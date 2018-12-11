@@ -733,11 +733,10 @@ struct hw_para_s {
 	u32 osd_fps;
 	u32 osd_fps_start;
 	u32 osd_display_debug;
-	char __iomem *screen_base[HW_OSD_COUNT];
-	u32 screen_size[HW_OSD_COUNT];
-	char __iomem *screen_base_backup[HW_OSD_COUNT];
-	u32 screen_size_backup[HW_OSD_COUNT];
-	u32 osd_clear[HW_OSD_COUNT];
+	ulong screen_base[HW_OSD_COUNT];
+	ulong screen_size[HW_OSD_COUNT];
+	ulong screen_base_backup[HW_OSD_COUNT];
+	ulong screen_size_backup[HW_OSD_COUNT];
 	u32 vinfo_width;
 	u32 vinfo_height;
 	u32 fb_drvier_probe;

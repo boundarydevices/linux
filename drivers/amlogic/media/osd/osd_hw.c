@@ -30,6 +30,9 @@
 #include <linux/kthread.h>
 #include <linux/ktime.h>
 #include <linux/delay.h>
+#include <linux/fs.h>
+#include <linux/sysfs.h>
+#include <linux/uaccess.h>
 
 /* Android Headers */
 
@@ -72,7 +75,6 @@
 #include "osd_fb.h"
 
 #define OSD_BLEND_SHIFT_WORKAROUND
-#define REMOVE_PHYS_TO_VIRT
 #ifdef CONFIG_AMLOGIC_VSYNC_FIQ_ENABLE
 #define FIQ_VSYNC
 #endif
@@ -3544,9 +3546,6 @@ static bool osd_ge2d_compose_pan_display(struct osd_fence_map_s *fence_map)
 {
 	u32 index = fence_map->fb_index;
 	bool free_scale_set = false;
-	#ifndef REMOVE_PHYS_TO_VIRT
-	void *vaddr = NULL;
-	#endif
 
 	canvas_config(osd_hw.fb_gem[index].canvas_idx,
 		fence_map->ext_addr,
@@ -3554,13 +3553,10 @@ static bool osd_ge2d_compose_pan_display(struct osd_fence_map_s *fence_map)
 		(osd_hw.color_info[index]->bpp >> 3)),
 		fence_map->height,
 		CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
-	#ifndef REMOVE_PHYS_TO_VIRT
-	vaddr = phys_to_virt(fence_map->ext_addr);
-	osd_hw.screen_base[index] = vaddr;
+	osd_hw.screen_base[index] = fence_map->ext_addr;
 	osd_hw.screen_size[index] =
 		CANVAS_ALIGNED(fence_map->width *
 		osd_hw.color_info[index]->bpp) * fence_map->height;
-	#endif
 	osd_hw.pandata[index].x_start = 0;
 	osd_hw.pandata[index].x_end = fence_map->width - 1;
 	osd_hw.pandata[index].y_start = 0;
@@ -3625,14 +3621,8 @@ static bool osd_direct_compose_pan_display(struct osd_fence_map_s *fence_map)
 	u32 x_start, x_end, y_start, y_end;
 	bool freescale_update = false;
 	struct pandata_s freescale_dst[HW_OSD_COUNT];
-	#ifndef REMOVE_PHYS_TO_VIRT
-	void *vaddr = NULL;
-	#endif
 
 	ext_addr = ext_addr + fence_map->byte_stride * fence_map->yoffset;
-	#ifndef REMOVE_PHYS_TO_VIRT
-	vaddr = phys_to_virt(ext_addr);
-	#endif
 
 	if (!osd_hw.osd_afbcd[index].enable) {
 		canvas_config(osd_hw.fb_gem[index].canvas_idx,
@@ -3640,11 +3630,9 @@ static bool osd_direct_compose_pan_display(struct osd_fence_map_s *fence_map)
 			fence_map->byte_stride,
 			fence_map->height,
 			CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
-		#ifndef REMOVE_PHYS_TO_VIRT
-		osd_hw.screen_base[index] = vaddr;
+		osd_hw.screen_base[index] = ext_addr;
 		osd_hw.screen_size[index] =
 			fence_map->byte_stride * fence_map->height;
-		#endif
 	} else {
 		osd_hw.osd_afbcd[index].phy_addr = ext_addr;
 		osd_hw.osd_afbcd[index].frame_width =
@@ -3665,10 +3653,8 @@ static bool osd_direct_compose_pan_display(struct osd_fence_map_s *fence_map)
 			else
 				osd_hw.osd_afbcd[index].conv_lbuf_len = 1024;
 		}
-		#ifndef REMOVE_PHYS_TO_VIRT
-		osd_hw.screen_base[index] = vaddr;
+		osd_hw.screen_base[index] = ext_addr;
 		osd_hw.screen_size[index] = fence_map->afbc_len;
-		#endif
 	}
 	width_dst = osd_hw.free_dst_data_backup[index].x_end -
 		osd_hw.free_dst_data_backup[index].x_start + 1;
@@ -4090,9 +4076,6 @@ static void osd_pan_display_update_info(struct layer_fence_map_s *layer_map)
 	u32 index = layer_map->fb_index;
 	const struct color_bit_define_s *color = NULL;
 	u32 ext_addr = 0;
-	#ifndef REMOVE_PHYS_TO_VIRT
-	void *vaddr = NULL;
-	#endif
 	u32 format = 0;
 
 	if (index > OSD_MAX)
@@ -4162,10 +4145,6 @@ static void osd_pan_display_update_info(struct layer_fence_map_s *layer_map)
 			layer_map->byte_stride *
 			layer_map->src_y;
 		#endif
-
-		#ifndef REMOVE_PHYS_TO_VIRT
-		vaddr = phys_to_virt(ext_addr);
-		#endif
 		if (!osd_hw.osd_afbcd[index].enable) {
 			/*ext_addr is no crop, so height =
 			 * layer_map->src_h + layer_map->src_y
@@ -4176,11 +4155,9 @@ static void osd_pan_display_update_info(struct layer_fence_map_s *layer_map)
 				layer_map->src_h + layer_map->src_y,
 				CANVAS_ADDR_NOWRAP,
 				CANVAS_BLKMODE_LINEAR);
-			#ifndef REMOVE_PHYS_TO_VIRT
-			osd_hw.screen_base[index] = vaddr;
+			osd_hw.screen_base[index] = ext_addr;
 			osd_hw.screen_size[index] =
 				layer_map->byte_stride * layer_map->src_h;
-			#endif
 		} else {
 			osd_hw.osd_afbcd[index].phy_addr = ext_addr;
 			if (osd_hw.osd_meson_dev.afbc_type ==
@@ -4207,11 +4184,9 @@ static void osd_pan_display_update_info(struct layer_fence_map_s *layer_map)
 				else
 					osd_hw.osd_afbcd[index]
 						.conv_lbuf_len = 1024;
-				#ifndef REMOVE_PHYS_TO_VIRT
-				osd_hw.screen_base[index] = vaddr;
+				osd_hw.screen_base[index] = ext_addr;
 				osd_hw.screen_size[index] =
 					layer_map->afbc_len;
-				#endif
 			} else if (osd_hw.osd_meson_dev
 				.afbc_type == MALI_AFBC) {
 				osd_hw.osd_afbcd[index].frame_width =
@@ -4219,11 +4194,9 @@ static void osd_pan_display_update_info(struct layer_fence_map_s *layer_map)
 					//BYTE_32_ALIGNED(layer_map->src_w);
 				osd_hw.osd_afbcd[index].frame_height =
 					BYTE_8_ALIGNED(layer_map->src_h);
-				#ifndef REMOVE_PHYS_TO_VIRT
-				osd_hw.screen_base[index] = vaddr;
+				osd_hw.screen_base[index] = ext_addr;
 				osd_hw.screen_size[index] =
 					layer_map->afbc_len;
-				#endif
 			}
 		}
 		/* just get para, need update via do_hwc */
@@ -4304,7 +4277,7 @@ static void osd_pan_display_layers_fence(
 		layer_map = &fence_map->layer_map[i];
 		index = layer_map->fb_index;
 		if (i != layer_map->fb_index) {
-			osd_hw.screen_base[i] = NULL;
+			osd_hw.screen_base[i] = 0;
 			osd_hw.screen_size[i] = 0;
 			osd_hw.enable[i] = 0;
 			continue;
@@ -8545,7 +8518,6 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 		osd_hw.free_src_data_backup[idx].y_end = 0;
 		osd_hw.free_scale_mode[idx] = 0;
 		osd_hw.buffer_alloc[idx] = 0;
-		osd_hw.osd_clear[idx] = 0;
 		osd_hw.osd_afbcd[idx].enable = 0;
 		osd_hw.use_h_filter_mode[idx] = -1;
 		osd_hw.use_v_filter_mode[idx] = -1;
@@ -9198,28 +9170,255 @@ void osd_get_blending_para(struct hw_osd_blending_s **para)
 }
 void osd_backup_screen_info(
 	u32 index,
-	char __iomem *screen_base,
-	u32 screen_size)
+	unsigned long screen_base,
+	unsigned long screen_size)
 {
 	osd_hw.screen_base_backup[index] = screen_base;
 	osd_hw.screen_size_backup[index] = screen_size;
-	osd_hw.screen_base[index] = screen_base;
-	osd_hw.screen_size[index] = screen_size;
 }
 
-void osd_restore_screen_info(
+void osd_get_screen_info(
 	u32 index,
 	char __iomem **screen_base,
 	unsigned long *screen_size)
 {
-	*screen_base = osd_hw.screen_base[index];
-	*screen_size = (unsigned long)osd_hw.screen_size[index];
-
+	*screen_base = (char __iomem *)osd_hw.screen_base[index];
+	*screen_size = osd_hw.screen_size[index];
 }
 
-void osd_set_clear(u32 index, u32 osd_clear)
+int get_vmap_addr(u32 index, u8 __iomem **buf)
 {
-	osd_hw.osd_clear[index] = osd_clear;
+	unsigned long total_size;
+	ulong phys;
+	u32 offset, npages;
+	struct page **pages = NULL;
+	pgprot_t pgprot;
+	static u8 *vaddr;
+	int i;
+
+	total_size = osd_hw.screen_size[index];
+
+	npages = PAGE_ALIGN(total_size) / PAGE_SIZE;
+	phys = osd_hw.screen_base[index];
+	offset = phys & ~PAGE_MASK;
+	if (offset)
+		npages++;
+	pages = vmalloc(sizeof(struct page *) * npages);
+	if (!pages)
+		return -ENOMEM;
+	for (i = 0; i < npages; i++) {
+		pages[i] = phys_to_page(phys);
+		phys += PAGE_SIZE;
+	}
+	/*nocache*/
+	pgprot = pgprot_writecombine(PAGE_KERNEL);
+	if (vaddr) {
+		/*  unmap prevois vaddr */
+		vunmap(vaddr);
+		vaddr = NULL;
+	}
+	vaddr = vmap(pages, npages, VM_MAP, pgprot);
+	if (!vaddr) {
+		pr_err("the phy(%lx) vmaped fail, size: %d\n",
+			phys, npages << PAGE_SHIFT);
+		vfree(pages);
+		return -ENOMEM;
+	}
+	vfree(pages);
+	*buf = (u8 __iomem *) (vaddr);
+
+	return osd_hw.screen_size[index];
+}
+#if 0
+static int is_new_page(unsigned long addr, unsigned long pos)
+{
+	static ulong pre_addr;
+	u32 offset;
+	int ret = 0;
+
+	/* ret == 0 : in same page*/
+	if (pos == 0)
+		ret = 1;
+	else {
+		offset = pre_addr & ~PAGE_MASK;
+		if ((offset + addr - pre_addr) >= PAGE_SIZE)
+			ret = 1;
+	}
+	pre_addr = addr;
+	return ret;
+}
+
+ssize_t dd_vmap_write(u32 index, const char __user *buf,
+	size_t count, loff_t *ppos)
+{
+	unsigned long p = *ppos;
+	unsigned long total_size;
+	static u8 *vaddr;
+	ulong phys;
+	u32 offset, npages;
+	struct page **pages = NULL;
+	struct page *pages_array[2] = {};
+	pgprot_t pgprot;
+	u8 *buffer, *src;
+	u8 __iomem *dst;
+	int i, c, cnt = 0, err = 0;
+
+	total_size = osd_hw.screen_size[index];
+	if (p > total_size)
+		return -EFBIG;
+
+	if (count > total_size) {
+		err = -EFBIG;
+		count = total_size;
+	}
+
+	if (count + p > total_size) {
+		if (!err)
+			err = -ENOSPC;
+
+		count = total_size - p;
+	}
+	if (count < PAGE_SIZE) {
+		/* small than one page, need not vmalloc */
+		npages = PAGE_ALIGN(count) / PAGE_SIZE;
+		phys = osd_hw.screen_base[index] + p;
+		if (is_new_page(phys, p)) {
+			/* new page, need call vmap*/
+			offset = phys & ~PAGE_MASK;
+			if ((offset + count) > PAGE_SIZE)
+				npages++;
+			for (i = 0; i < npages; i++) {
+				pages_array[i] = phys_to_page(phys);
+				phys += PAGE_SIZE;
+			}
+			/*nocache*/
+			pgprot = pgprot_writecombine(PAGE_KERNEL);
+			if (vaddr) {
+				/* unmap prevois vaddr */
+				vunmap(vaddr);
+				vaddr = NULL;
+			}
+			vaddr = vmap(pages_array, npages, VM_MAP, pgprot);
+			if (!vaddr) {
+				pr_err("the phy(%lx) vmaped fail, size: %d\n",
+					phys, npages << PAGE_SHIFT);
+				return -ENOMEM;
+			}
+			dst = (u8 __iomem *) (vaddr);
+		} else {
+			/* in same page just get vaddr + p*/
+			dst = (u8 __iomem *) (vaddr + (p & ~PAGE_MASK));
+		}
+	} else {
+		npages = PAGE_ALIGN(count) / PAGE_SIZE;
+		phys = osd_hw.screen_base[index] + p;
+		offset = phys & ~PAGE_MASK;
+		if ((offset + count) > PAGE_SIZE)
+			npages++;
+		pages = vmalloc(sizeof(struct page *) * npages);
+		if (!pages)
+			return -ENOMEM;
+		for (i = 0; i < npages; i++) {
+			pages[i] = phys_to_page(phys);
+			phys += PAGE_SIZE;
+		}
+		/*nocache*/
+		pgprot = pgprot_writecombine(PAGE_KERNEL);
+		//pgprot = PAGE_KERNEL;
+		if (vaddr) {
+			/*  unmap prevois vaddr */
+			vunmap(vaddr);
+			vaddr = NULL;
+		}
+		vaddr = vmap(pages, npages, VM_MAP, pgprot);
+		if (!vaddr) {
+			pr_err("the phy(%lx) vmaped fail, size: %d\n",
+				phys, npages << PAGE_SHIFT);
+			vfree(pages);
+			return -ENOMEM;
+		}
+		vfree(pages);
+		dst = (u8 __iomem *) (vaddr);
+	}
+	buffer = kmalloc((count > PAGE_SIZE) ? PAGE_SIZE : count,
+			 GFP_KERNEL);
+	if (!buffer)
+		return -ENOMEM;
+
+	/* osd_sync() */
+
+	while (count) {
+		c = (count > PAGE_SIZE) ? PAGE_SIZE : count;
+		src = buffer;
+
+		if (copy_from_user(src, buf, c)) {
+			err = -EFAULT;
+			break;
+		}
+
+		fb_memcpy_tofb(dst, src, c);
+		dst += c;
+		*ppos += c;
+		buf += c;
+		cnt += c;
+		count -= c;
+	}
+	kfree(buffer);
+	return (cnt) ? cnt : err;
+}
+#endif
+int osd_set_clear(u32 index)
+{
+	unsigned long total_size;
+	ulong phys;
+	u32 offset, npages;
+	struct page **pages = NULL;
+	pgprot_t pgprot;
+	static u8 *vaddr;
+	u8 __iomem *dst;
+	int i, c, count, cnt = 0;
+
+	total_size = osd_hw.screen_size[index];
+	npages = PAGE_ALIGN(total_size) / PAGE_SIZE;
+	phys = osd_hw.screen_base[index];
+	offset = phys & (~PAGE_MASK);
+	if (offset)
+		npages++;
+	pages = vmalloc(sizeof(struct page *) * npages);
+	if (!pages)
+		return -ENOMEM;
+	for (i = 0; i < npages; i++) {
+		pages[i] = phys_to_page(phys);
+		phys += PAGE_SIZE;
+	}
+	/*nocache*/
+	pgprot = pgprot_writecombine(PAGE_KERNEL);
+
+	vaddr = vmap(pages, npages, VM_MAP, pgprot);
+	if (!vaddr) {
+		pr_err("the phy(%lx) vmaped fail, size: %d\n",
+			phys, npages << PAGE_SHIFT);
+		vfree(pages);
+		return -ENOMEM;
+	}
+	vfree(pages);
+	dst = (u8 __iomem *) (vaddr);
+
+	count = total_size;
+	while (count) {
+		c = (count > PAGE_SIZE) ? PAGE_SIZE : count;
+		memset(dst, 0, c);
+		dst += c;
+		cnt += c;
+		count -= c;
+	}
+	if (vaddr) {
+		/*  unmap prevois vaddr */
+		vunmap(vaddr);
+		vaddr = NULL;
+	}
+
+	return cnt;
 }
 
 static const struct color_bit_define_s *convert_panel_format(u32 format)
@@ -9268,23 +9467,10 @@ static bool osd_direct_render(struct osd_plane_map_s *plane_map)
 	bool freescale_update = false;
 	struct pandata_s freescale_dst[HW_OSD_COUNT];
 
-	#ifndef REMOVE_PHYS_TO_VIRT
-	void *vaddr = NULL;
-	#endif
-
 	phy_addr = phy_addr + plane_map->byte_stride * plane_map->src_y;
-
-	#ifndef REMOVE_PHYS_TO_VIRT
-	vaddr = phys_to_virt(phy_addr);
-	osd_hw.screen_base[index] = vaddr;
+	osd_hw.screen_base[index] = phy_addr;
 	osd_hw.screen_size[index] =
 		plane_map->byte_stride * plane_map->src_h;
-	if (osd_hw.osd_clear[index]) {
-		if (vaddr)
-			memset(vaddr, 0x0,
-				plane_map->byte_stride*plane_map->src_h);
-	}
-	#endif
 	osd_log_dbg(MODULE_RENDER, "canvas_id=%x, phy_addr=%x\n",
 		osd_hw.fb_gem[index].canvas_idx, phy_addr);
 	canvas_config(osd_hw.fb_gem[index].canvas_idx,
@@ -9522,29 +9708,15 @@ static void osd_cursor_move(struct osd_plane_map_s *plane_map)
 	u32 phy_addr = plane_map->phy_addr;
 	u32 x_start, x_end, y_start, y_end;
 	u32 x, y;
-
-	#ifndef REMOVE_PHYS_TO_VIRT
-	void *vaddr = NULL;
-	#endif
-
 	struct pandata_s disp_tmp;
 	struct pandata_s free_dst_data_backup;
 
 	if (index != OSD2)
 		return;
 	phy_addr = phy_addr + plane_map->byte_stride * plane_map->src_y;
-
-	#ifndef REMOVE_PHYS_TO_VIRT
-	vaddr = phys_to_virt(phy_addr);
-	osd_hw.screen_base[index] = vaddr;
+	osd_hw.screen_base[index] = phy_addr;
 	osd_hw.screen_size[index] =
 		plane_map->byte_stride * plane_map->src_h;
-	if (osd_hw.osd_clear[index]) {
-		if (vaddr)
-			memset(vaddr, 0x0,
-				plane_map->byte_stride*plane_map->src_h);
-	}
-	#endif
 	canvas_config(osd_hw.fb_gem[index].canvas_idx,
 		phy_addr,
 		plane_map->byte_stride,

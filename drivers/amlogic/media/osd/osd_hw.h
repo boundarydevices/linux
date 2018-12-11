@@ -191,13 +191,16 @@ void osd_do_hwc(void);
 int osd_get_capbility(u32 index);
 void osd_backup_screen_info(
 	u32 index,
-	char __iomem *screen_base,
-	u32 screen_size);
-void osd_restore_screen_info(
+	unsigned long screen_base,
+	unsigned long screen_size);
+void osd_get_screen_info(
 	u32 index,
 	char __iomem **screen_base,
 	unsigned long *screen_size);
-void osd_set_clear(u32 index, u32 osd_clear);
+int get_vmap_addr(u32 index, u8 __iomem **buf);
+ssize_t dd_vmap_write(u32 index, const char __user *buf,
+	size_t count, loff_t *ppos);
+int osd_set_clear(u32 index);
 void osd_page_flip(struct osd_plane_map_s *plane_map);
 void walk_through_update_list(void);
 int osd_setting_blend(void);

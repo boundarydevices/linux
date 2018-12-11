@@ -1010,7 +1010,7 @@ static int osd_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 				osd_sync_request_render(info->node,
 				info->var.yres,
 				sync_request_render, phys_addr, len);
-			osd_restore_screen_info(info->node,
+			osd_get_screen_info(info->node,
 				&info->screen_base, &info->screen_size);
 			ret = copy_to_user(argp,
 				&sync_request,
@@ -1400,8 +1400,10 @@ static int malloc_osd_memory(struct fb_info *info)
 	fix->smem_len = fbdev->fb_len;
 	info->screen_base = (char __iomem *)fbdev->fb_mem_vaddr;
 	info->screen_size = fix->smem_len;
+	osd_hw.screen_base[fb_index] = fbdev->fb_mem_paddr;
+	osd_hw.screen_size[fb_index] = fix->smem_len;
 	osd_backup_screen_info(fb_index,
-		info->screen_base, info->screen_size);
+		osd_hw.screen_base[fb_index], osd_hw.screen_size[fb_index]);
 	logo_index = osd_get_logo_index();
 	osd_log_info("logo_index=%x,fb_index=%d\n",
 		logo_index, fb_index);
@@ -1539,6 +1541,275 @@ static int osd_mmap(struct fb_info *info, struct vm_area_struct *vma)
 	return vm_iomap_memory(vma, start, len);
 }
 
+static int is_new_page(unsigned long addr, unsigned long pos)
+{
+	static ulong pre_addr;
+	u32 offset;
+	int ret = 0;
+
+	/* ret == 0 : in same page*/
+	if (pos == 0)
+		ret = 1;
+	else {
+		offset = pre_addr & ~PAGE_MASK;
+		if ((offset + addr - pre_addr) >= PAGE_SIZE)
+			ret = 1;
+	}
+	pre_addr = addr;
+	return ret;
+}
+
+static ssize_t osd_read(struct fb_info *info, char __user *buf,
+	size_t count, loff_t *ppos)
+{
+	u32 fb_index;
+	struct osd_fb_dev_s *fbdev;
+	unsigned long p = *ppos;
+	unsigned long total_size;
+	static u8 *vaddr;
+	ulong phys;
+	u32 offset, npages;
+	struct page **pages = NULL;
+	struct page *pages_array[2] = {};
+	pgprot_t pgprot;
+	u8 *buffer, *dst;
+	u8 __iomem *src;
+	int i, c, cnt = 0, err = 0;
+
+	fbdev = (struct osd_fb_dev_s *)info->par;
+	fb_index = fbdev->fb_index;
+	total_size = osd_hw.screen_size[fb_index];
+	if (total_size == 0)
+		total_size = info->fix.smem_len;
+
+	if (p >= total_size)
+		return 0;
+
+	if (count >= total_size)
+		count = total_size;
+
+	if (count + p > total_size)
+		count = total_size - p;
+	if (count <= PAGE_SIZE) {
+		/* small than one page, need not vmalloc */
+		npages = PAGE_ALIGN(count) / PAGE_SIZE;
+		phys = osd_hw.screen_base[fb_index] + p;
+		if (is_new_page(phys, p)) {
+			/* new page, need call vmap*/
+			offset = phys & ~PAGE_MASK;
+			if ((offset + count) > PAGE_SIZE)
+				npages++;
+			for (i = 0; i < npages; i++) {
+				pages_array[i] = phys_to_page(phys);
+				phys += PAGE_SIZE;
+			}
+			/*nocache*/
+			pgprot = pgprot_writecombine(PAGE_KERNEL);
+			if (vaddr) {
+				/*  unmap prevois vaddr */
+				vunmap(vaddr);
+				vaddr = NULL;
+			}
+			vaddr = vmap(pages_array, npages, VM_MAP, pgprot);
+			if (!vaddr) {
+				pr_err("the phy(%lx) vmaped fail, size: %d\n",
+					phys, npages << PAGE_SHIFT);
+				return -ENOMEM;
+			}
+			src = (u8 __iomem *) (vaddr);
+		} else {
+			/* in same page just get vaddr + p*/
+			src = (u8 __iomem *) (vaddr + (p & ~PAGE_MASK));
+		}
+	} else {
+		npages = PAGE_ALIGN(count) / PAGE_SIZE;
+		phys = osd_hw.screen_base[fb_index] + p;
+		offset = phys & ~PAGE_MASK;
+		if ((offset + count) > PAGE_SIZE)
+			npages++;
+		pages = vmalloc(sizeof(struct page *) * npages);
+		if (!pages)
+			return -ENOMEM;
+		for (i = 0; i < npages; i++) {
+			pages[i] = phys_to_page(phys);
+			phys += PAGE_SIZE;
+		}
+		/*nocache*/
+		pgprot = pgprot_writecombine(PAGE_KERNEL);
+		if (vaddr) {
+			/*unmap prevois vaddr */
+			vunmap(vaddr);
+			vaddr = NULL;
+		}
+		vaddr = vmap(pages, npages, VM_MAP, pgprot);
+		if (!vaddr) {
+			pr_err("the phy(%lx) vmaped fail, size: %d\n",
+				phys, npages << PAGE_SHIFT);
+			vfree(pages);
+			return -ENOMEM;
+		}
+		vfree(pages);
+		src = (u8 __iomem *) (vaddr);
+	}
+
+	buffer = kmalloc((count > PAGE_SIZE) ? PAGE_SIZE : count,
+			 GFP_KERNEL);
+	if (!buffer)
+		return -ENOMEM;
+	/* osd_sync(info); */
+
+	while (count) {
+		c  = (count > PAGE_SIZE) ? PAGE_SIZE : count;
+		dst = buffer;
+		fb_memcpy_fromfb(dst, src, c);
+		dst += c;
+		src += c;
+
+		if (copy_to_user(buf, buffer, c)) {
+			err = -EFAULT;
+			break;
+		}
+		*ppos += c;
+		buf += c;
+		cnt += c;
+		count -= c;
+	}
+
+	kfree(buffer);
+
+	return (err) ? err : cnt;
+
+}
+
+static ssize_t osd_write(struct fb_info *info, const char __user *buf,
+	size_t count, loff_t *ppos)
+{
+	u32 fb_index;
+	struct osd_fb_dev_s *fbdev;
+	unsigned long p = *ppos;
+	unsigned long total_size;
+	static u8 *vaddr;
+	ulong phys;
+	u32 offset, npages;
+	struct page **pages = NULL;
+	struct page *pages_array[2] = {};
+	pgprot_t pgprot;
+	u8 *buffer, *src;
+	u8 __iomem *dst;
+	int i, c, cnt = 0, err = 0;
+
+	fbdev = (struct osd_fb_dev_s *)info->par;
+	fb_index = fbdev->fb_index;
+	total_size = osd_hw.screen_size[fb_index];
+
+	if (total_size == 0)
+		total_size = info->fix.smem_len;
+
+	if (p > total_size)
+		return -EFBIG;
+
+	if (count > total_size) {
+		err = -EFBIG;
+		count = total_size;
+	}
+
+	if (count + p > total_size) {
+		if (!err)
+			err = -ENOSPC;
+
+		count = total_size - p;
+	}
+	if (count <= PAGE_SIZE) {
+		/* small than one page, need not vmalloc */
+		npages = PAGE_ALIGN(count) / PAGE_SIZE;
+		phys = osd_hw.screen_base[fb_index] + p;
+		if (is_new_page(phys, p)) {
+			/* new page, need call vmap*/
+			offset = phys & ~PAGE_MASK;
+			if ((offset + count) > PAGE_SIZE)
+				npages++;
+			for (i = 0; i < npages; i++) {
+				pages_array[i] = phys_to_page(phys);
+				phys += PAGE_SIZE;
+			}
+			/*nocache*/
+			pgprot = pgprot_writecombine(PAGE_KERNEL);
+			if (vaddr) {
+				/* unmap prevois vaddr */
+				vunmap(vaddr);
+				vaddr = NULL;
+			}
+			vaddr = vmap(pages_array, npages, VM_MAP, pgprot);
+			if (!vaddr) {
+				pr_err("the phy(%lx) vmaped fail, size: %d\n",
+					phys, npages << PAGE_SHIFT);
+				return -ENOMEM;
+			}
+			dst = (u8 __iomem *) (vaddr);
+		} else {
+			/* in same page just get vaddr + p*/
+			dst = (u8 __iomem *) (vaddr + (p & ~PAGE_MASK));
+		}
+	} else {
+		npages = PAGE_ALIGN(count) / PAGE_SIZE;
+		phys = osd_hw.screen_base[fb_index] + p;
+		offset = phys & ~PAGE_MASK;
+		if ((offset + count) > PAGE_SIZE)
+			npages++;
+		pages = vmalloc(sizeof(struct page *) * npages);
+		if (!pages)
+			return -ENOMEM;
+		for (i = 0; i < npages; i++) {
+			pages[i] = phys_to_page(phys);
+			phys += PAGE_SIZE;
+		}
+		/*nocache*/
+		pgprot = pgprot_writecombine(PAGE_KERNEL);
+		if (vaddr) {
+			/*  unmap prevois vaddr */
+			vunmap(vaddr);
+			vaddr = NULL;
+		}
+		vaddr = vmap(pages, npages, VM_MAP, pgprot);
+		if (!vaddr) {
+			pr_err("the phy(%lx) vmaped fail, size: %d\n",
+				phys, npages << PAGE_SHIFT);
+			vfree(pages);
+			return -ENOMEM;
+		}
+		vfree(pages);
+		dst = (u8 __iomem *) (vaddr);
+
+	}
+	buffer = kmalloc((count > PAGE_SIZE) ? PAGE_SIZE : count,
+			 GFP_KERNEL);
+	if (!buffer)
+		return -ENOMEM;
+
+	/* osd_sync() */
+
+	while (count) {
+		c = (count > PAGE_SIZE) ? PAGE_SIZE : count;
+		src = buffer;
+
+		if (copy_from_user(src, buf, c)) {
+			err = -EFAULT;
+			break;
+		}
+
+		fb_memcpy_tofb(dst, src, c);
+		dst += c;
+		*ppos += c;
+		buf += c;
+		cnt += c;
+		count -= c;
+	}
+
+	kfree(buffer);
+
+	return (cnt) ? cnt : err;
+
+}
 
 static int osd_release(struct fb_info *info, int arg)
 {
@@ -1559,21 +1830,6 @@ static int osd_release(struct fb_info *info, int arg)
 	fbdev->open_count--;
 done:
 	return err;
-}
-static ssize_t osd_clear(struct device *device, struct device_attribute *attr,
-		const char *buf, size_t count)
-{
-	u32 res = 0;
-	int ret = 0;
-
-	ret = kstrtoint(buf, 0, &res);
-	osd_log_info("clear: osd %d\n", res);
-
-	memset(fb_rmem_vaddr[res],
-			0x0,
-			fb_rmem_size[res]);
-
-	return count;
 }
 
 int osd_blank(int blank_mode, struct fb_info *info)
@@ -1639,6 +1895,8 @@ static struct fb_ops osd_ops = {
 #endif
 	.fb_open        = osd_open,
 	.fb_mmap        = osd_mmap,
+	.fb_read        = osd_read,
+	.fb_write       = osd_write,
 	.fb_blank       = osd_blank,
 	.fb_pan_display = osd_pan_display,
 	.fb_sync        = osd_sync,
@@ -2389,6 +2647,22 @@ static ssize_t store_afbcd(struct device *device, struct device_attribute *attr,
 	osd_log_info("afbc: %d\n", res);
 
 	osd_set_afbc(fb_info->node, res);
+
+	return count;
+}
+
+static ssize_t osd_clear(struct device *device, struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	u32 res = 0;
+	int ret = 0;
+	struct fb_info *fb_info = dev_get_drvdata(device);
+
+	ret = kstrtoint(buf, 0, &res);
+	osd_log_info("clear: osd %d\n", fb_info->node);
+
+	if (res)
+		osd_set_clear(fb_info->node);
 
 	return count;
 }

@@ -133,10 +133,12 @@ static ssize_t logmodule_write_file(
 	char buf[128];
 	int ret = 0;
 
-	count = min_t(size_t, count, (sizeof(buf)-1));
+	if (count > sizeof(buf) || count <= 0)
+		return -EINVAL;
 	if (copy_from_user(buf, userbuf, count))
 		return -EFAULT;
-	buf[count] = 0;
+	if (buf[count - 1] == '\n')
+		buf[count - 1] = '\0';
 	ret = kstrtoint(buf, 0, &log_module);
 	osd_log_info("log_level: %d->%d\n", osd_log_module, log_module);
 	osd_log_module = log_module;
@@ -470,7 +472,8 @@ static ssize_t osd_clear_write_file(struct file *file,
 		return -EFAULT;
 	buf[count] = 0;
 	ret = kstrtoint(buf, 0, &osd_clear);
-	osd_set_clear(osd_id, osd_clear);
+	if (osd_clear)
+		osd_set_clear(osd_id);
 	return count;
 }
 
@@ -478,12 +481,12 @@ static ssize_t osd_dump_read_file(struct file *file,
 				char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
-	char __iomem *buf;
+	u8 __iomem *buf = NULL;
 	struct seq_file *s = file->private_data;
 	int osd_id = *(int *)s;
-	unsigned long len;
+	unsigned long len = 0;
 
-	osd_restore_screen_info(osd_id, &buf, &len);
+	len = get_vmap_addr(osd_id, &buf);
 	if (buf && len)
 		return simple_read_from_buffer(userbuf, count, ppos, buf, len);
 	else
@@ -494,7 +497,14 @@ static ssize_t osd_dump_write_file(struct file *file,
 				const char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
+#if 1
 	return 0;
+#else
+	struct seq_file *s = file->private_data;
+	int osd_id = *(int *)s;
+
+	return dd_vmap_write(osd_id,  userbuf, count, ppos);
+#endif
 }
 
 static void parse_param(char *buf_orig, char **parm)
