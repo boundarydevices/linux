@@ -300,15 +300,6 @@
 		dev_name = "ionvideo";
 		status = "okay";
 	};
-	dvb{
-	    compatible = "amlogic, dvb";
-		dev_name = "dvb";
-		status = "ok";
-		/*"parallel","serial","disable"*/
-		ts2 = "parallel";
-		ts2_control = <0>;
-		ts2_invert = <0>;
-	};
 	unifykey{
 		compatible = "amlogic, unifykey";
 		status = "ok";
@@ -733,6 +724,43 @@
 		status = "okay";
 	};
 
+	/*dvb {
+	 *	compatible = "amlogic, dvb";
+	 *	dev_name = "dvb";
+	 *
+	 *	fe0_mode = "external";
+	 *	fe0_demod = "Atbm8881";
+	 *	fe0_i2c_adap_id = <&i2c2>;
+	 *	fe0_demod_i2c_addr = <0xc0>;
+	 *	fe0_ts = <1>;
+	 *	fe0_reset_value = <0>;
+	 *	fe0_reset_gpio = <&gpio GPIOZ_1 GPIO_ACTIVE_HIGH>;
+	 *
+	 *	ts1 = "parallel";
+	 *	ts1_control = <0>;
+	 *	ts1_invert = <0>;
+	 *	interrupts = <0 23 1
+	 *	0 5 1
+	 *	0 21 1
+	 *	0 19 1
+	 *	0 25 1
+	 *	0 18 1
+	 *	0 24 1>;
+	 *	interrupt-names = "demux0_irq",
+	 *	"demux1_irq",
+	 *	"demux2_irq",
+	 *	"dvr0_irq",
+	 *	"dvr1_irq",
+	 *	"dvrfill0_fill",
+	 *	"dvrfill1_flush";
+	 *	pinctrl-names = "p_ts1";
+	 *	pinctrl-0 = <&dvb_p_ts1_pins>;
+	 *	clocks = <&clkc CLKID_DEMUX
+	 *	&clkc CLKID_AHB_ARB0
+	 *	&clkc CLKID_DOS_PARSER>;
+	 *	clock-names = "demux", "ahbarb0", "parser_top";
+	 *};
+	 */
 }; /* end of / */
 
 &meson_fb {
@@ -773,6 +801,19 @@
 		max-touch-number = <10>;
 	};
 };
+
+/*
+ *if use i2c2_master_pins2
+ *please disable internal_eth_pins
+ *in case pinmux conflict
+ */
+/*&i2c2 {
+ *	status = "okay";
+ *	pinctrl-names="default";
+ *	pinctrl-0=<&i2c2_master_pins2>;
+ *	clock-frequency = <300000>;
+ *};
+ */
 
 &i2c3 {
 	status = "disabled";
