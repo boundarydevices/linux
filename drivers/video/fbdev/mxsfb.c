@@ -2374,7 +2374,7 @@ static int mxsfb_remove(struct platform_device *pdev)
 	pm_runtime_disable(&host->pdev->dev);
 	mxsfb_overlay_exit(host);
 	unregister_framebuffer(fb_info);
-	mxsfb_free_videomem(fb_info);
+	mxsfb_free_videomem(host);
 
 	platform_set_drvdata(pdev, NULL);
 
