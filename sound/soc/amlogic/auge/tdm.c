@@ -798,8 +798,10 @@ static int aml_dai_set_tdm_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	if (cpu_dai->capture_active
 		&& p_tdm->chipinfo
 		&& p_tdm->chipinfo->adc_fn
-		&& p_tdm->acodec_adc)
+		&& p_tdm->acodec_adc){
 		aml_update_tdmin_skew(p_tdm->actrl, p_tdm->id, 4);
+		aml_update_tdmin_rev_ws(p_tdm->actrl, p_tdm->id, 0);
+	}
 
 	return 0;
 }

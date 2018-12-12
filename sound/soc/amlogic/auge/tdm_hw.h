@@ -91,6 +91,9 @@ extern void aml_tdm_set_format(
 extern void aml_update_tdmin_skew(struct aml_audio_controller *actrl,
 	int idx, int skew);
 
+extern void aml_update_tdmin_rev_ws(struct aml_audio_controller *actrl,
+	int idx, int is_rev);
+
 extern void aml_tdm_set_slot_out(
 	struct aml_audio_controller *actrl,
 	int index, int slots, int slot_width,
