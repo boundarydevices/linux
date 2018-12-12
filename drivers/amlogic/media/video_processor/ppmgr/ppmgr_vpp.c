@@ -169,6 +169,7 @@ static u8 tb_detect_last_flag;
 static u32 tb_buff_wptr;
 static u32 tb_buff_rptr;
 static s32 tb_canvas = -1;
+static u32 tb_src_canvas;
 static s8 tb_buffer_status;
 static u32 tb_buffer_start;
 static u32 tb_buffer_size;
@@ -843,6 +844,7 @@ static int process_vf_tb_detect(struct vframe_s *vf,
 {
 	struct canvas_s cs0, cs1, cs2, cd;
 	int interlace_mode;
+	struct vframe_s src_vf;
 	u32 format = GE2D_FORMAT_M24_YUV420;
 	u32 h_scale_coef_type =
 		context->config.h_scale_coef_type;
@@ -889,9 +891,35 @@ static int process_vf_tb_detect(struct vframe_s *vf,
 	ge2d_config->src1_gb_alpha = 0;/* 0xff; */
 	ge2d_config->dst_xy_swap = 0;
 
-	canvas_read(vf->canvas0Addr & 0xff, &cs0);
-	canvas_read((vf->canvas0Addr >> 8) & 0xff, &cs1);
-	canvas_read((vf->canvas0Addr >> 16) & 0xff, &cs2);
+	src_vf = *vf;
+	if (vf->canvas0Addr == (u32)-1) {
+		canvas_config_config(
+			tb_src_canvas & 0xff,
+			&src_vf.canvas0_config[0]);
+		canvas_config_config(
+			(tb_src_canvas >> 8) & 0xff,
+			&src_vf.canvas0_config[1]);
+		if (src_vf.plane_num == 2) {
+			src_vf.canvas0Addr =
+				tb_src_canvas & 0xffff;
+		} else if (src_vf.plane_num == 3) {
+			canvas_config_config(
+				(tb_src_canvas >> 16) & 0xff,
+				&src_vf.canvas0_config[2]);
+			src_vf.canvas0Addr =
+				tb_src_canvas & 0xffffff;
+		}
+		canvas_read(
+			src_vf.canvas0Addr & 0xff, &cs0);
+		canvas_read(
+			(src_vf.canvas0Addr >> 8) & 0xff, &cs1);
+		canvas_read(
+			(src_vf.canvas0Addr >> 16) & 0xff, &cs2);
+	} else {
+		canvas_read(vf->canvas0Addr & 0xff, &cs0);
+		canvas_read((vf->canvas0Addr >> 8) & 0xff, &cs1);
+		canvas_read((vf->canvas0Addr >> 16) & 0xff, &cs2);
+	}
 	ge2d_config->src_planes[0].addr = cs0.addr;
 	ge2d_config->src_planes[0].w = cs0.width;
 	ge2d_config->src_planes[0].h = cs0.height;
@@ -908,7 +936,7 @@ static int process_vf_tb_detect(struct vframe_s *vf,
 	ge2d_config->src_key.key_enable = 0;
 	ge2d_config->src_key.key_mask = 0;
 	ge2d_config->src_key.key_mode = 0;
-	ge2d_config->src_para.canvas_index = vf->canvas0Addr;
+	ge2d_config->src_para.canvas_index = src_vf.canvas0Addr;
 	ge2d_config->src_para.mem_type = CANVAS_TYPE_INVALID;
 	ge2d_config->src_para.format = format;
 	ge2d_config->src_para.fill_color_en = 0;
@@ -3603,9 +3631,23 @@ static int tb_buffer_init(void)
 	if (tb_buffer_status)
 		return tb_buffer_status;
 
+	if (tb_src_canvas == 0) {
+		if (canvas_pool_alloc_canvas_table(
+			"tb_detect_src",
+			&tb_src_canvas, 1,
+			CANVAS_MAP_TYPE_YUV)) {
+			pr_err(
+				"%s alloc tb src canvas error.\n",
+				__func__);
+			return -1;
+		}
+		pr_info("alloc tb src canvas 0x%x.\n",
+			tb_src_canvas);
+	}
+
 	if (tb_canvas < 0)
 		tb_canvas =
-			canvas_pool_map_alloc_canvas("tb_detect");
+			canvas_pool_map_alloc_canvas("tb_detect_dst");
 
 	if (tb_canvas < 0)
 		return -1;
@@ -3649,6 +3691,19 @@ static int tb_buffer_init(void)
 
 static int tb_buffer_uninit(void)
 {
+	if (tb_src_canvas) {
+		if (tb_src_canvas & 0xff)
+			canvas_pool_map_free_canvas(
+				tb_src_canvas & 0xff);
+		if ((tb_src_canvas >> 8) & 0xff)
+			canvas_pool_map_free_canvas(
+				(tb_src_canvas >> 8) & 0xff);
+		if ((tb_src_canvas >> 16) & 0xff)
+			canvas_pool_map_free_canvas(
+				(tb_src_canvas >> 16) & 0xff);
+	}
+	tb_src_canvas = 0;
+
 	if (tb_canvas >= 0)
 		canvas_pool_map_free_canvas(tb_canvas);
 	tb_canvas = -1;
