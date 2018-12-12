@@ -140,6 +140,19 @@ void dtmb_all_reset(void)
 		dtmb_write_reg(DTMB_FRONT_46_CONFIG, 0x1a000f0f);
 		dtmb_write_reg(DTMB_FRONT_ST_FREQ, 0xf2400000);
 		dtmb_clk_set(Adc_Clk_24M);
+	} else if (is_ic_ver(IC_VER_TL1)) {
+		if (demod_get_adc_clk() == Adc_Clk_24M) {
+			dtmb_write_reg(DTMB_FRONT_DDC_BYPASS, 0x6aaaaa);
+			dtmb_write_reg(DTMB_FRONT_SRC_CONFIG1, 0x13196596);
+			dtmb_write_reg(0x5b << 2, 0x50a30a25);
+		} else if (demod_get_adc_clk() == Adc_Clk_25M) {
+			dtmb_write_reg(DTMB_FRONT_DDC_BYPASS, 0x62c1a5);
+			dtmb_write_reg(DTMB_FRONT_SRC_CONFIG1, 0x131a747d);
+			dtmb_write_reg(0x5b << 2, 0x4d6a0a25);
+		}
+
+		//for timeshift issue(chuangcheng test)
+		dtmb_write_reg(0x4e << 2, 0x256cf604);
 	} else {
 		dtmb_write_reg(DTMB_FRONT_AGC_CONFIG1, 0x10127);
 		dtmb_write_reg(DTMB_CHE_IBDFE_CONFIG6, 0x943228cc);
@@ -192,27 +205,8 @@ void dtmb_initial(struct aml_demod_sta *demod_sta)
 /* dtmb_write_reg(0x049, memstart);		//only for init */
 	/*dtmb_spectrum = 1; no use */
 	dtmb_spectrum = demod_sta->spectrum;
-
-	if (is_ic_ver(IC_VER_TL1)) {
-		front_write_reg_v4(0x39,
-			(front_read_reg_v4(0x39) | (1 << 30)));
-
-		if (demod_sta->adc_freq == Adc_Clk_24M) {
-			dtmb_write_reg(DTMB_FRONT_DDC_BYPASS, 0x6aaaaa);
-			dtmb_write_reg(DTMB_FRONT_SRC_CONFIG1, 0x13196596);
-			dtmb_write_reg(0x5b << 2, 0x50a30a25);
-		} else if (demod_sta->adc_freq == Adc_Clk_25M) {
-			dtmb_write_reg(DTMB_FRONT_DDC_BYPASS, 0x62c1a5);
-			dtmb_write_reg(DTMB_FRONT_SRC_CONFIG1, 0x131a747d);
-			dtmb_write_reg(0x5b << 2, 0x4d6a0a25);
-		}
-
-		//for timeshift issue(chuangcheng test)
-		dtmb_write_reg(0x4e << 2, 0x256cf604);
-	} else {
-		dtmb_register_reset();
-		dtmb_all_reset();
-	}
+	dtmb_register_reset();
+	dtmb_all_reset();
 }
 
 int check_dtmb_fec_lock(void)
@@ -748,6 +742,7 @@ unsigned int dtmb_detect_first(void)
 			has_signal = 0x1;
 		}
 	}
+
 	if (has_signal == 0x1) {
 		/*fsm status is 6,digital signal*/
 		/*fsm (1->4) 30ms,(4->5) 20ms,*/

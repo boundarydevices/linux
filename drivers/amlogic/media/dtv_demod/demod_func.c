@@ -1056,9 +1056,10 @@ int demod_set_sys(struct aml_demod_sta *demod_sta,
 			front_write_reg_v4(0x20,
 				((front_read_reg_v4(0x20) & ~0xff)
 				| (nco_rate & 0xff)));
-
 			front_write_reg_v4(0x20,
 				(front_read_reg_v4(0x20) | (1 << 8)));
+			front_write_reg_v4(0x39,
+				(front_read_reg_v4(0x39) | (1 << 30)));
 		} else {
 			demod_write_reg(DEMOD_TOP_REGC, 0x8);
 			PR_DBG("[open arbit]dtmb\n");
@@ -1100,56 +1101,6 @@ int memorystart = 0x29c00000;//0x35100000;//0x1ef00000;0x9300000 7ca00000
 #endif
 
 /*TL1*/
-void demod_set_sys_dtmb_v4(void)
-{
-	#if 0//move to clocks_set_sys_defaults
-	int nco_rate;
-
-	nco_rate = (24*256)/224+2;
-	//app_apb_write_reg(0xf00*4,0x11 );
-	demod_write_reg(DEMOD_TOP_REG0, 0x11);
-	//app_apb_write_reg(0xf08*4,0x201);
-	demod_write_reg(DEMOD_TOP_REG8, 0x201);
-	//app_apb_write_reg(0xf0c*4,0x11);
-	demod_write_reg(DEMOD_TOP_REGC, 0x11);
-	//app_apb_write_reg(0xe20*4,
-			//((app_apb_read_reg(0xe20*4) &~ 0xff)
-			//| (nco_rate & 0xff)));
-
-	front_write_reg_v4(0x20, ((front_read_reg_v4(0x20) & ~0xff)
-			| (nco_rate & 0xff)));
-
-	//app_apb_write_reg(0xe20*4,  (app_apb_read_reg(0xe20*4) | (1 << 8)));
-	front_write_reg_v4(0x20, (front_read_reg_v4(0x20) | (1 << 8)));
-	#endif
-
-	//app_apb_write_reg(0x49,memorystart);
-	//move to enter_mode()
-	//dtmb_write_reg(DTMB_FRONT_MEM_ADDR, memorystart);
-
-	#if 0//move to dtmb_all_reset()
-	//app_apb_write_reg(0xe39,	(app_apb_read_reg(0xe39) | (1 << 30)));
-	front_write_reg_v4(0x39,	(front_read_reg_v4(0x39) | (1 << 30)));
-
-
-	//24M
-	//app_apb_write_reg(0x25, 0x6aaaaa);
-	//app_apb_write_reg(0x3e, 0x13196596);
-	//app_apb_write_reg(0x5b, 0x50a30a25);
-	dtmb_write_reg(DTMB_FRONT_DDC_BYPASS, 0x6aaaaa);
-	dtmb_write_reg(DTMB_FRONT_SRC_CONFIG1, 0x13196596);
-	dtmb_write_reg(0x5b << 2, 0x50a30a25);
-	#endif
-
-	//25m
-	//app_apb_write_reg(0x25, 0x62c1a5);
-	//app_apb_write_reg(0x3e, 0x131a747d);
-	//app_apb_write_reg(0x5b, 0x4d6a0a25);
-	//dtmb_write_reg(0x25, 0x62c1a5);
-	//dtmb_write_reg(0x3e, 0x131a747d);
-	//dtmb_write_reg(0x5b, 0x4d6a0a25);
-}
-
 void demod_set_sys_atsc_v4(void)
 {
 	//int nco_rate;

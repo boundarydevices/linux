@@ -236,7 +236,6 @@ int cap_adc_data(struct aml_cap_data *cap);
 extern unsigned int get_symbol_rate(void);
 extern unsigned int get_ch_freq(void);
 extern unsigned int get_modu(void);
-extern void demod_set_sys_dtmb_v4(void);
 extern void tuner_set_atsc_para(void);
 extern void tuner_set_dtmb_para(void);
 extern void tuner_set_qam_para(void);

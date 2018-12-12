@@ -922,7 +922,10 @@ int timer_tuner_not_enough(void)
 }
 
 
-
+unsigned int demod_get_adc_clk(void)
+{
+	return demod_status.adc_freq;
+}
 
 static int gxtv_demod_dvbc_read_status_timer
 	(struct dvb_frontend *fe, enum fe_status *status)
@@ -2265,6 +2268,7 @@ void dtmb_save_status(unsigned int s)
 		pollm->last_s = FE_TIMEDOUT;
 	}
 }
+
 void dtmb_poll_start(void)
 {
 	struct poll_machie_s *pollm = &dtvdd_devp->poll_machie;
@@ -2526,18 +2530,7 @@ static int gxtv_demod_dtmb_read_status_old
 			FE_HAS_VITERBI | FE_HAS_SYNC;
 	} else {
 		ilock = 0;
-
-		if (is_ic_ver(IC_VER_TL1)) {
-			if (timer_not_enough(D_TIMER_DETECT)) {
-				*status = 0;
-				PR_DBG("s=0\n");
-			} else {
-				*status = FE_TIMEDOUT;
-				timer_disable(D_TIMER_DETECT);
-			}
-		} else {
-			*status = FE_TIMEDOUT;
-		}
+		*status = FE_TIMEDOUT;
 	}
 	if (last_lock != ilock) {
 		PR_INFO("%s.\n",
@@ -2600,11 +2593,6 @@ static int gxtv_demod_dtmb_set_frontend(struct dvb_frontend *fe)
 	msleep(100);
 /* demod_power_switch(PWR_ON); */
 
-	#if 0
-	if (is_ic_ver(IC_VER_TL1))
-		demod_set_sys_dtmb_v4();
-	else
-	#endif
 	dtmb_set_ch(&demod_status, /*&demod_i2c,*/ &param);
 
 	return 0;
@@ -2730,13 +2718,7 @@ static int gxtv_demod_dtmb_tune(struct dvb_frontend *fe, bool re_tune,
 
 		*delay = HZ / 4;
 		gxtv_demod_dtmb_set_frontend(fe);
-
-		if (is_ic_ver(IC_VER_TL1)) {
-			timer_begain(D_TIMER_DETECT);
-			firstdetet = 0;
-		} else {
-			firstdetet = dtmb_detect_first();
-		}
+		firstdetet = dtmb_detect_first();
 
 		if (firstdetet == 1) {
 			*status = FE_TIMEDOUT;
@@ -2874,8 +2856,7 @@ static bool enter_mode(int mode)
 	/*mem_buf = (long *)phys_to_virt(memstart);*/
 	if (mode == AM_FE_DTMB_N) {
 		Gxtv_Demod_Dtmb_Init(devn);
-		if (is_ic_ver(IC_VER_TL1))
-			timer_set_max(D_TIMER_DETECT, 500);
+
 	if (devn->cma_flag == 1) {
 		PR_DBG("CMA MODE, cma flag is %d,mem size is %d",
 			devn->cma_flag, devn->cma_mem_size);

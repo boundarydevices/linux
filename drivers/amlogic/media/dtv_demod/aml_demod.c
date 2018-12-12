@@ -655,7 +655,6 @@ static ssize_t aml_demod_dbg_store(struct file *file,
 			demod_set_sys_atsc_v4();
 			break;
 		case AML_DBG_DTMB_INIT:
-			demod_set_sys_dtmb_v4();
 			break;
 		default:
 			break;
