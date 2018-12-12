@@ -491,6 +491,10 @@ die_sig:
 	if (user_debug & UDBG_UNDEFINED) {
 		pr_info("%s (%d): undefined instruction: pc=%p\n",
 			current->comm, task_pid_nr(current), pc);
+#ifdef CONFIG_AMLOGIC_USER_FAULT
+		if (user_fault_debug_ratelimited())
+			show_all_pfn(current, regs);
+#endif
 		__show_regs(regs);
 		dump_instr(KERN_INFO, regs);
 	}

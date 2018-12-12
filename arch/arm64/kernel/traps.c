@@ -418,6 +418,10 @@ static void force_signal_inject(int signal, int code, struct pt_regs *regs,
 	    show_unhandled_signals_ratelimited()) {
 		pr_info("%s[%d]: %s: pc=%p\n",
 			current->comm, task_pid_nr(current), desc, pc);
+#ifdef CONFIG_AMLOGIC_USER_FAULT
+		show_all_pfn(current, regs);
+		show_regs(regs);
+#endif
 		dump_instr(KERN_INFO, regs);
 	}
 
