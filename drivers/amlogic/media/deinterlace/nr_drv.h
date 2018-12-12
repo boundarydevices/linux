@@ -24,7 +24,7 @@ struct nr_param_s {
 	int *addr;
 };
 
-#define NR4_PARAMS_NUM 25
+#define NR4_PARAMS_NUM (30)	//25
 #define dnr_param_t struct nr_param_s
 #define nr4_param_t struct nr_param_s
 
@@ -68,6 +68,16 @@ struct NR4_PARM_s {
 	unsigned short width;
 	unsigned short height;
 	unsigned short border_offset;
+
+	unsigned int sw_nr4_noise_thd;//u8
+	/*u1, 0: use nr4 global gain, 1: use field sad;*/
+	unsigned int sw_nr4_noise_sel;
+	unsigned int sw_nr4_noise_ctrl_dm_en;//u1
+
+	/*u8, threshold for scene change*/
+	unsigned int sw_nr4_scene_change_thd2;
+	/*u1, enable dm scene change check*/
+	unsigned int sw_dm_scene_change_en;
 };
 
 struct CUE_PARM_s {
@@ -170,5 +180,8 @@ void nr_process_in_irq(void);
 void nr_all_config(unsigned short nCol, unsigned short nRow,
 	unsigned short type);
 bool set_nr_ctrl_reg_table(unsigned int addr, unsigned int value);
+
+extern void cue_int(void);
+
 #endif
 

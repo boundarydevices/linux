@@ -6222,6 +6222,7 @@ static void di_reg_process_irq(void)
 					vframe->sig_fmt);
 
 		di_patch_post_update_mc_sw(DI_MC_SW_REG, true);
+		cue_int();
 		if (de_devp->flags & DI_LOAD_REG_FLAG)
 			up(&di_sema);
 		init_flag = 1;
