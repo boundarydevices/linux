@@ -123,8 +123,12 @@ static u32 omx_pts;
 static u32 omx_pts_set_index;
 static bool omx_run;
 static u32 omx_version = 3;
+#define OMX_PTS_DV_DEFAULT_UPPER 2500
+#define OMX_PTS_DV_DEFAULT_LOWER -1600
 static int omx_pts_interval_upper = 11000;
 static int omx_pts_interval_lower = -5500;
+static int omx_pts_dv_upper = OMX_PTS_DV_DEFAULT_UPPER;
+static int omx_pts_dv_lower = OMX_PTS_DV_DEFAULT_LOWER;
 static int omx_pts_set_from_hwc_count;
 static bool omx_check_previous_session;
 static u32 omx_cur_session = 0xffffffff;
@@ -5283,6 +5287,10 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			/*1500(60fps) 3000(30fps) 3750(24fps) for some video*/
 			/*that pts is not evenly*/
 			timestamp_pcrscr_set(omx_pts + DURATION_GCD);
+		} else if (is_dolby_vision_enable()
+			&& ((diff - omx_pts_dv_upper) > 0
+			|| (diff - omx_pts_dv_lower) < 0)) {
+			timestamp_pcrscr_set(omx_pts + DURATION_GCD);
 		}
 	} else
 		omx_pts = 0;
@@ -7020,13 +7028,19 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		}
 	} else if (type == VFRAME_EVENT_PROVIDER_FR_HINT) {
 #ifdef CONFIG_AM_VOUT
-		if ((data != NULL) && (video_seek_flag == 0))
+		if ((data != NULL) && (video_seek_flag == 0)) {
 			set_vframe_rate_hint((unsigned long)data);
+			omx_pts_dv_upper = DUR2PTS((unsigned long)data) * 3 / 2;
+			omx_pts_dv_lower = 0 - DUR2PTS((unsigned long)data);
+		}
 #endif
 	} else if (type == VFRAME_EVENT_PROVIDER_FR_END_HINT) {
 #ifdef CONFIG_AM_VOUT
-		if (video_seek_flag == 0)
+		if (video_seek_flag == 0) {
 			set_vframe_rate_end_hint();
+			omx_pts_dv_upper = OMX_PTS_DV_DEFAULT_UPPER;
+			omx_pts_dv_lower = OMX_PTS_DV_DEFAULT_LOWER;
+		}
 #endif
 	} else if (type == VFRAME_EVENT_PROVIDER_QUREY_DISPLAY_INFO) {
 		get_display_info(data);
