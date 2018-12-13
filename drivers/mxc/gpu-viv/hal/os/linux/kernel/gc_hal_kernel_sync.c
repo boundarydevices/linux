@@ -319,7 +319,7 @@ struct dma_fence * viv_fence_create(struct viv_sync_timeline *timeline,
 
     spin_lock_init(&fence->lock);
 
-    fence->signal = signal;
+    fence->signal = (gctSIGNAL)(uintptr_t)signal->id;
     fence->parent = timeline;
 
     seqno = (unsigned)atomic64_inc_return(&timeline->seqno);
@@ -353,6 +353,8 @@ struct dma_fence * viv_fence_create(struct viv_sync_timeline *timeline,
         fence->signal = NULL;
 
         dma_fence_signal_locked((struct dma_fence*)fence);
+        dma_fence_put((struct dma_fence*)fence);
+        fence = NULL;
     }
 
     return (struct dma_fence*)fence;
