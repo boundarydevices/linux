@@ -46,12 +46,6 @@
 		#size-cells = <2>;
 		ranges;
 		/* global autoconfigured region for contiguous allocations */
-
-		defendkey_reserved:linux,defendkey {
-			compatible = "amlogic, defendkey";
-			reg = <0x0 0x08300000 0x0 0x100000>;
-		};
-
 		ramoops@0x07400000 {
 			compatible = "ramoops";
 			reg = <0x0 0x07400000 0x0 0x00100000>;
@@ -875,10 +869,5 @@
 		reg = <0x1f>;
 		status = "okay";
 	};
-};
-
-&defendkey {
-	memory-region = <&defendkey_reserved>;
-	status = "okay";
 };
 

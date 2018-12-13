@@ -559,7 +559,7 @@
 		compatible = "amlogic, defendkey";
 		reg = <0x0 0xc8834500 0x0 0x4>; /*RNG_USR_DATA*/
 		mem_size = <0x0 0x100000>;
-		status = "disabled";
+		status = "okay";
 	};
 }; /* end of root */
 
