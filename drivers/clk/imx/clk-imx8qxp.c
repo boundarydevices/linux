@@ -567,7 +567,7 @@ static int imx8qxp_clk_probe(struct platform_device *pdev)
 	clks[IMX8QXP_IMG_PXL_LINK_DC1_CLK] = imx_clk_gate2_scu("img_pxl_link_dc1_clk", "pxl_img_clk_root", (void __iomem *)(IMG_PXL_LINK_DC1_LPCG), 0, FUNCTION_NAME(PD_IMAGING));
 	clks[IMX8QXP_IMG_PXL_LINK_CSI0_CLK] = imx_clk_gate2_scu("img_pxl_link_csi0_clk", "pxl_img_clk_root", (void __iomem *)(IMG_PXL_LINK_CSI0_LPCG), 0, FUNCTION_NAME(PD_IMAGING));
 	clks[IMX8QXP_IMG_PXL_LINK_CSI1_CLK] = imx_clk_gate2_scu("img_pxl_link_csi1_clk", "pxl_img_clk_root", (void __iomem *)(IMG_PXL_LINK_CSI1_LPCG), 0, FUNCTION_NAME(PD_IMAGING));
-	clks[IMX8QXP_IMG_PXL_LINK_HDMI_IN_CLK] = imx_clk_gate2_scu("img_pxl_link_hdmi_in_clk", "pxl_img_clk_root", (void __iomem *)(IMG_PXL_LINK_HDMI_LPCG), 0, FUNCTION_NAME(PD_IMAGING));
+	clks[IMX8QXP_IMG_PXL_LINK_HDMI_IN_CLK] = imx_clk_gate2_scu("img_pxl_link_hdmi_in_clk", "pxl_img_clk_root", (void __iomem *)(IMG_PXL_LINK_HDMI_LPCG), 0, FUNCTION_NAME(PD_HDMI_RX));
 	clks[IMX8QXP_IMG_PDMA_0_CLK] = imx_clk_gate2_scu("img_pdma0_clk", "pxl_img_clk_root", (void __iomem *)(IMG_PDMA_0_LPCG), 0, FUNCTION_NAME(PD_IMAGING_PDMA0));
 	clks[IMX8QXP_IMG_PDMA_1_CLK] = imx_clk_gate2_scu("img_pdma1_clk", "pxl_img_clk_root", (void __iomem *)(IMG_PDMA_1_LPCG), 0, FUNCTION_NAME(PD_IMAGING_PDMA1));
 	clks[IMX8QXP_IMG_PDMA_2_CLK] = imx_clk_gate2_scu("img_pdma2_clk", "pxl_img_clk_root", (void __iomem *)(IMG_PDMA_2_LPCG), 0, FUNCTION_NAME(PD_IMAGING_PDMA2));
