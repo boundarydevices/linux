@@ -945,6 +945,8 @@ static u32 force_blackout;
 static u32 disable_video = VIDEO_DISABLE_NONE;
 static u32 video_enabled __nosavedata;
 static u32 video_status_saved __nosavedata;
+static u32 hold_video;
+
 u32 get_video_enabled(void)
 {
 	return video_enabled;
@@ -1019,6 +1021,8 @@ static u32 toggle_count;
 static u32 last_frame_time;
 static u32 timer_count;
 static u32 vsync_count;
+static u64 last_frame_duration;
+
 static struct vpp_frame_par_s *cur_frame_par, *next_frame_par;
 static struct vpp_frame_par_s frame_parms[2];
 
@@ -2518,6 +2522,42 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 			    "Video: invalid frame dimension\n");
 		return;
 	}
+
+	if (hold_video) {
+		if ((cur_dispbuf != vf)
+			&& (vf->source_type != VFRAME_SOURCE_TYPE_OSD)) {
+			new_frame_count++;
+			if (vf->pts != 0) {
+				amlog_mask(LOG_MASK_TIMESTAMP,
+				"vpts to: 0x%x, scr: 0x%x, abs_scr: 0x%x\n",
+				    vf->pts, timestamp_pcrscr_get(),
+				    READ_MPEG_REG(SCR_HIU));
+
+				timestamp_vpts_set(vf->pts);
+				last_frame_duration = vf->duration;
+			} else if (last_frame_duration) {
+				amlog_mask(LOG_MASK_TIMESTAMP,
+				"vpts inc: 0x%x, scr: 0x%x, abs_scr: 0x%x\n",
+				    timestamp_vpts_get() +
+				    DUR2PTS(cur_dispbuf->duration),
+				    timestamp_pcrscr_get(),
+				    READ_MPEG_REG(SCR_HIU));
+
+				timestamp_vpts_inc(DUR2PTS
+					(last_frame_duration));
+
+				vpts_remainder +=
+					DUR2PTS_RM(last_frame_duration);
+				if (vpts_remainder >= 0xf) {
+					vpts_remainder -= 0xf;
+					timestamp_vpts_inc(-1);
+				}
+			}
+			video_vf_put(vf);
+			return;
+		}
+	}
+
 	if ((cur_dispbuf) && (cur_dispbuf != &vf_local) && (cur_dispbuf != vf)
 	    && (video_property_changed != 2)) {
 		if (cur_dispbuf->source_type == VFRAME_SOURCE_TYPE_OSD) {
@@ -8802,6 +8842,28 @@ static ssize_t video_global_output_store(struct class *cla,
 	return count;
 }
 
+static ssize_t video_hold_show(struct class *cla,
+				  struct class_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", hold_video);
+}
+
+static ssize_t video_hold_store(struct class *cla,
+				   struct class_attribute *attr,
+				   const char *buf, size_t count)
+{
+	int r;
+
+	if (debug_flag & DEBUG_FLAG_BLACKOUT)
+		pr_info("%s(%s)\n", __func__, buf);
+
+	r = kstrtoint(buf, 0, &hold_video);
+	if (r < 0)
+		return -EINVAL;
+
+	return count;
+}
+
 static ssize_t video_freerun_mode_show(struct class *cla,
 				       struct class_attribute *attr, char *buf)
 {
@@ -9578,6 +9640,10 @@ static struct class_attribute amvideo_class_attrs[] = {
 			0664,
 			video_global_output_show,
 			video_global_output_store),
+	__ATTR(hold_video,
+	       0664,
+	       video_hold_show,
+	       video_hold_store),
 	__ATTR(zoom,
 	       0664,
 	       video_zoom_show,
