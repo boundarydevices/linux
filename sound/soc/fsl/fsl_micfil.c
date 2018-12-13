@@ -70,9 +70,9 @@ struct fsl_micfil_soc_data {
 };
 
 static char *envp[] = {
-		"EVENT=PDM_VOICE_DETECT",
-		NULL,
-	};
+	"EVENT=PDM_VOICE_DETECT",
+	NULL,
+};
 
 static struct fsl_micfil_soc_data fsl_micfil_imx8mm = {
 	.imx = true,
