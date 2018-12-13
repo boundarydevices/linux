@@ -165,7 +165,7 @@ static void hdmitx_late_resume(struct early_suspend *h)
 	if (phdmi->hdmitx_clk_tree.hdmi_clk_vpu != NULL)
 		clk_prepare_enable(phdmi->hdmitx_clk_tree.hdmi_clk_vpu);
 
-	if (hdmitx_is_hdmi_vmode(info->name) == 1)
+	if (info && (hdmitx_is_hdmi_vmode(info->name) == 1))
 		phdmi->HWOp.CntlMisc(&hdmitx_device, MISC_HPLL_FAKE, 0);
 
 	phdmi->hpd_lock = 0;
