@@ -3750,7 +3750,7 @@
 	};
 
 	dsp: dsp@556e8000 {
-		compatible = "fsl,imx8qxp-dsp";
+		compatible = "fsl,imx8qm-dsp";
 		reserved-region = <&dsp_reserved>;
 		reg = <0x0 0x556e8000 0x0 0x88000>;
 		clocks = <&clk IMX8QM_AUD_DSP_IPG>,
