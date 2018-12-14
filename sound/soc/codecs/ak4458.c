@@ -656,13 +656,13 @@ static int ak4458_hw_params(struct snd_pcm_substream *substream,
 	int ret, dsd_bclk, channels, channels_max;
 	bool is_dsd = false;
 
-	channels = params_channels(params);
-	channels_max = dai->driver->playback.channels_max;
-
 #ifdef AK4458_ACKS_USE_MANUAL_MODE
 	u8 dfs1, dfs2;
 #endif
 	int nfs1;
+
+	channels = params_channels(params);
+	channels_max = dai->driver->playback.channels_max;
 
 	dev_dbg(dai->dev, "%s(%d)\n", __func__, __LINE__);
 
