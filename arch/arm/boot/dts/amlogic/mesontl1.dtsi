@@ -1120,8 +1120,9 @@
 			   <&clkc CLKID_SD_EMMC_C_P0_COMP>,
 			   <&clkc CLKID_FCLK_DIV2>,
 			   <&clkc CLKID_FCLK_DIV5>,
+			   <&clkc CLKID_GP0_PLL>,
 			   <&xtal>;
-		clock-names = "core", "clkin0", "clkin1", "clkin2", "xtal";
+		clock-names = "core","clkin0","clkin1","clkin2","clkin3","xtal";
 
 		bus-width = <8>;
 		cap-sd-highspeed;

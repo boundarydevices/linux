@@ -1192,15 +1192,20 @@ static int mmc_select_hs400(struct mmc_card *card)
 		pr_info("%s: no support driver strength type 1 and 4\n",
 				mmc_hostname(host));
 	}
+	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
+			   EXT_CSD_HS_TIMING, val,
+			   card->ext_csd.generic_cmd6_time,
+			   true, true, true);
 #else
 	val = EXT_CSD_TIMING_HS400 |
 	      card->drive_strength << EXT_CSD_DRV_STR_SHIFT;
-#endif
 
 	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 			   EXT_CSD_HS_TIMING, val,
 			   card->ext_csd.generic_cmd6_time,
 			   true, false, true);
+#endif
+
 	if (err) {
 		pr_err("%s: switch to hs400 failed, err:%d\n",
 			 mmc_hostname(host), err);
@@ -1211,9 +1216,11 @@ static int mmc_select_hs400(struct mmc_card *card)
 	mmc_set_timing(host, MMC_TIMING_MMC_HS400);
 	mmc_set_bus_speed(card);
 
+#ifndef	CONFIG_AMLOGIC_MMC
 	err = mmc_switch_status(card);
 	if (err)
 		goto out_err;
+#endif
 
 	return 0;
 

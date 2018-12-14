@@ -331,6 +331,7 @@ struct amlsd_platform {
 	u64 align[10];
 	int base_line;
 	unsigned int count;
+	unsigned int cmd_c;
 	unsigned int delay_cell;
 	/* int order; */
 	unsigned int rx_err;

@@ -2618,7 +2618,7 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 					mmc_hostname(host->mmc),
 					vstat, virqc);
 		host->status = HOST_RSP_CRC_ERR;
-		mrq->cmd->error = -EILSEQ;
+		mrq->cmd->error = -EBADMSG;
 	} else if (ista->resp_timeout) {
 		if (host->is_tunning == 0)
 			pr_err("%s: resp_timeout,vstat:0x%x,virqc:%x\n",
@@ -3327,6 +3327,16 @@ static int meson_mmc_probe(struct platform_device *pdev)
 #endif /* CONFIG_MESON_CPU_EMULATOR */
 	}
 	pr_info("%s() : success!\n", __func__);
+	if (host->ctrl_ver >= 3) {
+		ret = device_create_file(&pdev->dev, &dev_attr_emmc_eyetest);
+		if (ret)
+			dev_warn(mmc_dev(host->mmc),
+					"Unable to creat sysfs attributes\n");
+		ret = device_create_file(&pdev->dev, &dev_attr_emmc_clktest);
+		if (ret)
+			dev_warn(mmc_dev(host->mmc),
+					"Unable to creat sysfs attributes\n");
+	}
 	return 0;
 
 free_host:
@@ -3581,9 +3591,11 @@ static struct meson_mmc_data mmc_data_g12b = {
 	.sdmmc.hs.core_phase = 1,
 	.sdmmc.ddr.core_phase = 2,
 	.sdmmc.ddr.tx_phase = 0,
-	.sdmmc.hs2.core_phase = 3,
+	.sdmmc.hs2.core_phase = 2,
 	.sdmmc.hs2.tx_phase = 0,
-	.sdmmc.hs4.tx_delay = 0,
+	.sdmmc.hs4.tx_phase = 0,
+	.sdmmc.hs4.core_phase = 0,
+	.sdmmc.hs4.tx_delay = 16,
 	.sdmmc.sd_hs.core_phase = 2,
 	.sdmmc.sdr104.core_phase = 2,
 	.sdmmc.sdr104.tx_phase = 0,
@@ -3604,8 +3616,9 @@ static struct meson_mmc_data mmc_data_tl1 = {
 	.sdmmc.init.rx_phase = 0,
 	.sdmmc.hs.core_phase = 1,
 	.sdmmc.ddr.core_phase = 2,
-	.sdmmc.hs2.core_phase = 3,
-	.sdmmc.hs4.tx_delay = 0,
+	.sdmmc.hs2.core_phase = 2,
+	.sdmmc.hs4.core_phase = 0,
+	.sdmmc.hs4.tx_delay = 16,
 	.sdmmc.sd_hs.core_phase = 2,
 	.sdmmc.sdr104.core_phase = 2,
 };
