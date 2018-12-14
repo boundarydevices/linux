@@ -3339,7 +3339,7 @@ u16 fec_enet_select_queue(struct net_device *ndev, struct sk_buff *skb,
 	u16 vlan_tag;
 
 	if (!(id_entry->driver_data & FEC_QUIRK_HAS_AVB))
-		return skb_tx_hash(ndev, skb);
+		return fallback(ndev, skb, NULL);
 
 	vlan_tag = fec_enet_get_raw_vlan_tci(skb);
 	if (!vlan_tag)
