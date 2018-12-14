@@ -162,6 +162,99 @@ int arm_pmu_device_probe(struct platform_device *pdev,
 
 #define ARMV8_PMU_PDEV_NAME "armv8-pmu"
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+#define MAX_DELTA_CNT 4
+struct amlpmu_cpuinfo {
+	int irq_num;
+
+	/*
+	 * In interrupt generated cpu(affinity cpu)
+	 * If pmu no overflowed, then we need to send IPI to some other cpus to
+	 * fix it. And before send IPI, set corresponding cpu's fix_done and
+	 * fix_overflowed to zero, in corresponding cpu's IPI interrupt will set
+	 * fix_done to inform source cpu and if indeed pmu overflowed then also
+	 * set fix_overflowed to 1, then inerrupt generated cpu can feel that.
+	 */
+	int fix_done;
+	int fix_overflowed;
+
+	/* for interrupt affinity prediction */
+	ktime_t last_stamp;
+	s64 stamp_deltas[MAX_DELTA_CNT];
+	s64 avg_delta;
+	ktime_t next_predicted_stamp;
+
+	/*
+	 * irq state account of this cpu
+	 *
+	 * - valid_irq_cnt:
+	 *   valid irq cnt.(pmu overflow happened)
+	 * - fix_irq_cnt:
+	 *   when this cpu is pmu interrupt generated affinity cpu, a pmu
+	 *   interrupt if cpu affinity predict failed so no pmu overflow
+	 *   happened and succeeded send IPI to other cpu, then it's a send
+	 *   fix irq. So the lower is better.
+	 * - empty_irq_cnt:
+	 *   when this cpu is pmu interrupt generated affinity cpu, a pmu
+	 *   interrupt that no overflow happened and also no fix IPI sended to
+	 *   other cpus, then it's a empty irq.
+	 *   when this cpu is not affinity cpu, a IPI interrupt(pmu fix from
+	 *   affinity cpu) that no pmu overflow happened, it's a empty irq.
+	 *
+	 *   attention:
+	 *   A interrupt can be a valid_irq and also a fix_irq.
+	 */
+	unsigned long valid_irq_cnt;
+	unsigned long fix_irq_cnt;
+	unsigned long empty_irq_cnt;
+
+	unsigned long valid_irq_time;
+	unsigned long fix_irq_time;
+	unsigned long empty_irq_time;
+
+	unsigned long last_valid_irq_cnt;
+	unsigned long last_fix_irq_cnt;
+	unsigned long last_empty_irq_cnt;
+
+	unsigned long last_valid_irq_time;
+	unsigned long last_fix_irq_time;
+	unsigned long last_empty_irq_time;
+};
+
+
+#define MAX_CLUSTER_NR 2
+struct amlpmu_context {
+	struct amlpmu_cpuinfo __percpu *cpuinfo;
+
+	/* struct arm_pmu */
+	struct arm_pmu *pmu;
+
+	int clusterb_enabled;
+
+	unsigned int __iomem *regs[MAX_CLUSTER_NR];
+	int irqs[MAX_CLUSTER_NR];
+	struct cpumask cpumasks[MAX_CLUSTER_NR];
+	int first_cpus[MAX_CLUSTER_NR];
+
+	/*
+	 * In main pmu irq route wait for other cpu fix done may cause lockup,
+	 * when lockup we disable main irq for a while.
+	 * relax_timer will enable main irq again.
+	 */
+	struct hrtimer relax_timer;
+
+	unsigned int relax_timer_ns;
+	unsigned int max_wait_cnt;
+};
+
+extern struct amlpmu_context amlpmu_ctx;
+
+int amlpmu_handle_irq(struct arm_pmu *cpu_pmu, int irq_num, int has_overflowed);
+
+/* defined int arch/arm(64)/kernel/perf_event(_v7).c */
+void amlpmu_handle_irq_ipi(void *arg);
+#endif
+
 #endif /* CONFIG_ARM_PMU */
 
 #endif /* __ARM_PMU_H__ */

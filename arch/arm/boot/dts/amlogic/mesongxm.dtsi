@@ -205,7 +205,7 @@
 	};
 
 	timer {
-		compatible = "arm,armv8-timer";
+		compatible = "arm,armv7-timer";
 		interrupts = <GIC_PPI 13 0xff08>,
 				<GIC_PPI 14 0xff08>,
 				<GIC_PPI 11 0xff08>,
@@ -223,12 +223,17 @@
 		bit_mode=<12>;
 		bit_resolution=<0>;
 	};
+
 	arm_pmu {
-		compatible = "arm,armv8-pmuv3";
-		interrupts = <0 137 4>,
-			     <0 138 4>,
-			     <0 153 4>,
-			     <0 154 4>;
+		compatible = "arm,cortex-a15-pmu";
+		/* clusterb-enabled; */
+		interrupts = <GIC_SPI 137 IRQ_TYPE_LEVEL_HIGH>;
+		reg = <0xc8834400 0x4>;
+		cpumasks = <0xf>;
+		/* default 10ms */
+		relax-timer-ns = <10000000>;
+		/* default 10000us */
+		max-wait-cnt = <10000>;
 	};
 
 	gic: interrupt-controller@2c001000 {

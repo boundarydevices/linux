@@ -73,13 +73,6 @@ extern void smp_send_stop(void);
  */
 extern void smp_send_reschedule(int cpu);
 
-#ifdef CONFIG_AMLOGIC_MODIFY
-/*
- * sends a 'aml pmu' event to another CPU:
- */
-extern void smp_send_aml_pmu(int cpu);
-#endif
-
 /*
  * Prepare machine for booting other CPUs.
  */

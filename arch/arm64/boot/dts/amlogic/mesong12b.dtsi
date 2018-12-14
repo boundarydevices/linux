@@ -215,9 +215,19 @@
 		bit_mode=<12>;
 		bit_resolution=<0>;
 	};
+
 	arm_pmu {
 		compatible = "arm,armv8-pmuv3";
-		interrupts = <0 137 4>;
+		clusterb-enabled;
+		interrupts = <GIC_SPI 137 IRQ_TYPE_LEVEL_HIGH>,
+			<GIC_SPI 171 IRQ_TYPE_LEVEL_HIGH>;
+		reg = <0x0 0xff634680 0x0 0x4>,
+			<0x0 0xff6347c0 0x0 0x04>;
+		cpumasks = <0x3 0x3C>;
+		/* default 10ms */
+		relax-timer-ns = <10000000>;
+		/* default 10000us */
+		max-wait-cnt = <10000>;
 	};
 
 	gic: interrupt-controller@2c001000 {

@@ -155,21 +155,17 @@
 		bit_mode=<12>;
 		bit_resolution=<0>;
 	};
+
 	arm_pmu {
 		compatible = "arm,cortex-a15-pmu";
-		interrupts = <0 137 4>;
-		reg = <0xff634400 0x1000>;
-
-		/* addr = base + offset << 2 */
-		sys_cpu_status0_offset = <0xa0>;
-
-		sys_cpu_status0_pmuirq_mask = <0xf>;
-
+		/* clusterb-enabled; */
+		interrupts = <GIC_SPI 137 IRQ_TYPE_LEVEL_HIGH>;
+		reg = <0xff634680 0x4>;
+		cpumasks = <0xf>;
 		/* default 10ms */
-		relax_timer_ns = <10000000>;
-
+		relax-timer-ns = <10000000>;
 		/* default 10000us */
-		max_wait_cnt = <10000>;
+		max-wait-cnt = <10000>;
 	};
 
 	gic: interrupt-controller@2c001000 {

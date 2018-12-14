@@ -5,11 +5,7 @@
 #include <linux/threads.h>
 #include <asm/irq.h>
 
-#ifdef CONFIG_AMLOGIC_MODIFY
-#define NR_IPI	8
-#else
 #define NR_IPI	7
-#endif
 
 typedef struct {
 	unsigned int __softirq_pending;

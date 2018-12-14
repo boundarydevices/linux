@@ -48,10 +48,6 @@
 #include <asm/mach/arch.h>
 #include <asm/mpu.h>
 
-#ifdef CONFIG_AMLOGIC_MODIFY
-#include <asm/perf_event.h>
-#endif
-
 #define CREATE_TRACE_POINTS
 #include <trace/events/ipi.h>
 
@@ -76,9 +72,6 @@ enum ipi_msg_type {
 	IPI_CPU_STOP,
 	IPI_IRQ_WORK,
 	IPI_COMPLETION,
-	#ifdef CONFIG_AMLOGIC_MODIFY
-	IPI_AML_PMU,
-	#endif
 	IPI_CPU_BACKTRACE,
 	/*
 	 * SGI8-15 can be reserved by secure firmware, and thus may
@@ -489,9 +482,6 @@ static const char *ipi_types[NR_IPI] __tracepoint_string = {
 	S(IPI_CPU_STOP, "CPU stop interrupts"),
 	S(IPI_IRQ_WORK, "IRQ work interrupts"),
 	S(IPI_COMPLETION, "completion interrupts"),
-#ifdef CONFIG_AMLOGIC_MODIFY
-	S(IPI_AML_PMU, "AML pmu cross interrupts"),
-#endif
 };
 
 static void smp_cross_call(const struct cpumask *target, unsigned int ipinr)
@@ -499,13 +489,6 @@ static void smp_cross_call(const struct cpumask *target, unsigned int ipinr)
 	trace_ipi_raise_rcuidle(target, ipi_types[ipinr]);
 	__smp_cross_call(target, ipinr);
 }
-
-#ifdef CONFIG_AMLOGIC_MODIFY
-void smp_send_aml_pmu(int cpu)
-{
-	smp_cross_call(cpumask_of(cpu), IPI_AML_PMU);
-}
-#endif
 
 void show_ipi_list(struct seq_file *p, int prec)
 {
@@ -667,12 +650,6 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		irq_exit();
 		printk_nmi_exit();
 		break;
-
-#ifdef CONFIG_AMLOGIC_MODIFY
-	case IPI_AML_PMU:
-		armv8pmu_handle_irq_ipi();
-		break;
-#endif
 
 	default:
 		pr_crit("CPU%u: Unknown IPI message 0x%x\n",
