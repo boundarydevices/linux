@@ -3331,7 +3331,7 @@ u16 fec_enet_get_raw_vlan_tci(struct sk_buff *skb)
 }
 
 u16 fec_enet_select_queue(struct net_device *ndev, struct sk_buff *skb,
-			  void *accel_priv, select_queue_fallback_t fallback)
+			  struct net_device *sb_dev, select_queue_fallback_t fallback)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	const struct platform_device_id *id_entry =
