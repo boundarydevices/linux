@@ -828,32 +828,42 @@ static int fsl_dsp_probe(struct platform_device *pdev)
 		return sciErr;
 	};
 
-	sciErr = sc_misc_set_control(dsp_priv->dsp_ipcHandle, SC_R_DSP,
-				SC_C_OFS_SEL, 1);
-	if (sciErr != SC_ERR_NONE) {
-		dev_err(&pdev->dev, "Error system address offset source select\n");
-		return -EIO;
-	}
+	if (dsp_priv->dsp_board_type == DSP_IMX8QXP_TYPE) {
+		sciErr = sc_misc_set_control(dsp_priv->dsp_ipcHandle, SC_R_DSP,
+					SC_C_OFS_SEL, 1);
+		if (sciErr != SC_ERR_NONE) {
+			dev_err(&pdev->dev, "Error system address offset source select\n");
+			return -EIO;
+		}
 
-	sciErr = sc_misc_set_control(dsp_priv->dsp_ipcHandle, SC_R_DSP,
-				SC_C_OFS_AUDIO, 0x80);
-	if (sciErr != SC_ERR_NONE) {
-		dev_err(&pdev->dev, "Error system address offset of AUDIO\n");
-		return -EIO;
-	}
+		sciErr = sc_misc_set_control(dsp_priv->dsp_ipcHandle, SC_R_DSP,
+					SC_C_OFS_PERIPH, 0x5A);
+		if (sciErr != SC_ERR_NONE) {
+			dev_err(&pdev->dev, "Error system address offset of PERIPH %d\n",
+				sciErr);
+			return -EIO;
+		}
 
-	sciErr = sc_misc_set_control(dsp_priv->dsp_ipcHandle, SC_R_DSP,
-				SC_C_OFS_PERIPH, 0x5A);
-	if (sciErr != SC_ERR_NONE) {
-		dev_err(&pdev->dev, "Error system address offset of PERIPH %d\n",
-			sciErr);
-	}
+		sciErr = sc_misc_set_control(dsp_priv->dsp_ipcHandle, SC_R_DSP,
+					SC_C_OFS_IRQ, 0x51);
+		if (sciErr != SC_ERR_NONE) {
+			dev_err(&pdev->dev, "Error system address offset of IRQ\n");
+			return -EIO;
+		}
 
-	sciErr = sc_misc_set_control(dsp_priv->dsp_ipcHandle, SC_R_DSP,
-				SC_C_OFS_IRQ, 0x51);
-	if (sciErr != SC_ERR_NONE) {
-		dev_err(&pdev->dev, "Error system address offset of IRQ\n");
-		return -EIO;
+		sciErr = sc_misc_set_control(dsp_priv->dsp_ipcHandle, SC_R_DSP,
+					SC_C_OFS_AUDIO, 0x80);
+		if (sciErr != SC_ERR_NONE) {
+			dev_err(&pdev->dev, "Error system address offset of AUDIO\n");
+			return -EIO;
+		}
+	} else {
+		sciErr = sc_misc_set_control(dsp_priv->dsp_ipcHandle, SC_R_DSP,
+					SC_C_OFS_SEL, 0);
+		if (sciErr != SC_ERR_NONE) {
+			dev_err(&pdev->dev, "Error system address offset source select\n");
+			return -EIO;
+		}
 	}
 
 	ret = dsp_mu_init(dsp_priv);
