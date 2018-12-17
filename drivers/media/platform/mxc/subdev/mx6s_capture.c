@@ -1737,6 +1737,10 @@ static int mx6s_csi_mux_sel(struct mx6s_csi_dev *csi_dev)
 	return ret;
 }
 
+static const struct v4l2_async_notifier_operations mx6s_capture_async_ops = {
+	.bound = subdev_notifier_bound,
+};
+
 static int mx6sx_register_subdevs(struct mx6s_csi_dev *csi_dev)
 {
 	struct device_node *parent = csi_dev->dev->of_node;
@@ -1771,7 +1775,7 @@ static int mx6sx_register_subdevs(struct mx6s_csi_dev *csi_dev)
 
 	csi_dev->subdev_notifier.subdevs = csi_dev->async_subdevs;
 	csi_dev->subdev_notifier.num_subdevs = 1;
-	csi_dev->subdev_notifier.bound = subdev_notifier_bound;
+	csi_dev->subdev_notifier.ops = &mx6s_capture_async_ops;
 
 	ret = v4l2_async_notifier_register(&csi_dev->v4l2_dev,
 					&csi_dev->subdev_notifier);
