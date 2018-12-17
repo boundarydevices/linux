@@ -892,7 +892,7 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 	struct csi_state *state = notifier_to_mipi_dev(notifier);
 
 	/* Find platform data for this sensor subdev */
-	if (state->asd.match.fwnode.fwnode == dev_fwnode(subdev->dev))
+	if (state->asd.match.fwnode == dev_fwnode(subdev->dev))
 		state->sensor_sd = subdev;
 
 	if (subdev == NULL)
@@ -965,7 +965,7 @@ static int mipi_csis_subdev_host(struct csi_state *state)
 		}
 
 		state->asd.match_type = V4L2_ASYNC_MATCH_FWNODE;
-		state->asd.match.fwnode.fwnode = of_fwnode_handle(rem);
+		state->asd.match.fwnode = of_fwnode_handle(rem);
 		state->async_subdevs[0] = &state->asd;
 
 		of_node_put(rem);

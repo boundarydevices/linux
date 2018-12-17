@@ -1685,7 +1685,7 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 	struct mx6s_csi_dev *csi_dev = notifier_to_mx6s_dev(notifier);
 
 	/* Find platform data for this sensor subdev */
-	if (csi_dev->asd.match.fwnode.fwnode == dev_fwnode(subdev->dev))
+	if (csi_dev->asd.match.fwnode == dev_fwnode(subdev->dev))
 		csi_dev->sd = subdev;
 
 	if (subdev == NULL)
@@ -1762,7 +1762,7 @@ static int mx6sx_register_subdevs(struct mx6s_csi_dev *csi_dev)
 		}
 
 		csi_dev->asd.match_type = V4L2_ASYNC_MATCH_FWNODE;
-		csi_dev->asd.match.fwnode.fwnode = of_fwnode_handle(rem);
+		csi_dev->asd.match.fwnode = of_fwnode_handle(rem);
 		csi_dev->async_subdevs[0] = &csi_dev->asd;
 
 		of_node_put(rem);
