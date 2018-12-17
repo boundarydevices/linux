@@ -100,7 +100,7 @@
 		ion_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x4C00000>;
+			size = <0x0 0x2400000>;
 			alignment = <0x0 0x400000>;
 		};
 
