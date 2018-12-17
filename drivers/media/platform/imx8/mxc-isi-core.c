@@ -217,6 +217,13 @@ static int mxc_isi_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 static int mxc_isi_pm_suspend(struct device *dev)
 {
+	struct mxc_isi_dev *mxc_isi = dev_get_drvdata(dev);
+
+	if (mxc_isi->is_streaming) {
+		dev_warn(dev, "running, prevent entering suspend.\n");
+		return -EAGAIN;
+	}
+
 	return pm_runtime_force_suspend(dev);
 }
 
