@@ -22,6 +22,11 @@
 #include "optee_private.h"
 #include "optee_smc.h"
 
+#if defined(CONFIG_SOC_IMX6) || defined(CONFIG_SOC_IMX7) \
+	|| (CONFIG_HAVE_IMX8_SOC)
+#include <linux/busfreq-imx.h>
+#endif
+
 struct optee_call_waiter {
 	struct list_head list_node;
 	struct completion c;
@@ -139,8 +144,19 @@ u32 optee_do_call_with_arg(struct tee_context *ctx, phys_addr_t parg)
 
 	param.a0 = OPTEE_SMC_CALL_WITH_ARG;
 	reg_pair_from_64(&param.a1, &param.a2, parg);
+
 	/* Initialize waiter */
 	optee_cq_wait_init(&optee->call_queue, &w);
+
+#if defined(CONFIG_SOC_IMX6) || defined(CONFIG_SOC_IMX7) \
+	|| (CONFIG_HAVE_IMX8_SOC)
+	/*
+	 * Request Busfreq to HIGH to prevent DDR self-refresh while
+	 * executing Secure stuff
+	 */
+	request_bus_freq(BUS_FREQ_HIGH);
+#endif
+
 	while (true) {
 		struct arm_smccc_res res;
 
@@ -165,6 +181,14 @@ u32 optee_do_call_with_arg(struct tee_context *ctx, phys_addr_t parg)
 			break;
 		}
 	}
+
+#if defined(CONFIG_SOC_IMX6) || defined(CONFIG_SOC_IMX7) \
+	|| (CONFIG_HAVE_IMX8_SOC)
+	/*
+	 * Release Busfreq from HIGH
+	 */
+	release_bus_freq(BUS_FREQ_HIGH);
+#endif
 
 	/*
 	 * We're done with our thread in secure world, if there's any
