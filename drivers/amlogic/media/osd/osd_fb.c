@@ -3061,6 +3061,15 @@ static ssize_t store_osd_plane_alpha(
 	return count;
 }
 
+static ssize_t show_osd_status(struct device *device,
+			       struct device_attribute *attr,
+			       char *buf)
+{
+	struct fb_info *fb_info = dev_get_drvdata(device);
+
+	return snprintf(buf, PAGE_SIZE, "osd[%d] enable: %d\n",
+				fb_info->node, osd_hw.enable[fb_info->node]);
+}
 
 static inline  int str2lower(char *str)
 {
@@ -3270,6 +3279,8 @@ static struct device_attribute osd_attrs[] = {
 			show_osd_dimm, store_osd_dimm),
 	__ATTR(osd_plane_alpha, 0644,
 			show_osd_plane_alpha, store_osd_plane_alpha),
+	__ATTR(osd_status, 0444,
+			show_osd_status, NULL),
 
 };
 
@@ -3318,6 +3329,8 @@ static struct device_attribute osd_attrs_viu2[] = {
 			show_osd_afbc_format, store_osd_afbc_format),
 	__ATTR(osd_rotate, 0644,
 			show_osd_rotate, store_osd_rotate),
+	__ATTR(osd_status, 0444,
+			show_osd_status, NULL),
 };
 
 #ifdef CONFIG_PM
