@@ -17,6 +17,10 @@
 #define CREATE_TRACE_POINTS
 #include "optee_trace.h"
 
+#if defined(CONFIG_HAVE_IMX_BUSFREQ)
+#include <linux/busfreq-imx.h>
+#endif
+
 struct optee_call_waiter {
 	struct list_head list_node;
 	struct completion c;
@@ -135,8 +139,19 @@ u32 optee_do_call_with_arg(struct tee_context *ctx, phys_addr_t parg)
 
 	param.a0 = OPTEE_SMC_CALL_WITH_ARG;
 	reg_pair_from_64(&param.a1, &param.a2, parg);
+
 	/* Initialize waiter */
 	optee_cq_wait_init(&optee->call_queue, &w);
+
+#if defined(CONFIG_HAVE_IMX_BUSFREQ)
+	/*
+	 * Request Busfreq to HIGH to prevent DDR self-refresh while
+	 * executing Secure stuff
+	 */
+	if (optee->sec_caps & OPTEE_SMC_SEC_CAP_IMX_BUSFREQ)
+		request_bus_freq(BUS_FREQ_HIGH);
+#endif
+
 	while (true) {
 		struct arm_smccc_res res;
 
@@ -166,6 +181,15 @@ u32 optee_do_call_with_arg(struct tee_context *ctx, phys_addr_t parg)
 	}
 
 	optee_rpc_finalize_call(&call_ctx);
+
+#if defined(CONFIG_HAVE_IMX_BUSFREQ)
+	/*
+	 * Release Busfreq from HIGH
+	 */
+	if (optee->sec_caps & OPTEE_SMC_SEC_CAP_IMX_BUSFREQ)
+		release_bus_freq(BUS_FREQ_HIGH);
+#endif
+
 	/*
 	 * We're done with our thread in secure world, if there's any
 	 * thread waiters wake up one.
