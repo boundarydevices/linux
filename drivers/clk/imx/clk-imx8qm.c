@@ -181,7 +181,7 @@ static int imx8qm_clk_probe(struct platform_device *pdev)
 	clks[IMX8QM_AUD_PLL1_DIV] = imx_clk_divider_scu("audio_pll1_div", SC_R_AUDIO_PLL_1, SC_PM_CLK_PLL);
 	clks[IMX8QM_DC0_PLL0_DIV] = imx_clk_divider_scu("dc0_pll0_div", SC_R_DC_0_PLL_0, SC_PM_CLK_PLL);
 	clks[IMX8QM_DC0_PLL1_DIV] = imx_clk_divider_scu("dc0_pll1_div", SC_R_DC_0_PLL_1, SC_PM_CLK_PLL);
-	clks[IMX8QM_DC1_PLL1_DIV] = imx_clk_divider_scu("dc1_pll0_div", SC_R_DC_1_PLL_0, SC_PM_CLK_PLL);
+	clks[IMX8QM_DC1_PLL0_DIV] = imx_clk_divider_scu("dc1_pll0_div", SC_R_DC_1_PLL_0, SC_PM_CLK_PLL);
 	clks[IMX8QM_DC1_PLL1_DIV] = imx_clk_divider_scu("dc1_pll1_div", SC_R_DC_1_PLL_1, SC_PM_CLK_PLL);
 	clks[IMX8QM_HDMI_AV_PLL_DIV] = imx_clk_divider_scu("hdmi_av_pll_div", SC_R_HDMI_PLL_1, SC_PM_CLK_PLL);
 	clks[IMX8QM_HDMI_DIG_PLL_DIV] = imx_clk_divider_scu("hdmi_dig_pll_div", SC_R_HDMI_PLL_0, SC_PM_CLK_PLL);
