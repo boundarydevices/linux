@@ -1022,6 +1022,8 @@ static int mxc_isi_cap_streamon(struct file *file, void *priv,
 	mxc_isi_channel_enable(mxc_isi);
 	mxc_isi_pipeline_enable(mxc_isi, 1);
 
+	mxc_isi->is_streaming = 1;
+
 	return ret;
 }
 
@@ -1036,6 +1038,8 @@ static int mxc_isi_cap_streamoff(struct file *file, void *priv,
 	mxc_isi_pipeline_enable(mxc_isi, 0);
 	mxc_isi_channel_disable(mxc_isi);
 	ret = vb2_ioctl_streamoff(file, priv, type);
+
+	mxc_isi->is_streaming = 0;
 
 	return ret;
 }

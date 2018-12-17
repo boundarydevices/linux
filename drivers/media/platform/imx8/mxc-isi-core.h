@@ -311,6 +311,7 @@ struct mxc_isi_dev {
 	unsigned int		deinterlace:1;
 	unsigned int		parallel_csi:1;
 	unsigned int		is_m2m:1;
+	unsigned int		is_streaming:1;
 
 	struct mxc_isi_ctrls ctrls;
 	u8			alpha;		/* goable alpha */

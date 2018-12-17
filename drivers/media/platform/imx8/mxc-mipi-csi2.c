@@ -786,6 +786,14 @@ static int mipi_csi2_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 static int  mipi_csi2_pm_suspend(struct device *dev)
 {
+	struct v4l2_subdev *sd = dev_get_drvdata(dev);
+	struct mxc_mipi_csi2_dev *csi2dev = sd_to_mxc_mipi_csi2_dev(sd);
+
+	if (csi2dev->running > 0) {
+		dev_warn(dev, "running, prevent entering suspend.\n");
+		return -EAGAIN;
+	}
+
 	return pm_runtime_force_suspend(dev);
 }
 
