@@ -870,6 +870,9 @@ static irqreturn_t sdma_int_handler(int irq, void *dev_id)
 	struct sdma_engine *sdma = dev_id;
 	unsigned long stat;
 
+	clk_enable(sdma->clk_ipg);
+	clk_enable(sdma->clk_ahb);
+
 	stat = readl_relaxed(sdma->regs + SDMA_H_INTR);
 	writel_relaxed(stat, sdma->regs + SDMA_H_INTR);
 	/* channel 0 is special and not handled here, see run_channel0() */
@@ -899,6 +902,9 @@ static irqreturn_t sdma_int_handler(int irq, void *dev_id)
 		__clear_bit(channel, &stat);
 		spin_unlock(&sdmac->vc.lock);
 	}
+
+	clk_disable(sdma->clk_ipg);
+	clk_disable(sdma->clk_ahb);
 
 	return IRQ_HANDLED;
 }
