@@ -44,4 +44,6 @@ int adaptive_combing_fixing(
 	unsigned int field_diff, unsigned int frame_diff,
 	int bit_mode);
 void adpative_combing_exit(void);
+extern void mtn_int_combing_glbmot(void);
+
 #endif

@@ -295,7 +295,12 @@ struct combing_status_s *adpative_combing_config(unsigned int width,
 	cmb_param.prog_flag = prog;
 	return &cmb_status;
 }
-
+void mtn_int_combing_glbmot(void)
+{
+	if (is_meson_tl1_cpu()) {/*from VLSI yanling.liu*/
+		combing_glbmot_radprat[0] = 30;
+	}
+}
 void adpative_combing_exit(void)
 {
 }

@@ -4968,10 +4968,10 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 			/*it means use previous field for MC*/
 			/*else not pulldown,mcdi_mcpreflag is 2*/
 			/*it means use forward & previous field for MC*/
-			if (is_meson_txhd_cpu())
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXHD))
 				mc_pre_flag = 2;
 		} else {
-			if (is_meson_txhd_cpu())
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXHD))
 				mc_pre_flag = 1;
 			post_blend_mode = 1;
 		}
@@ -5008,8 +5008,7 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 			di_post_stru.di_mcvecrd_mif.canvas_num =
 				di_buf->di_buf_dup_p[2]->mcvec_canvas_idx;
 			mc_pre_flag = is_meson_txl_cpu()?0:(overturn?1:0);
-			if (is_meson_txlx_cpu() || is_meson_gxlx_cpu() ||
-				is_meson_txhd_cpu())
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX))
 				invert_mv = true;
 			else if (!overturn)
 				di_post_stru.di_buf2_mif.canvas0_addr0 =
@@ -5021,10 +5020,10 @@ de_post_process(void *arg, unsigned int zoom_start_x_lines,
 			/*it means use previous field for MC*/
 			/*else not pulldown,mcdi_mcpreflag is 2*/
 			/*it means use forward & previous field for MC*/
-			if (is_meson_txhd_cpu())
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXHD))
 				mc_pre_flag = 2;
 		} else {
-			if (is_meson_txhd_cpu())
+			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXHD))
 				mc_pre_flag = 1;
 			post_blend_mode = 1;
 		}
@@ -7523,6 +7522,7 @@ static void set_di_flag(void)
 		pldn_dly1 = 2;
 	}
 
+	mtn_int_combing_glbmot();
 }
 
 static const struct reserved_mem_ops rmem_di_ops = {

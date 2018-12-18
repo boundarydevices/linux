@@ -2722,11 +2722,22 @@ void di_post_switch_buffer(
 		DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL,
 			di_mcvecrd_mif->vecrd_offset, 12, 3);
 		if (di_mcvecrd_mif->blend_en) {
-			DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL,
-				mcen_mode, 0, 2);
-			DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL, 1, 11, 1);
-			DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL,
-				3, 18, 2);
+			if (blend_mode == 1) {
+				DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL,
+					mcen_mode, 0, 2);
+				DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL,
+					0, 11, 1);
+				DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL,
+					2, 18, 2);
+			} else {
+				DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL,
+					mcen_mode, 0, 2);
+				DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL,
+					1, 11, 1);
+				DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL,
+					3, 18, 2);
+
+			}
 		} else {
 			DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL,
 				0, 0, 2);
@@ -3174,7 +3185,7 @@ void di_post_read_reverse_irq(bool reverse, unsigned char mc_pre_flag,
 			DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MCVECRD_X, 1, 30, 1);
 			DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MCVECRD_Y, 1, 30, 1);
 			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL)) {
-				if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX)) {
+				if (is_meson_txlx_cpu()) {
 					DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL,
 						pre_flag, 8, 2);
 					flag_val = (pre_flag != 2) ? 0 : 1;
@@ -3218,7 +3229,7 @@ void di_post_read_reverse_irq(bool reverse, unsigned char mc_pre_flag,
 			DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MCVECRD_X, 0, 30, 1);
 			DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MCVECRD_Y, 0, 30, 1);
 			if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL)) {
-				if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX)) {
+				if (is_meson_txlx_cpu()) {
 					DI_VSYNC_WR_MPEG_REG_BITS(MCDI_MC_CRTL,
 						pre_flag, 8, 2);
 					flag_val = (pre_flag != 2) ? 0 : 1;
