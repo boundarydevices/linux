@@ -25,6 +25,9 @@
 #include <asm/cputype.h>
 #include <asm/topology.h>
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+#include <linux/sched_energy.h>
+#endif
 /*
  * cpu capacity scale management
  */
@@ -281,6 +284,7 @@ void store_cpu_topology(unsigned int cpuid)
 		cpu_topology[cpuid].socket_id, mpidr);
 }
 
+#ifndef CONFIG_AMLOGIC_MODIFY
 /*
  * ARM TC2 specific energy cost model data. There are no unit requirements for
  * the data. Data can be normalized to any reference point, but the
@@ -386,7 +390,66 @@ static struct sched_group_energy energy_core_a15 = {
 	  .nr_cap_states  = ARRAY_SIZE(cap_states_core_a15),
 	  .cap_states     = cap_states_core_a15,
 };
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+/* sd energy functions */
+static inline
+const struct sched_group_energy * const cpu_cluster_energy(int cpu)
+{
+	struct sched_group_energy *sge = sge_array[cpu][SD_LEVEL1];
+
+	if (!sge) {
+		pr_debug("Invalid sched_group_energy for Cluster%d\n", cpu);
+		return NULL;
+	}
+
+	return sge;
+}
+
+static inline
+const struct sched_group_energy * const cpu_core_energy(int cpu)
+{
+	struct sched_group_energy *sge = sge_array[cpu][SD_LEVEL0];
+
+	if (!sge) {
+		pr_debug("Invalid sched_group_energy for Cluster%d\n", cpu);
+		return NULL;
+	}
+
+	return sge;
+}
+
+static int cpu_cpu_flags(void)
+{
+	return SD_ASYM_CPUCAPACITY;
+}
+
+static inline int cpu_corepower_flags(void)
+{
+	return SD_SHARE_PKG_RESOURCES | SD_SHARE_POWERDOMAIN |
+		SD_SHARE_CAP_STATES;
+}
+
+static struct sched_domain_topology_level arm_topology[] = {
+#ifdef CONFIG_SCHED_MC
+	{
+		cpu_coregroup_mask,
+		cpu_corepower_flags,
+		cpu_core_energy,
+		SD_INIT_NAME(MC)
+	},
+#endif
+	{
+		cpu_cpu_mask,
+		cpu_cpu_flags,
+		cpu_cluster_energy,
+		SD_INIT_NAME(DIE)
+	},
+	{ NULL, },
+};
+
+#else
 /* sd energy functions */
 static inline
 const struct sched_group_energy * const cpu_cluster_energy(int cpu)
@@ -415,6 +478,7 @@ static struct sched_domain_topology_level arm_topology[] = {
 	{ cpu_cpu_mask, NULL, cpu_cluster_energy, SD_INIT_NAME(DIE) },
 	{ NULL, },
 };
+#endif /* CONFIG_AMLOGIC_MODIFY */
 
 /*
  * init_cpu_topology is called at boot when only one cpu is running
@@ -440,4 +504,8 @@ void __init init_cpu_topology(void)
 
 	/* Set scheduler topology descriptor */
 	set_sched_topology(arm_topology);
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+	init_sched_energy_costs();
+#endif
 }
