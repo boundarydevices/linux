@@ -9,8 +9,8 @@ config AMLOGIC_DDR_TOOL
 	  Please see folllowing configs
 
 config AMLOGIC_DDR_WINDOW_TOOL
-	bool "Meson ddr window tool"
-	default n
+	tristate "Meson ddr window tool"
+	default m
 	depends on AMLOGIC_DDR_TOOL
 	help
 	  This config enables test for ddr window.
