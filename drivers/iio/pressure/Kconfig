@@ -227,4 +227,61 @@ config ZPA2326_SPI
 	tristate
 	select REGMAP_SPI
 
+config ST_LPS22HB_IIO
+	tristate "STMicroelectronics LPS22HB/LPS22HD sensor"
+	depends on (I2C || SPI_MASTER) && SYSFS
+	select IIO_BUFFER
+	select IIO_KFIFO_BUF
+	select ST_LPS22HB_I2C_IIO if (I2C)
+	select ST_LPS22HB_SPI_IIO if (SPI)
+	help
+	  This driver supports LPS22HB/LPS22HD sensors. This driver can be
+	  built as a module. The module will be called st-lps22hb.
+
+config ST_LPS22HB_I2C_IIO
+	tristate
+	depends on ST_LPS22HB_IIO
+
+config ST_LPS22HB_SPI_IIO
+	tristate
+	depends on ST_LPS22HB_IIO
+
+config ST_LPS33HW_IIO
+	tristate "STMicroelectronics LPS33HW/LPS35HW sensor"
+	depends on (I2C || SPI_MASTER) && SYSFS
+	select IIO_BUFFER
+	select IIO_KFIFO_BUF
+	select ST_LPS33HW_I2C_IIO if (I2C)
+	select ST_LPS33HW_SPI_IIO if (SPI)
+	help
+	  This driver supports LPS33HW/LPS35HW sensors. This driver can be
+	  built as a module. The module will be called st-lps33hw.
+
+config ST_LPS33HW_I2C_IIO
+	tristate
+	depends on ST_LPS33HW_IIO
+
+config ST_LPS33HW_SPI_IIO
+	tristate
+	depends on ST_LPS33HW_IIO
+
+config ST_LPS22HH_IIO
+	tristate "STMicroelectronics LPS22HH sensor"
+	depends on (I2C || SPI_MASTER) && SYSFS
+	select IIO_BUFFER
+	select IIO_KFIFO_BUF
+	select ST_LPS22HH_I2C_IIO if (I2C)
+	select ST_LPS22HH_SPI_IIO if (SPI)
+	help
+	  This driver supports LPS22HH sensors. This driver can be
+	  built as a module. The module will be called st-lps22hh.
+
+config ST_LPS22HH_I2C_IIO
+	tristate
+	depends on ST_LPS22HH_IIO
+
+config ST_LPS22HH_SPI_IIO
+	tristate
+	depends on ST_LPS22HH_IIO
+
 endmenu
