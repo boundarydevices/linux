@@ -632,6 +632,8 @@ static int v4l2_ioctl_subscribe_event(struct v4l2_fh *fh,
 	switch (sub->type) {
 	case V4L2_EVENT_EOS:
 		return v4l2_event_subscribe(fh, sub, 0, NULL);
+	case V4L2_EVENT_SKIP:
+		return v4l2_event_subscribe(fh, sub, 0, NULL);
 	case V4L2_EVENT_SOURCE_CHANGE:
 		return v4l2_src_change_event_subscribe(fh, sub);
 	default:
@@ -2121,8 +2123,14 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 			p_data_req = &This->vb2_reqs[fsrel->uFSIdx];
 
 			if (ctx->wait_rst_done != true && p_data_req->status != FRAME_READY) {
+				const struct v4l2_event ev = {
+					.type = V4L2_EVENT_SKIP
+				};
 				vpu_dbg(LVL_WARN, "warning: normal release and previous status %s, frame not for display, queue the buffer to list again\n",
 						bufstat[p_data_req->status]);
+
+				if (p_data_req->status == FRAME_DECODED)
+					v4l2_event_queue_fh(&ctx->fh, &ev);
 				list_add_tail(&p_data_req->list, &This->drv_q);
 			}
 			p_data_req->status = FRAME_RELEASE;
