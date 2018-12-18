@@ -734,13 +734,13 @@ static struct clk_mux vapb_mux = {
 };
 
 static struct clk_hw *vapb_clk_hws[] = {
-	[CLKID_VPU_P0_MUX - CLKID_VPU_P0_MUX]   = &vapb_p0_mux.hw,
-	[CLKID_VPU_P0_DIV - CLKID_VPU_P0_MUX]   = &vapb_p0_div.hw,
-	[CLKID_VPU_P0_GATE - CLKID_VPU_P0_MUX]  = &vapb_p0_gate.hw,
-	[CLKID_VPU_P1_MUX - CLKID_VPU_P0_MUX]   = &vapb_p1_mux.hw,
-	[CLKID_VPU_P1_DIV - CLKID_VPU_P0_MUX]   = &vapb_p1_div.hw,
-	[CLKID_VPU_P1_GATE - CLKID_VPU_P0_MUX]  = &vapb_p1_gate.hw,
-	[CLKID_VPU_MUX - CLKID_VPU_P0_MUX]      = &vapb_mux.hw,
+	[CLKID_VAPB_P0_MUX - CLKID_VAPB_P0_MUX]   = &vapb_p0_mux.hw,
+	[CLKID_VAPB_P0_DIV - CLKID_VAPB_P0_MUX]   = &vapb_p0_div.hw,
+	[CLKID_VAPB_P0_GATE - CLKID_VAPB_P0_MUX]  = &vapb_p0_gate.hw,
+	[CLKID_VAPB_P1_MUX - CLKID_VAPB_P0_MUX]   = &vapb_p1_mux.hw,
+	[CLKID_VAPB_P1_DIV - CLKID_VAPB_P0_MUX]   = &vapb_p1_div.hw,
+	[CLKID_VAPB_P1_GATE - CLKID_VAPB_P0_MUX]  = &vapb_p1_gate.hw,
+	[CLKID_VAPB_MUX - CLKID_VAPB_P0_MUX]      = &vapb_mux.hw,
 };
 
 static struct clk_gate ge2d_gate = {
@@ -768,7 +768,7 @@ static struct clk_mux vpu_clkb_tmp_mux = {
 		.name = "vpu_clkb_tmp_mux",
 		.ops = &clk_mux_ops,
 		.parent_names = vpu_clkb_tmp_parent_names,
-		.num_parents = 8,
+		.num_parents = ARRAY_SIZE(vpu_clkb_tmp_parent_names),
 		.flags = CLK_GET_RATE_NOCACHE,
 	},
 };
@@ -822,7 +822,7 @@ static struct clk_gate vpu_clkb_gate = {
 	.bit_idx = 8,
 	.lock = &clk_lock,
 	.hw.init = &(struct clk_init_data) {
-		.name = "vpu_clkb_tmp_gate",
+		.name = "vpu_clkb_gate",
 		.ops = &clk_gate_ops,
 		.parent_names = (const char *[]){ "vpu_clkb_div" },
 		.num_parents = 1,
@@ -943,6 +943,56 @@ static struct clk_hw *vpu_clkc_hws[] = {
 	[CLKID_VPU_CLKC_MUX - CLKID_VPU_CLKC_P0_MUX]      = &vpu_clkc_mux.hw,
 };
 
+/* cts_bt656 */
+static const char * const bt656_parent_names[] = { "fclk_div2",
+"fclk_div3", "fclk_div5", "fclk_div7" };
+
+static struct clk_mux bt656_mux = {
+	.reg = (void *)HHI_BT656_CLK_CNTL,
+	.mask = 0x3,
+	.shift = 9,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "bt656_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = bt656_parent_names,
+		.num_parents = ARRAY_SIZE(bt656_parent_names),
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider bt656_div = {
+	.reg = (void *)HHI_BT656_CLK_CNTL,
+	.shift = 0,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "bt656_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "bt656_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate bt656_gate = {
+	.reg = (void *)HHI_BT656_CLK_CNTL,
+	.bit_idx = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "bt656_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "bt656_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_hw *bt656_clk_hws[] = {
+	[0] = &bt656_mux.hw,
+	[1] = &bt656_div.hw,
+	[2] = &bt656_gate.hw,
+};
 
 void meson_g12a_media_init(void)
 {
@@ -1023,6 +1073,22 @@ void meson_g12a_media_init(void)
 	vpu_clkc_p1_div.reg = clk_base + (unsigned long)(vpu_clkc_p1_div.reg);
 	vpu_clkc_p1_gate.reg = clk_base + (unsigned long)(vpu_clkc_p1_gate.reg);
 	vpu_clkc_mux.reg = clk_base + (unsigned long)(vpu_clkc_mux.reg);
+
+	/* bt656 clk */
+	bt656_mux.reg = clk_base + (unsigned long)(bt656_mux.reg);
+	bt656_div.reg = clk_base + (unsigned long)(bt656_div.reg);
+	bt656_gate.reg = clk_base + (unsigned long)(bt656_gate.reg);
+
+	clks[CLKID_BT656_COMP] = clk_register_composite(NULL,
+		"bt656_composite",
+		bt656_parent_names, ARRAY_SIZE(bt656_parent_names),
+		bt656_clk_hws[0], &clk_mux_ops,
+		bt656_clk_hws[1], &clk_divider_ops,
+		bt656_clk_hws[2], &clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_BT656_COMP]))
+		panic("%s: %d clk_register_composite bt656_composite error\n",
+			__func__, __LINE__);
+
 
 	clks[CLKID_DSI_MEAS_COMP] = clk_register_composite(NULL,
 		"dsi_meas_composite",
