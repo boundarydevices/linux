@@ -7310,18 +7310,18 @@ static void set_blend_reg(struct layer_blend_reg_s *blend_reg)
 		}
 #endif
 	}
-	dv_core2_vsize = (blend_reg->vpp_osd1_blend_v_scope & 0xfff)
-		- ((blend_reg->vpp_osd1_blend_v_scope >> 16) & 0xfff) + 1;
-	dv_core2_hsize = (blend_reg->vpp_osd1_blend_h_scope & 0xfff)
-		- ((blend_reg->vpp_osd1_blend_h_scope >> 16) & 0xfff) + 1;
+
+	dv_core2_vsize = (blend_reg->osd_blend_blend0_size >> 16) & 0xfff;
+	dv_core2_hsize = blend_reg->osd_blend_blend0_size & 0xfff;
+
 	if (osd_hw.osd_meson_dev.has_dolby_vision) {
 		VSYNCOSD_WR_MPEG_REG(
 			DOLBY_CORE2A_SWAP_CTRL1,
-			((dv_core2_vsize + 0x40) << 16)
-			| (dv_core2_hsize + 0x80 + 0));
+			((dv_core2_hsize + 0x40) << 16)
+			| (dv_core2_vsize + 0x80 + 0));
 		VSYNCOSD_WR_MPEG_REG(
 			DOLBY_CORE2A_SWAP_CTRL2,
-			(dv_core2_vsize << 16) | (dv_core2_hsize + 0));
+			(dv_core2_hsize << 16) | (dv_core2_vsize + 0));
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 		update_graphic_width_height(dv_core2_vsize, dv_core2_hsize);
 #endif
