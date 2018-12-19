@@ -1127,14 +1127,16 @@ static int amvdec_656in_probe(struct platform_device *pdev)
 
 	BT656PR("%s: start probe .\n", __func__);
 
-	if (is_meson_gxtvbb_cpu() ||
-		is_meson_gxl_cpu() || is_meson_gxm_cpu()) {
+	if (is_meson_gxtvbb_cpu() || is_meson_gxl_cpu() ||
+		is_meson_gxm_cpu() || is_meson_g12a_cpu() ||
+		is_meson_g12b_cpu() || is_meson_tl1_cpu()) {
 		hw_cnt = 1;
 	} else if (is_meson_gxbb_cpu()) {
 		hw_cnt = 2;
 	} else {
 		hw_cnt = 0;
 	}
+
 	if (hw_cnt == 0) {
 		BT656ERR("no bt656 support for current chip\n");
 		return -EFAULT;
@@ -1241,10 +1243,9 @@ static int amvdec_656in_probe(struct platform_device *pdev)
 		if (IS_ERR(devp->gate_bt656_pclk)) {
 			BT656ERR("%s: cannot get clk_gate_bt656_pclk1 !!!\n",
 				__func__);
-			ret = -ENOENT;
-			goto fail_get_clktree;
+			//ret = -ENOENT;
+			//goto fail_get_clktree;
 		}
-
 		/* set regmap */
 		BT656PR("%s: bt656[%d] start get ioremap .\n",
 			__func__, devp->index);
@@ -1278,7 +1279,7 @@ static int amvdec_656in_probe(struct platform_device *pdev)
 		 * &am656_decoder_ops_s, &am656_machine_ops, pdev->id);
 		 */
 		if (!tvin_frontend_init(&devp->frontend, &am656_decoder_ops_s,
-			&am656_machine_ops, devp->index)) {
+			&am656_machine_ops, devp->index-1)) {
 			BT656PR("%s: tvin_frontend_init done :%d\n",
 				__func__, devp->index);
 			if (tvin_reg_frontend(&devp->frontend)) {
