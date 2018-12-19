@@ -123,9 +123,9 @@
 			no-map;
 			reg = <0 0x90400000 0 0x200000>;
 		};
-		encoder_rpc: encoder_rpc@0x90600000 {
+		encoder_rpc: encoder_rpc@0x92200000 {
 			no-map;
-			reg = <0 0x90600000 0 0x100000>;
+			reg = <0 0x92200000 0 0x200000>;
 		};
 		dsp_reserved: dsp@0x92400000 {
 			no-map;
