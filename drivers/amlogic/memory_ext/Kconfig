@@ -42,6 +42,7 @@ config AMLOGIC_CMA
 config AMLOGIC_VMAP
 	bool "Amlogic kernel stack"
 	depends on AMLOGIC_MEMORY_EXTEND
+	depends on !KASAN
 	depends on 64BIT
 	default y
 	help
