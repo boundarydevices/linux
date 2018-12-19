@@ -32,10 +32,6 @@
 		};
 	};
 
-	gpio_keys: gpio-keys {
-		compatible = "gpio-keys";
-	};
-
 	memory {
 		reg = <0x10000000 0x80000000>;
 	};
@@ -138,6 +134,25 @@
 			MX6QDL_PAD_EIM_DA7__GPIO3_IO07		0x030b0
 #define GP_RELAY_GAS			<&gpio3 9 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_DA9__GPIO3_IO09		0x030b0
+	/* Removed gpio_keys so these can be exported */
+#define GP_INTERLOCK_IRQ		<&gpio2 20 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_A18__GPIO2_IO20		0x1b0b0
+#define GP_ZERO_CROSSING_IRQ		<&gpio2 19 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_A19__GPIO2_IO19		0x1b0b0
+#define GP_SYNC_IRQ			<&gpio3 12 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA12__GPIO3_IO12		0x1b0b0
+#define GP_HEATER_FAULT_IRQ		<&gpio3 3 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA3__GPIO3_IO03		0x1b0b0
+#define GP_EXCH_FAULT1			<&gpio3 6 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA6__GPIO3_IO06		0x1b0b0
+#define GP_EXCH_FAULT2			<&gpio3 5 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA5__GPIO3_IO05		0x1b0b0
+#define GP_EXCH_FAULT_IRQ		<&gpio3 10 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0x1b0b0
+#define GP_CAN_CONNECT			<&gpio3 13 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x130b0
+#define GP_UART1_DTR			<&gpio3 24 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_D24__GPIO3_IO24		0x1b0b1
 		>;
 	};
 
@@ -189,29 +204,6 @@
 		fsl,pins = <
 			MX6QDL_PAD_KEY_ROW2__FLEXCAN1_RX	0x1b0b0
 			MX6QDL_PAD_KEY_COL2__FLEXCAN1_TX	0x1b0b0
-		>;
-	};
-
-	pinctrl_gpio_keys: gpio_keysgrp {
-		fsl,pins = <
-#define GP_INTERLOCK_IRQ		<&gpio2 20 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_A18__GPIO2_IO20		0x1b0b0
-#define GP_ZERO_CROSSING_IRQ		<&gpio2 19 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_A19__GPIO2_IO19		0x1b0b0
-#define GP_SYNC_IRQ			<&gpio3 12 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA12__GPIO3_IO12		0x1b0b0
-#define GP_HEATER_FAULT_IRQ		<&gpio3 3 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA3__GPIO3_IO03		0x1b0b0
-#define GP_EXCH_FAULT1			<&gpio3 6 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA6__GPIO3_IO06		0x1b0b0
-#define GP_EXCH_FAULT2			<&gpio3 5 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA5__GPIO3_IO05		0x1b0b0
-#define GP_EXCH_FAULT_IRQ		<&gpio3 10 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA10__GPIO3_IO10		0x1b0b0
-#define GP_CAN_CONNECT			<&gpio3 13 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_DA13__GPIO3_IO13		0x130b0
-#define GP_UART1_DTR			<&gpio3 24 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_D24__GPIO3_IO24		0x1b0b1
 		>;
 	};
 
@@ -389,65 +381,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan1>;
 	status = "okay";
-};
-
-&gpio_keys {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_gpio_keys>;
-	interlock {
-		label = "interlock";
-		gpios = GP_INTERLOCK_IRQ;
-		linux,code = <KEY_POWER>;
-		gpio-key,wakeup;
-	};
-
-	zero_crossing {
-		label = "zero_crossing";
-		gpios = GP_ZERO_CROSSING_IRQ;
-		linux,code = <KEY_MENU>;
-	};
-
-	sync {
-		label = "sync";
-		gpios = GP_SYNC_IRQ;
-		linux,code = <KEY_HOME>;
-	};
-
-	heater_fault {
-		label = "heater_fault";
-		gpios = GP_HEATER_FAULT_IRQ;
-		linux,code = <KEY_BACK>;
-	};
-
-	exch_fault1 {
-		label = "exch_fault1";
-		gpios = GP_EXCH_FAULT1;
-		linux,code = <KEY_VOLUMEUP>;
-	};
-
-	exch_fault2 {
-		label = "exch_fault2";
-		gpios = GP_EXCH_FAULT2;
-		linux,code = <KEY_VOLUMEDOWN>;
-	};
-
-	exch_fault_irq {
-		label = "exch_fault_irq";
-		gpios = GP_EXCH_FAULT_IRQ;
-		linux,code = <KEY_MINUS>;
-	};
-
-	can_connected {
-		label = "can_connect";
-		gpios = GP_CAN_CONNECT;
-		linux,code = <KEY_EQUAL>;
-	};
-
-	uart1_dtr {
-		label = "uart1_dtr";
-		gpios = GP_UART1_DTR;
-		linux,code = <KEY_1>;
-	};
 };
 
 &i2c1 {
