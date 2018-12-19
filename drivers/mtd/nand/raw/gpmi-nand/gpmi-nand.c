@@ -106,6 +106,12 @@ static const struct gpmi_devdata gpmi_devdata_imx6q = {
 	.clks_count = ARRAY_SIZE(gpmi_clks_for_mx6),
 };
 
+static const struct gpmi_devdata gpmi_devdata_imx6qp = {
+	.type = IS_MX6QP,
+	.bch_max_ecc_strength = 40,
+	.max_chain_delay = 12,
+};
+
 static const struct gpmi_devdata gpmi_devdata_imx6sx = {
 	.type = IS_MX6SX,
 	.bch_max_ecc_strength = 62,
@@ -943,6 +949,7 @@ static int gpmi_ecc_read_page_data(struct nand_chip *chip,
 {
 	struct gpmi_nand_data *this = nand_get_controller_data(chip);
 	struct bch_geometry *nfc_geo = &this->bch_geometry;
+	void __iomem *bch_regs = this->resources.bch_regs;
 	struct mtd_info *mtd = nand_to_mtd(chip);
 	dma_addr_t    payload_phys;
 	unsigned int  i;
@@ -950,6 +957,7 @@ static int gpmi_ecc_read_page_data(struct nand_chip *chip,
 	unsigned int  max_bitflips = 0;
 	int           ret;
 	bool          direct = false;
+	int flag = 0;
 
 	dev_dbg(this->dev, "page number is : %d\n", page);
 
@@ -985,8 +993,15 @@ static int gpmi_ecc_read_page_data(struct nand_chip *chip,
 		memcpy(buf, this->payload_virt, nfc_geo->payload_size);
 
 	for (i = 0; i < nfc_geo->ecc_chunk_count; i++, status++) {
-		if ((*status == STATUS_GOOD) || (*status == STATUS_ERASED))
+		if (*status == STATUS_GOOD)
 			continue;
+
+		if (*status == STATUS_ERASED) {
+			if (GPMI_IS_MX6QP(this) || GPMI_IS_MX7D(this))
+				if (readl(bch_regs + HW_BCH_DEBUG1))
+					flag = 1;
+			continue;
+		}
 
 		if (*status == STATUS_UNCORRECTABLE) {
 			int eccbits = nfc_geo->ecc_strength * nfc_geo->gf_len;
@@ -1081,6 +1096,10 @@ static int gpmi_ecc_read_page_data(struct nand_chip *chip,
 		memset(chip->oob_poi, ~0, mtd->oobsize);
 		chip->oob_poi[0] = ((uint8_t *)this->auxiliary_virt)[0];
 	}
+
+	/* if bitflip occurred in erased page, change data to all 0xff */
+	if (flag)
+		memset(buf, 0xff, nfc_geo->payload_size);
 
 	return max_bitflips;
 }
@@ -1967,6 +1986,9 @@ static const struct of_device_id gpmi_nand_id_table[] = {
 	}, {
 		.compatible = "fsl,imx6q-gpmi-nand",
 		.data = &gpmi_devdata_imx6q,
+	}, {
+		.compatible = "fsl,imx6qp-gpmi-nand",
+		.data = (void *)&gpmi_devdata_imx6qp,
 	}, {
 		.compatible = "fsl,imx6sx-gpmi-nand",
 		.data = &gpmi_devdata_imx6sx,
