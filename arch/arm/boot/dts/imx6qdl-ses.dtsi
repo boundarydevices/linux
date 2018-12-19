@@ -30,6 +30,13 @@
 		>;
 	};
 
+	pinctrl_can1: flexcan1grp {
+		fsl,pins = <
+			MX6QDL_PAD_KEY_ROW2__FLEXCAN1_RX	0x1b0b0
+			MX6QDL_PAD_KEY_COL2__FLEXCAN1_TX	0x1b0b0
+		>;
+	};
+
 	pinctrl_ecspi1: ecspi1grp {
 		fsl,pins = <
 			MX6QDL_PAD_EIM_D17__ECSPI1_MISO		0x100b1
@@ -127,9 +134,9 @@
 		>;
 	};
 
-	pinctrl_i2c1_adc101: i2c1-adc101grp {
+	pinctrl_i2c1_adc121c: i2c1-adc121cgrp {
 		fsl,pins = <
-#define GPIRQ_I2C1_ADC101	<&gpio7 13 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_I2C1_ADC121C	<&gpio7 13 IRQ_TYPE_EDGE_BOTH>
 			MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x1b0b0
 		>;
 	};
@@ -451,6 +458,12 @@
 	};
 };
 
+&can1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_can1>;
+	status = "okay";
+};
+
 &ecspi1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi1>;
@@ -563,6 +576,16 @@
 	scl-gpios = GP_I2C1_SCL;
 	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
+
+	adc121c@54 {
+		samples-per-sec = <400>;
+		compatible = "ti,adc121c";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c1_adc121c>;
+		reg = <0x54>;
+		vref-supply = <&reg_3p3v>;
+		interrupts-extended = GPIRQ_I2C1_ADC121C;
+	};
 
 };
 
