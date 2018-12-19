@@ -1026,7 +1026,8 @@ static int gpmi_ecc_read_page_data(struct nand_chip *chip,
 			continue;
 
 		if (*status == STATUS_ERASED) {
-			if (GPMI_IS_MX6QP(this) || GPMI_IS_MX7D(this))
+			if (GPMI_IS_MX6QP(this) || GPMI_IS_MX7D(this) ||
+					GPMI_IS_MX6UL(this))
 				if (readl(bch_regs + HW_BCH_DEBUG1))
 					flag = 1;
 			continue;
