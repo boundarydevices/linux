@@ -51,7 +51,9 @@
 #include <linux/slab.h>
 #include <linux/stat.h>
 #include <linux/ctype.h>/* for parse_para_pq */
+#include <linux/string.h>
 #include <linux/vmalloc.h>
+#include <linux/arm-smccc.h>
 
 DEFINE_SPINLOCK(dovi_lock);
 
@@ -576,6 +578,204 @@ struct TargetDisplayConfig def_tgt_display_cfg = {
 	0, /* chip_nolvl5 */
 	{0, 0, 0, 0, 0, 0, 0, 0} /* padding[8] */
 };
+struct TargetDisplayConfig def_tgt_display_cfg_ll = {
+	4095, /* gain */
+	0, /* offset */
+	39322, /* gamma */
+	2, /* eotf */
+	12, /* bitDepth */
+	0, /* rangeSpec */
+	42, /* diagSize */
+	2873, /* maxPq */
+	263, /* minPq */
+	2048, /* mSWeight */
+	16380, /* mSEdgeWeight */
+	0, /* minPQBias */
+	0, /* midPQBias */
+	0, /* maxPQBias */
+	0, /* trimSlopeBias */
+	0, /* trimOffsetBias */
+	0, /* trimPowerBias */
+	0, /* msWeightBias */
+	0, /* brightness */
+	0, /* contrast */
+	0, /* chromaWeightBias */
+	0, /* saturationGainBias */
+	2048, /* chromaWeight */
+	2048, /* saturationGain */
+	655, /* crossTalk */
+	0, /* tuningMode */
+	0, /* reserved0 */
+	0, /* dbgExecParamsPrintPeriod */
+	0, /* dbgDmMdPrintPeriod */
+	0, /* dbgDmCfgPrintPeriod */
+	2873, /* maxPq_dupli */
+	263, /* minPq_dupli */
+	12288, /* keyWeight */
+	24576, /* intensityVectorWeight */
+	24576, /* chromaVectorWeight */
+	0, /* chip_fpga_lowcomplex */
+	{
+		-245,
+		-208,
+		-171,
+		-130,
+		-93,
+		-56,
+		-19,
+		20,
+		57,
+		94,
+		131,
+		172,
+		209,
+		246,
+	},
+	{
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+	},
+	{
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+	},
+	{
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+	},
+	{
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+	},
+	{
+		-3685,
+		-3070,
+		-2456,
+		-1842,
+		-1228,
+		-613,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+	},
+	{
+		1, /* gdEnable */
+		4452, /* gdWMin */
+		165150720, /* gdWMax */
+		26214400, /* gdWMm */
+		20114920, /* gdWDynRngSqrt */
+		4096, /* gdWeightMean */
+		4096, /* gdWeightStd */
+		0, /* gdDelayMilliSec_hdmi */
+		1, /* gdRgb2YuvExt */
+		{
+			{5967, 20067, 2026},
+			{-3289, -11061, 14350},
+			{14350, -13034, -1316}
+		}, /* gdM33Rgb2Yuv[3][3] */
+		15, /* gdM33Rgb2YuvScale2P */
+		1, /* gdRgb2YuvOffExt */
+		{2048, 16384, 16384},/* gdV3Rgb2YuvOff[3] */
+		2152296, /* gdUpBound */
+		341634, /* gdLowBound */
+		0, /* lastMaxPq */
+		114, /*gdWMinPq */
+		2873, /*gdWMaxPq */
+		2081, /*gdWMmPq */
+		0, /*gdTriggerPeriod */
+		0, /* gdTriggerLinThresh */
+		0, /* gdDelayMilliSec_ott */
+#ifdef V1_5
+		{0, 0, 0, 0, 0, 0},
+#else
+		{0, 0, 0, 0, 0, 0, 0, 0, 0}
+#endif
+	},
+#ifdef V1_5
+	{36, 23, 83, 181, 139, 88, 101},
+	{0, 0, 0, 0, 0},
+#endif
+	28049, /* min_lin */
+	165150720, /* max_lin */
+	0, /* backlight_scaler */
+	28049, /* min_lin_dupli */
+	165150720, /* max_lin_dupli */
+	{
+		/* lms2RgbMat[3][3] */
+		{
+			{17486, -13950, 560},
+			{-4081, 8776, -599},
+			{257, -562, 4401}
+		},
+		12, /* lms2RgbMatScale */
+		{128, 128, 128}, /* whitePoint */
+		7, /* whitePointScale */
+		{0, 0, 0} /* reserved[3] */
+	},
+	0, /* reserved00 */
+	0, /* brightnessPreservation */
+	81920, /* iintensityVectorWeight */
+	24576, /* ichromaVectorWeight */
+	0, /* isaturationGainBias */
+	0, /* chip_12b_ocsc */
+	0, /* chip_512_tonecurve */
+	0, /* chip_nolvl5 */
+	{0, 0, 0, 0, 0, 0, 0, 0} /* padding[8] */
+};
+
 #else
 struct TargetDisplayConfig def_tgt_display_cfg = {
 	2048, /* gain */
@@ -2479,7 +2679,7 @@ void enable_dolby_vision(int enable)
 					/* 12->10 before vadj2*/
 					/*   10->12 after gainoff */
 					VSYNC_WR_MPEG_REG(
-						VPP_DAT_CONV_PARA1, 0x08000800);
+						VPP_DAT_CONV_PARA1, 0x20002000);
 					WRITE_VPP_REG(0x33e7, 0xb);
 				} else {
 					/* bypass all video effect */
@@ -2493,7 +2693,7 @@ void enable_dolby_vision(int enable)
 					/* 12->10 before vadj2*/
 					/*   10->12 after gainoff */
 					VSYNC_WR_MPEG_REG(
-						VPP_DAT_CONV_PARA1, 0x08000800);
+						VPP_DAT_CONV_PARA1, 0x20002000);
 				}
 				VSYNC_WR_MPEG_REG(
 					VPP_DUMMY_DATA1,
@@ -4572,6 +4772,10 @@ int dolby_vision_parse_metadata(
 	u32 graphic_min = 50; /* 0.0001 */
 	u32 graphic_max = 100; /* 1 */
 	int ret_flags = 0;
+	int ret = -1;
+
+	memset(&req, 0, (sizeof(struct provider_aux_req_s)));
+	memset(&el_req, 0, (sizeof(struct provider_aux_req_s)));
 
 	if (!dolby_vision_enable)
 		return -1;
@@ -4895,8 +5099,18 @@ int dolby_vision_parse_metadata(
 
 	/* TV core */
 	if (is_meson_txlx_tvmode() && !force_stb_mode) {
+		if (src_format != ((struct tv_dovi_setting_s *)
+			tv_dovi_setting)->src_format)
+			pq_config_set_flag = false;
 		if (!pq_config_set_flag) {
-			memcpy(&(((struct pq_config_s *)
+			if ((dolby_vision_flags & FLAG_FORCE_DOVI_LL)
+				|| (req.low_latency == 1))
+				memcpy(&(((struct pq_config_s *)
+				pq_config_fake)->target_display_config),
+					&def_tgt_display_cfg_ll,
+					sizeof(def_tgt_display_cfg_ll));
+			else
+				memcpy(&(((struct pq_config_s *)
 				pq_config_fake)->target_display_config),
 				&def_tgt_display_cfg,
 				sizeof(def_tgt_display_cfg));
@@ -5031,7 +5245,7 @@ int dolby_vision_parse_metadata(
 				(struct tv_dovi_setting_s *)tv_dovi_setting,
 				frame_count, debug_dolby);
 			el_mode = el_flag;
-			return 0; /* setting updated */
+			ret = 0; /* setting updated */
 		} else {
 			((struct tv_dovi_setting_s *)
 				tv_dovi_setting)->video_width = 0;
@@ -5039,7 +5253,7 @@ int dolby_vision_parse_metadata(
 				tv_dovi_setting)->video_height = 0;
 			pr_dolby_error("tv_control_path() failed\n");
 		}
-		return -1;
+		return ret;
 	}
 
 	/* STB core */
@@ -5368,8 +5582,8 @@ int dolby_vision_wait_metadata(struct vframe_s *vf)
 		if (dolby_vision_flags & FLAG_SINGLE_STEP)
 			/* wait fake el for "step" */
 			return 1;
-		else
-			dolby_vision_flags |= FLAG_SINGLE_STEP;
+
+		dolby_vision_flags |= FLAG_SINGLE_STEP;
 	}
 
 	if (dolby_vision_flags & FLAG_CERTIFICAION) {
@@ -5996,16 +6210,14 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 			dolby_vision_run_mode_delay = RUN_MODE_DELAY;
 
 		pq_config =  vmalloc(sizeof(struct pq_config_s));
-		if (pq_config == NULL) {
-			pr_info("[amdolby_vision] vmalloc failed for pq_config_s error!\n");
-			return -1;
-		}
+		if (!pq_config)
+			return -ENOMEM;
+
 		pq_config_fake = (struct pq_config_s *)pq_config;
 		dovi_setting = vmalloc(sizeof(struct tv_dovi_setting_s));
-		if (dovi_setting == NULL) {
-			pr_info("[amdolby_vision] vmalloc failed for tv_dovi_setting_s error!\n");
-			return -1;
-		}
+		if (!dovi_setting)
+			return -ENOMEM;
+
 		tv_dovi_setting = (struct tv_dovi_setting_s *)dovi_setting;
 		/* adjust core2 setting to work around fixing with 1080p24hz */
 		if (is_meson_txlx())

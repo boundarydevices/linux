@@ -20,7 +20,7 @@
 #define V1_5
 #define V2_4
 /*  driver version */
-#define DRIVER_VER "20181009"
+#define DRIVER_VER "20181220"
 
 #include <linux/types.h>
 
