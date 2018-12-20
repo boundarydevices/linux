@@ -760,7 +760,7 @@ void mxc_isi_m2m_config_src(struct mxc_isi_dev *mxc_isi)
 	/* source format */
 	val = readl(mxc_isi->regs + CHNL_MEM_RD_CTRL);
 	val &= ~CHNL_MEM_RD_CTRL_IMG_TYPE_MASK;
-	val = src_f->fmt->color << CHNL_MEM_RD_CTRL_IMG_TYPE_OFFSET;
+	val |= src_f->fmt->color << CHNL_MEM_RD_CTRL_IMG_TYPE_OFFSET;
 	writel(val, mxc_isi->regs + CHNL_MEM_RD_CTRL);
 
 	/* source image width and height */
