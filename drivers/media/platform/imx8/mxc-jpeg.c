@@ -244,8 +244,7 @@ static void print_nbuf_to_eoi(struct device *dev, struct vb2_buffer *buf, int n)
 	u32 dma_addr;
 	int i;
 	int items_per_line = 22;
-	char *bufstr = kmalloc(items_per_line * 6, GFP_ATOMIC);
-	char *bufptr = bufstr;
+	char *bufstr, *bufptr;
 
 	if (!mxc_jpeg_tracing)
 		return;
@@ -258,6 +257,9 @@ static void print_nbuf_to_eoi(struct device *dev, struct vb2_buffer *buf, int n)
 
 	dev_dbg(dev, "vaddr=%p dma_addr=%x bytesused=%d:",
 		 data, dma_addr, n);
+
+	bufstr = kmalloc(items_per_line * 6, GFP_ATOMIC);
+	bufptr = bufstr;
 	for (i = 0; i < n; i++) {
 		snprintf(bufptr, 6, "0x%02x,", data[i]);
 		bufptr += 5;
@@ -764,7 +766,7 @@ static void _bswap16(u16 *a)
 	*a = ((*a & 0x00FF) << 8) | ((*a & 0xFF00) >> 8);
 }
 
-static u8 get_sof(struct device *dev,
+static int get_sof(struct device *dev,
 	struct mxc_jpeg_stream *stream,
 	struct mxc_jpeg_sof *sof)
 {
