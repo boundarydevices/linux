@@ -2,7 +2,7 @@
 /*
  * Freescale GPMI NAND Flash Driver
  *
- * Copyright (C) 2008-2011 Freescale Semiconductor, Inc.
+ * Copyright (C) 2008-2016 Freescale Semiconductor, Inc.
  * Copyright (C) 2008 Embedded Alley Solutions, Inc.
  */
 #include <linux/delay.h>
@@ -243,7 +243,7 @@ void gpmi_dump_info(struct gpmi_nand_data *this)
 		geo->block_mark_bit_offset);
 }
 
-int bch_save_geometry(struct gpmi_nand_data *this)
+int bch_create_debugfs(struct gpmi_nand_data *this)
 {
 	struct bch_geometry *bch_geo = &this->bch_geometry;
 	struct dentry *dbg_root;
@@ -259,6 +259,13 @@ int bch_save_geometry(struct gpmi_nand_data *this)
 	if (!debugfs_create_blob("bch_geometry", S_IRUGO,
 				dbg_root, &dbg_bch_geo)) {
 		dev_err(this->dev, "failed to create debug bch geometry\n");
+		return -EINVAL;
+	}
+
+	/* create raw mode flag */
+	if (!debugfs_create_file("raw_mode", S_IRUGO,
+				dbg_root, NULL, NULL)) {
+		dev_err(this->dev, "failed to create raw mode flag\n");
 		return -EINVAL;
 	}
 
