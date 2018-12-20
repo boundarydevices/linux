@@ -1877,52 +1877,45 @@ static void aml_sd_emmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 {
 	struct amlsd_platform *pdata = mmc_priv(mmc);
 	struct amlsd_host *host = pdata->host;
-	unsigned long flags;
+	unsigned long flags = 0;
 	/* u32 vstat = 0; */
 	u32 vclkc = 0;
 	struct sd_emmc_clock *pclock = NULL;
 	struct sd_emmc_clock_v3 *pclock_v3 = NULL;
-	u32 vconf = 0;
-	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
 	u32 virqc = 0;
 	struct sd_emmc_irq_en *irqc = (struct sd_emmc_irq_en *)&virqc;
 
 	host->sdio_irqen = enable;
-	if (host->xfer_step == XFER_START)
+	if (host->data->tdma_f && (host->xfer_step == XFER_START))
 		return;
 
-	if (enable)
 	spin_lock_irqsave(&host->mrq_lock, flags);
-	vconf = readl(host->base + SD_EMMC_CFG);
-	virqc = readl(host->base + SD_EMMC_IRQ_EN);
-
-	pconf->irq_ds = 0;
 
 	/* vstat = sd_emmc_regs->gstatus&SD_EMMC_IRQ_ALL; */
+	virqc = readl(host->base + SD_EMMC_IRQ_EN);
 	if (enable)
 		irqc->irq_sdio = 1;
 	else
 		irqc->irq_sdio = 0;
-
 	writel(virqc, host->base + SD_EMMC_IRQ_EN);
-	writel(vconf, host->base + SD_EMMC_CFG);
 
-	if (host->ctrl_ver >= 3) {
-		pclock_v3 = (struct sd_emmc_clock_v3 *)&vclkc;
-		vclkc = readl(host->base + SD_EMMC_CLOCK_V3);
-		pclock_v3->irq_sdio_sleep = 1;
-		pclock_v3->irq_sdio_sleep_ds = 0;
-		writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
-	} else {
-		pclock = (struct sd_emmc_clock *)&vclkc;
-		vclkc = readl(host->base + SD_EMMC_CLOCK);
-		pclock->irq_sdio_sleep = 1;
-		pclock->irq_sdio_sleep_ds = 0;
-		writel(vclkc, host->base + SD_EMMC_CLOCK);
+	if (!pdata->irq_sdio_sleep) {
+		if (host->ctrl_ver >= 3) {
+			pclock_v3 = (struct sd_emmc_clock_v3 *)&vclkc;
+			vclkc = readl(host->base + SD_EMMC_CLOCK_V3);
+			pclock_v3->irq_sdio_sleep = 1;
+			pclock_v3->irq_sdio_sleep_ds = 0;
+			writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
+		} else {
+			pclock = (struct sd_emmc_clock *)&vclkc;
+			vclkc = readl(host->base + SD_EMMC_CLOCK);
+			pclock->irq_sdio_sleep = 1;
+			pclock->irq_sdio_sleep_ds = 0;
+			writel(vclkc, host->base + SD_EMMC_CLOCK);
+		}
+		pdata->irq_sdio_sleep = 1;
 	}
-	pdata->irq_sdio_sleep = 1;
 
-	if (enable)
 	spin_unlock_irqrestore(&host->mrq_lock, flags);
 
 	/* check if irq already occurred */
@@ -2476,9 +2469,6 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 	if (WARN_ON(!host))
 		return IRQ_NONE;
 
-	if (host->data->tdma_f)
-		spin_lock_irqsave(&host->mrq_lock, flags);
-
 	virqc = readl(host->base + SD_EMMC_IRQ_EN) & 0xffff;
 	vstat = readl(host->base + SD_EMMC_STATUS) & 0xffffffff;
 	host->ista = vstat;
@@ -2494,35 +2484,22 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 				&& (!atomic_read(
 					&sdio_host->sdio_irq_thread_abort))) {
 				mmc_signal_sdio_irq(sdio_host);
-				if (!(vstat & 0x3fff)) {
-					spin_unlock_irqrestore(&host->mrq_lock,
-							flags);
+				if (!(vstat & 0x3fff))
 					return IRQ_HANDLED;
-				}
 			}
 		} else {
 			if ((host->mmc->sdio_irq_thread)
 				&& (!atomic_read(
 					&host->mmc->sdio_irq_thread_abort))) {
 				mmc_signal_sdio_irq(host->mmc);
-				if (!(vstat & 0x3fff)) {
-					if (host->data->tdma_f)
-						spin_unlock_irqrestore(
-								&host->mrq_lock,
-								flags);
+				if (!(vstat & 0x3fff))
 					return IRQ_HANDLED;
-				}
 			}
 		}
-	} else if (!(vstat & 0x3fff)) {
-		if (host->data->tdma_f)
-			spin_unlock_irqrestore(&host->mrq_lock, flags);
+	} else if (!(vstat & 0x3fff))
 		return IRQ_HANDLED;
-	}
 
-	if (!host->data->tdma_f)
-		spin_lock_irqsave(&host->mrq_lock, flags);
-
+	spin_lock_irqsave(&host->mrq_lock, flags);
 	mrq = host->mrq;
 	mmc = host->mmc;
 	pdata = mmc_priv(mmc);
@@ -2621,6 +2598,10 @@ static irqreturn_t meson_mmc_irq(int irq, void *dev_id)
 					mrq->cmd->opcode, mrq->cmd->arg,
 					mrq->data, host->cmd_is_stop,
 					host->status);
+			if (aml_card_type_sdio(pdata))
+				pr_err("@ mrq blksz %d, cfg = %x\n",
+					mrq->data->blksz,
+					readl(host->base + SD_EMMC_CFG));
 		}
 	} else if (ista->desc_err) {
 		if (host->is_tunning == 0)
