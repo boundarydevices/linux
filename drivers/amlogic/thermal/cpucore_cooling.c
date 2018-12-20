@@ -197,7 +197,7 @@ static int cpucore_notify_state(struct thermal_cooling_device *cdev,
 				struct thermal_zone_device *tz,
 				enum thermal_trip_type type)
 {
-	unsigned long  ins_upper;
+	unsigned long  ins_upper, target_upper = 0;
 	long cur_state;
 	long upper = -1;
 	int i;
@@ -206,8 +206,11 @@ static int cpucore_notify_state(struct thermal_cooling_device *cdev,
 	case THERMAL_TRIP_HOT:
 		for (i = 0; i < tz->trips; i++) {
 			ins_upper = thermal_get_upper(tz, cdev, i);
-			if (ins_upper > upper)
-				upper = ins_upper;
+			if (!IS_ERR_VALUE(ins_upper)
+				&& (ins_upper >= target_upper)) {
+				target_upper = ins_upper;
+				upper = target_upper;
+			}
 		}
 		cur_state = tz->hot_step;
 		/* do not exceed levels */
