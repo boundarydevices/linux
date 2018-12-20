@@ -133,7 +133,7 @@ enum ov10635_mode {
 };
 
 enum ov10635_frame_rate {
-	OV10635_15_FPS,
+	OV10635_15_FPS = 0x1,
 	OV10635_30_FPS,
 };
 
@@ -2817,8 +2817,10 @@ static int max9286_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 
 		if (tgt_fps == 30)
 			frame_rate = OV10635_30_FPS;
-		if (tgt_fps == 15)
+		else if (tgt_fps == 15)
 			frame_rate = OV10635_15_FPS;
+		else
+			frame_rate = 0;
 
 		if (frame_rate != OV10635_30_FPS && frame_rate != OV10635_15_FPS) {
 			pr_err(" The camera %d frame rate is not supported!\n", frame_rate);
