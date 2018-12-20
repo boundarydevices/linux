@@ -180,6 +180,7 @@ extern int __gpmi_enable_clk(struct gpmi_nand_data *, bool v);
 int gpmi_init(struct gpmi_nand_data *);
 void gpmi_clear_bch(struct gpmi_nand_data *);
 void gpmi_dump_info(struct gpmi_nand_data *);
+extern int bch_save_geometry(struct gpmi_nand_data *);
 int bch_set_geometry(struct gpmi_nand_data *);
 int gpmi_is_ready(struct gpmi_nand_data *, unsigned chip);
 int gpmi_send_command(struct gpmi_nand_data *);
