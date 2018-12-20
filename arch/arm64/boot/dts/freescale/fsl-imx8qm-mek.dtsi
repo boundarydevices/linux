@@ -759,7 +759,6 @@
 			reg = <1>;
 			at803x,eee-disabled;
 			at803x,vddio-1p8v;
-			status = "disabled";
 		};
 	};
 };
