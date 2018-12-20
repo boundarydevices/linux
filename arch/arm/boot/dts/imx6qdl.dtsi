@@ -301,11 +301,6 @@
 			status = "disabled";
 		};
 
-		pmu {
-			compatible = "arm,cortex-a9-pmu";
-			interrupts = <0 94 IRQ_TYPE_LEVEL_HIGH>;
-		};
-
 		hdmi_core: hdmi_core@00120000 {
 			compatible = "fsl,imx6q-hdmi-core";
 			reg = <0x00120000 0x9000>;
