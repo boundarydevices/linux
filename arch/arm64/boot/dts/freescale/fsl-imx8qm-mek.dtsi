@@ -25,6 +25,9 @@
 
 	modem_reset: modem-reset {
 		compatible = "gpio-reset";
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&pinctrl_modem_reset>;
+		pinctrl-1 = <&pinctrl_modem_reset_sleep>;
 		reset-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
 		reset-delay-us = <2000>;
 		reset-post-delay-ms = <40>;
@@ -379,7 +382,6 @@
 				SC_P_UART1_TX_DMA_UART1_TX		0x06000020
 				SC_P_UART1_CTS_B_DMA_UART1_CTS_B	0x06000020
 				SC_P_UART1_RTS_B_DMA_UART1_RTS_B	0x06000020
-				SC_P_QSPI1A_DQS_LSIO_GPIO4_IO22		0x00000021
 			>;
 		};
 
@@ -405,6 +407,17 @@
 			>;
 		};
 
+		pinctrl_modem_reset: modemresetgrp {
+			fsl,pins = <
+				SC_P_QSPI1A_DQS_LSIO_GPIO4_IO22		0x06000021
+			>;
+		};
+
+		pinctrl_modem_reset_sleep: modemreset_sleepgrp {
+			fsl,pins = <
+				SC_P_QSPI1A_DQS_LSIO_GPIO4_IO22		0x07800021
+			>;
+		};
 
 		pinctrl_sai1: sai1grp {
 			fsl,pins = <
