@@ -20,6 +20,6 @@
 
 extern bool tee_enabled(void);
 extern int is_secload_get(void);
-extern int tee_load_video_fw(uint32_t index, uint32_t vdec);
+extern int tee_load_video_fw(uint32_t index, uint32_t vdec, bool is_swap);
 #endif /* __TEE_H__ */
 

@@ -162,7 +162,7 @@ static CLASS_ATTR(api_version, 0644, tee_api_version_show,
  * index: firmware index
  * vdec:  vdec type(0: compatible, 1: legency vdec, 2: HEVC vdec)
  */
-int tee_load_video_fw(uint32_t index, uint32_t vdec)
+int tee_load_video_fw(uint32_t index, uint32_t vdec, bool is_swap)
 {
 	struct arm_smccc_res res;
 	long cpu;
@@ -177,7 +177,7 @@ int tee_load_video_fw(uint32_t index, uint32_t vdec)
 	}
 
 	arm_smccc_smc(TEE_SMC_LOAD_VIDEO_FW,
-			index, vdec, 0, 0, 0, 0, 0, &res);
+			index, vdec, is_swap, 0, 0, 0, 0, &res);
 
 	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MAJOR)
 			== MESON_CPU_MAJOR_ID_G12B)
