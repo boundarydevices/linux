@@ -115,6 +115,8 @@ static const struct gpmi_devdata gpmi_devdata_imx6qp = {
 	.type = IS_MX6QP,
 	.bch_max_ecc_strength = 40,
 	.max_chain_delay = 12,
+	.clks = gpmi_clks_for_mx6,
+	.clks_count = ARRAY_SIZE(gpmi_clks_for_mx6),
 };
 
 static const struct gpmi_devdata gpmi_devdata_imx6sx = {
@@ -149,6 +151,8 @@ static const struct gpmi_devdata gpmi_devdata_imx6ull = {
 	.type = IS_MX6ULL,
 	.bch_max_ecc_strength = 40,
 	.max_chain_delay = 12,
+	.clks = gpmi_clks_for_mx6,
+	.clks_count = ARRAY_SIZE(gpmi_clks_for_mx6),
 };
 
 static irqreturn_t bch_irq(int irq, void *cookie)
