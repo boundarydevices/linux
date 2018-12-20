@@ -664,7 +664,8 @@ static int mxc_md_clean_channel(struct mxc_md *mxc_md, int index)
 	struct mxc_parallel_csi_dev *pcsidev;
 	struct media_pad *local_pad;
 	struct media_entity *local_en;
-	u32 i, ret, mipi_vc = 0;
+	u32 i, mipi_vc = 0;
+	int ret;
 
 	if (mxc_md->mipi_csi2[index]) {
 		mipi_csi2 = mxc_md->mipi_csi2[index];
