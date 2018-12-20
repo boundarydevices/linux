@@ -594,7 +594,7 @@ static int legacy_set_geometry(struct gpmi_nand_data *this)
 int common_nfc_set_geometry(struct gpmi_nand_data *this)
 {
 	struct mtd_info *mtd = &this->nand.mtd;
-	struct nand_chip *chip = mtd->priv;
+	struct nand_chip *chip = mtd_to_nand(mtd);
 
 	if (chip->ecc_strength_ds > this->devdata->bch_max_ecc_strength) {
 		dev_err(this->dev,
