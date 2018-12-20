@@ -37,7 +37,7 @@
 #include <linux/delay.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/driver.h>
-
+#include <linux/amlogic/pm.h>
 #include "../../regulator/internal.h"
 #include <linux/amlogic/scpi_protocol.h>
 #include "../../base/power/opp/opp.h"
@@ -122,7 +122,6 @@ static unsigned int meson_cpufreq_set_rate(struct cpufreq_policy *policy,
 		if (__clk_get_enable_count(high_freq_clk_p) >= 1)
 			clk_disable_unprepare(high_freq_clk_p);
 	}
-
 	if (!ret) {
 		/*
 		 * FIXME: clk_set_rate hasn't returned an error here however it
@@ -548,6 +547,14 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 		volt_tol = DEF_VOLT_TOL;
 	pr_info("value of voltage_tolerance %u\n", volt_tol);
 
+	if (of_property_read_u32(np, "dynamic_gp1_clk",
+				&gp1_clk_target)) {
+		pr_err("%s:don't find the node <dynamic_gp1_clk>\n",
+				__func__);
+		gp1_clk_target = 0;
+	}
+	pr_info("value of gp1_clk_target %u\n", gp1_clk_target);
+
 	if (cur_cluster < MAX_CLUSTERS)
 		cpumask_copy(policy->cpus, topology_core_cpumask(policy->cpu));
 
@@ -673,8 +680,31 @@ static int meson_cpufreq_exit(struct cpufreq_policy *policy)
 
 static int meson_cpufreq_suspend(struct cpufreq_policy *policy)
 {
+	struct clk *dsu_pre_parent;
+	struct meson_cpufreq_driver_data *cpufreq_data;
+	int ret = 0;
 
-	return cpufreq_generic_suspend(policy);
+	cpufreq_data = policy->driver_data;
+	dsu_pre_parent = cpufreq_data->clk_dsu_pre;
+
+	if (is_pm_freeze_mode() && gp1_clk_target) {
+		ret =  __cpufreq_driver_target(policy, gp1_clk_target
+				* 1000, CPUFREQ_RELATION_H);
+		if (__clk_get_enable_count(dsu_pre_parent) == 0) {
+			ret = clk_prepare_enable(dsu_pre_parent);
+			if (ret) {
+				pr_err("%s: CPU%d gp1 pll enable failed,ret = %d\n",
+					__func__, policy->cpu, ret);
+				return ret;
+			}
+		}
+		/*set gp1 pll to 1.2G*/
+		clk_set_rate(dsu_pre_parent, 1200 * 1000 * 1000);
+		pr_info("gp1 pll =%lu!\n", clk_get_rate(dsu_pre_parent));
+		return ret;
+	} else
+		return cpufreq_generic_suspend(policy);
+	return 0;
 }
 
 static int meson_cpufreq_resume(struct cpufreq_policy *policy)

@@ -57,6 +57,7 @@ static struct cpufreq_freqs freqs;
 #define DSU_HIGH_RATE (1500 * 1000)
 #define CPU_CMP_RATE (1800 * 1000)
 
+unsigned int gp1_clk_target;
 /*whether use different tables or not*/
 bool cpufreq_tables_supply;
 static unsigned int hispeed_cpufreq_max;

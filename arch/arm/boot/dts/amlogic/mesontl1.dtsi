@@ -52,6 +52,8 @@
 				"dsu_clk",
 				"dsu_pre_parent";
 			operating-points-v2 = <&cpu_opp_table0>;
+			/*set dynamic gp1 clk to val * 1000 *1000*/
+			dynamic_gp1_clk = <1000>;
 			cpu-supply = <&vddcpu0>;
 			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
 		};
@@ -73,6 +75,8 @@
 				"dsu_clk",
 				"dsu_pre_parent";
 			operating-points-v2 = <&cpu_opp_table0>;
+			/*set dynamic gp1 clk to val * 1000 *1000*/
+			dynamic_gp1_clk = <1000>;
 			cpu-supply = <&vddcpu0>;
 			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
 		};
@@ -94,6 +98,8 @@
 				"dsu_clk",
 				"dsu_pre_parent";
 			operating-points-v2 = <&cpu_opp_table0>;
+			/*set dynamic gp1 clk to val * 1000 *1000*/
+			dynamic_gp1_clk = <1000>;
 			cpu-supply = <&vddcpu0>;
 			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
 		};
@@ -115,6 +121,8 @@
 				"dsu_clk",
 				"dsu_pre_parent";
 			operating-points-v2 = <&cpu_opp_table0>;
+			/*set dynamic gp1 clk to val * 1000 *1000*/
+			dynamic_gp1_clk = <1000>;
 			cpu-supply = <&vddcpu0>;
 			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
 		};
