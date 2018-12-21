@@ -260,7 +260,7 @@ static int find_buffer_id(struct vpu_ctx *ctx, u_int32 addr)
 		if (p_data_req->vb2_buf != NULL) {
 			pphy_address = (u_int32 *)vb2_plane_cookie(p_data_req->vb2_buf, 0);
 			if (pphy_address != NULL) {
-				LumaAddr = *pphy_address;
+				LumaAddr = *pphy_address + p_data_req->data_offset[0];
 				if (LumaAddr == addr) {
 					up(&This->drv_q_lock);
 					return i;
@@ -818,6 +818,7 @@ static int v4l2_ioctl_qbuf(struct file *file,
 {
 	struct vpu_ctx *ctx = v4l2_fh_to_ctx(fh);
 	struct queue_data *q_data;
+	struct vb2_data_req *p_data_req;
 	int ret;
 
 	vpu_dbg(LVL_INFO, "%s()\n", __func__);
@@ -826,8 +827,14 @@ static int v4l2_ioctl_qbuf(struct file *file,
 		vpu_dbg(LVL_INFO, "%s: input %d bytes \n", __func__, buf->m.planes[0].bytesused);
 		q_data = &ctx->q_data[V4L2_SRC];
 		v4l2_update_stream_addr(ctx, 0);
-	} else if (buf->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
+	} else if (buf->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		q_data = &ctx->q_data[V4L2_DST];
+		down(&q_data->drv_q_lock);
+		p_data_req = &q_data->vb2_reqs[buf->index];
+		p_data_req->data_offset[0] = buf->m.planes[0].data_offset;
+		p_data_req->data_offset[1] = buf->m.planes[1].data_offset;
+		up(&q_data->drv_q_lock);
+	}
 	else
 		return -EINVAL;
 
@@ -2020,9 +2027,9 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 						if (!p_data_req->vb2_buf)
 							break;
 						pphy_address = (u_int32 *)vb2_plane_cookie(p_data_req->vb2_buf, 0);
-						LumaAddr = *pphy_address;
+						LumaAddr = *pphy_address + p_data_req->data_offset[0];
 						pphy_address = (u_int32 *)vb2_plane_cookie(p_data_req->vb2_buf, 1);
-						ChromaAddr = *pphy_address;
+						ChromaAddr = *pphy_address + p_data_req->data_offset[1];
 						vpu_dbg(LVL_INFO, "%s :LumaAddr(%x) ChromaAddr(%x) buf_id (%d)\n",
 								__func__,
 								LumaAddr,
@@ -2030,8 +2037,8 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 								p_data_req->id
 								);
 						if (!LumaAddr || !ChromaAddr) {
-							LumaAddr = p_data_req->phy_addr[0];
-							ChromaAddr = p_data_req->phy_addr[1];
+							LumaAddr = p_data_req->phy_addr[0] + p_data_req->data_offset[0];
+							ChromaAddr = p_data_req->phy_addr[1] + p_data_req->data_offset[1];
 						}
 
 						local_cmddata[0] = p_data_req->id;
@@ -2076,9 +2083,9 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 				}
 
 				pphy_address = (u_int32 *)vb2_plane_cookie(p_data_req->vb2_buf, 0);
-				LumaAddr = *pphy_address;
+				LumaAddr = *pphy_address + p_data_req->data_offset[0];
 				pphy_address = (u_int32 *)vb2_plane_cookie(p_data_req->vb2_buf, 1);
-				ChromaAddr = *pphy_address;
+				ChromaAddr = *pphy_address + p_data_req->data_offset[1];
 				vpu_dbg(LVL_INFO, "%s :LumaAddr(%x) ChromaAddr(%x) buf_id (%d)\n",
 						__func__,
 						LumaAddr,
@@ -2086,8 +2093,8 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 						p_data_req->id
 						);
 				if (!LumaAddr || !ChromaAddr) {
-					LumaAddr = p_data_req->phy_addr[0];
-					ChromaAddr = p_data_req->phy_addr[1];
+					LumaAddr = p_data_req->phy_addr[0] + p_data_req->data_offset[0];
+					ChromaAddr = p_data_req->phy_addr[1] + p_data_req->data_offset[1];
 				}
 				local_cmddata[0] = p_data_req->id;
 				local_cmddata[1] = LumaAddr;
