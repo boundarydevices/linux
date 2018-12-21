@@ -144,7 +144,7 @@ static int set_gop_size(struct v4l2_ctrl *ctrl)
 	pMEDIAIP_ENC_PARAM  param = &attr->param;
 
 	mutex_lock(&ctx->instance_mutex);
-	param->uGopBLength = ctrl->val;
+	param->uIFrameInterval = ctrl->val;
 	mutex_unlock(&ctx->instance_mutex);
 
 	return 0;
@@ -158,6 +158,30 @@ static int set_i_period(struct v4l2_ctrl *ctrl)
 
 	mutex_lock(&ctx->instance_mutex);
 	param->uIFrameInterval = ctrl->val;
+	mutex_unlock(&ctx->instance_mutex);
+
+	return 0;
+}
+
+static int get_gop_size(struct v4l2_ctrl *ctrl)
+{
+	struct vpu_ctx *ctx = v4l2_ctrl_to_ctx(ctrl);
+	struct vpu_attr *attr = get_vpu_ctx_attr(ctx);
+	pMEDIAIP_ENC_PARAM  param = &attr->param;
+
+	ctrl->val = param->uIFrameInterval;
+
+	return 0;
+}
+
+static int set_b_frames(struct v4l2_ctrl *ctrl)
+{
+	struct vpu_ctx *ctx = v4l2_ctrl_to_ctx(ctrl);
+	struct vpu_attr *attr = get_vpu_ctx_attr(ctx);
+	pMEDIAIP_ENC_PARAM  param = &attr->param;
+
+	mutex_lock(&ctx->instance_mutex);
+	param->uGopBLength = ctrl->val;
 	mutex_unlock(&ctx->instance_mutex);
 
 	return 0;
@@ -321,6 +345,7 @@ static int add_ctrl_gop_size(struct vpu_ctx *ctx)
 {
 	static const struct v4l2_ctrl_ops ctrl_gop_ops = {
 		.s_ctrl = set_gop_size,
+		.g_volatile_ctrl = get_gop_size,
 	};
 	struct v4l2_ctrl *ctrl;
 
@@ -336,6 +361,9 @@ static int add_ctrl_gop_size(struct vpu_ctx *ctx)
 		return -EINVAL;
 	}
 
+	ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
+	ctrl->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+
 	return 0;
 }
 
@@ -343,6 +371,7 @@ static int add_ctrl_i_period(struct vpu_ctx *ctx)
 {
 	static const struct v4l2_ctrl_ops ctrl_i_period_ops = {
 		.s_ctrl = set_i_period,
+		.g_volatile_ctrl = get_gop_size,
 	};
 	struct v4l2_ctrl *ctrl;
 
@@ -356,6 +385,32 @@ static int add_ctrl_i_period(struct vpu_ctx *ctx)
 
 	if (!ctrl) {
 		vpu_dbg(LVL_ERR, "add ctrl i period fail\n");
+		return -EINVAL;
+	}
+
+	ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
+	ctrl->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+
+	return 0;
+}
+
+static int add_ctrl_b_frames(struct vpu_ctx *ctx)
+{
+	static const struct v4l2_ctrl_ops ctrl_b_frames = {
+		.s_ctrl = set_b_frames,
+	};
+	struct v4l2_ctrl *ctrl;
+
+	ctrl = v4l2_ctrl_new_std(&ctx->ctrl_handler,
+			&ctrl_b_frames,
+			V4L2_CID_MPEG_VIDEO_B_FRAMES,
+			BFRAMES_L_THRESHOLD,
+			BFRAMES_H_THRESHOLD,
+			1,
+			BFRAMES_DEFAULT);
+
+	if (!ctrl) {
+		vpu_dbg(LVL_ERR, "add ctrl b frames fail\n");
 		return -EINVAL;
 	}
 
@@ -499,6 +554,7 @@ static int vpu_enc_register_ctrls(struct vpu_ctx *ctx)
 	add_ctrl_bitrate_peak(ctx);
 	add_ctrl_gop_size(ctx);
 	add_ctrl_i_period(ctx);
+	add_ctrl_b_frames(ctx);
 	add_ctrl_i_frame_qp(ctx);
 	add_ctrl_p_frame_qp(ctx);
 	add_ctrl_b_frame_qp(ctx);
