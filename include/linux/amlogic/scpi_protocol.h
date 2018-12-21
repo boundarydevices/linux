@@ -67,6 +67,8 @@ enum scpi_std_cmd {
 	SCPI_CMD_OSCRING_VALUE = 0x43,
 	SCPI_CMD_WAKEUP_REASON_GET = 0x30,
 	SCPI_CMD_WAKEUP_REASON_CLR = 0X31,
+	SCPI_CMD_GET_ETHERNET_CALC = 0x32,
+
 	SCPI_CMD_GET_CEC1		= 0xB4,
 	SCPI_CMD_GET_CEC2		= 0xB5,
 	SCPI_CMD_COUNT
@@ -98,4 +100,5 @@ int scpi_get_ring_value(unsigned char *val);
 int scpi_get_wakeup_reason(u32 *wakeup_reason);
 int scpi_clr_wakeup_reason(void);
 int scpi_get_cec_val(enum scpi_std_cmd index, u32 *p_cec);
+u8  scpi_get_ethernet_calc(void);
 #endif /*_SCPI_PROTOCOL_H_*/

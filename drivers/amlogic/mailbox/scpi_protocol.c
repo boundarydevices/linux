@@ -541,3 +541,21 @@ int scpi_get_cec_val(enum scpi_std_cmd index, u32 *p_cec)
 }
 EXPORT_SYMBOL_GPL(scpi_get_cec_val);
 
+u8 scpi_get_ethernet_calc(void)
+{
+	struct scpi_data_buf sdata;
+	struct mhu_data_buf mdata;
+	u8 temp = 0;
+
+	struct __packed {
+		u32 status;
+		u8 eth_calc;
+	} buf;
+
+	SCPI_SETUP_DBUF(sdata, mdata, SCPI_CL_NONE,
+		SCPI_CMD_GET_ETHERNET_CALC, temp, buf);
+	if (scpi_execute_cmd(&sdata))
+		return -EPERM;
+	return buf.eth_calc;
+}
+EXPORT_SYMBOL_GPL(scpi_get_ethernet_calc);
