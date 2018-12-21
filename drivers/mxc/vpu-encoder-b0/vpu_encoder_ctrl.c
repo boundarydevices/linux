@@ -114,7 +114,7 @@ static int set_bitrate(struct v4l2_ctrl *ctrl)
 	pMEDIAIP_ENC_PARAM  param = &attr->param;
 
 	mutex_lock(&ctx->instance_mutex);
-	param->uTargetBitrate = ctrl->val;
+	param->uTargetBitrate = ctrl->val / BITRATE_COEF;
 	if (param->uMaxBitRate < param->uTargetBitrate)
 		param->uMaxBitRate = param->uTargetBitrate;
 	mutex_unlock(&ctx->instance_mutex);
@@ -129,7 +129,7 @@ static int set_bitrate_peak(struct v4l2_ctrl *ctrl)
 	pMEDIAIP_ENC_PARAM  param = &attr->param;
 
 	mutex_lock(&ctx->instance_mutex);
-	param->uMaxBitRate = ctrl->val;
+	param->uMaxBitRate = ctrl->val / BITRATE_COEF;
 	if (param->uTargetBitrate > param->uMaxBitRate)
 		param->uTargetBitrate = param->uMaxBitRate;
 	mutex_unlock(&ctx->instance_mutex);
@@ -283,10 +283,10 @@ static int add_ctrl_bitrate(struct vpu_ctx *ctx)
 	ctrl = v4l2_ctrl_new_std(&ctx->ctrl_handler,
 				 &ctrl_bitrate_ops,
 				 V4L2_CID_MPEG_VIDEO_BITRATE,
-				 BITRATE_LOW_THRESHOLD,
-				 BITRATE_HIGH_THRESHOLD,
-				 1,
-				 BITRATE_DEFAULT_TARGET);
+				 BITRATE_LOW_THRESHOLD * BITRATE_COEF,
+				 BITRATE_HIGH_THRESHOLD * BITRATE_COEF,
+				 BITRATE_COEF,
+				 BITRATE_DEFAULT_TARGET * BITRATE_COEF);
 	if (!ctrl) {
 		vpu_dbg(LVL_ERR, "add ctrl bitrate fail\n");
 		return -EINVAL;
@@ -305,10 +305,10 @@ static int add_ctrl_bitrate_peak(struct vpu_ctx *ctx)
 	ctrl = v4l2_ctrl_new_std(&ctx->ctrl_handler,
 				 &ctrl_bitrate_ops,
 				 V4L2_CID_MPEG_VIDEO_BITRATE_PEAK,
-				 BITRATE_LOW_THRESHOLD,
-				 BITRATE_HIGH_THRESHOLD,
-				 1,
-				 BITRATE_DEFAULT_PEAK);
+				 BITRATE_LOW_THRESHOLD * BITRATE_COEF,
+				 BITRATE_HIGH_THRESHOLD * BITRATE_COEF,
+				 BITRATE_COEF,
+				 BITRATE_DEFAULT_PEAK * BITRATE_COEF);
 	if (!ctrl) {
 		vpu_dbg(LVL_ERR, "add ctrl bitrate peak fail\n");
 		return -EINVAL;
