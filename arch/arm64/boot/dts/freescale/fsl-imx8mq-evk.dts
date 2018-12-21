@@ -931,16 +931,6 @@
 	status = "okay";
 };
 
-&rpmsg{
-	/*
-	 * 64K for one rpmsg instance:
-	 * --0x98000000~0x9800ffff: pingpong
-	 */
-	vdev-nums = <1>;
-	reg = <0x0 0x98000000 0x0 0x10000>;
-	status = "okay";
-};
-
 &A53_0 {
 	operating-points = <
 		/* kHz    uV */

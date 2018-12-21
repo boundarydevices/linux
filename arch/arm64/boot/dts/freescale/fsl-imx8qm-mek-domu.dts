@@ -119,16 +119,19 @@
 			no-map;
 			reg = <0 0x90000000 0 0x400000>;
 		};
-
-		decoder_rpc: decoder_rpc@0x90400000 {
+		rpmsg_dma_reserved:rpmsg_dma@0x90400000 {
+			compatible = "shared-dma-pool";
 			no-map;
-			reg = <0 0x90400000 0 0x1000000>;
+			reg = <0 0x90400000 0 0x1C00000>;
 		};
-		encoder_rpc: encoder_rpc@0x91400000 {
+		decoder_rpc: decoder_rpc@0x92000000 {
 			no-map;
-			reg = <0 0x91400000 0 0x200000>;
+			reg = <0 0x92000000 0 0x200000>;
 		};
-
+		encoder_rpc: encoder_rpc@0x92200000 {
+			no-map;
+			reg = <0 0x92200000 0 0x200000>;
+		};
 		dsp_reserved: dsp@0x92400000 {
 			no-map;
 			reg = <0 0x92400000 0 0x2000000>;
