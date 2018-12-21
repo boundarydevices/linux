@@ -115,7 +115,7 @@
 		reg = <0x3c>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_mipi_csi0>;
-		clocks = <&clk IMX8QXP_CLK_DUMMY>;
+		clocks = <&clk IMX8QXP_24MHZ>;
 		clock-names = "csi_mclk";
 		csi_id = <0>;
 		pwn-gpios = <&gpio3 7 GPIO_ACTIVE_LOW>;
