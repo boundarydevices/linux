@@ -1083,15 +1083,6 @@
 	status = "okay";
 };
 
-&rpmsg{
-	/*
-	 * 64K for one rpmsg instance:
-	 */
-	vdev-nums = <2>;
-	reg = <0x0 0x90000000 0x0 0x20000>;
-	status = "okay";
-};
-
 &mipi_csi_0 {
 	#address-cells = <1>;
 	#size-cells = <0>;

@@ -4278,6 +4278,7 @@
 		rpmsg: rpmsg {
 			compatible = "fsl,imx8qm-rpmsg";
 			power-domains = <&pd_lsio_mu5a>;
+			memory-region = <&rpmsg_dma_reserved>;
 			status = "disabled";
 		};
 
@@ -4295,6 +4296,7 @@
 			compatible = "fsl,imx8qm-rpmsg";
 			multi-core-id = <1>;
 			power-domains = <&pd_lsio_mu6a>;
+			memory-region = <&rpmsg_dma_reserved>;
 			status = "disabled";
 		};
 	};
