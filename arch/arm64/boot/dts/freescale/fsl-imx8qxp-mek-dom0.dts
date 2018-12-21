@@ -63,8 +63,8 @@
 		reg = <0x0 0x90000000 0x0 0x400000>;
 	};
 
-	decoder_rpc_mem: decoder_rpc_mem@0x90400000 {
-		reg = <0 0x90400000 0 0x200000>;
+	decoder_rpc_mem: decoder_rpc_mem@0x92000000 {
+		reg = <0 0x92000000 0 0x200000>;
 	};
 
 	encoder_rpc_mem: encoder_rpc_mem@0x92200000 {
