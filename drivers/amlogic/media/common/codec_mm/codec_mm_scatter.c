@@ -2205,6 +2205,14 @@ int codec_mm_scatter_update_config(struct codec_mm_scatter_mgt *smgt)
 	smgt->no_alloc_from_sys = g_scatter.no_alloc_from_sys;
 	return 0;
 }
+int codec_mm_scatter_size(int is_tvp)
+{
+	struct codec_mm_scatter_mgt *smgt;
+	smgt = codec_mm_get_scatter_mgt(is_tvp ? 1 : 0);
+
+	return smgt->total_page_num;
+}
+EXPORT_SYMBOL(codec_mm_scatter_size);
 
 int codec_mm_scatter_mgt_delay_free_swith(
 	int on,
@@ -2213,7 +2221,6 @@ int codec_mm_scatter_mgt_delay_free_swith(
 	int is_tvp)
 {
 	struct codec_mm_scatter_mgt *smgt;
-	unsigned long ret = 0;
 
 	smgt = codec_mm_get_scatter_mgt(is_tvp);
 	codec_mm_list_lock(smgt);
@@ -2231,14 +2238,12 @@ int codec_mm_scatter_mgt_delay_free_swith(
 	}
 	codec_mm_list_unlock(smgt);
 	if (on && wait_size_M > 0 && !is_tvp) {
-		u64 start_time = get_jiffies_64();
-		int try_max = 10;
-
 		smgt->force_cache_on = 1;
 		smgt->force_cache_page_cnt = wait_size_M >> PAGE_SHIFT;
 		smgt->delay_free_timeout_jiffies64 =
 			get_jiffies_64() + 10000 * HZ/1000;
 		codec_mm_schedule_delay_work(smgt, 0, 1);/*start cache*/
+#if 0
 		while (smgt->total_page_num < smgt->force_cache_page_cnt) {
 			if (smgt->cache_sc &&
 				(smgt->cached_pages >=
@@ -2263,6 +2268,7 @@ int codec_mm_scatter_mgt_delay_free_swith(
 		smgt->force_cache_on = 0;
 		smgt->delay_free_timeout_jiffies64 =
 			get_jiffies_64() + delay_ms * HZ/1000;
+#endif
 	} else if (on) {
 		codec_mm_schedule_delay_work(smgt, 0, 1);
 	} else {
@@ -2288,8 +2294,11 @@ static void codec_mm_scatter_cache_manage(
 			 (smgt->no_cache_size_M * (SZ_1M >> PAGE_SHIFT)))) {
 			/*have enough pages for most movies.*/
 			  /*don't cache more.*/
-			if (smgt->force_cache_on)
-				complete(&smgt->complete);
+			if (smgt->force_cache_on) {
+				smgt->force_cache_on = 0;
+				smgt->delay_free_timeout_jiffies64 =
+					get_jiffies_64() + 2000 * HZ/1000;
+			}
 		} else if ((smgt->cached_pages < smgt->keep_size_PAGE) ||
 			(smgt->force_cache_on &&/*on star cache*/
 			(smgt->total_page_num < smgt->force_cache_page_cnt))
@@ -2333,7 +2342,9 @@ static void codec_mm_scatter_cache_manage(
 				smgt->force_cache_on &&
 				(smgt->cached_pages >=
 				 smgt->force_cache_page_cnt)) {
-				complete(&smgt->complete);
+				smgt->force_cache_on = 0;
+				smgt->delay_free_timeout_jiffies64 =
+					get_jiffies_64() + 2000 * HZ/1000;
 			}
 		} else if ((smgt->cached_pages >
 			(smgt->keep_size_PAGE + 1000)) &&
