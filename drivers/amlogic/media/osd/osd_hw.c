@@ -4567,6 +4567,9 @@ static void osd_update_disp_freescale_enable(u32 index)
 		if (osd_hw.scale_workaround)
 			data32 |= 1 << 21;
 		data32 |= 1 << 24;
+		if (osd_hw.osd_meson_dev.cpu_id >=
+			__MESON_CPU_MAJOR_ID_G12B)
+			data32 |= 1 << 25;
 	}
 	VSYNCOSD_WR_MPEG_REG(osd_reg->osd_vsc_ctrl0, data32);
 	data32 = 0x0;
