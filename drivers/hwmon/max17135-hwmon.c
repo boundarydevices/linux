@@ -39,6 +39,7 @@
 #include <linux/sysfs.h>
 #include <linux/platform_device.h>
 #include <linux/mfd/max17135.h>
+#include <linux/mod_devicetable.h>
 
 /*
  * Conversions
