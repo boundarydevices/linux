@@ -79,6 +79,9 @@ extern unsigned int vpu_dbg_level_encoder;
 #define QP_MIN				0
 #define QP_DEFAULT			25
 
+#define VPU_DISABLE_BITS		0x7
+#define VPU_ENCODER_MASK		0x1
+
 #define ENCODER_NODE_NUMBER 13 //use /dev/video13 as encoder node
 struct vpu_v4l2_control {
 	uint32_t id;
