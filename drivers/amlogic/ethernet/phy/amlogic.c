@@ -31,6 +31,7 @@
 #include <linux/mii.h>
 #include <linux/ethtool.h>
 #include <linux/phy.h>
+#include <linux/amlogic/scpi_protocol.h>
 
 #define  SMI_ADDR_TSTWRITE    23
 
@@ -105,7 +106,76 @@ void internal_config(struct phy_device *phydev)
 	phy_write(phydev, 0x14, 0x441A); /* A8_CONFIG */
 	pr_info("internal phy init\n");
 }
+/*fetch tx_amp from uboot*/
+#if 0
+int myAtoi(char *str)
+{
+	int i = 0;
+	int res = 0;
 
+	for (i = 0; str[i] != '\0'; ++i)
+		res = res*10 + str[i] - '0';
+	return res;
+}
+#endif
+unsigned int tx_amp;
+
+module_param_named(tx_amp, tx_amp,
+		uint, 0644);
+
+static char tx_amp_str[5] = "0";
+static int __init get_tx_amp(char *s)
+{
+	int ret = 0;
+
+	if (s != NULL)
+		sprintf(tx_amp_str, "%s", s);
+	if (strcmp(tx_amp_str, "0") == 0)
+		tx_amp = 0;
+	else
+		ret = kstrtouint(tx_amp_str, 0, &tx_amp);
+
+	return 0;
+}
+__setup("tx_amp=", get_tx_amp);
+
+void custom_internal_config(struct phy_device *phydev)
+{
+	unsigned int efuse_valid = 0;
+	unsigned int env_valid = 0;
+	unsigned int efuse_amp = 0;
+	unsigned int setup_amp = 0;
+	/*we will setup env tx_amp first to debug,
+	 *if env tx_amp ==0 we will use the efuse
+	 */
+	efuse_amp = scpi_get_ethernet_calc();
+	efuse_valid = (efuse_amp >> 3);
+	env_valid = (tx_amp >> 7);
+	if (env_valid || efuse_valid) {
+
+		/*env valid use env tx_amp*/
+		if (env_valid) {
+			/*debug mode use env tx_amp*/
+			setup_amp = tx_amp & (~0x80);
+			pr_info("debug mode tx_amp = %d\n", setup_amp);
+		} else {
+			/* efuse is valid but env not*/
+			setup_amp = efuse_amp;
+			pr_info("use efuse tx_amp = %d\n", setup_amp);
+		}
+		/*Enable Analog and DSP register Bank access by*/
+		phy_write(phydev, 0x14, 0x0000);
+		phy_write(phydev, 0x14, 0x0400);
+		phy_write(phydev, 0x14, 0x0000);
+		phy_write(phydev, 0x14, 0x0400);
+		phy_write(phydev, 0x17, setup_amp);
+		phy_write(phydev, 0x14, 0x4418);
+		pr_info("set phy setup_amp = %d\n", setup_amp);
+	} else {
+		/*env not set, efuse not valid return*/
+		pr_info("env not set, efuse also invalid\n");
+	}
+}
 void reset_internal_phy(struct phy_device *phydev)
 {
 	int value;
@@ -243,6 +313,11 @@ static int internal_config_init(struct phy_device *phydev)
 	return genphy_config_init(phydev);
 }
 
+static int custom_internal_config_init(struct phy_device *phydev)
+{
+	custom_internal_config(phydev);
+	return genphy_config_init(phydev);
+}
 unsigned int support_internal_phy_wol;
 int internal_phy_suspend(struct phy_device *phydev)
 {
@@ -284,7 +359,8 @@ void internal_phy_remove(struct phy_device *phydev)
 	value = phy_read(phydev, 0x18);
 	phy_write(phydev, 0x18, value | 0x1);
 }
-static struct phy_driver amlogic_internal_driver[] = { {
+static struct phy_driver amlogic_internal_driver[] = {
+{
 	.phy_id	= 0x01814400,
 	.name		= "amlogic internal phy",
 	.phy_id_mask	= 0x0fffffff,
@@ -297,12 +373,27 @@ static struct phy_driver amlogic_internal_driver[] = { {
 	.suspend	= internal_phy_suspend,
 	.resume		= internal_phy_resume,
 	.remove		= internal_phy_remove,
+}, {
+
+	.phy_id	= 0x01803301,
+	.name		= "custom internal phy",
+	.phy_id_mask	= 0x0fffffff,
+	.config_init	= custom_internal_config_init,
+	/*1 means power down reset, 0 means marm reset*/
+	/*bit 0-7,value f:count_sec=15*/
+	.features	= 0x10f,
+	.config_aneg	= genphy_config_aneg,
+	.read_status	= genphy_read_status,
+	.suspend	= genphy_suspend,
+	.resume		= genphy_resume,
+	.remove		= internal_phy_remove,
 } };
 
 module_phy_driver(amlogic_internal_driver);
 
 static struct mdio_device_id __maybe_unused amlogic_tbl[] = {
 	{ 0x01814400, 0xfffffff0 },
+	{ 0x01803301, 0xfffffff0 },
 	{ }
 };
 

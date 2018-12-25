@@ -233,7 +233,7 @@ static int dwmac_meson_cfg_ctrl(void __iomem *base_addr)
 
 	/*config phyid should between  a 0~0xffffffff*/
 	/*please don't use 44000181, this has been used by internal phy*/
-	writel(0x33000180, ETH_PHY_config_addr + ETH_PHY_CNTL0);
+	writel(0x33010180, ETH_PHY_config_addr + ETH_PHY_CNTL0);
 
 	/*use_phy_smi | use_phy_ip | co_clkin from eth_phy_top*/
 	writel(0x260, ETH_PHY_config_addr + ETH_PHY_CNTL2);
