@@ -5098,7 +5098,9 @@ int dolby_vision_parse_metadata(
 		dst_format = FORMAT_SDR;
 #ifdef V2_4
 	if ((src_format != dovi_setting.src_format)
-		|| (dst_format != dovi_setting.dst_format))
+		|| (dst_format != dovi_setting.dst_format) ||
+		((!(dolby_vision_flags & FLAG_CERTIFICAION))
+		&& (frame_count == 0)))
 		p_funcs->control_path(
 			FORMAT_INVALID, 0,
 			comp_buf[currentId], 0,
