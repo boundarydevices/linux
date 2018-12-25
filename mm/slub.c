@@ -3734,6 +3734,7 @@ static void aml_slub_free_large(struct page *page, const void *obj)
 			__func__, page_address(page), nr_pages, obj);
 		for (i = 0; i < nr_pages; i++)  {
 			__free_pages(page, 0);
+			kasan_free_pages(page, 0);
 			page++;
 		}
 	}
@@ -3900,14 +3901,17 @@ void kfree(const void *x)
 	page = virt_to_head_page(x);
 	if (unlikely(!PageSlab(page))) {
 		BUG_ON(!PageCompound(page));
-		kfree_hook(x);
 	#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
+		kmemleak_free(x);
 		if (unlikely(PageOwnerPriv1(page)))
 			aml_slub_free_large(page, x);
-		else
+		else {
 			__free_pages(page, compound_order(page));
+			kasan_kfree_large(x);
+		}
 		return;
 	#else
+		kfree_hook(x);
 		__free_pages(page, compound_order(page));
 		return;
 	#endif /* CONFIG_AMLOGIC_MEMORY_EXTEND */

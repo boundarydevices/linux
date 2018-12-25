@@ -632,6 +632,31 @@ void kasan_kmalloc_large(const void *ptr, size_t size, gfp_t flags)
 		KASAN_PAGE_REDZONE);
 }
 
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
+void kasan_kmalloc_save(const void *ptr, size_t size, gfp_t flags)
+{
+	struct page *page;
+	unsigned long redzone_start;
+	unsigned long redzone_end;
+
+	if (gfpflags_allow_blocking(flags))
+		quarantine_reduce();
+
+	if (unlikely(ptr == NULL))
+		return;
+
+	page = virt_to_page(ptr);
+	redzone_start = round_up((unsigned long)(ptr + size),
+				KASAN_SHADOW_SCALE_SIZE);
+	redzone_end = (unsigned long)ptr + PAGE_ALIGN(size);
+
+	kasan_unpoison_shadow(ptr, size);
+	kasan_poison_shadow((void *)redzone_start, redzone_end - redzone_start,
+		KASAN_PAGE_REDZONE);
+}
+
+#endif
+
 void kasan_krealloc(const void *object, size_t size, gfp_t flags)
 {
 	struct page *page;

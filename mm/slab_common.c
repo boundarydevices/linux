@@ -1091,19 +1091,31 @@ void *kmalloc_order(size_t size, gfp_t flags, unsigned int order)
 {
 	void *ret;
 	struct page *page;
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
+	int saved = 0;
+#endif
 
 	flags |= __GFP_COMP;
 #ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
-	if (size < (PAGE_SIZE * (1 << order)))
+	if (size < (PAGE_SIZE * (1 << order))) {
 		page = aml_slub_alloc_large(size, flags, order);
-	else
+		saved = 1;
+	} else
 		page = alloc_pages(flags, order);
 #else
 	page = alloc_pages(flags, order);
 #endif
 	ret = page ? page_address(page) : NULL;
 	kmemleak_alloc(ret, size, 1, flags);
+#ifdef CONFIG_AMLOGIC_MEMORY_EXTEND
+	/* only need poison used pages */
+	if (saved && ret)
+		kasan_kmalloc_save(ret, size, flags);
+	else
+		kasan_kmalloc_large(ret, size, flags);
+#else
 	kasan_kmalloc_large(ret, size, flags);
+#endif
 	return ret;
 }
 EXPORT_SYMBOL(kmalloc_order);
