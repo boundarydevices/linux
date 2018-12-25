@@ -33,6 +33,10 @@
 /delete-node/ &i2c0_mipi_lvds0;
 /delete-node/ &i2c0_csi0;
 
+&parallel_csi {
+	status = "disabled";
+};
+
 &i2c0 {
 	clock-frequency = <1000000>;
 };
