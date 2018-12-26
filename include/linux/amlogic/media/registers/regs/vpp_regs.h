@@ -245,5 +245,8 @@
 #define OSD1_BLEND_SRC_CTRL 0x1dfd
 #define OSD2_BLEND_SRC_CTRL 0x1dfe
 
+/* after g12b */
+#define SRSHARP0_SHARP_SYNC_CTRL 0x3eb0
+#define SRSHARP1_SHARP_SYNC_CTRL 0x3fb0
 #endif
 

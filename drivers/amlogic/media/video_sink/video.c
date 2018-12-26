@@ -10322,10 +10322,19 @@ static int __init video_early_init(void)
 			DMC_AM0_CHAN_CTRL,
 			0x8ff403cf);
 
-	/* force bypass dolby for TL1. There is no dolby function */
-	if (is_meson_tl1_cpu())
+	if (is_meson_tl1_cpu()) {
+		/* force bypass dolby for TL1, no dolby function */
 		WRITE_VCBUS_REG_BITS(
 			DOLBY_PATH_CTRL, 0xf, 0, 6);
+		/* disable latch for sr core0/1 scaler */
+		WRITE_VCBUS_REG_BITS(
+			SRSHARP0_SHARP_SYNC_CTRL, 1, 8, 1);
+		WRITE_VCBUS_REG_BITS(
+			SRSHARP1_SHARP_SYNC_CTRL, 1, 8, 1);
+	}
+	if (is_meson_g12b_cpu())
+		WRITE_VCBUS_REG_BITS(
+			SRSHARP0_SHARP_SYNC_CTRL, 1, 8, 1);
 	return 0;
 }
 
