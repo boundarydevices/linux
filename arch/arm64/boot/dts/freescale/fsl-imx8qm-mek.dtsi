@@ -689,6 +689,12 @@
 	status = "okay";
 };
 
+&usbphy1 {
+	fsl,tx-cal-45-dn-ohms = <45>;
+	fsl,tx-cal-45-dp-ohms = <45>;
+	fsl,tx-d-cal = <114>;
+};
+
 &usbotg1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg1>;
