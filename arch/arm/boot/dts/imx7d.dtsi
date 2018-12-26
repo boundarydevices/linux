@@ -254,6 +254,7 @@
 		clocks = <&clks IMX7D_CLK_DUMMY>, <&clks IMX7D_EPDC_PIXEL_ROOT_CLK>;
 		clock-names = "epdc_axi", "epdc_pix";
 		epdc-ram = <&gpr 0x4 30>;
+		qos = <&qosc>;
 		status = "disabled";
 	};
 
@@ -305,6 +306,11 @@
 	ddrc: ddrc@307a0000 {
 		compatible = "fsl,imx7-ddrc";
 		reg = <0x307a0000 0x10000>;
+	};
+
+	qosc: qosc@307f0000 {
+		compatible = "fsl,imx7d-qosc", "syscon";
+		reg = <0x307f0000 0x4000>;
 	};
 };
 
