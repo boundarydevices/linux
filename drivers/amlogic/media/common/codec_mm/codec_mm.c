@@ -270,6 +270,31 @@ static int codec_mm_alloc_pre_check_in(
 	return have_space;
 }
 
+static ulong codec_mm_search_phy_addr(char *vaddr)
+{
+	struct codec_mm_mgt_s *mgt = get_mem_mgt();
+	struct codec_mm_s *mem = NULL;
+	ulong phy_addr = 0;
+	unsigned long flags;
+
+	spin_lock_irqsave(&mgt->lock, flags);
+
+	list_for_each_entry(mem, &mgt->mem_list, list) {
+		if (vaddr - mem->vbuffer >= 0 &&
+			vaddr - mem->vbuffer < mem->buffer_size) {
+
+			if (mem->phy_addr)
+				phy_addr = mem->phy_addr +
+					(vaddr - mem->vbuffer);
+			break;
+		}
+	}
+
+	spin_unlock_irqrestore(&mgt->lock, flags);
+
+	return phy_addr;
+}
+
 static void *codec_mm_search_vaddr(unsigned long phy_addr)
 {
 	struct codec_mm_mgt_s *mgt = get_mem_mgt();
@@ -841,7 +866,19 @@ void codec_mm_dma_flush(void *vaddr,
 {
 	struct codec_mm_mgt_s *mgt = get_mem_mgt();
 	dma_addr_t dma_addr;
+	ulong phy_addr;
 
+	if (is_vmalloc_or_module_addr(vaddr)) {
+		phy_addr = codec_mm_search_phy_addr(vaddr);
+		if (!phy_addr)
+			phy_addr = page_to_phys(vmalloc_to_page(vaddr))
+				+ offset_in_page(vaddr);
+		if (phy_addr && PageHighMem(phys_to_page(phy_addr)))
+			flush_cache_vunmap(phy_addr, phy_addr + size);
+		return;
+	}
+
+	/* only apply to the lowmem. */
 	dma_addr = dma_map_single(mgt->dev, vaddr, size, dir);
 	if (dma_addr)
 		dma_unmap_single(mgt->dev, dma_addr, size, dir);
