@@ -351,7 +351,10 @@ static int caam_probe(struct platform_device *pdev)
 
 	ctrlpriv->has_seco = false;
 
-	caam_little_end = !(bool)(rd_reg32(&ctrl->perfmon.status) &
+	if (caam_imx)
+		caam_little_end = true;
+	else
+		caam_little_end = !(bool)(rd_reg32(&ctrl->perfmon.status) &
 				  (CSTA_PLEND | CSTA_ALT_PLEND));
 
 	/* Finding the page size for using the CTPR_MS register */
