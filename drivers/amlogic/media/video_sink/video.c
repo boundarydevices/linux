@@ -1390,7 +1390,16 @@ static void vpp_settings_h(struct vpp_frame_par_s *framePtr)
 			((framePtr->VPP_hsc_endp & VPP_VD_SIZE_MASK)
 			<< VPP_VD1_END_BIT));
 		} else{
-
+			if (!legacy_vpp) {
+				x_lines = (zoom_end_x_lines -
+					zoom_start_x_lines + 1)
+					/ (framePtr->hscale_skip_count + 1);
+				VSYNC_WR_MPEG_REG(
+				VPP_PREBLEND_VD1_H_START_END,
+				((0 & VPP_VD_SIZE_MASK) <<
+				VPP_VD1_START_BIT) | (((x_lines - 1) &
+				VPP_VD_SIZE_MASK) << VPP_VD1_END_BIT));
+			}
 			VSYNC_WR_MPEG_REG(VPP_POSTBLEND_VD1_H_START_END +
 			cur_dev->vpp_off,
 			((framePtr->VPP_hsc_startp & VPP_VD_SIZE_MASK)
