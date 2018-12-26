@@ -103,8 +103,7 @@ static int crypto_gcm_setkey(struct crypto_aead *aead, const u8 *key,
 		be128 hash;
 		u8 iv[16];
 
-		struct crypto_wait wait;
-		struct crypto_gcm_setkey_result result ____cacheline_aligned;
+		struct crypto_wait wait ____cacheline_aligned;
 
 		struct scatterlist sg[1];
 		struct skcipher_request req;
