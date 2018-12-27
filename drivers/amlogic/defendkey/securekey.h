@@ -18,6 +18,7 @@
 #if (defined CONFIG_ARM64) || (defined CONFIG_ARM64_A32)
 #define AML_D_P_UPGRADE_CHECK   (0x80)
 #define AML_D_P_IMG_DECRYPT     (0x40)
+#define AML_D_Q_IMG_SIG_HDR_SIZE	 (0x100)
 #define AML_DATA_PROCESS		(0x820000FF)
 #define GET_SHARE_MEM_INPUT_BASE	0x82000020
 
