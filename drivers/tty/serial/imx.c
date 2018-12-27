@@ -466,7 +466,7 @@ static void imx_uart_stop_tx(struct uart_port *port)
 static void imx_uart_stop_rx(struct uart_port *port)
 {
 	struct imx_port *sport = (struct imx_port *)port;
-	u32 ucr1, ucr2;
+	u32 ucr1, ucr2, ucr4;
 
 	ucr1 = imx_uart_readl(sport, UCR1);
 	ucr2 = imx_uart_readl(sport, UCR2);
@@ -483,13 +483,13 @@ static void imx_uart_stop_rx(struct uart_port *port)
 	imx_uart_writel(sport, ucr2, UCR2);
 
 	/* disable the Receiver Ready and overrun Interrupt */
-	temp = readl(sport->port.membase + UCR1);
-	writel(temp & ~UCR1_RRDYEN, sport->port.membase + UCR1);
-	temp = readl(sport->port.membase + UCR4);
-	writel(temp & ~UCR4_OREN, sport->port.membase + UCR4);
+	ucr1 = readl(sport->port.membase + UCR1);
+	writel(ucr1 & ~UCR1_RRDYEN, sport->port.membase + UCR1);
+	ucr4 = readl(sport->port.membase + UCR4);
+	writel(ucr4 & ~UCR4_OREN, sport->port.membase + UCR4);
 
-	temp = readl(sport->port.membase + UCR2);
-	writel(temp & ~UCR2_RXEN, sport->port.membase + UCR2);
+	ucr2 = readl(sport->port.membase + UCR2);
+	writel(ucr2 & ~UCR2_RXEN, sport->port.membase + UCR2);
 }
 
 /* called with port.lock taken and irqs off */
