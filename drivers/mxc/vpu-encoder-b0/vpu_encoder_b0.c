@@ -71,11 +71,6 @@ unsigned int vpu_dbg_level_encoder = LVL_WARN;
 static unsigned int reset_on_hang;
 static unsigned int show_detail_index = VPU_DETAIL_INDEX_DFT;
 
-static char *mu_cmp[] = {
-	"fsl,imx8-mu1-vpu-m0",
-	"fsl,imx8-mu2-vpu-m0"
-};
-
 #define ITEM_NAME(name)		\
 				[name] = #name
 
@@ -223,9 +218,14 @@ static void count_encoded_frame(struct vpu_ctx *ctx)
 	attr->statistic.encoded_count++;
 }
 
-static void write_enc_reg(struct vpu_dev *dev, u32 val, off_t reg)
+static void write_vpu_reg(struct vpu_dev *dev, u32 val, off_t reg)
 {
-	writel(val, dev->regs_enc + reg);
+	writel(val, dev->regs_base + reg);
+}
+
+static u32 read_vpu_reg(struct vpu_dev *dev, off_t reg)
+{
+	return readl(dev->regs_base + reg);
 }
 
 /*
@@ -2545,7 +2545,7 @@ static void enable_mu(struct core_device *dev)
 				dev->m0_rpc_virt, dev->rpc_buf_size,
 				&dev->rpc_actual_size);
 	rpc_set_system_cfg_value_encoder(dev->shared_mem.pSharedInterface,
-				VPU_REG_BASE, dev->id);
+				dev->vdev->reg_rpc_system, dev->id);
 
 	if (dev->rpc_actual_size > dev->rpc_buf_size)
 		vpu_err("rpc actual size(0x%x) > (0x%x), may occur overlay\n",
@@ -2652,37 +2652,22 @@ static irqreturn_t fsl_vpu_mu_isr(int irq, void *This)
 /* Initialization of the MU code. */
 static int vpu_mu_init(struct core_device *core_dev)
 {
-	struct device_node *np;
-	unsigned int	vpu_mu_id;
-	u32 irq;
 	int ret = 0;
 
-	/*
-	 * Get the address of MU to be used for communication with the M0 core
-	 */
-	np = of_find_compatible_node(NULL, NULL, mu_cmp[core_dev->id]);
-	if (!np) {
-		vpu_dbg(LVL_ERR, "error: Cannot find MU entry in device tree\n");
-		return -EINVAL;
-	}
-	core_dev->mu_base_virtaddr = of_iomap(np, 0);
+	core_dev->mu_base_virtaddr =
+		core_dev->vdev->regs_base + core_dev->reg_base;
 	WARN_ON(!core_dev->mu_base_virtaddr);
 
-	ret = of_property_read_u32_index(np,
-				"fsl,vpu_ap_mu_id", 0, &vpu_mu_id);
+	vpu_dbg(LVL_ALL, "core[%d] irq : %d\n", core_dev->id, core_dev->irq);
+
+	ret = devm_request_irq(core_dev->generic_dev, core_dev->irq,
+				fsl_vpu_mu_isr,
+				IRQF_EARLY_RESUME,
+				"vpu_mu_isr",
+				(void *)core_dev);
 	if (ret) {
-		vpu_dbg(LVL_ERR, "Cannot get mu_id %d\n", ret);
-		return -EINVAL;
-	}
-
-	core_dev->vpu_mu_id = vpu_mu_id;
-
-	irq = of_irq_get(np, 0);
-
-	ret = devm_request_irq(core_dev->generic_dev, irq, fsl_vpu_mu_isr,
-				IRQF_EARLY_RESUME, "vpu_mu_isr", (void *)core_dev);
-	if (ret) {
-		vpu_dbg(LVL_ERR, "request_irq failed %d, error = %d\n", irq, ret);
+		vpu_dbg(LVL_ERR, "request_irq failed %d, error = %d\n",
+				core_dev->irq, ret);
 		return -EINVAL;
 	}
 
@@ -2851,6 +2836,10 @@ static int vpu_queue_setup(struct vb2_queue *vq,
 			*plane_count = 1;
 		}
 	}
+
+	if (*buf_count > VPU_MAX_BUFFER)
+		*buf_count = VPU_MAX_BUFFER;
+
 	return 0;
 }
 
@@ -3122,14 +3111,17 @@ static void vpu_ctx_power_off(struct vpu_ctx *ctx)
 
 static int set_vpu_fw_addr(struct vpu_dev *dev, struct core_device *core_dev)
 {
+	off_t reg_fw_base;
+
 	if (!dev || !core_dev)
 		return -EINVAL;
 
 	MU_Init(core_dev->mu_base_virtaddr);
 	MU_EnableRxFullInt(core_dev->mu_base_virtaddr, 0);
 
-	write_enc_reg(dev, core_dev->m0_p_fw_space_phy, core_dev->reg_fw_base);
-	write_enc_reg(dev, 0x0, core_dev->reg_fw_base + 4);
+	reg_fw_base = core_dev->reg_csr_base;
+	write_vpu_reg(dev, core_dev->m0_p_fw_space_phy, reg_fw_base);
+	write_vpu_reg(dev, 0x0, reg_fw_base + 4);
 
 	return 0;
 }
@@ -3638,7 +3630,25 @@ static int show_v4l2_buf_status(struct vpu_ctx *ctx, char *buf, u32 size)
 {
 	int num = 0;
 
-	num += scnprintf(buf + num, size - num, "V4L2 Buffer Status:\n");
+	num += scnprintf(buf + num, size - num, "V4L2 Buffer Status: ");
+	num += scnprintf(buf + num, PAGE_SIZE - num, "(");
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			" %d:dequeued,", VB2_BUF_STATE_DEQUEUED);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			" %d:preparing,", VB2_BUF_STATE_PREPARING);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			" %d:prepared,", VB2_BUF_STATE_PREPARED);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			" %d:queued,", VB2_BUF_STATE_QUEUED);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			" %d:requeueing,", VB2_BUF_STATE_REQUEUEING);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			" %d:active,", VB2_BUF_STATE_ACTIVE);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			" %d:done,", VB2_BUF_STATE_DONE);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			" %d:error", VB2_BUF_STATE_ERROR);
+	num += scnprintf(buf + num, PAGE_SIZE - num, ")\n");
 	num += scnprintf(buf + num, size - num, "\tOUTPUT:");
 	num += show_queue_buffer_info(&ctx->q_data[V4L2_SRC],
 					buf + num,
@@ -3758,49 +3768,55 @@ static ssize_t show_core_info(struct device *dev,
 	num += scnprintf(buf + num, PAGE_SIZE - num,
 			"core[%d] info:\n", core->id);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"vpu mu id       :%d\n", core->vpu_mu_id);
+			"vpu mu id       : %d\n", core->vpu_mu_id);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"reg fw base     :0x%08lx\n", core->reg_fw_base);
+			"irq             : %d\n", core->irq);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"fw space phy    :0x%08x\n", core->m0_p_fw_space_phy);
+			"reg mu mcu      : 0x%08x 0x%08x\n",
+			core->reg_base, core->reg_size);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"fw space size   :0x%08x\n", core->fw_buf_size);
+			"reg csr         : 0x%08x 0x%08x\n",
+			core->reg_csr_base, core->reg_csr_size);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"fw actual size  :0x%08x\n", core->fw_actual_size);
+			"fw space phy    : 0x%08x\n", core->m0_p_fw_space_phy);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"rpc phy         :0x%08x\n", core->m0_rpc_phy);
+			"fw space size   : 0x%08x\n", core->fw_buf_size);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"rpc buf size    :0x%08x\n", core->rpc_buf_size);
+			"fw actual size  : 0x%08x\n", core->fw_actual_size);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"rpc actual size :0x%08x\n", core->rpc_actual_size);
+			"rpc phy         : 0x%08x\n", core->m0_rpc_phy);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"print buf phy   :0x%08x\n",
+			"rpc buf size    : 0x%08x\n", core->rpc_buf_size);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"rpc actual size : 0x%08x\n", core->rpc_actual_size);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"print buf phy   : 0x%08x\n",
 			core->m0_rpc_phy + core->rpc_buf_size);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"print buf size  :0x%08x\n", core->print_buf_size);
+			"print buf size  : 0x%08x\n", core->print_buf_size);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"max instance num:%d\n",
+			"max instance num: %d\n",
 			core->supported_instance_count);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"fw_is_ready     :%d\n", core->fw_is_ready);
+			"fw_is_ready     : %d\n", core->fw_is_ready);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"firmware_started:%d\n", core->firmware_started);
+			"firmware_started: %d\n", core->firmware_started);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"hang            :%d\n", core->hang);
+			"hang            : %d\n", core->hang);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"reset times     :%ld\n", core->reset_times);
+			"reset times     : %ld\n", core->reset_times);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"heartbeat       :%02x\n", core->vdev->heartbeat);
+			"heartbeat       : %02x\n", core->vdev->heartbeat);
 	if (core->fw_is_ready) {
 		pENC_RPC_HOST_IFACE iface = core->shared_mem.pSharedInterface;
 
 		num += scnprintf(buf + num, PAGE_SIZE - num,
-			"firmware version:%d.%d.%d\n",
+			"firmware version: %d.%d.%d\n",
 			(iface->FWVersion & 0x00ff0000) >> 16,
 			(iface->FWVersion & 0x0000ff00) >> 8,
 			iface->FWVersion & 0x000000ff);
 		num += scnprintf(buf + num, PAGE_SIZE - num,
-			"fw info         :0x%02x 0x%02x\n", fw[16], fw[17]);
+			"fw info         : 0x%02x 0x%02x\n", fw[16], fw[17]);
 	}
 
 	return num;
@@ -4058,6 +4074,12 @@ static ssize_t show_vpuinfo(struct device *dev,
 			"core number          : %d\n", vdev->core_num);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
 			"platform type        : %d\n", vdev->plat_type);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"reg-vpu              : 0x%8x 0x%08x\n",
+			vdev->reg_vpu_base, vdev->reg_vpu_size);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"reg-rpc-system       : 0x%08x\n",
+			vdev->reg_rpc_system);
 	num += scnprintf(buf + num, PAGE_SIZE - num, "supported resolution :");
 	num += scnprintf(buf + num, PAGE_SIZE - num, " %dx%d(min);",
 			vdev->supported_size.min_width,
@@ -4373,26 +4395,28 @@ static struct video_device v4l2_videodevice_encoder = {
 
 static void vpu_setup(struct vpu_dev *This)
 {
+	const off_t offset = SCB_XREG_SLV_BASE + SCB_SCB_BLK_CTRL;
 	uint32_t read_data = 0;
 
 	vpu_dbg(LVL_INFO, "enter %s\n", __func__);
-	writel(0x1, This->regs_base + SCB_XREG_SLV_BASE + SCB_SCB_BLK_CTRL + SCB_BLK_CTRL_SCB_CLK_ENABLE_SET);
-	writel(0xffffffff, This->regs_base + 0x70190);
-	writel(0xffffffff, This->regs_base + SCB_XREG_SLV_BASE + SCB_SCB_BLK_CTRL + SCB_BLK_CTRL_XMEM_RESET_SET);
 
-	writel(0xE, This->regs_base + SCB_XREG_SLV_BASE + SCB_SCB_BLK_CTRL + SCB_BLK_CTRL_SCB_CLK_ENABLE_SET);
-	writel(0x7, This->regs_base + SCB_XREG_SLV_BASE + SCB_SCB_BLK_CTRL + SCB_BLK_CTRL_CACHE_RESET_SET);
+	write_vpu_reg(This, 0x1, offset + SCB_BLK_CTRL_SCB_CLK_ENABLE_SET);
+	write_vpu_reg(This, 0xffffffff, 0x70190);
+	write_vpu_reg(This, 0xffffffff, offset + SCB_BLK_CTRL_XMEM_RESET_SET);
+	write_vpu_reg(This, 0xE, offset + SCB_BLK_CTRL_SCB_CLK_ENABLE_SET);
+	write_vpu_reg(This, 0x7, offset + SCB_BLK_CTRL_CACHE_RESET_SET);
+	write_vpu_reg(This, 0x102, XMEM_CONTROL);
 
-	writel(0x102, This->regs_base + XMEM_CONTROL);
-
-	read_data = readl(This->regs_base+0x70108);
+	read_data = read_vpu_reg(This, 0x70108);
 	vpu_dbg(LVL_IRQ, "%s read_data=%x\n", __func__, read_data);
 }
 
 static void vpu_reset(struct vpu_dev *This)
 {
+	const off_t offset = SCB_XREG_SLV_BASE + SCB_SCB_BLK_CTRL;
+
 	vpu_dbg(LVL_INFO, "enter %s\n", __func__);
-	writel(0x7, This->regs_base + SCB_XREG_SLV_BASE + SCB_SCB_BLK_CTRL + SCB_BLK_CTRL_CACHE_RESET_CLR);
+	write_vpu_reg(This, 0x7, offset + SCB_BLK_CTRL_CACHE_RESET_CLR);
 }
 
 static int vpu_enable_hw(struct vpu_dev *This)
@@ -4425,11 +4449,9 @@ static int get_platform_info_by_core_type(struct vpu_dev *dev, u32 core_type)
 	switch (core_type) {
 	case 1:
 		dev->plat_type = IMX8QXP;
-		dev->core_num = 1;
 		break;
 	case 2:
 		dev->plat_type = IMX8QM;
-		dev->core_num = 2;
 		break;
 	default:
 		ret = -EINVAL;
@@ -4446,14 +4468,42 @@ static int parse_core_info(struct core_device *core, struct device_node *np)
 
 	WARN_ON(!core || !np);
 
-	ret = of_property_read_u32_index(np, "reg-fw-base", core->id, &val);
+	ret = of_property_read_u32_index(np, "reg", 0, &val);
 	if (ret) {
-		vpu_err("find reg-fw-base for core[%d] fail\n", core->id);
+		vpu_err("find reg for core[%d] fail\n", core->id);
 		return ret;
 	}
-	core->reg_fw_base = val;
+	core->reg_base = val;
 
-	ret = of_property_read_u32_index(np, "fw-buf-size", core->id, &val);
+	ret = of_property_read_u32_index(np, "reg", 1, &val);
+	if (ret) {
+		vpu_err("find reg for core[%d] fail\n", core->id);
+		return ret;
+	}
+	core->reg_size = val;
+
+	ret = of_property_read_u32_index(np, "reg-csr", 0, &val);
+	if (ret) {
+		vpu_err("find reg-csr for core[%d] fail\n", core->id);
+		return ret;
+	}
+	core->reg_csr_base = val;
+
+	ret = of_property_read_u32_index(np, "reg-csr", 1, &val);
+	if (ret) {
+		vpu_err("find reg-csr for core[%d] fail\n", core->id);
+		return ret;
+	}
+	core->reg_csr_size = val;
+
+	ret = of_irq_get(np, 0);
+	if (ret < 0) {
+		vpu_err("get irq for core[%d] fail\n", core->id);
+		return -EINVAL;
+	}
+	core->irq = ret;
+
+	ret = of_property_read_u32(np, "fw-buf-size", &val);
 	if (ret) {
 		vpu_err("find fw-buf-size for core[%d] fail\n", core->id);
 		core->fw_buf_size = M0_BOOT_SIZE_DEFAULT;
@@ -4462,7 +4512,7 @@ static int parse_core_info(struct core_device *core, struct device_node *np)
 	}
 	core->fw_buf_size = max_t(u32, core->fw_buf_size, M0_BOOT_SIZE_MIN);
 
-	ret = of_property_read_u32_index(np, "rpc-buf-size", core->id, &val);
+	ret = of_property_read_u32(np, "rpc-buf-size", &val);
 	if (ret) {
 		vpu_err("find rpc-buf-size for core[%d] fail\n", core->id);
 		core->rpc_buf_size = RPC_SIZE_DEFAULT;
@@ -4471,7 +4521,7 @@ static int parse_core_info(struct core_device *core, struct device_node *np)
 	}
 	core->rpc_buf_size = max_t(u32, core->rpc_buf_size, RPC_SIZE_MIN);
 
-	ret = of_property_read_u32_index(np, "print-buf-size", core->id, &val);
+	ret = of_property_read_u32(np, "print-buf-size", &val);
 	if (ret) {
 		vpu_err("find print-buf-size for core[%d] fail\n", core->id);
 		core->print_buf_size = PRINT_SIZE_DEFAULT;
@@ -4479,6 +4529,42 @@ static int parse_core_info(struct core_device *core, struct device_node *np)
 		core->print_buf_size = val;
 	}
 	core->print_buf_size = max_t(u32, core->print_buf_size, PRINT_SIZE_MIN);
+
+	return 0;
+}
+
+static int parse_dt_cores(struct vpu_dev *dev, struct device_node *np)
+{
+	char core_name[64];
+	struct device_node *node = NULL;
+	struct core_device *core = NULL;
+	int i;
+	int ret;
+
+	dev->core_num = 0;
+	for (i = 0; i < VPU_ENC_MAX_CORE_NUM; i++) {
+		scnprintf(core_name, sizeof(core_name), "core%d", i);
+		node = of_find_node_by_name(np, core_name);
+		if (!node) {
+			vpu_dbg(LVL_INFO, "can't find %s\n", core_name);
+			break;
+		}
+
+		core = &dev->core_dev[i];
+		core->id = i;
+		ret = parse_core_info(core, node);
+		of_node_put(node);
+		node = NULL;
+		if (ret) {
+			vpu_err("parse core[%d] fail\n", i);
+			break;
+		}
+	}
+	if (i == 0)
+		return -EINVAL;
+
+	dev->core_num = i;
+	vpu_dbg(LVL_ALL, "VPU Encoder has %d core\n", dev->core_num);
 
 	return 0;
 }
@@ -4508,6 +4594,14 @@ static int parse_dt_info(struct vpu_dev *dev, struct device_node *np)
 		vpu_dbg(LVL_ERR, "invalid core_type : %d\n", core_type);
 		return ret;
 	}
+
+	ret = of_property_read_u32_index(np, "reg-rpc-system", 0, &val);
+	if (ret) {
+		vpu_err("get reg-rpc-system fail\n");
+		return -EINVAL;
+	}
+	dev->reg_rpc_system = val;
+
 	reserved_node = of_parse_phandle(np, "boot-region", 0);
 	if (!reserved_node) {
 		vpu_dbg(LVL_ERR, "error: boot-region of_parse_phandle error\n");
@@ -4531,15 +4625,16 @@ static int parse_dt_info(struct vpu_dev *dev, struct device_node *np)
 		return -EINVAL;
 	}
 
+	ret = parse_dt_cores(dev, np);
+	if (ret) {
+		vpu_err("parse cores from dt fail\n");
+		return ret;
+	}
+
 	fw_total_size = 0;
 	rpc_total_size = 0;
 	for (i = 0; i < dev->core_num; i++) {
 		struct core_device *core = &dev->core_dev[i];
-
-		core->id = i;
-		ret = parse_core_info(core, np);
-		if (ret)
-			return ret;
 
 		core->m0_p_fw_space_phy = reserved_fw.start + fw_total_size;
 		core->m0_rpc_phy = reserved_rpc.start + rpc_total_size;
@@ -4897,7 +4992,8 @@ static int uninit_vpu_core_dev(struct core_device *core_dev)
 	if (!core_dev)
 		return -EINVAL;
 
-	device_remove_file(core_dev->generic_dev, &core_dev->core_attr);
+	if (core_dev->core_attr.attr.name)
+		device_remove_file(core_dev->generic_dev, &core_dev->core_attr);
 	release_vpu_attrs(core_dev);
 	if (core_dev->workqueue) {
 		cancel_work_sync(&core_dev->msg_work);
@@ -4917,10 +5013,8 @@ static int uninit_vpu_core_dev(struct core_device *core_dev)
 	}
 	core_dev->m0_rpc_phy = 0;
 
-	if (core_dev->mu_base_virtaddr) {
-		iounmap(core_dev->mu_base_virtaddr);
+	if (core_dev->mu_base_virtaddr)
 		core_dev->mu_base_virtaddr = NULL;
-	}
 
 	if (core_dev->generic_dev) {
 		put_device(core_dev->generic_dev);
@@ -4980,8 +5074,8 @@ static int check_vpu_encoder_is_available(void)
 static int vpu_probe(struct platform_device *pdev)
 {
 	struct vpu_dev *dev;
-	struct resource *res;
 	struct device_node *np = pdev->dev.of_node;
+	struct resource *res = NULL;
 	u_int32 i;
 	int ret;
 
@@ -4999,29 +5093,25 @@ static int vpu_probe(struct platform_device *pdev)
 	dev->plat_dev = pdev;
 	dev->generic_dev = get_device(&pdev->dev);
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res) {
-		vpu_dbg(LVL_ERR, "Missing platform resource data\n");
-		ret = -EINVAL;
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (!res)
 		goto error_put_dev;
-	}
-	dev->regs_enc = devm_ioremap_resource(dev->generic_dev, res);
-	if (!dev->regs_enc) {
-		vpu_dbg(LVL_ERR, "couldn't map encoder reg\n");
-		ret = PTR_ERR(dev->regs_enc);
-		goto error_put_dev;
-	}
-	dev->regs_base = ioremap(ENC_REG_BASE, 0x1000000);
-	if (!dev->regs_base) {
-		vpu_dbg(LVL_ERR, "%s could not map regs_base\n", __func__);
-		ret = PTR_ERR(dev->regs_base);
-		goto error_put_dev;
-	}
+
+	vpu_dbg(LVL_ALL, "<0x%llx 0%llx>\n", res->start, resource_size(res));
+	dev->reg_vpu_base = res->start;
+	dev->reg_vpu_size = resource_size(res);
 
 	ret = parse_dt_info(dev, np);
 	if (ret) {
 		vpu_dbg(LVL_ERR, "parse device tree fail\n");
-		goto error_iounmap;
+		goto error_put_dev;
+	}
+
+	dev->regs_base = ioremap(dev->reg_vpu_base, dev->reg_vpu_size);
+	if (!dev->regs_base) {
+		vpu_err("%s could not map regs_base\n", __func__);
+		ret = PTR_ERR(dev->regs_base);
+		goto error_put_dev;
 	}
 
 	ret = v4l2_device_register(&pdev->dev, &dev->v4l2_dev);
@@ -5038,7 +5128,6 @@ static int vpu_probe(struct platform_device *pdev)
 		goto error_unreg_v4l2;
 	}
 
-
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_get_sync(&pdev->dev);
 
@@ -5051,8 +5140,12 @@ static int vpu_probe(struct platform_device *pdev)
 		dev->core_dev[i].vdev = dev;
 		ret = init_vpu_core_dev(&dev->core_dev[i]);
 		if (ret)
-			goto error_init_core;
+			break;
 	}
+	if (i == 0)
+		goto error_init_core;
+	dev->core_num = i;
+
 	pm_runtime_put_sync(&pdev->dev);
 
 	device_create_file(&pdev->dev, &dev_attr_meminfo);
@@ -5068,9 +5161,9 @@ error_init_core:
 	for (i = 0; i < dev->core_num; i++)
 		uninit_vpu_core_dev(&dev->core_dev[i]);
 
+	vpu_disable_hw(dev);
 	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
-	vpu_disable_hw(dev);
 
 	if (dev->pvpu_encoder_dev) {
 		video_unregister_device(dev->pvpu_encoder_dev);
@@ -5079,14 +5172,16 @@ error_init_core:
 error_unreg_v4l2:
 	v4l2_device_unregister(&dev->v4l2_dev);
 error_iounmap:
-	if (dev->regs_base)
+	if (dev->regs_base) {
 		iounmap(dev->regs_base);
+		dev->regs_base = NULL;
+	}
 error_put_dev:
 	if (dev->generic_dev) {
 		put_device(dev->generic_dev);
 		dev->generic_dev = NULL;
 	}
-	return ret;
+	return -EINVAL;
 }
 
 static int vpu_remove(struct platform_device *pdev)
