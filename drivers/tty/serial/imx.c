@@ -2526,6 +2526,7 @@ static int imx_uart_suspend_noirq(struct device *dev)
 static int imx_uart_resume_noirq(struct device *dev)
 {
 	struct imx_port *sport = dev_get_drvdata(dev);
+	unsigned int usr1;
 	int ret;
 
 	pinctrl_pm_select_default_state(dev);
@@ -2538,6 +2539,9 @@ static int imx_uart_resume_noirq(struct device *dev)
 
 	/* disable wakeup from i.MX UART */
 	imx_uart_enable_wakeup(sport, false);
+	usr1 = readl(sport->port.membase + USR1);
+	if (usr1 & (USR1_AWAKE | USR1_RTSD))
+		writel(USR1_AWAKE | USR1_RTSD, sport->port.membase + USR1);
 
 	clk_disable(sport->clk_ipg);
 
