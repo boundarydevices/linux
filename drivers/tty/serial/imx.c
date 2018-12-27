@@ -1400,7 +1400,7 @@ static int imx_uart_startup(struct uart_port *port)
 	writel(USR2_ORE, sport->port.membase + USR2);
 
 	ucr1 = readl(sport->port.membase + UCR1);
-	if (!sport->dma_is_inited)
+	if (dma_is_inited)
 		ucr1 |= UCR1_RRDYEN;
 	ucr1 |= UCR1_RTSDEN | UCR1_UARTEN;
 	writel(ucr1, sport->port.membase + UCR1);
@@ -1582,6 +1582,7 @@ imx_uart_set_termios(struct uart_port *port, struct ktermios *termios,
 	unsigned long div;
 	unsigned long num, denom;
 	uint64_t tdiv64;
+	int dma_is_inited = 0;
 
 	/*
 	 * We only support CS7 and CS8.
@@ -1618,8 +1619,8 @@ imx_uart_set_termios(struct uart_port *port, struct ktermios *termios,
 			}
 
 			/* Can we enable the DMA support? */
-			if (!uart_console(port) && !sport->dma_is_inited)
-				imx_uart_dma_init(sport);
+			if (!uart_console(port) && imx_uart_dma_init(sport) == 0)
+				dma_is_inited = 1;
 		} else {
 			termios->c_cflag &= ~CRTSCTS;
 		}
@@ -1740,7 +1741,7 @@ imx_uart_set_termios(struct uart_port *port, struct ktermios *termios,
 	if (UART_ENABLE_MS(&sport->port, termios->c_cflag))
 		imx_uart_enable_ms(&sport->port);
 
-	if (sport->dma_is_inited && !sport->dma_is_enabled) {
+	if (dma_is_inited && !sport->dma_is_enabled) {
 		imx_uart_enable_dma(sport);
 		imx_uart_start_rx_dma(sport);
 	}
