@@ -1313,7 +1313,7 @@ static void imx_uart_enable_dma(struct imx_port *sport)
 
 	/* set UCR1 */
 	ucr1 = readl(sport->port.membase + UCR1);
-	ucr1 |= UCR1_RDMAEN | UCR1_TDMAEN | UCR1_ATDMAEN |
+	ucr1 |= UCR1_RXDMAEN | UCR1_TXDMAEN | UCR1_ATDMAEN |
 		/* wait for 32 idle frames for IDDMA interrupt */
 		UCR1_ICD_REG(3);
 	writel(ucr1, sport->port.membase + UCR1);
@@ -1332,7 +1332,7 @@ static void imx_uart_disable_dma(struct imx_port *sport)
 
 	/* clear UCR1 */
 	ucr1 = readl(sport->port.membase + UCR1);
-	ucr1 &= ~(UCR1_RDMAEN | UCR1_TDMAEN | UCR1_ATDMAEN);
+	ucr1 &= ~(UCR1_RXDMAEN | UCR1_TXDMAEN | UCR1_ATDMAEN);
 	writel(ucr1, sport->port.membase + UCR1);
 
 	/* clear UCR2 */
