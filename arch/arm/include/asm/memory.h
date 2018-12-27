@@ -263,16 +263,9 @@ static inline unsigned long __phys_to_virt(phys_addr_t x)
 
 #endif
 
-#ifdef CONFIG_AMLOGIC_MODIFY
-#define virt_to_pfn(kaddr) \
-	({virt_check((unsigned long)kaddr); \
-	 ((((unsigned long)(kaddr) - PAGE_OFFSET) >> PAGE_SHIFT) + \
-	 PHYS_PFN_OFFSET); })
-#else
 #define virt_to_pfn(kaddr) \
 	((((unsigned long)(kaddr) - PAGE_OFFSET) >> PAGE_SHIFT) + \
 	 PHYS_PFN_OFFSET)
-#endif
 
 /*
  * These are *only* valid on the kernel direct mapped RAM memory.
