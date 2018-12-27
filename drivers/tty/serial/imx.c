@@ -1043,28 +1043,9 @@ static void imx_uart_break_ctl(struct uart_port *port, int break_state)
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 }
 
-#define TXTL 2 /* reset default */
-#define RXTL 1 /* For console port */
 #define RXTL_UART 16 /* For uart */
-
-static int imx_setup_ufcr(struct imx_port *sport, unsigned int mode)
-{
-	unsigned int val;
-	unsigned int rx_fifo_trig;
-
-	if (uart_console(&sport->port))
-		rx_fifo_trig = RXTL;
-	else
-		rx_fifo_trig = RXTL_UART;
-
-	/* set receiver / transmitter trigger level */
-	val = readl(sport->port.membase + UFCR) & (UFCR_RFDIV | UFCR_DCEDTE);
-	val |= TXTL << UFCR_TXTL_SHF | rx_fifo_trig;
-	writel(val, sport->port.membase + UFCR);
-	return 0;
-}
-
 #define RX_BUF_SIZE	(PAGE_SIZE)
+
 static void dma_rx_push_data(struct imx_port *sport, struct tty_struct *tty,
 				unsigned int start, unsigned int end)
 {
@@ -1226,6 +1207,30 @@ static int imx_uart_start_rx_dma(struct imx_port *sport)
 	return 0;
 }
 
+#define TXTL_DEFAULT	2 /* reset default */
+#define RXTL_DEFAULT	1 /* reset default */
+#define TXTL_DMA	8 /* DMA burst setting */
+#define RXTL_DMA	9 /* DMA burst setting */
+
+static int imx_uart_setup_ufcr(struct imx_port *sport,
+		unsigned char txwl, unsigned char rxwl)
+{
+	unsigned int val;
+	unsigned int rx_fifo_trig;
+
+	if (uart_console(&sport->port))
+		rx_fifo_trig = RXTL_DEFAULT;
+	else
+		rx_fifo_trig = RXTL_UART;
+
+	/* set receiver / transmitter trigger level */
+	val = readl(sport->port.membase + UFCR) & (UFCR_RFDIV | UFCR_DCEDTE);
+	val |= txwl << UFCR_TXTL_SHF | rxwl;
+	writel(val, sport->port.membase + UFCR);
+
+	return 0;
+}
+
 static void imx_uart_dma_exit(struct imx_port *sport)
 {
 	if (sport->dma_chan_rx) {
@@ -1292,7 +1297,7 @@ static int imx_uart_dma_init(struct imx_port *sport)
 	slave_config.direction = DMA_MEM_TO_DEV;
 	slave_config.dst_addr = sport->port.mapbase + URTX0;
 	slave_config.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
-	slave_config.dst_maxburst = TXTL;
+	slave_config.dst_maxburst = TXTL_DEFAULT;
 	ret = dmaengine_slave_config(sport->dma_chan_tx, &slave_config);
 	if (ret) {
 		dev_err(dev, "error in TX dma configuration.");
@@ -1368,7 +1373,7 @@ static int imx_uart_startup(struct uart_port *port)
 		return retval;
 	}
 
-	imx_setup_ufcr(sport, 0);
+	imx_uart_setup_ufcr(sport, TXTL_DEFAULT, RXTL_DEFAULT);
 
 	/* disable the DREN bit (Data Ready interrupt enable) before
 	 * requesting IRQs
@@ -1816,7 +1821,7 @@ static int imx_uart_poll_init(struct uart_port *port)
 	if (retval)
 		clk_disable_unprepare(sport->clk_ipg);
 
-	imx_setup_ufcr(sport, 0);
+	imx_uart_setup_ufcr(sport, TXTL_DEFAULT, RXTL_DEFAULT);
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 
@@ -2111,7 +2116,7 @@ imx_uart_console_setup(struct console *co, char *options)
 	else
 		imx_uart_console_get_options(sport, &baud, &parity, &bits);
 
-	imx_setup_ufcr(sport, 0);
+	imx_uart_setup_ufcr(sport, TXTL_DEFAULT, RXTL_DEFAULT);
 
 	retval = uart_set_options(&sport->port, co, baud, parity, bits, flow);
 
