@@ -884,7 +884,7 @@ static unsigned int imx_uart_get_hwmctrl(struct imx_port *sport)
 		if (!(imx_uart_readl(sport, USR2) & USR2_RIIN))
 			tmp |= TIOCM_RI;
 
-	if (readl(sport->port.membase + uts_reg(sport)) & UTS_LOOP)
+	if (readl(sport->port.membase + imx_uart_uts_reg(sport)) & UTS_LOOP)
 		tmp |= TIOCM_LOOP;
 
 	return tmp;
@@ -930,14 +930,14 @@ static irqreturn_t imx_uart_int(int irq, void *dev_id)
 		!sport->dma_is_enabled) {
 		if (sts & USR1_AGTIM)
 			writel(USR1_AGTIM, sport->port.membase + USR1);
-		imx_rxint(irq, dev_id);
+		imx_uart_rxint(irq, dev_id);
 	}
 
 	if ((sts & USR1_TRDY &&
 	     readl(sport->port.membase + UCR1) & UCR1_TXMPTYEN) ||
 	    (sts2 & USR2_TXDC &&
 	     readl(sport->port.membase + UCR4) & UCR4_TCEN))
-		imx_txint(irq, dev_id);
+		imx_uart_txint(irq, dev_id);
 
 	if (usr1 & USR1_DTRD) {
 		unsigned long flags;
@@ -1109,7 +1109,7 @@ static void imx_rx_dma_done(struct imx_port *sport)
 		wake_up(&sport->dma_wait);
 }
 
-static void clear_rx_errors(struct imx_port *sport)
+static void imx_uart_clear_rx_errors(struct imx_port *sport)
 {
 	unsigned int status_usr1, status_usr2;
 
@@ -1742,8 +1742,8 @@ imx_uart_set_termios(struct uart_port *port, struct ktermios *termios,
 		imx_uart_enable_ms(&sport->port);
 
 	if (sport->dma_is_inited && !sport->dma_is_enabled) {
-		imx_enable_dma(sport);
-		start_rx_dma(sport);
+		imx_uart_enable_dma(sport);
+		imx_uart_start_rx_dma(sport);
 	}
 
 	if (!sport->dma_is_enabled) {
