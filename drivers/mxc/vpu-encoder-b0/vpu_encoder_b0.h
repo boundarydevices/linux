@@ -32,7 +32,6 @@
 #include <soc/imx8/sc/sci.h>
 #include <linux/mx8_mu.h>
 #include <media/v4l2-event.h>
-#include <linux/kfifo.h>
 #include "vpu_encoder_rpc.h"
 #include "vpu_encoder_config.h"
 
@@ -43,24 +42,18 @@ extern unsigned int vpu_dbg_level_encoder;
 #define v4l2_ctrl_to_ctx(__ctrl) \
 	container_of((__ctrl)->handler, struct vpu_ctx, ctrl_handler)
 
-#define MIN_SPACE 2048
-
-#define VPU_MAX_FORMATS 4
-#define VPU_MAX_BUFFER 32
-#define M0FW_FILENAME "vpu/vpu_fw_imx8_enc.bin"
-#define MMAP_BUF_TYPE_SHIFT 28
-#define MMAP_BUF_TYPE_MASK 0xF0000000
-#define M0_BOOT_SIZE_DEFAULT	0x1000000
-#define M0_BOOT_SIZE_MIN	0x100000
-#define RPC_SIZE_DEFAULT	0x80000
-#define RPC_SIZE_MIN		0x20000
-#define PRINT_SIZE_DEFAULT	0x80000
-#define PRINT_SIZE_MIN		0x20000
-#define MEM_SIZE  0x2800000
-#define YUV_SIZE  0x4000000
-#define STREAM_SIZE 0x300000
-#define VPU_REG_BASE 0x40000000
-#define ENC_REG_BASE 0x2c000000
+#define VPU_ENC_MAX_CORE_NUM		2
+#define VPU_MAX_BUFFER			32
+#define M0FW_FILENAME			"vpu/vpu_fw_imx8_enc.bin"
+#define MMAP_BUF_TYPE_SHIFT		28
+#define MMAP_BUF_TYPE_MASK		0xF0000000
+#define M0_BOOT_SIZE_DEFAULT		0x1000000
+#define M0_BOOT_SIZE_MIN		0x100000
+#define RPC_SIZE_DEFAULT		0x80000
+#define RPC_SIZE_MIN			0x20000
+#define PRINT_SIZE_DEFAULT		0x80000
+#define PRINT_SIZE_MIN			0x20000
+#define STREAM_SIZE			0x300000
 #define MU_B0_REG_CONTROL		(0x10000 + 0x24)
 
 #define MIN_BUFFER_COUNT		3
@@ -291,7 +284,11 @@ struct core_device {
 	struct vpu_attr attr[VID_API_NUM_STREAMS];
 	struct shared_addr shared_mem;
 	u32 id;
-	off_t reg_fw_base;
+	u32 reg_base;
+	u32 reg_size;
+	u32 reg_csr_base;
+	u32 reg_csr_size;
+	int irq;
 	struct device *generic_dev;
 	struct vpu_dev *vdev;
 	bool snapshot;
@@ -308,10 +305,12 @@ struct vpu_dev {
 	struct video_device *pvpu_encoder_dev;
 	struct platform_device *plat_dev;
 	struct clk *clk_m0;
+	u32 reg_vpu_base;
+	u32 reg_vpu_size;
+	u32 reg_rpc_system;
 	void __iomem *regs_base;
-	void __iomem *regs_enc;
 	struct mutex dev_mutex;
-	struct core_device core_dev[2];
+	struct core_device core_dev[VPU_ENC_MAX_CORE_NUM];
 	u_int32 plat_type;
 	u_int32 core_num;
 	bool hw_enable;
