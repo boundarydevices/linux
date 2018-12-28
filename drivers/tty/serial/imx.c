@@ -1396,6 +1396,10 @@ static int imx_uart_startup(struct uart_port *port)
 	while (!(imx_uart_readl(sport, UCR2) & UCR2_SRST) && (--i > 0))
 		udelay(1);
 
+	/* Can we enable the DMA support? */
+	if (!uart_console(port) && imx_uart_dma_init(sport) == 0)
+		dma_is_inited = 1;
+
 	spin_lock_irqsave(&sport->port.lock, flags);
 
 	/*
@@ -1623,9 +1627,6 @@ imx_uart_set_termios(struct uart_port *port, struct ktermios *termios,
 				imx_uart_rts_auto(sport, &ucr2);
 			}
 
-			/* Can we enable the DMA support? */
-			if (!uart_console(port) && imx_uart_dma_init(sport) == 0)
-				dma_is_inited = 1;
 		} else {
 			termios->c_cflag &= ~CRTSCTS;
 		}
