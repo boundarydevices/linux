@@ -1304,6 +1304,8 @@ static void imx_uart_enable_dma(struct imx_port *sport)
 
 	imx_uart_setup_ufcr(sport, TXTL_DMA, RXTL_DMA);
 
+	sport->flags = 0;
+
 	/* set UCR1 */
 	ucr1 = readl(sport->port.membase + UCR1);
 	ucr1 |= UCR1_RXDMAEN | UCR1_TXDMAEN | UCR1_ATDMAEN |
