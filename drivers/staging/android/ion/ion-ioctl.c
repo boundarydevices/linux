@@ -55,6 +55,10 @@ static unsigned int ion_ioctl_dir(unsigned int cmd)
 	case ION_IOC_FREE:
 	case ION_IOC_CUSTOM:
 		return _IOC_WRITE;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	case ION_IOC_INVALID_CACHE:
+		return _IOC_WRITE;
+#endif
 	default:
 		return _IOC_DIR(cmd);
 	}
@@ -153,6 +157,13 @@ long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		ret = ion_sync_for_device(client, data.fd.fd);
 		break;
 	}
+#ifdef CONFIG_AMLOGIC_MODIFY
+	case ION_IOC_INVALID_CACHE:
+	{
+		ret = ion_sync_for_cpu(client, data.fd.fd);
+		break;
+	}
+#endif
 	case ION_IOC_CUSTOM:
 	{
 		if (!dev->custom_ioctl)

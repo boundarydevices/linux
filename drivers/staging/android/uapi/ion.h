@@ -233,4 +233,13 @@ struct ion_heap_query {
 #define ION_IOC_HEAP_QUERY     _IOWR(ION_IOC_MAGIC, 8, \
 					struct ion_heap_query)
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+/**
+ * DOC: ION_IOC_INVALID_CACHE - invalid cache before
+ * cpu read the memory and after device write the memory.
+ * this will make the buffer in memory coherent.
+ */
+#define ION_IOC_INVALID_CACHE	_IOWR(ION_IOC_MAGIC, 9, struct ion_fd_data)
+#endif
+
 #endif /* _UAPI_LINUX_ION_H */

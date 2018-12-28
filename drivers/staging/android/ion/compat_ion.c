@@ -189,6 +189,11 @@ long compat_ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case ION_IOC_SYNC:
 		return filp->f_op->unlocked_ioctl(filp, cmd,
 						(unsigned long)compat_ptr(arg));
+#ifdef CONFIG_AMLOGIC_MODIFY
+	case ION_IOC_INVALID_CACHE:
+		return filp->f_op->unlocked_ioctl(filp, cmd,
+						(unsigned long)compat_ptr(arg));
+#endif
 	default:
 		return -ENOIOCTLCMD;
 	}

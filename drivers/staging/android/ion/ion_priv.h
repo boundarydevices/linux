@@ -469,6 +469,10 @@ long ion_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 
 int ion_sync_for_device(struct ion_client *client, int fd);
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+int ion_sync_for_cpu(struct ion_client *client, int fd);
+#endif
+
 struct ion_handle *ion_handle_get_by_id_nolock(struct ion_client *client,
 						int id);
 

@@ -40,6 +40,9 @@
 #include "ion.h"
 #include "ion_priv.h"
 #include "compat_ion.h"
+#ifdef CONFIG_AMLOGIC_MODIFY
+#include <linux/of_device.h>
+#endif
 
 bool ion_buffer_fault_user_mappings(struct ion_buffer *buffer)
 {
@@ -1155,6 +1158,38 @@ int ion_sync_for_device(struct ion_client *client, int fd)
 	return 0;
 }
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+int ion_sync_for_cpu(struct ion_client *client, int fd)
+{
+	struct dma_buf *dmabuf;
+	struct ion_buffer *buffer;
+	struct miscdevice *mdev;
+
+	dmabuf = dma_buf_get(fd);
+	if (IS_ERR(dmabuf))
+		return PTR_ERR(dmabuf);
+
+	/* if this memory came from ion */
+	if (dmabuf->ops != &dma_buf_ops) {
+		pr_err("%s: can not sync dmabuf from another exporter\n",
+		       __func__);
+		dma_buf_put(dmabuf);
+		return -EINVAL;
+	}
+	buffer = dmabuf->priv;
+	mdev = &client->dev->dev;
+
+	dma_sync_sg_for_cpu(mdev->this_device,
+			    buffer->sg_table->sgl,
+			    buffer->sg_table->nents,
+			    DMA_FROM_DEVICE);
+
+	dma_buf_put(dmabuf);
+
+	return 0;
+}
+#endif
+
 int ion_query_heaps(struct ion_client *client, struct ion_heap_query *query)
 {
 	struct ion_device *dev = client->dev;
@@ -1426,7 +1461,9 @@ struct ion_device *ion_device_create(long (*custom_ioctl)
 {
 	struct ion_device *idev;
 	int ret;
-
+#ifdef CONFIG_AMLOGIC_MODIFY
+	struct miscdevice *mdev;
+#endif
 	idev = kzalloc(sizeof(*idev), GFP_KERNEL);
 	if (!idev)
 		return ERR_PTR(-ENOMEM);
@@ -1441,7 +1478,10 @@ struct ion_device *ion_device_create(long (*custom_ioctl)
 		kfree(idev);
 		return ERR_PTR(ret);
 	}
-
+#ifdef CONFIG_AMLOGIC_MODIFY
+	mdev = &idev->dev;
+	of_dma_configure(mdev->this_device, mdev->this_device->of_node);
+#endif
 	idev->debug_root = debugfs_create_dir("ion", NULL);
 	if (!idev->debug_root) {
 		pr_err("ion: failed to create debugfs root directory.\n");
