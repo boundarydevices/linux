@@ -52,6 +52,7 @@ struct defendkey_mem defendkey_rmem;
 
 #define CMD_SECURE_CHECK _IO('d', 0x01)
 #define CMD_DECRYPT_DTB  _IO('d', 0x02)
+#define DEFENDKEY_LIMIT_ADDR	0x0F000000
 
 enum e_defendkey_type {
 	e_upgrade_check = 0,
@@ -372,7 +373,6 @@ static struct class defendkey_class = {
 static int __init early_defendkey_para(char *buf)
 {
 	int ret;
-	struct page *page = NULL;
 
 	if (!buf)
 		return -EINVAL;
@@ -384,9 +384,8 @@ static int __init early_defendkey_para(char *buf)
 		return -EINVAL;
 	}
 
-	page = pfn_to_page(defendkey_rmem.base >> PAGE_SHIFT);
-	if (PageHighMem(page)) {
-		pr_err("invalid boot args \"defendkey\"\n");
+	if (defendkey_rmem.base > DEFENDKEY_LIMIT_ADDR) {
+		pr_err("defendkey reserved memory base overflow!\n");
 		return -EINVAL;
 	}
 
