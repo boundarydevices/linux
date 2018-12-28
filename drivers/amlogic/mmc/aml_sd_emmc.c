@@ -3187,9 +3187,6 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		if (pdata->caps & MMC_CAP_NONREMOVABLE)
 			pdata->is_in = 1;
 
-		if (pdata->caps & MMC_PM_KEEP_POWER)
-			mmc->pm_caps |= MMC_PM_KEEP_POWER;
-
 		/* data desc buffer */
 #ifdef CFG_SDEMMC_PIO
 		pr_err(">>>>>>>>hostbase %p, dmode %s\n",
@@ -3250,6 +3247,7 @@ static int meson_mmc_probe(struct platform_device *pdev)
 		mmc->ocr_avail = pdata->ocr_avail;
 		mmc->caps = pdata->caps;
 		mmc->caps2 = pdata->caps2;
+		mmc->pm_caps = pdata->pm_caps;
 		mmc->f_min = pdata->f_min;
 		mmc->f_max = pdata->f_max;
 		mmc->max_current_180 = 300; /* 300 mA in 1.8V */

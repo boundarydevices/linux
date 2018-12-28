@@ -113,8 +113,26 @@ static int amlsd_get_host_caps2(struct device_node *of_node,
 				caps |= host_caps2[i].caps;
 		}
 	};
+
 	pdata->caps2 = caps;
 	pr_debug("%s:pdata->caps2 = %x\n", pdata->pinname, pdata->caps2);
+	return 0;
+}
+
+static int amlsd_get_host_pm_caps(struct device_node *of_node,
+		struct amlsd_platform *pdata)
+{
+	const char *str_caps;
+	struct property *prop;
+	u32 caps = 0;
+
+	of_property_for_each_string(of_node, "caps", prop, str_caps) {
+		if (!strcasecmp("MMC_PM_KEEP_POWER", str_caps))
+			caps |= MMC_PM_KEEP_POWER;
+	};
+
+	pdata->pm_caps = caps;
+	pr_debug("%s:pdata->pm_caps = %x\n", pdata->pinname, pdata->pm_caps);
 	return 0;
 }
 
@@ -211,6 +229,7 @@ int amlsd_get_platform_data(struct platform_device *pdev,
 
 		amlsd_get_host_caps(child, pdata);
 		amlsd_get_host_caps2(child, pdata);
+		amlsd_get_host_pm_caps(child, pdata);
 		pdata->port_init = of_amlsd_init;
 #ifdef CARD_DETECT_IRQ
 		pdata->irq_init = of_amlsd_irq_init;
