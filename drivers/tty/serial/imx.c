@@ -838,27 +838,6 @@ out:
 	return IRQ_HANDLED;
 }
 
-static void imx_disable_rx_int(struct imx_port *sport)
-{
-	unsigned long ucr1, ucr2, ucr4;
-
-	sport->dma_is_rxing = 1;
-
-	/* disable the receiver ready and aging timer interrupts */
-	ucr1 = imx_uart_readl(sport, UCR1);
-	ucr1 &= ~(UCR1_RRDYEN);
-	imx_uart_writel(sport, ucr1, UCR1);
-
-	ucr2 = imx_uart_readl(sport, UCR2);
-	ucr2 &= ~(UCR2_ATEN);
-	imx_uart_writel(sport, ucr2, UCR2);
-
-	/* disable the rx errors interrupts */
-	ucr4 = imx_uart_readl(sport, UCR4);
-	ucr4 &= ~UCR4_OREN;
-	imx_uart_writel(sport, ucr4, UCR4);
-}
-
 /*
  * We have a modem side uart, so the meanings of RTS and CTS are inverted.
  */
