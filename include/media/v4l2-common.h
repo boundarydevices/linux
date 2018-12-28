@@ -268,6 +268,11 @@ struct v4l2_priv_tun_config {
 
 #define VIDIOC_INT_RESET		_IOW ('d', 102, u32)
 
+struct v4l2_routing {
+	u32 input;
+	u32 output;
+};
+
 /* ------------------------------------------------------------------------- */
 
 /* Miscellaneous helper functions */
