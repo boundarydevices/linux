@@ -386,27 +386,6 @@ static int mipi_csis_phy_init(struct csi_state *state)
 	return ret;
 }
 
-static int mipi_csis_phy_reset_mx8mm(struct csi_state *state)
-{
-	struct device_node *np = state->dev->of_node;
-	struct regmap *gpr;
-
-	gpr = syscon_regmap_lookup_by_phandle(np, "csi-gpr");
-	if (IS_ERR(gpr))
-		return PTR_ERR(gpr);
-
-	regmap_update_bits(gpr, GPR_MIPI_RESET,
-			   GPR_MIPI_S_RESETN,
-			   0x0);
-	usleep_range(10, 20);
-	regmap_update_bits(gpr, GPR_MIPI_RESET,
-			   GPR_MIPI_S_RESETN,
-			   GPR_MIPI_S_RESETN);
-	usleep_range(10, 20);
-
-	return 0;
-}
-
 static int mipi_csis_phy_reset(struct csi_state *state)
 {
 	struct device_node *np = state->dev->of_node;
