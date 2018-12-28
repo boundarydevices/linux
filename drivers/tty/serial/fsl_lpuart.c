@@ -26,6 +26,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_dma.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/reset.h>
 #include <linux/serial_core.h>
 #include <linux/slab.h>
@@ -1001,9 +1002,9 @@ static void lpuart_dma_rx_complete(void *arg)
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 }
 
-static void lpuart_timer_func(unsigned long data)
+static void lpuart_timer_func(struct timer_list *t)
 {
-	struct lpuart_port *sport = (struct lpuart_port *)data;
+	struct lpuart_port *sport = from_timer(sport, t, lpuart_timer);
 	struct tty_port *port = &sport->port.state->port;
 	struct dma_tx_state state;
 	unsigned long flags;
@@ -1373,8 +1374,7 @@ static int lpuart_startup(struct uart_port *port)
 
 	if (sport->dma_rx_chan && !lpuart_dma_rx_request(port)) {
 		sport->lpuart_dma_rx_use = true;
-		setup_timer(&sport->lpuart_timer, lpuart_timer_func,
-			    (unsigned long)sport);
+		timer_setup(&sport->lpuart_timer, lpuart_timer_func, 0);
 	} else
 		sport->lpuart_dma_rx_use = false;
 
@@ -1441,8 +1441,7 @@ static int lpuart32_startup(struct uart_port *port)
 
 	if (sport->dma_rx_chan && !lpuart_dma_rx_request(port)) {
 		sport->lpuart_dma_rx_use = true;
-		setup_timer(&sport->lpuart_timer, lpuart_timer_func,
-			    (unsigned long)sport);
+		timer_setup(&sport->lpuart_timer, lpuart_timer_func, 0);
 	} else
 		sport->lpuart_dma_rx_use = false;
 
@@ -2530,8 +2529,8 @@ static inline void lpuart32_resume_init(struct lpuart_port *sport)
 	if (sport->lpuart_dma_rx_use && irq_wake && tty_port_initialized(port)) {
 		if (!lpuart_dma_rx_request(&sport->port)) {
 			sport->lpuart_dma_rx_use = true;
-			setup_timer(&sport->lpuart_timer, lpuart_timer_func,
-				(unsigned long)sport);
+			timer_setup(&sport->lpuart_timer, lpuart_timer_func,
+				    0);
 		} else {
 			sport->lpuart_dma_rx_use = false;
 		}
@@ -2579,9 +2578,8 @@ static inline void lpuart_resume_init(struct lpuart_port *sport)
 	if (sport->lpuart_dma_rx_use && irq_wake && tty_port_initialized(port)) {
 		if (!lpuart_dma_rx_request(&sport->port)) {
 			sport->lpuart_dma_rx_use = true;
-			setup_timer(&sport->lpuart_timer,
-				lpuart_timer_func,
-				(unsigned long)sport);
+			timer_setup(&sport->lpuart_timer,
+				lpuart_timer_func, 0);
 		} else {
 			sport->lpuart_dma_rx_use = false;
 		}
