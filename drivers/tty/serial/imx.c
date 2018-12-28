@@ -235,6 +235,7 @@ struct imx_port {
 	unsigned int ufcr;
 
 	/* DMA fields */
+	unsigned int		dma_is_inited:1;
 	unsigned int		dma_is_enabled:1;
 	unsigned int		dma_is_rxing:1;
 	unsigned int		dma_is_txing:1;
@@ -1372,7 +1373,6 @@ static int imx_uart_startup(struct uart_port *port)
 	struct tty_port *tty_port = &sport->port.state->port;
 	int retval, i;
 	unsigned long flags;
-	int dma_is_inited = 0;
 	u32 ucr1, ucr2, ucr4;
 
 	/* some modem may need reset */
@@ -1415,10 +1415,10 @@ static int imx_uart_startup(struct uart_port *port)
 		udelay(1);
 
 	/* Can we enable the DMA support? */
-	if (!uart_console(port) && imx_uart_dma_init(sport) == 0)
-		dma_is_inited = 1;
+	if (!uart_console(port) && !sport->dma_is_inited)
+		imx_uart_dma_init(sport);
 
-	if (dma_is_inited)
+	if (sport->dma_is_inited)
 		INIT_WORK(&sport->tsk_dma_tx, imx_uart_dma_tx_work);
 
 	spin_lock_irqsave(&sport->port.lock, flags);
@@ -1430,7 +1430,7 @@ static int imx_uart_startup(struct uart_port *port)
 	writel(USR2_ORE, sport->port.membase + USR2);
 
 	ucr1 = readl(sport->port.membase + UCR1);
-	if (dma_is_inited)
+	if (!sport->dma_is_inited)
 		ucr1 |= UCR1_RRDYEN;
 	if (sport->have_rtscts)
 		ucr1 |= UCR1_RTSDEN;
@@ -1473,7 +1473,7 @@ static int imx_uart_startup(struct uart_port *port)
 	 */
 	imx_uart_enable_ms(&sport->port);
 
-	if (dma_is_inited) {
+	if (sport->dma_is_inited) {
 		imx_uart_enable_dma(sport);
 		imx_uart_start_rx_dma(sport);
 	} else {
@@ -1619,7 +1619,6 @@ imx_uart_set_termios(struct uart_port *port, struct ktermios *termios,
 	unsigned long div;
 	unsigned long num, denom;
 	uint64_t tdiv64;
-	int dma_is_inited = 0;
 
 	/*
 	 * We only support CS7 and CS8.
@@ -1775,7 +1774,7 @@ imx_uart_set_termios(struct uart_port *port, struct ktermios *termios,
 	if (UART_ENABLE_MS(&sport->port, termios->c_cflag))
 		imx_uart_enable_ms(&sport->port);
 
-	if (dma_is_inited && !sport->dma_is_enabled) {
+	if (sport->dma_is_inited && !sport->dma_is_enabled) {
 		imx_uart_enable_dma(sport);
 		imx_uart_start_rx_dma(sport);
 	}
