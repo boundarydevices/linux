@@ -135,15 +135,11 @@ static long defendkey_compat_ioctl(struct file *filp,
 static ssize_t defendkey_read(struct file *file,
 	char __user *buf, size_t count, loff_t *ppos)
 {
-	int ret;
-	unsigned long copy_base, copy_size, mem_base_phy, check_offset;
+	ssize_t ret_value = ret_error;
+	int ret = -EINVAL;
+	unsigned long mem_base_phy, check_offset;
 
-	switch (decrypt_dtb) {
-	case e_upgrade_check:
-	case e_decrypt_dtb:
-		return ret_error;
-	case e_decrypt_dtb_success:
-	{
+	if (decrypt_dtb == e_decrypt_dtb_success) {
 		mem_base_phy = virt_to_phys(mem_base_virt);
 
 		check_offset = aml_sec_boot_check(AML_D_Q_IMG_SIG_HDR_SIZE,
@@ -153,35 +149,30 @@ static ssize_t defendkey_read(struct file *file,
 		else
 			check_offset = 0;
 
-		if (check_offset)
-			memmove((void *)mem_base_virt,
-				(void *)mem_base_virt + check_offset, mem_size);
-
 		if (mem_size < count) {
 			pr_err("%s:data size overflow!\n", __func__);
-			return ret_fail;
+			ret_value = ret_fail;
+			goto exit;
 		}
 
-		copy_base = (unsigned long)buf;
-		copy_size = count;
-		ret = copy_to_user((void __user *)copy_base,
-			(const void *)mem_base_virt, copy_size);
+		ret = copy_to_user((void __user *)buf,
+			(const void *)(mem_base_virt + check_offset), count);
 		if (ret) {
 			pr_err("%s:copy_to_user fail! ret:%d\n",
 				__func__, ret);
-			ret = ret_fail;
+			ret_value = ret_fail;
 		} else {
 			pr_info("%s: copy data to user successfully!\n",
 				__func__);
-			ret = ret_success;
+			ret_value = ret_success;
 		}
 
-	}
-	default:
-		return ret_error;
-	}
+		decrypt_dtb = e_upgrade_check;
+	} else
+		ret_value = ret_error;
 
-	return ret;
+exit:
+	return ret_value;
 }
 
 static ssize_t defendkey_write(struct file *file,
