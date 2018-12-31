@@ -715,17 +715,6 @@ static int fsl_esai_trigger(struct snd_pcm_substream *substream, int cmd,
 	return 0;
 }
 
-static int fsl_esai_hw_free(struct snd_pcm_substream *substream,
-		struct snd_soc_dai *cpu_dai)
-{
-	struct fsl_esai *esai_priv = snd_soc_dai_get_drvdata(cpu_dai);
-
-	if (esai_priv->soc->dma_workaround)
-		clear_gpt_dma(substream,  esai_priv->dma_info);
-
-	return 0;
-}
-
 static const struct snd_soc_dai_ops fsl_esai_dai_ops = {
 	.startup = fsl_esai_startup,
 	.shutdown = fsl_esai_shutdown,
@@ -1148,18 +1137,6 @@ static int fsl_esai_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to init imx pcm dma: %d\n", ret);
 
 	return ret;
-}
-
-static int fsl_esai_remove(struct platform_device *pdev)
-{
-	struct fsl_esai *esai_priv = dev_get_drvdata(&pdev->dev);
-
-	if (esai_priv->soc->dma_workaround)
-		fsl_dma_workaround_free_info(esai_priv->dma_info, &pdev->dev);
-
-	pm_runtime_disable(&pdev->dev);
-
-	return 0;
 }
 
 #ifdef CONFIG_PM
