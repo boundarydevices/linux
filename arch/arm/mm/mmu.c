@@ -1668,7 +1668,7 @@ EXPORT_SYMBOL(phys_check);
 
 unsigned long notrace virt_check(unsigned long x)
 {
-	if (scheduler_running && (x >= VMALLOC_START || x <= PAGE_OFFSET)) {
+	if (scheduler_running && (x >= VMALLOC_START || x < PAGE_OFFSET)) {
 		pr_err("bad input of virt:%lx\n", x);
 		dump_stack();
 	}
