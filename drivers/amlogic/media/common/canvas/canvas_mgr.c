@@ -521,9 +521,6 @@ static void canvas_pool_config(void)
 	canvas_pool_register_const_canvas(0x70, 0x77, "ppmgr");
 	canvas_pool_register_const_canvas(0xe4, 0xef, "encoder");
 	canvas_pool_register_const_canvas(0x40, 0x48, "osd");
-#ifdef CONFIG_AMLOGIC_VIDEOIN_MANAGER
-	canvas_pool_register_const_canvas(0x4e, 0x5f, "vm");
-#endif
 	canvas_pool_register_const_canvas(0xc0, 0xd7, "amlvideo2");
 	/*please add static canvas later. */
 }

@@ -368,17 +368,6 @@ static void vfm_init(void)
 #ifdef CONFIG_TVIN_VIUIN
 	char def_ext_id[] = "default_ext";
 	char def_ext_name_chain[] = "vdin amvideo2";
-#else /**/
-#ifdef CONFIG_AMLOGIC_VIDEOIN_MANAGER
-	char def_ext_id0[] = "default_ext0";
-	char def_ext_id1[] = "default_ext1";
-#ifdef CONFIG_AMLOGIC_VM_DISABLE_VIDEOLAYER
-	char def_ext_name_chain0[] = "vdin0 vm0";
-	char def_ext_name_chain1[] = "vdin1 vm1";
-#else /**/
-	char def_ext_name_chain[] = "vdin0 vm amvideo";
-#endif /**/
-#endif /**/
 #endif /**/
 #ifdef CONFIG_VDIN_MIPI
 	char def_mipi_id[] = "default_mipi";
@@ -417,10 +406,7 @@ static void vfm_init(void)
 #ifdef CONFIG_VDIN_MIPI
 	vfm_map_add(def_mipi_id, def_mipi_name_chain);
 #endif /**/
-#ifdef CONFIG_AMLOGIC_VIDEOIN_MANAGER
-	vfm_map_add(def_ext_id0, def_ext_name_chain0);
-	vfm_map_add(def_ext_id1, def_ext_name_chain1);
-#endif /**/
+
 #if (defined CONFIG_TVIN_AFE) || (defined CONFIG_TVIN_HDMI)
 	vfm_map_add(tvpath_id, tvpath_chain);
 #endif /**/

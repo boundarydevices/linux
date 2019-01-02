@@ -94,6 +94,7 @@ source "drivers/amlogic/media/video_processor/Kconfig"
 source "drivers/amlogic/media/enhancement/Kconfig"
 source "drivers/amlogic/media/gdc/Kconfig"
 source "drivers/amlogic/media/algorithm/Kconfig"
+source "drivers/amlogic/media/camera/Kconfig"
 endif
 source "drivers/amlogic/media/dtv_demod/Kconfig"
 endmenu
