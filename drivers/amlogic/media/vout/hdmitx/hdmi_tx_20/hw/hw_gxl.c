@@ -253,23 +253,6 @@ void set_hpll_sspll_gxl(enum hdmi_vic vic)
 	case HDMI_1920x1080i50_16x9:
 		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x64348c4, 0, 30);
 		break;
-	case HDMI_3840x2160p50_16x9:
-	case HDMI_3840x2160p60_16x9:
-	case HDMI_4096x2160p50_256x135:
-	case HDMI_4096x2160p60_256x135:
-		break;
-	case HDMI_3840x2160p50_16x9_Y420:
-	case HDMI_3840x2160p60_16x9_Y420:
-	case HDMI_4096x2160p50_256x135_Y420:
-	case HDMI_4096x2160p60_256x135_Y420:
-	case HDMI_3840x2160p30_16x9:
-	case HDMI_3840x2160p25_16x9:
-	case HDMI_3840x2160p24_16x9:
-	case HDMI_4096x2160p30_256x135:
-	case HDMI_4096x2160p25_256x135:
-	case HDMI_4096x2160p24_256x135:
-		hd_set_reg_bits(P_HHI_HDMI_PLL_CNTL2, 0x62b44c4, 0, 30);
-		break;
 	default:
 		break;
 	}
