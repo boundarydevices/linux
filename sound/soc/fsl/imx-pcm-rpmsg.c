@@ -120,9 +120,9 @@ static snd_pcm_uframes_t imx_rpmsg_pcm_pointer(
 	return bytes_to_frames(substream->runtime, pos);
 }
 
-static void imx_rpmsg_timer_callback(unsigned long data)
+static void imx_rpmsg_timer_callback(struct timer_list *t)
 {
-	struct snd_pcm_substream *substream = (struct snd_pcm_substream *)data;
+	struct snd_pcm_substream *substream = from_timer(substream, t, set_timer);
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai   *cpu_dai = rtd->cpu_dai;
@@ -211,8 +211,8 @@ static int imx_rpmsg_pcm_open(struct snd_pcm_substream *substream)
 
 
 	/*create thread*/
-	setup_timer(&i2s_info->stream_timer[substream->stream],
-			imx_rpmsg_timer_callback, (unsigned long)substream);
+	timer_setup(&i2s_info->stream_timer[substream->stream],
+			imx_rpmsg_timer_callback, 0);
 
 	return ret;
 }

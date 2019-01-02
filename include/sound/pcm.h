@@ -455,6 +455,7 @@ struct snd_pcm_substream {
 	size_t buffer_bytes_max;	/* limit ring buffer size */
 	struct snd_dma_buffer dma_buffer;
 	size_t dma_max;
+	struct timer_list set_timer;
 	/* -- hardware operations -- */
 	const struct snd_pcm_ops *ops;
 	/* -- runtime information -- */
