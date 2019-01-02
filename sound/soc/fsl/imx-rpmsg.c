@@ -34,6 +34,7 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	struct device_node *cpu_np;
 	struct platform_device *cpu_pdev;
 	struct imx_rpmsg_data *data;
+	struct fsl_rpmsg_i2s *rpmsg_i2s;
 	int ret;
 
 	cpu_np = of_parse_phandle(pdev->dev.of_node, "cpu-dai", 0);
@@ -55,6 +56,8 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto fail;
 	}
+
+	rpmsg_i2s = platform_get_drvdata(cpu_pdev);
 
 	data->dai[0].name = "rpmsg hifi";
 	data->dai[0].stream_name = "rpmsg hifi";

@@ -24,6 +24,8 @@
 #include "fsl_rpmsg_i2s.h"
 #include "../../core/pcm_local.h"
 
+#define DRV_NAME	"imx_pcm_rpmsg"
+
 struct i2s_info *i2s_info_g;
 
 static struct snd_pcm_hardware imx_rpmsg_pcm_hardware = {
@@ -654,7 +656,8 @@ out:
 	return ret;
 }
 
-static struct snd_soc_platform_driver imx_rpmsg_soc_platform = {
+static struct snd_soc_component_driver imx_rpmsg_soc_component = {
+	.name		= DRV_NAME,
 	.ops		= &imx_rpmsg_pcm_ops,
 	.pcm_new	= imx_rpmsg_pcm_new,
 	.pcm_free	= imx_rpmsg_pcm_free_dma_buffers,
@@ -666,7 +669,8 @@ int imx_rpmsg_platform_register(struct device *dev)
 
 	i2s_info_g	=  &rpmsg_i2s->i2s_info;
 
-	return devm_snd_soc_register_platform(dev, &imx_rpmsg_soc_platform);
+	return devm_snd_soc_register_component(dev, &imx_rpmsg_soc_component,
+					       NULL, 0);
 }
 EXPORT_SYMBOL_GPL(imx_rpmsg_platform_register);
 
