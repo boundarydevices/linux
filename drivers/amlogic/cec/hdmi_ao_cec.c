@@ -2906,7 +2906,7 @@ static long hdmitx_cec_ioctl(struct file *f,
 				if (((cec_dev->port_seq >> i*4) & 0xF) == a)
 					break;
 			}
-			CEC_INFO("phy port:%d, ui port:%d\n", i, a);
+			CEC_INFO_L(L_2, "phy port:%d, ui port:%d\n", i, a);
 
 			if ((tmp & (1 << i)) && (a != 0xF))
 				tmp = 1;
