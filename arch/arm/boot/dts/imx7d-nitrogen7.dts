@@ -1057,7 +1057,11 @@
 };
 
 &usdhc3 {
+#if 0
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+#else
+	pinctrl-names = "default";
+#endif
 	pinctrl-0 = <&pinctrl_usdhc3>;
 	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
