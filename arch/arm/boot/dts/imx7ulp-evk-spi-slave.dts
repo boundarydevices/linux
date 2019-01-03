@@ -11,6 +11,18 @@
 
 /delete-node/&spidev0;
 
+&pinctrl_lpspi3 {
+	fsl,pins = <
+		IMX7ULP_PAD_PTF16__LPSPI3_SIN	0x0
+		IMX7ULP_PAD_PTF17__LPSPI3_SOUT	0x0
+		IMX7ULP_PAD_PTF18__LPSPI3_SCK	0x0
+		IMX7ULP_PAD_PTF19__LPSPI3_PCS0	0x0
+	>;
+};
+
 &lpspi3 {
+	pinctrl-0 = <&pinctrl_lpspi3>;
+	pinctrl-1 = <&pinctrl_lpspi3>;
+	/delete-property/ cs-gpios;
 	spi-slave;
 };
