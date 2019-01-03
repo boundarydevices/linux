@@ -487,6 +487,7 @@
 &lpspi3 {
 	#address-cells = <1>;
 	#size-cells = <0>;
+	fsl,spi-num-chipselects = <1>;
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_lpspi3>;
 	pinctrl-1 = <&pinctrl_lpspi3>;
