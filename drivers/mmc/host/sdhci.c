@@ -2993,9 +2993,11 @@ static irqreturn_t sdhci_thread_irq(int irq, void *dev_id)
 
 static bool sdhci_cd_irq_can_wakeup(struct sdhci_host *host)
 {
+	int gpio_cd = mmc_gpio_get_cd(host->mmc);
+
 	return mmc_card_is_removable(host->mmc) &&
-	       !(host->quirks & SDHCI_QUIRK_BROKEN_CARD_DETECTION) &&
-	       !mmc_can_gpio_cd(host->mmc);
+	       !(host->quirks & SDHCI_QUIRK_BROKEN_CARD_DETECTION ||
+	       (gpio_cd >= 0)) && !mmc_can_gpio_cd(host->mmc);
 }
 
 /*
