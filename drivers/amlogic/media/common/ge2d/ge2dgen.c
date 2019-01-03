@@ -90,6 +90,8 @@ static inline void _set_dst_format(
 		unsigned int format_src,
 		unsigned int format_dst)
 {
+	unsigned int y_yc_ratio;
+
 	src2_dst_data_cfg->dst_format_all = format_dst;
 	src2_dst_data_cfg->dst_format = (format_dst >> 8) & 3;
 	src2_dst_data_cfg->dst_endian = (format_dst & GE2D_ENDIAN_MASK) >>
@@ -118,6 +120,8 @@ static inline void _set_dst_format(
 	} else
 		dp_gen_cfg->conv_matrix_en = 0;
 
+	y_yc_ratio = (format_dst >> 0) & 1;
+
 	/* #if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6 */
 	/* for dest is nv21 or nv12 in m6. */
 	if ((format_dst & GE2D_FORMAT_YUV) &&
@@ -125,7 +129,10 @@ static inline void _set_dst_format(
 		src2_dst_data_cfg->dst_format = 0;
 		src2_dst_data_cfg->dst_mode_8b_sel = 0;
 		src2_dst_data_cfg->dst2_pixel_byte_width = 1;
-		src2_dst_data_cfg->dst2_discard_mode = 0xf;
+		if (y_yc_ratio == 0)
+			src2_dst_data_cfg->dst2_discard_mode = 0xc;
+		else
+			src2_dst_data_cfg->dst2_discard_mode = 0xf;
 		src2_dst_data_cfg->dst2_enable = 1;
 		src2_dst_data_cfg->dst2_color_map =
 			src2_dst_data_cfg->dst_color_map - 5;
