@@ -84,6 +84,8 @@
 #define IMX6_OCOTP_ANA1		0x04e0
 #define IMX7_OCOTP_ANA1		0x04f0
 
+#define IMX7_OCOTP_TESTER3     0x0440
+
 /* The driver supports 1 passive trip point and 1 critical trip point */
 enum imx_thermal_trip {
 	IMX_TRIP_PASSIVE,
@@ -687,7 +689,11 @@ static int imx_init_from_tempmon_data(struct platform_device *pdev)
 	else
 		imx6_calibrate_data(data, val);
 
-	ret = regmap_read(map, OCOTP_MEM0, &val);
+	if (data->socdata->version == TEMPMON_IMX7)
+		ret = regmap_read(map, IMX7_OCOTP_TESTER3, &val);
+	else
+		ret = regmap_read(map, OCOTP_MEM0, &val);
+
 	if (ret) {
 		dev_err(&pdev->dev, "failed to read sensor data: %d\n", ret);
 		return ret;
