@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -622,6 +622,8 @@ void framegen_wait_done(struct dpu_framegen *fg, struct drm_display_mode *m);
 void framegen_read_timestamp(struct dpu_framegen *fg,
 			     u32 *frame_index, u32 *line_index);
 void framegen_wait_for_frame_counter_moving(struct dpu_framegen *fg);
+bool framegen_secondary_requests_to_read_empty_fifo(struct dpu_framegen *fg);
+void framegen_secondary_clear_channel_status(struct dpu_framegen *fg);
 bool framegen_secondary_is_syncup(struct dpu_framegen *fg);
 void framegen_wait_for_secondary_syncup(struct dpu_framegen *fg);
 void framegen_enable_clock(struct dpu_framegen *fg);
