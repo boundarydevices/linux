@@ -298,6 +298,7 @@
 	clocks = <&clk IMX8QM_A53_DIV>;
 	clock-latency = <61036>;
 	#cooling-cells = <2>;
+	/delete-property/ cpu-idle-states;
 };
 
 &A72_0 {
@@ -312,6 +313,7 @@
 	clocks = <&clk IMX8QM_A72_DIV>;
 	clock-latency = <61036>;
 	#cooling-cells = <2>;
+	/delete-property/ cpu-idle-states;
 };
 
 
@@ -323,4 +325,20 @@
                700000  0
 /*underdrive*/ 400000  0  /*core/shader clock share the same frequency on underdrive mode*/
        >;
+};
+
+&A53_1 {
+	/delete-property/ cpu-idle-states;
+};
+
+&A53_2 {
+	/delete-property/ cpu-idle-states;
+};
+
+&A53_3 {
+	/delete-property/ cpu-idle-states;
+};
+
+&A72_1 {
+	/delete-property/ cpu-idle-states;
 };
