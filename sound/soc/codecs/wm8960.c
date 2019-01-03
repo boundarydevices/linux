@@ -139,6 +139,7 @@ struct wm8960_priv {
 	unsigned powering_down;
 	bool is_stream_in_use[2];
 	struct wm8960_data pdata;
+	bool quick_probe;
 };
 
 #define wm8960_reset(c)	regmap_write(c, WM8960_RESET, 0)
@@ -958,7 +959,8 @@ static int wm8960_set_bias_level_out3(struct snd_soc_codec *codec,
 			/* Enable & ramp VMID at 2x50k */
 			wait_for_powering_down_time(wm8960);
 			snd_soc_update_bits(codec, WM8960_POWER1, 0x80, 0x80);
-			msleep(100);
+			if(wm8960->quick_probe == false)
+				msleep(100);
 
 			/* Enable VREF */
 			snd_soc_update_bits(codec, WM8960_POWER1, WM8960_VREF,
@@ -1405,6 +1407,7 @@ static int wm8960_i2c_probe(struct i2c_client *i2c,
 	struct wm8960_priv *wm8960;
 	int ret;
 	int repeat_reset = 10;
+	struct device_node *np = i2c->dev.of_node;
 
 	wm8960 = devm_kzalloc(&i2c->dev, sizeof(struct wm8960_priv),
 			      GFP_KERNEL);
@@ -1425,6 +1428,11 @@ static int wm8960_i2c_probe(struct i2c_client *i2c,
 		memcpy(&wm8960->pdata, pdata, sizeof(struct wm8960_data));
 	else if (i2c->dev.of_node)
 		wm8960_set_pdata_from_of(i2c, &wm8960->pdata);
+
+	if (of_property_read_bool(np, "quick-probe"))
+		wm8960->quick_probe = true;
+
+	dev_info(&i2c->dev, "%s(), quick probe %d\n", __func__, wm8960->quick_probe);
 
 	do {
 		ret = wm8960_reset(wm8960->regmap);
