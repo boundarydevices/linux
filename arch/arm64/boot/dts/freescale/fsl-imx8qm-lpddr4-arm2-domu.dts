@@ -377,6 +377,7 @@
 /delete-node/ &irqsteer_csi1;
 /delete-node/ &i2c0_mipi_csi1;
 /delete-node/ &lpspi0;
+/delete-node/ &lpspi3;
 /delete-node/ &lpuart0;
 
 &lpuart1 {
