@@ -34,4 +34,9 @@ extern int ge2d_wq_init(struct platform_device *pdev,
 	int irq, struct clk *clk);
 extern int ge2d_wq_deinit(void);
 
+int ge2d_buffer_alloc(struct ge2d_dmabuf_req_s *ge2d_req_buf);
+int ge2d_buffer_free(int index);
+int ge2d_buffer_export(struct ge2d_dmabuf_exp_s *ge2d_exp_buf);
+void ge2d_buffer_dma_flush(int dma_fd);
+void ge2d_buffer_cache_flush(int dma_fd);
 #endif

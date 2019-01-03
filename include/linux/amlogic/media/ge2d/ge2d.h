@@ -27,6 +27,12 @@
 #include <linux/compat.h>
 #endif
 
+enum ge2d_memtype_s {
+	AML_GE2D_MEM_ION,
+	AML_GE2D_MEM_DMABUF,
+	AML_GE2D_MEM_INVALID,
+};
+
 
 #define MAX_BITBLT_WORK_CONFIG 4
 #define MAX_GE2D_CMD  32   /* 64 */
@@ -610,6 +616,12 @@ struct ge2d_config_s {
 	unsigned int	update_flag;
 };
 
+struct ge2d_dma_buf_s {
+	dma_addr_t paddr;
+	void *vaddr;
+	int len;
+};
+
 enum ge2d_src_dst_e {
 	OSD0_OSD0 = 0,
 	OSD0_OSD1,
@@ -663,6 +675,7 @@ struct ge2d_manager_s {
 	struct ge2d_context_s *last_wq;
 	struct task_struct *ge2d_thread;
 	struct ge2d_event_s event;
+	struct aml_dma_buffer *buffer;
 	int irq_num;
 	int ge2d_state;
 	int process_queue_state;
@@ -949,6 +962,56 @@ struct compat_config_para_ex_ion_s {
 	struct compat_config_planes_ion_s dst_planes[4];
 };
 #endif
+
+struct config_para_ex_memtype_s {
+	int ge2d_magic;
+	struct config_para_ex_ion_s _ge2d_config_ex;
+	/* memtype*/
+	unsigned int src1_mem_alloc_type;
+	unsigned int src2_mem_alloc_type;
+	unsigned int dst_mem_alloc_type;
+};
+
+struct config_ge2d_para_ex_s {
+	union {
+		struct config_para_ex_ion_s para_config_ion;
+		struct config_para_ex_memtype_s para_config_memtype;
+	};
+};
+
+
+#ifdef CONFIG_COMPAT
+struct compat_config_para_ex_memtype_s {
+	int ge2d_magic;
+	struct compat_config_para_ex_ion_s _ge2d_config_ex;
+	/* memtype*/
+	unsigned int src1_mem_alloc_type;
+	unsigned int src2_mem_alloc_type;
+	unsigned int dst_mem_alloc_type;
+};
+
+struct compat_config_ge2d_para_ex_s {
+	union {
+		struct compat_config_para_ex_ion_s para_config_ion;
+		struct compat_config_para_ex_memtype_s para_config_memtype;
+	};
+};
+#endif
+
+/* for ge2d dma buf define */
+struct ge2d_dmabuf_req_s {
+	int index;
+	unsigned int len;
+	unsigned int dma_dir;
+};
+
+struct ge2d_dmabuf_exp_s {
+	int index;
+	unsigned int flags;
+	int fd;
+};
+/* end of ge2d dma buffer define */
+
 struct ge2d_device_data_s {
 	int ge2d_rate;
 	int src2_alp;
@@ -990,6 +1053,21 @@ extern struct ge2d_device_data_s ge2d_meson_dev;
 	_IOW(GE2D_IOC_MAGIC, 0x03,  struct compat_config_para_ex_ion_s)
 #endif
 
+#define GE2D_REQUEST_BUFF _IOW(GE2D_IOC_MAGIC, 0x04, struct ge2d_dmabuf_req_s)
+#define GE2D_EXP_BUFF _IOW(GE2D_IOC_MAGIC, 0x05, struct ge2d_dmabuf_exp_s)
+#define GE2D_FREE_BUFF _IOW(GE2D_IOC_MAGIC, 0x06, int)
+
+#define GE2D_CONFIG_EX_MEM	 \
+	_IOW(GE2D_IOC_MAGIC, 0x07,  struct config_ge2d_para_ex_s)
+
+#ifdef CONFIG_COMPAT
+#define GE2D_CONFIG_EX32_MEM  \
+	_IOW(GE2D_IOC_MAGIC, 0x07,  struct compat_config_ge2d_para_ex_s)
+#endif
+
+#define GE2D_SYNC_DEVICE _IOW(GE2D_IOC_MAGIC, 0x08, int)
+#define GE2D_SYNC_CPU _IOW(GE2D_IOC_MAGIC, 0x09, int)
+
 extern void ge2d_set_src1_data(struct ge2d_src1_data_s *cfg);
 extern void ge2d_set_src1_gen(struct ge2d_src1_gen_s *cfg);
 extern void ge2d_set_src2_dst_data(struct ge2d_src2_dst_data_s *cfg);
@@ -1010,6 +1088,8 @@ extern int ge2d_context_config_ex(struct ge2d_context_s *context,
 				  struct config_para_ex_s *ge2d_config);
 extern int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 			   struct config_para_ex_ion_s *ge2d_config);
+extern int ge2d_context_config_ex_mem(struct ge2d_context_s *context,
+			   struct config_para_ex_memtype_s *ge2d_config_mem);
 extern struct ge2d_context_s *create_ge2d_work_queue(void);
 extern int destroy_ge2d_work_queue(struct ge2d_context_s *wq);
 extern int ge2d_wq_remove_config(struct ge2d_context_s *wq);
