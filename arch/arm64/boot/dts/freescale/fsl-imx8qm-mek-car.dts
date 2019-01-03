@@ -1089,3 +1089,7 @@
 &sata {
 	status = "disabled";
 };
+
+&wm8960 {
+	quick-probe;
+};
