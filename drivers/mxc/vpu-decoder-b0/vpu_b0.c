@@ -518,7 +518,10 @@ static int v4l2_ioctl_g_fmt(struct file *file,
 			pix_mp->pixelformat = V4L2_PIX_FMT_NV12;
 		pix_mp->width = ctx->pSeqinfo->uHorRes > 0?ctx->pSeqinfo->uHorRes:q_data->width;
 		pix_mp->height = ctx->pSeqinfo->uVerRes > 0?ctx->pSeqinfo->uVerRes:q_data->height;
-		pix_mp->field = V4L2_FIELD_NONE;
+		if (ctx->pSeqinfo->uProgressive == 1)
+			pix_mp->field = V4L2_FIELD_NONE;
+		else
+			pix_mp->field = V4L2_FIELD_INTERLACED;
 		pix_mp->num_planes = 2;
 		pix_mp->colorspace = V4L2_COLORSPACE_REC709;
 
