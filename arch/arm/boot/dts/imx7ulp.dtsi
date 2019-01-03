@@ -304,6 +304,8 @@
 			assigned-clocks = <&clks IMX7ULP_CLK_LPSPI2>;
 			assigned-clock-parents = <&clks IMX7ULP_CLK_FIRC_BUS_CLK>;
 			assigned-clock-rates = <48000000>;
+			dmas = <&edma0 0 26>, <&edma0 0 25>;
+			dma-names = "tx","rx";
 			status = "disabled";
 		};
 
@@ -317,6 +319,8 @@
 			assigned-clocks = <&clks IMX7ULP_CLK_LPSPI3>;
 			assigned-clock-parents = <&clks IMX7ULP_CLK_FIRC_BUS_CLK>;
 			assigned-clock-rates = <48000000>;
+			dmas = <&edma0 0 28>, <&edma0 0 27>;
+			dma-names = "tx","rx";
 			status = "disabled";
 		};
 
