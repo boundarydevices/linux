@@ -54,6 +54,14 @@
 		};
 	};
 
+	brcmfmac: brcmfmac {
+		compatible = "cypress,brcmfmac";
+		pinctrl-names = "init", "idle", "default";
+		pinctrl-0 = <&pinctrl_wlan_init>;
+		pinctrl-1 = <&pinctrl_wlan_init>;
+		pinctrl-2 = <&pinctrl_wlan>;
+	};
+
 	modem_reset: modem-reset {
 		compatible = "gpio-reset";
 		reset-gpios = <&gpio3 5 GPIO_ACTIVE_LOW>;
@@ -446,6 +454,18 @@
 		pinctrl_wdog: wdoggrp {
 			fsl,pins = <
 				MX8MQ_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B 0xc6
+			>;
+		};
+
+		pinctrl_wlan: wlangrp {
+			fsl,pins = <
+				MX8MQ_IOMUXC_GPIO1_IO00_ANAMIX_REF_CLK_32K	0x16
+			>;
+		};
+
+		pinctrl_wlan_init: wlan_initgrp {
+			fsl,pins = <
+				MX8MQ_IOMUXC_GPIO1_IO00_GPIO1_IO0		0x16
 			>;
 		};
 
