@@ -92,7 +92,7 @@ enum dhd_prealloc_index {
 #define WLAN_DHD_IF_FLOW_LKUP_SIZE	(64 * 1024)
 #else
 #define WLAN_DHD_INFO_BUF_SIZE	(16 * 1024)
-#define WLAN_DHD_WLFC_BUF_SIZE	(24 * 1024)
+#define WLAN_DHD_WLFC_BUF_SIZE	(29 * 1024)
 #define WLAN_DHD_IF_FLOW_LKUP_SIZE	(20 * 1024)
 #endif /* CONFIG_64BIT */
 #define WLAN_DHD_MEMDUMP_SIZE	(800 * 1024)
