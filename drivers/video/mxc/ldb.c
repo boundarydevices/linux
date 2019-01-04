@@ -163,7 +163,7 @@ static struct fb_videomode ldb_modedb[] = {
 	 FB_VMODE_NONINTERLACED,
 	 FB_MODE_IS_DETAILED,},
 	{
-	 "tm070jdhg30", 60, 1280, 800, 16624,
+	 "tm070jdhg30", 60, 1280, 800, 20000,
 	 5, 63,
 	 2, 39,
 	 1, 1,
