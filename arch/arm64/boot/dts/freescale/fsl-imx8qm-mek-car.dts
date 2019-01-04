@@ -85,7 +85,7 @@
 };
 
 &i2c1_lvds0 {
-	status = "disabled";
+	clock-frequency = <400000>;
 };
 
 &vehicle_rpmsg {
@@ -159,14 +159,6 @@
 };
 
 &lvds0_pwm {
-	status = "disabled";
-};
-
-&ldb1_phy {
-	status = "disabled";
-};
-
-&ldb1 {
 	status = "disabled";
 };
 
