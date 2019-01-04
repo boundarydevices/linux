@@ -66,14 +66,6 @@
 	status = "disabled";
 };
 
-&ldb2_phy {
-   status = "disabled";
-};
-
-&ldb2 {
-   status = "disabled";
-};
-
 &mipi_dsi_phy2 {
    status = "disabled";
 };
@@ -99,7 +91,7 @@
 };
 
 &i2c0_mipi_lvds1 {
-	status = "disabled";
+	clock-frequency = <400000>;
 };
 
 &jpegdec {
