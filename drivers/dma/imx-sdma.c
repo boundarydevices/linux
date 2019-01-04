@@ -1286,7 +1286,7 @@ static int sdma_alloc_bd(struct sdma_desc *desc)
 				      &desc->bd_phys);
 	if (!desc->bd) {
 		desc->bd_iram = false;
-		desc->bd = dma_zalloc_coherent(desc->sdmac->sdma->dev, bd_size,
+		desc->bd = dma_alloc_coherent(desc->sdmac->sdma->dev, bd_size,
 				&desc->bd_phys, GFP_NOWAIT);
 		if (!desc->bd)
 			return ret;

@@ -109,8 +109,8 @@ static int queue_alloc_page(struct hinic_hwif *hwif, u64 **vaddr, u64 *paddr,
 	struct pci_dev *pdev = hwif->pdev;
 	dma_addr_t dma_addr;
 
-	*vaddr = dma_zalloc_coherent(&pdev->dev, page_sz, &dma_addr,
-				     GFP_KERNEL);
+	*vaddr = dma_alloc_coherent(&pdev->dev, page_sz, &dma_addr,
+				    GFP_KERNEL);
 	if (!*vaddr) {
 		dev_err(&pdev->dev, "Failed to allocate dma for wqs page\n");
 		return -ENOMEM;
@@ -477,8 +477,8 @@ static int alloc_wq_pages(struct hinic_wq *wq, struct hinic_hwif *hwif,
 		u64 *paddr = &wq->block_vaddr[i];
 		dma_addr_t dma_addr;
 
-		*vaddr = dma_zalloc_coherent(&pdev->dev, wq->wq_page_size,
-					     &dma_addr, GFP_KERNEL);
+		*vaddr = dma_alloc_coherent(&pdev->dev, wq->wq_page_size,
+					    &dma_addr, GFP_KERNEL);
 		if (!*vaddr) {
 			dev_err(&pdev->dev, "Failed to allocate wq page\n");
 			goto err_alloc_wq_pages;
