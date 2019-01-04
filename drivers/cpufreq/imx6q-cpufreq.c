@@ -294,6 +294,13 @@ static void imx6q_opp_check_speed_grading(struct device *dev)
 				dev_warn(dev, "failed to disable 1.2GHz OPP\n");
 	}
 	iounmap(base);
+
+	if (IS_ENABLED(CONFIG_MX6_VPU_352M)) {
+		if (dev_pm_opp_disable(cpu_dev, 396000000))
+			pr_warn("failed to disable 396MHz OPP\n");
+		pr_info("remove 396MHz OPP for VPU running at 352MHz!\n");
+	}
+
 put_node:
 	of_node_put(np);
 }
