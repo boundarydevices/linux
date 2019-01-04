@@ -75,6 +75,7 @@ static unsigned int transition_latency;
 static u32 *imx6_soc_volt;
 static u32 soc_opp_count;
 static bool ignore_dc_reg;
+static bool low_power_run_support;
 
 static int imx6q_set_target(struct cpufreq_policy *policy, unsigned int index)
 {
@@ -116,8 +117,12 @@ static int imx6q_set_target(struct cpufreq_policy *policy, unsigned int index)
 	 * CPU freq is increasing, so need to ensure
 	 * that bus frequency is increased too.
 	 */
-	if (old_freq <= FREQ_396_MHZ && new_freq > FREQ_396_MHZ)
+	if (low_power_run_support) {
+		if (old_freq == freq_table[0].frequency)
+			request_bus_freq(BUS_FREQ_HIGH);
+	} else if (old_freq <= FREQ_396_MHZ && new_freq > FREQ_396_MHZ) {
 		request_bus_freq(BUS_FREQ_HIGH);
+	}
 
 	/* scaling up?  scale voltage before frequency */
 	if (new_freq > old_freq) {
@@ -237,8 +242,12 @@ static int imx6q_set_target(struct cpufreq_policy *policy, unsigned int index)
 	 * If CPU is dropped to the lowest level, release the need
 	 * for a high bus frequency.
 	 */
-	if (old_freq > FREQ_396_MHZ && new_freq <= FREQ_396_MHZ)
+	if (low_power_run_support) {
+		if (new_freq == freq_table[0].frequency)
+			release_bus_freq(BUS_FREQ_HIGH);
+	} else if (old_freq > FREQ_396_MHZ && new_freq <= FREQ_396_MHZ) {
 		release_bus_freq(BUS_FREQ_HIGH);
+	}
 
 	return 0;
 }
@@ -265,8 +274,11 @@ static int imx6q_cpufreq_init(struct cpufreq_policy *policy)
 		dev_err(cpu_dev, "imx6 cpufreq init failed!\n");
 		return ret;
 	}
-	if (policy->cur > FREQ_396_MHZ)
+	if (low_power_run_support && policy->cur > freq_table[0].frequency)
 		request_bus_freq(BUS_FREQ_HIGH);
+	else if (policy->cur > FREQ_396_MHZ)
+		request_bus_freq(BUS_FREQ_HIGH);
+
 	return 0;
 }
 
@@ -493,6 +505,9 @@ static int imx6q_cpufreq_probe(struct platform_device *pdev)
 	of_property_read_u32(np, "fsl,arm-soc-shared", &i);
 	if (i == 1)
 		soc_reg = arm_reg;
+
+	/* On i.MX6ULL, check the 24MHz low power run mode support */
+	low_power_run_support = of_property_read_bool(np, "fsl,low-power-run");
 
 	ret = dev_pm_opp_of_add_table(cpu_dev);
 	if (ret < 0) {
