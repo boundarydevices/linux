@@ -373,7 +373,7 @@ static int imx6q_cpufreq_probe(struct platform_device *pdev)
 	int num, ret;
 	const struct property *prop;
 	const __be32 *val;
-	u32 nr, i, j;
+	u32 nr, j, i = 0;
 
 	cpu_dev = get_cpu_device(0);
 	if (!cpu_dev) {
@@ -412,6 +412,17 @@ static int imx6q_cpufreq_probe(struct platform_device *pdev)
 		ret = -ENOENT;
 		goto put_reg;
 	}
+
+	/*
+	 * soc_reg sync  with arm_reg if arm shares the same regulator
+	 * with soc. Otherwise, regulator common framework will refuse to update
+	 * this consumer's voltage right now while another consumer voltage
+	 * still keep in old one. For example, imx6sx-sdb with pfuze200 in
+	 * ldo-bypass mode.
+	 */
+	of_property_read_u32(np, "fsl,arm-soc-shared", &i);
+	if (i == 1)
+		soc_reg = arm_reg;
 
 	ret = dev_pm_opp_of_add_table(cpu_dev);
 	if (ret < 0) {
