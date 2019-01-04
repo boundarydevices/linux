@@ -50,6 +50,14 @@
 		stdout-path = &lpuart0;
 	};
 
+	brcmfmac: brcmfmac {
+		compatible = "cypress,brcmfmac";
+		pinctrl-names = "init", "idle", "default";
+		pinctrl-0 = <&pinctrl_wifi_init>;
+		pinctrl-1 = <&pinctrl_wifi_init>;
+		pinctrl-2 = <&pinctrl_wifi>;
+	};
+
 	bt_rfkill {
 		compatible = "fsl,mxc_bt_rfkill";
 		bt-power-gpios = <&pca9557_a 1 GPIO_ACTIVE_LOW>;
@@ -662,6 +670,12 @@
 		pinctrl_wifi: wifigrp{
 			fsl,pins = <
 				SC_P_SCU_BOOT_MODE3_SCU_DSC_RTC_CLOCK_OUTPUT_32K	0x20
+			>;
+		};
+
+		pinctrl_wifi_init: wifi_initgrp{
+			fsl,pins = <
+				SC_P_SCU_BOOT_MODE3_SCU_DSC_BOOT_MODE3		0x20
 			>;
 		};
 
