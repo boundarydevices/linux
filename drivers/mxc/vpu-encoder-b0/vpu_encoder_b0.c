@@ -4726,6 +4726,7 @@ static int init_vpu_attrs(struct core_device *core)
 		attr->index = i;
 		scnprintf(attr->name, sizeof(attr->name) - 1, "instance.%d.%d",
 				core->id, attr->index);
+		sysfs_attr_init(&attr->dev_attr.attr);
 		attr->dev_attr.attr.name = attr->name;
 		attr->dev_attr.attr.mode = VERIFY_OCTAL_PERMISSIONS(0444);
 		attr->dev_attr.show = show_instance_info;
@@ -4973,6 +4974,7 @@ static int init_vpu_core_dev(struct core_device *core_dev)
 
 	scnprintf(core_dev->name, sizeof(core_dev->name) - 1,
 			"core.%d", core_dev->id);
+	sysfs_attr_init(&core_dev->core_attr.attr);
 	core_dev->core_attr.attr.name = core_dev->name;
 	core_dev->core_attr.attr.mode = VERIFY_OCTAL_PERMISSIONS(0444);
 	core_dev->core_attr.show = show_core_info;
