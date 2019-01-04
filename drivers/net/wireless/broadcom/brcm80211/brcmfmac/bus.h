@@ -9,6 +9,7 @@
 #include <linux/kernel.h>
 #include <linux/firmware.h>
 #include "debug.h"
+#include <linux/version.h>
 
 /* IDs of the 6 default common rings of msgbuf protocol */
 #define BRCMF_H2D_MSGRING_CONTROL_SUBMIT	0
@@ -159,6 +160,9 @@ struct brcmf_bus {
 
 	const struct brcmf_bus_ops *ops;
 	struct brcmf_bus_msgbuf *msgbuf;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 16, 0))
+	bool allow_skborphan;
+#endif
 };
 
 /*
