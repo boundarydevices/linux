@@ -34,11 +34,14 @@ enum IMX6_CPUFREQ_CLKS {
 	PLL1_SW,
 	PLL2_PFD2_396M,
 	/* MX6UL requires two more clks */
+	PLL1_BYPASS,
+	PLL1_BYPASS_SRC,
+	PLL1,
 	PLL2_BUS,
 	SECONDARY_SEL,
 };
 #define IMX6Q_CPUFREQ_CLK_NUM		5
-#define IMX6UL_CPUFREQ_CLK_NUM		7
+#define IMX6UL_CPUFREQ_CLK_NUM		10
 
 static int num_clks;
 static struct clk_bulk_data clks[] = {
@@ -47,6 +50,9 @@ static struct clk_bulk_data clks[] = {
 	{ .id = "step" },
 	{ .id = "pll1_sw" },
 	{ .id = "pll2_pfd2_396m" },
+	{ .id = "pll1_bypass" },
+	{ .id = "pll1_bypass_src" },
+	{ .id = "pll1" },
 	{ .id = "pll2_bus" },
 	{ .id = "secondary_sel" },
 };
