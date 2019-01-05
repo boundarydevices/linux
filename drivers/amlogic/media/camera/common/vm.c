@@ -1635,22 +1635,9 @@ static int simulate_task(void *data)
  ***********************************************
  */
 
-int vm_buffer_init(struct vm_device_s *vdevp)
+int alloc_vm_canvas(struct vm_device_s *vdevp)
 {
-	int i, j;
-	u32 canvas_width, canvas_height;
-	u32 decbuf_size;
-	resource_size_t buf_start;
-	unsigned int buf_size;
-	int buf_num = 0;
-	int local_pool_size = 0;
-
-	init_completion(&vdevp->vb_start_sema);
-	init_completion(&vdevp->vb_done_sema);
-
-	buf_start = vdevp->buffer_start;
-	buf_size = vdevp->buffer_size;
-
+	int j;
 	if (vdevp->index == 0) {
 		for (j = 0; j < MAX_CANVAS_INDEX; j++) {
 			memset(&(vdevp->vm_canvas[j]), -1, sizeof(int));
@@ -1672,6 +1659,25 @@ int vm_buffer_init(struct vm_device_s *vdevp)
 			}
 		}
 	}
+
+	return 0;
+}
+
+int vm_buffer_init(struct vm_device_s *vdevp)
+{
+	int i;
+	u32 canvas_width, canvas_height;
+	u32 decbuf_size;
+	resource_size_t buf_start;
+	unsigned int buf_size;
+	int buf_num = 0;
+	int local_pool_size = 0;
+
+	init_completion(&vdevp->vb_start_sema);
+	init_completion(&vdevp->vb_done_sema);
+
+	buf_start = vdevp->buffer_start;
+	buf_size = vdevp->buffer_size;
 
 	if (!buf_start || !buf_size)
 		goto exit;
@@ -2199,6 +2205,11 @@ static int vm_driver_probe(struct platform_device *pdev)
 	vm_device[vdevp->index] = vdevp;
 	vdevp->pdev = pdev;
 	platform_set_drvdata(pdev, vdevp);
+	ret = alloc_vm_canvas(vdevp);
+	if (ret != 0) {
+		pr_err("alloc vm canvas failed\n");
+		return ret;
+	}
 	vm_buffer_init(vdevp);
 	ret = init_vm_device(vdevp, pdev);
 	if (ret != 0)

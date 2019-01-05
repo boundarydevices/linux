@@ -503,7 +503,8 @@ static struct v4l2_frmsize_discrete
 
 static struct v4l2_frmsize_discrete gc2145_pic_resolution[] = {
 	{1600, 1200},
-	{800, 600}
+	{800, 600},
+	{640, 480}
 };
 
 #ifndef GC2145_MIRROR
@@ -1818,23 +1819,23 @@ void GC2145_set_resolution(struct gc2145_device *dev, int height, int width)
 
 	if ((width * height < 1600 * 1200)) {
 		while (1) {
-			buf[0] = gc2145_svga[i].addr;
-			buf[1] = gc2145_svga[i].val;
-			if (gc2145_svga[i].val == 0xff &&
-			  gc2145_svga[i].addr == 0xff) {
-				pr_info("success in gc2145_svga.\n");
+			buf[0] = gc2145_uxga[i].addr;
+			buf[1] = gc2145_uxga[i].val;
+			if (gc2145_uxga[i].val == 0xff &&
+			  gc2145_uxga[i].addr == 0xff) {
+				pr_info("success in gc2145_uxga.\n");
 				break;
 			}
 			if ((i2c_put_byte_add8(client, buf, 2)) < 0) {
-				pr_err("fail in gc2145_svga.\n");
+				pr_err("fail in gc2145_uxga.\n");
 				return;
 			}
 			i++;
 		}
 		gc2145_frmintervals_active.numerator = 1;
 		gc2145_frmintervals_active.denominator = 15;
-		GC2145_h_active = 800;
-		GC2145_v_active = 600;
+		GC2145_h_active = 1600;
+		GC2145_v_active = 1200;
 		mdelay(80);
 	} else if (width * height >= 1200 * 1600) {
 		buf[0] = 0xfe;
@@ -3403,6 +3404,7 @@ static int gc2145_probe(struct i2c_client *client,
 		pr_err("Create class gc2145 fail.\n");
 		return -ENOMEM;
 	}
+
 	gc2145_dev = device_create(gc2145_class, NULL,
 		MKDEV(0, 1), NULL, "dev");
 	device_create_file(gc2145_dev, &dev_attr_gc2145);

@@ -154,8 +154,8 @@
 		vm0_cma_reserved:linux,vm0_cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x2000000>;
-			alignment = <0x0 0x400000>;
+			size = <0x2000000>;
+			alignment = <0x400000>;
 		};
 	};
 
@@ -303,7 +303,7 @@
 		compatible = "amlogic, amvdec_656in";
 		dev_name = "amvdec_656in";
 		status = "disabled";
-		reg = <0x0 0xffe02000 0x0 0x7c>;
+		reg = <0xffe02000 0x7c>;
 		clocks = <&clkc CLKID_BT656_COMP>,
 		      <&clkc CLKID_BT656>;
 		clock-names = "cts_bt656_clk1",

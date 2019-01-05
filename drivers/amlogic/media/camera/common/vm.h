@@ -95,6 +95,7 @@ struct display_frame_s {
 
 int start_vm_task(struct vm_device_s *vdevp);
 int start_simulate_task(void);
+int alloc_vm_canvas(struct vm_device_s *vdevp);
 
 extern int get_vm_status(void);
 extern void set_vm_status(int flag);

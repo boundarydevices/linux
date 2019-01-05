@@ -149,6 +149,12 @@
 			size = <0x0 0x04000000>;
 			alignment = <0x0 0x400000>;
 		};
+		vm0_cma_reserved:linux,vm0_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x2000000>;
+			alignment = <0x0 0x400000>;
+		};
 	};
 
 	gpioleds {
@@ -281,6 +287,54 @@
 		compatible = "amlogic, ionvideo";
 		dev_name = "ionvideo";
 		status = "okay";
+	};
+	vm0 {
+		compatible = "amlogic, vm";
+		memory-region = <&vm0_cma_reserved>;
+		dev_name = "vm0";
+		status = "disabled";
+		vm_id = <0>;
+	};
+
+	amvdec_656in {
+		/*bt656 gpio conflict with i2c0*/
+		compatible = "amlogic, amvdec_656in";
+		dev_name = "amvdec_656in";
+		status = "disabled";
+		reg = <0x0 0xffe02000 0x0 0x7c>;
+		clocks = <&clkc CLKID_BT656_COMP>,
+		      <&clkc CLKID_BT656>;
+		clock-names = "cts_bt656_clk1",
+		      "clk_gate_bt656";
+		/* bt656in1, bt656in2 */
+		bt656in1 {
+		bt656_id = <1>;
+		status = "disabled";
+		};
+	};
+
+	aml_cams {
+		compatible = "amlogic, cams_prober";
+		status = "disabled";
+		pinctrl-names="default";
+		pinctrl-0=<&cam_dvp_pins &gen_clk_ee_z>;
+		clocks = <&clkc CLKID_GEN_CLK>;
+		clock-names = "g12a_24m";
+		cam_0{
+			cam_name = "gc2145";
+			front_back = <0>;
+			/*u200 i2c2 gpio conflict with ethmac*/
+			camera-i2c-bus = <&i2c2>;
+			gpio_pwdn-gpios = <&gpio GPIOZ_2 GPIO_ACTIVE_HIGH>;
+			gpio_rst-gpios = <&gpio GPIOZ_12 GPIO_ACTIVE_HIGH>;
+			mirror_flip = <1>;
+			vertical_flip = <1>;
+			spread_spectrum = <0>;
+			bt_path = "gpio";
+			bt_path_count = <1>;
+			vdin_path = <0>;
+			status = "okay";
+		};
 	};
 
 	gpio_keypad{
@@ -787,6 +841,13 @@
 	};
 };
 
+&i2c2 {
+	status = "disabled";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c2_master_pins2>;
+	clock-frequency = <100000>;
+};
+
 &i2c3 {
 	status = "okay";
 	pinctrl-names="default";
@@ -1119,6 +1180,32 @@
 			pins = "GPIOH_5";
 			function = "gpio_periphs";
 			output-high;
+		};
+	};
+
+	clk12_24_z_pins:clk12_24_z_pins {
+		mux {
+			groups = "clk12_24_z";
+			function = "clk12_24_ee";
+			drive-strength = <3>;
+		};
+	};
+
+	gen_clk_ee_z: gen_clk_ee_z {
+		mux {
+			groups="gen_clk_ee_z";
+			function="gen_clk_ee";
+			drive-strength = <3>;
+		};
+	};
+
+	cam_dvp_pins:cam_dvp_pins {
+		mux {
+			groups = "bt656_a_vs", "bt656_a_hs", "bt656_a_clk",
+				"bt656_a_din0", "bt656_a_din1", "bt656_a_din2",
+				"bt656_a_din3", "bt656_a_din4", "bt656_a_din5",
+				"bt656_a_din6", "bt656_a_din7";
+			function = "bt656";
 		};
 	};
 
