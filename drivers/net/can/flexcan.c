@@ -708,7 +708,7 @@ static netdev_tx_t flexcan_start_xmit(struct sk_buff *skb, struct net_device *de
 
 	for (i = 0; i < cf->len; i += 4) {
 		data = be32_to_cpup((__be32 *)&cf->data[i]);
-		flexcan_mb_write_le(priv, priv->tx_mb_idx,
+		flexcan_mb_write_le(priv, FLEXCAN_TX_MB,
 				    FLEXCAN_MB_DATA(i / 4), data);
 	}
 
@@ -717,8 +717,8 @@ static netdev_tx_t flexcan_start_xmit(struct sk_buff *skb, struct net_device *de
 	if (priv->can.ctrlmode & CAN_CTRLMODE_FD)
 		ctrl |= FLEXCAN_MB_CNT_EDL;
 
-	flexcan_mb_write_le(priv, priv->tx_mb_idx, FLEXCAN_MB_ID, can_id);
-	flexcan_mb_write_le(priv, priv->tx_mb_idx, FLEXCAN_MB_CTRL, ctrl);
+	flexcan_mb_write_le(priv, FLEXCAN_TX_MB, FLEXCAN_MB_ID, can_id);
+	flexcan_mb_write_le(priv, FLEXCAN_TX_MB, FLEXCAN_MB_CTRL, ctrl);
 
 	/* Errata ERR005829 step8:
 	 * Write twice INACTIVE(0x8) code to first MB.
@@ -989,8 +989,8 @@ static irqreturn_t flexcan_irq(int irq, void *dev_id)
 		can_led_event(dev, CAN_LED_EVENT_TX);
 
 		/* after sending a RTR frame MB is in RX mode */
-		flexcan_mb_write_le(priv, priv->tx_mb_idx, FLEXCAN_MB_CTRL,
-				FLEXCAN_MB_CODE_TX_INACTIVE);
+		flexcan_mb_write_le(priv, FLEXCAN_TX_MB, FLEXCAN_MB_CTRL,
+				    FLEXCAN_MB_CODE_TX_INACTIVE);
 		priv->write(FLEXCAN_IFLAG_MB(FLEXCAN_TX_MB), &regs->iflag2);
 		netif_wake_queue(dev);
 	}
@@ -1228,7 +1228,7 @@ static int flexcan_chip_start(struct net_device *dev)
 		}
 	} else {
 		/* clear and invalidate unused mailboxes first */
-		for (i = priv->tx_mb_idx; i < priv->mb_num ; i++) {
+		for (i = FLEXCAN_TX_MB; i < priv->mb_num ; i++) {
 			flexcan_mb_write_le(priv, i, FLEXCAN_MB_CTRL,
 					    FLEXCAN_MB_CODE_RX_INACTIVE);
 		}
@@ -1239,7 +1239,7 @@ static int flexcan_chip_start(struct net_device *dev)
 			    FLEXCAN_MB_CODE_TX_INACTIVE);
 
 	/* mark TX mailbox as INACTIVE */
-	flexcan_mb_write_le(priv, priv->tx_mb_idx, FLEXCAN_MB_CTRL,
+	flexcan_mb_write_le(priv, FLEXCAN_TX_MB, FLEXCAN_MB_CTRL,
 			    FLEXCAN_MB_CODE_TX_INACTIVE);
 
 	/* acceptance mask/acceptance code (accept everything) */
@@ -1251,7 +1251,7 @@ static int flexcan_chip_start(struct net_device *dev)
 		priv->write(0x0, &regs->rxfgmask);
 
 	/* clear acceptance filters */
-	for (i = priv->tx_mb_idx; i < priv->mb_num ; i++)
+	for (i = FLEXCAN_TX_MB; i < priv->mb_num ; i++)
 		priv->write(0, &regs->rximr[i]);
 
 	/* On Vybrid, disable memory error detection interrupts
@@ -1639,11 +1639,9 @@ static int flexcan_probe(struct platform_device *pdev)
 			priv->can.ctrlmode_supported |= CAN_CTRLMODE_FD;
 
 			priv->tx_mb_reserved_idx = FLEXCAN_TX_MB_RESERVED_OFF_TIMESTAMP_FD;
-			priv->tx_mb_idx = FLEXCAN_TX_MB_OFF_TIMESTAMP_FD;
 			priv->tx_mb_reserved = &regs->mb[FLEXCAN_TX_MB_RESERVED_OFF_TIMESTAMP_FD];
 		} else {
 			priv->tx_mb_reserved_idx = FLEXCAN_TX_MB_RESERVED_OFF_TIMESTAMP;
-			priv->tx_mb_idx = FLEXCAN_TX_MB_OFF_TIMESTAMP;
 			priv->tx_mb_reserved = &regs->mb[FLEXCAN_TX_MB_RESERVED_OFF_TIMESTAMP];
 		}
 	} else {
@@ -1654,7 +1652,6 @@ static int flexcan_probe(struct platform_device *pdev)
 		}
 
 		priv->tx_mb_reserved_idx = FLEXCAN_TX_MB_RESERVED_OFF_FIFO;
-		priv->tx_mb_idx = FLEXCAN_TX_MB_OFF_FIFO;
 		priv->tx_mb_reserved = &regs->mb[FLEXCAN_TX_MB_RESERVED_OFF_FIFO];
 	}
 
