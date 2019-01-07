@@ -483,9 +483,9 @@ void cecb_irq_handle(void)
 			/* clear start */
 			hdmirx_cec_write(DWC_CEC_TX_CNT, 0);
 			hdmirx_set_bits_dwc(DWC_CEC_CTRL, 0, 0, 3);
-			CEC_ERR("warning:ARB_LOST\n");
+			CEC_INFO("warning:ARB_LOST\n");
 		} else if (intr_cec & CEC_IRQ_TX_ERR_INITIATOR) {
-			CEC_ERR("warning:INITIATOR\n");
+			CEC_INFO("warning:INITIATOR\n");
 			cec_tx_result = CEC_FAIL_OTHER;
 		} else
 			cec_tx_result = CEC_FAIL_OTHER;
@@ -494,7 +494,7 @@ void cecb_irq_handle(void)
 
 	/* RX error irq flag */
 	if (intr_cec & CEC_IRQ_RX_ERR_FOLLOWER) {
-		CEC_ERR("warning:FOLLOWER\n");
+		CEC_INFO("warning:FOLLOWER\n");
 		hdmirx_cec_write(DWC_CEC_LOCK, 0);
 		/* TODO: need reset cec hw logic? */
 	}
