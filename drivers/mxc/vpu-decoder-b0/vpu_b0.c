@@ -1249,7 +1249,7 @@ static int add_scode(struct vpu_ctx *ctx, u_int32 uStrBufIdx, VPU_PADDING_SCODE_
 	uint32_t last;
 	uint32_t last2 = 0x0;
 	uint32_t pad_bytes = 0;
-	static uint8_t *buffer;
+	uint8_t *buffer;
 
 	vpu_dbg(LVL_INFO, "enter %s\n", __func__);
 	pStrBufDesc = ctx->dev->regs_base + DEC_MFD_XREG_SLV_BASE + MFD_MCX + MFD_MCX_OFF * ctx->str_index;
@@ -2958,6 +2958,7 @@ static int create_instance_command_file(struct vpu_ctx *ctx)
 	scnprintf(ctx->command_name, sizeof(ctx->command_name) - 1,
 			"instance%d_command",
 			ctx->str_index);
+	sysfs_attr_init(&ctx->dev_attr_instance_command.attr);
 	ctx->dev_attr_instance_command.attr.name = ctx->command_name;
 	ctx->dev_attr_instance_command.attr.mode = VERIFY_OCTAL_PERMISSIONS(0444);
 	ctx->dev_attr_instance_command.show = show_instance_command_info;
@@ -2972,6 +2973,7 @@ static int create_instance_event_file(struct vpu_ctx *ctx)
 	scnprintf(ctx->event_name, sizeof(ctx->event_name) - 1,
 			"instance%d_event",
 			ctx->str_index);
+	sysfs_attr_init(&ctx->dev_attr_instance_event.attr);
 	ctx->dev_attr_instance_event.attr.name = ctx->event_name;
 	ctx->dev_attr_instance_event.attr.mode = VERIFY_OCTAL_PERMISSIONS(0444);
 	ctx->dev_attr_instance_event.show = show_instance_event_info;
@@ -2986,6 +2988,7 @@ static int create_instance_buffer_file(struct vpu_ctx *ctx)
 	scnprintf(ctx->buffer_name, sizeof(ctx->buffer_name) - 1,
 			"instance%d_buffer",
 			ctx->str_index);
+	sysfs_attr_init(&ctx->dev_attr_instance_buffer.attr);
 	ctx->dev_attr_instance_buffer.attr.name = ctx->buffer_name;
 	ctx->dev_attr_instance_buffer.attr.mode = VERIFY_OCTAL_PERMISSIONS(0444);
 	ctx->dev_attr_instance_buffer.show = show_instance_buffer_info;
@@ -3000,6 +3003,7 @@ static int create_instance_flow_file(struct vpu_ctx *ctx)
 	scnprintf(ctx->flow_name, sizeof(ctx->flow_name) - 1,
 			"instance%d_flow",
 			ctx->str_index);
+	sysfs_attr_init(&ctx->dev_attr_instance_flow.attr);
 	ctx->dev_attr_instance_flow.attr.name = ctx->flow_name;
 	ctx->dev_attr_instance_flow.attr.mode = VERIFY_OCTAL_PERMISSIONS(0444);
 	ctx->dev_attr_instance_flow.show = show_instance_log_info;
@@ -3142,6 +3146,7 @@ static int v4l2_open(struct file *filp)
 		goto err_alloc_seq;
 	}
 	atomic64_add(sizeof(MediaIPFW_Video_SeqInfo), &ctx->statistic.total_alloc_size);
+	ctx->pSeqinfo->uProgressive = 1;
 	init_queue_data(ctx);
 	init_log_info_queue(ctx);
 	create_log_info_queue(ctx, vpu_log_depth);
@@ -3247,8 +3252,6 @@ static int v4l2_release(struct file *filp)
 	kfifo_free(&ctx->msg_fifo);
 	destroy_workqueue(ctx->instance_wq);
 	mutex_unlock(&ctx->instance_mutex);
-	mutex_lock(&dev->dev_mutex);
-	mutex_unlock(&dev->dev_mutex);
 
 	pm_runtime_put_sync(ctx->dev->generic_dev);
 
@@ -3257,9 +3260,11 @@ static int v4l2_release(struct file *filp)
 		destroy_log_info_queue(ctx);
 		if (atomic64_read(&ctx->statistic.total_alloc_size) != 0)
 			vpu_dbg(LVL_ERR, "error: memory leak for vpu kalloc buffer\n");
+		mutex_lock(&dev->dev_mutex);
 		clear_bit(ctx->str_index, &dev->instance_mask);
 		dev->ctx[ctx->str_index] = NULL;
 		kfree(ctx);
+		mutex_unlock(&dev->dev_mutex);
 	} else {
 		mutex_lock(&dev->dev_mutex);
 		set_bit(ctx->str_index, &dev->hang_mask);
