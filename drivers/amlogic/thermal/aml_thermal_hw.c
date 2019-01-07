@@ -67,6 +67,7 @@ struct aml_thermal_sensor {
 };
 
 static struct aml_thermal_sensor soc_sensor;
+static struct gpufreq_cooling_device *gf_cdev_s;
 
 int thermal_firmware_init(void)
 {
@@ -175,10 +176,13 @@ int aml_thermal_min_update(struct thermal_cooling_device *cdev)
 		gc_cdev = (struct gpucore_cooling_device *)cdev->devdata;
 		cdev->ops->get_max_state(cdev, &min_state);
 		min_state = min_state - cool->min_state;
+		if (gf_cdev_s != NULL)
+			gf_cdev_s->max_pp = gc_cdev->max_gpu_core_num;
 		break;
 
 	case COOL_DEV_TYPE_GPU_FREQ:
 		gf_cdev = (struct gpufreq_cooling_device *)cdev->devdata;
+		gf_cdev_s = (struct gpufreq_cooling_device *)cdev->devdata;
 		min_state = gf_cdev->get_gpu_freq_level(cool->min_state);
 		break;
 
