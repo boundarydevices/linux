@@ -88,6 +88,9 @@ MODULE_AMLOG(LOG_LEVEL_ERROR, 0, LOG_DEFAULT_LEVEL_DESC, LOG_MASK_DESC);
 #include "../common/vfm/vfm.h"
 #include <linux/amlogic/media/amdolbyvision/dolby_vision.h>
 
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+#include <linux/amlogic/pm.h>
+#endif
 static u32 osd_vpp_misc;
 static u32 osd_vpp_misc_mask;
 static bool update_osd_vpp_misc;
@@ -10337,6 +10340,25 @@ static struct mconfig video_configs[] = {
 #endif
 };
 
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+static void video_early_suspend(struct early_suspend *h)
+{
+	DisableVideoLayer();
+	DisableVideoLayer2();
+	pr_info("video_early_suspend ok\n");
+}
+
+static void video_late_resume(struct early_suspend *h)
+{
+	pr_info("video_late_resume ok\n");
+};
+
+static struct early_suspend video_early_suspend_handler = {
+	.suspend = video_early_suspend,
+	.resume = video_late_resume,
+};
+#endif
+
 static int amvideom_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -10356,11 +10378,17 @@ static int amvideom_probe(struct platform_device *pdev)
 
 	pr_info("amvideom vsync irq: %d\n", video_vsync);
 
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+	register_early_suspend(&video_early_suspend_handler);
+#endif
 	return ret;
 }
 
 static int amvideom_remove(struct platform_device *pdev)
 {
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+	unregister_early_suspend(&video_early_suspend_handler);
+#endif
 	return 0;
 }
 
