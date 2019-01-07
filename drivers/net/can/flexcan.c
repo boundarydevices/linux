@@ -22,7 +22,6 @@
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
-#include <linux/mfd/syscon.h>
 #include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <linux/mfd/syscon.h>
 #include <linux/module.h>
@@ -33,7 +32,6 @@
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
-#include <linux/regmap.h>
 
 #define DRV_NAME			"flexcan"
 
@@ -236,11 +234,11 @@ struct flexcan_mb {
 };
 
 /* Message Buffer */
-#define FLEXCAN_MB		0x80
 #define FLEXCAN_MB_CTRL		0x0
 #define FLEXCAN_MB_ID		0x4
 #define FLEXCAN_MB_DATA(n)	(0x8 + ((n) << 2))
 
+#define FLEXCAN_MB		0x80
 #define FLEXCAN_MB_NUM		64
 #define FLEXCAN_MB_FD_NUM	14
 #define FLEXCAN_MB_SIZE		16
@@ -319,6 +317,7 @@ struct flexcan_regs {
 	 *				size conf'ed via ctrl2::RFFN
 	 *				(mx6, vf610)
 	 */
+	u32 _reserved8[64 * 4];	/* 0x80 */ /* 64 mailbox */
 	u32 _reserved4[256];	/* 0x480 */
 	u32 rximr[64];		/* 0x880 */
 	u32 _reserved5[24];	/* 0x980 */
@@ -354,7 +353,6 @@ struct flexcan_priv {
 	struct can_rx_offload offload;
 
 	struct flexcan_regs __iomem *regs;
-	struct flexcan_mb __iomem *tx_mb_reserved;
 	void __iomem *base;
 	u8 tx_mb_reserved_idx;
 	u32 reg_ctrl_default;
@@ -1734,10 +1732,8 @@ static int flexcan_probe(struct platform_device *pdev)
 			}
 
 			priv->tx_mb_reserved_idx = FLEXCAN_TX_MB_RESERVED_OFF_TIMESTAMP_FD;
-			priv->tx_mb_reserved = &regs->mb[FLEXCAN_TX_MB_RESERVED_OFF_TIMESTAMP_FD];
 		} else {
 			priv->tx_mb_reserved_idx = FLEXCAN_TX_MB_RESERVED_OFF_TIMESTAMP;
-			priv->tx_mb_reserved = &regs->mb[FLEXCAN_TX_MB_RESERVED_OFF_TIMESTAMP];
 		}
 	} else {
 		if (priv->devtype_data->quirks & FLEXCAN_QUIRK_TIMESTAMP_SUPPORT_FD) {
@@ -1747,7 +1743,6 @@ static int flexcan_probe(struct platform_device *pdev)
 		}
 
 		priv->tx_mb_reserved_idx = FLEXCAN_TX_MB_RESERVED_OFF_FIFO;
-		priv->tx_mb_reserved = &regs->mb[FLEXCAN_TX_MB_RESERVED_OFF_FIFO];
 	}
 
 	priv->reg_imask1_default = 0;
