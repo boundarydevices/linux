@@ -1121,7 +1121,7 @@ static void flexcan_set_bittiming(struct net_device *dev)
 			FLEXCAN_CBT_ERJW(bt->sjw - 1) |
 			FLEXCAN_CBT_EPROPSEG(bt->prop_seg - 1) |
 			FLEXCAN_CBT_BTF;
-		flexcan_write(reg, &regs->cbt);
+		priv->write(reg, &regs->cbt);
 
 		netdev_dbg(dev, "bt: prediv %d seg1 %d seg2 %d rjw %d propseg %d\n",
 			   bt->brp - 1, bt->phase_seg1 - 1, bt->phase_seg2 - 1,
@@ -1132,7 +1132,7 @@ static void flexcan_set_bittiming(struct net_device *dev)
 			FLEXCAN_FDCBT_FPSEG2(dbt->phase_seg2 - 1) |
 			FLEXCAN_FDCBT_FRJW(dbt->sjw - 1) |
 			FLEXCAN_FDCBT_FPROPSEG(dbt->prop_seg);
-		flexcan_write(reg, &regs->fdcbt);
+		priv->write(reg, &regs->fdcbt);
 
 		if (bt->brp != dbt->brp)
 			netdev_warn(dev, "PRESDIV not the same, may risk transfer errors\n");
@@ -1142,12 +1142,12 @@ static void flexcan_set_bittiming(struct net_device *dev)
 			   dbt->sjw - 1, dbt->prop_seg);
 
 		netdev_dbg(dev, "%s: mcr=0x%08x ctrl=0x%08x cbt=0x%08x fdcbt=0x%08x\n",
-			   __func__, flexcan_read(&regs->mcr),
-			   flexcan_read(&regs->ctrl),
-			   flexcan_read(&regs->cbt),
-			   flexcan_read(&regs->fdcbt));
+			   __func__, priv->read(&regs->mcr),
+			   priv->read(&regs->ctrl),
+			   priv->read(&regs->cbt),
+			   priv->read(&regs->fdcbt));
 	} else {
-		reg = flexcan_read(&regs->ctrl);
+		reg = priv->read(&regs->ctrl);
 		reg &= ~(FLEXCAN_CTRL_PRESDIV(0xff) |
 			 FLEXCAN_CTRL_RJW(0x3) |
 			 FLEXCAN_CTRL_PSEG1(0x7) |
@@ -1159,7 +1159,7 @@ static void flexcan_set_bittiming(struct net_device *dev)
 			FLEXCAN_CTRL_PSEG2(bt->phase_seg2 - 1) |
 			FLEXCAN_CTRL_RJW(bt->sjw - 1) |
 			FLEXCAN_CTRL_PROPSEG(bt->prop_seg - 1);
-		flexcan_write(reg, &regs->ctrl);
+		priv->write(reg, &regs->ctrl);
 
 		netdev_dbg(dev, "bt: prediv %d seg1 %d seg2 %d rjw %d propseg %d\n",
 			   bt->brp - 1, bt->phase_seg1 - 1, bt->phase_seg2 - 1,
@@ -1167,7 +1167,7 @@ static void flexcan_set_bittiming(struct net_device *dev)
 
 		/* print chip status */
 		netdev_dbg(dev, "%s: mcr=0x%08x ctrl=0x%08x\n", __func__,
-			   flexcan_read(&regs->mcr), flexcan_read(&regs->ctrl));
+			   priv->read(&regs->mcr), priv->read(&regs->ctrl));
 	}
 }
 
