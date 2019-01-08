@@ -171,7 +171,7 @@
 #define ISM303DAC_EVENT_CHANNEL_SPEC_SIZE	2
 #define ISM303DAC_MIN_DURATION_MS		1638
 
-#define ISM303DAC_DEV_NAME			"ism303dac"
+#define ISM303DAC_DEV_NAME			"ism303dac_accel"
 #define SET_BIT(a, b)				{a |= (1 << b);}
 #define RESET_BIT(a, b)				{a &= ~(1 << b);}
 #define CHECK_BIT(a, b)				(a & (1 << b))

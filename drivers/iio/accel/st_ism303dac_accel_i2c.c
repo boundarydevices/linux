@@ -144,7 +144,7 @@ MODULE_DEVICE_TABLE(i2c, ism303dac_ids);
 
 #ifdef CONFIG_OF
 static const struct of_device_id ism303dac_id_table[] = {
-	{.compatible = "st,ism303dac",},
+	{.compatible = "st,ism303dac_accel",},
 	{},
 };
 
