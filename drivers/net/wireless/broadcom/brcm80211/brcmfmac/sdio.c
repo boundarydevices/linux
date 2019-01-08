@@ -4109,7 +4109,7 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 		bus->hostintmask = HOSTINTMASK;
 		brcmf_sdiod_writel(sdiod, core->base + SD_REG(hostintmask),
 				   bus->hostintmask, NULL);
-		switch (sdiodev->func0->device) {
+		switch (sdiod->func0->device) {
 		case SDIO_DEVICE_ID_CYPRESS_4373:
 			brcmf_dbg(INFO, "set F2 watermark to 0x%x*4 bytes for 4373\n",
 				  CY_4373_F2_WATERMARK);
