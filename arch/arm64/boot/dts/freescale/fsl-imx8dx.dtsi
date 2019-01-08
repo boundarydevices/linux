@@ -3402,6 +3402,7 @@
 		rpmsg: rpmsg{
 			compatible = "fsl,imx8qxp-rpmsg";
 			status = "disabled";
+			mub-partition = <3>;
 			power-domains = <&pd_lsio_mu5a>;
 			memory-region = <&rpmsg_dma_reserved>;
 		};
