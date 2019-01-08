@@ -69,6 +69,8 @@ struct dcss_soc {
 	struct clk *pout_clk;
 	struct clk *rtrm_clk;
 	struct clk *dtrc_clk;
+	struct clk *pll_src_clk;
+	struct clk *pll_phy_ref_clk;
 
 	void (*dcss_disable_callback)(void *data);
 
