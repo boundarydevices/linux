@@ -3757,7 +3757,6 @@ static int parse_sei_and_meta(
 	|| (req->aux_size == 0))
 		return 1;
 
-
 	p = req->aux_buf;
 	while (p < req->aux_buf + req->aux_size - 8) {
 		size = *p++;
@@ -3859,6 +3858,11 @@ static int parse_sei_and_meta(
 				ret = 2;
 				break;
 			}
+			/*dolby type just appears once in metadata
+			 *after parsing dolby type,breaking the
+			 *circulation directly
+			 */
+			break;
 		}
 		p += size;
 	}
