@@ -32,6 +32,8 @@
 #include <linux/virtio_ring.h>
 #include <linux/imx_rpmsg.h>
 #include <linux/mx8_mu.h>
+#include <soc/imx8/sc/sci.h>
+#include <soc/imx8/sc/svc/irq/api.h>
 
 enum imx_rpmsg_variants {
 	IMX6SX,
@@ -67,6 +69,8 @@ struct imx_rpmsg_vproc {
 	u32 in_idx;
 	u32 out_idx;
 	u32 core_id;
+	u32 mub_partition;
+	struct notifier_block *pnotifier;
 	spinlock_t mu_lock;
 };
 
@@ -101,6 +105,11 @@ struct imx_rpmsg_vq_info {
 	void *addr;	/* address where we mapped the virtio ring */
 	struct imx_rpmsg_vproc *rpdev;
 };
+
+static int imx_rpmsg_partion_notify0(struct notifier_block *nb,
+				unsigned long event, void *group);
+static int imx_rpmsg_partion_notify1(struct notifier_block *nb,
+				unsigned long event, void *group);
 
 static u64 imx_rpmsg_get_features(struct virtio_device *vdev)
 {
@@ -340,12 +349,23 @@ static struct virtio_config_ops imx_rpmsg_config_ops = {
 	.get_status	= imx_rpmsg_get_status,
 };
 
+static struct notifier_block imx_rpmsg_partion_notifier[] = {
+	{
+		.notifier_call = imx_rpmsg_partion_notify0,
+	},
+	{
+		.notifier_call = imx_rpmsg_partion_notify1,
+	},
+};
+
 static struct imx_rpmsg_vproc imx_rpmsg_vprocs[] = {
 	{
 		.rproc_name	= "m4",
+		.pnotifier	= &imx_rpmsg_partion_notifier[0],
 	},
 	{
 		.rproc_name	= "m4",
+		.pnotifier	= &imx_rpmsg_partion_notifier[1],
 	},
 };
 
@@ -465,6 +485,37 @@ static int imx_rpmsg_mu_init(struct imx_rpmsg_vproc *rpdev)
 
 	return ret;
 }
+
+static int imx_rpmsg_partion_notify0(struct notifier_block *nb,
+				      unsigned long event, void *group)
+{
+	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[0];
+
+	/* Ignore other irqs */
+	if (!((event & BIT(rpdev->mub_partition)) &&
+		(*(sc_irq_group_t *)group == SC_IRQ_GROUP_REBOOTED)))
+		return 0;
+
+	pr_info("Patition%d reset!\n", rpdev->mub_partition);
+
+	return 0;
+}
+
+static int imx_rpmsg_partion_notify1(struct notifier_block *nb,
+				      unsigned long event, void *group)
+{
+	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[1];
+
+	/* Ignore other irqs */
+	if (!((event & BIT(rpdev->mub_partition)) &&
+		(*(sc_irq_group_t *)group == SC_IRQ_GROUP_REBOOTED)))
+		return 0;
+
+	pr_info("Patition%d reset!\n", rpdev->mub_partition);
+
+	return 0;
+}
+
 static int imx_rpmsg_probe(struct platform_device *pdev)
 {
 	int core_id, j, ret = 0;
@@ -588,6 +639,39 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, rpdev);
+
+	if (rpdev->variant == IMX8QXP || rpdev->variant == IMX8QM) {
+		uint32_t mu_id;
+		sc_err_t sciErr;
+		static sc_ipc_t mu_ipchandle;
+		/* Get muB partition id and enable irq in SCFW then */
+		if (of_property_read_u32(np, "mub-partition",
+					&rpdev->mub_partition))
+			rpdev->mub_partition = 3; /* default partition 3 */
+
+		sciErr = sc_ipc_getMuID(&mu_id);
+		if (sciErr != SC_ERR_NONE) {
+			pr_err("can't obtain mu id: %d\n", sciErr);
+			return sciErr;
+		}
+
+		sciErr = sc_ipc_open(&mu_ipchandle, mu_id);
+
+		if (sciErr != SC_ERR_NONE) {
+			pr_err("can't get ipc handler: %d\n", sciErr);
+			return sciErr;
+		};
+
+		/* Request for the partition reset interrupt. */
+		sciErr = sc_irq_enable(mu_ipchandle, SC_R_MU_1A,
+				       SC_IRQ_GROUP_REBOOTED,
+				       BIT(rpdev->mub_partition), true);
+		if (sciErr)
+			pr_info("Cannot request partition reset interrupt\n");
+
+		return register_scu_notifier(rpdev->pnotifier);
+
+	}
 
 	return ret;
 

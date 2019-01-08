@@ -10,6 +10,9 @@ Required properties:
 - multi-core-id: The id number of the remote processors.
   And it is optional for the legacy platforms, since they
   only have one remote processors.
+- mub-partition: The partition ID of muB side, that's optional
+  and used on i.mx8qm/8qxp for partition reset. The default
+  value is 3 in driver without this property.
 
 
 =====================================================================
