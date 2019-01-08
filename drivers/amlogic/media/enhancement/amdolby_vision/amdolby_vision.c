@@ -2166,7 +2166,7 @@ static void apply_stb_core_settings(
 			24, 256 * 5,
 			(uint32_t *)&new_dovi_setting.dm_reg2,
 			(uint32_t *)&new_dovi_setting.dm_lut2,
-			graphics_w, graphics_h, 1, 1);
+			graphics_h, graphics_w, 1, 1);
 	v_size = vinfo->height;
 	if (((vinfo->width == 720) &&
 		(vinfo->height == 480) &&
@@ -5967,11 +5967,10 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 			("efuse_mode=%d reg_value = 0x%x\n",
 			efuse_mode,
 			reg_value);
-		/* r321 stb core doesn't need run mode*/
+		/*stb core doesn't need run mode*/
 		/*TV core need run mode and the value is 2*/
-		if (is_meson_gxm() || is_meson_g12())
-			dolby_vision_run_mode_delay = 3;
-		else if (force_stb_mode || is_meson_txlx_stbmode())
+		if (is_meson_gxm() || is_meson_g12() ||
+			is_meson_txlx_stbmode() || force_stb_mode)
 			dolby_vision_run_mode_delay = 0;
 		else
 			dolby_vision_run_mode_delay = RUN_MODE_DELAY;
