@@ -278,6 +278,8 @@ static int dcss_clks_init(struct dcss_soc *dcss)
 		{"pix_out", &dcss->pout_clk},
 		{"rtrm",  &dcss->rtrm_clk},
 		{"dtrc",  &dcss->dtrc_clk},
+		{"pll_src",  &dcss->pll_src_clk},
+		{"pll_phy_ref",  &dcss->pll_phy_ref_clk},
 	};
 
 	for (i = 0; i < ARRAY_SIZE(clks); i++) {
@@ -306,6 +308,8 @@ err:
 static void dcss_clocks_enable(struct dcss_soc *dcss, bool en)
 {
 	if (en && !dcss->clks_on) {
+		clk_prepare_enable(dcss->pll_phy_ref_clk);
+		clk_prepare_enable(dcss->pll_src_clk);
 		clk_prepare_enable(dcss->axi_clk);
 		clk_prepare_enable(dcss->apb_clk);
 		clk_prepare_enable(dcss->rtrm_clk);
@@ -321,6 +325,8 @@ static void dcss_clocks_enable(struct dcss_soc *dcss, bool en)
 		clk_disable_unprepare(dcss->rtrm_clk);
 		clk_disable_unprepare(dcss->apb_clk);
 		clk_disable_unprepare(dcss->axi_clk);
+		clk_disable_unprepare(dcss->pll_src_clk);
+		clk_disable_unprepare(dcss->pll_phy_ref_clk);
 	}
 
 	dcss->clks_on = en;
