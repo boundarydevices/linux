@@ -43,8 +43,15 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 	unsigned int val, unsigned int start, unsigned int len);
 
 #define HHI_VPU_CLKB_CNTL	0x83
-#define VPU_WRARB_REQEN_SLV_L1C1	((0x2795)) /* << 2) + 0xd0100000) */
-#define VPU_ARB_DBG_STAT_L1C1		((0x27b4)) /* << 2) + 0xd0100000) */
+
+#define VPU_WRARB_REQEN_SLV_L1C1	0x2795
+#define VPU_RDARB_REQEN_SLV_L1C1	0x2791
+#define VPU_ARB_DBG_STAT_L1C1		0x27b4
+
+#define VPU_WRARB_REQEN_SLV_L1C1_TL1	0x2055
+#define VPU_RDARB_REQEN_SLV_L1C1_TL1	0x2051
+#define VPU_ARB_DBG_STAT_L1C1_TL1		0x205a
+
 
 #define VIUB_SW_RESET					0x2001
 #define VIUB_SW_RESET0					0x2002

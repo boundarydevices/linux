@@ -251,5 +251,9 @@
 /* after g12b */
 #define SRSHARP0_SHARP_SYNC_CTRL 0x3eb0
 #define SRSHARP1_SHARP_SYNC_CTRL 0x3fb0
+
+#define VPU_RDARB_MODE_L2C1          0x279d
+#define VPU_WRARB_MODE_L2C1          0x27a2
+
 #endif
 

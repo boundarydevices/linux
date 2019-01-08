@@ -642,13 +642,34 @@ static void set_di_nrwr_mif(struct DI_SIM_MIF_s *nrwr_mif,
 	/* wr ext en from gxtvbb */
 	RDMA_WR_BITS(DI_NRWR_Y, 1, 15, 1);
 	RDMA_WR_BITS(DI_NRWR_Y, 3, 30, 2);
+	#if 0
 	RDMA_WR(DI_NRWR_CTRL, nrwr_mif->canvas_num|
 			(urgent<<16)|
 			2<<26 |
 			1<<30);
+	#endif
 	RDMA_WR_BITS(DI_NRWR_Y, nrwr_mif->bit_mode&0x1, 14, 1);
+	#if 0
 	if ((nrwr_mif->bit_mode&0x3) == 0x3)
 		RDMA_WR_BITS(DI_NRWR_CTRL, 0x3, 22, 2);
+	#endif
+
+	/*fix 1080i crash when di work on low speed*/
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL) &&
+				((nrwr_mif->bit_mode&0x3) == 0x3)) {
+		RDMA_WR(DI_NRWR_CTRL, nrwr_mif->canvas_num|
+			(urgent<<16)|
+			3<<22 |
+			1<<24 |
+			2<<26 |/*burst_lim 1->2 2->4*/
+			1<<30); /* urgent bit 16 */
+	} else {
+		RDMA_WR(DI_NRWR_CTRL, nrwr_mif->canvas_num|
+			(urgent<<16)|
+			1<<24 |
+			2<<26 |/*burst_lim 1->2 2->4*/
+			1<<30); /* urgent bit 16 */
+	}
 }
 
 void di_interrupt_ctrl(unsigned char ma_en,
@@ -3333,6 +3354,130 @@ void di_post_gate_control(bool gate)
 	}
 
 }
+
+void di_async_reset(void)	/*2019-01-17 add for debug*/
+{
+	/*wrmif async reset*/
+	RDMA_WR_BITS(VIUB_SW_RESET, 1, 14, 1);
+	RDMA_WR_BITS(VIUB_SW_RESET, 0, 14, 1);
+}
+
+void di_pre_rst_frame(void)
+{
+	RDMA_WR(DI_PRE_CTRL, Rd(DI_PRE_CTRL) | (1 << 31));
+}
+
+void di_pre_nr_enable(bool on)
+{
+	if (on)
+		RDMA_WR_BITS(DI_PRE_CTRL, 1, 0, 1);
+	else
+		RDMA_WR_BITS(DI_PRE_CTRL, 0, 0, 1);
+}
+
+void di_pre_nr_wr_done_sel(bool on)
+{
+	if (on)	/*wait till response finish*/
+		RDMA_WR_BITS(DI_CANVAS_URGENT0, 1, 8, 1);
+	else
+		RDMA_WR_BITS(DI_CANVAS_URGENT0, 0, 0, 1);
+
+}
+
+void di_rst_protect(bool on)
+{
+	if (on)
+		RDMA_WR_BITS(DI_NRWR_Y, 1, 15, 1);
+	else
+		RDMA_WR_BITS(DI_NRWR_Y, 0, 15, 1);
+}
+
+/*bit 10,12,16,18 [3:1]*/
+/*#define PRE_ID_MASK	(0x5140e) */
+#define PRE_ID_MASK	(0x51400)
+
+/*bit 8,10,14,16*/
+#define PRE_ID_MASK_TL1	(0x14500)
+
+bool di_pre_idle(void)
+{
+	bool ret = false;
+
+	if (is_meson_tl1_cpu()) {
+		if ((RDMA_RD(VPU_ARB_DBG_STAT_L1C1_TL1) &
+			PRE_ID_MASK_TL1) == PRE_ID_MASK_TL1)
+			ret = true;
+	} else {
+		if ((RDMA_RD(VPU_ARB_DBG_STAT_L1C1) &
+			PRE_ID_MASK) == PRE_ID_MASK)
+			ret = true;
+	}
+
+	return ret;
+}
+
+void di_arb_sw(bool on)
+{
+	int i;
+	u32 REG_VPU_WRARB_REQEN_SLV_L1C1;
+	u32 REG_VPU_RDARB_REQEN_SLV_L1C1;
+	u32 REG_VPU_ARB_DBG_STAT_L1C1;
+	u32 WRARB_onval;
+	u32 WRARB_offval;
+
+	if (is_meson_tl1_cpu()) {
+		REG_VPU_WRARB_REQEN_SLV_L1C1 = VPU_WRARB_REQEN_SLV_L1C1_TL1;
+		REG_VPU_RDARB_REQEN_SLV_L1C1 = VPU_RDARB_REQEN_SLV_L1C1_TL1;
+		REG_VPU_ARB_DBG_STAT_L1C1 = VPU_ARB_DBG_STAT_L1C1_TL1;
+		if (on)
+			WRARB_onval = 0x3f;
+		else
+			WRARB_offval = 0x3e;
+	} else {
+		REG_VPU_WRARB_REQEN_SLV_L1C1 = VPU_WRARB_REQEN_SLV_L1C1;
+		REG_VPU_RDARB_REQEN_SLV_L1C1 = VPU_RDARB_REQEN_SLV_L1C1;
+		REG_VPU_ARB_DBG_STAT_L1C1 = VPU_ARB_DBG_STAT_L1C1;
+		if (on)
+			WRARB_onval = 0x3f;
+		else
+			WRARB_offval = 0x2b;
+	}
+
+	if (on) {
+		RDMA_WR(REG_VPU_WRARB_REQEN_SLV_L1C1, WRARB_onval);
+		RDMA_WR(REG_VPU_RDARB_REQEN_SLV_L1C1, 0xffff);
+	} else {
+		/*close arb:*/
+		RDMA_WR(REG_VPU_WRARB_REQEN_SLV_L1C1, WRARB_offval);
+		RDMA_WR(REG_VPU_RDARB_REQEN_SLV_L1C1, 0xf1f1);
+
+		di_pre_nr_enable(false); /*by Feijun*/
+		/*check status*/
+		if (!di_pre_idle()) {
+			pr_err("di:err1:0x[%x]\n",
+				RDMA_RD(REG_VPU_ARB_DBG_STAT_L1C1));
+			for (i = 0; i < 9; i++) {
+				if (di_pre_idle())
+					break;
+			}
+
+			if (!di_pre_idle()) {
+				di_pre_rst_frame();
+
+				for (i = 0; i < 9; i++) {
+					if (di_pre_idle())
+						break;
+				}
+				if (!di_pre_idle())
+					pr_err("di:err2\n");
+
+			}
+		}
+		if (di_pre_idle())
+			di_async_reset();
+	}
+}
+
 /*
  * enable/disable mc pre mif mcinfo&mv
  */
@@ -3434,10 +3579,10 @@ static void di_pre_data_mif_ctrl(bool enable)
 		}
 		#endif
 		/* nrwr no clk gate en=0 */
-		RDMA_WR_BITS(DI_NRWR_CTRL, 0, 24, 1);
+		/*RDMA_WR_BITS(DI_NRWR_CTRL, 0, 24, 1);*/
 	} else {
 		/* nrwr no clk gate en=1 */
-		RDMA_WR_BITS(DI_NRWR_CTRL, 1, 24, 1);
+		/*RDMA_WR_BITS(DI_NRWR_CTRL, 1, 24, 1);*/
 		/* nr wr req en =0 */
 		RDMA_WR_BITS(DI_PRE_CTRL, 0, 0, 1);
 		/* disable input mif*/

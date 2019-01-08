@@ -197,4 +197,8 @@ extern int di_print(const char *fmt, ...);
 extern void di_patch_post_update_mc(void);
 extern void di_patch_post_update_mc_sw(unsigned int cmd, bool on);
 
+extern void di_rst_protect(bool on);
+extern void di_pre_nr_wr_done_sel(bool on);
+extern void di_arb_sw(bool on);
+
 #endif
