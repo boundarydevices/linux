@@ -274,7 +274,7 @@ int amlmmc_dtb_read(struct mmc_card *card,
 	memset(buf, 0x0, len);
 
 	start_blk = MMC_DTB_PART_OFFSET;
-	buffer = kmalloc(CONFIG_DTB_SIZE, GFP_KERNEL);
+	buffer = kmalloc(CONFIG_DTB_SIZE, GFP_KERNEL|__GFP_RECLAIM);
 	if (!buffer)
 		return -ENOMEM;
 
