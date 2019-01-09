@@ -32,7 +32,7 @@ struct tcpci {
 	struct regmap *regmap;
 
 	bool controls_vbus;
-	bool attached;
+	bool drive_vbus;
 	struct gpio_desc *ss_sel_gpio;
 
 	struct tcpc_dev tcpc;
@@ -334,19 +334,10 @@ static int tcpci_set_roles(struct tcpc_dev *tcpc, bool attached,
 	if (ret < 0)
 		return ret;
 
-	if (data == TYPEC_HOST) {
-		extcon_set_state_sync(tcpci->edev, EXTCON_USB, false);
+	if (data == TYPEC_HOST)
 		extcon_set_state_sync(tcpci->edev, EXTCON_USB_HOST, true);
-	} else {
+	else
 		extcon_set_state_sync(tcpci->edev, EXTCON_USB_HOST, false);
-		/*
-		 * Instead of use 'attached' input, we need
-		 * the real HW connection status to notify
-		 * USB device controller driver the attach
-		 * and dettach event to host.
-		 */
-		extcon_set_state_sync(tcpci->edev, EXTCON_USB, tcpci->attached);
-	}
 
 	return 0;
 }
@@ -376,7 +367,19 @@ static int tcpci_get_vbus(struct tcpc_dev *tcpc)
 	if (ret < 0)
 		return ret;
 
-	return !!(reg & TCPC_POWER_STATUS_VBUS_PRES);
+	ret = !!(reg & TCPC_POWER_STATUS_VBUS_PRES);
+
+	/*
+	 * If the vbus is not from itself for source, we
+	 * assume the vbus is from the port partner, this
+	 * is to work around the case of connect to legacy
+	 * Host like PC via a fixed Rp pull up cable, so
+	 * we notify the possible EXTCON_USB connection.
+	 */
+	if (!tcpci->drive_vbus)
+		extcon_set_state_sync(tcpci->edev, EXTCON_USB, ret);
+
+	return ret;
 }
 
 static unsigned int tcpci_get_vbus_vol(struct tcpc_dev *tcpc)
@@ -407,6 +410,7 @@ static int tcpci_set_vbus(struct tcpc_dev *tcpc, bool source, bool sink)
 		if (ret < 0)
 			return ret;
 
+		tcpci->drive_vbus = false;
 		/* Enable force discharge */
 		tcpci_vbus_force_discharge(tcpc, true);
 	}
@@ -423,6 +427,7 @@ static int tcpci_set_vbus(struct tcpc_dev *tcpc, bool source, bool sink)
 				   TCPC_CMD_SRC_VBUS_DEFAULT);
 		if (ret < 0)
 			return ret;
+		tcpci->drive_vbus = true;
 	}
 
 	if (sink) {
