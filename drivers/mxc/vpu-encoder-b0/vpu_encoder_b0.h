@@ -98,6 +98,9 @@ typedef enum{
 enum PLAT_TYPE {
 	IMX8QXP = 0,
 	IMX8QM  = 1,
+	IMX8DM,
+	IMX8DX,
+	PLAT_TYPE_RESERVED
 };
 
 enum QUEUE_TYPE {

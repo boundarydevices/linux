@@ -1535,7 +1535,6 @@
 };
 
 &vpu_encoder {
-	core_type = <2>;
 	status = "okay";
 };
 

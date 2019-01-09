@@ -235,7 +235,7 @@
 		};
 
 		vpu_encoder: vpu_encoder@2d000000 {
-			compatible = "nxp,imx8qm-b0-vpuenc", "nxp,imx8qxp-b0-vpuenc";
+			compatible = "nxp,imx8qm-b0-vpuenc";
 			#address-cells = <1>;
 			#size-cells = <1>;
 
@@ -860,7 +860,6 @@
 };
 
 &vpu_encoder {
-	core_type = <2>;
 	status = "okay";
 };
 
