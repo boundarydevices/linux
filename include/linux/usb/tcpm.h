@@ -159,6 +159,7 @@ struct tcpc_dev {
 			   const struct pd_message *msg);
 	int (*vbus_detect)(struct tcpc_dev *dev, bool enable);
 	int (*vbus_discharge)(struct tcpc_dev *tcpc, bool enable);
+	void (*bist_mode)(struct tcpc_dev *tcpc, bool enable);
 };
 
 struct tcpm_port;
