@@ -412,8 +412,6 @@ static int tcpci_set_vbus(struct tcpc_dev *tcpc, bool source, bool sink)
 			return ret;
 
 		tcpci->drive_vbus = false;
-		/* Enable force discharge */
-		tcpci_vbus_force_discharge(tcpc, true);
 	}
 
 	if (!sink) {
@@ -422,6 +420,10 @@ static int tcpci_set_vbus(struct tcpc_dev *tcpc, bool source, bool sink)
 		if (ret < 0)
 			return ret;
 	}
+
+	/* Enable force discharge */
+	if (!source && !sink)
+		tcpci_vbus_force_discharge(tcpc, true);
 
 	if (source) {
 		ret = regmap_write(tcpci->regmap, TCPC_COMMAND,
