@@ -780,8 +780,14 @@ void vpp_get_vframe_hist_info(struct vframe_s *vf)
 	unsigned int hist_height, hist_width;
 	u64 divid;
 
-	hist_height = READ_VPP_REG_BITS(VPP_IN_H_V_SIZE, 0, 13);
-	hist_width = READ_VPP_REG_BITS(VPP_IN_H_V_SIZE, 16, 13);
+	if (get_cpu_type() == MESON_CPU_MAJOR_ID_TL1) {
+		/*TL1 remove VPP_IN_H_V_SIZE register*/
+		hist_width = READ_VPP_REG_BITS(VPP_PREBLEND_H_SIZE, 0, 13);
+		hist_height = READ_VPP_REG_BITS(VPP_PREBLEND_H_SIZE, 16, 13);
+	} else {
+		hist_height = READ_VPP_REG_BITS(VPP_IN_H_V_SIZE, 0, 13);
+		hist_width = READ_VPP_REG_BITS(VPP_IN_H_V_SIZE, 16, 13);
+	}
 
 	if ((hist_height != pre_hist_height) ||
 		(hist_width != pre_hist_width)) {
