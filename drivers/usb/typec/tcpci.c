@@ -750,31 +750,25 @@ static int tcpci_probe(struct i2c_client *client,
 
 	i2c_set_clientdata(client, chip);
 
-	/* Clear and disable chip interrupts before requesting irq */
-	tcpci_write16(chip->tcpci, TCPC_ALERT, 0xffff);
-	err = regmap_raw_write(chip->data.regmap, TCPC_ALERT_MASK, &val,
-			       sizeof(u16));
-	if (err < 0)
-		return err;
-
 	chip->tcpci = tcpci_register_port(&client->dev, &chip->data);
 	if (IS_ERR(chip->tcpci))
 		return PTR_ERR(chip->tcpci);
 
 	err = tcpci_ss_mux_control_init(chip->tcpci);
 	if (err)
-		goto err;
+		goto err1;
 
 	err = devm_request_threaded_irq(&client->dev, client->irq, NULL,
 					_tcpci_irq,
 					IRQF_ONESHOT | IRQF_TRIGGER_LOW,
 					dev_name(&client->dev), chip);
-	if (err < 0) {
-		tcpci_unregister_port(chip->tcpci);
-		return err;
-	}
+	if (err < 0)
+		goto err1;
 
 	return 0;
+err1:
+	tcpci_unregister_port(chip->tcpci);
+	return err;
 }
 
 static int tcpci_remove(struct i2c_client *client)
