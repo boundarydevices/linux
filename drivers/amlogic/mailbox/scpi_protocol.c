@@ -60,6 +60,42 @@ enum scpi_error_codes {
 	SCPI_ERR_MAX
 };
 
+static int scpi_freq_map_table[] = {
+	0,
+	0,
+	1200,
+	1300,
+	1400,
+	1500,
+	1600,
+	1700,
+	1800,
+	1900,
+	2000,
+	2100,
+	2200,
+	2300,
+	2400,
+	0
+};
+static int scpi_volt_map_table[] = {
+	0,
+	0,
+	900,
+	910,
+	920,
+	930,
+	940,
+	950,
+	960,
+	970,
+	980,
+	990,
+	1000,
+	1010,
+	1020,
+	0
+};
 
 struct scpi_data_buf {
 	int client_id;
@@ -559,3 +595,55 @@ u8 scpi_get_ethernet_calc(void)
 	return buf.eth_calc;
 }
 EXPORT_SYMBOL_GPL(scpi_get_ethernet_calc);
+
+int scpi_get_cpuinfo(enum scpi_get_pfm_type type, u32 *freq, u32 *vol)
+{
+	struct scpi_data_buf sdata;
+	struct mhu_data_buf mdata;
+	u8 index = 0;
+	int ret;
+
+	struct __packed {
+		u32 status;
+		u8 pfm_info[4];
+	} buf;
+
+	SCPI_SETUP_DBUF(sdata, mdata, SCPI_CL_NONE,
+		SCPI_CMD_GET_CPUINFO, index, buf);
+	if (scpi_execute_cmd(&sdata))
+		return -EPERM;
+
+	switch (type) {
+	case SCPI_CPUINFO_VERSION:
+		ret = buf.pfm_info[0];
+		break;
+	case SCPI_CPUINFO_CLUSTER0:
+		index = (buf.pfm_info[1] >> 4) & 0xf;
+		*freq = scpi_freq_map_table[index];
+		index = buf.pfm_info[1] & 0xf;
+		*vol = scpi_volt_map_table[index];
+		ret = 0;
+		break;
+	case SCPI_CPUINFO_CLUSTER1:
+		index = (buf.pfm_info[2] >> 4) & 0xf;
+		*freq = scpi_freq_map_table[index];
+		index = buf.pfm_info[2] & 0xf;
+		*vol = scpi_volt_map_table[index];
+		ret = 0;
+		break;
+	case SCPI_CPUINFO_SLT:
+		index = (buf.pfm_info[3] >> 4) & 0xf;
+		*freq = scpi_freq_map_table[index];
+		index = buf.pfm_info[3] & 0xf;
+		*vol = scpi_volt_map_table[index];
+		ret = 0;
+		break;
+	default:
+		*freq = 0;
+		*vol = 0;
+		ret = -1;
+		break;
+	};
+	return ret;
+}
+EXPORT_SYMBOL_GPL(scpi_get_cpuinfo);

@@ -68,10 +68,19 @@ enum scpi_std_cmd {
 	SCPI_CMD_WAKEUP_REASON_GET = 0x30,
 	SCPI_CMD_WAKEUP_REASON_CLR = 0X31,
 	SCPI_CMD_GET_ETHERNET_CALC = 0x32,
+	SCPI_CMD_GET_CPUINFO = 0x33,
 
 	SCPI_CMD_GET_CEC1		= 0xB4,
 	SCPI_CMD_GET_CEC2		= 0xB5,
 	SCPI_CMD_COUNT
+};
+
+enum scpi_get_pfm_type {
+	SCPI_CPUINFO_CLUSTER0,
+	SCPI_CPUINFO_CLUSTER1,
+	SCPI_CPUINFO_VERSION,
+	SCPI_CPUINFO_SLT,
+	SCPI_CPUINFO_NUMS
 };
 
 struct scpi_opp_entry {
@@ -84,7 +93,6 @@ struct scpi_dvfs_info {
 	unsigned int latency; /* in usecs */
 	struct scpi_opp_entry *opp;
 } __packed;
-
 
 unsigned long scpi_clk_get_val(u16 clk_id);
 int scpi_clk_set_val(u16 clk_id, unsigned long rate);
@@ -101,4 +109,5 @@ int scpi_get_wakeup_reason(u32 *wakeup_reason);
 int scpi_clr_wakeup_reason(void);
 int scpi_get_cec_val(enum scpi_std_cmd index, u32 *p_cec);
 u8  scpi_get_ethernet_calc(void);
+int scpi_get_cpuinfo(enum scpi_get_pfm_type type, u32 *freq, u32 *vol);
 #endif /*_SCPI_PROTOCOL_H_*/
