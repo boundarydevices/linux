@@ -1238,7 +1238,7 @@ static const struct panel_desc jdi_tx26d202vm0bwa = {
 		/*
 		 * The panel spec recommends one second delay
 		 * to the below items.  However, it's a bit too
-		 * long in pratical.  Based on tests, it turns
+		 * long in practice.  Based on tests, it turns
 		 * out 100 milliseconds is fine.
 		 */
 		.prepare = 100,
