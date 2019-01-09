@@ -15,6 +15,7 @@
 #include <linux/usb/pd.h>
 #include <linux/usb/tcpm.h>
 #include <linux/usb/typec.h>
+#include <linux/of_gpio.h>
 
 #include "tcpci.h"
 
@@ -28,6 +29,7 @@ struct tcpci {
 	struct regmap *regmap;
 
 	bool controls_vbus;
+	int ss_sel_gpio;
 
 	struct tcpc_dev tcpc;
 	unsigned int irq_mask;
@@ -271,6 +273,19 @@ static int tcpci_set_polarity(struct tcpc_dev *tcpc,
 	return regmap_write(tcpci->regmap, TCPC_TCPC_CTRL,
 			   (polarity == TYPEC_POLARITY_CC2) ?
 			   TCPC_TCPC_CTRL_ORIENTATION : 0);
+}
+
+static int tcpci_set_ss_mux(struct tcpc_dev *tcpc,
+			    enum typec_cc_polarity polarity)
+{
+	struct tcpci *tcpci = tcpc_to_tcpci(tcpc);
+
+	if (polarity == TYPEC_POLARITY_CC1)
+		gpio_set_value(tcpci->ss_sel_gpio, 1);
+	else
+		gpio_set_value(tcpci->ss_sel_gpio, 0);
+
+	return 0;
 }
 
 static int tcpci_set_vconn(struct tcpc_dev *tcpc, bool enable)
@@ -625,6 +640,27 @@ static int tcpci_parse_config(struct tcpci *tcpci)
 	return 0;
 }
 
+static int tcpci_ss_mux_control_init(struct tcpci *tcpci)
+{
+	struct device *dev = tcpci->dev;
+	int retval = 0;
+
+	tcpci->ss_sel_gpio = of_get_named_gpio(dev->of_node,
+					       "ss-sel-gpios", 0);
+	if (!gpio_is_valid(tcpci->ss_sel_gpio)) {
+		/* Super speed signal mux conrol gpio is optional */
+		dev_dbg(dev, "no Super Speed mux gpio pin available");
+	} else {
+		retval = devm_gpio_request_one(dev, tcpci->ss_sel_gpio,
+					GPIOF_OUT_INIT_LOW, "typec_ss_sel");
+		if (retval < 0)
+			dev_err(dev, "Unable to request super speed mux gpio %d\n",
+				retval);
+	}
+
+	return retval;
+}
+
 struct tcpci *tcpci_register_port(struct device *dev, struct tcpci_data *data)
 {
 	struct tcpci *tcpci;
@@ -650,6 +686,7 @@ struct tcpci *tcpci_register_port(struct device *dev, struct tcpci_data *data)
 	tcpci->tcpc.vbus_discharge = tcpci_vbus_force_discharge;
 	tcpci->tcpc.get_vbus_vol = tcpci_get_vbus_vol;
 	tcpci->tcpc.bist_mode = tcpci_bist_mode;
+	tcpci->tcpc.ss_mux_sel = tcpci_set_ss_mux;
 
 	tcpci->tcpc.set_pd_rx = tcpci_set_pd_rx;
 	tcpci->tcpc.set_roles = tcpci_set_roles;
@@ -700,6 +737,10 @@ static int tcpci_probe(struct i2c_client *client,
 	chip->tcpci = tcpci_register_port(&client->dev, &chip->data);
 	if (IS_ERR(chip->tcpci))
 		return PTR_ERR(chip->tcpci);
+
+	err = tcpci_ss_mux_control_init(chip->tcpci);
+	if (err)
+		goto err;
 
 	err = devm_request_threaded_irq(&client->dev, client->irq, NULL,
 					_tcpci_irq,
