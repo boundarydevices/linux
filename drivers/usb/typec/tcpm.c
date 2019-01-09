@@ -2776,6 +2776,7 @@ static void tcpm_detach(struct tcpm_port *port)
 
 static void tcpm_src_detach(struct tcpm_port *port)
 {
+	port->data_role = TYPEC_DEVICE;
 	tcpm_detach(port);
 }
 
