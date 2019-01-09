@@ -4,7 +4,7 @@
 
 EXTRA_CFLAGS += $(DEFINES)
 
-obj-y = vpu-encoder.o
+obj-$(CONFIG_MXC_VPU_ENCODER) = vpu-encoder.o
 vpu-encoder-objs = vpu_encoder_b0.o \
 	vpu_encoder_ctrl.o \
 	vpu_event_msg.o \

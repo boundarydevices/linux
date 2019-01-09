@@ -29,6 +29,7 @@
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
+#include <linux/of_device.h>
 #include <linux/slab.h>
 #include <linux/platform_data/dma-imx.h>
 #include <linux/miscdevice.h>
@@ -4439,28 +4440,6 @@ static void vpu_disable_hw(struct vpu_dev *This)
 	}
 }
 
-static int get_platform_info_by_core_type(struct vpu_dev *dev, u32 core_type)
-{
-	int ret = 0;
-
-	if (!dev)
-		return -EINVAL;
-
-	switch (core_type) {
-	case 1:
-		dev->plat_type = IMX8QXP;
-		break;
-	case 2:
-		dev->plat_type = IMX8QM;
-		break;
-	default:
-		ret = -EINVAL;
-		break;
-	}
-
-	return ret;
-}
-
 static int parse_core_info(struct core_device *core, struct device_node *np)
 {
 	int ret;
@@ -4575,7 +4554,6 @@ static int parse_dt_info(struct vpu_dev *dev, struct device_node *np)
 	struct device_node *reserved_node = NULL;
 	struct resource reserved_fw;
 	struct resource reserved_rpc;
-	u_int32 core_type;
 	u32 fw_total_size = 0;
 	u32 rpc_total_size = 0;
 	u32 val;
@@ -4583,17 +4561,6 @@ static int parse_dt_info(struct vpu_dev *dev, struct device_node *np)
 
 	if (!dev || !np)
 		return -EINVAL;
-
-	ret = of_property_read_u32(np, "core_type", &core_type);
-	if (ret) {
-		vpu_dbg(LVL_ERR, "error: Cannot get core num %d\n", ret);
-		return -EINVAL;
-	}
-	ret = get_platform_info_by_core_type(dev, core_type);
-	if (ret) {
-		vpu_dbg(LVL_ERR, "invalid core_type : %d\n", core_type);
-		return ret;
-	}
 
 	ret = of_property_read_u32_index(np, "reg-rpc-system", 0, &val);
 	if (ret) {
@@ -5073,10 +5040,12 @@ static int check_vpu_encoder_is_available(void)
 	return 0;
 }
 
+static const struct of_device_id vpu_of_match[];
 static int vpu_probe(struct platform_device *pdev)
 {
 	struct vpu_dev *dev;
 	struct device_node *np = pdev->dev.of_node;
+	const struct of_device_id *dev_id = NULL;
 	struct resource *res = NULL;
 	u_int32 i;
 	int ret;
@@ -5086,12 +5055,20 @@ static int vpu_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
+	dev_id = of_match_device(vpu_of_match, &pdev->dev);
+	if (!dev_id) {
+		vpu_err("unmatch vpu encoder device\n");
+		return -EINVAL;
+	}
+	vpu_dbg(LVL_ALL, "probe %s\n", dev_id->compatible);
+
 	if (check_vpu_encoder_is_available())
 		return -EINVAL;
 
 	dev = devm_kzalloc(&pdev->dev, sizeof(*dev), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
+	dev->plat_type = *(enum PLAT_TYPE *)dev_id->data;
 	dev->plat_dev = pdev;
 	dev->generic_dev = get_device(&pdev->dev);
 
@@ -5196,10 +5173,13 @@ static int vpu_remove(struct platform_device *pdev)
 	device_remove_file(&pdev->dev, &dev_attr_fpsinfo);
 	device_remove_file(&pdev->dev, &dev_attr_buffer);
 	device_remove_file(&pdev->dev, &dev_attr_meminfo);
+
+	pm_runtime_get_sync(&pdev->dev);
 	for (i = 0; i < dev->core_num; i++)
 		uninit_vpu_core_dev(&dev->core_dev[i]);
 
 	vpu_disable_hw(dev);
+	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 
 	if (video_get_drvdata(dev->pvpu_encoder_dev))
@@ -5456,9 +5436,18 @@ static const struct dev_pm_ops vpu_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(vpu_enc_suspend, vpu_enc_resume)
 };
 
+static enum PLAT_TYPE supported_plat_types[PLAT_TYPE_RESERVED] = {
+	[IMX8QXP] = IMX8QXP,
+	[IMX8QM] = IMX8QM,
+};
+
 static const struct of_device_id vpu_of_match[] = {
-	{ .compatible = "nxp,imx8qm-b0-vpuenc", },
-	{ .compatible = "nxp,imx8qxp-b0-vpuenc", },
+	{ .compatible = "nxp,imx8qm-b0-vpuenc",
+	  .data = (void *)&supported_plat_types[IMX8QM]
+	},
+	{ .compatible = "nxp,imx8qxp-b0-vpuenc",
+	  .data = (void *)&supported_plat_types[IMX8QXP]
+	},
 	{}
 }
 MODULE_DEVICE_TABLE(of, vpu_of_match);
