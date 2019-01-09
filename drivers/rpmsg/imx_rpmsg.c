@@ -13,6 +13,7 @@
  */
 
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
@@ -34,6 +35,7 @@
 #include <linux/mx8_mu.h>
 #include <soc/imx8/sc/sci.h>
 #include <soc/imx8/sc/svc/irq/api.h>
+#include "rpmsg_internal.h"
 
 enum imx_rpmsg_variants {
 	IMX6SX,
@@ -486,6 +488,48 @@ static int imx_rpmsg_mu_init(struct imx_rpmsg_vproc *rpdev)
 	return ret;
 }
 
+static int imx_unregister_rpmsg(struct device *dev,
+				void *data)
+{
+	struct rpmsg_device *rpdev = to_rpmsg_device(dev);
+	struct rpmsg_channel_info chinfo;
+	int ret;
+	struct virtio_device *vdev = (struct virtio_device *)data;
+
+	chinfo.src = rpdev->src;
+	chinfo.dst = rpdev->dst;
+	strncpy(chinfo.name, rpdev->id.name, RPMSG_NAME_SIZE);
+	rpdev->announce = rpdev->src != RPMSG_ADDR_ANY;
+
+	ret = rpmsg_unregister_device(&vdev->dev, &chinfo);
+	if (ret)
+		dev_err(dev, "rpmsg_destroy_channel failed: %d\n", ret);
+
+	return ret;
+}
+
+void imx_rpmsg_restore(struct imx_rpmsg_vproc *rpdev)
+{
+	int i;
+	unsigned int mu_rpmsg = 0;
+	int vdev_nums = rpdev->vdev_nums;
+
+	for (i = 0; i < vdev_nums; i++) {
+		/* unregister all rpmsg channels */
+		device_for_each_child(&rpdev->ivdev[i].vdev.dev,
+				      &rpdev->ivdev[i].vdev,
+				      imx_unregister_rpmsg);
+
+		/* Wait a while for remote bootup */
+		if (!i)
+			usleep_range(10000, 20000);
+
+		/* Kick-off remote again */
+		MU_SendMessageTimeout(rpdev->mu_base, 1, mu_rpmsg << 16, 200);
+		mu_rpmsg += 2;
+	}
+}
+
 static int imx_rpmsg_partion_notify0(struct notifier_block *nb,
 				      unsigned long event, void *group)
 {
@@ -496,6 +540,7 @@ static int imx_rpmsg_partion_notify0(struct notifier_block *nb,
 		(*(sc_irq_group_t *)group == SC_IRQ_GROUP_REBOOTED)))
 		return 0;
 
+	imx_rpmsg_restore(rpdev);
 	pr_info("Patition%d reset!\n", rpdev->mub_partition);
 
 	return 0;
@@ -511,6 +556,7 @@ static int imx_rpmsg_partion_notify1(struct notifier_block *nb,
 		(*(sc_irq_group_t *)group == SC_IRQ_GROUP_REBOOTED)))
 		return 0;
 
+	imx_rpmsg_restore(rpdev);
 	pr_info("Patition%d reset!\n", rpdev->mub_partition);
 
 	return 0;
