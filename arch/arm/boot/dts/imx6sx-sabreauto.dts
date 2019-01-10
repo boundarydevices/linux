@@ -54,116 +54,122 @@
 		status = "okay";
 	};
 
-	reg_audio: cs42888_supply {
-		compatible = "regulator-fixed";
-		regulator-name = "cs42888_supply";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		regulator-always-on;
-	};
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
 
-	si4763_vio1: vio1_tnr {
-		compatible = "regulator-fixed";
-		regulator-name = "vio1";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		regulator-always-on;
-	};
+		reg_audio: cs42888_supply {
+			compatible = "regulator-fixed";
+			regulator-name = "cs42888_supply";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
 
-	si4763_vio2: vio2_tnr {
-		compatible = "regulator-fixed";
-		regulator-name = "vio2";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		regulator-always-on;
-	};
+		si4763_vio1: vio1_tnr {
+			compatible = "regulator-fixed";
+			regulator-name = "vio1";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
 
-	si4763_vd: f3v3_tnr {
-		compatible = "regulator-fixed";
-		regulator-name = "vd";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		regulator-always-on;
-	};
+		si4763_vio2: vio2_tnr {
+			compatible = "regulator-fixed";
+			regulator-name = "vio2";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
 
-	si4763_va: f5v_tnr {
-		compatible = "regulator-fixed";
-		regulator-name = "va";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		regulator-always-on;
-	};
+		si4763_vd: f3v3_tnr {
+			compatible = "regulator-fixed";
+			regulator-name = "vd";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
 
-	vcc_sd3: regulator-vcc-sd3 {
-		compatible = "regulator-fixed";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_vcc_sd3>;
-		regulator-name = "VCC_SD3";
-		regulator-min-microvolt = <3000000>;
-		regulator-max-microvolt = <3000000>;
-		gpio = <&gpio2 11 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-	};
+		si4763_va: f5v_tnr {
+			compatible = "regulator-fixed";
+			regulator-name = "va";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			regulator-always-on;
+		};
 
-	reg_usb_otg1_vbus: usb_otg1_vbus {
-		compatible = "regulator-fixed";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_usb_otg1_vbus>;
-		regulator-name = "usb_otg1_vbus";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		gpio = <&gpio1 9 0>;
-		enable-active-high;
-	};
+		vcc_sd3: regulator-vcc-sd3 {
+			compatible = "regulator-fixed";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_vcc_sd3>;
+			regulator-name = "VCC_SD3";
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3000000>;
+			gpio = <&gpio2 11 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
 
-	reg_usb_otg2_vbus: usb_otg2_vbus {
-		compatible = "regulator-fixed";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_usb_otg2_vbus>;
-		regulator-name = "usb_otg2_vbus";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		gpio = <&gpio1 12 0>;
-		enable-active-high;
-	};
+		reg_usb_otg1_vbus: usb_otg1_vbus {
+			compatible = "regulator-fixed";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_usb_otg1_vbus>;
+			regulator-name = "usb_otg1_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio1 9 0>;
+			enable-active-high;
+		};
 
-	reg_can_wake: regulator@1 {
-		compatible = "regulator-fixed";
-		reg = <1>;
-		regulator-name = "can-wake";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		gpio = <&max7310_b 7 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-	};
+		reg_usb_otg2_vbus: usb_otg2_vbus {
+			compatible = "regulator-fixed";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_usb_otg2_vbus>;
+			regulator-name = "usb_otg2_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio1 12 0>;
+			enable-active-high;
+		};
 
-	reg_can_en: regulator@2 {
-		compatible = "regulator-fixed";
-		reg = <2>;
-		regulator-name = "can-en";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		gpio = <&max7310_b 5 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		vin-supply = <&reg_can_wake>;
-	};
+		reg_can_wake: regulator@1 {
+			compatible = "regulator-fixed";
+			reg = <1>;
+			regulator-name = "can-wake";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&max7310_b 7 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
 
-	reg_can_stby: regulator@3 {
-		compatible = "regulator-fixed";
-		reg = <3>;
-		regulator-name = "can-stby";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		gpio = <&max7310_b 4 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		vin-supply = <&reg_can_en>;
-	};
+		reg_can_en: regulator@2 {
+			compatible = "regulator-fixed";
+			reg = <2>;
+			regulator-name = "can-en";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&max7310_b 5 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+			vin-supply = <&reg_can_wake>;
+		};
 
-	reg_vref_3v3: regulator@4 {
-		compatible = "regulator-fixed";
-		regulator-name = "vref-3v3";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
+		reg_can_stby: regulator@3 {
+			compatible = "regulator-fixed";
+			reg = <3>;
+			regulator-name = "can-stby";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&max7310_b 4 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+			vin-supply = <&reg_can_en>;
+		};
+
+		reg_vref_3v3: regulator@4 {
+			compatible = "regulator-fixed";
+			regulator-name = "vref-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
 	};
 
 	sound-cs42888 {

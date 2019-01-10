@@ -11,9 +11,11 @@
 / {
 	model = "Freescale i.MX6 SoloX SDB RevB Board";
 
-	/* Transceiver EN/STBY is active low on RevB board */
-	reg_can_stby: regulator@10 {
-		gpio = <&gpio4 27 GPIO_ACTIVE_LOW>;
+	regulators {
+		/* Transceiver EN/STBY is active low on RevB board */
+		reg_can_stby: regulator@10 {
+			gpio = <&gpio4 27 GPIO_ACTIVE_LOW>;
+		};
 	};
 };
 
