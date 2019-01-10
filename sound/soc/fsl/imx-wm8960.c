@@ -429,6 +429,51 @@ static struct snd_soc_ops imx_hifi_ops = {
 	.shutdown  = imx_hifi_shutdown,
 };
 
+static void imx_wm8960_add_hp_jack(struct imx_priv *priv,
+		struct imx_wm8960_data *data)
+{
+	struct device *dev = &priv->pdev->dev;
+	int ret;
+
+	if (priv->is_headset_jack) {
+		imx_hp_jack_pin.mask |= SND_JACK_MICROPHONE;
+		imx_hp_jack_gpio.report |= SND_JACK_MICROPHONE;
+	}
+	imx_hp_jack_gpio.jack_status_check = hp_jack_status_check;
+	imx_hp_jack_gpio.data = &imx_hp_jack;
+	ret = imx_wm8960_jack_init(&data->card, &imx_hp_jack,
+				   &imx_hp_jack_pin, &imx_hp_jack_gpio);
+	if (ret) {
+		dev_warn(dev, "hp jack init failed (%d)\n", ret);
+		return;
+	}
+
+	ret = driver_create_file(dev->driver, &driver_attr_headphone);
+	if (ret)
+		dev_warn(dev, "create hp attr failed (%d)\n", ret);
+}
+
+static void imx_wm8960_add_mic_jack(struct imx_priv *priv,
+		struct imx_wm8960_data *data)
+{
+	struct device *dev = &priv->pdev->dev;
+	int ret;
+
+	if (!priv->is_headset_jack) {
+		imx_mic_jack_gpio.jack_status_check = mic_jack_status_check;
+		imx_mic_jack_gpio.data = &imx_mic_jack;
+		ret = imx_wm8960_jack_init(&data->card, &imx_mic_jack,
+				&imx_mic_jack_pins, &imx_mic_jack_gpio);
+		if (ret) {
+			dev_warn(dev, "mic jack init failed (%d)\n", ret);
+			return;
+		}
+	}
+	ret = driver_create_file(dev->driver, &driver_attr_micphone);
+	if (ret)
+		dev_warn(dev, "create mic attr failed (%d)\n", ret);
+}
+
 static int imx_wm8960_late_probe(struct snd_soc_card *card)
 {
 	struct snd_soc_pcm_runtime *rtd = list_first_entry(
@@ -445,6 +490,11 @@ static int imx_wm8960_late_probe(struct snd_soc_card *card)
 	/* GPIO1 used as headphone detect output */
 	snd_soc_component_update_bits(codec_dai->component, WM8960_ADDCTL4, 7<<4, 3<<4);
 
+	if (gpio_is_valid(imx_hp_jack_gpio.gpio))
+		imx_wm8960_add_hp_jack(&card_priv, data);
+
+	if (gpio_is_valid(imx_mic_jack_gpio.gpio))
+		imx_wm8960_add_mic_jack(&card_priv, data);
 	if (data->hp_det[0] > 3)
 		return 0;
 
@@ -873,14 +923,6 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 
 	data->card.late_probe = imx_wm8960_late_probe;
 
-	platform_set_drvdata(pdev, &data->card);
-	snd_soc_card_set_drvdata(&data->card, data);
-	ret = devm_snd_soc_register_card(&pdev->dev, &data->card);
-	if (ret) {
-		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", ret);
-		goto fail;
-	}
-
 	imx_hp_jack_gpio.gpio = of_get_named_gpio_flags(np,
 			"hp-det-gpios", 0, &priv->hp_active_low);
 
@@ -892,44 +934,11 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 	    imx_hp_jack_gpio.gpio == imx_mic_jack_gpio.gpio)
 		priv->is_headset_jack = true;
 
-	if (gpio_is_valid(imx_hp_jack_gpio.gpio)) {
-		if (priv->is_headset_jack) {
-			imx_hp_jack_pin.mask |= SND_JACK_MICROPHONE;
-			imx_hp_jack_gpio.report |= SND_JACK_MICROPHONE;
-		}
-
-		imx_hp_jack_gpio.jack_status_check = hp_jack_status_check;
-		imx_hp_jack_gpio.data = &imx_hp_jack;
-		ret = imx_wm8960_jack_init(&data->card, &imx_hp_jack,
-					   &imx_hp_jack_pin, &imx_hp_jack_gpio);
-		if (ret) {
-			dev_warn(&pdev->dev, "hp jack init failed (%d)\n", ret);
-			goto out;
-		}
-
-		ret = driver_create_file(pdev->dev.driver, &driver_attr_headphone);
-		if (ret)
-			dev_warn(&pdev->dev, "create hp attr failed (%d)\n", ret);
-	}
-
-	if (gpio_is_valid(imx_mic_jack_gpio.gpio)) {
-		if (!priv->is_headset_jack) {
-			imx_mic_jack_gpio.jack_status_check = mic_jack_status_check;
-			imx_mic_jack_gpio.data = &imx_mic_jack;
-			ret = imx_wm8960_jack_init(&data->card, &imx_mic_jack,
-					&imx_mic_jack_pins, &imx_mic_jack_gpio);
-			if (ret) {
-				dev_warn(&pdev->dev, "mic jack init failed (%d)\n", ret);
-				goto out;
-			}
-		}
-		ret = driver_create_file(pdev->dev.driver, &driver_attr_micphone);
-		if (ret)
-			dev_warn(&pdev->dev, "create mic attr failed (%d)\n", ret);
-	}
-
-out:
-	ret = 0;
+	platform_set_drvdata(pdev, &data->card);
+	snd_soc_card_set_drvdata(&data->card, data);
+	ret = devm_snd_soc_register_card(&pdev->dev, &data->card);
+	if (ret)
+		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", ret);
 fail:
 	if (cpu_np)
 		of_node_put(cpu_np);
