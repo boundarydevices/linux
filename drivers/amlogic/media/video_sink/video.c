@@ -7756,6 +7756,9 @@ static long amvideo_ioctl(struct file *file, unsigned int cmd, ulong arg)
 			put_user(video_onoff_state, (u32 __user *)argp);
 			break;
 		}
+	case AMSTREAM_IOC_GET_FIRST_FRAME_TOGGLED:
+		put_user(first_frame_toggled, (u32 __user *)argp);
+		break;
 
 	case AMSTREAM_IOC_SET_VIDEOPEEK:
 		videopeek = true;

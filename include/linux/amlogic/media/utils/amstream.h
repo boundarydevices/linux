@@ -176,6 +176,7 @@
 #define AMSTREAM_IOC_GET_OMX_VERSION _IOW((_A_M), 0xb1, int)
 #define AMSTREAM_IOC_GET_OMX_INFO    _IOR((_A_M), 0xb2, unsigned int)
 #define AMSTREAM_IOC_SET_HDR_INFO    _IOW((_A_M), 0xb3, int)
+#define AMSTREAM_IOC_GET_FIRST_FRAME_TOGGLED _IOR(_A_M, 0xbe, unsigned int)
 #define AMSTREAM_IOC_SET_VIDEOPEEK   _IOW(_A_M, 0xbf, unsigned int)
 
 #define AMSTREAM_IOC_GET_TRICK_VPTS _IOR((_A_M), 0xf0, int)
