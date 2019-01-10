@@ -82,6 +82,7 @@ struct hdr_dynamic_struct {
 	unsigned char support_flags;
 	unsigned char optional_fields[20];
 };
+#define VESA_MAX_TIMING 64
 
 struct rx_cap {
 	unsigned int native_Mode;
@@ -89,6 +90,7 @@ struct rx_cap {
 	unsigned int VIC[VIC_MAX_NUM];
 	unsigned int VIC_count;
 	unsigned int native_VIC;
+	enum hdmi_vic vesa_timing[VESA_MAX_TIMING]; /* Max 64 */
 	/*audio*/
 	struct rx_audiocap RxAudioCap[AUD_MAX_NUM];
 	unsigned char AUD_count;

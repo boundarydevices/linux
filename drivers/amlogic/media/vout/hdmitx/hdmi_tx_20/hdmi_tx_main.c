@@ -2153,6 +2153,8 @@ const char *disp_mode_t[] = {
 	"1080p50hz",
 	"1080p25hz",
 	"1080p24hz",
+	"2560x1080p50hz",
+	"2560x1080p60hz",
 	"2160p30hz",
 	"2160p25hz",
 	"2160p24hz",
@@ -2163,6 +2165,34 @@ const char *disp_mode_t[] = {
 	"smpte60hz",
 	"2160p50hz",
 	"2160p60hz",
+	/* VESA modes */
+	"640x480p60hz",
+	"800x480p60hz",
+	"800x600p60hz",
+	"852x480p60hz",
+	"854x480p60hz",
+	"1024x600p60hz",
+	"1024x768p60hz",
+	"1152x864p75hz",
+	"1280x600p60hz",
+	"1280x768p60hz",
+	"1280x800p60hz",
+	"1280x960p60hz",
+	"1280x1024p60hz",
+	"1360x768p60hz",
+	"1366x768p60hz",
+	"1400x1050p60hz",
+	"1440x900p60hz",
+	"1440x2560p60hz",
+	"1600x900p60hz",
+	"1600x1200p60hz",
+	"1680x1050p60hz",
+	"1920x1200p60hz",
+	"2160x1200p90hz",
+	"2560x1080p60hz",
+	"2560x1440p60hz",
+	"2560x1600p60hz",
+	"3440x1440p60hz",
 	NULL
 };
 
@@ -2263,6 +2293,29 @@ static ssize_t show_preferred_mode(struct device *dev,
 	pos += snprintf(buf+pos, PAGE_SIZE, "%s\n",
 		hdmitx_edid_vic_to_string(pRXCap->preferred_mode));
 
+	return pos;
+}
+
+/* cea_cap, a clone of disp_cap */
+static ssize_t show_cea_cap(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	return show_disp_cap(dev, attr, buf);
+}
+
+static ssize_t show_vesa_cap(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	int i;
+	struct hdmi_format_para *para = NULL;
+	enum hdmi_vic *vesa_t = &hdmitx_device.RXCap.vesa_timing[0];
+	int pos = 0;
+
+	for (i = 0; vesa_t[i] && i < VESA_MAX_TIMING; i++) {
+		para = hdmi_get_fmt_paras(vesa_t[i]);
+		if (para && (para->vic >= HDMITX_VESA_OFFSET))
+			pos += snprintf(buf+pos, PAGE_SIZE, "%s\n", para->name);
+	}
 	return pos;
 }
 
@@ -3488,6 +3541,8 @@ static DEVICE_ATTR(config, 0664, show_config, store_config);
 static DEVICE_ATTR(debug, 0200, NULL, store_debug);
 static DEVICE_ATTR(disp_cap, 0444, show_disp_cap, NULL);
 static DEVICE_ATTR(preferred_mode, 0444, show_preferred_mode, NULL);
+static DEVICE_ATTR(cea_cap, 0444, show_cea_cap, NULL);
+static DEVICE_ATTR(vesa_cap, 0444, show_vesa_cap, NULL);
 static DEVICE_ATTR(aud_cap, 0444, show_aud_cap, NULL);
 static DEVICE_ATTR(hdr_cap, 0444, show_hdr_cap, NULL);
 static DEVICE_ATTR(dv_cap, 0444, show_dv_cap, NULL);
@@ -4585,6 +4640,8 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	ret = device_create_file(dev, &dev_attr_debug);
 	ret = device_create_file(dev, &dev_attr_disp_cap);
 	ret = device_create_file(dev, &dev_attr_preferred_mode);
+	ret = device_create_file(dev, &dev_attr_cea_cap);
+	ret = device_create_file(dev, &dev_attr_vesa_cap);
 	ret = device_create_file(dev, &dev_attr_disp_cap_3d);
 	ret = device_create_file(dev, &dev_attr_aud_cap);
 	ret = device_create_file(dev, &dev_attr_hdr_cap);
@@ -4687,6 +4744,8 @@ static int amhdmitx_remove(struct platform_device *pdev)
 	device_remove_file(dev, &dev_attr_debug);
 	device_remove_file(dev, &dev_attr_disp_cap);
 	device_remove_file(dev, &dev_attr_preferred_mode);
+	device_remove_file(dev, &dev_attr_cea_cap);
+	device_remove_file(dev, &dev_attr_vesa_cap);
 	device_remove_file(dev, &dev_attr_disp_cap_3d);
 	device_remove_file(dev, &dev_attr_hdr_cap);
 	device_remove_file(dev, &dev_attr_dv_cap);

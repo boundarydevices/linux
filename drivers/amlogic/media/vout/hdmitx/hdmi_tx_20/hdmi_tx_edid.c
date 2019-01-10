@@ -121,7 +121,7 @@ static int Edid_DecodeHeader(struct hdmitx_info *info, unsigned char *buff)
 	return ret;
 }
 
-static void Edid_ParsingIDManufacturerName(struct rx_cap *pRxCap,
+static void Edid_ParsingIDManufacturerName(struct rx_cap *pRXCap,
 		unsigned char *data)
 {
 	int i;
@@ -141,7 +141,7 @@ static void Edid_ParsingIDManufacturerName(struct rx_cap *pRxCap,
 		|| ((brand[2] > 26) || (brand[2] == 0)))
 		return;
 	for (i = 0; i < 3; i++)
-		pRxCap->IDManufacturerName[i] = uppercase[brand[i] - 1];
+		pRXCap->IDManufacturerName[i] = uppercase[brand[i] - 1];
 }
 
 static void Edid_ParsingIDProductCode(struct rx_cap *pRXCap,
@@ -163,31 +163,109 @@ static void Edid_ParsingIDSerialNumber(struct rx_cap *pRXCap,
 			pRXCap->IDSerialNumber[i] = data[3-i];
 }
 
-static int Edid_find_name_block(unsigned char *data)
+/* store the idx of vesa_timing[32], which is 0 */
+static void store_vesa_idx(struct rx_cap *pRXCap, enum hdmi_vic vesa_timing)
 {
-	int ret = 0;
 	int i;
 
-	for (i = 0; i < 3; i++) {
-		if (data[i])
-			return ret;
+	for (i = 0; i < VESA_MAX_TIMING; i++) {
+		if (!pRXCap->vesa_timing[i]) {
+			pRXCap->vesa_timing[i] = vesa_timing;
+			break;
+		}
+
+		if (pRXCap->vesa_timing[i] == vesa_timing)
+			break;
 	}
-	if (data[3] == 0xfc)
-		ret = 1;
-	return ret;
+	pr_info("hdmitx: reach vesa idx MAX\n");
 }
 
-static void Edid_ReceiverProductNameParse(struct rx_cap *pRxCap,
+static void Edid_EstablishedTimings(struct rx_cap *pRXCap, unsigned char *data)
+{
+	if (data[0] & (1 << 5))
+		store_vesa_idx(pRXCap, HDMIV_640x480p60hz);
+	if (data[0] & (1 << 0))
+		store_vesa_idx(pRXCap, HDMIV_800x600p60hz);
+	if (data[1] & (1 << 3))
+		store_vesa_idx(pRXCap, HDMIV_1024x768p60hz);
+}
+
+static void Edid_StandardTimingIII(struct rx_cap *pRXCap, unsigned char *data)
+{
+	if (data[0] & (1 << 0))
+		store_vesa_idx(pRXCap, HDMIV_1152x864p75hz);
+	if (data[1] & (1 << 6))
+		store_vesa_idx(pRXCap, HDMIV_1280x768p60hz);
+	if (data[1] & (1 << 2))
+		store_vesa_idx(pRXCap, HDMIV_1280x960p60hz);
+	if (data[1] & (1 << 1))
+		store_vesa_idx(pRXCap, HDMIV_1280x1024p60hz);
+	if (data[2] & (1 << 7))
+		store_vesa_idx(pRXCap, HDMIV_1360x768p60hz);
+	if (data[2] & (1 << 1))
+		store_vesa_idx(pRXCap, HDMIV_1400x1050p60hz);
+	if (data[3] & (1 << 5))
+		store_vesa_idx(pRXCap, HDMIV_1680x1050p60hz);
+	if (data[3] & (1 << 2))
+		store_vesa_idx(pRXCap, HDMIV_1600x1200p60hz);
+	if (data[4] & (1 << 0))
+		store_vesa_idx(pRXCap, HDMIV_1920x1200p60hz);
+}
+
+static void calc_timing(unsigned char *data, struct vesa_standard_timing *t)
+{
+	struct hdmi_format_para *para = NULL;
+
+	if ((data[0] < 2) && (data[1] < 2))
+		return;
+	t->hactive = (data[0] + 31) * 8;
+	switch ((data[1] >> 6) & 0x3) {
+	case 0:
+		t->vactive = t->hactive * 5 / 8;
+		break;
+	case 1:
+		t->vactive = t->hactive * 3 / 4;
+		break;
+	case 2:
+		t->vactive = t->hactive * 4 / 5;
+		break;
+	case 3:
+	default:
+		t->vactive = t->hactive * 9 / 16;
+		break;
+	}
+	t->hsync = (data[1] & 0x3f) + 60;
+	para = hdmi_get_vesa_paras(t);
+	if (para)
+		t->vesa_timing = para->vic;
+
+}
+
+static void Edid_StandardTiming(struct rx_cap *pRXCap, unsigned char *data,
+	int max_num)
+{
+	int i;
+	struct vesa_standard_timing timing;
+
+	for (i = 0; i < max_num; i++) {
+		memset(&timing, 0, sizeof(struct vesa_standard_timing));
+		calc_timing(&data[i * 2], &timing);
+		if (timing.vesa_timing)
+			store_vesa_idx(pRXCap, timing.vesa_timing);
+	}
+}
+
+static void Edid_ReceiverProductNameParse(struct rx_cap *pRXCap,
 	unsigned char *data)
 {
 	int i = 0;
 	/* some Display Product name end with 0x20, not 0x0a
 	 */
 	while ((data[i] != 0x0a) && (data[i] != 0x20) && (i < 13)) {
-		pRxCap->ReceiverProductName[i] = data[i];
+		pRXCap->ReceiverProductName[i] = data[i];
 		i++;
 	}
-	pRxCap->ReceiverProductName[i] = '\0';
+	pRXCap->ReceiverProductName[i] = '\0';
 }
 
 void Edid_DecodeStandardTiming(struct hdmitx_info *info,
@@ -1835,7 +1913,7 @@ int check_dvi_hdmi_edid_valid(unsigned char *buf)
 	return 1;
 }
 
-static void Edid_ManufactureDateParse(struct rx_cap *pRxCap,
+static void Edid_ManufactureDateParse(struct rx_cap *pRXCap,
 		unsigned char *data)
 {
 	if (data == NULL)
@@ -1848,20 +1926,20 @@ static void Edid_ManufactureDateParse(struct rx_cap *pRxCap,
 	 *	0xff: model year is specified
 	 */
 	if ((data[0] == 0) || ((data[0] >= 0x37) && (data[0] <= 0xfe)))
-		pRxCap->manufacture_week = 0;
+		pRXCap->manufacture_week = 0;
 	else
-		pRxCap->manufacture_week = data[0];
+		pRXCap->manufacture_week = data[0];
 
 	/* year:
 	 *	0x0~0xf: reserved
 	 *	0x10~0xff: year of manufacture,
 	 *		or model year(if specified by week=0xff)
 	 */
-	pRxCap->manufacture_year =
+	pRXCap->manufacture_year =
 		(data[1] <= 0xf)?0:data[1];
 }
 
-static void Edid_VersionParse(struct rx_cap *pRxCap,
+static void Edid_VersionParse(struct rx_cap *pRXCap,
 		unsigned char *data)
 {
 	if (data == NULL)
@@ -1871,13 +1949,13 @@ static void Edid_VersionParse(struct rx_cap *pRxCap,
 	 *	0x1: edid version 1
 	 *	0x0,0x2~0xff: reserved
 	 */
-	pRxCap->edid_version = (data[0] == 0x1)?1:0;
+	pRXCap->edid_version = (data[0] == 0x1)?1:0;
 
 	/*
 	 *	0x0~0x4: revision number
 	 *	0x5~0xff: reserved
 	 */
-	pRxCap->edid_revision = (data[1] < 0x5)?data[1]:0;
+	pRXCap->edid_revision = (data[1] < 0x5)?data[1]:0;
 }
 
 static void Edid_PhyscialSizeParse(struct rx_cap *pRxCap,
@@ -2019,6 +2097,94 @@ static void rxlatency_to_vinfo(struct vinfo_s *info, struct rx_cap *rx)
 	info->rx_latency.i_aLatency = rx->i_aLatency;
 }
 
+static void Edid_Descriptor_PMT(struct rx_cap *pRXCap,
+	struct vesa_standard_timing *t, unsigned char *data)
+{
+	struct hdmi_format_para *para = NULL;
+
+	t->tmds_clk = data[0] + (data[1] << 8);
+	t->hactive = data[2] + (((data[4] >> 4) & 0xf) << 8);
+	t->hblank = data[3] + ((data[4] & 0xf) << 8);
+	t->vactive = data[5] + (((data[7] >> 4) & 0xf) << 8);
+	t->vblank = data[6] + ((data[7] & 0xf) << 8);
+	para = hdmi_get_vesa_paras(t);
+	if (para && ((para->vic) < (HDMI_3840x2160p60_64x27 + 1))) {
+		pRXCap->native_VIC = para->vic;
+		pr_info("hdmitx: get PMT vic: %d\n", para->vic);
+	}
+	if (para && ((para->vic) >= HDMITX_VESA_OFFSET))
+		store_vesa_idx(pRXCap, para->vic);
+}
+
+static void Edid_Descriptor_PMT2(struct rx_cap *pRXCap,
+	struct vesa_standard_timing *t, unsigned char *data)
+{
+	struct hdmi_format_para *para = NULL;
+
+	t->tmds_clk = data[0] + (data[1] << 8);
+	t->hactive = data[2] + (((data[4] >> 4) & 0xf) << 8);
+	t->hblank = data[3] + ((data[4] & 0xf) << 8);
+	t->vactive = data[5] + (((data[7] >> 4) & 0xf) << 8);
+	t->vblank = data[6] + ((data[7] & 0xf) << 8);
+	para = hdmi_get_vesa_paras(t);
+	if (para && ((para->vic) >= HDMITX_VESA_OFFSET))
+		store_vesa_idx(pRXCap, para->vic);
+}
+
+static void Edid_CVT_timing_3bytes(struct rx_cap *pRXCap,
+	struct vesa_standard_timing *t, const unsigned char *data)
+{
+	struct hdmi_format_para *para = NULL;
+
+	t->hactive = ((data[0] + (((data[1] >> 4) & 0xf) << 8)) + 1) * 2;
+	switch ((data[1] >> 2) & 0x3) {
+	case 0:
+		t->vactive = t->hactive * 3 / 4;
+		break;
+	case 1:
+		t->vactive = t->hactive * 9 / 16;
+		break;
+	case 2:
+		t->vactive = t->hactive * 5 / 8;
+		break;
+	case 3:
+	default:
+		t->vactive = t->hactive * 3 / 5;
+		break;
+	}
+	switch ((data[2] >> 5) & 0x3) {
+	case 0:
+		t->hsync = 50;
+		break;
+	case 1:
+		t->hsync = 60;
+		break;
+	case 2:
+		t->hsync = 75;
+		break;
+	case 3:
+	default:
+		t->hsync = 85;
+		break;
+	}
+	para = hdmi_get_vesa_paras(t);
+	if (para)
+		t->vesa_timing = para->vic;
+}
+
+static void Edid_CVT_timing(struct rx_cap *pRXCap, unsigned char *data)
+{
+	int i;
+	struct vesa_standard_timing t;
+
+	for (i = 0; i < 4; i++) {
+		memset(&t, 0, sizeof(struct vesa_standard_timing));
+		Edid_CVT_timing_3bytes(pRXCap, &t, &data[i * 3]);
+		if (t.vesa_timing)
+			store_vesa_idx(pRXCap, t.vesa_timing);
+	}
+}
+
 int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 {
 	unsigned char CheckSum;
@@ -2061,18 +2227,9 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 	Edid_ParsingIDManufacturerName(&hdmitx_device->RXCap, &EDID_buf[8]);
 	Edid_ParsingIDProductCode(&hdmitx_device->RXCap, &EDID_buf[0x0A]);
 	Edid_ParsingIDSerialNumber(&hdmitx_device->RXCap, &EDID_buf[0x0C]);
-	idx[0] = EDID_DETAILED_TIMING_DES_BLOCK0_POS;
-	idx[1] = EDID_DETAILED_TIMING_DES_BLOCK1_POS;
-	idx[2] = EDID_DETAILED_TIMING_DES_BLOCK2_POS;
-	idx[3] = EDID_DETAILED_TIMING_DES_BLOCK3_POS;
-	for (i = 0; i < 4; i++) {
-		if ((EDID_buf[idx[i]]) && (EDID_buf[idx[i] + 1]))
-			Edid_DTD_parsing(pRXCap, &EDID_buf[idx[i]]);
 
-		if (Edid_find_name_block(&EDID_buf[idx[i]]))
-			Edid_ReceiverProductNameParse(&hdmitx_device->RXCap,
-				&EDID_buf[idx[i]+5]);
-	}
+	Edid_EstablishedTimings(&hdmitx_device->RXCap, &EDID_buf[0x23]);
+	Edid_StandardTiming(&hdmitx_device->RXCap, &EDID_buf[0x26], 8);
 
 	Edid_ManufactureDateParse(&hdmitx_device->RXCap, &EDID_buf[16]);
 
@@ -2173,6 +2330,44 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 		pRXCap->preferred_mode = pRXCap->VIC[0];
 	}
 
+	idx[0] = EDID_DETAILED_TIMING_DES_BLOCK0_POS;
+	idx[1] = EDID_DETAILED_TIMING_DES_BLOCK1_POS;
+	idx[2] = EDID_DETAILED_TIMING_DES_BLOCK2_POS;
+	idx[3] = EDID_DETAILED_TIMING_DES_BLOCK3_POS;
+	for (i = 0; i < 4; i++) {
+		if ((EDID_buf[idx[i]]) && (EDID_buf[idx[i] + 1])) {
+			struct vesa_standard_timing t;
+
+			memset(&t, 0, sizeof(struct vesa_standard_timing));
+			if (i == 0)
+				Edid_Descriptor_PMT(pRXCap, &t,
+					&EDID_buf[idx[i]]);
+			if (i == 1)
+				Edid_Descriptor_PMT2(pRXCap, &t,
+					&EDID_buf[idx[i]]);
+			continue;
+		}
+		switch (EDID_buf[idx[i] + 3]) {
+		case TAG_STANDARD_TIMINGS:
+			Edid_StandardTiming(pRXCap, &EDID_buf[idx[i] + 5], 6);
+			break;
+		case TAG_CVT_TIMING_CODES:
+			Edid_CVT_timing(pRXCap, &EDID_buf[idx[i] + 6]);
+			break;
+		case TAG_ESTABLISHED_TIMING_III:
+			Edid_StandardTimingIII(pRXCap, &EDID_buf[idx[i] + 6]);
+			break;
+		case TAG_RANGE_LIMITS:
+			break;
+		case TAG_DISPLAY_PRODUCT_NAME_STRING:
+			Edid_ReceiverProductNameParse(pRXCap,
+				&EDID_buf[idx[i] + 5]);
+			break;
+		default:
+			break;
+		}
+	}
+
 	if (hdmitx_edid_search_IEEEOUI(&EDID_buf[128])) {
 		pRXCap->ieeeoui = HDMI_IEEEOUI;
 		pr_info(EDID "find IEEEOUT\n");
@@ -2238,6 +2433,8 @@ static struct dispmode_vic dispmode_vic_tab[] = {
 	{"1080p25hz", HDMI_1080p25},
 	{"1080p24hz", HDMI_1080p24},
 	{"1080p60hz", HDMI_1080p60},
+	{"2560x1080p50hz", HDMI_2560x1080p50_64x27},
+	{"2560x1080p60hz", HDMI_2560x1080p60_64x27},
 	{"2160p30hz", HDMI_4k2k_30},
 	{"2160p25hz", HDMI_4k2k_25},
 	{"2160p24hz", HDMI_4k2k_24},
@@ -2252,7 +2449,34 @@ static struct dispmode_vic dispmode_vic_tab[] = {
 	{"smpte60hz", HDMI_4096x2160p60_256x135},
 	{"2160p60hz", HDMI_4k2k_60},
 	{"2160p50hz", HDMI_4k2k_50},
-
+	{"640x480p60hz", HDMIV_640x480p60hz},
+	{"800x480p60hz", HDMIV_800x480p60hz},
+	{"800x600p60hz", HDMIV_800x600p60hz},
+	{"852x480p60hz", HDMIV_852x480p60hz},
+	{"854x480p60hz", HDMIV_854x480p60hz},
+	{"1024x600p60hz", HDMIV_1024x600p60hz},
+	{"1024x768p60hz", HDMIV_1024x768p60hz},
+	{"1152x864p75hz", HDMIV_1152x864p75hz},
+	{"1280x600p60hz", HDMIV_1280x600p60hz},
+	{"1280x768p60hz", HDMIV_1280x768p60hz},
+	{"1280x800p60hz", HDMIV_1280x800p60hz},
+	{"1280x960p60hz", HDMIV_1280x960p60hz},
+	{"1280x1024p60hz", HDMIV_1280x1024p60hz},
+	{"1280x1024", HDMIV_1280x1024p60hz}, /* alias of "1280x1024p60hz" */
+	{"1360x768p60hz", HDMIV_1360x768p60hz},
+	{"1366x768p60hz", HDMIV_1366x768p60hz},
+	{"1400x1050p60hz", HDMIV_1400x1050p60hz},
+	{"1440x900p60hz", HDMIV_1440x900p60hz},
+	{"1440x2560p60hz", HDMIV_1440x2560p60hz},
+	{"1600x900p60hz", HDMIV_1600x900p60hz},
+	{"1600x1200p60hz", HDMIV_1600x1200p60hz},
+	{"1680x1050p60hz", HDMIV_1680x1050p60hz},
+	{"1920x1200p60hz", HDMIV_1920x1200p60hz},
+	{"2160x1200p90hz", HDMIV_2160x1200p90hz},
+	{"2560x1080p60hz", HDMIV_2560x1080p60hz},
+	{"2560x1440p60hz", HDMIV_2560x1440p60hz},
+	{"2560x1600p60hz", HDMIV_2560x1600p60hz},
+	{"3440x1440p60hz", HDMIV_3440x1440p60hz},
 };
 
 int hdmitx_edid_VIC_support(enum hdmi_vic vic)
