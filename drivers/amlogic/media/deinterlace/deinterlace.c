@@ -263,7 +263,7 @@ static long same_field_bot_count;
  * 1, keep 4 buffers in pre_ready_list for checking;
  */
 
-static int post_hold_line = 17;/* for m8 1080i/50 output */
+static int post_hold_line = 8; /*2019-01-10: from VLSI feijun from 17 to 8*/
 static int post_urgent = 1;
 
 /*pre process speed debug */
@@ -7405,6 +7405,7 @@ static void set_di_flag(void)
 		post_hold_line =
 			(is_meson_g12a_cpu() || is_meson_g12b_cpu())?10:17;
 	} else {
+		post_hold_line = 8;	/*2019-01-10: from VLSI feijun*/
 		mcpre_en = false;
 		pulldown_enable = false;
 		di_pre_rdma_enable = false;
