@@ -33,8 +33,10 @@
 #include <linux/virtio_ring.h>
 #include <linux/imx_rpmsg.h>
 #include <linux/mx8_mu.h>
+#ifdef CONFIG_ARCH_MXC_ARM64
 #include <soc/imx8/sc/sci.h>
 #include <soc/imx8/sc/svc/irq/api.h>
+#endif
 #include "rpmsg_internal.h"
 
 enum imx_rpmsg_variants {
@@ -533,6 +535,7 @@ void imx_rpmsg_restore(struct imx_rpmsg_vproc *rpdev)
 static int imx_rpmsg_partion_notify0(struct notifier_block *nb,
 				      unsigned long event, void *group)
 {
+#ifdef CONFIG_ARCH_MXC_ARM64
 	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[0];
 
 	/* Ignore other irqs */
@@ -542,13 +545,14 @@ static int imx_rpmsg_partion_notify0(struct notifier_block *nb,
 
 	imx_rpmsg_restore(rpdev);
 	pr_info("Patition%d reset!\n", rpdev->mub_partition);
-
+#endif
 	return 0;
 }
 
 static int imx_rpmsg_partion_notify1(struct notifier_block *nb,
 				      unsigned long event, void *group)
 {
+#ifdef CONFIG_ARCH_MXC_ARM64
 	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[1];
 
 	/* Ignore other irqs */
@@ -558,7 +562,7 @@ static int imx_rpmsg_partion_notify1(struct notifier_block *nb,
 
 	imx_rpmsg_restore(rpdev);
 	pr_info("Patition%d reset!\n", rpdev->mub_partition);
-
+#endif
 	return 0;
 }
 
@@ -686,6 +690,7 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, rpdev);
 
+#ifdef CONFIG_ARCH_MXC_ARM64
 	if (rpdev->variant == IMX8QXP || rpdev->variant == IMX8QM) {
 		uint32_t mu_id;
 		sc_err_t sciErr;
@@ -718,6 +723,7 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 		return register_scu_notifier(rpdev->pnotifier);
 
 	}
+#endif
 
 	return ret;
 
