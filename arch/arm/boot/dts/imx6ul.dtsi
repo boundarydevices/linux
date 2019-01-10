@@ -1109,6 +1109,8 @@
 
 			ocotp: ocotp-ctrl@021bc000 {
 				compatible = "fsl,imx6ul-ocotp", "syscon";
+				#address-cells = <1>;
+				#size-cells = <1>;
 				reg = <0x021bc000 0x4000>;
 				clocks = <&clks IMX6UL_CLK_OCOTP>;
 
