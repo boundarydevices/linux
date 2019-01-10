@@ -65,6 +65,9 @@ enum tcpm_transmit_type {
  * @nr_src_pdo:	Number of entries in @src_pdo
  * @snk_pdo:	PDO parameters sent to partner as response to
  *		PD_CTRL_GET_SINK_CAP message
+ * @max_snk_mv:	Maximum acceptable sink voltage in mV
+ * @max_snk_ma:	Maximum sink current in mA
+ * @max_snk_mw:	Maximum required sink power in mW
  * @nr_snk_pdo:	Number of entries in @snk_pdo
  * @operating_snk_mw:
  *		Required operating sink power in mW
@@ -85,6 +88,10 @@ struct tcpc_config {
 
 	const u32 *snk_vdo;
 	unsigned int nr_snk_vdo;
+
+	unsigned int max_snk_mv;
+	unsigned int max_snk_ma;
+	unsigned int max_snk_mw;
 
 	unsigned int operating_snk_mw;
 
