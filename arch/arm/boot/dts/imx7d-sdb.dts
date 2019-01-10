@@ -185,7 +185,7 @@
 	cs-gpios = <&gpio5 9 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 
-	tsc2046@0 {
+	tsc2046 {
 		compatible = "ti,tsc2046";
 		reg = <0>;
 		spi-max-frequency = <1000000>;
