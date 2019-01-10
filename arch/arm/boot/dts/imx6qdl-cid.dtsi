@@ -166,9 +166,9 @@
 	pinctrl_i2c1a_wm8960: i2c1-wm8960grp {
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0
-#define GP_WM8960_MIC_DET		<&gpio7 8 GPIO_ACTIVE_LOW>
+#define GP_WM8960_MIC_DET		<&gpio7 8 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_SD3_RST__GPIO7_IO08		0x1b0b0
-#define GP_WM8960_HP_DET		<&gpio4 10 GPIO_ACTIVE_LOW>
+#define GP_WM8960_HP_DET		<&gpio4 10 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x1b0b0
 		>;
 	};
@@ -751,6 +751,7 @@
 		codec-master;
 		/* JD2: hp detect high for headphone*/
 		hp-det = <2 0>;
+		hp-det-gpios = GP_WM8960_HP_DET;
 		audio-routing =
 			"Headphone Jack", "HP_L",
 			"Headphone Jack", "HP_R",
