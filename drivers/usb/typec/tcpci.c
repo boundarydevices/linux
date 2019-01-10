@@ -748,13 +748,13 @@ struct tcpci *tcpci_register_port(struct device *dev, struct tcpci_data *data)
 					       tcpci_extcon_cable);
 	if (IS_ERR(tcpci->edev)) {
 		dev_err(dev, "failed to allocate extcon dev.\n");
-		return -ENOMEM;
+		return ERR_CAST(tcpci->edev);
 	}
 
 	err = devm_extcon_dev_register(dev, tcpci->edev);
 	if (err) {
 		dev_err(dev, "failed to register extcon dev.\n");
-		return err;
+		return ERR_PTR(err);
 	}
 
 	err = tcpci_parse_config(tcpci);
@@ -780,7 +780,6 @@ static int tcpci_probe(struct i2c_client *client,
 {
 	struct tcpci_chip *chip;
 	int err;
-	u16 val = 0;
 
 	chip = devm_kzalloc(&client->dev, sizeof(*chip), GFP_KERNEL);
 	if (!chip)
