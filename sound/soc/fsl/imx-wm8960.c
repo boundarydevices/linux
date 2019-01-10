@@ -440,7 +440,7 @@ static void imx_wm8960_add_hp_jack(struct imx_priv *priv,
 	int ret;
 
 	priv->headphone_kctl = snd_kctl_jack_new("Headphone", NULL);
-	ret = snd_ctl_add(priv->snd_card, priv->headphone_kctl);
+	ret = snd_ctl_add(data->card.snd_card, priv->headphone_kctl);
 	if (ret)
 		dev_warn(dev, "failed to create headphone jack kctl\n");
 
