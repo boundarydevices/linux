@@ -892,9 +892,9 @@ static void tcpm_qos_handling(struct tcpm_port *port)
 {
 	enum tcpm_state idle_state;
 
-	if (port->typec_caps.type == TYPEC_PORT_UFP)
+	if (port->typec_caps.type == TYPEC_PORT_SNK)
 		idle_state = SNK_UNATTACHED;
-	else if (port->typec_caps.type == TYPEC_PORT_DFP)
+	else if (port->typec_caps.type == TYPEC_PORT_SRC)
 		idle_state = SNK_UNATTACHED;
 	else if (port->typec_caps.type == TYPEC_PORT_DRP)
 		idle_state = DRP_TOGGLING;
