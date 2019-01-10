@@ -53,8 +53,8 @@
 			status = "disabled";
 		};
 
-		aips-bus@02100000 { /* AIPS2 */
-			pre1: pre@021c8000 {
+		aips-bus@2100000 { /* AIPS2 */
+			pre1: pre@21c8000 {
 				compatible = "fsl,imx6q-pre";
 				reg = <0x021c8000 0x1000>;
 				clocks = <&clks IMX6QDL_CLK_PRE0>;
@@ -63,7 +63,7 @@
 				status = "disabled";
 			};
 
-			pre2: pre@021c9000 {
+			pre2: pre@21c9000 {
 				compatible = "fsl,imx6q-pre";
 				reg = <0x021c9000 0x1000>;
 				clocks = <&clks IMX6QDL_CLK_PRE1>;
@@ -72,7 +72,7 @@
 				status = "disabled";
 			};
 
-			pre3: pre@021ca000 {
+			pre3: pre@21ca000 {
 				compatible = "fsl,imx6q-pre";
 				reg = <0x021ca000 0x1000>;
 				clocks = <&clks IMX6QDL_CLK_PRE2>;
@@ -81,7 +81,7 @@
 				status = "disabled";
 			};
 
-			pre4: pre@021cb000 {
+			pre4: pre@21cb000 {
 				compatible = "fsl,imx6q-pre";
 				reg = <0x021cb000 0x1000>;
 				clocks = <&clks IMX6QDL_CLK_PRE3>;
@@ -90,7 +90,7 @@
 				status = "disabled";
 			};
 
-			prg1: prg@021cc000 {
+			prg1: prg@21cc000 {
 				compatible = "fsl,imx6q-prg";
 				reg = <0x021cc000 0x1000>;
 				clocks = <&clks IMX6QDL_CLK_PRG0_AXI>,
@@ -100,7 +100,7 @@
 				status = "disabled";
 			};
 
-			prg2: prg@021cd000 {
+			prg2: prg@21cd000 {
 				compatible = "fsl,imx6q-prg";
 				reg = <0x021cd000 0x1000>;
 				clocks = <&clks IMX6QDL_CLK_PRG1_AXI>,
