@@ -691,7 +691,7 @@ static int free_dma_buffer(struct vpu_ctx *ctx, struct dma_buffer *buffer)
 	atomic64_sub(buffer->dma_size, &ctx->statistic.total_dma_size);
 	return 0;
 }
-static void alloc_mbi_buffer(struct vpu_ctx *ctx,
+static int alloc_mbi_buffer(struct vpu_ctx *ctx,
 		struct queue_data *This,
 		u_int32 count)
 {
@@ -712,9 +712,13 @@ static void alloc_mbi_buffer(struct vpu_ctx *ctx,
 	for (i = 0; i < mbi_num; i++) {
 		ctx->mbi_buffer[i].dma_size = mbi_size;
 		ret = alloc_dma_buffer(ctx, &ctx->mbi_buffer[i]);
-		if (ret)
+		if (ret) {
 			vpu_dbg(LVL_ERR, "error: alloc mbi buffer fail\n");
+			return ret;
+		}
 	}
+
+	return ret;
 }
 
 void clear_vb2_buf(struct queue_data *q_data)
@@ -770,7 +774,7 @@ static int v4l2_ioctl_reqbufs(struct file *file,
 			} else {
 				for (i = 0; i < reqbuf->count; i++)
 					q_data->vb2_reqs[i].status = FRAME_ALLOC;
-				alloc_mbi_buffer(ctx, q_data, reqbuf->count);
+				ret = alloc_mbi_buffer(ctx, q_data, reqbuf->count);
 			}
 		}
 	} else if (reqbuf->count != 0)
@@ -1039,7 +1043,7 @@ static int v4l2_ioctl_streamoff(struct file *file,
 			wake_up_interruptible(&ctx->buffer_wq);
 			if (!wait_for_completion_timeout(&ctx->completion, msecs_to_jiffies(1000))) {
 				ctx->hang_status = true;
-				vpu_dbg(LVL_ERR, "the path id:%d firmware hang after send VID_API_CMD_ABORT, stopped(%d), finished(%d), eos_added(%d)\n",
+				vpu_dbg(LVL_ERR, "the path id:%d firmware timeout after send VID_API_CMD_ABORT, stopped(%d), finished(%d), eos_added(%d)\n",
 						ctx->str_index, ctx->firmware_stopped,
 						ctx->firmware_finished, ctx->eos_stop_added);
 			}
@@ -1235,7 +1239,7 @@ static void ctrls_delete_decoder(struct vpu_ctx *This)
 }
 
 /* Insert either the codec specific EOS type or a special scode to mark that this frame should be flushed/pushed directly for decode */
-static int add_scode(struct vpu_ctx *ctx, u_int32 uStrBufIdx, VPU_PADDING_SCODE_TYPE eScodeType, bool bUpdateWr)
+static int add_scode_vpu(struct vpu_ctx *ctx, u_int32 uStrBufIdx, VPU_PADDING_SCODE_TYPE eScodeType, bool bUpdateWr)
 {
 	struct vpu_dev *dev = ctx->dev;
 	pSTREAM_BUFFER_DESCRIPTOR_TYPE pStrBufDesc;
@@ -1413,6 +1417,19 @@ static int add_scode(struct vpu_ctx *ctx, u_int32 uStrBufIdx, VPU_PADDING_SCODE_
 	vpu_dbg(LVL_INFO, "%s() done type (%d) MCX address virt=%p, phy=0x%x, index=%d\n",
 			__func__, eScodeType, pStrBufDesc, dev->shared_mem.pSharedInterface->pStreamBuffDesc[ctx->str_index][uStrBufIdx], ctx->str_index);
 	return pad_bytes;
+}
+
+static int add_scode(struct vpu_ctx *ctx, u_int32 uStrBufIdx, VPU_PADDING_SCODE_TYPE eScodeType, bool bUpdateWr)
+{
+	int size = 0;
+
+	if (!ctx)
+		return 0;
+
+	mutex_lock(&ctx->instance_mutex);
+	size = add_scode_vpu(ctx, uStrBufIdx, eScodeType, bUpdateWr);
+	mutex_unlock(&ctx->instance_mutex);
+	return size;
 }
 
 TB_API_DEC_FMT vpu_format_remap(uint32_t vdec_std)
@@ -1668,7 +1685,6 @@ static int update_stream_addr(struct vpu_ctx *ctx, void *input_buffer, uint32_t 
 	if (nfreespace - buffer_size - length < MIN_SPACE)
 		return 0;
 
-	record_log_info(ctx, LOG_UPDATE_STREAM, 0, buffer_size);
 	if (nfreespace >= buffer_size + length) {
 		if ((wptr == rptr) || (wptr > rptr)) {
 			if (end - wptr >= length) {
@@ -1718,6 +1734,16 @@ static int update_stream_addr(struct vpu_ctx *ctx, void *input_buffer, uint32_t 
 			pStrBufDesc, dev->shared_mem.pSharedInterface->pStreamBuffDesc[ctx->str_index][uStrBufIdx], ctx->str_index);
 	return ret;
 }
+static int update_stream_addr_vpu(struct vpu_ctx *ctx, void *input_buffer, uint32_t buffer_size, uint32_t uStrBufIdx)
+{
+	int size = 0;
+
+	mutex_lock(&ctx->instance_mutex);
+	size = update_stream_addr(ctx, input_buffer, buffer_size, uStrBufIdx);
+	mutex_unlock(&ctx->instance_mutex);
+
+	return size;
+}
 //warn uStrIdx need to refine how to handle it
 static void v4l2_update_stream_addr(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 {
@@ -1739,7 +1765,7 @@ static void v4l2_update_stream_addr(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 
 		buffer_size = p_data_req->vb2_buf->planes[0].bytesused;
 		input_buffer = (void *)vb2_plane_vaddr(p_data_req->vb2_buf, 0);
-		if (!update_stream_addr(ctx, input_buffer, buffer_size, uStrBufIdx)) {
+		if (!update_stream_addr_vpu(ctx, input_buffer, buffer_size, uStrBufIdx)) {
 			up(&This->drv_q_lock);
 			vpu_dbg(LVL_INFO, " %s no space to write\n", __func__);
 			return;
@@ -1753,6 +1779,7 @@ static void v4l2_update_stream_addr(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 			ctx->frm_dec_delay++;
 			ctx->frm_dis_delay++;
 			ctx->frm_total_num++;
+			record_log_info(ctx, LOG_UPDATE_STREAM, 0, buffer_size);
 		}
 #ifdef HANDLE_EOS
 		if (buffer_size < p_data_req->vb2_buf->planes[0].length)
@@ -1852,10 +1879,13 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 {
 	struct vpu_dev *dev;
 	pDEC_RPC_HOST_IFACE pSharedInterface;
+	pSTREAM_BUFFER_DESCRIPTOR_TYPE pStrBufDesc;
 
 	vpu_log_event(uEvent, uStrIdx);
 	count_event(&ctx->statistic, uEvent);
-	record_log_info(ctx, LOG_EVENT, uEvent, 0);
+
+	pStrBufDesc = ctx->dev->regs_base + DEC_MFD_XREG_SLV_BASE + MFD_MCX + MFD_MCX_OFF * ctx->str_index;
+	record_log_info(ctx, LOG_EVENT, uEvent, pStrBufDesc->rptr);
 
 	if (ctx == NULL) {
 		vpu_dbg(LVL_ERR, "receive event: 0x%X after instance released, ignore it\n", uEvent);
@@ -2924,7 +2954,8 @@ static ssize_t show_instance_log_info(struct device *dev,
 		switch (vpu_info->type) {
 		case LOG_EVENT:
 			num += scnprintf(buf + num, PAGE_SIZE - num,
-				"\t%20s:%40s\n", "event", get_event_str(vpu_info->log_info[vpu_info->type]));
+				"\t%20s:%40s %20s:%20x\n", "event", get_event_str(vpu_info->log_info[vpu_info->type]),
+				"rptr", vpu_info->data);
 			break;
 		case LOG_COMMAND:
 			num += scnprintf(buf + num, PAGE_SIZE - num,
@@ -3297,7 +3328,7 @@ static unsigned int v4l2_poll(struct file *filp, poll_table *wait)
 
 		if ((!src_q->streaming || list_empty(&src_q->queued_list))
 				&& (!dst_q->streaming || list_empty(&dst_q->queued_list))) {
-			rc = POLLERR;
+			rc |= POLLERR;
 			return rc;
 		}
 
