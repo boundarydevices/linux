@@ -903,7 +903,11 @@ static int gpu_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 #endif /* USE_LINUX_PCIE */
 {
     int ret = -ENODEV;
-    static u64 dma_mask = ~0ULL;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 24)
+    static u64 dma_mask = DMA_BIT_MASK(40);
+#else
+    static u64 dma_mask = DMA_40BIT_MASK;
+#endif
 
     gcsMODULE_PARAMETERS moduleParam = {
         .irqLine            = irqLine,
@@ -944,14 +948,12 @@ static int gpu_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
     platform->device = pdev;
     galcore_device = &pdev->dev;
 
-    galcore_device->dma_mask = &dma_mask;
-
 #if USE_LINUX_PCIE
     if (pci_enable_device(pdev)) {
         printk(KERN_ERR "galcore: pci_enable_device() failed.\n");
     }
 
-    if (pci_set_dma_mask(pdev, DMA_BIT_MASK(32))) {
+    if (pci_set_dma_mask(pdev, dma_mask)) {
         printk(KERN_ERR "galcore: Failed to set DMA mask.\n");
     }
 
@@ -965,7 +967,9 @@ static int gpu_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
     if (pci_enable_msi(pdev)) {
         printk(KERN_ERR "galcore: Failed to enable MSI.\n");
     }
-#endif
+#  endif
+#else
+    galcore_device->dma_mask = &dma_mask;
 #endif
 
     if (platform->ops->getPower)

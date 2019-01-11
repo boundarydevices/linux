@@ -292,6 +292,15 @@ typedef struct _gcsUSER_MEMORY_DESC
 gcsUSER_MEMORY_DESC;
 
 
+enum
+{
+    /* GPU can't issue more that 32bit physical address */
+    gcvPLATFORM_FLAG_LIMIT_4G_ADDRESS = 1 << 0,
+
+    gcvPLATFORM_FLAG_IMX_MM           = 1 << 1,
+};
+
+
 #define gcdMAX_FLAT_MAPPING_COUNT           16
 
 typedef struct _gcsFLAT_MAPPING_RANGE
@@ -373,6 +382,8 @@ typedef struct _gcsHAL_QUERY_CHIP_IDENTITY
 
     /* Customer ID. */
     gctUINT32                   customerID;
+
+    gctUINT32                   platformFlagBits;
 }
 gcsHAL_QUERY_CHIP_IDENTITY;
 
@@ -1253,7 +1264,7 @@ typedef struct _gcsHAL_INTERFACE
             IN gctUINT64                shBuf;
 
             /* A signal. */
-            IN gctUINT32                signal;
+            IN gctUINT64                signal;
 
             OUT gctINT32                fd;
         }

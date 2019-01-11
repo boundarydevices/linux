@@ -728,6 +728,7 @@ static int gc_clk_show(struct seq_file* m, void* data)
     gcsINFO_NODE *node = m->private;
     gckGALDEVICE device = node->device;
     gctUINT i;
+    gceSTATUS status;
 
     for (i = gcvCORE_MAJOR; i < gcvCORE_COUNT; i++)
     {
@@ -741,7 +742,13 @@ static int gc_clk_show(struct seq_file* m, void* data)
                 continue;
             }
 #endif
-            gckHARDWARE_QueryFrequency(hardware);
+
+            status = gckHARDWARE_QueryFrequency(hardware);
+            if (gcmIS_ERROR(status))
+            {
+                seq_printf(m, "query gpu%d clock fail.\n", i);
+                continue;
+            }
 
             if (hardware->mcClk)
             {
