@@ -61,6 +61,10 @@
 #include <linux/mman.h>
 #include <asm/atomic.h>
 #include <linux/dma-mapping.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0)
+#include <linux/dma-direct.h>
+#endif
+
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 
@@ -129,25 +133,6 @@ _DebugfsCleanup(
     gckDEBUGFS_DIR_Deinit(&Allocator->debugfsDir);
 }
 
-#ifdef CONFIG_ARM64
-static struct device *
-_GetDevice(
-    IN gckOS Os
-    )
-{
-    gcsPLATFORM *platform;
-
-    platform = Os->device->platform;
-
-    if (!platform)
-    {
-        return gcvNULL;
-    }
-
-    return &platform->device->dev;
-}
-#endif
-
 static gceSTATUS
 _DmaAlloc(
     IN gckALLOCATOR Allocator,
@@ -176,12 +161,10 @@ _DmaAlloc(
 #endif
 
     mdlPriv->kvaddr
-#if defined CONFIG_ARM64
-        = dma_alloc_coherent(_GetDevice(os), NumPages * PAGE_SIZE, &mdlPriv->dmaHandle, gfp);
-#elif defined CONFIG_MIPS || defined CONFIG_CPU_CSKYV2 || defined CONFIG_PPC
-        = dma_alloc_coherent(gcvNULL, NumPages * PAGE_SIZE, &mdlPriv->dmaHandle, gfp);
+#if defined CONFIG_MIPS || defined CONFIG_CPU_CSKYV2 || defined CONFIG_PPC || defined CONFIG_ARM64
+        = dma_alloc_coherent(galcore_device, NumPages * PAGE_SIZE, &mdlPriv->dmaHandle, gfp);
 #else
-        = dma_alloc_writecombine(gcvNULL, NumPages * PAGE_SIZE,  &mdlPriv->dmaHandle, gfp);
+        = dma_alloc_writecombine(galcore_device, NumPages * PAGE_SIZE,  &mdlPriv->dmaHandle, gfp);
 #endif
 
 #ifdef CONFLICT_BETWEEN_BASE_AND_PHYS
@@ -299,12 +282,10 @@ _DmaFree(
     struct mdl_dma_priv *mdlPriv=(struct mdl_dma_priv *)Mdl->priv;
     gcsDMA_PRIV_PTR allocatorPriv = (gcsDMA_PRIV_PTR)Allocator->privateData;
 
-#if defined CONFIG_ARM64
-    dma_free_coherent(_GetDevice(os), Mdl->numPages * PAGE_SIZE, mdlPriv->kvaddr, mdlPriv->dmaHandle);
-#elif defined CONFIG_MIPS || defined CONFIG_CPU_CSKYV2 || defined CONFIG_PPC
-    dma_free_coherent(gcvNULL, Mdl->numPages * PAGE_SIZE, mdlPriv->kvaddr, mdlPriv->dmaHandle);
+#if defined CONFIG_MIPS || defined CONFIG_CPU_CSKYV2 || defined CONFIG_PPC || defined CONFIG_ARM64
+    dma_free_coherent(galcore_device, Mdl->numPages * PAGE_SIZE, mdlPriv->kvaddr, mdlPriv->dmaHandle);
 #else
-    dma_free_writecombine(gcvNULL, Mdl->numPages * PAGE_SIZE, mdlPriv->kvaddr, mdlPriv->dmaHandle);
+    dma_free_writecombine(galcore_device, Mdl->numPages * PAGE_SIZE, mdlPriv->kvaddr, mdlPriv->dmaHandle);
 #endif
 
     gckOS_Free(os, mdlPriv);
@@ -504,8 +485,8 @@ static gceSTATUS
 _DmaCache(
     IN gckALLOCATOR Allocator,
     IN PLINUX_MDL Mdl,
+    IN gctSIZE_T Offset,
     IN gctPOINTER Logical,
-    IN gctUINT32 Physical,
     IN gctUINT32 Bytes,
     IN gceCACHEOPERATION Operation
     )

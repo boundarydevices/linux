@@ -243,6 +243,7 @@ typedef struct _gcsSURF_BLIT_ARGS
     gcsRECT     scissor;
     gctUINT     flags;
     gctUINT     srcNumSlice, dstNumSlice;
+    gctBOOL     needDecode;
 }
 gcsSURF_BLIT_ARGS;
 
@@ -321,6 +322,7 @@ typedef enum _gceSPLIT_DRAW_TYPE
     gcvSPLIT_DRAW_1,
     gcvSPLIT_DRAW_2,
     gcvSPLIT_DRAW_3,
+    gcvSPLIT_DRAW_4,
     gcvSPLIT_DRAW_XFB,
     gcvSPLIT_DRAW_INDEX_FETCH,
     gcvSPLIT_DRAW_TCS,
@@ -2190,6 +2192,7 @@ gcoTEXTURE_AddMipMap(
     IN gctSIZE_T Depth,
     IN gctUINT Faces,
     IN gcePOOL Pool,
+    IN gctBOOL Filterable,
     OUT gcoSURF * Surface
     );
 
@@ -2206,6 +2209,7 @@ gcoTEXTURE_AddMipMapEx(
     IN gcePOOL Pool,
     IN gctUINT32 Samples,
     IN gctBOOL Protected,
+    IN gctBOOL Filterable,
     OUT gcoSURF * Surface
     );
 
@@ -2379,7 +2383,8 @@ gceSTATUS
 gcoTEXTURE_GenerateMipMap(
     IN gcoTEXTURE Texture,
     IN gctINT   BaseLevel,
-    IN gctINT   MaxLevel
+    IN gctINT   MaxLevel,
+    IN gctBOOL  sRGBDecode
     );
 
 /******************************************************************************\
