@@ -56,7 +56,7 @@
 #include <gc_hal.h>
 #include <gc_hal_base.h>
 
-#if gcdANDROID_NATIVE_FENCE_SYNC
+#if gcdLINUX_SYNC_FILE
 
 #include <linux/kernel.h>
 #include <linux/file.h>
@@ -70,7 +70,7 @@
 #include "gc_hal_kernel_sync.h"
 #include "gc_hal_kernel_linux.h"
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
+#ifndef CONFIG_SYNC_FILE
 
 static struct sync_pt * viv_sync_pt_dup(struct sync_pt *sync_pt)
 {
@@ -224,7 +224,7 @@ struct sync_pt * viv_sync_pt_create(struct viv_sync_timeline *obj,
     return (struct sync_pt *)pt;
 }
 
-#else /* v4.9.0 */
+#else
 
 struct viv_sync_timeline * viv_sync_timeline_create(const char *name, gckOS Os)
 {
@@ -308,6 +308,7 @@ static struct dma_fence_ops viv_fence_ops =
 struct dma_fence * viv_fence_create(struct viv_sync_timeline *timeline,
                     gcsSIGNAL *signal)
 {
+    gceSTATUS status;
     struct viv_fence *fence;
     struct dma_fence *old_fence = NULL;
     unsigned seqno;
@@ -317,9 +318,17 @@ struct dma_fence * viv_fence_create(struct viv_sync_timeline *timeline,
     if (!fence)
         return NULL;
 
+    /* Reference signal in fence. */
+    status = gckOS_MapSignal(timeline->os, (gctSIGNAL)(uintptr_t)signal->id,
+                NULL, &fence->signal);
+
+    if (gcmIS_ERROR(status)) {
+        kfree(fence);
+        return NULL;
+    }
+
     spin_lock_init(&fence->lock);
 
-    fence->signal = (gctSIGNAL)(uintptr_t)signal->id;
     fence->parent = timeline;
 
     seqno = (unsigned)atomic64_inc_return(&timeline->seqno);
@@ -340,6 +349,10 @@ struct dma_fence * viv_fence_create(struct viv_sync_timeline *timeline,
 
     if (!signal->done) {
         signal->fence = (struct dma_fence*)fence;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,9,68)
+        dma_fence_get((struct dma_fence*)fence);
+#endif
     }
 
     spin_unlock(&signal->lock);
@@ -360,6 +373,6 @@ struct dma_fence * viv_fence_create(struct viv_sync_timeline *timeline,
     return (struct dma_fence*)fence;
 }
 
-#endif /* v4.9.0 */
+#endif
 
 #endif
