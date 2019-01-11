@@ -1,0 +1,33 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright 2018 NXP
+ */
+
+/dts-v1/;
+
+#include "fsl-imx8mm-ddr4-evk.dts"
+
+/ {
+	model = "FSL i.MX8MM DDR4 EVK with QCA9377-3 WIFI/BT board";
+};
+
+&reg_sd1_vmmc {
+	status = "okay";
+};
+
+&usdhc1 {
+	pinctrl-0 = <&pinctrl_usdhc1>, <&pinctrl_usdhc1_gpio>;
+	pinctrl-1 = <&pinctrl_usdhc1_100mhz>, <&pinctrl_usdhc1_gpio>;
+	pinctrl-2 = <&pinctrl_usdhc1_200mhz>, <&pinctrl_usdhc1_gpio>;
+	vmmc-supply = <&reg_sd1_vmmc>;
+	/delete-property/ mmc-pwrseq;
+	/delete-property/ cap-power-off-card;
+
+	brcmf: bcrmf@1 {
+		status = "disabled";
+	};
+};
+
+&usdhc1_pwrseq {
+	status = "disabled";
+};
