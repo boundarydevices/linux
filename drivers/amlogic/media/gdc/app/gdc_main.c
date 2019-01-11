@@ -25,27 +25,27 @@
 irqreturn_t interrupt_handler_next(int irq, void *param)
 {
 	//handle the start of frame with gdc_process
-	struct gdc_settings *gdc_settings = (struct gdc_settings *)param;
+	struct gdc_cmd_s *gdc_cmd = (struct gdc_cmd_s *)param;
 
-	gdc_get_frame(gdc_settings);
+	gdc_get_frame(gdc_cmd);
 
 	return IRQ_HANDLED;
 }
 
-int gdc_run(struct gdc_settings *g)
+int gdc_run(struct gdc_cmd_s *g)
 {
 
 	gdc_stop(g);
 
-	LOG(LOG_INFO, "Done gdc load..\n");
+	gdc_log(LOG_INFO, "Done gdc load..\n");
 
 	//initialise the gdc by the first configuration
 	if (gdc_init(g) != 0) {
-		LOG(LOG_ERR, "Failed to initialise GDC block");
+		gdc_log(LOG_ERR, "Failed to initialise GDC block");
 		return -1;
 	}
 
-	LOG(LOG_INFO, "Done gdc config..\n");
+	gdc_log(LOG_INFO, "Done gdc config..\n");
 
 	switch (g->gdc_config.format) {
 	case NV12:
@@ -70,10 +70,10 @@ int gdc_run(struct gdc_settings *g)
 				g->v_base_addr);
 	break;
 	default:
-		LOG(LOG_ERR, "Error config format\n");
+		gdc_log(LOG_ERR, "Error config format\n");
 	break;
 	}
-	LOG(LOG_DEBUG, "call gdc process\n");
+	gdc_log(LOG_DEBUG, "call gdc process\n");
 
 	return 0;
 }

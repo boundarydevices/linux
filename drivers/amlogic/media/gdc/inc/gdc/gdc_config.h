@@ -22,10 +22,17 @@
 #include <linux/types.h>
 #include <linux/wait.h>
 #include <linux/spinlock.h>
+#include <linux/miscdevice.h>
 #include "system_gdc_io.h"
 #include "gdc_api.h"
 
-struct gdc_settings;
+struct gdc_cmd_s;
+
+struct gdc_manager_s {
+	struct aml_dma_buffer *buffer;
+	struct meson_gdc_dev_t *gdc_dev;
+};
+
 struct meson_gdc_dev_t {
 	struct platform_device *pdev;
 	void	*reg_base;
@@ -35,6 +42,7 @@ struct meson_gdc_dev_t {
 	struct mutex d_mutext;
 	struct completion d_com;
 	int	 irq;
+	struct miscdevice misc_dev;
 };
 
 struct mgdc_fh_s {
@@ -43,7 +51,7 @@ struct mgdc_fh_s {
 	struct meson_gdc_dev_t *gdev;
 	char task_comm[32];
 	struct ion_client   *ion_client;
-	struct gdc_settings gs;
+	struct gdc_cmd_s gdc_cmd;
 	uint32_t mmap_type;
 	dma_addr_t i_paddr;
 	dma_addr_t o_paddr;

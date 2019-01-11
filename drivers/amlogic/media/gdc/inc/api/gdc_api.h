@@ -21,13 +21,19 @@
 #include <linux/of_address.h>
 #include <linux/dma-direction.h>
 
+enum gdc_memtype_s {
+	AML_GDC_MEM_ION,
+	AML_GDC_MEM_DMABUF,
+	AML_GDC_MEM_INVALID,
+};
+
 struct gdc_buf_cfg {
 	uint32_t type;
 	unsigned long len;
 };
 
 // each configuration addresses and size
-struct gdc_config {
+struct gdc_config_s {
 	uint32_t format;
 	uint32_t config_addr;   //gdc config address
 	uint32_t config_size;   //gdc config size in 32bit
@@ -41,13 +47,27 @@ struct gdc_config {
 	uint32_t output_c_stride; //gdc output uv stride
 };
 
+struct gdc_buffer_info {
+	unsigned int mem_alloc_type;
+	unsigned int plane_number;
+	union {
+		unsigned int y_base_fd;
+		unsigned int shared_fd;
+	};
+	union {
+		unsigned int uv_base_fd;
+		unsigned int u_base_fd;
+	};
+	unsigned int v_base_fd;
+};
+
 // overall gdc settings and state
 struct gdc_settings {
 	uint32_t magic;
 	//writing/reading to gdc base address, currently not read by api
 	uint32_t base_gdc;
 	 //array of gdc configuration and sizes
-	struct gdc_config gdc_config;
+	struct gdc_config_s gdc_config;
 	//update this index for new config
 	//int gdc_config_total;
 	//start memory to write gdc output framse
@@ -88,12 +108,42 @@ struct gdc_settings {
 	int32_t v_base_fd;
 };
 
+struct gdc_settings_ex {
+	uint32_t magic;
+	struct gdc_config_s gdc_config;
+	struct gdc_buffer_info input_buffer;
+	struct gdc_buffer_info config_buffer;
+	struct gdc_buffer_info output_buffer;
+};
+
+/* for gdc dma buf define */
+struct gdc_dmabuf_req_s {
+	int index;
+	unsigned int len;
+	unsigned int dma_dir;
+};
+
+struct gdc_dmabuf_exp_s {
+	int index;
+	unsigned int flags;
+	int fd;
+};
+/* end of gdc dma buffer define */
+
 #define GDC_IOC_MAGIC  'G'
 #define GDC_PROCESS	 _IOW(GDC_IOC_MAGIC, 0x00, struct gdc_settings)
 #define GDC_PROCESS_NO_BLOCK	_IOW(GDC_IOC_MAGIC, 0x01, struct gdc_settings)
 #define GDC_RUN	_IOW(GDC_IOC_MAGIC, 0x02, struct gdc_settings)
 #define GDC_REQUEST_BUFF _IOW(GDC_IOC_MAGIC, 0x03, struct gdc_settings)
 #define GDC_HANDLE _IOW(GDC_IOC_MAGIC, 0x04, struct gdc_settings)
+
+#define GDC_PROCESS_EX _IOW(GDC_IOC_MAGIC, 0x05, struct gdc_settings_ex)
+#define GDC_REQUEST_DMA_BUFF _IOW(GDC_IOC_MAGIC, 0x06, struct gdc_dmabuf_req_s)
+#define GDC_EXP_DMA_BUFF _IOW(GDC_IOC_MAGIC, 0x07, struct gdc_dmabuf_exp_s)
+#define GDC_FREE_DMA_BUFF _IOW(GDC_IOC_MAGIC, 0x08, int)
+#define GDC_SYNC_DEVICE _IOW(GDC_IOC_MAGIC, 0x09, int)
+#define GDC_SYNC_CPU _IOW(GDC_IOC_MAGIC, 0x0a, int)
+
 
 enum {
 	INPUT_BUFF_TYPE = 0x1000,
@@ -121,6 +171,40 @@ struct gdc_dma_cfg {
 	enum dma_data_direction dir;
 };
 
+struct gdc_cmd_s {
+	//writing/reading to gdc base address, currently not read by api
+	uint32_t base_gdc;
+	 //array of gdc configuration and sizes
+	struct gdc_config_s gdc_config;
+	//update this index for new config
+	//int gdc_config_total;
+	//start memory to write gdc output framse
+	uint32_t buffer_addr;
+	//size of memory output frames to determine
+	//if it is enough and can do multiple write points
+	uint32_t buffer_size;
+	//current output address of gdc
+	uint32_t current_addr;
+	//set when expecting an interrupt from gdc
+	int32_t is_waiting_gdc;
+
+	//input address for y and u, v planes
+	uint32_t y_base_addr;
+	union {
+		uint32_t uv_base_addr;
+		uint32_t u_base_addr;
+	};
+	uint32_t v_base_addr;
+
+	//when inititialised this callback will be called
+	//to update frame buffer addresses and offsets
+	void (*get_frame_buffer)(uint32_t y_base_addr,
+			uint32_t uv_base_addr,
+			uint32_t y_line_offset,
+			uint32_t uv_line_offset);
+	void *fh;
+};
+
 /**
  *   Configure the output gdc configuration
  *
@@ -128,30 +212,30 @@ struct gdc_dma_cfg {
  *
  *   More than one gdc settings can be accessed by index to a gdc_config_t.
  *
- *   @param  gdc_settings - overall gdc settings and state
+ *   @param  gdc_cmd_s - overall gdc settings and state
  *   @param  gdc_config_num - selects the current gdc config to be applied
  *
  *   @return 0 - success
  *	 -1 - fail.
  */
-int gdc_init(struct gdc_settings *gdc_settings);
+int gdc_init(struct gdc_cmd_s *gdc_cmd);
 /**
  *   This function stops the gdc block
  *
- *   @param  gdc_settings - overall gdc settings and state
+ *   @param  gdc_cmd_s - overall gdc settings and state
  *
  */
-void gdc_stop(struct gdc_settings *gdc_settings);
+void gdc_stop(struct gdc_cmd_s *gdc_cmd);
 
 /**
  *   This function starts the gdc block
  *
  *   Writing 0->1 transition is necessary for trigger
  *
- *   @param  gdc_settings - overall gdc settings and state
+ *   @param  gdc_cmd_s - overall gdc settings and state
  *
  */
-void gdc_start(struct gdc_settings *gdc_settings);
+void gdc_start(struct gdc_cmd_s *gdc_cmd);
 
 /**
  *   This function points gdc to
@@ -160,7 +244,7 @@ void gdc_start(struct gdc_settings *gdc_settings);
  *
  *   Shown inputs to GDC are Y and UV plane address and offsets
  *
- *   @param  gdc_settings - overall gdc settings and state
+ *   @param  gdc_cmd_s - overall gdc settings and state
  *   @param  active_width -  input width resolution
  *   @param  active_height - input height resolution
  *   @param  y_base_addr -  input Y base address
@@ -171,20 +255,20 @@ void gdc_start(struct gdc_settings *gdc_settings);
  *   @return 0 - success
  *	 -1 - no interrupt from GDC.
  */
-int gdc_process(struct gdc_settings *gdc_settings,
+int gdc_process(struct gdc_cmd_s *gdc_cmd,
 		uint32_t y_base_addr,
 		uint32_t uv_base_addr);
-int gdc_process_yuv420p(struct gdc_settings *gdc_settings,
+int gdc_process_yuv420p(struct gdc_cmd_s *gdc_cmd,
 		uint32_t y_base_addr,
 		uint32_t u_base_addr,
 		uint32_t v_base_addr);
-int gdc_process_y_grey(struct gdc_settings *gdc_settings,
+int gdc_process_y_grey(struct gdc_cmd_s *gdc_cmd,
 		uint32_t y_base_addr);
-int gdc_process_yuv444p(struct gdc_settings *gdc_settings,
+int gdc_process_yuv444p(struct gdc_cmd_s *gdc_cmd,
 		uint32_t y_base_addr,
 		uint32_t u_base_addr,
 		uint32_t v_base_addr);
-int gdc_process_rgb444p(struct gdc_settings *gdc_settings,
+int gdc_process_rgb444p(struct gdc_cmd_s *gdc_cmd,
 		uint32_t y_base_addr,
 		uint32_t u_base_addr,
 		uint32_t v_base_addr);
@@ -198,12 +282,12 @@ int gdc_process_rgb444p(struct gdc_settings *gdc_settings,
  *
  *   Y and UV plane address and offsets
  *
- *   @param  gdc_settings - overall gdc settings and state
+ *   @param  gdc_cmd_s - overall gdc settings and state
  *
  *   @return 0 - success
  *	 -1 - unexpected interrupt from GDC.
  */
-int gdc_get_frame(struct gdc_settings *gdc_settings);
+int gdc_get_frame(struct gdc_cmd_s *gdc_cmd);
 
 /**
  *   This function points gdc to its input resolution
@@ -212,12 +296,12 @@ int gdc_get_frame(struct gdc_settings *gdc_settings);
  *
  *   Shown inputs to GDC are Y and UV plane address and offsets
  *
- *   @param  gdc_settings - overall gdc settings and state
+ *   @param  gdc_cmd_s - overall gdc settings and state
  *
  *   @return 0 - success
  *	 -1 - no interrupt from GDC.
  */
-int gdc_run(struct gdc_settings *g);
+int gdc_run(struct gdc_cmd_s *g);
 
 int32_t init_gdc_io(struct device_node *dn);
 

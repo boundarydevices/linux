@@ -14746,6 +14746,12 @@ M:	Pengcheng Chen <pengcheng.chen@amlogic.com>
 F:	drivers/amlogic/media/common/ge2d/ge2d_dmabuf.c
 F:	drivers/amlogic/media/common/ge2d/ge2d_dmabuf.h
 
+AMLOGIC GDC DRIVER
+M:	Pengcheng Chen <pengcheng.chen@amlogic.com>
+F:	drivers/amlogic/media/gdc/app/gdc_dmabuf.c
+F:	drivers/amlogic/media/gdc/app/gdc_dmabuf.h
+F:	drivers/amlogic/media/gdc/src/platform/system_log.c
+
 AMLOGIC VIDEOSYNC
 M:	Jintao Xu <jintao.xu@amlogic.com>
 F:	drivers/amlogic/media/video_processor/videosync/Kconfig

@@ -20,36 +20,27 @@
 
 //changeable logs
 #include <linux/kernel.h>
-#define FW_LOG_LEVEL LOG_ERR
+extern unsigned int gdc_log_level;
 
 enum log_level_e {
-	LOG_NOTHING,
-	LOG_EMERG,
-	LOG_ALERT,
+	LOG_NO_THING,
 	LOG_CRIT,
 	LOG_ERR,
 	LOG_WARNING,
-	LOG_NOTICE,
 	LOG_INFO,
 	LOG_DEBUG,
-	LOG_IRQ,
 	LOG_MAX
 };
 
-extern const char *const gdc_log_level[LOG_MAX];
-
-#define FILE (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-
 #if 1
-#define LOG(level, fmt, arg...)			 \
+#define gdc_log(level, fmt, ...)			 \
 	do {			\
-		if ((level) <= FW_LOG_LEVEL)		\
-		pr_info("%s: %s(%d) %s: " fmt "\n",\
-				FILE, __func__, __LINE__,	  \
-				gdc_log_level[level], ## arg);	\
+		if (level <= gdc_log_level)		\
+			pr_info("%s: "fmt, __func__, ##__VA_ARGS__);  \
 	} while (0)
+
 #else
-#define LOG(...)
+#define gdc_log(...)
 #endif
 
 #endif // __SYSTEM_LOG_H__

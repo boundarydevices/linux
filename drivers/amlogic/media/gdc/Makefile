@@ -1,8 +1,8 @@
 FW_SRC := src/fw_lib/acamera_gdc.c \
 	src/platform/system_gdc_io.c \
-	src/platform/system_log.c \
 	app/gdc_main.c \
-	app/gdc_module.c
+	app/gdc_module.c \
+	app/gdc_dmabuf.c
 
 FW_SRC_OBJ := $(FW_SRC:.c=.o)
 

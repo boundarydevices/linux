@@ -30,7 +30,7 @@ int32_t init_gdc_io(struct device_node *dn)
 
 	pr_info("reg base = %p\n", p_hw_base);
 	if (!p_hw_base) {
-		LOG(LOG_DEBUG, "failed to map register, %p\n", p_hw_base);
+		gdc_log(LOG_DEBUG, "failed to map register, %p\n", p_hw_base);
 		return -1;
 	}
 
@@ -39,28 +39,32 @@ int32_t init_gdc_io(struct device_node *dn)
 
 void close_gdc_io(struct device_node *dn)
 {
-	LOG(LOG_DEBUG, "IO functionality has been closed");
+	gdc_log(LOG_DEBUG, "IO functionality has been closed");
 }
 
 uint32_t system_gdc_read_32(uint32_t addr)
 {
 	uint32_t result = 0;
 
-	if (p_hw_base == NULL)
-		LOG(LOG_ERR, "Failed to base address %d\n", addr);
+	if (p_hw_base == NULL) {
+		gdc_log(LOG_ERR, "Failed to base address %d\n", addr);
+		return 0;
+	}
 
 	result = ioread32(p_hw_base + addr);
-	LOG(LOG_DEBUG, "r [0x%04x]= %08x\n", addr, result);
+	gdc_log(LOG_DEBUG, "r [0x%04x]= %08x\n", addr, result);
 	return result;
 }
 
 void system_gdc_write_32(uint32_t addr, uint32_t data)
 {
-	if (p_hw_base == NULL)
-		LOG(LOG_ERR, "Failed to write %d to addr %d\n", data, addr);
+	if (p_hw_base == NULL) {
+		gdc_log(LOG_ERR, "Failed to write %d to addr %d\n", data, addr);
+		return;
+	}
 
 	void *ptr = (void *)(p_hw_base + addr);
 
 	iowrite32(data, ptr);
-	LOG(LOG_DEBUG, "w [0x%04x]= %08x\n", addr, data);
+	gdc_log(LOG_DEBUG, "w [0x%04x]= %08x\n", addr, data);
 }
