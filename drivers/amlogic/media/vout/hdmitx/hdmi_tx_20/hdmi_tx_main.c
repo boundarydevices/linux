@@ -2325,12 +2325,27 @@ static ssize_t show_disp_cap_3d(struct device *dev,
 	return pos;
 }
 
+static void _show_pcm_ch(struct rx_cap *pRXCap, int i,
+	int *ppos, char *buf)
+{
+	const char * const aud_sample_size[] = {"ReferToStreamHeader",
+		"16", "20", "24", NULL};
+	int j = 0;
+
+	for (j = 0; j < 3; j++) {
+		if (pRXCap->RxAudioCap[i].cc3 & (1 << j))
+			*ppos += snprintf(buf + *ppos, PAGE_SIZE, "%s/",
+				aud_sample_size[j+1]);
+	}
+	*ppos += snprintf(buf + *ppos - 1, PAGE_SIZE, " bit\n");
+}
+
 /**/
 static ssize_t show_aud_cap(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	int i, pos = 0, j;
-	static const char * const aud_coding_type[] =  {
+	static const char * const aud_ct[] =  {
 		"ReferToStreamHeader", "PCM", "AC-3", "MPEG1", "MP3",
 		"MPEG2", "AAC", "DTS", "ATRAC",	"OneBitAudio",
 		"Dobly_Digital+", "DTS-HD", "MAT", "DST", "WMA_Pro",
@@ -2338,32 +2353,52 @@ static ssize_t show_aud_cap(struct device *dev,
 	static const char * const aud_sampling_frequency[] = {
 		"ReferToStreamHeader", "32", "44.1", "48", "88.2", "96",
 		"176.4", "192", NULL};
-	static const char * const aud_sample_size[] = {"ReferToStreamHeader",
-		"16", "20", "24", NULL};
-
 	struct rx_cap *pRXCap = &(hdmitx_device.RXCap);
 
 	pos += snprintf(buf + pos, PAGE_SIZE,
 		"CodingType MaxChannels SamplingFreq SampleSize\n");
 	for (i = 0; i < pRXCap->AUD_count; i++) {
-		pos += snprintf(buf + pos, PAGE_SIZE, "%s, %d ch, ",
-			aud_coding_type[pRXCap->RxAudioCap[i].
-				audio_format_code],
+		pos += snprintf(buf + pos, PAGE_SIZE, "%s",
+			aud_ct[pRXCap->RxAudioCap[i].audio_format_code]);
+		if ((pRXCap->RxAudioCap[i].audio_format_code == CT_DOLBY_D) &&
+			(pRXCap->RxAudioCap[i].cc3 & 1))
+			pos += snprintf(buf + pos, PAGE_SIZE, "/ATMOS");
+		pos += snprintf(buf + pos, PAGE_SIZE, ", %d ch, ",
 			pRXCap->RxAudioCap[i].channel_num_max + 1);
 		for (j = 0; j < 7; j++) {
 			if (pRXCap->RxAudioCap[i].freq_cc & (1 << j))
 				pos += snprintf(buf + pos, PAGE_SIZE, "%s/",
 					aud_sampling_frequency[j+1]);
 		}
-		pos += snprintf(buf + pos - 1, PAGE_SIZE, " kHz, ") - 1;
-		for (j = 0; j < 3; j++) {
-			if (pRXCap->RxAudioCap[i].cc3 & (1 << j))
-				pos += snprintf(buf + pos, PAGE_SIZE, "%s/",
-					aud_sample_size[j+1]);
+		pos += snprintf(buf + pos - 1, PAGE_SIZE, " kHz, ");
+		switch (pRXCap->RxAudioCap[i].audio_format_code) {
+		case CT_PCM:
+			_show_pcm_ch(pRXCap, i, &pos, buf);
+			break;
+		case CT_AC_3:
+		case CT_MPEG1:
+		case CT_MP3:
+		case CT_MPEG2:
+		case CT_AAC:
+		case CT_DTS:
+		case CT_ATRAC:
+		case CT_ONE_BIT_AUDIO:
+			pos += snprintf(buf + pos, PAGE_SIZE,
+				"MaxBitRate %dkHz\n",
+				pRXCap->RxAudioCap[i].cc3 * 8);
+			break;
+		case CT_DOLBY_D:
+		case CT_DTS_HD:
+		case CT_MAT:
+		case CT_DST:
+			pos += snprintf(buf + pos, PAGE_SIZE, "DepVaule 0x%x\n",
+				pRXCap->RxAudioCap[i].cc3);
+			break;
+		case CT_WMA:
+		default:
+			break;
 		}
-		pos += snprintf(buf + pos - 1, PAGE_SIZE, " bit\n") - 1;
 	}
-
 	return pos;
 }
 
