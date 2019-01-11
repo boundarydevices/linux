@@ -1660,7 +1660,7 @@ static int dolby_core1_set(
 	}
 
 	if (dolby_vision_on_count
-		< dolby_vision_run_mode_delay) {
+		<= dolby_vision_run_mode_delay) {
 		VSYNC_WR_MPEG_REG(
 			VPP_VD1_CLIP_MISC0,
 			(0x200 << 10) | 0x200);
