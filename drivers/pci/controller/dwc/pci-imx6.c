@@ -1834,6 +1834,8 @@ static int __init imx6_pcie_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "unable to get disable gpio\n");
 			return ret;
 		}
+	} else if (imx6_pcie->dis_gpio == -EPROBE_DEFER) {
+		return imx6_pcie->dis_gpio;
 	}
 
 	imx6_pcie->power_on_gpio = of_get_named_gpio(node, "power-on-gpio", 0);
@@ -1846,6 +1848,8 @@ static int __init imx6_pcie_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "unable to get power-on gpio\n");
 			return ret;
 		}
+	} else if (imx6_pcie->power_on_gpio == -EPROBE_DEFER) {
+		return imx6_pcie->power_on_gpio;
 	}
 
 	imx6_pcie->reset_gpio = of_get_named_gpio(node, "reset-gpio", 0);
