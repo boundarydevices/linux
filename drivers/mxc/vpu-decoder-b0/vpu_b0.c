@@ -69,6 +69,7 @@ static void v4l2_update_stream_addr(struct vpu_ctx *ctx, uint32_t uStrBufIdx);
 static int swreset_vpu_firmware(struct vpu_dev *dev, u_int32 idx);
 static int find_first_available_instance(struct vpu_dev *dev);
 static int remove_instance_file(struct vpu_ctx *ctx);
+static void fill_stream_buffer_info(struct vpu_ctx *ctx);
 #define CHECK_BIT(var, pos) (((var) >> (pos)) & 1)
 
 static char *cmd2str[] = {
@@ -1580,7 +1581,7 @@ static void transfer_buffer_to_firmware(struct vpu_ctx *ctx, void *input_buffer,
 	ctx->frm_dis_delay = 1;
 	ctx->frm_dec_delay = 1;
 	ctx->frm_total_num = 1;
-
+	fill_stream_buffer_info(ctx);
 }
 
 static void v4l2_transfer_buffer_to_firmware(struct queue_data *This, struct vb2_buffer *vb)
@@ -1744,6 +1745,23 @@ static int update_stream_addr_vpu(struct vpu_ctx *ctx, void *input_buffer, uint3
 
 	return size;
 }
+
+static void fill_stream_buffer_info(struct vpu_ctx *ctx)
+{
+	pDEC_RPC_HOST_IFACE pSharedInterface = ctx->dev->shared_mem.pSharedInterface;
+	pBUFFER_INFO_TYPE buffer_info = &pSharedInterface->StreamBuffInfo[ctx->str_index];
+
+	if (!ctx)
+		return;
+
+	if (ctx->start_code_bypass)
+		buffer_info->stream_input_mode = NON_FRAME_LVL;
+	else
+		buffer_info->stream_input_mode = FRAME_LVL;
+
+	buffer_info->stream_pic_input_count = ctx->frm_total_num;
+}
+
 //warn uStrIdx need to refine how to handle it
 static void v4l2_update_stream_addr(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 {
@@ -1780,6 +1798,7 @@ static void v4l2_update_stream_addr(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 			ctx->frm_dis_delay++;
 			ctx->frm_total_num++;
 			record_log_info(ctx, LOG_UPDATE_STREAM, 0, buffer_size);
+			fill_stream_buffer_info(ctx);
 		}
 #ifdef HANDLE_EOS
 		if (buffer_size < p_data_req->vb2_buf->planes[0].length)
@@ -2230,6 +2249,7 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		pStrBufDesc->wptr = pStrBufDesc->rptr;
 		ctx->frm_dis_delay = 0;
 		ctx->frm_dec_delay = 0;
+		ctx->frm_total_num = 0;
 		v4l2_vpu_send_cmd(ctx, uStrIdx, VID_API_CMD_RST_BUF, 0, NULL);
 		}
 		break;
