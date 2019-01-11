@@ -32,6 +32,7 @@
 #include <linux/reset.h>
 #include <linux/busfreq-imx.h>
 #include <linux/regulator/consumer.h>
+#include "../../pci.h"
 
 #include "pcie-designware.h"
 
@@ -1414,13 +1415,12 @@ static int __init imx6_pcie_probe(struct platform_device *pdev)
 		void __iomem *pcie_arb_base_addr;
 		struct timeval tv1s, tv1e, tv2s, tv2e;
 		u32 tv_count1, tv_count2;
-		struct device_node *np = node;
 		struct pcie_port *pp = &pci->pp;
 		LIST_HEAD(res);
 		struct resource_entry *win, *tmp;
 
-		ret = of_pci_get_host_bridge_resources(np, 0, 0xff, &res,
-						       &pp->io_base);
+		ret = devm_of_pci_get_host_bridge_resources(dev, 0, 0xff, &res,
+							    &pp->io_base);
 		if (ret)
 			return ret;
 
