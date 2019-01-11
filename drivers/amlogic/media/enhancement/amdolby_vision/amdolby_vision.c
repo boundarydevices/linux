@@ -3503,9 +3503,29 @@ static int dolby_vision_policy_process(
 					*mode = DOLBY_VISION_OUTPUT_MODE_SDR8;
 					mode_change = 1;
 				}
+			} else if (src_format == FORMAT_HDR10
+				&& (!(dolby_vision_hdr10_policy & 1))) {
+				if (dolby_vision_mode !=
+				DOLBY_VISION_OUTPUT_MODE_BYPASS) {
+					/* HDR bypass */
+					pr_dolby_dbg("dovi output -> DOLBY_VISION_OUTPUT_MODE_BYPASS\n");
+					*mode = DOLBY_VISION_OUTPUT_MODE_BYPASS;
+					mode_change = 1;
+				}
+			} else if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
+				/*g12 has a hardware bug. Therefore, dv cores
+				 *must keep working even if under sdr mode
+				 */
+				if (dolby_vision_mode !=
+					DOLBY_VISION_OUTPUT_MODE_SDR8) {
+					/* SDR to SDR */
+					pr_dolby_dbg("dovi output -> DOLBY_VISION_OUTPUT_MODE_SDR8\n");
+					*mode = DOLBY_VISION_OUTPUT_MODE_SDR8;
+					mode_change = 1;
+				}
 			} else if (dolby_vision_mode !=
-			DOLBY_VISION_OUTPUT_MODE_BYPASS) {
-				/* HDR/SDR bypass */
+				DOLBY_VISION_OUTPUT_MODE_BYPASS) {
+				/* SDR bypass */
 				pr_dolby_dbg("dovi output -> DOLBY_VISION_OUTPUT_MODE_BYPASS\n");
 				*mode = DOLBY_VISION_OUTPUT_MODE_BYPASS;
 				mode_change = 1;
