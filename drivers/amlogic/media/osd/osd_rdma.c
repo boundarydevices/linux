@@ -405,6 +405,17 @@ static inline int wrtie_reg_internal(u32 addr, u32 val)
 	/* TODO remove the Done write operation to save the time */
 	request_item.addr = OSD_RDMA_FLAG_REG;
 	request_item.val = OSD_RDMA_STATUS_MARK_TBL_DONE;
+	/* afbc start before afbc reset will cause afbc decode error */
+	if (addr == VIU_SW_RESET) {
+		int i = 0;
+
+		for (i = 0; i < item_count; i++) {
+			if (rdma_table[i].addr == VPU_MAFBC_COMMAND) {
+				rdma_table[i].addr = VIU_OSD1_TEST_RDDATA;
+				rdma_table[i].val = 0x0;
+			}
+		}
+	}
 	osd_rdma_mem_cpy(
 		&rdma_table[item_count],
 		&request_item, 8);
