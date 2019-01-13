@@ -1005,6 +1005,7 @@ static int mipi_dsi_lcd_init(struct mipi_dsi_info *mipi_dsi,
 		/* get the videomode in the order: cmdline->platform data->driver */
 		mipi_dsi_lcd_db[i].lcd_callback.get_mipi_lcd_videomode(&mipi_lcd_modedb, &size,
 						&mipi_dsi->lcd_config);
+		mipi_dsi->mode = mipi_lcd_modedb;
 	} else {
 		mipi_dsi->mode = mipi_lcd_modedb = &mipi_dsi->fb_vm;
 		size = 1;
@@ -1014,10 +1015,6 @@ static int mipi_dsi_lcd_init(struct mipi_dsi_info *mipi_dsi,
 	err = get_dphy_pll_config(mipi_dsi, mipi_dsi->lcd_config->max_phy_clk);
 	if (err)
 		return err;
-	ret = mipi_dsi_power_on1a(mipi_dsi);
-	if (ret)
-		return ret;
-	check_mipi_cmds_from_dtb(mipi_dsi, np);
 
 	err = fb_find_mode(&setting->fbi->var, setting->fbi,
 				setting->dft_mode_str,
@@ -1041,6 +1038,12 @@ static int mipi_dsi_lcd_init(struct mipi_dsi_info *mipi_dsi,
 		dev_err(dev, "failed to add videomode.\n");
 		return err;
 	}
+	ret = mipi_dsi_power_on1a(mipi_dsi);
+	if (ret) {
+		dev_err(dev, "mipi_dsi_power_on1a: failed %d\n", ret);
+		return ret;
+	}
+	check_mipi_cmds_from_dtb(mipi_dsi, np);
 	return 0;
 }
 
