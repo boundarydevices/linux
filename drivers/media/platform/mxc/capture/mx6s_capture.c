@@ -18,6 +18,8 @@
  *
  * @ingroup CSI
  */
+
+//#define DEBUG
 #include <asm/dma.h>
 #include <linux/busfreq-imx.h>
 #include <linux/clk.h>
@@ -322,6 +324,8 @@ struct mx6s_csi_dev {
 	int irq;
 
 	u32	 type;
+	u32      nextfb;
+	u32      skipframe;
 	u32 bytesperline;
 	v4l2_std_id std;
 	struct mx6s_fmt		*fmt;
@@ -451,6 +455,7 @@ static void csisw_reset(struct mx6s_csi_dev *csi_dev)
 	isr = csi_read(csi_dev, CSI_CSISR);
 	csi_write(csi_dev, isr, CSI_CSISR);
 
+	cr18 |= 0x80030;
 	/* Ensable csi  */
 	cr18 |= BIT_CSI_ENABLE;
 	csi_write(csi_dev, cr18, CSI_CSICR18);
@@ -470,8 +475,8 @@ static void csi_init_interface(struct mx6s_csi_dev *csi_dev)
 	val |= BIT_GCLK_MODE;
 	val |= BIT_HSYNC_POL;
 	val |= BIT_FCC;
-	val |= 1 << SHIFT_MCLKDIV;
-	val |= BIT_MCLKEN;
+	//val |= 1 << SHIFT_MCLKDIV;
+	//val |= BIT_MCLKEN;
 	__raw_writel(val, csi_dev->regbase + CSI_CSICR1);
 
 	imag_para = (640 << 16) | 960;
@@ -656,7 +661,6 @@ static int mx6s_videobuf_setup(struct vb2_queue *vq,
 
 	sizes[0] = csi_dev->pix.sizeimage;
 
-	pr_debug("size=%d\n", sizes[0]);
 	if (0 == *count)
 		*count = 32;
 	if (!*num_planes &&
@@ -664,6 +668,7 @@ static int mx6s_videobuf_setup(struct vb2_queue *vq,
 		*count = (MAX_VIDEO_MEM * 1024 * 1024) / sizes[0];
 
 	*num_planes = 1;
+	dev_dbg(csi_dev->dev, "adjusted count=%d\n", *count, sizes[0]);
 
 	return 0;
 }
@@ -673,9 +678,10 @@ static int mx6s_videobuf_prepare(struct vb2_buffer *vb)
 	struct mx6s_csi_dev *csi_dev = vb2_get_drv_priv(vb->vb2_queue);
 	int ret = 0;
 
+#ifdef DEBUG_BUFFERS
 	dev_dbg(csi_dev->dev, "%s (vb=0x%p) 0x%p %lu\n", __func__,
 		vb, vb2_plane_vaddr(vb, 0), vb2_get_plane_payload(vb, 0));
-
+#endif 
 #ifdef DEBUG
 	/*
 	 * This can be useful if you want to see if we actually fill
@@ -706,8 +712,10 @@ static void mx6s_videobuf_queue(struct vb2_buffer *vb)
 	struct mx6s_buffer *buf = container_of(vbuf, struct mx6s_buffer, vb);
 	unsigned long flags;
 
+#ifdef DEBUG_BUFFERS
 	dev_dbg(csi_dev->dev, "%s (vb=0x%p) 0x%p %lu\n", __func__,
 		vb, vb2_plane_vaddr(vb, 0), vb2_get_plane_payload(vb, 0));
+#endif 
 
 	spin_lock_irqsave(&csi_dev->slock, flags);
 
@@ -748,6 +756,7 @@ static int mx6s_csi_enable(struct mx6s_csi_dev *csi_dev)
 	unsigned long val;
 	int timeout, timeout2;
 
+	csi_dev->skipframe = 0;
 	csisw_reset(csi_dev);
 
 	if (pix->field == V4L2_FIELD_INTERLACED)
@@ -863,8 +872,8 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 		csi_write(csi_dev, cr1, CSI_CSICR1);
 
 		cr18 = csi_read(csi_dev, CSI_CSICR18);
-		cr18 &= BIT_MIPI_DATA_FORMAT_MASK;
-		cr18 |= BIT_DATA_FROM_MIPI;
+		cr18 &= ~BIT_MIPI_DATA_FORMAT_MASK;
+		cr18 |=  BIT_DATA_FROM_MIPI;
 
 		switch (csi_dev->fmt->pixelformat) {
 		case V4L2_PIX_FMT_UYVY:
@@ -944,6 +953,8 @@ static int mx6s_start_streaming(struct vb2_queue *vq, unsigned int count)
 	mx6s_update_csi_buf(csi_dev, phys, buf->internal.bufnum);
 	list_move_tail(csi_dev->capture.next, &csi_dev->active_bufs);
 
+	csi_dev->nextfb = 0;
+
 	spin_unlock_irqrestore(&csi_dev->slock, flags);
 
 	return mx6s_csi_enable(csi_dev);
@@ -1017,6 +1028,7 @@ static void mx6s_csi_frame_done(struct mx6s_csi_dev *csi_dev,
 		 * Just return it to the discard queue.
 		 */
 		list_move_tail(csi_dev->active_bufs.next, &csi_dev->discard);
+		dev_dbg(csi_dev->dev,"%s: used discard buffer, expected bufnum %d\n",__func__,bufnum);
 	} else {
 		buf = mx6s_ibuf_to_buf(ibuf);
 
@@ -1035,9 +1047,11 @@ static void mx6s_csi_frame_done(struct mx6s_csi_dev *csi_dev,
 					phys_fb1);
 			}
 		}
+#ifdef DEBUG_BUFFERS
 		dev_dbg(csi_dev->dev, "%s (vb=0x%p) 0x%p %lu\n", __func__, vb,
 				vb2_plane_vaddr(vb, 0),
 				vb2_get_plane_payload(vb, 0));
+#endif
 
 		list_del_init(&buf->internal.queue);
 		vb->timestamp =ktime_get_ns();
@@ -1049,6 +1063,7 @@ static void mx6s_csi_frame_done(struct mx6s_csi_dev *csi_dev,
 	}
 
 	csi_dev->frame_count++;
+	csi_dev->nextfb = (bufnum == 0 ? 1 : 0);
 
 	/* Config discard buffer to active_bufs */
 	if (list_empty(&csi_dev->capture)) {
@@ -1132,6 +1147,7 @@ static irqreturn_t mx6s_csi_irq_handler(int irq, void *data)
 		csi_write(csi_dev, cr18, CSI_CSICR18);
 
 		pr_debug("base address switching Change Err.\n");
+		csi_dev->skipframe = 1;
 	}
 
 	if ((status & BIT_DMA_TSF_DONE_FB1) &&
@@ -1142,12 +1158,25 @@ static irqreturn_t mx6s_csi_irq_handler(int irq, void *data)
 		 * Skip it to avoid base address updated
 		 * when csi work in field0 and field1 will write to
 		 * new base address.
-		 * PDM TKT230775 */
-		pr_debug("Skip two frames\n");
+		 * PDM TKT230775 
+		 */ 
+		pr_warn("Skip two frames\n");
 	} else if (status & BIT_DMA_TSF_DONE_FB1) {
-		mx6s_csi_frame_done(csi_dev, 0, false);
+		if (csi_dev->nextfb == 0)
+			if (csi_dev->skipframe > 0)
+				csi_dev->skipframe--;
+			else
+				mx6s_csi_frame_done(csi_dev, 0, false);
+		else
+			pr_warn("skip frame 0\n");
 	} else if (status & BIT_DMA_TSF_DONE_FB2) {
-		mx6s_csi_frame_done(csi_dev, 1, false);
+		if (csi_dev->nextfb == 1)
+			if (csi_dev->skipframe > 0)
+				csi_dev->skipframe--;
+			else
+				mx6s_csi_frame_done(csi_dev, 1, false);
+		else
+			pr_warn("skip frame 1\n");
 	}
 
 	spin_unlock(&csi_dev->slock);
@@ -1475,8 +1504,9 @@ static int mx6s_vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	csi_dev->pix.sizeimage = f->fmt.pix.sizeimage;
 	csi_dev->pix.field     = f->fmt.pix.field;
 	csi_dev->type          = f->type;
-	dev_dbg(csi_dev->dev, "set to pixelformat '%4.6s'\n",
-			(char *)&csi_dev->fmt->name);
+	dev_dbg(csi_dev->dev, "set to pixelformat '%4.6s' %d x %d (%d bytes)\n",
+			(char *)&csi_dev->fmt->name, csi_dev->pix.height, 
+			csi_dev->pix.width, csi_dev->pix.sizeimage);
 
 	/* Config csi */
 	mx6s_configure_csi(csi_dev);
