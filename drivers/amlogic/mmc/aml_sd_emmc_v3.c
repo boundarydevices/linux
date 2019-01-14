@@ -1152,6 +1152,7 @@ static int _aml_sd_emmc_execute_tuning(struct mmc_host *mmc, u32 opcode,
 	int best_win_start, best_win_size;
 	int curr_win_start, curr_win_size;
 	u32 old_dly, d1_dly, dly;
+	struct para_e *para = &(host->data->sdmmc);
 
 	if ((host->mem->start == host->data->port_b_base)
 			&& host->data->tdma_f)
@@ -1180,6 +1181,26 @@ tunning:
 	host->is_tunning = 1;
 	pr_info("%s: clk %d tuning start\n",
 			mmc_hostname(mmc), mmc->actual_clock);
+
+	/*retry adj[clk_div-1] tuning result*/
+	if ((clk_div == 5) && (aml_card_type_mmc(pdata))) {
+		gadjust->adj_delay = clk_div-1;
+		gadjust->adj_enable = 1;
+		gadjust->cali_enable = 0;
+		gadjust->cali_rise = 0;
+		writel(adjust, host->base +	SD_EMMC_ADJUST_V3);
+		nmatch = aml_sd_emmc_tuning_transfer(mmc, opcode,
+				blk_pattern, host->blk_test, blksz);
+		if (nmatch != TUNING_NUM_PER_POINT) {
+			clkc->core_phase = para->hs2.tx_phase;
+			clkc->tx_phase = para->hs2.core_phase;
+			writel(vclk, host->base + SD_EMMC_CLOCK_V3);
+			pr_info("%s:try clock:0x%x>>>rx_tuning[%d] = %d\n",
+				mmc_hostname(host->mmc),
+				readl(host->base + SD_EMMC_CLOCK_V3),
+				gadjust->adj_delay, nmatch);
+		}
+	}
 	for (adj_delay = 0; adj_delay < clk_div; adj_delay++) {
 		gadjust->adj_delay = adj_delay;
 		gadjust->adj_enable = 1;
@@ -1359,7 +1380,7 @@ RETRY:
 	return 0;
 }
 
-int aml_emmc_hs200_timming(struct mmc_host *mmc)
+int __attribute__((unused)) aml_emmc_hs200_timming(struct mmc_host *mmc)
 {
 	struct amlsd_platform *pdata = mmc_priv(mmc);
 	struct amlsd_host *host = pdata->host;
@@ -1601,17 +1622,18 @@ int aml_mmc_execute_tuning_v3(struct mmc_host *mmc, u32 opcode)
 			pdata->intf3 = intf3;
 			aml_sd_emmc_clktest(mmc);
 			err = aml_sdio_timing(mmc, opcode,
-					&tuning_data, adj_win_start);
+				&tuning_data, adj_win_start);
 		}
 	} else if (!(pdata->caps2 & MMC_CAP2_HS400)) {
-		if (mmc->actual_clock >= 200000000) {
-			intf3 = readl(host->base + SD_EMMC_INTF3);
-			intf3 |= (1<<22);
-			writel(intf3, (host->base + SD_EMMC_INTF3));
-			pdata->intf3 = intf3;
-			err = aml_emmc_hs200_timming(mmc);
-		} else
-			err = _aml_sd_emmc_execute_tuning(mmc, opcode,
+		/*if (mmc->actual_clock >= 200000000) {
+		 *	intf3 = readl(host->base + SD_EMMC_INTF3);
+		 *	intf3 |= (1<<22);
+		 *	writel(intf3, (host->base + SD_EMMC_INTF3));
+		 *	pdata->intf3 = intf3;
+		 *	err = aml_emmc_hs200_timming(mmc);
+		 *} else
+		 */
+		err = _aml_sd_emmc_execute_tuning(mmc, opcode,
 					&tuning_data, adj_win_start);
 	} else {
 		intf3 = readl(host->base + SD_EMMC_INTF3);
