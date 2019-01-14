@@ -207,6 +207,11 @@ static inline void dev_pm_opp_cpumask_remove_table(const struct cpumask *cpumask
 int dev_pm_opp_of_add_table(struct device *dev);
 void dev_pm_opp_of_remove_table(struct device *dev);
 int dev_pm_opp_of_cpumask_add_table(const struct cpumask *cpumask);
+#ifdef CONFIG_AMLOGIC_MODIFY
+int dev_pm_opp_of_add_table_indexed(struct device *dev, int index);
+int dev_pm_opp_of_cpumask_add_table_indexed(const struct cpumask *cpumask,
+		int index);
+#endif
 void dev_pm_opp_of_cpumask_remove_table(const struct cpumask *cpumask);
 int dev_pm_opp_of_get_sharing_cpus(struct device *cpu_dev, struct cpumask *cpumask);
 #else
@@ -224,6 +229,18 @@ static inline int dev_pm_opp_of_cpumask_add_table(const struct cpumask *cpumask)
 	return -ENOTSUPP;
 }
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+int dev_pm_opp_of_add_table_indexed(struct device *dev, int index)
+{
+	return -ENOTSUPP;
+}
+
+int dev_pm_opp_of_cpumask_add_table_indexed(const struct cpumask *cpumask,
+		int index)
+{
+	return -ENOTSUPP;
+}
+#endif
 static inline void dev_pm_opp_of_cpumask_remove_table(const struct cpumask *cpumask)
 {
 }

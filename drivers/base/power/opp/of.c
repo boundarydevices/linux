@@ -471,6 +471,59 @@ int dev_pm_opp_of_add_table(struct device *dev)
 }
 EXPORT_SYMBOL_GPL(dev_pm_opp_of_add_table);
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+/**
+ * dev_pm_opp_of_add_table_indexed() - Initialize indexed opp
+ *table from device tree
+ * @dev:	device pointer used to lookup OPP table.
+ * @index:	Index number.
+ *
+ * Register the initial OPP table with the OPP library for given device only
+ * using the "operating-points-v2" property.
+ *
+ * Return:
+ * 0		On success OR
+ *		Duplicate OPPs (both freq and volt are same) and opp->available
+ * -EEXIST	Freq are same and volt are different OR
+ *		Duplicate OPPs (both freq and volt are same) and !opp->available
+ * -ENOMEM	Memory allocation failure
+ * -ENODEV	when 'operating-points' property is not found or is invalid data
+ *		in device node.
+ * -ENODATA	when empty 'operating-points' property is found
+ * -EINVAL	when invalid entries are found in opp-v2 table
+ */
+int dev_pm_opp_of_add_table_indexed(struct device *dev, int index)
+{
+	struct device_node *opp_np;
+	int ret, count;
+
+again:
+	opp_np = of_parse_phandle(dev->of_node, "operating-points-v2", index);
+	if (!opp_np) {
+		/*
+		 * If only one phandle is present, then the same OPP table
+		 * applies for all index requests.
+		 */
+		count = of_count_phandle_with_args(dev->of_node,
+						   "operating-points-v2", NULL);
+		if (count <= index) {
+			pr_err("%s,count %d must smaller than index %d!\n",
+				__func__, count, index);
+			index = 0;
+			goto again;
+		}
+
+		return -ENODEV;
+	}
+
+	ret = _of_add_opp_table_v2(dev, opp_np);
+	of_node_put(opp_np);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(dev_pm_opp_of_add_table_indexed);
+#endif
+
 /* CPU device specific helpers */
 
 /**
@@ -533,6 +586,51 @@ int dev_pm_opp_of_cpumask_add_table(const struct cpumask *cpumask)
 	return ret;
 }
 EXPORT_SYMBOL_GPL(dev_pm_opp_of_cpumask_add_table);
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+/**
+ * dev_pm_opp_of_cpumask_add_table_index() - Adds OPP table for @cpumask
+ * @cpumask:	cpumask for which OPP table needs to be added.
+ *
+ * This adds the OPP tables for CPUs present in the @cpumask.
+ *
+ * Locking: The internal opp_table and opp structures are RCU protected.
+ * Hence this function internally uses RCU updater strategy with mutex locks
+ * to keep the integrity of the internal data structures. Callers should ensure
+ * that this function is *NOT* called under RCU protection or in contexts where
+ * mutex cannot be locked.
+ */
+int dev_pm_opp_of_cpumask_add_table_indexed(const struct cpumask *cpumask,
+		int index)
+{
+	struct device *cpu_dev;
+	int cpu, ret = 0;
+
+	WARN_ON(cpumask_empty(cpumask));
+
+	for_each_cpu(cpu, cpumask) {
+		cpu_dev = get_cpu_device(cpu);
+		if (!cpu_dev) {
+			pr_err("%s: failed to get cpu%d device\n", __func__,
+			       cpu);
+			continue;
+		}
+
+		ret = dev_pm_opp_of_add_table_indexed(cpu_dev, index);
+		if (ret) {
+			pr_err("%s: couldn't find opp table for cpu:%d, %d\n",
+			       __func__, cpu, ret);
+
+			/* Free all other OPPs */
+			dev_pm_opp_of_cpumask_remove_table(cpumask);
+			break;
+		}
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(dev_pm_opp_of_cpumask_add_table_indexed);
+#endif
 
 /*
  * Works only for OPP v2 bindings.

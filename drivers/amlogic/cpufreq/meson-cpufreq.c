@@ -30,51 +30,18 @@
 #include <linux/clk.h>
 #include <linux/cpumask.h>
 #include <linux/clk-provider.h>
-#include <linux/cpu_cooling.h>
 #include <linux/mutex.h>
 #include <linux/of_platform.h>
 #include <linux/topology.h>
 #include <linux/regulator/consumer.h>
 #include <linux/delay.h>
 #include <linux/regulator/driver.h>
+#include <linux/regulator/driver.h>
 
 #include "../../regulator/internal.h"
+#include <linux/amlogic/scpi_protocol.h>
 #include "../../base/power/opp/opp.h"
-/* Currently we support only two clusters */
-#define MAX_CLUSTERS	2
-
-/*core power supply*/
-#define CORE_SUPPLY "cpu"
-
-/* Core Clocks */
-#define CORE_CLK	"core_clk"
-#define LOW_FREQ_CLK_PARENT	"low_freq_clk_parent"
-#define HIGH_FREQ_CLK_PARENT	"high_freq_clk_parent"
-
-static struct thermal_cooling_device *cdev[MAX_CLUSTERS];
-static struct clk *clk[MAX_CLUSTERS];
-static struct cpufreq_frequency_table *freq_table[MAX_CLUSTERS];
-
-/* Default voltage_tolerance */
-#define DEF_VOLT_TOL		0
-
-/*mid rate for set parent,Khz*/
-static unsigned int mid_rate = (1000*1000);
-static unsigned int gap_rate = (10*1000*1000);
-
-struct meson_cpufreq_driver_data {
-	struct device *cpu_dev;
-	struct regulator *reg;
-	/* voltage tolerance in percentage */
-	unsigned int volt_tol;
-	struct clk *high_freq_clk_p;
-	struct clk *low_freq_clk_p;
-};
-
-
-static DEFINE_PER_CPU(unsigned int, physical_cluster);
-
-static struct mutex cluster_lock[MAX_CLUSTERS];
+#include "meson-cpufreq.h"
 
 static unsigned int meson_cpufreq_get_rate(unsigned int cpu)
 {
@@ -337,6 +304,70 @@ static inline u32 get_table_max(struct cpufreq_frequency_table *table)
 	return max_freq;
 }
 
+int get_cpufreq_tables_efuse(u32 cur_cluster)
+{
+	int ret, efuse_info;
+	u32 freq, vol;
+
+	efuse_info = scpi_get_cpuinfo(cur_cluster, &freq, &vol);
+	if (efuse_info)
+		pr_err("%s,get invalid efuse_info = %d by mailbox!\n",
+			__func__, efuse_info);
+
+	pr_info("%s:efuse info for cpufreq =  %u\n", __func__, freq);
+	BUG_ON(freq && freq < EFUSE_CPUFREQ_MIN);
+	freq = DIV_ROUND_UP(freq, CLK_DIV) * CLK_DIV;
+	pr_info("%s:efuse adjust cpufreq =  %u\n", __func__, freq);
+	if (freq >= hispeed_cpufreq_max)
+		ret = HISPEED_INDEX;
+	else if (freq >= medspeed_cpufreq_max && freq < hispeed_cpufreq_max)
+		ret = MEDSPEED_INDEX;
+	else
+		ret = LOSPEED_INDEX;
+
+	return ret;
+}
+
+int choose_cpufreq_tables_index(const struct device_node *np, u32 cur_cluster)
+{
+	int ret = 0;
+
+	cpufreq_tables_supply = of_property_read_bool(np, "diff_tables_supply");
+	if (cpufreq_tables_supply) {
+		/*choose appropriate cpufreq tables according efuse info*/
+		if (of_property_read_u32(np, "hispeed_cpufreq_max",
+					&hispeed_cpufreq_max)) {
+			pr_err("%s:don't find the node <dynamic_cpufreq_max>\n",
+					__func__);
+			hispeed_cpufreq_max = 0;
+			return ret;
+		}
+
+		if (of_property_read_u32(np, "medspeed_cpufreq_max",
+			&medspeed_cpufreq_max)) {
+			pr_err("%s:don't find the node <medspeed_cpufreq_max>\n",
+				__func__);
+			medspeed_cpufreq_max = 0;
+			return ret;
+		}
+
+		if (of_property_read_u32(np, "lospeed_cpufreq_max",
+			&lospeed_cpufreq_max)) {
+			pr_err("%s:don't find the node <lospeed_cpufreq_max>\n",
+				__func__);
+			lospeed_cpufreq_max = 0;
+			return ret;
+		}
+
+		ret = get_cpufreq_tables_efuse(cur_cluster);
+		pr_info("%s:hispeed_max %u,medspeed_max %u,lospeed_max %u,tables_index %u\n",
+				__func__, hispeed_cpufreq_max,
+				medspeed_cpufreq_max, lospeed_cpufreq_max, ret);
+
+	}
+
+	return ret;
+}
 /* CPU initialization */
 static int meson_cpufreq_init(struct cpufreq_policy *policy)
 {
@@ -349,8 +380,7 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 	unsigned int transition_latency = CPUFREQ_ETERNAL;
 	unsigned int volt_tol = 0;
 	unsigned long freq_hz = 0;
-	int cpu = 0;
-	int ret = 0;
+	int cpu = 0, ret = 0, tables_index;
 
 	if (!policy) {
 		pr_err("invalid cpufreq_policy\n");
@@ -415,15 +445,12 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 		volt_tol = DEF_VOLT_TOL;
 	pr_info("value of voltage_tolerance %u\n", volt_tol);
 
-	if (cur_cluster < MAX_CLUSTERS) {
-		int cpu;
-
+	if (cur_cluster < MAX_CLUSTERS)
 		cpumask_copy(policy->cpus, topology_core_cpumask(policy->cpu));
-		for_each_cpu(cpu, policy->cpus)
-			per_cpu(physical_cluster, cpu) = cur_cluster;
-	}
 
-	ret = dev_pm_opp_of_cpumask_add_table(policy->cpus);
+	tables_index = choose_cpufreq_tables_index(np, cur_cluster);
+	ret = dev_pm_opp_of_cpumask_add_table_indexed(policy->cpus,
+			tables_index);
 	if (ret) {
 		pr_err("%s: init_opp_table failed, cpu: %d, cluster: %d, err: %d\n",
 				__func__, cpu_dev->id, cur_cluster, ret);
@@ -502,11 +529,6 @@ static int meson_cpufreq_exit(struct cpufreq_policy *policy)
 	cpufreq_data = policy->driver_data;
 	if (cpufreq_data == NULL)
 		return 0;
-
-	if (cur_cluster < MAX_CLUSTERS) {
-		cpufreq_cooling_unregister(cdev[cur_cluster]);
-		cdev[cur_cluster] = NULL;
-	}
 
 	cpu_dev = get_cpu_device(policy->cpu);
 	if (!cpu_dev) {

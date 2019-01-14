@@ -14408,6 +14408,7 @@ F: sound/soc/codecs/amlogic/ad82584f.h
 
 AMLOGIC CPUFREQS DRIVER
 M:	hong guo <hong.guo@amlogic.com>
+F:	drivers/amlogic/cpufreq/meson-cpufreq.h
 F:	drivers/amlogic/cpufreq/meson-cpufreq.c
 F:	drivers/amlogic/clk/clk-cpu-fclk-composite.c
 
