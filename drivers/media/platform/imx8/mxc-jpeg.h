@@ -89,6 +89,7 @@ struct mxc_jpeg_ctx {
 	unsigned int			mode;
 	unsigned int			enc_state;
 	unsigned int			aborting;
+	unsigned int			stopping;
 };
 
 struct mxc_jpeg_slot_data {

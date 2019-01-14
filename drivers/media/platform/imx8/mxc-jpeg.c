@@ -405,6 +405,16 @@ static void mxc_jpeg_addrs(struct mxc_jpeg_desc *desc,
 		offset;
 }
 
+static void notify_eos(struct mxc_jpeg_ctx *ctx)
+{
+	const struct v4l2_event ev = {
+		.type = V4L2_EVENT_EOS
+	};
+
+	dev_dbg(ctx->mxc_jpeg->dev, "Notify app event EOS reached");
+	v4l2_event_queue_fh(&ctx->fh, &ev);
+}
+
 static irqreturn_t mxc_jpeg_dec_irq(int irq, void *priv)
 {
 	struct mxc_jpeg_dev *jpeg = priv;
@@ -647,17 +657,20 @@ end:
 static int mxc_jpeg_decoder_cmd(struct file *file, void *priv,
 			      struct v4l2_decoder_cmd *cmd)
 {
-	struct mxc_jpeg_ctx *ctx = mxc_jpeg_fh_to_ctx(file->private_data);
+	struct v4l2_fh *fh = file->private_data;
+	struct mxc_jpeg_ctx *ctx = mxc_jpeg_fh_to_ctx(fh);
 	struct device *dev = ctx->mxc_jpeg->dev;
 
 	switch (cmd->cmd) {
 	case V4L2_DEC_CMD_STOP:
 		dev_dbg(dev, "Received V4L2_DEC_CMD_STOP");
-		/*
-		 * TODO, provide actual implementation if needed,
-		 * for now, just silence vb2_warn_zero_bytesused
-		 * because allow_zero_bytesused flag is set
-		 */
+		if (v4l2_m2m_num_src_bufs_ready(fh->m2m_ctx) == 0) {
+			/* No more src bufs, notify app EOS */
+			notify_eos(ctx);
+		} else {
+			/* will send EOS later*/
+			ctx->stopping = 1;
+		}
 		return 0;
 	default:
 		return -EINVAL;
@@ -1484,6 +1497,27 @@ end:
 	return v4l2_m2m_qbuf(file, fh->m2m_ctx, buf);
 }
 
+static int mxc_jpeg_dqbuf(struct file *file, void *priv,
+			  struct v4l2_buffer *buf)
+{
+	struct v4l2_fh *fh = file->private_data;
+	struct mxc_jpeg_ctx *ctx = mxc_jpeg_fh_to_ctx(priv);
+	struct device *dev = ctx->mxc_jpeg->dev;
+	int num_src_ready = v4l2_m2m_num_src_bufs_ready(fh->m2m_ctx);
+	int ret;
+
+	dev_dbg(dev, "DQBUF type=%d, index=%d", buf->type, buf->index);
+	if (ctx->stopping == 1	&& num_src_ready == 0) {
+		/* No more src bufs, notify app EOS */
+		notify_eos(ctx);
+		ctx->stopping = 0;
+	}
+
+	ret = v4l2_m2m_dqbuf(file, fh->m2m_ctx, buf);
+	buf->field = V4L2_FIELD_NONE;
+
+	return ret;
+}
 static const struct v4l2_ioctl_ops mxc_jpeg_ioctl_ops = {
 	.vidioc_querycap		= mxc_jpeg_querycap,
 	.vidioc_enum_fmt_vid_cap	= mxc_jpeg_enum_fmt_vid_cap,
@@ -1502,12 +1536,12 @@ static const struct v4l2_ioctl_ops mxc_jpeg_ioctl_ops = {
 	.vidioc_decoder_cmd		= mxc_jpeg_decoder_cmd,
 
 	.vidioc_qbuf			= mxc_jpeg_qbuf,
+	.vidioc_dqbuf                   = mxc_jpeg_dqbuf,
 
 	.vidioc_create_bufs		= v4l2_m2m_ioctl_create_bufs,
 	.vidioc_prepare_buf		= v4l2_m2m_ioctl_prepare_buf,
 	.vidioc_reqbufs                 = v4l2_m2m_ioctl_reqbufs,
 	.vidioc_querybuf                = v4l2_m2m_ioctl_querybuf,
-	.vidioc_dqbuf                   = v4l2_m2m_ioctl_dqbuf,
 	.vidioc_expbuf                  = v4l2_m2m_ioctl_expbuf,
 	.vidioc_streamon                = v4l2_m2m_ioctl_streamon,
 	.vidioc_streamoff               = v4l2_m2m_ioctl_streamoff,
