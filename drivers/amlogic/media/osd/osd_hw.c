@@ -33,7 +33,7 @@
 #include <linux/fs.h>
 #include <linux/sysfs.h>
 #include <linux/uaccess.h>
-
+#include <linux/amlogic/cpu_version.h>
 /* Android Headers */
 
 /* Amlogic sync headers */
@@ -4441,12 +4441,8 @@ static void osd_update_disp_freescale_enable(u32 index)
 	else
 		vf_bank_len = 4;
 
-	if (osd_hw.hwc_enable && (index == OSD1)
-		&& ((osd_hw.osd_meson_dev.cpu_id ==
-		__MESON_CPU_MAJOR_ID_G12A) ||
-		(osd_hw.osd_meson_dev.cpu_id ==
-		__MESON_CPU_MAJOR_ID_G12B)))
-		shift_workaround = 1;
+	if (osd_hw.hwc_enable && (index == OSD1))
+		shift_workaround = osd_hw.workaround_line;
 
 #ifndef NEW_PPS_PHASE
 	if (osd_hw.bot_type == 1) {
@@ -6398,7 +6394,7 @@ static void osd_set_freescale(u32 index,
 	struct layer_blend_reg_s *blend_reg;
 	u32 width, height;
 	u32 src_height;
-	u32 workaround_line = 1;
+	u32 workaround_line = osd_hw.workaround_line;
 
 	layer_blend = &(blending->layer_blend);
 	blend_reg = &(blending->blend_reg);
@@ -6583,12 +6579,12 @@ static void osd_setting_blend1_input(u32 index,
 	/* for g12a blend shift issue */
 
 	if (osd_hw.hdr_used)
-		workaround_line = 1;
+		workaround_line = osd_hw.workaround_line;
 	else {
 		if (blending->layer_cnt == 2)
 			workaround_line = 0;
 		else
-			workaround_line = 1;
+			workaround_line = osd_hw.workaround_line;
 	}
 
 	layer_blend = &(blending->layer_blend);
@@ -8468,13 +8464,13 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 		osd_hw.disp_info.position_h = 1080;
 		osd_hw.vinfo_width = 1920;
 		osd_hw.vinfo_height = 1080;
+		osd_hw.workaround_line = 0;
 		if ((osd_hw.osd_meson_dev.cpu_id ==
 			__MESON_CPU_MAJOR_ID_G12A) ||
-			(osd_hw.osd_meson_dev.cpu_id ==
-			__MESON_CPU_MAJOR_ID_G12B))
+			((osd_hw.osd_meson_dev.cpu_id ==
+			__MESON_CPU_MAJOR_ID_G12B) &&
+			is_meson_rev_a()))
 			osd_hw.workaround_line = 1;
-		else
-			osd_hw.workaround_line = 0;
 		for (idx = 0; idx < osd_hw.osd_meson_dev.osd_count; idx++) {
 			osd_hw.premult_en[idx] = 0;
 			osd_hw.osd_afbcd[idx].format = COLOR_INDEX_32_ABGR;

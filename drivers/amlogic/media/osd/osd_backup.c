@@ -648,7 +648,7 @@ static struct reg_item osd3_afbcd_recovery_table_g12a[] = {
 		0x0, 0x0000ffff, 1
 	},
 	{
-		VPU_MAFBC_PREFETCH_CFG_S1, 0x0, 3, 1
+		VPU_MAFBC_PREFETCH_CFG_S2, 0x0, 3, 1
 	}
 };
 
