@@ -154,6 +154,7 @@ struct pcie_port {
 	u64			mem_base;
 	phys_addr_t		mem_bus_addr;
 	u32			mem_size;
+	int			cpu_addr_offset;
 	struct resource		*cfg;
 	struct resource		*io;
 	struct resource		*mem;
@@ -163,7 +164,7 @@ struct pcie_port {
 	int			msi_irq;
 	struct irq_domain	*irq_domain;
 	struct irq_domain	*msi_domain;
-	dma_addr_t		msi_data;
+	u64			msi_target;
 	unsigned int		msi_enable[MAX_MSI_CTRLS];
 	u32			num_vectors;
 	u32			irq_status[MAX_MSI_CTRLS];
