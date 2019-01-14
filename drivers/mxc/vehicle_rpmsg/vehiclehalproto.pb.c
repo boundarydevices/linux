@@ -41,6 +41,20 @@ const pb_field_t emulator_VehiclePropConfig_fields[12] = {
     PB_LAST_FIELD
 };
 
+#ifdef CONFIG_VEHICLE_DRIVER_OREO
+const pb_field_t emulator_VehiclePropValue_fields[10] = {
+    PB_FIELD2(  1, INT32   , REQUIRED, STATIC  , FIRST, emulator_VehiclePropValue, prop, prop, 0),
+    PB_FIELD2(  2, INT32   , OPTIONAL, STATIC  , OTHER, emulator_VehiclePropValue, value_type, prop, 0),
+    PB_FIELD2(  3, INT64   , OPTIONAL, STATIC  , OTHER, emulator_VehiclePropValue, timestamp, value_type, 0),
+    PB_FIELD2(  4, INT32   , OPTIONAL, STATIC  , OTHER, emulator_VehiclePropValue, area_id, timestamp, 0),
+    PB_FIELD2(  5, SINT32  , REPEATED, CALLBACK, OTHER, emulator_VehiclePropValue, int32_values, area_id, 0),
+    PB_FIELD2(  6, SINT64  , REPEATED, CALLBACK, OTHER, emulator_VehiclePropValue, int64_values, int32_values, 0),
+    PB_FIELD2(  7, FLOAT   , REPEATED, CALLBACK, OTHER, emulator_VehiclePropValue, float_values, int64_values, 0),
+    PB_FIELD2(  8, STRING  , OPTIONAL, CALLBACK, OTHER, emulator_VehiclePropValue, string_value, float_values, 0),
+    PB_FIELD2(  9, BYTES   , OPTIONAL, CALLBACK, OTHER, emulator_VehiclePropValue, bytes_value, string_value, 0),
+    PB_LAST_FIELD
+};
+#else
 const pb_field_t emulator_VehiclePropValue_fields[11] = {
     PB_FIELD2(  1, INT32   , REQUIRED, STATIC  , FIRST, emulator_VehiclePropValue, prop, prop, 0),
     PB_FIELD2(  2, INT32   , OPTIONAL, STATIC  , OTHER, emulator_VehiclePropValue, value_type, prop, 0),
@@ -54,6 +68,7 @@ const pb_field_t emulator_VehiclePropValue_fields[11] = {
     PB_FIELD2( 10, ENUM    , OPTIONAL, STATIC  , OTHER, emulator_VehiclePropValue, status, bytes_value, 0),
     PB_LAST_FIELD
 };
+#endif
 
 const pb_field_t emulator_VehiclePropGet_fields[3] = {
     PB_FIELD2(  1, INT32   , REQUIRED, STATIC  , FIRST, emulator_VehiclePropGet, prop, prop, 0),

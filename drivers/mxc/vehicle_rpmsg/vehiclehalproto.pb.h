@@ -48,11 +48,13 @@ typedef enum _emulator_Status {
     emulator_Status_ERROR_INVALID_OPERATION = 8
 } emulator_Status;
 
+#ifndef CONFIG_VEHICLE_DRIVER_OREO
 typedef enum _emulator_VehiclePropStatus {
     emulator_VehiclePropStatus_AVAILABLE = 0,
     emulator_VehiclePropStatus_UNAVAILABLE = 1,
     emulator_VehiclePropStatus_ERROR = 2
 } emulator_VehiclePropStatus;
+#endif
 
 /* Struct definitions */
 typedef struct _emulator_VehicleAreaConfig {
@@ -90,8 +92,10 @@ typedef struct _emulator_VehiclePropValue {
     pb_callback_t float_values;
     pb_callback_t string_value;
     pb_callback_t bytes_value;
+#ifndef CONFIG_VEHICLE_DRIVER_OREO
     bool has_status;
     emulator_VehiclePropStatus status;
+#endif
 } emulator_VehiclePropValue;
 
 typedef struct _emulator_VehiclePropConfig {
@@ -139,7 +143,9 @@ typedef struct _emulator_EmulatorMessage {
 #define emulator_VehiclePropValue_prop_tag       1
 #define emulator_VehiclePropValue_value_type_tag 2
 #define emulator_VehiclePropValue_timestamp_tag  3
+#ifndef CONFIG_VEHICLE_DRIVER_OREO
 #define emulator_VehiclePropValue_status_tag     10
+#endif
 #define emulator_VehiclePropValue_area_id_tag    4
 #define emulator_VehiclePropValue_int32_values_tag 5
 #define emulator_VehiclePropValue_int64_values_tag 6
@@ -166,7 +172,11 @@ typedef struct _emulator_EmulatorMessage {
 /* Struct field encoding specification for nanopb */
 extern const pb_field_t emulator_VehicleAreaConfig_fields[8];
 extern const pb_field_t emulator_VehiclePropConfig_fields[12];
+#ifdef CONFIG_VEHICLE_DRIVER_OREO
+extern const pb_field_t emulator_VehiclePropValue_fields[10];
+#else
 extern const pb_field_t emulator_VehiclePropValue_fields[11];
+#endif
 extern const pb_field_t emulator_VehiclePropGet_fields[3];
 extern const pb_field_t emulator_EmulatorMessage_fields[6];
 
