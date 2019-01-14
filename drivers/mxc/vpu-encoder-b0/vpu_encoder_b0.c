@@ -54,6 +54,8 @@
 #include "vpu_event_msg.h"
 #include "vpu_encoder_mem.h"
 
+#define VPU_ENC_DRIVER_VERSION		"1.0.1"
+
 struct vpu_frame_info {
 	struct list_head list;
 	MEDIAIP_ENC_PIC_INFO info;
@@ -3828,6 +3830,8 @@ static ssize_t show_core_info(struct device *dev,
 		num += scnprintf(buf + num, PAGE_SIZE - num,
 			"fw info         : 0x%02x 0x%02x\n", fw[16], fw[17]);
 	}
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"driver version  : %s\n", VPU_ENC_DRIVER_VERSION);
 
 	return num;
 }
@@ -4488,6 +4492,10 @@ static int parse_core_info(struct core_device *core, struct device_node *np)
 		return -EINVAL;
 	}
 	core->irq = ret;
+
+	ret = of_property_read_u32(np, "fsl,vpu_ap_mu_id", &val);
+	if (!ret)
+		core->vpu_mu_id = val;
 
 	ret = of_property_read_u32(np, "fw-buf-size", &val);
 	if (ret) {
@@ -5473,6 +5481,7 @@ module_platform_driver(vpu_enc_driver);
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("Linux VPU driver for Freescale i.MX/MXC");
 MODULE_LICENSE("GPL");
+MODULE_VERSION(VPU_ENC_DRIVER_VERSION);
 
 module_param(vpu_dbg_level_encoder, int, 0644);
 MODULE_PARM_DESC(vpu_dbg_level_encoder, "Debug level (0-4)");
