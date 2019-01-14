@@ -19,7 +19,8 @@
 #define __AO_CEC_H__
 
 
-#define CEC_DRIVER_VERSION	"Ver 2019/1/7\n"
+
+#define CEC_DRIVER_VERSION	"Ver 2019/1/14\n"
 
 #define CEC_FRAME_DELAY		msecs_to_jiffies(400)
 #define CEC_DEV_NAME		"cec"
@@ -538,4 +539,6 @@ extern void cec_restore_logical_addr(unsigned int cec_sel,
 	unsigned int addr_en);
 extern void cec_logicaddr_add(unsigned int cec_sel, unsigned int l_add);
 extern void cec_clear_all_logical_addr(unsigned int cec_sel);
+extern int dump_cecrx_reg(char *b);
+
 #endif	/* __AO_CEC_H__ */
