@@ -1025,8 +1025,6 @@ static void mxc_jpeg_buf_queue(struct vb2_buffer *vb)
 
 
 	if (ctx->state == MXC_JPEG_INIT) {
-		struct vb2_queue *dst_vq = v4l2_m2m_get_vq(
-			ctx->fh.m2m_ctx, V4L2_BUF_TYPE_VIDEO_OUTPUT);
 		static const struct v4l2_event ev_src_ch = {
 			.type = V4L2_EVENT_SOURCE_CHANGE,
 			.u.src_change.changes =
@@ -1034,8 +1032,7 @@ static void mxc_jpeg_buf_queue(struct vb2_buffer *vb)
 		};
 
 		v4l2_event_queue_fh(&ctx->fh, &ev_src_ch);
-		if (vb2_is_streaming(dst_vq))
-			ctx->state = MXC_JPEG_RUNNING;
+		ctx->state = MXC_JPEG_RUNNING;
 	}
 
 end:
@@ -1301,7 +1298,6 @@ static int mxc_jpeg_bound_align_image(u32 *w, unsigned int wmin,
 static int mxc_jpeg_try_fmt(struct v4l2_format *f, struct mxc_jpeg_fmt *fmt,
 			    struct mxc_jpeg_ctx *ctx, int q_type)
 {
-	struct device *dev = ctx->mxc_jpeg->dev;
 	struct v4l2_pix_format_mplane *pix_mp = &f->fmt.pix_mp;
 	struct v4l2_plane_pix_format *pfmt = &pix_mp->plane_fmt[0];
 	u32 w = pix_mp->width;
@@ -1312,15 +1308,14 @@ static int mxc_jpeg_try_fmt(struct v4l2_format *f, struct mxc_jpeg_fmt *fmt,
 	pix_mp->field = V4L2_FIELD_NONE;
 	pix_mp->num_planes = fmt->colplanes;
 	pix_mp->pixelformat = fmt->fourcc;
-	if (mxc_jpeg_bound_align_image(&w,
+	mxc_jpeg_bound_align_image(&w,
 					MXC_JPEG_MIN_WIDTH,
 					MXC_JPEG_MAX_WIDTH,
 					MXC_JPEG_W_ALIGN,
 					&h,
 					MXC_JPEG_MIN_HEIGHT,
 					MXC_JPEG_MAX_HEIGHT,
-					MXC_JPEG_H_ALIGN))
-		dev_dbg(dev, "Image was aligned to %dx%d", w, h);
+					MXC_JPEG_H_ALIGN);
 
 	memset(pfmt->reserved, 0, sizeof(pfmt->reserved));
 
@@ -1452,7 +1447,7 @@ static int mxc_jpeg_g_fmt_vid_cap(struct file *file, void *priv,
 	pix->height = q_data->h;
 	pix->field = V4L2_FIELD_NONE;
 	pix->colorspace = V4L2_COLORSPACE_REC709;
-	pix->bytesperline = q_data->bytesperline[0];
+	pix->bytesperline = q_data->stride;
 	pix->sizeimage = q_data->sizeimage[0];
 
 	return 0;
@@ -1480,20 +1475,16 @@ static int mxc_jpeg_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 {
 	struct v4l2_fh *fh = file->private_data;
 	struct mxc_jpeg_ctx *ctx = mxc_jpeg_fh_to_ctx(priv);
+	struct device *dev = ctx->mxc_jpeg->dev;
 	struct vb2_queue *vq;
-	struct vb2_buffer *vb;
 
-	if (buf->type != V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-		goto end;
-
+	dev_dbg(dev, "QBUF type=%d, index=%d", buf->type, buf->index);
 	vq = v4l2_m2m_get_vq(fh->m2m_ctx, buf->type);
 	if (buf->index >= vq->num_buffers) {
-		dev_err(ctx->mxc_jpeg->dev, "buffer index out of range\n");
+		dev_err(dev, "buffer index out of range\n");
 		return -EINVAL;
 	}
 
-	vb = vq->bufs[buf->index];
-end:
 	return v4l2_m2m_qbuf(file, fh->m2m_ctx, buf);
 }
 
