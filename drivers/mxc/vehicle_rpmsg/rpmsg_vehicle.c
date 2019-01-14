@@ -47,6 +47,16 @@ struct sock *nlsk = NULL;
 extern struct net init_net;
 int user_pid;
 
+#ifdef CONFIG_VEHICLE_DRIVER_OREO
+#define HVAC_FAN_SPEED 306185472
+#define HVAC_FAN_DIRECTION 306185473
+#define HVAC_AUTO_ON 304088330
+#define HVAC_AC_ON 304088325
+#define HVAC_RECIRC_ON 304088328
+#define HVAC_DEFROSTER 320865540
+#define HVAC_TEMPERATURE_SET 308282627
+#define HVAC_POWER_ON 304088336
+#else
 #define HVAC_FAN_SPEED 356517120
 #define HVAC_FAN_DIRECTION 356517121
 #define HVAC_AUTO_ON 354419978
@@ -55,6 +65,7 @@ int user_pid;
 #define HVAC_DEFROSTER 320865540
 #define HVAC_TEMPERATURE_SET 358614275
 #define HVAC_POWER_ON 354419984
+#endif
 
 /*command type which used between AP and M4 core*/
 enum vehicle_cmd {
