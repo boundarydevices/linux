@@ -163,7 +163,7 @@ void rpc_init_shared_memory(struct shared_addr *This,
 	}
 }
 
-void rpc_set_stream_cfg_value(void *Interface, u_int32 str_idx)
+void rpc_set_stream_cfg_value(void *Interface, u_int32 str_idx, u_int32 vpu_dbe_num)
 {
 	pDEC_RPC_HOST_IFACE pSharedInterface;
 	u_int32 *CurrStrfg;
@@ -186,7 +186,7 @@ void rpc_set_stream_cfg_value(void *Interface, u_int32 str_idx)
 	VID_STREAM_CONFIG_RC4_EN_SET(FALSE, CurrStrfg);
 	VID_STREAM_CONFIG_MCX_SET(TRUE, CurrStrfg);
 	VID_STREAM_CONFIG_PES_SET(FALSE, CurrStrfg);
-	VID_STREAM_CONFIG_NUM_DBE_SET(1, CurrStrfg);
+	VID_STREAM_CONFIG_NUM_DBE_SET(vpu_dbe_num, CurrStrfg);
 }
 
 void rpc_set_system_cfg_value(void *Interface, u_int32 regs_base)

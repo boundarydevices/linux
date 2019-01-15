@@ -56,6 +56,7 @@ static int vpu_frm_depth = INVALID_FRAME_DEPTH;
 static int vpu_log_depth = DEFAULT_LOG_DEPTH;
 static int vpu_max_bufsize = MAX_BUFFER_SIZE;
 static int vpu_frmdbg_ena;
+static int vpu_dbe_num = 1;
 
 /* Generic End of content startcodes to differentiate from those naturally in the stream/file */
 #define EOS_GENERIC_HEVC 0x7c010000
@@ -311,24 +312,28 @@ static struct vpu_v4l2_fmt  formats_compressed_dec[] = {
 		.fourcc     = V4L2_PIX_FMT_H264,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_AVC,
+		.disable    = 0,
 	},
 	{
 		.name       = "VC1 Encoded Stream",
 		.fourcc     = V4L2_PIX_FMT_VC1_ANNEX_G,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_VC1,
+		.disable    = 0,
 	},
 	{
 		.name       = "VC1 RCV Encoded Stream",
 		.fourcc     = V4L2_PIX_FMT_VC1_ANNEX_L,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_VC1,
+		.disable    = 0,
 	},
 	{
 		.name       = "MPEG2 Encoded Stream",
 		.fourcc     = V4L2_PIX_FMT_MPEG2,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_MPEG2,
+		.disable    = 0,
 	},
 
 	{
@@ -336,72 +341,84 @@ static struct vpu_v4l2_fmt  formats_compressed_dec[] = {
 		.fourcc     = VPU_PIX_FMT_AVS,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_AVS,
+		.disable    = 0,
 	},
 	{
 		.name       = "MPEG4 ASP Encoded Stream",
 		.fourcc     = V4L2_PIX_FMT_MPEG4,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_ASP,
+		.disable    = 0,
 	},
 	{
 		.name       = "DIVX Encoded Stream",
 		.fourcc     = VPU_PIX_FMT_DIVX,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_ASP,
+		.disable    = 0,
 	},
 	{
 		.name       = "JPEG stills",
 		.fourcc     = V4L2_PIX_FMT_JPEG,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_JPEG,
+		.disable    = 0,
 	},
 	{
 		.name       = "RV Encoded Stream",
 		.fourcc     = VPU_PIX_FMT_RV,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_RV,
+		.disable    = 0,
 	},
 	{
 		.name       = "VP6 Encoded Stream",
 		.fourcc     = VPU_PIX_FMT_VP6,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_VP6,
+		.disable    = 0,
 	},
 	{
 		.name       = "SPK Encoded Stream",
 		.fourcc     = VPU_PIX_FMT_SPK,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_SPK,
+		.disable    = 0,
 	},
 	{
 		.name       = "H263 Encoded Stream",
 		.fourcc     = V4L2_PIX_FMT_H263,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_ASP,
+		.disable    = 0,
 	},
 	{
 		.name       = "VP8 Encoded Stream",
 		.fourcc     = V4L2_PIX_FMT_VP8,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_VP8,
+		.disable    = 0,
 	},
 	{
 		.name       = "H264/MVC Encoded Stream",
 		.fourcc     = V4L2_PIX_FMT_H264_MVC,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_AVC_MVC,
+		.disable    = 0,
 	},
 	{
 		.name       = "H265 HEVC Encoded Stream",
 		.fourcc     = VPU_PIX_FMT_HEVC,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_HEVC,
+		.disable    = 0,
 	},
 	{
 		.name       = "Logo",
 		.fourcc     = VPU_PIX_FMT_LOGO,
 		.num_planes = 1,
 		.vdec_std   = VPU_VIDEO_UNDEFINED,
+		.disable    = 0,
 	},
 };
 
@@ -411,12 +428,14 @@ static struct vpu_v4l2_fmt  formats_yuv_dec[] = {
 		.fourcc     = V4L2_PIX_FMT_NV12,
 		.num_planes	= 2,
 		.vdec_std   = VPU_PF_YUV420_SEMIPLANAR,
+		.disable    = 0,
 	},
 	{
 		.name       = "4:2:0 2 Planes Y/CbCr",
 		.fourcc     = V4L2_PIX_FMT_NV12_10BIT,
 		.num_planes = 2,
 		.vdec_std   = VPU_PF_YUV420_SEMIPLANAR,
+		.disable    = 0,
 	},
 };
 
@@ -457,12 +476,25 @@ static int v4l2_ioctl_enum_fmt_vid_out_mplane(struct file *file,
 		)
 {
 	struct vpu_v4l2_fmt *fmt;
+	u_int32 index = 0, i;
 
 	vpu_dbg(LVL_INFO, "%s()\n", __func__);
+
 	if (f->index >= ARRAY_SIZE(formats_compressed_dec))
 		return -EINVAL;
 
-	fmt = &formats_compressed_dec[f->index];
+	for (i = 0; i < ARRAY_SIZE(formats_compressed_dec); i++) {
+		fmt = &formats_compressed_dec[i];
+		if (fmt->disable == 1)
+			continue;
+		if (f->index == index)
+			break;
+		index++;
+	}
+
+	if (i == ARRAY_SIZE(formats_compressed_dec))
+		return -EINVAL;
+
 	strlcpy(f->description, fmt->name, sizeof(f->description));
 	f->pixelformat = fmt->fourcc;
 	f->flags |= V4L2_FMT_FLAG_COMPRESSED;
@@ -547,7 +579,7 @@ static int v4l2_ioctl_g_fmt(struct file *file,
 	return 0;
 }
 
-static void set_video_standard(struct queue_data *q_data,
+static bool set_video_standard(struct queue_data *q_data,
 		struct v4l2_format *f,
 		struct vpu_v4l2_fmt *pformat_table,
 		uint32_t table_size)
@@ -555,9 +587,44 @@ static void set_video_standard(struct queue_data *q_data,
 	unsigned int i;
 
 	for (i = 0; i < table_size; i++) {
-		if (pformat_table[i].fourcc == f->fmt.pix_mp.pixelformat)
+		if (pformat_table[i].fourcc == f->fmt.pix_mp.pixelformat) {
+			if (pformat_table[i].disable == 1)
+				return false;
 			q_data->vdec_std = pformat_table[i].vdec_std;
+		}
 	}
+	return true;
+}
+
+#define VPU_DISABLE_BITS (0x7)
+void check_fuse_value(struct vpu_dev *dev,
+		struct vpu_v4l2_fmt *pformat_table,
+		uint32_t table_size)
+{
+	u_int32 fuse;
+	u_int32 val;
+	u_int32 i;
+
+	if (!dev)
+		return;
+	sc_misc_otp_fuse_read(dev->mu_ipcHandle, VPU_DISABLE_BITS, &fuse);
+	val = (fuse >> 2) & 0x3UL;
+	if (val == 0x1UL) {
+		for (i = 0; i < table_size; i++)
+			if (pformat_table[i].fourcc == VPU_PIX_FMT_HEVC)
+				pformat_table[i].disable = 1;
+		vpu_dbg(LVL_WARN, "H265 is disabled\n");
+	} else if (val == 0x2UL) {
+		for (i = 0; i < table_size; i++)
+			if (pformat_table[i].fourcc == V4L2_PIX_FMT_H264)
+				pformat_table[i].disable = 1;
+		vpu_dbg(LVL_WARN, "H264 is disabled\n");
+	} else if (val == 0x3UL) {
+		for (i = 0; i < table_size; i++)
+			pformat_table[i].disable = 1;
+		vpu_dbg(LVL_WARN, "All decoder disabled\n");
+	}
+
 }
 
 static int v4l2_ioctl_s_fmt(struct file *file,
@@ -574,7 +641,8 @@ static int v4l2_ioctl_s_fmt(struct file *file,
 
 	if (f->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		q_data = &ctx->q_data[V4L2_DST];
-		set_video_standard(q_data, f, formats_yuv_dec, ARRAY_SIZE(formats_yuv_dec));
+		if (!set_video_standard(q_data, f, formats_yuv_dec, ARRAY_SIZE(formats_yuv_dec)))
+			return -EINVAL;
 		pix_mp->num_planes = 2;
 		pix_mp->colorspace = V4L2_COLORSPACE_REC709;
 		for (i = 0; i < pix_mp->num_planes; i++) {
@@ -585,7 +653,8 @@ static int v4l2_ioctl_s_fmt(struct file *file,
 		}
 	} else if (f->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		q_data = &ctx->q_data[V4L2_SRC];
-		set_video_standard(q_data, f, formats_compressed_dec, ARRAY_SIZE(formats_compressed_dec));
+		if (!set_video_standard(q_data, f, formats_compressed_dec, ARRAY_SIZE(formats_compressed_dec)))
+			return -EINVAL;
 	} else
 		return -EINVAL;
 
@@ -3220,7 +3289,7 @@ static int v4l2_open(struct file *filp)
 		dev->fw_is_ready = true;
 	}
 	mutex_unlock(&dev->dev_mutex);
-	rpc_set_stream_cfg_value(dev->shared_mem.pSharedInterface, ctx->str_index);
+	rpc_set_stream_cfg_value(dev->shared_mem.pSharedInterface, ctx->str_index, vpu_dbe_num);
 	ret = alloc_vpu_buffer(ctx);
 	if (ret)
 		goto err_alloc_buffer;
@@ -3666,6 +3735,7 @@ static int vpu_probe(struct platform_device *pdev)
 
 	INIT_WORK(&dev->msg_work, vpu_msg_run_work);
 
+	check_fuse_value(dev, formats_compressed_dec, ARRAY_SIZE(formats_compressed_dec));
 	vpu_enable_hw(dev);
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_get_sync(&pdev->dev);
@@ -3901,3 +3971,5 @@ module_param(vpu_frmdbg_ena, int, 0644);
 MODULE_PARM_DESC(vpu_frmdbg_ena, "enable firmware dbg log bufferl(0-1)");
 module_param(vpu_max_bufsize, int, 0644);
 MODULE_PARM_DESC(vpu_frmdbg_ena, "maximun stream buffer size");
+module_param(vpu_dbe_num, int, 0644);
+MODULE_PARM_DESC(vpu_dbe_num, "vpu dbe number(1-2)");
