@@ -31,11 +31,11 @@
 #include <linux/of_fdt.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/amlogic/media/utils/amports_config.h>
+#include <linux/amlogic/media/video_sink/video.h>
 
 #include "ppmgr_log.h"
 #include "ppmgr_pri.h"
 #include "ppmgr_dev.h"
-#include <linux/amlogic/media/video_sink/video_prot.h>
 
 #define PPMGRDRV_INFO(fmt, args...) pr_info("PPMGRDRV: info: "fmt"", ## args)
 #define PPMGRDRV_DBG(fmt, args...) pr_debug("PPMGRDRV: dbg: "fmt"", ## args)

@@ -17,7 +17,19 @@
 
 #ifndef VIDEO_H
 #define VIDEO_H
-#include "vpp.h"
+
+#define MAX_VD_LAYERS 2
+
+#define LAYER1_BUSY (1 << 11)
+#define LAYER1_AFBC (1 << 10)
+#define LAYER1_SCALER (1 << 9)
+#define LAYER1_AVAIL (1 << 8)
+#define LAYER0_BUSY (1 << 3)
+#define LAYER0_AFBC (1 << 2)
+#define LAYER0_SCALER (1 << 1)
+#define LAYER0_AVAIL (1 << 0)
+
+#define LAYER_BITS_SHFIT 8
 
 enum {
 	VIDEO_WIDEOPTION_NORMAL = 0,
@@ -38,16 +50,6 @@ enum {
 	VIDEO_WIDEOPTION_AFD = 15,
 	VIDEO_WIDEOPTION_MAX = 16
 };
-
-extern bool pre_scaler_en;
-extern bool super_scaler;
-#define VIDEO_NOTIFY_TRICK_WAIT   0x01
-#define VIDEO_NOTIFY_PROVIDER_GET 0x02
-#define VIDEO_NOTIFY_PROVIDER_PUT 0x04
-#define VIDEO_NOTIFY_FRAME_WAIT   0x08
-#define VIDEO_NOTIFY_POS_CHANGED  0x10
-
-#if 1				/* MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6 */
 
 /* TODO: move to register headers */
 #define VPP_VADJ2_BLMINUS_EN        (1 << 3)
@@ -160,7 +162,7 @@ extern bool super_scaler;
 #define VPP_PHASECTL_TYPE_INTERLACE (1<<16)
 #define VPP_PHASECTL_VSL0B          (1<<15)
 #define VPP_PHASECTL_DOUBLELINE_BIT 17
-#define VPP_PHASECTL_DOUBLELINE_WID 1
+#define VPP_PHASECTL_DOUBLELINE_WID 2
 #define VPP_PHASECTL_INIRPTNUM_MASK 0x3
 #define VPP_PHASECTL_INIRPTNUM_WID  2
 #define VPP_PHASECTL_INIRPTNUMB_BIT 13
@@ -207,11 +209,7 @@ extern bool super_scaler;
 #define VPP_FORCE_FIELD_BOTTOM      (1 << 16)
 #define VPP_FOURCE_GO_FIELD         (1 << 15)
 #define VPP_FOURCE_GO_LINE          (1 << 14)
-#if 1				/* MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */
 #define VPP_OFIFO_SIZE_WID          13
-#else
-#define VPP_OFIFO_SIZE_WID          12
-#endif /* MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */
 #define VPP_OFIFO_SIZE_MASK         0xfff
 #define VPP_OFIFO_SIZE_BIT          0
 
@@ -226,44 +224,6 @@ extern bool super_scaler;
 #define VPP_COEF_INDEX_MASK     0x7f
 #define VPP_COEF_INDEX_BIT      0
 
-#define P_VFIFO2VD_LINE_TOP_START P_ENCP_VFIFO2VD_LINE_TOP_START
-#endif
-
-#if 0				/* MESON_CPU_TYPE < MESON_CPU_TYPE_MESON8 */
-#define READ_VCBUS_REG(r) READ_CBUS_REG(r)
-#define WRITE_VCBUS_REG(r, val) WRITE_CBUS_REG(r, val)
-#define WRITE_VCBUS_REG_BITS(r, val, from, size) \
-	WRITE_CBUS_REG_BITS(r, val, from, size)
-#define SET_VCBUS_REG_MASK(r, mask) SET_CBUS_REG_MASK(r, mask)
-#define CLEAR_VCBUS_REG_MASK(r, mask) CLEAR_CBUS_REG_MASK(r, mask)
-#endif
-
-#ifdef CONFIG_CLK81_DFS
-extern int check_and_set_clk81(void);
-#endif
-
-#ifdef CONFIG_GAMMA_PROC
-extern int gamma_adjust(void);
-#endif
-#ifdef CONFIG_SCREEN_ON_EARLY
-extern void osd_resume_early(void);
-extern void vout_pll_resume_early(void);
-extern void resume_vout_early(void);
-extern int power_key_pressed;
-#endif
-
-#ifdef CONFIG_AM_VIDEO2
-extern void set_clone_frame_rate(unsigned int frame_rate, unsigned int delay);
-#endif
-extern struct vframe_provider_s *vf_get_provider_by_name(
-	const char *provider_name);
-
-extern void prot_get_parameter(u32 wide_mode, struct vframe_s *vf,
-			       struct vpp_frame_par_s *next_frame_par,
-			       const struct vinfo_s *vinfo);
-u32 get_blackout_policy(void);
-int get_video0_frame_info(struct vframe_s *vf);
-
 #define AMVIDEO_UPDATE_OSD_MODE	0x00000001
 #ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
 int amvideo_notifier_call_chain(unsigned long val, void *v);
@@ -275,8 +235,11 @@ static inline int amvideo_notifier_call_chain(unsigned long val, void *v)
 #endif
 
 int query_video_status(int type, int *value);
-int get_video0_frame_info(struct vframe_s *vf);
-struct device *get_video_device(void);
+u32 set_blackout_policy(int policy);
+u32 get_blackout_policy(void);
+void set_video_angle(u32 s_value);
+u32 get_video_angle(void);
 extern unsigned int DI_POST_REG_RD(unsigned int addr);
 extern int DI_POST_WR_REG_BITS(u32 adr, u32 val, u32 start, u32 len);
+
 #endif /* VIDEO_H */

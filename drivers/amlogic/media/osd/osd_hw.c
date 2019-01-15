@@ -54,6 +54,7 @@
 #endif
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VIDEO
+#include <linux/amlogic/media/vfm/vframe.h>
 #include <linux/amlogic/media/video_sink/video.h>
 #endif
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION

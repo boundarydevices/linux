@@ -17,8 +17,13 @@
 
 #ifndef VPP_H
 #define VPP_H
+
 #include <linux/amlogic/media/vout/vinfo.h>
-#include <linux/amlogic/media/video_sink/video_prot.h>
+
+#define TV_3D_FUNCTION_OPEN
+#define TV_REVERSE
+
+extern bool super_scaler;
 
 #define VPP_FLAG_WIDEMODE_MASK      0x0000000F
 #define VPP_FLAG_INTERLACE_OUT      0x00000010
@@ -43,6 +48,12 @@
 #define SPEED_CHECK_HSKIP	1
 #define SPEED_CHECK_VSKIP	2
 
+enum vppfilter_state_e {
+	VppFilter_Fail = -1,
+	VppFilter_Success = 0,
+	VppFilter_Success_and_Changed,
+};
+
 enum f2v_vphase_type_e {
 	F2V_IT2IT = 0,
 	F2V_IB2IB,
@@ -54,7 +65,7 @@ enum f2v_vphase_type_e {
 	F2V_IB2P,
 	F2V_P2P,
 	F2V_TYPE_MAX
-};				/* frame to video conversion type */
+}; /* frame to video conversion type */
 
 struct f2v_vphase_s {
 	s8 repeat_skip;
@@ -142,21 +153,34 @@ struct vpp_frame_par_s {
 
 };
 
-#if 1
+struct disp_info_s {
+	u8 layer_id;
 
-/*
- *(MESON_CPU_TYPE==MESON_CPU_TYPE_MESON6TV)||
- *(MESON_CPU_TYPE==MESON_CPU_TYPE_MESONG9TV)
- */
-#define TV_3D_FUNCTION_OPEN
-#endif
+	u32 angle;
+	u32 custom_ar;
 
-#define TV_REVERSE
+	bool reverse;
+	u32 proc_3d_type;
+	bool vpp_3d_scale;
+	u32 nonlinear_factor;
 
-#ifdef TV_REVERSE
-extern bool reverse;
-#endif
-extern bool platform_type;
+	u32 wide_mode;
+	u32 zoom_ratio;
+	s32 zoom_center_x;
+	s32 zoom_center_y;
+	s32 layer_top;
+	s32 layer_left;
+	s32 layer_width;
+	s32 layer_height;
+	u32 crop_top;
+	u32 crop_left;
+	u32 crop_bottom;
+	u32 crop_right;
+	s32 global_offset_x;
+	s32 global_offset_y;
+	u32 speed_check_width;
+	u32 speed_check_height;
+};
 
 enum select_scaler_path_e {
 	CORE0_PPS_CORE1 = 0,	/*CORE0_PPS_CORE1_POSTBLEND*/
@@ -187,7 +211,6 @@ enum select_scaler_path_e {
 
 
 #ifdef TV_3D_FUNCTION_OPEN
-
 /*cmd use for 3d operation*/
 #define MODE_3D_DISABLE     0x00000000
 #define MODE_3D_ENABLE      0x00000001
@@ -222,11 +245,16 @@ enum select_scaler_path_e {
 
 #define MODE_3D_OUT_FA_MASK	\
 	(MODE_3D_OUT_FA_L_FIRST | \
-	MODE_3D_OUT_FA_R_FIRST|MODE_3D_OUT_FA_LB_FIRST|MODE_3D_OUT_FA_RB_FIRST)
+	MODE_3D_OUT_FA_R_FIRST | \
+	MODE_3D_OUT_FA_LB_FIRST | \
+	MODE_3D_OUT_FA_RB_FIRST)
 
 #define MODE_3D_TO_2D_MASK  \
-	(MODE_3D_TO_2D_L|MODE_3D_TO_2D_R|MODE_3D_OUT_FA_MASK | \
-	MODE_FORCE_3D_TO_2D_LR | MODE_FORCE_3D_TO_2D_TB)
+	(MODE_3D_TO_2D_L | \
+	MODE_3D_TO_2D_R | \
+	MODE_3D_OUT_FA_MASK | \
+	MODE_FORCE_3D_TO_2D_LR | \
+	MODE_FORCE_3D_TO_2D_TB)
 
 #define VPP_3D_MODE_NULL 0x0
 #define VPP_3D_MODE_LR   0x1
@@ -240,78 +268,49 @@ enum select_scaler_path_e {
 #define VPP_PIC0_FIRST	0x0
 #define VPP_PIC1_FIRST	0x8
 
-extern
-void vpp_set_3d_scale(bool enable);
-extern
-void get_vpp_3d_mode(u32 process_3d_type, u32 trans_fmt, u32 *vpp_3d_mode);
+extern void get_vpp_3d_mode(u32 process_3d_type,
+	u32 trans_fmt, u32 *vpp_3d_mode);
 #endif
 
-extern void
-vpp_set_filters(u32 process_3d_type, u32 wide_mode, struct vframe_s *vf,
-				struct vpp_frame_par_s *next_frame_par,
-				const struct vinfo_s *vinfo,
-				bool bypass_sr);
+extern int vpp_set_filters(
+	struct disp_info_s *input,
+	struct vframe_s *vf,
+	struct vpp_frame_par_s *next_frame_par,
+	const struct vinfo_s *vinfo,
+	bool bypass_sr);
 
-extern void vpp_set_video_source_crop(u32 t, u32 l, u32 b, u32 r);
+extern int vpp_set_filters_no_scaler(
+	struct disp_info_s *input,
+	struct vframe_s *vf,
+	struct vpp_frame_par_s *next_frame_par,
+	const struct vinfo_s *vinfo);
 
-extern void vpp_get_video_source_crop(u32 *t, u32 *l, u32 *b, u32 *r);
+extern s32 vpp_set_nonlinear_factor(
+	struct disp_info_s *info, u32 f);
 
-extern void vpp_set_video_layer_position(s32 x, s32 y, s32 w, s32 h);
+extern u32 vpp_get_nonlinear_factor(
+	struct disp_info_s *info);
 
-extern void vpp_get_video_layer_position(s32 *x, s32 *y, s32 *w, s32 *h);
-
-extern void vpp_set_global_offset(s32 x, s32 y);
-
-extern void vpp_get_global_offset(s32 *x, s32 *y);
-
-extern void vpp_set_zoom_ratio(u32 r);
-
-extern u32 vpp_get_zoom_ratio(void);
-
-extern void vpp_set_osd_layer_preblend(u32 *enable);
-
-extern void vpp_set_osd_layer_position(s32 *para);
-
-extern s32 vpp_set_nonlinear_factor(u32 f);
-
-extern u32 vpp_get_nonlinear_factor(void);
-
-extern void vpp_set_video_speed_check(u32 h, u32 w);
-
-extern void vpp_get_video_speed_check(u32 *h, u32 *w);
+extern void vpp_disp_info_init(
+	struct disp_info_s *info, u8 id);
 
 extern void vpp_super_scaler_support(void);
 
 extern void vpp_bypass_ratio_config(void);
 
-#ifdef CONFIG_AM_VIDEO2
-extern void
-vpp2_set_filters(u32 wide_mode, struct vframe_s *vf,
-				 struct vpp_frame_par_s *next_frame_par,
-				 const struct vinfo_s *vinfo);
-
-extern void vpp2_set_video_layer_position(s32 x, s32 y, s32 w, s32 h);
-
-extern void vpp2_get_video_layer_position(s32 *x, s32 *y, s32 *w, s32 *h);
-
-extern void vpp2_set_zoom_ratio(u32 r);
-
-extern u32 vpp2_get_zoom_ratio(void);
-#endif
-extern int video_property_notify(int flag);
-
-extern int vpp_set_super_scaler_regs(int scaler_path_sel,
-		int reg_srscl0_enable,
-		int reg_srscl0_hsize,
-		int reg_srscl0_vsize,
-		int reg_srscl0_hori_ratio,
-		int reg_srscl0_vert_ratio,
-		int reg_srscl1_enable,
-		int reg_srscl1_hsize,
-		int reg_srscl1_vsize,
-		int reg_srscl1_hori_ratio,
-		int reg_srscl1_vert_ratio,
-		int vpp_postblend_out_width,
-		int vpp_postblend_out_height);
+extern int vpp_set_super_scaler_regs(
+	int scaler_path_sel,
+	int reg_srscl0_enable,
+	int reg_srscl0_hsize,
+	int reg_srscl0_vsize,
+	int reg_srscl0_hori_ratio,
+	int reg_srscl0_vert_ratio,
+	int reg_srscl1_enable,
+	int reg_srscl1_hsize,
+	int reg_srscl1_vsize,
+	int reg_srscl1_hori_ratio,
+	int reg_srscl1_vert_ratio,
+	int vpp_postblend_out_width,
+	int vpp_postblend_out_height);
 
 #endif /* VPP_H */

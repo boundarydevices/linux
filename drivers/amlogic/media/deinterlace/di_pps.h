@@ -18,6 +18,7 @@
 #ifndef DI_PPS_H
 #define DI_PPS_H
 #include <linux/amlogic/media/video_sink/video.h>
+#include <linux/amlogic/media/video_sink/vpp.h>
 #if 0
 #define VPP_FLAG_WIDEMODE_MASK      0x0000000F
 #define VPP_FLAG_INTERLACE_OUT      0x00000010

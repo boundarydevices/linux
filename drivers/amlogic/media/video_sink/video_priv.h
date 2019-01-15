@@ -17,6 +17,9 @@
 
 #ifndef VIDEO_PRIV_HEADER_HH
 #define VIDEO_PRIV_HEADER_HH
+
+#include <linux/amlogic/media/video_sink/vpp.h>
+
 #define DEBUG_FLAG_BLACKOUT     0x1
 #define DEBUG_FLAG_PRINT_TOGGLE_FRAME 0x2
 #define DEBUG_FLAG_PRINT_RDMA                0x4
@@ -38,10 +41,97 @@
 #define VIDEO_DISABLE_NORMAL  1
 #define VIDEO_DISABLE_FORNEXT 2
 
+#define VIDEO_NOTIFY_TRICK_WAIT   0x01
+#define VIDEO_NOTIFY_PROVIDER_GET 0x02
+#define VIDEO_NOTIFY_PROVIDER_PUT 0x04
+#define VIDEO_NOTIFY_FRAME_WAIT   0x08
+#define VIDEO_NOTIFY_POS_CHANGED  0x10
+
 struct video_dev_s {
 	int vpp_off;
 	int viu_off;
 };
+
+struct mif_pos_s {
+	u32 id;
+	u32 vd_reg_offt;
+	u32 afbc_reg_offt;
+
+	/* frame original size */
+	u32 src_w;
+	u32 src_h;
+
+	/* mif start - end lines */
+	u32 start_x_lines;
+	u32 end_x_lines;
+	u32 start_y_lines;
+	u32 end_y_lines;
+
+	/* left and right eye position, skip flag. */
+	/* And if non 3d case, left eye = right eye */
+	u32 l_hs_luma;
+	u32 l_he_luma;
+	u32 l_hs_chrm;
+	u32 l_he_chrm;
+	u32 r_hs_luma;
+	u32 r_he_luma;
+	u32 r_hs_chrm;
+	u32 r_he_chrm;
+	u32 h_skip;
+	u32 l_vs_luma;
+	u32 l_ve_luma;
+	u32 l_vs_chrm;
+	u32 l_ve_chrm;
+	u32 r_vs_luma;
+	u32 r_ve_luma;
+	u32 r_vs_chrm;
+	u32 r_ve_chrm;
+	u32 v_skip;
+
+	bool reverse;
+
+	bool skip_afbc;
+};
+
+struct scaler_setting_s {
+	u32 id;
+	u32 misc_reg_offt;
+
+	bool sc_h_enable;
+	bool sc_v_enable;
+	bool sc_top_enable;
+
+	u32 vinfo_width;
+	u32 vinfo_height;
+	/* u32 VPP_pic_in_height_; */
+	/* u32 VPP_line_in_length_; */
+
+	struct vpp_frame_par_s *frame_par;
+};
+
+struct blend_setting_s {
+	u32 id;
+	u32 misc_reg_offt;
+
+	u32 layer_alpha;
+
+	u32 preblend_h_start;
+	u32 preblend_h_end;
+	u32 preblend_v_start;
+	u32 preblend_v_end;
+
+	u32 preblend_h_size;
+
+	u32 postblend_h_start;
+	u32 postblend_h_end;
+	u32 postblend_v_start;
+	u32 postblend_v_end;
+
+	u32 postblend_h_size;
+
+	struct vpp_frame_par_s *frame_par;
+};
+
 void safe_disble_videolayer(void);
 void update_cur_dispbuf(void *buf);
 
@@ -54,6 +144,7 @@ struct vframe_s *get_cur_dispbuf(void);
 int get_video_debug_flags(void);
 int _video_set_disable(u32 val);
 u32 get_video_enabled(void);
+struct device *get_video_device(void);
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VIDEOCAPTURE
 int ext_frame_capture_poll(int endflags);

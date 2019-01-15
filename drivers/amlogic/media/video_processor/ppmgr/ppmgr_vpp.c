@@ -46,7 +46,6 @@
 #include <linux/mm.h>
 #include <linux/amlogic/media/ppmgr/ppmgr.h>
 #include <linux/amlogic/media/ppmgr/ppmgr_status.h>
-#include <linux/amlogic/media/video_sink/video_prot.h>
 /*#include "../amports/video.h"*/
 #include <linux/amlogic/media/video_sink/video.h>
 /*#include "../amports/vdec_reg.h"*/
@@ -2755,7 +2754,6 @@ static int process_vf_adjust(struct vframe_s *vf,
 /* extern int get_tv_process_type(struct vframe_s *vf); */
 /* #endif */
 static struct task_struct *task;
-/* extern int video_property_notify(int flag); */
 /* extern struct vframe_s *get_cur_dispbuf(void); */
 /* extern enum platform_type_t get_platform_type(void); */
 
@@ -2835,7 +2833,10 @@ static int ppmgr_task(void *data)
 				continue;
 
 			process_vf_change(vf, context, &ge2d_config);
-			video_property_notify(2);
+			vf_notify_receiver(
+				PROVIDER_NAME,
+				VFRAME_EVENT_PROVIDER_PROPERTY_CHANGED,
+				NULL);
 			vfq_lookup_start(&q_ready);
 			vf = vfq_peek(&q_ready);
 
