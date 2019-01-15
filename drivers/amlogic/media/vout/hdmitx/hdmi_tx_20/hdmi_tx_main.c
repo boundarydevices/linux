@@ -3977,7 +3977,7 @@ static int get_dt_vend_init_data(struct device_node *np,
 
 static void hdmitx_init_fmt_attr(struct hdmitx_dev *hdev)
 {
-	if (hdev->fmt_attr[0]) {
+	if (strlen(hdev->fmt_attr) >= 8) {
 		pr_info(SYS "fmt_attr %s\n", hdev->fmt_attr);
 		return;
 	}
@@ -4753,19 +4753,22 @@ static void check_hdmiuboot_attr(char *token)
 
 	if (hdmitx_device.fmt_attr[0] != 0)
 		return;
+
 	if (!token)
 		return;
 
 	for (i = 0; cs[i] != NULL; i++) {
 		if (strstr(token, cs[i])) {
-			strncpy(attr, cs[i], strlen(attr));
+			if (strlen(cs[i]) < sizeof(attr))
+				strncpy(attr, cs[i], strlen(cs[i]));
 			strcat(attr, ",");
 			break;
 		}
 	}
 	for (i = 0; cd[i] != NULL; i++) {
 		if (strstr(token, cd[i])) {
-			strncat(attr, cd[i], strlen(attr) - strlen(cd[i]));
+			if (strlen(cd[i]) < (sizeof(attr) - strlen(attr)))
+				strncat(attr, cd[i], strlen(cd[i]));
 			strncpy(hdmitx_device.fmt_attr, attr,
 				sizeof(hdmitx_device.fmt_attr));
 			hdmitx_device.fmt_attr[15] = '\0';
