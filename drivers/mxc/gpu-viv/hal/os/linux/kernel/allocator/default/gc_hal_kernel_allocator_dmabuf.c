@@ -244,10 +244,10 @@ _DmabufAttach(
         npages += (sg_dma_len(s) + PAGE_SIZE - 1) / PAGE_SIZE;
     }
 
-    /* Allocate page array. */
+    /* Allocate page arrary. */
     gcmkONERROR(gckOS_Allocate(os, npages * gcmSIZEOF(*pagearray), (gctPOINTER *)&pagearray));
 
-    /* Fill page array. */
+    /* Fill page arrary. */
     for_each_sg(sgt->sgl, s, sgt->orig_nents, i)
     {
         for (j = 0; j < (sg_dma_len(s) + PAGE_SIZE - 1) / PAGE_SIZE; j++)
@@ -277,7 +277,8 @@ _DmabufAttach(
 
     Mdl->priv = buf_desc;
 
-    Mdl->contiguous = (sgt->nents == 1) ? gcvTRUE : gcvFALSE;
+    /* Need set it as true to avoid MMU mapping. */
+    Mdl->contiguous = gcvTRUE;
 
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
@@ -416,8 +417,8 @@ static gceSTATUS
 _DmabufCache(
     IN gckALLOCATOR Allocator,
     IN PLINUX_MDL Mdl,
-    IN gctSIZE_T Offset,
     IN gctPOINTER Logical,
+    IN gctUINT32 Physical,
     IN gctUINT32 Bytes,
     IN gceCACHEOPERATION Operation
     )
@@ -433,10 +434,8 @@ _DmabufCache(
         dma_sync_sg_for_device(galcore_device, sgt->sgl, sgt->nents, dir);
         break;
     case gcvCACHE_FLUSH:
-        dir = DMA_TO_DEVICE;
+        dir = DMA_BIDIRECTIONAL;
         dma_sync_sg_for_device(galcore_device, sgt->sgl, sgt->nents, dir);
-        dir = DMA_FROM_DEVICE;
-        dma_sync_sg_for_cpu(galcore_device, sgt->sgl, sgt->nents, dir);
         break;
     case gcvCACHE_INVALIDATE:
         dir = DMA_FROM_DEVICE;

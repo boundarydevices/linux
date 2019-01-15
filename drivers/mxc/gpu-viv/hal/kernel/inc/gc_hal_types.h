@@ -485,7 +485,6 @@ typedef enum _gceSTATUS
     gcvSTATUS_DEVICE                =   -27,
     gcvSTATUS_NOT_MULTI_PIPE_ALIGNED =   -28,
     gcvSTATUS_OUT_OF_SAMPLER         =   -29,
-    gcvSTATUS_CLOCK_ERROR           =   -30,
 
     /* Linker errors. */
     gcvSTATUS_GLOBAL_TYPE_MISMATCH              =   -1000,
@@ -783,7 +782,7 @@ gceSTATUS;
 #define gcmBITSET(x, y)         ((x) & (y))
 /*******************************************************************************
 **
-**  gcmPTR2SIZE
+**  gcmPTR2INT
 **
 **      Convert a pointer to an integer value.
 **
@@ -791,7 +790,7 @@ gceSTATUS;
 **
 **      p       Pointer value.
 */
-#define gcmPTR2SIZE(p) \
+#define gcmPTR2INT(p) \
 (\
     (gctUINTPTR_T) (p) \
 )
@@ -856,8 +855,7 @@ gceSTATUS;
 **
 **      Return a value with all bytes in the 32 bit argument swapped.
 */
-#if !defined(__KERNEL__) && defined(__GNUC__) && (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__ >= 40300) \
-   && !defined(__VXWORKS__)
+#if defined(__GNUC__) && !defined(__KERNEL__)
 #  define gcmBSWAP32(x)     __builtin_bswap32(x)
 #else
 #  define gcmBSWAP32(x) ((gctUINT32)(\

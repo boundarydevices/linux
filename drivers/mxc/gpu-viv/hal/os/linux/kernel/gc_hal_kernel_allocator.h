@@ -285,11 +285,11 @@ typedef struct _gcsALLOCATOR_OPERATIONS
     **      PLINUX_MDL Mdl
     **          Pointer to a Mdl object.
     **
-    **      gctSIZE_T Offset
-    **          Offset to this memory block
-    **
     **      gctPOINTER Logical
     **          Logical address, could be user address or kernel address
+    **
+    **      gctUINT32_PTR Physical
+    **          Physical address.
     **
     **      gctUINT32 Bytes
     **          Size of memory region.
@@ -305,8 +305,8 @@ typedef struct _gcsALLOCATOR_OPERATIONS
     gceSTATUS (*Cache)(
         IN gckALLOCATOR Allocator,
         IN PLINUX_MDL Mdl,
-        IN gctSIZE_T Offset,
         IN gctPOINTER Logical,
+        IN gctUINT32 Physical,
         IN gctUINT32 Bytes,
         IN gceCACHEOPERATION Operation
         );

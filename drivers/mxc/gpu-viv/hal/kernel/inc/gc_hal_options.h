@@ -741,21 +741,23 @@ This define enables the use of VM for gckCommand and fence buffers.
 #endif
 
 /*
-   gcdENABLE_CACHEABLE_COMMAND_BUFFER
+   gcdNONPAGED_MEMORY_CACHEABLE
 
-        When non-zero, command buffer will be cacheable.
+        When non-zero, non paged memory will be cacheable.
 */
-#ifndef gcdENABLE_CACHEABLE_COMMAND_BUFFER
-#   define gcdENABLE_CACHEABLE_COMMAND_BUFFER          0
+#ifndef gcdNONPAGED_MEMORY_CACHEABLE
+#   define gcdNONPAGED_MEMORY_CACHEABLE         0
 #endif
 
 /*
-   gcdENABLE_BUFFERABLE_VIDEO_MEMORY
+   gcdNONPAGED_MEMORY_BUFFERABLE
 
-        When non-zero, all video memory will be bufferable by default.
+        When non-zero, non paged memory will be bufferable.
+        gcdNONPAGED_MEMORY_BUFFERABLE and gcdNONPAGED_MEMORY_CACHEABLE
+        can't be set 1 at same time
 */
-#ifndef gcdENABLE_BUFFERABLE_VIDEO_MEMORY
-#   define gcdENABLE_BUFFERABLE_VIDEO_MEMORY           1
+#ifndef gcdNONPAGED_MEMORY_BUFFERABLE
+#   define gcdNONPAGED_MEMORY_BUFFERABLE        1
 #endif
 
 /*
@@ -984,10 +986,6 @@ This define enables the use of VM for gckCommand and fence buffers.
 #   define gcdANDROID_NATIVE_FENCE_SYNC         0
 #endif
 
-#ifndef gcdLINUX_SYNC_FILE
-#   define gcdLINUX_SYNC_FILE                   0
-#endif
-
 /*
     gcdANDROID_IMPLICIT_NATIVE_BUFFER_SYNC
 
@@ -1099,7 +1097,7 @@ This define enables the use of VM for gckCommand and fence buffers.
  */
 
 #ifndef gcdINTERRUPT_STATISTIC
-#if defined(LINUX) || defined(__QNXNTO__) || defined(UNDER_CE) || defined(__VXWORKS__)
+#if defined(LINUX) || defined(__QNXNTO__) || defined(UNDER_CE)
 #   define gcdINTERRUPT_STATISTIC               1
 #else
 #   define gcdINTERRUPT_STATISTIC               0

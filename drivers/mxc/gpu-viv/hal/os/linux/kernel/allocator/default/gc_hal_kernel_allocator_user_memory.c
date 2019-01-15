@@ -709,8 +709,8 @@ static gceSTATUS
 _UserMemoryCache(
     IN gckALLOCATOR Allocator,
     IN PLINUX_MDL Mdl,
-    IN gctSIZE_T Offset,
     IN gctPOINTER Logical,
+    IN gctUINT32 Physical,
     IN gctUINT32 Bytes,
     IN gceCACHEOPERATION Operation
     )
@@ -737,10 +737,8 @@ _UserMemoryCache(
         dma_sync_sg_for_device(galcore_device, um->sgt.sgl, um->sgt.nents, dir);
         break;
     case gcvCACHE_FLUSH:
-        dir = DMA_TO_DEVICE;
+        dir = DMA_BIDIRECTIONAL;
         dma_sync_sg_for_device(galcore_device, um->sgt.sgl, um->sgt.nents, dir);
-        dir = DMA_FROM_DEVICE;
-        dma_sync_sg_for_cpu(galcore_device, um->sgt.sgl, um->sgt.nents, dir);
         break;
     case gcvCACHE_INVALIDATE:
         dir = DMA_FROM_DEVICE;

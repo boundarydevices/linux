@@ -472,8 +472,8 @@ static gceSTATUS
 _CMACache(
     IN gckALLOCATOR Allocator,
     IN PLINUX_MDL Mdl,
-    IN gctSIZE_T Offset,
     IN gctPOINTER Logical,
+    IN gctUINT32 Physical,
     IN gctUINT32 Bytes,
     IN gceCACHEOPERATION Operation
     )

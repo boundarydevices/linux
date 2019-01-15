@@ -686,7 +686,7 @@ gckKERNEL_Construct(
     kernel->profileCleanRegister = gcvTRUE;
 #endif
 
-#if gcdLINUX_SYNC_FILE
+#if gcdANDROID_NATIVE_FENCE_SYNC
     gcmkONERROR(gckOS_CreateSyncTimeline(Os, Core, &kernel->timeline));
 #endif
 
@@ -932,7 +932,7 @@ gckKERNEL_Destroy(
     }
 #endif
 
-#if gcdLINUX_SYNC_FILE
+#if gcdANDROID_NATIVE_FENCE_SYNC
     if (Kernel->timeline)
     {
         gcmkVERIFY_OK(gckOS_DestroySyncTimeline(Kernel->os, Kernel->timeline));
@@ -2064,28 +2064,6 @@ gckKERNEL_WaitFence(
         {
             fence = asyncCommand->fence;
         }
-
-#if USE_KERNEL_VIRTUAL_BUFFERS
-        if (Kernel->virtualCommandBuffer)
-        {
-            gckVIRTUAL_COMMAND_BUFFER_PTR commandBuffer = (gckVIRTUAL_COMMAND_BUFFER_PTR) fence->physical;
-
-            fence->physHandle = commandBuffer->virtualBuffer.physical;
-        }
-        else
-#endif
-        {
-            fence->physHandle = fence->physical;
-        }
-
-        gcmkONERROR(gckOS_CacheInvalidate(
-            Kernel->os,
-            0,
-            fence->physHandle,
-            0,
-            fence->logical,
-            8
-            ));
 
         if (sync->commitStamp <= *(gctUINT64_PTR)fence->logical)
         {
@@ -3311,7 +3289,7 @@ gckKERNEL_Dispatch(
         gcmRELEASE_NAME(Interface->u.FreeVirtualCommandBuffer.physical);
         break;
 
-#if gcdLINUX_SYNC_FILE
+#if gcdANDROID_NATIVE_FENCE_SYNC
     case gcvHAL_CREATE_NATIVE_FENCE:
         {
             gctINT fenceFD;
@@ -4673,7 +4651,7 @@ gckKERNEL_AllocateVirtualMemory(
     gctSIZE_T bytes                      = *Bytes;
     gckVIRTUAL_BUFFER_PTR buffer         = gcvNULL;
     gckMMU mmu                           = gcvNULL;
-    gctUINT32 allocFlag                  = 0;
+    gctUINT32 flag = gcvALLOC_FLAG_NON_CONTIGUOUS;
 
     gcmkHEADER_ARG("Os=0x%X InUserSpace=%d *Bytes=%lu",
         os, InUserSpace, gcmOPT_VALUE(Bytes));
@@ -4700,16 +4678,12 @@ gckKERNEL_AllocateVirtualMemory(
 
     buffer->bytes = bytes;
 
-#if gcdENABLE_CACHEABLE_COMMAND_BUFFER
-    allocFlag = gcvALLOC_FLAG_CACHEABLE;
-#endif
-
     if (NonPaged)
     {
         gcmkONERROR(gckOS_AllocateNonPagedMemory(
             os,
             InUserSpace,
-            allocFlag | gcvALLOC_FLAG_CONTIGUOUS,
+            gcvALLOC_FLAG_CONTIGUOUS,
             &bytes,
             &buffer->physical,
             &logical
@@ -4717,13 +4691,11 @@ gckKERNEL_AllocateVirtualMemory(
     }
     else
     {
-        gcmkONERROR(gckOS_AllocatePagedMemoryEx(
-            os,
-            allocFlag | gcvALLOC_FLAG_NON_CONTIGUOUS,
+        gcmkONERROR(gckOS_AllocatePagedMemoryEx(os,
+            flag,
             bytes,
             gcvNULL,
-            &buffer->physical
-            ));
+            &buffer->physical));
     }
 
     if (NonPaged)
@@ -6039,16 +6011,10 @@ gckFENCE_Create(
     else
 #endif
     {
-        gctUINT32 allocFlag = gcvALLOC_FLAG_CONTIGUOUS;
-
-#if gcdENABLE_CACHEABLE_COMMAND_BUFFER
-        allocFlag |= gcvALLOC_FLAG_CACHEABLE;
-#endif
-
         gcmkONERROR(gckOS_AllocateNonPagedMemory(
             Os,
             gcvFALSE,
-            allocFlag,
+            gcvALLOC_FLAG_CONTIGUOUS,
             &pageSize,
             &fence->physical,
             &fence->logical

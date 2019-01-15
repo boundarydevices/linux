@@ -61,8 +61,6 @@
 #include "gc_hal_driver.h"
 #include "gc_hal_kernel_mutex.h"
 #include "gc_hal_metadata.h"
-#include "gc_hal_kernel_buffer.h"
-
 
 #if gcdENABLE_VG
 #include "gc_hal_kernel_vg.h"
@@ -622,7 +620,7 @@ struct _gckKERNEL
     gckDVFS                     dvfs;
 #endif
 
-#if gcdLINUX_SYNC_FILE
+#if gcdANDROID_NATIVE_FENCE_SYNC
     gctHANDLE                   timeline;
 #endif
 
@@ -690,7 +688,6 @@ typedef struct _gcsFENCE
 
     /* Fence location. */
     gctPHYS_ADDR                physical;
-    gctPHYS_ADDR                physHandle;
     gctPOINTER                  logical;
     gctUINT32                   address;
 
@@ -761,7 +758,6 @@ struct _gckCOMMAND
     queues[gcdCOMMAND_QUEUES];
 
     gctPHYS_ADDR                virtualMemory;
-    gctPHYS_ADDR                physHandle;
     gctUINT32                   physical;
     gctPOINTER                  logical;
     gctUINT32                   address;
@@ -783,7 +779,6 @@ struct _gckCOMMAND
     gctPOINTER                  waitLogical;
     gctUINT32                   waitAddress;
     gctUINT32                   waitSize;
-    gctUINT32                   waitOffset;
 
     /* Command buffer alignment. */
     gctUINT32                   alignment;
@@ -821,11 +816,6 @@ struct _gckCOMMAND
     gckASYNC_COMMAND            asyncCommand;
 
     gctBOOL                     dummyDraw;
-
-    /* a copy in kernel space for current committing command buffer
-     * avoid occupyting stack space.
-     */
-    struct _gcoCMDBUF           _commandBufferObject;
 };
 
 typedef struct _gcsEVENT *      gcsEVENT_PTR;
@@ -949,8 +939,7 @@ gceSTATUS
 gckEVENT_Stop(
     IN gckEVENT Event,
     IN gctUINT32 ProcessID,
-    IN gctPHYS_ADDR Handle,
-    IN gctSIZE_T Offset,
+    IN gctUINT32 Handle,
     IN gctPOINTER Logical,
     IN gctUINT32 Address,
     IN gctSIGNAL Signal,
@@ -1255,20 +1244,6 @@ gckVIDMEM_NODE_Allocate(
     );
 
 gceSTATUS
-gckVIDMEM_NODE_LockCPU(
-    IN gckKERNEL Kernel,
-    IN gctUINT32 Handle,
-    OUT gctPOINTER * Logical
-    );
-
-gceSTATUS
-gckVIDMEM_NODE_UnlockCPU(
-    IN gckKERNEL Kernel,
-    IN gctUINT32 Handle,
-    OUT gctPOINTER Logical
-    );
-
-gceSTATUS
 gckVIDMEM_Node_Lock(
     IN gckKERNEL Kernel,
     IN gckVIDMEM_NODE Node,
@@ -1459,21 +1434,6 @@ typedef struct _gcsASYNC_COMMAND
 }
 gcsASYNC_COMMAND;
 
-gceSTATUS
-gckOS_CreateKernelMapping(
-    IN gckOS Os,
-    IN gctPHYS_ADDR Physical,
-    IN gctSIZE_T Offset,
-    IN gctSIZE_T Bytes,
-    OUT gctPOINTER * Logical
-    );
-
-gceSTATUS
-gckOS_DestroyKernelMapping(
-    IN gckOS Os,
-    IN gctPHYS_ADDR Physical,
-    IN gctPOINTER Logical
-    );
 
 gceSTATUS
 gckOS_CreateKernelVirtualMapping(

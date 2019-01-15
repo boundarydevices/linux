@@ -61,10 +61,6 @@
 #include <linux/time.h>
 #include <stdarg.h>
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
-#include <linux/nmi.h>
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif

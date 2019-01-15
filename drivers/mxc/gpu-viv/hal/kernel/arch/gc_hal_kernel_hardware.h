@@ -226,7 +226,6 @@ struct _gckHARDWARE
     gctSIZE_T                   mmuFuncBytes;
 
     gctPHYS_ADDR                auxFuncPhysical;
-    gctPHYS_ADDR                auxPhysHandle;
     gctPOINTER                  auxFuncLogical;
     gctUINT32                   auxFuncAddress;
     gctSIZE_T                   auxFuncBytes;

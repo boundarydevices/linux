@@ -516,8 +516,6 @@ typedef enum _gceFEATURE
     gcvFEATURE_IMAGE_LS_NO_FULLMASK_FIX,
     gcvFEATURE_PE_TILE_CACHE_FLUSH_FIX,
     gcvFEATURE_USC_ATOMIC_FIX2,
-    gcvFEATURE_PA_LINECLIP_FIX,
-    gcvFEATURE_MAX_POINTSIZE_CLAMP,
 
     /* Insert features above this comment only. */
     gcvFEATURE_COUNT                /* Not a feature. */
@@ -569,7 +567,7 @@ typedef enum _gceOPTION
     gcvOPTION_OCL_ASYNC_BLT = 57,
     gcvOPTION_OCL_IN_THREAD = 58,
     gcvOPTION_COMPRESSION_DEC400 = 59,
-    gcvOPTION_NO_Y_INVERT = 60,
+
     /* Insert option above this comment only */
     gcvOPTION_COUNT                     /* Not a OPTION*/
 }
@@ -924,7 +922,6 @@ typedef enum _gceSURF_FORMAT
     gcvSURF_L16,
     gcvSURF_L32,
     gcvSURF_L1,
-    gcvSURF_L8_RAW,
 
     /* Alpha/Luminance formats. */
     gcvSURF_A4L4                = 900,
@@ -935,8 +932,6 @@ typedef enum _gceSURF_FORMAT
     gcvSURF_A16L16,
 
     gcvSURF_A8L8_1_A8R8G8B8,
-
-    gcvSURF_A8L8_RAW,
 
     /* Bump formats. */
     gcvSURF_L6V5U5              = 1000,

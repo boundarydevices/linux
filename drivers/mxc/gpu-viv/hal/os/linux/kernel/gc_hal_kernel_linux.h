@@ -118,6 +118,14 @@
 /* Protection bit when mapping memroy to user sapce */
 #define gcmkPAGED_MEMROY_PROT(x)    pgprot_writecombine(x)
 
+#if gcdNONPAGED_MEMORY_BUFFERABLE
+#define gcmkIOREMAP                 ioremap_wc
+#define gcmkNONPAGED_MEMROY_PROT(x) pgprot_writecombine(x)
+#elif !gcdNONPAGED_MEMORY_CACHEABLE
+#define gcmkIOREMAP                 ioremap_nocache
+#define gcmkNONPAGED_MEMROY_PROT(x) pgprot_noncached(x)
+#endif
+
 #define gcdSUPPRESS_OOM_MESSAGE 1
 
 #if gcdSUPPRESS_OOM_MESSAGE
@@ -217,9 +225,6 @@ struct _gckOS
 
     /* Signal management. */
 
-    /* Lock. */
-    spinlock_t                  signalLock;
-
     /* signal id database. */
     gcsINTEGER_DB               signalDB;
 
@@ -266,7 +271,7 @@ typedef struct _gcsSIGNAL
     gctBOOL manualReset;
 
     /* The reference counter. */
-    atomic_t ref;
+    volatile int ref;
 
     /* The owner of the signal. */
     gctHANDLE process;
@@ -274,8 +279,8 @@ typedef struct _gcsSIGNAL
     /* ID. */
     gctUINT32 id;
 
-#if gcdLINUX_SYNC_FILE
-#ifndef CONFIG_SYNC_FILE
+#if gcdANDROID_NATIVE_FENCE_SYNC
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
     /* Parent timeline. */
     struct sync_timeline * timeline;
 #  else

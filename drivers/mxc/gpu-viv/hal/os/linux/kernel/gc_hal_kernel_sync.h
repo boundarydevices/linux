@@ -58,7 +58,7 @@
 
 #include <linux/types.h>
 
-#ifndef CONFIG_SYNC_FILE
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
 
 /* sync.h is in drivers/staging/android/ for now. */
 #include <sync.h>
@@ -98,7 +98,7 @@ struct viv_sync_timeline * viv_sync_timeline_create(const char *name, gckOS Os);
 struct sync_pt * viv_sync_pt_create(struct viv_sync_timeline *obj,
                         gctSIGNAL signal);
 
-#else
+#else /* v4.9.0 */
 
 #include <linux/sync_file.h>
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
@@ -146,6 +146,6 @@ void viv_sync_timeline_destroy(struct viv_sync_timeline *timeline);
 struct dma_fence * viv_fence_create(struct viv_sync_timeline *timeline,
                     gcsSIGNAL *signal);
 
-#endif
+#endif /* v4.9.0 */
 
 #endif /* __gc_hal_kernel_sync_h_ */

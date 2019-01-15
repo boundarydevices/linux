@@ -217,7 +217,7 @@ gctaOS_GetPhysicalAddress(
 
     gcmkVERIFY_OK(gckOS_CPUPhysicalToGPUPhysical(Os->os, physical, &physical));
 
-    *Physical = physical;
+    *Physical = (gctUINT32)physical;
 
     return gcvSTATUS_OK;
 

@@ -514,15 +514,6 @@ gckOS_UserLogicalToPhysical(
     OUT gctPHYS_ADDR_T * Address
     );
 
-
-/*  Map a physical address into kernel space.*/
-gceSTATUS
-gckOS_MapPhysicalToKernelSpace(
-    IN gckOS Os,
-    IN gckVIDMEM_NODE NodeObject,
-    OUT gctPOINTER * Logical
-    );
-
 /* Map physical memory. */
 gceSTATUS
 gckOS_MapPhysical(
@@ -1325,7 +1316,7 @@ gckOS_CacheClean(
     gckOS Os,
     gctUINT32 ProcessID,
     gctPHYS_ADDR Handle,
-    gctSIZE_T Offset,
+    gctPHYS_ADDR_T Physical,
     gctPOINTER Logical,
     gctSIZE_T Bytes
     );
@@ -1335,7 +1326,7 @@ gckOS_CacheFlush(
     gckOS Os,
     gctUINT32 ProcessID,
     gctPHYS_ADDR Handle,
-    gctSIZE_T Offset,
+    gctPHYS_ADDR_T Physical,
     gctPOINTER Logical,
     gctSIZE_T Bytes
     );
@@ -1345,7 +1336,7 @@ gckOS_CacheInvalidate(
     gckOS Os,
     gctUINT32 ProcessID,
     gctPHYS_ADDR Handle,
-    gctSIZE_T Offset,
+    gctPHYS_ADDR_T Physical,
     gctPOINTER Logical,
     gctSIZE_T Bytes
     );
