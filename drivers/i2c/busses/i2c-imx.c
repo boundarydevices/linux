@@ -468,7 +468,7 @@ static int i2c_imx_acked(struct imx_i2c_struct *i2c_imx)
 	return 0;
 }
 
-static void i2c_imx_set_clk(struct imx_i2c_struct *i2c_imx)
+static int i2c_imx_set_clk(struct imx_i2c_struct *i2c_imx)
 {
 	struct imx_i2c_clk_pair *i2c_clk_div = i2c_imx->hwdata->clk_div;
 	unsigned int i2c_clk_rate;
@@ -477,8 +477,15 @@ static void i2c_imx_set_clk(struct imx_i2c_struct *i2c_imx)
 
 	/* Divider value calculation */
 	i2c_clk_rate = clk_get_rate(i2c_imx->clk);
+	/*
+	 * Keep the denominator of the following program
+	 * always NOT equal to 0.
+	 */
+	if (!(i2c_clk_rate / 2))
+		return -EINVAL;
+
 	if (i2c_imx->cur_clk == i2c_clk_rate)
-		return;
+		return 0;
 
 	i2c_imx->cur_clk = i2c_clk_rate;
 
@@ -509,6 +516,8 @@ static void i2c_imx_set_clk(struct imx_i2c_struct *i2c_imx)
 	dev_dbg(&i2c_imx->adapter.dev, "IFDR[IC]=0x%x, REAL DIV=%d\n",
 		i2c_clk_div[i].val, i2c_clk_div[i].div);
 #endif
+
+	return 0;
 }
 
 static int i2c_imx_start(struct imx_i2c_struct *i2c_imx)
@@ -518,7 +527,9 @@ static int i2c_imx_start(struct imx_i2c_struct *i2c_imx)
 
 	dev_dbg(&i2c_imx->adapter.dev, "<%s>\n", __func__);
 
-	i2c_imx_set_clk(i2c_imx);
+	result = i2c_imx_set_clk(i2c_imx);
+	if (result)
+		return result;
 
 	imx_i2c_write_reg(i2c_imx->ifdr, i2c_imx, IMX_I2C_IFDR);
 	/* Enable I2C controller */
