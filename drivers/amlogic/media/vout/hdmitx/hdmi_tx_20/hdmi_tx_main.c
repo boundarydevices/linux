@@ -1205,6 +1205,10 @@ static void hdr_work_func(struct work_struct *work)
 			CONF_AVI_BT2020, hdev->colormetry);
 
 		msleep(1500);/*delay 1.5s*/
+		if (hdev->hdr_transfer_feature != T_BT709 ||
+			hdev->hdr_color_feature != C_BT709)
+			return;
+
 		hdev->HWOp.SetPacket(HDMI_PACKET_DRM, NULL, NULL);
 		hdev->hdmi_current_hdr_mode = 0;
 		hdmitx_sdr_hdr_uevent(hdev);
