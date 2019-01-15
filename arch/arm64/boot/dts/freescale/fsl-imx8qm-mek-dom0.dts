@@ -14,11 +14,12 @@
 
 /dts-v1/;
 
-/memreserve/ 0x84000000 0x4000000;
+/memreserve/ 0x84000000 0x2000000;
+/memreserve/ 0x86000000 0x400000;
 /memreserve/ 0x90000000 0x400000;
-/memreserve/ 0x90400000 0x2000000;
+/memreserve/ 0x90400000 0x1C00000;
+/memreserve/ 0x92000000 0x200000;
 /memreserve/ 0x92400000 0x2000000;
-/memreserve/ 0x94400000 0x1800000;
 
 #include "fsl-imx8qm-mek.dtsi"
 #include "fsl-imx8qm-xen.dtsi"
@@ -311,27 +312,32 @@
 
 	encoder_boot_mem: encoder_boot_mem@0x86000000 {
 		xen,passthrough;
-		reg = <0 0x86000000 0 0x2000000>;
+		reg = <0 0x86000000 0 0x400000>;
 	};
 
 	rpmsg_reserved_mem: rpmsg_reserved_mem@90000000 {
+		xen,passthrough;
 		reg = <0x0 0x90000000 0x0 0x400000>;
-		xen,passthrough;
 	};
 
-	decoder_rpc_mem: decoder_rpc_mem@0x90400000 {
+	rpmsg_dma_mem: rpmsg_dma_mem@90400000 {
 		xen,passthrough;
-		reg = <0 0x90400000 0 0x1000000>;
+		reg = <0x0 0x90400000 0x0 0x1c00000>;
 	};
 
-	encoder_rpc_mem: encoder_rpc_mem@0x91400000 {
+	decoder_rpc_mem: decoder_rpc_mem@0x92000000 {
 		xen,passthrough;
-		reg = <0 0x91400000 0 0x1000000>;
+		reg = <0 0x92000000 0 0x200000>;
 	};
 
-	decoder_str_mem: str_mem@0x94400000 {
+	encoder_rpc_mem: encoder_rpc_mem@0x92200000 {
 		xen,passthrough;
-		reg = <0 0x94400000 0 0x1800000>;
+		reg = <0 0x92200000 0 0x200000>;
+	};
+
+	dsp_reserved_mem: dsp@0x92400000 {
+		xen,passthrough;
+		reg = <0 0x92400000 0 0x2000000>;
 	};
 
 	/* This piece memory is used by M41, M40 is not covered */
@@ -359,6 +365,11 @@
 
 &rpmsg1 {
 	/* Let xen not create mapping form dom0 */
+	/delete-property/ reg;
+	status = "disabled";
+};
+
+&rpmsg {
 	/delete-property/ reg;
 	status = "disabled";
 };
@@ -697,6 +708,14 @@
        iommus = <&smmu>;
        #stream-id-cells = <1>;
        xen,passthrough;
+};
+
+&{/vpu_encoder@2d000000/core0@1020000} {
+	xen,passthrough;
+};
+
+&{/vpu_encoder@2d000000/core1@1040000} {
+	xen,passthrough;
 };
 
 &crypto {
