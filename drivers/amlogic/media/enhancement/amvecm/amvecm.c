@@ -5976,9 +5976,6 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	else
 		hdr_flag = (1 << 0) | (1 << 1) | (0 << 2) | (0 << 3);
 
-	if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
-		sdr_mode = 2;
-
 	vlock_status_init();
 	hdr_init(&amvecm_dev.hdr_d);
 	aml_vecm_dt_parse(pdev);
