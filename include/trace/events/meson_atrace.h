@@ -66,13 +66,18 @@ TRACE_EVENT(tracing_mark_write,
 		print_flags_delim(__entry->flags),
 		__get_str(name), __entry->value)
 );
-
+#ifdef CONFIG_AMLOGIC_DEBUG_ATRACE
 #define ATRACE_COUNTER(name, value) \
 	trace_tracing_mark_write(name, (1 << KERNEL_ATRACE_COUNTER), value)
 #define ATRACE_BEGIN(name) \
 	trace_tracing_mark_write(name, (1 << KERNEL_ATRACE_BEGIN), 0)
 #define ATRACE_END(name) \
 	trace_tracing_mark_write("", (1 << KERNEL_ATRACE_END), 1)
+#else
+#define ATRACE_COUNTER(name, value)
+#define ATRACE_BEGIN(name)
+#define ATRACE_END(name)
+#endif
 
 #endif /* _TRACE_MESON_BASE_H */
 

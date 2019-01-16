@@ -22,6 +22,7 @@
 #include <linux/amlogic/media/utils/vdec_reg.h>
 #include <linux/amlogic/media/registers/register.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
+#include <trace/events/meson_atrace.h>
 
 
 u32 acc_apts_inc;
@@ -147,6 +148,7 @@ EXPORT_SYMBOL(timestamp_tsdemux_pcr_get);
 void timestamp_pcrscr_set(u32 pts)
 {
 	/*pr_info("timestamp_pcrscr_set system time  = %x\n", pts);*/
+	ATRACE_COUNTER("PCRSCR",  pts);
 	system_time = pts;
 }
 EXPORT_SYMBOL(timestamp_pcrscr_set);
@@ -210,6 +212,7 @@ void timestamp_pcrscr_inc(s32 inc)
 		inc = inc * timestamp_inc_factor / PLL_FACTOR;
 #endif
 		system_time += inc + system_time_inc_adj;
+		ATRACE_COUNTER("PCRSCR",  system_time);
 	}
 }
 EXPORT_SYMBOL(timestamp_pcrscr_inc);
@@ -234,6 +237,7 @@ void timestamp_pcrscr_inc_scale(s32 inc, u32 base)
 			system_time++;
 			system_time_scale_remainder -= system_time_scale_base;
 		}
+		ATRACE_COUNTER("PCRSCR",  system_time);
 	}
 }
 EXPORT_SYMBOL(timestamp_pcrscr_inc_scale);
