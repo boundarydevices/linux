@@ -876,6 +876,7 @@
 				snps,dis_rxdet_inp3_quirk;
 				usb3-lpm-capable;
 				snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+				snps,host-vbus-glitches;
 				status = "disabled";
 			};
 
@@ -888,6 +889,7 @@
 				snps,dis_rxdet_inp3_quirk;
 				usb3-lpm-capable;
 				snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+				snps,host-vbus-glitches;
 				status = "disabled";
 			};
 
@@ -900,6 +902,7 @@
 				snps,dis_rxdet_inp3_quirk;
 				usb3-lpm-capable;
 				snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+				snps,host-vbus-glitches;
 				status = "disabled";
 			};
 
