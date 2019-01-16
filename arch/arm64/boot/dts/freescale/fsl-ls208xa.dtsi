@@ -1182,6 +1182,7 @@
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,dis_rxdet_inp3_quirk;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			snps,host-vbus-glitches;
 		};
 
 		usb1: usb@3110000 {
@@ -1193,6 +1194,7 @@
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,dis_rxdet_inp3_quirk;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			snps,host-vbus-glitches;
 		};
 
 		ccn@4000000 {
