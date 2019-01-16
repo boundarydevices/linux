@@ -70,6 +70,8 @@ AMLVIDEO_MINOR_VERSION, AMLVIDEO_RELEASE)
 
 #define RECEIVER_NAME "amlvideo"
 #define PROVIDER_NAME "amlvideo"
+#define RECEIVER_NAME_PIP "aml_video"
+#define PROVIDER_NAME_PIP "aml_video"
 
 #define AMLVIDEO_POOL_SIZE 16
 /*extern bool omx_secret_mode;*/
@@ -82,11 +84,12 @@ MODULE_AUTHOR("amlogic-sh");
 MODULE_LICENSE("GPL");
 /* static u32 vpts_remainder; */
 static unsigned int video_nr_base = 10;
+static unsigned int video_nr_base_second = 23;
 /* module_param(video_nr_base, uint, 0644); */
 /* MODULE_PARM_DESC(video_nr_base, "videoX start number, 10 is defaut"); */
 
 #ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
-static unsigned int n_devs = 1;
+static unsigned int n_devs = 2;
 #else
 static unsigned int n_devs = 1;
 #endif
@@ -887,7 +890,10 @@ static int __init amlvideo_create_instance(int inst)
 	vfd->dev_debug = debug;
 	vfd->v4l2_dev = &dev->v4l2_dev;
 	dev->amlvideo_v4l_num = inst * 10 + video_nr_base;
-
+	if (inst == 0)
+		dev->amlvideo_v4l_num = video_nr_base;
+	else
+		dev->amlvideo_v4l_num = (inst - 1) + video_nr_base_second;
 	/* //////////////////////////////////////// */
 	/* vfd->v4l2_dev = &dev->v4l2_dev; */
 	/* //////////////////////////////////////// */
@@ -898,18 +904,19 @@ static int __init amlvideo_create_instance(int inst)
 		goto rel_vdev;
 
 	dev->inst = inst;
-#if 0
-	snprintf(dev->vf_receiver_name, AMLVIDEO_VF_NAME_SIZE,
-		(0) ? RECEIVER_NAME : RECEIVER_NAME ".%x",
-		inst & 0xff);
 
-	snprintf(dev->vf_provider_name, AMLVIDEO_VF_NAME_SIZE,
-		(0) ? PROVIDER_NAME : PROVIDER_NAME ".%x",
-		inst & 0xff);
-#else
-	memcpy(dev->vf_receiver_name, RECEIVER_NAME, sizeof(RECEIVER_NAME));
-	memcpy(dev->vf_provider_name, PROVIDER_NAME, sizeof(PROVIDER_NAME));
-#endif
+	if (inst != 0) {
+		snprintf(dev->vf_receiver_name, AMLVIDEO_VF_NAME_SIZE,
+			RECEIVER_NAME_PIP ".%x", inst & 0xff);
+
+		snprintf(dev->vf_provider_name, AMLVIDEO_VF_NAME_SIZE,
+			PROVIDER_NAME_PIP ".%x", inst & 0xff);
+	} else {
+		memcpy(dev->vf_receiver_name, RECEIVER_NAME,
+			sizeof(RECEIVER_NAME));
+		memcpy(dev->vf_provider_name, PROVIDER_NAME,
+			sizeof(PROVIDER_NAME));
+	}
 
 	vf_receiver_init(&dev->video_vf_recv,
 			dev->vf_receiver_name,

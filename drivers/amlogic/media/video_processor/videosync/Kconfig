@@ -1,0 +1,11 @@
+menu "Amlogic videosync support"
+
+config AMLOGIC_VIDEOSYNC
+	tristate "amlogic videosync device support"
+	select VIDEO_DEV
+	default n
+
+	---help---
+			Select to enable "Amlogic videosync support.
+
+endmenu

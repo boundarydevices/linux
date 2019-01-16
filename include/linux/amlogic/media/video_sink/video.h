@@ -241,5 +241,5 @@ void set_video_angle(u32 s_value);
 u32 get_video_angle(void);
 extern unsigned int DI_POST_REG_RD(unsigned int addr);
 extern int DI_POST_WR_REG_BITS(u32 adr, u32 val, u32 start, u32 len);
-
+extern void videosync_pcrscr_update(s32 inc, u32 base);
 #endif /* VIDEO_H */

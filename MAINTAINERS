@@ -14740,3 +14740,11 @@ F:	drivers/amlogic/media/camera/*
 F:	drivers/amlogic/media/common/canvas/canvas_mgr.c
 F:	drivers/amlogic/media/common/vfm/vfm.c
 F:	include/linux/amlogic/media/camera/*
+
+AMLOGIC VIDEOSYNC
+M:	Jintao Xu <jintao.xu@amlogic.com>
+F:	drivers/amlogic/media/video_processor/videosync/Kconfig
+F:	drivers/amlogic/media/video_processor/videosync/Makefile
+F:	drivers/amlogic/media/video_processor/videosync/vfp.h
+F:	drivers/amlogic/media/video_processor/videosync/videosync.h
+F:	drivers/amlogic/media/video_processor/videosync/videosync.c

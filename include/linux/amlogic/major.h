@@ -30,6 +30,7 @@
 #define VFM_MAJOR               (14+(AML_BASE))
 #define IONVIDEO_MAJOR		(15+(AML_BASE))
 #define VAD_MAJOR		(16+(AML_BASE))
+#define VIDEOSYNC_MAJOR		(17+(AML_BASE))
 /*
  *#define UIO_MAJOR			4+(AML_BASE)
  *#define USB_DEV_EP_MAJOR	5+(AML_BASE)

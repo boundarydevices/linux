@@ -972,9 +972,9 @@ bool afbc_is_supported(void)
 
 	/*currently support txlx and g12a*/
 	if (is_meson_txlx_cpu()
-		|| is_meson_g12a_cpu())
-		ret = true;
-
+		|| is_meson_g12a_cpu()
+		/*|| is_meson_tl1_cpu()*/)
+		ret = false;
 	return ret;
 
 }
