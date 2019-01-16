@@ -236,7 +236,7 @@ void set_usb_wifi_power(int is_power)
 {
 	usb_power_control(is_power, WIFI_BIT);
 }
-
+EXPORT_SYMBOL(set_usb_wifi_power);
 static int  wifi_power_open(struct inode *inode, struct file *file)
 {
 	struct cdev *cdevp = inode->i_cdev;
