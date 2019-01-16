@@ -14507,6 +14507,7 @@ F:	drivers/amlogic/defendkey/*
 
 AMLOGIC DEBUG
 M: Jianxin Pan <jianxin.pan@amlogic.com>
+M: Tao Guo <tao.guo@amlogic.com>
 F:  drivers/amlogic/debug/*
 
 AMLOGIC G12A spdif channel status
