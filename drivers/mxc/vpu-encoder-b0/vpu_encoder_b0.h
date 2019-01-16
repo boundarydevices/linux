@@ -260,6 +260,16 @@ struct vpu_attr {
 	bool created;
 };
 
+struct print_buf_desc {
+	u32 start_h_phy;
+	u32 start_h_vir;
+	u32 start_m;
+	u32 bytes;
+	u32 read;
+	u32 write;
+	char buffer[0];
+};
+
 struct core_device {
 	void *m0_p_fw_space_vir;
 	u_int32 m0_p_fw_space_phy;
@@ -270,6 +280,7 @@ struct core_device {
 	u32 rpc_buf_size;
 	u32 print_buf_size;
 	u32 rpc_actual_size;
+	struct print_buf_desc *print_buf;
 
 	struct mutex cmd_mutex;
 	bool fw_is_ready;

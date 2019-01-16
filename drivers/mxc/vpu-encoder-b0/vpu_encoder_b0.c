@@ -73,6 +73,7 @@ struct vpu_frame_info {
 unsigned int vpu_dbg_level_encoder = LVL_WARN;
 static unsigned int reset_on_hang;
 static unsigned int show_detail_index = VPU_DETAIL_INDEX_DFT;
+static unsigned long debug_firmware_bitmap;
 
 #define ITEM_NAME(name)		\
 				[name] = #name
@@ -2566,6 +2567,7 @@ static void enable_mu(struct core_device *dev)
 
 	mu_addr = cpu_phy_to_mu(dev, dev->m0_rpc_phy + dev->rpc_buf_size);
 	rpc_set_print_buffer(&dev->shared_mem, mu_addr, dev->print_buf_size);
+	dev->print_buf = dev->m0_rpc_virt + dev->rpc_buf_size;
 
 	mu_addr = cpu_phy_to_mu(dev, dev->m0_rpc_phy);
 	MU_sendMesgToFW(dev->mu_base_virtaddr, RPC_BUF_OFFSET, mu_addr);
@@ -4876,12 +4878,59 @@ static void statistic_fps_info(struct vpu_statistic *sts)
 		calc_rt_fps(&sts->fps[i], encoded_count, &ts);
 }
 
+static void print_firmware_debug(char *ptr, u32 size)
+{
+	u32 total = 0;
+	u32 len;
+
+	while (total < size) {
+		len = min_t(u32, size - total, 256);
+
+		pr_info("%.*s", len, ptr + total);
+		total += len;
+	}
+}
+
+static void handle_core_firmware_debug(struct core_device *core)
+{
+	char *ptr;
+	u32 rptr;
+	u32 wptr;
+
+	if (!core || !core->print_buf)
+		return;
+
+	if (!test_bit(core->id, &debug_firmware_bitmap))
+		return;
+
+	rptr = core->print_buf->read;
+	wptr = core->print_buf->write;
+	if (rptr == wptr)
+		return;
+
+	ptr = core->print_buf->buffer;
+	pr_info("----mem_printf for VPU Encoder core %d----\n", core->id);
+	if (rptr > wptr) {
+		print_firmware_debug(ptr + rptr, core->print_buf->bytes - rptr);
+		rptr = 0;
+	}
+	if (rptr < wptr) {
+		print_firmware_debug(ptr + rptr, wptr - rptr);
+		rptr = wptr;
+	}
+	if (rptr >= core->print_buf->bytes)
+		rptr = 0;
+	core->print_buf->read = rptr;
+}
+
 static void handle_core_minors(struct core_device *core)
 {
 	int i;
 
 	for (i = 0; i < core->supported_instance_count; i++)
 		statistic_fps_info(&core->attr[i].statistic);
+
+	handle_core_firmware_debug(core);
 }
 
 static void vpu_enc_watchdog_handler(struct work_struct *work)
@@ -4944,7 +4993,8 @@ static int init_vpu_core_dev(struct core_device *core_dev)
 	memset_io(core_dev->m0_p_fw_space_vir, 0, core_dev->fw_buf_size);
 
 	core_dev->m0_rpc_virt =
-		ioremap_wc(core_dev->m0_rpc_phy, core_dev->rpc_buf_size);
+		ioremap_wc(core_dev->m0_rpc_phy,
+			core_dev->rpc_buf_size + core_dev->print_buf_size);
 	if (!core_dev->m0_rpc_virt)
 		vpu_dbg(LVL_ERR, "failed to remap space for shared memory\n");
 
@@ -5491,4 +5541,7 @@ MODULE_PARM_DESC(reset_on_hang, "reset on hang (0-1)");
 
 module_param(show_detail_index, int, 0644);
 MODULE_PARM_DESC(reset_on_hang, "show memory detail info index");
+
+module_param(debug_firmware_bitmap, long, 0644);
+MODULE_PARM_DESC(debug_firmware_bitmap, "firmware debug info switch");
 
