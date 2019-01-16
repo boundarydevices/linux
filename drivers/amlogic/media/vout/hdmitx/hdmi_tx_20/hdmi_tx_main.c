@@ -4744,7 +4744,7 @@ static char *next_token_ex(char *separator, char *buf, unsigned int size,
 /* check the colorattribute from uboot */
 static void check_hdmiuboot_attr(char *token)
 {
-	char attr[16];
+	char attr[16] = {0};
 	const char * const cs[] = {
 		"444", "422", "rgb", "420", NULL};
 	const char * const cd[] = {
