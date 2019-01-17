@@ -21,6 +21,10 @@ ifeq ($(CONFIG_MACH_MESON8B),y)
 include $(srctree)/arch/arm/mach-meson/Makefile.boot
 endif
 
+ifeq ($(CONFIG_ARM64_A32),y)
+include $(srctree)/arch/arm/mach-meson/Makefile.boot
+endif
+
 include $(srctree)/arch/arm/boot/dts/Makefile
 
 # Note: the following conditions must always be true:

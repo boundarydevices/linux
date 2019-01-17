@@ -12,17 +12,17 @@ if ARCH_MESON
 
 config MACH_MESON6
 	bool "Amlogic Meson6 (8726MX) SoCs support"
-	default ARCH_MESON
+	default !ARM64_A32
 	select MESON6_TIMER
 
 config MACH_MESON8
 	bool "Amlogic Meson8 SoCs support"
-	default ARCH_MESON
+	default !ARM64_A32
 	select MESON6_TIMER
 
 config MACH_MESON8B
 	bool "Amlogic Meson8b SoCs support"
-	default ARCH_MESON
+	default !ARM64_A32
 
 config ARM64_A32
 	tristate "ARMV8 Run in A32"
