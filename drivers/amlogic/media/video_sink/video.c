@@ -143,6 +143,7 @@ static int omx_need_drop_frame_num;
 static bool omx_drop_done;
 static bool video_start_post;
 static bool videopeek;
+static bool nopostvideostart;
 
 /*----omx_info  bit0: keep_last_frame, bit1~31: unused----*/
 static u32 omx_info = 0x1;
@@ -5396,9 +5397,10 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 
 		if (vf) {
 			if (hdmi_in_onvideo == 0) {
-				tsync_avevent_locked(VIDEO_START,
-						     (vf->pts) ? vf->pts :
-						     timestamp_vpts_get());
+				if (nopostvideostart == false)
+					tsync_avevent_locked(VIDEO_START,
+					    (vf->pts) ? vf->pts :
+					    timestamp_vpts_get());
 				video_start_post = true;
 			}
 
@@ -6803,6 +6805,7 @@ static void video_vf_unreg_provider(void)
 	new_frame_count = 0;
 	first_frame_toggled = 0;
 	videopeek = 0;
+	nopostvideostart = false;
 
 	atomic_set(&video_unreg_flag, 1);
 	while (atomic_read(&video_inirq_flag) > 0)
@@ -7756,12 +7759,14 @@ static long amvideo_ioctl(struct file *file, unsigned int cmd, ulong arg)
 			put_user(video_onoff_state, (u32 __user *)argp);
 			break;
 		}
+
 	case AMSTREAM_IOC_GET_FIRST_FRAME_TOGGLED:
 		put_user(first_frame_toggled, (u32 __user *)argp);
 		break;
 
 	case AMSTREAM_IOC_SET_VIDEOPEEK:
 		videopeek = true;
+		nopostvideostart = true;
 		break;
 	default:
 		return -EINVAL;
