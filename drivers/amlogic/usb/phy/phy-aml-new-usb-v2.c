@@ -30,7 +30,6 @@
 int amlogic_new_usbphy_reset_v2(struct amlogic_usb_v2 *phy)
 {
 	static int	init_count;
-	int i = 0;
 
 	if (!init_count) {
 		init_count++;
@@ -39,8 +38,6 @@ int amlogic_new_usbphy_reset_v2(struct amlogic_usb_v2 *phy)
 		else
 			writel((readl(phy->reset_regs) | (0x1 << 2)),
 				phy->reset_regs);
-		for (i = 0; i < 1000; i++)
-			udelay(500);
 	}
 
 	return 0;
