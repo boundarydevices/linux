@@ -30,6 +30,14 @@
 	};
 };
 
+/ {
+    reserved-memory {
+            carveout_region: imx_ion@0 {
+		    status = "disabled";
+            };
+    };
+};
+
 &i2c0 {
 	clock-frequency = <1000000>;
 };
