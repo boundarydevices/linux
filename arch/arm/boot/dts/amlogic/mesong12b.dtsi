@@ -1853,6 +1853,7 @@
 		reg-names = "ISP";
 		interrupts = <0 142 4>;
 		interrupt-names = "ISP";
+		temper-buf-size = <24>;
 		clocks = <&clkc CLKID_MIPI_ISP_CLK_COMP>,
 			<&clkc CLKID_MIPI_CSI_PHY_CLK0_COMP>;
 		clock-names = "cts_mipi_isp_clk_composite",
