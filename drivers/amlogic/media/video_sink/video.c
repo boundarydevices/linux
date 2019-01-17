@@ -410,6 +410,8 @@ static u32 layer_cap;
 
 static struct disp_info_s glayer_info[MAX_VD_LAYERS];
 
+static u32 reference_zorder = 128;
+
 #define MAX_ZOOM_RATIO 300
 
 #define VPP_PREBLEND_VD_V_END_LIMIT 2304
@@ -5864,6 +5866,45 @@ void set_hdr_to_frame(struct vframe_s *vf)
 }
 #endif
 
+static int vpp_zorder_check(void)
+{
+	int force_flush = 0;
+	u32 layer0_sel = 0; /* vd1 */
+	u32 layer1_sel = 1; /* vd2 */
+
+	if (legacy_vpp)
+		return 0;
+
+	if (glayer_info[1].zorder < glayer_info[0].zorder) {
+		layer0_sel = 1;
+		layer1_sel = 0;
+		if ((glayer_info[0].zorder >= reference_zorder)
+			&& (glayer_info[1].zorder < reference_zorder))
+			layer0_sel++;
+	} else {
+		layer0_sel = 0;
+		layer1_sel = 1;
+		if ((glayer_info[1].zorder >= reference_zorder)
+			&& (glayer_info[0].zorder < reference_zorder))
+			layer1_sel++;
+	}
+
+	glayer_info[0].cur_sel_port = layer0_sel;
+	glayer_info[1].cur_sel_port = layer1_sel;
+
+	if ((glayer_info[0].cur_sel_port !=
+		glayer_info[0].last_sel_port) ||
+		(glayer_info[1].cur_sel_port !=
+		glayer_info[1].last_sel_port)) {
+		force_flush = 1;
+		glayer_info[0].last_sel_port =
+			glayer_info[0].cur_sel_port;
+		glayer_info[1].last_sel_port =
+			glayer_info[1].cur_sel_port;
+	}
+	return force_flush;
+}
+
 #ifdef FIQ_VSYNC
 void vsync_fisr_in(void)
 #else
@@ -7408,6 +7449,7 @@ SET_FILTER:
 
 	if (!legacy_vpp) {
 		u32 set_value = 0;
+		int force_flush = vpp_zorder_check();
 
 		vpp_misc_set &=
 			((1 << 29) | VPP_CM_ENABLE |
@@ -7437,31 +7479,60 @@ SET_FILTER:
 			VPP_PREBLEND_EN |
 			VPP_POSTBLEND_EN |
 			0xf);
-		if (vpp_misc_set != vpp_misc_save) {
-			/* vd1 need always enable pre bld */
-			if (vpp_misc_set & VPP_VD1_POSTBLEND)
-				set_value =
-					((1 << 16) | /* post bld premult*/
-					(1 << 8) | /* post src */
-					(1 << 4) | /* pre bld premult*/
-					(1 << 0)); /* pre bld src 1 */
-			VSYNC_WR_MPEG_REG(
-				VD1_BLEND_SRC_CTRL + cur_dev->vpp_off,
-				set_value);
+		if ((vpp_misc_set != vpp_misc_save)
+			|| force_flush) {
+			u32 port_val[3] = {0, 0, 0};
+			u32 vd1_port, vd2_port, icnt;
+			u32 post_blend_reg[3] = {
+				VD1_BLEND_SRC_CTRL,
+				VD2_BLEND_SRC_CTRL,
+				OSD2_BLEND_SRC_CTRL
+			};
 
-			set_value = 0;
+			/* just reset the select port */
+			if ((glayer_info[0].cur_sel_port > 2)
+				|| (glayer_info[1].cur_sel_port > 2)) {
+				glayer_info[0].cur_sel_port = 0;
+				glayer_info[1].cur_sel_port = 1;
+			}
+
+			vd1_port = glayer_info[0].cur_sel_port;
+			vd2_port = glayer_info[1].cur_sel_port;
+
+			/* post bld premult*/
+			port_val[0] |= (1 << 16);
+
+			/* vd2 path sel */
 			if (vpp_misc_set & VPP_VD2_POSTBLEND)
-				set_value =
-					((1 << 20) |
-					(0 << 16) | /* post bld premult*/
-					(2 << 8)); /* post src */
+				port_val[1] |= (1 << 20);
+			else
+				port_val[1] &= ~(1 << 20);
+
+			/* osd2 path sel */
+			port_val[2] |= (1 << 20);
+
+			if (vpp_misc_set & VPP_VD1_POSTBLEND) {
+				 /* post src */
+				port_val[vd1_port] |= (1 << 8);
+				port_val[0] |=
+					((1 << 4) | /* pre bld premult*/
+					(1 << 0)); /* pre bld src 1 */
+			} else
+				port_val[0] &= ~0xff;
+
+			if (vpp_misc_set & VPP_VD2_POSTBLEND)
+				 /* post src */
+				port_val[vd2_port] |= (2 << 8);
 			else if (vpp_misc_set & VPP_VD2_PREBLEND)
-				set_value =
+				port_val[1] |=
 					((1 << 4) | /* pre bld premult*/
 					(2 << 0)); /* pre bld src 1 */
-			VSYNC_WR_MPEG_REG(
-				VD2_BLEND_SRC_CTRL + cur_dev->vpp_off,
-				set_value);
+
+			for (icnt = 0; icnt < 3; icnt++)
+				VSYNC_WR_MPEG_REG(
+					post_blend_reg[icnt]
+					+ cur_dev->vpp_off,
+					port_val[icnt]);
 
 			set_value = vpp_misc_set;
 			set_value &=
@@ -8933,10 +9004,26 @@ static long amvideo_ioctl(struct file *file, unsigned int cmd, ulong arg)
 
 	case AMSTREAM_IOC_GET_PIP_ZORDER:
 	case AMSTREAM_IOC_GET_ZORDER:
+		put_user(layer->zorder, (u32 __user *)argp);
 		break;
 
 	case AMSTREAM_IOC_SET_PIP_ZORDER:
-	case AMSTREAM_IOC_SET_ZORDER:
+	case AMSTREAM_IOC_SET_ZORDER:{
+			u32 zorder, new_prop = 0;
+
+			if (copy_from_user(&zorder, argp, sizeof(u32)) == 0) {
+				if (layer->zorder != zorder)
+					new_prop = 1;
+				layer->zorder = zorder;
+				if ((layer->layer_id == 0) && new_prop)
+					video_property_changed = 1;
+#ifdef VIDEO_PIP
+				else if ((layer->layer_id == 1) && new_prop)
+					pip_property_changed = 1;
+#endif
+			} else
+				ret = -EFAULT;
+		}
 		break;
 
 	case AMSTREAM_IOC_QUERY_LAYER:
@@ -10935,6 +11022,36 @@ static ssize_t video_inuse_store(struct class *class,
 	return count;
 }
 
+static ssize_t video_zorder_show(
+	struct class *cla,
+	struct class_attribute *attr,
+	char *buf)
+{
+	struct disp_info_s *layer = &glayer_info[0];
+
+	return sprintf(buf, "%d\n", layer->zorder);
+}
+
+static ssize_t video_zorder_store(
+	struct class *cla,
+	struct class_attribute *attr,
+	const char *buf, size_t count)
+{
+	int zorder;
+	int ret = 0;
+	struct disp_info_s *layer = &glayer_info[0];
+
+	ret = kstrtoint(buf, 0, &zorder);
+	if (ret < 0)
+		return -EINVAL;
+
+	if (zorder != layer->zorder) {
+		layer->zorder = zorder;
+		video_property_changed = 1;
+	}
+	return count;
+}
+
 #ifdef VIDEO_PIP
 static int _videopip_set_disable(u32 val)
 {
@@ -11030,7 +11147,6 @@ static ssize_t videopip_disable_store(
 	struct class_attribute *attr,
 	const char *buf, size_t count)
 {
-
 	int r;
 	int val;
 
@@ -11133,6 +11249,36 @@ static ssize_t videopip_global_output_store(
 
 	pr_info("%s(%d)\n", __func__, pip_global_output);
 
+	return count;
+}
+
+static ssize_t videopip_zorder_show(
+	struct class *cla,
+	struct class_attribute *attr,
+	char *buf)
+{
+	struct disp_info_s *layer = &glayer_info[1];
+
+	return sprintf(buf, "%d\n", layer->zorder);
+}
+
+static ssize_t videopip_zorder_store(
+	struct class *cla,
+	struct class_attribute *attr,
+	const char *buf, size_t count)
+{
+	int zorder;
+	int ret = 0;
+	struct disp_info_s *layer = &glayer_info[1];
+
+	ret = kstrtoint(buf, 0, &zorder);
+	if (ret < 0)
+		return -EINVAL;
+
+	if (zorder != layer->zorder) {
+		layer->zorder = zorder;
+		pip_property_changed = 1;
+	}
 	return count;
 }
 
@@ -11399,6 +11545,10 @@ static struct class_attribute amvideo_class_attrs[] = {
 	       0664,
 	       video_inuse_show,
 	       video_inuse_store),
+	 __ATTR(video_zorder,
+	       0664,
+	       video_zorder_show,
+	       video_zorder_store),
 	__ATTR_RO(frame_addr),
 	__ATTR_RO(frame_canvas_width),
 	__ATTR_RO(frame_canvas_height),
@@ -11437,6 +11587,10 @@ static struct class_attribute amvideo_class_attrs[] = {
 	       0664,
 	       videopip_global_output_show,
 	       videopip_global_output_store),
+	 __ATTR(videopip_zorder,
+	       0664,
+	       videopip_zorder_show,
+	       videopip_zorder_store),
 	__ATTR_RO(videopip_state),
 #endif
 	__ATTR_NULL
@@ -11897,6 +12051,8 @@ static int __init video_early_init(void)
 		WRITE_VCBUS_REG(
 			VPP_POST_BLEND_DUMMY_ALPHA,
 			0x7fffffff);
+		WRITE_VCBUS_REG_BITS(
+			VPP_MISC1, 0x100, 0, 9);
 	}
 	if (is_meson_tl1_cpu()) {
 		/* force bypass dolby for TL1, no dolby function */
@@ -12165,9 +12321,13 @@ static int __init video_init(void)
 		goto err5;
 	}
 
+	/* make vd1 below vd2 */
 	for (i = 0; i < MAX_VD_LAYERS; i++) {
 		vpp_disp_info_init(&glayer_info[i], i);
 		glayer_info[i].wide_mode = 1;
+		glayer_info[i].zorder = reference_zorder - 2 + i;
+		glayer_info[i].cur_sel_port = i;
+		glayer_info[i].last_sel_port = i;
 	}
 
 	if (legacy_vpp)
@@ -12460,6 +12620,9 @@ module_param(toggle_count, uint, 0664);
 
 MODULE_PARM_DESC(vpp_hold_line, "\n vpp_hold_line\n");
 module_param(vpp_hold_line, uint, 0664);
+
+MODULE_PARM_DESC(reference_zorder, "\n reference_zorder\n");
+module_param(reference_zorder, uint, 0664);
 
 MODULE_DESCRIPTION("AMLOGIC video output driver");
 MODULE_LICENSE("GPL");

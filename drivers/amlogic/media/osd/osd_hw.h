@@ -30,6 +30,7 @@
 extern int int_viu_vsync;
 extern int int_viu2_vsync;
 extern struct hw_para_s osd_hw;
+extern int enable_vd_zorder;
 
 #ifdef CONFIG_HIBERNATION
 extern void osd_freeze_hw(void);

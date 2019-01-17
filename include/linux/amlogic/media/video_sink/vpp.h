@@ -180,6 +180,10 @@ struct disp_info_s {
 	s32 global_offset_y;
 	u32 speed_check_width;
 	u32 speed_check_height;
+
+	u32 zorder;
+	u32 cur_sel_port;
+	u32 last_sel_port;
 };
 
 enum select_scaler_path_e {

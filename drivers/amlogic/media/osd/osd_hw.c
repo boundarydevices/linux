@@ -447,6 +447,10 @@ static unsigned int supsend_delay;
 module_param(supsend_delay, uint, 0664);
 MODULE_PARM_DESC(supsend_delay, "supsend_delay");
 
+int enable_vd_zorder = 1;
+MODULE_PARM_DESC(enable_vd_zorder, "\n enable_vd_zorder\n");
+module_param(enable_vd_zorder, uint, 0664);
+
 static int vsync_enter_line_max;
 static int vsync_exit_line_max;
 static int vsync_line_threshold = 950;
@@ -4955,14 +4959,16 @@ static void osd_update_enable(u32 index)
 		if (osd_hw.enable[index] == ENABLE)
 			postbld_src_sel = (index == 0) ? 3 : 4;
 		if (index == 0)
-			VSYNCOSD_WR_MPEG_REG(OSD1_BLEND_SRC_CTRL,
+			VSYNCOSD_WR_MPEG_REG(
+				OSD1_BLEND_SRC_CTRL,
 				(0 & 0xf) << 0 |
 				(0 & 0x1) << 4 |
 				(postbld_src_sel & 0xf) << 8 |
 				(0 & 0x1) << 16|
 				(1 & 0x1) << 20);
-		else if (index == 1)
-			VSYNCOSD_WR_MPEG_REG(OSD2_BLEND_SRC_CTRL,
+		else if ((index == 1) && (!enable_vd_zorder))
+			VSYNCOSD_WR_MPEG_REG(
+				OSD2_BLEND_SRC_CTRL,
 				(0 & 0xf) << 0 |
 				(0 & 0x1) << 4 |
 				(postbld_src_sel & 0xf) << 8 |
@@ -7245,12 +7251,15 @@ static void set_blend_reg(struct layer_blend_reg_s *blend_reg)
 		(0 << 16) |
 		(1 & 0x1) << 20);
 	/* vpp osd2 blend ctrl */
-	VSYNCOSD_WR_MPEG_REG(OSD2_BLEND_SRC_CTRL,
-		(0 & 0xf) << 0 |
-		(0 & 0x1) << 4 |
-		(blend_reg->postbld_src4_sel & 0xf) << 8 |
-		(0 << 16) |
-		(1 & 0x1) << 20);
+	if (!enable_vd_zorder)
+		VSYNCOSD_WR_MPEG_REG(
+			OSD2_BLEND_SRC_CTRL,
+			(0 & 0xf) << 0 |
+			(0 & 0x1) << 4 |
+			(blend_reg->postbld_src4_sel & 0xf)
+			<< 8 |
+			(0 << 16) |
+			(1 & 0x1) << 20);
 
 	VSYNCOSD_WR_MPEG_REG(VIU_OSD_BLEND_BLEND0_SIZE,
 		blend_reg->osd_blend_blend0_size);
@@ -7531,12 +7540,16 @@ static void osd_setting_default_hwc(void)
 		(postbld_osd1_premult & 0x1) << 16|
 		(1 & 0x1) << 20);
 	/* vpp osd2 blend ctrl */
-	VSYNCOSD_WR_MPEG_REG(OSD2_BLEND_SRC_CTRL,
-		(0 & 0xf) << 0 |
-		(0 & 0x1) << 4 |
-		(postbld_src4_sel & 0xf) << 8 |
-		(postbld_osd2_premult & 0x1) << 16 |
-		(1 & 0x1) << 20);
+	if (!enable_vd_zorder)
+		VSYNCOSD_WR_MPEG_REG(
+			OSD2_BLEND_SRC_CTRL,
+			(0 & 0xf) << 0 |
+			(0 & 0x1) << 4 |
+			(postbld_src4_sel & 0xf)
+			<< 8 |
+			(postbld_osd2_premult & 0x1)
+			<< 16 |
+			(1 & 0x1) << 20);
 
 	/* Do later: different format select different dummy_data */
 	/* used default dummy data */
@@ -9014,15 +9027,19 @@ void  osd_suspend_hw(void)
 			osd_reg_read(VIU_OSD_BLEND_CTRL);
 		osd_hw.reg_status_save1 =
 			osd_reg_read(OSD1_BLEND_SRC_CTRL);
-		osd_hw.reg_status_save2 =
-			osd_reg_read(OSD2_BLEND_SRC_CTRL);
+
 		osd_hw.reg_status_save3 =
 			osd_reg_read(VPP_RDARB_REQEN_SLV);
 		osd_hw.reg_status_save4 =
 			osd_reg_read(VPU_MAFBC_SURFACE_CFG);
 		osd_reg_clr_mask(VIU_OSD_BLEND_CTRL, 0xf0000);
 		osd_reg_clr_mask(OSD1_BLEND_SRC_CTRL, 0xf0f);
-		osd_reg_clr_mask(OSD2_BLEND_SRC_CTRL, 0xf0f);
+		if (!enable_vd_zorder) {
+			osd_hw.reg_status_save2 =
+				osd_reg_read(OSD2_BLEND_SRC_CTRL);
+			osd_reg_clr_mask(
+				OSD2_BLEND_SRC_CTRL, 0xf0f);
+		}
 		osd_reg_clr_mask(VPP_RDARB_REQEN_SLV,
 			rdarb_reqen_slv);
 		osd_reg_write(VPU_MAFBC_SURFACE_CFG, 0);
@@ -9077,8 +9094,9 @@ void osd_resume_hw(void)
 			osd_hw.reg_status_save);
 		osd_reg_write(OSD1_BLEND_SRC_CTRL,
 			osd_hw.reg_status_save1);
-		osd_reg_write(OSD2_BLEND_SRC_CTRL,
-			osd_hw.reg_status_save2);
+		if (!enable_vd_zorder)
+			osd_reg_write(OSD2_BLEND_SRC_CTRL,
+				osd_hw.reg_status_save2);
 		osd_reg_write(VPP_RDARB_REQEN_SLV,
 			osd_hw.reg_status_save3);
 		osd_reg_write(VPU_MAFBC_SURFACE_CFG,

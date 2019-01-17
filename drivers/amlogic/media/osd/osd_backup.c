@@ -1538,7 +1538,11 @@ static s32 get_recovery_item_g12a(u32 addr, u32 *value, u32 *mask)
 			u32 regmask = table->mask;
 			u32 real_value = osd_reg_read(addr);
 
-			if ((real_value & regmask)
+			if (enable_vd_zorder &&
+				(addr == OSD2_BLEND_SRC_CTRL)) {
+				ret = 1;
+				table->recovery = 0;
+			} else if ((real_value & regmask)
 				== (table->val & regmask)) {
 				ret = 1;
 				*mask = regmask;
