@@ -30,6 +30,14 @@
 	};
 };
 
+/ {
+    reserved-memory {
+            carveout_region: imx_ion@0 {
+                   status = "disabled";
+            };
+    };
+};
+
 /delete-node/ &i2c0_mipi_lvds0;
 /delete-node/ &i2c0_csi0;
 
