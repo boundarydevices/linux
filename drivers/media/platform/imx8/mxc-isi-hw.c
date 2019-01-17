@@ -609,7 +609,10 @@ void mxc_isi_channel_enable(struct mxc_isi_dev *mxc_isi)
 
 	mxc_isi_clean_registers(mxc_isi);
 	mxc_isi_enable_irq(mxc_isi);
-	msleep(700);
+	if (mxc_isi->low_latency)
+		msleep(300);
+	else
+		msleep(700);
 	dump_isi_regs(mxc_isi);
 }
 
