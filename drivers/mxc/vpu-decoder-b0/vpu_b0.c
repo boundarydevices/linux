@@ -57,6 +57,7 @@ static int vpu_log_depth = DEFAULT_LOG_DEPTH;
 static int vpu_max_bufsize = MAX_BUFFER_SIZE;
 static int vpu_frmdbg_ena;
 static int vpu_dbe_num = 1;
+static int vpu_frmcrcdump_ena;
 
 /* Generic End of content startcodes to differentiate from those naturally in the stream/file */
 #define EOS_GENERIC_HEVC 0x7c010000
@@ -508,7 +509,7 @@ static void caculate_frame_size(struct vpu_ctx *ctx)
 	u_int32 luma_size;
 	u_int32 chroma_size;
 	u_int32 chroma_height;
-	u_int32 uVertAlign = 256-1;
+	u_int32 uVertAlign = 512-1;
 	bool b10BitFormat = (ctx->pSeqinfo->uBitDepthLuma > 8) ||
 		(ctx->pSeqinfo->uBitDepthChroma > 8);
 
@@ -2010,6 +2011,7 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		u_int32 uPicStartAddr = event_data[10];
 		struct queue_data *This = &ctx->q_data[V4L2_DST];
 		u_int32 uDpbmcCrc;
+		size_t wr_size;
 
 		if (ctx->buffer_null == true) {
 			vpu_dbg(LVL_INFO, "frame already released\n");
@@ -2020,6 +2022,11 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 			uDpbmcCrc = pPerfDcpInfo->uDBEDpbCRC[0];
 		else
 			uDpbmcCrc = pPerfInfo->uMemCRC;
+		if (vpu_frmcrcdump_ena) {
+			wr_size = kernel_write(ctx->crc_fp, &uDpbmcCrc, sizeof(uDpbmcCrc), &ctx->pos);
+			ctx->pos += wr_size;
+		}
+
 		vpu_dbg(LVL_INFO, "PICINFO GET: uPicType:%d uPicStruct:%d uPicStAddr:0x%x uFrameStoreID:%d uPercentInErr:%d, uRbspBytesCount=%d, ulLumBaseAddr[0]=%x, pQMeterInfo:%p, pPicInfo:%p, pDispInfo:%p, pPerfInfo:%p, pPerfDcpInfo:%p, uPicStartAddr=0x%x, uDpbmcCrc:%x\n",
 				pPicInfo[uStrIdx].uPicType, pPicInfo[uStrIdx].uPicStruct,
 				pPicInfo[uStrIdx].uPicStAddr, pPicInfo[uStrIdx].uFrameStoreID,
@@ -3193,6 +3200,41 @@ static int alloc_vpu_buffer(struct vpu_ctx *ctx)
 	return ret;
 }
 
+static int open_crc_file(struct vpu_ctx *ctx)
+{
+	char crc_file[64];
+	int ret = 0;
+
+	if (!ctx)
+		return -EINVAL;
+
+	scnprintf(crc_file, sizeof(crc_file) - 1,
+			"/home/instance%d_crc.txt",
+			ctx->str_index);
+	ctx->crc_fp = filp_open(crc_file, O_RDWR | O_CREAT, 0664);
+	if (IS_ERR(ctx->crc_fp)) {
+		vpu_dbg(LVL_ERR, "error: open crc file fail\n");
+		ret = -1;
+	}
+	ctx->pos = 0;
+
+	return ret;
+}
+
+static int close_crc_file(struct vpu_ctx *ctx)
+{
+	int ret = 0;
+
+	if (!ctx)
+		return -EINVAL;
+
+	if (!IS_ERR(ctx->crc_fp))
+		ret = filp_close(ctx->crc_fp, NULL);
+	ctx->pos = 0;
+
+	return ret;
+}
+
 static int v4l2_open(struct file *filp)
 {
 	struct video_device *vdev = video_devdata(filp);
@@ -3226,7 +3268,6 @@ static int v4l2_open(struct file *filp)
 	ctrls_setup_decoder(ctx);
 	ctx->fh.ctrl_handler = &ctx->ctrl_handler;
 
-
 	ctx->instance_wq = alloc_workqueue("vpu_instance", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
 	if (!ctx->instance_wq) {
 		vpu_dbg(LVL_ERR, "error: %s unable to alloc workqueue for ctx\n", __func__);
@@ -3259,6 +3300,11 @@ static int v4l2_open(struct file *filp)
 	ctx->start_code_bypass = false;
 	ctx->hang_status = false;
 	create_instance_file(ctx);
+	if (vpu_frmcrcdump_ena) {
+		ret = open_crc_file(ctx);
+		if (ret)
+			goto err_open_crc;
+	}
 	ctx->pSeqinfo = kzalloc(sizeof(MediaIPFW_Video_SeqInfo), GFP_KERNEL);
 	if (!ctx->pSeqinfo) {
 		vpu_dbg(LVL_ERR, "error: pSeqinfo alloc fail\n");
@@ -3308,6 +3354,9 @@ err_firmware_load:
 	atomic64_sub(sizeof(MediaIPFW_Video_SeqInfo), &ctx->statistic.total_alloc_size);
 	release_queue_data(ctx);
 err_alloc_seq:
+	if (vpu_frmcrcdump_ena)
+		close_crc_file(ctx);
+err_open_crc:
 	remove_instance_file(ctx);
 	kfifo_free(&ctx->msg_fifo);
 err_alloc_fifo:
@@ -3347,7 +3396,8 @@ static int v4l2_release(struct file *filp)
 		}
 	} else
 		vpu_dbg(LVL_INFO, "v4l2_release() - stopped(%d): skip VID_API_CMD_STOP\n", ctx->firmware_stopped);
-
+	if (vpu_frmcrcdump_ena)
+		close_crc_file(ctx);
 	release_queue_data(ctx);
 	ctrls_delete_decoder(ctx);
 	v4l2_fh_del(&ctx->fh);
@@ -3973,3 +4023,5 @@ module_param(vpu_max_bufsize, int, 0644);
 MODULE_PARM_DESC(vpu_frmdbg_ena, "maximun stream buffer size");
 module_param(vpu_dbe_num, int, 0644);
 MODULE_PARM_DESC(vpu_dbe_num, "vpu dbe number(1-2)");
+module_param(vpu_frmcrcdump_ena, int, 0644);
+MODULE_PARM_DESC(vpu_dbe_num, "enable frame crc dump(0-1)");
