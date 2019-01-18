@@ -579,7 +579,7 @@
 		};
 
 		rpmsg: rpmsg{
-			compatible = "fsl,imx8qm-rpmsg";
+			compatible = "fsl,imx8mq-rpmsg";
 			status = "disabled";
 		};
 	};
