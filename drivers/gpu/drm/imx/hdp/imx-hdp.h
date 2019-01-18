@@ -225,6 +225,9 @@ struct imx_hdp {
 	u32 dp_link_rate;
 	u32 dp_num_lanes;
 
+	u32 character_freq_khz;  /* character clock for hdmi */
+	u32 hdmi_type;
+
 	struct mutex mutex;		/* for state below and previous_mode */
 	enum drm_connector_force force;	/* mutex-protected force state */
 
