@@ -43,6 +43,7 @@ enum imx_rpmsg_variants {
 	IMX6SX,
 	IMX7D,
 	IMX7ULP,
+	IMX8MQ,
 	IMX8QXP,
 	IMX8QM,
 };
@@ -377,6 +378,7 @@ static const struct of_device_id imx_rpmsg_dt_ids[] = {
 	{ .compatible = "fsl,imx6sx-rpmsg",  .data = (void *)IMX6SX, },
 	{ .compatible = "fsl,imx7d-rpmsg",   .data = (void *)IMX7D, },
 	{ .compatible = "fsl,imx7ulp-rpmsg", .data = (void *)IMX7ULP, },
+	{ .compatible = "fsl,imx8mq-rpmsg", .data = (void *)IMX8MQ, },
 	{ .compatible = "fsl,imx8qxp-rpmsg", .data = (void *)IMX8QXP, },
 	{ .compatible = "fsl,imx8qm-rpmsg", .data = (void *)IMX8QM, },
 	{ /* sentinel */ }
@@ -610,8 +612,9 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	if (rpdev->variant == IMX7D || rpdev->variant == IMX8QXP
-			|| rpdev->variant == IMX8QM) {
+	if (rpdev->variant == IMX6SX || rpdev->variant == IMX7ULP) {
+		rpdev->mu_clk = NULL;
+	} else {
 		rpdev->mu_clk = of_clk_get(np_mu, 0);
 		if (IS_ERR(rpdev->mu_clk)) {
 			pr_err("mu clock source missing or invalid\n");
@@ -622,8 +625,6 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 			pr_err("unable to enable mu clock\n");
 			return ret;
 		}
-	} else {
-		rpdev->mu_clk = NULL;
 	}
 
 	ret = imx_rpmsg_mu_init(rpdev);
@@ -731,8 +732,7 @@ err_out:
 	if (rpdev->variant == IMX8QM || rpdev->variant == IMX8QXP)
 		of_reserved_mem_device_release(&pdev->dev);
 vdev_err_out:
-	if (rpdev->variant == IMX7D || rpdev->variant == IMX8QXP
-			|| rpdev->variant == IMX8QM)
+	if (rpdev->mu_clk)
 		clk_disable_unprepare(rpdev->mu_clk);
 	return ret;
 }
@@ -742,7 +742,8 @@ static int imx_rpmsg_suspend(struct device *dev)
 {
 	struct imx_rpmsg_vproc *rpdev = dev_get_drvdata(dev);
 
-	clk_disable_unprepare(rpdev->mu_clk);
+	if (rpdev->mu_clk)
+		clk_disable_unprepare(rpdev->mu_clk);
 
 	return 0;
 }
@@ -752,10 +753,12 @@ static int imx_rpmsg_resume(struct device *dev)
 	struct imx_rpmsg_vproc *rpdev = dev_get_drvdata(dev);
 	int ret;
 
-	ret = clk_prepare_enable(rpdev->mu_clk);
-	if (ret) {
-		pr_err("unable to enable mu clock\n");
-		return ret;
+	if (rpdev->mu_clk) {
+		ret = clk_prepare_enable(rpdev->mu_clk);
+		if (ret) {
+			pr_err("unable to enable mu clock\n");
+			return ret;
+		}
 	}
 
 	return imx_rpmsg_mu_init(rpdev);
