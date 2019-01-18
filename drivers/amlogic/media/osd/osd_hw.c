@@ -3905,6 +3905,7 @@ static void osd_pan_display_single_fence(struct osd_fence_map_s *fence_map)
 
 			/* geometry and freescale need update with ioctl */
 			osd_hw.reg[DISP_GEOMETRY].update_func(index);
+			osd_hw.reg[DISP_OSD_REVERSE].update_func(index);
 			if ((osd_hw.free_scale_enable[index]
 					&& osd_update_window_axis)
 					|| freescale_update) {
@@ -4024,6 +4025,7 @@ static void osd_pan_display_single_fence(struct osd_fence_map_s *fence_map)
 			if (color_mode)
 				osd_hw.reg[OSD_COLOR_MODE].update_func(index);
 			osd_hw.reg[DISP_GEOMETRY].update_func(index);
+			osd_hw.reg[DISP_OSD_REVERSE].update_func(index);
 			if ((osd_hw.free_scale_enable[index]
 					&& osd_update_window_axis)
 					|| (osd_hw.free_scale_enable[index]
@@ -4980,18 +4982,35 @@ static void osd_update_enable(u32 index)
 
 static void osd_update_disp_osd_reverse(u32 index)
 {
-	if (osd_hw.osd_reverse[index] == REVERSE_TRUE)
+	if (osd_hw.osd_reverse[index] == REVERSE_TRUE) {
 		VSYNCOSD_WR_MPEG_REG_BITS(
 		hw_osd_reg_array[index].osd_blk0_cfg_w0, 3, 28, 2);
-	else if (osd_hw.osd_reverse[index] == REVERSE_X)
+		if ((osd_hw.osd_meson_dev.afbc_type == MALI_AFBC) &&
+			(osd_hw.osd_afbcd[index].enable == ENABLE))
+			VSYNCOSD_WR_MPEG_REG_BITS(
+			hw_osd_reg_array[index].afbc_prefetch_cfg_s, 3, 0, 2);
+	} else if (osd_hw.osd_reverse[index] == REVERSE_X) {
 		VSYNCOSD_WR_MPEG_REG_BITS(
 		hw_osd_reg_array[index].osd_blk0_cfg_w0, 1, 28, 2);
-	else if (osd_hw.osd_reverse[index] == REVERSE_Y)
+		if ((osd_hw.osd_meson_dev.afbc_type == MALI_AFBC) &&
+			(osd_hw.osd_afbcd[index].enable == ENABLE))
+			VSYNCOSD_WR_MPEG_REG_BITS(
+			hw_osd_reg_array[index].afbc_prefetch_cfg_s, 1, 0, 2);
+	} else if (osd_hw.osd_reverse[index] == REVERSE_Y) {
 		VSYNCOSD_WR_MPEG_REG_BITS(
 		hw_osd_reg_array[index].osd_blk0_cfg_w0, 2, 28, 2);
-	else
+		if ((osd_hw.osd_meson_dev.afbc_type == MALI_AFBC) &&
+			(osd_hw.osd_afbcd[index].enable == ENABLE))
+			VSYNCOSD_WR_MPEG_REG_BITS(
+			hw_osd_reg_array[index].afbc_prefetch_cfg_s, 2, 0, 2);
+	} else {
 		VSYNCOSD_WR_MPEG_REG_BITS(
 		hw_osd_reg_array[index].osd_blk0_cfg_w0, 0, 28, 2);
+		if ((osd_hw.osd_meson_dev.afbc_type == MALI_AFBC) &&
+			(osd_hw.osd_afbcd[index].enable == ENABLE))
+			VSYNCOSD_WR_MPEG_REG_BITS(
+			hw_osd_reg_array[index].afbc_prefetch_cfg_s, 0, 0, 2);
+	}
 	remove_from_update_list(index, DISP_OSD_REVERSE);
 }
 
@@ -7465,6 +7484,7 @@ static int osd_setting_order(void)
 			}
 			osd_hw.reg[DISP_GEOMETRY].update_func(i);
 			osd_hw.reg[OSD_GBL_ALPHA].update_func(i);
+			osd_hw.reg[DISP_OSD_REVERSE].update_func(i);
 			if (update || osd_update_window_axis) {
 				osd_set_scan_mode(i);
 				osd_hw.reg
@@ -7748,6 +7768,7 @@ static void osd_setting_old_hwc(void)
 	freescale_update = set_old_hwc_freescale(index);
 	/* geometry and freescale need update with ioctl */
 	osd_hw.reg[DISP_GEOMETRY].update_func(index);
+	osd_hw.reg[DISP_OSD_REVERSE].update_func(index);
 	if ((osd_hw.free_scale_enable[index]
 		&& osd_update_window_axis)
 		|| freescale_update) {
@@ -7785,6 +7806,7 @@ static void osd_setting_viu2(void)
 	osd_hw.reg[OSD_COLOR_MODE].update_func(index);
 	/* geometry and freescale need update with ioctl */
 	osd_hw.reg[DISP_GEOMETRY].update_func(index);
+	osd_hw.reg[DISP_OSD_REVERSE].update_func(index);
 	if (!osd_hw.osd_display_debug)
 		osd_hw.reg[OSD_ENABLE]
 		.update_func(index);
@@ -9955,6 +9977,7 @@ void osd_page_flip(struct osd_plane_map_s *plane_map)
 					plane_map->phy_addr;
 			osd_hw.reg[OSD_COLOR_MODE].update_func(index);
 			osd_hw.reg[DISP_GEOMETRY].update_func(index);
+			osd_hw.reg[DISP_OSD_REVERSE].update_func(index);
 			if ((osd_hw.free_scale_enable[index]
 				&& osd_update_window_axis)
 				|| freescale_update) {
@@ -9986,6 +10009,7 @@ void osd_page_flip(struct osd_plane_map_s *plane_map)
 				osd_cursor_move(plane_map);
 			osd_hw.reg[OSD_COLOR_MODE].update_func(index);
 			osd_hw.reg[DISP_GEOMETRY].update_func(index);
+			osd_hw.reg[DISP_OSD_REVERSE].update_func(index);
 			if ((osd_enable != osd_hw.enable[index])
 				&& (suspend_flag == false)) {
 				osd_hw.enable[index] = osd_enable;
@@ -10026,6 +10050,7 @@ void osd_page_flip(struct osd_plane_map_s *plane_map)
 			osd_hw.reg[OSD_COLOR_MODE].update_func(index);
 			if (!osd_hw.hwc_enable) {
 				osd_hw.reg[DISP_GEOMETRY].update_func(index);
+				osd_hw.reg[DISP_OSD_REVERSE].update_func(index);
 				if ((osd_hw.free_scale_enable[index]
 					&& osd_update_window_axis)
 					|| freescale_update) {
