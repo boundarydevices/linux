@@ -78,6 +78,7 @@ struct imx_rpmsg_vproc {
 	u32 mub_partition;
 	struct notifier_block *pnotifier;
 	spinlock_t mu_lock;
+	struct platform_device *pdev;
 };
 
 /*
@@ -499,45 +500,33 @@ static int imx_rpmsg_mu_init(struct imx_rpmsg_vproc *rpdev)
 	return ret;
 }
 
-static int imx_unregister_rpmsg(struct device *dev,
-				void *data)
-{
-	struct rpmsg_device *rpdev = to_rpmsg_device(dev);
-	struct rpmsg_channel_info chinfo;
-	int ret;
-	struct virtio_device *vdev = (struct virtio_device *)data;
-
-	chinfo.src = rpdev->src;
-	chinfo.dst = rpdev->dst;
-	strncpy(chinfo.name, rpdev->id.name, RPMSG_NAME_SIZE);
-	rpdev->announce = rpdev->src != RPMSG_ADDR_ANY;
-
-	ret = rpmsg_unregister_device(&vdev->dev, &chinfo);
-	if (ret)
-		dev_err(dev, "rpmsg_destroy_channel failed: %d\n", ret);
-
-	return ret;
-}
-
 void imx_rpmsg_restore(struct imx_rpmsg_vproc *rpdev)
 {
 	int i;
-	unsigned int mu_rpmsg = 0;
 	int vdev_nums = rpdev->vdev_nums;
 
 	for (i = 0; i < vdev_nums; i++) {
-		/* unregister all rpmsg channels */
-		device_for_each_child(&rpdev->ivdev[i]->vdev.dev,
-				      &rpdev->ivdev[i]->vdev,
-				      imx_unregister_rpmsg);
+		unregister_virtio_device(&rpdev->ivdev[i]->vdev);
+		kfree(rpdev->ivdev[i]);
+	}
 
-		/* Wait a while for remote bootup */
-		if (!i)
-			usleep_range(10000, 20000);
+	/* Wait a while for remote bootup */
+	usleep_range(10000, 20000);
 
-		/* Kick-off remote again */
-		MU_SendMessageTimeout(rpdev->mu_base, 1, mu_rpmsg << 16, 200);
-		mu_rpmsg += 2;
+	/* Allocate and setup ivdev again to register virtio devices */
+	if (set_vring_phy_buf(rpdev->pdev, rpdev, rpdev->vdev_nums))
+		pr_err("No vring buffer.\n");
+
+	for (i = 0; i < vdev_nums; i++) {
+		rpdev->ivdev[i]->vdev.id.device = VIRTIO_ID_RPMSG;
+		rpdev->ivdev[i]->vdev.config = &imx_rpmsg_config_ops;
+		rpdev->ivdev[i]->vdev.dev.parent = &rpdev->pdev->dev;
+		rpdev->ivdev[i]->vdev.dev.release = imx_rpmsg_vproc_release;
+		rpdev->ivdev[i]->base_vq_id = i * 2;
+		rpdev->ivdev[i]->vproc_id = rpdev->core_id;
+
+		if (register_virtio_device(&rpdev->ivdev[i]->vdev))
+			pr_err("%s failed to register rpdev.\n", __func__);
 	}
 }
 
@@ -684,6 +673,7 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 			 rpdev->ivdev[j]->vring[1]);
 		rpdev->ivdev[j]->vdev.id.device = VIRTIO_ID_RPMSG;
 		rpdev->ivdev[j]->vdev.config = &imx_rpmsg_config_ops;
+		rpdev->pdev = pdev;
 		rpdev->ivdev[j]->vdev.dev.parent = &pdev->dev;
 		rpdev->ivdev[j]->vdev.dev.release = imx_rpmsg_vproc_release;
 		rpdev->ivdev[j]->base_vq_id = j * 2;
