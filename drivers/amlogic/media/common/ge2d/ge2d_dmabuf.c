@@ -416,6 +416,7 @@ int ge2d_dma_buffer_free(struct aml_dma_buffer *buffer, int index)
 		return (-EINVAL);
 	}
 	aml_dma_put(buf);
+	buffer->gd_buffer[index].alloc = 0;
 	return 0;
 }
 
