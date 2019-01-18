@@ -114,9 +114,9 @@ static char *event2str[] = {
 static int wait_for_start_done(struct core_device *core, int resume);
 static void wait_for_stop_done(struct vpu_ctx *ctx);
 static int sw_reset_firmware(struct core_device *core, int resume);
-static void reset_fw_statistic(struct vpu_attr *attr);
 static int enable_fps_sts(struct vpu_attr *attr);
 static int disable_fps_sts(struct vpu_attr *attr);
+static int configure_codec(struct vpu_ctx *ctx);
 
 static char *get_event_str(u32 event)
 {
@@ -1365,10 +1365,18 @@ static int vpu_enc_v4l2_ioctl_streamon(struct file *file,
 	}
 
 	ret = vb2_streamon(&q_data->vb2_q, i);
-	if (!ret && i == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-		clear_stop_status(ctx);
+	if (ret)
+		return ret;
+	if (i == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		mutex_lock(&ctx->dev->dev_mutex);
+		mutex_lock(&ctx->instance_mutex);
+		set_bit(VPU_ENC_STATUS_OUTPUT_READY, &ctx->status);
+		configure_codec(ctx);
+		mutex_unlock(&ctx->instance_mutex);
+		mutex_unlock(&ctx->dev->dev_mutex);
+	}
 
-	return ret;
+	return 0;
 }
 
 static int vpu_enc_v4l2_ioctl_streamoff(struct file *file,
@@ -1653,7 +1661,7 @@ static int do_configure_codec(struct vpu_ctx *ctx)
 	pEncExpertModeParam->Calib.cb_size = ctx->encoder_stream.size;
 
 	show_firmware_version(ctx->core_dev, LVL_INFO);
-	reset_fw_statistic(attr);
+	clear_stop_status(ctx);
 	memcpy(enc_param, &attr->param, sizeof(attr->param));
 	vpu_ctx_send_cmd(ctx, GTB_ENC_CMD_CONFIGURE_CODEC, 0, NULL);
 	vpu_dbg(LVL_INFO, "send command GTB_ENC_CMD_CONFIGURE_CODEC\n");
@@ -1663,10 +1671,26 @@ static int do_configure_codec(struct vpu_ctx *ctx)
 	return 0;
 }
 
+static int check_vpu_ctx_is_ready(struct vpu_ctx *ctx)
+{
+	if (!ctx)
+		return false;
+
+	if (!test_bit(VPU_ENC_STATUS_OUTPUT_READY, &ctx->status))
+		return false;
+	if (!test_bit(VPU_ENC_STATUS_DATA_READY, &ctx->status))
+		return false;
+
+	return true;
+}
+
 static int configure_codec(struct vpu_ctx *ctx)
 {
 	if (!ctx)
 		return -EINVAL;
+
+	if (!check_vpu_ctx_is_ready(ctx))
+		return 0;
 
 	if (ctx->core_dev->snapshot)
 		return 0;
@@ -1674,8 +1698,11 @@ static int configure_codec(struct vpu_ctx *ctx)
 	if (test_bit(VPU_ENC_STATUS_SNAPSHOT, &ctx->status))
 		return 0;
 
-	if (!test_and_set_bit(VPU_ENC_STATUS_CONFIGURED, &ctx->status))
+	if (!test_and_set_bit(VPU_ENC_STATUS_CONFIGURED, &ctx->status)) {
 		do_configure_codec(ctx);
+		clear_bit(VPU_ENC_STATUS_OUTPUT_READY, &ctx->status);
+		clear_bit(VPU_ENC_STATUS_DATA_READY, &ctx->status);
+	}
 
 	return 0;
 }
@@ -2941,6 +2968,8 @@ static void vpu_buf_queue(struct vb2_buffer *vb)
 
 		mutex_lock(&ctx->dev->dev_mutex);
 		mutex_lock(&ctx->instance_mutex);
+		if (!test_bit(VPU_ENC_STATUS_CONFIGURED, &ctx->status))
+			set_bit(VPU_ENC_STATUS_DATA_READY, &ctx->status);
 		configure_codec(ctx);
 		mutex_unlock(&ctx->instance_mutex);
 		mutex_unlock(&ctx->dev->dev_mutex);
@@ -4116,30 +4145,14 @@ static ssize_t show_vpuinfo(struct device *dev,
 }
 DEVICE_ATTR(vpuinfo, 0444, show_vpuinfo, NULL);
 
-static void reset_fw_statistic(struct vpu_attr *attr)
-{
-	int i;
-
-	if (!attr)
-		return;
-
-	for (i = 0; i <= GTB_ENC_CMD_RESERVED; i++) {
-		if (i == GTB_ENC_CMD_FIRM_RESET)
-			continue;
-		attr->statistic.cmd[i] = 0;
-	}
-	for (i = 0; i <= VID_API_ENC_EVENT_RESERVED; i++)
-		attr->statistic.event[i] = 0;
-	attr->statistic.current_cmd = GTB_ENC_CMD_NOOP;
-	attr->statistic.current_event = VID_API_EVENT_UNDEFINED;
-}
-
 static void reset_statistic(struct vpu_attr *attr)
 {
 	if (!attr)
 		return;
 
 	memset(&attr->statistic, 0, sizeof(attr->statistic));
+	attr->statistic.current_cmd = GTB_ENC_CMD_NOOP;
+	attr->statistic.current_event = VID_API_EVENT_UNDEFINED;
 }
 
 static int init_vpu_attr_fps_sts(struct vpu_attr *attr)
