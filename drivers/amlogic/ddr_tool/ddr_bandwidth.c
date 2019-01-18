@@ -74,7 +74,7 @@ static void cal_ddr_usage(struct ddr_bandwidth *db, struct ddr_grant *dg)
 		freq = db->ops->get_freq(db);
 	mul  = dg->all_grant;
 	mul *= 10000ULL;
-	mul /= 16;
+	do_div(mul, db->bytes_per_cycle);
 	cnt  = db->clock_count;
 	do_div(mul, cnt);
 	db->cur_sample.total_usage = mul;
@@ -229,7 +229,8 @@ static ssize_t threshold_show(struct class *cla,
 	struct class_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n",
-		aml_db->threshold / 16 / (aml_db->clock_count / 10000));
+			aml_db->threshold / aml_db->bytes_per_cycle
+			/ (aml_db->clock_count / 10000));
 }
 
 static ssize_t threshold_store(struct class *cla,
@@ -244,7 +245,8 @@ static ssize_t threshold_store(struct class *cla,
 
 	if (val > 10000)
 		val = 10000;
-	aml_db->threshold = val * 16 * (aml_db->clock_count / 10000);
+	aml_db->threshold = val * aml_db->bytes_per_cycle
+			* (aml_db->clock_count / 10000);
 	return count;
 }
 
@@ -682,6 +684,11 @@ static int __ref ddr_bandwidth_probe(struct platform_device *pdev)
 		goto inval;
 	}
 
+	if (is_meson_txl_package_950() || is_meson_gxl_package_805X())
+		aml_db->bytes_per_cycle = 8;
+	else
+		aml_db->bytes_per_cycle = 16;
+
 	/* set channel */
 	if (aml_db->cpu_type < MESON_CPU_MAJOR_ID_GXTVBB) {
 		aml_db->channels = 1;
@@ -737,7 +744,7 @@ static int __ref ddr_bandwidth_probe(struct platform_device *pdev)
 	spin_lock_init(&aml_db->lock);
 	aml_db->clock_count = DEFAULT_CLK_CNT;
 	aml_db->mode = MODE_DISABLE;
-	aml_db->threshold = DEFAULT_THRESHOLD * 16 *
+	aml_db->threshold = DEFAULT_THRESHOLD * aml_db->bytes_per_cycle *
 			(aml_db->clock_count / 10000);
 	if (aml_db->cpu_type <= MESON_CPU_MAJOR_ID_GXTVBB)
 		aml_db->ops = &gx_ddr_bw_ops;

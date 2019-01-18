@@ -151,6 +151,11 @@ static inline bool is_meson_txl_cpu(void)
 	return get_cpu_type() == MESON_CPU_MAJOR_ID_TXL;
 }
 
+static inline bool is_meson_txl_package_950(void)
+{
+	return is_meson_txl_cpu() && package_id_is(0x20);
+}
+
 static inline bool is_meson_txlx_cpu(void)
 {
 	return get_cpu_type() == MESON_CPU_MAJOR_ID_TXLX;
