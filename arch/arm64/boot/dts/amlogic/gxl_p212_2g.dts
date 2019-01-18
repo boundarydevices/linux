@@ -518,7 +518,7 @@
 		#thermal-sensor-cells = <1>;
 		cooling_devices {
 			cpufreq_cool_cluster0 {
-				min_state = <1000000>;
+				min_state = <1200000>;
 				dyn_coeff = <140>;
 				cluster_id = <0>;
 				node_name = "cpufreq_cool0";
@@ -532,7 +532,7 @@
 				device_type = "cpucore";
 			};
 			gpufreq_cool {
-				min_state = <400>;
+				min_state = <500>;
 				dyn_coeff = <437>;
 				cluster_id = <0>;
 				node_name = "gpufreq_cool0";
@@ -569,17 +569,17 @@
 
 			trips {
 				switch_on: trip-point@0 {
-					temperature = <70000>;
-					hysteresis = <1000>;
-					type = "passive";
-				};
-				control: trip-point@1 {
 					temperature = <80000>;
 					hysteresis = <1000>;
 					type = "passive";
 				};
+				control: trip-point@1 {
+					temperature = <90000>;
+					hysteresis = <1000>;
+					type = "passive";
+				};
 				hot: trip-point@2 {
-					temperature = <85000>;
+					temperature = <100000>;
 					hysteresis = <5000>;
 					type = "hot";
 				};
