@@ -285,7 +285,7 @@ _GFPAlloc(
     gceSTATUS status;
     gctUINT i;
     gctBOOL contiguous = Flags & gcvALLOC_FLAG_CONTIGUOUS;
-    u32 gfp = (contiguous ? (__GFP_HIGH | __GFP_ATOMIC) : GFP_KERNEL) | __GFP_HIGHMEM | gcdNOWARN;
+    u32 gfp = (contiguous ? (__GFP_HIGH | __GFP_ATOMIC) : (___GFP_IO | ___GFP_FS)) | __GFP_HIGHMEM | gcdNOWARN;
 
     struct gfp_alloc *priv = (struct gfp_alloc *)Allocator->privateData;
     struct gfp_mdl_priv *mdlPriv = gcvNULL;
