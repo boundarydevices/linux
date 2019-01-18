@@ -54,6 +54,7 @@ struct imx_virdev {
 	struct virtqueue *vq[2];
 	int base_vq_id;
 	int num_of_vqs;
+	u32 vproc_id;
 	struct notifier_block nb;
 };
 
@@ -64,8 +65,8 @@ struct imx_rpmsg_vproc {
 	enum imx_rpmsg_variants variant;
 	int vdev_nums;
 	int first_notify;
-#define MAX_VDEV_NUMS	8
-	struct imx_virdev ivdev[MAX_VDEV_NUMS];
+#define MAX_VDEV_NUMS  8
+	struct imx_virdev *ivdev[MAX_VDEV_NUMS];
 	void __iomem *mu_base;
 	struct delayed_work rpmsg_work;
 	struct blocking_notifier_head notifier;
@@ -102,7 +103,6 @@ struct imx_rpmsg_vproc {
 				RPMSG_VRING_ALIGN), PAGE_SIZE)) * PAGE_SIZE)
 
 #define to_imx_virdev(vd) container_of(vd, struct imx_virdev, vdev)
-#define to_imx_rpdev(vd, id) container_of(vd, struct imx_rpmsg_vproc, ivdev[id])
 
 struct imx_rpmsg_vq_info {
 	__u16 num;	/* number of entries in the virtio_ring */
@@ -115,6 +115,8 @@ static int imx_rpmsg_partion_notify0(struct notifier_block *nb,
 				unsigned long event, void *group);
 static int imx_rpmsg_partion_notify1(struct notifier_block *nb,
 				unsigned long event, void *group);
+
+static struct imx_rpmsg_vproc imx_rpmsg_vprocs[];
 
 static u64 imx_rpmsg_get_features(struct virtio_device *vdev)
 {
@@ -217,8 +219,8 @@ static struct virtqueue *rp_find_vq(struct virtio_device *vdev,
 				    bool ctx)
 {
 	struct imx_virdev *virdev = to_imx_virdev(vdev);
-	struct imx_rpmsg_vproc *rpdev = to_imx_rpdev(virdev,
-						     virdev->base_vq_id / 2);
+	int id = virdev->vproc_id;
+	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[id];
 	struct imx_rpmsg_vq_info *rpvq;
 	struct virtqueue *vq;
 	int err;
@@ -272,8 +274,8 @@ static void imx_rpmsg_del_vqs(struct virtio_device *vdev)
 {
 	struct virtqueue *vq, *n;
 	struct imx_virdev *virdev = to_imx_virdev(vdev);
-	struct imx_rpmsg_vproc *rpdev = to_imx_rpdev(virdev,
-						     virdev->base_vq_id / 2);
+	int id = virdev->vproc_id;
+	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[id];
 
 	list_for_each_entry_safe(vq, n, &vdev->vqs, list) {
 		struct imx_rpmsg_vq_info *rpvq = vq->priv;
@@ -295,8 +297,8 @@ static int imx_rpmsg_find_vqs(struct virtio_device *vdev, unsigned int nvqs,
 		       struct irq_affinity *desc)
 {
 	struct imx_virdev *virdev = to_imx_virdev(vdev);
-	struct imx_rpmsg_vproc *rpdev = to_imx_rpdev(virdev,
-						     virdev->base_vq_id / 2);
+	int id = virdev->vproc_id;
+	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[id];
 	int i, err;
 
 	/* we maintain two virtqueues per remote processor (for RX and TX) */
@@ -399,8 +401,13 @@ static int set_vring_phy_buf(struct platform_device *pdev,
 		start = res->start;
 		end = res->start + size;
 		for (i = 0; i < vdev_nums; i++) {
-			rpdev->ivdev[i].vring[0] = start;
-			rpdev->ivdev[i].vring[1] = start +
+			rpdev->ivdev[i] = kzalloc(sizeof(struct imx_virdev),
+							GFP_KERNEL);
+			if (!rpdev->ivdev[i])
+				return -ENOMEM;
+
+			rpdev->ivdev[i]->vring[0] = start;
+			rpdev->ivdev[i]->vring[1] = start +
 						   0x8000;
 			start += 0x10000;
 			if (start > end) {
@@ -520,8 +527,8 @@ void imx_rpmsg_restore(struct imx_rpmsg_vproc *rpdev)
 
 	for (i = 0; i < vdev_nums; i++) {
 		/* unregister all rpmsg channels */
-		device_for_each_child(&rpdev->ivdev[i].vdev.dev,
-				      &rpdev->ivdev[i].vdev,
+		device_for_each_child(&rpdev->ivdev[i]->vdev.dev,
+				      &rpdev->ivdev[i]->vdev,
 				      imx_unregister_rpmsg);
 
 		/* Wait a while for remote bootup */
@@ -673,15 +680,16 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	for (j = 0; j < rpdev->vdev_nums; j++) {
 		pr_debug("%s rpdev%d vdev%d: vring0 0x%x, vring1 0x%x\n",
 			 __func__, rpdev->core_id, rpdev->vdev_nums,
-			 rpdev->ivdev[j].vring[0],
-			 rpdev->ivdev[j].vring[1]);
-		rpdev->ivdev[j].vdev.id.device = VIRTIO_ID_RPMSG;
-		rpdev->ivdev[j].vdev.config = &imx_rpmsg_config_ops;
-		rpdev->ivdev[j].vdev.dev.parent = &pdev->dev;
-		rpdev->ivdev[j].vdev.dev.release = imx_rpmsg_vproc_release;
-		rpdev->ivdev[j].base_vq_id = j * 2;
+			 rpdev->ivdev[j]->vring[0],
+			 rpdev->ivdev[j]->vring[1]);
+		rpdev->ivdev[j]->vdev.id.device = VIRTIO_ID_RPMSG;
+		rpdev->ivdev[j]->vdev.config = &imx_rpmsg_config_ops;
+		rpdev->ivdev[j]->vdev.dev.parent = &pdev->dev;
+		rpdev->ivdev[j]->vdev.dev.release = imx_rpmsg_vproc_release;
+		rpdev->ivdev[j]->base_vq_id = j * 2;
+		rpdev->ivdev[j]->vproc_id = rpdev->core_id;
 
-		ret = register_virtio_device(&rpdev->ivdev[j].vdev);
+		ret = register_virtio_device(&rpdev->ivdev[j]->vdev);
 		if (ret) {
 			pr_err("%s failed to register rpdev: %d\n",
 					__func__, ret);
