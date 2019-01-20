@@ -998,6 +998,7 @@ static const struct vinfo_s *vinfo;
 static struct vframe_s *cur_dispbuf;
 static struct vframe_s *cur_dispbuf2;
 static bool need_disable_vd2;
+static bool last_mvc_status;
 void update_cur_dispbuf(void *buf)
 {
 	cur_dispbuf = buf;
@@ -3920,7 +3921,11 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 
 	/* if el is unnecessary, afbc2 need to be closed */
 	if ((last_el_status == 1) && (vf_with_el == 0))
-		need_disable_vd2 = 1;
+		need_disable_vd2 = true;
+
+	if (((vf->type & VIDTYPE_MVC) == 0)
+		&& last_mvc_status)
+		need_disable_vd2 = true;
 
 	last_el_status = vf_with_el;
 
@@ -3959,6 +3964,11 @@ static void vsync_toggle_frame(struct vframe_s *vf)
 		}
 	}
 	cur_dispbuf = vf;
+	if (cur_dispbuf && (cur_dispbuf->type & VIDTYPE_MVC))
+		last_mvc_status = true;
+	else
+		last_mvc_status = false;
+
 	if (first_picture) {
 		frame_par_ready_to_set = 1;
 		first_frame_toggled = 1;
