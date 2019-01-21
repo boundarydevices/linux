@@ -6705,14 +6705,16 @@ light_unreg:
 			pr_err("[DI] reg event device hasn't resumed\n");
 			return -1;
 		}
-		bypass_state = 0;
-		di_pre_stru.reg_req_flag = 1;
-		pr_dbg("%s: vframe provider reg %s\n", __func__,
-			provider_name);
 		if (reg_flag) {
 			pr_err("[DI] no muti instance.\n");
 			return -1;
 		}
+		pr_info("%s: vframe provider reg %s\n", __func__,
+			provider_name);
+
+		bypass_state = 0;
+		di_pre_stru.reg_req_flag = 1;
+
 		trigger_pre_di_process(TRIGGER_PRE_BY_PROVERDER_REG);
 		di_pre_stru.reg_req_flag_cnt = 0;
 		while (di_pre_stru.reg_req_flag) {
@@ -7750,6 +7752,29 @@ static void di_shutdown(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+
+static void di_clear_for_suspend(struct di_dev_s *di_devp)
+{
+	pr_info("%s\n", __func__);
+
+	di_unreg_process();/*have flag*/
+	if (di_pre_stru.unreg_req_flag_irq)
+		di_unreg_process_irq();
+
+#ifdef CONFIG_CMA
+	if (di_pre_stru.cma_release_req) {
+		pr_info("\tcma_release\n");
+		atomic_set(&di_devp->mem_flag, 0);
+		di_cma_release(di_devp);
+		di_pre_stru.cma_release_req = 0;
+		di_pre_stru.cma_alloc_done = 0;
+	}
+#endif
+	hrtimer_cancel(&di_pre_hrtimer);
+	tasklet_kill(&di_pre_tasklet);	//ary.sui
+	tasklet_disable(&di_pre_tasklet);
+	pr_info("%s end\n", __func__);
+}
 static int save_init_flag;
 /* must called after lcd */
 static int di_suspend(struct device *dev)
@@ -7759,9 +7784,13 @@ static int di_suspend(struct device *dev)
 
 	di_devp = dev_get_drvdata(dev);
 	di_devp->flags |= DI_SUSPEND_FLAG;
+
+	di_clear_for_suspend(di_devp);//add
+
 	/* fix suspend/resume crash problem */
 	save_init_flag = init_flag;
 	init_flag = 0;
+#if 0	/*2019-01-18*/
 	if (di_pre_stru.di_inp_buf) {
 		if (vframe_in[di_pre_stru.di_inp_buf->index]) {
 			vf_put(vframe_in[di_pre_stru.di_inp_buf->index],
@@ -7771,7 +7800,7 @@ static int di_suspend(struct device *dev)
 				VFRAME_EVENT_RECEIVER_PUT, NULL);
 		}
 	}
-
+#endif
 
 	if (!is_meson_txlx_cpu())
 		switch_vpu_clk_gate_vmod(VPU_VPU_CLKB,
@@ -7787,10 +7816,21 @@ static int di_resume(struct device *dev)
 	struct di_dev_s *di_devp = NULL;
 
 	di_devp = dev_get_drvdata(dev);
+
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL))
 		clk_prepare_enable(di_devp->vpu_clkb);
 	init_flag = save_init_flag;
 	di_devp->flags &= ~DI_SUSPEND_FLAG;
+	/*2018-01-18*/
+	pr_info("%s\n", __func__);
+	tasklet_init(&di_pre_tasklet, pre_tasklet,
+		(unsigned long)(&di_pre_stru));
+	tasklet_disable(&di_pre_tasklet);
+	hrtimer_init(&di_pre_hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	di_pre_hrtimer.function = di_pre_hrtimer_func;
+	hrtimer_start(&di_pre_hrtimer, ms_to_ktime(10), HRTIMER_MODE_REL);
+	tasklet_enable(&di_pre_tasklet);
+	/************/
 	pr_info("di: resume module\n");
 	return 0;
 }
