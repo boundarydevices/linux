@@ -22,6 +22,9 @@
 		trusty-virtio {
 			compatible = "android,trusty-virtio-v1";
 		};
+		trusty-log {
+			compatible = "android,trusty-log-v1";
+		};
 	};
 	trusty_ipi: interrupt-controller@0 {
 		compatible = "android,CustomIPI";

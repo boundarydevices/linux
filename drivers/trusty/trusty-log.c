@@ -198,6 +198,14 @@ static int trusty_log_probe(struct platform_device *pdev)
 		goto error_std_call;
 	}
 
+	/* Disable the Trusty OS UART console to prevent synchronous IO waiting */
+	result = trusty_std_call32(s->trusty_dev,
+		SMC_SC_SHARED_CONSOLE_CTL, TRUSTY_CONSOLE_DISABLE, 0, 0);
+
+	if (result != 0) {
+		pr_err("trusty std call SMC_SC_SHARED_CONSOLE_CTL shutdown console failed\n");
+	}
+
 	s->call_notifier.notifier_call = trusty_log_call_notify;
 	result = trusty_call_notifier_register(s->trusty_dev,
 					       &s->call_notifier);
