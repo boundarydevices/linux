@@ -637,6 +637,16 @@ void aml_tdmout_get_aed_info(int tdmout_id,
 		*frddrtype = (val >> 4) & 0x7;
 }
 
+void aml_tdmout_enable_gain(int tdmout_id, int en)
+{
+	unsigned int reg, offset;
+
+	offset = EE_AUDIO_TDMOUT_B_CTRL1
+			- EE_AUDIO_TDMOUT_A_CTRL1;
+	reg = EE_AUDIO_TDMOUT_A_CTRL1 + offset * tdmout_id;
+	audiobus_update_bits(reg, 0x1 << 26, !!en << 26);
+}
+
 void aml_tdm_clk_pad_select(
 	struct aml_audio_controller *actrl,
 	int mpad, int mclk_sel,

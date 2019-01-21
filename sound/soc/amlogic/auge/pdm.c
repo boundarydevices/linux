@@ -54,7 +54,7 @@ static struct snd_pcm_hardware aml_pdm_hardware = {
 	.rate_max			=	96000,
 
 	.channels_min		=	PDM_CHANNELS_MIN,
-	.channels_max		=	PDM_CHANNELS_MAX,
+	.channels_max		=	PDM_CHANNELS_LB_MAX,
 
 	.buffer_bytes_max	=	512 * 1024,
 	.period_bytes_max	=	256 * 1024,
@@ -626,6 +626,7 @@ static int aml_pdm_dai_prepare(
 		struct toddr *to = p_pdm->tddr;
 		struct toddr_fmt fmt;
 		unsigned int osr = 192;
+		struct pdm_info info;
 
 		/* to ddr pdmin */
 		fmt.type      = toddr_type;
@@ -639,8 +640,12 @@ static int aml_pdm_dai_prepare(
 		aml_toddr_set_format(to, &fmt);
 		aml_toddr_set_fifos(to, 0x40);
 
-		aml_pdm_ctrl(p_pdm->actrl,
-			bitwidth, runtime->channels);
+		info.bitdepth   = bitwidth;
+		info.channels   = runtime->channels;
+		info.lane_masks = p_pdm->lane_mask_in;
+		info.dclk_idx   = pdm_dclk;
+		info.bypass     = p_pdm->bypass;
+		aml_pdm_ctrl(&info);
 
 		/* filter for pdm */
 		if (pdm_dclk == 1) {
@@ -918,6 +923,26 @@ static const struct of_device_id aml_pdm_device_id[] = {
 };
 MODULE_DEVICE_TABLE(of, aml_pdm_device_id);
 
+static int snd_soc_of_get_slot_mask(
+	struct device_node *np,
+	const char *prop_name,
+	unsigned int *mask)
+{
+	u32 val;
+	const __be32 *of_slot_mask = of_get_property(np, prop_name, &val);
+	int i;
+
+	if (!of_slot_mask)
+		return -EINVAL;
+
+	val /= sizeof(u32);
+	for (i = 0; i < val; i++)
+		if (be32_to_cpup(&of_slot_mask[i]))
+			*mask |= (1 << i);
+
+	return val;
+}
+
 static int aml_pdm_platform_probe(struct platform_device *pdev)
 {
 	struct aml_pdm *p_pdm;
@@ -1022,6 +1047,12 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+	ret = snd_soc_of_get_slot_mask(node, "lane-mask-in",
+			&p_pdm->lane_mask_in);
+	if (ret < 0) {
+		pr_warn("default set lane_mask_in as all lanes.\n");
+		p_pdm->lane_mask_in = 0xf;
+	}
 
 	ret = of_property_read_u32(node, "filter_mode",
 			&p_pdm->filter_mode);

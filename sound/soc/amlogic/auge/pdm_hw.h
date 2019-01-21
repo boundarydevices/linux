@@ -19,9 +19,19 @@
 #define __AML_PDM_HW_H__
 #include "audio_io.h"
 
-extern void aml_pdm_ctrl(
-	struct aml_audio_controller *actrl,
-	int bitdepth, int channels);
+#define PDM_CHANNELS_MAX		8 /* 8ch pdm in */
+#define PDM_LANE_MAX            4 /* 4 data pins, for 8ch maxs*/
+
+struct pdm_info {
+	int bitdepth;
+	int channels;
+	int lane_masks;
+
+	int dclk_idx;  /* mapping for dclk value */
+	int bypass;    /* bypass all filter, capture raw data */
+};
+
+extern void aml_pdm_ctrl(struct pdm_info *info);
 
 extern void aml_pdm_arb_config(struct aml_audio_controller *actrl);
 

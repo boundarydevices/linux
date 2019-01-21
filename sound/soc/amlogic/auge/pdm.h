@@ -27,7 +27,9 @@
 #define DEFAULT_FS_RATIO		256
 
 #define PDM_CHANNELS_MIN		1
-#define PDM_CHANNELS_MAX		(8 + 8) /* 8ch pdm in, 8 ch tdmin_lb */
+/* 8ch pdm in, 8 ch tdmin_lb */
+#define PDM_CHANNELS_LB_MAX		(PDM_CHANNELS_MAX + 8)
+
 
 #define PDM_RATES			(SNDRV_PCM_RATE_96000 |\
 					SNDRV_PCM_RATE_64000 |\
@@ -72,6 +74,15 @@ struct aml_pdm {
 	 * the group delay (latency) is from high to low.
 	 */
 	int filter_mode;
+	/* dclk index */
+	int dclk_idx;
+	/* PCM or Raw Data */
+	int bypass;
+	/* PDM clk on/off */
+	bool clk_on;
+
+	/* lane mask in, each lane carries two channels */
+	int lane_mask_in;
 
 	struct pdm_chipinfo *chipinfo;
 	struct snd_kcontrol *controls[PDM_RUN_MAX];

@@ -928,13 +928,22 @@
 		dai-tdm-clk-sel = <0>;
 
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_A
-				&clkc CLKID_MPLL0>;
-		clock-names = "mclk", "clk_srcpll";
+				&clkc CLKID_MPLL0
+				&clkc CLKID_MPLL1
+				&clkaudio CLKID_AUDIO_SPDIFOUT_A>;
+		clock-names = "mclk", "clk_srcpll",
+			"samesource_srcpll", "samesource_clk";
 
 		pinctrl-names = "tdm_pins";
 		pinctrl-0 = <&tdma_mclk &tdmout_a &tdmin_a>;
 
 		status = "okay";
+
+		/* !!!For --TV platform-- ONLY */
+		Channel_Mask {
+			/*i2s has 4 pins, 8channel, mux output*/
+			Spdif_samesource_Channel_Mask = "i2s_2/3";
+		};
 	};
 
 	tdmb:tdm@1 {
@@ -987,8 +996,11 @@
 				<GIC_SPI 151 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "irq_spdifin";
 
-		pinctrl-names = "spdif_pins";
+		pinctrl-names = "spdif_pins",
+				"spdif_pins_mute";
+
 		pinctrl-0 = <&spdifout_a &spdifin_a>;
+		pinctrl-1 = <&spdifout_a_mute>;
 
 		/*
 		 * whether do asrc for pcm and resample a or b
@@ -1176,6 +1188,7 @@
 				"tdma_dout2_z",
 				"tdma_dout3_z";
 			function = "tdma_out";
+			bias-disable;
 		};
 	};
 
@@ -1220,6 +1233,13 @@
 		mux { /* GPIODV_4 */
 			groups = "spdif_out_dv4";
 			function = "spdif_out";
+		};
+	};
+
+	spdifout_a_mute: spdifout_a_mute {
+		mux { /* GPIODV_4 */
+			groups = "GPIODV_4";
+			function = "gpio_periphs";
 		};
 	};
 

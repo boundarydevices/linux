@@ -464,7 +464,7 @@ struct dfe_adcpll_para {
 
 struct rx_audio_stat_s {
 	/*audio packets received*/
-	bool aud_rcv_flag;
+	int aud_rcv_packet;
 	/*audio stable status*/
 	bool aud_stb_flag;
 	/*audio sample rate*/

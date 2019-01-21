@@ -13794,6 +13794,7 @@ F: arch/arm/boot/dts/amlogic>
 
 ANLOGIC AUDIO
 M: Xing Wang <xing.wang@amlogic.com>
+M: Zhe Wang <Zhe.Wang@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
 F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
 F: arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts
@@ -14768,7 +14769,13 @@ F:	arch/arm/boot/dts/amlogic/mesong12b.dtsi
 F:	arch/arm64/boot/dts/amlogic/g12b*_a.dts
 F:	arch/arm64/boot/dts/amlogic/mesong12b.dtsi
 
-AMLOGIC SM1 DTS
+AMLOGIC MESONAXG SBR DTS
+M:	Bing Jiang <Bing.Jiang@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/axg_s400_v03sbr.dts
+F:	arch/arm/boot/dts/amlogic/axg_s400_v03sbr.dts
+F:	sound/soc/codecs/amlogic/tas5782m.c
+F:	sound/soc/codecs/amlogic/tas5782m.h
+
 M:	Zhiqiang Liang <Zhiqiang.Liang@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/mesongsm1.dtsi
 F:	arch/arm64/boot/dts/amlogic/sm1_pxp.dts
@@ -14783,3 +14790,7 @@ AMLOGIC SM1 POWER CTRL DRIVERS
 M:	Shunzhou Jiang <shunzhou.jiang@amlogic.com>
 F:	drivers/amlogic/power/power_ctrl.c
 F:	include/linux/amlogic/power_ctrl.h
+
+AMLOGIC TL1 VAD
+M:	Wenbiao Zhang <wenbiao.zhang@amlogic.com>
+F:	include/linux/amlogic/vad_api.h

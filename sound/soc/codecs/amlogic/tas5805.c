@@ -24,10 +24,11 @@
 #include <sound/soc.h>
 #include <sound/pcm.h>
 #include <sound/initval.h>
+#include <linux/amlogic/aml_gpio_consumer.h>
 
 #include "tas5805.h"
 
-#define TAS5805M_DRV_NAME    "tas5805m"
+#define TAS5805M_DRV_NAME    "tas5805"
 
 #define TAS5805M_RATES	     (SNDRV_PCM_RATE_8000 | \
 		       SNDRV_PCM_RATE_11025 | \
@@ -227,9 +228,7 @@ const uint32_t tas5805m_volume[] = {
 
 struct tas5805m_priv {
 	struct regmap *regmap;
-
-	struct mutex lock;
-
+	struct tas5805m_platform_data *pdata;
 	int vol;
 	int mute;
 };
@@ -276,9 +275,7 @@ static int tas5805m_vol_locked_get(struct snd_kcontrol *kcontrol,
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tas5805m_priv *tas5805m = snd_soc_codec_get_drvdata(codec);
 
-	mutex_lock(&tas5805m->lock);
 	ucontrol->value.integer.value[0] = tas5805m->vol;
-	mutex_unlock(&tas5805m->lock);
 
 	return 0;
 }
@@ -339,12 +336,10 @@ static int tas5805m_vol_locked_put(struct snd_kcontrol *kcontrol,
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tas5805m_priv *tas5805m = snd_soc_codec_get_drvdata(codec);
 
-	mutex_lock(&tas5805m->lock);
 
 	tas5805m->vol = ucontrol->value.integer.value[0];
 	tas5805m_set_volume(codec, tas5805m->vol);
 
-	mutex_unlock(&tas5805m->lock);
 
 	return 0;
 }
@@ -353,7 +348,6 @@ static int tas5805m_mute(struct snd_soc_codec *codec, int mute)
 {
 	u8 reg03_value = 0;
 	u8 reg35_value = 0;
-//  struct snd_soc_codec *codec = dai->codec;
 
 	if (mute) {
 		//mute both left & right channels
@@ -380,12 +374,8 @@ static int tas5805m_mute_locked_put(struct snd_kcontrol *kcontrol,
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tas5805m_priv *tas5805m = snd_soc_codec_get_drvdata(codec);
 
-	mutex_lock(&tas5805m->lock);
-
 	tas5805m->mute = ucontrol->value.integer.value[0];
 	tas5805m_mute(codec, tas5805m->mute);
-
-	mutex_unlock(&tas5805m->lock);
 
 	return 0;
 }
@@ -395,11 +385,7 @@ static int tas5805m_mute_locked_get(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tas5805m_priv *tas5805m = snd_soc_codec_get_drvdata(codec);
-
-	mutex_lock(&tas5805m->lock);
 	ucontrol->value.integer.value[0] = tas5805m->mute;
-	mutex_unlock(&tas5805m->lock);
-
 	return 0;
 }
 
@@ -420,6 +406,31 @@ static const struct snd_kcontrol_new tas5805m_vol_control[] = {
 	}
 };
 
+static int tas5805m_set_bias_level(struct snd_soc_codec *codec,
+				  enum snd_soc_bias_level level)
+{
+	pr_debug("level = %d\n", level);
+
+	switch (level) {
+	case SND_SOC_BIAS_ON:
+		break;
+
+	case SND_SOC_BIAS_PREPARE:
+		/* Full power on */
+		break;
+
+	case SND_SOC_BIAS_STANDBY:
+		break;
+
+	case SND_SOC_BIAS_OFF:
+		/* The chip runs through the power down sequence for us. */
+		break;
+	}
+	codec->component.dapm.bias_level = level;
+
+	return 0;
+}
+
 static int tas5805m_snd_probe(struct snd_soc_codec *codec)
 {
 	int ret;
@@ -429,8 +440,40 @@ static int tas5805m_snd_probe(struct snd_soc_codec *codec)
 	return ret;
 }
 
+static int tas5805m_snd_suspend(struct snd_soc_codec *codec)
+{
+	dev_info(codec->dev, "tas5805m_suspend!\n");
+	tas5805m_set_bias_level(codec, SND_SOC_BIAS_OFF);
+	return 0;
+}
+
+static int tas5805m_snd_resume(struct snd_soc_codec *codec)
+{
+	int ret;
+	struct tas5805m_priv *tas5805m = snd_soc_codec_get_drvdata(codec);
+
+	dev_info(codec->dev, "tas5805m_snd_resume!\n");
+	ret =
+	    regmap_register_patch(tas5805m->regmap, tas5805m_init_sequence,
+				  ARRAY_SIZE(tas5805m_init_sequence));
+	if (ret != 0) {
+		dev_err(codec->dev, "Failed to initialize TAS5805M: %d\n", ret);
+		goto err;
+	}
+
+	tas5805m_set_volume(codec, tas5805m->vol);
+	tas5805m_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+
+	return 0;
+err:
+	return ret;
+}
+
 static struct snd_soc_codec_driver soc_codec_tas5805m = {
 	.probe = tas5805m_snd_probe,
+	.suspend = tas5805m_snd_suspend,
+	.resume = tas5805m_snd_resume,
+	.set_bias_level = tas5805m_set_bias_level,
 };
 
 static const struct snd_soc_dai_ops tas5805m_dai_ops = {
@@ -449,28 +492,60 @@ static struct snd_soc_dai_driver tas5805m_dai = {
 	.ops = &tas5805m_dai_ops,
 };
 
+static int reset_tas5805m_GPIO(struct device *dev)
+{
+	struct tas5805m_priv *tas5805m = dev_get_drvdata(dev);
+	struct tas5805m_platform_data *pdata = tas5805m->pdata;
+	int ret = 0;
+
+	if (pdata->reset_pin < 0)
+		return 0;
+
+	ret = devm_gpio_request_one(dev, pdata->reset_pin,
+					    GPIOF_OUT_INIT_LOW,
+					    "tas5805m-reset-pin");
+	if (ret < 0)
+		return -1;
+
+	gpio_direction_output(pdata->reset_pin, GPIOF_OUT_INIT_LOW);
+	mdelay(1);
+	gpio_direction_output(pdata->reset_pin, GPIOF_OUT_INIT_HIGH);
+	mdelay(1);
+
+	return 0;
+}
+
+static int tas5805m_parse_dt(
+	struct tas5805m_priv *tas5805m,
+	struct device_node *np)
+{
+	int ret = 0;
+	int reset_pin = -1;
+
+	reset_pin = of_get_named_gpio(np, "reset_pin", 0);
+	if (reset_pin < 0) {
+		pr_err("%s fail to get reset pin from dts!\n", __func__);
+		ret = -1;
+	} else {
+		pr_info("%s pdata->reset_pin = %d!\n", __func__,
+				tas5805m->pdata->reset_pin);
+	}
+	tas5805m->pdata->reset_pin = reset_pin;
+
+	return ret;
+}
+
 static int tas5805m_probe(struct device *dev, struct regmap *regmap)
 {
-	struct tas5805m_priv *tas5805m;
 	int ret;
 
-	tas5805m = devm_kzalloc(dev, sizeof(struct tas5805m_priv), GFP_KERNEL);
-	if (!tas5805m)
-		return -ENOMEM;
-
-	dev_set_drvdata(dev, tas5805m);
-	tas5805m->regmap = regmap;
-	tas5805m->vol = 100;	//100, -10dB
-
-	mutex_init(&tas5805m->lock);
-
+	reset_tas5805m_GPIO(dev);
 	ret =
 	    regmap_register_patch(regmap, tas5805m_init_sequence,
 				  ARRAY_SIZE(tas5805m_init_sequence));
 	if (ret != 0) {
 		dev_err(dev, "Failed to initialize TAS5805M: %d\n", ret);
 		goto err;
-
 	}
 
 	ret =
@@ -487,15 +562,38 @@ err:
 
 }
 
+
 static int tas5805m_i2c_probe(struct i2c_client *i2c,
 			      const struct i2c_device_id *id)
 {
 	struct regmap *regmap;
 	struct regmap_config config = tas5805m_regmap;
+	struct tas5805m_priv *tas5805m;
+	struct tas5805m_platform_data *pdata;
+
+	tas5805m = devm_kzalloc(&i2c->dev,
+		sizeof(struct tas5805m_priv), GFP_KERNEL);
+	if (!tas5805m)
+		return -ENOMEM;
 
 	regmap = devm_regmap_init_i2c(i2c, &config);
 	if (IS_ERR(regmap))
 		return PTR_ERR(regmap);
+
+	pdata = devm_kzalloc(&i2c->dev,
+				sizeof(struct tas5805m_platform_data),
+				GFP_KERNEL);
+	if (!pdata) {
+		pr_err("%s failed to kzalloc for tas5805 pdata\n", __func__);
+		return -ENOMEM;
+	}
+	tas5805m->pdata = pdata;
+
+	tas5805m_parse_dt(tas5805m, i2c->dev.of_node);
+	tas5805m->regmap = regmap;
+	tas5805m->vol = 100;	//100, -10dB
+
+	dev_set_drvdata(&i2c->dev, tas5805m);
 
 	return tas5805m_probe(&i2c->dev, regmap);
 }

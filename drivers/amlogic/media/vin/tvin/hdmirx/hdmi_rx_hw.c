@@ -917,8 +917,7 @@ void rx_get_audio_status(struct rx_audio_stat_s *aud_sts)
 		(rx.pre.sw_vic != HDMI_UNKNOWN) &&
 		(rx.pre.sw_vic != HDMI_UNSUPPORT) &&
 		(rx.avmute_skip == 0)) {
-		aud_sts->aud_rcv_flag =
-			(rx.aud_info.aud_packet_received == 0) ? false : true;
+		aud_sts->aud_rcv_packet = rx.aud_info.aud_packet_received;
 		aud_sts->aud_stb_flag = true;
 		aud_sts->aud_sr = rx.aud_info.real_sr;
 		aud_sts->aud_channel_cnt = rx.aud_info.channel_count;

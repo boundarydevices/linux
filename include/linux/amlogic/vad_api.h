@@ -1,5 +1,5 @@
 /*
- * sound/soc/amlogic/auge/spdif.h
+ * include/linux/amlogic/vad_api.h
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -15,17 +15,10 @@
  *
  */
 
-#ifndef __AML_SPDIF_H__
-#define __AML_SPDIF_H__
-#include <linux/clk.h>
+#ifndef __VAD_API_H__
+#define __VAD_API_H__
 
-enum SPDIF_ID {
-	SPDIF_A,
-	SPDIF_B,
-	SPDIF_ID_CNT
-};
+extern int register_vad_callback(int (*callback)(char *, int, int, int, int));
+extern void unregister_vad_callback(void);
 
-int spdif_set_audio_clk(enum SPDIF_ID id,
-		struct clk *clk_src, int rate, bool same);
-
-#endif
+#endif /* __VAD_API_H__ */

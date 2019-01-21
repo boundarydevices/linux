@@ -57,6 +57,7 @@ struct tl1_acodec_priv {
 	struct snd_soc_codec *codec;
 	struct snd_pcm_hw_params *params;
 	struct regmap *regmap;
+	struct work_struct work;
 	struct tl1_acodec_chipinfo *chipinfo;
 	int tdmout_index;
 	int dat0_ch_sel;
@@ -550,6 +551,35 @@ static int tl1_acodec_start_up(struct snd_soc_codec *codec)
 	return 0;
 }
 
+static void tl1_acodec_release_fast_mode_work_func(struct work_struct *p_work)
+{
+	struct tl1_acodec_priv *aml_acodec;
+	struct snd_soc_codec *codec;
+
+	aml_acodec = container_of(
+				p_work, struct tl1_acodec_priv, work);
+	if (!aml_acodec) {
+		pr_err("%s, Get tl1_acodec_priv fail\n", __func__);
+		return;
+	}
+
+	codec = aml_acodec->codec;
+	if (!codec) {
+		pr_err("%s, Get snd_soc_codec fail\n", __func__);
+		return;
+	}
+
+	pr_info("%s\n", __func__);
+	/*reset audio codec register*/
+	tl1_acodec_reset(codec);
+	snd_soc_write(codec, ACODEC_0, 0xF000);
+	msleep(200);
+	snd_soc_write(codec, ACODEC_0, 0xB000);
+	tl1_acodec_reg_init(codec);
+
+	aml_acodec->codec = codec;
+	tl1_acodec_dai_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+}
 static int tl1_acodec_dai_mute_stream(struct snd_soc_dai *dai, int mute,
 				      int stream)
 {
@@ -605,25 +635,23 @@ static int tl1_acodec_probe(struct snd_soc_codec *codec)
 		snd_soc_codec_get_drvdata(codec);
 
 	if (!aml_acodec) {
-		pr_err("Failed to get tl1 acodec pri\n");
+		pr_err("Failed to get tl1 acodec priv\n");
 		return -EINVAL;
 	}
-
-	/*reset audio codec register*/
-	tl1_acodec_reset(codec);
-	tl1_acodec_start_up(codec);
-	tl1_acodec_reg_init(codec);
-
 	aml_acodec->codec = codec;
-	tl1_acodec_dai_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+	INIT_WORK(&aml_acodec->work, tl1_acodec_release_fast_mode_work_func);
+	schedule_work(&aml_acodec->work);
+
 	pr_info("%s\n", __func__);
 	return 0;
 }
 
 static int tl1_acodec_remove(struct snd_soc_codec *codec)
 {
+	struct tl1_acodec_priv *aml_acodec =
+		snd_soc_codec_get_drvdata(codec);
 	pr_info("%s!\n", __func__);
-
+	cancel_work_sync(&aml_acodec->work);
 	tl1_acodec_dai_set_bias_level(codec, SND_SOC_BIAS_OFF);
 
 	return 0;

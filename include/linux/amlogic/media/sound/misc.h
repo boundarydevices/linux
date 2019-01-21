@@ -31,6 +31,15 @@ int aml_get_atv_audio_stable(
 
 #endif
 
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AVDETECT
+extern int tvin_get_av_status(void);
+extern const struct soc_enum av_audio_status_enum;
+
+extern int aml_get_av_audio_stable(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+#endif
+
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
 extern int update_spdifin_audio_type(int audio_type);
 
@@ -59,6 +68,10 @@ extern int aml_set_atmos_audio_edid(
 	struct snd_ctl_elem_value *ucontrol);
 
 extern int aml_get_atmos_audio_edid(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+
+extern int aml_get_hdmiin_audio_packet(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 

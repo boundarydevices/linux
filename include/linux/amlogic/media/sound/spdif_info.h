@@ -45,4 +45,10 @@ extern int spdif_format_get_enum(
 extern int spdif_format_set_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
+#ifdef CONFIG_AMLOGIC_HDMITX
+int aml_get_hdmi_out_audio(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int aml_set_hdmi_out_audio(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+#endif
 #endif

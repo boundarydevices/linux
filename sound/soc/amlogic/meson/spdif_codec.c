@@ -166,29 +166,6 @@ static int aml_audio_get_spdif_mute(struct snd_kcontrol *kcontrol,
 }
 
 #ifdef CONFIG_AMLOGIC_HDMITX
-/* call HDMITX API to enable/disable internal audio out */
-static int aml_get_hdmi_out_audio(struct snd_kcontrol *kcontrol,
-			  struct snd_ctl_elem_value *ucontrol)
-{
-	ucontrol->value.integer.value[0] = !hdmitx_ext_get_audio_status();
-
-	v_spdif_codec.aml_audio_hdmiout_mute_flag =
-			ucontrol->value.integer.value[0];
-	return 0;
-}
-
-static int aml_set_hdmi_out_audio(struct snd_kcontrol *kcontrol,
-			  struct snd_ctl_elem_value *ucontrol)
-{
-	bool mute = ucontrol->value.integer.value[0];
-
-	if (v_spdif_codec.aml_audio_hdmiout_mute_flag != mute) {
-		hdmitx_ext_set_audio_output(!mute);
-		v_spdif_codec.aml_audio_hdmiout_mute_flag = mute;
-	}
-	return 0;
-}
-
 static const char * const hdmi_out_channel_mask_texts[] = {
 		"SPDIF",
 		"2CH_I2S_0/1",

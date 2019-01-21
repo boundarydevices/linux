@@ -214,9 +214,14 @@ struct frddr {
 	//struct ddr_desc dscrpt;
 	struct device *dev;
 	enum frddr_dest dest;
+
+	/* dest for same source, whether enable */
+	enum frddr_dest ss_dest;
+	bool ss_en;
+
 	struct aml_audio_controller *actrl;
 	unsigned int reg_base;
-	unsigned int fifo_id;
+	enum ddr_num fifo_id;
 
 	unsigned int channels;
 	unsigned int msb;

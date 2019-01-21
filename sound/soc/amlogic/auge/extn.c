@@ -42,6 +42,15 @@
 
 #define DRV_NAME "EXTN"
 
+#define MAX_INT    0x7ffffff
+
+struct extn_chipinfo {
+	/* try to check papb before fetch pcpd
+	 * no nonpcm2pcm irq for tl1
+	 */
+	bool no_nonpcm2pcm_clr;
+};
+
 struct extn {
 	struct aml_audio_controller *actrl;
 	struct device *dev;
@@ -69,9 +78,19 @@ struct extn {
 	int arc_src;
 	int arc_en;
 
+	/* check whether irq generating
+	 * if not, reset
+	 * 'cuase no irq from nonpcm2pcm, do it by sw.
+	 */
+	unsigned int frhdmirx_cnt;      /* irq counter */
+	unsigned int frhdmirx_last_cnt;
+	unsigned int frhdmirx_same_cnt;
+	bool nonpcm_flag;
+
+	struct extn_chipinfo *chipinfo;
 };
 
-#define PREALLOC_BUFFER		(128 * 1024)
+#define PREALLOC_BUFFER		(256 * 1024)
 #define PREALLOC_BUFFER_MAX	(256 * 1024)
 
 #define EXTN_RATES      (SNDRV_PCM_RATE_8000_192000)
@@ -100,21 +119,58 @@ static const struct snd_pcm_hardware extn_hardware = {
 	.channels_max = 32,
 };
 
+static void frhdmirx_nonpcm2pcm_clr_reset(struct extn *p_extn)
+{
+	p_extn->frhdmirx_cnt = 0;
+	p_extn->frhdmirx_last_cnt = 0;
+	p_extn->frhdmirx_same_cnt = 0;
+}
+
 static irqreturn_t extn_ddr_isr(int irq, void *devid)
 {
 	struct snd_pcm_substream *substream =
 		(struct snd_pcm_substream *)devid;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct device *dev = rtd->platform->dev;
+	struct extn *p_extn = (struct extn *)dev_get_drvdata(dev);
 
 	if (!snd_pcm_running(substream))
 		return IRQ_HANDLED;
 
 	snd_pcm_period_elapsed(substream);
 
+	/* check pcm or nonpcm */
+	if (p_extn &&
+		p_extn->chipinfo &&
+		p_extn->chipinfo->no_nonpcm2pcm_clr) {
+		if (p_extn->frhdmirx_last_cnt == p_extn->frhdmirx_cnt) {
+
+			p_extn->frhdmirx_same_cnt++;
+
+			if (p_extn->frhdmirx_same_cnt > 5)
+				frhdmirx_nonpcm2pcm_clr_reset(p_extn);
+
+			if (p_extn->frhdmirx_cnt == 0)
+				p_extn->nonpcm_flag = false;
+		} else {
+			p_extn->frhdmirx_last_cnt = p_extn->frhdmirx_cnt;
+			p_extn->frhdmirx_same_cnt = 0;
+			p_extn->nonpcm_flag = true;
+			frhdmirx_clr_PAO_irq_bits();
+		}
+	}
+
 	return IRQ_HANDLED;
 }
 
 static irqreturn_t frhdmirx_isr(int irq, void *devid)
 {
+	struct extn *p_extn = (struct extn *)devid;
+
+	p_extn->frhdmirx_cnt++;
+	if (p_extn->frhdmirx_cnt > MAX_INT - 2)
+		frhdmirx_nonpcm2pcm_clr_reset(p_extn);
+
 	return IRQ_HANDLED;
 }
 
@@ -177,8 +233,12 @@ static int extn_close(struct snd_pcm_substream *substream)
 	else {
 		aml_audio_unregister_toddr(p_extn->dev, substream);
 
-		if (toddr_src_get() == FRHDMIRX)
+		if (toddr_src_get() == FRHDMIRX) {
+			frhdmirx_nonpcm2pcm_clr_reset(p_extn);
+			if (p_extn->hdmirx_mode == 1)
+				frhdmirx_clr_PAO_irq_bits();
 			free_irq(p_extn->irq_frhdmirx, p_extn);
+		}
 	}
 	runtime->private_data = NULL;
 
@@ -639,7 +699,7 @@ static const struct sppdif_audio_info type_texts[] = {
 	{3, 0xb, "DTS-I"},
 	{3, 0x0c, "DTS-II"},
 	{3, 0x0d, "DTS-III"},
-	{3, 0x11, "DTS-IV"},
+	{4, 0x11, "DTS-IV"},
 	{4, 0, "DTS-HD"},
 	{5, 0x16, "TRUEHD"},
 	{6, 0x103, "PAUSE"},
@@ -651,12 +711,15 @@ static const struct soc_enum hdmirx_audio_type_enum =
 	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(spdif_audio_type_texts),
 			spdif_audio_type_texts);
 
-static int hdmiin_check_audio_type(void)
+static int hdmiin_check_audio_type(struct extn *p_extn)
 {
 	int total_num = sizeof(type_texts)/sizeof(struct sppdif_audio_info);
 	int pc = frhdmirx_get_chan_status_pc();
 	int audio_type = 0;
 	int i;
+
+	if (!p_extn->nonpcm_flag)
+		return audio_type;
 
 	for (i = 0; i < total_num; i++) {
 		if (pc == type_texts[i].pc) {
@@ -674,8 +737,12 @@ static int hdmirx_audio_type_get_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct extn *p_extn = dev_get_drvdata(component->dev);
+
 	ucontrol->value.enumerated.item[0] =
-		hdmiin_check_audio_type();
+		hdmiin_check_audio_type(p_extn);
+
 	return 0;
 }
 #endif
@@ -705,6 +772,13 @@ static const struct snd_kcontrol_new extn_controls[] = {
 		NULL),
 #endif
 
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AVDETECT
+	SOC_ENUM_EXT("AV audio stable",
+		av_audio_status_enum,
+		aml_get_av_audio_stable,
+		NULL),
+#endif
+
 #ifdef CONFIG_AMLOGIC_MEDIA_TVIN_HDMI
 	SOC_ENUM_EXT("HDMIIN audio stable",
 		hdmi_in_status_enum[0],
@@ -726,10 +800,16 @@ static const struct snd_kcontrol_new extn_controls[] = {
 		aml_get_hdmiin_audio_format,
 		NULL),
 
+	SOC_ENUM_EXT("HDMIIN Audio Packet",
+		hdmi_in_status_enum[4],
+		aml_get_hdmiin_audio_packet,
+		NULL),
+
 	SOC_SINGLE_BOOL_EXT("HDMI ATMOS EDID Switch",
 		0,
 		aml_get_atmos_audio_edid,
 		aml_set_atmos_audio_edid),
+
 	SOC_ENUM_EXT("HDMIIN Audio Type",
 			 hdmirx_audio_type_enum,
 			 hdmirx_audio_type_get_enum,
@@ -744,9 +824,18 @@ static const struct snd_soc_component_driver extn_component = {
 	.name		= DRV_NAME,
 };
 
+struct extn_chipinfo tl1_extn_chipinfo = {
+	.no_nonpcm2pcm_clr = true,
+};
+
 static const struct of_device_id extn_device_id[] = {
 	{
 		.compatible = "amlogic, snd-extn",
+		.data       = &tl1_extn_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tl1-snd-extn",
+		.data       = &tl1_extn_chipinfo,
 	},
 	{},
 };
@@ -761,8 +850,8 @@ static int extn_platform_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct aml_audio_controller *actrl = NULL;
 	struct extn *p_extn = NULL;
+	struct extn_chipinfo *p_chipinfo;
 	int ret = 0;
-
 
 	p_extn = devm_kzalloc(dev, sizeof(struct extn), GFP_KERNEL);
 	if (!p_extn)
@@ -770,6 +859,14 @@ static int extn_platform_probe(struct platform_device *pdev)
 
 	p_extn->dev = dev;
 	dev_set_drvdata(dev, p_extn);
+
+	/* match data */
+	p_chipinfo = (struct extn_chipinfo *)
+		of_device_get_match_data(dev);
+	if (!p_chipinfo)
+		dev_warn_once(dev, "check whether to update chipinfo\n");
+	else
+		p_extn->chipinfo = p_chipinfo;
 
 	/* get audio controller */
 	node_prt = of_get_parent(node);
@@ -793,8 +890,8 @@ static int extn_platform_probe(struct platform_device *pdev)
 	/* Default ARC SRC */
 	p_extn->arc_src = 1;
 
-	/* Default: SPDIF in mode */
-	p_extn->hdmirx_mode = 0;
+	/* Default: PAO mode */
+	p_extn->hdmirx_mode = 1;
 
 	ret = snd_soc_register_component(&pdev->dev,
 				&extn_component,

@@ -59,29 +59,54 @@ void pdm_fifo_reset(void)
 		0x1 << 16);
 }
 
-void aml_pdm_ctrl(
-	struct aml_audio_controller *actrl,
-	int bitdepth, int channels)
+void aml_pdm_ctrl(struct pdm_info *info)
 {
 	int mode, i, ch_mask = 0, sample_count;
+	int pdm_chs, lane_chs = 0;
+
+	if (!info)
+		return;
 
 	/* sameple count */
-	if (pdm_dclk == 1)
+	if (info->dclk_idx == 1)
 		sample_count = 38;
-	else if (pdm_dclk == 2)
+	else if (info->dclk_idx == 2)
 		sample_count = 48;
 	else
 		sample_count = 18;
 
-	if (bitdepth == 32)
+	if (info->bitdepth == 32)
 		mode = 0;
 	else
 		mode = 1;
 
-	for (i = 0; i < channels; i++)
-		ch_mask |= (1 << i);
+	/* update pdm channels for loopback */
+	pdm_chs = info->channels;
+	if (info->channels > PDM_CHANNELS_MAX)
+		pdm_chs = PDM_CHANNELS_MAX;
 
-	pr_info("%s, channels mask:%x\n", __func__, ch_mask);
+	if (pdm_chs > info->lane_masks * 2)
+		pr_warn("capturing channels more than lanes carried\n");
+
+	/* each lanes carries two channels */
+	for (i = 0; i < PDM_LANE_MAX; i++)
+		if ((1 << i) & info->lane_masks) {
+			ch_mask |= (1 << (2 * i));
+			lane_chs += 1;
+			if (lane_chs >= info->channels)
+				break;
+			ch_mask |= (1 << (2 * i + 1));
+			lane_chs += 1;
+			if (lane_chs >= info->channels)
+				break;
+		}
+
+	pr_info("%s, lane mask:0x%x, channels:%d, channels mask:0x%x, bypass:%d\n",
+		__func__,
+		info->lane_masks,
+		info->channels,
+		ch_mask,
+		info->bypass);
 
 	aml_pdm_write(PDM_CLKG_CTRL, 1);
 
@@ -96,7 +121,7 @@ void aml_pdm_ctrl(
 				/* bypass mode.
 				 * 1: bypass all filter. 0: normal mode.
 				 */
-				(0 << 28) |
+				(info->bypass << 28) |
 				/* PDM channel reset. */
 				(ch_mask << 8) |
 				/* PDM channel enable */

@@ -39,9 +39,11 @@
 #include "audio_utils.h"
 #include "resample.h"
 #include "resample_hw.h"
-#include "spdif.h"
 
 #define DRV_NAME "aml_spdif"
+
+#define SPDIF_A	0
+#define SPDIF_B	1
 
 /* Debug by PTM when bringup */
 /*#define __PTM_SPDIF_CLK__*/
@@ -51,8 +53,11 @@
 
 /*#define __SPDIFIN_AUDIO_TYPE_HW__*/
 
+static int aml_dai_set_spdif_sysclk(struct snd_soc_dai *cpu_dai,
+				int clk_id, unsigned int freq, int dir);
+
 struct spdif_chipinfo {
-	enum SPDIF_ID id;
+	unsigned int id;
 
 	/* add ch_cnt to ch_num */
 	bool chnum_en;
@@ -70,6 +75,15 @@ struct spdif_chipinfo {
 	bool eq_drc_en;
 	/* pc, pd interrupt is separated. */
 	bool pcpd_separated;
+	/* same source, spdif re-enable */
+	bool same_src_spdif_reen;
+};
+
+enum SPDIF_SRC {
+	SPDIFIN_PAD = 0,
+	SPDIFOUT,
+	NOAP,
+	HDMIRX
 };
 
 struct aml_spdif {
@@ -91,7 +105,7 @@ struct aml_spdif {
 	/* external connect */
 	struct extcon_dev *edev;
 
-	enum SPDIF_ID id;
+	unsigned int id;
 	struct spdif_chipinfo *chipinfo;
 	unsigned int clk_cont; /* CONTINUOUS CLOCK */
 
@@ -123,7 +137,10 @@ struct aml_spdif {
 	/* last value for pc, pd */
 	int pc_last;
 	int pd_last;
-	bool on;
+
+	/* mixer control vals */
+	bool mute;
+	enum SPDIF_SRC spdifin_src;
 };
 
 static const struct snd_pcm_hardware aml_spdif_hardware = {
@@ -165,20 +182,6 @@ static const char *const spdifin_samplerate[] = {
 	"176400",
 	"192000"
 };
-
-struct aml_spdif *spdif_priv[SPDIF_ID_CNT];
-int spdif_set_audio_clk(enum SPDIF_ID id,
-		struct clk *clk_src, int rate, bool same)
-{
-	if (spdif_priv[id]->on && same) {
-		pr_debug("spdif priority");
-		return 0;
-	}
-
-	clk_set_parent(spdif_priv[id]->clk_spdifout, clk_src);
-	clk_set_rate(spdif_priv[id]->clk_spdifout, rate);
-	return 0;
-}
 
 static int spdifin_samplerate_get_enum(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol)
@@ -266,21 +269,44 @@ static int spdifin_audio_type_get_enum(
 	return 0;
 }
 
-/* For fake */
-static bool is_mute;
-static int  spdifin_src;
 static int aml_audio_set_spdif_mute(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
-	is_mute =
-			ucontrol->value.integer.value[0];
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(dai);
+	struct pinctrl_state *state = NULL;
+	bool mute = !!ucontrol->value.integer.value[0];
+
+	if (IS_ERR_OR_NULL(p_spdif->pin_ctl)) {
+		pr_err("%s(), no pinctrl", __func__);
+		return 0;
+	}
+	if (mute) {
+		state = pinctrl_lookup_state
+			(p_spdif->pin_ctl, "spdif_pins_mute");
+
+		if (!IS_ERR_OR_NULL(state))
+			pinctrl_select_state(p_spdif->pin_ctl, state);
+	} else {
+		state = pinctrl_lookup_state
+			(p_spdif->pin_ctl, "spdif_pins");
+
+		if (!IS_ERR_OR_NULL(state))
+			pinctrl_select_state(p_spdif->pin_ctl, state);
+	}
+
+	p_spdif->mute = mute;
+
 	return 0;
 }
 
 static int aml_audio_get_spdif_mute(struct snd_kcontrol *kcontrol,
 					struct snd_ctl_elem_value *ucontrol)
 {
-	ucontrol->value.integer.value[0] = is_mute;
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(dai);
+
+	ucontrol->value.integer.value[0] = p_spdif->mute;
 
 	return 0;
 }
@@ -296,7 +322,11 @@ int spdifin_source_get_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	ucontrol->value.enumerated.item[0] = spdifin_src;
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(dai);
+
+	ucontrol->value.enumerated.item[0] = p_spdif->spdifin_src;
+
 	return 0;
 }
 
@@ -304,6 +334,8 @@ int spdifin_source_set_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(dai);
 	int src = ucontrol->value.enumerated.item[0];
 
 	if (src > 3) {
@@ -311,20 +343,54 @@ int spdifin_source_set_enum(
 		return -1;
 	}
 	spdifin_set_src(src);
-	spdifin_src = src;
+	p_spdif->spdifin_src = src;
+
+	return 0;
+}
+
+static int spdif_clk_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
+
+	ucontrol->value.enumerated.item[0] =
+			clk_get_rate(p_spdif->clk_spdifout);
+	return 0;
+}
+
+static int spdif_clk_set(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
+
+	int sysclk = p_spdif->sysclk_freq;
+	int value = ucontrol->value.enumerated.item[0];
+
+	if (value > 2000000 || value < 0) {
+		pr_err("Fine spdif sysclk setting range(0~2000000), %d\n",
+				value);
+		return 0;
+	}
+	sysclk += (value - 1000000);
+
+	aml_dai_set_spdif_sysclk(cpu_dai, 0, sysclk, 0);
+
 	return 0;
 }
 
 static const struct snd_kcontrol_new snd_spdif_controls[] = {
 
-	SOC_ENUM_EXT("SPDIFIN audio samplerate", spdifin_sample_rate_enum,
+	SOC_ENUM_EXT("SPDIFIN audio samplerate",
+				spdifin_sample_rate_enum,
 				spdifin_samplerate_get_enum,
 				NULL),
 
 	SOC_ENUM_EXT("SPDIFIN Audio Type",
-			 spdif_audio_type_enum,
-			 spdifin_audio_type_get_enum,
-			 NULL),
+				spdif_audio_type_enum,
+				spdifin_audio_type_get_enum,
+				NULL),
 
 	SOC_ENUM_EXT("Audio spdif format",
 				spdif_format_enum,
@@ -334,11 +400,22 @@ static const struct snd_kcontrol_new snd_spdif_controls[] = {
 	SOC_SINGLE_BOOL_EXT("Audio spdif mute",
 				0, aml_audio_get_spdif_mute,
 				aml_audio_set_spdif_mute),
+
 	SOC_ENUM_EXT("Audio spdifin source",
 				spdifin_src_enum,
 				spdifin_source_get_enum,
 				spdifin_source_set_enum),
 
+#ifdef CONFIG_AMLOGIC_HDMITX
+	SOC_SINGLE_BOOL_EXT("Audio hdmi-out mute",
+				0, aml_get_hdmi_out_audio,
+				aml_set_hdmi_out_audio),
+#endif
+
+	SOC_SINGLE_EXT("SPDIF CLK Fine Setting",
+				0, 0, 2000000, 0,
+				spdif_clk_get,
+				spdif_clk_set),
 };
 
 static bool spdifin_check_audiotype_by_sw(struct aml_spdif *p_spdif)
@@ -680,7 +757,6 @@ static int aml_spdif_open(struct snd_pcm_substream *substream)
 	snd_soc_set_runtime_hwparams(substream, &aml_spdif_hardware);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		p_spdif->on = 1;
 		p_spdif->fddr = aml_audio_register_frddr(dev,
 			p_spdif->actrl,
 			aml_spdif_ddr_isr, substream);
@@ -726,7 +802,6 @@ static int aml_spdif_close(struct snd_pcm_substream *substream)
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		aml_audio_unregister_frddr(p_spdif->dev, substream);
-		p_spdif->on = 0;
 	} else {
 		aml_audio_unregister_toddr(p_spdif->dev, substream);
 		free_irq(p_spdif->irq_spdifin, p_spdif);
@@ -740,7 +815,7 @@ static int aml_spdif_close(struct snd_pcm_substream *substream)
 		}
 
 		/* clear extcon status */
-		if (p_spdif->id == SPDIF_A) {
+		if (p_spdif->id == 0) {
 			extcon_set_state(p_spdif->edev,
 				EXTCON_SPDIFIN_SAMPLERATE, 0);
 
@@ -875,7 +950,7 @@ static struct snd_pcm_ops aml_spdif_ops = {
 	.mmap      = aml_spdif_mmap,
 };
 
-#define PREALLOC_BUFFER		(128 * 1024)
+#define PREALLOC_BUFFER		(256 * 1024)
 #define PREALLOC_BUFFER_MAX	(256 * 1024)
 static int aml_spdif_new(struct snd_soc_pcm_runtime *rtd)
 {
@@ -886,7 +961,7 @@ static int aml_spdif_new(struct snd_soc_pcm_runtime *rtd)
 
 	pr_debug("%s spdif_%s, clk continuous:%d\n",
 		__func__,
-		(p_spdif->id == SPDIF_A) ? "a":"b",
+		(p_spdif->id == 0) ? "a":"b",
 		p_spdif->clk_cont);
 
 	/* keep frddr when probe, after spdif_frddr_init done
@@ -942,7 +1017,7 @@ static int aml_dai_spdif_startup(
 
 		if (p_spdif->clk_cont) {
 			pr_info("spdif_%s keep clk continuous\n",
-				(p_spdif->id == SPDIF_A) ? "a":"b");
+				(p_spdif->id == 0) ? "a":"b");
 			return 0;
 		}
 		/* enable clock gate */
@@ -1015,7 +1090,7 @@ static void aml_dai_spdif_shutdown(
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		if (p_spdif->clk_cont) {
 			pr_info("spdif_%s keep clk continuous\n",
-				(p_spdif->id == SPDIF_A) ? "a":"b");
+				(p_spdif->id == 0) ? "a":"b");
 			return;
 		}
 
@@ -1052,10 +1127,10 @@ static int aml_dai_spdif_prepare(
 		struct iec958_chsts chsts;
 
 		switch (p_spdif->id) {
-		case SPDIF_A:
+		case 0:
 			dst = SPDIFOUT_A;
 			break;
-		case SPDIF_B:
+		case 1:
 			dst = SPDIFOUT_B;
 			break;
 		default:
@@ -1176,6 +1251,9 @@ static int aml_dai_spdif_trigger(struct snd_pcm_substream *substream, int cmd,
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			dev_info(substream->pcm->card->dev, "S/PDIF Playback enable\n");
 			aml_frddr_enable(p_spdif->fddr, 1);
+			udelay(100);
+			aml_spdif_mute(p_spdif->actrl,
+				substream->stream, p_spdif->id, false);
 		} else {
 			dev_info(substream->pcm->card->dev, "S/PDIF Capture enable\n");
 			aml_toddr_enable(p_spdif->tddr, 1);
@@ -1190,9 +1268,6 @@ static int aml_dai_spdif_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			dev_info(substream->pcm->card->dev, "S/PDIF Playback disable\n");
-			memset(substream->runtime->dma_area,
-				0, substream->runtime->dma_bytes);
-			mdelay(3);
 			aml_frddr_enable(p_spdif->fddr, 0);
 		} else {
 			dev_info(substream->pcm->card->dev, "S/PDIF Capture disable\n");
@@ -1263,10 +1338,8 @@ static void aml_set_spdifclk(struct aml_spdif *p_spdif)
 		mpll_freq = p_spdif->sysclk_freq * 58 / 2; /* 96k */
 #endif
 		clk_set_rate(p_spdif->sysclk, mpll_freq);
-		//clk_set_rate(p_spdif->clk_spdifout,
-		//	p_spdif->sysclk_freq);
-		spdif_set_audio_clk(p_spdif->id,
-				p_spdif->sysclk, p_spdif->sysclk_freq, 0);
+		clk_set_rate(p_spdif->clk_spdifout,
+			p_spdif->sysclk_freq);
 
 		ret = clk_prepare_enable(p_spdif->sysclk);
 		if (ret) {
@@ -1361,7 +1434,7 @@ static int aml_spdif_parse_of(struct platform_device *pdev)
 	int ret = 0;
 
 	/* clock for spdif in */
-	if (p_spdif->id == SPDIF_A) {
+	if (p_spdif->id == 0) {
 		/* clock gate */
 		p_spdif->gate_spdifin = devm_clk_get(dev, "gate_spdifin");
 		if (IS_ERR(p_spdif->gate_spdifin)) {
@@ -1486,6 +1559,7 @@ struct spdif_chipinfo tl1_spdif_a_chipinfo = {
 	.chnum_en     = true,
 	.hold_start   = true,
 	.eq_drc_en    = true,
+	.same_src_spdif_reen = true,
 };
 
 struct spdif_chipinfo tl1_spdif_b_chipinfo = {
@@ -1493,6 +1567,7 @@ struct spdif_chipinfo tl1_spdif_b_chipinfo = {
 	.chnum_en     = true,
 	.hold_start   = true,
 	.eq_drc_en    = true,
+	.same_src_spdif_reen = true,
 };
 
 static const struct of_device_id aml_spdif_device_id[] = {
@@ -1530,6 +1605,7 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 	struct aml_spdif *aml_spdif = NULL;
 	struct spdif_chipinfo *p_spdif_chipinfo;
 	int ret = 0;
+	bool spdif_reenable = false;
 
 
 	aml_spdif = devm_kzalloc(dev, sizeof(struct aml_spdif), GFP_KERNEL);
@@ -1550,11 +1626,12 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 		aml_spdif->clk_cont = 1;
 
 		aml_spdif->chipinfo = p_spdif_chipinfo;
+
+		spdif_reenable = p_spdif_chipinfo->same_src_spdif_reen;
 	} else
 		dev_warn_once(dev,
 			"check whether to update spdif chipinfo\n");
 
-	spdif_priv[aml_spdif->id] = aml_spdif;
 	pr_debug("%s, spdif ID = %u\n", __func__, aml_spdif->id);
 
 	/* get audio controller */
@@ -1573,7 +1650,7 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 		return -EINVAL;
 
 	if (aml_spdif->clk_cont)
-		spdifout_play_with_zerodata(aml_spdif->id);
+		spdifout_play_with_zerodata(aml_spdif->id, spdif_reenable);
 
 	ret = devm_snd_soc_register_component(dev, &aml_spdif_component,
 		&aml_spdif_dai[aml_spdif->id], 1);

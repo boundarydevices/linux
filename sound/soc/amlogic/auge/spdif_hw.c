@@ -117,6 +117,22 @@ void aml_spdif_mute(
 	}
 }
 
+void aml_spdifout_mute_without_actrl(
+		int index,
+		bool is_mute)
+{
+	unsigned int offset, reg;
+	int mute_lr = 0;
+
+	if (is_mute)
+		mute_lr = 0x3;
+
+	offset = EE_AUDIO_SPDIFOUT_B_CTRL0 - EE_AUDIO_SPDIFOUT_CTRL0;
+	reg = EE_AUDIO_SPDIFOUT_CTRL0 + offset * index;
+
+	audiobus_update_bits(reg, 0x3 << 21, mute_lr << 21);
+}
+
 void aml_spdif_arb_config(struct aml_audio_controller *actrl)
 {
 	/* config ddr arb */
@@ -248,8 +264,8 @@ void aml_spdif_fifo_ctrl(
 		reg = EE_AUDIO_SPDIFOUT_CTRL0 + offset * index;
 		aml_audiobus_update_bits(actrl,
 			reg,
-			0x1<<29|0x1<<28|0x3<<21|0x1<<20|0x1<<19|0xff<<4,
-			1<<29|1<<28|0x0<<21|0<<20|0<<19|0x3<<4);
+			0x1<<29|0x1<<28|0x1<<20|0x1<<19|0xff<<4,
+			1<<29|1<<28|0<<20|0<<19|0x3<<4);
 
 		offset = EE_AUDIO_SPDIFOUT_B_CTRL1 - EE_AUDIO_SPDIFOUT_CTRL1;
 		reg = EE_AUDIO_SPDIFOUT_CTRL1 + offset * index;
@@ -359,7 +375,7 @@ void aml_spdifout_select_aed(bool enable, int spdifout_id)
 	/* select eq_drc output */
 	offset = EE_AUDIO_SPDIFOUT_B_CTRL1 - EE_AUDIO_SPDIFOUT_CTRL1;
 	reg = EE_AUDIO_SPDIFOUT_CTRL1 + offset * spdifout_id;
-	audiobus_update_bits(reg, 0x1 << 21, enable << 21);
+	audiobus_update_bits(reg, 0x1 << 31, enable << 31);
 }
 
 void aml_spdifout_get_aed_info(int spdifout_id,
@@ -391,8 +407,8 @@ void spdifout_to_hdmitx_ctrl(int spdif_index)
 		| spdif_index << 0 /* spdif_clk */
 	);
 }
-
-void spdifout_clk_ctrl(int spdif_id, bool is_enable)
+#if 0
+static void spdifout_clk_ctrl(int spdif_id, bool is_enable)
 {
 	unsigned int offset, reg;
 
@@ -402,28 +418,40 @@ void spdifout_clk_ctrl(int spdif_id, bool is_enable)
 	/* select : mpll 0, 24m, so spdif clk:6m */
 	audiobus_write(reg, is_enable << 31 | 0x0 << 24 | 0x3 << 0);
 }
-
+#endif
 static void spdifout_fifo_ctrl(int spdif_id,
-	int fifo_id, int bitwidth, int channels)
+	int fifo_id, int bitwidth, int channels, int lane_i2s)
 {
 	unsigned int frddr_type = spdifout_get_frddr_type(bitwidth);
 	unsigned int offset, reg, i, chmask = 0;
+	unsigned int swap_masks = 0;
+
+	/* spdif always masks two channel */
+	if (lane_i2s * 2 >= channels) {
+		pr_err("invalid lane(%d) and channels(%d)\n",
+				lane_i2s, channels);
+		return;
+	}
 
 	for (i = 0; i < channels; i++)
 		chmask |= (1 << i);
 
-	pr_debug("spdif_%s fifo ctrl, frddr:%d type:%d, %d bits\n",
+	swap_masks = (2 * lane_i2s) |
+		(2 * lane_i2s + 1) << 4;
+	pr_debug("spdif_%s fifo ctrl, frddr:%d type:%d, %d bits, chmask %#x, swap %#x\n",
 		(spdif_id == 0) ? "a":"b",
 		fifo_id,
 		frddr_type,
-		bitwidth);
+		bitwidth,
+		chmask,
+		swap_masks);
 
 	/* mask lane 0 L/R channels */
 	offset = EE_AUDIO_SPDIFOUT_B_CTRL0 - EE_AUDIO_SPDIFOUT_CTRL0;
 	reg = EE_AUDIO_SPDIFOUT_CTRL0 + offset * spdif_id;
 	audiobus_update_bits(reg,
-		0x3<<21|0x1<<20|0x1<<19|0xff<<4,
-		0x0<<21|0<<20|0<<19|chmask<<4);
+		0x1<<20|0x1<<19|0xff<<4,
+		0<<20|0<<19|chmask<<4);
 
 	offset = EE_AUDIO_SPDIFOUT_B_CTRL1 - EE_AUDIO_SPDIFOUT_CTRL1;
 	reg = EE_AUDIO_SPDIFOUT_CTRL1 + offset * spdif_id;
@@ -433,14 +461,7 @@ static void spdifout_fifo_ctrl(int spdif_id,
 
 	offset = EE_AUDIO_SPDIFOUT_B_SWAP - EE_AUDIO_SPDIFOUT_SWAP;
 	reg = EE_AUDIO_SPDIFOUT_SWAP + offset * spdif_id;
-	audiobus_write(reg, 1<<4);
-
-	/* reset afifo */
-	offset = EE_AUDIO_SPDIFOUT_B_CTRL0 - EE_AUDIO_SPDIFOUT_CTRL0;
-	reg = EE_AUDIO_SPDIFOUT_CTRL0 + offset * spdif_id;
-	audiobus_update_bits(reg, 3<<28, 0);
-	audiobus_update_bits(reg, 1<<29, 1<<29);
-	audiobus_update_bits(reg, 1<<28, 1<<28);
+	audiobus_write(reg, swap_masks);
 }
 
 static bool spdifout_is_enable(int spdif_id)
@@ -454,7 +475,7 @@ static bool spdifout_is_enable(int spdif_id)
 	return ((val >> 31) == 1);
 }
 
-void spdifout_enable(int spdif_id, bool is_enable)
+void spdifout_enable(int spdif_id, bool is_enable, bool reenable)
 {
 	unsigned int offset, reg;
 
@@ -467,15 +488,24 @@ void spdifout_enable(int spdif_id, bool is_enable)
 
 	if (!is_enable) {
 		/* share buffer, spdif should be active, so mute it */
-		audiobus_update_bits(reg, 0x3 << 21, 0x3 << 21);
+		/*audiobus_update_bits(reg, 0x3 << 21, 0x3 << 21);*/
 		return;
 	}
+
+	/* disable then for reset, to correct channel map */
+	if (reenable)
+		audiobus_update_bits(reg, 1<<31, 0x0<<31);
+
+	/* reset afifo */
+	audiobus_update_bits(reg, 3<<28, 0);
+	audiobus_update_bits(reg, 1<<29, 1<<29);
+	audiobus_update_bits(reg, 1<<28, 1<<28);
 
 	audiobus_update_bits(reg, 1<<31, is_enable<<31);
 }
 
 void spdifout_samesource_set(int spdif_index, int fifo_id,
-	int bitwidth, int channels, bool is_enable)
+	int bitwidth, int channels, bool is_enable, int lane_i2s)
 {
 	int spdif_id;
 
@@ -484,26 +514,35 @@ void spdifout_samesource_set(int spdif_index, int fifo_id,
 	else
 		spdif_id = 0;
 
-	/* clk for spdif_b is always on */
-	/*if (!spdif_id)*/
-		//spdifout_clk_ctrl(spdif_id, /*is_enable*/true);
-
 	if (is_enable)
-		spdifout_fifo_ctrl(spdif_id, fifo_id, bitwidth, channels);
+		spdifout_fifo_ctrl(spdif_id,
+			fifo_id, bitwidth, channels, lane_i2s);
 }
 
 int spdifin_get_sample_rate(void)
 {
 	unsigned int val;
+	/*EE_AUDIO_SPDIFIN_STAT0*/
+	/*r_width_max bit17:8 (the max width of two edge;)*/
+	unsigned int max_width = 0;
 
 	val = audiobus_read(EE_AUDIO_SPDIFIN_STAT0);
 
 	/* NA when check min width of two edges */
 	if (((val >> 18) & 0x3ff) == 0x3ff)
-		return 0x7;
+		return 7;
+
+	/*check the max width of two edge when spdifin sr=32kHz*/
+	/*if max_width is more than 0x2f0(magic number),*/
+	/*sr(32kHz) is unavailable*/
+	max_width = ((val >> 8) & 0x3ff);
+
+	if ((((val >> 28) & 0x7) == 0) && (max_width == 0x3ff))
+		return 7;
 
 	return (val >> 28) & 0x7;
 }
+
 
 static int spdifin_get_channel_status(int sel)
 {
@@ -596,7 +635,7 @@ void spdif_set_channel_status_info(
 	audiobus_write(reg, chsts->chstat1_r << 16 | chsts->chstat0_r);
 }
 
-void spdifout_play_with_zerodata(unsigned int spdif_id)
+void spdifout_play_with_zerodata(unsigned int spdif_id, bool reenable)
 {
 	pr_debug("%s, spdif id:%d enable:%d\n",
 		__func__,
@@ -623,13 +662,13 @@ void spdifout_play_with_zerodata(unsigned int spdif_id)
 			src0_sel = 3;
 
 		/* spdif clk */
-		spdifout_clk_ctrl(spdif_id, true);
+		//spdifout_clk_ctrl(spdif_id, true);
 		/* spdif to hdmitx */
 		spdifout_to_hdmitx_ctrl(spdif_id);
 
 		/* spdif ctrl */
 		spdifout_fifo_ctrl(spdif_id,
-			frddr_index, bitwidth, runtime.channels);
+			frddr_index, bitwidth, runtime.channels, 0);
 
 		/* channel status info */
 		spdif_get_channel_status_info(&chsts, sample_rate);
@@ -642,7 +681,7 @@ void spdifout_play_with_zerodata(unsigned int spdif_id)
 		frddr_init_without_mngr(frddr_index, src0_sel);
 
 		/* spdif enable */
-		spdifout_enable(spdif_id, true);
+		spdifout_enable(spdif_id, true, reenable);
 	}
 }
 

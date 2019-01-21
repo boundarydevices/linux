@@ -1247,8 +1247,10 @@
 
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_A
 				&clkc CLKID_MPLL0
-				&clkc CLKID_MPLL0>;
-		clock-names = "mclk", "clk_srcpll", "samesource_sysclk";
+				&clkc CLKID_MPLL1
+				&clkaudio CLKID_AUDIO_SPDIFOUT_A>;
+		clock-names = "mclk", "clk_srcpll",
+			"samesource_srcpll", "samesource_clk";
 
 		pinctrl-names = "tdm_pins";
 		pinctrl-0 = <&tdma_mclk &tdmout_a>;
@@ -1266,6 +1268,12 @@
 		acodec_adc = <1>;
 
 		status = "okay";
+
+		/* !!!For --TV platform-- ONLY */
+		Channel_Mask {
+			/*i2s has 4 pins, 8channel, mux output*/
+			Spdif_samesource_Channel_Mask = "i2s_2/3";
+		};
 	};
 
 	tdmb:tdm@1 {
@@ -1305,7 +1313,7 @@
 		compatible = "amlogic, tl1-snd-spdif-a";
 		#sound-dai-cells = <0>;
 
-		clocks = <&clkc CLKID_MPLL0
+		clocks = <&clkc CLKID_MPLL1
 				&clkc CLKID_FCLK_DIV4
 				&clkaudio CLKID_AUDIO_GATE_SPDIFIN
 				&clkaudio CLKID_AUDIO_GATE_SPDIFOUT_A
@@ -1318,8 +1326,11 @@
 				<GIC_SPI 151 IRQ_TYPE_EDGE_RISING>;
 		interrupt-names = "irq_spdifin";
 
-		pinctrl-names = "spdif_pins";
+		pinctrl-names = "spdif_pins",
+				"spdif_pins_mute";
 		pinctrl-0 = <&spdifout_a>;
+		pinctrl-1 = <&spdifout_a_mute>;
+
 
 		/*
 		 * whether do asrc for pcm and resample a or b
@@ -1396,9 +1407,6 @@
 			&clkaudio CLKID_AUDIO_EQDRC>;
 		clock-names = "gate", "srcpll", "eqdrc";
 
-		eq_enable = <1>;
-		multiband_drc_enable = <0>;
-		fullband_drc_enable = <0>;
 		/*
 		 * 0:tdmout_a
 		 * 1:tdmout_b
@@ -1410,7 +1418,7 @@
 		/* max 0xf, each bit for one lane, usually one lane */
 		lane_mask = <0x1>;
 		/* max 0xff, each bit for one channel */
-		channel_mask = <0x3>;
+		channel_mask = <0xff>;
 
 		status = "okay";
 	};
@@ -1477,6 +1485,7 @@
 				"tdma_fs_z",
 				"tdma_dout0_z";
 			function = "tdma_out";
+			bias-disable;
 		};
 	};
 
@@ -1514,6 +1523,13 @@
 		mux { /* GPIODV_4 */
 			groups = "spdif_out_dv4";
 			function = "spdif_out";
+		};
+	};
+
+	spdifout_a_mute: spdifout_a_mute {
+		mux { /* GPIODV_4 */
+			groups = "GPIODV_4";
+			function = "gpio_periphs";
 		};
 	};
 

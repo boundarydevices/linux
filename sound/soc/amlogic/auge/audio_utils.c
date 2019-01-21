@@ -42,6 +42,7 @@ struct snd_elem_info {
 static unsigned int loopback_enable;
 static unsigned int loopback_is_running;
 static unsigned int datain_datalb_total;
+static unsigned int audio_inskew;
 
 static const char *const loopback_enable_texts[] = {
 	"Disable",
@@ -164,6 +165,7 @@ static int loopback_tdminlb_set_enum(
 	return 0;
 }
 
+#if 0
 static int snd_int_info(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_info *uinfo)
 {
@@ -278,6 +280,7 @@ static int snd_byte_set(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
+#endif
 
 #define SND_BYTE(xname, type, func, xshift, xmask)   \
 {                                      \
@@ -625,6 +628,85 @@ static int audio_locker_set_enum(
 	return 0;
 }
 
+static const char *const audio_inskew_texts[] = {
+	"0",
+	"1",
+	"2",
+	"3",
+	"4",
+	"5",
+	"6",
+};
+
+static const struct soc_enum audio_inskew_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(audio_inskew_texts),
+			audio_inskew_texts);
+
+
+static int audio_inskew_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.enumerated.item[0] = audio_inskew;
+
+	return 0;
+}
+
+static int audio_inskew_set_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	unsigned int reg_in, off_set;
+	int inskew;
+	int id;
+
+	id = (ucontrol->value.enumerated.item[0] >> 16) & 0xffff;
+	inskew = (int)(ucontrol->value.enumerated.item[0] & 0xffff);
+	audio_inskew = inskew;
+	off_set = EE_AUDIO_TDMIN_B_CTRL - EE_AUDIO_TDMIN_A_CTRL;
+	reg_in = EE_AUDIO_TDMIN_A_CTRL + off_set * id;
+	pr_info("id=%d set inskew=%d\n", id, inskew);
+	audiobus_update_bits(reg_in, 0x7 << 16, inskew << 16);
+
+	return 0;
+}
+
+static const char *const tdmout_c_binv_texts[] = {
+	"0",
+	"1",
+};
+
+static const struct soc_enum tdmout_c_binv_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(tdmout_c_binv_texts),
+			tdmout_c_binv_texts);
+
+
+static int tdmout_c_binv_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	unsigned int val;
+
+	val = audiobus_read(EE_AUDIO_CLK_TDMOUT_C_CTRL);
+	ucontrol->value.enumerated.item[0] = ((val >> 29) & 0x1);
+
+	return 0;
+}
+
+static int tdmout_c_binv_set_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int binv;
+
+	binv = ucontrol->value.enumerated.item[0];
+	audiobus_update_bits(EE_AUDIO_CLK_TDMOUT_C_CTRL, 0x1 << 29, binv << 29);
+
+	return 0;
+}
+
+
+
 #define SND_MIX(xname, type, xenum, xshift, xmask)   \
 	SND_ENUM(xname, type, CTRL0, xenum, xshift, xmask)
 
@@ -662,7 +744,7 @@ static const struct snd_kcontrol_new snd_auge_controls[] = {
 		     loopback_tdminlb_enum,
 		     loopback_tdminlb_get_enum,
 		     loopback_tdminlb_set_enum),
-
+#if 0
 	/*TDMIN_A swap*/
 	SND_SWAP("TDMIN_A Ch0 Swap", TDMIN_A, in_swap_channel_enum, 0, 0x7),
 	SND_SWAP("TDMIN_A Ch1 Swap", TDMIN_A, in_swap_channel_enum, 4, 0x7),
@@ -903,6 +985,7 @@ static const struct snd_kcontrol_new snd_auge_controls[] = {
 		TDMOUT_C, lane2_mixer_enum, 22, 0x1),
 	SND_MIX("TDMOUT_C Lane3 Mixer Channel",
 		TDMOUT_C, lane3_mixer_enum, 23, 0x1),
+#endif
 
 	/* SPDIFIN Channel Status */
 	SPDIFIN_CHSTATUS("SPDIFIN Channel Status",
@@ -925,6 +1008,17 @@ static const struct snd_kcontrol_new snd_auge_controls[] = {
 		     audio_locker_enum,
 		     audio_locker_get_enum,
 		     audio_locker_set_enum),
+
+	/* audio inskew */
+	SOC_ENUM_EXT("audio inskew set",
+		     audio_inskew_enum,
+		     audio_inskew_get_enum,
+		     audio_inskew_set_enum),
+	/* tdmc out binv */
+	SOC_ENUM_EXT("tdmout_c binv set",
+		     tdmout_c_binv_enum,
+		     tdmout_c_binv_get_enum,
+		     tdmout_c_binv_set_enum),
 };
 
 

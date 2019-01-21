@@ -40,7 +40,7 @@
 #include "tdm_hw.h"
 #include "sharebuffer.h"
 #include "vad.h"
-#include "spdif.h"
+#include "spdif_hw.h"
 
 /*#define __PTM_TDM_CLK__*/
 
@@ -51,6 +51,9 @@
 #define TDM_B	1
 #define TDM_C	2
 #define LANE_MAX 4
+
+static int aml_dai_set_tdm_sysclk(struct snd_soc_dai *cpu_dai,
+				int clk_id, unsigned int freq, int dir);
 
 static void dump_pcm_setting(struct pcm_setting *setting)
 {
@@ -91,6 +94,9 @@ struct tdm_chipinfo {
 	/* same source */
 	bool same_src_fn;
 
+	/* same source, spdif re-enable */
+	bool same_src_spdif_reen;
+
 	/* ACODEC_ADC function */
 	bool adc_fn;
 };
@@ -103,7 +109,8 @@ struct aml_tdm {
 	struct clk *clk;
 	struct clk *clk_gate;
 	struct clk *mclk;
-	struct clk *samesrc_sysclk;
+	struct clk *samesrc_srcpll;
+	struct clk *samesrc_clk;
 	bool contns_clk;
 	unsigned int id;
 	/* bclk src selection */
@@ -114,12 +121,16 @@ struct aml_tdm {
 	struct tdm_chipinfo *chipinfo;
 	/* share buffer with module */
 	int samesource_sel;
+	/* share buffer lane setting from DTS */
+	int lane_ss;
 	/* virtual link for i2s to hdmitx */
 	int i2s2hdmitx;
 	int acodec_adc;
 	uint last_mpll_freq;
 	uint last_mclk_freq;
 	uint last_fmt;
+
+	bool en_share;
 };
 
 static const struct snd_pcm_hardware aml_tdm_hardware = {
@@ -143,6 +154,86 @@ static const struct snd_pcm_hardware aml_tdm_hardware = {
 	.channels_min = 1,
 	.channels_max = 32,
 };
+
+static int tdm_clk_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+
+	ucontrol->value.enumerated.item[0] = clk_get_rate(p_tdm->mclk);
+	return 0;
+}
+
+static int tdm_clk_set(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+
+	int mclk_rate = p_tdm->last_mclk_freq;
+	int value = ucontrol->value.enumerated.item[0];
+
+	if (value > 2000000 || value < 0) {
+		pr_err("Fine tdm clk setting range (0~2000000), %d\n", value);
+		return 0;
+	}
+	mclk_rate += (value - 1000000);
+
+	aml_dai_set_tdm_sysclk(cpu_dai, 0, mclk_rate, 0);
+
+	return 0;
+}
+
+static int tdmin_clk_get(struct snd_kcontrol *kcontrol,
+			struct snd_ctl_elem_value *ucontrol)
+{
+	int clk;
+	int value;
+
+	clk = meson_clk_measure(70);
+	if (clk >= 11000000)
+		value = 3;
+	else if (clk >= 6000000)
+		value = 2;
+	else if (clk >= 2000000)
+		value = 1;
+	else
+		value = 0;
+
+
+	ucontrol->value.integer.value[0] = value;
+
+	return 0;
+}
+
+/* current sample mode and its sample rate */
+static const char *const i2sin_clk[] = {
+	"0",
+	"3000000",
+	"6000000",
+	"12000000"
+};
+
+static const struct soc_enum i2sin_clk_enum[] = {
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(i2sin_clk),
+			i2sin_clk),
+};
+
+
+
+static const struct snd_kcontrol_new snd_tdm_controls[] = {
+	SOC_ENUM_EXT("I2SIn CLK", i2sin_clk_enum,
+				tdmin_clk_get,
+				NULL),
+
+	SOC_SINGLE_EXT("TDM MCLK Fine Setting",
+				0, 0, 2000000, 0,
+				tdm_clk_get,
+				tdm_clk_set),
+};
+
+
 
 static irqreturn_t aml_tdm_ddr_isr(int irq, void *devid)
 {
@@ -358,7 +449,7 @@ static struct snd_pcm_ops aml_tdm_ops = {
 	.mmap = aml_tdm_mmap,
 };
 
-#define PREALLOC_BUFFER		(128 * 1024)
+#define PREALLOC_BUFFER		(256 * 1024)
 #define PREALLOC_BUFFER_MAX	(256 * 1024)
 static int aml_tdm_new(struct snd_soc_pcm_runtime *rtd)
 {
@@ -391,12 +482,11 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 			p_tdm->chipinfo->same_src_fn
 			&& (p_tdm->samesource_sel >= 0)
 			&& (aml_check_sharebuffer_valid(p_tdm->fddr,
-					p_tdm->samesource_sel))) {
+					p_tdm->samesource_sel))
+			&& p_tdm->en_share) {
 				sharebuffer_prepare(substream,
-					fr, p_tdm->samesource_sel);
-				/* sharebuffer default uses spdif_a */
-				spdif_set_audio_clk(SPDIF_A, p_tdm->clk,
-					runtime->rate*128, 1);
+					fr, p_tdm->samesource_sel,
+					p_tdm->lane_ss);
 		}
 
 		/* i2s source to hdmix */
@@ -514,6 +604,18 @@ static int aml_dai_tdm_trigger(struct snd_pcm_substream *substream, int cmd,
 {
 	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
 
+	/* share buffer trigger */
+	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		&& p_tdm->chipinfo
+		&& p_tdm->chipinfo->same_src_fn
+		&& (p_tdm->samesource_sel >= 0)
+		&& (aml_check_sharebuffer_valid(p_tdm->fddr,
+				p_tdm->samesource_sel))
+		&& p_tdm->en_share)
+		sharebuffer_trigger(cmd,
+			p_tdm->samesource_sel,
+			p_tdm->chipinfo->same_src_spdif_reen);
+
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
@@ -535,22 +637,25 @@ static int aml_dai_tdm_trigger(struct snd_pcm_substream *substream, int cmd,
 
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			dev_info(substream->pcm->card->dev, "tdm playback enable\n");
-			/* share buffer trigger */
+			aml_frddr_enable(p_tdm->fddr, 1);
+			aml_tdm_enable(p_tdm->actrl,
+				substream->stream, p_tdm->id, true);
+			udelay(100);
+			aml_tdm_mute_playback(p_tdm->actrl, p_tdm->id, false);
 			if (p_tdm->chipinfo
 				&& p_tdm->chipinfo->same_src_fn
 				&& (p_tdm->samesource_sel >= 0)
 				&& (aml_check_sharebuffer_valid(p_tdm->fddr,
-						p_tdm->samesource_sel))) {
-				sharebuffer_trigger(cmd, p_tdm->samesource_sel);
+						p_tdm->samesource_sel))
+				&& p_tdm->en_share) {
+				aml_spdifout_mute_without_actrl(0, false);
 			}
-			aml_frddr_enable(p_tdm->fddr, 1);
 		} else {
 			dev_info(substream->pcm->card->dev, "tdm capture enable\n");
 			aml_toddr_enable(p_tdm->tddr, 1);
+			aml_tdm_enable(p_tdm->actrl,
+				substream->stream, p_tdm->id, true);
 		}
-		aml_tdm_enable(p_tdm->actrl,
-			substream->stream, p_tdm->id, true);
-
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
@@ -565,24 +670,22 @@ static int aml_dai_tdm_trigger(struct snd_pcm_substream *substream, int cmd,
 
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			dev_info(substream->pcm->card->dev, "tdm playback stop\n");
-			memset(substream->runtime->dma_area,
-				0, substream->runtime->dma_bytes);
-			mdelay(3);
 			aml_frddr_enable(p_tdm->fddr, 0);
-			/* share buffer trigger */
+			aml_tdm_mute_playback(p_tdm->actrl, p_tdm->id, true);
 			if (p_tdm->chipinfo
 				&& p_tdm->chipinfo->same_src_fn
 				&& (p_tdm->samesource_sel >= 0)
 				&& (aml_check_sharebuffer_valid(p_tdm->fddr,
-						p_tdm->samesource_sel))) {
-				sharebuffer_trigger(cmd, p_tdm->samesource_sel);
+						p_tdm->samesource_sel))
+				&& p_tdm->en_share) {
+				aml_spdifout_mute_without_actrl(0, true);
 			}
 		} else {
 			dev_info(substream->pcm->card->dev, "tdm capture stop\n");
 			aml_toddr_enable(p_tdm->tddr, 0);
 		}
 		aml_tdm_enable(p_tdm->actrl,
-				substream->stream, p_tdm->id, false);
+			substream->stream, p_tdm->id, false);
 		break;
 	default:
 		return -EINVAL;
@@ -747,15 +850,23 @@ static int aml_dai_tdm_hw_params(struct snd_pcm_substream *substream,
 		&& (p_tdm->chipinfo->same_src_fn)
 		&& (p_tdm->samesource_sel >= 0)
 		&& (aml_check_sharebuffer_valid(p_tdm->fddr,
-				p_tdm->samesource_sel))) {
+				p_tdm->samesource_sel))
+		&& p_tdm->en_share) {
 		int mux = 0, ratio = 0;
 
 			sharebuffer_get_mclk_fs_ratio(p_tdm->samesource_sel,
 				&mux, &ratio);
 			pr_info("samesource sysclk:%d\n", rate * ratio * mux);
-			if (p_tdm->samesrc_sysclk)
-				clk_set_rate(p_tdm->samesrc_sysclk,
+			if (!IS_ERR(p_tdm->samesrc_srcpll)) {
+				clk_set_rate(p_tdm->samesrc_srcpll,
 					rate * ratio * mux);
+				clk_prepare_enable(p_tdm->samesrc_srcpll);
+			}
+			if (!IS_ERR(p_tdm->samesrc_clk)) {
+				clk_set_rate(p_tdm->samesrc_clk,
+					rate * ratio);
+				clk_prepare_enable(p_tdm->samesrc_clk);
+			}
 	}
 
 	if (!p_tdm->contns_clk && !IS_ERR(p_tdm->mclk)) {
@@ -792,7 +903,8 @@ static int aml_dai_tdm_hw_free(struct snd_pcm_substream *substream,
 		&& p_tdm->chipinfo->same_src_fn
 		&& (p_tdm->samesource_sel >= 0)
 		&& fr
-		&& (aml_check_sharebuffer_valid(fr, p_tdm->samesource_sel))) {
+		&& (aml_check_sharebuffer_valid(fr, p_tdm->samesource_sel))
+		&& p_tdm->en_share) {
 			sharebuffer_free(substream,
 				fr, p_tdm->samesource_sel);
 	}
@@ -835,6 +947,14 @@ static int aml_dai_set_tdm_fmt(struct snd_soc_dai *cpu_dai, unsigned int fmt)
 	aml_tdm_set_format(p_tdm->actrl,
 		&(p_tdm->setting), p_tdm->clk_sel, p_tdm->id, fmt,
 		1, 1);
+	if (p_tdm->contns_clk && !IS_ERR(p_tdm->mclk)) {
+		int ret = clk_prepare_enable(p_tdm->mclk);
+
+		if (ret) {
+			pr_err("Can't enable mclk: %d\n", ret);
+			return ret;
+		}
+	}
 
 capture:
 	/* update skew for ACODEC_ADC */
@@ -1059,7 +1179,13 @@ static int aml_dai_set_tdm_slot(struct snd_soc_dai *cpu_dai,
 
 static int aml_dai_tdm_probe(struct snd_soc_dai *cpu_dai)
 {
+	int ret = 0;
 	struct aml_tdm *p_tdm = snd_soc_dai_get_drvdata(cpu_dai);
+
+	ret = snd_soc_add_dai_controls(cpu_dai, snd_tdm_controls,
+					ARRAY_SIZE(snd_tdm_controls));
+	if (ret < 0)
+		pr_err("%s, failed add snd spdif controls\n", __func__);
 
 	/* config ddr arb */
 	aml_tdm_arb_config(p_tdm->actrl);
@@ -1080,7 +1206,7 @@ static int aml_dai_tdm_mute_stream(struct snd_soc_dai *cpu_dai,
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		pr_debug("tdm playback mute: %d\n", mute);
-		aml_tdm_mute_playback(p_tdm->actrl, p_tdm->id, mute);
+		//aml_tdm_mute_playback(p_tdm->actrl, p_tdm->id, mute);
 	} else if (stream == SNDRV_PCM_STREAM_CAPTURE) {
 		pr_debug("tdm capture mute: %d\n", mute);
 		aml_tdm_mute_capture(p_tdm->actrl, p_tdm->id, mute);
@@ -1215,6 +1341,7 @@ struct tdm_chipinfo tl1_tdma_chipinfo = {
 	.clk_pad_ctl = true,
 	.same_src_fn = true,
 	.adc_fn      = true,
+	.same_src_spdif_reen = true,
 };
 
 struct tdm_chipinfo tl1_tdmb_chipinfo = {
@@ -1224,6 +1351,7 @@ struct tdm_chipinfo tl1_tdmb_chipinfo = {
 	.clk_pad_ctl = true,
 	.same_src_fn = true,
 	.adc_fn      = true,
+	.same_src_spdif_reen = true,
 };
 
 struct tdm_chipinfo tl1_tdmc_chipinfo = {
@@ -1233,6 +1361,7 @@ struct tdm_chipinfo tl1_tdmc_chipinfo = {
 	.clk_pad_ctl = true,
 	.same_src_fn = true,
 	.adc_fn      = true,
+	.same_src_spdif_reen = true,
 };
 
 static const struct of_device_id aml_tdm_device_id[] = {
@@ -1275,6 +1404,51 @@ static const struct of_device_id aml_tdm_device_id[] = {
 	{},
 };
 MODULE_DEVICE_TABLE(of, aml_tdm_device_id);
+
+static int check_channel_mask(const char *str)
+{
+	int ret = -1;
+
+	if (!strncmp(str, "i2s_0/1", 7))
+		ret = 0;
+	else if (!strncmp(str, "i2s_2/3", 7))
+		ret = 1;
+	else if (!strncmp(str, "i2s_4/5", 7))
+		ret = 2;
+	else if (!strncmp(str, "i2s_6/7", 7))
+		ret = 3;
+	return ret;
+}
+
+/* spdif same source with i2s */
+static void parse_samesrc_channel_mask(struct aml_tdm *p_tdm)
+{
+	struct device_node *node = p_tdm->dev->of_node;
+	struct device_node *np = NULL;
+	const char *str = NULL;
+	int ret = 0;
+
+	/* channel mask */
+	np = of_get_child_by_name(node, "Channel_Mask");
+	if (np == NULL) {
+		pr_info("No channel mask node %s\n",
+				"Channel_Mask");
+		return;
+	}
+
+	/* If spdif is same source to i2s,
+	 * it can be muxed to i2s 2 channels
+	 */
+	ret = of_property_read_string(np,
+			"Spdif_samesource_Channel_Mask", &str);
+	if (ret) {
+		pr_err("error:read Spdif_samesource_Channel_Mask\n");
+		return;
+	}
+	p_tdm->lane_ss = check_channel_mask(str);
+
+	pr_info("Channel_Mask: lane_ss = %d\n", p_tdm->lane_ss);
+}
 
 static int aml_tdm_platform_probe(struct platform_device *pdev)
 {
@@ -1330,12 +1504,25 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 		if (ret < 0)
 			p_tdm->samesource_sel = -1;
 		else {
-			p_tdm->samesrc_sysclk = devm_clk_get(&pdev->dev,
-				"samesource_sysclk");
-			if (IS_ERR(p_tdm->samesrc_sysclk)) {
+			p_tdm->samesrc_srcpll = devm_clk_get(&pdev->dev,
+				"samesource_srcpll");
+			if (IS_ERR(p_tdm->samesrc_srcpll)) {
 				dev_err(&pdev->dev,
-					"Can't retrieve samesrc_sysclk clock\n");
-				return PTR_ERR(p_tdm->samesrc_sysclk);
+					"Can't retrieve samesrc_srcpll clock\n");
+				return PTR_ERR(p_tdm->samesrc_srcpll);
+			}
+			p_tdm->samesrc_clk = devm_clk_get(&pdev->dev,
+				"samesource_clk");
+			if (IS_ERR(p_tdm->samesrc_clk)) {
+				dev_err(&pdev->dev,
+					"Can't retrieve samesrc_clk clock\n");
+				return PTR_ERR(p_tdm->samesrc_clk);
+			}
+			ret = clk_set_parent(p_tdm->samesrc_clk,
+				p_tdm->samesrc_srcpll);
+			if (ret) {
+				dev_err(dev, "can't set samesource clock\n");
+				return ret;
 			}
 			pr_info("TDM id %d samesource_sel:%d\n",
 				p_tdm->id,
@@ -1419,7 +1606,12 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 	}
 
 	p_tdm->dev = dev;
+	/* For debug to disable share buffer */
+	p_tdm->en_share = 1;
 	dev_set_drvdata(dev, p_tdm);
+
+	/* spdif same source with i2s */
+	parse_samesrc_channel_mask(p_tdm);
 
 	ret = devm_snd_soc_register_component(dev, &aml_tdm_component,
 					 &aml_tdm_dai[p_tdm->id], 1);

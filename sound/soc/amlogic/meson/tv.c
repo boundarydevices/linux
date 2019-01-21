@@ -285,9 +285,17 @@ static int aml_get_spdif_audio_type(
 	int audio_type = 0;
 	int i;
 	int total_num = sizeof(type_texts)/sizeof(struct spdif_audio_info);
-	int pc = aml_audin_read(AUDIN_SPDIF_NPCM_PCPD)>>16;
+	int pc_ori = aml_audin_read(AUDIN_SPDIF_NPCM_PCPD)>>16;
+	int pc = 0;
 
-	pc = pc&0xfff;
+	/* data type is 0~4 bit*/
+	pc = pc_ori&0x1f;
+	/* check whether it has stop bit
+	 *  refer to IEC61937-1 table 9
+	 */
+	if (pc == 0) {
+		pc = pc_ori&0xfff;
+	}
 	for (i = 0; i < total_num; i++) {
 		if (pc == type_texts[i].pc) {
 			audio_type = type_texts[i].aud_type;
@@ -562,22 +570,6 @@ static int aml_set_arc_audio(struct snd_kcontrol *kcontrol,
 }
 #endif
 
-#ifdef CONFIG_TVIN_VDIN
-static const char *const av_audio_is_stable[] = {
-	"false",
-	"true"
-};
-static const struct soc_enum av_audio_status_enum =
-	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(av_audio_is_stable),
-			av_audio_is_stable);
-static int aml_get_av_audio_stable(struct snd_kcontrol *kcontrol,
-			struct snd_ctl_elem_value *ucontrol)
-{
-	ucontrol->value.integer.value[0] = tvin_get_av_status();
-	return 0;
-}
-#endif /* CONFIG_TVIN_VDIN */
-
 static const struct snd_kcontrol_new av_controls[] = {
 	SOC_ENUM_EXT("AudioIn Switch",
 			 audio_in_switch_enum,
@@ -632,6 +624,9 @@ static const struct snd_kcontrol_new aml_tv_controls[] = {
 	SOC_ENUM_EXT("HDMIIN audio format", hdmi_in_status_enum[3],
 				aml_get_hdmiin_audio_format,
 				NULL),
+	SOC_ENUM_EXT("HDMIIN Audio Packet", hdmi_in_status_enum[4],
+				aml_get_hdmiin_audio_packet,
+				NULL),
 	SOC_SINGLE_BOOL_EXT("HDMI ATMOS EDID Switch", 0,
 				aml_get_atmos_audio_edid,
 				aml_set_atmos_audio_edid),
@@ -641,7 +636,7 @@ static const struct snd_kcontrol_new aml_tv_controls[] = {
 				aml_get_atv_audio_stable,
 				NULL),
 #endif
-#ifdef CONFIG_TVIN_VDIN
+#ifdef CONFIG_AMLOGIC_MEDIA_TVIN_AVDETECT
 	SOC_ENUM_EXT("AV audio stable", av_audio_status_enum,
 				aml_get_av_audio_stable,
 				NULL),

@@ -17,8 +17,13 @@
 #ifndef __FRHDMIRX_HW_H__
 #define __FRHDMIRX_HW_H__
 
+#define INT_PAO_PAPB_MASK    24
+#define INT_PAO_PCPD_MASK    16
+
 extern void frhdmirx_enable(bool enable);
 extern void frhdmirx_src_select(int src);
 extern void frhdmirx_ctrl(int channels, int src);
+extern void frhdmirx_clr_PAO_irq_bits(void);
+extern unsigned int frhdmirx_get_ch_status0to31(void);
 extern unsigned int frhdmirx_get_chan_status_pc(void);
 #endif
