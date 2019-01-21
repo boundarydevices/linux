@@ -548,13 +548,13 @@ struct rsa_priv_f1_pdb {
  */
 struct rsa_priv_f2_pdb {
 	u32		sgf;
-	dma_addr_t	g_dma;
-	dma_addr_t	f_dma;
-	dma_addr_t	d_dma;
-	dma_addr_t	p_dma;
-	dma_addr_t	q_dma;
-	dma_addr_t	tmp1_dma;
-	dma_addr_t	tmp2_dma;
+	caam_dma_addr_t	g_dma;
+	caam_dma_addr_t	f_dma;
+	caam_dma_addr_t	d_dma;
+	caam_dma_addr_t	p_dma;
+	caam_dma_addr_t	q_dma;
+	caam_dma_addr_t	tmp1_dma;
+	caam_dma_addr_t	tmp2_dma;
 	u32		p_q_len;
 } __packed;
 
@@ -578,15 +578,15 @@ struct rsa_priv_f2_pdb {
  */
 struct rsa_priv_f3_pdb {
 	u32		sgf;
-	dma_addr_t	g_dma;
-	dma_addr_t	f_dma;
-	dma_addr_t	c_dma;
-	dma_addr_t	p_dma;
-	dma_addr_t	q_dma;
-	dma_addr_t	dp_dma;
-	dma_addr_t	dq_dma;
-	dma_addr_t	tmp1_dma;
-	dma_addr_t	tmp2_dma;
+	caam_dma_addr_t	g_dma;
+	caam_dma_addr_t	f_dma;
+	caam_dma_addr_t	c_dma;
+	caam_dma_addr_t	p_dma;
+	caam_dma_addr_t	q_dma;
+	caam_dma_addr_t	dp_dma;
+	caam_dma_addr_t	dq_dma;
+	caam_dma_addr_t	tmp1_dma;
+	caam_dma_addr_t	tmp2_dma;
 	u32		p_q_len;
 } __packed;
 
