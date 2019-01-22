@@ -496,7 +496,7 @@ free_np:
 static int meson_cpufreq_exit(struct cpufreq_policy *policy)
 {
 	struct device *cpu_dev;
-	struct sprd_cpufreq_driver_data *cpufreq_data;
+	struct meson_cpufreq_driver_data *cpufreq_data;
 	int cur_cluster = topology_physical_package_id(policy->cpu);
 
 	cpufreq_data = policy->driver_data;
