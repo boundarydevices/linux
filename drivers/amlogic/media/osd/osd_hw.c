@@ -6488,13 +6488,10 @@ static void osd_set_freescale(u32 index,
 		osd_hw.free_src_data[index].x_start + 1;
 	if ((osd_hw.osd_meson_dev.cpu_id ==
 		__MESON_CPU_MAJOR_ID_G12A) &&
-		(height != src_height)) {
-		osd_hw.osd_meson_dev.dummy_data = 0x000000;
+		(height != src_height))
 		osd_set_dummy_data(index, 0);
-	} else {
-		osd_hw.osd_meson_dev.dummy_data = 0x808000;
+	else
 		osd_set_dummy_data(index, 0xff);
-	}
 	osd_log_dbg2(MODULE_BLEND, "osd%d:free_src_data:%d,%d,%d,%d\n",
 		index,
 		osd_hw.free_src_data[index].x_start,
