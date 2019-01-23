@@ -141,12 +141,15 @@
 #define AMSTREAM_IOC_UD_POC _IOR((_A_M), 0x55, int)
 #define AMSTREAM_IOC_UD_FLUSH_USERDATA _IOR((_A_M), 0x56, int)
 
-#define AMSTREAM_IOC_UD_BUF_READ _IOR((_A_M), 0x57, struct userdata_param_t)
+#define AMSTREAM_IOC_UD_BUF_READ _IOR((_A_M), 0x57, int)
 
 #define AMSTREAM_IOC_GET_SCREEN_MODE _IOR((_A_M), 0x58, int)
 #define AMSTREAM_IOC_SET_SCREEN_MODE _IOW((_A_M), 0x59, int)
 #define AMSTREAM_IOC_GET_VIDEO_DISCONTINUE_REPORT _IOR((_A_M), 0x5a, int)
 #define AMSTREAM_IOC_SET_VIDEO_DISCONTINUE_REPORT _IOW((_A_M), 0x5b, int)
+
+#define AMSTREAM_IOC_UD_AVAILABLE_VDEC      _IOR((_A_M), 0x5c, unsigned int)
+#define AMSTREAM_IOC_GET_VDEC_ID			_IOR((_A_M), 0x5d, int)
 
 /*
  * #define AMSTREAM_IOC_UD_BUF_STATUS _IOR((_A_M),
@@ -491,7 +494,7 @@ struct userdata_param_t {
 	uint32_t instance_id; /*input, 0~9*/
 	uint32_t buf_len; /*input*/
 	uint32_t data_size; /*output*/
-	unsigned long long pbuf_addr; /*input*/
+	void *pbuf_addr; /*input*/
 	struct userdata_meta_info_t meta_info; /*output*/
 };
 
