@@ -15,6 +15,9 @@
  *
  */
 
+/*
+ * All of these api should be call after early_initcall stage
+ */
 #ifndef __PLAT_MESON_CPU_H
 #define __PLAT_MESON_CPU_H
 
@@ -196,4 +199,20 @@ static inline bool is_meson_txlx_package_962E(void)
 {
 	return is_meson_txlx_cpu() && package_id_is(0x20);
 }
+
+static inline bool is_meson_rev_a(void)
+{
+	return (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MINOR) == 0xA);
+}
+
+static inline bool is_meson_rev_b(void)
+{
+	return (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MINOR) == 0xB);
+}
+
+static inline bool is_meson_rev_c(void)
+{
+	return (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MINOR) == 0xC);
+}
+
 #endif
