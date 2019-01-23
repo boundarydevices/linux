@@ -46,4 +46,10 @@ config TYPEC_MUX_NB7VPQ904M
 	  Say Y or M if your system has a On Semiconductor NB7VPQ904M Type-C
 	  redriver chip found on some devices with a Type-C port.
 
+config TYPEC_SWITCH_GPIO
+	tristate "Simple Super Speed Active Switch via GPIO"
+	help
+	  Say Y or M if your system has a typec super speed channel
+	  switch via a simple GPIO control.
+
 endmenu
