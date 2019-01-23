@@ -40,6 +40,9 @@
 #define HVAC_POWER_ON 354419984
 #endif
 
+#define TURN_SIGNAL_STATE 289408008
+#define GEAR_SELECTION 289408000
+
 //VehiclePropertyType
 #define VEHICLEPROPERTYTYPE_STRING    1048576
 #define VEHICLEPROPERTYTYPE_BOOLEAN   2097152
@@ -250,7 +253,8 @@ bool encode_value_callback(pb_istream_t *stream, const pb_field_t *field, void *
 	} else if (HVAC_FAN_SPEED == data->prop || HVAC_FAN_DIRECTION == data->prop ||
 		HVAC_AUTO_ON == data->prop || HVAC_AC_ON == data->prop ||
 		HVAC_RECIRC_ON == data->prop || HVAC_POWER_ON == data->prop ||
-		HVAC_DEFROSTER == data->prop) {
+		HVAC_DEFROSTER == data->prop || TURN_SIGNAL_STATE == data->prop ||
+		GEAR_SELECTION == data->prop) {
 		propvalue.int32_values.funcs.encode = &encode_int32_values_callback;
 		propvalue.int32_values.arg = &data->value;
 		propvalue.value_type = VEHICLEPROPERTYTYPE_INT32;
