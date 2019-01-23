@@ -2700,7 +2700,7 @@ static int vpu_enc_mu_init(struct core_device *core_dev)
 		core_dev->vdev->regs_base + core_dev->reg_base;
 	WARN_ON(!core_dev->mu_base_virtaddr);
 
-	vpu_dbg(LVL_ALL, "core[%d] irq : %d\n", core_dev->id, core_dev->irq);
+	vpu_dbg(LVL_INFO, "core[%d] irq : %d\n", core_dev->id, core_dev->irq);
 
 	ret = devm_request_irq(core_dev->generic_dev, core_dev->irq,
 				fsl_vpu_enc_mu_isr,
@@ -3194,6 +3194,7 @@ static int vpu_firmware_download(struct vpu_dev *This, u_int32 core_id)
 	memcpy(This->core_dev[core_id].m0_p_fw_space_vir, image, FW_Size);
 	p[16] = This->plat_type;
 	p[17] = core_id + 1;
+	p[18] = 1;
 	set_vpu_fw_addr(This, &This->core_dev[core_id]);
 
 	release_firmware(m0_pfw);
@@ -4573,7 +4574,6 @@ static int parse_dt_cores(struct vpu_dev *dev, struct device_node *np)
 		return -EINVAL;
 
 	dev->core_num = i;
-	vpu_dbg(LVL_ALL, "VPU Encoder has %d core\n", dev->core_num);
 
 	return 0;
 }
@@ -5109,7 +5109,7 @@ static int check_vpu_encoder_is_available(void)
 		return -EINVAL;
 	}
 
-	vpu_dbg(LVL_ALL, "mu_id = %d, fuse[7] = 0x%x\n", mu_id, fuse);
+	vpu_dbg(LVL_INFO, "mu_id = %d, fuse[7] = 0x%x\n", mu_id, fuse);
 	if (fuse & VPU_ENCODER_MASK) {
 		vpu_err("----Error, VPU Encoder is disabled\n");
 		return -EINVAL;
@@ -5138,7 +5138,7 @@ static int vpu_enc_probe(struct platform_device *pdev)
 		vpu_err("unmatch vpu encoder device\n");
 		return -EINVAL;
 	}
-	vpu_dbg(LVL_ALL, "probe %s\n", dev_id->compatible);
+	vpu_dbg(LVL_INFO, "probe %s\n", dev_id->compatible);
 
 	if (check_vpu_encoder_is_available())
 		return -EINVAL;
@@ -5154,7 +5154,6 @@ static int vpu_enc_probe(struct platform_device *pdev)
 	if (!res)
 		goto error_put_dev;
 
-	vpu_dbg(LVL_ALL, "<0x%llx 0%llx>\n", res->start, resource_size(res));
 	dev->reg_vpu_base = res->start;
 	dev->reg_vpu_size = resource_size(res);
 
@@ -5210,7 +5209,7 @@ static int vpu_enc_probe(struct platform_device *pdev)
 	device_create_file(&pdev->dev, &dev_attr_fpsinfo);
 	device_create_file(&pdev->dev, &dev_attr_vpuinfo);
 	init_vpu_enc_watchdog(dev);
-	vpu_dbg(LVL_ALL, "VPU Encoder registered\n");
+	vpu_dbg(LVL_INFO, "VPU Encoder registered\n");
 
 	return 0;
 
