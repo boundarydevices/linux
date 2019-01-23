@@ -1240,6 +1240,7 @@
 			&clkc CLKID_DEMUX
 			&clkc CLKID_AHB_ARB0
 			&clkc CLKID_DOS
+			&clkc CLKID_CLK81
 			&clkc CLKID_VDEC_MUX
 			&clkc CLKID_HCODEC_MUX
 			&clkc CLKID_HEVC_MUX
@@ -1248,6 +1249,7 @@
 			"demux",
 			"ahbarb0",
 			"vdec",
+			"clk_81",
 			"clk_vdec_mux",
 			"clk_hcodec_mux",
 			"clk_hevc_mux",
