@@ -67,6 +67,19 @@ int user_pid;
 #define HVAC_POWER_ON 354419984
 #endif
 
+#define TURN_SIGNAL_STATE 289408008
+#define GEAR_SELECTION 289408000
+
+#define VEHICLE_GEAR_DRIVE_CLIENT 16
+#define VEHICLE_GEAR_PARK_CLIENT 8
+#define VEHICLE_GEAR_REVERSE_CLIENT 4
+
+#define VEHICLE_TURN_SIGNAL_LEFT 1
+#define VEHICLE_TURN_SIGNAL_RIGHT 2
+
+#define VEHICLE_TURN_SIGNAL_LEFT_CLIENT 4
+#define VEHICLE_TURN_SIGNAL_RIGHT_CLIENT 2
+
 /*command type which used between AP and M4 core*/
 enum vehicle_cmd {
 	VEHICLE_RPMSG_REGISTER = 0,
@@ -107,6 +120,7 @@ enum vehicle_event_type {
 	VEHICLE_RVC,
 	VEHICLE_LIGHT,
 	VEHICLE_GEAR,
+	VEHICLE_TURN_SIGNAL,
 };
 
 /*vehicle_event_door_type: stateValue of type VEHICLE_DOOR*/
@@ -404,7 +418,7 @@ void set_property(u16 prop, u8 index, u32 value)
 	char *buffer;
 
 	buffer = kmalloc(128, GFP_KERNEL);
-
+	property_encode.value = value;
 	switch (prop) {
 	case VEHICLE_FAN_SPEED:
 		property_encode.prop = HVAC_FAN_SPEED;
@@ -432,10 +446,25 @@ void set_property(u16 prop, u8 index, u32 value)
 	case VEHICLE_HVAC_POWER_ON:
 		property_encode.prop = HVAC_POWER_ON;
 		break;
+	case VEHICLE_GEAR:
+		property_encode.prop = GEAR_SELECTION;
+		if (VEHICLE_GEAR_DRIVE == value)
+			property_encode.value = VEHICLE_GEAR_DRIVE_CLIENT;
+		else if (VEHICLE_GEAR_REVERSE == value)
+			property_encode.value = VEHICLE_GEAR_REVERSE_CLIENT;
+		else if (VEHICLE_GEAR_PARKING == value)
+			property_encode.value = VEHICLE_GEAR_PARK_CLIENT;
+		break;
+	case VEHICLE_TURN_SIGNAL:
+		property_encode.prop = TURN_SIGNAL_STATE;
+		if (VEHICLE_TURN_SIGNAL_LEFT == value)
+			property_encode.value = VEHICLE_TURN_SIGNAL_LEFT_CLIENT;
+		else if (VEHICLE_TURN_SIGNAL_RIGHT == value)
+			property_encode.value = VEHICLE_TURN_SIGNAL_RIGHT_CLIENT;
+		break;
 	default:
 		pr_err("property %d is not supported \n", prop);
 	}
-	property_encode.value = value;
 
 	pb_ostream_t stream;
 	stream = pb_ostream_from_buffer(buffer, 128);
@@ -583,9 +612,9 @@ static int vehicle_rpmsg_cb(struct rpmsg_device *rpdev,
 				extcon_set_state_sync(ev_edev, EXTCON_VEHICLE_RPMSG_EVENT, 1);
 #endif
 			}
-		} else {
-			set_property(msg->statetype, msg->index,  msg->statevalue);
 		}
+
+		set_property(msg->statetype, msg->index,  msg->statevalue);
 
 		if (vehicle_send_message(msg, vehicle_rpmsg, false))
 			dev_warn(&rpdev->dev, "vehicle_rpmsg_cb send message error \n");
