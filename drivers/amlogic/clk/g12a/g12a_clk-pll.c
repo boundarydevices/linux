@@ -536,6 +536,11 @@ static void meson_g12a_pll_disable(struct clk_hw *hw)
 	writel(readl(pll->base + p->reg_off) & (~MESON_PLL_ENABLE),
 		pll->base + p->reg_off);
 
+	if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
+		writel(0x20000060,
+		       pll->base + p->reg_off + 0x14);
+	}
+
 	if (pll->lock)
 		spin_unlock_irqrestore(pll->lock, flags);
 }
