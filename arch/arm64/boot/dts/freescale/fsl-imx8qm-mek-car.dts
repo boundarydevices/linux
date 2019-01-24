@@ -231,3 +231,22 @@
 &isi_3 {
 	low_latency;
 };
+
+&rpmsg{
+	/*
+	 * 64K for one rpmsg instance:
+	 */
+	vdev-nums = <2>;
+	reg = <0x0 0x90000000 0x0 0x20000>;
+	status = "okay";
+};
+
+&rpmsg1{
+	/*
+	 * 64K for one rpmsg instance, using 2 instance
+	 * 0x90110000 - 0x9011FFFF: audio
+	 */
+	vdev-nums = <2>;
+	reg = <0x0 0x90100000 0x0 0x20000>;
+	status = "okay";
+};
