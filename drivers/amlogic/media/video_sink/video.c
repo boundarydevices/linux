@@ -7377,7 +7377,9 @@ SET_FILTER:
 			if (is_dolby_vision_on())
 				vpp_misc_set &= ~(VPP_VD2_PREBLEND |
 					VPP_VD2_POSTBLEND | VPP_PREBLEND_EN);
-			else if (process_3d_type)
+			else if (process_3d_type ||
+				(cur_dispbuf &&
+				(cur_dispbuf->type & VIDTYPE_MVC)))
 				vpp_misc_set |= VPP_VD2_PREBLEND |
 					VPP_PREBLEND_EN;
 			else if (!legacy_vpp)
