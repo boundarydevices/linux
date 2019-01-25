@@ -27,6 +27,7 @@
 #include <linux/delay.h>
 #include <linux/usb/phy.h>
 #include <linux/amlogic/usb-v2.h>
+#include <linux/amlogic/cpu_version.h>
 #include "phy-aml-new-usb-v2.h"
 
 struct amlogic_usb_v2	*g_phy2_v2;
@@ -242,6 +243,11 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 		phy_version = of_read_ulong(prop, 1);
 	else
 		phy_version = 0;
+
+	if (is_meson_g12b_cpu()) {
+		if (!is_meson_rev_a())
+			phy_version = 1;
+	}
 
 	phy_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	phy_base = devm_ioremap_resource(dev, phy_mem);

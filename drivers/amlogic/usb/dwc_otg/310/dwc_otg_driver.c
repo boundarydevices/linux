@@ -71,6 +71,7 @@
 #include <linux/usb.h>
 #include <linux/usb/hcd.h>
 #include <linux/workqueue.h>
+#include <linux/amlogic/cpu_version.h>
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 #include <linux/amlogic/pm.h>
 #endif
@@ -1057,6 +1058,11 @@ static int dwc_otg_driver_probe(struct platform_device *pdev)
 			prop = of_get_property(of_node, "phy-interface", NULL);
 			if (prop)
 				phy_interface = of_read_ulong(prop, 1);
+
+			if (is_meson_g12b_cpu()) {
+				if (!is_meson_rev_a())
+					phy_interface = 2;
+			}
 
 			dwc_otg_module_params.host_rx_fifo_size = dwc_otg_module_params.data_fifo_size / 2;
 			DWC_PRINTF("dwc_otg: %s: type: %d speed: %d, ",
