@@ -432,3 +432,5 @@ dtb-$(CONFIG_ARCH_MXC) += imx8ulp-nitrogen-som.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-nitrogen8m.dtb imx8mq-nitrogen8m-m4.dtb \
 			  imx8mq-nitrogen8m-edp.dtb \
+			  imx8mq-nitrogen8m_som.dtb imx8mq-nitrogen8m_som-m4.dtb \
+			  imx8mq-nitrogen8m_som-sd.dtb \
