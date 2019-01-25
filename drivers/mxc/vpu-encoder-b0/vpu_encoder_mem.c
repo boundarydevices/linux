@@ -78,6 +78,17 @@ int vpu_enc_free_dma_buffer(struct vpu_ctx *ctx, struct buffer_addr *buffer)
 	return 0;
 }
 
+static bool check_mem_resource_is_valid(MEDIAIP_ENC_MEM_RESOURCE *resource)
+{
+	if (!resource)
+		return false;
+	if (resource->uMemVirtAddr >= VPU_MU_MAX_ADDRESS)
+		return false;
+	if (resource->uMemVirtAddr + resource->uMemSize > VPU_MU_MAX_ADDRESS)
+		return false;
+	return true;
+}
+
 static u32 get_enc_alloc_size(u32 size)
 {
 	u32 esize = ALIGN(size, PAGE_SIZE);
@@ -223,6 +234,15 @@ static int alloc_act_frame(struct vpu_ctx *ctx, pMEDIAIP_ENC_MEM_POOL pool)
 	if (ret) {
 		vpu_err("alloc act frame fail\n");
 		return ret;
+	}
+
+	if (!check_mem_resource_is_valid(&pool->tActFrameBufferArea)) {
+		vpu_err("invalid actFrames address, 0x%x, 0x%x, 0x%x\n",
+				pool->tActFrameBufferArea.uMemPhysAddr,
+				pool->tActFrameBufferArea.uMemVirtAddr,
+				pool->tActFrameBufferArea.uMemSize);
+		free_act_frame(ctx, pool);
+		return -EINVAL;
 	}
 
 	vpu_dbg(LVL_INFO, "actFrame: 0x%llx, %d(%d)\n",

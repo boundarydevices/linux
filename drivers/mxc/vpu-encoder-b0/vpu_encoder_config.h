@@ -44,4 +44,6 @@
 
 #define VPU_DETAIL_INDEX_DFT		0xffff
 
+#define VPU_MU_MAX_ADDRESS		0x40000000
+
 #endif

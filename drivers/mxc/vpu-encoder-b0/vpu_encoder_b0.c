@@ -5552,7 +5552,7 @@ module_param(reset_on_hang, int, 0644);
 MODULE_PARM_DESC(reset_on_hang, "reset on hang (0-1)");
 
 module_param(show_detail_index, int, 0644);
-MODULE_PARM_DESC(reset_on_hang, "show memory detail info index");
+MODULE_PARM_DESC(show_detail_index, "show memory detail info index");
 
 module_param(debug_firmware_bitmap, long, 0644);
 MODULE_PARM_DESC(debug_firmware_bitmap, "firmware debug info switch");
