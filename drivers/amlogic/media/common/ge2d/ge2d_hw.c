@@ -814,6 +814,32 @@ void ge2d_set_cmd(struct ge2d_cmd_s *cfg)
 	x_yc_ratio = ge2d_reg_get_bits(GE2D_GEN_CTRL0, 11, 1);
 	y_yc_ratio = ge2d_reg_get_bits(GE2D_GEN_CTRL0, 10, 1);
 
+	/* src:yuv , dst: rgb */
+	if ((cfg->src1_fmt & GE2D_FORMAT_YUV) &&
+		((cfg->dst_fmt & GE2D_FORMAT_YUV) == 0)) {
+		if (x_yc_ratio) {
+			if ((cfg->src1_x_rev + cfg->dst_x_rev) == 1) {
+				x_extra_bit_start = 3;
+				x_extra_bit_end   = 2;
+				x_chr_phase = 0x4c;
+			} else {
+				x_extra_bit_start = 2;
+				x_extra_bit_end   = 3;
+				x_chr_phase = 0xc4;
+			}
+		}
+		if (y_yc_ratio) {
+			if ((cfg->src1_y_rev + cfg->dst_y_rev) == 1) {
+				y_extra_bit_start = 3;
+				y_extra_bit_end   = 2;
+				y_chr_phase = 0x4c;
+			} else {
+				y_extra_bit_start = 2;
+				y_extra_bit_end   = 3;
+				y_chr_phase = 0xc4;
+			}
+		}
+	} else {
 		if (x_yc_ratio) {
 			if ((cfg->src1_x_rev + cfg->dst_x_rev) == 1) {
 				x_extra_bit_start = 3;
@@ -836,8 +862,8 @@ void ge2d_set_cmd(struct ge2d_cmd_s *cfg)
 				y_extra_bit_end   = 3;
 				y_chr_phase = 0x4c;
 			}
+		}
 	}
-
 	ge2d_reg_write(GE2D_SRC1_X_START_END,
 			(x_extra_bit_start << 30) |  /* x start extra */
 			((cfg->src1_x_start & 0x3fff) << 16) |
@@ -917,20 +943,18 @@ void ge2d_set_cmd(struct ge2d_cmd_s *cfg)
 	if (!gaul_filter_used) {
 		rate_w = (widtho * 10) / widthi;
 		rate_h = (heighto * 10) / heighti;
-		if (rate_w == 10) {
+		if (rate_h == 10) {
 			/* not scaler case */
-			cfg->sc_vsc_en = 1;
-			cfg->vsc_rpt_l0_num = 1;
 			cfg->vsc_ini_phase = 0;
 			ge2d_reg_set_bits(GE2D_SC_MISC_CTRL,
 				((0 << 1) | (0 << 0)), 8, 2);
-		} else if (rate_w < 10) {
+		} else if (rate_h < 10) {
 			/* scaler down case */
 			cfg->sc_vsc_en = 1;
 			cfg->vsc_rpt_l0_num = 1;
-			if (rate_w != 0)
+			if (rate_h != 0)
 				cfg->vsc_ini_phase =
-					0x5000000/rate_w - 0x800000;
+					0x5000000/rate_h - 0x800000;
 			else
 				cfg->vsc_ini_phase = 0x5000000;
 		} else {
@@ -938,23 +962,21 @@ void ge2d_set_cmd(struct ge2d_cmd_s *cfg)
 			cfg->sc_vsc_en = 1;
 			cfg->vsc_rpt_l0_num = 2;
 			cfg->vsc_ini_phase =
-				0x800000 + 0x5000000/rate_w;
+				0x800000 + 0x5000000/rate_h;
 		}
 
-		if (rate_h == 10) {
+		if (rate_w == 10) {
 			/* not scaler case */
-			cfg->sc_hsc_en = 1;
-			cfg->hsc_rpt_p0_num = 1;
 			cfg->hsc_ini_phase = 0;
 			ge2d_reg_set_bits(GE2D_SC_MISC_CTRL,
 				((0 << 1) | (0 << 0)), 8, 2);
-		} else if (rate_h < 10) {
+		} else if (rate_w < 10) {
 			/* scaler down case */
 			cfg->sc_hsc_en = 1;
 			cfg->hsc_rpt_p0_num = 1;
-			if (rate_h != 0)
+			if (rate_w != 0)
 				cfg->hsc_ini_phase =
-					0x5000000/rate_h - 0x800000;
+					0x5000000/rate_w - 0x800000;
 			else
 				cfg->hsc_ini_phase = 0x5000000;
 		} else {
@@ -962,7 +984,7 @@ void ge2d_set_cmd(struct ge2d_cmd_s *cfg)
 			cfg->sc_hsc_en = 1;
 			cfg->hsc_rpt_p0_num = 2;
 			cfg->hsc_ini_phase =
-				0x800000 + 0x5000000/rate_h;
+				0x800000 + 0x5000000/rate_w;
 		}
 		/* expand src1/src2 color with 1 */
 		ge2d_reg_set_bits(GE2D_GEN_CTRL2, 1, 27, 1);

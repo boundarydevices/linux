@@ -1982,6 +1982,11 @@ int ge2d_context_config_ex_ion(struct ge2d_context_s *context,
 	ge2d_cmd_cfg->hsc_rpt_p0_num = ge2d_config->hf_rpt_num;
 	ge2d_cmd_cfg->src1_cmult_asel = ge2d_config->src1_cmult_asel;
 	ge2d_cmd_cfg->src2_cmult_asel = ge2d_config->src2_cmult_asel;
+
+	ge2d_cmd_cfg->src1_fmt = ge2d_config->src_para.format;
+	ge2d_cmd_cfg->src2_fmt = ge2d_config->src2_para.format;
+	ge2d_cmd_cfg->dst_fmt = ge2d_config->dst_para.format;
+
 	context->config.update_flag = UPDATE_ALL;
 	/* context->config.src1_data.ddr_burst_size_y = 3; */
 	/* context->config.src1_data.ddr_burst_size_cb = 3; */

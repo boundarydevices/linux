@@ -555,6 +555,7 @@ struct ge2d_cmd_s {
 	/* unsigned char    src1_x_chr_phase; */
 	/* unsigned char    src1_y_chr_phase; */
 	unsigned char    src1_fill_color_en;
+	unsigned int     src1_fmt;
 
 	int              src2_x_start;
 	int              src2_y_start;
@@ -563,6 +564,7 @@ struct ge2d_cmd_s {
 	unsigned char    src2_x_rev;
 	unsigned char    src2_y_rev;
 	unsigned char    src2_fill_color_en;
+	unsigned int     src2_fmt;
 
 	int              dst_x_start;
 	int              dst_y_start;
@@ -571,6 +573,7 @@ struct ge2d_cmd_s {
 	unsigned char    dst_xy_swap;
 	unsigned char    dst_x_rev;
 	unsigned char    dst_y_rev;
+	unsigned int     dst_fmt;
 
 	int              sc_prehsc_en;
 	int              sc_prevsc_en;
