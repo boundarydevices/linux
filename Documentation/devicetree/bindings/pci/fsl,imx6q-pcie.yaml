@@ -25,6 +25,8 @@ properties:
       - fsl,imx6qp-pcie
       - fsl,imx7d-pcie
       - fsl,imx8mq-pcie
+      - fsl,imx8qm-pcie
+      - fsl,imx8qxp-pcie
 
   reg:
     items:
@@ -147,6 +149,15 @@ properties:
     description: Should specify the regulator in charge of VPH one of
       the three PCIe PHY powers. This regulator can be supplied by both
       1.8v and 3.3v voltage supplies (optional required).
+
+  hsio-cfg:
+    description: hsio configuration mode when the pcie node is supported.
+      mode 1: pciea 2 lanes and one sata ahci port.
+      mode 2: pciea 1 lane, pcieb 1 lane and one sata ahci port.
+      mode 3: pciea 2 lanes, pcieb 1 lane.
+
+  local-addr:
+    description: the local address used in hsio module.
 
 required:
   - compatible
