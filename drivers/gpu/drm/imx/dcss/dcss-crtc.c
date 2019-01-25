@@ -197,7 +197,7 @@ void dcss_crtc_setup_opipe(struct drm_crtc *crtc, struct drm_connector *conn,
 	else
 		dcss_crtc->opipe_g = G_REC709;
 
-	if ((eotf & (1 << 2)) && dcss_crtc->opipe_g == G_REC2020)
+	if (dcss_crtc->opipe_g == G_REC2020)
 		dcss_crtc->opipe_nl = NL_REC2084;
 	else if (dcss_crtc->opipe_g == G_ADOBE_ARGB)
 		dcss_crtc->opipe_nl = NL_SRGB;
