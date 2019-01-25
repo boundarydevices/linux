@@ -766,3 +766,5 @@ dtb-$(CONFIG_ARCH_MXC) += imx95-19x19-verdin-os08a20-isp-adv7535.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-nitrogen8m.dtb imx8mq-nitrogen8m-rpmsg.dtb \
 			  imx8mq-nitrogen8m-edp.dtb \
+			  imx8mq-nitrogen8m_som.dtb imx8mq-nitrogen8m_som-rpmsg.dtb \
+			  imx8mq-nitrogen8m_som-sd.dtb \
