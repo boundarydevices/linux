@@ -162,7 +162,7 @@ static CLASS_ATTR(api_version, 0644, tee_api_version_show,
  * index: firmware index
  * vdec:  vdec type(0: compatible, 1: legency vdec, 2: HEVC vdec)
  */
-int tee_load_video_fw(uint32_t index, uint32_t vdec, bool is_swap)
+static int tee_load_firmware(uint32_t index, uint32_t vdec, bool is_swap)
 {
 	struct arm_smccc_res res;
 	long cpu;
@@ -184,7 +184,18 @@ int tee_load_video_fw(uint32_t index, uint32_t vdec, bool is_swap)
 		set_cpus_allowed_ptr(current, cpu_all_mask);
 	return res.a0;
 }
+
+int tee_load_video_fw(uint32_t index, uint32_t vdec)
+{
+	return tee_load_firmware(index, vdec, false);
+}
 EXPORT_SYMBOL(tee_load_video_fw);
+
+int tee_load_video_fw_swap(uint32_t index, uint32_t vdec, bool is_swap)
+{
+	return tee_load_firmware(index, vdec, is_swap);
+}
+EXPORT_SYMBOL(tee_load_video_fw_swap);
 
 bool tee_enabled(void)
 {
