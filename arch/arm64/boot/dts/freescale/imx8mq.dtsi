@@ -1261,6 +1261,7 @@
 			phy-names = "usb2-phy", "usb3-phy";
 			power-domains = <&pgc_otg1>;
 			usb3-resume-missing-cas;
+			snps,power-down-scale = <2>;
 			status = "disabled";
 		};
 
@@ -1293,6 +1294,7 @@
 			phy-names = "usb2-phy", "usb3-phy";
 			power-domains = <&pgc_otg2>;
 			usb3-resume-missing-cas;
+			snps,power-down-scale = <2>;
 			status = "disabled";
 		};
 
