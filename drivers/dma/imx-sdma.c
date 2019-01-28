@@ -444,7 +444,6 @@ struct sdma_driver_data {
 	int num_events;
 	struct sdma_script_start_addrs	*script_addrs;
 	bool check_ratio;
-	bool check_idx;
 };
 
 struct sdma_engine {
@@ -618,7 +617,6 @@ static struct sdma_driver_data sdma_imx8mn = {
 	.num_events = 48,
 	.script_addrs = &sdma_script_imx7d,
 	.check_ratio = 0,
-	.check_idx = 1,
 };
 
 static struct sdma_driver_data sdma_imx8mq = {
@@ -626,7 +624,6 @@ static struct sdma_driver_data sdma_imx8mq = {
 	.num_events = 48,
 	.script_addrs = &sdma_script_imx7d,
 	.check_ratio = 1,
-	.check_idx = 1,
 };
 
 static const struct platform_device_id sdma_devtypes[] = {
@@ -2255,13 +2252,14 @@ disable_clk_ipg:
 static bool sdma_filter_fn(struct dma_chan *chan, void *fn_param)
 {
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
+	struct sdma_engine *sdma = sdmac->sdma;
 	struct imx_dma_data *data = fn_param;
 
 	if (!imx_dma_is_general_purpose(chan))
 		return false;
+
 	/* return false if it's not the right device */
-	if ((sdmac->sdma->drvdata->check_idx)
-		&& (sdmac->sdma->idx != data->idx))
+	if (sdma->dev->of_node != data->of_node)
 		return false;
 
 	sdmac->data = *data;
@@ -2289,6 +2287,7 @@ static struct dma_chan *sdma_xlate(struct of_phandle_args *dma_spec,
 		data.done_sel = dma_spec->args[2];
 	data.priority = dma_spec->args[2] & 0xff;
 	data.idx = sdma->idx;
+	data.of_node = ofdma->of_node;
 
 	return dma_request_channel(mask, sdma_filter_fn, &data);
 }
