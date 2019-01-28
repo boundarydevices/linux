@@ -3833,7 +3833,6 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 		goto err3;
 	}
 
-
 	usb_initialize_gadget(dwc->dev, dwc->gadget, dwc_gadget_release);
 	dev				= &dwc->gadget->dev;
 	dev->platform_data		= dwc;
@@ -3842,6 +3841,10 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 	dwc->gadget->sg_supported	= true;
 	dwc->gadget->name		= "dwc3-gadget";
 	dwc->gadget->lpm_capable	= true;
+	dwc->gadget->is_otg		= (dwc->dr_mode == USB_DR_MODE_OTG) &&
+					  (dwc->otg_caps.hnp_support ||
+					   dwc->otg_caps.srp_support ||
+					   dwc->otg_caps.adp_support);
 
 	/*
 	 * FIXME We might be setting max_speed to <SUPER, however versions
