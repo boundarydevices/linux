@@ -707,14 +707,14 @@ MODULE_PARM_DESC(hdr2_debug, "\n hdr2_debug\n");
 
 /* gamut 3x3 matrix*/
 /*standard 2020rgb->709rgb*/
-/*int ncl_2020_709[9] = {*/
-	/*3401, -1204, -149, -255, 2320, -17, -37, -206, 2291};*/
+int ncl_2020_709[9] = {
+	3401, -1204, -149, -255, 2320, -17, -37, -206, 2291};
 /* dci-p3->709rgb*/
 /*int ncl_2020_709[9] = {*/
 	/*2543, -459, -36, -88, 2133, 3, -41, -161, 2250};*/
 
 /* special primary->709rgb*/
-int ncl_2020_709[9] = {
+int ncl_sp_709[9] = {
 	2684, -489, -147, -201, 2266, -17, -29, -171, 2248};
 
 /*int cl_2020_709[9] =*/
@@ -1970,8 +1970,15 @@ void hdr_func(enum hdr_module_sel module_sel,
 			hdr_mtx_param.mtx_cgain[i] = rgb2ycbcr_709[i];
 			hdr_mtx_param.mtx_ogain[i] = rgb2ycbcr_ncl2020[i];
 			hdr_mtx_param.mtx_out[i] = rgb2ycbcr_709[i];
-			if (i < 9)
-				hdr_mtx_param.mtx_gamut[i] = ncl_2020_709[i];
+			if (i < 9) {
+				if (is_meson_g12a_cpu() ||
+					is_meson_g12b_cpu())
+					hdr_mtx_param.mtx_gamut[i] =
+						ncl_sp_709[i];
+				else
+					hdr_mtx_param.mtx_gamut[i] =
+						ncl_2020_709[i];
+			}
 		}
 		hdr_mtx_param.mtx_on = MTX_ON;
 
