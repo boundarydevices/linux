@@ -314,11 +314,15 @@ static void nwl_dsi_config_host(struct nwl_mipi_dsi *dsi)
 
 	if (dsi->dsi_mode_flags & MIPI_DSI_CLOCK_NON_CONTINUOUS) {
 		nwl_dsi_write(dsi, CFG_NONCONTINUOUS_CLK, 0x01);
-		nwl_dsi_write(dsi, CFG_AUTOINSERT_EOTP, 0x01);
 	} else {
 		nwl_dsi_write(dsi, CFG_NONCONTINUOUS_CLK, 0x00);
 		nwl_dsi_write(dsi, CFG_AUTOINSERT_EOTP, 0x00);
 	}
+
+	if (dsi->dsi_mode_flags & MIPI_DSI_MODE_EOT_PACKET)
+		nwl_dsi_write(dsi, CFG_AUTOINSERT_EOTP, 0x00);
+	else
+		nwl_dsi_write(dsi, CFG_AUTOINSERT_EOTP, 0x01);
 
 	nwl_dsi_write(dsi, CFG_T_PRE, 0x01);
 	nwl_dsi_write(dsi, CFG_T_POST, 0x34);
