@@ -986,6 +986,7 @@ struct dwc3_scratchpad_array {
  * @ip: controller's ID
  * @revision: controller's version of an IP
  * @version_type: VERSIONTYPE register contents, a sub release of a revision
+ * @otg_caps: the OTG capabilities from hardware point
  * @dr_mode: requested mode of operation
  * @current_dr_role: current role of operation when in dual-role mode
  * @desired_dr_role: desired role of operation when in dual-role mode
@@ -1161,6 +1162,7 @@ struct dwc3 {
 	u32			gadget_max_speed;
 	enum usb_ssp_rate	max_ssp_rate;
 	enum usb_ssp_rate	gadget_ssp_rate;
+	struct usb_otg_caps	otg_caps;
 
 	u32			ip;
 
