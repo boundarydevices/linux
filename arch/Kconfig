@@ -448,6 +448,11 @@ config CC_STACKPROTECTOR_REGULAR
 
 config CC_STACKPROTECTOR_STRONG
 	bool "Strong"
+	help
+	  Since this config will increase stack size. We repleace it
+
+config CC_STACKPROTECTOR_STRONG_AMLOGIC
+	bool "Strong"
 	select CC_STACKPROTECTOR
 	help
 	  Functions will have the stack-protector canary logic added in any
