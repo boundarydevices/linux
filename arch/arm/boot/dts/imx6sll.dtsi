@@ -83,34 +83,38 @@
 		      <0x00a00100 0x100>;
 		interrupt-parent = <&intc>;
 	};
+	clocks {
+		#address-cells = <1>;
+		#size-cells = <0>;
 
-	ckil: clock-ckil {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <32768>;
-		clock-output-names = "ckil";
-	};
+		ckil: clock-ckil {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <32768>;
+			clock-output-names = "ckil";
+		};
 
-	osc: clock-osc-24m {
-		compatible = "fixed-clock";
-		reg = <1>;
-		#clock-cells = <0>;
-		clock-frequency = <24000000>;
-		clock-output-names = "osc";
-	};
+		osc: clock-osc-24m {
+			compatible = "fixed-clock";
+			reg = <1>;
+			#clock-cells = <0>;
+			clock-frequency = <24000000>;
+			clock-output-names = "osc";
+		};
 
-	ipp_di0: clock-ipp-di0 {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <0>;
-		clock-output-names = "ipp_di0";
-	};
+		ipp_di0: clock-ipp-di0 {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <0>;
+			clock-output-names = "ipp_di0";
+		};
 
-	ipp_di1: clock-ipp-di1 {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <0>;
-		clock-output-names = "ipp_di1";
+		ipp_di1: clock-ipp-di1 {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <0>;
+			clock-output-names = "ipp_di1";
+		};
 	};
 
 	tempmon: temperature-sensor {
