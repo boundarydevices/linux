@@ -10,6 +10,7 @@ obj-$(CONFIG_PHY_LPC18XX_USB_OTG)	+= phy-lpc18xx-usb-otg.o
 obj-$(CONFIG_PHY_XGENE)			+= phy-xgene.o
 obj-$(CONFIG_PHY_PISTACHIO_USB)		+= phy-pistachio-usb.o
 obj-$(CONFIG_USB_LGM_PHY)		+= phy-lgm-usb.o
+obj-$(CONFIG_PHY_MIXEL_LVDS)		+= phy-mixel-lvds.o
 obj-y					+= allwinner/	\
 					   amlogic/	\
 					   broadcom/	\
