@@ -767,20 +767,18 @@
 &pcie0{
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie0>;
-	disable-gpio = <&gpio5 29 GPIO_ACTIVE_LOW>;
-	reset-gpio = <&gpio5 28 GPIO_ACTIVE_LOW>;
-	ext_osc = <1>;
-	hard-wired = <1>;
-	status = "disabled";
+	clkreq-gpio = <&gpio5 20 GPIO_ACTIVE_LOW>;
+	disable-gpio = <&gpio3 11 GPIO_ACTIVE_LOW>;
+	reset-gpio = <&gpio3 10 GPIO_ACTIVE_LOW>;
+	status = "okay";
 };
 
 &pcie1{
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie1>;
-	disable-gpio = <&gpio5 10 GPIO_ACTIVE_LOW>;
-	reset-gpio = <&gpio5 12 GPIO_ACTIVE_LOW>;
+	reset-gpio = <&gpio3 18 GPIO_ACTIVE_LOW>;
 	ext_osc = <1>;
-	status = "disabled";
+	status = "okay";
 };
 
 &uart1 { /* console */
