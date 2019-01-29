@@ -1674,6 +1674,7 @@ static void v4l2_transfer_buffer_to_firmware(struct queue_data *This, struct vb2
 		p_data_req = list_first_entry(&This->drv_q,
 				typeof(*p_data_req), list);
 		list_del(&p_data_req->list);
+		p_data_req->queued = false;
 		if (p_data_req->vb2_buf)
 			vb2_buffer_done(p_data_req->vb2_buf,
 					VB2_BUF_STATE_DONE);
@@ -1875,6 +1876,7 @@ static void v4l2_update_stream_addr(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 			vpu_dbg(LVL_INFO, "v4l2_transfer_buffer_to_firmware - set stream_feed_complete - DEBUG 2\n");
 #endif
 		list_del(&p_data_req->list);
+		p_data_req->queued = false;
 		if (p_data_req->vb2_buf)
 			vb2_buffer_done(p_data_req->vb2_buf,
 					VB2_BUF_STATE_DONE);
@@ -2183,6 +2185,7 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 						p_data_req->status = FRAME_FREE;
 						vpu_dbg(LVL_INFO, "VID_API_CMD_FS_ALLOC, data_req->vb2_buf=%p, data_req->id=%d\n", p_data_req->vb2_buf, p_data_req->id);
 						list_del(&p_data_req->list);
+						p_data_req->queued = false;
 						buffer_flag = true;
 						break;
 					} else {
@@ -2264,9 +2267,11 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 				vpu_dbg(LVL_WARN, "warning: normal release and previous status %s, frame not for display, queue the buffer to list again\n",
 						bufstat[p_data_req->status]);
 
-				if (p_data_req->status == FRAME_DECODED)
+				if (p_data_req->status == FRAME_DECODED && p_data_req->queued == false) {
 					v4l2_event_queue_fh(&ctx->fh, &ev);
-				list_add_tail(&p_data_req->list, &This->drv_q);
+					list_add_tail(&p_data_req->list, &This->drv_q);
+					p_data_req->queued = true;
+				}
 			}
 			p_data_req->status = FRAME_RELEASE;
 		}
@@ -2673,10 +2678,17 @@ static int vpu_start_streaming(struct vb2_queue *q,
 static void vpu_stop_streaming(struct vb2_queue *q)
 {
 	struct queue_data *This = (struct queue_data *)q->drv_priv;
+	struct vb2_data_req *p_data_req = NULL;
+	struct vb2_data_req *p_temp;
 	struct vb2_buffer *vb;
 
 	vpu_dbg(LVL_INFO, "%s() is called\n", __func__);
 	down(&This->drv_q_lock);
+	if (!list_empty(&This->drv_q))
+		list_for_each_entry_safe(p_data_req, p_temp, &This->drv_q, list) {
+			list_del(&p_data_req->list);
+			p_data_req->queued = false;
+		}
 
 	if (!list_empty(&q->queued_list))
 		list_for_each_entry(vb, &q->queued_list, queued_entry) {
@@ -2708,8 +2720,10 @@ static void vpu_buf_queue(struct vb2_buffer *vb)
 		pphy_address = (u_int32 *)vb2_plane_cookie(vb, 1);
 		data_req->phy_addr[1] = *pphy_address;
 	}
-	if (data_req->status != FRAME_FREE && data_req->status != FRAME_DECODED)
+	if (data_req->status != FRAME_FREE && data_req->status != FRAME_DECODED) {
 		list_add_tail(&data_req->list, &This->drv_q);
+		data_req->queued = true;
+	}
 
 	up(&This->drv_q_lock);
 
@@ -2790,6 +2804,7 @@ static void flush_drv_q(struct queue_data *This)
 					p_data_req->id,
 					p_data_req);
 			list_del(&p_data_req->list);
+			p_data_req->queued = false;
 			if (p_data_req->vb2_buf)
 				vb2_buffer_done(p_data_req->vb2_buf, VB2_BUF_STATE_ERROR);
 		}

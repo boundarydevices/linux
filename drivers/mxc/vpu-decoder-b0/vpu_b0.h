@@ -164,6 +164,7 @@ struct vb2_data_req {
 	int id;
 	u_int32 status;
 	bool bfield;
+	bool queued;
 	u_int32 phy_addr[2]; //0 for luma, 1 for chroma
 	u_int32 data_offset[2]; //0 for luma, 1 for chroma
 };
