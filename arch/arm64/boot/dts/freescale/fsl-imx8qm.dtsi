@@ -113,6 +113,10 @@
 			no-map;
 			reg = <0 0x92400000 0 0x2000000>;
 		};
+		encoder_reserved: encoder_reserved@0x94400000 {
+			no-map;
+			reg = <0 0x94400000 0 0x800000>;
+		};
 
 		/* global autoconfigured region for contiguous allocations */
 		linux,cma {
@@ -198,6 +202,7 @@
 
 		boot-region = <&encoder_boot>;
 		rpc-region = <&encoder_rpc>;
+		reserved-region = <&encoder_reserved>;
 		reg = <0x0 0x2d000000 0x0 0x1000000>,	/*VPU Encoder*/
 			<0x0 0x2c000000 0x0 0x2000000>; /*VPU*/
 		reg-names = "vpu_regs";

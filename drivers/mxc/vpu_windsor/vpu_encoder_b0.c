@@ -4002,7 +4002,10 @@ static ssize_t show_memory_info(struct device *dev,
 	}
 
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"total : %ld\n", total_dma_size);
+			"total dma             : %ld\n", total_dma_size);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"total reserved memory : %ld\n",
+			vdev->reserved_mem.bytesused);
 	show_detail_index = VPU_DETAIL_INDEX_DFT;
 
 	return num;
@@ -4134,6 +4137,9 @@ static ssize_t show_vpuinfo(struct device *dev,
 	num += scnprintf(buf + num, PAGE_SIZE - num,
 			"reg-rpc-system       : 0x%08x\n",
 			vdev->reg_rpc_system);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"reserved-memory      : 0x%08lx 0x%08lx\n",
+			vdev->reserved_mem.phy_addr, vdev->reserved_mem.size);
 	num += scnprintf(buf + num, PAGE_SIZE - num, "supported resolution :");
 	num += scnprintf(buf + num, PAGE_SIZE - num, " %dx%d(min);",
 			vdev->supported_size.min_width,
@@ -4593,6 +4599,7 @@ static int parse_dt_info(struct vpu_dev *dev, struct device_node *np)
 	struct device_node *reserved_node = NULL;
 	struct resource reserved_fw;
 	struct resource reserved_rpc;
+	struct resource reserved_mem;
 	u32 fw_total_size = 0;
 	u32 rpc_total_size = 0;
 	u32 val;
@@ -4627,6 +4634,18 @@ static int parse_dt_info(struct vpu_dev *dev, struct device_node *np)
 		vpu_err("error: rpc-region of_address_to_resource error\n");
 		return -EINVAL;
 	}
+
+	reserved_node = of_parse_phandle(np, "reserved-region", 0);
+	if (!reserved_node) {
+		vpu_err("error: rpc-region of_parse_phandle error\n");
+		return -ENODEV;
+	}
+	if (of_address_to_resource(reserved_node, 0, &reserved_mem)) {
+		vpu_err("error: rpc-region of_address_to_resource error\n");
+		return -EINVAL;
+	}
+	dev->reserved_mem.phy_addr = reserved_mem.start;
+	dev->reserved_mem.size = resource_size(&reserved_mem);
 
 	ret = parse_dt_cores(dev, np);
 	if (ret) {
@@ -5176,10 +5195,16 @@ static int vpu_enc_probe(struct platform_device *pdev)
 		goto error_put_dev;
 	}
 
+	ret = vpu_enc_init_reserved_memory(&dev->reserved_mem);
+	if (ret) {
+		vpu_err("%s couldn't init reserved memory\n", __func__);
+		goto error_iounmap;
+	}
+
 	ret = v4l2_device_register(&pdev->dev, &dev->v4l2_dev);
 	if (ret) {
 		vpu_err("%s unable to register v4l2 dev\n", __func__);
-		goto error_iounmap;
+		goto error_reserved_mem;
 	}
 
 	platform_set_drvdata(pdev, dev);
@@ -5233,6 +5258,8 @@ error_init_core:
 	}
 error_unreg_v4l2:
 	v4l2_device_unregister(&dev->v4l2_dev);
+error_reserved_mem:
+	vpu_enc_release_reserved_memory(&dev->reserved_mem);
 error_iounmap:
 	if (dev->regs_base) {
 		iounmap(dev->regs_base);
@@ -5269,6 +5296,11 @@ static int vpu_enc_remove(struct platform_device *pdev)
 		video_unregister_device(dev->pvpu_encoder_dev);
 
 	v4l2_device_unregister(&dev->v4l2_dev);
+	vpu_enc_release_reserved_memory(&dev->reserved_mem);
+	if (dev->regs_base) {
+		iounmap(dev->regs_base);
+		dev->regs_base = NULL;
+	}
 	if (dev->generic_dev) {
 		put_device(dev->generic_dev);
 		dev->generic_dev = NULL;

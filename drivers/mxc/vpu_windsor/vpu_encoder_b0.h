@@ -311,6 +311,23 @@ struct core_device {
 	unsigned long reset_times;
 };
 
+struct vpu_enc_mem_item {
+	struct list_head list;
+	void *virt_addr;
+	unsigned long phy_addr;
+	unsigned long size;
+	unsigned long offset;
+};
+
+struct vpu_enc_mem_info {
+	void *virt_addr;
+	unsigned long phy_addr;
+	unsigned long size;
+	unsigned long bytesused;
+	struct list_head memorys;
+	spinlock_t lock;
+};
+
 struct vpu_dev {
 	struct device *generic_dev;
 	struct v4l2_device v4l2_dev;
@@ -343,6 +360,7 @@ struct vpu_dev {
 		u32 max;
 		u32 step;
 	} supported_fps;
+	struct vpu_enc_mem_info reserved_mem;
 };
 
 struct buffer_addr {
