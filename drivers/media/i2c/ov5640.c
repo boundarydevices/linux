@@ -2328,6 +2328,9 @@ static int ov5640_set_fmt(struct v4l2_subdev *sd,
 
 	__v4l2_ctrl_s_ctrl_int64(sensor->ctrls.pixel_rate,
 				 ov5640_calc_pixel_rate(sensor));
+
+	if (sensor->pending_mode_change || sensor->pending_fmt_change)
+		sensor->fmt = *mbus_fmt;
 out:
 	mutex_unlock(&sensor->lock);
 	return ret;
