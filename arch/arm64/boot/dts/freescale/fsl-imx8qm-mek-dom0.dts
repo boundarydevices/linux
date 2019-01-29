@@ -339,6 +339,10 @@
 		xen,passthrough;
 		reg = <0 0x92400000 0 0x2000000>;
 	};
+	encoder_reserved_mem: encoder_reserved_mem@0x94400000 {
+		xen,passthrough;
+		reg = <0 0x94400000 0 0x800000>;
+	};
 
 	/* This piece memory is used by M41, M40 is not covered */
 	m41_mem: m41_mem@0x94400000 {

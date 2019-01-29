@@ -275,6 +275,10 @@
 		xen,passthrough;
 		reg = <0 0x91400000 0 0x1000000>;
 	};
+	encoder_reserved_mem: encoder_reserved_mem@0x94400000 {
+		xen,passthrough;
+		reg = <0 0x94400000 0 0x800000>;
+	};
 
 	decoder_str_mem: str_mem@0x94400000 {
 		xen,passthrough;
