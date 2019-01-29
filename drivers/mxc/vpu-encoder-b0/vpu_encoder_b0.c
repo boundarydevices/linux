@@ -70,7 +70,7 @@ struct vpu_frame_info {
 	struct queue_data *queue;
 };
 
-unsigned int vpu_dbg_level_encoder = LVL_WARN;
+unsigned int vpu_dbg_level_encoder = LVL_ERR | LVL_WARN | LVL_ALL;
 static unsigned int reset_on_hang;
 static unsigned int show_detail_index = VPU_DETAIL_INDEX_DFT;
 static unsigned long debug_firmware_bitmap;
@@ -135,20 +135,20 @@ static char *get_cmd_str(u32 cmdid)
 static void vpu_log_event(u_int32 uEvent, u_int32 ctxid)
 {
 	if (uEvent >= VID_API_ENC_EVENT_RESERVED)
-		vpu_dbg(LVL_ERR, "reveive event: 0x%X, ctx id:%d\n",
+		vpu_err("reveive event: 0x%X, ctx id:%d\n",
 				uEvent, ctxid);
 	else
-		vpu_dbg(LVL_DEBUG, "recevie event: %s, ctx id:%d\n",
+		vpu_dbg(LVL_EVT, "recevie event: %s, ctx id:%d\n",
 				event2str[uEvent], ctxid);
 }
 
 static void vpu_log_cmd(u_int32 cmdid, u_int32 ctxid)
 {
 	if (cmdid >= GTB_ENC_CMD_RESERVED)
-		vpu_dbg(LVL_ERR, "send cmd: 0x%X, ctx id:%d\n",
+		vpu_err("send cmd: 0x%X, ctx id:%d\n",
 				cmdid, ctxid);
 	else
-		vpu_dbg(LVL_DEBUG, "send cmd: %s ctx id:%d\n",
+		vpu_dbg(LVL_CMD, "send cmd: %s ctx id:%d\n",
 				cmd2str[cmdid], ctxid);
 }
 
@@ -309,10 +309,9 @@ pENC_DSA_STATUS_t get_rpc_dsa_status(struct vpu_ctx *ctx)
 
 static int vpu_enc_v4l2_ioctl_querycap(struct file *file,
 		void *fh,
-		struct v4l2_capability *cap
-		)
+		struct v4l2_capability *cap)
 {
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
+	vpu_log_func();
 	strncpy(cap->driver, "vpu encoder", sizeof(cap->driver) - 1);
 	strlcpy(cap->card, "vpu encoder", sizeof(cap->card));
 	strlcpy(cap->bus_info, "platform:", sizeof(cap->bus_info));
@@ -327,12 +326,11 @@ static int vpu_enc_v4l2_ioctl_querycap(struct file *file,
 
 static int vpu_enc_v4l2_ioctl_enum_fmt_vid_cap_mplane(struct file *file,
 		void *fh,
-		struct v4l2_fmtdesc *f
-		)
+		struct v4l2_fmtdesc *f)
 {
 	struct vpu_v4l2_fmt *fmt;
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
+	vpu_log_func();
 	if (f->index >= ARRAY_SIZE(formats_compressed_enc))
 		return -EINVAL;
 
@@ -344,13 +342,11 @@ static int vpu_enc_v4l2_ioctl_enum_fmt_vid_cap_mplane(struct file *file,
 }
 static int vpu_enc_v4l2_ioctl_enum_fmt_vid_out_mplane(struct file *file,
 		void *fh,
-		struct v4l2_fmtdesc *f
-		)
+		struct v4l2_fmtdesc *f)
 {
 	struct vpu_v4l2_fmt *fmt;
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
-
+	vpu_log_func();
 	if (f->index >= ARRAY_SIZE(formats_yuv_enc))
 		return -EINVAL;
 
@@ -375,6 +371,7 @@ static int vpu_enc_v4l2_ioctl_enum_framesizes(struct file *file, void *fh,
 	if (!vdev)
 		return -EINVAL;
 
+	vpu_log_func();
 	fsize->type = V4L2_FRMSIZE_TYPE_STEPWISE;
 	fsize->stepwise.max_width = vdev->supported_size.max_width;
 	fsize->stepwise.max_height = vdev->supported_size.max_height;
@@ -399,6 +396,7 @@ static int vpu_enc_v4l2_ioctl_enum_frameintervals(struct file *file, void *fh,
 	if (!vdev)
 		return -EINVAL;
 
+	vpu_log_func();
 	framerate = vdev->supported_fps.min +
 			fival->index * vdev->supported_fps.step;
 	if (framerate > vdev->supported_fps.max)
@@ -435,35 +433,36 @@ static struct queue_data *get_queue_by_v4l2_type(struct vpu_ctx *ctx, u32 type)
 
 static int vpu_enc_v4l2_ioctl_g_fmt(struct file *file,
 		void *fh,
-		struct v4l2_format *f
-		)
+		struct v4l2_format *f)
 {
 	struct vpu_ctx *ctx =           v4l2_fh_to_ctx(fh);
 	struct v4l2_pix_format_mplane   *pix_mp = &f->fmt.pix_mp;
+	struct queue_data *q_data;
 	unsigned int i;
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
-
-	if (f->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		pix_mp->pixelformat = V4L2_PIX_FMT_NV12;
-		pix_mp->width = ctx->q_data[V4L2_SRC].width;
-		pix_mp->height = ctx->q_data[V4L2_SRC].height;
-		pix_mp->field = V4L2_FIELD_ANY;
-		pix_mp->num_planes = 2;
-		pix_mp->colorspace = V4L2_COLORSPACE_REC709;
-
-		for (i = 0; i < pix_mp->num_planes; i++)
-			pix_mp->plane_fmt[i].sizeimage = ctx->q_data[V4L2_SRC].sizeimage[i];
-	} else if (f->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
-		pix_mp->width = ctx->q_data[V4L2_DST].width;
-		pix_mp->height = ctx->q_data[V4L2_DST].height;
-		pix_mp->field = V4L2_FIELD_ANY;
-		pix_mp->plane_fmt[0].bytesperline = ctx->q_data[V4L2_DST].width;
-		pix_mp->plane_fmt[0].sizeimage = ctx->q_data[V4L2_DST].sizeimage[0];
-		pix_mp->pixelformat = V4L2_PIX_FMT_H264;
-		pix_mp->num_planes = 1;
-	} else
+	q_data = get_queue_by_v4l2_type(ctx, f->type);
+	if (!q_data)
 		return -EINVAL;
+	vpu_dbg(LVL_FUNC, "%s(), %s\n", __func__, q_data->desc);
+
+	if (!q_data->current_fmt) {
+		vpu_err("%s's current fmt is NULL\n", q_data->desc);
+		return -EINVAL;
+	}
+
+	pix_mp->pixelformat = q_data->current_fmt->fourcc;
+	pix_mp->num_planes = q_data->current_fmt->num_planes;
+	pix_mp->width = q_data->width;
+	pix_mp->height = q_data->height;
+	pix_mp->field = V4L2_FIELD_ANY;
+	for (i = 0; i < pix_mp->num_planes; i++)
+		pix_mp->plane_fmt[i].sizeimage = q_data->sizeimage[i];
+
+	if (V4L2_TYPE_IS_OUTPUT(f->type))
+		pix_mp->colorspace = V4L2_COLORSPACE_REC709;
+	else
+		pix_mp->plane_fmt[0].bytesperline = q_data->width;
+
 	return 0;
 }
 
@@ -638,12 +637,11 @@ static int set_yuv_queue_fmt(struct queue_data *q_data, struct v4l2_format *f)
 	fmt = find_fmt_by_fourcc(q_data->supported_fmts, q_data->fmt_count,
 				pix_mp->pixelformat);
 	if (!fmt) {
-		vpu_dbg(LVL_ERR, "unsupport yuv fmt : %s\n",
+		vpu_err("unsupport yuv fmt : %s\n",
 				cvrt_fourcc_to_str(pix_mp->pixelformat));
 		return -EINVAL;
 	}
 
-	q_data->fourcc = pix_mp->pixelformat;
 	q_data->width = pix_mp->width;
 	q_data->height = pix_mp->height;
 	q_data->rect.left = 0;
@@ -685,12 +683,11 @@ static int set_enc_queue_fmt(struct queue_data *q_data, struct v4l2_format *f)
 	fmt = find_fmt_by_fourcc(q_data->supported_fmts, q_data->fmt_count,
 				pix_mp->pixelformat);
 	if (!fmt) {
-		vpu_dbg(LVL_ERR, "unsupport encode fmt : %s\n",
+		vpu_err("unsupport encode fmt : %s\n",
 				cvrt_fourcc_to_str(pix_mp->pixelformat));
 		return -EINVAL;
 	}
 
-	q_data->fourcc = pix_mp->pixelformat;
 	q_data->width = pix_mp->width;
 	q_data->height = pix_mp->height;
 	sizeimage = get_enc_minimum_sizeimage(pix_mp->width, pix_mp->height);
@@ -704,8 +701,7 @@ static int set_enc_queue_fmt(struct queue_data *q_data, struct v4l2_format *f)
 
 static int vpu_enc_v4l2_ioctl_s_fmt(struct file *file,
 		void *fh,
-		struct v4l2_format *f
-		)
+		struct v4l2_format *f)
 {
 	struct vpu_ctx                  *ctx = v4l2_fh_to_ctx(fh);
 	int                             ret = 0;
@@ -715,26 +711,21 @@ static int vpu_enc_v4l2_ioctl_s_fmt(struct file *file,
 
 	attr = get_vpu_ctx_attr(ctx);
 	pEncParam = &attr->param;
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
+	q_data = get_queue_by_v4l2_type(ctx, f->type);
+	if (!q_data)
+		return -EINVAL;
+	vpu_dbg(LVL_FUNC, "%s(), %s, (%d, %d)\n", __func__, q_data->desc,
+			ctx->core_dev->id, ctx->str_index);
 
 	ret = check_v4l2_fmt(ctx->dev, f);
 	if (ret)
 		return ret;
 
 	mutex_lock(&ctx->instance_mutex);
-	switch (f->type) {
-	case V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE:
-		q_data = &ctx->q_data[V4L2_SRC];
+	if (V4L2_TYPE_IS_OUTPUT(f->type))
 		ret = set_yuv_queue_fmt(q_data, f);
-		break;
-	case V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE:
-		q_data = &ctx->q_data[V4L2_DST];
+	else
 		ret = set_enc_queue_fmt(q_data, f);
-		break;
-	default:
-		ret = -EINVAL;
-		break;
-	}
 	mutex_unlock(&ctx->instance_mutex);
 
 	return ret;
@@ -753,6 +744,7 @@ static int vpu_enc_v4l2_ioctl_g_parm(struct file *file, void *fh,
 	attr = get_vpu_ctx_attr(ctx);
 	param = &attr->param;
 
+	vpu_log_func();
 	parm->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
 	parm->parm.capture.capturemode = V4L2_CAP_TIMEPERFRAME;
 	parm->parm.capture.timeperframe.numerator = 1;
@@ -808,6 +800,7 @@ static int vpu_enc_v4l2_ioctl_s_parm(struct file *file, void *fh,
 	if (!parm || !ctx)
 		return -EINVAL;
 
+	vpu_log_func();
 	attr = get_vpu_ctx_attr(ctx);
 
 	fival.numerator = parm->parm.capture.timeperframe.numerator;
@@ -817,7 +810,7 @@ static int vpu_enc_v4l2_ioctl_s_parm(struct file *file, void *fh,
 
 	ret = find_proper_framerate(ctx->dev, &fival);
 	if (ret) {
-		vpu_dbg(LVL_ERR, "Unsupported FPS : %d / %d\n",
+		vpu_err("Unsupported FPS : %d / %d\n",
 				fival.numerator, fival.denominator);
 		return ret;
 	}
@@ -834,31 +827,24 @@ static int vpu_enc_v4l2_ioctl_s_parm(struct file *file, void *fh,
 
 static int vpu_enc_v4l2_ioctl_expbuf(struct file *file,
 		void *fh,
-		struct v4l2_exportbuffer *buf
-		)
+		struct v4l2_exportbuffer *buf)
 {
 	struct vpu_ctx *ctx = v4l2_fh_to_ctx(fh);
 	struct queue_data *q_data;
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
-
-	if (buf->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-		q_data = &ctx->q_data[V4L2_SRC];
-	else if (buf->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
-		q_data = &ctx->q_data[V4L2_DST];
-	else
+	q_data = get_queue_by_v4l2_type(ctx, buf->type);
+	if (!q_data)
 		return -EINVAL;
+	vpu_dbg(LVL_FUNC, "%s(), %s\n", __func__, q_data->desc);
 
-	return (vb2_expbuf(&q_data->vb2_q,
-				buf
-				));
+	return vb2_expbuf(&q_data->vb2_q, buf);
 }
 
 static int vpu_enc_v4l2_ioctl_subscribe_event(struct v4l2_fh *fh,
 		const struct v4l2_event_subscription *sub
 		)
 {
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
+	vpu_log_func();
 
 	switch (sub->type) {
 	case V4L2_EVENT_EOS:
@@ -872,48 +858,37 @@ static int vpu_enc_v4l2_ioctl_subscribe_event(struct v4l2_fh *fh,
 
 static int vpu_enc_v4l2_ioctl_reqbufs(struct file *file,
 		void *fh,
-		struct v4l2_requestbuffers *reqbuf
-		)
+		struct v4l2_requestbuffers *reqbuf)
 {
 	struct vpu_ctx *ctx = v4l2_fh_to_ctx(fh);
 	struct queue_data *q_data;
 	int ret;
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
-
-	if (reqbuf->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-		q_data = &ctx->q_data[V4L2_SRC];
-	else if (reqbuf->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
-		q_data = &ctx->q_data[V4L2_DST];
-	else
+	q_data = get_queue_by_v4l2_type(ctx, reqbuf->type);
+	if (!q_data)
 		return -EINVAL;
+	vpu_dbg(LVL_FUNC, "%s(), %s, (%d, %d)\n", __func__, q_data->desc,
+			ctx->core_dev->id, ctx->str_index);
 
 	ret = vb2_reqbufs(&q_data->vb2_q, reqbuf);
-
-	vpu_dbg(LVL_DEBUG, "%s() c_port_req_buf(%d)\n",
-			__func__, ret);
 
 	return ret;
 }
 
 static int vpu_enc_v4l2_ioctl_querybuf(struct file *file,
 		void *fh,
-		struct v4l2_buffer *buf
-		)
+		struct v4l2_buffer *buf)
 {
 	struct vpu_ctx *ctx = v4l2_fh_to_ctx(fh);
 	struct queue_data *q_data;
 	unsigned int i;
 	int ret;
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
-
-	if (buf->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-		q_data = &ctx->q_data[V4L2_SRC];
-	else if (buf->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
-		q_data = &ctx->q_data[V4L2_DST];
-	else
+	q_data = get_queue_by_v4l2_type(ctx, buf->type);
+	if (!q_data)
 		return -EINVAL;
+	vpu_dbg(LVL_FUNC, "%s(), %s, (%d, %d)\n", __func__, q_data->desc,
+			ctx->core_dev->id, ctx->str_index);
 
 	ret = vb2_querybuf(&q_data->vb2_q, buf);
 	if (!ret) {
@@ -1000,11 +975,11 @@ static int precheck_qbuf(struct queue_data *q_data, struct v4l2_buffer *buf)
 
 	vb = cvrt_v4l2_to_vb2_buffer(&q_data->vb2_q, buf);
 	if (!vb) {
-		vpu_dbg(LVL_ERR, "invalid v4l2 buffer index:%d\n", buf->index);
+		vpu_err("invalid v4l2 buffer index:%d\n", buf->index);
 		return -EINVAL;
 	}
 	if (vb->state != VB2_BUF_STATE_DEQUEUED) {
-		vpu_dbg(LVL_ERR, "invalid buffer state:%d\n", vb->state);
+		vpu_err("invalid buffer state:%d\n", vb->state);
 		return -EINVAL;
 	}
 
@@ -1024,21 +999,17 @@ static int precheck_qbuf(struct queue_data *q_data, struct v4l2_buffer *buf)
 
 static int vpu_enc_v4l2_ioctl_qbuf(struct file *file,
 		void *fh,
-		struct v4l2_buffer *buf
-		)
+		struct v4l2_buffer *buf)
 {
 	struct vpu_ctx *ctx = v4l2_fh_to_ctx(fh);
 	struct queue_data *q_data;
 	int ret;
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
-
-	if (buf->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-		q_data = &ctx->q_data[V4L2_SRC];
-	else if (buf->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
-		q_data = &ctx->q_data[V4L2_DST];
-	else
+	q_data = get_queue_by_v4l2_type(ctx, buf->type);
+	if (!q_data)
 		return -EINVAL;
+	vpu_dbg(LVL_FUNC, "%s(), %s, (%d, %d)\n", __func__, q_data->desc,
+			ctx->core_dev->id, ctx->str_index);
 
 	ret = precheck_qbuf(q_data, buf);
 	if (ret < 0)
@@ -1085,21 +1056,17 @@ static int send_eos(struct vpu_ctx *ctx)
 
 static int vpu_enc_v4l2_ioctl_dqbuf(struct file *file,
 		void *fh,
-		struct v4l2_buffer *buf
-		)
+		struct v4l2_buffer *buf)
 {
 	struct vpu_ctx *ctx = v4l2_fh_to_ctx(fh);
 	struct queue_data *q_data;
 	int ret;
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
-
-	if (buf->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-		q_data = &ctx->q_data[V4L2_SRC];
-	else if (buf->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
-		q_data = &ctx->q_data[V4L2_DST];
-	else
+	q_data = get_queue_by_v4l2_type(ctx, buf->type);
+	if (!q_data)
 		return -EINVAL;
+	vpu_dbg(LVL_FUNC, "%s(), %s, (%d, %d)\n", __func__, q_data->desc,
+			ctx->core_dev->id, ctx->str_index);
 
 	ret = vb2_dqbuf(&q_data->vb2_q, buf, file->f_flags & O_NONBLOCK);
 
@@ -1127,23 +1094,22 @@ static bool format_is_support(struct vpu_v4l2_fmt *format_table,
 
 static int vpu_enc_v4l2_ioctl_try_fmt(struct file *file,
 		void *fh,
-		struct v4l2_format *f
-		)
+		struct v4l2_format *f)
 {
+	struct vpu_ctx *ctx = v4l2_fh_to_ctx(fh);
 	struct v4l2_pix_format_mplane   *pix_mp = &f->fmt.pix_mp;
-	unsigned int table_size;
+	struct queue_data *q_data;
 
-	if (f->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
-		table_size = ARRAY_SIZE(formats_compressed_enc);
-		if (!format_is_support(formats_compressed_enc, table_size, f))
-			return -EINVAL;
-	} else if (f->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+	q_data = get_queue_by_v4l2_type(ctx, f->type);
+	if (!q_data)
+		return -EINVAL;
+	vpu_dbg(LVL_FUNC, "%s(), %s\n", __func__, q_data->desc);
+
+	if (f->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		pix_mp->field = V4L2_FIELD_ANY;
 		pix_mp->colorspace = V4L2_COLORSPACE_REC709;
-		table_size = ARRAY_SIZE(formats_yuv_enc);
-		if (!format_is_support(formats_yuv_enc, table_size, f))
-			return -EINVAL;
-	} else
+	}
+	if (!format_is_support(q_data->supported_fmts, q_data->fmt_count, f))
 		return -EINVAL;
 
 	return 0;
@@ -1161,8 +1127,7 @@ static int vpu_enc_v4l2_ioctl_g_crop(struct file *file, void *fh,
 	if (get_queue_by_v4l2_type(ctx, cr->type) != src)
 		return -EINVAL;
 
-
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
+	vpu_log_func();
 	cr->c.left = src->rect.left;
 	cr->c.top = src->rect.top;
 	cr->c.width = src->rect.width;
@@ -1186,8 +1151,7 @@ static int vpu_enc_v4l2_ioctl_s_crop(struct file *file, void *fh,
 	if (get_queue_by_v4l2_type(ctx, cr->type) != src)
 		return -EINVAL;
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
-
+	vpu_log_func();
 	src->rect.left = ALIGN(cr->c.left, dev->supported_size.step_width);
 	src->rect.top = ALIGN(cr->c.top, dev->supported_size.step_height);
 	src->rect.width = ALIGN(cr->c.width, dev->supported_size.step_width);
@@ -1321,8 +1285,9 @@ static int vpu_enc_v4l2_ioctl_encoder_cmd(struct file *file,
 		)
 {
 	struct vpu_ctx *ctx = v4l2_fh_to_ctx(fh);
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
 
+	vpu_dbg(LVL_FUNC, "%s(), cmd = %d, (%d, %d)\n", __func__, cmd->cmd,
+			ctx->core_dev->id, ctx->str_index);
 	switch (cmd->cmd) {
 	case V4L2_ENC_CMD_START:
 		break;
@@ -1349,14 +1314,11 @@ static int vpu_enc_v4l2_ioctl_streamon(struct file *file,
 	struct queue_data *q_data;
 	int ret;
 
-	vpu_dbg(LVL_DEBUG, "%s(), type=%d\n", __func__, i);
-
-	if (i == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-		q_data = &ctx->q_data[V4L2_SRC];
-	else if (i == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
-		q_data = &ctx->q_data[V4L2_DST];
-	else
+	q_data = get_queue_by_v4l2_type(ctx, i);
+	if (!q_data)
 		return -EINVAL;
+	vpu_dbg(LVL_FUNC, "%s(), %s, (%d, %d)\n", __func__, q_data->desc,
+			ctx->core_dev->id, ctx->str_index);
 
 	attr = get_vpu_ctx_attr(ctx);
 	if (attr) {
@@ -1387,14 +1349,12 @@ static int vpu_enc_v4l2_ioctl_streamoff(struct file *file,
 	struct queue_data *q_data;
 	int ret;
 
-	vpu_dbg(LVL_DEBUG, "%s(), type=%d\n", __func__, i);
-
-	if (i == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-		q_data = &ctx->q_data[V4L2_SRC];
-	else if (i == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
-		q_data = &ctx->q_data[V4L2_DST];
-	else
+	q_data = get_queue_by_v4l2_type(ctx, i);
+	if (!q_data)
 		return -EINVAL;
+
+	vpu_dbg(LVL_FUNC, "%s(), %s, (%d, %d)\n", __func__, q_data->desc,
+			ctx->core_dev->id, ctx->str_index);
 
 	request_eos(ctx);
 	wait_for_stop_done(ctx);
@@ -1646,7 +1606,7 @@ static int do_configure_codec(struct vpu_ctx *ctx)
 	pEncStrBuffDesc->end = ctx->encoder_stream.phy_addr +
 				ctx->encoder_stream.size;
 
-	vpu_dbg(LVL_INFO,
+	vpu_dbg(LVL_DEBUG,
 		"pEncStrBuffDesc:start=%x, wptr=0x%x, rptr=%x, end=%x\n",
 		pEncStrBuffDesc->start,
 		pEncStrBuffDesc->wptr,
@@ -1664,7 +1624,6 @@ static int do_configure_codec(struct vpu_ctx *ctx)
 	clear_stop_status(ctx);
 	memcpy(enc_param, &attr->param, sizeof(attr->param));
 	vpu_ctx_send_cmd(ctx, GTB_ENC_CMD_CONFIGURE_CODEC, 0, NULL);
-	vpu_dbg(LVL_INFO, "send command GTB_ENC_CMD_CONFIGURE_CODEC\n");
 
 	show_codec_configure(enc_param);
 
@@ -1790,7 +1749,6 @@ static bool update_yuv_addr(struct vpu_ctx *ctx)
 	list_del(&p_data_req->list);
 
 	return bGotAFrame;
-
 }
 
 static void get_kmp_next(const u8 *p, int *next, int size)
@@ -1842,7 +1800,7 @@ static int get_stuff_data_size(u8 *data, int size)
 	index =  kmp_serach(data, size, pattern, ARRAY_SIZE(pattern), next);
 	if (index < 0)
 		return 0;
-	vpu_dbg(LVL_INFO, "find end_of_stream nal\n");
+	vpu_dbg(LVL_DEBUG, "find end_of_stream nal\n");
 	return size - index;
 }
 
@@ -1878,7 +1836,7 @@ static void strip_stuff_data_on_tail(struct vpu_ctx *ctx, struct vb2_buffer *vb)
 			count_strip_info(&attr->statistic.strip_sts.eos,
 					stuff_size);
 
-		vpu_dbg(LVL_INFO, "strip %d bytes stuff data\n", stuff_size);
+		vpu_dbg(LVL_DEBUG, "strip %d bytes stuff data\n", stuff_size);
 		vb2_set_plane_payload(vb, 0, bytesused - stuff_size);
 	}
 }
@@ -2424,8 +2382,8 @@ static int handle_event_frame_done(struct vpu_ctx *ctx,
 	if (!ctx || !pEncPicInfo)
 		return -EINVAL;
 
-	vpu_dbg(LVL_DEBUG, "pEncPicInfo->uPicEncodDone=%d\n",
-			pEncPicInfo->uPicEncodDone);
+	vpu_dbg(LVL_DEBUG, "Frame done(%d) - uFrameID = 0x%x\n",
+			pEncPicInfo->uPicEncodDone, pEncPicInfo->uFrameID);
 
 	queue = &ctx->q_data[V4L2_DST];
 	if (!pEncPicInfo->uPicEncodDone) {
@@ -2570,7 +2528,7 @@ static void vpu_enc_event_handler(struct vpu_ctx *ctx,
 		vpu_err("firmware exception:%s\n", (char *)event_data);
 		break;
 	default:
-		vpu_dbg(LVL_ERR, "........unknown event : 0x%x\n", uEvent);
+		vpu_err("........unknown event : 0x%x\n", uEvent);
 		break;
 	}
 }
@@ -2708,7 +2666,7 @@ static int vpu_enc_mu_init(struct core_device *core_dev)
 				"vpu_mu_isr",
 				(void *)core_dev);
 	if (ret) {
-		vpu_dbg(LVL_ERR, "request_irq failed %d, error = %d\n",
+		vpu_err("request_irq failed %d, error = %d\n",
 				core_dev->irq, ret);
 		return -EINVAL;
 	}
@@ -2831,7 +2789,7 @@ static void vpu_enc_msg_run_work(struct work_struct *work)
 		process_msg(dev);
 	}
 	if (rpc_MediaIPFW_Video_message_check_encoder(This) == API_MSG_BUFFER_ERROR)
-		vpu_dbg(LVL_ERR, "MSG num is too big to handle");
+		vpu_err("MSG num is too big to handle");
 }
 
 static void vpu_enc_msg_instance_work(struct work_struct *work)
@@ -2860,14 +2818,10 @@ static int vpu_queue_setup(struct vb2_queue *vq,
 {
 	struct queue_data  *This = (struct queue_data *)vq->drv_priv;
 
-	vpu_dbg(LVL_DEBUG, "%s() is called\n", __func__);
+	vpu_dbg(LVL_BUF, "%s(), %s, (%d, %d)\n", __func__, This->desc,
+			This->ctx->core_dev->id, This->ctx->str_index);
 
-	if ((vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) ||
-		(vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE)
-		) {
-		*plane_count = 1;
-		psize[0] = This->sizeimage[0];//check alignment
-	} else {
+	if (V4L2_TYPE_IS_OUTPUT(vq->type)) {
 		if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 			*plane_count = 2;
 			psize[0] = This->sizeimage[0];//check alignment
@@ -2876,26 +2830,39 @@ static int vpu_queue_setup(struct vb2_queue *vq,
 			psize[0] = This->sizeimage[0] + This->sizeimage[1];
 			*plane_count = 1;
 		}
+		if (*buf_count < MIN_BUFFER_COUNT)
+			*buf_count = MIN_BUFFER_COUNT;
+	} else {
+		*plane_count = 1;
+		psize[0] = This->sizeimage[0];//check alignment
 	}
 
 	if (*buf_count > VPU_MAX_BUFFER)
 		*buf_count = VPU_MAX_BUFFER;
+	if (*buf_count < 1)
+		*buf_count = 1;
 
 	return 0;
 }
 
 static int vpu_buf_prepare(struct vb2_buffer *vb)
 {
-	vpu_dbg(LVL_DEBUG, "%s() is called\n", __func__);
+	struct vb2_queue *vq = vb->vb2_queue;
+	struct queue_data *q_data = (struct queue_data *)vq->drv_priv;
+
+	vpu_dbg(LVL_BUF, "%s(), %s, (%d, %d)\n", __func__, q_data->desc,
+			q_data->ctx->core_dev->id, q_data->ctx->str_index);
+
 	return 0;
 }
 
 
-static int vpu_start_streaming(struct vb2_queue *q,
-		unsigned int count
-		)
+static int vpu_start_streaming(struct vb2_queue *q, unsigned int count)
 {
-	vpu_dbg(LVL_DEBUG, "%s() is called\n", __func__);
+	struct queue_data *q_data = (struct queue_data *)q->drv_priv;
+
+	vpu_dbg(LVL_BUF, "%s(), %s, (%d, %d)\n", __func__, q_data->desc,
+			q_data->ctx->core_dev->id, q_data->ctx->str_index);
 
 	return 0;
 }
@@ -2940,9 +2907,12 @@ static void clear_queue(struct queue_data *queue)
 
 static void vpu_stop_streaming(struct vb2_queue *q)
 {
-	struct queue_data *This = (struct queue_data *)q->drv_priv;
+	struct queue_data *q_data = (struct queue_data *)q->drv_priv;
 
-	clear_queue(This);
+	vpu_dbg(LVL_BUF, "%s(), %s, (%d, %d)\n", __func__, q_data->desc,
+			q_data->ctx->core_dev->id, q_data->ctx->str_index);
+
+	clear_queue(q_data);
 }
 
 static void vpu_buf_queue(struct vb2_buffer *vb)
@@ -2951,17 +2921,16 @@ static void vpu_buf_queue(struct vb2_buffer *vb)
 	struct queue_data   *This = (struct queue_data *)vq->drv_priv;
 	struct vb2_data_req *data_req;
 
-	vpu_dbg(LVL_DEBUG, "%s() is called\n", __func__);
+	vpu_dbg(LVL_BUF, "%s(), %s, (%d, %d)\n", __func__, This->desc,
+			This->ctx->core_dev->id, This->ctx->str_index);
 
 	down(&This->drv_q_lock);
-	vpu_dbg(LVL_DEBUG, "c_port_buf_queue down\n");
 	data_req = &This->vb2_reqs[vb->index];
 	data_req->vb2_buf = vb;
 	data_req->id = vb->index;
 	list_add_tail(&data_req->list, &This->drv_q);
 
 	up(&This->drv_q_lock);
-	vpu_dbg(LVL_DEBUG, "c_port_buf_queue up vq->type=%d\n", vq->type);
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		struct vpu_ctx *ctx = This->ctx;
@@ -3000,6 +2969,8 @@ static int vpu_enc_buf_init(struct vb2_buffer *vb)
 	struct vpu_ctx *ctx = queue->ctx;
 	int i;
 
+	vpu_dbg(LVL_BUF, "%s(), %s, (%d, %d)\n", __func__, queue->desc,
+			ctx->core_dev->id, ctx->str_index);
 	if (!is_enc_dma_buf(vb))
 		return 0;
 
@@ -3017,6 +2988,9 @@ static void vpu_enc_buf_cleanup(struct vb2_buffer *vb)
 	struct vpu_ctx *ctx = queue->ctx;
 	int i;
 
+	vpu_dbg(LVL_BUF, "%s(), %s, (%d, %d)\n", __func__, queue->desc,
+			ctx->core_dev->id, ctx->str_index);
+
 	if (!is_enc_dma_buf(vb))
 		return;
 
@@ -3027,12 +3001,18 @@ static void vpu_enc_buf_cleanup(struct vb2_buffer *vb)
 
 static void vpu_prepare(struct vb2_queue *q)
 {
-	vpu_dbg(LVL_DEBUG, "%s() is called\n", __func__);
+	struct queue_data *q_data = (struct queue_data *)q->drv_priv;
+
+	vpu_dbg(LVL_BUF, "%s(), %s, (%d, %d)\n", __func__, q_data->desc,
+			q_data->ctx->core_dev->id, q_data->ctx->str_index);
 }
 
 static void vpu_finish(struct vb2_queue *q)
 {
-	vpu_dbg(LVL_DEBUG, "%s() is called\n", __func__);
+	struct queue_data *q_data = (struct queue_data *)q->drv_priv;
+
+	vpu_dbg(LVL_BUF, "%s(), %s, (%d, %d)\n", __func__, q_data->desc,
+			q_data->ctx->core_dev->id, q_data->ctx->str_index);
 }
 
 static struct vb2_ops vpu_enc_v4l2_qops = {
@@ -3055,7 +3035,7 @@ static void init_vb2_queue(struct queue_data *This, unsigned int type,
 	struct vb2_queue  *vb2_q = &This->vb2_q;
 	int ret;
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
+	vpu_log_func();
 
 	// initialze driver queue
 	INIT_LIST_HEAD(&This->drv_q);
@@ -3076,7 +3056,7 @@ static void init_vb2_queue(struct queue_data *This, unsigned int type,
 	vb2_q->dev = &ctx->dev->plat_dev->dev;
 	ret = vb2_queue_init(vb2_q);
 	if (ret)
-		vpu_dbg(LVL_ERR, "%s vb2_queue_init() failed (%d)!\n",
+		vpu_err("%s vb2_queue_init() failed (%d)!\n",
 				__func__,
 				ret
 				);
@@ -3084,42 +3064,68 @@ static void init_vb2_queue(struct queue_data *This, unsigned int type,
 		This->vb2_q_inited = true;
 }
 
-static void init_queue_data(struct vpu_ctx *ctx)
+static void vpu_enc_init_output_queue(struct vpu_ctx *ctx,
+					struct queue_data *q)
 {
-	init_vb2_queue(&ctx->q_data[V4L2_SRC],
+	WARN_ON(!ctx);
+	WARN_ON(!q);
+
+	vpu_log_func();
+
+	init_vb2_queue(q,
 			V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
 			ctx,
 			&vb2_dma_contig_memops,
 			GFP_DMA32);
-	ctx->q_data[V4L2_SRC].type = V4L2_SRC;
-	sema_init(&ctx->q_data[V4L2_SRC].drv_q_lock, 1);
-	init_vb2_queue(&ctx->q_data[V4L2_DST],
+	q->type = V4L2_SRC;
+	sema_init(&q->drv_q_lock, 1);
+	q->ctx = ctx;
+
+	q->supported_fmts = formats_yuv_enc;
+	q->fmt_count = ARRAY_SIZE(formats_yuv_enc);
+	q->current_fmt = &formats_yuv_enc[0];
+
+	q->width = VPU_ENC_WIDTH_DEFAULT;
+	q->height = VPU_ENC_HEIGHT_DEFAULT;
+	q->rect.left = 0;
+	q->rect.top = 0;
+	q->rect.width = VPU_ENC_WIDTH_DEFAULT;
+	q->rect.height = VPU_ENC_HEIGHT_DEFAULT;
+	scnprintf(q->desc, sizeof(q->desc), "OUTPUT");
+}
+
+static void vpu_enc_init_capture_queue(struct vpu_ctx *ctx,
+					struct queue_data *q)
+{
+	WARN_ON(!ctx);
+	WARN_ON(!q);
+
+	vpu_log_func();
+
+	init_vb2_queue(q,
 			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE,
 			ctx,
 			&vb2_vmalloc_memops, 0);
-	ctx->q_data[V4L2_DST].type = V4L2_DST;
-	sema_init(&ctx->q_data[V4L2_DST].drv_q_lock, 1);
+	q->type = V4L2_DST;
+	sema_init(&q->drv_q_lock, 1);
+	q->ctx = ctx;
 
-	ctx->q_data[V4L2_SRC].ctx = ctx;
-	ctx->q_data[V4L2_DST].ctx = ctx;
+	q->supported_fmts = formats_compressed_enc;
+	q->fmt_count = ARRAY_SIZE(formats_compressed_enc);
+	q->current_fmt = &formats_compressed_enc[0];
 
-	ctx->q_data[V4L2_SRC].supported_fmts = formats_yuv_enc;
-	ctx->q_data[V4L2_SRC].fmt_count = ARRAY_SIZE(formats_yuv_enc);
-	ctx->q_data[V4L2_DST].supported_fmts = formats_compressed_enc;
-	ctx->q_data[V4L2_DST].fmt_count = ARRAY_SIZE(formats_compressed_enc);
-
-	ctx->q_data[V4L2_SRC].width = VPU_ENC_WIDTH_DEFAULT;
-	ctx->q_data[V4L2_SRC].height = VPU_ENC_HEIGHT_DEFAULT;
-	ctx->q_data[V4L2_SRC].rect.left = 0;
-	ctx->q_data[V4L2_SRC].rect.top = 0;
-	ctx->q_data[V4L2_SRC].rect.width = VPU_ENC_WIDTH_DEFAULT;
-	ctx->q_data[V4L2_SRC].rect.height = VPU_ENC_HEIGHT_DEFAULT;
-	ctx->q_data[V4L2_DST].width = VPU_ENC_WIDTH_DEFAULT;
-	ctx->q_data[V4L2_DST].height = VPU_ENC_HEIGHT_DEFAULT;
-
+	q->width = VPU_ENC_WIDTH_DEFAULT;
+	q->height = VPU_ENC_HEIGHT_DEFAULT;
+	scnprintf(q->desc, sizeof(q->desc), "CAPTURE");
 }
 
-static void release_queue_data(struct vpu_ctx *ctx)
+static void vpu_enc_init_queue_data(struct vpu_ctx *ctx)
+{
+	vpu_enc_init_output_queue(ctx, &ctx->q_data[V4L2_SRC]);
+	vpu_enc_init_capture_queue(ctx, &ctx->q_data[V4L2_DST]);
+}
+
+static void vpu_enc_release_queue_data(struct vpu_ctx *ctx)
 {
 	struct queue_data *This = &ctx->q_data[V4L2_SRC];
 
@@ -3177,9 +3183,11 @@ static int vpu_firmware_download(struct vpu_dev *This, u_int32 core_id)
 	int ret = 0;
 	char *p = This->core_dev[core_id].m0_p_fw_space_vir;
 
+	vpu_log_func();
+
 	ret = request_firmware(&m0_pfw, M0FW_FILENAME, This->generic_dev);
 	if (ret) {
-		vpu_dbg(LVL_ERR, "%s() request fw %s failed(%d)\n",
+		vpu_err("%s() request fw %s failed(%d)\n",
 			__func__, M0FW_FILENAME, ret);
 
 		return ret;
@@ -3218,7 +3226,7 @@ static int download_vpu_firmware(struct vpu_dev *dev,
 	init_completion(&core_dev->start_cmp);
 	ret = vpu_firmware_download(dev, core_dev->id);
 	if (ret) {
-		vpu_dbg(LVL_ERR, "error: vpu_firmware_download fail\n");
+		vpu_err("error: vpu_firmware_download fail\n");
 		goto exit;
 	}
 	wait_for_start_done(core_dev, 0);
@@ -3323,7 +3331,7 @@ static int request_instance(struct core_device *core, struct vpu_ctx *ctx)
 	}
 
 	if (!found) {
-		vpu_dbg(LVL_ERR, "cann't request any instance\n");
+		vpu_err("cann't request any instance\n");
 		return -EBUSY;
 	}
 
@@ -3434,13 +3442,13 @@ static int init_vpu_ctx(struct vpu_ctx *ctx)
 	ctx->instance_wq = alloc_workqueue("vpu_instance",
 				WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
 	if (!ctx->instance_wq) {
-		vpu_dbg(LVL_ERR, "error: unable to alloc workqueue for ctx\n");
+		vpu_err("error: unable to alloc workqueue for ctx\n");
 		return -ENOMEM;
 	}
 
 	init_ctx_msg_queue(ctx);
 
-	init_queue_data(ctx);
+	vpu_enc_init_queue_data(ctx);
 	init_completion(&ctx->stop_cmp);
 
 	set_bit(VPU_ENC_STATUS_INITIALIZED, &ctx->status);
@@ -4234,7 +4242,7 @@ static int release_instance(struct vpu_ctx *ctx)
 
 	uninit_vpu_ctx(ctx);
 	vpu_enc_free_ctrls(ctx);
-	release_queue_data(ctx);
+	vpu_enc_release_queue_data(ctx);
 	vpu_enc_free_mem(ctx, get_rpc_mem_pool(ctx));
 
 	vpu_ctx_power_off(ctx);
@@ -4288,7 +4296,7 @@ static int vpu_enc_v4l2_open(struct file *filp)
 	struct vpu_ctx *ctx = NULL;
 	int ret;
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
+	vpu_log_func();
 
 	mutex_lock(&dev->dev_mutex);
 	try_to_release_idle_instance(dev);
@@ -4298,7 +4306,7 @@ static int vpu_enc_v4l2_open(struct file *filp)
 	pm_runtime_put_sync(dev->generic_dev);
 	if (!ctx) {
 		mutex_unlock(&dev->dev_mutex);
-		vpu_dbg(LVL_ERR, "failed to create encoder ctx\n");
+		vpu_err("failed to create encoder ctx\n");
 		return -ENOMEM;
 	}
 
@@ -4306,7 +4314,7 @@ static int vpu_enc_v4l2_open(struct file *filp)
 	ret = init_vpu_ctx(ctx);
 	if (ret) {
 		mutex_unlock(&dev->dev_mutex);
-		vpu_dbg(LVL_ERR, "init vpu ctx fail\n");
+		vpu_err("init vpu ctx fail\n");
 		goto error;
 	}
 
@@ -4331,7 +4339,7 @@ static int vpu_enc_v4l2_release(struct file *filp)
 	struct vpu_ctx *ctx = v4l2_fh_to_ctx(filp->private_data);
 	struct vpu_dev *dev = ctx->dev;
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
+	vpu_log_func();
 
 	request_eos(ctx);
 	wait_for_stop_done(ctx);
@@ -4353,7 +4361,8 @@ static unsigned int vpu_enc_v4l2_poll(struct file *filp, poll_table *wait)
 	struct vb2_queue *src_q, *dst_q;
 	unsigned int rc = 0;
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
+	vpu_dbg(LVL_FUNC, "%s(), event: 0x%lx\n", __func__,
+			poll_requested_events(wait));
 
 	poll_wait(filp, &ctx->fh.wait, wait);
 
@@ -4390,7 +4399,7 @@ static int vpu_enc_v4l2_mmap(struct file *filp, struct vm_area_struct *vma)
 
 	struct vpu_ctx *ctx = v4l2_fh_to_ctx(filp->private_data);
 
-	vpu_dbg(LVL_DEBUG, "%s()\n", __func__);
+	vpu_log_func();
 
 	if (ctx) {
 		type = offset >> MMAP_BUF_TYPE_SHIFT;
@@ -4426,7 +4435,7 @@ static void vpu_enc_setup(struct vpu_dev *This)
 	const off_t offset = SCB_XREG_SLV_BASE + SCB_SCB_BLK_CTRL;
 	uint32_t read_data = 0;
 
-	vpu_dbg(LVL_INFO, "enter %s\n", __func__);
+	vpu_log_func();
 
 	write_vpu_reg(This, 0x1, offset + SCB_BLK_CTRL_SCB_CLK_ENABLE_SET);
 	write_vpu_reg(This, 0xffffffff, 0x70190);
@@ -4443,13 +4452,13 @@ static void vpu_enc_reset(struct vpu_dev *This)
 {
 	const off_t offset = SCB_XREG_SLV_BASE + SCB_SCB_BLK_CTRL;
 
-	vpu_dbg(LVL_INFO, "enter %s\n", __func__);
+	vpu_log_func();
 	write_vpu_reg(This, 0x7, offset + SCB_BLK_CTRL_CACHE_RESET_CLR);
 }
 
 static int vpu_enc_enable_hw(struct vpu_dev *This)
 {
-	vpu_dbg(LVL_INFO, "%s()\n", __func__);
+	vpu_log_func();
 	vpu_enc_setup(This);
 
 	This->hw_enable = true;
@@ -4601,24 +4610,21 @@ static int parse_dt_info(struct vpu_dev *dev, struct device_node *np)
 
 	reserved_node = of_parse_phandle(np, "boot-region", 0);
 	if (!reserved_node) {
-		vpu_dbg(LVL_ERR, "error: boot-region of_parse_phandle error\n");
+		vpu_err("error: boot-region of_parse_phandle error\n");
 		return -ENODEV;
 	}
 	if (of_address_to_resource(reserved_node, 0, &reserved_fw)) {
-		vpu_dbg(LVL_ERR,
-			"error: boot-region of_address_to_resource error\n");
+		vpu_err("error: boot-region of_address_to_resource error\n");
 		return -EINVAL;
 	}
 
 	reserved_node = of_parse_phandle(np, "rpc-region", 0);
 	if (!reserved_node) {
-		vpu_dbg(LVL_ERR,
-			"error: rpc-region of_parse_phandle error\n");
+		vpu_err("error: rpc-region of_parse_phandle error\n");
 		return -ENODEV;
 	}
 	if (of_address_to_resource(reserved_node, 0, &reserved_rpc)) {
-		vpu_dbg(LVL_ERR,
-			"error: rpc-region of_address_to_resource error\n");
+		vpu_err("error: rpc-region of_address_to_resource error\n");
 		return -EINVAL;
 	}
 
@@ -4683,7 +4689,7 @@ static int create_vpu_video_device(struct vpu_dev *dev)
 
 	dev->pvpu_encoder_dev = video_device_alloc();
 	if (!dev->pvpu_encoder_dev) {
-		vpu_dbg(LVL_ERR, "alloc vpu encoder video device fail\n");
+		vpu_err("alloc vpu encoder video device fail\n");
 		return -ENOMEM;
 	}
 
@@ -4701,7 +4707,7 @@ static int create_vpu_video_device(struct vpu_dev *dev)
 					VFL_TYPE_GRABBER,
 					ENCODER_NODE_NUMBER);
 	if (ret) {
-		vpu_dbg(LVL_ERR, "unable to register video encoder device\n");
+		vpu_err("unable to register video encoder device\n");
 		video_device_release(dev->pvpu_encoder_dev);
 		dev->pvpu_encoder_dev = NULL;
 		return ret;
@@ -4985,7 +4991,7 @@ static int init_vpu_core_dev(struct core_device *core_dev)
 	core_dev->workqueue = alloc_workqueue("vpu",
 					WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
 	if (!core_dev->workqueue) {
-		vpu_dbg(LVL_ERR, "%s unable to alloc workqueue\n", __func__);
+		vpu_err("%s unable to alloc workqueue\n", __func__);
 		ret = -ENOMEM;
 		return ret;
 	}
@@ -4994,14 +5000,14 @@ static int init_vpu_core_dev(struct core_device *core_dev)
 
 	ret = vpu_enc_mu_init(core_dev);
 	if (ret) {
-		vpu_dbg(LVL_ERR, "%s vpu mu init failed\n", __func__);
+		vpu_err("%s vpu mu init failed\n", __func__);
 		goto error;
 	}
 	//firmware space for M0
 	core_dev->m0_p_fw_space_vir =
 		ioremap_wc(core_dev->m0_p_fw_space_phy, core_dev->fw_buf_size);
 	if (!core_dev->m0_p_fw_space_vir)
-		vpu_dbg(LVL_ERR, "failed to remap space for M0 firmware\n");
+		vpu_err("failed to remap space for M0 firmware\n");
 
 	memset_io(core_dev->m0_p_fw_space_vir, 0, core_dev->fw_buf_size);
 
@@ -5009,7 +5015,7 @@ static int init_vpu_core_dev(struct core_device *core_dev)
 		ioremap_wc(core_dev->m0_rpc_phy,
 			core_dev->rpc_buf_size + core_dev->print_buf_size);
 	if (!core_dev->m0_rpc_virt)
-		vpu_dbg(LVL_ERR, "failed to remap space for shared memory\n");
+		vpu_err("failed to remap space for shared memory\n");
 
 	memset_io(core_dev->m0_rpc_virt, 0, core_dev->rpc_buf_size);
 
@@ -5129,7 +5135,7 @@ static int vpu_enc_probe(struct platform_device *pdev)
 	int ret;
 
 	if (!np) {
-		vpu_dbg(LVL_ERR, "error: %s of_node is NULL\n", __func__);
+		vpu_err("error: %s of_node is NULL\n", __func__);
 		return -EINVAL;
 	}
 
@@ -5159,7 +5165,7 @@ static int vpu_enc_probe(struct platform_device *pdev)
 
 	ret = parse_dt_info(dev, np);
 	if (ret) {
-		vpu_dbg(LVL_ERR, "parse device tree fail\n");
+		vpu_err("parse device tree fail\n");
 		goto error_put_dev;
 	}
 
@@ -5172,7 +5178,7 @@ static int vpu_enc_probe(struct platform_device *pdev)
 
 	ret = v4l2_device_register(&pdev->dev, &dev->v4l2_dev);
 	if (ret) {
-		vpu_dbg(LVL_ERR, "%s unable to register v4l2 dev\n", __func__);
+		vpu_err("%s unable to register v4l2 dev\n", __func__);
 		goto error_iounmap;
 	}
 
@@ -5180,7 +5186,7 @@ static int vpu_enc_probe(struct platform_device *pdev)
 
 	ret = create_vpu_video_device(dev);
 	if (ret) {
-		vpu_dbg(LVL_ERR, "create vpu video device fail\n");
+		vpu_err("create vpu video device fail\n");
 		goto error_unreg_v4l2;
 	}
 
@@ -5268,7 +5274,7 @@ static int vpu_enc_remove(struct platform_device *pdev)
 		dev->generic_dev = NULL;
 	}
 
-	vpu_dbg(LVL_ALL, "VPU Encoder removed\n");
+	vpu_dbg(LVL_INFO, "VPU Encoder removed\n");
 
 	return 0;
 }

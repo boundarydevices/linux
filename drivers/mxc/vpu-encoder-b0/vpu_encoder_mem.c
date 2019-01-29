@@ -9,6 +9,7 @@
  * Author Ming Qian<ming.qian@nxp.com>
  */
 
+#define TAG	"[VPU Encoder Mem]\t "
 #include <linux/kernel.h>
 #include <linux/dma-mapping.h>
 #include "vpu_encoder_config.h"
@@ -36,12 +37,13 @@ int vpu_enc_alloc_dma_buffer(struct vpu_ctx *ctx, struct buffer_addr *buffer)
 	if (!ctx || !ctx->dev || !buffer || !buffer->size)
 		return -EINVAL;
 
+	vpu_dbg(LVL_MEM, "alloc coherent dma %d\n", buffer->size);
 	buffer->virt_addr = dma_alloc_coherent(ctx->dev->generic_dev,
 						buffer->size,
 						(dma_addr_t *)&buffer->phy_addr,
 						GFP_KERNEL | GFP_DMA32);
 	if (!buffer->virt_addr) {
-		vpu_dbg(LVL_ERR, "encoder alloc coherent dma(%d) fail\n",
+		vpu_err("encoder alloc coherent dma(%d) fail\n",
 				buffer->size);
 		return -ENOMEM;
 	}
@@ -69,6 +71,7 @@ int vpu_enc_free_dma_buffer(struct vpu_ctx *ctx, struct buffer_addr *buffer)
 	if (!buffer->virt_addr)
 		return 0;
 
+	vpu_dbg(LVL_MEM, "free coherent dma %d\n", buffer->size);
 	vpu_enc_sub_dma_size(get_vpu_ctx_attr(ctx), buffer->size);
 	dma_free_coherent(ctx->dev->generic_dev, buffer->size,
 				buffer->virt_addr, buffer->phy_addr);
@@ -143,6 +146,7 @@ static int free_enc_frames(struct vpu_ctx *ctx, pMEDIAIP_ENC_MEM_POOL pool)
 {
 	int i;
 
+	vpu_log_func();
 	for (i = 0; i < ctx->mem_req.uEncFrmNum; i++)
 		free_mem_res(ctx, &ctx->encFrame[i],
 				&pool->tEncFrameBuffers[i]);
@@ -155,6 +159,7 @@ static int alloc_enc_frames(struct vpu_ctx *ctx, pMEDIAIP_ENC_MEM_POOL pool)
 	int i;
 	int ret;
 
+	vpu_log_func();
 	for (i = 0; i < ctx->mem_req.uEncFrmNum; i++) {
 		ret = alloc_mem_res(ctx,
 				&ctx->encFrame[i],
@@ -164,7 +169,7 @@ static int alloc_enc_frames(struct vpu_ctx *ctx, pMEDIAIP_ENC_MEM_POOL pool)
 			vpu_err("alloc enc frame[%d] fail\n", i);
 			goto error;
 		}
-		vpu_dbg(LVL_INFO, "encFrame[%d]: 0x%llx,%d(%d)\n", i,
+		vpu_dbg(LVL_MEM, "encFrame[%d]: 0x%llx,%d(%d)\n", i,
 				ctx->encFrame[i].phy_addr,
 				ctx->mem_req.uEncFrmSize,
 				ctx->encFrame[i].size);
@@ -180,6 +185,7 @@ static int free_ref_frames(struct vpu_ctx *ctx, pMEDIAIP_ENC_MEM_POOL pool)
 {
 	int i;
 
+	vpu_log_func();
 	for (i = 0; i < ctx->mem_req.uRefFrmNum; i++)
 		free_mem_res(ctx, &ctx->refFrame[i],
 				&pool->tRefFrameBuffers[i]);
@@ -192,6 +198,7 @@ static int alloc_ref_frames(struct vpu_ctx *ctx, pMEDIAIP_ENC_MEM_POOL pool)
 	int i;
 	int ret;
 
+	vpu_log_func();
 	for (i = 0; i < ctx->mem_req.uRefFrmNum; i++) {
 		ret = alloc_mem_res(ctx,
 				&ctx->refFrame[i],
@@ -201,7 +208,7 @@ static int alloc_ref_frames(struct vpu_ctx *ctx, pMEDIAIP_ENC_MEM_POOL pool)
 			vpu_err("alloc ref frame[%d] fail\n", i);
 			goto error;
 		}
-		vpu_dbg(LVL_INFO, "refFrame[%d]: 0x%llx,%d(%d)\n", i,
+		vpu_dbg(LVL_MEM, "refFrame[%d]: 0x%llx,%d(%d)\n", i,
 				ctx->refFrame[i].phy_addr,
 				ctx->mem_req.uRefFrmSize,
 				ctx->refFrame[i].size);
@@ -218,6 +225,7 @@ static int free_act_frame(struct vpu_ctx *ctx, pMEDIAIP_ENC_MEM_POOL pool)
 	if (!ctx || !pool)
 		return -EINVAL;
 
+	vpu_log_func();
 	free_mem_res(ctx, &ctx->actFrame, &pool->tActFrameBufferArea);
 
 	return 0;
@@ -227,6 +235,7 @@ static int alloc_act_frame(struct vpu_ctx *ctx, pMEDIAIP_ENC_MEM_POOL pool)
 {
 	int ret = 0;
 
+	vpu_log_func();
 	ret = alloc_mem_res(ctx,
 			&ctx->actFrame,
 			&pool->tActFrameBufferArea,
@@ -245,7 +254,7 @@ static int alloc_act_frame(struct vpu_ctx *ctx, pMEDIAIP_ENC_MEM_POOL pool)
 		return -EINVAL;
 	}
 
-	vpu_dbg(LVL_INFO, "actFrame: 0x%llx, %d(%d)\n",
+	vpu_dbg(LVL_MEM, "actFrame: 0x%llx, %d(%d)\n",
 			ctx->actFrame.phy_addr,
 			ctx->mem_req.uActBufSize,
 			ctx->actFrame.size);
@@ -417,10 +426,10 @@ int vpu_enc_alloc_stream(struct vpu_ctx *ctx)
 	ctx->encoder_stream.size = STREAM_SIZE;
 	ret = vpu_enc_alloc_dma_buffer(ctx, &ctx->encoder_stream);
 	if (ret) {
-		vpu_dbg(LVL_ERR, "alloc encoder stream buffer fail\n");
+		vpu_err("alloc encoder stream buffer fail\n");
 		return -ENOMEM;
 	}
-	vpu_dbg(LVL_INFO, "encoder_stream: 0x%llx, %d\n",
+	vpu_dbg(LVL_MEM, "encoder_stream: 0x%llx, %d\n",
 			ctx->encoder_stream.phy_addr, ctx->encoder_stream.size);
 
 	return 0;

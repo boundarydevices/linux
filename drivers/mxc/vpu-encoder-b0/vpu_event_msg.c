@@ -8,6 +8,7 @@
  *
  * Author Ming Qian<ming.qian@nxp.com>
  */
+#define TAG	"[VPU Encoder Msg]\t "
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/vmalloc.h>
@@ -77,10 +78,11 @@ void cleanup_ctx_msg_queue(struct vpu_ctx *ctx)
 
 	WARN_ON(!ctx);
 
+	vpu_log_func();
 	mutex_lock(&ctx->instance_mutex);
 	list_for_each_entry_safe(msg, tmp, &ctx->msg_q, list) {
 		list_del_init(&msg->list);
-		vpu_dbg(LVL_WARN, "drop core[%d] ctx[%d] msg:[%d]\n",
+		vpu_dbg(LVL_MSG, "drop core[%d] ctx[%d] msg:[%d]\n",
 				ctx->core_dev->id, ctx->str_index, msg->msgid);
 		free_event_msg(msg);
 		dec_msg_count(ctx);
@@ -116,6 +118,7 @@ int init_ctx_msg_queue(struct vpu_ctx *ctx)
 	if (!ctx)
 		return -EINVAL;
 
+	vpu_log_func();
 	mutex_lock(&ctx->instance_mutex);
 
 	set_msg_count(ctx, 0);
@@ -209,7 +212,7 @@ int alloc_msg_ext_buffer(struct vpu_event_msg *msg, u32 number)
 	msg->number = number;
 
 	atomic64_add(number, &total_ext_data);
-	vpu_dbg(LVL_DEBUG, "++++alloc %d msg ext data: %lld\n",
+	vpu_dbg(LVL_MSG, "++++alloc %d msg ext data: %lld\n",
 			number, get_total_ext_data_number());
 
 	return 0;
@@ -225,7 +228,7 @@ void free_msg_ext_buffer(struct vpu_event_msg *msg)
 	atomic64_sub(msg->number, &total_ext_data);
 	vfree(msg->ext_data);
 	msg->ext_data = NULL;
-	vpu_dbg(LVL_DEBUG, "----free %d msg ext data: %lld\n",
+	vpu_dbg(LVL_MSG, "----free %d msg ext data: %lld\n",
 			msg->number, get_total_ext_data_number());
 }
 
