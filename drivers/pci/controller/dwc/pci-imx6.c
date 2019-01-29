@@ -2304,6 +2304,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 
 	if (IS_ENABLED(CONFIG_EP_MODE_IN_EP_RC_SYS)) {
 		/* add attributes for device */
+		imx_pcie_attrgroup.attrs = imx_pcie_ep_attrs;
 		ret = sysfs_create_group(&pdev->dev.kobj, &imx_pcie_attrgroup);
 		if (ret)
 			return -EINVAL;
