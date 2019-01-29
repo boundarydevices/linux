@@ -1927,6 +1927,14 @@ static void vpp_set_super_scaler(
 		next_frame_par->supsc0_hori_ratio = 0;
 		next_frame_par->supsc0_vert_ratio = 0;
 	}
+
+	/* much vskip case, no need super scale up */
+	if (next_frame_par->vscale_skip_count >= 2) {
+		next_frame_par->supsc0_enable = 0;
+		next_frame_par->supsc0_hori_ratio = 0;
+		next_frame_par->supsc0_vert_ratio = 0;
+	}
+
 	if (bypass_sr1 || !(sr_support & SUPER_CORE1_SUPPORT)) {
 		next_frame_par->supsc1_enable = 0;
 		next_frame_par->supsc1_hori_ratio = 0;
