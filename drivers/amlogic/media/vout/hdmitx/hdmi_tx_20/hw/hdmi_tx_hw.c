@@ -4999,6 +4999,14 @@ static int hdmitx_tmds_rxsense(void)
 	struct hdmitx_dev *hdev = get_hdmitx_device();
 
 	switch (hdev->chip_type) {
+	case MESON_CPU_ID_G12A:
+	case MESON_CPU_ID_G12B:
+		hd_set_reg_bits(P_HHI_HDMI_PHY_CNTL0, 1, 16, 1);
+		hd_set_reg_bits(P_HHI_HDMI_PHY_CNTL3, 1, 23, 1);
+		hd_set_reg_bits(P_HHI_HDMI_PHY_CNTL3, 0, 24, 1);
+		hd_set_reg_bits(P_HHI_HDMI_PHY_CNTL3, 7, 20, 3);
+		ret = hd_read_reg(P_HHI_HDMI_PHY_CNTL2) & 0x1;
+		break;
 	case MESON_CPU_ID_GXBB:
 		curr0 = hd_read_reg(P_HHI_HDMI_PHY_CNTL0);
 		curr3 = hd_read_reg(P_HHI_HDMI_PHY_CNTL3);
