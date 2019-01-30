@@ -326,44 +326,43 @@ static void *codec_mm_search_vaddr(unsigned long phy_addr)
 u8 *codec_mm_vmap(ulong addr, u32 size)
 {
 	u8 *vaddr = NULL;
-	ulong phys = addr;
-	u32 offset = phys & ~PAGE_MASK;
-	u32 npages = PAGE_ALIGN(size) / PAGE_SIZE;
 	struct page **pages = NULL;
+	u32 i, npages, offset = 0;
+	ulong phys, page_start;
 	pgprot_t pgprot;
-	int i;
 
-	if (!PageHighMem(phys_to_page(phys)))
-		return phys_to_virt(phys);
+	if (!PageHighMem(phys_to_page(addr)))
+		return phys_to_virt(addr);
 
-	if (offset)
-		npages++;
+	/*No cache*/
+	pgprot = pgprot_noncached(PAGE_KERNEL);
 
-	pages = vmalloc(sizeof(struct page *) * npages);
+	offset = offset_in_page(addr);
+	page_start = addr - offset;
+	npages = DIV_ROUND_UP(size + offset, PAGE_SIZE);
+
+	pages = kmalloc_array(npages, sizeof(struct page *), GFP_KERNEL);
 	if (!pages)
 		return NULL;
 
 	for (i = 0; i < npages; i++) {
-		pages[i] = phys_to_page(phys);
-		phys += PAGE_SIZE;
+		phys = page_start + i * PAGE_SIZE;
+		pages[i] = pfn_to_page(phys >> PAGE_SHIFT);
 	}
-
-	/*nocache*/
-	pgprot = pgprot_writecombine(PAGE_KERNEL);
 
 	vaddr = vmap(pages, npages, VM_MAP, pgprot);
 	if (!vaddr) {
 		pr_err("the phy(%lx) vmaped fail, size: %d\n",
-			addr - offset, npages << PAGE_SHIFT);
-		vfree(pages);
+			page_start, npages << PAGE_SHIFT);
+		kfree(pages);
 		return NULL;
 	}
 
-	vfree(pages);
+	kfree(pages);
 
 	if (debug_mode & 0x20) {
 		pr_info("[HIGH-MEM-MAP] %s, pa(%lx) to va(%p), size: %d\n",
-			__func__, addr, vaddr + offset, npages << PAGE_SHIFT);
+			__func__, page_start, vaddr, npages << PAGE_SHIFT);
 	}
 
 	return vaddr + offset;
@@ -374,7 +373,8 @@ void codec_mm_unmap_phyaddr(u8 *vaddr)
 {
 	void *addr = (void *)(PAGE_MASK & (ulong)vaddr);
 
-	vunmap(addr);
+	if (is_vmalloc_or_module_addr(vaddr))
+		vunmap(addr);
 }
 EXPORT_SYMBOL(codec_mm_unmap_phyaddr);
 
@@ -874,14 +874,19 @@ void codec_mm_dma_flush(void *vaddr,
 			phy_addr = page_to_phys(vmalloc_to_page(vaddr))
 				+ offset_in_page(vaddr);
 		if (phy_addr && PageHighMem(phys_to_page(phy_addr)))
-			flush_cache_vunmap(phy_addr, phy_addr + size);
+			flush_cache_vmap(phy_addr, phy_addr + size);
 		return;
 	}
 
 	/* only apply to the lowmem. */
 	dma_addr = dma_map_single(mgt->dev, vaddr, size, dir);
-	if (dma_addr)
-		dma_unmap_single(mgt->dev, dma_addr, size, dir);
+	if (dma_mapping_error(mgt->dev, dma_addr)) {
+		pr_err("dma map %d bytes error\n", size);
+		return;
+	}
+
+	dma_sync_single_for_device(mgt->dev, dma_addr, size, dir);
+	dma_unmap_single(mgt->dev, dma_addr, size, dir);
 }
 EXPORT_SYMBOL(codec_mm_dma_flush);
 
