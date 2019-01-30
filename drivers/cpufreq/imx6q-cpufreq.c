@@ -84,7 +84,7 @@ static int imx6q_set_target(struct cpufreq_policy *policy, unsigned int index)
 	unsigned long freq_hz, volt, volt_old;
 	unsigned int old_freq, new_freq;
 	bool pll1_sys_temp_enabled = false;
-	int ret, ret1;
+	int ret;
 
 	new_freq = freq_table[index].frequency;
 	freq_hz = new_freq * 1000;

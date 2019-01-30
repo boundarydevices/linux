@@ -154,9 +154,8 @@ static int imx_pmx_set(struct pinctrl_dev *pctldev, unsigned selector,
 		       unsigned group)
 {
 	struct imx_pinctrl *ipctl = pinctrl_dev_get_drvdata(pctldev);
-	const struct imx_pin_reg *pin_reg;
 	unsigned int npins;
-	struct imx_pinctrl_soc_info *info = ipctl->info;
+	const struct imx_pinctrl_soc_info *info = ipctl->info;
 	int i, err;
 	struct group_desc *grp = NULL;
 	struct function_desc *func = NULL;
