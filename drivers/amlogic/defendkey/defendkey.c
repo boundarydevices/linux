@@ -36,12 +36,13 @@
 #include <asm/cacheflush.h>
 #include "securekey.h"
 #include <linux/memblock.h>
+#include <linux/random.h>
 
 #define DEFENDKEY_DEVICE_NAME	"defendkey"
 #define DEFENDKEY_CLASS_NAME "defendkey"
 void __iomem *mem_base_virt;
 unsigned long mem_size;
-unsigned long random_virt;
+//unsigned long random_virt;
 
 struct defendkey_mem {
 	unsigned long	base;
@@ -201,7 +202,7 @@ static ssize_t defendkey_write(struct file *file,
 	pr_info("defendkey: mem_base_phy:%lx mem_size:%lx mem_base_virt:%p\n",
 		mem_base_phy, mem_size, mem_base_virt);
 
-	random = readl((void *)random_virt);
+	random = get_random_long();
 
 #ifdef	CONFIG_ARM64_A32
 	option_random = (random << 8);
@@ -400,7 +401,6 @@ static int aml_defendkey_probe(struct platform_device *pdev)
 {
 	int ret =  -1;
 	u64 val64;
-	struct resource *res;
 
 	struct device *devp;
 
@@ -421,19 +421,7 @@ static int aml_defendkey_probe(struct platform_device *pdev)
 	mem_size = val64;
 	if (mem_size > defendkey_rmem.size) {
 		dev_err(&pdev->dev, "Reserved memory is not enough!\n");
-		return -EINVAL;
-	}
-
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (IS_ERR(res)) {
-		dev_err(&pdev->dev, "reg: cannot obtain I/O memory region");
-		ret = PTR_ERR(res);
-		goto error1;
-	}
-
-	random_virt = (unsigned long)devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR((void *)random_virt)) {
-		ret = PTR_ERR((void *)random_virt);
+		ret = -EINVAL;
 		goto error1;
 	}
 
