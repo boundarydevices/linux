@@ -344,7 +344,7 @@ static int imx_get_temp(struct thermal_zone_device *tz, int *temp)
 	}
 
 	n_meas = (val & soc_data->temp_value_mask) >> soc_data->temp_value_shift;
-	/* See imx_get_sensor_data() for formula derivation */
+	/* See imx_init_calib() for formula derivation */
 	*temp = data->c2 - n_meas * data->c1;
 	if (data->socdata->version == TEMPMON_IMX7)
 		*temp = (n_meas - data->c1 + 25) * 1000;
@@ -591,44 +591,6 @@ static inline void imx6_calibrate_data(struct imx_thermal_data *data, u32 val)
 static inline void imx7_calibrate_data(struct imx_thermal_data *data, u32 val)
 {
 	data->c1 = (val >> 9) & 0x1ff;
-}
-
-static int imx_get_sensor_data(struct platform_device *pdev)
-{
-	struct imx_thermal_data *data = platform_get_drvdata(pdev);
-	struct regmap *map;
-	int ret;
-	u32 val;
-
-	map = syscon_regmap_lookup_by_phandle(pdev->dev.of_node,
-					      "fsl,tempmon-data");
-	if (IS_ERR(map)) {
-		ret = PTR_ERR(map);
-		dev_err(&pdev->dev, "failed to get sensor regmap: %d\n", ret);
-		return ret;
-	}
-
-	if (data->socdata->version == TEMPMON_IMX7)
-		ret = regmap_read(map, IMX7_OCOTP_ANA1, &val);
-	else
-		ret = regmap_read(map, IMX6_OCOTP_ANA1, &val);
-
-	if (ret) {
-		dev_err(&pdev->dev, "failed to read sensor data: %d\n", ret);
-		return ret;
-	}
-
-	if (val == 0 || val == ~0) {
-		dev_err(&pdev->dev, "invalid sensor calibration data\n");
-		return -EINVAL;
-	}
-
-	if (data->socdata->version == TEMPMON_IMX7)
-		imx7_calibrate_data(data, val);
-	else
-		imx6_calibrate_data(data, val);
-
-	return 0;
 }
 
 static void imx_init_temp_grade(struct platform_device *pdev, u32 ocotp_mem0)
