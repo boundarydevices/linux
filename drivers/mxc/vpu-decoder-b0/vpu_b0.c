@@ -72,6 +72,7 @@ static int swreset_vpu_firmware(struct vpu_dev *dev, u_int32 idx);
 static int find_first_available_instance(struct vpu_dev *dev);
 static int remove_instance_file(struct vpu_ctx *ctx);
 static void fill_stream_buffer_info(struct vpu_ctx *ctx);
+static void send_skip_event(struct vpu_ctx* ctx);
 #define CHECK_BIT(var, pos) (((var) >> (pos)) & 1)
 
 static char *cmd2str[] = {
@@ -1915,9 +1916,15 @@ static void report_buffer_done(struct vpu_ctx *ctx, void *frame_info)
 	if (buffer_id == -1)
 		return;
 
-	if (buffer_id != fs_id)
+	if (buffer_id != fs_id) {
+		if (fs_id == MEDIA_PLAYER_SKIPPED_FRAME_ID) {
+			send_skip_event(ctx);
+			ctx->frm_dis_delay--;
+			return;
+		}
 		vpu_dbg(LVL_ERR, "error: find buffer_id(%d) and firmware return id(%d) doesn't match\n",
 				buffer_id, fs_id);
+	}
 	if (ctx->q_data[V4L2_DST].vb2_reqs[buffer_id].status != FRAME_DECODED)
 		vpu_dbg(LVL_ERR, "error: buffer(%d) need to set FRAME_READY, but previous state %s is not FRAME_DECODED\n",
 				buffer_id, bufstat[ctx->q_data[V4L2_DST].vb2_reqs[buffer_id].status]);
@@ -1964,6 +1971,17 @@ static bool wait_right_buffer(struct queue_data *This)
 	up(&This->drv_q_lock);
 
 	return false;
+}
+
+static void send_skip_event(struct vpu_ctx* ctx)
+{
+	const struct v4l2_event ev = {
+		.type = V4L2_EVENT_SKIP
+	};
+
+	if (!ctx)
+		return;
+	v4l2_event_queue_fh(&ctx->fh, &ev);
 }
 
 static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 uEvent, u_int32 *event_data)
@@ -2039,8 +2057,14 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		if (buffer_id == -1)
 			break;
 
-		if (buffer_id != uDecFrmId)
+		if (buffer_id != uDecFrmId) {
+			if (uDecFrmId == MEDIA_PLAYER_SKIPPED_FRAME_ID) {
+				send_skip_event(ctx);
+				ctx->frm_dec_delay--;
+				break;
+			}
 			vpu_dbg(LVL_ERR, "error: VID_API_EVENT_PIC_DECODED address and id doesn't match\n");
+		}
 		if (ctx->q_data[V4L2_DST].vb2_reqs[buffer_id].status != FRAME_FREE)
 			vpu_dbg(LVL_ERR, "error: buffer(%d) need to set FRAME_DECODED, but previous state %s is not FRAME_FREE\n",
 					buffer_id, bufstat[ctx->q_data[V4L2_DST].vb2_reqs[buffer_id].status]);
