@@ -959,7 +959,8 @@ static int videosync_receiver_event_fun(int type, void *data,
 				&dev_s->inactive_done,
 				msecs_to_jiffies(100));
 			if (time_left == 0)
-				pr_err("videosync: unreg timeout\n");
+				vp_print(RECEIVER_NAME, PRINT_OTHER,
+					"videosync: unreg timeout\n");
 		}
 		clear_ready_queue(dev_s);
 		clear_queued_queue(dev_s);
@@ -1112,7 +1113,8 @@ static void videosync_thread_tick(struct videosync_dev *dev)
 		time_left = wait_for_completion_timeout(&dev->thread_active,
 			msecs_to_jiffies(500));
 		if (time_left == 0)
-			pr_err("videosync: thread_tick timeout\n");
+			vp_print(RECEIVER_NAME, PRINT_OTHER,
+				"videosync: thread_tick timeout\n");
 	}
 }
 
