@@ -52,62 +52,69 @@
 		};
 	};
 
-	reg_usb_otg1_vbus: regulator-usb-otg1-vbus {
-		compatible = "regulator-fixed";
-		regulator-name = "usb_otg1_vbus";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		vin-supply = <&swbst_reg>;
-	};
-
-	reg_usb_otg2_vbus: regulator-usb-otg2-vbus {
-		compatible = "regulator-fixed";
-		regulator-name = "usb_otg2_vbus";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		gpio = <&gpio4 2 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		vin-supply = <&swbst_reg>;
-	};
-
-	reg_aud3v: regulator-aud3v {
-		compatible = "regulator-fixed";
-		regulator-name = "wm8962-supply-3v15";
-		regulator-min-microvolt = <3150000>;
-		regulator-max-microvolt = <3150000>;
-		regulator-boot-on;
-	};
-
-	reg_aud4v: regulator-aud4v {
-		compatible = "regulator-fixed";
-		regulator-name = "wm8962-supply-4v2";
-		regulator-min-microvolt = <4325000>;
-		regulator-max-microvolt = <4325000>;
-		regulator-boot-on;
-	};
-
-	reg_lcd_3v3: regulator-lcd-3v3 {
-		compatible = "regulator-fixed";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_reg_lcd_3v3>;
-		regulator-name = "lcd-3v3";
-		gpio = <&gpio4 3 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-	};
-
-	reg_lcd_5v: regulator-lcd-5v {
-		compatible = "regulator-fixed";
-		regulator-name = "lcd-5v0";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-	};
-
 	pxp_v4l2_out {
 		compatible = "fsl,imx6sl-pxp-v4l2";
 		status = "okay";
 	};
+
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		reg_usb_otg1_vbus: regulator-usb-otg1-vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_otg1_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio4 0 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+			vin-supply = <&swbst_reg>;
+		};
+
+		reg_usb_otg2_vbus: regulator-usb-otg2-vbus {
+			compatible = "regulator-fixed";
+			regulator-name = "usb_otg2_vbus";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio4 2 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+			vin-supply = <&swbst_reg>;
+		};
+
+		reg_aud3v: regulator-aud3v {
+			compatible = "regulator-fixed";
+			regulator-name = "wm8962-supply-3v15";
+			regulator-min-microvolt = <3150000>;
+			regulator-max-microvolt = <3150000>;
+			regulator-boot-on;
+		};
+
+		reg_aud4v: regulator-aud4v {
+			compatible = "regulator-fixed";
+			regulator-name = "wm8962-supply-4v2";
+			regulator-min-microvolt = <4325000>;
+			regulator-max-microvolt = <4325000>;
+			regulator-boot-on;
+		};
+
+		reg_lcd_3v3: regulator-lcd-3v3 {
+			compatible = "regulator-fixed";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_reg_lcd_3v3>;
+			regulator-name = "lcd-3v3";
+			gpio = <&gpio4 3 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
+
+		reg_lcd_5v: regulator-lcd-5v {
+			compatible = "regulator-fixed";
+			regulator-name = "lcd-5v0";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+		};
+	};
+
 
 	sound {
 		compatible = "fsl,imx6sl-evk-wm8962", "fsl,imx-audio-wm8962";
