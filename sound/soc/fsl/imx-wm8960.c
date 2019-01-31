@@ -17,6 +17,7 @@
 #include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/clk.h>
+#include <linux/extcon.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
 #include <sound/control.h>
@@ -56,6 +57,16 @@ struct imx_wm8960_data {
 	char amp_standby_set_pending;
 	char amp_mute_clear_pending;
 };
+
+#ifdef CONFIG_EXTCON
+struct extcon_dev *wm8960_edev;
+
+static const unsigned int imx_wm8960_extcon_cables[] = {
+	EXTCON_JACK_MICROPHONE,
+	EXTCON_JACK_HEADPHONE,
+	EXTCON_NONE,
+};
+#endif
 
 struct imx_priv {
 	enum of_gpio_flags hp_active_low;
@@ -101,6 +112,9 @@ static int hp_jack_status_check(void *data)
 	hp_status = gpio_get_value(imx_hp_jack_gpio.gpio);
 
 	if (hp_status != priv->hp_active_low) {
+#ifdef CONFIG_EXTCON
+		extcon_set_state_sync(wm8960_edev, EXTCON_JACK_HEADPHONE, 1);
+#endif
 		snd_soc_dapm_disable_pin(dapm, "Ext Spk");
 		if (priv->is_headset_jack) {
 			snd_soc_dapm_enable_pin(dapm, "Mic Jack");
@@ -108,6 +122,9 @@ static int hp_jack_status_check(void *data)
 		}
 		ret = imx_hp_jack_gpio.report;
 	} else {
+#ifdef CONFIG_EXTCON
+		extcon_set_state_sync(wm8960_edev, EXTCON_JACK_HEADPHONE, 0);
+#endif
 		snd_soc_dapm_enable_pin(dapm, "Ext Spk");
 		if (priv->is_headset_jack) {
 			snd_soc_dapm_disable_pin(dapm, "Mic Jack");
@@ -928,6 +945,19 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 	ret = devm_snd_soc_register_card(&pdev->dev, &data->card);
 	if (ret)
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", ret);
+
+#ifdef CONFIG_EXTCON
+	wm8960_edev  = devm_extcon_dev_allocate(&pdev->dev, imx_wm8960_extcon_cables);
+	if (IS_ERR(wm8960_edev)) {
+		dev_err(&pdev->dev, "failed to allocate extcon device\n");
+		goto fail;
+	}
+	ret = devm_extcon_dev_register(&pdev->dev,wm8960_edev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to register extcon device\n");
+		goto fail;
+	}
+#endif
 fail:
 	if (cpu_np)
 		of_node_put(cpu_np);
