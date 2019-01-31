@@ -26,6 +26,7 @@
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pwm/meson.h>
 #include "mesongxm-gpu-t82x.dtsi"
+#include "gxm-sched-energy.dtsi"
 / {
 	cpus:cpus {
 		#address-cells = <1>;
@@ -69,6 +70,8 @@
 			clocks = <&scpi_dvfs 0>;
 			clock-names = "cpu-cluster.0";
 			cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			sched-energy-costs = <&CPU_COST_A53_HS
+						&CLUSTER_COST_A53_HS>;
 /*
  *		cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0
  *				&SYSTEM_SLEEP_0>;
@@ -83,6 +86,8 @@
 			clocks = <&scpi_dvfs 0>;
 			clock-names = "cpu-cluster.0";
 			cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			sched-energy-costs = <&CPU_COST_A53_HS
+						&CLUSTER_COST_A53_HS>;
 /*
  *		cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0
  *				&SYSTEM_SLEEP_0>;
@@ -97,6 +102,8 @@
 			clocks = <&scpi_dvfs 0>;
 			clock-names = "cpu-cluster.0";
 			cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			sched-energy-costs = <&CPU_COST_A53_HS
+						&CLUSTER_COST_A53_HS>;
 /*
  *		cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0
  *				&SYSTEM_SLEEP_0>;
@@ -111,6 +118,8 @@
 			clocks = <&scpi_dvfs 0>;
 			clock-names = "cpu-cluster.0";
 			cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			sched-energy-costs = <&CPU_COST_A53_HS
+						&CLUSTER_COST_A53_HS>;
 /*
  *		cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0
  *				&SYSTEM_SLEEP_0>;
@@ -125,6 +134,8 @@
 			clocks = <&scpi_dvfs 1>;
 			clock-names = "cpu-cluster.1";
 			cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			sched-energy-costs = <&CPU_COST_A53
+						&CLUSTER_COST_A53>;
 /*
  *		cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0
  *				&SYSTEM_SLEEP_0>;
@@ -139,6 +150,8 @@
 			clocks = <&scpi_dvfs 1>;
 			clock-names = "cpu-cluster.1";
 			cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			sched-energy-costs = <&CPU_COST_A53
+						&CLUSTER_COST_A53>;
 /*
  *		cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0
  *				&SYSTEM_SLEEP_0>;
@@ -152,6 +165,8 @@
 			clocks = <&scpi_dvfs 1>;
 			clock-names = "cpu-cluster.1";
 			cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			sched-energy-costs = <&CPU_COST_A53
+						&CLUSTER_COST_A53>;
 /*
  *		cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0
  *				&SYSTEM_SLEEP_0>;
@@ -166,6 +181,8 @@
 			clocks = <&scpi_dvfs 1>;
 			clock-names = "cpu-cluster.1";
 			cpu-idle-states = <&SYSTEM_SLEEP_0>;
+			sched-energy-costs = <&CPU_COST_A53
+						&CLUSTER_COST_A53>;
 /*
  *		cpu-idle-states = <&CPU_SLEEP_0 &CLUSTER_SLEEP_0
  *				&SYSTEM_SLEEP_0>;
