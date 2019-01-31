@@ -329,10 +329,8 @@ alternative_insn eret, nop, ARM64_UNMAP_KERNEL_AT_EL0
 	 * Add a dummy stack frame, this non-standard format is fixed up
 	 * by unwind_frame()
 	 */
-#ifndef CONFIG_AMLOGIC_VMAP /* we need get right stack of el1_preempt */
 	stp     x29, x19, [sp, #-16]!
 	mov	x29, sp
-#endif /* !CONFIG_AMLOGIC_VMAP */
 
 9998:
 	.endm
