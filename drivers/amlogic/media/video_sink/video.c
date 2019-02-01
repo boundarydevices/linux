@@ -7829,6 +7829,7 @@ static long amvideo_compat_ioctl(struct file *file, unsigned int cmd, ulong arg)
 	case AMSTREAM_IOC_SET_VSYNC_UPINT:
 	case AMSTREAM_IOC_SET_VSYNC_SLOW_FACTOR:
 	case AMSTREAM_IOC_GLOBAL_SET_VIDEO_OUTPUT:
+	case AMSTREAM_IOC_GET_FIRST_FRAME_TOGGLED:
 	case AMSTREAM_IOC_SET_VIDEOPEEK:
 		return amvideo_ioctl(file, cmd, arg);
 	default:
