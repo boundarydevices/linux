@@ -16,8 +16,8 @@
  */
 
 #ifndef __AML_SD_EMMC_INTERNAL_H__
-
 #define __AML_SD_EMMC_INTERNAL_H__
+
 extern int aml_emmc_clktree_init(struct amlsd_host *host);
 
 extern int meson_mmc_clk_init_v3(struct amlsd_host *host);

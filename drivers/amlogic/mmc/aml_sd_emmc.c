@@ -1064,7 +1064,7 @@ static int aml_mmc_execute_tuning(struct mmc_host *mmc, u32 opcode)
 
 }
 
-static void aml_mmc_clk_switch_off(struct amlsd_platform *pdata)
+void aml_mmc_clk_switch_off(struct amlsd_platform *pdata)
 {
 	u32 vcfg = 0;
 	struct sd_emmc_config *conf = (struct sd_emmc_config *)&vcfg;

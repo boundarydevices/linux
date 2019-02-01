@@ -174,7 +174,7 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 
 #ifdef SD_EMMC_CLK_CTRL
 	if (clk_ios == 0) {
-		aml_mmc_clk_switch_off(host);
+		aml_mmc_clk_switch_off(pdata);
 		return ret;
 	}
 
@@ -260,10 +260,12 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 
 	/* (re)start clock, if non-zero */
 	if (clk_ios) {
-		vclkc = readl(host->base + SD_EMMC_CLOCK_V3);
-		pdata->clk_lay.source
-			= clk_get_rate(host->cfg_div_clk) * clkc->div;
-		pdata->clk_lay.core = clk_get_rate(host->cfg_div_clk);
+		if (pdata->calc_f) {
+			vclkc = readl(host->base + SD_EMMC_CLOCK_V3);
+			pdata->clk_lay.source
+				= clk_get_rate(host->cfg_div_clk) * clkc->div;
+			pdata->clk_lay.core = clk_get_rate(host->cfg_div_clk);
+		}
 
 		vcfg = readl(host->base + SD_EMMC_CFG);
 		conf->stop_clk = 0;
