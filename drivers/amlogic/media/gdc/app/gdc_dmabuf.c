@@ -552,7 +552,6 @@ int gdc_dma_buffer_get_phys(struct aml_dma_cfg *cfg, unsigned long *addr)
 		*addr = PFN_PHYS(page_to_pfn(page));
 		ret = 0;
 	}
-	gdc_dma_buffer_unmap(cfg);
 	return ret;
 }
 

@@ -616,6 +616,11 @@ struct ge2d_cmd_s {
 	unsigned char    hang_flag;
 };
 
+struct ge2d_dma_cfg_s {
+	int dma_used;
+	void *dma_cfg;
+};
+
 struct ge2d_config_s {
 	struct ge2d_gen_s            gen;
 	struct ge2d_src1_data_s      src1_data;
@@ -626,12 +631,22 @@ struct ge2d_config_s {
 	unsigned int	v_scale_coef_type;
 	unsigned int	h_scale_coef_type;
 	unsigned int	update_flag;
+	struct ge2d_dma_cfg_s src_dma_cfg;
+	struct ge2d_dma_cfg_s src2_dma_cfg;
+	struct ge2d_dma_cfg_s dst_dma_cfg;
 };
 
 struct ge2d_dma_buf_s {
 	dma_addr_t paddr;
 	void *vaddr;
 	int len;
+};
+
+enum ge2d_data_type_e {
+	AML_GE2D_SRC,
+	AML_GE2D_SRC2,
+	AML_GE2D_DST,
+	AML_GE2D_TYPE_INVALID,
 };
 
 enum ge2d_src_dst_e {

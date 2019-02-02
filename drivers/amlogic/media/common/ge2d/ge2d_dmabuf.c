@@ -515,6 +515,7 @@ int ge2d_dma_buffer_map(struct aml_dma_cfg *cfg)
 	cfg->attach = d_att;
 	cfg->vaddr = vaddr;
 	cfg->sg = sg;
+	ge2d_log_dbg("%s\n", __func__);
 	return ret;
 
 vmap_err:
@@ -549,7 +550,6 @@ int ge2d_dma_buffer_get_phys(struct aml_dma_cfg *cfg, unsigned long *addr)
 		*addr = PFN_PHYS(page_to_pfn(page));
 		ret = 0;
 	}
-	ge2d_dma_buffer_unmap(cfg);
 	return ret;
 }
 
@@ -586,6 +586,8 @@ void ge2d_dma_buffer_unmap(struct aml_dma_cfg *cfg)
 	dma_buf_detach(dbuf, d_att);
 
 	dma_buf_put(dbuf);
+
+	ge2d_log_dbg("%s\n", __func__);
 }
 
 void ge2d_dma_buffer_dma_flush(struct device *dev, int fd)
