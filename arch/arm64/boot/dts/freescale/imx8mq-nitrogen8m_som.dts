@@ -1090,11 +1090,6 @@
 				 <&clk IMX8MQ_CLK_25M>;
 	assigned-clock-rates = <266000000>;
 
-	clocks = <&clk IMX8MQ_CLK_DSI_CORE>,
-		 <&clk IMX8MQ_CLK_DSI_PHY_REF>,
-		 <&clk IMX8MQ_VIDEO_PLL1>;
-	clock-names = "core", "phy_ref", "pixel_pll";
-
 	port@1 {
 		mipi_dsi_in: endpoint {
 			remote-endpoint = <&lcdif_mipi_dsi>;
