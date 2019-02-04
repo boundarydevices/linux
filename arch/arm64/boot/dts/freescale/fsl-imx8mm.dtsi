@@ -1086,6 +1086,7 @@
 
 	mipi_dsi: mipi_dsi@32E10000 {
 		#address-cells = <1>;
+		#clock-cells = <1>;
 		#size-cells = <0>;
 		compatible = "fsl,imx8mm-mipi-dsim";
 		reg = <0x0 0x32e10000 0x0 0x400>;
@@ -1110,7 +1111,7 @@
 		};
 	};
 
-	display-subsystem {
+	display_subsystem: display-subsystem {
 		compatible = "fsl,imx-display-subsystem";
 		ports = <&lcdif_disp0>;
 	};
