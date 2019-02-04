@@ -1019,10 +1019,32 @@ static int nwl_dsi_connector_get_modes(struct drm_connector *connector)
 	struct nwl_mipi_dsi *dsi = container_of(connector,
 						struct nwl_mipi_dsi,
 						connector);
-	if (dsi->panel)
-		return drm_panel_get_modes(dsi->panel);
+	int num_modes = 0;
+	struct drm_display_mode *mode;
 
-	return 0;
+	DRM_DEV_DEBUG_DRIVER(dsi->dev, "\n");
+	if (dsi->panel)
+		num_modes = drm_panel_get_modes(dsi->panel);
+
+	/*
+	 * We need to inform the CRTC about the actual bit clock that we need
+	 * for each mode
+	 */
+	list_for_each_entry(mode, &connector->probed_modes, head) {
+		struct mode_config *config;
+		u32 phy_rate;
+
+		config = nwl_dsi_mode_probe(dsi, mode);
+		/* Unsupported mode */
+		if (!config)
+			continue;
+
+		/* Actual pixel clock that should be used by CRTC */
+		phy_rate = config->phyref_rate / 1000;
+		mode->crtc_clock = phy_rate * (mode->clock / phy_rate);
+	}
+
+	return num_modes;
 }
 
 static const struct drm_connector_funcs nwl_dsi_connector_funcs = {
