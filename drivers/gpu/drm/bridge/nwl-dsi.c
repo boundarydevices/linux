@@ -151,6 +151,22 @@
 
 static const char IRQ_NAME[] = "nwl-dsi";
 
+/*
+ * TODO: Currently, filter-out unsupported modes by their clocks.
+ * Need to find a better way to do this.
+ * These are the pixel clocks that the controller can handle successfully.
+ */
+static int valid_clocks[] = {
+	162000,
+	148500,
+	135000,
+	132000,
+	108000,
+	74250,
+	49500,
+	31500,
+};
+
 /* Possible valid PHY reference clock rates*/
 static u32 phyref_rates[] = {
 	27000000,
@@ -520,9 +536,20 @@ static enum drm_mode_status nwl_dsi_bridge_mode_valid(struct drm_bridge *bridge,
 			   const struct drm_display_mode *mode)
 {
 	struct nwl_mipi_dsi *dsi = bridge->driver_private;
+	size_t i, num_modes = ARRAY_SIZE(valid_clocks);
+	bool clock_ok = false;
 
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Validating mode:");
 	drm_mode_debug_printmodeline(mode);
+
+	for (i = 0; i < num_modes; i++)
+		if (mode->clock == valid_clocks[i]) {
+			clock_ok = true;
+			break;
+		}
+
+	if (!clock_ok)
+		return MODE_NOCLOCK;
 
 	if (!nwl_dsi_mode_probe(dsi, mode))
 		return MODE_NOCLOCK;
