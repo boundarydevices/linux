@@ -5,6 +5,11 @@
 };
 
 &mipi_dsi {
+	clocks = <&clk IMX8MM_CLK_DSI_CORE_DIV>,
+		 <&clk IMX8MM_CLK_DSI_PHY_REF_DIV>,
+		 <&clk IMX8MM_CLK_LCDIF_PIXEL_DIV>;
+	clock-names = "cfg", "pll-ref", "pixel_clock";
+
 	panel@0 {
 		compatible = "raydium,rm67191";
 		reg = <0>;
