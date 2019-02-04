@@ -39,7 +39,4 @@ enum dpi_pixel_format {
 	DPI_FMT_24_BIT /* 0x3 */
 };
 
-unsigned long nwl_dsi_get_bit_clock(struct drm_bridge *bridge,
-	unsigned long pixclock);
-
 #endif /* __NWL_DSI_H__ */
