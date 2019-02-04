@@ -544,22 +544,6 @@ static void imx_nwl_dsi_disable(struct imx_mipi_dsi *dsi)
 	dsi->enabled = false;
 }
 
-static void imx_nwl_update_sync_polarity(unsigned int *flags, u32 sync_pol)
-{
-	/* Make sure all flags are set-up accordingly */
-	if (sync_pol) {
-		*flags |= DRM_MODE_FLAG_PHSYNC;
-		*flags |= DRM_MODE_FLAG_PVSYNC;
-		*flags &= ~DRM_MODE_FLAG_NHSYNC;
-		*flags &= ~DRM_MODE_FLAG_NVSYNC;
-	} else {
-		*flags &= ~DRM_MODE_FLAG_PHSYNC;
-		*flags &= ~DRM_MODE_FLAG_PVSYNC;
-		*flags |= DRM_MODE_FLAG_NHSYNC;
-		*flags |= DRM_MODE_FLAG_NVSYNC;
-	}
-}
-
 /*
  * This function will try the required phy speed for current mode
  * If the phy speed can be achieved, the phy will save the speed
@@ -629,19 +613,40 @@ static void imx_nwl_dsi_encoder_disable(struct drm_encoder *encoder)
 	pm_runtime_put_sync(dsi->dev);
 }
 
+static bool imx_nwl_dsi_mode_fixup(struct imx_mipi_dsi *dsi,
+				 struct drm_display_mode *mode)
+{
+	unsigned int *flags = &mode->flags;
+
+	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Fixup mode:\n");
+	drm_mode_debug_printmodeline(mode);
+
+	/* Make sure all flags are set-up accordingly */
+	if (dsi->sync_pol) {
+		*flags |= DRM_MODE_FLAG_PHSYNC;
+		*flags |= DRM_MODE_FLAG_PVSYNC;
+		*flags &= ~DRM_MODE_FLAG_NHSYNC;
+		*flags &= ~DRM_MODE_FLAG_NVSYNC;
+	} else {
+		*flags &= ~DRM_MODE_FLAG_PHSYNC;
+		*flags &= ~DRM_MODE_FLAG_PVSYNC;
+		*flags |= DRM_MODE_FLAG_NHSYNC;
+		*flags |= DRM_MODE_FLAG_NVSYNC;
+	}
+
+	return !imx_nwl_try_phy_speed(dsi, mode);
+}
+
 static int imx_nwl_dsi_encoder_atomic_check(struct drm_encoder *encoder,
 					struct drm_crtc_state *crtc_state,
 					struct drm_connector_state *conn_state)
 {
-	struct imx_crtc_state *imx_crtc_state = to_imx_crtc_state(crtc_state);
 	struct imx_mipi_dsi *dsi = encoder_to_dsi(encoder);
-	unsigned int *flags = &crtc_state->adjusted_mode.flags;
+	struct imx_crtc_state *imx_crtc_state = to_imx_crtc_state(crtc_state);
 
 	imx_crtc_state->bus_format = MEDIA_BUS_FMT_RGB101010_1X30;
-	imx_nwl_update_sync_polarity(flags, dsi->sync_pol);
 
-	/* Try to see if the phy can satisfy the current mode */
-	return imx_nwl_try_phy_speed(dsi, &crtc_state->adjusted_mode);
+	return !imx_nwl_dsi_mode_fixup(dsi, &crtc_state->adjusted_mode);
 }
 
 static const struct drm_encoder_helper_funcs
@@ -679,14 +684,11 @@ static void imx_nwl_dsi_bridge_disable(struct drm_bridge *bridge)
 
 static bool imx_nwl_dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 			   const struct drm_display_mode *mode,
-			   struct drm_display_mode *adjusted_mode)
+			   struct drm_display_mode *adjusted)
 {
 	struct imx_mipi_dsi *dsi = bridge->driver_private;
-	unsigned int *flags = &adjusted_mode->flags;
 
-	imx_nwl_update_sync_polarity(flags, dsi->sync_pol);
-
-	return (imx_nwl_try_phy_speed(dsi, adjusted_mode) == 0);
+	return imx_nwl_dsi_mode_fixup(dsi, adjusted);
 }
 
 static int imx_nwl_dsi_bridge_attach(struct drm_bridge *bridge)
