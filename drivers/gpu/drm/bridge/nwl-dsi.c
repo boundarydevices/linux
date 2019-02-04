@@ -199,14 +199,11 @@ struct nwl_mipi_dsi {
 
 	void __iomem			*base;
 	int				irq;
-	enum mipi_dsi_pixel_format	format;
-	struct videomode		vm;
+	struct videomode                vm;
 
 	struct mipi_dsi_transfer	*xfer;
 
 	u32				lanes;
-	u32				vc;
-	unsigned long			dsi_mode_flags;
 	bool				no_clk_reset;
 	bool				enabled;
 };
@@ -274,8 +271,9 @@ unsigned long nwl_dsi_get_bit_clock(struct drm_bridge *bridge,
 	unsigned long pixclock)
 {
 	struct nwl_mipi_dsi *dsi;
+	struct mipi_dsi_device *dsi_device;
 	int bpp;
-	u32 bus_format;
+	u32 bus_fmt;
 	struct drm_crtc *crtc = 0;
 
 	/* Make sure the bridge is correctly initialized */
@@ -283,23 +281,23 @@ unsigned long nwl_dsi_get_bit_clock(struct drm_bridge *bridge,
 		return 0;
 
 	dsi = bridge->driver_private;
+	dsi_device = dsi->dsi_device;
 
-	if (dsi->lanes < 1 || dsi->lanes > 4)
+	if (dsi_device->lanes < 1 || dsi_device->lanes > 4)
 		return 0;
 
 	/* if CTRC updated the bus format, update dsi->format */
 	if (dsi->bridge.encoder)
 		crtc = dsi->bridge.encoder->crtc;
 	if (crtc && crtc->mode.private_flags & 0x1) {
-		bus_format = (crtc->mode.private_flags & 0x1FFFE) >> 1;
-		dsi->format = mipi_dsi_format_from_bus_format(bus_format);
+		bus_fmt = (crtc->mode.private_flags & 0x1FFFE) >> 1;
 		/* propagate the format to the attached panel/bridge */
-		dsi->dsi_device->format = dsi->format;
+		dsi_device->format = mipi_dsi_format_from_bus_format(bus_fmt);
 		/* clear bus format change indication*/
 		crtc->mode.private_flags &= ~0x1;
 	}
 
-	bpp = mipi_dsi_pixel_format_to_bpp(dsi->format);
+	bpp = mipi_dsi_pixel_format_to_bpp(dsi_device->format);
 
 	return (pixclock / dsi->lanes) * bpp;
 }
@@ -307,19 +305,19 @@ EXPORT_SYMBOL_GPL(nwl_dsi_get_bit_clock);
 
 static void nwl_dsi_config_host(struct nwl_mipi_dsi *dsi)
 {
-	if (dsi->lanes < 1 || dsi->lanes > 4)
+	struct mipi_dsi_device *dsi_device = dsi->dsi_device;
+
+	if (dsi_device->lanes < 1 || dsi_device->lanes > 4)
 		return;
 
-	nwl_dsi_write(dsi, CFG_NUM_LANES, dsi->lanes - 1);
+	nwl_dsi_write(dsi, CFG_NUM_LANES, dsi_device->lanes - 1);
 
-	if (dsi->dsi_mode_flags & MIPI_DSI_CLOCK_NON_CONTINUOUS) {
+	if (dsi_device->mode_flags & MIPI_DSI_CLOCK_NON_CONTINUOUS)
 		nwl_dsi_write(dsi, CFG_NONCONTINUOUS_CLK, 0x01);
-	} else {
+	else
 		nwl_dsi_write(dsi, CFG_NONCONTINUOUS_CLK, 0x00);
-		nwl_dsi_write(dsi, CFG_AUTOINSERT_EOTP, 0x00);
-	}
 
-	if (dsi->dsi_mode_flags & MIPI_DSI_MODE_EOT_PACKET)
+	if (dsi_device->mode_flags & MIPI_DSI_MODE_EOT_PACKET)
 		nwl_dsi_write(dsi, CFG_AUTOINSERT_EOTP, 0x00);
 	else
 		nwl_dsi_write(dsi, CFG_AUTOINSERT_EOTP, 0x01);
@@ -337,24 +335,25 @@ static void nwl_dsi_config_host(struct nwl_mipi_dsi *dsi)
 static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 {
 	struct device *dev = dsi->dev;
+	struct mipi_dsi_device *dsi_device = dsi->dsi_device;
 	struct videomode *vm = &dsi->vm;
 	enum dpi_pixel_format pixel_format =
-			nwl_dsi_get_dpi_pixel_format(dsi->format);
+		nwl_dsi_get_dpi_pixel_format(dsi_device->format);
 	enum dpi_interface_color_coding color_coding =
-			nwl_dsi_get_dpi_interface_color_coding(dsi->format);
+		nwl_dsi_get_dpi_interface_color_coding(dsi_device->format);
 	bool burst_mode;
 
 	nwl_dsi_write(dsi, INTERFACE_COLOR_CODING, color_coding);
 	nwl_dsi_write(dsi, PIXEL_FORMAT, pixel_format);
 	DRM_DEV_DEBUG_DRIVER(dev, "DSI format is: %d (CC=%d, PF=%d)\n",
-			dsi->format, color_coding, pixel_format);
+			dsi_device->format, color_coding, pixel_format);
 
 	/*TODO: need to make polarity configurable */
 	nwl_dsi_write(dsi, VSYNC_POLARITY, 0x00);
 	nwl_dsi_write(dsi, HSYNC_POLARITY, 0x00);
 
-	burst_mode = (dsi->dsi_mode_flags & MIPI_DSI_MODE_VIDEO_BURST) &&
-		!(dsi->dsi_mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE);
+	burst_mode = (dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_BURST) &&
+		!(dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE);
 
 	if (burst_mode) {
 		nwl_dsi_write(dsi, VIDEO_MODE, 0x2);
@@ -375,7 +374,7 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 	nwl_dsi_write(dsi, VC, 0x0);
 
 	nwl_dsi_write(dsi, PIXEL_PAYLOAD_SIZE, vm->hactive);
-	nwl_dsi_write(dsi, VACTIVE, vm->vactive - 1);
+	nwl_dsi_write(dsi, VACTIVE, vm->vactive);
 	nwl_dsi_write(dsi, VBP, vm->vback_porch);
 	nwl_dsi_write(dsi, VFP, vm->vfront_porch);
 }
@@ -451,11 +450,11 @@ static bool nwl_dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 			   struct drm_display_mode *adjusted_mode)
 {
 	struct nwl_mipi_dsi *dsi = bridge->driver_private;
-	int bpp = mipi_dsi_pixel_format_to_bpp(dsi->format);
+	int bpp = mipi_dsi_pixel_format_to_bpp(dsi->dsi_device->format);
 	unsigned long pixclock = adjusted_mode->clock * 1000;
 	unsigned long data_rate;
 
-	if (dsi->lanes < 1 || dsi->lanes > 4)
+	if (dsi->dsi_device->lanes < 1 || dsi->dsi_device->lanes > 4)
 		return false;
 
 	/* Data rate is in bit clock for each lane */
@@ -474,10 +473,10 @@ static void nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 {
 	struct nwl_mipi_dsi *dsi = bridge->driver_private;
 
-	drm_display_mode_to_videomode(adjusted, &dsi->vm);
-
-	DRM_DEV_DEBUG_DRIVER(dsi->dev, "\n");
+	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Setting mode:\n");
 	drm_mode_debug_printmodeline(adjusted);
+
+	drm_display_mode_to_videomode(adjusted, &dsi->vm);
 }
 
 static int nwl_dsi_host_attach(struct mipi_dsi_host *host,
@@ -493,8 +492,6 @@ static int nwl_dsi_host_attach(struct mipi_dsi_host *host,
 
 	if (device->lanes < 1 || device->lanes > 4)
 		return -EINVAL;
-
-	dsi->dsi_device = device;
 
 	/*
 	 * Someone has attached to us; it could be a panel or another bridge.
@@ -522,9 +519,8 @@ static int nwl_dsi_host_attach(struct mipi_dsi_host *host,
 	else
 		DRM_DEV_DEBUG_DRIVER(dsi->dev, "Bridge attached\n");
 
+	dsi->dsi_device = device;
 	dsi->lanes = device->lanes;
-	dsi->format = device->format;
-	dsi->dsi_mode_flags = device->mode_flags;
 
 	if (dsi->connector.dev)
 		drm_helper_hpd_irq_event(dsi->connector.dev);
@@ -543,6 +539,8 @@ static int nwl_dsi_host_detach(struct mipi_dsi_host *host,
 
 	if (dsi->connector.dev)
 		drm_helper_hpd_irq_event(dsi->connector.dev);
+
+	dsi->dsi_device = NULL;
 
 	return 0;
 }
@@ -1002,13 +1000,14 @@ static void nwl_dsi_bridge_detach(struct drm_bridge *bridge)
 static void nwl_dsi_bridge_enable(struct drm_bridge *bridge)
 {
 	struct nwl_mipi_dsi *dsi = bridge->driver_private;
+	struct mipi_dsi_device *dsi_device = dsi->dsi_device;
 	struct device *dev = dsi->dev;
 	int ret;
 
 	if (dsi->enabled || (!dsi->panel && !dsi->next_bridge))
 		return;
 
-	if (!dsi->lanes) {
+	if (!dsi_device) {
 		DRM_DEV_ERROR(dev, "Bridge not set up properly!\n");
 		return;
 	}
@@ -1049,7 +1048,7 @@ static void nwl_dsi_bridge_enable(struct drm_bridge *bridge)
 		goto enable_err;
 	}
 
-	if (dsi->dsi_mode_flags & MIPI_DSI_CLOCK_NON_CONTINUOUS)
+	if (dsi_device->mode_flags & MIPI_DSI_CLOCK_NON_CONTINUOUS)
 		nwl_dsi_write(dsi, CFG_NONCONTINUOUS_CLK, 0x00);
 
 	dsi->enabled = true;
