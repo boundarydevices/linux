@@ -638,8 +638,8 @@ static int imx_nwl_dsi_encoder_atomic_check(struct drm_encoder *encoder,
 					struct drm_crtc_state *crtc_state,
 					struct drm_connector_state *conn_state)
 {
-	struct imx_crtc_state *imx_crtc_state = to_imx_crtc_state(crtc_state);
 	struct imx_mipi_dsi *dsi = encoder_to_dsi(encoder);
+	struct imx_crtc_state *imx_crtc_state = to_imx_crtc_state(crtc_state);
 
 	imx_crtc_state->bus_format = MEDIA_BUS_FMT_RGB101010_1X30;
 	return do_imx_nwl_dsi_bridge_mode_fixup(dsi, &crtc_state->adjusted_mode);
@@ -680,9 +680,9 @@ static void imx_nwl_dsi_bridge_disable(struct drm_bridge *bridge)
 
 static bool imx_nwl_dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 			   const struct drm_display_mode *mode,
-			   struct drm_display_mode *adjusted_mode)
+			   struct drm_display_mode *adjusted)
 {
-	return (do_imx_nwl_dsi_bridge_mode_fixup(bridge->driver_private, adjusted_mode) == 0);
+	return (do_imx_nwl_dsi_bridge_mode_fixup(bridge->driver_private, adjusted) == 0);
 }
 
 static int imx_nwl_dsi_bridge_attach(struct drm_bridge *bridge)
