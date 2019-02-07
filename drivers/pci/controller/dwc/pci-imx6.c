@@ -113,6 +113,7 @@ struct imx6_pcie {
 	struct clk		*pcie_aux;
 	struct clk		*phy_per;
 	struct clk		*misc_per;
+	u32			ext_src_clk_enabled;
 	struct clk		*pcie_ext_src;
 	struct regmap		*iomuxc_gpr;
 	struct regmap		*hsiomix;
@@ -1063,8 +1064,10 @@ static void imx6_pcie_clk_disable(struct imx6_pcie *imx6_pcie)
 	default:
 		break;
 	}
-	if (imx6_pcie->ext_osc && imx6_pcie->pcie_ext_src)
+	if (imx6_pcie->ext_src_clk_enabled) {
+		imx6_pcie->ext_src_clk_enabled = 0;
 		clk_disable_unprepare(imx6_pcie->pcie_ext_src);
+	}
 }
 
 #define GPC_CNTR 0
@@ -1447,6 +1450,7 @@ static void imx6_pcie_init_phy(struct imx6_pcie *imx6_pcie)
 	if (imx6_pcie->ext_osc && imx6_pcie->pcie_ext_src) {
 		int ret;
 
+		imx6_pcie->ext_src_clk_enabled = 1;
 		ret = clk_prepare_enable(imx6_pcie->pcie_ext_src);
 		if (ret)
 			dev_err(imx6_pcie->pci->dev,
