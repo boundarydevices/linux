@@ -324,6 +324,9 @@ static int pcm186x_hw_params(struct snd_pcm_substream *substream,
 		case 6:
 			tdm_tx_sel = PCM186X_TDM_TX_SEL_6CH;
 			break;
+		case 8:
+			tdm_tx_sel = PCM186X_TDM_TX_SEL_4CH;
+			break;
 		default:
 			return -EINVAL;
 		}
@@ -499,7 +502,7 @@ static struct snd_soc_dai_driver pcm1865_dai = {
 	.capture = {
 		 .stream_name = "Capture",
 		 .channels_min = 1,
-		 .channels_max = 4,
+		 .channels_max = 8,
 		 .rates = PCM186X_RATES,
 		 .formats = PCM186X_FORMATS,
 	 },
