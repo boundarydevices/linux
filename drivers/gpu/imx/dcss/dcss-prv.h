@@ -21,6 +21,8 @@
 #define CLR 0x08
 #define TGL 0x0C
 
+#define MAX_CLK_SRC 3
+
 #define dcss_writel(v, c)   writel((v), (c))
 #define dcss_readl(c)	    readl(c)
 #define dcss_set(v, c)	    writel((v), (c) + SET)
@@ -65,12 +67,12 @@ struct dcss_soc {
 
 	struct clk *apb_clk;
 	struct clk *axi_clk;
-	struct clk *pdiv_clk;
-	struct clk *pout_clk;
+	struct clk *pix_clk;
 	struct clk *rtrm_clk;
 	struct clk *dtrc_clk;
-	struct clk *pll_src_clk;
-	struct clk *pll_phy_ref_clk;
+	struct clk *sel_clk;
+	struct clk *pll_clk;
+	struct clk *src_clk[MAX_CLK_SRC];
 
 	void (*dcss_disable_callback)(void *data);
 

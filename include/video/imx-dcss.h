@@ -84,6 +84,8 @@ void dcss_dpr_tile_derive(struct dcss_soc *dcss,
 void dcss_dpr_set_rotation(struct dcss_soc *dcss, int ch_num, u32 rotation);
 
 /* DTG */
+int dcss_dtg_mode_valid(struct dcss_soc *dcss, int clock, int crtc_clock);
+int dcss_dtg_mode_fixup(struct dcss_soc *dcss, int clock);
 void dcss_dtg_sync_set(struct dcss_soc *dcss, struct videomode *vm);
 void dcss_dtg_plane_pos_set(struct dcss_soc *dcss, int ch_num,
 			    int px, int py, int pw, int ph);
