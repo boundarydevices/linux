@@ -2553,8 +2553,10 @@ static int imx_pcie_probe(struct platform_device *pdev)
 				"pcie-phy");
 	} else if (imx_pcie->variant == IMX8MQ || imx_pcie->variant == IMX8MM) {
 		imx_pcie->iomuxc_gpr =
-			 syscon_regmap_lookup_by_compatible
-			 ("fsl,imx8mq-iomuxc-gpr");
+			 syscon_regmap_lookup_by_compatible(
+			 (imx_pcie->variant == IMX8MM) ?
+				"fsl,imx8mm-iomuxc-gpr" :
+				"fsl,imx8mq-iomuxc-gpr");
 		imx_pcie->reg_src =
 			 syscon_regmap_lookup_by_compatible("fsl,imx8mq-src");
 		if (IS_ERR(imx_pcie->reg_src)) {
