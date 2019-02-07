@@ -307,12 +307,47 @@ static void dcss_crtc_atomic_disable(struct drm_crtc *crtc,
 	pm_runtime_put_sync(dcss_crtc->dev->parent);
 }
 
+static enum drm_mode_status dcss_crtc_mode_valid(struct drm_crtc *crtc,
+		      const struct drm_display_mode *mode)
+{
+	struct dcss_crtc *dcss_crtc = container_of(crtc, struct dcss_crtc,
+						   base);
+	struct dcss_soc *dcss = dev_get_drvdata(dcss_crtc->dev->parent);
+
+	DRM_DEV_DEBUG_DRIVER(crtc->dev->dev, "Validating mode:\n");
+	drm_mode_debug_printmodeline(mode);
+	if (!dcss_dtg_mode_valid(dcss, mode->clock, mode->crtc_clock))
+		return MODE_OK;
+
+	return MODE_NOCLOCK;
+}
+
+
+static bool dcss_crtc_mode_fixup(struct drm_crtc *crtc,
+			   const struct drm_display_mode *mode,
+			   struct drm_display_mode *adjusted)
+{
+	struct dcss_crtc *dcss_crtc = container_of(crtc, struct dcss_crtc,
+						   base);
+	struct dcss_soc *dcss = dev_get_drvdata(dcss_crtc->dev->parent);
+	int clock = adjusted->clock, crtc_clock = adjusted->crtc_clock;
+
+	DRM_DEV_DEBUG_DRIVER(crtc->dev->dev, "Fixup mode:\n");
+	DRM_DEV_DEBUG_DRIVER(crtc->dev->dev, "clock=%d, crtc_clock=%d\n",
+			clock, crtc_clock);
+	drm_mode_debug_printmodeline(adjusted);
+
+	return !dcss_dtg_mode_fixup(dcss, clock);
+}
+
 static const struct drm_crtc_helper_funcs dcss_helper_funcs = {
 	.atomic_check = dcss_crtc_atomic_check,
 	.atomic_begin = dcss_crtc_atomic_begin,
 	.atomic_flush = dcss_crtc_atomic_flush,
 	.atomic_enable = dcss_crtc_atomic_enable,
 	.atomic_disable = dcss_crtc_atomic_disable,
+	.mode_valid = dcss_crtc_mode_valid,
+	.mode_fixup = dcss_crtc_mode_fixup,
 };
 
 static irqreturn_t dcss_crtc_irq_handler(int irq, void *dev_id)
