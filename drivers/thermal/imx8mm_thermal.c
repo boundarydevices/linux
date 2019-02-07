@@ -15,6 +15,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/thermal.h>
+#include "thermal_hwmon.h"
 
 #include "thermal_core.h"
 
@@ -75,24 +76,31 @@ static int tmu_get_temp(void *data, int *temp)
 	struct imx8mm_tmu *tmu = sensor->priv;
 	bool ready;
 	u32 val;
+	int loop_cnt = 0;
 
-	/* the temp sensor need about 1ms to finish the measurement */
-	usleep_range(1000, 2000);
-
-	if (tmu->socdata->flags == FLAGS_TMU_VER1) {
-		val = readl_relaxed(tmu->base + TRITSR) & TRITSR_VAL_MASK;
-		if (val < TEMP_LOW_LIMIT)
-			return -EAGAIN;
-	} else {
+	while (1) {
+		/* the temp sensor need about 1ms to finish the measurement */
+		if (loop_cnt)
+			usleep_range(1000, 2000);
+		/* read the calibrated temp value */
 		val = readl_relaxed(tmu->base + TRITSR);
-		ready = val & (1 << (sensor->hw_id + PROBE0_STATUS_OFFSET));
-		val = (val >> sensor->hw_id * PROBE0_VAL_OFFSET) & TRITSR_VAL_MASK;
-		if (val & SIGN_BIT) /* negative */
-			val = (~(val & TEMP_VAL_MASK) + 1);
+		if (tmu->socdata->flags == FLAGS_TMU_VER1) {
+			val &= TRITSR_VAL_MASK;
+			/* check if the temp in the sensor's range */
+			if (val >= TEMP_LOW_LIMIT)
+				break;
+		} else {
+			ready = val & (1 << (sensor->hw_id + PROBE0_STATUS_OFFSET));
+			val = (val >> sensor->hw_id * PROBE0_VAL_OFFSET) & TRITSR_VAL_MASK;
+			if (val & SIGN_BIT) /* negative */
+				val = (~(val & TEMP_VAL_MASK) + 1);
 
-		*temp = val;
-		if (!ready || *temp < -40 || *temp > 125)
+			if (ready && val >= -40 && val <= 125)
+				break;
+		}
+		if (loop_cnt >= 1)
 			return -EAGAIN;
+		loop_cnt++;
 	}
 
 	*temp = val * 1000;
@@ -232,7 +240,13 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 	val |= TER_EN;
 	writel_relaxed(val, tmu->base + TER);
 
-	return 0;
+	for (i = 0; i < num_sensors; i++) {
+		tmu->sensors[0].tzd->tzp->no_hwmon = false;
+		ret = thermal_add_hwmon_sysfs(tmu->sensors[0].tzd);
+		if (ret < 0)
+			break;
+	}
+	return ret;
 }
 
 static int imx8mm_tmu_remove(struct platform_device *pdev)
