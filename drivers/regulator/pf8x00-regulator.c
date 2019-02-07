@@ -67,6 +67,8 @@
 #define PF8X00_LDO1_CONFIG1		0x85
 #define PF8X00_VSNVS_CONFIG1		0x9d
 #define PF8X00_PAGE_SELECT		0x9f
+#define PF8X00_OTP_CTRL3		0xa4
+#define PF8X00_NUMREGS			0xe4
 
 /* regulators */
 enum pf8x00_regulators {
@@ -111,10 +113,11 @@ enum swxilim_bits {
 	SWXILIM_3000_MA,
 	SWXILIM_4500_MA,
 };
+#define PF8X00_SWXSLEW_SHIFT		5
+#define PF8X00_SWXSLEW_MASK		BIT(5)
 #define PF8X00_SWXILIM_SHIFT		3
 #define PF8X00_SWXILIM_MASK		GENMASK(4, 3)
 #define PF8X00_SWXPHASE_MASK		GENMASK(2, 0)
-#define PF8X00_SWXPHASE_SHIFT		7
 
 enum pf8x00_devid {
 	PF8100			= 0x0,
@@ -131,24 +134,25 @@ struct pf8x00_regulator_data {
 	unsigned int suspend_enable_mask;
 	unsigned int suspend_voltage_reg;
 	unsigned int suspend_voltage_cache;
-};
-
-struct pf8x00_chip {
-	struct regmap *regmap;
-	struct device *dev;
+	unsigned char hw_en;
+	unsigned char vselect_en;
+	unsigned char quad_phase;
+	unsigned char dual_phase;
+	unsigned char fast_slew;
+	unsigned int clk_freq;
 };
 
 static const struct regmap_config pf8x00_regmap_config = {
 	.reg_bits = 8,
 	.val_bits = 8,
-	.max_register = PF8X00_PAGE_SELECT,
+	.max_register = PF8X00_NUMREGS - 1,
 	.cache_type = REGCACHE_RBTREE,
 };
 
 /* VLDOx output: 1.5V to 5.0V */
 static const int pf8x00_ldo_voltages[] = {
 	1500000, 1600000, 1800000, 1850000, 2150000, 2500000, 2800000, 3000000,
-	3100000, 3150000, 3200000, 3300000, 3350000, 1650000, 1700000, 5000000,
+	3100000, 3150000, 3200000, 3300000, 3350000, 4000000, 4900000, 5000000,
 };
 
 /* Output: 2.1A to 4.5A */
@@ -176,107 +180,137 @@ static const int pf8x00_vsnvs_voltages[] = {
 	0, 1800000, 3000000, 3300000,
 };
 
-static void swxilim_select(struct pf8x00_chip *chip, int id, int ilim)
+static short ilim_table[] = {
+	2100, 2600, 3000, /* (4500 is selected for anything over 3000) */
+};
+
+static int swxilim_select(int ilim)
 {
 	u8 ilim_sel;
-	u8 reg = PF8X00_SW_BASE(id) + SW_CONFIG2;
 
-	switch (ilim) {
-	case 2100:
-		ilim_sel = SWXILIM_2100_MA;
-		break;
-	case 2600:
-		ilim_sel = SWXILIM_2600_MA;
-		break;
-	case 3000:
-		ilim_sel = SWXILIM_3000_MA;
-		break;
-	case 4500:
-		ilim_sel = SWXILIM_4500_MA;
-		break;
-	default:
-		ilim_sel = SWXILIM_2100_MA;
-		break;
+	if (ilim <= 0)
+		return -1;
+	while (ilim_sel < ARRAY_SIZE(ilim_table)) {
+		if (ilim <= ilim_table[ilim_sel])
+			break;
+		ilim_sel++;
 	}
-
-	regmap_update_bits(chip->regmap, reg,
-					PF8X00_SWXILIM_MASK,
-					ilim_sel << PF8X00_SWXILIM_SHIFT);
-}
-
-static void handle_ilim_property(struct device_node *np,
-			      const struct regulator_desc *desc,
-			      struct regulator_config *config)
-{
-	struct pf8x00_chip *chip = config->driver_data;
-	int ret;
-	int val;
-
-	if ((desc->id >= PF8X00_BUCK1) && (desc->id <= PF8X00_BUCK7)) {
-		ret = of_property_read_u32(np, "nxp,ilim-ma", &val);
-		if (ret) {
-			dev_dbg(chip->dev, "unspecified ilim for BUCK%d, use value stored in OTP\n",
-				desc->id - PF8X00_LDO4);
-			return;
-		}
-
-		dev_warn(chip->dev, "nxp,ilim-ma is deprecated, please use regulator-max-microamp\n");
-		swxilim_select(chip, desc->id, val);
-
-	} else
-		dev_warn(chip->dev, "nxp,ilim-ma used with incorrect regulator (%d)\n", desc->id);
-}
-
-static void handle_shift_property(struct device_node *np,
-			      const struct regulator_desc *desc,
-			      struct regulator_config *config)
-{
-	unsigned char id = desc->id - PF8X00_LDO4;
-	unsigned char reg = PF8X00_SW_BASE(id) + SW_CONFIG2;
-	struct pf8x00_chip *chip = config->driver_data;
-
-	int phase;
-	int val;
-	int ret;
-	if ((desc->id >= PF8X00_BUCK1) && (desc->id <= PF8X00_BUCK7)) {
-		ret = of_property_read_u32(np, "nxp,phase-shift", &val);
-		if (ret) {
-			dev_dbg(chip->dev,
-				"unspecified phase-shift for BUCK%d, using OTP configuration\n",
-				id);
-			return;
-		}
-
-		if (val < 0 || val > 315 || val % 45 != 0) {
-			dev_warn(config->dev,
-				"invalid phase_shift %d for BUCK%d, using OTP configuration\n",
-				val, id);
-			return;
-		}
-
-		phase = val / 45;
-
-		if (phase >= 1)
-			phase -= 1;
-		else
-			phase = PF8X00_SWXPHASE_SHIFT;
-
-		regmap_update_bits(chip->regmap, reg,
-				PF8X00_SWXPHASE_MASK,
-				phase);
-	} else
-		dev_warn(chip->dev, "nxp,phase-shift used with incorrect regulator (%d)\n", id);
-
+	return ilim_sel;
 }
 
 static int pf8x00_of_parse_cb(struct device_node *np,
 			      const struct regulator_desc *desc,
 			      struct regulator_config *config)
 {
+	struct pf8x00_regulator_data *rdesc = config->driver_data;
+	unsigned char hw_en = 0;
+	unsigned char vselect_en = 0;
+	unsigned char quad_phase = 0;
+	unsigned char dual_phase = 0;
+	unsigned fast_slew;
+	int ilim_sel;
+	int phase;
+	unsigned mask = 0;
+	int val = 0;
+	unsigned char reg = PF8X00_SW_BASE(desc->id) + SW_CONFIG2;
+	int ret;
 
-	handle_ilim_property(np, desc, config);
-	handle_shift_property(np, desc, config);
+	ret = of_property_read_u32(np, "nxp,ilim-ma", &val);
+	if (ret) {
+		dev_dbg(config->dev, "unspecified ilim for %s, use value stored in OTP\n",
+			desc->name);
+	} else {
+		dev_warn(config->dev, "nxp,ilim-ma is deprecated, please use regulator-max-microamp\n");
+		ilim_sel = swxilim_select(val);
+		if (ilim_sel >= 0) {
+			mask |= PF8X00_SWXILIM_MASK;
+			val |= ilim_sel << PF8X00_SWXILIM_SHIFT;
+		}
+	}
 
+	ret = of_property_read_u32(np, "nxp,phase-shift", &val);
+	if (ret) {
+		dev_dbg(config->dev,
+			"unspecified phase-shift for %s, using OTP configuration\n",
+			desc->name);
+	} else if (val < 0 || val > 315 || val % 45 != 0) {
+		dev_warn(config->dev,
+				"invalid phase_shift %d for %s, using OTP configuration\n",
+				val, desc->name);
+	} else {
+		phase = val / 45;
+		if (phase >= 1)
+			phase -= 1;
+		else
+			phase = 7;
+		mask |= PF8X00_SWXPHASE_MASK;
+		val |= phase;
+	}
+	fast_slew = ~0;
+	ret = of_property_read_u32(np, "fast-slew", &fast_slew);
+	if (!ret) {
+		if (fast_slew <= 1) {
+			mask |= PF8X00_SWXSLEW_MASK;
+			val |= fast_slew << PF8X00_SWXSLEW_SHIFT;
+		}
+	}
+
+	if ((desc->id >= PF8X00_BUCK1) && (desc->id <= PF8X00_BUCK7)) {
+		if (mask)
+			regmap_update_bits(config->regmap, reg, mask, val);
+
+		if (fast_slew > 1) {
+			ret = regmap_read(config->regmap, reg, &fast_slew);
+			fast_slew >>= PF8X00_SWXSLEW_SHIFT;
+			fast_slew &= 1;
+			if (ret < 0)
+				fast_slew = 0;
+		}
+		rdesc->fast_slew = fast_slew;
+		dev_dbg(config->dev, "%s:id=%d ilim=%d phase=%d fast_slew=%d\n",
+			__func__, desc->id, ilim_sel, phase, fast_slew);
+	} else if (mask) {
+		dev_warn(config->dev,
+			"specifying fast-slew/nxp,phase-shift for %s is ignored\n",
+			desc->name);
+	}
+
+	if (of_get_property(np, "hw-en", NULL))
+		hw_en = 1;
+	if (of_get_property(np, "quad-phase", NULL))
+		quad_phase = 1;
+	if (of_get_property(np, "dual-phase", NULL))
+		dual_phase = 1;
+	if (of_get_property(np, "vselect-en", NULL))
+		vselect_en = 1;
+
+	if ((desc->id != PF8X00_BUCK1) && quad_phase) {
+		dev_err(config->dev, "ignoring, only sw1 can use quad-phase\n");
+		quad_phase = 0;
+	}
+	if ((desc->id != PF8X00_BUCK1) && (desc->id != PF8X00_BUCK4)
+			 && (desc->id != PF8X00_BUCK5) && dual_phase) {
+		dev_err(config->dev, "ignoring, only sw1/sw4/sw5 can use dual-phase\n");
+		dual_phase = 0;
+	}
+	if ((desc->id != PF8X00_LDO2) && vselect_en) {
+		/* LDO2 has gpio vselect */
+		dev_err(config->dev, "ignoring, only ldo2 can use vselect-en\n");
+		vselect_en = 0;
+	}
+	if ((desc->id != PF8X00_LDO2) && hw_en) {
+		/* LDO2 has gpio vselect */
+		dev_err(config->dev, "ignoring, only ldo2 can use hw-en\n");
+		hw_en = 0;
+	}
+	rdesc->hw_en = hw_en;
+	rdesc->vselect_en = vselect_en;
+	rdesc->quad_phase = quad_phase;
+	rdesc->dual_phase = dual_phase;
+	dev_dbg(config->dev,
+		"%s:id=%d hw_en=%d vselect_en=%d quad_phase=%d fast_slew=%d\n"
+		" dual_phase=%d\n", __func__, desc->id, hw_en, vselect_en,
+		quad_phase, dual_phase, fast_slew);
 	return 0;
 }
 
@@ -325,6 +359,42 @@ static int pf8x00_set_suspend_voltage(struct regulator_dev *rdev, int uV)
 	regl->suspend_voltage_cache = uV;
 
 	return 0;
+}
+
+struct dvs_ramp {
+	unsigned short up_down_slow_fast[4];
+};
+
+/* Units uV/uS */
+struct dvs_ramp ramp_table[] = {
+/* 	up_slow,	down_slow,	up_fast,	down_fast */
+[0]  = {{ 7813,		5208,		15625,		10417 }},
+[1]  = {{ 8203,		5469,		16406,		10938 }},
+[2]  = {{ 8594,		5729,		17188,		11458 }},
+[3]  = {{ 8984,		5990,		17969,		11979 }},
+[4]  = {{ 9375,		6250,		18750,		12500 }},
+[9]  = {{ 6250,		4167,		12500,		 8333 }},
+[10] = {{ 6641,		4427,		13281,		 8854 }},
+[11] = {{ 7031,		4688,		14063,		 9375 }},
+[12] = {{ 7422,		4948,		14844,		 9896 }},
+};
+static int pf8x00_regulator_set_voltage_time_sel(struct regulator_dev *rdev,
+		unsigned int old_sel, unsigned int new_sel)
+{
+	struct pf8x00_regulator_data *rdesc = container_of(rdev->desc,
+			struct pf8x00_regulator_data, desc);
+	const unsigned int *volt_table = rdev->desc->volt_table;
+	int old_v = volt_table[old_sel];
+	int new_v = volt_table[new_sel];
+	int change = (new_v - old_v);
+	unsigned index;
+	unsigned slew;
+
+	index = (rdesc->fast_slew & 1) ? 2 : 0;
+	if (change < 0)
+		index++;
+	slew = ramp_table[rdesc->clk_freq].up_down_slow_fast[index];
+	return DIV_ROUND_UP(abs(change), slew);
 }
 
 static const struct regulator_ops pf8x00_ldo_ops = {
@@ -376,6 +446,7 @@ static const struct regulator_ops pf8x00_vsnvs_ops = {
 	.map_voltage = regulator_map_voltage_ascend,
 	.set_voltage_sel = regulator_set_voltage_sel_regmap,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
+	.set_voltage_time_sel = pf8x00_regulator_set_voltage_time_sel,
 };
 
 #define PF8X00LDO(_id, _name, base, voltages)			\
@@ -388,6 +459,7 @@ static const struct regulator_ops pf8x00_vsnvs_ops = {
 			.ops = &pf8x00_ldo_ops,			\
 			.type = REGULATOR_VOLTAGE,		\
 			.id = PF8X00_LDO ## _id,		\
+			.of_parse_cb = pf8x00_of_parse_cb,	\
 			.owner = THIS_MODULE,			\
 			.volt_table = voltages,			\
 			.vsel_reg = (base) + LDO_RUN_VOLT,	\
@@ -415,9 +487,9 @@ static const struct regulator_ops pf8x00_vsnvs_ops = {
 			.id = PF8X00_BUCK ## _id,		\
 			.owner = THIS_MODULE,			\
 			.ramp_delay = 19000,			\
-			.linear_ranges = pf8x00_sw1_to_6_voltages, \
+			.linear_ranges = voltages,		\
 			.n_linear_ranges = \
-				ARRAY_SIZE(pf8x00_sw1_to_6_voltages), \
+				ARRAY_SIZE(voltages),		\
 			.vsel_reg = (base) + SW_RUN_VOLT,	\
 			.vsel_mask = 0xff,			\
 			.curr_table = pf8x00_sw_current_table, \
@@ -476,6 +548,7 @@ static const struct regulator_ops pf8x00_vsnvs_ops = {
 			.ops = &pf8x00_vsnvs_ops,		\
 			.type = REGULATOR_VOLTAGE,		\
 			.id = PF8X00_VSNVS,			\
+			.of_parse_cb = pf8x00_of_parse_cb,	\
 			.owner = THIS_MODULE,			\
 			.volt_table = voltages,			\
 			.vsel_reg = (base),			\
@@ -498,16 +571,16 @@ static struct pf8x00_regulator_data pf8x00_regs_data[PF8X00_MAX_REGULATORS] = {
 	PF8X00VSNVS("vsnvs", PF8X00_VSNVS_CONFIG1, pf8x00_vsnvs_voltages),
 };
 
-static int pf8x00_identify(struct pf8x00_chip *chip)
+static int pf8x00_identify(struct device* dev, struct regmap *regmap)
 {
-	unsigned int value;
+	unsigned int value, id1, id2, prog_id;
 	u8 dev_fam, dev_id;
 	const char *name = NULL;
 	int ret;
 
-	ret = regmap_read(chip->regmap, PF8X00_DEVICEID, &value);
+	ret = regmap_read(regmap, PF8X00_DEVICEID, &value);
 	if (ret) {
-		dev_err(chip->dev, "failed to read chip family\n");
+		dev_err(dev, "failed to read chip family\n");
 		return ret;
 	}
 
@@ -516,8 +589,7 @@ static int pf8x00_identify(struct pf8x00_chip *chip)
 	case PF8X00_FAM:
 		break;
 	default:
-		dev_err(chip->dev,
-			"Chip 0x%x is not from PF8X00 family\n", dev_fam);
+		dev_err(dev, "Chip 0x%x is not from PF8X00 family\n", dev_fam);
 		return ret;
 	}
 
@@ -533,57 +605,152 @@ static int pf8x00_identify(struct pf8x00_chip *chip)
 		name = "PF8200";
 		break;
 	default:
-		dev_err(chip->dev, "Unknown pf8x00 device id 0x%x\n", dev_id);
+		dev_err(dev, "Unknown pf8x00 device id 0x%x\n", dev_id);
 		return -ENODEV;
 	}
 
-	dev_info(chip->dev, "%s PMIC found.\n", name);
+	dev_info(dev, "%s PMIC found.\n", name);
 
-	return 0;
+	ret = regmap_read(regmap, PF8X00_REVID, &value);
+	if (ret)
+		value = 0;
+	ret = regmap_read(regmap, PF8X00_EMREV, &id1);
+	if (ret)
+		id1 = 0;
+	ret = regmap_read(regmap, PF8X00_PROGID, &id2);
+	if (ret)
+		id2 = 0;
+	prog_id = (id1 << 8) | id2;
+
+	dev_info(dev, "%s: Full layer: %x, Metal layer: %x, prog_id=0x%04x\n",
+		name, (value & 0xf0) >> 4, value & 0x0f, prog_id);
+
+	return prog_id;
+}
+
+struct otp_reg_lookup {
+	unsigned short prog_id;
+	unsigned char reg;
+	unsigned char value;
+};
+
+static const struct otp_reg_lookup otp_map[] = {
+	{ 0x401c, PF8X00_OTP_CTRL3, 0 },
+	{ 0x4008, PF8X00_OTP_CTRL3, 0x04 },
+	{ 0x301d, PF8X00_OTP_CTRL3, 0x04 },	/* test only */
+	{ 0, 0, 0 },
+};
+
+static int get_otp_reg(struct device *dev, unsigned prog_id, unsigned char reg)
+{
+	const struct otp_reg_lookup *p = otp_map;
+
+	while (p->reg) {
+		if ((prog_id == p->prog_id) && (reg == p->reg))
+			return p->value;
+		p++;
+	}
+
+	dev_err(dev, "reg(0x%02x) not found for 0x%04x\n",
+		reg, prog_id);
+	return -EINVAL;
 }
 
 static int pf8x00_i2c_probe(struct i2c_client *client)
 {
 	struct regulator_config config = { NULL, };
-	struct pf8x00_chip *chip;
+	struct device *dev = &client->dev;
+	struct regmap *regmap;
+	unsigned hw_en;
+	unsigned vselect_en;
+	unsigned char quad_phase;
+	unsigned char dual_phase;
+	unsigned val;
+	int ctrl3;
+	const char *format = NULL;
+	unsigned clk_freq = 0;
+	int prog_id;
 	int id;
 	int ret;
 
-	chip = devm_kzalloc(&client->dev, sizeof(*chip), GFP_KERNEL);
-	if (!chip)
-		return -ENOMEM;
-
-	i2c_set_clientdata(client, chip);
-	chip->dev = &client->dev;
-
-	chip->regmap = devm_regmap_init_i2c(client, &pf8x00_regmap_config);
-	if (IS_ERR(chip->regmap)) {
-		ret = PTR_ERR(chip->regmap);
-		dev_err(&client->dev,
-			"regmap allocation failed with err %d\n", ret);
+	regmap = devm_regmap_init_i2c(client, &pf8x00_regmap_config);
+	if (IS_ERR(regmap)) {
+		ret = PTR_ERR(regmap);
+		dev_err(dev, "regmap allocation failed with err %d\n", ret);
 		return ret;
 	}
 
-	ret = pf8x00_identify(chip);
-	if (ret)
-		return ret;
+	prog_id = pf8x00_identify(dev, regmap);
+	if (prog_id < 0)
+		return prog_id;
+
+	ret = regmap_read(regmap, PF8X00_FREQ_CTRL, &clk_freq);
+	clk_freq &= 0xf;
+	if (ret < 0)
+		clk_freq = 0;
+	if (((clk_freq & 7) > 4) || (clk_freq == 8))
+		clk_freq = 0;
 
 	for (id = 0; id < ARRAY_SIZE(pf8x00_regs_data); id++) {
 		struct pf8x00_regulator_data *data = &pf8x00_regs_data[id];
 		struct regulator_dev *rdev;
 
-		config.dev = chip->dev;
+		data->clk_freq = clk_freq;
+		config.dev = dev;
 		config.driver_data = data;
-		config.regmap = chip->regmap;
+		config.regmap = regmap;
 
-		rdev = devm_regulator_register(&client->dev, &data->desc, &config);
+		rdev = devm_regulator_register(dev, &data->desc, &config);
 		if (IS_ERR(rdev)) {
-			dev_err(&client->dev,
+			dev_err(dev,
 				"failed to register %s regulator\n", data->desc.name);
 			return PTR_ERR(rdev);
 		}
 	}
 
+	hw_en = pf8x00_regs_data[PF8X00_LDO2].hw_en;
+	vselect_en = pf8x00_regs_data[PF8X00_LDO2].vselect_en;
+	val = vselect_en ? 8 : 0;
+	if (hw_en)
+		val |= 0x10;
+	ret = regmap_update_bits(regmap,
+			PF8X00_LDO_BASE(PF8X00_LDO2) + LDO_CONFIG2,
+				 0x18, val);
+
+	ctrl3 = get_otp_reg(dev, prog_id, PF8X00_OTP_CTRL3);
+	if (ctrl3 >= 0) {
+		quad_phase = pf8x00_regs_data[PF8X00_BUCK1].quad_phase;
+		dual_phase = pf8x00_regs_data[PF8X00_BUCK1].dual_phase;
+		if (quad_phase) {
+			if ((ctrl3 & 3) != 2)
+				format = "sw1 quad_phase not set in otp_ctrl3 %x\n";
+		} else if (dual_phase) {
+			if ((ctrl3 & 3) != 1)
+				format = "sw1 dual_phase not set in otp_ctrl3 %x\n";
+		} else if (ctrl3 & 3) {
+			format = "sw1 single_phase not set in otp_ctrl3 %x\n";
+		}
+		if (!quad_phase) {
+			dual_phase = pf8x00_regs_data[PF8X00_BUCK4].dual_phase;
+			if (dual_phase) {
+				if ((ctrl3 & 0x0c) != 4)
+					format = "sw4 dual_phase not set in otp_ctrl3 %x\n";
+			} else if (ctrl3 & 0x0c) {
+				format = "sw4 single_phase not set in otp_ctrl3 %x\n";
+			}
+		}
+		dual_phase = pf8x00_regs_data[PF8X00_BUCK5].dual_phase;
+		if (dual_phase) {
+			if ((ctrl3 & 0x30) != 0x10)
+				format = "sw5 dual_phase not set in otp_ctrl3 %x\n";
+		} else if (ctrl3 & 0x30) {
+			format = "sw5 single_phase not set in otp_ctrl3 %x\n";
+		}
+		if (format) {
+			dev_err(dev, format, ctrl3);
+			dev_err(dev, "!!!try updating u-boot, boot.scr, or pmic\n");
+		}
+	}
 	return 0;
 }
 
