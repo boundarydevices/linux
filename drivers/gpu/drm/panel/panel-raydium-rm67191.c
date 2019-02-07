@@ -214,6 +214,7 @@ static int rad_panel_push_cmd_list(struct mipi_dsi_device *dsi)
 	for (i = 0; i < count ; i++) {
 		cmd = manufacturer_cmd_set[i];
 		ret = mipi_dsi_generic_write(dsi, cmd, CMD_TABLE_LEN);
+		pr_debug("%s:(%d) %02x %02x\n", __func__, ret, cmd[0], cmd[1]);
 		if (ret < 0)
 			return ret;
 	}
@@ -306,8 +307,10 @@ static int rad_panel_enable(struct drm_panel *panel)
 
 	/* Select User Command Set table (CMD1) */
 	ret = mipi_dsi_generic_write(dsi, (u8[]){ WRMAUCCTR, 0x00 }, 2);
-	if (ret < 0)
+	if (ret < 0) {
+		pr_debug("%s:(%d) %02x %02x\n", __func__, ret, WRMAUCCTR, 0);
 		goto fail;
+	}
 
 	/* Software reset */
 	ret = mipi_dsi_dcs_soft_reset(dsi);
@@ -321,6 +324,7 @@ static int rad_panel_enable(struct drm_panel *panel)
 	/* Set DSI mode */
 	ret = mipi_dsi_generic_write(dsi, (u8[]){ 0xC2, 0x0B }, 2);
 	if (ret < 0) {
+		pr_debug("%s:(%d) %02x %02x\n", __func__, ret, 0xC2, 0x0B);
 		DRM_DEV_ERROR(dev, "Failed to set DSI mode (%d)\n", ret);
 		goto fail;
 	}
