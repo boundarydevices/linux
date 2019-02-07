@@ -728,7 +728,9 @@ static int pf8x00_regulator_probe(struct i2c_client *client,
 			PF8X00_LDO(REG_LDO2) + LDO_CONFIG2,
 				 0x18, val);
 
-	ret = regmap_read(pf->regmap, PF8X00_OTP_CTRL3, &ctrl3);
+	ret = regmap_write(pf->regmap, PF8X00_PAGE_SELECT, 1);
+	if (!ret)
+		ret = regmap_read(pf->regmap, PF8X00_OTP_CTRL3, &ctrl3);
 	if (!ret) {
 		quad_phase = pf->regulator_descs[REG_SW1].quad_phase;
 		dual_phase = pf->regulator_descs[REG_SW1].dual_phase;
