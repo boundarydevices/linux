@@ -144,7 +144,7 @@ static int send_mipi_cmd_list(struct panel_simple *panel, struct mipi_cmd *mc)
 	int match = 0;
 	int readval, matchval;
 
-	pr_debug("%s:\n", __func__);
+	pr_debug("%s:%d\n", __func__, length);
 	if (!cmd || !length)
 		return 0;
 
@@ -196,21 +196,35 @@ static int send_mipi_cmd_list(struct panel_simple *panel, struct mipi_cmd *mc)
 		} else if (len == S_DELAY) {
 			msleep(cmd[0]);
 			len = 1;
+			if (length <= len)
+				break;
+			cmd += len;
+			length -= len;
+			len = 0;
 		} else {
 			dev_err(&dsi->dev, "Unknown DCS command 0x%x0x\n", cmd[-1]);
 			match = -EINVAL;
 			break;
 		}
 		if (ret < 0) {
-			dev_err(&dsi->dev,
-				"Failed to send DCS (%d), (%d)%02x %02x\n",
-				ret, len, cmd[0], cmd[1]);
+			if (len == 1) {
+				dev_err(&dsi->dev,
+					"Failed to send DCS (%d), (%d)%02x\n",
+					ret, len, cmd[0]);
+			} else {
+				dev_err(&dsi->dev,
+					"Failed to send DCS (%d), (%d)%02x %02x\n",
+					ret, len, cmd[0], cmd[1]);
+			}
 			return ret;
 		} else {
 			if (len == 6) {
 				pr_debug("Sent DCS (%d), (%d)%02x %02x: %02x %02x %02x %02x\n",
 					ret, len, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5]);
-			} else {
+			} else if (len == 1) {
+				pr_debug("Sent DCS (%d), (%d)%02x\n",
+					ret, len, cmd[0]);
+			} else if (len) {
 				pr_debug("Sent DCS (%d), (%d)%02x %02x\n",
 					ret, len, cmd[0], cmd[1]);
 			}
