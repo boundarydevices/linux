@@ -271,27 +271,30 @@ static int dcss_clks_init(struct dcss_soc *dcss)
 	struct {
 		const char *id;
 		struct clk **clk;
+		bool optional;
 	} clks[] = {
-		{"apb",   &dcss->apb_clk},
-		{"axi",   &dcss->axi_clk},
-		{"pix_div", &dcss->pdiv_clk},
-		{"pix_out", &dcss->pout_clk},
-		{"rtrm",  &dcss->rtrm_clk},
-		{"dtrc",  &dcss->dtrc_clk},
-		{"pll_src",  &dcss->pll_src_clk},
-		{"pll_phy_ref",  &dcss->pll_phy_ref_clk},
+		{"apb",		&dcss->apb_clk,		false},
+		{"axi",		&dcss->axi_clk,		false},
+		{"pix",		&dcss->pix_clk,		false},
+		{"rtrm",	&dcss->rtrm_clk,	false},
+		{"dtrc",	&dcss->dtrc_clk,	false},
+		{"pll",		&dcss->pll_clk,		true},
+		{"pll_src1",	&dcss->src_clk[0],	true},
+		{"pll_src2",	&dcss->src_clk[1],	true},
+		{"pll_src3",	&dcss->src_clk[2],	true},
 	};
 
 	for (i = 0; i < ARRAY_SIZE(clks); i++) {
 		*clks[i].clk = devm_clk_get(dcss->dev, clks[i].id);
-		if (IS_ERR(*clks[i].clk)) {
+		if (IS_ERR(*clks[i].clk) && !clks[i].optional) {
 			dev_err(dcss->dev, "failed to get %s clock\n",
 				clks[i].id);
 			ret = PTR_ERR(*clks[i].clk);
 			goto err;
 		}
 
-		clk_prepare_enable(*clks[i].clk);
+		if (!clks[i].optional)
+			clk_prepare_enable(*clks[i].clk);
 	}
 
 	dcss->clks_on = true;
@@ -308,25 +311,19 @@ err:
 static void dcss_clocks_enable(struct dcss_soc *dcss, bool en)
 {
 	if (en && !dcss->clks_on) {
-		clk_prepare_enable(dcss->pll_phy_ref_clk);
-		clk_prepare_enable(dcss->pll_src_clk);
 		clk_prepare_enable(dcss->axi_clk);
 		clk_prepare_enable(dcss->apb_clk);
 		clk_prepare_enable(dcss->rtrm_clk);
 		clk_prepare_enable(dcss->dtrc_clk);
-		clk_prepare_enable(dcss->pdiv_clk);
-		clk_prepare_enable(dcss->pout_clk);
+		clk_prepare_enable(dcss->pix_clk);
 	}
 
 	if (!en && dcss->clks_on) {
-		clk_disable_unprepare(dcss->pout_clk);
-		clk_disable_unprepare(dcss->pdiv_clk);
+		clk_disable_unprepare(dcss->pix_clk);
 		clk_disable_unprepare(dcss->dtrc_clk);
 		clk_disable_unprepare(dcss->rtrm_clk);
 		clk_disable_unprepare(dcss->apb_clk);
 		clk_disable_unprepare(dcss->axi_clk);
-		clk_disable_unprepare(dcss->pll_src_clk);
-		clk_disable_unprepare(dcss->pll_phy_ref_clk);
 	}
 
 	dcss->clks_on = en;
