@@ -1111,12 +1111,12 @@ static void sec_mipi_dsim_set_standby(struct sec_mipi_dsim *dsim,
 	dsim_write(dsim, mdresol, DSIM_MDRESOL);
 }
 
-int sec_mipi_dsim_check_pll_out(void *driver_private,
+int sec_mipi_dsim_check_pll_out(struct drm_bridge *bridge,
 				const struct drm_display_mode *mode)
 {
 	int bpp;
 	uint64_t pix_clk, bit_clk, ref_clk;
-	struct sec_mipi_dsim *dsim = driver_private;
+	struct sec_mipi_dsim *dsim = bridge->driver_private;
 	const struct sec_mipi_dsim_plat_data *pdata = dsim->pdata;
 	const struct dsim_hblank_par *hpar;
 	const struct dsim_pll_pms *pms;
