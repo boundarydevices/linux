@@ -79,6 +79,7 @@ struct imx_pcie {
 	struct clk		*pcie_inbound_axi;
 	struct clk		*pcie_per;
 	struct clk		*pcie;
+	u32			ext_src_clk_enabled;
 	struct clk		*pcie_ext_src;
 	struct regmap		*iomuxc_gpr;
 	enum imx_pcie_variants variant;
@@ -1312,6 +1313,8 @@ static void imx_pcie_init_phy(struct imx_pcie *imx_pcie)
 			if (ret)
 				dev_err(imx_pcie->pp.dev,
 					"unable to enable pcie_ext_src clock\n");
+			else
+				imx_pcie->ext_src_clk_enabled = 1;
 		} else {
 			if (imx_pcie->variant == IMX8MM) {
 				/* Configure the internal PLL as REF clock */
@@ -1578,7 +1581,10 @@ static void pci_imx_clk_disable(struct device *dev)
 		regmap_update_bits(imx_pcie->iomuxc_gpr, val,
 				IMX8MQ_GPR_PCIE_CLK_REQ_OVERRIDE_EN,
 				0);
-		clk_disable_unprepare(imx_pcie->pcie_ext_src);
+		if (imx_pcie->ext_src_clk_enabled) {
+			imx_pcie->ext_src_clk_enabled = 0;
+			clk_disable_unprepare(imx_pcie->pcie_ext_src);
+		}
 		break;
 	case IMX8QXP:
 	case IMX8QM:
