@@ -7,6 +7,7 @@
 
 #include <linux/bitfield.h>
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/device_cooling.h>
 #include <linux/err.h>
 #include <linux/io.h>
@@ -15,6 +16,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/thermal.h>
+#include "thermal_hwmon.h"
 
 #include "thermal_core.h"
 
@@ -92,14 +94,24 @@ static int imx8mp_tmu_get_temp(void *data, int *temp)
 	struct imx8mm_tmu *tmu = sensor->priv;
 	unsigned long val;
 	bool ready;
+	int loop_cnt = 0;
 
 	if (sensor->hw_id > (MAX_SENSOR_NUMBER - 1))
 		return -EINVAL;
 
-	val = readl_relaxed(tmu->base + TRITSR);
-	ready = test_bit(probe_status_offset(sensor->hw_id), &val);
-	if (!ready)
-		return -EAGAIN;
+	while (1) {
+		/* the temp sensor need about 1ms to finish the measurement */
+		if (loop_cnt)
+			usleep_range(1000, 2000);
+		/* read the calibrated temp value */
+		val = readl_relaxed(tmu->base + TRITSR);
+		ready = test_bit(probe_status_offset(sensor->hw_id), &val);
+		if (ready)
+			break;
+		if (loop_cnt > 1)
+			return -EAGAIN;
+		loop_cnt++;
+	}
 
 	val = sensor->hw_id ? FIELD_GET(TRITSR_TEMP1_VAL_MASK, val) :
 	      FIELD_GET(TRITSR_TEMP0_VAL_MASK, val);
@@ -269,7 +281,13 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 	/* enable the monitor */
 	imx8mm_tmu_enable(tmu, true);
 
-	return 0;
+	for (i = 0; i < data->num_sensors; i++) {
+		tmu->sensors[0].tzd->tzp->no_hwmon = false;
+		ret = thermal_add_hwmon_sysfs(tmu->sensors[0].tzd);
+		if (ret < 0)
+			break;
+	}
+	return ret;
 
 disable_clk:
 	clk_disable_unprepare(tmu->clk);
