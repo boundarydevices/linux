@@ -100,7 +100,7 @@ static inline int dphy_timing_default_cmp(const void *key, const void *elt)
 		return -1;
 }
 
-int sec_mipi_dsim_check_pll_out(void *driver_private,
+int sec_mipi_dsim_check_pll_out(struct drm_bridge *bridge,
 				const struct drm_display_mode *mode);
 int sec_mipi_dsim_bind(struct device *dev, struct device *master, void *data,
 		       struct drm_encoder *encoder, void __iomem *base,
