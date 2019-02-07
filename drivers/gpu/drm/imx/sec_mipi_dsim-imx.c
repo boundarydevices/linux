@@ -133,7 +133,7 @@ static int imx_sec_dsim_encoder_helper_atomic_check(struct drm_encoder *encoder,
 	}
 
 	/* check pll out */
-	ret = sec_mipi_dsim_check_pll_out(bridge->driver_private,
+	ret = sec_mipi_dsim_check_pll_out(bridge,
 					  adjusted_mode);
 	if (ret)
 		return ret;
