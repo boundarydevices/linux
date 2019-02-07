@@ -273,6 +273,8 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 
 static void sn_enable_pll(struct sn65dsi83_priv *sn)
 {
+	struct device *dev = &sn->client->dev;
+
 	if (!sn_get_dsi_clk_divider(sn)) {
 		sn_i2c_write_byte(sn, SN_CLK_DIV, (sn->dsi_clk_divider - 1) << 3);
 		sn_i2c_write_byte(sn, SN_DSI_CLK, sn->mipi_clk_index);
@@ -281,6 +283,7 @@ static void sn_enable_pll(struct sn65dsi83_priv *sn)
 	msleep(5);
 	sn_i2c_write_byte(sn, SN_SOFT_RESET, 1);
 	sn_enable_irq(sn);
+	dev_info(dev, "%s:reg0a=%02x\n", __func__, sn_i2c_read_byte(sn, SN_CLK_SRC));
 }
 
 static void sn_disable_pll(struct sn65dsi83_priv *sn)
@@ -561,6 +564,7 @@ static int sn65dsi83_probe(struct i2c_client *client,
 		pr_warn("failed to add sn65dsi83 sysfs files\n");
 
 	sn_prepare(sn);
+	sn_enable_pll(sn);
 	dev_info(&client->dev, "succeeded\n");
 	return 0;
 }
