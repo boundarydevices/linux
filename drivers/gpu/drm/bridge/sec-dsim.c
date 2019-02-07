@@ -25,7 +25,6 @@
 #include <linux/of.h>
 #include <linux/of_graph.h>
 #include <linux/pm_runtime.h>
-#include <drm/bridge/sec_mipi_dsim.h>
 #include <drm/drm_vblank.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_bridge.h>
@@ -35,6 +34,7 @@
 #include <drm/drm_fourcc.h>
 #include <drm/drm_mipi_dsi.h>
 #include <drm/drm_panel.h>
+#include <drm/bridge/sec_mipi_dsim.h>
 #include <video/videomode.h>
 #include <video/mipi_display.h>
 
@@ -1243,12 +1243,12 @@ struct dsim_pll_pms *sec_mipi_dsim_calc_pmsk(struct sec_mipi_dsim *dsim)
 	return pll_pms;
 }
 
-int sec_mipi_dsim_check_pll_out(void *driver_private,
+int sec_mipi_dsim_check_pll_out(struct drm_bridge *bridge,
 				const struct drm_display_mode *mode)
 {
 	int bpp;
 	uint32_t pix_clk, bit_clk;
-	struct sec_mipi_dsim *dsim = driver_private;
+	struct sec_mipi_dsim *dsim = bridge->driver_private;
 	const struct sec_mipi_dsim_plat_data *pdata = dsim->pdata;
 	const struct dsim_hblank_par *hpar;
 	const struct dsim_pll_pms *pmsk;
