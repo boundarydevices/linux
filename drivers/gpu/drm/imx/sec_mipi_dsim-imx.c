@@ -25,11 +25,11 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
-#include <drm/bridge/sec_mipi_dsim.h>
 #include <drm/drm_bridge.h>
 #include <drm/drm_encoder.h>
 #include <drm/drm_modeset_helper_vtables.h>
 #include <drm/drm_simple_kms_helper.h>
+#include <drm/bridge/sec_mipi_dsim.h>
 
 #include "imx-drm.h"
 #include "sec_mipi_dphy_ln14lpp.h"
@@ -184,7 +184,7 @@ static int imx_sec_dsim_encoder_atomic_check(struct drm_encoder *encoder,
 	struct drm_bus_cfg *input_bus_cfg;
 
 	/* check pll out */
-	ret = sec_mipi_dsim_check_pll_out(bridge->driver_private,
+	ret = sec_mipi_dsim_check_pll_out(bridge,
 					  adjusted_mode);
 	if (ret)
 		return ret;
