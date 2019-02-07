@@ -59,15 +59,18 @@ static int tmu_get_temp(void *data, int *temp)
 	struct imx8mm_tmu *tmu = data;
 	u32 val;
 
-	/* the temp sensor need about 1ms to finish the measurement */
-	msleep(1);
 
 	/* read the calibrated temp value */
 	val = readl_relaxed(tmu->tmu_base + TRITSR) & TEMP_VAL_MASK;
 
 	/* check if the temp in the sensor's range */
-	if (val < TEMP_LOW_LIMIT)
-		return -EAGAIN;
+	if (val < TEMP_LOW_LIMIT) {
+		/* the temp sensor need about 1ms to finish the measurement */
+		msleep(10);
+		val = readl_relaxed(tmu->tmu_base + TRITSR) & TEMP_VAL_MASK;
+		if (val < TEMP_LOW_LIMIT)
+			return -EAGAIN;
+	}
 
 	*temp = val * 1000;
 
@@ -198,6 +201,11 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 	val = readl_relaxed(tmu->tmu_base + TER);
 	val |= TER_EN;
 	writel_relaxed(val, tmu->tmu_base + TER);
+
+	tmu->tzd->tzp->no_hwmon = false;
+	ret = thermal_add_hwmon_sysfs(tmu->tzd);
+	if (ret)
+		goto err;
 
 	return 0;
 err:
