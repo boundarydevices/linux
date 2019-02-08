@@ -261,6 +261,10 @@ struct ftrace_likely_data {
 #define __visible
 #endif
 
+#ifndef __copy
+# define __copy(symbol)
+#endif
+
 #ifndef __nostackprotector
 # define __nostackprotector
 #endif
