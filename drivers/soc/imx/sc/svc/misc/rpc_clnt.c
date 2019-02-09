@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
  * SPDX-License-Identifier:     GPL-2.0+
  */
@@ -28,7 +28,7 @@
 /* Local Functions */
 
 sc_err_t sc_misc_set_control(sc_ipc_t ipc, sc_rsrc_t resource,
-			     sc_ctrl_t ctrl, uint32_t val)
+	sc_ctrl_t ctrl, uint32_t val)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -48,7 +48,7 @@ sc_err_t sc_misc_set_control(sc_ipc_t ipc, sc_rsrc_t resource,
 }
 
 sc_err_t sc_misc_get_control(sc_ipc_t ipc, sc_rsrc_t resource,
-			     sc_ctrl_t ctrl, uint32_t *val)
+	sc_ctrl_t ctrl, uint32_t *val)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -62,16 +62,15 @@ sc_err_t sc_misc_get_control(sc_ipc_t ipc, sc_rsrc_t resource,
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (val != NULL) {
-		*val = RPC_U32(&msg, 0U);
-	}
+	if (val != NULL)
+	    *val = RPC_U32(&msg, 0U);
 
 	result = RPC_R8(&msg);
 	return (sc_err_t)result;
 }
 
 sc_err_t sc_misc_set_max_dma_group(sc_ipc_t ipc, sc_rm_pt_t pt,
-				   sc_misc_dma_group_t max)
+	sc_misc_dma_group_t max)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -90,7 +89,7 @@ sc_err_t sc_misc_set_max_dma_group(sc_ipc_t ipc, sc_rm_pt_t pt,
 }
 
 sc_err_t sc_misc_set_dma_group(sc_ipc_t ipc, sc_rsrc_t resource,
-			       sc_misc_dma_group_t group)
+	sc_misc_dma_group_t group)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -109,8 +108,7 @@ sc_err_t sc_misc_set_dma_group(sc_ipc_t ipc, sc_rsrc_t resource,
 }
 
 sc_err_t sc_misc_seco_image_load(sc_ipc_t ipc, sc_faddr_t addr_src,
-				 sc_faddr_t addr_dst, uint32_t len,
-				 sc_bool_t fw)
+	sc_faddr_t addr_dst, uint32_t len, sc_bool_t fw)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -133,7 +131,7 @@ sc_err_t sc_misc_seco_image_load(sc_ipc_t ipc, sc_faddr_t addr_src,
 }
 
 sc_err_t sc_misc_seco_authenticate(sc_ipc_t ipc,
-				   sc_misc_seco_auth_cmd_t cmd, sc_faddr_t addr)
+	sc_misc_seco_auth_cmd_t cmd, sc_faddr_t addr)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -223,7 +221,8 @@ sc_err_t sc_misc_seco_return_lifecycle(sc_ipc_t ipc, sc_faddr_t addr)
 	return (sc_err_t)result;
 }
 
-void sc_misc_seco_build_info(sc_ipc_t ipc, uint32_t *version, uint32_t *commit)
+void sc_misc_seco_build_info(sc_ipc_t ipc, uint32_t *version,
+	uint32_t *commit)
 {
 	sc_rpc_msg_t msg;
 
@@ -234,20 +233,17 @@ void sc_misc_seco_build_info(sc_ipc_t ipc, uint32_t *version, uint32_t *commit)
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (version != NULL) {
-		*version = RPC_U32(&msg, 0U);
-	}
+	if (version != NULL)
+	    *version = RPC_U32(&msg, 0U);
 
-	if (commit != NULL) {
-		*commit = RPC_U32(&msg, 4U);
-	}
+	if (commit != NULL)
+	    *commit = RPC_U32(&msg, 4U);
 
 	return;
 }
 
 sc_err_t sc_misc_seco_chip_info(sc_ipc_t ipc, uint16_t *lc,
-				uint16_t *monotonic, uint32_t *uid_l,
-				uint32_t *uid_h)
+	uint16_t *monotonic, uint32_t *uid_l, uint32_t *uid_h)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -259,21 +255,17 @@ sc_err_t sc_misc_seco_chip_info(sc_ipc_t ipc, uint16_t *lc,
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (uid_l != NULL) {
-		*uid_l = RPC_U32(&msg, 0U);
-	}
+	if (uid_l != NULL)
+	    *uid_l = RPC_U32(&msg, 0U);
 
-	if (uid_h != NULL) {
-		*uid_h = RPC_U32(&msg, 4U);
-	}
+	if (uid_h != NULL)
+	    *uid_h = RPC_U32(&msg, 4U);
 
-	if (lc != NULL) {
-		*lc = RPC_U16(&msg, 8U);
-	}
+	if (lc != NULL)
+	    *lc = RPC_U16(&msg, 8U);
 
-	if (monotonic != NULL) {
-		*monotonic = RPC_U16(&msg, 10U);
-	}
+	if (monotonic != NULL)
+	    *monotonic = RPC_U16(&msg, 10U);
 
 	result = RPC_R8(&msg);
 	return (sc_err_t)result;
@@ -418,7 +410,8 @@ sc_err_t sc_misc_waveform_capture(sc_ipc_t ipc, sc_bool_t enable)
 	return (sc_err_t)result;
 }
 
-void sc_misc_build_info(sc_ipc_t ipc, uint32_t *build, uint32_t *commit)
+void sc_misc_build_info(sc_ipc_t ipc, uint32_t *build,
+	uint32_t *commit)
 {
 	sc_rpc_msg_t msg;
 
@@ -429,18 +422,15 @@ void sc_misc_build_info(sc_ipc_t ipc, uint32_t *build, uint32_t *commit)
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (build != NULL) {
-		*build = RPC_U32(&msg, 0U);
-	}
+	if (build != NULL)
+	    *build = RPC_U32(&msg, 0U);
 
-	if (commit != NULL) {
-		*commit = RPC_U32(&msg, 4U);
-	}
-
-	return;
+	if (commit != NULL)
+	    *commit = RPC_U32(&msg, 4U);
 }
 
-void sc_misc_unique_id(sc_ipc_t ipc, uint32_t *id_l, uint32_t *id_h)
+void sc_misc_unique_id(sc_ipc_t ipc, uint32_t *id_l,
+	uint32_t *id_h)
 {
 	sc_rpc_msg_t msg;
 
@@ -451,19 +441,17 @@ void sc_misc_unique_id(sc_ipc_t ipc, uint32_t *id_l, uint32_t *id_h)
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (id_l != NULL) {
-		*id_l = RPC_U32(&msg, 0U);
-	}
+	if (id_l != NULL)
+	    *id_l = RPC_U32(&msg, 0U);
 
-	if (id_h != NULL) {
-		*id_h = RPC_U32(&msg, 4U);
-	}
+	if (id_h != NULL)
+	    *id_h = RPC_U32(&msg, 4U);
 
 	return;
 }
 
 sc_err_t sc_misc_set_ari(sc_ipc_t ipc, sc_rsrc_t resource,
-			 sc_rsrc_t resource_mst, uint16_t ari, sc_bool_t enable)
+	sc_rsrc_t resource_mst, uint16_t ari, sc_bool_t enable)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -528,9 +516,8 @@ sc_err_t sc_misc_otp_fuse_read(sc_ipc_t ipc, uint32_t word, uint32_t *val)
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (val != NULL) {
-		*val = RPC_U32(&msg, 0U);
-	}
+	if (val != NULL)
+	    *val = RPC_U32(&msg, 0U);
 
 	result = RPC_R8(&msg);
 	return (sc_err_t)result;
@@ -555,7 +542,7 @@ sc_err_t sc_misc_otp_fuse_write(sc_ipc_t ipc, uint32_t word, uint32_t val)
 }
 
 sc_err_t sc_misc_set_temp(sc_ipc_t ipc, sc_rsrc_t resource,
-			  sc_misc_temp_t temp, int16_t celsius, int8_t tenths)
+	sc_misc_temp_t temp, int16_t celsius, int8_t tenths)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -576,8 +563,7 @@ sc_err_t sc_misc_set_temp(sc_ipc_t ipc, sc_rsrc_t resource,
 }
 
 sc_err_t sc_misc_get_temp(sc_ipc_t ipc, sc_rsrc_t resource,
-			  sc_misc_temp_t temp, int16_t * celsius,
-			  int8_t * tenths)
+	sc_misc_temp_t temp, int16_t *celsius, int8_t *tenths)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -591,14 +577,12 @@ sc_err_t sc_misc_get_temp(sc_ipc_t ipc, sc_rsrc_t resource,
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (celsius != NULL) {
-		*celsius = RPC_I16(&msg, 0U);
-	}
+	if (celsius != NULL)
+	    *celsius = RPC_I16(&msg, 0U);
 
 	result = RPC_R8(&msg);
-	if (tenths != NULL) {
-		*tenths = RPC_I8(&msg, 2U);
-	}
+	if (tenths != NULL)
+	    *tenths = RPC_I8(&msg, 2U);
 
 	return (sc_err_t)result;
 }
@@ -614,11 +598,8 @@ void sc_misc_get_boot_dev(sc_ipc_t ipc, sc_rsrc_t *dev)
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (dev != NULL) {
-		*dev = RPC_U16(&msg, 0U);
-	}
-
-	return;
+	if (dev != NULL)
+	    *dev = RPC_U16(&msg, 0U);
 }
 
 sc_err_t sc_misc_get_boot_type(sc_ipc_t ipc, sc_misc_bt_t *type)
@@ -634,9 +615,8 @@ sc_err_t sc_misc_get_boot_type(sc_ipc_t ipc, sc_misc_bt_t *type)
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (type != NULL) {
-		*type = RPC_U8(&msg, 0U);
-	}
+	if (type != NULL)
+	    *type = RPC_U8(&msg, 0U);
 
 	return (sc_err_t)result;
 }
@@ -652,11 +632,8 @@ void sc_misc_get_button_status(sc_ipc_t ipc, sc_bool_t *status)
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (status != NULL) {
-		*status = U2B(RPC_U8(&msg, 0U));
-	}
-
-	return;
+	if (status != NULL)
+	    *status = U2B(RPC_U8(&msg, 0U));
 }
 
 sc_err_t sc_misc_rompatch_checksum(sc_ipc_t ipc, uint32_t *checksum)
@@ -671,12 +648,35 @@ sc_err_t sc_misc_rompatch_checksum(sc_ipc_t ipc, uint32_t *checksum)
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (checksum != NULL) {
-		*checksum = RPC_U32(&msg, 0U);
-	}
+	if (checksum != NULL)
+	    *checksum = RPC_U32(&msg, 0U);
 
 	result = RPC_R8(&msg);
 	return (sc_err_t)result;
 }
 
+sc_err_t sc_misc_board_ioctl(sc_ipc_t ipc, uint32_t *parm1,
+	uint32_t *parm2, uint32_t *parm3)
+{
+	sc_rpc_msg_t msg;
+	uint8_t result;
+
+	RPC_VER(&msg) = SC_RPC_VERSION;
+	RPC_SVC(&msg) = U8(SC_RPC_SVC_MISC);
+	RPC_FUNC(&msg) = U8(MISC_FUNC_BOARD_IOCTL);
+	RPC_U32(&msg, 0U) = *PTR_U32(parm1);
+	RPC_U32(&msg, 4U) = *PTR_U32(parm2);
+	RPC_U32(&msg, 8U) = *PTR_U32(parm3);
+	RPC_SIZE(&msg) = 4U;
+
+	sc_call_rpc(ipc, &msg, SC_FALSE);
+
+	*parm1 = RPC_U32(&msg, 0U);
+	*parm2 = RPC_U32(&msg, 4U);
+	*parm3 = RPC_U32(&msg, 8U);
+	result = RPC_R8(&msg);
+	return (sc_err_t)result;
+}
+
 /**@}*/
+

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
  * SPDX-License-Identifier:     GPL-2.0+
  */
@@ -28,7 +28,7 @@
 /* Local Functions */
 
 sc_err_t sc_pad_set_mux(sc_ipc_t ipc, sc_pad_t pad,
-			uint8_t mux, sc_pad_config_t config, sc_pad_iso_t iso)
+	uint8_t mux, sc_pad_config_t config, sc_pad_iso_t iso)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -49,8 +49,7 @@ sc_err_t sc_pad_set_mux(sc_ipc_t ipc, sc_pad_t pad,
 }
 
 sc_err_t sc_pad_get_mux(sc_ipc_t ipc, sc_pad_t pad,
-			uint8_t *mux, sc_pad_config_t *config,
-			sc_pad_iso_t *iso)
+	uint8_t *mux, sc_pad_config_t *config, sc_pad_iso_t *iso)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -64,17 +63,14 @@ sc_err_t sc_pad_get_mux(sc_ipc_t ipc, sc_pad_t pad,
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (mux != NULL) {
-		*mux = RPC_U8(&msg, 0U);
-	}
+	if (mux != NULL)
+	    *mux = RPC_U8(&msg, 0U);
 
-	if (config != NULL) {
-		*config = RPC_U8(&msg, 1U);
-	}
+	if (config != NULL)
+	    *config = RPC_U8(&msg, 1U);
 
-	if (iso != NULL) {
-		*iso = RPC_U8(&msg, 2U);
-	}
+	if (iso != NULL)
+	    *iso = RPC_U8(&msg, 2U);
 
 	return (sc_err_t)result;
 }
@@ -110,15 +106,15 @@ sc_err_t sc_pad_get_gp(sc_ipc_t ipc, sc_pad_t pad, uint32_t *ctrl)
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (ctrl != NULL) {
-		*ctrl = RPC_U32(&msg, 0U);
-	}
+	if (ctrl != NULL)
+	    *ctrl = RPC_U32(&msg, 0U);
 
 	result = RPC_R8(&msg);
 	return (sc_err_t)result;
 }
 
-sc_err_t sc_pad_set_wakeup(sc_ipc_t ipc, sc_pad_t pad, sc_pad_wakeup_t wakeup)
+sc_err_t sc_pad_set_wakeup(sc_ipc_t ipc, sc_pad_t pad,
+	sc_pad_wakeup_t wakeup)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -136,7 +132,8 @@ sc_err_t sc_pad_set_wakeup(sc_ipc_t ipc, sc_pad_t pad, sc_pad_wakeup_t wakeup)
 	return (sc_err_t)result;
 }
 
-sc_err_t sc_pad_get_wakeup(sc_ipc_t ipc, sc_pad_t pad, sc_pad_wakeup_t *wakeup)
+sc_err_t sc_pad_get_wakeup(sc_ipc_t ipc, sc_pad_t pad,
+	sc_pad_wakeup_t *wakeup)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -150,16 +147,15 @@ sc_err_t sc_pad_get_wakeup(sc_ipc_t ipc, sc_pad_t pad, sc_pad_wakeup_t *wakeup)
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (wakeup != NULL) {
-		*wakeup = RPC_U8(&msg, 0U);
-	}
+	if (wakeup != NULL)
+	    *wakeup = RPC_U8(&msg, 0U);
 
 	return (sc_err_t)result;
 }
 
 sc_err_t sc_pad_set_all(sc_ipc_t ipc, sc_pad_t pad, uint8_t mux,
-			sc_pad_config_t config, sc_pad_iso_t iso, uint32_t ctrl,
-			sc_pad_wakeup_t wakeup)
+	sc_pad_config_t config, sc_pad_iso_t iso, uint32_t ctrl,
+	sc_pad_wakeup_t wakeup)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -182,8 +178,8 @@ sc_err_t sc_pad_set_all(sc_ipc_t ipc, sc_pad_t pad, uint8_t mux,
 }
 
 sc_err_t sc_pad_get_all(sc_ipc_t ipc, sc_pad_t pad, uint8_t *mux,
-			sc_pad_config_t *config, sc_pad_iso_t *iso,
-			uint32_t *ctrl, sc_pad_wakeup_t *wakeup)
+	sc_pad_config_t *config, sc_pad_iso_t *iso, uint32_t *ctrl,
+	sc_pad_wakeup_t *wakeup)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -196,26 +192,21 @@ sc_err_t sc_pad_get_all(sc_ipc_t ipc, sc_pad_t pad, uint8_t *mux,
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (ctrl != NULL) {
-		*ctrl = RPC_U32(&msg, 0U);
-	}
+	if (ctrl != NULL)
+	    *ctrl = RPC_U32(&msg, 0U);
 
 	result = RPC_R8(&msg);
-	if (mux != NULL) {
-		*mux = RPC_U8(&msg, 4U);
-	}
+	if (mux != NULL)
+	    *mux = RPC_U8(&msg, 4U);
 
-	if (config != NULL) {
-		*config = RPC_U8(&msg, 5U);
-	}
+	if (config != NULL)
+	    *config = RPC_U8(&msg, 5U);
 
-	if (iso != NULL) {
-		*iso = RPC_U8(&msg, 6U);
-	}
+	if (iso != NULL)
+	    *iso = RPC_U8(&msg, 6U);
 
-	if (wakeup != NULL) {
-		*wakeup = RPC_U8(&msg, 7U);
-	}
+	if (wakeup != NULL)
+	    *wakeup = RPC_U8(&msg, 7U);
 
 	return (sc_err_t)result;
 }
@@ -251,16 +242,15 @@ sc_err_t sc_pad_get(sc_ipc_t ipc, sc_pad_t pad, uint32_t *val)
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (val != NULL) {
-		*val = RPC_U32(&msg, 0U);
-	}
+	if (val != NULL)
+	    *val = RPC_U32(&msg, 0U);
 
 	result = RPC_R8(&msg);
 	return (sc_err_t)result;
 }
 
 sc_err_t sc_pad_set_gp_28fdsoi(sc_ipc_t ipc, sc_pad_t pad,
-			       sc_pad_28fdsoi_dse_t dse, sc_pad_28fdsoi_ps_t ps)
+	sc_pad_28fdsoi_dse_t dse, sc_pad_28fdsoi_ps_t ps)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -280,8 +270,7 @@ sc_err_t sc_pad_set_gp_28fdsoi(sc_ipc_t ipc, sc_pad_t pad,
 }
 
 sc_err_t sc_pad_get_gp_28fdsoi(sc_ipc_t ipc, sc_pad_t pad,
-			       sc_pad_28fdsoi_dse_t *dse,
-			       sc_pad_28fdsoi_ps_t *ps)
+	sc_pad_28fdsoi_dse_t *dse, sc_pad_28fdsoi_ps_t *ps)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -295,21 +284,18 @@ sc_err_t sc_pad_get_gp_28fdsoi(sc_ipc_t ipc, sc_pad_t pad,
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (dse != NULL) {
-		*dse = RPC_U8(&msg, 0U);
-	}
+	if (dse != NULL)
+	    *dse = RPC_U8(&msg, 0U);
 
-	if (ps != NULL) {
-		*ps = RPC_U8(&msg, 1U);
-	}
+	if (ps != NULL)
+	    *ps = RPC_U8(&msg, 1U);
 
 	return (sc_err_t)result;
 }
 
 sc_err_t sc_pad_set_gp_28fdsoi_hsic(sc_ipc_t ipc, sc_pad_t pad,
-				    sc_pad_28fdsoi_dse_t dse, sc_bool_t hys,
-				    sc_pad_28fdsoi_pus_t pus, sc_bool_t pke,
-				    sc_bool_t pue)
+	sc_pad_28fdsoi_dse_t dse, sc_bool_t hys, sc_pad_28fdsoi_pus_t pus,
+	sc_bool_t pke, sc_bool_t pue)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -332,9 +318,8 @@ sc_err_t sc_pad_set_gp_28fdsoi_hsic(sc_ipc_t ipc, sc_pad_t pad,
 }
 
 sc_err_t sc_pad_get_gp_28fdsoi_hsic(sc_ipc_t ipc, sc_pad_t pad,
-				    sc_pad_28fdsoi_dse_t *dse, sc_bool_t *hys,
-				    sc_pad_28fdsoi_pus_t *pus, sc_bool_t *pke,
-				    sc_bool_t *pue)
+	sc_pad_28fdsoi_dse_t *dse, sc_bool_t *hys, sc_pad_28fdsoi_pus_t *pus,
+	sc_bool_t *pke, sc_bool_t *pue)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -348,33 +333,27 @@ sc_err_t sc_pad_get_gp_28fdsoi_hsic(sc_ipc_t ipc, sc_pad_t pad,
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (dse != NULL) {
-		*dse = RPC_U8(&msg, 0U);
-	}
+	if (dse != NULL)
+	    *dse = RPC_U8(&msg, 0U);
 
-	if (pus != NULL) {
-		*pus = RPC_U8(&msg, 1U);
-	}
+	if (pus != NULL)
+	    *pus = RPC_U8(&msg, 1U);
 
-	if (hys != NULL) {
-		*hys = U2B(RPC_U8(&msg, 2U));
-	}
+	if (hys != NULL)
+	    *hys = U2B(RPC_U8(&msg, 2U));
 
-	if (pke != NULL) {
-		*pke = U2B(RPC_U8(&msg, 3U));
-	}
+	if (pke != NULL)
+	    *pke = U2B(RPC_U8(&msg, 3U));
 
-	if (pue != NULL) {
-		*pue = U2B(RPC_U8(&msg, 4U));
-	}
+	if (pue != NULL)
+	    *pue = U2B(RPC_U8(&msg, 4U));
 
 	return (sc_err_t)result;
 }
 
 sc_err_t sc_pad_set_gp_28fdsoi_comp(sc_ipc_t ipc, sc_pad_t pad,
-				    uint8_t compen, sc_bool_t fastfrz,
-				    uint8_t rasrcp, uint8_t rasrcn,
-				    sc_bool_t nasrc_sel, sc_bool_t psw_ovr)
+	uint8_t compen, sc_bool_t fastfrz, uint8_t rasrcp, uint8_t rasrcn,
+	sc_bool_t nasrc_sel, sc_bool_t psw_ovr)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -398,10 +377,8 @@ sc_err_t sc_pad_set_gp_28fdsoi_comp(sc_ipc_t ipc, sc_pad_t pad,
 }
 
 sc_err_t sc_pad_get_gp_28fdsoi_comp(sc_ipc_t ipc, sc_pad_t pad,
-				    uint8_t *compen, sc_bool_t *fastfrz,
-				    uint8_t *rasrcp, uint8_t *rasrcn,
-				    sc_bool_t *nasrc_sel, sc_bool_t *compok,
-				    uint8_t *nasrc, sc_bool_t *psw_ovr)
+	uint8_t *compen, sc_bool_t *fastfrz, uint8_t *rasrcp, uint8_t *rasrcn,
+	sc_bool_t *nasrc_sel, sc_bool_t *compok, uint8_t *nasrc, sc_bool_t *psw_ovr)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -415,39 +392,32 @@ sc_err_t sc_pad_get_gp_28fdsoi_comp(sc_ipc_t ipc, sc_pad_t pad,
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (compen != NULL) {
-		*compen = RPC_U8(&msg, 0U);
-	}
+	if (compen != NULL)
+	    *compen = RPC_U8(&msg, 0U);
 
-	if (rasrcp != NULL) {
-		*rasrcp = RPC_U8(&msg, 1U);
-	}
+	if (rasrcp != NULL)
+	    *rasrcp = RPC_U8(&msg, 1U);
 
-	if (rasrcn != NULL) {
-		*rasrcn = RPC_U8(&msg, 2U);
-	}
+	if (rasrcn != NULL)
+	    *rasrcn = RPC_U8(&msg, 2U);
 
-	if (nasrc != NULL) {
-		*nasrc = RPC_U8(&msg, 3U);
-	}
+	if (nasrc != NULL)
+	    *nasrc = RPC_U8(&msg, 3U);
 
-	if (fastfrz != NULL) {
-		*fastfrz = U2B(RPC_U8(&msg, 4U));
-	}
+	if (fastfrz != NULL)
+	    *fastfrz = U2B(RPC_U8(&msg, 4U));
 
-	if (nasrc_sel != NULL) {
-		*nasrc_sel = U2B(RPC_U8(&msg, 5U));
-	}
+	if (nasrc_sel != NULL)
+	    *nasrc_sel = U2B(RPC_U8(&msg, 5U));
 
-	if (compok != NULL) {
-		*compok = U2B(RPC_U8(&msg, 6U));
-	}
+	if (compok != NULL)
+	    *compok = U2B(RPC_U8(&msg, 6U));
 
-	if (psw_ovr != NULL) {
-		*psw_ovr = U2B(RPC_U8(&msg, 7U));
-	}
+	if (psw_ovr != NULL)
+	    *psw_ovr = U2B(RPC_U8(&msg, 7U));
 
 	return (sc_err_t)result;
 }
 
 /**@}*/
+

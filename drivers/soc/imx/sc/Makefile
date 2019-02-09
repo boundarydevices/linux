@@ -5,4 +5,5 @@ obj-y += svc/pm/rpc_clnt.o
 obj-y += svc/rm/rpc_clnt.o
 obj-y += svc/timer/rpc_clnt.o
 obj-y += svc/irq/rpc_clnt.o
+obj-y += svc/seco/rpc_clnt.o
 

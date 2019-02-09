@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
  * SPDX-License-Identifier:     GPL-2.0+
  */
@@ -562,4 +562,5 @@
 #define SC_R_PERF                       546
 #define SC_R_LAST                       547
 
-#endif				/* DT_BINDINGS_RSCRC_IMX_H */
+#endif /* DT_BINDINGS_RSCRC_IMX_H */
+
