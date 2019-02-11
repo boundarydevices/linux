@@ -461,15 +461,21 @@ struct bufdesc_ex {
  * initialisation.
  */
 #define FEC_QUIRK_MIB_CLEAR		(1 << 15)
+
+/* Only i.MX25/i.MX27/i.MX28 controller supports FRBR,FRSR registers,
+ * those FIFO receive registers are resolved in other platforms.
+ */
+#define FEC_QUIRK_HAS_FRREG		(1 << 16)
+
 /*
  * i.MX6Q/DL ENET cannot wake up system in wait mode because ENET tx & rx
  * interrupt signal don't connect to GPC. So use pm qos to avoid cpu enter
  * to wait mode.
  */
-#define FEC_QUIRK_BUG_WAITMODE		(1 << 16)
+#define FEC_QUIRK_BUG_WAITMODE		(1 << 17)
 
 /* PHY fixup flag define */
-#define FEC_QUIRK_AR8031_FIXUP		(1 << 16)
+#define FEC_QUIRK_AR8031_FIXUP		(1 << 18)
 
 /* i.MX8QM/QXP ENET IP version add new feture to generate delayed TXC/RXC
  * as an alternative option to make sure it can work well with various PHYs.
@@ -479,12 +485,12 @@ struct bufdesc_ex {
  * - For the implementation of delayed RXC, there will be buffers in the subsystem
  *   level. The exact length of delay buffers will be decided when closing I/O timing.
  */
-#define FEC_QUIRK_DELAYED_CLKS_SUPPORT	(1 << 17)
+#define FEC_QUIRK_DELAYED_CLKS_SUPPORT	(1 << 19)
 /* i.MX8MQ ENET IP version add new feature to support IEEE 802.3az EEE
  * standard. For the transmission, MAC supply two user registers to set
  * Sleep (TS) and Wake (TW) time.
  */
-#define FEC_QUIRK_HAS_EEE		(1 << 18)
+#define FEC_QUIRK_HAS_EEE		(1 << 20)
 
 struct bufdesc_prop {
 	int qid;

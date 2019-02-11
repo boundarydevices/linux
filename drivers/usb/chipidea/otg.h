@@ -23,7 +23,7 @@ static inline void ci_otg_queue_work(struct ci_hdrc *ci)
 {
 	if (ci->wq) {
 		disable_irq_nosync(ci->irq);
-		if (!queue_work(ci->wq, &ci->work))
+		if (queue_work(ci->wq, &ci->work) == false)
 			enable_irq(ci->irq);
 	} else {
 		WARN_ON(!ci->wq);

@@ -436,6 +436,9 @@ static int netem_enqueue(struct sk_buff *skb, struct Qdisc *sch,
 	int count = 1;
 	int rc = NET_XMIT_SUCCESS;
 
+	/* Do not fool qdisc_drop_all() */
+	skb->prev = NULL;
+
 	/* Random duplication */
 	if (q->duplicate && q->duplicate >= get_crandom(&q->dup_cor))
 		++count;
@@ -624,6 +627,10 @@ deliver:
 			skb->next = NULL;
 			skb->prev = NULL;
 			skb->tstamp = netem_skb_cb(skb)->tstamp_save;
+			/* skb->dev shares skb->rbnode area,
+			 * we need to restore its value.
+			 */
+			skb->dev = qdisc_dev(sch);
 
 #ifdef CONFIG_NET_CLS_ACT
 			/*
