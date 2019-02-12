@@ -21,6 +21,7 @@
 #include <linux/of.h>
 #include <linux/sched.h>
 #include <linux/sched/topology.h>
+#include <linux/sched/energy.h>
 #include <linux/slab.h>
 #include <linux/string.h>
 
@@ -280,7 +281,57 @@ void store_cpu_topology(unsigned int cpuid)
 
 topology_populated:
 	update_siblings_masks(cpuid);
+	topology_detect_flags();
 }
+
+#ifdef CONFIG_SCHED_SMT
+static int smt_flags(void)
+{
+	return cpu_smt_flags() | topology_smt_flags();
+}
+#endif
+
+#ifdef CONFIG_SCHED_MC
+static int core_flags(void)
+{
+	return cpu_core_flags() | topology_core_flags();
+}
+#endif
+
+static int cpu_flags(void)
+{
+	return topology_cpu_flags();
+}
+
+static inline
+const struct sched_group_energy * const cpu_core_energy(int cpu)
+{
+	return sge_array[cpu][SD_LEVEL0];
+}
+
+static inline
+const struct sched_group_energy * const cpu_cluster_energy(int cpu)
+{
+	return sge_array[cpu][SD_LEVEL1];
+}
+
+static inline
+const struct sched_group_energy * const cpu_system_energy(int cpu)
+{
+	return sge_array[cpu][SD_LEVEL2];
+}
+
+static struct sched_domain_topology_level arm64_topology[] = {
+#ifdef CONFIG_SCHED_SMT
+	{ cpu_smt_mask, smt_flags, SD_INIT_NAME(SMT) },
+#endif
+#ifdef CONFIG_SCHED_MC
+	{ cpu_coregroup_mask, core_flags, cpu_core_energy, SD_INIT_NAME(MC) },
+#endif
+	{ cpu_cpu_mask, cpu_flags, cpu_cluster_energy, SD_INIT_NAME(DIE) },
+	{ cpu_cpu_mask, NULL, cpu_system_energy, SD_INIT_NAME(SYS) },
+	{ NULL, }
+};
 
 static void __init reset_cpu_topology(void)
 {
@@ -310,4 +361,6 @@ void __init init_cpu_topology(void)
 	 */
 	if (of_have_populated_dt() && parse_dt_topology())
 		reset_cpu_topology();
+	else
+		set_sched_topology(arm64_topology);
 }

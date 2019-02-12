@@ -267,9 +267,60 @@ set_table_entry(struct ctl_table *entry,
 }
 
 static struct ctl_table *
+sd_alloc_ctl_energy_table(struct sched_group_energy *sge)
+{
+	struct ctl_table *table = sd_alloc_ctl_entry(5);
+
+	if (table == NULL)
+		return NULL;
+
+	set_table_entry(&table[0], "nr_idle_states", &sge->nr_idle_states,
+			sizeof(int), 0644, proc_dointvec_minmax, false);
+	set_table_entry(&table[1], "idle_states", &sge->idle_states[0].power,
+			sge->nr_idle_states*sizeof(struct idle_state), 0644,
+			proc_doulongvec_minmax, false);
+	set_table_entry(&table[2], "nr_cap_states", &sge->nr_cap_states,
+			sizeof(int), 0644, proc_dointvec_minmax, false);
+	set_table_entry(&table[3], "cap_states", &sge->cap_states[0].cap,
+			sge->nr_cap_states*sizeof(struct capacity_state), 0644,
+			proc_doulongvec_minmax, false);
+
+	return table;
+}
+
+static struct ctl_table *
+sd_alloc_ctl_group_table(struct sched_group *sg)
+{
+	struct ctl_table *table = sd_alloc_ctl_entry(2);
+
+	if (table == NULL)
+		return NULL;
+
+	table->procname = kstrdup("energy", GFP_KERNEL);
+	table->mode = 0555;
+	table->child = sd_alloc_ctl_energy_table((struct sched_group_energy *)sg->sge);
+
+	return table;
+}
+
+static struct ctl_table *
 sd_alloc_ctl_domain_table(struct sched_domain *sd)
 {
-	struct ctl_table *table = sd_alloc_ctl_entry(14);
+	struct ctl_table *table;
+	unsigned int nr_entries = 14;
+
+	int i = 0;
+	struct sched_group *sg = sd->groups;
+
+	if (sg->sge) {
+		int nr_sgs = 0;
+
+		do {} while (nr_sgs++, sg = sg->next, sg != sd->groups);
+
+		nr_entries += nr_sgs;
+	}
+
+	table = sd_alloc_ctl_entry(nr_entries);
 
 	if (table == NULL)
 		return NULL;
@@ -302,7 +353,19 @@ sd_alloc_ctl_domain_table(struct sched_domain *sd)
 		sizeof(long), 0644, proc_doulongvec_minmax, false);
 	set_table_entry(&table[12], "name", sd->name,
 		CORENAME_MAX_SIZE, 0444, proc_dostring, false);
-	/* &table[13] is terminator */
+	sg = sd->groups;
+	if (sg->sge) {
+		char buf[32];
+		struct ctl_table *entry = &table[13];
+
+		do {
+			snprintf(buf, 32, "group%d", i);
+			entry->procname = kstrdup(buf, GFP_KERNEL);
+			entry->mode = 0555;
+			entry->child = sd_alloc_ctl_group_table(sg);
+		} while (entry++, i++, sg = sg->next, sg != sd->groups);
+	}
+	/* &table[nr_entries-1] is terminator */
 
 	return table;
 }
@@ -564,6 +627,8 @@ void print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq)
 			cfs_rq->runnable_load_avg);
 	SEQ_printf(m, "  .%-30s: %lu\n", "util_avg",
 			cfs_rq->avg.util_avg);
+	SEQ_printf(m, "  .%-30s: %u\n", "util_est_enqueued",
+			cfs_rq->avg.util_est.enqueued);
 	SEQ_printf(m, "  .%-30s: %ld\n", "removed_load_avg",
 			atomic_long_read(&cfs_rq->removed_load_avg));
 	SEQ_printf(m, "  .%-30s: %ld\n", "removed_util_avg",
@@ -1010,6 +1075,8 @@ void proc_sched_show_task(struct task_struct *p, struct pid_namespace *ns,
 	P(se.avg.load_avg);
 	P(se.avg.util_avg);
 	P(se.avg.last_update_time);
+	P(se.avg.util_est.ewma);
+	P(se.avg.util_est.enqueued);
 #endif
 	P(policy);
 	P(prio);
