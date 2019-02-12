@@ -253,6 +253,9 @@ struct mxc_epdc_fb_data {
 	struct regmap *gpr;
 	u8 req_gpr;
 	u8 req_bit;
+
+	/* qos */
+	struct regmap *qos_regmap;
 };
 
 struct waveform_data_header {
@@ -1052,6 +1055,9 @@ static int epdc_choose_next_lut(struct mxc_epdc_fb_data *fb_data, int *next_lut)
 		pxp_clear_wb_work_func(fb_data);
 		used_luts &= ~luts_complete;
 		fb_data->luts_complete &= ~luts_complete;
+		mutex_unlock(&fb_data->queue_mutex);
+		msleep(10);
+		mutex_lock(&fb_data->queue_mutex);
 	}
 
 	used_luts |= 0x1;
@@ -4998,6 +5004,11 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 		}
 	}
 
+	fb_data->qos_regmap = syscon_regmap_lookup_by_phandle(np, "qos");
+	if (IS_ERR(fb_data->qos_regmap)) {
+		dev_warn(&pdev->dev, "No qos phandle specified. Ignored.\n");
+	}
+
 	/* Get platform data and check validity */
 	fb_data->pdata = &epdc_data;
 	if ((fb_data->pdata == NULL) || (fb_data->pdata->num_modes < 1)
@@ -5711,11 +5722,46 @@ out:
 	return ret;
 }
 
+static void mxc_epdc_restore_qos(struct mxc_epdc_fb_data *data)
+{
+	if (IS_ERR_OR_NULL(data->qos_regmap)) {
+		dev_dbg(data->dev, "no QoS setting found.\n");
+		return;
+	}
+
+#define QOS_EPDC_OFFSET	0x3400
+#define QOS_PXP0_OFFSET	0x2C00
+#define QOS_PXP1_OFFSET	0x3C00
+	regmap_write(data->qos_regmap, 0, 0);
+	regmap_write(data->qos_regmap, 0x60, 0);
+	regmap_write(data->qos_regmap, QOS_EPDC_OFFSET, 0);
+	regmap_write(data->qos_regmap, QOS_PXP0_OFFSET, 0);
+	regmap_write(data->qos_regmap, QOS_PXP1_OFFSET, 0);
+
+	regmap_write(data->qos_regmap, QOS_EPDC_OFFSET + 0xd0, 0x0f020722);
+	regmap_write(data->qos_regmap, QOS_EPDC_OFFSET + 0xe0, 0x0f020722);
+
+	regmap_write(data->qos_regmap, QOS_PXP0_OFFSET, 1);
+	regmap_write(data->qos_regmap, QOS_PXP1_OFFSET, 1);
+
+	regmap_write(data->qos_regmap, QOS_PXP0_OFFSET + 0x50, 0x0f020222);
+	regmap_write(data->qos_regmap, QOS_PXP1_OFFSET + 0x50, 0x0f020222);
+	regmap_write(data->qos_regmap, QOS_PXP0_OFFSET + 0x60, 0x0f020222);
+	regmap_write(data->qos_regmap, QOS_PXP1_OFFSET + 0x60, 0x0f020222);
+	regmap_write(data->qos_regmap, QOS_PXP0_OFFSET + 0x70, 0x0f020422);
+	regmap_write(data->qos_regmap, QOS_PXP1_OFFSET + 0x70, 0x0f020422);
+
+	if (!IS_ERR_OR_NULL(data->gpr))
+		regmap_update_bits(data->gpr, 0x34, 0xe080, 0xe080);
+}
+
 static int mxc_epdc_fb_resume(struct device *dev)
 {
 	struct mxc_epdc_fb_data *data = dev_get_drvdata(dev);
 
 	pinctrl_pm_select_default_state(dev);
+
+	mxc_epdc_restore_qos(data);
 
 	mxc_epdc_fb_blank(FB_BLANK_UNBLANK, &data->info);
 	epdc_init_settings(data);

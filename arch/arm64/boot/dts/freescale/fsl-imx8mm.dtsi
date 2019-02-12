@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -57,10 +57,10 @@
 				compatible = "arm,idle-state";
 				arm,psci-suspend-param = <0x0010033>;
 				local-timer-stop;
-				entry-latency-us = <25000>;
-				exit-latency-us = <10000>;
-				min-residency-us = <30000>;
-				wakeup-latency-us = <15000>;
+				entry-latency-us = <1000>;
+				exit-latency-us = <700>;
+				min-residency-us = <2700>;
+				wakeup-latency-us = <1500>;
 			};
 		};
 	};
@@ -197,7 +197,8 @@
 			domain-id = <0>;
 			#power-domain-cells = <0>;
 			domain-name = "HSIO_PD";
-			clocks = <&clk IMX8MM_CLK_USB1_CTRL_ROOT>;
+			clocks = <&clk IMX8MM_CLK_USB1_CTRL_ROOT>,
+				 <&clk IMX8MM_CLK_SIM_HSIO>;
 
 			pcie0_pd: power-domain@1 {
 				domain-id = <1>;

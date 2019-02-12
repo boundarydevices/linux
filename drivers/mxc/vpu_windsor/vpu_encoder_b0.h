@@ -186,10 +186,7 @@ enum ENC_RW_FLAG {
 struct queue_data {
 	unsigned int width;
 	unsigned int height;
-	unsigned int bytesperline;
-	unsigned int sizeimage[3];
-	unsigned int fourcc;
-	unsigned int vdec_std;
+	unsigned int sizeimage[VB2_MAX_PLANES];
 	struct v4l2_rect rect;
 	int buf_type; // v4l2_buf_type
 	bool vb2_q_inited;
@@ -206,6 +203,7 @@ struct queue_data {
 	atomic64_t frame_count;
 	struct list_head frame_idle;
 	struct vpu_ctx *ctx;
+	char desc[64];
 };
 
 struct vpu_strip_info {
@@ -313,6 +311,23 @@ struct core_device {
 	unsigned long reset_times;
 };
 
+struct vpu_enc_mem_item {
+	struct list_head list;
+	void *virt_addr;
+	unsigned long phy_addr;
+	unsigned long size;
+	unsigned long offset;
+};
+
+struct vpu_enc_mem_info {
+	void *virt_addr;
+	unsigned long phy_addr;
+	unsigned long size;
+	unsigned long bytesused;
+	struct list_head memorys;
+	spinlock_t lock;
+};
+
 struct vpu_dev {
 	struct device *generic_dev;
 	struct v4l2_device v4l2_dev;
@@ -345,6 +360,7 @@ struct vpu_dev {
 		u32 max;
 		u32 step;
 	} supported_fps;
+	struct vpu_enc_mem_info reserved_mem;
 };
 
 struct buffer_addr {
@@ -403,12 +419,20 @@ struct vpu_ctx {
 	unsigned int frozen_count;
 };
 
-#define LVL_DEBUG	4
-#define LVL_INFO	3
-#define LVL_IRQ		2
-#define LVL_ALL		1
-#define LVL_WARN	1
-#define LVL_ERR		0
+#define LVL_ERR		(1 << 0)
+#define LVL_WARN	(1 << 1)
+#define LVL_ALL		(1 << 2)
+#define LVL_IRQ		(1 << 3)
+#define LVL_INFO	(1 << 4)
+#define LVL_CMD		(1 << 5)
+#define LVL_EVT		(1 << 6)
+#define LVL_DEBUG	(1 << 7)
+#define LVL_CTRL	(1 << 8)
+#define LVL_RPC		(1 << 9)
+#define LVL_MSG		(1 << 10)
+#define LVL_MEM		(1 << 11)
+#define LVL_BUF		(1 << 12)
+#define LVL_FUNC	(1 << 16)
 
 #ifndef TAG
 #define TAG	"[VPU Encoder]\t "
@@ -416,11 +440,12 @@ struct vpu_ctx {
 
 #define vpu_dbg(level, fmt, arg...) \
 	do { \
-		if (vpu_dbg_level_encoder >= (level)) \
+		if ((vpu_dbg_level_encoder & (level)) || ((level) & LVL_ERR)) \
 			pr_info(TAG""fmt, ## arg); \
 	} while (0)
 
 #define vpu_err(fmt, arg...)	vpu_dbg(LVL_ERR, fmt, ##arg)
+#define vpu_log_func()		vpu_dbg(LVL_FUNC, "%s()\n", __func__)
 
 u32 cpu_phy_to_mu(struct core_device *dev, u32 addr);
 struct vpu_attr *get_vpu_ctx_attr(struct vpu_ctx *ctx);
