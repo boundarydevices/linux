@@ -479,10 +479,10 @@
 
 		pinctrl_pciea: pcieagrp{
 			fsl,pins = <
-				SC_P_PCIE_CTRL0_CLKREQ_B_LSIO_GPIO4_IO27	0x04000021
+				SC_P_PCIE_CTRL0_CLKREQ_B_LSIO_GPIO4_IO27	0x06000021
 				SC_P_PCIE_CTRL0_WAKE_B_LSIO_GPIO4_IO28		0x04000021
-				SC_P_PCIE_CTRL0_PERST_B_LSIO_GPIO4_IO29		0x04000021
-				SC_P_USDHC2_RESET_B_LSIO_GPIO4_IO09		0x04000021
+				SC_P_PCIE_CTRL0_PERST_B_LSIO_GPIO4_IO29		0x06000021
+				SC_P_USDHC2_RESET_B_LSIO_GPIO4_IO09		0x06000021
 			>;
 		};
 
@@ -634,7 +634,7 @@
 			fsl,pins = <
 				SC_P_MIPI_DSI0_I2C0_SCL_MIPI_DSI0_I2C0_SCL	0xc600004c
 				SC_P_MIPI_DSI0_I2C0_SDA_MIPI_DSI0_I2C0_SDA	0xc600004c
-				SC_P_MIPI_DSI0_GPIO0_01_MIPI_DSI0_GPIO0_IO01	0x00000020
+				SC_P_MIPI_DSI0_GPIO0_01_LSIO_GPIO1_IO19		0x00000020
 			>;
 		};
 
@@ -642,7 +642,7 @@
 			fsl,pins = <
 				SC_P_MIPI_DSI1_I2C0_SCL_MIPI_DSI1_I2C0_SCL	0xc600004c
 				SC_P_MIPI_DSI1_I2C0_SDA_MIPI_DSI1_I2C0_SDA	0xc600004c
-				SC_P_MIPI_DSI1_GPIO0_01_MIPI_DSI1_GPIO0_IO01	0x00000020
+				SC_P_MIPI_DSI1_GPIO0_01_LSIO_GPIO1_IO23		0x00000020
 			>;
 		};
 
@@ -1407,8 +1407,8 @@
 		reg = <0x3d>;
 		adi,dsi-lanes = <4>;
 		adi,dsi-channel = <1>;
-		interrupt-parent = <&gpio0>;
-		interrupts = <1 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <19 IRQ_TYPE_LEVEL_LOW>;
 		status = "okay";
 
 		port {
@@ -1451,8 +1451,8 @@
 		reg = <0x3d>;
 		adi,dsi-lanes = <4>;
 		adi,dsi-channel = <1>;
-		interrupt-parent = <&gpio0>;
-		interrupts = <1 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <23 IRQ_TYPE_LEVEL_LOW>;
 		status = "okay";
 
 		port {
