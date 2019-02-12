@@ -300,8 +300,10 @@ int hdmirx_init(state_struct *state)
 
 	/* Check if the firmware is running */
 	ret = CDN_API_CheckAlive_blocking(state);
-	if (ret < 0)
-		return ret;
+	if (ret != 0) {
+		DRM_ERROR("NO HDMI RX FW running\n");
+		return -ENXIO;
+	}
 
 	/* Set driver and firmware active */
 	CDN_API_MainControl_blocking(state, 1, &sts);
@@ -330,7 +332,7 @@ void hdmirx_hotplug_trigger(state_struct *state)
 int hdmirx_startup(state_struct *state)
 {
 	u8 sts;
-	u32 rx_clk_freq;
+	int rx_clk_freq;
 	u8 data_rate_change = 0;
 	u8 scrambling_en;
 	clk_ratio_t clk_ratio, clk_ratio_detected;
@@ -364,26 +366,33 @@ int hdmirx_startup(state_struct *state)
 
 	ret = pma_cmn_ready(state);
 	if (ret < 0) {
-		pr_err("pma_cmn_ready failed\n");
+		dev_err(&hdmi_rx->pdev->dev, "pma_cmn_ready failed\n");
 		return -1;
 	}
 
 	msleep(500);
 
+	/* init ARC */
 	arc_config(state);
 
+	/* Detect rx clk signal */
 	ret = pma_rx_clk_signal_detect(state);
 	if (ret < 0) {
-		pr_err("pma_rx_clk_signal_detect failed\n");
+		dev_err(&hdmi_rx->pdev->dev, "Common rx_clk signal detect failed\n");
 		return -1;
 	}
 	/* Get TMDS clock frequency */
 	rx_clk_freq = pma_rx_clk_freq_detect(state);
+	if (rx_clk_freq < 0) {
+		dev_err(&hdmi_rx->pdev->dev, "detect tmds clock failed\n");
+		return -1;
+	}
+	dev_info(&hdmi_rx->pdev->dev, "detect TMDS clock freq: %d kHz\n", rx_clk_freq);
 
 	ret = pma_pll_config(state, rx_clk_freq, clk_ratio, tmds_bit_clock_ratio,
 		       data_rate_change);
 	if (ret < 0) {
-		pr_err("pma_pll_config failed\n");
+		dev_err(&hdmi_rx->pdev->dev, "pma_pll_config failed\n");
 		return -1;
 	}
 	msleep(500);
@@ -415,19 +424,18 @@ int hdmirx_startup(state_struct *state)
 
 	ret = get_avi_infoframe(state);
 	if (ret < 0) {
-		pr_err("Get AVI info frame failed\n");
+		dev_err(&hdmi_rx->pdev->dev, "Get AVI info frame failed\n");
 		return -1;
 	}
 	ret = get_vendor_infoframe(state);
 	if (ret < 0)
-		pr_info("No Vendor info frame\n");
+		dev_warn(&hdmi_rx->pdev->dev, "No Vendor info frame\n");
 
-	dev_dbg(&hdmi_rx->pdev->dev,
-			"get_avi_infoframe() vic_code: %0d, pixel_encoding: %0d.\n",
+	dev_info(&hdmi_rx->pdev->dev, "VIC: %0d, pixel_encoding: %0d.\n",
 			hdmi_rx->vic_code, hdmi_rx->pixel_encoding);
 	ret = mxc_hdmi_frame_timing(hdmi_rx);
 	if (ret < 0) {
-		pr_err("Get frame timing failed\n\n");
+		dev_err(&hdmi_rx->pdev->dev, "Get frame timing failed\n\n");
 		return -1;
 	}
 
@@ -454,7 +462,26 @@ int hdmirx_startup(state_struct *state)
 		dev_info(&hdmi_rx->pdev->dev, "TMDS/pixel clock ratio correct\n");
 
 	get_color_depth(hdmi_rx, clk_ratio_detected);
-	dev_dbg(&hdmi_rx->pdev->dev, "Get colordepth is %d bpc\n", hdmi_rx->color_depth);
+	switch (hdmi_rx->pixel_encoding) {
+		case PIXEL_ENCODING_YUV422:
+			dev_info(&hdmi_rx->pdev->dev, "Detect mode VIC %d %dbit YUV422\n",
+					hdmi_rx->vic_code,  hdmi_rx->color_depth);
+			break;
+		case PIXEL_ENCODING_YUV420:
+			dev_info(&hdmi_rx->pdev->dev, "Detect mode VIC %d %dbit YUV420\n",
+					hdmi_rx->vic_code,  hdmi_rx->color_depth);
+			break;
+		case PIXEL_ENCODING_YUV444:
+			dev_info(&hdmi_rx->pdev->dev, "Detect mode VIC %d %dbit YUV444\n",
+					hdmi_rx->vic_code,  hdmi_rx->color_depth);
+			break;
+		case PIXEL_ENCODING_RGB:
+			dev_info(&hdmi_rx->pdev->dev, "Detect mode VIC %d %dbit RGB\n",
+					hdmi_rx->vic_code, hdmi_rx->color_depth);
+			break;
+		default:
+			dev_err(&hdmi_rx->pdev->dev, "Unknow color format\n");
+	}
 
 	/* Do post PHY programming settings */
 	CDN_API_MainControl_blocking(state, 0x80, &sts);

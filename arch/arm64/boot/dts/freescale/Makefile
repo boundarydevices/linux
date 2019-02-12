@@ -49,6 +49,7 @@ dtb-$(CONFIG_ARCH_FSL_IMX8QM) += fsl-imx8qm-lpddr4-arm2.dtb \
 				 fsl-imx8qm-lpddr4-arm2-it6263-dual-channel.dtb \
 				 fsl-imx8qm-lpddr4-arm2-jdi-wuxga-lvds1-panel.dtb \
 				 fsl-imx8qm-lpddr4-arm2-lpspi.dtb \
+				 fsl-imx8qm-lpddr4-arm2-lpspi-slave.dtb \
 				 fsl-imx8qm-lpddr4-arm2-spdif.dtb \
 				 fsl-imx8qm-lpddr4-arm2-mqs.dtb \
 				 fsl-imx8qm-lpddr4-arm2-usb3.dtb \

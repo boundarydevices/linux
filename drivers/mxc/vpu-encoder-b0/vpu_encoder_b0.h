@@ -34,6 +34,7 @@
 #include <media/v4l2-event.h>
 #include <linux/kfifo.h>
 #include "vpu_encoder_rpc.h"
+#include "vpu_encoder_config.h"
 
 extern unsigned int vpu_dbg_level_encoder;
 
@@ -51,9 +52,9 @@ extern unsigned int vpu_dbg_level_encoder;
 #define MMAP_BUF_TYPE_MASK 0xF0000000
 #define M0_BOOT_SIZE_DEFAULT	0x1000000
 #define M0_BOOT_SIZE_MIN	0x100000
-#define RPC_SIZE_DEFAULT	0x100000
+#define RPC_SIZE_DEFAULT	0x80000
 #define RPC_SIZE_MIN		0x20000
-#define PRINT_SIZE_DEFAULT	0x200000
+#define PRINT_SIZE_DEFAULT	0x80000
 #define PRINT_SIZE_MIN		0x20000
 #define MEM_SIZE  0x2800000
 #define YUV_SIZE  0x4000000
@@ -199,7 +200,23 @@ struct queue_data {
 	struct vpu_v4l2_fmt *current_fmt;
 	unsigned long rw_flag;
 	struct list_head frame_q;
+	atomic64_t frame_count;
+	struct list_head frame_idle;
 	struct vpu_ctx *ctx;
+};
+
+struct vpu_strip_info {
+	unsigned long count;
+	unsigned long max;
+	unsigned long total;
+};
+
+struct vpu_fps_sts {
+	unsigned int thd;
+	unsigned int times;
+	unsigned long frame_number;
+	struct timespec ts;
+	unsigned long fps;
 };
 
 struct vpu_statistic {
@@ -212,6 +229,13 @@ struct vpu_statistic {
 	unsigned long yuv_count;
 	unsigned long encoded_count;
 	unsigned long h264_count;
+	struct {
+		struct vpu_strip_info begin;
+		struct vpu_strip_info end;
+		struct vpu_strip_info eos;
+	} strip_sts;
+	bool fps_sts_enable;
+	struct vpu_fps_sts fps[VPU_FPS_STS_CNT];
 };
 
 struct vpu_attr {
@@ -287,6 +311,20 @@ struct vpu_dev {
 
 	struct delayed_work watchdog;
 	u8 heartbeat;
+
+	struct {
+		u32 min_width;
+		u32 max_width;
+		u32 step_width;
+		u32 min_height;
+		u32 max_height;
+		u32 step_height;
+	} supported_size;
+	struct {
+		u32 min;
+		u32 max;
+		u32 step;
+	} supported_fps;
 };
 
 struct buffer_addr {
@@ -330,6 +368,7 @@ struct vpu_ctx {
 	struct buffer_addr refFrame[MEDIAIP_MAX_NUM_WINDSOR_REF_FRAMES];
 	struct buffer_addr actFrame;
 	struct buffer_addr enc_buffer;
+	MEDIAIP_ENC_MEM_REQ_DATA mem_req;
 	struct core_device *core_dev;
 
 	struct completion stop_cmp;
@@ -361,6 +400,7 @@ struct vpu_ctx {
 
 #define vpu_err(fmt, arg...)	vpu_dbg(LVL_ERR, fmt, ##arg)
 
+u32 cpu_phy_to_mu(struct core_device *dev, u32 addr);
 struct vpu_attr *get_vpu_ctx_attr(struct vpu_ctx *ctx);
 struct vpu_ctx *get_vpu_attr_ctx(struct vpu_attr *attr);
 
