@@ -489,9 +489,6 @@ static int mxc_isi_m2m_enum_fmt_vid_out(struct file *file, void *priv,
 		return -EINVAL;
 
 	fmt = &mxc_isi_input_formats[f->index];
-	if (!fmt)
-		return -EINVAL;
-
 	strncpy(f->description, fmt->name, sizeof(f->description) - 1);
 
 	f->pixelformat = fmt->fourcc;
@@ -510,9 +507,6 @@ static int mxc_isi_m2m_enum_fmt_vid_cap(struct file *file, void *priv,
 		return -EINVAL;
 
 	fmt = &mxc_isi_out_formats[f->index];
-	if (!fmt)
-		return -EINVAL;
-
 	strncpy(f->description, fmt->name, sizeof(f->description) - 1);
 
 	f->pixelformat = fmt->fourcc;

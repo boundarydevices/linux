@@ -787,9 +787,6 @@ static int mxc_isi_cap_enum_fmt_mplane(struct file *file, void *priv,
 		return -EINVAL;
 
 	fmt = &mxc_isi_out_formats[f->index];
-	if (!fmt)
-		return -EINVAL;
-
 	strncpy(f->description, fmt->name, sizeof(f->description) - 1);
 
 	f->pixelformat = fmt->fourcc;
@@ -1022,6 +1019,8 @@ static int mxc_isi_cap_streamon(struct file *file, void *priv,
 	mxc_isi_channel_enable(mxc_isi);
 	mxc_isi_pipeline_enable(mxc_isi, 1);
 
+	mxc_isi->is_streaming = 1;
+
 	return ret;
 }
 
@@ -1036,6 +1035,8 @@ static int mxc_isi_cap_streamoff(struct file *file, void *priv,
 	mxc_isi_pipeline_enable(mxc_isi, 0);
 	mxc_isi_channel_disable(mxc_isi);
 	ret = vb2_ioctl_streamoff(file, priv, type);
+
+	mxc_isi->is_streaming = 0;
 
 	return ret;
 }
@@ -1723,7 +1724,7 @@ static void mxc_isi_subdev_unregistered(struct v4l2_subdev *sd)
 	dev_dbg(&mxc_isi->pdev->dev, "%s\n", __func__);
 	mutex_lock(&mxc_isi->lock);
 
-	if (mxc_isi->id == 0)
+	if (mxc_isi->id == 0 && mxc_isi->skip_m2m == 0)
 		mxc_isi_unregister_m2m_device(mxc_isi);
 
 	vdev = &mxc_isi->isi_cap.vdev;

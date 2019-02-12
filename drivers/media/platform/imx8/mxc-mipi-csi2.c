@@ -660,6 +660,7 @@ static int mipi_csi2_parse_dt(struct mxc_mipi_csi2_dev *csi2dev)
 {
 	struct device *dev = &csi2dev->pdev->dev;
 	struct device_node *node = dev->of_node;
+	struct device_node *ep;
 	struct v4l2_fwnode_endpoint endpoint;
 	u32 i;
 
@@ -667,20 +668,20 @@ static int mipi_csi2_parse_dt(struct mxc_mipi_csi2_dev *csi2dev)
 
 	csi2dev->vchannel = of_property_read_bool(node, "virtual-channel");
 
-	node = of_graph_get_next_endpoint(node, NULL);
-	if (!node) {
+	ep = of_graph_get_next_endpoint(node, NULL);
+	if (!ep) {
 		dev_err(dev, "No port node at %s\n", node->full_name);
 		return -EINVAL;
 	}
 
 	/* Get port node */
-	v4l2_fwnode_endpoint_parse(of_fwnode_handle(node), &endpoint);
+	v4l2_fwnode_endpoint_parse(of_fwnode_handle(ep), &endpoint);
 
 	csi2dev->num_lanes = endpoint.bus.mipi_csi2.num_data_lanes;
 	for (i = 0; i < 4; i++)
 		csi2dev->data_lanes[i] = endpoint.bus.mipi_csi2.data_lanes[i];
 
-	of_node_put(node);
+	of_node_put(ep);
 
 	return 0;
 }
@@ -786,6 +787,14 @@ static int mipi_csi2_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 static int  mipi_csi2_pm_suspend(struct device *dev)
 {
+	struct v4l2_subdev *sd = dev_get_drvdata(dev);
+	struct mxc_mipi_csi2_dev *csi2dev = sd_to_mxc_mipi_csi2_dev(sd);
+
+	if (csi2dev->running > 0) {
+		dev_warn(dev, "running, prevent entering suspend.\n");
+		return -EAGAIN;
+	}
+
 	return pm_runtime_force_suspend(dev);
 }
 

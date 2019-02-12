@@ -305,7 +305,8 @@ static int fsl_asrc_config_pair(struct fsl_asrc_pair *pair, bool p2p_in, bool p2
 	struct fsl_asrc *asrc_priv = pair->asrc_priv;
 	enum asrc_pair_index index = pair->index;
 	u32 inrate, outrate, indiv, outdiv;
-	u32 clk_index[2], div[2];
+	u32 clk_index[2], div[2], rem[2];
+	u64 clk_rate;
 	int in, out, channels;
 	int pre_proc, post_proc;
 	struct clk *clk;
@@ -365,8 +366,9 @@ static int fsl_asrc_config_pair(struct fsl_asrc_pair *pair, bool p2p_in, bool p2
 
 	/* We only have output clock for ideal ratio mode */
 	clk = asrc_priv->asrck_clk[clk_index[ideal ? OUT : IN]];
-
-	div[IN] = clk_get_rate(clk) / inrate;
+	clk_rate = clk_get_rate(clk);
+	rem[IN] = do_div(clk_rate, inrate);
+	div[IN] = (u32)clk_rate;
 	if (div[IN] == 0) {
 		pair_err("failed to support input sample rate %dHz by asrck_%x\n",
 				inrate, clk_index[ideal ? OUT : IN]);
@@ -381,11 +383,14 @@ static int fsl_asrc_config_pair(struct fsl_asrc_pair *pair, bool p2p_in, bool p2
 	 * When M2M mode, output rate should also need to align with the out
 	 * samplerate, but M2M must use less time to achieve good performance.
 	 */
-	if (p2p_out || p2p_in)
-		div[OUT] = clk_get_rate(clk) / outrate;
-	else
-		div[OUT] = clk_get_rate(clk) / IDEAL_RATIO_RATE;
-
+	clk_rate = clk_get_rate(clk);
+	if (p2p_out || p2p_in || (!ideal)) {
+		rem[OUT] = do_div(clk_rate, outrate);
+		div[OUT] = clk_rate;
+	} else {
+		rem[OUT] = do_div(clk_rate, IDEAL_RATIO_RATE);
+		div[OUT] = clk_rate;
+	}
 
 	if (div[OUT] == 0) {
 		pair_err("failed to support output sample rate %dHz by asrck_%x\n",
@@ -393,7 +398,13 @@ static int fsl_asrc_config_pair(struct fsl_asrc_pair *pair, bool p2p_in, bool p2
 		return -EINVAL;
 	}
 
-	if (div[IN] > 1024 && div[OUT] > 1024) {
+	if (!ideal && (div[IN] > 1024 || div[OUT] > 1024 ||
+				rem[IN] != 0 || rem[OUT] != 0)) {
+		pair_err("The divider can't be used for non ideal mode\n");
+		return -EINVAL;
+	}
+
+	if (ideal && div[IN] > 1024 && div[OUT] > 1024) {
 		pair_warn("both divider (%d, %d) are larger than threshold\n",
 							div[IN], div[OUT]);
 	}
@@ -491,7 +502,7 @@ static void fsl_asrc_start_pair(struct fsl_asrc_pair *pair)
 {
 	struct fsl_asrc *asrc_priv = pair->asrc_priv;
 	enum asrc_pair_index index = pair->index;
-	int reg, retry = 10, i;
+	int reg, retry = 50, i;
 
 	/* Enable the current pair */
 	regmap_update_bits(asrc_priv->regmap, REG_ASRCTR,
@@ -503,6 +514,9 @@ static void fsl_asrc_start_pair(struct fsl_asrc_pair *pair)
 		regmap_read(asrc_priv->regmap, REG_ASRCFG, &reg);
 		reg &= ASRCFG_INIRQi_MASK(index);
 	} while (!reg && --retry);
+
+	if (retry == 0)
+		pair_warn("initialization is not finished\n");
 
 	/* Make the input fifo to ASRC STALL level */
 	regmap_read(asrc_priv->regmap, REG_ASRCNCR, &reg);
@@ -618,7 +632,9 @@ static int fsl_asrc_dai_hw_params(struct snd_pcm_substream *substream,
 	pair->pair_streams |= BIT(substream->stream);
 	pair->config = &config;
 
-	if (width == 16)
+	if (width == 8)
+		width = ASRC_WIDTH_8_BIT;
+	else if (width == 16)
 		width = ASRC_WIDTH_16_BIT;
 	else
 		width = ASRC_WIDTH_24_BIT;
@@ -753,8 +769,12 @@ static int fsl_asrc_dai_probe(struct snd_soc_dai *dai)
 }
 
 #define FSL_ASRC_RATES		 SNDRV_PCM_RATE_8000_192000
-#define FSL_ASRC_FORMATS	(SNDRV_PCM_FMTBIT_S24_LE | \
+#define FSL_ASRC_FORMATS_RX	(SNDRV_PCM_FMTBIT_S24_LE | \
 				 SNDRV_PCM_FMTBIT_S16_LE | \
+				 SNDRV_PCM_FMTBIT_S24_3LE)
+#define FSL_ASRC_FORMATS_TX	(SNDRV_PCM_FMTBIT_S24_LE | \
+				 SNDRV_PCM_FMTBIT_S16_LE | \
+				 SNDRV_PCM_FMTBIT_S8 | \
 				 SNDRV_PCM_FMTBIT_S24_3LE)
 
 static struct snd_soc_dai_driver fsl_asrc_dai = {
@@ -766,7 +786,7 @@ static struct snd_soc_dai_driver fsl_asrc_dai = {
 		.rate_min = 5512,
 		.rate_max = 192000,
 		.rates = SNDRV_PCM_RATE_KNOT,
-		.formats = FSL_ASRC_FORMATS,
+		.formats = FSL_ASRC_FORMATS_TX,
 	},
 	.capture = {
 		.stream_name = "ASRC-Capture",
@@ -775,7 +795,7 @@ static struct snd_soc_dai_driver fsl_asrc_dai = {
 		.rate_min = 5512,
 		.rate_max = 192000,
 		.rates = SNDRV_PCM_RATE_KNOT,
-		.formats = FSL_ASRC_FORMATS,
+		.formats = FSL_ASRC_FORMATS_RX,
 	},
 	.ops = &fsl_asrc_dai_ops,
 };
@@ -1235,7 +1255,7 @@ static int fsl_asrc_runtime_resume(struct device *dev)
 	int i, ret;
 	u32 asrctr;
 	u32 reg;
-	int retry = 10;
+	int retry = 50;
 
 	ret = clk_prepare_enable(asrc_priv->mem_clk);
 	if (ret)
@@ -1278,6 +1298,9 @@ static int fsl_asrc_runtime_resume(struct device *dev)
 		regmap_read(asrc_priv->regmap, REG_ASRCFG, &reg);
 		reg = (reg >> ASRCFG_INIRQi_SHIFT(0)) & 0x7;
 	} while (!(reg == ((asrctr & 0xE) >> 1)) && --retry);
+
+	if (retry == 0)
+		dev_warn(dev, "initialization is not finished\n");
 
 	return 0;
 

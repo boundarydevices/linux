@@ -62,6 +62,7 @@ extern unsigned int vpu_dbg_level_decoder;
 #define INVALID_FRAME_DEPTH -1
 #define DECODER_NODE_NUMBER 12 // use /dev/video12 as vpu decoder
 #define DEFAULT_LOG_DEPTH 20
+#define V4L2_EVENT_SKIP 8
 
 struct vpu_v4l2_control {
 	uint32_t id;

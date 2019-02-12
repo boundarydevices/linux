@@ -1036,6 +1036,7 @@ static int ov5640_set_fmt(struct v4l2_subdev *sd,
 	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
 		return 0;
 
+	init_device(sensor);
 	ret = ov5640_change_mode(sensor);
 	sensor->fmt = fmt;
 

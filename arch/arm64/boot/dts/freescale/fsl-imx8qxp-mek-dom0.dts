@@ -67,8 +67,8 @@
 		reg = <0 0x90400000 0 0x200000>;
 	};
 
-	encoder_rpc_mem: encoder_rpc_mem@0x90600000 {
-		reg = <0 0x90600000 0 0x200000>;
+	encoder_rpc_mem: encoder_rpc_mem@0x92200000 {
+		reg = <0 0x92200000 0 0x200000>;
 	};
 
 	dsp_reserved_mem: dsp_reserved_mem@0x92400000 {

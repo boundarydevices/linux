@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright (C) 2016-2017 Cadence Design Systems, Inc.
+ * Copyright (C) 2016-2018 Cadence Design Systems, Inc.
  * All rights reserved worldwide.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -50,12 +50,6 @@
 
 #ifndef GENERAL_HANDLER_H
 #define GENERAL_HANDLER_H
-
-/**
- *  \file
- *  \brief general handler, checks available messages, receives it from mailbox, handles requests and sends response to the host
- */
-#define DP_TX_MAIL_HANDLER_REQUEST_BUFFER_LEN 256
 
 /**
  *  \brief opcode defines host->controller

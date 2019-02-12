@@ -1211,7 +1211,7 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	virtual-channel;
-	status = "disabled";
+	status = "okay";
 
 	/* Camera 0 MIPI CSI-2 (CSIS1) */
 	port@1 {
@@ -1262,7 +1262,7 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	clock-frequency = <100000>;
-	status = "disabled";
+	status = "okay";
 
 	max9286_mipi@6A	 {
 		compatible = "maxim,max9286_mipi";
@@ -1297,6 +1297,22 @@
 };
 
 &isi_3 {
+	status = "okay";
+};
+
+&isi_4 {
+	status = "okay";
+};
+
+&isi_5 {
+	status = "okay";
+};
+
+&isi_6 {
+	status = "okay";
+};
+
+&isi_7 {
 	status = "okay";
 };
 

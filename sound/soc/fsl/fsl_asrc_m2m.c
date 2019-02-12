@@ -159,6 +159,9 @@ static int fsl_asrc_dmaconfig(struct fsl_asrc_pair *pair, struct dma_chan *chan,
 	int ret, i;
 
 	switch (word_width) {
+	case ASRC_WIDTH_8_BIT:
+		buswidth = DMA_SLAVE_BUSWIDTH_1_BYTE;
+		break;
 	case ASRC_WIDTH_16_BIT:
 		buswidth = DMA_SLAVE_BUSWIDTH_2_BYTES;
 		break;
@@ -183,8 +186,11 @@ static int fsl_asrc_dmaconfig(struct fsl_asrc_pair *pair, struct dma_chan *chan,
 		slave_config.direction = DMA_DEV_TO_MEM;
 		slave_config.src_addr = dma_addr;
 		slave_config.src_addr_width = buswidth;
-		slave_config.src_maxburst =
-			m2m->watermark[OUT] * pair->channels;
+		if (asrc_priv->dma_type == DMA_SDMA)
+			slave_config.src_maxburst =
+				m2m->watermark[OUT] * pair->channels;
+		else
+			slave_config.src_maxburst = 1;
 	}
 
 	ret = dmaengine_slave_config(chan, &slave_config);
@@ -264,10 +270,20 @@ static int fsl_asrc_prepare_io_buffer(struct fsl_asrc_pair *pair,
 		buf_len = pbuf->output_buffer_length;
 	}
 
-	if (width == ASRC_WIDTH_24_BIT)
+	switch (width) {
+	case ASRC_WIDTH_24_BIT:
 		word_size = 4;
-	else
+		break;
+	case ASRC_WIDTH_16_BIT:
 		word_size = 2;
+		break;
+	case ASRC_WIDTH_8_BIT:
+		word_size = 1;
+		break;
+	default:
+		pair_err("wrong word length\n");
+		return -EINVAL;
+	}
 
 	if (buf_len < word_size * pair->channels * wm ||
 	    buf_len > ASRC_DMA_BUFFER_SIZE ||

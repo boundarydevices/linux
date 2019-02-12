@@ -4314,6 +4314,7 @@ static unsigned int vpu_enc_v4l2_poll(struct file *filp, poll_table *wait)
 
 	if ((!src_q->streaming || list_empty(&src_q->queued_list))
 		&& (!dst_q->streaming || list_empty(&dst_q->queued_list))) {
+		rc |= POLLERR;
 		return rc;
 	}
 
