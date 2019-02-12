@@ -155,6 +155,7 @@ struct vpu_v4l2_fmt {
 	unsigned int fourcc;
 	unsigned int num_planes;
 	unsigned int vdec_std;
+	unsigned int disable;
 };
 
 struct vb2_data_req {

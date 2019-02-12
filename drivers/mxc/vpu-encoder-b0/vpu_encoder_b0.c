@@ -73,6 +73,7 @@ struct vpu_frame_info {
 unsigned int vpu_dbg_level_encoder = LVL_WARN;
 static unsigned int reset_on_hang;
 static unsigned int show_detail_index = VPU_DETAIL_INDEX_DFT;
+static unsigned long debug_firmware_bitmap;
 
 #define ITEM_NAME(name)		\
 				[name] = #name
@@ -113,9 +114,9 @@ static char *event2str[] = {
 static int wait_for_start_done(struct core_device *core, int resume);
 static void wait_for_stop_done(struct vpu_ctx *ctx);
 static int sw_reset_firmware(struct core_device *core, int resume);
-static void reset_fw_statistic(struct vpu_attr *attr);
 static int enable_fps_sts(struct vpu_attr *attr);
 static int disable_fps_sts(struct vpu_attr *attr);
+static int configure_codec(struct vpu_ctx *ctx);
 
 static char *get_event_str(u32 event)
 {
@@ -1364,10 +1365,18 @@ static int vpu_enc_v4l2_ioctl_streamon(struct file *file,
 	}
 
 	ret = vb2_streamon(&q_data->vb2_q, i);
-	if (!ret && i == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-		clear_stop_status(ctx);
+	if (ret)
+		return ret;
+	if (i == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		mutex_lock(&ctx->dev->dev_mutex);
+		mutex_lock(&ctx->instance_mutex);
+		set_bit(VPU_ENC_STATUS_OUTPUT_READY, &ctx->status);
+		configure_codec(ctx);
+		mutex_unlock(&ctx->instance_mutex);
+		mutex_unlock(&ctx->dev->dev_mutex);
+	}
 
-	return ret;
+	return 0;
 }
 
 static int vpu_enc_v4l2_ioctl_streamoff(struct file *file,
@@ -1652,7 +1661,7 @@ static int do_configure_codec(struct vpu_ctx *ctx)
 	pEncExpertModeParam->Calib.cb_size = ctx->encoder_stream.size;
 
 	show_firmware_version(ctx->core_dev, LVL_INFO);
-	reset_fw_statistic(attr);
+	clear_stop_status(ctx);
 	memcpy(enc_param, &attr->param, sizeof(attr->param));
 	vpu_ctx_send_cmd(ctx, GTB_ENC_CMD_CONFIGURE_CODEC, 0, NULL);
 	vpu_dbg(LVL_INFO, "send command GTB_ENC_CMD_CONFIGURE_CODEC\n");
@@ -1662,10 +1671,26 @@ static int do_configure_codec(struct vpu_ctx *ctx)
 	return 0;
 }
 
+static int check_vpu_ctx_is_ready(struct vpu_ctx *ctx)
+{
+	if (!ctx)
+		return false;
+
+	if (!test_bit(VPU_ENC_STATUS_OUTPUT_READY, &ctx->status))
+		return false;
+	if (!test_bit(VPU_ENC_STATUS_DATA_READY, &ctx->status))
+		return false;
+
+	return true;
+}
+
 static int configure_codec(struct vpu_ctx *ctx)
 {
 	if (!ctx)
 		return -EINVAL;
+
+	if (!check_vpu_ctx_is_ready(ctx))
+		return 0;
 
 	if (ctx->core_dev->snapshot)
 		return 0;
@@ -1673,8 +1698,11 @@ static int configure_codec(struct vpu_ctx *ctx)
 	if (test_bit(VPU_ENC_STATUS_SNAPSHOT, &ctx->status))
 		return 0;
 
-	if (!test_and_set_bit(VPU_ENC_STATUS_CONFIGURED, &ctx->status))
+	if (!test_and_set_bit(VPU_ENC_STATUS_CONFIGURED, &ctx->status)) {
 		do_configure_codec(ctx);
+		clear_bit(VPU_ENC_STATUS_OUTPUT_READY, &ctx->status);
+		clear_bit(VPU_ENC_STATUS_DATA_READY, &ctx->status);
+	}
 
 	return 0;
 }
@@ -2566,6 +2594,7 @@ static void enable_mu(struct core_device *dev)
 
 	mu_addr = cpu_phy_to_mu(dev, dev->m0_rpc_phy + dev->rpc_buf_size);
 	rpc_set_print_buffer(&dev->shared_mem, mu_addr, dev->print_buf_size);
+	dev->print_buf = dev->m0_rpc_virt + dev->rpc_buf_size;
 
 	mu_addr = cpu_phy_to_mu(dev, dev->m0_rpc_phy);
 	MU_sendMesgToFW(dev->mu_base_virtaddr, RPC_BUF_OFFSET, mu_addr);
@@ -2939,6 +2968,8 @@ static void vpu_buf_queue(struct vb2_buffer *vb)
 
 		mutex_lock(&ctx->dev->dev_mutex);
 		mutex_lock(&ctx->instance_mutex);
+		if (!test_bit(VPU_ENC_STATUS_CONFIGURED, &ctx->status))
+			set_bit(VPU_ENC_STATUS_DATA_READY, &ctx->status);
 		configure_codec(ctx);
 		mutex_unlock(&ctx->instance_mutex);
 		mutex_unlock(&ctx->dev->dev_mutex);
@@ -4114,30 +4145,14 @@ static ssize_t show_vpuinfo(struct device *dev,
 }
 DEVICE_ATTR(vpuinfo, 0444, show_vpuinfo, NULL);
 
-static void reset_fw_statistic(struct vpu_attr *attr)
-{
-	int i;
-
-	if (!attr)
-		return;
-
-	for (i = 0; i <= GTB_ENC_CMD_RESERVED; i++) {
-		if (i == GTB_ENC_CMD_FIRM_RESET)
-			continue;
-		attr->statistic.cmd[i] = 0;
-	}
-	for (i = 0; i <= VID_API_ENC_EVENT_RESERVED; i++)
-		attr->statistic.event[i] = 0;
-	attr->statistic.current_cmd = GTB_ENC_CMD_NOOP;
-	attr->statistic.current_event = VID_API_EVENT_UNDEFINED;
-}
-
 static void reset_statistic(struct vpu_attr *attr)
 {
 	if (!attr)
 		return;
 
 	memset(&attr->statistic, 0, sizeof(attr->statistic));
+	attr->statistic.current_cmd = GTB_ENC_CMD_NOOP;
+	attr->statistic.current_event = VID_API_EVENT_UNDEFINED;
 }
 
 static int init_vpu_attr_fps_sts(struct vpu_attr *attr)
@@ -4876,12 +4891,59 @@ static void statistic_fps_info(struct vpu_statistic *sts)
 		calc_rt_fps(&sts->fps[i], encoded_count, &ts);
 }
 
+static void print_firmware_debug(char *ptr, u32 size)
+{
+	u32 total = 0;
+	u32 len;
+
+	while (total < size) {
+		len = min_t(u32, size - total, 256);
+
+		pr_info("%.*s", len, ptr + total);
+		total += len;
+	}
+}
+
+static void handle_core_firmware_debug(struct core_device *core)
+{
+	char *ptr;
+	u32 rptr;
+	u32 wptr;
+
+	if (!core || !core->print_buf)
+		return;
+
+	if (!test_bit(core->id, &debug_firmware_bitmap))
+		return;
+
+	rptr = core->print_buf->read;
+	wptr = core->print_buf->write;
+	if (rptr == wptr)
+		return;
+
+	ptr = core->print_buf->buffer;
+	pr_info("----mem_printf for VPU Encoder core %d----\n", core->id);
+	if (rptr > wptr) {
+		print_firmware_debug(ptr + rptr, core->print_buf->bytes - rptr);
+		rptr = 0;
+	}
+	if (rptr < wptr) {
+		print_firmware_debug(ptr + rptr, wptr - rptr);
+		rptr = wptr;
+	}
+	if (rptr >= core->print_buf->bytes)
+		rptr = 0;
+	core->print_buf->read = rptr;
+}
+
 static void handle_core_minors(struct core_device *core)
 {
 	int i;
 
 	for (i = 0; i < core->supported_instance_count; i++)
 		statistic_fps_info(&core->attr[i].statistic);
+
+	handle_core_firmware_debug(core);
 }
 
 static void vpu_enc_watchdog_handler(struct work_struct *work)
@@ -4944,7 +5006,8 @@ static int init_vpu_core_dev(struct core_device *core_dev)
 	memset_io(core_dev->m0_p_fw_space_vir, 0, core_dev->fw_buf_size);
 
 	core_dev->m0_rpc_virt =
-		ioremap_wc(core_dev->m0_rpc_phy, core_dev->rpc_buf_size);
+		ioremap_wc(core_dev->m0_rpc_phy,
+			core_dev->rpc_buf_size + core_dev->print_buf_size);
 	if (!core_dev->m0_rpc_virt)
 		vpu_dbg(LVL_ERR, "failed to remap space for shared memory\n");
 
@@ -5491,4 +5554,7 @@ MODULE_PARM_DESC(reset_on_hang, "reset on hang (0-1)");
 
 module_param(show_detail_index, int, 0644);
 MODULE_PARM_DESC(reset_on_hang, "show memory detail info index");
+
+module_param(debug_firmware_bitmap, long, 0644);
+MODULE_PARM_DESC(debug_firmware_bitmap, "firmware debug info switch");
 
