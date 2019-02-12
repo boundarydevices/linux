@@ -366,6 +366,7 @@ struct flexcan_priv {
 #ifdef CONFIG_ARCH_MXC_ARM64
 	sc_ipc_t ipc_handle;
 #endif
+	bool wakeup;
 
 	u32 mb_size;
 	u32 mb_num;
@@ -544,6 +545,26 @@ static void flexcan_clks_disable(const struct flexcan_priv *priv)
 {
 	clk_disable_unprepare(priv->clk_ipg);
 	clk_disable_unprepare(priv->clk_per);
+}
+
+static void flexcan_wake_mask_enable(struct flexcan_priv *priv)
+{
+	struct flexcan_regs __iomem *regs = priv->regs;
+	u32 reg_mcr;
+
+	reg_mcr = flexcan_read(&regs->mcr);
+	reg_mcr |= FLEXCAN_MCR_WAK_MSK;
+	flexcan_write(reg_mcr, &regs->mcr);
+}
+
+static void flexcan_wake_mask_disable(struct flexcan_priv *priv)
+{
+	struct flexcan_regs __iomem *regs = priv->regs;
+	u32 reg_mcr;
+
+	reg_mcr = flexcan_read(&regs->mcr);
+	reg_mcr &= ~FLEXCAN_MCR_WAK_MSK;
+	flexcan_write(reg_mcr, &regs->mcr);
 }
 
 #ifdef CONFIG_ARCH_MXC_ARM64
@@ -1228,7 +1249,7 @@ static int flexcan_chip_start(struct net_device *dev)
 	}
 
 	/* enable self wakeup */
-	reg_mcr |= FLEXCAN_MCR_WAK_MSK | FLEXCAN_MCR_SLF_WAK;
+	reg_mcr |= FLEXCAN_MCR_SLF_WAK;
 
 	netdev_dbg(dev, "%s: writing mcr=0x%08x", __func__, reg_mcr);
 	flexcan_write(reg_mcr, &regs->mcr);
@@ -1434,6 +1455,8 @@ static int flexcan_open(struct net_device *dev)
 	if (err)
 		goto out_free_irq;
 
+	device_set_wakeup_capable(priv->dev, priv->wakeup);
+
 	can_led_event(dev, CAN_LED_EVENT_OPEN);
 
 	can_rx_offload_enable(&priv->offload);
@@ -1463,6 +1486,8 @@ static int flexcan_close(struct net_device *dev)
 	free_irq(dev->irq, dev);
 
 	close_candev(dev);
+
+	device_set_wakeup_capable(priv->dev, false);
 
 	can_led_event(dev, CAN_LED_EVENT_STOP);
 
@@ -1659,7 +1684,6 @@ static int flexcan_probe(struct platform_device *pdev)
 	int err, irq;
 	u32 clock_freq = 0;
 	u32 clk_src = 1;
-	int wakeup = 1;
 
 	reg_xceiver = devm_regulator_get(&pdev->dev, "xceiver");
 	if (PTR_ERR(reg_xceiver) == -EPROBE_DEFER)
@@ -1808,21 +1832,20 @@ static int flexcan_probe(struct platform_device *pdev)
 
 	devm_can_led_init(dev);
 
+	priv->wakeup = true;
 	if (priv->devtype_data->quirks & FLEXCAN_QUIRK_TIMESTAMP_SUPPORT_FD) {
 		err = imx8_sc_ipc_fetch(pdev);
 		if (err) {
-			wakeup = 0;
+			priv->wakeup = false;
 			dev_dbg(&pdev->dev, "failed to fetch scu ipc\n");
 		}
 	} else if (priv->devtype_data->quirks & FLEXCAN_QUIRK_DISABLE_RXFG) {
 		err = flexcan_of_parse_stop_mode(pdev);
 		if (err) {
-			wakeup = 0;
+			priv->wakeup = false;;
 			dev_dbg(&pdev->dev, "failed to parse stop-mode\n");
 		}
 	}
-
-	device_set_wakeup_capable(&pdev->dev, wakeup);
 
 	pm_runtime_put(&pdev->dev);
 
@@ -1896,7 +1919,9 @@ static int __maybe_unused flexcan_resume(struct device *device)
 		netif_device_attach(dev);
 		netif_start_queue(dev);
 
-		if (!device_may_wakeup(device)) {
+		if (device_may_wakeup(device)) {
+			flexcan_wake_mask_disable(priv);
+		} else {
 			pinctrl_pm_select_default_state(device);
 
 			err = pm_runtime_force_resume(device);
@@ -1929,6 +1954,18 @@ static int __maybe_unused flexcan_runtime_resume(struct device *device)
 	return 0;
 }
 
+static int __maybe_unused flexcan_noirq_suspend(struct device *device)
+{
+	struct net_device *dev = dev_get_drvdata(device);
+	struct flexcan_priv *priv = netdev_priv(dev);
+
+	if (netif_running(dev) && device_may_wakeup(device)) {
+		flexcan_wake_mask_enable(priv);
+	}
+
+	return 0;
+}
+
 static int __maybe_unused flexcan_noirq_resume(struct device *device)
 {
 	struct net_device *dev = dev_get_drvdata(device);
@@ -1945,7 +1982,7 @@ static int __maybe_unused flexcan_noirq_resume(struct device *device)
 static const struct dev_pm_ops flexcan_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(flexcan_suspend, flexcan_resume)
 	SET_RUNTIME_PM_OPS(flexcan_runtime_suspend, flexcan_runtime_resume, NULL)
-	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(NULL, flexcan_noirq_resume)
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(flexcan_noirq_suspend, flexcan_noirq_resume)
 };
 
 static struct platform_driver flexcan_driver = {

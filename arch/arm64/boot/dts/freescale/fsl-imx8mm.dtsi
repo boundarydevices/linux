@@ -716,7 +716,7 @@
 		clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 		dmas = <&sdma2 0 2 0>, <&sdma2 1 2 0>;
 		dma-names = "rx", "tx";
-		fsl,dataline = <0xff 0xff>;
+		fsl,dataline = <0 0xff 0xff>;
 		status = "disabled";
 	};
 
@@ -761,7 +761,7 @@
 		dmas = <&sdma2 8 2 0>, <&sdma2 9 2 0>;
 		dma-names = "rx", "tx";
 		fsl,shared-interrupt;
-		fsl,dataline = <0xf 0xf>;
+		fsl,dataline = <0 0xf 0xf>;
 		status = "disabled";
 	};
 
@@ -907,7 +907,7 @@
 		clocks = <&clk IMX8MM_CLK_ECSPI1_ROOT>,
 			<&clk IMX8MM_CLK_ECSPI1_ROOT>;
 		clock-names = "ipg", "per";
-		dmas = <&sdma1 0 4 0>, <&sdma1 1 4 0>;
+		dmas = <&sdma1 0 7 1>, <&sdma1 1 7 2>;
 		dma-names = "rx", "tx";
 		status = "disabled";
 	};
@@ -921,7 +921,7 @@
 		clocks = <&clk IMX8MM_CLK_ECSPI2_ROOT>,
 			<&clk IMX8MM_CLK_ECSPI2_ROOT>;
 		clock-names = "ipg", "per";
-		dmas = <&sdma1 2 4 0>, <&sdma1 3 4 0>;
+		dmas = <&sdma1 2 7 1>, <&sdma1 3 7 2>;
 		dma-names = "rx", "tx";
 		status = "disabled";
 	};
@@ -935,7 +935,7 @@
 		clocks = <&clk IMX8MM_CLK_ECSPI3_ROOT>,
 			<&clk IMX8MM_CLK_ECSPI3_ROOT>;
 		clock-names = "ipg", "per";
-		dmas = <&sdma1 4 4 0>, <&sdma1 5 4 0>;
+		dmas = <&sdma1 4 7 1>, <&sdma1 5 7 2>;
 		dma-names = "rx", "tx";
 		status = "disabled";
 	};
