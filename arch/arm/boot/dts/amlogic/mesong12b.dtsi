@@ -1824,6 +1824,15 @@
 		status = "okay";
 	 };
 
+	rng {
+		compatible = "amlogic,meson-rng";
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0xff630218 0x4>;
+		quality = /bits/ 16 <1000>;
+	};
+
 	ddr_bandwidth {
 		compatible = "amlogic, ddr-bandwidth";
 		status = "okay";
