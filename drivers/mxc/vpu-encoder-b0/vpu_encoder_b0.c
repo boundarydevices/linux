@@ -46,6 +46,7 @@
 #include <media/videobuf2-dma-contig.h>
 #include <media/videobuf2-vmalloc.h>
 
+#include <soc/imx8/sc/ipc.h>
 #include "vpu_encoder_b0.h"
 #include "vpu_encoder_ctrl.h"
 #include "vpu_encoder_config.h"
@@ -3464,7 +3465,7 @@ static int show_encoder_param(struct vpu_attr *attr,
 			attr->param.uIFrameInterval,
 			param->uIFrameInterval);
 	num += scnprintf(buf + num, size - num,
-			"\t%-18s:%10d;%10d\n", "GOP Length",
+			"\t%-18s:%10d;%10d\n", "Bframes",
 			attr->param.uGopBLength, param->uGopBLength);
 	num += scnprintf(buf + num, size - num,
 			"\t%-18s:%10d;%10d\n", "Low Latency Mode",
@@ -4939,6 +4940,43 @@ static void init_vpu_watchdog(struct vpu_dev *vdev)
 			msecs_to_jiffies(VPU_WATCHDOG_INTERVAL_MS));
 }
 
+static int check_vpu_encoder_is_available(void)
+{
+	sc_ipc_t mu_ipc;
+	sc_ipc_id_t mu_id;
+	uint32_t fuse = 0xffff;
+	int ret;
+
+	ret = sc_ipc_getMuID(&mu_id);
+	if (ret) {
+		vpu_err("sc_ipc_getMuID() can't obtain mu id SCI! %d\n",
+				ret);
+		return -EINVAL;
+	}
+
+	ret = sc_ipc_open(&mu_ipc, mu_id);
+	if (ret) {
+		vpu_err("sc_ipc_getMuID() can't open MU channel to SCU! %d\n",
+				ret);
+		return -EINVAL;
+	}
+
+	ret = sc_misc_otp_fuse_read(mu_ipc, VPU_DISABLE_BITS, &fuse);
+	sc_ipc_close(mu_ipc);
+	if (ret) {
+		vpu_err("sc_misc_otp_fuse_read fail! %d\n", ret);
+		return -EINVAL;
+	}
+
+	vpu_dbg(LVL_ALL, "mu_id = %d, fuse[7] = 0x%x\n", mu_id, fuse);
+	if (fuse & VPU_ENCODER_MASK) {
+		vpu_err("----Error, VPU Encoder is disabled\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static int vpu_probe(struct platform_device *pdev)
 {
 	struct vpu_dev *dev;
@@ -4951,6 +4989,9 @@ static int vpu_probe(struct platform_device *pdev)
 		vpu_dbg(LVL_ERR, "error: %s of_node is NULL\n", __func__);
 		return -EINVAL;
 	}
+
+	if (check_vpu_encoder_is_available())
+		return -EINVAL;
 
 	dev = devm_kzalloc(&pdev->dev, sizeof(*dev), GFP_KERNEL);
 	if (!dev)

@@ -75,7 +75,7 @@
 		reg = <0x3c>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_mipi_csi0>;
-		clocks = <&clk IMX8QM_CLK_DUMMY>;
+		clocks = <&clk IMX8QM_24MHZ>;
 		clock-names = "csi_mclk";
 		csi_id = <0>;
 		pwn-gpios = <&gpio1 28 GPIO_ACTIVE_LOW>;
@@ -105,7 +105,7 @@
 		reg = <0x3c>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_mipi_csi1>;
-		clocks = <&clk IMX8QM_CLK_DUMMY>;
+		clocks = <&clk IMX8QM_24MHZ>;
 		clock-names = "csi_mclk";
 		csi_id = <1>;
 		pwn-gpios = <&gpio1 31 GPIO_ACTIVE_LOW>;

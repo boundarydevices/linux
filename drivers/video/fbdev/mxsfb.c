@@ -1381,7 +1381,9 @@ static int mxsfb_restore_mode(struct mxsfb_info *host)
 
 	fb_info->var.bits_per_pixel = bits_per_pixel;
 
-	vmode.pixclock = KHZ2PICOS(clk_get_rate(host->clk_pix) / 1000U);
+	vmode.pixclock = clk_get_rate(host->clk_pix) / 1000U;
+	if (vmode.pixclock)
+		vmode.pixclock = KHZ2PICOS(vmode.pixclock);
 	vmode.hsync_len = get_hsync_pulse_width(host, vdctrl2);
 	vmode.left_margin = GET_HOR_WAIT_CNT(vdctrl3) - vmode.hsync_len;
 	vmode.right_margin = VDCTRL2_GET_HSYNC_PERIOD(vdctrl2) - vmode.hsync_len -
@@ -1638,7 +1640,7 @@ static int mxsfb_dispdrv_init(struct platform_device *pdev,
 	disp_dev[strlen(host->disp_dev)] = '\0';
 
 	/* Use videomode name from dtb, if any given */
-	if (host->disp_videomode) {
+	if (host->disp_videomode[0]) {
 		setting.dft_mode_str = kmalloc(NAME_LEN, GFP_KERNEL);
 		if (setting.dft_mode_str) {
 			memset(setting.dft_mode_str, 0x0, NAME_LEN);
