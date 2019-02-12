@@ -56,6 +56,14 @@
 		status ="okay";
 	};
 
+	brcmfmac: brcmfmac {
+		compatible = "cypress,brcmfmac";
+		pinctrl-names = "init", "idle", "default";
+		pinctrl-0 = <&pinctrl_wifi_init>;
+		pinctrl-1 = <&pinctrl_wifi_init>;
+		pinctrl-2 = <&pinctrl_wifi>;
+	};
+
 	regulators {
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -413,7 +421,6 @@
 				SC_P_UART1_TX_DMA_UART1_TX		0x06000020
 				SC_P_UART1_CTS_B_DMA_UART1_CTS_B	0x06000020
 				SC_P_UART1_RTS_B_DMA_UART1_RTS_B	0x06000020
-				SC_P_QSPI1A_DQS_LSIO_GPIO4_IO22		0x00000021
 			>;
 		};
 
@@ -662,6 +669,12 @@
 		pinctrl_wifi: wifigrp{
 			fsl,pins = <
 				SC_P_SCU_GPIO0_07_SCU_DSC_RTC_CLOCK_OUTPUT_32K	0x20
+			>;
+		};
+
+		pinctrl_wifi_init: wifi_initgrp{
+			fsl,pins = <
+				SC_P_SCU_GPIO0_07_LSIO_GPIO1_IO03		0x20
 			>;
 		};
 
@@ -1561,7 +1574,6 @@
 };
 
 &vpu_encoder {
-	core_type = <2>;
 	status = "okay";
 };
 

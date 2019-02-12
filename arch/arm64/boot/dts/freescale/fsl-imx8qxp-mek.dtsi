@@ -56,6 +56,14 @@
 		status ="okay";
 	};
 
+	brcmfmac: brcmfmac {
+		compatible = "cypress,brcmfmac";
+		pinctrl-names = "init", "idle", "default";
+		pinctrl-0 = <&pinctrl_wifi_init>;
+		pinctrl-1 = <&pinctrl_wifi_init>;
+		pinctrl-2 = <&pinctrl_wifi>;
+	};
+
 	regulators {
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -665,6 +673,12 @@
 			>;
 		};
 
+		pinctrl_wifi_init: wifi_initgrp{
+			fsl,pins = <
+				SC_P_SCU_BOOT_MODE3_SCU_DSC_BOOT_MODE3		0x20
+			>;
+		};
+
 		pinctrl_parallel_csi: parallelcsigrp {
 			fsl,pins = <
 				SC_P_CSI_D00_CI_PI_D02		0xC0000041
@@ -1120,15 +1134,6 @@
 	status = "okay";
 };
 
-&rpmsg{
-	/*
-	 * 64K for one rpmsg instance:
-	 */
-	vdev-nums = <2>;
-	reg = <0x0 0x90000000 0x0 0x20000>;
-	status = "okay";
-};
-
 &mipi_csi_0 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -1226,7 +1231,6 @@
 };
 
 &vpu_encoder {
-	core_type = <1>;
 	status = "okay";
 };
 

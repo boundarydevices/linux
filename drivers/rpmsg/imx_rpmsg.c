@@ -13,6 +13,7 @@
  */
 
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
@@ -22,6 +23,7 @@
 #include <linux/of_address.h>
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
+#include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
 #include <linux/rpmsg.h>
 #include <linux/slab.h>
@@ -31,6 +33,11 @@
 #include <linux/virtio_ring.h>
 #include <linux/imx_rpmsg.h>
 #include <linux/mx8_mu.h>
+#ifdef CONFIG_ARCH_MXC_ARM64
+#include <soc/imx8/sc/sci.h>
+#include <soc/imx8/sc/svc/irq/api.h>
+#endif
+#include "rpmsg_internal.h"
 
 enum imx_rpmsg_variants {
 	IMX6SX,
@@ -66,6 +73,8 @@ struct imx_rpmsg_vproc {
 	u32 in_idx;
 	u32 out_idx;
 	u32 core_id;
+	u32 mub_partition;
+	struct notifier_block *pnotifier;
 	spinlock_t mu_lock;
 };
 
@@ -100,6 +109,11 @@ struct imx_rpmsg_vq_info {
 	void *addr;	/* address where we mapped the virtio ring */
 	struct imx_rpmsg_vproc *rpdev;
 };
+
+static int imx_rpmsg_partion_notify0(struct notifier_block *nb,
+				unsigned long event, void *group);
+static int imx_rpmsg_partion_notify1(struct notifier_block *nb,
+				unsigned long event, void *group);
 
 static u64 imx_rpmsg_get_features(struct virtio_device *vdev)
 {
@@ -339,12 +353,23 @@ static struct virtio_config_ops imx_rpmsg_config_ops = {
 	.get_status	= imx_rpmsg_get_status,
 };
 
+static struct notifier_block imx_rpmsg_partion_notifier[] = {
+	{
+		.notifier_call = imx_rpmsg_partion_notify0,
+	},
+	{
+		.notifier_call = imx_rpmsg_partion_notify1,
+	},
+};
+
 static struct imx_rpmsg_vproc imx_rpmsg_vprocs[] = {
 	{
 		.rproc_name	= "m4",
+		.pnotifier	= &imx_rpmsg_partion_notifier[0],
 	},
 	{
 		.rproc_name	= "m4",
+		.pnotifier	= &imx_rpmsg_partion_notifier[1],
 	},
 };
 
@@ -464,6 +489,83 @@ static int imx_rpmsg_mu_init(struct imx_rpmsg_vproc *rpdev)
 
 	return ret;
 }
+
+static int imx_unregister_rpmsg(struct device *dev,
+				void *data)
+{
+	struct rpmsg_device *rpdev = to_rpmsg_device(dev);
+	struct rpmsg_channel_info chinfo;
+	int ret;
+	struct virtio_device *vdev = (struct virtio_device *)data;
+
+	chinfo.src = rpdev->src;
+	chinfo.dst = rpdev->dst;
+	strncpy(chinfo.name, rpdev->id.name, RPMSG_NAME_SIZE);
+	rpdev->announce = rpdev->src != RPMSG_ADDR_ANY;
+
+	ret = rpmsg_unregister_device(&vdev->dev, &chinfo);
+	if (ret)
+		dev_err(dev, "rpmsg_destroy_channel failed: %d\n", ret);
+
+	return ret;
+}
+
+void imx_rpmsg_restore(struct imx_rpmsg_vproc *rpdev)
+{
+	int i;
+	unsigned int mu_rpmsg = 0;
+	int vdev_nums = rpdev->vdev_nums;
+
+	for (i = 0; i < vdev_nums; i++) {
+		/* unregister all rpmsg channels */
+		device_for_each_child(&rpdev->ivdev[i].vdev.dev,
+				      &rpdev->ivdev[i].vdev,
+				      imx_unregister_rpmsg);
+
+		/* Wait a while for remote bootup */
+		if (!i)
+			usleep_range(10000, 20000);
+
+		/* Kick-off remote again */
+		MU_SendMessageTimeout(rpdev->mu_base, 1, mu_rpmsg << 16, 200);
+		mu_rpmsg += 2;
+	}
+}
+
+static int imx_rpmsg_partion_notify0(struct notifier_block *nb,
+				      unsigned long event, void *group)
+{
+#ifdef CONFIG_ARCH_MXC_ARM64
+	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[0];
+
+	/* Ignore other irqs */
+	if (!((event & BIT(rpdev->mub_partition)) &&
+		(*(sc_irq_group_t *)group == SC_IRQ_GROUP_REBOOTED)))
+		return 0;
+
+	imx_rpmsg_restore(rpdev);
+	pr_info("Patition%d reset!\n", rpdev->mub_partition);
+#endif
+	return 0;
+}
+
+static int imx_rpmsg_partion_notify1(struct notifier_block *nb,
+				      unsigned long event, void *group)
+{
+#ifdef CONFIG_ARCH_MXC_ARM64
+	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[1];
+
+	/* Ignore other irqs */
+	if (!((event & BIT(rpdev->mub_partition)) &&
+		(*(sc_irq_group_t *)group == SC_IRQ_GROUP_REBOOTED)))
+		return 0;
+
+	imx_rpmsg_restore(rpdev);
+	pr_info("Patition%d reset!\n", rpdev->mub_partition);
+#endif
+	return 0;
+}
+
 static int imx_rpmsg_probe(struct platform_device *pdev)
 {
 	int core_id, j, ret = 0;
@@ -527,7 +629,7 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	ret = imx_rpmsg_mu_init(rpdev);
 	if (ret) {
 		pr_err("unable to initialize mu module.\n");
-		return ret;
+		goto vdev_err_out;
 	}
 	INIT_DELAYED_WORK(&(rpdev->rpmsg_work), rpmsg_work_handler);
 	BLOCKING_INIT_NOTIFIER_HEAD(&(rpdev->notifier));
@@ -539,7 +641,8 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 		rpdev->vdev_nums = 1;
 	if (rpdev->vdev_nums > MAX_VDEV_NUMS) {
 		pr_err("vdev-nums exceed the max %d\n", MAX_VDEV_NUMS);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto vdev_err_out;
 	}
 	rpdev->first_notify = rpdev->vdev_nums;
 
@@ -548,13 +651,24 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 					rpdev->vdev_nums);
 		if (ret) {
 			pr_err("No vring buffer.\n");
-			return -ENOMEM;
+			ret = -ENOMEM;
+			goto vdev_err_out;
 		}
 	} else {
 		pr_err("No remote m4 processor.\n");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto vdev_err_out;
 	}
 
+
+	if (rpdev->variant == IMX8QM || rpdev->variant == IMX8QXP) {
+		if (of_reserved_mem_device_init(&pdev->dev)) {
+			dev_err(&pdev->dev,
+			"dev doesn't have specific DMA pool.\n");
+			ret = -ENOMEM;
+			goto vdev_err_out;
+		}
+	}
 	for (j = 0; j < rpdev->vdev_nums; j++) {
 		pr_debug("%s rpdev%d vdev%d: vring0 0x%x, vring1 0x%x\n",
 			 __func__, rpdev->core_id, rpdev->vdev_nums,
@@ -570,12 +684,56 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 		if (ret) {
 			pr_err("%s failed to register rpdev: %d\n",
 					__func__, ret);
-			return ret;
+			goto err_out;
 		}
-
 	}
+
 	platform_set_drvdata(pdev, rpdev);
 
+#ifdef CONFIG_ARCH_MXC_ARM64
+	if (rpdev->variant == IMX8QXP || rpdev->variant == IMX8QM) {
+		uint32_t mu_id;
+		sc_err_t sciErr;
+		static sc_ipc_t mu_ipchandle;
+		/* Get muB partition id and enable irq in SCFW then */
+		if (of_property_read_u32(np, "mub-partition",
+					&rpdev->mub_partition))
+			rpdev->mub_partition = 3; /* default partition 3 */
+
+		sciErr = sc_ipc_getMuID(&mu_id);
+		if (sciErr != SC_ERR_NONE) {
+			pr_err("can't obtain mu id: %d\n", sciErr);
+			return sciErr;
+		}
+
+		sciErr = sc_ipc_open(&mu_ipchandle, mu_id);
+
+		if (sciErr != SC_ERR_NONE) {
+			pr_err("can't get ipc handler: %d\n", sciErr);
+			return sciErr;
+		};
+
+		/* Request for the partition reset interrupt. */
+		sciErr = sc_irq_enable(mu_ipchandle, SC_R_MU_1A,
+				       SC_IRQ_GROUP_REBOOTED,
+				       BIT(rpdev->mub_partition), true);
+		if (sciErr)
+			pr_info("Cannot request partition reset interrupt\n");
+
+		return register_scu_notifier(rpdev->pnotifier);
+
+	}
+#endif
+
+	return ret;
+
+err_out:
+	if (rpdev->variant == IMX8QM || rpdev->variant == IMX8QXP)
+		of_reserved_mem_device_release(&pdev->dev);
+vdev_err_out:
+	if (rpdev->variant == IMX7D || rpdev->variant == IMX8QXP
+			|| rpdev->variant == IMX8QM)
+		clk_disable_unprepare(rpdev->mu_clk);
 	return ret;
 }
 

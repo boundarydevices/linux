@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -229,9 +229,26 @@ static void dpu_crtc_atomic_enable(struct drm_crtc *crtc,
 
 		framegen_wait_for_secondary_syncup(dpu_crtc->m_fg);
 		framegen_wait_for_secondary_syncup(dpu_crtc->s_fg);
+
+		if (framegen_secondary_requests_to_read_empty_fifo(dpu_crtc->m_fg)) {
+			framegen_secondary_clear_channel_status(dpu_crtc->m_fg);
+			dev_warn(dpu_crtc->dev,
+				 "enable - master FrameGen requests to read empty FIFO\n");
+		}
+		if (framegen_secondary_requests_to_read_empty_fifo(dpu_crtc->s_fg)) {
+			framegen_secondary_clear_channel_status(dpu_crtc->s_fg);
+			dev_warn(dpu_crtc->dev,
+				 "enable - slave FrameGen requests to read empty FIFO\n");
+		}
 	} else {
 		framegen_wait_for_frame_counter_moving(dpu_crtc->fg);
 		tcon_set_operation_mode(dpu_crtc->tcon);
+
+		if (framegen_secondary_requests_to_read_empty_fifo(dpu_crtc->fg)) {
+			framegen_secondary_clear_channel_status(dpu_crtc->fg);
+			dev_warn(dpu_crtc->dev,
+				 "enable - FrameGen requests to read empty FIFO\n");
+		}
 	}
 }
 
@@ -653,6 +670,25 @@ static void dpu_crtc_atomic_flush(struct drm_crtc *crtc,
 		disable_irq(dpu_crtc->content_shdld_irq);
 		if (dcstate->use_pc)
 			disable_irq(aux_dpu_crtc->content_shdld_irq);
+
+		if (dcstate->use_pc) {
+			if (framegen_secondary_requests_to_read_empty_fifo(dpu_crtc->m_fg)) {
+				framegen_secondary_clear_channel_status(dpu_crtc->m_fg);
+				dev_warn(dpu_crtc->dev,
+					 "flush - master FrameGen requests to read empty FIFO\n");
+			}
+			if (framegen_secondary_requests_to_read_empty_fifo(dpu_crtc->s_fg)) {
+				framegen_secondary_clear_channel_status(dpu_crtc->s_fg);
+				dev_warn(dpu_crtc->dev,
+					 "flush - slave FrameGen requests to read empty FIFO\n");
+			}
+		} else {
+			if (framegen_secondary_requests_to_read_empty_fifo(dpu_crtc->fg)) {
+				framegen_secondary_clear_channel_status(dpu_crtc->fg);
+				dev_warn(dpu_crtc->dev,
+					 "flush - FrameGen requests to read empty FIFO\n");
+			}
+		}
 
 		WARN_ON(!crtc->state->event);
 

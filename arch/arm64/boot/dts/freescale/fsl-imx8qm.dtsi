@@ -96,7 +96,11 @@
 			no-map;
 			reg = <0 0x90000000 0 0x400000>;
 		};
-
+		rpmsg_dma_reserved:rpmsg_dma@0x90400000 {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0 0x90400000 0 0x1C00000>;
+		};
 		decoder_rpc: decoder_rpc@0x92000000 {
 			no-map;
 			reg = <0 0x92000000 0 0x200000>;
@@ -179,7 +183,7 @@
 	};
 
 	vpu_encoder: vpu_encoder@2d000000 {
-		compatible = "nxp,imx8qm-b0-vpuenc", "nxp,imx8qxp-b0-vpuenc";
+		compatible = "nxp,imx8qm-b0-vpuenc";
 		#address-cells = <1>;
 		#size-cells = <1>;
 

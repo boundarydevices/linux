@@ -119,6 +119,11 @@
 			no-map;
 			reg = <0 0x90000000 0 0x400000>;
 		};
+		rpmsg_dma_reserved:rpmsg_dma@0x90400000 {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0 0x90400000 0 0x1C00000>;
+		};
 		decoder_rpc: decoder_rpc@0x92000000 {
 			no-map;
 			reg = <0 0x92000000 0 0x200000>;
@@ -3202,9 +3207,6 @@
 			<&clk IMX8QXP_AUD_DSP_CORE_CLK>;
 		clock-names = "ipg", "ocram", "core";
 		fsl,dsp-firmware = "imx/dsp/hifi4.bin";
-		fsl,dsp-wrap = "imx/dsp/lib_dsp_codec_wrap.so";
-		fsl,dsp-codec-mp3 = "imx/dsp/lib_dsp_mp3_dec.so";
-		fsl,dsp-codec-aac = "imx/dsp/lib_dsp_aac_dec.so";
 		power-domains = <&pd_dsp>;
 	};
 
@@ -3365,7 +3367,7 @@
 	};
 
 	vpu_encoder: vpu_encoder@2d000000 {
-		compatible = "nxp,imx8qm-b0-vpuenc", "nxp,imx8qxp-b0-vpuenc";
+		compatible = "nxp,imx8qxp-b0-vpuenc";
 		#address-cells = <1>;
 		#size-cells = <1>;
 
@@ -3410,7 +3412,9 @@
 		rpmsg: rpmsg{
 			compatible = "fsl,imx8qxp-rpmsg";
 			status = "disabled";
+			mub-partition = <3>;
 			power-domains = <&pd_lsio_mu5a>;
+			memory-region = <&rpmsg_dma_reserved>;
 		};
 	};
 

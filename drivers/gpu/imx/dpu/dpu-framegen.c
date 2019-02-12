@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -79,7 +79,9 @@
 #define FRAMEINDEX_SHIFT	14
 #define FGCHSTAT		0x78
 #define SECSYNCSTAT		BIT(24)
+#define SFIFOEMPTY		BIT(16)
 #define FGCHSTATCLR		0x7C
+#define CLRSECSTAT		BIT(16)
 #define FGSKEWMON		0x80
 #define FGSFIFOMIN		0x84
 #define FGSFIFOMAX		0x88
@@ -581,6 +583,34 @@ void framegen_wait_for_frame_counter_moving(struct dpu_framegen *fg)
 			fg->id, last_frame_index, frame_index);
 }
 EXPORT_SYMBOL_GPL(framegen_wait_for_frame_counter_moving);
+
+bool framegen_secondary_requests_to_read_empty_fifo(struct dpu_framegen *fg)
+{
+	u32 val;
+	bool empty;
+
+	mutex_lock(&fg->mutex);
+	val = dpu_fg_read(fg, FGCHSTAT);
+	mutex_unlock(&fg->mutex);
+
+	empty = !!(val & SFIFOEMPTY);
+
+	if (empty)
+		dev_dbg(fg->dpu->dev,
+			"FrameGen%d secondary requests to read empty FIFO\n",
+			fg->id);
+
+	return empty;
+}
+EXPORT_SYMBOL_GPL(framegen_secondary_requests_to_read_empty_fifo);
+
+void framegen_secondary_clear_channel_status(struct dpu_framegen *fg)
+{
+	mutex_lock(&fg->mutex);
+	dpu_fg_write(fg, CLRSECSTAT, FGCHSTATCLR);
+	mutex_unlock(&fg->mutex);
+}
+EXPORT_SYMBOL_GPL(framegen_secondary_clear_channel_status);
 
 bool framegen_secondary_is_syncup(struct dpu_framegen *fg)
 {
