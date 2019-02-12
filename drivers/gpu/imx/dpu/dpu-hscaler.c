@@ -105,7 +105,7 @@ int hscaler_pixengcfg_dynamic_src_sel(struct dpu_hscaler *hs, hs_src_sel_t src)
 		if (hs_id_array[i] == hs->id)
 			break;
 
-	if (WARN_ON(i == (ARRAY_SIZE(hs_id_array) + 1)))
+	if (WARN_ON(i == ARRAY_SIZE(hs_id_array)))
 		return -EINVAL;
 
 	mutex_lock(&hs->mutex);
@@ -370,6 +370,9 @@ int dpu_hs_init(struct dpu_soc *dpu, unsigned int id,
 	for (i = 0; i < ARRAY_SIZE(hs_ids); i++)
 		if (hs_ids[i] == id)
 			break;
+
+	if (i == ARRAY_SIZE(hs_ids))
+		return -EINVAL;
 
 	dpu->hs_priv[i] = hs;
 

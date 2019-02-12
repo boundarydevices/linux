@@ -46,15 +46,7 @@ struct mxc_isi_fmt mxc_isi_out_formats[] = {
 		.name		= "RGB24",
 		.fourcc		= V4L2_PIX_FMT_RGB24,
 		.depth		= { 24 },
-		.color		= MXC_ISI_OUT_FMT_RGB32P,
-		.memplanes	= 1,
-		.colplanes	= 1,
-		.mbus_code  = MEDIA_BUS_FMT_RGB888_1X24,
-	}, {
-		.name		= "RGB32",
-		.fourcc		= V4L2_PIX_FMT_XRGB32,
-		.depth		= { 32 },
-		.color		= MXC_ISI_OUT_FMT_XRGB32,
+		.color		= MXC_ISI_OUT_FMT_BGR32P,
 		.memplanes	= 1,
 		.colplanes	= 1,
 		.mbus_code  = MEDIA_BUS_FMT_RGB888_1X24,
@@ -62,18 +54,10 @@ struct mxc_isi_fmt mxc_isi_out_formats[] = {
 		.name		= "BGR24",
 		.fourcc		= V4L2_PIX_FMT_BGR24,
 		.depth		= { 24 },
-		.color		= MXC_ISI_OUT_FMT_BGR32P,
+		.color		= MXC_ISI_OUT_FMT_RGB32P,
 		.memplanes	= 1,
 		.colplanes	= 1,
 		.mbus_code  = MEDIA_BUS_FMT_BGR888_1X24,
-	}, {
-		.name		= "ARGB32",
-		.fourcc		= V4L2_PIX_FMT_ARGB32,
-		.depth		= { 32 },
-		.color		= MXC_ISI_OUT_FMT_ARGB32,
-		.memplanes	= 1,
-		.colplanes	= 1,
-		.mbus_code  = MEDIA_BUS_FMT_ARGB8888_1X32,
 	}, {
 		.name		= "YUYV-16",
 		.fourcc		= V4L2_PIX_FMT_YUYV,
@@ -106,6 +90,22 @@ struct mxc_isi_fmt mxc_isi_out_formats[] = {
 		.memplanes	= 3,
 		.colplanes	= 3,
 		.mbus_code	= MEDIA_BUS_FMT_YUV8_1X24,
+	}, {
+		.name		= "xBGR32",
+		.fourcc		= V4L2_PIX_FMT_XBGR32,
+		.depth		= { 32 },
+		.color		= MXC_ISI_OUT_FMT_XRGB32,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code	= MEDIA_BUS_FMT_RGB888_1X24,
+	}, {
+		.name		= "ABGR32",
+		.fourcc		= V4L2_PIX_FMT_ABGR32,
+		.depth		= { 32 },
+		.color		= MXC_ISI_OUT_FMT_ARGB32,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code	= MEDIA_BUS_FMT_RGB888_1X24,
 	}
 };
 
@@ -547,16 +547,27 @@ static int mxc_isi_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_HFLIP:
-		mxc_isi->hflip = ctrl->val;
+		if (ctrl->val < 0)
+			return -EINVAL;
+		mxc_isi->hflip = (ctrl->val > 0) ? 1 : 0;
 		break;
 
 	case V4L2_CID_VFLIP:
-		mxc_isi->vflip = ctrl->val;
+		if (ctrl->val < 0)
+			return -EINVAL;
+		mxc_isi->vflip = (ctrl->val > 0) ? 1 : 0;
 		break;
 
 	case V4L2_CID_ALPHA_COMPONENT:
+		if (ctrl->val < 0 || ctrl->val > 255)
+			return -EINVAL;
 		mxc_isi->alpha = ctrl->val;
+		mxc_isi->alphaen = 1;
 		break;
+
+	default:
+		dev_err(&mxc_isi->pdev->dev, "%s: Not support %d CID\n", __func__, ctrl->id);
+		return -EINVAL;
 	}
 
 	spin_unlock_irqrestore(&mxc_isi->slock, flags);
@@ -653,14 +664,14 @@ static int mxc_isi_capture_open(struct file *file)
 	source_pad = mxc_isi_get_remote_source_pad(mxc_isi);
 	if (source_pad == NULL) {
 		v4l2_err(mxc_isi->v4l2_dev, "%s, No remote pad found!\n", __func__);
-		return -EINVAL;
+		goto fail;
 	}
 
 	/* Get remote source pad subdev */
 	sd = media_entity_to_v4l2_subdev(source_pad->entity);
 	if (sd == NULL) {
 		v4l2_err(mxc_isi->v4l2_dev, "%s, No remote subdev found!\n", __func__);
-		return -EINVAL;
+		goto fail;
 	}
 
 	mutex_lock(&mxc_isi->lock);
@@ -673,10 +684,14 @@ static int mxc_isi_capture_open(struct file *file)
 	if (ret) {
 		v4l2_err(mxc_isi->v4l2_dev, "%s, Call subdev s_power fail!\n", __func__);
 		pm_runtime_put(dev);
-		return ret;
+		goto fail;
 	}
 
 	return 0;
+
+fail:
+	atomic_dec(&mxc_isi->open_count);
+	return -EINVAL;
 }
 
 static int mxc_isi_capture_release(struct file *file)
@@ -714,7 +729,8 @@ static int mxc_isi_capture_release(struct file *file)
 	}
 	mutex_unlock(&mxc_isi->lock);
 
-	if (atomic_dec_and_test(&mxc_isi->open_count))
+	if (atomic_read(&mxc_isi->open_count) > 0 &&
+		atomic_dec_and_test(&mxc_isi->open_count))
 		mxc_isi_channel_deinit(mxc_isi);
 
 	ret = v4l2_subdev_call(sd, core, s_power, 0);

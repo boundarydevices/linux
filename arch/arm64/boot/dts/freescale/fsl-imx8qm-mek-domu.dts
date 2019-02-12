@@ -99,7 +99,7 @@
 		};
 		encoder_boot: encoder_boot@0x86000000 {
 			no-map;
-			reg = <0 0x86000000 0 0x2000000>;
+			reg = <0 0x86000000 0 0x400000>;
 		};
 		/*
 		 * CM40 rpmsg memory is still for Dom0, the domu.cfg
@@ -116,7 +116,7 @@
 		};
 		encoder_rpc: encoder_rpc@0x91400000 {
 			no-map;
-			reg = <0 0x91400000 0 0x1000000>;
+			reg = <0 0x91400000 0 0x200000>;
 		};
 
 		dsp_reserved: dsp@0x92400000 {
@@ -168,6 +168,26 @@
 		reg = <0x0 0x38000000 0x0 0x1000000>;
 		interrupts = <GIC_PPI 15 (GIC_CPU_MASK_SIMPLE(6) | IRQ_TYPE_LEVEL_LOW)>;
 		interrupt-parent = <&gic>;
+	};
+
+	clocks {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		clk0: clock@0 {
+		        compatible = "fixed-clock";
+		        reg = <0>;
+		        #clock-cells = <0>;
+		        clock-frequency = <24000000>;
+		};
+	};
+
+	rtc0: rtc@23000000 {
+		compatible = "arm,pl031", "arm,primecell";
+		reg = <0x0 0x23000000 0x0 0x1000>;
+		interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clk0>;
+		clock-names = "apb_pclk";
 	};
 
 	passthrough {
@@ -266,9 +286,9 @@
 			compatible = "nxp,imx8qm-b0-vpuenc", "nxp,imx8qxp-b0-vpuenc";
 			boot-region = <&encoder_boot>;
 			rpc-region = <&encoder_rpc>;
-			fw-buf-size = <0x1000000 0x1000000>;
-			rpc-buf-size = <0x500000 0x500000>;
-			print-buf-size = <0x300000 0x300000>;
+			fw-buf-size = <0x200000 0x200000>;
+			rpc-buf-size = <0x80000 0x80000>;
+			print-buf-size = <0x80000 0x80000>;
 			reg = <0x0 0x2d000000 0x0 0x1000000>;
 			reg-names = "vpu_regs";
 			power-domains = <&pd_vpu_enc>;
@@ -511,6 +531,7 @@
 };
 
 /delete-node/ &hdmi;
+/delete-node/ &hdmi_rx;
 /delete-node/ &irqsteer_dsi0;
 /delete-node/ &i2c0_mipi_dsi0;
 /delete-node/ &mipi_dsi_csr1;
@@ -591,6 +612,7 @@
 /delete-node/ &i2c0_cm40;
 /delete-node/ &i2c0_cm41;
 /delete-node/ &irqsteer_hdmi;
+/delete-node/ &irqsteer_hdmi_rx;
 /delete-node/ &i2c0_hdmi;
 
 &irqsteer_lvds1 {

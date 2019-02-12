@@ -44,25 +44,19 @@ extern unsigned int vpu_dbg_level_decoder;
 
 #define MIN_SPACE (4096+64)
 
-#define VPU_MAX_FORMATS 4
 #define VPU_MAX_BUFFER 32
 #define M0FW_FILENAME "vpu/vpu_fw_imx8_dec.bin"
 #define MMAP_BUF_TYPE_SHIFT 28
 #define MMAP_BUF_TYPE_MASK 0xF0000000
 #define M0_BOOT_SIZE 0x1000000
-#define M0_PRINT_OFFSET 0x500000
 #define DCP_SIZE 0x3000000
-#define MAX_BUFFER_SIZE 5242880
+#define MAX_BUFFER_SIZE 0xc00000
 #define UDATA_BUFFER_SIZE 0x1000
 #define SHARED_SIZE 0x00400000
 #define MAX_DCP_NUM 2
 #define MAX_MBI_NUM 18 // same with MEDIA_PLAYER_MAX_MBI_UNIT defined in firmware
 #define MAX_TIMEOUT_COUNT 10
-#ifdef CM4
-#define VPU_REG_BASE 0x2c000000
-#else
 #define VPU_REG_BASE 0x40000000
-#endif
 
 #define V4L2_MAX_CTRLS 12
 #define V4L2_PIX_FMT_NV12_10BIT    v4l2_fourcc('N', 'T', '1', '2') /*  Y/CbCr 4:2:0 for 10bit  */
@@ -83,7 +77,6 @@ struct vpu_v4l2_control {
 typedef enum{
 	INIT_DONE = 1,
 	RPC_BUF_OFFSET,
-	PRINT_BUF_OFFSET,
 	BOOT_ADDRESS,
 	COMMAND,
 	EVENT
@@ -117,7 +110,8 @@ enum vpu_video_standard {
 
 typedef enum{
 	EOS_PADDING_TYPE = 1,
-	BUFFLUSH_PADDING_TYPE = 2
+	BUFFLUSH_PADDING_TYPE = 2,
+	BUFABORT_PADDING_TYPE = 3,
 } VPU_PADDING_SCODE_TYPE;
 
 #define VPU_PIX_FMT_AVS         v4l2_fourcc('A', 'V', 'S', '0')
@@ -200,11 +194,6 @@ struct vpu_dev {
 	u_int32 m0_p_fw_space_phy;
 	void *m0_rpc_virt;
 	u_int32 m0_rpc_phy;
-#ifndef DYNAMIC_MEM
-	void *str_base_vir;
-	u_int32 str_base_phy;
-	u_int32 str_size;
-#endif
 	struct mutex dev_mutex;
 	struct mutex cmd_mutex;
 	bool fw_is_ready;
@@ -277,6 +266,7 @@ struct vpu_ctx {
 	bool eos_stop_added;
 	bool ctx_released;
 	bool start_code_bypass;
+	bool hang_status;
 	wait_queue_head_t buffer_wq;
 	void *dpb_dma_virt;
 	u_int32 uSize;

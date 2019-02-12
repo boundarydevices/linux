@@ -37,6 +37,12 @@ static const unsigned int imx_rpmsg_extcon_cables[] = {
 	EXTCON_NONE,
 };
 #endif
+static const struct snd_soc_dapm_widget imx_wm8960_dapm_widgets[] = {
+	SND_SOC_DAPM_HP("Headphone Jack", NULL),
+	SND_SOC_DAPM_SPK("Ext Spk", NULL),
+	SND_SOC_DAPM_MIC("Mic Jack", NULL),
+	SND_SOC_DAPM_MIC("Main MIC", NULL),
+};
 
 static int imx_rpmsg_probe(struct platform_device *pdev)
 {
@@ -44,6 +50,8 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	struct platform_device *cpu_pdev;
 	struct imx_rpmsg_data *data;
 	struct fsl_rpmsg_i2s         *rpmsg_i2s;
+	struct snd_soc_dai_link_component dlc = { 0 };
+	struct snd_soc_dai *codec_dai;
 	int ret;
 
 	cpu_np = of_parse_phandle(pdev->dev.of_node, "cpu-dai", 0);
@@ -92,6 +100,12 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 			    SND_SOC_DAIFMT_CBS_CFS;
 	}
 
+	dlc.name = data->dai[0].codec_name;
+	dlc.dai_name = data->dai[0].codec_dai_name;
+	codec_dai = snd_soc_find_dai(&dlc);
+	if (!codec_dai)
+		return -ENODEV;
+
 	data->dai[0].cpu_dai_name = dev_name(&cpu_pdev->dev);
 	data->dai[0].platform_of_node = cpu_np;
 	data->dai[0].playback_only = true;
@@ -116,6 +130,17 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
 	if (ret)
 		goto fail;
+
+	if (rpmsg_i2s->codec_wm8960) {
+		ret = snd_soc_of_parse_audio_routing(&data->card,
+						"audio-routing");
+		if (ret)
+			goto fail;
+
+		data->card.dapm_widgets = imx_wm8960_dapm_widgets;
+		data->card.num_dapm_widgets =
+				ARRAY_SIZE(imx_wm8960_dapm_widgets);
+	}
 
 	platform_set_drvdata(pdev, &data->card);
 	snd_soc_card_set_drvdata(&data->card, data);

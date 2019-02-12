@@ -52,9 +52,9 @@ extern unsigned int vpu_dbg_level_encoder;
 #define M0_BOOT_SIZE_DEFAULT	0x1000000
 #define M0_BOOT_SIZE_MIN	0x100000
 #define RPC_SIZE_DEFAULT	0x100000
-#define RPC_SIZE_MIN		0x100000
+#define RPC_SIZE_MIN		0x20000
 #define PRINT_SIZE_DEFAULT	0x200000
-#define PRINT_SIZE_MIN		0x200000
+#define PRINT_SIZE_MIN		0x20000
 #define MEM_SIZE  0x2800000
 #define YUV_SIZE  0x4000000
 #define STREAM_SIZE 0x300000
@@ -89,7 +89,6 @@ struct vpu_v4l2_control {
 typedef enum{
 	INIT_DONE = 1,
 	RPC_BUF_OFFSET,
-	PRINT_BUF_OFFSET,
 	BOOT_ADDRESS,
 	COMMAND,
 	EVENT
@@ -228,6 +227,8 @@ struct vpu_attr {
 	MEDIAIP_ENC_PARAM param;
 
 	unsigned long ts_start[2];
+	unsigned long msg_count;
+	atomic64_t total_dma_size;
 
 	bool created;
 };
@@ -242,7 +243,7 @@ struct core_device {
 	u32 rpc_buf_size;
 	u32 print_buf_size;
 	u32 rpc_actual_size;
-	struct mutex core_mutex;
+
 	struct mutex cmd_mutex;
 	bool fw_is_ready;
 	bool firmware_started;
@@ -292,6 +293,7 @@ struct buffer_addr {
 
 enum {
 	VPU_ENC_STATUS_INITIALIZED,
+	VPU_ENC_STATUS_SNAPSHOT = 20,
 	VPU_ENC_STATUS_FORCE_RELEASE = 21,
 	VPU_ENC_STATUS_EOS_SEND = 22,
 	VPU_ENC_STATUS_START_SEND = 23,
@@ -315,13 +317,11 @@ struct vpu_ctx {
 	int str_index;
 	unsigned long status;
 	struct queue_data q_data[2];
-	struct kfifo msg_fifo;
 	struct mutex instance_mutex;
 	struct work_struct instance_work;
 	struct workqueue_struct *instance_wq;
 	bool ctx_released;
 	struct buffer_addr encoder_stream;
-	struct buffer_addr encoder_mem;
 	struct buffer_addr encFrame[MEDIAIP_MAX_NUM_WINDSOR_SRC_FRAMES];
 	struct buffer_addr refFrame[MEDIAIP_MAX_NUM_WINDSOR_REF_FRAMES];
 	struct buffer_addr actFrame;
@@ -330,6 +330,9 @@ struct vpu_ctx {
 
 	struct completion stop_cmp;
 	bool power_status;
+
+	struct list_head msg_q;
+	struct list_head idle_q;
 };
 
 #define LVL_DEBUG	4
