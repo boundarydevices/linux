@@ -545,15 +545,17 @@
 			 <&clk IMX8MQ_CLK_DISP_AXI_ROOT>,
 			 <&clk IMX8MQ_CLK_DISP_RTRM_ROOT>,
 			 <&clk IMX8MQ_CLK_DUMMY>,
-			 <&clk IMX8MQ_CLK_DUMMY>,
+			 <&clk IMX8MQ_VIDEO2_PLL_OUT>,
 			 <&clk IMX8MQ_CLK_DISP_DTRC>;
 		clock-names = "apb", "axi", "rtrm", "pix_div", "pix_out", "dtrc";
 		assigned-clocks = <&clk IMX8MQ_CLK_DC_PIXEL>,
 				  <&clk IMX8MQ_CLK_DISP_AXI>,
-				  <&clk IMX8MQ_CLK_DISP_RTRM>;
+				  <&clk IMX8MQ_CLK_DISP_RTRM>,
+				  <&clk IMX8MQ_VIDEO2_PLL1_REF_SEL>;
 		assigned-clock-parents = <&clk IMX8MQ_VIDEO_PLL1_OUT>,
 					 <&clk IMX8MQ_SYS1_PLL_800M>,
-					 <&clk IMX8MQ_SYS1_PLL_800M>;
+					 <&clk IMX8MQ_SYS1_PLL_800M>,
+					 <&clk IMX8MQ_CLK_PHY_27MHZ>;
 		assigned-clock-rates = <594000000>,
 				       <800000000>,
 				       <400000000>;
