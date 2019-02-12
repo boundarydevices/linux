@@ -12,7 +12,6 @@ obj-$(CONFIG_ARM)   += \
 	clk-pllv2.o \
 	clk-pllv3.o \
 	clk-pfd.o \
-	clk-composite.o \
 	clk-pllv4.o \
 	clk-pllv5.o \
 	clk-pfdv2.o
@@ -30,12 +29,12 @@ obj-$(CONFIG_SOC_IMX6SLL) += clk-imx6sll.o
 obj-$(CONFIG_SOC_IMX6SX) += clk-imx6sx.o
 obj-$(CONFIG_SOC_IMX6UL) += clk-imx6ul.o
 obj-$(CONFIG_SOC_IMX7D)  += clk-imx7d.o
-obj-$(CONFIG_SOC_IMX7ULP)  += clk-imx7ulp.o
+obj-$(CONFIG_SOC_IMX7ULP)  += clk-imx7ulp.o clk-composite-7ulp.o
 obj-$(CONFIG_SOC_VF610)  += clk-vf610.o
 #
 # IMX Clock specific Makefile
 #
 obj-$(CONFIG_ARCH_FSL_IMX8QM)	+= clk.o clk-imx8qm.o clk-imx8.o clk-divider-scu.o clk-gate-scu.o clk-mux-scu.o
 obj-$(CONFIG_ARCH_FSL_IMX8QXP)	+= clk.o clk-imx8qxp.o clk-imx8.o clk-divider-scu.o clk-gate-scu.o clk-mux-scu.o
-obj-$(CONFIG_ARCH_FSL_IMX8MQ)	+= clk.o clk-imx8mq.o clk-frac-pll.o clk-sccg-pll.o clk-gate2.o
+obj-$(CONFIG_ARCH_FSL_IMX8MQ)	+= clk.o clk-imx8mq.o clk-frac-pll.o clk-sccg-pll.o clk-gate2.o clk-composite-8m.o
 obj-$(CONFIG_ARCH_FSL_IMX8MM)	+= clk.o clk-imx8mm.o clk-intpll.o clk-gate2.o clk-cpu.o

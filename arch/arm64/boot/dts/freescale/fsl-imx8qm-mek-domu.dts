@@ -37,6 +37,11 @@
 		dpu1 = &dpu2;
 		ldb1 = &ldb2;
 		serial1 = &lpuart1;
+		isi0 = &isi_0;
+		isi1 = &isi_1;
+		isi2 = &isi_2;
+		isi3 = &isi_3;
+		csi0 = &mipi_csi_0;
 	};
 
 	cpus {
@@ -220,6 +225,7 @@
 			str-region = <&decoder_str>;
 			reg = <0x0 0x2c000000 0x0 0x1000000>;
 			reg-names = "vpu_regs";
+			reg-csr = <0x2d080000>;
 			power-domains = <&pd_vpu_dec>;
 			status = "disabled";
 		};
@@ -283,6 +289,12 @@
 			interrupts = <GIC_SPI 436 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 437 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "edma0-chan14-rx", "edma0-chan15-tx";
+			status = "okay";
+		};
+
+		xen_i2c0: xen_i2c@0 {
+			compatible = "xen,i2c";
+			be-adapter = "5a800000.i2c";
 			status = "okay";
 		};
 	};
@@ -468,7 +480,7 @@
 /delete-node/ &ldb1_phy;
 /delete-node/ &ldb1;
 /delete-node/ &lvds1_pwm;
-/delete-node/ &camera;
+/*/delete-node/ &camera;*/
 /delete-node/ &adc0;
 /delete-node/ &adc1;
 /delete-node/ &i2c0;
@@ -498,8 +510,8 @@
 
 /delete-node/ &irqsteer_lvds0;
 /delete-node/ &i2c1_lvds0;
-/delete-node/ &irqsteer_csi0;
-/delete-node/ &i2c0_mipi_csi0;
+/*/delete-node/ &irqsteer_csi0;*/
+/*/delete-node/ &i2c0_mipi_csi0;*/
 /delete-node/ &irqsteer_csi1;
 /delete-node/ &i2c0_mipi_csi1;
 /delete-node/ &lpspi0;
@@ -554,7 +566,7 @@
 	status = "disabled";
 };
 
-/delete-node/ &gpio0_mipi_csi0;
+/*/delete-node/ &gpio0_mipi_csi0;*/
 /delete-node/ &gpio0_mipi_csi1;
 /delete-node/ &gpt0;
 /delete-node/ &pwm0;
@@ -599,15 +611,27 @@
 	reg = <0x0 0x5b0d0200 0x0 0x200>;
 };
 
-/delete-node/ &usbmisc2;
+&usbmisc2 {
+	status = "okay";
+};
 
 &usbphy1 {
 	reg = <0x0 0x5b100000 0x0 0x200>;
 };
 
 /delete-node/ &usbh1;
-/delete-node/ &usbotg3;
-/delete-node/ &usbphynop1;
+
+&usbotg3 {
+	/delete-property/ interrupt-parent;
+	dr_mode = "otg";
+	extcon = <&typec_ptn5110>;
+	status = "okay";
+};
+
+&usbphynop1 {
+	status = "okay";
+};
+
 /delete-node/ &usbphynop2;
 
 &usbotg1 {
@@ -763,6 +787,20 @@
 				SC_P_USDHC2_RESET_B_LSIO_GPIO4_IO09		0x04000021
 			>;
 		};
+
+		pinctrl_typec: typecgrp {
+			fsl,pins = <
+				SC_P_QSPI1A_SS0_B_LSIO_GPIO4_IO19	0x60
+				SC_P_USB_SS3_TC3_LSIO_GPIO4_IO06	0x60
+				SC_P_QSPI1A_DATA0_LSIO_GPIO4_IO26	0x00000021
+			>;
+		};
+
+		pinctrl_isl29023: isl29023grp {
+			fsl,pins = <
+				SC_P_USDHC2_WP_LSIO_GPIO4_IO11		0x00000021
+			>;
+		};
 	};
 };
 
@@ -818,4 +856,130 @@
 &vpu_encoder {
 	core_type = <2>;
 	status = "okay";
+};
+
+&xen_i2c0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	clock-frequency = <100000>;
+	status = "okay";
+
+	isl29023@44 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_isl29023>;
+		compatible = "fsl,isl29023";
+		reg = <0x44>;
+		rext = <499>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <11 2>;
+	};
+
+	fxos8700@1e {
+		compatible = "fsl,fxos8700";
+		reg = <0x1e>;
+		interrupt-open-drain;
+	};
+
+	fxas2100x@20 {
+		compatible = "fsl,fxas2100x";
+		reg = <0x20>;
+		interrupt-open-drain;
+	};
+
+	mpl3115@60 {
+		compatible = "fsl,mpl3115";
+		reg = <0x60>;
+		interrupt-open-drain;
+	};
+
+	typec_ptn5110: typec@50 {
+		compatible = "usb,tcpci";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_typec>;
+		reg = <0x51>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <26 IRQ_TYPE_LEVEL_LOW>;
+		ss-sel-gpios = <&gpio4 6 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&gpio4 19 GPIO_ACTIVE_HIGH>;
+		src-pdos = <0x380190c8 0x3803c0c8>;
+		port-type = "drp";
+		sink-disable;
+		default-role = "source";
+		status = "okay";
+	};
+};
+
+/* Camera */
+/delete-node/ &isi_4;
+/delete-node/ &isi_5;
+/delete-node/ &isi_6;
+/delete-node/ &isi_7;
+/delete-node/ &mipi_csi_1;
+/delete-node/ &jpegdec;
+/delete-node/ &jpegenc;
+
+&gpio0_mipi_csi0 {
+	status = "okay";
+};
+
+&irqsteer_csi0 {
+	status = "okay";
+};
+
+&isi_0 {
+	status = "okay";
+};
+
+&isi_1 {
+	status = "okay";
+};
+
+&isi_2 {
+	status = "okay";
+};
+
+&isi_3 {
+	status = "okay";
+};
+
+&mipi_csi_0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	virtual-channel;
+	status = "okay";
+
+	/* Camera 0  MIPI CSI-2 (CSIS0) */
+	port@0 {
+		reg = <0>;
+		mipi_csi0_ep: endpoint {
+			remote-endpoint = <&max9286_0_ep>;
+			data-lanes = <1 2 3 4>;
+		};
+	};
+};
+
+&i2c0_mipi_csi0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default";
+	clock-frequency = <100000>;
+	status = "okay";
+
+
+	max9286_mipi@6A	 {
+		compatible = "maxim,max9286_mipi";
+		reg = <0x6A>;
+		clocks = <&clk IMX8QM_CLK_DUMMY>;
+		clock-names = "capture_mclk";
+		mclk = <27000000>;
+		mclk_source = <0>;
+		pwn-gpios = <&gpio1 27 GPIO_ACTIVE_HIGH>;
+		virtual-channel;
+		port {
+			max9286_0_ep: endpoint {
+			remote-endpoint = <&mipi_csi0_ep>;
+			data-lanes = <1 2 3 4>;
+			};
+		};
+	};
 };
