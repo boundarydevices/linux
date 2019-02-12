@@ -66,7 +66,7 @@ static bool i2cback_handle_int(struct i2cback_info *info)
 	struct i2cif_request req;
 	struct i2cif_response *res;
 	RING_IDX rc, rp;
-	int more_to_do, notify, num_msg, ret;
+	int more_to_do, notify, num_msg = 0, ret;
 	struct i2c_msg msg[I2CIF_MAX_MSG];
 	char tmp_buf[I2CIF_BUF_LEN];
 	unsigned long flags;
@@ -94,8 +94,10 @@ static bool i2cback_handle_int(struct i2cback_info *info)
 		allow_access = i2cback_access_allowed(info, &req);
 		if (allow_access) {
 			/* Write/Read sequence */
-			if (req.num_msg > I2CIF_MAX_MSG)
+			num_msg = req.num_msg;
+			if (num_msg > I2CIF_MAX_MSG)
 				num_msg = I2CIF_MAX_MSG;
+
 			for (i = 0; i < num_msg; i++) {
 				msg[i].addr = req.msg[i].addr;
 				msg[i].len = req.msg[i].len;
@@ -130,7 +132,7 @@ static bool i2cback_handle_int(struct i2cback_info *info)
 				memcpy(tmp_buf, req.write_buf, I2CIF_BUF_LEN);
 				ret = i2c_transfer(info->adapter, msg,
 						   num_msg);
-			} else if (req.num_msg == 1) {
+			} else if (num_msg == 1) {
 				msg[0].buf = tmp_buf;
 				if (!(msg[0].flags & I2C_M_RD))
 					memcpy(tmp_buf, req.write_buf,
@@ -153,10 +155,10 @@ static bool i2cback_handle_int(struct i2cback_info *info)
 
 			if ((req.num_msg == 2) &&
 			    (!(msg[0].flags & I2C_M_RD)) &&
-			    (msg[1].flags & I2C_M_RD)) {
+			    (msg[1].flags & I2C_M_RD) && (ret >= 0)) {
 				memcpy(res->read_buf, tmp_buf, I2CIF_BUF_LEN);
 			} else if (req.num_msg == 1) {
-				if (msg[0].flags & I2C_M_RD)
+				if ((msg[0].flags & I2C_M_RD) && (ret >= 0))
 					memcpy(res->read_buf, tmp_buf,
 					       I2CIF_BUF_LEN);
 			}
