@@ -2767,6 +2767,9 @@ OnError:
 **      gctPHYS_ADDR Handle
 **          Physical address handle.  If gcvNULL it is video memory.
 **
+**      gctSIZE_T Offset,
+**          Offset to this memory block.
+**
 **      gctPOINTER Logical
 **          Logical address to flush.
 **
@@ -2781,7 +2784,8 @@ gceSTATUS
 gckEVENT_Stop(
     IN gckEVENT Event,
     IN gctUINT32 ProcessID,
-    IN gctUINT32 Handle,
+    IN gctPHYS_ADDR Handle,
+    IN gctSIZE_T Offset,
     IN gctPOINTER Logical,
     IN gctUINT32 Address,
     IN gctSIGNAL Signal,
@@ -2840,17 +2844,15 @@ gckEVENT_Stop(
     }
 #endif
 
-#if gcdNONPAGED_MEMORY_CACHEABLE
     /* Flush the cache for the END. */
     gcmkONERROR(gckOS_CacheClean(
         Event->os,
-        ProcessID,
-        gcvNULL,
-        (gctUINT32)Handle,
+        0,
+        Handle,
+        Offset,
         Logical,
         *waitSize
         ));
-#endif
 
     /* Wait for the signal. */
     gcmkONERROR(gckOS_WaitSignal(Event->os, Signal, gcvFALSE, gcvINFINITE));

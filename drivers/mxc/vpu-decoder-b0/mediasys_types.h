@@ -101,6 +101,12 @@ typedef enum {
 } FRAME_BUFFER_OWNER;
 
 typedef enum {
+	INVALID_MODE = 0,
+	FRAME_LVL,
+	NON_FRAME_LVL,
+} STREAM_INPUT_MODE;
+
+typedef enum {
 	MEDIAIP_FRAME_REQ = 0,
 	MEDIAIP_MBI_REQ,
 	MEDIAIP_DCP_REQ,
@@ -511,6 +517,12 @@ typedef struct {
 } BUFFER_DESCRIPTOR_TYPE, *pBUFFER_DESCRIPTOR_TYPE;
 
 typedef struct {
+	u_int32 stream_input_mode;
+	u_int32 stream_pic_input_count;
+	u_int32 stream_pic_parsed_count;
+} BUFFER_INFO_TYPE, *pBUFFER_INFO_TYPE;
+
+typedef struct {
 	volatile u_int32 wptr;
 	volatile u_int32 rptr;
 	volatile u_int32 start;
@@ -674,6 +686,7 @@ typedef struct {
 	u_int32                                ptEncryptInfo[VID_API_NUM_STREAMS];
 	MEDIAIP_FW_SYSTEM_CONFIG               sSystemCfg;
 	u_int32                                uApiVersion;
+	BUFFER_INFO_TYPE                       StreamBuffInfo[VID_API_NUM_STREAMS];
 } DEC_RPC_HOST_IFACE, *pDEC_RPC_HOST_IFACE;
 
 //x means source data , y means destination data

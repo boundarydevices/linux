@@ -297,8 +297,15 @@ void dcss_dtg_sync_set(struct dcss_soc *dcss, struct videomode *vm)
 		    vm->vactive - 1;
 
 	if (dtg->hdmi_output) {
+		int err;
 		clk_disable_unprepare(dcss->pout_clk);
+		clk_disable_unprepare(dcss->pll_src_clk);
+		err = clk_set_parent(dcss->pll_src_clk, dcss->pll_phy_ref_clk);
+		if (err < 0)
+			dev_warn(dcss->dev, "clk_set_parent() returned %d",
+				 err);
 		clk_set_rate(dcss->pout_clk, vm->pixelclock);
+		clk_prepare_enable(dcss->pll_src_clk);
 		clk_prepare_enable(dcss->pout_clk);
 	} else {
 		clk_disable_unprepare(dcss->pout_clk);
