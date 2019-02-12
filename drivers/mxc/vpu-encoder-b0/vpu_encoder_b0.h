@@ -55,14 +55,21 @@ extern unsigned int vpu_dbg_level_encoder;
 #define MEM_SIZE  0x2800000
 #define YUV_SIZE  0x4000000
 #define STREAM_SIZE 0x300000
-#ifdef CM4
-#define VPU_REG_BASE 0x2c000000
-#else
 #define VPU_REG_BASE 0x40000000
-#endif
 #define ENC_REG_BASE 0x2c000000
-#define MIN_BUFFER_COUNT 3
-#define V4L2_MAX_CTRLS 12
+
+#define MIN_BUFFER_COUNT		3
+#define BITRATE_LOW_THRESHOLD		64
+#define BITRATE_HIGH_THRESHOLD		1048576
+#define BITRATE_DEFAULT_TARGET		2048
+#define BITRATE_DEFAULT_PEAK		4096
+#define GOP_H_THRESHOLD			300
+#define GOP_L_THRESHOLD			1
+#define GOP_DEFAULT			30
+#define QP_MAX				51
+#define QP_MIN				0
+#define QP_DEFAULT			25
+
 #define ENCODER_NODE_NUMBER 13 //use /dev/video13 as encoder node
 struct vpu_v4l2_control {
 	uint32_t id;
@@ -203,20 +210,23 @@ struct core_device {
 
 	struct vpu_ctx *ctx[VPU_MAX_NUM_STREAMS];
 	struct shared_addr shared_mem;
+	u32 id;
+	off_t reg_fw_base;
+	struct device *generic_dev;
 };
 struct vpu_dev {
 	struct device *generic_dev;
 	struct v4l2_device v4l2_dev;
 	struct video_device *pvpu_encoder_dev;
 	struct platform_device *plat_dev;
-	sc_ipc_t mu_ipcHandle;
 	struct clk *clk_m0;
 	struct firmware *m0_pfw;
-	struct clk *vpu_clk;
 	void __iomem *regs_base;
+	void __iomem *regs_enc;
 	struct mutex dev_mutex;
 	struct core_device core_dev[2];
 	u_int32 plat_type;
+	u_int32 core_num;
 //	struct vpu_ctx *ctx[VPU_MAX_NUM_STREAMS];
 };
 
@@ -230,7 +240,6 @@ struct vpu_ctx {
 	struct vpu_dev *dev;
 	struct v4l2_fh fh;
 
-	struct v4l2_ctrl *ctrls[V4L2_MAX_CTRLS];
 	struct v4l2_ctrl_handler ctrl_handler;
 	bool ctrl_inited;
 
@@ -242,14 +251,12 @@ struct vpu_ctx {
 	struct workqueue_struct *instance_wq;
 	struct completion completion;
 	struct completion stop_cmp;
-	bool b_firstseq;
 	bool start_flag;
 	bool firmware_stopped;
 	bool ctx_released;
 	bool forceStop;
 	wait_queue_head_t buffer_wq_output;
 	wait_queue_head_t buffer_wq_input;
-	struct buffer_addr encoder_buffer;
 	struct buffer_addr encoder_stream;
 	struct buffer_addr encoder_mem;
 	struct buffer_addr encFrame[MEDIAIP_MAX_NUM_WINDSOR_SRC_FRAMES];
@@ -275,5 +282,8 @@ struct vpu_ctx {
 		if (vpu_dbg_level_encoder >= (level)) \
 			pr_info(TAG""fmt, ## arg); \
 	} while (0)
+
+
+pMEDIAIP_ENC_PARAM get_enc_param(struct vpu_ctx *ctx);
 
 #endif

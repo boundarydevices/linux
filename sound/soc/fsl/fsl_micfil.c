@@ -26,6 +26,7 @@
 #include <sound/dmaengine_pcm.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
+#include <sound/tlv.h>
 
 #include "fsl_micfil.h"
 #include "imx-pcm.h"
@@ -43,9 +44,11 @@ struct fsl_micfil {
 	unsigned int channels;
 	unsigned int dataline;
 	char name[32];
+	int irq[MICFIL_IRQ_LINES];
 	unsigned int mclk_streams;
 	int quality;	/*QUALITY 2-0 bits */
 	bool slave_mode;
+	int channel_gain[8];
 	int vad_sound_gain;
 	int vad_noise_gain;
 	int vad_input_gain;
@@ -253,13 +256,69 @@ static int hwvad_get_zcd_auto(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int hwvad_gain_info(struct snd_kcontrol *kcontrol,
+static int gain_info(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_info *uinfo)
 {
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->count = 1;
 	uinfo->value.integer.min = 0;
 	uinfo->value.integer.max = 0xf;
+
+	return 0;
+}
+
+static int put_channel_gain(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *comp = snd_kcontrol_chip(kcontrol);
+	struct fsl_micfil *micfil = snd_soc_component_get_drvdata(comp);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int shift = mc->shift;
+	int index = shift / 4;
+	int val = ucontrol->value.integer.value[0];
+	int remapped_value;
+	int ret;
+	u32 reg_val;
+
+	/* a value remapping must be done since the gain field have
+	 * the following meaning:
+	 * * 0 : no gain
+	 * * 1 - 7 : +1 to +7 bits gain
+	 * * 8 - 15 : -8 to -1 bits gain
+	 * After the remapp, the scale should start from -8 to +7
+	 */
+
+	micfil->channel_gain[index] = val;
+
+	remapped_value = (val - 8) & 0xF;
+
+	reg_val = remapped_value << shift;
+
+	ret = snd_soc_component_update_bits(comp,
+					    REG_MICFIL_OUT_CTRL,
+					    0xF << shift,
+					    reg_val);
+
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+static int get_channel_gain(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *comp = snd_kcontrol_chip(kcontrol);
+	struct fsl_micfil *micfil = snd_soc_component_get_drvdata(comp);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	int index;
+
+	/* gain bitfield is 4 bits wide */
+	index = mc->shift / 4;
+
+	ucontrol->value.enumerated.item[0] = micfil->channel_gain[index];
 
 	return 0;
 }
@@ -495,23 +554,34 @@ static int hwvad_get_zcd_adj(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static DECLARE_TLV_DB_SCALE(gain_tlv, 0, 100, 0);
+
 static const struct snd_kcontrol_new fsl_micfil_snd_controls[] = {
-	SOC_SINGLE_RANGE("CH1 Gain", REG_MICFIL_OUT_CTRL,
-			 MICFIL_OUTGAIN_CHX_SHIFT(0), 0x0, 0xF, 0),
-	SOC_SINGLE_RANGE("CH2 Gain", REG_MICFIL_OUT_CTRL,
-			 MICFIL_OUTGAIN_CHX_SHIFT(1), 0x0, 0xF, 0),
-	SOC_SINGLE_RANGE("CH3 Gain", REG_MICFIL_OUT_CTRL,
-			 MICFIL_OUTGAIN_CHX_SHIFT(2), 0x0, 0xF, 0),
-	SOC_SINGLE_RANGE("CH4 Gain", REG_MICFIL_OUT_CTRL,
-			 MICFIL_OUTGAIN_CHX_SHIFT(3), 0x0, 0xF, 0),
-	SOC_SINGLE_RANGE("CH5 Gain", REG_MICFIL_OUT_CTRL,
-			 MICFIL_OUTGAIN_CHX_SHIFT(4), 0x0, 0xF, 0),
-	SOC_SINGLE_RANGE("CH6 Gain", REG_MICFIL_OUT_CTRL,
-			 MICFIL_OUTGAIN_CHX_SHIFT(5), 0x0, 0xF, 0),
-	SOC_SINGLE_RANGE("CH7 Gain", REG_MICFIL_OUT_CTRL,
-			 MICFIL_OUTGAIN_CHX_SHIFT(6), 0x0, 0xF, 0),
-	SOC_SINGLE_RANGE("CH8 Gain", REG_MICFIL_OUT_CTRL,
-			 MICFIL_OUTGAIN_CHX_SHIFT(7), 0x0, 0xF, 0),
+	SOC_SINGLE_RANGE_EXT_TLV("CH0 Gain", -1, MICFIL_OUTGAIN_CHX_SHIFT(0),
+				 0x0, 0xF, 0,
+				 get_channel_gain, put_channel_gain, gain_tlv),
+	SOC_SINGLE_RANGE_EXT_TLV("CH1 Gain", -1, MICFIL_OUTGAIN_CHX_SHIFT(1),
+				 0x0, 0xF, 0,
+				 get_channel_gain, put_channel_gain, gain_tlv),
+	SOC_SINGLE_RANGE_EXT_TLV("CH2 Gain", -1, MICFIL_OUTGAIN_CHX_SHIFT(2),
+				 0x0, 0xF, 0,
+				 get_channel_gain, put_channel_gain, gain_tlv),
+	SOC_SINGLE_RANGE_EXT_TLV("CH3 Gain", -1, MICFIL_OUTGAIN_CHX_SHIFT(3),
+				 0x0, 0xF, 0,
+				 get_channel_gain, put_channel_gain, gain_tlv),
+	SOC_SINGLE_RANGE_EXT_TLV("CH4 Gain", -1, MICFIL_OUTGAIN_CHX_SHIFT(4),
+				 0x0, 0xF, 0,
+				 get_channel_gain, put_channel_gain, gain_tlv),
+	SOC_SINGLE_RANGE_EXT_TLV("CH5 Gain", -1, MICFIL_OUTGAIN_CHX_SHIFT(5),
+				 0x0, 0xF, 0,
+				 get_channel_gain, put_channel_gain, gain_tlv),
+	SOC_SINGLE_RANGE_EXT_TLV("CH6 Gain", -1, MICFIL_OUTGAIN_CHX_SHIFT(6),
+				 0x0, 0xF, 0,
+				 get_channel_gain, put_channel_gain, gain_tlv),
+	SOC_SINGLE_RANGE_EXT_TLV("CH7 Gain", -1, MICFIL_OUTGAIN_CHX_SHIFT(7),
+				 0x0, 0xF, 0,
+				 get_channel_gain, put_channel_gain, gain_tlv),
+
 	SOC_ENUM_EXT("MICFIL Quality Select", fsl_micfil_enum[0],
 		     snd_soc_get_enum_double, snd_soc_put_enum_double),
 	SOC_ENUM_EXT("HWVAD Initialization Mode", fsl_micfil_enum[1],
@@ -529,7 +599,7 @@ static const struct snd_kcontrol_new fsl_micfil_snd_controls[] = {
 		.name = "HWVAD Input Gain",
 		.access = SNDRV_CTL_ELEM_ACCESS_READ |
 			  SNDRV_CTL_ELEM_ACCESS_WRITE,
-		.info = hwvad_gain_info,
+		.info = gain_info,
 		.get = hwvad_get_input_gain,
 		.put = hwvad_put_input_gain,
 	},
@@ -538,7 +608,7 @@ static const struct snd_kcontrol_new fsl_micfil_snd_controls[] = {
 		.name = "HWVAD Sound Gain",
 		.access = SNDRV_CTL_ELEM_ACCESS_READ |
 			  SNDRV_CTL_ELEM_ACCESS_WRITE,
-		.info = hwvad_gain_info,
+		.info = gain_info,
 		.get = hwvad_get_sound_gain,
 		.put = hwvad_put_sound_gain,
 	},
@@ -547,7 +617,7 @@ static const struct snd_kcontrol_new fsl_micfil_snd_controls[] = {
 		.name = "HWVAD Noise Gain",
 		.access = SNDRV_CTL_ELEM_ACCESS_READ |
 			  SNDRV_CTL_ELEM_ACCESS_WRITE,
-		.info = hwvad_gain_info,
+		.info = gain_info,
 		.get = hwvad_get_noise_gain,
 		.put = hwvad_put_noise_gain,
 	},
@@ -730,17 +800,6 @@ static int configure_hwvad_interrupts(struct device *dev,
 	u32 vadie_reg = enable ? MICFIL_VAD0_CTRL1_IE : 0;
 	u32 vaderie_reg = enable ? MICFIL_VAD0_CTRL1_ERIE : 0;
 
-	/* Voice Activity Detector Interruption Enable */
-	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL1,
-				 MICFIL_VAD0_CTRL1_IE_MASK,
-				 vadie_reg);
-	if (ret) {
-		dev_err(dev,
-			"Failed to set/clear VADIE in CTRL1_VAD0 [%d]\n",
-			ret);
-		return ret;
-	}
-
 	/* Voice Activity Detector Error Interruption Enable */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL1,
 				 MICFIL_VAD0_CTRL1_ERIE_MASK,
@@ -748,6 +807,17 @@ static int configure_hwvad_interrupts(struct device *dev,
 	if (ret) {
 		dev_err(dev,
 			"Failed to set/clear VADERIE in CTRL1_VAD0 [%d]\n",
+			ret);
+		return ret;
+	}
+
+	/* Voice Activity Detector Interruption Enable */
+	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL1,
+				 MICFIL_VAD0_CTRL1_IE_MASK,
+				 vadie_reg);
+	if (ret) {
+		dev_err(dev,
+			"Failed to set/clear VADIE in CTRL1_VAD0 [%d]\n",
 			ret);
 		return ret;
 	}
@@ -1026,7 +1096,7 @@ static int init_hwvad_envelope_mode(struct device *dev)
 
 	/* Voice Activity Detector Reset */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_CTRL1,
-				 MICFIL_VAD0_CTRL1_RST_SHIFT,
+				 MICFIL_VAD0_CTRL1_RST_MASK,
 				 MICFIL_VAD0_CTRL1_RST);
 	if (ret) {
 		dev_err(dev, "Failed to set VADRST in CTRL1_VAD0 [%d]\n", ret);
@@ -1469,6 +1539,7 @@ static int fsl_micfil_dai_probe(struct snd_soc_dai *cpu_dai)
 	struct device *dev = cpu_dai->dev;
 	unsigned int val;
 	int ret;
+	int i;
 
 	/* set qsel to medium */
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_CTRL2,
@@ -1479,7 +1550,10 @@ static int fsl_micfil_dai_probe(struct snd_soc_dai *cpu_dai)
 		return ret;
 	}
 
+	/* set default gain to max_gain */
 	regmap_write(micfil->regmap, REG_MICFIL_OUT_CTRL, 0x77777777);
+	for (i = 0; i < 8; i++)
+		micfil->channel_gain[i] = 0xF;
 
 	snd_soc_dai_init_dma_data(cpu_dai, NULL,
 				  &micfil->dma_params_rx);
@@ -1670,13 +1744,18 @@ static irqreturn_t hwvad_isr(int irq, void *devid)
 	int old_flag;
 
 	regmap_read(micfil->regmap, REG_MICFIL_VAD0_STAT, &vad0_reg);
-
 	old_flag = atomic_cmpxchg(&micfil->voice_detected, 0, 1);
+
+	/* The only difference between MICFIL_VAD0_STAT_EF and
+	 * MICFIL_VAD0_STAT_IF is that the former requires Write
+	 * 1 to Clear. Since both flags are set, it is enough
+	 * to only read one of them
+	 */
 	if ((vad0_reg & MICFIL_VAD0_STAT_IF_MASK) && !old_flag) {
 		dev_info(dev, "Detected voice\n");
 
 		/* Write 1 to clear */
-		regmap_update_bits(micfil->regmap, REG_MICFIL_VAD0_STAT,
+		regmap_write_bits(micfil->regmap, REG_MICFIL_VAD0_STAT,
 				   MICFIL_VAD0_STAT_IF_MASK,
 				   MICFIL_VAD0_STAT_IF);
 
@@ -1686,33 +1765,76 @@ static irqreturn_t hwvad_isr(int irq, void *devid)
 	return IRQ_HANDLED;
 }
 
+static irqreturn_t hwvad_err_isr(int irq, void *devid)
+{
+	struct fsl_micfil *micfil = (struct fsl_micfil *)devid;
+	struct device *dev = &micfil->pdev->dev;
+	u32 vad0_reg;
+
+	regmap_read(micfil->regmap, REG_MICFIL_VAD0_STAT, &vad0_reg);
+
+	if (vad0_reg & MICFIL_VAD0_STAT_INSATF_MASK)
+		dev_dbg(dev, "voice activity input overflow/underflow detected\n");
+
+	if (vad0_reg & MICFIL_VAD0_STAT_INITF_MASK)
+		dev_dbg(dev, "voice activity dectector is initializing\n");
+
+	return IRQ_HANDLED;
+}
+
 static irqreturn_t micfil_isr(int irq, void *devid)
 {
 	struct fsl_micfil *micfil = (struct fsl_micfil *)devid;
 	struct platform_device *pdev = micfil->pdev;
-	irqreturn_t ret = IRQ_HANDLED;
 	u32 stat_reg;
+	u32 fifo_stat_reg;
 	u32 ctrl1_reg;
-	u32 vad0_reg;
 	bool dma_enabled;
 	int i;
 
 	regmap_read(micfil->regmap, REG_MICFIL_STAT, &stat_reg);
 	regmap_read(micfil->regmap, REG_MICFIL_CTRL1, &ctrl1_reg);
-	regmap_read(micfil->regmap, REG_MICFIL_VAD0_STAT, &vad0_reg);
+	regmap_read(micfil->regmap, REG_MICFIL_FIFO_STAT, &fifo_stat_reg);
+
 	dma_enabled = MICFIL_DMA_ENABLED(ctrl1_reg);
 
-	if (vad0_reg & MICFIL_VAD0_STAT_IF_MASK)
-		ret = IRQ_WAKE_THREAD;
+	/* Channel 0-7 Output Data Flags */
+	for (i = 0; i < MICFIL_OUTPUT_CHANNELS; i++) {
+		if (stat_reg & MICFIL_STAT_CHXF_MASK(i))
+			dev_dbg(&pdev->dev,
+				"Data available in Data Channel %d\n", i);
+		/* if DMA is not enabled, field must be written with 1
+		 * to clear
+		 */
+		if (!dma_enabled)
+			regmap_write_bits(micfil->regmap,
+					  REG_MICFIL_STAT,
+					  MICFIL_STAT_CHXF_MASK(i),
+					  1);
+	}
 
-	if (vad0_reg & MICFIL_VAD0_STAT_EF_MASK)
-		dev_dbg(&pdev->dev, "isr: voice activity event detected\n");
+	for (i = 0; i < MICFIL_FIFO_NUM; i++) {
+		if (fifo_stat_reg & MICFIL_FIFO_STAT_FIFOX_OVER_MASK(i))
+			dev_dbg(&pdev->dev,
+				"FIFO Overflow Exception flag for channel %d\n",
+				i);
 
-	if (vad0_reg & MICFIL_VAD0_STAT_INSATF_MASK)
-		dev_dbg(&pdev->dev, "isr: voice activity input overflow/underflow detected\n");
+		if (fifo_stat_reg & MICFIL_FIFO_STAT_FIFOX_UNDER_MASK(i))
+			dev_dbg(&pdev->dev,
+				"FIFO Underflow Exception flag for channel %d\n",
+				i);
+	}
 
-	if (vad0_reg & MICFIL_VAD0_STAT_INITF_MASK)
-		dev_dbg(&pdev->dev, "isr: voice activity dectector is initializing\n");
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t micfil_err_isr(int irq, void *devid)
+{
+	struct fsl_micfil *micfil = (struct fsl_micfil *)devid;
+	struct platform_device *pdev = micfil->pdev;
+	u32 stat_reg;
+
+	regmap_read(micfil->regmap, REG_MICFIL_STAT, &stat_reg);
 
 	if (stat_reg & MICFIL_STAT_BSY_FIL_MASK)
 		dev_dbg(&pdev->dev, "isr: Decimation Filter is running\n");
@@ -1722,26 +1844,11 @@ static irqreturn_t micfil_isr(int irq, void *devid)
 
 	if (stat_reg & MICFIL_STAT_LOWFREQF_MASK) {
 		dev_dbg(&pdev->dev, "isr: ipg_clk_app is too low\n");
-		regmap_update_bits(micfil->regmap, REG_MICFIL_STAT,
-				   MICFIL_STAT_LOWFREQF_MASK, 1);
+		regmap_write_bits(micfil->regmap, REG_MICFIL_STAT,
+				  MICFIL_STAT_LOWFREQF_MASK, 1);
 	}
 
-	/* Channel 0-7 Output Data Flags */
-	for (i = 0; i < MICFIL_OUTPUT_CHANNELS; i++) {
-		if (stat_reg & MICFIL_STAT_CHXF_MASK(i))
-			dev_dbg(&pdev->dev,
-				"isr: Data available in Data Channel %d\n", i);
-		/* if DMA is not enabled, field must be written with 1
-		 * to clear
-		 */
-		if (!dma_enabled)
-			regmap_update_bits(micfil->regmap,
-					   REG_MICFIL_STAT,
-					   MICFIL_STAT_CHXF_MASK(i),
-					   1);
-	}
-
-	return ret;
+	return IRQ_HANDLED;
 }
 
 static int fsl_set_clock_params(struct device *, unsigned int);
@@ -1767,9 +1874,9 @@ static int enable_hwvad(struct device *dev)
 	 * suspend function will mark regmap as cache only
 	 * and reads/writes in volatile regs will fail
 	 */
+	regcache_cache_only(micfil->regmap, false);
 	regcache_mark_dirty(micfil->regmap);
 	regcache_sync(micfil->regmap);
-	regcache_cache_only(micfil->regmap, false);
 
 	/* clear voice detected flag */
 	atomic_set(&micfil->voice_detected, 0);
@@ -1901,7 +2008,7 @@ static int fsl_micfil_probe(struct platform_device *pdev)
 	struct fsl_micfil *micfil;
 	struct resource *res;
 	void __iomem *regs;
-	int irq, ret;
+	int ret, i;
 	unsigned long irqflag = 0;
 
 	micfil = devm_kzalloc(&pdev->dev, sizeof(*micfil), GFP_KERNEL);
@@ -1958,20 +2065,59 @@ static int fsl_micfil_probe(struct platform_device *pdev)
 	}
 
 	/* get IRQs */
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0) {
-		dev_err(&pdev->dev, "no irq for node %s\n", pdev->name);
-		return irq;
+	for (i = 0; i < MICFIL_IRQ_LINES; i++) {
+		micfil->irq[i] = platform_get_irq(pdev, i);
+		dev_err(&pdev->dev, "GET IRQ: %d\n", micfil->irq[i]);
+		if (micfil->irq[i] < 0) {
+			dev_err(&pdev->dev, "no irq for node %s\n", pdev->name);
+			return micfil->irq[i];
+		}
 	}
 
 	if (of_property_read_bool(np, "fsl,shared-interrupt"))
 		irqflag = IRQF_SHARED;
 
-	ret = devm_request_threaded_irq(&pdev->dev, irq, micfil_isr,
-					hwvad_isr, irqflag,
-					micfil->name, micfil);
+	/* Digital Microphone interface voice activity detector event
+	 * interrupt - IRQ 44
+	 */
+	ret = devm_request_irq(&pdev->dev, micfil->irq[0],
+			       hwvad_isr, irqflag,
+			       micfil->name, micfil);
 	if (ret) {
-		dev_err(&pdev->dev, "failed to claim irq %u\n", irq);
+		dev_err(&pdev->dev, "failed to claim hwvad event irq %u\n",
+			micfil->irq[0]);
+		return ret;
+	}
+
+	/* Digital Microphone interface voice activity detector error
+	 * interrupt - IRQ 45
+	 */
+	ret = devm_request_irq(&pdev->dev, micfil->irq[1],
+			       hwvad_err_isr, irqflag,
+			       micfil->name, micfil);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to claim hwvad error irq %u\n",
+			micfil->irq[1]);
+		return ret;
+	}
+
+	/* Digital Microphone interface interrupt - IRQ 109 */
+	ret = devm_request_irq(&pdev->dev, micfil->irq[2],
+			       micfil_isr, irqflag,
+			       micfil->name, micfil);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to claim mic interface irq %u\n",
+			micfil->irq[2]);
+		return ret;
+	}
+
+	/* Digital Microphone interface error interrupt - IRQ 110 */
+	ret = devm_request_irq(&pdev->dev, micfil->irq[3],
+			       micfil_err_isr, irqflag,
+			       micfil->name, micfil);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to claim mic interface error irq %u\n",
+			micfil->irq[3]);
 		return ret;
 	}
 

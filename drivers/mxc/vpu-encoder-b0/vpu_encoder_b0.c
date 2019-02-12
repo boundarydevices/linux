@@ -44,9 +44,10 @@
 #include <media/v4l2-mem2mem.h>
 #include <media/videobuf2-v4l2.h>
 #include <media/videobuf2-dma-contig.h>
-#include <media/videobuf2-dma-sg.h>
+#include <media/videobuf2-vmalloc.h>
 
 #include "vpu_encoder_b0.h"
+#include "vpu_encoder_ctrl.h"
 
 unsigned int vpu_dbg_level_encoder = 1;
 #ifdef DUMP_DATA
@@ -56,26 +57,6 @@ unsigned int vpu_dbg_level_encoder = 1;
 static char *mu_cmp[] = {
 	"fsl,imx8-mu1-vpu-m0",
 	"fsl,imx8-mu2-vpu-m0"
-};
-
-// H264 level is maped like level 5.1 to uLevel 51, except level 1b to uLevel 14
-const u_int32 h264_level[] = {
-	[V4L2_MPEG_VIDEO_H264_LEVEL_1_0] = 10,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_1B]  = 14,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_1_1] = 11,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_1_2] = 12,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_1_3] = 13,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_2_0] = 20,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_2_1] = 21,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_2_2] = 22,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_3_0] = 30,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_3_1] = 31,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_3_2] = 32,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_4_0] = 40,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_4_1] = 41,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_4_2] = 42,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_5_0] = 50,
-	[V4L2_MPEG_VIDEO_H264_LEVEL_5_1] = 51
 };
 
 #define ITEM_NAME(name)		\
@@ -130,6 +111,11 @@ static void vpu_log_cmd(u_int32 cmdid, u_int32 ctxid)
 	else
 		vpu_dbg(LVL_INFO, "send cmd: %s ctx id:%d\n",
 				cmd2str[cmdid], ctxid);
+}
+
+static void write_enc_reg(struct vpu_dev *dev, u32 val, off_t reg)
+{
+	writel(val, dev->regs_enc + reg);
 }
 
 /*
@@ -256,13 +242,6 @@ static void get_param_from_v4l2(pMEDIAIP_ENC_PARAM pEncParam,
 		)
 {
 	//get the param and update gpParameters
-	pEncParam->eCodecMode           = MEDIAIP_ENC_FMT_H264;
-
-	pEncParam->tEncMemDesc.uMemPhysAddr = ctx->encoder_mem.phy_addr;
-	pEncParam->tEncMemDesc.uMemVirtAddr = ctx->encoder_mem.phy_addr;
-	pEncParam->tEncMemDesc.uMemSize     = ctx->encoder_mem.size;
-
-	pEncParam->uFrameRate           = 30;
 	pEncParam->uSrcStride           = pix_mp->width;
 	pEncParam->uSrcWidth            = pix_mp->width;
 	pEncParam->uSrcHeight           = pix_mp->height;
@@ -272,17 +251,16 @@ static void get_param_from_v4l2(pMEDIAIP_ENC_PARAM pEncParam,
 	pEncParam->uSrcCropHeight       = pix_mp->height;
 	pEncParam->uOutWidth            = pix_mp->width;
 	pEncParam->uOutHeight           = pix_mp->height;
-	pEncParam->uLowLatencyMode      = 0;
-
-	if (!pEncParam->uIFrameInterval)
-		pEncParam->uIFrameInterval = 30;
-	if (!pEncParam->uGopBLength)
-		pEncParam->uGopBLength = 30;
 
 	vpu_dbg(LVL_INFO, "eCodecMode(%d) eProfile(%d) uSrcStride(%d) uSrcWidth(%d) uSrcHeight(%d) uSrcOffset_x(%d) uSrcOffset_y(%d) uSrcCropWidth(%d) uSrcCropHeight(%d) uOutWidth(%d) uOutHeight(%d) uGopBLength(%d) uLowLatencyMode(%d) uInitSliceQP(%d) uIFrameInterval(%d) eBitRateMode(%d) uTargetBitrate(%d) uMaxBitRate(%d) uMinBitRate(%d) uFrameRate(%d)\n",
 			pEncParam->eCodecMode, pEncParam->eProfile, pEncParam->uSrcStride, pEncParam->uSrcWidth,
 			pEncParam->uSrcHeight, pEncParam->uSrcOffset_x, pEncParam->uSrcOffset_y, pEncParam->uSrcCropWidth, pEncParam->uSrcCropHeight,
 			pEncParam->uOutWidth, pEncParam->uOutHeight, pEncParam->uGopBLength, pEncParam->uLowLatencyMode, pEncParam->uInitSliceQP, pEncParam->uIFrameInterval, pEncParam->eBitRateMode, pEncParam->uTargetBitrate, pEncParam->uMaxBitRate, pEncParam->uMinBitRate, pEncParam->uFrameRate);
+}
+
+static u32 cpu_phy_to_mu(struct core_device *dev, u32 addr)
+{
+	return addr - dev->m0_p_fw_space_phy;
 }
 
 static void *phy_to_virt(u_int32 src, unsigned long long offset)
@@ -291,6 +269,35 @@ static void *phy_to_virt(u_int32 src, unsigned long long offset)
 
 	result = (void *)(src + offset);
 	return result;
+}
+
+pMEDIAIP_ENC_PARAM get_enc_param(struct vpu_ctx *ctx)
+{
+	struct core_device  *dev = &ctx->dev->core_dev[ctx->core_id];
+	pENC_RPC_HOST_IFACE iface = dev->shared_mem.pSharedInterface;
+	pMEDIA_ENC_API_CONTROL_INTERFACE ctrl_interface;
+	pMEDIAIP_ENC_PARAM  pEncParam;
+
+	ctrl_interface = phy_to_virt(iface->pEncCtrlInterface[ctx->str_index],
+					dev->shared_mem.base_offset);
+	pEncParam = phy_to_virt(ctrl_interface->pEncParam,
+				dev->shared_mem.base_offset);
+
+	return pEncParam;
+}
+
+static int initialize_enc_param(struct vpu_ctx *ctx)
+{
+	pMEDIAIP_ENC_PARAM param = get_enc_param(ctx);
+
+	param->eCodecMode = MEDIAIP_ENC_FMT_H264;
+	param->tEncMemDesc.uMemPhysAddr = ctx->encoder_mem.phy_addr;
+	param->tEncMemDesc.uMemVirtAddr = ctx->encoder_mem.phy_addr;
+	param->tEncMemDesc.uMemSize     = ctx->encoder_mem.size;
+	param->uFrameRate = 30;
+	param->uMinBitRate = BITRATE_LOW_THRESHOLD;
+
+	return 0;
 }
 
 static struct vpu_v4l2_fmt *find_fmt_by_fourcc(struct vpu_v4l2_fmt *fmts,
@@ -837,161 +844,6 @@ static const struct v4l2_ioctl_ops v4l2_encoder_ioctl_ops = {
 	.vidioc_streamoff               = v4l2_ioctl_streamoff,
 };
 
-static int v4l2_enc_s_ctrl(struct v4l2_ctrl *ctrl)
-{
-	struct vpu_ctx *ctx = v4l2_ctrl_to_ctx(ctrl);
-	struct core_device  *dev = &ctx->dev->core_dev[ctx->core_id];
-	pENC_RPC_HOST_IFACE pSharedInterface = dev->shared_mem.pSharedInterface;
-	pMEDIA_ENC_API_CONTROL_INTERFACE pEncCtrlInterface;
-	pMEDIAIP_ENC_PARAM  pEncParam;
-	pMEDIAIP_ENC_EXPERT_MODE_PARAM pEncExpertModeParam;
-
-	pEncCtrlInterface = (pMEDIA_ENC_API_CONTROL_INTERFACE)phy_to_virt(pSharedInterface->pEncCtrlInterface[ctx->str_index],
-			dev->shared_mem.base_offset);
-	pEncParam = (pMEDIAIP_ENC_PARAM)phy_to_virt(pEncCtrlInterface->pEncParam,
-			dev->shared_mem.base_offset);
-	pEncExpertModeParam = (pMEDIAIP_ENC_EXPERT_MODE_PARAM)phy_to_virt(pEncCtrlInterface->pEncExpertModeParam,
-			dev->shared_mem.base_offset);
-
-	vpu_dbg(LVL_INFO, "s_ctrl: id = %d, val = %d\n", ctrl->id, ctrl->val);
-
-	switch (ctrl->id) {
-	case V4L2_CID_MPEG_VIDEO_BITRATE_MODE: {
-		if (ctrl->val == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR) {
-			pEncParam->eBitRateMode = MEDIAIP_ENC_BITRATECONTROLMODE_CONSTANT_QP;
-
-			// Not used for CQ mode - set zero
-			pEncParam->uTargetBitrate       = 0;
-			pEncParam->uMaxBitRate          = 0;
-			pEncParam->uMinBitRate          = 0;
-		} else if (ctrl->val == V4L2_MPEG_VIDEO_BITRATE_MODE_CBR) {
-			pEncParam->eBitRateMode = MEDIAIP_ENC_BITRATECONTROLMODE_CBR;
-			if (!pEncParam->uTargetBitrate) {
-				// Setup some default values if not set, these should really be
-				// resolution specific
-				pEncParam->uTargetBitrate = ctx->q_data[V4L2_SRC].height * ctx->q_data[V4L2_SRC].width * 12 * 30 / 100000;
-				pEncParam->uMaxBitRate    = ctx->q_data[V4L2_SRC].height * ctx->q_data[V4L2_SRC].width * 12 * 30 / 10000;
-				pEncParam->uMinBitRate    = ctx->q_data[V4L2_SRC].height * ctx->q_data[V4L2_SRC].width * 12 * 30 / 1000000;
-			}
-		} else
-			// Only CQ and CBR supported at present, force CQ mode
-			pEncParam->eBitRateMode = MEDIAIP_ENC_BITRATECONTROLMODE_CONSTANT_QP;
-	}
-		break;
-	case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
-		if ((V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE == ctrl->val) || (V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_BASELINE == ctrl->val))
-			pEncParam->eProfile = MEDIAIP_ENC_PROF_H264_BP;
-		else if (V4L2_MPEG_VIDEO_H264_PROFILE_MAIN == ctrl->val)
-			pEncParam->eProfile = MEDIAIP_ENC_PROF_H264_MP;
-		else if (V4L2_MPEG_VIDEO_H264_PROFILE_HIGH == ctrl->val)
-			pEncParam->eProfile = MEDIAIP_ENC_PROF_H264_HP;
-		else {
-			vpu_dbg(LVL_INFO, "not support h264 profile %d, set default: BP\n", ctrl->val);
-			pEncParam->eProfile = MEDIAIP_ENC_PROF_H264_BP;
-		}
-		break;
-	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
-		pEncParam->uLevel = h264_level[ctrl->val];
-		vpu_dbg(LVL_INFO, "V4L2_CID_MPEG_VIDEO_H264_LEVEL set val = %d\n", ctrl->val);
-		break;
-	case V4L2_CID_MPEG_VIDEO_BITRATE:
-		pEncParam->uTargetBitrate = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_GOP_SIZE:
-		pEncParam->uIFrameInterval = ctrl->val;
-		pEncParam->uGopBLength = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP:
-		pEncParam->uInitSliceQP = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP:
-		pEncParam->uInitSliceQP = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP:
-		pEncParam->uInitSliceQP = ctrl->val;
-		break;
-	}
-	return 0;
-}
-
-static int v4l2_enc_g_ctrl(struct v4l2_ctrl *ctrl)
-{
-	vpu_dbg(LVL_INFO, "g_ctrl: id = %d\n", ctrl->id);
-
-	switch (ctrl->id) {
-	case V4L2_CID_MIN_BUFFERS_FOR_OUTPUT:
-		ctrl->val = MIN_BUFFER_COUNT;
-		break;
-	default:
-		vpu_dbg(LVL_INFO, "%s() Invalid control(%d)\n",
-				__func__, ctrl->id);
-		return -EINVAL;
-	}
-	return 0;
-}
-
-static const struct v4l2_ctrl_ops   vpu_enc_ctrl_ops = {
-	.s_ctrl             = v4l2_enc_s_ctrl,
-	.g_volatile_ctrl    = v4l2_enc_g_ctrl,
-};
-
-static void vpu_encoder_ctrls(struct vpu_ctx *ctx)
-{
-	v4l2_ctrl_new_std_menu(&ctx->ctrl_handler, &vpu_enc_ctrl_ops,
-			V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
-			V4L2_MPEG_VIDEO_BITRATE_MODE_CBR, 0x0,
-			V4L2_MPEG_VIDEO_BITRATE_MODE_VBR);
-	v4l2_ctrl_new_std_menu(&ctx->ctrl_handler, &vpu_enc_ctrl_ops,
-			V4L2_CID_MPEG_VIDEO_H264_PROFILE,
-			V4L2_MPEG_VIDEO_H264_PROFILE_MULTIVIEW_HIGH, 0x0,
-			V4L2_MPEG_VIDEO_H264_PROFILE_CONSTRAINED_BASELINE
-			);
-	v4l2_ctrl_new_std_menu(&ctx->ctrl_handler, &vpu_enc_ctrl_ops,
-			V4L2_CID_MPEG_VIDEO_H264_LEVEL,
-			V4L2_MPEG_VIDEO_H264_LEVEL_5_1, 0x0,
-			V4L2_MPEG_VIDEO_H264_LEVEL_4_0
-			);
-	v4l2_ctrl_new_std(&ctx->ctrl_handler, &vpu_enc_ctrl_ops,
-		V4L2_CID_MPEG_VIDEO_BITRATE, 0, 32767000, 1, 0);
-	v4l2_ctrl_new_std(&ctx->ctrl_handler, &vpu_enc_ctrl_ops,
-		V4L2_CID_MPEG_VIDEO_GOP_SIZE, 1, 60, 1, 16);
-	v4l2_ctrl_new_std(&ctx->ctrl_handler, &vpu_enc_ctrl_ops,
-		V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP, 0, 51, 1, 25);
-	v4l2_ctrl_new_std(&ctx->ctrl_handler, &vpu_enc_ctrl_ops,
-		V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP, 0, 51, 1, 25);
-	v4l2_ctrl_new_std(&ctx->ctrl_handler, &vpu_enc_ctrl_ops,
-		V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP, 0, 51, 1, 25);
-	v4l2_ctrl_new_std(&ctx->ctrl_handler, &vpu_enc_ctrl_ops,
-		V4L2_CID_MIN_BUFFERS_FOR_OUTPUT, 0, 32, 1, MIN_BUFFER_COUNT);
-}
-
-static int ctrls_setup_encoder(struct vpu_ctx *ctx)
-{
-	v4l2_ctrl_handler_init(&ctx->ctrl_handler, 2);
-	vpu_encoder_ctrls(ctx);
-	if (ctx->ctrl_handler.error) {
-		vpu_dbg(LVL_ERR,
-			"control initialization error (%d)",
-			ctx->ctrl_handler.error);
-		return -EINVAL;
-	} else
-		ctx->ctrl_inited = true;
-
-	return v4l2_ctrl_handler_setup(&ctx->ctrl_handler);
-}
-
-static void ctrls_delete_encoder(struct vpu_ctx *This)
-{
-	int i;
-
-	if (This->ctrl_inited) {
-		v4l2_ctrl_handler_free(&This->ctrl_handler);
-		This->ctrl_inited = false;
-	}
-	for (i = 0; i < 2; i++)
-		This->ctrls[i] = NULL;
-}
-
 static void v4l2_vpu_send_cmd(struct vpu_ctx *ctx, uint32_t idx, uint32_t cmdid, uint32_t cmdnum, uint32_t *local_cmddata)
 {
 
@@ -1211,6 +1063,7 @@ static void report_stream_done(struct vpu_ctx *ctx,  MEDIAIP_ENC_PIC_INFO *pEncP
 		p_data_req->vb2_buf->planes[0].bytesused = length;
 	else
 		p_data_req->vb2_buf->planes[0].bytesused = data_length;
+	length = p_data_req->vb2_buf->planes[0].bytesused;
 
 	vpu_dbg(LVL_INFO, "%s data_length %d, length %d\n", __func__, data_length, length);
 	/* Following calculations determine how much data we can transfer into p_vb2_buf
@@ -1288,11 +1141,7 @@ static void enc_mem_alloc(struct vpu_ctx *ctx, MEDIAIP_ENC_MEM_REQ_DATA *req_dat
 		}
 
 		pEncMemPool->tEncFrameBuffers[i].uMemPhysAddr = ctx->encFrame[i].phy_addr;
-#ifdef CM4
-		pEncMemPool->tEncFrameBuffers[i].uMemVirtAddr = ctx->encFrame[i].phy_addr;
-#else
-		pEncMemPool->tEncFrameBuffers[i].uMemVirtAddr = ctx->encFrame[i].phy_addr - core_dev->m0_p_fw_space_phy;
-#endif
+		pEncMemPool->tEncFrameBuffers[i].uMemVirtAddr = cpu_phy_to_mu(core_dev, ctx->encFrame[i].phy_addr);
 		pEncMemPool->tEncFrameBuffers[i].uMemSize = ctx->encFrame[i].size;
 	}
 
@@ -1312,11 +1161,7 @@ static void enc_mem_alloc(struct vpu_ctx *ctx, MEDIAIP_ENC_MEM_REQ_DATA *req_dat
 		}
 
 		pEncMemPool->tRefFrameBuffers[i].uMemPhysAddr = ctx->refFrame[i].phy_addr;
-#ifdef CM4
-		pEncMemPool->tRefFrameBuffers[i].uMemVirtAddr = ctx->refFrame[i].phy_addr;
-#else
-		pEncMemPool->tRefFrameBuffers[i].uMemVirtAddr = ctx->refFrame[i].phy_addr - core_dev->m0_p_fw_space_phy;
-#endif
+		pEncMemPool->tRefFrameBuffers[i].uMemVirtAddr = cpu_phy_to_mu(core_dev, ctx->refFrame[i].phy_addr);
 		pEncMemPool->tRefFrameBuffers[i].uMemSize = ctx->refFrame[i].size;
 	}
 
@@ -1335,11 +1180,7 @@ static void enc_mem_alloc(struct vpu_ctx *ctx, MEDIAIP_ENC_MEM_REQ_DATA *req_dat
 	}
 
 	pEncMemPool->tActFrameBufferArea.uMemPhysAddr = ctx->actFrame.phy_addr;
-#ifdef CM4
-	pEncMemPool->tActFrameBufferArea.uMemVirtAddr = ctx->actFrame.phy_addr;
-#else
-	pEncMemPool->tActFrameBufferArea.uMemVirtAddr = ctx->actFrame.phy_addr - core_dev->m0_p_fw_space_phy;
-#endif
+	pEncMemPool->tActFrameBufferArea.uMemVirtAddr = cpu_phy_to_mu(core_dev, ctx->actFrame.phy_addr);
 	pEncMemPool->tActFrameBufferArea.uMemSize = ctx->actFrame.size;
 
 }
@@ -1419,6 +1260,20 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 	}
 }
 
+static void enable_mu(struct core_device *dev)
+{
+	MU_sendMesgToFW(dev->mu_base_virtaddr,
+			PRINT_BUF_OFFSET,
+			cpu_phy_to_mu(dev,  dev->m0_rpc_phy + M0_PRINT_OFFSET));
+	MU_sendMesgToFW(dev->mu_base_virtaddr,
+			RPC_BUF_OFFSET,
+			cpu_phy_to_mu(dev, dev->m0_rpc_phy));
+	MU_sendMesgToFW(dev->mu_base_virtaddr,
+			BOOT_ADDRESS,
+			dev->m0_p_fw_space_phy);
+	MU_sendMesgToFW(dev->mu_base_virtaddr, INIT_DONE, 2);
+}
+
 //This code is added for MU
 static irqreturn_t fsl_vpu_mu_isr(int irq, void *This)
 {
@@ -1427,10 +1282,7 @@ static irqreturn_t fsl_vpu_mu_isr(int irq, void *This)
 
 	MU_ReceiveMsg(dev->mu_base_virtaddr, 0, &msg);
 	if (msg == 0xaa) {
-		MU_sendMesgToFW(dev->mu_base_virtaddr, PRINT_BUF_OFFSET, dev->m0_rpc_phy - dev->m0_p_fw_space_phy + M0_PRINT_OFFSET);
-		MU_sendMesgToFW(dev->mu_base_virtaddr, RPC_BUF_OFFSET, dev->m0_rpc_phy - dev->m0_p_fw_space_phy); //CM0 use relative address
-		MU_sendMesgToFW(dev->mu_base_virtaddr, BOOT_ADDRESS, dev->m0_p_fw_space_phy);
-		MU_sendMesgToFW(dev->mu_base_virtaddr, INIT_DONE, 2);
+		enable_mu(dev);
 	} else if (msg == 0x55) {
 		dev->firmware_started = true;
 		complete(&dev->start_cmp);
@@ -1443,30 +1295,21 @@ static irqreturn_t fsl_vpu_mu_isr(int irq, void *This)
 }
 
 /* Initialization of the MU code. */
-static int vpu_mu_init(struct vpu_dev *dev, u_int32 id)
+static int vpu_mu_init(struct core_device *core_dev)
 {
 	struct device_node *np;
 	unsigned int	vpu_mu_id;
 	u32 irq;
-	struct core_device *core_dev = &dev->core_dev[id];
 	int ret = 0;
 
 	/*
 	 * Get the address of MU to be used for communication with the M0 core
 	 */
-#ifdef CM4
-	np = of_find_compatible_node(NULL, NULL, "fsl,imx8-mu0-vpu-m4");
+	np = of_find_compatible_node(NULL, NULL, mu_cmp[core_dev->id]);
 	if (!np) {
 		vpu_dbg(LVL_ERR, "error: Cannot find MU entry in device tree\n");
 		return -EINVAL;
 	}
-#else
-	np = of_find_compatible_node(NULL, NULL, mu_cmp[id]);
-	if (!np) {
-		vpu_dbg(LVL_ERR, "error: Cannot find MU entry in device tree\n");
-		return -EINVAL;
-	}
-#endif
 	core_dev->mu_base_virtaddr = of_iomap(np, 0);
 	WARN_ON(!core_dev->mu_base_virtaddr);
 
@@ -1481,7 +1324,7 @@ static int vpu_mu_init(struct vpu_dev *dev, u_int32 id)
 
 	irq = of_irq_get(np, 0);
 
-	ret = devm_request_irq(&dev->plat_dev->dev, irq, fsl_vpu_mu_isr,
+	ret = devm_request_irq(core_dev->generic_dev, irq, fsl_vpu_mu_isr,
 				IRQF_EARLY_RESUME, "vpu_mu_isr", (void *)core_dev);
 	if (ret) {
 		vpu_dbg(LVL_ERR, "request_irq failed %d, error = %d\n", irq, ret);
@@ -1696,7 +1539,9 @@ static struct vb2_ops v4l2_qops = {
 	.buf_queue          = vpu_buf_queue,
 };
 
-static void init_vb2_queue(struct queue_data *This, unsigned int type, struct vpu_ctx *ctx)
+static void init_vb2_queue(struct queue_data *This, unsigned int type,
+				struct vpu_ctx *ctx,
+				const struct vb2_mem_ops *mem_ops)
 {
 	struct vb2_queue  *vb2_q = &This->vb2_q;
 	int ret;
@@ -1711,7 +1556,10 @@ static void init_vb2_queue(struct queue_data *This, unsigned int type, struct vp
 	vb2_q->gfp_flags = GFP_DMA32;
 	vb2_q->ops = &v4l2_qops;
 	vb2_q->drv_priv = This;
-	vb2_q->mem_ops = (struct vb2_mem_ops *)&vb2_dma_contig_memops;
+	if (mem_ops)
+		vb2_q->mem_ops = mem_ops;
+	else
+		vb2_q->mem_ops = &vb2_dma_contig_memops;
 	vb2_q->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 	vb2_q->dev = &ctx->dev->plat_dev->dev;
 	ret = vb2_queue_init(vb2_q);
@@ -1726,10 +1574,16 @@ static void init_vb2_queue(struct queue_data *This, unsigned int type, struct vp
 
 static void init_queue_data(struct vpu_ctx *ctx)
 {
-	init_vb2_queue(&ctx->q_data[V4L2_SRC], V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE, ctx);
+	init_vb2_queue(&ctx->q_data[V4L2_SRC],
+			V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE,
+			ctx,
+			&vb2_dma_contig_memops);
 	ctx->q_data[V4L2_SRC].type = V4L2_SRC;
 	sema_init(&ctx->q_data[V4L2_SRC].drv_q_lock, 1);
-	init_vb2_queue(&ctx->q_data[V4L2_DST], V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE, ctx);
+	init_vb2_queue(&ctx->q_data[V4L2_DST],
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE,
+			ctx,
+			&vb2_vmalloc_memops);
 	ctx->q_data[V4L2_DST].type = V4L2_DST;
 	sema_init(&ctx->q_data[V4L2_DST].drv_q_lock, 1);
 }
@@ -1745,66 +1599,21 @@ static void release_queue_data(struct vpu_ctx *ctx)
 		vb2_queue_release(&This->vb2_q);
 }
 
-#ifdef CM4
-static int power_CM4_up(struct vpu_dev *dev)
+static int set_vpu_fw_addr(struct vpu_dev *dev, struct core_device *core_dev)
 {
-	sc_ipc_t ipcHndl;
-	sc_rsrc_t core_rsrc, mu_rsrc = -1;
+	if (!dev || !core_dev)
+		return -EINVAL;
 
-	ipcHndl = dev->mu_ipcHandle;
-	core_rsrc = SC_R_M4_0_PID0;
-	mu_rsrc = SC_R_M4_0_MU_1A;
-
-	if (sc_pm_set_resource_power_mode(ipcHndl, core_rsrc, SC_PM_PW_MODE_ON) != SC_ERR_NONE) {
-		vpu_dbg(LVL_ERR, "error: failed to power up core_rsrc\n");
-		return -EIO;
-	}
-
-	if (mu_rsrc != -1) {
-		if (sc_pm_set_resource_power_mode(ipcHndl, mu_rsrc, SC_PM_PW_MODE_ON) != SC_ERR_NONE) {
-			vpu_dbg(LVL_ERR, "error: failed to power up mu_rsrc\n");
-			return -EIO;
-		}
-	}
+	write_enc_reg(dev, core_dev->m0_p_fw_space_phy, core_dev->reg_fw_base);
+	write_enc_reg(dev, 0x0, core_dev->reg_fw_base + 4);
 
 	return 0;
 }
-
-static int boot_CM4_up(struct vpu_dev *dev, void *boot_addr)
-{
-	sc_ipc_t ipcHndl;
-	sc_rsrc_t core_rsrc;
-	sc_faddr_t aux_core_ram;
-	void *core_ram_vir;
-	u32 size;
-
-	ipcHndl = dev->mu_ipcHandle;
-	core_rsrc = SC_R_M4_0_PID0;
-	aux_core_ram = 0x34FE0000;
-	size = SZ_128K;
-
-	core_ram_vir = ioremap_wc(aux_core_ram,
-			size
-			);
-	if (!core_ram_vir)
-		vpu_dbg(LVL_ERR, "error: failed to remap space for core ram\n");
-
-	memcpy((void *)core_ram_vir, (void *)boot_addr, size);
-
-	if (sc_pm_cpu_start(ipcHndl, core_rsrc, true, aux_core_ram) != SC_ERR_NONE) {
-		vpu_dbg(LVL_ERR, "error: failed to start core_rsrc\n");
-		return -EIO;
-	}
-
-	return 0;
-}
-#endif
 
 static int vpu_firmware_download(struct vpu_dev *This, u_int32 core_id)
 {
 	unsigned char *image;
 	unsigned int FW_Size = 0;
-	void *csr_offset, *csr_cpuwait;
 	int ret = 0;
 	char *p = This->core_dev[core_id].m0_p_fw_space_vir;
 
@@ -1831,30 +1640,9 @@ static int vpu_firmware_download(struct vpu_dev *This, u_int32 core_id)
 			image,
 			FW_Size
 			);
-	if (This->plat_type == IMX8QM) { //encoder use core 1,2
-		if (core_id == 0) {
-			p[16] = IMX8QM;
-			p[17] = core_id + 1;
-			csr_offset = ioremap(0x2d090000, 4);
-			writel(This->core_dev[core_id].m0_p_fw_space_phy, csr_offset);
-			csr_cpuwait = ioremap(0x2d090004, 4);
-			writel(0x0, csr_cpuwait);
-		} else {
-			p[16] = IMX8QM;
-			p[17] = core_id + 1;
-			csr_offset = ioremap(0x2d0a0000, 4);
-			writel(This->core_dev[core_id].m0_p_fw_space_phy, csr_offset);
-			csr_cpuwait = ioremap(0x2d0a0004, 4);
-			writel(0x0, csr_cpuwait);
-		}
-	} else {
-		p[16] = IMX8QXP;
-		p[17] = core_id + 1;
-		csr_offset = ioremap(0x2d050000, 4);
-		writel(This->core_dev[core_id].m0_p_fw_space_phy, csr_offset);
-		csr_cpuwait = ioremap(0x2d050004, 4);
-		writel(0x0, csr_cpuwait);
-	}
+	p[16] = This->plat_type;
+	p[17] = core_id + 1;
+	set_vpu_fw_addr(This, &This->core_dev[core_id]);
 
 	return ret;
 }
@@ -1893,7 +1681,8 @@ static int v4l2_open(struct file *filp)
 	ctx->str_index = idx;
 	ctx->dev = dev;
 	ctx->ctrl_inited = false;
-	ctrls_setup_encoder(ctx);
+	vpu_enc_setup_ctrls(ctx);
+
 	ctx->fh.ctrl_handler = &ctx->ctrl_handler;
 
 	ctx->instance_wq = alloc_workqueue("vpu_instance", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
@@ -1913,7 +1702,6 @@ static int v4l2_open(struct file *filp)
 		goto err_alloc;
 	}
 	dev->core_dev[ctx->core_id].ctx[idx] = ctx;
-	ctx->b_firstseq = true;
 	ctx->start_flag = true;
 	ctx->forceStop = false;
 	ctx->firmware_stopped = false;
@@ -1971,11 +1759,13 @@ static int v4l2_open(struct file *filp)
 	ctx->q_data[V4L2_DST].supported_fmts = formats_compressed_enc;
 	ctx->q_data[V4L2_DST].fmt_count = ARRAY_SIZE(formats_compressed_enc);
 
+	initialize_enc_param(ctx);
+
 	return 0;
 
 err_firmware_load:
 	release_queue_data(ctx);
-	ctrls_delete_encoder(ctx);
+	vpu_enc_free_ctrls(ctx);
 	v4l2_fh_del(&ctx->fh);
 	v4l2_fh_exit(&ctx->fh);
 	clear_bit(ctx->str_index, &dev->core_dev[ctx->core_id].instance_mask);
@@ -2012,7 +1802,7 @@ static int v4l2_release(struct file *filp)
 		wait_for_completion(&ctx->stop_cmp);
 
 	release_queue_data(ctx);
-	ctrls_delete_encoder(ctx);
+	vpu_enc_free_ctrls(ctx);
 	v4l2_fh_del(&ctx->fh);
 	v4l2_fh_exit(&ctx->fh);
 
@@ -2138,84 +1928,6 @@ static struct video_device v4l2_videodevice_encoder = {
 	.ioctl_ops = &v4l2_encoder_ioctl_ops,
 	.vfl_dir = VFL_DIR_M2M,
 };
-#if 1
-static int set_vpu_pwr(sc_ipc_t ipcHndl,
-		sc_pm_power_mode_t pm,
-		u_int32 core_id
-		)
-{
-	int rv = -1;
-	sc_err_t sciErr;
-
-	vpu_dbg(LVL_INFO, "%s()\n", __func__);
-	if (!ipcHndl) {
-		vpu_dbg(LVL_ERR, "error: --- set_vpu_pwr no IPC handle\n");
-		goto set_vpu_pwrexit;
-	}
-
-	// Power on or off VPU, ENC and MU1
-	sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_VPU, pm);
-	if (sciErr != SC_ERR_NONE) {
-		vpu_dbg(LVL_ERR, "error: --- sc_pm_set_resource_power_mode(SC_R_VPU,%d) SCI error! (%d)\n", sciErr, pm);
-		goto set_vpu_pwrexit;
-	}
-#ifdef TEST_BUILD
-	sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_VPU_ENC, pm);
-	if (sciErr != SC_ERR_NONE) {
-		vpu_dbg(LVL_ERR, "error: --- sc_pm_set_resource_power_mode(SC_R_VPU_ENC,%d) SCI error! (%d)\n", sciErr, pm);
-		goto set_vpu_pwrexit;
-	}
-#else
-	if (core_id == 0) {
-		sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_VPU_ENC_0, pm);
-		if (sciErr != SC_ERR_NONE) {
-			vpu_dbg(LVL_ERR, "error: --- sc_pm_set_resource_power_mode(SC_R_VPU_ENC_0,%d) SCI error! (%d)\n", sciErr, pm);
-			goto set_vpu_pwrexit;
-		}
-	} else {
-		sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_VPU_ENC_1, pm);
-		if (sciErr != SC_ERR_NONE) {
-			vpu_dbg(LVL_ERR, "error: --- sc_pm_set_resource_power_mode(SC_R_VPU_ENC_1,%d) SCI error! (%d)\n", sciErr, pm);
-			goto set_vpu_pwrexit;
-		}
-	}
-#endif
-	if (core_id == 0) {
-		sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_VPU_MU_1, pm);
-		if (sciErr != SC_ERR_NONE) {
-			vpu_dbg(LVL_ERR, "error: --- sc_pm_set_resource_power_mode(SC_R_VPU_MU_1,%d) SCI error! (%d)\n", sciErr, pm);
-			goto set_vpu_pwrexit;
-		}
-	} else {
-		sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_VPU_MU_2, pm);
-		if (sciErr != SC_ERR_NONE) {
-			vpu_dbg(LVL_ERR, "error: --- sc_pm_set_resource_power_mode(SC_R_VPU_MU_2,%d) SCI error! (%d)\n", sciErr, pm);
-			goto set_vpu_pwrexit;
-		}
-	}
-	rv = 0;
-
-set_vpu_pwrexit:
-	return rv;
-}
-
-static void vpu_set_power(struct vpu_dev *dev, bool on, u_int32 core_id)
-{
-	int ret;
-
-	if (on) {
-		ret = set_vpu_pwr(dev->mu_ipcHandle, SC_PM_PW_MODE_ON, core_id);
-		if (ret)
-			vpu_dbg(LVL_ERR, "error: failed to power on\n");
-		pm_runtime_get_sync(dev->generic_dev);
-	} else {
-		pm_runtime_put_sync_suspend(dev->generic_dev);
-		ret = set_vpu_pwr(dev->mu_ipcHandle, SC_PM_PW_MODE_OFF, core_id);
-		if (ret)
-			vpu_dbg(LVL_ERR, "error: failed to power off\n");
-	}
-}
-#endif
 
 static void vpu_setup(struct vpu_dev *This)
 {
@@ -2244,14 +1956,8 @@ static void vpu_reset(struct vpu_dev *This)
 static int vpu_enable_hw(struct vpu_dev *This)
 {
 	vpu_dbg(LVL_INFO, "%s()\n", __func__);
-#if 0
-	This->vpu_clk = clk_get(&This->plat_dev->dev, "vpu_encoder_clk");
-	if (IS_ERR(This->vpu_clk)) {
-		vpu_dbg(LVL_ERR, "vpu_clk get error\n");
-		return -ENOENT;
-	}
-#endif
 	vpu_setup(This);
+
 	return 0;
 }
 
@@ -2259,14 +1965,232 @@ static void vpu_disable_hw(struct vpu_dev *This)
 {
 	vpu_reset(This);
 	if (This->regs_base) {
-		devm_iounmap(&This->plat_dev->dev,
-				This->regs_base);
+		iounmap(This->regs_base);
+		This->regs_base = NULL;
 	}
-#if 0
-	if (This->vpu_clk) {
-		clk_put(This->vpu_clk);
+}
+
+static int get_platform_info_by_core_type(struct vpu_dev *dev, u32 core_type)
+{
+	int ret = 0;
+
+	if (!dev)
+		return -EINVAL;
+
+	switch (core_type) {
+	case 1:
+		dev->plat_type = IMX8QXP;
+		dev->core_num = 1;
+		break;
+	case 2:
+		dev->plat_type = IMX8QM;
+		dev->core_num = 2;
+		break;
+	default:
+		ret = -EINVAL;
+		break;
 	}
-#endif
+
+	return ret;
+}
+
+static int parse_dt_info(struct vpu_dev *dev, struct device_node *np)
+{
+	int ret;
+	struct device_node *reserved_node = NULL;
+	struct resource reserved_res;
+	u_int32 core_type;
+	u32 i;
+
+	if (!dev || !np)
+		return -EINVAL;
+
+	ret = of_property_read_u32(np, "core_type", &core_type);
+	if (ret) {
+		vpu_dbg(LVL_ERR, "error: Cannot get core num %d\n", ret);
+		return -EINVAL;
+	}
+	ret = get_platform_info_by_core_type(dev, core_type);
+	if (ret) {
+		vpu_dbg(LVL_ERR, "invalid core_type : %d\n", core_type);
+		return ret;
+	}
+	reserved_node = of_parse_phandle(np, "boot-region", 0);
+	if (!reserved_node) {
+		vpu_dbg(LVL_ERR, "error: boot-region of_parse_phandle error\n");
+		return -ENODEV;
+	}
+
+	if (of_address_to_resource(reserved_node, 0, &reserved_res)) {
+		vpu_dbg(LVL_ERR,
+			"error: boot-region of_address_to_resource error\n");
+		return -EINVAL;
+	}
+	dev->core_dev[0].m0_p_fw_space_phy = reserved_res.start;
+	dev->core_dev[1].m0_p_fw_space_phy = reserved_res.start + M0_BOOT_SIZE;
+	reserved_node = of_parse_phandle(np, "rpc-region", 0);
+	if (!reserved_node) {
+		vpu_dbg(LVL_ERR,
+			"error: rpc-region of_parse_phandle error\n");
+		return -ENODEV;
+	}
+
+	if (of_address_to_resource(reserved_node, 0, &reserved_res)) {
+		vpu_dbg(LVL_ERR,
+			"error: rpc-region of_address_to_resource error\n");
+		return -EINVAL;
+	}
+	dev->core_dev[0].m0_rpc_phy = reserved_res.start;
+	dev->core_dev[1].m0_rpc_phy = reserved_res.start + SHARED_SIZE;
+
+	for (i = 0; i < dev->core_num; i++) {
+		u32 val;
+
+		ret = of_property_read_u32_index(np, "reg-fw-base", i, &val);
+		if (ret) {
+			vpu_dbg(LVL_ERR,
+				"find reg-fw-base for core[%d] fail\n", i);
+			return ret;
+		}
+		dev->core_dev[i].reg_fw_base = val;
+	}
+
+	return 0;
+}
+
+static int create_vpu_video_device(struct vpu_dev *dev)
+{
+	int ret;
+
+	dev->pvpu_encoder_dev = video_device_alloc();
+	if (!dev->pvpu_encoder_dev) {
+		vpu_dbg(LVL_ERR, "alloc vpu encoder video device fail\n");
+		return -ENOMEM;
+	}
+
+	strncpy(dev->pvpu_encoder_dev->name,
+		v4l2_videodevice_encoder.name,
+		sizeof(v4l2_videodevice_encoder.name));
+	dev->pvpu_encoder_dev->fops = v4l2_videodevice_encoder.fops;
+	dev->pvpu_encoder_dev->ioctl_ops = v4l2_videodevice_encoder.ioctl_ops;
+	dev->pvpu_encoder_dev->release = video_device_release;
+	dev->pvpu_encoder_dev->vfl_dir = v4l2_videodevice_encoder.vfl_dir;
+	dev->pvpu_encoder_dev->v4l2_dev = &dev->v4l2_dev;
+	video_set_drvdata(dev->pvpu_encoder_dev, dev);
+
+	ret = video_register_device(dev->pvpu_encoder_dev,
+					VFL_TYPE_GRABBER,
+					ENCODER_NODE_NUMBER);
+	if (ret) {
+		vpu_dbg(LVL_ERR, "unable to register video encoder device\n");
+		video_device_release(dev->pvpu_encoder_dev);
+		dev->pvpu_encoder_dev = NULL;
+		return ret;
+	}
+
+	return 0;
+}
+
+static int reset_vpu_core_dev(struct core_device *core_dev)
+{
+	if (!core_dev)
+		return -EINVAL;
+
+	core_dev->fw_is_ready = false;
+	core_dev->firmware_started = false;
+	rpc_init_shared_memory_encoder(&core_dev->shared_mem,
+				cpu_phy_to_mu(core_dev, core_dev->m0_rpc_phy),
+				core_dev->m0_rpc_virt, SHARED_SIZE);
+	rpc_set_system_cfg_value_encoder(core_dev->shared_mem.pSharedInterface,
+				VPU_REG_BASE, core_dev->id);
+	return 0;
+}
+
+static int init_vpu_core_dev(struct core_device *core_dev)
+{
+	int ret;
+
+	if (!core_dev)
+		return -EINVAL;
+
+	mutex_init(&core_dev->core_mutex);
+	mutex_init(&core_dev->cmd_mutex);
+	init_completion(&core_dev->start_cmp);
+	init_completion(&core_dev->snap_done_cmp);
+
+	core_dev->workqueue = alloc_workqueue("vpu",
+					WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+	if (!core_dev->workqueue) {
+		vpu_dbg(LVL_ERR, "%s unable to alloc workqueue\n", __func__);
+		ret = -ENOMEM;
+		return ret;
+	}
+
+	INIT_WORK(&core_dev->msg_work, vpu_msg_run_work);
+
+	ret = vpu_mu_init(core_dev);
+	if (ret) {
+		vpu_dbg(LVL_ERR, "%s vpu mu init failed\n", __func__);
+		goto error;
+	}
+	//firmware space for M0
+	core_dev->m0_p_fw_space_vir =
+		ioremap_wc(core_dev->m0_p_fw_space_phy, M0_BOOT_SIZE);
+	if (!core_dev->m0_p_fw_space_vir)
+		vpu_dbg(LVL_ERR, "failed to remap space for M0 firmware\n");
+
+	memset_io(core_dev->m0_p_fw_space_vir, 0, M0_BOOT_SIZE);
+
+	core_dev->m0_rpc_virt = ioremap_wc(core_dev->m0_rpc_phy, SHARED_SIZE);
+	if (!core_dev->m0_rpc_virt)
+		vpu_dbg(LVL_ERR, "failed to remap space for shared memory\n");
+
+	memset_io(core_dev->m0_rpc_virt, 0, SHARED_SIZE);
+
+	reset_vpu_core_dev(core_dev);
+
+	return 0;
+error:
+	if (core_dev->workqueue) {
+		destroy_workqueue(core_dev->workqueue);
+		core_dev->workqueue = NULL;
+	}
+	return ret;
+}
+
+static int uninit_vpu_core_dev(struct core_device *core_dev)
+{
+	if (!core_dev)
+		return -EINVAL;
+
+	if (core_dev->workqueue) {
+		destroy_workqueue(core_dev->workqueue);
+		core_dev->workqueue = NULL;
+	}
+
+	if (core_dev->m0_p_fw_space_vir) {
+		iounmap(core_dev->m0_p_fw_space_vir);
+		core_dev->m0_p_fw_space_vir = NULL;
+	}
+	core_dev->m0_p_fw_space_phy = 0;
+
+	if (core_dev->m0_rpc_virt) {
+		iounmap(core_dev->m0_rpc_virt);
+		core_dev->m0_rpc_virt = NULL;
+	}
+	core_dev->m0_rpc_phy = 0;
+
+	if (core_dev->mu_base_virtaddr) {
+		iounmap(core_dev->mu_base_virtaddr);
+		core_dev->mu_base_virtaddr = NULL;
+	}
+
+	if (core_dev->generic_dev) {
+		put_device(core_dev->generic_dev);
+		core_dev->generic_dev = NULL;
+	}
+
+	return 0;
 }
 
 static int vpu_probe(struct platform_device *pdev)
@@ -2274,114 +2198,57 @@ static int vpu_probe(struct platform_device *pdev)
 	struct vpu_dev *dev;
 	struct resource *res;
 	struct device_node *np = pdev->dev.of_node;
-	struct device_node *reserved_node;
-	struct resource reserved_res;
-	unsigned int mu_id;
-	u_int32 core_type;
 	u_int32 i;
 	int ret;
+
+	if (!np) {
+		vpu_dbg(LVL_ERR, "error: %s of_node is NULL\n", __func__);
+		return -EINVAL;
+	}
 
 	dev = devm_kzalloc(&pdev->dev, sizeof(*dev), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
 	dev->plat_dev = pdev;
-	dev->generic_dev = &pdev->dev;
+	dev->generic_dev = get_device(&pdev->dev);
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		vpu_dbg(LVL_ERR, "Missing platform resource data\n");
+		ret = -EINVAL;
+		goto error_put_dev;
+	}
+	dev->regs_enc = devm_ioremap_resource(dev->generic_dev, res);
+	if (!dev->regs_enc) {
+		vpu_dbg(LVL_ERR, "couldn't map encoder reg\n");
+		ret = PTR_ERR(dev->regs_enc);
+		goto error_put_dev;
+	}
 	dev->regs_base = ioremap(ENC_REG_BASE, 0x1000000);
 	if (!dev->regs_base) {
 		vpu_dbg(LVL_ERR, "%s could not map regs_base\n", __func__);
-		return PTR_ERR(dev->regs_base);
+		ret = PTR_ERR(dev->regs_base);
+		goto error_put_dev;
 	}
 
-	if (np) {
-		ret = of_property_read_u32(np, "core_type", &core_type);
-		if (ret) {
-			vpu_dbg(LVL_ERR, "error: Cannot get core num %d\n", ret);
-			return -EINVAL;
-		}
-		if (core_type == 2)
-			dev->plat_type = IMX8QM;
-		else
-			dev->plat_type = IMX8QXP;
-		reserved_node = of_parse_phandle(np, "boot-region", 0);
-		if (!reserved_node) {
-			vpu_dbg(LVL_ERR, "error: boot-region of_parse_phandle error\n");
-			return -ENODEV;
-		}
-
-		if (of_address_to_resource(reserved_node, 0, &reserved_res)) {
-			vpu_dbg(LVL_ERR, "error: boot-region of_address_to_resource error\n");
-			return -EINVAL;
-		}
-		dev->core_dev[0].m0_p_fw_space_phy = reserved_res.start;
-		dev->core_dev[1].m0_p_fw_space_phy = reserved_res.start + M0_BOOT_SIZE;
-		reserved_node = of_parse_phandle(np, "rpc-region", 0);
-		if (!reserved_node) {
-			vpu_dbg(LVL_ERR, "error: rpc-region of_parse_phandle error\n");
-			return -ENODEV;
-		}
-
-		if (of_address_to_resource(reserved_node, 0, &reserved_res)) {
-			vpu_dbg(LVL_ERR, "error: rpc-region of_address_to_resource error\n");
-			return -EINVAL;
-		}
-		dev->core_dev[0].m0_rpc_phy = reserved_res.start;
-		dev->core_dev[1].m0_rpc_phy = reserved_res.start + SHARED_SIZE;
-	} else
-		vpu_dbg(LVL_ERR, "error: %s of_node is NULL\n", __func__);
+	ret = parse_dt_info(dev, np);
+	if (ret) {
+		vpu_dbg(LVL_ERR, "parse device tree fail\n");
+		goto error_iounmap;
+	}
 
 	ret = v4l2_device_register(&pdev->dev, &dev->v4l2_dev);
 	if (ret) {
 		vpu_dbg(LVL_ERR, "%s unable to register v4l2 dev\n", __func__);
-		return ret;
+		goto error_iounmap;
 	}
 
 	platform_set_drvdata(pdev, dev);
 
-	dev->pvpu_encoder_dev = video_device_alloc();
-	if (dev->pvpu_encoder_dev) {
-		strncpy(dev->pvpu_encoder_dev->name, v4l2_videodevice_encoder.name, sizeof(v4l2_videodevice_encoder.name));
-		dev->pvpu_encoder_dev->fops = v4l2_videodevice_encoder.fops;
-		dev->pvpu_encoder_dev->ioctl_ops = v4l2_videodevice_encoder.ioctl_ops;
-		dev->pvpu_encoder_dev->release = video_device_release;
-		dev->pvpu_encoder_dev->vfl_dir = v4l2_videodevice_encoder.vfl_dir;
-		dev->pvpu_encoder_dev->v4l2_dev = &dev->v4l2_dev;
-
-		video_set_drvdata(dev->pvpu_encoder_dev, dev);
-
-		if (video_register_device(dev->pvpu_encoder_dev,
-					VFL_TYPE_GRABBER,
-					ENCODER_NODE_NUMBER)) {
-			vpu_dbg(LVL_ERR, "%s unable to register video encoder device\n",
-					__func__
-					);
-			video_device_release(dev->pvpu_encoder_dev);
-			dev->pvpu_encoder_dev = NULL;
-		} else {
-			vpu_dbg(LVL_INFO, "%s  register video encoder device\n",
-					__func__
-				   );
-		}
-	}
-
-	if (!dev->mu_ipcHandle) {
-		ret = sc_ipc_getMuID(&mu_id);
-		if (ret) {
-			vpu_dbg(LVL_ERR, "--- sc_ipc_getMuID() cannot obtain mu id SCI error! (%d)\n", ret);
-			return ret;
-		}
-
-		ret = sc_ipc_open(&dev->mu_ipcHandle, mu_id);
-		if (ret) {
-			vpu_dbg(LVL_ERR, "--- sc_ipc_getMuID() cannot open MU channel to SCU error! (%d)\n", ret);
-			return ret;
-		}
-	}
-
-	if (core_type == 2) {
-		vpu_set_power(dev, true, 0);
-		vpu_set_power(dev, true, 1);
+	ret = create_vpu_video_device(dev);
+	if (ret) {
+		vpu_dbg(LVL_ERR, "create vpu video device fail\n");
+		goto error_unreg_v4l2;
 	}
 
 	vpu_enable_hw(dev);
@@ -2390,80 +2257,50 @@ static int vpu_probe(struct platform_device *pdev)
 	pm_runtime_get_sync(&pdev->dev);
 
 	mutex_init(&dev->dev_mutex);
-	for (i = 0; i < core_type; i++) {
-		struct core_device *core_dev;
-
-		core_dev = &dev->core_dev[i];
-		mutex_init(&core_dev->core_mutex);
-		mutex_init(&core_dev->cmd_mutex);
-		init_completion(&core_dev->start_cmp);
-		init_completion(&core_dev->snap_done_cmp);
-		core_dev->firmware_started = false;
-
-		core_dev->fw_is_ready = false;
-		core_dev->workqueue = alloc_workqueue("vpu", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
-		if (!core_dev->workqueue) {
-			vpu_dbg(LVL_ERR, "%s unable to alloc workqueue\n", __func__);
-			ret = -ENOMEM;
-			return ret;
-		}
-
-		INIT_WORK(&core_dev->msg_work, vpu_msg_run_work);
-
-		ret = vpu_mu_init(dev, i);
-		if (ret) {
-			vpu_dbg(LVL_ERR, "%s vpu mu init failed\n", __func__);
-			return ret;
-		}
-		//firmware space for M0
-		core_dev->m0_p_fw_space_vir = ioremap_wc(core_dev->m0_p_fw_space_phy,
-				M0_BOOT_SIZE
-				);
-		if (!core_dev->m0_p_fw_space_vir)
-			vpu_dbg(LVL_ERR, "failed to remap space for M0 firmware\n");
-
-		memset_io(core_dev->m0_p_fw_space_vir, 0, M0_BOOT_SIZE);
-
-		core_dev->m0_rpc_virt = ioremap_wc(core_dev->m0_rpc_phy,
-				SHARED_SIZE
-				);
-		if (!core_dev->m0_rpc_virt)
-			vpu_dbg(LVL_ERR, "failed to remap space for shared memory\n");
-
-		memset_io(core_dev->m0_rpc_virt, 0, SHARED_SIZE);
-
-		rpc_init_shared_memory_encoder(&core_dev->shared_mem, core_dev->m0_rpc_phy - core_dev->m0_p_fw_space_phy, core_dev->m0_rpc_virt, SHARED_SIZE);
-		rpc_set_system_cfg_value_encoder(core_dev->shared_mem.pSharedInterface, VPU_REG_BASE, i);
+	for (i = 0; i < dev->core_num; i++) {
+		dev->core_dev[i].id = i;
+		dev->core_dev[i].generic_dev = get_device(dev->generic_dev);
+		ret = init_vpu_core_dev(&dev->core_dev[i]);
+		if (ret)
+			goto error_init_core;
 	}
 	pm_runtime_put_sync(&pdev->dev);
+
 	return 0;
+
+error_init_core:
+	for (i = 0; i < dev->core_num; i++)
+		uninit_vpu_core_dev(&dev->core_dev[i]);
+
+	pm_runtime_put_sync(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+	vpu_disable_hw(dev);
+
+	if (dev->pvpu_encoder_dev) {
+		video_unregister_device(dev->pvpu_encoder_dev);
+		dev->pvpu_encoder_dev = NULL;
+	}
+error_unreg_v4l2:
+	v4l2_device_unregister(&dev->v4l2_dev);
+error_iounmap:
+	if (dev->regs_base)
+		iounmap(dev->regs_base);
+error_put_dev:
+	if (dev->generic_dev) {
+		put_device(dev->generic_dev);
+		dev->generic_dev = NULL;
+	}
+	return ret;
 }
 
 static int vpu_remove(struct platform_device *pdev)
 {
 	struct vpu_dev *dev = platform_get_drvdata(pdev);
-	u_int32 core_num;
 	u_int32 i;
 
-	if (dev->plat_type == IMX8QM) {
-		destroy_workqueue(dev->core_dev[0].workqueue);
-		destroy_workqueue(dev->core_dev[1].workqueue);
-		core_num = 2;
-	} else {
-		destroy_workqueue(dev->core_dev[0].workqueue);
-		core_num = 1;
-	}
+	for (i = 0; i < dev->core_num; i++)
+		uninit_vpu_core_dev(&dev->core_dev[i]);
 
-	for (i = 0; i < core_num; i++) {
-		if (dev->core_dev[i].m0_p_fw_space_vir)
-			iounmap(dev->core_dev[i].m0_p_fw_space_vir);
-		dev->core_dev[i].m0_p_fw_space_vir = NULL;
-		dev->core_dev[i].m0_p_fw_space_phy = 0;
-		if (dev->core_dev[i].shared_mem.shared_mem_vir)
-			iounmap(dev->core_dev[i].shared_mem.shared_mem_vir);
-		dev->core_dev[i].shared_mem.shared_mem_vir = NULL;
-		dev->core_dev[i].shared_mem.shared_mem_phy = 0;
-	}
 	if (dev->m0_pfw) {
 		release_firmware(dev->m0_pfw);
 		dev->m0_pfw = NULL;
@@ -2475,6 +2312,11 @@ static int vpu_remove(struct platform_device *pdev)
 		video_unregister_device(dev->pvpu_encoder_dev);
 
 	v4l2_device_unregister(&dev->v4l2_dev);
+	if (dev->generic_dev) {
+		put_device(dev->generic_dev);
+		dev->generic_dev = NULL;
+	}
+
 	return 0;
 }
 
@@ -2487,17 +2329,7 @@ static int vpu_runtime_resume(struct device *dev)
 {
 	return 0;
 }
-#if 0
-static int vpu_suspend(struct device *dev)
-{
-	return 0;
-}
 
-static int vpu_resume(struct device *dev)
-{
-	return 0;
-}
-#endif
 #define CHECK_BIT(var, pos) (((var) >> (pos)) & 1)
 static void v4l2_vpu_send_snapshot(struct core_device *dev)
 {
@@ -2518,14 +2350,9 @@ static int vpu_suspend(struct device *dev)
 {
 	struct vpu_dev *vpudev = (struct vpu_dev *)dev_get_drvdata(dev);
 	struct core_device *core_dev;
-	u_int32 core_num, i;
+	u_int32 i;
 
-	if (vpudev->plat_type == IMX8QM)
-		core_num = 2;
-	else
-		core_num = 1;
-
-	for (i = 0; i < core_num; i++) {
+	for (i = 0; i < vpudev->core_num; i++) {
 		core_dev = &vpudev->core_dev[i];
 		if (core_dev->hang_mask != core_dev->instance_mask) {
 
@@ -2537,7 +2364,6 @@ static int vpu_suspend(struct device *dev)
 				return -1;
 			}
 		}
-		vpu_set_power(vpudev, false, i);
 	}
 
 	return 0;
@@ -2546,53 +2372,22 @@ static int vpu_suspend(struct device *dev)
 static int vpu_resume(struct device *dev)
 {
 	struct vpu_dev *vpudev = (struct vpu_dev *)dev_get_drvdata(dev);
-	void *csr_offset, *csr_cpuwait;
 	struct core_device *core_dev;
-	u_int32 core_num;
 	u_int32 i;
 
-	if (vpudev->plat_type == IMX8QM) {
-		core_num = 2;
-		vpu_set_power(vpudev, true, 0);
-		vpu_set_power(vpudev, true, 1);
-		vpu_enable_hw(vpudev);
-	} else {
-		core_num = 1;
-		vpu_set_power(vpudev, true, 0);
-		vpu_enable_hw(vpudev);
-	}
-	for (i = 0; i < core_num; i++) {
+	vpu_enable_hw(vpudev);
+
+	for (i = 0; i < vpudev->core_num; i++) {
 		core_dev = &vpudev->core_dev[i];
 		MU_Init(core_dev->mu_base_virtaddr);
 		MU_EnableRxFullInt(core_dev->mu_base_virtaddr, 0);
 
 		if (core_dev->hang_mask == core_dev->instance_mask) {
 			/*no instance is active before suspend, do reset*/
-			core_dev->fw_is_ready = false;
-			core_dev->firmware_started = false;
-
-			rpc_init_shared_memory_encoder(&core_dev->shared_mem, core_dev->m0_rpc_phy - core_dev->m0_p_fw_space_phy, core_dev->m0_rpc_virt, SHARED_SIZE);
-			rpc_set_system_cfg_value_encoder(core_dev->shared_mem.pSharedInterface, VPU_REG_BASE, i);
+			reset_vpu_core_dev(core_dev);
 		} else {
 			/*resume*/
-			if (vpudev->plat_type == IMX8QXP) {
-				csr_offset = ioremap(0x2d050000, 4);
-				writel(core_dev->m0_p_fw_space_phy, csr_offset);
-				csr_cpuwait = ioremap(0x2d050004, 4);
-				writel(0x0, csr_cpuwait);
-			} else {
-				if (i == 0) {
-					csr_offset = ioremap(0x2d090000, 4);
-					writel(core_dev->m0_p_fw_space_phy, csr_offset);
-					csr_cpuwait = ioremap(0x2d090004, 4);
-					writel(0x0, csr_cpuwait);
-				} else {
-					csr_offset = ioremap(0x2d0a0000, 4);
-					writel(core_dev->m0_p_fw_space_phy, csr_offset);
-					csr_cpuwait = ioremap(0x2d0a0004, 4);
-					writel(0x0, csr_cpuwait);
-				}
-			}
+			set_vpu_fw_addr(vpudev, core_dev);
 			/*wait for firmware resotre done*/
 			if (!wait_for_completion_timeout(&core_dev->start_cmp, msecs_to_jiffies(1000))) {
 				vpu_dbg(LVL_ERR, "error: wait for vpu encoder resume done timeout!\n");
