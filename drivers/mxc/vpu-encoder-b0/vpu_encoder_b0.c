@@ -59,7 +59,24 @@ static char *mu_cmp[] = {
 };
 
 // H264 level is maped like level 5.1 to uLevel 51, except level 1b to uLevel 14
-u_int32 h264_lvl[] = {10, 14, 11, 12, 13, 20, 21, 22, 30, 31, 32, 40, 41, 42, 50, 51};
+const u_int32 h264_level[] = {
+	[V4L2_MPEG_VIDEO_H264_LEVEL_1_0] = 10,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_1B]  = 14,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_1_1] = 11,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_1_2] = 12,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_1_3] = 13,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_2_0] = 20,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_2_1] = 21,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_2_2] = 22,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_3_0] = 30,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_3_1] = 31,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_3_2] = 32,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_4_0] = 40,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_4_1] = 41,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_4_2] = 42,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_5_0] = 50,
+	[V4L2_MPEG_VIDEO_H264_LEVEL_5_1] = 51
+};
 
 #define ITEM_NAME(name)		\
 				[name] = #name
@@ -257,7 +274,10 @@ static void get_param_from_v4l2(pMEDIAIP_ENC_PARAM pEncParam,
 	pEncParam->uOutHeight           = pix_mp->height;
 	pEncParam->uLowLatencyMode      = 0;
 
-	pEncParam->uIFrameInterval      = 10;
+	if (!pEncParam->uIFrameInterval)
+		pEncParam->uIFrameInterval = 30;
+	if (!pEncParam->uGopBLength)
+		pEncParam->uGopBLength = 30;
 
 	vpu_dbg(LVL_INFO, "eCodecMode(%d) eProfile(%d) uSrcStride(%d) uSrcWidth(%d) uSrcHeight(%d) uSrcOffset_x(%d) uSrcOffset_y(%d) uSrcCropWidth(%d) uSrcCropHeight(%d) uOutWidth(%d) uOutHeight(%d) uGopBLength(%d) uLowLatencyMode(%d) uInitSliceQP(%d) uIFrameInterval(%d) eBitRateMode(%d) uTargetBitrate(%d) uMaxBitRate(%d) uMinBitRate(%d) uFrameRate(%d)\n",
 			pEncParam->eCodecMode, pEncParam->eProfile, pEncParam->uSrcStride, pEncParam->uSrcWidth,
@@ -338,10 +358,23 @@ static int set_yuv_queue_fmt(struct queue_data *q_data, struct v4l2_format *f)
 	return 0;
 }
 
+static u32 get_enc_minimum_sizeimage(u32 width, u32 height)
+{
+	const u32 THRESHOLD = 256 * 1024;
+	u32 sizeimage;
+
+	sizeimage = width * height / 2;
+	if (sizeimage < THRESHOLD)
+		sizeimage = THRESHOLD;
+
+	return sizeimage;
+}
+
 static int set_enc_queue_fmt(struct queue_data *q_data, struct v4l2_format *f)
 {
 	struct vpu_v4l2_fmt *fmt = NULL;
 	struct v4l2_pix_format_mplane *pix_mp = &f->fmt.pix_mp;
+	u32 sizeimage;
 
 	if (!q_data || !f)
 		return -EINVAL;
@@ -357,7 +390,9 @@ static int set_enc_queue_fmt(struct queue_data *q_data, struct v4l2_format *f)
 	q_data->fourcc = pix_mp->pixelformat;
 	q_data->width = pix_mp->width;
 	q_data->height = pix_mp->height;
-	q_data->sizeimage[0] = pix_mp->plane_fmt[0].sizeimage;
+	sizeimage = get_enc_minimum_sizeimage(pix_mp->width, pix_mp->height);
+	q_data->sizeimage[0] = max(sizeimage, pix_mp->plane_fmt[0].sizeimage);
+	pix_mp->plane_fmt[0].sizeimage = q_data->sizeimage[0];
 
 	q_data->current_fmt = fmt;
 
@@ -514,6 +549,11 @@ static struct vb2_buffer *cvrt_v4l2_to_vb2_buffer(struct vb2_queue *vq,
 	return vq->bufs[buf->index];
 }
 
+static u32 get_v4l2_plane_payload(struct v4l2_plane *plane)
+{
+	return plane->bytesused - plane->data_offset;
+}
+
 static int is_valid_output_mplane_buf(struct queue_data *q_data,
 					struct vpu_v4l2_fmt *fmt,
 					struct v4l2_buffer *buf)
@@ -521,10 +561,11 @@ static int is_valid_output_mplane_buf(struct queue_data *q_data,
 	int i;
 
 	for (i = 0; i < fmt->num_planes; i++) {
-		if (!buf->m.planes[i].bytesused)
+		u32 bytesused = get_v4l2_plane_payload(&buf->m.planes[i]);
+
+		if (!bytesused)
 			return 0;
-		if (fmt->is_yuv &&
-			buf->m.planes[i].bytesused != q_data->sizeimage[i])
+		if (fmt->is_yuv && bytesused != q_data->sizeimage[i])
 			return 0;
 	}
 
@@ -850,7 +891,7 @@ static int v4l2_enc_s_ctrl(struct v4l2_ctrl *ctrl)
 		}
 		break;
 	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
-		pEncParam->uLevel = h264_lvl[ctrl->val];
+		pEncParam->uLevel = h264_level[ctrl->val];
 		vpu_dbg(LVL_INFO, "V4L2_CID_MPEG_VIDEO_H264_LEVEL set val = %d\n", ctrl->val);
 		break;
 	case V4L2_CID_MPEG_VIDEO_BITRATE:
@@ -858,6 +899,7 @@ static int v4l2_enc_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_MPEG_VIDEO_GOP_SIZE:
 		pEncParam->uIFrameInterval = ctrl->val;
+		pEncParam->uGopBLength = ctrl->val;
 		break;
 	case V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP:
 		pEncParam->uInitSliceQP = ctrl->val;
@@ -907,7 +949,7 @@ static void vpu_encoder_ctrls(struct vpu_ctx *ctx)
 	v4l2_ctrl_new_std_menu(&ctx->ctrl_handler, &vpu_enc_ctrl_ops,
 			V4L2_CID_MPEG_VIDEO_H264_LEVEL,
 			V4L2_MPEG_VIDEO_H264_LEVEL_5_1, 0x0,
-			V4L2_MPEG_VIDEO_H264_LEVEL_1_0
+			V4L2_MPEG_VIDEO_H264_LEVEL_4_0
 			);
 	v4l2_ctrl_new_std(&ctx->ctrl_handler, &vpu_enc_ctrl_ops,
 		V4L2_CID_MPEG_VIDEO_BITRATE, 0, 32767000, 1, 0);
@@ -2310,7 +2352,7 @@ static int vpu_probe(struct platform_device *pdev)
 
 		if (video_register_device(dev->pvpu_encoder_dev,
 					VFL_TYPE_GRABBER,
-					-1)) {
+					ENCODER_NODE_NUMBER)) {
 			vpu_dbg(LVL_ERR, "%s unable to register video encoder device\n",
 					__func__
 					);
