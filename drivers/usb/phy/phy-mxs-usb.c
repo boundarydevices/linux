@@ -87,11 +87,26 @@
 #define ANADIG_ANA_MISC0_SET			0x154
 #define ANADIG_ANA_MISC0_CLR			0x158
 
+#define ANADIG_USB1_CHRG_DETECT_SET		0x1b4
+#define ANADIG_USB1_CHRG_DETECT_CLR		0x1b8
+#define ANADIG_USB1_CHRG_DETECT_EN_B		BIT(20)
+#define ANADIG_USB1_CHRG_DETECT_CHK_CHRG_B	BIT(19)
+#define ANADIG_USB1_CHRG_DETECT_CHK_CONTACT	BIT(18)
+
 #define ANADIG_USB1_VBUS_DET_STAT		0x1c0
+#define ANADIG_USB1_VBUS_DET_STAT_VBUS_VALID	BIT(3)
+
+#define ANADIG_USB1_CHRG_DET_STAT		0x1d0
+#define ANADIG_USB1_CHRG_DET_STAT_DM_STATE	BIT(2)
+#define ANADIG_USB1_CHRG_DET_STAT_CHRG_DETECTED	BIT(1)
+#define ANADIG_USB1_CHRG_DET_STAT_PLUG_CONTACT	BIT(0)
+
 #define ANADIG_USB2_VBUS_DET_STAT		0x220
 
 #define ANADIG_USB1_LOOPBACK_SET		0x1e4
 #define ANADIG_USB1_LOOPBACK_CLR		0x1e8
+#define ANADIG_USB1_LOOPBACK_UTMI_TESTSTART	BIT(0)
+
 #define ANADIG_USB2_LOOPBACK_SET		0x244
 #define ANADIG_USB2_LOOPBACK_CLR		0x248
 
@@ -118,6 +133,32 @@
 #define BM_ANADIG_REG_1P1_TRACK_VDD_SOC_CAP	BIT(19)
 
 #define BM_ANADIG_PLL_USB2_HOLD_RING_OFF	BIT(11)
+
+/* DCD module, the offset is 0x800 */
+#define DCD_CONTROL				0x800
+#define DCD_CLOCK				(DCD_CONTROL + 0x4)
+#define DCD_STATUS				(DCD_CONTROL + 0x8)
+
+#define DCD_CONTROL_SR				BIT(25)
+#define DCD_CONTROL_START			BIT(24)
+#define DCD_CONTROL_BC12			BIT(17)
+#define DCD_CONTROL_IE				BIT(16)
+#define DCD_CONTROL_IF				BIT(8)
+#define DCD_CONTROL_IACK			BIT(0)
+
+#define DCD_CLOCK_MHZ				BIT(0)
+
+#define DCD_STATUS_ACTIVE			BIT(22)
+#define DCD_STATUS_TO				BIT(21)
+#define DCD_STATUS_ERR				BIT(20)
+#define DCD_STATUS_SEQ_STAT			(BIT(18) | BIT(19))
+#define DCD_CHG_PORT				BIT(19)
+#define DCD_CHG_DET				(BIT(18) | BIT(19))
+#define DCD_CHG_DPIN				BIT(18)
+#define DCD_STATUS_SEQ_RES			(BIT(16) | BIT(17))
+#define DCD_SDP_PORT				BIT(16)
+#define DCD_CDP_PORT				BIT(17)
+#define DCD_DCP_PORT				(BIT(16) | BIT(17))
 
 #define to_mxs_phy(p) container_of((p), struct mxs_phy, phy)
 
@@ -161,6 +202,9 @@
  */
 #define MXS_PHY_HARDWARE_CONTROL_PHY2_CLK	BIT(4)
 
+/* The MXS PHYs which have DCD module for charger detection */
+#define MXS_PHY_HAS_DCD				BIT(5)
+
 struct mxs_phy_data {
 	unsigned int flags;
 };
@@ -198,6 +242,7 @@ static const struct mxs_phy_data imx6ul_phy_data = {
 };
 
 static const struct mxs_phy_data imx7ulp_phy_data = {
+	.flags = MXS_PHY_HAS_DCD,
 };
 
 static const struct of_device_id mxs_phy_dt_ids[] = {
@@ -224,6 +269,7 @@ struct mxs_phy {
 	struct regulator *phy_3p0;
 	bool hardware_control_phy2_clk;
 	enum usb_current_mode mode;
+	unsigned long clk_rate;
 };
 
 static inline bool is_imx6q_phy(struct mxs_phy *mxs_phy)
@@ -647,6 +693,59 @@ static int mxs_phy_on_suspend(struct usb_phy *phy,
 	return 0;
 }
 
+#define MXS_USB_CHARGER_DATA_CONTACT_TIMEOUT	100
+static int mxs_charger_data_contact_detect(struct mxs_phy *x)
+{
+	struct regmap *regmap = x->regmap_anatop;
+	int i, stable_contact_count = 0;
+	u32 val;
+
+	/* Check if vbus is valid */
+	regmap_read(regmap, ANADIG_USB1_VBUS_DET_STAT, &val);
+	if (!(val & ANADIG_USB1_VBUS_DET_STAT_VBUS_VALID)) {
+		dev_err(x->phy.dev, "vbus is not valid\n");
+		return -EINVAL;
+	}
+
+	/* Enable charger detector */
+	regmap_write(regmap, ANADIG_USB1_CHRG_DETECT_CLR,
+				ANADIG_USB1_CHRG_DETECT_EN_B);
+	/*
+	 * - Do not check whether a charger is connected to the USB port
+	 * - Check whether the USB plug has been in contact with each other
+	 */
+	regmap_write(regmap, ANADIG_USB1_CHRG_DETECT_SET,
+			ANADIG_USB1_CHRG_DETECT_CHK_CONTACT |
+			ANADIG_USB1_CHRG_DETECT_CHK_CHRG_B);
+
+	/* Check if plug is connected */
+	for (i = 0; i < MXS_USB_CHARGER_DATA_CONTACT_TIMEOUT; i++) {
+		regmap_read(regmap, ANADIG_USB1_CHRG_DET_STAT, &val);
+		if (val & ANADIG_USB1_CHRG_DET_STAT_PLUG_CONTACT) {
+			stable_contact_count++;
+			if (stable_contact_count > 5)
+				/* Data pin makes contact */
+				break;
+			else
+				usleep_range(5000, 10000);
+		} else {
+			stable_contact_count = 0;
+			usleep_range(5000, 6000);
+		}
+	}
+
+	if (i == MXS_USB_CHARGER_DATA_CONTACT_TIMEOUT) {
+		dev_err(x->phy.dev,
+			"Data pin can't make good contact.\n");
+		/* Disable charger detector */
+		regmap_write(regmap, ANADIG_USB1_CHRG_DETECT_SET,
+				ANADIG_USB1_CHRG_DETECT_EN_B |
+				ANADIG_USB1_CHRG_DETECT_CHK_CHRG_B);
+		return -ENXIO;
+	}
+	return 0;
+}
+
 /*
  * The resume signal must be finished here.
  */
@@ -677,6 +776,199 @@ static int mxs_phy_set_mode(struct usb_phy *phy,
 	mxs_phy->mode = mode;
 
 	return 0;
+}
+
+static enum usb_charger_type mxs_charger_primary_detection(struct mxs_phy *x)
+{
+	struct regmap *regmap = x->regmap_anatop;
+	enum usb_charger_type chgr_type = UNKNOWN_TYPE;
+	u32 val;
+
+	/*
+	 * - Do check whether a charger is connected to the USB port
+	 * - Do not Check whether the USB plug has been in contact with
+	 *   each other
+	 */
+	regmap_write(regmap, ANADIG_USB1_CHRG_DETECT_CLR,
+			ANADIG_USB1_CHRG_DETECT_CHK_CONTACT |
+			ANADIG_USB1_CHRG_DETECT_CHK_CHRG_B);
+
+	msleep(100);
+
+	/* Check if it is a charger */
+	regmap_read(regmap, ANADIG_USB1_CHRG_DET_STAT, &val);
+	if (!(val & ANADIG_USB1_CHRG_DET_STAT_CHRG_DETECTED)) {
+		chgr_type = SDP_TYPE;
+		dev_dbg(x->phy.dev, "It is a stardard downstream port\n");
+	}
+
+	/* Disable charger detector */
+	regmap_write(regmap, ANADIG_USB1_CHRG_DETECT_SET,
+			ANADIG_USB1_CHRG_DETECT_EN_B |
+			ANADIG_USB1_CHRG_DETECT_CHK_CHRG_B);
+
+	return chgr_type;
+}
+
+/*
+ * It must be called after DP is pulled up, which is used to
+ * differentiate DCP and CDP.
+ */
+static enum usb_charger_type mxs_charger_secondary_detection(struct mxs_phy *x)
+{
+	struct regmap *regmap = x->regmap_anatop;
+	int val;
+
+	msleep(80);
+
+	regmap_read(regmap, ANADIG_USB1_CHRG_DET_STAT, &val);
+	if (val & ANADIG_USB1_CHRG_DET_STAT_DM_STATE) {
+		dev_dbg(x->phy.dev, "It is a dedicate charging port\n");
+		return DCP_TYPE;
+	} else {
+		dev_dbg(x->phy.dev, "It is a charging downstream port\n");
+		return CDP_TYPE;
+	}
+}
+
+static enum usb_charger_type mxs_phy_charger_detect(struct usb_phy *phy)
+{
+	struct mxs_phy *mxs_phy = to_mxs_phy(phy);
+	struct regmap *regmap = mxs_phy->regmap_anatop;
+	void __iomem *base = phy->io_priv;
+	enum usb_charger_type chgr_type = UNKNOWN_TYPE;
+
+	if (mxs_charger_data_contact_detect(mxs_phy))
+		return chgr_type;
+
+	chgr_type = mxs_charger_primary_detection(mxs_phy);
+
+	if (chgr_type != SDP_TYPE) {
+		/* Pull up DP via test */
+		writel_relaxed(BM_USBPHY_DEBUG_CLKGATE,
+				base + HW_USBPHY_DEBUG_CLR);
+		regmap_write(regmap, ANADIG_USB1_LOOPBACK_SET,
+				ANADIG_USB1_LOOPBACK_UTMI_TESTSTART);
+
+		chgr_type = mxs_charger_secondary_detection(mxs_phy);
+
+		/* Stop the test */
+		regmap_write(regmap, ANADIG_USB1_LOOPBACK_CLR,
+				ANADIG_USB1_LOOPBACK_UTMI_TESTSTART);
+		writel_relaxed(BM_USBPHY_DEBUG_CLKGATE,
+				base + HW_USBPHY_DEBUG_SET);
+	}
+
+	return chgr_type;
+}
+
+static int mxs_phy_dcd_start(struct mxs_phy *mxs_phy)
+{
+	void __iomem *base = mxs_phy->phy.io_priv;
+	u32 value;
+
+	value = readl(base + DCD_CONTROL);
+	writel(value | DCD_CONTROL_SR, base + DCD_CONTROL);
+
+	if (!mxs_phy->clk_rate)
+		return -EINVAL;
+
+	value = readl(base + DCD_CONTROL);
+	writel(((mxs_phy->clk_rate / 1000000) << 2) | DCD_CLOCK_MHZ,
+		base + DCD_CLOCK);
+
+	value = readl(base + DCD_CONTROL);
+	value &= ~DCD_CONTROL_IE;
+	writel(value | DCD_CONTROL_BC12, base + DCD_CONTROL);
+
+	value = readl(base + DCD_CONTROL);
+	writel(value | DCD_CONTROL_START, base + DCD_CONTROL);
+
+	return 0;
+}
+
+
+#define DCD_CHARGING_DURTION 1000 /* One second according to BC 1.2 */
+static enum usb_charger_type mxs_phy_dcd_flow(struct usb_phy *phy)
+{
+	struct mxs_phy *mxs_phy = to_mxs_phy(phy);
+	void __iomem *base = mxs_phy->phy.io_priv;
+	u32 value;
+	int i = 0;
+	enum usb_charger_type chgr_type;
+
+	if (mxs_phy_dcd_start(mxs_phy))
+		return UNKNOWN_TYPE;
+
+	while (i++ <= (DCD_CHARGING_DURTION / 50)) {
+		value = readl(base + DCD_CONTROL);
+		if (value & DCD_CONTROL_IF) {
+			value = readl(base + DCD_STATUS);
+			if (value & DCD_STATUS_ACTIVE) {
+				dev_err(phy->dev, "still detecting\n");
+				chgr_type = UNKNOWN_TYPE;
+				break;
+			}
+
+			if (value & DCD_STATUS_TO) {
+				dev_err(phy->dev, "detect timeout\n");
+				chgr_type = UNKNOWN_TYPE;
+				break;
+			}
+
+			if (value & DCD_STATUS_ERR) {
+				dev_err(phy->dev, "detect error\n");
+				chgr_type = UNKNOWN_TYPE;
+				break;
+			}
+
+			if ((value & DCD_STATUS_SEQ_STAT) <= DCD_CHG_DPIN) {
+				dev_err(phy->dev, "error occurs\n");
+				chgr_type = UNKNOWN_TYPE;
+				break;
+			}
+
+			/* SDP */
+			if (((value & DCD_STATUS_SEQ_STAT) == DCD_CHG_PORT) &&
+				((value & DCD_STATUS_SEQ_RES)
+					== DCD_SDP_PORT)) {
+				dev_dbg(phy->dev, "SDP\n");
+				chgr_type = SDP_TYPE;
+				break;
+			}
+
+			if ((value & DCD_STATUS_SEQ_STAT) == DCD_CHG_DET) {
+				if ((value & DCD_STATUS_SEQ_RES) ==
+						DCD_CDP_PORT) {
+					dev_dbg(phy->dev, "CDP\n");
+					chgr_type = CDP_TYPE;
+					break;
+				}
+
+				if ((value & DCD_STATUS_SEQ_RES) ==
+						DCD_DCP_PORT) {
+					dev_dbg(phy->dev, "DCP\n");
+					chgr_type = DCP_TYPE;
+					break;
+				}
+			}
+			dev_err(phy->dev, "unknown error occurs\n");
+			chgr_type = UNKNOWN_TYPE;
+			break;
+		}
+		msleep(50);
+	}
+
+	if (i > 20) {
+		dev_err(phy->dev, "charger detecting timeout\n");
+		chgr_type = UNKNOWN_TYPE;
+	}
+
+	/* disable dcd module */
+	readl(base + DCD_STATUS);
+	writel(DCD_CONTROL_IACK, base + DCD_CONTROL);
+	writel(DCD_CONTROL_SR, base + DCD_CONTROL);
+	return chgr_type;
 }
 
 static int mxs_phy_probe(struct platform_device *pdev)
@@ -710,6 +1002,7 @@ static int mxs_phy_probe(struct platform_device *pdev)
 	if (!mxs_phy)
 		return -ENOMEM;
 
+	mxs_phy->clk_rate = clk_get_rate(clk);
 	/* Some SoCs don't have anatop registers */
 	if (of_get_property(np, "fsl,anatop", NULL)) {
 		mxs_phy->regmap_anatop = syscon_regmap_lookup_by_phandle
@@ -774,6 +1067,11 @@ static int mxs_phy_probe(struct platform_device *pdev)
 		mxs_phy->phy.notify_suspend = mxs_phy_on_suspend;
 		mxs_phy->phy.notify_resume = mxs_phy_on_resume;
 	}
+
+	if (mxs_phy->data->flags & MXS_PHY_HAS_DCD)
+		mxs_phy->phy.charger_detect	= mxs_phy_dcd_flow;
+	else
+		mxs_phy->phy.charger_detect	= mxs_phy_charger_detect;
 
 	mxs_phy->phy_3p0 = devm_regulator_get(&pdev->dev, "phy-3p0");
 	if (PTR_ERR(mxs_phy->phy_3p0) == -EPROBE_DEFER) {

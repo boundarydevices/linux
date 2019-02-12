@@ -270,24 +270,12 @@ static void get_color_depth(struct mxc_hdmi_rx_dev *hdmi_rx,
 void hdmirx_edid_set(state_struct *state)
 {
 	struct mxc_hdmi_rx_dev *hdmi_rx = state_to_mxc_hdmirx(state);
-	GENERAL_Read_Register_response regresp;
 
 	/* Set EDID - block 0 */
 	CDN_API_HDMIRX_SET_EDID_blocking(state, 0, 0, &block0[0]);
 	/* Set EDID - block 1 */
 	CDN_API_HDMIRX_SET_EDID_blocking(state, 0, 1, &block1[0]);
 	dev_dbg(&hdmi_rx->pdev->dev, "EDID block 0/1 set complete.\n");
-
-	/* Read the current value of the CTRL register */
-	CDN_API_General_Read_Register_blocking(state, 0xb000, &regresp);
-	/* Clear the 'divisor_a' and 'divisor_b' values - bits 15:8 */
-	regresp.val &= ~0xFF00;
-	/* Set the 'divisor_a' value */
-	regresp.val |= 0x4 << 14;
-	/* Set the 'divisor_b' value */
-	regresp.val |= 0x32 << 8;
-	/* Write the CTRL register back */
-	CDN_API_General_Write_Register_blocking(state, 0xb000, regresp.val);
 }
 
 /* Set SCDC data sample */
@@ -324,28 +312,9 @@ int hdmirx_init(state_struct *state)
 	return ret;
 }
 
-int hdmirx_check5v(state_struct *state)
+int hdmirx_get_hpd_state(state_struct *state, u8 *hpd)
 {
-	struct mxc_hdmi_rx_dev *hdmi_rx = state_to_mxc_hdmirx(state);
-	u8 event5V = 0;
-	u32 i;
-
-	/* check for 5v to get hdmi cable state */
-	CDN_API_HDMIRX_ReadEvent(state, &event5V);
-	for (i = 0; i < 5; i++) {
-		if (event5V & (1 << HDMI_RX_EVENT_5V_VAL)) {
-			dev_dbg(&hdmi_rx->pdev->dev, "HDMI 5V present\n");
-			break;
-		}
-		msleep(20);
-		CDN_API_HDMIRX_ReadEvent(state, &event5V);
-	}
-	if (i == 5) {
-		dev_dbg(&hdmi_rx->pdev->dev, "No HDMI 5V present!!!\n");
-		return -1;
-	}
-
-	return 0;
+	return CDN_API_General_GetHpdState_blocking(state, hpd);
 }
 
 void hdmirx_hotplug_trigger(state_struct *state)
@@ -520,7 +489,7 @@ void hdmirx_phy_pix_engine_reset(state_struct *state)
 					       &regresp);
 	CDN_API_General_Write_Register_blocking(state, ADDR_SINK_CAR +
 						(SINK_MHL_HD_CAR << 2),
-						regresp.val & 0x3F);
+						regresp.val & 0x3D);
 	CDN_API_General_Write_Register_blocking(state, ADDR_SINK_CAR +
 						(SINK_MHL_HD_CAR << 2),
 						regresp.val);
