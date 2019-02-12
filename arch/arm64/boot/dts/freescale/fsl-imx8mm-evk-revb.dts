@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 NXP
+ * Copyright 2018 NXP
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -12,15 +12,21 @@
  * GNU General Public License for more details.
  */
 
-#include "fsl-imx8mq-evk.dts"
+/dts-v1/;
 
-&hdmi {
-	compatible = "fsl,imx8mq-dp";
+#include "fsl-imx8mm-evk.dts"
 
-	dp-lane-mapping = <0xc6>;
-	dp-link-rate = <0x14>;
-	dp-num-lanes = <0x4>;
+/ {
+	model = "FSL i.MX8MM EVK RevB board";
+};
 
+/*
+ * External OSC is used as PCIe REFCLK on RevC board.
+ * Use the -revb.dts file to distiguish the different
+ * HW design.
+ */
+&pcie0{
+	ext_osc = <0>;
 	status = "okay";
 };
 

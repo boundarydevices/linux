@@ -318,16 +318,10 @@ static int ci_hdrc_imx_notify_event(struct ci_hdrc *ci, unsigned event)
 
 	switch (event) {
 	case CI_HDRC_CONTROLLER_VBUS_EVENT:
-		if (ci->vbus_active) {
+		if (ci->vbus_active)
 			ret = imx_usbmisc_charger_detection(mdata, true);
-			if (!ret && mdata->usb_phy->chg_type != SDP_TYPE)
-				ret = CI_HDRC_NOTIFY_RET_DEFER_EVENT;
-		} else {
+		else
 			ret = imx_usbmisc_charger_detection(mdata, false);
-		}
-		break;
-	case CI_HDRC_CONTROLLER_CHARGER_POST_EVENT:
-		imx_usbmisc_charger_secondary_detection(mdata);
 		break;
 	case CI_HDRC_IMX_HSIC_ACTIVE_EVENT:
 		if (!IS_ERR(data->pinctrl) &&
@@ -500,7 +494,6 @@ static int ci_hdrc_imx_probe(struct platform_device *pdev)
 		data->usbmisc_data->anatop = data->anatop;
 	}
 
-	data->usbmisc_data->picophy = (imx_platform_flag == &imx7d_usb_data);
 	ret = imx_usbmisc_init(data->usbmisc_data);
 	if (ret) {
 		dev_err(dev, "usbmisc init failed, ret=%d\n", ret);
