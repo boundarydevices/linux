@@ -39,7 +39,7 @@
 #define ST_LIS2DW12_CTRL4_INT1_CTRL_ADDR	0x23
 #define ST_LIS2DW12_DRDY_MASK			BIT(0)
 #define ST_LIS2DW12_FTH_INT_MASK		BIT(1)
-#define ST_LIS2DW12_TAP_INT1_MASK		0x48
+#define ST_LIS2DW12_TAP_INT1_MASK		BIT(6)
 #define ST_LIS2DW12_TAP_TAP_INT1_MASK		BIT(3)
 #define ST_LIS2DW12_FF_INT1_MASK		BIT(4)
 #define ST_LIS2DW12_WU_INT1_MASK		BIT(5)
@@ -401,12 +401,6 @@ static int st_lis2dw12_init_hw(struct st_lis2dw12_hw *hw)
 	if (err < 0)
 		return err;
 
-	/* enable latched interrupt */
-	err = st_lis2dw12_write_with_mask(hw, ST_LIS2DW12_CTRL3_ADDR,
-					  ST_LIS2DW12_LIR_MASK, 1);
-	if (err < 0)
-		return err;
-
 	/* enable BDU */
 	err = st_lis2dw12_write_with_mask(hw, ST_LIS2DW12_CTRL2_ADDR,
 					  ST_LIS2DW12_BDU_MASK, 1);
@@ -645,22 +639,37 @@ static int st_lis2dw12_write_event_config(struct iio_dev *iio_dev,
 	u8 data[2] = {}, drdy_val, drdy_mask;
 	int err;
 
+	/* Read initial configuration data */
+	err = hw->tf->read(hw->dev, ST_LIS2DW12_INT_DUR_ADDR,
+				   sizeof(data), data);
+	if (err < 0)
+		return -EINVAL;
+
 	switch (sensor->id) {
 	case ST_LIS2DW12_ID_WU:
 		drdy_mask = ST_LIS2DW12_WU_INT1_MASK;
-		data[1] = state ? 0x02 : 0;
 		drdy_val = state ? 1 : 0;
+		data[1] = state ? 0x02 : 0;
 		break;
 	case ST_LIS2DW12_ID_TAP_TAP:
 		drdy_mask = ST_LIS2DW12_TAP_TAP_INT1_MASK;
-		data[0] = state ? 0x7f : 0;
-		data[1] = state ? 0x80 : 0;
 		drdy_val = state ? 1 : 0;
+		if (state) {
+			data[0] |= 0x7f;
+			data[1] |= 0x80;
+		} else {
+			data[0] &= ~0x7f;
+			data[1] &= ~0x80;
+		}
 		break;
 	case ST_LIS2DW12_ID_TAP:
 		drdy_mask = ST_LIS2DW12_TAP_INT1_MASK;
-		drdy_val = state ? 9 : 0;
-		data[0] = state ? 6 : 0;
+		drdy_val = state ? 1 : 0;
+		if (state) {
+			data[0] |= 6;
+		} else {
+			data[0] &= ~6;
+		}
 		break;
 	default:
 		return -EINVAL;
@@ -872,7 +881,6 @@ static const struct iio_info st_lis2dw12_acc_info = {
 	.attrs = &st_lis2dw12_acc_attribute_group,
 	.read_raw = st_lis2dw12_read_raw,
 	.write_raw = st_lis2dw12_write_raw,
-	.write_event_config = st_lis2dw12_write_event_config,
 };
 
 static struct attribute *st_lis2dw12_wu_attributes[] = {

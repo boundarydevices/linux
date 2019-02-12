@@ -252,17 +252,24 @@ static irqreturn_t st_lis2dw12_handler_thread(int irq, void *private)
 		if (err < 0)
 			return IRQ_HANDLED;
 
+		/* Consider can have Tap and Double Tap events contemporarely */
 		if (source & ST_LIS2DW12_DTAP_SRC_MASK) {
 			iio_dev = hw->iio_devs[ST_LIS2DW12_ID_TAP_TAP];
 			type = IIO_TAP_TAP;
-		} else {
+			code = IIO_UNMOD_EVENT_CODE(type, -1,
+						    IIO_EV_TYPE_THRESH,
+						    IIO_EV_DIR_RISING);
+			iio_push_event(iio_dev, code, st_lis2dw12_get_timestamp());
+		}
+
+		if (source & ST_LIS2DW12_STAP_SRC_MASK) {
 			iio_dev = hw->iio_devs[ST_LIS2DW12_ID_TAP];
 			type = IIO_TAP;
+			code = IIO_UNMOD_EVENT_CODE(type, -1,
+						    IIO_EV_TYPE_THRESH,
+						    IIO_EV_DIR_RISING);
+			iio_push_event(iio_dev, code, st_lis2dw12_get_timestamp());
 		}
-		code = IIO_UNMOD_EVENT_CODE(type, -1,
-					    IIO_EV_TYPE_THRESH,
-					    IIO_EV_DIR_RISING);
-		iio_push_event(iio_dev, code, st_lis2dw12_get_timestamp());
 	}
 
 	if (status & ST_LIS2DW12_STATUS_WU_MASK) {
