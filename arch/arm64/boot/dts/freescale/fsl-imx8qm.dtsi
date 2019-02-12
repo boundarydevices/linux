@@ -158,6 +158,7 @@
 		fsl,vpu_ap_mu_id = <17>;
 		status = "okay";
 	};
+
 	mu2_m0: mu2_m0@2d040000 {
 		compatible = "fsl,imx8-mu2-vpu-m0";
 		reg = <0x0 0x2d040000 0x0 0x20000>;
@@ -179,18 +180,41 @@
 
 	vpu_encoder: vpu_encoder@2d000000 {
 		compatible = "nxp,imx8qm-b0-vpuenc", "nxp,imx8qxp-b0-vpuenc";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
 		boot-region = <&encoder_boot>;
 		rpc-region = <&encoder_rpc>;
-		fw-buf-size = <0x200000 0x200000>;
-		rpc-buf-size = <0x80000 0x80000>;
-		print-buf-size = <0x80000 0x80000>;
-		reg = <0x0 0x2d000000 0x0 0x1000000>;
+		reg = <0x0 0x2d000000 0x0 0x1000000>,	/*VPU Encoder*/
+			<0x0 0x2c000000 0x0 0x2000000>; /*VPU*/
 		reg-names = "vpu_regs";
 		power-domains = <&pd_vpu_enc>;
-		reg-fw-base = <0x90000 0xa0000>;
+		reg-rpc-system = <0x40000000>;
+
 		resolution-max = <1920 1080>;
 		fps-max = <120>;
 		status = "disabled";
+
+		core0@1020000 {
+			compatible = "fsl,imx8-mu1-vpu-m0";
+			reg = <0x1020000 0x20000>;
+			reg-csr = <0x1090000 0x10000>;
+			interrupts = <GIC_SPI 473 IRQ_TYPE_LEVEL_HIGH>;
+			fsl,vpu_ap_mu_id = <17>;
+			fw-buf-size = <0x200000>;
+			rpc-buf-size = <0x80000>;
+			print-buf-size = <0x80000>;
+		};
+		core1@1040000 {
+			compatible = "fsl,imx8-mu2-vpu-m0";
+			reg = <0x1040000 0x20000>;
+			reg-csr = <0x10a0000 0x10000>;
+			interrupts = <GIC_SPI 474 IRQ_TYPE_LEVEL_HIGH>;
+			fsl,vpu_ap_mu_id = <18>;
+			fw-buf-size = <0x200000>;
+			rpc-buf-size = <0x80000>;
+			print-buf-size = <0x80000>;
+		};
 	};
 
 	clk: clk {
@@ -285,6 +309,7 @@
 	clocks = <&clk IMX8QM_A53_DIV>;
 	clock-latency = <61036>;
 	#cooling-cells = <2>;
+	/delete-property/ cpu-idle-states;
 };
 
 &A72_0 {
@@ -299,6 +324,7 @@
 	clocks = <&clk IMX8QM_A72_DIV>;
 	clock-latency = <61036>;
 	#cooling-cells = <2>;
+	/delete-property/ cpu-idle-states;
 };
 
 /* Data for energy-aware-scheduling */
@@ -395,4 +421,20 @@
                700000  0
 /*underdrive*/ 400000  0  /*core/shader clock share the same frequency on underdrive mode*/
        >;
+};
+
+&A53_1 {
+	/delete-property/ cpu-idle-states;
+};
+
+&A53_2 {
+	/delete-property/ cpu-idle-states;
+};
+
+&A53_3 {
+	/delete-property/ cpu-idle-states;
+};
+
+&A72_1 {
+	/delete-property/ cpu-idle-states;
 };
