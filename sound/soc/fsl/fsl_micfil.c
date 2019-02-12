@@ -61,6 +61,7 @@ struct fsl_micfil {
 	int vad_zcd_auto;
 	int vad_zcd_en;
 	int vad_zcd_adj;
+	int vad_rate_index;
 	atomic_t state;
 	atomic_t voice_detected;
 	atomic_t init_hwvad_done;
@@ -129,6 +130,16 @@ static const char * const micfil_hwvad_noise_decimation[] = {
 	"Disabled", "Enabled",
 };
 
+/* when adding new rate text, also add it to the
+ * micfil_hwvad_rate_ints
+ */
+static const char * const micfil_hwvad_rate[] = {
+	"48KHz", "44.1KHz",
+};
+
+static const int micfil_hwvad_rate_ints[] = {
+	48000, 44100,
+};
 
 static const struct soc_enum fsl_micfil_enum[] = {
 	SOC_ENUM_SINGLE(REG_MICFIL_CTRL2,
@@ -147,6 +158,8 @@ static const struct soc_enum fsl_micfil_enum[] = {
 			MICFIL_VAD0_NCONFIG_NOREN_SHIFT,
 			ARRAY_SIZE(micfil_hwvad_noise_decimation),
 			micfil_hwvad_noise_decimation),
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(micfil_hwvad_rate),
+			    micfil_hwvad_rate),
 };
 
 static int hwvad_put_init_mode(struct snd_kcontrol *kcontrol,
@@ -227,6 +240,31 @@ static int hwvad_get_zcd_en(struct snd_kcontrol *kcontrol,
 	struct fsl_micfil *micfil = snd_soc_component_get_drvdata(comp);
 
 	ucontrol->value.enumerated.item[0] = micfil->vad_zcd_en;
+
+	return 0;
+}
+
+static int hwvad_put_rate(struct snd_kcontrol *kcontrol,
+			  struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *comp = snd_kcontrol_chip(kcontrol);
+	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	unsigned int *item = ucontrol->value.enumerated.item;
+	struct fsl_micfil *micfil = snd_soc_component_get_drvdata(comp);
+	int val = snd_soc_enum_item_to_val(e, item[0]);
+
+	micfil->vad_rate_index = val;
+
+	return 0;
+}
+
+static int hwvad_get_rate(struct snd_kcontrol *kcontrol,
+			  struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *comp = snd_kcontrol_chip(kcontrol);
+	struct fsl_micfil *micfil = snd_soc_component_get_drvdata(comp);
+
+	ucontrol->value.enumerated.item[0] = micfil->vad_rate_index;
 
 	return 0;
 }
@@ -594,6 +632,8 @@ static const struct snd_kcontrol_new fsl_micfil_snd_controls[] = {
 		     hwvad_get_zcd_auto, hwvad_put_zcd_auto),
 	SOC_ENUM_EXT("HWVAD Noise OR Enable", fsl_micfil_enum[5],
 		     snd_soc_get_enum_double, snd_soc_put_enum_double),
+	SOC_ENUM_EXT("HWVAD Sampling Rate", fsl_micfil_enum[6],
+		     hwvad_get_rate, hwvad_put_rate),
 	{
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name = "HWVAD Input Gain",
@@ -671,16 +711,16 @@ static const struct snd_kcontrol_new fsl_micfil_snd_controls[] = {
 
 static int disable_hwvad(struct device *dev);
 
-static inline unsigned int get_pdm_clk(struct fsl_micfil *micfil,
-				       unsigned int rate);
+static inline int get_pdm_clk(struct fsl_micfil *micfil,
+			      unsigned int rate);
 
-static inline unsigned int get_clk_div(struct fsl_micfil *micfil,
-				       unsigned int rate)
+static inline int get_clk_div(struct fsl_micfil *micfil,
+			      unsigned int rate)
 {
 	u32 ctrl2_reg;
-	unsigned long mclk_rate;
-	unsigned int clk_div;
-	unsigned int osr;
+	long mclk_rate;
+	int osr;
+	int clk_div;
 
 	regmap_read(micfil->regmap, REG_MICFIL_CTRL2, &ctrl2_reg);
 	osr = 16 - ((ctrl2_reg & MICFIL_CTRL2_CICOSR_MASK)
@@ -693,12 +733,12 @@ static inline unsigned int get_clk_div(struct fsl_micfil *micfil,
 	return clk_div;
 }
 
-static inline unsigned int get_pdm_clk(struct fsl_micfil *micfil,
-				       unsigned int rate)
+static inline int get_pdm_clk(struct fsl_micfil *micfil,
+			      unsigned int rate)
 {
 	u32 ctrl2_reg;
-	unsigned int qsel, osr;
-	unsigned int bclk;
+	int qsel, osr;
+	int bclk;
 
 	regmap_read(micfil->regmap, REG_MICFIL_CTRL2, &ctrl2_reg);
 	osr = 16 - ((ctrl2_reg & MICFIL_CTRL2_CICOSR_MASK)
@@ -724,7 +764,9 @@ static inline unsigned int get_pdm_clk(struct fsl_micfil *micfil,
 		bclk = rate * osr;
 		break;
 	default:
-		bclk = 0;
+		dev_err(&micfil->pdev->dev,
+			"Please make sure you select a valid quality.\n");
+		bclk = -1;
 		break;
 	}
 
@@ -1394,7 +1436,7 @@ static int fsl_micfil_trigger(struct snd_pcm_substream *substream, int cmd,
 static int fsl_set_clock_params(struct device *dev, unsigned int rate)
 {
 	struct fsl_micfil *micfil = dev_get_drvdata(dev);
-	unsigned int clk_div;
+	int clk_div;
 	int ret;
 
 	if (fsl_micfil_bsy(dev))
@@ -1412,6 +1454,8 @@ static int fsl_set_clock_params(struct device *dev, unsigned int rate)
 
 	/* set CLK_DIV */
 	clk_div = get_clk_div(micfil, rate);
+	if (clk_div < 0)
+		return -EINVAL;
 
 	ret = regmap_update_bits(micfil->regmap, REG_MICFIL_CTRL2,
 				 MICFIL_CTRL2_CLKDIV_MASK, clk_div);
@@ -1456,8 +1500,10 @@ static int fsl_micfil_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	ret = fsl_set_clock_params(dev, rate);
-	if (ret)
+	if (ret < 0) {
+		dev_err(dev, "Failed to set clock parameters [%d]\n", ret);
 		return ret;
+	}
 
 	micfil->dma_params_rx.fifo_num = channels;
 	micfil->dma_params_rx.maxburst = channels * MICFIL_DMA_MAXBURST_RX;
@@ -1717,8 +1763,9 @@ static const struct regmap_config fsl_micfil_regmap_config = {
 
 /* END OF REGMAP */
 
-static void voice_detected_irq(struct fsl_micfil *micfil)
+static irqreturn_t voice_detected_fn(int irq, void *devid)
 {
+	struct fsl_micfil *micfil = (struct fsl_micfil *)devid;
 	struct device *dev = &micfil->pdev->dev;
 	int ret;
 
@@ -1734,6 +1781,8 @@ static void voice_detected_irq(struct fsl_micfil *micfil)
 
 	/* notify userspace that voice was detected */
 	kobject_uevent_env(&dev->kobj, KOBJ_CHANGE, envp);
+
+	return IRQ_HANDLED;
 }
 
 static irqreturn_t hwvad_isr(int irq, void *devid)
@@ -1759,10 +1808,9 @@ static irqreturn_t hwvad_isr(int irq, void *devid)
 				   MICFIL_VAD0_STAT_IF_MASK,
 				   MICFIL_VAD0_STAT_IF);
 
-		voice_detected_irq(micfil);
 	}
 
-	return IRQ_HANDLED;
+	return IRQ_WAKE_THREAD;
 }
 
 static irqreturn_t hwvad_err_isr(int irq, void *devid)
@@ -1858,6 +1906,7 @@ static int enable_hwvad(struct device *dev)
 	struct fsl_micfil *micfil = dev_get_drvdata(dev);
 	int ret;
 	int old_state;
+	int rate;
 
 	/* go further with enablement only if both recording and
 	 * hwvad are not on
@@ -1870,6 +1919,14 @@ static int enable_hwvad(struct device *dev)
 		return -EBUSY;
 	}
 
+	if (micfil->vad_rate_index >= ARRAY_SIZE(micfil_hwvad_rate_ints)) {
+		dev_err(dev, "There are more select texts than rates\n");
+		ret = -EINVAL;
+		goto enable_err;
+	}
+
+	rate = micfil_hwvad_rate_ints[micfil->vad_rate_index];
+
 	/* This is required because if an arecord was done,
 	 * suspend function will mark regmap as cache only
 	 * and reads/writes in volatile regs will fail
@@ -1881,7 +1938,7 @@ static int enable_hwvad(struct device *dev)
 	/* clear voice detected flag */
 	atomic_set(&micfil->voice_detected, 0);
 
-	ret = fsl_set_clock_params(dev, MICFIL_DEFAULT_RATE);
+	ret = fsl_set_clock_params(dev, rate);
 	if (ret)
 		goto enable_err;
 
@@ -1982,7 +2039,8 @@ static ssize_t micfil_hwvad_handler(struct kobject *kobj,
 	if (enabled_channels > 0 && enabled_channels <= 8) {
 		dev_info(dev,
 			 "enabling hwvad with %lu channels at rate %d\n",
-			 enabled_channels, MICFIL_DEFAULT_RATE);
+			 enabled_channels,
+			 micfil_hwvad_rate_ints[micfil->vad_rate_index]);
 		micfil->channels = enabled_channels;
 		ret = enable_hwvad(dev);
 	} else if (!enabled_channels) {
@@ -2080,9 +2138,9 @@ static int fsl_micfil_probe(struct platform_device *pdev)
 	/* Digital Microphone interface voice activity detector event
 	 * interrupt - IRQ 44
 	 */
-	ret = devm_request_irq(&pdev->dev, micfil->irq[0],
-			       hwvad_isr, irqflag,
-			       micfil->name, micfil);
+	ret = devm_request_threaded_irq(&pdev->dev, micfil->irq[0],
+					hwvad_isr, voice_detected_fn,
+					irqflag, micfil->name, micfil);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to claim hwvad event irq %u\n",
 			micfil->irq[0]);
@@ -2126,6 +2184,9 @@ static int fsl_micfil_probe(struct platform_device *pdev)
 	micfil->dma_params_rx.chan_name = "rx";
 	micfil->dma_params_rx.addr = res->start + REG_MICFIL_DATACH0;
 	micfil->dma_params_rx.maxburst = MICFIL_DMA_MAXBURST_RX;
+
+	/* set default rate to first value in available vad rates */
+	micfil->vad_rate_index = 0;
 
 	platform_set_drvdata(pdev, micfil);
 
