@@ -72,6 +72,7 @@ static int swreset_vpu_firmware(struct vpu_dev *dev, u_int32 idx);
 static int find_first_available_instance(struct vpu_dev *dev);
 static int remove_instance_file(struct vpu_ctx *ctx);
 static void fill_stream_buffer_info(struct vpu_ctx *ctx);
+static void send_skip_event(struct vpu_ctx* ctx);
 #define CHECK_BIT(var, pos) (((var) >> (pos)) & 1)
 
 static char *cmd2str[] = {
@@ -1674,6 +1675,7 @@ static void v4l2_transfer_buffer_to_firmware(struct queue_data *This, struct vb2
 		p_data_req = list_first_entry(&This->drv_q,
 				typeof(*p_data_req), list);
 		list_del(&p_data_req->list);
+		p_data_req->queued = false;
 		if (p_data_req->vb2_buf)
 			vb2_buffer_done(p_data_req->vb2_buf,
 					VB2_BUF_STATE_DONE);
@@ -1875,6 +1877,7 @@ static void v4l2_update_stream_addr(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 			vpu_dbg(LVL_INFO, "v4l2_transfer_buffer_to_firmware - set stream_feed_complete - DEBUG 2\n");
 #endif
 		list_del(&p_data_req->list);
+		p_data_req->queued = false;
 		if (p_data_req->vb2_buf)
 			vb2_buffer_done(p_data_req->vb2_buf,
 					VB2_BUF_STATE_DONE);
@@ -1913,9 +1916,15 @@ static void report_buffer_done(struct vpu_ctx *ctx, void *frame_info)
 	if (buffer_id == -1)
 		return;
 
-	if (buffer_id != fs_id)
+	if (buffer_id != fs_id) {
+		if (fs_id == MEDIA_PLAYER_SKIPPED_FRAME_ID) {
+			send_skip_event(ctx);
+			ctx->frm_dis_delay--;
+			return;
+		}
 		vpu_dbg(LVL_ERR, "error: find buffer_id(%d) and firmware return id(%d) doesn't match\n",
 				buffer_id, fs_id);
+	}
 	if (ctx->q_data[V4L2_DST].vb2_reqs[buffer_id].status != FRAME_DECODED)
 		vpu_dbg(LVL_ERR, "error: buffer(%d) need to set FRAME_READY, but previous state %s is not FRAME_DECODED\n",
 				buffer_id, bufstat[ctx->q_data[V4L2_DST].vb2_reqs[buffer_id].status]);
@@ -1962,6 +1971,17 @@ static bool wait_right_buffer(struct queue_data *This)
 	up(&This->drv_q_lock);
 
 	return false;
+}
+
+static void send_skip_event(struct vpu_ctx* ctx)
+{
+	const struct v4l2_event ev = {
+		.type = V4L2_EVENT_SKIP
+	};
+
+	if (!ctx)
+		return;
+	v4l2_event_queue_fh(&ctx->fh, &ev);
 }
 
 static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 uEvent, u_int32 *event_data)
@@ -2037,8 +2057,14 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		if (buffer_id == -1)
 			break;
 
-		if (buffer_id != uDecFrmId)
+		if (buffer_id != uDecFrmId) {
+			if (uDecFrmId == MEDIA_PLAYER_SKIPPED_FRAME_ID) {
+				send_skip_event(ctx);
+				ctx->frm_dec_delay--;
+				break;
+			}
 			vpu_dbg(LVL_ERR, "error: VID_API_EVENT_PIC_DECODED address and id doesn't match\n");
+		}
 		if (ctx->q_data[V4L2_DST].vb2_reqs[buffer_id].status != FRAME_FREE)
 			vpu_dbg(LVL_ERR, "error: buffer(%d) need to set FRAME_DECODED, but previous state %s is not FRAME_FREE\n",
 					buffer_id, bufstat[ctx->q_data[V4L2_DST].vb2_reqs[buffer_id].status]);
@@ -2183,6 +2209,7 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 						p_data_req->status = FRAME_FREE;
 						vpu_dbg(LVL_INFO, "VID_API_CMD_FS_ALLOC, data_req->vb2_buf=%p, data_req->id=%d\n", p_data_req->vb2_buf, p_data_req->id);
 						list_del(&p_data_req->list);
+						p_data_req->queued = false;
 						buffer_flag = true;
 						break;
 					} else {
@@ -2264,9 +2291,11 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 				vpu_dbg(LVL_WARN, "warning: normal release and previous status %s, frame not for display, queue the buffer to list again\n",
 						bufstat[p_data_req->status]);
 
-				if (p_data_req->status == FRAME_DECODED)
+				if (p_data_req->status == FRAME_DECODED && p_data_req->queued == false) {
 					v4l2_event_queue_fh(&ctx->fh, &ev);
-				list_add_tail(&p_data_req->list, &This->drv_q);
+					list_add_tail(&p_data_req->list, &This->drv_q);
+					p_data_req->queued = true;
+				}
 			}
 			p_data_req->status = FRAME_RELEASE;
 		}
@@ -2673,10 +2702,17 @@ static int vpu_start_streaming(struct vb2_queue *q,
 static void vpu_stop_streaming(struct vb2_queue *q)
 {
 	struct queue_data *This = (struct queue_data *)q->drv_priv;
+	struct vb2_data_req *p_data_req = NULL;
+	struct vb2_data_req *p_temp;
 	struct vb2_buffer *vb;
 
 	vpu_dbg(LVL_INFO, "%s() is called\n", __func__);
 	down(&This->drv_q_lock);
+	if (!list_empty(&This->drv_q))
+		list_for_each_entry_safe(p_data_req, p_temp, &This->drv_q, list) {
+			list_del(&p_data_req->list);
+			p_data_req->queued = false;
+		}
 
 	if (!list_empty(&q->queued_list))
 		list_for_each_entry(vb, &q->queued_list, queued_entry) {
@@ -2708,8 +2744,10 @@ static void vpu_buf_queue(struct vb2_buffer *vb)
 		pphy_address = (u_int32 *)vb2_plane_cookie(vb, 1);
 		data_req->phy_addr[1] = *pphy_address;
 	}
-	if (data_req->status != FRAME_FREE && data_req->status != FRAME_DECODED)
+	if (data_req->status != FRAME_FREE && data_req->status != FRAME_DECODED) {
 		list_add_tail(&data_req->list, &This->drv_q);
+		data_req->queued = true;
+	}
 
 	up(&This->drv_q_lock);
 
@@ -2790,6 +2828,7 @@ static void flush_drv_q(struct queue_data *This)
 					p_data_req->id,
 					p_data_req);
 			list_del(&p_data_req->list);
+			p_data_req->queued = false;
 			if (p_data_req->vb2_buf)
 				vb2_buffer_done(p_data_req->vb2_buf, VB2_BUF_STATE_ERROR);
 		}

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -128,19 +128,24 @@ EXPORT_SYMBOL_GPL(tcon_set_operation_mode);
 void tcon_cfg_videomode(struct dpu_tcon *tcon,
 			struct drm_display_mode *m, bool side_by_side)
 {
-	struct drm_display_mode tmp_m = { 0 };
 	struct dpu_soc *dpu = tcon->dpu;
 	const struct dpu_devtype *devtype = dpu->devtype;
 	u32 val;
+	int hdisplay, hsync_start, hsync_end;
+	int vdisplay, vsync_start, vsync_end;
 	int y;
 
-	drm_mode_copy(&tmp_m, m);
+	hdisplay = m->hdisplay;
+	vdisplay = m->vdisplay;
+	hsync_start = m->hsync_start;
+	vsync_start = m->vsync_start;
+	hsync_end = m->hsync_end;
+	vsync_end = m->vsync_end;
 
 	if (side_by_side) {
-		tmp_m.hdisplay /= 2;
-		tmp_m.hsync_start /= 2;
-		tmp_m.hsync_end /= 2;
-		tmp_m.htotal /= 2;
+		hdisplay /= 2;
+		hsync_start /= 2;
+		hsync_end /= 2;
 	}
 
 	mutex_lock(&tcon->mutex);
@@ -154,22 +159,20 @@ void tcon_cfg_videomode(struct dpu_tcon *tcon,
 	dpu_tcon_write(tcon, val, TCON_CTRL);
 
 	/* dsp_control[0]: hsync */
-	dpu_tcon_write(tcon, X(tmp_m.hsync_start), SPGPOSON(0));
+	dpu_tcon_write(tcon, X(hsync_start), SPGPOSON(0));
 	dpu_tcon_write(tcon, 0xffff, SPGMASKON(0));
 
-	dpu_tcon_write(tcon, X(tmp_m.hsync_end), SPGPOSOFF(0));
+	dpu_tcon_write(tcon, X(hsync_end), SPGPOSOFF(0));
 	dpu_tcon_write(tcon, 0xffff, SPGMASKOFF(0));
 
 	dpu_tcon_write(tcon, 0x2, SMXSIGS(0));
 	dpu_tcon_write(tcon, 0x1, SMXFCTTABLE(0));
 
 	/* dsp_control[1]: vsync */
-	dpu_tcon_write(tcon, X(tmp_m.hsync_start) | Y(m->vsync_start - 1),
-								SPGPOSON(1));
+	dpu_tcon_write(tcon, X(hsync_start) | Y(vsync_start - 1), SPGPOSON(1));
 	dpu_tcon_write(tcon, 0x0, SPGMASKON(1));
 
-	dpu_tcon_write(tcon, X(tmp_m.hsync_start) | Y(m->vsync_end - 1),
-								SPGPOSOFF(1));
+	dpu_tcon_write(tcon, X(hsync_start) | Y(vsync_end - 1), SPGPOSOFF(1));
 	dpu_tcon_write(tcon, 0x0, SPGMASKOFF(1));
 
 	dpu_tcon_write(tcon, 0x3, SMXSIGS(1));
@@ -180,21 +183,21 @@ void tcon_cfg_videomode(struct dpu_tcon *tcon,
 	dpu_tcon_write(tcon, 0x0, SPGPOSON(2));
 	dpu_tcon_write(tcon, 0xffff, SPGMASKON(2));
 
-	dpu_tcon_write(tcon, X(tmp_m.hdisplay), SPGPOSOFF(2));
+	dpu_tcon_write(tcon, X(hdisplay), SPGPOSOFF(2));
 	dpu_tcon_write(tcon, 0xffff, SPGMASKOFF(2));
 
 	/* vertical */
 	dpu_tcon_write(tcon, 0x0, SPGPOSON(3));
 	dpu_tcon_write(tcon, 0x7fff0000, SPGMASKON(3));
 
-	dpu_tcon_write(tcon, Y(m->vdisplay), SPGPOSOFF(3));
+	dpu_tcon_write(tcon, Y(vdisplay), SPGPOSOFF(3));
 	dpu_tcon_write(tcon, 0x7fff0000, SPGMASKOFF(3));
 
 	dpu_tcon_write(tcon, 0x2c, SMXSIGS(2));
 	dpu_tcon_write(tcon, 0x8, SMXFCTTABLE(2));
 
 	/* dsp_control[3]: kachuck */
-	y = m->vdisplay + 1;
+	y = vdisplay + 1;
 	/*
 	 * If sync mode fixup is present, the kachuck signal from slave tcon
 	 * should be one line later than the one from master tcon.

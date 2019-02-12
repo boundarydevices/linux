@@ -1,8 +1,8 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
- * SPDX-License-Identifier:     GPL-2.0+
+ * SPDX-License-Identifier:	 GPL-2.0+
  */
 
 /*!
@@ -27,8 +27,7 @@
 /* Local Functions */
 
 sc_err_t sc_rm_partition_alloc(sc_ipc_t ipc, sc_rm_pt_t *pt, sc_bool_t secure,
-			       sc_bool_t isolated, sc_bool_t restricted,
-			       sc_bool_t grant, sc_bool_t coherent)
+	sc_bool_t isolated, sc_bool_t restricted, sc_bool_t grant, sc_bool_t coherent)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -46,9 +45,8 @@ sc_err_t sc_rm_partition_alloc(sc_ipc_t ipc, sc_rm_pt_t *pt, sc_bool_t secure,
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (pt != NULL) {
+	if (pt != NULL)
 		*pt = RPC_U8(&msg, 0U);
-	}
 
 	return (sc_err_t)result;
 }
@@ -101,10 +99,11 @@ sc_rm_did_t sc_rm_get_did(sc_ipc_t ipc)
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	return (sc_rm_did_t) result;
+	return (sc_rm_did_t)result;
 }
 
-sc_err_t sc_rm_partition_static(sc_ipc_t ipc, sc_rm_pt_t pt, sc_rm_did_t did)
+sc_err_t sc_rm_partition_static(sc_ipc_t ipc, sc_rm_pt_t pt,
+	sc_rm_did_t did)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -152,14 +151,14 @@ sc_err_t sc_rm_get_partition(sc_ipc_t ipc, sc_rm_pt_t *pt)
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (pt != NULL) {
+	if (pt != NULL)
 		*pt = RPC_U8(&msg, 0U);
-	}
 
 	return (sc_err_t)result;
 }
 
-sc_err_t sc_rm_set_parent(sc_ipc_t ipc, sc_rm_pt_t pt, sc_rm_pt_t pt_parent)
+sc_err_t sc_rm_set_parent(sc_ipc_t ipc, sc_rm_pt_t pt,
+	sc_rm_pt_t pt_parent)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -178,7 +177,7 @@ sc_err_t sc_rm_set_parent(sc_ipc_t ipc, sc_rm_pt_t pt, sc_rm_pt_t pt_parent)
 }
 
 sc_err_t sc_rm_move_all(sc_ipc_t ipc, sc_rm_pt_t pt_src, sc_rm_pt_t pt_dst,
-			sc_bool_t move_rsrc, sc_bool_t move_pads)
+	sc_bool_t move_rsrc, sc_bool_t move_pads)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -198,7 +197,8 @@ sc_err_t sc_rm_move_all(sc_ipc_t ipc, sc_rm_pt_t pt_src, sc_rm_pt_t pt_dst,
 	return (sc_err_t)result;
 }
 
-sc_err_t sc_rm_assign_resource(sc_ipc_t ipc, sc_rm_pt_t pt, sc_rsrc_t resource)
+sc_err_t sc_rm_assign_resource(sc_ipc_t ipc, sc_rm_pt_t pt,
+	sc_rsrc_t resource)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -217,7 +217,7 @@ sc_err_t sc_rm_assign_resource(sc_ipc_t ipc, sc_rm_pt_t pt, sc_rsrc_t resource)
 }
 
 sc_err_t sc_rm_set_resource_movable(sc_ipc_t ipc, sc_rsrc_t resource_fst,
-				    sc_rsrc_t resource_lst, sc_bool_t movable)
+	sc_rsrc_t resource_lst, sc_bool_t movable)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -237,7 +237,7 @@ sc_err_t sc_rm_set_resource_movable(sc_ipc_t ipc, sc_rsrc_t resource_fst,
 }
 
 sc_err_t sc_rm_set_subsys_rsrc_movable(sc_ipc_t ipc, sc_rsrc_t resource,
-				       sc_bool_t movable)
+	sc_bool_t movable)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -256,8 +256,7 @@ sc_err_t sc_rm_set_subsys_rsrc_movable(sc_ipc_t ipc, sc_rsrc_t resource,
 }
 
 sc_err_t sc_rm_set_master_attributes(sc_ipc_t ipc, sc_rsrc_t resource,
-				     sc_rm_spa_t sa, sc_rm_spa_t pa,
-				     sc_bool_t smmu_bypass)
+	sc_rm_spa_t sa, sc_rm_spa_t pa, sc_bool_t smmu_bypass)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -277,7 +276,8 @@ sc_err_t sc_rm_set_master_attributes(sc_ipc_t ipc, sc_rsrc_t resource,
 	return (sc_err_t)result;
 }
 
-sc_err_t sc_rm_set_master_sid(sc_ipc_t ipc, sc_rsrc_t resource, sc_rm_sid_t sid)
+sc_err_t sc_rm_set_master_sid(sc_ipc_t ipc, sc_rsrc_t resource,
+	sc_rm_sid_t sid)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -296,7 +296,7 @@ sc_err_t sc_rm_set_master_sid(sc_ipc_t ipc, sc_rsrc_t resource, sc_rm_sid_t sid)
 }
 
 sc_err_t sc_rm_set_peripheral_permissions(sc_ipc_t ipc, sc_rsrc_t resource,
-					  sc_rm_pt_t pt, sc_rm_perm_t perm)
+	sc_rm_pt_t pt, sc_rm_perm_t perm)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -330,6 +330,27 @@ sc_bool_t sc_rm_is_resource_owned(sc_ipc_t ipc, sc_rsrc_t resource)
 
 	result = U2B(RPC_R8(&msg));
 	return result;
+}
+
+sc_err_t sc_rm_get_resource_owner(sc_ipc_t ipc, sc_rsrc_t resource,
+	sc_rm_pt_t *pt)
+{
+	sc_rpc_msg_t msg;
+	uint8_t result;
+
+	RPC_VER(&msg) = SC_RPC_VERSION;
+	RPC_SVC(&msg) = U8(SC_RPC_SVC_RM);
+	RPC_FUNC(&msg) = U8(RM_FUNC_GET_RESOURCE_OWNER);
+	RPC_U16(&msg, 0U) = U16(resource);
+	RPC_SIZE(&msg) = 2U;
+
+	sc_call_rpc(ipc, &msg, SC_FALSE);
+
+	result = RPC_R8(&msg);
+	if (pt != NULL)
+		*pt = RPC_U8(&msg, 0U);
+
+	return (sc_err_t)result;
 }
 
 sc_bool_t sc_rm_is_resource_master(sc_ipc_t ipc, sc_rsrc_t resource)
@@ -367,7 +388,7 @@ sc_bool_t sc_rm_is_resource_peripheral(sc_ipc_t ipc, sc_rsrc_t resource)
 }
 
 sc_err_t sc_rm_get_resource_info(sc_ipc_t ipc, sc_rsrc_t resource,
-				 sc_rm_sid_t *sid)
+	sc_rm_sid_t *sid)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -380,16 +401,15 @@ sc_err_t sc_rm_get_resource_info(sc_ipc_t ipc, sc_rsrc_t resource,
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (sid != NULL) {
+	if (sid != NULL)
 		*sid = RPC_U16(&msg, 0U);
-	}
 
 	result = RPC_R8(&msg);
 	return (sc_err_t)result;
 }
 
 sc_err_t sc_rm_memreg_alloc(sc_ipc_t ipc, sc_rm_mr_t *mr,
-			    sc_faddr_t addr_start, sc_faddr_t addr_end)
+	sc_faddr_t addr_start, sc_faddr_t addr_end)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -406,16 +426,14 @@ sc_err_t sc_rm_memreg_alloc(sc_ipc_t ipc, sc_rm_mr_t *mr,
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (mr != NULL) {
+	if (mr != NULL)
 		*mr = RPC_U8(&msg, 0U);
-	}
 
 	return (sc_err_t)result;
 }
 
 sc_err_t sc_rm_memreg_split(sc_ipc_t ipc, sc_rm_mr_t mr,
-			    sc_rm_mr_t *mr_ret, sc_faddr_t addr_start,
-			    sc_faddr_t addr_end)
+	sc_rm_mr_t *mr_ret, sc_faddr_t addr_start, sc_faddr_t addr_end)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -433,15 +451,14 @@ sc_err_t sc_rm_memreg_split(sc_ipc_t ipc, sc_rm_mr_t mr,
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (mr_ret != NULL) {
+	if (mr_ret != NULL)
 		*mr_ret = RPC_U8(&msg, 0U);
-	}
 
 	return (sc_err_t)result;
 }
 
 sc_err_t sc_rm_memreg_frag(sc_ipc_t ipc, sc_rm_mr_t *mr_ret,
-			   sc_faddr_t addr_start, sc_faddr_t addr_end)
+	sc_faddr_t addr_start, sc_faddr_t addr_end)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -458,9 +475,8 @@ sc_err_t sc_rm_memreg_frag(sc_ipc_t ipc, sc_rm_mr_t *mr_ret,
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (mr_ret != NULL) {
+	if (mr_ret != NULL)
 		*mr_ret = RPC_U8(&msg, 0U);
-	}
 
 	return (sc_err_t)result;
 }
@@ -483,7 +499,7 @@ sc_err_t sc_rm_memreg_free(sc_ipc_t ipc, sc_rm_mr_t mr)
 }
 
 sc_err_t sc_rm_find_memreg(sc_ipc_t ipc, sc_rm_mr_t *mr,
-			   sc_faddr_t addr_start, sc_faddr_t addr_end)
+	sc_faddr_t addr_start, sc_faddr_t addr_end)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -500,9 +516,8 @@ sc_err_t sc_rm_find_memreg(sc_ipc_t ipc, sc_rm_mr_t *mr,
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (mr != NULL) {
+	if (mr != NULL)
 		*mr = RPC_U8(&msg, 0U);
-	}
 
 	return (sc_err_t)result;
 }
@@ -526,7 +541,7 @@ sc_err_t sc_rm_assign_memreg(sc_ipc_t ipc, sc_rm_pt_t pt, sc_rm_mr_t mr)
 }
 
 sc_err_t sc_rm_set_memreg_permissions(sc_ipc_t ipc, sc_rm_mr_t mr,
-				      sc_rm_pt_t pt, sc_rm_perm_t perm)
+	sc_rm_pt_t pt, sc_rm_perm_t perm)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -563,7 +578,7 @@ sc_bool_t sc_rm_is_memreg_owned(sc_ipc_t ipc, sc_rm_mr_t mr)
 }
 
 sc_err_t sc_rm_get_memreg_info(sc_ipc_t ipc, sc_rm_mr_t mr,
-			       sc_faddr_t *addr_start, sc_faddr_t *addr_end)
+	sc_faddr_t *addr_start, sc_faddr_t *addr_end)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -576,15 +591,11 @@ sc_err_t sc_rm_get_memreg_info(sc_ipc_t ipc, sc_rm_mr_t mr,
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (addr_start != NULL) {
-		*addr_start =
-		    ((uint64_t) RPC_U32(&msg, 0U) << 32U) | RPC_U32(&msg, 4U);
-	}
+	if (addr_start != NULL)
+		*addr_start = ((uint64_t) RPC_U32(&msg, 0U) << 32U) | RPC_U32(&msg, 4U);
 
-	if (addr_end != NULL) {
-		*addr_end =
-		    ((uint64_t) RPC_U32(&msg, 8U) << 32U) | RPC_U32(&msg, 12U);
-	}
+	if (addr_end != NULL)
+		*addr_end = ((uint64_t) RPC_U32(&msg, 8U) << 32U) | RPC_U32(&msg, 12U);
 
 	result = RPC_R8(&msg);
 	return (sc_err_t)result;
@@ -609,7 +620,7 @@ sc_err_t sc_rm_assign_pad(sc_ipc_t ipc, sc_rm_pt_t pt, sc_pad_t pad)
 }
 
 sc_err_t sc_rm_set_pad_movable(sc_ipc_t ipc, sc_pad_t pad_fst,
-			       sc_pad_t pad_lst, sc_bool_t movable)
+	sc_pad_t pad_lst, sc_bool_t movable)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -655,8 +666,7 @@ void sc_rm_dump(sc_ipc_t ipc)
 	RPC_SIZE(&msg) = 1U;
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
-
-	return;
 }
 
 /**@}*/
+

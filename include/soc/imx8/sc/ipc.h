@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
  * SPDX-License-Identifier:     GPL-2.0+
  */
@@ -67,4 +67,5 @@ void sc_ipc_write(sc_ipc_t ipc, const void *data);
 int register_scu_notifier(struct notifier_block *nb);
 int unregister_scu_notifier(struct notifier_block *nb);
 
-#endif				/* SC_IPC_H */
+#endif /* SC_IPC_H */
+

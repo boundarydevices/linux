@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
  * SPDX-License-Identifier:     GPL-2.0+
  */
@@ -45,7 +45,7 @@ sc_err_t sc_pm_set_sys_power_mode(sc_ipc_t ipc, sc_pm_power_mode_t mode)
 }
 
 sc_err_t sc_pm_set_partition_power_mode(sc_ipc_t ipc, sc_rm_pt_t pt,
-					sc_pm_power_mode_t mode)
+	sc_pm_power_mode_t mode)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -64,7 +64,7 @@ sc_err_t sc_pm_set_partition_power_mode(sc_ipc_t ipc, sc_rm_pt_t pt,
 }
 
 sc_err_t sc_pm_get_sys_power_mode(sc_ipc_t ipc, sc_rm_pt_t pt,
-				  sc_pm_power_mode_t *mode)
+	sc_pm_power_mode_t *mode)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -78,15 +78,14 @@ sc_err_t sc_pm_get_sys_power_mode(sc_ipc_t ipc, sc_rm_pt_t pt,
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (mode != NULL) {
-		*mode = RPC_U8(&msg, 0U);
-	}
+	if (mode != NULL)
+	    *mode = RPC_U8(&msg, 0U);
 
 	return (sc_err_t)result;
 }
 
 sc_err_t sc_pm_set_resource_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
-				       sc_pm_power_mode_t mode)
+	sc_pm_power_mode_t mode)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -105,9 +104,7 @@ sc_err_t sc_pm_set_resource_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
 }
 
 sc_err_t sc_pm_set_resource_power_mode_all(sc_ipc_t ipc,
-					   sc_rm_pt_t pt,
-					   sc_pm_power_mode_t mode,
-					   sc_rsrc_t exclude)
+	sc_rm_pt_t pt, sc_pm_power_mode_t mode, sc_rsrc_t exclude)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -127,7 +124,7 @@ sc_err_t sc_pm_set_resource_power_mode_all(sc_ipc_t ipc,
 }
 
 sc_err_t sc_pm_get_resource_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
-				       sc_pm_power_mode_t *mode)
+	sc_pm_power_mode_t *mode)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -141,15 +138,14 @@ sc_err_t sc_pm_get_resource_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (mode != NULL) {
-		*mode = RPC_U8(&msg, 0U);
-	}
+	if (mode != NULL)
+	    *mode = RPC_U8(&msg, 0U);
 
 	return (sc_err_t)result;
 }
 
 sc_err_t sc_pm_req_low_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
-				  sc_pm_power_mode_t mode)
+	sc_pm_power_mode_t mode)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -168,8 +164,7 @@ sc_err_t sc_pm_req_low_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
 }
 
 sc_err_t sc_pm_req_cpu_low_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
-				      sc_pm_power_mode_t mode,
-				      sc_pm_wake_src_t wake_src)
+	sc_pm_power_mode_t mode, sc_pm_wake_src_t wake_src)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -189,7 +184,7 @@ sc_err_t sc_pm_req_cpu_low_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
 }
 
 sc_err_t sc_pm_set_cpu_resume_addr(sc_ipc_t ipc, sc_rsrc_t resource,
-				   sc_faddr_t address)
+	sc_faddr_t address)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -209,7 +204,7 @@ sc_err_t sc_pm_set_cpu_resume_addr(sc_ipc_t ipc, sc_rsrc_t resource,
 }
 
 sc_err_t sc_pm_set_cpu_resume(sc_ipc_t ipc, sc_rsrc_t resource,
-			      sc_bool_t isPrimary, sc_faddr_t address)
+	sc_bool_t isPrimary, sc_faddr_t address)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -230,9 +225,7 @@ sc_err_t sc_pm_set_cpu_resume(sc_ipc_t ipc, sc_rsrc_t resource,
 }
 
 sc_err_t sc_pm_req_sys_if_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
-				     sc_pm_sys_if_t sys_if,
-				     sc_pm_power_mode_t hpm,
-				     sc_pm_power_mode_t lpm)
+	sc_pm_sys_if_t sys_if, sc_pm_power_mode_t hpm, sc_pm_power_mode_t lpm)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -253,7 +246,7 @@ sc_err_t sc_pm_req_sys_if_power_mode(sc_ipc_t ipc, sc_rsrc_t resource,
 }
 
 sc_err_t sc_pm_set_clock_rate(sc_ipc_t ipc, sc_rsrc_t resource,
-			      sc_pm_clk_t clk, sc_pm_clock_rate_t *rate)
+	sc_pm_clk_t clk, sc_pm_clock_rate_t *rate)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -274,7 +267,7 @@ sc_err_t sc_pm_set_clock_rate(sc_ipc_t ipc, sc_rsrc_t resource,
 }
 
 sc_err_t sc_pm_get_clock_rate(sc_ipc_t ipc, sc_rsrc_t resource,
-			      sc_pm_clk_t clk, sc_pm_clock_rate_t *rate)
+	sc_pm_clk_t clk, sc_pm_clock_rate_t *rate)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -288,16 +281,15 @@ sc_err_t sc_pm_get_clock_rate(sc_ipc_t ipc, sc_rsrc_t resource,
 
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
-	if (rate != NULL) {
-		*rate = RPC_U32(&msg, 0U);
-	}
+	if (rate != NULL)
+	    *rate = RPC_U32(&msg, 0U);
 
 	result = RPC_R8(&msg);
 	return (sc_err_t)result;
 }
 
 sc_err_t sc_pm_clock_enable(sc_ipc_t ipc, sc_rsrc_t resource,
-			    sc_pm_clk_t clk, sc_bool_t enable, sc_bool_t autog)
+	sc_pm_clk_t clk, sc_bool_t enable, sc_bool_t autog)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -318,7 +310,7 @@ sc_err_t sc_pm_clock_enable(sc_ipc_t ipc, sc_rsrc_t resource,
 }
 
 sc_err_t sc_pm_set_clock_parent(sc_ipc_t ipc, sc_rsrc_t resource,
-				sc_pm_clk_t clk, sc_pm_clk_parent_t parent)
+	sc_pm_clk_t clk, sc_pm_clk_parent_t parent)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -338,7 +330,7 @@ sc_err_t sc_pm_set_clock_parent(sc_ipc_t ipc, sc_rsrc_t resource,
 }
 
 sc_err_t sc_pm_get_clock_parent(sc_ipc_t ipc, sc_rsrc_t resource,
-				sc_pm_clk_t clk, sc_pm_clk_parent_t * parent)
+	sc_pm_clk_t clk, sc_pm_clk_parent_t *parent)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -353,9 +345,8 @@ sc_err_t sc_pm_get_clock_parent(sc_ipc_t ipc, sc_rsrc_t resource,
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (parent != NULL) {
-		*parent = RPC_U8(&msg, 0U);
-	}
+	if (parent != NULL)
+	    *parent = RPC_U8(&msg, 0U);
 
 	return (sc_err_t)result;
 }
@@ -390,16 +381,34 @@ sc_err_t sc_pm_reset_reason(sc_ipc_t ipc, sc_pm_reset_reason_t *reason)
 	sc_call_rpc(ipc, &msg, SC_FALSE);
 
 	result = RPC_R8(&msg);
-	if (reason != NULL) {
-		*reason = RPC_U8(&msg, 0U);
-	}
+	if (reason != NULL)
+	    *reason = RPC_U8(&msg, 0U);
+
+	return (sc_err_t)result;
+}
+
+sc_err_t sc_pm_get_reset_part(sc_ipc_t ipc, sc_rm_pt_t *pt)
+{
+	sc_rpc_msg_t msg;
+	uint8_t result;
+
+	RPC_VER(&msg) = SC_RPC_VERSION;
+	RPC_SVC(&msg) = U8(SC_RPC_SVC_PM);
+	RPC_FUNC(&msg) = U8(PM_FUNC_GET_RESET_PART);
+	RPC_SIZE(&msg) = 1U;
+
+	sc_call_rpc(ipc, &msg, SC_FALSE);
+
+	result = RPC_R8(&msg);
+	if (pt != NULL)
+	    *pt = RPC_U8(&msg, 0U);
 
 	return (sc_err_t)result;
 }
 
 sc_err_t sc_pm_boot(sc_ipc_t ipc, sc_rm_pt_t pt,
-		    sc_rsrc_t resource_cpu, sc_faddr_t boot_addr,
-		    sc_rsrc_t resource_mu, sc_rsrc_t resource_dev)
+	sc_rsrc_t resource_cpu, sc_faddr_t boot_addr,
+	sc_rsrc_t resource_mu, sc_rsrc_t resource_dev)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -432,12 +441,10 @@ void sc_pm_reboot(sc_ipc_t ipc, sc_pm_reset_type_t type)
 	RPC_SIZE(&msg) = 2U;
 
 	sc_call_rpc(ipc, &msg, SC_TRUE);
-
-	return;
 }
 
 sc_err_t sc_pm_reboot_partition(sc_ipc_t ipc, sc_rm_pt_t pt,
-				sc_pm_reset_type_t type)
+	sc_pm_reset_type_t type)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -455,8 +462,25 @@ sc_err_t sc_pm_reboot_partition(sc_ipc_t ipc, sc_rm_pt_t pt,
 	return (sc_err_t)result;
 }
 
+sc_err_t sc_pm_reboot_continue(sc_ipc_t ipc, sc_rm_pt_t pt)
+{
+	sc_rpc_msg_t msg;
+	uint8_t result;
+
+	RPC_VER(&msg) = SC_RPC_VERSION;
+	RPC_SVC(&msg) = U8(SC_RPC_SVC_PM);
+	RPC_FUNC(&msg) = U8(PM_FUNC_REBOOT_CONTINUE);
+	RPC_U8(&msg, 0U) = U8(pt);
+	RPC_SIZE(&msg) = 2U;
+
+	sc_call_rpc(ipc, &msg, SC_FALSE);
+
+	result = RPC_R8(&msg);
+	return (sc_err_t)result;
+}
+
 sc_err_t sc_pm_cpu_start(sc_ipc_t ipc, sc_rsrc_t resource, sc_bool_t enable,
-			 sc_faddr_t address)
+	sc_faddr_t address)
 {
 	sc_rpc_msg_t msg;
 	uint8_t result;
@@ -493,4 +517,22 @@ void sc_pm_cpu_reset(sc_ipc_t ipc, sc_rsrc_t resource, sc_faddr_t address)
 	return;
 }
 
+sc_bool_t sc_pm_is_partition_started(sc_ipc_t ipc, sc_rm_pt_t pt)
+{
+	sc_rpc_msg_t msg;
+	sc_bool_t result;
+
+	RPC_VER(&msg) = SC_RPC_VERSION;
+	RPC_SVC(&msg) = U8(SC_RPC_SVC_PM);
+	RPC_FUNC(&msg) = U8(PM_FUNC_IS_PARTITION_STARTED);
+	RPC_U8(&msg, 0U) = U8(pt);
+	RPC_SIZE(&msg) = 2U;
+
+	sc_call_rpc(ipc, &msg, SC_FALSE);
+
+	result = U2B(RPC_R8(&msg));
+	return result;
+}
+
 /**@}*/
+

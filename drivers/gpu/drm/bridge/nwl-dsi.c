@@ -29,6 +29,7 @@
 #include <linux/of_graph.h>
 #include <linux/of_platform.h>
 #include <linux/phy/phy.h>
+#include <linux/phy/phy-mixel-mipi-dsi.h>
 #include <linux/spinlock.h>
 #include <video/mipi_display.h>
 #include <video/videomode.h>
@@ -150,6 +151,29 @@
 
 static const char IRQ_NAME[] = "nwl-dsi";
 
+/*
+ * TODO: Currently, filter-out unsupported modes by their clocks.
+ * Need to find a better way to do this.
+ * These are the pixel clocks that the controller can handle successfully.
+ */
+static int valid_clocks[] = {
+	162000,
+	148500,
+	135000,
+	132000,
+	108000,
+	74250,
+	49500,
+	31500,
+};
+
+/* Possible valid PHY reference clock rates*/
+static u32 phyref_rates[] = {
+	27000000,
+	25000000,
+	24000000,
+};
+
 enum {
 	CLK_PHY_REF	= BIT(1),
 	CLK_RX_ESC	= BIT(2),
@@ -181,6 +205,14 @@ struct clk_config {
 	bool enabled;
 };
 
+struct mode_config {
+	int				pixclock;
+	unsigned int			lanes;
+	unsigned long			bitclock;
+	u32				phyref_rate;
+	struct list_head		list;
+};
+
 struct nwl_mipi_dsi {
 	struct device			*dev;
 	struct drm_panel		*panel;
@@ -199,14 +231,12 @@ struct nwl_mipi_dsi {
 
 	void __iomem			*base;
 	int				irq;
-	enum mipi_dsi_pixel_format	format;
-	struct videomode		vm;
 
 	struct mipi_dsi_transfer	*xfer;
 
+	struct drm_display_mode		*curr_mode;
+	struct list_head		valid_modes;
 	u32				lanes;
-	u32				vc;
-	unsigned long			dsi_mode_flags;
 	bool				no_clk_reset;
 	bool				enabled;
 };
@@ -270,55 +300,51 @@ static enum dpi_pixel_format nwl_dsi_get_dpi_pixel_format(
 	}
 }
 
-unsigned long nwl_dsi_get_bit_clock(struct drm_bridge *bridge,
-	unsigned long pixclock)
+static unsigned long nwl_dsi_get_bit_clock(struct nwl_mipi_dsi *dsi,
+		unsigned long pixclock)
 {
-	struct nwl_mipi_dsi *dsi;
+	struct mipi_dsi_device *dsi_device = dsi->dsi_device;
 	int bpp;
-	u32 bus_format;
+	u32 bus_fmt;
 	struct drm_crtc *crtc = 0;
 
-	/* Make sure the bridge is correctly initialized */
-	if (!bridge || !bridge->driver_private)
-		return 0;
-
-	dsi = bridge->driver_private;
-
-	if (dsi->lanes < 1 || dsi->lanes > 4)
+	if (dsi_device->lanes < 1 || dsi_device->lanes > 4)
 		return 0;
 
 	/* if CTRC updated the bus format, update dsi->format */
 	if (dsi->bridge.encoder)
 		crtc = dsi->bridge.encoder->crtc;
 	if (crtc && crtc->mode.private_flags & 0x1) {
-		bus_format = (crtc->mode.private_flags & 0x1FFFE) >> 1;
-		dsi->format = mipi_dsi_format_from_bus_format(bus_format);
+		bus_fmt = (crtc->mode.private_flags & 0x1FFFE) >> 1;
 		/* propagate the format to the attached panel/bridge */
-		dsi->dsi_device->format = dsi->format;
+		dsi_device->format = mipi_dsi_format_from_bus_format(bus_fmt);
 		/* clear bus format change indication*/
 		crtc->mode.private_flags &= ~0x1;
 	}
 
-	bpp = mipi_dsi_pixel_format_to_bpp(dsi->format);
+	bpp = mipi_dsi_pixel_format_to_bpp(dsi_device->format);
 
-	return (pixclock / dsi->lanes) * bpp;
+	return (pixclock * bpp) / dsi_device->lanes;
 }
-EXPORT_SYMBOL_GPL(nwl_dsi_get_bit_clock);
 
 static void nwl_dsi_config_host(struct nwl_mipi_dsi *dsi)
 {
-	if (dsi->lanes < 1 || dsi->lanes > 4)
+	struct mipi_dsi_device *dsi_device = dsi->dsi_device;
+
+	if (dsi_device->lanes < 1 || dsi_device->lanes > 4)
 		return;
 
-	nwl_dsi_write(dsi, CFG_NUM_LANES, dsi->lanes - 1);
+	nwl_dsi_write(dsi, CFG_NUM_LANES, dsi_device->lanes - 1);
 
-	if (dsi->dsi_mode_flags & MIPI_DSI_CLOCK_NON_CONTINUOUS) {
+	if (dsi_device->mode_flags & MIPI_DSI_CLOCK_NON_CONTINUOUS)
 		nwl_dsi_write(dsi, CFG_NONCONTINUOUS_CLK, 0x01);
-		nwl_dsi_write(dsi, CFG_AUTOINSERT_EOTP, 0x01);
-	} else {
+	else
 		nwl_dsi_write(dsi, CFG_NONCONTINUOUS_CLK, 0x00);
+
+	if (dsi_device->mode_flags & MIPI_DSI_MODE_EOT_PACKET)
 		nwl_dsi_write(dsi, CFG_AUTOINSERT_EOTP, 0x00);
-	}
+	else
+		nwl_dsi_write(dsi, CFG_AUTOINSERT_EOTP, 0x01);
 
 	nwl_dsi_write(dsi, CFG_T_PRE, 0x01);
 	nwl_dsi_write(dsi, CFG_T_POST, 0x34);
@@ -333,36 +359,39 @@ static void nwl_dsi_config_host(struct nwl_mipi_dsi *dsi)
 static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 {
 	struct device *dev = dsi->dev;
-	struct videomode *vm = &dsi->vm;
+	struct mipi_dsi_device *dsi_device = dsi->dsi_device;
+	struct videomode vm;
 	enum dpi_pixel_format pixel_format =
-			nwl_dsi_get_dpi_pixel_format(dsi->format);
+		nwl_dsi_get_dpi_pixel_format(dsi_device->format);
 	enum dpi_interface_color_coding color_coding =
-			nwl_dsi_get_dpi_interface_color_coding(dsi->format);
+		nwl_dsi_get_dpi_interface_color_coding(dsi_device->format);
 	bool burst_mode;
+
+	drm_display_mode_to_videomode(dsi->curr_mode, &vm);
 
 	nwl_dsi_write(dsi, INTERFACE_COLOR_CODING, color_coding);
 	nwl_dsi_write(dsi, PIXEL_FORMAT, pixel_format);
 	DRM_DEV_DEBUG_DRIVER(dev, "DSI format is: %d (CC=%d, PF=%d)\n",
-			dsi->format, color_coding, pixel_format);
+			dsi_device->format, color_coding, pixel_format);
 
 	/*TODO: need to make polarity configurable */
 	nwl_dsi_write(dsi, VSYNC_POLARITY, 0x00);
 	nwl_dsi_write(dsi, HSYNC_POLARITY, 0x00);
 
-	burst_mode = (dsi->dsi_mode_flags & MIPI_DSI_MODE_VIDEO_BURST) &&
-		!(dsi->dsi_mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE);
+	burst_mode = (dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_BURST) &&
+		!(dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE);
 
 	if (burst_mode) {
 		nwl_dsi_write(dsi, VIDEO_MODE, 0x2);
 		nwl_dsi_write(dsi, PIXEL_FIFO_SEND_LEVEL, 256);
 	} else {
 		nwl_dsi_write(dsi, VIDEO_MODE, 0x0);
-		nwl_dsi_write(dsi, PIXEL_FIFO_SEND_LEVEL, vm->hactive);
+		nwl_dsi_write(dsi, PIXEL_FIFO_SEND_LEVEL, vm.hactive);
 	}
 
-	nwl_dsi_write(dsi, HFP, vm->hfront_porch);
-	nwl_dsi_write(dsi, HBP, vm->hback_porch);
-	nwl_dsi_write(dsi, HSA, vm->hsync_len);
+	nwl_dsi_write(dsi, HFP, vm.hfront_porch);
+	nwl_dsi_write(dsi, HBP, vm.hback_porch);
+	nwl_dsi_write(dsi, HSA, vm.hsync_len);
 
 	nwl_dsi_write(dsi, ENABLE_MULT_PKTS, 0x0);
 	nwl_dsi_write(dsi, BLLP_MODE, 0x1);
@@ -370,10 +399,10 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 	nwl_dsi_write(dsi, USE_NULL_PKT_BLLP, 0x0);
 	nwl_dsi_write(dsi, VC, 0x0);
 
-	nwl_dsi_write(dsi, PIXEL_PAYLOAD_SIZE, vm->hactive);
-	nwl_dsi_write(dsi, VACTIVE, vm->vactive - 1);
-	nwl_dsi_write(dsi, VBP, vm->vback_porch);
-	nwl_dsi_write(dsi, VFP, vm->vfront_porch);
+	nwl_dsi_write(dsi, PIXEL_PAYLOAD_SIZE, vm.hactive);
+	nwl_dsi_write(dsi, VACTIVE, vm.vactive);
+	nwl_dsi_write(dsi, VBP, vm.vback_porch);
+	nwl_dsi_write(dsi, VFP, vm.vfront_porch);
 }
 
 static void nwl_dsi_enable_clocks(struct nwl_mipi_dsi *dsi, u32 clks)
@@ -442,23 +471,113 @@ static void nwl_dsi_init_interrupts(struct nwl_mipi_dsi *dsi)
 	nwl_dsi_write(dsi, IRQ_MASK, irq_enable);
 }
 
-static bool nwl_dsi_bridge_mode_fixup(struct drm_bridge *bridge,
-			   const struct drm_display_mode *mode,
-			   struct drm_display_mode *adjusted_mode)
+/*
+ * This function will try the required phy speed for current mode
+ * If the phy speed can be achieved, the phy will save the speed
+ * configuration
+ */
+static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
+			    const struct drm_display_mode *mode)
+{
+	struct device *dev = dsi->dev;
+	struct mode_config *config;
+	unsigned long pixclock = mode->clock * 1000;
+	unsigned long bit_clk = 0;
+	u32 phyref_rate = 0, lanes = dsi->lanes;
+	size_t i = 0, num_rates = ARRAY_SIZE(phyref_rates);
+	int ret = 0;
+
+	list_for_each_entry(config, &dsi->valid_modes, list)
+		if (config->pixclock == pixclock)
+			return config;
+
+	while (i < num_rates) {
+		bit_clk = nwl_dsi_get_bit_clock(dsi, pixclock);
+		phyref_rate = phyref_rates[i];
+		ret = mixel_phy_mipi_set_phy_speed(dsi->phy,
+			bit_clk,
+			phyref_rate,
+			false);
+
+		/* Pick the first non-failing rate */
+		if (!ret)
+			break;
+
+		/* Reached the end of phyref_rates, try another lane config */
+		if ((i++ == num_rates - 1) && (--lanes > 1)) {
+			i = 0;
+			continue;
+		}
+	}
+
+	if (ret < 0) {
+		DRM_DEV_DEBUG_DRIVER(dev,
+			"Cannot setup PHY for mode: %ux%u @%d kHz\n",
+			mode->hdisplay,
+			mode->vdisplay,
+			mode->clock);
+		DRM_DEV_DEBUG_DRIVER(dev, "phy_ref clk: %u, bit clk: %lu\n",
+			phyref_rate, bit_clk);
+
+		return NULL;
+	}
+
+	config = devm_kzalloc(dsi->dev, sizeof(struct mode_config), GFP_KERNEL);
+	config->pixclock = pixclock;
+	config->lanes = lanes;
+	config->bitclock = bit_clk;
+	config->phyref_rate = phyref_rate;
+	list_add(&config->list, &dsi->valid_modes);
+
+	return config;
+}
+
+static enum drm_mode_status nwl_dsi_bridge_mode_valid(struct drm_bridge *bridge,
+			   const struct drm_display_mode *mode)
 {
 	struct nwl_mipi_dsi *dsi = bridge->driver_private;
-	int bpp = mipi_dsi_pixel_format_to_bpp(dsi->format);
-	unsigned long pixclock = adjusted_mode->clock * 1000;
-	unsigned long data_rate;
+	size_t i, num_modes = ARRAY_SIZE(valid_clocks);
+	bool clock_ok = false;
 
-	if (dsi->lanes < 1 || dsi->lanes > 4)
+	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Validating mode:");
+	drm_mode_debug_printmodeline(mode);
+
+	for (i = 0; i < num_modes; i++)
+		if (mode->clock == valid_clocks[i]) {
+			clock_ok = true;
+			break;
+		}
+
+	if (!clock_ok)
+		return MODE_NOCLOCK;
+
+	if (!nwl_dsi_mode_probe(dsi, mode))
+		return MODE_NOCLOCK;
+
+	return MODE_OK;
+}
+
+static bool nwl_dsi_bridge_mode_fixup(struct drm_bridge *bridge,
+			   const struct drm_display_mode *mode,
+			   struct drm_display_mode *adjusted)
+{
+	struct nwl_mipi_dsi *dsi = bridge->driver_private;
+	struct mode_config *config;
+
+	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Fixup mode:\n");
+	drm_mode_debug_printmodeline(adjusted);
+
+	config = nwl_dsi_mode_probe(dsi, adjusted);
+	if (!config)
 		return false;
 
-	/* Data rate is in bit clock for each lane */
-	data_rate = (pixclock / dsi->lanes) * bpp;
+	DRM_DEV_DEBUG_DRIVER(dsi->dev, "lanes=%u, data_rate=%lu\n",
+			     config->lanes, config->bitclock);
+	if (config->lanes < 1 || config->lanes > 4)
+		return false;
 
 	/* Max data rate for this controller is 1.5Gbps */
-	if (data_rate > 1500000000)
+	if (config->bitclock > 1500000000)
 		return false;
 
 	return true;
@@ -469,11 +588,34 @@ static void nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 				     struct drm_display_mode *adjusted)
 {
 	struct nwl_mipi_dsi *dsi = bridge->driver_private;
+	struct mode_config *config;
+	u32 actual_phy_rate;
 
-	drm_display_mode_to_videomode(adjusted, &dsi->vm);
-
-	DRM_DEV_DEBUG_DRIVER(dsi->dev, "\n");
+	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Setting mode:\n");
 	drm_mode_debug_printmodeline(adjusted);
+
+	config = nwl_dsi_mode_probe(dsi, adjusted);
+	/* New mode? This should NOT happen */
+	if (!config) {
+		DRM_DEV_ERROR(dsi->dev, "Unsupported mode provided:\n");
+		drm_mode_debug_printmodeline(adjusted);
+		return;
+	}
+
+	mixel_phy_mipi_set_phy_speed(dsi->phy,
+			config->bitclock,
+			config->phyref_rate,
+			false);
+	clk_set_rate(dsi->phy_ref.clk, config->phyref_rate);
+	actual_phy_rate = clk_get_rate(dsi->phy_ref.clk);
+	dsi->dsi_device->lanes = config->lanes;
+	DRM_DEV_DEBUG_DRIVER(dsi->dev,
+		"Using phy_ref rate: %u (actual: %u), "
+		"bitclock: %lu, lanes: %u\n",
+		config->phyref_rate, actual_phy_rate,
+		config->bitclock, config->lanes);
+
+	dsi->curr_mode = drm_mode_duplicate(bridge->dev, adjusted);
 }
 
 static int nwl_dsi_host_attach(struct mipi_dsi_host *host,
@@ -489,8 +631,6 @@ static int nwl_dsi_host_attach(struct mipi_dsi_host *host,
 
 	if (device->lanes < 1 || device->lanes > 4)
 		return -EINVAL;
-
-	dsi->dsi_device = device;
 
 	/*
 	 * Someone has attached to us; it could be a panel or another bridge.
@@ -518,9 +658,37 @@ static int nwl_dsi_host_attach(struct mipi_dsi_host *host,
 	else
 		DRM_DEV_DEBUG_DRIVER(dsi->dev, "Bridge attached\n");
 
+	dsi->dsi_device = device;
 	dsi->lanes = device->lanes;
-	dsi->format = device->format;
-	dsi->dsi_mode_flags = device->mode_flags;
+
+	/*
+	 * If this happened right before a mode_set, it means that our
+	 * bridge/panel doesn't like the current mode parameters and changed
+	 * something on the dsi_device (lanes or format). In this case, we have
+	 * to reconfigure the phy.
+	 */
+	if (dsi->curr_mode) {
+		unsigned long pixclock = dsi->curr_mode->clock * 1000;
+		struct mode_config *config;
+
+		DRM_DEV_DEBUG_DRIVER(dsi->dev, "Re-setting mode:\n");
+		drm_mode_debug_printmodeline(dsi->curr_mode);
+		drm_mode_destroy(dsi->bridge.dev, dsi->curr_mode);
+		list_for_each_entry(config, &dsi->valid_modes, list)
+			if (config->pixclock == pixclock)
+				break;
+
+		if (device->lanes != config->lanes)
+			return 0;
+
+		clk_set_rate(dsi->phy_ref.clk, config->phyref_rate);
+		device->lanes = config->lanes;
+		DRM_DEV_DEBUG_DRIVER(dsi->dev,
+			"Using phy_ref rate: %d (actual: %ld), "
+			"bitclock: %lu, lanes: %d\n",
+			config->phyref_rate, clk_get_rate(dsi->phy_ref.clk),
+			config->bitclock, config->lanes);
+	}
 
 	if (dsi->connector.dev)
 		drm_helper_hpd_irq_event(dsi->connector.dev);
@@ -539,6 +707,8 @@ static int nwl_dsi_host_detach(struct mipi_dsi_host *host,
 
 	if (dsi->connector.dev)
 		drm_helper_hpd_irq_event(dsi->connector.dev);
+
+	dsi->dsi_device = NULL;
 
 	return 0;
 }
@@ -876,11 +1046,32 @@ static int nwl_dsi_connector_get_modes(struct drm_connector *connector)
 	struct nwl_mipi_dsi *dsi = container_of(connector,
 						struct nwl_mipi_dsi,
 						connector);
+	int num_modes = 0;
+	struct drm_display_mode *mode;
 
+	DRM_DEV_DEBUG_DRIVER(dsi->dev, "\n");
 	if (dsi->panel)
-		return drm_panel_get_modes(dsi->panel);
+		num_modes = drm_panel_get_modes(dsi->panel);
 
-	return 0;
+	/*
+	 * We need to inform the CRTC about the actual bit clock that we need
+	 * for each mode
+	 */
+	list_for_each_entry(mode, &connector->probed_modes, head) {
+		struct mode_config *config;
+		u32 phy_rate;
+
+		config = nwl_dsi_mode_probe(dsi, mode);
+		/* Unsupported mode */
+		if (!config)
+			continue;
+
+		/* Actual pixel clock that should be used by CRTC */
+		phy_rate = config->phyref_rate / 1000;
+		mode->crtc_clock = phy_rate * (mode->clock / phy_rate);
+	}
+
+	return num_modes;
 }
 
 static const struct drm_connector_funcs nwl_dsi_connector_funcs = {
@@ -998,13 +1189,14 @@ static void nwl_dsi_bridge_detach(struct drm_bridge *bridge)
 static void nwl_dsi_bridge_enable(struct drm_bridge *bridge)
 {
 	struct nwl_mipi_dsi *dsi = bridge->driver_private;
+	struct mipi_dsi_device *dsi_device = dsi->dsi_device;
 	struct device *dev = dsi->dev;
 	int ret;
 
 	if (dsi->enabled || (!dsi->panel && !dsi->next_bridge))
 		return;
 
-	if (!dsi->lanes) {
+	if (!dsi_device) {
 		DRM_DEV_ERROR(dev, "Bridge not set up properly!\n");
 		return;
 	}
@@ -1045,7 +1237,7 @@ static void nwl_dsi_bridge_enable(struct drm_bridge *bridge)
 		goto enable_err;
 	}
 
-	if (dsi->dsi_mode_flags & MIPI_DSI_CLOCK_NON_CONTINUOUS)
+	if (dsi_device->mode_flags & MIPI_DSI_CLOCK_NON_CONTINUOUS)
 		nwl_dsi_write(dsi, CFG_NONCONTINUOUS_CLK, 0x00);
 
 	dsi->enabled = true;
@@ -1096,6 +1288,7 @@ static void nwl_dsi_bridge_disable(struct drm_bridge *bridge)
 static const struct drm_bridge_funcs nwl_dsi_bridge_funcs = {
 	.enable = nwl_dsi_bridge_enable,
 	.disable = nwl_dsi_bridge_disable,
+	.mode_valid = nwl_dsi_bridge_mode_valid,
 	.mode_fixup = nwl_dsi_bridge_mode_fixup,
 	.mode_set = nwl_dsi_bridge_mode_set,
 	.attach = nwl_dsi_bridge_attach,
@@ -1185,14 +1378,25 @@ static int nwl_dsi_probe(struct platform_device *pdev)
 	if (ret < 0)
 		dev_err(dev, "Failed to add nwl-dsi bridge (%d)\n", ret);
 
+	INIT_LIST_HEAD(&dsi->valid_modes);
+
 	return ret;
 }
 
 static int nwl_dsi_remove(struct platform_device *pdev)
 {
 	struct nwl_mipi_dsi *dsi = platform_get_drvdata(pdev);
+	struct mode_config *config;
+	struct list_head *pos, *tmp;
+
 
 	drm_bridge_remove(&dsi->bridge);
+
+	list_for_each_safe(pos, tmp, &dsi->valid_modes) {
+		config = list_entry(pos, struct mode_config, list);
+		list_del(pos);
+		devm_kfree(dsi->dev, config);
+	}
 
 	pm_runtime_disable(&pdev->dev);
 

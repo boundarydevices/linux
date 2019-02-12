@@ -28,6 +28,7 @@
 #include <drm/drm_simple_kms_helper.h>
 #include <linux/busfreq-imx.h>
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/iopoll.h>
 #include <linux/of_graph.h>
 #include <linux/platform_data/simplefb.h>
@@ -343,6 +344,8 @@ static void mxsfb_crtc_mode_set_nofb(struct mxsfb_drm_private *mxsfb)
 	const u32 bus_flags = mxsfb->connector->display_info.bus_flags;
 	u32 vdctrl0, vsync_pulse_len, hsync_pulse_len;
 	int err;
+	u32 pixclock = m->clock * 1000;
+	struct mode_config *config;
 
 	/*
 	 * It seems, you can't re-program the controller if it is still
@@ -355,6 +358,27 @@ static void mxsfb_crtc_mode_set_nofb(struct mxsfb_drm_private *mxsfb)
 	if (err)
 		return;
 
+	/*
+	 * Before setting the clock rate, we need to be sure that the clock
+	 * has the right source to output the required rate.
+	 */
+	list_for_each_entry(config, &mxsfb->valid_modes, list) {
+		if (config->clock == pixclock) {
+			struct clk *src;
+
+			src = clk_get_parent(mxsfb->clk_sel);
+			if (!clk_is_match(src, config->clk_src))
+				clk_set_parent(mxsfb->clk_sel, config->clk_src);
+			if (clk_get_rate(mxsfb->clk_pll) != config->out_rate)
+				clk_set_rate(mxsfb->clk_pll, config->out_rate);
+			DRM_DEV_DEBUG_DRIVER(mxsfb->dev,
+				"pll rate: %ld (actual %ld)\n",
+				config->out_rate, clk_get_rate(mxsfb->clk_pll));
+			pixclock = config->mode_clock;
+			break;
+		}
+	}
+
 	/* Clear the FIFOs */
 	writel(CTRL1_FIFO_CLEAR, mxsfb->base + LCDC_CTRL1 + REG_SET);
 
@@ -362,9 +386,9 @@ static void mxsfb_crtc_mode_set_nofb(struct mxsfb_drm_private *mxsfb)
 	if (err)
 		return;
 
-	clk_set_rate(mxsfb->clk, m->crtc_clock * 1000);
+	clk_set_rate(mxsfb->clk, pixclock);
 	DRM_DEV_DEBUG_DRIVER(mxsfb->dev, "Pixel clock: %dkHz (actual: %dkHz)\n",
-		m->crtc_clock, (int)(clk_get_rate(mxsfb->clk) / 1000));
+		pixclock / 1000, (int)(clk_get_rate(mxsfb->clk) / 1000));
 
 	DRM_DEV_DEBUG_DRIVER(mxsfb->dev,
 		"Connector bus_flags: 0x%08X\n", bus_flags);
