@@ -21,8 +21,6 @@
 #include "API_AFE_ss28fdsoi_kiran_hdmitx.h"
 #include "API_AFE_t28hpc_hdmitx.h"
 
-static int character_freq_khz;
-
 #define RGB_ALLOWED_COLORIMETRY (BIT(HDMI_EXTENDED_COLORIMETRY_BT2020) |\
 				 BIT(HDMI_EXTENDED_COLORIMETRY_ADOBE_RGB))
 #define YCC_ALLOWED_COLORIMETRY (BIT(HDMI_EXTENDED_COLORIMETRY_BT2020) |\
@@ -31,6 +29,8 @@ static int character_freq_khz;
 				 BIT(HDMI_EXTENDED_COLORIMETRY_S_YCC_601) |\
 				 BIT(HDMI_EXTENDED_COLORIMETRY_XV_YCC_709) |\
 				 BIT(HDMI_EXTENDED_COLORIMETRY_XV_YCC_601))
+
+#define B0_SILICON_ID			0x11
 
 static int hdmi_avi_info_set(struct imx_hdp *hdp,
 				struct drm_display_mode *mode,
@@ -189,6 +189,51 @@ static void hdmi_mode_set_vswing(state_struct *state)
 		  );
 }
 
+static int hdmi_scdc_tmds_config(struct imx_hdp *hdp)
+{
+	struct drm_scdc *scdc = &hdp->connector.display_info.hdmi.scdc;
+	HDMITX_TRANS_DATA data_in;
+	HDMITX_TRANS_DATA data_out;
+	u8 buff;
+	int ret = 0;
+
+	if (hdp->character_freq_khz > 340000) {
+		/*
+		 * TMDS Character Rate above 340MHz should working in HDMI2.0
+		 * Enable scrambling and TMDS_Bit_Clock_Ratio
+		 */
+		buff = 3;
+		hdp->hdmi_type = HDMI_TX_MODE_HDMI_2_0;
+	} else  if (scdc->scrambling.low_rates) {
+		/*
+		 * Enable scrambling and work in HDMI2.0 when scrambling capability of sink
+		 * be indicated in the HF-VSDB LTE_340Mcsc_scramble bit
+		 */
+		buff = 1;
+		hdp->hdmi_type = HDMI_TX_MODE_HDMI_2_0;
+	} else {
+		/* Default work in HDMI1.4 */
+		buff = 0;
+		hdp->hdmi_type = HDMI_TX_MODE_HDMI_1_4;
+	 }
+
+	data_in.buff = &buff;
+	data_in.len = 1;
+	data_in.slave = 0x54;
+	/* TMDS config */
+	data_in.offset = 0x20;
+
+	/* Workaround for imx8qm A0 SOC DDC R/W failed issue */
+	if (cpu_is_imx8qm() && (imx8_get_soc_revision() < B0_SILICON_ID))
+		pr_info("Skip DDC Write for iMX8QM A0 SOC\n");
+	else {
+		ret = CDN_API_HDMITX_DDC_WRITE_blocking(&hdp->state, &data_in, &data_out);
+		if (ret != CDN_OK)
+			pr_warn("CDN_API_HDMITX_DDC_WRITE_blocking ret = %d\n", ret);
+	}
+	return ret;
+}
+
 int hdmi_phy_init_ss28fdsoi(state_struct *state, struct drm_display_mode *mode, int format, int color_depth)
 {
 	struct imx_hdp *hdp = state_to_imx_hdp(state);
@@ -198,8 +243,8 @@ int hdmi_phy_init_ss28fdsoi(state_struct *state, struct drm_display_mode *mode, 
 	imx_hdp_call(hdp, phy_reset, hdp->ipcHndl, NULL, 0);
 
 	/* Configure PHY */
-	character_freq_khz = phy_cfg_hdp_ss28fdsoi(state, 4, mode, color_depth, format);
-	if (character_freq_khz == 0) {
+	hdp->character_freq_khz = phy_cfg_hdp_ss28fdsoi(state, 4, mode, color_depth, format);
+	if (hdp->character_freq_khz == 0) {
 		DRM_ERROR("failed to set phy pclock\n");
 		return -EINVAL;
 	}
@@ -223,12 +268,8 @@ void hdmi_mode_set_ss28fdsoi(state_struct *state, struct drm_display_mode *mode,
 	struct imx_hdp *hdp = container_of(state, struct imx_hdp, state);
 	int ret;
 
-	/* Mode = 0 - DVI, 1 - HDMI1.4, 2 HDMI 2.0 */
-	HDMI_TX_MAIL_HANDLER_PROTOCOL_TYPE ptype = 1;
-
-	if (drm_match_cea_mode(mode) == VIC_MODE_97_60Hz ||
-	    drm_match_cea_mode(mode) == VIC_MODE_96_50Hz)
-		ptype = 2;
+	/* config SCDC TMDS & HDMI type */
+	hdmi_scdc_tmds_config(hdp);
 
 	ret = CDN_API_HDMITX_Init_blocking(state);
 	if (ret != CDN_OK) {
@@ -241,7 +282,7 @@ void hdmi_mode_set_ss28fdsoi(state_struct *state, struct drm_display_mode *mode,
 		CDN_API_HDMITX_Disable_GCP(state);
 
 	/* Set HDMI TX Mode */
-	ret = CDN_API_HDMITX_Set_Mode_blocking(state, ptype, character_freq_khz);
+	ret = CDN_API_HDMITX_Set_Mode_blocking(state, hdp->hdmi_type, hdp->character_freq_khz);
 	if (ret != CDN_OK) {
 		DRM_INFO("CDN_API_HDMITX_Set_Mode_blocking ret = %d\n", ret);
 		return;
@@ -266,6 +307,7 @@ void hdmi_mode_set_ss28fdsoi(state_struct *state, struct drm_display_mode *mode,
 
 int hdmi_phy_init_t28hpc(state_struct *state, struct drm_display_mode *mode, int format, int color_depth)
 {
+	struct imx_hdp *hdp = state_to_imx_hdp(state);
 	int ret;
 	/* 0- pixel clock from phy */
 	u32	pixel_clk_from_phy = 1;
@@ -289,9 +331,9 @@ int hdmi_phy_init_t28hpc(state_struct *state, struct drm_display_mode *mode, int
 	}
 
 	/* Configure PHY */
-	character_freq_khz =
+	hdp->character_freq_khz =
 	    phy_cfg_hdp_t28hpc(state, 4, mode, color_depth, format, pixel_clk_from_phy);
-	if (character_freq_khz == 0) {
+	if (hdp->character_freq_khz == 0) {
 		DRM_ERROR("failed to set phy pclock\n");
 		return -EINVAL;
 	}
@@ -335,13 +377,8 @@ void hdmi_mode_set_t28hpc(state_struct *state, struct drm_display_mode *mode, in
 	struct imx_hdp *hdp = container_of(state, struct imx_hdp, state);
 	int ret;
 
-	/* Set HDMI TX Mode */
-	/* Mode = 0 - DVI, 1 - HDMI1.4, 2 HDMI 2.0 */
-	HDMI_TX_MAIL_HANDLER_PROTOCOL_TYPE ptype = 1;
-
-	if (drm_match_cea_mode(mode) == VIC_MODE_97_60Hz ||
-	    drm_match_cea_mode(mode) == VIC_MODE_96_50Hz)
-		ptype = 2;
+	/* config SCDC TMDS & HDMI type */
+	hdmi_scdc_tmds_config(hdp);
 
 	ret = CDN_API_HDMITX_Init_blocking(state);
 	if (ret != CDN_OK) {
@@ -354,7 +391,7 @@ void hdmi_mode_set_t28hpc(state_struct *state, struct drm_display_mode *mode, in
 		CDN_API_HDMITX_Disable_GCP(state);
 
 	/* Set HDMI TX Mode */
-	ret = CDN_API_HDMITX_Set_Mode_blocking(state, ptype, character_freq_khz);
+	ret = CDN_API_HDMITX_Set_Mode_blocking(state, hdp->hdmi_type, hdp->character_freq_khz);
 	if (ret != CDN_OK) {
 		DRM_ERROR("CDN_API_HDMITX_Set_Mode_blocking ret = %d\n", ret);
 		return;

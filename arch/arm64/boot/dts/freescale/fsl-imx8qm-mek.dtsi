@@ -1184,29 +1184,11 @@
 	status = "okay";
 };
 
-&rpmsg{
-	/*
-	 * 64K for one rpmsg instance:
-	 */
-	vdev-nums = <2>;
-	reg = <0x0 0x90000000 0x0 0x20000>;
-	status = "okay";
-};
-
 &pd_cm41_intmux {
 	early_power_on;
 };
 
 &intmux_cm41 {
-	status = "okay";
-};
-
-&rpmsg1{
-	/*
-	 * 64K for one rpmsg instance:
-	 */
-	vdev-nums = <2>;
-	reg = <0x0 0x90100000 0x0 0x20000>;
 	status = "okay";
 };
 

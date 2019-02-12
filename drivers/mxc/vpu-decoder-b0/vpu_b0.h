@@ -297,6 +297,9 @@ struct vpu_ctx {
 	struct dma_buffer stream_buffer;
 	struct dma_buffer udata_buffer;
 
+	struct file *crc_fp;
+	loff_t pos;
+
 	int frm_dis_delay;
 	int frm_dec_delay;
 	int frm_total_num;

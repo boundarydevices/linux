@@ -71,6 +71,20 @@
 			enable-method = "psci";
 			reg = <0x0 0x1>;
 		};
+
+		cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			enable-method = "psci";
+			reg = <0x0 0x2>;
+		};
+
+		cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,armv8";
+			enable-method = "psci";
+			reg = <0x0 0x3>;
+		};
 	};
 
 	psci {
@@ -135,11 +149,6 @@
 		dsp_reserved: dsp@0x92400000 {
 			no-map;
 			reg = <0 0x92400000 0 0x2000000>;
-		};
-
-		decoder_str: str@0x94400000 {
-			no-map;
-			reg = <0 0x94400000 0 0x1800000>;
 		};
 
 		/* global autoconfigured region for contiguous allocations */
@@ -287,7 +296,6 @@
 			compatible = "nxp,imx8qm-b0-vpudec", "nxp,imx8qxp-b0-vpudec";
 			boot-region = <&decoder_boot>;
 			rpc-region = <&decoder_rpc>;
-			str-region = <&decoder_str>;
 			reg = <0x0 0x2c000000 0x0 0x1000000>;
 			reg-names = "vpu_regs";
 			reg-csr = <0x2d080000>;
@@ -690,6 +698,7 @@
 /delete-node/ &irqsteer_csi1;
 /delete-node/ &i2c0_mipi_csi1;
 /delete-node/ &lpspi0;
+/delete-node/ &lpspi3;
 /delete-node/ &lpuart0;
 
 &lpuart1 {

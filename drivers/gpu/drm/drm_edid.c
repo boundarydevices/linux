@@ -4503,6 +4503,7 @@ static void drm_add_display_info(struct drm_connector *connector,
 {
 	struct drm_display_info *info = &connector->display_info;
 
+	memset(info, 0, sizeof(struct drm_display_info));
 	info->width_mm = edid->width_cm * 10;
 	info->height_mm = edid->height_cm * 10;
 

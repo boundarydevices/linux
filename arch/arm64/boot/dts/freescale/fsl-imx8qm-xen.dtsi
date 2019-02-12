@@ -20,6 +20,38 @@
 
 	/delete-node/ wu;
 
+	/*
+	 * This is just to avoid renaming all other edma0 nodes, so choose
+	 * edma0a and edma0d here.
+	 */
+	edma0a: dma-controller0@5a200000 {
+		compatible = "fsl,imx8qm-edma";
+		reg = <0x0 0x5a200000 0x0 0x10000>, /* channel0 LPSPI0 rx */
+		      <0x0 0x5a210000 0x0 0x10000>; /* channel1 LPSPI0 tx */
+		#dma-cells = <3>;
+		dma-channels = <2>;
+		interrupts = <GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 417 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "edma0-chan0-rx", "edma0-chan1-tx";
+		fsl,sc_rsrc_id = <SC_R_DMA_0_CH0>,
+				 <SC_R_DMA_0_CH1>;
+		status = "okay";
+	};
+
+	edma0d: dma-controller0@5a260000 {
+		compatible = "fsl,imx8qm-edma";
+		reg = <0x0 0x5a260000 0x0 0x10000>, /* channel6 LPSPI3 rx */
+		      <0x0 0x5a270000 0x0 0x10000>; /* channel7 LPSPI3 tx */
+		#dma-cells = <3>;
+		dma-channels = <2>;
+		interrupts = <GIC_SPI 422 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "edma0-chan6-rx", "edma0-chan7-tx";
+		fsl,sc_rsrc_id = <SC_R_DMA_0_CH6>,
+				 <SC_R_DMA_0_CH7>;
+		status = "okay";
+	};
+
 	edma00: dma-controller0@5a2c0000 {
 		compatible = "fsl,imx8qm-edma";
 		reg = <0x0 0x5a2c0000 0x0 0x10000>, /* channel12 UART0 rx */
@@ -404,6 +436,16 @@
 
 &flexcan3 {
 	interrupt-parent = <&gic>;
+};
+
+&lpspi0 {
+	interrupt-parent = <&gic>;
+	dmas = <&edma0a 1 0 0>, <&edma0a 0 0 1>;
+};
+
+&lpspi3 {
+	interrupt-parent = <&gic>;
+	dmas = <&edma0d 7 0 0>, <&edma0d 6 0 1>;
 };
 
 &lpuart0 {

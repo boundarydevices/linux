@@ -405,6 +405,16 @@ static void mxc_jpeg_addrs(struct mxc_jpeg_desc *desc,
 		offset;
 }
 
+static void notify_eos(struct mxc_jpeg_ctx *ctx)
+{
+	const struct v4l2_event ev = {
+		.type = V4L2_EVENT_EOS
+	};
+
+	dev_dbg(ctx->mxc_jpeg->dev, "Notify app event EOS reached");
+	v4l2_event_queue_fh(&ctx->fh, &ev);
+}
+
 static irqreturn_t mxc_jpeg_dec_irq(int irq, void *priv)
 {
 	struct mxc_jpeg_dev *jpeg = priv;
@@ -647,17 +657,20 @@ end:
 static int mxc_jpeg_decoder_cmd(struct file *file, void *priv,
 			      struct v4l2_decoder_cmd *cmd)
 {
-	struct mxc_jpeg_ctx *ctx = mxc_jpeg_fh_to_ctx(file->private_data);
+	struct v4l2_fh *fh = file->private_data;
+	struct mxc_jpeg_ctx *ctx = mxc_jpeg_fh_to_ctx(fh);
 	struct device *dev = ctx->mxc_jpeg->dev;
 
 	switch (cmd->cmd) {
 	case V4L2_DEC_CMD_STOP:
 		dev_dbg(dev, "Received V4L2_DEC_CMD_STOP");
-		/*
-		 * TODO, provide actual implementation if needed,
-		 * for now, just silence vb2_warn_zero_bytesused
-		 * because allow_zero_bytesused flag is set
-		 */
+		if (v4l2_m2m_num_src_bufs_ready(fh->m2m_ctx) == 0) {
+			/* No more src bufs, notify app EOS */
+			notify_eos(ctx);
+		} else {
+			/* will send EOS later*/
+			ctx->stopping = 1;
+		}
 		return 0;
 	default:
 		return -EINVAL;
@@ -1012,8 +1025,6 @@ static void mxc_jpeg_buf_queue(struct vb2_buffer *vb)
 
 
 	if (ctx->state == MXC_JPEG_INIT) {
-		struct vb2_queue *dst_vq = v4l2_m2m_get_vq(
-			ctx->fh.m2m_ctx, V4L2_BUF_TYPE_VIDEO_OUTPUT);
 		static const struct v4l2_event ev_src_ch = {
 			.type = V4L2_EVENT_SOURCE_CHANGE,
 			.u.src_change.changes =
@@ -1021,8 +1032,7 @@ static void mxc_jpeg_buf_queue(struct vb2_buffer *vb)
 		};
 
 		v4l2_event_queue_fh(&ctx->fh, &ev_src_ch);
-		if (vb2_is_streaming(dst_vq))
-			ctx->state = MXC_JPEG_RUNNING;
+		ctx->state = MXC_JPEG_RUNNING;
 	}
 
 end:
@@ -1288,7 +1298,6 @@ static int mxc_jpeg_bound_align_image(u32 *w, unsigned int wmin,
 static int mxc_jpeg_try_fmt(struct v4l2_format *f, struct mxc_jpeg_fmt *fmt,
 			    struct mxc_jpeg_ctx *ctx, int q_type)
 {
-	struct device *dev = ctx->mxc_jpeg->dev;
 	struct v4l2_pix_format_mplane *pix_mp = &f->fmt.pix_mp;
 	struct v4l2_plane_pix_format *pfmt = &pix_mp->plane_fmt[0];
 	u32 w = pix_mp->width;
@@ -1299,15 +1308,14 @@ static int mxc_jpeg_try_fmt(struct v4l2_format *f, struct mxc_jpeg_fmt *fmt,
 	pix_mp->field = V4L2_FIELD_NONE;
 	pix_mp->num_planes = fmt->colplanes;
 	pix_mp->pixelformat = fmt->fourcc;
-	if (mxc_jpeg_bound_align_image(&w,
+	mxc_jpeg_bound_align_image(&w,
 					MXC_JPEG_MIN_WIDTH,
 					MXC_JPEG_MAX_WIDTH,
 					MXC_JPEG_W_ALIGN,
 					&h,
 					MXC_JPEG_MIN_HEIGHT,
 					MXC_JPEG_MAX_HEIGHT,
-					MXC_JPEG_H_ALIGN))
-		dev_dbg(dev, "Image was aligned to %dx%d", w, h);
+					MXC_JPEG_H_ALIGN);
 
 	memset(pfmt->reserved, 0, sizeof(pfmt->reserved));
 
@@ -1439,7 +1447,7 @@ static int mxc_jpeg_g_fmt_vid_cap(struct file *file, void *priv,
 	pix->height = q_data->h;
 	pix->field = V4L2_FIELD_NONE;
 	pix->colorspace = V4L2_COLORSPACE_REC709;
-	pix->bytesperline = q_data->bytesperline[0];
+	pix->bytesperline = q_data->stride;
 	pix->sizeimage = q_data->sizeimage[0];
 
 	return 0;
@@ -1467,23 +1475,40 @@ static int mxc_jpeg_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 {
 	struct v4l2_fh *fh = file->private_data;
 	struct mxc_jpeg_ctx *ctx = mxc_jpeg_fh_to_ctx(priv);
+	struct device *dev = ctx->mxc_jpeg->dev;
 	struct vb2_queue *vq;
-	struct vb2_buffer *vb;
 
-	if (buf->type != V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-		goto end;
-
+	dev_dbg(dev, "QBUF type=%d, index=%d", buf->type, buf->index);
 	vq = v4l2_m2m_get_vq(fh->m2m_ctx, buf->type);
 	if (buf->index >= vq->num_buffers) {
-		dev_err(ctx->mxc_jpeg->dev, "buffer index out of range\n");
+		dev_err(dev, "buffer index out of range\n");
 		return -EINVAL;
 	}
 
-	vb = vq->bufs[buf->index];
-end:
 	return v4l2_m2m_qbuf(file, fh->m2m_ctx, buf);
 }
 
+static int mxc_jpeg_dqbuf(struct file *file, void *priv,
+			  struct v4l2_buffer *buf)
+{
+	struct v4l2_fh *fh = file->private_data;
+	struct mxc_jpeg_ctx *ctx = mxc_jpeg_fh_to_ctx(priv);
+	struct device *dev = ctx->mxc_jpeg->dev;
+	int num_src_ready = v4l2_m2m_num_src_bufs_ready(fh->m2m_ctx);
+	int ret;
+
+	dev_dbg(dev, "DQBUF type=%d, index=%d", buf->type, buf->index);
+	if (ctx->stopping == 1	&& num_src_ready == 0) {
+		/* No more src bufs, notify app EOS */
+		notify_eos(ctx);
+		ctx->stopping = 0;
+	}
+
+	ret = v4l2_m2m_dqbuf(file, fh->m2m_ctx, buf);
+	buf->field = V4L2_FIELD_NONE;
+
+	return ret;
+}
 static const struct v4l2_ioctl_ops mxc_jpeg_ioctl_ops = {
 	.vidioc_querycap		= mxc_jpeg_querycap,
 	.vidioc_enum_fmt_vid_cap	= mxc_jpeg_enum_fmt_vid_cap,
@@ -1502,12 +1527,12 @@ static const struct v4l2_ioctl_ops mxc_jpeg_ioctl_ops = {
 	.vidioc_decoder_cmd		= mxc_jpeg_decoder_cmd,
 
 	.vidioc_qbuf			= mxc_jpeg_qbuf,
+	.vidioc_dqbuf                   = mxc_jpeg_dqbuf,
 
 	.vidioc_create_bufs		= v4l2_m2m_ioctl_create_bufs,
 	.vidioc_prepare_buf		= v4l2_m2m_ioctl_prepare_buf,
 	.vidioc_reqbufs                 = v4l2_m2m_ioctl_reqbufs,
 	.vidioc_querybuf                = v4l2_m2m_ioctl_querybuf,
-	.vidioc_dqbuf                   = v4l2_m2m_ioctl_dqbuf,
 	.vidioc_expbuf                  = v4l2_m2m_ioctl_expbuf,
 	.vidioc_streamon                = v4l2_m2m_ioctl_streamon,
 	.vidioc_streamoff               = v4l2_m2m_ioctl_streamoff,
