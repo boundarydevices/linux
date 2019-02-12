@@ -84,6 +84,7 @@ static bool is_rgb(u32 pix_fmt)
 {
 	if ((pix_fmt == V4L2_PIX_FMT_RGB565) ||
 		(pix_fmt == V4L2_PIX_FMT_RGB24) ||
+		(pix_fmt == V4L2_PIX_FMT_BGR32) ||
 		(pix_fmt == V4L2_PIX_FMT_XRGB32) ||
 		(pix_fmt == V4L2_PIX_FMT_BGR24) ||
 	    (pix_fmt == V4L2_PIX_FMT_ARGB32)) {
@@ -97,6 +98,7 @@ static bool is_yuv(u32 pix_fmt)
 {
 	if ((pix_fmt == V4L2_PIX_FMT_YUYV) ||
 		(pix_fmt == V4L2_PIX_FMT_YUV32) ||
+		(pix_fmt == V4L2_PIX_FMT_YUV444M) ||
 		(pix_fmt == V4L2_PIX_FMT_NV12)) {
 		return true;
 	} else {
@@ -184,63 +186,6 @@ void mxc_isi_channel_set_m2m_src_addr(struct mxc_isi_dev *mxc_isi,
 	/* Only support one plane */
 	paddr->y = vb2_dma_contig_plane_dma_addr(vb2_buf, 0);
 	writel(paddr->y, mxc_isi->regs + CHNL_IN_BUF_ADDR);
-}
-
-void mxc_isi_channel_hw_reset(struct mxc_isi_dev *mxc_isi)
-{
-	sc_ipc_t ipcHndl;
-	sc_err_t sciErr;
-	uint32_t mu_id, ch_id, i;
-	uint8_t chan_mask = 0, temp_mask;
-	struct device_node *parent, *node;
-
-	sciErr = sc_ipc_getMuID(&mu_id);
-	if (sciErr != SC_ERR_NONE) {
-		pr_err("Cannot obtain MU ID\n");
-		return;
-	}
-
-	sciErr = sc_ipc_open(&ipcHndl, mu_id);
-	if (sciErr != SC_ERR_NONE) {
-		pr_err("sc_ipc_open failed! (sciError = %d)\n", sciErr);
-		return;
-	}
-
-	parent = of_get_parent(mxc_isi->pdev->dev.of_node);
-	if (!parent) {
-		dev_err(&mxc_isi->pdev->dev, "get parent device fail\n");
-		return;
-	}
-
-	for_each_available_child_of_node(parent, node) {
-		if (!strcmp(node->name, ISI_OF_NODE_NAME)) {
-			ch_id = of_alias_get_id(node, "isi");
-			chan_mask |= 1 << ch_id;
-		}
-	}
-
-	temp_mask = chan_mask;
-	for (i = 0; i < 8; i++) {
-		if (chan_mask & 0x1) {
-			sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_ISI_CH0 + i, SC_PM_PW_MODE_OFF);
-			if (sciErr != SC_ERR_NONE)
-				pr_err("power on ISI%d failed! (sciError = %d)\n", i, sciErr);
-		}
-		chan_mask >>= 1;
-	}
-
-	chan_mask = temp_mask;
-	for (i = 0; i < 8; i++) {
-		if (chan_mask & 0x1) {
-			sciErr = sc_pm_set_resource_power_mode(ipcHndl, SC_R_ISI_CH0 + i, SC_PM_PW_MODE_ON);
-			if (sciErr != SC_ERR_NONE)
-				pr_err("power off ISI%d failed! (sciError = %d)\n", i, sciErr);
-		}
-		chan_mask >>= 1;
-	}
-
-	udelay(500);
-	sc_ipc_close(mu_id);
 }
 
 void mxc_isi_channel_sw_reset(struct mxc_isi_dev *mxc_isi)
@@ -573,9 +518,6 @@ void mxc_isi_channel_init(struct mxc_isi_dev *mxc_isi)
 {
 	u32 val;
 
-	/* hw reset */
-	mxc_isi_channel_hw_reset(mxc_isi);
-
 	/* sw reset */
 	mxc_isi_channel_sw_reset(mxc_isi);
 
@@ -645,6 +587,14 @@ void mxc_isi_channel_config(struct mxc_isi_dev *mxc_isi)
 	writel(val, mxc_isi->regs + CHNL_CTRL);
 }
 
+void mxc_isi_clean_registers(struct mxc_isi_dev *mxc_isi)
+{
+	u32 status;
+
+	status = mxc_isi_get_irq_status(mxc_isi);
+	mxc_isi_clean_irq_status(mxc_isi, status);
+}
+
 void mxc_isi_channel_enable(struct mxc_isi_dev *mxc_isi)
 {
 	u32 val;
@@ -654,7 +604,7 @@ void mxc_isi_channel_enable(struct mxc_isi_dev *mxc_isi)
 	val |= 0xff << CHNL_CTRL_BLANK_PXL_OFFSET;
 	writel(val, mxc_isi->regs + CHNL_CTRL);
 
-	mxc_isi_clean_irq_status(mxc_isi, 0);
+	mxc_isi_clean_registers(mxc_isi);
 	mxc_isi_enable_irq(mxc_isi);
 	msleep(700);
 	dump_isi_regs(mxc_isi);
@@ -743,6 +693,10 @@ void mxc_isi_m2m_channel_config(struct mxc_isi_dev *mxc_isi)
 			mxc_isi->m2m.alphaen << CHNL_IMG_CTRL_GBL_ALPHA_EN_OFFSET);
 	writel(reg, mxc_isi->regs + CHNL_IMG_CTRL);
 
+	/* scale size need to equal input size when scaling disabled*/
+	reg = src_f->o_width | (src_f->o_height << CHNL_IMG_CFG_HEIGHT_OFFSET);
+	writel(reg, mxc_isi->regs + CHNL_SCL_IMG_CFG);
+
 	/* CSC */
 	mxc_isi_channel_set_csc(mxc_isi);
 
@@ -764,7 +718,7 @@ void mxc_isi_m2m_channel_enable(struct mxc_isi_dev *mxc_isi)
 			CHNL_CTRL_CHNL_EN_ENABLE << CHNL_CTRL_CHNL_EN_OFFSET);
 	writel(reg, mxc_isi->regs + CHNL_CTRL);
 
-	mxc_isi_clean_irq_status(mxc_isi, 0);
+	mxc_isi_clean_registers(mxc_isi);
 	mxc_isi_enable_irq(mxc_isi);
 	mxc_isi_m2m_start_read(mxc_isi);
 

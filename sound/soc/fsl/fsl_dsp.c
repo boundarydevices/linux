@@ -60,6 +60,7 @@
 #endif
 #include <uapi/linux/mxc_dsp.h>
 #include <soc/imx8/sc/svc/irq/api.h>
+#include <soc/imx8/sc/types.h>
 #include <soc/imx8/sc/ipc.h>
 #include <soc/imx8/sc/sci.h>
 
@@ -370,6 +371,7 @@ int fsl_dsp_open_func(struct fsl_dsp *dsp_priv, struct xf_client *client)
 
 	client->global = (void *)dsp_priv;
 	dsp_priv->proxy.is_loaded = 0;
+	dsp_priv->proxy.is_active = 1;
 
 	pm_runtime_get_sync(dev);
 

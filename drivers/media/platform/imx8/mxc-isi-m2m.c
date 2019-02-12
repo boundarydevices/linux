@@ -39,7 +39,7 @@
 #define file_to_ctx(file)		\
 	container_of(file->private_data, struct mxc_isi_ctx, fh);
 
-extern struct mxc_isi_fmt mxc_isi_out_formats[8];
+extern struct mxc_isi_fmt mxc_isi_out_formats[9];
 
 struct mxc_isi_fmt mxc_isi_input_formats[] = {
 	/* Pixel link input format */
@@ -395,6 +395,11 @@ static int mxc_isi_m2m_open(struct file *file)
 	int ret = 0;
 
 	dev_dbg(dev, "%s, ISI%d\n", __func__, mxc_isi->id);
+
+	if (atomic_read(&mxc_isi->open_count) > 0) {
+		dev_err(dev, "%s: ISI channel[%d] is busy\n", __func__, mxc_isi->id);
+		return -EBUSY;
+	}
 
 	if (mutex_lock_interruptible(&mxc_isi->lock))
 		return -ERESTARTSYS;
@@ -795,7 +800,16 @@ static int mxc_isi_m2m_streamon(struct file *file, void *priv,
 			     enum v4l2_buf_type type)
 {
 	struct mxc_isi_dev *mxc_isi = video_drvdata(file);
+	struct mxc_isi_frame *src_f, *dst_f;
 	int ret;
+
+	src_f = &mxc_isi->m2m.src_f;
+	dst_f = &mxc_isi->m2m.dst_f;
+	if ((dst_f->width  > src_f->width) ||
+		(dst_f->height > src_f->height)) {
+		dev_err(&mxc_isi->pdev->dev, "%s Not support upscale\n", __func__);
+		return -EINVAL;
+	}
 
 	if (type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		mxc_isi->m2m.frame_count = 0;
