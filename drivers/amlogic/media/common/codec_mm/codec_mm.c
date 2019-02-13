@@ -1099,8 +1099,14 @@ int codec_mm_extpool_pool_alloc(
 					CODEC_MM_FLAGS_FOR_LOCAL_MGR |
 					CODEC_MM_FLAGS_CMA);
 			if (mem) {
+				struct page *mm = mem->mem_handle;
+
+				if (mem->from_flags ==
+					AMPORTS_MEM_FLAGS_FROM_GET_FROM_CMA_RES)
+					mm = phys_to_page(
+						(unsigned long)mm);
 				if (for_tvp) {
-					cma_mmu_op(mem->mem_handle,
+					cma_mmu_op(mm,
 						mem->page_count,
 						0);
 				}
@@ -1109,7 +1115,7 @@ int codec_mm_extpool_pool_alloc(
 					mem);
 				if (ret < 0) {
 					if (for_tvp) {
-						cma_mmu_op(mem->mem_handle,
+						cma_mmu_op(mm,
 							mem->page_count,
 							1);
 					}
@@ -1160,7 +1166,13 @@ static int codec_mm_extpool_pool_release(struct extpool_mgt_s *tvp_pool)
 			slot_mem_size = gen_pool_size(gpool);
 			gen_pool_destroy(tvp_pool->gen_pool[i]);
 			if (tvp_pool->mm[i]) {
-				cma_mmu_op(tvp_pool->mm[i]->mem_handle,
+				struct page *mm = tvp_pool->mm[i]->mem_handle;
+
+				if (tvp_pool->mm[i]->from_flags ==
+					AMPORTS_MEM_FLAGS_FROM_GET_FROM_CMA_RES)
+					mm = phys_to_page(
+						(unsigned long)mm);
+				cma_mmu_op(mm,
 					tvp_pool->mm[i]->page_count,
 					1);
 				codec_mm_release(tvp_pool->mm[i],
