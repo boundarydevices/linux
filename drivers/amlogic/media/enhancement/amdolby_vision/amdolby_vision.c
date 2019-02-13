@@ -5499,8 +5499,12 @@ int dolby_vision_parse_metadata(
 	new_dovi_setting.video_height = h << 16;
 	flag = p_funcs->control_path(
 		src_format, dst_format,
-		comp_buf[currentId], total_comp_size,
-		md_buf[currentId], total_md_size,
+		comp_buf[currentId],
+		((src_format == FORMAT_DOVI)
+		|| (src_format == FORMAT_DOVI_LL)) ? total_comp_size : 0,
+		md_buf[currentId],
+		((src_format == FORMAT_DOVI)
+		|| (src_format == FORMAT_DOVI_LL)) ? total_md_size : 0,
 		pri_mode,
 		src_bdp, 0, SIG_RANGE_SMPTE, /* bit/chroma/range */
 		graphic_min,
