@@ -7657,6 +7657,9 @@ cfg80211_connect_timeout(struct net_device *dev, const u8 *bssid,
  * @links.bss: For MLO roaming, entry of new bss to which STA link got
  *	roamed. For non-MLO roaming, links[0].bss points to entry of bss to
  *	which STA got roamed (may be %NULL if %links.bssid is set)
+ * @authorized: true if the 802.1X authentication was done by the driver or is
+ *	not needed (e.g., when Fast Transition protocol was used), false
+ *	otherwise. Ignored for networks that don't use 802.1X authentication.
  */
 struct cfg80211_roam_info {
 	const u8 *req_ie;
@@ -7673,6 +7676,7 @@ struct cfg80211_roam_info {
 		struct ieee80211_channel *channel;
 		struct cfg80211_bss *bss;
 	} links[IEEE80211_MLD_MAX_NUM_LINKS];
+	bool authorized;
 };
 
 /**
