@@ -162,12 +162,8 @@ void dfs_print_activity(struct ath_dfs *dfs)
 #ifndef ATH_DFS_RADAR_DETECTION_ONLY
 OS_TIMER_FUNC(dfs_debug_timeout)
 {
-    struct ieee80211com *ic;
-    struct ath_dfs* dfs;
-
-    OS_GET_TIMER_ARG(ic, struct ieee80211com *);
-
-    dfs = (struct ath_dfs *)ic->ic_dfs;
+    struct ath_dfs *dfs = from_timer(dfs, t, ath_dfs_task_timer);
+    struct ieee80211com *ic = dfs->ic;
 
     dfs_print_activity(dfs);
 

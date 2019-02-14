@@ -75,13 +75,12 @@ dfs_nol_delete(struct ath_dfs *dfs, u_int16_t delfreq, u_int16_t delchwidth);
 static
 OS_TIMER_FUNC(dfs_remove_from_nol)
 {
-    struct dfs_nol_timer_arg *nol_arg;
+    struct dfs_nolelem *elem = from_timer(elem, t, nol_timer);
+    struct dfs_nol_timer_arg *nol_arg = elem->dfs_timer_arg;;
     struct ath_dfs *dfs;
     struct ieee80211com *ic;
     u_int16_t delfreq;
     u_int16_t delchwidth;
-
-    OS_GET_TIMER_ARG(nol_arg, struct dfs_nol_timer_arg *);
 
     dfs = nol_arg->dfs;
     ic = dfs->ic;
@@ -238,8 +237,10 @@ dfs_nol_addchan(struct ath_dfs *dfs, struct ieee80211_channel *chan,
     dfs_nol_arg->delfreq = elem->nol_freq;
     dfs_nol_arg->delchwidth = elem->nol_chwidth;
 
+    elem->dfs_timer_arg = dfs_nol_arg;
+
     OS_INIT_TIMER(NULL, &elem->nol_timer, dfs_remove_from_nol,
-      dfs_nol_arg, ADF_DEFERRABLE_TIMER);
+      elem, ADF_DEFERRABLE_TIMER);
     OS_SET_TIMER(&elem->nol_timer, dfs_nol_timeout*TIME_IN_MS);
 
     /* Update the NOL counter */

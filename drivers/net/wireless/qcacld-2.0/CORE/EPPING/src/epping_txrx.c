@@ -64,23 +64,24 @@
 static int epping_start_adapter(epping_adapter_t *pAdapter);
 static void epping_stop_adapter(epping_adapter_t *pAdapter);
 
-static void epping_timer_expire(void *data)
+static void epping_timer_expire(struct timer_list *t)
 {
-   struct net_device *dev = (struct net_device *) data;
-   epping_adapter_t *pAdapter;
+   epping_adapter_t *pAdapter = from_timer(pAdapter, t, epping_timer);
+   struct net_device *dev;
 
+   if (pAdapter == NULL) {
+      EPPING_LOG(VOS_TRACE_LEVEL_FATAL,
+         "%s: adapter = NULL", __func__);
+      return;
+   }
+
+   dev = pAdapter->dev;
    if (dev == NULL) {
       EPPING_LOG(VOS_TRACE_LEVEL_FATAL,
          "%s: netdev = NULL", __func__);
       return;
    }
 
-   pAdapter = netdev_priv(dev);
-   if (pAdapter == NULL) {
-      EPPING_LOG(VOS_TRACE_LEVEL_FATAL,
-         "%s: adapter = NULL", __func__);
-      return;
-   }
    pAdapter->epping_timer_state = EPPING_TX_TIMER_STOPPED;
    epping_tx_timer_expire(pAdapter);
 }
@@ -384,7 +385,7 @@ epping_adapter_t *epping_add_adapter(epping_context_t *pEpping_ctx,
    adf_nbuf_queue_init(&pAdapter->nodrop_queue);
    pAdapter->epping_timer_state = EPPING_TX_TIMER_STOPPED;
    adf_os_timer_init(epping_get_adf_ctx(), &pAdapter->epping_timer,
-      epping_timer_expire, dev, ADF_DEFERRABLE_TIMER);
+      epping_timer_expire, pAdapter, ADF_DEFERRABLE_TIMER);
    dev->type = ARPHRD_IEEE80211;
    dev->netdev_ops = &epping_drv_ops;
    dev->watchdog_timeo = 5 * HZ;           /* XXX */

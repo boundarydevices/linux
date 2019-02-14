@@ -160,9 +160,9 @@ static void SendPacketCompletion(HTC_TARGET *target, HTC_PACKET *pPacket)
 }
 
 void
-HTCSendCompleteCheckCleanup(void *context)
+HTCSendCompleteCheckCleanup(struct timer_list *t)
 {
-    HTC_ENDPOINT *pEndpoint = (HTC_ENDPOINT *) context;
+    HTC_ENDPOINT *pEndpoint = from_timer(pEndpoint, t, ul_poll_timer);
     HTCSendCompleteCheck(pEndpoint, 1);
 }
 

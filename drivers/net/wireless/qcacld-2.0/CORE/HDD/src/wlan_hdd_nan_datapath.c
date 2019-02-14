@@ -1928,7 +1928,7 @@ static int __wlan_hdd_cfg80211_process_ndp_cmd(struct wiphy *wiphy,
 	}
 	if (nla_parse(tb, QCA_WLAN_VENDOR_ATTR_NDP_PARAMS_MAX,
 			data, data_len,
-			qca_wlan_vendor_ndp_policy)) {
+			qca_wlan_vendor_ndp_policy, NULL)) {
 		hddLog(LOGE, FL("Invalid NDP vendor command attributes"));
 		return -EINVAL;
 	}

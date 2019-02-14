@@ -282,7 +282,7 @@ void        HTCProcessCreditRpt(HTC_TARGET        *target,
                                 int                NumEntries,
                                 HTC_ENDPOINT_ID    FromEndpoint);
 void        HTCFwEventHandler(void *context, A_STATUS status);
-void        HTCSendCompleteCheckCleanup(void *context);
+void        HTCSendCompleteCheckCleanup(struct timer_list *t);
 void        HTCTxResumeAllHandler(void *context);
 
 void htc_credit_record(htc_credit_exchange_type type, A_UINT32 tx_credit,

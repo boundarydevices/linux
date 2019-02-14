@@ -205,9 +205,9 @@ htt_rx_ring_fill_level(struct htt_pdev_t *pdev)
 }
 
 static void
-htt_rx_ring_refill_retry(void *arg)
+htt_rx_ring_refill_retry(struct timer_list *t)
 {
-    htt_pdev_handle pdev = (htt_pdev_handle)arg;
+    htt_pdev_handle pdev = from_timer(pdev, t, rx_ring.refill_retry_timer);
     htt_rx_msdu_buff_replenish(pdev);
 }
 

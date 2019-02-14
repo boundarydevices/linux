@@ -1487,9 +1487,9 @@ static void hif_oob_irq_handler(void *dev_para)
 
 #ifdef HIF_MBOX_SLEEP_WAR
 static void
-HIF_sleep_entry(void *arg)
+HIF_sleep_entry(struct timer_list *t)
 {
-    HIF_DEVICE *device = (HIF_DEVICE *)arg;
+    HIF_DEVICE *device = from_timer(device, t, sleep_timer);
     A_UINT32 idle_ms;
 
     idle_ms = adf_os_ticks_to_msecs(adf_os_ticks()
@@ -2722,6 +2722,8 @@ static int hif_reset_target(HIF_DEVICE *hif_device)
 			("AR6000: %s invalid HIF DEVICE \n", __func__));
 		return -ENODEV;
 	}
+
+#if 0
 	/* Disable sdio func->pull down WLAN_EN-->pull down DAT_2 line */
 	ret = mmc_power_save_host(hif_device->func->card->host);
 	if(ret) {
@@ -2738,6 +2740,7 @@ static int hif_reset_target(HIF_DEVICE *hif_device)
 			("AR6000: %s Failed to restore mmc Power host %d\n",
 			__func__, ret));
 	}
+#endif
 
 done:
 	return ret;

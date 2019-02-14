@@ -126,7 +126,7 @@ void ol_tx_hl_del_ack_queue_flush_all(struct ol_txrx_vdev_t *vdev)
 
 #ifdef QCA_SUPPORT_TXRX_HL_BUNDLE
 void
-ol_tx_hl_vdev_bundle_timer(void *vdev);
+ol_tx_hl_vdev_bundle_timer(struct timer_list *t);
 
 
 void
@@ -137,7 +137,7 @@ ol_tx_hl_queue(struct ol_txrx_vdev_t* vdev, adf_nbuf_t msdu_list);
 
 #else
 
-static inline void ol_tx_hl_vdev_bundle_timer(void *vdev)
+static inline void ol_tx_hl_vdev_bundle_timer(struct timer_list *t)
 {
 	return;
 }
@@ -205,9 +205,6 @@ void
 ol_tx_pdev_ll_pause_queue_send_all(struct ol_txrx_pdev_t *pdev);
 
 struct ol_txrx_vdev_t *
-ol_txrx_get_vdev_from_vdev_id(uint8_t vdev_id);
-
-ol_txrx_vdev_handle
 ol_txrx_get_vdev_from_vdev_id(uint8_t vdev_id);
 
 #endif /* _OL_TX__H_ */

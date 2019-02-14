@@ -1305,9 +1305,9 @@ more_watermarks:
 }
 
 static void
-CE_poll_timeout(void *arg)
+CE_poll_timeout(struct timer_list *t)
 {
-    struct CE_state *CE_state = (struct CE_state *) arg;
+    struct CE_state *CE_state = from_timer(CE_state, t, poll_timer);
     if (CE_state->timer_inited) {
         CE_per_engine_service(CE_state->sc, CE_state->id);
         adf_os_timer_mod(&CE_state->poll_timer, CE_POLL_TIMEOUT);

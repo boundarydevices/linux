@@ -635,11 +635,7 @@ typedef dma_addr_t * dma_context_t;
 #define OS_DECLARE_TIMER(_fn)                  void _fn(void *)
 
 #define OS_TIMER_FUNC(_fn)                     \
-    void _fn(void *timer_arg)
-
-#define OS_GET_TIMER_ARG(_arg, _type)          \
-    (_arg) = (_type)(timer_arg)
-
+    void _fn(struct timer_list *t)
 
 #define OS_INIT_TIMER(_osdev, _timer, _fn, _ctx, type)  adf_os_timer_init(_osdev, _timer, _fn, _ctx, type)
 
@@ -677,9 +673,9 @@ typedef enum _mesgq_event_delivery_type {
  */
 
 static INLINE void
-os_mesgq_handler(void *timer_arg)
+os_mesgq_handler(struct timer_list *t)
 {
-    os_mesg_queue_t    *queue = (os_mesg_queue_t*)timer_arg;
+    os_mesg_queue_t    *queue = from_timer(queue, t, _timer);
     os_mesg_t          *mesg = NULL;
     void               *msg;
 

@@ -71,11 +71,9 @@ __adf_os_timer_init(adf_os_handle_t      hdl,
                     uint8_t type)
 {
     if (ADF_DEFERRABLE_TIMER == type)
-        init_timer_deferrable(timer);
+        timer_setup(timer, func, TIMER_DEFERRABLE);
     else
-        init_timer(timer);
-    timer->function = (adf_dummy_timer_func_t)func;
-    timer->data = (unsigned long)arg;
+	timer_setup(timer, func, 0);
 
     return A_STATUS_OK;
 }

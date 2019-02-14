@@ -2110,9 +2110,10 @@ ol_tx_hl_pdev_queue_send_all(struct ol_txrx_pdev_t* pdev)
  * Return: none
  */
 void
-ol_tx_hl_vdev_bundle_timer(void *vdev)
+ol_tx_hl_vdev_bundle_timer(struct timer_list *t)
 {
 	adf_nbuf_t msdu_list;
+	struct ol_txrx_vdev_t *vdev = from_timer(vdev, t, bundle_queue.timer);
 
 	msdu_list = ol_tx_hl_vdev_queue_send_all(vdev, true);
 	if (msdu_list)

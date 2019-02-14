@@ -191,13 +191,13 @@ endif
 # Feature flags which are not (currently) configurable via Kconfig
 
 #Whether to build debug version
-BUILD_DEBUG_VERSION := 1
+#BUILD_DEBUG_VERSION := 1
 
 #Enable this flag to build driver in diag version
-BUILD_DIAG_VERSION := 1
+#BUILD_DIAG_VERSION := 1
 
 #Do we panic on bug?  default is to warn
-PANIC_ON_BUG := 1
+#PANIC_ON_BUG := 1
 
 #Re-enable wifi on WDI timeout
 RE_ENABLE_WIFI_ON_WDI_TIMEOUT := 0
@@ -1017,7 +1017,6 @@ CDEFINES :=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DWLAN_PERF \
 		-DPTT_SOCK_SVC_ENABLE \
 		-Wall\
-		-Werror\
 		-D__linux__ \
 		-DHAL_SELF_STA_PER_BSS=1 \
 		-DWLAN_FEATURE_VOWIFI_11R \
@@ -1057,7 +1056,9 @@ CDEFINES :=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DFEATURE_WLAN_CH144 \
 		-DHTC_CRP_DEBUG \
 		-DWLAN_VOWIFI_DEBUG \
-		-DATH_SUPPORT_DFS
+		-DATH_SUPPORT_DFS \
+		-Wno-misleading-indentation
+#-Werror is omitted
 
 ifeq ($(CONFIG_WLAN_POWER_DEBUGFS), y)
 CDEFINES += -DWLAN_POWER_DEBUGFS
@@ -1163,7 +1164,7 @@ CDEFINES += -DMDNS_OFFLOAD
 endif
 
 ifeq (y,$(findstring y,$(CONFIG_ARCH_MSM) $(CONFIG_ARCH_QCOM)))
-CDEFINES += -DMSM_PLATFORM
+#CDEFINES += -DMSM_PLATFORM
 ifeq ($(CONFIG_CNSS), y)
 ifeq ($(CONFIG_HIF_PCI), 1)
 CDEFINES += -DFEATURE_BUS_BANDWIDTH
@@ -1702,7 +1703,7 @@ CDEFINES += -DFEATURE_DPTRACE_ENABLE
 endif
 
 ifeq ($(CONFIG_HIF_PCI), 1)
-CDEFINES += -DFORCE_LEGACY_PCI_INTERRUPTS
+#CDEFINES += -DFORCE_LEGACY_PCI_INTERRUPTS
 endif
 
 ifeq ($(CONFIG_WLAN_THERMAL_SHUTDOWN), 1)
