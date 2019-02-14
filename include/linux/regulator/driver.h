@@ -545,4 +545,10 @@ int regulator_set_active_discharge_regmap(struct regulator_dev *rdev,
 					  bool enable);
 void *regulator_get_init_drvdata(struct regulator_init_data *reg_init_data);
 
+/*
+ * Helper functions intended to be used by regulator drivers prior registering
+ * their regulators.
+ */
+int regulator_desc_list_voltage_linear_range(const struct regulator_desc *desc,
+					     unsigned int selector);
 #endif
