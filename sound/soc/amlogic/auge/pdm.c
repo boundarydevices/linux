@@ -185,7 +185,7 @@ static const struct snd_kcontrol_new snd_pdm_controls[] = {
 		     pdm_dclk_get_enum,
 		     pdm_dclk_set_enum),
 };
-
+#if 0
 static int pdm_mute_val_info(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_info *uinfo)
 {
@@ -327,7 +327,7 @@ __error:
 
 	return err;
 }
-
+#endif
 static irqreturn_t aml_pdm_isr_handler(int irq, void *data)
 {
 	struct snd_pcm_substream *substream =
@@ -830,13 +830,13 @@ int aml_pdm_dai_startup(struct snd_pcm_substream *substream,
 		pr_err("Can't enable pcm clk_pdm_dclk clock: %d\n", ret);
 		goto err;
 	}
-
+#if 0
 	if (p_pdm->chipinfo && p_pdm->chipinfo->mute_fn) {
 		struct snd_card *card = cpu_dai->component->card->snd_card;
 
 		pdm_running_create_controls(card, p_pdm);
 	}
-
+#endif
 	return 0;
 err:
 	pr_err("failed enable clock\n");
@@ -847,12 +847,13 @@ void aml_pdm_dai_shutdown(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *cpu_dai)
 {
 	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
-
+#if 0
 	if (p_pdm->chipinfo && p_pdm->chipinfo->mute_fn) {
 		struct snd_card *card = cpu_dai->component->card->snd_card;
 
 		pdm_running_destroy_controls(card, p_pdm);
 	}
+#endif
 
 	/* disable clock and gate */
 	clk_disable_unprepare(p_pdm->clk_pdm_dclk);
