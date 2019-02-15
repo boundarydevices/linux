@@ -15,7 +15,7 @@
 #include "imx6dl.dtsi"
 #include "imx6qdl-lshore.dtsi"
 
-&iomuxc_imx6q_lshore {
+&iomuxc {
 	pinctrl_uart5: uart5grp {
 		fsl,pins = <
 			MX6QDL_PAD_CSI0_DAT14__UART5_TX_DATA	0x1b0b1

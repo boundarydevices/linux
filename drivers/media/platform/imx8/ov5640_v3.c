@@ -1082,7 +1082,7 @@ static int ov5640_config_init(struct ov5640 *sensor)
 		return retval;
 
 	/* driver capability */
-	ov5640_write_reg(0x302C, 0xc2);
+	ov5640_write_reg(sensor, 0x302C, 0xc2);
 
 	return 0;
 }
@@ -1096,7 +1096,7 @@ static void ov5640_start(struct ov5640 *sensor)
 
 static int ov5640_change_mode(struct ov5640 *sensor)
 {
-	struct reg_value *pModeSetting = NULL;
+	const struct reg_value *pModeSetting = NULL;
 	enum ov5640_mode mode = sensor->streamcap.capturemode;
 	enum ov5640_frame_rate frame_rate =
 				to_ov5640_frame_rate(&sensor->streamcap.timeperframe);
@@ -1296,7 +1296,7 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 	return 0;
 }
 
-static struct ov5640_mode_info *get_max_resolution(enum ov5640_frame_rate rate)
+static const struct ov5640_mode_info *get_max_resolution(enum ov5640_frame_rate rate)
 {
 	u32 max_width;
 	enum ov5640_mode mode;
@@ -1314,10 +1314,10 @@ static struct ov5640_mode_info *get_max_resolution(enum ov5640_frame_rate rate)
 	return &ov5640_mode_info_data[rate][mode];
 }
 
-static struct ov5640_mode_info *match(struct v4l2_mbus_framefmt *fmt,
+static const struct ov5640_mode_info *match(struct v4l2_mbus_framefmt *fmt,
 			enum ov5640_frame_rate rate)
 {
-	struct ov5640_mode_info *info;
+	const struct ov5640_mode_info *info;
 	int i;
 
 	for (i = 0; i < (ov5640_mode_MAX + 1); i++) {
@@ -1340,7 +1340,7 @@ static void try_to_find_resolution(struct ov5640 *sensor,
 	struct v4l2_fract *timeperframe = &sensor->streamcap.timeperframe;
 	enum ov5640_frame_rate frame_rate = to_ov5640_frame_rate(timeperframe);
 	struct device *dev = &sensor->i2c_client->dev;
-	struct ov5640_mode_info *info;
+	const struct ov5640_mode_info *info;
 	bool found = false;
 
 	if ((mf->width == ov5640_mode_info_data[frame_rate][mode].width) &&
@@ -1402,7 +1402,7 @@ static int ov5640_set_fmt(struct v4l2_subdev *sd,
 	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
 		return 0;
 
-	init_device();
+	init_device(sensor);
 	ret = ov5640_change_mode(sensor);
 	sensor->fmt = fmt;
 

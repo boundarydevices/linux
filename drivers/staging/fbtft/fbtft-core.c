@@ -33,6 +33,7 @@
 #include <linux/backlight.h>
 #include <linux/platform_device.h>
 #include <linux/spinlock.h>
+#include <linux/dma-mapping.h>
 #include <linux/of.h>
 #include <linux/of_gpio.h>
 #include <video/mipi_display.h>
@@ -43,6 +44,12 @@
 static unsigned long debug;
 module_param(debug, ulong, 0000);
 MODULE_PARM_DESC(debug, "override device debug level");
+
+#ifdef CONFIG_HAS_DMA
+static bool dma = true;
+module_param(dma, bool, 0);
+MODULE_PARM_DESC(dma, "Use DMA buffer");
+#endif
 
 int fbtft_write_buf_dc(struct fbtft_par *par, void *buf, size_t len, int dc)
 {

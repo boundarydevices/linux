@@ -708,7 +708,6 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 	struct device_node *cpu_np = NULL, *codec_np = NULL;
 	struct platform_device *cpu_pdev;
 	struct imx_priv *priv = &card_priv;
-	struct i2c_client *codec_dev;
 	struct imx_wm8960_data *data;
 	struct platform_device *asrc_pdev = NULL;
 	struct device_node *asrc_np;

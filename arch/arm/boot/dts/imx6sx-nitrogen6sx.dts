@@ -47,12 +47,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
-	iomuxc_nitrogen6sx: iomuxc-nitrogen6sxgrp {
-		status = "okay";
-	};
-};
-
-&iomuxc_nitrogen6sx {
 	pinctrl_audmux: audmuxgrp {
 		fsl,pins = <
 			MX6SX_PAD_SD1_DATA0__AUDMUX_AUD5_RXD	0x1b0b0
@@ -193,7 +187,7 @@
 		>;
 	};
 
-	pinctrl_i2c1_1: i2c1_1grp {
+	pinctrl_i2c1_1: i2c1-1grp {
 		fsl,pins = <
 #define GP_I2C1_SCL	<&gpio1 0 GPIO_ACTIVE_HIGH>
 			MX6SX_PAD_GPIO1_IO00__GPIO1_IO_0	0x4001b8b1
@@ -209,7 +203,7 @@
 		>;
 	};
 
-	pinctrl_i2c2_1: i2c2_1grp {
+	pinctrl_i2c2_1: i2c2-1grp {
 		fsl,pins = <
 #define GP_I2C2_SCL	<&gpio1 2 GPIO_ACTIVE_HIGH>
 			MX6SX_PAD_GPIO1_IO02__GPIO1_IO_2	0x4001b8b1
@@ -237,7 +231,7 @@
 		>;
 	};
 
-	pinctrl_i2c3_1: i2c3_1grp {
+	pinctrl_i2c3_1: i2c3-1grp {
 		fsl,pins = <
 #define GP_I2C3_SCL	<&gpio2 14 GPIO_ACTIVE_HIGH>
 			MX6SX_PAD_KEY_COL4__GPIO2_IO_14		0x4001b8b1
@@ -500,7 +494,7 @@
 		t_lvds = &t_lvds;
 	};
 
-	backlight_lvds {
+	backlight-lvds {
 		compatible = "pwm-backlight";
 		pwms = <&pwm4 0 5000000>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
@@ -509,11 +503,11 @@
 		power-supply = <&reg_3p3v>;
 	};
 
-	bt_rfkill {
+	bt-rfkill {
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
 		compatible = "net,rfkill-gpio";
-		name = "bt_rfkill";
+		name = "bt-rfkill";
 		type = <2>;     /* bluetooth */
 		reset-gpios = GP_BT_RFKILL_RESET;
 		status = "okay";
@@ -531,105 +525,92 @@
 		reg = <0x80000000 0x40000000>;
 	};
 
-	pxp_v4l2_out {
+	pxp-v4l2-out {
 		compatible = "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
 		status = "okay";
 	};
 
-	regulators {
-		compatible = "simple-bus";
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		reg_1p8v: regulator@0 {
-			compatible = "regulator-fixed";
-			reg = <0>;
-			regulator-name = "1P8V";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			regulator-always-on;
-		};
-
-		reg_2p5v: regulator@1 {
-			compatible = "regulator-fixed";
-			reg = <1>;
-			regulator-name = "2P5V";
-			regulator-min-microvolt = <2500000>;
-			regulator-max-microvolt = <2500000>;
-			regulator-always-on;
-		};
-
-		reg_3p3v: regulator@2 {
-			compatible = "regulator-fixed";
-			reg = <2>;
-			regulator-name = "3P3V";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-		};
-
-		reg_usb_otg1_vbus: regulator@3 {
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_usbotg1_vbus>;
-			compatible = "regulator-fixed";
-			reg = <3>;
-			regulator-name = "usb_otg1_vbus";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-			gpio = GP_USB_OTG1_PWR;
-			enable-active-high;
-		};
-
-		reg_wifi_3p3v: regulator@4 {
-			compatible = "regulator-fixed";
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_wifi_3p3v>;
-			reg = <4>;
-			regulator-name = "wifi_3P3V";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			startup-delay-us = <5000>;
-			gpio = GP_REG_WIFI_3P3V_EN;
-			enable-active-high;
-		};
-
-		reg_wifi_1p8v: regulator@5 {
-			compatible = "regulator-fixed";
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_wifi_1p8v>;
-			reg = <5>;
-			regulator-name = "wifi_1P8V";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			startup-delay-us = <400000>;
-			gpio = GP_REG_WIFI_1P8V_EN;
-			enable-active-high;
-			vin-supply = <&reg_wifi_3p3v>;
-		};
-
-		reg_wlan_en: regulator@6 {
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_wlan>;
-			compatible = "regulator-fixed";
-			clocks = <&clks IMX6SX_CLK_CKO>;
-			clock-names = "slow";
-			reg = <6>;
-			regulator-name = "wlan-en";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			startup-delay-us = <70000>;
-			gpio = GP_REG_WLAN_EN;
-			enable-active-high;
-			vin-supply = <&reg_wifi_1p8v>;
-		};
+	reg_1p8v: regulator-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "1P8V";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
 	};
 
-	sound_sgtl5000 {
+	reg_2p5v: regulator-2v5 {
+		compatible = "regulator-fixed";
+		regulator-name = "2P5V";
+		regulator-min-microvolt = <2500000>;
+		regulator-max-microvolt = <2500000>;
+		regulator-always-on;
+	};
+
+	reg_3p3v: regulator-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "3P3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	reg_usb_otg1_vbus: regulator-usb-otg1-vbus {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usbotg1_vbus>;
+		compatible = "regulator-fixed";
+		regulator-name = "usb_otg1_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = GP_USB_OTG1_PWR;
+		enable-active-high;
+	};
+
+	reg_wifi_3p3v: regulator-wifi-3v3 {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_wifi_3p3v>;
+		regulator-name = "wifi_3P3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		startup-delay-us = <5000>;
+		gpio = GP_REG_WIFI_3P3V_EN;
+		enable-active-high;
+	};
+
+	reg_wifi_1p8v: regulator-wifi-1v8 {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_wifi_1p8v>;
+		regulator-name = "wifi_1P8V";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		startup-delay-us = <400000>;
+		gpio = GP_REG_WIFI_1P8V_EN;
+		enable-active-high;
+		vin-supply = <&reg_wifi_3p3v>;
+	};
+
+	reg_wlan_en: regulator-wlan {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_wlan>;
+		compatible = "regulator-fixed";
+		clocks = <&clks IMX6SX_CLK_CKO>;
+		clock-names = "slow";
+		regulator-name = "wlan-en";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		startup-delay-us = <70000>;
+		gpio = GP_REG_WLAN_EN;
+		enable-active-high;
+		vin-supply = <&reg_wifi_1p8v>;
+	};
+
+	sound-sgtl5000 {
 		compatible = "fsl,imx6sx-nitrogen6sx-sgtl5000",
 			     "fsl,imx-audio-sgtl5000";
 		model = "sgtl5000-audio";
 		ssi-controller = <&ssi1>;
-		audio-codec = <&codec>;
+		audio-codec = <&sgtl5000>;
 		audio-routing =
 			"MIC_IN", "Mic Jack",
 			"Mic Jack", "Mic Bias",
@@ -786,7 +767,7 @@
 	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
-	codec: sgtl5000@0a {
+	sgtl5000: sgtl5000@0a {
 		compatible = "fsl,sgtl5000";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sgtl5000>;
@@ -831,14 +812,14 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-        egalax_ts@04 {
+        egalax-ts@04 {
                 compatible = "eeti,egalax_ts";
                 reg = <0x04>;
                 interrupts-extended = GPIRQ_I2C3_J18;
                 wakeup-gpios = GP_I2C3_J18;
         };
 
-	ft5x06_ts@38 {
+	ft5x06-ts@38 {
 		compatible = "ft5x06-ts";
 		reg = <0x38>;
                 interrupts-extended = GPIRQ_I2C3_J18;
@@ -881,7 +862,7 @@
 		bus-width = <24>;
 
 		display-timings {
-			t_lcd: t_lcd_default {
+			t_lcd: t-lcd-default {
 				/* 720p values may be changed in bootscript */
 				clock-frequency = <74160000>;
 				hactive = <1280>;
@@ -927,7 +908,7 @@
 		status = "okay";
 
 		display-timings {
-			t_lvds: t_lvds_default {
+			t_lvds: t-lvds-default {
 				/* values may be changed in bootscript */
 				clock-frequency = <73404600>;
 				hactive = <1280>;

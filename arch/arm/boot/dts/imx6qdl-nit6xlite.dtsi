@@ -45,12 +45,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
-	iomuxc_imx6q_nit6xlite: iomuxc-imx6q-nit6xlitegrp {
-		status = "okay";
-	};
-};
-
-&iomuxc_imx6q_nit6xlite {
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x1b0b0		/* J28 pin 7 - barcode scanner gpio */
@@ -194,7 +188,7 @@
 		>;
 	};
 
-	pinctrl_ipu1_di0: ipu1_di0grp {
+	pinctrl_ipu1_di0: ipu1-di0grp {
 		fsl,pins = <
 			MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK 0x10
 			MX6QDL_PAD_DI0_PIN15__IPU1_DI0_PIN15       0x10		/* DRDY */
@@ -398,14 +392,96 @@
 		t_lvds = &t_lvds;
 	};
 
+	backlight-j7 {
+		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <10>;
+		pwms = <&pwm1 0 100000>;
+	};
+
+	backlight_lcd: backlight-lcd {
+		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <10>;
+		display = <&fb_lcd>;
+		pwms = <&pwm3 0 5000000>;
+	};
+
+	backlight_lvds: backlight-lvds {
+		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <10>;
+		display = <&fb_lvds>;
+		pwms = <&pwm4 0 5000000>;
+	};
+
 	bt-rfkill {
 		compatible = "net,rfkill-gpio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		name = "bt_rfkill";
+		name = "bt-rfkill";
 		type = <2>;     /* bluetooth */
 		reset-gpios = GP_BRM_BT_RESET;
 		shutdown-gpios = GP_BRM_BT_SHUTDOWN;
+	};
+
+	fb_lvds: fb@0 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "ldb";
+		interface_pix_fmt = "RGB666";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	fb_lcd: fb@1 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "lcd";
+		interface_pix_fmt = "RGB24";
+		mode_str = "okaya_480x272";
+		default_bpp = <16>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	fb_hdmi: fb@2 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "hdmi";
+		interface_pix_fmt = "RGB24";
+		mode_str ="1280x720M@60";
+		default_bpp = <32>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "disabled";
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+		home {
+			label = "Home";
+			gpios = GP_HOME;
+			linux,code = <KEY_HOMEPAGE>;
+		};
+
+		back {
+			label = "Back";
+			gpios = GP_BACK;
+			linux,code = <KEY_BACK>;
+		};
+	};
+
+	lcd: lcd@0 {
+		compatible = "fsl,lcd";
+		ipu_id = <0>;
+		disp_id = <0>;
+		default_ifmt = "RGB24";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ipu1_di0>;
+		status = "okay";
 	};
 
 	leds {
@@ -447,79 +523,51 @@
 		reg = <0x10000000 0x20000000>;
 	};
 
-	regulators {
-		compatible = "simple-bus";
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		reg_1p8v: regulator@0 {
-			compatible = "regulator-fixed";
-			reg = <0>;
-			regulator-name = "1P8V";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			regulator-always-on;
-		};
-
-		reg_2p5v: regulator@1 {
-			compatible = "regulator-fixed";
-			reg = <1>;
-			regulator-name = "2P5V";
-			regulator-min-microvolt = <2500000>;
-			regulator-max-microvolt = <2500000>;
-			regulator-always-on;
-		};
-
-		reg_3p3v: regulator@2 {
-			compatible = "regulator-fixed";
-			reg = <2>;
-			regulator-name = "3P3V";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-		};
-
-		reg_brm_wifi: regulator@3 {
-			compatible = "regulator-fixed";
-			reg = <3>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_brm_wifi>;
-			regulator-name = "reg_brm_wifi";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			gpio = GP_BRM_WL_EN;
-			startup-delay-us = <70000>;
-			enable-active-high;
-		};
-
-		reg_usbotg_vbus: regulator@4 {
-			compatible = "regulator-fixed";
-			reg = <4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_usbotg_vbus>;
-			regulator-name = "usbotg_vbus";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-			gpio = GP_USB_OTG_PWR;
-			enable-active-high;
-		};
+	reg_1p8v: regulator-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "1P8V";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
 	};
 
-	gpio-keys {
-		compatible = "gpio-keys";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_gpio_keys>;
-		home {
-			label = "Home";
-			gpios = GP_HOME;
-			linux,code = <KEY_HOMEPAGE>;
-		};
+	reg_2p5v: regulator-2v5 {
+		compatible = "regulator-fixed";
+		regulator-name = "2P5V";
+		regulator-min-microvolt = <2500000>;
+		regulator-max-microvolt = <2500000>;
+		regulator-always-on;
+	};
 
-		back {
-			label = "Back";
-			gpios = GP_BACK;
-			linux,code = <KEY_BACK>;
-		};
+	reg_3p3v: regulator-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "3P3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	reg_brm_wifi: regulator-brm-wifi {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_brm_wifi>;
+		regulator-name = "reg_brm_wifi";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = GP_BRM_WL_EN;
+		startup-delay-us = <70000>;
+		enable-active-high;
+	};
+
+	reg_usbotg_vbus: regulator-usb-otg-vbus {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usbotg_vbus>;
+		regulator-name = "usbotg_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = GP_USB_OTG_PWR;
+		enable-active-high;
 	};
 
 	sound_sgtl5000: sound-sgtl5000 {
@@ -527,7 +575,7 @@
 			     "fsl,imx-audio-sgtl5000";
 		model = "sgtl5000-audio";
 		ssi-controller = <&ssi1>;
-		audio-codec = <&codec>;
+		audio-codec = <&sgtl5000>;
 		audio-routing =
 			"MIC_IN", "Mic Jack",
 			"Mic Jack", "Mic Bias",
@@ -541,71 +589,6 @@
 			     "fsl,imx-audio-hdmi";
 		model = "imx-audio-hdmi";
 		hdmi-controller = <&hdmi_audio>;
-	};
-
-	fb_lvds: fb@0 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "ldb";
-		interface_pix_fmt = "RGB666";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	fb_lcd: fb@1 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "lcd";
-		interface_pix_fmt = "RGB24";
-		mode_str = "okaya_480x272";
-		default_bpp = <16>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	fb_hdmi: fb@2 {
-		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "hdmi";
-		interface_pix_fmt = "RGB24";
-		mode_str ="1280x720M@60";
-		default_bpp = <32>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "disabled";
-	};
-
-	lcd: lcd@0 {
-		compatible = "fsl,lcd";
-		ipu_id = <0>;
-		disp_id = <0>;
-		default_ifmt = "RGB24";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ipu1_di0>;
-		status = "okay";
-	};
-
-	backlight-j7 {
-		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
-		compatible = "pwm-backlight";
-		default-brightness-level = <10>;
-		pwms = <&pwm1 0 100000>;
-	};
-
-	backlight_lcd: backlight-lcd {
-		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
-		compatible = "pwm-backlight";
-		default-brightness-level = <10>;
-		display = <&fb_lcd>;
-		pwms = <&pwm3 0 5000000>;
-	};
-
-	backlight_lvds: backlight-lvds {
-		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
-		compatible = "pwm-backlight";
-		default-brightness-level = <10>;
-		display = <&fb_lvds>;
-		pwms = <&pwm4 0 5000000>;
 	};
 
 	v4l2-out {
@@ -703,7 +686,7 @@
 	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
-	codec: sgtl5000@0a {
+	sgtl5000: sgtl5000@0a {
 		compatible = "fsl,sgtl5000";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sgtl5000>;
@@ -796,7 +779,7 @@
 		primary;
 
 		display-timings {
-			t_lvds: t_lvds_default {
+			t_lvds: t-lvds-default {
 				/* lg1280x800 values may be changed in bootscript */
 				clock-frequency = <72000000>;
 				hactive = <1280>;

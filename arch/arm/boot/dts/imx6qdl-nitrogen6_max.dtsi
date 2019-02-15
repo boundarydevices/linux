@@ -61,6 +61,15 @@
 		>;
 	};
 
+	pinctrl_can1: can1grp {
+		fsl,pins = <
+			MX6QDL_PAD_KEY_ROW2__FLEXCAN1_RX	0x1b0b0
+			MX6QDL_PAD_KEY_COL2__FLEXCAN1_TX	0x1b0b0
+#define GP_CAN1_STANDBY	<&gpio1 2 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x0b0b0
+		>;
+	};
+
 	pinctrl_ecspi1: ecspi1grp {
 		fsl,pins = <
 			MX6QDL_PAD_EIM_D17__ECSPI1_MISO		0x100b1
@@ -94,15 +103,6 @@
 			MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28	0x1b0b0
 #define GPIRQ_ENET		<&gpio1 6 IRQ_TYPE_LEVEL_HIGH>
 			MX6QDL_PAD_GPIO_6__ENET_IRQ		0x000b1
-		>;
-	};
-
-	pinctrl_flexcan1: flexcan1grp {
-		fsl,pins = <
-			MX6QDL_PAD_KEY_ROW2__FLEXCAN1_RX	0x1b0b0
-			MX6QDL_PAD_KEY_COL2__FLEXCAN1_TX	0x1b0b0
-#define GP_FLEXCAN1_STANDBY	<&gpio1 2 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x0b0b0
 		>;
 	};
 
@@ -539,7 +539,7 @@
 		compatible = "net,rfkill-gpio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		name = "bt_rfkill";
+		name = "bt-rfkill";
 		type = <2>;	/* bluetooth */
 		reset-gpios = GP_BT_RFKILL_RESET;
 	};
@@ -698,62 +698,51 @@
 		pwms = <&pwm3 0 45>; /* 1 / 45 ns = 22 MHz */
 	};
 
-	regulators {
-		compatible = "simple-bus";
-		#address-cells = <1>;
-		#size-cells = <0>;
+	reg_1p8v: regulator-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "1P8V";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+	};
 
-		reg_1p8v: regulator@0 {
-			compatible = "regulator-fixed";
-			reg = <0>;
-			regulator-name = "1P8V";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			regulator-always-on;
-		};
+	reg_2p5v: regulator-2v5 {
+		compatible = "regulator-fixed";
+		regulator-name = "2P5V";
+		regulator-min-microvolt = <2500000>;
+		regulator-max-microvolt = <2500000>;
+		regulator-always-on;
+	};
 
-		reg_2p5v: regulator@1 {
-			compatible = "regulator-fixed";
-			reg = <1>;
-			regulator-name = "2P5V";
-			regulator-min-microvolt = <2500000>;
-			regulator-max-microvolt = <2500000>;
-			regulator-always-on;
-		};
+	reg_3p3v: regulator-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "3P3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
 
-		reg_3p3v: regulator@2 {
-			compatible = "regulator-fixed";
-			reg = <2>;
-			regulator-name = "3P3V";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-		};
+	reg_usb_otg_vbus: regulator-usb-otg-vbus {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usbotg_vbus>;
+		regulator-name = "usb_otg_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = GP_REG_USBOTG;
+		enable-active-high;
+	};
 
-		reg_usbotg_vbus: regulator@3 {
-			compatible = "regulator-fixed";
-			reg = <3>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_usbotg_vbus>;
-			regulator-name = "usb_otg_vbus";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-			gpio = GP_REG_USBOTG;
-			enable-active-high;
-		};
-
-		reg_wlan_en: regulator@4 {
-			compatible = "regulator-fixed";
-			reg = <4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_wlan_en>;
-			regulator-name = "wlan-en";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			gpio = GP_REG_WLAN_EN;
-			startup-delay-us = <70000>;
-			enable-active-high;
-		};
+	reg_wlan_en: regulator-wlan {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_wlan_en>;
+		regulator-name = "wlan-en";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = GP_REG_WLAN_EN;
+		startup-delay-us = <70000>;
+		enable-active-high;
 	};
 
 	sound {
@@ -833,8 +822,8 @@
 
 &can1 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_flexcan1>;
-	trx-stby-gpio = GP_FLEXCAN1_STANDBY;
+	pinctrl-0 = <&pinctrl_can1>;
+	trx-stby-gpio = GP_CAN1_STANDBY;
 	status = "okay";
 };
 
@@ -1299,7 +1288,7 @@
 };
 
 &usbotg {
-	vbus-supply = <&reg_usbotg_vbus>;
+	vbus-supply = <&reg_usb_otg_vbus>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg>;
 	disable-over-current;

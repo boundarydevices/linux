@@ -1177,7 +1177,7 @@ static void dwc3_get_properties(struct dwc3 *dwc)
 		vbus_reg = devm_regulator_get(dev, "vbus");
 		if (IS_ERR(vbus_reg)) {
 			dev_err(dev, "vbus init failed\n");
-			return PTR_ERR(vbus_reg);
+/*			return PTR_ERR(vbus_reg); */
 		}
 	}
 	dwc->vbus_reg = vbus_reg;

@@ -424,8 +424,6 @@ static void imx_stop_tx(struct uart_port *port)
 			 * half duplex - reactivate receive mode,
 			 * flush receive pipe echo crap
 			 */
-			udelay(sport->trcv_delay);
-
 			while (readl(sport->port.membase + URXD0) &
 			       URXD_CHARRDY)
 				barrier();
@@ -533,7 +531,7 @@ static inline int imx_transmit_buffer(struct imx_port *sport)
 	}
 
 	if (sport->dma_is_txing)
-		return;
+		return 0;
 
 	while (!uart_circ_empty(xmit) &&
 	       !(readl(sport->port.membase + uts_reg(sport)) & UTS_TXFULL)) {

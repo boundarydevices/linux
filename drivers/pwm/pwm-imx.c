@@ -208,17 +208,15 @@ static void imx_pwm_wait_fifo_slot(struct pwm_chip *chip,
 static int imx_pwm_apply_v2(struct pwm_chip *chip, struct pwm_device *pwm,
 			    struct pwm_state *state)
 {
-	unsigned long duty_cycles, prescale;
+	unsigned long duty_cycles;
 	struct imx_chip *imx = to_imx_chip(chip);
 	struct pwm_state cstate;
-	struct device *dev = chip->dev;
 	int duty_ns = state->duty_cycle;
 	int period_ns = state->period;
 	unsigned src, best_src = 0;
 	unsigned long best_rate = ~0;
 	unsigned long best_error = ~0;
 	unsigned long best_cycles = 0, best_prescale = 0;
-	unsigned int period_ms;
 	unsigned long long c;
 	int ret;
 	u32 cr;
@@ -226,10 +224,10 @@ static int imx_pwm_apply_v2(struct pwm_chip *chip, struct pwm_device *pwm,
 	pwm_get_state(pwm, &cstate);
 
 	if (!state->enabled) {
-		writel(0, imx->mmio_base + MX3_PWMCR);
-
-		if (cstate.enabled)
+		if (cstate.enabled) {
+			writel(0, imx->mmio_base + MX3_PWMCR);
 			imx_pwm_clk_disable_unprepare(chip);
+		}
 		return 0;
 	}
 

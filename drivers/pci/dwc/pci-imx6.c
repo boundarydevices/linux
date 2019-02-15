@@ -522,7 +522,7 @@ static void imx_pcie_assert_core_reset(struct imx_pcie *imx_pcie)
 		if (gpc_reg)
 			reg32setbit(gpc_reg + GPC_CNTR, 7);
 		else
-			dev_err(pp->dev, "ioremap failed with gpc base\n");
+			dev_err(dev, "ioremap failed with gpc base\n");
 		iounmap(gpc_reg);
 		break;
 	}
@@ -1041,10 +1041,10 @@ static int imx_pcie_deassert_core_reset(struct imx_pcie *imx_pcie)
 
 	if (imx_pcie->force_detect_state) {
 		imx_pcie->force_detect_state = 0;
-		val = dw_pcie_readl_rc(pp, PCIE_PL_PFLR);
+		val = dw_pcie_readl_dbi(pci, PCIE_PL_PFLR);
 		val &= ~PCIE_PL_PFLR_LINK_STATE_MASK;
 		val |= PCIE_PL_PFLR_FORCE_LINK;
-		dw_pcie_writel_rc(pp, PCIE_PL_PFLR, val);
+		dw_pcie_writel_dbi(pci, PCIE_PL_PFLR, val);
 	}
 
 	if (ret == 0)
@@ -1311,7 +1311,7 @@ static void imx_pcie_init_phy(struct imx_pcie *imx_pcie)
 			}
 			ret = clk_prepare_enable(imx_pcie->pcie_ext_src);
 			if (ret)
-				dev_err(imx_pcie->pp.dev,
+				dev_err(imx_pcie->pci->dev,
 					"unable to enable pcie_ext_src clock\n");
 			else
 				imx_pcie->ext_src_clk_enabled = 1;

@@ -2026,7 +2026,7 @@ struct spi_controller *__spi_alloc_controller(struct device *dev,
 	ctlr->dev.parent = dev;
 	pm_suspend_ignore_children(&ctlr->dev, true);
 	spi_controller_set_devdata(ctlr, &ctlr[1]);
-	of_spi_get_pinctrl(master, dev);
+	of_spi_get_pinctrl(ctlr, dev);
 
 	return ctlr;
 }
@@ -2066,7 +2066,7 @@ static int of_spi_register_master(struct spi_controller *ctlr)
 	return 0;
 }
 
-static int of_spi_get_pinctrl(struct spi_master *master, struct device *dev)
+static int of_spi_get_pinctrl(struct spi_controller *ctlr, struct device *dev)
 {
 	int ret;
 	struct pinctrl *pinctrl;
@@ -2075,14 +2075,14 @@ static int of_spi_get_pinctrl(struct spi_master *master, struct device *dev)
 
 	pinctrl = devm_pinctrl_get(dev);
 	if (!IS_ERR(pinctrl)) {
-		master->pinctrl = pinctrl;
+		ctlr->pinctrl = pinctrl;
 		pins_read = pinctrl_lookup_state(pinctrl, "read");
 		if (!IS_ERR(pins_read))
-			master->pins_read = pins_read;
+			ctlr->pins_read = pins_read;
 
 		pins_write = pinctrl_lookup_state(pinctrl, "write");
 		if (!IS_ERR(pins_write)) {
-			master->pins_write = pins_write;
+			ctlr->pins_write = pins_write;
 			ret = pinctrl_select_state(pinctrl, pins_write);
 			if (ret)
 				return ret;

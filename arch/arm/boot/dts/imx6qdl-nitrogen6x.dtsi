@@ -47,12 +47,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
-	iomuxc_imx6q_nitrogen6x: iomuxc-imx6q-nitrogen6xgrp {
-		status = "okay";
-	};
-};
-
-&iomuxc_imx6q_nitrogen6x {
 	pinctrl_audmux: audmuxgrp {
 		fsl,pins = <
 			MX6QDL_PAD_CSI0_DAT7__AUD3_RXD		0x130b0
@@ -153,7 +147,7 @@
 		>;
 	};
 
-	pinctrl_i2c1_1: i2c1_1grp {
+	pinctrl_i2c1_1: i2c1-1grp {
 		fsl,pins = <
 #define GP_I2C1_SCL	<&gpio3 21 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_D21__GPIO3_IO21		0x4001b8b1
@@ -182,7 +176,7 @@
 		>;
 	};
 
-	pinctrl_i2c2_1: i2c2_1grp {
+	pinctrl_i2c2_1: i2c2-1grp {
 		fsl,pins = <
 #define GP_I2C2_SCL	<&gpio4 12 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_KEY_COL3__GPIO4_IO12		0x4001b8b1
@@ -242,7 +236,7 @@
 		>;
 	};
 
-	pinctrl_i2c3_1: i2c3_1grp {
+	pinctrl_i2c3_1: i2c3-1grp {
 		fsl,pins = <
 #define GP_I2C3_SCL	<&gpio1 5 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_5__GPIO1_IO05		0x4001b8b1
@@ -279,7 +273,7 @@
 		>;
 	};
 
-	pinctrl_i2c3_gt911: i2c3_gt911grp {
+	pinctrl_i2c3_gt911: i2c3-gt911grp {
 		fsl,pins = <
 #define GPIRQ_GT911			<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
 #define GP_GT911_IRQ			<&gpio1 9 GPIO_ACTIVE_HIGH>
@@ -310,7 +304,7 @@
 		>;
 	};
 
-	pinctrl_lcd0_rgb: lcd0_rgbgrp {
+	pinctrl_lcd0_rgb: lcd0-rgbgrp {
 		fsl,pins = <
 			MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK	0x10
 			MX6QDL_PAD_DI0_PIN15__IPU1_DI0_PIN15		0x10	/* DRDY */
@@ -337,7 +331,7 @@
 		>;
 	};
 
-	pinctrl_lcd0_rgb24: lcd0_rgb24grp {
+	pinctrl_lcd0_rgb24: lcd0-rgb24grp {
 		fsl,pins = <
 			MX6QDL_PAD_DISP0_DAT18__IPU1_DISP0_DATA18	0x10
 			MX6QDL_PAD_DISP0_DAT19__IPU1_DISP0_DATA19	0x10
@@ -525,7 +519,7 @@
 		compatible = "net,rfkill-gpio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		name = "bt_rfkill";
+		name = "bt-rfkill";
 		type = <2>;	/* bluetooth */
 		reset-gpios = GP_BT_RFKILL_RESET;
 	};
@@ -631,11 +625,11 @@
 		reg = <0x10000000 0x40000000>;
 	};
 
-	mipi_mclk: mipi-mclk {
+	mipi_xclk: mipi-xclk {
 		compatible = "pwm-clock";
 		#clock-cells = <0>;
 		clock-frequency = <22000000>;
-		clock-output-names = "mipi_mclk";
+		clock-output-names = "mipi_pwm3";
 		pwms = <&pwm3 0 45>; /* 1 / 45 ns = 22 MHz */
 	};
 
@@ -905,12 +899,12 @@
 		mclk_source = <0>;
 	};
 
-	ov5640_mipi: ov5640_mipi@3e {
+	ov5640_mipi: ov5640-mipi@3e {
 		compatible = "ovti,ov5640_mipi";
 		reg = <0x3e>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_ov5640_mipi>;
-		clocks = <&mipi_mclk>;
+		clocks = <&mipi_xclk>;
 		clock-names = "csi_mclk";
 		DOVDD-supply = <&reg_1p8v>;
 		AVDD-supply = <&reg_2p5v>;
@@ -923,7 +917,7 @@
 		mclk_source = <0>;
 	};
 
-	tc358743_mipi: tc358743_mipi@0f {
+	tc358743_mipi: tc358743-mipi@0f {
 		compatible = "tc358743_mipi";
 		reg = <0x0f>;
 		pinctrl-names = "default";
@@ -971,7 +965,7 @@
 		cvbs = <1>;
 	};
 
-	egalax_ts@04 {
+	egalax-ts@04 {
 		compatible = "eeti,egalax_ts";
 		reg = <0x04>;
 		interrupts-extended = GPIRQ_I2C3_J7;
@@ -989,7 +983,7 @@
 		reset-gpios = GP_GT911_RESET;
 	};
 
-	ft5x06_ts@38 {
+	ft5x06-ts@38 {
 		compatible = "ft5x06-ts";
 		reg = <0x38>;
 		interrupts-extended = GPIRQ_I2C3_J7;
@@ -1052,7 +1046,7 @@
 		primary;
 
 		display-timings {
-			t_lvds: t_lvds_default {
+			t_lvds: t-lvds-default {
 				/* lg1280x800 values may be changed in bootscript */
 				clock-frequency = <72000000>;
 				hactive = <1280>;

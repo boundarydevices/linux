@@ -60,7 +60,7 @@
 	csi_id = <0>;
 };
 
-&iomuxc_imx6q_nitrogen6x {
+&iomuxc {
 	pinctrl_i2c3_adv7391: i2c3-adv7391grp {
 		fsl,pins = <
 			MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK 0x10     /* Pixclk */

@@ -32,7 +32,7 @@
 	ipu_id = <1>;
 };
 
-&iomuxc_imx6q_nitrogen6_som2 {
+&iomuxc {
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
 			MX6QDL_PAD_CSI0_DAT10__ECSPI2_MISO	0x100b1

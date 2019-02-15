@@ -576,7 +576,7 @@ static bool do_imx_nwl_dsi_bridge_mode_fixup(struct imx_mipi_dsi *dsi,
 		int n = (380000000 + pll_rate - 1) / pll_rate;
 
 		pll_rate *= n;
-		pr_info("%s: %d = %d * %d\n", __func__, pll_rate, bit_clk, n);
+		pr_info("%s: %ld = %ld * %d\n", __func__, pll_rate, bit_clk, n);
 	}
 	clk = dsi->clk_config[NCLK_PIXEL_PLL].clk;
 	if (dsi->clk_config[NCLK_PIXEL_PLL].present)

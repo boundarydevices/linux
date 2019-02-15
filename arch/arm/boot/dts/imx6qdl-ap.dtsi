@@ -17,12 +17,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
-	iomuxc_imx6q_ap: iomuxc-imx6q-apgrp {
-		status = "okay";
-	};
-};
-
-&iomuxc_imx6q_ap {
 	pinctrl_audmux: audmuxgrp {
 		fsl,pins = <
 			MX6QDL_PAD_CSI0_DAT4__AUD3_TXC		0x130b0
@@ -157,7 +151,7 @@
 		>;
 	};
 
-	pinctrl_i2c1_1: i2c1_1grp {
+	pinctrl_i2c1_1: i2c1-1grp {
 		fsl,pins = <
 #define GP_I2C1_SCL	<&gpio3 21 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_D21__GPIO3_IO21		0x4001b8b1
@@ -194,7 +188,7 @@
 		>;
 	};
 
-	pinctrl_i2c2_1: i2c2_1grp {
+	pinctrl_i2c2_1: i2c2-1grp {
 		fsl,pins = <
 #define GP_I2C2_SCL	<&gpio4 12 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_KEY_COL3__GPIO4_IO12		0x4001b8b1
@@ -203,7 +197,7 @@
 		>;
 	};
 
-	pinctrl_i2c2_gt911: i2c2_gt911grp {
+	pinctrl_i2c2_gt911: i2c2-gt911grp {
 		fsl,pins = <
 #define GPIRQ_I2C2_SER2_TOUCH	<&gpio1 16 IRQ_TYPE_LEVEL_HIGH>	/* GP0 */
 #define GP_I2C2_SER2_TOUCH	<&gpio1 16 GPIO_ACTIVE_HIGH>
@@ -213,7 +207,7 @@
 		>;
 	};
 
-	pinctrl_i2c2_lp8860: i2c2_lp8860grp {
+	pinctrl_i2c2_lp8860: i2c2-lp8860grp {
 		fsl,pins = <
 #define GP_LVDS2_LP8860_RESET	<&gpio2 23 GPIO_ACTIVE_LOW>	/* GP1 */
 			MX6QDL_PAD_EIM_CS0__GPIO2_IO23		0x030b0
@@ -235,7 +229,7 @@
 		>;
 	};
 
-	pinctrl_i2c3_1: i2c3_1grp {
+	pinctrl_i2c3_1: i2c3-1grp {
 		fsl,pins = <
 #define GP_I2C3_SCL	<&gpio1 5 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_5__GPIO1_IO05		0x4001b8b1
@@ -244,7 +238,7 @@
 		>;
 	};
 
-	pinctrl_i2c3_gt911: i2c3_gt911grp {
+	pinctrl_i2c3_gt911: i2c3-gt911grp {
 		fsl,pins = <
 #define GPIRQ_I2C3_SER1_TOUCH	<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>	/* GP0 */
 #define GP_I2C3_SER1_TOUCH	<&gpio1 9 GPIO_ACTIVE_HIGH>
@@ -254,7 +248,7 @@
 		>;
 	};
 
-	pinctrl_i2c3_lp8860: i2c3_lp8860grp {
+	pinctrl_i2c3_lp8860: i2c3-lp8860grp {
 		fsl,pins = <
 #define GP_LVDS_LP8860_RESET	<&gpio2 0 GPIO_ACTIVE_LOW>	/* GP1 */
 			MX6QDL_PAD_NANDF_D0__GPIO2_IO00		0x030b0
@@ -432,9 +426,9 @@
 		t_lvds2 = &t_lvds2;
 	};
 
-	bt_rfkill {
+	bt-rfkill {
 		compatible = "net,rfkill-gpio";
-		name = "bt_rfkill";
+		name = "bt-rfkill";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
 		reset-gpios = GP_BT_RFKILL_RESET;
@@ -527,62 +521,51 @@
 		reg = <0x10000000 0xeffffc00>;
 	};
 
-	regulators {
-		compatible = "simple-bus";
-		#address-cells = <1>;
-		#size-cells = <0>;
+	reg_1p8v: regulator-1v8 {
+		compatible = "regulator-fixed";
+		regulator-always-on;
+		regulator-max-microvolt = <1800000>;
+		regulator-min-microvolt = <1800000>;
+		regulator-name = "1P8V";
+	};
 
-		reg_1p8v: regulator@0 {
-			compatible = "regulator-fixed";
-			reg = <0>;
-			regulator-always-on;
-			regulator-max-microvolt = <1800000>;
-			regulator-min-microvolt = <1800000>;
-			regulator-name = "1P8V";
-		};
+	reg_2p5v: regulator-2v5 {
+		compatible = "regulator-fixed";
+		regulator-always-on;
+		regulator-max-microvolt = <2500000>;
+		regulator-min-microvolt = <2500000>;
+		regulator-name = "2P5V";
+	};
 
-		reg_2p5v: regulator@1 {
-			compatible = "regulator-fixed";
-			reg = <1>;
-			regulator-always-on;
-			regulator-max-microvolt = <2500000>;
-			regulator-min-microvolt = <2500000>;
-			regulator-name = "2P5V";
-		};
+	reg_3p3v: regulator-3v3 {
+		compatible = "regulator-fixed";
+		regulator-always-on;
+		regulator-max-microvolt = <3300000>;
+		regulator-min-microvolt = <3300000>;
+		regulator-name = "3P3V";
+	};
 
-		reg_3p3v: regulator@2 {
-			compatible = "regulator-fixed";
-			reg = <2>;
-			regulator-always-on;
-			regulator-max-microvolt = <3300000>;
-			regulator-min-microvolt = <3300000>;
-			regulator-name = "3P3V";
-		};
+	reg_usbotg_vbus: regulator-usb-otg-vbus {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_REG_USBOTG;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usbotg_vbus>;
+		regulator-max-microvolt = <5000000>;
+		regulator-min-microvolt = <5000000>;
+		regulator-name = "usb_otg_vbus";
+	};
 
-		reg_usbotg_vbus: regulator@3 {
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = GP_REG_USBOTG;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_usbotg_vbus>;
-			reg = <3>;
-			regulator-max-microvolt = <5000000>;
-			regulator-min-microvolt = <5000000>;
-			regulator-name = "usb_otg_vbus";
-		};
-
-		reg_wlan_en: regulator@4 {
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = GP_REG_WLAN_EN;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_wlan_en>;
-			reg = <4>;
-			regulator-max-microvolt = <3300000>;
-			regulator-min-microvolt = <3300000>;
-			regulator-name = "wlan-en";
-			startup-delay-us = <70000>;
-		};
+	reg_wlan_en: regulator-wlan {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_REG_WLAN_EN;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_wlan_en>;
+		regulator-max-microvolt = <3300000>;
+		regulator-min-microvolt = <3300000>;
+		regulator-name = "wlan-en";
+		startup-delay-us = <70000>;
 	};
 
 	sound {
@@ -622,7 +605,7 @@
 		model = "imx-audio-hdmi";
 	};
 
-	v4l2_out {
+	v4l2-out {
 		compatible = "fsl,mxc_v4l2_output";
 		status = "okay";
 	};
@@ -764,7 +747,7 @@
 		substitute-i2c-address = <0x2c>;
 	};
 
-	lp8860_backlight_lvds2@2d {
+	lp8860-backlight-lvds2@2d {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "lp8860-backlight";
 		default-brightness-level = <10>;
@@ -797,7 +780,7 @@
 		substitute-i2c-address = <0x2c>;
 	};
 
-	lp8860_backlight_lvds@2d {
+	lp8860-backlight-lvds@2d {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "lp8860-backlight";
 		default-brightness-level = <10>;
@@ -820,7 +803,7 @@
 		status = "okay";
 
 		display-timings {
-			t_lvds: t_lvds_default {
+			t_lvds: t-lvds-default {
 				/* TFC_A9700LTWV35TC_C1 values may be changed in bootscript */
 				clock-frequency = <29232073>;
 				hactive = <800>;
@@ -842,7 +825,7 @@
 		status = "okay";
 
 		display-timings {
-			t_lvds2: t_lvds2_default {
+			t_lvds2: t-lvds2-default {
 				/* TFC_A9700LTWV35TC_C1 values may be changed in bootscript */
 				clock-frequency = <29232073>;
 				hactive = <800>;

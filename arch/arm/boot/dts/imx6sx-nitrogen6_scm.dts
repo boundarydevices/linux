@@ -16,12 +16,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
-	iomuxc_nitrogen6_scm: iomuxc-nitrogen6_scmgrp {
-		status = "okay";
-	};
-};
-
-&iomuxc_nitrogen6_scm {
 	pinctrl_bt_rfkill: bt-rfkillgrp {
 		fsl,pins = <
 #define GP_BT_RFKILL_RESET	<&gpio2 18 GPIO_ACTIVE_LOW>
@@ -106,7 +100,7 @@
 		>;
 	};
 
-	pinctrl_i2c2_1: i2c2_1grp {
+	pinctrl_i2c2_1: i2c2-1grp {
 		fsl,pins = <
 #define GP_I2C2_SCL	<&gpio1 2 GPIO_ACTIVE_HIGH>
 			MX6SX_PAD_GPIO1_IO02__GPIO1_IO_2	0x4001b8b1
@@ -128,7 +122,7 @@
 		>;
 	};
 
-	pinctrl_i2c3_1: i2c3_1grp {
+	pinctrl_i2c3_1: i2c3-1grp {
 		fsl,pins = <
 #define GP_I2C3_SCL	<&gpio2 8 GPIO_ACTIVE_HIGH>
 			MX6SX_PAD_ENET2_RX_CLK__GPIO2_IO_8	0x4001b8b1
@@ -144,7 +138,7 @@
 		>;
 	};
 
-	pinctrl_i2c4_1: i2c4_1grp {
+	pinctrl_i2c4_1: i2c4-1grp {
 		fsl,pins = <
 #define GP_I2C4_SCL	<&gpio7 2 GPIO_ACTIVE_HIGH>
 			MX6SX_PAD_SD3_DATA0__GPIO7_IO_2		0x4001b8b1
@@ -153,7 +147,7 @@
 		>;
 	};
 
-	pinctrl_i2c4a_max77818: i2c4a_max77818grp {
+	pinctrl_i2c4a_max77818: i2c4a-max77818grp {
 		fsl,pins = <
 #define GPIRQ_MAX77818_INTB		<&gpio7 0 IRQ_TYPE_LEVEL_LOW>
 			MX6SX_PAD_SD3_CLK__GPIO7_IO_0		0x1b0b0
@@ -349,7 +343,7 @@
 		t_lcd = &t_lcd;
 	};
 
-	backlight_lcd {
+	backlight-lcd {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
@@ -357,10 +351,10 @@
 		pwms = <&pwm1 0 5000000>;
 	};
 
-	bt_rfkill {
+	bt-rfkill {
 		reset-gpios = GP_BT_RFKILL_RESET;
 		compatible = "net,rfkill-gpio";
-		name = "bt_rfkill";
+		name = "bt-rfkill";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
 		type = <2>;     /* bluetooth */
@@ -399,96 +393,83 @@
 		pinctrl-0 = <&pinctrl_gpio_poweroff>;
 	};
 
-	pxp_v4l2_out {
+	pxp-v4l2-out {
 		compatible = "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
 		status = "okay";
 	};
 
-	regulators {
-		compatible = "simple-bus";
-		#address-cells = <1>;
-		#size-cells = <0>;
+	reg_1p8v: regulator-1v8 {
+		compatible = "regulator-fixed";
+		regulator-always-on;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-name = "1P8V";
+	};
 
-		reg_1p8v: regulator@0 {
-			compatible = "regulator-fixed";
-			reg = <0>;
-			regulator-always-on;
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			regulator-name = "1P8V";
-		};
+	reg_2p5v: regulator-2v5 {
+		compatible = "regulator-fixed";
+		regulator-always-on;
+		regulator-min-microvolt = <2500000>;
+		regulator-max-microvolt = <2500000>;
+		regulator-name = "2P5V";
+	};
 
-		reg_2p5v: regulator@1 {
-			compatible = "regulator-fixed";
-			reg = <1>;
-			regulator-always-on;
-			regulator-min-microvolt = <2500000>;
-			regulator-max-microvolt = <2500000>;
-			regulator-name = "2P5V";
-		};
+	reg_3p3v: regulator-3v3 {
+		compatible = "regulator-fixed";
+		regulator-always-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-name = "3P3V";
+	};
 
-		reg_3p3v: regulator@2 {
-			compatible = "regulator-fixed";
-			reg = <2>;
-			regulator-always-on;
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-name = "3P3V";
-		};
+	reg_5v: regulator-5v {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_5V_BST_EN;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_5v>;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-name = "5V";
+		vin-supply = <&swbst_reg>;
+	};
 
-		reg_5v: regulator@3 {
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = GP_5V_BST_EN;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_5v>;
-			reg = <3>;
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-			regulator-name = "5V";
-			vin-supply = <&swbst_reg>;
-		};
+	reg_usb_otg_vbus: regulator-usb-otg1-vbus {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_USB_OTG1_PWR;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usbotg1_vbus>;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-name = "usb_otg1_vbus";
+		vin-supply = <&reg_5v>;
+	};
 
-		reg_usbotg1_vbus: regulator@4 {
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = GP_USB_OTG1_PWR;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_usbotg1_vbus>;
-			reg = <4>;
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-			regulator-name = "usb_otg1_vbus";
-			vin-supply = <&reg_5v>;
-		};
+	reg_usbotg2_vbus: regulator-usb-otg2-vbus {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_USB_OTG2_PWR;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usbotg2_vbus>;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-name = "usb_otg2_vbus";
+		vin-supply = <&reg_5v>;
+	};
 
-		reg_usbotg2_vbus: regulator@5 {
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = GP_USB_OTG2_PWR;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_usbotg2_vbus>;
-			reg = <5>;
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-			regulator-name = "usb_otg2_vbus";
-			vin-supply = <&reg_5v>;
-		};
-
-		reg_wlan_en: regulator@6 {
-			clocks = <&clks IMX6SX_CLK_CKO>;
-			clock-names = "slow";
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = GP_WLAN_EN;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_wlan>;
-			reg = <6>;
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-name = "wlan-en";
-			startup-delay-us = <70000>;
-		};
+	reg_wlan_en: regulator-wlan {
+		clocks = <&clks IMX6SX_CLK_CKO>;
+		clock-names = "slow";
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_WLAN_EN;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_wlan>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-name = "wlan-en";
+		startup-delay-us = <70000>;
 	};
 };
 
@@ -673,14 +654,14 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-        egalax_ts@04 {
+        egalax-ts@04 {
                 compatible = "eeti,egalax_ts";
                 reg = <0x04>;
                 interrupts-extended = GPIRQ_I2C3_J4;
                 wakeup-gpios = GP_I2C3_J4;
         };
 
-	ft5x06_ts@38 {
+	ft5x06-ts@38 {
 		compatible = "ft5x06-ts";
 		reg = <0x38>;
                 interrupts-extended = GPIRQ_I2C3_J4;
@@ -754,7 +735,7 @@
 		bus-width = <24>;
 
 		display-timings {
-			t_lcd: t_lcd_default {
+			t_lcd: t-lcd-default {
 				/* 720p values may be changed in bootscript */
 				clock-frequency = <74160000>;
 				hactive = <1280>;
@@ -846,7 +827,7 @@
 	battery,fast_charging_current  = <2100   0  460 2100  460 1200 1000  460   0 1200  900 2100 2100   0 1300  300  700 1300 1800  300   80 2100   0 1000 2800 1000 1000 1000>;
 	battery,full_check_current_1st = <200    0  200  200  200  200  200  200   0  200  200  200  200   0  200  200  200  200  200  200  200  200   0  200  200  200  200  200>;
 	battery,full_check_current_2nd = <2400   0 2400 2400 2400 2400 2400 2400   0 2400 2400 2400 2400   0 2400 2400 2400 2400 2400 2400 2400 2400   0 2400 2400 2400 2400 2400>;
-	usbotg-supply = <&reg_usbotg1_vbus>;
+	usbotg-supply = <&reg_usb_otg_vbus>;
 };
 
 &max77823_fuelgauge {
@@ -939,7 +920,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg1>;
 	status = "okay";
-	vbus-supply = <&reg_usbotg1_vbus>;
+	vbus-supply = <&reg_usb_otg_vbus>;
 };
 
 &usbotg2 {

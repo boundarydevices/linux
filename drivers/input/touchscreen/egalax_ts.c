@@ -186,21 +186,21 @@ static void egalax_free_irq(struct egalax_ts *ts)
 }
 
 /* wake up controller by an falling edge of interrupt gpio.  */
-static int egalax_wake_up_device(struct gpio_desc *wakeup_gpio)
+static int egalax_wake_up_device(struct i2c_client *client, struct egalax_ts *ts)
 {
 	u8 buf[MAX_I2C_DATA_LEN];
 	int tries = 0;
 
 	/* wake up controller via an falling edge on IRQ gpio. */
-	gpiod_direction_output(wakeup_gpio, 0);
-	gpiod_set_value(wakeup_gpio, 1);
+	gpiod_direction_output(ts->wakeup_gpio, 0);
+	gpiod_set_value(ts->wakeup_gpio, 1);
 
 	/* controller should be waken up, return irq.  */
-	gpiod_direction_input(wakeup_gpio);
+	gpiod_direction_input(ts->wakeup_gpio);
 
 	/* If the touch controller has some data pending, read it */
 	/* or the INT line will remian low */
-	while ((gpio_get_value(gpio) == 0) && (tries++ < EGALAX_MAX_TRIES))
+	while ((gpiod_get_value(ts->wakeup_gpio) == 0) && (tries++ < EGALAX_MAX_TRIES))
 		i2c_master_recv(client, buf, MAX_I2C_DATA_LEN);
 	return 0;
 }
@@ -255,7 +255,7 @@ static int egalax_ts_probe(struct i2c_client *client,
 	}
 
 	/* controller may be in sleep, wake it up. */
-	error = egalax_wake_up_device(ts->wakeup_gpio);
+	error = egalax_wake_up_device(client, ts);
 	if (error) {
 		dev_err(&client->dev, "Failed to wake up, disable suspend,"
 				"otherwise it can not wake up\n");
@@ -311,7 +311,7 @@ err_free_irq:
 	free_irq(client->irq, ts);
 err_free_dev:
 	input_free_device(input_dev);
-exit1;
+exit1:
 	if (client->irq)
 		irq_set_irq_type(client->irq, IRQ_TYPE_NONE);
 
@@ -366,7 +366,7 @@ static int __maybe_unused egalax_ts_resume(struct device *dev)
 	if (ts->touch_no_wake)
 		return 0;
 
-	ret = egalax_wake_up_device(ts->wakeup_gpio);
+	ret = egalax_wake_up_device(client, ts);
 	if (!ret)
 		ret = egalax_irq_request(ts);
 

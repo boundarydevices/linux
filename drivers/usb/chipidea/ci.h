@@ -284,7 +284,7 @@ struct ci_hdrc {
 	struct work_struct		power_lost_work;
 	struct workqueue_struct		*power_lost_wq;
 	struct mutex			mutex;
-	struct extcon_dev		extcon;
+	struct extcon_dev		*extcon;
 };
 
 static inline struct ci_role_driver *ci_role(struct ci_hdrc *ci)

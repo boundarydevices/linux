@@ -144,7 +144,7 @@
 		>;
 	};
 
-	pinctrl_i2c1_1: i2c1_1grp {
+	pinctrl_i2c1_1: i2c1-1grp {
 		fsl,pins = <
 #define GP_I2C1_SCL	<&gpio3 21 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_D21__GPIO3_IO21		0x4001b8b1
@@ -153,7 +153,7 @@
 		>;
 	};
 
-	pinctrl_i2c1_pca9546: i2c1_pca9546grp {
+	pinctrl_i2c1_pca9546: i2c1-pca9546grp {
 		fsl,pins = <
 			/* Select addr 0x70 for pca9546 */
 			MX6QDL_PAD_EIM_DA15__GPIO3_IO15		0x030b0
@@ -173,7 +173,7 @@
 		>;
 	};
 
-	pinctrl_i2c1b_mpu9250: i2c3_mpu9250grp {
+	pinctrl_i2c1b_mpu9250: i2c3-mpu9250grp {
 		fsl,pins = <
 #define GPIRQ_MPU9250_INT	<&gpio6 11 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x1b0b0
@@ -220,7 +220,7 @@
 		>;
 	};
 
-	pinctrl_i2c2_1: i2c2_1grp {
+	pinctrl_i2c2_1: i2c2-1grp {
 		fsl,pins = <
 #define GP_I2C2_SCL	<&gpio4 12 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_KEY_COL3__GPIO4_IO12		0x4001b8b1
@@ -264,7 +264,7 @@
 		>;
 	};
 
-	pinctrl_i2c3_1: i2c3_1grp {
+	pinctrl_i2c3_1: i2c3-1grp {
 		fsl,pins = <
 #define GP_I2C3_SCL	<&gpio1 5 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_5__GPIO1_IO05		0x4001b8b1
@@ -273,7 +273,7 @@
 		>;
 	};
 
-	pinctrl_i2c3_lm3643: i2c3_lm3643grp {
+	pinctrl_i2c3_lm3643: i2c3-lm3643grp {
 		fsl,pins = <
 #define GP_FLASH_STROBE		<&gpio6 6 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_A23__GPIO6_IO06		0x0b0b0
@@ -286,7 +286,7 @@
 		>;
 	};
 
-	pinctrl_i2c3_max77818: i2c3_max77818grp {
+	pinctrl_i2c3_max77818: i2c3-max77818grp {
 		fsl,pins = <
 #define GPIRQ_MAX77818_WCHG_VALID_INT	<&gpio2 22 IRQ_TYPE_LEVEL_LOW>
 			MX6QDL_PAD_EIM_A16__GPIO2_IO22		0x1b0b0
@@ -489,7 +489,7 @@
 		>;
 	};
 
-	pinctrl_wwan_rfkill: wwan_rfkillgrp {
+	pinctrl_wwan_rfkill: wwan-rfkillgrp {
 		fsl,pins = <
 			/* HL7588 - Modem pins */
 #define GP_MODEM_RESET		<&gpio4 23 GPIO_ACTIVE_LOW>
@@ -532,7 +532,7 @@
 		p2 = <&mipi_cmds_osd050t3872>;
 	};
 
-	backlight_mipi: backlight_mipi_dsi {
+	backlight_mipi: backlight-mipi_dsi {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
@@ -543,11 +543,11 @@
 		pwms = <&pwm1 0 30000>;
 	};
 
-	bt_rfkill: bt_rfkill {
+	bt-rfkill {
 		compatible = "net,rfkill-gpio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		name = "bt_rfkill";
+		name = "bt-rfkill";
 		type = <2>;     /* bluetooth */
 		reset-gpios = GP_BT_RFKILL_RESET;
 		status = "okay";
@@ -569,6 +569,14 @@
 		int_clk = <0>;
 		late_init = <0>;
 		status = "okay";
+	};
+
+	fp_mclk: fp-mclk {
+		compatible = "pwm-clock";
+		#clock-cells = <0>;
+		clock-frequency = <22000000>;
+		clock-output-names = "fp_mclk";
+		pwms = <&pwm2 0 45>; /* 1 / 45 ns = 22 MHz */
 	};
 
 	gpio-keys {
@@ -625,118 +633,95 @@
 		reg = <0x10000000 0xeffffc00>;
 	};
 
-	fp_mclk: fp_mclk {
-		compatible = "pwm-clock";
-		#clock-cells = <0>;
-		clock-frequency = <22000000>;
-		clock-output-names = "fp_mclk";
-		pwms = <&pwm2 0 45>; /* 1 / 45 ns = 22 MHz */
+	reg_1p8v: regulator-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "1P8V";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
 	};
 
-	regulators {
-		compatible = "simple-bus";
-		#address-cells = <1>;
-		#size-cells = <0>;
+	reg_2p5v: regulator-2v5 {
+		compatible = "regulator-fixed";
+		regulator-name = "2P5V";
+		regulator-min-microvolt = <2500000>;
+		regulator-max-microvolt = <2500000>;
+		regulator-always-on;
+	};
 
-		reg_1p8v: regulator@0 {
-			compatible = "regulator-fixed";
-			reg = <0>;
-			regulator-name = "1P8V";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			regulator-always-on;
-		};
+	reg_2p8v: regulator-2v8 {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_REG_2P8V_EN;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_2p8v>;
+		regulator-name = "2P8V";
+		startup-delay-us = <2000>;
+	};
 
-		reg_2p5v: regulator@1 {
-			compatible = "regulator-fixed";
-			reg = <1>;
-			regulator-name = "2P5V";
-			regulator-min-microvolt = <2500000>;
-			regulator-max-microvolt = <2500000>;
-			regulator-always-on;
-		};
+	reg_3p3v: regulator-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "3P3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
 
-		reg_2p8v: regulator@2 {
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = GP_REG_2P8V_EN;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_2p8v>;
-			reg = <2>;
-			regulator-name = "2P8V";
-			startup-delay-us = <2000>;
-		};
+	reg_csi_3p3v: regulator-csi-3v3 {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_REG_CSI_3P3V_EN;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_csi_3p3v>;
+		regulator-name = "csi_3p3vbus";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+	};
 
-		reg_3p3v: regulator@3 {
-			compatible = "regulator-fixed";
-			reg = <3>;
-			regulator-name = "3P3V";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-		};
+	reg_csi_5v: regulator-csi-5v {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_REG_CSI_5V_EN;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_csi_5v>;
+		regulator-name = "csi_5vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+	};
 
-		reg_csi_3p3v: regulator@4 {
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = GP_REG_CSI_3P3V_EN;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_csi_3p3v>;
-			reg = <4>;
-			regulator-name = "csi_3p3vbus";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-		};
+	reg_gps_en: regulator-gps {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_REG_GPS_EN;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_gps_en>;
+		regulator-name = "gps-en";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
 
-		reg_csi_5v: regulator@5 {
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = GP_REG_CSI_5V_EN;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_csi_5v>;
-			reg = <5>;
-			regulator-name = "csi_5vbus";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-		};
+	reg_usbh1: regulator-usb-h1 {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_USBH1_PWR_EN;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usbh1>;
+		regulator-name = "usbh1";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+	};
 
-		reg_gps_en: regulator@6 {
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = GP_REG_GPS_EN;
-			reg = <6>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_gps_en>;
-			regulator-name = "gps-en";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-		};
-
-		reg_usbh1: regulator@7 {
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = GP_USBH1_PWR_EN;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_usbh1>;
-			reg = <7>;
-			regulator-name = "usbh1";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-		};
-
-		reg_wlan_en: regulator@8 {
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = GP_REG_WLAN_EN;
-			reg = <8>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_reg_wlan_en>;
-			regulator-name = "wlan-en";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			startup-delay-us = <70000>;
-		};
+	reg_wlan_en: regulator-wlan {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_REG_WLAN_EN;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_wlan_en>;
+		regulator-name = "wlan-en";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		startup-delay-us = <70000>;
 	};
 
 	sound {
@@ -771,7 +756,7 @@
 	};
 
 	/* finger_sensor */
-	v4l2_cap_0 {
+	v4l2-cap-0 {
 		compatible = "fsl,imx6q-v4l2-capture";
 		ipu_id = <0>;
 		csi_id = <0>;
@@ -781,7 +766,7 @@
 	};
 
 	/* ov5640_mipi */
-	v4l2_cap_1 {
+	v4l2-cap-1 {
 		compatible = "fsl,imx6q-v4l2-capture";
 		ipu_id = <0>;
 		csi_id = <1>;
@@ -790,16 +775,16 @@
 		status = "okay";
 	};
 
-	v4l2_out {
+	v4l2-out {
 		compatible = "fsl,mxc_v4l2_output";
 		status = "okay";
 	};
 
-	wwan_rfkill: wwan_rfkill {
+	wwan_rfkill: wwan-rfkill {
 		compatible = "net,rfkill-gpio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_wwan_rfkill>;
-		name = "wwan_rfkill";
+		name = "wwan-rfkill";
 		type = <5>;     /* WWAN */
 		reset-gpios = GP_MODEM_RESET;
 		pulse-on-gpios = GP_MODEM_PULSE_ON;
@@ -1023,7 +1008,7 @@
 		interrupts-extended = GPIRQ_RTC;
 	};
 
-	atmel_maxtouch@4a {
+	atmel-maxtouch@4a {
 		compatible = "atmel,maxtouch";
 		interrupts-extended = GPIRQ_TOUCH;
 		pinctrl-names = "default";

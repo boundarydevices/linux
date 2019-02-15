@@ -48,21 +48,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog_1 &pinctrl_j2>;
 
-	iomuxc_nitrogen7: iomuxc-nitrogen7grp {
-		status = "okay";
-	};
-};
-
-&iomuxc_lpsr {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hog_2>;
-
-	iomuxc_lpsr_nitrogen7: iomuxc-lpsr-nitrogen7grp {
-		status = "okay";
-	};
-};
-
-&iomuxc_nitrogen7 {
 	pinctrl_hog_1: hoggrp-1 {
 		fsl,pins = <
 			MX7D_PAD_SD3_RESET_B__GPIO6_IO11	0x5d /* eMMC reset */
@@ -124,7 +109,7 @@
 		>;
 	};
 
-	pinctrl_i2c1_1: i2c1_1grp {
+	pinctrl_i2c1_1: i2c1-1grp {
 		fsl,pins = <
 #define GP_I2C1_SCL	<&gpio4 8 GPIO_ACTIVE_HIGH>
 			MX7D_PAD_I2C1_SCL__GPIO4_IO8	0x4000007f
@@ -140,7 +125,7 @@
 		>;
 	};
 
-	pinctrl_i2c2_1: i2c2_1grp {
+	pinctrl_i2c2_1: i2c2-1grp {
 		fsl,pins = <
 #define GP_I2C2_SCL	<&gpio4 10 GPIO_ACTIVE_HIGH>
 			MX7D_PAD_I2C2_SCL__GPIO4_IO10	0x4000007f
@@ -162,7 +147,7 @@
 		>;
 	};
 
-	pinctrl_i2c3_1: i2c3_1grp {
+	pinctrl_i2c3_1: i2c3-1grp {
 		fsl,pins = <
 #define GP_I2C3_SCL	<&gpio4 12 GPIO_ACTIVE_HIGH>
 			MX7D_PAD_I2C3_SCL__GPIO4_IO12	0x4000007f
@@ -185,7 +170,7 @@
 		>;
 	};
 
-	pinctrl_i2c4_1: i2c4_1grp {
+	pinctrl_i2c4_1: i2c4-1grp {
 		fsl,pins = <
 #define GP_I2C4_SCL	<&gpio4 14 GPIO_ACTIVE_HIGH>
 			MX7D_PAD_I2C4_SCL__GPIO4_IO14	0x4000007f
@@ -336,7 +321,7 @@
 		>;
 	};
 
-	pinctrl_usdhc1_100mhz: usdhc1grp_100mhz {
+	pinctrl_usdhc1_100mhz: usdhc1grp-100mhz {
 		fsl,pins = <
 			MX7D_PAD_SD1_CLK__SD1_CLK		0x09
 			MX7D_PAD_SD1_CMD__SD1_CMD		0x59
@@ -347,7 +332,7 @@
 		>;
 	};
 
-	pinctrl_usdhc1_200mhz: usdhc1grp_200mhz {
+	pinctrl_usdhc1_200mhz: usdhc1grp-200mhz {
 		fsl,pins = <
 			MX7D_PAD_SD1_CLK__SD1_CLK		0x0b
 			MX7D_PAD_SD1_CMD__SD1_CMD		0x5b
@@ -372,7 +357,7 @@
 		>;
 	};
 
-	pinctrl_usdhc2_100mhz: usdhc2grp_100mhz {
+	pinctrl_usdhc2_100mhz: usdhc2grp-100mhz {
 		fsl,pins = <
 			MX7D_PAD_SD2_CLK__SD2_CLK	0x09
 			MX7D_PAD_SD2_CMD__SD2_CMD	0x59
@@ -383,7 +368,7 @@
 		>;
 	};
 
-	pinctrl_usdhc2_200mhz: usdhc2grp_200mhz {
+	pinctrl_usdhc2_200mhz: usdhc2grp-200mhz {
 		fsl,pins = <
 			MX7D_PAD_SD2_CLK__SD2_CLK	0x0b
 			MX7D_PAD_SD2_CMD__SD2_CMD	0x5b
@@ -409,7 +394,7 @@
 		>;
 	};
 
-	pinctrl_usdhc3_100mhz: usdhc3grp_100mhz {
+	pinctrl_usdhc3_100mhz: usdhc3grp-100mhz {
 		fsl,pins = <
 			MX7D_PAD_SD3_CLK__SD3_CLK	0x09
 			MX7D_PAD_SD3_CMD__SD3_CMD	0x59
@@ -424,7 +409,7 @@
 		>;
 	};
 
-	pinctrl_usdhc3_200mhz: usdhc3grp_200mhz {
+	pinctrl_usdhc3_200mhz: usdhc3grp-200mhz {
 		fsl,pins = <
 			MX7D_PAD_SD3_CLK__SD3_CLK	0x0b
 			MX7D_PAD_SD3_CMD__SD3_CMD	0x5b
@@ -450,42 +435,45 @@
 	};
 };
 
-&iomuxc_lpsr_nitrogen7 {
+&iomuxc_lpsr {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hog_2>;
+
 	pinctrl_hog_2: hoggrp-2 {
 		fsl,pins = <
-			MX7D_PAD_GPIO1_IO02__GPIO1_IO2	0x7d /* ENET INT */
-			MX7D_PAD_GPIO1_IO03__CCM_CLKO2	0x7d /* Slow clock */
+			MX7D_PAD_LPSR_GPIO1_IO02__GPIO1_IO2	0x7d /* ENET INT */
+			MX7D_PAD_LPSR_GPIO1_IO03__CCM_CLKO2	0x7d /* Slow clock */
 		>;
 	};
 
 	pinctrl_backlight_j9: backlightj9grp {
 		fsl,pins = <
-			MX7D_PAD_GPIO1_IO07__GPIO1_IO7	0x7d /* J9 pin 3 */
+			MX7D_PAD_LPSR_GPIO1_IO07__GPIO1_IO7	0x7d /* J9 pin 3 */
 		>;
 	};
 
 	pinctrl_mipi_csi: mipicsigrp-1 {
 		fsl,pins = <
-			MX7D_PAD_GPIO1_IO06__GPIO1_IO6	0x15 /* MIPI reset */
+			MX7D_PAD_LPSR_GPIO1_IO06__GPIO1_IO6	0x15 /* MIPI reset */
 		>;
 	};
 
 	pinctrl_pwm1: pwm1grp {
 		fsl,pins = <
-			MX7D_PAD_GPIO1_IO01__PWM1_OUT	0x7d
+			MX7D_PAD_LPSR_GPIO1_IO01__PWM1_OUT	0x7d
 		>;
 	};
 
 	pinctrl_usbotg1: usbotg1grp {
 		fsl,pins = <
-			MX7D_PAD_GPIO1_IO04__USB_OTG1_OC	0x7d
-			MX7D_PAD_GPIO1_IO05__GPIO1_IO5		0x14
+			MX7D_PAD_LPSR_GPIO1_IO04__USB_OTG1_OC	0x7d
+			MX7D_PAD_LPSR_GPIO1_IO05__GPIO1_IO5	0x14
 		>;
 	};
 
 	pinctrl_wdog1: wdog1grp {
 		fsl,pins = <
-			MX7D_PAD_GPIO1_IO00__WDOD1_WDOG_B	0x75
+			MX7D_PAD_LPSR_GPIO1_IO00__WDOG1_WDOG_B	0x75
 		>;
 	};
 };
@@ -503,7 +491,7 @@
 		t_lcd = &t_lcd;
 	};
 
-	backlight_j9 {
+	backlight-j9 {
 		compatible = "gpio-backlight";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_j9>;
@@ -511,7 +499,7 @@
 		default-on;
 	};
 
-	backlight_j20 {
+	backlight-j20 {
 		compatible = "pwm-backlight";
 		pwms = <&pwm1 0 5000000 0>;
 		brightness-levels = <0 4 8 16 32 64 128 255>;
@@ -519,11 +507,11 @@
 		status = "okay";
 	};
 
-	bt_rfkill {
+	bt-rfkill {
 		compatible = "net,rfkill-gpio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		name = "bt_rfkill";
+		name = "bt-rfkill";
 		type = <2>;     /* bluetooth */
 		reset-gpios = <&gpio4 23 GPIO_ACTIVE_LOW>;
 		clocks = <&clks IMX7D_CLKO2_ROOT_DIV>;
@@ -533,7 +521,7 @@
 		reg = <0x80000000 0x40000000>;
 	};
 
-	mipi_mclk: mipi_mclk {
+	mipi_mclk: mipi-mclk {
 		compatible = "pwm-clock";
 		#clock-cells = <0>;
 		clock-frequency = <22000000>;
@@ -546,61 +534,53 @@
 		status = "okay";
 	};
 
-	regulators {
-		compatible = "simple-bus";
-		#address-cells = <1>;
-		#size-cells = <0>;
+	reg_usb_otg1_vbus: regulator-usb-otg1-vbus {
+		compatible = "regulator-fixed";
+		regulator-name = "usb_otg1_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio1 5 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
 
-		reg_usb_otg1_vbus: regulator@0 {
-			compatible = "regulator-fixed";
-			reg = <0>;
-			regulator-name = "usb_otg1_vbus";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-			gpio = <&gpio1 5 GPIO_ACTIVE_HIGH>;
-			enable-active-high;
-		};
+	reg_usb_otg2_vbus: regulator-usb-otg2-vbus {
+		compatible = "regulator-fixed";
+		regulator-name = "usb_otg2_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio4 7 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
 
-		reg_usb_otg2_vbus: regulator@1 {
-			compatible = "regulator-fixed";
-			reg = <1>;
-			regulator-name = "usb_otg2_vbus";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-			gpio = <&gpio4 7 GPIO_ACTIVE_HIGH>;
-			enable-active-high;
-		};
+	reg_vref_1v8: regulator-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "vref-1v8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
 
-		reg_vref_1v8: regulator@2 {
-			compatible = "regulator-fixed";
-			regulator-name = "vref-1v8";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-		};
+	reg_vref_2v5: regulator-2v5 {
+		compatible = "regulator-fixed";
+		regulator-name = "vref-2v5";
+		regulator-min-microvolt = <2500000>;
+		regulator-max-microvolt = <2500000>;
+	};
 
-		reg_vref_2v5: regulator@3 {
-			compatible = "regulator-fixed";
-			regulator-name = "vref-2v5";
-			regulator-min-microvolt = <2500000>;
-			regulator-max-microvolt = <2500000>;
-		};
+	reg_vref_3v3: regulator-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vref-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+	};
 
-		reg_vref_3v3: regulator@4 {
-			compatible = "regulator-fixed";
-			regulator-name = "vref-3v3";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-		};
-
-		reg_wlan: regulator@5 {
-			compatible = "regulator-fixed";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-name = "reg_wlan";
-			startup-delay-us = <70000>;
-			gpio = <&gpio4 21 GPIO_ACTIVE_HIGH>;
-			enable-active-high;
-		};
+	reg_wlan: regulator-wlan {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-name = "reg_wlan";
+		startup-delay-us = <70000>;
+		gpio = <&gpio4 21 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
 	};
 
 	sound {
@@ -627,7 +607,7 @@
 		assigned-clock-rates = <0>, <12288000>;
 	};
 
-	usdhc2_pwrseq: usdhc2_pwrseq {
+	usdhc2_pwrseq: usdhc2-pwrseq {
 		compatible = "mmc-pwrseq-simple";
 		clocks = <&clks IMX7D_CLKO2_ROOT_DIV>;
 		clock-names = "ext_clock";
@@ -853,7 +833,7 @@
 	sda-gpios = GP_I2C2_SDA;
 	status = "okay";
 
-	ov5640_mipi: ov5640_mipi@3c {
+	ov5640_mipi: ov5640-mipi@3c {
 		compatible = "ovti,ov5640_mipisubdev";
 		reg = <0x3c>;
 		pinctrl-names = "default";
@@ -935,7 +915,7 @@
 
 		display-timings {
 			native-mode = <&t_lcd>;
-			t_lcd: t_lcd_default {
+			t_lcd: t-lcd-default {
 				/* default to Okaya display */
 				clock-frequency = <30000000>;
 				hactive = <800>;

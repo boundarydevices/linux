@@ -13,6 +13,7 @@
 #include <linux/kthread.h>
 #include <linux/delay.h>
 #include <linux/input.h>
+#include <linux/signal.h>
 
 #define CWC_HOOKSWITCH_I2C_BUS         2
 #define CWC_HOOKSWITCH_I2C_ADDR        0x20

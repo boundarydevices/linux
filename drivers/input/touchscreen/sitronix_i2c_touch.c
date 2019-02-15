@@ -54,6 +54,7 @@
 #include <linux/path.h>
 #include <linux/namei.h>
 #include <linux/of_gpio.h>
+#include <linux/uaccess.h>
 
 #ifdef SITRONIX_MULTI_SLAVE_ADDR
 #if defined(CONFIG_MACH_OMAP4_PANDA)

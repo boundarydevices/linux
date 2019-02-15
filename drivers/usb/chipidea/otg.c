@@ -175,7 +175,7 @@ void ci_handle_vbus_connected(struct ci_hdrc *ci)
 	if (bsv && !ci_is_vbus_glitch(ci))
 		usb_gadget_vbus_connect(&ci->gadget);
 
-	extcon_set_cable_state_(&ci->extcon, 2, bsv);
+	extcon_set_state(ci->extcon, 2, bsv);
 }
 
 void ci_handle_vbus_change(struct ci_hdrc *ci)
@@ -191,7 +191,7 @@ void ci_handle_vbus_change(struct ci_hdrc *ci)
 	else if (!bsv && ci->vbus_active)
 		usb_gadget_vbus_disconnect(&ci->gadget);
 
-	extcon_set_cable_state_(&ci->extcon, 2, bsv);
+	extcon_set_state(ci->extcon, 2, bsv);
 }
 
 /**
@@ -229,7 +229,7 @@ void ci_handle_id_switch(struct ci_hdrc *ci)
 	if (role != ci->role) {
 		if (ci->is_otg) {
 			dev_info(ci->dev, "role %d to %d\n", ci->role, role);
-			extcon_set_cable_state_(&ci->extcon, role, 1);
+			extcon_set_state(ci->extcon, role, 1);
 		}
 		dev_dbg(ci->dev, "switching from %s to %s\n",
 			ci_role(ci)->name, ci->roles[role]->name);
@@ -270,12 +270,12 @@ void ci_handle_id_switch(struct ci_hdrc *ci)
 		if (ci->is_otg) {
 			role = ci->role;
 			if (role < CI_ROLE_END) {
-				extcon_set_cable_state_(&ci->extcon, role, 1);
+				extcon_set_state(ci->extcon, role, 1);
 			} else {
 				role = 0;
-				extcon_set_cable_state_(&ci->extcon, role, 0);
+				extcon_set_state(ci->extcon, role, 0);
 			}
-			extcon_set_cable_state_(&ci->extcon, role ^ 1, 0);
+			extcon_set_state(ci->extcon, role ^ 1, 0);
 		}
 	}
 	mutex_unlock(&ci->mutex);

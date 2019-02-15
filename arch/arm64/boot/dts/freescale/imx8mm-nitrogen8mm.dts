@@ -446,15 +446,37 @@
 	};
 
 	bt-rfkill {
-		compatible = "net,rfkill-gpio";
+		compatible = "fsl,mxc_bt_rfkill";
+		bt-power-gpios = GP_BT_RFKILL_RESET;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		name = "bt-rfkill";
-		type = <2>; /* Bluetooth */
-		reset-gpios = GP_BT_RFKILL_RESET;
 		status = "okay";
 	};
 
+	firmware {
+		android {
+			compatible = "android,firmware";
+			fstab {
+				compatible = "android,fstab";
+				vendor {
+					compatible = "android,vendor";
+					/* sd card node which used if androidboot.storage_type=sd */
+					dev_sd = "/dev/block/platform/30b50000.usdhc/by-name/vendor";
+					/* emmc node which used if androidboot.storage_type=emmc */
+					dev_emmc = "/dev/block/platform/30b40000.usdhc/by-name/vendor";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,slotselect,avb";
+				};
+			};
+			vbmeta {
+				/*we need use FirstStageMountVBootV2 if we enable avb*/
+				compatible = "android,vbmeta";
+				/*parts means the partition witch can be mount in first stage*/
+				parts = "vbmeta,boot,system,vendor";
+			};
+		};
+	};
 	reg_usdhc2_vqmmc: regulator-usdhc2-vqmmc {
 		compatible = "regulator-gpio";
 		pinctrl-names = "default";
@@ -552,6 +574,10 @@
 			remote-endpoint = <&csi1_mipi_ep>;
 		};
 	};
+};
+
+&crypto {
+	status = "disabled";
 };
 
 &ecspi2 {
@@ -716,17 +742,6 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
-	touchscreen@5d {
-		compatible = "goodix,gt9271";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c2_gt911>;
-		reg = <0x5d>;
-		esd-recovery-timeout-ms = <2000>;
-		interrupts-extended = GPIRQ_GT911;
-		irq-gpios = GP_GT911_IRQ;
-		reset-gpios = GP_GT911_RESET;
-	};
-
 	mipi_to_lvds: mipi-to-lvds@2c {
 		clocks = <&mipi_dsi 0>;
 		clock-names = "mipi_clk";
@@ -749,6 +764,17 @@
 		reg = <0x38>;
 		wakeup-gpios = GP_I2C2_FT5X06_WAKE;
 		reset-gpios = GP_I2C2_FT5X06_RESET;
+	};
+
+	touchscreen@5d {
+		compatible = "goodix,gt9271";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_gt911>;
+		reg = <0x5d>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		reset-gpios = GP_GT911_RESET;
 	};
 };
 
@@ -1000,7 +1026,7 @@
 &usdhc1 {
 	bus-width = <8>;
 	no-mmc-hs400;
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc1>;
 	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
@@ -1011,7 +1037,7 @@
 };
 
 &usdhc2 {
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc2>;
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
@@ -1028,7 +1054,7 @@
 &usdhc3 {
 	bus-width = <4>;
 	no-sd-uhs-sdr104;
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc3>;
 	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;

@@ -326,7 +326,6 @@ struct mxt_data {
 
 	/* for config update handling */
 	struct completion crc_completion;
-	struct gpio_desc *reset_gpio;
 };
 
 struct mxt_vb2_buffer {
@@ -3200,17 +3199,11 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct mxt_data *data;
 	const struct mxt_platform_data *pdata;
 	int error;
-	struct gpio_desc *gpio;
 
 	pdata = mxt_get_platform_data(client);
 	if (IS_ERR(pdata))
 		return PTR_ERR(pdata);
 
-	gpio = devm_gpiod_get_index(&client->dev, "reset", 0, GPIOD_OUT_HIGH);
-	if (!IS_ERR(gpio)) {
-		gpiod_set_value(gpio, 0);	/* inactive */
-		msleep(100);	/* 70 fails, 75 works */
-	}
 	error = detect_device(client);
 	if (error) {
 		dev_err(&client->dev, "not detected\n");
@@ -3219,8 +3212,6 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	data = devm_kzalloc(&client->dev, sizeof(struct mxt_data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
-	if (!IS_ERR(gpio))
-		data->reset_gpio = gpio;
 
 	snprintf(data->phys, sizeof(data->phys), "i2c-%u-%04x/input0",
 		 client->adapter->nr, client->addr);
@@ -3235,7 +3226,7 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	init_completion(&data->crc_completion);
 
 	data->reset_gpio = devm_gpiod_get_optional(&client->dev,
-						   "reset", GPIOD_OUT_LOW);
+						   "reset", GPIOD_OUT_HIGH);
 	if (IS_ERR(data->reset_gpio)) {
 		error = PTR_ERR(data->reset_gpio);
 		dev_err(&client->dev, "Failed to get reset gpio: %d\n", error);
@@ -3252,10 +3243,11 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 
 	if (data->reset_gpio) {
+		msleep(100);	/* 70 fails, 75 works */
 		data->in_bootloader = true;
 		msleep(MXT_RESET_TIME);
 		reinit_completion(&data->bl_completion);
-		gpiod_set_value(data->reset_gpio, 1);
+		gpiod_set_value(data->reset_gpio, 0);
 		error = mxt_wait_for_completion(data, &data->bl_completion,
 						MXT_RESET_TIMEOUT);
 		if (error)
