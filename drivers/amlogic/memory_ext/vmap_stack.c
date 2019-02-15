@@ -108,10 +108,10 @@ void notrace __setup_vmap_stack(unsigned long cpu)
 		WARN_ON(!irq_stack[cpu]);
 	}
 
-	pr_info("cpu %ld, vmap stack:[%lx-%lx]\n",
+	pr_debug("cpu %ld, vmap stack:[%lx-%lx]\n",
 		cpu, (unsigned long)stack,
 		(unsigned long)stack + THREAD_START_SP);
-	pr_info("cpu %ld, irq  stack:[%lx-%lx]\n",
+	pr_debug("cpu %ld, irq  stack:[%lx-%lx]\n",
 		cpu, (unsigned long)irq_stack[cpu],
 		(unsigned long)irq_stack[cpu] + THREAD_START_SP);
 	stack += THREAD_SIZE;
