@@ -31,6 +31,8 @@
 #define DEBUG_FLAG_GOFIELD_MANUL             0x100000
 #define DEBUG_FLAG_LATENCY             0x200000
 #define DEBUG_FLAG_PTS_TRACE            0x400000
+#define DEBUG_FLAG_FRAME_DETECT            0x800000
+
 /*for video.c's static int debug_flag;*/
 
 #define VOUT_TYPE_TOP_FIELD 0

@@ -122,6 +122,12 @@ struct platform_resource_s {
 	int mem_end;
 };
 #endif
+
+struct video_frame_detect_s {
+	u32 interrupt_count;
+	u32 start_receive_count;
+};
+
 static int debugflags;
 static int output_fps;
 static u32 omx_pts;
@@ -146,6 +152,7 @@ static bool omx_drop_done;
 static bool video_start_post;
 static bool videopeek;
 static bool nopostvideostart;
+static struct video_frame_detect_s video_frame_detect;
 
 /*----omx_info  bit0: keep_last_frame, bit1~31: unused----*/
 static u32 omx_info = 0x1;
@@ -240,6 +247,25 @@ static DEFINE_SPINLOCK(video2_onoff_lock);
 static int video2_onoff_state = VIDEO_ENABLE_STATE_IDLE;
 static u32 hdmiin_frame_check;
 static u32 hdmiin_frame_check_cnt;
+
+
+/*frame_detect_flag: 1 enable, 0 disable */
+/*frame_detect_time: */
+/*	How often "frame_detect_receive_count" and */
+/*		"frame_detect_drop_count" are updated, suggested set 1(s) */
+/*frame_detect_fps: Set fps based on the video file, */
+/*					If the FPS is 60, set it to 60000. */
+/*frame_detect_receive_count: */
+/*	The number of frame that should be obtained during the test time. */
+/*frame_detect_drop_count: */
+/*	The number of frame lost during test time. */
+
+
+static u32 frame_detect_flag;
+static u32 frame_detect_time = 1;
+static u32 frame_detect_fps = 60000;
+static u32 frame_detect_receive_count;
+static u32 frame_detect_drop_count;
 
 #ifdef FIQ_VSYNC
 #define BRIDGE_IRQ INT_TIMER_C
@@ -5937,9 +5963,81 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	struct vframe_s *cur_dispbuf_back = cur_dispbuf;
 	static  struct vframe_s *pause_vf;
 	int force_flush = 0;
+	static u32 interrupt_count;
 
 	if (debug_flag & DEBUG_FLAG_VSYNC_DONONE)
 		return IRQ_HANDLED;
+
+	if (frame_detect_flag == 1 &&
+			receive_frame_count &&
+			frame_detect_time &&
+			!atomic_read(&video_unreg_flag)) {
+		struct vinfo_s *video_info;
+
+		video_info = get_current_vinfo();
+		if (video_frame_detect.interrupt_count == 0) {
+			interrupt_count = 0;
+			video_frame_detect.interrupt_count =
+				frame_detect_time *
+				video_info->sync_duration_num /
+			    video_info->sync_duration_den;
+			if (debug_flag & DEBUG_FLAG_FRAME_DETECT) {
+				pr_info("sync_duration_num = %d\n",
+					video_info->sync_duration_num);
+				pr_info("sync_duration_den = %d\n",
+					video_info->sync_duration_den);
+			}
+			video_frame_detect.start_receive_count =
+				receive_frame_count;
+		}
+
+		interrupt_count++;
+
+		if (interrupt_count == video_frame_detect.interrupt_count + 1) {
+			u32 receive_count;
+			u32 expect_frame_count;
+
+			receive_count = receive_frame_count -
+				video_frame_detect.start_receive_count;
+			expect_frame_count =
+				video_frame_detect.interrupt_count *
+				frame_detect_fps *
+				video_info->sync_duration_den /
+				video_info->sync_duration_num /
+				1000;
+
+			if (receive_count < expect_frame_count) {
+				frame_detect_drop_count +=
+					expect_frame_count -
+					receive_count;
+				if (debug_flag & DEBUG_FLAG_FRAME_DETECT) {
+					pr_info("drop_count = %d\n",
+						expect_frame_count -
+						receive_count);
+				}
+				frame_detect_receive_count +=
+					expect_frame_count;
+			} else
+				frame_detect_receive_count += receive_count;
+
+			if (debug_flag & DEBUG_FLAG_FRAME_DETECT) {
+				pr_info("expect count = %d\n",
+						expect_frame_count);
+				pr_info("receive_count = %d, time = %ds\n",
+					receive_count,
+					frame_detect_time);
+				pr_info("interrupt_count = %d\n",
+					video_frame_detect.interrupt_count);
+				pr_info("frame_detect_drop_count = %d\n",
+					frame_detect_drop_count);
+				pr_info("frame_detect_receive_count = %d\n",
+					frame_detect_receive_count);
+			}
+			interrupt_count = 0;
+			memset(&video_frame_detect, 0,
+				sizeof(struct video_frame_detect_s));
+		}
+	}
 
 #ifdef CONFIG_SUPPORT_VIDEO_ON_VPP2
 	const char *dev_id_s = (const char *)dev_id;
@@ -7842,6 +7940,10 @@ static void video_vf_unreg_provider(void)
 	atomic_set(&video_unreg_flag, 1);
 	while (atomic_read(&video_inirq_flag) > 0)
 		schedule();
+	memset(&video_frame_detect, 0,
+				sizeof(struct video_frame_detect_s));
+	frame_detect_drop_count = 0;
+	frame_detect_receive_count = 0;
 	spin_lock_irqsave(&lock, flags);
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
@@ -12606,6 +12708,24 @@ module_param(receive_frame_count, int, 0664);
 
 MODULE_PARM_DESC(display_frame_count, "\n display_frame_count\n");
 module_param(display_frame_count, int, 0664);
+
+module_param(frame_detect_time, uint, 0664);
+MODULE_PARM_DESC(frame_detect_time, "\n frame_detect_time\n");
+
+module_param(frame_detect_flag, uint, 0664);
+MODULE_PARM_DESC(frame_detect_flag, "\n frame_detect_flag\n");
+
+module_param(frame_detect_fps, uint, 0664);
+MODULE_PARM_DESC(frame_detect_fps, "\n frame_detect_fps\n");
+
+module_param(frame_detect_receive_count, uint, 0664);
+MODULE_PARM_DESC(frame_detect_receive_count, "\n frame_detect_receive_count\n");
+
+module_param(frame_detect_drop_count, uint, 0664);
+MODULE_PARM_DESC(frame_detect_drop_count, "\n frame_detect_drop_count\n");
+
+
+
 
 MODULE_PARM_DESC(bypass_pps, "\n pps_bypass\n");
 module_param(bypass_pps, bool, 0664);
