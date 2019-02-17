@@ -1041,6 +1041,9 @@ static int __ref kernel_init(void *unused)
 
 static noinline void __init kernel_init_freeable(void)
 {
+	int ret;
+
+	pr_info("%s: a\n", __func__);
 	/*
 	 * Wait until kthreadd is all set-up.
 	 */
@@ -1060,6 +1063,7 @@ static noinline void __init kernel_init_freeable(void)
 
 	workqueue_init();
 
+	pr_info("%s: b\n", __func__);
 	init_mm_internals();
 
 	do_pre_smp_initcalls();
@@ -1070,6 +1074,7 @@ static noinline void __init kernel_init_freeable(void)
 
 	page_alloc_init_late();
 
+	pr_info("%s: c\n", __func__);
 	do_basic_setup();
 
 	/* Open the /dev/console on the rootfs, this should never fail */
@@ -1083,13 +1088,20 @@ static noinline void __init kernel_init_freeable(void)
 	 * the work
 	 */
 
+	pr_info("%s: d\n", __func__);
 	if (!ramdisk_execute_command)
 		ramdisk_execute_command = "/init";
 
-	if (sys_access((const char __user *) ramdisk_execute_command, 0) != 0) {
+	pr_info("%s: e %s\n", __func__, ramdisk_execute_command);
+	ret = sys_access((const char __user *) ramdisk_execute_command, 0);
+	pr_info("%s: f ret=%d\n", __func__, ret);
+	if (ret != 0) {
 		ramdisk_execute_command = NULL;
+		pr_info("%s: g\n", __func__);
 		prepare_namespace();
+		pr_info("%s: h\n", __func__);
 	}
+	pr_info("%s: i\n", __func__);
 
 	/*
 	 * Ok, we have completed the initial bootup, and

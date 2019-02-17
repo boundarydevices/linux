@@ -549,6 +549,7 @@ void __init prepare_namespace(void)
 {
 	int is_floppy;
 
+	pr_info("%s: a\n", __func__);
 	if (root_delay) {
 		printk(KERN_INFO "Waiting %d sec before mounting root device...\n",
 		       root_delay);
@@ -562,10 +563,14 @@ void __init prepare_namespace(void)
 	 * For example, it is not atypical to wait 5 seconds here
 	 * for the touchpad of a laptop to initialize.
 	 */
+	pr_info("%s: b\n", __func__);
 	wait_for_device_probe();
+	pr_info("%s: c\n", __func__);
 
 	md_run_setup();
+	pr_info("%s: d\n", __func__);
 	dm_run_setup();
+	pr_info("%s: e %s\n", __func__, saved_root_name);
 
 	if (saved_root_name[0]) {
 		root_device_name = saved_root_name;
@@ -579,9 +584,11 @@ void __init prepare_namespace(void)
 			root_device_name += 5;
 	}
 
+	pr_info("%s: f\n", __func__);
 	if (initrd_load())
 		goto out;
 
+	pr_info("%s: g\n", __func__);
 	/* wait for any asynchronous scanning to complete */
 	if ((ROOT_DEV == 0) && root_wait) {
 		printk(KERN_INFO "Waiting for root device %s...\n",
@@ -591,15 +598,20 @@ void __init prepare_namespace(void)
 			msleep(5);
 		async_synchronize_full();
 	}
+	pr_info("%s: h\n", __func__);
 
 	is_floppy = MAJOR(ROOT_DEV) == FLOPPY_MAJOR;
 
 	if (is_floppy && rd_doload && rd_load_disk(0))
 		ROOT_DEV = Root_RAM0;
 
+	pr_info("%s: i\n", __func__);
 	mount_root();
+	pr_info("%s: j\n", __func__);
 out:
+	pr_info("%s: k\n", __func__);
 	devtmpfs_mount("dev");
+	pr_info("%s: l\n", __func__);
 	sys_mount(".", "/", NULL, MS_MOVE, NULL);
 	sys_chroot(".");
 }
