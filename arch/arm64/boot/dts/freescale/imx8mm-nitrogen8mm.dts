@@ -453,6 +453,7 @@
 		status = "okay";
 	};
 
+#if 1
 	firmware {
 		android {
 			compatible = "android,firmware";
@@ -477,6 +478,8 @@
 			};
 		};
 	};
+#endif
+
 	reg_usdhc2_vqmmc: regulator-usdhc2-vqmmc {
 		compatible = "regulator-gpio";
 		pinctrl-names = "default";
@@ -1033,7 +1036,7 @@
 	non-removable;
 	vqmmc-1-8-v;
 	vmmc-supply = <&reg_vref_1v8>;
-	status = "disabled";
+	status = "okay";
 };
 
 &usdhc2 {
