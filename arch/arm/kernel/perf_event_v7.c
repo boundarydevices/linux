@@ -28,6 +28,10 @@
 #include <linux/perf/arm_pmu.h>
 #include <linux/platform_device.h>
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+#include <asm/perf_event.h>
+#endif
+
 /*
  * Common ARMv7 event types
  *
@@ -2038,8 +2042,86 @@ static const struct pmu_probe_info armv7_pmu_probe_table[] = {
 	{ /* sentinel value */ }
 };
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+#if 0
+static int read_pmuserenr(void)
+{
+	int val = -1;
+
+	asm volatile("mrc p15, 0, %0, c9, c14, 0" : "=r" (val):: "memory");
+	return val;
+}
+#endif
+
+void enable_pmuserenr(void)
+{
+	//pr_emerg("enable_pmuserenr() start, val = %d\n", read_pmuserenr());
+	asm volatile("mcr p15, 0, %0, c9, c14, 0" : : "r" (1) : "memory");
+	//pr_emerg("enable_pmuserenr() end, val = %d\n", read_pmuserenr());
+}
+
+static void enable_pmuserenr_single(void *info)
+{
+	enable_pmuserenr();
+}
+
+static void enable_pmuserenr_all(void)
+{
+	pr_info("enable_pmuserenr_all() start\n");
+
+	enable_pmuserenr_single(NULL);
+	smp_call_function_many(cpu_possible_mask,
+				enable_pmuserenr_single,
+				NULL,
+				1);
+
+	pr_info("enable_pmuserenr_all() end\n");
+}
+
+static int pmu_user_callback(struct notifier_block *nfb,
+			     unsigned long action,
+			     void *hcpu)
+{
+	switch (action) {
+	case CPU_ONLINE:
+	case CPU_ONLINE_FROZEN:
+		pr_debug("cpu online callback\n");
+		enable_pmuserenr();
+		break;
+	default:
+		break;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block pmu_user_notify = {
+	&pmu_user_callback,
+	NULL,
+	0
+};
+
+static int armv7_pmu_resume(struct platform_device *pdev)
+{
+	pr_debug("armv7_pmu_resume()\n");
+	enable_pmuserenr();
+	return 0;
+}
+
+static int armv7_pmu_suspend(struct platform_device *pdev,
+	pm_message_t state)
+{
+	pr_debug("armv7_pmu_suspend()\n");
+	return 0;
+}
+#endif
+
 static int armv7_pmu_device_probe(struct platform_device *pdev)
 {
+#ifdef CONFIG_AMLOGIC_MODIFY
+		enable_pmuserenr_all();
+		__register_cpu_notifier(&pmu_user_notify);
+#endif
+
 	return arm_pmu_device_probe(pdev, armv7_pmu_of_device_ids,
 				    armv7_pmu_probe_table);
 }
@@ -2050,6 +2132,10 @@ static struct platform_driver armv7_pmu_driver = {
 		.of_match_table = armv7_pmu_of_device_ids,
 	},
 	.probe		= armv7_pmu_device_probe,
+#ifdef CONFIG_AMLOGIC_MODIFY
+	.suspend	= armv7_pmu_suspend,
+	.resume		= armv7_pmu_resume,
+#endif
 };
 
 static int __init register_armv7_pmu_driver(void)

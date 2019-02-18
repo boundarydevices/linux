@@ -29,4 +29,9 @@ extern unsigned long perf_misc_flags(struct pt_regs *regs);
 	(regs)->ARM_sp = current_stack_pointer; \
 	(regs)->ARM_cpsr = SVC_MODE; \
 }
+
+#ifdef CONFIG_AMLOGIC_MODIFY
+void enable_pmuserenr(void);
+#endif
+
 #endif /* __ARM_PERF_EVENT_H__ */
