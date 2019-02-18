@@ -319,9 +319,9 @@ int Edid_Parse_check_HDMI_VSDB(struct hdmitx_dev *hdev,
 	if (temp_addr >= VSpecificBoundary)
 		ret = -1;
 	else {
-		if ((buff[BlockAddr + 1] != 0x03) ||
-			(buff[BlockAddr + 2] != 0x0C) ||
-			(buff[BlockAddr + 3] != 0x0))
+		if ((buff[BlockAddr + 1] != GET_OUI_BYTE0(HDMI_IEEE_OUI)) ||
+			(buff[BlockAddr + 2] != GET_OUI_BYTE1(HDMI_IEEE_OUI)) ||
+			(buff[BlockAddr + 3] != GET_OUI_BYTE2(HDMI_IEEE_OUI)))
 			ret = -1;
 	}
 	return ret;
@@ -1501,7 +1501,7 @@ static int hdmitx_edid_block_parse(struct hdmitx_dev *hdmitx_device,
 			if ((BlockBuf[offset] == 0x03) &&
 				(BlockBuf[offset+1] == 0x0c) &&
 				(BlockBuf[offset+2] == 0x00)) {
-				pRXCap->IEEEOUI = 0x000c03;
+				pRXCap->IEEEOUI = HDMI_IEEE_OUI;
 				pRXCap->ColorDeepSupport =
 					(count > 5) ? BlockBuf[offset+5] : 0;
 				set_vsdb_dc_cap(pRXCap);
@@ -1548,7 +1548,7 @@ static int hdmitx_edid_block_parse(struct hdmitx_dev *hdmitx_device,
 			} else if ((BlockBuf[offset] == 0xd8) &&
 				(BlockBuf[offset+1] == 0x5d) &&
 				(BlockBuf[offset+2] == 0xc4)) {
-				pRXCap->HF_IEEEOUI = 0xd85dc4;
+				pRXCap->HF_IEEEOUI = HF_IEEE_OUI;
 				pRXCap->Max_TMDS_Clock2 = BlockBuf[offset+4];
 				pRXCap->scdc_present =
 					!!(BlockBuf[offset+5] & (1 << 7));
@@ -1558,6 +1558,11 @@ static int hdmitx_edid_block_parse(struct hdmitx_dev *hdmitx_device,
 					!!(BlockBuf[offset+5] & (1 << 3));
 				set_vsdb_dc_420_cap(&hdmitx_device->RXCap,
 					&BlockBuf[offset]);
+				if (count > 7) {
+					unsigned char b7 = BlockBuf[offset+7];
+
+					pRXCap->allm = !!(b7 & (1 << 1));
+				}
 			}
 
 			offset += count; /* ignore the remaind. */
@@ -2100,9 +2105,9 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 		if ((CheckSum & 0xff) == 0)
 			hdmitx_device->RXCap.IEEEOUI = 0;
 		else
-			hdmitx_device->RXCap.IEEEOUI = 0x0c03;
+			hdmitx_device->RXCap.IEEEOUI = HDMI_IEEE_OUI;
 		if (zero_numbers > 120)
-			hdmitx_device->RXCap.IEEEOUI = 0x0c03;
+			hdmitx_device->RXCap.IEEEOUI = HDMI_IEEE_OUI;
 
 		return 0; /* do nothing. */
 	}
@@ -2168,14 +2173,14 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 	}
 
 	if (hdmitx_edid_search_IEEEOUI(&EDID_buf[128])) {
-		pRXCap->IEEEOUI = 0x0c03;
+		pRXCap->IEEEOUI = HDMI_IEEE_OUI;
 		pr_info(EDID "find IEEEOUT\n");
 	} else {
 		pRXCap->IEEEOUI = 0x0;
 		pr_info(EDID "not find IEEEOUT\n");
 	}
 
-	if ((pRXCap->IEEEOUI != 0x0c03) || (pRXCap->IEEEOUI == 0x0) ||
+	if ((pRXCap->IEEEOUI != HDMI_IEEE_OUI) || (pRXCap->IEEEOUI == 0x0) ||
 		(pRXCap->VIC_count == 0))
 		hdmitx_edid_set_default_vic(hdmitx_device);
 
@@ -2186,10 +2191,10 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 		pRXCap->IEEEOUI = 0x0;
 		pr_info(EDID "sink is DVI device\n");
 	} else
-		pRXCap->IEEEOUI = 0x0c03;
+		pRXCap->IEEEOUI = HDMI_IEEE_OUI;
 
 	if (edid_zero_data(EDID_buf))
-		pRXCap->IEEEOUI = 0x0c03;
+		pRXCap->IEEEOUI = HDMI_IEEE_OUI;
 
 	if ((!pRXCap->AUD_count) && (!pRXCap->IEEEOUI))
 		hdmitx_edid_set_default_aud(hdmitx_device);
@@ -2201,7 +2206,7 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 	hdmitx_device->tmp_buf[i] = 0;
 
 	if (!hdmitx_edid_check_valid_blocks(&EDID_buf[0])) {
-		pRXCap->IEEEOUI = 0x0c03;
+		pRXCap->IEEEOUI = HDMI_IEEE_OUI;
 		pr_info(EDID "Invalid edid, consider RX as HDMI device\n");
 	}
 	/* update RX HDR information */
@@ -2358,7 +2363,7 @@ bool hdmitx_edid_check_valid_mode(struct hdmitx_dev *hdev,
 	pRXCap = &(hdev->RXCap);
 
 	/* DVI case, only 8bit */
-	if (pRXCap->IEEEOUI != 0x0c03) {
+	if (pRXCap->IEEEOUI != HDMI_IEEE_OUI) {
 		if (para->cd != COLORDEPTH_24B)
 			return 0;
 	}
@@ -2519,7 +2524,7 @@ void hdmitx_edid_clear(struct hdmitx_dev *hdmitx_device)
 	/* Note: in most cases, we think that rx is tv and the default
 	 * IEEEOUI is HDMI Identifier
 	 */
-	pRXCap->IEEEOUI = 0x000c03;
+	pRXCap->IEEEOUI = HDMI_IEEE_OUI;
 
 	hdmitx_device->vic_count = 0;
 	hdmitx_device->hdmi_info.vsdb_phy_addr.a = 0;
@@ -2710,6 +2715,10 @@ int hdmitx_edid_dump(struct hdmitx_dev *hdmitx_device, char *buffer,
 		pos += snprintf(buffer+pos, buffer_len-pos,
 			"MaxTMDSClock2 %d MHz\n", pRXCap->Max_TMDS_Clock2 * 5);
 	}
+
+	if (pRXCap->allm)
+		pos += snprintf(buffer+pos, buffer_len-pos, "ALLM: %x\n",
+			pRXCap->allm);
 
 	pos += snprintf(buffer+pos, buffer_len-pos, "vLatency: ");
 	if (pRXCap->vLatency == LATENCY_INVALID_UNKNOWN)

@@ -68,6 +68,8 @@ struct ksv_lists_ {
 static struct ksv_lists_ tmp_ksv_lists;
 
 static void hdmitx_set_packet(int type, unsigned char *DB, unsigned char *HB);
+static void hdmitx_set_datapacket(int type, unsigned char *DB,
+	unsigned char *HB);
 static void hdmitx_setaudioinfoframe(unsigned char *AUD_DB,
 	unsigned char *CHAN_STAT_BUF);
 static int hdmitx_set_dispmode(struct hdmitx_dev *hdev);
@@ -240,6 +242,11 @@ static void config_avmute(unsigned int val)
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_GCP, 0, 0, 1);
 		break;
 	}
+}
+
+void hdmitx_set_avi_vic(enum hdmi_vic vic)
+{
+	hdmitx_wr_reg(HDMITX_DWC_FC_AVIVID, vic);
 }
 
 static int read_avmute(void)
@@ -600,6 +607,7 @@ static void hdmi_hwi_init(struct hdmitx_dev *hdev)
 void HDMITX_Meson_Init(struct hdmitx_dev *hdev)
 {
 	hdev->HWOp.SetPacket = hdmitx_set_packet;
+	hdev->HWOp.SetDataPacket = hdmitx_set_datapacket;
 	hdev->HWOp.SetAudioInfoFrame = hdmitx_setaudioinfoframe;
 	hdev->HWOp.SetDispMode = hdmitx_set_dispmode;
 	hdev->HWOp.SetAudMode = hdmitx_set_audmode;
@@ -2072,6 +2080,40 @@ static void hdmitx_set_packet(int type, unsigned char *DB, unsigned char *HB)
 			hdmitx_wr_reg(HDMITX_DWC_FC_SPDVENDORNAME0 + i, DB[i]);
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO0, 1, 4, 1);
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO2, 0x1, 4, 4);
+		hdmitx_set_reg_bits(HDMITX_DWC_FC_PACKET_TX_EN, 1, 4, 1);
+		break;
+	default:
+		break;
+	}
+}
+
+static void hdmitx_set_datapacket(int type, unsigned char *DB,
+	unsigned char *HB)
+{
+	int i;
+#if 0
+	pr_info("HB: %02x %02x %02x\nDB:", HB[0], HB[1], HB[2]);
+	for (i = 0; (i < 24) && (i < HB[2]); i++)
+		pr_info(" %02x", DB[i]);
+	pr_info("\n");
+#endif
+	switch (type) {
+	case HDMI_PACKET_VEND:
+		if ((!DB) || (!HB)) {
+			hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO0, 0, 3, 1);
+			hdmitx_wr_reg(HDMITX_DWC_FC_VSDSIZE, 0x0);
+			return;
+		}
+		hdmitx_wr_reg(HDMITX_DWC_FC_VSDSIZE, HB[2]);
+		hdmitx_wr_reg(HDMITX_DWC_FC_VSDIEEEID0, DB[0]);
+		hdmitx_wr_reg(HDMITX_DWC_FC_VSDIEEEID1, DB[1]);
+		hdmitx_wr_reg(HDMITX_DWC_FC_VSDIEEEID2, DB[2]);
+		for (i = 0; (i < 24) && (i < HB[2]); i++)
+			hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD0 + i, DB[3 + i]);
+		/* Enable VSI packet */
+		hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO0, 1, 3, 1);
+		hdmitx_wr_reg(HDMITX_DWC_FC_DATAUTO1, 0);
+		hdmitx_wr_reg(HDMITX_DWC_FC_DATAUTO2, 0x10);
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_PACKET_TX_EN, 1, 4, 1);
 		break;
 	default:
@@ -4680,6 +4722,28 @@ static int hdmitx_cntl_config(struct hdmitx_dev *hdev, unsigned int cmd,
 		break;
 	case CONF_AVI_YQ01:
 		hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF3, argv, 2, 2);
+		break;
+	case CONF_ALLM_MODE:
+		if (argv == CLEAR_ALLM_MODE) {
+			hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF2, 0, 7, 1);
+			hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF3, 0, 0, 2);
+			break;
+		}
+		if (argv == GET_ALLM_MODE) {
+			if (hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF2) & (1 << 7))
+				ret = hdmitx_rd_reg(HDMITX_DWC_FC_AVICONF3) & 3;
+			else
+				ret = -1;
+			break;
+		}
+		/* set ALLM mode */
+		hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF2, 1, 7, 1);
+		hdmitx_set_reg_bits(HDMITX_DWC_FC_AVICONF3, argv & 3, 0, 2);
+		if (argv == SET_ALLM_PHOTO) {
+			// TODO
+			// Extended colorimetry field may be
+			// sYcc601, AdobeYcc601 or AdobeRGB
+		}
 		break;
 	case CONF_EMP_NUMBER:
 		hdmitx_set_reg_bits(HDMITX_TOP_EMP_CNTL0, argv, 16, 16);

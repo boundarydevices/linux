@@ -2164,3 +2164,22 @@ unsigned int hdmi_get_csc_coef(
 	return 1;
 }
 
+bool is_hdmi14_4k(enum hdmi_vic vic)
+{
+	bool ret = 0;
+
+	switch (vic) {
+	case HDMI_3840x2160p24_16x9:
+	case HDMI_3840x2160p25_16x9:
+	case HDMI_3840x2160p30_16x9:
+	case HDMI_4096x2160p24_256x135:
+		ret = 1;
+		break;
+	default:
+		ret = 0;
+		break;
+	}
+
+	return ret;
+}
+
