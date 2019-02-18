@@ -10107,7 +10107,11 @@ static ssize_t video_test_screen_store(struct class *cla,
 #endif
 
 	/* show test screen  YUV blend*/
-	if (is_meson_gxm_cpu() ||
+	if (!legacy_vpp)
+		WRITE_VCBUS_REG(
+			VPP_POST_BLEND_BLEND_DUMMY_DATA,
+			test_screen & 0x00ffffff);
+	else if (is_meson_gxm_cpu() ||
 		(get_cpu_type() == MESON_CPU_MAJOR_ID_TXLX))
 		/* bit width change to 10bit in gxm, 10/12 in txlx*/
 		WRITE_VCBUS_REG(VPP_DUMMY_DATA1,
@@ -10173,7 +10177,11 @@ static ssize_t video_rgb_screen_store(struct class *cla,
 #endif
 	/* show test screen  YUV blend*/
 	yuv_eight = rgb2yuv(rgb_screen & 0x00ffffff);
-	if (is_meson_gxtvbb_cpu())   {
+	if (!legacy_vpp) {
+		WRITE_VCBUS_REG(
+			VPP_POST_BLEND_BLEND_DUMMY_DATA,
+			yuv_eight & 0x00ffffff);
+	} else if (is_meson_gxtvbb_cpu()) {
 		WRITE_VCBUS_REG(VPP_DUMMY_DATA1,
 			rgb_screen & 0x00ffffff);
 	} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXL)) {
