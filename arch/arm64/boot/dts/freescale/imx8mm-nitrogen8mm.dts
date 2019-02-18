@@ -461,10 +461,16 @@
 				compatible = "android,fstab";
 				vendor {
 					compatible = "android,vendor";
+#if 1
 					/* sd card node which used if androidboot.storage_type=sd */
 					dev_sd = "/dev/block/platform/30b50000.usdhc/by-name/vendor";
 					/* emmc node which used if androidboot.storage_type=emmc */
 					dev_emmc = "/dev/block/platform/30b40000.usdhc/by-name/vendor";
+#else
+					dev_sd = "/dev/disk/by-partlabel/vendor";
+					/* emmc node which used if androidboot.storage_type=emmc */
+					dev_emmc = "/dev/disk/by-partlabel/vendor";
+#endif
 					type = "ext4";
 					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
 					fsmgr_flags = "wait,slotselect,avb";
@@ -945,6 +951,23 @@
 &pwm4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm4>;
+	status = "okay";
+};
+
+&resmem {
+	carveout_region: imx_ion@0 {
+		compatible = "imx-ion-pool";
+		reg = <0x0 0xf8000000 0 0x8000000>;
+	};
+};
+
+&rpmsg{
+	/*
+	 * 64K for one rpmsg instance:
+	 * --0xb8000000~0xb800ffff: pingpong
+	 */
+	vdev-nums = <1>;
+	reg = <0x0 0xb8000000 0x0 0x10000>;
 	status = "okay";
 };
 
