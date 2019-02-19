@@ -55,6 +55,10 @@ struct aml_vmap {
 	spinlock_t page_lock;
 };
 
+#ifndef CONFIG_ARM64
+extern void *irq_stack[NR_CPUS];
+#endif
+
 extern int handle_vmap_fault(unsigned long addr,
 			     unsigned int esr, struct pt_regs *regs);
 

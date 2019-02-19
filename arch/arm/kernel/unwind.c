@@ -46,6 +46,7 @@
 #include <linux/list.h>
 #ifdef CONFIG_AMLOGIC_VMAP
 #include <linux/amlogic/vmap_stack.h>
+#include <asm/irq.h>
 #endif
 
 #include <asm/stacktrace.h>
@@ -524,25 +525,36 @@ void unwind_backtrace(struct pt_regs *regs, struct task_struct *tsk)
 	#ifdef CONFIG_AMLOGIC_VMAP
 		if (urc < 0) {
 			int keep = 0;
+			int cpu;
+			unsigned long addr;
+			struct pt_regs *pt_regs;
 
+			cpu = raw_smp_processor_id();
 			/* continue search for irq stack */
-			if (on_irq_stack(frame.sp, raw_smp_processor_id())) {
-				unsigned long *prev_fp;
+			if (on_irq_stack(frame.sp, cpu)) {
+				unsigned long sp_irq;
 
-				prev_fp  = (unsigned long *)(frame.fp - 12);
-				if (frame.fp >= TASK_SIZE) {
-					keep     = 1;
-					frame.fp = prev_fp[0];
-					frame.sp = prev_fp[1];
-					frame.lr = prev_fp[2];
-					frame.pc = prev_fp[3];
-				}
+				keep = 1;
+				sp_irq = (unsigned long)irq_stack[cpu];
+				addr = *((unsigned long *)(sp_irq +
+					THREAD_INFO_OFFSET - 8 -
+					sizeof(addr)));
+				pt_regs = (struct pt_regs *)addr;
+				frame.fp = pt_regs->ARM_fp;
+				frame.sp = pt_regs->ARM_sp;
+				frame.lr = pt_regs->ARM_lr;
+				frame.pc = pt_regs->ARM_pc;
 			}
 			if (!keep)
 				break;
 		}
-		where = frame.lr;
-		dump_backtrace_entry_fp(where, frame.fp, frame.sp);
+		where = frame.pc;
+		/*
+		 * The last "where" may be an invalid one,
+		 * rechecking it
+		 */
+		if (kernel_text_address(where))
+			dump_backtrace_entry_fp(where, frame.fp, frame.sp);
 	#else
 		if (urc < 0)
 			break;

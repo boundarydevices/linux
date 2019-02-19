@@ -56,7 +56,7 @@ DEFINE_PER_CPU(unsigned long [THREAD_SIZE/sizeof(long)], vmap_stack)
 #else
 static unsigned long irq_stack1[(THREAD_SIZE/sizeof(long))]
 				__aligned(THREAD_SIZE);
-static void *irq_stack[NR_CPUS] = {
+void *irq_stack[NR_CPUS] = {
 	irq_stack1,	/* only assign 1st irq stack ,other need alloc */
 };
 static unsigned long vmap_stack1[(THREAD_SIZE/sizeof(long))]
@@ -142,23 +142,29 @@ int on_irq_stack(unsigned long sp, int cpu)
 	return 0;
 }
 
-unsigned long notrace irq_stack_entry(unsigned long sp_irq)
+unsigned long notrace irq_stack_entry(unsigned long sp)
 {
 	int cpu = raw_smp_processor_id();
 
-	if (!on_irq_stack(sp_irq, cpu)) {
-		unsigned long sp = (unsigned long)irq_stack[cpu];
+	if (!on_irq_stack(sp, cpu)) {
+		unsigned long sp_irq = (unsigned long)irq_stack[cpu];
 		void *src, *dst;
 
 		/*
 		 * copy some data to irq stack
 		 */
 		src = current_thread_info();
-		dst = (void *)(sp + THREAD_INFO_OFFSET);
+		dst = (void *)(sp_irq + THREAD_INFO_OFFSET);
 		memcpy(dst, src, offsetof(struct thread_info, cpu_context));
 		sp_irq = (unsigned long)dst - 8;
+		/*
+		 * save start addr of the interrupted task's context
+		 */
+		sp_irq = sp_irq - sizeof(sp);
+		*((unsigned long *)sp_irq) = sp;
+		return sp_irq;
 	}
-	return sp_irq;
+	return sp;
 }
 
 unsigned long notrace pmd_check(unsigned long addr, unsigned long far)
@@ -403,6 +409,7 @@ static noinline void show_fault_stack(unsigned long addr, struct pt_regs *regs)
 #elif defined(CONFIG_ARM)
 	frame.fp = regs->ARM_fp;
 	frame.sp = regs->ARM_sp;
+	frame.lr = regs->ARM_lr;
 	frame.pc = (unsigned long)regs->uregs[15];
 #endif
 

@@ -47,7 +47,11 @@
 #endif
 #ifdef CONFIG_MULTI_IRQ_HANDLER
 	ldr	r1, =handle_arch_irq
+#ifdef CONFIG_AMLOGIC_VMAP
+	mov	r0, r8
+#else
 	mov	r0, sp
+#endif
 	badr	lr, 9997f
 	ldr	pc, [r1]
 #else
