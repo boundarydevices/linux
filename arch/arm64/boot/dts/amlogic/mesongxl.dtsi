@@ -124,7 +124,7 @@
 		compatible = "arm,armv8-pmuv3";
 		/* clusterb-enabled; */
 		interrupts = <GIC_SPI 137 IRQ_TYPE_LEVEL_HIGH>;
-		reg = <0x0 0xc8834400 0x0 0x4>;
+		reg = <0x0 0xc8834680 0x0 0x4>;
 		cpumasks = <0xf>;
 		/* default 10ms */
 		relax-timer-ns = <10000000>;
