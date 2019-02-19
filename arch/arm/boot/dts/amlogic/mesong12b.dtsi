@@ -1886,6 +1886,7 @@
 		reg-names = "adapter";
 		interrupts = <0 179 0>;
 		interrupt-names = "adapter-irq";
+		mem_alloc = <48>;
 	};
 
 	phycsi: phy-csi@ff650000 {
