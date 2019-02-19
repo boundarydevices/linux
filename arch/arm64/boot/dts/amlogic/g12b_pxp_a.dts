@@ -1,5 +1,5 @@
 /*
- * arch/arm64/boot/dts/amlogic/g12b_pxp.dts
+ * arch/arm64/boot/dts/amlogic/g12b_pxp_a.dts
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -17,11 +17,11 @@
 
 /dts-v1/;
 
-#include "mesong12b.dtsi"
+#include "mesong12b_a.dtsi"
 
 / {
 	model = "Amlogic";
-	amlogic-dt-id = "g12b_w400_b";
+	amlogic-dt-id = "g12b_w400_a";
 	compatible = "amlogic, g12b";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
@@ -401,63 +401,43 @@
 
 		opp00 {
 			opp-hz = /bits/ 64 <100000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp01 {
 			opp-hz = /bits/ 64 <250000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp02 {
 			opp-hz = /bits/ 64 <500000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp03 {
 			opp-hz = /bits/ 64 <667000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp04 {
 			opp-hz = /bits/ 64 <1000000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <771000>;
 		};
 		opp05 {
 			opp-hz = /bits/ 64 <1200000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <771000>;
 		};
 		opp06 {
 			opp-hz = /bits/ 64 <1398000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <791000>;
 		};
 		opp07 {
 			opp-hz = /bits/ 64 <1512000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <821000>;
 		};
 		opp08 {
 			opp-hz = /bits/ 64 <1608000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <861000>;
 		};
 		opp09 {
 			opp-hz = /bits/ 64 <1704000000>;
-			opp-microvolt = <741000>;
-		};
-		opp10 {
-			opp-hz = /bits/ 64 <1800000000>;
-			opp-microvolt = <771000>;
-		};
-		opp11 {
-			opp-hz = /bits/ 64 <1908000000>;
-			opp-microvolt = <801000>;
-		};
-		opp12 {
-			opp-hz = /bits/ 64 <2016000000>;
-			opp-microvolt = <821000>;
-		};
-		opp13 {
-			opp-hz = /bits/ 64 <2100000000>;
-			opp-microvolt = <851000>;
-		};
-		opp14 {
-			opp-hz = /bits/ 64 <2208000000>;
-			opp-microvolt = <901000>;
+			opp-microvolt = <891000>;
 		};
 	};
 

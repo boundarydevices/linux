@@ -1,5 +1,5 @@
 /*
- * arch/arm64/boot/dts/amlogic/g12b_a311d_w400_buildroot.dts
+ * arch/arm64/boot/dts/amlogic/g12b_a311d_skt_a.dts
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -17,12 +17,13 @@
 
 /dts-v1/;
 
-#include "mesong12b.dtsi"
+#include "partition_mbox_normal.dtsi"
+#include "mesong12b_a.dtsi"
 #include "mesong12b_skt-panel.dtsi"
 
 / {
 	model = "Amlogic";
-	amlogic-dt-id = "g12b_w400_b";
+	amlogic-dt-id = "g12b_w400_a";
 	compatible = "amlogic, g12b";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
@@ -68,6 +69,7 @@
 			size = <0x0 0x400000>;
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x05000000 0x0 0x400000>;
+			clear-map;
 		};
 
 		secos_reserved:linux,secos {
@@ -150,19 +152,41 @@
 			size = <0x0 0x04000000>;
 			alignment = <0x0 0x400000>;
 		};
-	};
+		galcore_reserved:linux,galcore {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x0>;
+			alignment = <0x0 0x400000>;
+			linux,contiguous-region;
+		};
 
-	gpioleds {
-		compatible = "gpio-leds";
-		status = "okay";
+		isp_cma_reserved:linux,isp_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			status = "okay";
+			size = <0x0 0x10000000>;
+			alignment = <0x0 0x400000>;
+		};
 
-		sys_led {
-			label="sys_led";
-			gpios=<&gpio_ao GPIOAO_11 GPIO_ACTIVE_HIGH>;
-			default-state ="on";
+		adapt_cma_reserved:linux,adapt_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			status = "okay";
+			size = <0x0 0x03000000>;
+			alignment = <0x0 0x400000>;
+		};
+		gdc_cma_reserved:linux,gdc_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			status = "okay";
+			size = <0x0 0x04000000>;
+			alignment = <0x0 0x400000>;
 		};
 	};
-
+	galcore {
+		status = "okay";
+		memory-region = <&galcore_reserved>;
+	};
 	cvbsout {
 		compatible = "amlogic, cvbsout-g12b";
 		dev_name = "cvbsout";
@@ -175,6 +199,7 @@
 			"venci_0_gate",
 			"venci_1_gate",
 			"vdac_clk_gate";
+		clk_path = <0>;
 
 		/* performance: reg_address, reg_value */
 		/* g12b */
@@ -270,96 +295,6 @@
 		status = "okay";
 	};
 
-
-	partitions: partitions{
-		parts = <14>;
-		part-0 = <&logo>;
-		part-1 = <&recovery>;
-		part-2 = <&misc>;
-		part-3 = <&dto>;
-		part-4 = <&cri_data>;
-		part-5 = <&param>;
-		part-6 = <&boot>;
-		part-7 = <&rsv>;
-		part-8 = <&tee>;
-		part-9 = <&vendor>;
-		part-10 = <&odm>;
-		part-11 = <&system>;
-		part-12 = <&cache>;
-		part-13 = <&data>;
-
-		logo:logo{
-			pname = "logo";
-			size = <0x0 0x800000>;
-			mask = <1>;
-		};
-		recovery:recovery{
-			pname = "recovery";
-			size = <0x0 0x1800000>;
-			mask = <1>;
-		};
-		misc:misc{
-			pname = "misc";
-			size = <0x0 0x800000>;
-			mask = <1>;
-		};
-		dto:dto{
-			pname = "dto";
-			size = <0x0 0x800000>;
-			mask = <1>;
-		};
-		cri_data:cri_data{
-			pname = "cri_data";
-			size = <0x0 0x800000>;
-			mask = <2>;
-		};
-		rsv:rsv{
-			pname = "rsv";
-			size = <0x0 0x1000000>;
-			mask = <1>;
-		};
-		param:param{
-			pname = "param";
-			size = <0x0 0x1000000>;
-			mask = <2>;
-		};
-		boot:boot{
-			pname = "boot";
-			size = <0x0 0x1000000>;
-			mask = <1>;
-		};
-		tee:tee{
-			pname = "tee";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		vendor:vendor{
-			pname = "vendor";
-			size = <0x0 0x10000000>;
-			mask = <1>;
-		};
-		odm:odm{
-			pname = "odm";
-			size = <0x0 0x10000000>;
-			mask = <1>;
-		};
-		system:system{
-			pname = "system";
-			size = <0x0 0x80000000>;
-			mask = <1>;
-		};
-		cache:cache{
-			pname = "cache";
-			size = <0x0 0x46000000>;
-			mask = <2>;
-		};
-		data:data{
-			pname = "data";
-			size = <0xffffffff 0xffffffff>;
-			mask = <4>;
-		};
-	};
-
 	gpio_keypad {
 		compatible = "amlogic, gpio_keypad";
 		status = "okay";
@@ -374,20 +309,21 @@
 	adc_keypad {
 		compatible = "amlogic, adc_keypad";
 		status = "okay";
-		key_name = "vol-", "vol+", "enter";
-		key_num = <3>;
+		key_name = "menu", "vol-", "vol+", "esc", "home";
+		key_num = <5>;
 		io-channels = <&saradc SARADC_CH2>;
 		io-channel-names = "key-chan-2";
-		key_chan = <SARADC_CH2 SARADC_CH2 SARADC_CH2>;
-		key_code = <114 115 28>;
-		key_val = <143 266 389>; //val=voltage/1800mV*1023
-		key_tolerance = <40 40 40>;
+		key_chan = <SARADC_CH2 SARADC_CH2 SARADC_CH2
+			SARADC_CH2 SARADC_CH2>;
+		key_code = <139 114 115 1 102>;
+		key_val = <0 143 266 389 512>; //val=voltage/1800mV*1023
+		key_tolerance = <40 40 40 40 40>;
 	};
 
 	unifykey{
 		compatible = "amlogic, unifykey";
 		status = "ok";
-		unifykey-num = <15>;
+		unifykey-num = <16>;
 		unifykey-index-0 = <&keysn_0>;
 		unifykey-index-1 = <&keysn_1>;
 		unifykey-index-2 = <&keysn_2>;
@@ -403,6 +339,8 @@
 		unifykey-index-12= <&keysn_12>;
 		unifykey-index-13= <&keysn_13>;
 		unifykey-index-14= <&keysn_14>;
+		unifykey-index-15= <&keysn_15>;
+
 
 		keysn_0: key_0{
 			key-name = "usid";
@@ -478,11 +416,45 @@
 			key-permit = "read","write","del";
 		};
 		keysn_14:key_14{
+			key-name = "attestationkeybox";// attestation key
+			key-device = "secure";
+			key-permit = "read","write","del";
+		};
+		keysn_15:key_15{
 			key-name = "netflix_mgkid";
 			key-device = "secure";
 			key-permit = "read","write","del";
 		};
 	};//End unifykey
+
+	efusekey:efusekey{
+		keynum = <4>;
+		key0 = <&key_0>;
+		key1 = <&key_1>;
+		key2 = <&key_2>;
+		key3 = <&key_3>;
+		key_0:key_0{
+			keyname = "mac";
+			offset = <0>;
+			size = <6>;
+		};
+		key_1:key_1{
+			keyname = "mac_bt";
+			offset = <6>;
+			size = <6>;
+		};
+		key_2:key_2{
+			keyname = "mac_wifi";
+			offset = <12>;
+			size = <6>;
+		};
+		key_3:key_3{
+			keyname = "usid";
+			offset = <18>;
+			size = <16>;
+		};
+	};//End efusekey
+
 
 	amlvecm {
 		compatible = "amlogic, vecm";
@@ -512,11 +484,11 @@
 	};
 	amlogic_codec:t9015{
 		#sound-dai-cells = <0>;
-		compatible = "amlogic, aml_codec_T9015";
+		/*compatible = "amlogic, aml_codec_T9015";*/
 		reg = <0x0 0xFF632000 0x0 0x2000>;
 		is_auge_used = <1>; /* meson or auge chipset used */
 		tdmout_index = <1>;
-		status = "okay";
+		status = "disabled";
 	};
 	audio_effect:eqdrc{
 		/*eq_enable = <1>;*/
@@ -596,7 +568,7 @@
 			};
 			tdmbcodec: codec {
 				sound-dai = <&dummy_codec &dummy_codec
-				&amlogic_codec &ad82584f_62>;
+				&dummy_codec &ad82584f_62>;
 			};
 		};
 
@@ -717,16 +689,8 @@
 			opp-microvolt = <861000>;
 		};
 		opp10 {
-			opp-hz = /bits/ 64 <1896000000>;
+			opp-hz = /bits/ 64 <1800000000>;
 			opp-microvolt = <981000>;
-		};
-		opp11 {
-			opp-hz = /bits/ 64 <2016000000>;
-			opp-microvolt = <1011000>;
-		};
-		opp12 {
-			opp-hz = /bits/ 64 <2100000000>;
-			opp-microvolt = <1011000>;
 		};
 	};
 
@@ -736,63 +700,43 @@
 
 		opp00 {
 			opp-hz = /bits/ 64 <100000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp01 {
 			opp-hz = /bits/ 64 <250000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp02 {
 			opp-hz = /bits/ 64 <500000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp03 {
 			opp-hz = /bits/ 64 <667000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp04 {
 			opp-hz = /bits/ 64 <1000000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <771000>;
 		};
 		opp05 {
 			opp-hz = /bits/ 64 <1200000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <771000>;
 		};
 		opp06 {
 			opp-hz = /bits/ 64 <1398000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <791000>;
 		};
 		opp07 {
 			opp-hz = /bits/ 64 <1512000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <821000>;
 		};
 		opp08 {
 			opp-hz = /bits/ 64 <1608000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <861000>;
 		};
 		opp09 {
 			opp-hz = /bits/ 64 <1704000000>;
-			opp-microvolt = <741000>;
-		};
-		opp10 {
-			opp-hz = /bits/ 64 <1800000000>;
-			opp-microvolt = <771000>;
-		};
-		opp11 {
-			opp-hz = /bits/ 64 <1908000000>;
-			opp-microvolt = <801000>;
-		};
-		opp12 {
-			opp-hz = /bits/ 64 <2016000000>;
-			opp-microvolt = <821000>;
-		};
-		opp13 {
-			opp-hz = /bits/ 64 <2100000000>;
-			opp-microvolt = <851000>;
-		};
-		opp14 {
-			opp-hz = /bits/ 64 <2208000000>;
-			opp-microvolt = <901000>;
+			opp-microvolt = <891000>;
 		};
 	};
 
@@ -801,8 +745,69 @@
 		status = "okay";
 	};
 
+	sensor: sensor {
+		compatible = "soc, sensor";
+		status = "okay";
+		sensor-name = "imx290"; /*imx290;os08a10;imx227*/
+		pinctrl-names="default";
+		pinctrl-0=<&clk12_24_z_pins>;
+		clocks = <&clkc CLKID_24M>;
+		clock-names = "g12a_24m";
+		reset = <&gpio GPIOZ_12 GPIO_ACTIVE_HIGH>;
+		ir_cut_gpio = <&gpio GPIOZ_11 GPIO_ACTIVE_HIGH
+				&gpio GPIOZ_7 GPIO_ACTIVE_HIGH>;
+	};
 
+	iq: iq {
+		compatible = "soc, iq";
+		status = "okay";
+		sensor-name = "imx290"; /*imx290;os08a10;imx227*/
+	};
 }; /* end of / */
+&i2c2 {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c2_master_pins2>;
+	clock-frequency = <100000>; /* default 100k */
+	sensor-i2c@6c {
+		compatible = "arm, i2c-sensor";
+		reg = <0x6c>;
+		reg-names = "i2c-sensor";
+		slave-addr = <0x6c>;
+		reg-type = <2>;
+		reg-data-type = <1>;
+		link-device = <&phycsi>;
+	};
+
+	lcd_extern_i2c0: lcd_extern_i2c@0 {
+		compatible = "lcd_ext, i2c";
+		dev_name = "i2c_LT8912_0";
+		reg = <0x48>;
+		status = "disabled";
+	};
+
+	lcd_extern_i2c1: lcd_extern_i2c@1 {
+		compatible = "lcd_ext, i2c";
+		dev_name = "i2c_LT8912_1";
+		reg = <0x49>;
+		status = "disabled";
+	};
+};
+
+&isp {
+	status = "okay";
+	memory-region = <&isp_cma_reserved>;
+};
+
+&adapter {
+	status = "okay";
+	memory-region = <&adapt_cma_reserved>;
+};
+
+&gdc {
+	status = "okay";
+	memory-region = <&gdc_cma_reserved>;
+};
 
 &meson_fb {
 	status = "okay";
@@ -824,6 +829,24 @@
 &pwm_AO_cd {
 		status = "okay";
 	};
+
+&i2c0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_master_pins2>;
+	clock-frequency = <400000>;
+
+	touchscreen@38 {
+		compatible = "focaltech,fts";
+		status = "disabled";
+		reg = <0x38>;
+		reset-gpio = <&gpio GPIOZ_9 GPIO_ACTIVE_HIGH>;
+		irq-gpio = <&gpio GPIOZ_3 GPIO_ACTIVE_HIGH>;
+		x_max = <720>;
+		y_max = <1280>;
+		max-touch-number = <10>;
+	};
+};
 
 &i2c3 {
 	status = "okay";
@@ -882,7 +905,7 @@
 		 * 3: spdifout;
 		 * 4: spdifout_b;
 		 */
-		samesource_sel = <3>;
+		samesource_sel = <4>;
 	};
 
 	aml_tdmc: tdmc {
@@ -1087,6 +1110,14 @@
 		mux { /* GPIOA_11 */
 			groups = "mclk1_a";
 			function = "mclk1";
+		};
+	};
+
+	clk12_24_z_pins:clk12_24_z_pins {
+		mux {
+			groups = "clk12_24_z";
+			function = "clk12_24_ee";
+			drive-strength = <3>;
 		};
 	};
 
@@ -1326,8 +1357,10 @@
 };
 &ethmac {
 	status = "okay";
-	pinctrl-names = "internal_eth_pins";
-	pinctrl-0 = <&internal_eth_pins>;
+/*	//conflict with isp i2c
+ *	pinctrl-names = "internal_eth_pins";
+ *	pinctrl-0 = <&internal_eth_pins>;
+ */
 	mc_val = <0x4be04>;
 
 	internal_phy=<1>;
@@ -1339,9 +1372,16 @@
 
 &pcie_A {
 	reset-gpio = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
-	status = "okay";
+	status = "disabled";
 };
 
 &saradc {
 	status = "okay";
+};
+
+&spicc1 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spicc1_pins>;
+	cs-gpios = <&gpio GPIOH_6 0>;
 };

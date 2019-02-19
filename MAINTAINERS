@@ -14760,3 +14760,10 @@ F:	drivers/amlogic/media/video_processor/videosync/Makefile
 F:	drivers/amlogic/media/video_processor/videosync/vfp.h
 F:	drivers/amlogic/media/video_processor/videosync/videosync.h
 F:	drivers/amlogic/media/video_processor/videosync/videosync.c
+
+AMLOGIC G12B_A DTS
+M:	Jianxiong Pan <jianxiong.pan@amlogic.com>
+F:	arch/arm/boot/dts/amlogic/g12b*_a.dts
+F:	arch/arm/boot/dts/amlogic/mesong12b.dtsi
+F:	arch/arm64/boot/dts/amlogic/g12b*_a.dts
+F:	arch/arm64/boot/dts/amlogic/mesong12b.dtsi

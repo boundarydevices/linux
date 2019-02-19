@@ -1,5 +1,5 @@
 /*
- * arch/arm64/boot/dts/amlogic/g12b_pxp.dts
+ * arch/arm/boot/dts/amlogic/g12b_pxp_a.dts
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -17,15 +17,15 @@
 
 /dts-v1/;
 
-#include "mesong12b.dtsi"
+#include "mesong12b_a.dtsi"
 
 / {
 	model = "Amlogic";
-	amlogic-dt-id = "g12b_w400_b";
+	amlogic-dt-id = "g12b_w400_a";
 	compatible = "amlogic, g12b";
 	interrupt-parent = <&gic>;
-	#address-cells = <2>;
-	#size-cells = <2>;
+	#address-cells = <1>;
+	#size-cells = <1>;
 
 	aliases {
 		serial0 = &uart_AO;
@@ -38,40 +38,40 @@
 
 	memory@00000000 {
 		device_type = "memory";
-		linux,usable-memory = <0x0 0x100000 0x0 0x3ff00000>;
+		linux,usable-memory = <0x100000 0x3ff00000>;
 	};
 
 	reserved-memory {
-		#address-cells = <2>;
-		#size-cells = <2>;
+		#address-cells = <1>;
+		#size-cells = <1>;
 		ranges;
 		/* global autoconfigured region for contiguous allocations */
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x400000>;
-			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x05000000 0x0 0x400000>;
+			size = <0x400000>;
+			alignment = <0x400000>;
+			alloc-ranges = <0x05000000 0x400000>;
 		};
 
 		secos_reserved:linux,secos {
 			status = "disable";
 			compatible = "amlogic, aml_secos_memory";
-			reg = <0x0 0x05300000 0x0 0x2000000>;
+			reg = <0x05300000 0x2000000>;
 			no-map;
 		};
 		logo_reserved:linux,meson-fb {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x800000>;
-			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x3f800000 0x0 0x800000>;
+			size = <0x800000>;
+			alignment = <0x400000>;
+			alloc-ranges = <0x3f800000 0x800000>;
 		};
 		ion_cma_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x8000000>;
-			alignment = <0x0 0x400000>;
+			size = <0x8000000>;
+			alignment = <0x400000>;
 		};
 
 		//di_reserved:linux,di {
@@ -81,7 +81,7 @@
 			/** 10x3621952=34.6M(0x23) support 8bit **/
 			/** 10x4736064=45.2M(0x2e) support 12bit **/
 			/** 10x4179008=40M(0x28) support 10bit **/
-			//size = <0x0 0x2800000>;
+			//size = <0x2800000>;
 			//no-map;
 		//};
 		/*di CMA pool */
@@ -95,22 +95,23 @@
 			 * 10x4736064=45.2M(0x2e) support 12bit
 			 * 10x4074560=40M(0x28) support 10bit
 			 */
-			size = <0x0 0x02800000>;
-			alignment = <0x0 0x400000>;
+			size = <0x02800000>;
+			alignment = <0x400000>;
 		};
 		codec_mm_cma:linux,codec_mm_cma {
 			compatible = "shared-dma-pool";
 			reusable;
 			/* ion_codec_mm max can alloc size 80M*/
-			size = <0x0 0x13400000>;
-			alignment = <0x0 0x400000>;
+			size = <0xd000000>;
+			alignment = <0x400000>;
 			linux,contiguous-region;
+			alloc-ranges = <0x0 0x30000000>;
 		};
 		/* codec shared reserved */
 		codec_mm_reserved:linux,codec_mm_reserved {
 			compatible = "amlogic, codec-mm-reserved";
-			size = <0x0 0x0>;
-			alignment = <0x0 0x100000>;
+			size = <0x0>;
+			alignment = <0x100000>;
 			//no-map;
 		};
 		/*  vdin0 CMA pool */
@@ -118,16 +119,16 @@
 			compatible = "shared-dma-pool";
 			reusable;
 		/* 1920x1080x2x4  =16+4 M */
-			size = <0x0 0x04000000>;
-			alignment = <0x0 0x400000>;
+			size = <0x04000000>;
+			alignment = <0x400000>;
 		};
 		/*  vdin1 CMA pool */
 		vdin1_cma_reserved:linux,vdin1_cma {
 			compatible = "shared-dma-pool";
 			reusable;
 			/* 1920x1080x2x4  =16 M */
-			size = <0x0 0x04000000>;
-			alignment = <0x0 0x400000>;
+			size = <0x04000000>;
+			alignment = <0x400000>;
 		};
 	};
 
@@ -222,7 +223,7 @@
 	amlogic_codec:t9015{
 		#sound-dai-cells = <0>;
 		/*compatible = "amlogic, aml_codec_T9015";*/
-		reg = <0x0 0xFF632000 0x0 0x2000>;
+		reg = <0xFF632000 0x2000>;
 		is_auge_used = <1>; /* meson or auge chipset used */
 		tdmout_index = <0>;
 		status = "disabled";
@@ -401,63 +402,43 @@
 
 		opp00 {
 			opp-hz = /bits/ 64 <100000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp01 {
 			opp-hz = /bits/ 64 <250000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp02 {
 			opp-hz = /bits/ 64 <500000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp03 {
 			opp-hz = /bits/ 64 <667000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp04 {
 			opp-hz = /bits/ 64 <1000000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <771000>;
 		};
 		opp05 {
 			opp-hz = /bits/ 64 <1200000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <771000>;
 		};
 		opp06 {
 			opp-hz = /bits/ 64 <1398000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <791000>;
 		};
 		opp07 {
 			opp-hz = /bits/ 64 <1512000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <821000>;
 		};
 		opp08 {
 			opp-hz = /bits/ 64 <1608000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <861000>;
 		};
 		opp09 {
 			opp-hz = /bits/ 64 <1704000000>;
-			opp-microvolt = <741000>;
-		};
-		opp10 {
-			opp-hz = /bits/ 64 <1800000000>;
-			opp-microvolt = <771000>;
-		};
-		opp11 {
-			opp-hz = /bits/ 64 <1908000000>;
-			opp-microvolt = <801000>;
-		};
-		opp12 {
-			opp-hz = /bits/ 64 <2016000000>;
-			opp-microvolt = <821000>;
-		};
-		opp13 {
-			opp-hz = /bits/ 64 <2100000000>;
-			opp-microvolt = <851000>;
-		};
-		opp14 {
-			opp-hz = /bits/ 64 <2208000000>;
-			opp-microvolt = <901000>;
+			opp-microvolt = <891000>;
 		};
 	};
 

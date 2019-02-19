@@ -1,5 +1,5 @@
 /*
- * arch/arm64/boot/dts/amlogic/g12b_a311d_w400_buildroot.dts
+ * arch/arm64/boot/dts/amlogic/g12b_a311x_w411_buildroot.dts
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -18,7 +18,6 @@
 /dts-v1/;
 
 #include "mesong12b.dtsi"
-#include "mesong12b_skt-panel.dtsi"
 
 / {
 	model = "Amlogic";
@@ -45,7 +44,7 @@
 
 	memory@00000000 {
 		device_type = "memory";
-		linux,usable-memory = <0x0 0x100000 0x0 0x7ff00000>;
+		linux,usable-memory = <0x0 0x100000 0x0 0x3ff00000>;
 	};
 
 	reserved-memory {
@@ -68,6 +67,7 @@
 			size = <0x0 0x400000>;
 			alignment = <0x0 0x400000>;
 			alloc-ranges = <0x0 0x05000000 0x0 0x400000>;
+			clear-map;
 		};
 
 		secos_reserved:linux,secos {
@@ -81,7 +81,7 @@
 			reusable;
 			size = <0x0 0x800000>;
 			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x7f800000 0x0 0x800000>;
+			alloc-ranges = <0x0 0x3f800000 0x0 0x800000>;
 		};
 		ion_cma_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
@@ -123,7 +123,7 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			/* ion_codec_mm max can alloc size 80M*/
-			size = <0x0 0x13400000>;
+			size = <0x0 0x5000000>;
 			alignment = <0x0 0x400000>;
 			linux,contiguous-region;
 		};
@@ -135,23 +135,56 @@
 			//no-map;
 		};
 		/*  vdin0 CMA pool */
-		vdin0_cma_reserved:linux,vdin0_cma {
+	//	vdin0_cma_reserved:linux,vdin0_cma {
+	//		compatible = "shared-dma-pool";
+	//		reusable;
+		/* 1920x1080x2x4  =16+4 M */
+	//		size = <0x0 0x04000000>;
+	//		alignment = <0x0 0x400000>;
+	//	};
+		/*  vdin1 CMA pool */
+	//	vdin1_cma_reserved:linux,vdin1_cma {
+	//		compatible = "shared-dma-pool";
+	//		reusable;
+			/* 1920x1080x2x4  =16 M */
+	//		size = <0x0 0x04000000>;
+	//		alignment = <0x0 0x400000>;
+	//	};
+		galcore_reserved:linux,galcore {
 			compatible = "shared-dma-pool";
 			reusable;
-		/* 1920x1080x2x4  =16+4 M */
-			size = <0x0 0x04000000>;
+			size = <0x0 0x0>;
+			alignment = <0x0 0x400000>;
+			linux,contiguous-region;
+		};
+
+		isp_cma_reserved:linux,isp_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			status = "okay";
+			size = <0x0 0x3c00000>;
 			alignment = <0x0 0x400000>;
 		};
-		/*  vdin1 CMA pool */
-		vdin1_cma_reserved:linux,vdin1_cma {
+
+		adapt_cma_reserved:linux,adapt_cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			/* 1920x1080x2x4  =16 M */
+			status = "okay";
+			size = <0x0 0x1800000>;
+			alignment = <0x0 0x400000>;
+		};
+		gdc_cma_reserved:linux,gdc_cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			status = "okay";
 			size = <0x0 0x04000000>;
 			alignment = <0x0 0x400000>;
 		};
 	};
-
+	galcore {
+		status = "okay";
+		memory-region = <&galcore_reserved>;
+	};
 	gpioleds {
 		compatible = "gpio-leds";
 		status = "okay";
@@ -365,29 +398,29 @@
 		status = "okay";
 		scan_period = <20>;
 		key_num = <1>;
-		key_name = "power";
-		key_code = <116>;
+		key_name = "wificonfig";
+		key_code = <139>;
 		key-gpios = <&gpio_ao  GPIOAO_3  GPIO_ACTIVE_HIGH>;
 		detect_mode = <0>;/*0:polling mode, 1:irq mode*/
 	};
 
 	adc_keypad {
 		compatible = "amlogic, adc_keypad";
-		status = "okay";
-		key_name = "vol-", "vol+", "enter";
-		key_num = <3>;
+		status = "disabled";
+		key_name = "vol-", "vol+", "enter", "wificonfig";
+		key_num = <4>;
 		io-channels = <&saradc SARADC_CH2>;
 		io-channel-names = "key-chan-2";
-		key_chan = <SARADC_CH2 SARADC_CH2 SARADC_CH2>;
-		key_code = <114 115 28>;
-		key_val = <143 266 389>; //val=voltage/1800mV*1023
-		key_tolerance = <40 40 40>;
+		key_chan = <SARADC_CH2 SARADC_CH2 SARADC_CH2 SARADC_CH2>;
+		key_code = <114 115 28 139>;
+		key_val = <143 266 389 0>; //val=voltage/1800mV*1023
+		key_tolerance = <40 40 40 40>;
 	};
 
 	unifykey{
 		compatible = "amlogic, unifykey";
 		status = "ok";
-		unifykey-num = <15>;
+		unifykey-num = <14>;
 		unifykey-index-0 = <&keysn_0>;
 		unifykey-index-1 = <&keysn_1>;
 		unifykey-index-2 = <&keysn_2>;
@@ -402,7 +435,6 @@
 		unifykey-index-11= <&keysn_11>;
 		unifykey-index-12= <&keysn_12>;
 		unifykey-index-13= <&keysn_13>;
-		unifykey-index-14= <&keysn_14>;
 
 		keysn_0: key_0{
 			key-name = "usid";
@@ -477,11 +509,6 @@
 			key-device = "secure";
 			key-permit = "read","write","del";
 		};
-		keysn_14:key_14{
-			key-name = "netflix_mgkid";
-			key-device = "secure";
-			key-permit = "read","write","del";
-		};
 	};//End unifykey
 
 	amlvecm {
@@ -541,7 +568,7 @@
 		//aml-audio-card,loopback = <&aml_loopback>;
 		//aml-audio-card,aux-devs = <&amlogic_codec>;
 		/*avout mute gpio*/
-		avout_mute-gpios = <&gpio_ao GPIOAO_2 GPIO_ACTIVE_HIGH>;
+		avout_mute-gpios = <&gpio_ao GPIOAO_6 GPIO_ACTIVE_HIGH>;
 		/*for audio effect ,eqdrc */
 		aml-audio-card,effect = <&audio_effect>;
 
@@ -708,26 +735,6 @@
 			opp-hz = /bits/ 64 <1512000000>;
 			opp-microvolt = <791000>;
 		};
-		opp08 {
-			opp-hz = /bits/ 64 <1608000000>;
-			opp-microvolt = <831000>;
-		};
-		opp09 {
-			opp-hz = /bits/ 64 <1704000000>;
-			opp-microvolt = <861000>;
-		};
-		opp10 {
-			opp-hz = /bits/ 64 <1896000000>;
-			opp-microvolt = <981000>;
-		};
-		opp11 {
-			opp-hz = /bits/ 64 <2016000000>;
-			opp-microvolt = <1011000>;
-		};
-		opp12 {
-			opp-hz = /bits/ 64 <2100000000>;
-			opp-microvolt = <1011000>;
-		};
 	};
 
 	cpu_opp_table1: cpu_opp_table1 {
@@ -801,14 +808,75 @@
 		status = "okay";
 	};
 
+	sensor: sensor {
+		compatible = "soc, sensor";
+		status = "okay";
+		sensor-name = "imx290"; /*imx290;os08a10;imx227*/
+		pinctrl-names="default";
+		pinctrl-0=<&clk12_24_z_pins>;
+		clocks = <&clkc CLKID_24M>;
+		clock-names = "g12a_24m";
+		reset = <&gpio GPIOZ_12 GPIO_ACTIVE_HIGH>;
+		ir_cut_gpio = <&gpio GPIOZ_11 GPIO_ACTIVE_HIGH
+				&gpio GPIOZ_7 GPIO_ACTIVE_HIGH>;
+	};
 
+	iq: iq {
+		compatible = "soc, iq";
+		status = "okay";
+		sensor-name = "imx290"; /*imx290;os08a10;imx227*/
+	};
+	ircut: ircut {
+		compatible = "amlogic, ircut";
+		status = "okay";
+		filter1-gpios = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
+		filter2-gpios = <&gpio GPIOH_7 GPIO_ACTIVE_HIGH>;
+		light_in-gpios = <&gpio_ao GPIOAO_7 GPIO_ACTIVE_HIGH>;
+		alarm-gpios = <&gpio_ao GPIOAO_10 GPIO_ACTIVE_HIGH>;
+	};
+	vcodec_dec {
+		compatible = "amlogic, vcodec-dec";
+		dev_name = "aml-vcodec-dec";
+		status = "okay";
+	};
 }; /* end of / */
+&i2c2 {
+	status = "okay";
+	pinctrl-names="default";
+	pinctrl-0=<&i2c2_master_pins2>;
+	clock-frequency = <100000>; /* default 100k */
+	sensor-i2c@6c {
+		compatible = "arm, i2c-sensor";
+		reg = <0x6c>;
+		reg-names = "i2c-sensor";
+		slave-addr = <0x6c>;
+		reg-type = <2>;
+		reg-data-type = <1>;
+		link-device = <&phycsi>;
+	};
+};
+
+&isp {
+	status = "okay";
+	memory-region = <&isp_cma_reserved>;
+};
+
+&adapter {
+	status = "okay";
+	mem_alloc = <24>;
+	memory-region = <&adapt_cma_reserved>;
+};
+
+&gdc {
+	status = "okay";
+	memory-region = <&gdc_cma_reserved>;
+};
 
 &meson_fb {
 	status = "okay";
 	display_size_default = <1920 1080 1920 2160 32>;
 	mem_size = <0x00800000 0x1980000 0x100000 0x100000 0x800000>;
-	logo_addr = "0x7f800000";
+	logo_addr = "0x3f800000";
 	mem_alloc = <1>;
 	pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
 };
@@ -845,6 +913,13 @@
 		#sound-dai-cells = <0>;
 		reg = <0x19>;
 		differential_pair = <1>;
+		status = "disabled";
+	};
+
+	bl_extern_i2c {
+		compatible = "bl_extern, i2c";
+		dev_name = "lp8556";
+		reg = <0x2c>;
 		status = "disabled";
 	};
 };
@@ -931,7 +1006,7 @@
 
 		interrupt-names = "irq_spdifin";
 		pinctrl-names = "spdif_pins";
-		pinctrl-0 = <&spdifout &spdifin>;
+		pinctrl-0 = <&spdifin>;
 		status = "okay";
 	};
 	aml_spdif_b: spdif_b {
@@ -1090,6 +1165,14 @@
 		};
 	};
 
+	clk12_24_z_pins:clk12_24_z_pins {
+		mux {
+			groups = "clk12_24_z";
+			function = "clk12_24_ee";
+			drive-strength = <3>;
+		};
+	};
+
 	tdmout_c:tdmout_c {
 		mux { /* GPIOA_12, GPIOA_13, GPIOA_8, GPIOA_7*/
 			groups = "tdmc_sclk_a",
@@ -1148,10 +1231,17 @@
 }; /* end of pinctrl_periphs */
 
 &pinctrl_aobus {
-	spdifout: spdifout {
-		mux { /* gpiao_10 */
-			groups = "spdif_out_ao";
-			function = "spdif_out_ao";
+//	spdifout: spdifout {
+//		mux { /* gpiao_10 */
+//			groups = "spdif_out_ao";
+//			function = "spdif_out_ao";
+//		};
+//};
+	ao_b_uart_pins2:ao_b_uart2 {
+		mux {
+			groups = "uart_ao_tx_b_8",
+				"uart_ao_rx_b_9";
+			function = "uart_ao_b";
 		};
 	};
 };  /* end of pinctrl_aobus */
@@ -1166,8 +1256,8 @@
 
 /*if you want to use vdin just modify status to "ok"*/
 &vdin0 {
-	memory-region = <&vdin0_cma_reserved>;
-	status = "okay";
+//	memory-region = <&vdin0_cma_reserved>;
+	status = "disabled";
 	/*vdin write mem color depth support:
 	 *bit0:support 8bit
 	 *bit1:support 9bit
@@ -1178,8 +1268,8 @@
 	tv_bit_mode = <0x15>;
 };
 &vdin1 {
-	memory-region = <&vdin1_cma_reserved>;
-	status = "okay";
+//	memory-region = <&vdin1_cma_reserved>;
+	status = "disabled";
 	/*vdin write mem color depth support:
 	 *bit0:support 8bit
 	 *bit1:support 9bit
@@ -1210,11 +1300,23 @@
 &sd_emmc_b {
 	status = "okay";
 	sd {
+		/*if card have no switch gpio,
+		 * remove all relative to vol_switch
+		 */
+		vol_switch =  <&gpio_ao GPIOAO_2 GPIO_ACTIVE_HIGH>;
+		vol_switch_18 = <1>; /* 1 = high, 0 = low */
+		vol_switch_delay = <150>; /* Uint: ms*/
+
 		caps = "MMC_CAP_4_BIT_DATA",
 			 "MMC_CAP_MMC_HIGHSPEED",
-			 "MMC_CAP_SD_HIGHSPEED";
+			 "MMC_CAP_SD_HIGHSPEED",
+			 "MMC_CAP_UHS_SDR12",
+			 "MMC_CAP_UHS_SDR25",
+			 "MMC_CAP_UHS_SDR50",
+			 "MMC_CAP_UHS_SDR104";
+
 		f_min = <400000>;
-		f_max = <50000000>;
+		f_max = <200000000>;
 	};
 };
 
@@ -1225,14 +1327,14 @@
 			 "MMC_CAP_MMC_HIGHSPEED",
 			 "MMC_CAP_SD_HIGHSPEED",
 			 "MMC_CAP_NONREMOVABLE",
-			 "MMC_CAP_UHS_SDR12",
-			 "MMC_CAP_UHS_SDR25",
-			 "MMC_CAP_UHS_SDR50",
-			 "MMC_CAP_UHS_SDR104",
+//			 "MMC_CAP_UHS_SDR12",
+//			 "MMC_CAP_UHS_SDR25",
+//			 "MMC_CAP_UHS_SDR50",
+//			 "MMC_CAP_UHS_SDR104",
 			 "MMC_PM_KEEP_POWER",
 			 "MMC_CAP_SDIO_IRQ";
 		f_min = <400000>;
-		f_max = <200000000>;
+		f_max = <50000000>;
 	};
 };
 
@@ -1315,8 +1417,8 @@
 	status = "okay";
 	portnum = <0>;
 	otg = <1>;
-	gpio-vbus-power = "GPIOH_6";
-	gpios = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
+	//gpio-vbus-power = "GPIOH_6";
+	//gpios = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
 };
 
 &dwc2_a {
@@ -1326,8 +1428,10 @@
 };
 &ethmac {
 	status = "okay";
-	pinctrl-names = "internal_eth_pins";
-	pinctrl-0 = <&internal_eth_pins>;
+	//conflict with isp i2c
+	//pinctrl-names = "internal_eth_pins";
+	//pinctrl-0 = <&internal_eth_pins>;
+
 	mc_val = <0x4be04>;
 
 	internal_phy=<1>;
@@ -1336,12 +1440,24 @@
 &uart_A {
 	status = "okay";
 };
+&uart_AO_B {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&ao_b_uart_pins2>;
+};
 
 &pcie_A {
 	reset-gpio = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
-	status = "okay";
+	status = "disabled";
 };
 
 &saradc {
 	status = "okay";
+};
+
+&spicc1 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&spicc1_pins>;
+	cs-gpios = <&gpio GPIOH_6 0>;
 };

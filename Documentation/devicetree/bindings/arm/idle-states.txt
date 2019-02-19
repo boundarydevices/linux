@@ -489,7 +489,7 @@ cpus {
 
 	CPU15: cpu@100010101 {
 		device_type = "cpu";
-		compatible = "arm,cortex-a53";
+		compatible = "arm,cortex-a73","arm,armv8";
 		reg = <0x1 0x10101>;
 		enable-method = "psci";
 		cpu-idle-states = <&CPU_RETENTION_1_0 &CPU_SLEEP_1_0

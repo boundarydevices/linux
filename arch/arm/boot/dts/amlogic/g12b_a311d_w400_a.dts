@@ -1,5 +1,5 @@
 /*
- * arch/arm64/boot/dts/amlogic/g12b_a311d_w400_buildroot.dts
+ * arch/arm/boot/dts/amlogic/g12b_a311d_w400_a.dts
  *
  * Copyright (C) 2017 Amlogic, Inc. All rights reserved.
  *
@@ -17,16 +17,17 @@
 
 /dts-v1/;
 
-#include "mesong12b.dtsi"
+#include "partition_mbox_normal.dtsi"
+#include "mesong12b_a.dtsi"
 #include "mesong12b_skt-panel.dtsi"
 
 / {
 	model = "Amlogic";
-	amlogic-dt-id = "g12b_w400_b";
+	amlogic-dt-id = "g12b_w400_a";
 	compatible = "amlogic, g12b";
 	interrupt-parent = <&gic>;
-	#address-cells = <2>;
-	#size-cells = <2>;
+	#address-cells = <1>;
+	#size-cells = <1>;
 
 	aliases {
 		serial0 = &uart_AO;
@@ -45,17 +46,17 @@
 
 	memory@00000000 {
 		device_type = "memory";
-		linux,usable-memory = <0x0 0x100000 0x0 0x7ff00000>;
+		linux,usable-memory = <0x000000 0x80000000>;
 	};
 
 	reserved-memory {
-		#address-cells = <2>;
-		#size-cells = <2>;
+		#address-cells = <1>;
+		#size-cells = <1>;
 		ranges;
 		/* global autoconfigured region for contiguous allocations */
 		ramoops@0x07400000 {
 			compatible = "ramoops";
-			reg = <0x0 0x07400000 0x0 0x00100000>;
+			reg = <0x07400000 0x00100000>;
 			record-size = <0x8000>;
 			console-size = <0x8000>;
 			ftrace-size = <0x0>;
@@ -65,29 +66,30 @@
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x400000>;
-			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x05000000 0x0 0x400000>;
+			size = <0x400000>;
+			alignment = <0x400000>;
+			alloc-ranges = <0x05000000 0x400000>;
+			clear-map;
 		};
 
 		secos_reserved:linux,secos {
 			status = "disable";
 			compatible = "amlogic, aml_secos_memory";
-			reg = <0x0 0x05300000 0x0 0x2000000>;
+			reg = <0x05300000 0x2000000>;
 			no-map;
 		};
 		logo_reserved:linux,meson-fb {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x800000>;
-			alignment = <0x0 0x400000>;
-			alloc-ranges = <0x0 0x7f800000 0x0 0x800000>;
+			size = <0x800000>;
+			alignment = <0x400000>;
+			alloc-ranges = <0x7f800000 0x800000>;
 		};
 		ion_cma_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x0 0x8000000>;
-			alignment = <0x0 0x400000>;
+			size = <0x8000000>;
+			alignment = <0x400000>;
 		};
 
 		//di_reserved:linux,di {
@@ -97,7 +99,7 @@
 			/** 10x3621952=34.6M(0x23) support 8bit **/
 			/** 10x4736064=45.2M(0x2e) support 12bit **/
 			/** 10x4179008=40M(0x28) support 10bit **/
-			//size = <0x0 0x2800000>;
+			//size = <0x2800000>;
 			//no-map;
 		//};
 		/*di CMA pool */
@@ -111,27 +113,22 @@
 			 * 10x4736064=45.2M(0x2e) support 12bit
 			 * 10x4074560=40M(0x28) support 10bit
 			 */
-			size = <0x0 0x02800000>;
-			alignment = <0x0 0x400000>;
-		};
-		/*  POST PROCESS MANAGER */
-		ppmgr_reserved:linux,ppmgr {
-			compatible = "shared-dma-pool";
-			size = <0x0 0x0>;
+			size = <0x02800000>;
+			alignment = <0x400000>;
 		};
 		codec_mm_cma:linux,codec_mm_cma {
 			compatible = "shared-dma-pool";
 			reusable;
 			/* ion_codec_mm max can alloc size 80M*/
-			size = <0x0 0x13400000>;
-			alignment = <0x0 0x400000>;
+			size = <0x13400000>;
+			alignment = <0x400000>;
 			linux,contiguous-region;
 		};
 		/* codec shared reserved */
 		codec_mm_reserved:linux,codec_mm_reserved {
 			compatible = "amlogic, codec-mm-reserved";
-			size = <0x0 0x0>;
-			alignment = <0x0 0x100000>;
+			size = <0x0>;
+			alignment = <0x100000>;
 			//no-map;
 		};
 		/*  vdin0 CMA pool */
@@ -139,23 +136,22 @@
 			compatible = "shared-dma-pool";
 			reusable;
 		/* 1920x1080x2x4  =16+4 M */
-			size = <0x0 0x04000000>;
-			alignment = <0x0 0x400000>;
+			size = <0x04000000>;
+			alignment = <0x400000>;
 		};
 		/*  vdin1 CMA pool */
 		vdin1_cma_reserved:linux,vdin1_cma {
 			compatible = "shared-dma-pool";
 			reusable;
 			/* 1920x1080x2x4  =16 M */
-			size = <0x0 0x04000000>;
-			alignment = <0x0 0x400000>;
+			size = <0x04000000>;
+			alignment = <0x400000>;
 		};
 	};
 
 	gpioleds {
 		compatible = "gpio-leds";
 		status = "okay";
-
 		sys_led {
 			label="sys_led";
 			gpios=<&gpio_ao GPIOAO_11 GPIO_ACTIVE_HIGH>;
@@ -175,6 +171,12 @@
 			"venci_0_gate",
 			"venci_1_gate",
 			"vdac_clk_gate";
+		/* clk path */
+		/* 0:vid_pll vid2_clk */
+		/* 1:gp0_pll vid2_clk */
+		/* 2:vid_pll vid1_clk */
+		/* 3:gp0_pll vid1_clk */
+		clk_path = <0>;
 
 		/* performance: reg_address, reg_value */
 		/* g12b */
@@ -233,13 +235,6 @@
 		status = "okay";
 	};
 
-	ppmgr {
-		compatible = "amlogic, ppmgr";
-		memory-region = <&ppmgr_reserved>;
-		dev_name = "ppmgr";
-		status = "okay";
-	};
-
 	deinterlace {
 		compatible = "amlogic, deinterlace";
 		status = "okay";
@@ -270,96 +265,6 @@
 		status = "okay";
 	};
 
-
-	partitions: partitions{
-		parts = <14>;
-		part-0 = <&logo>;
-		part-1 = <&recovery>;
-		part-2 = <&misc>;
-		part-3 = <&dto>;
-		part-4 = <&cri_data>;
-		part-5 = <&param>;
-		part-6 = <&boot>;
-		part-7 = <&rsv>;
-		part-8 = <&tee>;
-		part-9 = <&vendor>;
-		part-10 = <&odm>;
-		part-11 = <&system>;
-		part-12 = <&cache>;
-		part-13 = <&data>;
-
-		logo:logo{
-			pname = "logo";
-			size = <0x0 0x800000>;
-			mask = <1>;
-		};
-		recovery:recovery{
-			pname = "recovery";
-			size = <0x0 0x1800000>;
-			mask = <1>;
-		};
-		misc:misc{
-			pname = "misc";
-			size = <0x0 0x800000>;
-			mask = <1>;
-		};
-		dto:dto{
-			pname = "dto";
-			size = <0x0 0x800000>;
-			mask = <1>;
-		};
-		cri_data:cri_data{
-			pname = "cri_data";
-			size = <0x0 0x800000>;
-			mask = <2>;
-		};
-		rsv:rsv{
-			pname = "rsv";
-			size = <0x0 0x1000000>;
-			mask = <1>;
-		};
-		param:param{
-			pname = "param";
-			size = <0x0 0x1000000>;
-			mask = <2>;
-		};
-		boot:boot{
-			pname = "boot";
-			size = <0x0 0x1000000>;
-			mask = <1>;
-		};
-		tee:tee{
-			pname = "tee";
-			size = <0x0 0x2000000>;
-			mask = <1>;
-		};
-		vendor:vendor{
-			pname = "vendor";
-			size = <0x0 0x10000000>;
-			mask = <1>;
-		};
-		odm:odm{
-			pname = "odm";
-			size = <0x0 0x10000000>;
-			mask = <1>;
-		};
-		system:system{
-			pname = "system";
-			size = <0x0 0x80000000>;
-			mask = <1>;
-		};
-		cache:cache{
-			pname = "cache";
-			size = <0x0 0x46000000>;
-			mask = <2>;
-		};
-		data:data{
-			pname = "data";
-			size = <0xffffffff 0xffffffff>;
-			mask = <4>;
-		};
-	};
-
 	gpio_keypad {
 		compatible = "amlogic, gpio_keypad";
 		status = "okay";
@@ -387,7 +292,7 @@
 	unifykey{
 		compatible = "amlogic, unifykey";
 		status = "ok";
-		unifykey-num = <15>;
+		unifykey-num = <16>;
 		unifykey-index-0 = <&keysn_0>;
 		unifykey-index-1 = <&keysn_1>;
 		unifykey-index-2 = <&keysn_2>;
@@ -403,6 +308,7 @@
 		unifykey-index-12= <&keysn_12>;
 		unifykey-index-13= <&keysn_13>;
 		unifykey-index-14= <&keysn_14>;
+		unifykey-index-15= <&keysn_15>;
 
 		keysn_0: key_0{
 			key-name = "usid";
@@ -478,11 +384,44 @@
 			key-permit = "read","write","del";
 		};
 		keysn_14:key_14{
+			key-name = "attestationkeybox";// attestation key
+			key-device = "secure";
+			key-permit = "read","write","del";
+		};
+		keysn_15:key_15{
 			key-name = "netflix_mgkid";
 			key-device = "secure";
 			key-permit = "read","write","del";
 		};
 	};//End unifykey
+
+	efusekey:efusekey{
+		keynum = <4>;
+		key0 = <&key_0>;
+		key1 = <&key_1>;
+		key2 = <&key_2>;
+		key3 = <&key_3>;
+		key_0:key_0{
+			keyname = "mac";
+			offset = <0>;
+			size = <6>;
+		};
+		key_1:key_1{
+			keyname = "mac_bt";
+			offset = <6>;
+			size = <6>;
+		};
+		key_2:key_2{
+			keyname = "mac_wifi";
+			offset = <12>;
+			size = <6>;
+		};
+		key_3:key_3{
+			keyname = "usid";
+			offset = <18>;
+			size = <16>;
+		};
+	};//End efusekey
 
 	amlvecm {
 		compatible = "amlogic, vecm";
@@ -513,7 +452,7 @@
 	amlogic_codec:t9015{
 		#sound-dai-cells = <0>;
 		compatible = "amlogic, aml_codec_T9015";
-		reg = <0x0 0xFF632000 0x0 0x2000>;
+		reg = <0xFF632000 0x2000>;
 		is_auge_used = <1>; /* meson or auge chipset used */
 		tdmout_index = <1>;
 		status = "okay";
@@ -575,7 +514,7 @@
 		aml-audio-card,dai-link@1 {
 			format = "i2s";
 			mclk-fs = <256>;
-			//continuous-clock;
+			continuous-clock;
 			//bitclock-inversion;
 			//frame-inversion;
 			bitclock-master = <&aml_tdmb>;
@@ -641,6 +580,7 @@
 
 		aml-audio-card,dai-link@4 {
 			mclk-fs = <128>;
+			continuous-clock;
 			/* suffix-name, sync with android audio hal
 			 * what's the dai link used for
 			 */
@@ -717,16 +657,8 @@
 			opp-microvolt = <861000>;
 		};
 		opp10 {
-			opp-hz = /bits/ 64 <1896000000>;
+			opp-hz = /bits/ 64 <1800000000>;
 			opp-microvolt = <981000>;
-		};
-		opp11 {
-			opp-hz = /bits/ 64 <2016000000>;
-			opp-microvolt = <1011000>;
-		};
-		opp12 {
-			opp-hz = /bits/ 64 <2100000000>;
-			opp-microvolt = <1011000>;
 		};
 	};
 
@@ -736,63 +668,43 @@
 
 		opp00 {
 			opp-hz = /bits/ 64 <100000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp01 {
 			opp-hz = /bits/ 64 <250000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp02 {
 			opp-hz = /bits/ 64 <500000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp03 {
 			opp-hz = /bits/ 64 <667000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <751000>;
 		};
 		opp04 {
 			opp-hz = /bits/ 64 <1000000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <771000>;
 		};
 		opp05 {
 			opp-hz = /bits/ 64 <1200000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <771000>;
 		};
 		opp06 {
 			opp-hz = /bits/ 64 <1398000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <791000>;
 		};
 		opp07 {
 			opp-hz = /bits/ 64 <1512000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <821000>;
 		};
 		opp08 {
 			opp-hz = /bits/ 64 <1608000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <861000>;
 		};
 		opp09 {
 			opp-hz = /bits/ 64 <1704000000>;
-			opp-microvolt = <741000>;
-		};
-		opp10 {
-			opp-hz = /bits/ 64 <1800000000>;
-			opp-microvolt = <771000>;
-		};
-		opp11 {
-			opp-hz = /bits/ 64 <1908000000>;
-			opp-microvolt = <801000>;
-		};
-		opp12 {
-			opp-hz = /bits/ 64 <2016000000>;
-			opp-microvolt = <821000>;
-		};
-		opp13 {
-			opp-hz = /bits/ 64 <2100000000>;
-			opp-microvolt = <851000>;
-		};
-		opp14 {
-			opp-hz = /bits/ 64 <2208000000>;
-			opp-microvolt = <901000>;
+			opp-microvolt = <891000>;
 		};
 	};
 
@@ -809,7 +721,7 @@
 	display_size_default = <1920 1080 1920 2160 32>;
 	mem_size = <0x00800000 0x1980000 0x100000 0x100000 0x800000>;
 	logo_addr = "0x7f800000";
-	mem_alloc = <1>;
+	mem_alloc = <0>;
 	pxp_mode = <0>; /** 0:normal mode 1:pxp mode */
 };
 
@@ -824,6 +736,50 @@
 &pwm_AO_cd {
 		status = "okay";
 	};
+
+&i2c0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c0_master_pins2>;
+	clock-frequency = <400000>;
+
+	touchscreen@5d {
+		compatible = "goodix,gt9xx";
+		status = "disabled";
+		reg = <0x5d>;
+		reset-gpio = <&gpio GPIOZ_9 GPIO_ACTIVE_HIGH>;
+		irq-gpio = <&gpio GPIOZ_3 GPIO_ACTIVE_HIGH>;
+		goodix,cfg-group0 = [
+			41 00 04 58 02 05 0C 00 02 54 07
+			0F 50 2D 03 05 00 00 00 00 40 00
+			04 20 10 F3 AA 07 28 0A 2C 2E 7C
+			06 00 00 00 C9 03 24 00 01 00 00
+			00 00 FF 5D 66 98 32 28 64 94 C5
+			02 08 00 00 01 91 2C 00 8A 34 00
+			8A 3F 00 7E 4C 00 78 5B 00 78 00
+			00 00 00 00 00 00 00 00 00 00 00
+			00 00 00 00 00 00 00 00 00 00 00
+			00 00 00 00 00 00 00 00 00 00 00
+			00 00 02 04 06 08 0A 0C 0E 10 12
+			14 FF FF FF FF 00 00 00 00 00 00
+			00 00 00 00 00 00 00 00 00 00 00
+			02 04 06 08 0A 0C 1D 1E 1F 20 21
+			22 24 26 FF FF FF FF FF FF FF FF
+			FF FF FF 00 00 00 00 00 00 00 00
+			00 00 00 00 00 00 00 00 E3 01];
+	};
+
+	touchscreen@38 {
+		compatible = "focaltech,fts";
+		status = "disabled";
+		reg = <0x38>;
+		reset-gpio = <&gpio GPIOZ_9 GPIO_ACTIVE_HIGH>;
+		irq-gpio = <&gpio GPIOZ_3 GPIO_ACTIVE_HIGH>;
+		x_max = <720>;
+		y_max = <1280>;
+		max-touch-number = <10>;
+	};
+};
 
 &i2c3 {
 	status = "okay";
@@ -845,6 +801,13 @@
 		#sound-dai-cells = <0>;
 		reg = <0x19>;
 		differential_pair = <1>;
+		status = "disabled";
+	};
+
+	bl_extern_i2c {
+		compatible = "bl_extern, i2c";
+		dev_name = "lp8556";
+		reg = <0x2c>;
 		status = "disabled";
 	};
 };
@@ -1345,3 +1308,4 @@
 &saradc {
 	status = "okay";
 };
+
