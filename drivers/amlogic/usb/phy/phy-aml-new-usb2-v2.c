@@ -40,7 +40,7 @@ void set_usb_phy_host_tuning(int port, int default_val)
 	if (!g_phy2_v2)
 		return;
 
-	if (g_phy2_v2->phy_version == 1)
+	if (g_phy2_v2->phy_version)
 		return;
 
 	if (port > g_phy2_v2->portnum)
@@ -69,7 +69,7 @@ void set_usb_phy_device_tuning(int port, int default_val)
 	if (!g_phy2_v2)
 		return;
 
-	if (g_phy2_v2->phy_version == 1)
+	if (g_phy2_v2->phy_version)
 		return;
 
 	if (port > g_phy2_v2->portnum)
@@ -91,7 +91,6 @@ void set_usb_phy_device_tuning(int port, int default_val)
 	g_phy2_v2->phy_cfg_state[port] = default_val;
 }
 
-
 void set_usb_pll(struct amlogic_usb_v2 *phy, void __iomem	*reg)
 {
 	/* TO DO set usb  PLL */
@@ -102,11 +101,23 @@ void set_usb_pll(struct amlogic_usb_v2 *phy, void __iomem	*reg)
 	writel((0x10000000 | (phy->pll_setting[0])), reg + 0x40);
 
 	/* PHY Tune */
-	writel(phy->pll_setting[3], reg + 0x50);
-	writel(phy->pll_setting[4], reg + 0x10);
-	/* Recovery analog status */
-	writel(0, reg + 0x38);
-	writel(phy->pll_setting[5], reg + 0x34);
+	if (g_phy2_v2) {
+		if (g_phy2_v2->phy_version == 2) {
+		/**g12b revB don't need set 0x10 ,0x38 and 0x34**/
+			writel(phy->pll_setting[3], reg + 0x50);
+			writel(0x70000, reg + 0x34);
+		} else {
+			writel(phy->pll_setting[3], reg + 0x50);
+			writel(phy->pll_setting[4], reg + 0x10);
+			writel(0, reg + 0x38);
+			writel(phy->pll_setting[5], reg + 0x34);
+		}
+	} else {
+		writel(phy->pll_setting[3], reg + 0x50);
+		writel(phy->pll_setting[4], reg + 0x10);
+		writel(0, reg + 0x38);
+		writel(phy->pll_setting[5], reg + 0x34);
+	}
 
 	writel(TUNING_DISCONNECT_THRESHOLD, reg + 0xC);
 }
@@ -246,7 +257,7 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 
 	if (is_meson_g12b_cpu()) {
 		if (!is_meson_rev_a())
-			phy_version = 1;
+			phy_version = 2;
 	}
 
 	phy_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);

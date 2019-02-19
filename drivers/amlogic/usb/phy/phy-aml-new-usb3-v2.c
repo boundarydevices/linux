@@ -124,6 +124,19 @@ void aml_new_usb_v2_init(void)
 }
 EXPORT_SYMBOL(aml_new_usb_v2_init);
 
+int aml_new_usb_get_mode(void)
+{
+	union usb_r5_v2 r5 = {.d32 = 0};
+
+	r5.d32 = readl(usb_new_aml_regs_v2.usb_r_v2[5]);
+	if (r5.b.iddig_curr == 0)
+		return 0;
+	else
+		return 1;
+}
+EXPORT_SYMBOL(aml_new_usb_get_mode);
+
+
 static void cr_bus_addr(unsigned int addr)
 {
 	union phy3_r4 phy_r4 = {.d32 = 0};

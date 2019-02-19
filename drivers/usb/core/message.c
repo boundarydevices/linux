@@ -2212,8 +2212,12 @@ free_interfaces:
 		device_enable_async_suspend(&intf->dev);
 		ret = device_add(&intf->dev);
 #ifdef CONFIG_AMLOGIC_USB
-		if (((&intf->dev)->driver) == NULL)
-			dev_err(&dev->dev, "Unsupported device\n");
+		if (((&intf->dev)->driver) == NULL) {
+			if (intf->cur_altsetting->desc.bInterfaceClass == 0x09)
+				dev_err(&dev->dev, "Unsupported the hub\n");
+			else
+				dev_err(&dev->dev, "Unsupported device\n");
+		}
 #endif
 		if (ret != 0) {
 			dev_err(&dev->dev, "device_add(%s) --> %d\n",
