@@ -600,8 +600,9 @@ static void set_combing_regs(int lvl, int bit_mode)
 			DI_Wr_reg_bits(DI_MTN_1_CTRL1,
 				((*combing_setting_values[lvl])[0] &
 				combing_setting_masks[i]), 0, 24);
-		if (bit_mode != 10 &&
-			combing_setting_registers[i] == NR2_MATNR_DEGHOST)
+          	/*working on db, driver don't handle this*/
+		if (((bit_mode != 10) || cpu_after_eq(MESON_CPU_MAJOR_ID_TL1))
+			&& combing_setting_registers[i] == NR2_MATNR_DEGHOST)
 			break;
 		else if (i < GXTVBB_REG_START) {
 			/* TODO: need change to check if
