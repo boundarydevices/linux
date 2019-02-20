@@ -755,6 +755,7 @@ struct hw_para_s {
 	u32 two_ports;
 	u32 afbc_err_cnt;
 	u32 viu_type;
+	u32 line_n_rdma;
 	struct hw_debug_s osd_debug;
 	int out_fence_fd;
 	int in_fd[HW_OSD_COUNT];

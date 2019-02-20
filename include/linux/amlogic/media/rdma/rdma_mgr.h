@@ -24,6 +24,7 @@ struct rdma_op_s {
 };
 
 #define RDMA_TRIGGER_VSYNC_INPUT 0x1
+#define RDMA_TRIGGER_LINE_INPUT (1 << 5)
 #define RDMA_TRIGGER_MANUAL	0x100
 #define RDMA_TRIGGER_DEBUG1 0x101
 #define RDMA_TRIGGER_DEBUG2 0x102
@@ -34,11 +35,18 @@ enum rdma_ver_e {
 	RDMA_VER_2,
 };
 
+enum cpu_ver_e {
+	CPU_G12B,
+	CPU_NORMAL,
+};
+
 struct rdma_device_data_s {
+	enum cpu_ver_e cpu_type;
 	enum rdma_ver_e rdma_ver;
 	u32 trigger_mask_len;
 };
 
+u32 is_meson_g12b_revb(void);
 /*
  *	rdma_read_reg(), rdma_write_reg(), rdma_clear() can only be called
  *	after rdma_register() is called and

@@ -825,11 +825,19 @@ MODULE_PARM_DESC(trace_reg, "\n trace_addr\n");
 module_param(trace_reg, ushort, 0664);
 
 static struct rdma_device_data_s rdma_meson = {
+	.cpu_type = CPU_NORMAL,
+	.rdma_ver = RDMA_VER_1,
+	.trigger_mask_len = 8,
+};
+
+static struct rdma_device_data_s rdma_g12b = {
+	.cpu_type = CPU_G12B,
 	.rdma_ver = RDMA_VER_1,
 	.trigger_mask_len = 8,
 };
 
 static struct rdma_device_data_s rdma_tl1 = {
+	.cpu_type = CPU_NORMAL,
 	.rdma_ver = RDMA_VER_2,
 	.trigger_mask_len = 16,
 };
@@ -840,11 +848,24 @@ static const struct of_device_id rdma_dt_match[] = {
 		.data = &rdma_meson,
 	},
 	{
+		.compatible = "amlogic, meson-g12b, rdma",
+		.data = &rdma_g12b,
+	},
+	{
 		.compatible = "amlogic, meson-tl1, rdma",
 		.data = &rdma_tl1,
 	},
 	{},
 };
+
+u32 is_meson_g12b_revb(void)
+{
+	if (rdma_meson_dev.cpu_type == CPU_G12B &&
+		is_meson_rev_b())
+		return 1;
+	else
+		return 0;
+}
 
 /* static int __devinit rdma_probe(struct platform_device *pdev) */
 static int rdma_probe(struct platform_device *pdev)
@@ -880,7 +901,8 @@ static int rdma_probe(struct platform_device *pdev)
 		pr_err("dev %s NOT found\n", __func__);
 		return -ENODEV;
 	}
-	pr_info("%s,ver:%d, len:%d\n", __func__,
+	pr_info("%s,cpu_type:%d, ver:%d, len:%d\n", __func__,
+		rdma_meson_dev.cpu_type,
 		rdma_meson_dev.rdma_ver, rdma_meson_dev.trigger_mask_len);
 
 	switch_vpu_mem_pd_vmod(VPU_RDMA, VPU_MEM_POWER_ON);
@@ -933,9 +955,16 @@ static int rdma_probe(struct platform_device *pdev)
 
 	info->rdma_dev = pdev;
 
-	handle = rdma_register(get_rdma_ops(), NULL, RDMA_TABLE_SIZE);
-	set_rdma_handle(handle);
+	handle = rdma_register(get_rdma_ops(VSYNC_RDMA),
+		NULL, RDMA_TABLE_SIZE);
+	set_rdma_handle(VSYNC_RDMA, handle);
 
+	if (is_meson_g12b_revb()) {
+		pr_info("g12b revb!!!!\n");
+		handle = rdma_register(get_rdma_ops(LINE_N_INT_RDMA),
+			NULL, RDMA_TABLE_SIZE);
+		set_rdma_handle(LINE_N_INT_RDMA, handle);
+	}
 	return 0;
 
 }

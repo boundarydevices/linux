@@ -33,7 +33,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/mm.h>
 #include <linux/of_device.h>
-
+#include <linux/amlogic/cpu_version.h>
 /* Local Headers */
 #include "osd.h"
 #include "osd_io.h"
@@ -47,6 +47,7 @@
 #include <linux/amlogic/media/amvecm/ve.h>
 #endif
 #endif
+#define RDMA_TRIGGER_LINE_INPUT (1 << 5)
 
 #if 0
 #ifndef CONFIG_AMLOGIC_MEDIA_RDMA
@@ -1085,9 +1086,19 @@ static int start_osd_rdma(char channel)
 	data32 &= ~(1 << inc_bit);
 	osd_reg_write(RDMA_ACCESS_AUTO, data32);
 #else
-	rdma_config(channel,
-		RDMA_TRIGGER_VSYNC_INPUT
-		| RDMA_AUTO_START_MASK);
+	if (osd_hw.osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_G12B &&
+		is_meson_rev_b()) {
+		set_reset_rdma_trigger_line();
+		rdma_config(channel, RDMA_TRIGGER_LINE_INPUT |
+			RDMA_AUTO_START_MASK);
+		osd_hw.line_n_rdma = 1;
+
+	} else {
+		rdma_config(channel,
+			RDMA_TRIGGER_VSYNC_INPUT
+			| RDMA_AUTO_START_MASK);
+		osd_hw.line_n_rdma = 0;
+	}
 #endif
 	return 1;
 }
@@ -1113,6 +1124,41 @@ static int stop_rdma(char channel)
 	return 0;
 }
 
+void enable_line_n_rdma(void)
+{
+	unsigned long flags;
+
+	osd_log_info("%s\n", __func__);
+	rdma_clear(OSD_RDMA_CHANNEL_INDEX);
+	spin_lock_irqsave(&rdma_lock, flags);
+	OSD_RDMA_STATUS_CLEAR_REJECT;
+	osd_reg_write(START_ADDR, table_paddr);
+	osd_reg_write(END_ADDR, table_paddr - 1);
+	item_count = 0;
+	spin_unlock_irqrestore(&rdma_lock, flags);
+	reset_rdma_table();
+	rdma_config(OSD_RDMA_CHANNEL_INDEX,
+		RDMA_TRIGGER_LINE_INPUT |
+		RDMA_AUTO_START_MASK);
+}
+
+void enable_vsync_rdma(void)
+{
+	unsigned long flags;
+
+	osd_log_info("%s\n", __func__);
+	rdma_clear(OSD_RDMA_CHANNEL_INDEX);
+	spin_lock_irqsave(&rdma_lock, flags);
+	OSD_RDMA_STATUS_CLEAR_REJECT;
+	osd_reg_write(START_ADDR, table_paddr);
+	osd_reg_write(END_ADDR, table_paddr - 1);
+	item_count = 0;
+	spin_unlock_irqrestore(&rdma_lock, flags);
+	reset_rdma_table();
+	rdma_config(OSD_RDMA_CHANNEL_INDEX,
+		RDMA_TRIGGER_VSYNC_INPUT
+		| RDMA_AUTO_START_MASK);
+}
 
 void osd_rdma_interrupt_done_clear(void)
 {

@@ -1360,7 +1360,7 @@
 	};
 
 	rdma{
-		compatible = "amlogic, meson, rdma";
+		compatible = "amlogic, meson-g12b, rdma";
 		dev_name = "amlogic-rdma";
 		status = "okay";
 		interrupts = <0 89 1>;

@@ -2071,6 +2071,22 @@ u32 osd_get_gbl_alpha_hw(u32  index)
 	return osd_hw.gbl_alpha[index];
 }
 
+void  osd_set_line_n_rdma(u32 line_n_rdma)
+{
+	if (osd_hw.line_n_rdma != line_n_rdma) {
+		osd_hw.line_n_rdma = line_n_rdma;
+		if (osd_hw.line_n_rdma)
+			enable_line_n_rdma();
+		else
+			enable_vsync_rdma();
+	}
+}
+
+u32 osd_get_line_n_rdma(void)
+{
+	return osd_hw.line_n_rdma;
+}
+
 void osd_set_color_key_hw(u32 index, u32 color_index, u32 colorkey)
 {
 	u8 r = 0, g = 0, b = 0, a = (colorkey & 0xff000000) >> 24;
@@ -8656,7 +8672,7 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 #endif
 	}
 	if (osd_hw.hw_rdma_en)
-		osd_rdma_enable(1);
+		osd_rdma_enable(2);
 
 }
 
