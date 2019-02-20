@@ -1179,6 +1179,10 @@ int Flm22DetSft(struct sFlmDatSt *pRDat, int *nDif02,
 	int flm22_comlev1 = pPar->flm22_comlev1;
 	int flm22_comnum = pPar->flm22_comnum;
 
+	int dif_flag;
+	int flm22_min;
+	int flm22_th;
+
 	int cFlg = pFlg[HISDETNUM - 1];
 	int rFlg[4] = { 2, 3, 4, 1 };
 
@@ -1578,7 +1582,16 @@ int Flm22DetSft(struct sFlmDatSt *pRDat, int *nDif02,
 
 		nFlm22Lvl -= nT1;
 	}
-	if (flm22_flag) {
+	/* ---------------------- */
+	/*DI:PQ patch fix 480i error into pulldown22(by yanling)*/
+	flm22_min = nDif01[HISDIFNUM-1] > nDif01[HISDIFNUM-2]
+		? nDif01[HISDIFNUM-2] : nDif01[HISDIFNUM-1];
+	flm22_th = flm22_min/2;
+	dif_flag = abs(nDif01[HISDIFNUM-1]-nDif01[HISDIFNUM-2])
+		> flm22_th ? 1:0;
+	dif_flag = nDif01[HISDIFNUM-1] > (1<<16) ? dif_flag : 0;
+	if (flm22_flag && dif_flag) {
+	/* ---------------------- */
 		if (pFlg[HISDETNUM-1] == 3
 				|| pFlg[HISDETNUM-1] == 1) {
 			if (comsum > flm22_comnum) {
@@ -1601,8 +1614,9 @@ int Flm22DetSft(struct sFlmDatSt *pRDat, int *nDif02,
 		if (nFlgCk21 < flm22_chk21_sml)
 			nFlm22Lvl = nFlm22Lvl + flm22_comlev1 - nFlgCk21;
 		if (prt_flg) {
-			pr_info("nFlm22Lvl=%d, nFlgCk20=%d, nFlgCk21=%d\n",
-				nFlm22Lvl, nFlgCk20, nFlgCk21);
+			pr_info("nFlm22Lvl=%d, nFlgCk20=%d, nFlgCk21=%d,flm22_min=%d,flm22_th=%d\n",
+				nFlm22Lvl, nFlgCk20, nFlgCk21,
+				flm22_min, flm22_th);
 		}
 	}
 	/* for sony-mp3 */
