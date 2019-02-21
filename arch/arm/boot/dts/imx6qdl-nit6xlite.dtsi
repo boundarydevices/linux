@@ -229,10 +229,10 @@
 
 	pinctrl_leds: ledsgrp {
 		fsl,pins = <
-#define GP_LED_RED			<&gpio1 3 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x0b0b0		/* J14 pin 1 - RLED */
 #define GP_LED_GREEN			<&gpio1 2 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x0b0b0		/* J14 pin 3 - GLED */
+			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x0b0b0		/* J14 pin 1 - GLED */
+#define GP_LED_RED			<&gpio1 3 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x0b0b0		/* J14 pin 3 - RLED */
 #define GP_J14_POWER_ON			<&gpio3 29 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_D29__GPIO3_IO29		0x030b0		/* J14 pin 8/9(dry contact) */
 #define GP_J46_PIN2_I			<&gpio1 7 GPIO_ACTIVE_LOW>
@@ -489,13 +489,13 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_leds>;
 		j14-pin1 {
-			gpios = GP_LED_RED;
+			gpios = GP_LED_GREEN;
 			retain-state-suspended;
 			default-state = "off";
 		};
 
 		j14-pin3 {
-			gpios = GP_LED_GREEN;
+			gpios = GP_LED_RED;
 			retain-state-suspended;
 			default-state = "off";
 		};
