@@ -17,9 +17,78 @@
 #include "imx6dl.dtsi"
 #include "imx6qdl-nit6xlite.dtsi"
 
+&iomuxc {
+	/delete-node/ ledsgrp;
+
+	pinctrl_leds: ledsgrp {
+		fsl,pins = <
+			/* J14 pin 1 - Green LED */
+#define GP_LED_GREEN			<&gpio1 2 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x0b0b0
+
+			/* J14 pin 3 - Red LED */
+#define GP_LED_RED			<&gpio1 3 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x0b0b0
+
+			/* J14 pin 8/9(dry contact) */
+#define GP_J14_POWER_ON			<&gpio3 29 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_D29__GPIO3_IO29		0x030b0
+		>;
+	};
+
+	pinctrl_wiegand: wiegandgrp {
+		fsl,pins = <
+			/* J46 pin 2 - gp(inverted) */
+#define GP_WIEGAND_DATA0		<&gpio1 7 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x0b0b0
+
+			/* J46 pin 3 - gp(inverted) */
+#define GP_WIEGAND_DATA1		<&gpio1 8 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_8__GPIO1_IO08		0x0b0b0
+		>;
+	};
+};
+
+
 / {
 	model = "Freescale i.MX6 Solo Nit6x-Lite access control Board";
 	compatible = "fsl,imx6dl-nit6xlite", "fsl,imx6dl";
+
+	/delete-node/ leds;
+
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_leds>;
+
+		j14-pin1 {
+			gpios = GP_LED_GREEN;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		j14-pin3 {
+			gpios = GP_LED_RED;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		j14-pins8-9 {
+			gpios = GP_J14_POWER_ON;
+			retain-state-suspended;
+			default-state = "off";
+		};
+	};
+
+	wiegand {
+		compatible = "wiegand,scanout";
+		data0-gpios = GP_WIEGAND_DATA0;
+		data1-gpios = GP_WIEGAND_DATA1;
+		length = <26>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wiegand>;
+	};
+
 };
 
 &ethphy {
