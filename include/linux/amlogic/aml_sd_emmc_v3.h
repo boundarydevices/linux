@@ -29,15 +29,14 @@ irqreturn_t meson_mmc_irq_thread_v3(int irq, void *dev_id);
 
 int aml_post_hs400_timming(struct mmc_host *mmc);
 
-/* extern ssize_t emmc_eyetest_show(struct device *dev,
- *		struct device_attribute *attr, char *buf);
- */
+extern ssize_t emmc_eyetest_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
 
-/* extern ssize_t emmc_clktest_show(struct device *dev,
- *		struct device_attribute *attr, char *buf);
- */
 
-/* DEVICE_ATTR(emmc_eyetest, S_IRUGO, emmc_eyetest_show, NULL);*/
-/*DEVICE_ATTR(emmc_clktest, S_IRUGO, emmc_clktest_show, NULL);*/
+extern ssize_t emmc_clktest_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
 
+
+DEVICE_ATTR(emmc_eyetest, 0444, emmc_eyetest_show, NULL);
+DEVICE_ATTR(emmc_clktest, 0444, emmc_clktest_show, NULL);
 #endif

@@ -27,7 +27,7 @@
 #include "g12a.h"
 
 static const char * const sd_emmc_parent_names[] = { "xtal", "fclk_div2",
-	"fclk_div3", "fclk_div5", "fclk_div7", "mpll2", "mpll3", "gp0_pll" };
+	"fclk_div3", "fclk_div5", "fclk_div2p5", "mpll2", "mpll3", "gp0_pll" };
 
 static struct clk_mux sd_emmc_p0_mux_A = {
 	.reg = (void *)HHI_SD_EMMC_CLK_CNTL,

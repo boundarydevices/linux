@@ -281,6 +281,7 @@ struct amlsd_platform {
 	unsigned int dly1;
 	unsigned int dly2;
 	unsigned int intf3;
+	unsigned int win_start;
 	unsigned int irq_sdio_sleep;
 	unsigned int clock;
 	/* signalling voltage (1.8V or 3.3V) */

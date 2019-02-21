@@ -1131,7 +1131,10 @@ static int mmc_select_hs400(struct mmc_card *card)
 	unsigned int max_dtr;
 	int err = 0;
 	u8 val;
-
+#ifdef CONFIG_AMLOGIC_MMC
+	u8 raw_driver_strength = card->ext_csd.raw_driver_strength;
+	u8 ds = (host->caps >> 23) & 0x7;
+#endif
 	/*
 	 * HS400 mode requires 8-bit bus width
 	 */
@@ -1175,13 +1178,25 @@ static int mmc_select_hs400(struct mmc_card *card)
 
 	/* Switch card to HS400 */
 #ifdef CONFIG_AMLOGIC_MMC
-	if (card->ext_csd.raw_driver_strength & (1 << 1)) {
+	if (ds) {
+		if (ds & (1 << 0)) {
+			raw_driver_strength &= (1 << 0);
+			pr_info("%s:use ds type0\n",
+				mmc_hostname(host));
+	/*3 -> type4 -> MMC_CAP_DRIVER_TYPED*/
+		} else if (ds & (1 << 3)) {
+			raw_driver_strength &= ~(1 << 1);
+			pr_info("%s:use ds type4\n",
+				mmc_hostname(host));
+		}
+	}
+	if (raw_driver_strength & (1 << 1)) {
 		val =
 			(0x1 << EXT_CSD_DRV_STR_SHIFT)
 			| EXT_CSD_TIMING_HS400;
 		pr_info("%s: support driver strength type 1\n",
 				mmc_hostname(host));
-	} else if (card->ext_csd.raw_driver_strength & (1 << 4)) {
+	} else if (raw_driver_strength & (1 << 4)) {
 		val =
 			(0x4 << EXT_CSD_DRV_STR_SHIFT)
 			| EXT_CSD_TIMING_HS400;

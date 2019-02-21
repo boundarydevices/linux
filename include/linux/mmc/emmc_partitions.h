@@ -25,6 +25,14 @@
 
 #define     SZ_1M                           0x00100000
 
+#define	MMC_PATTERN_NAME		"pattern"
+#define	MMC_PATTERN_OFFSET		((SZ_1M*(36+3))/512)
+#define	MMC_MAGIC_NAME			"magic"
+#define	MMC_MAGIC_OFFSET		((SZ_1M*(36+6))/512)
+#define	MMC_RANDOM_NAME			"random"
+#define	MMC_RANDOM_OFFSET		((SZ_1M*(36+7))/512)
+#define	MMC_DTB_NAME			"dtb"
+#define	MMC_DTB_OFFSET			((SZ_1M*(36+4))/512)
 /* the size of bootloader partition */
 #define     MMC_BOOT_PARTITION_SIZE         (4*SZ_1M)
 
