@@ -43,7 +43,19 @@ static struct cpufreq_frequency_table *freq_table[MAX_CLUSTERS];
 static unsigned int mid_rate = (1000 * 1000);
 static unsigned int gap_rate = (10 * 1000 * 1000);
 static struct cpufreq_freqs freqs;
-#define MID_RATE (1500 * 1000)
+
+/*
+ * DSU_LOW_RATE:cpu clk less than DSU_LOW_RATE(1.2G)
+ * dsu clk swith to cpu clk
+ * DSU_HIGH_RATE:cpu clk between 1.2G to DSU_HIGH_RATE (1.8G)
+ * dsu clk set to DSU_LOW_RATE(1.2G)
+ * CPU_CMP_RATE: cpu clk greater than CPU_CMP_RATE(1.8G)
+ * dsu clk set to DSU_HIGH_RATE(1.5G)
+ */
+
+#define DSU_LOW_RATE (1200 * 1000)
+#define DSU_HIGH_RATE (1500 * 1000)
+#define CPU_CMP_RATE (1800 * 1000)
 
 /*whether use different tables or not*/
 bool cpufreq_tables_supply;

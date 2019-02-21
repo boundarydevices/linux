@@ -397,44 +397,52 @@ static int meson_cpufreq_transition_notifier(struct notifier_block *nb,
 	struct clk *dsu_cpu_parent =  policy->clk;
 	struct clk *dsu_pre_parent = cpufreq_data->clk_dsu_pre;
 	int ret = 0;
-	static bool first_set = true;
+	unsigned int dsu_set_rate;
 
 	if (!dsu_clk || !dsu_cpu_parent || !dsu_pre_parent)
 		return 0;
 
-	pr_debug("%s,event %ld,freq->old_rate =%u,freq->new_rate =%u!\n",
+	pr_debug("%s:event %ld,old_rate =%u,new_rate =%u!\n",
 		__func__, val, freq->old, freq->new);
 	switch (val) {
 	case CPUFREQ_PRECHANGE:
-		if (freq->new > MID_RATE) {
-			pr_debug("%s,dsu clk switch parent to dsu pre!\n",
+		if (freq->new > DSU_LOW_RATE) {
+			pr_debug("%s:dsu clk switch parent to dsu pre!\n",
 				__func__);
-			if (first_set) {
-				clk_set_rate(dsu_pre_parent, MID_RATE * 1000);
-				first_set = false;
-				pr_info("first set gp1 pll to 1.5G!\n");
-			}
 			if (__clk_get_enable_count(dsu_pre_parent) == 0) {
 				ret = clk_prepare_enable(dsu_pre_parent);
 				if (ret) {
-					pr_err("%s: CPU%d gp1 pll enable failed\n",
-							__func__, policy->cpu);
+					pr_err("%s: CPU%d gp1 pll enable failed,ret = %d\n",
+						__func__, policy->cpu, ret);
 					return ret;
 				}
 			}
+
+			if (freq->new > CPU_CMP_RATE)
+				dsu_set_rate = DSU_HIGH_RATE;
+			else
+				dsu_set_rate = DSU_LOW_RATE;
+
+			clk_set_rate(dsu_pre_parent, dsu_set_rate * 1000);
+			if (ret) {
+				pr_err("%s: GP1 clk setting %u MHz failed, ret = %d!\n",
+					__func__, dsu_set_rate, ret);
+				return ret;
+			}
+			pr_debug("%s:GP1 clk setting %u MHz!\n",
+				__func__, dsu_set_rate);
 
 			ret = clk_set_parent(dsu_clk, dsu_pre_parent);
 		}
 
 		return ret;
 	case CPUFREQ_POSTCHANGE:
-		if (freq->new <= MID_RATE) {
-			pr_debug("%s,dsu clk switch parent to cpu!\n",
+		if (freq->new <= DSU_LOW_RATE) {
+			pr_debug("%s:dsu clk switch parent to cpu!\n",
 				__func__);
 			ret = clk_set_parent(dsu_clk, dsu_cpu_parent);
 			if (__clk_get_enable_count(dsu_pre_parent) >= 1)
 				clk_disable_unprepare(dsu_pre_parent);
-
 		}
 
 		return ret;
@@ -525,13 +533,13 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 	dsu_clk = of_clk_get_by_name(np, DSU_CLK);
 	if (IS_ERR(dsu_clk)) {
 		dsu_clk = NULL;
-		pr_debug("%s: ignor dsu clk!\n", __func__);
+		pr_info("%s: ignor dsu clk!\n", __func__);
 	}
 
 	dsu_pre_parent = of_clk_get_by_name(np, DSU_PRE_PARENT);
 	if (IS_ERR(dsu_pre_parent)) {
 		dsu_pre_parent = NULL;
-		pr_debug("%s: ignor dsu pre parent clk!\n", __func__);
+		pr_info("%s: ignor dsu pre parent clk!\n", __func__);
 	}
 
 	cpu_reg = devm_regulator_get(cpu_dev, CORE_SUPPLY);

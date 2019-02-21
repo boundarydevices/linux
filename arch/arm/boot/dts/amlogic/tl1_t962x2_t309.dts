@@ -1097,7 +1097,6 @@
 		};
 	}; /*thermal zone end*/
 
-	/*DCDC for MP8756GD*/
 	cpu_opp_table0: cpu_opp_table0 {
 		compatible = "operating-points-v2";
 		opp-shared;

@@ -43,10 +43,14 @@
 			enable-method = "psci";
 			clocks = <&clkc CLKID_CPU_CLK>,
 				<&clkc CLKID_CPU_FCLK_P>,
-				<&clkc CLKID_SYS_PLL>;
+				<&clkc CLKID_SYS_PLL>,
+				<&clkc CLKID_DSU_CLK>,
+				<&clkc CLKID_DSU_PRE_CLK>;
 			clock-names = "core_clk",
 				"low_freq_clk_parent",
-				"high_freq_clk_parent";
+				"high_freq_clk_parent",
+				"dsu_clk",
+				"dsu_pre_parent";
 			operating-points-v2 = <&cpu_opp_table0>;
 			cpu-supply = <&vddcpu0>;
 			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
@@ -60,10 +64,14 @@
 			enable-method = "psci";
 			clocks = <&clkc CLKID_CPU_CLK>,
 				<&clkc CLKID_CPU_FCLK_P>,
-				<&clkc CLKID_SYS_PLL>;
+				<&clkc CLKID_SYS_PLL>,
+				<&clkc CLKID_DSU_CLK>,
+				<&clkc CLKID_DSU_PRE_CLK>;
 			clock-names = "core_clk",
 				"low_freq_clk_parent",
-				"high_freq_clk_parent";
+				"high_freq_clk_parent",
+				"dsu_clk",
+				"dsu_pre_parent";
 			operating-points-v2 = <&cpu_opp_table0>;
 			cpu-supply = <&vddcpu0>;
 			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
@@ -77,10 +85,14 @@
 			enable-method = "psci";
 			clocks = <&clkc CLKID_CPU_CLK>,
 				<&clkc CLKID_CPU_FCLK_P>,
-				<&clkc CLKID_SYS_PLL>;
+				<&clkc CLKID_SYS_PLL>,
+				<&clkc CLKID_DSU_CLK>,
+				<&clkc CLKID_DSU_PRE_CLK>;
 			clock-names = "core_clk",
 				"low_freq_clk_parent",
-				"high_freq_clk_parent";
+				"high_freq_clk_parent",
+				"dsu_clk",
+				"dsu_pre_parent";
 			operating-points-v2 = <&cpu_opp_table0>;
 			cpu-supply = <&vddcpu0>;
 			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
@@ -94,10 +106,14 @@
 			enable-method = "psci";
 			clocks = <&clkc CLKID_CPU_CLK>,
 				<&clkc CLKID_CPU_FCLK_P>,
-				<&clkc CLKID_SYS_PLL>;
+				<&clkc CLKID_SYS_PLL>,
+				<&clkc CLKID_DSU_CLK>,
+				<&clkc CLKID_DSU_PRE_CLK>;
 			clock-names = "core_clk",
 				"low_freq_clk_parent",
-				"high_freq_clk_parent";
+				"high_freq_clk_parent",
+				"dsu_clk",
+				"dsu_pre_parent";
 			operating-points-v2 = <&cpu_opp_table0>;
 			cpu-supply = <&vddcpu0>;
 			//cpu-idle-states = <&SYSTEM_SLEEP_0>;
