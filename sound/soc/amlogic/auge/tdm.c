@@ -40,6 +40,7 @@
 #include "tdm_hw.h"
 #include "sharebuffer.h"
 #include "vad.h"
+#include "spdif.h"
 
 /*#define __PTM_TDM_CLK__*/
 
@@ -393,6 +394,9 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 					p_tdm->samesource_sel))) {
 				sharebuffer_prepare(substream,
 					fr, p_tdm->samesource_sel);
+				/* sharebuffer default uses spdif_a */
+				spdif_set_audio_clk(SPDIF_A, p_tdm->clk,
+					runtime->rate*128, 1);
 		}
 
 		/* i2s source to hdmix */

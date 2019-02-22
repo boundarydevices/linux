@@ -486,7 +486,7 @@ void spdifout_samesource_set(int spdif_index, int fifo_id,
 
 	/* clk for spdif_b is always on */
 	/*if (!spdif_id)*/
-		spdifout_clk_ctrl(spdif_id, /*is_enable*/true);
+		//spdifout_clk_ctrl(spdif_id, /*is_enable*/true);
 
 	if (is_enable)
 		spdifout_fifo_ctrl(spdif_id, fifo_id, bitwidth, channels);
