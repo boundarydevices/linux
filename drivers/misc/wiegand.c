@@ -536,6 +536,7 @@ static int wiegand_probe(struct platform_device *pdev)
 
 	getnstimeofday(&wie->last_time);
 	platform_set_drvdata(pdev, wie);
+	g_wie = wie;
 
 	/* /sys/kernel/wiegand/ setup there */
 	wie->wiegand_kobj = kobject_create_and_add("wiegand", kernel_kobj);
