@@ -85,7 +85,7 @@
 		compatible = "fsl,mxc_bt_rfkill";
 		bt-power-gpios = <&gpio3 5 GPIO_ACTIVE_LOW>;
 		status ="okay";
-	}
+	};
 
 	ir_recv: ir-receiver {
 		compatible = "gpio-ir-receiver";
