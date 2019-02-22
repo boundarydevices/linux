@@ -421,6 +421,18 @@ struct lcd_power_ctrl_s {
 	int power_off_step_max; /* internal use for debug */
 };
 
+struct lcd_boot_ctrl_s {
+	unsigned char lcd_type;	//bit[3:0]
+	unsigned char lcd_bits; //bit[7:4] bits:6 or 8
+	unsigned char advanced_flag;	//bit[15:8]
+	unsigned char debug_print_flag;	//bit[19:16]
+	unsigned char debug_test_pattern;	//bit[27:24]
+	unsigned char debug_para_source;//bit[29:28]
+					//0:normal, 1:dts, 2:unifykey, 3:TBD
+	unsigned char debug_lcd_mode;	//bit[31:30]
+					//0:normal, 1:tv, 2:tablet, 3:TBD
+};
+
 #define LCD_ENABLE_RETRY_MAX    3
 struct lcd_config_s {
 	char *lcd_propname;
@@ -431,6 +443,7 @@ struct lcd_config_s {
 	struct lcd_optical_info_s optical_info;
 	struct lcd_control_config_s lcd_control;
 	struct lcd_power_ctrl_s *lcd_power;
+	struct lcd_boot_ctrl_s *lcd_boot_ctrl;
 	struct pinctrl *pin;
 	unsigned char pinmux_flag;
 	unsigned char change_flag;
