@@ -227,7 +227,9 @@ static bool verify48_parity(struct wiegand_data *wie)
 }
 
 /*
- * Since Wiegand is active-low, writing 1 is actually 0v
+ * Wiegand is active-low, but our gp's have an inverter,
+ * making the gp active-high, writing 1 is actually 0v
+ * after the inverter.
  * Hold desired bit low for 50us, then wait 2ms, then repeat
  * Trail with 50ms before new data.
  */
@@ -504,7 +506,7 @@ static int wiegand_probe(struct platform_device *pdev)
 	wie->last_scan = 1;
 
 	/* Request GPIOS */
-	gp = devm_gpiod_get_index(dev, "data0", 0, GPIOD_OUT_HIGH);
+	gp = devm_gpiod_get_index(dev, "data0", 0, GPIOD_OUT_LOW);
 	if (IS_ERR(gp)) {
 		dev_alert(dev,
 			"Wiegand: Error requesting Data0. %ld.\n", PTR_ERR(gp));
@@ -512,7 +514,7 @@ static int wiegand_probe(struct platform_device *pdev)
 
 	}
 	wie->gpd_data0 = gp;
-	gp = devm_gpiod_get_index(dev, "data1", 0, GPIOD_OUT_HIGH);
+	gp = devm_gpiod_get_index(dev, "data1", 0, GPIOD_OUT_LOW);
 	if (IS_ERR(gp)) {
 		dev_alert(dev,
 			"Wiegand: Error requesting Data1. %ld.\n", PTR_ERR(gp));
