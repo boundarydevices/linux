@@ -356,7 +356,7 @@ static ssize_t hexval_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 	getnstimeofday(&this_time);
 	if (wie->lock == 0) { /* Only take hex input when a scan has cleared */
-		int err = kstrtoull(buf, 10, &wie->this_scan);
+		int err = kstrtoull(buf, 16, &wie->this_scan);
 
 		if (err)
 			return err;
