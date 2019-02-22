@@ -526,14 +526,14 @@ static int set_disp_mode_auto(void)
 	if ((vic_ready != HDMI_Unknown) && (vic_ready == vic)) {
 		pr_info(SYS "[%s] ALREADY init VIC = %d\n",
 			__func__, vic);
-		if (hdev->RXCap.IEEEOUI == 0) {
+		if (hdev->RXCap.ieeeoui == 0) {
 			/* DVI case judgement. In uboot, directly output HDMI
 			 * mode
 			 */
 			hdev->HWOp.CntlConfig(hdev, CONF_HDMI_DVI_MODE,
 				DVI_MODE);
 			pr_info(SYS "change to DVI mode\n");
-		} else if ((hdev->RXCap.IEEEOUI == 0xc03) &&
+		} else if ((hdev->RXCap.ieeeoui == 0xc03) &&
 		(hdev->HWOp.CntlConfig(hdev, CONF_GET_HDMI_DVI_MODE, 0)
 			== DVI_MODE)) {
 			hdev->HWOp.CntlConfig(hdev, CONF_HDMI_DVI_MODE,
@@ -3828,7 +3828,7 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 		rx_repeat_hpd_state(1);
 	hdmitx_get_edid(hdev);
 	hdmi_physcial_size_update(hdev);
-	if (hdev->RXCap.IEEEOUI != HDMI_IEEE_OUI)
+	if (hdev->RXCap.ieeeoui != HDMI_IEEEOUI)
 		hdev->HWOp.CntlConfig(hdev,
 			CONF_HDMI_DVI_MODE, DVI_MODE);
 	else

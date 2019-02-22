@@ -31,8 +31,8 @@
 #define HDMITX_VIC_MASK			0xff
 
 /* Refer to http://standards-oui.ieee.org/oui/oui.txt */
-#define HDMI_IEEE_OUI	0x000C03
-#define HF_IEEE_OUI		0xC45DD8
+#define HDMI_IEEEOUI	0x000C03
+#define HF_IEEEOUI		0xC45DD8
 #define GET_OUI_BYTE0(oui)	(oui & 0xff) /* Little Endian */
 #define GET_OUI_BYTE1(oui)	((oui >> 8) & 0xff)
 #define GET_OUI_BYTE2(oui)	((oui >> 16) & 0xff)

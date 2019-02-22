@@ -552,12 +552,12 @@ static void hdmi_tx_construct_avi_packet(
  *************************************/
 
 /*
- * HDMI Identifier = HDMI_IEEE_OUI 0x000c03
+ * HDMI Identifier = HDMI_IEEEOUI 0x000c03
  * If not, treated as a DVI Device
  */
 static int is_dvi_device(struct rx_cap *pRXCap)
 {
-	if (pRXCap->IEEEOUI != HDMI_IEEE_OUI)
+	if (pRXCap->ieeeoui != HDMI_IEEEOUI)
 		return 1;
 	else
 		return 0;
@@ -698,9 +698,9 @@ static void hdmi_set_vend_spec_infofram(struct hdmitx_dev *hdev,
 
 	for (i = 0; i < 0x6; i++)
 		VEN_DB[i] = 0;
-	VEN_DB[0] = GET_OUI_BYTE0(HDMI_IEEE_OUI);
-	VEN_DB[1] = GET_OUI_BYTE1(HDMI_IEEE_OUI);
-	VEN_DB[2] = GET_OUI_BYTE2(HDMI_IEEE_OUI);
+	VEN_DB[0] = GET_OUI_BYTE0(HDMI_IEEEOUI);
+	VEN_DB[1] = GET_OUI_BYTE1(HDMI_IEEEOUI);
+	VEN_DB[2] = GET_OUI_BYTE2(HDMI_IEEEOUI);
 	VEN_DB[3] = 0x00;    /* 4k x 2k  Spec P156 */
 
 	if (VideoCode == HDMI_4k2k_30) {
@@ -734,9 +734,9 @@ int hdmi_set_3d(struct hdmitx_dev *hdev, int type, unsigned int param)
 	else {
 		for (i = 0; i < 0x6; i++)
 			VEN_DB[i] = 0;
-		VEN_DB[0] = GET_OUI_BYTE0(HDMI_IEEE_OUI);
-		VEN_DB[1] = GET_OUI_BYTE1(HDMI_IEEE_OUI);
-		VEN_DB[2] = GET_OUI_BYTE2(HDMI_IEEE_OUI);
+		VEN_DB[0] = GET_OUI_BYTE0(HDMI_IEEEOUI);
+		VEN_DB[1] = GET_OUI_BYTE1(HDMI_IEEEOUI);
+		VEN_DB[2] = GET_OUI_BYTE2(HDMI_IEEEOUI);
 		VEN_DB[3] = 0x40;
 		VEN_DB[4] = type<<4;
 		VEN_DB[5] = param<<4;
@@ -813,7 +813,7 @@ int hdmitx_construct_vsif(struct hdmitx_dev *hdev, enum vsif_type type,
 	case VT_DEFAULT:
 		break;
 	case VT_HDMI14_4K:
-		ieeeoui = HDMI_IEEE_OUI;
+		ieeeoui = HDMI_IEEEOUI;
 		len = 5;
 		if (is_hdmi14_4k(hdev->cur_VIC)) {
 			fill_hdmi4k_vsif_data(hdev->cur_VIC, DB, HB);
@@ -821,7 +821,7 @@ int hdmitx_construct_vsif(struct hdmitx_dev *hdev, enum vsif_type type,
 		}
 		break;
 	case VT_ALLM:
-		ieeeoui = HF_IEEE_OUI;
+		ieeeoui = HF_IEEEOUI;
 		len = 5;
 		DB[3] = 0x1; /* Fixed value */
 		if (on) {
