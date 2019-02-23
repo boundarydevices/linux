@@ -410,9 +410,6 @@ static ssize_t hexval_store(struct kobject *kobj, struct kobj_attribute *attr,
 				 * short time here.
 				 */
 				wie->kt_period = ktime_set(0, 50000);
-				hrtimer_init(&wie->htimer, CLOCK_MONOTONIC,
-						HRTIMER_MODE_REL);
-				wie->htimer.function = &function_timer;
 				hrtimer_start(&wie->htimer, wie->kt_period,
 						HRTIMER_MODE_REL);
 			}
@@ -460,9 +457,6 @@ static ssize_t hexval_store(struct kobject *kobj, struct kobj_attribute *attr,
 				wie->state = DRIVE;
 				wie->t_mask = 1ULL << (wie->length-1);
 				wie->kt_period = ktime_set(0, 50000);
-				hrtimer_init(&wie->htimer, CLOCK_MONOTONIC,
-						HRTIMER_MODE_REL);
-				wie->htimer.function = &function_timer;
 				hrtimer_start(&wie->htimer, wie->kt_period,
 						HRTIMER_MODE_REL);
 			}
@@ -504,6 +498,8 @@ static int wiegand_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	wie->length = 26;
 	wie->last_scan = 1;
+	hrtimer_init(&wie->htimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	wie->htimer.function = &function_timer;
 
 	/* Request GPIOS */
 	gp = devm_gpiod_get_index(dev, "data0", 0, GPIOD_OUT_LOW);
