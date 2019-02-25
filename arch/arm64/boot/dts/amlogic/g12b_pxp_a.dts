@@ -21,7 +21,7 @@
 
 / {
 	model = "Amlogic";
-	amlogic-dt-id = "g12b_w400_a";
+	amlogic-dt-id = "g12b_skt_a";
 	compatible = "amlogic, g12b";
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
