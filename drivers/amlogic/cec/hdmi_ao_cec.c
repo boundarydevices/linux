@@ -56,11 +56,7 @@
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/jtag.h>
 #include <linux/amlogic/scpi_protocol.h>
-
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-static struct early_suspend aocec_suspend_handler;
-#endif
+#include <linux/amlogic/pm.h>
 #include "hdmi_ao_cec.h"
 
 
@@ -74,6 +70,10 @@ static struct early_suspend aocec_suspend_handler;
 
 #define HR_DELAY(n)		(ktime_set(0, n * 1000 * 1000))
 #define MAX_INT    0x7ffffff
+
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
+static struct early_suspend aocec_suspend_handler;
+#endif
 
 struct cec_platform_data_s {
 	/*unsigned int chip_id;*/
@@ -1992,9 +1992,9 @@ static void cec_rx_process(void)
 		if (cec_dev->cec_suspend == CEC_DEEP_SUSPEND)
 			cec_report_power_status(initiator, POWER_STANDBY);
 		else if (cec_dev->cec_suspend == CEC_EARLY_SUSPEND)
-			cec_report_power_status(initiator, TRANS_ON_TO_STANDBY);
+			cec_report_power_status(initiator, POWER_STANDBY);
 		else if (cec_dev->cec_suspend == CEC_POWER_RESUME)
-			cec_report_power_status(initiator, TRANS_STANDBY_TO_ON);
+			cec_report_power_status(initiator, POWER_ON);
 		else
 			cec_report_power_status(initiator, POWER_ON);
 		break;
@@ -3024,7 +3024,7 @@ static const struct file_operations hdmitx_cec_fops = {
 };
 
 /************************ cec high level code *****************************/
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 static void aocec_early_suspend(struct early_suspend *h)
 {
 	cec_dev->cec_suspend = CEC_EARLY_SUSPEND;
@@ -3444,13 +3444,14 @@ static int aml_cec_probe(struct platform_device *pdev)
 		goto tag_cec_msg_alloc_err;
 	}
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	aocec_suspend_handler.level   = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 20;
 	aocec_suspend_handler.suspend = aocec_early_suspend;
 	aocec_suspend_handler.resume  = aocec_late_resume;
 	aocec_suspend_handler.param   = cec_dev;
 	register_early_suspend(&aocec_suspend_handler);
 #endif
+
 	hrtimer_init(&start_bit_check, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	start_bit_check.function = cec_line_check;
 	cec_dev->cec_thread = create_workqueue("cec_work");
