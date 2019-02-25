@@ -3712,8 +3712,9 @@ static int dolby_vision_policy_process(
 					*mode = DOLBY_VISION_OUTPUT_MODE_BYPASS;
 					mode_change = 1;
 				}
-			} else if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
-				/*g12 has a hardware bug. Therefore, dv cores
+			} else if ((is_meson_g12b_cpu() && is_meson_rev_a()) ||
+				is_meson_g12a_cpu()) {
+				/*g12 verA has a hardware bug.Therefore,dv cores
 				 *must keep working even if under sdr mode
 				 */
 				if (dolby_vision_mode !=
