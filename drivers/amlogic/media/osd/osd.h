@@ -451,6 +451,8 @@ struct layer_fence_map_s {
 	u32 ext_addr;
 	u32 format;
 	u32 compose_type;
+	u32 fb_width;
+	u32 fb_height;
 	u32 src_x;
 	u32 src_y;
 	u32 src_w;

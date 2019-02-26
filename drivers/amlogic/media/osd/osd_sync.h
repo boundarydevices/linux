@@ -88,6 +88,8 @@ struct sync_req_render_s {
 	unsigned char  plane_alpha;
 	unsigned char  dim_layer;
 	unsigned int  dim_color;
+	int  fb_width;
+	int  fb_height;
 	int  reserve;
 };
 

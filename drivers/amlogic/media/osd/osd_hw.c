@@ -1073,6 +1073,8 @@ static int sync_render_layers_fence(u32 index, u32 yres,
 	fence_map->layer_map[index].ext_addr = phys_addr;
 	fence_map->layer_map[index].format = request->format;
 	fence_map->layer_map[index].compose_type = request->type;
+	fence_map->layer_map[index].fb_width = request->fb_width;
+	fence_map->layer_map[index].fb_height = request->fb_height;
 	fence_map->layer_map[index].src_x = request->xoffset;
 	fence_map->layer_map[index].src_y = request->yoffset;
 	fence_map->layer_map[index].src_w = request->width;
@@ -4225,7 +4227,8 @@ static void osd_pan_display_update_info(struct layer_fence_map_s *layer_map)
 					layer_map->byte_stride / 4;
 					//BYTE_32_ALIGNED(layer_map->src_w);
 				osd_hw.osd_afbcd[index].frame_height =
-					BYTE_8_ALIGNED(layer_map->src_h);
+					BYTE_8_ALIGNED(layer_map->fb_height);
+					/*BYTE_8_ALIGNED(layer_map->src_h);*/
 				osd_hw.screen_base[index] = ext_addr;
 				osd_hw.screen_size[index] =
 					layer_map->afbc_len;
