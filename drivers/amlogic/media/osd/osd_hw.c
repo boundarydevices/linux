@@ -2812,17 +2812,18 @@ void osd_enable_hw(u32 index, u32 enable)
 		add_to_update_list(index, OSD_GBL_ALPHA);
 		add_to_update_list(index, DISP_GEOMETRY);
 		osd_wait_vsync_hw();
-	}
 
-	while ((index == 0) && osd_hw.osd_afbcd[index].enable &&
+		while ((index == 0) && osd_hw.osd_afbcd[index].enable &&
 			(osd_hw.osd_afbcd[index].phy_addr == 0) &&
 			enable && (i < count)) {
-		osd_wait_vsync_hw();
-		i++;
+			osd_wait_vsync_hw();
+			i++;
+		}
+		if (i > 0)
+			osd_log_info("osd[%d]: wait %d vsync first buffer ready.\n",
+				index, i);
 	}
-	if (i > 0)
-		osd_log_info("osd[%d]: wait %d vsync first buffer ready.\n",
-			index, i);
+
 	osd_hw.enable[index] = enable;
 	if (get_osd_hwc_type() != OSD_G12A_NEW_HWC) {
 		add_to_update_list(index, OSD_ENABLE);
@@ -3024,16 +3025,18 @@ void osd_switch_free_scale(
 		next_index, next_enable, next_scale, current->comm);
 	if (osd_hw.free_scale_mode[pre_index]
 		|| osd_hw.free_scale_mode[next_index]) {
-		while ((next_index == OSD1)
-			&& osd_hw.osd_afbcd[next_index].enable
-			&& (osd_hw.osd_afbcd[next_index].phy_addr == 0)
-			&& next_enable && (i < count)) {
-			osd_wait_vsync_hw();
-			i++;
+		if (osd_hw.osd_meson_dev.osd_ver == OSD_NORMAL) {
+			while ((next_index == OSD1)
+				&& osd_hw.osd_afbcd[next_index].enable
+				&& (osd_hw.osd_afbcd[next_index].phy_addr == 0)
+				&& next_enable && (i < count)) {
+				osd_wait_vsync_hw();
+				i++;
+			}
+			if (i > 0)
+				osd_log_info("osd[%d]: wait %d vsync first buffer ready.\n",
+					next_index, i);
 		}
-		if (i > 0)
-			osd_log_info("osd[%d]: wait %d vsync first buffer ready.\n",
-				next_index, i);
 		if (pre_index != next_index) {
 			h_enable = (pre_scale & 0xffff0000 ? 1 : 0);
 			v_enable = (pre_scale & 0xffff ? 1 : 0);
