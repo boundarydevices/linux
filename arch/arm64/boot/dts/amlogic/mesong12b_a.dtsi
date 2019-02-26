@@ -27,7 +27,7 @@
 #include <dt-bindings/input/meson_rc.h>
 #include <dt-bindings/phy/phy-amlogic-pcie.h>
 #include "mesong12a-bifrost.dtsi"
-#include "g12b-sched-energy.dtsi"
+#include "g12b-sched-energy-a.dtsi"
 
 / {
 	cpus:cpus {
