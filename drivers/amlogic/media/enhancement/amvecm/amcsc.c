@@ -6521,9 +6521,8 @@ int amvecm_matrix_process(
 			toggle_frame = 0;
 		/* when sdr mode change */
 		if ((vinfo->hdr_info.hdr_support & 0x4) &&
-			((get_cpu_type() == MESON_CPU_MAJOR_ID_GXL) ||
-			(get_cpu_type() == MESON_CPU_MAJOR_ID_GXM) ||
-			(get_cpu_type() == MESON_CPU_MAJOR_ID_G12A)))
+			((cpu_after_eq(MESON_CPU_MAJOR_ID_GXL)) &&
+			(vinfo->viu_color_fmt != COLOR_FMT_RGB444)))
 			if (((sdr_process_mode != 1) && (sdr_mode > 0))
 				|| ((sdr_process_mode > 0) && (sdr_mode == 0)))
 				null_vf_cnt = toggle_frame;
