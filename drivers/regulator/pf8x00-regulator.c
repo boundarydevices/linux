@@ -161,6 +161,7 @@
 
 enum chips {
 	PF8100 = 0x40,
+	PF8121A = 0x42,
 	PF8200 = 0x48,
 };
 
@@ -598,7 +599,7 @@ static int pf8x_identify(struct pf8x_chip *pf)
 		return ret;
 
 	pf->chip_id = value;
-	if ((value != PF8100) && (value != PF8200)) {
+	if ((value != PF8100) && (value != PF8121A) && (value != PF8200)) {
 		dev_warn(pf->dev, "Illegal ID: %x\n", value);
 		return -ENODEV;
 	}
