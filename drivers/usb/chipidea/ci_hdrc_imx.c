@@ -186,11 +186,11 @@ static struct imx_usbmisc_data *usbmisc_get_init_data(struct device *dev)
 	if (of_find_property(np, "over-current-active-high", NULL))
 		data->oc_polarity = 1;
 
+	data->pwr_pol = of_property_read_bool(np, "power-active-high");
 	if (of_find_property(np, "power-polarity-active-high", NULL))
-		data->pwr_polarity = 1;
+		data->pwr_pol = 1;
 
-	if (of_find_property(np, "external-vbus-divider", NULL))
-		data->evdo = 1;
+	data->evdo = of_property_read_bool(np, "external-vbus-divider");
 
 	if (of_usb_get_phy_mode(np) == USBPHY_INTERFACE_MODE_ULPI)
 		data->ulpi = 1;

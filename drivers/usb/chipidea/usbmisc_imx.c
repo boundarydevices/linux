@@ -72,7 +72,7 @@
 #define MX6_BM_NON_BURST_SETTING	BIT(1)
 #define MX6_BM_OVER_CUR_DIS		BIT(7)
 #define MX6_BM_OVER_CUR_POLARITY	BIT(8)
-#define MX6_BM_PRW_POLARITY		BIT(9)
+#define MX6_BM_PWR_POLARITY		BIT(9)
 #define MX6_BM_WAKEUP_ENABLE		BIT(10)
 #define MX6_BM_UTMI_SUSPEND		BIT(12)
 #define MX6_BM_UTMI_ON_CLOCK		BIT(13)
@@ -640,8 +640,8 @@ static int usbmisc_imx7d_init(struct imx_usbmisc_data *data)
 		reg |= MX6_BM_OVER_CUR_POLARITY;
 	}
 
-	if (data->pwr_polarity)
-		reg |= MX6_BM_PRW_POLARITY;
+	if (data->pwr_pol)
+		reg |= MX6_BM_PWR_POLARITY;
 
 	writel(reg, usbmisc->base);
 
@@ -950,8 +950,8 @@ static int usbmisc_imx7ulp_init(struct imx_usbmisc_data *data)
 		reg |= MX6_BM_OVER_CUR_POLARITY;
 	}
 
-	if (data->pwr_polarity)
-		reg |= MX6_BM_PRW_POLARITY;
+	if (data->pwr_pol)
+		reg |= MX6_BM_PWR_POLARITY;
 
 	writel(reg, usbmisc->base);
 
