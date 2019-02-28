@@ -1614,11 +1614,16 @@ int vpp_set_super_scaler_regs(
 	int tmp_data = 0;
 	int tmp_data2 = 0;
 	unsigned int data_path_chose;
+	int sr_core0_max_width = SUPER_CORE0_WIDTH_MAX;
+
+	/* just work around for g12a not to disable sr core2 bit2 */
+	if (is_meson_g12a_cpu() && (reg_srscl0_vert_ratio == 0))
+		sr_core0_max_width = SUPER_CORE0_WIDTH_MAX << 1;
 
 	/* top config */
 	tmp_data = VSYNC_RD_MPEG_REG(VPP_SRSHARP0_CTRL);
 	if (sr0_sr1_refresh) {
-		if (reg_srscl0_hsize > SUPER_CORE0_WIDTH_MAX) {
+		if (reg_srscl0_hsize > sr_core0_max_width) {
 			if (((tmp_data >> 1) & 0x1) != 0)
 				VSYNC_WR_MPEG_REG_BITS(VPP_SRSHARP0_CTRL,
 					0, 1, 1);
@@ -1650,7 +1655,7 @@ int vpp_set_super_scaler_regs(
 				SRSHARP0_SHARP_SR2_CTRL + sr_reg_offt,
 				reg_srscl0_hori_ratio&0x1, 4, 1);
 
-		if (reg_srscl0_hsize > SUPER_CORE0_WIDTH_MAX) {
+		if (reg_srscl0_hsize > sr_core0_max_width) {
 			if (((tmp_data >> 2) & 0x1) != 0)
 				VSYNC_WR_MPEG_REG_BITS(
 					SRSHARP0_SHARP_SR2_CTRL + sr_reg_offt,

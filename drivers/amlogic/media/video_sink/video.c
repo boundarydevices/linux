@@ -12069,13 +12069,13 @@ static int __init video_early_init(void)
 			DOLBY_PATH_CTRL, 0xf, 0, 6);
 		/* disable latch for sr core0/1 scaler */
 		WRITE_VCBUS_REG_BITS(
-			SRSHARP0_SHARP_SYNC_CTRL, 1, 8, 1);
+			SRSHARP0_SHARP_SYNC_CTRL, 1, 0, 1);
 		WRITE_VCBUS_REG_BITS(
 			SRSHARP1_SHARP_SYNC_CTRL, 1, 8, 1);
 	}
 	if (is_meson_g12b_cpu())
 		WRITE_VCBUS_REG_BITS(
-			SRSHARP0_SHARP_SYNC_CTRL, 1, 8, 1);
+			SRSHARP0_SHARP_SYNC_CTRL, 1, 0, 1);
 	return 0;
 }
 
