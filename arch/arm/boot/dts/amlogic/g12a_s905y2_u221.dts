@@ -669,18 +669,20 @@
 			opp-hz = /bits/ 64 <1512000000>;
 			opp-microvolt = <831000>;
 		};
-		opp08 {
-			opp-hz = /bits/ 64 <1608000000>;
-			opp-microvolt = <871000>;
-		};
-		opp09 {
-			opp-hz = /bits/ 64 <1704000000>;
-			opp-microvolt = <921000>;
-		};
-		opp10 {
-			opp-hz = /bits/ 64 <1800000000>;
-			opp-microvolt = <981000>;
-		};
+/*
+ *		opp08 {
+ *		        opp-hz = /bits/ 64 <1608000000>;
+ *		        opp-microvolt = <871000>;
+ *		};
+ *		opp09 {
+ *		        opp-hz = /bits/ 64 <1704000000>;
+ *		        opp-microvolt = <921000>;
+ *		};
+ *		opp10 {
+ *		        opp-hz = /bits/ 64 <1800000000>;
+ *		        opp-microvolt = <981000>;
+ *		};
+ */
 	};
 
 	cpufreq-meson {
@@ -1298,3 +1300,13 @@
 	status = "okay";
 };
 
+&gpu{
+	/*max gpu is 500MHz*/
+	tbl = <&dvfs285_cfg
+		&dvfs400_cfg
+		&dvfs500_cfg>;
+};
+
+&amhdmitx {
+	dongle_mode = <1>;
+};
