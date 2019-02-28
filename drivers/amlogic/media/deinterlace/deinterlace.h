@@ -117,6 +117,8 @@ struct di_buf_s {
 	int cnt_canvas_idx;
 	unsigned long mcinfo_adr;
 	int mcinfo_canvas_idx;
+	unsigned short *mcinfo_vaddr;
+	bool bflg_vmap;
 	unsigned long mcvec_adr;
 	int mcvec_canvas_idx;
 	struct mcinfo_pre_s {
