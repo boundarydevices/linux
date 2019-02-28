@@ -63,6 +63,10 @@
 	};
 };
 
+&emdio2 {
+	status = "okay";
+};
+
 &esdhc0 {
 	sd-uhs-sdr104;
 	sd-uhs-sdr50;
