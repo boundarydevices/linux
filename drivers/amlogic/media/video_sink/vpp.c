@@ -2974,7 +2974,10 @@ int vpp_set_filters(
 	aspect_ratio = (vf->ratio_control & DISP_RATIO_ASPECT_RATIO_MASK)
 				   >> DISP_RATIO_ASPECT_RATIO_BIT;
 
-	if (vf->type & VIDTYPE_INTERLACE)
+	/* the height from vdin afbc will be half */
+	/* so need no interlace in */
+	if ((vf->type & VIDTYPE_INTERLACE)
+		&& !(vf->type & VIDTYPE_COMPRESS))
 		vpp_flags = VPP_FLAG_INTERLACE_IN;
 
 	if (vf->ratio_control & DISP_RATIO_PORTRAIT_MODE)

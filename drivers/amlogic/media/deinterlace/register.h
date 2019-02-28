@@ -212,6 +212,15 @@ void DI_VSYNC_WR_MPEG_REG_BITS(unsigned int addr,
 #define DI_HSC_INI_PAT_CTRL				0x376b
 #define DI_SC_GCLK_CTRL					0x376c
 #define DI_SC_HOLD_LINE					0x376d
+
+/* DI H DOWN SCALER */
+#define DI_VIU_HSC_WIDTHM1				0x37b0
+#define DI_VIU_HSC_PHASE_STEP				0x37b1
+#define DI_VIU_HSC_CTRL					0x37b2
+#define DI_VIU_HSC_PHASE_CTRL				0x37b3
+#define DI_VIU_HSC_COEF					0x37b4
+#define DI_VIU_HSC_COEF_IDX				0x37b5
+
 /* NR DOWNSAMPLE */
 #define NRDSWR_X						0x37f9
 #define NRDSWR_Y						0x37fa

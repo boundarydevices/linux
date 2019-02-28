@@ -297,7 +297,7 @@ struct combing_status_s *adpative_combing_config(unsigned int width,
 }
 void mtn_int_combing_glbmot(void)
 {
-	if (is_meson_tl1_cpu()) {/*from VLSI yanling.liu*/
+	if (is_meson_tl1_cpu() || is_meson_tm2_cpu()) {/*from VLSI yanling.liu*/
 		combing_glbmot_radprat[0] = 30;
 	}
 }
@@ -628,6 +628,24 @@ static void set_combing_regs(int lvl, int bit_mode)
 static int di_debug_readreg;
 module_param(di_debug_readreg, int, 0644);
 MODULE_PARM_DESC(di_debug_readreg, "di_debug_readreg");
+
+/*from VLSI yanling.liu, the patch fix TL1 1080I in some dark */
+/*scenes and roller coasters have small sawtooth, when turn off*/
+/*combing_fix_en, set the registers*/
+void fix_tl1_1080i_sawtooth_patch(void)
+{
+	DI_Wr(0x1741, 0x0A0A1A22);
+	DI_Wr(0x1742, 0x0a100101);
+	DI_Wr(0x1743, 0x01020420);
+	DI_Wr(0x1744, 0x32210404);
+	DI_Wr(0x17a9, 0x0a100505);
+	DI_Wr(0x17aa, 0x04040101);
+	DI_Wr(0x17ab, 0x0a0a0a0a);
+	DI_Wr(0x17ac, 0x0f100101);
+	DI_Wr(0x17ad, 0x04040606);
+	DI_Wr(0x17ae, 0x02030202);
+	DI_Wr(0x17af, 0x60020a60);
+}
 
 static int combing_cnt;
 int combing_diff_min = 2000;

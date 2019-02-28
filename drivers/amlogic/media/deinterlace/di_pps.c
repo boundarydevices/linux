@@ -388,10 +388,12 @@ static void f2v_get_vertical_phase(unsigned int zoom_ratio,
 		vphase->phase = (offset_out - offset_in) >> 2;
 	}
 }
+
 /*
  * patch 1: inp scaler 0: di wr scaler
+ * support: TM2
+ * not support: SM1
  */
-
 void di_pps_config(unsigned char path, int src_w, int src_h,
 	int dst_w, int dst_h)
 {
@@ -1324,4 +1326,62 @@ RESTART:
 #endif
 }
 #endif
+
+/*
+ * di pre h scaling down function
+ * only have h scaling down
+ * support: sm1 tm2 ...
+ * 0x37b0 ~ 0x37b5
+ */
+void di_inp_hsc_setting(uint32_t src_w, uint32_t dst_w)
+{
+	uint32_t  i;
+	uint32_t  hsc_en;
+	uint32_t horz_phase_step;
+	int *filt_coef0 = di_filt_coef0;
+	/*int *filt_coef1 = di_filt_coef1;*/
+	/*int *filt_coef2 = di_filt_coef2;*/
+
+	if (src_w == dst_w) {
+		hsc_en = 0;
+	} else {
+		hsc_en = 1;
+		/*write horz filter coefs*/
+		RDMA_WR(DI_VIU_HSC_COEF_IDX, 0x0100);
+		for (i = 0; i < 33; i++)
+			RDMA_WR(DI_VIU_HSC_COEF, filt_coef0[i]); /*bicubic*/
+
+		horz_phase_step = (src_w << 20) / dst_w;
+		horz_phase_step = (horz_phase_step << 4);
+		RDMA_WR(DI_VIU_HSC_WIDTHM1, (src_w-1)<<16 | (dst_w-1));
+		RDMA_WR(DI_VIU_HSC_PHASE_STEP, horz_phase_step);
+		RDMA_WR(DI_VIU_HSC_PHASE_CTRL, 0);
+	}
+	RDMA_WR(DI_VIU_HSC_CTRL,
+		(4 << 20) |		/* initial receive number*/
+		(0 << 12) |		/* initial pixel ptr*/
+		(1 << 10) |		/* repeat first pixel number*/
+		(0 << 8) |		/* sp422 mode*/
+		(4 << 4) |      /* horz scaler bank length*/
+		(0 << 2) |      /* phase0 always en*/
+		(0 << 1) |      /* nearest_en*/
+		(hsc_en<<0));	/* hsc_en*/
+}
+
+/*
+ * 0x37b0 ~ 0x37b5
+ */
+void dump_hdownscler_reg(unsigned int base_addr)
+{
+	unsigned int i = 0x374e;
+
+	pr_info("-----dump hdownscler start-----\n");
+	for (i = 0x37b0; i < 0x37b5; i++) {
+		pr_info("[0x%x][0x%x]=0x%x\n",
+			base_addr + (i << 2),
+			i, RDMA_RD(i));
+	}
+	pr_info("-----dump hdownscler end-----\n");
+}
+
 

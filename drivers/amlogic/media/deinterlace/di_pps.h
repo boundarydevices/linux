@@ -54,6 +54,12 @@ enum f2v_vphase_type_e {
 	F2V_TYPE_MAX
 }; /* frame to video conversion type */
 #endif
+
+enum hdr2_scaler_e {
+	hdr2_scaler_postdi = 0,
+	hdr2_scaler_predi = 1,
+};
+
 struct pps_f2v_vphase_s {
 	unsigned char rcv_num;
 	unsigned char rpt_num;
@@ -99,4 +105,7 @@ struct pps_frame_par_s {
 void di_pps_config(unsigned char path, int src_w, int src_h,
 	int dst_w, int dst_h);
 void dump_pps_reg(unsigned int base_addr);
+void di_inp_hsc_setting(uint32_t src_w, uint32_t dst_w);
+void dump_hdownscler_reg(unsigned int base_addr);
+
 #endif

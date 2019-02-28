@@ -529,6 +529,7 @@ const char video_dev_id2[] = "amvideo-dev2";
 int onwaitendframe;
 
 static u32 vpp_hold_line = 8;
+static u32 stop_update;
 
 struct video_dev_s video_dev[2] = {
 	{0x1d00 - 0x1d00, 0x1a50 - 0x1a50},
@@ -4038,6 +4039,8 @@ static void vsync_toggle_frame(struct vframe_s *vf, int line)
 #endif
 		}
 	}
+	if (stop_update)
+		frame_par_ready_to_set = 0;
 	ATRACE_COUNTER(__func__,  0);
 }
 
@@ -7179,7 +7182,15 @@ SET_FILTER:
 			u32 zoom_start_y, zoom_end_y;
 			correct_vd1_mif_size_for_DV(cur_frame_par);
 			if (cur_dispbuf->type & VIDTYPE_INTERLACE) {
-				if (cur_dispbuf->type & VIDTYPE_VIU_FIELD) {
+				if (cur_dispbuf->type
+					& VIDTYPE_COMPRESS) {
+					/* for vdin afbc and interlace case */
+					zoom_start_y =
+					cur_frame_par->VPP_vd_start_lines_;
+					zoom_end_y =
+					cur_frame_par->VPP_vd_end_lines_;
+				} else if (cur_dispbuf->type
+					& VIDTYPE_VIU_FIELD) {
 					zoom_start_y =
 					cur_frame_par->VPP_vd_start_lines_
 					>> 1;
@@ -13027,6 +13038,9 @@ module_param(toggle_count, uint, 0664);
 
 MODULE_PARM_DESC(vpp_hold_line, "\n vpp_hold_line\n");
 module_param(vpp_hold_line, uint, 0664);
+
+MODULE_PARM_DESC(stop_update, "\n stop_update\n");
+module_param(stop_update, uint, 0664);
 
 MODULE_PARM_DESC(reference_zorder, "\n reference_zorder\n");
 module_param(reference_zorder, uint, 0664);

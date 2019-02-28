@@ -27,6 +27,34 @@
 
 #define	SKIP_CTRE_NUM	13
 
+enum eAFBC_REG {
+	eAFBC_ENABLE,			/*0x1ae0*/
+	eAFBC_MODE,				/*0x1ae1*/
+	eAFBC_SIZE_IN,			/*0x1ae2*/
+	eAFBC_DEC_DEF_COLOR,	/*0x1ae3*/
+	eAFBC_CONV_CTRL,		/*0x1ae4*/
+	eAFBC_LBUF_DEPTH,		/*0x1ae5*/
+	eAFBC_HEAD_BADDR,		/*0x1ae6*/
+	eAFBC_BODY_BADDR,		/*0x1ae7*/
+	eAFBC_SIZE_OUT,			/*0x1ae8*/
+	eAFBC_OUT_YSCOPE,		/*0x1ae9*/
+	eAFBC_STAT,				/*0x1aea*/
+	eAFBC_VD_CFMT_CTRL,		/*0x1aeb*/
+	eAFBC_VD_CFMT_W,		/*0x1aec*/
+	eAFBC_MIF_HOR_SCOPE,	/*0x1aed*/
+	eAFBC_MIF_VER_SCOPE,	/*0x1aee*/
+	eAFBC_PIXEL_HOR_SCOPE,	/*0x1aef*/
+	eAFBC_PIXEL_VER_SCOPE,	/*0x1af0*/
+	eAFBC_VD_CFMT_H,		/*0x1af1*/
+};
+
+enum eAFBC_DEC {
+	eAFBC_DEC0,
+	eAFBC_DEC1,
+};
+#define AFBC_REG_INDEX_NUB	(18)
+#define AFBC_DEC_NUB		(2)
+
 struct DI_MIF_s {
 	unsigned short	luma_x_start0;
 	unsigned short	luma_x_end0;
@@ -91,6 +119,7 @@ struct di_pq_parm_s {
 	struct list_head list;
 };
 
+extern u32 afbc_disable_flag;
 void read_pulldown_info(unsigned int *glb_frm_mot_num,
 	unsigned int *glb_fid_mot_num);
 void read_new_pulldown_info(struct FlmModReg_t *pFMRegp);
@@ -109,7 +138,7 @@ void enable_di_pre_aml(
 	struct DI_SIM_MIF_s    *di_contwr_mif,
 	unsigned char madi_en, unsigned char pre_field_num,
 	unsigned char pre_vdin_link);
-void enable_afbc_input(struct vframe_s *vf);
+u32 enable_afbc_input(struct vframe_s *vf);
 
 void mc_pre_mv_irq(void);
 void enable_mc_di_pre(struct DI_MC_MIF_s *di_mcinford_mif,
@@ -179,8 +208,11 @@ void di_txl_patch_prog(int prog_flg, unsigned int cnt, bool mc_en);
 bool afbc_is_supported(void);
 //extern void afbc_power_sw(bool on);
 extern void afbc_reg_sw(bool on);
-extern void afbc_sw_trig(bool  on);
+/*extern void afbc_sw_trig(bool  on);*/
+extern void afbc_sw(bool on);
+extern void afbc_input_sw(bool on);
 extern void dump_vd2_afbc(void);
+extern int afbc_reg_unreg_flag;
 
 extern u8 *di_vmap(ulong addr, u32 size, bool *bflg);
 extern void di_unmap_phyaddr(u8 *vaddr);

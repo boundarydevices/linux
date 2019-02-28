@@ -39,6 +39,7 @@ struct combing_status_s *adpative_combing_config(unsigned int width,
 	unsigned int height,
 	enum vframe_source_type_e src_type, bool prog,
 	enum tvin_sig_fmt_e fmt);
+extern void fix_tl1_1080i_sawtooth_patch(void);
 int adaptive_combing_fixing(
 	struct combing_status_s *cmb_status,
 	unsigned int field_diff, unsigned int frame_diff,

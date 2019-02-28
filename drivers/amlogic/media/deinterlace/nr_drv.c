@@ -280,7 +280,10 @@ static void dnr_config(struct DNR_PARM_s *dnr_parm_p,
 	DI_Wr(DNR_DM_CTRL, Rd(DNR_DM_CTRL)|(1 << 11));
 	DI_Wr_reg_bits(DNR_CTRL, dnr_en?1:0, 16, 1);
 	/* dm for sd, hd will slower */
-	DI_Wr(DNR_CTRL, 0x1df00);
+	if (is_meson_tl1_cpu() || is_meson_tm2_cpu())
+		DI_Wr(DNR_CTRL, 0x1df00 | (0x03 << 18)); //5 line
+	else
+		DI_Wr(DNR_CTRL, 0x1df00);
 	if (is_meson_gxlx_cpu()) {
 		/* disable chroma dm according to baozheng */
 		DI_Wr_reg_bits(DNR_DM_CTRL, 0, 8, 1);
@@ -354,7 +357,7 @@ static void nr2_config(unsigned short width, unsigned short height)
 {
 	if (is_meson_txlx_cpu() || is_meson_g12a_cpu() ||
 		is_meson_g12b_cpu() || is_meson_tl1_cpu() ||
-		is_meson_sm1_cpu()) {
+		is_meson_sm1_cpu() || is_meson_tm2_cpu()) {
 		DI_Wr_reg_bits(NR4_TOP_CTRL, nr2_en, 2, 1);
 		DI_Wr_reg_bits(NR4_TOP_CTRL, nr2_en, 15, 1);
 		DI_Wr_reg_bits(NR4_TOP_CTRL, nr2_en, 17, 1);
@@ -404,7 +407,7 @@ void nr_all_config(unsigned short width, unsigned short height,
 		cue_config(nr_param.pcue_parm, field_type);
 	if (is_meson_txlx_cpu() || is_meson_g12a_cpu() ||
 		is_meson_g12b_cpu() || is_meson_tl1_cpu() ||
-		is_meson_sm1_cpu()) {
+		is_meson_sm1_cpu() || is_meson_tm2_cpu()) {
 		linebuffer_config(width);
 		nr4_config(nr_param.pnr4_parm, width, height);
 	}
@@ -596,7 +599,7 @@ static void dnr_process(struct DNR_PARM_s *pDnrPrm)
 #endif
 	int ll, lr;
 
-	if (is_meson_tl1_cpu()) {
+	if (is_meson_tl1_cpu() || is_meson_tm2_cpu()) {
 		ll = Rd(DNR_RO_GBS_STAT_LR);
 		lr = Rd(DNR_RO_GBS_STAT_LL);
 	} else {
@@ -742,6 +745,16 @@ module_param_named(glb_fieldck_en, glb_fieldck_en, bool, 0644);
 void adaptive_cue_adjust(unsigned int frame_diff, unsigned int field_diff)
 {
 	struct CUE_PARM_s *pcue_parm = nr_param.pcue_parm;
+	unsigned int mask1, mask2;
+
+	if (is_meson_tl1_cpu() || is_meson_tm2_cpu()) {
+		/*value from VLSI(yanling.liu) 2018-12-07: */
+		mask1 = 0x50332;
+		mask2 = 0x00054357;
+	} else { /*ori value*/
+		mask1 = 0x50323;
+		mask2 = 0x00054375;
+	}
 
 	if (frame_diff > pcue_parm->glb_mot_framethr) {
 		pcue_parm->frame_count = pcue_parm->frame_count > 0 ?
@@ -827,7 +840,7 @@ void nr_process_in_irq(void)
 		dnr_process(&dnr_param);
 	if (is_meson_txlx_cpu() || is_meson_g12a_cpu()
 		|| is_meson_g12a_cpu() || is_meson_tl1_cpu() ||
-		is_meson_sm1_cpu()) {
+		is_meson_sm1_cpu() || is_meson_tm2_cpu()) {
 		noise_meter_process(nr_param.pnr4_parm, nr_param.frame_count);
 		luma_enhancement_process(nr_param.pnr4_parm,
 				nr_param.frame_count);
@@ -1064,19 +1077,11 @@ static void nr4_param_init(struct NR4_PARM_s *nr4_parm_p)
 	nr4_parm_p->sw_nr4_sad2gain_lut[14] = 14;
 	nr4_parm_p->sw_nr4_sad2gain_lut[15] = 9;
 
-	if (is_meson_tl1_cpu()) {
-		nr4_parm_p->sw_nr4_noise_thd = 32;
-		nr4_parm_p->sw_nr4_noise_sel = 0;
-		nr4_parm_p->sw_nr4_noise_ctrl_dm_en = 0;
-		nr4_parm_p->sw_nr4_scene_change_thd2 = 80;
-		nr4_parm_p->sw_dm_scene_change_en = 0;
-	} else {
-		nr4_parm_p->sw_nr4_noise_thd = 32;
-		nr4_parm_p->sw_nr4_noise_sel = 0;
-		nr4_parm_p->sw_nr4_noise_ctrl_dm_en = 0;
-		nr4_parm_p->sw_nr4_scene_change_thd2 = 80;
-		nr4_parm_p->sw_dm_scene_change_en = 0;
-	}
+	nr4_parm_p->sw_nr4_noise_thd = 32;
+	nr4_parm_p->sw_nr4_noise_sel = 0;
+	nr4_parm_p->sw_nr4_noise_ctrl_dm_en = 0;
+	nr4_parm_p->sw_nr4_scene_change_thd2 = 80;
+	nr4_parm_p->sw_dm_scene_change_en = 0;
 }
 
 static void cue_param_init(struct CUE_PARM_s *cue_parm_p)
@@ -1187,7 +1192,10 @@ void nr_hw_init(void)
 {
 
 	nr_gate_control(true);
-	DI_Wr(DNR_CTRL, 0x1df00);
+	if (is_meson_tl1_cpu() || is_meson_tm2_cpu())
+		DI_Wr(DNR_CTRL, 0x1df00|(0x03<<18));//5 line
+	else
+		DI_Wr(DNR_CTRL, 0x1df00);
 	DI_Wr(NR3_MODE, 0x3);
 	DI_Wr(NR3_COOP_PARA, 0x28ff00);
 	DI_Wr(NR3_CNOOP_GAIN, 0x881900);
@@ -1201,7 +1209,7 @@ void nr_gate_control(bool gate)
 {
 	if (!is_meson_txlx_cpu() && !is_meson_g12a_cpu()
 		&& !is_meson_g12b_cpu() && !is_meson_sm1_cpu()
-		&& !is_meson_tl1_cpu())
+		&& !is_meson_tl1_cpu() && !is_meson_tm2_cpu())
 		return;
 	if (gate) {
 		/* enable nr auto gate */
