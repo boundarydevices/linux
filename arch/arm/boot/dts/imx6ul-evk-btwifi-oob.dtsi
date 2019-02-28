@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 NXP
+ * Copyright 2017-2019 NXP
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -9,7 +9,7 @@
 &pinctrl_wifi {
 	fsl,pins = <
 		/* MUXing for WL_HOST_WAKE */
-		MX6UL_PAD_ENET2_RX_ER__GPIO2_IO15  0x13041
+		MX6UL_PAD_ENET2_RX_ER__GPIO2_IO15  0x0b001 /* input: 100K Pull-up */
 	>;
 };
 
@@ -25,6 +25,6 @@
 
 &brcmf {
 	interrupt-parent = <&gpio2>;
-	interrupts = <15 IRQ_TYPE_LEVEL_HIGH>;
+	interrupts = <15 IRQ_TYPE_LEVEL_LOW>;  /* M.2 WL_HOST_WAKE is active low */
 	interrupt-names = "host-wake";
 };
