@@ -193,9 +193,11 @@ static unsigned int combing_bias_motion_setting[MAX_NUM_DI_REG] = {
 	0x02020606,
 	0x05080344,
 	0x40020a04,
-	0x0001ff0c, /* 0x0001FF12 */
-	0x00400204, /* 0x00200204 */
-	0x00016404, /* 0x00012002 */
+	/*idea from mingliang.dong & vlsi zheng.bao begin*/
+	0x0001FF12, /* 0x0001ff0c */
+	0x00200204, /* 0x00400204 */
+	0x00012002, /* 0x00016404 */
+	/*idea from mingliang.dong & vlsi zheng.bao end*/
 	0x00000142
 };
 
@@ -211,10 +213,12 @@ static unsigned int combing_very_motion_setting[MAX_NUM_DI_REG] = {
 	0x0D200302,
 	0x02020606,
 	0x05080344,
-	0x40020a04,  /* 0x60000404,*/
-	0x0001ff0c, /* 0x0001FF12 */
-	0x00400204, /* 0x00200204 */
-	0x00016404, /* 0x00012002 */
+	/*idea from mingliang.dong & vlsi zheng.bao begin*/
+	0x60000404, /* 0x40020a04*/
+	0x0001FF12, /* 0x0001ff0c */
+	0x00200204, /* 0x00400204 */
+	0x00012002, /* 0x00016404 */
+	/*idea from mingliang.dong & vlsi zheng.bao end*/
 	0x00000131
 };
 /*special for resolution test file*/
