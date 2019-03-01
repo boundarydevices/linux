@@ -103,14 +103,14 @@ struct devtype {
 
 /* Possible clocks */
 #define CLK_CORE	"core"
-#define CLK_PIXEL	"pixel"
-#define CLK_BYPASS	"bypass"
 #define CLK_PHYREF	"phy_ref"
+#define CLK_BYPASS	"bypass"
+#define CLK_PIXEL	"pixel"
 
 #define NCLK_CORE	0
-#define NCLK_PIXEL	1
+#define NCLK_PHYREF	1
 #define NCLK_BYPASS	2
-#define NCLK_PHYREF	3
+#define NCLK_PIXEL	3
 	struct clk_config clk_config[4];
 };
 
@@ -121,9 +121,9 @@ static struct devtype imx8qm_dev = {
 	.poweroff = &imx8qm_dsi_poweroff,
 	.clk_config = {
 		[NCLK_CORE]      = { .id = CLK_CORE,   .present = false },
-		[NCLK_PIXEL]     = { .id = CLK_PIXEL,  .present = true },
-		[NCLK_BYPASS]    = { .id = CLK_BYPASS, .present = true },
 		[NCLK_PHYREF]    = { .id = CLK_PHYREF, .present = true },
+		[NCLK_BYPASS]    = { .id = CLK_BYPASS, .present = true },
+		[NCLK_PIXEL]     = { .id = CLK_PIXEL,  .present = true },
 	},
 	.ext_regs = IMX_REG_CSR,
 	.tx_ulps_reg   = 0x00,
@@ -138,9 +138,9 @@ static struct devtype imx8qxp_dev = {
 	.poweroff = &imx8qxp_dsi_poweroff,
 	.clk_config = {
 		[NCLK_CORE]      = { .id = CLK_CORE,   .present = false },
-		[NCLK_PIXEL]     = { .id = CLK_PIXEL,  .present = true },
-		[NCLK_BYPASS]    = { .id = CLK_BYPASS, .present = true },
 		[NCLK_PHYREF]    = { .id = CLK_PHYREF, .present = true },
+		[NCLK_BYPASS]    = { .id = CLK_BYPASS, .present = true },
+		[NCLK_PIXEL]     = { .id = CLK_PIXEL,  .present = true },
 	},
 	.ext_regs = IMX_REG_CSR,
 	.tx_ulps_reg   = 0x30,
@@ -155,9 +155,9 @@ static struct devtype imx8mq_dev = {
 	.poweroff = &imx8mq_dsi_poweroff,
 	.clk_config = {
 		[NCLK_CORE]      = { .id = CLK_CORE,   .present = true },
-		[NCLK_PIXEL]     = { .id = CLK_PIXEL,  .present = false },
-		[NCLK_BYPASS]    = { .id = CLK_BYPASS, .present = false },
 		[NCLK_PHYREF]    = { .id = CLK_PHYREF, .present = true },
+		[NCLK_BYPASS]    = { .id = CLK_BYPASS, .present = false },
+		[NCLK_PIXEL]     = { .id = CLK_PIXEL,  .present = false },
 	},
 	.ext_regs = IMX_REG_SRC | IMX_REG_GPR,
 	.max_instances = 1,
@@ -181,27 +181,9 @@ static void imx_nwl_dsi_set_clocks(struct imx_mipi_dsi *dsi, bool enable)
 	struct device *dev = dsi->dev;
 	const char *id;
 	struct clk *clk;
-	unsigned long new_rate, cur_rate, phy_rate = 0;
+	unsigned long new_rate, cur_rate;
 	bool enabled;
 	size_t i;
-
-	/*
-	 * PHY_REF rate should be set by the nwl-dsi bridge, depending on the
-	 * current mode used. We need that rate to set the PIXEL clock for
-	 * QM or QXP.
-	 */
-	for (i = 0; i < dsi->clk_num; i++) {
-		if (!dsi->clk_config[i].present)
-			continue;
-		id = dsi->clk_config[i].id;
-		clk = dsi->clk_config[i].clk;
-
-		if (i == NCLK_BYPASS || i == NCLK_PHYREF) {
-			dsi->clk_config[i].rate = clk_get_rate(clk);
-			phy_rate = dsi->clk_config[i].rate;
-			break;
-		}
-	}
 
 	for (i = 0; i < dsi->clk_num; i++) {
 		if (!dsi->clk_config[i].present)
@@ -211,9 +193,6 @@ static void imx_nwl_dsi_set_clocks(struct imx_mipi_dsi *dsi, bool enable)
 		new_rate = dsi->clk_config[i].rate;
 		cur_rate = clk_get_rate(clk);
 		enabled = dsi->clk_config[i].enabled;
-
-		if ((i == NCLK_PIXEL) && phy_rate)
-			new_rate = phy_rate;
 
 		if (enable) {
 			if (enabled && new_rate != cur_rate)
@@ -551,6 +530,25 @@ static void imx_nwl_dsi_encoder_disable(struct drm_encoder *encoder)
 	pm_runtime_put_sync(dsi->dev);
 }
 
+static void imx_nwl_dsi_mode_set(struct imx_mipi_dsi *dsi,
+				 struct drm_display_mode *mode)
+{	const char *id;
+	struct clk *clk;
+	size_t i;
+
+	for (i = 0; i < dsi->clk_num; i++) {
+		if (!dsi->clk_config[i].present)
+			continue;
+		id = dsi->clk_config[i].id;
+		clk = dsi->clk_config[i].clk;
+
+		/* Set bypass and pixel clocks to mode clock rate */
+		if ((i == NCLK_BYPASS) || (i == NCLK_PIXEL))
+			dsi->clk_config[i].rate = mode->crtc_clock * 1000;
+	}
+
+}
+
 static int imx_nwl_dsi_encoder_atomic_check(struct drm_encoder *encoder,
 					struct drm_crtc_state *crtc_state,
 					struct drm_connector_state *conn_state)
@@ -561,11 +559,21 @@ static int imx_nwl_dsi_encoder_atomic_check(struct drm_encoder *encoder,
 	return 0;
 }
 
+static void imx_nwl_dsi_encoder_mode_set(struct drm_encoder *encoder,
+			 struct drm_display_mode *mode,
+			 struct drm_display_mode *adjusted_mode)
+{
+	struct imx_mipi_dsi *dsi = encoder_to_dsi(encoder);
+
+	imx_nwl_dsi_mode_set(dsi, adjusted_mode);
+}
+
 static const struct drm_encoder_helper_funcs
 imx_nwl_dsi_encoder_helper_funcs = {
 	.enable = imx_nwl_dsi_encoder_enable,
 	.disable = imx_nwl_dsi_encoder_disable,
 	.atomic_check = imx_nwl_dsi_encoder_atomic_check,
+	.mode_set = imx_nwl_dsi_encoder_mode_set,
 };
 
 static void imx_nwl_dsi_encoder_destroy(struct drm_encoder *encoder)
@@ -592,6 +600,15 @@ static void imx_nwl_dsi_bridge_disable(struct drm_bridge *bridge)
 
 	imx_nwl_dsi_disable(dsi);
 	pm_runtime_put_sync(dsi->dev);
+}
+
+static void imx_nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
+			   struct drm_display_mode *mode,
+			   struct drm_display_mode *adjusted)
+{
+	struct imx_mipi_dsi *dsi = bridge->driver_private;
+
+	imx_nwl_dsi_mode_set(dsi, adjusted);
 }
 
 static int imx_nwl_dsi_bridge_attach(struct drm_bridge *bridge)
@@ -631,6 +648,7 @@ static void imx_nwl_dsi_bridge_detach(struct drm_bridge *bridge)
 static const struct drm_bridge_funcs imx_nwl_dsi_bridge_funcs = {
 	.enable = imx_nwl_dsi_bridge_enable,
 	.disable = imx_nwl_dsi_bridge_disable,
+	.mode_set = imx_nwl_dsi_bridge_mode_set,
 	.attach = imx_nwl_dsi_bridge_attach,
 	.detach = imx_nwl_dsi_bridge_detach,
 };
