@@ -13,6 +13,9 @@ config HAVE_IMX_MU
 config HAVE_IMX_SC
 	bool
 
+config HAVE_IMX_SC_PD
+	bool
+
 config HAVE_IMX_RPMSG
 	select RPMSG_VIRTIO
 	select RPMSG
