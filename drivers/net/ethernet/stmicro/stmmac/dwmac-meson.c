@@ -34,6 +34,7 @@
 /* if it's internal phy we will shutdown analog*/
 static unsigned int is_internal_phy;
 /* Ethernet register for G12A PHY */
+#define REG_ETH_REG1_OFFSET 0x4
 #define ETH_PLL_CTL0 0x44
 #define ETH_PLL_CTL1 0x48
 #define ETH_PLL_CTL2 0x4C
@@ -227,10 +228,12 @@ static void __iomem *network_interface_setup(struct platform_device *pdev)
 	return PREG_ETH_REG0;
 }
 
-static int dwmac_meson_cfg_ctrl(void __iomem *base_addr)
+static int dwmac_meson_cfg_ctrl(void __iomem *base_addr,
+				struct platform_device *pdev)
 {
 	void __iomem *ETH_PHY_config_addr = base_addr;
-
+	unsigned int led_setting = 0;
+	unsigned int phy_setting = 0x54147;
 	/*config phyid should between  a 0~0xffffffff*/
 	/*please don't use 44000181, this has been used by internal phy*/
 	writel(0x33010180, ETH_PHY_config_addr + ETH_PHY_CNTL0);
@@ -238,9 +241,16 @@ static int dwmac_meson_cfg_ctrl(void __iomem *base_addr)
 	/*use_phy_smi | use_phy_ip | co_clkin from eth_phy_top*/
 	writel(0x260, ETH_PHY_config_addr + ETH_PHY_CNTL2);
 	/*led signal is inverted*/
-	writel(0x41054147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
-	writel(0x41014147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
-	writel(0x41054147, ETH_PHY_config_addr + ETH_PHY_CNTL1);
+	if (of_property_read_u32(pdev->dev.of_node,
+				 "led_setting", &led_setting))
+		led_setting = 0x41;
+	else
+		pr_info("load led setting as 0x%x\n", led_setting);
+
+	phy_setting = (led_setting << 24) + (phy_setting & ~(0xff << 24));
+	writel(phy_setting, ETH_PHY_config_addr + ETH_PHY_CNTL1);
+	writel(phy_setting & ~(0x1 << 18), ETH_PHY_config_addr + ETH_PHY_CNTL1);
+	writel(phy_setting, ETH_PHY_config_addr + ETH_PHY_CNTL1);
 	/*wait phy to reset cause Power Up Reset need 5.2~2.6 ms*/
 	mdelay(10);
 	return 0;
@@ -294,6 +304,7 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 	struct pinctrl *pin_ctl;
 	struct resource *res = NULL;
 	u32 mc_val;
+	u32 cali_val;
 	void __iomem *addr = NULL;
 	void __iomem *REG_ETH_reg0_addr = NULL;
 	void __iomem *ETH_PHY_config_addr = NULL;
@@ -357,7 +368,7 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 		/*PLL*/
 		dwmac_meson_cfg_pll(ETH_PHY_config_addr, pdev);
 		dwmac_meson_cfg_analog(ETH_PHY_config_addr, pdev);
-		dwmac_meson_cfg_ctrl(ETH_PHY_config_addr);
+		dwmac_meson_cfg_ctrl(ETH_PHY_config_addr, pdev);
 		pin_ctl = devm_pinctrl_get_select
 			(&pdev->dev, "internal_eth_pins");
 		return REG_ETH_reg0_addr;
@@ -376,6 +387,13 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 
 		/*switch to extern phy*/
 		writel(0x0, ETH_PHY_config_addr + ETH_PHY_CNTL2);
+		/*set PRG_ETH_REG1 for exphy delay*/
+		if (of_property_read_u32(np, "cali_val", &cali_val))
+			pr_info("Not set  cali_val for REG1\n");
+		else
+			writel(cali_val, REG_ETH_reg0_addr +
+					REG_ETH_REG1_OFFSET);
+
 		pin_ctl = devm_pinctrl_get_select
 			(&pdev->dev, "external_eth_pins");
 		return REG_ETH_reg0_addr;
