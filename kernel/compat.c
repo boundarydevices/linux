@@ -112,6 +112,11 @@ COMPAT_SYSCALL_DEFINE2(settimeofday, struct compat_timeval __user *, tv,
 	struct timespec	new_ts;
 	struct timezone new_tz;
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	new_ts.tv_sec = 0;
+	new_ts.tv_nsec = 0;
+#endif
+
 	if (tv) {
 		if (compat_get_timeval(&user_tv, tv))
 			return -EFAULT;

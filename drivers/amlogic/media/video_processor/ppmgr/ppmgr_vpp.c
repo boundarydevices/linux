@@ -3248,7 +3248,7 @@ SKIP_DETECT:
 			vf_local_init();
 			vf_light_unreg_provider(&ppmgr_vf_prov);
 			msleep(30);
-			vf_reg_provider(&ppmgr_vf_prov);
+			vf_light_reg_provider(&ppmgr_vf_prov);
 			ppmgr_blocking = false;
 			up(&thread_sem);
 			PPMGRVPP_WARN("ppmgr rebuild from light-unregister\n");

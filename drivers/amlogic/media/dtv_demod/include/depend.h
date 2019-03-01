@@ -33,21 +33,21 @@ bool aml_dma_release_contiguous(struct device *dev, struct page *pages,
 
 /*void ary_test(void);*/
 enum aml_fe_n_mode_t {		/*same as aml_fe_mode_t in aml_fe.h*/
-	AM_FE_UNKNOWN_N = 0,
-	AM_FE_QPSK_N = 1,
-	AM_FE_QAM_N = 2,
-	AM_FE_OFDM_N = 4,
-	AM_FE_ATSC_N = 8,
+	AM_FE_UNKNOWN_N,
+	AM_FE_QPSK_N,
+	AM_FE_QAM_N,
+	AM_FE_OFDM_N,
+	AM_FE_ATSC_N,
 	/*AM_FE_ANALOG = 16,*/
-	AM_FE_DTMB_N = 32,
-	AM_FE_ISDBT_N = 64
+	AM_FE_DTMB_N,
+	AM_FE_ISDBT_N,
+	AM_FE_NUM,
 };
-
 /*----------------------------------*/
 
 struct aml_exp_func {
 
-	int (*leave_mode)(int mode);
+	int (*leave_mode)(enum aml_fe_n_mode_t mode);
 };
 
 #endif	/*__DEPEND_H__*/

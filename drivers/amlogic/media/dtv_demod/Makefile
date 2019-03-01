@@ -5,7 +5,7 @@ obj-$(CONFIG_AMLOGIC_DTV_DEMOD) += dtvdemod.o
 
 dtvdemod-objs := demod_func.o  dvbc_func.o i2c_func.o tuner_func.o atsc_func.o dvbc_v2.o dvbc_v3.o dtmb_func.o dvbt_v2.o#dvbt_func.o
 
-dtvdemod-objs += amlfrontend.o
+dtvdemod-objs += amlfrontend.o demod_dbg.o
 
 dtvdemod-objs	+= aml_demod.o
 

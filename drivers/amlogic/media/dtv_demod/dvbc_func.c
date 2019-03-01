@@ -331,7 +331,7 @@ int dvbc_set_ch(struct aml_demod_sta *demod_sta,
 		ret = -1;
 	}
 	/* if (ret != 0) return ret; */
-	demod_sta->dvb_mode = 0;
+	//demod_sta->dvb_mode = 0;
 	demod_sta->ch_mode = mode;
 	/* 0:16, 1:32, 2:64, 3:128, 4:256 */
 	demod_sta->agc_mode = 1;

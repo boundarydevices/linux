@@ -565,6 +565,7 @@ if (!field_test_version) {
 	atsc_write_reg(0x54d, 0x08);
 	atsc_write_reg(0x54c, 0x08);
 	atsc_write_reg(0x53b, 0x0e);
+	atsc_write_reg(0x912, 0x50);
 }
 	ar_flag = 0;
 }

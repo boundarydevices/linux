@@ -92,6 +92,7 @@ extern int vf_notify_provider(const char *receiver_name, int event_type,
 extern int vf_notify_provider_by_name(const char *provider_name,
 				int event_type, void *data);
 
+void vf_light_reg_provider(struct vframe_provider_s *prov);
 void vf_light_unreg_provider(struct vframe_provider_s *prov);
 void vf_ext_light_unreg_provider(struct vframe_provider_s *prov);
 struct vframe_provider_s *vf_get_provider(const char *name);

@@ -997,6 +997,10 @@ static int unix_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len)
 	struct hlist_head *list;
 	struct path path = { NULL, NULL };
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	hash = 0;
+#endif
+
 	err = -EINVAL;
 	if (addr_len < offsetofend(struct sockaddr_un, sun_family) ||
 	    sunaddr->sun_family != AF_UNIX)

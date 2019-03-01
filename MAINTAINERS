@@ -14507,6 +14507,8 @@ F:      drivers/amlogic/media/dtv_demod/*
 AMLOGIC DTV DEMOD DRIVER
 M:      Zhiwei Yuan <zhiwei.yuan@amlogic.com>
 F:      drivers/amlogic/media/dtv_demod/include/addr_atsc*.h
+F:      drivers/amlogic/media/dtv_demod/include/demod_dbg.h
+F:      drivers/amlogic/media/dtv_demod/demod_dbg.c
 
 AMLOGIC DEFENDKEY DRIVER
 M:	Zhongfu Luo <zhongfu.luo@amlogic.com>

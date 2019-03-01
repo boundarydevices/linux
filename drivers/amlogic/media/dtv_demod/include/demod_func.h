@@ -454,8 +454,9 @@ u16 tuner_get_ch_power3(void);
 
 int dtmb_get_power_strength(int agc_gain);
 
-
-
+extern int dvbc_get_power_strength(int agc_gain, int tuner_strength);
+extern int j83b_get_power_strength(int agc_gain, int tuner_strength);
+extern int atsc_get_power_strength(int agc_gain, int tuner_strength);
 
 /* dvbt */
 int dvbt_set_ch(struct aml_demod_sta *demod_sta,
@@ -498,6 +499,7 @@ extern void dvbc_reg_initial_old(struct aml_demod_sta *demod_sta);
 
 /*txlx*/
 extern void dvbc_reg_initial(struct aml_demod_sta *demod_sta);
+extern void demod_dvbc_set_qam(unsigned int qam);
 extern void dvbc_init_reg_ext(void);
 extern u32 dvbc_get_ch_sts(void);
 extern u32 dvbc_get_qam_mode(void);

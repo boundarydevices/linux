@@ -931,7 +931,7 @@ static void xc5000_config_tv(struct dvb_frontend *fe,
 static int xc5000_set_tv_freq(struct dvb_frontend *fe)
 {
 	struct xc5000_priv *priv = fe->tuner_priv;
-	u16 pll_lock_status;
+	u16 pll_lock_status = 0;
 	int ret;
 
 tune_channel:

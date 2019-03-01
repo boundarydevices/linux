@@ -375,7 +375,7 @@ canvas_pool_map_show(struct class *class,
 	int ret;
 	int i;
 	ssize_t size = 0;
-	struct canvas_info info;
+	struct canvas_info info = {NULL, 0, NULL, 0};
 	struct canvas_s canvas;
 
 	if (jiffies - pool->last_cat_map > 5 * HZ) {

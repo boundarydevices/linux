@@ -39,6 +39,18 @@ enum Gxtv_Demod_Dvb_Mode {
 	Gxtv_Atsc = 2,
 	Gxtv_Dtmb = 3,
 };
+
+enum demod_md {
+	UNKNOWN = 0,
+	AML_DVBC,
+	AML_DTMB,
+	AML_DVBT,
+	AML_ATSC,
+	AML_J83B,
+	AML_ISDBT,
+	AML_DVBT2
+};
+
 #define Adc_Clk_35M             35714	/* adc clk    dvbc */
 #define Demod_Clk_71M   71428	/* demod clk */
 
@@ -448,4 +460,7 @@ extern unsigned int dtmb_is_update_delay(void);
 extern unsigned int dtmb_get_delay_clear(void);
 extern unsigned int dtmb_is_have_check(void);
 extern void dtmb_poll_v3(void);
+extern enum demod_md demod_get_current_mode(void);
+extern unsigned int demod_dvbc_get_fast_search(void);
+extern void demod_dvbc_set_fast_search(unsigned int en);
 #endif
