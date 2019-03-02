@@ -664,6 +664,7 @@ dtb-$(CONFIG_SOC_IMX6ULL) += \
 	imx6ull-9x9-evk-btwifi.dtb \
 	imx6ull-9x9-evk-btwifi-oob.dtb \
 	imx6ull-9x9-evk-ldo.dtb		\
+	imx6ull-rta.dtb \
 	imx6ulz-14x14-evk.dtb \
 	imx6ulz-14x14-evk-btwifi.dtb \
 	imx6ulz-14x14-evk-btwifi-oob.dtb \
