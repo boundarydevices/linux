@@ -5936,6 +5936,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	int video2_off_req = 0;
 	struct vframe_s *cur_dispbuf_back = cur_dispbuf;
 	static  struct vframe_s *pause_vf;
+	int force_flush = 0;
 
 	if (debug_flag & DEBUG_FLAG_VSYNC_DONONE)
 		return IRQ_HANDLED;
@@ -7336,6 +7337,7 @@ SET_FILTER:
 				pr_info("VsyncEnableVideoLayer\n");
 			vpu_delay_work_flag |=
 				VPU_VIDEO_LAYER1_CHANGED;
+			force_flush = 1;
 		} else if (video_onoff_state == VIDEO_ENABLE_STATE_OFF_REQ) {
 			vpp_misc_set &= ~(VPP_VD1_PREBLEND |
 				  VPP_VD1_POSTBLEND);
@@ -7355,6 +7357,7 @@ SET_FILTER:
 			if (debug_flag & DEBUG_FLAG_BLACKOUT)
 				pr_info("VsyncDisableVideoLayer\n");
 			video1_off_req = 1;
+			force_flush = 1;
 		}
 
 		spin_unlock_irqrestore(&video_onoff_lock, flags);
@@ -7405,6 +7408,7 @@ SET_FILTER:
 
 			if (debug_flag & DEBUG_FLAG_BLACKOUT)
 				pr_info("VsyncEnableVideoLayer2\n");
+			force_flush = 1;
 		} else if (video2_onoff_state == VIDEO_ENABLE_STATE_OFF_REQ) {
 			vpp_misc_set &= ~(VPP_VD2_PREBLEND |
 				VPP_VD2_POSTBLEND | VPP_PREBLEND_EN
@@ -7415,6 +7419,7 @@ SET_FILTER:
 			if (debug_flag & DEBUG_FLAG_BLACKOUT)
 				pr_info("VsyncDisableVideoLayer2\n");
 			video2_off_req = 1;
+			force_flush = 1;
 		}
 		spin_unlock_irqrestore(&video2_onoff_lock, flags);
 	}
@@ -7458,7 +7463,7 @@ SET_FILTER:
 
 	if (!legacy_vpp) {
 		u32 set_value = 0;
-		int force_flush = vpp_zorder_check();
+		force_flush |= vpp_zorder_check();
 
 		vpp_misc_set &=
 			((1 << 29) | VPP_CM_ENABLE |
