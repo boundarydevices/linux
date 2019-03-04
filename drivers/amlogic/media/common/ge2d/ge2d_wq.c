@@ -1244,7 +1244,6 @@ static int build_ge2d_config_ex_dma(struct ge2d_context_s *context,
 			dma_cfg->dir = dir;
 			cfg->dma_cfg = dma_cfg;
 			ret = ge2d_dma_buffer_get_phys(dma_cfg, &addr);
-			ge2d_log_info("phys: addr=%lx\n", addr);
 			if (ret != 0)
 				return ret;
 

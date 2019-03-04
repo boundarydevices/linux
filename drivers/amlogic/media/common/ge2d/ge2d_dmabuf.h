@@ -37,9 +37,9 @@ struct aml_dma_buf {
 	unsigned int		index;
 	dma_addr_t			dma_addr;
 	atomic_t			refcount;
-	struct sg_table		*sgt_base;
 	/* DMABUF related */
 	struct dma_buf_attachment	*db_attach;
+	void                *priv;
 };
 
 struct aml_dma_buf_priv {

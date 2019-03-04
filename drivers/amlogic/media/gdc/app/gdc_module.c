@@ -53,6 +53,9 @@ static const struct of_device_id gdc_dt_match[] = {
 	{} };
 
 MODULE_DEVICE_TABLE(of, gdc_dt_match);
+static void meson_gdc_cache_flush(struct device *dev,
+					dma_addr_t addr,
+					size_t size);
 
 //////
 static int meson_gdc_open(struct inode *inode, struct file *file)
@@ -80,7 +83,7 @@ static int meson_gdc_open(struct inode *inode, struct file *file)
 
 	fh->gdev = gdc_dev;
 
-	gdc_log(LOG_CRIT, "Success open\n");
+	gdc_log(LOG_INFO, "Success open\n");
 
 	return rc;
 }
@@ -146,7 +149,7 @@ static int meson_gdc_release(struct inode *inode, struct file *file)
 	fh = NULL;
 
 	if (ret == 0)
-		gdc_log(LOG_CRIT, "Success release\n");
+		gdc_log(LOG_INFO, "Success release\n");
 	else
 		gdc_log(LOG_ERR, "Error release\n");
 
@@ -181,6 +184,8 @@ static long meson_gdc_set_buff(void *f_fh,
 		fh->o_paddr = page_to_phys(cma_pages);
 		fh->o_kaddr = phys_to_virt(fh->o_paddr);
 		fh->o_len = len;
+		meson_gdc_cache_flush(&fh->gdev->pdev->dev,
+			fh->o_paddr, fh->o_len);
 	break;
 	case CONFIG_BUFF_TYPE:
 		if (fh->c_paddr != 0 && fh->c_kaddr != NULL)
@@ -551,6 +556,9 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 			}
 			gdc_log(LOG_INFO, "1 plane get input addr=%x\n",
 				gdc_cmd->y_base_addr);
+			meson_gdc_dma_flush(&fh->gdev->pdev->dev,
+				gdc_cmd->y_base_addr,
+				gc->input_y_stride * gc->input_height);
 		} else if (gs_ex->input_buffer.plane_number == 2) {
 			cfg = &fh->dma_cfg.input_cfg_plane1;
 			cfg->fd = gs_ex->input_buffer.y_base_fd;
@@ -564,6 +572,9 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 				return -EINVAL;
 			}
 			gdc_cmd->y_base_addr = addr;
+			meson_gdc_dma_flush(&fh->gdev->pdev->dev,
+				gdc_cmd->y_base_addr,
+				gc->input_y_stride * gc->input_height);
 			cfg = &fh->dma_cfg.input_cfg_plane2;
 			cfg->fd = gs_ex->input_buffer.uv_base_fd;
 			cfg->dev = &fh->gdev->pdev->dev;
@@ -576,6 +587,9 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 				return -EINVAL;
 			}
 			gdc_cmd->uv_base_addr = addr;
+			meson_gdc_dma_flush(&fh->gdev->pdev->dev,
+				gdc_cmd->uv_base_addr,
+				gc->input_y_stride * gc->input_height / 2);
 			gdc_log(LOG_INFO, "2 plane get input addr=%x\n",
 				gdc_cmd->y_base_addr);
 			gdc_log(LOG_INFO, "2 plane get input addr=%x\n",
@@ -596,6 +610,9 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 		}
 		gdc_cmd->y_base_addr = addr;
 		gdc_cmd->uv_base_addr = 0;
+		meson_gdc_dma_flush(&fh->gdev->pdev->dev,
+			gdc_cmd->y_base_addr,
+			gc->input_y_stride * gc->input_height);
 	break;
 	default:
 		gdc_log(LOG_ERR, "Error image format");
@@ -691,7 +708,9 @@ static long gdc_process_ex_info(struct mgdc_fh_s *fh,
 		}
 	} else if (gs_ex->input_buffer.mem_alloc_type == AML_GDC_MEM_DMABUF) {
 		/* dma alloc */
-		gdc_process_input_dma_info(fh, gs_ex);
+		ret = gdc_process_input_dma_info(fh, gs_ex);
+		if (ret < 0)
+			return -EINVAL;
 	}
 	gdc_log(LOG_INFO, "%s, input addr=%x\n",
 		__func__, fh->gdc_cmd.y_base_addr);
@@ -923,7 +942,7 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 			gdc_log(LOG_ERR, "copy from user failed\n");
 		memcpy(&gdc_cmd->gdc_config, &gs_ex.gdc_config,
 			sizeof(struct gdc_config_s));
-		gdc_process_ex_info(fh, &gs_ex);
+		ret = gdc_process_ex_info(fh, &gs_ex);
 		break;
 	case GDC_REQUEST_DMA_BUFF:
 		ret = copy_from_user(&gdc_req_buf, argp,

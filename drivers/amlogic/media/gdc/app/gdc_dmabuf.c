@@ -30,29 +30,34 @@
 #include <linux/pagemap.h>
 #include <linux/dma-mapping.h>
 #include <api/gdc_api.h>
+#include <linux/dma-contiguous.h>
 
 #include "system_log.h"
 #include "gdc_dmabuf.h"
 
+static void clear_dma_buffer(struct aml_dma_buffer *buffer, int index);
 /* dma free*/
 static void aml_dma_put(void *buf_priv)
 {
 	struct aml_dma_buf *buf = buf_priv;
+	struct page *cma_pages = NULL;
 
 	if (!atomic_dec_and_test(&buf->refcount)) {
-		gdc_log(LOG_INFO, "aml_dma_put, refcont=%d\n",
+		gdc_log(LOG_INFO, "gdc aml_dma_put, refcont=%d\n",
 			atomic_read(&buf->refcount));
 		return;
 	}
-	if (buf->sgt_base) {
-		sg_free_table(buf->sgt_base);
-		kfree(buf->sgt_base);
+	cma_pages = virt_to_page(buf->vaddr);
+	if (!dma_release_from_contiguous(buf->dev, cma_pages,
+					 buf->size >> PAGE_SHIFT)) {
+		pr_err("failed to release cma buffer\n");
 	}
-	dma_free_attrs(buf->dev, buf->size, buf->cookie, buf->dma_addr,
-		       buf->attrs);
+	buf->vaddr = NULL;
+	clear_dma_buffer((struct aml_dma_buffer *)buf->priv, buf->index);
 	put_device(buf->dev);
 	kfree(buf);
-	gdc_log(LOG_INFO, "aml_dma_put free!\n");
+	gdc_log(LOG_INFO, "gdc free:aml_dma_buf=0x%p,buf->index=%d\n",
+		buf, buf->index);
 }
 
 static void *aml_dma_alloc(struct device *dev, unsigned long attrs,
@@ -60,6 +65,8 @@ static void *aml_dma_alloc(struct device *dev, unsigned long attrs,
 			  gfp_t gfp_flags)
 {
 	struct aml_dma_buf *buf;
+	struct page *cma_pages = NULL;
+	dma_addr_t paddr = 0;
 
 	if (WARN_ON(!dev))
 		return (void *)(-EINVAL);
@@ -70,25 +77,22 @@ static void *aml_dma_alloc(struct device *dev, unsigned long attrs,
 
 	if (attrs)
 		buf->attrs = attrs;
-	buf->cookie = dma_alloc_attrs(dev, size, &buf->dma_addr,
-			 gfp_flags, buf->attrs);
-	if (!buf->cookie) {
-		dev_err(dev, "dma_alloc_coherent of size %ld failed\n", size);
-		kfree(buf);
+	cma_pages = dma_alloc_from_contiguous(dev,
+		size >> PAGE_SHIFT, 0);
+	if (cma_pages) {
+		paddr = page_to_phys(cma_pages);
+	} else {
+		pr_err("failed to alloc cma pages.\n");
 		return NULL;
 	}
-
-	if ((buf->attrs & DMA_ATTR_NO_KERNEL_MAPPING) == 0)
-		buf->vaddr = buf->cookie;
-
-	/* Prevent the device from being released while the buffer is used */
+	buf->vaddr = phys_to_virt(paddr);
 	buf->dev = get_device(dev);
 	buf->size = size;
 	buf->dma_dir = dma_dir;
-
+	buf->dma_addr = paddr;
 	atomic_inc(&buf->refcount);
-	gdc_log(LOG_INFO, "aml_dma_alloc, refcont=%d\n",
-		atomic_read(&buf->refcount));
+	gdc_log(LOG_INFO, "aml_dma_buf=0x%p, refcont=%d\n",
+		buf, atomic_read(&buf->refcount));
 
 	return buf;
 }
@@ -96,26 +100,24 @@ static void *aml_dma_alloc(struct device *dev, unsigned long attrs,
 static int aml_dma_mmap(void *buf_priv, struct vm_area_struct *vma)
 {
 	struct aml_dma_buf *buf = buf_priv;
-	int ret;
+	unsigned long pfn = 0;
+	unsigned long vsize = vma->vm_end - vma->vm_start;
+	int ret = -1;
 
-	if (!buf) {
-		pr_err("No buffer to map\n");
+	if (!buf || !vma) {
+		pr_err("No memory to map\n");
 		return -EINVAL;
 	}
 
-	/*
-	 * dma_mmap_* uses vm_pgoff as in-buffer offset, but we want to
-	 * map whole buffer
-	 */
-	vma->vm_pgoff = 0;
-
-	ret = dma_mmap_attrs(buf->dev, vma, buf->cookie,
-		buf->dma_addr, buf->size, buf->attrs);
-
+	pfn = virt_to_phys(buf->vaddr) >> PAGE_SHIFT;
+	ret = remap_pfn_range(vma, vma->vm_start, pfn,
+		vsize, vma->vm_page_prot);
 	if (ret) {
-		pr_err("Remapping memory failed, error: %d\n", ret);
+		pr_err("Remapping memory, error: %d\n", ret);
 		return ret;
 	}
+	vma->vm_flags |= VM_DONTEXPAND;
+
 	gdc_log(LOG_INFO, "mapped dma addr 0x%08lx at 0x%08lx, size %d\n",
 		(unsigned long)buf->dma_addr, vma->vm_start,
 		buf->size);
@@ -134,10 +136,12 @@ static int aml_dmabuf_ops_attach(struct dma_buf *dbuf, struct device *dev,
 	struct dma_buf_attachment *dbuf_attach)
 {
 	struct aml_attachment *attach;
-	unsigned int i;
-	struct scatterlist *rd, *wr;
-	struct sg_table *sgt;
 	struct aml_dma_buf *buf = dbuf->priv;
+	int num_pages = PAGE_ALIGN(buf->size) / PAGE_SIZE;
+	struct sg_table *sgt;
+	struct scatterlist *sg;
+	void *vaddr = buf->vaddr;
+	unsigned int i;
 	int ret;
 
 	attach = kzalloc(sizeof(*attach), GFP_KERNEL);
@@ -148,18 +152,21 @@ static int aml_dmabuf_ops_attach(struct dma_buf *dbuf, struct device *dev,
 	/* Copy the buf->base_sgt scatter list to the attachment, as we can't
 	 * map the same scatter list to multiple attachments at the same time.
 	 */
-	ret = sg_alloc_table(sgt, buf->sgt_base->orig_nents, GFP_KERNEL);
+	ret = sg_alloc_table(sgt, num_pages, GFP_KERNEL);
 	if (ret) {
 		kfree(attach);
 		return -ENOMEM;
 	}
+	for_each_sg(sgt->sgl, sg, sgt->nents, i) {
+		struct page *page = virt_to_page(vaddr);
 
-	rd = buf->sgt_base->sgl;
-	wr = sgt->sgl;
-	for (i = 0; i < sgt->orig_nents; ++i) {
-		sg_set_page(wr, sg_page(rd), rd->length, rd->offset);
-		rd = sg_next(rd);
-		wr = sg_next(wr);
+		if (!page) {
+			sg_free_table(sgt);
+			kfree(attach);
+			return -ENOMEM;
+		}
+		sg_set_page(sg, page, PAGE_SIZE, 0);
+		vaddr += PAGE_SIZE;
 	}
 
 	attach->dma_dir = DMA_NONE;
@@ -272,25 +279,6 @@ static struct dma_buf_ops gdc_dmabuf_ops = {
 	.release = aml_dmabuf_ops_release,
 };
 
-static struct sg_table *get_base_sgt(struct aml_dma_buf *buf)
-{
-	int ret;
-	struct sg_table *sgt;
-
-	sgt = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
-	if (!sgt)
-		return NULL;
-
-	ret = dma_get_sgtable(buf->dev, sgt, buf->cookie,
-		buf->dma_addr, buf->size);
-	if (ret < 0) {
-		dev_err(buf->dev, "failed to get scatterlist from DMA API\n");
-		kfree(sgt);
-		return NULL;
-	}
-	return sgt;
-}
-
 static struct dma_buf *get_dmabuf(void *buf_priv, unsigned long flags)
 {
 	struct aml_dma_buf *buf = buf_priv;
@@ -302,10 +290,7 @@ static struct dma_buf *get_dmabuf(void *buf_priv, unsigned long flags)
 	exp_info.flags = flags;
 	exp_info.priv = buf;
 
-	if (!buf->sgt_base)
-		buf->sgt_base = get_base_sgt(buf);
-
-	if (WARN_ON(!buf->sgt_base))
+	if (WARN_ON(!buf->vaddr))
 		return NULL;
 
 	dbuf = dma_buf_export(&exp_info);
@@ -341,6 +326,15 @@ static int find_empty_dma_buffer(struct aml_dma_buffer *buffer)
 		return -1;
 }
 
+static void clear_dma_buffer(struct aml_dma_buffer *buffer, int index)
+{
+	mutex_lock(&(buffer->lock));
+	buffer->gd_buffer[index].mem_priv = NULL;
+	buffer->gd_buffer[index].index = 0;
+	buffer->gd_buffer[index].alloc = 0;
+	mutex_unlock(&(buffer->lock));
+}
+
 void *gdc_dma_buffer_create(void)
 {
 	int i;
@@ -369,6 +363,7 @@ int gdc_dma_buffer_alloc(struct aml_dma_buffer *buffer,
 	struct gdc_dmabuf_req_s *gdc_req_buf)
 {
 	void *buf;
+	struct aml_dma_buf *dma_buf;
 	unsigned int size;
 	int index;
 
@@ -382,24 +377,30 @@ int gdc_dma_buffer_alloc(struct aml_dma_buffer *buffer,
 	size = PAGE_ALIGN(gdc_req_buf->len);
 	if (size == 0)
 		return (-EINVAL);
-
-	index = find_empty_dma_buffer(buffer);
-	if ((index < 0) || (index >= AML_MAX_DMABUF)) {
-		pr_err("no empty buffer found\n");
-		return (-ENOMEM);
-	}
-
 	buf = aml_dma_alloc(dev, 0, size, gdc_req_buf->dma_dir,
 		GFP_HIGHUSER | __GFP_ZERO);
 	if (!buf)
 		return (-ENOMEM);
-
 	mutex_lock(&(buffer->lock));
+	index = find_empty_dma_buffer(buffer);
+	if ((index < 0) || (index >= AML_MAX_DMABUF)) {
+		pr_err("no empty buffer found\n");
+		mutex_unlock(&(buffer->lock));
+		aml_dma_put(buf);
+		return (-ENOMEM);
+	}
+	((struct aml_dma_buf *)buf)->priv = buffer;
+	((struct aml_dma_buf *)buf)->index = index;
 	buffer->gd_buffer[index].mem_priv = buf;
 	buffer->gd_buffer[index].index = index;
 	buffer->gd_buffer[index].alloc = 1;
 	mutex_unlock(&(buffer->lock));
 	gdc_req_buf->index = index;
+	dma_buf = (struct aml_dma_buf *)buf;
+	if (dma_buf->dma_dir == DMA_FROM_DEVICE)
+		dma_sync_single_for_cpu(dma_buf->dev,
+			dma_buf->dma_addr,
+			dma_buf->size, DMA_FROM_DEVICE);
 	return 0;
 }
 
@@ -418,7 +419,6 @@ int gdc_dma_buffer_free(struct aml_dma_buffer *buffer, int index)
 		return (-EINVAL);
 	}
 	aml_dma_put(buf);
-	buffer->gd_buffer[index].alloc = 0;
 	return 0;
 }
 
@@ -445,7 +445,6 @@ int gdc_dma_buffer_export(struct aml_dma_buffer *buffer,
 		pr_err("aml_dma_buf is null\n");
 		return (-EINVAL);
 	}
-
 	dbuf = get_dmabuf(buf, flags & O_ACCMODE);
 	if (IS_ERR_OR_NULL(dbuf)) {
 		pr_err("failed to export buffer %d\n", index);
@@ -458,7 +457,6 @@ int gdc_dma_buffer_export(struct aml_dma_buffer *buffer,
 		dma_buf_put(dbuf);
 		return ret;
 	}
-
 	gdc_log(LOG_INFO, "buffer %d,exported as %d descriptor\n",
 		index, ret);
 	gdc_exp_buf->fd = ret;
@@ -476,6 +474,7 @@ int gdc_dma_buffer_map(struct aml_dma_cfg *cfg)
 	struct device *dev = NULL;
 	enum dma_data_direction dir;
 
+
 	if (cfg == NULL || (cfg->fd < 0) || cfg->dev == NULL) {
 		pr_err("error input param");
 		return -EINVAL;
@@ -483,21 +482,19 @@ int gdc_dma_buffer_map(struct aml_dma_cfg *cfg)
 	fd = cfg->fd;
 	dev = cfg->dev;
 	dir = cfg->dir;
-
 	dbuf = dma_buf_get(fd);
-	if (dbuf == NULL) {
+	if (IS_ERR(dbuf)) {
 		pr_err("failed to get dma buffer");
 		return -EINVAL;
 	}
-
 	d_att = dma_buf_attach(dbuf, dev);
-	if (d_att == NULL) {
+	if (IS_ERR(d_att)) {
 		pr_err("failed to set dma attach");
 		goto attach_err;
 	}
 
 	sg = dma_buf_map_attachment(d_att, dir);
-	if (sg == NULL) {
+	if (IS_ERR(sg)) {
 		pr_err("failed to get dma sg");
 		goto map_attach_err;
 	}
@@ -517,6 +514,7 @@ int gdc_dma_buffer_map(struct aml_dma_cfg *cfg)
 	cfg->attach = d_att;
 	cfg->vaddr = vaddr;
 	cfg->sg = sg;
+	gdc_log(LOG_INFO, "gdc_dma_buffer_map, dbuf=0x%p\n", dbuf);
 
 	return ret;
 
@@ -531,7 +529,6 @@ map_attach_err:
 
 attach_err:
 	dma_buf_put(dbuf);
-
 	return ret;
 }
 
@@ -579,7 +576,6 @@ void gdc_dma_buffer_unmap(struct aml_dma_cfg *cfg)
 	vaddr = cfg->vaddr;
 	d_att = cfg->attach;
 	sg = cfg->sg;
-
 	dma_buf_vunmap(dbuf, vaddr);
 
 	dma_buf_end_cpu_access(dbuf, dir);
@@ -589,6 +585,7 @@ void gdc_dma_buffer_unmap(struct aml_dma_cfg *cfg)
 	dma_buf_detach(dbuf, d_att);
 
 	dma_buf_put(dbuf);
+	gdc_log(LOG_INFO, "gdc_dma_buffer_unmap, dbuf=0x%p\n", dbuf);
 }
 
 void gdc_dma_buffer_dma_flush(struct device *dev, int fd)
@@ -607,7 +604,7 @@ void gdc_dma_buffer_dma_flush(struct device *dev, int fd)
 		pr_err("error input param");
 		return;
 	}
-	if (buf->size > 0)
+	if ((buf->size > 0) && (buf->dev == dev))
 		dma_sync_single_for_device(buf->dev, buf->dma_addr,
 			buf->size, DMA_TO_DEVICE);
 	dma_buf_put(dmabuf);
@@ -629,8 +626,8 @@ void gdc_dma_buffer_cache_flush(struct device *dev, int fd)
 		pr_err("error input param");
 		return;
 	}
-	if (buf->size > 0)
-		dma_sync_single_for_device(buf->dev, buf->dma_addr,
+	if ((buf->size > 0) && (buf->dev == dev))
+		dma_sync_single_for_cpu(buf->dev, buf->dma_addr,
 			buf->size, DMA_FROM_DEVICE);
 	dma_buf_put(dmabuf);
 }
