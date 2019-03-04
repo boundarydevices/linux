@@ -160,8 +160,9 @@ config PINCTRL_IMX8QXP
 
 config PINCTRL_IMX8MQ
 	bool "IMX8MQ pinctrl driver"
-	depends on SOC_IMX8MQ
+	depends on ARCH_FSL_IMX8MQ
 	select PINCTRL_IMX
+	select PINCTRL_IMX_MEMMAP
 	help
 	  Say Y here to enable the imx8mq pinctrl driver
 
