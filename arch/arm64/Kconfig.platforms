@@ -320,6 +320,7 @@ config ARCH_FSL_IMX8QM
 	select HAVE_IMX_MU
 	select HAVE_IMX_SC
 	select HAVE_IMX_SC_PD
+	select HAVE_IMX8_SOC
 	select PM
 	select SOC_BUS
 	help
@@ -333,6 +334,7 @@ config ARCH_FSL_IMX8QXP
 	select HAVE_IMX_MU
 	select HAVE_IMX_SC
 	select HAVE_IMX_SC_PD
+	select HAVE_IMX8_SOC
 	select PM
 	select SOC_BUS
 	help

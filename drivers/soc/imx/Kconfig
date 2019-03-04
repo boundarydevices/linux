@@ -10,6 +10,9 @@ config IMX7_PM_DOMAINS
 config HAVE_IMX_MU
 	bool
 
+config HAVE_IMX8_SOC
+	bool
+
 config HAVE_IMX_SC
 	bool
 
