@@ -18,3 +18,4 @@ dtb-$(CONFIG_ARCH_FSL_IMX8QM) += fsl-imx8qm-lpddr4-arm2.dtb \
 				 fsl-imx8qm-mek.dtb
 dtb-$(CONFIG_ARCH_FSL_IMX8QXP) += fsl-imx8qxp-lpddr4-arm2.dtb \
 				  fsl-imx8qxp-mek.dtb
+dtb-$(CONFIG_ARCH_FSL_IMX8MQ) += fsl-imx8mq-evk.dtb
