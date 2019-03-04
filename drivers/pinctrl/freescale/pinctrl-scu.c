@@ -95,15 +95,15 @@ int imx_pinctrl_parse_pin_scu(struct imx_pinctrl *ipctl,
 			  unsigned int *pin_id, struct imx_pin *pin,
 			  const __be32 **list_p, u32 generic_config)
 {
+	const struct imx_pinctrl_soc_info *info = ipctl->info;
 	struct imx_pin_scu *pin_scu = &pin->pin_conf.pin_scu;
-	struct imx_pinctrl_soc_info *info;
 
 	pin->pin = be32_to_cpu(*((*list_p)++));
 	*pin_id = pin->pin;
 	pin_scu->mux = be32_to_cpu(*((*list_p)++));
 	pin_scu->config = be32_to_cpu(*((*list_p)++));
 
-	dev_dbg(info->dev, "%s: 0x%lx 0x%lx",
+	dev_dbg(ipctl->dev, "%s: 0x%lx 0x%lx",
 		 info->pins[pin->pin].name, pin_scu->mux, pin_scu->config);
 
 	return 0;
