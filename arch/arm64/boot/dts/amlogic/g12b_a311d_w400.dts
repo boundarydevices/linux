@@ -660,6 +660,10 @@
 			opp-hz = /bits/ 64 <1800000000>;
 			opp-microvolt = <981000>;
 		};
+		opp11 {
+			opp-hz = /bits/ 64 <1908000000>;
+			opp-microvolt = <1011000>;
+		};
 	};
 
 	cpu_opp_table1: cpu_opp_table1 {
