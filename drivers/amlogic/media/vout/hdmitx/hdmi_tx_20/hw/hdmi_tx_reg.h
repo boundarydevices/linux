@@ -79,6 +79,10 @@ int hdmitx_hdcp_opr(unsigned int val);
 
 /* intr_maskn: MASK_N, one bit per interrupt source.
  *     1=Enable interrupt source; 0=Disable interrupt source. Default 0.
+ * [  8] hdcp_topology_err
+ * [  7] rxsense_fall
+ * [  6] rxsense_rise
+ * [  5] err_i2c_timeout
  * [  4] hdcp22_rndnum_err
  * [  3] nonce_rfrsh_rise
  * [  2] hpd_fall_intr
@@ -185,6 +189,7 @@ int hdmitx_hdcp_opr(unsigned int val);
 #define HDMITX_TOP_I2C_BUSY_CNT_STAT            (TOP_OFFSET_MASK + 0x029)
 #define HDMITX_TOP_HDCP22_BSOD                  (TOP_SEC_OFFSET_MASK + 0x02A)
 #define HDMITX_TOP_DDC_CNTL                     (TOP_OFFSET_MASK + 0x02B)
+#define HDMITX_TOP_DISABLE_NULL                     (TOP_OFFSET_MASK + 0x030)
 #define HDMITX_TOP_REVOCMEM_ADDR_S              (TOP_OFFSET_MASK + 0x2000 >> 2)
 #define HDMITX_TOP_REVOCMEM_ADDR_E              (TOP_OFFSET_MASK + 0x365E >> 2)
 
@@ -921,6 +926,8 @@ int hdmitx_hdcp_opr(unsigned int val);
 /* [  1] Rsvd for read-only ksv_mem_access */
 /* [  0] ksv_mem_request */
 #define HDMITX_DWC_A_KSVMEMCTRL                 (DWC_OFFSET_MASK + 0x5016)
+#define HDMITX_DWC_A_BSTATUS_HI                 (DWC_OFFSET_MASK + 0x5017)
+#define HDMITX_DWC_A_BSTATUS_LO                 (DWC_OFFSET_MASK + 0x5018)
 
 #define HDMITX_DWC_HDCP_BSTATUS_0               (TOP_OFFSET_MASK + 0x2000)
 #define HDMITX_DWC_HDCP_BSTATUS_1               (TOP_OFFSET_MASK + 0x2001)

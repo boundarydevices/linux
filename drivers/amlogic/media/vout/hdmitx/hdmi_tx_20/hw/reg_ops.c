@@ -165,6 +165,7 @@ void init_reg_map(unsigned int type)
 	switch (type) {
 	case MESON_CPU_ID_G12A:
 	case MESON_CPU_ID_G12B:
+	case MESON_CPU_ID_SM1:
 		map = reg_maps_g12a;
 		for (i = 0; i < REG_IDX_END; i++) {
 			map[i].p = ioremap(map[i].phy_addr, map[i].size);
@@ -252,6 +253,7 @@ unsigned int hd_read_reg(unsigned int addr)
 	case MESON_CPU_ID_GXM:
 	case MESON_CPU_ID_G12A:
 	case MESON_CPU_ID_G12B:
+	case MESON_CPU_ID_SM1:
 	default:
 		val = readl(TO_PMAP_ADDR(addr));
 		break;
@@ -301,6 +303,7 @@ void hd_write_reg(unsigned int addr, unsigned int val)
 	case MESON_CPU_ID_GXM:
 	case MESON_CPU_ID_G12A:
 	case MESON_CPU_ID_G12B:
+	case MESON_CPU_ID_SM1:
 	default:
 		writel(val, TO_PMAP_ADDR(addr));
 		break;
