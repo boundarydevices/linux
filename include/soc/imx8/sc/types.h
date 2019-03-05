@@ -824,7 +824,7 @@ typedef uint8_t sc_err_t;
  * and bus masters (but not memory regions). Note items from list should
  * never be changed or removed (only added to at the end of the list).
  */
-typedef uint16_t sc_rsrc_t;
+typedef uint32_t sc_rsrc_t;
 
 /*!
  * This type is used to indicate a control.
