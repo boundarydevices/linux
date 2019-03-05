@@ -386,7 +386,6 @@ static struct phy_driver amlogic_internal_driver[] = {
 	.read_status	= genphy_read_status,
 	.suspend	= genphy_suspend,
 	.resume		= genphy_resume,
-	.remove		= internal_phy_remove,
 } };
 
 module_phy_driver(amlogic_internal_driver);
