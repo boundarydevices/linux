@@ -1,0 +1,12 @@
+MT8183 with MT6358 CODEC
+
+Required properties:
+- compatible: "mediatek,mt8183-mt6358-sound"
+- mediatek,platform: the phandle of MT8183 ASoC platform
+
+Example:
+
+	sound {
+		compatible = "mediatek,mt8183-mt6358-sound";
+		mediatek,platform = <&afe>;
+	};
