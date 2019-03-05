@@ -2340,11 +2340,11 @@ static int imx_uart_probe(struct platform_device *pdev)
 	}
 
 	/* initialize shadow register values */
-	sport->ucr1 = imx_uart_readl(sport, UCR1);
-	sport->ucr2 = imx_uart_readl(sport, UCR2);
-	sport->ucr3 = imx_uart_readl(sport, UCR3);
-	sport->ucr4 = imx_uart_readl(sport, UCR4);
-	sport->ufcr = imx_uart_readl(sport, UFCR);
+	sport->ucr1 = readl(sport->port.membase + UCR1);
+	sport->ucr2 = readl(sport->port.membase + UCR2);
+	sport->ucr3 = readl(sport->port.membase + UCR3);
+	sport->ucr4 = readl(sport->port.membase + UCR4);
+	sport->ufcr = readl(sport->port.membase + UFCR);
 
 	uart_get_rs485_mode(&pdev->dev, &sport->port.rs485);
 
