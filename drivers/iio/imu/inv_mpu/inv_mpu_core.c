@@ -38,9 +38,7 @@
 
 s64 get_time_ns(void)
 {
-	struct timespec ts;
-	ktime_get_ts(&ts);
-	return timespec_to_ns(&ts);
+	return iio_get_time_ns();
 }
 
 /* This is for compatibility for power state. Should remove once HAL
