@@ -752,6 +752,11 @@ static int pts_lookup_offset_inline_locked(u8 type, u32 offset, u32 *val,
 
 				p2 = p;
 			}
+			/* if p2 lookup fail, set p2 = p */
+			if (type == PTS_TYPE_VIDEO && p2 && p &&
+			OFFSET_DIFF(offset, p2->offset) > lookup_threshold &&
+			OFFSET_DIFF(offset, p->offset) < lookup_threshold)
+				p2 = p;
 		} else if (OFFSET_LATER(p->offset, offset)) {
 			list_for_each_entry_continue_reverse(p,
 					&pTable->
