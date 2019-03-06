@@ -11295,6 +11295,18 @@ static ssize_t video_vsync_slow_factor_store(struct class *cla,
 	return count;
 }
 
+static ssize_t vframe_ready_cnt_show(struct class *cla,
+				struct class_attribute *attr, char *buf)
+{
+	int ret = -1;
+	struct vframe_states states;
+
+	ret = video_vf_get_states(&states);
+
+	return snprintf(buf, 10, "%d\n", (ret == 0) ?
+		states.buf_avail_num : 0);
+}
+
 static ssize_t fps_info_show(struct class *cla, struct class_attribute *attr,
 			     char *buf)
 {
@@ -12078,6 +12090,7 @@ static struct class_attribute amvideo_class_attrs[] = {
 	__ATTR_RO(vframe_states),
 	__ATTR_RO(video_state),
 	__ATTR_RO(fps_info),
+	__ATTR_RO(vframe_ready_cnt),
 	__ATTR_RO(video_layer1_state),
 	__ATTR_RO(pic_mode_info),
 #ifdef VIDEO_PIP
