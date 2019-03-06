@@ -829,6 +829,29 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 			t = timestamp_apts_get();
 		else
 			t = timestamp_pcrscr_get();
+		if (tsdemux_pcrscr_valid_cb && tsdemux_pcrscr_valid_cb() == 1) {
+			if (abs(param - oldpts) > tsync_av_threshold_min) {
+				vpts_discontinue = 1;
+				if (apts_discontinue == 1) {
+					apts_discontinue = 0;
+					vpts_discontinue = 0;
+					pr_info("set apts->pcrsrc,pcrsrc %x to %x,diff %d\n",
+						timestamp_pcrscr_get(),
+						timestamp_apts_get(),
+						timestamp_apts_get()
+						- timestamp_pcrscr_get());
+					timestamp_pcrscr_set(param);
+				} else {
+					pr_info("set para->pcrsrc,pcrsrc %x to %x,diff %d\n",
+						timestamp_pcrscr_get(), param,
+						param-timestamp_pcrscr_get());
+					timestamp_pcrscr_set(
+						timestamp_vpts_get());
+				}
+			}
+			timestamp_vpts_set(param);
+			break;
+		}
 		/*
 		 *amlog_level(LOG_LEVEL_ATTENTION,
 		 *"VIDEO_TSTAMP_DISCONTINUITY, 0x%x, 0x%x\n", t, param);
@@ -860,6 +883,29 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 		amlog_level(LOG_LEVEL_ATTENTION,
 				"audio discontinue, reset apts, 0x%x\n",
 				param);
+		if (tsdemux_pcrscr_valid_cb && tsdemux_pcrscr_valid_cb() == 1) {
+			if (abs(param - oldpts) > tsync_av_threshold_min) {
+				apts_discontinue = 1;
+				if (vpts_discontinue == 1) {
+					pr_info("set para->pcrsrc,pcrsrc from %x to %x,diff %d\n",
+						timestamp_pcrscr_get(), param,
+						param-timestamp_pcrscr_get());
+					apts_discontinue = 0;
+					vpts_discontinue = 0;
+					timestamp_pcrscr_set(param);
+				} else {
+					pr_info("set vpts->pcrsrc,pcrsrc from %x to %x,diff %d\n",
+						timestamp_pcrscr_get(),
+						timestamp_vpts_get(),
+						timestamp_vpts_get()
+						- timestamp_pcrscr_get());
+					timestamp_pcrscr_set(
+						timestamp_vpts_get());
+				}
+			}
+			timestamp_apts_set(param);
+			break;
+		}
 		timestamp_apts_set(param);
 		if (!tsync_enable) {
 			timestamp_apts_set(param);
@@ -1132,6 +1178,15 @@ void tsync_set_sync_vdiscont(int syncdiscont)
 }
 EXPORT_SYMBOL(tsync_set_sync_vdiscont);
 
+int tsync_set_video_runmode(void)
+{
+	if (tsdemux_pcrscr_valid_cb && tsdemux_pcrscr_valid_cb() == 1) {
+		if (vpts_discontinue == 1 || apts_discontinue == 1)
+			return 1;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(tsync_set_video_runmode);
 void tsync_set_automute_on(int automute_on)
 {
 	tsync_automute_on = automute_on;
@@ -1155,6 +1210,16 @@ int tsync_set_apts(unsigned int pts)
 		t = timestamp_vpts_get();
 	else
 		t = timestamp_pcrscr_get();
+	if (tsdemux_pcrscr_valid_cb && tsdemux_pcrscr_valid_cb() == 1) {
+		pr_info("tsync_set_apts %x,diff %d\n",
+			pts, (int)timestamp_pcrscr_get() - pts);
+		timestamp_apts_set(pts);
+		if ((int)(timestamp_apts_get() - t) > 30 * TIME_UNIT90K / 1000
+				|| (int)(t - timestamp_apts_get()) >
+				80 * TIME_UNIT90K / 1000)
+			timestamp_pcrscr_set(pts);
+		return 0;
+	}
 	/* do not switch tsync mode until first video toggled. */
 	if ((abs(oldpts - pts) > tsync_av_threshold_min) &&
 		(timestamp_firstvpts_get() > 0)) {	/* is discontinue */
