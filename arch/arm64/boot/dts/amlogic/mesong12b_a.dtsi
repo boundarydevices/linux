@@ -1406,7 +1406,7 @@
 
 	sd_emmc_c: emmc@ffe07000 {
 		status = "disabled";
-		compatible = "amlogic, meson-mmc-g12b";
+		compatible = "amlogic, meson-mmc-g12b-a";
 		reg = <0x0 0xffe07000 0x0 0x800>;
 		interrupts = <0 191 1>;
 		pinctrl-names = "emmc_clk_cmd_pins", "emmc_all_pins";
