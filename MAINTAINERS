@@ -14773,3 +14773,7 @@ F:	arch/arm64/boot/dts/amlogic/mesongsm1.dtsi
 F:	arch/arm64/boot/dts/amlogic/sm1_pxp.dts
 F:	arch/arm/boot/dts/amlogic/mesonsm1.dtsi
 F:	arch/arm/boot/dts/amlogic/sm1_pxp.dts
+
+AMLOGIC SM1 CLOCK DRIVERS
+M:	Shunzhou Jiang <shunzhou.jiang@amlogic.com>
+F:	drivers/amlogic/clk/sm1/*

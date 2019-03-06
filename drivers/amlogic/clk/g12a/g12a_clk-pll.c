@@ -364,7 +364,8 @@ static int meson_g12a_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 		writel(G12A_PLL_CNTL6,
 				cntlbase + (unsigned long)(6*4));
 		udelay(10);
-	} else if (!strcmp(clk_hw_get_name(hw), "gp0_pll")) {
+	} else if (!strcmp(clk_hw_get_name(hw), "gp0_pll")
+			|| !strcmp(clk_hw_get_name(hw), "gp1_pll")) {
 		writel((readl(cntlbase) | MESON_PLL_RESET)
 			& (~MESON_PLL_ENABLE), cntlbase);
 		writel(G12A_GP0_PLL_CNTL1,
@@ -488,6 +489,7 @@ static int meson_g12a_pll_enable(struct clk_hw *hw)
 	}
 
 	if (!strcmp(clk_hw_get_name(hw), "gp0_pll")
+		|| !strcmp(clk_hw_get_name(hw), "gp1_pll")
 		|| !strcmp(clk_hw_get_name(hw), "hifi_pll")
 		|| !strcmp(clk_hw_get_name(hw), "pcie_pll")
 		|| !strcmp(clk_hw_get_name(hw), "sys_pll")

@@ -673,9 +673,9 @@
 			};
 
 			aoclkc: clock-controller@0 {
-				compatible = "amlogic,g12a-aoclkc";
+				compatible = "amlogic,sm1-aoclkc";
 				#clock-cells = <1>;
-				reg = <0x0 0x320>;
+				reg = <0x0 0x3dc>;
 			};
 
 			pwm_AO_ab: pwm@7000 {
@@ -773,9 +773,15 @@
 			ranges = <0x0 0xff63c000 0x2000>;
 
 			clkc: clock-controller@0 {
-				compatible = "amlogic,g12a-clkc";
+				compatible = "amlogic,sm1-clkc-1";
 				#clock-cells = <1>;
-				reg = <0x0 0x320>;
+				reg = <0x0 0x3dc>;
+			};
+
+			clkc_b: clock-controller@1 {
+				compatible = "amlogic,sm1-clkc-2";
+				#clock-cells = <1>;
+				reg = <0x0 0x3dc>;
 			};
 		};/* end of hiubus*/
 

@@ -1027,6 +1027,20 @@ static void __init g12a_clkc_init(struct device_node *np)
 				__func__);
 		goto iounmap;
 	}
+
+	if (of_property_read_bool(np, "own-dsu-clk")) {
+		if (clks[CLKID_DSU_CLK]) {
+			clk_set_parent(clks[CLKID_DSU_CLK],
+						clks[CLKID_CPU_CLK]);
+			/* set sm1_dsu_pre_clk to 1.5G, gp1 pll is 1.5G */
+			clk_set_rate(clks[CLKID_DSU_PRE_CLK], 1500000000);
+			clk_prepare_enable(clks[CLKID_DSU_PRE_CLK]);
+			/* set sm1_dsu_pre_clk as dsu_pre's parent */
+			clk_set_parent(clks[CLKID_DSU_CLK],
+						clks[CLKID_DSU_PRE_CLK]);
+		}
+	}
+
 	pr_debug("%s: cpu clk register notifier ok!", __func__);
 
 	ret = of_clk_add_provider(np, of_clk_src_onecell_get,
@@ -1045,4 +1059,5 @@ iounmap:
 
 CLK_OF_DECLARE(g12a, "amlogic,g12a-clkc", g12a_clkc_init);
 CLK_OF_DECLARE(g12b, "amlogic,g12b-clkc-1", g12a_clkc_init);
+CLK_OF_DECLARE(sm1,  "amlogic,sm1-clkc-1", g12a_clkc_init);
 

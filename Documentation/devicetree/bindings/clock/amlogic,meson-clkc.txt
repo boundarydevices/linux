@@ -22,6 +22,9 @@ Required Properties:
 	"amlogic,tl1-clkc"      - for tl1 ee clock
 	"amlogic,tl1-aoclkc"    - for tl1 ao clock
 	"amlogic,tl1-measure"    - for tl1 clock measurement
+	"amlogic,sm1-clkc-1"   - for sm1 ee part1 clock
+	"amlogic,sm1-clkc-2"   - for sm1 ee part2 clock
+	"amlogic,sm1-aoclkc"   - for sm1 ao clock
 
 - reg: physical base address of the clock controller and length of memory
        mapped region.
