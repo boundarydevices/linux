@@ -1,8 +1,7 @@
 /*
  * Copyright 2004-2016 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2019 NXP
  */
-
-/* Copyright 2019 NXP */
 
 /*
  * The code contained herein is licensed under the GNU General Public
@@ -122,6 +121,9 @@ struct mxcfb_info {
 	spinlock_t spin_lock;	/* for PRE small yres cases */
 	struct ipu_pre_context *pre_config;
 	ktime_t vsync_nf_timestamp;
+#ifdef CONFIG_FB_FENCE
+	struct fb_fence_context context;
+#endif
 };
 
 struct mxcfb_pfmt {
@@ -1804,7 +1806,7 @@ static int mxcfb_setcolreg(u_int regno, u_int red, u_int green, u_int blue,
 	return ret;
 }
 
-#ifdef CONFIG_ANDROID
+#if defined(CONFIG_ANDROID) || defined(CONFIG_FB_FENCE)
 static int mxcfb_update_screen(struct fb_info *fb_info, struct mxcfb_buffer *buffer)
 {
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)fb_info->par;
@@ -1885,6 +1887,20 @@ static int mxcfb_update_screen(struct fb_info *fb_info, struct mxcfb_buffer *buf
 }
 #endif
 
+#ifdef CONFIG_FB_FENCE
+static int mxcfb_update_data(int64_t dma_address, struct fb_var_screeninfo *var, struct fb_info *fb_info)
+{
+	struct mxcfb_buffer buffer;
+
+	buffer.phys = dma_address;
+	buffer.xoffset = var->xoffset;
+	buffer.yoffset = var->yoffset;
+	buffer.stride = fb_info->fix.line_length;
+
+	return mxcfb_update_screen(fb_info, &buffer);
+}
+#endif
+
 /*
  * Function to handle custom ioctls for MXC framebuffer.
  *
@@ -1914,6 +1930,28 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
 				break;
 			}
 			retval = mxcfb_update_screen(fbi, &buffer);
+		}
+		break;
+#endif
+#ifdef CONFIG_FB_FENCE
+	case MXCFB_UPDATE_OVERLAY:
+		{
+			struct mxcfb_datainfo buffer;
+			if (copy_from_user(&buffer, (void *)arg, sizeof(buffer))) {
+				retval = -EFAULT;
+				break;
+			}
+			retval = fb_update_overlay(&mxc_fbi->context, &buffer);
+		}
+		break;
+	case MXCFB_PRESENT_SCREEN:
+		{
+			struct mxcfb_datainfo buffer;
+			if (copy_from_user(&buffer, (void *)arg, sizeof(buffer))) {
+				retval = -EFAULT;
+				break;
+			}
+			retval = fb_present_screen(&mxc_fbi->context, &buffer);
 		}
 		break;
 #endif
@@ -2818,6 +2856,10 @@ static irqreturn_t mxcfb_irq_handler(int irq, void *dev_id)
 	}
 
 	complete(&mxc_fbi->flip_complete);
+#ifdef CONFIG_FB_FENCE
+	fb_handle_fence(&mxc_fbi->context);
+#endif
+
 	return IRQ_HANDLED;
 }
 
@@ -3306,6 +3348,9 @@ static int mxcfb_register(struct fb_info *fbi)
 		strcpy(fbi->fix.id, fg_id);
 	}
 
+#ifdef CONFIG_FB_FENCE
+	fb_init_fence_context(&mxcfbi->context, "ipu", fbi, mxcfb_update_data);
+#endif
 	mxcfb_check_var(&fbi->var, fbi);
 
 	mxcfb_set_fix(fbi);
