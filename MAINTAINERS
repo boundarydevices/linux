@@ -13920,6 +13920,7 @@ F:	drivers/amlogic/media/enhancement/amvecm/arch/*
 F:	drivers/amlogic/media/enhancement/amvecm/dnlp_algorithm/*
 F:	include/linux/amlogic/media/amvecm/*
 F:	drivers/amlogic/media/enhancement/amvecm/hdr/*
+F:      drivers/amlogic/media/enhancement/amvecm/amprime_sl/*
 
 AMLOGIC GXL ADD SKT DTS
 M: Yun Cai <yun.cai@amlogic.com>
@@ -14435,6 +14436,11 @@ AMLOGIC G12A Dolby Vision DRIVER
 M:	Zhilei Wu <zhilei.wu@amlogic.com>
 F:	drivers/amlogic/media/enhancement/amdolby_vision*
 F:	include/linux/amlogic/media/amdolbyvision/*
+
+AMLOGIC HDR PRIMSE SL DRIVER
+M:      Yi Zhou <yi.zhou@amlogic.com>
+F:      drivers/amlogic/media/enhancement/amprime_sl/*
+F:      include/linux/amlogic/media/amprime_sl/*
 
 AMLOGIC G12A Media codec io bus
 M:	Nanxin Qin <nanxin.qin@amlogic.com>

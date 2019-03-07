@@ -1,0 +1,15 @@
+#
+# AMLOGIC amprime_sl devices configuration
+#
+
+comment "Amlogic amprime_sl Drivers"
+
+menu "Amlogic amprime_sl Driver"
+
+config AMLOGIC_MEDIA_ENHANCEMENT_PRIME_SL
+        bool "Amlogic amprime_sl driver"
+        default n
+        help
+                "Amlogic amprime_sl module init"
+
+endmenu

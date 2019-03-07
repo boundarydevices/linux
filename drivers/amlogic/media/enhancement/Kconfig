@@ -12,6 +12,7 @@ config AMLOGIC_MEDIA_ENHANCEMENT
 if AMLOGIC_MEDIA_ENHANCEMENT
 source "drivers/amlogic/media/enhancement/amvecm/Kconfig"
 source "drivers/amlogic/media/enhancement/amdolby_vision/Kconfig"
+source "drivers/amlogic/media/enhancement/amprime_sl/Kconfig"
 endif
 
 endmenu

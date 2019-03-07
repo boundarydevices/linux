@@ -1082,6 +1082,12 @@
 		};
 	};
 
+	amprime_sl:amprime_sl {
+		compatible = "amlogic, prime_sl_g12";
+		dev_name = "amprime_sl";
+		status = "disabled";
+	};
+
 	aocec: aocec {
 		compatible = "amlogic, aocec-g12a";
 		device_name = "aocec";
