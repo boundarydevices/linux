@@ -50,6 +50,7 @@
 #define VIDEO_NOTIFY_PROVIDER_PUT 0x04
 #define VIDEO_NOTIFY_FRAME_WAIT   0x08
 #define VIDEO_NOTIFY_POS_CHANGED  0x10
+#define VIDEO_NOTIFY_NEED_NO_COMP  0x20
 
 struct video_dev_s {
 	int vpp_off;

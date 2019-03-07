@@ -6360,15 +6360,6 @@ static void video_process(
 		pr_csc("saturation offset = %d.\n",
 			saturation_offset);
 		cur_csc_type = csc_type;
-
-		if (vf) {
-			if ((cur_csc_type == VPP_MATRIX_BT2020YUV_BT2020RGB) &&
-				(cur_csc_type != 0xffff) &&
-				(vf->source_type == VFRAME_SOURCE_TYPE_HDMI)) {
-				amvecm_wakeup_queue();
-				pr_csc("wake up hdr status queue.\n");
-			}
-		}
 	}
 }
 

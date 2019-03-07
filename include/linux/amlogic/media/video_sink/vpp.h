@@ -34,6 +34,8 @@ extern bool super_scaler;
 #define VPP_FLAG_AR_BITS            8
 #define VPP_FLAG_PORTRAIT_MODE      0x00040000
 #define VPP_FLAG_VSCALE_DISABLE     0x00080000
+#define VPP_FLAG_MORE_LOG     0x00100000
+#define VPP_FLAG_FORCE_NO_COMPRESS     0x00200000
 
 #define IDX_H           (2 << 8)
 #define IDX_V_Y         (1 << 13)
@@ -52,6 +54,7 @@ enum vppfilter_state_e {
 	VppFilter_Fail = -1,
 	VppFilter_Success = 0,
 	VppFilter_Success_and_Changed,
+	VppFilter_Changed_but_Hold,
 };
 
 enum f2v_vphase_type_e {
@@ -187,6 +190,11 @@ struct disp_info_s {
 	u32 zorder;
 	u32 cur_sel_port;
 	u32 last_sel_port;
+
+	bool afbc_support;
+	bool pps_support;
+
+	bool need_no_compress;
 };
 
 enum select_scaler_path_e {
@@ -285,13 +293,7 @@ extern int vpp_set_filters(
 	struct vframe_s *vf,
 	struct vpp_frame_par_s *next_frame_par,
 	const struct vinfo_s *vinfo,
-	bool bypass_sr);
-
-extern int vpp_set_filters_no_scaler(
-	struct disp_info_s *input,
-	struct vframe_s *vf,
-	struct vpp_frame_par_s *next_frame_par,
-	const struct vinfo_s *vinfo);
+	bool bypass_sr, u32 op_flag);
 
 extern s32 vpp_set_nonlinear_factor(
 	struct disp_info_s *info, u32 f);

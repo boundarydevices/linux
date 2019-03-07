@@ -104,6 +104,7 @@ struct vivi_fh {
 	enum v4l2_buf_type type;
 };
 
+extern bool video_inuse;
 extern bool omx_secret_mode;
 extern void get_ppmgr_buf_info(char **start, unsigned int *size);
 

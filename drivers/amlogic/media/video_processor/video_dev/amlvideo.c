@@ -780,6 +780,8 @@ static int amlvideo_close(struct file *file)
 	mutex_lock(&dev->mutex);
 	dev->users--;
 	mutex_unlock(&dev->mutex);
+	if (dev->inst == 0)
+		video_inuse = 0;
 	AMLVIDEO_DBG("amlvideo close");
 	return 0;
 }
