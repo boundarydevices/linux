@@ -12,7 +12,7 @@ This repository contains Linux kernel v4.14 with STMicroelectronics MEMS sensor 
 
 ### Inertial Module Unit (IMU):
 
-> LSM6DS3, LSM6DS3H, LSM6DSL, LSM6DSM, LSM9DS0, LSM9DS1, ISM330DLC, LSM6DSO
+> LSM6DS3, LSM6DS3H, LSM6DSL, LSM6DSM, LSM9DS0, LSM9DS1, ISM330DLC, LSM6DSO, ASM330LHH
 
 ### Accelerometer:
 
