@@ -39,7 +39,7 @@ firmware {
 			dev = "/dev/block/product";
 			type = "ext4";
 			mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
-			fsmgr_flags = "wait,slotselect";
+			fsmgr_flags = "wait,slotselect,avb";
 			};
 		odm {
 			compatible = "android,odm";
