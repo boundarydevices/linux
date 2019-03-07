@@ -1,0 +1,32 @@
+/*
+ * Copyright 2018 NXP
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "fsl-imx8qm-lpddr4-arm2-lpspi.dts"
+
+/delete-node/&spidev0;
+
+&pinctrl_lpspi3 {
+	fsl,pins = <
+		SC_P_SPI3_SCK_DMA_SPI3_SCK		0x0600004c
+		SC_P_SPI3_SDO_DMA_SPI3_SDO		0x0600004c
+		SC_P_SPI3_SDI_DMA_SPI3_SDI		0x0600004c
+		SC_P_SPI3_CS0_DMA_SPI3_CS0		0x0600004c
+	>;
+};
+
+&lpspi3 {
+	pinctrl-0 = <&pinctrl_lpspi3>;
+	/delete-property/ cs-gpios;
+	spi-slave;
+};

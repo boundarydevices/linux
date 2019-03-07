@@ -1,0 +1,65 @@
+/*
+ * Copyright 2018 NXP
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "fsl-imx8mm-evk.dts"
+
+/ {
+	interrupt-parent = <&gic>;
+};
+
+/delete-node/ &gpc;
+
+&CPU_SLEEP {
+	/* We are not using GPC for now, need set 0 to avoid hang */
+	/delete-property/ compatible;
+	/*arm,psci-suspend-param = <0x0>;*/
+};
+
+&{/busfreq} {
+	/* Disable busfreq, to avoid 1st Linux busfreq crash other inmates */
+	status = "disabled";
+};
+
+&{/reserved-memory} {
+
+	ivshmem_reserved: ivshmem@0xbbb00000 {
+		no-map;
+		reg = <0 0xbbb00000 0x0 0x00100000>;
+	};
+
+	ivshmem2_reserved: ivshmem2@0xbba00000 {
+		no-map;
+		reg = <0 0xbba00000 0x0 0x00100000>;
+	};
+
+	pci_reserved: pci@0xbb800000 {
+		no-map;
+		reg = <0 0xbb800000 0x0 0x00200000>;
+	};
+
+	loader_reserved: loader@0xbb700000 {
+		no-map;
+		reg = <0 0xbb700000 0x0 0x00100000>;
+	};
+
+	jh_reserved: jh@0xb7c00000 {
+		no-map;
+		reg = <0 0xb7c00000 0x0 0x00400000>;
+	};
+
+	inmate_reserved: inmate@0xb3c00000 {
+		no-map;
+		reg = <0 0xb3c00000 0x0 0x04000000>;
+	};
+};

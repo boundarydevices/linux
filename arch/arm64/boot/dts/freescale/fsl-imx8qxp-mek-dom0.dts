@@ -1,0 +1,90 @@
+/*
+ * Copyright 2017-2018 NXP
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/dts-v1/;
+
+/memreserve/ 0x84000000 0x2200000;
+/memreserve/ 0x90000000 0x400000;
+/memreserve/ 0x90400000 0x400000;
+/memreserve/ 0x92400000 0x2000000;
+
+#include "fsl-imx8qxp-mek.dtsi"
+#include "fsl-imx8qxp-xen.dtsi"
+
+/ {
+	chosen {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		module@0 {
+			bootargs = "earlycon=xen console=hvc0 root=/dev/mmcblk1p2 rootwait rw";
+			compatible = "xen,linux-zimage", "xen,multiboot-module";
+			/* The size will be override by uboot command */
+			reg = <0x00000000 0x80a00000 0x00000000 0xf93a00>;
+		};
+
+	};
+
+	reserved-memory {
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0 0x3c000000>;
+			alloc-ranges = <0 0xa0000000 0 0x40000000>;
+			linux,cma-default;
+		};
+	};
+
+	/*
+	 * Dom0 memory is from 0x90000000, so add reg to make sure
+	 * the memory is mapped as device, because they are used
+	 * for vpu boot code.
+	 */
+	decoder_boot_mem: decoder_boot_mem@0x84000000 {
+		reg = <0 0x84000000 0 0x2000000>;
+	};
+
+	encoder_boot_mem: encoder_boot_mem@0x86000000 {
+		reg = <0 0x86000000 0 0x200000>;
+	};
+
+	rpmsg_reserved_mem: rpmsg_reserved_mem@90000000 {
+		reg = <0x0 0x90000000 0x0 0x400000>;
+	};
+
+	decoder_rpc_mem: decoder_rpc_mem@0x92000000 {
+		reg = <0 0x92000000 0 0x200000>;
+	};
+
+	encoder_rpc_mem: encoder_rpc_mem@0x92200000 {
+		reg = <0 0x92200000 0 0x200000>;
+	};
+
+	dsp_reserved_mem: dsp_reserved_mem@0x92400000 {
+		reg = <0 0x92400000 0 0x2000000>;
+	};
+	encoder_reserved_mem: encoder_reserved_mem@0x94400000 {
+		reg = <0 0x94400000 0 0x800000>;
+	};
+
+	rtc0: rtc@23000000 {
+		interrupts = <GIC_SPI 1 IRQ_TYPE_LEVEL_HIGH>;
+		xen,passthrough;
+	};
+};
+
+&imx8_gpu_ss {
+	/delete-property/ reg;
+	/delete-property/ reg-names;
+};
