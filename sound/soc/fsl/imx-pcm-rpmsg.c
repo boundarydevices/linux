@@ -534,8 +534,14 @@ int imx_rpmsg_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		ret = imx_rpmsg_async_issue_pending(substream);
 		break;
 	case SNDRV_PCM_TRIGGER_RESUME:
-		if (rpmsg_i2s->force_lpa)
+		if (rpmsg_i2s->force_lpa) {
+			int time_msec;
+
+			time_msec = (int)(runtime->period_size*1000/runtime->rate);
+			mod_timer(&i2s_info->stream_timer[substream->stream],
+			     jiffies + msecs_to_jiffies(time_msec));
 			break;
+		}
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		ret = imx_rpmsg_restart(substream);
 		break;
