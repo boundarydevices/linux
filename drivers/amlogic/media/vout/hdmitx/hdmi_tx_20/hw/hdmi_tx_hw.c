@@ -1676,7 +1676,7 @@ static void set_phy_by_mode(unsigned int mode)
 			hd_write_reg(P_HHI_HDMI_PHY_CNTL5, 0x0000080b);
 			break;
 		case 2: /* 2.97Gbps */
-			hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x33eb6262);
+			hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x33eb6272);
 			if (hdev->dongle_mode)
 				hd_write_reg(P_HHI_HDMI_PHY_CNTL0, 0x33eb4262);
 			hd_write_reg(P_HHI_HDMI_PHY_CNTL3, 0x2ab0ff3b);
