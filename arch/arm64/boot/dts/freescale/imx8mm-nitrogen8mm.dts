@@ -85,7 +85,6 @@
 
 	pinctrl_i2c1_pf8100: i2c1-pf8100grp {
 		fsl,pins = <
-			MX8MM_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B		0x149
 #define GP_I2C1_PF8100_EWARN	<&gpio3 3 GPIO_ACTIVE_LOW>
 			MX8MM_IOMUXC_NAND_CE2_B_GPIO3_IO3		0x149
 #define GP_I2C1_PF8100_FAULT	<&gpio3 4 GPIO_ACTIVE_LOW>
@@ -137,7 +136,14 @@
 		>;
 	};
 
-	pinctrl_i2c3_csi1: i2c3-csi1grp {
+	pinctrl_i2c3a_rv4162: i2c3a-rv4162grp {
+		fsl,pins = <
+#define GPIRQ_RV4162		<&gpio4 22 IRQ_TYPE_LEVEL_LOW>
+			MX8MM_IOMUXC_SAI2_RXC_GPIO4_IO22		0x1c0
+		>;
+	};
+
+	pinctrl_i2c3b_csi1: i2c3b-csi1grp {
 		fsl,pins = <
 #define GP_CSI1_MIPI_PWDN	<&gpio1 3 GPIO_ACTIVE_HIGH>
 			MX8MM_IOMUXC_GPIO1_IO03_GPIO1_IO3		0x161
@@ -162,10 +168,10 @@
 
 	pinctrl_pcie0: pcie0grp {
 		fsl,pins = <
-#define GP_PCIE0_RESET		<&gpio4 23 GPIO_ACTIVE_LOW>	/* fixme later */
-			MX8MM_IOMUXC_SAI2_RXC_GPIO4_IO22	0x16
+#define GP_PCIE0_RESET		<&gpio4 31 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_SAI3_TXFS_GPIO4_IO31	0x100
 #define GP_PCIE0_DISABLE	<&gpio1 5 GPIO_ACTIVE_LOW>
-			MX8MM_IOMUXC_GPIO1_IO05_GPIO1_IO5	0x16
+			MX8MM_IOMUXC_GPIO1_IO05_GPIO1_IO5	0x100
 		>;
 	};
 
@@ -246,6 +252,15 @@
 			MX8MM_IOMUXC_SAI5_RXD1_SAI5_RX_DATA1    	0xd6
 			MX8MM_IOMUXC_SAI5_RXD2_SAI5_RX_DATA2    	0xd6
 			MX8MM_IOMUXC_SAI5_RXD3_SAI5_RX_DATA3    	0xd6
+		>;
+	};
+
+	pinctrl_sound_wm8960: sound-wm8960grp {
+		fsl,pins = <
+#define GP_WM8960_MIC_DET		<&gpio1 10 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_GPIO1_IO10_GPIO1_IO10		0x80
+#define GP_WM8960_HP_DET		<&gpio4 28 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_SAI3_RXFS_GPIO4_IO28		0x80
 		>;
 	};
 
@@ -411,6 +426,12 @@
 			MX8MM_IOMUXC_NAND_DATA07_USDHC3_DATA3		0x1d6
 		>;
 	};
+
+	pinctrl_wdog: wdoggrp {
+		fsl,pins = <
+			MX8MM_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B		0x140
+		>;
+	};
 };
 
 / {
@@ -531,9 +552,17 @@
 			"Ext Spk", "SPK_RP",
 			"Ext Spk", "SPK_RN",
 			"LINPUT1", "Main MIC",
-			"Main MIC", "MICB";
+			"Main MIC", "MICB",
+			"RINPUT1", "Mic Jack",
+			"Mic Jack", "MICB";
 		/* JD2: hp detect high for headphone*/
 		hp-det = <2 0>;
+		hp-det-gpios = GP_WM8960_HP_DET;
+#if 0		/* Jack is not stuffed */
+		mic-det-gpios = GP_WM8960_MIC_DET;
+#endif
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
 };
 
@@ -758,12 +787,44 @@
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
+	i2cmux@70 {
+		compatible = "nxp,pca9540";
+		reg = <0x70>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c3a: i2c3@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c3b: i2c3@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};
+
+&i2c3a {
+	rtc@68 {
+		compatible = "microcrystal,rv4162";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3a_rv4162>;
+		reg = <0x68>;
+		interrupts-extended = GPIRQ_RV4162;
+		wakeup-source;
+	};
+};
+
+&i2c3b {
 	ov5640-mipi1@3c {
 		compatible = "ov5640_mipisubdev";
 		reg = <0x3c>;
 		status = "okay";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c3_csi1>;
+		pinctrl-0 = <&pinctrl_i2c3b_csi1>;
 		clocks = <&clk IMX8MM_CLK_CLKO1_DIV>;
 		clock-names = "csi_mclk";
 		assigned-clocks = <&clk IMX8MM_CLK_CLKO1_SRC>,
@@ -1051,5 +1112,8 @@
 };
 
 &wdog1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_wdog>;
+	fsl,ext-reset-output;
 	status = "okay";
 };
