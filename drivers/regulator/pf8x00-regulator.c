@@ -515,7 +515,7 @@ static const struct pf8x_regulator pf8x00_regulators[] = {
 	STRUCT_SW_REG(REG_SW5, sw5, PF8X00_SW(REG_SW5), pf8x00_sw1_to_6_voltages),
 	STRUCT_SW_REG(REG_SW6, sw6, PF8X00_SW(REG_SW6), pf8x00_sw1_to_6_voltages),
 	STRUCT_SW_REG(REG_SW7, sw7, PF8X00_SW(REG_SW7), pf8x00_sw7_voltages),
-	STRUCT_VSNVS_REG(REG_VSNVS, vsnvs, PF8X00_VSNVS_CONFIG1, pf8x00_ldo_voltages),
+	STRUCT_VSNVS_REG(REG_VSNVS, vsnvs, PF8X00_VSNVS_CONFIG1, pf8x00_vsnvs_voltages),
 };
 
 #ifdef CONFIG_OF
