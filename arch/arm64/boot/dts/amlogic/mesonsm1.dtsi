@@ -524,7 +524,7 @@
 
 			gpio_intc: interrupt-controller@f080 {
 				compatible = "amlogic,meson-gpio-intc",
-						"amlogic,meson-g12a-gpio-intc";
+						"amlogic,meson-sm1-gpio-intc";
 				reg = <0x0 0xf080 0x0 0x10>;
 				interrupt-controller;
 				#interrupt-cells = <2>;
