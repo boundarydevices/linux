@@ -446,6 +446,7 @@ struct hdmitx_dev {
 	unsigned int flag_3dfp:1;
 	unsigned int flag_3dtb:1;
 	unsigned int flag_3dss:1;
+	unsigned int dongle_mode:1;
 	unsigned int drm_feature;/*Direct Rander Management*/
 };
 

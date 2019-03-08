@@ -1075,6 +1075,7 @@
 		 * 10:G12A
 		 */
 		ic_type = <10>;
+		dongle_mode = <0>;
 		vend_data: vend_data{ /* Should modified by Customer */
 			vendor_name = "Amlogic"; /* Max Chars: 8 */
 			/* standards.ieee.org/develop/regauth/oui/oui.txt */
