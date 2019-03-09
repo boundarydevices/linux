@@ -7,6 +7,7 @@
 
 /* Includes */
 #include <linux/arm-smccc.h>
+#include <linux/completion.h>
 #include <linux/err.h>
 #include <linux/kernel.h>
 #include <linux/of.h>
@@ -18,6 +19,7 @@
 #include <linux/irq.h>
 #include <linux/mx8_mu.h>
 #include <linux/syscore_ops.h>
+#include <linux/suspend.h>
 
 #include <soc/imx8/sc/svc/irq/api.h>
 #include <soc/imx8/sc/ipc.h>
@@ -38,7 +40,9 @@ static sc_ipc_t mu_ipcHandle;
 
 /* Local variables */
 static uint32_t gIPCport;
+static sc_rpc_msg_t *rx_msg;
 static bool scu_mu_init;
+struct completion rx_completion;
 
 DEFINE_MUTEX(scu_mu_mutex);
 
@@ -55,6 +59,8 @@ EXPORT_SYMBOL(sc_pm_set_clock_rate);
 /*--------------------------------------------------------------------------*/
 void sc_call_rpc(sc_ipc_t handle, sc_rpc_msg_t *msg, sc_bool_t no_resp)
 {
+	unsigned long timeout;
+
 	if (in_interrupt()) {
 		pr_warn("Cannot make SC IPC calls from an interrupt context\n");
 		dump_stack();
@@ -62,9 +68,17 @@ void sc_call_rpc(sc_ipc_t handle, sc_rpc_msg_t *msg, sc_bool_t no_resp)
 	}
 	mutex_lock(&scu_mu_mutex);
 
+	reinit_completion(&rx_completion);
+	rx_msg = msg;
 	sc_ipc_write(handle, msg);
-	if (!no_resp)
-		sc_ipc_read(handle, msg);
+	if (!no_resp) {
+		timeout = wait_for_completion_timeout(&rx_completion, HZ / 10);
+		if (!timeout) {
+			pr_err("Timeout for IPC response!\n");
+			mutex_unlock(&scu_mu_mutex);
+			return;
+		}
+	}
 
 	mutex_unlock(&scu_mu_mutex);
 }
@@ -275,6 +289,12 @@ static irqreturn_t imx8_scu_mu_isr(int irq, void *param)
 {
 	u32 irqs;
 
+	irqs = (readl_relaxed(mu_base_virtaddr + 0x20) & (0xf << 24));
+	if (irqs) {
+		sc_ipc_read(mu_ipcHandle, rx_msg);
+		complete(&rx_completion);
+	}
+
 	irqs = (readl_relaxed(mu_base_virtaddr + 0x20) & (0xf << 28));
 	if (irqs) {
 		/* Clear the General Interrupt */
@@ -290,6 +310,7 @@ static void imx8_mu_resume(void)
 	int i;
 
 	MU_Init(mu_base_virtaddr);
+	MU_EnableRxFullInt(mu_base_virtaddr, 0);
 	for (i = 0; i < MU_RR_COUNT; i++)
 		MU_EnableGeneralInt(mu_base_virtaddr, i);
 }
@@ -328,7 +349,7 @@ int __init imx8_mu_init(void)
 		pr_warn("imx8_mu_init: no irq: %d\n", irq);
 	} else {
 		err = request_irq(irq, imx8_scu_mu_isr,
-				  IRQF_EARLY_RESUME, "imx8_mu_isr", NULL);
+				  IRQF_NO_SUSPEND, "imx8_mu_isr", NULL);
 		if (err) {
 			pr_err("imx8_mu_init: request_irq %d failed: %d\n",
 					irq, err);
@@ -345,6 +366,7 @@ int __init imx8_mu_init(void)
 
 		/* Init MU */
 		MU_Init(mu_base_virtaddr);
+		MU_EnableRxFullInt(mu_base_virtaddr, 0);
 
 #if 1
 		/* Enable all RX interrupts */
@@ -353,6 +375,7 @@ int __init imx8_mu_init(void)
 #endif
 		gIPCport = scu_mu_id;
 		scu_mu_init = true;
+		init_completion(&rx_completion);
 	}
 
 	sciErr = sc_ipc_open(&mu_ipcHandle, scu_mu_id);
