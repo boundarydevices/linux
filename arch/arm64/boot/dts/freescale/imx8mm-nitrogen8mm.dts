@@ -432,6 +432,13 @@
 			MX8MM_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B		0x140
 		>;
 	};
+
+	pinctrl_wdog_gpio: wdog-gpiogrp {
+		fsl,pins = <
+#define GP_WDOG_RESET	<&gpio1 2 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_GPIO1_IO02_GPIO1_IO2		0x140
+		>;
+	};
 };
 
 / {
@@ -1112,8 +1119,10 @@
 };
 
 &wdog1 {
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_wdog>;
+	pinctrl-1 = <&pinctrl_wdog_gpio>;
+	reset-gpios = GP_WDOG_RESET;
 	fsl,ext-reset-output;
 	status = "okay";
 };
