@@ -20,6 +20,7 @@
 
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/gpio/consumer.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -27,6 +28,7 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/of_address.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/watchdog.h>
@@ -249,6 +251,31 @@ static const struct regmap_config imx2_wdt_regmap_config = {
 	.max_register = 0x8,
 };
 
+static void __init imx2_wdt_setup_reset_gpio(struct platform_device *pdev)
+{
+	struct gpio_desc *gpiod;
+	struct device *dev = &pdev->dev;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pins;
+
+	/* High means active */
+	gpiod = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(gpiod) || !gpiod)
+		return;
+	pinctrl = devm_pinctrl_get(dev);
+	if (IS_ERR(pinctrl))
+		return;
+	pins = pinctrl_lookup_state(pinctrl, "gpio");
+	if (IS_ERR(pins))
+		return;
+	pinctrl_select_state(pinctrl, pins);
+	dev_info(&pdev->dev, "wdog gpio selected\n");
+	/*
+	 * gpio is low until wdog triggers and pull-up makes
+	 * it go high
+	 */
+}
+
 static void imx2_wdt_action(void *data)
 {
 	clk_disable_unprepare(data);
@@ -318,6 +345,8 @@ static int __init imx2_wdt_probe(struct platform_device *pdev)
 	 * during suspend.
 	 */
 	wdev->no_ping = !of_device_is_compatible(dev->of_node, "fsl,imx7d-wdt");
+
+	imx2_wdt_setup_reset_gpio(pdev);
 	platform_set_drvdata(pdev, wdog);
 	watchdog_set_drvdata(wdog, wdev);
 	watchdog_set_nowayout(wdog, nowayout);
