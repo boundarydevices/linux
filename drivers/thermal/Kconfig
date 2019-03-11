@@ -234,7 +234,7 @@ config IMX8M_THERMAL
 
 config IMX_SC_THERMAL
 	tristate "thermal sensor driver for NXP i.MX8 SoCs"
-	depends on THERMAL_OF && ARCH_MXC_ARM64
+	depends on THERMAL_OF && HAVE_IMX_SC
 	help
 	  Support for Temperature Monitor (TEMPMON) found on NXP i.MX SOCs
 	  with system controller.
