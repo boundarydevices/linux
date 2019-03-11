@@ -34,12 +34,12 @@ static const char * const dma_mode_name[] = {
 //static unsigned int dma_mode = DMA_MODE_CONTIG;
 static unsigned int dma_mode = DMA_MODE_MEMCPY;
 
-static int dma_mode_get(char *buffer, struct kernel_param *kp)
+static int dma_mode_get(char *buffer, const struct kernel_param *kp)
 {
 	return sprintf(buffer, dma_mode_name[dma_mode]);
 }
 
-static int dma_mode_set(const char *val, struct kernel_param *kp)
+static int dma_mode_set(const char *val, const struct kernel_param *kp)
 {
 	int i = 0;
 	for (i = 0; i < ARRAY_SIZE(dma_mode_name); i++) {
