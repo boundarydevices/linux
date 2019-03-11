@@ -38,7 +38,7 @@ config NVMEM_IMX_OCOTP
 
 config NVMEM_IMX_SCU_OCOTP
 	tristate "i.MX8QM On-Chip OTP Controller support"
-	depends on ARCH_MXC_ARM64|| COMPILE_TEST
+	depends on HAVE_IMX_SC || COMPILE_TEST
 	depends on HAS_IOMEM
 	help
 	  This is a driver for the On-Chip OTP Controller (OCOTP) available on
