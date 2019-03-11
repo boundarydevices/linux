@@ -16,7 +16,7 @@
 #include <linux/phy.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
-#ifdef CONFIG_ARCH_MXC_ARM64
+#ifdef CONFIG_HAVE_IMX_SC
 #include <soc/imx8/sc/sci.h>
 #endif
 #include "fec.h"
@@ -116,7 +116,7 @@ put_ocotp_node:
 	of_node_put(ocotp_np);
 }
 
-#ifdef CONFIG_ARCH_MXC_ARM64
+#ifdef CONFIG_HAVE_IMX_SC
 static void imx8qm_get_mac_from_fuse(int dev_id, unsigned char *mac)
 {
 	u32 mu_id;
