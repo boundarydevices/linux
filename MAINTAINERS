@@ -13794,7 +13794,6 @@ F: arch/arm/boot/dts/amlogic>
 
 ANLOGIC AUDIO
 M: Xing Wang <xing.wang@amlogic.com>
-M: Shuai Li <shuai.li@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
 F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
 F: arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts
@@ -14767,3 +14766,12 @@ F:	arch/arm/boot/dts/amlogic/g12b*_a.dts
 F:	arch/arm/boot/dts/amlogic/mesong12b.dtsi
 F:	arch/arm64/boot/dts/amlogic/g12b*_a.dts
 F:	arch/arm64/boot/dts/amlogic/mesong12b.dtsi
+
+AMLOGIC SM1 DTS
+M:	Zhiqiang Liang <Zhiqiang.Liang@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/mesongsm1-bifrost.dtsi
+F:	arch/arm64/boot/dts/amlogic/mesongsm1.dtsi
+F:	arch/arm64/boot/dts/amlogic/sm1_pxp.dts
+F:	arch/arm/boot/dts/amlogic/mesongsm1-bifrost.dtsi
+F:	arch/arm/boot/dts/amlogic/mesongsm1.dtsi
+F:	arch/arm/boot/dts/amlogic/sm1_pxp.dts
