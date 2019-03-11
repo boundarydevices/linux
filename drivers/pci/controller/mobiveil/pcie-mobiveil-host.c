@@ -29,6 +29,12 @@
 
 static bool mobiveil_pcie_valid_device(struct pci_bus *bus, unsigned int devfn)
 {
+	struct mobiveil_pcie *pcie = bus->sysdata;
+
+	/* If there is no link, then there is no device */
+	if (!pci_is_root_bus(bus) && !mobiveil_pcie_link_up(pcie))
+		return false;
+
 	/* Only one device down on each root port */
 	if (pci_is_root_bus(bus) && (devfn > 0))
 		return false;
