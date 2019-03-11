@@ -3789,17 +3789,6 @@ static void clear_hdr_info(struct hdmitx_dev *hdev)
 	}
 }
 
-static void hdmitx_aud_hpd_plug_handler(struct work_struct *work)
-{
-	int st;
-	struct hdmitx_dev *hdev = container_of((struct delayed_work *)work,
-		struct hdmitx_dev, work_aud_hpd_plug);
-
-	st = hdev->HWOp.CntlMisc(hdev, MISC_HPD_GPI_ST, 0);
-	pr_info("hdmitx_aud_hpd_plug_handler state:%d\n", st);
-	extcon_set_state_sync(hdmitx_extcon_audio, EXTCON_DISP_HDMI, st);
-}
-
 static void hdmitx_hpd_plugout_handler(struct work_struct *work)
 {
 	struct hdmitx_dev *hdev = container_of((struct delayed_work *)work,
@@ -3840,6 +3829,7 @@ static void hdmitx_hpd_plugout_handler(struct work_struct *work)
 	hdev->hpd_state = 0;
 	hdmitx_notify_hpd(hdev->hpd_state);
 	extcon_set_state_sync(hdmitx_extcon_hdmi, EXTCON_DISP_HDMI, 0);
+	extcon_set_state_sync(hdmitx_extcon_audio, EXTCON_DISP_HDMI, 0);
 	mutex_unlock(&setclk_mutex);
 }
 
@@ -3898,8 +3888,6 @@ static int hdmi_task_handle(void *data)
 		hdmitx_hpd_plugin_handler);
 	INIT_DELAYED_WORK(&hdmitx_device->work_hpd_plugout,
 		hdmitx_hpd_plugout_handler);
-	INIT_DELAYED_WORK(&hdmitx_device->work_aud_hpd_plug,
-		hdmitx_aud_hpd_plug_handler);
 	INIT_WORK(&hdmitx_device->work_internal_intr,
 		hdmitx_internal_intr_handler);
 

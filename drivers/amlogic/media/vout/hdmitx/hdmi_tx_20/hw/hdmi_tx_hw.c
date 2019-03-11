@@ -653,8 +653,6 @@ static irqreturn_t intr_handler(int irq, void *dev)
 	}
 	/* HPD falling */
 	if (dat_top & (1 << 2)) {
-		queue_delayed_work(hdev->hdmi_wq,
-			&hdev->work_aud_hpd_plug, 2 * HZ);
 		hdev->hdmitx_event |= HDMI_TX_HPD_PLUGOUT;
 		hdev->hdmitx_event &= ~HDMI_TX_HPD_PLUGIN;
 		hdev->rhpd_state = 0;

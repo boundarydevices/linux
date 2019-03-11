@@ -300,7 +300,6 @@ struct hdmitx_dev {
 	struct pinctrl_state *pinctrl_default;
 	struct delayed_work work_hpd_plugin;
 	struct delayed_work work_hpd_plugout;
-	struct delayed_work work_aud_hpd_plug;
 	struct delayed_work work_rxsense;
 	struct work_struct work_internal_intr;
 	struct work_struct work_hdr;
