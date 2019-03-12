@@ -106,6 +106,7 @@ void set_usb_pll(struct amlogic_usb_v2 *phy, void __iomem	*reg)
 		if (g_phy2_v2->phy_version == 2) {
 		/**g12b revB don't need set 0x10 ,0x38 and 0x34**/
 			writel(phy->pll_setting[3], reg + 0x50);
+			writel(0x2a, reg + 0x54);
 			writel(0x70000, reg + 0x34);
 		} else {
 			writel(phy->pll_setting[3], reg + 0x50);
