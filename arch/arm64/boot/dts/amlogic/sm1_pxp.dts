@@ -17,7 +17,7 @@
 
 /dts-v1/;
 
-#include "mesongsm1.dtsi"
+#include "mesonsm1.dtsi"
 
 / {
 	model = "Amlogic";

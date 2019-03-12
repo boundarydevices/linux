@@ -14772,6 +14772,6 @@ M:	Zhiqiang Liang <Zhiqiang.Liang@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/mesongsm1-bifrost.dtsi
 F:	arch/arm64/boot/dts/amlogic/mesongsm1.dtsi
 F:	arch/arm64/boot/dts/amlogic/sm1_pxp.dts
-F:	arch/arm/boot/dts/amlogic/mesongsm1-bifrost.dtsi
-F:	arch/arm/boot/dts/amlogic/mesongsm1.dtsi
+F:	arch/arm/boot/dts/amlogic/mesonsm1-bifrost.dtsi
+F:	arch/arm/boot/dts/amlogic/mesonsm1.dtsi
 F:	arch/arm/boot/dts/amlogic/sm1_pxp.dts
