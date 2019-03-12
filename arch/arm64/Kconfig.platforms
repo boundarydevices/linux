@@ -318,6 +318,7 @@ config ARCH_FSL_IMX8QM
 	select PINCTRL_IMX
 	select PINCTRL_IMX8QM
 	select HAVE_IMX_MU
+	select HAVE_IMX_RPMSG
 	select HAVE_IMX_SC
 	select HAVE_IMX_SC_PD
 	select HAVE_IMX8_SOC
@@ -332,6 +333,7 @@ config ARCH_FSL_IMX8QXP
 	select PINCTRL_IMX
 	select PINCTRL_IMX8QXP
 	select HAVE_IMX_MU
+	select HAVE_IMX_RPMSG
 	select HAVE_IMX_SC
 	select HAVE_IMX_SC_PD
 	select HAVE_IMX8_SOC
@@ -352,6 +354,8 @@ config ARCH_FSL_IMX8MQ
 	select HAVE_IMX8_SOC
 	select HAVE_IMX_SRC
 	select HAVE_IMX_GPC_PSCI
+	select HAVE_IMX_MU
+	select HAVE_IMX_RPMSG
 	select PM
 	select SOC_BUS
 	help
@@ -366,6 +370,8 @@ config ARCH_FSL_IMX8MM
 	select HAVE_IMX8_SOC
 	select HAVE_IMX_SRC
 	select HAVE_IMX_GPC_PSCI
+	select HAVE_IMX_MU
+	select HAVE_IMX_RPMSG
 	select PM
 	select SOC_BUS
 	help
