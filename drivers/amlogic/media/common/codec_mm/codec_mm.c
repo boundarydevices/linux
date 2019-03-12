@@ -329,13 +329,10 @@ u8 *codec_mm_vmap(ulong addr, u32 size)
 	struct page **pages = NULL;
 	u32 i, npages, offset = 0;
 	ulong phys, page_start;
-	pgprot_t pgprot;
+	pgprot_t pgprot = PAGE_KERNEL;
 
 	if (!PageHighMem(phys_to_page(addr)))
 		return phys_to_virt(addr);
-
-	/*No cache*/
-	pgprot = pgprot_noncached(PAGE_KERNEL);
 
 	offset = offset_in_page(addr);
 	page_start = addr - offset;
@@ -874,7 +871,8 @@ void codec_mm_dma_flush(void *vaddr,
 			phy_addr = page_to_phys(vmalloc_to_page(vaddr))
 				+ offset_in_page(vaddr);
 		if (phy_addr && PageHighMem(phys_to_page(phy_addr)))
-			flush_cache_vmap(phy_addr, phy_addr + size);
+			dma_sync_single_for_device(mgt->dev,
+					phy_addr, size, dir);
 		return;
 	}
 
