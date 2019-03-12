@@ -135,6 +135,7 @@ struct blend_setting_s {
 };
 
 void safe_disble_videolayer(void);
+void safe_disble_videolayer2(void);
 void update_cur_dispbuf(void *buf);
 
 /*for video related files only.*/
@@ -145,7 +146,9 @@ struct vframe_s *get_cur_dispbuf(void);
 
 int get_video_debug_flags(void);
 int _video_set_disable(u32 val);
+int _videopip_set_disable(u32 val);
 u32 get_video_enabled(void);
+u32 get_videopip_enabled(void);
 struct device *get_video_device(void);
 
 #ifdef CONFIG_AMLOGIC_MEDIA_VIDEOCAPTURE

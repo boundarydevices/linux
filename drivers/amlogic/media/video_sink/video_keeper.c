@@ -64,10 +64,15 @@ static DEFINE_MUTEX(video_keeper_mutex);
 
 static unsigned long keep_y_addr, keep_u_addr, keep_v_addr;
 static int keep_video_on;
+static int keep_video_pip_on;
 static int keep_id;
 static int keep_head_id;
+static int keep_pip_id;
+static int keep_pip_head_id;
 static int keep_el_id;
 static int keep_el_head_id;
+static int keep_pip_el_id;
+static int keep_pip_el_head_id;
 
 #define Y_BUFFER_SIZE   0x400000	/* for 1920*1088 */
 #define U_BUFFER_SIZE   0x100000	/* compatible with NV21 */
@@ -722,6 +727,28 @@ void try_free_keep_video(int flags)
 EXPORT_SYMBOL(try_free_keep_video);
 #endif
 
+void try_free_keep_videopip(int flags)
+{
+	int free_scatter_keeper = flags & 0x1;
+
+	if (keep_video_pip_on || free_scatter_keeper) {
+		/*pr_info("disbled keep video before free keep buffer.\n");*/
+		keep_video_pip_on = 0;
+		if (!get_videopip_enabled()) {
+			/*if not disable video,changed to 2 for */
+			pr_info("disbled videopip for next before free keep buffer!\n");
+			_videopip_set_disable(VIDEO_DISABLE_FORNEXT);
+		} else if (get_videopip_enabled()) {
+			safe_disble_videolayer2();
+		}
+	}
+	mutex_lock(&video_keeper_mutex);
+	video_pip_keeper_new_frame_notify();
+	free_alloced_keep_buffer();
+	mutex_unlock(&video_keeper_mutex);
+}
+EXPORT_SYMBOL(try_free_keep_videopip);
+
 static void video_keeper_update_keeper_mem(
 	void *mem_handle, int type,
 	int *id)
@@ -747,7 +774,6 @@ static int video_keeper_frame_keep_locked(
 	struct vframe_s *cur_dispbuf_el)
 {
 	int type = MEM_TYPE_CODEC_MM;
-
 	if (cur_dispbuf->type & VIDTYPE_SCATTER)
 		type = MEM_TYPE_CODEC_MM_SCATTER;
 	video_keeper_update_keeper_mem(
@@ -775,6 +801,41 @@ static int video_keeper_frame_keep_locked(
 	return (keep_id + keep_head_id) > 0;
 }
 
+static int video_pip_keeper_frame_keep_locked(
+	struct vframe_s *cur_dispbuf,
+	struct vframe_s *cur_dispbuf_el)
+{
+	int type = MEM_TYPE_CODEC_MM;
+
+	if (cur_dispbuf) {
+		if (cur_dispbuf->type & VIDTYPE_SCATTER)
+			type = MEM_TYPE_CODEC_MM_SCATTER;
+		video_keeper_update_keeper_mem(
+			cur_dispbuf->mem_handle,
+			type,
+			&keep_pip_id);
+		video_keeper_update_keeper_mem(
+			cur_dispbuf->mem_head_handle,
+			MEM_TYPE_CODEC_MM,
+			&keep_pip_head_id);
+	}
+	if (cur_dispbuf_el) {
+		if (cur_dispbuf_el->type & VIDTYPE_SCATTER)
+			type = MEM_TYPE_CODEC_MM_SCATTER;
+		else
+			type = MEM_TYPE_CODEC_MM;
+		video_keeper_update_keeper_mem(
+			cur_dispbuf_el->mem_handle,
+			type,
+			&keep_pip_el_id);
+		video_keeper_update_keeper_mem(
+			cur_dispbuf_el->mem_head_handle,
+			MEM_TYPE_CODEC_MM,
+			&keep_pip_el_head_id);
+	}
+	return (keep_pip_id + keep_pip_head_id) > 0;
+}
+
 /*
  * call in irq.
  *don't used mutex
@@ -795,6 +856,7 @@ void video_keeper_new_frame_notify(void)
 		codec_mm_keeper_unmask_keeper(keep_head_id, 120);
 		keep_head_id = -1;
 	}
+
 	if (keep_el_id > 0) {
 		/*wait 80 ms for vsync post.*/
 		codec_mm_keeper_unmask_keeper(keep_el_id, 120);
@@ -807,6 +869,36 @@ void video_keeper_new_frame_notify(void)
 	}
 	return;
 }
+
+void video_pip_keeper_new_frame_notify(void)
+{
+	if (keep_video_pip_on) {
+		pr_info("new frame show, pip free keeper\n");
+		keep_video_pip_on = 0;
+	}
+	if (keep_pip_id > 0) {
+		/*wait 80 ms for vsync post.*/
+		codec_mm_keeper_unmask_keeper(keep_pip_id, 120);
+		keep_pip_id = -1;
+	}
+	if (keep_pip_head_id > 0) {
+		/*wait 80 ms for vsync post.*/
+		codec_mm_keeper_unmask_keeper(keep_pip_head_id, 120);
+		keep_pip_head_id = -1;
+	}
+	if (keep_pip_el_id > 0) {
+		/*wait 80 ms for vsync post.*/
+		codec_mm_keeper_unmask_keeper(keep_pip_el_id, 120);
+		keep_pip_el_id = -1;
+	}
+	if (keep_pip_el_head_id > 0) {
+		/*wait 80 ms for vsync post.*/
+		codec_mm_keeper_unmask_keeper(keep_pip_el_head_id, 120);
+		keep_pip_el_head_id = -1;
+	}
+
+}
+
 
 static unsigned int vf_keep_current_locked(
 	struct vframe_s *cur_dispbuf,
@@ -1043,6 +1135,51 @@ static unsigned int vf_keep_current_locked(
 	return 1;
 
 }
+
+unsigned int vf_keep_pip_current_locked(
+	struct vframe_s *cur_dispbuf,
+	struct vframe_s *cur_dispbuf_el)
+{
+	//u32 cur_index;
+	//u32 y_index, u_index, v_index;
+	//struct canvas_s cs0, cs1, cs2, cd;
+	int ret;
+
+	if (!cur_dispbuf) {
+		pr_info("keep pip exit without cur_dispbuf\n");
+		return 0;
+	}
+
+	if (get_video_debug_flags() &
+		DEBUG_FLAG_TOGGLE_SKIP_KEEP_CURRENT) {
+		pr_info("flag: keep pip exit is skip current\n");
+		return 0;
+	}
+
+#ifdef CONFIG_AMLOGIC_MEDIA_VIDEOCAPTURE
+	ext_frame_capture_poll(1); /*pull  if have capture end frame */
+#endif
+
+	if (get_blackout_pip_policy()) {
+		pr_info("policy: keep exit is skip current\n");
+		return 0;
+	}
+
+	ret = video_pip_keeper_frame_keep_locked(
+		cur_dispbuf,
+		cur_dispbuf_el);
+
+	if (ret) {
+		/*keeped ok with codec keeper!*/
+		pr_info("keep pip buffer on!\n");
+		keep_video_pip_on = 1;
+		return 1;
+	}
+
+	keep_video_pip_on = 0;
+	return 0;
+}
+
 unsigned int vf_keep_current(
 	struct vframe_s *cur_dispbuf,
 	struct vframe_s *cur_dispbuf2)

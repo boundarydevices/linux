@@ -90,6 +90,9 @@
 #define AMSTREAM_IOC_GLOBAL_GET_VIDEO_OUTPUT  _IOR((_A_M), 0x21, int)
 #define AMSTREAM_IOC_GLOBAL_SET_VIDEO_OUTPUT  _IOW((_A_M), 0x22, int)
 #define AMSTREAM_IOC_GET_VIDEO_LAYER1_ON  _IOR((_A_M), 0x23, int)
+/*video pip IOCTL command list*/
+#define AMSTREAM_IOC_CLEAR_VIDEOPIP _IOW((_A_M), 0x24, int)
+#define AMSTREAM_IOC_CLEAR_PIP_VBUF _IO((_A_M), 0x25)
 
 #define AMSTREAM_IOC_GLOBAL_GET_VIDEOPIP_OUTPUT  _IOR((_A_M), 0x2b, int)
 #define AMSTREAM_IOC_GLOBAL_SET_VIDEOPIP_OUTPUT  _IOW((_A_M), 0x2c, int)
@@ -156,8 +159,11 @@
  * 0x5c, struct userdata_buf_state_t)
  */
 
-
 #define AMSTREAM_IOC_VF_STATUS  _IOR((_A_M), 0x60, int)
+
+#define AMSTREAM_IOC_GET_BLACKOUT_PIP_POLICY   _IOR((_A_M), 0x62, int)
+#define AMSTREAM_IOC_SET_BLACKOUT_PIP_POLICY   _IOW((_A_M), 0x63, int)
+
 #define AMSTREAM_IOC_CLEAR_VBUF _IO((_A_M), 0x80)
 
 #define AMSTREAM_IOC_APTS_LOOKUP    _IOR((_A_M), 0x81, int)

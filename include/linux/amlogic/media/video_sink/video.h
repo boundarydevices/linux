@@ -241,6 +241,8 @@ static inline int amvideo_notifier_call_chain(unsigned long val, void *v)
 int query_video_status(int type, int *value);
 u32 set_blackout_policy(int policy);
 u32 get_blackout_policy(void);
+u32 set_blackout_pip_policy(int policy);
+u32 get_blackout_pip_policy(void);
 void set_video_angle(u32 s_value);
 u32 get_video_angle(void);
 extern unsigned int DI_POST_REG_RD(unsigned int addr);
