@@ -26,7 +26,7 @@
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/input/meson_rc.h>
 #include <dt-bindings/phy/phy-amlogic-pcie.h>
-#include "mesonsm1-bifrost.dtsi"
+#include "mesong12a-bifrost.dtsi"
 
 / {
 	cpus:cpus {
