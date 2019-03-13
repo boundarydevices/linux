@@ -55,7 +55,7 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x0>;
 			enable-method = "psci";
-			cpu-idle-states = <&CPU_SLEEP_0>;
+//			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks = <&clkc CLKID_CPU_CLK>,
 				<&clkc CLKID_CPU_FCLK_P>,
 				<&clkc CLKID_SYS_PLL>;
@@ -73,7 +73,7 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x1>;
 			enable-method = "psci";
-			cpu-idle-states = <&CPU_SLEEP_0>;
+//			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks = <&clkc CLKID_CPU_CLK>,
 				<&clkc CLKID_CPU_FCLK_P>,
 				<&clkc CLKID_SYS_PLL>;
@@ -91,7 +91,7 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x2>;
 			enable-method = "psci";
-			cpu-idle-states = <&CPU_SLEEP_0>;
+//			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks = <&clkc CLKID_CPU_CLK>,
 				<&clkc CLKID_CPU_FCLK_P>,
 				<&clkc CLKID_SYS_PLL>;
@@ -109,7 +109,7 @@
 			compatible = "arm,cortex-a53","arm,armv8";
 			reg = <0x0 0x3>;
 			enable-method = "psci";
-			cpu-idle-states = <&CPU_SLEEP_0>;
+//			cpu-idle-states = <&CPU_SLEEP_0>;
 			clocks = <&clkc CLKID_CPU_CLK>,
 				<&clkc CLKID_CPU_FCLK_P>,
 				<&clkc CLKID_SYS_PLL>;
@@ -732,7 +732,7 @@
 				fifosize = < 64 >;
 				pinctrl-names = "default";
 				/*pinctrl-0 = <&ao_uart_pins>;*/
-				support-sysrq = <0>;  /* 0 not support*/
+				support-sysrq = <1>;  /* 0 not support*/
 			};
 
 			uart_AO_B: serial@4000 {

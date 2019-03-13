@@ -436,7 +436,7 @@
 		compatible = "amlogic, cpufreq-meson";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pwm_ao_d_pins3>;
-		status = "okay";
+		status = "disabled";
 	};
 
 

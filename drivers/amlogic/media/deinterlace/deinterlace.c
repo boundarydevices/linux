@@ -7625,13 +7625,14 @@ static int di_probe(struct platform_device *pdev)
 	vf_reg_receiver(&di_vf_recv);
 	vf_provider_init(&di_vf_prov, VFM_NAME, &deinterlace_vf_provider, NULL);
 	active_flag = 1;
+	sema_init(&di_sema, 1);
 	ret = request_irq(di_devp->pre_irq, &de_irq, IRQF_SHARED,
 		"pre_di", (void *)"pre_di");
 	if (di_devp->post_wr_support) {
 		ret = request_irq(di_devp->post_irq, &post_irq,
 			IRQF_SHARED, "post_di", (void *)"post_di");
 	}
-	sema_init(&di_sema, 1);
+	//sema_init(&di_sema, 1);
 	di_sema_init_flag = 1;
 	di_hw_init(pulldown_enable, mcpre_en);
 	set_di_flag();
