@@ -147,6 +147,18 @@
 			size = <0x04000000>;
 			alignment = <0x400000>;
 		};
+		galcore_reserved:linux,galcore {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x1000000>;
+			alignment = <0x400000>;
+			linux,contiguous-region;
+		};
+	};
+
+	galcore {
+		status = "okay";
+		memory-region = <&galcore_reserved>;
 	};
 
 	gpioleds {

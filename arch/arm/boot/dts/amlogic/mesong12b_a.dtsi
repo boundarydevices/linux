@@ -1139,7 +1139,7 @@
 			<&clkc CLKID_VNANOQ_CORE_CLK_COMP>;
 		clock-names = "cts_vipnanoq_axi_clk_composite",
 			"cts_vipnanoq_core_clk_composite";
-		interrupts = <0 147 1>;
+		interrupts = <0 147 4>;
 		interrupt-names = "galcore";
 		reg = <0xff100000 0x800
 		       0xff000000 0x400000>;
