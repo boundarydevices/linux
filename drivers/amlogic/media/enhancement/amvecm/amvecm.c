@@ -5410,6 +5410,24 @@ static ssize_t amvecm_lc_store(struct class *cls,
 /* #if (MESON_CPU_TYPE == MESON_CPU_TYPE_MESONG9TV) */
 void init_pq_setting(void)
 {
+	if (is_meson_gxtvbb_cpu() || is_meson_txl_cpu() ||
+		is_meson_txlx_cpu() || is_meson_txhd_cpu() ||
+		is_meson_tl1_cpu())
+		goto tvchip_pq_setting;
+	else if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
+		sr_offset[0] = SR0_OFFSET;
+		/*dnlp off*/
+		WRITE_VPP_REG_BITS(VPP_VE_ENABLE_CTRL, 0,
+			 DNLP_EN_BIT, DNLP_EN_WID);
+		/*sr0  chroma filter bypass*/
+		WRITE_VPP_REG(SRSHARP0_SHARP_SR2_CBIC_HCOEF0 + sr_offset[0],
+			0x4000);
+		WRITE_VPP_REG(SRSHARP0_SHARP_SR2_CBIC_VCOEF0 + sr_offset[0],
+			0x4000);
+	}
+	return;
+
+tvchip_pq_setting:
 	if (get_cpu_type() == MESON_CPU_MAJOR_ID_TL1) {
 		/*sr0 & sr1 register shfit*/
 		sr_offset[0] = SR0_OFFSET;
@@ -5812,11 +5830,7 @@ static int aml_vecm_probe(struct platform_device *pdev)
 	/* register vout client */
 	vout_register_client(&vlock_notifier_nb);
 
-	/* #if (MESON_CPU_TYPE == MESON_CPU_TYPE_MESONG9TV) */
-	if (is_meson_gxtvbb_cpu() || is_meson_txl_cpu() ||
-		is_meson_txlx_cpu() || is_meson_txhd_cpu() ||
-		is_meson_tl1_cpu())
-		init_pq_setting();
+	init_pq_setting();
 	/* #endif */
 	vpp_get_hist_en();
 
