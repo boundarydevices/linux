@@ -425,6 +425,14 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 		goto free_clk;
 	}
 
+	/*setting low_freq_clk_p to 1G,default 24M*/
+	ret = clk_set_rate(low_freq_clk_p, mid_rate * 1000);
+	if (ret) {
+		pr_err("%s: error in setting low_freq_clk_p rate!\n",
+				__func__);
+		return ret;
+	}
+
 	high_freq_clk_p = of_clk_get_by_name(np, HIGH_FREQ_CLK_PARENT);
 	if (IS_ERR(high_freq_clk_p)) {
 		pr_err("%s: Failed to get high parent for cpu: %d,cluster: %d\n",
