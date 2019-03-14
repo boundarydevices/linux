@@ -278,8 +278,8 @@
 		sys_poweroff = <0x84000008>;
 	};
 
-	vpu {
-		compatible = "amlogic, vpu-g12a";
+	vpu: vpu {
+		compatible = "amlogic, vpu-sm1";
 		dev_name = "vpu";
 		status = "okay";
 		clocks = <&clkc CLKID_VAPB_MUX>,

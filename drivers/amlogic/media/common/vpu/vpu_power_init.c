@@ -124,7 +124,17 @@ void vpu_power_on(void)
 	}
 
 	/* Remove VPU_HDMI ISO */
-	vpu_ao_setb(AO_RTI_GEN_PWR_SLEEP0, 0, 9, 1); /* [9] VPU_HDMI */
+	ctrl_table = vpu_conf.data->hdmi_iso_table;
+	i = 0;
+	while (i < VPU_HDMI_ISO_CNT_MAX) {
+		if (ctrl_table[i].reg == VPU_REG_END)
+			break;
+		_reg = ctrl_table[i].reg;
+		_bit = ctrl_table[i].bit;
+		_len = ctrl_table[i].len;
+		vpu_ao_setb(_reg, 0, _bit, _len);
+		i++;
+	}
 
 	if (vpu_debug_print_flag)
 		VPUPR("%s finish\n", __func__);
@@ -140,12 +150,23 @@ void vpu_power_off(void)
 
 	/* Power down VPU_HDMI */
 	/* Enable Isolation */
-	vpu_ao_setb(AO_RTI_GEN_PWR_SLEEP0, 1, 9, 1); /* ISO */
+	ctrl_table = vpu_conf.data->hdmi_iso_table;
+	while (i < VPU_HDMI_ISO_CNT_MAX) {
+		if (ctrl_table[i].reg == VPU_REG_END)
+			break;
+		_reg = ctrl_table[i].reg;
+		_val = ctrl_table[i].val;
+		_bit = ctrl_table[i].bit;
+		_len = ctrl_table[i].len;
+		vpu_ao_setb(_reg, _val, _bit, _len);
+		i++;
+	}
 	udelay(20);
 
 	/* power down memories */
 	cnt = vpu_conf.data->mem_pd_table_cnt;
 	ctrl_table = vpu_conf.data->mem_pd_table;
+	i = 0;
 	while (i < cnt) {
 		if (ctrl_table[i].vmod == VPU_MOD_MAX)
 			break;

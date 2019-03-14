@@ -28,7 +28,8 @@
  * *********************************
  */
 
-#define AO_RTI_GEN_PWR_SLEEP0        (0x3a << 2)
+#define AO_RTI_GEN_PWR_SLEEP0        (0x03a << 2)
+#define AO_RTI_GEN_PWR_ISO0          (0x03b << 2)
 
 /* HHI bus */
 #define HHI_GP1_PLL_CNTL             0x16
