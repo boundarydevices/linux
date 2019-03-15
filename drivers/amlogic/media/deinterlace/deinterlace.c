@@ -129,7 +129,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2019-02-26a sm1 buring up test";
+static const char version_s[] = "2019-03-18a";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -2100,7 +2100,8 @@ static int di_init_buf(int width, int height, unsigned char prog_flag)
 		mtn_size = (mtn_width * canvas_height)*4/16;
 		count_size = (mtn_width * canvas_height)*4/16;
 		mv_size = (mv_width * canvas_height)/5;
-		mc_size = canvas_height;
+		mc_size = roundup(canvas_height >> 1, canvas_align_width) << 1;
+
 		if (mc_mem_alloc) {
 			di_buf_size = nr_size + mtn_size + count_size +
 				mv_size + mc_size;
@@ -2153,6 +2154,7 @@ static int di_init_buf(int width, int height, unsigned char prog_flag)
 			di_buf->canvas_width[NR_CANVAS] = nr_canvas_width;
 			di_buf->canvas_width[MTN_CANVAS] = mtn_canvas_width;
 			di_buf->canvas_width[MV_CANVAS] = mv_canvas_width;
+
 			if (prog_flag) {
 				di_buf->canvas_height = canvas_height;
 				di_buf->nr_adr = de_devp->mem_start +
@@ -2160,6 +2162,9 @@ static int di_init_buf(int width, int height, unsigned char prog_flag)
 				di_buf->canvas_config_flag = 1;
 			} else {
 				di_buf->canvas_height = (canvas_height>>1);
+				di_buf->canvas_height =
+					roundup(di_buf->canvas_height,
+					canvas_align_width);
 				di_buf->nr_adr = de_devp->mem_start +
 					di_buf_size * i;
 				di_buf->mtn_adr = de_devp->mem_start +

@@ -330,6 +330,11 @@ void calc_lmv_base_mcinfo(unsigned int vf_height, unsigned long mcinfo_adr,
 	if (!lmv_lock_win_en)
 		return;
 
+    if (!cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
+		pr_debug("%s: only support G12A and after chips.\n", __func__);
+		return;
+	}
+
 	tmp = di_vmap(mcinfo_adr, mcinfo_size, &bflg_vmap);
 	if (tmp == NULL) {
 		di_print("err:di_vmap failed\n");
@@ -340,11 +345,12 @@ void calc_lmv_base_mcinfo(unsigned int vf_height, unsigned long mcinfo_adr,
 	for (i = 0; i < (vf_height>>1); i++) {
 		lmvs_init(&lines_mv[i], *(mcinfo_vadr+i));
 		j = i + (vf_height>>1);
-		lmvs_init(&lines_mv[j], *(mcinfo_vadr+i+272));
+		/*288 = (canvas height(1088)/2 align to 64)*/
+		lmvs_init(&lines_mv[j], *(mcinfo_vadr+i+288));
 		if (pr_mcinfo_cnt && j < (vf_height - 10) &&
 			j > (vf_height - offset_lmv)) {
 			pr_info("MCINFO[%u]=0x%x\t", j,
-				*(mcinfo_vadr + i + 272));
+				*(mcinfo_vadr + i + 288));
 			if (i%16 == 0)
 				pr_info("\n");
 		}
@@ -487,6 +493,10 @@ void di_hw_init(bool pd_enable, bool mc_enable)
 		fifo_size_vpp = 0x180;
 		fifo_size_di = 0x120;
 	}
+
+	/*enable lock win, suggestion from vlsi zheng.bao*/
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
+		lmv_lock_win_en = 1;
 
 	DI_Wr(VD1_IF0_LUMA_FIFO_SIZE, fifo_size_vpp);
 	DI_Wr(VD2_IF0_LUMA_FIFO_SIZE, fifo_size_vpp);
@@ -1275,7 +1285,7 @@ void enable_mc_di_pre_g12(struct DI_MC_MIF_s *mcinford_mif,
 
 	RDMA_WR_BITS(MCINFRD_SCOPE_X, mcinford_mif->size_x, 16, 13);
 	RDMA_WR_BITS(MCINFRD_SCOPE_Y, mcinford_mif->size_y, 16, 13);
-	RDMA_WR_BITS(MCINFRD_CTRL1, mcvecwr_mif->canvas_num, 16, 8);
+	RDMA_WR_BITS(MCINFRD_CTRL1, mcinford_mif->canvas_num, 16, 8);
 	RDMA_WR_BITS(MCINFRD_CTRL1, 2, 0, 3);
 
 	RDMA_WR_BITS(MCVECWR_X, mcvecwr_mif->size_x, 0, 13);
