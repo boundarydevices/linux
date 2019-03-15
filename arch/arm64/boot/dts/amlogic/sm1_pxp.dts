@@ -18,6 +18,7 @@
 /dts-v1/;
 
 #include "mesonsm1.dtsi"
+#include "partition_mbox_normal.dtsi"
 
 / {
 	model = "Amlogic";
