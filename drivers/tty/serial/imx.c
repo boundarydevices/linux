@@ -2560,8 +2560,6 @@ static int imx_uart_resume_noirq(struct device *dev)
 	/* disable wakeup from i.MX UART */
 	imx_uart_enable_wakeup(sport, false);
 
-	clk_disable(sport->clk_ipg);
-
 	return 0;
 }
 
