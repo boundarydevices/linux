@@ -226,7 +226,7 @@
 #define dsim_write(dsim, val, reg)	writel(val, dsim->base + reg)
 
 /* fixed phy ref clk rate */
-#define PHY_REF_CLK		27000000
+#define PHY_REF_CLK		27000
 
 #define MAX_MAIN_HRESOL		2047
 #define MAX_MAIN_VRESOL		2047
@@ -315,6 +315,7 @@ struct sec_mipi_dsim {
 	/* kHz clocks */
 	uint32_t pix_clk;
 	uint32_t bit_clk;
+	uint32_t pref_clk;			/* phy ref clock rate in KHz */
 
 	unsigned int lanes;
 	unsigned int channel;			/* virtual channel */
@@ -570,6 +571,112 @@ static const struct dsim_hblank_par *sec_mipi_dsim_get_hblank_par(const char *na
 	}
 
 	return NULL;
+}
+
+int _sec_mipi_dsim_pll_enable(struct sec_mipi_dsim *dsim, int enable)
+{
+	if (dsim->clk_pllref_enable == enable)
+		return 0;
+
+	if (enable)
+		clk_prepare_enable(dsim->clk_pllref);
+	else
+		clk_disable_unprepare(dsim->clk_pllref);
+	dsim->clk_pllref_enable = enable;
+	return 1;
+}
+
+static int sec_mipi_choose_ref_clk(struct sec_mipi_dsim *dsim, unsigned long pix_clk)
+{
+	unsigned long ref_clk, bit_clk;
+	struct clk *clk_ref_parent;
+	unsigned bpp = mipi_dsi_pixel_format_to_bpp(dsim->format);
+
+	if (bpp < 0)
+		return -EINVAL;
+
+	bit_clk = DIV_ROUND_UP_ULL((u64)pix_clk * bpp, dsim->lanes);
+	clk_ref_parent = clk_get_parent(dsim->clk_pllref);
+	ref_clk = bit_clk;
+	if (clk_ref_parent) {
+		unsigned ref_parent_clk = clk_get_rate(clk_ref_parent);
+		unsigned div = 0;
+
+		if (ref_parent_clk) {
+			div = (ref_parent_clk + 4) / pix_clk;
+			if (div)
+				ref_clk = ref_parent_clk / div;
+		}
+		pr_debug("%s: ref_clk=%ld, ref_parent_clk=%d, pix_clk=%ld, div=%d\n",
+			__func__, ref_clk, ref_parent_clk, pix_clk, div);
+	}
+	while (ref_clk > 48000000) {
+		ref_clk >>= 1;
+	}
+	while (ref_clk < 24000000) {
+		ref_clk <<= 1;
+	}
+	return ref_clk;
+}
+
+static int sec_mipi_dsim_set_pref_rate(struct sec_mipi_dsim *dsim, unsigned long pix_clk)
+{
+	int ret;
+	uint32_t rate, diff;
+	uint32_t ref_clk;
+	struct device *dev = dsim->dev;
+
+	ret = of_property_read_u32(dev->of_node, "pref-rate", &rate);
+	if (ret < 0) {
+		dev_dbg(dev, "no valid rate assigned for pref clock\n");
+		ref_clk = sec_mipi_choose_ref_clk(dsim, pix_clk);
+	} else {
+		if (unlikely(rate < 6000 || rate > 300000)) {
+			dev_warn(dev, "pref-rate get is invalid: %uKHz\n",
+				 rate);
+			ref_clk = PHY_REF_CLK * 1000;
+		} else
+			ref_clk = rate * 1000;
+	}
+
+	while (1) {
+		if (dsim->clk_pllref_enable) {
+			_sec_mipi_dsim_pll_enable(dsim, 0);
+			ret = clk_set_rate(dsim->clk_pllref, ref_clk);
+			_sec_mipi_dsim_pll_enable(dsim, 1);
+		} else {
+			ret = clk_set_rate(dsim->clk_pllref, ref_clk);
+		}
+		if (ret)
+			dev_err(dev, "failed to set pll ref clock rate %d\n", ret);
+
+		rate = clk_get_rate(dsim->clk_pllref);
+		pr_debug("%s: ref_clk=%d %d\n", __func__, ref_clk, rate);
+		if (unlikely(!rate)) {
+			dev_err(dev, "failed to get pll ref clock rate\n");
+			return -EINVAL;
+		}
+
+		diff = (rate > ref_clk) ? rate - ref_clk : ref_clk - rate;
+		if (diff <= 500) {
+			dsim->pref_clk = rate / 1000;
+			dsim->ref_clk = rate;
+			return 0;
+
+		}
+		if (unlikely(ref_clk == PHY_REF_CLK * 1000))
+			break;
+
+		dev_warn(dev, "invalid assigned rate for pref: %uKHz\n",
+			 dsim->pref_clk);
+		dev_warn(dev, "use default pref rate instead: %uKHz\n",
+			 PHY_REF_CLK);
+
+		ref_clk = PHY_REF_CLK * 1000;
+	}
+	/* set default rate failed */
+	dev_err(dev, "no valid pll ref clock rate\n");
+	return -EINVAL;
 }
 
 static void sec_mipi_dsim_irq_init(struct sec_mipi_dsim *dsim);
@@ -1246,25 +1353,11 @@ static void sec_mipi_dsim_set_standby(struct sec_mipi_dsim *dsim,
 	dsim_write(dsim, mdresol, DSIM_MDRESOL);
 }
 
-int _sec_mipi_dsim_pll_enable(struct sec_mipi_dsim *dsim, int enable)
-{
-	if (dsim->clk_pllref_enable == enable)
-		return 0;
-
-	if (enable)
-		clk_prepare_enable(dsim->clk_pllref);
-	else
-		clk_disable_unprepare(dsim->clk_pllref);
-	dsim->clk_pllref_enable = enable;
-	return 1;
-}
-
 static int _sec_mipi_dsim_check_pll_out(struct sec_mipi_dsim *dsim)
 {
 	int bpp;
 	unsigned long pix_clk;
-	uint32_t bit_clk, ref_clk, ref_parent_clk, div;
-	struct clk *clk_ref_parent;
+	uint32_t bit_clk;
 	const struct sec_mipi_dsim_plat_data *pdata = dsim->pdata;
 	int ret;
 
@@ -1290,35 +1383,8 @@ static int _sec_mipi_dsim_check_pll_out(struct sec_mipi_dsim *dsim)
 		}
 	}
 
-	clk_ref_parent = clk_get_parent(dsim->clk_pllref);
-	ref_clk = bit_clk;
-	if (clk_ref_parent) {
-		ref_parent_clk = clk_get_rate(clk_ref_parent);
-		div = 0;
-		if (ref_parent_clk) {
-			div = (ref_parent_clk + 4) / pix_clk;
-			if (div)
-				ref_clk = ref_parent_clk / div;
-		}
-		pr_debug("%s: ref_clk=%d, ref_parent_clk=%d, pix_clk=%ld, div=%d\n",
-			__func__, ref_clk, ref_parent_clk, pix_clk, div);
-	}
-	while (ref_clk > 48000000) {
-		ref_clk >>= 1;
-	}
-	while (ref_clk < 24000000) {
-		ref_clk <<= 1;
-	}
-	pr_debug("%s: ref_clk=%d\n", __func__, ref_clk);
-	if (dsim->clk_pllref_enable) {
-		_sec_mipi_dsim_pll_enable(dsim, 0);
-		clk_set_rate(dsim->clk_pllref, ref_clk);
-		_sec_mipi_dsim_pll_enable(dsim, 1);
-	} else {
-		clk_set_rate(dsim->clk_pllref, ref_clk);
-	}
-	dsim->ref_clk = ref_clk = clk_get_rate(dsim->clk_pllref);
-	pr_debug("%s: ref_clk=%d\n", __func__, ref_clk);
+	/* set suitable rate for phy ref clock */
+	ret = sec_mipi_dsim_set_pref_rate(dsim, pix_clk);
 
 	dsim->pixelclock = pix_clk;
 	dsim->pix_clk = DIV_ROUND_UP_ULL(pix_clk, 1000);
