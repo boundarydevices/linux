@@ -1,7 +1,7 @@
 /*
  * Samsung MIPI DSIM Bridge
  *
- * Copyright 2018 NXP
+ * Copyright 2018-2019 NXP
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -290,7 +290,7 @@ struct dsim_hblank_par {
 };
 
 struct dsim_pll_pms {
-	uint64_t bit_clk;	/* kHz */
+	uint32_t bit_clk;	/* kHz */
 	uint32_t p;
 	uint32_t m;
 	uint32_t s;
@@ -313,8 +313,8 @@ struct sec_mipi_dsim {
 	struct clk *clk_pixel;
 
 	/* kHz clocks */
-	uint64_t pix_clk;
-	uint64_t bit_clk;
+	uint32_t pix_clk;
+	uint32_t bit_clk;
 
 	unsigned int lanes;
 	unsigned int channel;			/* virtual channel */
@@ -1201,7 +1201,7 @@ static void sec_mipi_dsim_init_fifo_pointers(struct sec_mipi_dsim *dsim)
 static void sec_mipi_dsim_config_clkctrl(struct sec_mipi_dsim *dsim)
 {
 	uint32_t clkctrl = 0, data_lanes_en;
-	uint64_t byte_clk, esc_prescaler;
+	uint32_t byte_clk, esc_prescaler;
 
 	clkctrl |= CLKCTRL_TXREQUESTHSCLK;
 #if 0
@@ -1224,8 +1224,8 @@ static void sec_mipi_dsim_config_clkctrl(struct sec_mipi_dsim *dsim)
 	 * EscClk = ByteClk / EscPrescaler;
 	 */
 	byte_clk = dsim->bit_clk >> 3;
-	pr_info("%s: bit_clk=%lld, clkctrl=%x\n", __func__, dsim->bit_clk, clkctrl);
-	esc_prescaler = DIV_ROUND_UP_ULL(byte_clk, MAX_ESC_CLK_FREQ);
+	pr_info("%s: bit_clk=%d, clkctrl=%x\n", __func__, dsim->bit_clk, clkctrl);
+	esc_prescaler = DIV_ROUND_UP(byte_clk, MAX_ESC_CLK_FREQ);
 	clkctrl |= CLKCTRL_SET_ESCPRESCALER(esc_prescaler);
 
 	dsim_write(dsim, clkctrl, DSIM_CLKCTRL);
@@ -1262,7 +1262,8 @@ int _sec_mipi_dsim_pll_enable(struct sec_mipi_dsim *dsim, int enable)
 static int _sec_mipi_dsim_check_pll_out(struct sec_mipi_dsim *dsim)
 {
 	int bpp;
-	unsigned long pix_clk, bit_clk, ref_clk, ref_parent_clk, div;
+	unsigned long pix_clk;
+	uint32_t bit_clk, ref_clk, ref_parent_clk, div;
 	struct clk *clk_ref_parent;
 	const struct sec_mipi_dsim_plat_data *pdata = dsim->pdata;
 	int ret;
@@ -1276,12 +1277,12 @@ static int _sec_mipi_dsim_check_pll_out(struct sec_mipi_dsim *dsim)
 		pix_clk = dsim->def_pix_clk;
 
 	bit_clk = DIV_ROUND_UP_ULL((u64)pix_clk * bpp, dsim->lanes);
-	pr_debug("%s: %ld = %ld * %d / %d\n", __func__, bit_clk, pix_clk, bpp, dsim->lanes);
+	pr_debug("%s: %d = %ld * %d / %d\n", __func__, bit_clk, pix_clk, bpp, dsim->lanes);
 
 	if (bit_clk > pdata->max_data_rate) {
 		pix_clk = dsim->def_pix_clk;
 		bit_clk = DIV_ROUND_UP_ULL((u64)pix_clk * bpp, dsim->lanes);
-		pr_debug("%s:aa %ld = %ld * %d / %d\n", __func__, bit_clk, pix_clk, bpp, dsim->lanes);
+		pr_debug("%s:aa %d = %ld * %d / %d\n", __func__, bit_clk, pix_clk, bpp, dsim->lanes);
 		if (bit_clk > pdata->max_data_rate) {
 			dev_err(dsim->dev,
 					"requested bit clk freq exceeds lane's maximum value\n");
@@ -1299,7 +1300,7 @@ static int _sec_mipi_dsim_check_pll_out(struct sec_mipi_dsim *dsim)
 			if (div)
 				ref_clk = ref_parent_clk / div;
 		}
-		pr_debug("%s: ref_clk=%ld, ref_parent_clk=%ld, pix_clk=%ld, div=%ld\n",
+		pr_debug("%s: ref_clk=%d, ref_parent_clk=%d, pix_clk=%ld, div=%d\n",
 			__func__, ref_clk, ref_parent_clk, pix_clk, div);
 	}
 	while (ref_clk > 48000000) {
@@ -1308,7 +1309,7 @@ static int _sec_mipi_dsim_check_pll_out(struct sec_mipi_dsim *dsim)
 	while (ref_clk < 24000000) {
 		ref_clk <<= 1;
 	}
-	pr_debug("%s: ref_clk=%ld\n", __func__, ref_clk);
+	pr_debug("%s: ref_clk=%d\n", __func__, ref_clk);
 	if (dsim->clk_pllref_enable) {
 		_sec_mipi_dsim_pll_enable(dsim, 0);
 		clk_set_rate(dsim->clk_pllref, ref_clk);
@@ -1317,7 +1318,7 @@ static int _sec_mipi_dsim_check_pll_out(struct sec_mipi_dsim *dsim)
 		clk_set_rate(dsim->clk_pllref, ref_clk);
 	}
 	dsim->ref_clk = ref_clk = clk_get_rate(dsim->clk_pllref);
-	pr_debug("%s: ref_clk=%ld\n", __func__, ref_clk);
+	pr_debug("%s: ref_clk=%d\n", __func__, ref_clk);
 
 	dsim->pixelclock = pix_clk;
 	dsim->pix_clk = DIV_ROUND_UP_ULL(pix_clk, 1000);
@@ -1328,7 +1329,7 @@ static int _sec_mipi_dsim_check_pll_out(struct sec_mipi_dsim *dsim)
 	if (!dsim->panel)
 		return 0;
 
-	pr_debug("%s: %ld = %ld * %d / %d\n", __func__, bit_clk, pix_clk, bpp, dsim->lanes);
+	pr_debug("%s: %d = %ld * %d / %d\n", __func__, bit_clk, pix_clk, bpp, dsim->lanes);
 	ret = sec_mipi_dsim_get_pms(dsim, bit_clk, dsim->ref_clk);
 	if (ret < 0)
 		return ret;
