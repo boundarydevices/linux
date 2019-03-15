@@ -2133,7 +2133,7 @@
 		isi_0: isi@58100000 {
 			compatible = "fsl,imx8-isi";
 			reg = <0x0 0x58100000 0x0 0x10000>;
-			interrupts = <0 297 0>;
+			interrupts = <0 297 IRQ_TYPE_LEVEL_HIGH>;
 			interface = <2 0 2>;  /* <Input MIPI_VCx Output>
 									Input:  0-DC0, 1-DC1, 2-MIPI CSI0, 3-MIPI CSI1, 4-HDMI, 5-MEM
 									VCx:    0-VC0, 1-VC1, 2-VC2, 3-VC3, MIPI CSI only
@@ -2149,7 +2149,7 @@
 		isi_1: isi@58110000 {
 			compatible = "fsl,imx8-isi";
 			reg = <0x0 0x58110000 0x0 0x10000>;
-			interrupts = <0 298 0>;
+			interrupts = <0 298 IRQ_TYPE_LEVEL_HIGH>;
 			interface = <2 1 2>;
 			clocks = <&clk IMX8QXP_IMG_PDMA_1_CLK>;
 			clock-names = "per";
@@ -2162,7 +2162,7 @@
 		isi_2: isi@58120000 {
 			compatible = "fsl,imx8-isi";
 			reg = <0x0 0x58120000 0x0 0x10000>;
-			interrupts = <0 299 0>;
+			interrupts = <0 299 IRQ_TYPE_LEVEL_HIGH>;
 			interface = <2 2 2>;
 			clocks = <&clk IMX8QXP_IMG_PDMA_2_CLK>;
 			clock-names = "per";
@@ -2175,7 +2175,7 @@
 		isi_3: isi@58130000 {
 			compatible = "fsl,imx8-isi";
 			reg = <0x0 0x58130000 0x0 0x10000>;
-			interrupts = <0 300 0>;
+			interrupts = <0 300 IRQ_TYPE_LEVEL_HIGH>;
 			interface = <2 3 2>;
 			clocks = <&clk IMX8QXP_IMG_PDMA_3_CLK>;
 			clock-names = "per";
@@ -2188,7 +2188,7 @@
 		isi_4: isi@58140000 {
 			compatible = "fsl,imx8-isi";
 			reg = <0x0 0x58140000 0x0 0x10000>;
-			interrupts = <0 301 0>;
+			interrupts = <0 301 IRQ_TYPE_LEVEL_HIGH>;
 			interface = <3 0 2>;
 			clocks = <&clk IMX8QXP_IMG_PDMA_4_CLK>;
 			clock-names = "per";
@@ -2201,7 +2201,7 @@
 		isi_5: isi@58150000 {
 			compatible = "fsl,imx8-isi";
 			reg = <0x0 0x58150000 0x0 0x10000>;
-			interrupts = <0 302 0>;
+			interrupts = <0 302 IRQ_TYPE_LEVEL_HIGH>;
 			interface = <3 1 2>;
 			clocks = <&clk IMX8QXP_IMG_PDMA_5_CLK>;
 			clock-names = "per";
@@ -2214,7 +2214,7 @@
 		isi_6: isi@58160000 {
 			compatible = "fsl,imx8-isi";
 			reg = <0x0 0x58160000 0x0 0x10000>;
-			interrupts = <0 303 0>;
+			interrupts = <0 303 IRQ_TYPE_LEVEL_HIGH>;
 			interface = <3 2 2>;
 			clocks = <&clk IMX8QXP_IMG_PDMA_6_CLK>;
 			clock-names = "per";
@@ -2227,7 +2227,7 @@
 		isi_7: isi@58170000 {
 			compatible = "fsl,imx8-isi";
 			reg = <0x0 0x58170000 0x0 0x10000>;
-			interrupts = <0 304 0>;
+			interrupts = <0 304 IRQ_TYPE_LEVEL_HIGH>;
 			interface = <3 3 2>;
 			clocks = <&clk IMX8QXP_IMG_PDMA_7_CLK>;
 			clock-names = "per";
