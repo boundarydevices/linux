@@ -14,6 +14,7 @@
 
 /* Includes */
 
+#include <linux/notifier.h>
 #include <soc/imx8/sc/types.h>
 
 /* Defines */
@@ -62,5 +63,8 @@ void sc_ipc_read(sc_ipc_t ipc, void *data);
  * This function will block if the outgoing buffer is full.
  */
 void sc_ipc_write(sc_ipc_t ipc, const void *data);
+
+int register_scu_notifier(struct notifier_block *nb);
+int unregister_scu_notifier(struct notifier_block *nb);
 
 #endif				/* SC_IPC_H */
