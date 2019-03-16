@@ -40,6 +40,7 @@
 	S(SRC_ATTACHED),			\
 	S(SRC_STARTUP),				\
 	S(SRC_SEND_CAPABILITIES),		\
+	S(SRC_SEND_CAPABILITIES_TIMEOUT),	\
 	S(SRC_NEGOTIATE_CAPABILITIES),		\
 	S(SRC_TRANSITION_SUPPLY),		\
 	S(SRC_READY),				\
@@ -3103,12 +3104,40 @@ static void run_state_machine(struct tcpm_port *port)
 			tcpm_set_state(port, SRC_SEND_CAPABILITIES,
 				       PD_T_SEND_SOURCE_CAP);
 		} else {
-			port->hard_reset_count = 0;
+			/*
+			 * Per standard, we should clear the reset counter here.
+			 * However, that can result in state machine hang-ups.
+			 * Reset it only in READY state to improve stability.
+			 */
+			/* port->hard_reset_count = 0; */
 			port->caps_count = 0;
 			port->pd_capable = true;
-			hrtimer_start(&port->snd_res_timer,
-				      ms_to_ktime(PD_T_SENDER_RESPONSE),
-				      HRTIMER_MODE_REL);
+			tcpm_set_state_cond(port, SRC_SEND_CAPABILITIES_TIMEOUT,
+					    PD_T_SEND_SOURCE_CAP);
+		}
+		break;
+	case SRC_SEND_CAPABILITIES_TIMEOUT:
+		/*
+		 * Error recovery for a PD_DATA_SOURCE_CAP reply timeout.
+		 *
+		 * PD 2.0 sinks are supposed to accept src-capabilities with a
+		 * 3.0 header and simply ignore any src PDOs which the sink does
+		 * not understand such as PPS but some 2.0 sinks instead ignore
+		 * the entire PD_DATA_SOURCE_CAP message, causing contract
+		 * negotiation to fail.
+		 *
+		 * After PD_N_HARD_RESET_COUNT hard-reset attempts, we try
+		 * sending src-capabilities with a lower PD revision to
+		 * make these broken sinks work.
+		 */
+		if (port->hard_reset_count < PD_N_HARD_RESET_COUNT) {
+			tcpm_set_state(port, HARD_RESET_SEND, 0);
+		} else if (port->negotiated_rev > PD_REV20) {
+			port->negotiated_rev--;
+			port->hard_reset_count = 0;
+			tcpm_set_state(port, SRC_SEND_CAPABILITIES, 0);
+		} else {
+			tcpm_set_state(port, hard_reset_state(port), 0);
 		}
 		break;
 	case SRC_NEGOTIATE_CAPABILITIES:
