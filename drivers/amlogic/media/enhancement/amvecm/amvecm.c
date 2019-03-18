@@ -1072,7 +1072,8 @@ int amvecm_on_vs(
 	/* add some flag to trigger */
 	if (vf) {
 		/*gxlx sharpness adaptive setting*/
-		if (is_meson_gxlx_cpu())
+		if (is_meson_gxlx_cpu() || is_meson_g12a_cpu()
+		|| is_meson_g12b_cpu() || is_meson_sm1_cpu())
 			amve_sharpness_adaptive_setting(vf,
 				sps_h_en, sps_v_en);
 		amvecm_bricon_process(
