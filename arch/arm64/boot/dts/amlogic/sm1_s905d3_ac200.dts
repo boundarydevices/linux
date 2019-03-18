@@ -1389,7 +1389,7 @@
 };
 
 &dwc3 {
-	status = "okay";
+	status = "disabled";
 };
 
 &usb2_phy_v2 {
@@ -1406,7 +1406,7 @@
 };
 
 &dwc2_a {
-	status = "okay";
+	status = "disabled";
 	/** 0: normal, 1: otg+dwc3 host only, 2: otg+dwc3 device only*/
 	controller-type = <3>;
 };
