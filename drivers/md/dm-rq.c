@@ -9,6 +9,7 @@
 
 #include <linux/elevator.h> /* for rq_end_sector() */
 #include <linux/blk-mq.h>
+int elv_register_queue(struct request_queue *q);
 
 #define DM_MSG_PREFIX "core-rq"
 
