@@ -467,11 +467,11 @@ static int pwm_backlight_initial_power_state(const struct pwm_bl_data *pb)
 	/* The regulator is disabled, do not enable the backlight */
 	if (!regulator_is_enabled(pb->power_supply))
 		return FB_BLANK_POWERDOWN;
-
+#if 0
 	/* The PWM is disabled, keep it like this */
 	if (!pwm_is_enabled(pb->pwm))
 		return FB_BLANK_POWERDOWN;
-
+#endif
 	return FB_BLANK_UNBLANK;
 }
 
