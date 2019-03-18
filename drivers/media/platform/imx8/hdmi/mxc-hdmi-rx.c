@@ -28,8 +28,6 @@
 
 #define imx_sd_to_hdmi(sd) container_of(sd, struct mxc_hdmi_rx_dev, sd)
 
-static void mxc_hdmi_cec_init(struct mxc_hdmi_rx_dev *hdmi_rx);
-
 static const struct v4l2_dv_timings_cap mxc_hdmi_timings_cap = {
 	.type = V4L2_DV_BT_656_1120,
 	/* keep this initialization for compatibility with GCC < 4.4.6 */
