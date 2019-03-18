@@ -155,6 +155,7 @@ extern void amve_sharpness_adaptive_setting(struct vframe_s *vf,
 extern void amve_sharpness_init(void);
 extern struct am_regs_s sr1reg_sd_scale;
 extern struct am_regs_s sr1reg_hd_scale;
+extern struct am_regs_s sr0reg_cvbs;
 extern struct am_regs_s sr1reg_cvbs;
 extern struct am_regs_s sr1reg_hv_noscale;
 extern void amvecm_fresh_overscan(struct vframe_s *vf);
