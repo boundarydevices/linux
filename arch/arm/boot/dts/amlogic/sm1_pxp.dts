@@ -237,7 +237,7 @@
 		tx_op_color_primary = <0>;
 	};
 	amdolby_vision {
-		compatible = "amlogic, dolby_vision_g12a";
+		compatible = "amlogic, dolby_vision_sm1";
 		dev_name = "aml_amdolby_vision_driver";
 		status = "okay";
 		tv_mode = <0>;/*1:enabel ;0:disable*/

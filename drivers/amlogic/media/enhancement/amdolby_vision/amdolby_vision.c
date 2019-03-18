@@ -6645,6 +6645,10 @@ static const struct of_device_id amlogic_dolby_vision_match[] = {
 		.compatible = "amlogic, dolby_vision_g12b",
 		.data = &dolby_vision_g12,
 	},
+	{
+		.compatible = "amlogic, dolby_vision_sm1",
+		.data = &dolby_vision_g12,
+	},
 	{},
 };
 
