@@ -58,8 +58,6 @@
 /* The maximum  bytes that a sdma BD can transfer.*/
 #define MAX_SDMA_BD_BYTES  (1 << 15)
 #define MX51_ECSPI_CTRL_MAX_BURST	512
-/* The maximum bytes that IMX53_ECSPI can transfer in slave mode.*/
-#define MX53_MAX_TRANSFER_BYTES		512
 
 enum spi_imx_devtype {
 	IMX1_CSPI,
@@ -87,6 +85,7 @@ struct spi_imx_devtype_data {
 	unsigned int fifo_size;
 	bool dynamic_burst;
 	enum spi_imx_devtype devtype;
+	int max_slave_transfer_bytes;
 };
 
 struct spi_imx_data {
@@ -962,6 +961,7 @@ static struct spi_imx_devtype_data imx51_ecspi_devtype_data = {
 	.has_slavemode = true,
 	.disable = mx51_ecspi_disable,
 	.devtype = IMX51_ECSPI,
+	.max_slave_transfer_bytes = 512,
 };
 
 static struct spi_imx_devtype_data imx53_ecspi_devtype_data = {
@@ -977,6 +977,7 @@ static struct spi_imx_devtype_data imx53_ecspi_devtype_data = {
 	.has_slavemode = true,
 	.disable = mx51_ecspi_disable,
 	.devtype = IMX53_ECSPI,
+	.max_slave_transfer_bytes = 512,
 };
 
 static struct spi_imx_devtype_data imx6ul_ecspi_devtype_data = {
@@ -1408,11 +1409,11 @@ static int spi_imx_pio_transfer_slave(struct spi_device *spi,
 {
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
 	int ret = transfer->len;
+	int max = spi_imx->devtype_data->max_slave_transfer_bytes;
 
-	if ((is_imx51_ecspi(spi_imx) || is_imx53_ecspi(spi_imx)) &&
-	    transfer->len > MX53_MAX_TRANSFER_BYTES) {
+	if (max && transfer->len > max) {
 		dev_err(&spi->dev, "Transaction too big, max size is %d bytes\n",
-			MX53_MAX_TRANSFER_BYTES);
+			max);
 		return -EMSGSIZE;
 	}
 
