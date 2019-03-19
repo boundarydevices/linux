@@ -3403,8 +3403,8 @@ static void pip_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	}
 
 	if (is_meson_txlx_cpu()
-		|| is_meson_g12a_cpu()
-		|| is_meson_g12b_cpu())
+		|| cpu_after_eq(
+		MESON_CPU_MAJOR_ID_G12A))
 		VSYNC_WR_MPEG_REG_BITS(
 			VIU_VD2_FMT_CTRL + cur_dev->viu_off,
 			1, 29, 1);
@@ -4391,8 +4391,8 @@ static void viu_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	}
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if ((is_meson_txlx_cpu()
-		|| is_meson_g12a_cpu()
-		|| is_meson_g12b_cpu())
+		|| cpu_after_eq(
+		MESON_CPU_MAJOR_ID_G12A))
 		&& is_dolby_vision_on()
 		&& is_dolby_vision_stb_mode()
 		&& (vf->source_type ==
@@ -4853,8 +4853,8 @@ static void vd2_set_dcu(struct vpp_frame_par_s *frame_par, struct vframe_s *vf)
 	}
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
 	if ((is_meson_txlx_cpu()
-		|| is_meson_g12a_cpu()
-		|| is_meson_g12b_cpu())
+		|| cpu_after_eq(
+		MESON_CPU_MAJOR_ID_G12A))
 		&& is_dolby_vision_on()
 		&& is_dolby_vision_stb_mode()
 		&& (vf->source_type ==
@@ -7779,8 +7779,8 @@ SET_FILTER:
 				VSYNC_WR_MPEG_REG_BITS(
 					VIU_MISC_CTRL1,
 					1, 16, 1); /* bypass core1 */
-			else if (is_meson_g12a_cpu()
-				|| is_meson_g12b_cpu())
+			else if (cpu_after_eq(
+				MESON_CPU_MAJOR_ID_G12A))
 				VSYNC_WR_MPEG_REG_BITS(
 					DOLBY_PATH_CTRL, 1, 0, 1);
 		}
@@ -12225,7 +12225,7 @@ static int __init video_early_init(void)
 		WRITE_VCBUS_REG_BITS(
 			SRSHARP1_SHARP_SYNC_CTRL, 1, 8, 1);
 	}
-	if (is_meson_g12b_cpu())
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12B))
 		WRITE_VCBUS_REG_BITS(
 			SRSHARP0_SHARP_SYNC_CTRL, 1, 0, 1);
 	return 0;
@@ -12384,8 +12384,7 @@ static int __init video_init(void)
 	}
 #endif
 
-	if (is_meson_g12a_cpu() || is_meson_g12b_cpu()
-		|| is_meson_tl1_cpu()) {
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
 		cur_dev->viu_off = 0x3200 - 0x1a50;
 		legacy_vpp = false;
 	}
@@ -12515,9 +12514,8 @@ static int __init video_init(void)
 
 	init_waitqueue_head(&amvideo_trick_wait);
 	init_waitqueue_head(&amvideo_sizechange_wait);
-#if 1				/* MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON8 */
+
 	INIT_WORK(&vpu_delay_work, do_vpu_delay_work);
-#endif
 
 #ifdef CONFIG_AM_VOUT
 	vout_hook();

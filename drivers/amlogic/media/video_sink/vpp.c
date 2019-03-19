@@ -1733,7 +1733,10 @@ int vpp_set_super_scaler_regs(
 	}
 
 	/*ve input size setting*/
-	if (is_meson_txhd_cpu() || is_meson_g12a_cpu() || is_meson_g12b_cpu() ||
+	if (is_meson_txhd_cpu() ||
+		is_meson_g12a_cpu() ||
+		is_meson_g12b_cpu() ||
+		is_meson_sm1_cpu() ||
 		(is_meson_tl1_cpu() &&
 		((scaler_path_sel == PPS_CORE0_CORE1) ||
 		(scaler_path_sel == PPS_CORE0_POSTBLEND_CORE1))))
@@ -1746,8 +1749,8 @@ int vpp_set_super_scaler_regs(
 	if (tmp_data != tmp_data2)
 		VSYNC_WR_MPEG_REG(VPP_VE_H_V_SIZE, tmp_data);
 	/*chroma blue stretch size setting*/
-	if (is_meson_txlx_cpu() || is_meson_txhd_cpu() || is_meson_g12a_cpu() ||
-		is_meson_g12b_cpu() || is_meson_tl1_cpu()) {
+	if (is_meson_txlx_cpu() || is_meson_txhd_cpu()
+		|| (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))) {
 		tmp_data = (((vpp_postblend_out_width & 0x1fff) << 16) |
 			(vpp_postblend_out_height & 0x1fff));
 		VSYNC_WR_MPEG_REG(VPP_OUT_H_V_SIZE, tmp_data);
@@ -1928,8 +1931,10 @@ static void vpp_set_super_scaler(
 				next_frame_par->supscl_path = CORE1_BEFORE_PPS;
 			else
 				next_frame_par->supscl_path = CORE1_AFTER_PPS;
-		} else if (is_meson_txhd_cpu() || is_meson_g12a_cpu() ||
-			is_meson_g12b_cpu()) {
+		} else if (is_meson_txhd_cpu() ||
+			is_meson_g12a_cpu() ||
+			is_meson_g12b_cpu() ||
+			is_meson_sm1_cpu()) {
 			next_frame_par->supscl_path = CORE0_BEFORE_PPS;
 		} else
 			next_frame_par->supscl_path = CORE0_PPS_CORE1;
@@ -2152,7 +2157,8 @@ static void vpp_set_super_scaler(
 		}
 	} else if (is_meson_txhd_cpu()
 		|| is_meson_g12a_cpu()
-		|| is_meson_g12b_cpu()) {
+		|| is_meson_g12b_cpu()
+		|| is_meson_sm1_cpu()) {
 		if (sr_path == CORE0_BEFORE_PPS)
 			next_frame_par->sr0_position = 1;
 		else if (sr_path == CORE0_AFTER_PPS)
@@ -3096,8 +3102,10 @@ void vpp_super_scaler_support(void)
 	if (is_meson_gxlx_cpu()) {
 		sr_support &= ~SUPER_CORE0_SUPPORT;
 		sr_support |= SUPER_CORE1_SUPPORT;
-	} else if (is_meson_txhd_cpu() || is_meson_g12a_cpu() ||
-		is_meson_g12b_cpu()) {
+	} else if (is_meson_txhd_cpu() ||
+		is_meson_g12a_cpu() ||
+		is_meson_g12b_cpu() ||
+		is_meson_sm1_cpu()) {
 		sr_support |= SUPER_CORE0_SUPPORT;
 		sr_support &= ~SUPER_CORE1_SUPPORT;
 	} else if (is_meson_gxtvbb_cpu() || is_meson_txl_cpu() ||
@@ -3112,7 +3120,9 @@ void vpp_super_scaler_support(void)
 		sr_support &= ~SUPER_CORE0_SUPPORT;
 		sr_support &= ~SUPER_CORE1_SUPPORT;
 	}
-	if (is_meson_g12a_cpu() || is_meson_g12b_cpu()) {
+	if (is_meson_g12a_cpu() ||
+		is_meson_g12b_cpu() ||
+		is_meson_sm1_cpu()) {
 		sr_reg_offt = 0xc00;
 		sr_reg_offt2 = 0x00;
 	} else if (is_meson_tl1_cpu()) {
