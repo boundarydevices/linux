@@ -451,10 +451,10 @@ static struct vpu_ctrl_s vpu_mem_pd_sm1[] = {
 	{VPU_VIU2,            HHI_VPU_MEM_PD_REG2, 0x3, 22,   2},
 	{VPU_DI_PRE,          HHI_VPU_MEM_PD_REG2, 0xf, 24,   4},
 	{VPU_RDMA,            HHI_VPU_MEM_PD_REG2, 0x3, 30,   2},
-	{VPU_TCON,            HHI_VPU_MEM_PD_REG3, 0x3,  0,  16},
-	{VPU_TCON,            HHI_VPU_MEM_PD_REG3, 0x3, 16,  16},
-	{VPU_AXI_WR1,         HHI_VPU_MEM_PD_REG4, 0x3,  0,   2},
-	{VPU_AXI_WR0,         HHI_VPU_MEM_PD_REG4, 0x3,  2,   2},
+	{VPU_TCON,            HHI_VPU_MEM_PD_REG3_SM1, 0x3,  0,  16},
+	{VPU_TCON,            HHI_VPU_MEM_PD_REG3_SM1, 0x3, 16,  16},
+	{VPU_AXI_WR1,         HHI_VPU_MEM_PD_REG4_SM1, 0x3,  0,   2},
+	{VPU_AXI_WR0,         HHI_VPU_MEM_PD_REG4_SM1, 0x3,  2,   2},
 	{VPU_MOD_MAX,         VPU_REG_END,         0,    0,   0},
 };
 

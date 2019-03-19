@@ -790,8 +790,16 @@ static ssize_t vpu_mem_debug(struct class *class, struct class_attribute *attr,
 	_reg0 = HHI_VPU_MEM_PD_REG0;
 	_reg1 = HHI_VPU_MEM_PD_REG1;
 	_reg2 = HHI_VPU_MEM_PD_REG2;
-	_reg3 = HHI_VPU_MEM_PD_REG3;
-	_reg4 = HHI_VPU_MEM_PD_REG4;
+	switch (vpu_conf.data->chip_type) {
+	case VPU_CHIP_SM1:
+		_reg3 = HHI_VPU_MEM_PD_REG3_SM1;
+		_reg4 = HHI_VPU_MEM_PD_REG4_SM1;
+		break;
+	default:
+		_reg3 = HHI_VPU_MEM_PD_REG3;
+		_reg4 = HHI_VPU_MEM_PD_REG4;
+		break;
+	}
 	switch (buf[0]) {
 	case 'r':
 		VPUPR("mem_pd0: 0x%08x\n", vpu_hiu_read(_reg0));
@@ -800,9 +808,9 @@ static ssize_t vpu_mem_debug(struct class *class, struct class_attribute *attr,
 		if (vpu_conf.data->mem_pd_reg2_valid)
 			VPUPR("mem_pd2: 0x%08x\n", vpu_hiu_read(_reg2));
 		if (vpu_conf.data->mem_pd_reg3_valid)
-			VPUPR("mem_pd2: 0x%08x\n", vpu_hiu_read(_reg3));
+			VPUPR("mem_pd3: 0x%08x\n", vpu_hiu_read(_reg3));
 		if (vpu_conf.data->mem_pd_reg4_valid)
-			VPUPR("mem_pd2: 0x%08x\n", vpu_hiu_read(_reg4));
+			VPUPR("mem_pd4: 0x%08x\n", vpu_hiu_read(_reg4));
 		break;
 	case 'w':
 		ret = sscanf(buf, "w %u %u", &tmp[0], &tmp[1]);
@@ -940,6 +948,7 @@ static ssize_t vpu_print_debug(struct class *class,
 static ssize_t vpu_debug_info(struct class *class,
 		struct class_attribute *attr, char *buf)
 {
+	unsigned int _reg0, _reg1, _reg2, _reg3, _reg4;
 	unsigned int level_max, clk;
 	ssize_t len = 0;
 	int ret;
@@ -951,6 +960,20 @@ static ssize_t vpu_debug_info(struct class *class,
 	if (ret) {
 		len = sprintf(buf, "vpu invalid\n");
 		return len;
+	}
+
+	_reg0 = HHI_VPU_MEM_PD_REG0;
+	_reg1 = HHI_VPU_MEM_PD_REG1;
+	_reg2 = HHI_VPU_MEM_PD_REG2;
+	switch (vpu_conf.data->chip_type) {
+	case VPU_CHIP_SM1:
+		_reg3 = HHI_VPU_MEM_PD_REG3_SM1;
+		_reg4 = HHI_VPU_MEM_PD_REG4_SM1;
+		break;
+	default:
+		_reg3 = HHI_VPU_MEM_PD_REG3;
+		_reg4 = HHI_VPU_MEM_PD_REG4;
+		break;
 	}
 
 	clk = get_vpu_clk();
@@ -972,22 +995,22 @@ static ssize_t vpu_debug_info(struct class *class,
 
 	len += sprintf(buf+len, "mem_pd:\n"
 		"  mem_pd0:      0x%08x\n",
-		vpu_hiu_read(HHI_VPU_MEM_PD_REG0));
+		vpu_hiu_read(_reg0));
 	if (vpu_conf.data->mem_pd_reg1_valid) {
 		len += sprintf(buf+len, "  mem_pd1:      0x%08x\n",
-			vpu_hiu_read(HHI_VPU_MEM_PD_REG1));
+			vpu_hiu_read(_reg1));
 	}
 	if (vpu_conf.data->mem_pd_reg2_valid) {
 		len += sprintf(buf+len, "  mem_pd2:      0x%08x\n",
-			vpu_hiu_read(HHI_VPU_MEM_PD_REG2));
+			vpu_hiu_read(_reg2));
 	}
 	if (vpu_conf.data->mem_pd_reg3_valid) {
 		len += sprintf(buf+len, "  mem_pd3:      0x%08x\n",
-			vpu_hiu_read(HHI_VPU_MEM_PD_REG3));
+			vpu_hiu_read(_reg3));
 	}
 	if (vpu_conf.data->mem_pd_reg4_valid) {
 		len += sprintf(buf+len, "  mem_pd4:      0x%08x\n",
-			vpu_hiu_read(HHI_VPU_MEM_PD_REG4));
+			vpu_hiu_read(_reg4));
 	}
 
 #ifdef CONFIG_VPU_DYNAMIC_ADJ
