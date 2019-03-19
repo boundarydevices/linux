@@ -1593,7 +1593,7 @@
 	};
 
 	meson_cooldev: meson-cooldev@0 {
-			status = "disabled";
+			status = "okay";
 			compatible = "amlogic, meson-cooldev";
 			device_name = "mcooldev";
 			cooling_devices {
@@ -1695,9 +1695,9 @@
 			};
 		};
 		ddr_thermal: ddr_thermal {
-			polling-delay = <1000>;
-			polling-delay-passive = <100>;
-			sustainable-power = <2150>;
+			polling-delay = <2000>;
+			polling-delay-passive = <1000>;
+			sustainable-power = <1460>;
 			thermal-sensors = <&d_tsensor 1>;
 			trips {
 				dswitch_on: trip-point@0 {
