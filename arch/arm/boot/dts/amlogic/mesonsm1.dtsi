@@ -1381,7 +1381,6 @@
 			/*caps defined in dts*/
 			tx_delay = <0>;
 			co_phase = <3>;
-			calc_f = <1>;
 			max_req_size = <0x20000>; /**128KB*/
 			gpio_dat3 = <&gpio BOOT_3 GPIO_ACTIVE_HIGH>;
 			hw_reset = <&gpio BOOT_12 GPIO_ACTIVE_HIGH>;
