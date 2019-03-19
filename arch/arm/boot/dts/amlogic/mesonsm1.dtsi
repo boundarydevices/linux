@@ -1352,7 +1352,7 @@
 
 	sd_emmc_c: emmc@ffe07000 {
 		status = "disabled";
-		compatible = "amlogic, meson-mmc-g12a";
+		compatible = "amlogic, meson-mmc-sm1";
 		reg = <0xffe07000 0x800>;
 		interrupts = <0 191 1>;
 		pinctrl-names = "emmc_clk_cmd_pins", "emmc_all_pins";
@@ -1391,9 +1391,9 @@
 		};
 	};
 
-	sd_emmc_b1:sd1@ffe05000 {
+	sd_emmc_b:sd@ffe05000 {
 		status = "disabled";
-		compatible = "amlogic, meson-mmc-g12a";
+		compatible = "amlogic, meson-mmc-sm1";
 		reg = <0xffe05000 0x800>;
 		interrupts = <0 190 1>;
 
@@ -1447,88 +1447,10 @@
 		};
 	};
 
-	sd_emmc_b2:sd2@ffe05000 {
-		status = "disabled";
-		compatible = "amlogic, meson-mmc-g12a";
-		reg = <0xffe05000 0x800>;
-		interrupts = <0 190 4>;
-
-		pinctrl-names = "sd_all_pins",
-			"sd_clk_cmd_pins",
-			"sd_1bit_pins",
-			"sd_clk_cmd_uart_pins",
-			"sd_1bit_uart_pins",
-			"sd_to_ao_uart_pins",
-			"ao_to_sd_uart_pins",
-			"sd_to_ao_jtag_pins",
-			"ao_to_sd_jtag_pins",
-			"sdio_noclr_all_pins",
-			"sdio_noclr_clk_cmd_pins",
-			"sdio_all_pins",
-			"sdio_clk_cmd_pins";
-		pinctrl-0 = <&sdio_x_clr_pins &sd_all_pins>;
-		pinctrl-1 = <&sdio_x_clr_pins &sd_clk_cmd_pins>;
-		pinctrl-2 = <&sdio_x_clr_pins &sd_1bit_pins>;
-		pinctrl-3 = <&sdio_x_clr_pins &sd_to_ao_uart_clr_pins
-			&sd_clk_cmd_pins &ao_to_sd_uart_pins>;
-		pinctrl-4 = <&sdio_x_clr_pins &sd_to_ao_uart_clr_pins
-			&sd_1bit_pins &ao_to_sd_uart_pins>;
-		pinctrl-5 = <&sdio_x_clr_pins
-			&sd_all_pins &sd_to_ao_uart_pins>;
-		pinctrl-6 = <&sdio_x_en_pins &sd_to_ao_uart_clr_pins
-			&sd_clr_noall_pins &ao_to_sd_uart_pins>;
-		pinctrl-7 = <&sdio_x_en_pins
-			&sd_clr_all_pins &sd_to_ao_uart_pins>;
-		pinctrl-8 = <&sdio_x_en_pins &sd_to_ao_uart_clr_pins
-			&sd_clr_noall_pins &ao_to_sd_uart_pins>;
-		pinctrl-9 = <&sd_clr_noall_pins
-			&sdio_x_en_pins &sdio_x_all_pins>;
-		pinctrl-10 = <&sd_clr_noall_pins
-			&sdio_x_en_pins &sdio_x_clk_cmd_pins>;
-		pinctrl-11 = <&sd_clr_all_pins
-			 &sdio_x_en_pins &sdio_x_all_pins>;
-		pinctrl-12 = <&sd_clr_all_pins
-			 &sdio_x_en_pins &sdio_x_clk_cmd_pins>;
-
-		clocks = <&clkc CLKID_SD_EMMC_B>,
-			<&clkc CLKID_SD_EMMC_B_P0_COMP>,
-			<&clkc CLKID_FCLK_DIV2>,
-			<&clkc CLKID_FCLK_DIV5>,
-			<&xtal>;
-		clock-names = "core", "clkin0", "clkin1", "clkin2", "xtal";
-
-		bus-width = <4>;
-		cap-sd-highspeed;
-		cap-mmc-highspeed;
-		max-frequency = <100000000>;
-		disable-wp;
-		sd {
-			pinname = "sd";
-			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
-			max_req_size = <0x20000>; /**128KB*/
-			gpio_dat3 = <&gpio GPIOC_3 GPIO_ACTIVE_HIGH>;
-			jtag_pin = <&gpio GPIOC_0 GPIO_ACTIVE_HIGH>;
-			gpio_cd = <&gpio GPIOC_6 GPIO_ACTIVE_HIGH>;
-			card_type = <5>;
-			/* 3:sdio device(ie:sdio-wifi),
-			 * 5:NON sdio device(means sd/mmc card)
-			 */
-		};
-
-		sdio {
-			pinname = "sdio";
-			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
-			max_req_size = <0x20000>; /**128KB*/
-			card_type = <3>;
-			/* 3:sdio device(ie:sdio-wifi),
-			 * 5:NON sdio device(means sd/mmc card)
-			 */
-		};
-	};
 
 	sd_emmc_a:sdio@ffe03000 {
 		status = "disabled";
-		compatible = "amlogic, meson-mmc-g12a";
+		compatible = "amlogic, meson-mmc-sm1";
 		reg = <0xffe03000 0x800>;
 		interrupts = <0 189 4>;
 
@@ -1552,13 +1474,11 @@
 		sdio {
 			pinname = "sdio";
 			ocr_avail = <0x200080>; /**VDD voltage 3.3 ~ 3.4 */
-			/* max_req_size = <0x20000>; */ /**128KB*/
-			max_req_size = <0x400>;
+			max_req_size = <0x20000>; /**128KB*/
 			card_type = <3>;
 			/* 3:sdio device(ie:sdio-wifi),
 			 * 4:SD combo (IO+mem) card
 			 */
-			dmode = "pio";
 		};
 	};
 

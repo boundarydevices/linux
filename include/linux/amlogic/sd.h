@@ -192,6 +192,7 @@ enum mmc_chip_e {
 	MMC_CHIP_GXLX2 = 0x2a,
 	MMC_CHIP_TL1 = 0X2b,
 	MMC_CHIP_G12B = 0x29b,
+	MMC_CHIP_SM1 = 0X2C,
 };
 
 struct mmc_phase {

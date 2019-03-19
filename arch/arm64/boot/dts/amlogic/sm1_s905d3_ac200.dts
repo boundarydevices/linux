@@ -1461,15 +1461,15 @@
 			 "MMC_CAP_HW_RESET",
 			 "MMC_CAP_ERASE",
 			 "MMC_CAP_CMD23";
-		caps2 = "MMC_CAP2_HS200";
+		/*caps2 = "MMC_CAP2_HS200";*/
 		/* "MMC_CAP2_HS400";*/
 		f_min = <400000>;
-		f_max = <200000000>;
+		f_max = <50000000>;
 	};
 };
 
-&sd_emmc_b1 {
-	status = "disabled";
+&sd_emmc_b {
+	status = "okay";
 	sd {
 		caps = "MMC_CAP_4_BIT_DATA",
 			 "MMC_CAP_MMC_HIGHSPEED",
@@ -1479,33 +1479,6 @@
 	};
 };
 
-&sd_emmc_b2 {
-	status = "disabled";
-	sd {
-		caps = "MMC_CAP_4_BIT_DATA",
-			 "MMC_CAP_MMC_HIGHSPEED",
-			 "MMC_CAP_SD_HIGHSPEED";
-
-		f_min = <400000>;
-		f_max = <50000000>;
-	};
-
-	sdio {
-		caps = "MMC_CAP_4_BIT_DATA",
-			 "MMC_CAP_MMC_HIGHSPEED",
-			 "MMC_CAP_SD_HIGHSPEED",
-			 "MMC_CAP_NONREMOVABLE",
-			 "MMC_CAP_UHS_SDR12",
-			 "MMC_CAP_UHS_SDR25",
-			 "MMC_CAP_UHS_SDR50",
-			 "MMC_CAP_UHS_SDR104",
-			 "MMC_PM_KEEP_POWER",
-			 "MMC_CAP_SDIO_IRQ";
-
-		f_min = <400000>;
-		f_max = <200000000>;
-	};
-};
 
 &sd_emmc_a {
 	status = "disabled";
