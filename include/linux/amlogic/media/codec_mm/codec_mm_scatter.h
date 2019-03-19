@@ -47,6 +47,53 @@ struct codec_mm_scatter {
 	struct list_head list;	/*hold list. */
 };
 
+enum e_mmu_free_status {
+		MMU_FREE_START,
+		MMU_FREE_START_LOCK,
+		MMU_FREE_SCATTER_START,
+		MMU_FREE_SCATTER_START_LOCK,
+		MMU_FREE_SCATTER_START_DTS,
+		MMU_FREE_SCATTER_START_DTS_LOCK,
+		MMU_FREE_SCATTER_START_SMGT,
+		MMU_FREE_SCATTER_START_SMGT_LOCK,
+		MMU_FREE_SCATTER_START_SMGT_LOCK_DONE,
+		MMU_FREE_SCATTER_START_DTS_LOCK_DONE,
+		MMU_FREE_SCATTER_START_LOCK_DONE,
+		MMU_FREE_START_LOCK_DONE,
+};
+
+enum e_mmu_alloc_status {
+		MMU_ALLOC_START,
+		MMU_ALLOC_START_LOCK,
+		MMU_ALLOC_SCATTER_START,
+		MMU_ALLOC_SCATTER_START_LOCK,
+		MMU_ALLOC_SCATTER_START_LOCK_DONE,
+		MMU_ALLOC_SCATTER_ALLOC_NEW,
+		MMU_ALLOC_SCATTER_ALLOC_NEW_END,
+		MMU_ALLOC_SCATTER_ALLOC_WANT_PAGE_IN,
+		MMU_ALLOC_SCATTER_LOCK,
+		MMU_ALLOC_SCATTER_LOCK_END,
+		MMU_ALLOC_from_cache_scatter,
+		MMU_ALLOC_from_cache_scatter_1,
+		MMU_ALLOC_from_cache_scatter_2,
+		MMU_ALLOC_from_cache_scatter_3,
+		MMU_ALLOC_from_cache_scatter_4,
+		MMU_ALLOC_from_cache_scatter_5,
+		MMU_ALLOC_from_cache_scatter_end,
+		MMU_ALLOC_from_free_scatter,
+		MMU_ALLOC_from_free_scatter_end,
+		MMU_ALLOC_from_slot,
+		MMU_ALLOC_from_slot_end,
+		MMU_ALLOC_LIST_LOCK_START,
+		MMU_ALLOC_LIST_LOCK,
+		MMU_ALLOC_LIST_LOCK_END,
+		MMU_ALLOC_SCATTER_ALLOC_WANT_PAGE_IN_END,
+		MMU_ALLOC_SCATTER_ALLOC_WANT_PAGE_IN_2,
+		MMU_ALLOC_SCATTER_ALLOC_WANT_PAGE_IN_2_END,
+		MMU_ALLOC_START_LOCK_DONE,
+};
+
+
 int codec_mm_scatter_free_all_pages(struct codec_mm_scatter *mms);
 
 int codec_mm_scatter_free_tail_pages(struct codec_mm_scatter *mms,
