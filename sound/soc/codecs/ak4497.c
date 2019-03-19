@@ -172,14 +172,14 @@ static const struct soc_enum ak4497_dac_enum2[] = {
 			    ak4497_adfs_select)
 };
 
-int ak4497_read(struct snd_soc_codec *codec, unsigned int reg,
+int ak4497_read(struct snd_soc_component *comp, unsigned int reg,
 	unsigned int *val)
 {
 	int ret;
 
-	ret = snd_soc_component_read(&codec->component, reg, val);
+	ret = snd_soc_component_read(comp, reg, val);
 	if (ret < 0)
-		dev_err(codec->dev,
+		dev_err(comp->dev,
 				"Register %u read failed, ret=%d.\n", reg, ret);
 
 	return ret;
@@ -188,13 +188,13 @@ int ak4497_read(struct snd_soc_codec *codec, unsigned int reg,
 static int ak4497_get_dsdsel(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value  *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_component *comp = snd_soc_kcontrol_component(kcontrol);
 	unsigned int dsdsel0, dsdsel1;
 
-	ak4497_read(codec, AK4497_06_DSD1, &dsdsel0);
+	ak4497_read(comp, AK4497_06_DSD1, &dsdsel0);
 	dsdsel0 &= AK4497_DSDSEL0;
 
-	ak4497_read(codec, AK4497_09_DSD2, &dsdsel1);
+	ak4497_read(comp, AK4497_09_DSD2, &dsdsel1);
 	dsdsel1 &= AK4497_DSDSEL1;
 
 	ucontrol->value.enumerated.item[0] = ((dsdsel1 << 1) | dsdsel0);
@@ -205,25 +205,25 @@ static int ak4497_get_dsdsel(struct snd_kcontrol *kcontrol,
 static int ak4497_set_dsdsel(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value  *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_component *comp = snd_soc_kcontrol_component(kcontrol);
 	unsigned int dsdsel = ucontrol->value.enumerated.item[0];
 
 	switch (dsdsel) {
 	case 0: /* 2.8224MHz */
-		snd_soc_update_bits(codec, AK4497_06_DSD1, 0x01, 0x00);
-		snd_soc_update_bits(codec, AK4497_09_DSD2, 0x01, 0x00);
+		snd_soc_component_update_bits(comp, AK4497_06_DSD1, 0x01, 0x00);
+		snd_soc_component_update_bits(comp, AK4497_09_DSD2, 0x01, 0x00);
 		break;
 	case 1:  /* 5.6448MHz */
-		snd_soc_update_bits(codec, AK4497_06_DSD1, 0x01, 0x01);
-		snd_soc_update_bits(codec, AK4497_09_DSD2, 0x01, 0x00);
+		snd_soc_component_update_bits(comp, AK4497_06_DSD1, 0x01, 0x01);
+		snd_soc_component_update_bits(comp, AK4497_09_DSD2, 0x01, 0x00);
 		break;
 	case 2: /* 11.2896MHz */
-		snd_soc_update_bits(codec, AK4497_06_DSD1, 0x01, 0x00);
-		snd_soc_update_bits(codec, AK4497_09_DSD2, 0x01, 0x01);
+		snd_soc_component_update_bits(comp, AK4497_06_DSD1, 0x01, 0x00);
+		snd_soc_component_update_bits(comp, AK4497_09_DSD2, 0x01, 0x01);
 		break;
 	case 3: /* 22.5792MHz */
-		snd_soc_update_bits(codec, AK4497_06_DSD1, 0x01, 0x01);
-		snd_soc_update_bits(codec, AK4497_09_DSD2, 0x01, 0x01);
+		snd_soc_component_update_bits(comp, AK4497_06_DSD1, 0x01, 0x01);
+		snd_soc_component_update_bits(comp, AK4497_09_DSD2, 0x01, 0x01);
 		break;
 	default:
 		return -EINVAL;
@@ -235,8 +235,8 @@ static int ak4497_set_dsdsel(struct snd_kcontrol *kcontrol,
 static int ak4497_get_bickfs(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value  *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
-	struct ak4497_priv *ak4497 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *comp = snd_soc_kcontrol_component(kcontrol);
+	struct ak4497_priv *ak4497 = snd_soc_component_get_drvdata(comp);
 
 	ucontrol->value.enumerated.item[0] = ak4497->nBickFreq;
 
@@ -246,8 +246,8 @@ static int ak4497_get_bickfs(struct snd_kcontrol *kcontrol,
 static int ak4497_set_bickfs(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value  *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
-	struct ak4497_priv *ak4497 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *comp = snd_soc_kcontrol_component(kcontrol);
+	struct ak4497_priv *ak4497 = snd_soc_component_get_drvdata(comp);
 
 	ak4497->nBickFreq = ucontrol->value.enumerated.item[0];
 
@@ -257,8 +257,8 @@ static int ak4497_set_bickfs(struct snd_kcontrol *kcontrol,
 static int ak4497_get_tdmsds(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value  *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
-	struct ak4497_priv *ak4497 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *comp = snd_soc_kcontrol_component(kcontrol);
+	struct ak4497_priv *ak4497 = snd_soc_component_get_drvdata(comp);
 
 	ucontrol->value.enumerated.item[0] = ak4497->nTdmSds;
 
@@ -268,8 +268,8 @@ static int ak4497_get_tdmsds(struct snd_kcontrol *kcontrol,
 static int ak4497_set_tdmsds(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value  *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
-	struct ak4497_priv *ak4497 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *comp = snd_soc_kcontrol_component(kcontrol);
+	struct ak4497_priv *ak4497 = snd_soc_component_get_drvdata(comp);
 	int regA, regB;
 
 	ak4497->nTdmSds = ucontrol->value.enumerated.item[0];
@@ -320,8 +320,8 @@ static int ak4497_set_tdmsds(struct snd_kcontrol *kcontrol,
 	regA <<= 4;
 	regB <<= 4;
 
-	snd_soc_update_bits(codec, AK4497_0A_CONTROL7, 0xF0, regA);
-	snd_soc_update_bits(codec, AK4497_0B_CONTROL8, 0x10, regB);
+	snd_soc_component_update_bits(comp, AK4497_0A_CONTROL7, 0xF0, regA);
+	snd_soc_component_update_bits(comp, AK4497_0B_CONTROL8, 0x10, regB);
 
 	return 0;
 }
@@ -329,10 +329,10 @@ static int ak4497_set_tdmsds(struct snd_kcontrol *kcontrol,
 static int ak4497_get_adfs(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_component *comp = snd_soc_kcontrol_component(kcontrol);
 	unsigned int nADFSbit;
 
-	ak4497_read(codec, AK4497_15_DFSREAD, &nADFSbit);
+	ak4497_read(comp, AK4497_15_DFSREAD, &nADFSbit);
 	nADFSbit &= 0x7;
 
 	ucontrol->value.enumerated.item[0] = nADFSbit;
@@ -512,8 +512,8 @@ static int ak4497_hw_params(struct snd_pcm_substream *substream,
 			    struct snd_pcm_hw_params *params,
 			    struct snd_soc_dai *dai)
 {
-	struct snd_soc_codec *codec = dai->codec;
-	struct ak4497_priv *ak4497 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *comp = dai->component;
+	struct ak4497_priv *ak4497 = snd_soc_component_get_drvdata(comp);
 	snd_pcm_format_t pcm_format = params_format(params);
 
 	unsigned int dfs, dfs2, dsdsel0, dsdsel1, format;
@@ -531,16 +531,16 @@ static int ak4497_hw_params(struct snd_pcm_substream *substream,
 	nfs1 = params_rate(params);
 	ak4497->fs1 = nfs1;
 
-	ak4497_read(codec, AK4497_01_CONTROL2, &dfs);
+	ak4497_read(comp, AK4497_01_CONTROL2, &dfs);
 	dfs &= ~AK4497_DFS;
 
-	ak4497_read(codec, AK4497_05_CONTROL4, &dfs2);
+	ak4497_read(comp, AK4497_05_CONTROL4, &dfs2);
 	dfs2 &= ~AK4497_DFS2;
 
-	ak4497_read(codec, AK4497_06_DSD1, &dsdsel0);
+	ak4497_read(comp, AK4497_06_DSD1, &dsdsel0);
 	dsdsel0 &= ~AK4497_DSDSEL0;
 
-	ak4497_read(codec, AK4497_09_DSD2, &dsdsel1);
+	ak4497_read(comp, AK4497_09_DSD2, &dsdsel1);
 	dsdsel1 &= ~AK4497_DSDSEL1;
 
 	if (!is_dsd) {
@@ -603,14 +603,14 @@ static int ak4497_hw_params(struct snd_pcm_substream *substream,
 			return -EINVAL;
 		}
 
-		snd_soc_write(codec, AK4497_06_DSD1, dsdsel0);
-		snd_soc_write(codec, AK4497_09_DSD2, dsdsel1);
+		snd_soc_component_write(comp, AK4497_06_DSD1, dsdsel0);
+		snd_soc_component_write(comp, AK4497_09_DSD2, dsdsel1);
 	}
 
-	snd_soc_write(codec, AK4497_01_CONTROL2, dfs);
-	snd_soc_write(codec, AK4497_05_CONTROL4, dfs2);
+	snd_soc_component_write(comp, AK4497_01_CONTROL2, dfs);
+	snd_soc_component_write(comp, AK4497_05_CONTROL4, dfs2);
 
-	ak4497_read(codec, AK4497_00_CONTROL1, &format);
+	ak4497_read(comp, AK4497_00_CONTROL1, &format);
 	format &= ~AK4497_DIF;
 
 	switch (params_format(params)) {
@@ -639,7 +639,7 @@ static int ak4497_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	snd_soc_write(codec, AK4497_00_CONTROL1, format);
+	snd_soc_component_write(comp, AK4497_00_CONTROL1, format);
 
 	return 0;
 }
@@ -654,15 +654,15 @@ static int ak4497_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
 
 static int ak4497_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
-	struct snd_soc_codec *codec = dai->codec;
-	struct ak4497_priv *ak4497 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *comp = dai->component;
+	struct ak4497_priv *ak4497 = snd_soc_component_get_drvdata(comp);
 	unsigned int format, format2;
 
 	/* set master/slave audio interface */
-	ak4497_read(codec, AK4497_00_CONTROL1, &format);
+	ak4497_read(comp, AK4497_00_CONTROL1, &format);
 	format &= ~AK4497_DIF;
 
-	ak4497_read(codec, AK4497_02_CONTROL3, &format2);
+	ak4497_read(comp, AK4497_02_CONTROL3, &format2);
 	format2 &= ~AK4497_DIF_DSD;
 
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
@@ -672,7 +672,7 @@ static int ak4497_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	case SND_SOC_DAIFMT_CBS_CFM:
 	case SND_SOC_DAIFMT_CBM_CFS:
 	default:
-		dev_err(codec->dev, "Clock mode unsupported");
+		dev_err(comp->dev, "Clock mode unsupported");
 		return -EINVAL;
 	}
 
@@ -694,8 +694,8 @@ static int ak4497_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	}
 
 	/* set format */
-	snd_soc_write(codec, AK4497_00_CONTROL1, format);
-	snd_soc_write(codec, AK4497_02_CONTROL3, format2);
+	snd_soc_component_write(comp, AK4497_00_CONTROL1, format);
+	snd_soc_component_write(comp, AK4497_02_CONTROL3, format2);
 
 	return 0;
 }
@@ -719,7 +719,7 @@ static bool ak4497_volatile(struct device *dev, unsigned int reg)
 	return ret;
 }
 
-static int ak4497_set_bias_level(struct snd_soc_codec *codec,
+static int ak4497_set_bias_level(struct snd_soc_component *comp,
 				 enum snd_soc_bias_level level)
 {
 	switch (level) {
@@ -727,11 +727,13 @@ static int ak4497_set_bias_level(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_PREPARE:
 	case SND_SOC_BIAS_STANDBY:
 		/* RSTN bit = 1 */
-		snd_soc_update_bits(codec, AK4497_00_CONTROL1, 0x01, 0x01);
+		snd_soc_component_update_bits(comp, AK4497_00_CONTROL1,
+					      0x01, 0x01);
 		break;
 	case SND_SOC_BIAS_OFF:
 		/* RSTN bit = 0 */
-		snd_soc_update_bits(codec, AK4497_00_CONTROL1, 0x01, 0x00);
+		snd_soc_component_update_bits(comp, AK4497_00_CONTROL1,
+					      0x01, 0x00);
 		break;
 	}
 
@@ -740,14 +742,15 @@ static int ak4497_set_bias_level(struct snd_soc_codec *codec,
 
 static int ak4497_set_dai_mute(struct snd_soc_dai *dai, int mute)
 {
-	struct snd_soc_codec *codec = dai->codec;
-	struct ak4497_priv *ak4497 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *comp = dai->component;
+	struct ak4497_priv *ak4497 = snd_soc_component_get_drvdata(comp);
 	int nfs, ndt;
 
 	nfs = ak4497->fs1;
 
 	if (mute) { /* SMUTE: 1 , MUTE */
-		snd_soc_update_bits(codec, AK4497_01_CONTROL2, 0x01, 0x01);
+		snd_soc_component_update_bits(comp, AK4497_01_CONTROL2,
+					      0x01, 0x01);
 		ndt = 7424000 / nfs;
 		mdelay(ndt);
 
@@ -759,7 +762,8 @@ static int ak4497_set_dai_mute(struct snd_soc_dai *dai, int mute)
 		/* External Mute OFF */
 		if (gpio_is_valid(ak4497->mute_gpio))
 			gpio_set_value_cansleep(ak4497->mute_gpio, 0);
-		snd_soc_update_bits(codec, AK4497_01_CONTROL2, 0x01, 0x00);
+		snd_soc_component_update_bits(comp, AK4497_01_CONTROL2,
+					      0x01, 0x00);
 	}
 
 	return 0;
@@ -824,9 +828,9 @@ struct snd_soc_dai_driver ak4497_dai[] = {
 	},
 };
 
-static int ak4497_init_reg(struct snd_soc_codec *codec)
+static int ak4497_init_reg(struct snd_soc_component *comp)
 {
-	struct ak4497_priv *ak4497 = snd_soc_codec_get_drvdata(codec);
+	struct ak4497_priv *ak4497 = snd_soc_component_get_drvdata(comp);
 	int ret = 0;
 
 	/* External Mute ON */
@@ -843,16 +847,14 @@ static int ak4497_init_reg(struct snd_soc_codec *codec)
 	/* ak4497_set_bias_level(codec, SND_SOC_BIAS_STANDBY); */
 
 	/* SYNCE bit = 1 */
-	ret = snd_soc_update_bits(codec, AK4497_07_CONTROL5, 0x01, 0x01);
+	ret = snd_soc_component_update_bits(comp, AK4497_07_CONTROL5,
+					    0x01, 0x01);
 	if (ret)
 		return ret;
 
 	/*  HLOAD bit = 1, SC2 bit = 1 */
-	ret = snd_soc_update_bits(codec, AK4497_08_SOUNDCONTROL, 0x0F, 0x0C);
-	if (ret)
-		return ret;
-
-	return ret;
+	return snd_soc_component_update_bits(comp, AK4497_08_SOUNDCONTROL,
+					    0x0F, 0x0C);
 }
 
 static int ak4497_parse_dt(struct ak4497_priv *ak4497)
@@ -892,9 +894,9 @@ static int ak4497_parse_dt(struct ak4497_priv *ak4497)
 	return 0;
 }
 
-static int ak4497_probe(struct snd_soc_codec *codec)
+static int ak4497_probe(struct snd_soc_component *comp)
 {
-	struct ak4497_priv *ak4497 = snd_soc_codec_get_drvdata(codec);
+	struct ak4497_priv *ak4497 = snd_soc_component_get_drvdata(comp);
 	int ret = 0;
 
 	ret = ak4497_parse_dt(ak4497);
@@ -914,7 +916,7 @@ static int ak4497_probe(struct snd_soc_codec *codec)
 		gpio_direction_output(ak4497->mute_gpio, 0);
 	}
 
-	ret = ak4497_init_reg(codec);
+	ret = ak4497_init_reg(comp);
 	if (ret)
 		return ret;
 
@@ -925,19 +927,17 @@ static int ak4497_probe(struct snd_soc_codec *codec)
 	return ret;
 }
 
-static int ak4497_remove(struct snd_soc_codec *codec)
+static void ak4497_remove(struct snd_soc_component *comp)
 {
-	struct ak4497_priv *ak4497 = snd_soc_codec_get_drvdata(codec);
+	struct ak4497_priv *ak4497 = snd_soc_component_get_drvdata(comp);
 
-	ak4497_set_bias_level(codec, SND_SOC_BIAS_OFF);
+	ak4497_set_bias_level(comp, SND_SOC_BIAS_OFF);
 	if (gpio_is_valid(ak4497->pdn_gpio)) {
 		gpio_set_value_cansleep(ak4497->pdn_gpio, 0);
 		gpio_free(ak4497->pdn_gpio);
 	}
 	if (gpio_is_valid(ak4497->mute_gpio))
 		gpio_free(ak4497->mute_gpio);
-
-	return 0;
 }
 
 #ifdef CONFIG_PM
@@ -983,21 +983,20 @@ static const struct dev_pm_ops ak4497_pm = {
 	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
 };
 
-struct snd_soc_codec_driver soc_codec_dev_ak4497 = {
-	.probe = ak4497_probe,
-	.remove = ak4497_remove,
-
-	.idle_bias_off = true,
-	.set_bias_level = ak4497_set_bias_level,
-
-	.component_driver = {
-		.controls = ak4497_snd_controls,
-		.num_controls = ARRAY_SIZE(ak4497_snd_controls),
-		.dapm_widgets = ak4497_dapm_widgets,
-		.num_dapm_widgets = ARRAY_SIZE(ak4497_dapm_widgets),
-		.dapm_routes = ak4497_intercon,
-		.num_dapm_routes = ARRAY_SIZE(ak4497_intercon),
-	},
+static const struct snd_soc_component_driver soc_component_dev_ak4497 = {
+	.probe			= ak4497_probe,
+	.remove			= ak4497_remove,
+	.controls		= ak4497_snd_controls,
+	.num_controls		= ARRAY_SIZE(ak4497_snd_controls),
+	.dapm_widgets		= ak4497_dapm_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(ak4497_dapm_widgets),
+	.dapm_routes		= ak4497_intercon,
+	.num_dapm_routes	= ARRAY_SIZE(ak4497_intercon),
+	.idle_bias_on		= 0,
+	.use_pmdown_time	= 1,
+	.endianness		= 1,
+	.non_legacy_dai_naming	= 1,
+	.set_bias_level		= ak4497_set_bias_level,
 };
 
 static const struct regmap_config ak4497_regmap = {
@@ -1048,7 +1047,7 @@ static int ak4497_i2c_probe(struct i2c_client *i2c,
 		return ret;
 	}
 
-	ret = snd_soc_register_codec(&i2c->dev, &soc_codec_dev_ak4497,
+	ret = snd_soc_register_component(&i2c->dev, &soc_component_dev_ak4497,
 				     &ak4497_dai[0], ARRAY_SIZE(ak4497_dai));
 	if (ret < 0)
 		return ret;
@@ -1060,7 +1059,7 @@ static int ak4497_i2c_probe(struct i2c_client *i2c,
 
 static int ak4497_i2c_remove(struct i2c_client *client)
 {
-	snd_soc_unregister_codec(&client->dev);
+	snd_soc_unregister_component(&client->dev);
 	pm_runtime_disable(&client->dev);
 
 	return 0;
