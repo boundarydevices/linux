@@ -570,10 +570,10 @@
 				       <400000000>;
 		status = "disabled";
 
-		dcss_disp0: port@0 {
+		dcss_port: port@0 {
 			reg = <0>;
 
-			dcss_disp0_hdmi: hdmi-endpoint {
+			dcss_disp0_hdmi: endpoint {
 				remote-endpoint = <&hdmi_disp>;
 			};
 		};
@@ -592,7 +592,7 @@
 		fsl,cec;
 		status = "disabled";
 
-		port@0 {
+		hdmi_port: port@0 {
 			reg = <0>;
 			hdmi_disp: endpoint {
 				remote-endpoint = <&dcss_disp0_hdmi>;
@@ -617,7 +617,7 @@
 
 	display-subsystem {
 		compatible = "fsl,imx-display-subsystem";
-		ports = <&dcss_disp0>;
+		ports = <&dcss_port>;
 	};
 
 	mipi_dsi_phy: dsi_phy@30A00300 {

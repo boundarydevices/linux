@@ -981,12 +981,12 @@
 	#size-cells = <0>;
 	status = "okay";
 	port {
-		mipi1_sensor_ep: endpoint1 {
+		mipi1_sensor_ep: endpoint@0 {
 			remote-endpoint = <&ov5640_mipi1_ep>;
 			data-lanes = <1 2>;
 		};
 
-		csi1_mipi_ep: endpoint2 {
+		csi1_mipi_ep: endpoint@1 {
 			remote-endpoint = <&csi1_ep>;
 		};
 	};
@@ -997,12 +997,12 @@
 	#size-cells = <0>;
 	status = "okay";
 	port {
-		mipi2_sensor_ep: endpoint1 {
+		mipi2_sensor_ep: endpoint@0 {
 			remote-endpoint = <&ov5640_mipi2_ep>;
 			data-lanes = <1 2>;
 		};
 
-		csi2_mipi_ep: endpoint2 {
+		csi2_mipi_ep: endpoint@1 {
 			remote-endpoint = <&csi2_ep>;
 		};
 	};

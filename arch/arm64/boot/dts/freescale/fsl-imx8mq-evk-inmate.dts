@@ -160,6 +160,8 @@
 
 &dcss {
 	/delete-property/ interrupt-parent;
+	/delete-property/ interrupts;
+	/delete-property/ interrupt-names;
 };
 
 /delete-node/ &gpc;

@@ -18,8 +18,12 @@
 	};
 };
 
+
+/delete-node/ &hdmi_port;
+
 &hdmi {
 	status = "disabled";
+
 };
 
 &dcss {
@@ -47,10 +51,10 @@
 			       <800000000>,
 			       <400000000>;
 
-	dcss_disp0: port@0 {
+	dcss_port: port@0 {
 		reg = <0>;
 
-		dcss_disp0_mipi_dsi: mipi_dsi {
+		dcss_disp0_mipi_dsi: endpoint {
 			remote-endpoint = <&mipi_dsi_in>;
 		};
 	};
