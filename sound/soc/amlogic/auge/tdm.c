@@ -42,15 +42,12 @@
 #include "vad.h"
 #include "spdif_hw.h"
 
+#include "tdm_match_table.c"
+
 /*#define __PTM_TDM_CLK__*/
 
 
-#define DRV_NAME "aml_tdm"
-
-#define TDM_A	0
-#define TDM_B	1
-#define TDM_C	2
-#define LANE_MAX 4
+#define DRV_NAME "snd_tdm"
 
 static int aml_dai_set_tdm_sysclk(struct snd_soc_dai *cpu_dai,
 				int clk_id, unsigned int freq, int dir);
@@ -78,29 +75,6 @@ static void dump_pcm_setting(struct pcm_setting *setting)
 	pr_debug("\tlane_lb_mask_in(%#x)\n", setting->lane_lb_mask_in);
 }
 
-struct tdm_chipinfo {
-	/* device id */
-	unsigned int id;
-
-	/* no eco, sclk_ws_inv for out */
-	bool sclk_ws_inv;
-
-	/* output en (oe) for pinmux */
-	bool oe_fn;
-
-	/* clk pad */
-	bool clk_pad_ctl;
-
-	/* same source */
-	bool same_src_fn;
-
-	/* same source, spdif re-enable */
-	bool same_src_spdif_reen;
-
-	/* ACODEC_ADC function */
-	bool adc_fn;
-};
-
 struct aml_tdm {
 	struct pcm_setting setting;
 	struct pinctrl *pin_ctl;
@@ -123,6 +97,7 @@ struct aml_tdm {
 	int samesource_sel;
 	/* share buffer lane setting from DTS */
 	int lane_ss;
+	int mclk_pad;
 	/* virtual link for i2s to hdmitx */
 	int i2s2hdmitx;
 	int acodec_adc;
@@ -131,6 +106,7 @@ struct aml_tdm {
 	uint last_fmt;
 
 	bool en_share;
+	unsigned int lane_cnt;
 };
 
 static const struct snd_pcm_hardware aml_tdm_hardware = {
@@ -724,6 +700,7 @@ static int aml_tdm_set_lanes(struct aml_tdm *p_tdm,
 	unsigned int lane_mask;
 	unsigned int set_num = 0;
 	unsigned int i;
+	//unsigned int swap0_val = 0, swap1_val = 0, lane_chs = 0;
 
 	pr_debug("asoc channels:%d, slots:%d\n", channels, setting->slots);
 
@@ -735,6 +712,7 @@ static int aml_tdm_set_lanes(struct aml_tdm *p_tdm,
 		return -EINVAL;
 	}
 
+#if 1
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		// set lanes mask acordingly
 		if (p_tdm->chipinfo
@@ -752,7 +730,7 @@ static int aml_tdm_set_lanes(struct aml_tdm *p_tdm,
 		}
 		swap_val = 0x76543210;
 		aml_tdm_set_lane_channel_swap(p_tdm->actrl,
-			stream, p_tdm->id, swap_val);
+			stream, p_tdm->id, swap_val, 0x0);
 	} else {
 		if (p_tdm->chipinfo
 			&& p_tdm->chipinfo->oe_fn
@@ -774,29 +752,83 @@ static int aml_tdm_set_lanes(struct aml_tdm *p_tdm,
 		}
 
 		aml_tdm_set_lane_channel_swap(p_tdm->actrl,
-			stream, p_tdm->id, swap_val);
+			stream, p_tdm->id, swap_val, 0x0);
 	}
 
+#else
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		if (p_tdm->chipinfo
+			&& p_tdm->chipinfo->oe_fn
+			&& p_tdm->setting.lane_oe_mask_out)
+			lane_mask = setting->lane_oe_mask_out;
+		else
+			lane_mask = setting->lane_mask_out;
+	} else {
+		if (p_tdm->chipinfo
+			&& p_tdm->chipinfo->oe_fn
+			&& p_tdm->setting.lane_oe_mask_in)
+			lane_mask = setting->lane_oe_mask_in;
+		else
+			lane_mask = setting->lane_mask_in;
+	}
 
+	/* lane mask */
+	for (i = 0; i < 4; i++) {
+		if (((1 << i) & lane_mask) && lanes) {
+			aml_tdm_set_channel_mask(p_tdm->actrl,
+				stream, p_tdm->id, i, setting->tx_mask);
+			lanes--;
+		}
+	}
+
+	/* channel swap */
+	for (i = 0; i < p_tdm->lane_cnt; i++) {
+		if ((1 << i) & lane_mask) {
+			swap0_val |= (1 << (2 * i)) - 1;
+			lane_chs += 1;
+			if (lane_chs >= channels)
+				break;
+			swap0_val |= (1 << (2 * i + 1)) - 1;
+			lane_chs += 1;
+			if (lane_chs >= channels)
+				break;
+
+			if (i >= LANE_MAX1) {
+				swap1_val |= (1 << (2 * (i - LANE_MAX1))) - 1;
+				lane_chs += 1;
+				if (lane_chs >= channels)
+					break;
+				swap1_val |= (1 << (2 * (i - LANE_MAX1) + 1))
+								- 1;
+				lane_chs += 1;
+				if (lane_chs >= channels)
+					break;
+			}
+		}
+	}
+	aml_tdm_set_lane_channel_swap(p_tdm->actrl,
+		stream, p_tdm->id, swap0_val, swap1_val);
+#endif
 	return 0;
 }
 
 static int aml_tdm_set_clk_pad(struct aml_tdm *p_tdm)
 {
-	unsigned int mpad, mclk_sel;
+	int mpad_offset = 0;
+	/* mclk pad
+	 * does mclk need?
+	 * mclk from which mclk source,  mclk_a/b/c/d/e/f
+	 * mclk pad controlled by dts, mclk source according to id
+	 */
+	if (p_tdm->chipinfo && (!p_tdm->chipinfo->mclkpad_no_offset))
+		mpad_offset = 1;
 
-	// TODO: update pad
-	if (p_tdm->id >= 1) {
-		mpad = p_tdm->id - 1;
-		mclk_sel = p_tdm->id;
-	} else {
-		mpad = 0;
-		mclk_sel = 0;
-	}
-
-	/* clk pad */
-	aml_tdm_clk_pad_select(p_tdm->actrl, mpad, mclk_sel,
-		p_tdm->id, p_tdm->clk_sel);
+	aml_tdm_clk_pad_select(p_tdm->actrl,
+		p_tdm->mclk_pad,
+		mpad_offset,
+		p_tdm->id,
+		p_tdm->id,
+		p_tdm->clk_sel);
 
 	return 0;
 }
@@ -833,7 +865,7 @@ static int aml_dai_tdm_hw_params(struct snd_pcm_substream *substream,
 	if (ret)
 		return ret;
 
-	if (p_tdm->chipinfo && p_tdm->chipinfo->clk_pad_ctl) {
+	if (p_tdm->chipinfo && (!p_tdm->chipinfo->no_mclkpad_ctrl)) {
 		ret = aml_tdm_set_clk_pad(p_tdm);
 		if (ret)
 			return ret;
@@ -870,7 +902,7 @@ static int aml_dai_tdm_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	if (!p_tdm->contns_clk && !IS_ERR(p_tdm->mclk)) {
-		pr_debug("%s(), enable mclk for %s", __func__, cpu_dai->name);
+		pr_debug("%s(), enable mclk for %s\n", __func__, cpu_dai->name);
 		ret = clk_prepare_enable(p_tdm->mclk);
 		if (ret) {
 			pr_err("Can't enable mclk: %d\n", ret);
@@ -1298,113 +1330,6 @@ static const struct snd_soc_component_driver aml_tdm_component = {
 	.name              = DRV_NAME,
 };
 
-struct tdm_chipinfo axg_tdma_chipinfo = {
-	.id          = TDM_A,
-};
-
-struct tdm_chipinfo axg_tdmb_chipinfo = {
-	.id          = TDM_B,
-};
-
-struct tdm_chipinfo axg_tdmc_chipinfo = {
-	.id          = TDM_C,
-};
-
-struct tdm_chipinfo g12a_tdma_chipinfo = {
-	.id          = TDM_A,
-	.sclk_ws_inv = true,
-	.oe_fn       = true,
-	.clk_pad_ctl = true,
-	.same_src_fn = true,
-};
-
-struct tdm_chipinfo g12a_tdmb_chipinfo = {
-	.id          = TDM_B,
-	.sclk_ws_inv = true,
-	.oe_fn       = true,
-	.clk_pad_ctl = true,
-	.same_src_fn = true,
-};
-
-struct tdm_chipinfo g12a_tdmc_chipinfo = {
-	.id          = TDM_C,
-	.sclk_ws_inv = true,
-	.oe_fn       = true,
-	.clk_pad_ctl = true,
-	.same_src_fn = true,
-};
-
-struct tdm_chipinfo tl1_tdma_chipinfo = {
-	.id          = TDM_A,
-	.sclk_ws_inv = true,
-	.oe_fn       = true,
-	.clk_pad_ctl = true,
-	.same_src_fn = true,
-	.adc_fn      = true,
-	.same_src_spdif_reen = true,
-};
-
-struct tdm_chipinfo tl1_tdmb_chipinfo = {
-	.id          = TDM_B,
-	.sclk_ws_inv = true,
-	.oe_fn       = true,
-	.clk_pad_ctl = true,
-	.same_src_fn = true,
-	.adc_fn      = true,
-	.same_src_spdif_reen = true,
-};
-
-struct tdm_chipinfo tl1_tdmc_chipinfo = {
-	.id          = TDM_C,
-	.sclk_ws_inv = true,
-	.oe_fn       = true,
-	.clk_pad_ctl = true,
-	.same_src_fn = true,
-	.adc_fn      = true,
-	.same_src_spdif_reen = true,
-};
-
-static const struct of_device_id aml_tdm_device_id[] = {
-	{
-		.compatible = "amlogic, axg-snd-tdma",
-		.data       = &axg_tdma_chipinfo,
-	},
-	{
-		.compatible = "amlogic, axg-snd-tdmb",
-		.data       = &axg_tdmb_chipinfo,
-	},
-	{
-		.compatible = "amlogic, axg-snd-tdmc",
-		.data       = &axg_tdmc_chipinfo,
-	},
-	{
-		.compatible = "amlogic, g12a-snd-tdma",
-		.data       = &g12a_tdma_chipinfo,
-	},
-	{
-		.compatible = "amlogic, g12a-snd-tdmb",
-		.data       = &g12a_tdmb_chipinfo,
-	},
-	{
-		.compatible = "amlogic, g12a-snd-tdmc",
-		.data       = &g12a_tdmc_chipinfo,
-	},
-	{
-		.compatible = "amlogic, tl1-snd-tdma",
-		.data       = &tl1_tdma_chipinfo,
-	},
-	{
-		.compatible = "amlogic, tl1-snd-tdmb",
-		.data       = &tl1_tdmb_chipinfo,
-	},
-	{
-		.compatible = "amlogic, tl1-snd-tdmc",
-		.data       = &tl1_tdmc_chipinfo,
-	},
-	{},
-};
-MODULE_DEVICE_TABLE(of, aml_tdm_device_id);
-
 static int check_channel_mask(const char *str)
 {
 	int ret = -1;
@@ -1474,6 +1399,10 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 	}
 	p_tdm->chipinfo = p_chipinfo;
 	p_tdm->id = p_chipinfo->id;
+	if (!p_chipinfo->lane_cnt)
+		p_chipinfo->lane_cnt = LANE_MAX1;
+	else
+		p_tdm->lane_cnt = p_chipinfo->lane_cnt;
 	pr_info("%s, tdm ID = %u\n", __func__, p_tdm->id);
 
 	/* get audio controller */
@@ -1604,6 +1533,12 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 		dev_info(dev, "aml_tdm_get_pins error!\n");
 		/*return PTR_ERR(p_tdm->pin_ctl);*/
 	}
+
+	/* mclk pad ctrl */
+	ret = of_property_read_u32(node, "mclk_pad",
+			&p_tdm->mclk_pad);
+	if (ret < 0)
+		p_tdm->mclk_pad = -1; /* not use mclk in defalut. */
 
 	p_tdm->dev = dev;
 	/* For debug to disable share buffer */

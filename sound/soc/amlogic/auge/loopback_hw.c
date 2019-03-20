@@ -71,8 +71,8 @@ void datalb_ctrl(struct loopback_cfg *lb_cfg)
 
 	if (id >= 0 && id <= 2) {
 		/* tdmout_a, tdmout_b, tdmout_c */
-		reg_base = EE_AUDIO_TDMOUT_A_SWAP;
-		offset = EE_AUDIO_TDMOUT_B_SWAP - EE_AUDIO_TDMOUT_A_SWAP;
+		reg_base = EE_AUDIO_TDMOUT_A_SWAP0;
+		offset = EE_AUDIO_TDMOUT_B_SWAP0 - EE_AUDIO_TDMOUT_A_SWAP0;
 	} else if (id < 6) {
 		/*lb_cfg->datalb_src for pad tdm in,
 		 *pad from tdmin_a, tdmin_b, tdmin_c
@@ -115,8 +115,8 @@ void datalb_ctrl(struct loopback_cfg *lb_cfg)
 		audiobus_write(
 			reg,
 			lb_cfg->datalb_chmask);
-		reg_base = EE_AUDIO_TDMIN_A_SWAP;
-		offset = EE_AUDIO_TDMIN_B_SWAP - EE_AUDIO_TDMIN_A_SWAP;
+		reg_base = EE_AUDIO_TDMIN_A_SWAP0;
+		offset = EE_AUDIO_TDMIN_B_SWAP0 - EE_AUDIO_TDMIN_A_SWAP0;
 	} else {
 		pr_err("unsupport datalb_src\n");
 		return;
@@ -124,7 +124,7 @@ void datalb_ctrl(struct loopback_cfg *lb_cfg)
 
 	if (lb_cfg->datain_datalb_total > 8) {
 		audiobus_write(
-				EE_AUDIO_TDMIN_LB_SWAP,
+				EE_AUDIO_TDMIN_LB_SWAP0,
 				lb_cfg->datalb_chswap);
 
 		audiobus_write(EE_AUDIO_TDMIN_LB_MASK0, 3);
@@ -134,7 +134,7 @@ void datalb_ctrl(struct loopback_cfg *lb_cfg)
 	} else {
 		/*swap same as tdmout */
 		reg = reg_base + offset * id;
-		audiobus_write(EE_AUDIO_TDMIN_LB_SWAP,
+		audiobus_write(EE_AUDIO_TDMIN_LB_SWAP0,
 				audiobus_read(reg));
 
 		/*mask same as datalb*/

@@ -4,6 +4,7 @@ obj-$(CONFIG_AMLOGIC_SND_SOC_AUGE)	+= audio_controller.o \
 						axg,clocks.o \
 						g12a,clocks.o \
 						tl1,clocks.o \
+						sm1,clocks.o \
 						card.o \
 						card_utils.o \
 						tdm.o \
@@ -32,4 +33,6 @@ obj-$(CONFIG_AMLOGIC_SND_SOC_AUGE)	+= audio_controller.o \
 						frhdmirx_hw.o \
 						vad.o \
 						vad_hw.o \
-						vad_dev.o
+						vad_dev.o \
+						earc.o \
+						earc_hw.o

@@ -50,6 +50,10 @@ extern void pdm_set_mute_channel(int mute_chmask);
 
 extern void pdm_init_truncate_data(int freq);
 
+extern void pdm_train_en(bool en);
+extern void pdm_train_clr(void);
+extern int pdm_train_sts(void);
+
 extern int pdm_hcic_shift_gain;
 extern int pdm_dclk;
 

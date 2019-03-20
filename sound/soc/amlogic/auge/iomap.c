@@ -231,6 +231,87 @@ void vad_update_bits(unsigned int reg,
 }
 EXPORT_SYMBOL(vad_update_bits);
 
+int earcrx_cmdc_read(unsigned int reg)
+{
+	int ret, val = 0;
+
+	ret = aml_snd_read(IO_EARCRX_CMDC, reg, &val);
+
+	if (ret) {
+		pr_err("read audio reg %x error %d\n", reg, ret);
+		return -1;
+	}
+	return val;
+}
+EXPORT_SYMBOL(earcrx_cmdc_read);
+
+void earcrx_cmdc_write(unsigned int reg, unsigned int val)
+{
+	aml_snd_write(IO_EARCRX_CMDC, reg, val);
+}
+EXPORT_SYMBOL(earcrx_cmdc_write);
+
+void earcrx_cmdc_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val)
+{
+	aml_snd_update_bits(IO_EARCRX_CMDC, reg, mask, val);
+}
+EXPORT_SYMBOL(earcrx_cmdc_update_bits);
+
+int earcrx_dmac_read(unsigned int reg)
+{
+	int ret, val = 0;
+
+	ret = aml_snd_read(IO_EARCRX_DMAC, reg, &val);
+
+	if (ret) {
+		pr_err("read audio reg %x error %d\n", reg, ret);
+		return -1;
+	}
+	return val;
+}
+EXPORT_SYMBOL(earcrx_dmac_read);
+
+void earcrx_dmac_write(unsigned int reg, unsigned int val)
+{
+	aml_snd_write(IO_EARCRX_DMAC, reg, val);
+}
+EXPORT_SYMBOL(earcrx_dmac_write);
+
+void earcrx_dmac_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val)
+{
+	aml_snd_update_bits(IO_EARCRX_DMAC, reg, mask, val);
+}
+EXPORT_SYMBOL(earcrx_dmac_update_bits);
+
+int earcrx_top_read(unsigned int reg)
+{
+	int ret, val = 0;
+
+	ret = aml_snd_read(IO_EARCRX_TOP, reg, &val);
+
+	if (ret) {
+		pr_err("read audio reg %x error %d\n", reg, ret);
+		return -1;
+	}
+	return val;
+}
+EXPORT_SYMBOL(earcrx_top_read);
+
+void earcrx_top_write(unsigned int reg, unsigned int val)
+{
+	aml_snd_write(IO_EARCRX_TOP, reg, val);
+}
+EXPORT_SYMBOL(earcrx_top_write);
+
+void earcrx_top_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val)
+{
+	aml_snd_update_bits(IO_EARCRX_TOP, reg, mask, val);
+}
+EXPORT_SYMBOL(earcrx_top_update_bits);
+
 static int snd_iomap_probe(struct platform_device *pdev)
 {
 	struct resource res;

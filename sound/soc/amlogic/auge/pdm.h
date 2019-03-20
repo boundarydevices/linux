@@ -54,6 +54,8 @@ struct pdm_chipinfo {
 	bool mute_fn;
 	/* truncate invalid data when filter init */
 	bool truncate_data;
+	/* train */
+	bool train;
 };
 
 struct aml_pdm {
@@ -78,11 +80,15 @@ struct aml_pdm {
 	int dclk_idx;
 	/* PCM or Raw Data */
 	int bypass;
-	/* PDM clk on/off */
-	bool clk_on;
 
 	/* lane mask in, each lane carries two channels */
 	int lane_mask_in;
+
+	/* PDM clk on/off, only clk on, pdm registers can be accessed */
+	bool clk_on;
+
+	/* train */
+	bool train_en;
 
 	struct pdm_chipinfo *chipinfo;
 	struct snd_kcontrol *controls[PDM_RUN_MAX];

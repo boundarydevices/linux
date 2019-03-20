@@ -155,7 +155,7 @@ static int __init vad_init(void)
 		goto err2;
 	}
 
-	pr_info("Register %s", DRV_NAME);
+	pr_info("Register %s\n", DRV_NAME);
 
 	return 0;
 err2:

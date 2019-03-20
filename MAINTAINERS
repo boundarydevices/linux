@@ -14679,7 +14679,7 @@ AMLOGIC TL1 NEW EQDRC
 AMLOGIC TL1 MIXER CONTROLS
 AMLOGIC TL1 VAD DRIVER
 AMLOGIC SM1 SOUND CARD
-M:	Xing Wang <xing.wang@amlogic.com
+M:	Xing Wang <xing.wang@amlogic.com>
 F:	arch/arm/boot/dts/amlogic/tl1_pxp.dts
 F:	include/dt-bindings/clock/amlogic,tl1-audio-clk.h
 F:	include/dt-bindings/clock/amlogic,sm1-audio-clk.h

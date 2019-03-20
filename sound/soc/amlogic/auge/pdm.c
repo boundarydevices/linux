@@ -30,6 +30,7 @@
 
 #include "pdm.h"
 #include "pdm_hw.h"
+#include "pdm_match_table.c"
 #include "audio_io.h"
 #include "iomap.h"
 #include "regs.h"
@@ -166,6 +167,46 @@ static int pdm_dclk_set_enum(
 	return 0;
 }
 
+static const char *const pdm_train_texts[] = {
+	"Disabled",
+	"Enable",
+};
+
+static const struct soc_enum pdm_train_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(pdm_train_texts),
+			pdm_train_texts);
+
+static int pdm_train_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
+
+	ucontrol->value.enumerated.item[0] = p_pdm->train_en;
+
+	return 0;
+}
+
+static int pdm_train_set_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
+
+	if (!p_pdm->chipinfo ||
+		!p_pdm->chipinfo->train ||
+		(p_pdm->train_en == ucontrol->value.enumerated.item[0]))
+		return 0;
+
+	p_pdm->train_en = ucontrol->value.enumerated.item[0];
+
+	if (p_pdm->clk_on)
+		pdm_train_en(p_pdm->train_en);
+
+	return 0;
+}
 
 static const struct snd_kcontrol_new snd_pdm_controls[] = {
 	/* which set */
@@ -184,7 +225,13 @@ static const struct snd_kcontrol_new snd_pdm_controls[] = {
 		     pdm_dclk_enum,
 		     pdm_dclk_get_enum,
 		     pdm_dclk_set_enum),
+
+	SOC_ENUM_EXT("PDM Train",
+		     pdm_train_enum,
+		     pdm_train_get_enum,
+		     pdm_train_set_enum),
 };
+
 #if 0
 static int pdm_mute_val_info(struct snd_kcontrol *kcontrol,
 		struct snd_ctl_elem_info *uinfo)
@@ -332,10 +379,18 @@ static irqreturn_t aml_pdm_isr_handler(int irq, void *data)
 {
 	struct snd_pcm_substream *substream =
 		(struct snd_pcm_substream *)data;
+	int train_sts = pdm_train_sts();
 
 	pr_debug("%s\n", __func__);
 
 	snd_pcm_period_elapsed(substream);
+
+	if (train_sts) {
+		pr_debug("%s train result:0x%x\n",
+			__func__,
+			train_sts);
+		pdm_train_clr();
+	}
 
 	return IRQ_HANDLED;
 }
@@ -842,6 +897,9 @@ int aml_pdm_dai_startup(struct snd_pcm_substream *substream,
 		pdm_running_create_controls(card, p_pdm);
 	}
 #endif
+
+	p_pdm->clk_on = true;
+
 	return 0;
 err:
 	pr_err("failed enable clock\n");
@@ -859,6 +917,8 @@ void aml_pdm_dai_shutdown(struct snd_pcm_substream *substream,
 		pdm_running_destroy_controls(card, p_pdm);
 	}
 #endif
+
+	p_pdm->clk_on = false;
 
 	/* disable clock and gate */
 	clk_disable_unprepare(p_pdm->clk_pdm_dclk);
@@ -896,32 +956,6 @@ EXPORT_SYMBOL_GPL(aml_pdm_dai);
 static const struct snd_soc_component_driver aml_pdm_component = {
 	.name = DRV_NAME,
 };
-
-static struct pdm_chipinfo g12a_pdm_chipinfo = {
-	.mute_fn         = true,
-	.truncate_data   = false,
-};
-
-static struct pdm_chipinfo tl1_pdm_chipinfo = {
-	.mute_fn         = true,
-	.truncate_data   = false,
-};
-
-static const struct of_device_id aml_pdm_device_id[] = {
-	{
-		.compatible = "amlogic, axg-snd-pdm",
-	},
-	{
-		.compatible = "amlogic, g12a-snd-pdm",
-		.data       = &g12a_pdm_chipinfo,
-	},
-	{
-		.compatible = "amlogic, tl1-snd-pdm",
-		.data       = &tl1_pdm_chipinfo,
-	},
-	{}
-};
-MODULE_DEVICE_TABLE(of, aml_pdm_device_id);
 
 static int snd_soc_of_get_slot_mask(
 	struct device_node *np,

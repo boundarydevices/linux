@@ -53,6 +53,7 @@ enum toddr_src {
 	FRHDMIRX, /* from tl1 chipset*/
 	LOOPBACK_B,
 	SPDIFIN_LB,
+	EARCRX_DMAC, /* from sm1 chipset */
 	VAD,
 };
 

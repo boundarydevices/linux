@@ -545,10 +545,20 @@ void aml_tdm_set_channel_mask(
 	unsigned int offset, reg;
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		offset = EE_AUDIO_TDMOUT_B_MASK0 - EE_AUDIO_TDMOUT_A_MASK0;
+		if (lane >= LANE_MAX1)
+			offset = EE_AUDIO_TDMOUT_B_MASK4
+				- EE_AUDIO_TDMOUT_A_MASK4;
+		else
+			offset = EE_AUDIO_TDMOUT_B_MASK0
+				- EE_AUDIO_TDMOUT_A_MASK0;
 		reg = EE_AUDIO_TDMOUT_A_MASK0 + offset * index;
 	} else {
-		offset = EE_AUDIO_TDMIN_B_MASK0 - EE_AUDIO_TDMIN_A_MASK0;
+		if (lane >= LANE_MAX1)
+			offset = EE_AUDIO_TDMIN_B_MASK4
+				- EE_AUDIO_TDMIN_A_MASK4;
+		else
+			offset = EE_AUDIO_TDMIN_B_MASK0
+				- EE_AUDIO_TDMIN_A_MASK0;
 		reg = EE_AUDIO_TDMIN_A_MASK0 + offset * index;
 	}
 
@@ -557,27 +567,39 @@ void aml_tdm_set_channel_mask(
 
 void aml_tdm_set_lane_channel_swap(
 	struct aml_audio_controller *actrl,
-	int stream, int index, int swap)
+	int stream, int index, int swap0, int swap1)
 {
 	unsigned int offset, reg;
 
+	pr_debug("\t %s swap0 = %#x, swap1 = %#x\n",
+		(stream == SNDRV_PCM_STREAM_PLAYBACK) ? "tdmout" : "tdmin",
+		swap0,
+		swap1);
+
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		// set lanes mask acordingly
-		offset = EE_AUDIO_TDMOUT_B_MASK0 - EE_AUDIO_TDMOUT_A_MASK0;
-		reg = EE_AUDIO_TDMOUT_A_MASK0 + offset * index;
+		offset = EE_AUDIO_TDMOUT_B_SWAP0
+			- EE_AUDIO_TDMOUT_A_SWAP0;
+		reg = EE_AUDIO_TDMOUT_A_SWAP0 + offset * index;
+		aml_audiobus_write(actrl, reg, swap0);
 
-		pr_debug("\ttdmout swap val = %#x\n", swap);
-		offset = EE_AUDIO_TDMOUT_B_SWAP - EE_AUDIO_TDMOUT_A_SWAP;
-		reg = EE_AUDIO_TDMOUT_A_SWAP + offset * index;
-		aml_audiobus_write(actrl, reg, swap);
+		if (swap1) {
+			offset = EE_AUDIO_TDMOUT_B_SWAP1
+				- EE_AUDIO_TDMOUT_A_SWAP1;
+			reg = EE_AUDIO_TDMOUT_A_SWAP1 + offset * index;
+			aml_audiobus_write(actrl, reg, swap1);
+		}
 	} else {
-		offset = EE_AUDIO_TDMIN_B_MASK0 - EE_AUDIO_TDMIN_A_MASK0;
-		reg = EE_AUDIO_TDMIN_A_MASK0 + offset * index;
+		offset = EE_AUDIO_TDMIN_B_SWAP0
+			- EE_AUDIO_TDMIN_A_SWAP0;
+		reg = EE_AUDIO_TDMIN_A_SWAP0 + offset * index;
+		aml_audiobus_write(actrl, reg, swap0);
 
-		pr_debug("\ttdmin swap val = %#x\n", swap);
-		offset = EE_AUDIO_TDMIN_B_SWAP - EE_AUDIO_TDMIN_A_SWAP;
-		reg = EE_AUDIO_TDMIN_A_SWAP + offset * index;
-		aml_audiobus_write(actrl, reg, swap);
+		if (swap1) {
+			offset = EE_AUDIO_TDMIN_B_SWAP1
+				- EE_AUDIO_TDMIN_A_SWAP1;
+			reg = EE_AUDIO_TDMIN_A_SWAP1 + offset * index;
+			aml_audiobus_write(actrl, reg, swap1);
+		}
 	}
 }
 
@@ -649,27 +671,39 @@ void aml_tdmout_enable_gain(int tdmout_id, int en)
 
 void aml_tdm_clk_pad_select(
 	struct aml_audio_controller *actrl,
-	int mpad, int mclk_sel,
+	int mpad, int mpad_offset, int mclk_sel,
 	int tdm_index, int clk_sel)
 {
 	unsigned int reg, mask_offset, val_offset;
 
-	// TODO: fix mclk
-	if (mpad == 0) {
-		mask_offset = 0x7 << 0;
-		val_offset = mclk_sel << 0;
-	} else if (mpad == 1) {
-		mask_offset = 0x7 << 4;
-		val_offset = mclk_sel << 4;
-	} else {
-		pr_err("unknown tdm mpad:%d\n", mpad);
-		return;
-	}
-	reg = EE_AUDIO_MST_PAD_CTRL0(0);
-	aml_audiobus_update_bits(actrl, reg,
-		mask_offset, val_offset);
+	if (mpad >= 0) {
+		switch (mpad) {
+		case 0:
+			mask_offset = 0x7 << 0;
+			val_offset = mclk_sel << 0;
+			break;
+		case 1:
+			mask_offset = 0x7 << 4;
+			val_offset = mclk_sel << 4;
+			break;
+		default:
+			mask_offset = 0;
+			val_offset = 0;
+			pr_info("unknown tdm mpad:%d\n", mpad);
+			break;
+		}
 
-	reg = EE_AUDIO_MST_PAD_CTRL1(0);
+		reg = EE_AUDIO_MST_PAD_CTRL0(mpad_offset);
+		if (actrl)
+			aml_audiobus_update_bits(actrl, reg,
+				mask_offset, val_offset);
+		else
+			audiobus_update_bits(reg,
+				mask_offset, val_offset);
+	} else
+		pr_warn("mclk is not configured\n");
+
+	reg = EE_AUDIO_MST_PAD_CTRL1(mpad_offset);
 	switch (tdm_index) {
 	case 0:
 		mask_offset = 0x7 << 16 | 0x7 << 0;
@@ -684,12 +718,15 @@ void aml_tdm_clk_pad_select(
 		val_offset = clk_sel << 24 | clk_sel << 8;
 		break;
 	default:
-		pr_err("unknown tdm index:%d\n", tdm_index);
+		pr_err("unknown mclk pad, tdm index:%d\n", tdm_index);
 		return;
 	}
-	aml_audiobus_update_bits(actrl, reg,
-		mask_offset, val_offset);
-
+	if (actrl)
+		aml_audiobus_update_bits(actrl, reg,
+			mask_offset, val_offset);
+	else
+		audiobus_update_bits(reg,
+			mask_offset, val_offset);
 }
 
 void i2s_to_hdmitx_ctrl(int tdm_index)

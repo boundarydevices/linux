@@ -711,6 +711,9 @@ static int tdmout_c_binv_set_enum(
 	SND_ENUM(xname, type, CTRL0, xenum, xshift, xmask)
 
 #define SND_SWAP(xname, type, xenum, xshift, xmask)   \
+	SND_ENUM(xname, type, SWAP0, xenum, xshift, xmask)
+
+#define SND_SPDIFOUT_SWAP(xname, type, xenum, xshift, xmask)   \
 	SND_ENUM(xname, type, SWAP, xenum, xshift, xmask)
 
 #define TDM_MASK(xname, type, func)   \
@@ -992,9 +995,9 @@ static const struct snd_kcontrol_new snd_auge_controls[] = {
 				spdif_channel_status_enum),
 
 	/*SPDIFOUT swap*/
-	SND_SWAP("SPDIFOUT Lane0 Left Channel Swap",
+	SND_SPDIFOUT_SWAP("SPDIFOUT Lane0 Left Channel Swap",
 		SPDIFOUT, out_swap_channel_enum, 0, 0x7),
-	SND_SWAP("SPDIFOUT Lane0 Right Channel Swap",
+	SND_SPDIFOUT_SWAP("SPDIFOUT Lane0 Right Channel Swap",
 		SPDIFOUT, out_swap_channel_enum, 4, 0x7),
 	/*SPDIFOUT mixer*/
 	SND_MIX("SPDIFOUT Mixer Channel",

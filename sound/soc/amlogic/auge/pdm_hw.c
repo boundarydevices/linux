@@ -487,3 +487,24 @@ void pdm_init_truncate_data(int freq)
 
 	aml_pdm_write(PDM_MASK_NUM, mask_val);
 }
+
+void pdm_train_en(bool en)
+{
+	aml_pdm_update_bits(PDM_CTRL,
+		0x1 << 19,
+		en << 19);
+}
+
+void pdm_train_clr(void)
+{
+	aml_pdm_update_bits(PDM_CTRL,
+		0x1 << 18,
+		0x1 << 18);
+}
+
+int pdm_train_sts(void)
+{
+	int val = aml_pdm_read(PDM_STS);
+
+	return ((val >> 4) & 0xff);
+}

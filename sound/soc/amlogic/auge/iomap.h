@@ -25,6 +25,9 @@ enum{
 	IO_EQDRC_BUS,
 	IO_RESET,
 	IO_VAD,
+	IO_EARCRX_CMDC,
+	IO_EARCRX_DMAC,
+	IO_EARCRX_TOP,
 
 	IO_MAX,
 };
@@ -57,5 +60,18 @@ extern void audioreset_update_bits(unsigned int reg,
 extern int vad_read(unsigned int reg);
 extern void vad_write(unsigned int reg, unsigned int val);
 extern void vad_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val);
+
+extern int earcrx_cmdc_read(unsigned int reg);
+extern void earcrx_cmdc_write(unsigned int reg, unsigned int val);
+extern void earcrx_cmdc_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val);
+extern int earcrx_dmac_read(unsigned int reg);
+extern void earcrx_dmac_write(unsigned int reg, unsigned int val);
+extern void earcrx_dmac_update_bits(unsigned int reg,
+		unsigned int mask, unsigned int val);
+extern int earcrx_top_read(unsigned int reg);
+extern void earcrx_top_write(unsigned int reg, unsigned int val);
+extern void earcrx_top_update_bits(unsigned int reg,
 		unsigned int mask, unsigned int val);
 #endif
