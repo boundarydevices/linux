@@ -534,7 +534,7 @@
 			};
 
 			meson_clk_msr {
-				compatible = "amlogic, gxl_measure";
+				compatible = "amlogic, sm1-measure";
 				reg = <0x18004 0x4
 					0x1800c 0x4>;
 				ringctrl = <0xff6345fc>;
