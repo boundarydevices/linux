@@ -494,26 +494,20 @@ static void imx_uart_stop_rx(struct uart_port *port)
 
 	ucr1 = imx_uart_readl(sport, UCR1);
 	ucr2 = imx_uart_readl(sport, UCR2);
+	ucr4 = imx_uart_readl(sport, UCR4);
 
 	if (sport->dma_is_enabled) {
 		ucr1 &= ~(UCR1_RXDMAEN | UCR1_ATDMAEN);
 	} else {
 		ucr1 &= ~UCR1_RRDYEN;
 		ucr2 &= ~UCR2_ATEN;
+		ucr4 &= ~UCR4_OREN;
 	}
 	imx_uart_writel(sport, ucr1, UCR1);
+	imx_uart_writel(sport, ucr4, UCR4);
 
 	ucr2 &= ~UCR2_RXEN;
 	imx_uart_writel(sport, ucr2, UCR2);
-
-	/* disable the Receiver Ready and overrun Interrupt */
-	ucr1 = imx_uart_readl(sport, UCR1);
-	imx_uart_writel(sport, ucr1 & ~UCR1_RRDYEN, UCR1);
-	ucr4 = imx_uart_readl(sport, UCR4);
-	imx_uart_writel(sport, ucr4 & ~UCR4_OREN, UCR4);
-
-	ucr2 = imx_uart_readl(sport, UCR2);
-	imx_uart_writel(sport, ucr2 & ~UCR2_RXEN, UCR2);
 }
 
 /* called with port.lock taken and irqs off */
