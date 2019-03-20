@@ -726,7 +726,12 @@ static void cue_process_irq(void)
 }
 void cue_int(void)
 {
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A)) {
+	/*confirm with vlsi-liuyanling, G12a cue must be disabled*/
+	if (is_meson_g12a_cpu()) {
+		cue_en = false;
+		cue_glb_mot_check_en = false;
+	}
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12B)) {
 		if (cue_en)
 			Wr_reg_bits(NR2_CUE_MODE, 3, 10, 2);
 	}
