@@ -17,7 +17,7 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/amlogic,g12a-clkc.h>
-#include <dt-bindings/clock/amlogic,g12a-audio-clk.h>
+#include <dt-bindings/clock/amlogic,sm1-audio-clk.h>
 #include <dt-bindings/iio/adc/amlogic-saradc.h>
 #include <dt-bindings/gpio/meson-g12a-gpio.h>
 #include <dt-bindings/pwm/pwm.h>
@@ -800,30 +800,34 @@
 			memory-region = <&ion_cma_reserved>;
 		};/* end of ion_dev*/
 
-		audiobus: audiobus@0xff642000 {
+		audiobus: audiobus@0xFF660000 {
 			compatible = "amlogic, audio-controller", "simple-bus";
-			reg = <0x0 0xff642000 0x0 0x2000>;
+			reg = <0x0 0xFF660000 0x0 0x4000>;
 			#address-cells = <2>;
 			#size-cells = <2>;
-			ranges = <0x0 0x0 0x0 0xff642000 0x0 0x2000>;
+			ranges = <0x0 0x0 0x0 0xFF660000 0x0 0x4000>;
 			clkaudio: audio_clocks {
-				compatible = "amlogic, g12a-audio-clocks";
+				compatible = "amlogic, sm1-audio-clocks";
 				#clock-cells = <1>;
 				reg = <0x0 0x0 0x0 0xb0>;
 			};
 			ddr_manager {
-				compatible = "amlogic, g12a-audio-ddr-manager";
+				compatible = "amlogic, sm1-audio-ddr-manager";
 				interrupts = <
 					GIC_SPI 148 IRQ_TYPE_EDGE_RISING
 					GIC_SPI 149 IRQ_TYPE_EDGE_RISING
 					GIC_SPI 150 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 49 IRQ_TYPE_EDGE_RISING
 					GIC_SPI 152 IRQ_TYPE_EDGE_RISING
 					GIC_SPI 153 IRQ_TYPE_EDGE_RISING
 					GIC_SPI 154 IRQ_TYPE_EDGE_RISING
+					GIC_SPI 50 IRQ_TYPE_EDGE_RISING
 				>;
 				interrupt-names =
 					"toddr_a", "toddr_b", "toddr_c",
-					"frddr_a", "frddr_b", "frddr_c";
+					"toddr_d",
+					"frddr_a", "frddr_b", "frddr_c",
+					"frddr_d";
 			};
 		};/* end of audiobus*/
 
@@ -1686,19 +1690,31 @@
 		#size-cells=<2>;
 		ranges;
 		pdm_bus {
-			reg = <0x0 0xFF640000 0x0 0x2000>;
+			reg = <0x0 0xFF661000 0x0 0x400>;
 		};
 		audiobus_base {
-			reg = <0x0 0xFF642000 0x0 0x2000>;
+			reg = <0x0 0xFF660000 0x0 0x1000>;
 		};
 		audiolocker_base {
-			reg = <0x0 0xFF64A000 0x0 0x2000>;
+			reg = <0x0 0xFF661400 0x0 0x400>;
 		};
 		eqdrc_base {
-			reg = <0x0 0xFF642800 0x0 0x1800>;
+			reg = <0x0 0xFF662000 0x0 0x1000>;
 		};
 		reset_base {
 			reg = <0x0 0xFFD01000 0x0 0x1000>;
+		};
+		vad_base {
+			reg = <0x0 0xFF661800 0x0 0x400>;
+		};
+		earcrx_cdmc_base {
+			reg = <0x0 0xFF663800 0x0 0x30>;
+		};
+		earcrx_dmac_base {
+			reg = <0x0 0xFF663C00 0x0 0x20>;
+		};
+		earcrx_top_base {
+			reg = <0x0 0xFF663E00 0x0 0x10>;
 		};
 	};
 
