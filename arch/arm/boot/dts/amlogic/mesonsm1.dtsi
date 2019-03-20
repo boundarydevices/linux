@@ -1795,7 +1795,7 @@
 	};
 
 	cpu_ver_name {
-		compatible = "amlogic, cpu-major-id-g12a";
+		compatible = "amlogic, cpu-major-id-sm1";
 	};
 };/* end of / */
 
