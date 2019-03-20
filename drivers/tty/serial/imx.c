@@ -2569,9 +2569,6 @@ static int imx_uart_suspend(struct device *dev)
 	if (ret)
 		return ret;
 
-	/* enable wakeup from i.MX UART */
-	imx_uart_enable_wakeup(sport, true);
-
 	return 0;
 }
 
