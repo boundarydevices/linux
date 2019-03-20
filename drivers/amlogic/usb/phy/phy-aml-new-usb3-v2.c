@@ -145,7 +145,6 @@ static void cr_bus_addr(unsigned int addr)
 
 	phy_r4.b.phy_cr_data_in = addr;
 	writel(phy_r4.d32, g_phy_v2->phy3_cfg_r4);
-
 	phy_r4.b.phy_cr_cap_addr = 0;
 	writel(phy_r4.d32, g_phy_v2->phy3_cfg_r4);
 	phy_r4.b.phy_cr_cap_addr = 1;
@@ -312,6 +311,7 @@ static int amlogic_new_usb3_init(struct usb_phy *x)
 		p3_r2.b.phy_tx_vboost_lvl = 0x4;
 		writel(p3_r2.d32, phy->phy3_cfg_r2);
 		udelay(2);
+
 		/*
 		 * WORKAROUND: There is SSPHY suspend bug due to
 		 * which USB enumerates
@@ -482,13 +482,44 @@ static bool device_is_available(const struct device_node *device)
 	return false;
 }
 
+static void power_switch_to_pcie(struct amlogic_usb_v2 *phy)
+{
+	u32 val;
+
+	writel(readl(phy->power_base) & (~(0x1<<18)), phy->power_base);
+
+	writel(readl(phy->hhi_mem_pd_base) & (~(0xf<<26)),
+		phy->hhi_mem_pd_base);
+	udelay(100);
+
+	val = readl((void __iomem *)
+		((unsigned long)phy->reset_regs + (0x20 * 4 - 0x8)));
+	writel((val & (~(0x1<<12))), (void __iomem *)
+		((unsigned long)phy->reset_regs + (0x20 * 4 - 0x8)));
+	udelay(100);
+
+	writel(readl(phy->power_base+0x4) & (~(0x1<<18)),
+		phy->power_base + 0x4);
+	val = readl((void __iomem *)
+		((unsigned long)phy->reset_regs + (0x20 * 4 - 0x8)));
+	writel((val | (0x1<<12)), (void __iomem	*)
+		((unsigned long)phy->reset_regs + (0x20 * 4 - 0x8)));
+	udelay(100);
+}
+
 static int amlogic_new_usb3_v2_probe(struct platform_device *pdev)
 {
 	struct amlogic_usb_v2			*phy;
 	struct device *dev = &pdev->dev;
 	struct resource *phy_mem;
-	void __iomem	*phy_base;
+	struct resource *power_mem = NULL;
+	struct resource *hhi_mem_pd_mem = NULL;
+	struct resource *reset_mem;
+	void __iomem *phy_base;
 	void __iomem *phy3_base;
+	void __iomem	*power_base = NULL;
+	void __iomem	*hhi_mem_pd_base = NULL;
+	void __iomem	*reset_base = NULL;
 	unsigned int phy3_mem;
 	unsigned int phy3_mem_size = 0;
 	void __iomem *usb2_phy_base;
@@ -504,6 +535,7 @@ static int amlogic_new_usb3_v2_probe(struct platform_device *pdev)
 	int otg = 0;
 	int ret;
 	struct device_node *tsi_pci;
+	u32 pwr_ctl = 0;
 
 	gpio_name = of_get_property(dev->of_node, "gpio-vbus-power", NULL);
 	if (gpio_name) {
@@ -553,6 +585,38 @@ static int amlogic_new_usb3_v2_probe(struct platform_device *pdev)
 				(unsigned long)phy3_mem_size);
 	if (!phy3_base)
 		return -ENOMEM;
+
+	prop = of_get_property(dev->of_node, "pwr-ctl", NULL);
+	if (prop)
+		pwr_ctl = of_read_ulong(prop, 1);
+	else
+		pwr_ctl = 0;
+
+	if (pwr_ctl) {
+		power_mem = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+		if (power_mem) {
+			power_base = ioremap(power_mem->start,
+				resource_size(power_mem));
+			if (IS_ERR(power_base))
+				return PTR_ERR(power_base);
+		}
+
+		hhi_mem_pd_mem = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+		if (hhi_mem_pd_mem) {
+			hhi_mem_pd_base = ioremap(hhi_mem_pd_mem->start,
+				resource_size(hhi_mem_pd_mem));
+			if (IS_ERR(hhi_mem_pd_base))
+				return PTR_ERR(hhi_mem_pd_base);
+		}
+
+		reset_mem = platform_get_resource(pdev, IORESOURCE_MEM, 3);
+		if (reset_mem) {
+			reset_base = ioremap(reset_mem->start,
+				resource_size(reset_mem));
+			if (IS_ERR(reset_base))
+				return PTR_ERR(reset_base);
+		}
+	}
 
 	retval = of_property_read_u32
 				(dev->of_node, "usb2-phy-reg", &usb2_phy_mem);
@@ -615,9 +679,16 @@ static int amlogic_new_usb3_v2_probe(struct platform_device *pdev)
 	phy->phy.flags		= AML_USB3_PHY_DISABLE;
 	phy->vbus_power_pin = gpio_vbus_power_pin;
 	phy->usb_gpio_desc = usb_gd;
+	phy->pwr_ctl = pwr_ctl;
 
 	/* set the phy from pcie to usb3 */
 	if (phy->portnum > 0) {
+		if (phy->pwr_ctl) {
+			phy->power_base = power_base;
+			phy->hhi_mem_pd_base = hhi_mem_pd_base;
+			phy->reset_regs = reset_base;
+			power_switch_to_pcie(phy);
+		}
 		writel((readl(phy->phy3_cfg) | (3<<5)), phy->phy3_cfg);
 		udelay(100);
 
@@ -634,6 +705,7 @@ static int amlogic_new_usb3_v2_probe(struct platform_device *pdev)
 			ret = PTR_ERR(phy->clk);
 			return ret;
 		}
+
 		phy->phy.flags = AML_USB3_PHY_ENABLE;
 	}
 

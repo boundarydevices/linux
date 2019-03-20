@@ -271,7 +271,8 @@ static int meson_g12a_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	cntlbase = pll->base + p->reg_off;
 
 	if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
-		if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12A) {
+		if ((get_cpu_type() == MESON_CPU_MAJOR_ID_G12A) ||
+			((get_cpu_type() == MESON_CPU_MAJOR_ID_SM1))) {
 			writel(G12A_PCIE_PLL_CNTL0_0,
 				cntlbase + (unsigned long)(0*4));
 			writel(G12A_PCIE_PLL_CNTL0_1,

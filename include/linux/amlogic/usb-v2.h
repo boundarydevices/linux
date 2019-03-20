@@ -169,6 +169,8 @@ struct amlogic_usb_v2 {
 	void __iomem	*phy3_cfg_r4;
 	void __iomem	*phy3_cfg_r5;
 	void __iomem	*usb2_phy_cfg;
+	void __iomem	*power_base;
+	void __iomem	*hhi_mem_pd_base;
 	u32 pll_setting[8];
 	int phy_cfg_state[4];
 	/* Set VBus Power though GPIO */
@@ -180,6 +182,7 @@ struct amlogic_usb_v2 {
 	int portnum;
 	int suspend_flag;
 	int phy_version;
+	int pwr_ctl;
 	struct clk		*clk;
 };
 

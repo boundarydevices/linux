@@ -51,6 +51,7 @@ struct amlogic_pcie {
 	u32			pm_enable;
 	u32			device_attch;
 	u32			rst_mod;
+	u32			pwr_ctl;
 };
 
 #define to_amlogic_pcie(x)	container_of(x, struct amlogic_pcie, pp)
@@ -679,6 +680,31 @@ static int __init amlogic_add_pcie_port(struct amlogic_pcie *amlogic_pcie,
 	return 0;
 }
 
+static void power_switch_to_pcie(struct pcie_phy *phy)
+{
+	u32 val;
+
+	writel(readl(phy->power_base) & (~(0x1<<18)), phy->power_base);
+
+	writel(readl(phy->hhi_mem_pd_base) & (~(0xf<<26)),
+			phy->hhi_mem_pd_base);
+	udelay(100);
+
+	val = readl((void __iomem *)(unsigned long)phy->reset_base);
+	writel((val & (~(0x1<<12))),
+		(void __iomem *)(unsigned long)phy->reset_base);
+	udelay(100);
+
+	writel(readl(phy->power_base+0x4) & (~(0x1<<18)),
+			phy->power_base + 0x4);
+
+	val = readl((void __iomem *)(unsigned long)phy->reset_base);
+	writel((val | (0x1<<12)),
+			(void __iomem	*)(unsigned long)phy->reset_base);
+	udelay(100);
+}
+
+
 static int __init amlogic_pcie_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -690,6 +716,8 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 	struct resource *phy_base;
 	struct resource *cfg_base;
 	struct resource *reset_base;
+	struct resource *power_base = NULL;
+	struct resource *hhi_mem_pd_base = NULL;
 	int ret;
 	int pcie_num = 0;
 	int num_lanes = 0;
@@ -703,6 +731,7 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 	int pcie_apb_rst_bit = 0;
 	int pcie_phy_rst_bit = 0;
 	int pcie_ctrl_a_rst_bit = 0;
+	u32 pwr_ctl = 0;
 
 	dev_info(&pdev->dev, "amlogic_pcie_probe!\n");
 
@@ -757,6 +786,49 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 		pp->lanes = 0;
 	pp->lanes = num_lanes;
 
+	ret = of_property_read_u32(np, "pwr-ctl", &pwr_ctl);
+	if (ret)
+		amlogic_pcie->pwr_ctl = 0;
+	else
+		amlogic_pcie->pwr_ctl = pwr_ctl;
+
+	if (pwr_ctl) {
+		power_base = platform_get_resource_byname(
+			pdev, IORESOURCE_MEM, "pwr");
+		if (power_base) {
+			amlogic_pcie->phy->power_base =
+				ioremap(power_base->start,
+				resource_size(power_base));
+			if (IS_ERR(amlogic_pcie->phy->power_base))
+				return PTR_ERR(amlogic_pcie->phy->power_base);
+		}
+
+		hhi_mem_pd_base = platform_get_resource_byname(
+			pdev, IORESOURCE_MEM, "hii");
+		if (hhi_mem_pd_base) {
+			amlogic_pcie->phy->hhi_mem_pd_base =
+				ioremap(hhi_mem_pd_base->start,
+				resource_size(hhi_mem_pd_base));
+			if (IS_ERR(amlogic_pcie->phy->hhi_mem_pd_base))
+				return PTR_ERR(amlogic_pcie->
+						phy->hhi_mem_pd_base);
+		}
+	}
+
+	if (!amlogic_pcie->phy->reset_base) {
+		reset_base = platform_get_resource_byname(
+			pdev, IORESOURCE_MEM, "reset");
+		amlogic_pcie->phy->reset_base = devm_ioremap_resource(
+			dev, reset_base);
+		if (IS_ERR(amlogic_pcie->phy->reset_base)) {
+			ret = PTR_ERR(amlogic_pcie->phy->reset_base);
+			return ret;
+		}
+	}
+
+	if (pwr_ctl)
+		power_switch_to_pcie(amlogic_pcie->phy);
+
 	if (!amlogic_pcie->phy->phy_base) {
 		phy_base = platform_get_resource_byname(
 			pdev, IORESOURCE_MEM, "phy");
@@ -782,17 +854,6 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 	amlogic_pcie->gpio_type = gpio_type;
 
 	amlogic_pcie->reset_gpio = of_get_named_gpio(np, "reset-gpio", 0);
-
-	if (!amlogic_pcie->phy->reset_base) {
-		reset_base = platform_get_resource_byname(
-			pdev, IORESOURCE_MEM, "reset");
-		amlogic_pcie->phy->reset_base = devm_ioremap_resource(
-			dev, reset_base);
-		if (IS_ERR(amlogic_pcie->phy->reset_base)) {
-			ret = PTR_ERR(amlogic_pcie->phy->reset_base);
-			goto fail_pcie;
-		}
-	}
 
 	/* RESET0[1,2,6,7] = 0*/
 	if (!amlogic_pcie->phy->reset_state) {

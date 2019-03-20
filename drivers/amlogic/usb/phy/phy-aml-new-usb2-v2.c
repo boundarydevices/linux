@@ -223,6 +223,26 @@ static void amlogic_new_usb2phy_shutdown(struct usb_phy *x)
 	phy->suspend_flag = 1;
 }
 
+void power_switch_to_usb(struct amlogic_usb_v2	*phy)
+{
+	/* Powerup usb_comb */
+	writel(readl(phy->power_base) & (~(0x1<<17)), phy->power_base);
+	writel(readl(phy->hhi_mem_pd_base) & (~(0x3<<30)),
+		phy->hhi_mem_pd_base);
+	udelay(100);
+
+	writel((readl(phy->reset_regs + (0x21 * 4 - 0x8)) & ~(0x1 << 2)),
+		phy->reset_regs + (0x21 * 4 - 0x8));
+
+	udelay(100);
+	writel(readl(phy->power_base+0x4) & (~(0x1<<17)),
+		phy->power_base + 0x4);
+
+	writel((readl(phy->reset_regs + (0x21 * 4 - 0x8)) | (0x1 << 2)),
+		phy->reset_regs + (0x21 * 4 - 0x8));
+	udelay(100);
+}
+
 static int amlogic_new_usb2_probe(struct platform_device *pdev)
 {
 	struct amlogic_usb_v2			*phy;
@@ -230,15 +250,20 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	struct resource *phy_mem;
 	struct resource *reset_mem;
 	struct resource *phy_cfg_mem[4];
+	struct resource *power_mem = NULL;
+	struct resource *hhi_mem_pd_mem = NULL;
 	void __iomem	*phy_base;
 	void __iomem	*reset_base = NULL;
 	void __iomem	*phy_cfg_base[4];
+	void __iomem	*power_base = NULL;
+	void __iomem	*hhi_mem_pd_base = NULL;
 	int portnum = 0;
 	int phy_version = 0;
 	const void *prop;
 	int i = 0;
 	int retval;
 	u32 pll_setting[8];
+	u32 pwr_ctl = 0;
 
 	prop = of_get_property(dev->of_node, "portnum", NULL);
 	if (prop)
@@ -281,6 +306,32 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 				resource_size(phy_cfg_mem[i]));
 			if (IS_ERR(phy_cfg_base[i]))
 				return PTR_ERR(phy_cfg_base[i]);
+		}
+	}
+
+	prop = of_get_property(dev->of_node, "pwr-ctl", NULL);
+	if (prop)
+		pwr_ctl = of_read_ulong(prop, 1);
+	else
+		pwr_ctl = 0;
+
+	if (pwr_ctl) {
+		power_mem = platform_get_resource
+			(pdev, IORESOURCE_MEM, 2 + portnum);
+		if (power_mem) {
+			power_base = ioremap(power_mem->start,
+				resource_size(power_mem));
+			if (IS_ERR(power_base))
+				return PTR_ERR(power_base);
+		}
+
+		hhi_mem_pd_mem = platform_get_resource
+				(pdev, IORESOURCE_MEM, 3 + portnum);
+		if (hhi_mem_pd_mem) {
+			hhi_mem_pd_base = ioremap(hhi_mem_pd_mem->start,
+				resource_size(hhi_mem_pd_mem));
+			if (IS_ERR(hhi_mem_pd_base))
+				return PTR_ERR(hhi_mem_pd_base);
 		}
 	}
 
@@ -351,10 +402,17 @@ static int amlogic_new_usb2_probe(struct platform_device *pdev)
 	phy->pll_setting[7] = pll_setting[7];
 	phy->suspend_flag = 0;
 	phy->phy_version = phy_version;
+	phy->pwr_ctl = pwr_ctl;
 	for (i = 0; i < portnum; i++) {
 		phy->phy_cfg[i] = phy_cfg_base[i];
 		/* set port default tuning state */
 		phy->phy_cfg_state[i] = 1;
+	}
+
+	if (pwr_ctl) {
+		phy->power_base = power_base;
+		phy->hhi_mem_pd_base = hhi_mem_pd_base;
+		power_switch_to_usb(phy);
 	}
 
 	usb_add_phy_dev(&phy->phy);

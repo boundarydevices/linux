@@ -760,6 +760,7 @@ static int dwc3_core_init(struct dwc3 *dwc)
 	ret = dwc3_phy_setup(dwc);
 	if (ret)
 		goto err0;
+
 #ifdef CONFIG_AMLOGIC_USB
 	reg = dwc3_readl(dwc->regs, DWC3_GUCTL1);
 	reg |= DWC3_GUCTL_NAKPERENHHS;
@@ -1553,7 +1554,9 @@ MODULE_DEVICE_TABLE(acpi, dwc3_acpi_match);
 #endif
 
 static struct platform_driver dwc3_driver = {
+#ifndef CONFIG_AMLOGIC_USB
 	.probe		= dwc3_probe,
+#endif
 	.remove		= dwc3_remove,
 #ifdef CONFIG_AMLOGIC_USB
 	.shutdown	= dwc3_shutdown,
@@ -1566,7 +1569,16 @@ static struct platform_driver dwc3_driver = {
 	},
 };
 
+#ifdef CONFIG_AMLOGIC_USB
+/* AMLOGIC DWC3 driver does not allow module unload */
+static int __init amlogic_dwc3_init(void)
+{
+	return platform_driver_probe(&dwc3_driver, dwc3_probe);
+}
+late_initcall(amlogic_dwc3_init);
+#else
 module_platform_driver(dwc3_driver);
+#endif
 
 MODULE_ALIAS("platform:dwc3");
 MODULE_AUTHOR("Felipe Balbi <balbi@ti.com>");
