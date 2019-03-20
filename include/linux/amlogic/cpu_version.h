@@ -186,6 +186,11 @@ static inline bool is_meson_tl1_cpu(void)
 	return get_cpu_type() == MESON_CPU_MAJOR_ID_TL1;
 }
 
+static inline bool is_meson_sm1_cpu(void)
+{
+	return get_cpu_type() == MESON_CPU_MAJOR_ID_SM1;
+}
+
 static inline bool cpu_after_eq(unsigned int id)
 {
 	return get_cpu_type() >= id;
