@@ -1322,8 +1322,8 @@
 		interrupt-names = "rdma";
 	};
 
-	meson_fb: meson-fb {
-		compatible = "amlogic, meson-g12a";
+	meson_fb: fb {
+		compatible = "amlogic, meson-sm1";
 		memory-region = <&logo_reserved>;
 		dev_name = "meson-fb";
 		status = "disable";

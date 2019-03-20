@@ -1679,6 +1679,7 @@ static u32 osd_get_hw_reset_flag(void)
 	case __MESON_CPU_MAJOR_ID_G12A:
 	case __MESON_CPU_MAJOR_ID_G12B:
 	case __MESON_CPU_MAJOR_ID_TL1:
+	case __MESON_CPU_MAJOR_ID_SM1:
 		{
 		int i, afbc_enable = 0;
 
@@ -5051,7 +5052,8 @@ static void osd_update_disp_osd_rotate(u32 index)
 	const struct vinfo_s *vinfo;
 	int out_y_crop_start, out_y_crop_end;
 
-	if (osd_hw.osd_meson_dev.cpu_id < __MESON_CPU_MAJOR_ID_G12B)
+	if (osd_hw.osd_meson_dev.cpu_id < __MESON_CPU_MAJOR_ID_G12B ||
+		osd_hw.osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_SM1)
 		return;
 	src_fmt = get_viu2_src_format();
 	src_data.x = 0;
@@ -8387,7 +8389,8 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 			osd_hw.hw_rdma_en = 1;
 	} else if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
 		osd_hw.hw_cursor_en = 0;
-		osd_hw.hw_rdma_en = 1;
+		if (osd_hw.osd_meson_dev.has_rdma)
+			osd_hw.hw_rdma_en = 1;
 		/* g12a and g12b need delay */
 		supsend_delay = 50;
 	}
