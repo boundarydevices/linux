@@ -14793,6 +14793,11 @@ M:	Shunzhou Jiang <shunzhou.jiang@amlogic.com>
 F:	drivers/amlogic/power/power_ctrl.c
 F:	include/linux/amlogic/power_ctrl.h
 
+AMLOGIC SM1 DTS
+M:	shaochan.liu <shaochan.liu@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/mesonsm1_skt-panel.dtsi
+F:	arch/arm/boot/dts/amlogic/mesonsm1_skt-panel.dtsi
+
 AMLOGIC TL1 VAD
 M:	Wenbiao Zhang <wenbiao.zhang@amlogic.com>
 F:	include/linux/amlogic/vad_api.h

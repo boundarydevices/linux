@@ -19,7 +19,7 @@
 
 #include "mesonsm1.dtsi"
 #include "partition_mbox_normal.dtsi"
-#include "mesong12a_skt-panel.dtsi"
+#include "mesonsm1_skt-panel.dtsi"
 
 / {
 	model = "Amlogic";

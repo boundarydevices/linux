@@ -2666,6 +2666,7 @@ static void lcd_clk_config_chip_init(struct lcd_clk_config_s *cConf)
 		cConf->data = &lcd_clk_data_axg;
 		break;
 	case LCD_CHIP_G12A:
+	case LCD_CHIP_SM1:
 		if (lcd_drv->lcd_clk_path)
 			cConf->data = &lcd_clk_data_g12a_path1;
 		else
@@ -2709,6 +2710,7 @@ int lcd_clk_path_change(int sel)
 	switch (lcd_drv->data->chip_type) {
 	case LCD_CHIP_G12A:
 	case LCD_CHIP_G12B:
+	case LCD_CHIP_SM1:
 		if (sel)
 			cConf->data = &lcd_clk_data_g12a_path1;
 		else

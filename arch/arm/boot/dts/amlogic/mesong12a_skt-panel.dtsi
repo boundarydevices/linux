@@ -34,8 +34,8 @@
 			"encl_top_gate",
 			"encl_int_gate",
 			"gp0_pll";
-		reg = <0x0 0xffd07000 0x0 0x400    /* dsi_host */
-			0x0 0xff644000 0x0 0x200>; /* dsi_phy */
+		reg = <0xffd07000 0x400    /* dsi_host */
+			0xff644000 0x200>; /* dsi_phy */
 		interrupts = <0 3 1
 			0 56 1>;
 		interrupt-names = "vsync","vsync2";

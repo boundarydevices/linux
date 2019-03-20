@@ -163,6 +163,7 @@ static void lcd_mipi_phy_set(struct lcd_config_s *pconf, int status)
 		switch (lcd_drv->data->chip_type) {
 		case LCD_CHIP_G12A:
 		case LCD_CHIP_G12B:
+		case LCD_CHIP_SM1:
 			/* HHI_MIPI_CNTL0 */
 			/* DIF_REF_CTL1:31-16bit, DIF_REF_CTL0:15-0bit */
 			lcd_hiu_write(HHI_MIPI_CNTL0,
@@ -223,6 +224,7 @@ static void lcd_mipi_phy_set(struct lcd_config_s *pconf, int status)
 		switch (lcd_drv->data->chip_type) {
 		case LCD_CHIP_G12A:
 		case LCD_CHIP_G12B:
+		case LCD_CHIP_SM1:
 			lcd_hiu_write(HHI_MIPI_CNTL0, 0);
 			lcd_hiu_write(HHI_MIPI_CNTL1, 0);
 			lcd_hiu_write(HHI_MIPI_CNTL2, 0);

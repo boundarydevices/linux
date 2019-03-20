@@ -3231,6 +3231,12 @@ static struct bl_data_s bl_data_tl1 = {
 	.pwm_reg = pwm_reg_txlx,
 };
 
+static struct bl_data_s bl_data_sm1 = {
+	.chip_type = BL_CHIP_SM1,
+	.chip_name = "sm1",
+	.pwm_reg = pwm_reg_txlx,
+};
+
 static const struct of_device_id bl_dt_match_table[] = {
 	{
 		.compatible = "amlogic, backlight-gxl",
@@ -3263,6 +3269,10 @@ static const struct of_device_id bl_dt_match_table[] = {
 	{
 		.compatible = "amlogic, backlight-tl1",
 		.data = &bl_data_tl1,
+	},
+	{
+		.compatible = "amlogic, backlight-sm1",
+		.data = &bl_data_sm1,
 	},
 	{},
 };

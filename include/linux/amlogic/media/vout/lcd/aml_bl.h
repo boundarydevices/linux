@@ -50,6 +50,7 @@ enum bl_chip_type_e {
 	BL_CHIP_G12A,
 	BL_CHIP_G12B,
 	BL_CHIP_TL1,
+	BL_CHIP_SM1,
 	BL_CHIP_MAX,
 };
 
