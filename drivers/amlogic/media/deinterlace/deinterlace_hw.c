@@ -496,7 +496,7 @@ void di_hw_init(bool pd_enable, bool mc_enable)
 
 	/*enable lock win, suggestion from vlsi zheng.bao*/
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
-		lmv_lock_win_en = 1;
+		lmv_lock_win_en = 0;
 
 	DI_Wr(VD1_IF0_LUMA_FIFO_SIZE, fifo_size_vpp);
 	DI_Wr(VD2_IF0_LUMA_FIFO_SIZE, fifo_size_vpp);
