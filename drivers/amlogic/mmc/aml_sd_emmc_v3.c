@@ -1192,8 +1192,10 @@ tunning:
 		nmatch = aml_sd_emmc_tuning_transfer(mmc, opcode,
 				blk_pattern, host->blk_test, blksz);
 		if (nmatch != TUNING_NUM_PER_POINT) {
-			clkc->core_phase = para->hs2.tx_phase;
-			clkc->tx_phase = para->hs2.core_phase;
+			if (host->data->chip_type != MMC_CHIP_SM1) {
+				clkc->core_phase = para->hs2.tx_phase;
+				clkc->tx_phase = para->hs2.core_phase;
+			}
 			writel(vclk, host->base + SD_EMMC_CLOCK_V3);
 			pr_info("%s:try clock:0x%x>>>rx_tuning[%d] = %d\n",
 				mmc_hostname(host->mmc),
