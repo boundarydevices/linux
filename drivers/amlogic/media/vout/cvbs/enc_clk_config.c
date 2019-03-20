@@ -183,7 +183,8 @@ void set_vmode_clk(void)
 		cvbs_out_hiu_setb(HHI_VIID_CLK_CNTL, 0, VCLK2_EN, 1);
 		udelay(5);
 	} else if (cvbs_cpu_type() == CVBS_CPU_TYPE_G12A ||
-			cvbs_cpu_type() == CVBS_CPU_TYPE_G12B) {
+			cvbs_cpu_type() == CVBS_CPU_TYPE_G12B ||
+			cvbs_cpu_type() == CVBS_CPU_TYPE_SM1) {
 		if (cvbs_clk_path & 0x1) {
 			pr_info("config g12a gp0_pll\n");
 			cvbs_out_hiu_write(HHI_GP0_PLL_CNTL0, 0x180204f7);
@@ -229,7 +230,8 @@ void set_vmode_clk(void)
 	}
 
 	if (cvbs_cpu_type() == CVBS_CPU_TYPE_G12A ||
-		cvbs_cpu_type() == CVBS_CPU_TYPE_G12B) {
+		cvbs_cpu_type() == CVBS_CPU_TYPE_G12B ||
+		cvbs_cpu_type() == CVBS_CPU_TYPE_SM1) {
 		if (cvbs_clk_path & 0x2)
 			cvbs_set_vid1_clk(cvbs_clk_path & 0x1);
 		else
@@ -248,7 +250,8 @@ void set_vmode_clk(void)
 void disable_vmode_clk(void)
 {
 	if (cvbs_cpu_type() == CVBS_CPU_TYPE_G12A ||
-		cvbs_cpu_type() == CVBS_CPU_TYPE_G12B) {
+		cvbs_cpu_type() == CVBS_CPU_TYPE_G12B ||
+		cvbs_cpu_type() == CVBS_CPU_TYPE_SM1) {
 		if (cvbs_clk_path & 0x2)
 			disable_vid1_clk_out();
 		else

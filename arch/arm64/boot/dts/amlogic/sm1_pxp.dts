@@ -132,7 +132,7 @@
 	};
 
 	cvbsout {
-		compatible = "amlogic, cvbsout-g12a";
+		compatible = "amlogic, cvbsout-sm1";
 		dev_name = "cvbsout";
 		status = "okay";
 		clocks = <&clkc CLKID_VCLK2_ENCI
@@ -146,7 +146,7 @@
 		clk_path = <0>;
 
 		/* performance: reg_address, reg_value */
-		/* g12a */
+		/* sm1 */
 		performance = <0x1bf0  0x9
 			0x1b56  0x333
 			0x1b12  0x8080

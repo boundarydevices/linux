@@ -27,6 +27,7 @@ enum vdac_cpu_type {
 	VDAC_CPU_TXHD = 5,
 	VDAC_CPU_G12AB = 6,
 	VDAC_CPU_TL1 = 7,
+	VDAC_CPU_SM1 = 8,
 	VDAC_CPU_MAX,
 };
 

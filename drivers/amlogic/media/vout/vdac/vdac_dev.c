@@ -589,6 +589,11 @@ struct meson_vdac_data meson_tl1_vdac_data = {
 	.name = "meson-tl1-vdac",
 };
 
+struct meson_vdac_data meson_sm1_vdac_data = {
+	.cpu_id = VDAC_CPU_SM1,
+	.name = "meson-sm1-vdac",
+};
+
 static const struct of_device_id meson_vdac_dt_match[] = {
 	{
 		.compatible = "amlogic, vdac-gxtvbb",
@@ -620,6 +625,9 @@ static const struct of_device_id meson_vdac_dt_match[] = {
 	}, {
 		.compatible = "amlogic, vdac-tl1",
 		.data		= &meson_tl1_vdac_data,
+	}, {
+		.compatible = "amlogic, vdac-sm1",
+		.data		= &meson_sm1_vdac_data,
 	},
 	{},
 };
@@ -701,7 +709,8 @@ static int __exit aml_vdac_remove(struct platform_device *pdev)
 static int amvdac_drv_suspend(struct platform_device *pdev,
 		pm_message_t state)
 {
-	if (s_vdac_data->cpu_id == VDAC_CPU_TXL)
+	if (s_vdac_data->cpu_id == VDAC_CPU_TXL ||
+		s_vdac_data->cpu_id == VDAC_CPU_TXLX)
 		vdac_hiu_reg_write(HHI_VDAC_CNTL0, 0);
 	pr_info("%s: suspend module\n", __func__);
 	return 0;
@@ -720,8 +729,11 @@ static void amvdac_drv_shutdown(struct platform_device *pdev)
 
 	pr_info("%s: shutdown module\n", __func__);
 	cntl0 = 0x0;
-	if (is_meson_txl_cpu() || is_meson_txlx_cpu())
+	if (s_vdac_data->cpu_id == VDAC_CPU_TXL ||
+		s_vdac_data->cpu_id == VDAC_CPU_TXLX)
 		cntl1 = 0x0;
+	else if (s_vdac_data->cpu_id == VDAC_CPU_TL1)
+		cntl1 = 0x80;
 	else
 		cntl1 = 0x8;
 	vdac_set_ctrl0_ctrl1(cntl0, cntl1);

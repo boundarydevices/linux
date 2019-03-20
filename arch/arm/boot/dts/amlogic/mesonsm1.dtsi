@@ -1201,7 +1201,7 @@
 	};
 
 	vdac {
-		compatible = "amlogic, vdac-g12a";
+		compatible = "amlogic, vdac-sm1";
 		status = "okay";
 	};
 
