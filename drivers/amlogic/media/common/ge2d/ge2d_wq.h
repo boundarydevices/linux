@@ -39,4 +39,5 @@ int ge2d_buffer_free(int index);
 int ge2d_buffer_export(struct ge2d_dmabuf_exp_s *ge2d_exp_buf);
 void ge2d_buffer_dma_flush(int dma_fd);
 void ge2d_buffer_cache_flush(int dma_fd);
+void ge2d_pwr_config(bool enable);
 #endif

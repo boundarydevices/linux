@@ -1012,6 +1012,26 @@ struct ge2d_dmabuf_exp_s {
 };
 /* end of ge2d dma buffer define */
 
+enum {
+	CBUS_BASE,
+	AOBUS_BASE,
+	HIUBUS_BASE,
+};
+
+struct ge2d_ctrl_s {
+	unsigned int bus_type;
+	unsigned int reg;
+	unsigned int val;
+	unsigned int start;
+	unsigned int len;
+	unsigned int udelay;
+};
+
+struct ge2d_power_table_s {
+	unsigned int table_size;
+	struct ge2d_ctrl_s *power_btale;
+};
+
 struct ge2d_device_data_s {
 	int ge2d_rate;
 	int src2_alp;
@@ -1019,6 +1039,9 @@ struct ge2d_device_data_s {
 	int deep_color;
 	int hang_flag;
 	int fifo;
+	int has_self_pwr;
+	struct ge2d_power_table_s *poweron_table;
+	struct ge2d_power_table_s *poweroff_table;
 };
 extern struct ge2d_device_data_s ge2d_meson_dev;
 

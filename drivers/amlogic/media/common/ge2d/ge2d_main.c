@@ -39,6 +39,7 @@
 /* Amlogic Headers */
 #include <linux/amlogic/media/ge2d/ge2d.h>
 #include <linux/amlogic/media/ge2d/ge2d_cmd.h>
+#include <linux/amlogic/media/registers/regs/ao_regs.h>
 #include <linux/amlogic/media/vpu/vpu.h>
 #include <linux/amlogic/cpu_version.h>
 #ifdef CONFIG_AMLOGIC_ION
@@ -52,6 +53,7 @@
 
 #define GE2D_CLASS_NAME "ge2d"
 #define MAX_GE2D_CLK 500000000
+#define HHI_MEM_PD_REG0 0x40
 
 struct ge2d_device_s {
 	char name[20];
@@ -1032,6 +1034,26 @@ static int ge2d_release(struct inode *inode, struct file *file)
 	return -1;
 }
 
+static struct ge2d_ctrl_s default_poweron_ctrl[] = {
+			/* power up ge2d */
+			{AOBUS_BASE, AO_RTI_GEN_PWR_SLEEP0, 0, 19, 1, 0},
+			/* Power up memory */
+			{HIUBUS_BASE, HHI_MEM_PD_REG0, 0, 18, 8, 100},
+			/* remove isolation */
+			{AOBUS_BASE, AO_RTI_GEN_PWR_ISO0, 0, 19, 1, 0}
+		};
+static struct ge2d_ctrl_s default_poweroff_ctrl[] = {
+			/* add isolation */
+			{AOBUS_BASE, AO_RTI_GEN_PWR_ISO0, 1, 19, 1, 0},
+			/* Power down memory */
+			{HIUBUS_BASE, HHI_MEM_PD_REG0, 0xff, 18, 8, 0},
+			/* power down ge2d */
+			{AOBUS_BASE, AO_RTI_GEN_PWR_SLEEP0, 1, 19, 1, 0}
+		};
+
+struct ge2d_power_table_s default_poweron_table = {3, default_poweron_ctrl};
+struct ge2d_power_table_s default_poweroff_table = {3, default_poweroff_ctrl};
+
 static struct ge2d_device_data_s ge2d_gxl = {
 	.ge2d_rate = 400000000,
 	.src2_alp = 0,
@@ -1039,6 +1061,7 @@ static struct ge2d_device_data_s ge2d_gxl = {
 	.deep_color = 0,
 	.hang_flag = 0,
 	.fifo = 0,
+	.has_self_pwr = 0,
 };
 
 static struct ge2d_device_data_s ge2d_gxm = {
@@ -1048,6 +1071,7 @@ static struct ge2d_device_data_s ge2d_gxm = {
 	.deep_color = 0,
 	.hang_flag = 0,
 	.fifo = 0,
+	.has_self_pwr = 0,
 };
 
 static struct ge2d_device_data_s ge2d_txl = {
@@ -1057,6 +1081,7 @@ static struct ge2d_device_data_s ge2d_txl = {
 	.deep_color = 1,
 	.hang_flag = 0,
 	.fifo = 0,
+	.has_self_pwr = 0,
 };
 
 static struct ge2d_device_data_s ge2d_txlx = {
@@ -1066,6 +1091,7 @@ static struct ge2d_device_data_s ge2d_txlx = {
 	.deep_color = 1,
 	.hang_flag = 1,
 	.fifo = 1,
+	.has_self_pwr = 0,
 };
 
 static struct ge2d_device_data_s ge2d_axg = {
@@ -1075,6 +1101,7 @@ static struct ge2d_device_data_s ge2d_axg = {
 	.deep_color = 1,
 	.hang_flag = 1,
 	.fifo = 1,
+	.has_self_pwr = 0,
 };
 
 static struct ge2d_device_data_s ge2d_g12a = {
@@ -1084,6 +1111,19 @@ static struct ge2d_device_data_s ge2d_g12a = {
 	.deep_color = 1,
 	.hang_flag = 1,
 	.fifo = 1,
+	.has_self_pwr = 0,
+};
+
+static struct ge2d_device_data_s ge2d_sm1 = {
+	.ge2d_rate = 500000000,
+	.src2_alp = 1,
+	.canvas_status = 0,
+	.deep_color = 1,
+	.hang_flag = 1,
+	.fifo = 1,
+	.has_self_pwr = 1,
+	.poweron_table = &default_poweron_table,
+	.poweroff_table = &default_poweroff_table,
 };
 
 static const struct of_device_id ge2d_dt_match[] = {
@@ -1110,6 +1150,10 @@ static const struct of_device_id ge2d_dt_match[] = {
 	{
 		.compatible = "amlogic, ge2d-g12a",
 		.data = &ge2d_g12a,
+	},
+	{
+		.compatible = "amlogic, ge2d-sm1",
+		.data = &ge2d_sm1,
 	},
 	{},
 };
@@ -1171,6 +1215,7 @@ static int ge2d_probe(struct platform_device *pdev)
 		goto failed1;
 	}
 	ge2d_log_info("clock clk_ge2d source %p\n", clk);
+	ge2d_pwr_config(true);
 	clk_prepare_enable(clk);
 
 	clk_vapb0 = devm_clk_get(&pdev->dev, "clk_vapb_0");
@@ -1240,6 +1285,7 @@ static int ge2d_remove(struct platform_device *pdev)
 	ge2d_log_info("%s\n", __func__);
 	ge2d_wq_deinit();
 	remove_ge2d_device();
+	ge2d_pwr_config(false);
 	return 0;
 }
 

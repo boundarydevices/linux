@@ -26,6 +26,7 @@
 #include <linux/of_fdt.h>
 #include <linux/reset.h>
 #include <linux/clk.h>
+#include <linux/delay.h>
 
 /* Amlogic Headers */
 #include <linux/amlogic/cpu_version.h>
@@ -45,6 +46,7 @@
 
 #include "osd_io.h"
 #include "osd_hw.h"
+
 #define OSD1_CANVAS_INDEX 0x40
 #define OSD2_CANVAS_INDEX 0x43
 #define OSD3_CANVAS_INDEX 0x41
@@ -117,6 +119,32 @@ static const int default_ge2d_color_lut[] = {
 	GE2D_FORMAT_S32_RGBA,/* BPP_TYPE_32_RGBA=31, */
 	GE2D_FORMAT_S32_ARGB,/* BPP_TYPE_32_ARGB=32, */
 };
+
+void ge2d_pwr_config(bool enable)
+{
+	int i, table_size;
+	struct ge2d_ctrl_s tmp;
+	struct ge2d_ctrl_s *power_table;
+
+	if (ge2d_meson_dev.has_self_pwr) {
+		if (enable) {
+			power_table = ge2d_meson_dev.poweron_table->power_btale;
+			table_size = ge2d_meson_dev.poweron_table->table_size;
+		} else {
+			power_table =
+				ge2d_meson_dev.poweroff_table->power_btale;
+			table_size = ge2d_meson_dev.poweroff_table->table_size;
+		}
+
+		for (i = 0; i < table_size; i++) {
+			tmp = power_table[i];
+			ge2d_set_bus_bits(tmp.bus_type, tmp.reg, tmp.val,
+					tmp.start, tmp.len);
+			if (tmp.udelay > 0)
+				udelay(tmp.udelay);
+		}
+	}
+}
 
 static int ge2d_clk_config(bool enable)
 {
