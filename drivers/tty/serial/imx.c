@@ -2470,12 +2470,10 @@ static void imx_uart_enable_wakeup(struct imx_port *sport, bool on)
 		imx_uart_writel(sport, USR1_AWAKE | USR1_RTSD, USR1);
 
 	ucr3 = imx_uart_readl(sport, UCR3);
-	if (on) {
-		imx_uart_writel(sport, USR1_AWAKE, USR1);
+	if (on)
 		ucr3 |= UCR3_AWAKEN;
-	} else {
+	else
 		ucr3 &= ~UCR3_AWAKEN;
-	}
 	imx_uart_writel(sport, ucr3, UCR3);
 
 	if (sport->have_rtscts) {
