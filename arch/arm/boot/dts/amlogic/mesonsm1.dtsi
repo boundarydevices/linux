@@ -509,6 +509,12 @@
 		#thermal-sensor-cells = <1>;
 	};
 
+	power_ctrl: power_ctrl@ff8000e8 {
+		compatible = "amlogic, sm1-powerctrl";
+		reg = <0xff8000e8 0x10>,
+		      <0xff63c100 0x10>;
+	};
+
 	soc {
 		compatible = "simple-bus";
 		#address-cells = <1>;

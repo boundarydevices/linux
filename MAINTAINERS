@@ -14778,3 +14778,8 @@ F:	arch/arm/boot/dts/amlogic/sm1_pxp.dts
 AMLOGIC SM1 CLOCK DRIVERS
 M:	Shunzhou Jiang <shunzhou.jiang@amlogic.com>
 F:	drivers/amlogic/clk/sm1/*
+
+AMLOGIC SM1 POWER CTRL DRIVERS
+M:	Shunzhou Jiang <shunzhou.jiang@amlogic.com>
+F:	drivers/amlogic/power/power_ctrl.c
+F:	include/linux/amlogic/power_ctrl.h

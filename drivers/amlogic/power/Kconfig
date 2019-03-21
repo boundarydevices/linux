@@ -1,6 +1,5 @@
 config AMLOGIC_POWER
 	bool "Amloigc power related driver support"
-	depends on MACH_MESON8B
 	default n
 	help
 		this config enables to use amlogic power management driver
