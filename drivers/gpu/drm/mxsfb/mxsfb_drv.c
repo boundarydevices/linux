@@ -125,14 +125,14 @@ static int mxsfb_atomic_helper_check(struct drm_device *dev,
 			    struct drm_atomic_state *state)
 {
 	struct drm_crtc *crtc;
-	struct drm_crtc_state *crtc_state;
+	struct drm_crtc_state *new_state;
 	int i, ret;
 
 	ret = drm_atomic_helper_check(dev, state);
 	if (ret)
 		return ret;
 
-	for_each_crtc_in_state(state, crtc, crtc_state, i) {
+	for_each_new_crtc_in_state(state, crtc, new_state, i) {
 		struct drm_plane_state *primary_state;
 		int old_bpp = 0;
 		int new_bpp = 0;
@@ -146,7 +146,7 @@ static int mxsfb_atomic_helper_check(struct drm_device *dev,
 		old_bpp = crtc->primary->old_fb->format->depth;
 		new_bpp = primary_state->fb->format->depth;
 		if (old_bpp != new_bpp) {
-			crtc_state->mode_changed = true;
+			new_state->mode_changed = true;
 			DRM_DEBUG_ATOMIC(
 				"[CRTC:%d:%s] mode changed, bpp %d->%d\n",
 				crtc->base.id, crtc->name, old_bpp, new_bpp);
