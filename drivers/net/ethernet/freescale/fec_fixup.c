@@ -202,6 +202,7 @@ static void imx8qm_ipg_stop_enable(int dev_id, bool enabled)
 }
 #else
 static void imx8qm_get_mac_from_fuse(int dev_id, unsigned char *mac) {}
+static void imx8qm_ipg_stop_enable(int dev_id, bool enabled) {}
 #endif
 
 void fec_enet_get_mac_from_fuse(struct device_node *np, unsigned char *mac)
@@ -220,4 +221,20 @@ void fec_enet_get_mac_from_fuse(struct device_node *np, unsigned char *mac)
 		imx8qm_get_mac_from_fuse(idx, mac);
 	else if (of_machine_is_compatible("fsl,imx8mq"))
 		imx8mq_get_mac_from_fuse(idx, mac);
+}
+
+void fec_enet_ipg_stop_misc_set(struct device_node *np, bool enabled)
+{
+	int idx;
+
+	if (!np)
+		return;
+
+	idx = of_alias_get_id(np, "ethernet");
+	if (idx < 0)
+		idx = 0;
+
+	if (of_machine_is_compatible("fsl,imx8qm") ||
+	    of_machine_is_compatible("fsl,imx8qxp"))
+		imx8qm_ipg_stop_enable(idx, enabled);
 }
