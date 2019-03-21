@@ -47,6 +47,8 @@
 	};
 };
 
+/delete-node/ &it6263_1_in;
+
 &ldb2_phy {
 	status = "okay";
 };

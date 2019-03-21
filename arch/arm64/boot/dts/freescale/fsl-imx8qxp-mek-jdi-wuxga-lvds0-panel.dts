@@ -27,6 +27,8 @@
 	};
 };
 
+/delete-node/ &it6263_0_in;
+
 &ldb1 {
 	fsl,dual-channel;
 	power-domains = <&pd_mipi_dsi_0_dual_lvds>;
