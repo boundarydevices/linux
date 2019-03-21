@@ -539,7 +539,11 @@
 		compatible = "amlogic, aml_codec_T9015";
 		reg = <0xFF632000 0x2000>;
 		is_auge_used = <1>; /* meson or auge chipset used */
+		tocodec_inout = <1>;
 		tdmout_index = <1>;
+		ch0_sel = <0>;
+		ch1_sel = <1>;
+
 		status = "okay";
 	};
 
@@ -838,6 +842,7 @@
 		reg = <0x31>;
 		status = "okay";
 		reset_pin = <&gpio GPIOA_5 0>;
+		no_mclk;
 	};
 
 	bl_extern_i2c {
@@ -1134,6 +1139,7 @@
 
 
 }; /* end of pinctrl_periphs */
+
 &pinctrl_aobus {
 	spdifout: spdifout {
 		mux { /* GPIOAO_10 */

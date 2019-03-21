@@ -46,7 +46,13 @@ struct aml_T9015_audio_priv {
 
 	/* codec is used by meson or auge arch */
 	bool is_auge_arch;
+	/* tocodec ctrl supports in and out data */
+	bool tocodec_inout;
+	/* attach which tdm when play */
 	int tdmout_index;
+	/* channel map */
+	int ch0_sel;
+	int ch1_sel;
 };
 
 static const struct reg_default t9015_init_list[] = {
@@ -72,26 +78,20 @@ static int aml_DAC_Gain_get_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-#if 0
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
-	u32 add, val, val1, val2;
-#endif
-	/*TODO: return 0 for tmp, this wolud modified later */
-	return 0;
-#if 0
-	if (codec == NULL)
-		return -1;
+	u32 reg_addr = ADC_VOL_CTR_PGA_IN_CONFIG;
+	u32 val = snd_soc_read(codec, reg_addr);
+	u32 val1 = (val & (0x1 << DAC_GAIN_SEL_L))
+					>> DAC_GAIN_SEL_L;
+	u32 val2 = (val & (0x1 << DAC_GAIN_SEL_H))
+					>> (DAC_GAIN_SEL_H);
 
-	add = ADC_VOL_CTR_PGA_IN_CONFIG;
-	val = snd_soc_read(codec, add);
-	val1 = (val & (0x1 <<  DAC_GAIN_SEL_L)) >> DAC_GAIN_SEL_L;
-	val2 = (val & (0x1 <<  DAC_GAIN_SEL_H)) >> (DAC_GAIN_SEL_H - 1);
+	val = val1 | (val2 << 1);
 
-	val = val1 | val2;
 	ucontrol->value.enumerated.item[0] = val;
+
 	return 0;
- #endif
 }
 
 static int aml_DAC_Gain_set_enum(
@@ -100,8 +100,8 @@ static int aml_DAC_Gain_set_enum(
 {
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
-	u32 add = ADC_VOL_CTR_PGA_IN_CONFIG;
-	u32 val = snd_soc_read(codec, add);
+	u32 addr = ADC_VOL_CTR_PGA_IN_CONFIG;
+	u32 val = snd_soc_read(codec, addr);
 
 	if (ucontrol->value.enumerated.item[0] == 0) {
 		val &= ~(0x1 << DAC_GAIN_SEL_H);
@@ -120,7 +120,7 @@ static int aml_DAC_Gain_set_enum(
 		pr_info("It has risk of distortion!\n");
 	}
 
-	snd_soc_write(codec, val, add);
+	snd_soc_write(codec, addr, val);
 	return 0;
 }
 
@@ -392,9 +392,15 @@ static int aml_T9015_audio_probe(struct snd_soc_codec *codec)
 	aml_T9015_audio_start_up(codec);
 	aml_T9015_audio_reg_init(codec);
 
-	if (T9015_audio && T9015_audio->is_auge_arch)
-		auge_toacodec_ctrl(T9015_audio->tdmout_index);
-	else
+	if (T9015_audio && T9015_audio->is_auge_arch) {
+		if (T9015_audio->tocodec_inout)
+			auge_toacodec_ctrl_ext(
+				T9015_audio->tdmout_index,
+				T9015_audio->ch0_sel,
+				T9015_audio->ch1_sel);
+		else
+			auge_toacodec_ctrl(T9015_audio->tdmout_index);
+	} else
 		aml_write_cbus(AIU_ACODEC_CTRL,
 				(1 << 4)
 				|(1 << 6)
@@ -531,12 +537,27 @@ static int aml_T9015_audio_codec_probe(struct platform_device *pdev)
 	T9015_audio->is_auge_arch = of_property_read_bool(
 			pdev->dev.of_node,
 			"is_auge_used");
+
+	T9015_audio->tocodec_inout = of_property_read_bool(
+			pdev->dev.of_node,
+			"tocodec_inout");
+
 	of_property_read_u32(
 			pdev->dev.of_node,
 			"tdmout_index",
 			&T9015_audio->tdmout_index);
 
-	pr_info("aml_codec_T9015 is used by %s chipset, tdmout:%d\n",
+	of_property_read_u32(
+			pdev->dev.of_node,
+			"ch0_sel",
+			&T9015_audio->ch0_sel);
+
+	of_property_read_u32(
+			pdev->dev.of_node,
+			"ch1_sel",
+			&T9015_audio->ch1_sel);
+
+	pr_info("T9015 acodec used by %s, tdmout:%d\n",
 		T9015_audio->is_auge_arch ? "auge" : "meson",
 		T9015_audio->tdmout_index);
 

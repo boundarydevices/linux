@@ -16,6 +16,7 @@
 
 struct ad82584f_platform_data {
 	int reset_pin;
+	bool no_mclk;
 };
 
 #endif

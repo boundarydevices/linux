@@ -808,11 +808,21 @@ static int ad82584f_reg_init(struct snd_soc_codec *codec)
 }
 static int ad82584f_init(struct snd_soc_codec *codec)
 {
+	struct ad82584f_priv *ad82584f = snd_soc_codec_get_drvdata(codec);
+
 	reset_ad82584f_GPIO(codec);
 
 	dev_info(codec->dev, "ad82584f_init!\n");
 
 	ad82584f_reg_init(codec);
+
+	/* Bclk system */
+	if (ad82584f->pdata->no_mclk)
+		snd_soc_write(codec,
+			0x01,
+			0x1 << 7 | /* Bclk system enable */
+			0x1 << 0   /* 64x bclk/fs */
+			);
 
 	/*eq and drc*/
 	ad82584f_set_eq_drc(codec);
@@ -944,6 +954,12 @@ static int ad82584f_parse_dt(
 				ad82584f->pdata->reset_pin);
 	}
 	ad82584f->pdata->reset_pin = reset_pin;
+
+	ad82584f->pdata->no_mclk = of_property_read_bool(
+			np,
+			"no_mclk");
+	if (ad82584f->pdata->no_mclk)
+		pr_info("%s mclk is not connected.\n", __func__);
 
 	return ret;
 }

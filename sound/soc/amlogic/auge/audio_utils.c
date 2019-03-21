@@ -1589,6 +1589,20 @@ void auge_toacodec_ctrl(int tdmout_id)
 		);
 }
 
+void auge_toacodec_ctrl_ext(int tdmout_id, int ch0_sel, int ch1_sel)
+{
+	// TODO: check skew for tl1/sm1
+	audiobus_write(EE_AUDIO_TOACODEC_CTRL0,
+		1 << 31
+		| ((tdmout_id << 2) + ch1_sel) << 20 /* data 1 */
+		| ((tdmout_id << 2) + ch0_sel) << 16 /* data 0 */
+		| tdmout_id << 12          /* lrclk */
+		| 1 << 9                   /* Bclk_cap_inv*/
+		| tdmout_id << 4           /* bclk */
+		| tdmout_id << 0           /* mclk */
+		);
+}
+
 void fratv_enable(bool enable)
 {
 	/* Need reset firstlry ? */
