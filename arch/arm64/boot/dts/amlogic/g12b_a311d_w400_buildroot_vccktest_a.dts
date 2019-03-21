@@ -1156,7 +1156,7 @@
 	spdifout_a_mute: spdifout_a_mute {
 		mux { /* gpiao_10 */
 			groups = "GPIOAO_10";
-			function = "gpio_periphs";
+			function = "gpio_aobus";
 		};
 	};
 };  /* end of pinctrl_aobus */
