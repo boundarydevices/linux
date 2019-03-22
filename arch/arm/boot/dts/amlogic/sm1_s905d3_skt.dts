@@ -23,6 +23,7 @@
 
 / {
 	model = "Amlogic";
+	amlogic-dt-id = "sm1_skt_2g";
 	compatible = "amlogic, g12a";
 	interrupt-parent = <&gic>;
 	#address-cells = <1>;
