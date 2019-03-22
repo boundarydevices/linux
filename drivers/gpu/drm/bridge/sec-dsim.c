@@ -1118,7 +1118,7 @@ int sec_mipi_dsim_check_pll_out(void *driver_private,
 	if (bpp < 0)
 		return -EINVAL;
 
-	pix_clk = mode->clock * 1000;
+	pix_clk = (uint64_t)mode->clock * 1000;
 	bit_clk = DIV_ROUND_UP_ULL(pix_clk * bpp, dsim->lanes);
 
 	if (bit_clk > pdata->max_data_rate) {
