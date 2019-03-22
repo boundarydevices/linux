@@ -353,7 +353,8 @@ static void linebuffer_config(unsigned short width)
 static void nr2_config(unsigned short width, unsigned short height)
 {
 	if (is_meson_txlx_cpu() || is_meson_g12a_cpu() ||
-		is_meson_g12b_cpu()) {
+		is_meson_g12b_cpu() || is_meson_tl1_cpu() ||
+		is_meson_sm1_cpu()) {
 		DI_Wr_reg_bits(NR4_TOP_CTRL, nr2_en, 2, 1);
 		DI_Wr_reg_bits(NR4_TOP_CTRL, nr2_en, 15, 1);
 		DI_Wr_reg_bits(NR4_TOP_CTRL, nr2_en, 17, 1);
@@ -402,7 +403,8 @@ void nr_all_config(unsigned short width, unsigned short height,
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXLX))
 		cue_config(nr_param.pcue_parm, field_type);
 	if (is_meson_txlx_cpu() || is_meson_g12a_cpu() ||
-		is_meson_g12b_cpu()) {
+		is_meson_g12b_cpu() || is_meson_tl1_cpu() ||
+		is_meson_sm1_cpu()) {
 		linebuffer_config(width);
 		nr4_config(nr_param.pnr4_parm, width, height);
 	}
@@ -782,7 +784,8 @@ void nr_process_in_irq(void)
 	if (dnr_en)
 		dnr_process(&dnr_param);
 	if (is_meson_txlx_cpu() || is_meson_g12a_cpu()
-		|| is_meson_g12a_cpu()) {
+		|| is_meson_g12a_cpu() || is_meson_tl1_cpu() ||
+		is_meson_sm1_cpu()) {
 		noise_meter_process(nr_param.pnr4_parm, nr_param.frame_count);
 		luma_enhancement_process(nr_param.pnr4_parm,
 				nr_param.frame_count);
@@ -1130,7 +1133,8 @@ void nr_hw_init(void)
 void nr_gate_control(bool gate)
 {
 	if (!is_meson_txlx_cpu() && !is_meson_g12a_cpu()
-		&& !is_meson_g12b_cpu())
+		&& !is_meson_g12b_cpu() && !is_meson_sm1_cpu()
+		&& !is_meson_tl1_cpu())
 		return;
 	if (gate) {
 		/* enable nr auto gate */

@@ -253,7 +253,9 @@ void dump_di_reg_g12(void)
 	if (is_meson_txlx_cpu() ||
 		is_meson_txhd_cpu() ||
 		is_meson_g12a_cpu() ||
-		is_meson_g12b_cpu())
+		is_meson_g12b_cpu() ||
+		is_meson_tl1_cpu() ||
+		is_meson_sm1_cpu())
 		base_addr = 0xff900000;
 	else
 		base_addr = 0xd0100000;
