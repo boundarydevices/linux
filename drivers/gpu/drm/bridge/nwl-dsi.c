@@ -640,6 +640,9 @@ static int nwl_dsi_host_attach(struct mipi_dsi_host *host,
 	    device->dev.of_node != dsi->next_bridge->of_node)
 		dsi->panel = of_drm_find_panel(device->dev.of_node);
 
+	if (IS_ERR(dsi->panel))
+		dsi->panel = NULL;
+
 	/*
 	 * Bridge has priority in front of panel.
 	 * Since the panel driver cannot tell if there is a physical
@@ -1106,7 +1109,7 @@ static int nwl_dsi_create_connector(struct drm_device *drm,
 				 &nwl_dsi_connector_helper_funcs);
 
 	dsi->connector.dpms = DRM_MODE_DPMS_OFF;
-	drm_mode_connector_attach_encoder(&dsi->connector, dsi->bridge.encoder);
+	drm_connector_attach_encoder(&dsi->connector, dsi->bridge.encoder);
 
 	ret = drm_panel_attach(dsi->panel, &dsi->connector);
 	if (ret) {
@@ -1301,7 +1304,7 @@ static int nwl_dsi_probe(struct platform_device *pdev)
 	struct nwl_mipi_dsi *dsi;
 	struct clk *clk;
 	struct resource *res;
-	int ret;
+	int ret = 0;
 
 	dsi = devm_kzalloc(dev, sizeof(*dsi), GFP_KERNEL);
 	if (!dsi)
@@ -1374,9 +1377,7 @@ static int nwl_dsi_probe(struct platform_device *pdev)
 	dsi->bridge.funcs = &nwl_dsi_bridge_funcs;
 	dsi->bridge.of_node = dev->of_node;
 
-	ret = drm_bridge_add(&dsi->bridge);
-	if (ret < 0)
-		dev_err(dev, "Failed to add nwl-dsi bridge (%d)\n", ret);
+	drm_bridge_add(&dsi->bridge);
 
 	INIT_LIST_HEAD(&dsi->valid_modes);
 
