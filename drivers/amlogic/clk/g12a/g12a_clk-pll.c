@@ -64,19 +64,6 @@
 #define G12A_PCIE_PLL_CNTL5  0x68000048
 #define G12A_PCIE_PLL_CNTL5_ 0x68000068
 
-#define G12B_PCIE_PLL_CNTL0_0  0x28060464
-#define G12B_PCIE_PLL_CNTL0_1  0x38060464
-#define G12B_PCIE_PLL_CNTL0_2  0x3c060464
-#define G12B_PCIE_PLL_CNTL0_3  0x1c060464
-#define G12B_PCIE_PLL_CNTL1  0x00000000
-#define G12B_PCIE_PLL_CNTL2  0x00001100
-#define G12B_PCIE_PLL_CNTL2_ 0x00001000
-#define G12B_PCIE_PLL_CNTL3  0x10058e00
-#define G12B_PCIE_PLL_CNTL4  0x000100c0
-#define G12B_PCIE_PLL_CNTL4_ 0x008100c0
-#define G12B_PCIE_PLL_CNTL5  0x68000048
-#define G12B_PCIE_PLL_CNTL5_ 0x68000068
-
 #define G12A_SYS_PLL_CNTL1 0x00000000
 #define G12A_SYS_PLL_CNTL2 0x00000000
 #define G12A_SYS_PLL_CNTL3 0x48681c00
@@ -89,7 +76,7 @@
 #define G12A_SYS1_PLL_CNTL4 0x88770290
 #define G12A_SYS1_PLL_CNTL5 0x39272000
 
-#define G12A_GP0_PLL_CNTL1 0x00000000
+#define G12A_GP0_PLL_CNTL1 0x00007800
 #define G12A_GP0_PLL_CNTL2 0x00000000
 #define G12A_GP0_PLL_CNTL3 0x48681c00
 #define G12A_GP0_PLL_CNTL4 0x33771290
@@ -271,66 +258,34 @@ static int meson_g12a_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	cntlbase = pll->base + p->reg_off;
 
 	if (!strcmp(clk_hw_get_name(hw), "pcie_pll")) {
-		if ((get_cpu_type() == MESON_CPU_MAJOR_ID_G12A) ||
-			((get_cpu_type() == MESON_CPU_MAJOR_ID_SM1))) {
-			writel(G12A_PCIE_PLL_CNTL0_0,
-				cntlbase + (unsigned long)(0*4));
-			writel(G12A_PCIE_PLL_CNTL0_1,
-				cntlbase + (unsigned long)(0*4));
-			writel(G12A_PCIE_PLL_CNTL1,
-				cntlbase + (unsigned long)(1*4));
-			writel(G12A_PCIE_PLL_CNTL2,
-				cntlbase + (unsigned long)(2*4));
-			writel(G12A_PCIE_PLL_CNTL3,
-				cntlbase + (unsigned long)(3*4));
-			writel(G12A_PCIE_PLL_CNTL4,
-				cntlbase + (unsigned long)(4*4));
-			writel(G12A_PCIE_PLL_CNTL5,
-				cntlbase + (unsigned long)(5*4));
-			writel(G12A_PCIE_PLL_CNTL5_,
-				cntlbase + (unsigned long)(5*4));
-			udelay(20);
-			writel(G12A_PCIE_PLL_CNTL4_,
-				cntlbase + (unsigned long)(4*4));
-			udelay(10);
-			/*set pcie_apll_afc_start bit*/
-			writel(G12A_PCIE_PLL_CNTL0_2,
-				cntlbase + (unsigned long)(0*4));
-			writel(G12A_PCIE_PLL_CNTL0_3,
-				cntlbase + (unsigned long)(0*4));
-			udelay(10);
-			writel(G12A_PCIE_PLL_CNTL2_,
-				cntlbase + (unsigned long)(2*4));
-		} else if (get_cpu_type() == MESON_CPU_MAJOR_ID_G12B) {
-			writel(G12B_PCIE_PLL_CNTL0_0,
-				cntlbase + (unsigned long)(0*4));
-			writel(G12B_PCIE_PLL_CNTL0_1,
-				cntlbase + (unsigned long)(0*4));
-			writel(G12B_PCIE_PLL_CNTL1,
-				cntlbase + (unsigned long)(1*4));
-			writel(G12B_PCIE_PLL_CNTL2,
-				cntlbase + (unsigned long)(2*4));
-			writel(G12B_PCIE_PLL_CNTL3,
-				cntlbase + (unsigned long)(3*4));
-			writel(G12B_PCIE_PLL_CNTL4,
-				cntlbase + (unsigned long)(4*4));
-			writel(G12B_PCIE_PLL_CNTL5,
-				cntlbase + (unsigned long)(5*4));
-			writel(G12B_PCIE_PLL_CNTL5_,
-				cntlbase + (unsigned long)(5*4));
-			udelay(20);
-			writel(G12B_PCIE_PLL_CNTL4_,
-				cntlbase + (unsigned long)(4*4));
-			udelay(10);
-			/*set pcie_apll_afc_start bit*/
-			writel(G12B_PCIE_PLL_CNTL0_2,
-				cntlbase + (unsigned long)(0*4));
-			writel(G12B_PCIE_PLL_CNTL0_3,
-				cntlbase + (unsigned long)(0*4));
-			udelay(10);
-			writel(G12B_PCIE_PLL_CNTL2_,
-				cntlbase + (unsigned long)(2*4));
-		}
+		writel(G12A_PCIE_PLL_CNTL0_0,
+			cntlbase + (unsigned long)(0*4));
+		writel(G12A_PCIE_PLL_CNTL0_1,
+			cntlbase + (unsigned long)(0*4));
+		writel(G12A_PCIE_PLL_CNTL1,
+			cntlbase + (unsigned long)(1*4));
+		writel(G12A_PCIE_PLL_CNTL2,
+			cntlbase + (unsigned long)(2*4));
+		writel(G12A_PCIE_PLL_CNTL3,
+			cntlbase + (unsigned long)(3*4));
+		writel(G12A_PCIE_PLL_CNTL4,
+			cntlbase + (unsigned long)(4*4));
+		writel(G12A_PCIE_PLL_CNTL5,
+			cntlbase + (unsigned long)(5*4));
+		writel(G12A_PCIE_PLL_CNTL5_,
+			cntlbase + (unsigned long)(5*4));
+		udelay(20);
+		writel(G12A_PCIE_PLL_CNTL4_,
+			cntlbase + (unsigned long)(4*4));
+		udelay(10);
+		/*set pcie_apll_afc_start bit*/
+		writel(G12A_PCIE_PLL_CNTL0_2,
+			cntlbase + (unsigned long)(0*4));
+		writel(G12A_PCIE_PLL_CNTL0_3,
+			cntlbase + (unsigned long)(0*4));
+		udelay(10);
+		writel(G12A_PCIE_PLL_CNTL2_,
+			cntlbase + (unsigned long)(2*4));
 		goto OUT;
 	} else if (!strcmp(clk_hw_get_name(hw), "sys_pll")) {
 		writel((readl(cntlbase) | MESON_PLL_RESET)
@@ -384,15 +339,15 @@ static int meson_g12a_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	} else if (!strcmp(clk_hw_get_name(hw), "hifi_pll")) {
 		writel((readl(cntlbase) | MESON_PLL_RESET)
 			& (~MESON_PLL_ENABLE), cntlbase);
-		writel(G12A_GP0_PLL_CNTL1,
+		writel(G12A_HIFI_PLL_CNTL1,
 				cntlbase + (unsigned long)(1*4));
-		writel(G12A_GP0_PLL_CNTL2,
+		writel(G12A_HIFI_PLL_CNTL2,
 				cntlbase + (unsigned long)(2*4));
-		writel(G12A_GP0_PLL_CNTL3,
+		writel(G12A_HIFI_PLL_CNTL3,
 				cntlbase + (unsigned long)(3*4));
-		writel(G12A_GP0_PLL_CNTL4,
+		writel(G12A_HIFI_PLL_CNTL4,
 				cntlbase + (unsigned long)(4*4));
-		writel(G12A_GP0_PLL_CNTL5,
+		writel(G12A_HIFI_PLL_CNTL5,
 				cntlbase + (unsigned long)(5*4));
 		writel(G12A_PLL_CNTL6,
 				cntlbase + (unsigned long)(6*4));

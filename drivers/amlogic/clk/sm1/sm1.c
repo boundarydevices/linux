@@ -176,7 +176,7 @@ static struct clk_mux sm1_dsu_pre_clk = {
 static struct clk_mux sm1_dsu_clk = {
 	.reg = (void *)HHI_SYS_CPU_CLK_CNTL6,
 	.mask = 0x1,
-	.shift = 11,
+	.shift = 27,
 	.lock = &clk_lock,
 	.hw.init = &(struct clk_init_data){
 		.name = "dsu_clk",
@@ -190,6 +190,24 @@ static struct clk_mux sm1_dsu_clk = {
 
 static struct meson_clk_pll *const sm1_clk_plls[] = {
 	&sm1_gp1_pll,
+};
+
+static MESON_GATE(sm1_csi_dig, HHI_GCLK_MPEG1, 18);
+static MESON_GATE(sm1_nna, HHI_GCLK_MPEG1, 19);
+static MESON_GATE(sm1_parser1, HHI_GCLK_MPEG1, 28);
+static MESON_GATE(sm1_csi_host, HHI_GCLK_MPEG2, 16);
+static MESON_GATE(sm1_csi_adpat, HHI_GCLK_MPEG2, 17);
+static MESON_GATE(sm1_temp_sensor, HHI_GCLK_MPEG2, 22);
+static MESON_GATE(sm1_csi_phy, HHI_GCLK_MPEG2, 29);
+
+static struct clk_gate *sm1_clk_gates[] = {
+	&sm1_csi_dig,
+	&sm1_nna,
+	&sm1_parser1,
+	&sm1_csi_host,
+	&sm1_csi_adpat,
+	&sm1_temp_sensor,
+	&sm1_csi_phy,
 };
 
 static struct clk_hw *sm1_clk_hws[] = {
@@ -211,6 +229,20 @@ static struct clk_hw *sm1_clk_hws[] = {
 	[CLKID_DSU_PRE_CLK - CLKID_SM1_ADD_BASE] =
 				&sm1_dsu_pre_clk.hw,
 	[CLKID_DSU_CLK - CLKID_SM1_ADD_BASE] = &sm1_dsu_clk.hw,
+	[CLKID_CSI_DIG_CLK - CLKID_SM1_ADD_BASE] =
+				&sm1_csi_dig.hw,
+	[CLKID_NNA_CLK - CLKID_SM1_ADD_BASE] =
+				&sm1_nna.hw,
+	[CLKID_PARSER1_CLK - CLKID_SM1_ADD_BASE] =
+				&sm1_parser1.hw,
+	[CLKID_CSI_HOST_CLK - CLKID_SM1_ADD_BASE] =
+				&sm1_csi_host.hw,
+	[CLKID_CSI_ADPAT_CLK - CLKID_SM1_ADD_BASE] =
+				&sm1_csi_adpat.hw,
+	[CLKID_TEMP_SENSOR_CLK - CLKID_SM1_ADD_BASE] =
+				&sm1_temp_sensor.hw,
+	[CLKID_CSI_PHY_CLK - CLKID_SM1_ADD_BASE] =
+				&sm1_csi_phy.hw,
 };
 
 static void __init sm1_clkc_init(struct device_node *np)
@@ -244,6 +276,11 @@ static void __init sm1_clkc_init(struct device_node *np)
 		+ (unsigned long)sm1_dsu_pre_clk.reg;
 	sm1_dsu_clk.reg = clk_base
 		+ (unsigned long)sm1_dsu_clk.reg;
+
+	/* Populate base address for gates */
+	for (i = 0; i < ARRAY_SIZE(sm1_clk_gates); i++)
+		sm1_clk_gates[i]->reg = clk_base +
+			(unsigned long)sm1_clk_gates[i]->reg;
 	if (!clks) {
 		clks = kzalloc(NR_CLKS*sizeof(struct clk *), GFP_KERNEL);
 		if (!clks) {

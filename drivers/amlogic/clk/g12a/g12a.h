@@ -221,4 +221,8 @@ static const struct pll_rate_table g12a_pcie_pll_rate_table[] = {
 	PLL_RATE(100000000, 150, 0, 9),
 	{ /* sentinel */ },
 };
+
+static const struct pll_rate_table g12a_hifi_pll_rate_table[] = {
+	PLL_RATE(666000000ULL,	222, 1, 3), /*DCO=5328M*/
+};
 #endif /* __G12A_H */
