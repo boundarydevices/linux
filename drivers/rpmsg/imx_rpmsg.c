@@ -248,7 +248,7 @@ static struct virtqueue *rp_find_vq(struct virtio_device *vdev,
 		goto free_rpvq;
 	}
 
-	memset(rpvq->addr, 0, RPMSG_RING_SIZE);
+	memset_io(rpvq->addr, 0, RPMSG_RING_SIZE);
 
 	pr_debug("vring%d: phys 0x%x, virt 0x%p\n", index, virdev->vring[index],
 					rpvq->addr);
