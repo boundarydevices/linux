@@ -379,6 +379,8 @@ static int aml_cali_find(struct mmc_host *mmc, struct cali_data *c_data)
 
 	if (host->data->chip_type == MMC_CHIP_GXBB)
 		delay_step = 125;
+	else if (host->data->chip_type == MMC_CHIP_GXM)
+		delay_step = 250;
 	else
 		delay_step = 200;
 	if (mmc->ios.bus_width == 0)
