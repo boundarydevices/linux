@@ -998,6 +998,8 @@ void enable_afbc_input(struct vframe_s *vf)
 }
 #endif
 
+#define AFBC_DEC_SEL	(eAFBC_DEC1)
+
 u32 enable_afbc_input(struct vframe_s *vf)
 {
 	unsigned int r, u, v, w_aligned, h_aligned;
