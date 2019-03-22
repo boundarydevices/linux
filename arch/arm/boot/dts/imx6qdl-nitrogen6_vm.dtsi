@@ -12,6 +12,7 @@
  */
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
+#include "panel-ltk0680ytmdb.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -164,6 +165,23 @@
 			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x130b0
 #define GP_AR1021_5_WIRE_SEL		<&gpio7 13 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x1b0b0
+		>;
+	};
+
+	pinctrl_i2c3_gt911: i2c3-gt911grp {
+		fsl,pins = <
+#define GPIRQ_GT911	<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
+#define GP_GT911_IRQ	<&gpio1 9 GPIO_ACTIVE_HIGH>
+/*			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		*/
+#define GP_GT911_RESET		<&gpio3 30 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_D30__GPIO3_IO30		0x030b0
+		>;
+	};
+
+	pinctrl_i2c3_tc358778: i2c3-tc358778grp {
+		fsl,pins = <
+#define GP_TC358778_RESET	<&gpio1 19 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_SD1_DAT2__GPIO1_IO19		0x030b0
 		>;
 	};
 
@@ -357,6 +375,8 @@
 		fb_lvds = &fb_lvds;
 		lcd = &lcd;
 		ldb = &ldb;
+		mipi = &tc358778;
+		mipi_cmds_ltk0680ytmdb = &mipi_cmds_ltk0680ytmdb;
 		mmc0 = &usdhc3;
 		mmc1 = &usdhc4;
 		mxcfb0 = &fb_lcd;
@@ -365,6 +385,10 @@
 		pwm_lcd = &pwm3;
 		pwm_lvds = &pwm4;
 		t_lvds = &t_lvds;
+	};
+
+	alias_create_phandles {
+		p1 = <&mipi_cmds_ltk0680ytmdb>;
 	};
 
 	memory {
@@ -451,7 +475,7 @@
 		disp_dev = "lcd";
 		interface_pix_fmt = "RGB666";
 		mode_str ="hitachi_hvga";
-		default_bpp = <16>;
+		default_bpp = <32>;
 		int_clk = <0>;
 		late_init = <0>;
 		status = "disabled";
@@ -661,11 +685,37 @@
 		wakeup-gpios = GP_PCAP_TOUCH;
 	};
 
+	tc358778: bridge@0e {
+		clocks = <&clks IMX6QDL_CLK_IPU1_DI0>;
+		clock-names = "pixel";
+		compatible = "tc358778";
+		display = <&fb_lcd>;
+		dsi-format = "rgb24";
+		dsi-lanes = <4>;
+		mipi-cmds = <&mipi_cmds_ltk0680ytmdb>;
+		mode-video-burst;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_tc358778>;
+		reg = <0x0e>;
+		reset-gpios = GP_TC358778_RESET;
+	};
+
 	ft5x06_ts@38 {
 		compatible = "ft5x06-ts";
 		reg = <0x38>;
 		interrupts-extended = GPIRQ_PCAP_TOUCH;
 		wakeup-gpios = GP_PCAP_TOUCH;
+	};
+
+	gt911@5d {
+		compatible = "goodix,gt9271";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_gt911>;
+		reg = <0x5d>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		reset-gpios = GP_GT911_RESET;
 	};
 };
 
