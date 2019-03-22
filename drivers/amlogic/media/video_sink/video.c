@@ -563,6 +563,9 @@ static int pts_trace;
 #define PTS_32_PATTERN_DETECT_RANGE 10
 #define PTS_22_PATTERN_DETECT_RANGE 10
 #define PTS_41_PATTERN_DETECT_RANGE 2
+#define PTS_32_PATTERN_DURATION 3750
+#define PTS_22_PATTERN_DURATION 3000
+
 
 enum video_refresh_pattern {
 	PTS_32_PATTERN = 0,
@@ -5027,10 +5030,13 @@ static inline void vpts_perform_pulldown(struct vframe_s *next_vf,
 {
 	int pattern_range, expected_curr_interval;
 	int expected_prev_interval;
+	int next_vf_nextpts = 0;
 
 	/* Dont do anything if we have invalid data */
-	if (!next_vf || !next_vf->pts || !next_vf->next_vf_pts_valid)
+	if (!next_vf || !next_vf->pts)
 		return;
+	if (next_vf->next_vf_pts_valid)
+		next_vf_nextpts = next_vf->next_vf_pts;
 
 	switch (pts_pattern_detected) {
 	case PTS_32_PATTERN:
@@ -5047,6 +5053,9 @@ static inline void vpts_perform_pulldown(struct vframe_s *next_vf,
 		default:
 			return;
 		}
+		if (!next_vf_nextpts)
+			next_vf_nextpts = next_vf->pts +
+				PTS_32_PATTERN_DURATION;
 		break;
 	case PTS_22_PATTERN:
 		if (pre_pts_trace != 2)
@@ -5054,6 +5063,9 @@ static inline void vpts_perform_pulldown(struct vframe_s *next_vf,
 		pattern_range =  PTS_22_PATTERN_DETECT_RANGE;
 		expected_prev_interval = 2;
 		expected_curr_interval = 2;
+		if (!next_vf_nextpts)
+			next_vf_nextpts = next_vf->pts +
+				PTS_22_PATTERN_DURATION;
 		break;
 	case PTS_41_PATTERN:
 		/* TODO */
@@ -5076,7 +5088,7 @@ static inline void vpts_perform_pulldown(struct vframe_s *next_vf,
 			if (/*((int)(nextPts + expected_prev_interval * */
 			/*vsync_pts_inc - next_vf->next_vf_pts) < 0) && */
 				((int)(nextPts + (expected_prev_interval + 1) *
-				vsync_pts_inc - next_vf->next_vf_pts) >= 0)) {
+				vsync_pts_inc - next_vf_nextpts) >= 0)) {
 				*expired = false;
 				if (pts_log_enable[PTS_32_PATTERN]
 					|| pts_log_enable[PTS_22_PATTERN])
@@ -5109,9 +5121,9 @@ static inline void vpts_perform_pulldown(struct vframe_s *next_vf,
 				>= 0) &&
 			    ((int)(nextPts +
 			    vsync_pts_inc * (expected_prev_interval - 1)
-			    - next_vf->next_vf_pts) < 0) &&
+			    - next_vf_nextpts) < 0) &&
 			    ((int)(nextPts + expected_prev_interval *
-				vsync_pts_inc - next_vf->next_vf_pts) >= 0)) {
+				vsync_pts_inc - next_vf_nextpts) >= 0)) {
 				*expired = true;
 				if (pts_log_enable[PTS_32_PATTERN]
 					|| pts_log_enable[PTS_22_PATTERN])
