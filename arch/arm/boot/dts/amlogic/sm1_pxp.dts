@@ -388,47 +388,47 @@
 
 		opp00 {
 			opp-hz = /bits/ 64 <100000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <750000>;
 		};
 		opp01 {
 			opp-hz = /bits/ 64 <250000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <750000>;
 		};
 		opp02 {
 			opp-hz = /bits/ 64 <500000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <750000>;
 		};
 		opp03 {
 			opp-hz = /bits/ 64 <667000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <750000>;
 		};
 		opp04 {
 			opp-hz = /bits/ 64 <1000000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <770000>;
 		};
 		opp05 {
 			opp-hz = /bits/ 64 <1200000000>;
-			opp-microvolt = <731000>;
+			opp-microvolt = <790000>;
 		};
 		opp06 {
-			opp-hz = /bits/ 64 <1398000000>;
-			opp-microvolt = <761000>;
+			opp-hz = /bits/ 64 <1404000000>;
+			opp-microvolt = <830000>;
 		};
 		opp07 {
 			opp-hz = /bits/ 64 <1512000000>;
-			opp-microvolt = <791000>;
+			opp-microvolt = <870000>;
 		};
 		opp08 {
 			opp-hz = /bits/ 64 <1608000000>;
-			opp-microvolt = <831000>;
+			opp-microvolt = <890000>;
 		};
 		opp09 {
 			opp-hz = /bits/ 64 <1704000000>;
-			opp-microvolt = <861000>;
+			opp-microvolt = <960000>;
 		};
 		opp10 {
-			opp-hz = /bits/ 64 <1908000000>;
-			opp-microvolt = <981000>;
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <1010000>;
 		};
 	};
 
