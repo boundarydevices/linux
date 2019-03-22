@@ -5,7 +5,6 @@ config DRM_IMX
 	select DRM_GEM_CMA_HELPER
 	select DRM_KMS_CMA_HELPER
 	depends on DRM && (ARCH_MXC || ARCH_MULTIPLATFORM)
-	depends on IMX_IPUV3_CORE
 	help
 	  enable i.MX graphics support
 
@@ -47,7 +46,7 @@ config DRM_IMX_HDMI
 
 config DRM_IMX_NWL_DSI
 	tristate "Support for Northwest Logic MIPI DSI displays"
-	depends on DRM_IMX
+	select DRM_IMX
 	select MFD_SYSCON
 	select DRM_NWL_DSI
 	help
