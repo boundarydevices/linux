@@ -235,7 +235,7 @@
 		#size-cells=<1>;
 		ranges;
 		io_cbus_base {
-			reg = <0xffd00000 0x26000>;
+			reg = <0xffd00000 0x26fff>;
 		};
 		io_apb_base {
 			reg = <0xffe01000 0x7f000>;

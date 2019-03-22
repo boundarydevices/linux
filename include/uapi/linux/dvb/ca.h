@@ -82,12 +82,26 @@ enum ca_cw_type {
 	CA_CW_AES_EVEN,
 	CA_CW_AES_ODD,
 	CA_CW_AES_EVEN_IV,
-	CA_CW_AES_ODD_IV
+	CA_CW_AES_ODD_IV,
+	CA_CW_DES_EVEN,
+	CA_CW_DES_ODD,
+	CA_CW_SM4_EVEN,
+	CA_CW_SM4_ODD,
+	CA_CW_SM4_EVEN_IV,
+	CA_CW_SM4_ODD_IV,
+	CA_CW_TYPE_MAX
+};
+
+enum ca_dsc_mode {
+	CA_DSC_CBC = 1,
+	CA_DSC_ECB,
+	CA_DSC_IDSA
 };
 
 struct ca_descr_ex {
 	unsigned int index;
 	enum ca_cw_type type;
+	enum ca_dsc_mode mode;
 	int          flags;
 #define CA_CW_FROM_KL 1
 	unsigned char cw[16];
