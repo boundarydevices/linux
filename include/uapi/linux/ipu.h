@@ -108,6 +108,8 @@ typedef enum {
 #define IPU_PIX_FMT_GENERIC_16 fourcc('I', 'P', 'U', '2')	/*!< IPU Generic Data */
 #define IPU_PIX_FMT_LVDS666 fourcc('L', 'V', 'D', '6')	/*!< IPU Generic Data */
 #define IPU_PIX_FMT_LVDS888 fourcc('L', 'V', 'D', '8')	/*!< IPU Generic Data */
+#define IPU_PIX_FMT_BT656    fourcc('B', 'T', '6', '5')	/*!< BT656, 8 bits UYVY */
+#define IPU_PIX_FMT_BT1120    fourcc('B', 'T', '1', '1')	/*!< BT1120, 16 bits UYVY */
 /*! @} */
 /*! @name RGB Formats */
 /*! @{ */
