@@ -1344,7 +1344,7 @@ int sec_mipi_dsim_check_pll_out(struct drm_bridge *bridge,
 	const struct dsim_hblank_par *hpar;
 	struct sec_mipi_dsim *dsim = bridge->driver_private;
 
-	dsim->def_pix_clk = mode->clock * 1000;
+	dsim->def_pix_clk = (uint64_t)mode->clock * 1000;
 
 	if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE) {
 		hpar = sec_mipi_dsim_get_hblank_par(mode->name,
