@@ -3085,6 +3085,13 @@ static const struct cec_platform_data_s cec_tl1_data = {
 	.cecb_ver = CECB_VER_2,
 };
 
+static const struct cec_platform_data_s cec_sm1_data = {
+	.line_reg = 1,
+	.line_bit = 3,
+	.ee_to_ao = 1,
+	.ceca_sts_reg = 1,
+	.cecb_ver = CECB_VER_2,
+};
 
 static const struct of_device_id aml_cec_dt_match[] = {
 	{
@@ -3106,6 +3113,10 @@ static const struct of_device_id aml_cec_dt_match[] = {
 	{
 		.compatible = "amlogic, aocec-tl1",
 		.data = &cec_tl1_data,
+	},
+	{
+		.compatible = "amlogic, aocec-sm1",
+		.data = &cec_sm1_data,
 	},
 	{}
 };

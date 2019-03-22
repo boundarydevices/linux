@@ -1131,7 +1131,7 @@
 			>;
 	};
 	aocec: aocec {
-		compatible = "amlogic, aocec-g12a";
+		compatible = "amlogic, aocec-sm1";
 		device_name = "aocec";
 		status = "okay";
 		vendor_name = "Amlogic"; /* Max Chars: 8     */
@@ -1139,7 +1139,7 @@
 		 * http://standards.ieee.org/develop/regauth/oui/oui.txt
 		 */
 		vendor_id = <0x000000>;
-		product_desc = "G12A"; /* Max Chars: 16    */
+		product_desc = "SM1"; /* Max Chars: 16    */
 		cec_osd_string = "AML_MBOX"; /* Max Chars: 14    */
 		cec_version = <5>;/*5:1.4;6:2.0*/
 		port_num = <1>;
@@ -1154,7 +1154,7 @@
 		pinctrl-2=<&eecec_b>;
 		reg = <0xFF80023c 0x4
 		       0xFF800000 0x400
-		       0xFF634400 0x26>;
+		       0xFF634400 0x70>;
 		reg-names = "ao_exit","ao","periphs";
 	};
 
