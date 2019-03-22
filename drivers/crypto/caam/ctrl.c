@@ -628,7 +628,7 @@ static int probe_w_seco(struct caam_drv_private *ctrlpriv)
 {
 	int ret = 0;
 	struct device_node *np;
-	u32 idx, status;
+	u32 idx;
 
 	ctrlpriv->has_seco = true;
 	/*
@@ -651,8 +651,7 @@ static int probe_w_seco(struct caam_drv_private *ctrlpriv)
 		return -ENODEV;
 	}
 	idx = ctrlpriv->first_jr_index;
-	status = rd_reg32(&ctrlpriv->jr[idx]->perfmon.status);
-	caam_little_end = !(bool)(status & (CSTA_PLEND | CSTA_ALT_PLEND));
+	caam_little_end = true;
 	ctrlpriv->assure = ((struct caam_assurance __force *)
 			    ((uint8_t *)ctrlpriv->ctrl +
 			     PG_SIZE_64K * ASSURE_BLOCK_NUMBER));
