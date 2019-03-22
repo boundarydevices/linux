@@ -876,6 +876,7 @@ static void mxc_sdma_handle_channel_normal(struct sdma_channel *data)
 	struct sdma_buffer_descriptor *bd;
 	int i, error = 0;
 
+	sdmac->chn_real_count = 0;
 	/*
 	 * non loop mode. Iterate over all descriptors, collect
 	 * errors and call callback function
@@ -1903,27 +1904,17 @@ static enum dma_status sdma_tx_status(struct dma_chan *chan,
 	unsigned long flags;
 
 	ret = dma_cookie_status(chan, cookie, txstate);
-	if (!txstate) {
+	if (ret == DMA_COMPLETE || !txstate)
 		return ret;
-	} else if (ret == DMA_COMPLETE) {
-		spin_lock_irqsave(&sdmac->vc.lock, flags);
-		txstate->residue = sdmac->chn_count - sdmac->chn_real_count;
-		spin_unlock_irqrestore(&sdmac->vc.lock, flags);
-		return ret;
-	}
 
 	spin_lock_irqsave(&sdmac->vc.lock, flags);
 	vd = vchan_find_desc(&sdmac->vc, cookie);
 	desc = to_sdma_desc(&vd->tx);
 	if (vd) {
 		if ((sdmac->flags & IMX_DMA_SG_LOOP)) {
-			if (sdmac->peripheral_type != IMX_DMATYPE_UART)
-				residue = (desc->num_bd - desc->buf_ptail) *
-					   sdmac->period_len -
-					   sdmac->chn_real_count;
-			else
-				residue = sdmac->chn_count -
-					  sdmac->chn_real_count;
+			residue = (desc->num_bd - desc->buf_ptail) *
+				   sdmac->period_len -
+				   sdmac->chn_real_count;
 		} else
 			residue = sdmac->chn_count;
 	} else if (sdmac->desc && sdmac->desc->vd.tx.cookie == cookie)
