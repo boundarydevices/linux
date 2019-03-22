@@ -5,7 +5,6 @@
 /dts-v1/;
 
 #include "imx6ul.dtsi"
-#include "imx6ul-14x14-evk.dtsi"
 
 / {
 	model = "Freescale i.MX6 UltraLite 14x14 EVK Board";
@@ -39,6 +38,17 @@
 		default-brightness-level = <6>;
 		status = "okay";
 	};
+
+	reg_sd1_vmmc: regulator-sd1-vmmc {
+		compatible = "regulator-fixed";
+		regulator-name = "VSD_3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio1 9 GPIO_ACTIVE_HIGH>;
+		off-on-delay = <20000>;
+		enable-active-high;
+	};
+
 
 	pxp_v4l2 {
 		compatible = "fsl,imx6ul-pxp-v4l2", "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
@@ -309,6 +319,12 @@
 				de-active = <1>;
 				pixelclk-active = <0>;
 			};
+		};
+	};
+
+	port {
+		display_out: endpoint {
+			remote-endpoint = <&panel_in>;
 		};
 	};
 };
