@@ -23,4 +23,5 @@
 extern void earcrx_cmdc_init(void);
 extern void earcrx_dmac_init(void);
 extern void earc_arc_init(void);
+extern void earc_rx_enable(bool enable);
 #endif

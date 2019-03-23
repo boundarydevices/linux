@@ -40,32 +40,26 @@ void earcrx_cmdc_init(void)
 		(0 <<  1) |  /* int_recv_packet */
 		(0 <<  0)	  /* int_rec_time_out */
 		);
+
+	earcrx_top_write(EARCRX_ANA_CTRL0, 0x90884814);
+	earcrx_top_write(EARCRX_PLL_CTRL3, 0x242000);
+	earcrx_top_write(EARCRX_PLL_CTRL0, 0x10800400);
 }
 
 void earcrx_dmac_init(void)
 {
-	earcrx_dmac_write(EARCRX_DMAC_TOP_CTRL0, 1 << 31); /* reg_top_work_en */
 	earcrx_dmac_write(EARCRX_DMAC_SYNC_CTRL0,
-		(1 << 31)	|	 /* reg_work_en */
-		(1 << 30)	|	 /* reg_rst_afifo_out_n */
-		(1 << 29)	|	 /* reg_rst_afifo_in_n */
 		(1 << 16)	|	 /* reg_ana_buf_data_sel_en */
 		(3 << 12)	|	 /* reg_ana_buf_data_sel */
 		(7 << 8)	|	 /* reg_ana_clr_cnt */
 		(7 << 4)		 /* reg_ana_set_cnt */
 		);
-	earcrx_dmac_write(EARCRX_ERR_CORRECT_CTRL0,
-		(1 << 29) | /* reg_rst_afifo_out_n */
-		(1 << 28)	/* reg_rst_afifo_in_n */
-		);
 	earcrx_dmac_write(EARCRX_DMAC_UBIT_CTRL0,
-		(1 << 31)  | /* reg_work_enable */
 		(47 << 16) | /* reg_fifo_thd */
 		(1 << 12)  | /* reg_user_lr */
 		(29 << 0)	/* reg_data_bit */
 		);
 	earcrx_dmac_write(EARCRX_ANA_RST_CTRL0, 1 << 31);
-	earcrx_dmac_write(EARCRX_ERR_CORRECT_CTRL0, 1 << 31); /* reg_work_en */
 }
 
 void earc_arc_init(void)
@@ -84,4 +78,49 @@ void earc_arc_init(void)
 		(0xEC37<<16) | /* reg_earc_pa_value */
 		(0x5A5A<<0)    /* reg_earc_pb_value */
 		);
+}
+
+void earc_rx_enable(bool enable)
+{
+	if (enable) {
+		earcrx_dmac_update_bits(EARCRX_DMAC_SYNC_CTRL0,
+			1 << 30,	 /* reg_rst_afifo_out_n */
+			1 << 30);
+
+		earcrx_dmac_update_bits(EARCRX_DMAC_SYNC_CTRL0,
+			1 << 29,	 /* reg_rst_afifo_in_n */
+			0x1 << 29);
+
+		earcrx_dmac_update_bits(EARCRX_ERR_CORRECT_CTRL0,
+			1 << 29,  /* reg_rst_afifo_out_n */
+			1 << 29
+			);
+		earcrx_dmac_update_bits(EARCRX_ERR_CORRECT_CTRL0,
+			1 << 28, /* reg_rst_afifo_in_n */
+			1 << 28	/* reg_rst_afifo_in_n */
+			);
+	} else {
+		earcrx_dmac_update_bits(EARCRX_DMAC_SYNC_CTRL0,
+			0x3 << 29,
+			0x0 << 29);
+
+		earcrx_dmac_update_bits(EARCRX_ERR_CORRECT_CTRL0,
+			0x3 << 28, 0x0 << 28);
+	}
+
+	earcrx_dmac_update_bits(EARCRX_DMAC_SYNC_CTRL0,
+		1 << 31,	 /* reg_work_en */
+		enable << 31);
+
+	earcrx_dmac_update_bits(EARCRX_DMAC_UBIT_CTRL0,
+		1 << 31, /* reg_work_enable */
+		enable << 31);
+
+	earcrx_dmac_update_bits(EARCRX_ERR_CORRECT_CTRL0,
+		1 << 31,
+		enable << 31); /* reg_work_en */
+
+	earcrx_dmac_update_bits(EARCRX_DMAC_TOP_CTRL0,
+		1 << 31,
+		enable << 31); /* reg_top_work_en */
 }

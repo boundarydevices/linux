@@ -373,7 +373,9 @@ static int earc_dai_prepare(
 		unsigned int src = EARCRX_DMAC;
 		struct toddr_fmt fmt;
 
-		if (bit_depth == 24)
+		if (bit_depth == 32)
+			toddr_type = 3;
+		else if (bit_depth == 24)
 			toddr_type = 4;
 		else
 			toddr_type = 0;
@@ -382,9 +384,14 @@ static int earc_dai_prepare(
 			__func__,
 			toddr_src_get_str(src));
 
-		msb = bit_depth - 1;
+		msb = 28 - 1;
+		if (bit_depth == 16)
+			lsb = 28 - bit_depth;
+		else
+			lsb = 4;
 
-		pr_info("%s m:%d, n:%d\n", __func__, msb, lsb);
+		pr_info("%s m:%d, n:%d, toddr type:%d\n",
+			__func__, msb, lsb, toddr_type);
 
 		fmt.type      = toddr_type;
 		fmt.msb       = msb;
@@ -424,6 +431,8 @@ static int earc_dai_trigger(struct snd_pcm_substream *substream, int cmd,
 			dev_info(substream->pcm->card->dev, "eARC/ARC RX enable\n");
 
 			aml_toddr_enable(p_earc->tddr, true);
+
+			earc_rx_enable(true);
 		}
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -435,6 +444,8 @@ static int earc_dai_trigger(struct snd_pcm_substream *substream, int cmd,
 			aml_frddr_enable(p_earc->fddr, false);
 		} else {
 			dev_info(substream->pcm->card->dev, "eARC/ARC RX disable\n");
+
+			earc_rx_enable(false);
 
 			aml_toddr_enable(p_earc->tddr, false);
 		}
@@ -481,8 +492,8 @@ static int earc_dai_set_sysclk(struct snd_soc_dai *cpu_dai,
 	pr_info("earc_dai_set_sysclk, %d, %d, %d\n",
 			clk_id, freq, dir);
 
-	clk_set_rate(p_earc->clk_rx_cmdc, 2000000);
-	clk_set_rate(p_earc->clk_rx_dmac, 24576000);
+	clk_set_rate(p_earc->clk_rx_cmdc, 10000000);
+	clk_set_rate(p_earc->clk_rx_dmac, 250000000);
 
 	pr_info("earc rx cmdc clk:%lu rx dmac clk:%lu\n",
 		clk_get_rate(p_earc->clk_rx_cmdc),
