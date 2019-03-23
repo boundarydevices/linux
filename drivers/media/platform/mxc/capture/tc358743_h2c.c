@@ -32,16 +32,17 @@
 #include <linux/regulator/consumer.h>
 #include <linux/fsl_devices.h>
 #include <linux/mutex.h>
-#include <mach/mipi_csi2.h>
+#include <linux/mipi_csi2.h>
 #include <media/v4l2-chip-ident.h>
-#include <media/v4l2-int-device.h>
+#include "v4l2-int-device.h"
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
 #include <sound/soc-dapm.h>
 #include <asm/mach-types.h>
-#include <mach/audmux.h>
+#include "../../../../../sound/soc/fsl/imx-audmux.h"
+#include "../../../../../sound/soc/fsl/fsl_ssi.h"
 #include <linux/slab.h>
 #include "mxc_v4l2_capture.h"
 
