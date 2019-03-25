@@ -744,22 +744,21 @@
 	};
 	/* Audio Related end */
 
-	/*DCDC for MP8756GD*/
 	cpu_opp_table0: cpu_opp_table0 {
 		compatible = "operating-points-v2";
 		opp-shared;
 
 		opp00 {
 			opp-hz = /bits/ 64 <100000000>;
-			opp-microvolt = <750000>;
+			opp-microvolt = <730000>;
 		};
 		opp01 {
 			opp-hz = /bits/ 64 <250000000>;
-			opp-microvolt = <750000>;
+			opp-microvolt = <730000>;
 		};
 		opp02 {
 			opp-hz = /bits/ 64 <500000000>;
-			opp-microvolt = <750000>;
+			opp-microvolt = <730000>;
 		};
 		opp03 {
 			opp-hz = /bits/ 64 <667000000>;
@@ -771,27 +770,31 @@
 		};
 		opp05 {
 			opp-hz = /bits/ 64 <1200000000>;
-			opp-microvolt = <790000>;
+			opp-microvolt = <780000>;
 		};
 		opp06 {
 			opp-hz = /bits/ 64 <1404000000>;
-			opp-microvolt = <830000>;
+			opp-microvolt = <790000>;
 		};
 		opp07 {
 			opp-hz = /bits/ 64 <1512000000>;
-			opp-microvolt = <870000>;
+			opp-microvolt = <800000>;
 		};
 		opp08 {
 			opp-hz = /bits/ 64 <1608000000>;
-			opp-microvolt = <890000>;
+			opp-microvolt = <810000>;
 		};
 		opp09 {
 			opp-hz = /bits/ 64 <1704000000>;
-			opp-microvolt = <960000>;
+			opp-microvolt = <850000>;
 		};
 		opp10 {
 			opp-hz = /bits/ 64 <1800000000>;
-			opp-microvolt = <1010000>;
+			opp-microvolt = <900000>;
+		};
+		opp11 {
+			opp-hz = /bits/ 64 <1908000000>;
+			opp-microvolt = <950000>;
 		};
 	};
 
