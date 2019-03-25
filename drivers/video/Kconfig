@@ -41,6 +41,12 @@ config SN65DSI83
 	---help---
 	  This initializes the Texas Instruments SN65DSI83 bridge for output.
 
+config TC358778
+	tristate "RGB to MIPI bridge (TC358778)"
+	depends on I2C
+	---help---
+	  This initializes the Toshiba TC358778 bridge for output.
+
 config VIDEOMODE_HELPERS
 	bool
 
