@@ -240,4 +240,7 @@ source "drivers/peci/Kconfig"
 source "drivers/hte/Kconfig"
 
 source "drivers/mxc/Kconfig"
+
+source "drivers/battery/Kconfig"
+
 endmenu
