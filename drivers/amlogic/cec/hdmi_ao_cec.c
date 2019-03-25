@@ -221,15 +221,10 @@ unsigned int waiting_aocec_free(unsigned int r)
 {
 	unsigned int cnt = 0;
 	int ret = true;
-	char *s;
 
 	while (readl(cec_dev->cec_reg + r) & (1<<23)) {
 		if (cnt++ >= 3500) {
 			pr_info("waiting aocec %x free time out %d\n", r, cnt);
-			s = kmalloc(2048, GFP_KERNEL);
-			dump_cecrx_reg(s);
-			CEC_ERR("%s\n", s);
-			kfree(s);
 			if (cec_dev->proble_finish)
 				cec_hw_reset(CEC_A);
 			ret = false;
