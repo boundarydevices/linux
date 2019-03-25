@@ -12,6 +12,7 @@ obj-y				  += backlight/
 obj-y				  += fbdev/
 obj-$(CONFIG_DVI_TFP410)	  += tfp410.o
 obj-$(CONFIG_SN65DSI83)		  += sn65dsi83.o
+obj-$(CONFIG_TC358778)		  += tc358778.o
 
 obj-$(CONFIG_VIDEOMODE_HELPERS) += display_timing.o videomode.o
 ifeq ($(CONFIG_OF),y)
