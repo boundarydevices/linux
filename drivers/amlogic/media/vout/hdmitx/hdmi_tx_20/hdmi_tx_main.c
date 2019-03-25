@@ -1339,9 +1339,6 @@ static void hdmitx_set_drm_pkt(struct master_display_info_s *data)
 			hdev->hdmi_current_hdr_mode = 3;
 	}
 
-	hdev->HWOp.CntlConfig(hdev, CONF_AVI_Q01,
-		RGB_RANGE_LIM);
-
 	switch (hdev->hdmi_current_hdr_mode) {
 	case 1:
 		/*standard HDR*/
