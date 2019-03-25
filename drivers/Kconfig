@@ -229,4 +229,7 @@ source "drivers/interconnect/Kconfig"
 source "drivers/counter/Kconfig"
 
 source "drivers/mxc/Kconfig"
+
+source "drivers/battery/Kconfig"
+
 endmenu
