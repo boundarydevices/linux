@@ -198,6 +198,12 @@ void dtmb_all_reset(void)
 		    dtmb_write_reg(DTMB_CHE_FD_TD_COEFF, temp_data);
 		}
 	}
+
+	/*for non-standard signal,
+	 *ignore calculatiing amplitude tps(transport parameter signalling)
+	 */
+	dtmb_write_reg(DTMB_CHE_IBDFE_CONF0,
+		dtmb_read_reg(DTMB_CHE_IBDFE_CONF0) & 0xfffff0ff);
 }
 
 void dtmb_initial(struct aml_demod_sta *demod_sta)

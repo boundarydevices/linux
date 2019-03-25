@@ -22,6 +22,7 @@
 
 #define  DTMB_CHE_ADDR(x) (DTMB_DEMOD_BASE + (x << 2))
 
+#define  DTMB_CHE_IBDFE_CONF0               DTMB_CHE_ADDR(0x8b)
 #define  DTMB_CHE_TE_HREB_SNR               DTMB_CHE_ADDR(0x8d)
 #define  DTMB_CHE_MC_SC_TIMING_POWTHR       DTMB_CHE_ADDR(0x8e)
 #define  DTMB_CHE_MC_SC_PROTECT_GD          DTMB_CHE_ADDR(0x8f)
