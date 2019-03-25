@@ -231,10 +231,9 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 
 	if (aml_card_type_mmc(pdata)) {
 		if ((clk_ios >= 200000000) && conf->ddr) {
-			if (host->data->chip_type == MMC_CHIP_G12B)
-				src0_clk = devm_clk_get(host->dev, "clkin3");
-			else
-				src0_clk = devm_clk_get(host->dev, "clkin2");
+			src0_clk = devm_clk_get(host->dev, "clkin2");
+			if (ret)
+				pr_warn("not get clkin2\n");
 			ret = clk_set_parent(host->mux_parent[0], src0_clk);
 			if (ret)
 				pr_warn("set src0 as comp0 parent error\n");
@@ -245,16 +244,17 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 		} else if (((host->data->chip_type == MMC_CHIP_TL1)
 				|| (host->data->chip_type == MMC_CHIP_G12B))
 				&& (clk_ios >= 166000000)) {
-			src0_clk = devm_clk_get(host->dev, "clkin3");
+			src0_clk = devm_clk_get(host->dev, "clkin2");
 			if (ret)
-				pr_warn("not get clkin3\n");
-			if (host->data->chip_type == MMC_CHIP_TL1) {
+				pr_warn("not get clkin2\n");
+			if ((host->data->chip_type == MMC_CHIP_TL1)
+				&& (clk_ios <= 198000000)) {
 				ret = clk_set_rate(src0_clk, 792000000);
 				if (ret)
-					pr_warn("not set tl1-792\n");
+					pr_warn("not set tl1-gp0\n");
 			}
-			pr_warn("set rate clkin3>>>>>>>>clk:%lu\n",
-					clk_get_rate(src0_clk));
+			pr_warn("set rate clkin2>>>>>>>>clk:%lu\n",
+						clk_get_rate(src0_clk));
 			ret = clk_set_parent(host->mux_parent[0],
 					src0_clk);
 			if (ret)
