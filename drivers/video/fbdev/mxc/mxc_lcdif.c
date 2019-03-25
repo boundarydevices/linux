@@ -112,6 +112,15 @@ static struct fb_videomode lcdif_modedb[] = {
 		0, /* flags */
 	},
 	{
+	/* 480x1280 @ 60 Hz , pixel clk @ 40MHz */
+	"ltk0680ytmdb", 40, 480, 1280, 1000000000000ULL/((480+160+160+24)*(1280+10+12+2)*40),
+	.left_margin = 160, .right_margin = 160,
+	.upper_margin = 10, .lower_margin = 12,
+	.hsync_len = 24, .vsync_len = 2,
+	.sync = 0,
+	.vmode = FB_VMODE_NONINTERLACED,
+	.flag = 0,},
+	{
 	/* 800x600 @ 60 Hz , pixel clk @ 40MHz */
 	"LSA40AT9001", 60, 800, 600, 1000000000 / (800+10+46+210) * 1000 / (600+1+23+12) / 60,
 	.left_margin = 46, .right_margin = 210,
