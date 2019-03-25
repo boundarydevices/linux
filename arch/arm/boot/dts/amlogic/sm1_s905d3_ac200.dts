@@ -160,6 +160,9 @@
 		};
 	};
 
+	galcore {
+		status = "okay";
+	};
 	gpioleds {
 		compatible = "gpio-leds";
 		status = "okay";

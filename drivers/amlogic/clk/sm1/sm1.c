@@ -55,6 +55,91 @@ static struct meson_clk_pll sm1_gp1_pll = {
 	},
 };
 
+static const char * const media_parent_names[] = { "xtal",
+	"gp0_pll", "hifi_pll", "fclk_div2p5", "fclk_div3", "fclk_div4",
+	"fclk_div5",  "fclk_div7"};
+
+static struct clk_mux cts_vipnanoq_core_clk_mux = {
+	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
+	.mask = 0x7,
+	.shift = 9,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_vipnanoq_core_clk_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = media_parent_names,
+		.num_parents = 8,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider cts_vipnanoq_core_clk_div = {
+	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
+	.shift = 0,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_vipnanoq_core_clk_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "cts_vipnanoq_core_clk_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate cts_vipnanoq_core_clk_gate = {
+	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "cts_vipnanoq_core_clk_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "cts_vipnanoq_core_clk_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_mux cts_vipnanoq_axi_clk_mux = {
+	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
+	.mask = 0x7,
+	.shift = 25,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_vipnanoq_axi_clk_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = media_parent_names,
+		.num_parents = 8,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider cts_vipnanoq_axi_clk_div = {
+	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
+	.shift = 16,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_vipnanoq_axi_clk_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "cts_vipnanoq_axi_clk_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate cts_vipnanoq_axi_clk_gate = {
+	.reg = (void *)HHI_VIPNANOQ_CLK_CNTL,
+	.bit_idx = 24,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+		.name = "cts_vipnanoq_axi_clk_gate",
+		.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "cts_vipnanoq_axi_clk_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
 static struct clk_mux sm1_dsu_pre_src_clk_mux0 = {
 	.reg = (void *)HHI_SYS_CPU_CLK_CNTL5,
 	.mask = 0x3,
@@ -276,7 +361,18 @@ static void __init sm1_clkc_init(struct device_node *np)
 		+ (unsigned long)sm1_dsu_pre_clk.reg;
 	sm1_dsu_clk.reg = clk_base
 		+ (unsigned long)sm1_dsu_clk.reg;
-
+	cts_vipnanoq_core_clk_mux.reg = clk_base
+		+ (unsigned long)(cts_vipnanoq_core_clk_mux.reg);
+	cts_vipnanoq_core_clk_gate.reg = clk_base
+		+ (unsigned long)(cts_vipnanoq_core_clk_gate.reg);
+	cts_vipnanoq_core_clk_div.reg = clk_base
+		+ (unsigned long)(cts_vipnanoq_core_clk_div.reg);
+	cts_vipnanoq_axi_clk_mux.reg = clk_base
+		+ (unsigned long)(cts_vipnanoq_axi_clk_mux.reg);
+	cts_vipnanoq_axi_clk_gate.reg = clk_base
+		+ (unsigned long)(cts_vipnanoq_axi_clk_gate.reg);
+	cts_vipnanoq_axi_clk_div.reg = clk_base
+		+ (unsigned long)(cts_vipnanoq_axi_clk_div.reg);
 	/* Populate base address for gates */
 	for (i = 0; i < ARRAY_SIZE(sm1_clk_gates); i++)
 		sm1_clk_gates[i]->reg = clk_base +
@@ -305,7 +401,31 @@ static void __init sm1_clkc_init(struct device_node *np)
 			}
 		}
 	}
+	clks[CLKID_VNANOQ_CORE_CLK_COMP] = clk_register_composite(NULL,
+		"cts_vipnanoq_core_clk_composite",
+		media_parent_names, 8,
+		&cts_vipnanoq_core_clk_mux.hw,
+		&clk_mux_ops,
+		&cts_vipnanoq_core_clk_div.hw,
+		&clk_divider_ops,
+		&cts_vipnanoq_core_clk_gate.hw,
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_VNANOQ_CORE_CLK_COMP]))
+		panic("%s: %d register cts_vipnanoq_core_clk_composite error\n",
+			__func__, __LINE__);
 
+	clks[CLKID_VNANOQ_AXI_CLK_COMP] = clk_register_composite(NULL,
+		"cts_vipnanoq_axi_clk_composite",
+		media_parent_names, 8,
+		&cts_vipnanoq_axi_clk_mux.hw,
+		&clk_mux_ops,
+		&cts_vipnanoq_axi_clk_div.hw,
+		&clk_divider_ops,
+		&cts_vipnanoq_axi_clk_gate.hw,
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_VNANOQ_AXI_CLK_COMP]))
+		panic("%s: %d register cts_vipnanoq_axi_clk_composite error\n",
+			__func__, __LINE__);
 	if (clks[CLKID_CPU_CLK]) {
 		if (!of_property_read_bool(np, "own-dsu-clk"))
 			return;
