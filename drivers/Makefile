@@ -187,3 +187,4 @@ obj-$(CONFIG_GNSS)		+= gnss/
 obj-$(CONFIG_INTERCONNECT)	+= interconnect/
 obj-$(CONFIG_COUNTER)		+= counter/
 obj-y		 		+= mxc/
+obj-$(CONFIG_BATTERY_SAMSUNG)   += battery/
