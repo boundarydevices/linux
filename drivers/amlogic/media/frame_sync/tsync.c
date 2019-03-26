@@ -1211,13 +1211,14 @@ int tsync_set_apts(unsigned int pts)
 	else
 		t = timestamp_pcrscr_get();
 	if (tsdemux_pcrscr_valid_cb && tsdemux_pcrscr_valid_cb() == 1) {
-		pr_info("tsync_set_apts %x,diff %d\n",
-			pts, (int)timestamp_pcrscr_get() - pts);
 		timestamp_apts_set(pts);
-		if ((int)(timestamp_apts_get() - t) > 30 * TIME_UNIT90K / 1000
-				|| (int)(t - timestamp_apts_get()) >
-				80 * TIME_UNIT90K / 1000)
+		if ((int)(timestamp_apts_get() - timestamp_pcrscr_get())
+			> 30 * TIME_UNIT90K / 1000
+			|| (int)(timestamp_pcrscr_get() - timestamp_apts_get())
+			> 80 * TIME_UNIT90K / 1000) {
 			timestamp_pcrscr_set(pts);
+			set_pts_realign();
+		}
 		return 0;
 	}
 	/* do not switch tsync mode until first video toggled. */
