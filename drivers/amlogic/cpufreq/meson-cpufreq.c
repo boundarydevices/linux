@@ -430,7 +430,7 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 	if (ret) {
 		pr_err("%s: error in setting low_freq_clk_p rate!\n",
 				__func__);
-		return ret;
+		goto free_clk;
 	}
 
 	high_freq_clk_p = of_clk_get_by_name(np, HIGH_FREQ_CLK_PARENT);
