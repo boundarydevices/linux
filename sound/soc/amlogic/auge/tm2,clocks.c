@@ -1,5 +1,5 @@
 /*
- * sound/soc/amlogic/auge/sm1,clocks.c
+ * sound/soc/amlogic/auge/tm2_clocks.c
  *
  * Copyright (C) 2019 Amlogic, Inc. All rights reserved.
  *
@@ -15,9 +15,9 @@
  *
  */
 #undef pr_fmt
-#define pr_fmt(fmt) "sm1_audio_clocks: " fmt
+#define pr_fmt(fmt) "tm2_audio_clocks: " fmt
 
-#include <dt-bindings/clock/amlogic,sm1-audio-clk.h>
+#include <dt-bindings/clock/amlogic,tm2-audio-clk.h>
 
 #include "audio_clks.h"
 #include "regs.h"
@@ -54,25 +54,31 @@ CLOCK_GATE(audio_spdifin, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 16);
 CLOCK_GATE(audio_spdifout, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 17);
 CLOCK_GATE(audio_resamplea, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 18);
 CLOCK_GATE(audio_reserved0, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 19);
-CLOCK_GATE(audio_toram, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 20);
+CLOCK_GATE(audio_reserved1, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 20);
 CLOCK_GATE(audio_spdifoutb, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 21);
 CLOCK_GATE(audio_eqdrc, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 22);
-CLOCK_GATE(audio_reserved1, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 23);
-CLOCK_GATE(audio_reserved2, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 24);
-CLOCK_GATE(audio_reserved3, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 25);
+CLOCK_GATE(audio_reserved2, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 23);
+CLOCK_GATE(audio_reserved3, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 24);
+CLOCK_GATE(audio_reserved4, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 25);
 CLOCK_GATE(audio_resampleb, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 26);
 CLOCK_GATE(audio_tovad, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 27);
 CLOCK_GATE(audio_audiolocker, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 28);
 CLOCK_GATE(audio_spdifin_lb, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 29);
-CLOCK_GATE(audio_reserved4, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 30);
-CLOCK_GATE(audio_reserved5, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 31);
+CLOCK_GATE(audio_fratv, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 30);
+CLOCK_GATE(audio_frhdmirx, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 31);
 
 CLOCK_GATE(audio_frddrd, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 0);
 CLOCK_GATE(audio_toddrd, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 1);
 CLOCK_GATE(audio_loopbackb, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 2);
+CLOCK_GATE(audio_frddre, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 3);
+CLOCK_GATE(audio_toddre, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 4);
+CLOCK_GATE(audio_earctx, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 5);
 CLOCK_GATE(audio_earcrx, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 6);
+CLOCK_GATE(audio_resampleb_old, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 7);
+CLOCK_GATE(audio_locker, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 8);
 
-static struct clk_gate *sm1_audio_clk_gates[] = {
+
+static struct clk_gate *tm2_audio_clk_gates[] = {
 	&audio_ddr_arb,
 	&audio_pdm,
 	&audio_tdmina,
@@ -93,27 +99,32 @@ static struct clk_gate *sm1_audio_clk_gates[] = {
 	&audio_spdifout,
 	&audio_resamplea,
 	&audio_reserved0,
-	&audio_toram,
+	&audio_reserved1,
 	&audio_spdifoutb,
 	&audio_eqdrc,
-	&audio_reserved1,
 	&audio_reserved2,
 	&audio_reserved3,
+	&audio_reserved4,
 	&audio_resampleb,
 	&audio_tovad,
 	&audio_audiolocker,
 	&audio_spdifin_lb,
-	&audio_reserved4,
-	&audio_reserved5,
+	&audio_fratv,
+	&audio_frhdmirx,
 
 	&audio_frddrd,
 	&audio_toddrd,
 	&audio_loopbackb,
+	&audio_frddre,
+	&audio_toddre,
+	&audio_earctx,
 	&audio_earcrx,
+	&audio_resampleb_old,
+	&audio_locker,
 };
 
 /* Array of all clocks provided by this provider */
-static struct clk_hw *sm1_audio_clk_hws[] = {
+static struct clk_hw *tm2_audio_clk_hws[] = {
 	[CLKID_AUDIO_GATE_DDR_ARB]     = &audio_ddr_arb.hw,
 	[CLKID_AUDIO_GATE_PDM]         = &audio_pdm.hw,
 	[CLKID_AUDIO_GATE_TDMINA]      = &audio_tdmina.hw,
@@ -134,37 +145,42 @@ static struct clk_hw *sm1_audio_clk_hws[] = {
 	[CLKID_AUDIO_GATE_SPDIFOUT_A]  = &audio_spdifout.hw,
 	[CLKID_AUDIO_GATE_RESAMPLEA]   = &audio_resamplea.hw,
 	[CLKID_AUDIO_GATE_RESERVED0]   = &audio_reserved0.hw,
-	[CLKID_AUDIO_GATE_TORAM]       = &audio_toram.hw,
+	[CLKID_AUDIO_GATE_RESERVED1]   = &audio_reserved1.hw,
 	[CLKID_AUDIO_GATE_SPDIFOUT_B]  = &audio_spdifoutb.hw,
 	[CLKID_AUDIO_GATE_EQDRC]       = &audio_eqdrc.hw,
-	[CLKID_AUDIO_GATE_RESERVED1]   = &audio_reserved1.hw,
 	[CLKID_AUDIO_GATE_RESERVED2]   = &audio_reserved2.hw,
 	[CLKID_AUDIO_GATE_RESERVED3]   = &audio_reserved3.hw,
+	[CLKID_AUDIO_GATE_RESERVED4]   = &audio_reserved4.hw,
 	[CLKID_AUDIO_GATE_RESAMPLEB]   = &audio_resampleb.hw,
 	[CLKID_AUDIO_GATE_TOVAD]       = &audio_tovad.hw,
 	[CLKID_AUDIO_GATE_AUDIOLOCKER] = &audio_audiolocker.hw,
 	[CLKID_AUDIO_GATE_SPDIFIN_LB]  = &audio_spdifin_lb.hw,
-	[CLKID_AUDIO_GATE_RESERVED4]   = &audio_reserved4.hw,
-	[CLKID_AUDIO_GATE_RESERVED5]   = &audio_reserved5.hw,
+	[CLKID_AUDIO_GATE_FRATV]       = &audio_fratv.hw,
+	[CLKID_AUDIO_GATE_FRHDMIRX]    = &audio_frhdmirx.hw,
 
 	[CLKID_AUDIO_GATE_FRDDRD]      = &audio_frddrd.hw,
 	[CLKID_AUDIO_GATE_TODDRD]      = &audio_toddrd.hw,
 	[CLKID_AUDIO_GATE_LOOPBACKB]   = &audio_loopbackb.hw,
+	[CLKID_AUDIO_GATE_FRDDRE]      = &audio_frddre.hw,
+	[CLKID_AUDIO_GATE_TODDRE]      = &audio_toddre.hw,
+	[CLKID_AUDIO_GATE_EARCTX]      = &audio_earctx.hw,
 	[CLKID_AUDIO_GATE_EARCRX]      = &audio_earcrx.hw,
+	[CLKID_AUDIO_GATE_RESAMPLEB_OLD] = &audio_resampleb_old.hw,
+	[CLKID_AUDIO_GATE_LOCKER]      = &audio_locker.hw,
 };
 
-static int sm1_clk_gates_init(struct clk **clks, void __iomem *iobase)
+static int tm2_clk_gates_init(struct clk **clks, void __iomem *iobase)
 {
 	int clkid;
 
-	if (ARRAY_SIZE(sm1_audio_clk_gates) != MCLK_BASE) {
+	if (ARRAY_SIZE(tm2_audio_clk_gates) != MCLK_BASE) {
 		pr_err("check clk gates number\n");
 		return -EINVAL;
 	}
 
 	for (clkid = 0; clkid < MCLK_BASE; clkid++) {
-		sm1_audio_clk_gates[clkid]->reg = iobase;
-		clks[clkid] = clk_register(NULL, sm1_audio_clk_hws[clkid]);
+		tm2_audio_clk_gates[clkid]->reg = iobase;
+		clks[clkid] = clk_register(NULL, tm2_audio_clk_hws[clkid]);
 		WARN_ON(IS_ERR_OR_NULL(clks[clkid]));
 	}
 
@@ -276,7 +292,7 @@ CLOCK_COM_DIV(earcrx_dmac,
 CLOCK_COM_GATE(earcrx_dmac,
 	AUD_ADDR_OFFSET(EE_AUDIO_EARCRX_DMAC_CLK_CTRL), 31);
 
-static int sm1_clks_init(struct clk **clks, void __iomem *iobase)
+static int tm2_clks_init(struct clk **clks, void __iomem *iobase)
 {
 	IOMAP_COM_CLK(mclk_a, iobase);
 	clks[CLKID_AUDIO_MCLK_A] = REGISTER_CLK_COM(mclk_a);
@@ -369,8 +385,8 @@ static int sm1_clks_init(struct clk **clks, void __iomem *iobase)
 	return 0;
 }
 
-struct audio_clk_init sm1_audio_clks_init = {
+struct audio_clk_init tm2_audio_clks_init = {
 	.clk_num   = NUM_AUDIO_CLKS,
-	.clk_gates = sm1_clk_gates_init,
-	.clks      = sm1_clks_init,
+	.clk_gates = tm2_clk_gates_init,
+	.clks      = tm2_clks_init,
 };

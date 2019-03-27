@@ -94,6 +94,7 @@ extern struct audio_clk_init axg_audio_clks_init;
 extern struct audio_clk_init g12a_audio_clks_init;
 extern struct audio_clk_init tl1_audio_clks_init;
 extern struct audio_clk_init sm1_audio_clks_init;
+extern struct audio_clk_init tm2_audio_clks_init;
 
 struct clk_chipinfo {
 	/* force clock source as oscin(24M) */

@@ -107,3 +107,8 @@ void vad_set_enable(bool enable)
 		vad_write(VAD_TOP_CTRL1, 0x0);
 	}
 }
+
+void vad_force_clk_to_oscin(bool force)
+{
+	audiobus_update_bits(EE_AUDIO_CLK_VAD_CTRL, 0x1 << 30, force << 30);
+}

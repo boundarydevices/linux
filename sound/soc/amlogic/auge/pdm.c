@@ -28,6 +28,8 @@
 #include <sound/soc.h>
 #include <sound/tlv.h>
 
+#include <linux/amlogic/pm.h>
+
 #include "pdm.h"
 #include "pdm_hw.h"
 #include "pdm_match_table.c"
@@ -76,8 +78,6 @@ static struct snd_pcm_hw_constraint_list hw_constraints_period_sizes = {
 	.mask = 0
 };
 
-static int s_pdm_filter_mode;
-
 static const char *const pdm_filter_mode_texts[] = {
 	"Filter Mode 0",
 	"Filter Mode 1",
@@ -94,7 +94,13 @@ static int aml_pdm_filter_mode_get_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	ucontrol->value.enumerated.item[0] = s_pdm_filter_mode;
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct aml_pdm *p_pdm = dev_get_drvdata(component->dev);
+
+	if (!p_pdm)
+		return 0;
+
+	ucontrol->value.enumerated.item[0] = p_pdm->filter_mode;
 
 	return 0;
 }
@@ -103,7 +109,13 @@ static int aml_pdm_filter_mode_set_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	s_pdm_filter_mode = ucontrol->value.enumerated.item[0];
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct aml_pdm *p_pdm = dev_get_drvdata(component->dev);
+
+	if (!p_pdm)
+		return 0;
+
+	p_pdm->filter_mode = ucontrol->value.enumerated.item[0];
 
 	return 0;
 }
@@ -137,8 +149,6 @@ static int pdm_hcic_shift_gain_set_enum(
 	return 0;
 }
 
-int pdm_dclk;
-
 static const char *const pdm_dclk_texts[] = {
 	"PDM Dclk 3.072m, support 8k/16k/32k/48k/64k/96k",
 	"PDM Dclk 1.024m, support 8k/16k",
@@ -153,7 +163,13 @@ static int pdm_dclk_get_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	ucontrol->value.enumerated.item[0] = pdm_dclk;
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct aml_pdm *p_pdm = dev_get_drvdata(component->dev);
+
+	if (!p_pdm)
+		return 0;
+
+	ucontrol->value.enumerated.item[0] = p_pdm->dclk_idx;
 
 	return 0;
 }
@@ -162,7 +178,150 @@ static int pdm_dclk_set_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	pdm_dclk = ucontrol->value.enumerated.item[0];
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct aml_pdm *p_pdm = dev_get_drvdata(component->dev);
+
+	if (!p_pdm)
+		return 0;
+
+	p_pdm->dclk_idx = ucontrol->value.enumerated.item[0];
+
+	return 0;
+}
+
+
+static const char *const pdm_bypass_texts[] = {
+	"PCM Data",
+	"Raw Data/Bypass Data",
+};
+
+static const struct soc_enum pdm_bypass_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(pdm_bypass_texts),
+			pdm_bypass_texts);
+
+static int pdm_bypass_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct aml_pdm *p_pdm = dev_get_drvdata(component->dev);
+
+	if (!p_pdm)
+		return 0;
+
+	ucontrol->value.enumerated.item[0] = p_pdm->bypass;
+
+	return 0;
+}
+
+static int pdm_bypass_set_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct aml_pdm *p_pdm = dev_get_drvdata(component->dev);
+
+	if (!p_pdm)
+		return 0;
+
+	p_pdm->bypass = ucontrol->value.enumerated.item[0];
+
+	if (p_pdm->clk_on)
+		pdm_set_bypass_data((bool)p_pdm->bypass);
+
+	return 0;
+}
+
+static const char *const pdm_lowpower_texts[] = {
+	"PDM Normal Mode",
+	"PDM Low Power Mode",
+};
+
+static const struct soc_enum pdm_lowpower_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(pdm_lowpower_texts),
+			pdm_lowpower_texts);
+
+static void pdm_set_lowpower_mode(struct aml_pdm *p_pdm, bool isLowPower)
+{
+	if (p_pdm->isLowPower == isLowPower)
+		return;
+
+	p_pdm->isLowPower = isLowPower;
+
+	if (p_pdm->clk_on) {
+		int osr, filter_mode, dclk_idx;
+
+		if (p_pdm->isLowPower) {
+			/* dclk for 768k */
+			dclk_idx = 2;
+
+			pr_info("%s force pdm sysclk to 24m, dclk 768k\n",
+				__func__);
+		} else
+			dclk_idx = p_pdm->dclk_idx;
+
+		clk_set_rate(p_pdm->clk_pdm_dclk,
+			pdm_dclkidx2rate(dclk_idx));
+
+		/* filter for pdm */
+		osr = pdm_get_ors(dclk_idx, p_pdm->rate);
+		if (!osr)
+			osr = 192;
+
+		filter_mode = p_pdm->isLowPower ? 4 : p_pdm->filter_mode;
+		aml_pdm_filter_ctrl(osr, filter_mode);
+
+		/* update sample count */
+		pdm_set_channel_ctrl(
+			pdm_get_sample_count(
+				p_pdm->isLowPower,
+				dclk_idx)
+			);
+
+		/* check to set pdm sysclk */
+		pdm_force_sysclk_to_oscin(p_pdm->isLowPower);
+
+		pr_info("\n%s, pdm_sysclk:%lu pdm_dclk:%lu, dclk_srcpll:%lu\n",
+			__func__,
+			clk_get_rate(p_pdm->clk_pdm_sysclk),
+			clk_get_rate(p_pdm->clk_pdm_dclk),
+			clk_get_rate(p_pdm->dclk_srcpll));
+
+		/* Check to set vad for Low Power */
+		if (vad_pdm_is_running())
+			vad_set_lowerpower_mode(p_pdm->isLowPower);
+	}
+}
+
+static int pdm_lowpower_get_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct aml_pdm *p_pdm = dev_get_drvdata(component->dev);
+
+	if (!p_pdm)
+		return 0;
+
+	ucontrol->value.enumerated.item[0] = p_pdm->isLowPower;
+
+	return 0;
+}
+
+
+static int pdm_lowpower_set_enum(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct aml_pdm *p_pdm = dev_get_drvdata(component->dev);
+	bool isLowPower;
+
+	if (!p_pdm)
+		return 0;
+
+	isLowPower = (bool)ucontrol->value.enumerated.item[0];
+	pdm_set_lowpower_mode(p_pdm, isLowPower);
 
 	return 0;
 }
@@ -180,8 +339,11 @@ static int pdm_train_get_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct aml_pdm *p_pdm = dev_get_drvdata(component->dev);
+
+	if (!p_pdm)
+		return 0;
 
 	ucontrol->value.enumerated.item[0] = p_pdm->train_en;
 
@@ -192,10 +354,11 @@ static int pdm_train_set_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
-	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct aml_pdm *p_pdm = dev_get_drvdata(component->dev);
 
-	if (!p_pdm->chipinfo ||
+	if (!p_pdm ||
+		!p_pdm->chipinfo ||
 		!p_pdm->chipinfo->train ||
 		(p_pdm->train_en == ucontrol->value.enumerated.item[0]))
 		return 0;
@@ -226,10 +389,20 @@ static const struct snd_kcontrol_new snd_pdm_controls[] = {
 		     pdm_dclk_get_enum,
 		     pdm_dclk_set_enum),
 
+	SOC_ENUM_EXT("PDM Low Power mode",
+			pdm_lowpower_enum,
+			pdm_lowpower_get_enum,
+			pdm_lowpower_set_enum),
+
 	SOC_ENUM_EXT("PDM Train",
 		     pdm_train_enum,
 		     pdm_train_get_enum,
 		     pdm_train_set_enum),
+
+	SOC_ENUM_EXT("PDM Bypass",
+		     pdm_bypass_enum,
+		     pdm_bypass_get_enum,
+		     pdm_bypass_set_enum),
 };
 
 #if 0
@@ -252,7 +425,7 @@ static int pdm_mute_val_get(struct snd_kcontrol *kcontrol,
 	val = pdm_get_mute_value();
 	ucontrol->value.integer.value[0] = val;
 
-	pr_info("%s:get mute_val:0x%x\n",
+	pr_info("%s, get mute_val:0x%x\n",
 		__func__,
 		val);
 
@@ -264,7 +437,7 @@ static int pdm_mute_val_set(struct snd_kcontrol *kcontrol,
 {
 	int val  = (int)ucontrol->value.integer.value[0];
 
-	pr_info("%s:set mute_val:0x%x\n",
+	pr_info("%s, set mute_val:0x%x\n",
 		__func__,
 		val);
 
@@ -302,7 +475,7 @@ static int pdm_mute_chmask_get(struct snd_kcontrol *kcontrol,
 
 	ucontrol->value.integer.value[0] = val;
 
-	pr_info("%s:get pdm channel mask val:0x%x\n",
+	pr_info("%s, get pdm channel mask val:0x%x\n",
 		__func__,
 		val);
 
@@ -319,7 +492,7 @@ static int pdm_mute_chmask_set(struct snd_kcontrol *kcontrol,
 	if (val > 255)
 		val = 255;
 
-	pr_info("%s:set pdm channel mask val:0x%x\n",
+	pr_info("%s, set pdm channel mask val:0x%x\n",
 		__func__,
 		val);
 
@@ -379,11 +552,25 @@ static irqreturn_t aml_pdm_isr_handler(int irq, void *data)
 {
 	struct snd_pcm_substream *substream =
 		(struct snd_pcm_substream *)data;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct device *dev = rtd->platform->dev;
+	struct aml_pdm *p_pdm = (struct aml_pdm *)dev_get_drvdata(dev);
+	unsigned int status;
 	int train_sts = pdm_train_sts();
 
 	pr_debug("%s\n", __func__);
 
-	snd_pcm_period_elapsed(substream);
+	if (!snd_pcm_running(substream))
+		return IRQ_NONE;
+
+	status = aml_toddr_get_status(p_pdm->tddr) & MEMIF_INT_MASK;
+	if (status & MEMIF_INT_COUNT_REPEAT) {
+		snd_pcm_period_elapsed(substream);
+
+		aml_toddr_ack_irq(p_pdm->tddr, MEMIF_INT_COUNT_REPEAT);
+	} else
+		dev_dbg(dev, "unexpected irq - STS 0x%02x\n",
+			status);
 
 	if (train_sts) {
 		pr_debug("%s train result:0x%x\n",
@@ -392,7 +579,7 @@ static irqreturn_t aml_pdm_isr_handler(int irq, void *data)
 		pdm_train_clr();
 	}
 
-	return IRQ_HANDLED;
+	return !status ? IRQ_NONE : IRQ_HANDLED;
 }
 
 static int aml_pdm_open(struct snd_pcm_substream *substream)
@@ -404,7 +591,7 @@ static int aml_pdm_open(struct snd_pcm_substream *substream)
 							dev_get_drvdata(dev);
 	int ret;
 
-	pr_info("%s, stream:%d\n",
+	pr_debug("%s, stream:%d\n",
 		__func__, substream->stream);
 
 	snd_soc_set_runtime_hwparams(substream, &aml_pdm_hardware);
@@ -453,7 +640,7 @@ static int aml_pdm_close(struct snd_pcm_substream *substream)
 	struct device *dev = rtd->platform->dev;
 	struct aml_pdm *p_pdm = (struct aml_pdm *)dev_get_drvdata(dev);
 
-	pr_info("enter %s type: %d\n",
+	pr_debug("enter %s type: %d\n",
 		__func__, substream->stream);
 
 	aml_audio_unregister_toddr(p_pdm->dev, substream);
@@ -469,7 +656,7 @@ static int aml_pdm_hw_params(
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int ret = 0;
 
-	pr_info("enter %s\n", __func__);
+	pr_debug("enter %s\n", __func__);
 
 	snd_pcm_set_runtime_buffer(substream, &substream->dma_buffer);
 	runtime->dma_bytes = params_buffer_bytes(params);
@@ -480,7 +667,7 @@ static int aml_pdm_hw_params(
 
 static int aml_pdm_hw_free(struct snd_pcm_substream *substream)
 {
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	snd_pcm_lib_free_pages(substream);
 
 	return 0;
@@ -547,7 +734,7 @@ static int aml_pdm_silence(
 	unsigned char *ppos = NULL;
 	ssize_t n;
 
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 
 	n = frames_to_bytes(runtime, count);
 	ppos = runtime->dma_area + frames_to_bytes(runtime, pos);
@@ -564,7 +751,7 @@ static int aml_pdm_pcm_new(struct snd_soc_pcm_runtime *soc_runtime)
 	int size = aml_pdm_hardware.buffer_bytes_max;
 	int ret = -EINVAL;
 
-	pr_info("%s dai->name: %s dai->id: %d\n",
+	pr_debug("%s dai->name: %s dai->id: %d\n",
 		__func__, dai->name, dai->id);
 
 	/* only capture for PDM */
@@ -586,7 +773,7 @@ static void aml_pdm_pcm_free(struct snd_pcm *pcm)
 {
 	struct snd_pcm_substream *substream;
 
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 
 	substream = pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream;
 	if (substream) {
@@ -611,7 +798,7 @@ static struct snd_pcm_ops aml_pdm_ops = {
 
 static int aml_pdm_probe(struct snd_soc_platform *platform)
 {
-	pr_info("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 
 	return 0;
 }
@@ -638,7 +825,6 @@ static int aml_pdm_dai_set_fmt(
 	return 0;
 }
 
-
 static int aml_pdm_dai_prepare(
 	struct snd_pcm_substream *substream,
 	struct snd_soc_dai *cpu_dai)
@@ -651,6 +837,8 @@ static int aml_pdm_dai_prepare(
 	if (vad_pdm_is_running()
 		&& pm_audio_is_suspend())
 		return 0;
+
+	p_pdm->rate = runtime->rate;
 
 	/* set bclk */
 	bitwidth = snd_pcm_format_width(runtime->format);
@@ -670,17 +858,16 @@ static int aml_pdm_dai_prepare(
 		return -1;
 	}
 
-	pr_info("%s rate:%d, bits:%d, channels:%d\n",
+	pr_debug("%s rate:%d, bits:%d, channels:%d\n",
 		__func__,
 		runtime->rate,
 		bitwidth,
 		runtime->channels);
 
-
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 		struct toddr *to = p_pdm->tddr;
 		struct toddr_fmt fmt;
-		unsigned int osr = 192;
+		unsigned int osr = 192, filter_mode, dclk_idx;
 		struct pdm_info info;
 
 		/* to ddr pdmin */
@@ -695,52 +882,42 @@ static int aml_pdm_dai_prepare(
 		aml_toddr_set_format(to, &fmt);
 		aml_toddr_set_fifos(to, 0x40);
 
+		/* force pdm sysclk to 24m */
+		if (p_pdm->isLowPower) {
+			/* dclk for 768k */
+			dclk_idx = 2;
+			filter_mode = 4;
+			pdm_force_sysclk_to_oscin(true);
+			if (vad_pdm_is_running())
+				vad_set_lowerpower_mode(true);
+
+		} else {
+			dclk_idx = p_pdm->dclk_idx;
+			filter_mode = p_pdm->filter_mode;
+		}
+
+		/* filter for pdm */
+		osr = pdm_get_ors(dclk_idx, runtime->rate);
+		if (!osr)
+			return -EINVAL;
+
+		pr_info("%s, pdm_dclk:%d, osr:%d, rate:%d filter mode:%d\n",
+			__func__,
+			pdm_dclkidx2rate(dclk_idx),
+			osr,
+			runtime->rate,
+			p_pdm->filter_mode);
+
 		info.bitdepth   = bitwidth;
 		info.channels   = runtime->channels;
 		info.lane_masks = p_pdm->lane_mask_in;
-		info.dclk_idx   = pdm_dclk;
+		info.dclk_idx   = dclk_idx;
 		info.bypass     = p_pdm->bypass;
-		aml_pdm_ctrl(&info);
+		info.sample_count = pdm_get_sample_count(p_pdm->isLowPower,
+								dclk_idx);
 
-		/* filter for pdm */
-		if (pdm_dclk == 1) {
-			if (runtime->rate == 16000)
-				osr = 64;
-			else if (runtime->rate == 8000)
-				osr = 128;
-			else {
-				pr_err("Not support rate:%d\n", runtime->rate);
-				return -EINVAL;
-			}
-		} else if (pdm_dclk == 2) {
-			if (runtime->rate == 16000)
-				osr = 48;
-			else if (runtime->rate == 8000)
-				osr = 96;
-			else {
-				pr_err("Not support rate:%d\n", runtime->rate);
-				return -EINVAL;
-			}
-		} else {
-			if (runtime->rate == 96000)
-				osr = 32;
-			else if (runtime->rate == 64000)
-				osr = 48;
-			else if (runtime->rate == 48000)
-				osr = 64;
-			else if (runtime->rate == 32000)
-				osr = 96;
-			else if (runtime->rate == 16000)
-				osr = 192;
-			else if (runtime->rate == 8000)
-				osr = 384;
-			else {
-				pr_err("Not support rate:%d\n", runtime->rate);
-				return -EINVAL;
-			}
-		}
-		p_pdm->filter_mode = s_pdm_filter_mode;
-		aml_pdm_filter_ctrl(osr, p_pdm->filter_mode);
+		aml_pdm_ctrl(&info);
+		aml_pdm_filter_ctrl(osr, filter_mode);
 
 		if (p_pdm->chipinfo && p_pdm->chipinfo->truncate_data)
 			pdm_init_truncate_data(runtime->rate);
@@ -755,7 +932,7 @@ static int aml_pdm_dai_trigger(
 {
 	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
 
-	pr_info("%s, cmd:%d\n", __func__, cmd);
+	pr_debug("%s\n", __func__);
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
@@ -773,7 +950,7 @@ static int aml_pdm_dai_trigger(
 		pdm_fifo_reset();
 
 		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-			dev_info(substream->pcm->card->dev, "pdm capture start\n");
+			dev_info(substream->pcm->card->dev, "PDM Capture start\n");
 			aml_toddr_enable(p_pdm->tddr, 1);
 			pdm_enable(1);
 		}
@@ -807,6 +984,11 @@ static int aml_pdm_dai_set_sysclk(struct snd_soc_dai *cpu_dai,
 {
 	struct aml_pdm *p_pdm = snd_soc_dai_get_drvdata(cpu_dai);
 	unsigned int sysclk_srcpll_freq, dclk_srcpll_freq;
+	unsigned int dclk_idx = p_pdm->dclk_idx;
+
+	/* lowpower, force dclk to 768k */
+	if (p_pdm->isLowPower)
+		dclk_idx = 2;
 
 	sysclk_srcpll_freq = clk_get_rate(p_pdm->sysclk_srcpll);
 	dclk_srcpll_freq = clk_get_rate(p_pdm->dclk_srcpll);
@@ -820,37 +1002,21 @@ static int aml_pdm_dai_set_sysclk(struct snd_soc_dai *cpu_dai,
 
 	if (dclk_srcpll_freq == 0)
 		clk_set_rate(p_pdm->dclk_srcpll, 24576000);
-	else
-		pr_info("pdm dclk_srcpll:%lu\n",
-			clk_get_rate(p_pdm->dclk_srcpll));
 #endif
-	if (pdm_dclk == 1)
-		clk_set_rate(p_pdm->clk_pdm_dclk, 1024000);
-	else if (pdm_dclk == 2)
-		clk_set_rate(p_pdm->clk_pdm_dclk, 768000);
-	else
-		clk_set_rate(p_pdm->clk_pdm_dclk, 3072000);
+	clk_set_rate(p_pdm->clk_pdm_dclk,
+		pdm_dclkidx2rate(dclk_idx));
 
-	pr_info("pdm pdm_sysclk:%lu clk_pdm_dclk:%lu\n",
+	pr_info("\n%s, pdm_sysclk:%lu pdm_dclk:%lu, dclk_srcpll:%lu\n",
+		__func__,
 		clk_get_rate(p_pdm->clk_pdm_sysclk),
-		clk_get_rate(p_pdm->clk_pdm_dclk));
+		clk_get_rate(p_pdm->clk_pdm_dclk),
+		clk_get_rate(p_pdm->dclk_srcpll));
 
 	return 0;
 }
 
 static int aml_pdm_dai_probe(struct snd_soc_dai *cpu_dai)
 {
-	int ret = 0;
-
-	ret = snd_soc_add_dai_controls(cpu_dai, snd_pdm_controls,
-				ARRAY_SIZE(snd_pdm_controls));
-	if (ret < 0) {
-		pr_err("%s, failed add snd pdm controls\n", __func__);
-		return ret;
-	}
-
-	pr_info("%s\n", __func__);
-
 	return 0;
 }
 
@@ -919,6 +1085,12 @@ void aml_pdm_dai_shutdown(struct snd_pcm_substream *substream,
 #endif
 
 	p_pdm->clk_on = false;
+	p_pdm->rate = 0;
+
+	if (p_pdm->isLowPower) {
+		pdm_force_sysclk_to_oscin(false);
+		vad_set_lowerpower_mode(false);
+	}
 
 	/* disable clock and gate */
 	clk_disable_unprepare(p_pdm->clk_pdm_dclk);
@@ -943,7 +1115,7 @@ struct snd_soc_dai_driver aml_pdm_dai[] = {
 		.name = "PDM",
 		.capture = {
 			.channels_min =	PDM_CHANNELS_MIN,
-			.channels_max = PDM_CHANNELS_MAX,
+			.channels_max = PDM_CHANNELS_LB_MAX,
 			.rates        = PDM_RATES,
 			.formats      = PDM_FORMATS,
 		},
@@ -955,6 +1127,8 @@ EXPORT_SYMBOL_GPL(aml_pdm_dai);
 
 static const struct snd_soc_component_driver aml_pdm_component = {
 	.name = DRV_NAME,
+	.controls = snd_pdm_controls,
+	.num_controls = ARRAY_SIZE(snd_pdm_controls),
 };
 
 static int snd_soc_of_get_slot_mask(
@@ -1094,7 +1268,6 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 		/* defulat set 1 */
 		p_pdm->filter_mode = 1;
 	}
-	s_pdm_filter_mode = p_pdm->filter_mode;
 	pr_info("%s pdm filter mode from dts:%d\n",
 		__func__, p_pdm->filter_mode);
 
@@ -1126,29 +1299,61 @@ err:
 
 static int aml_pdm_platform_remove(struct platform_device *pdev)
 {
-	struct aml_pdm *pdm_priv = dev_get_drvdata(&pdev->dev);
+	struct aml_pdm *p_pdm = dev_get_drvdata(&pdev->dev);
 
-	clk_disable_unprepare(pdm_priv->sysclk_srcpll);
-	clk_disable_unprepare(pdm_priv->clk_pdm_dclk);
+	clk_disable_unprepare(p_pdm->sysclk_srcpll);
+	clk_disable_unprepare(p_pdm->clk_pdm_dclk);
 
 	snd_soc_unregister_component(&pdev->dev);
 
-	snd_soc_unregister_codec(&pdev->dev);
+	snd_soc_unregister_platform(&pdev->dev);
 
 	return 0;
 }
 
+static int pdm_platform_suspend(
+	struct platform_device *pdev, pm_message_t state)
+{
+	struct aml_pdm *p_pdm = dev_get_drvdata(&pdev->dev);
+
+	/* whether in freeze */
+	if (is_pm_freeze_mode()
+		&& vad_pdm_is_running()) {
+		pr_info("%s, Entry in freeze\n", __func__);
+		pdm_set_lowpower_mode(p_pdm, true);
+	}
+
+	return 0;
+}
+
+static int pdm_platform_resume(
+	struct platform_device *pdev)
+{
+	struct aml_pdm *p_pdm = dev_get_drvdata(&pdev->dev);
+
+	/* whether in freeze mode */
+	if (is_pm_freeze_mode()
+		&& vad_pdm_is_running()) {
+		pr_info("%s, Exist from freeze\n", __func__);
+		pdm_set_lowpower_mode(p_pdm, false);
+	}
+
+	return 0;
+}
+
+
 struct platform_driver aml_pdm_driver = {
-	.driver = {
-		.name = DRV_NAME,
-		.owner = THIS_MODULE,
+	.driver  = {
+		.name           = DRV_NAME,
+		.owner          = THIS_MODULE,
 		.of_match_table = of_match_ptr(aml_pdm_device_id),
 	},
-	.probe = aml_pdm_platform_probe,
-	.remove = aml_pdm_platform_remove,
+	.probe   = aml_pdm_platform_probe,
+	.remove  = aml_pdm_platform_remove,
+	.suspend = pdm_platform_suspend,
+	.resume  = pdm_platform_resume,
 };
 module_platform_driver(aml_pdm_driver);
-
 
 MODULE_AUTHOR("AMLogic, Inc.");
 MODULE_DESCRIPTION("Amlogic PDM ASoc driver");

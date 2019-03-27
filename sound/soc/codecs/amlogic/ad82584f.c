@@ -19,32 +19,33 @@ static void ad82584f_early_suspend(struct early_suspend *h);
 static void ad82584f_late_resume(struct early_suspend *h);
 #endif
 
-#define AD82584F_RATES (SNDRV_PCM_RATE_32000 | \
-		       SNDRV_PCM_RATE_44100 | \
-		       SNDRV_PCM_RATE_48000 | \
-		       SNDRV_PCM_RATE_64000 | \
-		       SNDRV_PCM_RATE_88200 | \
-		       SNDRV_PCM_RATE_96000 | \
-		       SNDRV_PCM_RATE_176400 | \
-		       SNDRV_PCM_RATE_192000)
+#define AD82584F_RATES (SNDRV_PCM_RATE_16000 | \
+	SNDRV_PCM_RATE_32000 | \
+	SNDRV_PCM_RATE_44100 | \
+	SNDRV_PCM_RATE_48000 | \
+	SNDRV_PCM_RATE_64000 | \
+	SNDRV_PCM_RATE_88200 | \
+	SNDRV_PCM_RATE_96000 | \
+	SNDRV_PCM_RATE_176400 | \
+	SNDRV_PCM_RATE_192000)
 
 #define AD82584F_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | \
-	 SNDRV_PCM_FMTBIT_S24_LE | \
-	 SNDRV_PCM_FMTBIT_S32_LE)
+	SNDRV_PCM_FMTBIT_S24_LE | \
+	SNDRV_PCM_FMTBIT_S32_LE)
 
 static const DECLARE_TLV_DB_SCALE(mvol_tlv, -10300, 50, 1);
 static const DECLARE_TLV_DB_SCALE(chvol_tlv, -10300, 50, 1);
 
 static const struct snd_kcontrol_new ad82584f_snd_controls[] = {
-	SOC_SINGLE_TLV("AMP Master Volume", MVOL, 0,
+	SOC_SINGLE_TLV("Master Volume", MVOL, 0,
 				0xff, 1, mvol_tlv),
-	SOC_SINGLE_TLV("AMP Ch1 Volume", C1VOL, 0,
+	SOC_SINGLE_TLV("Ch1 Volume", C1VOL, 0,
 				0xff, 1, chvol_tlv),
-	SOC_SINGLE_TLV("AMP Ch2 Volume", C2VOL, 0,
+	SOC_SINGLE_TLV("Ch2 Volume", C2VOL, 0,
 			0xff, 1, chvol_tlv),
 
-	SOC_SINGLE("AMP Ch1 Switch", MUTE, 5, 1, 1),
-	SOC_SINGLE("AMP Ch2 Switch", MUTE, 4, 1, 1),
+	SOC_SINGLE("Ch1 Switch", MUTE, 5, 1, 1),
+	SOC_SINGLE("Ch2 Switch", MUTE, 4, 1, 1),
 };
 
 static int ad82584f_reg_init(struct snd_soc_codec *codec);
@@ -773,9 +774,9 @@ static int reset_ad82584f_GPIO(struct snd_soc_codec *codec)
 		return -1;
 
 	gpio_direction_output(pdata->reset_pin, GPIOF_OUT_INIT_LOW);
-	mdelay(1);
+	usleep_range(10 * 1000, 11 * 1000);
 	gpio_direction_output(pdata->reset_pin, GPIOF_OUT_INIT_HIGH);
-	mdelay(1);
+	usleep_range(1 * 1000, 2 * 1000);
 
 	return 0;
 }
@@ -830,8 +831,10 @@ static int ad82584f_init(struct snd_soc_codec *codec)
 	/* for de-pop */
 	udelay(100);
 
+	snd_soc_write(codec, MVOL, 0x11);
+
 	/* unmute, default power-on is mute. */
-	snd_soc_write(codec, 0x02, 0x00);
+	snd_soc_write(codec, MUTE, 0x00);
 
 	return 0;
 }

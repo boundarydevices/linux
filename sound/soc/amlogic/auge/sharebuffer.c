@@ -83,7 +83,7 @@ void sharebuffer_enable(int sel, bool enable, bool reenable)
 }
 
 int sharebuffer_prepare(struct snd_pcm_substream *substream,
-	void *pfrddr, int samesource_sel, int lane_i2s)
+	void *pfrddr, int samesource_sel, int lane_i2s, int offset)
 {
 	struct frddr *fr = (struct frddr *)pfrddr;
 

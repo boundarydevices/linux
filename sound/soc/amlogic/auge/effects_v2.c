@@ -51,6 +51,7 @@ struct effect_chipinfo {
 	 * v2 is for tl1
 	 */
 	bool v2;
+	bool reserved_frddr;
 };
 
 struct audioeffect {
@@ -64,12 +65,6 @@ struct audioeffect {
 	struct clk *clk;
 
 	struct effect_chipinfo *chipinfo;
-
-	bool dc_en;
-	bool nd_en;
-	bool eq_en;
-	bool multiband_drc_en;
-	bool fullband_drc_en;
 
 	int lane_mask;
 	int ch_mask;
@@ -88,6 +83,16 @@ static struct audioeffect *get_audioeffects(void)
 	}
 
 	return s_effect;
+}
+
+int get_aed_dst(void)
+{
+	struct audioeffect *p_effect = get_audioeffects();
+
+	if (!p_effect)
+		return -1;
+	else
+		return p_effect->effect_module;
 }
 
 bool check_aed_v2(void)
@@ -411,52 +416,6 @@ static int mixer_set_fullband_DRC_params(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-/* aed module
- * check to sync with enum frddr_dest in ddr_mngr.h
- */
-static const char *const aed_module_texts[] = {
-	"TDMOUT_A",
-	"TDMOUT_B",
-	"TDMOUT_C",
-	"SPDIFOUT_A",
-	"SPDIFOUT_B",
-};
-
-static const struct soc_enum aed_module_enum =
-	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0, ARRAY_SIZE(aed_module_texts),
-			aed_module_texts);
-
-static int aed_module_get_enum(
-	struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct audioeffect *p_effect =  snd_kcontrol_chip(kcontrol);
-
-	if (!p_effect)
-		return -EINVAL;
-
-	ucontrol->value.enumerated.item[0] = p_effect->effect_module;
-
-	return 0;
-}
-
-static int aed_module_set_enum(
-	struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct audioeffect *p_effect =  snd_kcontrol_chip(kcontrol);
-
-	if (!p_effect)
-		return -EINVAL;
-
-	p_effect->effect_module = ucontrol->value.enumerated.item[0];
-
-	/* update info to ddr and modules */
-	aml_set_aed(1, p_effect->effect_module);
-
-	return 0;
-}
-
 static void aed_set_filter_data(void)
 {
 	int *p;
@@ -534,11 +493,6 @@ static const struct snd_kcontrol_new snd_effect_controls[] = {
 		mixer_get_fullband_DRC_params,
 		mixer_set_fullband_DRC_params),
 
-	SOC_ENUM_EXT("AED module",
-		aed_module_enum,
-		aed_module_get_enum,
-		aed_module_set_enum),
-
 	SOC_SINGLE_EXT_TLV("AED Lch volume",
 		AED_EQ_VOLUME, 0, 0xFF, 1,
 		mixer_aed_read, mixer_aed_write,
@@ -578,6 +532,7 @@ int card_add_effect_v2_kcontrols(struct snd_soc_card *card)
 
 static struct effect_chipinfo tl1_effect_chipinfo = {
 	.v2 = true,
+	.reserved_frddr = true,
 };
 
 static const struct of_device_id effect_device_id[] = {
@@ -601,9 +556,6 @@ static int effect_platform_probe(struct platform_device *pdev)
 	struct audioeffect *p_effect;
 	struct device *dev = &pdev->dev;
 	struct effect_chipinfo *p_chipinfo;
-	bool eq_enable = false;
-	bool multiband_drc_enable = false;
-	bool fullband_drc_enable = false;
 	int lane_mask = -1, channel_mask = -1, eqdrc_module = -1;
 	int ret;
 
@@ -694,9 +646,6 @@ static int effect_platform_probe(struct platform_device *pdev)
 		);
 
 	/* config from dts */
-	p_effect->eq_en            = eq_enable;
-	p_effect->multiband_drc_en = multiband_drc_enable;
-	p_effect->fullband_drc_en  = fullband_drc_enable;
 	p_effect->lane_mask        = lane_mask;
 	p_effect->ch_mask          = channel_mask;
 	p_effect->effect_module    = eqdrc_module;
@@ -723,6 +672,11 @@ static int effect_platform_probe(struct platform_device *pdev)
 	p_effect->dev = dev;
 	s_effect = p_effect;
 	dev_set_drvdata(&pdev->dev, p_effect);
+
+	if (p_effect->chipinfo &&
+		p_effect->chipinfo->reserved_frddr) {
+		aml_aed_set_frddr_reserved();
+	}
 
 	return 0;
 }

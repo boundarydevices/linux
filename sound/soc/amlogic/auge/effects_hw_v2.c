@@ -280,19 +280,26 @@ void aed_set_format(int msb, enum ddr_types frddr_type, enum ddr_num source)
 
 void aed_enable(bool enable)
 {
+	/*don't change this flow*/
 	if (enable) {
 		eqdrc_write(AED_ED_CNTL, 0x1);
-		eqdrc_write(AED_ED_CNTL, 0x0);
+		eqdrc_write(AED_ED_CNTL, 0x1);
 
-		eqdrc_update_bits(AED_TOP_CTL, 0x1 << 1, 0x1 << 1);
-		eqdrc_update_bits(AED_TOP_CTL, 0x1 << 2, 0x1 << 2);
-	} else
-		eqdrc_update_bits(AED_TOP_CTL, 0x3 << 1, 0x0 << 1);
-
-	eqdrc_update_bits(AED_TOP_CTL, 0x1 << 0, enable << 0);
-
-	/* start en */
-	if (enable)
+		eqdrc_update_bits(AED_TOP_CTL, 0x3 << 1, 0x3 << 1);
+		eqdrc_update_bits(AED_TOP_CTL, 0x1 << 0, 0x1 << 0);
 		eqdrc_update_bits(AED_TOP_CTL, 0x1 << 31, 0x1 << 31);
+	} else {
+		eqdrc_update_bits(AED_TOP_CTL, 0x1 << 0, 0x0 << 0);
+		eqdrc_write(AED_ED_CNTL, 0x1);
+		eqdrc_write(AED_ED_CNTL, 0x1);
+		eqdrc_update_bits(AED_TOP_CTL, 0x3 << 1, 0x0 << 1);
+	}
 }
 
+void aed_module_reset(int offset)
+{
+	audiobus_update_bits(EE_AUDIO_SW_RESET0(offset),
+		REG_BIT_RESET_EQDRC, REG_BIT_RESET_EQDRC);
+	audiobus_update_bits(EE_AUDIO_SW_RESET0(offset),
+		REG_BIT_RESET_EQDRC, 0);
+}

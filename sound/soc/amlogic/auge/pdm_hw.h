@@ -29,9 +29,13 @@ struct pdm_info {
 
 	int dclk_idx;  /* mapping for dclk value */
 	int bypass;    /* bypass all filter, capture raw data */
+	int sample_count;
 };
 
 extern void aml_pdm_ctrl(struct pdm_info *info);
+
+extern void pdm_force_sysclk_to_oscin(bool force);
+extern void pdm_set_channel_ctrl(int sample_count);
 
 extern void aml_pdm_arb_config(struct aml_audio_controller *actrl);
 
@@ -47,14 +51,16 @@ extern int pdm_get_mute_value(void);
 extern void pdm_set_mute_value(int val);
 extern int pdm_get_mute_channel(void);
 extern void pdm_set_mute_channel(int mute_chmask);
-
+extern void pdm_set_bypass_data(bool bypass);
 extern void pdm_init_truncate_data(int freq);
-
 extern void pdm_train_en(bool en);
 extern void pdm_train_clr(void);
 extern int pdm_train_sts(void);
 
+extern int pdm_dclkidx2rate(int idx);
+extern int pdm_get_sample_count(int isLowPower, int dclk_idx);
+extern int pdm_get_ors(int dclk_idx, int sample_rate);
+
 extern int pdm_hcic_shift_gain;
-extern int pdm_dclk;
 
 #endif /*__AML_PDM_HW_H__*/

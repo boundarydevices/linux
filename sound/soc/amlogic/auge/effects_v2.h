@@ -19,5 +19,6 @@
 
 extern bool check_aed_v2(void);
 extern int card_add_effect_v2_kcontrols(struct snd_soc_card *card);
+extern int get_aed_dst(void);
 
 #endif

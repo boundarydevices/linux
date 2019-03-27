@@ -93,4 +93,6 @@ extern void spdif_set_channel_status_info(
 extern void spdifout_play_with_zerodata(unsigned int spdif_id, bool reenable);
 extern void spdifout_play_with_zerodata_free(unsigned int spdif_id);
 extern void spdifin_set_src(int src);
+void aml_spdif_out_reset(unsigned int spdif_id, int offset);
+
 #endif

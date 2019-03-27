@@ -808,3 +808,28 @@ void aml_tdm_mute_capture(
 	}
 }
 
+void aml_tdm_out_reset(unsigned int tdm_id, int offset)
+{
+	unsigned int reg = 0, val = 0;
+
+	if ((offset != 0) && (offset != 1)) {
+		pr_err("%s(), invalid offset = %d\n", __func__, offset);
+		return;
+	}
+
+	if (tdm_id == 0) {
+		reg = EE_AUDIO_SW_RESET0(offset);
+		val = REG_BIT_RESET_TDMOUTA;
+	} else if (tdm_id == 1) {
+		reg = EE_AUDIO_SW_RESET0(offset);
+		val = REG_BIT_RESET_TDMOUTB;
+	} else if (tdm_id == 2) {
+		reg = EE_AUDIO_SW_RESET0(offset);
+		val = REG_BIT_RESET_TDMOUTC;
+	} else {
+		pr_err("invalid tdmout id %d\n", tdm_id);
+		return;
+	}
+	audiobus_update_bits(reg, val, val);
+	audiobus_update_bits(reg, val, 0);
+}

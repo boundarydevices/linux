@@ -17,15 +17,30 @@
 #ifndef __AML_AUDIO_RESAMPLE_HW_H__
 #define __AML_AUDIO_RESAMPLE_HW_H__
 
-extern void resample_enable(int id, bool enable);
-extern int resample_init(int id, int input_sr);
-extern int resample_disable(int id);
-extern int resample_set_hw_param(int id, int index);
-extern void resample_src_select(int src);
-extern void resample_src_select_ab(int id, int src);
-extern void resample_format_set(int id, int ch_num, int bits);
+#include "ddr_mngr.h"
 
-extern int resample_ctrl_read(int id);
-extern void resample_ctrl_write(int id, int value);
+enum samplerate_index {
+	RATE_OFF,
+	RATE_32K,
+	RATE_44K,
+	RATE_48K,
+	RATE_88K,
+	RATE_96K,
+	RATE_176K,
+	RATE_192K,
+};
+
+extern void resample_enable(enum resample_idx id, bool enable);
+extern int resample_init(enum resample_idx id, int input_sr);
+extern int resample_disable(enum resample_idx id);
+extern int resample_set_hw_param(enum resample_idx id,
+		enum samplerate_index rate_index);
+extern void resample_src_select(int src);
+extern void resample_src_select_ab(enum resample_idx id, enum toddr_src src);
+extern void resample_format_set(enum resample_idx id, int ch_num, int bits);
+
+extern int resample_ctrl_read(enum resample_idx id);
+extern void resample_ctrl_write(enum resample_idx id, int value);
+int resample_set_hw_pause_thd(enum resample_idx id, unsigned int thd);
 
 #endif

@@ -15,17 +15,35 @@
  *
  */
 
+/*#define DEBUG*/
+
 #include <linux/of.h>
 #include <linux/io.h>
 #include <linux/of_address.h>
 #include <linux/platform_device.h>
 
 #include "iomap.h"
+#include "audio_aed_reg_list.h"
+#include "audio_top_reg_list.h"
 
 #define DEV_NAME	"auge_snd_iomap"
 
 static void __iomem *aml_snd_reg_map[IO_MAX];
 
+#ifdef DEBUG
+static void register_debug(u32 base_type, unsigned int reg, unsigned int val)
+{
+	if (base_type == IO_AUDIO_BUS) {
+		pr_debug("audio top reg:[%s] addr: [%#x] val: [%#x]\n",
+			top_register_table[reg].name,
+			top_register_table[reg].addr, val);
+	} else if (base_type == IO_EQDRC_BUS) {
+		pr_debug("audio aed reg:[%s] addr: [%#x] val: [%#x]\n",
+			aed_register_table[reg].name,
+			aed_register_table[reg].addr, val);
+	}
+}
+#endif
 
 static int aml_snd_read(u32 base_type, unsigned int reg, unsigned int *val)
 {
@@ -43,7 +61,9 @@ static void aml_snd_write(u32 base_type, unsigned int reg, unsigned int val)
 
 	if (base_type < IO_MAX) {
 		writel(val, (aml_snd_reg_map[base_type] + (reg << 2)));
-
+#ifdef DEBUG
+		register_debug(base_type, reg, val);
+#endif
 		return;
 	}
 

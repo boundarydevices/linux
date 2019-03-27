@@ -1162,6 +1162,12 @@
 		 */
 		samesource_sel = <3>;
 
+		/*enable default mclk(12.288M), before extern codec start*/
+		start_clk_enable = <1>;
+
+		/*tdm clk tuning enable*/
+		clk_tuning_enable = <1>;
+
 		status = "okay";
 	};
 
@@ -1194,6 +1200,7 @@
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_B
 				&clkc CLKID_MPLL1>;
 		clock-names = "mclk", "clk_srcpll";
+		lb-src-sel = <1>;
 
 		/*
 		 * select tdmin_lb src;
@@ -1250,6 +1257,9 @@
 		interrupt-names = "irq_spdifin";
 		pinctrl-names = "spdif_pins";
 		pinctrl-0 = <&spdifout>; /* bob remove &spdifin*/
+
+		/*spdif clk tuning enable*/
+		clk_tuning_enable = <1>;
 
 		status = "okay";
 	};

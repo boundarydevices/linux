@@ -44,4 +44,5 @@ extern void vad_set_trunk_data_readable(bool en);
 
 extern int card_add_vad_kcontrols(struct snd_soc_card *card);
 
+extern void vad_set_lowerpower_mode(bool isLowPower);
 #endif

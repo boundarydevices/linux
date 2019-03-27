@@ -40,5 +40,6 @@ void aed_set_mixer_params(void);
 void aed_eq_taps(unsigned int eq1_taps);
 void aed_set_multiband_drc_param(void);
 void aed_set_fullband_drc_param(int tap);
+void aed_module_reset(int offset);
 
 #endif

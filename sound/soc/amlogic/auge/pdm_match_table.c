@@ -31,6 +31,12 @@ static struct pdm_chipinfo sm1_pdm_chipinfo = {
 	.train           = true,
 };
 
+static struct pdm_chipinfo tm2_pdm_chipinfo = {
+	.mute_fn         = true,
+	.truncate_data   = false,
+	.train           = true,
+};
+
 static const struct of_device_id aml_pdm_device_id[] = {
 	{
 		.compatible = "amlogic, axg-snd-pdm",
@@ -46,6 +52,10 @@ static const struct of_device_id aml_pdm_device_id[] = {
 	{
 		.compatible = "amlogic, sm1-snd-pdm",
 		.data		= &sm1_pdm_chipinfo,
+	},
+	{
+		.compatible = "amlogic, tm2-snd-pdm",
+		.data		= &tm2_pdm_chipinfo,
 	},
 
 	{}

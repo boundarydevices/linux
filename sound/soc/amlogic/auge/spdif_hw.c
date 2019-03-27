@@ -694,3 +694,28 @@ void spdifout_play_with_zerodata_free(unsigned int spdif_id)
 	/* free frddr, then frddr in mngr */
 	frddr_deinit_without_mngr(spdif_id);
 }
+
+void aml_spdif_out_reset(unsigned int spdif_id, int offset)
+{
+	unsigned int reg = 0, val = 0;
+
+	if ((offset != 0) && (offset != 1)) {
+		pr_err("%s(), invalid offset = %d\n", __func__, offset);
+		return;
+	}
+
+	if (spdif_id == 0) {
+		reg = EE_AUDIO_SW_RESET0(offset);
+		val = REG_BIT_RESET_SPDIFOUTA;
+	} else if (spdif_id == 1) {
+		reg = EE_AUDIO_SW_RESET0(offset);
+		val = REG_BIT_RESET_SPDIFOUTB;
+	} else {
+		pr_err("invalid spdif id %d\n", spdif_id);
+		return;
+	}
+
+	audiobus_update_bits(reg, val, val);
+	audiobus_update_bits(reg, val, 0);
+}
+

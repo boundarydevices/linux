@@ -355,10 +355,10 @@ static const struct snd_soc_dapm_widget tl1_acodec_dapm_widgets[] = {
 			 0, 0, &lir_mux),
 
 	/*ADC capture stream */
-	SND_SOC_DAPM_ADC("Left ADC", "Capture", ACODEC_0,
-			 ADCL_EN, 0),
-	SND_SOC_DAPM_ADC("Right ADC", "Capture", ACODEC_0,
-			 ADCR_EN, 0),
+	SND_SOC_DAPM_ADC("Left ADC", "Capture", SND_SOC_NOPM,
+			 0, 0),
+	SND_SOC_DAPM_ADC("Right ADC", "Capture", SND_SOC_NOPM,
+			 0, 0),
 
 	/*Output */
 	SND_SOC_DAPM_OUTPUT("Lineout 1 left"),
@@ -368,19 +368,19 @@ static const struct snd_soc_dapm_widget tl1_acodec_dapm_widgets[] = {
 
 	/*DAC playback stream */
 	SND_SOC_DAPM_DAC("Left DAC", "Playback",
-			ACODEC_0,
-			DACL_EN, 0),
+			SND_SOC_NOPM,
+			0, 0),
 	SND_SOC_DAPM_DAC("Right DAC", "Playback",
-			ACODEC_0,
-			DACR_EN, 0),
+			SND_SOC_NOPM,
+			0, 0),
 
 	/*DAC 2 playback stream */
 	SND_SOC_DAPM_DAC("Left DAC2", "Playback",
-			ACODEC_5,
-			DAC2L_EN, 0),
+			SND_SOC_NOPM,
+			0, 0),
 	SND_SOC_DAPM_DAC("Right DAC2", "Playback",
-			ACODEC_5,
-			DAC2R_EN, 0),
+			SND_SOC_NOPM,
+			0, 0),
 
 	/*DRV output */
 	SND_SOC_DAPM_OUT_DRV("LO1L_OUT_EN", ACODEC_0,

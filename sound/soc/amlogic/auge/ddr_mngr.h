@@ -23,6 +23,14 @@
 #include <sound/soc.h>
 #include "audio_io.h"
 
+#define MEMIF_INT_ADDR_FINISH       BIT(0)
+#define MEMIF_INT_ADDR_INT          BIT(1)
+#define MEMIF_INT_COUNT_REPEAT      BIT(2)
+#define MEMIF_INT_COUNT_ONCE        BIT(3)
+#define MEMIF_INT_FIFO_ZERO         BIT(4)
+#define MEMIF_INT_FIFO_DEPTH        BIT(5)
+#define MEMIF_INT_MASK              GENMASK(7, 0)
+
 enum ddr_num {
 	DDR_A,
 	DDR_B,
@@ -42,19 +50,29 @@ enum ddr_types {
  * from tl1, add new source FRATV, FRHDMIRX, LOOPBACK_B, SPDIFIN_LB, VAD
  */
 enum toddr_src {
-	TDMIN_A,
-	TDMIN_B,
-	TDMIN_C,
-	SPDIFIN,
-	PDMIN,
-	FRATV, /* NONE for axg, g12a, g12b */
-	TDMIN_LB,
-	LOOPBACK_A,
-	FRHDMIRX, /* from tl1 chipset*/
-	LOOPBACK_B,
-	SPDIFIN_LB,
-	EARCRX_DMAC, /* from sm1 chipset */
-	VAD,
+	TODDR_INVAL = -1,
+	TDMIN_A = 0,
+	TDMIN_B = 1,
+	TDMIN_C = 2,
+	SPDIFIN = 3,
+	PDMIN = 4,
+	FRATV = 5, /* NONE for axg, g12a, g12b */
+	TDMIN_LB = 6,
+	LOOPBACK_A = 7,
+	FRHDMIRX = 8, /* from tl1 chipset*/
+	LOOPBACK_B = 9,
+	SPDIFIN_LB = 10,
+	EARCRX_DMAC = 11,/* from sm1 chipset */
+	RESERVED_0 = 12,
+	RESERVED_1 = 13,
+	RESERVED_2 = 14,
+	VAD = 15,
+	TODDR_SRC_MAX = 16
+};
+
+enum resample_idx {
+	RESAMPLE_A,
+	RESAMPLE_B
 };
 
 enum resample_src {
@@ -93,27 +111,6 @@ struct toddr_fmt {
 	unsigned int ch_num;
 	unsigned int rate;
 };
-
-#if 0
-struct ddr_desc {
-	/* start address of DDR */
-	unsigned int start;
-	/* finish address of DDR */
-	unsigned int finish;
-	/* interrupt address or counts of DDR blocks */
-	unsigned int intrpt;
-	/* fifo total counts */
-	unsigned int fifo_depth;
-	/* fifo start threshold */
-	unsigned int fifo_thr;
-	enum ddr_types data_type;
-	unsigned int edian;
-	unsigned int pp_mode;
-	//unsigned int reg_base;
-	struct clk *ddr;
-	struct clk *ddr_arb;
-};
-#endif
 
 struct ddr_chipinfo {
 	/* INT and Start address is same or separated */
@@ -160,7 +157,6 @@ struct ddr_chipinfo {
 };
 
 struct toddr {
-	//struct ddr_desc dscrpt;
 	struct device *dev;
 	unsigned int resample: 1;
 	unsigned int ext_signed: 1;
@@ -177,7 +173,7 @@ struct toddr {
 	enum toddr_src src;
 	unsigned int fifo_id;
 
-	unsigned int asrc_src_sel;
+	enum toddr_src asrc_src_sel;
 
 	int is_lb; /* check whether for loopback */
 	int irq;
@@ -194,7 +190,7 @@ enum status {
 
 struct toddr_attach {
 	bool enable;
-	int id;
+	enum resample_idx id;
 	int status;
 	/* which module should be attached,
 	 * check which toddr in use should be attached
@@ -212,7 +208,6 @@ struct frddr_attach {
 };
 
 struct frddr {
-	//struct ddr_desc dscrpt;
 	struct device *dev;
 	enum frddr_dest dest;
 
@@ -231,10 +226,11 @@ struct frddr {
 	int irq;
 	bool in_use;
 	struct ddr_chipinfo *chipinfo;
+
+	bool reserved;
 };
 
 /* to ddrs */
-int fetch_toddr_index_by_src(int toddr_src);
 struct toddr *fetch_toddr_by_src(int toddr_src);
 struct toddr *aml_audio_register_toddr(struct device *dev,
 		struct aml_audio_controller *actrl,
@@ -254,24 +250,31 @@ void aml_toddr_set_fifos(struct toddr *to, unsigned int thresh);
 void aml_toddr_update_fifos_rd_th(struct toddr *to, int th);
 void aml_toddr_force_finish(struct toddr *to);
 void aml_toddr_set_format(struct toddr *to, struct toddr_fmt *fmt);
+
+unsigned int aml_toddr_get_status(struct toddr *to);
+void aml_toddr_ack_irq(struct toddr *to, int status);
+
 void aml_toddr_insert_chanum(struct toddr *to);
 unsigned int aml_toddr_read(struct toddr *to);
 void aml_toddr_write(struct toddr *to, unsigned int val);
+unsigned int aml_toddr_read1(struct toddr *to);
+void aml_toddr_write1(struct toddr *to, unsigned int val);
+unsigned int aml_toddr_read_status2(struct toddr *to);
 
 /* resample */
-void aml_set_resample(int id, bool enable, int resample_module);
+void aml_set_resample(enum resample_idx id,
+		bool enable, enum toddr_src resample_module);
 /* power detect */
 void aml_pwrdet_enable(bool enable, int pwrdet_module);
 /* Voice Activity Detection */
 void aml_set_vad(bool enable, int module);
 
 /* from ddrs */
-int fetch_frddr_index_by_src(int frddr_src);
 struct frddr *fetch_frddr_by_src(int frddr_src);
 
 struct frddr *aml_audio_register_frddr(struct device *dev,
 		struct aml_audio_controller *actrl,
-		irq_handler_t handler, void *data);
+		irq_handler_t handler, void *data, bool rvd_dst);
 int aml_audio_unregister_frddr(struct device *dev, void *data);
 int aml_frddr_set_buf(struct frddr *fr, unsigned int start,
 			unsigned int end);
@@ -291,14 +294,18 @@ void aml_frddr_set_format(struct frddr *fr,
 	unsigned int chnum,
 	unsigned int msb,
 	unsigned int frddr_type);
+
+void aml_frddr_reset(struct frddr *fr, int offset);
+
 /* audio eq drc */
 void aml_set_aed(bool enable, int aed_module);
+void aml_aed_top_enable(struct frddr *fr, bool enable);
 
 void frddr_init_without_mngr(unsigned int frddr_index, unsigned int src0_sel);
 void frddr_deinit_without_mngr(unsigned int frddr_index);
 
-int toddr_src_get(void);
-const char *toddr_src_get_str(int idx);
+enum toddr_src toddr_src_get(void);
+const char *toddr_src_get_str(enum toddr_src idx);
 int frddr_src_get(void);
 const char *frddr_src_get_str(int idx);
 
@@ -306,6 +313,9 @@ int card_add_ddr_kcontrols(struct snd_soc_card *card);
 
 void pm_audio_set_suspend(bool is_suspend);
 bool pm_audio_is_suspend(void);
+
+void aml_frddr_check(struct frddr *fr);
+void aml_aed_set_frddr_reserved(void);
 
 #endif
 

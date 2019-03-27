@@ -18,7 +18,7 @@
 #define __AML_AUDIO_SHAREBUFFER_H__
 
 extern int sharebuffer_prepare(struct snd_pcm_substream *substream,
-	void *pfrddr, int samesource_sel, int lane_i2s);
+	void *pfrddr, int samesource_sel, int lane_i2s, int offset);
 extern int sharebuffer_free(struct snd_pcm_substream *substream,
 		void *pfrddr, int samesource_sel);
 extern int sharebuffer_trigger(int cmd, int samesource_sel, bool reenable);

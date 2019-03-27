@@ -13795,13 +13795,9 @@ F: arch/arm/boot/dts/amlogic>
 ANLOGIC AUDIO
 M: Xing Wang <xing.wang@amlogic.com>
 M: Zhe Wang <Zhe.Wang@amlogic.com>
-F: arch/arm64/boot/dts/amlogic/gxl_p212_1g.dts
-F: arch/arm64/boot/dts/amlogic/gxl_p212_2g.dts
-F: arch/arm64/boot/dts/amlogic/gxl_p230_2g.dts
-F: arch/arm64/boot/dts/amlogic/gxm_q200_2g.dts
-F: arch/arm64/boot/dts/amlogic/gxm_skt.dts
-F: arch/arm64/boot/dts/amlogic/mesongxl.dtsi
-F: arch/arm64/boot/dts/amlogic/mesongxm.dtsi
+M: Shuai Li <shuai.li@amlogic.com>
+F: arch/arm64/boot/dts/amlogic/*
+F: arch/arm/boot/dts/amlogic/*
 F: arch/arm64/configs/meson64_defconfig
 F: drivers/amlogic/clk/clk-mpll.c
 F: drivers/amlogic/clk/clk_misc.c
@@ -13813,7 +13809,8 @@ F: include/dt-bindings/clock/amlogic,gxl-clkc.h
 F: include/linux/amlogic/media/sound/audin_regs.h
 F: sound/soc/Kconfig
 F: sound/soc/Makefile
-F: sound/soc/amlogic/*
+F: sound/soc/amlogic/auge/*
+F: sound/soc/amlogic/meson/*
 F: sound/soc/codecs/Kconfig
 F: sound/soc/codecs/Makefile
 F: sound/soc/codecs/amlogic/*
@@ -14693,6 +14690,14 @@ F:	include/dt-bindings/clock/amlogic,tl1-audio-clk.h
 F:	include/dt-bindings/clock/amlogic,sm1-audio-clk.h
 F:	include/linux/amlogic/media/sound/misc.h
 F:	include/linux/amlogic/major.h
+F:	sound/soc/amlogic/auge/*
+
+AMLOGIC TL1 AUDIO EXTERANL INPUT/OUTPUT DRIVERS
+AMLOGIC AUDIO New LOOPBACK DRIVERS
+M:	Xing Wang <xing.wang@amlogic.com
+F:	sound/soc/amlogic/auge/extn.c
+F:	sound/soc/amlogic/auge/frhdmirx_hw.c
+F:	sound/soc/amlogic/auge/frhdmirx_hw.h
 F:	sound/soc/amlogic/auge/*
 
 AMLOGIC LCD DRIVERS

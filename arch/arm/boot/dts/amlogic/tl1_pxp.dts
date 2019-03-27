@@ -315,6 +315,49 @@
 			};
 		};
 
+#if 0
+		aml-audio-card,dai-link@7 {
+			format = "i2s";
+			mclk-fs = <256>;
+			//continuous-clock;
+			//bitclock-inversion;
+			//frame-inversion;
+			bitclock-master = <&tdmlb>;
+			frame-master = <&tdmlb>;
+			cpu {
+				sound-dai = <&tdmlb>;
+				dai-tdm-slot-rx-mask = <1 1>;
+				dai-tdm-slot-num = <2>;
+				dai-tdm-slot-width = <32>;
+				system-clock-frequency = <12288000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+#endif
+		aml-audio-card,dai-link@8 {
+			mclk-fs = <256>;
+			continuous-clock;
+			cpu {
+				sound-dai = <&loopbacka>;
+				system-clock-frequency = <12288000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
+		aml-audio-card,dai-link@9 {
+			mclk-fs = <256>;
+			continuous-clock;
+			cpu {
+				sound-dai = <&loopbackb>;
+				system-clock-frequency = <12288000>;
+			};
+			codec {
+				sound-dai = <&dummy_codec>;
+			};
+		};
 	};
 	/* Audio Related end */
 
@@ -504,6 +547,8 @@
 				&clkc CLKID_MPLL1>;
 		clock-names = "mclk", "clk_srcpll";
 
+		mclk_pad = <0>;  /* 0: mclk_0; 1: mclk_1 */
+
 		status = "okay";
 	};
 
@@ -521,6 +566,57 @@
 
 		pinctrl-names = "tdm_pins";
 		pinctrl-0 = <&tdmout_c &tdmin_c>;
+
+		mclk_pad = <0>;  /* 0: mclk_0; 1: mclk_1 */
+
+		status = "okay";
+	};
+
+	tdmlb:tdm@3 {
+		compatible = "amlogic, tl1-snd-tdmlb";
+		#sound-dai-cells = <0>;
+
+		dai-tdm-lane-lb-slot-mask-in = <1 0 0 0>;
+		dai-tdm-clk-sel = <1>;
+
+		clocks = <&clkaudio CLKID_AUDIO_MCLK_B
+				&clkc CLKID_MPLL1>;
+		clock-names = "mclk", "clk_srcpll";
+
+		/*
+		 * select tdmin_lb src;
+		 * AXG
+		 *  0: TDMOUTA
+		 *  1: TDMOUTB
+		 *  2: TDMOUTC
+		 *  3: PAD_TDMINA
+		 *  4: PAD_TDMINB
+		 *  5: PAD_TDMINC
+		 *
+		 * G12A/G12B
+		 *  0: TDMOUTA
+		 *  1: TDMOUTB
+		 *  2: TDMOUTC
+		 *  3: PAD_TDMINA_DIN*
+		 *  4: PAD_TDMINB_DIN*
+		 *  5: PAD_TDMINC_DIN*
+		 *  6: PAD_TDMINA_D*, oe pin
+		 *  7: PAD_TDMINB_D*, oe pin
+		 *
+		 * TL1
+		 *  0: TDMOUTA
+		 *  1: TDMOUTB
+		 *  2: TDMOUTC
+		 *  3: PAD_TDMINA_DIN*
+		 *  4: PAD_TDMINB_DIN*
+		 *  5: PAD_TDMINC_DIN*
+		 *  6: PAD_TDMINA_D*
+		 *  7: PAD_TDMINB_D*
+		 *  8: PAD_TDMINC_D*
+		 *  9: HDMIRX_I2S
+		 *  10: ACODEC_ADC
+		 */
+		lb-src-sel = <1>;
 
 		status = "okay";
 	};
@@ -618,7 +714,7 @@
 		clocks = <&clkaudio CLKID_AUDIO_GATE_EQDRC
 			&clkc CLKID_FCLK_DIV5
 			&clkaudio CLKID_AUDIO_EQDRC>;
-		clock-names = "gate", "clk_srcpll", "eqdrc";
+		clock-names = "gate", "srcpll", "eqdrc";
 
 		eq_enable = <1>;
 		multiband_drc_enable = <0>;
@@ -683,6 +779,117 @@
 		status = "disabled";
 	};
 
+	loopbacka:loopback@0 {
+		compatible = "amlogic, tl1-loopbacka";
+		#sound-dai-cells = <0>;
+
+		clocks = <&clkaudio CLKID_AUDIO_GATE_PDM
+			&clkc CLKID_FCLK_DIV3
+			&clkc CLKID_MPLL3
+			&clkaudio CLKID_AUDIO_PDMIN0
+			&clkaudio CLKID_AUDIO_PDMIN1>;
+		clock-names = "gate",
+			"sysclk_srcpll",
+			"dclk_srcpll",
+			"pdm_dclk",
+			"pdm_sysclk";
+
+		/* calc mclk for datain_lb */
+		mclk-fs = <256>;
+
+		/*
+		 * 0: out rate = in data rate;
+		 * 1: out rate = loopback data rate;
+		 */
+		lb_mode = <0>;
+
+		/* datain src
+		 * 0: tdmin_a;
+		 * 1: tdmin_b;
+		 * 2: tdmin_c;
+		 * 3: spdifin;
+		 * 4: pdmin;
+		 */
+		datain_src = <4>;
+		datain_chnum = <8>;
+		datain_chmask = <0x3f>;
+
+		/* tdmin_lb src
+		 * 0: tdmoutA
+		 * 1: tdmoutB
+		 * 2: tdmoutC
+		 * 3: PAD_TDMINA_DIN*, refer to core pinmux
+		 * 4: PAD_TDMINB_DIN*, refer to core pinmux
+		 * 5: PAD_TDMINC_DIN*, refer to core pinmux
+		 * 6: PAD_TDMINA_D*, oe, refer to core pinmux
+		 * 7: PAD_TDMINB_D*, oe, refer to core pinmux
+		 */
+		/* if tdmin_lb >= 3, use external loopback */
+		datalb_src = <1>;
+		datalb_chnum = <2>;
+		datalb_chmask = <0x3>;
+
+		/* config which data pin as loopback */
+		datalb-lane-mask-in = <1 0 0 0>;
+
+		status = "okay";
+	};
+
+	loopbackb:loopback@1 {
+		compatible = "amlogic, tl1-loopbackb";
+		#sound-dai-cells = <0>;
+
+		clocks = <&clkaudio CLKID_AUDIO_GATE_PDM
+			&clkc CLKID_FCLK_DIV3
+			&clkc CLKID_MPLL3
+			&clkaudio CLKID_AUDIO_PDMIN0
+			&clkaudio CLKID_AUDIO_PDMIN1>;
+		clock-names = "gate",
+			"sysclk_srcpll",
+			"dclk_srcpll",
+			"pdm_dclk",
+			"pdm_sysclk";
+
+		/* calc mclk for datain_lb */
+		mclk-fs = <256>;
+
+		/*
+		 * 0: out rate = in data rate;
+		 * 1: out rate = loopback data rate;
+		 */
+		lb_mode = <0>;
+
+		/* datain src
+		 * 0: tdmin_a;
+		 * 1: tdmin_b;
+		 * 2: tdmin_c;
+		 * 3: spdifin;
+		 * 4: pdmin;
+		 */
+		datain_src = <4>;
+		datain_chnum = <8>;
+		datain_chmask = <0x3f>;
+
+		/* tdmin_lb src
+		 * 0: tdmoutA
+		 * 1: tdmoutB
+		 * 2: tdmoutC
+		 * 3: PAD_TDMINA_DIN*, refer to core pinmux
+		 * 4: PAD_TDMINB_DIN*, refer to core pinmux
+		 * 5: PAD_TDMINC_DIN*, refer to core pinmux
+		 * 6: PAD_TDMINA_D*, oe, refer to core pinmux
+		 * 7: PAD_TDMINB_D*, oe, refer to core pinmux
+		 */
+		/* if tdmin_lb >= 3, use external loopback */
+		datalb_src = <1>;
+		datalb_chnum = <2>;
+		datalb_chmask = <0x3>;
+
+		/* config which data pin as loopback */
+		datalb-lane-mask-in = <1 0 0 0>;
+
+		status = "okay";
+	};
 }; /* end of audiobus */
 
 &pinctrl_periphs {

@@ -541,6 +541,11 @@ static void vad_deinit(struct vad *p_vad)
 	vad_set_clks(p_vad, false);
 }
 
+void vad_set_lowerpower_mode(bool isLowPower)
+{
+	vad_force_clk_to_oscin(isLowPower);
+}
+
 void vad_update_buffer(int isvad)
 {
 	struct vad *p_vad = get_vad();
@@ -561,7 +566,7 @@ void vad_update_buffer(int isvad)
 		p_vad->start_last = tddr->start_addr;
 		p_vad->end_last   = tddr->end_addr;
 
-		rd_th = 0x100;
+		rd_th = 0x800;
 
 		pr_debug("Switch to VAD buffer\n");
 		pr_debug("\t ASAL start:%x, end:%x, bytes:%d\n",
@@ -1003,7 +1008,8 @@ static int vad_platform_probe(struct platform_device *pdev)
 	return 0;
 }
 
-int vad_platform_suspend(struct platform_device *pdev, pm_message_t state)
+static int vad_platform_suspend(
+	struct platform_device *pdev, pm_message_t state)
 {
 	struct device *dev = &pdev->dev;
 	struct vad *p_vad = dev_get_drvdata(dev);
@@ -1022,7 +1028,8 @@ int vad_platform_suspend(struct platform_device *pdev, pm_message_t state)
 	return 0;
 }
 
-int vad_platform_resume(struct platform_device *pdev)
+static int vad_platform_resume(
+	struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct vad *p_vad = dev_get_drvdata(dev);

@@ -35,4 +35,6 @@ extern void vad_set_src(int src);
 extern void vad_set_in(void);
 
 extern void vad_set_enable(bool enable);
+
+extern void vad_force_clk_to_oscin(bool force);
 #endif

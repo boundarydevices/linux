@@ -18,54 +18,55 @@
 #ifndef __AML_LOOPBACK_HW_H__
 #define __AML_LOOPBACK_HW_H__
 
-#include "audio_utils.h"
+#include <linux/types.h>
 
-struct lb_cfg {
+struct data_cfg {
 	/*
 	 * 0: extend bits as "0"
 	 * 1: extend bits as "msb"
 	 */
 	unsigned int ext_signed;
-	/* total channel number */
+	/* channel number */
 	unsigned int chnum;
-	/* which channel is selected for loopback */
+	/* channel selected */
 	unsigned int chmask;
+	/* combined data */
+	unsigned int type;
+	/* the msb positioin in data */
+	unsigned int m;
+	/* the lsb position in data */
+	unsigned int n;
+
+	/* loopback datalb src */
+	unsigned int src;
+
+	unsigned int datalb_src;
+
+	/* channel and mask in new ctrol register */
+	bool ch_ctrl_switch;
 };
 
-struct data_in {
-	struct lb_cfg *config;
-	struct audio_data *ddrdata;
-};
+extern void tdminlb_set_clk(int datatlb_src,
+	int sclk_div, int ratio, bool enable);
 
-struct data_lb {
-	struct lb_cfg *config;
-	unsigned int ddr_type;
-	unsigned int msb;
-	unsigned int lsb;
-};
+extern void tdminlb_set_format(int i2s_fmt);
 
-struct loopback {
-	struct device *dev;
-	unsigned int lb_mode;
+extern void tdminlb_set_ctrl(int src);
 
-	struct data_in *datain;
-	struct data_lb *datalb;
-};
+extern void tdminlb_enable(int tdm_index, int in_enable);
+
+extern void tdminlb_fifo_enable(int is_enable);
+
+extern void tdminlb_set_format(int i2s_fmt);
+extern void tdminlb_set_lanemask_and_chswap(int swap, int lane_mask);
 
 
-extern void datain_config(struct data_in *datain);
+extern void tdminlb_set_src(int src);
+extern void lb_set_datain_src(int id, int src);
 
-extern void datalb_config(struct data_lb *datalb);
+extern void lb_set_datain_cfg(int id, struct data_cfg *datain_cfg);
+extern void lb_set_datalb_cfg(int id, struct data_cfg *datalb_cfg);
 
-extern void datalb_ctrl(struct loopback_cfg *lb_cfg);
+extern void lb_enable(int id, bool enable);
 
-extern int lb_is_enable(void);
-
-extern void lb_enable(bool is_enable);
-
-extern void lb_mode(int mode);
-
-extern void tdmin_lb_enable(int tdm_index, int in_enable);
-
-extern void tdmin_lb_fifo_enable(int is_enable);
 #endif
