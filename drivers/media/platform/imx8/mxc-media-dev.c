@@ -279,7 +279,7 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 
 	/* Find platform data for this sensor subdev */
 	for (i = 0; i < ARRAY_SIZE(mxc_md->sensor); i++) {
-		if (mxc_md->sensor[i].asd.match.fwnode.fwnode ==
+		if (mxc_md->sensor[i].asd.match.fwnode ==
 				of_fwnode_handle(sd->dev->of_node))
 			sensor = &mxc_md->sensor[i];
 	}
@@ -323,6 +323,10 @@ unlock:
 	return media_device_register(&mxc_md->media_dev);
 }
 
+static const struct v4l2_async_notifier_operations subdev_notifer_ops = {
+	.bound    = subdev_notifier_bound,
+	.complete = subdev_notifier_complete,
+};
 
 /**
  * mxc_sensor_notify - v4l2_device notification from a sensor subdev
@@ -385,7 +389,7 @@ static int register_sensor_entities(struct mxc_md *mxc_md)
 		}
 
 		mxc_md->sensor[index].asd.match_type = V4L2_ASYNC_MATCH_FWNODE;
-		mxc_md->sensor[index].asd.match.fwnode.fwnode = of_fwnode_handle(rem);
+		mxc_md->sensor[index].asd.match.fwnode = of_fwnode_handle(rem);
 		mxc_md->async_subdevs[index] = &mxc_md->sensor[index].asd;
 
 		mxc_md->num_sensors++;
@@ -770,8 +774,7 @@ static int mxc_md_probe(struct platform_device *pdev)
 	if (mxc_md->num_sensors > 0) {
 		mxc_md->subdev_notifier.subdevs = mxc_md->async_subdevs;
 		mxc_md->subdev_notifier.num_subdevs = mxc_md->num_sensors;
-		mxc_md->subdev_notifier.bound = subdev_notifier_bound;
-		mxc_md->subdev_notifier.complete = subdev_notifier_complete;
+		mxc_md->subdev_notifier.ops = &subdev_notifer_ops;
 		mxc_md->num_sensors = 0;
 		mxc_md->link_status = 0;
 
