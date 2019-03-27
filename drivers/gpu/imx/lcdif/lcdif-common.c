@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 NXP
+ * Copyright 2018-2019 NXP
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -625,6 +625,12 @@ static int lcdif_add_client_devices(struct lcdif_soc *lcdif)
 
 		pdev->dev.parent = dev;
 		client_reg[i].pdata.of_node = of_node;
+
+		/* make child device 'dma_mask' to point to its
+		 * coherent dma mask, otherwise later probe will
+		 * print warning message: 'DMA mask not set'.
+		 */
+		pdev->dev.dma_mask = &pdev->dev.coherent_dma_mask;
 
 		ret = platform_device_add_data(pdev, &client_reg[i].pdata,
 					       sizeof(client_reg[i].pdata));
