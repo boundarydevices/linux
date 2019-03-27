@@ -63,7 +63,6 @@ dtb-$(CONFIG_ARCH_FSL_IMX8QXP) += fsl-imx8qxp-lpddr4-arm2.dtb \
 				  fsl-imx8qxp-mek-dsp.dtb \
 				  fsl-imx8qxp-mek-dom0.dtb \
 				  fsl-imx8qxp-mek-ov5640.dtb \
-				  fsl-imx8qxp-mek-ov5640-rpmsg.dtb \
 				  fsl-imx8qxp-mek-enet2.dtb \
 				  fsl-imx8qxp-mek-enet2-tja1100.dtb \
 				  fsl-imx8qxp-mek-dsi-rm67191.dtb \

@@ -91,9 +91,7 @@
 		};
 	};
 
-	max9286_mipi@6A {
-		status = "disabled";
-	};
+	/delete-node/max9286_mipi@6A;
 };
 
 &i2c0_mipi_csi1 {
@@ -121,9 +119,7 @@
 		};
 	};
 
-	max9286_mipi@6A {
-		status = "disabled";
-	};
+	/delete-node/max9286_mipi@6A;
 };
 
 &mipi_csi_0 {
