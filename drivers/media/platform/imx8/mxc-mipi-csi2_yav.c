@@ -501,7 +501,7 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 	struct mxc_mipi_csi2_dev *csi2dev = notifier_to_mipi_dev(notifier);
 
 	/* Find platform data for this sensor subdev */
-	if (csi2dev->asd.match.fwnode.fwnode == of_fwnode_handle(subdev->dev->of_node))
+	if (csi2dev->asd.match.fwnode == of_fwnode_handle(subdev->dev->of_node))
 		csi2dev->sensor_sd = subdev;
 
 	if (subdev == NULL)
@@ -512,6 +512,10 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 
 	return 0;
 }
+
+static const struct v4l2_async_notifier_operations subdev_notifier_ops = {
+	.bound = subdev_notifier_bound,
+};
 
 static int mipi_csis_subdev_host(struct mxc_mipi_csi2_dev *csi2dev)
 {
@@ -542,7 +546,7 @@ static int mipi_csis_subdev_host(struct mxc_mipi_csi2_dev *csi2dev)
 				  port->full_name);
 
 		csi2dev->asd.match_type = V4L2_ASYNC_MATCH_FWNODE;
-		csi2dev->asd.match.fwnode.fwnode = of_fwnode_handle(rem);
+		csi2dev->asd.match.fwnode = of_fwnode_handle(rem);
 		csi2dev->async_subdevs[0] = &csi2dev->asd;
 
 		of_node_put(rem);
@@ -551,7 +555,7 @@ static int mipi_csis_subdev_host(struct mxc_mipi_csi2_dev *csi2dev)
 
 	csi2dev->subdev_notifier.subdevs = csi2dev->async_subdevs;
 	csi2dev->subdev_notifier.num_subdevs = 1;
-	csi2dev->subdev_notifier.bound = subdev_notifier_bound;
+	csi2dev->subdev_notifier.ops = &subdev_notifier_ops;
 
 	ret = v4l2_async_notifier_register(&csi2dev->v4l2_dev,
 					   &csi2dev->subdev_notifier);
