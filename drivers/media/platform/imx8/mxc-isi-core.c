@@ -185,8 +185,6 @@ static int mxc_isi_probe(struct platform_device *pdev)
 		goto err_sclk;
 	}
 
-	mxc_isi->flags = MXC_ISI_PM_POWERED;
-	mxc_isi_channel_set_chain_buf(mxc_isi);
 	clk_disable_unprepare(mxc_isi->clk);
 
 	pm_runtime_enable(dev);
