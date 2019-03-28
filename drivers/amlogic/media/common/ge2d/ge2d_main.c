@@ -54,6 +54,7 @@
 #define GE2D_CLASS_NAME "ge2d"
 #define MAX_GE2D_CLK 500000000
 #define HHI_MEM_PD_REG0 0x40
+#define RESET2_LEVEL    0x422
 
 struct ge2d_device_s {
 	char name[20];
@@ -1036,23 +1037,29 @@ static int ge2d_release(struct inode *inode, struct file *file)
 
 static struct ge2d_ctrl_s default_poweron_ctrl[] = {
 			/* power up ge2d */
-			{AOBUS_BASE, AO_RTI_GEN_PWR_SLEEP0, 0, 19, 1, 0},
+			{GEN_PWR_SLEEP0, AO_RTI_GEN_PWR_SLEEP0, 0, 19, 1, 0},
 			/* Power up memory */
-			{HIUBUS_BASE, HHI_MEM_PD_REG0, 0, 18, 8, 100},
+			{MEM_PD_REG0, HHI_MEM_PD_REG0, 0, 18, 8, 100},
+			/* reset */
+			{CBUS_BASE, RESET2_LEVEL, 0, 6, 1, 0},
 			/* remove isolation */
-			{AOBUS_BASE, AO_RTI_GEN_PWR_ISO0, 0, 19, 1, 0}
+			{GEN_PWR_ISO0, AO_RTI_GEN_PWR_ISO0, 0, 19, 1, 0},
+			/* pull up reset */
+			{CBUS_BASE, RESET2_LEVEL, 1, 6, 1, 0}
 		};
 static struct ge2d_ctrl_s default_poweroff_ctrl[] = {
+			/* reset */
+			{CBUS_BASE, RESET2_LEVEL, 0, 6, 1, 0},
 			/* add isolation */
-			{AOBUS_BASE, AO_RTI_GEN_PWR_ISO0, 1, 19, 1, 0},
+			{GEN_PWR_ISO0, AO_RTI_GEN_PWR_ISO0, 1, 19, 1, 0},
 			/* Power down memory */
-			{HIUBUS_BASE, HHI_MEM_PD_REG0, 0xff, 18, 8, 0},
+			{MEM_PD_REG0, HHI_MEM_PD_REG0, 0xFF, 18, 8, 0},
 			/* power down ge2d */
-			{AOBUS_BASE, AO_RTI_GEN_PWR_SLEEP0, 1, 19, 1, 0}
+			{GEN_PWR_SLEEP0, AO_RTI_GEN_PWR_SLEEP0, 1, 19, 1, 0}
 		};
 
-struct ge2d_power_table_s default_poweron_table = {3, default_poweron_ctrl};
-struct ge2d_power_table_s default_poweroff_table = {3, default_poweroff_ctrl};
+struct ge2d_power_table_s default_poweron_table = {5, default_poweron_ctrl};
+struct ge2d_power_table_s default_poweroff_table = {4, default_poweroff_ctrl};
 
 static struct ge2d_device_data_s ge2d_gxl = {
 	.ge2d_rate = 400000000,
@@ -1215,7 +1222,6 @@ static int ge2d_probe(struct platform_device *pdev)
 		goto failed1;
 	}
 	ge2d_log_info("clock clk_ge2d source %p\n", clk);
-	ge2d_pwr_config(true);
 	clk_prepare_enable(clk);
 
 	clk_vapb0 = devm_clk_get(&pdev->dev, "clk_vapb_0");
@@ -1285,7 +1291,6 @@ static int ge2d_remove(struct platform_device *pdev)
 	ge2d_log_info("%s\n", __func__);
 	ge2d_wq_deinit();
 	remove_ge2d_device();
-	ge2d_pwr_config(false);
 	return 0;
 }
 

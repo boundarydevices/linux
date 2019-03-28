@@ -120,6 +120,37 @@ static const int default_ge2d_color_lut[] = {
 	GE2D_FORMAT_S32_ARGB,/* BPP_TYPE_32_ARGB=32, */
 };
 
+static void ge2d_pre_init(void)
+{
+	struct ge2d_gen_s ge2d_gen_cfg;
+
+	ge2d_gen_cfg.interrupt_ctrl = 0x02;
+	ge2d_gen_cfg.dp_on_cnt       = 0;
+	ge2d_gen_cfg.dp_off_cnt      = 0;
+	ge2d_gen_cfg.dp_onoff_mode   = 0;
+	ge2d_gen_cfg.vfmt_onoff_en   = 0;
+	/*  fifo size control, 00: 512, 01: 256, 10: 128 11: 96 */
+	ge2d_gen_cfg.fifo_size = 0;
+	/* fifo burst control, 00: 24x64, 01: 32x64
+	 * 10: 48x64, 11:64x64
+	 */
+	ge2d_gen_cfg.burst_ctrl = 0;
+	ge2d_set_gen(&ge2d_gen_cfg);
+}
+
+static int ge2d_clk_config(bool enable)
+{
+	if (ge2d_clk == NULL)
+		return -1;
+	if (enable)
+		clk_prepare_enable(ge2d_clk);
+	else
+		clk_disable_unprepare(ge2d_clk);
+
+	return 0;
+}
+
+
 void ge2d_pwr_config(bool enable)
 {
 	int i, table_size;
@@ -128,34 +159,29 @@ void ge2d_pwr_config(bool enable)
 
 	if (ge2d_meson_dev.has_self_pwr) {
 		if (enable) {
-			power_table = ge2d_meson_dev.poweron_table->power_btale;
+			power_table = ge2d_meson_dev.poweron_table->power_table;
 			table_size = ge2d_meson_dev.poweron_table->table_size;
 		} else {
 			power_table =
-				ge2d_meson_dev.poweroff_table->power_btale;
+				ge2d_meson_dev.poweroff_table->power_table;
 			table_size = ge2d_meson_dev.poweroff_table->table_size;
 		}
 
 		for (i = 0; i < table_size; i++) {
 			tmp = power_table[i];
-			ge2d_set_bus_bits(tmp.bus_type, tmp.reg, tmp.val,
+			ge2d_set_pwr_tbl_bits(tmp.table_type, tmp.reg, tmp.val,
 					tmp.start, tmp.len);
 			if (tmp.udelay > 0)
 				udelay(tmp.udelay);
 		}
 	}
-}
 
-static int ge2d_clk_config(bool enable)
-{
-	if (ge2d_clk == NULL)
-		return -1;
+	ge2d_clk_config(enable);
+
 	if (enable) {
-		clk_prepare_enable(ge2d_clk);
-	} else {
-		clk_disable_unprepare(ge2d_clk);
+		ge2d_soft_rst();
+		ge2d_pre_init();
 	}
-	return 0;
 }
 
 static int get_queue_member_count(struct list_head *head)
@@ -492,12 +518,12 @@ static int ge2d_monitor_thread(void *data)
 	/* setup current_wq here. */
 	while (ge2d_manager.process_queue_state != GE2D_PROCESS_QUEUE_STOP) {
 		ret = down_interruptible(&manager->event.cmd_in_sem);
-		ge2d_clk_config(true);
+		ge2d_pwr_config(true);
 		while ((manager->current_wq =
 				get_next_work_queue(manager)) != NULL)
 			ge2d_process_work_queue(manager->current_wq);
 		if (!ge2d_dump_reg_enable)
-			ge2d_clk_config(false);
+			ge2d_pwr_config(false);
 	}
 	ge2d_log_info("exit ge2d_monitor_thread\n");
 	return 0;
@@ -2566,8 +2592,6 @@ EXPORT_SYMBOL(destroy_ge2d_work_queue);
 int ge2d_wq_init(struct platform_device *pdev,
 	int irq, struct clk *clk)
 {
-	struct ge2d_gen_s ge2d_gen_cfg;
-
 	ge2d_manager.pdev = pdev;
 	ge2d_irq = irq;
 	ge2d_clk = clk;
@@ -2596,21 +2620,7 @@ int ge2d_wq_init(struct platform_device *pdev,
 	ge2d_manager.buffer = ge2d_dma_buffer_create();
 	if (!ge2d_manager.buffer)
 		return -1;
-	ge2d_clk_config(true);
-	ge2d_soft_rst();
-	ge2d_gen_cfg.interrupt_ctrl = 0x02;
-	ge2d_gen_cfg.dp_on_cnt       = 0;
-	ge2d_gen_cfg.dp_off_cnt      = 0;
-	ge2d_gen_cfg.dp_onoff_mode   = 0;
-	ge2d_gen_cfg.vfmt_onoff_en   = 0;
-	/*  fifo size control, 00: 512, 01: 256, 10: 128 11: 96 */
-	ge2d_gen_cfg.fifo_size = 0;
-	/* fifo burst control, 00: 24x64, 01: 32x64
-	 * 10: 48x64, 11:64x64
-	 */
-	ge2d_gen_cfg.burst_ctrl = 0;
-	ge2d_set_gen(&ge2d_gen_cfg);
-	ge2d_clk_config(false);
+
 	if (ge2d_start_monitor()) {
 		ge2d_log_err("ge2d create thread error\n");
 		return -1;

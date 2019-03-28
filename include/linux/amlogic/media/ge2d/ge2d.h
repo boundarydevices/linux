@@ -1016,10 +1016,13 @@ enum {
 	CBUS_BASE,
 	AOBUS_BASE,
 	HIUBUS_BASE,
+	GEN_PWR_SLEEP0,
+	GEN_PWR_ISO0,
+	MEM_PD_REG0,
 };
 
 struct ge2d_ctrl_s {
-	unsigned int bus_type;
+	unsigned int table_type;
 	unsigned int reg;
 	unsigned int val;
 	unsigned int start;
@@ -1029,7 +1032,7 @@ struct ge2d_ctrl_s {
 
 struct ge2d_power_table_s {
 	unsigned int table_size;
-	struct ge2d_ctrl_s *power_btale;
+	struct ge2d_ctrl_s *power_table;
 };
 
 struct ge2d_device_data_s {
