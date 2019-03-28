@@ -155,9 +155,11 @@ extern void i2s_to_hdmitx_ctrl(int tdm_index);
 void aml_tdm_mute_playback(
 		struct aml_audio_controller *actrl,
 		int index,
-		bool mute);
+		bool mute,
+		int lane_cnt);
 void aml_tdm_mute_capture(
 		struct aml_audio_controller *actrl,
 		int tdm_index,
-		bool mute);
+		bool mute,
+		int lane_cnt);
 #endif

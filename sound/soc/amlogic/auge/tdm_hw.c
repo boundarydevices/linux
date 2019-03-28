@@ -545,21 +545,27 @@ void aml_tdm_set_channel_mask(
 	unsigned int offset, reg;
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if (lane >= LANE_MAX1)
+		if (lane >= LANE_MAX1) {
 			offset = EE_AUDIO_TDMOUT_B_MASK4
 				- EE_AUDIO_TDMOUT_A_MASK4;
-		else
+			reg = EE_AUDIO_TDMOUT_A_MASK4 + offset * index;
+			lane -= LANE_MAX1;
+		} else {
 			offset = EE_AUDIO_TDMOUT_B_MASK0
 				- EE_AUDIO_TDMOUT_A_MASK0;
-		reg = EE_AUDIO_TDMOUT_A_MASK0 + offset * index;
+			reg = EE_AUDIO_TDMOUT_A_MASK0 + offset * index;
+		}
 	} else {
-		if (lane >= LANE_MAX1)
+		if (lane >= LANE_MAX1) {
 			offset = EE_AUDIO_TDMIN_B_MASK4
 				- EE_AUDIO_TDMIN_A_MASK4;
-		else
+			reg = EE_AUDIO_TDMIN_A_MASK4 + offset * index;
+			lane -= LANE_MAX1;
+		} else {
 			offset = EE_AUDIO_TDMIN_B_MASK0
 				- EE_AUDIO_TDMIN_A_MASK0;
-		reg = EE_AUDIO_TDMIN_A_MASK0 + offset * index;
+			reg = EE_AUDIO_TDMIN_A_MASK0 + offset * index;
+		}
 	}
 
 	aml_audiobus_write(actrl, reg + lane, mask);
@@ -744,12 +750,13 @@ void i2s_to_hdmitx_ctrl(int tdm_index)
 void aml_tdm_mute_playback(
 		struct aml_audio_controller *actrl,
 		int tdm_index,
-		bool mute)
+		bool mute,
+		int lane_cnt)
 {
 	unsigned int offset, reg;
 	unsigned int mute_mask = 0xffffffff;
 	unsigned int mute_val = 0;
-	int i = 0, lanes = 4;
+	int i = 0;
 
 	if (mute)
 		mute_val = 0xffffffff;
@@ -757,19 +764,29 @@ void aml_tdm_mute_playback(
 	offset = EE_AUDIO_TDMOUT_B_MUTE0
 			- EE_AUDIO_TDMOUT_A_MUTE0;
 	reg = EE_AUDIO_TDMOUT_A_MUTE0 + offset * tdm_index;
-	for (i = 0; i < lanes; i++)
+	for (i = 0; i < LANE_MAX1; i++)
 		aml_audiobus_update_bits(actrl, reg + i, mute_mask, mute_val);
+
+	if (lane_cnt > LANE_MAX1) {
+		offset = EE_AUDIO_TDMOUT_B_MUTE4
+				- EE_AUDIO_TDMOUT_A_MUTE4;
+		reg = EE_AUDIO_TDMOUT_A_MUTE4 + offset * tdm_index;
+		for (i = 0; i < LANE_MAX1; i++)
+			aml_audiobus_update_bits(actrl, reg + i,
+					mute_mask, mute_val);
+	}
 }
 
 void aml_tdm_mute_capture(
 		struct aml_audio_controller *actrl,
 		int tdm_index,
-		bool mute)
+		bool mute,
+		int lane_cnt)
 {
 	unsigned int offset, reg;
 	unsigned int mute_mask = 0xffffffff;
 	unsigned int mute_val = 0;
-	int i = 0, lanes = 4;
+	int i = 0;
 
 	if (mute)
 		mute_val = 0xffffffff;
@@ -777,7 +794,17 @@ void aml_tdm_mute_capture(
 	offset = EE_AUDIO_TDMIN_B_MUTE0
 			- EE_AUDIO_TDMIN_A_MUTE0;
 	reg = EE_AUDIO_TDMIN_A_MUTE0 + offset * tdm_index;
-	for (i = 0; i < lanes; i++)
-		aml_audiobus_update_bits(actrl, reg + i, mute_mask, mute_val);
+	for (i = 0; i < LANE_MAX1; i++)
+		aml_audiobus_update_bits(actrl, reg + i,
+				mute_mask, mute_val);
+
+	if (lane_cnt > LANE_MAX1) {
+		offset = EE_AUDIO_TDMIN_B_MUTE4
+				- EE_AUDIO_TDMIN_A_MUTE4;
+		reg = EE_AUDIO_TDMIN_A_MUTE4 + offset * tdm_index;
+		for (i = 0; i < LANE_MAX1; i++)
+			aml_audiobus_update_bits(actrl, reg + i,
+					mute_mask, mute_val);
+	}
 }
 

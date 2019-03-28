@@ -70,7 +70,7 @@ CLOCK_GATE(audio_reserved5, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN0), 31);
 CLOCK_GATE(audio_frddrd, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 0);
 CLOCK_GATE(audio_toddrd, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 1);
 CLOCK_GATE(audio_loopbackb, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 2);
-CLOCK_GATE(audio_earc, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 6);
+CLOCK_GATE(audio_earcrx, AUD_ADDR_OFFSET(EE_AUDIO_CLK_GATE_EN1), 6);
 
 static struct clk_gate *sm1_audio_clk_gates[] = {
 	&audio_ddr_arb,
@@ -109,7 +109,7 @@ static struct clk_gate *sm1_audio_clk_gates[] = {
 	&audio_frddrd,
 	&audio_toddrd,
 	&audio_loopbackb,
-	&audio_earc,
+	&audio_earcrx,
 };
 
 /* Array of all clocks provided by this provider */
@@ -150,7 +150,7 @@ static struct clk_hw *sm1_audio_clk_hws[] = {
 	[CLKID_AUDIO_GATE_FRDDRD]      = &audio_frddrd.hw,
 	[CLKID_AUDIO_GATE_TODDRD]      = &audio_toddrd.hw,
 	[CLKID_AUDIO_GATE_LOOPBACKB]   = &audio_loopbackb.hw,
-	[CLKID_AUDIO_GATE_EARCRX]      = &audio_earc.hw,
+	[CLKID_AUDIO_GATE_EARCRX]      = &audio_earcrx.hw,
 };
 
 static int sm1_clk_gates_init(struct clk **clks, void __iomem *iobase)

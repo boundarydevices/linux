@@ -1043,6 +1043,8 @@
 		#sound-dai-cells = <0>;
 		dai-tdm-lane-slot-mask-in = <0 1 0 0>;
 		dai-tdm-lane-slot-mask-out = <1 0 0 0>;
+		//dai-tdm-lane-slot-mask-in = <0 0 0 0 0 0 0 0>;
+		//dai-tdm-lane-slot-mask-out = <1 1 1 1 1 1 1 1>;
 		dai-tdm-clk-sel = <1>;
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_B
 				&clkc CLKID_MPLL1
@@ -1211,11 +1213,21 @@
 			drive-strength = <2>;
 		};
 	};
+
 	tdmout_b: tdmout_b {
-		mux { /* GPIOA_1, GPIOA_2, GPIOA_3 */
+		mux { /* GPIOA_1, GPIOA_2, GPIOA_3, GPIOA_4, */
+			  /* GPIOA_5, GPIOA_6, GPIOA_7, GPIOA_8, */
+			  /* GPIOA_9, GPIOA_0*/
 			groups = "tdmb_sclk",
 				"tdmb_fs",
 				"tdmb_dout0";
+				//"tdmb_dout1",
+				//"tdmb_dout2",
+				//"tdmb_dout3_a",
+				//"tdmb_dout4_a",
+				//"tdmb_dout5_a",
+				//"tdmb_dout6_a",
+				//"tdmb_dout7_a0";
 			function = "tdmb_out";
 			drive-strength = <2>;
 		};

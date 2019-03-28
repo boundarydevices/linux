@@ -728,7 +728,7 @@ static struct snd_soc_dai_driver ad82584f_dai = {
 	.playback = {
 		.stream_name = "HIFI Playback",
 		.channels_min = 2,
-		.channels_max = 8,
+		.channels_max = 16,
 		.rates = AD82584F_RATES,
 		.formats = AD82584F_FORMATS,
 	},

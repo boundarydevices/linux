@@ -465,7 +465,7 @@ struct snd_soc_dai_driver aml_T9015_audio_dai[] = {
 	 .playback = {
 		      .stream_name = "HIFI Playback",
 		      .channels_min = 2,
-		      .channels_max = 8,
+		      .channels_max = 16,
 		      .rates = T9015_AUDIO_STEREO_RATES,
 		      .formats = T9015_AUDIO_FORMATS,
 		      },
