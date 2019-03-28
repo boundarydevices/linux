@@ -317,7 +317,6 @@ struct flexcan_regs {
 	 *				size conf'ed via ctrl2::RFFN
 	 *				(mx6, vf610)
 	 */
-	u32 _reserved8[64 * 4];	/* 0x80 */ /* 64 mailbox */
 	u32 _reserved4[256];	/* 0x480 */
 	u32 rximr[64];		/* 0x880 */
 	u32 _reserved5[24];	/* 0x980 */
