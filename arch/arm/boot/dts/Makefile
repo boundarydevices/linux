@@ -143,6 +143,7 @@ dtb-$(CONFIG_ARCH_MXC) += \
 	imx6q-nitrogen6x-cwc.dtb \
 	imx6q-nitrogen6x-cwc-ov5640.dtb \
 	imx6q-nitrogen6_max.dtb \
+	imx6q-nitrogen6_max-cwc.dtb \
 	imx6q-nitrogen6_max-nolcd.dtb \
 	imx6q-nitrogen6_mtp.dtb \
 	imx6q-nitrogen6_som2.dtb \
