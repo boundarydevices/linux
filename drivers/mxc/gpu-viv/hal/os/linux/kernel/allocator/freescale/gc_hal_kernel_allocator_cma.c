@@ -62,8 +62,10 @@
 #include <asm/atomic.h>
 #include <linux/dma-mapping.h>
 #include <linux/slab.h>
-#include <linux/dma-direct.h>
 #include <linux/platform_device.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0)
+#include <linux/dma-direct.h>
+#endif
 
 #define _GC_OBJ_ZONE    gcvZONE_OS
 
@@ -473,8 +475,8 @@ static gceSTATUS
 _CMACache(
     IN gckALLOCATOR Allocator,
     IN PLINUX_MDL Mdl,
+    IN gctSIZE_T Offset,
     IN gctPOINTER Logical,
-    IN gctUINT32 Physical,
     IN gctUINT32 Bytes,
     IN gceCACHEOPERATION Operation
     )

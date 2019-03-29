@@ -456,6 +456,20 @@ typedef struct _gcsHAL_LIMITS
 
 }gcsHAL_LIMITS;
 
+
+typedef struct _gcsHAL_CHIPIDENTITY
+{
+    gceCHIPMODEL                chipModel;
+    gctUINT32                   chipRevision;
+    gctUINT32                   productID;
+    gctUINT32                   customerID;
+    gctUINT32                   ecoID;
+    gceCHIP_FLAG                chipFlags;
+    gctUINT32                   platformFlagBits;
+}
+gcsHAL_CHIPIDENTITY;
+
+
 #define gcdEXTERNAL_MEMORY_NAME_MAX 32
 #define gcdEXTERNAL_MEMORY_DATA_MAX 8
 
@@ -631,6 +645,12 @@ gcoHAL_QueryChipIdentity(
     OUT gctUINT32* ChipRevision,
     OUT gctUINT32* ChipFeatures,
     OUT gctUINT32* ChipMinorFeatures
+    );
+
+gceSTATUS gcoHAL_QueryChipIdentityEx(
+    IN gcoHAL Hal,
+    IN gctUINT32 SizeOfParam,
+    OUT gcsHAL_CHIPIDENTITY *ChipIdentity
     );
 
 
@@ -1086,6 +1106,14 @@ gcoHAL_GetGraphicBufferFd(
     IN gctSHBUF ShBuf,
     IN gctSIGNAL Signal,
     OUT gctINT32 * Fd
+    );
+
+gceSTATUS
+gcoHAL_AlignToTile(
+    IN OUT gctUINT32 * Width,
+    IN OUT gctUINT32 * Height,
+    IN  gceSURF_TYPE Type,
+    IN  gceSURF_FORMAT Format
     );
 
 /******************************************************************************\
@@ -4650,8 +4678,8 @@ gckOS_Verify(
         } \
         while (gcvFALSE)
 #else
-#   define gcmVERIFY_OK(func)       func
-#   define gcmkVERIFY_OK(func)      func
+#   define gcmVERIFY_OK(func)       (void)func
+#   define gcmkVERIFY_OK(func)      (void)func
 #endif
 
 gctCONST_STRING
