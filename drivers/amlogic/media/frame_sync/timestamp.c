@@ -22,6 +22,7 @@
 #include <linux/amlogic/media/utils/vdec_reg.h>
 #include <linux/amlogic/media/registers/register.h>
 #include <linux/amlogic/media/vout/vout_notify.h>
+#define KERNEL_ATRACE_TAG KERNEL_ATRACE_TAG_TSYNC
 #include <trace/events/meson_atrace.h>
 
 
@@ -64,12 +65,14 @@ EXPORT_SYMBOL(timestamp_vpts_get);
 void timestamp_vpts_set(u32 pts)
 {
 	video_pts = pts;
+	ATRACE_COUNTER("VPTS", video_pts);
 }
 EXPORT_SYMBOL(timestamp_vpts_set);
 
 void timestamp_vpts_inc(s32 val)
 {
 	video_pts += val;
+	ATRACE_COUNTER("VPTS", video_pts);
 }
 EXPORT_SYMBOL(timestamp_vpts_inc);
 
@@ -82,6 +85,7 @@ EXPORT_SYMBOL(timestamp_apts_get);
 void timestamp_apts_set(u32 pts)
 {
 	audio_pts = pts;
+	ATRACE_COUNTER("APTS", audio_pts);
 }
 EXPORT_SYMBOL(timestamp_apts_set);
 
@@ -92,6 +96,7 @@ void timestamp_apts_inc(s32 inc)
 		inc = inc * timestamp_inc_factor / PLL_FACTOR;
 #endif
 		audio_pts += inc;
+		ATRACE_COUNTER("APTS", audio_pts);
 	}
 }
 EXPORT_SYMBOL(timestamp_apts_inc);
@@ -161,8 +166,8 @@ EXPORT_SYMBOL(timestamp_tsdemux_pcr_get);
 void timestamp_pcrscr_set(u32 pts)
 {
 	/*pr_info("timestamp_pcrscr_set system time  = %x\n", pts);*/
-	ATRACE_COUNTER("PCRSCR",  pts);
 	system_time = pts;
+	ATRACE_COUNTER("PCRSCR",  pts);
 }
 EXPORT_SYMBOL(timestamp_pcrscr_set);
 

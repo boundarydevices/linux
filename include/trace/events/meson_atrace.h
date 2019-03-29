@@ -32,17 +32,36 @@
 #define KERNEL_ATRACE_COUNTER 0
 #define KERNEL_ATRACE_BEGIN 1
 #define KERNEL_ATRACE_END 2
+#define KERNEL_ATRACE_ASYNC_BEGIN 3
+#define KERNEL_ATRACE_ASYNC_END 4
+
+#if !defined(TRACE_HEADER_MULTI_READ)
+
+enum {
+	KERNEL_ATRACE_TAG_VIDEO,
+	KERNEL_ATRACE_TAG_CODEC_MM,
+	KERNEL_ATRACE_TAG_VDEC,
+	KERNEL_ATRACE_TAG_TSYNC,
+	KERNEL_ATRACE_TAG_MAX = 64,
+	KERNEL_ATRACE_TAG_ALL
+};
+
+#endif
 
 #define print_flags_header(flags) __print_flags(flags, "",	\
-	{ (1UL << KERNEL_ATRACE_COUNTER),	"C" },		\
-	{ (1UL << KERNEL_ATRACE_BEGIN),		"B" },		\
-	{ (1UL << KERNEL_ATRACE_END),		"E" })
+	{ (1UL << KERNEL_ATRACE_COUNTER),		"C" },	\
+	{ (1UL << KERNEL_ATRACE_BEGIN),			"B" },	\
+	{ (1UL << KERNEL_ATRACE_END),			"E" },	\
+	{ (1UL << KERNEL_ATRACE_ASYNC_BEGIN),		"S" },	\
+	{ (1UL << KERNEL_ATRACE_ASYNC_END),		"F" })
 
 
 #define print_flags_delim(flags) __print_flags(flags, "",	\
-	{ (1UL << KERNEL_ATRACE_COUNTER),	"|1|" },		\
-	{ (1UL << KERNEL_ATRACE_BEGIN),		"|1|" },		\
-	{ (1UL << KERNEL_ATRACE_END),		"" })
+	{ (1UL << KERNEL_ATRACE_COUNTER),		"|1|" },\
+	{ (1UL << KERNEL_ATRACE_BEGIN),			"|1|" },\
+	{ (1UL << KERNEL_ATRACE_END),			"" },	\
+	{ (1UL << KERNEL_ATRACE_ASYNC_BEGIN),		"|1|" },\
+	{ (1UL << KERNEL_ATRACE_ASYNC_END),		"|1|" })
 
 TRACE_EVENT(tracing_mark_write,
 
@@ -66,17 +85,32 @@ TRACE_EVENT(tracing_mark_write,
 		print_flags_delim(__entry->flags),
 		__get_str(name), __entry->value)
 );
+
 #ifdef CONFIG_AMLOGIC_DEBUG_ATRACE
+void meson_atrace(int tag, const char *name, unsigned int flags,
+	 unsigned int value);
+
 #define ATRACE_COUNTER(name, value) \
-	trace_tracing_mark_write(name, (1 << KERNEL_ATRACE_COUNTER), value)
+	meson_atrace(KERNEL_ATRACE_TAG, name, \
+		(1 << KERNEL_ATRACE_COUNTER), value)
 #define ATRACE_BEGIN(name) \
-	trace_tracing_mark_write(name, (1 << KERNEL_ATRACE_BEGIN), 0)
+	meson_atrace(KERNEL_ATRACE_TAG, name, \
+		(1 << KERNEL_ATRACE_BEGIN), 0)
 #define ATRACE_END(name) \
-	trace_tracing_mark_write("", (1 << KERNEL_ATRACE_END), 1)
+	meson_atrace(KERNEL_ATRACE_TAG, "", \
+		(1 << KERNEL_ATRACE_END), 1)
+#define ATRACE_ASYNC_BEGIN(name, cookie) \
+	meson_atrace(KERNEL_ATRACE_TAG, name, \
+		(1 << KERNEL_ATRACE_ASYNC_BEGIN), cookie)
+#define ATRACE_ASYNC_END(name, cookie) \
+	meson_atrace(KERNEL_ATRACE_TAG, name, \
+		(1 << KERNEL_ATRACE_ASYNC_END), cookie)
 #else
 #define ATRACE_COUNTER(name, value)
 #define ATRACE_BEGIN(name)
 #define ATRACE_END(name)
+#define ATRACE_ASYNC_BEGIN(name, cookie)
+#define ATRACE_ASYNC_END(name, cookie)
 #endif
 
 #endif /* _TRACE_MESON_BASE_H */

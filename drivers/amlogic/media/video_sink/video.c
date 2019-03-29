@@ -49,6 +49,7 @@
 #include <linux/sched.h>
 #include <linux/amlogic/media/video_sink/video_keeper.h>
 #include "video_priv.h"
+#define KERNEL_ATRACE_TAG KERNEL_ATRACE_TAG_VIDEO
 #include <trace/events/meson_atrace.h>
 
 #if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
@@ -3532,6 +3533,7 @@ static void vsync_toggle_frame(struct vframe_s *vf, int line)
 		ATRACE_COUNTER("vsync_toggle_frame_inc", diff_pts);
 	else
 		ATRACE_COUNTER("vsync_toggle_frame_inc", 0);  /* discontinue */
+
 	last_pts = vf->pts;
 
 	frame_count++;
