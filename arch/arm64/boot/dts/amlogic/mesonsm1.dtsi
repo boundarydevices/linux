@@ -374,9 +374,7 @@
 		reg = <0x0 0xffe09000 0x0 0x80
 				0x0 0xffd01008 0x0 0x100
 				0x0 0xff636000 0x0 0x2000
-				0x0 0xff63a000 0x0 0x2000
-				0x0 0xff8000e8 0x0 0x10
-				0x0 0xff63c100 0x0 0x4>;
+				0x0 0xff63a000 0x0 0x2000>;
 		pll-setting-1 = <0x09400414>;
 		pll-setting-2 = <0x927E0000>;
 		pll-setting-3 = <0xac5f69e5>;
@@ -387,14 +385,16 @@
 		pll-setting-8 = <0xe000c>;
 		version = <2>;
 		pwr-ctl = <1>;
+		u2-ctrl-sleep-shift = <17>;
+		u2-hhi-mem-pd-shift = <30>;
+		u2-hhi-mem-pd-mask = <0x3>;
+		u2-ctrl-iso-shift = <17>;
 	};
 
 	usb3_phy_v2: usb3phy@ffe09080 {
 		compatible = "amlogic, amlogic-new-usb3-v2";
 		status = "disable";
 		reg = <0x0 0xffe09080 0x0 0x20
-			0x0 0xff8000e8 0x0 0x10
-			0x0 0xff63c100 0x0 0x4
 			0x0 0xffd01008 0x0 0x100>;
 		phy-reg = <0xff646000>;
 		phy-reg-size = <0x2000>;
@@ -404,6 +404,10 @@
 		clocks = <&clkc CLKID_PCIE_PLL>;
 		clock-names = "pcie_refpll";
 		pwr-ctl = <1>;
+		u3-ctrl-sleep-shift = <18>;
+		u3-hhi-mem-pd-shift = <26>;
+		u3-hhi-mem-pd-mask = <0xf>;
+		u3-ctrl-iso-shift = <18>;
 	};
 
 	dwc2_a: dwc2_a@ff400000 {
@@ -1035,11 +1039,8 @@
 			0x0 0xff648000 0x0 0x2000
 			0x0 0xfc400000 0x0 0x200000
 			0x0 0xff646000 0x0 0x2000
-			0x0 0xffd01080 0x0 0x10
-			0x0 0xff8000e8 0x0 0x8
-			0x0 0xff63c100 0x0 0x4>;
-		reg-names = "elbi", "cfg", "config", "phy",
-				"reset", "pwr", "hii";
+			0x0 0xffd01080 0x0 0x10>;
+		reg-names = "elbi", "cfg", "config", "phy", "reset";
 		interrupts = <0 221 0>;
 		#interrupt-cells = <1>;
 		bus-range = <0x0 0xff>;
@@ -1067,6 +1068,10 @@
 		pcie-phy-rst-bit = <14>;
 		pcie-ctrl-a-rst-bit = <12>;
 		pwr-ctl = <1>;
+		pcie-ctrl-sleep-shift = <18>;
+		pcie-hhi-mem-pd-shift = <26>;
+		pcie-hhi-mem-pd-mask = <0xf>;
+		pcie-ctrl-iso-shift = <18>;
 		status = "disabled";
 	};
 

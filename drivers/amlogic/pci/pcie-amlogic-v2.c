@@ -28,6 +28,7 @@
 #include <linux/signal.h>
 #include <linux/types.h>
 #include <linux/module.h>
+#include <linux/amlogic/power_ctrl.h>
 #include "../drivers/pci/host/pcie-designware.h"
 #include "pcie-amlogic.h"
 
@@ -684,10 +685,10 @@ static void power_switch_to_pcie(struct pcie_phy *phy)
 {
 	u32 val;
 
-	writel(readl(phy->power_base) & (~(0x1<<18)), phy->power_base);
+	power_ctrl_sleep(1, phy->pcie_ctrl_sleep_shift);
 
-	writel(readl(phy->hhi_mem_pd_base) & (~(0xf<<26)),
-			phy->hhi_mem_pd_base);
+	power_ctrl_mempd0(1, phy->pcie_hhi_mem_pd_mask,
+			phy->pcie_hhi_mem_pd_shift);
 	udelay(100);
 
 	val = readl((void __iomem *)(unsigned long)phy->reset_base);
@@ -695,8 +696,7 @@ static void power_switch_to_pcie(struct pcie_phy *phy)
 		(void __iomem *)(unsigned long)phy->reset_base);
 	udelay(100);
 
-	writel(readl(phy->power_base+0x4) & (~(0x1<<18)),
-			phy->power_base + 0x4);
+	power_ctrl_iso(1, phy->pcie_ctrl_iso_shift);
 
 	val = readl((void __iomem *)(unsigned long)phy->reset_base);
 	writel((val | (0x1<<12)),
@@ -716,8 +716,6 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 	struct resource *phy_base;
 	struct resource *cfg_base;
 	struct resource *reset_base;
-	struct resource *power_base = NULL;
-	struct resource *hhi_mem_pd_base = NULL;
 	int ret;
 	int pcie_num = 0;
 	int num_lanes = 0;
@@ -732,6 +730,7 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 	int pcie_phy_rst_bit = 0;
 	int pcie_ctrl_a_rst_bit = 0;
 	u32 pwr_ctl = 0;
+	const void *prop;
 
 	dev_info(&pdev->dev, "amlogic_pcie_probe!\n");
 
@@ -793,26 +792,37 @@ static int __init amlogic_pcie_probe(struct platform_device *pdev)
 		amlogic_pcie->pwr_ctl = pwr_ctl;
 
 	if (pwr_ctl) {
-		power_base = platform_get_resource_byname(
-			pdev, IORESOURCE_MEM, "pwr");
-		if (power_base) {
-			amlogic_pcie->phy->power_base =
-				ioremap(power_base->start,
-				resource_size(power_base));
-			if (IS_ERR(amlogic_pcie->phy->power_base))
-				return PTR_ERR(amlogic_pcie->phy->power_base);
-		}
+		prop = of_get_property(dev->of_node,
+			"pcie-ctrl-sleep-shift", NULL);
+		if (prop)
+			amlogic_pcie->phy->pcie_ctrl_sleep_shift =
+				of_read_ulong(prop, 1);
+		else
+			pwr_ctl = 0;
 
-		hhi_mem_pd_base = platform_get_resource_byname(
-			pdev, IORESOURCE_MEM, "hii");
-		if (hhi_mem_pd_base) {
-			amlogic_pcie->phy->hhi_mem_pd_base =
-				ioremap(hhi_mem_pd_base->start,
-				resource_size(hhi_mem_pd_base));
-			if (IS_ERR(amlogic_pcie->phy->hhi_mem_pd_base))
-				return PTR_ERR(amlogic_pcie->
-						phy->hhi_mem_pd_base);
-		}
+		prop = of_get_property(dev->of_node,
+			"pcie-hhi-mem-pd-shift", NULL);
+		if (prop)
+			amlogic_pcie->phy->pcie_hhi_mem_pd_shift =
+				of_read_ulong(prop, 1);
+		else
+			pwr_ctl = 0;
+
+		prop = of_get_property(dev->of_node,
+			"pcie-hhi-mem-pd-mask", NULL);
+		if (prop)
+			amlogic_pcie->phy->pcie_hhi_mem_pd_mask =
+				of_read_ulong(prop, 1);
+		else
+			pwr_ctl = 0;
+
+		prop = of_get_property(dev->of_node,
+			"pcie-ctrl-iso-shift", NULL);
+		if (prop)
+			amlogic_pcie->phy->pcie_ctrl_iso_shift =
+				of_read_ulong(prop, 1);
+		else
+			pwr_ctl = 0;
 	}
 
 	if (!amlogic_pcie->phy->reset_base) {

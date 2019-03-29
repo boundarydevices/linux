@@ -162,8 +162,10 @@ struct pcie_phy {
 	u32 reset_state;
 	void __iomem		*phy_base;	/* DT 1st resource */
 	void __iomem		*reset_base;/* DT 3nd resource */
-	void __iomem		*power_base;
-	void __iomem		*hhi_mem_pd_base;
+	u32 pcie_ctrl_sleep_shift;
+	u32 pcie_hhi_mem_pd_mask;
+	u32 pcie_ctrl_iso_shift;
+	u32 pcie_hhi_mem_pd_shift;
 };
 
 
