@@ -1680,6 +1680,7 @@ static u32 osd_get_hw_reset_flag(void)
 	case __MESON_CPU_MAJOR_ID_G12B:
 	case __MESON_CPU_MAJOR_ID_TL1:
 	case __MESON_CPU_MAJOR_ID_SM1:
+	case __MESON_CPU_MAJOR_ID_TM2:
 		{
 		int i, afbc_enable = 0;
 
@@ -5052,8 +5053,7 @@ static void osd_update_disp_osd_rotate(u32 index)
 	const struct vinfo_s *vinfo;
 	int out_y_crop_start, out_y_crop_end;
 
-	if (osd_hw.osd_meson_dev.cpu_id < __MESON_CPU_MAJOR_ID_G12B ||
-		osd_hw.osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_SM1)
+	if (osd_hw.osd_meson_dev.cpu_id != __MESON_CPU_MAJOR_ID_G12B)
 		return;
 	src_fmt = get_viu2_src_format();
 	src_data.x = 0;

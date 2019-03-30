@@ -4037,6 +4037,10 @@ static const struct of_device_id meson_fb_dt_match[] = {
 		.compatible = "amlogic, meson-sm1",
 		.data = &osd_sm1,
 	},
+	{
+		.compatible = "amlogic, meson-tm2",
+		.data = &osd_tm2,
+	},
 	{},
 };
 
