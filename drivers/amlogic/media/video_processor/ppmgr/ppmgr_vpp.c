@@ -177,9 +177,11 @@ static u32 tb_buffer_len = TB_DETECT_BUFFER_MAX_SIZE;
 static atomic_t tb_reset_flag;
 static u32 tb_init_mute;
 static atomic_t tb_skip_flag;
+static atomic_t tb_run_flag;
 static bool tb_quit_flag;
 static struct TB_DetectFuncPtr *gfunc;
 static int tb_buffer_init(void);
+static int tb_buffer_uninit(void);
 #endif
 
 const struct vframe_receiver_op_s *vf_ppmgr_reg_provider(void);
@@ -3081,7 +3083,9 @@ static int ppmgr_task(void *data)
 					/* wait tb task done */
 					while ((tb_buff_wptr >= 5)
 						&& (tb_buff_rptr
-						<= tb_buff_wptr - 5))
+						<= tb_buff_wptr - 5)
+						&& (atomic_read(&tb_run_flag)
+						== 1))
 						usleep_range(
 							4000, 5000);
 					atomic_set(&detect_status,
@@ -3171,7 +3175,9 @@ static int ppmgr_task(void *data)
 						"tb detect skip case1\n");
 					goto SKIP_DETECT;
 				}
-				if (tb_buff_wptr < tb_buffer_len) {
+				if ((tb_buff_wptr < tb_buffer_len)
+					&& (atomic_read(&tb_run_flag)
+						== 1)) {
 					ret = process_vf_tb_detect(
 						vf, context, &ge2d_config);
 				} else {
@@ -3268,6 +3274,9 @@ SKIP_DETECT:
 	}
 
 	destroy_ge2d_work_queue(context);
+#ifdef PPMGR_TB_DETECT
+	tb_buffer_uninit();
+#endif
 	ppmgr_buffer_uninit();
 	while (!kthread_should_stop()) {
 		/* may not call stop, wait..
@@ -3747,6 +3756,7 @@ static void tb_detect_init(void)
 	atomic_set(&tb_detect_flag, TB_DETECT_NC);
 	atomic_set(&tb_reset_flag, 0);
 	atomic_set(&tb_skip_flag, 0);
+	atomic_set(&tb_run_flag, 1);
 	tb_detect_last_flag = TB_DETECT_NC;
 	tb_buff_wptr = 0;
 	tb_buff_rptr = 0;
@@ -3845,9 +3855,9 @@ static int tb_task(void *data)
 			atomic_set(&detect_status, tb_done);
 		}
 	}
+	atomic_set(&tb_run_flag, 0);
 	while (!kthread_should_stop())
 		usleep_range(9000, 10000);
-	tb_buffer_uninit();
 	return 0;
 }
 
