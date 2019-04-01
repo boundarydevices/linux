@@ -43,12 +43,13 @@ extern int get_last_checkin_pts(u8 type);
 
 extern int get_last_checkout_pts(u8 type);
 
-extern int pts_lookup(u8 type, u32 *val, u32 pts_margin);
+extern int pts_lookup(u8 type, u32 *val, u32 *frame_size, u32 pts_margin);
 
-extern int pts_lookup_offset(u8 type, u32 offset, u32 *val, u32 pts_margin);
+extern int pts_lookup_offset(u8 type, u32 offset, u32 *val,
+					u32 *frame_size, u32 pts_margin);
 
 extern int pts_lookup_offset_us64(u8 type, u32 offset, u32 *val,
-	u32 pts_margin, u64 *uS64);
+				  u32 *frame_size, u32 pts_margin, u64 *uS64);
 
 extern int pts_pickout_offset_us64(u8 type, u32 offset,
 				u32 *val, u32 pts_margin,

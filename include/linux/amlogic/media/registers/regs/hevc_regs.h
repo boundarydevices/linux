@@ -357,6 +357,14 @@
 #define HEVC_IQIT_STAT_GEN0 0x3708
 #define HEVC_QP_WRITE 0x3709
 #define HEVC_IQIT_STAT_GEN1 0x370a
+#define HEVC_IQIT_BITDEPTH                         0x370b
+#define HEVC_IQIT_STAT_GEN2                        0x370c
+#define HEVC_IQIT_AVS2_WQP_0123                    0x370d
+#define HEVC_IQIT_AVS2_WQP_45                      0x370e
+#define HEVC_IQIT_AVS2_QP_DELTA                    0x370f
+#define HEVC_PIC_QUALITY_CTRL                      0x3710
+#define HEVC_PIC_QUALITY_DATA                      0x3711
+
 /**/
 
 /*add from M8M2*/

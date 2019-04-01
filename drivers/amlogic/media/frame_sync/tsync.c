@@ -2002,8 +2002,10 @@ static ssize_t show_startsync_mode(struct class *class,
 static ssize_t show_apts_lookup(struct class *class,
 	struct class_attribute *attrr, char *buf)
 {
+	u32 frame_size;
 	unsigned int  pts = 0xffffffff;
-	pts_lookup_offset(PTS_TYPE_AUDIO, apts_lookup_offset, &pts, 300);
+	pts_lookup_offset(PTS_TYPE_AUDIO, apts_lookup_offset,
+		&pts, &frame_size, 300);
 	return sprintf(buf, "0x%x\n", pts);
 }
 
