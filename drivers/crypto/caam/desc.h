@@ -1674,12 +1674,7 @@
 /* Frame Descriptor Command for Replacement Job Descriptor */
 #define FD_CMD_REPLACE_JOB_DESC				0x20000000
 
-#define ARC4_BLOCK_SIZE       1
-#define ARC4_MAX_KEY_SIZE     256
-#define ARC4_MIN_KEY_SIZE     1
-
 #define XCBC_MAC_DIGEST_SIZE  16
 #define XCBC_MAC_BLOCK_WORDS  16
-
 
 #endif /* DESC_H */
