@@ -12,14 +12,11 @@
  *
  */
 
-#include <linux/module.h>
+#include <crypto/algapi.h>
+#include <crypto/arc4.h>
 #include <linux/init.h>
 #include <linux/crypto.h>
-#include <crypto/algapi.h>
-
-#define ARC4_MIN_KEY_SIZE	1
-#define ARC4_MAX_KEY_SIZE	256
-#define ARC4_BLOCK_SIZE		1
+#include <linux/module.h>
 
 struct arc4_ctx {
 	u32 S[256];
