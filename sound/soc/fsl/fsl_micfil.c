@@ -2319,7 +2319,7 @@ static int fsl_micfil_probe(struct platform_device *pdev)
 	}
 
 	if (micfil->soc->imx)
-		ret = imx_pcm_platform_register(&pdev->dev);
+		ret = imx_pcm_component_register(&pdev->dev);
 	else
 		ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL, 0);
 
