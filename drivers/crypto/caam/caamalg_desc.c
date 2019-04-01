@@ -1,7 +1,7 @@
 /*
  * Shared descriptors for aead, ablkcipher algorithms
  *
- * Copyright 2016 NXP
+ * Copyright 2016-2019 NXP
  */
 
 #include "compat.h"
@@ -1270,9 +1270,11 @@ void cnstr_shdsc_ablkcipher_encap(u32 * const desc, struct alginfo *cdata,
 
 	set_jump_tgt_here(desc, key_jump_cmd);
 
-	/* Load iv */
-	append_seq_load(desc, ivsize, LDST_SRCDST_BYTE_CONTEXT |
-			LDST_CLASS_1_CCB | (ctx1_iv_off << LDST_OFFSET_SHIFT));
+	/* Load IV, if there is one */
+	if (ivsize)
+		append_seq_load(desc, ivsize, LDST_SRCDST_BYTE_CONTEXT |
+				LDST_CLASS_1_CCB | (ctx1_iv_off <<
+				LDST_OFFSET_SHIFT));
 
 	/* Load counter into CONTEXT1 reg */
 	if (is_rfc3686)
@@ -1341,9 +1343,11 @@ void cnstr_shdsc_ablkcipher_decap(u32 * const desc, struct alginfo *cdata,
 
 	set_jump_tgt_here(desc, key_jump_cmd);
 
-	/* load IV */
-	append_seq_load(desc, ivsize, LDST_SRCDST_BYTE_CONTEXT |
-			LDST_CLASS_1_CCB | (ctx1_iv_off << LDST_OFFSET_SHIFT));
+	/* Load IV, if there is one */
+	if (ivsize)
+		append_seq_load(desc, ivsize, LDST_SRCDST_BYTE_CONTEXT |
+				LDST_CLASS_1_CCB | (ctx1_iv_off <<
+				LDST_OFFSET_SHIFT));
 
 	/* Load counter into CONTEXT1 reg */
 	if (is_rfc3686)

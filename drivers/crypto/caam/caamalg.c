@@ -1,8 +1,8 @@
 /*
  * caam - Freescale FSL CAAM support for crypto API
  *
- * Copyright 2008-2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2008-2011 Freescale Semiconductor, Inc.
+ * Copyright 2016-2019 NXP
  *
  * Based on talitos crypto API driver.
  *
@@ -788,6 +788,27 @@ exit:
 	return ret;
 }
 
+static int des_ablkcipher_setkey(struct crypto_ablkcipher *skcipher,
+				 const u8 *key, unsigned int keylen)
+{
+	u32 tmp[DES3_EDE_EXPKEY_WORDS];
+	struct crypto_tfm *tfm = crypto_ablkcipher_tfm(skcipher);
+
+	if (keylen == DES3_EDE_KEY_SIZE &&
+	    __des3_ede_setkey(tmp, &tfm->crt_flags, key, DES3_EDE_KEY_SIZE)) {
+		return -EINVAL;
+	}
+
+	if (!des_ekey(tmp, key) && (crypto_ablkcipher_get_flags(skcipher) &
+	    CRYPTO_TFM_REQ_WEAK_KEY)) {
+		crypto_ablkcipher_set_flags(skcipher,
+					    CRYPTO_TFM_RES_WEAK_KEY);
+		return -EINVAL;
+	}
+
+	return ablkcipher_setkey(skcipher, key, keylen);
+}
+
 static int xts_ablkcipher_setkey(struct crypto_ablkcipher *ablkcipher,
 				 const u8 *key, unsigned int keylen)
 {
@@ -999,8 +1020,9 @@ static void ablkcipher_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 	 * The crypto API expects us to set the IV (req->info) to the last
 	 * ciphertext block. This is used e.g. by the CTS mode.
 	 */
-	scatterwalk_map_and_copy(req->info, req->dst, req->nbytes - ivsize,
-				 ivsize, 0);
+	if (ivsize)
+		scatterwalk_map_and_copy(req->info, req->dst, req->nbytes -
+					 ivsize, ivsize, 0);
 
 	/* In case initial IV was generated, copy it in GIVCIPHER request */
 	if (edesc->iv_dir == DMA_FROM_DEVICE) {
@@ -1206,9 +1228,9 @@ static void init_ablkcipher_job(u32 *sh_desc, dma_addr_t ptr,
 	struct crypto_ablkcipher *ablkcipher = crypto_ablkcipher_reqtfm(req);
 	int ivsize = crypto_ablkcipher_ivsize(ablkcipher);
 	u32 *desc = edesc->hw_desc;
-	u32 out_options = 0;
-	dma_addr_t dst_dma;
-	int len;
+	u32 in_options = 0, out_options = 0;
+	dma_addr_t src_dma, dst_dma;
+	int len, sec4_sg_index = 0;
 
 #ifdef DEBUG
 	print_hex_dump(KERN_ERR, "presciv@"__stringify(__LINE__)": ",
@@ -1224,21 +1246,27 @@ static void init_ablkcipher_job(u32 *sh_desc, dma_addr_t ptr,
 	len = desc_len(sh_desc);
 	init_job_desc_shared(desc, ptr, len, HDR_SHARE_DEFER | HDR_REVERSE);
 
-	append_seq_in_ptr(desc, edesc->sec4_sg_dma, req->nbytes + ivsize,
-			  LDST_SGF);
+	if (ivsize || edesc->mapped_src_nents > 1) {
+		src_dma = edesc->sec4_sg_dma;
+		sec4_sg_index = edesc->mapped_src_nents + !!ivsize;
+		in_options = LDST_SGF;
+	} else {
+		src_dma = sg_dma_address(req->src);
+	}
+
+	append_seq_in_ptr(desc, src_dma, req->nbytes + ivsize, in_options);
 
 	if (likely(req->src == req->dst)) {
-		dst_dma = edesc->sec4_sg_dma + sizeof(struct sec4_sg_entry);
-		out_options = LDST_SGF;
+		dst_dma = src_dma + !!ivsize * sizeof(struct sec4_sg_entry);
+		out_options = in_options;
+	} else if (edesc->mapped_dst_nents == 1) {
+		dst_dma = sg_dma_address(req->dst);
 	} else {
-		if (edesc->mapped_dst_nents == 1) {
-			dst_dma = sg_dma_address(req->dst);
-		} else {
-			dst_dma = edesc->sec4_sg_dma + (edesc->mapped_src_nents
-				  + 1) * sizeof(struct sec4_sg_entry);
-			out_options = LDST_SGF;
-		}
+		dst_dma = edesc->sec4_sg_dma + sec4_sg_index *
+			  sizeof(struct sec4_sg_entry);
+		out_options = LDST_SGF;
 	}
+
 	append_seq_out_ptr(desc, dst_dma, req->nbytes, out_options);
 }
 
@@ -1584,7 +1612,8 @@ static struct ablkcipher_edesc *ablkcipher_edesc_alloc(struct ablkcipher_request
 		       GFP_KERNEL : GFP_ATOMIC;
 	int src_nents, mapped_src_nents, dst_nents = 0, mapped_dst_nents = 0;
 	struct ablkcipher_edesc *edesc;
-	dma_addr_t iv_dma;
+	dma_addr_t iv_dma = 0;
+
 	u8 *iv;
 	int ivsize = crypto_ablkcipher_ivsize(ablkcipher);
 	int dst_sg_idx, sec4_sg_ents, sec4_sg_bytes;
@@ -1619,7 +1648,6 @@ static struct ablkcipher_edesc *ablkcipher_edesc_alloc(struct ablkcipher_request
 			dev_err(jrdev, "unable to map source\n");
 			return ERR_PTR(-ENOMEM);
 		}
-
 		mapped_dst_nents = dma_map_sg(jrdev, req->dst, dst_nents,
 					      DMA_FROM_DEVICE);
 		if (unlikely(!mapped_dst_nents)) {
@@ -1629,7 +1657,10 @@ static struct ablkcipher_edesc *ablkcipher_edesc_alloc(struct ablkcipher_request
 		}
 	}
 
-	sec4_sg_ents = 1 + mapped_src_nents;
+	if (!ivsize && mapped_src_nents == 1)
+		sec4_sg_ents = 0; // no need for an input hw s/g table
+	else
+		sec4_sg_ents = mapped_src_nents + !!ivsize;
 	dst_sg_idx = sec4_sg_ents;
 	sec4_sg_ents += mapped_dst_nents > 1 ? mapped_dst_nents : 0;
 	sec4_sg_bytes = sec4_sg_ents * sizeof(struct sec4_sg_entry);
@@ -1656,34 +1687,42 @@ static struct ablkcipher_edesc *ablkcipher_edesc_alloc(struct ablkcipher_request
 	edesc->iv_dir = DMA_TO_DEVICE;
 
 	/* Make sure IV is located in a DMAable area */
-	iv = (u8 *)edesc->hw_desc + desc_bytes + sec4_sg_bytes;
-	memcpy(iv, req->info, ivsize);
+	if (ivsize) {
+		iv = (u8 *)edesc->hw_desc + desc_bytes + sec4_sg_bytes;
+		memcpy(iv, req->info, ivsize);
 
-	iv_dma = dma_map_single(jrdev, iv, ivsize, DMA_TO_DEVICE);
-	if (dma_mapping_error(jrdev, iv_dma)) {
-		dev_err(jrdev, "unable to map IV\n");
-		caam_unmap(jrdev, req->src, req->dst, src_nents, dst_nents, 0,
-			   0, DMA_NONE, 0, 0);
-		kfree(edesc);
-		return ERR_PTR(-ENOMEM);
+		iv_dma = dma_map_single(jrdev, iv, ivsize, DMA_TO_DEVICE);
+		if (dma_mapping_error(jrdev, iv_dma)) {
+			dev_err(jrdev, "unable to map IV\n");
+			caam_unmap(jrdev, req->src, req->dst, src_nents,
+				   dst_nents, 0, 0, DMA_NONE, 0, 0);
+			kfree(edesc);
+			return ERR_PTR(-ENOMEM);
+		}
+
+		dma_to_sec4_sg_one(edesc->sec4_sg, iv_dma, ivsize, 0);
 	}
-
-	dma_to_sec4_sg_one(edesc->sec4_sg, iv_dma, ivsize, 0);
-	sg_to_sec4_sg_last(req->src, mapped_src_nents, edesc->sec4_sg + 1, 0);
+	if (dst_sg_idx)
+		sg_to_sec4_sg_last(req->src, mapped_src_nents, edesc->sec4_sg +
+				   !!ivsize, 0);
 
 	if (mapped_dst_nents > 1) {
 		sg_to_sec4_sg_last(req->dst, mapped_dst_nents,
 				   edesc->sec4_sg + dst_sg_idx, 0);
 	}
 
-	edesc->sec4_sg_dma = dma_map_single(jrdev, edesc->sec4_sg,
-					    sec4_sg_bytes, DMA_TO_DEVICE);
-	if (dma_mapping_error(jrdev, edesc->sec4_sg_dma)) {
-		dev_err(jrdev, "unable to map S/G table\n");
-		caam_unmap(jrdev, req->src, req->dst, src_nents, dst_nents,
-			   iv_dma, ivsize, DMA_TO_DEVICE, 0, 0);
-		kfree(edesc);
-		return ERR_PTR(-ENOMEM);
+	if (sec4_sg_bytes) {
+		edesc->sec4_sg_dma = dma_map_single(jrdev, edesc->sec4_sg,
+						    sec4_sg_bytes,
+						    DMA_TO_DEVICE);
+		if (dma_mapping_error(jrdev, edesc->sec4_sg_dma)) {
+			dev_err(jrdev, "unable to map S/G table\n");
+			caam_unmap(jrdev, req->src, req->dst, src_nents,
+				   dst_nents, iv_dma, ivsize, DMA_TO_DEVICE, 0,
+				   0);
+			kfree(edesc);
+			return ERR_PTR(-ENOMEM);
+		}
 	}
 
 	edesc->iv_dma = iv_dma;
@@ -1750,8 +1789,9 @@ static int ablkcipher_decrypt(struct ablkcipher_request *req)
 	 * The crypto API expects us to set the IV (req->info) to the last
 	 * ciphertext block.
 	 */
-	scatterwalk_map_and_copy(req->info, req->src, req->nbytes - ivsize,
-				 ivsize, 0);
+	if (ivsize)
+		scatterwalk_map_and_copy(req->info, req->src, req->nbytes -
+					 ivsize, ivsize, 0);
 
 	/* Create and submit job descriptor*/
 	init_ablkcipher_job(ctx->sh_desc_dec, ctx->sh_desc_dec_dma, edesc, req);
@@ -2055,6 +2095,67 @@ static struct caam_alg_template driver_algs[] = {
 			.ivsize = AES_BLOCK_SIZE,
 			},
 		.class1_alg_type = OP_ALG_ALGSEL_AES | OP_ALG_AAI_XTS,
+	},
+	{
+		.name = "ecb(aes)",
+		.driver_name = "ecb-aes-caam",
+		.blocksize = AES_BLOCK_SIZE,
+		.type = CRYPTO_ALG_TYPE_ABLKCIPHER,
+		.template_ablkcipher = {
+			.setkey = ablkcipher_setkey,
+			.encrypt = ablkcipher_encrypt,
+			.decrypt = ablkcipher_decrypt,
+			.geniv = "eseqiv",
+			.min_keysize = AES_MIN_KEY_SIZE,
+			.max_keysize = AES_MAX_KEY_SIZE,
+			},
+		.class1_alg_type = OP_ALG_ALGSEL_AES | OP_ALG_AAI_ECB,
+		.support_tagged_key = true,
+	},
+	{
+		.name = "ecb(des3_ede)",
+		.driver_name = "ecb-des3-caam",
+		.blocksize = DES3_EDE_BLOCK_SIZE,
+		.type = CRYPTO_ALG_TYPE_ABLKCIPHER,
+		.template_ablkcipher = {
+			.setkey = des_ablkcipher_setkey,
+			.encrypt = ablkcipher_encrypt,
+			.decrypt = ablkcipher_decrypt,
+			.geniv = "eseqiv",
+			.min_keysize = DES3_EDE_KEY_SIZE,
+			.max_keysize = DES3_EDE_KEY_SIZE,
+			},
+		.class1_alg_type = OP_ALG_ALGSEL_3DES | OP_ALG_AAI_ECB,
+	},
+	{
+		.name = "ecb(des)",
+		.driver_name = "ecb-des-caam",
+		.blocksize = DES_BLOCK_SIZE,
+		.type = CRYPTO_ALG_TYPE_ABLKCIPHER,
+		.template_ablkcipher = {
+			.setkey = des_ablkcipher_setkey,
+			.encrypt = ablkcipher_encrypt,
+			.decrypt = ablkcipher_decrypt,
+			.geniv = "eseqiv",
+			.min_keysize = DES_KEY_SIZE,
+			.max_keysize = DES_KEY_SIZE,
+		},
+		.class1_alg_type = OP_ALG_ALGSEL_DES | OP_ALG_AAI_ECB,
+	},
+		{
+		.name = "ecb(arc4)",
+		.driver_name = "ecb-arc4-caam",
+		.blocksize = ARC4_BLOCK_SIZE,
+		.type = CRYPTO_ALG_TYPE_ABLKCIPHER,
+		.template_ablkcipher = {
+			.setkey = ablkcipher_setkey,
+			.encrypt = ablkcipher_encrypt,
+			.decrypt = ablkcipher_decrypt,
+			.geniv = "eseqiv",
+			.min_keysize = ARC4_MIN_KEY_SIZE,
+			.max_keysize = ARC4_MAX_KEY_SIZE,
+		},
+		.class1_alg_type = OP_ALG_ALGSEL_ARC4 | OP_ALG_AAI_ECB
 	},
 };
 
@@ -3580,8 +3681,11 @@ static int __init caam_algapi_init(void)
 	struct device *ctrldev;
 	struct caam_drv_private *priv;
 	int i = 0, err = 0;
+
 	u32 cha_vid, cha_inst, des_inst, aes_inst, md_inst;
 	u32 cha_rn;
+	u32 arc4_inst;
+
 	unsigned int md_limit = SHA512_DIGEST_SIZE;
 	bool registered = false;
 
@@ -3629,6 +3733,7 @@ static int __init caam_algapi_init(void)
 	des_inst = (cha_inst & CHA_ID_LS_DES_MASK) >> CHA_ID_LS_DES_SHIFT;
 	aes_inst = (cha_inst & CHA_ID_LS_AES_MASK) >> CHA_ID_LS_AES_SHIFT;
 	md_inst = (cha_inst & CHA_ID_LS_MD_MASK) >> CHA_ID_LS_MD_SHIFT;
+	arc4_inst = (cha_inst & CHA_ID_LS_ARC4_MASK) >> CHA_ID_LS_ARC4_SHIFT;
 
 	/* If MD is present, limit digest size based on LP256 */
 	if (md_inst && ((cha_vid & CHA_ID_LS_MD_MASK) == CHA_ID_LS_MD_LP256))
@@ -3648,6 +3753,10 @@ static int __init caam_algapi_init(void)
 		/* Skip AES algorithms if not supported by device */
 		if (!aes_inst && (alg_sel == OP_ALG_ALGSEL_AES))
 				continue;
+
+		/* Skip ARC4 algorithms if not supported by device */
+		if (!arc4_inst && alg_sel == OP_ALG_ALGSEL_ARC4)
+			continue;
 
 		/*
 		 * Check support for AES modes not available
