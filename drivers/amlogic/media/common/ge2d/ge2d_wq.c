@@ -301,7 +301,7 @@ static int ge2d_process_work_queue(struct ge2d_context_s *wq)
 	struct ge2d_queue_item_s *pitem;
 	unsigned int  mask = 0x1;
 	struct list_head  *head = &wq->work_queue, *pos;
-	int ret = 0;
+	int ret = 0, i = 0;
 	unsigned int block_mode;
 	int timeout = 0;
 	if (wq->ge2d_request_exit)
@@ -390,23 +390,25 @@ static int ge2d_process_work_queue(struct ge2d_context_s *wq)
 		list_move_tail(&pitem->list, &wq->free_queue);
 		spin_unlock(&wq->lock);
 		/* if dma buf detach it */
-		if (pitem->config.src_dma_cfg.dma_used) {
-			ge2d_dma_buffer_unmap((struct aml_dma_cfg *
-				)pitem->config.src_dma_cfg.dma_cfg);
-			pitem->config.src_dma_cfg.dma_used = 0;
-			kfree(pitem->config.src_dma_cfg.dma_cfg);
-		}
-		if (pitem->config.src2_dma_cfg.dma_used) {
-			ge2d_dma_buffer_unmap((struct aml_dma_cfg *
-				)pitem->config.src2_dma_cfg.dma_cfg);
-			pitem->config.src2_dma_cfg.dma_used = 0;
-			kfree(pitem->config.src2_dma_cfg.dma_cfg);
-		}
-		if (pitem->config.dst_dma_cfg.dma_used) {
-			ge2d_dma_buffer_unmap((struct aml_dma_cfg *
-				)pitem->config.dst_dma_cfg.dma_cfg);
-			pitem->config.dst_dma_cfg.dma_used = 0;
-			kfree(pitem->config.dst_dma_cfg.dma_cfg);
+		for (i = 0; i < MAX_PLANE; i++) {
+			if (pitem->config.src_dma_cfg[i].dma_used) {
+				ge2d_dma_buffer_unmap((struct aml_dma_cfg *
+					)pitem->config.src_dma_cfg[i].dma_cfg);
+				pitem->config.src_dma_cfg[i].dma_used = 0;
+				kfree(pitem->config.src_dma_cfg[i].dma_cfg);
+			}
+			if (pitem->config.src2_dma_cfg[i].dma_used) {
+				ge2d_dma_buffer_unmap((struct aml_dma_cfg *
+					)pitem->config.src2_dma_cfg[i].dma_cfg);
+				pitem->config.src2_dma_cfg[i].dma_used = 0;
+				kfree(pitem->config.src2_dma_cfg[i].dma_cfg);
+			}
+			if (pitem->config.dst_dma_cfg[i].dma_used) {
+				ge2d_dma_buffer_unmap((struct aml_dma_cfg *
+					)pitem->config.dst_dma_cfg[i].dma_cfg);
+				pitem->config.dst_dma_cfg[i].dma_used = 0;
+				kfree(pitem->config.dst_dma_cfg[i].dma_cfg);
+			}
 		}
 		pitem = (struct ge2d_queue_item_s *)pos;
 	} while (pos != head);
@@ -425,19 +427,20 @@ static irqreturn_t ge2d_wq_handle(int irq_number, void *para)
 }
 
 struct ge2d_dma_cfg_s *ge2d_wq_get_dma_cfg(struct ge2d_context_s *wq,
-					   unsigned int data_type)
+					   unsigned int data_type,
+					   unsigned int plane_id)
 {
 	struct ge2d_dma_cfg_s *dma_cfg = NULL;
 
 	switch (data_type) {
 	case AML_GE2D_SRC:
-		dma_cfg = &wq->config.src_dma_cfg;
+		dma_cfg = &wq->config.src_dma_cfg[plane_id];
 		break;
 	case AML_GE2D_SRC2:
-		dma_cfg = &wq->config.src2_dma_cfg;
+		dma_cfg = &wq->config.src2_dma_cfg[plane_id];
 		break;
 	case AML_GE2D_DST:
-		dma_cfg = &wq->config.dst_dma_cfg;
+		dma_cfg = &wq->config.dst_dma_cfg[plane_id];
 		break;
 	default:
 		ge2d_log_err("wrong data_type\n");
@@ -1046,7 +1049,7 @@ static int build_ge2d_addr_config_dma(
 			struct ge2d_dma_cfg_s *cfg = NULL;
 			struct aml_dma_cfg *dma_cfg = NULL;
 
-			cfg = ge2d_wq_get_dma_cfg(context, data_type);
+			cfg = ge2d_wq_get_dma_cfg(context, data_type, 0);
 			if (!cfg)
 				return -1;
 			cfg->dma_used = 1;
@@ -1146,70 +1149,49 @@ static int build_ge2d_config_ex_ion(struct config_planes_ion_s *plane,
 				unsigned int *r_offset)
 {
 	int bpp_value = bpp(format);
-	int ret = -1;
+	int ret = -1, i;
 	unsigned long addr;
 	size_t len;
 
 	bpp_value /= 8;
 	index &= 0xff;
+	*canvas_index = 0;
 	if (plane) {
-		if (plane[0].shared_fd) {
+		for (i = 0; i < MAX_PLANE; i++) {
+			/* multi-src_planes */
+			if (plane[i].shared_fd) {
 #ifdef CONFIG_AMLOGIC_ION
 			ret = meson_ion_share_fd_to_phys(ge2d_ion_client,
-				plane[0].shared_fd, &addr, &len);
+				plane[i].shared_fd, &addr, &len);
 			if (ret != 0)
 				return ret;
 #else
-			return ret;
+				return ret;
 #endif
-			plane[0].addr += addr;
-			*canvas_index = index;
-			*r_offset += 1;
+				plane[i].addr = addr;
+				*canvas_index |= index << (8 * i);
+				*r_offset += 1;
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-			canvas_config(index++, plane[0].addr,
-				      plane[0].w * bpp_value,
-				      plane[0].h,
-				      CANVAS_ADDR_NOWRAP,
-				      CANVAS_BLKMODE_LINEAR);
+				canvas_config(index++, plane[i].addr,
+					plane[i].w * bpp_value,
+					plane[i].h,
+					CANVAS_ADDR_NOWRAP,
+					CANVAS_BLKMODE_LINEAR);
 #endif
-			ret = 0;
-		}
-		/* multi-src_planes */
-		if (plane[1].addr) {
-			plane[1].addr += plane[0].addr;
-			*canvas_index |= index << 8;
-			*r_offset += 1;
+				ret = 0;
+			} else if (plane[i].addr) {
+				plane[i].addr += plane[0].addr;
+				*canvas_index |= index << (8 * i);
+				*r_offset += 1;
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-			canvas_config(index++, plane[1].addr,
-				      plane[1].w * bpp_value,
-				      plane[1].h,
-				      CANVAS_ADDR_NOWRAP,
-				      CANVAS_BLKMODE_LINEAR);
+				canvas_config(index++, plane[i].addr,
+					plane[i].w * bpp_value,
+					plane[i].h,
+					CANVAS_ADDR_NOWRAP,
+					CANVAS_BLKMODE_LINEAR);
 #endif
-		}
-		if (plane[2].addr) {
-			plane[2].addr += plane[0].addr;
-			*canvas_index |= index << 16;
-			*r_offset += 1;
-#ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-			canvas_config(index++, plane[2].addr,
-				      plane[2].w * bpp_value,
-				      plane[2].h,
-				      CANVAS_ADDR_NOWRAP,
-				      CANVAS_BLKMODE_LINEAR);
-#endif
-		}
-		if (plane[3].addr) {
-			plane[3].addr += plane[0].addr;
-			*canvas_index |= index << 24;
-			*r_offset += 1;
-#ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-			canvas_config(index++, plane[3].addr,
-				      plane[3].w * bpp_value,
-				      plane[3].h,
-				      CANVAS_ADDR_NOWRAP,
-				      CANVAS_BLKMODE_LINEAR);
-#endif
+				ret = 0;
+			}
 		}
 	}
 	return ret;
@@ -1224,77 +1206,56 @@ static int build_ge2d_config_ex_dma(struct ge2d_context_s *context,
 				unsigned int data_type)
 {
 	int bpp_value = bpp(format);
-	int ret = -1;
+	int ret = -1, i;
 	unsigned long addr;
 
 	bpp_value /= 8;
 	index &= 0xff;
+	*canvas_index = 0;
 	if (plane) {
-		if (plane[0].shared_fd) {
-			struct ge2d_dma_cfg_s *cfg = NULL;
-			struct aml_dma_cfg *dma_cfg = NULL;
+		for (i = 0; i < MAX_PLANE; i++) {
+			/* multi-src_planes */
+			if (plane[i].shared_fd) {
+				struct ge2d_dma_cfg_s *cfg = NULL;
+				struct aml_dma_cfg *dma_cfg = NULL;
 
-			cfg = ge2d_wq_get_dma_cfg(context, data_type);
-			if (!cfg)
-				return -1;
-			cfg->dma_used = 1;
-			dma_cfg = kzalloc(sizeof(*dma_cfg), GFP_KERNEL);
-			dma_cfg->fd = plane[0].shared_fd;
-			dma_cfg->dev = &(ge2d_manager.pdev->dev);
-			dma_cfg->dir = dir;
-			cfg->dma_cfg = dma_cfg;
-			ret = ge2d_dma_buffer_get_phys(dma_cfg, &addr);
-			if (ret != 0)
-				return ret;
-
-			plane[0].addr += addr;
-			*canvas_index = index;
-			*r_offset += 1;
+				cfg = ge2d_wq_get_dma_cfg(context,
+					data_type, i);
+				if (!cfg)
+					return -1;
+				cfg->dma_used = 1;
+				dma_cfg = kzalloc(sizeof(*dma_cfg), GFP_KERNEL);
+				if (!dma_cfg)
+					return ret;
+				dma_cfg->fd = plane[i].shared_fd;
+				dma_cfg->dev = &(ge2d_manager.pdev->dev);
+				dma_cfg->dir = dir;
+				cfg->dma_cfg = dma_cfg;
+				ret = ge2d_dma_buffer_get_phys(dma_cfg, &addr);
+				if (ret != 0)
+					return ret;
+				plane[i].addr = addr;
+				*canvas_index |= index << (8 * i);
+				*r_offset += 1;
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-			canvas_config(index++, plane[0].addr,
-				      plane[0].w * bpp_value,
-				      plane[0].h,
-				      CANVAS_ADDR_NOWRAP,
-				      CANVAS_BLKMODE_LINEAR);
+				canvas_config(index++, plane[i].addr,
+						  plane[i].w * bpp_value,
+						  plane[i].h,
+						  CANVAS_ADDR_NOWRAP,
+						  CANVAS_BLKMODE_LINEAR);
 #endif
-			ret = 0;
-		}
-		/* multi-src_planes */
-		if (plane[1].addr) {
-			plane[1].addr += plane[0].addr;
-			*canvas_index |= index << 8;
-			*r_offset += 1;
+			} else if (plane[i].addr) {
+				plane[i].addr += plane[0].addr;
+				*canvas_index |= index << (8 * i);
+				*r_offset += 1;
 #ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-			canvas_config(index++, plane[1].addr,
-				      plane[1].w * bpp_value,
-				      plane[1].h,
-				      CANVAS_ADDR_NOWRAP,
-				      CANVAS_BLKMODE_LINEAR);
+				canvas_config(index++, plane[i].addr,
+					      plane[i].w * bpp_value,
+					      plane[i].h,
+					      CANVAS_ADDR_NOWRAP,
+					      CANVAS_BLKMODE_LINEAR);
 #endif
-		}
-		if (plane[2].addr) {
-			plane[2].addr += plane[0].addr;
-			*canvas_index |= index << 16;
-			*r_offset += 1;
-#ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-			canvas_config(index++, plane[2].addr,
-				      plane[2].w * bpp_value,
-				      plane[2].h,
-				      CANVAS_ADDR_NOWRAP,
-				      CANVAS_BLKMODE_LINEAR);
-#endif
-		}
-		if (plane[3].addr) {
-			plane[3].addr += plane[0].addr;
-			*canvas_index |= index << 24;
-			*r_offset += 1;
-#ifdef CONFIG_AMLOGIC_MEDIA_CANVAS
-			canvas_config(index++, plane[3].addr,
-				      plane[3].w * bpp_value,
-				      plane[3].h,
-				      CANVAS_ADDR_NOWRAP,
-				      CANVAS_BLKMODE_LINEAR);
-#endif
+			}
 		}
 	}
 	return ret;
@@ -2068,8 +2029,15 @@ int ge2d_context_config_ex_mem(struct ge2d_context_s *context,
 	unsigned int src_addr = 0, src2_addr = 0, dst_addr = 0;
 	unsigned int src_stride = 0, src2_stride = 0, dst_stride = 0;
 	struct config_para_ex_ion_s *ge2d_config;
+	int i;
 
 	ge2d_config = &(ge2d_config_mem->_ge2d_config_ex);
+	/* reset dms_used flag */
+	for (i = 0; i < MAX_PLANE; i++) {
+		context->config.src_dma_cfg[i].dma_used = 0;
+		context->config.src2_dma_cfg[i].dma_used = 0;
+		context->config.dst_dma_cfg[i].dma_used = 0;
+	}
 	/* setup src and dst */
 	switch (ge2d_config->src_para.mem_type) {
 	case CANVAS_OSD0:

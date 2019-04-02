@@ -149,7 +149,10 @@ int gdc_process(struct gdc_cmd_s *gdc_cmd,
 	gdc_data1out_line_offset_write(o_y_line_offset);
 
 	//gdc uv output
-	gdc_out_base_addr += output_height * o_y_line_offset;
+	if (gdc_cmd->outplane == 1)
+		gdc_out_base_addr += output_height * o_y_line_offset;
+	else
+		gdc_out_base_addr = gdc_cmd->uv_out_base_addr;
 	gdc_data2out_addr_write(gdc_out_base_addr);
 	gdc_data2out_line_offset_write(o_uv_line_offset);
 
@@ -224,12 +227,18 @@ int gdc_process_yuv420p(struct gdc_cmd_s *gdc_cmd,
 	gdc_data1out_line_offset_write(output_stride);
 
 	//gdc u output
-	gdc_out_base_addr += output_height * output_stride;
+	if (gdc_cmd->outplane == 1)
+		gdc_out_base_addr += output_height * output_stride;
+	else
+		gdc_out_base_addr = gdc_cmd->u_out_base_addr;
 	gdc_data2out_addr_write(gdc_out_base_addr);
 	gdc_data2out_line_offset_write(output_u_stride);
 
 	//gdc v output
-	gdc_out_base_addr += output_height * output_u_stride / 2;
+	if (gdc_cmd->outplane == 1)
+		gdc_out_base_addr += output_height * output_u_stride / 2;
+	else
+		gdc_out_base_addr = gdc_cmd->v_out_base_addr;
 	gdc_data3out_addr_write(gdc_out_base_addr);
 	gdc_data3out_line_offset_write(output_v_stride);
 	gdc_start(gdc_cmd);
@@ -351,12 +360,18 @@ int gdc_process_yuv444p(struct gdc_cmd_s *gdc_cmd,
 	gdc_data1out_line_offset_write(output_stride);
 
 	//gdc u output
-	gdc_out_base_addr += output_height * output_stride;
+	if (gdc_cmd->outplane == 1)
+		gdc_out_base_addr += output_height * output_stride;
+	else
+		gdc_out_base_addr = gdc_cmd->u_out_base_addr;
 	gdc_data2out_addr_write(gdc_out_base_addr);
 	gdc_data2out_line_offset_write(output_u_stride);
 
 	//gdc v output
-	gdc_out_base_addr += output_height * output_u_stride;
+	if (gdc_cmd->outplane == 1)
+		gdc_out_base_addr += output_height * output_u_stride;
+	else
+		gdc_out_base_addr = gdc_cmd->v_out_base_addr;
 	gdc_data3out_addr_write(gdc_out_base_addr);
 	gdc_data3out_line_offset_write(output_v_stride);
 	gdc_start(gdc_cmd);
@@ -428,12 +443,18 @@ int gdc_process_rgb444p(struct gdc_cmd_s *gdc_cmd,
 	gdc_data1out_line_offset_write(output_stride);
 
 	//gdc u output
-	gdc_out_base_addr += output_height * output_stride;
+	if (gdc_cmd->outplane == 1)
+		gdc_out_base_addr += output_height * output_stride;
+	else
+		gdc_out_base_addr = gdc_cmd->u_out_base_addr;
 	gdc_data2out_addr_write(gdc_out_base_addr);
 	gdc_data2out_line_offset_write(output_u_stride);
 
 	//gdc v output
-	gdc_out_base_addr += output_height * output_u_stride;
+	if (gdc_cmd->outplane == 1)
+		gdc_out_base_addr += output_height * output_u_stride;
+	else
+		gdc_out_base_addr = gdc_cmd->v_out_base_addr;
 	gdc_data3out_addr_write(gdc_out_base_addr);
 	gdc_data3out_line_offset_write(output_v_stride);
 	gdc_start(gdc_cmd);

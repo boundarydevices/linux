@@ -33,7 +33,7 @@ enum ge2d_memtype_s {
 	AML_GE2D_MEM_INVALID,
 };
 
-
+#define MAX_PLANE         4
 #define MAX_BITBLT_WORK_CONFIG 4
 #define MAX_GE2D_CMD  32   /* 64 */
 
@@ -631,9 +631,9 @@ struct ge2d_config_s {
 	unsigned int	v_scale_coef_type;
 	unsigned int	h_scale_coef_type;
 	unsigned int	update_flag;
-	struct ge2d_dma_cfg_s src_dma_cfg;
-	struct ge2d_dma_cfg_s src2_dma_cfg;
-	struct ge2d_dma_cfg_s dst_dma_cfg;
+	struct ge2d_dma_cfg_s src_dma_cfg[MAX_PLANE];
+	struct ge2d_dma_cfg_s src2_dma_cfg[MAX_PLANE];
+	struct ge2d_dma_cfg_s dst_dma_cfg[MAX_PLANE];
 };
 
 struct ge2d_dma_buf_s {

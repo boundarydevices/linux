@@ -184,6 +184,7 @@ struct gdc_dma_cfg {
 };
 
 struct gdc_cmd_s {
+	uint32_t outplane;
 	//writing/reading to gdc base address, currently not read by api
 	uint32_t base_gdc;
 	 //array of gdc configuration and sizes
@@ -197,6 +198,13 @@ struct gdc_cmd_s {
 	uint32_t buffer_size;
 	//current output address of gdc
 	uint32_t current_addr;
+	//output address for  u, v planes
+	union {
+		uint32_t uv_out_base_addr;
+		uint32_t u_out_base_addr;
+	};
+	uint32_t v_out_base_addr;
+
 	//set when expecting an interrupt from gdc
 	int32_t is_waiting_gdc;
 
@@ -309,6 +317,7 @@ struct gdc_settings_with_fw {
 	uint32_t magic;
 	struct gdc_config_s gdc_config;
 	struct gdc_buffer_info input_buffer;
+	struct gdc_buffer_info reserved;
 	struct gdc_buffer_info output_buffer;
 	struct fw_info_s fw_info;
 };

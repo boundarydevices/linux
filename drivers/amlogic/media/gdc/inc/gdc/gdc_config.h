@@ -46,10 +46,13 @@ struct meson_gdc_dev_t {
 };
 
 struct gdc_dma_cfg_t {
+	struct aml_dma_cfg config_cfg;
 	struct aml_dma_cfg input_cfg_plane1;
 	struct aml_dma_cfg input_cfg_plane2;
-	struct aml_dma_cfg config_cfg;
-	struct aml_dma_cfg output_cfg;
+	struct aml_dma_cfg input_cfg_plane3;
+	struct aml_dma_cfg output_cfg_plane1;
+	struct aml_dma_cfg output_cfg_plane2;
+	struct aml_dma_cfg output_cfg_plane3;
 };
 
 struct mgdc_fh_s {
