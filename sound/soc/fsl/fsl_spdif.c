@@ -854,7 +854,6 @@ static const struct snd_soc_dai_ops fsl_spdif_dai_ops = {
 	.hw_free = fsl_spdif_hw_free,
 };
 
-
 /*
  * FSL SPDIF IEC958 controller(mixer) functions
  *
@@ -1505,6 +1504,14 @@ static int fsl_spdif_probe(struct platform_device *pdev)
 		return PTR_ERR(spdif_priv->rxclk);
 	}
 	spdif_priv->rxclk_src = DEFAULT_RXCLK_SRC;
+
+	spdif_priv->pll8k_clk = devm_clk_get(&pdev->dev, "pll8k");
+	if (IS_ERR(spdif_priv->pll8k_clk))
+		spdif_priv->pll8k_clk = NULL;
+
+	spdif_priv->pll11k_clk = devm_clk_get(&pdev->dev, "pll11k");
+	if (IS_ERR(spdif_priv->pll11k_clk))
+		spdif_priv->pll11k_clk = NULL;
 
 	for (i = 0; i < SPDIF_TXRATE_MAX; i++) {
 		ret = fsl_spdif_probe_txclk(spdif_priv, i);
