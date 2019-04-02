@@ -1614,6 +1614,7 @@ int aml_emmc_hs200_tl1(struct mmc_host *mmc)
 	writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
 	pr_info("[%s][%d] clk config:0x%x\n",
 		__func__, __LINE__, readl(host->base + SD_EMMC_CLOCK_V3));
+
 	for (i = 0; i < 63; i++) {
 		retry_times = 0;
 		delay2 += (1 << 24);
@@ -1622,6 +1623,7 @@ retry:
 		err = emmc_eyetest_log(mmc, 9);
 		if (err)
 			continue;
+
 		count = fbinary(pdata->align[9]);
 		if (((count >= 14) && (count <= 20))
 			|| ((count >= 48) && (count <= 54))) {
@@ -1939,11 +1941,10 @@ int aml_post_hs400_timming(struct mmc_host *mmc)
 	struct amlsd_platform *pdata = mmc_priv(mmc);
 	struct amlsd_host *host = pdata->host;
 	aml_sd_emmc_clktest(mmc);
-	if ((host->data->chip_type == MMC_CHIP_TL1)
-		|| (host->data->chip_type == MMC_CHIP_SM1))
-		aml_emmc_hs400_tl1(mmc);
-	else if (host->data->chip_type == MMC_CHIP_G12B)
+	if (host->data->chip_type == MMC_CHIP_G12B)
 		aml_emmc_hs400_Revb(mmc);
+	else if (host->data->chip_type >= MMC_CHIP_TL1)
+		aml_emmc_hs400_tl1(mmc);
 	else
 		aml_emmc_hs400_general(mmc);
 	return 0;
