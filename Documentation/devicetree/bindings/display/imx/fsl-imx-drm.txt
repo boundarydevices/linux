@@ -226,6 +226,22 @@ dcss_drm: dcss@0x32e00000 {
 	};
 };
 
+Freescale i.MX8 PC (Pixel Combiner)
+=============================================
+Required properties:
+- compatible: should be "fsl,<chip>-pixel-combiner"
+- reg: should be register base and length as documented in the
+  datasheet
+- power-domains: phandle pointing to power domain
+
+example:
+
+pixel-combiner@56020000 {
+	compatible = "fsl,imx8qm-pixel-combiner";
+	reg = <0x0 0x56020000 0x0 0x10000>;
+	power-domains = <&pd_dc0>;
+};
+
 Freescale i.MX8 PRG (Prefetch Resolve Gasket)
 =============================================
 Required properties:
