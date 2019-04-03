@@ -16,3 +16,4 @@ obj-$(CONFIG_DRM_IMX_SEC_DSIM) += sec_mipi_dsim-imx.o
 obj-$(CONFIG_DRM_IMX_LCDIF) += lcdif/
 obj-$(CONFIG_DRM_IMX_DCSS) += dcss/
 obj-$(CONFIG_DRM_IMX_HDP) += hdp/
+obj-$(CONFIG_DRM_IMX_DPU) += dpu/
