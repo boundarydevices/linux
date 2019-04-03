@@ -1033,7 +1033,7 @@ void vpp_vd_adj1_contrast(signed int cont_val, struct vframe_s *vf)
 				WRITE_VPP_REG_BITS(VPP_VADJ_CTRL, 0, 1, 1);
 		}
 	}
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_TL1) {
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
 		vd1_contrast = (READ_VPP_REG(VPP_VADJ1_Y_2) & 0x7ff00) |
 						(cont_val << 0);
 		WRITE_VPP_REG(VPP_VADJ1_Y_2, vd1_contrast);
@@ -1065,7 +1065,7 @@ void vpp_vd_adj1_brightness(signed int bri_val, struct vframe_s *vf)
 	if (bri_val > 1023 || bri_val < -1024)
 		return;
 
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_TL1) {
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
 		vd1_brightness = (READ_VPP_REG(VPP_VADJ1_Y_2) & 0xff) |
 			(bri_val << 8);
 

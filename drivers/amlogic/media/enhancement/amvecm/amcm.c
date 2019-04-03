@@ -161,8 +161,8 @@ void am_set_regmap(struct am_regs_s *p)
 
 			if (!cm_en) {
 				if (p->am_reg[i].addr == 0x208) {
-					if (get_cpu_type() ==
-						MESON_CPU_MAJOR_ID_TL1)
+					if (get_cpu_type() >=
+						MESON_CPU_MAJOR_ID_G12A)
 						p->am_reg[i].val =
 						p->am_reg[i].val & 0xfffffffe;
 					else
@@ -270,7 +270,7 @@ void amcm_disable(void)
 
 	WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, 0x208);
 	temp = READ_VPP_REG(VPP_CHROMA_DATA_PORT);
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_TL1) {
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
 		if (temp & 0x1) {
 			WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT,
 				0x208);
@@ -296,7 +296,7 @@ void amcm_enable(void)
 		WRITE_VPP_REG_BITS(VPP_MISC, 1, 28, 1);
 	WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, 0x208);
 	temp = READ_VPP_REG(VPP_CHROMA_DATA_PORT);
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_TL1) {
+	if (get_cpu_type() >= MESON_CPU_MAJOR_ID_G12A) {
 		if (!(temp & 0x1)) {
 			WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT,
 				0x208);
