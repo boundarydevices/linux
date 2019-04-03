@@ -55,9 +55,8 @@
 			reg = <0x07400000 0x00100000>;
 			record-size = <0x8000>;
 			console-size = <0x8000>;
-			ftrace-size = <0x0>;
-			pmsg-size = <0x8000>;
-};
+			ftrace-size = <0x20000>;
+		};
 
 		secmon_reserved:linux,secmon {
 			compatible = "shared-dma-pool";
