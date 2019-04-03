@@ -1344,9 +1344,11 @@ gckOS_AllocateNonPagedMemory(
 
     gcmkASSERT(Flag & gcvALLOC_FLAG_CONTIGUOUS);
 
-#ifndef CONFIG_ZONE_DMA32
-    Flag |= gcvALLOC_FLAG_CMA_PREEMPT;
-#endif
+    if (Os->allocatorLimitMarker)
+    {
+        Flag |= gcvALLOC_FLAG_CMA_LIMIT;
+        Flag |= gcvALLOC_FLAG_CMA_PREEMPT;
+    }
 
     /* Walk all allocators. */
     list_for_each_entry(allocator, &Os->allocatorList, link)
