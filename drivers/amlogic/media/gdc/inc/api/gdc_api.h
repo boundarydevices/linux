@@ -143,7 +143,8 @@ struct gdc_dmabuf_exp_s {
 #define GDC_FREE_DMA_BUFF _IOW(GDC_IOC_MAGIC, 0x08, int)
 #define GDC_SYNC_DEVICE _IOW(GDC_IOC_MAGIC, 0x09, int)
 #define GDC_SYNC_CPU _IOW(GDC_IOC_MAGIC, 0x0a, int)
-
+#define GDC_PROCESS_WITH_FW _IOW(GDC_IOC_MAGIC, 0x0b, \
+					struct gdc_settings_with_fw)
 
 enum {
 	INPUT_BUFF_TYPE = 0x1000,
@@ -159,6 +160,15 @@ enum {
 	YUV444_P,
 	RGB444_P,
 	FMT_MAX
+};
+
+enum {
+	EQUISOLID = 1,
+	CYLINDER,
+	EQUIDISTANT,
+	CUSTOM,
+	AFFINE,
+	FW_TYPE_MAX
 };
 
 struct gdc_dma_cfg {
@@ -203,6 +213,102 @@ struct gdc_cmd_s {
 			uint32_t y_line_offset,
 			uint32_t uv_line_offset);
 	void *fh;
+};
+
+/* path: "/vendor/lib/firmware/gdc/" */
+#define FIRMWARE_DIR "gdc"
+
+struct fw_equisolid_s {
+	/* float */
+	char strengthX[8];
+	/* float */
+	char strengthY[8];
+	int rotation;
+};
+
+struct fw_cylinder_s {
+	/* float */
+	char strength[8];
+	int rotation;
+};
+
+struct fw_equidistant_s {
+	/* float */
+	char azimuth[8];
+	int elevation;
+	int rotation;
+	int fov_width;
+	int fov_height;
+	bool keep_ratio;
+	int cylindricityX;
+	int cylindricityY;
+};
+
+struct fw_custom_s {
+	char *fw_name;
+};
+
+
+struct fw_affine_s {
+	int rotation;
+};
+
+struct fw_input_info_s {
+	int with;
+	int height;
+	int fov;
+	int diameter;
+	int offsetX;
+	int offsetY;
+};
+
+union transform_u {
+	struct fw_equisolid_s fw_equisolid;
+	struct fw_cylinder_s fw_cylinder;
+	struct fw_equidistant_s fw_equidistant;
+	struct fw_custom_s fw_custom;
+	struct fw_affine_s fw_affine;
+};
+
+struct fw_output_info_s {
+	int offsetX;
+	int offsetY;
+	int width;
+	int height;
+	union transform_u trans;
+	int pan;
+	int tilt;
+	/* float*/
+	char zoom[8];
+};
+
+struct firmware_info {
+	unsigned int format;
+	unsigned int trans_size_type;
+	char *file_name;
+	phys_addr_t phys_addr;
+	void __iomem *virt_addr;
+	unsigned int size;
+	struct page *cma_pages;
+	unsigned int loaded;
+};
+
+struct fw_info_s {
+	char *fw_name;
+	int fw_type;
+	struct page *cma_pages;
+	phys_addr_t phys_addr;
+	void __iomem *virt_addr;
+	struct fw_input_info_s fw_input_info;
+	struct fw_output_info_s fw_output_info;
+};
+
+struct gdc_settings_with_fw {
+	uint32_t magic;
+	struct gdc_config_s gdc_config;
+	struct gdc_buffer_info input_buffer;
+	struct gdc_buffer_info output_buffer;
+	struct fw_info_s fw_info;
 };
 
 /**

@@ -41,6 +41,8 @@
 #include <linux/wait.h>
 #include <linux/sched.h>
 #include <linux/semaphore.h>
+#include <linux/firmware.h>
+
 //gdc configuration sequence
 #include "gdc_config.h"
 #include "gdc_dmabuf.h"
@@ -794,6 +796,344 @@ void unmap_virt_from_phys(u8 __iomem *vaddr)
 	}
 }
 
+static void release_config_firmware(struct gdc_settings_with_fw *gs_with_fw)
+{
+
+	if (gs_with_fw->fw_info.virt_addr)
+		unmap_virt_from_phys(gs_with_fw->fw_info.virt_addr);
+	if (gs_with_fw->fw_info.cma_pages) {
+		dma_release_from_contiguous(
+			&gdc_manager.gdc_dev->pdev->dev,
+			gs_with_fw->fw_info.cma_pages,
+			PAGE_ALIGN(gs_with_fw->gdc_config.config_size * 4)
+					>> PAGE_SHIFT);
+
+		gs_with_fw->fw_info.cma_pages = NULL;
+	}
+}
+
+static int load_firmware_by_name(struct gdc_settings_with_fw *gs_with_fw)
+{
+	int ret = -1;
+	const struct firmware *fw = NULL;
+	char *path = NULL;
+	struct fw_info_s *current_fw = &gs_with_fw->fw_info;
+	struct page *cma_pages = NULL;
+	void __iomem *virt_addr = NULL;
+	phys_addr_t phys_addr = 0;
+
+	if (!current_fw->fw_name) {
+		gdc_log(LOG_ERR, "current firmware name is NULL, invalid\n");
+		return -EINVAL;
+	}
+
+	gdc_log(LOG_DEBUG, "Try to load %s  ...\n", current_fw->fw_name);
+
+	path = kzalloc(CONFIG_PATH_LENG, GFP_KERNEL);
+	if (!path) {
+		gdc_log(LOG_ERR, "cannot malloc fw_name!\n");
+		return -ENOMEM;
+	}
+	snprintf(path, (CONFIG_PATH_LENG - 1), "%s/%s",
+			FIRMWARE_DIR, current_fw->fw_name);
+
+	ret = request_firmware(&fw, path, &gdc_manager.gdc_dev->pdev->dev);
+	if (ret < 0) {
+		gdc_log(LOG_ERR, "Error : %d can't load the %s.\n", ret, path);
+		kfree(path);
+		return -ENOENT;
+	}
+
+	if (fw->size <= 0) {
+		gdc_log(LOG_ERR,
+			"size error, wrong firmware or no enough mem.\n");
+		ret = -ENOMEM;
+		goto release;
+	}
+
+	cma_pages = dma_alloc_from_contiguous(&gdc_manager.gdc_dev->pdev->dev,
+					PAGE_ALIGN(fw->size) >> PAGE_SHIFT, 0);
+	if (cma_pages != NULL) {
+		phys_addr = page_to_phys(cma_pages);
+		virt_addr = map_virt_from_phys(phys_addr,
+						PAGE_ALIGN(fw->size));
+		if (!virt_addr) {
+			gdc_log(LOG_ERR, "map_virt_from_phys failed\n");
+			dma_release_from_contiguous(
+					&gdc_manager.gdc_dev->pdev->dev,
+					cma_pages,
+					PAGE_ALIGN(fw->size) >> PAGE_SHIFT);
+			ret = -ENOMEM;
+			goto release;
+		}
+	} else {
+		gdc_log(LOG_ERR, "Failed to alloc dma buff\n");
+		ret = -ENOMEM;
+		goto release;
+	}
+	memcpy(virt_addr, (char *)fw->data, fw->size);
+
+	gdc_log(LOG_DEBUG,
+		"current firmware virt_addr: 0x%p, fw->data: 0x%p.\n",
+		virt_addr, fw->data);
+
+	gs_with_fw->gdc_config.config_addr = phys_addr;
+	gs_with_fw->gdc_config.config_size = fw->size / 4;
+	gs_with_fw->fw_info.cma_pages = cma_pages;
+
+	gdc_log(LOG_DEBUG, "load firmware size : %zd, Name : %s.\n",
+		fw->size, path);
+	ret = fw->size;
+
+release:
+	release_firmware(fw);
+	kfree(path);
+
+	return ret;
+}
+
+static long gdc_process_with_fw(struct mgdc_fh_s *fh,
+	struct gdc_settings_with_fw *gs_with_fw)
+{
+	long ret = -1;
+	unsigned long addr = 0;
+	size_t len;
+	struct aml_dma_cfg *cfg = NULL;
+	struct gdc_cmd_s *gdc_cmd = &fh->gdc_cmd;
+	char *fw_name = NULL;
+
+	if (fh == NULL || gs_with_fw == NULL) {
+		gdc_log(LOG_ERR, "Error input param\n");
+		return -EINVAL;
+	}
+
+	gs_with_fw->fw_info.virt_addr = NULL;
+	gs_with_fw->fw_info.cma_pages = NULL;
+
+	memcpy(&(gdc_cmd->gdc_config), &(gs_with_fw->gdc_config),
+		sizeof(struct gdc_config_s));
+
+	fw_name = kzalloc(CONFIG_PATH_LENG, GFP_KERNEL);
+	if (!fw_name) {
+		gdc_log(LOG_ERR, "cannot malloc fw_name!\n");
+		return -ENOMEM;
+	}
+
+	gdc_cmd->fh = fh;
+	if (gs_with_fw->output_buffer.mem_alloc_type == AML_GDC_MEM_ION) {
+		/* ion alloc */
+		ret = meson_ion_share_fd_to_phys(fh->ion_client,
+			gs_with_fw->output_buffer.shared_fd,
+			(ion_phys_addr_t *)&addr, &len);
+		if (ret < 0) {
+			gdc_log(LOG_ERR, "ion import out fd %d failed\n",
+				gs_with_fw->output_buffer.shared_fd);
+			ret = -EINVAL;
+			goto release_fw_name;
+		}
+	} else if (gs_with_fw->output_buffer.mem_alloc_type ==
+							AML_GDC_MEM_DMABUF) {
+		/* dma alloc */
+		cfg = &fh->dma_cfg.output_cfg;
+		cfg->fd = gs_with_fw->output_buffer.y_base_fd;
+		cfg->dev = &(gdc_manager.gdc_dev->pdev->dev);
+		cfg->dir = DMA_FROM_DEVICE;
+		ret = gdc_dma_buffer_get_phys(cfg, &addr);
+		if (ret < 0) {
+			gdc_log(LOG_ERR, "dma import out fd %d failed\n",
+				gs_with_fw->output_buffer.y_base_fd);
+			ret = -EINVAL;
+			goto release_fw_name;
+		}
+	}
+	gdc_log(LOG_INFO, "%s, output addr=%lx\n", __func__, addr);
+	gdc_cmd->base_gdc = 0;
+	gdc_cmd->buffer_addr = addr;
+	gdc_cmd->current_addr = gdc_cmd->buffer_addr;
+
+	if (gs_with_fw->input_buffer.mem_alloc_type == AML_GDC_MEM_ION) {
+		/* ion alloc */
+		ret = meson_ion_share_fd_to_phys(fh->ion_client,
+			gs_with_fw->input_buffer.shared_fd,
+			(ion_phys_addr_t *)&addr, &len);
+		if (ret < 0) {
+			gdc_log(LOG_ERR, "ion import input fd %d failed\n",
+				gs_with_fw->input_buffer.shared_fd);
+			ret = -EINVAL;
+			goto unmap;
+		}
+		ret = meson_gdc_set_input_addr(addr, gdc_cmd);
+		if (ret != 0) {
+			gdc_log(LOG_ERR, "set input addr failed\n");
+			ret = -EINVAL;
+			goto unmap;
+		}
+	} else if (gs_with_fw->input_buffer.mem_alloc_type ==
+						AML_GDC_MEM_DMABUF) {
+		/* dma alloc */
+		gdc_process_input_dma_info(fh,
+				(struct gdc_settings_ex *)gs_with_fw);
+	}
+	gdc_log(LOG_INFO, "%s, input addr=%x\n",
+		__func__, fh->gdc_cmd.y_base_addr);
+
+	/* load firmware */
+	if (gs_with_fw->fw_info.fw_name != NULL) {
+		ret = load_firmware_by_name(gs_with_fw);
+		if (ret <= 0) {
+			gdc_log(LOG_ERR, "line %d,load FW %s failed\n",
+					__LINE__, gs_with_fw->fw_info.fw_name);
+			ret = -EINVAL;
+			goto release_fw;
+		}
+	}
+
+	if (ret <= 0 || gs_with_fw->fw_info.fw_name == NULL) {
+		char in_info[64] = {};
+		char out_info[64] = {};
+		char *format = NULL;
+		struct fw_input_info_s *in = &gs_with_fw->fw_info.fw_input_info;
+		struct fw_output_info_s *out =
+					&gs_with_fw->fw_info.fw_output_info;
+		union transform_u *trans =
+				&gs_with_fw->fw_info.fw_output_info.trans;
+
+		switch (gdc_cmd->gdc_config.format) {
+		case NV12:
+			format = "nv12";
+			break;
+		case YV12:
+			format = "yv12";
+			break;
+		case Y_GREY:
+			format = "ygrey";
+			break;
+		case YUV444_P:
+			format = "yuv444p";
+			break;
+		case RGB444_P:
+			format = "rgb444p";
+			break;
+		default:
+			gdc_log(LOG_ERR, "unsupported gdc format\n");
+			ret = -EINVAL;
+			goto release_fw;
+		}
+		snprintf(in_info, (64 - 1), "%d_%d_%d_%d_%d_%d",
+				in->with, in->height,
+				in->fov, in->diameter,
+				in->offsetX, in->offsetY);
+
+		snprintf(out_info, (64 - 1), "%d_%d_%d_%d-%d_%d_%s",
+				out->offsetX, out->offsetY,
+				out->width, out->height,
+				out->pan, out->tilt, out->zoom);
+
+		switch (gs_with_fw->fw_info.fw_type) {
+		case EQUISOLID:
+			snprintf(fw_name, (CONFIG_PATH_LENG - 1),
+					"equisolid-%s-%s-%s_%s_%d-%s.bin",
+					in_info, out_info,
+					trans->fw_equisolid.strengthX,
+					trans->fw_equisolid.strengthY,
+					trans->fw_equisolid.rotation,
+					format);
+			break;
+		case CYLINDER:
+			snprintf(fw_name, (CONFIG_PATH_LENG - 1),
+					"cylinder-%s-%s-%s_%d-%s.bin",
+					in_info, out_info,
+					trans->fw_cylinder.strength,
+					trans->fw_cylinder.rotation,
+					format);
+			break;
+		case EQUIDISTANT:
+			snprintf(fw_name, (CONFIG_PATH_LENG - 1),
+				"equidistant-%s-%s-%s_%d_%d_%d_%d_%d_%d_%d-%s.bin",
+					in_info, out_info,
+					trans->fw_equidistant.azimuth,
+					trans->fw_equidistant.elevation,
+					trans->fw_equidistant.rotation,
+					trans->fw_equidistant.fov_width,
+					trans->fw_equidistant.fov_height,
+					trans->fw_equidistant.keep_ratio,
+					trans->fw_equidistant.cylindricityX,
+					trans->fw_equidistant.cylindricityY,
+					format);
+			break;
+		case CUSTOM:
+			if (trans->fw_custom.fw_name != NULL) {
+			snprintf(fw_name, (CONFIG_PATH_LENG - 1),
+					"custom-%s-%s-%s-%s.bin",
+					in_info, out_info,
+					trans->fw_custom.fw_name,
+					format);
+			} else {
+				gdc_log(LOG_ERR, "custom fw_name is NULL\n");
+				ret = -EINVAL;
+				goto release_fw;
+			}
+			break;
+		case AFFINE:
+			snprintf(fw_name, (CONFIG_PATH_LENG - 1),
+					"affine-%s-%s-%d-%s.bin",
+					in_info, out_info,
+					trans->fw_affine.rotation,
+					format);
+			break;
+		default:
+			gdc_log(LOG_ERR, "unsupported FW type\n");
+			ret = -EINVAL;
+			goto release_fw;
+		}
+
+		gs_with_fw->fw_info.fw_name = fw_name;
+	}
+	ret = load_firmware_by_name(gs_with_fw);
+	if (ret <= 0) {
+		gdc_log(LOG_ERR, "line %d,load FW %s failed\n",
+				__LINE__, gs_with_fw->fw_info.fw_name);
+		ret = -EINVAL;
+		goto release_fw;
+	}
+
+	gdc_cmd->gdc_config.config_addr =
+		gs_with_fw->gdc_config.config_addr;
+	gdc_cmd->gdc_config.config_size =
+		gs_with_fw->gdc_config.config_size;
+
+	mutex_lock(&fh->gdev->d_mutext);
+	ret = gdc_run(gdc_cmd);
+	if (ret < 0)
+		gdc_log(LOG_ERR, "gdc process failed ret = %ld\n", ret);
+
+	ret = wait_for_completion_timeout(&fh->gdev->d_com,
+					msecs_to_jiffies(40));
+	if (ret == 0)
+		gdc_log(LOG_ERR, "gdc timeout\n");
+
+	gdc_stop(gdc_cmd);
+	mutex_unlock(&fh->gdev->d_mutext);
+
+release_fw:
+	release_config_firmware(gs_with_fw);
+
+unmap:
+	if (gs_with_fw->input_buffer.mem_alloc_type == AML_GDC_MEM_DMABUF) {
+		gdc_dma_buffer_unmap(&fh->dma_cfg.input_cfg_plane1);
+		if (gs_with_fw->input_buffer.plane_number == 2)
+			gdc_dma_buffer_unmap(&fh->dma_cfg.input_cfg_plane2);
+	}
+
+	if (gs_with_fw->output_buffer.mem_alloc_type == AML_GDC_MEM_DMABUF)
+		gdc_dma_buffer_unmap(&fh->dma_cfg.output_cfg);
+
+release_fw_name:
+	kfree(fw_name);
+
+	return ret;
+}
+EXPORT_SYMBOL(gdc_process_with_fw);
 int write_buf_to_file(char *path, char *buf, int size)
 {
 	int ret = 0;
@@ -841,6 +1181,7 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 	struct gdc_buf_cfg buf_cfg;
 	struct page *cma_pages = NULL;
 	struct gdc_settings_ex gs_ex;
+	struct gdc_settings_with_fw gs_with_fw;
 	struct gdc_dmabuf_req_s gdc_req_buf;
 	struct gdc_dmabuf_exp_s gdc_exp_buf;
 	ion_phys_addr_t addr;
@@ -1135,6 +1476,14 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		}
 
 	break;
+	case GDC_PROCESS_WITH_FW:
+		ret = copy_from_user(&gs_with_fw, argp, sizeof(gs_with_fw));
+		if (ret < 0)
+			gdc_log(LOG_ERR, "copy from user failed\n");
+		memcpy(&gdc_cmd->gdc_config, &gs_with_fw.gdc_config,
+			sizeof(struct gdc_config_s));
+		ret = gdc_process_with_fw(fh, &gs_with_fw);
+		break;
 	case GDC_PROCESS_EX:
 		ret = copy_from_user(&gs_ex, argp, sizeof(gs_ex));
 		if (ret < 0)
