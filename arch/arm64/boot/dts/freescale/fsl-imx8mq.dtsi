@@ -412,9 +412,9 @@
 		#thermal-sensor-cells =  <0>;
 	};
 
-	thermal-zones {
+	thermal_zones: thermal-zones {
 		/* cpu thermal */
-		cpu_thermal: cpu-thermal {
+		cpu-thermal {
 			polling-delay-passive = <250>;
 			polling-delay = <2000>;
 			thermal-sensors = <&tmu>;
