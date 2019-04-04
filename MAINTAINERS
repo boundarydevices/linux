@@ -14796,3 +14796,12 @@ F:	include/linux/amlogic/power_ctrl.h
 AMLOGIC TL1 VAD
 M:	Wenbiao Zhang <wenbiao.zhang@amlogic.com>
 F:	include/linux/amlogic/vad_api.h
+
+AMLOGIC SM1 S905X3 DTS
+M:	Xiaoliang Wang <xiaoliang.wang@amlogic.com>
+F:	arch/arm/boot/dts/amlogic/g12a_s905x2_u212.dts
+F:	arch/arm/boot/dts/amlogic/g12a_s905x2_u212_1g.dts
+F:	arch/arm64/boot/dts/amlogic/g12a_s905x2_u212.dts
+F:	arch/arm64/boot/dts/amlogic/g12a_s905x2_u212_1g.dts
+F:	arch/arm/boot/dts/amlogic/sm1_s905x3_ac213.dts
+F:	arch/arm64/boot/dts/amlogic/sm1_s905x3_ac213.dts
