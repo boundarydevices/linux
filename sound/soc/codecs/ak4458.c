@@ -284,19 +284,13 @@ static int ak4458_get_tdm_mode(struct ak4458_priv *ak4458)
 
 static int ak4458_rstn_control(struct snd_soc_component *component, int bit)
 {
-	int ret;
+	int ret, val;
 
-	if (bit)
-		ret = snd_soc_component_update_bits(component,
-					  AK4458_00_CONTROL1,
-					  AK4458_RSTN_MASK,
-					  0x1);
-	else
-		ret = snd_soc_component_update_bits(component,
-					  AK4458_00_CONTROL1,
-					  AK4458_RSTN_MASK,
-					  0x0);
-	return ret;
+	val = bit ? AK4458_RSTN_MASK : 0;
+	ret = snd_soc_component_update_bits(component, AK4458_00_CONTROL1,
+					    AK4458_RSTN_MASK, val);
+	/* Return a negative error code only. */
+	return (ret < 0 ? ret : 0);
 }
 
 static int ak4458_hw_params(struct snd_pcm_substream *substream,
@@ -308,7 +302,7 @@ static int ak4458_hw_params(struct snd_pcm_substream *substream,
 	int pcm_width = max(params_physical_width(params), ak4458->slot_width);
 	int nfs1;
 	u8 format, dsdsel0, dsdsel1, dchn;
-	int ret, dsd_bclk, channels, channels_max;
+	int dsd_bclk, channels, channels_max;
 	bool is_dsd = false;
 
 	channels = params_channels(params);
@@ -402,13 +396,8 @@ static int ak4458_hw_params(struct snd_pcm_substream *substream,
 	snd_soc_component_update_bits(component, AK4458_0B_CONTROL7,
 				AK4458_DCHAIN_MASK, dchn);
 
-	ret = ak4458_rstn_control(component, 0);
-	if (ret)
-		return ret;
-
-	ret = ak4458_rstn_control(component, 1);
-	if (ret)
-		return ret;
+	ak4458_rstn_control(component, 0);
+	ak4458_rstn_control(component, 1);
 
 	return 0;
 }
@@ -417,8 +406,7 @@ static int ak4458_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
 	struct snd_soc_component *component = dai->component;
 	struct ak4458_priv *ak4458 = snd_soc_component_get_drvdata(component);
-	u8 format, dp = 0;
-	int ret;
+	u8 dp;
 
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS: /* Slave Mode */
@@ -436,11 +424,8 @@ static int ak4458_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	case SND_SOC_DAIFMT_LEFT_J:
 	case SND_SOC_DAIFMT_RIGHT_J:
 	case SND_SOC_DAIFMT_DSP_B:
-		ak4458->fmt = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
-		break;
 	case SND_SOC_DAIFMT_PDM:
 		ak4458->fmt = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
-		dp = AK4458_DP_MASK; /* DSD mode */;
 		break;
 	default:
 		dev_err(component->dev, "Audio format 0x%02X unsupported\n",
@@ -448,6 +433,8 @@ static int ak4458_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 		return -EINVAL;
 	}
 
+	/* DSD mode */
+	dp = ak4458->fmt == SND_SOC_DAIFMT_PDM ? AK4458_DP_MASK : 0;
 	snd_soc_component_update_bits(component, AK4458_02_CONTROL3,
 				      AK4458_DP_MASK, dp);
 
@@ -493,15 +480,16 @@ static int ak4458_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 {
 	struct snd_soc_component *component = dai->component;
 	struct ak4458_priv *ak4458 = snd_soc_component_get_drvdata(component);
-	int reg;
+	int mode;
 
 	ak4458->slots = slots;
 	ak4458->slot_width = slot_width;
 
-	reg = snd_soc_read(codec, AK4458_0A_CONTROL6);
-	reg &= ~(0x3 << 6);
-	reg |= ak4458_get_tdm_mode(ak4458) << 6;
-	snd_soc_write(codec, AK4458_0A_CONTROL6, reg);
+	mode = ak4458_get_tdm_mode(ak4458) << AK4458_MODE_SHIFT;
+
+	snd_soc_component_update_bits(component, AK4458_0A_CONTROL6,
+			    AK4458_MODE_MASK,
+			    mode);
 
 	return 0;
 }
@@ -538,7 +526,7 @@ static int ak4458_startup(struct snd_pcm_substream *substream,
 	return ret;
 }
 
-static struct snd_soc_dai_ops ak4458_dai_ops = {
+static const struct snd_soc_dai_ops ak4458_dai_ops = {
 	.startup        = ak4458_startup,
 	.hw_params	= ak4458_hw_params,
 	.set_fmt	= ak4458_set_dai_fmt,
@@ -701,17 +689,17 @@ static int ak4458_i2c_probe(struct i2c_client *i2c)
 	for (i = 0; i < ARRAY_SIZE(ak4458->supplies); i++)
 		ak4458->supplies[i].supply = ak4458_supply_names[i];
 
-	ret = devm_regulator_bulk_get(dev, ARRAY_SIZE(ak4458->supplies),
+	ret = devm_regulator_bulk_get(ak4458->dev, ARRAY_SIZE(ak4458->supplies),
 				 ak4458->supplies);
 	if (ret != 0) {
-		dev_err(dev, "Failed to request supplies: %d\n", ret);
+		dev_err(ak4458->dev, "Failed to request supplies: %d\n", ret);
 		return ret;
 	}
 
 	ret = regulator_bulk_enable(ARRAY_SIZE(ak4458->supplies),
 				    ak4458->supplies);
 	if (ret != 0) {
-		dev_err(dev, "Failed to enable supplies: %d\n", ret);
+		dev_err(ak4458->dev, "Failed to enable supplies: %d\n", ret);
 		return ret;
 	}
 

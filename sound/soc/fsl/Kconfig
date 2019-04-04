@@ -291,7 +291,7 @@ config SND_SOC_EUKREA_TLV320
 config SND_SOC_IMX_AK4458
 	tristate "SoC Audio support for i.MX boards with AK4458"
 	depends on OF && I2C
-	select SND_SOC_AK4458_I2C
+	select SND_SOC_AK4458
 	select SND_SOC_IMX_PCM_DMA
 	select SND_SOC_FSL_SAI
 	select SND_SOC_FSL_UTILS

@@ -31,7 +31,7 @@ struct imx_ak4458_data {
 	int num_codec_conf;
 	struct snd_soc_codec_conf *codec_conf;
 	bool tdm_mode;
-	int pdn_gpio;
+	struct gpio_desc *reset_gpiod;
 	unsigned int slots;
 	unsigned int slot_width;
 	bool one2one_ratio;
@@ -345,19 +345,15 @@ static int imx_ak4458_probe(struct platform_device *pdev)
 	priv->one2one_ratio = !of_device_is_compatible(pdev->dev.of_node,
 					"fsl,imx-audio-ak4458-mq");
 
-	priv->pdn_gpio = of_get_named_gpio(pdev->dev.of_node,
-			"ak4458,pdn-gpio", 0);
-	if (gpio_is_valid(priv->pdn_gpio)) {
-		ret = devm_gpio_request_one(&pdev->dev, priv->pdn_gpio,
-				GPIOF_OUT_INIT_LOW, "ak4458,pdn");
-		if (ret) {
-			dev_err(&pdev->dev, "unable to get pdn gpio\n");
-			goto fail;
-		}
+	priv->reset_gpiod = devm_gpiod_get_optional(&pdev->dev, "ak4458,pdn",
+						    GPIOD_OUT_LOW);
+	if (IS_ERR(priv->reset_gpiod))
+		return PTR_ERR(priv->reset_gpiod);
 
-		gpio_set_value_cansleep(priv->pdn_gpio, 0);
+	if (priv->reset_gpiod) {
+		gpiod_set_value_cansleep(priv->reset_gpiod, 0);
 		usleep_range(1000, 2000);
-		gpio_set_value_cansleep(priv->pdn_gpio, 1);
+		gpiod_set_value_cansleep(priv->reset_gpiod, 1);
 		usleep_range(1000, 2000);
 	}
 
