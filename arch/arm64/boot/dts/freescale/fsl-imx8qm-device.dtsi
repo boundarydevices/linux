@@ -2914,7 +2914,7 @@
 	};
 
 	i2c1_lvds0: i2c@56247000 {
-		compatible = "fsl,imx8qm-lpi2c";
+		compatible = "fsl,imx8qm-lpi2c", "fsl,imx7ulp-lpi2c";
 		reg = <0x0 0x56247000 0x0 0x1000>;
 		interrupts = <9 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-parent = <&irqsteer_lvds0>;
@@ -2940,7 +2940,7 @@
 	};
 
 	i2c1_lvds1: i2c@57247000 {
-		compatible = "fsl,imx8qm-lpi2c";
+		compatible = "fsl,imx8qm-lpi2c", "fsl,imx7ulp-lpi2c";
 		reg = <0x0 0x57247000 0x0 0x1000>;
 		interrupts = <9 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-parent = <&irqsteer_lvds1>;
