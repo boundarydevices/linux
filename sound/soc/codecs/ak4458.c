@@ -328,33 +328,29 @@ static int ak4458_hw_params(struct snd_pcm_substream *substream,
 	nfs1 = params_rate(params);
 	ak4458->fs = nfs1;
 
-	dsdsel0 = snd_soc_read(codec, AK4458_06_DSD1);
-	dsdsel0 &= ~AK4458_DSDSEL_MASK;
-
-	dsdsel1 = snd_soc_read(codec, AK4458_09_DSD2);
-	dsdsel1 &= ~AK4458_DSDSEL_MASK;
-
 	if (is_dsd) {
 		switch (dsd_bclk) {
 		case 2822400:
-			dsdsel0 |= 0;
-			dsdsel1 |= 0;
+			dsdsel0 = 0;
+			dsdsel1 = 0;
 			break;
 		case 5644800:
-			dsdsel0 |= 1;
-			dsdsel1 |= 0;
+			dsdsel0 = 1;
+			dsdsel1 = 0;
 			break;
 		case 11289600:
-			dsdsel0 |= 0;
-			dsdsel1 |= 1;
+			dsdsel0 = 0;
+			dsdsel1 = 1;
 			break;
 		default:
 			dev_err(dai->dev, "DSD512 not supported.\n");
 			return -EINVAL;
 		}
 
-		snd_soc_write(codec, AK4458_06_DSD1, dsdsel0);
-		snd_soc_write(codec, AK4458_09_DSD2, dsdsel1);
+		snd_soc_component_update_bits(component, AK4458_06_DSD1,
+					      AK4458_DSDSEL_MASK, dsdsel0);
+		snd_soc_component_update_bits(component, AK4458_09_DSD2,
+					      AK4458_DSDSEL_MASK, dsdsel1);
 	}
 
 	/* Master Clock Frequency Auto Setting Mode Enable */
@@ -381,7 +377,7 @@ static int ak4458_hw_params(struct snd_pcm_substream *substream,
 		case SND_SOC_DAIFMT_DSP_B:
 			format = AK4458_DIF_32BIT_MSB;
 			break;
-		case SND_SOC_DAIFMT_PDM;
+		case SND_SOC_DAIFMT_PDM:
 			format = AK4458_DIF_32BIT_MSB;
 			break;
 		default:
