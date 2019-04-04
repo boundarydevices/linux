@@ -47,6 +47,12 @@
 
 unsigned int gdc_log_level;
 struct gdc_manager_s gdc_manager;
+static int trace_mode_enable;
+static char *config_out_file;
+static int config_out_path_defined;
+
+#define WAIT_THRESHOLD   1000
+#define CONFIG_PATH_LENG 128
 
 static const struct of_device_id gdc_dt_match[] = {
 	{.compatible = "amlogic, g12b-gdc"},
@@ -351,7 +357,6 @@ attach_err:
 
 	return ret;
 }
-
 
 static void meson_gdc_dma_unmap(struct gdc_dma_cfg *cfg)
 {
@@ -746,6 +751,84 @@ static long gdc_process_ex_info(struct mgdc_fh_s *fh,
 	return 0;
 }
 
+u8 __iomem *map_virt_from_phys(phys_addr_t phys, unsigned long total_size)
+{
+	u32 offset, npages;
+	struct page **pages = NULL;
+	pgprot_t pgprot;
+	u8 __iomem *vaddr;
+	int i;
+
+	npages = PAGE_ALIGN(total_size) / PAGE_SIZE;
+	offset = phys & (~PAGE_MASK);
+	if (offset)
+		npages++;
+	pages = vmalloc(sizeof(struct page *) * npages);
+	if (!pages)
+		return NULL;
+	for (i = 0; i < npages; i++) {
+		pages[i] = phys_to_page(phys);
+		phys += PAGE_SIZE;
+	}
+	/*nocache*/
+	pgprot = pgprot_noncached(PAGE_KERNEL);
+
+	vaddr = vmap(pages, npages, VM_MAP, pgprot);
+	if (!vaddr) {
+		pr_err("vmaped fail, size: %d\n",
+			npages << PAGE_SHIFT);
+		vfree(pages);
+		return NULL;
+	}
+	vfree(pages);
+
+	return vaddr;
+}
+
+void unmap_virt_from_phys(u8 __iomem *vaddr)
+{
+	if (vaddr) {
+		/* unmap prevois vaddr */
+		vunmap(vaddr);
+		vaddr = NULL;
+	}
+}
+
+int write_buf_to_file(char *path, char *buf, int size)
+{
+	int ret = 0;
+	struct file *fp = NULL;
+	mm_segment_t old_fs;
+	loff_t pos = 0;
+	int w_size = 0;
+
+	if (!path || !config_out_path_defined) {
+		gdc_log(LOG_ERR, "please define path first\n");
+		return -1;
+	}
+
+	/* change to KERNEL_DS address limit */
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+
+	/* open file to write */
+	fp = filp_open(path, O_WRONLY|O_CREAT, 0640);
+	if (IS_ERR(fp)) {
+		gdc_log(LOG_ERR, "open file error\n");
+		ret = -1;
+	}
+
+	/* Write buf to file */
+	w_size = vfs_write(fp, buf, size, &pos);
+	gdc_log(LOG_INFO, "write w_size = %u, size = %u\n", w_size, size);
+
+	vfs_fsync(fp, 0);
+	filp_close(fp, NULL);
+	set_fs(old_fs);
+
+	return w_size;
+}
+
 static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		unsigned long arg)
 {
@@ -763,7 +846,12 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 	ion_phys_addr_t addr;
 	int index, dma_fd;
 	void __user *argp = (void __user *)arg;
+	void __iomem *config_virt_addr;
+	ktime_t start_time, stop_time, diff_time;
+	int process_time = 0;
+	int i = 0;
 
+	start_time.tv64 = 0;
 	switch (cmd) {
 	case GDC_PROCESS:
 		ret = copy_from_user(&gs, argp, sizeof(gs));
@@ -815,16 +903,53 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 
 		gdc_cmd->fh = fh;
 		mutex_lock(&fh->gdev->d_mutext);
+
+		if (trace_mode_enable >= 1)
+			start_time = ktime_get();
+
 		ret = gdc_run(gdc_cmd);
 		if (ret < 0)
 			gdc_log(LOG_ERR, "gdc process ret = %ld\n", ret);
 
 		ret = wait_for_completion_timeout(&fh->gdev->d_com,
-						msecs_to_jiffies(40));
+					msecs_to_jiffies(WAIT_THRESHOLD));
 		if (ret == 0)
 			gdc_log(LOG_ERR, "gdc timeout\n");
 
+		if (ret == 0) {
+			gdc_log(LOG_ERR, "gdc timeout, status = 0x%x\n",
+				gdc_status_read());
+
+			if (trace_mode_enable >= 2) {
+				/* dump regs */
+				for (i = 0; i <= 0xFF; i += 4)
+					gdc_log(LOG_ERR, "reg[0x%x] = 0x%x\n",
+						i, system_gdc_read_32(i));
+
+				/* dump config buffer */
+				config_virt_addr =
+					map_virt_from_phys(gc->config_addr,
+					PAGE_ALIGN(gc->config_size * 4));
+				ret = write_buf_to_file(config_out_file,
+							config_virt_addr,
+							(gc->config_size * 4));
+				if (ret <= 0)
+					gdc_log(LOG_ERR,
+						"Failed to read_file_to_buf\n");
+				unmap_virt_from_phys(config_virt_addr);
+			}
+		}
+
 		gdc_stop(gdc_cmd);
+
+		if (trace_mode_enable >= 1) {
+			stop_time = ktime_get();
+			diff_time = ktime_sub(stop_time, start_time);
+			process_time = ktime_to_ms(diff_time);
+			if (process_time > 50)
+				gdc_log(LOG_ERR, "gdc process time = %d\n",
+					process_time);
+		}
 		mutex_unlock(&fh->gdev->d_mutext);
 	break;
 	case GDC_RUN:
@@ -854,16 +979,52 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 					fh->i_paddr, fh->i_len);
 		meson_gdc_dma_flush(&fh->gdev->pdev->dev,
 					fh->c_paddr, fh->c_len);
+
+		if (trace_mode_enable >= 1)
+			start_time = ktime_get();
+
 		ret = gdc_run(gdc_cmd);
 		if (ret < 0)
 			gdc_log(LOG_ERR, "gdc process failed ret = %ld\n", ret);
 
 		ret = wait_for_completion_timeout(&fh->gdev->d_com,
-						msecs_to_jiffies(40));
+					msecs_to_jiffies(WAIT_THRESHOLD));
 		if (ret == 0)
 			gdc_log(LOG_ERR, "gdc timeout\n");
 
+		if (ret == 0) {
+			gdc_log(LOG_ERR, "gdc timeout, status = 0x%x\n",
+				gdc_status_read());
+
+			if (trace_mode_enable >= 2) {
+				/* dump regs */
+				for (i = 0; i <= 0xFF; i += 4)
+					gdc_log(LOG_ERR, "reg[0x%x] = 0x%x\n",
+						i, system_gdc_read_32(i));
+
+				/* dump config buffer */
+				config_virt_addr =
+					map_virt_from_phys(gc->config_addr,
+					PAGE_ALIGN(gc->config_size * 4));
+				ret = write_buf_to_file(config_out_file,
+							config_virt_addr,
+							(gc->config_size * 4));
+				if (ret <= 0)
+					gdc_log(LOG_ERR,
+						"Failed to read_file_to_buf\n");
+				unmap_virt_from_phys(config_virt_addr);
+			}
+		}
+
 		gdc_stop(gdc_cmd);
+		if (trace_mode_enable >= 1) {
+			stop_time = ktime_get();
+			diff_time = ktime_sub(stop_time, start_time);
+			process_time = ktime_to_ms(diff_time);
+			if (process_time > 50)
+				gdc_log(LOG_ERR, "gdc process time = %d\n",
+					process_time);
+		}
 		meson_gdc_cache_flush(&fh->gdev->pdev->dev,
 					fh->o_paddr, fh->o_len);
 		mutex_unlock(&fh->gdev->d_mutext);
@@ -893,16 +1054,54 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		}
 		meson_gdc_dma_flush(&fh->gdev->pdev->dev,
 					fh->c_paddr, fh->c_len);
+
+
+		if (trace_mode_enable >= 1)
+			start_time = ktime_get();
+
 		ret = gdc_run(gdc_cmd);
 		if (ret < 0)
 			gdc_log(LOG_ERR, "gdc process failed ret = %ld\n", ret);
 
 		ret = wait_for_completion_timeout(&fh->gdev->d_com,
-						msecs_to_jiffies(40));
+					msecs_to_jiffies(WAIT_THRESHOLD));
 		if (ret == 0)
 			gdc_log(LOG_ERR, "gdc timeout\n");
 
+		if (ret == 0) {
+			gdc_log(LOG_ERR, "gdc timeout, status = 0x%x\n",
+				gdc_status_read());
+
+			if (trace_mode_enable >= 2) {
+				/* dump regs */
+				for (i = 0; i <= 0xFF; i += 4)
+					gdc_log(LOG_ERR, "reg[0x%x] = 0x%x\n",
+						i, system_gdc_read_32(i));
+
+				/* dump config buffer */
+				config_virt_addr =
+					map_virt_from_phys(gc->config_addr,
+					PAGE_ALIGN(gc->config_size * 4));
+				ret = write_buf_to_file(config_out_file,
+							config_virt_addr,
+							(gc->config_size * 4));
+				if (ret <= 0)
+					gdc_log(LOG_ERR,
+						"Failed to read_file_to_buf\n");
+				unmap_virt_from_phys(config_virt_addr);
+			}
+		}
+
 		gdc_stop(gdc_cmd);
+
+		if (trace_mode_enable >= 1) {
+			stop_time = ktime_get();
+			diff_time = ktime_sub(stop_time, start_time);
+			process_time = ktime_to_ms(diff_time);
+			if (process_time > 50)
+				gdc_log(LOG_ERR, "gdc process time = %d\n",
+					process_time);
+		}
 		meson_gdc_cache_flush(&fh->gdev->pdev->dev,
 					fh->o_paddr, fh->o_len);
 		meson_gdc_deinit_dma_addr(fh);
@@ -1122,6 +1321,60 @@ static ssize_t loglevel_store(struct device *dev,
 
 static DEVICE_ATTR(loglevel, 0664, loglevel_show, loglevel_store);
 
+static ssize_t trace_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	ssize_t len = 0;
+
+	len += sprintf(buf+len, "trace_mode_enable: %d\n",
+			trace_mode_enable);
+	return len;
+}
+
+static ssize_t trace_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t len)
+{
+	int res = 0;
+	int ret = 0;
+
+	ret = kstrtoint(buf, 0, &res);
+	pr_info("trace_mode: %d->%d\n", trace_mode_enable, res);
+	trace_mode_enable = res;
+
+	return len;
+}
+static DEVICE_ATTR(trace_mode, 0664, trace_mode_show, trace_mode_store);
+
+static ssize_t config_out_path_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	ssize_t len = 0;
+
+	if (config_out_path_defined)
+		len += sprintf(buf+len, "config out path: %s\n",
+				config_out_file);
+	else
+		len += sprintf(buf+len, "config out path is not set\n");
+
+	return len;
+}
+
+static ssize_t config_out_path_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t len)
+{
+	if (strlen(buf) >= sizeof(config_out_file)) {
+		pr_info("err: path too long\n");
+	} else {
+		strncpy(config_out_file, buf, CONFIG_PATH_LENG - 1);
+		config_out_path_defined = 1;
+		pr_info("set config out path: %s\n", config_out_file);
+	}
+
+	return len;
+}
+static DEVICE_ATTR(config_out_path, 0664, config_out_path_show,
+					config_out_path_store);
+
 irqreturn_t gdc_interrupt_handler(int irq, void *param)
 {
 	struct meson_gdc_dev_t *gdc_dev = param;
@@ -1154,6 +1407,13 @@ static int gdc_platform_probe(struct platform_device *pdev)
 	}
 
 	of_reserved_mem_device_init(&(pdev->dev));
+
+	/* alloc mem to store config out path*/
+	config_out_file = kzalloc(CONFIG_PATH_LENG, GFP_KERNEL);
+	if (config_out_file == NULL) {
+		gdc_log(LOG_ERR, "config out alloc failed\n");
+		return -ENOMEM;
+	}
 
 	gdc_dev = devm_kzalloc(&pdev->dev, sizeof(*gdc_dev),
 			GFP_KERNEL);
@@ -1215,6 +1475,10 @@ static int gdc_platform_probe(struct platform_device *pdev)
 		&dev_attr_firmware1);
 	device_create_file(gdc_dev->misc_dev.this_device,
 		&dev_attr_loglevel);
+	device_create_file(gdc_dev->misc_dev.this_device,
+		&dev_attr_trace_mode);
+	device_create_file(gdc_dev->misc_dev.this_device,
+		&dev_attr_config_out_path);
 
 	platform_set_drvdata(pdev, gdc_dev);
 	return rc;
@@ -1229,9 +1493,16 @@ static int gdc_platform_remove(struct platform_device *pdev)
 		&dev_attr_firmware1);
 	device_remove_file(meson_gdc_dev.this_device,
 		&dev_attr_loglevel);
+	device_remove_file(meson_gdc_dev.this_device,
+		&dev_attr_trace_mode);
+	device_remove_file(meson_gdc_dev.this_device,
+		&dev_attr_config_out_path);
 
 	gdc_dma_buffer_destroy(gdc_manager.buffer);
 	gdc_manager.gdc_dev = NULL;
+
+	kfree(config_out_file);
+	config_out_file = NULL;
 
 	misc_deregister(&meson_gdc_dev);
 	return 0;
