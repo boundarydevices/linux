@@ -438,9 +438,6 @@ static int ak4458_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	case SND_SOC_DAIFMT_DSP_B:
 		ak4458->fmt = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
 		break;
-	case SND_SOC_DAIFMT_DSP_B:
-		ak4458->fmt = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
-		break;
 	case SND_SOC_DAIFMT_PDM:
 		ak4458->fmt = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
 		dp = AK4458_DP_MASK; /* DSD mode */;
