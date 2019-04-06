@@ -4753,20 +4753,17 @@ out:
 		} else
 			osd_timeline_increase(output_index);
 	}
-	/*clear last displayed buffer.*/
-	for (i = 0; i < HW_OSD_COUNT; i++) {
+	/* clear osd layer's order */
+	for (i = start_index; i < osd_count; i++) {
+		layer_map = &fence_map->layer_map[i];
 		if (displayed_bufs[i]) {
 			fput(displayed_bufs[i]);
 			displayed_bufs[i] = NULL;
 		}
-	}
-	/* clear osd layer's order */
-	for (i = start_index; i < osd_count; i++) {
-		layer_map = &fence_map->layer_map[i];
 		if (layer_map->buf_file)
 			displayed_bufs[i] = layer_map->buf_file;
 		if (layer_map->in_fence)
-		osd_put_fenceobj(layer_map->in_fence);
+			osd_put_fenceobj(layer_map->in_fence);
 		osd_hw.order[i] = 0;
 	}
 }
