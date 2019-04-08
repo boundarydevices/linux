@@ -761,9 +761,16 @@ static int dpu_drm_atomic_check(struct drm_device *dev,
 		}
 
 		kfree(states);
+	};
 
-		if (pipe_states_prone_to_put[drm_crtc_index(crtc)])
+	drm_for_each_crtc(crtc, dev) {
+		if (pipe_states_prone_to_put[drm_crtc_index(crtc)]) {
+			crtc_state = drm_atomic_get_crtc_state(state, crtc);
+			if (WARN_ON(IS_ERR(crtc_state)))
+				return PTR_ERR(crtc_state);
+
 			dpu_atomic_put_possible_states_per_crtc(crtc_state);
+		}
 	}
 
 	ret = drm_atomic_helper_check_planes(dev, state);
