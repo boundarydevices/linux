@@ -261,7 +261,10 @@ static int meson_cpufreq_set_target(struct cpufreq_policy *policy,
 		}
 	}
 
+	freqs.old = freq_old / 1000;
+	freqs.new = freq_new / 1000;
 	/*scale clock frequency*/
+	cpufreq_freq_transition_begin(policy, &freqs);
 	ret = meson_cpufreq_set_rate(policy, cur_cluster,
 					freq_new / 1000);
 	if (ret) {
@@ -274,6 +277,7 @@ static int meson_cpufreq_set_target(struct cpufreq_policy *policy,
 		}
 		return ret;
 	}
+	cpufreq_freq_transition_end(policy, &freqs, ret);
 	/*cpufreq down,change voltage after frequency*/
 	if (freq_new < freq_old) {
 		ret = meson_regulator_set_volate(cpu_reg, volt_old,
@@ -281,8 +285,12 @@ static int meson_cpufreq_set_target(struct cpufreq_policy *policy,
 		if (ret) {
 			pr_err("failed to scale volt %u %u down: %d\n",
 				volt_new, volt_tol, ret);
-			meson_cpufreq_set_rate(policy, cur_cluster,
+			freqs.old = freq_new / 1000;
+			freqs.new = freq_old / 1000;
+			cpufreq_freq_transition_begin(policy, &freqs);
+			ret = meson_cpufreq_set_rate(policy, cur_cluster,
 				freq_old / 1000);
+			cpufreq_freq_transition_end(policy, &freqs, ret);
 		}
 	}
 
@@ -368,6 +376,69 @@ int choose_cpufreq_tables_index(const struct device_node *np, u32 cur_cluster)
 
 	return ret;
 }
+
+static int meson_cpufreq_transition_notifier(struct notifier_block *nb,
+					unsigned long val, void *data)
+{
+	struct cpufreq_freqs *freq = data;
+	struct meson_cpufreq_driver_data *cpufreq_data =
+					to_meson_dvfs_cpu_nb(nb);
+	struct cpufreq_policy *policy = cpufreq_data->policy;
+	struct clk *dsu_clk = cpufreq_data->clk_dsu;
+	struct clk *dsu_cpu_parent =  policy->clk;
+	struct clk *dsu_pre_parent = cpufreq_data->clk_dsu_pre;
+	int ret = 0;
+	static bool first_set = true;
+
+	if (!dsu_clk || !dsu_cpu_parent || !dsu_pre_parent)
+		return 0;
+
+	pr_debug("%s,event %ld,freq->old_rate =%u,freq->new_rate =%u!\n",
+		__func__, val, freq->old, freq->new);
+	switch (val) {
+	case CPUFREQ_PRECHANGE:
+		if (freq->new > MID_RATE) {
+			pr_debug("%s,dsu clk switch parent to dsu pre!\n",
+				__func__);
+			if (first_set) {
+				clk_set_rate(dsu_pre_parent, MID_RATE * 1000);
+				first_set = false;
+				pr_info("first set gp1 pll to 1.5G!\n");
+			}
+			if (__clk_get_enable_count(dsu_pre_parent) == 0) {
+				ret = clk_prepare_enable(dsu_pre_parent);
+				if (ret) {
+					pr_err("%s: CPU%d gp1 pll enable failed\n",
+							__func__, policy->cpu);
+					return ret;
+				}
+			}
+
+			ret = clk_set_parent(dsu_clk, dsu_pre_parent);
+		}
+
+		return ret;
+	case CPUFREQ_POSTCHANGE:
+		if (freq->new <= MID_RATE) {
+			pr_debug("%s,dsu clk switch parent to cpu!\n",
+				__func__);
+			ret = clk_set_parent(dsu_clk, dsu_cpu_parent);
+			if (__clk_get_enable_count(dsu_pre_parent) >= 1)
+				clk_disable_unprepare(dsu_pre_parent);
+
+		}
+
+		return ret;
+	default:
+		return 0;
+	}
+	return 0;
+}
+
+static struct notifier_block meson_cpufreq_notifier_block = {
+	.notifier_call = meson_cpufreq_transition_notifier,
+};
+
 /* CPU initialization */
 static int meson_cpufreq_init(struct cpufreq_policy *policy)
 {
@@ -377,6 +448,7 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 	struct regulator *cpu_reg = NULL;
 	struct meson_cpufreq_driver_data *cpufreq_data;
 	struct clk *low_freq_clk_p, *high_freq_clk_p = NULL;
+	struct clk *dsu_clk, *dsu_pre_parent;
 	unsigned int transition_latency = CPUFREQ_ETERNAL;
 	unsigned int volt_tol = 0;
 	unsigned long freq_hz = 0;
@@ -441,6 +513,18 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 		goto free_clk;
 	}
 
+	dsu_clk = of_clk_get_by_name(np, DSU_CLK);
+	if (IS_ERR(dsu_clk)) {
+		dsu_clk = NULL;
+		pr_debug("%s: ignor dsu clk!\n", __func__);
+	}
+
+	dsu_pre_parent = of_clk_get_by_name(np, DSU_PRE_PARENT);
+	if (IS_ERR(dsu_pre_parent)) {
+		dsu_pre_parent = NULL;
+		pr_debug("%s: ignor dsu pre parent clk!\n", __func__);
+	}
+
 	cpu_reg = devm_regulator_get(cpu_dev, CORE_SUPPLY);
 	if (IS_ERR(cpu_reg)) {
 		pr_err("%s:failed to get regulator, %ld\n", __func__,
@@ -482,11 +566,22 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 	if (of_property_read_u32(np, "clock-latency", &transition_latency))
 		policy->cpuinfo.transition_latency = CPUFREQ_ETERNAL;
 
+	cpufreq_data->freq_transition = meson_cpufreq_notifier_block;
+	ret = cpufreq_register_notifier(&cpufreq_data->freq_transition,
+					CPUFREQ_TRANSITION_NOTIFIER);
+	if (ret) {
+		dev_err(cpu_dev, "failed to register cpufreq notifier!\n");
+		goto fail_cpufreq_unregister;
+	}
+
 	cpufreq_data->cpu_dev = cpu_dev;
 	cpufreq_data->low_freq_clk_p = low_freq_clk_p;
 	cpufreq_data->high_freq_clk_p = high_freq_clk_p;
+	cpufreq_data->clk_dsu = dsu_clk;
+	cpufreq_data->clk_dsu_pre = dsu_pre_parent;
 	cpufreq_data->reg = cpu_reg;
 	cpufreq_data->volt_tol = volt_tol;
+	cpufreq_data->policy = policy;
 	policy->driver_data = cpufreq_data;
 	policy->clk = clk[cur_cluster];
 	policy->cpuinfo.transition_latency = transition_latency;
@@ -504,6 +599,9 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 
 	dev_info(cpu_dev, "%s: CPU %d initialized\n", __func__, policy->cpu);
 	return ret;
+fail_cpufreq_unregister:
+		cpufreq_unregister_notifier(&cpufreq_data->freq_transition,
+				CPUFREQ_TRANSITION_NOTIFIER);
 free_opp_table:
 	if (policy->freq_table != NULL) {
 		dev_pm_opp_free_cpufreq_table(cpu_dev,
@@ -572,7 +670,8 @@ static struct cpufreq_driver meson_cpufreq_driver = {
 	.name			= "arm-big-little",
 	.flags			= CPUFREQ_STICKY |
 					CPUFREQ_HAVE_GOVERNOR_PER_POLICY |
-					CPUFREQ_NEED_INITIAL_FREQ_CHECK,
+					CPUFREQ_NEED_INITIAL_FREQ_CHECK |
+					CPUFREQ_ASYNC_NOTIFICATION,
 	.verify			= cpufreq_generic_frequency_table_verify,
 	.target_index	= meson_cpufreq_set_target,
 	.get			= meson_cpufreq_get_rate,
@@ -583,8 +682,6 @@ static struct cpufreq_driver meson_cpufreq_driver = {
 	.resume			= meson_cpufreq_resume,
 };
 
-static int meson_cpufreq_register_notifier(void) { return 0; }
-static int meson_cpufreq_unregister_notifier(void) { return 0; }
 static int meson_cpufreq_probe(struct platform_device *pdev)
 {
 	struct device *cpu_dev;
@@ -622,14 +719,6 @@ static int meson_cpufreq_probe(struct platform_device *pdev)
 	if (ret) {
 		pr_err("%s: Failed registering platform driver, err: %d\n",
 				__func__, ret);
-	} else {
-		ret = meson_cpufreq_register_notifier();
-		if (ret) {
-			cpufreq_unregister_driver(&meson_cpufreq_driver);
-		} else {
-			pr_err("%s: Registered platform drive\n",
-					__func__);
-		}
 	}
 
 	return ret;
@@ -637,8 +726,6 @@ static int meson_cpufreq_probe(struct platform_device *pdev)
 
 static int meson_cpufreq_remove(struct platform_device *pdev)
 {
-	meson_cpufreq_unregister_notifier();
-
 	return cpufreq_unregister_driver(&meson_cpufreq_driver);
 }
 

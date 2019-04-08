@@ -27,6 +27,10 @@
 #define CORE_CLK	"core_clk"
 #define LOW_FREQ_CLK_PARENT	"low_freq_clk_parent"
 #define HIGH_FREQ_CLK_PARENT	"high_freq_clk_parent"
+#define DSU_CLK		"dsu_clk"
+#define DSU_PRE_PARENT "dsu_pre_parent"
+#define to_meson_dvfs_cpu_nb(_nb) container_of(_nb,	\
+		struct meson_cpufreq_driver_data, freq_transition)
 
 static struct clk *clk[MAX_CLUSTERS];
 static struct cpufreq_frequency_table *freq_table[MAX_CLUSTERS];
@@ -38,6 +42,8 @@ static struct cpufreq_frequency_table *freq_table[MAX_CLUSTERS];
 /*mid rate for set parent,Khz*/
 static unsigned int mid_rate = (1000 * 1000);
 static unsigned int gap_rate = (10 * 1000 * 1000);
+static struct cpufreq_freqs freqs;
+#define MID_RATE (1500 * 1000)
 
 /*whether use different tables or not*/
 bool cpufreq_tables_supply;
@@ -53,10 +59,14 @@ enum cpufreq_index {
 struct meson_cpufreq_driver_data {
 	struct device *cpu_dev;
 	struct regulator *reg;
+	struct cpufreq_policy *policy;
 	/* voltage tolerance in percentage */
 	unsigned int volt_tol;
 	struct clk *high_freq_clk_p;
 	struct clk *low_freq_clk_p;
+	struct clk *clk_dsu;
+	struct clk *clk_dsu_pre;
+	struct notifier_block freq_transition;
 };
 
 static struct mutex cluster_lock[MAX_CLUSTERS];
