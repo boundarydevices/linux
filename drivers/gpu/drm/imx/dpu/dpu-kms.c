@@ -761,7 +761,7 @@ static int dpu_drm_atomic_check(struct drm_device *dev,
 		}
 
 		kfree(states);
-	};
+	}
 
 	drm_for_each_crtc(crtc, dev) {
 		if (pipe_states_prone_to_put[drm_crtc_index(crtc)]) {
