@@ -321,10 +321,8 @@ struct sec_mipi_dsim {
 	enum mipi_dsi_pixel_format format;
 	unsigned long mode_flags;
 	const struct dsim_hblank_par *hpar;
-	unsigned int pms;
-	unsigned int p;
-	unsigned int m;
-	unsigned int s;
+	unsigned int c_pms;
+	struct dsim_pll_pms pms;
 	unsigned long long lp_data_rate;
 	unsigned long long hs_data_rate;
 	unsigned long ref_clk;
@@ -423,12 +421,14 @@ static void get_best_ratio(unsigned long *pnum, unsigned long *pdenom, unsigned 
 	*pdenom = d[i];
 }
 
-static int sec_mipi_dsim_get_pms(struct dsim_pll_pms *pms, unsigned long bit_clk, unsigned long ref_clk)
+static int sec_mipi_dsim_get_pms(struct sec_mipi_dsim *dsim, unsigned long bit_clk, unsigned long ref_clk)
 {
+	struct dsim_pll_pms *pms = &dsim->pms;
 	unsigned long numerator;
 	unsigned long denominator;
 	unsigned max_d = 128*33;
 	unsigned p,m;
+	unsigned int c_pms;
 	int s = 0;
 
 	bit_clk = bit_clk * 4 / 3;
@@ -444,7 +444,7 @@ static int sec_mipi_dsim_get_pms(struct dsim_pll_pms *pms, unsigned long bit_clk
 		s++;
 	} while ((denominator >> __ffs(denominator)) > 33);
 
-	pr_info("%s: %ld/%ld = %ld/%ld\n", __func__, numerator, denominator, bit_clk, ref_clk);
+	pr_debug("%s: %ld/%ld = %ld/%ld\n", __func__, numerator, denominator, bit_clk, ref_clk);
 	s = __ffs(denominator);
 	if (s > 7)
 		s = 7;
@@ -504,11 +504,22 @@ static int sec_mipi_dsim_get_pms(struct dsim_pll_pms *pms, unsigned long bit_clk
 			__func__, bit_clk, ref_clk, p, m, s);
 		return -EINVAL;
 	}
-	pms->p = p;
-	pms->m = m;
-	pms->s = s;
-	pms->bit_clk = (ref_clk * m / p) >> s;
-
+	bit_clk = (ref_clk * m / p) >> s;
+	c_pms =	PLLCTRL_SET_P(p) |
+		    PLLCTRL_SET_M(m) |
+		    PLLCTRL_SET_S(s);
+	dsim->c_pms = c_pms;
+	if ((pms->p != p) || (pms->m != m) || (pms->s != s) || (pms->bit_clk != bit_clk)) {
+		pms->p = p;
+		pms->m = m;
+		pms->s = s;
+		pms->bit_clk = bit_clk;
+		pr_info("%s: bit_clk=%ld ref_clk=%ld, p=%d, m=%d, s=%d, lanes=%d\n",
+			__func__, bit_clk, ref_clk, p, m, s, dsim->lanes);
+	}
+	/* Divided by 2 because mipi output clock is DDR */
+	dsim->frequency = bit_clk / 2;
+	dsim->bit_clk = DIV_ROUND_UP_ULL(bit_clk, 1000);
 	return 0;
 }
 
@@ -941,7 +952,7 @@ static int sec_mipi_dsim_config_pll(struct sec_mipi_dsim *dsim)
 
 	/* TODO: config dp/dn swap if requires */
 
-	pllctrl |= PLLCTRL_SET_PMS(dsim->pms) | PLLCTRL_PLLEN;
+	pllctrl |= PLLCTRL_SET_PMS(dsim->c_pms) | PLLCTRL_PLLEN;
 	dsim_write(dsim, pllctrl, DSIM_PLLCTRL);
 
 	ret = wait_for_completion_timeout(&dsim->pll_stable, HZ / 10);
@@ -1230,7 +1241,6 @@ int sec_mipi_dsim_check_pll_out(struct drm_bridge *bridge,
 	struct sec_mipi_dsim *dsim = bridge->driver_private;
 	const struct sec_mipi_dsim_plat_data *pdata = dsim->pdata;
 	const struct dsim_hblank_par *hpar;
-	struct dsim_pll_pms pms;
 	int ret;
 
 	bpp = mipi_dsi_pixel_format_to_bpp(dsim->format);
@@ -1263,7 +1273,7 @@ int sec_mipi_dsim_check_pll_out(struct drm_bridge *bridge,
 			if (div)
 				ref_clk = ref_parent_clk / div;
 		}
-		pr_info("%s: ref_clk=%ld, ref_parent_clk=%ld, pix_clk=%ld, div=%ld\n",
+		pr_debug("%s: ref_clk=%ld, ref_parent_clk=%ld, pix_clk=%ld, div=%ld\n",
 			__func__, ref_clk, ref_parent_clk, pix_clk, div);
 	}
 	while (ref_clk > 48000000) {
@@ -1274,30 +1284,19 @@ int sec_mipi_dsim_check_pll_out(struct drm_bridge *bridge,
 	}
 	clk_set_rate(dsim->clk_pllref, ref_clk);
 	dsim->ref_clk = ref_clk = clk_get_rate(dsim->clk_pllref);
-	pr_info("%s: ref_clk=%ld\n", __func__, ref_clk);
+	pr_debug("%s: ref_clk=%ld\n", __func__, ref_clk);
 
 	dsim->pix_clk = DIV_ROUND_UP_ULL(pix_clk, 1000);
 	dsim->bit_clk = DIV_ROUND_UP_ULL(bit_clk, 1000);
 
-	dsim->pms = 0x4210;
+	dsim->c_pms = 0x4210;
 	dsim->hpar = NULL;
 	if (!dsim->panel)
 		return 0;
 
-	ret = sec_mipi_dsim_get_pms(&pms, bit_clk, dsim->ref_clk);
+	ret = sec_mipi_dsim_get_pms(dsim, bit_clk, dsim->ref_clk);
 	if (ret < 0)
 		return ret;
-	dsim->pms = PLLCTRL_SET_P(pms.p) |
-		    PLLCTRL_SET_M(pms.m) |
-		    PLLCTRL_SET_S(pms.s);
-	/* Divided by 2 because mipi output clock is DDR */
-	dsim->frequency = pms.bit_clk / 2;
-
-	dsim->bit_clk = DIV_ROUND_UP_ULL(pms.bit_clk, 1000);
-
-	pr_info("%s:%lld,%ld, ref_clk=%ld p=%d, m=%d, s=%d, lanes=%d\n",
-		__func__, pms.bit_clk, bit_clk, dsim->ref_clk,
-		pms.p, pms.m, pms.s, dsim->lanes);
 	if (dsim->dsi_clk_hw.clk)
 		clk_set_rate(dsim->dsi_clk_hw.clk, dsim->frequency);
 
