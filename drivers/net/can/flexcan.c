@@ -101,6 +101,7 @@
 #define FLEXCAN_CTRL2_MRP		BIT(18)
 #define FLEXCAN_CTRL2_RRS		BIT(17)
 #define FLEXCAN_CTRL2_EACEN		BIT(16)
+#define FLEXCAN_CTRL2_ISOCANFDEN	BIT(12)
 
 /* FLEXCAN memory error control register (MECR) bits */
 #define FLEXCAN_MECR_ECRWRDIS		BIT(31)
@@ -1364,6 +1365,11 @@ static int flexcan_chip_start(struct net_device *dev)
 		reg_mcr = flexcan_read_le(&regs->mcr);
 		flexcan_write_le(reg_mcr | FLEXCAN_MCR_FDEN, &regs->mcr);
 
+		if (!(priv->can.ctrlmode & CAN_CTRLMODE_FD_NON_ISO)) {
+			reg_ctrl2 = priv->read(&regs->ctrl2);
+			priv->write(reg_ctrl2 | FLEXCAN_CTRL2_ISOCANFDEN, &regs->ctrl2);
+		}
+
 		priv->mb_size = FLEXCAN_MB_FD_SIZE;
 		priv->mb_num = FLEXCAN_MB_FD_NUM;
 	} else {
@@ -1828,7 +1834,7 @@ static int flexcan_probe(struct platform_device *pdev)
 	if (priv->devtype_data->quirks & FLEXCAN_QUIRK_USE_OFF_TIMESTAMP) {
 		if (priv->devtype_data->quirks & FLEXCAN_QUIRK_TIMESTAMP_SUPPORT_FD) {
 			if (!(of_find_property(np, "disable-fd-mode", NULL))) {
-				priv->can.ctrlmode_supported |= CAN_CTRLMODE_FD;
+				priv->can.ctrlmode_supported = CAN_CTRLMODE_FD | CAN_CTRLMODE_FD_NON_ISO;
 				priv->can.bittiming_const = &flexcan_fd_bittiming_const;
 				priv->offload.is_canfd = true;
 			}
