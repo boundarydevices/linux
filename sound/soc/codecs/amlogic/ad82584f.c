@@ -824,11 +824,14 @@ static int ad82584f_init(struct snd_soc_codec *codec)
 			0x1 << 0   /* 64x bclk/fs */
 			);
 
-	/*eq and drc*/
+	/* eq and drc */
 	ad82584f_set_eq_drc(codec);
 
-	/*unmute,default power-on is mute.*/
-	/*snd_soc_write(codec, 0x02, 0x00);*/
+	/* for de-pop */
+	udelay(100);
+
+	/* unmute, default power-on is mute. */
+	snd_soc_write(codec, 0x02, 0x00);
 
 	return 0;
 }
