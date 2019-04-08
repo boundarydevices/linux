@@ -163,8 +163,9 @@ unsigned long notrace irq_stack_entry(unsigned long sp)
 		sp_irq = (unsigned long)dst - 8;
 		/*
 		 * save start addr of the interrupted task's context
+		 * minus an extra 12 to force base sp 16Bytes aligned
 		 */
-		sp_irq = sp_irq - sizeof(sp);
+		sp_irq = sp_irq - sizeof(sp) - 12;
 		*((unsigned long *)sp_irq) = sp;
 		return sp_irq;
 	}
