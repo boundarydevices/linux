@@ -1,0 +1,157 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2019 Boundary Devices
+ */
+
+#include "imx8mm-nitrogen8mm.dts"
+
+&iomuxc_pinctrl {
+	pinctrl_i2c2_sn65dsi83: i2c2-sn65dsi83grp {
+		fsl,pins = <
+#define GPIRQ_I2C2_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
+			MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1		0x04
+#undef  GP_I2C2_SN65DSI83_EN
+#define GP_I2C2_SN65DSI83_EN	<&gpio5 0 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_SAI3_TXC_GPIO5_IO0			0x106
+		>;
+	};
+
+	/delete-node/ i2c3a-rv4162grp;
+	/delete-node/ i2c3b-csi1grp;
+
+	pinctrl_i2c2_rv4162: i2c2-rv4162grp {
+		fsl,pins = <
+#undef  GPIRQ_RV4162
+#define GPIRQ_RV4162		<&gpio1 3 IRQ_TYPE_LEVEL_LOW>
+			MX8MM_IOMUXC_GPIO1_IO03_GPIO1_IO3		0x1c0
+		>;
+	};
+
+	pinctrl_i2c3_csi1: i2c3-csi1grp {
+		fsl,pins = <
+#undef GP_CSI1_MIPI_PWDN
+#define GP_CSI1_MIPI_PWDN	<&gpio1 11 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_GPIO1_IO11_GPIO1_IO11		0x141
+#undef  GP_CSI1_MIPI_RESET
+#define GP_CSI1_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9		0x101
+		>;
+	};
+
+	pinctrl_pwm4: pwm4grp {
+		fsl,pins = <
+			MX8MM_IOMUXC_GPIO1_IO15_PWM4_OUT		0x16
+		>;
+	};
+
+	pinctrl_usbotg2: usbotg2grp {
+		fsl,pins = <
+			MX8MM_IOMUXC_GPIO1_IO14_USB2_OTG_PWR		0x16
+			MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8		0x16
+		>;
+	};
+
+};
+
+/ {
+	model = "Boundary Devices i.MX8MMini Nitrogen8MM Som";
+	compatible = "boundary,imx8mm-nitrogen8mm_som", "fsl,imx8mm";
+
+	aliases {
+		mipi_to_lvds = &mipi_to_lvds_som;
+	};
+
+        mipi_xclk: mipi-xclk {
+		assigned-clocks = <&clk IMX8MM_CLK_PWM4_SRC>;
+		assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_40M>;
+                compatible = "pwm-clock";
+                #clock-cells = <0>;
+                clock-frequency = <20000000>;
+                clock-output-names = "mipi_pwm4";
+                pwms = <&pwm4 0 50>; /* 20 MHz */
+        };
+};
+
+&i2c2 {
+	/delete-node/ mipi-to-lvds@2c;
+	/delete-node/ touchscreen@38;
+	/delete-node/ touchscreen@5d;
+
+	rtc@68 {
+		compatible = "microcrystal,rv4162";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_rv4162>;
+		reg = <0x68>;
+		interrupts-extended = GPIRQ_RV4162;
+		wakeup-source;
+	};
+};
+
+&i2c3 {
+	/delete-node/ i2cmux@70;
+
+	ov5640-mipi1@3c {
+		compatible = "ov5640_mipisubdev";
+		reg = <0x3c>;
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_csi1>;
+		clocks = <&mipi_xclk>;
+		clock-names = "csi_mclk";
+		csi_id = <1>;
+		AVDD-supply = <&reg_vref_2v5>;
+		DVDD-supply = <&reg_vref_3v3>;
+		DOVDD-supply = <&reg_vref_1v8>;
+		pwn-gpios = GP_CSI1_MIPI_PWDN;
+		rst-gpios = GP_CSI1_MIPI_RESET;
+		mclk = <20000000>;
+		mipi_csi;
+
+		port {
+			ov5640_mipi1_ep: endpoint {
+				remote-endpoint = <&mipi1_sensor_ep>;
+			};
+		};
+	};
+};
+
+&i2c4 {
+	mipi_to_lvds_som: mipi-to-lvds@2c {
+		clocks = <&mipi_dsi 0>;
+		clock-names = "mipi_clk";
+		compatible = "ti,sn65dsi83";
+		display = <&display_subsystem>;
+		display-dsi = <&fb_mipi>;
+		enable-gpios = GP_I2C2_SN65DSI83_EN;
+		interrupts-extended = GPIRQ_I2C2_SN65DSI83;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_sn65dsi83>;
+		reg = <0x2c>;
+		status = "okay";
+	};
+
+	touchscreen@38 {
+		compatible = "ft5x06-ts";
+		interrupts-extended = GPIRQ_I2C2_FT5X06;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_ft5x06>;
+		reg = <0x38>;
+		wakeup-gpios = GP_I2C2_FT5X06_WAKE;
+		reset-gpios = GP_I2C2_FT5X06_RESET;
+	};
+
+	touchscreen@5d {
+		compatible = "goodix,gt9271";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_gt911>;
+		reg = <0x5d>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		reset-gpios = GP_GT911_RESET;
+	};
+};
+
+&usbotg2 {
+	disable-over-current;
+};

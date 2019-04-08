@@ -137,7 +137,9 @@ dtb-$(CONFIG_ARCH_FSL_IMX8MM) += fsl-imx8mm-evk.dtb \
 				 fsl-imx8mm-evk-revb-rm67191.dtb \
 				 fsl-imx8mm-ddr4-evk-rm67191.dtb \
 				 imx8mm-nitrogen8mm.dtb \
-				 imx8mm-nitrogen8mm-m4.dtb
+				 imx8mm-nitrogen8mm-m4.dtb \
+				 imx8mm-nitrogen8mm_som.dtb \
+
 always		:= $(dtb-y)
 subdir-y	:= $(dts-dirs)
 clean-files	:= *.dtb
