@@ -20,7 +20,7 @@
 	pinctrl_bt_rfkill: bt-rfkillgrp {
 		fsl,pins = <
 #define GP_BT_RFKILL_RESET	<&gpio3 14 GPIO_ACTIVE_LOW>
-			MX8MM_IOMUXC_NAND_DQS_GPIO3_IO14		0x19
+			MX8MM_IOMUXC_NAND_DQS_GPIO3_IO14		0x119
 		>;
 	};
 
@@ -37,8 +37,9 @@
 
 	pinctrl_fec1: fec1grp {
 		fsl,pins = <
-			MX8MM_IOMUXC_ENET_MDC_ENET1_MDC			0x3
-			MX8MM_IOMUXC_ENET_MDIO_ENET1_MDIO		0x3
+			MX8MM_IOMUXC_ENET_MDC_ENET1_MDC			0x00
+			/* PAD_CTL_ODE is screwy on 8mm mini, avoid it */
+			MX8MM_IOMUXC_ENET_MDIO_ENET1_MDIO		0x00
 			MX8MM_IOMUXC_ENET_RD0_ENET1_RGMII_RD0		0x91
 			MX8MM_IOMUXC_ENET_RD1_ENET1_RGMII_RD1		0x91
 			MX8MM_IOMUXC_ENET_RD2_ENET1_RGMII_RD2		0x91
@@ -72,7 +73,7 @@
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 			/* TODO expansion connector pinmux */
-			MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8		0x1d6
+			MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8		0x1c0
 		>;
 	};
 
@@ -80,6 +81,15 @@
 		fsl,pins = <
 			MX8MM_IOMUXC_I2C1_SCL_I2C1_SCL			0x400001c3
 			MX8MM_IOMUXC_I2C1_SDA_I2C1_SDA			0x400001c3
+		>;
+	};
+
+	pinctrl_i2c1_1: i2c1_1grp {
+		fsl,pins = <
+#define GP_I2C1_SCL	<&gpio5 14 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_I2C1_SCL_GPIO5_IO14		0x400001c3
+#define GP_I2C1_SDA	<&gpio5 15 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_I2C1_SDA_GPIO5_IO15		0x400001c3
 		>;
 	};
 
@@ -96,6 +106,15 @@
 		fsl,pins = <
 			MX8MM_IOMUXC_I2C2_SCL_I2C2_SCL			0x400001c3
 			MX8MM_IOMUXC_I2C2_SDA_I2C2_SDA			0x400001c3
+		>;
+	};
+
+	pinctrl_i2c2_1: i2c2_1grp {
+		fsl,pins = <
+#define GP_I2C2_SCL	<&gpio5 16 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_I2C2_SCL_GPIO5_IO16		0x400001c3
+#define GP_I2C2_SDA	<&gpio5 17 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_I2C2_SDA_GPIO5_IO17		0x400001c3
 		>;
 	};
 
@@ -116,7 +135,7 @@
 #define GP_I2C2_FT5X06_WAKE	<&gpio1 6 GPIO_ACTIVE_LOW>
 			MX8MM_IOMUXC_GPIO1_IO06_GPIO1_IO6		0x149
 #define GP_I2C2_FT5X06_RESET	<&gpio1 7 GPIO_ACTIVE_LOW>
-			MX8MM_IOMUXC_GPIO1_IO07_GPIO1_IO7		0x149
+			MX8MM_IOMUXC_GPIO1_IO07_GPIO1_IO7		0x109
 		>;
 	};
 
@@ -125,7 +144,7 @@
 #define GPIRQ_I2C2_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
 			MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1		0x04
 #define GP_I2C2_SN65DSI83_EN	<&gpio1 9 GPIO_ACTIVE_HIGH>
-			MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9		0x06
+			MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9		0x106
 		>;
 	};
 
@@ -133,6 +152,15 @@
 		fsl,pins = <
 			MX8MM_IOMUXC_I2C3_SCL_I2C3_SCL			0x400001c3
 			MX8MM_IOMUXC_I2C3_SDA_I2C3_SDA			0x400001c3
+		>;
+	};
+
+	pinctrl_i2c3_1: i2c3_1grp {
+		fsl,pins = <
+#define GP_I2C3_SCL	<&gpio5 18 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_I2C3_SCL_GPIO5_IO18		0x400001c3
+#define GP_I2C3_SDA	<&gpio5 19 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_I2C3_SDA_GPIO5_IO19		0x400001c3
 		>;
 	};
 
@@ -159,10 +187,19 @@
 		>;
 	};
 
+	pinctrl_i2c4_1: i2c4_1grp {
+		fsl,pins = <
+#define GP_I2C4_SCL	<&gpio5 20 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_I2C4_SCL_GPIO5_IO20		0x400001c3
+#define GP_I2C4_SDA	<&gpio5 21 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_I2C4_SDA_GPIO5_IO21		0x400001c3
+		>;
+	};
+
 	pinctrl_ltk080a60a004t: ltk080a60a004tgrp {
 		fsl,pins = <
 #define GP_LTK08_MIPI_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
-			MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x16
+			MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x116
 		>;
 	};
 
@@ -529,13 +566,6 @@
 			  3300000 0x0>;
 	};
 
-	reg_vref_0v9: regulator-vref-0v9 {
-		compatible = "regulator-fixed";
-		regulator-name = "vref-0v9";
-		regulator-min-microvolt = <900000>;
-		regulator-max-microvolt = <900000>;
-	};
-
 	reg_vref_1v8: regulator-vref-1v8 {
 		compatible = "regulator-fixed";
 		regulator-name = "vref-1v8";
@@ -676,8 +706,11 @@
 
 &i2c1 {
 	clock-frequency = <400000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c1>;
+	pinctrl-1 = <&pinctrl_i2c1_1>;
+	scl-gpios = GP_I2C1_SCL;
+	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
 	pf8100@08 {
@@ -783,8 +816,11 @@
 
 &i2c2 {
 	clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c2>;
+	pinctrl-1 = <&pinctrl_i2c2_1>;
+	scl-gpios = GP_I2C2_SCL;
+	sda-gpios = GP_I2C2_SDA;
 	status = "okay";
 
 	mipi_to_lvds: mipi-to-lvds@2c {
@@ -825,8 +861,11 @@
 
 &i2c3 {
 	clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c3>;
+	pinctrl-1 = <&pinctrl_i2c3_1>;
+	scl-gpios = GP_I2C3_SCL;
+	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
 	i2cmux@70 {
@@ -892,8 +931,11 @@
 
 &i2c4 {
 	clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c4>;
+	pinctrl-1 = <&pinctrl_i2c4_1>;
+	scl-gpios = GP_I2C4_SCL;
+	sda-gpios = GP_I2C4_SDA;
 	status = "okay";
 
 	wm8960: codec@1a {
@@ -1076,7 +1118,7 @@
 	status = "okay";
 };
 
-&uart2 {
+&uart2 { /* console */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2>;
 	assigned-clocks = <&clk IMX8MM_CLK_UART2_SRC>;
@@ -1120,39 +1162,40 @@
 &usdhc1 {
 	bus-width = <8>;
 	no-mmc-hs400;
+	non-removable;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc1>;
 	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
-	non-removable;
-	vqmmc-1-8-v;
-	vmmc-supply = <&reg_vref_1v8>;
 	status = "okay";
+	vmmc-supply = <&reg_vref_3v3>;
+	vqmmc-1-8-v;
+	vqmmc-supply = <&reg_vref_1v8>;
 };
 
 &usdhc2 {
+	bus-width = <4>;
+	cd-gpios = GP_USDHC2_CD;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc2>;
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
-	cd-gpios = GP_USDHC2_CD;
-	bus-width = <4>;
+	status = "okay";
 #if 0
 	vqmmc-supply = <&reg_usdhc2_vqmmc>;
 #else
 	vqmmc-supply = <&reg_ldo2>;
 #endif
-	status = "okay";
 };
 
 &usdhc3 {
 	bus-width = <4>;
 	no-sd-uhs-sdr104;
+	non-removable;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc3>;
 	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
-	non-removable;
 	status = "okay";
 	vmmc-supply = <&reg_wlan_vmmc>;
 	vqmmc-1-8-v;
