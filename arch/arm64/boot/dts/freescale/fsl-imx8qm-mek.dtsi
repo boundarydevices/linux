@@ -178,13 +178,6 @@
 		status = "okay";
 	};
 
-	sound-amix-sai {
-		compatible = "fsl,imx-audio-amix";
-		model = "amix-audio-sai";
-		dais = <&sai6>, <&sai7>;
-		amix-controller = <&amix>;
-	};
-
 	lvds_backlight0: lvds_backlight@0 {
 		compatible = "pwm-backlight";
 		pwms = <&lvds0_pwm 0 100000 0>;
@@ -226,7 +219,7 @@
 	status = "okay";
 };
 
-&amix {
+&audmix {
 	status = "okay";
 };
 

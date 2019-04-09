@@ -878,7 +878,7 @@
 								#power-domain-cells = <0>;
 								power-domains =<&pd_audio_clk1>;
 							};
-							pd_amix: PD_AUD_AMIX {
+							pd_audmix: PD_AUD_AMIX {
 								reg = <SC_R_AMIX>;
 								#power-domain-cells = <0>;
 								power-domains =<&pd_audio_clk1>;
@@ -4025,12 +4025,13 @@
 		power-domains = <&pd_sai7>;
 	};
 
-	amix: amix@59840000 {
-		compatible = "fsl,imx8qm-amix";
+	audmix: audmix@59840000 {
+		compatible = "fsl,imx8qm-audmix";
 		reg = <0x0 0x59840000 0x0 0x10000>;
 		clocks = <&clk IMX8QM_AUD_AMIX_IPG>;
 		clock-names = "ipg";
-		power-domains = <&pd_amix>;
+		power-domains = <&pd_audmix>;
+		dais = <&sai6>, <&sai7>;
 		status = "disabled";
 	};
 

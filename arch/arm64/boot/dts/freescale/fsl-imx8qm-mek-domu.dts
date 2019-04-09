@@ -864,7 +864,7 @@
 /delete-node/ &sai_hdmi_tx;
 /delete-node/ &sai6;
 /delete-node/ &sai7;
-/delete-node/ &amix;
+/delete-node/ &audmix;
 
 &asrc0 {
 	dmas = <&edma20 0 0 0>, <&edma20 1 0 0>, <&edma20 2 0 0>,

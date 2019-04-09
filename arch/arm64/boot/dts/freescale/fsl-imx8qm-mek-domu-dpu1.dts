@@ -678,7 +678,7 @@
 /delete-node/ &sai_hdmi_tx;
 /delete-node/ &sai6;
 /delete-node/ &sai7;
-/delete-node/ &amix;
+/delete-node/ &audmix;
 /delete-node/ &asrc0;
 /delete-node/ &asrc1;
 /delete-node/ &mqs;

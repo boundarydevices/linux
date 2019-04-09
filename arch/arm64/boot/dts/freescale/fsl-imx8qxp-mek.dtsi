@@ -146,13 +146,6 @@
 			"CPU-Capture", "Capture";
 	};
 
-	sound-amix-sai {
-		compatible = "fsl,imx-audio-amix";
-		model = "amix-audio-sai";
-		dais = <&sai4>, <&sai5>;
-		amix-controller = <&amix>;
-	};
-
 	sound-cs42888 {
 		compatible = "fsl,imx8qm-sabreauto-cs42888",
 				"fsl,imx-audio-cs42888";
@@ -214,7 +207,7 @@
 	status = "okay";
 };
 
-&amix {
+&audmix {
 	status = "okay";
 };
 
