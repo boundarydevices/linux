@@ -485,7 +485,6 @@
 	aliases {
 		backlight_mipi = &backlight_mipi;
 		fb_mipi = &fb_mipi;
-		gpio1 = &gpio1;
 		lcdif = &lcdif;
 		mipi = &fb_mipi;
 		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
