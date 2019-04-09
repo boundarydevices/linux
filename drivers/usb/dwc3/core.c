@@ -1174,8 +1174,10 @@ static void dwc3_get_properties(struct dwc3 *dwc)
 				 &dwc->fladj);
 
 	vbus_reg = devm_regulator_get_optional(dev, "vbus");
-	if (IS_ERR(vbus_reg))
-		dev_err(dev, "vbus regulator failed\n");
+	if (IS_ERR(vbus_reg)) {
+		dev_err(dev, "vbus regulator failed %ld\n", PTR_ERR(vbus_reg));
+		vbus_reg = NULL;
+	}
 	dwc->vbus_reg = vbus_reg;
 
 	dwc->lpm_nyet_threshold = lpm_nyet_threshold;
