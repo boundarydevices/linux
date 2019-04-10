@@ -1389,7 +1389,7 @@
 	dmc_monitor {
 		compatible = "amlogic, dmc_monitor";
 		status = "okay";
-		reg_base = <0xff638800>;
+		reg_base = <0xff639000>;
 		interrupts = <GIC_SPI 51 IRQ_TYPE_EDGE_RISING>;
 	};
 

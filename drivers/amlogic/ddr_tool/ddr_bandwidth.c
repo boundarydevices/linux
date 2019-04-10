@@ -43,7 +43,7 @@ static const unsigned int bandwidth_cable[] = {
 static void cal_ddr_usage(struct ddr_bandwidth *db, struct ddr_grant *dg)
 {
 	u64 mul; /* avoid overflow */
-	unsigned long i, cnt, freq = 0;
+	unsigned long i, cnt, freq = 0, flags;
 
 	if (db->mode == MODE_AUTODETECT) { /* ignore mali bandwidth */
 		static int count;
@@ -77,22 +77,43 @@ static void cal_ddr_usage(struct ddr_bandwidth *db, struct ddr_grant *dg)
 	mul /= 16;
 	cnt  = db->clock_count;
 	do_div(mul, cnt);
-	db->total_usage = mul;
+	db->cur_sample.total_usage = mul;
 	if (freq) {
 		/* calculate in KB */
 		mul  = dg->all_grant;
 		mul *= freq;
 		mul /= 1024;
 		do_div(mul, cnt);
-		db->total_bandwidth = mul;
+		db->cur_sample.total_bandwidth = mul;
+		db->cur_sample.tick = sched_clock();
 		for (i = 0; i < db->channels; i++) {
 			mul  = dg->channel_grant[i];
 			mul *= freq;
 			mul /= 1024;
 			do_div(mul, cnt);
-			db->bandwidth[i] = mul;
+			db->cur_sample.bandwidth[i] = mul;
 		}
 	}
+
+	if (db->stat_flag)  /* stop update usage stat if flag set */
+		return;
+
+	spin_lock_irqsave(&aml_db->lock, flags);
+	/* update max sample */
+	if (db->cur_sample.total_bandwidth > db->max_sample.total_bandwidth) {
+		memcpy(&db->max_sample, &db->cur_sample,
+		       sizeof(struct ddr_bandwidth_sample));
+	}
+	/* update usage statistics */
+	db->usage_stat[db->cur_sample.total_usage / 1000]++;
+
+	/* collect for average bandwidth calculate */
+	db->avg.avg_bandwidth += db->cur_sample.total_bandwidth;
+	db->avg.avg_usage     += db->cur_sample.total_usage;
+	for (i = 0; i < db->channels; i++)
+		db->avg.avg_port[i]  += db->cur_sample.bandwidth[i];
+	db->avg.sample_count++;
+	spin_unlock_irqrestore(&aml_db->lock, flags);
 }
 
 static irqreturn_t dmc_irq_handler(int irq, void *dev_instance)
@@ -113,7 +134,7 @@ unsigned int aml_get_ddr_usage(void)
 	unsigned int ret = 0;
 
 	if (aml_db)
-		ret = aml_db->total_usage;
+		ret = aml_db->cur_sample.total_usage;
 
 	return ret;
 }
@@ -268,8 +289,8 @@ static ssize_t mode_store(struct class *cla,
 			aml_db->ops->init(aml_db);
 	} else if ((aml_db->mode != MODE_DISABLE) && (val == MODE_DISABLE)) {
 		free_irq(aml_db->irq_num, (void *)aml_db);
-		aml_db->total_usage = 0;
-		aml_db->total_bandwidth = 0;
+		aml_db->cur_sample.total_usage = 0;
+		aml_db->cur_sample.total_bandwidth = 0;
 		aml_db->busy = 0;
 	}
 	aml_db->mode = val;
@@ -301,24 +322,116 @@ static ssize_t clock_count_store(struct class *cla,
 	return count;
 }
 
+static ssize_t usage_stat_store(struct class *cla,
+	struct class_attribute *attr, const char *buf, size_t count)
+{
+	unsigned long flags;
+	int d = -1;
+
+	if (kstrtoint(buf, 10, &d))
+		return count;
+
+	aml_db->stat_flag = d;
+	if (d)
+		return count;
+
+	/* clear flag and start statistics */
+	spin_lock_irqsave(&aml_db->lock, flags);
+	memset(&aml_db->max_sample, 0, sizeof(struct ddr_bandwidth_sample));
+	memset(aml_db->usage_stat, 0, 10 * sizeof(int));
+	memset(&aml_db->avg, 0, sizeof(struct ddr_avg_bandwidth));
+	spin_unlock_irqrestore(&aml_db->lock, flags);
+	return count;
+}
+
+static ssize_t usage_stat_show(struct class *cla,
+	struct class_attribute *attr, char *buf)
+{
+	size_t s = 0;
+	int percent, rem, i;
+	unsigned long long tick;
+	unsigned long total_count = 0;
+	struct ddr_avg_bandwidth tmp;
+#define MAX_PREFIX "MAX bandwidth: %8d KB/s, usage: %2d.%02d%%"
+#define AVG_PREFIX "AVG bandwidth: %8lld KB/s, usage: %2d.%02d%%"
+
+	if (aml_db->mode != MODE_ENABLE)
+		return sprintf(buf, "set mode to enable(1) first.\n");
+
+	/* show for max bandwidth */
+	percent = aml_db->max_sample.total_usage / 100;
+	rem     = aml_db->max_sample.total_usage % 100;
+	tick    = aml_db->max_sample.tick;
+	do_div(tick, 1000);
+	s      += sprintf(buf + s, MAX_PREFIX", tick:%lld us\n",
+			  aml_db->max_sample.total_bandwidth,
+			  percent, rem, tick);
+	for (i = 0; i < aml_db->channels; i++) {
+		s += sprintf(buf + s, "ch:%d port:%16llx: %8d KB/s\n",
+			     i, aml_db->port[i],
+			     aml_db->max_sample.bandwidth[i]);
+	}
+
+	/* show for average bandwidth */
+	if (aml_db->avg.sample_count) {
+		memcpy(&tmp, &aml_db->avg, sizeof(tmp));
+		do_div(tmp.avg_bandwidth, tmp.sample_count);
+		do_div(tmp.avg_usage,     tmp.sample_count);
+		for (i = 0; i < aml_db->channels; i++)
+			do_div(tmp.avg_port[i], tmp.sample_count);
+
+		rem     = do_div(tmp.avg_usage, 100);
+		percent = tmp.avg_usage,
+		s      += sprintf(buf + s, AVG_PREFIX", samples:%d\n",
+				  tmp.avg_bandwidth,
+				  percent, rem, tmp.sample_count);
+		for (i = 0; i < aml_db->channels; i++) {
+			s += sprintf(buf + s, "ch:%d port:%16llx: %8lld KB/s\n",
+				     i, aml_db->port[i],
+				     tmp.avg_port[i]);
+		}
+	}
+
+	/* show for usage statistics */
+	for (i = 0; i < 10; i++)
+		total_count += aml_db->usage_stat[i];
+
+	s += sprintf(buf + s, "\nusage statistics:\n");
+	s += sprintf(buf + s, "range,         count,  proportion\n");
+	for (i = 0; i < 10; i++) {
+		percent = aml_db->usage_stat[i] * 10000 / total_count;
+		rem     = percent % 100;
+		percent = percent / 100;
+		s += sprintf(buf + s, "%2d%% ~ %3d%%: %8d,  %3d.%02d%%\n",
+			     i * 10, (i + 1) * 10,
+			     aml_db->usage_stat[i], percent, rem);
+	}
+	return s;
+}
+
 static ssize_t bandwidth_show(struct class *cla,
 	struct class_attribute *attr, char *buf)
 {
 	size_t s = 0;
 	int percent, rem, i;
+	unsigned long long tick;
 #define BANDWIDTH_PREFIX "Total bandwidth: %8d KB/s, usage: %2d.%02d%%\n"
 
 	if (aml_db->mode != MODE_ENABLE)
 		return sprintf(buf, "set mode to enable(1) first.\n");
 
-	percent = aml_db->total_usage / 100;
-	rem     = aml_db->total_usage % 100;
+	percent = aml_db->cur_sample.total_usage / 100;
+	rem     = aml_db->cur_sample.total_usage % 100;
+	tick    = aml_db->cur_sample.tick;
+	do_div(tick, 1000);
 	s      += sprintf(buf + s, BANDWIDTH_PREFIX,
-			aml_db->total_bandwidth, percent, rem);
+			  aml_db->cur_sample.total_bandwidth,
+			  percent, rem);
 
 	for (i = 0; i < aml_db->channels; i++) {
-		s += sprintf(buf + s, "ch:%d port bit:%16llx: %8d KB/s\n",
-			     i, aml_db->port[i], aml_db->bandwidth[i]);
+		s += sprintf(buf + s, "ch:%d port:%16llx: %8d KB/s\n",
+			     i, aml_db->port[i],
+			     aml_db->cur_sample.bandwidth[i]);
 	}
 	return s;
 }
@@ -466,6 +579,7 @@ static struct class_attribute aml_ddr_tool_attr[] = {
 	__ATTR(urgent, 0664, urgent_show, urgent_store),
 	__ATTR(threshold, 0664, threshold_show, threshold_store),
 	__ATTR(mode, 0664, mode_show, mode_store),
+	__ATTR(usage_stat, 0664, usage_stat_show, usage_stat_store),
 	__ATTR_RO(busy),
 	__ATTR_RO(bandwidth),
 	__ATTR_RO(freq),
@@ -597,6 +711,7 @@ static int __ref ddr_bandwidth_probe(struct platform_device *pdev)
 
 	aml_db->irq_num = of_irq_get(node, 0);
 #endif
+	spin_lock_init(&aml_db->lock);
 	aml_db->clock_count = DEFAULT_CLK_CNT;
 	aml_db->mode = MODE_DISABLE;
 	aml_db->threshold = DEFAULT_THRESHOLD * 16 *

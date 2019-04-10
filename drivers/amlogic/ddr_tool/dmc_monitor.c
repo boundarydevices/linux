@@ -109,6 +109,30 @@ unsigned int get_all_dev_mask(void)
 	return ret;
 }
 
+static unsigned int get_other_dev_mask(void)
+{
+	unsigned int ret = 0;
+	int i;
+
+	for (i = 0; i < PORT_MAJOR; i++) {
+		if (dmc_mon->port[i].port_id >= PORT_MAJOR)
+			break;
+
+		/*
+		 * we don't want id with arm mali and device
+		 * because these devices can access all ddr range
+		 * and generate value-less report
+		 */
+		if (strstr(dmc_mon->port[i].port_name, "ARM")  ||
+		    strstr(dmc_mon->port[i].port_name, "MALI") ||
+		    strstr(dmc_mon->port[i].port_name, "DEVICE"))
+			continue;
+
+		ret |= (1 << dmc_mon->port[i].port_id);
+	}
+	return ret;
+}
+
 static size_t dump_reg(char *buf)
 {
 	size_t sz = 0, i;
@@ -220,6 +244,8 @@ static ssize_t dev_store(struct class *cla,
 	}
 	if (!strncmp(buf, "all", 3))
 		dmc_mon->device = get_all_dev_mask();
+	else if (!strncmp(buf, "other", 5))
+		dmc_mon->device = get_other_dev_mask();
 	else {
 		i = dev_name_to_id(buf);
 		if (i < 0) {

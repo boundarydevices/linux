@@ -83,12 +83,24 @@ static void check_violation(struct dmc_monitor *mon)
 	struct page *page;
 	unsigned long *p;
 	char id_str[4];
-	char off1 = 21, off2 = 10;
+	char off1, off2;
 
-	if (mon->chip == MESON_CPU_MAJOR_ID_G12B) {
+	switch (mon->chip) {
+	case MESON_CPU_MAJOR_ID_G12B:
 		/* bit fix for G12B */
 		off1 = 24;
 		off2 = 13;
+		break;
+	case MESON_CPU_MAJOR_ID_SM1:
+	case MESON_CPU_MAJOR_ID_TL1:
+		/* bit fix for SM1/TL1 */
+		off1 = 22;
+		off2 = 11;
+		break;
+	default: /* G12A */
+		off1 = 21;
+		off2 = 10;
+		break;
 	}
 
 	for (i = 1; i < 4; i += 2) {

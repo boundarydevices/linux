@@ -114,6 +114,7 @@
 struct ddr_bandwidth;
 
 struct ddr_grant {
+	unsigned long long tick;
 	unsigned int all_grant, all_req;
 	unsigned int channel_grant[MAX_CHANNEL];
 };
@@ -129,19 +130,36 @@ struct ddr_bandwidth_ops {
 #endif
 };
 
+struct ddr_bandwidth_sample {
+	unsigned long long tick;
+	unsigned int total_usage;
+	unsigned int total_bandwidth;
+	unsigned int bandwidth[MAX_CHANNEL];
+};
+
+struct ddr_avg_bandwidth {
+	unsigned long long avg_bandwidth;
+	unsigned long long avg_usage;
+	unsigned long long avg_port[MAX_CHANNEL];
+	unsigned int sample_count;
+};
+
 struct ddr_bandwidth {
 	unsigned short cpu_type;
 	unsigned short real_ports;
 	char busy;
 	char mode;
 	int mali_port[2];
+	int stat_flag;
 	unsigned int threshold;
 	unsigned int irq_num;
 	unsigned int clock_count;
 	unsigned int channels;
-	unsigned int bandwidth[MAX_CHANNEL];
-	unsigned int total_usage;
-	unsigned int total_bandwidth;
+	unsigned int usage_stat[10];
+	spinlock_t lock;
+	struct ddr_bandwidth_sample cur_sample;
+	struct ddr_bandwidth_sample max_sample;
+	struct ddr_avg_bandwidth    avg;
 	u64	     port[MAX_CHANNEL];
 	void __iomem *ddr_reg;
 	void __iomem *pll_reg;
