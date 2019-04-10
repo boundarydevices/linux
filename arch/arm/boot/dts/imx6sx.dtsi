@@ -186,12 +186,6 @@
 		interrupt-parent = <&gpc>;
 		ranges;
 
-		ocram_s: sram@8f8000 {
-			compatible = "mmio-sram";
-			reg = <0x008f8000 0x4000>;
-			clocks = <&clks IMX6SX_CLK_OCRAM_S>;
-		};
-
 		busfreq {
 			compatible = "fsl,imx_busfreq";
 			clocks = <&clks IMX6SX_CLK_PLL2_BUS>, <&clks IMX6SX_CLK_PLL2_PFD2>,
