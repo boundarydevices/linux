@@ -357,7 +357,7 @@
 		io-channels = <&saradc SARADC_CH2>;
 		io-channel-names = "key-chan-2";
 		key_chan = <SARADC_CH2 SARADC_CH2 SARADC_CH2>;
-		key_code = <114 115 28>;
+		key_code = <114 115 97>;
 		key_val = <143 266 389>; //val=voltage/1800mV*1023
 		key_tolerance = <40 40 40>;
 	};
