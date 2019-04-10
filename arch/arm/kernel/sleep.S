@@ -136,7 +136,12 @@ ARM_BE8(setend be)			@ ensure we are in BE mode
 	safe_svcmode_maskall r1
 	mov	r1, #0
 	ALT_SMP(mrc p15, 0, r0, c0, c0, 5)
+	ALT_SMP(and r2, r0, #1<<24)
+	ALT_SMP(cmp r2, #0)
+	ALT_SMP(beq 2f)
+	ALT_SMP(lsr r0, r0, #8)
 	ALT_UP_B(1f)
+2:
 	adr	r2, mpidr_hash_ptr
 	ldr	r3, [r2]
 	add	r2, r2, r3		@ r2 = struct mpidr_hash phys address

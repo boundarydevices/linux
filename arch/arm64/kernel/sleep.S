@@ -75,6 +75,10 @@ ENTRY(__cpu_suspend_enter)
 	/* find the mpidr_hash */
 	ldr_l	x1, sleep_save_stash
 	mrs	x7, mpidr_el1
+	ubfx x2, x7, #24, 1
+	cbz x2, __cpu_suspend_enter_cont
+	lsr x7, x7, #8
+__cpu_suspend_enter_cont:
 	adr_l	x9, mpidr_hash
 	ldr	x10, [x9, #MPIDR_HASH_MASK]
 	/*
@@ -109,6 +113,10 @@ ENDPROC(cpu_resume)
 
 ENTRY(_cpu_resume)
 	mrs	x1, mpidr_el1
+	ubfx x2, x1, #24, 1
+	cbz x2, _cpu_resume_cont
+	lsr x1, x1, #8
+_cpu_resume_cont:
 	adr_l	x8, mpidr_hash		// x8 = struct mpidr_hash virt address
 
 	/* retrieve mpidr_hash members to compute the hash */
