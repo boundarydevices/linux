@@ -1054,13 +1054,12 @@ static void nwl_dsi_bridge_enable(struct drm_bridge *bridge)
 
 	nwl_dsi_init_interrupts(dsi);
 	nwl_dsi_config_dpi(dsi);
+	nwl_dsi_config_host(dsi);
 
 	if (dsi->panel && drm_panel_prepare(dsi->panel)) {
 		DRM_DEV_ERROR(dev, "Failed to setup panel\n");
 		goto prepare_err;
 	}
-
-	nwl_dsi_config_host(dsi);
 
 	if (dsi->panel && drm_panel_enable(dsi->panel)) {
 		DRM_DEV_ERROR(dev, "Failed to enable panel\n");
