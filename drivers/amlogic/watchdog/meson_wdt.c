@@ -54,6 +54,7 @@ struct aml_wdt_dev {
 	void __iomem *reg_base;
 	struct notifier_block pm_notifier;
 	struct notifier_block reboot_notifier;
+	bool is_running; /* 1:enable 0:disable */
 };
 
 static void aml_update_bits(void __iomem  *reg, unsigned int mask,
@@ -108,7 +109,9 @@ static int aml_wdt_start(struct watchdog_device *wdog)
 	if (wdev->boot_queue)
 		cancel_delayed_work(&wdev->boot_queue);
 #endif
+	wdev->is_running = true;
 	dev_info(wdev->dev, "start watchdog\n");
+
 	return 0;
 }
 
@@ -119,6 +122,7 @@ static int aml_wdt_stop(struct watchdog_device *wdog)
 	mutex_lock(&wdev->lock);
 	disable_watchdog(wdev);
 	mutex_unlock(&wdev->lock);
+	wdev->is_running = false;
 	dev_info(wdev->dev, "stop watchdog\n");
 
 	return 0;
@@ -153,12 +157,14 @@ static int aml_wdt_set_timeout(struct watchdog_device *wdog,
 unsigned int aml_wdt_get_timeleft(struct watchdog_device *wdog)
 {
 	struct aml_wdt_dev *wdev = watchdog_get_drvdata(wdog);
-	unsigned int timeleft;
+	unsigned long timeleft, tick;
 
 	mutex_lock(&wdev->lock);
 	timeleft = read_watchdog_tcnt(wdev);
+	tick = readl(wdev->reg_base + TCNT) & 0xffff;
 	mutex_unlock(&wdev->lock);
-	return timeleft/wdev->one_second;
+
+	return (tick - timeleft)/wdev->one_second;
 }
 
 static void boot_moniter_work(struct work_struct *work)
@@ -255,14 +261,18 @@ static int aml_wtd_pm_notify(struct notifier_block *nb, unsigned long event,
 	wdev = container_of(nb, struct aml_wdt_dev, pm_notifier);
 
 	if (event == PM_SUSPEND_PREPARE) {
-		disable_watchdog(wdev);
-		dev_info(wdev->dev,
-			"pm_notify: disable watchdog, event = %lu\n", event);
+		if (wdev->is_running) {
+			disable_watchdog(wdev);
+			dev_info(wdev->dev,
+			 "pm_notify: disable watchdog, event = %lu\n", event);
+		}
 	}
 	if (event == PM_POST_SUSPEND) {
-		enable_watchdog(wdev);
-		dev_info(wdev->dev,
-			"pm_notify: enable watchdog, event = %lu\n", event);
+		if (wdev->is_running) {
+			enable_watchdog(wdev);
+			dev_info(wdev->dev,
+			 "pm_notify: enable watchdog, event = %lu\n", event);
+		}
 	}
 	return NOTIFY_OK;
 }
@@ -338,14 +348,13 @@ static int aml_wdt_probe(struct platform_device *pdev)
 
 	watchdog_set_drvdata(aml_wdt, wdev);
 	platform_set_drvdata(pdev, aml_wdt);
+	wdev->is_running = false;
 	if (wdev->reset_watchdog_method == 1) {
 
 		INIT_DELAYED_WORK(&wdev->boot_queue, boot_moniter_work);
 		mod_delayed_work(system_freezable_wq, &wdev->boot_queue,
 	 round_jiffies(msecs_to_jiffies(wdev->reset_watchdog_time*1000)));
-		enable_watchdog(wdev);
-		set_watchdog_cnt(wdev,
-				 wdev->default_timeout * wdev->one_second);
+		aml_wdt_start(aml_wdt);
 		dev_info(wdev->dev, "creat work queue for watch dog\n");
 	}
 	ret = watchdog_register_device(aml_wdt);
