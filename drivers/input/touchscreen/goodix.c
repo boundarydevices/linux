@@ -1337,7 +1337,9 @@ static void goodix_read_config(struct goodix_ts_data *ts)
 
 	x_max = get_unaligned_le16(&ts->config[RESOLUTION_LOC]);
 	y_max = get_unaligned_le16(&ts->config[RESOLUTION_LOC + 2]);
-	if (x_max && y_max) {
+	if (x_max > 1 && y_max > 1) {
+		ts->prop.max_x = x_max - 1;
+		ts->prop.max_y = y_max - 1;
 		input_abs_set_max(ts->input_dev, ABS_MT_POSITION_X, x_max - 1);
 		input_abs_set_max(ts->input_dev, ABS_MT_POSITION_Y, y_max - 1);
 	}
@@ -1406,7 +1408,6 @@ static int goodix_i2c_test(struct i2c_client *client)
  */
 static int goodix_configure_dev(struct goodix_ts_data *ts)
 {
-	int error;
 	int i;
 
 	ts->int_trigger_type = GOODIX_INT_TRIGGER;
@@ -1448,9 +1449,14 @@ static int goodix_configure_dev(struct goodix_ts_data *ts)
 	input_set_abs_params(ts->input_dev, ABS_MT_WIDTH_MAJOR, 0, 255, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
 
-retry_read_config:
 	/* Read configuration and apply touchscreen parameters */
 	goodix_read_config(ts);
+	return 0;
+}
+
+static int goodix_finish_setup(struct goodix_ts_data *ts)
+{
+	int error;
 
 	/* Try overriding touchscreen parameters via device properties */
 	touchscreen_parse_properties(ts->input_dev, true, &ts->prop);
@@ -1464,14 +1470,18 @@ retry_read_config:
 			error = goodix_reset(ts);
 			if (error)
 				return error;
-			goto retry_read_config;
+			/* Read configuration and apply touchscreen parameters */
+			goodix_read_config(ts);
 		}
 		dev_err(&ts->client->dev,
 			"Invalid config (%d, %d, %d), using defaults\n",
 			ts->prop.max_x, ts->prop.max_y, ts->max_touch_num);
-		ts->prop.max_x = GOODIX_MAX_WIDTH - 1;
-		ts->prop.max_y = GOODIX_MAX_HEIGHT - 1;
-		ts->max_touch_num = GOODIX_MAX_CONTACTS;
+		if (!ts->prop.max_x)
+			ts->prop.max_x = GOODIX_MAX_WIDTH - 1;
+		if (!ts->prop.max_y)
+			ts->prop.max_y = GOODIX_MAX_HEIGHT - 1;
+		if (!ts->max_touch_num)
+			ts->max_touch_num = GOODIX_MAX_CONTACTS;
 		input_abs_set_max(ts->input_dev,
 				  ABS_MT_POSITION_X, ts->prop.max_x);
 		input_abs_set_max(ts->input_dev,
@@ -1579,6 +1589,11 @@ static void goodix_config_cb(const struct firmware *cfg, void *ctx)
 	/* Must not suspend immediately after device initialization */
 	pm_runtime_mark_last_busy(&ts->client->dev);
 	pm_request_autosuspend(&ts->client->dev);
+
+	release_firmware(cfg);
+	complete_all(&ts->firmware_loading_complete);
+	goodix_finish_setup(ts);
+	return;
 
 err_release_cfg:
 	release_firmware(cfg);
@@ -1716,6 +1731,9 @@ reset:
 		return 0;
 	} else {
 		error = goodix_configure_dev(ts);
+		if (error)
+			return error;
+		error = goodix_finish_setup(ts);
 		if (error)
 			return error;
 	}
