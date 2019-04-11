@@ -843,7 +843,7 @@
 	status = "okay";
 
 	pca9646@71 {
-		compatible = "nxp,pca9646";
+		compatible = "nxp,pca9646", "nxp,pca9546";
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg = <0x71>;
