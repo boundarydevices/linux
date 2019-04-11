@@ -410,6 +410,9 @@ struct vframe_s {
 	struct vframe_pic_mode_s pic_mode;
 
 	unsigned long v4l_mem_handle;
+
+	u32 sar_width;
+	u32 sar_height;
 } /*vframe_t */;
 
 #if 0
