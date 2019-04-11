@@ -377,7 +377,7 @@ uint16_t L2PQ_500_4000[] = {
 static uint32_t tv_max_lin = 200;
 static uint16_t tv_max_pq = 2372;
 
-static unsigned int panel_max_lumin;
+static unsigned int panel_max_lumin = 300;
 module_param(panel_max_lumin, uint, 0664);
 MODULE_PARM_DESC(panel_max_lumin, "\n panel_max_lumin\n");
 
@@ -3229,6 +3229,9 @@ void enable_dolby_vision(int enable)
 					/* 16 core1 bl bypass */
 					(1 << 0),
 					16, 2);
+				if (is_meson_tm2_tvmode())
+					VSYNC_WR_DV_REG_BITS(
+						DOLBY_PATH_CTRL, 3, 0, 2);
 #ifdef V1_5
 				if (p_funcs_tv) /* destroy ctx */
 					p_funcs_tv->tv_control_path(
@@ -5296,7 +5299,6 @@ int dolby_vision_parse_metadata(
 		h = (vf->type & VIDTYPE_COMPRESS) ?
 			vf->compHeight : vf->height;
 	}
-
 	if ((src_format == FORMAT_DOVI)
 	&& meta_flag_bl && meta_flag_el) {
 		/* dovi frame no meta or meta error */
@@ -5340,8 +5342,13 @@ int dolby_vision_parse_metadata(
 		return -1;
 	}
 
-	if (!p_funcs_stb && !p_funcs_tv)
-		return -1;
+	if (tv_mode) {
+		if (!p_funcs_tv)
+			return -1;
+	} else {
+		if (!p_funcs_stb)
+			return -1;
+	}
 
 	/* TV core */
 	if (is_meson_tvmode() && !force_stb_mode) {
@@ -6094,11 +6101,13 @@ int dolby_vision_process(struct vframe_s *vf, u32 display_size,
 		}
 	}
 #endif
+
 	if (!vf) {
 		if (dolby_vision_flags & FLAG_TOGGLE_FRAME)
 			dolby_vision_parse_metadata(
 				NULL, 1, false);
 	}
+
 	if (dolby_vision_mode == DOLBY_VISION_OUTPUT_MODE_BYPASS) {
 		if (vinfo && sink_support_dolby_vision(vinfo))
 			dolby_vision_set_toggle_flag(1);
