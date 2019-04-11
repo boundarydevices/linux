@@ -1084,6 +1084,7 @@
 };
 
 &mipi_dsi {
+	/delete-property/ no_clk_reset;
 	status = "disabled";
 	as_bridge;
 	assigned-clocks = <&clk IMX8MQ_CLK_DSI_CORE>,
@@ -1107,6 +1108,7 @@
 };
 
 &mipi_dsi_bridge {
+	/delete-property/ no_clk_reset;
 	status = "disabled";
 
 	fb_mipi: panel@0 {
