@@ -957,8 +957,6 @@ static int goodix_request_input_dev(struct goodix_ts_data *ts)
  */
 static int goodix_configure_dev(struct goodix_ts_data *ts)
 {
-	int error;
-
 	ts->swapped_x_y = device_property_read_bool(&ts->client->dev,
 						    "touchscreen-swapped-x-y");
 	ts->inverted_x = device_property_read_bool(&ts->client->dev,
@@ -967,6 +965,11 @@ static int goodix_configure_dev(struct goodix_ts_data *ts)
 						   "touchscreen-inverted-y");
 
 	goodix_read_config(ts);
+}
+
+static int goodix_finish_setup(struct goodix_ts_data *ts)
+{
+	int error;
 
 	error = goodix_request_input_dev(ts);
 	if (error)
@@ -1021,6 +1024,11 @@ static void goodix_config_cb(const struct firmware *cfg, void *ctx)
 	/* Must not suspend immediately after device initialization */
 	pm_runtime_mark_last_busy(&ts->client->dev);
 	pm_request_autosuspend(&ts->client->dev);
+
+	release_firmware(cfg);
+	complete_all(&ts->firmware_loading_complete);
+	goodix_finish_setup(ts);
+	return;
 
 err_release_cfg:
 	release_firmware(cfg);
@@ -1116,6 +1124,9 @@ static int goodix_ts_probe(struct i2c_client *client,
 		return 0;
 	} else {
 		error = goodix_configure_dev(ts);
+		if (error)
+			return error;
+		error = goodix_finish_setup(ts);
 		if (error)
 			return error;
 	}
