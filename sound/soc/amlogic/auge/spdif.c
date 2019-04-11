@@ -483,10 +483,10 @@ static void spdifin_audio_type_work_func(struct work_struct *work)
 
 	if (val & 0x2)
 		/* nonpcm, resample disable */
-		resample_set(p_spdif->asrc_id, RATE_OFF);
+		resample_set(p_spdif->asrc_id, RATE_OFF, false);
 	else
 		/* pcm, resample which rate ? */
-		resample_set(p_spdif->asrc_id, p_spdif->auto_asrc);
+		resample_set(p_spdif->asrc_id, p_spdif->auto_asrc, false);
 }
 
 static void spdifin_audio_type_detect_init(struct aml_spdif *p_spdif)
@@ -672,7 +672,7 @@ static void spdifin_status_event(struct aml_spdif *p_spdif)
 				/* resample enable, by hw */
 				if (!spdifin_check_audiotype_by_sw(p_spdif))
 					resample_set(p_spdif->asrc_id,
-						p_spdif->auto_asrc);
+						p_spdif->auto_asrc, false);
 #endif
 				extcon_set_state(p_spdif->edev,
 					EXTCON_SPDIFIN_SAMPLERATE, 1);
@@ -694,7 +694,7 @@ static void spdifin_status_event(struct aml_spdif *p_spdif)
 #ifdef __SPDIFIN_AUDIO_TYPE_HW__
 			/* resample disable, by hw */
 			if (!spdifin_check_audiotype_by_sw(p_spdif))
-				resample_set(p_spdif->asrc_id, RATE_OFF);
+				resample_set(p_spdif->asrc_id, RATE_OFF, false);
 #endif
 #endif
 		}
@@ -728,7 +728,8 @@ static void spdifin_status_event(struct aml_spdif *p_spdif)
 #ifdef __SPDIFIN_AUDIO_TYPE_HW__
 		/* resample to 48k, by hw */
 		if (!spdifin_check_audiotype_by_sw(p_spdif))
-			resample_set(p_spdif->asrc_id, p_spdif->auto_asrc);
+			resample_set(p_spdif->asrc_id,
+				p_spdif->auto_asrc, false);
 #endif
 	}
 	if (intrpt_status & 0x40)
@@ -1097,7 +1098,8 @@ static int aml_dai_spdif_startup(
 #ifdef __SPDIFIN_AUDIO_TYPE_HW__
 		/* resample to 48k in default, by hw */
 		if (!spdifin_check_audiotype_by_sw(p_spdif))
-			resample_set(p_spdif->asrc_id, p_spdif->auto_asrc);
+			resample_set(p_spdif->asrc_id,
+				p_spdif->auto_asrc, false);
 #endif
 	}
 
@@ -1128,7 +1130,7 @@ static void aml_dai_spdif_shutdown(
 #ifdef __SPDIFIN_AUDIO_TYPE_HW__
 		/* resample disabled, by hw */
 		if (!spdifin_check_audiotype_by_sw(p_spdif))
-			resample_set(p_spdif->asrc_id, RATE_OFF);
+			resample_set(p_spdif->asrc_id, RATE_OFF, false);
 #endif
 		clk_disable_unprepare(p_spdif->clk_spdifin);
 		clk_disable_unprepare(p_spdif->fixed_clk);
