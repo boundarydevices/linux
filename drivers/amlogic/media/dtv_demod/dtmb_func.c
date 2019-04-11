@@ -204,6 +204,12 @@ void dtmb_all_reset(void)
 	 */
 	dtmb_write_reg(DTMB_CHE_IBDFE_CONF0,
 		dtmb_read_reg(DTMB_CHE_IBDFE_CONF0) & 0xfffff0ff);
+
+	/*increase cfo track val to avoid dtmb playing is not smooth
+	 *when temperature is over 80 degree Celsius
+	 */
+	dtmb_write_reg(DTMB_SYNC_TRACK_CFO_MAX,
+		(dtmb_read_reg(DTMB_SYNC_TRACK_CFO_MAX) & ~0xff) | 0x1f);
 }
 
 void dtmb_initial(struct aml_demod_sta *demod_sta)
