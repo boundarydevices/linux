@@ -41,6 +41,8 @@
 #include <linux/amlogic/media/codec_mm/codec_mm.h>
 #include <linux/dma-contiguous.h>
 #include <linux/amlogic/iomap.h>
+#include <linux/poll.h>
+#include <linux/workqueue.h>
 #include "amdolby_vision.h"
 
 #include <linux/device.h>
@@ -69,6 +71,7 @@ struct amdolby_vision_dev_s {
 	dev_t                       devno;
 	struct device               *dev;
 	struct class                *clsp;
+	wait_queue_head_t	dv_queue;
 };
 static struct amdolby_vision_dev_s amdolby_vision_dev;
 struct dv_device_data_s dv_meson_dev;
@@ -377,7 +380,7 @@ uint16_t L2PQ_500_4000[] = {
 static uint32_t tv_max_lin = 200;
 static uint16_t tv_max_pq = 2372;
 
-static unsigned int panel_max_lumin = 300;
+static unsigned int panel_max_lumin = 350;
 module_param(panel_max_lumin, uint, 0664);
 MODULE_PARM_DESC(panel_max_lumin, "\n panel_max_lumin\n");
 
@@ -1205,6 +1208,24 @@ static int WRITE_VPP_DV_REG(u32 adr, const u32 val)
 	adr = addr_map(adr);
 	WRITE_VPP_REG(adr, val);
 	return 0;
+}
+
+void amdolby_vision_wakeup_queue(void)
+{
+	struct amdolby_vision_dev_s *devp = &amdolby_vision_dev;
+
+	wake_up(&devp->dv_queue);
+}
+
+static unsigned int amdolby_vision_poll(struct file *file, poll_table *wait)
+{
+	struct amdolby_vision_dev_s *devp = file->private_data;
+	unsigned int mask = 0;
+
+	poll_wait(file, &devp->dv_queue, wait);
+	mask = (POLLIN | POLLRDNORM);
+
+	return mask;
 }
 
 static int is_graphics_output_off(void)
@@ -4960,7 +4981,7 @@ static void calculate_panel_max_pq(
 			max_lin = (max_lin / 100) * 100 + 500;
 			max_pq = L2PQ_500_4000[(max_lin - 500) / 100];
 		}
-		pr_info("panel max lumin changed from %d(%d) to %d(%d)\n",
+		pr_dolby_dbg("panel max lumin changed from %d(%d) to %d(%d)\n",
 			tv_max_lin, tv_max_pq, max_lin, max_pq);
 		tv_max_lin = max_lin;
 		tv_max_pq = max_pq;
@@ -5299,6 +5320,7 @@ int dolby_vision_parse_metadata(
 		h = (vf->type & VIDTYPE_COMPRESS) ?
 			vf->compHeight : vf->height;
 	}
+
 	if ((src_format == FORMAT_DOVI)
 	&& meta_flag_bl && meta_flag_el) {
 		/* dovi frame no meta or meta error */
@@ -6023,6 +6045,11 @@ int dolby_vision_process(struct vframe_s *vf, u32 display_size,
 	if (!is_meson_box() && !is_meson_txlx() && !is_meson_tm2())
 		return -1;
 
+	if ((dolby_vision_enable == 1) && (tv_mode == 1)) {
+		amdolby_vision_wakeup_queue();
+		pr_dolby_dbg("wake up dv status queue\n");
+	}
+
 	if (dolby_vision_flags & FLAG_CERTIFICAION) {
 		if (vf) {
 			h_size = (vf->type & VIDTYPE_COMPRESS) ?
@@ -6696,6 +6723,7 @@ static const struct file_operations amdolby_vision_fops = {
 #ifdef CONFIG_COMPAT
 	.compat_ioctl = amdolby_vision_compat_ioctl,
 #endif
+	.poll = amdolby_vision_poll,
 };
 
 static void parse_param_amdolby_vision(char *buf_orig, char **parm)
@@ -6942,6 +6970,7 @@ static int amdolby_vision_probe(struct platform_device *pdev)
 	}
 
 	dolby_vision_init_receiver(pdev);
+	init_waitqueue_head(&devp->dv_queue);
 	pr_info("%s: ok\n", __func__);
 	return 0;
 
