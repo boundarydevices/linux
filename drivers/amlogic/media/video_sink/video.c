@@ -108,6 +108,8 @@ static int video_global_output = 1;
 /*  video_pause_global: 0 is play, 1 is pause, 2 is invalid */
 static int video_pause_global = 1;
 
+static u32 cur_omx_index;
+
 #ifdef CONFIG_GE2D_KEEP_FRAME
 /* #if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6 */
 /* #include <mach/mod_gate.h> */
@@ -5284,11 +5286,13 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 			/* pts==0 is a keep frame maybe. */
 			if (systime > next_vf->pts || next_vf->pts == 0)
 				return true;
-			if (omx_secret_mode == true)
+			if (omx_secret_mode == true
+					&& cur_omx_index >= next_vf->omx_index)
 				return true;
 
 			return false;
-		} else if (omx_secret_mode == true)
+		} else if (omx_secret_mode == true
+				&& cur_omx_index >= next_vf->omx_index)
 			return true;
 	} else if (omx_run
 			&& omx_secret_mode
@@ -8689,6 +8693,7 @@ static void set_omx_pts(u32 *p)
 	u32 session = p[5];
 	unsigned int try_cnt = 0x1000;
 
+	cur_omx_index = frame_num;
 	mutex_lock(&omx_mutex);
 	if (omx_pts_set_index < frame_num)
 		omx_pts_set_index = frame_num;
