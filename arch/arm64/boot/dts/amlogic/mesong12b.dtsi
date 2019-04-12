@@ -321,6 +321,14 @@
 		#clock-cells = <0>;
 	};
 
+	rtc{
+		compatible = "amlogic, aml_vrtc";
+		alarm_reg_addr = <0xff8000a8>;
+		timer_e_addr = <0xffd0f188>;
+		init_date = "2019/01/01";
+		status = "okay";
+	};
+
 	cpu_info {
 		compatible = "amlogic, cpuinfo";
 		status = "okay";
