@@ -6,7 +6,7 @@
 #else
 	mipi_cmds_ltk0680ytmdb: mipi-cmds-ltk0680ytmdb {
 #endif
-		mipi-cmds-init = /bits/ 8 <
+		mipi-cmds-enable = /bits/ 8 <
 			DELAY(50)
 			GEN_S1P(0xCD,0xAA)
 			DELAY(1)
@@ -90,8 +90,7 @@
 			DELAY(1)
 			GEN_S1P(0x4D,0x00)
 			DELAY(1)
-		>;
-		mipi-cmds-enable = /bits/ 8 <
+
 			DCS_S0P(0x11)		/* Exit sleep */
 			DELAY(120)		/* 5 is what spec says */
 			DCS_S0P(0x29)		/* MIPI_DCS_SET_DISPLAY_ON */
