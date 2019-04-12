@@ -48,6 +48,7 @@
 #include "gdc_dmabuf.h"
 
 unsigned int gdc_log_level;
+unsigned int gdc_reg_store_mode;
 struct gdc_manager_s gdc_manager;
 static int trace_mode_enable;
 static char *config_out_file;
@@ -55,6 +56,8 @@ static int config_out_path_defined;
 
 #define WAIT_THRESHOLD   1000
 #define CONFIG_PATH_LENG 128
+#define CORE_CLK_RATE 800000000
+#define AXI_CLK_RATE  800000000
 
 static const struct of_device_id gdc_dt_match[] = {
 	{.compatible = "amlogic, g12b-gdc"},
@@ -726,6 +729,7 @@ static long gdc_process_ex_info(struct mgdc_fh_s *fh,
 	if (gs_ex->config_buffer.mem_alloc_type == AML_GDC_MEM_DMABUF)
 		gdc_buffer_dma_flush(gs_ex->config_buffer.shared_fd);
 
+	gdc_pwr_config(true);
 	ret = gdc_run(gdc_cmd);
 	if (ret < 0)
 		gdc_log(LOG_ERR, "gdc process failed ret = %ld\n", ret);
@@ -736,6 +740,8 @@ static long gdc_process_ex_info(struct mgdc_fh_s *fh,
 		gdc_log(LOG_ERR, "gdc timeout\n");
 
 	gdc_stop(gdc_cmd);
+	if (!gdc_reg_store_mode)
+		gdc_pwr_config(false);
 	mutex_unlock(&fh->gdev->d_mutext);
 	#if 0
 	if (gs_ex->output_buffer.mem_alloc_type == AML_GDC_MEM_DMABUF)
@@ -1103,6 +1109,7 @@ static long gdc_process_with_fw(struct mgdc_fh_s *fh,
 		gs_with_fw->gdc_config.config_size;
 
 	mutex_lock(&fh->gdev->d_mutext);
+	gdc_pwr_config(true);
 	ret = gdc_run(gdc_cmd);
 	if (ret < 0)
 		gdc_log(LOG_ERR, "gdc process failed ret = %ld\n", ret);
@@ -1113,6 +1120,8 @@ static long gdc_process_with_fw(struct mgdc_fh_s *fh,
 		gdc_log(LOG_ERR, "gdc timeout\n");
 
 	gdc_stop(gdc_cmd);
+	if (!gdc_reg_store_mode)
+		gdc_pwr_config(false);
 	mutex_unlock(&fh->gdev->d_mutext);
 
 release_fw:
@@ -1248,6 +1257,7 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		if (trace_mode_enable >= 1)
 			start_time = ktime_get();
 
+		gdc_pwr_config(true);
 		ret = gdc_run(gdc_cmd);
 		if (ret < 0)
 			gdc_log(LOG_ERR, "gdc process ret = %ld\n", ret);
@@ -1291,6 +1301,8 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 				gdc_log(LOG_ERR, "gdc process time = %d\n",
 					process_time);
 		}
+		if (!gdc_reg_store_mode)
+			gdc_pwr_config(false);
 		mutex_unlock(&fh->gdev->d_mutext);
 	break;
 	case GDC_RUN:
@@ -1324,6 +1336,7 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		if (trace_mode_enable >= 1)
 			start_time = ktime_get();
 
+		gdc_pwr_config(true);
 		ret = gdc_run(gdc_cmd);
 		if (ret < 0)
 			gdc_log(LOG_ERR, "gdc process failed ret = %ld\n", ret);
@@ -1368,6 +1381,9 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		}
 		meson_gdc_cache_flush(&fh->gdev->pdev->dev,
 					fh->o_paddr, fh->o_len);
+
+		if (!gdc_reg_store_mode)
+			gdc_pwr_config(false);
 		mutex_unlock(&fh->gdev->d_mutext);
 	break;
 	case GDC_HANDLE:
@@ -1400,6 +1416,7 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		if (trace_mode_enable >= 1)
 			start_time = ktime_get();
 
+		gdc_pwr_config(true);
 		ret = gdc_run(gdc_cmd);
 		if (ret < 0)
 			gdc_log(LOG_ERR, "gdc process failed ret = %ld\n", ret);
@@ -1446,6 +1463,9 @@ static long meson_gdc_ioctl(struct file *file, unsigned int cmd,
 		meson_gdc_cache_flush(&fh->gdev->pdev->dev,
 					fh->o_paddr, fh->o_len);
 		meson_gdc_deinit_dma_addr(fh);
+
+		if (!gdc_reg_store_mode)
+			gdc_pwr_config(false);
 		mutex_unlock(&fh->gdev->d_mutext);
 	break;
 	case GDC_REQUEST_BUFF:
@@ -1607,28 +1627,48 @@ static struct miscdevice meson_gdc_dev = {
 	.fops	= &meson_gdc_fops,
 };
 
-static ssize_t gdc_reg_show(struct device *dev,
+static ssize_t gdc_dump_reg_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	ssize_t len = 0;
 	int i;
 
-	len += sprintf(buf+len, "gdc adapter register below\n");
-	for (i = 0; i <= 0xff; i += 4) {
-		len += sprintf(buf+len, "\t[0xff950000 + 0x%08x, 0x%-8x\n",
+	if (gdc_reg_store_mode) {
+		len += sprintf(buf+len, "gdc adapter register below\n");
+		for (i = 0; i <= 0xff; i += 4) {
+			len += sprintf(buf+len,
+					"\t[0xff950000 + 0x%08x, 0x%-8x\n",
 						i, system_gdc_read_32(i));
+		}
+	} else {
+		len += sprintf(buf+len,
+				"err: please flow blow steps\n");
+		len += sprintf(buf+len,
+				"1. turn on dump mode, \"echo 1 > dump_reg\"\n");
+		len += sprintf(buf+len,
+				"2. run gdc to process\n");
+		len += sprintf(buf+len,
+				"3. show reg value, \"cat dump_reg\"\n");
 	}
 
 	return len;
 }
 
-static ssize_t gdc_reg_store(struct device *dev,
+static ssize_t gdc_dump_reg_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t len)
 {
-	gdc_log(LOG_DEBUG, "%s, %d\n", __func__, __LINE__);
+
+	int res = 0;
+	int ret = 0;
+
+	ret = kstrtoint(buf, 0, &res);
+
+	pr_info("dump mode: %d->%d\n", gdc_reg_store_mode, res);
+	gdc_reg_store_mode = res;
+
 	return len;
 }
-static DEVICE_ATTR(gdc_reg, 0554, gdc_reg_show, gdc_reg_store);
+static DEVICE_ATTR(dump_reg, 0664, gdc_dump_reg_show, gdc_dump_reg_store);
 
 static ssize_t firmware1_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -1738,7 +1778,6 @@ static int gdc_platform_probe(struct platform_device *pdev)
 	int rc = -1;
 	struct resource *gdc_res;
 	struct meson_gdc_dev_t *gdc_dev = NULL;
-	void *clk_cntl = NULL;
 	void *pd_cntl = NULL;
 	uint32_t reg_value = 0;
 
@@ -1784,22 +1823,36 @@ static int gdc_platform_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-#if 0
-	gdc_dev->clk_core = devm_clk_get(&pdev->dev, "core");
-	rc = clk_set_rate(gdc_dev->clk_core, 800000000);
-
-	gdc_dev->clk_axi = devm_clk_get(&pdev->dev, "axi");
-	rc = clk_set_rate(gdc_dev->clk_axi, 800000000);
-#else
-	clk_cntl = of_iomap(pdev->dev.of_node, 1);
-	iowrite32((3<<25)|(1<<24)|(0<<16)|(3<<9)|(1<<8)|(0<<0), clk_cntl);
+	/* mem_pd */
 	pd_cntl = of_iomap(pdev->dev.of_node, 2);
 	reg_value = ioread32(pd_cntl);
 	gdc_log(LOG_DEBUG, "pd_cntl=%x\n", reg_value);
 	reg_value = reg_value & (~(3<<18));
 	gdc_log(LOG_DEBUG, "pd_cntl=%x\n", reg_value);
 	iowrite32(reg_value, pd_cntl);
-#endif
+
+	/* core/axi clk */
+	gdc_dev->clk_core =
+		devm_clk_get(&pdev->dev, "core");
+	if (IS_ERR(gdc_dev->clk_core)) {
+		gdc_log(LOG_ERR, "cannot get gdc core clk\n");
+	} else {
+		clk_set_rate(gdc_dev->clk_core, CORE_CLK_RATE);
+		clk_prepare_enable(gdc_dev->clk_core);
+		rc =  clk_get_rate(gdc_dev->clk_core);
+		gdc_log(LOG_INFO, "gdc core clk is %d MHZ\n", rc/1000000);
+	}
+
+	gdc_dev->clk_axi =
+		devm_clk_get(&pdev->dev, "axi");
+	if (IS_ERR(gdc_dev->clk_axi)) {
+		gdc_log(LOG_ERR, "cannot get gdc axi clk\n");
+	} else {
+		clk_set_rate(gdc_dev->clk_axi, AXI_CLK_RATE);
+		clk_prepare_enable(gdc_dev->clk_axi);
+		rc =  clk_get_rate(gdc_dev->clk_axi);
+		gdc_log(LOG_INFO, "gdc axi clk is %d MHZ\n", rc/1000000);
+	}
 
 	mutex_init(&gdc_dev->d_mutext);
 	init_completion(&gdc_dev->d_com);
@@ -1819,7 +1872,7 @@ static int gdc_platform_probe(struct platform_device *pdev)
 			gdc_dev->misc_dev.minor);
 	}
 	device_create_file(gdc_dev->misc_dev.this_device,
-		&dev_attr_gdc_reg);
+		&dev_attr_dump_reg);
 	device_create_file(gdc_dev->misc_dev.this_device,
 		&dev_attr_firmware1);
 	device_create_file(gdc_dev->misc_dev.this_device,
@@ -1830,6 +1883,8 @@ static int gdc_platform_probe(struct platform_device *pdev)
 		&dev_attr_config_out_path);
 
 	platform_set_drvdata(pdev, gdc_dev);
+	gdc_pwr_config(false);
+
 	return rc;
 }
 
@@ -1837,7 +1892,7 @@ static int gdc_platform_remove(struct platform_device *pdev)
 {
 
 	device_remove_file(meson_gdc_dev.this_device,
-		&dev_attr_gdc_reg);
+		&dev_attr_dump_reg);
 	device_remove_file(meson_gdc_dev.this_device,
 		&dev_attr_firmware1);
 	device_remove_file(meson_gdc_dev.this_device,

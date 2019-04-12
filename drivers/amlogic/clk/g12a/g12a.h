@@ -46,7 +46,7 @@
 #define HHI_GCLK_OTHER			0x150 /* 0x54 offset in data sheet */
 #define HHI_GCLK_SP_MPEG               0x154 /* 0x55 offset in data sheet */
 
-#define HHI_APICALGDC_CNTL		0x168 /* 0x5a offset in data sheet */
+#define HHI_APICALGDC_CNTL		0x16C /* 0x5b offset in data sheet */
 
 #define HHI_MPEG_CLK_CNTL       0x174 /* 0x5d offset in data sheet */
 #define HHI_AUD_CLK_CNTL        0x178 /* 0x5e offset in data sheet */

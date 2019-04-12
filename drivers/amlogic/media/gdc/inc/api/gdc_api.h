@@ -21,6 +21,8 @@
 #include <linux/of_address.h>
 #include <linux/dma-direction.h>
 
+extern struct gdc_manager_s gdc_manager;
+
 enum gdc_memtype_s {
 	AML_GDC_MEM_ION,
 	AML_GDC_MEM_DMABUF,
@@ -410,5 +412,7 @@ int gdc_get_frame(struct gdc_cmd_s *gdc_cmd);
 int gdc_run(struct gdc_cmd_s *g);
 
 int32_t init_gdc_io(struct device_node *dn);
+
+int gdc_pwr_config(bool enable);
 
 #endif

@@ -22,6 +22,7 @@
 #include <linux/sched.h>
 #include <linux/semaphore.h>
 #include <linux/spinlock.h>
+#include <linux/clk.h>
 
 //data types and prototypes
 #include "gdc_api.h"
@@ -483,5 +484,35 @@ int gdc_get_frame(struct gdc_cmd_s *gdc_cmd)
 	//done of the current frame and stop gdc block
 	gdc_stop(gdc_cmd);
 	//spin_unlock_irqrestore(&gdev->slock, flags);
+	return 0;
+}
+
+/**
+ *   This function set the GDC power on/off
+ *
+ *   @param enable - power off/on
+ *   @return  0 - success
+ *           -1 - fail.
+ */
+int gdc_pwr_config(bool enable)
+{
+	struct meson_gdc_dev_t *gdc_dev = gdc_manager.gdc_dev;
+
+	if (gdc_dev == NULL ||
+		gdc_dev->clk_core == NULL ||
+		gdc_dev->clk_axi == NULL) {
+		gdc_log(LOG_ERR, "core/axi set err.\n");
+		return -1;
+	}
+
+	/* clk */
+	if (enable) {
+		clk_prepare_enable(gdc_dev->clk_core);
+		clk_prepare_enable(gdc_dev->clk_axi);
+	} else {
+		clk_disable_unprepare(gdc_dev->clk_core);
+		clk_disable_unprepare(gdc_dev->clk_axi);
+	}
+
 	return 0;
 }

@@ -25,7 +25,7 @@ extern unsigned int gdc_log_level;
 enum log_level_e {
 	LOG_NO_THING,
 	LOG_CRIT,
-	LOG_ERR,
+	LOG_ERR = 0,
 	LOG_WARNING,
 	LOG_INFO,
 	LOG_DEBUG,
