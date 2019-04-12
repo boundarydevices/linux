@@ -2315,6 +2315,29 @@ const char *hdmitx_edid_vic_to_string(enum hdmi_vic vic)
 	return disp_str;
 }
 
+static bool is_rx_support_y420(struct hdmitx_dev *hdev)
+{
+	enum hdmi_vic vic = HDMI_Unknown;
+
+	vic = hdmitx_edid_get_VIC(hdev, "2160p60hz420", 0);
+	if (vic != HDMI_Unknown)
+		return 1;
+
+	vic = hdmitx_edid_get_VIC(hdev, "2160p50hz420", 0);
+	if (vic != HDMI_Unknown)
+		return 1;
+
+	vic = hdmitx_edid_get_VIC(hdev, "smpte60hz420", 0);
+	if (vic != HDMI_Unknown)
+		return 1;
+
+	vic = hdmitx_edid_get_VIC(hdev, "smpte50hz420", 0);
+	if (vic != HDMI_Unknown)
+		return 1;
+
+	return 0;
+}
+
 /* For some TV's EDID, there maybe exist some information ambiguous.
  * Such as EDID declears support 2160p60hz(Y444 8bit), but no valid
  * Max_TMDS_Clock2 to indicate that it can support 5.94G signal.
@@ -2455,6 +2478,8 @@ bool hdmitx_edid_check_valid_mode(struct hdmitx_dev *hdev,
 		return valid;
 	}
 	if (para->cs == COLORSPACE_YUV420) {
+		if (!is_rx_support_y420(hdev))
+			return 0;
 		if (pRXCap->dc_30bit_420)
 			rx_y420_max_dc = COLORDEPTH_30B;
 		if (pRXCap->dc_36bit_420)
