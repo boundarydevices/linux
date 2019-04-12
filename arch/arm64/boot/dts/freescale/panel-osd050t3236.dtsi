@@ -56,7 +56,7 @@
 
 / {
 	mipi_cmds_osd050t3236: mipi-cmds-osd050t3236 {
-		mipi-cmds-init = /bits/ 8 <
+		mipi-cmds-enable = /bits/ 8 <
 			GEN_S1P(0xFE, 0x01)		/* CMD Mode Switch, manufacturer command set page 0 */
 
 			GEN_S1P(P0_RGBCTR, VBP)	/* Vertical back porch*/
