@@ -120,13 +120,13 @@
 		vendor_a:vendor_a
 		{
 			pname = "vendor_a";
-			size = <0x0 0x10000000>;
+			size = <0x0 0x14000000>;
 			mask = <1>;
 		};
 		vendor_b:vendor_b
 		{
 			pname = "vendor_b";
-			size = <0x0 0x10000000>;
+			size = <0x0 0x14000000>;
 			mask = <1>;
 		};
 		odm_a:odm_a
