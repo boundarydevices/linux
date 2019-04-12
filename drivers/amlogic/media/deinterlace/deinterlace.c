@@ -129,7 +129,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2019-0422b:vscale_skip v is odd";
+static const char version_s[] = "2019-04-12b:chg clkb from 500 to 667 for tl1";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -7778,6 +7778,7 @@ static void di_get_vpu_clkb(struct device *dev, struct di_dev_s *pdev)
 	int ret = 0;
 	unsigned int tmp_clk[2] = {0, 0};
 	struct clk *vpu_clk = NULL;
+	struct clk *clkb_tmp_comp = NULL;
 
 	vpu_clk = clk_get(dev, "vpu_mux");
 	if (IS_ERR(vpu_clk))
@@ -7798,9 +7799,22 @@ static void di_get_vpu_clkb(struct device *dev, struct di_dev_s *pdev)
 		pdev->clkb_max_rate);
 	#ifdef CLK_TREE_SUPPORT
 	pdev->vpu_clkb = clk_get(dev, "vpu_clkb_composite");
+	if (is_meson_tl1_cpu()) {
+		clkb_tmp_comp = clk_get(dev, "vpu_clkb_tmp_composite");
+		if (IS_ERR(clkb_tmp_comp))
+			pr_err("clkb_tmp_comp error\n");
+		else {
+			if (!IS_ERR(vpu_clk))
+				clk_set_parent(clkb_tmp_comp, vpu_clk);
+		}
+	}
+
 	if (IS_ERR(pdev->vpu_clkb))
 		pr_err("%s: get vpu clkb gate error.\n", __func__);
-	clk_set_rate(pdev->vpu_clkb, pdev->clkb_min_rate);
+	else {
+		clk_set_rate(pdev->vpu_clkb, pdev->clkb_min_rate);
+		pr_info("get clkb rate:%ld\n", clk_get_rate(pdev->vpu_clkb));
+	}
 	#endif
 }
 

@@ -210,9 +210,11 @@
 				0 40 1>;
 		interrupt-names = "pre_irq", "post_irq";
 		clocks = <&clkc CLKID_VPU_CLKB_TMP_COMP>,
-			<&clkc CLKID_VPU_CLKB_COMP>;
+			<&clkc CLKID_VPU_CLKB_COMP>,
+			<&clkc CLKID_VPU_MUX>;
 		clock-names = "vpu_clkb_tmp_composite",
-			"vpu_clkb_composite";
+			"vpu_clkb_composite",
+			"vpu_mux";
 		clock-range = <334 667>;
 		/* buffer-size = <3621952>;(yuv422 8bit) */
 		buffer-size = <4074560>;/*yuv422 fullpack*/
