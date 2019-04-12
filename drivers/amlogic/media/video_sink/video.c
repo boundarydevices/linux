@@ -153,6 +153,11 @@ static bool video_start_post;
 static bool videopeek;
 static bool nopostvideostart;
 static struct video_frame_detect_s video_frame_detect;
+static struct timeval time_setomxpts = {
+	.tv_sec = 0,
+	.tv_usec = 0,
+};
+
 
 /*----omx_info  bit0: keep_last_frame, bit1~31: unused----*/
 static u32 omx_info = 0x1;
@@ -6269,7 +6274,19 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 	}
 	if (omx_secret_mode == true) {
 		u32 system_time = timestamp_pcrscr_get();
-		int diff = system_time - omx_pts;
+		int diff = 0;
+		unsigned long delta1 = 0;
+
+		diff = system_time - omx_pts;
+		if (time_setomxpts.tv_sec > 0) {
+			struct timeval now;
+
+			do_gettimeofday(&now);
+			delta1 = (now.tv_sec - time_setomxpts.tv_sec)
+				* 1000000LL
+				+ (now.tv_usec - time_setomxpts.tv_usec);
+			diff -=  delta1 * 90 / 1000;
+		}
 
 		if ((diff - omx_pts_interval_upper) > 0
 			|| (diff - omx_pts_interval_lower) < 0
@@ -8107,6 +8124,9 @@ static void video_vf_unreg_provider(void)
 	show_first_picture = false;
 	show_first_frame_nosync = false;
 
+	time_setomxpts.tv_sec = 0;
+	time_setomxpts.tv_usec = 0;
+
 #ifdef PTS_LOGGING
 	{
 		int pattern;
@@ -8643,8 +8663,11 @@ static void set_omx_pts(u32 *p)
 		pr_info("[set_omx_pts]tmp_pts:%d, set_from_hwc:%d,frame_num=%d, not_reset=%d\n",
 			tmp_pts, set_from_hwc, frame_num, not_reset);
 
-	if (not_reset == 0)
+	if (not_reset == 0) {
 		omx_pts = tmp_pts;
+		ATRACE_COUNTER("omxpts", omx_pts);
+		do_gettimeofday(&time_setomxpts);
+	}
 	/* kodi may render first frame, then drop dozens of frames */
 	if (set_from_hwc == 0 && omx_run == true && frame_num <= 2
 			&& not_reset == 0) {
