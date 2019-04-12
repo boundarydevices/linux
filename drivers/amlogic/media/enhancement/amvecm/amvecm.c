@@ -61,6 +61,7 @@
 #include "vlock.h"
 #include "hdr/am_hdr10_plus.h"
 #include "local_contrast.h"
+#include "arch/vpp_hdr_regs.h"
 
 #define pr_amvecm_dbg(fmt, args...)\
 	do {\
@@ -5433,6 +5434,12 @@ static ssize_t amvecm_lc_store(struct class *cls,
 	return count;
 }
 
+static void def_hdr_sdr_mode(void)
+{
+	if (((READ_VPP_REG(VD1_HDR2_CTRL) >> 13) & 0x1) &&
+		((READ_VPP_REG(OSD1_HDR2_CTRL) >> 13) & 0x1))
+		sdr_mode = 2;
+}
 
 /* #if (MESON_CPU_TYPE == MESON_CPU_TYPE_MESONG9TV) */
 void init_pq_setting(void)
@@ -5461,6 +5468,9 @@ void init_pq_setting(void)
 			0x4000);
 		WRITE_VPP_REG(SRSHARP0_SHARP_SR2_CBIC_VCOEF0 + sr_offset[0],
 			0x4000);
+
+		/*kernel sdr2hdr match uboot setting*/
+		def_hdr_sdr_mode();
 	}
 	return;
 
