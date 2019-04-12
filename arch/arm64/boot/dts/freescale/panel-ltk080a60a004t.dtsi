@@ -2,7 +2,7 @@
 
 / {
 	mipi_cmds_ltk080a60a004t: mipi-cmds-ltk080a60a004t {
-		mipi-cmds-init = /bits/ 8 <
+		mipi-cmds-enable = /bits/ 8 <
 			GEN_S1P(0x83,0x00)	/* Page 0 */
 			GEN_S1P(0x84,0x00)
 
@@ -21,8 +21,7 @@
 
 			DELAY(50)
 			GEN_S1P(0x3A, 0x77)	/* Interface pixel format, 24 BPP */
-		>;
-		mipi-cmds-enable = /bits/ 8 <
+
 			DCS_S0P(0x11)		/* Exit sleep */
 			DELAY(120)		/* 5 is what spec says */
 			DCS_S0P(0x29)		/* MIPI_DCS_SET_DISPLAY_ON */
