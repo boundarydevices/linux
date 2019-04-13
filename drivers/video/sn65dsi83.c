@@ -98,6 +98,7 @@ struct sn65dsi83_priv
 	struct device_node	*disp_dsi;
 	struct gpio_desc	*gp_en;
 	struct clk		*mipi_clk;
+	struct mutex		power_mutex;
 	struct notifier_block	fbnb;
 	struct notifier_block	drmnb;
 	u32			int_cnt;
@@ -323,6 +324,22 @@ static void sn_prepare(struct sn65dsi83_priv *sn)
 		enable_irq(sn->client->irq);
 	}
 	sn_setup_regs(sn);
+	sn_enable_pll(sn);
+}
+
+static void sn_powerup(struct sn65dsi83_priv *sn)
+{
+	mutex_lock(&sn->power_mutex);
+	sn_prepare(sn);
+	mutex_unlock(&sn->power_mutex);
+}
+
+static void sn_powerdown(struct sn65dsi83_priv *sn)
+{
+	mutex_lock(&sn->power_mutex);
+	sn_disable_pll(sn);
+	sn_disable(sn);
+	mutex_unlock(&sn->power_mutex);
 }
 
 static int sn_drm_event(struct notifier_block *nb, unsigned long event, void *data)
@@ -341,12 +358,12 @@ static int sn_drm_event(struct notifier_block *nb, unsigned long event, void *da
 
 	switch (event) {
 	case DRM_MODE_DPMS_ON:
-		sn_enable_pll(sn);
+		sn_powerup(sn);
 		break;
 	case DRM_MODE_DPMS_STANDBY:
 	case DRM_MODE_DPMS_SUSPEND:
 	case DRM_MODE_DPMS_OFF:
-		sn_disable_pll(sn);
+		sn_powerdown(sn);
 		break;
 	default:
 		dev_info(dev, "%s: unknown event %lx\n", __func__, event);
@@ -372,33 +389,24 @@ static int sn_fb_event(struct notifier_block *nb, unsigned long event, void *dat
 	switch (event) {
 	case FB_R_EARLY_EVENT_BLANK:
 		blank_type = *((int *)evdata->data);
-		if (blank_type == FB_BLANK_UNBLANK) {
-			sn_disable(sn);
-		} else {
-			sn_enable_pll(sn);
-		}
+		if (blank_type != FB_BLANK_UNBLANK)
+			sn_powerup(sn);
 		break;
 	case FB_EARLY_EVENT_BLANK:
 		blank_type = *((int *)evdata->data);
-		if (blank_type == FB_BLANK_UNBLANK) {
-			sn_prepare(sn);
-		} else {
-			sn_disable_pll(sn);
-		}
+		if (blank_type != FB_BLANK_UNBLANK)
+			sn_powerdown(sn);
 		break;
 	case FB_EVENT_BLANK: {
 		blank_type = *((int *)evdata->data);
-		if (blank_type == FB_BLANK_UNBLANK) {
-			sn_enable_pll(sn);
-		} else {
-			sn_disable(sn);
-		}
+		if (blank_type == FB_BLANK_UNBLANK)
+			sn_powerup(sn);
 		dev_info(dev, "%s: blank type 0x%x\n", __func__, blank_type );
 		break;
 	}
 	case FB_EVENT_SUSPEND : {
 		dev_info(dev, "%s: suspend\n", __func__ );
-		sn_disable(sn);
+		sn_powerdown(sn);
 		break;
 	}
 	case FB_EVENT_RESUME : {
@@ -406,10 +414,8 @@ static int sn_fb_event(struct notifier_block *nb, unsigned long event, void *dat
 		break;
 	}
 	case FB_EVENT_FB_REGISTERED : {
-		if (clk_get_rate(sn->mipi_clk)) {
-			sn_prepare(sn);
-			sn_enable_pll(sn);
-		}
+		if (clk_get_rate(sn->mipi_clk))
+			sn_powerup(sn);
 		break;
 	}
 	default:
@@ -571,6 +577,7 @@ static int sn65dsi83_probe(struct i2c_client *client,
 		return -ENOMEM;
 	sn->client = client;
 	sn->gp_en = gp_en;
+	mutex_init(&sn->power_mutex);
 	sn_init(sn);
 
 	sn->disp_dsi = of_parse_phandle(np, "display-dsi", 0);
@@ -627,8 +634,7 @@ static int sn65dsi83_probe(struct i2c_client *client,
 	if (ret < 0)
 		pr_warn("failed to add sn65dsi83 sysfs files\n");
 
-	sn_prepare(sn);
-	sn_enable_pll(sn);
+	sn_powerup(sn);
 	dev_info(&client->dev, "succeeded\n");
 	return 0;
 }
@@ -640,7 +646,7 @@ static int sn65dsi83_remove(struct i2c_client *client)
 	device_remove_file(&client->dev, &dev_attr_sn65dsi83_reg);
 	fb_unregister_client(&sn->drmnb);
 	fb_unregister_client(&sn->fbnb);
-	sn_disable(sn);
+	sn_powerdown(sn);
 	return 0;
 }
 
