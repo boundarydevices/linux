@@ -12,6 +12,8 @@
 #include "fsl_dsp_proxy.h"
 #include "fsl_dsp_platform.h"
 
+#define DRV_NAME "fsl-dsp"
+
 typedef void (*memcpy_func) (void *dest, const void *src, size_t n);
 typedef void (*memset_func) (void *s, int c, size_t n);
 
