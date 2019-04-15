@@ -1999,6 +1999,25 @@ static ssize_t show_startsync_mode(struct class *class,
 	return sprintf(buf, "0x%x\n", tsync_get_startsync_mode());
 }
 
+static ssize_t show_latency(struct class *class,
+		struct class_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%u\n", timestamp_get_pcrlatency());
+}
+
+static ssize_t store_latency(struct class *class,
+	struct class_attribute *attr,
+	const char *buf, size_t size)
+{
+	unsigned int latency = 0;
+	ssize_t r;
+
+	r = kstrtoint(buf, 0, &latency);
+	if (r != 0)
+		return -EINVAL;
+	timestamp_set_pcrlatency(latency);
+	return size;
+}
 
 static ssize_t show_apts_lookup(struct class *class,
 	struct class_attribute *attrr, char *buf)
@@ -2088,6 +2107,7 @@ static struct class_attribute tsync_class_attrs[] = {
 	NULL),
 	__ATTR(checkin_firstapts, 0644, show_checkin_firstapts,
 	NULL),
+	__ATTR(pts_latency, 0664, show_latency, store_latency),
 	__ATTR_NULL
 };
 

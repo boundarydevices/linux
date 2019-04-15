@@ -338,19 +338,35 @@ static int spdif_clk_set(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
 	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
+	unsigned int mpll_freq = 0;
+	int ret;
 
 	int sysclk = p_spdif->sysclk_freq;
 	int value = ucontrol->value.enumerated.item[0];
-
 	if (value > 2000000 || value < 0) {
 		pr_err("Fine spdif sysclk setting range(0~2000000), %d\n",
 				value);
 		return 0;
 	}
-	sysclk += (value - 1000000);
-
-	aml_dai_set_spdif_sysclk(cpu_dai, 0, sysclk, 0);
-
+	value = value - 1000000;
+	sysclk += value;
+	/* pr_info("spdif_set %d to %d,diff %d\n",
+	 * p_spdif->sysclk_freq,sysclk,value);
+	 */
+	mpll_freq = sysclk * 4;
+	p_spdif->sysclk_freq = sysclk;
+	clk_set_rate(p_spdif->sysclk, mpll_freq);
+	clk_set_rate(p_spdif->clk_spdifout, p_spdif->sysclk_freq);
+	ret = clk_prepare_enable(p_spdif->sysclk);
+	if (ret) {
+		pr_err("Can't enable pcm sysclk clock: %d\n", ret);
+		return 0;
+	}
+	ret = clk_prepare_enable(p_spdif->clk_spdifout);
+	if (ret) {
+		pr_err("Can't enable clk_spdifout clock: %d\n", ret);
+		return 0;
+	}
 	return 0;
 }
 

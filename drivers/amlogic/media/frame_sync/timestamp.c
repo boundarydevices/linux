@@ -136,6 +136,19 @@ u32 timestamp_pcrscr_get(void)
 }
 EXPORT_SYMBOL(timestamp_pcrscr_get);
 
+void timestamp_set_pcrlatency(u32 latency)
+{
+	if (latency < 500 * 90)
+		pcrscr_lantcy = latency;
+}
+EXPORT_SYMBOL(timestamp_set_pcrlatency);
+
+u32 timestamp_get_pcrlatency(void)
+{
+	return pcrscr_lantcy;
+}
+EXPORT_SYMBOL(timestamp_get_pcrlatency);
+
 u32 timestamp_tsdemux_pcr_get(void)
 {
 	if (tsdemux_pcrscr_get_cb)
