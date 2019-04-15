@@ -22,6 +22,7 @@ source "drivers/mxc/vpu_malone/Kconfig"
 source "drivers/mxc/vpu_windsor/Kconfig"
 source "drivers/mxc/hantro_845/Kconfig"
 source "drivers/mxc/hantro_845_h1/Kconfig"
+source "drivers/mxc/hantro/Kconfig"
 
 config MXC_IPU
 	bool "Image Processing Unit Driver"
