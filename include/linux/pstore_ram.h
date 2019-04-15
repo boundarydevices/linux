@@ -30,6 +30,7 @@
  * PRZ_FLAG_NO_LOCK is used. For all other cases, locking is required.
  */
 #define PRZ_FLAG_NO_LOCK	BIT(0)
+#define PRZ_FLAG_BIG_LOCK	BIT(7)
 
 struct persistent_ram_buffer;
 struct rs_control;

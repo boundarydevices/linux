@@ -37,6 +37,7 @@
 #include <linux/spinlock.h>
 #include <linux/uaccess.h>
 #include <linux/syslog.h>
+#include <linux/amlogic/debug_ftrace_ramoops.h>
 
 #include "internal.h"
 
@@ -107,10 +108,13 @@ static int pstore_ftrace_seq_show(struct seq_file *s, void *v)
 	struct pstore_ftrace_seq_data *data = v;
 	struct pstore_ftrace_record *rec = (void *)(ps->data + data->off);
 
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_dump(rec, s);
+#else
 	seq_printf(s, "%d %08lx  %08lx  %pf <- %pF\n",
 		pstore_ftrace_decode_cpu(rec), rec->ip, rec->parent_ip,
 		(void *)rec->ip, (void *)rec->parent_ip);
-
+#endif
 	return 0;
 }
 

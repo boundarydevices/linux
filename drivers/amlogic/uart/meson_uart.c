@@ -15,6 +15,7 @@
  *
  */
 
+#define SKIP_IO_TRACE
 #include <linux/clk.h>
 #include <linux/console.h>
 #include <linux/delay.h>

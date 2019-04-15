@@ -17,7 +17,21 @@ struct pstore_ftrace_record {
 #ifndef PSTORE_CPU_IN_IP
 	unsigned int cpu;
 #endif
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	int pid;
+	unsigned long val1;
+	unsigned long val2;
+	unsigned long long time;
+	unsigned char comm[8];
+	unsigned int flag;
+#endif
 };
+
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+void notrace pstore_ftrace_save(struct pstore_ftrace_record *rec);
+void notrace pstore_ftrace_dump(struct pstore_ftrace_record *rec,
+				struct seq_file *s);
+#endif
 
 static inline void
 pstore_ftrace_encode_cpu(struct pstore_ftrace_record *rec, unsigned int cpu)

@@ -12,6 +12,7 @@
  *
  */
 
+#define SKIP_IO_TRACE
 #define pr_fmt(fmt) "persistent_ram: " fmt
 
 #include <linux/device.h>
@@ -49,7 +50,8 @@ static inline size_t buffer_start(struct persistent_ram_zone *prz)
 }
 
 /* increase and wrap the start pointer, returning the old value */
-static size_t buffer_start_add(struct persistent_ram_zone *prz, size_t a)
+static size_t notrace buffer_start_add(struct persistent_ram_zone *prz,
+				       size_t a)
 {
 	int old;
 	int new;
@@ -71,7 +73,7 @@ static size_t buffer_start_add(struct persistent_ram_zone *prz, size_t a)
 }
 
 /* increase the size counter until it hits the max size */
-static void buffer_size_add(struct persistent_ram_zone *prz, size_t a)
+static void notrace buffer_size_add(struct persistent_ram_zone *prz, size_t a)
 {
 	size_t old;
 	size_t new;
@@ -310,6 +312,12 @@ int notrace persistent_ram_write(struct persistent_ram_zone *prz,
 	int c = count;
 	size_t start;
 
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	unsigned long flags = 0;
+
+	if (prz->flags & PRZ_FLAG_BIG_LOCK)
+		raw_spin_lock_irqsave(&prz->buffer_lock, flags);
+#endif
 	if (unlikely(c > prz->buffer_size)) {
 		s += c - prz->buffer_size;
 		c = prz->buffer_size;
@@ -330,6 +338,10 @@ int notrace persistent_ram_write(struct persistent_ram_zone *prz,
 
 	persistent_ram_update_header_ecc(prz);
 
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	if (prz->flags & PRZ_FLAG_BIG_LOCK)
+		raw_spin_unlock_irqrestore(&prz->buffer_lock, flags);
+#endif
 	return count;
 }
 

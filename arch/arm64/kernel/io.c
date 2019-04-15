@@ -18,13 +18,21 @@
 
 #include <linux/export.h>
 #include <linux/types.h>
+#define SKIP_IO_TRACE
 #include <linux/io.h>
+#undef SKIP_IO_TRACE
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+#include <linux/amlogic/debug_ftrace_ramoops.h>
+#endif
 
 /*
  * Copy data from IO memory space to "real" memory space.
  */
 void __memcpy_fromio(void *to, const volatile void __iomem *from, size_t count)
 {
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_rd((unsigned long)addr);
+#endif
 	while (count && !IS_ALIGNED((unsigned long)from, 8)) {
 		*(u8 *)to = __raw_readb(from);
 		from++;
@@ -45,6 +53,9 @@ void __memcpy_fromio(void *to, const volatile void __iomem *from, size_t count)
 		to++;
 		count--;
 	}
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_rd_end((unsigned long)addr);
+#endif
 }
 EXPORT_SYMBOL(__memcpy_fromio);
 
@@ -53,6 +64,9 @@ EXPORT_SYMBOL(__memcpy_fromio);
  */
 void __memcpy_toio(volatile void __iomem *to, const void *from, size_t count)
 {
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr((unsigned long)addr, 0x1234);
+#endif
 	while (count && !IS_ALIGNED((unsigned long)to, 8)) {
 		__raw_writeb(*(u8 *)from, to);
 		from++;
@@ -73,6 +87,9 @@ void __memcpy_toio(volatile void __iomem *to, const void *from, size_t count)
 		to++;
 		count--;
 	}
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr_end((unsigned long)addr, 0x1234);
+#endif
 }
 EXPORT_SYMBOL(__memcpy_toio);
 
@@ -83,6 +100,9 @@ void __memset_io(volatile void __iomem *dst, int c, size_t count)
 {
 	u64 qc = (u8)c;
 
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr((unsigned long)addr, 0xabcd);
+#endif
 	qc |= qc << 8;
 	qc |= qc << 16;
 	qc |= qc << 32;
@@ -104,5 +124,8 @@ void __memset_io(volatile void __iomem *dst, int c, size_t count)
 		dst++;
 		count--;
 	}
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr_end((unsigned long)addr, 0xabcd);
+#endif
 }
 EXPORT_SYMBOL(__memset_io);

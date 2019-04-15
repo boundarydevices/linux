@@ -31,6 +31,9 @@
 #include <asm-generic/pci_iomap.h>
 #include <xen/xen.h>
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+#include <linux/amlogic/debug_ftrace_ramoops.h>
+#endif
 /*
  * ISA I/O bus memory addresses are 1:1 with the physical address.
  */
@@ -73,17 +76,29 @@ void __raw_readsl(const volatile void __iomem *addr, void *data, int longlen);
 #define __raw_writew __raw_writew
 static inline void __raw_writew(u16 val, volatile void __iomem *addr)
 {
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr((unsigned long)addr, (unsigned long)val);
+#endif
 	asm volatile("strh %1, %0"
 		     : : "Q" (*(volatile u16 __force *)addr), "r" (val));
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr_end((unsigned long)addr, (unsigned long)val);
+#endif
 }
 
 #define __raw_readw __raw_readw
 static inline u16 __raw_readw(const volatile void __iomem *addr)
 {
 	u16 val;
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_rd((unsigned long)addr);
+#endif
 	asm volatile("ldrh %0, %1"
 		     : "=r" (val)
 		     : "Q" (*(volatile u16 __force *)addr));
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_rd_end((unsigned long)addr);
+#endif
 	return val;
 }
 #endif
@@ -91,24 +106,42 @@ static inline u16 __raw_readw(const volatile void __iomem *addr)
 #define __raw_writeb __raw_writeb
 static inline void __raw_writeb(u8 val, volatile void __iomem *addr)
 {
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr((unsigned long)addr, (unsigned long)val);
+#endif
 	asm volatile("strb %1, %0"
 		     : : "Qo" (*(volatile u8 __force *)addr), "r" (val));
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr_end((unsigned long)addr, (unsigned long)val);
+#endif
 }
 
 #define __raw_writel __raw_writel
 static inline void __raw_writel(u32 val, volatile void __iomem *addr)
 {
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr((unsigned long)addr, (unsigned long)val);
+#endif
 	asm volatile("str %1, %0"
 		     : : "Qo" (*(volatile u32 __force *)addr), "r" (val));
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr_end((unsigned long)addr, (unsigned long)val);
+#endif
 }
 
 #define __raw_readb __raw_readb
 static inline u8 __raw_readb(const volatile void __iomem *addr)
 {
 	u8 val;
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_rd((unsigned long)addr);
+#endif
 	asm volatile("ldrb %0, %1"
 		     : "=r" (val)
 		     : "Qo" (*(volatile u8 __force *)addr));
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_rd_end((unsigned long)addr);
+#endif
 	return val;
 }
 
@@ -116,9 +149,15 @@ static inline u8 __raw_readb(const volatile void __iomem *addr)
 static inline u32 __raw_readl(const volatile void __iomem *addr)
 {
 	u32 val;
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_rd((unsigned long)addr);
+#endif
 	asm volatile("ldr %0, %1"
 		     : "=r" (val)
 		     : "Qo" (*(volatile u32 __force *)addr));
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_rd_end((unsigned long)addr);
+#endif
 	return val;
 }
 
@@ -317,7 +356,13 @@ static inline void memset_io(volatile void __iomem *dst, unsigned c,
 	size_t count)
 {
 	extern void mmioset(void *, unsigned int, size_t);
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr((unsigned long)dst, (unsigned long)count);
+#endif
 	mmioset((void __force *)dst, c, count);
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr_end((unsigned long)dst, (unsigned long)count);
+#endif
 }
 #define memset_io(dst,c,count) memset_io(dst,c,count)
 
@@ -325,7 +370,13 @@ static inline void memcpy_fromio(void *to, const volatile void __iomem *from,
 	size_t count)
 {
 	extern void mmiocpy(void *, const void *, size_t);
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr((unsigned long)to, (unsigned long)count);
+#endif
 	mmiocpy(to, (const void __force *)from, count);
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr_end((unsigned long)to, (unsigned long)count);
+#endif
 }
 #define memcpy_fromio(to,from,count) memcpy_fromio(to,from,count)
 
@@ -333,7 +384,13 @@ static inline void memcpy_toio(volatile void __iomem *to, const void *from,
 	size_t count)
 {
 	extern void mmiocpy(void *, const void *, size_t);
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr((unsigned long)to, (unsigned long)count);
+#endif
 	mmiocpy((void __force *)to, from, count);
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	pstore_ftrace_io_wr_end((unsigned long)to, (unsigned long)count);
+#endif
 }
 #define memcpy_toio(to,from,count) memcpy_toio(to,from,count)
 

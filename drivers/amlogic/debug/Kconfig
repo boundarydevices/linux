@@ -19,3 +19,15 @@ config AMLOGIC_DEBUG_ATRACE
 	default y
 	help
 		Add android atrace compatible function
+
+config AMLOGIC_DEBUG_FTRACE_PSTORE
+	bool "Amlogic ftrace pstore debug"
+	depends on AMLOGIC_DEBUG
+	depends on PSTORE_FTRACE
+	default y
+	help
+		Dump function call and register access to ramoops after watchdog
+		reboot.
+		Enable if doubt.
+
+

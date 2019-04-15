@@ -26,8 +26,9 @@ enum{
 	IO_HIUBUS_BASE,
 	IO_BUS_MAX,
 };
-extern int aml_reg_read(u32 bus_type, unsigned int reg, unsigned int *val);
-extern int aml_reg_write(u32 bus_type, unsigned int reg, unsigned int val);
+
+extern inline int aml_reg_read(u32 bus_type, u32 reg, u32 *val);
+extern inline int aml_reg_write(u32 bus_type, u32 reg, u32 val);
 extern int aml_regmap_update_bits(u32 bus_type,
 			unsigned int reg, unsigned int mask,
 			unsigned int val);

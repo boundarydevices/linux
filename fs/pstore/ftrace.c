@@ -27,6 +27,10 @@
 #include <asm/barrier.h>
 #include "internal.h"
 
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+#include <linux/amlogic/debug_ftrace_ramoops.h>
+#endif
+
 static void notrace pstore_ftrace_call(unsigned long ip,
 				       unsigned long parent_ip,
 				       struct ftrace_ops *op,
@@ -39,13 +43,16 @@ static void notrace pstore_ftrace_call(unsigned long ip,
 		return;
 
 	local_irq_save(flags);
-
 	rec.ip = ip;
 	rec.parent_ip = parent_ip;
+#ifdef CONFIG_AMLOGIC_DEBUG_FTRACE_PSTORE
+	rec.flag = PSTORE_FLAG_FUNC;
+	pstore_ftrace_save(&rec);
+#else
 	pstore_ftrace_encode_cpu(&rec, raw_smp_processor_id());
 	psinfo->write_buf(PSTORE_TYPE_FTRACE, 0, NULL, 0, (void *)&rec,
 			  0, sizeof(rec), psinfo);
-
+#endif
 	local_irq_restore(flags);
 }
 

@@ -14521,6 +14521,7 @@ AMLOGIC DEBUG
 M: Jianxin Pan <jianxin.pan@amlogic.com>
 M: Tao Guo <tao.guo@amlogic.com>
 F:  drivers/amlogic/debug/*
+F: include/linux/amlogic/debug*.h
 
 AMLOGIC G12A spdif channel status
 M: xing wang<xing.wang@amlogic.com>
