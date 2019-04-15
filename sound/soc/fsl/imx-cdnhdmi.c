@@ -147,7 +147,7 @@ static int get_edid_info(struct snd_soc_card *card)
 	struct snd_soc_pcm_runtime *rtd = list_first_entry(
 		&card->rtd_list, struct snd_soc_pcm_runtime, list);
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_component *codec = codec_dai->component;
 	struct hdmi_codec_pdata *hcd = codec->dev->platform_data;
 	struct imx_cdnhdmi_data *data = snd_soc_card_get_drvdata(card);
 	int i, j, ret;
@@ -281,7 +281,7 @@ static int get_edid_rx_info(struct snd_soc_card *card)
 	struct snd_soc_pcm_runtime *rtd = list_first_entry(
 		&card->rtd_list, struct snd_soc_pcm_runtime, list);
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_component *codec = codec_dai->component;
 	struct hdmi_codec_pdata *hcd = codec->dev->platform_data;
 	struct imx_cdnhdmi_data *data = snd_soc_card_get_drvdata(card);
 	int ret;
