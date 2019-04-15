@@ -18,6 +18,7 @@ source "drivers/mxc/sim/Kconfig"
 source "drivers/mxc/vpu/Kconfig"
 source "drivers/mxc/hdp/Kconfig"
 source "drivers/mxc/hdp-cec/Kconfig"
+source "drivers/mxc/vpu_malone/Kconfig"
 
 config MXC_IPU
 	bool "Image Processing Unit Driver"

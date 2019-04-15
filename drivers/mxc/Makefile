@@ -7,3 +7,4 @@ obj-$(CONFIG_MXC_MIPI_CSI2) += mipi/
 obj-$(CONFIG_MXC_VPU) += vpu/
 obj-$(CONFIG_MX8_HDP)	+= hdp/
 obj-$(CONFIG_IMX_HDP_CEC)	+= hdp-cec/
+obj-$(CONFIG_MXC_VPU_MALONE) += vpu_malone/
