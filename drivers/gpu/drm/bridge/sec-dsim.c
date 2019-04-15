@@ -1928,9 +1928,8 @@ int sec_mipi_dsim_bind(struct device *dev, struct device *master, void *data,
 	}
 	dsim->clk_pixel = devm_clk_get(dev, "pixel_clock");
 	if (IS_ERR(dsim->clk_pixel)) {
-		ret = PTR_ERR(dsim->clk_pixel);
-		dev_err(dev, "Unable to get pixel clock: %d\n", ret);
-		return ret;
+		dev_warn(dev, "Unable to get pixel clock: %ld\n", PTR_ERR(dsim->clk_pixel));
+		dsim->clk_pixel = NULL;
 	}
 
 	clk_prepare_enable(dsim->clk_cfg);
