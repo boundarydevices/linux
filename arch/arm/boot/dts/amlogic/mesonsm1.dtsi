@@ -2133,6 +2133,15 @@
 		};
 	};
 
+	i2c2_master_pins3:i2c2_pins3 {
+		mux {
+			groups = "i2c2_sda_z10",
+				"i2c2_sck_z11";
+			function = "i2c2";
+			drive-strength = <2>;
+		};
+	};
+
 	i2c3_master_pins1:i2c3_pins1 {
 		mux {
 			groups = "i2c3_sda_h",

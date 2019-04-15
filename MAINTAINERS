@@ -14816,3 +14816,24 @@ F:	arch/arm64/boot/dts/amlogic/g12a_s905x2_u212.dts
 F:	arch/arm64/boot/dts/amlogic/g12a_s905x2_u212_1g.dts
 F:	arch/arm/boot/dts/amlogic/sm1_s905x3_ac213.dts
 F:	arch/arm64/boot/dts/amlogic/sm1_s905x3_ac213.dts
+
+AMLOGIC SM1 MIPI CSI DRIVER
+M:	Guosong Zhou <guosong.zhou@amlogic.com>
+F:	arch/arm/boot/dts/amlogic/sm1_s905d3_ac200.dts
+F:	arch/arm/boot/dts/amlogic/mesonsm1.dtsi
+F:	arch/arm/configs/meson64_a32_defconfig
+F:	arch/arm64/boot/dts/amlogic/sm1_s905d3_ac200.dts
+F:	arch/arm64/boot/dts/amlogic/mesonsm1.dtsi
+F:	arch/arm64/configs/meson64_defconfig
+F:	drivers/amlogic/clk/g12a/g12a.h
+F:	include/dt-bindings/clock/amlogic,g12a-clkc.h
+F:	drivers/amlogic/clk/sm1/sm1.c
+F:	drivers/amlogic/media/camera/Makefile
+F:	drivers/amlogic/media/camera/common/cam_prober.c
+F:	drivers/amlogic/media/vin/tvin/Kconfig
+F:	drivers/amlogic/media/vin/tvin/Makefile
+F:	include/linux/amlogic/media/camera/aml_cam_info.h
+F:	drivers/amlogic/media/camera/ov5640.c
+F:	drivers/amlogic/media/camera/ov5640_firmware.h
+F:	drivers/amlogic/media/vin/tvin/csi/*
+F:	include/linux/amlogic/media/mipi/*

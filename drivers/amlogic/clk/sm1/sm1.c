@@ -140,6 +140,99 @@ static struct clk_gate cts_vipnanoq_axi_clk_gate = {
 		.flags = CLK_GET_RATE_NOCACHE,
 	},
 };
+
+static const char * const media_parent_names_mipi[] = { "xtal",
+	"gp0_pll", "mpll1", "mpll2", "fclk_div3", "fclk_div4",
+	"fclk_div5",  "fclk_div7"
+};
+
+static struct clk_mux cts_mipi_csi_phy_clk_mux = {
+	.reg = (void *)HHI_MIPI_CSI_PHY_CLK_CNTL,
+	.mask = 0x7,
+	.shift = 9,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_mipi_csi_phy_clk_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = media_parent_names_mipi,
+		.num_parents = 8,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider cts_mipi_csi_phy_clk_div = {
+	.reg = (void *)HHI_MIPI_CSI_PHY_CLK_CNTL,
+	.shift = 0,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_mipi_csi_phy_clk_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "cts_mipi_csi_phy_clk_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate cts_mipi_csi_phy_clk_gate = {
+	.reg = (void *)HHI_MIPI_CSI_PHY_CLK_CNTL,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+	.name = "cts_mipi_csi_phy_clk_gate",
+	.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "cts_mipi_csi_phy_clk_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static const char * const media_parent_names_adapt[] = { "xtal",
+	"fclk_div4", "fclk_div3", "fclk_div5", "fclk_div7", "mpll2",
+	"mpll3",  "gp0_pll"
+};
+
+static struct clk_mux cts_csi_adapt_clk_mux = {
+	.reg = (void *)HHI_CSI2_ADAPT_CLK_CNTL,
+	.mask = 0x7,
+	.shift = 9,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_csi_adapt_clk_mux",
+		.ops = &clk_mux_ops,
+		.parent_names = media_parent_names_adapt,
+		.num_parents = 8,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_divider cts_csi_adapt_clk_div = {
+	.reg = (void *)HHI_CSI2_ADAPT_CLK_CNTL,
+	.shift = 0,
+	.width = 7,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data){
+		.name = "cts_csi_adapt_clk_div",
+		.ops = &clk_divider_ops,
+		.parent_names = (const char *[]){ "cts_csi_adapt_clk_mux" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
+static struct clk_gate cts_csi_adapt_clk_gate = {
+	.reg = (void *)HHI_CSI2_ADAPT_CLK_CNTL,
+	.bit_idx = 8,
+	.lock = &clk_lock,
+	.hw.init = &(struct clk_init_data) {
+	.name = "cts_csi_adapt_clk_gate",
+	.ops = &clk_gate_ops,
+		.parent_names = (const char *[]){ "cts_csi_adapt_clk_div" },
+		.num_parents = 1,
+		.flags = CLK_GET_RATE_NOCACHE,
+	},
+};
+
 static struct clk_mux sm1_dsu_pre_src_clk_mux0 = {
 	.reg = (void *)HHI_SYS_CPU_CLK_CNTL5,
 	.mask = 0x3,
@@ -373,6 +466,20 @@ static void __init sm1_clkc_init(struct device_node *np)
 		+ (unsigned long)(cts_vipnanoq_axi_clk_gate.reg);
 	cts_vipnanoq_axi_clk_div.reg = clk_base
 		+ (unsigned long)(cts_vipnanoq_axi_clk_div.reg);
+
+	cts_mipi_csi_phy_clk_mux.reg = clk_base
+		+ (unsigned long)(cts_mipi_csi_phy_clk_mux.reg);
+	cts_mipi_csi_phy_clk_div.reg = clk_base
+		+ (unsigned long)(cts_mipi_csi_phy_clk_div.reg);
+	cts_mipi_csi_phy_clk_gate.reg = clk_base
+		+ (unsigned long)(cts_mipi_csi_phy_clk_gate.reg);
+	cts_csi_adapt_clk_mux.reg = clk_base
+		+ (unsigned long)(cts_csi_adapt_clk_mux.reg);
+	cts_csi_adapt_clk_div.reg = clk_base
+		+ (unsigned long)(cts_csi_adapt_clk_div.reg);
+	cts_csi_adapt_clk_gate.reg = clk_base
+		+ (unsigned long)(cts_csi_adapt_clk_gate.reg);
+
 	/* Populate base address for gates */
 	for (i = 0; i < ARRAY_SIZE(sm1_clk_gates); i++)
 		sm1_clk_gates[i]->reg = clk_base +
@@ -426,6 +533,33 @@ static void __init sm1_clkc_init(struct device_node *np)
 	if (IS_ERR(clks[CLKID_VNANOQ_AXI_CLK_COMP]))
 		panic("%s: %d register cts_vipnanoq_axi_clk_composite error\n",
 			__func__, __LINE__);
+
+	clks[CLKID_MIPI_CSI_PHY_CLK_COMP] = clk_register_composite(NULL,
+		"cts_csi_phy_clk_composite",
+		media_parent_names_mipi, 8,
+		&cts_mipi_csi_phy_clk_mux.hw,
+		&clk_mux_ops,
+		&cts_mipi_csi_phy_clk_div.hw,
+		&clk_divider_ops,
+		&cts_mipi_csi_phy_clk_gate.hw,
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_MIPI_CSI_PHY_CLK_COMP]))
+		panic("%s: %d register cts_csi_phy_clk_composite error\n",
+			__func__, __LINE__);
+
+	clks[CLKID_CSI_ADAPT_CLK_COMP] = clk_register_composite(NULL,
+		"cts_csi_adapt_clk_composite",
+		media_parent_names_adapt, 8,
+		&cts_csi_adapt_clk_mux.hw,
+		&clk_mux_ops,
+		&cts_csi_adapt_clk_div.hw,
+		&clk_divider_ops,
+		&cts_csi_adapt_clk_gate.hw,
+		&clk_gate_ops, 0);
+	if (IS_ERR(clks[CLKID_CSI_ADAPT_CLK_COMP]))
+		panic("%s: %d register cts_csi_adapt_clk_composite error\n",
+			__func__, __LINE__);
+
 	if (clks[CLKID_CPU_CLK]) {
 		if (!of_property_read_bool(np, "own-dsu-clk"))
 			return;

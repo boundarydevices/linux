@@ -33,6 +33,7 @@
 #include <linux/amlogic/cpu_version.h>
 #include <linux/amlogic/media/old_cpu_version.h>
 #include <linux/clk.h>
+#include <linux/errno.h>
 
 #define CONFIG_ARCH_MESON8
 
@@ -1049,7 +1050,8 @@ void aml_cam_init(struct aml_cam_info_s *cam_dev)
 	if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXBB)
 		GXBB_cam_enable_clk();
 	else if ((get_cpu_type() == MESON_CPU_MAJOR_ID_G12A) ||
-		(get_cpu_type() == MESON_CPU_MAJOR_ID_G12B))
+		(get_cpu_type() == MESON_CPU_MAJOR_ID_G12B) ||
+		(is_meson_sm1_cpu()))
 		GX12_cam_enable_clk();
 	else
 		cam_enable_clk(cam_dev->mclk, cam_dev->spread_spectrum);
@@ -1109,7 +1111,8 @@ void aml_cam_uninit(struct aml_cam_info_s *cam_dev)
 	if (get_cpu_type() == MESON_CPU_MAJOR_ID_GXBB)
 		GXBB_cam_disable_clk(cam_dev->spread_spectrum);
 	else if ((get_cpu_type() == MESON_CPU_MAJOR_ID_G12A) ||
-		(get_cpu_type() == MESON_CPU_MAJOR_ID_G12B))
+		(get_cpu_type() == MESON_CPU_MAJOR_ID_G12B) ||
+		(is_meson_sm1_cpu()))
 		GX12_cam_disable_clk(cam_dev->spread_spectrum);
 	else
 		cam_disable_clk(cam_dev->spread_spectrum);
@@ -1195,6 +1198,15 @@ static int fill_cam_dev(struct device_node *p_node,
 		pr_info("get camera name failed!\n");
 		goto err_out;
 	}
+
+	cam_dev->cam_vdd = of_get_named_gpio(p_node, "camvdd-gpios", 0);
+	pr_info("cam_dev->cam_vdd = %d\n", cam_dev->cam_vdd);
+	if (cam_dev->cam_vdd == 0)
+		pr_info("%s: failed to map gpio_cam_vdd !\n", cam_dev->name);
+	ret = gpio_request(cam_dev->cam_vdd, "camera");
+	if (ret < 0)
+		pr_info("aml_cam_init cam_vdd request failed\n");
+	gpio_direction_output(cam_dev->cam_vdd, 0);
 
 	cam_dev->pwdn_pin = of_get_named_gpio(p_node, "gpio_pwdn-gpios", 0);
 	if (cam_dev->pwdn_pin == 0) {

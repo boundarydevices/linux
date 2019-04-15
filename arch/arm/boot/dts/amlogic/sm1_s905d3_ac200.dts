@@ -310,7 +310,7 @@
 		compatible = "amlogic, vm";
 		memory-region = <&vm0_cma_reserved>;
 		dev_name = "vm0";
-		status = "disabled";
+		status = "okay";
 		vm_id = <0>;
 	};
 
@@ -333,26 +333,43 @@
 
 	aml_cams {
 		compatible = "amlogic, cams_prober";
-		status = "disabled";
+		status = "okay";
 		pinctrl-names="default";
-		pinctrl-0=<&cam_dvp_pins &gen_clk_ee_z>;
+		pinctrl-0=<&gen_clk_ee_z>;
 		clocks = <&clkc CLKID_GEN_CLK>;
 		clock-names = "g12a_24m";
 		cam_0{
-			cam_name = "gc2145";
+			cam_name = "ov5640";
 			front_back = <0>;
-			/*u200 i2c2 gpio conflict with ethmac*/
 			camera-i2c-bus = <&i2c2>;
-			gpio_pwdn-gpios = <&gpio GPIOZ_2 GPIO_ACTIVE_HIGH>;
+			camvdd-gpios = <&gpio GPIOZ_5 GPIO_ACTIVE_HIGH>;
+			gpio_pwdn-gpios = <&gpio GPIOZ_6 GPIO_ACTIVE_HIGH>;
 			gpio_rst-gpios = <&gpio GPIOZ_12 GPIO_ACTIVE_HIGH>;
 			mirror_flip = <1>;
 			vertical_flip = <1>;
 			spread_spectrum = <0>;
-			bt_path = "gpio";
+			bt_path = "csi";
+			interface = "mipi";
+			clk_channel = "a";
 			bt_path_count = <1>;
-			vdin_path = <0>;
 			status = "okay";
 		};
+	};
+
+	amvdec_csi {
+		compatible = "amlogic, amvdec_csi";
+		status = "okay";
+		csi_id = <0>;
+		reg = <0xff650000 0x00000100>,
+		      <0xffe0c000 0x00000100>,
+		      <0xffe0d000 0x00000100>;
+		reg-names = "csi_phy", "csi_host", "csi_adapt";
+		clocks = <&clkc CLKID_CSI_ADAPT_CLK_COMP>,
+		      <&clkc CLKID_MIPI_CSI_PHY_CLK_COMP>;
+		clock-names = "cts_csi_adapt_clk_composite",
+		      "cts_csi_phy_clk_composite";
+		interrupts = <0 1 0>;
+		interrupt-names = "csi_phy";
 	};
 
 	gpio_keypad{
@@ -1049,9 +1066,9 @@
 };
 
 &i2c2 {
-	status = "disabled";
+	status = "okay";
 	pinctrl-names="default";
-	pinctrl-0=<&i2c2_master_pins2>;
+	pinctrl-0=<&i2c2_master_pins3>;
 	clock-frequency = <100000>;
 };
 

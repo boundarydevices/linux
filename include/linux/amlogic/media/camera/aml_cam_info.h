@@ -108,6 +108,7 @@ struct aml_cam_info_s {
 	/* gpio_t torch_ctrl_pin; */
 	unsigned int pwdn_pin;
 	unsigned int rst_pin;
+	unsigned int cam_vdd;
 	unsigned int flash_ctrl_pin;
 	unsigned int torch_ctrl_pin;
 	enum resolution_size max_cap_size;

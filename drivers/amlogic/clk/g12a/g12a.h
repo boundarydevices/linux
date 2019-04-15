@@ -117,6 +117,11 @@
 #define HHI_SYS1_PLL_CNTL5        0x394 /* 0xe5 offset in data sheet */
 #define HHI_SYS1_PLL_CNTL6        0x398 /* 0xe6 offset in data sheet */
 /*****************/
+
+/* For SM1 only */
+#define HHI_CSI2_ADAPT_CLK_CNTL		0x3c0 /* 0xf0 offset in data sheet */
+/*****************/
+
 #define HHI_BT656_CLK_CNTL		0x3d4 /* 0xf5 offset in data sheet */
 #define HHI_SPICC_CLK_CNTL      0x3dc /* 0xf7 offset in data sheet */
 /* AO registers*/
