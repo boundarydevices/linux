@@ -170,17 +170,17 @@
 
 	gpioleds {
 		compatible = "gpio-leds";
-		status = "okay";
+		status = "disabled";
 
 		net_red {
 			label="net_red";
-			gpios=<&gpio GPIOA_14 GPIO_ACTIVE_LOW>;
+			/*gpios=<&gpio GPIOA_14 GPIO_ACTIVE_LOW>;*/
 			default-state ="on";
 		};
 
 		net_green {
 			label="net_green";
-			gpios=<&gpio GPIOA_15 GPIO_ACTIVE_HIGH>;
+			/*gpios=<&gpio GPIOA_15 GPIO_ACTIVE_HIGH>;*/
 			default-state ="on";
 		};
 
@@ -326,6 +326,42 @@
 		nrds-enable = <1>;
 		pps-enable = <1>;
 	};
+	dvb {
+		compatible = "amlogic, dvb";
+		dev_name = "dvb";
+		fe0_mode = "external";
+		fe0_demod = "Avl6762";
+		fe0_i2c_adap_id = <&i2c3>;
+		fe0_demod_i2c_addr = <0x14>;
+		fe0_ts = <0>;
+		fe0_reset_value = <0>;
+		fe0_reset_gpio = <&gpio GPIOZ_10 GPIO_ACTIVE_HIGH>;
+
+		ts0 = "serial";
+		ts0_control = <0x800>;
+		ts0_invert = <0>;
+		interrupts = <0 23 1
+		0 5 1
+		0 21 1
+		0 19 1
+		0 25 1
+		0 18 1
+		0 24 1>;
+		interrupt-names = "demux0_irq",
+		"demux1_irq",
+		"demux2_irq",
+		"dvr0_irq",
+		"dvr1_irq",
+		"dvrfill0_fill",
+		"dvrfill1_flush";
+		pinctrl-names = "s_ts0";
+		pinctrl-0 = <&dvb_s_ts0_pins>;
+		clocks = <&clkc CLKID_DEMUX
+		&clkc CLKID_AHB_ARB0
+		&clkc CLKID_DOS_PARSER>;
+		clock-names = "demux", "ahbarb0", "parser_top";
+	};
+
 	ionvideo {
 		compatible = "amlogic, ionvideo";
 		dev_name = "ionvideo";
@@ -1045,15 +1081,16 @@
 	};
 };
 
-&i2c2 {
-	status = "disabled";
-	pinctrl-names="default";
-	pinctrl-0=<&i2c2_master_pins2>;
-	clock-frequency = <100000>;
-};
+/*&i2c2 {
+ *	status = "okay";
+ *	pinctrl-names="default";
+ *	pinctrl-0=<&i2c2_master_pins2>;
+ *	clock-frequency = <300000>;
+ *};
+ */
 
 &i2c3 {
-	status = "okay";
+	status = "ok";
 	pinctrl-names="default";
 	pinctrl-0=<&i2c3_master_pins2>;
 	clock-frequency = <100000>; /* default 100k */
@@ -1063,7 +1100,7 @@
 		compatible = "ESMT, ad82584f";
 		#sound-dai-cells = <0>;
 		reg = <0x31>;
-		status = "okay";
+		status = "disabled";
 		reset_pin = <&gpio GPIOA_5 0>;
 		no_mclk;
 	};
@@ -1579,3 +1616,14 @@
 	status = "okay";
 };
 
+&pinctrl_aobus {
+	dvb_s_ts0_pins: dvb_s_ts0_pins {
+		tsin_a {
+			groups = "tsin_a_sop_ao",
+				"tsin_a_valid_ao",
+				"tsin_a_clk_ao",
+				"tsin_a_din0_ao";
+			function = "tsin_a_ao";
+		};
+	};
+};
