@@ -34,7 +34,7 @@
 
 #define FOREACH_STATE(S)			\
 	S(INVALID_STATE),			\
-	S(DRP_TOGGLING),			\
+	S(TOGGLING),			\
 	S(SRC_UNATTACHED),			\
 	S(SRC_ATTACH_WAIT),			\
 	S(SRC_ATTACHED),			\
@@ -482,7 +482,7 @@ static void tcpm_log(struct tcpm_port *port, const char *fmt, ...)
 	/* Do not log while disconnected and unattached */
 	if (tcpm_port_is_disconnected(port) &&
 	    (port->state == SRC_UNATTACHED || port->state == SNK_UNATTACHED ||
-	     port->state == DRP_TOGGLING))
+	     port->state == TOGGLING))
 		return;
 
 	va_start(args, fmt);
@@ -910,9 +910,8 @@ static enum tcpm_state tcpm_get_idle_state(struct tcpm_port *port)
 	else if (port->typec_caps.type == TYPEC_PORT_SRC)
 		return SNK_UNATTACHED;
 	else if (port->typec_caps.type == TYPEC_PORT_DRP)
-		return DRP_TOGGLING;
-	else
-		return INVALID_STATE;
+		return TOGGLING;
+	return INVALID_STATE;
 }
 
 static void tcpm_qos_handling(struct tcpm_port *port)
@@ -2618,8 +2617,7 @@ static int tcpm_set_charge(struct tcpm_port *port, bool charge)
 	return 0;
 }
 
-static bool tcpm_start_drp_toggling(struct tcpm_port *port,
-				    enum typec_cc_status cc)
+static bool tcpm_start_toggling(struct tcpm_port *port, enum typec_cc_status cc)
 {
 	int ret = 0;
 
@@ -2627,26 +2625,23 @@ static bool tcpm_start_drp_toggling(struct tcpm_port *port,
 
 	/* First toggle Rp if current state is SNK_UNATTACHED */
 
-	if (port->tcpc->start_drp_toggling &&
-		(port->port_type == TYPEC_PORT_DRP ||
-		 port->typec_caps.data == TYPEC_PORT_DRD)) {
-		if (port->state == SRC_UNATTACHED)
-			ret = port->tcpc->start_drp_toggling(port->tcpc,
-					tcpm_rp_cc(port), 0);
-		else if (port->state == SNK_UNATTACHED)
-			ret = port->tcpc->start_drp_toggling(port->tcpc,
-					TYPEC_CC_RD, 0);
-		else if (port->state == SRC_ATTACHED)
-			ret = port->tcpc->start_drp_toggling(port->tcpc,
-					tcpm_rp_cc(port), 0x1 << port->polarity);
-		else if (port->state == SNK_ATTACHED)
-			ret = port->tcpc->start_drp_toggling(port->tcpc,
-					TYPEC_CC_RD, 0x1 << port->polarity);
-		if (!ret)
-			return true;
-	}
+	if (!port->tcpc->start_toggling)
+		return false;
 
-	return false;
+	tcpm_log_force(port, "Start toggling");
+	if (port->state == SRC_UNATTACHED)
+		ret = port->tcpc->start_toggling(port->tcpc, port->port_type,
+				tcpm_rp_cc(port), 0);
+	else if (port->state == SNK_UNATTACHED)
+		ret = port->tcpc->start_toggling(port->tcpc, port->port_type,
+				TYPEC_CC_RD, 0);
+	else if (port->state == SRC_ATTACHED)
+		ret = port->tcpc->start_toggling(port->tcpc, port->port_type,
+				tcpm_rp_cc(port), 0x1 << port->polarity);
+	else if (port->state == SNK_ATTACHED)
+		ret = port->tcpc->start_toggling(port->tcpc, port->port_type,
+				TYPEC_CC_RD, 0x1 << port->polarity);
+	return ret == 0;
 }
 
 static bool tcpm_vbus_is_low(struct tcpm_port *port)
@@ -2726,7 +2721,7 @@ static int tcpm_src_attach(struct tcpm_port *port)
 	if (port->tcpc->ss_mux_sel)
 		port->tcpc->ss_mux_sel(port->tcpc, polarity);
 
-	tcpm_start_drp_toggling(port, tcpm_rp_cc(port));
+	tcpm_start_toggling(port, tcpm_rp_cc(port));
 
 	ret = tcpm_set_roles(port, true, TYPEC_SOURCE, TYPEC_HOST);
 	if (ret < 0)
@@ -2858,7 +2853,7 @@ static int tcpm_snk_attach(struct tcpm_port *port)
 	if (port->tcpc->ss_mux_sel)
 		port->tcpc->ss_mux_sel(port->tcpc, polarity);
 
-	tcpm_start_drp_toggling(port, tcpm_rp_cc(port));
+	tcpm_start_toggling(port, tcpm_rp_cc(port));
 
 	ret = tcpm_set_roles(port, true, TYPEC_SINK, TYPEC_DEVICE);
 	if (ret < 0)
@@ -2987,15 +2982,15 @@ static void run_state_machine(struct tcpm_port *port)
 
 	port->enter_state = port->state;
 	switch (port->state) {
-	case DRP_TOGGLING:
+	case TOGGLING:
 		break;
 	/* SRC states */
 	case SRC_UNATTACHED:
 		if (!port->non_pd_role_swap)
 			tcpm_swap_complete(port, -ENOTCONN);
 		tcpm_src_detach(port);
-		if (tcpm_start_drp_toggling(port, tcpm_rp_cc(port))) {
-			tcpm_set_state(port, DRP_TOGGLING, 0);
+		if (tcpm_start_toggling(port, tcpm_rp_cc(port))) {
+			tcpm_set_state(port, TOGGLING, 0);
 			break;
 		}
 		tcpm_set_cc(port, tcpm_rp_cc(port));
@@ -3104,16 +3099,12 @@ static void run_state_machine(struct tcpm_port *port)
 			tcpm_set_state(port, SRC_SEND_CAPABILITIES,
 				       PD_T_SEND_SOURCE_CAP);
 		} else {
-			/*
-			 * Per standard, we should clear the reset counter here.
-			 * However, that can result in state machine hang-ups.
-			 * Reset it only in READY state to improve stability.
-			 */
-			/* port->hard_reset_count = 0; */
+			port->hard_reset_count = 0;
 			port->caps_count = 0;
 			port->pd_capable = true;
-			tcpm_set_state_cond(port, SRC_SEND_CAPABILITIES_TIMEOUT,
-					    PD_T_SEND_SOURCE_CAP);
+			hrtimer_start(&port->snd_res_timer,
+				      ms_to_ktime(PD_T_SENDER_RESPONSE),
+				      HRTIMER_MODE_REL);
 		}
 		break;
 	case SRC_SEND_CAPABILITIES_TIMEOUT:
@@ -3198,8 +3189,8 @@ static void run_state_machine(struct tcpm_port *port)
 			tcpm_swap_complete(port, -ENOTCONN);
 		tcpm_pps_complete(port, -ENOTCONN);
 		tcpm_snk_detach(port);
-		if (tcpm_start_drp_toggling(port, TYPEC_CC_RD)) {
-			tcpm_set_state(port, DRP_TOGGLING, 0);
+		if (tcpm_start_toggling(port, TYPEC_CC_RD)) {
+			tcpm_set_state(port, TOGGLING, 0);
 			break;
 		}
 		tcpm_set_cc(port, TYPEC_CC_RD);
@@ -3787,7 +3778,7 @@ static void _tcpm_cc_change(struct tcpm_port *port, enum typec_cc_status cc1,
 						       : "connected");
 
 	switch (port->state) {
-	case DRP_TOGGLING:
+	case TOGGLING:
 		if (tcpm_port_is_debug(port) || tcpm_port_is_audio(port) ||
 		    tcpm_port_is_source(port))
 			tcpm_set_state(port, SRC_ATTACH_WAIT, 0);
