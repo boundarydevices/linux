@@ -90,7 +90,7 @@
 		vendor:vendor
 		{
 			pname = "vendor";
-			size = <0x0 0x14000000>;
+			size = <0x0 0x10000000>;
 			mask = <1>;
 		};
 		odm:odm
