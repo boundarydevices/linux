@@ -1310,8 +1310,6 @@ void amvecm_3d_sync_process(void)
 #define SR_NOSCALE_LEVEL 0x10
 static void amve_sr_reg_setting(unsigned int adaptive_level)
 {
-	if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
-		goto g12_sr_reg_setting;
 	if (adaptive_level & SR_SD_SCALE_LEVEL)
 		am_set_regmap(&sr1reg_sd_scale);
 	else if (adaptive_level & SR_HD_SCALE_LEVEL)
@@ -1328,12 +1326,6 @@ static void amve_sr_reg_setting(unsigned int adaptive_level)
 		am_set_regmap(&sr1reg_cvbs);
 	else if (adaptive_level & SR_NOSCALE_LEVEL)
 		am_set_regmap(&sr1reg_hv_noscale);
-	return;
-g12_sr_reg_setting:
-	/*for g12a and g12b, load sr0 cvbs table when output cvbs mode*/
-	if (adaptive_level & SR_CVBS_LEVEL)
-		am_set_regmap(&sr0reg_cvbs);
-	return;
 }
 void amve_sharpness_adaptive_setting(struct vframe_s *vf,
 	 unsigned int sps_h_en, unsigned int sps_v_en)
