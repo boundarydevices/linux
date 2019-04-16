@@ -58,6 +58,7 @@
 #define CLD_DEBUGFS_DIR          "cld"
 #endif
 #define DEBUGFS_BLOCK_NAME       "dbglog_block"
+#define CNSS_DIAG_FWLOG_TIMEOUT        2000
 
 #define CFR_DEBUGFS_CAPT          "cfr_capture"
 
@@ -4309,8 +4310,9 @@ static ssize_t dbglog_block_read(struct file *file,
 
        spin_unlock_bh(&fwlog->fwlog_queue.lock);
 
-       ret = wait_for_completion_interruptible(
-                    &fwlog->fwlog_completion);
+       ret = wait_for_completion_interruptible_timeout(
+			&fwlog->fwlog_completion,
+			msecs_to_jiffies(CNSS_DIAG_FWLOG_TIMEOUT));
        if (ret == -ERESTARTSYS) {
                vfree(buf);
                return ret;
