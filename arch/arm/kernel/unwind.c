@@ -246,8 +246,21 @@ static unsigned long unwind_get_byte(struct unwind_ctrl_block *ctrl)
 }
 
 /* Before poping a register check whether it is feasible or not */
+#ifdef CONFIG_AMLOGIC_KASAN32
+/*
+ * If enabled KASAN and unwind_frame is called under IRQ routine,
+ * an value-less kasan report will trigger. Because IRQ is using
+ * thread context and don't initialized shadow memory when irq_svc
+ * saving irq context. Since it's hard to guess reserved memory for
+ * shadow in stack by compiler, so we just tell compiler do not
+ * sanitize for this function
+ */
+int __no_sanitize_address unwind_pop_register(struct unwind_ctrl_block *ctrl,
+				unsigned long **vsp, unsigned int reg)
+#else
 static int unwind_pop_register(struct unwind_ctrl_block *ctrl,
 				unsigned long **vsp, unsigned int reg)
+#endif
 {
 	if (unlikely(ctrl->check_each_pop))
 		if (*vsp >= (unsigned long *)ctrl->sp_high)
@@ -407,7 +420,13 @@ int unwind_frame(struct stackframe *frame)
 
 	idx = unwind_find_idx(frame->pc);
 	if (!idx) {
+	#ifdef CONFIG_AMLOGIC_KASAN32
+		/* avoid FUCKING close source ko print too many here */
+		if (frame->pc > PAGE_OFFSET)
+			pr_warn("unwind: Index not found %08lx\n", frame->pc);
+	#else
 		pr_warn("unwind: Index not found %08lx\n", frame->pc);
+	#endif
 		return -URC_FAILURE;
 	}
 

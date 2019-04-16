@@ -101,6 +101,9 @@ __mmap_switched:
 	str	r2, [r6]			@ Save atags pointer
 	cmp	r7, #0
 	strne	r0, [r7]			@ Save control register values
+#ifdef CONFIG_AMLOGIC_KASAN32
+	bl	kasan_early_init
+#endif
 	b	start_kernel
 ENDPROC(__mmap_switched)
 

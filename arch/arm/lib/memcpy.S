@@ -62,9 +62,17 @@
 /* Prototype: void *memcpy(void *dest, const void *src, size_t n); */
 
 ENTRY(mmiocpy)
+#ifdef CONFIG_AMLOGIC_KASAN32
+ENTRY(__memcpy)
+#else
 ENTRY(memcpy)
+#endif
 
 #include "copy_template.S"
 
+#ifdef CONFIG_AMLOGIC_KASAN32
+ENDPROC(__memcpy)
+#else
 ENDPROC(memcpy)
+#endif
 ENDPROC(mmiocpy)

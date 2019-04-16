@@ -37,6 +37,9 @@
 #include <asm/mach/map.h>
 #include <asm/mach/pci.h>
 #include <asm/fixmap.h>
+#ifdef CONFIG_AMLOGIC_KASAN32
+#include <asm/kasan.h>
+#endif
 
 #include "fault.h"
 #include "mm.h"
@@ -951,7 +954,11 @@ static void __init __create_mapping(struct mm_struct *mm, struct map_desc *md,
  * offsets, and we take full advantage of sections and
  * supersections.
  */
+#ifdef CONFIG_AMLOGIC_KASAN32
+void __init create_mapping(struct map_desc *md)
+#else
 static void __init create_mapping(struct map_desc *md)
+#endif
 {
 	if (md->virtual != vectors_base() && md->virtual < TASK_SIZE) {
 		pr_warn("BUG: not creating mapping for 0x%08llx at 0x%08lx in user region\n",
@@ -1121,6 +1128,7 @@ void __init debug_ll_io_init(void)
 }
 #endif
 
+#ifndef CONFIG_AMLOGIC_KASAN32
 static void * __initdata vmalloc_min =
 	(void *)(VMALLOC_END - (240 << 20) - VMALLOC_OFFSET);
 
@@ -1149,6 +1157,7 @@ static int __init early_vmalloc(char *arg)
 	return 0;
 }
 early_param("vmalloc", early_vmalloc);
+#endif
 
 phys_addr_t arm_lowmem_limit __initdata = 0;
 
@@ -1166,7 +1175,11 @@ void __init adjust_lowmem_bounds(void)
 	 * and may itself be outside the valid range for which phys_addr_t
 	 * and therefore __pa() is defined.
 	 */
+#ifdef CONFIG_AMLOGIC_KASAN32
+	vmalloc_limit = (u64)(KMEM_END - PAGE_OFFSET + PHYS_OFFSET);
+#else
 	vmalloc_limit = (u64)(uintptr_t)vmalloc_min - PAGE_OFFSET + PHYS_OFFSET;
+#endif
 
 	for_each_memblock(memory, reg) {
 		phys_addr_t block_start = reg->base;
@@ -1244,8 +1257,19 @@ static inline void prepare_page_table(void)
 	/*
 	 * Clear out all the mappings below the kernel image.
 	 */
+#ifdef CONFIG_AMLOGIC_KASAN32
+	for (addr = 0; addr < MODULES_VADDR; addr += PMD_SIZE) {
+		/*
+		 * keep pre-initialized kasan shadow memory MMU before
+		 * kasan really eanbled
+		 */
+		if (addr < KASAN_SHADOW_START || addr >= KASAN_SHADOW_END)
+			pmd_clear(pmd_off_k(addr));
+	}
+#else
 	for (addr = 0; addr < MODULES_VADDR; addr += PMD_SIZE)
 		pmd_clear(pmd_off_k(addr));
+#endif
 
 #ifdef CONFIG_XIP_KERNEL
 	/* The XIP kernel is mapped in the module area -- skip over it */
@@ -1321,8 +1345,16 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	/*
 	 * Clear page table except top pmd used by early fixmaps
 	 */
+#ifdef CONFIG_AMLOGIC_KASAN32
+	/* we have adjusted memory map layout */
+	for (addr =  VMALLOC_START;
+	     addr <  (PAGE_OFFSET & PMD_MASK);
+	     addr += PMD_SIZE)
+		pmd_clear(pmd_off_k(addr));
+#else
 	for (addr = VMALLOC_START; addr < (FIXADDR_TOP & PMD_MASK); addr += PMD_SIZE)
 		pmd_clear(pmd_off_k(addr));
+#endif
 
 	/*
 	 * Map the kernel if it is XIP.
@@ -1645,10 +1677,11 @@ void __init paging_init(const struct machine_desc *mdesc)
 unsigned long notrace phys_check(phys_addr_t x)
 {
 	unsigned long addr;
-	struct page *page;
 
 	addr = x - PHYS_OFFSET + PAGE_OFFSET;
+#ifndef CONFIG_AMLOGIC_KASAN32
 	if (scheduler_running) {
+		struct page *page;
 		page = phys_to_page(x);
 
 		/*
@@ -1662,16 +1695,19 @@ unsigned long notrace phys_check(phys_addr_t x)
 			dump_stack();
 		}
 	}
+#endif
 	return addr;
 }
 EXPORT_SYMBOL(phys_check);
 
 unsigned long notrace virt_check(unsigned long x)
 {
+#ifndef CONFIG_AMLOGIC_KASAN32
 	if (scheduler_running && (x >= VMALLOC_START || x < PAGE_OFFSET)) {
 		pr_err("bad input of virt:%lx\n", x);
 		dump_stack();
 	}
+#endif
 	return (phys_addr_t)x - PAGE_OFFSET + PHYS_OFFSET;
 }
 EXPORT_SYMBOL(virt_check);

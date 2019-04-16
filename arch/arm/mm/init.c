@@ -36,6 +36,9 @@
 
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
+#ifdef CONFIG_AMLOGIC_KASAN32
+#include <asm/kasan.h>
+#endif
 
 #include "mm.h"
 
@@ -502,6 +505,9 @@ void __init mem_init(void)
 #define MLK_ROUNDUP(b, t) b, t, DIV_ROUND_UP(((t) - (b)), SZ_1K)
 
 	pr_notice("Virtual kernel memory layout:\n"
+#ifdef CONFIG_AMLOGIC_KASAN32
+			"    kasan   : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+#endif
 			"    vector  : 0x%08lx - 0x%08lx   (%4ld kB)\n"
 #ifdef CONFIG_HAVE_TCM
 			"    DTCM    : 0x%08lx - 0x%08lx   (%4ld kB)\n"
@@ -520,6 +526,9 @@ void __init mem_init(void)
 			"      .init : 0x%p" " - 0x%p" "   (%4td kB)\n"
 			"      .data : 0x%p" " - 0x%p" "   (%4td kB)\n"
 			"       .bss : 0x%p" " - 0x%p" "   (%4td kB)\n",
+#ifdef CONFIG_AMLOGIC_KASAN32
+			MLM(KASAN_SHADOW_START, KASAN_SHADOW_END),
+#endif
 
 			MLK(UL(CONFIG_VECTORS_BASE), UL(CONFIG_VECTORS_BASE) +
 				(PAGE_SIZE)),

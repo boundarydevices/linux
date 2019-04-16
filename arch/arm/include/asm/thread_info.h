@@ -16,8 +16,14 @@
 #include <asm/fpstate.h>
 #include <asm/page.h>
 
+#ifdef CONFIG_AMLOGIC_KASAN32
+#define THREAD_SIZE_ORDER	2
+#else
 #define THREAD_SIZE_ORDER	1
+#endif /* CONFIG_AMLOGIC_KASAN32 */
+
 #define THREAD_SIZE		(PAGE_SIZE << THREAD_SIZE_ORDER)
+
 #ifdef CONFIG_AMLOGIC_VMAP
 #define THREAD_INFO_SIZE	(sizeof(struct thread_info))
 #define THREAD_INFO_OFFSET	(THREAD_SIZE - THREAD_INFO_SIZE)

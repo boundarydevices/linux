@@ -25,6 +25,9 @@
 #include <asm/smp_plat.h>
 #include <asm/unwind.h>
 #include <asm/opcodes.h>
+#ifdef CONFIG_AMLOGIC_KASAN32
+#include <linux/kasan.h>
+#endif
 
 #ifdef CONFIG_XIP_KERNEL
 /*
@@ -40,6 +43,20 @@
 #ifdef CONFIG_MMU
 void *module_alloc(unsigned long size)
 {
+#ifdef CONFIG_AMLOGIC_KASAN32
+	void *p = __vmalloc_node_range(size, MODULE_ALIGN, MODULES_VADDR,
+				MODULES_END, GFP_KERNEL, PAGE_KERNEL_EXEC, 0,
+				NUMA_NO_NODE, __builtin_return_address(0));
+	if (!p)
+		p = __vmalloc_node_range(size, MODULE_ALIGN,  VMALLOC_START,
+				VMALLOC_END, GFP_KERNEL, PAGE_KERNEL_EXEC, 0,
+				NUMA_NO_NODE, __builtin_return_address(0));
+	if (p && (kasan_module_alloc(p, size) < 0)) {
+		vfree(p);
+		return NULL;
+	}
+	return p;
+#else
 	void *p = __vmalloc_node_range(size, 1, MODULES_VADDR, MODULES_END,
 				GFP_KERNEL, PAGE_KERNEL_EXEC, 0, NUMA_NO_NODE,
 				__builtin_return_address(0));
@@ -48,6 +65,7 @@ void *module_alloc(unsigned long size)
 	return __vmalloc_node_range(size, 1,  VMALLOC_START, VMALLOC_END,
 				GFP_KERNEL, PAGE_KERNEL_EXEC, 0, NUMA_NO_NODE,
 				__builtin_return_address(0));
+#endif
 }
 #endif
 

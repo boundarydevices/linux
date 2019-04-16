@@ -18,6 +18,9 @@
 #include <asm/domain.h>
 #include <asm/unified.h>
 #include <asm/compiler.h>
+#ifdef CONFIG_AMLOGIC_KASAN32
+#include <linux/kasan-checks.h>
+#endif
 
 #ifndef CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS
 #include <asm-generic/uaccess-unaligned.h>
@@ -532,6 +535,9 @@ __clear_user(void __user *addr, unsigned long n)
 static inline unsigned long __must_check
 __copy_from_user(void *to, const void __user *from, unsigned long n)
 {
+#ifdef CONFIG_AMLOGIC_KASAN32
+	kasan_check_write(to, n);
+#endif
 	check_object_size(to, n, false);
 	return __arch_copy_from_user(to, from, n);
 }
@@ -540,6 +546,9 @@ static inline unsigned long __must_check
 copy_from_user(void *to, const void __user *from, unsigned long n)
 {
 	unsigned long res = n;
+#ifdef CONFIG_AMLOGIC_KASAN32
+	kasan_check_write(to, n);
+#endif
 
 	check_object_size(to, n, false);
 
@@ -553,6 +562,9 @@ copy_from_user(void *to, const void __user *from, unsigned long n)
 static inline unsigned long __must_check
 __copy_to_user(void __user *to, const void *from, unsigned long n)
 {
+#ifdef CONFIG_AMLOGIC_KASAN32
+	kasan_check_read(from, n);
+#endif
 	check_object_size(from, n, true);
 
 	return __arch_copy_to_user(to, from, n);
@@ -561,6 +573,9 @@ __copy_to_user(void __user *to, const void *from, unsigned long n)
 static inline unsigned long __must_check
 copy_to_user(void __user *to, const void *from, unsigned long n)
 {
+#ifdef CONFIG_AMLOGIC_KASAN32
+	kasan_check_read(from, n);
+#endif
 	check_object_size(from, n, true);
 
 	if (access_ok(VERIFY_WRITE, to, n))

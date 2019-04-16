@@ -68,6 +68,9 @@
 #ifdef CONFIG_AMLOGIC_CPU_INFO
 #include <linux/amlogic/cpu_version.h>
 #endif
+#ifdef CONFIG_AMLOGIC_KASAN32
+#include <asm/kasan.h>
+#endif
 #include "atags.h"
 
 
@@ -1127,6 +1130,9 @@ void __init setup_arch(char **cmdline_p)
 	early_ioremap_reset();
 
 	paging_init(mdesc);
+#ifdef CONFIG_AMLOGIC_KASAN32
+	kasan_init();
+#endif
 	request_standard_resources(mdesc);
 
 	if (mdesc->restart)

@@ -90,6 +90,7 @@ config ARM
 	select PERF_USE_VMALLOC
 	select RTC_LIB
 	select SYS_SUPPORTS_APM_EMULATION
+	select HAVE_ARCH_KASAN
 	# Above selects are sorted alphabetically; please add new ones
 	# according to that.  Thanks.
 	help
@@ -1444,6 +1445,7 @@ config PAGE_OFFSET
 	default 0x40000000 if VMSPLIT_1G
 	default 0x80000000 if VMSPLIT_2G
 	default 0xB0000000 if VMSPLIT_3G_OPT
+	default 0xD0000000 if AMLOGIC_KASAN32
 	default 0xC0000000
 
 config NR_CPUS

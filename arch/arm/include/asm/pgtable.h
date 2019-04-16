@@ -41,9 +41,11 @@
  * The vmalloc() routines leaves a hole of 4kB between each vmalloced
  * area for the same reason. ;)
  */
+#ifndef CONFIG_AMLOGIC_KASAN32
 #define VMALLOC_OFFSET		(8*1024*1024)
 #define VMALLOC_START		(((unsigned long)high_memory + VMALLOC_OFFSET) & ~(VMALLOC_OFFSET-1))
 #define VMALLOC_END		0xff800000UL
+#endif /* !CONFIG_AMLOGIC_KASAN32 */
 
 #define LIBRARY_TEXT_START	0x0c000000
 

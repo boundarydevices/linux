@@ -39,10 +39,23 @@ config AMLOGIC_CMA
 		Amlogic CMA optimization for cma alloc/free problems
 		Including policy change of CMA usage
 
+config AMLOGIC_KASAN32
+	bool "Amlogic KASAN support for 32bit kernel"
+	depends on AMLOGIC_MEMORY_EXTEND
+	depends on KASAN
+	depends on !64BIT
+	default y
+	help
+		Amlogic implementation for KASAN on 32bit ARM kernel.
+		Which can help to debug memory of use-after-free,
+		out-of-bounds and other problems. This config will
+		change memory layout.
+
 config AMLOGIC_VMAP
 	bool "Amlogic kernel stack"
 	depends on AMLOGIC_MEMORY_EXTEND
 	depends on !KASAN
+	depends on !AMLOGIC_KASAN32
 	default y
 	help
 		This config is used to enable amlogic kernel stack

@@ -181,3 +181,9 @@ EXPORT_SYMBOL(__pv_offset);
 EXPORT_SYMBOL(__arm_smccc_smc);
 EXPORT_SYMBOL(__arm_smccc_hvc);
 #endif
+
+#ifdef CONFIG_AMLOGIC_KASAN32
+EXPORT_SYMBOL(__memset);
+EXPORT_SYMBOL(__memcpy);
+EXPORT_SYMBOL(__memmove);
+#endif

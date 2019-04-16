@@ -27,7 +27,11 @@
  * occurring in the opposite direction.
  */
 
+#ifdef CONFIG_AMLOGIC_KASAN32
+ENTRY(__memmove)
+#else
 ENTRY(memmove)
+#endif
 	UNWIND(	.fnstart			)
 
 		subs	ip, r0, r1
@@ -224,4 +228,8 @@ ENTRY(memmove)
 
 18:		backward_copy_shift	push=24	pull=8
 
+#ifdef CONFIG_AMLOGIC_KASAN32
+ENDPROC(__memmove)
+#else
 ENDPROC(memmove)
+#endif

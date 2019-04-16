@@ -39,15 +39,22 @@
  * TASK_UNMAPPED_BASE - the lower boundary of the mmap VM area
  */
 #define TASK_SIZE		(UL(CONFIG_PAGE_OFFSET) - UL(SZ_64M))
-#define TASK_UNMAPPED_BASE	ALIGN(TASK_SIZE / 3, SZ_16M)
-#else /* CONFIG_AMLOGIC_VMAP */
+#elif defined(CONFIG_AMLOGIC_KASAN32)
+/*
+ * reserve 128MB address space for kasan
+ * for this memory layout implementation, PAGE_OFFSET should be 0xD0000000
+ */
+#define VMALLOC_START		(UL(CONFIG_PAGE_OFFSET) - UL(SZ_256M))
+#define TASK_SIZE		(VMALLOC_START - UL(SZ_128M))
+#define KMEM_END		(0xffa00000UL)
+#else
 /*
  * TASK_SIZE - the maximum size of a user space task.
  * TASK_UNMAPPED_BASE - the lower boundary of the mmap VM area
  */
 #define TASK_SIZE		(UL(CONFIG_PAGE_OFFSET) - UL(SZ_16M))
-#define TASK_UNMAPPED_BASE	ALIGN(TASK_SIZE / 3, SZ_16M)
 #endif /* CONFIG_AMLOGIC_VMAP */
+#define TASK_UNMAPPED_BASE	ALIGN(TASK_SIZE / 3, SZ_16M)
 
 /*
  * The maximum size of a 26-bit user space task.
@@ -66,12 +73,23 @@
  * and PAGE_OFFSET - it must be within 32MB of the kernel text.
  */
 #ifndef CONFIG_THUMB2_KERNEL
+#ifdef CONFIG_AMLOGIC_KASAN32
+/*
+ * to fix module link problem
+ */
+#define MODULES_VADDR		(PAGE_OFFSET - SZ_16M + SZ_4M + SZ_2M)
+#else
 #define MODULES_VADDR		(PAGE_OFFSET - SZ_16M)
+#endif
 #else
 /* smaller range for Thumb-2 symbols relocation (2^24)*/
 #define MODULES_VADDR		(PAGE_OFFSET - SZ_8M)
 #endif
 #endif	/* CONFIG_AMLOGIC_VMAP */
+
+#ifdef CONFIG_AMLOGIC_KASAN32
+#define VMALLOC_END		(MODULES_VADDR - SZ_2M)
+#endif
 
 #if TASK_SIZE > MODULES_VADDR
 #error Top of user space clashes with start of module space
@@ -80,10 +98,14 @@
 /*
  * The highmem pkmap virtual space shares the end of the module area.
  */
+#ifdef CONFIG_AMLOGIC_KASAN32
+#define MODULES_END		(PAGE_OFFSET)
+#else
 #ifdef CONFIG_HIGHMEM
 #define MODULES_END		(PAGE_OFFSET - PMD_SIZE)
 #else
 #define MODULES_END		(PAGE_OFFSET)
+#endif
 #endif
 
 /*

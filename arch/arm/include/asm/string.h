@@ -26,6 +26,24 @@ extern void * memset(void *, int, __kernel_size_t);
 
 extern void __memzero(void *ptr, __kernel_size_t n);
 
+#ifdef CONFIG_AMLOGIC_KASAN32
+/* replace default function to check kasan */
+extern void *__memcpy(void *dst, const void *src, __kernel_size_t size);
+extern void *__memmove(void *dst, const void *src, __kernel_size_t size);
+extern void *__memset(void *dst, int v, __kernel_size_t size);
+#if defined(CONFIG_KASAN) && !defined(__SANITIZE_ADDRESS__)
+
+/*
+ * For files that are not instrumented (e.g. mm/slub.c) we
+ * should use not instrumented version of mem* functions.
+ */
+
+#define memcpy(dst, src, len) __memcpy(dst, src, len)
+#define memmove(dst, src, len) __memmove(dst, src, len)
+#define memset(s, c, n) __memset(s, c, n)
+#endif
+
+#else
 #define memset(p,v,n)							\
 	({								\
 	 	void *__p = (p); size_t __n = n;			\
@@ -38,4 +56,5 @@ extern void __memzero(void *ptr, __kernel_size_t n);
 		(__p);							\
 	})
 
+#endif
 #endif

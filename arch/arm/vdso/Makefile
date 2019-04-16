@@ -20,6 +20,8 @@ obj-$(CONFIG_VDSO) += vdso.o
 extra-$(CONFIG_VDSO) += vdso.lds
 CPPFLAGS_vdso.lds += -P -C -U$(ARCH)
 
+KASAN_SANITIZE_vgettimeofday.o := n
+
 CFLAGS_REMOVE_vdso.o = -pg
 
 # Force -O2 to avoid libgcc dependencies

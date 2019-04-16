@@ -3,7 +3,12 @@
 
 #include <asm/kmap_types.h>
 
+#ifdef CONFIG_AMLOGIC_KASAN32
+#include <asm/memory.h>
+#define PKMAP_BASE		VMALLOC_END
+#else
 #define PKMAP_BASE		(PAGE_OFFSET - PMD_SIZE)
+#endif
 #define LAST_PKMAP		PTRS_PER_PTE
 #define LAST_PKMAP_MASK		(LAST_PKMAP - 1)
 #define PKMAP_NR(virt)		(((virt) - PKMAP_BASE) >> PAGE_SHIFT)

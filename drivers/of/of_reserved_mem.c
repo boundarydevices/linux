@@ -161,6 +161,18 @@ static int __init __reserved_mem_alloc_size(unsigned long node,
 						       &prop);
 
 		#ifdef CONFIG_AMLOGIC_MODIFY
+		#ifdef CONFIG_AMLOGIC_KASAN32
+			{
+				unsigned long lowmem_size;
+
+				/* fix for cma overlap 2 zone */
+				lowmem_size = KMEM_END - PAGE_OFFSET;
+				lowmem_size += CONFIG_PHYS_OFFSET;
+				if (start < lowmem_size && end > lowmem_size) {
+					end = lowmem_size - SZ_4M;
+				}
+			}
+		#endif
 		#ifdef CONFIG_PHYS_ADDR_T_64BIT
 			pr_info("%s, start:%pa, end:%pa, len:%ld MiB\n",
 				__func__, &start, &end,

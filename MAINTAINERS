@@ -13539,6 +13539,11 @@ AMLOGIC boot config for M8B
 M: Tao Zeng <tao.zeng@amlogic.com>
 F: arch/arm/mach-meson/Makefile.boot
 
+AMLOGIC implementation for 32bit kasan
+M: Tao Zeng <tao.zeng@amlogic.com>
+F: arch/arm/include/asm/kasan.h
+F: arch/arm/mm/kasan_init.c
+
 HDMITX OUTPUT DRIVER
 M:	Yi Zhou <yi.zhou@amlogic.com>
 M:      Zongdong Jiao <zongdong.jiao@amlogic.com>

@@ -17,7 +17,11 @@
 	.align	5
 
 ENTRY(mmioset)
+#ifdef CONFIG_AMLOGIC_KASAN32
+ENTRY(__memset)
+#else
 ENTRY(memset)
+#endif
 UNWIND( .fnstart         )
 	ands	r3, r0, #3		@ 1 unaligned?
 	mov	ip, r0			@ preserve r0 as return value
@@ -133,5 +137,9 @@ UNWIND( .fnstart            )
 	add	r2, r2, r3		@ 1 (r2 = r2 - (4 - r3))
 	b	1b
 UNWIND( .fnend   )
+#ifdef CONFIG_AMLOGIC_KASAN32
+ENDPROC(__memset)
+#else
 ENDPROC(memset)
+#endif
 ENDPROC(mmioset)

@@ -120,7 +120,9 @@ char *strchr(const char *s, int c)
 	return (char *)s;
 }
 
+#ifndef CONFIG_AMLOGIC_KASAN32 /* for compile problems */
 #undef memset
+#endif
 
 void *memset(void *s, int c, size_t count)
 {

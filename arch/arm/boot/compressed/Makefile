@@ -4,6 +4,8 @@
 # create a compressed vmlinuz image from the original vmlinux
 #
 
+KASAN_SANITIZE := n
+
 OBJS		=
 
 AFLAGS_head.o += -DTEXT_OFFSET=$(TEXT_OFFSET)

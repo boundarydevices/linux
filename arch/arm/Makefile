@@ -52,6 +52,10 @@ AS		+= -EL
 LD		+= -EL
 endif
 
+ifeq ($(CONFIG_KASAN),y)
+KASAN_SHADOW_OFFSET := 0xA0000000
+endif
+
 #
 # The Scalar Replacement of Aggregates (SRA) optimization pass in GCC 4.9 and
 # later may result in code being generated that handles signed short and signed

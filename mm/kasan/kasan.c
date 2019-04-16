@@ -416,8 +416,18 @@ void kasan_cache_create(struct kmem_cache *cache, size_t *size,
 	if (redzone_adjust > 0)
 		*size += redzone_adjust;
 
+#ifdef CONFIG_AMLOGIC_KASAN32 /* compile problem */
+	{
+		size_t s1;
+
+		s1 = max(*size, cache->object_size +
+			optimal_redzone(cache->object_size));
+		*size = s1 >= KMALLOC_MAX_SIZE ?  KMALLOC_MAX_SIZE : s1;
+	}
+#else
 	*size = min(KMALLOC_MAX_SIZE, max(*size, cache->object_size +
 					optimal_redzone(cache->object_size)));
+#endif
 
 	/*
 	 * If the metadata doesn't fit, don't enable KASAN at all.
@@ -569,8 +579,13 @@ bool kasan_slab_free(struct kmem_cache *cache, void *object)
 
 	shadow_byte = READ_ONCE(*(s8 *)kasan_mem_to_shadow(object));
 	if (shadow_byte < 0 || shadow_byte >= KASAN_SHADOW_SCALE_SIZE) {
+	#ifdef CONFIG_AMLOGIC_KASAN32 /* for compile problems */
+		kasan_report_double_free(cache, object,
+				__builtin_return_address(0));
+	#else
 		kasan_report_double_free(cache, object,
 				__builtin_return_address(1));
+	#endif
 		return true;
 	}
 
@@ -731,6 +746,11 @@ static void register_global(struct kasan_global *global)
 {
 	size_t aligned_size = round_up(global->size, KASAN_SHADOW_SCALE_SIZE);
 
+#ifdef CONFIG_AMLOGIC_KASAN32
+	/* avoid FUCKING close source ko panic here */
+	if ((unsigned long)global->beg < MODULES_VADDR)
+		return;
+#endif
 	kasan_unpoison_shadow(global->beg, global->size);
 
 	kasan_poison_shadow(global->beg + aligned_size,
