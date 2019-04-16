@@ -95,6 +95,8 @@
 				      "pll1_bypass", "pll1_bypass_src";
 			arm-supply = <&reg_arm>;
 			soc-supply = <&reg_soc>;
+			nvmem-cells = <&cpu_speed_grade>;
+			nvmem-cell-names = "speed_grade";
 		};
 	};
 
@@ -1229,6 +1231,10 @@
 
 				tempmon_temp_grade: temp-grade@20 {
 					reg = <0x20 4>;
+				};
+
+				cpu_speed_grade: speed-grade@10 {
+					reg = <0x10 4>;
 				};
 			};
 
