@@ -741,7 +741,7 @@ defined(CONFIG_NON_QC_PLATFORM_PCI)
        status = request_firmware(&fw_entry, filename, scn->sc_osdev->device);
 	if (status)
 	{
-		pr_err("%s: Failed to get %s:%d\n", __func__, filename, status);
+		pr_debug("%s: Failed to get %s:%d\n", __func__, filename, status);
 
 		if (file == ATH_OTP_FILE)
 			return -ENOENT;
@@ -756,7 +756,7 @@ defined(CONFIG_NON_QC_PLATFORM_PCI)
 				return -1;
 			}
 
-			pr_info("%s: Trying to load default %s\n",
+			pr_debug("%s: Trying to load default %s\n",
 							__func__, filename);
 
 			status = request_firmware(&fw_entry, filename,
@@ -833,7 +833,7 @@ defined(CONFIG_NON_QC_PLATFORM_PCI)
 		BMIReadMemory(scn->hif_hdl,
 				HOST_INTEREST_ITEM_ADDRESS(scn->target_type, hi_board_ext_data),
 				(u_int8_t *)&board_ext_address, 4, scn);
-		printk("Board extended Data download address: 0x%x\n", board_ext_address);
+		pr_debug("Board extended Data download address: 0x%x\n", board_ext_address);
 
 		/*
 		 * Check whether the target has allocated memory for extended board
@@ -2238,7 +2238,7 @@ int ol_download_firmware(struct ol_softc *scn)
 	} else {
 		/* Transfer One Time Programmable data */
 		address = BMI_SEGMENTED_WRITE_ADDR;
-		printk("%s: Using 0x%x for the remainder of init\n", __func__, address);
+		pr_debug("%s: Using 0x%x for the remainder of init\n", __func__, address);
 
 		if ( scn->enablesinglebinary == FALSE ) {
 #ifdef HIF_PCI
@@ -2256,7 +2256,7 @@ int ol_download_firmware(struct ol_softc *scn)
 				bdf_ret = param & 0xff;
 				if (!bdf_ret)
 					scn->board_id = (param >> 8) & 0xffff;
-				pr_err("%s: chip_id:0x%0x board_id:0x%0x\n",
+				pr_debug("%s: chip_id:0x%0x board_id:0x%0x\n",
 						__func__, scn->target_version,
 							scn->board_id);
 			} else if (status < 0) {

@@ -486,7 +486,7 @@ ol_txrx_pdev_attach(
         desc_per_page = desc_per_page >> 1;
     }
     pdev->tx_desc.page_divider = (sig_bit - 1);
-    TXRX_PRINT(TXRX_PRINT_LEVEL_ERR,
+    TXRX_PRINT(TXRX_PRINT_LEVEL_INFO1,
         "page_divider 0x%x, offset_filter 0x%x num elem %d, ol desc num page %d, ol desc per page %d",
         pdev->tx_desc.page_divider, pdev->tx_desc.offset_filter,
         desc_pool_size, pdev->tx_desc.desc_pages.num_pages,

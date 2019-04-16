@@ -115,7 +115,7 @@ unsigned int forcecard = 0;
 module_param(forcecard, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 MODULE_PARM_DESC(forcecard, "Ignore card capabilities information to switch bus mode");
 
-unsigned int debugcccr = 1;
+unsigned int debugcccr = 0;
 module_param(debugcccr, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 MODULE_PARM_DESC(debugcccr, "Output this cccr values");
 
