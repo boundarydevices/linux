@@ -15,6 +15,7 @@
 #include <linux/clk.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
+#include <linux/dma-mapping.h>
 #include <linux/pm_runtime.h>
 #include "fsl_sai.h"
 #include "fsl_audmix.h"
@@ -306,6 +307,19 @@ static int imx_audmix_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, &priv->card);
 	snd_soc_card_set_drvdata(&priv->card, priv);
+
+	/*
+	 * The device is not created from a device tree node, so
+	 * arch_setup_dma_ops is not called, thus leaving the device with dummy
+	 * DMA ops. Fix this by calling of_dma_configure() with a NULL node to
+	 * set default DMA ops.
+	 */
+	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
+	ret = of_dma_configure(&pdev->dev, NULL, true);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Cannot setup DMA ops: %d\n", ret);
+		return ret;
+	}
 
 	ret = devm_snd_soc_register_card(&pdev->dev, &priv->card);
 	if (ret) {
