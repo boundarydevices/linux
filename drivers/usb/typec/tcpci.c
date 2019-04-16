@@ -139,12 +139,17 @@ static int tcpci_set_cc(struct tcpc_dev *tcpc, enum typec_cc_status cc)
 	return 0;
 }
 
-static int tcpci_start_drp_toggling(struct tcpc_dev *tcpc,
-		enum typec_cc_status cc, int attach)
+static int tcpci_start_toggling(struct tcpc_dev *tcpc,
+				enum typec_port_type port_type,
+				enum typec_cc_status cc,
+				int attach)
 {
 	int ret;
 	struct tcpci *tcpci = tcpc_to_tcpci(tcpc);
 	unsigned int reg = 0;
+
+	if (port_type != TYPEC_PORT_DRP)
+		return -EOPNOTSUPP;
 
 	/* Handle vendor drp toggling */
 	if (tcpci->data->start_drp_toggling) {
@@ -732,7 +737,7 @@ struct tcpci *tcpci_register_port(struct device *dev, struct tcpci_data *data)
 	tcpci->tcpc.get_cc = tcpci_get_cc;
 	tcpci->tcpc.set_polarity = tcpci_set_polarity;
 	tcpci->tcpc.set_vconn = tcpci_set_vconn;
-	tcpci->tcpc.start_drp_toggling = tcpci_start_drp_toggling;
+	tcpci->tcpc.start_toggling = tcpci_start_toggling;
 	tcpci->tcpc.vbus_detect = tcpci_vbus_detect;
 	tcpci->tcpc.vbus_discharge = tcpci_vbus_force_discharge;
 	tcpci->tcpc.get_vbus_vol = tcpci_get_vbus_vol;
