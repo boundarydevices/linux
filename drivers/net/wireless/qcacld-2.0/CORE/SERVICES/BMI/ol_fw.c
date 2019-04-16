@@ -670,11 +670,7 @@ defined(CONFIG_NON_QC_PLATFORM_PCI)
 		}
 #ifdef QCA_WIFI_FTM
 		if (vos_get_conparam() == VOS_FTM_MODE) {
-#if defined(CONFIG_CNSS) || defined(HIF_SDIO)
 			filename = scn->fw_files.utf_file;
-#else
-			filename = QCA_UTF_FIRMWARE_FILE;
-#endif
 #ifdef QCA_SIGNED_SPLIT_BINARY_SUPPORT
 			bin_sign = TRUE;
 #endif
