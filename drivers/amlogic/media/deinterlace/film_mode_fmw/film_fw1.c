@@ -17,7 +17,9 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/amlogic/media/vfm/vframe.h>
 #include "film_vof_soft.h"
+#include "../deinterlace.h"
 
 
 static int DIweavedetec(struct sFlmSftPar *pPar, int nDif01);
@@ -69,6 +71,8 @@ UINT8 FlmVOFSftInt(struct sFlmSftPar *pPar)
 	pPar->dif01rate = 20;
 	pPar->flag_di01th = 0;
 	pPar->numthd = 60;
+	pPar->flm32_dif02_gap_th = 7;
+	pPar->flm32_luma_th = 90;
 	pPar->sF32Dif02M0 = 4096;/* mpeg-4096, cvbs-8192 */
 	pPar->sF32Dif02M1 = 4096;
 
@@ -231,6 +235,7 @@ static int dif01_ratio = 10;
 module_param(dif01_ratio,  int, 0644);
 MODULE_PARM_DESC(dif01_ratio, "dif01_ratio");
 
+
 int comsum;
 
 int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
@@ -240,7 +245,8 @@ int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
 	UINT8 *dif01flag, UINT32 *rROFldDif01, UINT32 *rROFrmDif02,
 	UINT32 *rROCmbInf, UINT32 glb_frame_mot_num,
 	UINT32 glb_field_mot_num, unsigned int *combing_row_num,
-	unsigned int *frame_diff_avg, struct sFlmSftPar *pPar, bool reverse)
+	unsigned int *frame_diff_avg, struct sFlmSftPar *pPar, bool reverse,
+	struct vframe_s *vf)
 {
 	static UINT32 DIF01[HISDIFNUM]; /* Last one is global */
 	static UINT32 DIF02[HISDIFNUM]; /* Last one is global */
@@ -379,7 +385,7 @@ int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
 	}
 	/* --------------------------------------------------------- */
 	/* Film-Detection */
-	nS1 = FlmDetSft(&pRDat, nDIF01, nDIF02, nT0, pPar);
+	nS1 = FlmDetSft(&pRDat, nDIF01, nDIF02, nT0, pPar, vf);
 
 	nS0 = FlmModsDet(&pRDat, rROFldDif01[0], rROFrmDif02[0]);
 	/* --------------------------------------------------------- */
@@ -621,12 +627,12 @@ int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
 /* nDif02: Frame Difference */
 /* WND: The index of Window */
 int FlmDetSft(struct sFlmDatSt *pRDat, int *nDif01, int *nDif02,
-	      int WND, struct sFlmSftPar *pPar)
+	      int WND, struct sFlmSftPar *pPar, struct vframe_s *vf)
 {
 	int nT0 = 0;
 
 	/* 3-2 */
-	Flm32DetSft(pRDat, nDif02, nDif01, pPar);
+	Flm32DetSft(pRDat, nDif02, nDif01, pPar, vf);
 
 	/* Film2-2 Detection */
 	/* debug0304 */
@@ -639,7 +645,7 @@ int FlmDetSft(struct sFlmDatSt *pRDat, int *nDif01, int *nDif02,
 /* pFlm02[0:nLEN-1] : recursive, 0-2 dif */
 /* pFlm01[0:nLEN-1] : recursive, 0-1 dif */
 int Flm32DetSft(struct sFlmDatSt *pRDat, int *nDif02,
-		int *nDif01, struct sFlmSftPar *pPar)
+		int *nDif01, struct sFlmSftPar *pPar, struct vframe_s *vf)
 {
 	int sFrmDifAvgRat = pPar->sFrmDifAvgRat;	/* 16;  //0~32 */
 	/*  The Large Decision should be: (large>average+LgDifThrd) */
@@ -647,7 +653,6 @@ int Flm32DetSft(struct sFlmDatSt *pRDat, int *nDif02,
 	int sF32StpWgt01 = pPar->sF32StpWgt01;	/* 15; */
 	int sF32StpWgt02 = pPar->sF32StpWgt02;	/* 15; */
 	int sF32DifLgRat = pPar->sF32DifLgRat;	/* 16; Dif>Rat*Min-->Larger */
-
 	/* int sF32DifSmRat = 16;  //Dif*Rat<Max  --> Smaller */
 
 	UINT8 *pFlm02 = pRDat->pFrm32;
@@ -680,6 +685,29 @@ int Flm32DetSft(struct sFlmDatSt *pRDat, int *nDif02,
 	int nFlgChk1 = 0;
 	int nFlgChk2 = 0;
 	int nFlgChk3 = 0; /* for Mit32VHLine */
+
+	int luma_avg = 0;
+	int flm32_dif02_gap = 0;
+
+	int flm32_luma_th = pPar->flm32_luma_th; // APL th
+	int flm32_dif02_gap_th = pPar->flm32_dif02_gap_th;
+
+	/* ============================================= */
+	/*patch for dark scenes don't into pulldown32 by vlsi yanling*/
+	if (vf == NULL || !IS_VDIN_SRC(vf->source_type))
+		luma_avg = flm32_luma_th;
+	else {
+		if (vf->prop.hist.pixel_sum > 0)
+			luma_avg = vf->prop.hist.luma_sum /
+				vf->prop.hist.pixel_sum;
+		else
+			luma_avg = flm32_luma_th;
+	}
+	if (luma_avg < flm32_luma_th)
+		flm32_dif02_gap = flm32_dif02_gap_th * 2;
+	else
+		flm32_dif02_gap = flm32_dif02_gap_th;
+	/*---------------------------------*/
 
 	prt_flg = ((pr_pd >> 2) & 0x1);
 	if (prt_flg)
@@ -779,7 +807,6 @@ int Flm32DetSft(struct sFlmDatSt *pRDat, int *nDif02,
 		nFlgChk1 = 0;
 		nFlgChk2 = 0;
 	}
-	/* ============================================= */
 
 	nT2 = 5 * nDif02[HISDIFNUM - 1] / (nMn + sFrmDifLgTDif + 1);
 	nT2 = nT2>>1;
@@ -799,7 +826,10 @@ int Flm32DetSft(struct sFlmDatSt *pRDat, int *nDif02,
 
 	if (nSTP > 16)
 		nSTP = 16;
-
+		/*patch for dark scenes don't into pulldown32 by vlsi yanling*/
+	if (((nMx + nMn/2) / (nMn + 1)) < flm32_dif02_gap)
+		nSTP = 0;
+	/*---------------*/
 	for (nT0 = 1; nT0 < HISDETNUM; nT0++) {
 		pFlm02[nT0 - 1] = pFlm02[nT0];
 		pFlm02t[nT0 - 1] = pFlm02t[nT0];

@@ -46,7 +46,7 @@ struct pulldown_detected_s {
 unsigned char pulldown_init(unsigned short width, unsigned short height);
 
 unsigned int pulldown_detection(struct pulldown_detected_s *res,
-	struct combing_status_s *cmb_sts, bool reverse);
+	struct combing_status_s *cmb_sts, bool reverse, struct vframe_s *vf);
 
 void pulldown_vof_win_vshift(struct pulldown_detected_s *wins,
 	unsigned short v_offset);

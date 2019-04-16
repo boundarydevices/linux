@@ -112,7 +112,7 @@ module_param(cmb_3point_rrat, uint, 0644);
 MODULE_PARM_DESC(cmb_3point_rrat, "cmb_3point_rrat/n");
 
 unsigned int pulldown_detection(struct pulldown_detected_s *res,
-	struct combing_status_s *cmb_sts, bool reverse)
+	struct combing_status_s *cmb_sts, bool reverse, struct vframe_s *vf)
 {
 	unsigned int glb_frame_mot_num, glb_field_mot_num, i;
 	unsigned int mot_row = 0, mot_max = 0, ntmp = 0;
@@ -142,7 +142,8 @@ unsigned int pulldown_detection(struct pulldown_detected_s *res,
 		&cmb_sts->cmb_row_num,
 		&cmb_sts->frame_diff_avg,
 		&pd_param,
-		reverse);
+		reverse,
+		vf);
 
 	difflag = dectres.dif01flag;
 	if (dectres.rFlmPstMod == 1)
@@ -413,6 +414,10 @@ static struct pd_param_s pd_params[] = {
 	  &(pd_param.flag_di01th)   },
 	{ "numthd",
 	  &(pd_param.numthd)        },
+	{ "flm32_dif02_gap_th",
+	  &(pd_param.flm32_dif02_gap_th) },
+	{ "flm32_luma_th",
+	  &(pd_param.flm32_luma_th)   },
 	{ "sF32Dif02M0",
 	  &(pd_param.sF32Dif02M0)   },        /* mpeg-4096, cvbs-8192 */
 	{ "sF32Dif02M1",

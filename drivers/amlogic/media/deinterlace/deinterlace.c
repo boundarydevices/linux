@@ -3245,7 +3245,8 @@ static void pre_de_done_buf_config(void)
 				&glb_field_mot_num);
 			if (pulldown_enable)
 				pulldown_detection(&post_wr_buf->pd_config,
-					di_pre_stru.mtn_status, overturn);
+					di_pre_stru.mtn_status, overturn,
+					di_pre_stru.di_inp_buf->vframe);
 			if (combing_fix_en)
 				cur_lev = adaptive_combing_fixing(
 				di_pre_stru.mtn_status,
