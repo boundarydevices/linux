@@ -133,6 +133,7 @@ imx_sec_dsim_encoder_atomic_enable(struct drm_encoder *encoder,
 
 	pm_runtime_get_sync(dsim_dev->dev);
 
+	sec_mipi_dsim_pll_enable(drm_bridge_chain_get_first_bridge(encoder), 1);
 	ret = sec_dsim_rstc_reset(dsim_dev->mipi_reset, false);
 	if (ret)
 		dev_err(dsim_dev->dev, "deassert mipi_reset failed\n");
@@ -166,6 +167,7 @@ disable:
 	ret = sec_dsim_rstc_reset(dsim_dev->mipi_reset, true);
 	if (ret)
 		dev_err(dsim_dev->dev, "deassert mipi_reset failed\n");
+	sec_mipi_dsim_pll_enable(drm_bridge_chain_get_first_bridge(encoder), 0);
 
 	pm_runtime_put_sync(dsim_dev->dev);
 
