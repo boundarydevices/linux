@@ -1310,7 +1310,8 @@ void amvecm_3d_sync_process(void)
 #define SR_NOSCALE_LEVEL 0x10
 static void amve_sr_reg_setting(unsigned int adaptive_level)
 {
-	if (is_meson_g12a_cpu() || is_meson_g12b_cpu())
+	if (is_meson_g12a_cpu() || is_meson_g12b_cpu() ||
+		is_meson_sm1_cpu())
 		goto g12_sr_reg_setting;
 	if (adaptive_level & SR_SD_SCALE_LEVEL)
 		am_set_regmap(&sr1reg_sd_scale);
