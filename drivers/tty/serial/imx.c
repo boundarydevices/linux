@@ -36,6 +36,7 @@
 
 #include <asm/irq.h>
 #include <linux/busfreq-imx.h>
+#include <linux/pm_qos.h>
 #include <linux/platform_data/serial-imx.h>
 #include <linux/platform_data/dma-imx.h>
 
@@ -261,6 +262,8 @@ struct imx_port {
 	wait_queue_head_t	dma_wait;
 	unsigned int            saved_reg[10];
 	bool			context_saved;
+
+	struct pm_qos_request	pm_qos_req;
 };
 
 struct imx_port_ucrs {
@@ -1372,8 +1375,10 @@ static void imx_uart_dma_exit(struct imx_port *sport)
 	if (sport->dma_chan_tx) {
 		dma_release_channel(sport->dma_chan_tx);
 		sport->dma_chan_tx = NULL;
-		release_bus_freq(BUS_FREQ_HIGH);
 	}
+
+	pm_qos_remove_request(&sport->pm_qos_req);
+	release_bus_freq(BUS_FREQ_HIGH);
 }
 
 static int imx_uart_dma_init(struct imx_port *sport)
@@ -1381,6 +1386,10 @@ static int imx_uart_dma_init(struct imx_port *sport)
 	struct dma_slave_config slave_config = {};
 	struct device *dev = sport->port.dev;
 	int ret;
+
+	/* request high bus for DMA mode */
+	request_bus_freq(BUS_FREQ_HIGH);
+	pm_qos_add_request(&sport->pm_qos_req, PM_QOS_CPU_DMA_LATENCY, 0);
 
 	/* Prepare for RX : */
 	sport->dma_chan_rx = dma_request_slave_channel(dev, "rx");
@@ -1425,8 +1434,6 @@ static int imx_uart_dma_init(struct imx_port *sport)
 		dev_err(dev, "error in TX dma configuration.");
 		goto err;
 	}
-
-	request_bus_freq(BUS_FREQ_HIGH);
 
 	return 0;
 err:
