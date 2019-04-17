@@ -539,9 +539,9 @@ static int i2c_imx_clk_notifier_call(struct notifier_block *nb,
 {
 	int ret = 0;
 	struct clk_notifier_data *ndata = data;
-	struct imx_i2c_struct *i2c_imx = container_of(&ndata->clk,
+	struct imx_i2c_struct *i2c_imx = container_of(nb,
 						      struct imx_i2c_struct,
-						      clk);
+						      clk_change_nb);
 
 	if (action & POST_RATE_CHANGE)
 		ret = i2c_imx_set_clk(i2c_imx, ndata->new_rate);
