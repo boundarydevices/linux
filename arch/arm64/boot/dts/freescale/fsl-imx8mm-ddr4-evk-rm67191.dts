@@ -13,27 +13,125 @@
  */
 
 #include "fsl-imx8mm-ddr4-evk.dts"
+#include "panel-raydium-rm67191.dtsi"
+#include "panel-ltk080a60a004t.dtsi"
+
+/ {
+	reg_vref_5v: regulator-vref-5v {
+		compatible = "regulator-fixed";
+		regulator-name = "vref-5v";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+	};
+
+};
 
 &adv_bridge {
 	status = "disabled";
 };
 
 &mipi_dsi {
-	panel@0 {
-		compatible = "raydium,rm67191";
-		reg = <0>;
-		pinctrl-0 = <&pinctrl_mipi_dsi_en>;
-		reset-gpio = <&gpio1 8 GPIO_ACTIVE_HIGH>;
+	assigned-clocks = <&clk IMX8MM_CLK_DSI_CORE_SRC>,
+			  <&clk IMX8MM_CLK_DSI_PHY_REF_SRC>,
+			  <&clk IMX8MM_VIDEO_PLL1_REF_SEL>,
+			  <&clk IMX8MM_CLK_LCDIF_PIXEL_DIV>;
+	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_266M>,
+				 <&clk IMX8MM_VIDEO_PLL1_OUT>,
+				 <&clk IMX8MM_CLK_24M>;
+	assigned-clock-rates = <266000000>, <0>, <0>, <66000000>;
+	clocks = <&clk IMX8MM_CLK_DSI_CORE_DIV>,
+		 <&clk IMX8MM_CLK_DSI_PHY_REF_DIV>,
+		 <&clk IMX8MM_CLK_LCDIF_PIXEL_DIV>;
+	clock-names = "cfg", "pll-ref", "pixel_clock";
+
+	fb_mipi: panel@0 {
+		bits-per-color = <8>;
+		bridge-de-active = <0>;
+		bridge-sync-active = <1>;
+		bus-format = "rgb888";
+		dsi-format = "rgb888";
 		dsi-lanes = <4>;
-		video-mode = <2>;	/* 0: burst mode
-					 * 1: non-burst mode with sync event
-					 * 2: non-burst mode with sync pulse
-					 */
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_mipi_dsi_en>;
+#if 1
+#define RM67191
+#endif
+#ifdef RM67191
+		mipi-cmds = <&mipi_cmds_rm67191>;
+#else
+		mipi-cmds = <&mipi_cmds_ltk080a60a004t>;
+#endif
+
+		mode-skip-eot;
+		mode-video;
+#if 1
+		mode-video-burst;
+#else
+		mode-video-sync-pulse;
+#endif
 		panel-width-mm = <68>;
 		panel-height-mm = <121>;
-		status = "okay";
+		power-supply = <&reg_vref_5v>;
+		reg = <0>;
+		spwg;
+
+		display-timings {
+#ifdef RM67191
+			/* OLED rm67191 */
+			t_mipi: t-dsi-default {
+				clock-frequency = <118800000>;
+				hactive = <1080>;
+				vactive = <1920>;
+				hback-porch = <34>;
+				hfront-porch = <20>;
+				vback-porch = <4>;
+				vfront-porch = <10>;
+				hsync-len = <2>;
+				vsync-len = <2>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <1>;
+			};
+#else
+			/* ltk080a60a004t */
+			t_mipi: t-dsi-default {
+				clock-frequency = <120000000>;
+				hactive = <1200>;
+				vactive = <1920>;
+				hback-porch = <60>;
+				hfront-porch = <42>;
+				vback-porch = <25>;
+				vfront-porch = <35>;
+				hsync-len = <1>;
+				vsync-len = <1>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <1>;
+			};
+#endif
+		};
 	};
 };
+
+#if 0
+&fb_mipi {
+	compatible = "raydium,rm67191";
+	video-mode = <2>;	/* 0: burst mode
+				 * 1: non-burst mode with sync event
+				 * 2: non-burst mode with sync pulse
+				 */
+	reset-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
+};
+#else
+&fb_mipi {
+	compatible = "panel,simple";
+#if 0
+	reset-gpios = <&gpio1 8 GPIO_ACTIVE_LOW>;
+#else
+	enable-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
+#endif
+};
+#endif
 
 &i2c2 {
 	synaptics_dsx_ts@20 {
