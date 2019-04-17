@@ -3,6 +3,8 @@
 / {
 	mipi_cmds_ltk080a60a004t: mipi-cmds-ltk080a60a004t {
 		mipi-cmds-enable = /bits/ 8 <
+			DELAY(2)
+#if 0
 			GEN_S1P(0x83,0x00)	/* Page 0 */
 			GEN_S1P(0x84,0x00)
 
@@ -26,11 +28,15 @@
 			DELAY(120)		/* 5 is what spec says */
 			DCS_S0P(0x29)		/* MIPI_DCS_SET_DISPLAY_ON */
 			DELAY(20)
+#endif
 		>;
 		mipi-cmds-disable = /bits/ 8 <
+#if 0
 			DCS_S0P(0x28)		/* MIPI_DCS_SET_DISPLAY_OFF */
 			DELAY(20)
 			DCS_S0P(0x10)		/* Enter sleep */
+#endif
+			DELAY(1)
 		>;
 	};
 };
