@@ -785,8 +785,6 @@ static int tcpci_probe(struct i2c_client *client,
 	if (!chip)
 		return -ENOMEM;
 
-	chip->tcpci->client = client;
-
 	chip->data.regmap = devm_regmap_init_i2c(client, &tcpci_regmap_config);
 	if (IS_ERR(chip->data.regmap))
 		return PTR_ERR(chip->data.regmap);
@@ -796,6 +794,8 @@ static int tcpci_probe(struct i2c_client *client,
 	chip->tcpci = tcpci_register_port(&client->dev, &chip->data);
 	if (IS_ERR(chip->tcpci))
 		return PTR_ERR(chip->tcpci);
+
+	chip->tcpci->client = client;
 
 	err = tcpci_ss_mux_control_init(chip->tcpci);
 	if (err)
@@ -827,20 +827,20 @@ static int tcpci_remove(struct i2c_client *client)
 
 static int tcpci_suspend(struct device *dev)
 {
-	struct tcpci *tcpci = dev_get_drvdata(dev);
+	struct tcpci_chip *chip = dev_get_drvdata(dev);
 
 	if (device_may_wakeup(dev))
-		enable_irq_wake(tcpci->client->irq);
+		enable_irq_wake(chip->tcpci->client->irq);
 
 	return 0;
 }
 
 static int tcpci_resume(struct device *dev)
 {
-	struct tcpci *tcpci = dev_get_drvdata(dev);
+	struct tcpci_chip *chip = dev_get_drvdata(dev);
 
 	if (device_may_wakeup(dev))
-		disable_irq_wake(tcpci->client->irq);
+		disable_irq_wake(chip->tcpci->client->irq);
 
 	return 0;
 }
