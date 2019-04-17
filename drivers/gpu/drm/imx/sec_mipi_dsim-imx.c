@@ -90,6 +90,7 @@ static void imx_sec_dsim_encoder_helper_enable(struct drm_encoder *encoder)
 
 	pm_runtime_get_sync(dsim_dev->dev);
 
+	sec_mipi_dsim_pll_enable(encoder->bridge, 1);
 	if (dsim_dev->blk_ctl) {
 		reg = imx8mp_get_ldo_trim(0);
 		if(reg >= 0)
@@ -109,6 +110,7 @@ static void imx_sec_dsim_encoder_helper_disable(struct drm_encoder *encoder)
 	ret = sec_dsim_rstc_reset(dsim_dev->mipi_reset, true);
 	if (ret)
 		dev_err(dsim_dev->dev, "deassert mipi_reset failed\n");
+	sec_mipi_dsim_pll_enable(encoder->bridge, 0);
 
 	pm_runtime_put_sync(dsim_dev->dev);
 }
