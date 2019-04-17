@@ -304,6 +304,7 @@ struct sec_mipi_dsim {
 	struct device *dev;
 
 	void __iomem *base;
+	struct clk *clk_cfg;
 	struct clk *clk_pllref;
 	struct clk *clk_pixel;
 
@@ -327,6 +328,11 @@ struct sec_mipi_dsim {
 	unsigned long	frequency;
 	struct videomode vmode;
 	bool enabled;
+	int clk_pllref_enable;
+	int clk_cfg_enable;
+	unsigned long def_pix_clk;
+	unsigned long byte_clock;
+	unsigned long pixelclock;
 
 	struct completion pll_stable;
 	struct completion ph_tx_done;
@@ -425,7 +431,7 @@ static const struct dsim_hblank_par *sec_mipi_dsim_get_hblank_par(const char *na
 	int i, size;
 	const struct dsim_hblank_par *hpar, *hblank;
 
-	pr_info("%s: name=%s, vrefresh=%d, lanes=%d\n", __func__, name, vrefresh, lanes);
+	pr_debug("%s: name=%s, vrefresh=%d, lanes=%d\n", __func__, name, vrefresh, lanes);
 	if (unlikely(!name))
 		return NULL;
 
@@ -459,9 +465,55 @@ static const struct dsim_hblank_par *sec_mipi_dsim_get_hblank_par(const char *na
 	return NULL;
 }
 
+static int _sec_mipi_dsim_pll_enable(struct sec_mipi_dsim *dsim, int enable)
+{
+	if (dsim->clk_pllref_enable == enable)
+		return 0;
+
+	if (enable)
+		clk_prepare_enable(dsim->clk_pllref);
+	else
+		clk_disable_unprepare(dsim->clk_pllref);
+	dsim->clk_pllref_enable = enable;
+	return 1;
+}
+
+static int sec_mipi_choose_ref_clk(struct sec_mipi_dsim *dsim, unsigned long pix_clk)
+{
+	unsigned long ref_clk, bit_clk;
+	struct clk *clk_ref_parent;
+	unsigned bpp = mipi_dsi_pixel_format_to_bpp(dsim->format);
+
+	if (bpp < 0)
+		return -EINVAL;
+
+	bit_clk = DIV_ROUND_UP_ULL((u64)pix_clk * bpp, dsim->lanes);
+	clk_ref_parent = clk_get_parent(dsim->clk_pllref);
+	ref_clk = bit_clk;
+	if (clk_ref_parent) {
+		unsigned ref_parent_clk = clk_get_rate(clk_ref_parent);
+		unsigned div = 0;
+
+		if (ref_parent_clk) {
+			div = (ref_parent_clk + 4) / pix_clk;
+			if (div)
+				ref_clk = ref_parent_clk / div;
+		}
+		pr_debug("%s: ref_clk=%ld, ref_parent_clk=%d, pix_clk=%ld, div=%d\n",
+			__func__, ref_clk, ref_parent_clk, pix_clk, div);
+	}
+	while (ref_clk > 48000000) {
+		ref_clk >>= 1;
+	}
+	while (ref_clk < 24000000) {
+		ref_clk <<= 1;
+	}
+	return ref_clk;
+}
+
 #define PHY_REF_CLK		12000
 
-static int sec_mipi_dsim_set_pref_rate(struct sec_mipi_dsim *dsim)
+static int sec_mipi_dsim_set_pref_rate(struct sec_mipi_dsim *dsim, unsigned long pix_clk)
 {
 	int ret;
 	uint32_t rate, diff;
@@ -474,18 +526,7 @@ static int sec_mipi_dsim_set_pref_rate(struct sec_mipi_dsim *dsim)
 	ret = of_property_read_u32(dev->of_node, "pref-rate", &rate);
 	if (ret < 0) {
 		dev_dbg(dev, "no valid rate assigned for pref clock\n");
-
-		ref_clk = clk_get_rate(dsim->clk_pllref);
-		if (ref_clk) {
-			if ((ref_clk < 24000000) || (ref_clk >= 48000000)) {
-				while (ref_clk < 24000000)
-					ref_clk <<= 1;
-				while (ref_clk >= 48000000)
-					ref_clk >>= 1;
-			}
-		} else {
-			ref_clk = PHY_REF_CLK * 1000;
-		}
+		ref_clk = sec_mipi_choose_ref_clk(dsim, pix_clk);
 	} else {
 		if (unlikely(rate < fin_range->min || rate > fin_range->max)) {
 			dev_warn(dev, "pref-rate get is invalid: %uKHz\n",
@@ -495,29 +536,33 @@ static int sec_mipi_dsim_set_pref_rate(struct sec_mipi_dsim *dsim)
 			ref_clk = rate * 1000;
 	}
 
-set_rate:
-	dsim->pref_clk = ref_clk / 1000;
-	dsim->ref_clk = ref_clk;
+	while (1) {
+		if (dsim->clk_pllref_enable) {
+			_sec_mipi_dsim_pll_enable(dsim, 0);
+			ret = clk_set_rate(dsim->clk_pllref, ref_clk);
+			_sec_mipi_dsim_pll_enable(dsim, 1);
+		} else {
+			ret = clk_set_rate(dsim->clk_pllref, ref_clk);
+		}
+		if (ret)
+			dev_err(dev, "failed to set pll ref clock rate %d\n", ret);
 
-	ret = clk_set_rate(dsim->clk_pllref, ref_clk);
-	if (ret) {
-		dev_err(dev, "failed to set pll ref clock rate\n");
-		return ret;
-	}
-
-	rate = clk_get_rate(dsim->clk_pllref);
-	if (unlikely(!rate)) {
-		dev_err(dev, "failed to get pll ref clock rate\n");
-		return -EINVAL;
-	}
-
-	diff = (rate > ref_clk) ? rate - ref_clk : ref_clk - rate;
-	if (diff > 500) {
-		if (unlikely(ref_clk == PHY_REF_CLK * 1000)) {
-			/* set default rate failed */
-			dev_err(dev, "no valid pll ref clock rate\n");
+		rate = clk_get_rate(dsim->clk_pllref);
+		pr_debug("%s: ref_clk=%d %d\n", __func__, ref_clk, rate);
+		if (unlikely(!rate)) {
+			dev_err(dev, "failed to get pll ref clock rate\n");
 			return -EINVAL;
 		}
+
+		diff = (rate > ref_clk) ? rate - ref_clk : ref_clk - rate;
+		if (diff <= 500) {
+			dsim->pref_clk = rate / 1000;
+			dsim->ref_clk = rate;
+			return 0;
+
+		}
+		if (unlikely(ref_clk == PHY_REF_CLK * 1000))
+			break;
 
 		dev_warn(dev, "invalid assigned rate for pref: %uKHz\n",
 			 dsim->pref_clk);
@@ -525,10 +570,10 @@ set_rate:
 			 PHY_REF_CLK);
 
 		ref_clk = PHY_REF_CLK * 1000;
-		goto set_rate;
 	}
-
-	return 0;
+	/* set default rate failed */
+	dev_err(dev, "no valid pll ref clock rate\n");
+	return -EINVAL;
 }
 
 static void sec_mipi_dsim_irq_init(struct sec_mipi_dsim *dsim);
@@ -967,12 +1012,25 @@ static int sec_mipi_dsim_config_pll(struct sec_mipi_dsim *dsim)
 	return 0;
 }
 
+static unsigned pix_to_delay_byte_clocks(struct sec_mipi_dsim *dsim, unsigned pix)
+{
+	u64 delay = pix;
+
+	delay *= dsim->byte_clock;
+	delay += (dsim->pixelclock >> 1);
+	do_div(delay, dsim->pixelclock);
+	if (!delay)
+		delay = 1;
+	return delay;
+}
+
 static void sec_mipi_dsim_set_main_mode(struct sec_mipi_dsim *dsim)
 {
-	uint32_t bpp, hfp_wc, hbp_wc, hsa_wc, wc;
+	uint32_t bpp, hfp_wc, hbp_wc, hsa_wc;
 	uint32_t mdresol = 0, mvporch = 0, mhporch = 0, msync = 0;
 	struct videomode *vmode = &dsim->vmode;
 
+	pr_debug("%s: hfp=%d hbp=%d hsync=%d\n", __func__, vmode->hfront_porch, vmode->hback_porch, vmode->hsync_len);
 	mdresol |= MDRESOL_SET_MAINVRESOL(vmode->vactive) |
 		   MDRESOL_SET_MAINHRESOL(vmode->hactive);
 	dsim_write(dsim, mdresol, DSIM_MDRESOL);
@@ -985,15 +1043,9 @@ static void sec_mipi_dsim_set_main_mode(struct sec_mipi_dsim *dsim)
 	bpp = mipi_dsi_pixel_format_to_bpp(dsim->format);
 
 	/* calculate hfp & hbp word counts */
-	if (!dsim->hpar) {
-		wc = DIV_ROUND_UP(vmode->hfront_porch * (bpp >> 3),
-				  dsim->lanes);
-		hfp_wc = wc > MIPI_HFP_PKT_OVERHEAD ?
-			 wc - MIPI_HFP_PKT_OVERHEAD : vmode->hfront_porch;
-		wc = DIV_ROUND_UP(vmode->hback_porch * (bpp >> 3),
-				  dsim->lanes);
-		hbp_wc = wc > MIPI_HBP_PKT_OVERHEAD ?
-			 wc - MIPI_HBP_PKT_OVERHEAD : vmode->hback_porch;
+	if (dsim->panel || !dsim->hpar) {
+		hfp_wc = pix_to_delay_byte_clocks(dsim, vmode->hfront_porch);
+		hbp_wc = pix_to_delay_byte_clocks(dsim, vmode->hback_porch);
 	} else {
 		hfp_wc = dsim->hpar->hfp_wc;
 		hbp_wc = dsim->hpar->hbp_wc;
@@ -1005,12 +1057,9 @@ static void sec_mipi_dsim_set_main_mode(struct sec_mipi_dsim *dsim)
 	dsim_write(dsim, mhporch, DSIM_MHPORCH);
 
 	/* calculate hsa word counts */
-	if (!dsim->hpar) {
-		wc = DIV_ROUND_UP(vmode->hsync_len * (bpp >> 3),
-				  dsim->lanes);
-		hsa_wc = wc > MIPI_HSA_PKT_OVERHEAD ?
-			 wc - MIPI_HSA_PKT_OVERHEAD : vmode->hsync_len;
-	} else
+	if (!dsim->hpar)
+		hsa_wc = pix_to_delay_byte_clocks(dsim, vmode->hsync_len);
+	else
 		hsa_wc = dsim->hpar->hsa_wc;
 
 	msync |= MSYNC_SET_MAINVSA(vmode->vsync_len) |
@@ -1239,7 +1288,9 @@ static int sec_mipi_dsim_get_pms(struct sec_mipi_dsim *dsim, unsigned long bit_c
 	unsigned int c_pms;
 	int s = 0;
 
+#if 1
 	bit_clk = bit_clk * 4 / 3;
+#endif
 	/* 80 MHz to 750 MHz */
 	/* p ranges between 1 and 33 */
 	/* m ranges between 25 and 125 */
@@ -1327,20 +1378,17 @@ static int sec_mipi_dsim_get_pms(struct sec_mipi_dsim *dsim, unsigned long bit_c
 	}
 	/* Divided by 2 because mipi output clock is DDR */
 	dsim->frequency = bit_clk / 2;
+	dsim->byte_clock = bit_clk >> 3;
 	dsim->bit_clk = DIV_ROUND_UP_ULL(bit_clk, 1000);
 	return 0;
 }
 
-int sec_mipi_dsim_check_pll_out(struct drm_bridge *bridge,
-				const struct drm_display_mode *mode)
+static int _sec_mipi_dsim_check_pll_out(struct sec_mipi_dsim *dsim)
 {
 	int bpp;
 	unsigned long pix_clk;
-	uint32_t bit_clk, ref_parent_clk, ref_clk, div;
-	struct clk *clk_ref_parent;
-	struct sec_mipi_dsim *dsim = bridge->driver_private;
+	uint32_t bit_clk;
 	const struct sec_mipi_dsim_plat_data *pdata = dsim->pdata;
-	const struct dsim_hblank_par *hpar;
 	int ret;
 
 	bpp = mipi_dsi_pixel_format_to_bpp(dsim->format);
@@ -1349,52 +1397,46 @@ int sec_mipi_dsim_check_pll_out(struct drm_bridge *bridge,
 
 	pix_clk = clk_get_rate(dsim->clk_pixel);
 	if (!pix_clk)
-		pix_clk = mode->clock * 1000;
+		pix_clk = dsim->def_pix_clk;
 
-	bit_clk = DIV_ROUND_UP_ULL(pix_clk * bpp, dsim->lanes);
+	bit_clk = DIV_ROUND_UP_ULL((u64)pix_clk * bpp, dsim->lanes);
+	pr_debug("%s: %d = %ld * %d / %d\n", __func__, bit_clk, pix_clk, bpp, dsim->lanes);
 
 	if (bit_clk > pdata->max_data_rate) {
-		pix_clk = mode->clock * 1000;
-		bit_clk = DIV_ROUND_UP_ULL(pix_clk * bpp, dsim->lanes);
+		pix_clk = dsim->def_pix_clk;
+		bit_clk = DIV_ROUND_UP_ULL((u64)pix_clk * bpp, dsim->lanes);
+		pr_debug("%s:aa %d = %ld * %d / %d\n", __func__, bit_clk, pix_clk, bpp, dsim->lanes);
 		if (bit_clk > pdata->max_data_rate) {
 			dev_err(dsim->dev,
 					"requested bit clk freq exceeds lane's maximum value\n");
 			return -EINVAL;
 		}
 	}
+	/* set suitable rate for phy ref clock */
+	ret = sec_mipi_dsim_set_pref_rate(dsim, pix_clk);
 
-	clk_ref_parent = clk_get_parent(dsim->clk_pllref);
-	ref_clk = bit_clk;
-	if (clk_ref_parent) {
-		ref_parent_clk = clk_get_rate(clk_ref_parent);
-		div = 0;
-		if (ref_parent_clk) {
-			div = (ref_parent_clk + 4) / pix_clk;
-			if (div)
-				ref_clk = ref_parent_clk / div;
-		}
-		pr_debug("%s: ref_clk=%d, ref_parent_clk=%d, pix_clk=%ld, div=%d\n",
-			__func__, ref_clk, ref_parent_clk, pix_clk, div);
-	}
-	while (ref_clk > 48000000) {
-		ref_clk >>= 1;
-	}
-	while (ref_clk < 24000000) {
-		ref_clk <<= 1;
-	}
-	clk_set_rate(dsim->clk_pllref, ref_clk);
-	dsim->ref_clk = ref_clk = clk_get_rate(dsim->clk_pllref);
-	pr_debug("%s: ref_clk=%d\n", __func__, ref_clk);
-
-	dsim->pix_clk = DIV_ROUND_UP(pix_clk, 1000);
-	dsim->bit_clk = DIV_ROUND_UP(bit_clk, 1000);
+	dsim->pixelclock = pix_clk;
+	dsim->pix_clk = DIV_ROUND_UP_ULL(pix_clk, 1000);
+	dsim->bit_clk = DIV_ROUND_UP_ULL(bit_clk, 1000);
 	dsim->hpar = NULL;
 
+	pr_debug("%s: %d = %ld * %d / %d\n", __func__, bit_clk, pix_clk, bpp, dsim->lanes);
 	ret = sec_mipi_dsim_get_pms(dsim, bit_clk, dsim->ref_clk);
 	if (ret < 0)
 		return ret;
 	if (dsim->dsi_clk_hw.clk)
 		clk_set_rate(dsim->dsi_clk_hw.clk, dsim->frequency);
+
+	return 0;
+}
+
+int sec_mipi_dsim_check_pll_out(struct drm_bridge *bridge,
+				const struct drm_display_mode *mode)
+{
+	const struct dsim_hblank_par *hpar;
+	struct sec_mipi_dsim *dsim = bridge->driver_private;
+
+	dsim->def_pix_clk = mode->clock * 1000;
 
 	if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE) {
 		hpar = sec_mipi_dsim_get_hblank_par(mode->name,
@@ -1488,6 +1530,8 @@ sec_mipi_dsim_bridge_atomic_enable(struct drm_bridge *bridge,
 	/* config esc clock, byte clock and etc */
 	sec_mipi_dsim_config_clkctrl(dsim);
 
+	pr_debug("%s: status=%x\n", __func__, dsim_read(dsim, DSIM_STATUS));
+
 	/* enable panel if exists */
 	if (dsim->panel) {
 		ret = drm_panel_enable(dsim->panel);
@@ -1501,6 +1545,7 @@ sec_mipi_dsim_bridge_atomic_enable(struct drm_bridge *bridge,
 	sec_mipi_dsim_set_standby(dsim, true);
 
 	dsim->enabled = true;
+	pr_debug("%s: b status=%x\n", __func__, dsim_read(dsim, DSIM_STATUS));
 
 	return;
 
@@ -1768,15 +1813,44 @@ static const struct drm_bridge_funcs sec_mipi_dsim_bridge_funcs = {
 	.mode_set   = sec_mipi_dsim_bridge_mode_set,
 };
 
+int sec_mipi_dsim_pll_enable(struct drm_bridge *bridge, int enable)
+{
+	struct sec_mipi_dsim *dsim = bridge->driver_private;
+	int ret = _sec_mipi_dsim_check_pll_out(dsim);
+
+	if (ret < 0)
+		return ret;
+	pr_debug("%s:enable=%d was %d\n", __func__, enable, dsim->clk_cfg_enable);
+	dsim->clk_cfg_enable = enable;
+	if (enable)
+		clk_prepare_enable(dsim->clk_cfg);
+	else
+		clk_disable_unprepare(dsim->clk_cfg);
+	_sec_mipi_dsim_pll_enable(dsim, enable);
+	return 0;
+}
+EXPORT_SYMBOL(sec_mipi_dsim_pll_enable);
+
 void sec_mipi_dsim_suspend(struct device *dev)
 {
+	struct sec_mipi_dsim *dsim = dev_get_drvdata(dev);
 	/* TODO: add dsim reset */
+
+	if (dsim->clk_cfg_enable) {
+		clk_disable_unprepare(dsim->clk_cfg);
+		_sec_mipi_dsim_pll_enable(dsim, 0);
+	}
 }
 EXPORT_SYMBOL(sec_mipi_dsim_suspend);
 
 void sec_mipi_dsim_resume(struct device *dev)
 {
 	struct sec_mipi_dsim *dsim = dev_get_drvdata(dev);
+
+	if (dsim->clk_cfg_enable) {
+		_sec_mipi_dsim_pll_enable(dsim, 1);
+		clk_prepare_enable(dsim->clk_cfg);
+	}
 
 	sec_mipi_dsim_irq_init(dsim);
 
@@ -1944,7 +2018,7 @@ static irqreturn_t sec_mipi_dsim_irq_handler(int irq, void *data)
 
 	intsrc = dsim_read(dsim, DSIM_INTSRC);
 	status = dsim_read(dsim, DSIM_STATUS);
-	pr_info("%s: intsrc=%x status=%x\n", __func__, intsrc, status);
+	pr_debug("%s: intsrc=%x status=%x\n", __func__, intsrc, status);
 
 	if (WARN_ON(!intsrc)) {
 		dev_err(dsim->dev, "interrupt is not from dsim\n");
@@ -2151,6 +2225,12 @@ int sec_mipi_dsim_bind(struct device *dev, struct device *master, void *data,
 		return ret;
 	}
 
+	dsim->clk_cfg = devm_clk_get(dev, "cfg");
+	if (IS_ERR(dsim->clk_cfg)) {
+		ret = PTR_ERR(dsim->clk_cfg);
+		dev_err(dev, "Unable to get configuration clock: %d\n", ret);
+		return ret;
+	}
 	dsim->clk_pixel = devm_clk_get(dev, "pixel_clock");
 	if (IS_ERR(dsim->clk_pixel)) {
 		dev_warn(dev, "Unable to get pixel clock: %ld\n", PTR_ERR(dsim->clk_pixel));
@@ -2165,13 +2245,7 @@ int sec_mipi_dsim_bind(struct device *dev, struct device *master, void *data,
 	pm_runtime_put_sync(dev);
 
 	dev_info(dev, "version number is %#x\n", version);
-
-	/* set suitable rate for phy ref clock */
-	ret = sec_mipi_dsim_set_pref_rate(dsim);
-	if (ret) {
-		dev_err(dev, "failed to set pll ref clock rate\n");
-		return ret;
-	}
+	dsim->def_pix_clk = 118800000;
 
 	ret = devm_request_irq(dev, irq, sec_mipi_dsim_irq_handler,
 			       0, dev_name(dev), dsim);
