@@ -1139,14 +1139,14 @@ bool is_meson_tvmode(void)
 		return false;
 }
 
-static u32 addr_map(u32 adr)
-{
-	u32 CORE1_BASE = 0;
-	u32 CORE1_1_BASE = 0;
-	u32 CORE2A_BASE = 0;
-	u32 CORE3_BASE = 0;
-	u32 CORETV_BASE = 0;
+static u32 CORE1_BASE;
+static u32 CORE1_1_BASE;
+static u32 CORE2A_BASE;
+static u32 CORE3_BASE;
+static u32 CORETV_BASE;
 
+static void dolby_vision_addr(void)
+{
 	if (is_meson_gxm() || is_meson_g12()) {
 		CORE1_BASE = 0x3300;
 		CORE2A_BASE = 0x3400;
@@ -1162,6 +1162,9 @@ static u32 addr_map(u32 adr)
 		CORE3_BASE = 0x3600;
 		CORETV_BASE = 0x4300;
 	}
+}
+static u32 addr_map(u32 adr)
+{
 
 	if (adr & CORE1_OFFSET)
 		adr = (adr & 0xffff) + CORE1_BASE;
@@ -2374,7 +2377,6 @@ static int dolby_core3_set(
 	VSYNC_WR_DV_REG(DOLBY_CORE3_REG_START + 1, cur_dv_mode);
 	VSYNC_WR_DV_REG(DOLBY_CORE3_REG_START + 1, cur_dv_mode);
 	/* for delay */
-
 	if (dm_count == 0)
 		count = 26;
 	else
@@ -2411,7 +2413,7 @@ static int dolby_core3_set(
 
 	if ((dolby_vision_flags & FLAG_CERTIFICAION)
 		&& !(dolby_vision_flags & FLAG_DISABLE_CRC))
-		VSYNC_WR_DV_REG(0x36fb, 1);
+		VSYNC_WR_DV_REG(DOLBY_CORE3_CRC_CTRL, 1);
 	/* enable core3 */
 	VSYNC_WR_DV_REG(DOLBY_CORE3_SWAP_CTRL0, (dolby_enable << 0));
 	return 0;
@@ -6045,10 +6047,8 @@ int dolby_vision_process(struct vframe_s *vf, u32 display_size,
 	if (!is_meson_box() && !is_meson_txlx() && !is_meson_tm2())
 		return -1;
 
-	if ((dolby_vision_enable == 1) && (tv_mode == 1)) {
+	if ((dolby_vision_enable == 1) && (tv_mode == 1))
 		amdolby_vision_wakeup_queue();
-		pr_dolby_dbg("wake up dv status queue\n");
-	}
 
 	if (dolby_vision_flags & FLAG_CERTIFICAION) {
 		if (vf) {
@@ -6082,13 +6082,13 @@ int dolby_vision_process(struct vframe_s *vf, u32 display_size,
 			ott_mode =
 				(tv_dovi_setting->input_mode !=
 				INPUT_MODE_HDMI);
-		if ((is_meson_txlx_stbmode()
-			|| is_meson_box()
-			|| force_stb_mode)
+		if ((is_meson_txlx_stbmode() ||
+			is_meson_tm2_stbmode() ||
+			is_meson_box() || force_stb_mode)
 			&& (setting_update_count == 1)
 			&& (crc_read_delay == 1)) {
 			/* work around to enable crc for frame 0 */
-			VSYNC_WR_DV_REG(0x36fb, 1);
+			VSYNC_WR_DV_REG(DOLBY_CORE3_CRC_CTRL, 1);
 			crc_read_delay++;
 		} else {
 			crc_read_delay++;
@@ -6968,7 +6968,7 @@ static int amdolby_vision_probe(struct platform_device *pdev)
 		ret = PTR_ERR(devp->dev);
 		goto fail_create_device;
 	}
-
+	dolby_vision_addr();
 	dolby_vision_init_receiver(pdev);
 	init_waitqueue_head(&devp->dv_queue);
 	pr_info("%s: ok\n", __func__);

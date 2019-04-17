@@ -3972,6 +3972,21 @@ static struct osd_device_data_s osd_sm1 = {
 	.has_viu2 = 1,
 };
 
+static struct osd_device_data_s osd_tm2 = {
+	.cpu_id = __MESON_CPU_MAJOR_ID_TM2,
+	.osd_ver = OSD_HIGH_ONE,
+	.afbc_type = MALI_AFBC,
+	.osd_count = 4,
+	.has_deband = 1,
+	.has_lut = 1,
+	.has_rdma = 1,
+	.has_dolby_vision = 1,
+	.osd_fifo_len = 64, /* fifo len 64*8 = 512 */
+	.vpp_fifo_len = 0xfff,/* 2048 */
+	.dummy_data = 0x00808000,
+	.has_viu2 = 1,
+};
+
 static const struct of_device_id meson_fb_dt_match[] = {
 	{
 		.compatible = "amlogic, meson-gxbb",
