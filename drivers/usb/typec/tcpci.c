@@ -779,6 +779,7 @@ static int tcpci_probe(struct i2c_client *client,
 		       const struct i2c_device_id *i2c_id)
 {
 	struct tcpci_chip *chip;
+	u16 val = 0;
 	int err;
 
 	chip = devm_kzalloc(&client->dev, sizeof(*chip), GFP_KERNEL);
@@ -790,6 +791,12 @@ static int tcpci_probe(struct i2c_client *client,
 		return PTR_ERR(chip->data.regmap);
 
 	i2c_set_clientdata(client, chip);
+
+	/* Disable chip interrupts before requesting irq */
+	err = regmap_raw_write(chip->data.regmap, TCPC_ALERT_MASK, &val,
+			       sizeof(u16));
+	if (err < 0)
+		return err;
 
 	chip->tcpci = tcpci_register_port(&client->dev, &chip->data);
 	if (IS_ERR(chip->tcpci))
