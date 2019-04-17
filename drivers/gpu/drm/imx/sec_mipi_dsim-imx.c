@@ -117,6 +117,7 @@ static void imx_sec_dsim_encoder_helper_enable(struct drm_encoder *encoder)
 
 	pm_runtime_get_sync(dsim_dev->dev);
 
+	sec_mipi_dsim_pll_enable(encoder->bridge, 1);
 	imx_sec_dsim_lanes_reset(dsim_dev->gpr, false);
 }
 
@@ -125,6 +126,7 @@ static void imx_sec_dsim_encoder_helper_disable(struct drm_encoder *encoder)
 	struct imx_sec_dsim_device *dsim_dev = enc_to_dsim(encoder);
 
 	imx_sec_dsim_lanes_reset(dsim_dev->gpr, true);
+	sec_mipi_dsim_pll_enable(encoder->bridge, 0);
 
 	pm_runtime_put_sync(dsim_dev->dev);
 }

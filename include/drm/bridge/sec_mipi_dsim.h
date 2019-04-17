@@ -81,6 +81,7 @@ static inline int dphy_timing_default_cmp(const void *key, const void *elt)
 		return -1;
 }
 
+int sec_mipi_dsim_pll_enable(struct drm_bridge *bridge, int enable);
 int sec_mipi_dsim_check_pll_out(struct drm_bridge *bridge,
 				const struct drm_display_mode *mode);
 int sec_mipi_dsim_bind(struct device *dev, struct device *master, void *data,
