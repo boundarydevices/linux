@@ -12,6 +12,7 @@
  * GNU General Public License for more details.
  */
 
+#include <dt-bindings/usb/pd.h>
 #include "fsl-imx8qxp-mek.dtsi"
 
 /delete-node/ &i2c0_cm40;
@@ -23,7 +24,7 @@
 	status = "okay";
 
 	typec_ptn5110: typec@50 {
-		compatible = "usb,tcpci";
+		compatible = "nxp,ptn5110";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_typec>;
 		reg = <0x50>;
@@ -31,11 +32,15 @@
 		interrupts = <3 IRQ_TYPE_LEVEL_LOW>;
 		ss-sel-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
 		reset-gpios = <&pca9557_a 7 GPIO_ACTIVE_HIGH>;
-		src-pdos = <0x380190c8 0x3803c0c8>;
-		port-type = "drp";
-		sink-disable;
-		default-role = "source";
 		status = "okay";
+
+		usb_con1: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			power-role = "source";
+			data-role = "dual";
+			source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
+		};
 	};
 };
 
