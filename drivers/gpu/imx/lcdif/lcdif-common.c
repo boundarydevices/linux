@@ -55,6 +55,7 @@ struct lcdif_soc {
 	struct clk *clk_pix;
 	struct clk *clk_disp_axi;
 	struct clk *clk_disp_apb;
+	struct clk *clk_video_pll;
 };
 
 struct lcdif_soc_pdata {
@@ -464,6 +465,20 @@ void lcdif_set_mode(struct lcdif_soc *lcdif, struct videomode *vmode)
 			of_match_device(imx_lcdif_dt_ids, lcdif->dev);
 	const struct lcdif_soc_pdata *soc_pdata = of_id->data;
 	u32 vdctrl0, vdctrl1, vdctrl2, vdctrl3, vdctrl4, htotal;
+	struct clk *clk_pix_parent = lcdif->clk_pix;
+	int pll_parent = 0;
+
+	if (lcdif->clk_video_pll) {
+		while (1) {
+			clk_pix_parent = clk_get_parent(clk_pix_parent);
+			if (!clk_pix_parent)
+				break;
+			if (clk_is_match(clk_pix_parent, lcdif->clk_video_pll)) {
+				pll_parent = 1;
+				break;
+			}
+		}
+	}
 
 	/* Clear the FIFO */
 	writel(CTRL1_FIFO_CLEAR, lcdif->base + LCDIF_CTRL1 + REG_SET);
@@ -471,7 +486,12 @@ void lcdif_set_mode(struct lcdif_soc *lcdif, struct videomode *vmode)
 
 	/* set pixel clock rate */
 	clk_disable_unprepare(lcdif->clk_pix);
+	if (pll_parent) {
+		clk_set_rate(lcdif->clk_video_pll, vmode->pixelclock);
+		pr_debug("%s: pll %ld %ld\n", __func__, vmode->pixelclock, clk_get_rate(lcdif->clk_video_pll));
+	}
 	clk_set_rate(lcdif->clk_pix, vmode->pixelclock);
+	pr_debug("%s: %ld %ld\n", __func__, vmode->pixelclock, clk_get_rate(lcdif->clk_pix));
 	clk_prepare_enable(lcdif->clk_pix);
 
 	/* config display timings */
@@ -682,6 +702,10 @@ static int imx_lcdif_probe(struct platform_device *pdev)
 	lcdif->clk_disp_apb = devm_clk_get(dev, "disp-apb");
 	if (IS_ERR(lcdif->clk_disp_apb))
 		lcdif->clk_disp_apb = NULL;
+
+	lcdif->clk_video_pll = devm_clk_get(dev, "video-pll");
+	if (IS_ERR(lcdif->clk_video_pll))
+		lcdif->clk_video_pll = NULL;
 
 	lcdif->base = devm_ioremap_resource(dev, res);
 	if (IS_ERR(lcdif->base))
