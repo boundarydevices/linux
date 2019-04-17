@@ -6,6 +6,7 @@
 /dts-v1/;
 
 #include "fsl-imx8mm.dtsi"
+#include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
 
 &iomuxc {
@@ -193,6 +194,13 @@
 			MX8MM_IOMUXC_I2C4_SCL_GPIO5_IO20		0x400001c3
 #define GP_I2C4_SDA	<&gpio5 21 GPIO_ACTIVE_HIGH>
 			MX8MM_IOMUXC_I2C4_SDA_GPIO5_IO21		0x400001c3
+		>;
+	};
+
+	pinctrl_ltk0680ytmdb: ltk0680ytmdbgrp {
+		fsl,pins = <
+#define GP_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9	0x16
 		>;
 	};
 
@@ -487,17 +495,21 @@
 		fb_mipi = &fb_mipi;
 		lcdif = &lcdif;
 		mipi = &fb_mipi;
+		mipi_cmds_ltk0680ytmdb = &mipi_cmds_ltk0680ytmdb;
 		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
 		mipi_cmds_m101nwwb = &mipi_cmds_ltk080a60a004t;		/* Same commands work for both */
 		mipi_dsi = &mipi_dsi;
 		mipi_to_lvds = &mipi_to_lvds;
+		pinctrl_ltk0680ytmdb = &pinctrl_ltk0680ytmdb;
 		pinctrl_ltk080a60a004t = &pinctrl_ltk080a60a004t;
 		t_mipi = &t_mipi;
 	};
 
 	alias_create_phandles {
-		p1 = <&mipi_cmds_ltk080a60a004t>;
-		p2 = <&pinctrl_ltk080a60a004t>;
+		p1 = <&mipi_cmds_ltk0680ytmdb>;
+		p2 = <&mipi_cmds_ltk080a60a004t>;
+		p3 = <&pinctrl_ltk0680ytmdb>;
+		p4 = <&pinctrl_ltk080a60a004t>;
 	};
 
 	backlight_mipi: backlight-mipi {
@@ -991,6 +1003,8 @@
 		dsi-format = "rgb888";
 		dsi-lanes = <4>;
 #if 0
+		/* u-boot will set this where appropriate */
+		enable-gpios = GP_LTK08_MIPI_EN;
 		mipi-cmds = <&mipi_cmds_ltk080a60a004t>;
 #endif
 		mode-skip-eot;
