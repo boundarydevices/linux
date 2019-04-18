@@ -1414,6 +1414,7 @@ static int fsl_micfil_set_mclk_rate(struct fsl_micfil *micfil, int clk_id,
 		return -EINVAL;
 	}
 
+	clk_disable_unprepare(micfil->mclk);
 	if (!clk_is_match(pll, npll)) {
 		ret = clk_set_parent(p, npll);
 		if (ret < 0)
@@ -1421,7 +1422,6 @@ static int fsl_micfil_set_mclk_rate(struct fsl_micfil *micfil, int clk_id,
 				 "failed to set parrent %d\n", ret);
 	}
 
-	clk_disable_unprepare(micfil->mclk);
 	ret = clk_set_rate(micfil->mclk, freq * 1024);
 	if (ret)
 		dev_warn(dev, "failed to set rate (%u): %d\n",
