@@ -218,8 +218,9 @@ static int __init meson_pm_probe(struct platform_device *pdev)
 {
 	struct device_node *cpu_node;
 	struct device_node *state_node;
-	int count = 0;
+	int count = 0, ret;
 	u32 ver = psci_get_version();
+	u32 paddr = 0;
 
 	pr_info("enter meson_pm_probe!\n");
 
@@ -245,11 +246,26 @@ static int __init meson_pm_probe(struct platform_device *pdev)
 		suspend_set_ops(&meson_gx_ops);
 	}
 
-	debug_reg = of_iomap(pdev->dev.of_node, 0);
-	exit_reg = of_iomap(pdev->dev.of_node, 1);
+	ret = of_property_read_u32(pdev->dev.of_node,
+				"debug_reg", &paddr);
+		if (!ret) {
+			pr_debug("debug_reg: 0x%x\n", paddr);
+			debug_reg = ioremap(paddr, 0x4);
+			if (IS_ERR_OR_NULL(debug_reg))
+				goto uniomap;
+		}
+
+	ret = of_property_read_u32(pdev->dev.of_node,
+			"exit_reg", &paddr);
+	if (!ret) {
+		pr_debug("exit_reg: 0x%x\n", paddr);
+		exit_reg = ioremap(paddr, 0x4);
+		if (IS_ERR_OR_NULL(exit_reg))
+			goto uniomap;
+	}
+
 	device_create_file(&pdev->dev, &dev_attr_suspend_reason);
 	device_create_file(&pdev->dev, &dev_attr_time_out);
-	device_rename(&pdev->dev, "aml_pm");
 #ifdef CONFIG_AMLOGIC_LEGACY_EARLY_SUSPEND
 	if (lgcy_early_suspend_init())
 		return -1;
@@ -258,9 +274,13 @@ static int __init meson_pm_probe(struct platform_device *pdev)
 
 	pr_info("meson_pm_probe done\n");
 	return 0;
+uniomap:
+	if (debug_reg)
+		iounmap(debug_reg);
+	return -ENXIO;
 }
 
-static int __exit meson_pm_remove(struct platform_device *pdev)
+static int meson_pm_remove(struct platform_device *pdev)
 {
 	return 0;
 }
@@ -277,12 +297,13 @@ static struct platform_driver meson_pm_driver = {
 		   .owner = THIS_MODULE,
 		   .of_match_table = amlogic_pm_dt_match,
 		   },
-	.remove = __exit_p(meson_pm_remove),
+	.probe = meson_pm_probe,
+	.remove = meson_pm_remove,
 };
 
 static int __init meson_pm_init(void)
 {
-	return platform_driver_probe(&meson_pm_driver, meson_pm_probe);
+	return platform_driver_register(&meson_pm_driver);
 }
 
 late_initcall(meson_pm_init);

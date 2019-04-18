@@ -147,14 +147,13 @@
 		method = "smc";
 	};
 
-	meson_suspend:pm {
+	aml_pm {
 		compatible = "amlogic, pm";
 		device_name = "aml_pm";
 		status = "okay";
-		reg = <0xff8000a8 0x4>,
-			<0xff80023c 0x4>;
+		debug_reg = <0xff8000a8>;
+		exit_reg = <0xff80023c>;
 	};
-
 
 	secmon {
 		compatible = "amlogic, secmon";

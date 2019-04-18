@@ -237,12 +237,12 @@
 		#clock-cells = <0>;
 	};
 
-	meson_suspend: pm {
+	aml_pm {
 		compatible = "amlogic, pm";
-		/*gxbaby-suspend;*/
 		status = "okay";
-		reg = <0xff8000a8 0x4>,
-			<0xff80023c 0x4>;
+                device_name = "aml_pm";
+		debug_reg = <0xff8000a8>;
+		exit_reg = <0xff80023c>;
 	};
 
 	cpuinfo {
