@@ -1362,10 +1362,11 @@ static int flexcan_chip_start(struct net_device *dev)
 		reg_mcr = priv->read(&regs->mcr);
 		priv->write(reg_mcr | FLEXCAN_MCR_FDEN, &regs->mcr);
 
-		if (!(priv->can.ctrlmode & CAN_CTRLMODE_FD_NON_ISO)) {
-			reg_ctrl2 = priv->read(&regs->ctrl2);
+		reg_ctrl2 = priv->read(&regs->ctrl2);
+		if (!(priv->can.ctrlmode & CAN_CTRLMODE_FD_NON_ISO))
 			priv->write(reg_ctrl2 | FLEXCAN_CTRL2_ISOCANFDEN, &regs->ctrl2);
-		}
+		else
+			priv->write(reg_ctrl2 & ~FLEXCAN_CTRL2_ISOCANFDEN, &regs->ctrl2);
 	}
 
 	if (priv->devtype_data->quirks & FLEXCAN_QUIRK_USE_OFF_TIMESTAMP) {
