@@ -4751,16 +4751,36 @@ static void get_cm_hist(enum cm_hist_e hist_sel)
 	kfree(hist);
 }
 
-static void cm_init_config(void)
+static void cm_init_config(int bitdepth)
 {
-	WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, XVYCC_YSCP_REG);
-	WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x3ff0000);
-	WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, XVYCC_USCP_REG);
-	WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x3ff0000);
-	WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, XVYCC_VSCP_REG);
-	WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x3ff0000);
-	WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, LUMA_ADJ0_REG);
-	WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x40400);
+	if (bitdepth == 10) {
+		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, XVYCC_YSCP_REG);
+		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x3ff0000);
+		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, XVYCC_USCP_REG);
+		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x3ff0000);
+		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, XVYCC_VSCP_REG);
+		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x3ff0000);
+		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, LUMA_ADJ0_REG);
+		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x40400);
+	} else if (bitdepth == 12) {
+		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, XVYCC_YSCP_REG);
+		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0xfff0000);
+		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, XVYCC_USCP_REG);
+		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0xfff0000);
+		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, XVYCC_VSCP_REG);
+		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0xfff0000);
+		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, LUMA_ADJ0_REG);
+		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x100400);
+	} else {
+		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, XVYCC_YSCP_REG);
+		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x3ff0000);
+		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, XVYCC_USCP_REG);
+		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x3ff0000);
+		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, XVYCC_VSCP_REG);
+		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x3ff0000);
+		WRITE_VPP_REG(VPP_CHROMA_ADDR_PORT, LUMA_ADJ0_REG);
+		WRITE_VPP_REG(VPP_CHROMA_DATA_PORT, 0x40400);
+	}
 }
 
 static const char *amvecm_debug_usage_str = {
@@ -4910,7 +4930,7 @@ static ssize_t amvecm_debug_store(struct class *cla,
 			amvecm_sharpness_enable(13);
 			pr_info("SR disable\n");
 		}
-	} else if (!strncmp(parm[0], "cm", 2)) {
+	} else if (!strcmp(parm[0], "cm")) {
 		if (!strncmp(parm[1], "enable", 6)) {
 			amcm_enable();
 			pr_info("enable cm\n");
@@ -5417,6 +5437,9 @@ static ssize_t amvecm_lc_store(struct class *cls,
 /* #if (MESON_CPU_TYPE == MESON_CPU_TYPE_MESONG9TV) */
 void init_pq_setting(void)
 {
+
+	int bitdepth;
+
 	if (is_meson_gxtvbb_cpu() || is_meson_txl_cpu() ||
 		is_meson_txlx_cpu() || is_meson_txhd_cpu() ||
 		is_meson_tl1_cpu())
@@ -5442,12 +5465,16 @@ void init_pq_setting(void)
 	return;
 
 tvchip_pq_setting:
-	if (get_cpu_type() == MESON_CPU_MAJOR_ID_TL1) {
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
+		if (is_meson_tl1_cpu())
+			bitdepth = 10;
+		else
+			bitdepth = 12;
 		/*sr0 & sr1 register shfit*/
 		sr_offset[0] = SR0_OFFSET;
 		sr_offset[1] = SR1_OFFSET;
 		/*cm register init*/
-		cm_init_config();
+		cm_init_config(bitdepth);
 		/*lc init*/
 		lc_init();
 	}
