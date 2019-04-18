@@ -1582,7 +1582,8 @@ int aml_emmc_hs200_tl1(struct mmc_host *mmc)
 	struct para_e *para = &(host->data->sdmmc);
 	u32 clk_bak = 0;
 	u32 delay2 = 0, count = 0;
-	int i, err = 0;
+	int i, j, err = 0;
+	int retry_times = 0;
 
 	clk_bak = vclkc;
 	clkc->tx_phase = para->hs4.tx_phase;
@@ -1594,18 +1595,52 @@ int aml_emmc_hs200_tl1(struct mmc_host *mmc)
 	pr_info("[%s][%d] clk config:0x%x\n",
 		__func__, __LINE__, readl(host->base + SD_EMMC_CLOCK_V3));
 	for (i = 0; i < 63; i++) {
+		retry_times = 0;
 		delay2 += (1 << 24);
 		writel(delay2, host->base + SD_EMMC_DELAY2_V3);
+retry:
 		err = emmc_eyetest_log(mmc, 9);
 		if (err)
 			continue;
 		count = fbinary(pdata->align[9]);
-		if (((count >= 10) && (count <= 22))
-			|| ((count >= 45) && (count <= 56)))
-			break;
+		if (host->data->chip_type == MMC_CHIP_TL1) {
+			if (((count >= 14) && (count <= 20))
+				|| ((count >= 48) && (count <= 54))) {
+				if (retry_times != 3) {
+					retry_times++;
+					goto retry;
+				} else
+					break;
+			}
+		} else {
+			if (((count >= 10) && (count <= 22))
+				|| ((count >= 45) && (count <= 56)))
+				break;
+		}
 	}
-	if (i == 63)
-		pr_err("[%s]no find cmd timing\n", __func__);
+
+	if (host->data->chip_type == MMC_CHIP_TL1) {
+		if (delay2 == 63) {
+			for (j = 0; j < 6; j++) {
+				clkc->tx_delay++;
+				pr_info("modify tx delay to %d\n",
+						clkc->tx_delay);
+				writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
+				err = emmc_eyetest_log(mmc, 9);
+				if (err)
+					continue;
+				count = fbinary(pdata->align[9]);
+				if (((count >= 14) && (count <= 20))
+					|| ((count >= 48) && (count <= 54)))
+					break;
+			}
+			pdata->tx_delay = clkc->tx_delay;
+		}
+	} else {
+		if (i == 63)
+			pr_err("[%s]no find cmd timing\n", __func__);
+	}
+
 	pdata->cmd_c = (delay2 >> 24);
 	pr_info("cmd->u64eyet:0x%016llx\n",
 			pdata->align[9]);
