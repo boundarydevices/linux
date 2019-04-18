@@ -918,7 +918,7 @@ static int brcmf_sdiod_probe(struct brcmf_sdio_dev *sdiodev)
 		goto out;
 	}
 
-	if (sdiodev->func0->device == SDIO_DEVICE_ID_CYPRESS_4373) {
+	if (sdiodev->func1->device == SDIO_DEVICE_ID_CYPRESS_4373) {
 		f2_blksz = SDIO_4373_FUNC2_BLOCKSIZE;
 	}
 

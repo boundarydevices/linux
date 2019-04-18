@@ -4328,7 +4328,7 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 		bus->hostintmask = HOSTINTMASK;
 		brcmf_sdiod_writel(sdiod, core->base + SD_REG(hostintmask),
 				   bus->hostintmask, NULL);
-		switch (sdiod->func0->device) {
+		switch (sdiod->func1->device) {
 		case SDIO_DEVICE_ID_CYPRESS_4373:
 			brcmf_dbg(INFO, "set F2 watermark to 0x%x*4 bytes\n",
 				  CY_4373_F2_WATERMARK);
@@ -4417,7 +4417,8 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 	err = brcmf_attach(sdiod->dev, sdiod->settings);
 	if (err != 0) {
 		brcmf_err("brcmf_attach failed\n");
-		goto fail;
+		sdio_claim_host(sdiod->func1);
+		goto release;
 	}
 
 	/* ready */
