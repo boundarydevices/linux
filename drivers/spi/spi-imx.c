@@ -257,7 +257,7 @@ static bool spi_imx_can_dma(struct spi_master *master, struct spi_device *spi,
 	spi_imx->dynamic_burst = 0;
 	if (transfer->len > spi_imx_get_fifosize(spi_imx) * bytes_per_word)
 		return true;
-	return true;
+	return false;
 }
 
 #define MX51_ECSPI_CTRL		0x08
@@ -522,7 +522,6 @@ static int mx51_ecspi_prepare_message(struct spi_imx_data *spi_imx,
 	u32 ctrl = MX51_ECSPI_CTRL_ENABLE;
 	u32 testreg;
 	u32 cfg = readl(spi_imx->base + MX51_ECSPI_CONFIG);
-	u32 bits = spi_imx->bits_per_word;
 
 	/* set Master or Slave mode */
 	if (spi_imx->slave_mode)
@@ -539,28 +538,6 @@ static int mx51_ecspi_prepare_message(struct spi_imx_data *spi_imx,
 	/* set chip select to use */
 	ctrl |= MX51_ECSPI_CTRL_CS(spi->chip_select);
 
-	if (spi_imx->slave_mode) {
-		bits = spi_imx->slave_burst * 8;
-	}  else {
-		if (bits == 32) {
-			unsigned len = spi_imx->len / 4;
-
-			while (len > 128) {
-				if (len & 1)
-					break;
-				len >>= 1;
-			}
-			while (len > 128) {
-				if (len % 3)
-					break;
-				len /= 3;
-			}
-			if ((len > 128) || !len)
-				len = 1;
-			bits = len << 5;
-		}
-	}
-	ctrl |= (bits - 1) << MX51_ECSPI_CTRL_BL_OFFSET;
 	/*
 	 * The ctrl register must be written first, with the EN bit set other
 	 * registers must not be written to.
@@ -612,10 +589,32 @@ static int mx51_ecspi_config(struct spi_device *spi)
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
 	u32 ctrl = readl(spi_imx->base + MX51_ECSPI_CTRL);
 	u32 clk = spi_imx->speed_hz, delay;
+	u32 bits = spi_imx->bits_per_word;
 
 	/* Clear BL field and set the right value */
 	ctrl &= ~MX51_ECSPI_CTRL_BL_MASK;
-	ctrl |= (spi_imx->bits_per_word - 1) << MX51_ECSPI_CTRL_BL_OFFSET;
+	if (spi_imx->slave_mode) {
+		bits = spi_imx->slave_burst * 8;
+	}  else {
+		if (bits == 32) {
+			unsigned len = spi_imx->len / 4;
+
+			while (len > 128) {
+				if (len & 1)
+					break;
+				len >>= 1;
+			}
+			while (len > 128) {
+				if (len % 3)
+					break;
+				len /= 3;
+			}
+			if ((len > 128) || !len)
+				len = 1;
+			bits = len << 5;
+		}
+	}
+	ctrl |= (bits - 1) << MX51_ECSPI_CTRL_BL_OFFSET;
 
 	/* set clock speed */
 	ctrl &= ~(0xf << MX51_ECSPI_CTRL_POSTDIV_OFFSET |
@@ -1048,7 +1047,9 @@ static struct spi_imx_devtype_data imx53_ecspi_devtype_data = {
 	.trigger = mx51_ecspi_trigger,
 	.rx_available = mx51_ecspi_rx_available,
 	.reset = mx51_ecspi_reset,
+	.setup_wml = mx51_setup_wml,
 	.fifo_size = 64,
+	.dynamic_burst = true,
 	.has_slavemode = true,
 	.disable = mx51_ecspi_disable,
 	.devtype = IMX53_ECSPI,
@@ -1400,8 +1401,6 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	int left = 0;
 	struct spi_master *master = spi_imx->bitbang.master;
 	struct sg_table *tx = &transfer->tx_sg, *rx = &transfer->rx_sg;
-	struct scatterlist *last_sg = sg_last(rx->sgl, rx->nents);
-	unsigned int bytes_per_word, i;
 	int bits_per_word = transfer->bits_per_word;
 	int burst;
 	int width;
@@ -1410,18 +1409,9 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	int rem;
 	u32 bpw;
 
-	/* Get the right burst length from the last sg to ensure no tail data */
-	bytes_per_word = spi_imx_bytes_per_word(transfer->bits_per_word);
-	for (i = spi_imx->devtype_data->fifo_size / 2; i > 0; i--) {
-		if (!(sg_dma_len(last_sg) % (i * bytes_per_word)))
-			break;
-	}
-	/* Use 1 as wml in case no available burst length got */
-	if (i == 0)
-		i = 1;
-	spi_imx->wml =  i;
-
-	if (bits_per_word <= 8) {
+	if (spi_imx->devtype_data->dynamic_burst && !spi_imx->slave_mode) {
+		width = DMA_SLAVE_BUSWIDTH_4_BYTES;
+	} else if (bits_per_word <= 8) {
 		width = DMA_SLAVE_BUSWIDTH_1_BYTE;
 	} else if (bits_per_word <= 16) {
 		width = DMA_SLAVE_BUSWIDTH_2_BYTES;
@@ -1782,21 +1772,18 @@ static int spi_imx_probe(struct platform_device *pdev)
 	master->bits_per_word_mask = SPI_BPW_RANGE_MASK(1, 32);
 	master->bus_num = np ? -1 : pdev->id;
 
-	ret = of_property_read_u32(np, "fsl,spi-num-chipselects", &num_cs);
-	if (ret < 0) {
-		if (mxc_platform_info) {
-			num_cs = mxc_platform_info->num_chipselect;
-			master->num_chipselect = num_cs;
-		}
-	} else {
-		master->num_chipselect = num_cs;
-	}
-
 	spi_imx = spi_master_get_devdata(master);
 	spi_imx->bitbang.master = master;
 	spi_imx->dev = &pdev->dev;
 	spi_imx->slave_mode = slave_mode;
 	spi_imx->speed_hz = speed_hz;
+
+	num_cs = of_gpio_named_count(np, "cs-gpios");
+	if (num_cs < 0)
+		num_cs = 0;
+	if (mxc_platform_info && (num_cs < mxc_platform_info->num_chipselect))
+		num_cs = mxc_platform_info->num_chipselect;
+	master->num_chipselect = num_cs;
 
 	ret = of_property_read_u32(np, "idle-state", &idle_state);
 	if (ret >= 0) {
