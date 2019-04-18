@@ -72,8 +72,8 @@
 #include "fsl-imx8mq-evk.dts"
 
 / {
-	modem_reset: modem-reset {
-		reset-gpios = <&gpio3 5 GPIO_ACTIVE_HIGH>;
+	bt_rfkill {
+		bt-power-gpios = <&gpio3 5 GPIO_ACTIVE_HIGH>;
 	};
 };
 
