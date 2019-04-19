@@ -413,6 +413,7 @@
 enum fsl_flexspi_devtype {
 	FSL_FLEXSPI_IMX8QM,
 	FSL_FLEXSPI_IMX8QXP,
+	FSL_FLEXSPI_IMX8MM,
 };
 
 struct fsl_flexspi_devtype_data {
@@ -425,8 +426,7 @@ struct fsl_flexspi_devtype_data {
 
 static struct fsl_flexspi_devtype_data imx8qm_data = {
 	.devtype = FSL_FLEXSPI_IMX8QM,
-	/* .rxfifo = 1024, */
-	.rxfifo = 128,
+	.rxfifo = 1024,
 	.txfifo = 1024,
 	.ahb_buf_size = 2048,
 	.driver_data = 0,
@@ -434,11 +434,18 @@ static struct fsl_flexspi_devtype_data imx8qm_data = {
 
 static struct fsl_flexspi_devtype_data imx8qxp_data = {
 	.devtype = FSL_FLEXSPI_IMX8QXP,
-	/* .rxfifo = 1024, */
-	.rxfifo = 128,
+	.rxfifo = 1024,
 	.txfifo = 1024,
 	.ahb_buf_size = 2048,
 	.driver_data = 0,
+};
+
+static struct fsl_flexspi_devtype_data imx8mm_data = {
+	.devtype = FSL_FLEXSPI_IMX8MM,
+	.rxfifo = 1024,
+	.txfifo = 1024,
+	.ahb_buf_size = 2048,
+	.driver_data = FLEXSPI_QUIRK_QUAD_ONLY,
 };
 
 #define FSL_FLEXSPI_MAX_CHIP	4
@@ -1154,6 +1161,7 @@ static void fsl_flexspi_unprep(struct spi_nor *nor, enum spi_nor_ops ops)
 static const struct of_device_id fsl_flexspi_dt_ids[] = {
 	{ .compatible = "fsl,imx8qm-flexspi", .data = (void *)&imx8qm_data, },
 	{ .compatible = "fsl,imx8qxp-flexspi", .data = (void *)&imx8qxp_data, },
+	{ .compatible = "fsl,imx8mm-flexspi", .data = (void *)&imx8mm_data, },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, fsl_flexspi_dt_ids);
