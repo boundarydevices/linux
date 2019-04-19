@@ -739,8 +739,6 @@
 	fsl,tuning-step = <2>;
 	pm-ignore-notify;
 	cap-power-off-card;
-	cd-post;
-	wifi-host;
 	status = "okay";
 
 	brcmf: bcrmf@1 {
