@@ -1277,7 +1277,7 @@ static ssize_t name_store(struct class *cla,
 	}
 
 	key_cnt = unifykey_count_key(&(ukdev->uk_header));
-	name = kzalloc(count, GFP_KERNEL);
+	name = kzalloc(count + 1, GFP_KERNEL);
 	if (!name) {
 		pr_err("can't kzalloc mem,%s:%d\n",
 			__func__,
