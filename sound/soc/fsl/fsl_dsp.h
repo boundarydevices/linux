@@ -12,12 +12,18 @@
 #include "fsl_dsp_proxy.h"
 #include "fsl_dsp_platform.h"
 
+#define DRV_NAME "fsl-dsp"
+
 typedef void (*memcpy_func) (void *dest, const void *src, size_t n);
 typedef void (*memset_func) (void *s, int c, size_t n);
 
 /* ...maximal number of IPC clients per proxy */
 #define XF_CFG_MAX_IPC_CLIENTS          (1 << 4)
 
+enum {
+	DSP_IMX8QXP_TYPE = 0,
+	DSP_IMX8QM_TYPE,
+};
 
 /* ...proxy client data */
 struct xf_client {
@@ -75,6 +81,7 @@ struct fsl_dsp {
 	unsigned long			sram;
 	void			        *sdram_vir_addr;
 	unsigned long			sdram_phys_addr;
+	int				sdram_reserved_size;
 	void				*msg_buf_virt;
 	dma_addr_t			 msg_buf_phys;
 	int				 msg_buf_size;
@@ -84,6 +91,8 @@ struct fsl_dsp {
 	void				*dsp_config_virt;
 	dma_addr_t			 dsp_config_phys;
 	int				 dsp_config_size;
+	int				 dsp_board_type;
+	unsigned int			fixup_offset;
 
 	/* ...proxy data structures */
 	struct xf_proxy proxy;
@@ -95,6 +104,12 @@ struct fsl_dsp {
 
 	/* ...global clients pool (item[0] serves as list terminator) */
 	union xf_client_link xf_client_map[XF_CFG_MAX_IPC_CLIENTS];
+
+	struct clk *esai_ipg_clk;
+	struct clk *esai_mclk;
+	struct clk *asrc_mem_clk;
+	struct clk *asrc_ipg_clk;
+	struct clk *asrck_clk[4];
 };
 
 #define IRAM_OFFSET		0x10000
@@ -116,32 +131,6 @@ struct fsl_dsp {
 #define INPUT_BUF_SIZE		4096
 #define OUTPUT_BUF_SIZE		16384
 #define DSP_CONFIG_SIZE    4096
-
-/*external buffer
- *  ----------------------------------------------------------------------
- *  |  name                      | size     |   description     |
- * -----------------------------------------------------------------------
- *  |  scratch buffer for malloc | 0xffffff | For MEM_scratch_malloc()
- * ------------------------------------------------------------------------
- *  |  global structure          | 4096     | For store dsp config structure
- * ------------------------------------------------------------------------
- */
-
-#define MEMORY_REMAP_OFFSET	0x39000000
-
-/* reserved memory for dsp firmware and core libs to
- * save their instruction/data section in SDRAM, the physical
- * address range is 0x8e000000 ~ 0x8fffffff (32M bytes).
- */
-#define SDRAM_BASE_ADDR  0x8e000000
-#define SDRAM_BASE_SIZE  0x1ffffff
-#define SDRAM_CODEC_LIB_OFFSET 0x1000000
-#define SDRAM_SCRATCH_BUF_SIZE 0xffffff
-
-#define SC_C_OFS_SEL    39
-#define SC_C_OFS_AUDIO  40
-#define SC_C_OFS_PERIPH 41
-#define SC_C_OFS_IRQ    42
 
 void *memcpy_dsp(void *dest, const void *src, size_t count);
 void *memset_dsp(void *dest, int c, size_t count);

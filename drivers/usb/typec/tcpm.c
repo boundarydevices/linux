@@ -2600,7 +2600,8 @@ static bool tcpm_start_drp_toggling(struct tcpm_port *port,
 	/* First toggle Rp if current state is SNK_UNATTACHED */
 
 	if (port->tcpc->start_drp_toggling &&
-		port->port_type == TYPEC_PORT_DRP) {
+		(port->port_type == TYPEC_PORT_DRP ||
+		 port->typec_caps.data == TYPEC_PORT_DRD)) {
 		if (port->state == SRC_UNATTACHED)
 			ret = port->tcpc->start_drp_toggling(port->tcpc,
 					tcpm_rp_cc(port), 0);
@@ -3222,6 +3223,9 @@ static void run_state_machine(struct tcpm_port *port)
 		ret = tcpm_snk_attach(port);
 		if (ret < 0)
 			tcpm_set_state(port, SNK_UNATTACHED, 0);
+		else if (port->port_type == TYPEC_PORT_SRC &&
+			 port->typec_caps.data == TYPEC_PORT_DRD)
+			tcpm_log(port, "Keep at SNK_ATTACHED for USB data.");
 		else
 			tcpm_set_state(port, SNK_STARTUP, 0);
 		break;

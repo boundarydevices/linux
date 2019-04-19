@@ -27,10 +27,6 @@
 		hdmi-out;
 	};
 
-	sound-amix-sai {
-		status = "disabled";
-	};
-
 	sound-hdmi-arc {
 		compatible = "fsl,imx-audio-spdif";
 		model = "imx-hdmi-arc";
@@ -68,7 +64,7 @@
 	status = "okay";
 };
 
-&amix {
+&audmix {
 	status = "disabled";
 };
 

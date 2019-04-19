@@ -193,6 +193,7 @@ int send_dpu_ext_msg_addr(struct xf_proxy *proxy)
 	dpu_ext_msg->scratch_size =  dsp_priv->scratch_buf_size;
 	dpu_ext_msg->dsp_config_phys =  dsp_priv->dsp_config_phys;
 	dpu_ext_msg->dsp_config_size =  dsp_priv->dsp_config_size;
+	dpu_ext_msg->dsp_board_type = dsp_priv->dsp_board_type;
 
 	icm_intr_extended_send(proxy, msghdr.allbits, &ext_msg);
 
@@ -269,7 +270,7 @@ irqreturn_t fsl_dsp_mu_isr(int irq, void *dev_id)
 /* ...NULL-address specification */
 #define XF_PROXY_NULL           (~0U)
 
-#define XF_PROXY_BADADDR  SDRAM_SCRATCH_BUF_SIZE
+#define XF_PROXY_BADADDR        (dsp_priv->scratch_buf_size)
 
 /* ...shared memory translation - kernel virtual address to shared address */
 u32 xf_proxy_b2a(struct xf_proxy *proxy, void *b)
@@ -280,7 +281,7 @@ u32 xf_proxy_b2a(struct xf_proxy *proxy, void *b)
 	if (b == NULL)
 		return XF_PROXY_NULL;
 	else if ((u32)(b - dsp_priv->scratch_buf_virt) <
-					SDRAM_SCRATCH_BUF_SIZE)
+					dsp_priv->scratch_buf_size)
 		return (u32)(b - dsp_priv->scratch_buf_virt);
 	else
 		return XF_PROXY_BADADDR;
@@ -292,7 +293,7 @@ void *xf_proxy_a2b(struct xf_proxy *proxy, u32 address)
 	struct fsl_dsp *dsp_priv = container_of(proxy,
 					struct fsl_dsp, proxy);
 
-	if (address < SDRAM_SCRATCH_BUF_SIZE)
+	if (address < dsp_priv->scratch_buf_size)
 		return dsp_priv->scratch_buf_virt + address;
 	else if (address == XF_PROXY_NULL)
 		return NULL;
@@ -558,12 +559,13 @@ struct xf_message *xf_cmd_recv(struct xf_proxy *proxy,
 						  struct xf_msg_queue *queue,
 						  int wait)
 {
-	struct xf_message *m;
+	struct xf_message *m = NULL;
 	int ret;
 
 	/* ...wait for message reception (take lock on success) */
 	ret = wait_event_interruptible(*wq,
-			(m = xf_msg_received(proxy, queue)) != NULL || !wait);
+			(m = xf_msg_received(proxy, queue)) != NULL || !wait
+			|| !proxy->is_active);
 	if (ret)
 		return ERR_PTR(-EINTR);
 
@@ -678,6 +680,7 @@ int xf_cmd_alloc(struct xf_proxy *proxy, void **buffer, u32 length)
 	/* ...send command to remote proxy */
 	m = xf_cmd_send_recv(proxy, id, XF_ALLOC, NULL, length);
 	if (IS_ERR(m)) {
+		xf_unlock(&proxy->lock);
 		ret = PTR_ERR(m);
 		return ret;
 	}
@@ -707,6 +710,7 @@ int xf_cmd_free(struct xf_proxy *proxy, void *buffer, u32 length)
 	/* ...synchronously execute freeing command */
 	m = xf_cmd_send_recv(proxy, id, XF_FREE, buffer, length);
 	if (IS_ERR(m)) {
+		xf_unlock(&proxy->lock);
 		ret = PTR_ERR(m);
 		return ret;
 	}

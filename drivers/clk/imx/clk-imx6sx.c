@@ -655,9 +655,6 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 
 	imx_clk_set_parent(clks[IMX6SX_CLK_QSPI1_SEL], clks[IMX6SX_CLK_PLL2_BUS]);
 	imx_clk_set_parent(clks[IMX6SX_CLK_QSPI2_SEL], clks[IMX6SX_CLK_PLL2_BUS]);
-	/* Set the UART parent if needed. */
-	if (uart_from_osc)
-		imx_clk_set_parent(clks[IMX6SX_CLK_UART_SEL], clks[IMX6SX_CLK_OSC]);
 
 	if (!imx_src_is_m4_enabled())
 		/* default parent of can_sel clock is invalid, manually set it here */

@@ -12,6 +12,7 @@
  * GNU General Public License for more details.
  */
 
+#include <dt-bindings/usb/pd.h>
 #include "fsl-imx8qxp.dtsi"
 
 / {
@@ -146,13 +147,6 @@
 			"CPU-Capture", "Capture";
 	};
 
-	sound-amix-sai {
-		compatible = "fsl,imx-audio-amix";
-		model = "amix-audio-sai";
-		dais = <&sai4>, <&sai5>;
-		amix-controller = <&amix>;
-	};
-
 	sound-cs42888 {
 		compatible = "fsl,imx8qm-sabreauto-cs42888",
 				"fsl,imx-audio-cs42888";
@@ -214,7 +208,7 @@
 	status = "okay";
 };
 
-&amix {
+&audmix {
 	status = "okay";
 };
 
@@ -640,7 +634,7 @@
 
 		pinctrl_wifi_init: wifi_initgrp{
 			fsl,pins = <
-				SC_P_SCU_BOOT_MODE3_SCU_DSC_BOOT_MODE3		0x20
+				/* reserve pin init/idle_state to support multiple wlan cards */
 			>;
 		};
 
@@ -850,7 +844,7 @@
 	status = "okay";
 
 	pca9646@71 {
-		compatible = "nxp,pca9646";
+		compatible = "nxp,pca9646", "nxp,pca9546";
 		#address-cells = <1>;
 		#size-cells = <0>;
 		reg = <0x71>;
@@ -930,7 +924,7 @@
 	};
 
 	typec_ptn5110: typec@50 {
-		compatible = "usb,tcpci";
+		compatible = "nxp,ptn5110";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_typec>;
 		reg = <0x50>;
@@ -938,11 +932,15 @@
 		interrupts = <3 IRQ_TYPE_LEVEL_LOW>;
 		ss-sel-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
 		reset-gpios = <&pca9557_a 7 GPIO_ACTIVE_HIGH>;
-		src-pdos = <0x380190c8 0x3803c0c8>;
-		port-type = "drp";
-		sink-disable;
-		default-role = "source";
 		status = "okay";
+
+		usb_con1: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			power-role = "source";
+			data-role = "dual";
+			source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
+		};
 	};
 };
 
@@ -1004,7 +1002,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcieb>;
 	clkreq-gpio = <&gpio4 1 GPIO_ACTIVE_LOW>;
-	disable-gpio = <&pca9557_a 2 GPIO_ACTIVE_LOW>;
+	power-on-gpio = <&pca9557_a 2 GPIO_ACTIVE_HIGH>;
 	reset-gpio = <&gpio4 0 GPIO_ACTIVE_LOW>;
 	epdev_on-supply = <&epdev_on>;
 	status = "okay";

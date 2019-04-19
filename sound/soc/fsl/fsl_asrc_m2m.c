@@ -29,11 +29,6 @@ struct fsl_asrc_m2m {
 	spinlock_t lock;
 };
 
-static struct miscdevice asrc_miscdev = {
-	.name	= "mxc_asrc",
-	.minor	= MISC_DYNAMIC_MINOR,
-};
-
 static void fsl_asrc_get_status(struct fsl_asrc_pair *pair,
 				struct asrc_status_flags *flags)
 {
@@ -179,14 +174,20 @@ static int fsl_asrc_dmaconfig(struct fsl_asrc_pair *pair, struct dma_chan *chan,
 		slave_config.direction = DMA_MEM_TO_DEV;
 		slave_config.dst_addr = dma_addr;
 		slave_config.dst_addr_width = buswidth;
-		slave_config.dst_maxburst =
-			m2m->watermark[IN] * pair->channels;
+		if (asrc_priv->dma_type == DMA_SDMA)
+			slave_config.dst_maxburst =
+				m2m->watermark[IN] * pair->channels;
+		else
+			slave_config.dst_maxburst = 1;
 	} else {
 		slave_config.direction = DMA_DEV_TO_MEM;
 		slave_config.src_addr = dma_addr;
 		slave_config.src_addr_width = buswidth;
-		slave_config.src_maxburst =
-			m2m->watermark[OUT] * pair->channels;
+		if (asrc_priv->dma_type == DMA_SDMA)
+			slave_config.src_maxburst =
+				m2m->watermark[OUT] * pair->channels;
+		else
+			slave_config.src_maxburst = 1;
 	}
 
 	ret = dmaengine_slave_config(chan, &slave_config);
@@ -289,6 +290,9 @@ static int fsl_asrc_prepare_io_buffer(struct fsl_asrc_pair *pair,
 		*dma_len -= last_period_size * word_size * pair->channels;
 		*dma_len = *dma_len / (word_size * pair->channels) *
 				(word_size * pair->channels);
+		if (asrc_priv->dma_type == DMA_EDMA)
+			*dma_len = *dma_len / (word_size * pair->channels * m2m->watermark[OUT])
+					* (word_size * pair->channels * m2m->watermark[OUT]);
 	}
 
 	*sg_nodes = *dma_len / ASRC_MAX_BUFFER_SIZE + 1;
@@ -631,11 +635,13 @@ static long fsl_asrc_calc_last_period_size(struct fsl_asrc_pair *pair,
 					struct asrc_convert_buffer *pbuf)
 {
 	struct fsl_asrc_m2m *m2m = pair->private;
+	struct fsl_asrc *asrc_priv = pair->asrc_priv;
 	unsigned int out_length;
 	unsigned int in_width, out_width;
 	unsigned int channels = pair->channels;
 	unsigned int in_samples, out_samples;
 	unsigned int last_period_size;
+	unsigned int remain;
 
 	switch (m2m->word_width[IN]) {
 	case ASRC_WIDTH_24_BIT:
@@ -677,6 +683,12 @@ static long fsl_asrc_calc_last_period_size(struct fsl_asrc_pair *pair,
 					- out_samples;
 
 	m2m->last_period_size = last_period_size + 1 + ASRC_OUTPUT_LAST_SAMPLE;
+
+	if (asrc_priv->dma_type == DMA_EDMA) {
+		remain = pbuf->output_buffer_length % (out_width * channels * m2m->watermark[OUT]);
+		if (remain)
+			m2m->last_period_size += remain / (out_width * channels);
+	}
 
 	return 0;
 }
@@ -862,12 +874,12 @@ static long fsl_asrc_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 
 static int fsl_asrc_open(struct inode *inode, struct file *file)
 {
-	struct fsl_asrc *asrc_priv = dev_get_drvdata(asrc_miscdev.this_device);
+	struct miscdevice *asrc_miscdev = file->private_data;
+	struct fsl_asrc *asrc_priv = dev_get_drvdata(asrc_miscdev->parent);
 	struct device *dev = &asrc_priv->pdev->dev;
 	struct fsl_asrc_pair *pair;
 	struct fsl_asrc_m2m *m2m;
 	int ret;
-	int i;
 
 	ret = signal_pending(current);
 	if (ret) {
@@ -895,11 +907,7 @@ static int fsl_asrc_open(struct inode *inode, struct file *file)
 
 	file->private_data = pair;
 
-	clk_prepare_enable(asrc_priv->mem_clk);
-	clk_prepare_enable(asrc_priv->ipg_clk);
-	clk_prepare_enable(asrc_priv->spba_clk);
-	for (i = 0; i < ASRC_CLK_MAX_NUM; i++)
-		clk_prepare_enable(asrc_priv->asrck_clk[i]);
+	pm_runtime_get_sync(dev);
 
 	return 0;
 out:
@@ -913,8 +921,8 @@ static int fsl_asrc_close(struct inode *inode, struct file *file)
 	struct fsl_asrc_pair *pair = file->private_data;
 	struct fsl_asrc_m2m *m2m = pair->private;
 	struct fsl_asrc *asrc_priv = pair->asrc_priv;
+	struct device *dev = &asrc_priv->pdev->dev;
 	unsigned long lock_flags;
-	int i;
 
 	if (m2m->asrc_active) {
 		m2m->asrc_active = 0;
@@ -950,11 +958,7 @@ static int fsl_asrc_close(struct inode *inode, struct file *file)
 	spin_unlock_irqrestore(&asrc_priv->lock, lock_flags);
 	file->private_data = NULL;
 
-	for (i = 0; i < ASRC_CLK_MAX_NUM; i++)
-		clk_disable_unprepare(asrc_priv->asrck_clk[i]);
-	clk_disable_unprepare(asrc_priv->spba_clk);
-	clk_disable_unprepare(asrc_priv->ipg_clk);
-	clk_disable_unprepare(asrc_priv->mem_clk);
+	pm_runtime_put_sync(dev);
 
 	return 0;
 }
@@ -971,20 +975,24 @@ static int fsl_asrc_m2m_init(struct fsl_asrc *asrc_priv)
 	struct device *dev = &asrc_priv->pdev->dev;
 	int ret;
 
-	asrc_miscdev.fops = &asrc_fops,
-	ret = misc_register(&asrc_miscdev);
+	asrc_priv->asrc_miscdev.fops = &asrc_fops;
+	asrc_priv->asrc_miscdev.parent = dev;
+	asrc_priv->asrc_miscdev.name = asrc_priv->name;
+	asrc_priv->asrc_miscdev.minor = MISC_DYNAMIC_MINOR;
+	ret = misc_register(&asrc_priv->asrc_miscdev);
 	if (ret) {
 		dev_err(dev, "failed to register char device %d\n", ret);
 		return ret;
 	}
-	dev_set_drvdata(asrc_miscdev.this_device, asrc_priv);
 
 	return 0;
 }
 
 static int fsl_asrc_m2m_remove(struct platform_device *pdev)
 {
-	misc_deregister(&asrc_miscdev);
+	struct fsl_asrc *asrc_priv = dev_get_drvdata(&pdev->dev);
+
+	misc_deregister(&asrc_priv->asrc_miscdev);
 	return 0;
 }
 

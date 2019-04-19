@@ -11,6 +11,7 @@
 #define _FSL_ASRC_H
 
 #include <uapi/linux/mxc_asrc.h>
+#include <linux/miscdevice.h>
 
 #define IN	0
 #define OUT	1
@@ -362,16 +363,20 @@ struct fsl_asrc {
 
 	struct snd_pcm_substream *substream[2];
 	struct fsl_asrc_pair *pair[ASRC_PAIR_MAX_NUM];
+	struct miscdevice asrc_miscdev;
 	unsigned int channel_bits;
 	unsigned int channel_avail;
 
 	int asrc_rate;
 	int asrc_width;
-
-	char name[32];
+	int dma_type;  /* 0 is sdma, 1 is edma */
 
 	u32 regcache_cfg;
+	char name[20];
 };
+
+#define DMA_SDMA 0
+#define DMA_EDMA 1
 
 #define DRV_NAME "fsl-asrc-dai"
 extern struct snd_soc_component_driver fsl_asrc_component;

@@ -658,7 +658,8 @@ audmux_bypass:
 	codec_dev = of_find_i2c_device_by_node(codec_np);
 	if (!codec_dev || !codec_dev->dev.driver) {
 		dev_err(&pdev->dev, "failed to find codec platform device\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto fail;
 	}
 
 	asrc_np = of_parse_phandle(pdev->dev.of_node, "asrc-controller", 0);

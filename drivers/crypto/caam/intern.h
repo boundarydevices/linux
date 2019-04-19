@@ -4,7 +4,7 @@
  * Private/internal definitions between modules
  *
  * Copyright 2008-2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
  */
 
@@ -41,6 +41,18 @@ struct caam_jrentry_info {
 	u32 desc_size;	/* Stored size for postprocessing, header derived */
 };
 
+#ifdef CONFIG_PM_SLEEP
+struct caam_jr_state {
+	dma_addr_t inpbusaddr;
+	dma_addr_t outbusaddr;
+};
+#endif
+
+struct caam_jr_dequeue_params {
+	struct device *dev;
+	int enable_itr;
+};
+
 /* Private sub-storage for a single JobR */
 struct caam_drv_private_jr {
 	struct list_head	list_node;	/* Job Ring device list */
@@ -48,6 +60,7 @@ struct caam_drv_private_jr {
 	int ridx;
 	struct caam_job_ring __iomem *rregs;	/* JobR's register space */
 	struct tasklet_struct irqtask;
+	struct caam_jr_dequeue_params tasklet_params;
 	int irq;			/* One per queue */
 
 	/* Number of scatterlist crypt transforms active on the JobR */
@@ -64,7 +77,19 @@ struct caam_drv_private_jr {
 	int out_ring_read_index;	/* Output index "tail" */
 	int tail;			/* entinfo (s/w ring) tail index */
 	struct jr_outentry *outring;	/* Base of output ring, DMA-safe */
+
+#ifdef CONFIG_PM_SLEEP
+	struct caam_jr_state state;   /* State of the JR during PM */
+#endif
 };
+
+#ifdef CONFIG_PM_SLEEP
+struct caam_ctl_state {
+	u32 scfgr;
+	struct masterid deco_mid[1];
+	struct masterid jr_mid[4];
+};
+#endif
 
 /*
  * Driver-private storage for a single CAAM block instance
@@ -101,7 +126,6 @@ struct caam_drv_private {
 	u8 total_jobrs;		/* Total Job Rings in device */
 	u8 qi_present;		/* Nonzero if QI present in device */
 	u8 mc_en;		/* Nonzero if MC f/w is active */
-	int secvio_irq;		/* Security violation interrupt number */
 	int virt_en;		/* Virtualization enabled in CAAM */
 
 #define	RNG4_MAX_HANDLES 2
@@ -116,7 +140,6 @@ struct caam_drv_private {
 	struct clk *caam_emi_slow;
 
 	bool has_seco;
-	u32 first_jr_index;
 	/*
 	 * debugfs entries for developer view into driver/device
 	 * variables at runtime.
@@ -126,6 +149,14 @@ struct caam_drv_private {
 	struct dentry *ctl; /* controller dir */
 	struct debugfs_blob_wrapper ctl_kek_wrap, ctl_tkek_wrap, ctl_tdsk_wrap;
 	struct dentry *ctl_kek, *ctl_tkek, *ctl_tdsk;
+#endif
+
+	int    has_optee;
+	int    has_access_p0; /* If driver has acces to page 0 of the CAAM */
+
+#ifdef CONFIG_PM_SLEEP
+	int    caam_off_during_pm; /* If the CAAM is reset after suspend */
+	struct caam_ctl_state state;   /* State of the CTL during PM */
 #endif
 };
 

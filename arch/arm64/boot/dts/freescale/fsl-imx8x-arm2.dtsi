@@ -99,13 +99,6 @@
 		asrc-controller = <&asrc0>;
 		status = "okay";
 	};
-
-	sound-amix-sai {
-		compatible = "fsl,imx-audio-amix";
-		model = "amix-audio-sai";
-		dais = <&sai4>, <&sai5>;
-		amix-controller = <&amix>;
-	};
 };
 
 &acm {
@@ -119,7 +112,7 @@
 	status = "okay";
 };
 
-&amix {
+&audmix {
 	status = "okay";
 };
 

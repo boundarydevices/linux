@@ -2,7 +2,7 @@
 *
 *    The MIT License (MIT)
 *
-*    Copyright (c) 2014 - 2018 Vivante Corporation
+*    Copyright (c) 2014 - 2019 Vivante Corporation
 *
 *    Permission is hereby granted, free of charge, to any person obtaining a
 *    copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
 *
 *    The GPL License (GPL)
 *
-*    Copyright (C) 2014 - 2018 Vivante Corporation
+*    Copyright (C) 2014 - 2019 Vivante Corporation
 *
 *    This program is free software; you can redistribute it and/or
 *    modify it under the terms of the GNU General Public License
@@ -59,6 +59,7 @@
 
 #include <linux/slab.h>
 #include <linux/pagemap.h>
+#include <linux/cache.h>
 
 #define _GC_OBJ_ZONE gcvZONE_ALLOCATOR
 
@@ -129,6 +130,12 @@ static int import_page_map(struct um_desc *um,
     int i;
     int result;
     struct page **pages;
+
+    if ((addr & (cache_line_size() - 1)) || (size & (cache_line_size() - 1)))
+    {
+        /* Not cpu cacheline size aligned, can not support. */
+        return -EINVAL;
+    }
 
     pages = kzalloc(page_count * sizeof(void *), GFP_KERNEL | gcdNOWARN);
     if (!pages)
@@ -201,6 +208,8 @@ static int import_page_map(struct um_desc *um,
         goto error;
     }
 
+    dma_sync_sg_for_cpu(galcore_device, um->sgt.sgl, um->sgt.nents, DMA_FROM_DEVICE);
+
     um->type = UM_PAGE_MAP;
     um->pages = pages;
 
@@ -265,7 +274,15 @@ static int import_pfn_map(struct um_desc *um,
         if (pgd_none(*pgd) || pgd_bad(*pgd))
             goto err;
 
+#if (defined(CONFIG_CPU_CSKYV2) || defined(CONFIG_X86)) \
+    && LINUX_VERSION_CODE >= KERNEL_VERSION (4,12,0)
+        pud = pud_offset((p4d_t*)pgd, addr);
+#elif (defined(CONFIG_CPU_CSKYV2)) \
+    && LINUX_VERSION_CODE >= KERNEL_VERSION (4,11,0)
+        pud = pud_offset((p4d_t*)pgd, addr);
+#else
         pud = pud_offset(pgd, addr);
+#endif
         if (pud_none(*pud) || pud_bad(*pud))
             goto err;
 
@@ -330,7 +347,7 @@ static gceSTATUS
 _Import(
     IN gckOS Os,
     IN gctPOINTER Memory,
-    IN gctUINT32 Physical,
+    IN gctPHYS_ADDR_T Physical,
     IN gctSIZE_T Size,
     IN struct um_desc * UserMemory
     )
@@ -344,11 +361,11 @@ _Import(
     gctSIZE_T extraPage;
     gctSIZE_T pageCount, i;
 
-    gcmkHEADER_ARG("Os=0x%p Memory=%p Physical=0x%x Size=%lu", Os, Memory, Physical, Size);
+    gcmkHEADER_ARG("Os=%p Memory=%p Physical=0x%llx Size=%lu", Os, Memory, Physical, Size);
 
     /* Verify the arguments. */
     gcmkVERIFY_OBJECT(Os, gcvOBJ_OS);
-    gcmkVERIFY_ARGUMENT(Memory != gcvNULL || Physical != ~0U);
+    gcmkVERIFY_ARGUMENT(Memory != gcvNULL || Physical != ~0ULL);
     gcmkVERIFY_ARGUMENT(Size > 0);
 
     memory = (unsigned long)Memory;
@@ -385,17 +402,11 @@ _Import(
 
         for (i = 0; i < pageCount; i++)
         {
-            u32 data;
+            u32 data = 0;
 
             get_user(data, (u32 *)vaddr);
             put_user(data, (u32 *)vaddr);
             vaddr += PAGE_SIZE;
-
-            /* Fix QM crash with test_buffers */
-            if (vaddr > memory + Size - 4)
-            {
-                vaddr = memory + Size - 4;
-            }
         }
 
         vma = find_vma(current->mm, memory);
@@ -469,7 +480,7 @@ _Import(
 
         if (Physical != gcvINVALID_PHYSICAL_ADDRESS)
         {
-            if(Physical >0xFFFFFFFFu || Physical + Size > 0xFFFFFFFFu )
+            if(Physical > 0xFFFFFFFFu || Physical + Size > 0xFFFFFFFFu )
             {
                 gcmkONERROR(gcvSTATUS_INVALID_ARGUMENT);
             }
@@ -576,7 +587,7 @@ static void release_page_map(struct um_desc *um)
 {
     int i;
 
-    dma_unmap_sg(galcore_device, um->sgt.sgl, um->sgt.nents, DMA_TO_DEVICE);
+    dma_unmap_sg(galcore_device, um->sgt.sgl, um->sgt.nents, DMA_FROM_DEVICE);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION (3,6,0) \
     && (defined(ARCH_HAS_SG_CHAIN) || defined(CONFIG_ARCH_HAS_SG_CHAIN))
@@ -687,6 +698,8 @@ static gceSTATUS
 _UserMemoryMapKernel(
     IN gckALLOCATOR Allocator,
     IN PLINUX_MDL Mdl,
+    IN gctSIZE_T Offset,
+    IN gctSIZE_T Bytes,
     OUT gctPOINTER *Logical
     )
 {
@@ -711,7 +724,7 @@ _UserMemoryCache(
     IN PLINUX_MDL Mdl,
     IN gctSIZE_T Offset,
     IN gctPOINTER Logical,
-    IN gctUINT32 Bytes,
+    IN gctSIZE_T Bytes,
     IN gceCACHEOPERATION Operation
     )
 {
@@ -784,13 +797,13 @@ _UserMemoryPhysical(
         switch (userMemory->type)
         {
         case UM_PHYSICAL_MAP:
-            *Physical = userMemory->physical + index * PAGE_SIZE;
+            *Physical = userMemory->physical + (gctPHYS_ADDR_T)index * PAGE_SIZE;
             break;
         case UM_PAGE_MAP:
             *Physical = page_to_phys(userMemory->pages[index]);
             break;
         case UM_PFN_MAP:
-            *Physical = userMemory->pfns[index] << PAGE_SHIFT;
+            *Physical = (gctPHYS_ADDR_T)userMemory->pfns[index] << PAGE_SHIFT;
             break;
         }
     }

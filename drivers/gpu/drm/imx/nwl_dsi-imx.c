@@ -859,6 +859,8 @@ static int imx_nwl_dsi_bind(struct device *dev,
 	if (ret)
 		drm_encoder_cleanup(&dsi->encoder);
 
+	pm_runtime_enable(dev);
+
 	return ret;
 }
 
@@ -940,8 +942,6 @@ static int imx_nwl_dsi_probe(struct platform_device *pdev)
 
 	dsi->dev = dev;
 	dev_set_drvdata(dev, dsi);
-
-	pm_runtime_enable(dev);
 
 	if (of_property_read_bool(dev->of_node, "as_bridge")) {
 		ret = imx_nwl_dsi_parse_of(dev, true);

@@ -19,6 +19,14 @@ source "drivers/mxc/vpu/Kconfig"
 source "drivers/mxc/hdp/Kconfig"
 source "drivers/mxc/hdp-cec/Kconfig"
 
+if ARM64
+source "drivers/mxc/vpu_malone/Kconfig"
+source "drivers/mxc/vpu_windsor/Kconfig"
+source "drivers/mxc/hantro_845/Kconfig"
+source "drivers/mxc/hantro_845_h1/Kconfig"
+source "drivers/mxc/hantro/Kconfig"
+endif
+
 config MXC_IPU
 	bool "Image Processing Unit Driver"
 	select MXC_IPU_V3

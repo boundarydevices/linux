@@ -22,6 +22,7 @@
 #include <dt-bindings/pinctrl/pads-imx8qm.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/thermal/thermal.h>
+#include <dt-bindings/usb/pd.h>
 
 / {
 	model = "Freescale i.MX8QM DOMU";
@@ -678,7 +679,7 @@
 /delete-node/ &sai_hdmi_tx;
 /delete-node/ &sai6;
 /delete-node/ &sai7;
-/delete-node/ &amix;
+/delete-node/ &audmix;
 /delete-node/ &asrc0;
 /delete-node/ &asrc1;
 /delete-node/ &mqs;
@@ -899,7 +900,7 @@
 	};
 
 	typec_ptn5110: typec@50 {
-		compatible = "usb,tcpci";
+		compatible = "nxp,ptn5110";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_typec>;
 		reg = <0x51>;
@@ -907,11 +908,15 @@
 		interrupts = <26 IRQ_TYPE_LEVEL_LOW>;
 		ss-sel-gpios = <&gpio4 6 GPIO_ACTIVE_LOW>;
 		reset-gpios = <&gpio4 19 GPIO_ACTIVE_HIGH>;
-		src-pdos = <0x380190c8 0x3803c0c8>;
-		port-type = "drp";
-		sink-disable;
-		default-role = "source";
 		status = "okay";
+
+		usb_con1: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			power-role = "source";
+			data-role = "dual";
+			source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
+		};
 	};
 };
 

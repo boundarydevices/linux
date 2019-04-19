@@ -794,7 +794,7 @@
 								#power-domain-cells = <0>;
 								power-domains =<&pd_audio_clk1>;
 							};
-							pd_amix: PD_AUD_AMIX {
+							pd_audmix: PD_AUD_AMIX {
 								reg = <SC_R_AMIX>;
 								#power-domain-cells = <0>;
 								power-domains =<&pd_audio_clk1>;
@@ -1872,17 +1872,19 @@
 		interrupts = <16 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-parent = <&irqsteer_mipi_lvds0>;
 		clocks =
-			<&clk IMX8QXP_MIPI0_BYPASS_CLK>,
+			<&clk IMX8QXP_MIPI0_DSI_PHY_CLK>,
 			<&clk IMX8QXP_MIPI0_DSI_TX_ESC_CLK>,
 			<&clk IMX8QXP_MIPI0_DSI_RX_ESC_CLK>;
 		clock-names = "phy_ref", "tx_esc", "rx_esc";
 		assigned-clocks =
+			<&clk IMX8QXP_MIPI0_DSI_PHY_SEL>,
 			<&clk IMX8QXP_MIPI0_DSI_TX_ESC_SEL>,
 			<&clk IMX8QXP_MIPI0_DSI_RX_ESC_SEL>,
 			<&clk IMX8QXP_MIPI0_DSI_TX_ESC_CLK>,
 			<&clk IMX8QXP_MIPI0_DSI_RX_ESC_CLK>;
-		assigned-clock-rates = <0>, <0>, <18000000>, <72000000>;
+		assigned-clock-rates = <0>, <0>, <0>, <18000000>, <72000000>;
 		assigned-clock-parents =
+			<&clk IMX8QXP_MIPI0_DSI_PLL_DIV2_CLK>,
 			<&clk IMX8QXP_MIPI0_DSI_PLL_DIV2_CLK>,
 			<&clk IMX8QXP_MIPI0_DSI_PLL_DIV2_CLK>;
 		power-domains = <&pd_mipi_dsi0>;
@@ -1902,7 +1904,7 @@
 		clocks =
 			<&clk IMX8QXP_MIPI0_PIXEL_CLK>,
 			<&clk IMX8QXP_MIPI0_BYPASS_CLK>,
-			<&clk IMX8QXP_CLK_DUMMY>;
+			<&clk IMX8QXP_MIPI0_DSI_PHY_CLK>;
 		clock-names = "pixel", "bypass", "phy_ref";
 		power-domains = <&pd_mipi_dsi0>;
 		csr = <&mipi_dsi_csr1>;
@@ -2048,17 +2050,19 @@
 		interrupts = <16 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-parent = <&irqsteer_mipi_lvds1>;
 		clocks =
-			<&clk IMX8QXP_MIPI1_BYPASS_CLK>,
+			<&clk IMX8QXP_MIPI1_DSI_PHY_CLK>,
 			<&clk IMX8QXP_MIPI1_DSI_TX_ESC_CLK>,
 			<&clk IMX8QXP_MIPI1_DSI_RX_ESC_CLK>;
 		clock-names = "phy_ref", "tx_esc", "rx_esc";
 		assigned-clocks =
+			<&clk IMX8QXP_MIPI1_DSI_PHY_SEL>,
 			<&clk IMX8QXP_MIPI1_DSI_TX_ESC_SEL>,
 			<&clk IMX8QXP_MIPI1_DSI_RX_ESC_SEL>,
 			<&clk IMX8QXP_MIPI1_DSI_TX_ESC_CLK>,
 			<&clk IMX8QXP_MIPI1_DSI_RX_ESC_CLK>;
-		assigned-clock-rates = <0>, <0>, <18000000>, <72000000>;
+		assigned-clock-rates = <0>, <0>, <0>, <18000000>, <72000000>;
 		assigned-clock-parents =
+			<&clk IMX8QXP_MIPI1_DSI_PLL_DIV2_CLK>,
 			<&clk IMX8QXP_MIPI1_DSI_PLL_DIV2_CLK>,
 			<&clk IMX8QXP_MIPI1_DSI_PLL_DIV2_CLK>;
 		power-domains = <&pd_mipi_dsi1>;
@@ -2078,7 +2082,7 @@
 		clocks =
 			<&clk IMX8QXP_MIPI1_PIXEL_CLK>,
 			<&clk IMX8QXP_MIPI1_BYPASS_CLK>,
-			<&clk IMX8QXP_CLK_DUMMY>;
+			<&clk IMX8QXP_MIPI1_DSI_PHY_CLK>;
 		clock-names = "pixel", "bypass", "phy_ref";
 		power-domains = <&pd_mipi_dsi1>;
 		csr = <&mipi_dsi_csr2>;
@@ -3067,12 +3071,13 @@
 		power-domains = <&pd_sai5>;
 	};
 
-	amix: amix@59840000 {
-		compatible = "fsl,imx8qm-amix";
+	audmix: audmix@59840000 {
+		compatible = "fsl,imx8qm-audmix";
 		reg = <0x0 0x59840000 0x0 0x10000>;
 		clocks = <&clk IMX8QXP_AUD_AMIX_IPG>;
 		clock-names = "ipg";
-		power-domains = <&pd_amix>;
+		power-domains = <&pd_audmix>;
+		dais = <&sai4>, <&sai5>;
 		status = "disabled";
 	};
 
@@ -3167,7 +3172,7 @@
 	};
 
 	usdhc1: usdhc@5b010000 {
-		compatible = "fsl,imx8qm-usdhc", "fsl,imx6sl-usdhc";
+		compatible = "fsl,imx8qxp-usdhc", "fsl,imx6sl-usdhc";
 		interrupt-parent = <&gic>;
 		interrupts = <GIC_SPI 232 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x0 0x5b010000 0x0 0x10000>;
@@ -3185,7 +3190,7 @@
 	};
 
 	usdhc2: usdhc@5b020000 {
-		compatible = "fsl,imx8qm-usdhc", "fsl,imx6sl-usdhc";
+		compatible = "fsl,imx8qxp-usdhc", "fsl,imx6sl-usdhc";
 		interrupt-parent = <&gic>;
 		interrupts = <GIC_SPI 233 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x0 0x5b020000 0x0 0x10000>;
@@ -3203,7 +3208,7 @@
 	};
 
 	usdhc3: usdhc@5b030000 {
-		compatible = "fsl,imx8qm-usdhc", "fsl,imx6sl-usdhc";
+		compatible = "fsl,imx8qxp-usdhc", "fsl,imx6sl-usdhc";
 		interrupt-parent = <&gic>;
 		interrupts = <GIC_SPI 234 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x0 0x5b030000 0x0 0x10000>;
@@ -3515,7 +3520,6 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0 0 0x31400000 0x400000>;
-		fsl,first-jr-index = <2>;
 		fsl,sec-era = <9>;
 
 		sec_jr1: jr1@0x20000 {

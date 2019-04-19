@@ -23,6 +23,7 @@
 #include <sound/soc-dapm.h>
 #include <sound/hdmi-codec.h>
 #include "../../../drivers/gpu/drm/imx/hdp/imx-hdp.h"
+#include "fsl_sai.h"
 
 #define SUPPORT_RATE_NUM 10
 #define SUPPORT_CHANNEL_NUM 10
@@ -98,8 +99,15 @@ static int imx_cdnhdmi_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	ret = snd_soc_dai_set_sysclk(cpu_dai, 0, 0,
-			tx ? SND_SOC_CLOCK_OUT : SND_SOC_CLOCK_IN);
+	if (of_device_is_compatible(dev->of_node,
+				    "fsl,imx8mq-evk-cdnhdmi"))
+		ret = snd_soc_dai_set_sysclk(cpu_dai, FSL_SAI_CLK_MAST1,
+				256 * params_rate(params),
+				SND_SOC_CLOCK_OUT);
+	else
+		ret = snd_soc_dai_set_sysclk(cpu_dai, 0,
+				0,
+				tx ? SND_SOC_CLOCK_OUT : SND_SOC_CLOCK_IN);
 	if (ret) {
 		dev_err(dev, "failed to set cpu sysclk: %d\n", ret);
 		return ret;
@@ -139,7 +147,7 @@ static int get_edid_info(struct snd_soc_card *card)
 	struct snd_soc_pcm_runtime *rtd = list_first_entry(
 		&card->rtd_list, struct snd_soc_pcm_runtime, list);
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_component *codec = codec_dai->component;
 	struct hdmi_codec_pdata *hcd = codec->dev->platform_data;
 	struct imx_cdnhdmi_data *data = snd_soc_card_get_drvdata(card);
 	int i, j, ret;
@@ -273,7 +281,7 @@ static int get_edid_rx_info(struct snd_soc_card *card)
 	struct snd_soc_pcm_runtime *rtd = list_first_entry(
 		&card->rtd_list, struct snd_soc_pcm_runtime, list);
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_component *codec = codec_dai->component;
 	struct hdmi_codec_pdata *hcd = codec->dev->platform_data;
 	struct imx_cdnhdmi_data *data = snd_soc_card_get_drvdata(card);
 	int ret;
@@ -518,6 +526,7 @@ fail:
 }
 
 static const struct of_device_id imx_cdnhdmi_dt_ids[] = {
+	{ .compatible = "fsl,imx8mq-evk-cdnhdmi", },
 	{ .compatible = "fsl,imx-audio-cdnhdmi", },
 	{ /* sentinel */ }
 };

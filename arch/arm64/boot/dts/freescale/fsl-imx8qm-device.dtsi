@@ -878,7 +878,7 @@
 								#power-domain-cells = <0>;
 								power-domains =<&pd_audio_clk1>;
 							};
-							pd_amix: PD_AUD_AMIX {
+							pd_audmix: PD_AUD_AMIX {
 								reg = <SC_R_AMIX>;
 								#power-domain-cells = <0>;
 								power-domains =<&pd_audio_clk1>;
@@ -1932,7 +1932,7 @@
 		clocks =
 			<&clk IMX8QM_MIPI0_PXL_CLK>,
 			<&clk IMX8QM_MIPI0_BYPASS_CLK>,
-			<&clk IMX8QM_CLK_DUMMY>;
+			<&clk IMX8QM_MIPI0_DSI_PHY_CLK>;
 		clock-names = "pixel", "bypass", "phy_ref";
 		power-domains = <&pd_mipi0>;
 		csr = <&mipi_dsi_csr1>;
@@ -2355,7 +2355,7 @@
 		clocks =
 			<&clk IMX8QM_MIPI1_PXL_CLK>,
 			<&clk IMX8QM_MIPI1_BYPASS_CLK>,
-			<&clk IMX8QM_CLK_DUMMY>;
+			<&clk IMX8QM_MIPI1_DSI_PHY_CLK>;
 		clock-names = "pixel", "bypass", "phy_ref";
 		power-domains = <&pd_mipi1>;
 		csr = <&mipi_dsi_csr2>;
@@ -3574,7 +3574,7 @@
 	};
 
 	usdhc1: usdhc@5b010000 {
-		compatible = "fsl,imx8qm-usdhc", "fsl,imx6sl-usdhc";
+		compatible = "fsl,imx8qm-usdhc", "fsl,imx8qxp-usdhc";
 		interrupt-parent = <&gic>;
 		interrupts = <GIC_SPI 232 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x0 0x5b010000 0x0 0x10000>;
@@ -3592,7 +3592,7 @@
 	};
 
 	usdhc2: usdhc@5b020000 {
-		compatible = "fsl,imx8qm-usdhc", "fsl,imx6sl-usdhc";
+		compatible = "fsl,imx8qm-usdhc", "fsl,imx8qxp-usdhc";
 		interrupt-parent = <&gic>;
 		interrupts = <GIC_SPI 233 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x0 0x5b020000 0x0 0x10000>;
@@ -3610,7 +3610,7 @@
 	};
 
 	usdhc3: usdhc@5b030000 {
-		compatible = "fsl,imx8qm-usdhc", "fsl,imx6sl-usdhc";
+		compatible = "fsl,imx8qm-usdhc", "fsl,imx8qxp-usdhc";
 		interrupt-parent = <&gic>;
 		interrupts = <GIC_SPI 234 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x0 0x5b030000 0x0 0x10000>;
@@ -4025,12 +4025,13 @@
 		power-domains = <&pd_sai7>;
 	};
 
-	amix: amix@59840000 {
-		compatible = "fsl,imx8qm-amix";
+	audmix: audmix@59840000 {
+		compatible = "fsl,imx8qm-audmix";
 		reg = <0x0 0x59840000 0x0 0x10000>;
 		clocks = <&clk IMX8QM_AUD_AMIX_IPG>;
 		clock-names = "ipg";
-		power-domains = <&pd_amix>;
+		power-domains = <&pd_audmix>;
+		dais = <&sai6>, <&sai7>;
 		status = "disabled";
 	};
 
@@ -4359,7 +4360,6 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0 0 0x31400000 0x400000>;
-		fsl,first-jr-index = <2>;
 		fsl,sec-era = <9>;
 
 		sec_jr1: jr1@0x20000 {

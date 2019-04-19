@@ -32,14 +32,12 @@ config SND_SOC_FSL_ACM
 	  This option is only useful for out-of-tree drivers since
 	  in-tree drivers select it automatically.
 
-config SND_SOC_FSL_AMIX
-	tristate "Audio Mixer (AMIX) module support"
+config SND_SOC_FSL_AUDMIX
+	tristate "Audio Mixer (AUDMIX) module support"
 	select REGMAP_MMIO
 	help
-	  Say Y if you want to add Audio Mixer (AMIX)
-	  support for the Freescale CPUs.
-	  This option is only useful for out-of-tree drivers since
-	  in-tree drivers select it automatically.
+	  Say Y if you want to add Audio Mixer (AUDMIX)
+	  support for the NXP iMX CPUs.
 
 config SND_SOC_FSL_SSI
 	tristate "Synchronous Serial Interface module (SSI) support"
@@ -530,14 +528,6 @@ config SND_SOC_IMX_HDMI
 	  Say Y if you want to add support for SoC audio on an i.MX board with
 	  IMX HDMI.
 
-config SND_SOC_IMX_AMIX
-	tristate "SoC Audio support for i.MX boards with AMIX"
-	select SND_SOC_FSL_AMIX
-	help
-	  SoC Audio support for i.MX boards with AMIX
-	  Say Y if you want to add support for SoC audio on an i.MX board with
-	  an AMIX.
-
 config SND_SOC_IMX_CDNHDMI
 	tristate "SoC Audio support for i.MX boards with CDN HDMI port"
 	depends on DRM_IMX_HDP
@@ -567,6 +557,15 @@ config SND_SOC_IMX_PDM_MIC
 	  SoC Audio support for i.MX boards with PDM microphones on SAI
 	  Say Y if you want to add support for SoC Audio support for i.MX boards
 	  with PDM microphones on SAI.
+
+config SND_SOC_IMX_AUDMIX
+	tristate "SoC Audio support for i.MX boards with AUDMIX"
+	select SND_SOC_FSL_AUDMIX
+	select SND_SOC_FSL_SAI
+	help
+	  SoC Audio support for i.MX boards with Audio Mixer
+	  Say Y if you want to add support for SoC audio on an i.MX board with
+	  an Audio Mixer.
 
 endif # SND_IMX_SOC
 

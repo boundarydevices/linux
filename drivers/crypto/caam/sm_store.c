@@ -605,7 +605,6 @@ u32 slot_get_slot_size(struct device *dev, u32 unit, u32 slot)
 int kso_init_data(struct device *dev, u32 unit)
 {
 	struct caam_drv_private_sm *smpriv = dev_get_drvdata(dev);
-	int retval = -EINVAL;
 	struct keystore_data *keystore_data = NULL;
 	u32 slot_count;
 	u32 keystore_data_size;
@@ -625,10 +624,8 @@ int kso_init_data(struct device *dev, u32 unit)
 
 	keystore_data = kzalloc(keystore_data_size, GFP_KERNEL);
 
-	if (keystore_data == NULL) {
-		retval = -ENOSPC;
-		goto out;
-	}
+	if (!keystore_data)
+		return -ENOMEM;
 
 #ifdef SM_DEBUG
 	dev_info(dev, "kso_init_data: keystore data size = %d\n",
@@ -649,15 +646,7 @@ int kso_init_data(struct device *dev, u32 unit)
 	smpriv->pagedesc[unit].ksdata->phys_address =
 		smpriv->pagedesc[unit].pg_phys;
 
-	retval = 0;
-
-out:
-	if (retval != 0)
-		if (keystore_data != NULL)
-			kfree(keystore_data);
-
-
-	return retval;
+	return 0;
 }
 
 void kso_cleanup_data(struct device *dev, u32 unit)
@@ -1118,15 +1107,11 @@ int caam_sm_startup(struct platform_device *pdev)
 
 	/* Set the Secure Memory Register Map Version */
 	if (ctrlpriv->has_seco) {
-		int i = ctrlpriv->first_jr_index;
-
-		smvid = rd_reg32(&ctrlpriv->jr[i]->perfmon.smvid);
-		smpart = rd_reg32(&ctrlpriv->jr[i]->perfmon.smpart);
-
+		smvid = rd_reg32(&ctrlpriv->jr[0]->perfmon.smvid);
+		smpart = rd_reg32(&ctrlpriv->jr[0]->perfmon.smpart);
 	} else {
 		smvid = rd_reg32(&ctrlpriv->ctrl->perfmon.smvid);
 		smpart = rd_reg32(&ctrlpriv->ctrl->perfmon.smpart);
-
 	}
 
 	if (smvid < SMVID_V2)

@@ -84,7 +84,7 @@
 	status = "okay";
 
 	port@0 {
-		lcdif_out: lcdif-endpoint {
+		lcdif_out: endpoint {
 			remote-endpoint = <&adapter_in>;
 		};
 	};

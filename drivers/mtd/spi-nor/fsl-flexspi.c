@@ -32,6 +32,9 @@
 #include <soc/imx8/sc/sci.h>
 #include <linux/pm_runtime.h>
 
+/* Board only enabled up to Quad mode, not Octal */
+#define FLEXSPI_QUIRK_QUAD_ONLY		(1 << 0)
+
 /* runtime pm timeout */
 #define FSL_FLEXSPI_RPM_TIMEOUT 50 /* 50ms */
 
@@ -463,6 +466,11 @@ struct fsl_flexspi {
 #define FLEXSPI_INITILIZED	(1 << 0)
 	int flags;
 };
+
+static inline int fsl_flexspi_quad_only(struct fsl_flexspi *flex)
+{
+	return flex->devtype_data->driver_data & FLEXSPI_QUIRK_QUAD_ONLY;
+}
 
 static inline void fsl_flexspi_unlock_lut(struct fsl_flexspi *flex)
 {

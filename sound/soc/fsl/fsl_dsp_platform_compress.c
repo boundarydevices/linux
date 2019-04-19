@@ -28,9 +28,9 @@ void dsp_platform_process(struct work_struct *w)
 
 	while (1) {
 		rmsg = xf_cmd_recv(proxy, &client->wait, &client->queue, 1);
-		if (IS_ERR(rmsg)) {
+
+		if (!proxy->is_active || IS_ERR(rmsg))
 			return;
-		}
 		if (rmsg->opcode == XF_EMPTY_THIS_BUFFER) {
 			client->consume_bytes += rmsg->length;
 			snd_compr_fragment_elapsed(client->cstream);
@@ -51,9 +51,9 @@ void dsp_platform_process(struct work_struct *w)
 static int dsp_platform_compr_open(struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_platform *platform = rtd->platform;
+	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, DRV_NAME);
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	struct fsl_dsp  *dsp_priv = snd_soc_platform_get_drvdata(platform);
+	struct fsl_dsp  *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
 
 	drv->client = xf_client_alloc(dsp_priv);
@@ -76,9 +76,9 @@ static int dsp_platform_compr_open(struct snd_compr_stream *cstream)
 static int dsp_platform_compr_free(struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_platform *platform = rtd->platform;
+	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, DRV_NAME);
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
-	struct fsl_dsp  *dsp_priv = snd_soc_platform_get_drvdata(platform);
+	struct fsl_dsp  *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
 	int ret;
 
@@ -88,20 +88,22 @@ static int dsp_platform_compr_free(struct snd_compr_stream *cstream)
 
 		ret = xaf_comp_delete(drv->client, &drv->component[1]);
 		if (ret) {
-			dev_err(platform->dev, "Fail to delete component, err = %d\n", ret);
+			dev_err(component->dev, "Fail to delete component, err = %d\n", ret);
 			return ret;
 		}
 
 		ret = xaf_comp_delete(drv->client, &drv->component[0]);
 		if (ret) {
-			dev_err(platform->dev, "Fail to delete component, err = %d\n", ret);
+			dev_err(component->dev, "Fail to delete component, err = %d\n", ret);
 			return ret;
 		}
 	}
 
 	cpu_dai->driver->ops->shutdown(NULL, cpu_dai);
 
-	ret = cancel_work(&drv->client->work);
+	drv->client->proxy->is_active = 0;
+	wake_up(&drv->client->wait);
+	cancel_work_sync(&drv->client->work);
 
 	fsl_dsp_close_func(drv->client);
 
@@ -113,8 +115,8 @@ static int dsp_platform_compr_set_params(struct snd_compr_stream *cstream,
 {
 	/* accroding to the params, load the library and create component*/
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_platform *platform = rtd->platform;
-	struct fsl_dsp  *dsp_priv = snd_soc_platform_get_drvdata(platform);
+	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, DRV_NAME);
+	struct fsl_dsp  *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
 	struct xf_proxy *p_proxy = &dsp_priv->proxy;
 	struct xf_set_param_msg s_param;
@@ -128,7 +130,7 @@ static int dsp_platform_compr_set_params(struct snd_compr_stream *cstream,
 		drv->codec_type = CODEC_AAC_DEC;
 		break;
 	default:
-		dev_err(platform->dev, "codec not supported, id =%d\n", params->codec.id);
+		dev_err(component->dev, "codec not supported, id =%d\n", params->codec.id);
 		return -EINVAL;
 	}
 
@@ -140,14 +142,14 @@ static int dsp_platform_compr_set_params(struct snd_compr_stream *cstream,
 				XF_POOL_AUX,
 				&p_proxy->aux);
 	if (ret) {
-		dev_err(platform->dev, "xf_pool_alloc failed");
+		dev_err(component->dev, "xf_pool_alloc failed");
 		return ret;
 	}
 
 	/* ...create pipeline */
 	ret = xaf_pipeline_create(&drv->pipeline);
 	if (ret) {
-		dev_err(platform->dev, "create pipeline error\n");
+		dev_err(component->dev, "create pipeline error\n");
 		goto err_pool_alloc;
 	}
 
@@ -155,7 +157,7 @@ static int dsp_platform_compr_set_params(struct snd_compr_stream *cstream,
 	ret = xaf_comp_create(drv->client, p_proxy, &drv->component[0],
 			      drv->codec_type);
 	if (ret) {
-		dev_err(platform->dev,
+		dev_err(component->dev,
 			"create component failed type = %d, err = %d\n",
 			drv->codec_type, ret);
 		goto err_pool_alloc;
@@ -164,7 +166,7 @@ static int dsp_platform_compr_set_params(struct snd_compr_stream *cstream,
 	ret = xaf_comp_create(drv->client, p_proxy, &drv->component[1],
 			      RENDER_ESAI);
 	if (ret) {
-		dev_err(platform->dev,
+		dev_err(component->dev,
 			"create component failed, type = %d, err = %d\n",
 			RENDER_ESAI, ret);
 		goto err_comp0_create;
@@ -173,7 +175,7 @@ static int dsp_platform_compr_set_params(struct snd_compr_stream *cstream,
 	/* ...add component into pipeline */
 	ret = xaf_comp_add(&drv->pipeline, &drv->component[0]);
 	if (ret) {
-		dev_err(platform->dev,
+		dev_err(component->dev,
 			"add component failed, type = %d, err = %d\n",
 			drv->codec_type, ret);
 		goto err_comp1_create;
@@ -181,7 +183,7 @@ static int dsp_platform_compr_set_params(struct snd_compr_stream *cstream,
 
 	ret = xaf_comp_add(&drv->pipeline, &drv->component[1]);
 	if (ret) {
-		dev_err(platform->dev,
+		dev_err(component->dev,
 			"add component failed, type = %d, err = %d\n",
 			drv->codec_type, ret);
 		goto err_comp1_create;
@@ -194,7 +196,7 @@ static int dsp_platform_compr_set_params(struct snd_compr_stream *cstream,
 	s_param.value = params->codec.sample_rate;
 	ret = xaf_comp_set_config(drv->client, &drv->component[1], 1, &s_param);
 	if (ret) {
-		dev_err(platform->dev,
+		dev_err(component->dev,
 			"set param[cmd:0x%x|val:0x%x] error, err = %d\n",
 			s_param.id, s_param.value, ret);
 		goto err_comp1_create;
@@ -204,7 +206,7 @@ static int dsp_platform_compr_set_params(struct snd_compr_stream *cstream,
 	s_param.value = params->codec.ch_out;
 	ret = xaf_comp_set_config(drv->client, &drv->component[1], 1, &s_param);
 	if (ret) {
-		dev_err(platform->dev,
+		dev_err(component->dev,
 			"set param[cmd:0x%x|val:0x%x] error, err = %d\n",
 			s_param.id, s_param.value, ret);
 		goto err_comp1_create;
@@ -214,7 +216,7 @@ static int dsp_platform_compr_set_params(struct snd_compr_stream *cstream,
 	s_param.value = 16;
 	ret = xaf_comp_set_config(drv->client, &drv->component[1], 1, &s_param);
 	if (ret) {
-		dev_err(platform->dev,
+		dev_err(component->dev,
 			"set param[cmd:0x%x|val:0x%x] error, err = %d\n",
 			s_param.id, s_param.value, ret);
 		goto err_comp1_create;
@@ -234,8 +236,8 @@ err_pool_alloc:
 static int dsp_platform_compr_trigger_start(struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_platform *platform = rtd->platform;
-	struct fsl_dsp *dsp_priv = snd_soc_platform_get_drvdata(platform);
+	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, DRV_NAME);
+	struct fsl_dsp *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
 	struct xaf_comp *p_comp = &drv->component[0];
 	int ret;
@@ -252,7 +254,7 @@ static int dsp_platform_compr_trigger_start(struct snd_compr_stream *cstream)
 				1,
 				OUTBUF_SIZE);
 	if (ret) {
-		dev_err(platform->dev, "Failed to connect component, err = %d\n", ret);
+		dev_err(component->dev, "Failed to connect component, err = %d\n", ret);
 		return ret;
 	}
 
@@ -264,32 +266,32 @@ static int dsp_platform_compr_trigger_start(struct snd_compr_stream *cstream)
 static int dsp_platform_compr_trigger_stop(struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_platform *platform = rtd->platform;
-	struct fsl_dsp  *dsp_priv = snd_soc_platform_get_drvdata(platform);
+	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, DRV_NAME);
+	struct fsl_dsp  *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
 	int ret;
 
 	ret = xaf_comp_flush(drv->client, &drv->component[0]);
 	if (ret) {
-		dev_err(platform->dev, "Fail to flush component, err = %d\n", ret);
+		dev_err(component->dev, "Fail to flush component, err = %d\n", ret);
 		return ret;
 	}
 
 	ret = xaf_comp_flush(drv->client, &drv->component[1]);
 	if (ret) {
-		dev_err(platform->dev, "Fail to flush component, err = %d\n", ret);
+		dev_err(component->dev, "Fail to flush component, err = %d\n", ret);
 		return ret;
 	}
 
 	ret = xaf_comp_delete(drv->client, &drv->component[0]);
 	if (ret) {
-		dev_err(platform->dev, "Fail to delete component, err = %d\n", ret);
+		dev_err(component->dev, "Fail to delete component, err = %d\n", ret);
 		return ret;
 	}
 
 	ret = xaf_comp_delete(drv->client, &drv->component[1]);
 	if (ret) {
-		dev_err(platform->dev, "Fail to delete component, err = %d\n", ret);
+		dev_err(component->dev, "Fail to delete component, err = %d\n", ret);
 		return ret;
 	}
 
@@ -299,8 +301,8 @@ static int dsp_platform_compr_trigger_stop(struct snd_compr_stream *cstream)
 static int dsp_platform_compr_trigger_drain(struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_platform *platform = rtd->platform;
-	struct fsl_dsp  *dsp_priv = snd_soc_platform_get_drvdata(platform);
+	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, DRV_NAME);
+	struct fsl_dsp  *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
 	struct xaf_comp *p_comp = &drv->component[0];
 	int ret;
@@ -342,8 +344,8 @@ static int dsp_platform_compr_pointer(struct snd_compr_stream *cstream,
 					struct snd_compr_tstamp *tstamp)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_platform *platform = rtd->platform;
-	struct fsl_dsp  *dsp_priv = snd_soc_platform_get_drvdata(platform);
+	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, DRV_NAME);
+	struct fsl_dsp  *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
 
 	tstamp->copied_total = drv->client->input_bytes;
@@ -360,8 +362,8 @@ static int dsp_platform_compr_copy(struct snd_compr_stream *cstream,
 					size_t count)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_platform *platform = rtd->platform;
-	struct fsl_dsp *dsp_priv = snd_soc_platform_get_drvdata(platform);
+	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, DRV_NAME);
+	struct fsl_dsp *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
 	struct xaf_comp *p_comp = &drv->component[0];
 	int copied = 0;
@@ -371,14 +373,16 @@ static int dsp_platform_compr_copy(struct snd_compr_stream *cstream,
 		if (count > INBUF_SIZE) {
 			ret = copy_from_user(p_comp->inptr, buf, INBUF_SIZE);
 			if (ret) {
-				dev_err(platform->dev, "failed to get message from user space\n");
+				dev_err(component->dev,
+					"failed to get message from user space\n");
 				return -EFAULT;
 			}
 			copied = INBUF_SIZE;
 		} else {
 			ret = copy_from_user(p_comp->inptr, buf, count);
 			if (ret) {
-				dev_err(platform->dev, "failed to get message from user space\n");
+				dev_err(component->dev,
+					"failed to get message from user space\n");
 				return -EFAULT;
 			}
 			copied = count;
