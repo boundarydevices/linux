@@ -504,6 +504,7 @@ int ge2d_dma_buffer_export(struct aml_dma_buffer *buffer,
 
 	ge2d_log_dbg("buffer %d,exported as %d descriptor\n",
 		index, ret);
+	buffer->gd_buffer[index].fd = ret;
 	ge2d_exp_buf->fd = ret;
 	return 0;
 }
@@ -578,24 +579,72 @@ attach_err:
 	return ret;
 }
 
-int ge2d_dma_buffer_get_phys(struct aml_dma_cfg *cfg, unsigned long *addr)
+static int ge2d_dma_buffer_get_phys_internal(struct aml_dma_buffer *buffer,
+	int fd, unsigned long *addr)
+{
+	int i = 0, ret = -1;
+	struct aml_dma_buf *dma_buf;
+
+	for (i = 0; i < AML_MAX_DMABUF; i++) {
+		if (buffer->gd_buffer[i].alloc &&
+			(fd == buffer->gd_buffer[i].fd)) {
+			dma_buf = buffer->gd_buffer[i].mem_priv;
+			*addr = dma_buf->dma_addr;
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+int ge2d_dma_buffer_get_phys(struct aml_dma_buffer *buffer,
+	struct aml_dma_cfg *cfg, unsigned long *addr)
 {
 	struct sg_table *sg_table;
 	struct page *page;
-	int ret;
+	int ret = -1;
 
-	ret = ge2d_dma_buffer_map(cfg);
-	if (ret < 0) {
-		pr_err("gdc_dma_buffer_map failed\n");
-		return ret;
+	if (cfg == NULL || (cfg->fd < 0)) {
+		pr_err("error input param");
+		return -EINVAL;
 	}
-	if (cfg->sg) {
-		sg_table = cfg->sg;
-		page = sg_page(sg_table->sgl);
-		*addr = PFN_PHYS(page_to_pfn(page));
-		ret = 0;
+	ret = ge2d_dma_buffer_get_phys_internal(buffer, cfg->fd, addr);
+	if (ret < 0) {
+		ret = ge2d_dma_buffer_map(cfg);
+		if (ret < 0) {
+			pr_err("gdc_dma_buffer_map failed\n");
+			return ret;
+		}
+		if (cfg->sg) {
+			sg_table = cfg->sg;
+			page = sg_page(sg_table->sgl);
+			*addr = PFN_PHYS(page_to_pfn(page));
+			ret = 0;
+		}
 	}
 	return ret;
+}
+
+int ge2d_dma_buffer_unmap_info(struct aml_dma_buffer *buffer,
+	struct aml_dma_cfg *cfg)
+{
+	int i, found = 0;
+
+	if (cfg == NULL || (cfg->fd < 0)) {
+		pr_err("error input param");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < AML_MAX_DMABUF; i++) {
+		if (buffer->gd_buffer[i].alloc &&
+			(cfg->fd == buffer->gd_buffer[i].fd)) {
+			found = 1;
+			break;
+		}
+	}
+	if (!found)
+		ge2d_dma_buffer_unmap(cfg);
+	return 0;
 }
 
 void ge2d_dma_buffer_unmap(struct aml_dma_cfg *cfg)

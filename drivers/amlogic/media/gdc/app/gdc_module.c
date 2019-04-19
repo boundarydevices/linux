@@ -530,6 +530,16 @@ static void gdc_buffer_cache_flush(int dma_fd)
 	gdc_dma_buffer_cache_flush(dev, dma_fd);
 }
 
+static int gdc_buffer_get_phys(struct aml_dma_cfg *cfg, unsigned long *addr)
+{
+	return gdc_dma_buffer_get_phys(gdc_manager.buffer, cfg, addr);
+}
+
+static int gdc_buffer_unmap(struct aml_dma_cfg *cfg)
+{
+	return gdc_dma_buffer_unmap_info(gdc_manager.buffer, cfg);
+}
+
 static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 	struct gdc_settings_ex *gs_ex)
 {
@@ -558,7 +568,7 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_TO_DEVICE;
 
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import input fd %d err\n",
@@ -572,15 +582,12 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 			}
 			gdc_log(LOG_INFO, "1 plane get input addr=%x\n",
 				gdc_cmd->y_base_addr);
-			meson_gdc_dma_flush(&fh->gdev->pdev->dev,
-				gdc_cmd->y_base_addr,
-				gc->input_y_stride * gc->input_height);
 		} else if (gs_ex->input_buffer.plane_number == 2) {
 			cfg = &fh->dma_cfg.input_cfg_plane1;
 			cfg->fd = gs_ex->input_buffer.y_base_fd;
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_TO_DEVICE;
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import input fd %d err\n",
@@ -588,14 +595,11 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 				return -EINVAL;
 			}
 			gdc_cmd->y_base_addr = addr;
-			meson_gdc_dma_flush(&fh->gdev->pdev->dev,
-				gdc_cmd->y_base_addr,
-				gc->input_y_stride * gc->input_height);
 			cfg = &fh->dma_cfg.input_cfg_plane2;
 			cfg->fd = gs_ex->input_buffer.uv_base_fd;
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_TO_DEVICE;
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import input fd %d err\n",
@@ -603,9 +607,6 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 				return -EINVAL;
 			}
 			gdc_cmd->uv_base_addr = addr;
-			meson_gdc_dma_flush(&fh->gdev->pdev->dev,
-				gdc_cmd->uv_base_addr,
-				gc->input_y_stride * gc->input_height / 2);
 			gdc_log(LOG_INFO, "2 plane get input y_addr=%x\n",
 				gdc_cmd->y_base_addr);
 			gdc_log(LOG_INFO, "2 plane get input uv_addr=%x\n",
@@ -620,7 +621,7 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_TO_DEVICE;
 
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import input fd %d err\n",
@@ -634,15 +635,12 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 			}
 			gdc_log(LOG_INFO, "1 plane get input addr=%x\n",
 				gdc_cmd->y_base_addr);
-			meson_gdc_dma_flush(&fh->gdev->pdev->dev,
-				gdc_cmd->y_base_addr,
-				gc->input_y_stride * gc->input_height);
 		} else if (gs_ex->input_buffer.plane_number == 3) {
 			cfg = &fh->dma_cfg.input_cfg_plane1;
 			cfg->fd = gs_ex->input_buffer.y_base_fd;
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_TO_DEVICE;
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import input fd %d err\n",
@@ -650,15 +648,11 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 				return -EINVAL;
 			}
 			gdc_cmd->y_base_addr = addr;
-			meson_gdc_dma_flush(&fh->gdev->pdev->dev,
-				gdc_cmd->y_base_addr,
-				gc->input_y_stride * gc->input_height);
-
 			cfg = &fh->dma_cfg.input_cfg_plane2;
 			cfg->fd = gs_ex->input_buffer.u_base_fd;
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_TO_DEVICE;
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import input fd %d err\n",
@@ -666,15 +660,11 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 				return -EINVAL;
 			}
 			gdc_cmd->u_base_addr = addr;
-			meson_gdc_dma_flush(&fh->gdev->pdev->dev,
-				gdc_cmd->u_base_addr,
-				gc->input_y_stride * gc->input_height / 2);
-
 			cfg = &fh->dma_cfg.input_cfg_plane3;
 			cfg->fd = gs_ex->input_buffer.v_base_fd;
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_TO_DEVICE;
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import input fd %d err\n",
@@ -682,10 +672,6 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 				return -EINVAL;
 			}
 			gdc_cmd->v_base_addr = addr;
-			meson_gdc_dma_flush(&fh->gdev->pdev->dev,
-				gdc_cmd->v_base_addr,
-				gc->input_y_stride * gc->input_height / 2);
-
 			gdc_log(LOG_INFO, "3 plane get input y_addr=%x\n",
 				gdc_cmd->y_base_addr);
 			gdc_log(LOG_INFO, "3 plane get input u_addr=%x\n",
@@ -700,7 +686,7 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 		cfg->fd = gs_ex->input_buffer.y_base_fd;
 		cfg->dev = &(fh->gdev->pdev->dev);
 		cfg->dir = DMA_TO_DEVICE;
-		ret = gdc_dma_buffer_get_phys(cfg, &addr);
+		ret = gdc_buffer_get_phys(cfg, &addr);
 		if (ret < 0) {
 			gdc_log(LOG_ERR,
 				"dma import input fd %d failed\n",
@@ -709,9 +695,6 @@ static long gdc_process_input_dma_info(struct mgdc_fh_s *fh,
 		}
 		gdc_cmd->y_base_addr = addr;
 		gdc_cmd->uv_base_addr = 0;
-		meson_gdc_dma_flush(&fh->gdev->pdev->dev,
-			gdc_cmd->y_base_addr,
-			gc->input_y_stride * gc->input_height);
 	break;
 	default:
 		gdc_log(LOG_ERR, "Error image format");
@@ -891,7 +874,7 @@ static long gdc_process_output_dma_info(struct mgdc_fh_s *fh,
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_FROM_DEVICE;
 
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import output fd %d err\n",
@@ -907,7 +890,7 @@ static long gdc_process_output_dma_info(struct mgdc_fh_s *fh,
 			cfg->fd = gs_ex->output_buffer.y_base_fd;
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_FROM_DEVICE;
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import output fd %d err\n",
@@ -921,7 +904,7 @@ static long gdc_process_output_dma_info(struct mgdc_fh_s *fh,
 			cfg->fd = gs_ex->output_buffer.uv_base_fd;
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_FROM_DEVICE;
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import output fd %d err\n",
@@ -944,7 +927,7 @@ static long gdc_process_output_dma_info(struct mgdc_fh_s *fh,
 			cfg->fd = gs_ex->output_buffer.y_base_fd;
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_FROM_DEVICE;
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import output fd %d err\n",
@@ -960,7 +943,7 @@ static long gdc_process_output_dma_info(struct mgdc_fh_s *fh,
 			cfg->fd = gs_ex->output_buffer.y_base_fd;
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_FROM_DEVICE;
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import output fd %d err\n",
@@ -974,7 +957,7 @@ static long gdc_process_output_dma_info(struct mgdc_fh_s *fh,
 			cfg->fd = gs_ex->output_buffer.u_base_fd;
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_FROM_DEVICE;
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import output fd %d err\n",
@@ -987,7 +970,7 @@ static long gdc_process_output_dma_info(struct mgdc_fh_s *fh,
 			cfg->fd = gs_ex->output_buffer.v_base_fd;
 			cfg->dev = &fh->gdev->pdev->dev;
 			cfg->dir = DMA_FROM_DEVICE;
-			ret = gdc_dma_buffer_get_phys(cfg, &addr);
+			ret = gdc_buffer_get_phys(cfg, &addr);
 			if (ret < 0) {
 				gdc_log(LOG_ERR,
 					"dma import output fd %d err\n",
@@ -1009,7 +992,7 @@ static long gdc_process_output_dma_info(struct mgdc_fh_s *fh,
 		cfg->fd = gs_ex->output_buffer.y_base_fd;
 		cfg->dev = &(fh->gdev->pdev->dev);
 		cfg->dir = DMA_FROM_DEVICE;
-		ret = gdc_dma_buffer_get_phys(cfg, &addr);
+		ret = gdc_buffer_get_phys(cfg, &addr);
 		if (ret < 0) {
 			gdc_log(LOG_ERR,
 				"dma import output fd %d err\n",
@@ -1205,7 +1188,7 @@ static long gdc_process_ex_info(struct mgdc_fh_s *fh,
 		cfg->fd = gs_ex->config_buffer.y_base_fd;
 		cfg->dev = &(gdc_manager.gdc_dev->pdev->dev);
 		cfg->dir = DMA_TO_DEVICE;
-		ret = gdc_dma_buffer_get_phys(cfg, &addr);
+		ret = gdc_buffer_get_phys(cfg, &addr);
 		if (ret < 0) {
 			gdc_log(LOG_ERR, "dma import config fd %d failed\n",
 				gs_ex->config_buffer.shared_fd);
@@ -1250,28 +1233,24 @@ static long gdc_process_ex_info(struct mgdc_fh_s *fh,
 	if (!gdc_reg_store_mode)
 		gdc_pwr_config(false);
 	mutex_unlock(&fh->gdev->d_mutext);
-	#if 0
-	if (gs_ex->output_buffer.mem_alloc_type == AML_GDC_MEM_DMABUF)
-		gdc_buffer_cache_flush(gs_ex->output_buffer.shared_fd);
-	#endif
 	if (gs_ex->input_buffer.mem_alloc_type == AML_GDC_MEM_DMABUF) {
-		gdc_dma_buffer_unmap(&fh->dma_cfg.input_cfg_plane1);
+		gdc_buffer_unmap(&fh->dma_cfg.input_cfg_plane1);
 		if (gs_ex->input_buffer.plane_number == 2)
-			gdc_dma_buffer_unmap(&fh->dma_cfg.input_cfg_plane2);
+			gdc_buffer_unmap(&fh->dma_cfg.input_cfg_plane2);
 		if (gs_ex->input_buffer.plane_number == 3) {
-			gdc_dma_buffer_unmap(&fh->dma_cfg.input_cfg_plane2);
-			gdc_dma_buffer_unmap(&fh->dma_cfg.input_cfg_plane3);
+			gdc_buffer_unmap(&fh->dma_cfg.input_cfg_plane2);
+			gdc_buffer_unmap(&fh->dma_cfg.input_cfg_plane3);
 		}
 	}
 	if (gs_ex->config_buffer.mem_alloc_type == AML_GDC_MEM_DMABUF)
-		gdc_dma_buffer_unmap(&fh->dma_cfg.config_cfg);
+		gdc_buffer_unmap(&fh->dma_cfg.config_cfg);
 	if (gs_ex->output_buffer.mem_alloc_type == AML_GDC_MEM_DMABUF) {
-		gdc_dma_buffer_unmap(&fh->dma_cfg.output_cfg_plane1);
+		gdc_buffer_unmap(&fh->dma_cfg.output_cfg_plane1);
 		if (gs_ex->output_buffer.plane_number == 2)
-			gdc_dma_buffer_unmap(&fh->dma_cfg.output_cfg_plane2);
+			gdc_buffer_unmap(&fh->dma_cfg.output_cfg_plane2);
 		if (gs_ex->output_buffer.plane_number == 3) {
-			gdc_dma_buffer_unmap(&fh->dma_cfg.output_cfg_plane2);
-			gdc_dma_buffer_unmap(&fh->dma_cfg.output_cfg_plane3);
+			gdc_buffer_unmap(&fh->dma_cfg.output_cfg_plane2);
+			gdc_buffer_unmap(&fh->dma_cfg.output_cfg_plane3);
 		}
 	}
 	return 0;

@@ -45,6 +45,7 @@ struct aml_dma_buf {
 struct aml_dma_buf_priv {
 	void *mem_priv;
 	int index;
+	int fd;
 	unsigned int alloc;
 	struct dma_buf *dbuf;
 };
@@ -75,7 +76,10 @@ int ge2d_dma_buffer_export(struct aml_dma_buffer *buffer,
 	struct ge2d_dmabuf_exp_s *ge2d_exp_buf);
 int ge2d_dma_buffer_map(struct aml_dma_cfg *cfg);
 void ge2d_dma_buffer_unmap(struct aml_dma_cfg *cfg);
-int ge2d_dma_buffer_get_phys(struct aml_dma_cfg *cfg, unsigned long *addr);
+int ge2d_dma_buffer_get_phys(struct aml_dma_buffer *buffer,
+	struct aml_dma_cfg *cfg, unsigned long *addr);
+int ge2d_dma_buffer_unmap_info(struct aml_dma_buffer *buffer,
+	struct aml_dma_cfg *cfg);
 void ge2d_dma_buffer_dma_flush(struct device *dev, int fd);
 void ge2d_dma_buffer_cache_flush(struct device *dev, int fd);
 #endif
