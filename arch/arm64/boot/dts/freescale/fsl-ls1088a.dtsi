@@ -364,7 +364,7 @@
 		};
 
 		/* TODO: WRIOP (CCSR?) */
-		emdio1: mdio@0x8B96000 { /* WRIOP0: 0x8B8_0000,
+		emdio1: mdio@8B96000 { /* WRIOP0: 0x8B8_0000,
 					  * E-MDIO1: 0x1_6000
 					  */
 			compatible = "fsl,fman-memac-mdio";
@@ -377,7 +377,7 @@
 			#size-cells = <0>;
 		};
 
-		emdio2: mdio@0x8B97000 { /* WRIOP0: 0x8B8_0000,
+		emdio2: mdio@8B97000 { /* WRIOP0: 0x8B8_0000,
 					  * E-MDIO2: 0x1_7000
 					  */
 			compatible = "fsl,fman-memac-mdio";
@@ -389,7 +389,7 @@
 			#size-cells = <0>;
 		};
 
-		pcs_mdio1: mdio@0x8c07000 {
+		pcs_mdio1: mdio@8c07000 {
 			compatible = "fsl,fman-memac-mdio";
 			reg = <0x0 0x8c07000 0x0 0x1000>;
 			device_type = "mdio";
@@ -399,7 +399,7 @@
 			#size-cells = <0>;
 		};
 
-		pcs_mdio2: mdio@0x8c0b000 {
+		pcs_mdio2: mdio@8c0b000 {
 			compatible = "fsl,fman-memac-mdio";
 			reg = <0x0 0x8c0b000 0x0 0x1000>;
 			device_type = "mdio";
@@ -409,7 +409,7 @@
 			#size-cells = <0>;
 		};
 
-		pcs_mdio3: mdio@0x8c0f000 {
+		pcs_mdio3: mdio@8c0f000 {
 			compatible = "fsl,fman-memac-mdio";
 			reg = <0x0 0x8c0f000 0x0 0x1000>;
 			device_type = "mdio";
@@ -419,7 +419,7 @@
 			#size-cells = <0>;
 		};
 
-		pcs_mdio4: mdio@0x8c13000 {
+		pcs_mdio4: mdio@8c13000 {
 			compatible = "fsl,fman-memac-mdio";
 			reg = <0x0 0x8c13000 0x0 0x1000>;
 			device_type = "mdio";
