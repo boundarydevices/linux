@@ -1630,7 +1630,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	struct spi_master *master;
 	struct spi_imx_data *spi_imx;
 	struct resource *res;
-	int i, ret, irq, spi_drctl;
+	int i, ret, irq, spi_drctl, num_cs;
 	const struct spi_imx_devtype_data *devtype_data = of_id ? of_id->data :
 		(struct spi_imx_devtype_data *)pdev->id_entry->driver_data;
 	bool slave_mode;
@@ -1666,6 +1666,13 @@ static int spi_imx_probe(struct platform_device *pdev)
 	spi_imx->bitbang.master = master;
 	spi_imx->dev = &pdev->dev;
 	spi_imx->slave_mode = slave_mode;
+
+	num_cs = of_gpio_named_count(np, "cs-gpios");
+	if (num_cs < 0)
+		num_cs = 0;
+	if (mxc_platform_info && (num_cs < mxc_platform_info->num_chipselect))
+		num_cs = mxc_platform_info->num_chipselect;
+	master->num_chipselect = num_cs;
 
 	spi_imx->devtype_data = devtype_data;
 
