@@ -572,7 +572,7 @@
 		};
 	};
 
-	pfe: pfe@04000000 {
+	pfe: pfe@4000000 {
 		compatible = "fsl,pfe";
 		reg =   <0x0 0x04000000 0x0 0xc00000>,	/* AXI 16M */
 			<0x0 0x83400000 0x0 0xc00000>;  /* PFE DDR 12M */
