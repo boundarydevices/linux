@@ -642,9 +642,8 @@ static irqreturn_t intr_handler(int irq, void *dev)
 	hdmitx_wr_reg(HDMITX_TOP_INTR_STAT_CLR, ~0);
 	hdmitx_wr_reg(HDMITX_DWC_HDCP22REG_STAT, 0xff);
 
-	pr_info(SYS "irq %x\n", dat_top);
-	if (dat_dwc)
-		pr_info(SYS "irq %x\n", dat_dwc);
+	pr_info(SYS "irq %x %x\n", dat_top, dat_dwc);
+
 	if (hdev->hpd_lock == 1) {
 		pr_info(HW "HDMI hpd locked\n");
 		goto next;
@@ -675,7 +674,8 @@ static irqreturn_t intr_handler(int irq, void *dev)
 	/* internal interrupt */
 	if (dat_top & (1 << 0)) {
 		hdev->hdmitx_event |= HDMI_TX_INTERNAL_INTR;
-		queue_work(hdev->hdmi_wq, &hdev->work_internal_intr);
+		queue_delayed_work(hdev->hdmi_wq,
+			&hdev->work_internal_intr, HZ / 10);
 	}
 	if (dat_top & (1 << 3)) {
 		unsigned int rd_nonce_mode =
@@ -2730,11 +2730,9 @@ do { \
 
 #define DUMP_HDMITXREG_SECTION(start, end) \
 do { \
-	if (start > end) { \
-		pr_info("Error start = 0x%lx > end = 0x%lx\n", start, end); \
+	if (start > end) \
 		break; \
-	} \
-	pr_info("Start = 0x%lx   End = 0x%lx\n", start, end); \
+\
 	for (addr = start; addr < end + 1; addr++) { \
 		val = hdmitx_rd_reg(addr); \
 		if (val) \
@@ -2746,7 +2744,12 @@ static void hdmitx_dump_intr(void)
 {
 	unsigned int addr = 0, val = 0;
 
-	DUMP_HDMITXREG_SECTION(HDMITX_DWC_IH_FC_STAT0, HDMITX_DWC_IH_MUTE);
+	DUMP_HDMITXREG_SECTION(HDMITX_DWC_IH_FC_STAT0,
+		HDMITX_DWC_IH_I2CMPHY_STAT0);
+	DUMP_HDMITXREG_SECTION(HDMITX_DWC_IH_DECODE, HDMITX_DWC_IH_DECODE);
+	DUMP_HDMITXREG_SECTION(HDMITX_DWC_IH_MUTE_FC_STAT0,
+		HDMITX_DWC_IH_MUTE_I2CMPHY_STAT0);
+	DUMP_HDMITXREG_SECTION(HDMITX_DWC_IH_MUTE, HDMITX_DWC_IH_MUTE);
 }
 
 static void mode420_half_horizontal_para(void)
