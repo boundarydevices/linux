@@ -97,6 +97,13 @@
 			size = <0x0 0x02800000>;
 			alignment = <0x0 0x400000>;
 		};
+
+		/* POST PROCESS MANAGER */
+		ppmgr_reserved:linux,ppmgr {
+			compatible = "amlogic, ppmgr_memory";
+			size = <0x0>;
+		};
+
 		codec_mm_cma:linux,codec_mm_cma {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -171,6 +178,12 @@
 		memory-region = <&codec_mm_cma &codec_mm_reserved>;
 		dev_name = "codec_mm";
 		status = "okay";
+	};
+
+	ppmgr {
+		compatible = "amlogic, ppmgr";
+		status = "okay";
+		memory-region = <&ppmgr_reserved>;
 	};
 
 	deinterlace {
