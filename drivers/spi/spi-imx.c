@@ -1409,9 +1409,7 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	int rem;
 	u32 bpw;
 
-	if (spi_imx->devtype_data->dynamic_burst && !spi_imx->slave_mode) {
-		width = DMA_SLAVE_BUSWIDTH_4_BYTES;
-	} else if (bits_per_word <= 8) {
+	if (bits_per_word <= 8) {
 		width = DMA_SLAVE_BUSWIDTH_1_BYTE;
 	} else if (bits_per_word <= 16) {
 		width = DMA_SLAVE_BUSWIDTH_2_BYTES;
