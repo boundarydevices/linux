@@ -956,6 +956,7 @@ static int __init meson_early_console_setup(struct earlycon_device *device,
 	return 0;
 }
 EARLYCON_DECLARE(aml_uart, meson_early_console_setup);
+EARLYCON_DECLARE_COMP(aml-uart, meson_early_console_setup);
 
 static struct console meson_serial_console = {
 	.name = AML_UART_DEV_NAME,
