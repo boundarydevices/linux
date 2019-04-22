@@ -58,6 +58,10 @@
 #ifdef CONFIG_DWMAC_MESON
 #include <phy_debug.h>
 #endif
+
+#include <linux/suspend.h>
+#define PM_SUSPEND_PREPARE      0x0003 /* Going to suspend the system */
+
 #define STMMAC_ALIGN(x)	L1_CACHE_ALIGN(x)
 #define	TSO_MAX_BUFF_SIZE	(SZ_16K - 1)
 
@@ -126,7 +130,7 @@ static void stmmac_exit_fs(struct net_device *dev);
 
 /*won't be valid unless enable amlogic priv code*/
 #ifdef CONFIG_AMLOGIC_ETH_PRIVE
-#undef TX_MONITOR
+#define TX_MONITOR
 #endif
 
 #ifdef TX_MONITOR
@@ -1794,6 +1798,26 @@ static int stmmac_hw_setup(struct net_device *dev, bool init_ptp)
 	return 0;
 }
 
+#ifdef TX_MONITOR
+static int suspend_pm_notify(struct notifier_block *nb,
+			     unsigned long mode, void *_unused)
+{
+	switch (mode) {
+	case PM_SUSPEND_PREPARE:
+		cancel_delayed_work_sync(&moniter_tx_worker);
+		flush_scheduled_work();
+		pr_info("receive suspend notify\n");
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
+
+static struct notifier_block suspend_pm_nb = {
+	.notifier_call = suspend_pm_notify,
+};
+#endif
 /**
  *  stmmac_open - open entry point of the driver
  *  @dev : pointer to the device structure.
@@ -2742,9 +2766,6 @@ static void stmmac_tx_timeout(struct net_device *dev)
 
 	/* Clear Tx resources and restart transmitting again */
 	stmmac_tx_err(priv);
-#ifdef TX_MONITOR
-	timeout_err = 1;
-#endif
 }
 
 /**
@@ -3279,7 +3300,7 @@ static void moniter_tx_handler(struct work_struct *work)
 	} else {
 		pr_info("device not init yet!\n");
 	}
-	queue_delayed_work(moniter_tx_wq, &moniter_tx_worker, HZ);
+//	queue_delayed_work(moniter_tx_wq, &moniter_tx_worker, HZ);
 }
 #endif
 /**
@@ -3301,8 +3322,15 @@ int stmmac_dvr_probe(struct device *device,
 	struct stmmac_priv *priv;
 
 #ifdef TX_MONITOR
+	int result = 0;
 	moniter_tx_wq = create_singlethread_workqueue("eth_moniter_tx_wq");
 	INIT_DELAYED_WORK(&moniter_tx_worker, moniter_tx_handler);
+	/*register pm notify callback*/
+	result = register_pm_notifier(&suspend_pm_nb);
+	if (result) {
+		unregister_pm_notifier(&suspend_pm_nb);
+		pr_info("register suspend notifier failed return %d\n", result);
+	}
 #endif
 	ndev = alloc_etherdev(sizeof(struct stmmac_priv));
 	if (!ndev)
@@ -3526,9 +3554,6 @@ int stmmac_suspend(struct device *dev)
 	struct stmmac_priv *priv = netdev_priv(ndev);
 	unsigned long flags;
 
-#ifdef TX_MONITOR
-	cancel_delayed_work_sync(&moniter_tx_worker);
-#endif
 	if (!ndev || !netif_running(ndev))
 		return 0;
 
