@@ -639,8 +639,9 @@
 		interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clk IMX8MQ_CLK_DSI_PHY_REF>,
 			 <&clk IMX8MQ_CLK_DSI_AHB>,
-			 <&clk IMX8MQ_CLK_DSI_IPG_DIV>;
-		clock-names = "phy_ref", "rx_esc", "tx_esc";
+			 <&clk IMX8MQ_CLK_DSI_IPG_DIV>,
+			 <&clk IMX8MQ_VIDEO_PLL1>;
+		clock-names = "phy_ref", "rx_esc", "tx_esc", "pixel_pll";
 		assigned-clocks = <&clk IMX8MQ_CLK_DSI_AHB>;
 		assigned-clock-parents = <&clk IMX8MQ_SYS1_PLL_80M>;
 		assigned-clock-rates = <80000000>;
