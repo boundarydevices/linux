@@ -92,6 +92,44 @@ void set_usb_phy_device_tuning(int port, int default_val)
 	g_phy2_v2->phy_cfg_state[port] = default_val;
 }
 
+void set_usb_phy_host_low_reset(int port)
+{
+	void __iomem	*phy_reg_base;
+	u32 val;
+
+	if (!g_phy2_v2)
+		return;
+	if (port > g_phy2_v2->portnum)
+		return;
+
+	if (g_phy2_v2->phy_version) {
+		phy_reg_base = g_phy2_v2->phy_cfg[port];
+		val = readl(phy_reg_base);
+		val &= (~(1 << 14));
+		writel(val, phy_reg_base);
+		val = readl(phy_reg_base + 0x08);
+		val &= 0xfff;
+		writel(val | readl(phy_reg_base + 0x10), phy_reg_base + 0x10);
+		writel(g_phy2_v2->pll_setting[5], phy_reg_base + 0x34);
+
+          	val = readl(phy_reg_base);
+          	val |= (1 << 14);
+		writel(val, phy_reg_base);
+		writel(g_phy2_v2->pll_setting[5], phy_reg_base + 0x34);
+	} else {
+		phy_reg_base = g_phy2_v2->phy_cfg[port];
+		val = readl(phy_reg_base);
+		val &= (~(1 << 12));
+		writel(val, phy_reg_base);
+		writel(g_phy2_v2->pll_setting[5], phy_reg_base + 0x34);
+		val |= (1 << 12);
+		writel(val, phy_reg_base);
+		writel(g_phy2_v2->pll_setting[5], phy_reg_base + 0x34);
+	}
+
+}
+
+
 void set_usb_pll(struct amlogic_usb_v2 *phy, void __iomem	*reg)
 {
 	/* TO DO set usb  PLL */

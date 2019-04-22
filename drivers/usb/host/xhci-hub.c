@@ -555,6 +555,9 @@ static void xhci_clear_port_change_bit(struct xhci_hcd *xhci, u16 wValue,
 	if (DEV_HIGHSPEED(port_status) &&
 		(wValue == USB_PORT_FEAT_C_RESET))
 		set_usb_phy_host_tuning(wIndex, 0);
+	if (DEV_LOWSPEED(port_status) &&
+		(wValue == USB_PORT_FEAT_C_RESET))
+		set_usb_phy_host_low_reset(wIndex);
 #endif
 }
 
