@@ -951,6 +951,9 @@ schedtune_add_cluster_nrg(
 			 * Assume we have EM data only at the CPU and
 			 * the upper CLUSTER level
 			 */
+#ifdef CONFIG_AMLOGIC_MODIFY
+			if (sd2->parent)
+#endif
 			BUG_ON(!cpumask_equal(
 				sched_group_cpus(sg),
 				sched_group_cpus(sd2->parent->groups)
