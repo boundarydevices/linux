@@ -826,7 +826,7 @@ static int fsl_lpspi_probe(struct platform_device *pdev)
 	struct spi_imx_master *lpspi_platform_info =
 		dev_get_platdata(&pdev->dev);
 	struct resource *res;
-	int i, ret, irq;
+	int i, ret, irq, num_cs;
 	u32 temp;
 
 	if (!np && !lpspi_platform_info) {
@@ -848,6 +848,16 @@ static int fsl_lpspi_probe(struct platform_device *pdev)
 
 	controller->bits_per_word_mask = SPI_BPW_RANGE_MASK(8, 32);
 	controller->bus_num = pdev->id;
+
+	ret = of_property_read_u32(np, "fsl,spi-num-chipselects", &num_cs);
+	if (ret < 0) {
+		if (lpspi_platform_info) {
+			num_cs = lpspi_platform_info->num_chipselect;
+			controller->num_chipselect = num_cs;
+		}
+	} else {
+		controller->num_chipselect = num_cs;
+	}
 
 	fsl_lpspi = spi_controller_get_devdata(controller);
 	fsl_lpspi->dev = &pdev->dev;
