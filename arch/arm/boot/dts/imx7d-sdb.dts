@@ -67,6 +67,15 @@
 			size = <0x14000000>;
 			linux,cma-default;
 		};
+
+		ramoops@0xbbf00000 {
+			compatible = "ramoops";
+			reg = <0xbbf00000 0x00100000>;
+			record-size     = <0x00020000>;
+			console-size    = <0x00020000>;
+			ftrace-size     = <0x00020000>;
+			pmsg-size       = <0x00020000>;
+		};
 	};
 
 	modem_reset: modem-reset {
