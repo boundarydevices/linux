@@ -129,7 +129,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2019-04-12b:chg clkb from 500 to 667 for tl1";
+static const char version_s[] = "2019-0423a:src chg, post ready size is wrong";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -3689,7 +3689,7 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 				vframe->type |= VIDTYPE_INTERLACE_TOP;
 			}
 		}
-		di_pre_stru.width_bk = vframe->width;
+		/*di_pre_stru.width_bk = vframe->width;*/
 		if (force_width)
 			vframe->width = force_width;
 		if (force_height)
@@ -3723,7 +3723,7 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 		}
 #endif
 		memcpy(di_buf->vframe, vframe, sizeof(vframe_t));
-
+		di_buf->width_bk = vframe->width;
 		di_buf->vframe->private_data = di_buf;
 		vframe_in[di_buf->index] = vframe;
 		di_buf->seq = di_pre_stru.in_seq;
@@ -4110,10 +4110,12 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 	/* set vframe bit info */
 	di_buf->vframe->bitdepth &= ~(BITDEPTH_YMASK);
 	di_buf->vframe->bitdepth &= ~(FULL_PACK_422_MODE);
+	di_buf->width_bk = di_buf->vframe->width;
 	if (de_devp->pps_enable && pps_position) {
 		if (pps_dstw != di_buf->vframe->width) {
 			di_buf->vframe->width = pps_dstw;
-			di_pre_stru.width_bk = pps_dstw;
+			/*di_pre_stru.width_bk = pps_dstw;*/
+			di_buf->width_bk = pps_dstw;
 		}
 		if (pps_dsth != di_buf->vframe->height)
 			di_buf->vframe->height = pps_dsth;
@@ -4122,10 +4124,10 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 			pr_info("di: hscd %d to %d\n", di_buf->vframe->width,
 				pre_hsc_down_width);
 			di_buf->vframe->width = pre_hsc_down_width;
-			di_pre_stru.width_bk = pre_hsc_down_width;
+			/*di_pre_stru.width_bk = pre_hsc_down_width;*/
+			di_buf->width_bk = pre_hsc_down_width;
 		}
 	}
-
 	if (di_force_bit_mode == 10) {
 		di_buf->vframe->bitdepth |= (BITDEPTH_Y10);
 		if (full_422_pack)
@@ -5680,7 +5682,8 @@ static int process_post_vframe(void)
 					VIDTYPE_VIU_SINGLE_PLANE |
 					VIDTYPE_VIU_FIELD |
 					VIDTYPE_PRE_INTERLACE;
-				di_buf->vframe->width = di_pre_stru.width_bk;
+				di_buf->vframe->width =
+					di_buf->di_buf_dup_p[1]->width_bk;
 				if (
 					di_buf->di_buf_dup_p[1]->
 					new_format_flag) {
@@ -5826,7 +5829,7 @@ VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 				memcpy(di_buf->vframe,
 					di_buf_i->vframe,
 					sizeof(vframe_t));
-				di_buf->vframe->width = di_pre_stru.width_bk;
+				di_buf->vframe->width = di_buf_i->width_bk;
 				di_buf->vframe->private_data = di_buf;
 
 				if (ready_di_buf->new_format_flag &&
@@ -6001,7 +6004,8 @@ VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 					VIDTYPE_VIU_FIELD |
 					VIDTYPE_PRE_INTERLACE;
 				di_buf->vframe->height >>= 1;
-				di_buf->vframe->width = di_pre_stru.width_bk;
+				di_buf->vframe->width =
+					di_buf->di_buf_dup_p[0]->width_bk;
 				if (
 					(di_buf->di_buf_dup_p[0]->
 					 new_format_flag) ||
