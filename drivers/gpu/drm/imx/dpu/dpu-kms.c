@@ -521,6 +521,40 @@ dpu_atomic_put_possible_states_per_crtc(struct drm_crtc_state *crtc_state)
 	dpu_atomic_put_crtc_state(state, crtc);
 }
 
+/* primary plane on-the-fly disablement? */
+static bool
+dpu_primary_plane_is_disabling_otf_per_crtc(struct drm_crtc_state *crtc_state)
+{
+	struct drm_atomic_state *state = crtc_state->state;
+	struct drm_plane *plane;
+	struct drm_plane_state *old_plane_state, *new_plane_state;
+	int i;
+
+	if (!crtc_state->enable)
+		return false;
+
+	if (drm_atomic_crtc_needs_modeset(crtc_state))
+		return false;
+
+	for_each_oldnew_plane_in_state(state, plane, old_plane_state,
+				       new_plane_state, i) {
+		if (plane->type != DRM_PLANE_TYPE_PRIMARY)
+			continue;
+
+		if (!old_plane_state->crtc)
+			continue;
+
+		if (old_plane_state->crtc != crtc_state->crtc)
+			continue;
+
+		if (drm_atomic_plane_disabling(old_plane_state,
+					       new_plane_state))
+			return true;
+	}
+
+	return false;
+}
+
 static int dpu_drm_atomic_check(struct drm_device *dev,
 				struct drm_atomic_state *state)
 {
@@ -579,6 +613,10 @@ static int dpu_drm_atomic_check(struct drm_device *dev,
 
 		imx_crtc_state = to_imx_crtc_state(crtc_state);
 		dcstate = to_dpu_crtc_state(imx_crtc_state);
+
+		/* disallow primary plane on-the-fly disablement */
+		if (dpu_primary_plane_is_disabling_otf_per_crtc(crtc_state))
+			return -EINVAL;
 
 		if (crtc_state->enable) {
 			if (use_pc[dpu_crtc->crtc_grp_id])
