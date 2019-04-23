@@ -350,7 +350,7 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_platform *pdata,
 				if (pdata->tx_delay != 0)
 					clkc->tx_delay = pdata->tx_delay;
 
-				if (((host->data->chip_type == MMC_CHIP_TL1)
+				if (((host->data->chip_type >= MMC_CHIP_TL1)
 				|| (host->data->chip_type == MMC_CHIP_G12B))
 					&& aml_card_type_mmc(pdata)) {
 					clkc->core_phase = para->hs4.core_phase;
@@ -1877,7 +1877,7 @@ int aml_mmc_execute_tuning_v3(struct mmc_host *mmc, u32 opcode)
 		intf3 |= (1<<22);
 		writel(intf3, (host->base + SD_EMMC_INTF3));
 		pdata->intf3 = intf3;
-		if ((host->data->chip_type == MMC_CHIP_TL1)
+		if ((host->data->chip_type >= MMC_CHIP_TL1)
 			|| (host->data->chip_type == MMC_CHIP_G12B))
 			aml_emmc_hs200_tl1(mmc);
 		err = 0;
@@ -1895,7 +1895,8 @@ int aml_post_hs400_timming(struct mmc_host *mmc)
 	struct amlsd_platform *pdata = mmc_priv(mmc);
 	struct amlsd_host *host = pdata->host;
 	aml_sd_emmc_clktest(mmc);
-	if (host->data->chip_type == MMC_CHIP_TL1)
+	if ((host->data->chip_type == MMC_CHIP_TL1)
+		|| (host->data->chip_type == MMC_CHIP_SM1))
 		aml_emmc_hs400_tl1(mmc);
 	else if (host->data->chip_type == MMC_CHIP_G12B)
 		aml_emmc_hs400_Revb(mmc);
