@@ -131,8 +131,13 @@ u32 timestamp_pcrscr_get(void)
 			return system_time;
 			}
 		else {
-			if (tsdemux_pcrscr_get_cb)
-				return tsdemux_pcrscr_get_cb()-pcrscr_lantcy;
+			if (tsdemux_pcrscr_get_cb) {
+				if (tsdemux_pcrscr_get_cb() > pcrscr_lantcy)
+					return
+					tsdemux_pcrscr_get_cb() - pcrscr_lantcy;
+				else
+					return 0;
+			}
 			else
 				return system_time;
 		}

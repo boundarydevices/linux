@@ -192,7 +192,7 @@ static u32 tsync_last_play_mode;
 
 static u32 tsync_use_demux_pcr = 1;
 
-static u32 tsync_pcr_debug;
+static u32 tsync_pcr_debug = 0x01;
 
 static DEFINE_SPINLOCK(tsync_pcr_lock);
 
@@ -359,7 +359,9 @@ void tsync_pcr_pcrscr_set(void)
 	}
 
 	/* check the valid of the pcr */
-	if (cur_pcr && cur_checkin_vpts && cur_checkin_apts) {
+	if (cur_pcr && cur_checkin_vpts && cur_checkin_apts &&
+		cur_checkin_vpts != 0xffffffff &&
+		cur_checkin_apts != 0xffffffff) {
 		u32 gap_pa, gap_pv, gap_av;
 		gap_pa = abs(cur_pcr - cur_checkin_apts);
 		gap_av = abs(cur_checkin_apts - cur_checkin_vpts);
@@ -371,19 +373,21 @@ void tsync_pcr_pcrscr_set(void)
 	if (cur_pcr && !(tsync_pcr_inited_flag & complete_init_flag)
 		&& (min_checkinpts != 0)) {
 		tsync_pcr_inited_flag |= TSYNC_PCR_INITCHECK_PCR;
-		if (abs(cur_pcr - min_checkinpts) >
-			PLAY_PCR_INVALID_THRESHOLD) {
+		if (tsync_pcr_debug&0x02)
+			pr_info("cur_pcr=%x min_checkinpts=%x\n",
+			cur_pcr, min_checkinpts);
+		if ((abs(cur_pcr - min_checkinpts) >
+			PLAY_PCR_INVALID_THRESHOLD) &&
+			min_checkinpts != 0xffffffff) {
 			ref_pcr = min_checkinpts;
-			timestamp_pcrscr_set(ref_pcr);
-			timestamp_pcrscr_enable(1);
 			tsync_use_demux_pcr = 0;
 			if (tsync_pcr_debug&0x01) {
 				pr_info("check init.first_pcr=0x%x, first_apts=0x%x, ",
-		 first_pcr, first_apts);
+				first_pcr, first_apts);
 				pr_info("first_vpts=0x%x, cur_pcr = 0x%x, checkin_vpts=0x%x, ",
-		 first_vpts, cur_pcr, cur_checkin_vpts);
+				first_vpts, cur_pcr, cur_checkin_vpts);
 				pr_info("checkin_apts=0x%x alevel=%d vlevel=%d\n",
-		 cur_checkin_apts, abuf_level, vbuf_level);
+				cur_checkin_apts, abuf_level, vbuf_level);
 				pr_info("[%d]init by pcr. pcr=%x usepcr=%d\n",
 				__LINE__, ref_pcr, tsync_pcr_usepcr);
 			}
@@ -396,11 +400,11 @@ void tsync_pcr_pcrscr_set(void)
 				timestamp_pcrscr_set(ref_pcr);
 				timestamp_pcrscr_enable(1);
 				tsync_use_demux_pcr = 0;
-		} else {
-			tsync_use_demux_pcr = 1;
+			} else
+				tsync_use_demux_pcr = 1;
 		}
-		}
-
+		timestamp_pcrscr_set(ref_pcr);
+		timestamp_pcrscr_enable(1);
 		init_check_first_systemtime = ref_pcr;
 		if (tsdemux_pcrscr_get_cb)
 			init_check_first_demuxpcr = tsdemux_pcrscr_get_cb();
@@ -409,20 +413,19 @@ void tsync_pcr_pcrscr_set(void)
 	if (first_apts && !(tsync_pcr_inited_flag & complete_init_flag)
 		&& (min_checkinpts != 0)) {
 		tsync_pcr_inited_flag |= TSYNC_PCR_INITCHECK_APTS;
-		ref_pcr = first_apts;
-
+		if (tsync_pcr_debug&0x02)
+			pr_info("cur_pcr=%x first_apts=%x\n",
+			cur_pcr, first_apts);
 		if (abs(cur_pcr - first_apts) > PLAY_PCR_INVALID_THRESHOLD) {
 			ref_pcr = first_apts;
-		timestamp_pcrscr_set(ref_pcr);
-			timestamp_pcrscr_enable(1);
 			tsync_use_demux_pcr = 0;
 			if (tsync_pcr_debug&0x01) {
 				pr_info("check init.first_pcr=0x%x, first_apts=0x%x, ",
-		 first_pcr, first_apts);
+				first_pcr, first_apts);
 				pr_info("first_vpts=0x%x, cur_pcr = 0x%x, checkin_vpts=0x%x, ",
-		 first_vpts, cur_pcr, cur_checkin_vpts);
+				first_vpts, cur_pcr, cur_checkin_vpts);
 				pr_info("checkin_apts=0x%x alevel=%d vlevel=%d\n",
-		 cur_checkin_apts, abuf_level, vbuf_level);
+				cur_checkin_apts, abuf_level, vbuf_level);
 				pr_info("[%d]init by pcr. pcr=%x usepcr=%d\n",
 				__LINE__, ref_pcr, tsync_pcr_usepcr);
 			}
@@ -438,7 +441,8 @@ void tsync_pcr_pcrscr_set(void)
 				timestamp_firstvpts_get());
 			}
 		}
-
+		timestamp_pcrscr_set(ref_pcr);
+		timestamp_pcrscr_enable(1);
 		init_check_first_systemtime = ref_pcr;
 		if (tsdemux_pcrscr_get_cb)
 			init_check_first_demuxpcr = tsdemux_pcrscr_get_cb();
@@ -447,18 +451,23 @@ void tsync_pcr_pcrscr_set(void)
 	if (first_vpts && !(tsync_pcr_inited_flag & complete_init_flag)
 		&& (min_checkinpts != 0)) {
 		tsync_pcr_inited_flag |= TSYNC_PCR_INITCHECK_VPTS;
+		if (tsync_pcr_debug&0x02)
+			pr_info("cur_pcr=%x first_vpts=%x\n",
+			cur_pcr, first_vpts);
 		if (abs(cur_pcr - first_vpts) > PLAY_PCR_INVALID_THRESHOLD) {
-			ref_pcr = min_checkinpts;
-		timestamp_pcrscr_set(ref_pcr);
-		timestamp_pcrscr_enable(1);
+			if (min_checkinpts == 0xffffffff)
+				ref_pcr = first_vpts > 90*300 ?
+				first_vpts - 90*300 : 0;
+			else
+				ref_pcr = min_checkinpts;
 			tsync_use_demux_pcr = 0;
 			if (tsync_pcr_debug&0x01) {
 				pr_info("check init.first_pcr=0x%x, first_apts=0x%x, ",
-		 first_pcr, first_apts);
+				first_pcr, first_apts);
 				pr_info("first_vpts=0x%x, cur_pcr = 0x%x, checkin_vpts=0x%x, ",
-		 first_vpts, cur_pcr, cur_checkin_vpts);
+				first_vpts, cur_pcr, cur_checkin_vpts);
 				pr_info("checkin_apts=0x%x alevel=%d vlevel=%d\n",
-		 cur_checkin_apts, abuf_level, vbuf_level);
+				cur_checkin_apts, abuf_level, vbuf_level);
 				pr_info("[%d]init by pcr. pcr=%x usepcr=%d\n",
 				__LINE__, ref_pcr, tsync_pcr_usepcr);
 			}
@@ -474,6 +483,8 @@ void tsync_pcr_pcrscr_set(void)
 				timestamp_firstvpts_get());
 			}
 		}
+		timestamp_pcrscr_set(ref_pcr);
+		timestamp_pcrscr_enable(1);
 	}
 }
 
@@ -612,13 +623,11 @@ static void tsync_process_discontinue(void)
 	} else {
 		if ((tsync_pcr_tsdemuxpcr_discontinue & VIDEO_DISCONTINUE) ==
 			VIDEO_DISCONTINUE) {
-			if (tsync_pcr_debug&0x02)
-				pr_info(" now video discontinue\n");
 			tsync_pcr_tsdemuxpcr_discontinue = 0;
-			pr_info("after discontinue, pcr = 0x%x,vpts=0x%x\n",
-				timestamp_pcrscr_get(), cur_vpts);
+			tsync_pcr_reset_flag = 1;
+			if (tsync_pcr_debug&0x02)
+				pr_info(" now video discontinue,need replay now\n");
 		}
-		timestamp_pcrscr_set(cur_vpts);
 	}
 }
 
@@ -641,7 +650,8 @@ void tsync_pcr_check_checinpts(void)
 	if (checkin_vpts == 0xffffffff)
 		return;
 
-	if (checkin_apts == 0xffffffff)
+	if (tsdemux_pcraudio_valid_cb && tsdemux_pcraudio_valid_cb()
+		&& (checkin_apts == 0xffffffff))
 		return;
 
 	if (last_pcr_checkin_apts == 0 || last_pcr_checkin_vpts == 0) {
@@ -1411,12 +1421,12 @@ void tsync_pcr_exit(void)
 }
 EXPORT_SYMBOL(tsync_pcr_exit);
 
-/*
- *module_init(tsync_pcr_init);
- *module_exit(tsync_pcr_exit);
- *
- *MODULE_DESCRIPTION
- *("AMLOGIC time sync management driver of referrence by pcrscr");
- *MODULE_LICENSE("GPL");
- *MODULE_AUTHOR("le yang <le.yang@amlogic.com>");
- */
+
+module_init(tsync_pcr_init);
+module_exit(tsync_pcr_exit);
+
+MODULE_DESCRIPTION
+("AMLOGIC time sync management driver of referrence by pcrscr");
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("le yang <le.yang@amlogic.com>");
+
