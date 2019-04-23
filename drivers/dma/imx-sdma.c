@@ -443,6 +443,13 @@ struct sdma_driver_data {
 	int num_events;
 	struct sdma_script_start_addrs	*script_addrs;
 	bool check_ratio;
+	/*
+	 * ecspi ERR009165 fixed should be done in sdma script
+	 * and it be fixed in soc from i.mx6ul.
+	 * please get more information from below link:
+	 * https://www.nxp.com/docs/en/errata/IMX6DQCE.pdf
+	 */
+	bool ecspi_fixed;
 };
 
 struct sdma_engine {
@@ -591,6 +598,7 @@ static struct sdma_driver_data sdma_imx6ul = {
 	.chnenbl0 = SDMA_CHNENBL0_IMX35,
 	.num_events = 48,
 	.script_addrs = &sdma_script_imx6sx,
+	.ecspi_fixed = true,
 };
 
 static struct sdma_script_start_addrs sdma_script_imx7d = {
@@ -623,6 +631,7 @@ static struct sdma_driver_data sdma_imx8mq = {
 	.num_events = 48,
 	.script_addrs = &sdma_script_imx7d,
 	.check_ratio = 1,
+	.ecspi_fixed = true,
 };
 
 static const struct platform_device_id sdma_devtypes[] = {
@@ -650,6 +659,9 @@ static const struct platform_device_id sdma_devtypes[] = {
 	}, {
 		.name = "imx7d-sdma",
 		.driver_data = (unsigned long)&sdma_imx7d,
+	}, {
+		.name = "imx6ul-sdma",
+		.driver_data = (unsigned long)&sdma_imx6ul,
 	}, {
 		.name = "imx8mn-sdma",
 		.driver_data = (unsigned long)&sdma_imx8mn,
@@ -1238,10 +1250,13 @@ static int sdma_config_channel(struct dma_chan *chan)
 			    sdmac->peripheral_type == IMX_DMATYPE_ASRC)
 				sdma_set_watermarklevel_for_p2p(sdmac);
 		} else {
-			/* ERR008517 fixed on i.mx6ul, no workaround needed */
+			/*
+			 * ERR009165 fixed from i.mx6ul, no errata need,
+			 * set bit31 to let sdma script skip the errata.
+			 */
 			if (sdmac->peripheral_type == IMX_DMATYPE_CSPI &&
 			    sdmac->direction == DMA_MEM_TO_DEV &&
-			    sdmac->sdma->drvdata == &sdma_imx6ul)
+			    sdmac->sdma->drvdata->ecspi_fixed)
 				__set_bit(31, &sdmac->watermark_level);
 			else if (sdmac->peripheral_type ==
 					IMX_DMATYPE_MULTI_SAI)
