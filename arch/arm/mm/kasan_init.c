@@ -154,7 +154,8 @@ static void kasan_alloc_and_map_shadow(unsigned long start, unsigned long end)
 
 void __init kasan_init(void)
 {
-	unsigned long start, end;
+	unsigned long start, end, mem_size = 0;
+	struct memblock_region *reg;
 	int i;
 
 	/*
@@ -169,7 +170,17 @@ void __init kasan_init(void)
 	cpu_switch_mm(tmp_pg_dir, &init_mm);
 	clear_pmds(KASAN_SHADOW_START, KASAN_SHADOW_END);
 
-	kasan_alloc_and_map_shadow(PAGE_OFFSET, KMEM_END);
+	for_each_memblock(memory, reg) {
+		mem_size += reg->size;
+	}
+	/* create shadow for linear map space */
+	if (mem_size < (KMEM_END - PAGE_OFFSET))
+		end = PAGE_OFFSET + mem_size;
+	else
+		end = KMEM_END;
+	pr_info("%s, total mem size:%lx, end:%lx\n", __func__, mem_size, end);
+
+	kasan_alloc_and_map_shadow(PAGE_OFFSET, end);
 	kasan_alloc_and_map_shadow(FIXADDR_START, FIXADDR_END);
 #ifdef CONFIG_HIGHMEM
 	kasan_alloc_and_map_shadow(PKMAP_BASE,
@@ -215,4 +226,29 @@ void __init kasan_init(void)
 	/* At this point kasan is fully initialized. Enable error messages */
 	init_task.kasan_depth = 0;
 	pr_info("KernelAddressSanitizer initialized\n");
+}
+
+/*
+ * This is work around for mis-report of KASAN when resume.
+ * On arm architecture, cpu suspend/resume routine is done in
+ * function call path:
+ *    cpu_suspend -> psci_cpu_suspend -> __invoke_psci_fn_smc
+ * during this call path, some parts of stack will be marked as
+ * shadow memory. But when cpu resume from smc call, it directly
+ * return to point which saved in cpu_suspend and call resume
+ * procedure. Which do not comeback as a reverse return path:
+ *    __invoke_psci_fn_smc -> psci_cpu_suspend -> cpu_suspend
+ * So some residual shadow memory may affect KASAN report when
+ * cpu is calling resume hooks.
+ * We just need to clear all shadow in stack for this case.
+ */
+void kasan_clear_shadow_for_resume(unsigned long sp)
+{
+	unsigned long size;
+
+	size = sp &  (THREAD_SIZE - 1);
+	sp   = sp & ~(THREAD_SIZE - 1);
+	size = ALIGN(size, (1 << KASAN_SHADOW_SCALE_SHIFT));
+	pr_debug("%s, sp:%lx, size:%lx\n", __func__, sp, size);
+	kasan_unpoison_shadow((void *)sp, size);
 }

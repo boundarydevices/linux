@@ -112,6 +112,10 @@ ENDPROC(cpu_resume_mmu)
 	.popsection
 cpu_resume_after_mmu:
 	bl	cpu_init		@ restore the und/abt/irq banked regs
+#ifdef CONFIG_AMLOGIC_KASAN32
+	mov	r0, sp
+	bl	kasan_clear_shadow_for_resume
+#endif
 	mov	r0, #0			@ return zero on success
 	ldmfd	sp!, {r4 - r11, pc}
 ENDPROC(cpu_resume_after_mmu)
