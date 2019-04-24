@@ -44,6 +44,9 @@
 #include <video/videomode.h>
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
+#define HALT_CHECK_DELAY	100
+#define HALT_CHECK_CNT		10
+
 struct mipi_cmd {
 	const u8* mipi_cmds;
 	unsigned length;
@@ -59,6 +62,8 @@ struct tc358778_priv
 	struct notifier_block	drmnb;
 	struct clk		*pixel_clk;
 	struct mutex		power_mutex;
+	struct delayed_work	tc_work;
+	struct workqueue_struct *tc_workqueue;
 	u32			int_cnt;
 	u32			pixelclock;
 	u32			byte_clock;
@@ -72,6 +77,8 @@ struct tc358778_priv
 	u8			dsi_bpp;
 	u8			pulse;
 	u8			skip_eot;
+	u8			gp_reset_active;
+	u8			halt_check_cnt;
 	struct mipi_cmd		mipi_cmds_init;
 	struct mipi_cmd		mipi_cmds_enable;
 	struct mipi_cmd		mipi_cmds_disable;
@@ -428,6 +435,7 @@ static int tc_flush_read_fifo(struct tc358778_priv *tc)
 	return 0;
 }
 
+#if 0
 static int check_for_halt(struct tc358778_priv *tc, char from)
 {
 	unsigned long timeout = jiffies + msecs_to_jiffies(20);
@@ -450,6 +458,12 @@ static int check_for_halt(struct tc358778_priv *tc, char from)
 	} while (1);
 	return 0;
 }
+#else
+static int check_for_halt(struct tc358778_priv *tc, char from)
+{
+	return 0;
+}
+#endif
 
 static int tc_start_tx_and_complete(struct tc358778_priv *tc)
 {
@@ -471,8 +485,27 @@ static int tc_start_tx_and_complete(struct tc358778_priv *tc)
 			pr_err("%s: timeout, 0x%x\n", __func__, ret);
 			return -ETIMEDOUT;
 		}
+		msleep(1);
 	} while (1);
-	msleep(2);
+	return 0;
+}
+
+static int tc_wait_tx_idle(struct tc358778_priv *tc)
+{
+	unsigned long timeout = jiffies + msecs_to_jiffies(50);
+	int ret;
+	int status = 0;
+
+	do {
+		ret = tc_read32(tc, TC_DSI_STATUS, &status);
+		if ((ret >= 0) && !(ret & 0x200))
+				break;
+		if (time_after(jiffies, timeout)) {
+			pr_err("%s: timeout, 0x%x\n", __func__, ret);
+			return -ETIMEDOUT;
+		}
+		msleep(1);
+	} while (1);
 	return 0;
 }
 
@@ -483,10 +516,11 @@ static int tc_mipi_dsi_pkt_write_indirect(struct tc358778_priv *tc, u8 id, const
 {
 	u16 val;
 	int ret;
-//	int delay = (buf_cnt + 19) / 10;
+	int delay = (buf_cnt + 19) / 10;
 
 	if ((buf_cnt <= 8) || (buf_cnt > 1024))
 		return -EINVAL;
+	tc_wait_tx_idle(tc);
 	check_for_halt(tc, 'i');
 	tc_write16(tc, TC_DSITX_DT, DCS_ID(id));
 	tc_write16(tc, TC_CMDBYTE, buf_cnt);
@@ -511,7 +545,8 @@ static int tc_mipi_dsi_pkt_write_indirect(struct tc358778_priv *tc, u8 id, const
 		tc_write16(tc, TC_DBG_DATA, val);
 	}
 	tc_write16(tc, TC_VBUFCTL, 0xe000);	/* start */
-	msleep(100);
+	msleep(delay);
+	tc_wait_tx_idle(tc);
 	tc_write16(tc, TC_VBUFCTL, 0x2000);
 	check_for_halt(tc, '2');
 	ret = tc_write16(tc, TC_VBUFCTL, 0);
@@ -708,12 +743,13 @@ static int send_mipi_cmd_list(struct tc358778_priv *tc, struct mipi_cmd *mc)
 	return match;
 };
 
-static void tc_powerdown_locked(struct tc358778_priv *tc)
+static void tc_powerdown_locked(struct tc358778_priv *tc, int cmd_disable)
 {
 	tc->chip_enabled = 0;
 	if (tc->client->irq)
 		disable_irq(tc->client->irq);
-	send_mipi_cmd_list(tc, &tc->mipi_cmds_disable);
+	if (cmd_disable)
+		send_mipi_cmd_list(tc, &tc->mipi_cmds_disable);
 	/*
 	 * Disable Parallel Input
 	 * 1. Set FrmStop to 1, wait 1 frame
@@ -742,14 +778,16 @@ static void tc_powerdown_locked(struct tc358778_priv *tc)
 	tc_write32(tc, TC_HSTXVREGEN, 0);
 	/* assert reset to display */
 	tc_write16(tc, TC_GPIOOUT, 0);
+	tc->gp_reset_active = 1;
 	gpiod_set_value(tc->gp_reset, 1);
 }
 
 static void tc_powerdown_c(struct tc358778_priv *tc)
 {
+	cancel_delayed_work_sync(&tc->tc_work);
 	mutex_lock(&tc->power_mutex);
 	if (tc->chip_enabled)
-		tc_powerdown_locked(tc);
+		tc_powerdown_locked(tc, 1);
 	mutex_unlock(&tc->power_mutex);
 }
 
@@ -925,6 +963,7 @@ static int tc_powerup1(struct tc358778_priv *tc)
 	int ret;
 
 	tc_enable_gp(tc->gp_reset);
+	tc->gp_reset_active = 0;
 	tc_write16(tc, TC_CONFCTL, 4);
 	tc_write16(tc, TC_SYSCTL, 1);
 	tc_write16(tc, TC_SYSCTL, 0);
@@ -1362,6 +1401,9 @@ static int tc_powerup_c(struct tc358778_priv *tc)
 			tc->chip_enabled = 1;
 	}
 	mutex_unlock(&tc->power_mutex);
+	tc->halt_check_cnt = 0;
+	queue_delayed_work(tc->tc_workqueue, &tc->tc_work,
+		msecs_to_jiffies(HALT_CHECK_DELAY));
 	return ret;
 }
 
@@ -1458,7 +1500,40 @@ static int tc_fb_event(struct notifier_block *nb, unsigned long event, void *dat
 	return 0;
 }
 
+static int tc_check_halt(struct tc358778_priv *tc)
+{
+	int status = 1;
+	int ret = 0;
 
+	mutex_lock(&tc->power_mutex);
+	if (tc->pixel_clk_active) {
+		if (!tc->gp_reset_active)
+			tc_read32(tc, TC_DSI_STATUS, &status);
+		if (status & 3) {
+			/* halted */
+			struct device *dev = &tc->client->dev;
+			int dsi_err = 0;
+
+			if (!tc->gp_reset_active) {
+				tc_read32(tc, TC_DSI_ERR, &dsi_err);
+				dev_info(dev, "%s: dsi_err=%x, status=%x\n",
+					__func__, dsi_err, status);
+			}
+			tc_powerdown_locked(tc, 0);
+			ret = tc_powerup_locked(tc);
+			if (ret) {
+				dev_info(dev, "%s: powerup failed %d\n",
+					__func__, ret);
+			} else {
+				tc->chip_enabled = 1;
+			}
+			ret = 1;
+			tc->halt_check_cnt = 0;
+		}
+	}
+	mutex_unlock(&tc->power_mutex);
+	return ret;
+}
 
 /*
  * We only report errors in this handler
@@ -1466,41 +1541,58 @@ static int tc_fb_event(struct notifier_block *nb, unsigned long event, void *dat
 static irqreturn_t tc_irq_handler(int irq, void *id)
 {
 	struct tc358778_priv *tc = id;
+	struct device *dev = &tc->client->dev;
 	int dsi_int = tc_read16(tc, TC_DSI_INT);
 
 	if (dsi_int > 0) {
-		dev_info(&tc->client->dev, "%s: dsi_int %x\n", __func__,
-			dsi_int);
-		if (dsi_int & 4) {
-			int dsi_err = tc_read16(tc, TC_DSI_ERR);
 
-			dev_info(&tc->client->dev, "%s: dsi_err %x\n", __func__,
-				dsi_err);
-		}
+		dev_info(dev, "%s: dsi_int %x\n", __func__,
+			dsi_int);
 		if (dsi_int & 2) {
 			int dsi_rxerr = tc_read16(tc, TC_DSI_RXERR);
 
-			dev_info(&tc->client->dev, "%s: dsi_rxerr %x\n", __func__,
+			dev_info(dev, "%s: dsi_rxerr %x\n", __func__,
 				dsi_rxerr);
 		}
 		if (dsi_int & 1) {
 			int dsi_ackerr = tc_read16(tc, TC_DSI_ACKERR);
 
-			dev_info(&tc->client->dev, "%s: dsi_ackerr %x\n", __func__,
+			dev_info(dev, "%s: dsi_ackerr %x\n", __func__,
 				dsi_ackerr);
 		}
 		tc_write16(tc, TC_DSI_INT_CLR, dsi_int);
+		if (dsi_int & 7) {
+			tc_check_halt(tc);
+		}
 		if (tc->int_cnt++ > 10) {
 			disable_irq_nosync(tc->client->irq);
+			dev_err(dev, "%s: irq disabled\n", __func__);
 		} else {
 			msleep(100);
 		}
 		return IRQ_HANDLED;
 	} else {
-		dev_err(&tc->client->dev, "%s: read error %d\n", __func__, dsi_int);
+		dev_err(dev, "%s: read error %d\n", __func__, dsi_int);
 	}
 	return IRQ_NONE;
 }
+
+static void tc_work_func(struct work_struct *work)
+{
+	struct tc358778_priv *tc = container_of(to_delayed_work(work),
+			struct tc358778_priv, tc_work);
+	int ret;
+
+	if (!tc->pixel_clk_active)
+		return;
+	ret = tc_check_halt(tc);
+	if (!ret)
+		tc->halt_check_cnt++;
+	if (tc->halt_check_cnt < HALT_CHECK_CNT)
+		queue_delayed_work(tc->tc_workqueue, &tc->tc_work,
+				msecs_to_jiffies(HALT_CHECK_DELAY));
+}
+
 
 static int find_size(u16 reg)
 {
@@ -1623,10 +1715,12 @@ static ssize_t tc358778_enable_store(struct device *dev, struct device_attribute
 		return -EBUSY;
 
 	enable = simple_strtol(buf, &endp, 16);
-	if (enable)
+	if (enable) {
 		tc_powerup_c(tc);
-	else
+	} else {
 		tc_powerdown_c(tc);
+	}
+
 
 	return count;
 }
@@ -1657,7 +1751,7 @@ static int tc358778_probe(struct i2c_client *client,
 		goto exit1;
 	}
 
-	gp_reset = devm_gpiod_get_optional(&client->dev, "reset", GPIOD_OUT_LOW);
+	gp_reset = devm_gpiod_get_optional(&client->dev, "reset", GPIOD_OUT_HIGH);
 	if (IS_ERR(gp_reset)) {
 		if (PTR_ERR(gp_reset) != -EPROBE_DEFER)
 			dev_err(&client->dev, "Failed to get reset gpio: %ld\n",
@@ -1679,6 +1773,12 @@ static int tc358778_probe(struct i2c_client *client,
 	tc->gp_reset = gp_reset;
 	tc->of_node = np;
 	mutex_init(&tc->power_mutex);
+	INIT_DELAYED_WORK(&tc->tc_work, tc_work_func);
+	tc->tc_workqueue = create_workqueue("tc358778_wq");
+	if (!tc->tc_workqueue) {
+		pr_err("Failed to create tc work queue");
+		goto exit1;
+	}
 
 	tc->disp_node = of_parse_phandle(np, "display", 0);
 	if (!tc->disp_node) {
@@ -1766,6 +1866,8 @@ static int tc358778_remove(struct i2c_client *client)
 {
 	struct tc358778_priv *tc = i2c_get_clientdata(client);
 
+	cancel_delayed_work_sync(&tc->tc_work);
+	destroy_workqueue(tc->tc_workqueue);
 	device_remove_file(&client->dev, &dev_attr_tc358778_reg);
 	device_remove_file(&client->dev, &dev_attr_tc358778_enable);
 	fb_unregister_client(&tc->drmnb);
