@@ -1987,8 +1987,8 @@ err_input_dev_alloc_failed:
 #endif // SITRONIX_MONITOR_THREAD
 err_device_info_error:
 err_check_functionality_failed:
-	if (ts->client->irq)
-		irq_set_irq_type(ts->client->irq, IRQ_TYPE_NONE);
+	if (client->irq)
+		irq_set_irq_type(client->irq, IRQ_TYPE_NONE);
 
 	return ret;
 }
