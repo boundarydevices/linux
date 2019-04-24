@@ -965,6 +965,7 @@ static int goodix_configure_dev(struct goodix_ts_data *ts)
 						   "touchscreen-inverted-y");
 
 	goodix_read_config(ts);
+	return 0;
 }
 
 static int goodix_finish_setup(struct goodix_ts_data *ts)
