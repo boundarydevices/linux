@@ -261,10 +261,12 @@ static int meson_cpufreq_set_target(struct cpufreq_policy *policy,
 		}
 	}
 
-	freqs.old = freq_old / 1000;
-	freqs.new = freq_new / 1000;
+	if (cur_cluster == 0) {
+		freqs.old = freq_old / 1000;
+		freqs.new = freq_new / 1000;
+		cpufreq_freq_transition_begin(policy, &freqs);
+	}
 	/*scale clock frequency*/
-	cpufreq_freq_transition_begin(policy, &freqs);
 	ret = meson_cpufreq_set_rate(policy, cur_cluster,
 					freq_new / 1000);
 	if (ret) {
@@ -277,7 +279,9 @@ static int meson_cpufreq_set_target(struct cpufreq_policy *policy,
 		}
 		return ret;
 	}
-	cpufreq_freq_transition_end(policy, &freqs, ret);
+
+	if (cur_cluster == 0)
+		cpufreq_freq_transition_end(policy, &freqs, ret);
 	/*cpufreq down,change voltage after frequency*/
 	if (freq_new < freq_old) {
 		ret = meson_regulator_set_volate(cpu_reg, volt_old,
@@ -285,12 +289,17 @@ static int meson_cpufreq_set_target(struct cpufreq_policy *policy,
 		if (ret) {
 			pr_err("failed to scale volt %u %u down: %d\n",
 				volt_new, volt_tol, ret);
-			freqs.old = freq_new / 1000;
-			freqs.new = freq_old / 1000;
-			cpufreq_freq_transition_begin(policy, &freqs);
+			if (cur_cluster == 0) {
+				freqs.old = freq_new / 1000;
+				freqs.new = freq_old / 1000;
+				cpufreq_freq_transition_begin(policy, &freqs);
+			}
+
 			ret = meson_cpufreq_set_rate(policy, cur_cluster,
 				freq_old / 1000);
-			cpufreq_freq_transition_end(policy, &freqs, ret);
+			if (cur_cluster == 0)
+				cpufreq_freq_transition_end(policy,
+					&freqs, ret);
 		}
 	}
 
@@ -565,13 +574,15 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 
 	if (of_property_read_u32(np, "clock-latency", &transition_latency))
 		policy->cpuinfo.transition_latency = CPUFREQ_ETERNAL;
+	if (cur_cluster == 0) {
+		cpufreq_data->freq_transition = meson_cpufreq_notifier_block;
 
-	cpufreq_data->freq_transition = meson_cpufreq_notifier_block;
-	ret = cpufreq_register_notifier(&cpufreq_data->freq_transition,
-					CPUFREQ_TRANSITION_NOTIFIER);
-	if (ret) {
-		dev_err(cpu_dev, "failed to register cpufreq notifier!\n");
-		goto fail_cpufreq_unregister;
+		ret = cpufreq_register_notifier(&cpufreq_data->freq_transition,
+						CPUFREQ_TRANSITION_NOTIFIER);
+		if (ret) {
+			dev_err(cpu_dev, "failed to register cpufreq notifier!\n");
+			goto fail_cpufreq_unregister;
+		}
 	}
 
 	cpufreq_data->cpu_dev = cpu_dev;
@@ -600,6 +611,7 @@ static int meson_cpufreq_init(struct cpufreq_policy *policy)
 	dev_info(cpu_dev, "%s: CPU %d initialized\n", __func__, policy->cpu);
 	return ret;
 fail_cpufreq_unregister:
+	if (cur_cluster == 0)
 		cpufreq_unregister_notifier(&cpufreq_data->freq_transition,
 				CPUFREQ_TRANSITION_NOTIFIER);
 free_opp_table:
@@ -642,6 +654,9 @@ static int meson_cpufreq_exit(struct cpufreq_policy *policy)
 				policy->cpu);
 		return -ENODEV;
 	}
+	if (cur_cluster == 0)
+		cpufreq_unregister_notifier(&cpufreq_data->freq_transition,
+						CPUFREQ_TRANSITION_NOTIFIER);
 
 	if (policy->freq_table != NULL) {
 		dev_pm_opp_free_cpufreq_table(cpu_dev,
