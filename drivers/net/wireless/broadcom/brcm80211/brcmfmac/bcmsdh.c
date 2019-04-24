@@ -1133,6 +1133,9 @@ static int brcmf_ops_sdio_suspend(struct device *dev)
 
 	brcmf_dbg(SDIO, "Enter: F%d\n", func->num);
 
+	if (func->num != 1)
+		return 0;
+
 	while (retry &&
 	       config->pm_state == BRCMF_CFG80211_PM_STATE_SUSPENDING) {
 		usleep_range(10000, 20000);
@@ -1140,9 +1143,6 @@ static int brcmf_ops_sdio_suspend(struct device *dev)
 	}
 	if (!retry && config->pm_state == BRCMF_CFG80211_PM_STATE_SUSPENDING)
 		brcmf_err("timed out wait for cfg80211 suspended\n");
-
-	if (func->num != 1)
-		return 0;
 
 	sdiodev = bus_if->bus_priv.sdio;
 
