@@ -374,7 +374,8 @@ void tsync_pcr_pcrscr_set(void)
 		if (abs(cur_pcr - min_checkinpts) >
 			PLAY_PCR_INVALID_THRESHOLD) {
 			ref_pcr = min_checkinpts;
-		timestamp_pcrscr_set(ref_pcr);
+			timestamp_pcrscr_set(ref_pcr);
+			timestamp_pcrscr_enable(1);
 			tsync_use_demux_pcr = 0;
 			if (tsync_pcr_debug&0x01) {
 				pr_info("check init.first_pcr=0x%x, first_apts=0x%x, ",
@@ -412,6 +413,7 @@ void tsync_pcr_pcrscr_set(void)
 		if (abs(cur_pcr - first_apts) > PLAY_PCR_INVALID_THRESHOLD) {
 			ref_pcr = first_apts;
 		timestamp_pcrscr_set(ref_pcr);
+			timestamp_pcrscr_enable(1);
 			tsync_use_demux_pcr = 0;
 			if (tsync_pcr_debug&0x01) {
 				pr_info("check init.first_pcr=0x%x, first_apts=0x%x, ",
@@ -447,6 +449,7 @@ void tsync_pcr_pcrscr_set(void)
 		if (abs(cur_pcr - first_vpts) > PLAY_PCR_INVALID_THRESHOLD) {
 			ref_pcr = min_checkinpts;
 		timestamp_pcrscr_set(ref_pcr);
+		timestamp_pcrscr_enable(1);
 			tsync_use_demux_pcr = 0;
 			if (tsync_pcr_debug&0x01) {
 				pr_info("check init.first_pcr=0x%x, first_apts=0x%x, ",
@@ -979,7 +982,8 @@ static void tsync_pcr_check_timer_func(unsigned long arg)
 	tsync_pcr_check();
 	spin_unlock_irqrestore(&tsync_pcr_lock, flags);
 
-	tsync_pcr_check_timer.expires = jiffies + TEN_MS_INTERVAL;
+	tsync_pcr_check_timer.expires =
+	(unsigned long)(jiffies + TEN_MS_INTERVAL);
 
 	add_timer(&tsync_pcr_check_timer);
 }
@@ -1045,7 +1049,7 @@ int tsync_pcr_start(void)
 		init_timer(&tsync_pcr_check_timer);
 
 		tsync_pcr_check_timer.function = tsync_pcr_check_timer_func;
-		tsync_pcr_check_timer.expires = jiffies;
+		tsync_pcr_check_timer.expires = (unsigned long)jiffies;
 
 		first_time_record = (jiffies * TIME_UNIT90K) / HZ;
 		tsync_pcr_started = 1;
