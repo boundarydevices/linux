@@ -2839,10 +2839,18 @@ static void spi_nor_resume(struct mtd_info *mtd)
 	struct device *dev = nor->dev;
 	int ret;
 
+	ret = spi_nor_lock_and_prep(nor, SPI_NOR_OPS_RESUME);
+	if (ret) {
+		dev_err(dev, "prepare() failed\n");
+		return;
+	}
+
 	/* re-initialize the nor chip */
 	ret = spi_nor_init(nor);
 	if (ret)
 		dev_err(dev, "resume() failed\n");
+
+	spi_nor_unlock_and_unprep(nor, SPI_NOR_OPS_RESUME);
 }
 
 void spi_nor_restore(struct spi_nor *nor)
