@@ -591,7 +591,7 @@ u8 scpi_get_ethernet_calc(void)
 	SCPI_SETUP_DBUF(sdata, mdata, SCPI_CL_NONE,
 		SCPI_CMD_GET_ETHERNET_CALC, temp, buf);
 	if (scpi_execute_cmd(&sdata))
-		return -EPERM;
+		return 0;
 	return buf.eth_calc;
 }
 EXPORT_SYMBOL_GPL(scpi_get_ethernet_calc);

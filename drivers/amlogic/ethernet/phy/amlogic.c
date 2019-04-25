@@ -32,6 +32,7 @@
 #include <linux/ethtool.h>
 #include <linux/phy.h>
 #include <linux/amlogic/scpi_protocol.h>
+#include <linux/amlogic/cpu_version.h>
 
 #define  SMI_ADDR_TSTWRITE    23
 
@@ -149,7 +150,15 @@ void custom_internal_config(struct phy_device *phydev)
 	 *if env tx_amp ==0 we will use the efuse
 	 */
 	efuse_amp = scpi_get_ethernet_calc();
-	efuse_valid = (efuse_amp >> 3);
+	if (is_meson_g12b_cpu() && is_meson_rev_a()) {
+		pr_info("g12b a\n");
+		efuse_valid = (efuse_amp >> 3);
+		efuse_amp = efuse_amp & 0x7;
+	} else {
+		pr_info("others\n");
+		efuse_valid = (efuse_amp >> 4);
+		efuse_amp = efuse_amp & 0xf;
+	}
 	env_valid = (tx_amp >> 7);
 	if (env_valid || efuse_valid) {
 
