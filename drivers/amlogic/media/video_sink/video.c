@@ -6280,12 +6280,26 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 		diff = system_time - omx_pts;
 		if (time_setomxpts.tv_sec > 0) {
 			struct timeval now;
-
+			/* time_setomxpts record hwc setomxpts time, */
+			/* when check  diff between pcr and  omx_pts, */
+			/* add compensation will let omx_pts and pcr */
+			/* is at the some time, more accurate. Also */
+			/* remove the compensation when omx_pts */
+			/* is not update for a while, in case when */
+			/* paused, pcr is not paused */
 			do_gettimeofday(&now);
 			delta1 = (now.tv_sec - time_setomxpts.tv_sec)
 				* 1000000LL
 				+ (now.tv_usec - time_setomxpts.tv_usec);
-			diff -=  delta1 * 90 / 1000;
+			if (((diff - omx_pts_interval_upper * 3 / 2) > 0)
+				|| ((diff - omx_pts_interval_lower * 3 / 2)
+				< 0)) {
+				time_setomxpts.tv_sec = 0;
+				time_setomxpts.tv_usec = 0;
+				pr_info("omxpts is not update for a while,do not need compenstate\n");
+			} else {
+				diff -=  delta1 * 90 / 1000;
+			}
 		}
 
 		if ((diff - omx_pts_interval_upper) > 0
