@@ -1142,7 +1142,15 @@
 		interrupts = <0 147 4>;
 		interrupt-names = "galcore";
 		reg = <0xff100000 0x800
-		       0xff000000 0x400000>;
+			0xff000000 0x400000
+			0xff63c10c 0x4
+			0xff63c110 0x4
+			0xffd01088 0x4
+			0xff63c1c8 0x4
+			>;
+		reg-names = "NN_REG","NN_SRAM","NN_MEM0",
+			"NN_MEM1","NN_RESET","NN_CLK";
+		nn_efuse = <0xff63003c 0x20>;
 	};
 
 	aocec: aocec {
