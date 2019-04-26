@@ -7346,7 +7346,7 @@ static void set_blend_reg(struct layer_blend_reg_s *blend_reg)
 			DOLBY_CORE2A_SWAP_CTRL2,
 			(dv_core2_hsize << 16) | (dv_core2_vsize + 0));
 #ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
-		update_graphic_width_height(dv_core2_vsize, dv_core2_hsize);
+		update_graphic_width_height(dv_core2_hsize, dv_core2_vsize);
 #endif
 	}
 

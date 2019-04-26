@@ -2386,7 +2386,7 @@ static void apply_stb_core_settings(
 			24, 256 * 5,
 			(uint32_t *)&new_dovi_setting.dm_reg2,
 			(uint32_t *)&new_dovi_setting.dm_lut2,
-			graphics_h, graphics_w, 1, 1);
+			graphics_w, graphics_h, 1, 1);
 	v_size = vinfo->height;
 	if (((vinfo->width == 720) &&
 		(vinfo->height == 480) &&
