@@ -1720,10 +1720,16 @@ int vpp_set_super_scaler_regs(
 					SRSHARP0_SHARP_SR2_CTRL + sr_reg_offt,
 					0, 2, 1);
 		} else {
-			if (((tmp_data >> 2) & 0x1) != 1)
+			if (((tmp_data >> 2) & 0x1) != 1) {
+				if (is_meson_txlx_cpu())
+					WRITE_VCBUS_REG_BITS(
+						SRSHARP0_SHARP_SR2_CTRL
+						+ sr_reg_offt,
+						1, 2, 1);
 				VSYNC_WR_MPEG_REG_BITS(
 					SRSHARP0_SHARP_SR2_CTRL + sr_reg_offt,
 					1, 2, 1);
+			}
 		}
 
 		if ((tmp_data & 0x1) == (reg_srscl0_hori_ratio & 0x1))
