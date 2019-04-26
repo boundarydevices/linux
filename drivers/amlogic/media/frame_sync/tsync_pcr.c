@@ -722,15 +722,41 @@ void tsync_pcr_avevent_locked(enum avevent_e event, u32 param)
 		break;
 
 	case VIDEO_TSTAMP_DISCONTINUITY:{
+		unsigned int systime;
+
 		/* unsigned oldpts=timestamp_vpts_get(); */
 		if (!get_vsync_pts_inc_mode()) {
 			tsync_pcr_tsdemuxpcr_discontinue |=
 				VIDEO_DISCONTINUE;
-				timestamp_pcrscr_enable(0);
 				tsync_process_discontinue();
 		}
+		if (tsdemux_pcrscr_valid_cb &&
+			tsdemux_pcrscr_valid_cb() == 1 &&
+			tsync_check_vpts_discontinuity(param)) {
+			if (tsync_pcr_demux_pcr_used() == 1) {
+				systime = timestamp_pcrscr_get() +
+					timestamp_get_pcrlatency();
+				if (systime < param) {
+					tsync_use_demux_pcr = 0;
+					tsync_pcr_freerun_mode = 1;
+					timestamp_pcrscr_set(param);
+					timestamp_pcrscr_enable(1);
+				} else {
+					timestamp_pcrscr_set(param);
+				}
+			} else {
+				systime = timestamp_pcrscr_get();
+				if (systime > param && tsync_pcr_freerun_mode) {
+					tsync_use_demux_pcr = 1;
+					tsync_pcr_freerun_mode = 0;
+					timestamp_pcrscr_set(param);
+					timestamp_pcrscr_enable(0);
+				} else {
+					timestamp_pcrscr_set(param);
+				}
+			}
+		}
 		timestamp_vpts_set(param);
-
 		break;
 	}
 	case AUDIO_TSTAMP_DISCONTINUITY:{

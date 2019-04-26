@@ -5255,7 +5255,8 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 		/*
 		 * if paused ignore discontinue
 		 */
-		if (!timestamp_pcrscr_enable_state()) {
+		if (!timestamp_pcrscr_enable_state() &&
+			tsync_get_mode() != TSYNC_MODE_PCRMASTER) {
 			/*pr_info("video pts discontinue,
 			 * but pcrscr is disabled,
 			 * return false\n");
@@ -5292,8 +5293,26 @@ static inline bool vpts_expire(struct vframe_s *cur_vf,
 
 			return false;
 		} else if (omx_secret_mode == true
-				&& cur_omx_index >= next_vf->omx_index)
+				&& cur_omx_index >= next_vf->omx_index) {
 			return true;
+		} else if (tsync_check_vpts_discontinuity(pts) &&
+			tsync_get_mode() == TSYNC_MODE_PCRMASTER) {
+			/* in pcrmaster mode and pcr clk was used by tync,
+			 * when the stream was replayed, the pcr clk was
+			 * changed to the head of the stream. in this case,
+			 * we send the "VIDEO_TSTAMP_DISCONTINUITY" signal
+			 *  to notify tsync and adjust the sysclock to
+			 * make playback smooth.
+			 */
+			if (next_vf->pts != 0)
+				tsync_avevent_locked(VIDEO_TSTAMP_DISCONTINUITY,
+					next_vf->pts);
+			else if (next_vf->pts == 0) {
+				tsync_avevent_locked(VIDEO_TSTAMP_DISCONTINUITY,
+					pts);
+				return true;
+			}
+		}
 	} else if (omx_run
 			&& omx_secret_mode
 			&& (omx_pts + omx_pts_interval_upper < next_vf->pts)
