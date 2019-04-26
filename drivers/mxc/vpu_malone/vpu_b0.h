@@ -131,6 +131,10 @@ typedef enum{
 
 #define V4L2_CID_USER_RAW_BASE  (V4L2_CID_USER_BASE + 0x1100)
 #define V4L2_CID_USER_FRAME_DEPTH (V4L2_CID_USER_BASE + 0x1200)
+#define V4L2_CID_USER_FRAME_DIS_REORDER (V4L2_CID_USER_BASE + 0x1300)
+#define V4L2_CID_USER_TS_THRESHOLD	(V4L2_CID_USER_BASE + 0x1101)
+#define V4L2_CID_USER_BS_L_THRESHOLD	(V4L2_CID_USER_BASE + 0x1102)
+#define V4L2_CID_USER_BS_H_THRESHOLD	(V4L2_CID_USER_BASE + 0x1103)
 
 enum vpu_pixel_format {
 	VPU_HAS_COLOCATED = 0x00000001,
@@ -292,6 +296,7 @@ struct vpu_ctx {
 	bool ctx_released;
 	bool start_code_bypass;
 	bool hang_status;
+	bool fifo_low;
 	wait_queue_head_t buffer_wq;
 	u_int32 mbi_count;
 	u_int32 mbi_num;
@@ -317,6 +322,12 @@ struct vpu_ctx {
 	long total_write_bytes;
 	long total_consumed_bytes;
 	long total_ts_bytes;
+	struct semaphore tsm_lock;
+	s64 output_ts;
+	s64 capture_ts;
+	s64 ts_threshold;
+	u32 bs_l_threshold;
+	u32 bs_h_threshold;
 
 	struct v4l2_fract fixed_frame_interval;
 	struct v4l2_fract frame_interval;
@@ -345,5 +356,12 @@ struct vpu_ctx {
 		else if ((vpu_dbg_level_decoder & (~LVL_MASK)) & level) \
 			pr_info("[VPU Decoder]\t " fmt, ## arg); \
 	} while (0)
+
+#define V4L2_NXP_BUF_FLAG_CODECCONFIG		0x00200000
+#define V4L2_NXP_BUF_FLAG_TIMESTAMP_INVALID	0x00400000
+
+#define V4L2_NXP_BUF_MASK_FLAGS		(V4L2_NXP_BUF_FLAG_CODECCONFIG | \
+					 V4L2_NXP_BUF_FLAG_TIMESTAMP_INVALID)
+
 
 #endif

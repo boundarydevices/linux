@@ -33,7 +33,7 @@
 #include <linux/virtio_ring.h>
 #include <linux/imx_rpmsg.h>
 #include <linux/mx8_mu.h>
-#ifdef CONFIG_ARCH_MXC_ARM64
+#ifdef CONFIG_HAVE_IMX_SC
 #include <soc/imx8/sc/sci.h>
 #include <soc/imx8/sc/svc/irq/api.h>
 #endif
@@ -54,8 +54,7 @@ struct imx_virdev {
 	struct virtqueue *vq[2];
 	int base_vq_id;
 	int num_of_vqs;
-	u32 vproc_id;
-	struct notifier_block nb;
+	struct imx_rpmsg_vproc *rpdev;
 };
 
 struct imx_rpmsg_vproc {
@@ -65,6 +64,7 @@ struct imx_rpmsg_vproc {
 	enum imx_rpmsg_variants variant;
 	int vdev_nums;
 	int first_notify;
+	u32 none_suspend;
 #define MAX_VDEV_NUMS  8
 	struct imx_virdev *ivdev[MAX_VDEV_NUMS];
 	void __iomem *mu_base;
@@ -76,7 +76,7 @@ struct imx_rpmsg_vproc {
 	u32 out_idx;
 	u32 core_id;
 	u32 mub_partition;
-	struct notifier_block *pnotifier;
+	struct notifier_block proc_nb;
 	spinlock_t mu_lock;
 	struct platform_device *pdev;
 };
@@ -119,13 +119,6 @@ struct imx_rpmsg_vq_info {
 	void *addr;	/* address where we mapped the virtio ring */
 	struct imx_rpmsg_vproc *rpdev;
 };
-
-static int imx_rpmsg_partion_notify0(struct notifier_block *nb,
-				unsigned long event, void *group);
-static int imx_rpmsg_partion_notify1(struct notifier_block *nb,
-				unsigned long event, void *group);
-
-static struct imx_rpmsg_vproc imx_rpmsg_vprocs[];
 
 static u64 imx_rpmsg_get_features(struct virtio_device *vdev)
 {
@@ -171,58 +164,6 @@ static bool imx_rpmsg_notify(struct virtqueue *vq)
 	return true;
 }
 
-static int imx_mu_rpmsg_callback(struct notifier_block *this,
-					unsigned long index, void *data)
-{
-	u32 mu_msg = (phys_addr_t) data;
-	struct imx_virdev *virdev;
-
-	virdev = container_of(this, struct imx_virdev, nb);
-
-	pr_debug("%s mu_msg: 0x%x\n", __func__, mu_msg);
-	/* ignore vq indices which are clearly not for us */
-	mu_msg = mu_msg >> 16;
-	if (mu_msg < virdev->base_vq_id || mu_msg > virdev->base_vq_id + 1) {
-		pr_debug("mu_msg: 0x%x is invalid\n", mu_msg);
-		return NOTIFY_DONE;
-	}
-
-	mu_msg -= virdev->base_vq_id;
-
-	/*
-	 * Currently both PENDING_MSG and explicit-virtqueue-index
-	 * messaging are supported.
-	 * Whatever approach is taken, at this point 'mu_msg' contains
-	 * the index of the vring which was just triggered.
-	 */
-	if (mu_msg < virdev->num_of_vqs)
-		vring_interrupt(mu_msg, virdev->vq[mu_msg]);
-
-	return NOTIFY_DONE;
-}
-
-static int imx_mu_rpmsg_register_nb(struct imx_rpmsg_vproc *rpdev,
-		struct notifier_block *nb)
-{
-	if ((rpdev == NULL) || (nb == NULL))
-		return -EINVAL;
-
-	blocking_notifier_chain_register(&(rpdev->notifier), nb);
-
-	return 0;
-}
-
-static int imx_mu_rpmsg_unregister_nb(struct imx_rpmsg_vproc *rpdev,
-		struct notifier_block *nb)
-{
-	if ((rpdev == NULL) || (nb == NULL))
-		return -EINVAL;
-
-	blocking_notifier_chain_unregister(&(rpdev->notifier), nb);
-
-	return 0;
-}
-
 static struct virtqueue *rp_find_vq(struct virtio_device *vdev,
 				    unsigned int index,
 				    void (*callback)(struct virtqueue *vq),
@@ -230,8 +171,7 @@ static struct virtqueue *rp_find_vq(struct virtio_device *vdev,
 				    bool ctx)
 {
 	struct imx_virdev *virdev = to_imx_virdev(vdev);
-	int id = virdev->vproc_id;
-	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[id];
+	struct imx_rpmsg_vproc *rpdev = virdev->rpdev;
 	struct imx_rpmsg_vq_info *rpvq;
 	struct virtqueue *vq;
 	int err;
@@ -284,9 +224,6 @@ free_rpvq:
 static void imx_rpmsg_del_vqs(struct virtio_device *vdev)
 {
 	struct virtqueue *vq, *n;
-	struct imx_virdev *virdev = to_imx_virdev(vdev);
-	int id = virdev->vproc_id;
-	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[id];
 
 	list_for_each_entry_safe(vq, n, &vdev->vqs, list) {
 		struct imx_rpmsg_vq_info *rpvq = vq->priv;
@@ -295,9 +232,6 @@ static void imx_rpmsg_del_vqs(struct virtio_device *vdev)
 		vring_del_virtqueue(vq);
 		kfree(rpvq);
 	}
-
-	if (&virdev->nb)
-		imx_mu_rpmsg_unregister_nb(rpdev, &virdev->nb);
 }
 
 static int imx_rpmsg_find_vqs(struct virtio_device *vdev, unsigned int nvqs,
@@ -308,8 +242,6 @@ static int imx_rpmsg_find_vqs(struct virtio_device *vdev, unsigned int nvqs,
 		       struct irq_affinity *desc)
 {
 	struct imx_virdev *virdev = to_imx_virdev(vdev);
-	int id = virdev->vproc_id;
-	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[id];
 	int i, err;
 
 	/* we maintain two virtqueues per remote processor (for RX and TX) */
@@ -326,10 +258,6 @@ static int imx_rpmsg_find_vqs(struct virtio_device *vdev, unsigned int nvqs,
 	}
 
 	virdev->num_of_vqs = nvqs;
-
-	virdev->nb.notifier_call = imx_mu_rpmsg_callback;
-	imx_mu_rpmsg_register_nb(rpdev, &virdev->nb);
-
 	return 0;
 
 error:
@@ -365,26 +293,6 @@ static struct virtio_config_ops imx_rpmsg_config_ops = {
 	.reset		= imx_rpmsg_reset,
 	.set_status	= imx_rpmsg_set_status,
 	.get_status	= imx_rpmsg_get_status,
-};
-
-static struct notifier_block imx_rpmsg_partion_notifier[] = {
-	{
-		.notifier_call = imx_rpmsg_partion_notify0,
-	},
-	{
-		.notifier_call = imx_rpmsg_partion_notify1,
-	},
-};
-
-static struct imx_rpmsg_vproc imx_rpmsg_vprocs[] = {
-	{
-		.rproc_name	= "m4",
-		.pnotifier	= &imx_rpmsg_partion_notifier[0],
-	},
-	{
-		.rproc_name	= "m4",
-		.pnotifier	= &imx_rpmsg_partion_notifier[1],
-	},
 };
 
 static const struct of_device_id imx_rpmsg_dt_ids[] = {
@@ -439,6 +347,7 @@ static void rpmsg_work_handler(struct work_struct *work)
 {
 	u32 message;
 	unsigned long flags;
+	struct imx_virdev *virdev;
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct imx_rpmsg_vproc *rpdev = container_of(dwork,
 			struct imx_rpmsg_vproc, rpmsg_work);
@@ -449,8 +358,20 @@ static void rpmsg_work_handler(struct work_struct *work)
 		message = rpdev->m4_message[rpdev->out_idx % MAX_NUM];
 		spin_unlock_irqrestore(&rpdev->mu_lock, flags);
 
-		blocking_notifier_call_chain(&(rpdev->notifier), 4,
-						(void *)(phys_addr_t)message);
+		virdev = rpdev->ivdev[(message >> 16) / 2];
+
+		pr_debug("%s msg: 0x%x\n", __func__, message);
+		message = message >> 16;
+		message -= virdev->base_vq_id;
+
+		/*
+		 * Currently both PENDING_MSG and explicit-virtqueue-index
+		 * messaging are supported.
+		 * Whatever approach is taken, at this point message contains
+		 * the index of the vring which was just triggered.
+		 */
+		if (message  < virdev->num_of_vqs)
+			vring_interrupt(message, virdev->vq[message]);
 
 		spin_lock_irqsave(&rpdev->mu_lock, flags);
 		rpdev->m4_message[rpdev->out_idx % MAX_NUM] = 0;
@@ -513,7 +434,7 @@ static int imx_rpmsg_mu_init(struct imx_rpmsg_vproc *rpdev)
 void imx_rpmsg_restore(struct imx_rpmsg_vproc *rpdev)
 {
 	int i;
-	u32 flags;
+	u32 flags = 0;
 	int vdev_nums = rpdev->vdev_nums;
 
 	for (i = 0; i < vdev_nums; i++) {
@@ -523,7 +444,8 @@ void imx_rpmsg_restore(struct imx_rpmsg_vproc *rpdev)
 
 	/* Make a double check that remote processor is ready or not */
 	for (i = 0; i < REMOTE_READY_WAIT_MAX_RETRIES; i++) {
-		flags = MU_ReadStatus(rpdev->mu_base);
+		if (rpdev->none_suspend)
+			flags = MU_ReadStatus(rpdev->mu_base);
 		if (flags & REMOTE_IS_READY)
 			break;
 		usleep_range(100, 200);
@@ -548,35 +470,20 @@ void imx_rpmsg_restore(struct imx_rpmsg_vproc *rpdev)
 		rpdev->ivdev[i]->vdev.dev.parent = &rpdev->pdev->dev;
 		rpdev->ivdev[i]->vdev.dev.release = imx_rpmsg_vproc_release;
 		rpdev->ivdev[i]->base_vq_id = i * 2;
-		rpdev->ivdev[i]->vproc_id = rpdev->core_id;
+		rpdev->ivdev[i]->rpdev = rpdev;
 
 		if (register_virtio_device(&rpdev->ivdev[i]->vdev))
 			pr_err("%s failed to register rpdev.\n", __func__);
 	}
 }
 
-static int imx_rpmsg_partion_notify0(struct notifier_block *nb,
+static int imx_rpmsg_partion_notify(struct notifier_block *nb,
 				      unsigned long event, void *group)
 {
-#ifdef CONFIG_ARCH_MXC_ARM64
-	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[0];
+#ifdef CONFIG_HAVE_IMX_SC
+	struct imx_rpmsg_vproc *rpdev;
 
-	/* Ignore other irqs */
-	if (!((event & BIT(rpdev->mub_partition)) &&
-		(*(sc_irq_group_t *)group == SC_IRQ_GROUP_REBOOTED)))
-		return 0;
-
-	imx_rpmsg_restore(rpdev);
-	pr_info("Patition%d reset!\n", rpdev->mub_partition);
-#endif
-	return 0;
-}
-
-static int imx_rpmsg_partion_notify1(struct notifier_block *nb,
-				      unsigned long event, void *group)
-{
-#ifdef CONFIG_ARCH_MXC_ARM64
-	struct imx_rpmsg_vproc *rpdev = &imx_rpmsg_vprocs[1];
+	rpdev = container_of(nb, struct imx_rpmsg_vproc, proc_nb);
 
 	/* Ignore other irqs */
 	if (!((event & BIT(rpdev->mub_partition)) &&
@@ -598,9 +505,15 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct imx_rpmsg_vproc *rpdev;
 
+	rpdev = devm_kzalloc(dev, sizeof(*rpdev), GFP_KERNEL);
+	if (!rpdev)
+		return -ENOMEM;
+	rpdev->none_suspend = 1;
+	rpdev->rproc_name = "m4";
+	rpdev->proc_nb.notifier_call = imx_rpmsg_partion_notify;
+
 	if (of_property_read_u32(np, "multi-core-id", &core_id))
 		core_id = 0;
-	rpdev = &imx_rpmsg_vprocs[core_id];
 	rpdev->core_id = core_id;
 	rpdev->variant = (enum imx_rpmsg_variants)of_device_get_match_data(dev);
 
@@ -702,7 +615,7 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 		rpdev->ivdev[j]->vdev.dev.parent = &pdev->dev;
 		rpdev->ivdev[j]->vdev.dev.release = imx_rpmsg_vproc_release;
 		rpdev->ivdev[j]->base_vq_id = j * 2;
-		rpdev->ivdev[j]->vproc_id = rpdev->core_id;
+		rpdev->ivdev[j]->rpdev = rpdev;
 
 		ret = register_virtio_device(&rpdev->ivdev[j]->vdev);
 		if (ret) {
@@ -714,7 +627,7 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, rpdev);
 
-#ifdef CONFIG_ARCH_MXC_ARM64
+#ifdef CONFIG_HAVE_IMX_SC
 	if (rpdev->variant == IMX8QXP || rpdev->variant == IMX8QM) {
 		uint32_t mu_id;
 		sc_err_t sciErr;
@@ -755,7 +668,7 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 		if (sciErr)
 			pr_info("Cannot request partition reset interrupt\n");
 
-		return register_scu_notifier(rpdev->pnotifier);
+		return register_scu_notifier(&rpdev->proc_nb);
 
 	}
 #endif
@@ -772,17 +685,18 @@ vdev_err_out:
 }
 
 #ifdef CONFIG_PM_SLEEP
-static int imx_rpmsg_suspend(struct device *dev)
+static int imx_rpmsg_noirq_suspend(struct device *dev)
 {
 	struct imx_rpmsg_vproc *rpdev = dev_get_drvdata(dev);
 
+	rpdev->none_suspend = 0;
 	if (rpdev->mu_clk)
 		clk_disable_unprepare(rpdev->mu_clk);
 
 	return 0;
 }
 
-static int imx_rpmsg_resume(struct device *dev)
+static int imx_rpmsg_noirq_resume(struct device *dev)
 {
 	struct imx_rpmsg_vproc *rpdev = dev_get_drvdata(dev);
 	int ret;
@@ -794,12 +708,17 @@ static int imx_rpmsg_resume(struct device *dev)
 			return ret;
 		}
 	}
+	ret = imx_rpmsg_mu_init(rpdev);
+	rpdev->none_suspend = 1;
 
-	return imx_rpmsg_mu_init(rpdev);
+	return ret;
 }
 #endif
 
-static SIMPLE_DEV_PM_OPS(imx_rpmsg_pm_ops, imx_rpmsg_suspend, imx_rpmsg_resume);
+static const struct dev_pm_ops imx_rpmsg_pm_ops = {
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(imx_rpmsg_noirq_suspend,
+				      imx_rpmsg_noirq_resume)
+};
 
 static struct platform_driver imx_rpmsg_driver = {
 	.driver = {

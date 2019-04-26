@@ -888,18 +888,21 @@ static int tcpm_pd_send_sink_caps(struct tcpm_port *port)
 	return tcpm_pd_transmit(port, TCPC_TX_SOP, &msg);
 }
 
+static enum tcpm_state tcpm_get_idle_state(struct tcpm_port *port)
+{
+	if (port->typec_caps.type == TYPEC_PORT_SNK)
+		return SNK_UNATTACHED;
+	else if (port->typec_caps.type == TYPEC_PORT_SRC)
+		return SNK_UNATTACHED;
+	else if (port->typec_caps.type == TYPEC_PORT_DRP)
+		return DRP_TOGGLING;
+	else
+		return INVALID_STATE;
+}
+
 static void tcpm_qos_handling(struct tcpm_port *port)
 {
-	enum tcpm_state idle_state;
-
-	if (port->typec_caps.type == TYPEC_PORT_SNK)
-		idle_state = SNK_UNATTACHED;
-	else if (port->typec_caps.type == TYPEC_PORT_SRC)
-		idle_state = SNK_UNATTACHED;
-	else if (port->typec_caps.type == TYPEC_PORT_DRP)
-		idle_state = DRP_TOGGLING;
-	else
-		return;
+	enum tcpm_state idle_state = tcpm_get_idle_state(port);
 
 	if ((port->prev_state == SNK_READY || port->prev_state == SRC_READY ||
 	    port->prev_state == idle_state)) {
@@ -5047,6 +5050,11 @@ void tcpm_unregister_port(struct tcpm_port *port)
 	usb_role_switch_put(port->role_sw);
 	tcpm_debugfs_exit(port);
 	destroy_workqueue(port->wq);
+	if (!(port->state == SNK_READY || port->state == SRC_READY ||
+		   port->state == tcpm_get_idle_state(port))) {
+		pm_qos_remove_request(&port->pm_qos_req);
+		release_bus_freq(BUS_FREQ_HIGH);
+	}
 }
 EXPORT_SYMBOL_GPL(tcpm_unregister_port);
 

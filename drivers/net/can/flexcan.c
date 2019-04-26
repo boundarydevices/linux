@@ -33,7 +33,7 @@
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
 
-#ifdef CONFIG_ARCH_MXC_ARM64
+#ifdef CONFIG_HAVE_IMX_SC
 #include <soc/imx8/sc/sci.h>
 #endif
 
@@ -366,7 +366,7 @@ struct flexcan_priv {
 
 	struct regmap *gpr;
 	struct flexcan_stop_mode stm;
-#ifdef CONFIG_ARCH_MXC_ARM64
+#ifdef CONFIG_HAVE_IMX_SC
 	sc_ipc_t ipc_handle;
 #endif
 	bool wakeup;
@@ -588,7 +588,7 @@ static void flexcan_wake_mask_disable(struct flexcan_priv *priv)
 	priv->write(reg_mcr, &regs->mcr);
 }
 
-#ifdef CONFIG_ARCH_MXC_ARM64
+#ifdef CONFIG_HAVE_IMX_SC
 static void imx8_ipg_stop_enable(struct flexcan_priv *priv, bool enabled)
 {
 	struct device_node *np = priv->dev->of_node;
@@ -1362,10 +1362,11 @@ static int flexcan_chip_start(struct net_device *dev)
 		reg_mcr = priv->read(&regs->mcr);
 		priv->write(reg_mcr | FLEXCAN_MCR_FDEN, &regs->mcr);
 
-		if (!(priv->can.ctrlmode & CAN_CTRLMODE_FD_NON_ISO)) {
-			reg_ctrl2 = priv->read(&regs->ctrl2);
+		reg_ctrl2 = priv->read(&regs->ctrl2);
+		if (!(priv->can.ctrlmode & CAN_CTRLMODE_FD_NON_ISO))
 			priv->write(reg_ctrl2 | FLEXCAN_CTRL2_ISOCANFDEN, &regs->ctrl2);
-		}
+		else
+			priv->write(reg_ctrl2 & ~FLEXCAN_CTRL2_ISOCANFDEN, &regs->ctrl2);
 	}
 
 	if (priv->devtype_data->quirks & FLEXCAN_QUIRK_USE_OFF_TIMESTAMP) {
@@ -1680,7 +1681,7 @@ static void unregister_flexcandev(struct net_device *dev)
 	unregister_candev(dev);
 }
 
-#ifdef CONFIG_ARCH_MXC_ARM64
+#ifdef CONFIG_HAVE_IMX_SC
 static int imx8_sc_ipc_fetch(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
@@ -1939,7 +1940,7 @@ static int flexcan_remove(struct platform_device *pdev)
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct flexcan_priv *priv = netdev_priv(dev);
 
-#ifdef CONFIG_ARCH_MXC_ARM64
+#ifdef CONFIG_HAVE_IMX_SC
 	sc_ipc_close(priv->ipc_handle);
 #endif
 	unregister_flexcandev(dev);
