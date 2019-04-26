@@ -1879,6 +1879,7 @@
 		compatible = "arm, isp";
 		reg = <0xff140000 0x00040000>;
 		reg-names = "ISP";
+		isp-efuse = <0xff630038 0x4000>;
 		interrupts = <0 142 4>;
 		interrupt-names = "ISP";
 		temper-buf-size = <24>;
