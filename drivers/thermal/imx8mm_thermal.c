@@ -64,7 +64,7 @@ static int tmu_get_temp(void *data, int *temp)
 	val = readl_relaxed(tmu->tmu_base + TRITSR) & TEMP_VAL_MASK;
 
 	/* check if the temp in the sensor's range */
-	if (val < TEMP_LOW_LIMIT)
+	if (val < TEMP_LOW_LIMIT) {
 		/* the temp sensor need about 1ms to finish the measurement */
 		msleep(10);
 		val = readl_relaxed(tmu->tmu_base + TRITSR) & TEMP_VAL_MASK;
