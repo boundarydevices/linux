@@ -119,17 +119,6 @@
 			"CPU-Capture", "Capture";
 	};
 
-	panel {
-		compatible = "innolux,at043tn24";
-		backlight = <&backlight_display>;
-
-		port {
-			panel_in: endpoint {
-				remote-endpoint = <&display_out>;
-			};
-		};
-	};
-
 	spi4 {
 		compatible = "spi-gpio";
 		pinctrl-names = "default";
@@ -319,12 +308,6 @@
 				de-active = <1>;
 				pixelclk-active = <0>;
 			};
-		};
-	};
-
-	port {
-		display_out: endpoint {
-			remote-endpoint = <&panel_in>;
 		};
 	};
 };
