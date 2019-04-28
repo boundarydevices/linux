@@ -394,6 +394,7 @@ struct sdma_channel {
 	bool				sw_done;
 	u32				sw_done_sel;
 	struct work_struct              terminate_worker;
+	bool				is_ram_script;
 };
 
 #define IMX_DMA_SG_LOOP		BIT(0)
@@ -479,6 +480,7 @@ struct sdma_engine {
 	bool				clk_ratio;
 	struct gen_pool			*iram_pool;
 	bool				fw_loaded;
+	unsigned short			ram_code_start;
 };
 
 static int sdma_config_write(struct dma_chan *chan,
@@ -1069,6 +1071,13 @@ static void sdma_get_pc(struct sdma_channel *sdmac,
 	sdmac->pc_to_device = emi_2_per;
 	sdmac->device_to_device = per_2_per;
 	sdmac->pc_to_pc = emi_2_emi;
+
+	if (sdma->ram_code_start &&
+	   ((sdmac->pc_from_device >= sdma->ram_code_start) ||
+	   (sdmac->pc_to_device >= sdma->ram_code_start) ||
+	   (sdmac->device_to_device >= sdma->ram_code_start ||
+	   (sdmac->pc_to_pc >= sdma->ram_code_start))))
+		sdmac->is_ram_script = true;
 }
 
 static int sdma_load_context(struct sdma_channel *sdmac)
@@ -1124,6 +1133,31 @@ static int sdma_load_context(struct sdma_channel *sdmac)
 	bd0->mode.count = sizeof(*context) / 4;
 	bd0->buffer_addr = sdma->context_phys;
 	bd0->ext_buffer_addr = 2048 + (sizeof(*context) / 4) * channel;
+	ret = sdma_run_channel0(sdma);
+
+	spin_unlock_irqrestore(&sdma->channel_0_lock, flags);
+
+	return ret;
+}
+
+static int sdma_save_restore_context(struct sdma_engine *sdma, bool save)
+{
+	struct sdma_context_data *context = sdma->context;
+	struct sdma_buffer_descriptor *bd0 = sdma->bd0;
+	unsigned long flags;
+	int ret;
+
+	spin_lock_irqsave(&sdma->channel_0_lock, flags);
+
+	if (save)
+		bd0->mode.command = C0_GETDM;
+	else
+		bd0->mode.command = C0_SETDM;
+
+	bd0->mode.status = BD_DONE | BD_WRAP | BD_EXTD;
+	bd0->mode.count = MAX_DMA_CHANNELS * sizeof(*context) / 4;
+	bd0->buffer_addr = sdma->context_phys;
+	bd0->ext_buffer_addr = 2048;
 	ret = sdma_run_channel0(sdma);
 
 	spin_unlock_irqrestore(&sdma->channel_0_lock, flags);
@@ -1545,7 +1579,7 @@ static struct sdma_desc *sdma_transfer_init(struct sdma_channel *sdmac,
 {
 	struct sdma_desc *desc;
 
-	if (!sdmac->sdma->fw_loaded) {
+	if (!sdmac->sdma->fw_loaded && sdmac->is_ram_script) {
 		dev_err(sdmac->sdma->dev, "sdma firmware not ready!\n");
 		goto err_out;
 	}
@@ -2062,6 +2096,7 @@ static void sdma_load_firmware(const struct firmware *fw, void *context)
 
 	addr = (void *)header + header->script_addrs_start;
 	ram_code = (void *)header + header->ram_code_start;
+	sdma->ram_code_start = header->ram_code_start;
 
 	clk_enable(sdma->clk_ipg);
 	clk_enable(sdma->clk_ahb);
@@ -2073,6 +2108,8 @@ static void sdma_load_firmware(const struct firmware *fw, void *context)
 	clk_disable(sdma->clk_ahb);
 
 	sdma_add_scripts(sdma, addr);
+
+	sdma->fw_loaded = true;
 
 	dev_info(sdma->dev, "loaded firmware %d.%d\n",
 			header->version_major,
@@ -2519,31 +2556,6 @@ static int sdma_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM_SLEEP
-static int sdma_save_restore_context(struct sdma_engine *sdma, bool save)
-{
-	struct sdma_context_data *context = sdma->context;
-	struct sdma_buffer_descriptor *bd0 = sdma->bd0;
-	unsigned long flags;
-	int ret;
-
-	spin_lock_irqsave(&sdma->channel_0_lock, flags);
-
-	if (save)
-		bd0->mode.command = C0_GETDM;
-	else
-		bd0->mode.command = C0_SETDM;
-
-	bd0->mode.status = BD_DONE | BD_WRAP | BD_EXTD;
-	bd0->mode.count = MAX_DMA_CHANNELS * sizeof(*context) / 4;
-	bd0->buffer_addr = sdma->context_phys;
-	bd0->ext_buffer_addr = 2048;
-	ret = sdma_run_channel0(sdma);
-
-	spin_unlock_irqrestore(&sdma->channel_0_lock, flags);
-
-	return ret;
-}
-
 static int sdma_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -2646,8 +2658,6 @@ static int sdma_resume(struct device *dev)
 		dev_err(sdma->dev, "restore context error!\n");
 		goto out;
 	}
-
-	ret = 0;
 out:
 	clk_disable(sdma->clk_ipg);
 	clk_disable(sdma->clk_ahb);
