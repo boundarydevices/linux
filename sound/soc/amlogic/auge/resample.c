@@ -246,15 +246,21 @@ int resample_set(int id, int index)
 	if (!p_resample)
 		return 0;
 
+	if (index < 0 || index > 7) {
+		pr_err("%s(), invalid index %d\n", __func__, index);
+		return 0;
+	}
+
+	pr_info("%s resample_%c to %s, last %s\n",
+		__func__,
+		(id == RESAMPLE_A) ? 'a' : 'b',
+		auge_resample_texts[index],
+		auge_resample_texts[p_resample->asrc_rate_idx]);
+
 	if (index == p_resample->asrc_rate_idx)
 		return 0;
 
 	p_resample->asrc_rate_idx = index;
-
-	pr_info("%s resample_%c %s\n",
-		__func__,
-		(id == 0) ? 'a' : 'b',
-		auge_resample_texts[index]);
 
 	if (audio_resample_set(p_resample, (bool)index, resample_rate))
 		return 0;

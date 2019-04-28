@@ -1476,6 +1476,12 @@ static int aml_spdif_parse_of(struct platform_device *pdev)
 		if (ret < 0)
 			p_spdif->auto_asrc = 0;
 
+		if (p_spdif->auto_asrc < 0 ||
+				p_spdif->auto_asrc > 7) {
+			pr_info("%s(), inval asrc setting %d\n",
+				__func__, p_spdif->auto_asrc);
+			p_spdif->auto_asrc = 0;
+		}
 		pr_debug("SPDIF id %d asrc_id:%d auto_asrc:%d\n",
 			p_spdif->id,
 			p_spdif->asrc_id,
