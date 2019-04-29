@@ -370,6 +370,7 @@ struct flexcan_priv {
 	sc_ipc_t ipc_handle;
 #endif
 	bool wakeup;
+	bool in_stop_mode;
 
 	/* Selects the clock source to CAN Protocol Engine (PE), 1 by default*/
 	u32 clk_src;
@@ -1995,6 +1996,7 @@ static int __maybe_unused flexcan_suspend(struct device *device)
 		if (device_may_wakeup(device)) {
 			enable_irq_wake(dev->irq);
 			flexcan_enter_stop_mode(priv);
+			priv->in_stop_mode = true;
 		} else {
 			flexcan_chip_stop(dev);
 			ret = pm_runtime_force_suspend(device);
@@ -2019,6 +2021,11 @@ static int __maybe_unused flexcan_resume(struct device *device)
 		netif_start_queue(dev);
 
 		if (device_may_wakeup(device)) {
+			if (priv->in_stop_mode) {
+				disable_irq_wake(dev->irq);
+				flexcan_exit_stop_mode(priv);
+				priv->in_stop_mode = false;
+			}
 			flexcan_wake_mask_disable(priv);
 		} else {
 			pinctrl_pm_select_default_state(device);
@@ -2072,6 +2079,7 @@ static int __maybe_unused flexcan_noirq_resume(struct device *device)
 	if (netif_running(dev) && device_may_wakeup(device)) {
 		disable_irq_wake(dev->irq);
 		flexcan_exit_stop_mode(priv);
+		priv->in_stop_mode = false;
 	}
 
 	return 0;
