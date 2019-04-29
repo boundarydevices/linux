@@ -98,9 +98,9 @@
 	pinctrl-0 = <&pinctrl_i2c4>;
 	status = "okay";
 
-	codec_a: cs42888@048 {
+	codec_a: cs42888@48 {
 		compatible = "cirrus,cs42888";
-		reg = <0x048>;
+		reg = <0x48>;
 		clocks = <&codec_osc 0>;
 		clock-names = "mclk";
 		VA-supply = <&reg_audio>;
