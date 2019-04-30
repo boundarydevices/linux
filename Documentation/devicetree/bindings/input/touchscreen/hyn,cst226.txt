@@ -1,0 +1,29 @@
+* Neonode infrared touchscreen controller
+
+Required properties:
+- compatible: must be "hyn,cst226"
+- reg: I2C address of the chip
+- interrupts: interrupt to which the chip is connected
+- reset-gpios: reset gpio the chip is connected to
+- x-size: horizontal resolution of touchscreen
+- y-size: vertical resolution of touchscreen
+
+Optional properties:
+- irq-gpios : interrupt gpio the chip is connected to
+- vdd-supply: Regulator controlling the controller supply
+
+Example:
+
+	i2c@00000000 {
+		/* ... */
+
+	hyn@1A {
+		compatible = "hyn,cst226";
+		status = "okay";
+		reg = <0x1a>;
+		reset-gpio = <&gpio GPIOA_5 0x00>;
+		irq-gpio = <&gpio GPIOA_6 0x00>;
+	};
+
+		/* ... */
+	};

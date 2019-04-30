@@ -1,0 +1,10 @@
+#
+#  Touchscreen driver configuration
+#
+
+config  TOUCHSCREEN_HYN_CST2XX
+       tristate  "hyn_CST2XX touchscreen driver"
+       depends on INPUT && I2C
+       default m
+       help
+		hyn_CST2XX touchscreen driver

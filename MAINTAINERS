@@ -14843,3 +14843,7 @@ F:	include/linux/amlogic/media/mipi/*
 AMLOGIC SM1 S905D3 AC202
 M:	LUAN YUAN <luan.yuan@amlogic.com>
 F:	arch/arm64/boot/dts/amlogic/sm1_s905d3_ac202*
+
+AMLOGIC HYN_CST2XX TOUCHSCREEN
+M:	XINLIANG ZHANG <xinliang.zhang@amlogic.com>
+F:	drivers/amlogic/input/touchscreen/hyn_cst2xx/*

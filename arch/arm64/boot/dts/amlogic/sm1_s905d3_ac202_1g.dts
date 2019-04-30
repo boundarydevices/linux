@@ -1091,6 +1091,14 @@
 	pinctrl-0=<&i2c3_master_pins2>;
 	clock-frequency = <100000>; /* default 100k */
 
+	hyn@1A {
+		compatible = "hyn,cst226";
+		status = "okay";
+		reg = <0x1a>;
+		reset-gpio = <&gpio GPIOA_5 0x00>;
+		irq-gpio = <&gpio GPIOA_6 0x00>;
+	};
+
 	/* for ref board */
 	ad82584f_62: ad82584f_62@62 {
 		compatible = "ESMT, ad82584f";
