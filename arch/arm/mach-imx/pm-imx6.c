@@ -1357,7 +1357,7 @@ void __init imx6sx_pm_init(void)
 	WARN_ON(!ocram_saved_in_ddr);
 
 	np = of_find_node_by_path(
-		"/soc/aips-bus@02000000/spba-bus@02000000/serial@02020000");
+		"/soc/aips-bus@2000000/spba-bus@2000000/serial@2020000");
 	if (np)
 		console_base = of_iomap(np, 0);
 	if (imx_src_is_m4_enabled()) {
@@ -1380,7 +1380,7 @@ void __init imx6ul_pm_init(void)
 
 	if (cpu_is_imx6ull()) {
 		np = of_find_node_by_path(
-			"/soc/aips-bus@02000000/spba-bus@02000000/serial@02020000");
+			"/soc/aips-bus@2000000/spba-bus@2000000/serial@2020000");
 		if (np)
 			console_base = of_iomap(np, 0);
 	}
