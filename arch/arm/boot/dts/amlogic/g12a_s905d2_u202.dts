@@ -1147,7 +1147,7 @@
 		interrupt-names = "irq_spdifin";
 		pinctrl-names = "spdif_pins",
 					"spdif_pins_mute";
-		pinctrl-0 = <&spdifout &spdifin>;
+		pinctrl-0 = <&spdifout>; /* bob remove &spdifin*/
 		pinctrl-1 = <&spdifout_a_mute>;
 		status = "okay";
 	};
@@ -1326,12 +1326,15 @@
 		};
 	};
 
-	spdifin: spdifin {
-		mux {/* GPIOH_5 */
-			groups = "spdif_in_h";
-			function = "spdif_in";
-		};
-	};
+	/* GPIOH_5 */
+	/* bob remove spdifin
+	 *spdifin: spdifin {
+	 *	mux {
+	 *		groups = "spdif_in_h";
+	 *		function = "spdif_in";
+	 *	};
+	 *};
+	 */
 
 	/* GPIOH_4 */
 	/*
@@ -1354,13 +1357,15 @@
 		};
 	};
 
-	bl_pwm_off_pins:bl_pwm_off_pin {
-		mux {
-			pins = "GPIOH_5";
-			function = "gpio_periphs";
-			output-high;
-		};
-	};
+	/*
+	 *bl_pwm_off_pins:bl_pwm_off_pin {
+	 *	mux {
+	 *		pins = "GPIOH_5";
+	 *		function = "gpio_periphs";
+	 *		output-high;
+	 *	};
+	 *};
+	 */
 
 	clk12_24_z_pins:clk12_24_z_pins {
 		mux {
