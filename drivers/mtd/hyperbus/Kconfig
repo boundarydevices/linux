@@ -29,4 +29,10 @@ config RPCIF_HYPERBUS
 	help
 	  This option includes Renesas RPC-IF HyperBus support.
 
+config IMX_HYPERBUS
+	bool "NXP HYPERBUS DRIVER"
+	depends on ARCH_MXC || ARM|| ARM64
+	help
+	Driver for i.MX HyperBus(flexspi) controller.
+
 endif # MTD_HYPERBUS
