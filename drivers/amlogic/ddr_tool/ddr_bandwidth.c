@@ -104,6 +104,11 @@ static void cal_ddr_usage(struct ddr_bandwidth *db, struct ddr_grant *dg)
 		memcpy(&db->max_sample, &db->cur_sample,
 		       sizeof(struct ddr_bandwidth_sample));
 	}
+	/* update min sample */
+	if (db->cur_sample.total_bandwidth < db->min_sample.total_bandwidth) {
+		memcpy(&db->min_sample, &db->cur_sample,
+		       sizeof(struct ddr_bandwidth_sample));
+	}
 	/* update usage statistics */
 	db->usage_stat[db->cur_sample.total_usage / 1000]++;
 
@@ -338,8 +343,10 @@ static ssize_t usage_stat_store(struct class *cla,
 	/* clear flag and start statistics */
 	spin_lock_irqsave(&aml_db->lock, flags);
 	memset(&aml_db->max_sample, 0, sizeof(struct ddr_bandwidth_sample));
+	memset(&aml_db->min_sample, 0, sizeof(struct ddr_bandwidth_sample));
 	memset(aml_db->usage_stat, 0, 10 * sizeof(int));
 	memset(&aml_db->avg, 0, sizeof(struct ddr_avg_bandwidth));
+	aml_db->min_sample.total_bandwidth = 0xffffffff;
 	spin_unlock_irqrestore(&aml_db->lock, flags);
 	return count;
 }
@@ -353,6 +360,7 @@ static ssize_t usage_stat_show(struct class *cla,
 	unsigned long total_count = 0;
 	struct ddr_avg_bandwidth tmp;
 #define MAX_PREFIX "MAX bandwidth: %8d KB/s, usage: %2d.%02d%%"
+#define MIN_PREFIX "MIN bandwidth: %8d KB/s, usage: %2d.%02d%%"
 #define AVG_PREFIX "AVG bandwidth: %8lld KB/s, usage: %2d.%02d%%"
 
 	if (aml_db->mode != MODE_ENABLE)
@@ -370,6 +378,20 @@ static ssize_t usage_stat_show(struct class *cla,
 		s += sprintf(buf + s, "ch:%d port:%16llx: %8d KB/s\n",
 			     i, aml_db->port[i],
 			     aml_db->max_sample.bandwidth[i]);
+	}
+
+	/* show for min bandwidth */
+	percent = aml_db->min_sample.total_usage / 100;
+	rem     = aml_db->min_sample.total_usage % 100;
+	tick    = aml_db->min_sample.tick;
+	do_div(tick, 1000);
+	s      += sprintf(buf + s, MIN_PREFIX", tick:%lld us\n",
+			  aml_db->min_sample.total_bandwidth,
+			  percent, rem, tick);
+	for (i = 0; i < aml_db->channels; i++) {
+		s += sprintf(buf + s, "ch:%d port:%16llx: %8d KB/s\n",
+			     i, aml_db->port[i],
+			     aml_db->min_sample.bandwidth[i]);
 	}
 
 	/* show for average bandwidth */
@@ -652,6 +674,7 @@ static int __ref ddr_bandwidth_probe(struct platform_device *pdev)
 	if (!aml_db)
 		return -ENOMEM;
 
+	aml_db->min_sample.total_bandwidth = 0xffffffff;
 	aml_db->cpu_type = get_meson_cpu_version(0);
 	pr_info("chip type:0x%x\n", aml_db->cpu_type);
 	if (aml_db->cpu_type < MESON_CPU_MAJOR_ID_M8B) {

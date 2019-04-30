@@ -159,6 +159,7 @@ struct ddr_bandwidth {
 	spinlock_t lock;
 	struct ddr_bandwidth_sample cur_sample;
 	struct ddr_bandwidth_sample max_sample;
+	struct ddr_bandwidth_sample min_sample;
 	struct ddr_avg_bandwidth    avg;
 	u64	     port[MAX_CHANNEL];
 	void __iomem *ddr_reg;
