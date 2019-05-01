@@ -250,8 +250,10 @@ mxsfb_pipe_mode_valid(struct drm_crtc *crtc,
 	 * 74250kHz are working. Limit to these modes until we figure out how
 	 * to handle the rest of the display modes.
 	 */
+#if 0
 	if (clock < MIN_PIX_CLK)
 		return MODE_NOCLOCK;
+#endif
 
 	if (!crtc_clock)
 		crtc_clock = clock;
