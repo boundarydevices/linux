@@ -153,7 +153,7 @@
 			   "fsl,imx-audio-sii902x";
 		model = "sii902x-audio";
 		cpu-dai = <&sai3>;
-		hdmi-controler = <&sii902x>;
+		hdmi-controller = <&sii902x>;
 	};
 
 	usdhc2_pwrseq: usdhc2_pwrseq {
