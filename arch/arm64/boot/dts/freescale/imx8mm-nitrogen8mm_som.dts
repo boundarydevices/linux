@@ -5,7 +5,7 @@
 
 #include "imx8mm-nitrogen8mm.dts"
 
-&iomuxc_pinctrl {
+&iomuxc {
 	pinctrl_i2c2_sn65dsi83: i2c2-sn65dsi83grp {
 		fsl,pins = <
 #define GPIRQ_I2C2_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
