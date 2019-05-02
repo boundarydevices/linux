@@ -10,9 +10,6 @@
 #include "panel-ltk080a60a004t.dtsi"
 
 &iomuxc {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hog>;
-
 	iomuxc_pinctrl: iomuxc-pinctrlgrp {
 	};
 };
@@ -68,13 +65,6 @@
 			MX8MM_IOMUXC_NAND_DATA01_QSPI_A_DATA1		0x82
 			MX8MM_IOMUXC_NAND_DATA02_QSPI_A_DATA2		0x82
 			MX8MM_IOMUXC_NAND_DATA03_QSPI_A_DATA3		0x82
-		>;
-	};
-
-	pinctrl_hog: hoggrp {
-		fsl,pins = <
-			/* TODO expansion connector pinmux */
-			MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8		0x1c0
 		>;
 	};
 
