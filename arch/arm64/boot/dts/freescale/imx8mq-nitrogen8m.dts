@@ -14,11 +14,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
-	iomuxc_pinctrl: iomuxc-pinctrlgrp {
-	};
-};
-
-&iomuxc_pinctrl {
 	pinctrl_bt_rfkill: bt-rfkillgrp {
 		fsl,pins = <
 #define GP_BT_RFKILL_RESET	<&gpio3 19 GPIO_ACTIVE_LOW>
