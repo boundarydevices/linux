@@ -200,6 +200,7 @@
 		/* HSIOMIX */
 		hsio_pd: power-domain@0 {
 			compatible = "fsl,imx8mm-pm-domain";
+			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			domain-id = <0>;
@@ -209,6 +210,7 @@
 				 <&clk IMX8MM_CLK_SIM_HSIO>;
 
 			pcie0_pd: power-domain@1 {
+				reg = <1>;
 				domain-id = <1>;
 				#power-domain-cells = <0>;
 				domain-name = "PCIE0_PD";
@@ -216,12 +218,14 @@
 			};
 
 			usb_otg1_pd: power-domain@2 {
+				reg = <2>;
 				domain-id = <2>;
 				#power-domain-cells = <0>;
 				domain-name = "USB_OTG1_PD";
 			};
 
 			usb_otg2_pd: power-domain@3 {
+				reg = <3>;
 				domain-id = <3>;
 				#power-domain-cells = <0>;
 				domain-name = "USB_OTG2_PD";
@@ -231,6 +235,7 @@
 		/* GPU2D&3D */
 		gpumix_pd: power-domain@4 {
 			compatible = "fsl,imx8mm-pm-domain";
+			reg = <4>;
 			domain-id = <4>;
 			#power-domain-cells = <0>;
 			domain-name = "GPUMIX_PD";
@@ -242,6 +247,7 @@
 
 		vpumix_pd: power-domain@5 {
 			compatible = "fsl,imx8mm-pm-domain";
+			reg = <5>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			domain-id = <5>;
@@ -250,6 +256,7 @@
 			clocks =  <&clk IMX8MM_CLK_VPU_DEC_ROOT>;
 
 			vpu_g1_pd: power-domain@6 {
+				reg = <6>;
 				domain-id = <6>;
 				#power-domain-cells = <0>;
 				domain-name = "VPU_G1_PD";
@@ -257,6 +264,7 @@
 			};
 
 			vpu_g2_pd: power-domain@7 {
+				reg = <7>;
 				domain-id = <7>;
 				#power-domain-cells = <0>;
 				domain-name = "VPU_G2_PD";
@@ -264,6 +272,7 @@
 			};
 
 			vpu_h1_pd: power-domain@8 {
+				reg = <8>;
 				domain-id = <8>;
 				#power-domain-cells = <0>;
 				domain-name = "VPU_H1_PD";
@@ -273,6 +282,7 @@
 
 		dispmix_pd: power-domain@9 {
 			compatible = "fsl,imx8mm-pm-domain";
+			reg = <9>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			domain-id = <9>;
@@ -281,6 +291,7 @@
 			clocks = <&clk IMX8MM_CLK_DISP_ROOT>;
 
 			mipi_pd: power-domain@10 {
+				reg = <10>;
 				domain-id = <10>;
 				#power-domain-cells = <0>;
 				domain-name = "MIPI_PD";
