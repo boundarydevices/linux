@@ -3131,7 +3131,7 @@
 		status = "disabled";
 	};
 
-	ftmpwm0: ftmpwm@0x05a8a0000 {
+	ftmpwm0: ftmpwm@5a8a0000 {
 		compatible = "fsl,vf610-ftm-pwm";
 		reg = <0 0x5A8A0000 0 0x1000>;
 		#pwm-cells = <3>;
@@ -3149,7 +3149,7 @@
 		status = "disabled";
 	};
 
-	ftmpwm1: ftmpwm@0x05a8b0000 {
+	ftmpwm1: ftmpwm@5a8b0000 {
 		compatible = "fsl,vf610-ftm-pwm";
 		reg = <0 0x5A8B0000 0 0x1000>;
 		#pwm-cells = <3>;
@@ -3693,7 +3693,7 @@
 		reg = <0x0 0x5b0e0200 0x0 0x200>;
 	};
 
-	usbphy1: usbphy@0x5b100000 {
+	usbphy1: usbphy@5b100000 {
 		compatible = "fsl,imx8qm-usbphy", "fsl,imx7ulp-usbphy", "fsl,imx6ul-usbphy", "fsl,imx23-usbphy";
 		reg = <0x0 0x5b100000 0x0 0x1000>;
 		clocks = <&clk IMX8QM_USB2_PHY_IPG_CLK>;
@@ -4137,7 +4137,7 @@
 		status = "disabled";
 	};
 
-	flexspi0: flexspi@05d120000 {
+	flexspi0: flexspi@5d120000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "fsl,imx8qm-flexspi";
@@ -4174,7 +4174,7 @@
 		compatible = "fsl,imx8qm-ocotp", "syscon";
 	};
 
-	pciea: pcie@0x5f000000 {
+	pciea: pcie@5f000000 {
 		compatible = "fsl,imx8qm-pcie","snps,dw-pcie";
 		reg = <0x0 0x5f000000 0x0 0x10000>, /* Controller reg */
 		      <0x0 0x6ff00000 0x0 0x80000>; /* PCI cfg space */
@@ -4217,7 +4217,7 @@
 		status = "disabled";
 	};
 
-	pcieb: pcie@0x5f010000 {
+	pcieb: pcie@5f010000 {
 		compatible = "fsl,imx8qm-pcie","snps,dw-pcie";
 		reg = <0x0 0x5f010000 0x0 0x10000>, /* Controller reg */
 		      <0x0 0x7ff00000 0x0 0x80000>; /* PCI cfg space */
@@ -4365,7 +4365,7 @@
 		};
 	};
 
-	crypto: caam@0x31400000 {
+	crypto: caam@31400000 {
 		compatible = "fsl,sec-v4.0";
 		reg = <0 0x31400000 0 0x400000>;
 		interrupts = <GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>;
@@ -4374,7 +4374,7 @@
 		ranges = <0 0 0x31400000 0x400000>;
 		fsl,sec-era = <9>;
 
-		sec_jr1: jr1@0x20000 {
+		sec_jr1: jr1@20000 {
 			compatible = "fsl,sec-v4.0-job-ring";
 			reg = <0x20000 0x1000>;
 			interrupts = <GIC_SPI 452 IRQ_TYPE_LEVEL_HIGH>;

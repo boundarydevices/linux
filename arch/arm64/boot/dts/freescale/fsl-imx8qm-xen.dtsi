@@ -151,7 +151,7 @@
 		status = "okay";
 	};
 
-	edma21: dma-controller@0x59260000 {
+	edma21: dma-controller@59260000 {
 		compatible = "fsl,imx8qm-adma";
 		reg = <0x0 0x59260000 0x0 0x10000>, /* esai0 rx */
 		      <0x0 0x59270000 0x0 0x10000>; /* esai0 tx */
@@ -166,7 +166,7 @@
 		status = "okay";
 	};
 
-	edma22: dma-controller@0x59280000 {
+	edma22: dma-controller@59280000 {
 		compatible = "fsl,imx8qm-adma";
 		reg = <0x0 0x59280000 0x0 0x10000>, /* spdif0 rx */
 		      <0x0 0x59290000 0x0 0x10000>; /* spdif0 tx */
@@ -181,7 +181,7 @@
 		status = "okay";
 	};
 
-	edma23: dma-controller@0x592a0000 {
+	edma23: dma-controller@592a0000 {
 		compatible = "fsl,imx8qm-adma";
 		reg = <0x0 0x592A0000 0x0 0x10000>, /* spdif1 rx */
 		      <0x0 0x592B0000 0x0 0x10000>; /* spdif1 tx */
@@ -196,7 +196,7 @@
 		status = "okay";
 	};
 
-	edma24: dma-controller@0x592c0000 {
+	edma24: dma-controller@592c0000 {
 		compatible = "fsl,imx8qm-adma";
 		reg = <0x0 0x592c0000 0x0 0x10000>, /* sai0 rx */
 		      <0x0 0x592d0000 0x0 0x10000>; /* sai0 tx */
@@ -211,7 +211,7 @@
 		status = "okay";
 	};
 
-	edma25: dma-controller@0x592e0000 {
+	edma25: dma-controller@592e0000 {
 		compatible = "fsl,imx8qm-adma";
 		reg = <0x0 0x592e0000 0x0 0x10000>, /* sai1 rx */
 		      <0x0 0x592f0000 0x0 0x10000>; /* sai1 tx */
@@ -226,7 +226,7 @@
 		status = "okay";
 	};
 
-	edma26: dma-controller@0x59320000 {
+	edma26: dma-controller@59320000 {
 		compatible = "fsl,imx8qm-adma";
 		reg = <0x0 0x59320000 0x0 0x10000>, /* sai4 rx */
 		      <0x0 0x59330000 0x0 0x10000>; /* sai5 tx */
@@ -350,36 +350,36 @@
 		reg = <0x0 0x58530000 0x0 0x1000>;
 	};
 
-	vpu_decoder_csr: vpu_decoder_csr@0x2d080000 {
+	vpu_decoder_csr: vpu_decoder_csr@2d080000 {
 		reg = <0x0 0x2d080000 0x0 0x1000>;
 	};
 
 	/* hdmi */
-	di_hdmi_lpcg: di_hdmi_lpcg@0x56263000 {
+	di_hdmi_lpcg: di_hdmi_lpcg@56263000 {
 		reg = <0x0 0x56263000 0x0 0x1000>;
 	};
 
-	rx_hdmi_lpcg: rx_hdmi_lpcg@0x58263000 {
+	rx_hdmi_lpcg: rx_hdmi_lpcg@58263000 {
 		reg = <0x0 0x58263000 0x0 0x1000>;
 	};
 
-	img_pxl_link_hdmi_lpcg: img_pxl_link_hdmi_lpcg@0x585a0000 {
+	img_pxl_link_hdmi_lpcg: img_pxl_link_hdmi_lpcg@585a0000 {
 		reg = <0x0 0x585a0000 0x0 0x1000>;
 	};
 
-	aud_hdmi_rx_sai_0_lpcg: aud_hdmi_rx_sai_0_lpcg@0x59480000 {
+	aud_hdmi_rx_sai_0_lpcg: aud_hdmi_rx_sai_0_lpcg@59480000 {
 		reg = <0x0 0x59480000 0x0 0x1000>;
 	};
 
-	aud_hdmi_tx_sai_0_lpcg: aud_hdmi_tx_sai_0_lpcg@0x59490000 {
+	aud_hdmi_tx_sai_0_lpcg: aud_hdmi_tx_sai_0_lpcg@59490000 {
 		reg = <0x0 0x59490000 0x0 0x1000>;
 	};
 
-	aud_asrc_0_lpcg: aud_asrc_0_lpcg@0x59400000 {
+	aud_asrc_0_lpcg: aud_asrc_0_lpcg@59400000 {
 		reg = <0x0 0x59400000 0x0 0x1000>;
 	};
 
-	aud_esai_0_lpcg: aud_esai_0_lpcg@0x59410000 {
+	aud_esai_0_lpcg: aud_esai_0_lpcg@59410000 {
 		reg = <0x0 0x59410000 0x0 0x1000>;
 	};
 

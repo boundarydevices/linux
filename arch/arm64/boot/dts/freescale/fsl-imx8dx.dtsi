@@ -113,36 +113,36 @@
 		 * Shouldn't be used at A core and Linux side.
 		 *
 		 */
-		decoder_boot: decoder_boot@0x84000000 {
+		decoder_boot: decoder_boot@84000000 {
 			no-map;
 			reg = <0 0x84000000 0 0x2000000>;
 		};
-		encoder_boot: encoder_boot@0x86000000 {
+		encoder_boot: encoder_boot@86000000 {
 			no-map;
 			reg = <0 0x86000000 0 0x200000>;
 		};
-		rpmsg_reserved: rpmsg@0x90000000 {
+		rpmsg_reserved: rpmsg@90000000 {
 			no-map;
 			reg = <0 0x90000000 0 0x400000>;
 		};
-		rpmsg_dma_reserved:rpmsg_dma@0x90400000 {
+		rpmsg_dma_reserved:rpmsg_dma@90400000 {
 			compatible = "shared-dma-pool";
 			no-map;
 			reg = <0 0x90400000 0 0x1C00000>;
 		};
-		decoder_rpc: decoder_rpc@0x92000000 {
+		decoder_rpc: decoder_rpc@92000000 {
 			no-map;
 			reg = <0 0x92000000 0 0x200000>;
 		};
-		encoder_rpc: encoder_rpc@0x92200000 {
+		encoder_rpc: encoder_rpc@92200000 {
 			no-map;
 			reg = <0 0x92200000 0 0x200000>;
 		};
-		dsp_reserved: dsp@0x92400000 {
+		dsp_reserved: dsp@92400000 {
 			no-map;
 			reg = <0 0x92400000 0 0x2000000>;
 		};
-		encoder_reserved: encoder_reserved@0x94400000 {
+		encoder_reserved: encoder_reserved@94400000 {
 			no-map;
 			reg = <0 0x94400000 0 0x800000>;
 		};
@@ -2485,7 +2485,7 @@
 		reg = <0x0 0x5b0d0200 0x0 0x200>;
 	};
 
-	usbphy1: usbphy@0x5b100000 {
+	usbphy1: usbphy@5b100000 {
 		compatible = "fsl,imx8qm-usbphy", "fsl,imx7ulp-usbphy", "fsl,imx6ul-usbphy", "fsl,imx23-usbphy";
 		reg = <0x0 0x5b100000 0x0 0x1000>;
 		clocks = <&clk IMX8QXP_USB2_PHY_IPG_CLK>;
@@ -3355,7 +3355,7 @@
 		status = "disabled";
 	};
 
-	flexspi0: flexspi@05d120000 {
+	flexspi0: flexspi@5d120000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "fsl,imx8qxp-flexspi";
@@ -3390,7 +3390,7 @@
 		compatible = "fsl,imx8qxp-ocotp", "syscon";
 	};
 
-	pcieb: pcie@0x5f010000 {
+	pcieb: pcie@5f010000 {
 		/*
 		 * pcieb phyx1 lane1 in default, adjust it refer to the
 		 * exact hw design.
@@ -3523,7 +3523,7 @@
 		};
 	};
 
-	crypto: caam@0x31400000 {
+	crypto: caam@31400000 {
 		compatible = "fsl,sec-v4.0";
 		reg = <0 0x31400000 0 0x400000>;
 		interrupts = <GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>;
@@ -3532,7 +3532,7 @@
 		ranges = <0 0 0x31400000 0x400000>;
 		fsl,sec-era = <9>;
 
-		sec_jr1: jr1@0x20000 {
+		sec_jr1: jr1@20000 {
 			compatible = "fsl,sec-v4.0-job-ring";
 			reg = <0x20000 0x1000>;
 			interrupts = <GIC_SPI 452 IRQ_TYPE_LEVEL_HIGH>;

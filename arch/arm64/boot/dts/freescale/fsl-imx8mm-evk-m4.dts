@@ -20,7 +20,7 @@
 		#size-cells = <2>;
 		ranges;
 
-		m4_reserved: m4@0x80000000 {
+		m4_reserved: m4@80000000 {
 			no-map;
 			reg = <0 0x80000000 0 0x1000000>;
 		};

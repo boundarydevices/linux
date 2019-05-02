@@ -84,7 +84,7 @@
 			linux,cma-default;
 		};
 
-		rpmsg_reserved: rpmsg@0xb8000000 {
+		rpmsg_reserved: rpmsg@b8000000 {
 			no-map;
 			reg = <0 0xb8000000 0 0x400000>;
 		};
@@ -532,7 +532,7 @@
 		status = "disabled";
 	};
 
-	dcss: dcss@0x32e00000 {
+	dcss: dcss@32e00000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nxp,imx8mq-dcss";
@@ -1220,7 +1220,7 @@
 		status = "disabled";
 	};
 
-	pcie0: pcie@0x33800000 {
+	pcie0: pcie@33800000 {
 		compatible = "fsl,imx8mq-pcie", "snps,dw-pcie";
 		reg = <0x0 0x33800000 0x0 0x400000>, <0x0 0x1ff00000 0x0 0x80000>;
 		reg-names = "dbi", "config";
@@ -1250,7 +1250,7 @@
 		status = "disabled";
 	};
 
-	pcie1: pcie@0x33c00000 {
+	pcie1: pcie@33c00000 {
 		compatible = "fsl,imx8mq-pcie", "snps,dw-pcie";
 		reg = <0x0 0x33c00000 0x0 0x400000>, <0x0 0x27f00000 0x0 0x80000>;
 		reg-names = "dbi", "config";
@@ -1325,7 +1325,7 @@
 		};
 	};
 
-	caam_sm: caam-sm@00100000 {
+	caam_sm: caam-sm@100000 {
 		compatible = "fsl,imx6q-caam-sm";
 		reg = <0 0x00100000 0 0x8000>;
 	};

@@ -51,11 +51,11 @@
 	 * the memory is mapped as device, because they are used
 	 * for vpu boot code.
 	 */
-	decoder_boot_mem: decoder_boot_mem@0x84000000 {
+	decoder_boot_mem: decoder_boot_mem@84000000 {
 		reg = <0 0x84000000 0 0x2000000>;
 	};
 
-	encoder_boot_mem: encoder_boot_mem@0x86000000 {
+	encoder_boot_mem: encoder_boot_mem@86000000 {
 		reg = <0 0x86000000 0 0x200000>;
 	};
 
@@ -63,18 +63,18 @@
 		reg = <0x0 0x90000000 0x0 0x400000>;
 	};
 
-	decoder_rpc_mem: decoder_rpc_mem@0x92000000 {
+	decoder_rpc_mem: decoder_rpc_mem@92000000 {
 		reg = <0 0x92000000 0 0x200000>;
 	};
 
-	encoder_rpc_mem: encoder_rpc_mem@0x92200000 {
+	encoder_rpc_mem: encoder_rpc_mem@92200000 {
 		reg = <0 0x92200000 0 0x200000>;
 	};
 
-	dsp_reserved_mem: dsp_reserved_mem@0x92400000 {
+	dsp_reserved_mem: dsp_reserved_mem@92400000 {
 		reg = <0 0x92400000 0 0x2000000>;
 	};
-	encoder_reserved_mem: encoder_reserved_mem@0x94400000 {
+	encoder_reserved_mem: encoder_reserved_mem@94400000 {
 		reg = <0 0x94400000 0 0x800000>;
 	};
 

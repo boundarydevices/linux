@@ -84,7 +84,7 @@
 			linux,cma-default;
 		};
 
-		rpmsg_reserved: rpmsg@0xb8000000 {
+		rpmsg_reserved: rpmsg@b8000000 {
 			no-map;
 			reg = <0 0xb8000000 0 0x400000>;
 		};
@@ -371,7 +371,7 @@
 		#interrupt-cells = <2>;
 	};
 
-	tmu: tmu@0x30260000 {
+	tmu: tmu@30260000 {
 		compatible = "fsl,imx8mm-tmu";
 		reg = <0x0 0x30260000 0x0 0x10000>;
 		clocks = <&clk IMX8MM_CLK_TMU_ROOT>;
@@ -1050,7 +1050,7 @@
 		ports = <&lcdif_disp0>;
 	};
 
-	pcie0: pcie@0x33800000 {
+	pcie0: pcie@33800000 {
 		compatible = "fsl,imx8mm-pcie", "snps,dw-pcie";
 		reg = <0x0 0x33800000 0x0 0x400000>, <0x0 0x32f00000 0x0 0x10000>,
 			<0x0 0x1ff00000 0x0 0x80000>;
@@ -1227,7 +1227,7 @@
 		};
 	};
 
-	caam_sm: caam-sm@00100000 {
+	caam_sm: caam-sm@100000 {
 		compatible = "fsl,imx6q-caam-sm";
 		reg = <0 0x00100000 0 0x8000>;
 	};
