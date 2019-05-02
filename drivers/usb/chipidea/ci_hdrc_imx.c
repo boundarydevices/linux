@@ -596,7 +596,8 @@ static int ci_hdrc_imx_remove(struct platform_device *pdev)
 	for (i = 0 ; i < ARRAY_SIZE(data->reset_gpios); i++) {
 		if (!gpio_is_valid(data->reset_gpios[i].gpio))
 			break;
-		gpio_set_value(data->reset_gpios[i].gpio, data->reset_gpios[i].active_low ? 0 : 1);
+		gpio_set_value_cansleep(data->reset_gpios[i].gpio,
+			data->reset_gpios[i].active_low ? 0 : 1);
 	}
 	return 0;
 }
