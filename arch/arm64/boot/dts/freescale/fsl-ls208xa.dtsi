@@ -238,13 +238,12 @@
 		};
 	};
 
-	timer {
+	timer: timer {
 		compatible = "arm,armv8-timer";
 		interrupts = <1 13 4>, /* Physical Secure PPI, active-low */
 			     <1 14 4>, /* Physical Non-Secure PPI, active-low */
 			     <1 11 4>, /* Virtual PPI, active-low */
 			     <1 10 4>; /* Hypervisor PPI, active-low */
-		fsl,erratum-a008585;
 	};
 
 	pmu {
@@ -684,15 +683,126 @@
 			#interrupt-cells = <2>;
 		};
 
+		/* TODO: WRIOP (CCSR?) */
+		emdio1: mdio@0x8B96000 { /* WRIOP0: 0x8B8_0000,
+					  * E-MDIO1: 0x1_6000
+					  */
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8B96000 0x0 0x1000>;
+			device_type = "mdio";	/* TODO: is this necessary? */
+			little-endian;	/* force the driver in LE mode */
+
+			/* Not necessary on the QDS, but needed on the RDB */
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		emdio2: mdio@0x8B97000 { /* WRIOP0: 0x8B8_0000,
+					  * E-MDIO2: 0x1_7000
+					  */
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8B97000 0x0 0x1000>;
+			device_type = "mdio";	/* TODO: is this necessary? */
+			little-endian;	/* force the driver in LE mode */
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		pcs_mdio1: mdio@0x8c07000 {
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8c07000 0x0 0x1000>;
+			device_type = "mdio";
+			little-endian;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		pcs_mdio2: mdio@0x8c0b000 {
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8c0b000 0x0 0x1000>;
+			device_type = "mdio";
+			little-endian;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		pcs_mdio3: mdio@0x8c0f000 {
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8c0f000 0x0 0x1000>;
+			device_type = "mdio";
+			little-endian;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		pcs_mdio4: mdio@0x8c13000 {
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8c13000 0x0 0x1000>;
+			device_type = "mdio";
+			little-endian;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		pcs_mdio5: mdio@0x8c17000 {
+			status = "disabled";
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8c17000 0x0 0x1000>;
+			device_type = "mdio";
+			little-endian;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		pcs_mdio6: mdio@0x8c1b000 {
+			status = "disabled";
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8c1b000 0x0 0x1000>;
+			device_type = "mdio";
+			little-endian;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		pcs_mdio7: mdio@0x8c1f000 {
+			status = "disabled";
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8c1f000 0x0 0x1000>;
+			device_type = "mdio";
+			little-endian;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		pcs_mdio8: mdio@0x8c23000 {
+			status = "disabled";
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8c23000 0x0 0x1000>;
+			device_type = "mdio";
+			little-endian;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
 		i2c0: i2c@2000000 {
 			status = "disabled";
-			compatible = "fsl,vf610-i2c";
+			compatible = "fsl,vf610-i2c", "fsl,ls208xa-vf610-i2c";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x0 0x2000000 0x0 0x10000>;
 			interrupts = <0 34 0x4>; /* Level high type */
 			clock-names = "i2c";
-			clocks = <&clockgen 4 3>;
+			clocks = <&clockgen 4 1>;
+			scl-gpios = <&gpio3 10 0>;
 		};
 
 		i2c1: i2c@2010000 {
@@ -703,7 +813,7 @@
 			reg = <0x0 0x2010000 0x0 0x10000>;
 			interrupts = <0 34 0x4>; /* Level high type */
 			clock-names = "i2c";
-			clocks = <&clockgen 4 3>;
+			clocks = <&clockgen 4 1>;
 		};
 
 		i2c2: i2c@2020000 {
@@ -714,7 +824,7 @@
 			reg = <0x0 0x2020000 0x0 0x10000>;
 			interrupts = <0 35 0x4>; /* Level high type */
 			clock-names = "i2c";
-			clocks = <&clockgen 4 3>;
+			clocks = <&clockgen 4 1>;
 		};
 
 		i2c3: i2c@2030000 {
@@ -725,7 +835,7 @@
 			reg = <0x0 0x2030000 0x0 0x10000>;
 			interrupts = <0 35 0x4>; /* Level high type */
 			clock-names = "i2c";
-			clocks = <&clockgen 4 3>;
+			clocks = <&clockgen 4 1>;
 		};
 
 		ifc: ifc@2240000 {
@@ -757,8 +867,8 @@
 		pcie1: pcie@3400000 {
 			compatible = "fsl,ls2080a-pcie", "fsl,ls2085a-pcie";
 			reg-names = "regs", "config";
-			interrupts = <0 108 0x4>; /* Level high type */
-			interrupt-names = "intr";
+			interrupts = <0 108 0x4>; /* aer interrupt */
+			interrupt-names = "aer";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			device_type = "pci";
@@ -779,8 +889,8 @@
 		pcie2: pcie@3500000 {
 			compatible = "fsl,ls2080a-pcie", "fsl,ls2085a-pcie";
 			reg-names = "regs", "config";
-			interrupts = <0 113 0x4>; /* Level high type */
-			interrupt-names = "intr";
+			interrupts = <0 113 0x4>; /* aer interrupt */
+			interrupt-names = "aer";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			device_type = "pci";
@@ -801,8 +911,8 @@
 		pcie3: pcie@3600000 {
 			compatible = "fsl,ls2080a-pcie", "fsl,ls2085a-pcie";
 			reg-names = "regs", "config";
-			interrupts = <0 118 0x4>; /* Level high type */
-			interrupt-names = "intr";
+			interrupts = <0 118 0x4>; /* aer interrupt */
+			interrupt-names = "aer";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			device_type = "pci";
@@ -823,8 +933,8 @@
 		pcie4: pcie@3700000 {
 			compatible = "fsl,ls2080a-pcie", "fsl,ls2085a-pcie";
 			reg-names = "regs", "config";
-			interrupts = <0 123 0x4>; /* Level high type */
-			interrupt-names = "intr";
+			interrupts = <0 123 0x4>; /* aer interrupt */
+			interrupt-names = "aer";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			device_type = "pci";
@@ -880,6 +990,11 @@
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,dis_rxdet_inp3_quirk;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+		};
+
+		serdes1: serdes@1ea0000 {
+				reg = <0x0 0x1ea0000 0 0x00002000>;
+				compatible = "fsl,serdes-10g";
 		};
 
 		ccn@4000000 {
