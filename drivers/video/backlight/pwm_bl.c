@@ -164,8 +164,10 @@ static int pwm_backlight_check_fb(struct backlight_device *bl,
 		int i;
 
 		for (i = 0 ; i < pb->disp_cnt; i++) {
-			if (np == pb->disp_node[i])
+			if (np == pb->disp_node[i]) {
+				bl->props.power = FB_BLANK_UNBLANK;
 				return 1;
+			}
 		}
 		return 0;
 	}
@@ -461,6 +463,22 @@ static bool pwm_backlight_is_linear(struct platform_pwm_backlight_data *data)
 static int pwm_backlight_initial_power_state(const struct pwm_bl_data *pb)
 {
 	struct device_node *node = pb->dev->of_node;
+
+#if defined(CONFIG_FB_MXC_LCDIF) || defined(CONFIG_FB_MXC_SYNC_PANEL)
+	if (pb->disp_cnt) {
+		int i;
+		struct device_node *np;
+		struct fb_info *fbi;
+
+		for (i = 0 ; i < pb->disp_cnt; i++) {
+			np = pb->disp_node[i];
+			fbi = find_registered_fb_from_dt(np);
+			if (fbi)
+				return FB_BLANK_UNBLANK;
+		}
+		return FB_BLANK_POWERDOWN;
+	}
+#endif
 
 	/* Not booted with device tree or no phandle link to the node */
 	if (!node || !node->phandle)
