@@ -98,7 +98,7 @@
 		pinctrl-0 = <&pinctrl_i2c3_csi1>;
 		clocks = <&mipi_xclk>;
 		clock-names = "csi_mclk";
-		csi_id = <1>;
+		csi_id = <0>;
 		AVDD-supply = <&reg_vref_2v5>;
 		DVDD-supply = <&reg_vref_3v3>;
 		DOVDD-supply = <&reg_vref_1v8>;
