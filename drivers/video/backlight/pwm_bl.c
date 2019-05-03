@@ -33,6 +33,7 @@ struct pwm_bl_data {
 	bool			legacy;
 	unsigned int		post_pwm_on_delay;
 	unsigned int		pwm_off_delay;
+	int			on_delay;
 	int			disp_cnt;
 	struct device_node	*disp_node[4];
 	int			(*notify)(struct device *,
@@ -83,6 +84,8 @@ static void pwm_backlight_power_on(struct pwm_bl_data *pb)
 	if (pb->enabled)
 		return;
 
+	if (pb->on_delay)
+		msleep(pb->on_delay);
 	err = regulator_enable(pb->power_supply);
 	if (err < 0)
 		dev_err(pb->dev, "failed to enable power supply\n");
@@ -405,6 +408,10 @@ static int pwm_backlight_parse_dt(struct device *dev,
 
 		data->max_brightness = num_levels - 1;
 	}
+
+	ret = of_property_read_u32(node, "on-delay", &value);
+	if (!ret)
+		pb->on_delay = value;
 
 	for (i = 0 ; i < ARRAY_SIZE(pb->disp_node); i++) {
 		pb->disp_node[i] = of_parse_phandle(node, "display", i);
