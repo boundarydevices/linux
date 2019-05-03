@@ -28,6 +28,7 @@
 
 #include "cyttsp5_regs.h"
 #include <linux/kthread.h>
+#include <linux/i2c.h>
 
 #define CY_CORE_STARTUP_RETRY_COUNT		3
 
