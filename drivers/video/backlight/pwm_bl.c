@@ -38,6 +38,7 @@ struct pwm_bl_data {
 	struct gpio_desc	*legacy_desc;	/* part of above struct gpio_descs */
 	unsigned int		scale;
 	bool			legacy;
+	int			on_delay;
 	int			disp_cnt;
 	struct device_node	*disp_node[4];
 	int			(*notify)(struct device *,
@@ -74,6 +75,8 @@ static void pwm_backlight_power_on(struct pwm_bl_data *pb, int brightness)
 	if (pb->enabled)
 		return;
 
+	if (pb->on_delay)
+		msleep(pb->on_delay);
 	err = regulator_enable(pb->power_supply);
 	if (err < 0)
 		dev_err(pb->dev, "failed to enable power supply\n");
@@ -214,6 +217,10 @@ static int pwm_backlight_parse_dt(struct device *dev,
 		data->dft_brightness = value;
 		data->max_brightness--;
 	}
+
+	ret = of_property_read_u32(node, "on-delay", &value);
+	if (!ret)
+		pb->on_delay = value;
 
 	data->enable_gpio = -EINVAL;
 	for (i = 0 ; i < ARRAY_SIZE(pb->disp_node); i++) {
