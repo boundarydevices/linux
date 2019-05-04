@@ -465,6 +465,7 @@
 		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
 		display = <&fb_lvds>;
+		on-delay = <100>;
 		pwms = <&pwm4 0 5000000>;
 	};
 
@@ -473,6 +474,7 @@
 		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
 		display = <&fb_lvds2>;
+		on-delay = <100>;
 		pwms = <&pwm2 0 5000000>;
 	};
 
