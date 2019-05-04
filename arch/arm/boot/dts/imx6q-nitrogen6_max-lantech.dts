@@ -77,6 +77,10 @@
 	};
 };
 
+&backlight_lvds {
+	on-delay = <100>;
+};
+
 &backlight_lvds2 {
 	on-delay = <100>;
 };
