@@ -389,15 +389,16 @@ void tsync_pcr_pcrscr_set(void)
 			}
 		} else {
 			ref_pcr = timestamp_pcrscr_get();
+			ref_pcr = timestamp_pcrscr_get();
+			if (cur_pcr > min_checkinpts) {
+				ref_pcr = min_checkinpts -
+				tsync_pcr_ref_latency;
+				timestamp_pcrscr_set(ref_pcr);
+				timestamp_pcrscr_enable(1);
+				tsync_use_demux_pcr = 0;
+		} else {
 			tsync_use_demux_pcr = 1;
-			if ((tsync_pcr_debug&0x01) && tsdemux_pcrscr_get_cb) {
-				pr_info("use the pcr from stream , the cur demux pcr is %x\n",
-				tsdemux_pcrscr_get_cb());
-				pr_info("the timestamp pcr is %x\n",
-				timestamp_pcrscr_get());
-				pr_info("the timestamp video pts is %x\n",
-				timestamp_firstvpts_get());
-			}
+		}
 		}
 
 		init_check_first_systemtime = ref_pcr;
