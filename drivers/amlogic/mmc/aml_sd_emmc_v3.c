@@ -355,11 +355,6 @@ static void aml_sd_emmc_set_timing_v3(struct amlsd_platform *pdata,
 		clkc->tx_phase = para->sdr104.tx_phase;
 	} else {
 		ctrl->ddr = 0;
-		clkc->tx_delay = 0;
-		clkc->core_phase = para->init.core_phase;
-		clkc->tx_phase = para->init.tx_phase;
-		irq_en &= ~(1<<17);
-		writel(irq_en, host->base + SD_EMMC_IRQ_EN);
 		/* timing == MMC_TIMING_LEGACY */
 		if (pdata->calc_f) {
 			clkc->core_phase = para->calc.core_phase;
