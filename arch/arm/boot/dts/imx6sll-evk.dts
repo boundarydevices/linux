@@ -158,8 +158,10 @@
 };
 
 &clks {
-	assigned-clocks = <&clks IMX6SLL_CLK_PLL4_AUDIO_DIV>;
-	assigned-clock-rates = <393216000>;
+	assigned-clocks = <&clks IMX6SLL_CLK_PERCLK_SEL>,
+			<&clks IMX6SLL_CLK_PLL4_AUDIO_DIV>;
+	assigned-clock-parents = <&clks IMX6SLL_CLK_OSC>;
+	assigned-clock-rates = <0>, <393216000>;
 };
 
 &cpu0 {
