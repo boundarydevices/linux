@@ -1925,9 +1925,9 @@
 		};
 	};
 
-	lvds_region1: lvds_region@56220000 {
+	lvds_region1: lvds_region@562210e0 {
 		compatible = "fsl,imx8qxp-lvds-region", "syscon";
-		reg = <0x0 0x56220000 0x0 0x10000>;
+		reg = <0x0 0x562210e0 0x0 0x4>;
 	};
 
 	ldb1_phy: ldb_phy@56221000 {
@@ -2103,9 +2103,9 @@
 		};
 	};
 
-	lvds_region2: lvds_region@56240000 {
+	lvds_region2: lvds_region@562410e0 {
 		compatible = "fsl,imx8qxp-lvds-region", "syscon";
-		reg = <0x0 0x56240000 0x0 0x10000>;
+		reg = <0x0 0x562410e0 0x0 0x4>;
 	};
 
 	ldb2_phy: ldb_phy@56241000 {
