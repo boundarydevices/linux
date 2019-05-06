@@ -30,6 +30,7 @@
 #include <linux/amlogic/media/vfm/vframe_provider.h>
 #include <linux/amlogic/media/video_sink/video.h>
 #include "deinterlace_hw.h"
+#include "deinterlace.h"
 #include "register.h"
 #include "register_nr4.h"
 #ifdef DET3D
@@ -3557,6 +3558,36 @@ void di_arb_sw(bool on)
 			di_async_reset();
 	}
 }
+#if 0
+// for g12a:
+#define DI_NOP_REG1	(0x2fcb)
+#define DI_NOP_REG2	(0x2fcd)
+#else
+//for tl1:
+#define DI_NOP_REG1	(0x2ffb)
+#define DI_NOP_REG2	(0x2ffc)
+
+#endif
+static void h_dbg_reg_set(unsigned int val)
+{
+
+	if (is_meson_tl1_cpu())
+		DI_Wr(DI_NOP_REG1, val);
+
+}
+void ddbg_mod_save(unsigned int mod, unsigned int ch, unsigned int cnt)
+{
+
+#if 1
+//-----------------------------
+	if (ch)
+		h_dbg_reg_set(mod | 0x80000000);
+	else
+		h_dbg_reg_set(mod);
+//-----------------------------
+#endif
+
+}
 
 /*
  * enable/disable mc pre mif mcinfo&mv
@@ -3802,6 +3833,7 @@ void di_load_regs(struct di_pq_parm_s *di_pq_ptr)
 		pr_err("[DI] table ptr error.\n");
 		return;
 	}
+	ddbg_mod_save(eDI_DBG_MOD_PQB, 0, 0);
 	nr_table = TABLE_NAME_NR | TABLE_NAME_DEBLOCK | TABLE_NAME_DEMOSQUITO;
 	regs_p = (struct am_reg_s *)di_pq_ptr->regs;
 	len = di_pq_ptr->pq_parm.table_len;
@@ -3839,6 +3871,7 @@ void di_load_regs(struct di_pq_parm_s *di_pq_ptr)
 			pr_info("[%u][0x%x] = [0x%x] %s\n", i, addr,
 				value, Rd(addr) != value?"fail":"success");
 	}
+	ddbg_mod_save(eDI_DBG_MOD_PQE, 0, 0);
 }
 /*note:*/
 /*	function: patch for txl for progressive source	*/
