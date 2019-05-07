@@ -2290,14 +2290,6 @@ static int imx_pcie_probe(struct platform_device *pdev)
 	if (of_property_read_u32(node, "hard-wired", &imx_pcie->hard_wired))
 		imx_pcie->hard_wired = 0;
 
-	if (IS_ENABLED(CONFIG_EP_MODE_IN_EP_RC_SYS)) {
-		/* add attributes for device */
-		imx_pcie_attrgroup.attrs = imx_pcie_ep_attrs;
-		ret = sysfs_create_group(&pdev->dev.kobj, &imx_pcie_attrgroup);
-		if (ret)
-			return -EINVAL;
-	}
-
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "phy");
 	if (res)
 		imx_pcie->phy_base = devm_ioremap_resource(dev, res);
@@ -2558,6 +2550,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 		unsigned long timeout = jiffies + msecs_to_jiffies(300000);
 
 		/* add attributes for device */
+		imx_pcie_attrgroup.attrs = imx_pcie_ep_attrs;
 		ret = sysfs_create_group(&pdev->dev.kobj, &imx_pcie_attrgroup);
 		if (ret)
 			return -EINVAL;
