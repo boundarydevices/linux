@@ -781,37 +781,55 @@ static int RGB709_to_YUV709l_coeff[MATRIX_5x3_COEF_SIZE] = {
 	0, 0, 0 /* mode, right_shift, clip_en */
 };
 
+static int is_yuv_format(u32 format)
+{
+	int b_yuv = 0;
+
+	switch (format) {
+	case COLOR_FMT_YUV422:
+	case COLOR_FMT_YUV444:
+	case COLOR_FMT_YUYV422:
+	case COLOR_FMT_YVYU422:
+	case COLOR_FMT_UYVY422:
+	case COLOR_FMT_VYUY422:
+	case COLOR_FMT_NV12:
+	case COLOR_FMT_NV21:
+		b_yuv = 1;
+		break;
+	default:
+		break;
+	}
+	return b_yuv;
+}
+
 /*for G12A, set osd3 matrix(10bit) RGB2YUV*/
 static void set_viu2_rgb2yuv(bool on)
 {
+	/* RGB -> 709 limit */
+	int *m = RGB709_to_YUV709l_coeff;
 
-	if (osd_hw.osd_meson_dev.cpu_id == __MESON_CPU_MAJOR_ID_G12A) {
-		/* RGB -> 709 limit */
-		int *m = RGB709_to_YUV709l_coeff;
+	/* VPP WRAP OSD3 matrix */
+	osd_reg_write(VIU2_OSD1_MATRIX_PRE_OFFSET0_1,
+		((m[0] & 0xfff) << 16) | (m[1] & 0xfff));
+	osd_reg_write(VIU2_OSD1_MATRIX_PRE_OFFSET2,
+		m[2] & 0xfff);
+	osd_reg_write(VIU2_OSD1_MATRIX_COEF00_01,
+		((m[3] & 0x1fff) << 16) | (m[4] & 0x1fff));
+	osd_reg_write(VIU2_OSD1_MATRIX_COEF02_10,
+		((m[5]  & 0x1fff) << 16) | (m[6] & 0x1fff));
+	osd_reg_write(VIU2_OSD1_MATRIX_COEF11_12,
+		((m[7] & 0x1fff) << 16) | (m[8] & 0x1fff));
+	osd_reg_write(VIU2_OSD1_MATRIX_COEF20_21,
+		((m[9] & 0x1fff) << 16) | (m[10] & 0x1fff));
+	osd_reg_write(VIU2_OSD1_MATRIX_COEF22,
+		m[11] & 0x1fff);
 
-		/* VPP WRAP OSD3 matrix */
-		osd_reg_write(VIU2_OSD1_MATRIX_PRE_OFFSET0_1,
-			((m[0] & 0xfff) << 16) | (m[1] & 0xfff));
-		osd_reg_write(VIU2_OSD1_MATRIX_PRE_OFFSET2,
-			m[2] & 0xfff);
-		osd_reg_write(VIU2_OSD1_MATRIX_COEF00_01,
-			((m[3] & 0x1fff) << 16) | (m[4] & 0x1fff));
-		osd_reg_write(VIU2_OSD1_MATRIX_COEF02_10,
-			((m[5]  & 0x1fff) << 16) | (m[6] & 0x1fff));
-		osd_reg_write(VIU2_OSD1_MATRIX_COEF11_12,
-			((m[7] & 0x1fff) << 16) | (m[8] & 0x1fff));
-		osd_reg_write(VIU2_OSD1_MATRIX_COEF20_21,
-			((m[9] & 0x1fff) << 16) | (m[10] & 0x1fff));
-		osd_reg_write(VIU2_OSD1_MATRIX_COEF22,
-			m[11] & 0x1fff);
+	osd_reg_write(VIU2_OSD1_MATRIX_OFFSET0_1,
+		((m[18] & 0xfff) << 16) | (m[19] & 0xfff));
+	osd_reg_write(VIU2_OSD1_MATRIX_OFFSET2,
+		m[20] & 0xfff);
 
-		osd_reg_write(VIU2_OSD1_MATRIX_OFFSET0_1,
-			((m[18] & 0xfff) << 16) | (m[19] & 0xfff));
-		osd_reg_write(VIU2_OSD1_MATRIX_OFFSET2,
-			m[20] & 0xfff);
-
-		osd_reg_set_bits(VIU2_OSD1_MATRIX_EN_CTRL, on, 0, 1);
-	}
+	osd_reg_set_bits(VIU2_OSD1_MATRIX_EN_CTRL, on, 0, 1);
 }
 
 static void f2v_get_vertical_phase(
@@ -9074,10 +9092,9 @@ static int osd_extra_canvas_alloc(void)
 {
 	int osd_num = 2;
 
-	if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE)
-		osd_num = 4;
 	osd_extra_idx[0][0] = EXTERN1_CANVAS;
 	osd_extra_idx[0][1] = EXTERN2_CANVAS;
+	osd_num = (osd_hw.osd_meson_dev.osd_count - 1) * 2;
 	if (canvas_pool_alloc_canvas_table("osd_extra",
 		&osd_extra_idx[1][0], osd_num, CANVAS_MAP_TYPE_1)) {
 		osd_log_info("allocate osd extra canvas error.\n");
@@ -9459,27 +9476,39 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 
 }
 
+void set_viu2_format(u32 format)
+{
+	if (is_yuv_format(format)) {
+		set_viu2_rgb2yuv(1);
+	} else
+		set_viu2_rgb2yuv(0);
+}
+
 void osd_init_viu2(void)
 {
 	u32 idx, data32;
+	struct vinfo_s *vinfo;
+#ifdef CONFIG_AMLOGIC_VOUT2_SERVE
+	vinfo = get_current_vinfo2();
+	if (vinfo && (strcmp(vinfo->name, "invalid") &&
+		strcmp(vinfo->name, "null")))
+	set_viu2_format(vinfo->viu_color_fmt);
+#endif
 
 	idx = osd_hw.osd_meson_dev.viu2_index;
 	if (osd_get_logo_index() != LOGO_DEV_VIU2_OSD0) {
 		set_viu2_rgb2yuv(1);
 		osd_vpu_power_on_viu2();
-
 		/* here we will init default value, these value only set once */
 		/* init vpu fifo control register */
 		osd_reg_write(VPP2_OFIFO_SIZE, 0x7ff00800);
 		/* init osd fifo control register
 		 * set DDR request priority to be urgent
 		 */
-
 		data32 = 0x1 << 0;
 		data32 |= OSD_GLOBAL_ALPHA_DEF << 12;
 		osd_reg_write(
 			hw_osd_reg_array[idx].osd_ctrl_stat, data32);
-
 		osd_reg_set_bits(
 			hw_osd_reg_array[idx].osd_fifo_ctrl_stat,
 			1, 31, 1);

@@ -2069,6 +2069,7 @@ int osd_notify_callback_viu2(struct notifier_block *block, unsigned long cmd,
 	i = osd_meson_dev.viu2_index;
 	switch (cmd) {
 	case  VOUT_EVENT_MODE_CHANGE:
+		set_viu2_format(vinfo->viu_color_fmt);
 		fb_dev = gp_fbdev_list[i];
 		set_default_display_axis(&fb_dev->fb_info->var,
 			&fb_dev->osd_ctl, vinfo);
