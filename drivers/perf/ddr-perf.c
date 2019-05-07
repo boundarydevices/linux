@@ -69,7 +69,13 @@ PMU_EVENT_ATTR_STRING(lp-req-nocredit, ddr_perf_lp_req_nocredit, "event=0x26");
 PMU_EVENT_ATTR_STRING(lp-xact-credit, ddr_perf_lp_xact_credit, "event=0x27");
 PMU_EVENT_ATTR_STRING(wr-xact-credit, ddr_perf_wr_xact_credit, "event=0x29");
 PMU_EVENT_ATTR_STRING(read-cycles, ddr_perf_read_cycles, "event=0x2a");
+PMU_EVENT_ATTR_STRING(read-bytes, ddr_perf_read_bytes, "event=0xf2a");
+PMU_EVENT_ATTR_STRING(read-bytes.unit, ddr_perf_read_bytes_unit, "MB");
+PMU_EVENT_ATTR_STRING(read-bytes.scale, ddr_perf_read_bytes_scale, "0.000001");
 PMU_EVENT_ATTR_STRING(write-cycles, ddr_perf_write_cycles, "event=0x2b");
+PMU_EVENT_ATTR_STRING(write-bytes, ddr_perf_write_bytes, "event=0xf2b");
+PMU_EVENT_ATTR_STRING(write-bytes.unit, ddr_perf_write_bytes_unit, "MB");
+PMU_EVENT_ATTR_STRING(write-bytes.scale, ddr_perf_write_bytes_scale, "0.000001");
 PMU_EVENT_ATTR_STRING(read-write-transition, ddr_perf_read_write_transition,
 		"event=0x30");
 PMU_EVENT_ATTR_STRING(precharge, ddr_perf_precharge, "event=0x31");
@@ -154,7 +160,13 @@ static struct attribute *ddr_perf_events_attrs[] = {
 	&ddr_perf_lp_xact_credit.attr.attr,
 	&ddr_perf_wr_xact_credit.attr.attr,
 	&ddr_perf_read_cycles.attr.attr,
+	&ddr_perf_read_bytes.attr.attr,
+	&ddr_perf_read_bytes_unit.attr.attr,
+	&ddr_perf_read_bytes_scale.attr.attr,
 	&ddr_perf_write_cycles.attr.attr,
+	&ddr_perf_write_bytes.attr.attr,
+	&ddr_perf_write_bytes_unit.attr.attr,
+	&ddr_perf_write_bytes_scale.attr.attr,
 	&ddr_perf_read_write_transition.attr.attr,
 	&ddr_perf_precharge.attr.attr,
 	&ddr_perf_activate.attr.attr,
@@ -273,6 +285,17 @@ static void ddr_perf_event_update(struct perf_event *event)
 
 	delta = (new_raw_count - prev_raw_count) & 0xFFFFFFFF;
 
+	/*
+	 * Calculate ddr read/write bandwidth via read-bytes/write-bytes event,
+	 * actually using read-cycles/write-cycles.
+	 *
+	 * The ddr interface will generate 2 up edges and 2 down edges in an
+	 * internal clock cycle, so it can pass 4 beats of data. 4 bytes of
+	 * each beat if ddr burst width is 32 bit.
+	 */
+	if (event->attr.config == 0xf2a || event->attr.config == 0xf2b)
+		delta = delta * 4 * 4;
+
 	local64_add(delta, &event->count);
 }
 
@@ -286,7 +309,11 @@ static void ddr_perf_event_enable(struct ddr_pmu *pmu, int config,
 		/* Clear counter, then enable it. */
 		writel(0, pmu->base + reg);
 		val = CNTL_EN | CNTL_CLEAR;
-		val |= (config << CNTL_CSV_SHIFT) & CNTL_CSV_MASK;
+		/* Virtual event(read-bytes/write-bytes) share event(read-cycles/write-cycles) */
+		if (config == 0xf2a || config == 0xf2b)
+			val |= ((config - 0xf00) << CNTL_CSV_SHIFT) & CNTL_CSV_MASK;
+		else
+			val |= (config << CNTL_CSV_SHIFT) & CNTL_CSV_MASK;
 	} else {
 		/* Disable counter */
 		val = readl(pmu->base + reg) & CNTL_EN_MASK;
