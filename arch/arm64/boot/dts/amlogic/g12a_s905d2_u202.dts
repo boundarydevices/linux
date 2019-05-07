@@ -575,7 +575,7 @@
 		aml-audio-card,loopback = <&aml_loopback>;
 		aml-audio-card,aux-devs = <&amlogic_codec>;
 		/*avout mute gpio*/
-		avout_mute-gpios = <&gpio_ao GPIOAO_2 GPIO_ACTIVE_HIGH>;
+		avout_mute-gpios = <&gpio_ao GPIOAO_8 GPIO_ACTIVE_HIGH>;
 		/*for audio effect ,eqdrc */
 		aml-audio-card,effect = <&audio_effect>;
 
@@ -662,7 +662,7 @@
 				system-clock-frequency = <12288000>;
 			};
 			codec {
-				sound-dai = <&tlv320adc3101_32 &dummy_codec>;
+				sound-dai = <&dummy_codec>;
 			};
 		};
 
@@ -926,7 +926,7 @@
 	cpufreq-meson {
 		compatible = "amlogic, cpufreq-meson";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pwm_ao_d_pins3>;
+		/*pinctrl-0 = <&pwm_ao_d_pins3>;*/
 		status = "okay";
 	};
 
@@ -1042,7 +1042,8 @@
 		#sound-dai-cells = <0>;
 		reg = <0x31>;
 		status = "okay";
-		reset_pin = <&gpio GPIOA_5 0>;
+		reset_pin = <&gpio_ao GPIOAO_9 0>;
+		enable_pin = <&gpio GPIOC_4 0>;
 	};
 
 	tlv320adc3101_32: tlv320adc3101_32@32 {
@@ -1050,7 +1051,7 @@
 		#sound-dai-cells = <0>;
 		reg = <0x19>;
 		differential_pair = <1>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	tas5707_36: tas5707_36@36 {
@@ -1058,7 +1059,7 @@
 		#sound-dai-cells = <0>;
 		reg = <0x1b>;
 		status = "disabled";
-		reset_pin = <&gpio GPIOA_5 0>;
+	/*	reset_pin = <&gpio GPIOA_5 0>;*/
 	};
 
 	bl_extern_i2c {
@@ -1194,6 +1195,9 @@
 		 */
 		lb_mode = <0>;
 
+		clocks = <&clkc CLKID_MPLL2>;
+		clock-names = "datalb_mpll";
+
 		/* datain src
 		 * 0: tdmin_a;
 		 * 1: tdmin_b;
@@ -1213,8 +1217,9 @@
 		 * 4: PAD_tdminB
 		 * 5: PAD_tdminC
 		 */
-		datalb_src = <2>;
-		datalb_chnum = <8>;
+		datalb_src = <4>;
+		datalb_chnum = <2>;
+		datalb-lane-mask-in = <0 1 0 0>;
 		datalb_chmask = <0x3>;
 
 		status = "okay";
@@ -1356,8 +1361,8 @@
 	pdmin: pdmin {
 		mux { /* gpioa_5, gpioa_6, gpioa_7, gpioa_8, gpioa_9*/
 			groups = "pdm_din0_a",
-			/*"pdm_din1_a",*/
-			"pdm_din2_a",
+			"pdm_din1_a",
+			/*"pdm_din2_a",*/
 			/*"pdm_din3_a",*/
 			"pdm_dclk_a";
 			function = "pdm";
@@ -1451,7 +1456,7 @@
 	controller-type = <3>;
 };
 &ethmac {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names = "internal_eth_pins";
 	pinctrl-0 = <&internal_eth_pins>;
 	mc_val = <0x4be04>;
