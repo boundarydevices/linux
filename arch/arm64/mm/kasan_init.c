@@ -122,8 +122,13 @@ void __init kasan_copy_shadow(pgd_t *pgdir)
 	} while (pgd++, pgd_new++, pgd != pgd_end);
 }
 
+#ifdef CONFIG_AMLOGIC_VMAP
+void __init clear_pgds(unsigned long start,
+			unsigned long end)
+#else
 static void __init clear_pgds(unsigned long start,
 			unsigned long end)
+#endif
 {
 	/*
 	 * Remove references to kasan page tables from

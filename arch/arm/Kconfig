@@ -1433,6 +1433,7 @@ choice
 		bool "3G/1G user/kernel split"
 	config VMSPLIT_3G_OPT
 		bool "3G/1G user/kernel split (for full 1G low memory)"
+		depends on !AMLOGIC_KASAN32
 	config VMSPLIT_2G
 		bool "2G/2G user/kernel split"
 	config VMSPLIT_1G

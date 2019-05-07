@@ -33,6 +33,10 @@
 #include <linux/memcontrol.h>
 #include <linux/amlogic/vmap_stack.h>
 #include <linux/highmem.h>
+#include <linux/delay.h>
+#ifdef CONFIG_KASAN
+#include <linux/kasan.h>
+#endif
 #include <asm/tlbflush.h>
 #include <asm/stacktrace.h>
 
@@ -454,16 +458,18 @@ static void check_sp_fault_again(struct pt_regs *regs)
 		 * will fault when we copy back context, so handle
 		 * it first
 		 */
-		E("fault again, sp:%lx, addr:%lx\n", sp, addr);
+		D("fault again, sp:%lx, addr:%lx\n", sp, addr);
 		page = get_vmap_cached_page(&cache);
 		WARN_ON(!page);
 		vmap_mmu_set(page, addr, 1);
 		update_vmap_stack(1);
+	#ifndef CONFIG_KASAN
 		if ((THREAD_SIZE_ORDER > 1) && stack_floor_page(addr)) {
 			E("task:%d %s, stack near overflow, addr:%lx\n",
 				current->pid, current->comm, addr);
 			show_fault_stack(addr, regs);
 		}
+	#endif
 
 		/* cache is not enough */
 		if (cache <= (VMAP_CACHE_PAGE / 2))
@@ -682,6 +688,40 @@ void aml_account_task_stack(struct task_struct *tsk, int account)
 	}
 }
 
+#ifdef CONFIG_KASAN
+DEFINE_MUTEX(stack_shadow_lock);
+static void check_and_map_stack_shadow(unsigned long addr)
+{
+	unsigned long shadow;
+	struct page *page, *pages[2] = {};
+	int ret;
+
+	shadow = (unsigned long)kasan_mem_to_shadow((void *)addr);
+	page   = check_pte_exist(shadow);
+	if (page) {
+		WARN(page_address(page) == (void *)kasan_zero_page,
+		     "bad pte, page:%p, %lx, addr:%lx\n",
+		     page_address(page), page_to_pfn(page), addr);
+		return;
+	}
+	shadow = shadow & PAGE_MASK;
+	page   = alloc_page(GFP_KERNEL | __GFP_HIGHMEM |
+			    __GFP_ZERO | __GFP_REPEAT);
+	if (!page) {
+		WARN(!page,
+		     "alloc page for addr:%lx, shadow:%lx fail\n",
+		     addr, shadow);
+		return;
+	}
+	pages[0] = page;
+	ret = map_kernel_range_noflush(shadow, PAGE_SIZE, PAGE_KERNEL, pages);
+	if (ret < 0) {
+		pr_err("%s, map shadow:%lx failed:%d\n", __func__, shadow, ret);
+		__free_page(page);
+	}
+}
+#endif
+
 void *aml_stack_alloc(int node, struct task_struct *tsk)
 {
 	unsigned long bitmap_no, raw_start;
@@ -721,6 +761,12 @@ void *aml_stack_alloc(int node, struct task_struct *tsk)
 	map_addr = addr + STACK_TOP_PAGE_OFF;
 	vmap_mmu_set(page, map_addr, 1);
 	update_vmap_stack(1);
+#ifdef CONFIG_KASAN
+	/* 2 thread stack can be a single shadow page, we need use lock */
+	mutex_lock(&stack_shadow_lock);
+	check_and_map_stack_shadow(addr);
+	mutex_unlock(&stack_shadow_lock);
+#endif
 
 	D("bit idx:%5ld, start:%5ld, addr:%lx, page:%lx\n",
 		bitmap_no, raw_start, addr, page_to_pfn(page));
@@ -746,6 +792,9 @@ void aml_stack_free(struct task_struct *tsk)
 		page = vmalloc_to_page((const void *)addr);
 		if (!page)
 			break;
+	#ifdef CONFIG_KASAN
+		kasan_unpoison_shadow((void *)addr, PAGE_SIZE);
+	#endif
 		vmap_mmu_set(page, addr, 0);
 		/* supplement for stack page cache first */
 		spin_lock_irqsave(&avmap->page_lock, flags);
@@ -812,6 +861,9 @@ void __init thread_stack_cache_init(void)
 {
 	int i;
 	struct page *page;
+#ifdef CONFIG_KASAN
+	unsigned long align, size;
+#endif
 
 	page = alloc_pages(GFP_KERNEL | __GFP_HIGHMEM, VMAP_CACHE_PAGE_ORDER);
 	if (!page)
@@ -831,11 +883,31 @@ void __init thread_stack_cache_init(void)
 	}
 	pr_info("%s, vmap:%p, bitmap:%p, cache page:%lx\n",
 		__func__, avmap, avmap->bitmap, page_to_pfn(page));
+#ifdef CONFIG_KASAN
+	align = PGDIR_SIZE << KASAN_SHADOW_SCALE_SHIFT;
+	size  = VM_STACK_AREA_SIZE;
+	size  = ALIGN(size, align);
+	avmap->root_vm = __get_vm_area_node(size, align, VM_NO_GUARD,
+					    VMALLOC_START, VMALLOC_END,
+					    NUMA_NO_NODE, GFP_KERNEL,
+					    __builtin_return_address(0));
+	WARN(!avmap->root_vm, "alloc vmap area %lx failed\n", size);
+	if (avmap->root_vm) {
+		unsigned long s, e;
+
+		s = (unsigned long)kasan_mem_to_shadow(avmap->root_vm->addr);
+		e = (unsigned long)avmap->root_vm->addr + size;
+		e = (unsigned long)kasan_mem_to_shadow((void *)e);
+		pr_info("%s, s:%lx, e:%lx, size:%lx\n", __func__, s, e, size);
+		clear_pgds(s, e);
+	}
+#else
 	avmap->root_vm = __get_vm_area_node(VM_STACK_AREA_SIZE,
 					    VMAP_ALIGN,
 					    0, VMAP_ADDR_START, VMAP_ADDR_END,
 					    NUMA_NO_NODE, GFP_KERNEL,
 					    __builtin_return_address(0));
+#endif
 	if (!avmap->root_vm) {
 		__free_pages(page, VMAP_CACHE_PAGE_ORDER);
 		kfree(avmap->bitmap);

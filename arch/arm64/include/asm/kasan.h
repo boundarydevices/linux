@@ -31,6 +31,9 @@
 void kasan_init(void);
 void kasan_copy_shadow(pgd_t *pgdir);
 asmlinkage void kasan_early_init(void);
+#ifdef CONFIG_AMLOGIC_VMAP
+void clear_pgds(unsigned long start, unsigned long end);
+#endif
 
 #else
 static inline void kasan_init(void) { }

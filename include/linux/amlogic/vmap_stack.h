@@ -28,8 +28,13 @@
 #else
 /* currently support max 6144 tasks on 32bit */
 #define VM_STACK_AREA_SIZE		(SZ_64M - SZ_16M)
+#ifdef CONFIG_AMLOGIC_KASAN32		/* change place if open kasan */
+#define VMAP_ADDR_START			VMALLOC_START
+#define VMAP_ADDR_END			(VMALLOC_START + VM_STACK_AREA_SIZE)
+#else
 #define VMAP_ADDR_START			MODULES_VADDR
 #define VMAP_ADDR_END			MODULES_END
+#endif /* CONFIG_AMLOGIC_KASAN32 */
 #define VMAP_ALIGN			SZ_64M
 #endif
 
@@ -40,9 +45,13 @@
 #define VMAP_PAGE_FLAG			(__GFP_ZERO | __GFP_HIGH |\
 					 __GFP_ATOMIC | __GFP_REPEAT)
 
+#ifdef CONFIG_KASAN
+#define VMAP_CACHE_PAGE_ORDER		7
+#else
 #define VMAP_CACHE_PAGE_ORDER		5
+#endif
 #define VMAP_CACHE_PAGE			(1 << VMAP_CACHE_PAGE_ORDER)
-#define CACHE_MAINTAIN_DELAY		(HZ)
+#define CACHE_MAINTAIN_DELAY		(HZ / 2)
 
 struct aml_vmap {
 	spinlock_t vmap_lock;

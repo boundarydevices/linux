@@ -120,14 +120,18 @@ static inline pmd_t *pmd_off_k(unsigned long virt)
 	return pmd_offset(pud_offset(pgd_offset_k(virt), virt), virt);
 }
 
-static void __init clear_pmds(unsigned long start,
-			unsigned long end)
+#ifdef CONFIG_AMLOGIC_VMAP
+void __init clear_pgds(unsigned long start, unsigned long end)
+#else
+static void __init clear_pgds(unsigned long start, unsigned long end)
+#endif
 {
 	/*
 	 * Remove references to kasan page tables from
 	 * swapper_pg_dir. pmd_clear() can't be used
 	 * here because it's nop on 2,3-level pagetable setups
 	 */
+	pr_debug("%s, clear %lx %lx\n", __func__, start, end);
 	for (; start < end; start += PGDIR_SIZE)
 		pmd_clear(pmd_off_k(start));
 }
@@ -168,7 +172,7 @@ void __init kasan_init(void)
 	memcpy(tmp_pg_dir, swapper_pg_dir, sizeof(tmp_pg_dir));
 	dsb(ishst);
 	cpu_switch_mm(tmp_pg_dir, &init_mm);
-	clear_pmds(KASAN_SHADOW_START, KASAN_SHADOW_END);
+	clear_pgds(KASAN_SHADOW_START, KASAN_SHADOW_END);
 
 	for_each_memblock(memory, reg) {
 		mem_size += reg->size;

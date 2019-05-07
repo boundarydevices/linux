@@ -53,7 +53,7 @@ LD		+= -EL
 endif
 
 ifeq ($(CONFIG_KASAN),y)
-KASAN_SHADOW_OFFSET := 0xA0000000
+KASAN_SHADOW_OFFSET := 0x99000000
 endif
 
 #

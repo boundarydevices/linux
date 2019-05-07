@@ -397,7 +397,11 @@ static inline bool kasan_report_enabled(void)
 void kasan_report(unsigned long addr, size_t size,
 		bool is_write, unsigned long ip)
 {
+#ifdef CONFIG_AMLOGIC_MODIFY
+	struct kasan_access_info info = {};
+#else
 	struct kasan_access_info info;
+#endif
 
 	if (likely(!kasan_report_enabled()))
 		return;
