@@ -870,7 +870,7 @@ const unsigned int reg_AFBC[AFBC_DEC_NUB][AFBC_REG_INDEX_NUB] = {
 
 };
 
-static enum eAFBC_DEC afbc_get_decnub(void)
+enum eAFBC_DEC afbc_get_decnub(void)
 {
 	enum eAFBC_DEC sel_dec = eAFBC_DEC0;
 	/* info from vlsi feijun
@@ -1069,6 +1069,8 @@ u32 enable_afbc_input(struct vframe_s *vf)
 	}
 	RDMA_WR(reg[eAFBC_ENABLE], r);
 
+	/*pr_info("AFBC_ENABLE:0x%x\n", RDMA_RD(reg[eAFBC_ENABLE]));*/
+
 	r = 0x100;
 	/* TL1 add bit[13:12]: fmt_mode; 0:yuv444; 1:yuv422; 2:yuv420
 	 * di does not support yuv444, so for fmt yuv444 di will bypass+
@@ -1183,8 +1185,11 @@ static void afbcx_sw(bool on)	/*g12a*/
 
 	if (on) {
 		tmp = tmp
+			/*0:go_file 1:go_filed_pre*/
 			| (2<<20)
+			/*0:afbc0 mif to axi 1:vd1 mif to axi*/
 			| (1<<12)
+			/*0:afbc0 to vpp 1:afbc0 to di*/
 			| (1<<9);
 		RDMA_WR(reg_ctrl, tmp);
 		/*0:vd1 to di	1:vd2 to di */
@@ -1300,6 +1305,25 @@ void afbc_reg_sw(bool on)
 		afbc_reg_unreg_flag = 0;
 	}
 }
+
+bool afbc_is_free(void)
+{
+	bool sts = 0;
+	u32 afbc_num = afbc_get_decnub();
+
+	if (afbc_num == eAFBC_DEC0)
+		sts = RDMA_RD_BITS(VD1_AFBCD0_MISC_CTRL, 8, 2);
+	else
+		sts = RDMA_RD_BITS(VD2_AFBCD1_MISC_CTRL, 8, 2);
+
+	if (sts)
+		return true;
+	else
+		return false;
+
+	return sts;
+}
+
 #if 0
 void afbc_sw_trig(bool  on)
 {

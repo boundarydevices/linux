@@ -131,7 +131,7 @@ static di_dev_t *de_devp;
 static dev_t di_devno;
 static struct class *di_clsp;
 
-static const char version_s[] = "2019-0423a:src chg, post ready size is wrong";
+static const char version_s[] = "2019-06-20a: afbc switch from vpp";
 
 static int bypass_state = 1;
 static int bypass_all;
@@ -236,6 +236,7 @@ static int di_vscale_skip_count;
 static int di_vscale_skip_count_real;
 static int vpp_3d_mode;
 static bool det3d_en;
+
 #ifdef DET3D
 static unsigned int det3d_mode;
 static void set3d_view(enum tvin_trans_fmt trans_fmt, struct vframe_s *vf);
@@ -637,6 +638,14 @@ store_dbg(struct device *dev,
 			afbc_sw(false);
 		afbc_disable_flag = val > 0 ? 0:1;
 		pr_info("afbc_disable_flag:%d\n", afbc_disable_flag);
+	} else if (strncmp(buf, "reqafbc", 7) == 0) {
+		val = di_requeset_afbc(true);
+		di_pre_stru.wait_afbc = false;
+		pr_info("request_afbc(%d)\n", val);
+	} else if (strncmp(buf, "rlsafbc", 7) == 0) {
+		val = di_requeset_afbc(false);
+		di_pre_stru.wait_afbc = false;
+		pr_info("rlease_afbc(%d)\n", val);
 	} else {
 		pr_info("DI no support cmd %s\n", buf);
 		pr_info("supported cmd list:\n");
@@ -656,7 +665,9 @@ store_dbg(struct device *dev,
 		pr_info("\t recycle_buf\n");
 		pr_info("\t recycle_post\n");
 		pr_info("\t mem_map\n");
-		pr_info("\t afbc_on 0/1\n");
+		pr_info("\t reqafbc\n");
+		pr_info("\t rlsafbc\n");
+		pr_info("\n trigger val\n");
 	}
 
 	kfree(buf_orig);
@@ -3811,6 +3822,19 @@ module_param_named(pre_hsc_down_en, pre_hsc_down_en, bool, 0644);
 static int pre_hsc_down_width = 480;
 module_param_named(pre_hsc_down_width, pre_hsc_down_width, int, 0644);
 
+
+u32 di_requeset_afbc(u32 onoff)
+{
+	u32 afbc_busy;
+
+	if (onoff)
+		afbc_busy = di_request_afbc_hw(afbc_get_decnub(), true);
+	else
+		afbc_busy = di_request_afbc_hw(afbc_get_decnub(), false);
+
+	return afbc_busy;
+}
+
 static unsigned char pre_de_buf_config(void)
 {
 	struct di_buf_s *di_buf = NULL;
@@ -3819,6 +3843,9 @@ static unsigned char pre_de_buf_config(void)
 	unsigned char change_type = 0;
 	bool bit10_pack_patch = false;
 	unsigned int width_roundup = 2;
+	u32 rls_timeout;
+	u32 afbc_busy;
+	u32 is_afbc_mode;
 
 	if (di_blocking || !atomic_read(&de_devp->mem_flag))
 		return 0;
@@ -3853,6 +3880,7 @@ static unsigned char pre_de_buf_config(void)
 			return 0;
 		}
 	}
+
 	if (di_pre_stru.di_inp_buf_next) {
 		di_pre_stru.di_inp_buf = di_pre_stru.di_inp_buf_next;
 		di_pre_stru.di_inp_buf_next = NULL;
@@ -3880,13 +3908,15 @@ static unsigned char pre_de_buf_config(void)
 #endif
 		}
 
-		vframe = vf_get(VFM_NAME);
-
 		if (vframe == NULL)
 			return 0;
 
+		vframe = vf_get(VFM_NAME);
+
 		/*for support compress from dec*/
-		if (IS_COMP_MODE(vframe->type)) {
+		if (IS_COMP_MODE(vframe->type) &&
+			!is_bypass(vframe)) {
+			is_afbc_mode = true;
 			if (IS_VDIN_SRC(vframe->source_type)
 				&& IS_I_SRC(vframe->type)) {
 				vframe->width = vframe->compWidth;
@@ -3907,11 +3937,38 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 			if (vframe->width > 10000 || vframe->height > 10000)
 				di_pre_stru.bad_frame_throw_count = 10;
 			di_pre_stru.bad_frame_throw_count--;
+
 			vf_put(vframe, VFM_NAME);
 			vf_notify_provider(
 				VFM_NAME, VFRAME_EVENT_RECEIVER_PUT, NULL);
 			return 0;
 		}
+
+
+		/*
+		 * for afbc used by vpp and di, when di use it,
+		 * vpp need release afbc, waitting vpp release
+		 */
+		if (di_pre_stru.wait_afbc) {
+			/*check time out and afbc release status*/
+			rls_timeout =
+				jiffies_to_msecs(jiffies_64 -
+					di_pre_stru.afbc_rls_time);
+			afbc_busy = di_requeset_afbc(true);
+			if (afbc_busy && (rls_timeout < 80)) {
+				vf_put(vframe, VFM_NAME);
+				vf_notify_provider(
+				VFM_NAME, VFRAME_EVENT_RECEIVER_PUT, NULL);
+				pr_info("di: drop vframe (%d) t:%d\n",
+					afbc_busy, rls_timeout);
+				return 0;
+			} else if (!afbc_busy) {
+				/*afbc_busy = di_requeset_afbc(false);*/
+				di_pre_stru.wait_afbc = 0;
+				pr_info("di: afbc hw free\n");
+			}
+		}
+
 		bit10_pack_patch =  (is_meson_gxtvbb_cpu() ||
 							is_meson_gxl_cpu() ||
 							is_meson_gxm_cpu());
@@ -3983,6 +4040,9 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 		/* source change, when i mix p,force p as i*/
 		if (change_type == 1 || (change_type == 2 &&
 					 di_pre_stru.cur_prog_flag == 1)) {
+
+			di_pre_stru.field_count_for_cont = 0;
+
 			if (di_pre_stru.di_mem_buf_dup_p) {
 				/*avoid only 2 i field then p field*/
 				if (
@@ -4032,7 +4092,8 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 				di_buf->vframe->height,
 				di_buf->vframe->source_type);
 
-			if (IS_COMP_MODE(di_buf->vframe->type)) {
+			if (IS_COMP_MODE(di_buf->vframe->type) &&
+				!is_bypass(vframe)) {
 				if (IS_VDIN_SRC(di_buf->vframe->source_type) &&
 					IS_I_SRC(di_buf->vframe->type)) {
 					di_pre_stru.cur_width =
@@ -4083,7 +4144,30 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 				mpeg2vdin_flag = 1;
 			}
 #endif
-			di_pre_stru.field_count_for_cont = 0;
+
+			/*
+			 * for afbc used by vpp and di, when di use it,
+			 * vpp need release afbc, waitting vpp release
+			 */
+			if (is_meson_tl1_cpu() || is_meson_sm1_cpu()) {
+				/*compress mode and format changed*/
+				if (!is_bypass(di_buf->vframe) &&
+					di_pre_stru.source_change_flag &&
+					IS_COMP_MODE(di_pre_stru.cur_inp_type)
+					&& !afbc_is_free()
+					&& !di_pre_stru.wait_afbc) {
+					afbc_busy = di_requeset_afbc(true);
+					vf_put(vframe, VFM_NAME);
+					vf_notify_provider(VFM_NAME,
+					VFRAME_EVENT_RECEIVER_PUT, NULL);
+					recycle_vframe_type_pre(di_buf);
+					di_pre_stru.afbc_rls_time = jiffies_64;
+					di_pre_stru.wait_afbc = true;
+					pr_info("di req afbc:%d\n", afbc_busy);
+					return 0;
+				}
+			}
+			/*di_pre_stru.field_count_for_cont = 0;*/
 		} else if (di_pre_stru.cur_prog_flag == 0) {
 			/* check if top/bot interleaved */
 			if (change_type == 2)
@@ -4410,6 +4494,12 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 		if (bypass_state == 0)
 			di_buf->vframe->type |= VIDTYPE_PRE_INTERLACE;
 	}
+
+	if (is_afbc_mode) {
+		di_buf->vframe->type |= VIDTYPE_PRE_DI_AFBC;
+		/*pr_info("vf type:0x%x\n", di_buf->vframe->type);*/
+	}
+
 	if (is_bypass_post()) {
 		if (bypass_post_state == 0)
 			di_pre_stru.source_change_flag = 1;
@@ -4438,6 +4528,7 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 		di_buf->post_proc_flag = 1;
 		di_patch_post_update_mc_sw(DI_MC_SW_OTHER, mcpre_en);//en
 	}
+
 	if ((di_pre_stru.di_mem_buf_dup_p == di_pre_stru.di_wr_buf) ||
 	    (di_pre_stru.di_chan2_buf_dup_p == di_pre_stru.di_wr_buf)) {
 		pr_dbg("+++++++++++++++++++++++\n");
@@ -5845,6 +5936,7 @@ static int process_post_vframe(void)
 	int itmp;
 	int ready_count = list_count(QUEUE_PRE_READY);
 	bool check_drop = false;
+	u32 di_afbc = false;
 
 	if (queue_empty(QUEUE_POST_FREE))
 		return 0;
@@ -5862,6 +5954,11 @@ static int process_post_vframe(void)
 
 		recovery_flag++;
 		return 0;
+	}
+
+	if (ready_di_buf->vframe->type & VIDTYPE_PRE_DI_AFBC) {
+		di_afbc = 1;
+		/*pr_info("di afbc mode 0x%x\n", ready_di_buf->vframe->type);*/
 	}
 
 	if ((ready_di_buf->post_proc_flag) &&
@@ -5940,6 +6037,9 @@ static int process_post_vframe(void)
 					VIDTYPE_VIU_SINGLE_PLANE |
 					VIDTYPE_VIU_FIELD |
 					VIDTYPE_PRE_INTERLACE;
+				if (di_afbc)
+					di_buf->vframe->type |=
+					VIDTYPE_PRE_DI_AFBC;
 				di_buf->vframe->width =
 					di_buf->di_buf_dup_p[1]->width_bk;
 				if (
@@ -5966,6 +6066,10 @@ static int process_post_vframe(void)
 						  VIDTYPE_VIU_SINGLE_PLANE |
 							VIDTYPE_VIU_FIELD |
 							VIDTYPE_PRE_INTERLACE;
+					if (di_afbc)
+						di_buf->vframe->type |=
+						VIDTYPE_PRE_DI_AFBC;
+
 					di_buf->vframe->height >>= 1;
 					di_buf->vframe->canvas0Addr =
 						di_buf->di_buf_dup_p[0]
@@ -6113,6 +6217,10 @@ VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 						|= VIDTYPE_VIU_FIELD;
 					di_buf->vframe->type
 						&= ~(VIDTYPE_TYPEMASK);
+					if (di_afbc)
+						di_buf->vframe->type |=
+						VIDTYPE_PRE_DI_AFBC;
+
 					di_buf->vframe->process_fun
 = (post_wr_en && post_wr_support)?NULL:de_post_process;
 					di_buf->process_fun_index
@@ -6205,6 +6313,10 @@ VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 					VIDTYPE_VIU_SINGLE_PLANE |
 					VIDTYPE_VIU_FIELD |
 					VIDTYPE_PRE_INTERLACE;
+				if (di_afbc)
+					di_buf->vframe->type |=
+					VIDTYPE_PRE_DI_AFBC;
+
 				if (
 					di_buf->di_buf_dup_p[0]->
 					new_format_flag)
@@ -6231,6 +6343,10 @@ VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 					VIDTYPE_PROGRESSIVE |
 					VIDTYPE_VIU_422 |
 					VIDTYPE_VIU_SINGLE_PLANE;
+				if (di_afbc)
+					di_buf->vframe->type |=
+					VIDTYPE_PRE_DI_AFBC;
+
 				if (
 					(di_buf->di_buf_dup_p[0]->
 					 new_format_flag) ||
@@ -6261,6 +6377,10 @@ VFRAME_EVENT_PROVIDER_VFRAME_READY, NULL);
 					VIDTYPE_VIU_SINGLE_PLANE |
 					VIDTYPE_VIU_FIELD |
 					VIDTYPE_PRE_INTERLACE;
+				if (di_afbc)
+					di_buf->vframe->type |=
+					VIDTYPE_PRE_DI_AFBC;
+
 				di_buf->vframe->height >>= 1;
 				di_buf->vframe->width =
 					di_buf->di_buf_dup_p[0]->width_bk;
@@ -6910,6 +7030,8 @@ static void di_pre_trigger_work(struct di_pre_stru_s *pre_stru_p)
 					Rd(DI_INTR_CTRL),
 					(unsigned int)(cur_to_msecs() -
 					di_pre_stru.irq_time[1]));
+				pr_info("AFBCD0_MISC_CTRL=0x%x\n",
+					RDMA_RD(VD1_AFBCD0_MISC_CTRL));
 			}
 		}
 	} else {
@@ -7081,6 +7203,8 @@ static int di_receiver_event_fun(int type, void *data, void *arg)
 		ddbg_mod_save(eDI_DBG_MOD_UNREGB, 0, 0);
 		di_pre_stru.unreg_req_flag = 1;
 		di_pre_stru.vdin_source = false;
+		di_pre_stru.wait_afbc = false;
+		/*di_requeset_afbc(false);*/
 		trigger_pre_di_process(TRIGGER_PRE_BY_PROVERDER_UNREG);
 		di_pre_stru.unreg_req_flag_cnt = 0;
 		//wait 10ms:
@@ -7453,6 +7577,7 @@ static vframe_t *di_vf_peek(void *arg)
 			vframe_type_name[di_buf->type],
 			di_buf->index, vframe_ret);
 #endif
+
 	return vframe_ret;
 }
 /*recycle the buffer for keeping buffer*/
@@ -7585,6 +7710,7 @@ get_vframe:
 			vframe_ret->early_process_fun(
 				vframe_ret->private_data, vframe_ret);
 	}
+
 	return vframe_ret;
 }
 

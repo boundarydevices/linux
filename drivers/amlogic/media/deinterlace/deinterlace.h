@@ -370,6 +370,8 @@ struct di_pre_stru_s {
 	unsigned long irq_time[2];
 	/* combing adaptive */
 	struct combing_status_s *mtn_status;
+	u64 afbc_rls_time;
+	bool wait_afbc;
 };
 
 struct di_post_stru_s {
@@ -445,6 +447,8 @@ int get_di_video_peek_cnt(void);
 unsigned long get_di_reg_unreg_timeout_cnt(void);
 struct vframe_s **get_di_vframe_in(void);
 
+extern s32 di_request_afbc_hw(u8 id, bool on);
+u32 di_requeset_afbc(u32 onoff);
 
 /*---------------------*/
 
