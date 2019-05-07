@@ -81,7 +81,7 @@
 **      gckCOMMAND Command
 **          gckCOMMAND object has been updated with a new command queue.
 */
-static gceSTATUS
+static gcmNOINLINE gceSTATUS
 _NewQueue(
     IN OUT gckCOMMAND Command,
     IN gctBOOL Stalled
@@ -173,7 +173,7 @@ OnError:
     return status;
 }
 
-static gceSTATUS
+static gcmNOINLINE gceSTATUS
 _IncrementCommitAtom(
     IN gckCOMMAND Command,
     IN gctBOOL Increment
@@ -234,7 +234,7 @@ OnError:
     return status;
 }
 
-static gceSTATUS
+static gcmNOINLINE gceSTATUS
 _CheckFlushMMU(
     IN gckCOMMAND Command,
     IN gckHARDWARE Hardware
@@ -348,7 +348,7 @@ OnError:
 }
 
 /* WaitLink FE only. */
-static gceSTATUS
+static gcmNOINLINE gceSTATUS
 _DummyDraw(
     IN gckCOMMAND Command
     )
@@ -1156,7 +1156,7 @@ OnError:
     return status;
 }
 
-static gceSTATUS
+static gcmNOINLINE gceSTATUS
 _HandlePatchList(
     IN gckCOMMAND Command,
     IN gcsHAL_COMMAND_LOCATION * CommandBuffer,
@@ -1251,7 +1251,7 @@ OnError:
     return status;
 }
 
-static gceSTATUS
+static gcmNOINLINE gceSTATUS
 _WaitForAsyncCommandStamp(
     IN gckCOMMAND Command,
     IN gctUINT64 Stamp

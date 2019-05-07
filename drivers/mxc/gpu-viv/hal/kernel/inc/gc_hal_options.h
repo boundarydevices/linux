@@ -416,13 +416,18 @@ This define enables the use of VM for gckCommand and fence buffers.
 #endif
 
 /*
-    gcdREGISTER_ACCESS_FROM_USER
+    gcdREGISTER_READ_FROM_USER
+    gcdREGISTER_WRITE_FROM_USER
 
         Set to 1 to allow IOCTL calls to get through from user land.  This
         should only be in debug or development drops.
 */
-#ifndef gcdREGISTER_ACCESS_FROM_USER
-#   define gcdREGISTER_ACCESS_FROM_USER         1
+#ifndef gcdREGISTER_READ_FROM_USER
+#   define gcdREGISTER_READ_FROM_USER           1
+#endif
+
+#ifndef gcdREGISTER_WRITE_FROM_USER
+#   define gcdREGISTER_WRITE_FROM_USER          0
 #endif
 
 /*
@@ -1331,6 +1336,14 @@ VIV:gcdUSE_MMU_EXCEPTION
 #endif
 
 #define gcdHAL_TEST 1
+
+/*
+    gcdUSE_SINGLE_CONTEXT
+        When enabled, will enable single context.
+ */
+#ifndef gcdUSE_SINGLE_CONTEXT
+#   define gcdUSE_SINGLE_CONTEXT                   0
+#endif
 
 #endif /* __gc_hal_options_h_ */
 

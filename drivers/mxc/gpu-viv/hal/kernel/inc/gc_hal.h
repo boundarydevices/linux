@@ -74,15 +74,21 @@ extern "C" {
 \******************************************************************************/
 
 /* Alignment with a non-power of two value. */
-#define gcmALIGN_NP2(n, align) \
+#define gcmALIGN_NP2(n, align) (((n) + (align) - 1) - (((n) + (align) - 1) % (align)))
+
+#define gcmALIGN_NP2_SAFE(n, align)                                        \
 (\
-    ((n) + (align) - 1) - (((n) + (align) - 1) % (align)) \
+    (gcmALIGN_NP2((n) & ~0ULL, (align) & ~0ULL) ^ gcmALIGN_NP2(n, align)) ?   \
+        (n) : gcmALIGN_NP2(n, align)                                       \
 )
 
 /* Alignment with a power of two value. */
-#define gcmALIGN(n, align) \
+#define gcmALIGN(n, align) (((n) + ((align) - 1)) & ~((align) - 1))
+
+#define gcmALIGN_SAFE(n, align)                                        \
 (\
-    ((n) + ((align) - 1)) & ~((align) - 1) \
+    (gcmALIGN((n) & ~0ULL, (align) & ~0ULL) ^ gcmALIGN(n, align)) ?    \
+         (n) : gcmALIGN(n, align)                                      \
 )
 
 #define gcmALIGN_BASE(n, align) \

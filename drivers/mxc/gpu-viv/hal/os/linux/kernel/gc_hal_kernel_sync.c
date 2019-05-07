@@ -329,7 +329,6 @@ struct dma_fence * viv_fence_create(struct viv_sync_timeline *timeline,
 
     spin_lock_init(&fence->lock);
 
-    fence->signal = (gctSIGNAL)(uintptr_t)signal->id;
     fence->parent = timeline;
 
     seqno = (unsigned)atomic64_inc_return(&timeline->seqno);

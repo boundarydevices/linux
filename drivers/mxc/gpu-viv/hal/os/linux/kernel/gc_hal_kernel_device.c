@@ -660,7 +660,6 @@ gc_version_show(struct seq_file *m, void *data)
         return -ENXIO;
 
     platform = device->platform;
-
     if (!platform)
         return -ENXIO;
 

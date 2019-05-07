@@ -979,10 +979,9 @@ static int patch_param(struct platform_device *pdev,
         patch_param_imx6(pdev, args);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
-    if(args->compression == -1)
+    if(args->compression == gcvCOMPRESSION_OPTION_DEFAULT)
     {
         const u32 *property;
-        args->compression = gcvCOMPRESSION_OPTION_DEFAULT;
         property = of_get_property(pdev->dev.of_node, "depth-compression", NULL);
         if (property && *property == 0)
         {
