@@ -1594,7 +1594,7 @@
 
 	dpu1_intsteer: dpu_intsteer@56000000 {
 		compatible = "fsl,imx8qm-dpu-intsteer", "syscon";
-		reg = <0x0 0x56000000 0x0 0x10000>;
+		reg = <0x0 0x56000000 0x0 0xcc>;
 	};
 
 	pixel_combiner1: pixel-combiner@56020000 {
@@ -2068,7 +2068,7 @@
 
 	dpu2_intsteer: dpu_intsteer@57000000 {
 		compatible = "fsl,imx8qm-dpu-intsteer", "syscon";
-		reg = <0x0 0x57000000 0x0 0x10000>;
+		reg = <0x0 0x57000000 0x0 0xcc>;
 	};
 
 	pixel_combiner2: pixel-combiner@57020000 {
