@@ -1852,7 +1852,7 @@
 
 	mipi_dsi_csr1: csr@56221000 {
 		compatible = "fsl,imx8qxp-mipi-dsi-csr", "syscon";
-		reg = <0x0 0x56221000 0x0 0x1000>;
+		reg = <0x0 0x56221000 0x0 0xf0>;
 	};
 
 	mipi_dsi_phy1: dsi_phy@56228300 {
@@ -2030,7 +2030,7 @@
 
 	mipi_dsi_csr2: csr@56241000 {
 		compatible = "fsl,imx8qxp-mipi-dsi-csr", "syscon";
-		reg = <0x0 0x56241000 0x0 0x1000>;
+		reg = <0x0 0x56241000 0x0 0xf0>;
 	};
 
 	mipi_dsi_phy2: dsi_phy@56248300 {
