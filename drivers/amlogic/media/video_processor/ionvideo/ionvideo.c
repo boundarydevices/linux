@@ -25,7 +25,8 @@
 #include <media/videobuf2-v4l2.h>
 #include <linux/platform_device.h>
 #include <linux/amlogic/major.h>
-
+#define KERNEL_ATRACE_TAG KERNEL_ATRACE_TAG_IONVIDEO
+#include <trace/events/meson_atrace.h>
 #define IONVIDEO_MODULE_NAME "ionvideo"
 
 #define IONVIDEO_VERSION "1.0"
@@ -389,8 +390,6 @@ static void ionvideo_thread_tick(struct ionvideo_dev *dev)
 	vf = vf_peek(dev->vf_receiver_name);
 	if (!vf) {
 		dev->vf_wait_cnt++;
-		/* msleep(5); */
-		usleep_range(1000, 2000);
 		return;
 	}
 	dev->ppmgr2_dev.dst_width = dev->width;
@@ -407,7 +406,7 @@ static void ionvideo_thread_tick(struct ionvideo_dev *dev)
 	}
 	if (dev->freerun_mode == 0 && ionvideo_size_changed(dev, w, h)) {
 		/* msleep(10); */
-		usleep_range(4000, 5000);
+		/*usleep_range(4000, 5000);*/
 		return;
 	}
 	mutex_lock(&dev->mutex_input);
@@ -415,7 +414,6 @@ static void ionvideo_thread_tick(struct ionvideo_dev *dev)
 	if (buf == NULL) {
 		dprintk(dev, 3, "No active queue to serve\n");
 		mutex_unlock(&dev->mutex_input);
-		schedule_timeout_interruptible(msecs_to_jiffies(20));
 		return;
 	}
 	mutex_unlock(&dev->mutex_input);
@@ -431,6 +429,8 @@ static void ionvideo_thread_tick(struct ionvideo_dev *dev)
 	v4l2q_push(&dev->output_queue, buf);
 	dma_q->vb_ready++;
 	mutex_unlock(&dev->mutex_output);
+	ATRACE_COUNTER(dev->v4l2_dev.name, dma_q->vb_ready);
+	wake_up_interruptible(&dma_q->wq_poll);
 	dprintk(dev, 4, "[%p/%d] done\n", buf, buf->index);
 }
 
@@ -441,22 +441,33 @@ static void ionvideo_sleep(struct ionvideo_dev *dev)
 {
 	struct ionvideo_dmaqueue *dma_q = &dev->vidq;
 	/* int timeout; */
-	DECLARE_WAITQUEUE(wait, current);
+	/*DECLARE_WAITQUEUE(wait, current);*/
 
 	dprintk(dev, 4, "%s dma_q=0x%08lx\n", __func__, (unsigned long)dma_q);
 
-	add_wait_queue(&dma_q->wq, &wait);
+	/*add_wait_queue(&dma_q->wq, &wait);*/
 	if (kthread_should_stop())
 		goto stop_task;
 
 	/* Calculate time to wake up */
 	/* timeout = msecs_to_jiffies(frames_to_ms(1)); */
 
+	if (vf_peek(dev->vf_receiver_name) == NULL
+		|| v4l2q_peek(&dev->input_queue) == NULL) {
+		wait_event_interruptible_timeout(
+				dma_q->wq,
+				(vf_peek(dev->vf_receiver_name) != NULL)
+				&& (v4l2q_peek(&dev->input_queue) != NULL),
+				msecs_to_jiffies(5));
+	}
+	ATRACE_BEGIN("ionvideo_thread_tick");
 	ionvideo_thread_tick(dev);
+	ATRACE_END();
 
 	/* schedule_timeout_interruptible(timeout); */
 
-stop_task: remove_wait_queue(&dma_q->wq, &wait);
+stop_task:
+	/*remove_wait_queue(&dma_q->wq, &wait);*/
 	try_to_freeze();
 }
 
@@ -476,7 +487,6 @@ static int ionvideo_thread(void *data)
 			break;
 	}
 	dev->thread_stopped = 1;
-	wake_up_interruptible(&dev->wq);
 	dprintk(dev, 2, "thread: exit\n");
 	return 0;
 }
@@ -695,6 +705,21 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	return 0;
 }
 
+static unsigned int vidioc_poll(struct file *file,
+				struct poll_table_struct *wait)
+{
+	struct ionvideo_dev *dev = video_drvdata(file);
+	struct ionvideo_dmaqueue *dma_q = &dev->vidq;
+
+	if (dma_q->vb_ready > 0)
+		return POLL_IN | POLLRDNORM;
+	poll_wait(file, &dma_q->wq_poll, wait);
+	if (dma_q->vb_ready > 0)
+		return POLL_IN | POLLRDNORM;
+	else
+		return 0;
+}
+
 static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 {
 	struct ionvideo_dev *dev = video_drvdata(file);
@@ -868,6 +893,7 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 	if (out_put != NULL) {
 		dma_q->vb_ready--;
 		*p = *out_put;
+		ATRACE_COUNTER(dev->v4l2_dev.name, dma_q->vb_ready);
 	} else {
 		mutex_unlock(&dev->mutex_output);
 		return -EAGAIN;
@@ -887,7 +913,7 @@ static const struct v4l2_file_operations ionvideo_v4l2_fops = {
 	.open = vidioc_open,
 	.release = vidioc_close,
 	.read = vb2_fop_read,
-	.poll = vb2_fop_poll,
+	.poll = vidioc_poll,
 	.unlocked_ioctl = video_ioctl2,/* V4L2 ioctl handler */
 	.mmap = vb2_fop_mmap,
 };
@@ -951,6 +977,7 @@ static int ionvideo_v4l2_release(void)
 static int video_receiver_event_fun(int type, void *data, void *private_data)
 {
 	struct ionvideo_dev *dev = (struct ionvideo_dev *)private_data;
+	struct ionvideo_dmaqueue *dma_q = &dev->vidq;
 	int timeout = 0;
 	if (type == VFRAME_EVENT_PROVIDER_UNREG) {
 		dev->receiver_register = 0;
@@ -992,8 +1019,13 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 			set_vframe_rate_end_hint();
 		}
 #endif
+	} else if (type == VFRAME_EVENT_PROVIDER_VFRAME_READY) {
+		wake_up_interruptible(&dma_q->wq);
+		return 0;
+	} else if (type == VFRAME_EVENT_PROVIDER_RESET) {
+		wake_up_interruptible(&dma_q->wq);
+		return 0;
 	}
-
 	return 0;
 }
 
@@ -1034,6 +1066,7 @@ static int __init ionvideo_create_instance(int inst)
 	/* init video dma queues */
 	INIT_LIST_HEAD(&dev->vidq.active);
 	init_waitqueue_head(&dev->vidq.wq);
+	init_waitqueue_head(&dev->vidq.wq_poll);
 	dev->vidq.pdev = dev;
 
 	vfd = &dev->vdev;

@@ -195,6 +195,7 @@ struct ionvideo_dmaqueue {
 	/* thread for generating video stream*/
 	struct task_struct *kthread;
 	wait_queue_head_t wq;
+	wait_queue_head_t wq_poll;
 	/* Counters to control fps rate */
 	int vb_ready;
 	struct ionvideo_dev *pdev;

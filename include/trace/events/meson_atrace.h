@@ -42,6 +42,7 @@ enum {
 	KERNEL_ATRACE_TAG_CODEC_MM,
 	KERNEL_ATRACE_TAG_VDEC,
 	KERNEL_ATRACE_TAG_TSYNC,
+	KERNEL_ATRACE_TAG_IONVIDEO,
 	KERNEL_ATRACE_TAG_MAX = 64,
 	KERNEL_ATRACE_TAG_ALL
 };
@@ -96,7 +97,7 @@ void meson_atrace(int tag, const char *name, unsigned int flags,
 #define ATRACE_BEGIN(name) \
 	meson_atrace(KERNEL_ATRACE_TAG, name, \
 		(1 << KERNEL_ATRACE_BEGIN), 0)
-#define ATRACE_END(name) \
+#define ATRACE_END() \
 	meson_atrace(KERNEL_ATRACE_TAG, "", \
 		(1 << KERNEL_ATRACE_END), 1)
 #define ATRACE_ASYNC_BEGIN(name, cookie) \

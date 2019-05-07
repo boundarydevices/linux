@@ -32,6 +32,7 @@ struct {
 	TAG_INFO(CODEC_MM),
 	TAG_INFO(VDEC),
 	TAG_INFO(TSYNC),
+	TAG_INFO(IONVIDEO),
 	{ NULL, 0 }
 };
 
