@@ -140,15 +140,17 @@ static bool omx_run;
 static u32 omx_version = 3;
 #define OMX_PTS_DV_DEFAULT_UPPER 2500
 #define OMX_PTS_DV_DEFAULT_LOWER -1600
-static int omx_pts_interval_upper = 11000;
+static int omx_pts_interval_upper = 5500;
 static int omx_pts_interval_lower = -5500;
 static int omx_pts_dv_upper = OMX_PTS_DV_DEFAULT_UPPER;
 static int omx_pts_dv_lower = OMX_PTS_DV_DEFAULT_LOWER;
 static int omx_pts_set_from_hwc_count;
+static int omx_pts_set_from_hwc_count_begin;
 static bool omx_check_previous_session;
 static u32 omx_cur_session = 0xffffffff;
 static int drop_frame_count;
 #define OMX_MAX_COUNT_RESET_SYSTEMTIME 2
+#define OMX_MAX_COUNT_RESET_SYSTEMTIME_BEGIN 10
 static int receive_frame_count;
 static int display_frame_count;
 static int omx_need_drop_frame_num;
@@ -157,11 +159,7 @@ static bool video_start_post;
 static bool videopeek;
 static bool nopostvideostart;
 static struct video_frame_detect_s video_frame_detect;
-static struct timeval time_setomxpts = {
-	.tv_sec = 0,
-	.tv_usec = 0,
-};
-
+static long long time_setomxpts;
 
 /*----omx_info  bit0: keep_last_frame, bit1~31: unused----*/
 static u32 omx_info = 0x1;
@@ -6318,8 +6316,7 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 		unsigned long delta1 = 0;
 
 		diff = system_time - omx_pts;
-		if (time_setomxpts.tv_sec > 0) {
-			struct timeval now;
+		if (time_setomxpts > 0) {
 			/* time_setomxpts record hwc setomxpts time, */
 			/* when check  diff between pcr and  omx_pts, */
 			/* add compensation will let omx_pts and pcr */
@@ -6327,15 +6324,11 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			/* remove the compensation when omx_pts */
 			/* is not update for a while, in case when */
 			/* paused, pcr is not paused */
-			do_gettimeofday(&now);
-			delta1 = (now.tv_sec - time_setomxpts.tv_sec)
-				* 1000000LL
-				+ (now.tv_usec - time_setomxpts.tv_usec);
+			delta1 = func_div(sched_clock() - time_setomxpts, 1000);
 			if (((diff - omx_pts_interval_upper * 3 / 2) > 0)
 				|| ((diff - omx_pts_interval_lower * 3 / 2)
 				< 0)) {
-				time_setomxpts.tv_sec = 0;
-				time_setomxpts.tv_usec = 0;
+				time_setomxpts = 0;
 				pr_info("omxpts is not update for a while,do not need compenstate\n");
 			} else {
 				diff -=  delta1 * 90 / 1000;
@@ -6347,11 +6340,21 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			|| (omx_pts_set_from_hwc_count <
 			OMX_MAX_COUNT_RESET_SYSTEMTIME)) {
 			timestamp_pcrscr_enable(1);
-			/*pr_info("system_time=%d, omx_pts=%d, diff=%d\n",*/
-			/*system_time, omx_pts, diff);*/
+			if (debug_flag & DEBUG_FLAG_PTS_TRACE)
+				pr_info("system_time=%d, omx_pts=%d, diff=%d\n",
+					system_time, omx_pts, diff);
 			/*add  greatest common divisor of duration*/
 			/*1500(60fps) 3000(30fps) 3750(24fps) for some video*/
 			/*that pts is not evenly*/
+			timestamp_pcrscr_set(omx_pts + DURATION_GCD);
+		} else if (((diff - omx_pts_interval_upper / 2) > 0
+			|| (diff - omx_pts_interval_lower / 2) < 0)
+			&& (omx_pts_set_from_hwc_count_begin <
+			OMX_MAX_COUNT_RESET_SYSTEMTIME_BEGIN)) {
+			timestamp_pcrscr_enable(1);
+			if (debug_flag & DEBUG_FLAG_PTS_TRACE)
+				pr_info("begin-system_time=%d, omx_pts=%d, diff=%d\n",
+					system_time, omx_pts, diff);
 			timestamp_pcrscr_set(omx_pts + DURATION_GCD);
 		} else if (is_dolby_vision_enable()
 			&& ((diff - omx_pts_dv_upper) > 0
@@ -8197,8 +8200,7 @@ static void video_vf_unreg_provider(void)
 	show_first_picture = false;
 	show_first_frame_nosync = false;
 
-	time_setomxpts.tv_sec = 0;
-	time_setomxpts.tv_usec = 0;
+	time_setomxpts = 0;
 
 #ifdef PTS_LOGGING
 	{
@@ -8346,6 +8348,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		display_frame_count = 0;
 		omx_run = false;
 		omx_pts_set_from_hwc_count = 0;
+		omx_pts_set_from_hwc_count_begin = 0;
 		omx_check_previous_session = true;
 		omx_need_drop_frame_num = 0;
 		omx_drop_done = false;
@@ -8738,9 +8741,10 @@ static void set_omx_pts(u32 *p)
 			tmp_pts, set_from_hwc, frame_num, not_reset);
 
 	if (not_reset == 0) {
+		time_setomxpts = sched_clock();
 		omx_pts = tmp_pts;
 		ATRACE_COUNTER("omxpts", omx_pts);
-		do_gettimeofday(&time_setomxpts);
+
 	}
 	/* kodi may render first frame, then drop dozens of frames */
 	if (set_from_hwc == 0 && omx_run == true && frame_num <= 2
@@ -8760,6 +8764,9 @@ static void set_omx_pts(u32 *p)
 		omx_run = true;
 		if (omx_pts_set_from_hwc_count < OMX_MAX_COUNT_RESET_SYSTEMTIME)
 			omx_pts_set_from_hwc_count++;
+		if (omx_pts_set_from_hwc_count_begin <
+			OMX_MAX_COUNT_RESET_SYSTEMTIME_BEGIN)
+			omx_pts_set_from_hwc_count_begin++;
 
 	} else if (set_from_hwc == 0 && !omx_run) {
 		struct vframe_s *vf = NULL;
