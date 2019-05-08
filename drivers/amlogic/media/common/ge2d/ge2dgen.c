@@ -49,14 +49,14 @@ static inline void _set_src1_format(struct ge2d_src1_data_s *src1_data_cfg,
 	if ((format_src & GE2D_FORMAT_YUV) &&
 	    ((format_dst & GE2D_FORMAT_YUV) == 0)) {
 		dp_gen_cfg->use_matrix_default =
-			(format_src & GE2D_FORMAT_COMP_RANGE) ?
+			(format_src & GE2D_FORMAT_FULL_RANGE) ?
 			MATRIX_FULL_RANGE_YCC_TO_RGB : MATRIX_YCC_TO_RGB;
 		dp_gen_cfg->conv_matrix_en = 1;
 	} else if (((format_src & GE2D_FORMAT_YUV) == 0) &&
 		   (format_dst & GE2D_FORMAT_YUV)) {
 		dp_gen_cfg->use_matrix_default =
-			(format_dst & GE2D_FORMAT_COMP_RANGE) ?
-			MATRIX_RGB_TO_YCC : MATRIX_RGB_TO_FULL_RANGE_YCC;
+			(format_dst & GE2D_FORMAT_FULL_RANGE) ?
+			MATRIX_RGB_TO_FULL_RANGE_YCC : MATRIX_RGB_TO_YCC;
 		dp_gen_cfg->conv_matrix_en = 1;
 	} else
 		dp_gen_cfg->conv_matrix_en = 0;
@@ -100,14 +100,14 @@ static inline void _set_dst_format(
 	if ((format_src & GE2D_FORMAT_YUV) &&
 	    ((format_dst & GE2D_FORMAT_YUV) == 0)) {
 		dp_gen_cfg->use_matrix_default =
-			(format_src & GE2D_FORMAT_COMP_RANGE) ?
+			(format_src & GE2D_FORMAT_FULL_RANGE) ?
 			MATRIX_FULL_RANGE_YCC_TO_RGB : MATRIX_YCC_TO_RGB;
 		dp_gen_cfg->conv_matrix_en = 1;
 	} else if (((format_src & GE2D_FORMAT_YUV) == 0) &&
 		   (format_dst & GE2D_FORMAT_YUV)) {
 		dp_gen_cfg->use_matrix_default =
-			(format_dst & GE2D_FORMAT_COMP_RANGE) ?
-			MATRIX_RGB_TO_YCC : MATRIX_RGB_TO_FULL_RANGE_YCC;
+			(format_dst & GE2D_FORMAT_FULL_RANGE) ?
+			MATRIX_RGB_TO_FULL_RANGE_YCC : MATRIX_RGB_TO_YCC;
 		dp_gen_cfg->conv_matrix_en = 1;
 	} else
 		dp_gen_cfg->conv_matrix_en = 0;
