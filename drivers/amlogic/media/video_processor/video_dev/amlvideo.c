@@ -235,7 +235,8 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		if (vf_get_receiver(dev->vf_provider_name)) {
 			AMLVIDEO_DBG("unreg:amlvideo\n");
 			vf_unreg_provider(&dev->video_vf_prov);
-			omx_secret_mode = false;
+			if (dev->inst == 0)
+				omx_secret_mode = false;
 		}
 		dev->first_frame = 0;
 		vfq_init(&dev->q_ready, AMLVIDEO_POOL_SIZE + 1,
@@ -268,7 +269,8 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 			struct vframe_receiver_s *aaa = vf_get_receiver(
 				dev->vf_provider_name);
 			AMLVIDEO_DBG("aaa->name=%s", aaa->name);
-			omx_secret_mode = true;
+			if (dev->inst == 0)
+				omx_secret_mode = true;
 			vfq_init(&dev->q_ready, AMLVIDEO_POOL_SIZE + 1,
 					&dev->amlvideo_pool_ready[0]);
 			vf_provider_init(&dev->video_vf_prov,
