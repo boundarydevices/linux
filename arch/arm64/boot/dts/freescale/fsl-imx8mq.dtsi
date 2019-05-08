@@ -205,7 +205,6 @@
 			compatible = "fsl,imx8mq-pm-domain";
 			reg = <0>;
 			#power-domain-cells = <0>;
-			domain-id = <0>;
 			domain-name = "MIPI_PD";
 		};
 
@@ -213,7 +212,6 @@
 			compatible = "fsl,imx8mq-pm-domain";
 			reg = <1>;
 			#power-domain-cells = <0>;
-			domain-id = <1>;
 			domain-name = "PCIE0_PD";
 		};
 
@@ -221,7 +219,6 @@
 			compatible = "fsl,imx8mq-pm-domain";
 			reg = <2>;
 			#power-domain-cells = <0>;
-			domain-id = <2>;
 			domain-name = "USB_OTG1_PD";
 		};
 
@@ -229,7 +226,6 @@
 			compatible = "fsl,imx8mq-pm-domain";
 			reg = <3>;
 			#power-domain-cells = <0>;
-			domain-id = <3>;
 			domain-name = "USB_OTG2_PD";
 		};
 
@@ -237,7 +233,6 @@
 			compatible = "fsl,imx8mq-pm-domain";
 			reg = <4>;
 			#power-domain-cells = <0>;
-			domain-id = <4>;
 			domain-name = "GPU_PD";
 			clocks = <&clk IMX8MQ_CLK_GPU_AXI>, <&clk IMX8MQ_CLK_GPU_SHADER_DIV>,
 				 <&clk IMX8MQ_CLK_GPU_ROOT>, <&clk IMX8MQ_CLK_GPU_AHB>;
@@ -247,7 +242,6 @@
 			compatible = "fsl,imx8mq-pm-domain";
 			reg = <5>;
 			#power-domain-cells = <0>;
-			domain-id = <5>;
 			domain-name = "VPU_PD";
 			clocks = <&clk IMX8MQ_CLK_VPU_G1_ROOT>, <&clk IMX8MQ_CLK_VPU_G2_ROOT>,
 				 <&clk IMX8MQ_CLK_VPU_DEC_ROOT>;
@@ -257,7 +251,6 @@
 			compatible = "fsl,imx8mq-pm-domain";
 			reg = <8>;
 			#power-domain-cells = <0>;
-			domain-id = <8>;
 			domain-name = "MIPI_CSI1_PD";
 		};
 
@@ -265,7 +258,6 @@
 			compatible = "fsl,imx8mq-pm-domain";
 			reg = <9>;
 			#power-domain-cells = <0>;
-			domain-id = <9>;
 			domain-name = "MIPI_CSI2_PD";
 		};
 
@@ -273,7 +265,6 @@
 			compatible = "fsl,imx8mq-pm-domain";
 			reg = <10>;
 			#power-domain-cells = <0>;
-			domain-id = <10>;
 			domain-name = "PCIE1_PD";
 		};
 	};
