@@ -14839,3 +14839,7 @@ F:	drivers/amlogic/media/camera/ov5640.c
 F:	drivers/amlogic/media/camera/ov5640_firmware.h
 F:	drivers/amlogic/media/vin/tvin/csi/*
 F:	include/linux/amlogic/media/mipi/*
+
+AMLOGIC SM1 S905D3 AC202
+M:	LUAN YUAN <luan.yuan@amlogic.com>
+F:	arch/arm64/boot/dts/amlogic/sm1_s905d3_ac202*
