@@ -1803,7 +1803,7 @@ void set_c_gain(
 	VSYNC_WR_MPEG_REG_BITS(hdr_ctrl, 0, 12, 1);
 	VSYNC_WR_MPEG_REG_BITS(hdr_ctrl, hdr_lut_param->cgain_en, 0, 1);
 
-	if (cpu_after_eq(MESON_CPU_MAJOR_ID_TL1)) {
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_SM1)) {
 		if (hdr_lut_param->bitdepth == 10)
 			VSYNC_WR_MPEG_REG_BITS(cgain_coef1, 0x400, 16, 13);
 		else if (hdr_lut_param->bitdepth == 12)
