@@ -191,12 +191,16 @@ enum signal_format_e {
 	FORMAT_DOVI = 0,
 	FORMAT_HDR10 = 1,
 	FORMAT_SDR = 2,
-	FORMAT_DOVI_LL = 3
+	FORMAT_DOVI_LL = 3,
+	FORMAT_SDR_2020 = 4
 };
 
 enum priority_mode_e {
 	VIDEO_PRIORITY = 0,
-	GRAPHIC_PRIORITY = 1
+	GRAPHIC_PRIORITY = 1,
+	/* same as video priority, but will only switch to video*/
+	/* priority after scene refresh flag has been received */
+	VIDEO_PRIORITY_DELAYED = 2
 };
 
 enum cp_signal_range_e {

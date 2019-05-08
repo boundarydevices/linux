@@ -292,11 +292,15 @@ static unsigned int dolby_vision_default_max[3][3] = {
 };
 
 static unsigned int dolby_vision_graphic_min = 50; /* 0.0001 */
-static unsigned int dolby_vision_graphic_max = 100; /* 1 */
+static unsigned int dolby_vision_graphic_max; /* 100 *//* 0.1 */
 module_param(dolby_vision_graphic_min, uint, 0664);
 MODULE_PARM_DESC(dolby_vision_graphic_min, "\n dolby_vision_graphic_min\n");
 module_param(dolby_vision_graphic_max, uint, 0664);
 MODULE_PARM_DESC(dolby_vision_graphic_max, "\n dolby_vision_graphic_max\n");
+
+static unsigned int dolby_vision_target_graphics_max[3] = {
+	300, 300, 100
+}; /* DOVI/HDR/SDR */
 
 /*these two parameters form OSD*/
 static unsigned int osd_graphic_width = 1920;
@@ -1062,6 +1066,7 @@ static bool stb_core2_const_flag;
 static uint64_t stb_core1_lut[STB_DMA_TBL_SIZE];
 
 static bool tv_mode;
+static bool mel_mode;
 bool is_meson_gxm(void)
 {
 	if (dv_meson_dev.cpu_id == _CPU_MAJOR_ID_GXM)
@@ -5042,7 +5047,7 @@ int dolby_vision_parse_metadata(
 	u32 graphic_max = 100; /* 1 */
 	int ret_flags = 0;
 	int ret = -1;
-	bool melFlag = false;
+	bool mel_flag = false;
 
 	memset(&req, 0, (sizeof(struct provider_aux_req_s)));
 	memset(&el_req, 0, (sizeof(struct provider_aux_req_s)));
@@ -5171,7 +5176,7 @@ int dolby_vision_parse_metadata(
 					VFRAME_EVENT_RECEIVER_DOLBY_BYPASS_EL,
 					(void *)&req);
 			if (ret_flags == 1) {
-				melFlag = true;
+				mel_flag = true;
 			}
 			if (!is_dv_standard_es(req.dv_enhance_exist,
 				ret_flags, w)) {
@@ -5309,6 +5314,9 @@ int dolby_vision_parse_metadata(
 				el_flag = dovi_setting.el_flag;
 			else
 				el_flag = tv_dovi_setting->el_flag;
+			mel_flag = mel_mode;
+			pr_dolby_dbg("update el_flag %d, melFlag %d\n",
+				el_flag, mel_flag);
 			meta_flag_bl = 0;
 		}
 		if ((src_format == FORMAT_DOVI)
@@ -5502,6 +5510,7 @@ int dolby_vision_parse_metadata(
 			dump_tv_setting(tv_dovi_setting,
 				frame_count, debug_dolby);
 			el_mode = el_flag;
+			mel_mode = mel_flag;
 			ret = 0; /* setting updated */
 		} else {
 			tv_dovi_setting->video_width = 0;
@@ -5511,15 +5520,29 @@ int dolby_vision_parse_metadata(
 		return ret;
 	}
 
+	/* check dst format */
+	if ((dolby_vision_mode == DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL)
+	|| (dolby_vision_mode == DOLBY_VISION_OUTPUT_MODE_IPT))
+		dst_format = FORMAT_DOVI;
+	else if (dolby_vision_mode == DOLBY_VISION_OUTPUT_MODE_HDR10)
+		dst_format = FORMAT_HDR10;
+	else
+		dst_format = FORMAT_SDR;
+
 	/* STB core */
 	/* check target luminance */
+	graphic_min = dolby_vision_graphic_min;
+	if (dolby_vision_graphic_max != 0)
+		graphic_max = dolby_vision_graphic_max;
+	else
+		graphic_max =
+			dolby_vision_target_graphics_max[dst_format];
+
 	if (is_graphics_output_off()) {
 		graphic_min = 0;
 		graphic_max = 0;
 		is_osd_off = true;
 	} else {
-		graphic_min = dolby_vision_graphic_min;
-		graphic_max = dolby_vision_graphic_max;
 		/* force reset core2 when osd off->on */
 		/* TODO: 962e need ? */
 		if (is_osd_off)
@@ -5581,14 +5604,6 @@ int dolby_vision_parse_metadata(
 		}
 	}
 
-	/* check dst format */
-	if ((dolby_vision_mode == DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL)
-	|| (dolby_vision_mode == DOLBY_VISION_OUTPUT_MODE_IPT))
-		dst_format = FORMAT_DOVI;
-	else if (dolby_vision_mode == DOLBY_VISION_OUTPUT_MODE_HDR10)
-		dst_format = FORMAT_HDR10;
-	else
-		dst_format = FORMAT_SDR;
 #ifdef V2_4
 	if ((src_format != dovi_setting.src_format)
 		|| (dst_format != dovi_setting.dst_format) ||
@@ -5764,7 +5779,7 @@ int dolby_vision_parse_metadata(
 		graphic_max * 10000,
 		dolby_vision_target_min,
 		dolby_vision_target_max[src_format][dst_format] * 10000,
-		(!el_flag && !melFlag) ||
+		(!el_flag && !mel_flag) ||
 		(dolby_vision_flags & FLAG_DISABLE_COMPOSER),
 		&hdr10_param,
 		&new_dovi_setting);
@@ -5815,6 +5830,7 @@ int dolby_vision_parse_metadata(
 		}
 		dump_setting(&new_dovi_setting, frame_count, debug_dolby);
 		el_mode = el_flag;
+		mel_mode = mel_flag;
 		return 0; /* setting updated */
 	}
 	if (flag < 0) {
@@ -6636,11 +6652,11 @@ static char *pq_config_buf;
 static uint32_t pq_config_level;
 static ssize_t amdolby_vision_write(
 	struct file *file,
-	const char *buf,
+	const char __user *buf,
 	size_t len,
 	loff_t *off)
 {
-	int i;
+	int max_len, w_len;
 
 	if (pq_config_buf == NULL) {
 		pq_config_buf = vmalloc(108*1024);
@@ -6648,15 +6664,20 @@ static ssize_t amdolby_vision_write(
 		if (pq_config_buf == NULL)
 			return -ENOSPC;
 	}
-	for (i = 0; i < len; i++) {
-		pq_config_buf[pq_config_level] = buf[i];
-		pq_config_level++;
-		if (pq_config_level == sizeof(struct pq_config_s)) {
-			dolby_vision_update_pq_config(pq_config_buf);
-			pq_config_level = 0;
-			break;
-		}
+	max_len = sizeof(struct pq_config_s) - pq_config_level;
+	w_len = len < max_len ? len : max_len;
+
+	pr_info("amdolby_vision_write len %d, w_len %d, level %d\n",
+		(int)len, w_len, pq_config_level);
+	if (copy_from_user(pq_config_buf + pq_config_level, buf, w_len))
+		return -EFAULT;
+
+	pq_config_level += w_len;
+	if (pq_config_level == sizeof(struct pq_config_s)) {
+		dolby_vision_update_pq_config(pq_config_buf);
+		pq_config_level = 0;
 	}
+
 	if (len <= 0x1f) {
 		dolby_vision_update_vsvdb_config(
 			pq_config_buf, len);
