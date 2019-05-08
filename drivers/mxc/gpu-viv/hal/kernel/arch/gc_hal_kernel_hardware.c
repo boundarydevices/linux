@@ -10194,7 +10194,11 @@ gckHARDWARE_SetFscaleValue(
         gckOS_AcquireMutex(Hardware->os, Hardware->powerMutex, gcvINFINITE));
     acquired =  gcvTRUE;
 
+    Hardware->kernel->timeOut = Hardware->kernel->timeOut * Hardware->powerOnFscaleVal / 64;
+
     Hardware->powerOnFscaleVal = FscaleValue;
+
+    Hardware->kernel->timeOut = Hardware->kernel->timeOut * 64 / Hardware->powerOnFscaleVal;
 
     if (Hardware->chipPowerState == gcvPOWER_ON)
     {
