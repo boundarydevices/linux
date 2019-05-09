@@ -224,7 +224,6 @@ static struct rpmsg_device_id rpmsg_driver_tty_id_table[] = {
 	{ .name = "rpmsg-openamp-demo-channel" },
 	{ },
 };
-MODULE_DEVICE_TABLE(rpmsg, rpmsg_driver_tty_id_table);
 
 static struct rpmsg_driver rpmsg_tty_driver = {
 	.drv.name	= KBUILD_MODNAME,

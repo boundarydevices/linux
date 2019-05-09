@@ -81,7 +81,6 @@ static struct rpmsg_device_id rpmsg_driver_pingpong_id_table[] = {
 	{ .name	= "rpmsg-openamp-demo-channel-1" },
 	{ },
 };
-MODULE_DEVICE_TABLE(rpmsg, rpmsg_driver_pingpong_id_table);
 
 static struct rpmsg_driver rpmsg_pingpong_driver = {
 	.drv.name	= KBUILD_MODNAME,
