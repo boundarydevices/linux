@@ -573,9 +573,8 @@ static int ak4458_init(struct snd_soc_component *component)
 
 	ak4458_power_on(ak4458);
 
-	/* ACKS bit = 1; 10000000 */
 	ret = snd_soc_component_update_bits(component, AK4458_00_CONTROL1,
-					    0x80, 0x80);
+			    0x80, 0x80);   /* ACKS bit = 1; 10000000 */
 	if (ret < 0)
 		return ret;
 
@@ -585,13 +584,10 @@ static int ak4458_init(struct snd_soc_component *component)
 static int ak4458_probe(struct snd_soc_component *component)
 {
 	struct ak4458_priv *ak4458 = snd_soc_component_get_drvdata(component);
-	int ret;
-
-	ret = ak4458_init(component);
 
 	ak4458->fs = 48000;
 
-	return ret;
+	return ak4458_init(component);
 }
 
 static void ak4458_remove(struct snd_soc_component *component)
