@@ -624,6 +624,11 @@ static int di_debug_readreg;
 module_param(di_debug_readreg, int, 0644);
 MODULE_PARM_DESC(di_debug_readreg, "di_debug_readreg");
 
+static int combing_cnt;
+int combing_diff_min = 2000;
+int combing_diff_max = 2000;
+int combing_cnt_thd = 10;
+
 int adaptive_combing_fixing(
 	struct combing_status_s *cmb_status,
 	unsigned int field_diff,
@@ -678,6 +683,13 @@ int adaptive_combing_fixing(
 	glb_mot[2] = glb_mot[1];
 	glb_mot[1] = glb_mot[0];
 	glb_mot[0] = frame_diff;
+	if (glb_mot[0] < combing_diff_min)
+		combing_cnt = combing_cnt + 1;
+	else
+		combing_cnt = 0;
+	if (glb_mot[0] < combing_diff_min && glb_mot[1] > combing_diff_max &&
+		combing_cnt <= combing_cnt_thd)
+		glb_mot[0] = glb_mot[1];
 	glb_mot_avg5 =
 		(glb_mot[0] + glb_mot[1] + glb_mot[2] + glb_mot[3] +
 		 glb_mot[4]) / 5;
