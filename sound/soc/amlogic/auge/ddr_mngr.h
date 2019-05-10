@@ -173,7 +173,7 @@ struct toddr {
 	enum toddr_src src;
 	unsigned int fifo_id;
 
-	enum toddr_src asrc_src_sel;
+	enum resample_src asrc_src_sel;
 
 	int is_lb; /* check whether for loopback */
 	int irq;

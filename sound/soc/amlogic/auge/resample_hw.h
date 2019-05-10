@@ -36,7 +36,7 @@ extern int resample_disable(enum resample_idx id);
 extern int resample_set_hw_param(enum resample_idx id,
 		enum samplerate_index rate_index);
 extern void resample_src_select(int src);
-extern void resample_src_select_ab(enum resample_idx id, enum toddr_src src);
+extern void resample_src_select_ab(enum resample_idx id, enum resample_src src);
 extern void resample_format_set(enum resample_idx id, int ch_num, int bits);
 
 extern int resample_ctrl_read(enum resample_idx id);

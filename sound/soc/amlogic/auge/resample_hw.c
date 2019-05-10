@@ -127,7 +127,7 @@ void resample_src_select(int src)
 		src << 29);
 }
 /* for tl1 and after */
-void resample_src_select_ab(enum resample_idx id, enum toddr_src src)
+void resample_src_select_ab(enum resample_idx id, enum resample_src src)
 {
 	int offset = EE_AUDIO_RESAMPLEB_CTRL3 - EE_AUDIO_RESAMPLEA_CTRL3;
 	int reg = EE_AUDIO_RESAMPLEA_CTRL3 + offset * id;

@@ -566,7 +566,6 @@ static void aml_resample_enable(
 	if (to->chipinfo
 			&& to->chipinfo->asrc_src_sel_ctrl) {
 		/* fix asrc_src_sel */
-		/*
 		switch (p_attach_resample->attach_module) {
 		case LOOPBACK_A:
 			to->asrc_src_sel = ASRC_LOOPBACK_A;
@@ -578,8 +577,8 @@ static void aml_resample_enable(
 			to->asrc_src_sel = to->fifo_id;
 			break;
 		}
-		*/
-		to->asrc_src_sel = p_attach_resample->attach_module;
+
+		/*to->asrc_src_sel = p_attach_resample->attach_module;*/
 	}
 
 	pr_info("toddr %d selects data to %s resample_%c for module:%s\n",
