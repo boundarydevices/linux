@@ -11,9 +11,9 @@
 		linux,usable-memory = <0x80000000 0x1ff00000>,
 				<0xa0000000 0x1ff00000>;
 	};
-	m4_tcm: tcml@007f8000 {
+	m4_tcm: tcml@7f8000 {
 		compatible = "fsl, m4_tcml";
-		reg = <0x007f8000 0x8000>;
+		reg = <0x7f8000 0x8000>;
 	};
 };
 
@@ -46,7 +46,7 @@
 };
 
 &ocram {
-	reg = <0x00901000 0xf000>;
+	reg = <0x901000 0xf000>;
 };
 
 &reg_can2_3v3 {

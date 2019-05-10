@@ -102,13 +102,13 @@
 				<&clks IMX7D_AHB_CHANNEL_ROOT_CLK>, <&clks IMX7D_MAIN_AXI_ROOT_DIV>;
 			clock-names = "osc", "axi_sel", "ahb_sel", "pfd0_392m", "dram_root", "dram_alt_sel",
 					"pll_dram", "dram_alt_root", "pfd2_270m", "pfd1_332m", "ahb", "axi";
-			interrupts = <0 112 0x04>, <0 113 0x04>;
+			interrupts = <0 112 0x4>, <0 113 0x4>;
 			interrupt-names = "irq_busfreq_0", "irq_busfreq_1";
 		};
 
-		caam_sm: caam-sm@00100000 {
+		caam_sm: caam-sm@100000 {
 			 compatible = "fsl,imx7d-caam-sm", "fsl,imx6q-caam-sm";
-			 reg = <0x00100000 0x8000>;
+			 reg = <0x100000 0x8000>;
 		};
 
 		irq_sec_vio: caam_secvio {
@@ -126,37 +126,37 @@
 			status = "disabled";
 		};
 
-		ocrams_ddr: sram@00900000 {
+		ocrams_ddr: sram@900000 {
 			compatible = "fsl,ddr-lpm-sram";
-			reg = <0x00900000 0x1000>;
+			reg = <0x900000 0x1000>;
 			clocks = <&clks IMX7D_OCRAM_CLK>;
 		};
 
 		ocram: sram@901000 {
 			compatible = "mmio-sram";
-			reg = <0x00901000 0x1f000>;
+			reg = <0x901000 0x1f000>;
 			clocks = <&clks IMX7D_OCRAM_CLK>;
 		};
 
-		ocrams: sram@00180000 {
+		ocrams: sram@180000 {
 			compatible = "fsl,lpm-sram";
-			reg = <0x00180000 0x8000>;
+			reg = <0x180000 0x8000>;
 			clocks = <&clks IMX7D_OCRAM_S_CLK>;
 			status = "disabled";
 		};
 
-		ocrams_mf: sram-mf@00900000 {
+		ocrams_mf: sram-mf@900000 {
 			compatible = "fsl,mega-fast-sram";
-			reg = <0x00900000 0x20000>;
+			reg = <0x900000 0x20000>;
 			clocks = <&clks IMX7D_OCRAM_CLK>;
 		};
 
 		ocram_optee {
 			compatible = "fsl,optee-lpm-sram";
-			reg = <0x00180000 0x8000>;
-			overw_reg = <&ocrams_ddr 0x00904000 0x1000>,
-					<&ocram 0x00905000 0x1b000>,
-					<&ocrams 0x00900000 0x4000>;
+			reg = <0x180000 0x8000>;
+			overw_reg = <&ocrams_ddr 0x904000 0x1000>,
+					<&ocram 0x905000 0x1b000>,
+					<&ocrams 0x900000 0x4000>;
 			overw_clock = <&ocrams &clks IMX7D_OCRAM_CLK>;
 		};
 	};
@@ -346,9 +346,9 @@
 		#address-cells = <3>;
 		#size-cells = <2>;
 		device_type = "pci";
-		bus-range = <0x00 0xff>;
-		ranges = <0x81000000 0 0          0x4ff80000 0 0x00010000   /* downstream I/O */
-			  0x82000000 0 0x40000000 0x40000000 0 0x0ff00000>; /* non-prefetchable memory */
+		bus-range = <0x0 0xff>;
+		ranges = <0x81000000 0 0          0x4ff80000 0 0x10000   /* downstream I/O */
+			  0x82000000 0 0x40000000 0x40000000 0 0xff00000>; /* non-prefetchable memory */
 		num-lanes = <1>;
 		interrupts = <GIC_SPI 122 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 127 IRQ_TYPE_LEVEL_HIGH>; /* eDMA */

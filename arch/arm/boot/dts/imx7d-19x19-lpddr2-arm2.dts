@@ -96,9 +96,9 @@
 	pinctrl-0 = <&pinctrl_i2c1_1>;
 	status = "okay";
 
-	pmic: pfuze3000@08 {
+	pmic: pfuze3000@8 {
 		compatible = "fsl,pfuze3000";
-		reg = <0x08>;
+		reg = <0x8>;
 
 		regulators {
 			sw1a_reg: sw1a {
@@ -397,12 +397,12 @@
 	pinctrl-0 = <&pinctrl_weim_nor_1 &pinctrl_weim_cs0_1>;
 	#address-cells = <2>;
 	#size-cells = <1>;
-	ranges = <0 0 0x28000000 0x08000000>;
+	ranges = <0 0 0x28000000 0x8000000>;
 	status = "okay";
 
 	nor@0,0 {
 		compatible = "cfi-flash";
-		reg = <0 0 0x08000000>;
+		reg = <0 0 0x8000000>;
 		#address-cells = <1>;
 		#size-cells = <1>;
 		bank-width = <2>;
