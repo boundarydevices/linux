@@ -1002,10 +1002,16 @@ static int videosync_receiver_event_fun(int type, void *data,
 		videosync_buffer_states(&states, dev_s);
 		if (states.buf_queued_num + states.buf_ready_num > 0)
 			return RECEIVER_ACTIVE;
-
-		vp_print(dev_s->vf_receiver_name, 0,
+		else {
+			vp_print(dev_s->vf_receiver_name, 0,
 				"buf queue empty!!\n");
-		return RECEIVER_ACTIVE;/*return RECEIVER_INACTIVE;*/
+			if (vf_notify_receiver(
+				dev_s->vf_provider_name,
+				VFRAME_EVENT_PROVIDER_QUREY_STATE,
+				NULL) == RECEIVER_ACTIVE)
+				return RECEIVER_ACTIVE;
+			return RECEIVER_INACTIVE;
+		}
 	}
 	return 0;
 }

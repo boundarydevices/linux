@@ -6754,10 +6754,12 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 SET_FILTER:
 #ifdef VIDEO_PIP
 	vf = pip_vf_peek();
+
 	/* setting video display property in underflow mode */
 	if ((!vf) && cur_pipbuf && (pip_property_changed))
 		pip_toggle_frame(cur_pipbuf);
-	if (vf) {
+
+	while (vf) {
 		vf = pip_vf_get();
 		if (vf) {
 			if (!vf->frame_dirty)
@@ -6765,6 +6767,7 @@ SET_FILTER:
 			else
 				pip_vf_put(vf);
 		}
+		vf = pip_vf_peek();
 	}
 #endif
 #if defined(CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_VECM)
