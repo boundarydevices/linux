@@ -1102,7 +1102,9 @@
 	assigned-clocks = <&clks IMX7D_USDHC3_ROOT_CLK>;
 	assigned-clock-rates = <400000000>;
 	bus-width = <8>;
+	no-mmc-hs400;
 	non-removable;
+	vqmmc-1-8-v;
 	status = "okay";
 };
 
