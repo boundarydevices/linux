@@ -884,7 +884,8 @@ static void ahci_imx_error_handler(struct ata_port *ap)
 
 	ahci_error_handler(ap);
 
-	if (!(imxpriv->first_time) || ahci_imx_hotplug)
+	if (!(imxpriv->first_time) || ahci_imx_hotplug ||
+			(imxpriv->type == AHCI_IMX8QM))
 		return;
 
 	imxpriv->first_time = false;
@@ -916,7 +917,7 @@ static int ahci_imx_softreset(struct ata_link *link, unsigned int *class,
 
 	if (imxpriv->type == AHCI_IMX53)
 		ret = ahci_pmp_retry_srst_ops.softreset(link, class, deadline);
-	else if (imxpriv->type == AHCI_IMX6Q || imxpriv->type == AHCI_IMX6QP)
+	else
 		ret = ahci_ops.softreset(link, class, deadline);
 
 	return ret;
@@ -1115,6 +1116,10 @@ static int imx8_sata_probe(struct device *dev, struct imx_ahci_priv *imxpriv)
 	struct platform_device *pdev = imxpriv->ahci_pdev;
 	struct device_node *np = dev->of_node;
 
+	if (!(dev->bus_dma_mask)) {
+		dev->bus_dma_mask = DMA_BIT_MASK(32);
+		dev_info(dev, "imx8qm sata only supports 32bit dma.\n");
+	}
 	if (of_property_read_u32(np, "ext_osc", &imxpriv->ext_osc) < 0) {
 		dev_info(dev, "ext_osc is not specified.\n");
 		/* Use the external osc as ref clk defaultly. */
@@ -1327,12 +1332,6 @@ static int imx_ahci_probe(struct platform_device *pdev)
 		return PTR_ERR(imxpriv->sata_ref_clk);
 	}
 
-	imxpriv->ahb_clk = devm_clk_get(dev, "ahb");
-	if (IS_ERR(imxpriv->ahb_clk)) {
-		dev_err(dev, "can't get ahb clock.\n");
-		return PTR_ERR(imxpriv->ahb_clk);
-	}
-
 	if (imxpriv->type == AHCI_IMX6Q || imxpriv->type == AHCI_IMX6QP) {
 		u32 reg_value;
 
@@ -1409,8 +1408,17 @@ static int imx_ahci_probe(struct platform_device *pdev)
 		writel(reg_val, hpriv->mmio + HOST_PORTS_IMPL);
 	}
 
-	reg_val = clk_get_rate(imxpriv->ahb_clk) / 1000;
-	writel(reg_val, hpriv->mmio + IMX_TIMER1MS);
+	imxpriv->ahb_clk = devm_clk_get(dev, "ahb");
+	if (IS_ERR(imxpriv->ahb_clk)) {
+		dev_info(dev, "no ahb clock.\n");
+	} else {
+		/*
+		 * AHB clock is only used to configure the vendor specified
+		 * TIMER1MS register. Set it if the AHB clock is defined.
+		 */
+		reg_val = clk_get_rate(imxpriv->ahb_clk) / 1000;
+		writel(reg_val, hpriv->mmio + IMX_TIMER1MS);
+	}
 
 	/*
 	 * Due to IP bug on the Synopsis 3.00 SATA version,
