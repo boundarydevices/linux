@@ -49,6 +49,63 @@
 #include "spdif_dai.h"
 #include "dmic.h"
 
+static int i2s_clk_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_i2s *p_i2s = snd_soc_dai_get_drvdata(cpu_dai);
+
+	ucontrol->value.enumerated.item[0] = clk_get_rate(p_i2s->clk_mclk);
+	return 0;
+}
+
+static int i2s_clk_set(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_i2s *p_i2s = snd_soc_dai_get_drvdata(cpu_dai);
+	int ret = 0;
+
+	unsigned long mclk_rate = p_i2s->mclk;
+	int value = ucontrol->value.enumerated.item[0];
+
+	if (value > 2000000 || value < 0) {
+		pr_err("Fine tdm clk setting range (0~2000000), %d\n", value);
+		return 0;
+	}
+	mclk_rate += (value - 1000000);
+
+	ret = clk_set_rate(p_i2s->clk_mpll, mclk_rate * 10);
+	if (ret) {
+		pr_err("Cannot set i2s mpll\n");
+		return ret;
+	}
+
+	ret = clk_set_rate(p_i2s->clk_mclk, mclk_rate);
+	if (ret) {
+		pr_err("Cannot set i2s mclk %ld\n", mclk_rate);
+		return ret;
+	}
+
+	p_i2s->mclk = mclk_rate;
+	return 0;
+}
+
+static const struct snd_kcontrol_new snd_i2s_controls[] = {
+	SOC_SINGLE_EXT("TDM MCLK Fine Setting",
+				0, 0, 2000000, 0,
+				i2s_clk_get,
+				i2s_clk_set),
+};
+
+static int aml_dai_i2s_probe(struct snd_soc_dai *dai)
+{
+	snd_soc_add_dai_controls(dai,
+		snd_i2s_controls, ARRAY_SIZE(snd_i2s_controls));
+	return 0;
+}
+
+
 /* extern int set_i2s_iec958_samesource(int enable);
  *
  * the I2S hw  and IEC958 PCM output initiation,958 initiation here,
@@ -140,6 +197,8 @@ static int aml_i2s_set_amclk(struct aml_i2s *i2s, unsigned long rate)
 	if (ret) {
 		pr_info("Cannot set i2s mclk %lu\n", rate);
 		return ret;
+	} else {
+		i2s->mclk = rate;
 	}
 
 	audio_set_i2s_clk_div();
@@ -379,6 +438,7 @@ static struct snd_soc_dai_ops aml_dai_i2s_ops = {
 struct snd_soc_dai_driver aml_i2s_dai[] = {
 	{
 		.id = 0,
+		.probe = aml_dai_i2s_probe,
 		.suspend  = aml_dai_i2s_suspend,
 		.resume   = aml_dai_i2s_resume,
 		.playback = {

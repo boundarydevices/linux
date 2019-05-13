@@ -26,5 +26,6 @@ struct aml_i2s {
 	int audin_fifo_src;
 	int i2s_pos_sync;
 	int clk_data_pos;
+	unsigned long mclk;
 };
 #endif

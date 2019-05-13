@@ -62,6 +62,7 @@ struct aml_spdif {
 	 * !Check this with chip spec.
 	 */
 	uint src;
+	unsigned long spdifout_clk;
 };
 struct aml_spdif *spdif_p;
 
@@ -548,6 +549,7 @@ int aml_set_spdif_clk(unsigned long rate, bool src_i2s)
 			pr_err("Can't set spdif clk parent: %d\n", ret);
 			return ret;
 		}
+		spdif_p->spdifout_clk = rate;
 	}
 
 	return 0;
@@ -585,6 +587,51 @@ static int aml_dai_spdif_resume(struct snd_soc_dai *cpu_dai)
 	if (spdif_priv && spdif_priv->clk_spdif)
 		clk_prepare_enable(spdif_priv->clk_spdif);
 
+	return 0;
+}
+
+static int spdif_clk_get(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
+
+	ucontrol->value.enumerated.item[0] =
+			clk_get_rate(p_spdif->clk_spdif);
+	return 0;
+}
+
+static int spdif_clk_set(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *cpu_dai = snd_kcontrol_chip(kcontrol);
+	struct aml_spdif *p_spdif = snd_soc_dai_get_drvdata(cpu_dai);
+	unsigned long sysclk = p_spdif->spdifout_clk;
+	int value = ucontrol->value.enumerated.item[0];
+
+	if (value > 2000000 || value < 0) {
+		pr_err("Fine spdif sysclk setting range(0~2000000), %d\n",
+				value);
+		return 0;
+	}
+	value = value - 1000000;
+	sysclk += value;
+
+	aml_set_spdif_clk(sysclk, 0);
+	return 0;
+}
+
+static const struct snd_kcontrol_new aml_spdif_dai_controls[] = {
+	SOC_SINGLE_EXT("SPDIF CLK Fine Setting",
+				0, 0, 2000000, 0,
+				spdif_clk_get,
+				spdif_clk_set),
+};
+
+static int aml_spdif_probe(struct snd_soc_dai *dai)
+{
+	snd_soc_add_dai_controls(dai,
+		aml_spdif_dai_controls, ARRAY_SIZE(aml_spdif_dai_controls));
 	return 0;
 }
 
@@ -628,6 +675,7 @@ static struct snd_soc_dai_driver aml_spdif_dai[] = {
 		.ops = &spdif_dai_ops,
 		.suspend = aml_dai_spdif_suspend,
 		.resume = aml_dai_spdif_resume,
+		.probe = aml_spdif_probe,
 	}
 };
 
@@ -692,6 +740,7 @@ static int aml_dai_spdif_probe(struct platform_device *pdev)
 		ret = PTR_ERR(spdif_priv->clk_spdif);
 		goto err;
 	}
+
 	ret = clk_set_parent(spdif_priv->clk_i958, spdif_priv->clk_mpl1);
 	if (ret) {
 		pr_err("Can't set i958 clk parent: %d\n", ret);
@@ -703,6 +752,7 @@ static int aml_dai_spdif_probe(struct platform_device *pdev)
 		pr_err("Can't set spdif clk parent: %d\n", ret);
 		return ret;
 	}
+
 	ret = clk_prepare_enable(spdif_priv->clk_spdif);
 	if (ret) {
 		pr_err("Can't enable spdif clock: %d\n", ret);
