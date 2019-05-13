@@ -18,12 +18,12 @@
 #include <linux/rpmsg.h>
 
 #define MSG		"hello world!"
-static unsigned int rpmsg_pingpong;
 
 static int rpmsg_pingpong_cb(struct rpmsg_device *rpdev, void *data, int len,
 						void *priv, u32 src)
 {
 	int err;
+	unsigned int rpmsg_pingpong;
 
 	/* reply */
 	rpmsg_pingpong = *(unsigned int *)data;
@@ -46,6 +46,7 @@ static int rpmsg_pingpong_cb(struct rpmsg_device *rpdev, void *data, int len,
 static int rpmsg_pingpong_probe(struct rpmsg_device *rpdev)
 {
 	int err;
+	unsigned int rpmsg_pingpong;
 
 	dev_info(&rpdev->dev, "new channel: 0x%x -> 0x%x!\n",
 			rpdev->src, rpdev->dst);
@@ -80,7 +81,6 @@ static struct rpmsg_device_id rpmsg_driver_pingpong_id_table[] = {
 	{ .name	= "rpmsg-openamp-demo-channel-1" },
 	{ },
 };
-MODULE_DEVICE_TABLE(rpmsg, rpmsg_driver_pingpong_id_table);
 
 static struct rpmsg_driver rpmsg_pingpong_driver = {
 	.drv.name	= KBUILD_MODNAME,

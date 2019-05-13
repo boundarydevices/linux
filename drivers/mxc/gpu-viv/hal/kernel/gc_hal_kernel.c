@@ -3004,7 +3004,7 @@ gckKERNEL_Dispatch(
         break;
 
     case gcvHAL_READ_REGISTER:
-#if gcdREGISTER_ACCESS_FROM_USER
+#if gcdREGISTER_READ_FROM_USER
         {
             gceCHIPPOWERSTATE power;
 
@@ -3038,7 +3038,7 @@ gckKERNEL_Dispatch(
         break;
 
     case gcvHAL_WRITE_REGISTER:
-#if gcdREGISTER_ACCESS_FROM_USER
+#if gcdREGISTER_WRITE_FROM_USER
         {
             gceCHIPPOWERSTATE power;
 

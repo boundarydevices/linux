@@ -303,27 +303,27 @@
 		status = "disabled";
 	};
 
-	irqsteer_cm41: irqsteer_cm41@0x51080000 {
+	irqsteer_cm41: irqsteer_cm41@51080000 {
 		reg = <0x0 0x51080000 0x0 0x10000>;
 		xen,passthrough;
 	};
 
-	mu_rpmsg1_b: mu_rpmsg1_b@0x5d2a0000 {
+	mu_rpmsg1_b: mu_rpmsg1_b@5d2a0000 {
 		reg = <0x0 0x5d2a0000 0x0 0x10000>;
 		xen,passthrough;
 	};
 
-	dsp_mu_b: dsp_mu_b@0x5d310000 {
+	dsp_mu_b: dsp_mu_b@5d310000 {
 		reg = <0x0 0x5d310000 0x0 0x10000>;
 		xen,passthrough;
 	};
 
-	decoder_boot_mem: decoder_boot_mem@0x84000000 {
+	decoder_boot_mem: decoder_boot_mem@84000000 {
 		xen,passthrough;
 		reg = <0 0x84000000 0 0x2000000>;
 	};
 
-	encoder_boot_mem: encoder_boot_mem@0x86000000 {
+	encoder_boot_mem: encoder_boot_mem@86000000 {
 		xen,passthrough;
 		reg = <0 0x86000000 0 0x400000>;
 	};
@@ -338,27 +338,27 @@
 		reg = <0x0 0x90400000 0x0 0x1c00000>;
 	};
 
-	decoder_rpc_mem: decoder_rpc_mem@0x92000000 {
+	decoder_rpc_mem: decoder_rpc_mem@92000000 {
 		xen,passthrough;
 		reg = <0 0x92000000 0 0x200000>;
 	};
 
-	encoder_rpc_mem: encoder_rpc_mem@0x92200000 {
+	encoder_rpc_mem: encoder_rpc_mem@92200000 {
 		xen,passthrough;
 		reg = <0 0x92200000 0 0x200000>;
 	};
 
-	dsp_reserved_mem: dsp@0x92400000 {
+	dsp_reserved_mem: dsp@92400000 {
 		xen,passthrough;
 		reg = <0 0x92400000 0 0x2000000>;
 	};
-	encoder_reserved_mem: encoder_reserved_mem@0x94400000 {
+	encoder_reserved_mem: encoder_reserved_mem@94400000 {
 		xen,passthrough;
 		reg = <0 0x94400000 0 0x800000>;
 	};
 
 	/* This piece memory is used by M41, M40 is not covered */
-	m41_mem: m41_mem@0x94400000 {
+	m41_mem: m41_mem@94400000 {
 		xen,passthrough;
 		reg = <0 0x88800000 0 0x7800000>;
 	};

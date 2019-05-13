@@ -1127,7 +1127,6 @@ static void dump_pxp_reg2(struct pxps *pxp)
 	for (i=0; i< ((0x33C0/0x10) + 1);i++) {
 		printk("0x%08x: 0x%08x\n", 0x10*i, __raw_readl(pxp->base + 0x10*i));
 	}
-j++;
 #endif
 }
 
@@ -1149,6 +1148,7 @@ static uint8_t is_yuv(uint32_t format)
 	case PXP_PIX_FMT_VYUY:
 	case PXP_PIX_FMT_YUV444:
 	case PXP_PIX_FMT_YVU444:
+	case PXP_PIX_FMT_VUY444:
 		return 1;
 	case PXP_PIX_FMT_NV12:
 	case PXP_PIX_FMT_NV21:
@@ -1210,6 +1210,7 @@ static u32 get_bpp_from_fmt(u32 pix_fmt)
 	case PXP_PIX_FMT_BGRA32:
 	case PXP_PIX_FMT_YUV444:
 	case PXP_PIX_FMT_YVU444:
+	case PXP_PIX_FMT_VUY444:
 		bpp = 32;
 		break;
 	default:
@@ -1550,12 +1551,16 @@ static uint32_t pxp_store_ctrl_config(struct pxp_pixmap *out, uint8_t mode,
 			ctrl.store_memory_en = 1;
 		}
 	} else {
-		if (fill_en)
+		if (fill_en) {
 			ctrl.fill_data_en = 1;
+			ctrl.wr_num_bytes = 2;
+		}
 		ctrl.store_memory_en = 1;
 	}
 
-	ctrl.block_en = 1;
+	if (out->rotate || out->flip)
+		ctrl.block_en = 1;
+
 	ctrl.ch_en = 1;
 
 	return *(uint32_t *)&ctrl;
@@ -1889,6 +1894,7 @@ static bool fmt_ps_support(uint32_t format)
 	case PXP_PIX_FMT_RGB565:
 	case PXP_PIX_FMT_YUV444:
 	case PXP_PIX_FMT_UYVY:
+	case PXP_PIX_FMT_VUY444:
 	/* need word byte swap */
 	case PXP_PIX_FMT_YUYV:
 	case PXP_PIX_FMT_VYUY:
@@ -2819,8 +2825,16 @@ static int pxp_store_config(struct pxp_pixmap *output,
 	pxp_writel(shift_ctrl, HW_PXP_INPUT_STORE_SHIFT_CTRL_CH0);
 	pxp_writel(store_size, HW_PXP_INPUT_STORE_SIZE_CH0);
 	pxp_writel(store_pitch, HW_PXP_INPUT_STORE_PITCH);
-	if (op->fill_en)
+	if (op->fill_en) {
+		uint32_t lrc;
+
+		lrc = (output->width - 1) | ((output->height - 1) << 16);
 		pxp_writel(op->fill_data, HW_PXP_INPUT_STORE_FILL_DATA_CH0);
+
+		pxp_writel(0x1, HW_PXP_INPUT_FETCH_CTRL_CH0);
+		pxp_writel(0, HW_PXP_INPUT_FETCH_ACTIVE_SIZE_ULC_CH0);
+		pxp_writel(lrc, HW_PXP_INPUT_FETCH_ACTIVE_SIZE_LRC_CH0);
+	}
 
 	offset = output->crop.y * output->pitch +
 		 output->crop.x * (output->bpp >> 3);
@@ -3036,6 +3050,7 @@ static int pxp_2d_task_config(struct pxp_pixmap *input,
 {
 	uint8_t position = 0;
 
+
 	do {
 		position = find_next_bit((unsigned long *)&nodes_used, 32, position);
 		if (position >= sizeof(uint32_t) * 8)
@@ -3198,8 +3213,11 @@ reparse:
 		if (!input->pitch)
 			return -EINVAL;
 
-		if (input->rotate || input->flip)
+		if (input->rotate || input->flip) {
 			input->flags |= IN_NEED_ROTATE_FLIP;
+			output->rotate = input->rotate;
+			output->flip = input->flip;
+		}
 
 		if (!is_yuv(input->format) != !is_yuv(output->format))
 			input->flags |= IN_NEED_CSC;

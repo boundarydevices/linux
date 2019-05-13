@@ -241,22 +241,22 @@
 		xen,passthrough;
 	};
 
-	irqsteer_cm41: irqsteer_cm41@0x51080000 {
+	irqsteer_cm41: irqsteer_cm41@51080000 {
 		reg = <0x0 0x51080000 0x0 0x10000>;
 		xen,passthrough;
 	};
 
-	mu_rpmsg1_b: mu_rpmsg1_b@0x5d2a0000 {
+	mu_rpmsg1_b: mu_rpmsg1_b@5d2a0000 {
 		reg = <0x0 0x5d2a0000 0x0 0x10000>;
 		xen,passthrough;
 	};
 
-	decoder_boot_mem: decoder_boot_mem@0x84000000 {
+	decoder_boot_mem: decoder_boot_mem@84000000 {
 		xen,passthrough;
 		reg = <0 0x84000000 0 0x2000000>;
 	};
 
-	encoder_boot_mem: encoder_boot_mem@0x86000000 {
+	encoder_boot_mem: encoder_boot_mem@86000000 {
 		xen,passthrough;
 		reg = <0 0x86000000 0 0x2000000>;
 	};
@@ -266,21 +266,21 @@
 		xen,passthrough;
 	};
 
-	decoder_rpc_mem: decoder_rpc_mem@0x90400000 {
+	decoder_rpc_mem: decoder_rpc_mem@90400000 {
 		xen,passthrough;
 		reg = <0 0x90400000 0 0x1000000>;
 	};
 
-	encoder_rpc_mem: encoder_rpc_mem@0x91400000 {
+	encoder_rpc_mem: encoder_rpc_mem@91400000 {
 		xen,passthrough;
 		reg = <0 0x91400000 0 0x1000000>;
 	};
-	encoder_reserved_mem: encoder_reserved_mem@0x94400000 {
+	encoder_reserved_mem: encoder_reserved_mem@94400000 {
 		xen,passthrough;
 		reg = <0 0x94400000 0 0x800000>;
 	};
 
-	decoder_str_mem: str_mem@0x94400000 {
+	decoder_str_mem: str_mem@94400000 {
 		xen,passthrough;
 		reg = <0 0x94400000 0 0x1800000>;
 	};

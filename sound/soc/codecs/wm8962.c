@@ -2521,7 +2521,9 @@ static int wm8962_set_bias_level(struct snd_soc_component *component,
 		snd_soc_component_update_bits(component, WM8962_PWR_MGMT_1,
 				    WM8962_VMID_SEL_MASK, 0x80);
 
-		wm8962_configure_bclk(component);
+		if (snd_soc_component_get_bias_level(component) == SND_SOC_BIAS_STANDBY)
+			wm8962_configure_bclk(component);
+
 		break;
 
 	case SND_SOC_BIAS_STANDBY:
@@ -3879,6 +3881,7 @@ static int wm8962_runtime_suspend(struct device *dev)
 #endif
 
 static const struct dev_pm_ops wm8962_pm = {
+	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
 	SET_RUNTIME_PM_OPS(wm8962_runtime_suspend, wm8962_runtime_resume, NULL)
 };
 

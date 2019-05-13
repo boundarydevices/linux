@@ -119,11 +119,11 @@
 		 *
 		 */
 
-		decoder_boot: decoder_boot@0x84000000 {
+		decoder_boot: decoder_boot@84000000 {
 			no-map;
 			reg = <0 0x84000000 0 0x2000000>;
 		};
-		encoder_boot: encoder_boot@0x86000000 {
+		encoder_boot: encoder_boot@86000000 {
 			no-map;
 			reg = <0 0x86000000 0 0x400000>;
 		};
@@ -131,28 +131,28 @@
 		 * CM40 rpmsg memory is still for Dom0, the domu.cfg
 		 * not map 0x90000000 - 0x90100000 to DomU.
 		 */
-		rpmsg_reserved: rpmsg@0x90000000 {
+		rpmsg_reserved: rpmsg@90000000 {
 			no-map;
 			reg = <0 0x90000000 0 0x400000>;
 		};
-		rpmsg_dma_reserved:rpmsg_dma@0x90400000 {
+		rpmsg_dma_reserved:rpmsg_dma@90400000 {
 			compatible = "shared-dma-pool";
 			no-map;
 			reg = <0 0x90400000 0 0x1C00000>;
 		};
-		decoder_rpc: decoder_rpc@0x92000000 {
+		decoder_rpc: decoder_rpc@92000000 {
 			no-map;
 			reg = <0 0x92000000 0 0x200000>;
 		};
-		encoder_rpc: encoder_rpc@0x92200000 {
+		encoder_rpc: encoder_rpc@92200000 {
 			no-map;
 			reg = <0 0x92200000 0 0x200000>;
 		};
-		dsp_reserved: dsp@0x92400000 {
+		dsp_reserved: dsp@92400000 {
 			no-map;
 			reg = <0 0x92400000 0 0x2000000>;
 		};
-		encoder_reserved: encoder_reserved@0x94400000 {
+		encoder_reserved: encoder_reserved@94400000 {
 			no-map;
 			reg = <0 0x94400000 0 0x800000>;
 		};
@@ -432,7 +432,7 @@
 			status = "okay";
 		};
 
-		edma21: dma-controller@0x59260000 {
+		edma21: dma-controller@59260000 {
 			compatible = "fsl,imx8qm-adma";
 			reg = <0x0 0x59260000 0x0 0x10000>, /* esai0 rx */
 			      <0x0 0x59270000 0x0 0x10000>; /* esai0 tx */
@@ -445,7 +445,7 @@
 			status = "okay";
 		};
 
-		edma24: dma-controller@0x592c0000 {
+		edma24: dma-controller@592c0000 {
 			compatible = "fsl,imx8qm-adma";
 			reg = <0x0 0x592c0000 0x0 0x10000>, /* sai0 rx */
 			      <0x0 0x592d0000 0x0 0x10000>; /* sai0 tx */
@@ -597,9 +597,8 @@
 			/delete-property/ remote-endpoint;
 		};
 	};
-	dpu2_disp1: port@1 {
-		reg = <1>;
 
+	dpu2_disp1: port@1 {
 		dpu2_disp1_lvds0: endpoint@0 {
 			remote-endpoint = <&ldb2_lvds0>;
 		};

@@ -129,14 +129,6 @@ extern "C" {
 #define gcdZONE_PROFILER        (1 << 22)
 #define gcdZONE_SHADER          (1 << 23)
 
-/*#define gcvZONE_CONTEXT         (1 << 6) */
-/*#define gcvZONE_PARAMETERS      (1 << 23) */
-/*#define gcvZONE_STATE           (1 << 15) */
-/*#define gcvZONE_AUX             (1 << 16) */
-/*#define gcvZONE_IMAGE           (1 << 21) */
-/*#define gcvZONE_STREAM_OUT      (1 << 26) */
-
-
 
 /******************************************************************************\
 ******************************** Khronos API Zones *****************************
@@ -146,9 +138,10 @@ extern "C" {
 #define gcdZONE_API_ES11             ((gctUINT32) 2  << 28)
 #define gcdZONE_API_ES30             ((gctUINT32) 3  << 28)
 #define gcdZONE_API_GL40             ((gctUINT32) 4  << 28)
-#define gcdZONE_API_VG11             ((gctUINT32) 5  << 28)
+#define gcdZONE_API_VG3D             ((gctUINT32) 5  << 28)
 #define gcdZONE_API_CL               ((gctUINT32) 6  << 28)
 #define gcdZONE_API_VX               ((gctUINT32) 7  << 28)
+#define gcdZONE_API_VG               ((gctUINT32) 8  << 28)
 
 /******************************************************************************\
 ************************* Subzones of Khronos API Zones ************************
@@ -230,18 +223,42 @@ extern "C" {
 #define gcdZONE_GL40_FIXFRAG         (gcdZONE_API_GL40 | (1 << 17))
 #define gcdZONE_GL40_HASH            (gcdZONE_API_GL40 | (1 << 18))
 
+/* Subzones of VG3D API  */
+#define gcdZONE_VG3D_CONTEXT           (gcdZONE_API_VG3D | (1 << 0))
+#define gcdZONE_VG3D_DUMP              (gcdZONE_API_VG3D | (1 << 1))
+#define gcdZONE_VG3D_EGL               (gcdZONE_API_VG3D | (1 << 2))
+#define gcdZONE_VG3D_FONT              (gcdZONE_API_VG3D | (1 << 3))
+#define gcdZONE_VG3D_HARDWARE          (gcdZONE_API_VG3D | (1 << 4))
+#define gcdZONE_VG3D_IMAGE             (gcdZONE_API_VG3D | (1 << 5))
+#define gcdZONE_VG3D_MASK              (gcdZONE_API_VG3D | (1 << 6))
+#define gcdZONE_VG3D_MATRIX            (gcdZONE_API_VG3D | (1 << 7))
+#define gcdZONE_VG3D_OBJECT            (gcdZONE_API_VG3D | (1 << 8))
+#define gcdZONE_VG3D_PAINT             (gcdZONE_API_VG3D | (1 << 9))
+#define gcdZONE_VG3D_PATH              (gcdZONE_API_VG3D | (1 << 10))
+#define gcdZONE_VG3D_PROFILER          (gcdZONE_API_VG3D | (1 << 11))
+#define gcdZONE_VG3D_SCANLINE          (gcdZONE_API_VG3D | (1 << 12))
+#define gcdZONE_VG3D_SHADER            (gcdZONE_API_VG3D | (1 << 13))
+#define gcdZONE_VG3D_TESSELLATOR       (gcdZONE_API_VG3D | (1 << 14))
+#define gcdZONE_VG3D_VGU               (gcdZONE_API_VG3D | (1 << 15))
+
 /* Subzones of VG11 API  */
-#define gcdZONE_VG_TRACE             (gcdZONE_API_VG11 | (1 << 0))
-#define gcdZONE_VG_STATE             (gcdZONE_API_VG11 | (1 << 1))  /* unused */
-#define gcdZONE_VG_FONT              (gcdZONE_API_VG11 | (1 << 2))  /* unused */
-#define gcdZONE_VG_HARDWARE          (gcdZONE_API_VG11 | (1 << 3))  /* unused */
-#define gcdZONE_VG_IMAGE             (gcdZONE_API_VG11 | (1 << 4))  /* unused */
-#define gcdZONE_VG_MASK              (gcdZONE_API_VG11 | (1 << 5))  /* unused */
-#define gcdZONE_VG_MATRIX            (gcdZONE_API_VG11 | (1 << 7))  /* unused */
-#define gcdZONE_VG_PATH              (gcdZONE_API_VG11 | (1 << 8))  /* unused */
-#define gcdZONE_VG_PAINT             (gcdZONE_API_VG11 | (1 << 9))  /* unused */
-#define gcdZONE_VG_TESSELLATOR       (gcdZONE_API_VG11 | (1 << 10)) /* unused */
-#define gcdZONE_VG_VGU               (gcdZONE_API_VG11 | (1 << 11)) /* unused */
+#define gcdZONE_VG_ARC               (gcdZONE_API_VG | (1 << 0))
+#define gcdZONE_VG_CONTEXT           (gcdZONE_API_VG | (1 << 1))
+#define gcdZONE_VG_DEBUG             (gcdZONE_API_VG | (1 << 2))
+#define gcdZONE_VG_FILTER            (gcdZONE_API_VG | (1 << 3))
+#define gcdZONE_VG_FORMAT            (gcdZONE_API_VG | (1 << 4))
+#define gcdZONE_VG_IMAGE             (gcdZONE_API_VG | (1 << 5))
+#define gcdZONE_VG_MAIN              (gcdZONE_API_VG | (1 << 6))
+#define gcdZONE_VG_MASK              (gcdZONE_API_VG | (1 << 7))
+#define gcdZONE_VG_MATRIX            (gcdZONE_API_VG | (1 << 8))
+#define gcdZONE_VG_MEMORYMGR         (gcdZONE_API_VG | (1 << 9))
+#define gcdZONE_VG_OBJECT            (gcdZONE_API_VG | (1 << 10))
+#define gcdZONE_VG_PAINT             (gcdZONE_API_VG | (1 << 11))
+#define gcdZONE_VG_PATH              (gcdZONE_API_VG | (1 << 12))
+#define gcdZONE_VG_STATE             (gcdZONE_API_VG | (1 << 13))
+#define gcdZONE_VG_STROKE            (gcdZONE_API_VG | (1 << 14))
+#define gcdZONE_VG_TEXT              (gcdZONE_API_VG | (1 << 15))
+#define gcdZONE_VG_VGU               (gcdZONE_API_VG | (1 << 16))
 
 /* Subzones of CL API  */
 #define gcdZONE_CL_COMMAND           (gcdZONE_API_CL | (1 << 0))

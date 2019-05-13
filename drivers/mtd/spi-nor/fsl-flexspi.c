@@ -36,9 +36,16 @@
 #define FLEXSPI_QUIRK_QUAD_ONLY		(1 << 0)
 /* Maximum clock limitation */
 #define FLEXSPI_QUIRK_FREQ_LIMIT	(1 << 1)
+/* Config DLL register */
+#define FLEXSPI_QUIRK_CONFIG_DLL	(1 << 2)
 
 /* runtime pm timeout */
 #define FSL_FLEXSPI_RPM_TIMEOUT 50 /* 50ms */
+#define FREQ_1MHz               1000000 /* 1MHz */
+
+/* delay cell range */
+#define FLEXSPI_DLL_MIN		75 /* 75ps */
+#define FLEXSPI_DLL_MAX		225 /* 225ps */
 
 /* The registers */
 #define FLEXSPI_MCR0			0x00
@@ -271,6 +278,34 @@
 #define FLEXSPI_IPTXFCR_WMRK_SHIFT	2
 #define FLEXSPI_IPTXFCR_WMRK_MASK	(0x1F << FLEXSPI_IPTXFCR_WMRK_SHIFT)
 
+#define FLEXSPI_DLLACR			0xC0
+#define FLEXSPI_DLLACR_REFUPDINT_SHIFT	28
+#define FLEXSPI_DLLACR_REFUPDINT_MASK	(0xF << FLEXSPI_DLLACR_REFUPDINT_SHIFT)
+#define FLEXSPI_DLLACR_OVRDVAL_SHIFT	9
+#define FLEXSPI_DLLACR_OVRDVAL_MASK	(0x3F << FLEXSPI_DLLACR_OVRDVAL_SHIFT)
+#define FLEXSPI_DLLACR_OVRDEN_SHIFT	8
+#define FLEXSPI_DLLACR_OVRDEN_MASK	(1 << FLEXSPI_DLLACR_OVRDEN_SHIFT)
+#define FLEXSPI_DLLACR_SLVDLYTGT_SHIFT	3
+#define FLEXSPI_DLLACR_SLVDLYTGT_MASK	(0xF << FLEXSPI_DLLACR_SLVDLYTGT_SHIFT)
+#define FLEXSPI_DLLACR_DLLRST_SHIFT	1
+#define FLEXSPI_DLLACR_DLLRST_MASK	(1 << FLEXSPI_DLLACR_DLLRST_SHIFT)
+#define FLEXSPI_DLLACR_DLLEN_SHIFT	0
+#define FLEXSPI_DLLACR_DLLEN_MASK	(1 << FLEXSPI_DLLACR_DLLEN_SHIFT)
+
+#define FLEXSPI_DLLBCR			0xC4
+#define FLEXSPI_DLLBCR_REFUPDINT_SHIFT	28
+#define FLEXSPI_DLLBCR_REFUPDINT_MASK	(0xF << FLEXSPI_DLLBCR_REFUPDINT_SHIFT)
+#define FLEXSPI_DLLBCR_OVRDVAL_SHIFT	9
+#define FLEXSPI_DLLBCR_OVRDVAL_MASK	(0x3F << FLEXSPI_DLLBCR_OVRDVAL_SHIFT)
+#define FLEXSPI_DLLBCR_OVRDEN_SHIFT	8
+#define FLEXSPI_DLLBCR_OVRDEN_MASK	(1 << FLEXSPI_DLLBCR_OVRDEN_SHIFT)
+#define FLEXSPI_DLLBCR_SLVDLYTGT_SHIFT	3
+#define FLEXSPI_DLLBCR_SLVDLYTGT_MASK	(0xF << FLEXSPI_DLLBCR_SLVDLYTGT_SHIFT)
+#define FLEXSPI_DLLBCR_DLLRST_SHIFT	1
+#define FLEXSPI_DLLBCR_DLLRST_MASK	(1 << FLEXSPI_DLLBCR_DLLRST_SHIFT)
+#define FLEXSPI_DLLBCR_DLLEN_SHIFT	0
+#define FLEXSPI_DLLBCR_DLLEN_MASK	(1 << FLEXSPI_DLLBCR_DLLEN_SHIFT)
+
 #define FLEXSPI_STS0			0xE0
 #define FLEXSPI_STS0_DLPHA_SHIFT	9
 #define FLEXSPI_STS0_DLPHA_MASK		(0x1F << FLEXSPI_STS0_DLPHA_SHIFT)
@@ -425,6 +460,7 @@ struct fsl_flexspi_devtype_data {
 	int txfifo;
 	int ahb_buf_size;
 	int driver_data;
+	int dllvalue;
 };
 
 static struct fsl_flexspi_devtype_data imx8qm_data = {
@@ -432,7 +468,8 @@ static struct fsl_flexspi_devtype_data imx8qm_data = {
 	.rxfifo = 1024,
 	.txfifo = 1024,
 	.ahb_buf_size = 2048,
-	.driver_data = 0,
+	.driver_data = FLEXSPI_QUIRK_CONFIG_DLL,
+	.dllvalue = 80, /* unit is 0.1 ns, this is 8ns */
 };
 
 static struct fsl_flexspi_devtype_data imx8qxp_data = {
@@ -440,7 +477,8 @@ static struct fsl_flexspi_devtype_data imx8qxp_data = {
 	.rxfifo = 1024,
 	.txfifo = 1024,
 	.ahb_buf_size = 2048,
-	.driver_data = 0,
+	.driver_data = FLEXSPI_QUIRK_CONFIG_DLL,
+	.dllvalue = 80, /* unit is 0.1 ns, this is 8ns */
 };
 
 static struct fsl_flexspi_devtype_data imx8mm_data = {
@@ -449,6 +487,7 @@ static struct fsl_flexspi_devtype_data imx8mm_data = {
 	.txfifo = 1024,
 	.ahb_buf_size = 2048,
 	.driver_data = FLEXSPI_QUIRK_QUAD_ONLY | FLEXSPI_QUIRK_FREQ_LIMIT,
+	.dllvalue = 0,
 };
 
 #define FSL_FLEXSPI_MAX_CHIP	4
@@ -476,6 +515,11 @@ struct fsl_flexspi {
 #define FLEXSPI_INITILIZED	(1 << 0)
 	int flags;
 };
+
+static inline int fsl_flexspi_need_config_dll(struct fsl_flexspi *flex)
+{
+	return flex->devtype_data->driver_data & FLEXSPI_QUIRK_CONFIG_DLL;
+}
 
 static inline int fsl_flexspi_freq_limit(struct fsl_flexspi *flex)
 {
@@ -965,6 +1009,53 @@ static int fsl_flexspi_init_rpm(struct fsl_flexspi *flex)
 	return 0;
 }
 
+static void fsl_flexspi_config_dll(struct fsl_flexspi *flex, int rate)
+{
+	int tmp, dll;
+	u32 reg;
+
+	if (!fsl_flexspi_need_config_dll(flex))
+		return;
+
+	if (rate >= 100 * FREQ_1MHz) {
+		writel(FLEXSPI_DLLACR_DLLEN_MASK | FLEXSPI_DLLACR_SLVDLYTGT_MASK,
+			flex->iobase + FLEXSPI_DLLACR);
+		writel(FLEXSPI_DLLBCR_DLLEN_MASK | FLEXSPI_DLLBCR_SLVDLYTGT_MASK,
+			flex->iobase + FLEXSPI_DLLBCR);
+	} else {
+	/*
+	 * If Serial root closk is lower than 100MHz, DLL is unable to lock on
+	 * half cycle of serial root clock because the dealy cell number is limited
+	 * in delay chain, Then DLL should be configured as following instead:
+	 * OVRDEN = 0x01
+	 * OVRDVAL=N; each dealy cell in DLL is about 75ps - 225ps.
+	 * The delay of DLL delay chain ( N * delay_cell_delay) should be larger
+	 * than device output data valid time (from SCK edge to data valid).
+	 */
+
+		/* 0.1 ns to ps */
+		tmp = flex->devtype_data->dllvalue * 100;
+		dll = tmp / FLEXSPI_DLL_MIN;
+
+		if (dll >= FLEXSPI_DLLACR_OVRDVAL_MASK)
+			dll = FLEXSPI_DLLACR_OVRDVAL_MASK;
+		else if (dll * FLEXSPI_DLL_MIN < tmp)
+			dll++;
+
+	writel(FLEXSPI_DLLACR_OVRDEN_MASK | (dll << FLEXSPI_DLLACR_OVRDVAL_SHIFT) |
+		FLEXSPI_DLLACR_DLLRST_MASK, flex->iobase + FLEXSPI_DLLACR);
+	udelay(1);
+	reg = readl(flex->iobase + FLEXSPI_DLLACR);
+	writel(reg & ~FLEXSPI_DLLACR_DLLRST_MASK, flex->iobase + FLEXSPI_DLLACR);
+
+	writel(FLEXSPI_DLLBCR_OVRDEN_MASK | (dll << FLEXSPI_DLLBCR_OVRDVAL_SHIFT) |
+		FLEXSPI_DLLBCR_DLLRST_MASK, flex->iobase + FLEXSPI_DLLBCR);
+	udelay(1);
+	reg = readl(flex->iobase + FLEXSPI_DLLBCR);
+	writel(reg & ~FLEXSPI_DLLBCR_DLLRST_MASK, flex->iobase + FLEXSPI_DLLBCR);
+	}
+}
+
 /* We use this function to do some basic init for spi_nor_scan(). */
 static int fsl_flexspi_nor_setup(struct fsl_flexspi *flex)
 {
@@ -975,7 +1066,7 @@ static int fsl_flexspi_nor_setup(struct fsl_flexspi *flex)
 	fsl_flexspi_clk_disable_unprep(flex);
 
 	/* set rate to 24Mhz as safe clock rate to probe */
-	ret = clk_set_rate(flex->clk, 24000000);
+	ret = clk_set_rate(flex->clk, 24 * FREQ_1MHz);
 	if (ret)
 		return ret;
 
@@ -1021,7 +1112,7 @@ static int fsl_flexspi_nor_setup_last(struct fsl_flexspi *flex)
 
 	/* clock limitation for i.MX8MM, no more than 160Mhz */
 	if (fsl_flexspi_freq_limit(flex))
-		rate = rate > 160000000 ? 160000000 : rate;
+		rate = rate > 160 * FREQ_1MHz ? 160 * FREQ_1MHz : rate;
 
 	ret = clk_set_rate(flex->clk, rate);
 	if (ret)
@@ -1030,6 +1121,9 @@ static int fsl_flexspi_nor_setup_last(struct fsl_flexspi *flex)
 	ret = fsl_flexspi_clk_prep_enable(flex);
 	if (ret)
 		return ret;
+
+	/* setup the DLL value */
+	fsl_flexspi_config_dll(flex, rate);
 
 	/* Init the LUT table again. */
 	fsl_flexspi_init_lut(flex);
@@ -1105,7 +1199,6 @@ static ssize_t fsl_flexspi_read(struct spi_nor *nor, loff_t from,
 		size_t len, u_char *buf)
 {
 	struct fsl_flexspi *flex = nor->priv;
-	int i, j;
 
 	/* for read sfdp only */
 	if (nor->read_opcode == SPINOR_OP_RDSFDP)
@@ -1117,7 +1210,7 @@ static ssize_t fsl_flexspi_read(struct spi_nor *nor, loff_t from,
 		flex->memmap_len = len > FLEXSPI_MIN_IOMAP ?
 			len : FLEXSPI_MIN_IOMAP;
 
-		flex->ahb_addr = ioremap_nocache(
+		flex->ahb_addr = ioremap_wc(
 				flex->memmap_phy + flex->memmap_offs,
 				flex->memmap_len);
 		if (!flex->ahb_addr) {
@@ -1133,7 +1226,7 @@ static ssize_t fsl_flexspi_read(struct spi_nor *nor, loff_t from,
 		flex->memmap_offs = flex->chip_base_addr + from;
 		flex->memmap_len = len > FLEXSPI_MIN_IOMAP ?
 			len : FLEXSPI_MIN_IOMAP;
-		flex->ahb_addr = ioremap_nocache(
+		flex->ahb_addr = ioremap_wc(
 				flex->memmap_phy + flex->memmap_offs,
 				flex->memmap_len);
 		if (!flex->ahb_addr) {
@@ -1142,20 +1235,8 @@ static ssize_t fsl_flexspi_read(struct spi_nor *nor, loff_t from,
 		}
 	}
 
-	/* For non-8-byte alignment cases */
-	if (from % 8) {
-		j = 8 - (from & 0x7);
-		for (i = 0; i < j; ++i) {
-			memcpy(buf + i, flex->ahb_addr + flex->chip_base_addr
-			       + from - flex->memmap_offs + i, 1);
-		}
-		memcpy(buf + j, flex->ahb_addr + flex->chip_base_addr + from
-		       - flex->memmap_offs + j, len - j);
-	} else {
-		/* Read out the data directly from the AHB buffer.*/
-		memcpy(buf, flex->ahb_addr + flex->chip_base_addr + from
-		       - flex->memmap_offs, len);
-	}
+	memcpy(buf, flex->ahb_addr + flex->chip_base_addr + from
+	       - flex->memmap_offs, len);
 
 	return len;
 }

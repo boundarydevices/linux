@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
+ * Copyright 2019 NXP
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -7,9 +8,27 @@
  */
 
 /*
- * NOTE: This DTS file is written for plugging in Murata Wi-Fi/BT EVK into Slot
- * SD1 and using Murata i.MX InterConnect Ver 2.0 Adapter. Bluetooth UART &
- * control signals are connected via ribbon cable (J4 connector).
+ * NOTE: This DTS file is wrote for plugging in Murata 1MW M.2
+ * into SD3 slot by using Murata uSD-to-M.2 Adapter.
+ *
+ * By default, OOB IRQ is not enabled since i.MX6SLL EVK board needs to rework.
+ * How to enable OOB IRQ ?
+ * HW rework:
+ *	Install R127 on i.MX6SLL EVK board.
+ * SW change: add below pin for WL_HOST_WAKE
+ *	pinctrl_wifi: wifigrp {
+ *		fsl,pins = <
+ *			...
+ *			MX6SLL_PAD_KEY_COL1__GPIO3_IO26 0x0b001
+ *		>;
+ *	};
+ *	brcmf: bcrmf@1 {
+ *		reg = <1>;
+ *		compatible = "brcm,bcm4329-fmac";
+ *		interrupt-parent = <&gpio3>;
+ *		interrupts = <26 IRQ_TYPE_LEVEL_LOW>;
+ *		interrupt-names = "host-wake";
+ *	};
  */
 
 #include "imx6sll-evk.dts"
@@ -40,7 +59,6 @@
 				MX6SLL_PAD_SD3_DATA3__SD3_DATA3 0x170b9
 
 				MX6SLL_PAD_KEY_COL0__GPIO3_IO24 0x17059 /* WL_REG_ON */
-				MX6SLL_PAD_KEY_COL1__GPIO3_IO26 0x17059 /* WL_HOST_WAKE */
 			>;
 		};
 	};
@@ -70,6 +88,9 @@
 	mmc-pwrseq = <&usdhc1_pwrseq>;
 	pm-ignore-notify;
 	cap-power-off-card;
+	/delete-property/ cd-gpios;
+	/delete-property/ vmmc-supply;
+	/delete-property/ enable-sdio-wakeup;
 
 	brcmf: bcrmf@1 {
 		reg = <1>;

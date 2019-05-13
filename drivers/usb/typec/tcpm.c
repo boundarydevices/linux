@@ -4943,7 +4943,7 @@ struct tcpm_port *tcpm_register_port(struct device *dev, struct tcpc_dev *tcpc)
 	mutex_init(&port->lock);
 	mutex_init(&port->swap_lock);
 
-	port->wq = create_singlethread_workqueue(dev_name(dev));
+	port->wq = create_freezable_workqueue(dev_name(dev));
 	if (!port->wq)
 		return ERR_PTR(-ENOMEM);
 	INIT_DELAYED_WORK(&port->state_machine, tcpm_state_machine_work);
@@ -5043,6 +5043,8 @@ void tcpm_unregister_port(struct tcpm_port *port)
 {
 	int i;
 
+	cancel_delayed_work_sync(&port->state_machine);
+	cancel_delayed_work_sync(&port->vdm_state_machine);
 	tcpm_reset_port(port);
 	for (i = 0; i < ARRAY_SIZE(port->port_altmode); i++)
 		typec_unregister_altmode(port->port_altmode[i]);

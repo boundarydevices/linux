@@ -58,32 +58,32 @@
 };
 
 &resmem {
-	jh_reserved: jh@0xfdc00000 {
+	jh_reserved: jh@fdc00000 {
 		no-map;
 		reg = <0 0xfdc00000 0x0 0x400000>;
 	};
 
-	inmate_reserved: inmate@0xc0000000 {
+	inmate_reserved: inmate@c0000000 {
 		no-map;
 		reg = <0 0xc0000000 0x0 0x3dc00000>;
 	};
 
-	loader_reserved: loader@0xbff00000 {
+	loader_reserved: loader@bff00000 {
 		no-map;
 		reg = <0 0xbff00000 0x0 0x00100000>;
 	};
 
-	ivshmem_reserved: ivshmem@0xbfe00000 {
+	ivshmem_reserved: ivshmem@bfe00000 {
 		no-map;
 		reg = <0 0xbfe00000 0x0 0x00100000>;
 	};
 
-	ivshmem2_reserved: ivshmem2@0xbfd00000 {
+	ivshmem2_reserved: ivshmem2@bfd00000 {
 		no-map;
 		reg = <0 0xbfd00000 0x0 0x00100000>;
 	};
 
-	pci_reserved: pci@0xbfc00000 {
+	pci_reserved: pci@bfc00000 {
 		no-map;
 		reg = <0 0xbfb00000 0x0 0x00200000>;
 	};

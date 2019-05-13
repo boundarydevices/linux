@@ -169,6 +169,7 @@
 			regulator-name = "lcd-3v3";
 			gpio = <&gpio3 27 0>;
 			enable-active-high;
+			status = "disabled";
 		};
 
 		reg_peri_3v3: regulator-peri-3v3 {

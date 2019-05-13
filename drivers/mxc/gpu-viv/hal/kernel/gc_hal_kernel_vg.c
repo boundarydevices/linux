@@ -371,10 +371,9 @@ gceSTATUS gckVGKERNEL_Dispatch(
         break;
 
         case gcvHAL_READ_REGISTER:
-#if gcdREGISTER_ACCESS_FROM_USER
+#if gcdREGISTER_READ_FROM_USER
         {
             gceCHIPPOWERSTATE power;
-
             gcmkONERROR(gckOS_AcquireMutex(Kernel->os, Kernel->vg->hardware->powerMutex, gcvINFINITE));
             powerMutexAcquired = gcvTRUE;
             gcmkONERROR(gckVGHARDWARE_QueryPowerManagementState(Kernel->vg->hardware,
@@ -403,12 +402,10 @@ gceSTATUS gckVGKERNEL_Dispatch(
         status = gcvSTATUS_NOT_SUPPORTED;
 #endif
         break;
-
     case gcvHAL_WRITE_REGISTER:
-#if gcdREGISTER_ACCESS_FROM_USER
+#if gcdREGISTER_WRITE_FROM_USER
         {
             gceCHIPPOWERSTATE power;
-
             gcmkONERROR(gckOS_AcquireMutex(Kernel->os, Kernel->vg->hardware->powerMutex, gcvINFINITE));
             powerMutexAcquired = gcvTRUE;
             gcmkONERROR(gckVGHARDWARE_QueryPowerManagementState(Kernel->vg->hardware,
@@ -471,7 +468,6 @@ OnError:
     {
         gcmkVERIFY_OK(gckOS_ReleaseMutex(Kernel->os, Kernel->vg->hardware->powerMutex));
     }
-
     gcmkFOOTER();
 
     /* Return the status. */

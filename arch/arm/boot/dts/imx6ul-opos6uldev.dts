@@ -186,7 +186,7 @@
 	lcd-supply = <&reg_3v3>;
 	status = "okay";
 
-	display0: display0 {
+	display0: display@0 {
 		bits-per-pixel = <32>;
 		bus-width = <18>;
 

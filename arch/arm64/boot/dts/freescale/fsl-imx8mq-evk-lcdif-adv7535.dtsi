@@ -15,8 +15,6 @@
 / {
 	display-subsystem {
 		status = "disabled";
-
-		/delete-property/ ports;
 	};
 
 	sound-hdmi {
@@ -28,13 +26,9 @@
 	status = "disabled";
 };
 
-/delete-node/ &dcss_port;
-
 &dcss {
 	status = "disabled";
 };
-
-/delete-node/ &hdmi_port;
 
 &hdmi {
 	status = "disabled";

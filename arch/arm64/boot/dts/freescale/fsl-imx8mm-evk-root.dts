@@ -62,33 +62,33 @@
 
 &{/reserved-memory} {
 
-	ivshmem_reserved: ivshmem@0xbbb00000 {
+	ivshmem_reserved: ivshmem@bbb00000 {
 		no-map;
 		reg = <0 0xbbb00000 0x0 0x00100000>;
 	};
 
-	ivshmem2_reserved: ivshmem2@0xbba00000 {
+	ivshmem2_reserved: ivshmem2@bba00000 {
 		no-map;
 		reg = <0 0xbba00000 0x0 0x00100000>;
 	};
 
-	pci_reserved: pci@0xbb800000 {
+	pci_reserved: pci@bb800000 {
 		no-map;
 		reg = <0 0xbb800000 0x0 0x00200000>;
 	};
 
-	loader_reserved: loader@0xbb700000 {
+	loader_reserved: loader@bb700000 {
 		no-map;
 		reg = <0 0xbb700000 0x0 0x00100000>;
 	};
 
-	jh_reserved: jh@0xb7c00000 {
+	jh_reserved: jh@b7c00000 {
 		no-map;
 		reg = <0 0xb7c00000 0x0 0x00400000>;
 	};
 
 	/* 512MB */
-	inmate_reserved: inmate@0x93c00000 {
+	inmate_reserved: inmate@93c00000 {
 		no-map;
 		reg = <0 0x93c00000 0x0 0x24000000>;
 	};

@@ -808,6 +808,7 @@ static int tcpci_probe(struct i2c_client *client,
 	if (err)
 		goto err1;
 
+	irq_set_status_flags(client->irq, IRQ_DISABLE_UNLAZY);
 	err = devm_request_threaded_irq(&client->dev, client->irq, NULL,
 					_tcpci_irq,
 					IRQF_ONESHOT | IRQF_TRIGGER_LOW,
@@ -828,6 +829,7 @@ static int tcpci_remove(struct i2c_client *client)
 	struct tcpci_chip *chip = i2c_get_clientdata(client);
 
 	tcpci_unregister_port(chip->tcpci);
+	irq_clear_status_flags(client->irq, IRQ_DISABLE_UNLAZY);
 
 	return 0;
 }
@@ -838,6 +840,8 @@ static int tcpci_suspend(struct device *dev)
 
 	if (device_may_wakeup(dev))
 		enable_irq_wake(chip->tcpci->client->irq);
+	else
+		disable_irq(chip->tcpci->client->irq);
 
 	return 0;
 }
@@ -848,6 +852,8 @@ static int tcpci_resume(struct device *dev)
 
 	if (device_may_wakeup(dev))
 		disable_irq_wake(chip->tcpci->client->irq);
+	else
+		enable_irq(chip->tcpci->client->irq);
 
 	return 0;
 }

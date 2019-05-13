@@ -94,11 +94,11 @@
 		 *
 		 */
 
-		decoder_boot: decoder_boot@0x84000000 {
+		decoder_boot: decoder_boot@84000000 {
 			no-map;
 			reg = <0 0x84000000 0 0x2000000>;
 		};
-		encoder_boot: encoder_boot@0x86000000 {
+		encoder_boot: encoder_boot@86000000 {
 			no-map;
 			reg = <0 0x86000000 0 0x400000>;
 		};
@@ -106,25 +106,25 @@
 		 * CM40 rpmsg memory is still for Dom0, the domu.cfg
 		 * not map 0x90000000 - 0x90100000 to DomU.
 		 */
-		rpmsg_reserved: rpmsg@0x90000000 {
+		rpmsg_reserved: rpmsg@90000000 {
 			no-map;
 			reg = <0 0x90000000 0 0x400000>;
 		};
-		rpmsg_dma_reserved:rpmsg_dma@0x90400000 {
+		rpmsg_dma_reserved:rpmsg_dma@90400000 {
 			compatible = "shared-dma-pool";
 			no-map;
 			reg = <0 0x90400000 0 0x1C00000>;
 		};
-		decoder_rpc: decoder_rpc@0x92000000 {
+		decoder_rpc: decoder_rpc@92000000 {
 			no-map;
 			reg = <0 0x92000000 0 0x200000>;
 		};
-		encoder_rpc: encoder_rpc@0x92200000 {
+		encoder_rpc: encoder_rpc@92200000 {
 			no-map;
 			reg = <0 0x92200000 0 0x200000>;
 		};
 
-		encoder_reserved: encoder_reserved@0x94400000 {
+		encoder_reserved: encoder_reserved@94400000 {
 			no-map;
 			reg = <0 0x94400000 0 0x800000>;
 		};

@@ -186,7 +186,7 @@
 			   "fsl,imx-audio-sii902x";
 		model = "sii902x-audio";
 		cpu-dai = <&sai3>;
-		hdmi-controler = <&sii902x>;
+		hdmi-controller = <&sii902x>;
 	};
 
 	usdhc2_pwrseq: usdhc2_pwrseq {
@@ -603,7 +603,7 @@
 	display = <&display0>;
 	status = "okay";
 
-	display0: display {
+	display0: display@0 {
 		bits-per-pixel = <16>;
 		bus-width = <24>;
 
@@ -776,7 +776,6 @@
 	pinctrl-0 = <&pinctrl_usdhc2 &pinctrl_wifi>;
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz &pinctrl_wifi>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz &pinctrl_wifi>;
-	wakeup-source;
 	keep-power-in-suspend;
 	non-removable;
 	mmc-pwrseq = <&usdhc2_pwrseq>;

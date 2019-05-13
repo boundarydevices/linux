@@ -521,8 +521,15 @@ static ssize_t gpu_govern_store(struct device_driver *dev, const char *buf, size
         if (clk_core != NULL && clk_shader != NULL &&
             core_freq != 0 && shader_freq != 0)
         {
+#ifdef CONFIG_PM
+            pm_runtime_get_sync(priv->pmdev[core]);
+#endif
             clk_set_rate(clk_core, core_freq);
             clk_set_rate(clk_shader, shader_freq);
+
+#ifdef CONFIG_PM
+            pm_runtime_put_sync(priv->pmdev[core]);
+#endif
         }
     }
 
@@ -542,13 +549,7 @@ int init_gpu_opp_table(struct device *dev)
     int nr;
     int ret = 0;
     int i, p;
-    int core = gcvCORE_MAJOR;
     struct imx_priv *priv = &imxPriv;
-
-    struct clk *clk_core;
-    struct clk *clk_shader;
-
-    unsigned long core_freq, shader_freq;
 
     priv->imx_gpu_govern.num_modes = 0;
 
@@ -631,30 +632,6 @@ int init_gpu_opp_table(struct device *dev)
             dev_err(dev, "create gpu_govern attr failed (%d)\n", ret);
 	    return ret;
 	}
-
-	/*
-	 * This could be redundant, but it is useful for testing DTS with
-	 * different OPPs that have assigned-clock rates different than the
-	 * ones specified in OPP tuple array. Otherwise we will display
-	 * different clock values when the driver is loaded. Further
-	 * modifications of the governor will display correctly but not when
-	 * the driver has been loaded.
-	 */
-	core_freq = priv->imx_gpu_govern.core_clk_freq[priv->imx_gpu_govern.current_mode];
-	shader_freq = priv->imx_gpu_govern.shader_clk_freq[priv->imx_gpu_govern.current_mode];
-
-	if (core_freq && shader_freq) {
-		for (; core <= gcvCORE_3D_MAX; core++) {
-			clk_core = priv->imx_gpu_clks[core].clk_core;
-			clk_shader = priv->imx_gpu_clks[core].clk_shader;
-
-			if (clk_core != NULL && clk_shader != NULL) {
-				clk_set_rate(clk_core, core_freq);
-				clk_set_rate(clk_shader, shader_freq);
-			}
-		}
-	}
-
     }
 
     return ret;
@@ -979,10 +956,9 @@ static int patch_param(struct platform_device *pdev,
         patch_param_imx6(pdev, args);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
-    if(args->compression == -1)
+    if(args->compression == gcvCOMPRESSION_OPTION_DEFAULT)
     {
         const u32 *property;
-        args->compression = gcvCOMPRESSION_OPTION_DEFAULT;
         property = of_get_property(pdev->dev.of_node, "depth-compression", NULL);
         if (property && *property == 0)
         {

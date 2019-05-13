@@ -1698,6 +1698,11 @@ gckOS_ReadRegisterEx(
     OUT gctUINT32 * Data
     )
 {
+    if (Address > Os->device->registerSizes[Core] - 1)
+    {
+        return gcvSTATUS_INVALID_ARGUMENT;
+    }
+
     if (in_irq())
     {
         uint32_t data;
@@ -1778,6 +1783,11 @@ _WriteRegisterEx(
     IN gctBOOL Dump
     )
 {
+    if (Address > Os->device->registerSizes[Core] - 1)
+    {
+        return gcvSTATUS_INVALID_ARGUMENT;
+    }
+
     if (in_irq())
     {
         spin_lock(&Os->registerAccessLock);

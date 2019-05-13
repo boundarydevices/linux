@@ -24,4 +24,3 @@
 		reset-gpios = <&gpio_ptf 1 GPIO_ACTIVE_HIGH>;
 	};
 };
-

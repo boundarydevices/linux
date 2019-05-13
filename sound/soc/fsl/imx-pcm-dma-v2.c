@@ -295,8 +295,23 @@ static struct snd_soc_component_driver imx_soc_component = {
 
 int imx_pcm_component_register(struct device *dev)
 {
-	return devm_snd_soc_register_component(dev, &imx_soc_component,
+	int ret;
+	struct snd_soc_component *component;
+
+	ret = devm_snd_soc_register_component(dev, &imx_soc_component,
 					       NULL, 0);
+	if (ret)
+		return ret;
+
+	component = snd_soc_lookup_component(dev, "imx-pcm-dma-v2");
+	if (!component)
+		return -EINVAL;
+
+#ifdef CONFIG_DEBUG_FS
+	component->debugfs_prefix = "dma";
+#endif
+
+	return 0;
 }
 EXPORT_SYMBOL_GPL(imx_pcm_component_register);
 

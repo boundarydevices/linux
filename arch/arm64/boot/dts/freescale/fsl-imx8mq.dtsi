@@ -76,7 +76,7 @@
 		ranges;
 
 		/* global autoconfigured region for contiguous allocations */
-		rpmsg_reserved: rpmsg@0xb8000000 {
+		rpmsg_reserved: rpmsg@b8000000 {
 			no-map;
 			reg = <0 0xb8000000 0 0x400000>;
 		};
@@ -188,71 +188,77 @@
 		};
 	};
 
-	mipi_pd: gpc_power_domain@0 {
-		compatible = "fsl,imx8mq-pm-domain";
-		#power-domain-cells = <0>;
-		domain-id = <0>;
-		domain-name = "MIPI_PD";
-	};
+	power-domains {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
 
-	pcie0_pd: gpc_power_domain@1 {
-		compatible = "fsl,imx8mq-pm-domain";
-		#power-domain-cells = <0>;
-		domain-id = <1>;
-		domain-name = "PCIE0_PD";
-	};
+		mipi_pd: power-domain@0 {
+			compatible = "fsl,imx8mq-pm-domain";
+			reg = <0>;
+			#power-domain-cells = <0>;
+			domain-name = "MIPI_PD";
+		};
 
-	usb_otg1_pd: gpc_power_domain@2 {
-		compatible = "fsl,imx8mq-pm-domain";
-		#power-domain-cells = <0>;
-		domain-id = <2>;
-		domain-name = "USB_OTG1_PD";
-	};
+		pcie0_pd: power-domain@1 {
+			compatible = "fsl,imx8mq-pm-domain";
+			reg = <1>;
+			#power-domain-cells = <0>;
+			domain-name = "PCIE0_PD";
+		};
 
-	usb_otg2_pd: gpc_power_domain@3 {
-		compatible = "fsl,imx8mq-pm-domain";
-		#power-domain-cells = <0>;
-		domain-id = <3>;
-		domain-name = "USB_OTG2_PD";
-	};
+		usb_otg1_pd: power-domain@2 {
+			compatible = "fsl,imx8mq-pm-domain";
+			reg = <2>;
+			#power-domain-cells = <0>;
+			domain-name = "USB_OTG1_PD";
+		};
 
-	gpu_pd: gpc_power_domain@4 {
-		compatible = "fsl,imx8mq-pm-domain";
-		#power-domain-cells = <0>;
-		domain-id = <4>;
-		domain-name = "GPU_PD";
-		clocks = <&clk IMX8MQ_CLK_GPU_AXI>, <&clk IMX8MQ_CLK_GPU_SHADER_DIV>,
-			 <&clk IMX8MQ_CLK_GPU_ROOT>, <&clk IMX8MQ_CLK_GPU_AHB>;
-	};
+		usb_otg2_pd: power-domain@3 {
+			compatible = "fsl,imx8mq-pm-domain";
+			reg = <3>;
+			#power-domain-cells = <0>;
+			domain-name = "USB_OTG2_PD";
+		};
 
-	vpu_pd: gpc_power_domain@5 {
-		compatible = "fsl,imx8mq-pm-domain";
-		#power-domain-cells = <0>;
-		domain-id = <5>;
-		domain-name = "VPU_PD";
-		clocks = <&clk IMX8MQ_CLK_VPU_G1_ROOT>, <&clk IMX8MQ_CLK_VPU_G2_ROOT>,
-			 <&clk IMX8MQ_CLK_VPU_DEC_ROOT>;
-	};
+		gpu_pd: power-domain@4 {
+			compatible = "fsl,imx8mq-pm-domain";
+			reg = <4>;
+			#power-domain-cells = <0>;
+			domain-name = "GPU_PD";
+			clocks = <&clk IMX8MQ_CLK_GPU_AXI>, <&clk IMX8MQ_CLK_GPU_SHADER_DIV>,
+				 <&clk IMX8MQ_CLK_GPU_ROOT>, <&clk IMX8MQ_CLK_GPU_AHB>;
+		};
 
-	mipi_csi1_pd: gpc_power_domain@8 {
-		compatible = "fsl,imx8mq-pm-domain";
-		#power-domain-cells = <0>;
-		domain-id = <8>;
-		domain-name = "MIPI_CSI1_PD";
-	};
+		vpu_pd: power-domain@5 {
+			compatible = "fsl,imx8mq-pm-domain";
+			reg = <5>;
+			#power-domain-cells = <0>;
+			domain-name = "VPU_PD";
+			clocks = <&clk IMX8MQ_CLK_VPU_G1_ROOT>, <&clk IMX8MQ_CLK_VPU_G2_ROOT>,
+				 <&clk IMX8MQ_CLK_VPU_DEC_ROOT>;
+		};
 
-	mipi_csi2_pd: gpc_power_domain@9 {
-		compatible = "fsl,imx8mq-pm-domain";
-		#power-domain-cells = <0>;
-		domain-id = <9>;
-		domain-name = "MIPI_CSI2_PD";
-	};
+		mipi_csi1_pd: power-domain@8 {
+			compatible = "fsl,imx8mq-pm-domain";
+			reg = <8>;
+			#power-domain-cells = <0>;
+			domain-name = "MIPI_CSI1_PD";
+		};
 
-	pcie1_pd: gpc_power_domain@10 {
-		compatible = "fsl,imx8mq-pm-domain";
-		#power-domain-cells = <0>;
-		domain-id = <10>;
-		domain-name = "PCIE1_PD";
+		mipi_csi2_pd: power-domain@9 {
+			compatible = "fsl,imx8mq-pm-domain";
+			reg = <9>;
+			#power-domain-cells = <0>;
+			domain-name = "MIPI_CSI2_PD";
+		};
+
+		pcie1_pd: power-domain@10 {
+			compatible = "fsl,imx8mq-pm-domain";
+			reg = <10>;
+			#power-domain-cells = <0>;
+			domain-name = "PCIE1_PD";
+		};
 	};
 
 	pwm1: pwm@30660000 {
@@ -518,7 +524,7 @@
 		status = "disabled";
 	};
 
-	dcss: dcss@0x32e00000 {
+	dcss: dcss@32e00000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		compatible = "nxp,imx8mq-dcss";
@@ -1206,7 +1212,7 @@
 		status = "disabled";
 	};
 
-	pcie0: pcie@0x33800000 {
+	pcie0: pcie@33800000 {
 		compatible = "fsl,imx8mq-pcie", "snps,dw-pcie";
 		reg = <0x0 0x33800000 0x0 0x400000>, <0x0 0x1ff00000 0x0 0x80000>;
 		reg-names = "dbi", "config";
@@ -1236,7 +1242,7 @@
 		status = "disabled";
 	};
 
-	pcie1: pcie@0x33c00000 {
+	pcie1: pcie@33c00000 {
 		compatible = "fsl,imx8mq-pcie", "snps,dw-pcie";
 		reg = <0x0 0x33c00000 0x0 0x400000>, <0x0 0x27f00000 0x0 0x80000>;
 		reg-names = "dbi", "config";
@@ -1311,7 +1317,7 @@
 		};
 	};
 
-	caam_sm: caam-sm@00100000 {
+	caam_sm: caam-sm@100000 {
 		compatible = "fsl,imx6q-caam-sm";
 		reg = <0 0x00100000 0 0x8000>;
 	};

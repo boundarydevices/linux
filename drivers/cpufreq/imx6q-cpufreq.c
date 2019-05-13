@@ -391,6 +391,7 @@ static int imx6ul_opp_check_speed_grading(struct device *dev)
 		void __iomem *base;
 
 		np = of_find_compatible_node(NULL, NULL, "fsl,imx6ul-ocotp");
+
 		if (!np)
 			return -ENOENT;
 
@@ -422,7 +423,8 @@ static int imx6ul_opp_check_speed_grading(struct device *dev)
 				dev_warn(dev, "failed to disable 696MHz OPP\n");
 	}
 
-	if (of_machine_is_compatible("fsl,imx6ull")) {
+	if (of_machine_is_compatible("fsl,imx6ull") ||
+	    of_machine_is_compatible("fsl,imx6ulz")) {
 		if (val != OCOTP_CFG3_6ULL_SPEED_792MHZ)
 			if (dev_pm_opp_disable(dev, 792000000))
 				dev_warn(dev, "failed to disable 792MHz OPP\n");
@@ -552,7 +554,8 @@ static int imx6q_cpufreq_probe(struct platform_device *pdev)
 	}
 
 	if (of_machine_is_compatible("fsl,imx6ul") ||
-	    of_machine_is_compatible("fsl,imx6ull")) {
+	    of_machine_is_compatible("fsl,imx6ull") ||
+	    of_machine_is_compatible("fsl,imx6ulz")) {
 		ret = imx6ul_opp_check_speed_grading(cpu_dev);
 		if (ret == -EPROBE_DEFER)
 			return ret;

@@ -318,7 +318,7 @@ static int imx8m_add_subdomain(struct device_node *parent,
 		if (ret)
 			goto exit;
 
-		ret = of_property_read_u32(child_node, "domain-id",
+		ret = of_property_read_u32(child_node, "reg",
 					   &child_domain->gpc_domain_id);
 		if (ret)
 			goto exit;
@@ -371,7 +371,7 @@ static int imx_gpc_pm_domain_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	ret = of_property_read_u32(np, "domain-id", &imx_pm_domain->gpc_domain_id);
+	ret = of_property_read_u32(np, "reg", &imx_pm_domain->gpc_domain_id);
 	if (ret) {
 		dev_err(dev, "get domain id failed\n");
 		return -EINVAL;
