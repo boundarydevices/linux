@@ -284,13 +284,22 @@ static int ak4458_get_tdm_mode(struct ak4458_priv *ak4458)
 
 static int ak4458_rstn_control(struct snd_soc_component *component, int bit)
 {
-	int ret, val;
+	int ret;
 
-	val = bit ? AK4458_RSTN_MASK : 0;
-	ret = snd_soc_component_update_bits(component, AK4458_00_CONTROL1,
-					    AK4458_RSTN_MASK, val);
-	/* Return a negative error code only. */
-	return (ret < 0 ? ret : 0);
+	if (bit)
+		ret = snd_soc_component_update_bits(component,
+					  AK4458_00_CONTROL1,
+					  AK4458_RSTN_MASK,
+					  0x1);
+	else
+		ret = snd_soc_component_update_bits(component,
+					  AK4458_00_CONTROL1,
+					  AK4458_RSTN_MASK,
+					  0x0);
+	if (ret < 0)
+		return ret;
+
+	return 0;
 }
 
 static int ak4458_hw_params(struct snd_pcm_substream *substream,
