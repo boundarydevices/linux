@@ -363,9 +363,9 @@
 				interrupts = <17 IRQ_TYPE_EDGE_FALLING>;
 			};
 
-			mag3110@0e {
+			mag3110@e {
 				compatible = "fsl,mag3110";
-				reg = <0x0e>;
+				reg = <0xe>;
 				position = <2>;
 				interrupt-parent = <&gpio2>;
 				interrupts = <29 IRQ_TYPE_EDGE_RISING>;
@@ -517,7 +517,7 @@
 };
 
 &hdmi_video {
-	fsl,phy_reg_vlev = <0x0294>;
+	fsl,phy_reg_vlev = <0x294>;
 	fsl,phy_reg_cksymtx = <0x800d>;
 	status = "okay";
 };
@@ -528,9 +528,9 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
-	egalax_ts@04 {
+	egalax_ts@4 {
 		compatible = "eeti,egalax_ts";
-		reg = <0x04>;
+		reg = <0x4>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_egalax_int>;
 		interrupt-parent = <&gpio2>;
@@ -540,7 +540,7 @@
 
 	pmic: pfuze100@8 {
 		compatible = "fsl,pfuze100";
-		reg = <0x08>;
+		reg = <0x8>;
 
 		regulators {
 			sw1a_reg: sw1ab {
@@ -1218,16 +1218,16 @@
 &weim {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_weim_nor &pinctrl_weim_cs0>;
-	ranges = <0 0 0x08000000 0x08000000>;
+	ranges = <0 0 0x8000000 0x8000000>;
 	status = "disabled"; /* pin conflict with SPI NOR */
 
 	nor@0,0 {
 		compatible = "cfi-flash";
-		reg = <0 0 0x02000000>;
+		reg = <0 0 0x2000000>;
 		#address-cells = <1>;
 		#size-cells = <1>;
 		bank-width = <2>;
-		fsl,weim-cs-timing = <0x00620081 0x00000001 0x1c022000
+		fsl,weim-cs-timing = <0x620081 0x00000001 0x1c022000
 				0x0000c000 0x1404a38e 0x00000000>;
 	};
 };

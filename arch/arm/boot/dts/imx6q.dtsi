@@ -181,15 +181,15 @@
 				<&clks 18>, <&clks 60>, <&clks 20>, <&clks 3>;
 			clock-names = "pll2_bus", "pll2_pfd2_396m", "pll2_198m", "arm", "pll3_usb_otg", "periph",
 				"periph_pre", "periph_clk2", "periph_clk2_sel", "osc";
-			interrupts = <0 107 0x04>, <0 112 0x4>, <0 113 0x4>, <0 114 0x4>;
+			interrupts = <0 107 0x4>, <0 112 0x4>, <0 113 0x4>, <0 114 0x4>;
 			interrupt-names = "irq_busfreq_0", "irq_busfreq_1", "irq_busfreq_2", "irq_busfreq_3";
 			fsl,max_ddr_freq = <528000000>;
 		};
 
 		gpu: gpu@130000 {
 			compatible = "fsl,imx6q-gpu";
-			reg = <0x00130000 0x4000>, <0x00134000 0x4000>,
-			      <0x02204000 0x4000>, <0x10000000 0x0>,
+			reg = <0x130000 0x4000>, <0x134000 0x4000>,
+			      <0x2204000 0x4000>, <0x10000000 0x0>,
 			      <0x0 0x8000000>;
 			reg-names = "iobase_3d", "iobase_2d",
 				    "iobase_vg", "phys_baseaddr",
@@ -209,16 +209,16 @@
 			power-domains = <&pd_pu>;
 		};
 
-		ocram: sram@00905000 {
+		ocram: sram@905000 {
 			compatible = "mmio-sram";
-			reg = <0x00905000 0x3B000>;
+			reg = <0x905000 0x3B000>;
 			clocks = <&clks IMX6QDL_CLK_OCRAM>;
 		};
 
-		ocram_optee: sram@00938000 {
+		ocram_optee: sram@938000 {
 			compatible = "fsl,optee-lpm-sram";
-			reg = <0x00938000 0x8000>;
-			overw_reg = <&ocram 0x00905000 0x33000>;
+			reg = <0x938000 0x8000>;
+			overw_reg = <&ocram 0x905000 0x33000>;
 		};
 
 		aips-bus@2000000 { /* AIPS1 */
@@ -227,7 +227,7 @@
 					#address-cells = <1>;
 					#size-cells = <0>;
 					compatible = "fsl,imx6q-ecspi", "fsl,imx51-ecspi";
-					reg = <0x02018000 0x4000>;
+					reg = <0x2018000 0x4000>;
 					interrupts = <0 35 IRQ_TYPE_LEVEL_HIGH>;
 					clocks = <&clks IMX6Q_CLK_ECSPI5>,
 						 <&clks IMX6Q_CLK_ECSPI5>;
@@ -246,8 +246,8 @@
 		aips-bus@2100000 { /* AIPS2 */
 			mipi_dsi: mipi@21e0000 {
 				compatible = "fsl,imx6q-mipi-dsi";
-				reg = <0x021e0000 0x4000>;
-				interrupts = <0 102 0x04>;
+				reg = <0x21e0000 0x4000>;
+				interrupts = <0 102 0x4>;
 				gpr = <&gpr>;
 				clocks = <&clks IMX6QDL_CLK_HSI_TX>, <&clks IMX6QDL_CLK_VIDEO_27M>;
 				clock-names = "mipi_pllref_clk", "mipi_cfg_clk";
@@ -257,7 +257,7 @@
 
 		sata: sata@2200000 {
 			compatible = "fsl,imx6q-ahci";
-			reg = <0x02200000 0x4000>;
+			reg = <0x2200000 0x4000>;
 			interrupts = <0 39 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clks IMX6QDL_CLK_SATA>,
 				 <&clks IMX6QDL_CLK_SATA_REF_100M>,
@@ -268,7 +268,7 @@
 
 		gpu_vg: gpu@2204000 {
 			compatible = "vivante,gc";
-			reg = <0x02204000 0x4000>;
+			reg = <0x2204000 0x4000>;
 			interrupts = <0 11 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clks IMX6QDL_CLK_OPENVG_AXI>,
 				 <&clks IMX6QDL_CLK_GPU2D_CORE>;
@@ -280,7 +280,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			compatible = "fsl,imx6q-ipu";
-			reg = <0x02800000 0x400000>;
+			reg = <0x2800000 0x400000>;
 			interrupts = <0 8 IRQ_TYPE_LEVEL_HIGH>,
 				     <0 7 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clks IMX6QDL_CLK_IPU2>,
