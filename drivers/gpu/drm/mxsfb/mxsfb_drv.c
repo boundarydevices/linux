@@ -147,6 +147,7 @@ static int mxsfb_atomic_helper_check(struct drm_device *dev,
 				crtc->base.id, crtc->name, old_bpp, new_bpp);
 		}
 	}
+
 	return ret;
 }
 
@@ -159,6 +160,25 @@ static const struct drm_mode_config_funcs mxsfb_mode_config_funcs = {
 static const struct drm_mode_config_helper_funcs mxsfb_mode_config_helpers = {
 	.atomic_commit_tail = drm_atomic_helper_commit_tail_rpm,
 };
+
+static int mxsfb_pipe_check(struct drm_simple_display_pipe *pipe,
+		     struct drm_plane_state *plane_state,
+		     struct drm_crtc_state *crtc_state)
+{
+	struct drm_framebuffer *fb = plane_state->fb;
+	struct drm_framebuffer *old_fb = pipe->plane.state->fb;
+
+	/* force 'mode_changed' when fb pitches changed, since
+	 * the pitch related registers configuration of LCDIF
+	 * can not be done when LCDIF is running.
+	 */
+	if (old_fb && likely(!crtc_state->mode_changed)) {
+		if (old_fb->pitches[0] != fb->pitches[0])
+			crtc_state->mode_changed = true;
+	}
+
+	return 0;
+}
 
 static void mxsfb_pipe_enable(struct drm_simple_display_pipe *pipe,
 			      struct drm_crtc_state *crtc_state,
@@ -256,6 +276,7 @@ static void mxsfb_pipe_disable_vblank(struct drm_simple_display_pipe *pipe)
 }
 
 static struct drm_simple_display_pipe_funcs mxsfb_funcs = {
+	.check          = mxsfb_pipe_check,
 	.enable		= mxsfb_pipe_enable,
 	.disable	= mxsfb_pipe_disable,
 	.update		= mxsfb_pipe_update,
@@ -360,8 +381,9 @@ static int mxsfb_load(struct drm_device *drm, unsigned long flags)
 
 	drm->mode_config.min_width	= MXSFB_MIN_XRES;
 	drm->mode_config.min_height	= MXSFB_MIN_YRES;
-	drm->mode_config.max_width	= max_res[0];
-	drm->mode_config.max_height	= max_res[1];
+	/* Add additional 16 pixels for possible strides */
+	drm->mode_config.max_width	= max_res[0] + 16;
+	drm->mode_config.max_height	= max_res[1] + 16;
 	drm->mode_config.funcs		= &mxsfb_mode_config_funcs;
 	drm->mode_config.helper_private	= &mxsfb_mode_config_helpers;
 
