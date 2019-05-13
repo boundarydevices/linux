@@ -20,6 +20,8 @@
 				compatible = "android,fstab";
 				system {
 					compatible = "android,system";
+					/* default sd card node used for GSI */
+					dev = "/dev/block/platform/soc0/soc/2100000.aips-bus/219c000.usdhc/by-name/system";
 					/* sd card node which used if androidboot.boot_device_root=mmcblk3 */
 					dev_mmcblk3 = "/dev/block/platform/soc0/soc/2100000.aips-bus/219c000.usdhc/by-name/system";
 					type = "ext4";
@@ -28,6 +30,8 @@
 				};
 				vendor {
 					compatible = "android,vendor";
+					/* default sd card node used for GSI */
+					dev = "/dev/block/platform/soc0/soc/2100000.aips-bus/219c000.usdhc/by-name/vendor";
 					/* sd card node which used if androidboot.boot_device_root=mmcblk3 */
 					dev_mmcblk3 = "/dev/block/platform/soc0/soc/2100000.aips-bus/219c000.usdhc/by-name/vendor";
 					type = "ext4";
