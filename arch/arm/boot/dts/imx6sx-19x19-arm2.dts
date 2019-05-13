@@ -182,9 +182,9 @@
 	pinctrl-0 = <&pinctrl_i2c1_1>;
 	status = "okay";
 
-	pmic: pfuze100@08 {
+	pmic: pfuze100@8 {
 		compatible = "fsl,pfuze100";
-		reg = <0x08>;
+		reg = <0x8>;
 
 		regulators {
 			sw1a_reg: sw1ab {
@@ -342,17 +342,17 @@
 	pinctrl-0 = <&pinctrl_i2c4_2>;
 	status = "okay";
 
-	sgtl5000: sgtl5000@0a {
+	sgtl5000: sgtl5000@a {
 		compatible = "fsl,sgtl5000";
-		reg = <0x0a>;
+		reg = <0xa>;
 		clocks = <&codec_osc>;
 		VDDA-supply = <&vgen4_reg>;
 		VDDIO-supply = <&reg_3p3v>;
 	};
 
-	cs42888: cs42888@048 {
+	cs42888: cs42888@48 {
 		compatible = "cirrus,cs42888";
-		reg = <0x048>;
+		reg = <0x48>;
 		clocks = <&clks IMX6SX_CLK_ESAI_EXTAL>;
 		clock-names = "mclk";
 		VA-supply = <&reg_3p3v>;
@@ -509,12 +509,12 @@
 	pinctrl-0 = <&pinctrl_weim_nor_1 &pinctrl_weim_cs0_1>;
 	#address-cells = <2>;
 	#size-cells = <1>;
-	ranges = <0 0 0x50000000 0x08000000>;
+	ranges = <0 0 0x50000000 0x8000000>;
 	status = "disabled"; /* pin conflict with qspi, nand and lcd1 */
 
 	nor@0,0 {
 		compatible = "cfi-flash";
-		reg = <0 0 0x02000000>;
+		reg = <0 0 0x2000000>;
 		#address-cells = <1>;
 		#size-cells = <1>;
 		bank-width = <2>;

@@ -9,9 +9,9 @@
 #include "imx6sx-sabreauto.dts"
 
 &ocram {
-	reg = <0x00905000 0x1b000>;
+	reg = <0x905000 0x1b000>;
 };
 
 &ocrams_ddr {
-	reg = <0x00904000 0x1000>;
+	reg = <0x904000 0x1000>;
 };

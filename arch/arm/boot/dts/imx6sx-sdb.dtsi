@@ -334,7 +334,7 @@
 
 	pmic: pfuze100@8 {
 		compatible = "fsl,pfuze200";
-		reg = <0x08>;
+		reg = <0x8>;
 
 		regulators {
 			sw1a_reg: sw1ab {
@@ -459,9 +459,9 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
-	egalax_ts@04 {
+	egalax_ts@4 {
 		compatible = "eeti,egalax_ts";
-		reg = <0x04>;
+		reg = <0x4>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_egalax_int>;
 		interrupt-parent = <&gpio4>;
@@ -485,9 +485,9 @@
 		shared-interrupt;
 	};
 
-	mag3110@0e {
+	mag3110@e {
 		compatible = "fsl,mag3110";
-		reg = <0x0e>;
+		reg = <0xe>;
 		position = <2>;
 		interrupt-parent = <&gpio6>;
 		interrupts = <5 1>;
