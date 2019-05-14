@@ -62,7 +62,6 @@ static int secmon_probe(struct platform_device *pdev)
 	int ret;
 	int mem_size;
 	struct page *page;
-	unsigned int clear[2] = {};
 
 	if (!of_property_read_u32(np, "in_base_func", &id))
 		phy_in_base = get_sharemem_info(id);
@@ -82,11 +81,6 @@ static int secmon_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	if (of_property_read_u32_array(np, "clear_range", clear, 2))
-		pr_info("can't fine clear_range\n");
-	else
-		pr_info("clear_range:%x %x\n", clear[0], clear[1]);
-
 	page = dma_alloc_from_contiguous(&pdev->dev, mem_size >> PAGE_SHIFT, 0);
 	if (!page) {
 		pr_err("alloc page failed, ret:%p\n", page);
@@ -102,13 +96,6 @@ static int secmon_probe(struct platform_device *pdev)
 	if (!sharemem_in_base) {
 		pr_info("secmon share mem in buffer remap fail!\n");
 		return -ENOMEM;
-	}
-
-	if (clear[0]) {
-		struct page *page = phys_to_page(clear[0]);
-		int cnt = clear[1] / PAGE_SIZE;
-
-		cma_mmu_op(page, cnt, 0);
 	}
 
 	if (pfn_valid(__phys_to_pfn(phy_out_base)))
@@ -128,6 +115,28 @@ static int secmon_probe(struct platform_device *pdev)
 		phy_in_base, phy_out_base);
 
 	return ret;
+}
+
+void __init secmon_clear_cma_mmu(void)
+{
+	struct device_node *np;
+	unsigned int clear[2] = {};
+
+	np = of_find_node_by_name(NULL, "secmon");
+	if (!np)
+		return;
+
+	if (of_property_read_u32_array(np, "clear_range", clear, 2))
+		pr_info("can't fine clear_range\n");
+	else
+		pr_info("clear_range:%x %x\n", clear[0], clear[1]);
+
+	if (clear[0]) {
+		struct page *page = phys_to_page(clear[0]);
+		int cnt = clear[1] / PAGE_SIZE;
+
+		cma_mmu_op(page, cnt, 0);
+	}
 }
 
 static const struct of_device_id secmon_dt_match[] = {

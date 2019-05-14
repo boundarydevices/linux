@@ -39,6 +39,7 @@
 #ifdef CONFIG_AMLOGIC_CMA
 #include <asm/pgtable.h>
 #include <linux/amlogic/aml_cma.h>
+#include <linux/amlogic/secmon.h>
 #endif /* CONFIG_AMLOGIC_CMA */
 
 #include "cma.h"
@@ -279,10 +280,22 @@ static int __init cma_init_reserved_areas(void)
 		if (ret)
 			return ret;
 	}
-
+#ifdef CONFIG_AMLOGIC_SEC
+	/*
+	 * A73 cache speculate prefetch may cause SError when boot.
+	 * because it may prefetch cache line in secure memory range
+	 * which have already reserved by bootloader. So we must
+	 * clear mmu of secmon range before A73 core boot up
+	 */
+	secmon_clear_cma_mmu();
+#endif
 	return 0;
 }
+#ifdef CONFIG_AMLOGIC_CMA
+early_initcall(cma_init_reserved_areas);
+#else
 core_initcall(cma_init_reserved_areas);
+#endif
 
 /**
  * cma_init_reserved_mem() - create custom contiguous area from reserved memory
