@@ -514,6 +514,7 @@ irqreturn_t meson_mmc_irq_thread_v3(int irq, void *dev_id)
 	unsigned long flags;
 	enum aml_mmc_waitfor xfer_step;
 	u32 status, xfer_bytes = 0;
+	u32 delay2 = 0, tmp = 0;
 
 	spin_lock_irqsave(&host->mrq_lock, flags);
 	pdata = mmc_priv(host->mmc);
@@ -589,9 +590,6 @@ irqreturn_t meson_mmc_irq_thread_v3(int irq, void *dev_id)
 	case HOST_DAT_TIMEOUT_ERR:
 	case HOST_RSP_CRC_ERR:
 	case HOST_DAT_CRC_ERR:
-		if (host->is_tunning == 0)
-			pr_info("%s %d %s: cmd:%d\n", __func__, __LINE__,
-				mmc_hostname(host->mmc), mrq->cmd->opcode);
 		if (mrq->cmd->data) {
 			dma_unmap_sg(mmc_dev(host->mmc), mrq->cmd->data->sg,
 				mrq->cmd->data->sg_len,
@@ -600,14 +598,29 @@ irqreturn_t meson_mmc_irq_thread_v3(int irq, void *dev_id)
 		}
 		meson_mmc_read_resp(host->mmc, host->mrq->cmd);
 
+		if (((status == HOST_RSP_CRC_ERR)
+			|| (status == HOST_RSP_TIMEOUT_ERR))
+			&& (host->cmd_retune == 1)) {
+
+			if (host->error_flag == 0)
+				host->is_tunning = 0;
+			delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
+			tmp = (((delay2 >> 24) & 0x3f) + 3) % 0x3f;
+			delay2 = (delay2 & ~(0x3f << 24)) | (tmp << 24);
+			writel(delay2, host->base + SD_EMMC_DELAY2_V3);
+			pr_err("retune cmd-delay:0x%x\n", delay2);
+		}
 		/* set retry @ 1st error happens! */
 		if ((host->error_flag == 0)
 			&& (aml_card_type_mmc(pdata)
 				|| aml_card_type_non_sdio(pdata))
 			&& (host->is_tunning == 0)) {
 
-			pr_err("%s() %d: set 1st retry!\n",
+			if (host->find_win == 0)
+				pr_err("%s() %d: set 1st retry!\n",
 					__func__, __LINE__);
+			else
+				host->is_tunning = 1;
 			host->error_flag |= (1<<0);
 			spin_lock_irqsave(&host->mrq_lock, flags);
 			mrq->cmd->retries = 3;
@@ -616,7 +629,8 @@ irqreturn_t meson_mmc_irq_thread_v3(int irq, void *dev_id)
 
 		if (aml_card_type_mmc(pdata) &&
 			(host->error_flag & (1<<0)) && mrq->cmd->retries) {
-			pr_err("retry cmd %d the %d-th time(s)\n",
+			if (host->find_win == 0)
+				pr_err("retry cmd %d the %d-th time(s)\n",
 					mrq->cmd->opcode, mrq->cmd->retries);
 			/* chage configs on current host */
 		}
@@ -624,7 +638,8 @@ irqreturn_t meson_mmc_irq_thread_v3(int irq, void *dev_id)
 		if ((aml_card_type_mmc(pdata) || aml_card_type_non_sdio(pdata))
 			&& host->error_flag && (mrq->cmd->retries == 0)) {
 			host->error_flag |= (1<<30);
-			pr_err("Command retried failed line:%d, cmd:%d\n",
+			if (host->find_win == 0)
+				pr_err("Command retried failed line:%d, cmd:%d\n",
 					__LINE__, mrq->cmd->opcode);
 		}
 		/* retry need send a stop 2 emmc... */
@@ -1084,9 +1099,14 @@ static int emmc_ds_manual_sht(struct mmc_host *mmc)
 	int best_start = -1, best_size = -1;
 	int cur_start = -1, cur_size = 0;
 
-	host->is_tunning = 1;
+	if (host->data->chip_type >= MMC_CHIP_TL1) {
+		host->cmd_retune = 1;
+		host->find_win = 1;
+	}
 	for (i = 0; i < 64; i++) {
+		host->is_tunning = 1;
 		err = emmc_test_bus(mmc);
+		host->is_tunning = 0;
 		pr_debug("intf3: 0x%x, err[%d]: %d\n",
 				readl(host->base + SD_EMMC_INTF3), i, err);
 		if (!err)
@@ -1139,7 +1159,7 @@ static int emmc_ds_manual_sht(struct mmc_host *mmc)
 			readl(host->base + SD_EMMC_INTF3),
 			readl(host->base + SD_EMMC_CLOCK_V3));
 	pr_info("adjust:0x%x\n", readl(host->base + SD_EMMC_ADJUST_V3));
-	host->is_tunning = 0;
+	host->find_win = 0;
 	return 0;
 }
 #endif
@@ -1528,7 +1548,6 @@ int aml_get_data_eyetest(struct mmc_host *mmc)
 	u32 delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
 	int ret = 0, retry = 10, line_x;
 
-	host->is_timming = 1;
 	host->is_tunning = 1;
 	pr_info("[%s] 2018-4-18 emmc HS200 Timming\n", __func__);
 	aml_sd_emmc_clktest(mmc);
@@ -1568,7 +1587,6 @@ RETRY:
 		readl(host->base + SD_EMMC_DELAY1_V3),
 		readl(host->base + SD_EMMC_DELAY2_V3));
 	update_all_line_eyetest(mmc);
-	host->is_timming = 0;
 	host->is_tunning = 0;
 	return 0;
 }
@@ -1585,6 +1603,7 @@ int aml_emmc_hs200_tl1(struct mmc_host *mmc)
 	int i, j, err = 0;
 	int retry_times = 0;
 
+	aml_sd_emmc_clktest(mmc);
 	clk_bak = vclkc;
 	clkc->tx_phase = para->hs4.tx_phase;
 	clkc->core_phase = para->hs4.core_phase;
@@ -1603,42 +1622,31 @@ retry:
 		if (err)
 			continue;
 		count = fbinary(pdata->align[9]);
-		if (host->data->chip_type == MMC_CHIP_TL1) {
-			if (((count >= 14) && (count <= 20))
-				|| ((count >= 48) && (count <= 54))) {
-				if (retry_times != 3) {
-					retry_times++;
-					goto retry;
-				} else
-					break;
-			}
-		} else {
-			if (((count >= 10) && (count <= 22))
-				|| ((count >= 45) && (count <= 56)))
+		if (((count >= 14) && (count <= 20))
+			|| ((count >= 48) && (count <= 54))) {
+			if (retry_times != 3) {
+				retry_times++;
+				goto retry;
+			} else
 				break;
 		}
 	}
 
-	if (host->data->chip_type == MMC_CHIP_TL1) {
-		if (delay2 == 63) {
-			for (j = 0; j < 6; j++) {
-				clkc->tx_delay++;
-				pr_info("modify tx delay to %d\n",
-						clkc->tx_delay);
-				writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
-				err = emmc_eyetest_log(mmc, 9);
-				if (err)
-					continue;
-				count = fbinary(pdata->align[9]);
-				if (((count >= 14) && (count <= 20))
-					|| ((count >= 48) && (count <= 54)))
-					break;
-			}
-			pdata->tx_delay = clkc->tx_delay;
+	if (i == 63) {
+		for (j = 0; j < 6; j++) {
+			clkc->tx_delay++;
+			pr_info("modify tx delay to %d\n",
+					clkc->tx_delay);
+			writel(vclkc, host->base + SD_EMMC_CLOCK_V3);
+			err = emmc_eyetest_log(mmc, 9);
+			if (err)
+				continue;
+			count = fbinary(pdata->align[9]);
+			if (((count >= 14) && (count <= 20))
+				|| ((count >= 48) && (count <= 54)))
+				break;
 		}
-	} else {
-		if (i == 63)
-			pr_err("[%s]no find cmd timing\n", __func__);
+		pdata->tx_delay = clkc->tx_delay;
 	}
 
 	pdata->cmd_c = (delay2 >> 24);

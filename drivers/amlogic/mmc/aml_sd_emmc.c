@@ -3128,7 +3128,8 @@ static int meson_mmc_probe(struct platform_device *pdev)
 	host->pinctrl = NULL;
 	host->status = HOST_INVALID;
 	host->is_tunning = 0;
-	host->is_timming = 0;
+	host->find_win = 0;
+	host->cmd_retune = 0;
 
 	if (host->ctrl_ver >= 3)
 		ret = meson_mmc_clk_init_v3(host);

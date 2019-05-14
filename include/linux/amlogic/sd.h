@@ -441,7 +441,8 @@ struct amlsd_host {
 	dma_addr_t		dma_gping; /* 0x400 */
 	dma_addr_t		dma_gpong; /* 0x800 */
 	char is_tunning;
-	char is_timming;
+	char cmd_retune;
+	char find_win;
 	char tuning_mode;
 	unsigned int is_sduart;
 	unsigned int irq;
