@@ -22,7 +22,7 @@
 
 / {
 	compatible = "fsl,imx8mm";
-	interrupt-parent = <&gpc>;
+	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;
 
@@ -460,15 +460,6 @@
 		reg = <0x0 0x30390000 0x0 0x10000>;
 		interrupts = <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
 		#reset-cells = <1>;
-	};
-
-	gpc: gpc@303a0000 {
-		compatible = "fsl,imx8mm-gpc", "fsl,imx8mq-gpc", "syscon";
-		reg = <0x0 0x303a0000 0x0 0x10000>;
-		interrupt-controller;
-		interrupts = <GIC_SPI 87 IRQ_TYPE_LEVEL_HIGH>;
-		#interrupt-cells = <3>;
-		interrupt-parent = <&gic>;
 	};
 
 	system_counter: timer@306a0000 {
