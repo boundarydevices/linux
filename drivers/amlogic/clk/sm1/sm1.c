@@ -26,6 +26,7 @@
 #include "../clkc.h"
 #include "../g12a/g12a.h"
 #include "sm1.h"
+#include <linux/delay.h>
 
 static struct meson_clk_pll sm1_gp1_pll = {
 	.m = {
@@ -244,7 +245,7 @@ static struct clk_mux sm1_dsu_pre_src_clk_mux0 = {
 		.parent_names = (const char *[]){ "xtal", "fclk_div2",
 				"fclk_div3", "gp1_pll" },
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT | CLK_SET_RATE_NO_REPARENT,
+		.flags = CLK_SET_RATE_PARENT,
 	},
 };
 
@@ -259,7 +260,7 @@ static struct clk_mux sm1_dsu_pre_src_clk_mux1 = {
 		.parent_names = (const char *[]){ "xtal", "fclk_div2",
 				"fclk_div3", "gp1_pll" },
 		.num_parents = 4,
-		.flags = CLK_SET_RATE_PARENT | CLK_SET_RATE_NO_REPARENT,
+		.flags = CLK_SET_RATE_PARENT,
 	},
 };
 
@@ -423,12 +424,53 @@ static struct clk_hw *sm1_clk_hws[] = {
 				&sm1_csi_phy.hw,
 };
 
+struct sm1_nb_data {
+	struct notifier_block nb;
+};
+
+static int sm1_dsu_mux_clk_notifier_cb(struct notifier_block *nb,
+				    unsigned long event, void *data)
+{
+	struct clk *dsu_pre_clk, *parent_clk;
+	int ret;
+
+	switch (event) {
+	case PRE_RATE_CHANGE:
+		/* switch to sm1_dsu_fixed_sel1, set it to 1G (default 24M) */
+		ret = clk_set_rate(sm1_dsu_pre_clk_mux1.hw.clk, 1000000000);
+		if (ret < 0)
+			return ret;
+		parent_clk = sm1_dsu_pre_clk_mux1.hw.clk;
+		break;
+	case POST_RATE_CHANGE:
+		parent_clk = sm1_dsu_pre_clk_mux0.hw.clk;
+		break;
+	default:
+		return NOTIFY_DONE;
+	}
+
+	dsu_pre_clk = sm1_dsu_pre_post_clk_mux.hw.clk;
+
+	ret = clk_set_parent(dsu_pre_clk, parent_clk);
+	if (ret)
+		return notifier_from_errno(ret);
+
+	usleep_range(80, 120);
+
+	return NOTIFY_OK;
+}
+
+static struct sm1_nb_data sm1_dsu_nb_data = {
+	.nb.notifier_call = sm1_dsu_mux_clk_notifier_cb,
+};
+
 static void __init sm1_clkc_init(struct device_node *np)
 {
 	int ret = 0, clkid, i;
 
 	if (!clk_base)
 		clk_base = of_iomap(np, 0);
+
 	if (!clk_base) {
 		pr_err("%s: Unable to map clk base\n", __func__);
 		return;
@@ -560,17 +602,20 @@ static void __init sm1_clkc_init(struct device_node *np)
 		panic("%s: %d register cts_csi_adapt_clk_composite error\n",
 			__func__, __LINE__);
 
-	if (clks[CLKID_CPU_CLK]) {
-		if (!of_property_read_bool(np, "own-dsu-clk"))
-			return;
-		/* set cpu clk as dsu_clk's parent*/
-		clk_set_parent(sm1_dsu_clk.hw.clk, clks[CLKID_CPU_CLK]);
-		/* set sm1_dsu_pre_clk to 1.5G, gp1 pll is 1.5G */
-		clk_set_rate(sm1_dsu_pre_clk.hw.clk, 1500000000);
-		clk_prepare_enable(sm1_dsu_pre_clk.hw.clk);
-		/* set sm1_dsu_pre_clk as dsu_clk's parent */
-		clk_set_parent(sm1_dsu_clk.hw.clk, sm1_dsu_pre_clk.hw.clk);
+	if (of_property_read_bool(np, "own-dsu-clk")) {
+		/*
+		 * when change sm1_dsu_pre_clk_mux0, switch to
+		 * sm1_dsu_pre_clk_mux1 to avoid crash
+		 */
+		ret = clk_notifier_register(sm1_dsu_pre_clk_mux0.hw.clk,
+					&sm1_dsu_nb_data.nb);
+		if (ret) {
+			pr_err("%s: failed to register clock notifier for cpu_clk\n",
+			__func__);
+			goto iounmap;
+		}
 	}
+	pr_err("sm1 clk probe ok\n");
 	return;
 
 iounmap:
@@ -579,5 +624,3 @@ iounmap:
 }
 
 CLK_OF_DECLARE(sm1, "amlogic,sm1-clkc-2", sm1_clkc_init);
-
-
