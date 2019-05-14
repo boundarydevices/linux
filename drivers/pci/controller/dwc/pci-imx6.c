@@ -77,6 +77,8 @@ struct imx_pcie {
 	struct clk		*pcie_phy;
 	struct clk		*pcie_inbound_axi;
 	struct clk		*pcie_per;
+	struct clk		*phy_per;
+	struct clk		*misc_per;
 	struct clk		*pcie;
 	struct clk		*pcie_ext_src;
 	struct regmap		*iomuxc_gpr;
@@ -227,7 +229,6 @@ struct imx_pcie {
 
 /* iMX8 HSIO registers */
 #define IMX8QM_LPCG_PHYX2_OFFSET		0x00000
-#define IMX8QM_LPCG_PHYX1_OFFSET		0x10000
 #define IMX8QM_CSR_PHYX2_OFFSET			0x90000
 #define IMX8QM_CSR_PHYX1_OFFSET			0xA0000
 #define IMX8QM_CSR_PHYX_STTS0_OFFSET		0x4
@@ -308,6 +309,86 @@ struct imx_pcie {
 #define IMX8MM_GPR_PCIE_CMN_RST			BIT(18)
 #define IMX8MM_GPR_PCIE_POWER_OFF		BIT(17)
 #define IMX8MM_GPR_PCIE_SSC_EN			BIT(16)
+
+static bool imx_pcie_readable_reg(struct device *dev, unsigned int reg)
+{
+	enum imx_pcie_variants variant;
+
+	variant = (enum imx_pcie_variants)of_device_get_match_data(dev);
+	if (variant == IMX8QXP) {
+		switch (reg) {
+		case IMX8QM_CSR_PHYX1_OFFSET:
+		case IMX8QM_CSR_PCIEB_OFFSET:
+		case IMX8QM_CSR_MISC_OFFSET:
+		case IMX8QM_CSR_PHYX1_OFFSET + IMX8QM_CSR_PHYX_STTS0_OFFSET:
+		case IMX8QM_CSR_PCIEB_OFFSET + IMX8QM_CSR_PCIE_CTRL1_OFFSET:
+		case IMX8QM_CSR_PCIEB_OFFSET + IMX8QM_CSR_PCIE_CTRL2_OFFSET:
+		case IMX8QM_CSR_PCIEB_OFFSET + IMX8QM_CSR_PCIE_STTS0_OFFSET:
+			return true;
+
+		default:
+			return false;
+		}
+	} else {
+		switch (reg) {
+		case IMX8QM_LPCG_PHYX2_OFFSET:
+		case IMX8QM_CSR_PHYX2_OFFSET:
+		case IMX8QM_CSR_PCIEA_OFFSET:
+		case IMX8QM_CSR_MISC_OFFSET:
+		case IMX8QM_CSR_PHYX2_OFFSET + IMX8QM_CSR_PHYX_STTS0_OFFSET:
+		case IMX8QM_CSR_PCIEA_OFFSET + IMX8QM_CSR_PCIE_CTRL1_OFFSET:
+		case IMX8QM_CSR_PCIEA_OFFSET + IMX8QM_CSR_PCIE_CTRL2_OFFSET:
+		case IMX8QM_CSR_PCIEA_OFFSET + IMX8QM_CSR_PCIE_STTS0_OFFSET:
+			return true;
+		default:
+			return false;
+		}
+	}
+}
+
+static bool imx_pcie_writeable_reg(struct device *dev, unsigned int reg)
+{
+	enum imx_pcie_variants variant;
+
+	variant = (enum imx_pcie_variants)of_device_get_match_data(dev);
+	if (variant == IMX8QXP) {
+		switch (reg) {
+		case IMX8QM_CSR_PHYX1_OFFSET:
+		case IMX8QM_CSR_PCIEB_OFFSET:
+		case IMX8QM_CSR_MISC_OFFSET:
+		case IMX8QM_CSR_PCIEB_OFFSET + IMX8QM_CSR_PCIE_CTRL1_OFFSET:
+		case IMX8QM_CSR_PCIEB_OFFSET + IMX8QM_CSR_PCIE_CTRL2_OFFSET:
+			return true;
+
+		default:
+			return false;
+		}
+	} else {
+		switch (reg) {
+		case IMX8QM_LPCG_PHYX2_OFFSET:
+		case IMX8QM_CSR_PHYX2_OFFSET:
+		case IMX8QM_CSR_PCIEA_OFFSET:
+		case IMX8QM_CSR_MISC_OFFSET:
+		case IMX8QM_CSR_PCIEA_OFFSET + IMX8QM_CSR_PCIE_CTRL1_OFFSET:
+		case IMX8QM_CSR_PCIEA_OFFSET + IMX8QM_CSR_PCIE_CTRL2_OFFSET:
+			return true;
+		default:
+			return false;
+		}
+	}
+}
+
+static const struct regmap_config imx_pcie_regconfig = {
+	.max_register = IMX8QM_CSR_MISC_OFFSET,
+	.reg_bits = 32,
+	.val_bits = 32,
+	.reg_stride = 4,
+	.val_format_endian = REGMAP_ENDIAN_NATIVE,
+	.num_reg_defaults_raw =  IMX8QM_CSR_MISC_OFFSET / sizeof(uint32_t) + 1,
+	.readable_reg = imx_pcie_readable_reg,
+	.writeable_reg = imx_pcie_writeable_reg,
+	.cache_type = REGCACHE_NONE,
+};
 
 static int pcie_phy_poll_ack(struct imx_pcie *imx_pcie, int exp_val)
 {
@@ -648,6 +729,19 @@ static int imx_pcie_enable_ref_clk(struct imx_pcie *imx_pcie)
 			dev_err(dev, "unable to enable pcie_per clock\n");
 			clk_disable_unprepare(imx_pcie->pcie_inbound_axi);
 			break;
+		}
+		ret = clk_prepare_enable(imx_pcie->phy_per);
+		if (unlikely(ret)) {
+			clk_disable_unprepare(imx_pcie->pcie_per);
+			clk_disable_unprepare(imx_pcie->pcie_inbound_axi);
+			dev_err(dev, "unable to enable phy per clock\n");
+		}
+		ret = clk_prepare_enable(imx_pcie->misc_per);
+		if (unlikely(ret)) {
+			clk_disable_unprepare(imx_pcie->phy_per);
+			clk_disable_unprepare(imx_pcie->pcie_per);
+			clk_disable_unprepare(imx_pcie->pcie_inbound_axi);
+			dev_err(dev, "unable to enable misc per clock\n");
 		}
 
 		break;
@@ -1484,6 +1578,8 @@ static void pci_imx_clk_disable(struct device *dev)
 	case IMX8QM:
 		clk_disable_unprepare(imx_pcie->pcie_per);
 		clk_disable_unprepare(imx_pcie->pcie_inbound_axi);
+		clk_disable_unprepare(imx_pcie->phy_per);
+		clk_disable_unprepare(imx_pcie->misc_per);
 		break;
 	}
 }
@@ -2256,13 +2352,15 @@ static int imx_pcie_local_dma_start(struct pcie_port *pp, bool dir,
 
 static int imx_pcie_probe(struct platform_device *pdev)
 {
-	struct device *dev = &pdev->dev;
-	struct dw_pcie *pci;
-	struct imx_pcie *imx_pcie;
-	struct resource *res, reserved_res;
-	struct device_node *reserved_node, *node = dev->of_node;
 	int ret;
 	u16 val;
+	struct dw_pcie *pci;
+	struct imx_pcie *imx_pcie;
+	void __iomem *iomem;
+	struct resource *res, reserved_res;
+	struct device *dev = &pdev->dev;
+	struct device_node *reserved_node, *node = dev->of_node;
+	struct regmap_config regconfig = imx_pcie_regconfig;
 
 	imx_pcie = devm_kzalloc(dev, sizeof(*imx_pcie), GFP_KERNEL);
 	if (!imx_pcie)
@@ -2469,13 +2567,6 @@ static int imx_pcie_probe(struct platform_device *pdev)
 			("fsl,imx6sx-iomuxc-gpr");
 	} else if (imx_pcie->variant == IMX8QM
 			|| imx_pcie->variant == IMX8QXP) {
-		imx_pcie->pcie_per = devm_clk_get(dev, "pcie_per");
-		if (IS_ERR(imx_pcie->pcie_per)) {
-			dev_err(dev, "pcie_per clock source missing or invalid\n");
-			return PTR_ERR(imx_pcie->pcie_per);
-		}
-		imx_pcie->iomuxc_gpr =
-			syscon_regmap_lookup_by_phandle(node, "hsio");
 		imx_pcie->pcie_inbound_axi = devm_clk_get(&pdev->dev,
 				"pcie_inbound_axi");
 		if (IS_ERR(imx_pcie->pcie_inbound_axi)) {
@@ -2491,6 +2582,38 @@ static int imx_pcie_probe(struct platform_device *pdev)
 		ret = regulator_enable(imx_pcie->epdev_on);
 		if (ret)
 			dev_err(dev, "failed to enable the epdev_on regulator\n");
+
+		imx_pcie->pcie_per = devm_clk_get(dev, "pcie_per");
+		if (IS_ERR(imx_pcie->pcie_per)) {
+			dev_err(dev, "pcie_per clock source missing or invalid\n");
+			return PTR_ERR(imx_pcie->pcie_per);
+		}
+		imx_pcie->phy_per = devm_clk_get(dev, "phy_per");
+		if (IS_ERR(imx_pcie->phy_per)) {
+			dev_err(dev, "failed to get per clock.\n");
+			return PTR_ERR(imx_pcie->phy_per);
+		}
+		imx_pcie->misc_per = devm_clk_get(dev, "misc_per");
+		if (IS_ERR(imx_pcie->misc_per)) {
+			dev_err(dev, "failed to get per clock.\n");
+			return PTR_ERR(imx_pcie->misc_per);
+		}
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
+						   "hsio");
+		if (res) {
+			iomem = devm_ioremap(dev, res->start,
+					resource_size(res));
+			if (IS_ERR(iomem))
+				return PTR_ERR(iomem);
+			imx_pcie->iomuxc_gpr =
+				devm_regmap_init_mmio(dev, iomem, &regconfig);
+			if (IS_ERR(imx_pcie->iomuxc_gpr)) {
+				dev_err(dev, "failed to init register map\n");
+				return PTR_ERR(imx_pcie->iomuxc_gpr);
+			}
+		} else {
+			dev_err(dev, "missing *hsio* reg space\n");
+		}
 	} else {
 		imx_pcie->iomuxc_gpr =
 		 syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
