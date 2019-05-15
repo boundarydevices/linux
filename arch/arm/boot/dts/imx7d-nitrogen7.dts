@@ -526,7 +526,7 @@
 		#clock-cells = <0>;
 		clock-frequency = <22000000>;
 		clock-output-names = "mipi_mclk";
-		pwms = <&pwm2 0 45>; /* 1 / 45 ns = 22 MHz */
+		pwms = <&pwm2 0 45 0>; /* 1 / 45 ns = 22 MHz */
 	};
 
 	pxp_v4l2_out {
