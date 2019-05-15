@@ -59,6 +59,9 @@ static struct class *vout2_class;
 static DEFINE_MUTEX(vout2_serve_mutex);
 static char vout2_mode[VMODE_NAME_LEN_MAX];
 static char local_name[VMODE_NAME_LEN_MAX] = {0};
+static char vout2_mode_uboot[VMODE_NAME_LEN_MAX] = "null";
+static unsigned int vout2_init_vmode = VMODE_INIT_NULL;
+static int uboot_display;
 static unsigned int bist_mode2;
 
 static char vout2_axis[64];
@@ -77,28 +80,52 @@ static unsigned char vpu_clkc_state;
  * null display support
  * **********************************************************
  */
-static struct vinfo_s nulldisp_vinfo = {
-	.name              = "null",
-	.mode              = VMODE_NULL,
-	.width             = 1920,
-	.height            = 1080,
-	.field_height      = 1080,
-	.aspect_ratio_num  = 16,
-	.aspect_ratio_den  = 9,
-	.sync_duration_num = 60,
-	.sync_duration_den = 1,
-	.video_clk         = 148500000,
-	.htotal            = 2200,
-	.vtotal            = 1125,
-	.fr_adj_type       = VOUT_FR_ADJ_NONE,
-	.viu_color_fmt     = COLOR_FMT_RGB444,
-	.viu_mux           = VIU_MUX_MAX,
-	.vout_device       = NULL,
+static int nulldisp_index = VMODE_NULL_DISP_MAX;
+static struct vinfo_s nulldisp_vinfo[] = {
+	{
+		.name              = "null",
+		.mode              = VMODE_NULL,
+		.width             = 1920,
+		.height            = 1080,
+		.field_height      = 1080,
+		.aspect_ratio_num  = 16,
+		.aspect_ratio_den  = 9,
+		.sync_duration_num = 60,
+		.sync_duration_den = 1,
+		.video_clk         = 148500000,
+		.htotal            = 2200,
+		.vtotal            = 1125,
+		.fr_adj_type       = VOUT_FR_ADJ_NONE,
+		.viu_color_fmt     = COLOR_FMT_RGB444,
+		.viu_mux           = VIU_MUX_MAX,
+		.vout_device       = NULL,
+	},
+	{
+		.name              = "invalid",
+		.mode              = VMODE_INVALID,
+		.width             = 1920,
+		.height            = 1080,
+		.field_height      = 1080,
+		.aspect_ratio_num  = 16,
+		.aspect_ratio_den  = 9,
+		.sync_duration_num = 60,
+		.sync_duration_den = 1,
+		.video_clk         = 148500000,
+		.htotal            = 2200,
+		.vtotal            = 1125,
+		.fr_adj_type       = VOUT_FR_ADJ_NONE,
+		.viu_color_fmt     = COLOR_FMT_RGB444,
+		.viu_mux           = VIU_MUX_MAX,
+		.vout_device       = NULL,
+	},
 };
 
 static struct vinfo_s *nulldisp_get_current_info(void)
 {
-	return &nulldisp_vinfo;
+	if (nulldisp_index >= ARRAY_SIZE(nulldisp_vinfo))
+		return NULL;
+
+	return &nulldisp_vinfo[nulldisp_index];
 }
 
 static int nulldisp_set_current_vmode(enum vmode_e mode)
@@ -108,18 +135,28 @@ static int nulldisp_set_current_vmode(enum vmode_e mode)
 
 static enum vmode_e nulldisp_validate_vmode(char *name)
 {
-	if (strncmp(nulldisp_vinfo.name, name,
-		strlen(nulldisp_vinfo.name)) == 0) {
-		return nulldisp_vinfo.mode;
+	enum vmode_e vmode = VMODE_MAX;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(nulldisp_vinfo); i++) {
+		if (strcmp(nulldisp_vinfo[i].name, name) == 0) {
+			vmode = nulldisp_vinfo[i].mode;
+			nulldisp_index = i;
+			break;
+		}
 	}
 
-	return VMODE_MAX;
+	return vmode;
 }
 
 static int nulldisp_vmode_is_supported(enum vmode_e mode)
 {
-	if (nulldisp_vinfo.mode == (mode & VMODE_MODE_BIT_MASK))
-		return true;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(nulldisp_vinfo); i++) {
+		if (nulldisp_vinfo[i].mode == (mode & VMODE_MODE_BIT_MASK))
+			return true;
+	}
 	return false;
 }
 
@@ -209,15 +246,33 @@ static int set_vout2_mode(char *name)
 
 static int set_vout2_init_mode(void)
 {
-	enum vmode_e vmode = nulldisp_vinfo.mode;
+	enum vmode_e vmode;
+	char init_mode_str[VMODE_NAME_LEN_MAX];
 	int ret = 0;
 
+	snprintf(init_mode_str, VMODE_NAME_LEN_MAX, "%s", vout2_mode_uboot);
+	vout2_init_vmode = validate_vmode2(vout2_mode_uboot);
+	if (vout2_init_vmode >= VMODE_MAX) {
+		VOUTERR(
+		"vout2: no matched vout2_init mode %s, force to invalid\n",
+			vout2_mode_uboot);
+		nulldisp_index = 1;
+		vout2_init_vmode = nulldisp_vinfo[nulldisp_index].mode;
+		snprintf(init_mode_str, VMODE_NAME_LEN_MAX, "%s",
+			nulldisp_vinfo[nulldisp_index].name);
+	}
+	if (uboot_display)
+		vmode = vout2_init_vmode | VMODE_INIT_BIT_MASK;
+	else
+		vmode = vout2_init_vmode;
+
+	memset(local_name, 0, sizeof(local_name));
+	snprintf(local_name, VMODE_NAME_LEN_MAX, "%s", init_mode_str);
 	ret = set_current_vmode2(vmode);
 	if (ret) {
-		VOUTERR("vout2: init mode null set error\n");
+		VOUTERR("vout2: init mode %s set error\n", init_mode_str);
 	} else {
-		snprintf(local_name, VMODE_NAME_LEN_MAX, nulldisp_vinfo.name);
-		snprintf(vout2_mode, VMODE_NAME_LEN_MAX, nulldisp_vinfo.name);
+		snprintf(vout2_mode, VMODE_NAME_LEN_MAX, init_mode_str);
 		VOUTPR("vout2: init mode %s set ok\n", vout2_mode);
 	}
 
@@ -901,13 +956,12 @@ static int aml_vout2_probe(struct platform_device *pdev)
 	ret = vout2_attr_create();
 	ret = vout2_fops_create();
 
-	vout2_register_server(&nulldisp_vout2_server);
-	set_vout2_init_mode();
 	vout2_clktree_init(&pdev->dev);
-
+	vout2_register_server(&nulldisp_vout2_server);
 	aml_vout2_extcon_register(pdev);
-
 	vout2_notifier_register();
+
+	set_vout2_init_mode();
 
 	VOUTPR("vout2: %s OK\n", __func__);
 	return ret;
@@ -985,6 +1039,76 @@ static __exit void vout2_exit_module(void)
 
 module_init(vout2_init_module);
 module_exit(vout2_exit_module);
+
+static int str2lower(char *str)
+{
+	while (*str != '\0') {
+		*str = tolower(*str);
+		str++;
+	}
+	return 0;
+}
+
+static void vout2_init_mode_parse(char *str)
+{
+	/* detect vout mode */
+	if (strlen(str) <= 1) {
+		VOUTERR("%s: %s\n", __func__, str);
+		return;
+	}
+
+	/* detect uboot display */
+	if (strncmp(str, "en", 2) == 0) { /* enable */
+		uboot_display = 1;
+		VOUTPR("vout2: %s: %d\n", str, uboot_display);
+		return;
+	}
+	if (strncmp(str, "dis", 3) == 0) { /* disable */
+		uboot_display = 0;
+		VOUTPR("vout2: %s: %d\n", str, uboot_display);
+		return;
+	}
+
+	/*
+	 * just save the vmode_name,
+	 * convert to vmode when vout sever registered
+	 */
+	snprintf(vout2_mode_uboot, VMODE_NAME_LEN_MAX, "%s", str);
+	vout_trim_string(vout2_mode_uboot);
+	VOUTPR("vout2: %s\n", str);
+}
+
+static int __init get_vout2_init_mode(char *str)
+{
+	char *ptr = str;
+	char sep[2];
+	char *option;
+	int count = 3;
+	char find = 0;
+
+	if (str == NULL)
+		return -EINVAL;
+
+	do {
+		if (!isalpha(*ptr) && !isdigit(*ptr)) {
+			find = 1;
+			break;
+		}
+	} while (*++ptr != '\0');
+	if (!find)
+		return -EINVAL;
+
+	sep[0] = *ptr;
+	sep[1] = '\0';
+	while ((count--) && (option = strsep(&str, sep))) {
+		/* VOUTPR("vout2:%s\n", option); */
+		str2lower(option);
+		vout2_init_mode_parse(option);
+	}
+
+	return 0;
+}
+__setup("vout2=", get_vout2_init_mode);
 
 MODULE_AUTHOR("Platform-BJ <platform.bj@amlogic.com>");
 MODULE_DESCRIPTION("VOUT2 Server Module");

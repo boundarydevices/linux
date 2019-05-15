@@ -58,7 +58,7 @@ static int early_resume_flag;
 #define VMODE_NAME_LEN_MAX    64
 static struct class *vout_class;
 static DEFINE_MUTEX(vout_serve_mutex);
-static char vout_mode_uboot[VMODE_NAME_LEN_MAX] __nosavedata;
+static char vout_mode_uboot[VMODE_NAME_LEN_MAX] = "null";
 static char vout_mode[VMODE_NAME_LEN_MAX] __nosavedata;
 static char local_name[VMODE_NAME_LEN_MAX] = {0};
 static u32 vout_init_vmode = VMODE_INIT_NULL;
@@ -975,9 +975,9 @@ static int aml_vout_probe(struct platform_device *pdev)
 	ret = vout_fops_create();
 
 	vout_register_server(&nulldisp_vout_server);
-	set_vout_init_mode();
-
 	aml_vout_extcon_register(pdev);
+
+	set_vout_init_mode();
 	aml_tvout_mode_monitor();
 
 	VOUTPR("%s OK\n", __func__);
@@ -1101,9 +1101,6 @@ static int __init get_vout_init_mode(char *str)
 	char *option;
 	int count = 3;
 	char find = 0;
-
-	/* init void vout_mode_uboot name */
-	memset(vout_mode_uboot, 0, sizeof(vout_mode_uboot));
 
 	if (str == NULL)
 		return -EINVAL;
