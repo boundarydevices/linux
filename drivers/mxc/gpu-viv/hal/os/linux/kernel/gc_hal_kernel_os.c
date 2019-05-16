@@ -3118,7 +3118,7 @@ gckOS_AllocatePagedMemory(
     if (Flag & gcvALLOC_FLAG_CMA_LIMIT)
     {
         Flag &= ~gcvALLOC_FLAG_CMA_LIMIT;
-        Flag |= gcvALLOC_FLAG_4GB_ADDR;
+        Flag |= gcvALLOC_FLAG_4GB_ADDR | gcvALLOC_FLAG_CONTIGUOUS;
     }
 #endif
 
