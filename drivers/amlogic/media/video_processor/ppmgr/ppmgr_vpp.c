@@ -3613,7 +3613,10 @@ int start_ppmgr_task(void)
 		ppmgr_quit_flag = false;
 		task = kthread_run(ppmgr_task, 0, "ppmgr");
 	}
-	task_running = 1;
+	if (!IS_ERR_OR_NULL(task))
+		task_running = 1;
+	else
+		task = NULL;
 	return 0;
 }
 
@@ -3622,7 +3625,7 @@ void stop_ppmgr_task(void)
 #ifdef PPMGR_TB_DETECT
 	stop_tb_task();
 #endif
-	if (task) {
+	if (!IS_ERR_OR_NULL(task)) {
 		/* send_sig(SIGTERM, task, 1); */
 		ppmgr_quit_flag = true;
 		up(&thread_sem);
@@ -3867,7 +3870,10 @@ int start_tb_task(void)
 		tb_detect_init();
 		tb_detect_task = kthread_run(tb_task, 0, "tb_detect");
 	}
-	tb_task_running = 1;
+	if (!IS_ERR_OR_NULL(tb_detect_task))
+		tb_task_running = 1;
+	else
+		tb_detect_task = NULL;
 	return 0;
 }
 
@@ -3875,7 +3881,7 @@ void stop_tb_task(void)
 {
 	int val = 0;
 
-	if (tb_detect_task) {
+	if (!IS_ERR_OR_NULL(tb_detect_task)) {
 		tb_quit_flag = true;
 		up(&tb_sem);
 		/* send_sig(SIGTERM, tb_detect_task, 1); */
