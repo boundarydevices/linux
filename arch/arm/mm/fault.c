@@ -153,8 +153,10 @@ static long get_user_pfn(struct mm_struct *mm, unsigned long addr)
 			break;
 
 		pte = pte_offset_map(pmd, addr);
-		if (pte_none(*pte))
+		if (pte_none(*pte)) {
+			pte_unmap(pte);
 			break;
+		}
 
 		pfn = pte_pfn(*pte);
 		pte_unmap(pte);
