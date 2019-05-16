@@ -1333,7 +1333,6 @@ static int aml_set_default_tdm_clk(struct aml_tdm *tdm)
 	/*set default i2s clk for codec sequence*/
 	tdm->setting.bclk_lrclk_ratio = 64;
 	tdm->setting.sysclk_bclk_ratio = 4;
-	tdm->clk_sel = 0;
 	lrclk_hi = tdm->setting.bclk_lrclk_ratio - 1;
 
 	aml_tdm_set_lrclkdiv(tdm->actrl, tdm->clk_sel,
