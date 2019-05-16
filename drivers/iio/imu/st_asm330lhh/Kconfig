@@ -21,3 +21,14 @@ config IIO_ST_ASM330LHH_SPI
 	tristate
 	depends on IIO_ST_ASM330LHH
 
+config IIO_ST_ASM330LHH_MAY_WAKEUP
+	boolean "Enable wake-up irq"
+	depends on IIO_ST_ASM330LHH
+	help
+	  Enable wake-up irq on interrupt line
+
+config IIO_ST_ASM330LHH_EN_TEMPERATURE
+	boolean "Enable internal temperature sensor"
+	depends on IIO_ST_ASM330LHH
+	help
+	  Enable internal temperature sensor channel

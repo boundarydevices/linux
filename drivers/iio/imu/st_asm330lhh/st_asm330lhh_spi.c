@@ -50,7 +50,7 @@ static int st_asm330lhh_spi_read(struct device *dev, u8 addr, int len,
 }
 
 static int st_asm330lhh_spi_write(struct device *dev, u8 addr, int len,
-				u8 *data)
+				const u8 *data)
 {
 	struct st_asm330lhh_hw *hw;
 	struct spi_device *spi;
@@ -106,4 +106,3 @@ module_spi_driver(st_asm330lhh_driver);
 MODULE_AUTHOR("Lorenzo Bianconi <lorenzo.bianconi@st.com>");
 MODULE_DESCRIPTION("STMicroelectronics st_asm330lhh spi driver");
 MODULE_LICENSE("GPL v2");
-MODULE_VERSION(ST_ASM330LHH_VERSION);
