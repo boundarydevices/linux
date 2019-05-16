@@ -213,19 +213,6 @@
 		hp-det-gpios = <&gpio1 17 1>;
 	};
 
-	panel {
-		compatible = "sii,43wvf1g";
-		backlight = <&backlight_display>;
-		dvdd-supply = <&reg_lcd_3v3>;
-		avdd-supply = <&reg_lcd_5v>;
-
-		port {
-			panel_in: endpoint {
-				remote-endpoint = <&display_out>;
-			};
-		};
-	};
-
 	sound-spdif {
 		compatible = "fsl,imx-audio-spdif",
 			   "fsl,imx6sx-sdb-spdif";
@@ -557,11 +544,24 @@
 	display0: display@0 {
 		bits-per-pixel = <16>;
 		bus-width = <24>;
-	};
 
-	port {
-		display_out: endpoint {
-			remote-endpoint = <&panel_in>;
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+				clock-frequency = <33500000>;
+				hactive = <800>;
+				vactive = <480>;
+				hback-porch = <89>;
+				hfront-porch = <164>;
+				vback-porch = <23>;
+				vfront-porch = <10>;
+				hsync-len = <10>;
+				vsync-len = <10>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <1>;
+				pixelclk-active = <0>;
+			};
 		};
 	};
 };
