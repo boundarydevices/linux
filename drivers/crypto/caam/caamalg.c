@@ -1002,15 +1002,6 @@ static void ablkcipher_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 	if (err)
 		caam_jr_strstatus(jrdev, err);
 
-#ifdef DEBUG
-	print_hex_dump(KERN_ERR, "dstiv  @"__stringify(__LINE__)": ",
-		       DUMP_PREFIX_ADDRESS, 16, 4, req->info,
-		       edesc->src_nents > 1 ? 100 : ivsize, 1);
-#endif
-	caam_dump_sg(KERN_ERR, "dst    @" __stringify(__LINE__)": ",
-		     DUMP_PREFIX_ADDRESS, 16, 4, req->dst,
-		     edesc->dst_nents > 1 ? 100 : req->nbytes, 1);
-
 	ablkcipher_unmap(jrdev, edesc, req);
 
 	/*
@@ -1020,6 +1011,15 @@ static void ablkcipher_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 	if (ivsize)
 		scatterwalk_map_and_copy(req->info, req->dst, req->nbytes -
 					 ivsize, ivsize, 0);
+
+#ifdef DEBUG
+	print_hex_dump(KERN_ERR, "dstiv  @"__stringify(__LINE__)": ",
+		       DUMP_PREFIX_ADDRESS, 16, 4, req->info,
+		       edesc->src_nents > 1 ? 100 : ivsize, 1);
+#endif
+	caam_dump_sg(KERN_ERR, "dst    @" __stringify(__LINE__)": ",
+		     DUMP_PREFIX_ADDRESS, 16, 4, req->dst,
+		     edesc->dst_nents > 1 ? 100 : req->nbytes, 1);
 
 	/* In case initial IV was generated, copy it in GIVCIPHER request */
 	if (edesc->iv_dir == DMA_FROM_DEVICE) {
@@ -1054,6 +1054,8 @@ static void ablkcipher_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 	if (err)
 		caam_jr_strstatus(jrdev, err);
 
+	ablkcipher_unmap(jrdev, edesc, req);
+
 #ifdef DEBUG
 	print_hex_dump(KERN_ERR, "dstiv  @"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, req->info,
@@ -1063,7 +1065,6 @@ static void ablkcipher_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 		     DUMP_PREFIX_ADDRESS, 16, 4, req->dst,
 		     edesc->dst_nents > 1 ? 100 : req->nbytes, 1);
 
-	ablkcipher_unmap(jrdev, edesc, req);
 	kfree(edesc);
 
 	ablkcipher_request_complete(req, err);
