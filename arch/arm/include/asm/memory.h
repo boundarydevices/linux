@@ -41,11 +41,11 @@
 #ifdef CONFIG_AMLOGIC_KASAN32
 /*
  * if open AMLOGIC_KASAN32, PAGE_OFFSET is set to 0xD0000000
- * we config 0xB0000000 as shadow memory start. so vmalloc
- * can be 0xb9000000 and total 368mb space for vmalloc
+ * we config 0xB8000000 as shadow memory start. so vmalloc
+ * can be 0xC0000000 and total 256mb space for vmalloc
  */
-#define VMALLOC_START		(UL(0xB9000000))
-#define TASK_SIZE		(UL(0xB0000000))
+#define VMALLOC_START		(UL(CONFIG_PAGE_OFFSET) - UL(SZ_256M))
+#define TASK_SIZE		(VMALLOC_START - UL(SZ_128M))
 #define KMEM_END		(0xffa00000UL)
 #else /* CONFIG_AMLOGIC_KASAN32 */
 #define TASK_SIZE		(UL(CONFIG_PAGE_OFFSET) - UL(SZ_64M))

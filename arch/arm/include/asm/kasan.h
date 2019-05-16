@@ -20,16 +20,18 @@
  *  0x00000000 +--------+
  *             |        |
  *             |        |
- *             |        |  User space memory,         2816MB
+ *             |        |  User space memory,         2944MB
  *             |        |
  *             |        |
- *  0xb0000000 +--------+
- *             |        |  Kasan shaddow memory,       144MB
- *  0xb9000000 +--------+
- *             |        |  Vmalloc address,            356MB
+ *  0xb8000000 +--------+
+ *             |        |  Kasan shaddow memory,       128MB
+ *  0xc0000000 +--------+
+ *             |        |
+ *             |        |  Vmalloc address,            240MB
+ *             |        |
  *  0xCF400000 +--------+
  *  0xCF600000 +--------+  PKmap, for kmap               2MB
- *  0xD0000000 +--------+  Modul                        10MB
+ *  0xD0000000 +--------+  Module and pkmap,            10MB
  *             |        |
  *             |        |  Kernel linear mapped space, 762MB
  *             |        |
@@ -39,7 +41,8 @@
  *  0xFFFF0000 +--------+  High vector,                  4KB
  *
  */
-#define KASAN_SHADOW_SIZE	(0x09000000)
+#define KADDR_SIZE		(SZ_1G)
+#define KASAN_SHADOW_SIZE	(KADDR_SIZE >> 3)
 #define KASAN_SHADOW_START	(TASK_SIZE)
 #define KASAN_SHADOW_END	(KASAN_SHADOW_START + KASAN_SHADOW_SIZE)
 
@@ -49,7 +52,7 @@
  *     shadow_addr = (address >> 3) + KASAN_SHADOW_OFFSET;
  *
  */
-#define KASAN_SHADOW_OFFSET	0x99000000UL
+#define KASAN_SHADOW_OFFSET	(KASAN_SHADOW_START - (VMALLOC_START >> 3))
 struct map_desc;
 void kasan_init(void);
 void kasan_copy_shadow(pgd_t *pgdir);
