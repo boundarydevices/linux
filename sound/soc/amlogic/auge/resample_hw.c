@@ -25,17 +25,17 @@
 
 static u32 resample_coef_parameters_table[7][5] = {
 	/*coef of 32K, fc = 9000, Q:0.55, G= 14.00, */
-	{0x0137fd9a, 0x033fe4a2, 0x0029da1f, 0x001a66fb, 0x00075562},
+	{0x0146cd61, 0x0081f5a5, 0x038eadfd, 0x0081f5a5, 0x00557b5f},
 	/*coef of 44.1K, fc = 14700, Q:0.55, G= 14.00, */
-	{0x010dac28, 0x03b7f553, 0x0011380c, 0x00479dd8, 0x000f3baf},
+	{0x0106f9aa, 0x00b84366, 0x03cdcb2d, 0x00b84366, 0x0054c4d7},
 	/*coef of 48K, fc = 15000, Q:0.60, G= 11.00, */
-	{0x00ea14d7, 0x03c59759, 0x001851f0, 0x00375a09, 0x0010a417},
+	{0x00ea25ae, 0x00afe01d, 0x03e0efb0, 0x00afe01d, 0x004b155e},
 	/*coef of 88.2K, fc = 26000, Q:0.60, G= 4.00, */
 	{0x009dc098, 0x000972c7, 0x000e7582, 0x00277b49, 0x000e2d97},
 	/*coef of 96K, fc = 36000, Q:0.50, G= 4.00, */
-	{0x0094268c, 0x005d3192, 0x000ea7e2, 0x006a09e6, 0x0015f61a},
-	/*no support filter now*/
-	{0x00800000, 0x0, 0x0, 0x0, 0x0},
+	{0x0098178d, 0x008b0d0d, 0x00087862, 0x008b0d0d, 0x00208fef},
+	/*coef of 192K*/
+	{0x008741e5, 0x008fd7fd, 0x001ed6c9, 0x008fd7fd, 0x002618ae},
 	/*no support filter now*/
 	{0x00800000, 0x0, 0x0, 0x0, 0x0},
 };
@@ -104,8 +104,10 @@ int resample_set_hw_param(enum resample_idx id,
 		pr_info("%s(), inval index %d", __func__, rate_index);
 		return -EINVAL;
 	}
+
 	offset = EE_AUDIO_RESAMPLEB_COEF0 - EE_AUDIO_RESAMPLEA_COEF0;
 	reg = EE_AUDIO_RESAMPLEA_COEF0 + offset * id;
+
 	for (i = 0; i < 5; i++) {
 		audiobus_write((reg + i),
 			resample_coef_parameters_table[rate_index - 1][i]);
@@ -113,12 +115,13 @@ int resample_set_hw_param(enum resample_idx id,
 
 	offset = EE_AUDIO_RESAMPLEB_CTRL2 - EE_AUDIO_RESAMPLEA_CTRL2;
 	reg = EE_AUDIO_RESAMPLEA_CTRL2 + offset * id;
-	audiobus_update_bits(reg,
-			1 << 25, 1 << 25);
+
+	audiobus_update_bits(reg, 1 << 25, 1 << 25);
 	resample_set_hw_pause_thd(id, 128);
 
 	return 0;
 }
+
 /* not avail for tl1 */
 void resample_src_select(int src)
 {
@@ -167,7 +170,8 @@ int resample_set_hw_pause_thd(enum resample_idx id, unsigned int thd)
 	int offset = EE_AUDIO_RESAMPLEB_CTRL2 - EE_AUDIO_RESAMPLEA_CTRL2;
 	int reg = EE_AUDIO_RESAMPLEA_CTRL2 + offset * id;
 
-	audiobus_write(reg, 1 << 24 | thd << 11);
+	audiobus_update_bits(reg, 1 << 24 | 0x1fff << 11,
+			1 << 24 | thd << 11);
 
 	return 0;
 }

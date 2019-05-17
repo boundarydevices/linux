@@ -132,57 +132,16 @@ static int resample_clk_set(struct audioresample *p_resample)
 	/* enable clock */
 	if (p_resample->enable) {
 
-		if (p_resample->out_rate) {
-#ifdef __PTM_RESAMPLE_CLK__
-			clk_set_rate(p_resample->pll,
-				p_resample->out_rate * CLK_RATIO * 2 * 14);
-#else
-			clk_set_rate(p_resample->pll,
-				p_resample->out_rate * CLK_RATIO * 2);
-#endif
-			clk_set_rate(p_resample->sclk,
-				p_resample->out_rate * CLK_RATIO);
-			clk_set_rate(p_resample->clk,
-				p_resample->out_rate * CLK_RATIO);
-		} else {
-			/* defaule resample clk */
-			clk_set_rate(p_resample->pll, 48000 * CLK_RATIO * 2);
-			clk_set_rate(p_resample->sclk, 48000 * CLK_RATIO);
-			clk_set_rate(p_resample->clk, 48000 * CLK_RATIO);
-		}
-#if 0
-		ret = clk_prepare_enable(p_resample->pll);
-		if (ret) {
-			pr_err("Can't enable pll clock: %d\n", ret);
-			return -EINVAL;
-		}
-
-		ret = clk_prepare_enable(p_resample->sclk);
-		if (ret) {
-			pr_err("Can't enable resample_src clock: %d\n",
-				ret);
-			return -EINVAL;
-		}
-
-		ret = clk_prepare_enable(p_resample->clk);
-		if (ret) {
-			pr_err("Can't enable resample_clk clock: %d\n",
-				ret);
-			return -EINVAL;
-		}
-#endif
+		/* defaule tdm out mclk to resample clk */
+		clk_set_rate(p_resample->pll, 48000 * CLK_RATIO * 2);
+		clk_set_rate(p_resample->sclk, 48000 * CLK_RATIO);
+		clk_set_rate(p_resample->clk, 48000 * CLK_RATIO);
 
 		pr_info("%s, resample_pll:%lu, sclk:%lu, clk:%lu\n",
 			__func__,
 			clk_get_rate(p_resample->pll),
 			clk_get_rate(p_resample->sclk),
 			clk_get_rate(p_resample->clk));
-	} else {
-#if 0
-		clk_disable_unprepare(p_resample->clk);
-		clk_disable_unprepare(p_resample->sclk);
-		clk_disable_unprepare(p_resample->pll);
-#endif
 	}
 
 	return ret;
@@ -190,8 +149,6 @@ static int resample_clk_set(struct audioresample *p_resample)
 
 static void audio_resample_init(struct audioresample *p_resample)
 {
-	resample_clk_set(p_resample);
-
 	aml_set_resample(p_resample->id, p_resample->enable,
 		p_resample->resample_module);
 }
@@ -622,6 +579,10 @@ static int resample_platform_probe(struct platform_device *pdev)
 			ret);
 		return ret;
 	}
+
+	/*set resample clk to default 256fs mclk.*/
+	/*the same clk source with tdm*/
+	resample_clk_set(p_resample);
 
 	p_resample->dev = dev;
 

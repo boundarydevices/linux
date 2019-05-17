@@ -98,7 +98,7 @@ static u32 aml_DRC_table[AML_DRC_PARAM_LENGTH] = {
 
 static u32 aml_hw_resample_table[7][5] = {
 	/*coef of 32K, fc = 9000, Q:0.55, G= 14.00, */
-	{0x0137fd9a, 0x033fe4a2, 0x0029da1f, 0x001a66fb, 0x00075562},
+	{0x0146cd61, 0x0081f5a5, 0x038eadfd, 0x0081f5a5, 0x00557b5f},
 	/*coef of 44.1K, fc = 14700, Q:0.55, G= 14.00, */
 	{0x0106f9aa, 0x00b84366, 0x03cdcb2d, 0x00b84366, 0x0054c4d7},
 	/*coef of 48K, fc = 15000, Q:0.60, G= 11.00, */
@@ -107,8 +107,8 @@ static u32 aml_hw_resample_table[7][5] = {
 	{0x009dc098, 0x000972c7, 0x000e7582, 0x00277b49, 0x000e2d97},
 	/*coef of 96K, fc = 36000, Q:0.50, G= 4.00, */
 	{0x0098178d, 0x008b0d0d, 0x00087862, 0x008b0d0d, 0x00208fef},
-	/*no support filter now*/
-	{0x00800000, 0x0, 0x0, 0x0, 0x0},
+	/*coef of 192K*/
+	{0x008741e5, 0x008fd7fd, 0x001ed6c9, 0x008fd7fd, 0x002618ae},
 	/*no support filter now*/
 	{0x00800000, 0x0, 0x0, 0x0, 0x0},
 };
