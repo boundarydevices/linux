@@ -1102,6 +1102,7 @@ _RemoveFromBlockList(
 static gckVIDMEM_BLOCK
 _FindFreeBlock(
     IN gckKERNEL Kernel,
+    IN gctBOOL Contiguous,
     IN gctSIZE_T Bytes
     )
 {
@@ -1109,7 +1110,7 @@ _FindFreeBlock(
 
     for (vidMemBlock = Kernel->vidMemBlock; vidMemBlock != gcvNULL; vidMemBlock = vidMemBlock->next)
     {
-        if (vidMemBlock->freeBytes >= Bytes)
+        if ((vidMemBlock->freeBytes >= Bytes) && (Contiguous == vidMemBlock->contiguous))
         {
             /* Found the block */
             break;
@@ -1760,7 +1761,7 @@ gckVIDMEM_AllocateVirtualChunk(
     acquired = gcvTRUE;
 
     /* Find the free vidmem block. */
-    vidMemBlock = _FindFreeBlock(Kernel, Bytes);
+    vidMemBlock = _FindFreeBlock(Kernel, Bytes, Flag & gcvALLOC_FLAG_CONTIGUOUS);
     if (!vidMemBlock)
     {
         /* Not found, construct new block. */
