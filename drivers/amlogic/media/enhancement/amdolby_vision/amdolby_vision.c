@@ -2002,7 +2002,7 @@ static int dolby_core1_set(
 	}
 
 	if (dolby_vision_on_count
-		<= dolby_vision_run_mode_delay) {
+		< dolby_vision_run_mode_delay) {
 		VSYNC_WR_DV_REG(
 			VPP_VD1_CLIP_MISC0,
 			(0x200 << 10) | 0x200);
@@ -3228,18 +3228,30 @@ void enable_dolby_vision(int enable)
 			if (!dolby_vision_core1_on
 				&& (dolby_vision_mask & 1)
 				&& dovi_setting_video_flag) {
-				VSYNC_WR_DV_REG_BITS(
-					VIU_MISC_CTRL1,
-					0,
-					16, 1); /* core1 */
+				if (is_meson_g12() || is_meson_tm2_stbmode())
+					VSYNC_WR_DV_REG_BITS(
+						DOLBY_PATH_CTRL,
+						/* enable core1 */
+						0, 0, 1);
+				else
+					VSYNC_WR_DV_REG_BITS(
+						VIU_MISC_CTRL1,
+						0,
+						16, 1); /* core1 */
 				dolby_vision_core1_on = true;
 			} else if (dolby_vision_core1_on
 				&& (!(dolby_vision_mask & 1)
-				|| !dovi_setting_video_flag)){
-				VSYNC_WR_DV_REG_BITS(
-					VIU_MISC_CTRL1,
-					1,
-					16, 1); /* core1 */
+				|| !dovi_setting_video_flag)) {
+				if (is_meson_g12() || is_meson_tm2_stbmode())
+					VSYNC_WR_DV_REG_BITS(
+						DOLBY_PATH_CTRL,
+						/* disable core1 */
+						1, 0, 1);
+				else
+					VSYNC_WR_DV_REG_BITS(
+						VIU_MISC_CTRL1,
+						1,
+						16, 1); /* core1 */
 				dolby_vision_core1_on = false;
 			}
 		}
