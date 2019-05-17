@@ -57,6 +57,9 @@ static inline void _set_src1_format(struct ge2d_src1_data_s *src1_data_cfg,
 		dp_gen_cfg->use_matrix_default =
 			(format_dst & GE2D_FORMAT_FULL_RANGE) ?
 			MATRIX_RGB_TO_FULL_RANGE_YCC : MATRIX_RGB_TO_YCC;
+		dp_gen_cfg->use_matrix_default |=
+			((format_dst & GE2D_FORMAT_BT_STANDARD) ?
+				MATRIX_BT_709 : MATRIX_BT_601);
 		dp_gen_cfg->conv_matrix_en = 1;
 	} else
 		dp_gen_cfg->conv_matrix_en = 0;
@@ -108,6 +111,9 @@ static inline void _set_dst_format(
 		dp_gen_cfg->use_matrix_default =
 			(format_dst & GE2D_FORMAT_FULL_RANGE) ?
 			MATRIX_RGB_TO_FULL_RANGE_YCC : MATRIX_RGB_TO_YCC;
+		dp_gen_cfg->use_matrix_default |=
+			((format_dst & GE2D_FORMAT_BT_STANDARD) ?
+				MATRIX_BT_709 : MATRIX_BT_601);
 		dp_gen_cfg->conv_matrix_en = 1;
 	} else
 		dp_gen_cfg->conv_matrix_en = 0;

@@ -128,10 +128,17 @@ enum ge2d_memtype_s {
 #define FILTER_TYPE_GAU0_BOT    5
 #define FILTER_TYPE_GAU1    6
 
-#define MATRIX_YCC_TO_RGB               1
-#define MATRIX_RGB_TO_YCC               2
-#define MATRIX_FULL_RANGE_YCC_TO_RGB    3
-#define MATRIX_RGB_TO_FULL_RANGE_YCC    4
+#define MATRIX_YCC_TO_RGB               (1 << 0)
+#define MATRIX_RGB_TO_YCC               (1 << 1)
+#define MATRIX_FULL_RANGE_YCC_TO_RGB    (1 << 2)
+#define MATRIX_RGB_TO_FULL_RANGE_YCC    (1 << 3)
+#define MATRIX_BT_STANDARD              (1 << 4)
+#define MATRIX_BT_601                   (0 << 4)
+#define MATRIX_BT_709                   (1 << 4)
+
+#define GE2D_FORMAT_BT_STANDARD         (1 << 28)
+#define GE2D_FORMAT_BT601               (0 << 28)
+#define GE2D_FORMAT_BT709               (1 << 28)
 
 
 #define GE2D_ENDIAN_SHIFT	24

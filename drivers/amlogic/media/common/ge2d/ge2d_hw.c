@@ -624,7 +624,7 @@ void ge2d_set_dp_gen(struct ge2d_dp_gen_s *cfg)
 			);
 	} else
 		ge2d_reg_set_bits(GE2D_ANTIFLICK_CTRL0, 0, 31, 1);
-	if (cfg->use_matrix_default == MATRIX_YCC_TO_RGB) {
+	if (cfg->use_matrix_default & MATRIX_YCC_TO_RGB) {
 		/* ycbcr(16-235) to rgb(0-255) */
 		cfg->matrix_coef[0] = 0x4a8;
 		cfg->matrix_coef[1] = 0;
@@ -641,27 +641,43 @@ void ge2d_set_dp_gen(struct ge2d_dp_gen_s *cfg)
 		cfg->matrix_sat_in_en = 1;
 		cfg->matrix_minus_16_ctrl = 0x4;
 		cfg->matrix_sign_ctrl = 0x3;
-	} else if (cfg->use_matrix_default == MATRIX_RGB_TO_YCC) {
-		/* rgb(0-255) to ycbcr(16-235) */
-		/* 0.257     0.504   0.098 */
-		/* -0.148    -0.291  0.439 */
-		/* 0.439     -0.368 -0.071 */
-		cfg->matrix_coef[0] = 0x107;
-		cfg->matrix_coef[1] = 0x204;
-		cfg->matrix_coef[2] = 0x64;
-		cfg->matrix_coef[3] = 0x1f68;
-		cfg->matrix_coef[4] = 0x1ed6;
-		cfg->matrix_coef[5] = 0x1c2;
-		cfg->matrix_coef[6] = 0x1c2;
-		cfg->matrix_coef[7] = 0x1e87;
-		cfg->matrix_coef[8] = 0x1fb7;
+	} else if (cfg->use_matrix_default & MATRIX_RGB_TO_YCC) {
+		if (cfg->use_matrix_default & MATRIX_BT_709) {
+			/* VDIN_MATRIX_RGB_YUV709 */
+			/* 0     0.183  0.614  0.062     16 */
+			/* 0    -0.101 -0.338  0.439    128 */
+			/* 0     0.439 -0.399 -0.04     128 */
+			cfg->matrix_coef[0] = 0xbb;
+			cfg->matrix_coef[1] = 0x275;
+			cfg->matrix_coef[2] = 0x3f;
+			cfg->matrix_coef[3] = 0x1f99;
+			cfg->matrix_coef[4] = 0x1ea6;
+			cfg->matrix_coef[5] = 0x1c2;
+			cfg->matrix_coef[6] = 0x1c2;
+			cfg->matrix_coef[7] = 0x1e67;
+			cfg->matrix_coef[8] = 0x1fd7;
+		} else {
+			/* rgb(0-255) to ycbcr(16-235) */
+			/* 0.257     0.504   0.098 */
+			/* -0.148    -0.291  0.439 */
+			/* 0.439     -0.368 -0.071 */
+			cfg->matrix_coef[0] = 0x107;
+			cfg->matrix_coef[1] = 0x204;
+			cfg->matrix_coef[2] = 0x64;
+			cfg->matrix_coef[3] = 0x1f68;
+			cfg->matrix_coef[4] = 0x1ed6;
+			cfg->matrix_coef[5] = 0x1c2;
+			cfg->matrix_coef[6] = 0x1c2;
+			cfg->matrix_coef[7] = 0x1e87;
+			cfg->matrix_coef[8] = 0x1fb7;
+		}
 		cfg->matrix_offset[0] = 16;
 		cfg->matrix_offset[1] = 128;
 		cfg->matrix_offset[2] = 128;
 		cfg->matrix_sat_in_en = 0;
 		cfg->matrix_minus_16_ctrl = 0;
 		cfg->matrix_sign_ctrl = 0;
-	} else if (cfg->use_matrix_default == MATRIX_FULL_RANGE_YCC_TO_RGB) {
+	} else if (cfg->use_matrix_default & MATRIX_FULL_RANGE_YCC_TO_RGB) {
 		/* ycbcr (0-255) to rgb(0-255) */
 		/* 1,     0,      1.402 */
 		/* 1, -0.34414,   -0.71414 */
@@ -681,7 +697,7 @@ void ge2d_set_dp_gen(struct ge2d_dp_gen_s *cfg)
 		cfg->matrix_sat_in_en = 0;
 		cfg->matrix_minus_16_ctrl = 0;
 		cfg->matrix_sign_ctrl = 0x3;
-	} else if (cfg->use_matrix_default == MATRIX_RGB_TO_FULL_RANGE_YCC) {
+	} else if (cfg->use_matrix_default & MATRIX_RGB_TO_FULL_RANGE_YCC) {
 		cfg->matrix_coef[0] = 0x132;
 		cfg->matrix_coef[1] = 0x259;
 		cfg->matrix_coef[2] = 0x75;
