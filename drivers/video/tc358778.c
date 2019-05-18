@@ -1867,6 +1867,7 @@ static int tc358778_remove(struct i2c_client *client)
 	struct tc358778_priv *tc = i2c_get_clientdata(client);
 
 	cancel_delayed_work_sync(&tc->tc_work);
+	flush_workqueue(tc->tc_workqueue);
 	destroy_workqueue(tc->tc_workqueue);
 	device_remove_file(&client->dev, &dev_attr_tc358778_reg);
 	device_remove_file(&client->dev, &dev_attr_tc358778_enable);
