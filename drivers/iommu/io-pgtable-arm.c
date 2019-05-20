@@ -239,7 +239,7 @@ static void *__arm_lpae_alloc_pages(size_t size, gfp_t gfp,
 
 	VM_BUG_ON((gfp & __GFP_HIGHMEM));
 	p = alloc_pages_node(dev ? dev_to_node(dev) : NUMA_NO_NODE,
-			     gfp | __GFP_ZERO | __GFP_DMA, order);
+			     gfp | __GFP_ZERO | __GFP_DMA32, order);
 	if (!p)
 		return NULL;
 
