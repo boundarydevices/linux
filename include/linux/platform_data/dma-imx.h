@@ -62,7 +62,6 @@ struct imx_dma_data {
 	bool dst_dualfifo;
 	int idx;
 	int done_sel;
-	struct device_node *of_node;
 };
 
 static inline int imx_dma_is_ipu(struct dma_chan *chan)
