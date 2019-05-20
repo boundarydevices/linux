@@ -1975,6 +1975,9 @@ static int dolby_core2_set(
 		_VSYNC_WR_MPEG_REG(DOLBY_CORE2A_SWAP_CTRL2,
 			(hsize << 16) | (vsize + g_vsize_add));
 	}
+	if (debug_dolby & 2)
+		pr_dolby_dbg("g_hpotch %x, g_vpotch %x\n",
+		g_hpotch, g_vpotch);
 	_VSYNC_WR_MPEG_REG(DOLBY_CORE2A_SWAP_CTRL3,
 		(g_hwidth << 16) | g_vwidth);
 	_VSYNC_WR_MPEG_REG(DOLBY_CORE2A_SWAP_CTRL4,
@@ -2305,7 +2308,23 @@ static void apply_stb_core_settings(
 			g_vpotch = 0x60;
 		else
 			g_vpotch = 0x20;
+	} else if (is_meson_g12()) {
+		if (vinfo) {
+			if (debug_dolby & 2)
+				pr_dolby_dbg("vinfo %d %d %d\n",
+					vinfo->width,
+					vinfo->height,
+					vinfo->field_height);
+			if ((vinfo->width < 1280) &&
+				(vinfo->height < 720) &&
+				(vinfo->field_height < 720))
+				g_vpotch = 0x60;
+			else
+				g_vpotch = 0x8;
+		} else
+			g_vpotch = 0x8;
 	}
+
 	if (mask & 1) {
 		if (is_meson_txlx_stbmode()
 			|| force_stb_mode) {
