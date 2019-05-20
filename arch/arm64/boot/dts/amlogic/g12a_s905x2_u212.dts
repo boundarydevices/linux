@@ -922,6 +922,11 @@
 		 * 4: spdifout_b;
 		 */
 		samesource_sel = <3>;
+		/*enable default mclk(12.288M), before extern codec start*/
+		start_clk_enable = <1>;
+
+		/*tdm clk tuning enable*/
+		clk_tuning_enable = <1>;
 	};
 
 	aml_tdmc: tdmc {
@@ -997,6 +1002,8 @@
 		pinctrl-0 = <&spdifout>;
 		pinctrl-1 = <&spdifout_a_mute>;
 		status = "okay";
+		/*spdif clk tuning enable*/
+		clk_tuning_enable = <1>;
 	};
 	aml_spdif_b: spdif_b {
 		compatible = "amlogic, g12a-snd-spdif-b";
