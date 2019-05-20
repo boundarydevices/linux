@@ -329,7 +329,9 @@ int vf_ppmgr_get_states(struct vframe_states *states)
 static int get_input_format(struct vframe_s *vf)
 {
 	int format = GE2D_FORMAT_M24_YUV420;
+	int interlace_mode;
 
+	interlace_mode = vf->type & VIDTYPE_TYPEMASK;
 	if (vf->type & VIDTYPE_VIU_422) {
 #if 0
 		if (vf->type & VIDTYPE_INTERLACE_BOTTOM)
@@ -346,9 +348,9 @@ static int get_input_format(struct vframe_s *vf)
 			format = GE2D_FORMAT_S16_YUV422;
 
 #else
-		if (vf->type & VIDTYPE_INTERLACE_BOTTOM) {
+		if (interlace_mode == VIDTYPE_INTERLACE_BOTTOM) {
 			format = GE2D_FORMAT_S16_YUV422;
-		} else if (vf->type & VIDTYPE_INTERLACE_TOP) {
+		} else if (interlace_mode == VIDTYPE_INTERLACE_TOP) {
 			format = GE2D_FORMAT_S16_YUV422;
 		} else {
 			format = GE2D_FORMAT_S16_YUV422
@@ -357,18 +359,17 @@ static int get_input_format(struct vframe_s *vf)
 #endif
 
 	} else if (vf->type & VIDTYPE_VIU_NV21) {
-		if (vf->type & VIDTYPE_INTERLACE_BOTTOM)
+		if (vf->type & VIDTYPE_INTERLACE_BOTTOM) {
 			format =
 					GE2D_FORMAT_M24_NV21 |
 					(GE2D_FORMAT_M24_NV21B & (3 << 3));
-
-		else if (vf->type & VIDTYPE_INTERLACE_TOP)
+		} else if (vf->type & VIDTYPE_INTERLACE_TOP) {
 			format =
 				GE2D_FORMAT_M24_NV21
 				| (GE2D_FORMAT_M24_NV21T & (3 << 3));
-
-		else
+		} else {
 			format = GE2D_FORMAT_M24_NV21;
+		}
 	} else {
 		if (vf->type & VIDTYPE_INTERLACE_BOTTOM) {
 			format = GE2D_FORMAT_M24_YUV420
@@ -2976,6 +2977,10 @@ static int ppmgr_task(void *data)
 			if (vf->source_type !=
 				VFRAME_SOURCE_TYPE_OTHERS)
 				goto SKIP_DETECT;
+			if ((vf->width * vf->height)
+				>= (3840 * 2160)) {          //4k do not detect
+				goto SKIP_DETECT;
+			}
 			if (first_frame) {
 				last_type = vf->type & VIDTYPE_TYPEMASK;
 				last_width = vf->width;
