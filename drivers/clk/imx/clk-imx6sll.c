@@ -59,12 +59,6 @@ static const char *epdc_sels[] = { "epdc_podf", "ipp_di0", "ipp_di1", "ldb_di0",
 static struct clk *clks[IMX6SLL_CLK_END];
 static struct clk_onecell_data clk_data;
 
-static int const clks_init_on[] __initconst = {
-	IMX6SLL_CLK_AIPSTZ1, IMX6SLL_CLK_AIPSTZ2,
-	IMX6SLL_CLK_OCRAM, IMX6SLL_CLK_ARM, IMX6SLL_CLK_ROM,
-	IMX6SLL_CLK_MMDC_P0_FAST, IMX6SLL_CLK_MMDC_P0_IPG,
-};
-
 static const struct clk_div_table post_div_table[] = {
 	{ .val = 2, .div = 1, },
 	{ .val = 1, .div = 2, },
