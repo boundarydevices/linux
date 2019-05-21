@@ -172,9 +172,9 @@
 			reg = <0x904000 0x1000>;
 		};
 
-		ocram: sram@900000 {
+		ocram: sram@905000 {
 			compatible = "mmio-sram";
-			reg = <0x900000 0x20000>;
+			reg = <0x905000 0x1b000>;
 		};
 
 		ocram_optee: sram@918000 {
