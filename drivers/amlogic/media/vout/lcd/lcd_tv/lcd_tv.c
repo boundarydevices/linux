@@ -44,6 +44,7 @@
 
 static unsigned int lcd_output_vmode;
 static char lcd_output_name[30];
+static int lcd_init_on_flag;
 
 /* ************************************************** *
  * lcd mode function
@@ -331,7 +332,19 @@ static int lcd_set_current_vmode(enum vmode_e mode)
 	if (VMODE_LCD == (mode & VMODE_MODE_BIT_MASK)) {
 		if (mode & VMODE_INIT_BIT_MASK) {
 			lcd_clk_gate_switch(1);
-		} else {
+		} else if (lcd_init_on_flag == 0) {
+			lcd_init_on_flag = 1;
+			if ((lcd_drv->lcd_key_valid == 0)
+			&& !(lcd_drv->lcd_status & LCD_STATUS_ENCL_ON)) {
+				aml_lcd_notifier_call_chain
+					(LCD_EVENT_POWER_ON, NULL);
+				lcd_if_enable_retry(lcd_drv->lcd_config);
+			} else if (lcd_drv->driver_change != NULL) {
+				mutex_lock(&lcd_vout_mutex);
+				ret = lcd_drv->driver_change();
+				mutex_unlock(&lcd_vout_mutex);
+			}
+		} else if (lcd_init_on_flag == 1) {
 			mutex_lock(&lcd_vout_mutex);
 			ret = lcd_drv->driver_change();
 			mutex_unlock(&lcd_vout_mutex);

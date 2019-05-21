@@ -1026,6 +1026,13 @@ static void lcd_config_probe_delayed(struct work_struct *work)
 		lcd_driver = NULL;
 		LCDERR("probe exit\n");
 	}
+
+	if ((lcd_driver->lcd_status & LCD_STATUS_VMODE_ACTIVE)
+	&& !(lcd_driver->lcd_status & LCD_STATUS_ENCL_ON)) {
+		LCDPR("%s: lcd_enable in kernel\n", __func__);
+		aml_lcd_notifier_call_chain(LCD_EVENT_POWER_ON, NULL);
+		lcd_if_enable_retry(lcd_driver->lcd_config);
+	}
 }
 
 static void lcd_config_default(void)
