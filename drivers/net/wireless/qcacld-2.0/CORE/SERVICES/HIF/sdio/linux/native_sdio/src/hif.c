@@ -106,9 +106,15 @@ MODULE_PARM_DESC(forcesleepmode, "Set sleep mode: 0-host capbility, 1-force WOW,
 /* Some laptop with JMicron SDIO host has compitable
  * issue with asyncintdelay value,
  * change default value to 2 */
+#ifdef CONFIG_X86
 unsigned int asyncintdelay = 2;
 module_param(asyncintdelay, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 MODULE_PARM_DESC(asyncintdelay, "Delay clock count for aysnc interrupt, 2 is default, vaild values are 1 and 2");
+#else
+unsigned int asyncintdelay = 0;
+module_param(asyncintdelay, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+MODULE_PARM_DESC(asyncintdelay, "Delay clock count for aysnc interrupt, 0 is default, vaild values are 1 and 2");
+#endif
 
 unsigned int forcecard = 0;
 module_param(forcecard, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
