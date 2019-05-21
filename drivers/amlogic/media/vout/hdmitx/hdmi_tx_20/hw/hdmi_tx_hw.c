@@ -2201,6 +2201,7 @@ static void hdmitx_set_packet(int type, unsigned char *DB, unsigned char *HB)
 {
 	int i;
 	int pkt_data_len = 0;
+	unsigned int IEEECode = 0;
 
 	switch (type) {
 	case HDMI_PACKET_AVI:
@@ -2209,6 +2210,12 @@ static void hdmitx_set_packet(int type, unsigned char *DB, unsigned char *HB)
 		if ((!DB) || (!HB)) {
 			hdmitx_set_reg_bits(HDMITX_DWC_FC_DATAUTO0, 0, 3, 1);
 			hdmitx_wr_reg(HDMITX_DWC_FC_VSDSIZE, 0x0);
+			hdmitx_wr_reg(HDMITX_DWC_FC_VSDIEEEID0, 0x00);
+			hdmitx_wr_reg(HDMITX_DWC_FC_VSDIEEEID1, 0x00);
+			hdmitx_wr_reg(HDMITX_DWC_FC_VSDIEEEID2, 0x00);
+			for (i = 0; i < 24; i++)
+				hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD0 + i,
+					0x00);
 			return;
 		}
 		hdmitx_wr_reg(HDMITX_DWC_FC_VSDIEEEID0, DB[0]);
@@ -2216,11 +2223,14 @@ static void hdmitx_set_packet(int type, unsigned char *DB, unsigned char *HB)
 		hdmitx_wr_reg(HDMITX_DWC_FC_VSDIEEEID2, DB[2]);
 		hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD0, DB[3]);
 		hdmitx_wr_reg(HDMITX_DWC_FC_VSDSIZE, HB[2]);
-		if (DB[3] == 0x20) { /* set HDMI VIC */
+		IEEECode = DB[0] | DB[1] << 8 | DB[2] << 16;
+		if ((IEEECode == HDMI_IEEEOUI) && (DB[3] == 0x20)) {
+			/* set HDMI VIC */
 			hdmitx_wr_reg(HDMITX_DWC_FC_AVIVID, 0);
 			hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD1, DB[4]);
 		}
-		if (DB[3] == 0x40) { /* 3D VSI */
+		if ((IEEECode == HDMI_IEEEOUI) && (DB[3] == 0x40)) {
+			/* 3D VSI */
 			hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD1, DB[4]);
 			hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD2, DB[5]);
 			if ((DB[4] >> 4) == T3D_FRAME_PACKING)
@@ -2228,7 +2238,8 @@ static void hdmitx_set_packet(int type, unsigned char *DB, unsigned char *HB)
 			else
 				hdmitx_wr_reg(HDMITX_DWC_FC_VSDSIZE, 6);
 		}
-		if (HB[2] == 0x1b) {/*set dolby vsif data information*/
+		if ((IEEECode == DOVI_IEEEOUI) && (HB[2] == 0x1b)) {
+			/*set dolby vsif data information*/
 			hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD1, DB[4]);
 			hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD2, DB[5]);
 			hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD3, DB[6]);
@@ -2236,7 +2247,7 @@ static void hdmitx_set_packet(int type, unsigned char *DB, unsigned char *HB)
 			hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD5, DB[8]);
 		}
 		/*set hdr 10+ vsif data information*/
-		if ((DB[0] == 0x8b) && (DB[1] == 0x84) && (DB[2] == 0x90)) {
+		if (IEEECode == HDR10PLUS_IEEEOUI) {
 			for (i = 0; i < 23; i++)
 				hdmitx_wr_reg(HDMITX_DWC_FC_VSDPAYLOAD1 + i,
 					DB[4 + i]);
