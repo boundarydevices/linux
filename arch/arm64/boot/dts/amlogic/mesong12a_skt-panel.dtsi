@@ -16,7 +16,7 @@
  */
 
 / {
-	lcd{
+	lcd:lcd{
 		compatible = "amlogic, lcd-g12a";
 		mode = "tablet";
 		status = "okay";

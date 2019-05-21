@@ -185,7 +185,7 @@
 		/* 1:gp0_pll vid2_clk */
 		/* 2:vid_pll vid1_clk */
 		/* 3:gp0_pll vid1_clk */
-		clk_path = <0>;
+		clk_path = <2>;
 
 		/* performance: reg_address, reg_value */
 		/* g12a */
@@ -518,7 +518,7 @@
 		compatible = "amlogic, vecm";
 		dev_name = "aml_vecm";
 		status = "okay";
-		gamma_en = <0>;/*1:enabel ;0:disable*/
+		gamma_en = <1>;/*1:enabel ;0:disable*/
 		wb_en = <0>;/*1:enabel ;0:disable*/
 		cm_en = <0>;/*1:enabel ;0:disable*/
 		/*0: 709/601  1: bt2020*/
@@ -1488,3 +1488,15 @@
 	status = "okay";
 };
 
+&lcd {
+	clk_path = <1>;
+};
+
+&gpu{
+	tbl =  <&dvfs285_cfg
+				&dvfs400_cfg
+				&dvfs500_cfg
+				&dvfs666_cfg
+				&dvfs800_cfg
+				&dvfs800_cfg>;
+};
