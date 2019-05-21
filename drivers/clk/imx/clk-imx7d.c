@@ -895,6 +895,7 @@ static void __init imx7d_clocks_init(struct device_node *ccm_node)
 	if (imx_src_is_m4_enabled()) {
 		imx_clk_set_parent(clks[IMX7D_ARM_M4_ROOT_SRC], clks[IMX7D_PLL_SYS_MAIN_240M_CLK]);
 		imx_clk_prepare_enable(clks[IMX7D_ARM_M4_ROOT_CLK]);
+		imx_clk_prepare_enable(clks[IMX7D_UART2_ROOT_CLK]);
 	}
 
 	imx_clk_set_parent(clks[IMX7D_PLL_ARM_MAIN_BYPASS], clks[IMX7D_PLL_ARM_MAIN]);
