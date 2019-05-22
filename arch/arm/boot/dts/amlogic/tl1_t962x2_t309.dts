@@ -1288,8 +1288,9 @@
 		clock-names = "mclk", "clk_srcpll",
 			"samesource_srcpll", "samesource_clk";
 
-		pinctrl-names = "tdm_pins";
+		pinctrl-names = "tdm_pins", "tdmout_a_gpio";
 		pinctrl-0 = <&tdma_mclk &tdmout_a>;
+		pinctrl-1 = <&tdmout_a_gpio>;
 
 		/*
 		 * 0: tdmout_a;
@@ -1731,6 +1732,15 @@
 		};
 	};
 
+	tdmout_a_gpio: tdmout_a_gpio {
+		mux { /* GPIOZ_1, GPIOZ_2, GPIOZ_3 */
+			groups = "GPIOZ_1",
+				"GPIOZ_2",
+				"GPIOZ_3";
+			function = "gpio_periphs";
+			output-low;
+		};
+	};
 	tdmin_a: tdmin_a {
 		mux { /* GPIOZ_9 */
 			groups = "tdma_din2_z";

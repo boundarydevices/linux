@@ -1729,15 +1729,49 @@ static int aml_tdm_platform_probe(struct platform_device *pdev)
 static int aml_tdm_platform_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
+	struct aml_tdm *p_tdm = dev_get_drvdata(&pdev->dev);
+
+	/*mute default clk */
+	if (p_tdm->start_clk_enable == 1 && p_tdm->pin_ctl) {
+		struct pinctrl_state *state = NULL;
+
+		state = pinctrl_lookup_state(p_tdm->pin_ctl, "tdmout_a_gpio");
+		if (!IS_ERR_OR_NULL(state)) {
+			pinctrl_select_state(p_tdm->pin_ctl, state);
+			pr_info("%s tdm pins disable!\n", __func__);
+		}
+	}
+
+	pr_info("%s tdm:(%d)\n", __func__, p_tdm->id);
 	return 0;
 }
+
 static int aml_tdm_platform_resume(struct platform_device *pdev)
 {
+	struct aml_tdm *p_tdm = dev_get_drvdata(&pdev->dev);
+
 	/* complete mclk for tdm */
 	if (get_meson_cpu_version(MESON_CPU_VERSION_LVL_MINOR) == 0xa)
 		meson_clk_measure((1<<16) | 0x67);
 
+	/*set default clk for output*/
+	if (p_tdm->start_clk_enable == 1 && p_tdm->pin_ctl) {
+		struct pinctrl_state *state = NULL;
+
+		aml_set_default_tdm_clk(p_tdm);
+		state = pinctrl_lookup_state(p_tdm->pin_ctl, "tdm_pins");
+		if (!IS_ERR_OR_NULL(state)) {
+			pinctrl_select_state(p_tdm->pin_ctl, state);
+			pr_info("%s tdm pins enable!\n", __func__);
+		}
+	}
+
+	pr_info("%s tdm:(%d)\n", __func__, p_tdm->id);
 	return 0;
+}
+
+static void aml_tdm_platform_shutdown(struct platform_device *pdev)
+{
 }
 
 struct platform_driver aml_tdm_driver = {
@@ -1745,9 +1779,10 @@ struct platform_driver aml_tdm_driver = {
 		.name = DRV_NAME,
 		.of_match_table = aml_tdm_device_id,
 	},
-	.probe   = aml_tdm_platform_probe,
+	.probe	 = aml_tdm_platform_probe,
 	.suspend = aml_tdm_platform_suspend,
 	.resume  = aml_tdm_platform_resume,
+	.shutdown = aml_tdm_platform_shutdown,
 };
 module_platform_driver(aml_tdm_driver);
 
