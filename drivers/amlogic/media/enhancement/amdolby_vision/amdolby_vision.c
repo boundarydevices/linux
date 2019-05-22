@@ -301,6 +301,7 @@ MODULE_PARM_DESC(dolby_vision_graphic_max, "\n dolby_vision_graphic_max\n");
 static unsigned int dolby_vision_target_graphics_max[3] = {
 	300, 300, 100
 }; /* DOVI/HDR/SDR */
+static unsigned int dolby_vision_target_graphics_LL = 210;
 
 /*these two parameters form OSD*/
 static unsigned int osd_graphic_width = 1920;
@@ -5537,6 +5538,14 @@ int dolby_vision_parse_metadata(
 	else
 		graphic_max =
 			dolby_vision_target_graphics_max[dst_format];
+
+	if (dst_format == FORMAT_DOVI) {
+		if ((dolby_vision_flags
+			& FLAG_FORCE_DOVI_LL) ||
+			(dolby_vision_ll_policy
+			>= DOLBY_VISION_LL_YUV422))
+			graphic_max = dolby_vision_target_graphics_LL;
+	}
 
 	if (is_graphics_output_off()) {
 		graphic_min = 0;
