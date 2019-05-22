@@ -316,6 +316,12 @@ static int __swiotlb_get_sgtable(struct device *dev, struct sg_table *sgt,
 
 static int __swiotlb_dma_supported(struct device *hwdev, u64 mask)
 {
+	/*
+	 * Upstream PCI/PCIe bridges or SoC interconnects may not carry
+	 * as many DMA address bits as the device itself supports.
+	 */
+	if (hwdev->bus_dma_mask && mask > hwdev->bus_dma_mask)
+		return 0;
 	if (swiotlb)
 		return swiotlb_dma_supported(hwdev, mask);
 	return 1;
