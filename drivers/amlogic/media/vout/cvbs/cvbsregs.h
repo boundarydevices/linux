@@ -395,6 +395,7 @@ static struct cvbsregs_set_t cvbsregsTab[] = {
 	{MODE_576CVBS, cvbsregs_576cvbs_enc},
 	{MODE_PAL_M, cvbsregs_pal_m_enc},
 	{MODE_PAL_N, cvbsregs_pal_n_enc},
+	{MODE_NTSC_M, cvbsregs_480cvbs_enc},
 };
 
 #endif /* TVREGS_H */

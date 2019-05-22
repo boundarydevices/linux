@@ -130,6 +130,24 @@ static struct vinfo_s cvbs_info[] = {
 		.viu_mux           = VIU_MUX_ENCI,
 		.vout_device       = NULL,
 	},
+	{ /* MODE_NTSC_M */
+		.name              = "ntsc_m",
+		.mode              = VMODE_CVBS,
+		.width             = 720,
+		.height            = 480,
+		.field_height      = 240,
+		.aspect_ratio_num  = 4,
+		.aspect_ratio_den  = 3,
+		.sync_duration_num = 60,
+		.sync_duration_den = 1,
+		.video_clk         = 27000000,
+		.htotal            = 1716,
+		.vtotal            = 525,
+		.fr_adj_type       = VOUT_FR_ADJ_NONE,
+		.viu_color_fmt     = COLOR_FMT_YUV444,
+		.viu_mux           = VIU_MUX_ENCI,
+		.vout_device       = NULL,
+	},
 };
 
 /*bit[0]: 0=vid_pll, 1=gp0_pll*/
@@ -411,6 +429,9 @@ int cvbs_out_setmode(void)
 		break;
 	case MODE_PAL_N:
 		cvbs_log_info("SET cvbs mode: pal_n\n");
+		break;
+	case MODE_NTSC_M:
+		cvbs_log_info("SET cvbs mode: ntsc_m\n");
 		break;
 	default:
 		cvbs_log_err("cvbs_out_setmode:invalid cvbs mode");
