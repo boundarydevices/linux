@@ -38,6 +38,8 @@ Optional properties:
   The regulator will be enabled when initializing the PCIe host and
   disabled either as part of the init process or when shutting down the
   host.
+- dma-ranges: the property of the PCIe's parent, used to describe the DMA
+  scope or limitation.
 
 Additional required properties for imx6sx-pcie:
 - clock names: Must include the following additional entries:
