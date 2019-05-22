@@ -118,6 +118,7 @@ struct sFlmSftPar {
 	int flm22_en;
 	int flm32_en;
 	int flm22_flag;
+	int flm22_avg_flag;
 	int flm2224_flag;
 	int flm22_comlev;
 	int flm22_comlev1;

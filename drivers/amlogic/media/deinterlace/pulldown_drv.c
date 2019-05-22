@@ -393,6 +393,8 @@ static struct pd_param_s pd_params[] = {
 	     &(pd_param.flm32_en)   },
 	{ "flm22_flag",
 	  &(pd_param.flm22_flag)    },
+	{ "flm22_avg_flag",
+		&(pd_param.flm22_avg_flag)},
 	{ "flm2224_flag",
 	&(pd_param.flm2224_flag)    },
 	{ "flm22_comlev",

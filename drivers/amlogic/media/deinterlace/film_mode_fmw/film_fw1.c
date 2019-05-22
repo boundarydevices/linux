@@ -58,6 +58,7 @@ UINT8 FlmVOFSftInt(struct sFlmSftPar *pPar)
 	pPar->flm22_en = 1;
 	pPar->flm32_en = 1;
 	pPar->flm22_flag = 1;
+	pPar->flm22_avg_flag = 0;
 	pPar->flm2224_flag = 1;
 	pPar->flm22_comlev = 22;
 	pPar->flm22_comlev1 = 8;
@@ -256,6 +257,9 @@ int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
 	static int comsumpre;
 	static int nS1pre;
 	int dif01th = 0;
+	int avg_flag = 0;
+	int flm22_min = 0;
+	int flm22_th = 0;
 
 	int nDIF01[HISDIFNUM];
 	int nDIF02[HISDIFNUM];
@@ -270,6 +274,7 @@ int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
 	int flm22_flag = pPar->flm22_flag;
 	int flm2224_flag = pPar->flm2224_flag;
 	int flm22_comth = pPar->flm22_comth;
+	int flm22_avg_flag = pPar->flm22_avg_flag;
 	int comdif = 0;
 	int dif01avg = 0;
 
@@ -425,6 +430,17 @@ int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
 	/* pFMReg->rFlmPstGCm = 0; */
 	*rFlmPstGCm = 0;
 	*frame_diff_avg = DIF02[HISDIFNUM-1] / (glb_frame_mot_num + 1);
+	/*-----------------*/
+	/*force entry pulldown22 to fix image jitter when play DTV*/
+	/*3 channels by vlsi-yanling*/
+	flm22_min = nDIF01[HISDIFNUM-1] > nDIF01[HISDIFNUM-2]
+		? nDIF01[HISDIFNUM-2] : nDIF01[HISDIFNUM-1];
+	flm22_th = flm22_min/2;
+	avg_flag = abs(nDIF01[HISDIFNUM-1] - nDIF01[HISDIFNUM-2]) > flm22_th
+		? 1:0;
+	avg_flag = (nDIF01[HISDIFNUM-1] > (1<<16) && pRDat.iHeight == 288)
+		? avg_flag : 0;
+	/*-----------------*/
 	/* rFlmPstGCm = 1; */
 	if (pRDat.pMod32[HISDETNUM - 1 - mDly] == 3) {
 		nT0 = pRDat.pFlg32[HISDETNUM - 1 - mDly] % 2;
@@ -456,8 +472,10 @@ int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
 			flm22_mim_numb = flm22_mim_smfrms;
 
 		if (pr_pd)
-			pr_info("diff02-avg=%4d\n", *frame_diff_avg);
-		if (*frame_diff_avg > flm22_frmdif_max) {
+			pr_info("diff02-avg=%4d, flm22_min=%4d,flm22_th=%4d, avg_flag=%d\n",
+				*frame_diff_avg, flm22_min, flm22_th, avg_flag);
+		if ((*frame_diff_avg > flm22_frmdif_max)
+			&& (avg_flag == 0 || flm22_avg_flag == 1)) {
 			ntmp = *frame_diff_avg - flm22_frmdif_max;
 			if (ntmp > flm22_minus_cntmax)
 				ntmp = flm22_minus_cntmax;
@@ -476,7 +494,8 @@ int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
 
 			if (pr_pd)
 				pr_info("diff01-avg=%4d\n", ntmp);
-			if (ntmp > flm22_flddif_max) {
+			if ((ntmp > flm22_flddif_max)
+				&& (avg_flag == 0 || flm22_avg_flag == 1)) {
 				ntmp = ntmp - flm22_flddif_max;
 
 				if (ntmp > flm22_minus_cntmax)
@@ -500,7 +519,8 @@ int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
 					nS1 = 0;
 				else
 					nS1 = nS1 - pPar->flm22_comlev;
-			} else if (dif01avg > pPar->flm22_dif01_avgth) {
+			} else if ((dif01avg > pPar->flm22_dif01_avgth)
+				&& (avg_flag == 0)) {
 				if (nS1 < pPar->flm22_comlev)
 					nS1 = 0;
 				else
