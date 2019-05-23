@@ -50,7 +50,6 @@ choice
 config BCMDHD_OOB
 	depends on BCMDHD && BCMDHD_SDIO
 	bool "Out-of-Band Interrupt"
-	default y
 	---help---
 		Interrupt from WL_HOST_WAKE.
 config BCMDHD_SDIO_IRQ
