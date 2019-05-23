@@ -4319,6 +4319,7 @@ static void hdmitx_getediddata(unsigned char *des, unsigned char *src)
 /*
  * Note: read 8 Bytes of EDID data every time
  */
+#define EDID_WAIT_TIMEOUT	10
 static void hdmitx_read_edid(unsigned char *rx_edid)
 {
 	unsigned int timeout = 0;
@@ -4328,6 +4329,7 @@ static void hdmitx_read_edid(unsigned char *rx_edid)
 
 	/* Program SLAVE/ADDR */
 	hdmitx_wr_reg(HDMITX_DWC_I2CM_SLAVE, 0x50);
+	hdmitx_wr_reg(HDMITX_DWC_IH_I2CM_STAT0, 1 << 1);
 	/* Read complete EDID data sequentially */
 	while (byte_num < 128 * blk_no) {
 		hdmitx_wr_reg(HDMITX_DWC_I2CM_ADDRESS,  byte_num&0xff);
@@ -4341,11 +4343,11 @@ static void hdmitx_read_edid(unsigned char *rx_edid)
 		/* Wait until I2C done */
 		timeout = 0;
 		while ((!(hdmitx_rd_reg(HDMITX_DWC_IH_I2CM_STAT0) & (1 << 1)))
-			&& (timeout < 3)) {
+			&& (timeout < EDID_WAIT_TIMEOUT)) {
 			mdelay(2);
 			timeout++;
 		}
-		if (timeout == 3)
+		if (timeout == EDID_WAIT_TIMEOUT)
 			pr_info(HW "ddc timeout\n");
 		hdmitx_wr_reg(HDMITX_DWC_IH_I2CM_STAT0, 1 << 1);
 		/* Read back 8 bytes */
@@ -5049,6 +5051,13 @@ static int hdmitx_cntl_misc(struct hdmitx_dev *hdev, unsigned int cmd,
 			pr_info("set hdcp clkdis: %d\n", !!argv);
 		}
 		hdmitx_set_reg_bits(HDMITX_DWC_MC_CLKDIS, !!argv, 6, 1);
+		break;
+	case MISC_I2C_RESET:
+		hdmitx_set_reg_bits(HDMITX_TOP_SW_RESET, 1, 9, 1);
+		usleep_range(1000, 2000);
+		hdmitx_set_reg_bits(HDMITX_TOP_SW_RESET, 0, 9, 1);
+		usleep_range(1000, 2000);
+		hdmi_hwi_init(hdev);
 		break;
 	case MISC_I2C_REACTIVE:
 		hdmitx_hdcp_opr(4);
