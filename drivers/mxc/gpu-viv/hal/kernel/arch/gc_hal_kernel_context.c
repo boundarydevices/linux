@@ -4185,6 +4185,12 @@ _DestroyContext(
             /* Destroy the signal. */
             if (buffer->signal != gcvNULL)
             {
+                /* Wait until the context buffer becomes available;
+                   this avoid GPU hang due to context command corruption */
+                gcmkONERROR(gckOS_WaitSignal(
+                    Context->os, buffer->signal, gcvFALSE, gcvINFINITE
+                ));
+
                 gcmkONERROR(gckOS_DestroySignal(
                     Context->os, buffer->signal
                     ));
