@@ -2763,6 +2763,69 @@ static void di_pre_size_change(unsigned short width,
 #ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
 static void pre_inp_canvas_config(struct vframe_s *vf);
 #endif
+
+bool secam_cfr_en = true;
+unsigned int cfr_phase1 = 1;/*0x179c[6]*/
+unsigned int cfr_phase2 = 1;/*0x179c[7]*/
+unsigned int gb_flg = 1;/*1:top, 0:bot*/
+
+static ssize_t
+secam_show(struct device *dev,
+	    struct device_attribute *attr, char *buf)
+{
+	int len = 0;
+
+	len += sprintf(buf+len,
+		"secam_cfr_en %u, gb_flg %u, cfr_phase2 %u.\n",
+		secam_cfr_en, gb_flg, cfr_phase2);
+	return len;
+}
+
+static ssize_t
+secam_store(struct device *dev, struct device_attribute *attr, const char *buf,
+	     size_t count)
+{
+	char *parm[3] = { NULL }, *buf_orig;
+	long val;
+	ssize_t ret_ext = count;
+
+	if (!buf)
+		return count;
+	buf_orig = kstrdup(buf, GFP_KERNEL);
+	parse_cmd_params(buf_orig, (char **)(&parm));
+
+	if (!parm[2]) {
+		ret_ext = -EINVAL;
+		pr_info("miss param!!\n");
+	} else {
+		if (kstrtol(parm[0], 10, &val) == 0)
+			secam_cfr_en = val;
+		if (kstrtol(parm[1], 10, &val) == 0)
+			gb_flg = val;
+		if (kstrtol(parm[2], 10, &val) == 0)
+			cfr_phase2 = val;
+	}
+
+	kfree(buf_orig);
+
+	pr_info("secam_cfr_en %u, gb_flg %u, cfr_phase2 %u.\n",
+				secam_cfr_en, gb_flg, cfr_phase2);
+	return ret_ext;
+}
+static DEVICE_ATTR(secam, 0664, secam_show, secam_store);
+
+static void secam_cfr_fun(int top)
+{
+	DI_Wr_reg_bits(NR2_SW_EN, 1, 7, 1);/*set cfr_en:1*/
+	DI_Wr_reg_bits(NR2_CFR_PARA_CFG0, 1, 2, 2);
+	DI_Wr_reg_bits(NR2_CFR_PARA_CFG1, 0x80, 8, 8);
+	if (((gb_flg == 0) && top) || ((gb_flg == 1) && (!top))) {
+		cfr_phase1 = ~cfr_phase1;
+		DI_Wr_reg_bits(NR2_CFR_PARA_CFG0, cfr_phase1, 6, 1);
+	}
+	DI_Wr_reg_bits(NR2_CFR_PARA_CFG0, cfr_phase2, 7, 1);
+}
+
 static void pre_de_process(void)
 {
 	ulong irq_flag2 = 0;
@@ -2878,6 +2941,16 @@ static void pre_de_process(void)
 		} else {
 			nr_ds_hw_ctrl(false);
 		}
+	}
+
+	/*patch for SECAM signal format*/
+	if (di_pre_stru.di_inp_buf->vframe->sig_fmt ==
+		TVIN_SIG_FMT_CVBS_SECAM && secam_cfr_en) {
+		secam_cfr_fun((di_pre_stru.di_inp_buf->vframe->type &
+			VIDTYPE_TYPEMASK) == VIDTYPE_INTERLACE_TOP);
+	} else {
+		DI_Wr_reg_bits(NR2_SW_EN, 0, 7, 1);/*set cfr_en:1*/
+		DI_Wr_reg_bits(NR2_CFR_PARA_CFG0, 2, 2, 2);
 	}
 
 	/* set interrupt mask for pre module.
@@ -7630,6 +7703,7 @@ static int di_probe(struct platform_device *pdev)
 	device_create_file(di_devp->dev, &dev_attr_provider_vframe_status);
 	device_create_file(di_devp->dev, &dev_attr_frame_format);
 	device_create_file(di_devp->dev, &dev_attr_tvp_region);
+	device_create_file(di_devp->dev, &dev_attr_secam);
 	pd_device_files_add(di_devp->dev);
 	nr_drv_init(di_devp->dev);
 
