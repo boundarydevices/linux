@@ -2100,6 +2100,20 @@ static void pci_imx_ltssm_disable(struct device *dev)
 	}
 }
 
+static void pci_imx_set_msi_en(struct pcie_port *pp)
+{
+	u16 val;
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+
+	if (pci_msi_enabled()) {
+		val = dw_pcie_readw_dbi(pci, PCIE_RC_IMX6_MSI_CAP +
+					PCI_MSI_FLAGS);
+		val |= PCI_MSI_FLAGS_ENABLE;
+		dw_pcie_writew_dbi(pci, PCIE_RC_IMX6_MSI_CAP + PCI_MSI_FLAGS,
+				   val);
+	}
+}
+
 static int pci_imx_resume_noirq(struct device *dev)
 {
 	int ret = 0;
@@ -2132,6 +2146,7 @@ static int pci_imx_resume_noirq(struct device *dev)
 
 		if (IS_ENABLED(CONFIG_PCI_MSI))
 			dw_pcie_msi_cfg_restore(pp);
+		pci_imx_set_msi_en(pp);
 
 		pci_imx_ltssm_enable(dev);
 
@@ -2250,8 +2265,8 @@ static int imx_pcie_local_dma_start(struct pcie_port *pp, bool dir,
 
 static int imx_pcie_probe(struct platform_device *pdev)
 {
+	u32 val;
 	int ret;
-	u16 val;
 	struct dw_pcie *pci;
 	struct imx_pcie *imx_pcie;
 	void __iomem *iomem;
@@ -2557,7 +2572,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 		dma_addr_t test_reg1_dma, test_reg2_dma;
 		void __iomem *pcie_arb_base_addr;
 		struct timeval tv1s, tv1e, tv2s, tv2e;
-		u32 val, tv_count1, tv_count2;
+		u32 tv_count1, tv_count2;
 		struct pcie_port *pp = &pci->pp;
 		LIST_HEAD(res);
 		struct resource_entry *win, *tmp;
@@ -2808,14 +2823,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 				&& (imx_pcie->hard_wired == 0))
 			imx_pcie_regions_setup(&pdev->dev);
 	}
-
-	if (pci_msi_enabled()) {
-		val = dw_pcie_readw_dbi(pci, PCIE_RC_IMX6_MSI_CAP +
-					PCI_MSI_FLAGS);
-		val |= PCI_MSI_FLAGS_ENABLE;
-		dw_pcie_writew_dbi(pci, PCIE_RC_IMX6_MSI_CAP + PCI_MSI_FLAGS,
-				   val);
-	}
+	pci_imx_set_msi_en(&pci->pp);
 
 	return 0;
 }
