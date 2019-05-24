@@ -8,6 +8,7 @@
 #define S_MRPS		0x41
 #define S_DCS_READ	0x42
 #define S_DCS_READ4	0x47
+#define S_DCS_LENGTH	0x48
 #define S_GEN_S0P	0x81
 #define S_GEN_S1P	0x82
 #define S_GEN_L2P	0x83
@@ -15,6 +16,7 @@
 #define S_GEN_L4P	0x85
 #define S_GEN_L5P	0x86
 #define S_GEN_READ4	0xc7
+#define S_GEN_LENGTH	0xc8
 
 #define MRPS(len)			S_MRPS len			/* Set max return packet size */
 #define DCS_READ(cmd, compare)		S_DCS_READ cmd compare
