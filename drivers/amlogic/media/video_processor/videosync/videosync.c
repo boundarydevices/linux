@@ -36,7 +36,7 @@ static int enable_video_discontinue_report = 1;
 static u32 system_time_scale_base = 1;
 static s32 system_time_inc_adj;/*?*/
 static u32 vsync_pts_inc;/*?*/
-static u32 omx_version = 2;
+static u32 omx_version = 3;
 static u32 vp_debug_flag;
 static bool no_render;/* default: false */
 static bool async_mode;/* default: false */
@@ -62,6 +62,8 @@ static int omx_pts_interval_lower = -5500;
 #define PRINT_OTHER			0X0004
 
 static struct videosync_dev *vp_dev;
+static uint show_first_frame_nosync;
+static u32 cur_omx_index;
 
 static int vp_print(char *name, int debug_flag, const char *fmt, ...)
 {
@@ -92,7 +94,7 @@ static void ts_pcrscr_set(struct videosync_s *dev_s, u32 pts)
 {
 	dev_s->system_time = pts;
 	vp_print(dev_s->vf_receiver_name, PRINT_TIMESTAMP,
-			"ts_pcrscr_set sys_time %d\n", dev_s->system_time);
+			"ts_pcrscr_set sys_time %u\n", dev_s->system_time);
 }
 
 static void ts_pcrscr_enable(struct videosync_s *dev_s, u32 enable)
@@ -136,7 +138,7 @@ void videosync_pcrscr_update(s32 inc, u32 base)
 						-= system_time_scale_base;
 				}
 				vp_print(dev_s->vf_receiver_name, PRINT_OTHER,
-				"update sys_time %d, system_time_scale_base %d, inc %d\n",
+				"update sys_time %u, system_time_scale_base %d, inc %d\n",
 				dev_s->system_time,
 				system_time_scale_base,
 				inc);
@@ -150,7 +152,7 @@ void videosync_pcrscr_update(s32 inc, u32 base)
 				|| (diff - omx_pts_interval_lower) < 0) {
 				vp_print(dev_s->vf_receiver_name,
 					PRINT_TIMESTAMP,
-					"sys_time=%d, omx_pts=%d, diff=%d\n",
+					"sys_time=%u, omx_pts=%u, diff=%d\n",
 					dev_s->system_time,
 					current_omx_pts,
 					diff);
@@ -316,9 +318,9 @@ static ssize_t dump_pts_show(struct class *class,
 			ret += sprintf(buf + ret,
 					   "%s:  ", dev_s->vf_receiver_name);
 			ret += sprintf(buf + ret,
-					   "omx_pts=%d, ", dev_s->omx_pts);
+					   "omx_pts=%u, ", dev_s->omx_pts);
 			ret += sprintf(buf + ret,
-					"system_time=%d\n", dev_s->system_time);
+					"system_time=%u\n", dev_s->system_time);
 		}
 	}
 	return ret;
@@ -518,7 +520,10 @@ static int set_omx_pts(u32 *p)
 	u32 set_from_hwc = p[2];
 	u32 frame_num = p[3];
 	u32 not_reset = p[4];
+	u32 session = p[5];
 	u32 dev_id = p[6];
+
+	cur_omx_index = frame_num;
 
 	if (dev_id < VIDEOSYNC_S_COUNT)
 		dev_s = &vp_dev->video_prov[dev_id];
@@ -526,8 +531,24 @@ static int set_omx_pts(u32 *p)
 	if (dev_s != NULL && dev_s->mapped) {
 		mutex_lock(&dev_s->omx_mutex);
 		vp_print(dev_s->vf_receiver_name, PRINT_TIMESTAMP,
-			"set omx_pts %d, hwc %d, not_reset %d, frame_num\n",
+			"set omx_pts %u, hwc %d, not_reset %d, frame_num=%u\n",
 			tmp_pts, set_from_hwc, not_reset, frame_num);
+
+		if (dev_s->omx_check_previous_session) {
+			if (session != dev_s->omx_cur_session) {
+				dev_s->omx_cur_session = session;
+				dev_s->omx_check_previous_session = false;
+			} else {
+				pr_info("videosync: tmp_pts %d, session=0x%x\n",
+					tmp_pts, dev_s->omx_cur_session);
+				mutex_unlock(&dev_s->omx_mutex);
+				return ret;
+			}
+		}
+
+		if (dev_s->omx_pts_set_index < frame_num)
+			dev_s->omx_pts_set_index = frame_num;
+
 		if (not_reset == 0)
 			dev_s->omx_pts = tmp_pts;
 
@@ -670,6 +691,23 @@ static long videosync_ioctl(struct file *file,
 		put_user(omx_version, (u32 __user *)argp);
 		pr_info("get omx_version %d\n", omx_version);
 	break;
+	case VIDEOSYNC_IOC_SET_FIRST_FRAME_NOSYNC: {
+		u32 info[5];
+		struct videosync_s *dev_s = NULL;
+		u32 dev_id;
+
+		if (copy_from_user(info, argp, sizeof(info)) == 0) {
+			dev_id = info[0];
+			if (dev_id < VIDEOSYNC_S_COUNT)
+				dev_s = &vp_dev->video_prov[dev_id];
+
+			if (dev_s != NULL && dev_s->mapped)
+				dev_s->show_first_frame_nosync = info[1];
+			pr_info("show_first_frame_nosync =%d\n",
+				dev_s->show_first_frame_nosync);
+		}
+	}
+	break;
 	default:
 		pr_info("ioctl invalid cmd 0x%x\n", cmd);
 		return -EINVAL;
@@ -737,14 +775,19 @@ static inline bool omx_vpts_expire(struct vframe_s *cur_vf,
 	if (next_vf->duration == 0)
 		return true;
 
+	if (dev_s->show_first_frame_nosync
+		|| show_first_frame_nosync) {
+		if (next_vf->omx_index == 0)
+			return true;
+	}
 	systime = ts_pcrscr_get(dev_s);
 
 	if (no_render)
 		dev_s->first_frame_toggled = 1; /*just for debug, not render*/
 
 	vp_print(dev_s->vf_receiver_name, PRINT_TIMESTAMP,
-		"sys_time=%d, vf->pts=%d, diff=%d\n",
-		systime, pts, (int)(systime - pts));
+		"sys_time=%u, vf->pts=%u, diff=%d, index=%d\n",
+		systime, pts, (int)(systime - pts), next_vf->omx_index);
 
 	if (0) {
 		pts =
@@ -760,8 +803,16 @@ static inline bool omx_vpts_expire(struct vframe_s *cur_vf,
 		 || tsync_vpts_discontinuity_margin() <= 90000)) {
 
 		vp_print(dev_s->vf_receiver_name, PRINT_TIMESTAMP,
-			"discontinue, systime = %d, next_vf->pts = %d\n",
+			"discontinue, systime = %u, next_vf->pts = %u\n",
 			systime, next_vf->pts);
+		return true;
+	} else if ((dev_s->omx_pts + omx_pts_interval_upper < next_vf->pts)
+			&& (dev_s->omx_pts_set_index >= next_vf->omx_index)) {
+		pr_info("videosync, omx_pts=%d omx_pts_set_index=%d pts=%d omx_index=%d\n",
+					dev_s->omx_pts,
+					dev_s->omx_pts_set_index,
+					next_vf->pts,
+					next_vf->omx_index);
 		return true;
 	}
 
@@ -829,7 +880,7 @@ void videosync_sync(struct videosync_s *dev_s)
 				ready_q_size = vfq_level(&dev_s->ready_q);
 				vp_print(dev_s->vf_receiver_name,
 					PRINT_QUEUE_STATUS,
-					"add pts %d index 0x%x to ready_q, size %d\n",
+					"add pts %u index 0x%x to ready_q, size %d\n",
 					vf->pts, vf->index, ready_q_size);
 
 				vf_notify_receiver(
@@ -879,7 +930,7 @@ static void prepare_queued_queue(struct videosync_dev *dev)
 				dev_s->get_frame_count++;
 				vp_print(dev_s->vf_receiver_name,
 					PRINT_QUEUE_STATUS,
-					"add pts %d index 0x%x to queued_q, size %d\n",
+					"add pts %u index 0x%x to queued_q, size %d\n",
 					vf->pts,
 					vf->index,
 					vfq_level(&dev_s->queued_q));
@@ -976,6 +1027,8 @@ static int videosync_receiver_event_fun(int type, void *data,
 		//videosync_register(dev_s);
 		dev_s->receiver_register = true;
 		dev_s->active_state = VIDEOSYNC_ACTIVE;
+		dev_s->omx_check_previous_session = true;
+		dev_s->omx_pts_set_index = 0;
 
 		spin_lock_irqsave(&dev->dev_s_num_slock, flags);
 		++dev->active_dev_s_num;
@@ -1049,6 +1102,7 @@ static int __init videosync_create_instance(int inst)
 	dev_s->fd_num = 0;
 	dev_s->ops = &videosync_vf_provider;
 	dev_s->active_state = VIDEOSYNC_INACTIVE;
+	dev_s->omx_cur_session = 0xffffffff;
 	pr_info("videosync_create_instance dev_s %p,dev_s->dev %p\n",
 		dev_s, dev_s->dev);
 
@@ -1255,3 +1309,8 @@ module_param(async_mode, bool, 0664);
 MODULE_PARM_DESC(video_early_threshold, "\n video_early_threshold\n");
 module_param(video_early_threshold, uint, 0664);
 
+MODULE_PARM_DESC(cur_omx_index, "\n cur_omx_index\n");
+module_param(cur_omx_index, uint, 0664);
+
+MODULE_PARM_DESC(show_first_frame_nosync, "\n show_first_frame_nosync\n");
+module_param(show_first_frame_nosync, uint, 0664);

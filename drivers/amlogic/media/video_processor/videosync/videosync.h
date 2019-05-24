@@ -71,6 +71,8 @@ extern bool omx_secret_mode;
 	_IOR(VIDEOSYNC_IOC_MAGIC, 0x06, unsigned int)
 #define VIDEOSYNC_IOC_SET_OMX_ZORDER \
 	_IOW(VIDEOSYNC_IOC_MAGIC, 0x07, unsigned int)
+#define VIDEOSYNC_IOC_SET_FIRST_FRAME_NOSYNC \
+	_IOR(VIDEOSYNC_IOC_MAGIC, 0x08, unsigned int)
 
 #define VIDEOSYNC_S_VF_RECEIVER_NAME_SIZE 32
 #define VIDEOSYNC_S_POOL_SIZE 16
@@ -122,6 +124,10 @@ struct videosync_s {
 	u32 system_time;
 	u32 system_time_scale_remainder;
 	u32 omx_pts;
+	u32 omx_pts_set_index;
+	bool omx_check_previous_session;
+	u32 omx_cur_session;
+	u32 show_first_frame_nosync;
 	u32 vpts_ref;
 	u32 video_frame_repeat_count;
 	u32 freerun_mode;
