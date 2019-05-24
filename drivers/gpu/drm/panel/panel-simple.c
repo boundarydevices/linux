@@ -157,7 +157,15 @@ static int send_mipi_cmd_list(struct panel_simple *panel, struct mipi_cmd *mc)
 		len &= 0x7f;
 
 		ret = 0;
-		if (len < S_DELAY) {
+		if ((len < S_DELAY) || (len == S_DCS_LENGTH)) {
+			if (len == S_DCS_LENGTH) {
+				len = *cmd++;
+				length--;
+			}
+			if (length < len) {
+				dev_err(&dsi->dev, "Unexpected end of data\n");
+				break;
+			}
 			if (generic)
 				ret = mipi_dsi_generic_write(dsi, cmd, len);
 			else
@@ -229,10 +237,14 @@ static int send_mipi_cmd_list(struct panel_simple *panel, struct mipi_cmd *mc)
 					ret, len, cmd[0], cmd[1]);
 			}
 		}
-		if (length <= len)
+		if (length < len) {
+			dev_err(&dsi->dev, "Unexpected end of data\n");
 			break;
+		}
 		cmd += len;
 		length -= len;
+		if (!length)
+			break;
 	}
 	return match;
 };
