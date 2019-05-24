@@ -9,6 +9,7 @@
 #include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
 #include "panel-lcm-jm430.dtsi"
+#include "panel-com50h5n03ulc.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -232,21 +233,28 @@
 		>;
 	};
 
-	pinctrl_lcm_jm430: lcm-jm430grp {
+	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
+		fsl,pins = <
+#define GP_MIPI_RESET	<&gpio3 15 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15		0x16
+		>;
+	};
+
+	pinctrl_mipi_lcm_jm430: mipi-lcm-jm430grp {
 		fsl,pins = <
 #define GP_TC358762_EN	<&gpio3 15 GPIO_ACTIVE_HIGH>
 			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15		0x16
 		>;
 	};
 
-	pinctrl_ltk0680ytmdb: ltk0680ytmdbgrp {
+	pinctrl_mipi_ltk0680ytmdb: mipi-ltk0680ytmdbgrp {
 		fsl,pins = <
-#define GP_MIPI_RESET	<&gpio1 1 GPIO_ACTIVE_LOW>
+#define GP_MIPI_RESET	<&gpio3 15 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15		0x16
 		>;
 	};
 
-	pinctrl_ltk080a60a004t: ltk080a60a004tgrp {
+	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
 		fsl,pins = <
 #define GP_LTK08_MIPI_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
 			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1		0x16
@@ -496,6 +504,7 @@
 		fb_hdmi = &hdmi;
 		lcdif = &lcdif;
 		mipi = &fb_mipi;
+		mipi_cmds_com50h5n03ulc = &mipi_cmds_com50h5n03ulc;
 		mipi_cmds_lcm_jm430 = &mipi_cmds_lcm_jm430;
 		mipi_cmds_ltk0680ytmdb = &mipi_cmds_ltk0680ytmdb;
 		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
@@ -504,21 +513,24 @@
 		mipi_dsi_bridge = &mipi_dsi_bridge;
 		mipi_dsi_phy = &mipi_dsi_phy;
 		mipi_to_lvds = &mipi_to_lvds;
-		pinctrl_lcm_jm430 = &pinctrl_lcm_jm430;
-		pinctrl_ltk0680ytmdb = &pinctrl_ltk0680ytmdb;
-		pinctrl_ltk080a60a004t = &pinctrl_ltk080a60a004t;
+		pinctrl_com50h5n03ulc = &pinctrl_mipi_com50h5n03ulc;
+		pinctrl_lcm_jm430 = &pinctrl_mipi_lcm_jm430;
+		pinctrl_ltk0680ytmdb = &pinctrl_mipi_ltk0680ytmdb;
+		pinctrl_ltk080a60a004t = &pinctrl_mipi_ltk080a60a004t;
 		sound_hdmi = &sound_hdmi;
 		t_mipi = &t_mipi;
 	};
 
 	alias_create_phandles {
-		p1 = <&mipi_cmds_lcm_jm430>;
-		p2 = <&mipi_cmds_ltk0680ytmdb>;
-		p3 = <&mipi_cmds_ltk080a60a004t>;
-		p4 = <&mipi_to_lvds>;
-		p5 = <&pinctrl_lcm_jm430>;
-		p6 = <&pinctrl_ltk0680ytmdb>;
-		p7 = <&pinctrl_ltk080a60a004t>;
+		p1 = <&mipi_cmds_com50h5n03ulc>;
+		p2 = <&mipi_cmds_lcm_jm430>;
+		p3 = <&mipi_cmds_ltk0680ytmdb>;
+		p4 = <&mipi_cmds_ltk080a60a004t>;
+		p5 = <&mipi_to_lvds>;
+		p6 = <&pinctrl_mipi_com50h5n03ulc>;
+		p7 = <&pinctrl_mipi_lcm_jm430>;
+		p8 = <&pinctrl_mipi_ltk0680ytmdb>;
+		p9 = <&pinctrl_mipi_ltk080a60a004t>;
 	};
 
 	backlight_mipi: backlight-mipi {
