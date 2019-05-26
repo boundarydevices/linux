@@ -752,11 +752,10 @@ struct av_param_qosinfo_t {
 	struct vframe_qos_s vframe_qos[QOS_FRAME_NUM];
 };
 
-
-#define SUPPORT_VDEC_NUM	(20)
+#define SUPPORT_VDEC_NUM	(64)
 int vcodec_profile_register(const struct codec_profile_t *vdec_profile);
 ssize_t vcodec_profile_read(char *buf);
-
+bool is_support_profile(char *name);
 #ifdef __KERNEL__
 #include <linux/interrupt.h>
 
