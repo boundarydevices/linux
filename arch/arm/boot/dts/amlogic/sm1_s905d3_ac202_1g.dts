@@ -1106,7 +1106,7 @@
 		#sound-dai-cells = <0>;
 		reg = <0x31>;
 		status = "okay";
-		reset_pin = <&gpio GPIOA_5 0>;
+		reset_pin = <&gpio GPIOAO_9 0>;
 		no_mclk;
 	};
 
@@ -1405,10 +1405,10 @@
 		 * 4: pdmin;
 		 */
 		datain_src = <4>;
-		datain_chnum = <6>;
-		datain_chmask = <0x3f>;
+		datain_chnum = <4>;
+		datain_chmask = <0xf>;
 		/* config which data pin for loopback */
-		datain-lane-mask-in = <1 1 1 0>;
+		datain-lane-mask-in = <1 1 0 0>;
 
 		/* calc mclk for datalb */
 		mclk-fs = <256>;
@@ -1581,8 +1581,8 @@
 	pdmin: pdmin {
 		mux { /* GPIOA_5, GPIOA_6, GPIOA_8, GPIOA_9, GPIOA_7 */
 			groups = "pdm_din0_a",
-			/*"pdm_din1_a",*/
-			"pdm_din2_a",
+			"pdm_din1_a",
+			/*"pdm_din2_a",*/
 			/*"pdm_din3_a",*/
 			"pdm_dclk_a";
 			function = "pdm";
