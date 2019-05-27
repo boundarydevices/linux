@@ -510,7 +510,10 @@ void hdr10_plus_parser_metadata(struct vframe_s *vf)
 	vf_notify_provider_by_name("vdec.h265.00",
 			VFRAME_EVENT_RECEIVER_GET_AUX_DATA,
 			(void *)&req);
-
+	if (!req.aux_buf)
+		vf_notify_provider_by_name("decoder",
+			VFRAME_EVENT_RECEIVER_GET_AUX_DATA,
+			(void *)&req);
 	if (req.aux_buf && req.aux_size) {
 		p = req.aux_buf;
 		while (p < req.aux_buf
@@ -544,6 +547,8 @@ void hdr10_plus_hdmitx_vsif_parser(
 	int kpx, kpy;
 	int bz_cur_anchors[9];
 
+	memset(hdmitx_hdr10plus_param, 0, sizeof(struct hdr10plus_para));
+
 	hdmitx_hdr10plus_param->application_version =
 		(u8)hdr_plus_sei.application_version;
 
@@ -574,7 +579,7 @@ void hdr10_plus_hdmitx_vsif_parser(
 			continue;
 		}
 		distribution_values[i] =
-			hdr_plus_sei.distribution_maxrgb_percentiles[0][i];
+			hdr_plus_sei.distribution_maxrgb_percentiles[0][i] / 10;
 		if (distribution_values[i] < (1 << 12)) {
 			distribution_values[i] =
 				(distribution_values[i] + (1 << 3)) >> 4;
@@ -596,6 +601,8 @@ void hdr10_plus_hdmitx_vsif_parser(
 		hdmitx_hdr10plus_param->num_bezier_curve_anchors =
 			(u8)hdr_plus_sei.num_bezier_curve_anchors[0];
 
+		if (hdmitx_hdr10plus_param->num_bezier_curve_anchors > 9)
+			hdmitx_hdr10plus_param->num_bezier_curve_anchors = 9;
 		kpx = hdr_plus_sei.knee_point_x[0];
 		kpx = (kpx + (1 << 1)) >> 2;
 		if (kpx > 1023)
@@ -609,6 +616,9 @@ void hdr10_plus_hdmitx_vsif_parser(
 		hdmitx_hdr10plus_param->knee_point_y = kpy;
 
 		for (i = 0; i < 9; i++) {
+			if (i ==
+			hdmitx_hdr10plus_param->num_bezier_curve_anchors)
+				break;
 			bz_cur_anchors[i] =
 				hdr_plus_sei.bezier_curve_anchors[0][i];
 
@@ -622,7 +632,7 @@ void hdr10_plus_hdmitx_vsif_parser(
 	/*only video, don't include graphic*/
 	hdmitx_hdr10plus_param->graphics_overlay_flag = 0;
 	/*metadata and video have no delay*/
-	hdmitx_hdr10plus_param->no_delay_flag = 1;
+	hdmitx_hdr10plus_param->no_delay_flag = 0;
 
 	memcpy(&dbg_hdr10plus_pkt, hdmitx_hdr10plus_param,
 		sizeof(struct hdr10plus_para));
