@@ -93,7 +93,8 @@ static int aml_DAC_Gain_set_enum(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_component_to_codec(component);
 	u32 add = ADC_VOL_CTR_PGA_IN_CONFIG;
 	u32 val = snd_soc_read(codec, add);
 
