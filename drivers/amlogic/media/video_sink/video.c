@@ -12622,8 +12622,6 @@ static int __init video_init(void)
 	cur_dispbuf = NULL;
 	cur_dispbuf2 = NULL;
 	amvideo_register_client(&amvideo_notifier);
-	/* set supoer_scaler to false default*/
-	super_scaler = false;
 
 #ifdef FIQ_VSYNC
 	/* enable fiq bridge */
