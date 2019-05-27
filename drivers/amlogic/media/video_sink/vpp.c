@@ -973,6 +973,11 @@ RESTART:
 		ext_sar = false;
 	}
 
+	/* speical mode did not use ext sar mode */
+	if ((wide_mode == VIDEO_WIDEOPTION_NONLINEAR) ||
+		(wide_mode == VIDEO_WIDEOPTION_NORMAL_NOSCALEUP))
+		ext_sar = false;
+
 	/* keep 8 bits resolution for aspect conversion */
 	if (wide_mode == VIDEO_WIDEOPTION_4_3) {
 		if (vpp_flags & VPP_FLAG_PORTRAIT_MODE)
@@ -1025,8 +1030,6 @@ RESTART:
 			width_out, h_in, aspect_ratio_out >> 2);
 
 	if ((aspect_factor == 0)
-		|| (aspect_factor ==
-		(VPP_FLAG_AR_MASK >> VPP_FLAG_AR_BITS))
 		|| (wide_mode == VIDEO_WIDEOPTION_FULL_STRETCH)
 		|| (wide_mode == VIDEO_WIDEOPTION_NONLINEAR)) {
 		aspect_factor = 0x100;
@@ -1043,8 +1046,13 @@ RESTART:
 				(u64)sar_height *
 				(u64)height_in,
 				(u32)tmp);
-		height_after_ratio /= sar_height;
+		height_after_ratio /= sar_width;
 		aspect_factor = (height_after_ratio << 8) / h_in;
+		if (super_debug)
+			pr_info("ext_sar: aspect_factor=%d, %d,%d,%d,%d,%d\n",
+				aspect_factor, w_in, h_in,
+				height_after_ratio,
+				sar_width, sar_height);
 	} else {
 		/* avoid the bit length overflow */
 		u64 tmp = (u64)((u64)(width_out * h_in) * aspect_ratio_out);
@@ -1161,7 +1169,10 @@ RESTART:
 
 		if (wide_mode == VIDEO_WIDEOPTION_NORMAL) {
 			ratio_x = ratio_y = max(ratio_x, ratio_y);
-			ratio_y = (ratio_y << 8) / aspect_factor;
+			if (ext_sar)
+				ratio_y = (ratio_y * h_in) / height_after_ratio;
+			else
+				ratio_y = (ratio_y << 8) / aspect_factor;
 		} else if (wide_mode == VIDEO_WIDEOPTION_NORMAL_NOSCALEUP) {
 			u32 r1, r2;
 
