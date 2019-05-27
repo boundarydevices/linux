@@ -1179,8 +1179,6 @@ skip_format_initialization:
 		ret = regmap_attach_dev(dev, map, config);
 		if (ret != 0)
 			goto err_regcache;
-	} else {
-		regmap_debugfs_init(map);
 	}
 
 	return map;
