@@ -622,10 +622,6 @@
 	xen,passthrough;
 };
 
-&hsio {
-	xen,passthrough;
-};
-
 &hsio_pcie_x2_lpcg {
 	xen,passthrough;
 };

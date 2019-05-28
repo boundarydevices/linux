@@ -224,9 +224,9 @@
 	pinctrl-0 = <&pinctrl_i2c1_1>;
 	status = "okay";
 
-	pmic: pfuze100@08 {
+	pmic: pfuze100@8 {
 		compatible = "fsl,pfuze200";
-		reg = <0x08>;
+		reg = <0x8>;
 
 		regulators {
 			sw1a_reg: sw1ab {
@@ -334,9 +334,9 @@
 		resets = <&max7322_reset>;
 	};
 
-	codec: sgtl5000@0a {
+	codec: sgtl5000@a {
 		compatible = "fsl,sgtl5000";
-		reg = <0x0a>;
+		reg = <0xa>;
 		clocks = <&codec_osc>;
 		VDDA-supply = <&vgen4_reg>;
 		VDDIO-supply = <&reg_3p3v>;

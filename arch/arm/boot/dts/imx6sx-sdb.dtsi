@@ -265,19 +265,6 @@
 		hp-det-gpios = <&gpio1 17 1>;
 	};
 
-	panel {
-		compatible = "sii,43wvf1g";
-		backlight = <&backlight_display>;
-		dvdd-supply = <&reg_lcd_3v3>;
-		avdd-supply = <&reg_lcd_5v>;
-
-		port {
-			panel_in: endpoint {
-				remote-endpoint = <&display_out>;
-			};
-		};
-	};
-
 	sound-spdif {
 		compatible = "fsl,imx-audio-spdif",
 			   "fsl,imx6sx-sdb-spdif";
@@ -399,7 +386,7 @@
 
 	pmic: pfuze100@8 {
 		compatible = "fsl,pfuze200";
-		reg = <0x08>;
+		reg = <0x8>;
 
 		regulators {
 			sw1a_reg: sw1ab {
@@ -524,9 +511,9 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
-	egalax_ts@04 {
+	egalax_ts@4 {
 		compatible = "eeti,egalax_ts";
-		reg = <0x04>;
+		reg = <0x4>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_egalax_int>;
 		interrupt-parent = <&gpio4>;
@@ -550,9 +537,9 @@
 		shared-interrupt;
 	};
 
-	mag3110@0e {
+	mag3110@e {
 		compatible = "fsl,mag3110";
-		reg = <0x0e>;
+		reg = <0xe>;
 		position = <2>;
 		interrupt-parent = <&gpio6>;
 		interrupts = <5 1>;
@@ -609,11 +596,24 @@
 	display0: display@0 {
 		bits-per-pixel = <16>;
 		bus-width = <24>;
-	};
 
-	port {
-		display_out: endpoint {
-			remote-endpoint = <&panel_in>;
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+				clock-frequency = <33500000>;
+				hactive = <800>;
+				vactive = <480>;
+				hback-porch = <89>;
+				hfront-porch = <164>;
+				vback-porch = <23>;
+				vfront-porch = <10>;
+				hsync-len = <10>;
+				vsync-len = <10>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <1>;
+				pixelclk-active = <0>;
+			};
 		};
 	};
 };

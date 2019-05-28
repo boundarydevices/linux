@@ -93,14 +93,14 @@
 				<&clks IMX6QDL_CLK_PLL3_PFD1_540M>;
 			clock-names = "pll2_bus", "pll2_pfd2_396m", "pll2_198m", "arm", "pll3_usb_otg", "periph",
 				"periph_pre", "periph_clk2", "periph_clk2_sel", "osc", "axi_alt_sel", "axi_sel", "pll3_pfd1_540m";
-			interrupts = <0 107 0x04>, <0 112 0x4>;
+			interrupts = <0 107 0x4>, <0 112 0x4>;
 			interrupt-names = "irq_busfreq_0", "irq_busfreq_1";
 			fsl,max_ddr_freq = <400000000>;
 		};
 
 		gpu: gpu@130000 {
 			compatible = "fsl,imx6dl-gpu", "fsl,imx6q-gpu";
-			reg = <0x00130000 0x4000>, <0x00134000 0x4000>,
+			reg = <0x130000 0x4000>, <0x134000 0x4000>,
 			      <0x10000000 0x0>, <0x0 0x8000000>;
 			reg-names = "iobase_3d", "iobase_2d",
 				    "phys_baseaddr", "contiguous_mem";
@@ -118,16 +118,16 @@
 			power-domains = <&pd_pu>;
 		};
 
-		ocram: sram@00905000 {
+		ocram: sram@905000 {
 			compatible = "mmio-sram";
-			reg = <0x00905000 0x1B000>;
+			reg = <0x905000 0x1B000>;
 			clocks = <&clks IMX6QDL_CLK_OCRAM>;
 		};
 
-		ocram_optee: sram@00918000 {
+		ocram_optee: sram@918000 {
 			compatible = "fsl,optee-lpm-sram";
-			reg = <0x00918000 0x8000>;
-			overw_reg = <&ocram 0x00905000 0x13000>;
+			reg = <0x918000 0x8000>;
+			overw_reg = <&ocram 0x905000 0x13000>;
 		};
 
 		aips1: aips-bus@2000000 {
@@ -143,7 +143,7 @@
 
 			pxp: pxp@20f0000 {
 				compatible = "fsl,imx6dl-pxp-dma";
-				reg = <0x020f0000 0x4000>;
+				reg = <0x20f0000 0x4000>;
 				interrupts = <0 98 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6QDL_CLK_IPU2>, <&clks IMX6QDL_CLK_DUMMY>;
 				clock-names = "pxp-axi", "disp-axi";
@@ -152,7 +152,7 @@
 
 			epdc: epdc@20f4000 {
 				compatible = "fsl,imx6dl-epdc";
-				reg = <0x020f4000 0x4000>;
+				reg = <0x20f4000 0x4000>;
 				interrupts = <0 97 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6QDL_CLK_IPU2>, <&clks IMX6QDL_CLK_IPU2_DI1>;
 				clock-names = "epdc_axi", "epdc_pix";
@@ -162,8 +162,8 @@
 		aips2: aips-bus@2100000 {
 			mipi_dsi: mipi@21e0000 {
 				compatible = "fsl,imx6dl-mipi-dsi";
-				reg = <0x021e0000 0x4000>;
-				interrupts = <0 102 0x04>;
+				reg = <0x21e0000 0x4000>;
+				interrupts = <0 102 0x4>;
 				gpr = <&gpr>;
 				clocks = <&clks IMX6QDL_CLK_HSI_TX>, <&clks IMX6QDL_CLK_VIDEO_27M>;
 				clock-names = "mipi_pllref_clk", "mipi_cfg_clk";
@@ -174,7 +174,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				compatible = "fsl,imx6q-i2c", "fsl,imx21-i2c";
-				reg = <0x021f8000 0x4000>;
+				reg = <0x21f8000 0x4000>;
 				interrupts = <0 35 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6DL_CLK_I2C4>;
 				status = "disabled";

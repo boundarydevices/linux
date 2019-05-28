@@ -431,10 +431,10 @@
 		compatible = "focaltech,fts";
 		reg = <0x38>;
 		interrupt-parent = <&gpio_ptf>;
-		interrupts = <0 0x02>;
+		interrupts = <0 0x2>;
 		focaltech,panel-type = <FT5426>;
-		focaltech,reset-gpio = <&gpio_ptf 1 0x01>;
-		focaltech,irq-gpio = <&gpio_ptf 0 0x02>;
+		focaltech,reset-gpio = <&gpio_ptf 1 0x1>;
+		focaltech,irq-gpio = <&gpio_ptf 0 0x2>;
 		focaltech,max-touch-number = <5>;
 		focaltech,display-coords =  <0 0 480 854>;
 
@@ -577,6 +577,7 @@
 	pinctrl-1 = <&pinctrl_usdhc0>;
 	pinctrl-2 = <&pinctrl_usdhc0>;
 	pinctrl-3 = <&pinctrl_usdhc0>;
+	fsl,delay-line = <15>;
 	cd-gpios = <&gpio_ptc 10 GPIO_ACTIVE_LOW>;
 	vmmc-supply = <&reg_vsd_3v3>;
 	vqmmc-supply = <&vldo2_reg>;

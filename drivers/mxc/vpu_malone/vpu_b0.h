@@ -62,9 +62,11 @@ extern unsigned int vpu_dbg_level_decoder;
 #define INVALID_FRAME_DEPTH -1
 #define DECODER_NODE_NUMBER 12 // use /dev/video12 as vpu decoder
 #define DEFAULT_LOG_DEPTH 20
-#define V4L2_EVENT_SKIP 8
 #define DEFAULT_FRMDBG_ENABLE 0
 #define DEFAULT_FRMDBG_LEVEL 0
+
+#define V4L2_EVENT_DECODE_ERROR		(V4L2_EVENT_PRIVATE_START + 1)
+#define V4L2_EVENT_SKIP			(V4L2_EVENT_PRIVATE_START + 2)
 
 struct vpu_v4l2_control {
 	uint32_t id;
@@ -142,7 +144,8 @@ typedef enum{
 #define V4L2_CID_USER_FRAME_FULLRANGE		(V4L2_CID_USER_BASE + 0x1107)
 #define V4L2_CID_USER_FRAME_VUIPRESENT		(V4L2_CID_USER_BASE + 0x1108)
 
-#define IMX_V4L2_DEC_CMD_RESET		(5)
+#define IMX_V4L2_DEC_CMD_START		(0x09000000)
+#define IMX_V4L2_DEC_CMD_RESET		(IMX_V4L2_DEC_CMD_START + 1)
 
 enum vpu_pixel_format {
 	VPU_HAS_COLOCATED = 0x00000001,
@@ -215,6 +218,11 @@ struct queue_data {
 	struct semaphore drv_q_lock;
 	struct vb2_data_req vb2_reqs[VPU_MAX_BUFFER];
 	enum QUEUE_TYPE type;
+	unsigned long qbuf_count;
+	unsigned long dqbuf_count;
+	unsigned long process_count;
+	unsigned long beginning;
+	bool enable;
 };
 
 struct print_buf_desc {
@@ -242,6 +250,7 @@ struct vpu_dev {
 	u_int32 m0_rpc_size;
 	struct mutex dev_mutex;
 	struct mutex cmd_mutex;
+	struct mutex fw_flow_mutex;
 	bool fw_is_ready;
 	bool firmware_started;
 	struct completion start_cmp;
@@ -265,6 +274,7 @@ struct vpu_dev {
 	struct shared_addr shared_mem;
 	struct vpu_ctx *ctx[VPU_MAX_NUM_STREAMS];
 	struct dentry *debugfs_root;
+	struct dentry *debugfs_fwlog;
 
 	struct print_buf_desc *print_buf;
 };
@@ -321,9 +331,8 @@ struct vpu_ctx {
 	bool b_dis_reorder;
 	bool b_firstseq;
 	bool start_flag;
-	bool wait_abort_done;
 	bool wait_rst_done;
-	bool buffer_null;
+	bool wait_res_change_done;
 	bool firmware_stopped;
 	bool firmware_finished;
 	bool eos_stop_received;
@@ -332,9 +341,9 @@ struct vpu_ctx {
 	bool start_code_bypass;
 	bool hang_status;
 	bool fifo_low;
+	u32 req_frame_count;
 	wait_queue_head_t buffer_wq;
 	u_int32 mbi_count;
-	u_int32 mbi_num;
 	u_int32 mbi_size;
 	u_int32 dcp_count;
 	struct dma_buffer dpb_buffer;
@@ -343,6 +352,7 @@ struct vpu_ctx {
 	struct dma_buffer stream_buffer;
 	struct dma_buffer udata_buffer;
 	enum ARV_FRAME_TYPE arv_type;
+	u32 beginning;
 
 	struct file *crc_fp;
 	loff_t pos;
@@ -384,6 +394,7 @@ struct vpu_ctx {
 #define LVL_BIT_BUFFER_STAT	(1 << 10)
 #define LVL_BIT_BUFFER_DESC	(1 << 11)
 #define LVL_BIT_FUNC		(1 << 12)
+#define LVL_BIT_FLOW		(1 << 13)
 
 #define vpu_dbg(level, fmt, arg...) \
 	do { \

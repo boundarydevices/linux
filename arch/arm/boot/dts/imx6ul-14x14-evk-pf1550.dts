@@ -47,11 +47,11 @@
 };
 
 &i2c1 {
-	pmic: pf1550@08 {
+	pmic: pf1550@8 {
 		compatible = "fsl,pf1550";
 		interrupt-parent = <&gpio5>;
 		interrupts = <4 8>;
-		reg = <0x08>;
+		reg = <0x8>;
 		pinctrl-0 = <&pinctrl_pf1550>;
 
 		onkey {

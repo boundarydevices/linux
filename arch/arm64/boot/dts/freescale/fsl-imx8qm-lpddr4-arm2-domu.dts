@@ -493,7 +493,6 @@
 	only-dma-mask32 = <1>;
 };
 
-/delete-node/ &hsio;
 /delete-node/ &ocotp;
 /delete-node/ &pciea;
 /delete-node/ &pcieb;

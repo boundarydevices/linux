@@ -43,14 +43,14 @@ enum IMX6_CPUFREQ_CLKS {
 	STEP,
 	PLL1_SW,
 	PLL2_PFD2_396M,
-	/* MX6UL requires two more clks */
 	PLL1_BYPASS,
 	PLL1_BYPASS_SRC,
 	PLL1,
+	/* MX6UL requires two more clks */
 	PLL2_BUS,
 	SECONDARY_SEL,
 };
-#define IMX6Q_CPUFREQ_CLK_NUM		5
+#define IMX6Q_CPUFREQ_CLK_NUM		8
 #define IMX6UL_CPUFREQ_CLK_NUM		10
 
 static int num_clks;
@@ -327,8 +327,9 @@ static int imx6q_opp_check_speed_grading(struct device *dev)
 		void __iomem *base;
 
 		np = of_find_compatible_node(NULL, NULL, "fsl,imx6q-ocotp");
+		/* Assume no speed grading if nothing found */
 		if (!np)
-			return -ENOENT;
+			return 0;
 
 		base = of_iomap(np, 0);
 		of_node_put(np);
