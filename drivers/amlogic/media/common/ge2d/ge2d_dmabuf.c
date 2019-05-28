@@ -505,6 +505,7 @@ int ge2d_dma_buffer_export(struct aml_dma_buffer *buffer,
 	ge2d_log_dbg("buffer %d,exported as %d descriptor\n",
 		index, ret);
 	buffer->gd_buffer[index].fd = ret;
+	buffer->gd_buffer[index].dbuf = dbuf;
 	ge2d_exp_buf->fd = ret;
 	return 0;
 }
@@ -580,18 +581,28 @@ attach_err:
 }
 
 static int ge2d_dma_buffer_get_phys_internal(struct aml_dma_buffer *buffer,
-	int fd, unsigned long *addr)
+	struct aml_dma_cfg *cfg, unsigned long *addr)
 {
 	int i = 0, ret = -1;
 	struct aml_dma_buf *dma_buf;
+	struct dma_buf *dbuf = NULL;
 
 	for (i = 0; i < AML_MAX_DMABUF; i++) {
-		if (buffer->gd_buffer[i].alloc &&
-			(fd == buffer->gd_buffer[i].fd)) {
-			dma_buf = buffer->gd_buffer[i].mem_priv;
-			*addr = dma_buf->dma_addr;
-			ret = 0;
-			break;
+		if (buffer->gd_buffer[i].alloc) {
+			dbuf = dma_buf_get(cfg->fd);
+			if (IS_ERR(dbuf)) {
+				pr_err("%s: failed to get dma buffer,fd=%d, dbuf=%p\n",
+					__func__, cfg->fd, dbuf);
+				return -EINVAL;
+			}
+			dma_buf_put(dbuf);
+			if (dbuf == buffer->gd_buffer[i].dbuf) {
+				cfg->dbuf = dbuf;
+				dma_buf = buffer->gd_buffer[i].mem_priv;
+				*addr = dma_buf->dma_addr;
+				ret = 0;
+				break;
+			}
 		}
 	}
 	return ret;
@@ -608,7 +619,7 @@ int ge2d_dma_buffer_get_phys(struct aml_dma_buffer *buffer,
 		pr_err("error input param");
 		return -EINVAL;
 	}
-	ret = ge2d_dma_buffer_get_phys_internal(buffer, cfg->fd, addr);
+	ret = ge2d_dma_buffer_get_phys_internal(buffer, cfg, addr);
 	if (ret < 0) {
 		ret = ge2d_dma_buffer_map(cfg);
 		if (ret < 0) {
@@ -634,12 +645,12 @@ int ge2d_dma_buffer_unmap_info(struct aml_dma_buffer *buffer,
 		pr_err("error input param");
 		return -EINVAL;
 	}
-
 	for (i = 0; i < AML_MAX_DMABUF; i++) {
-		if (buffer->gd_buffer[i].alloc &&
-			(cfg->fd == buffer->gd_buffer[i].fd)) {
-			found = 1;
-			break;
+		if (buffer->gd_buffer[i].alloc) {
+			if (cfg->dbuf == buffer->gd_buffer[i].dbuf) {
+				found = 1;
+				break;
+			}
 		}
 	}
 	if (!found)
