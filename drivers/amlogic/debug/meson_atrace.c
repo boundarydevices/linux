@@ -33,6 +33,7 @@ struct {
 	TAG_INFO(VDEC),
 	TAG_INFO(TSYNC),
 	TAG_INFO(IONVIDEO),
+	TAG_INFO(AMLVIDEO),
 	{ NULL, 0 }
 };
 

@@ -89,6 +89,7 @@ struct vivi_dev {
 	struct vframe_receiver_s video_vf_recv;
 	u32 frame_num;
 	struct v4l2_amlogic_parm am_parm;
+	wait_queue_head_t wq;
 };
 
 struct vivi_fh {

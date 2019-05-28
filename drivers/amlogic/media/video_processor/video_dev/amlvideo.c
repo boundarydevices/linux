@@ -54,6 +54,8 @@
 #include "amlvideo.h"
 
 #define AVMLVIDEO_MODULE_NAME "amlvideo"
+#define KERNEL_ATRACE_TAG KERNEL_ATRACE_TAG_AMLVIDEO
+#include <trace/events/meson_atrace.h>
 
 #define AMLVIDEO_INFO(fmt, args...) pr_info("amlvid:info: "fmt"", ## args)
 #define AMLVIDEO_DBG(fmt, args...) pr_debug("amlvid:dbg: "fmt"", ## args)
@@ -154,9 +156,12 @@ static struct vframe_s *amlvideo_vf_peek(void *op_arg)
 
 static struct vframe_s *amlvideo_vf_get(void *op_arg)
 {
+	struct vframe_s *vf;
 	struct vivi_dev *dev = (struct vivi_dev *)op_arg;
 
-	return vfq_pop(&dev->q_ready);
+	vf = vfq_pop(&dev->q_ready);
+	ATRACE_COUNTER(dev->v4l2_dev.name, vfq_level(&dev->q_ready));
+	return vf;
 }
 
 static void amlvideo_vf_put(struct vframe_s *vf, void *op_arg)
@@ -294,6 +299,9 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 
 		vf_notify_receiver(dev->vf_provider_name,
 			VFRAME_EVENT_PROVIDER_RESET, data);
+	} else if (type == VFRAME_EVENT_PROVIDER_VFRAME_READY) {
+		if (vf_peek(dev->vf_receiver_name) != NULL)
+			wake_up_interruptible(&dev->wq);
 	}
 	return 0;
 }
@@ -587,6 +595,7 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 		dev->vf->next_vf_pts = next_vf->pts;
 
 	vfq_push(&dev->q_ready, dev->vf);
+	ATRACE_COUNTER(dev->v4l2_dev.name, vfq_level(&dev->q_ready));
 	p->index = 0;
 
 	p->timestamp.tv_sec = pts_us64 >> 32;
@@ -732,14 +741,21 @@ static unsigned int amlvideo_poll(struct file *file,
 {
 	struct vivi_fh *fh = file->private_data;
 	struct vivi_dev *dev = fh->dev;
-	struct videobuf_queue *q = &fh->vb_vidq;
 
 	dprintk(dev, 1, "%s\n", __func__);
 
 	if (fh->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return POLLERR;
 
-	return videobuf_poll_stream(file, q, wait);
+	if (vf_peek(dev->vf_receiver_name))
+		return POLL_IN | POLLRDNORM;
+
+	poll_wait(file, &dev->wq, wait);
+
+	if (vf_peek(dev->vf_receiver_name))
+		return POLL_IN | POLLRDNORM;
+	else
+		return 0;
 }
 
 static int amlvideo_close(struct file *file)
@@ -872,7 +888,7 @@ static int __init amlvideo_create_instance(int inst)
 		goto free_dev;
 
 	/* init video dma queues */
-
+	init_waitqueue_head(&dev->wq);
 	INIT_LIST_HEAD(&dev->vidq.active);
 	init_waitqueue_head(&dev->vidq.wq);
 
