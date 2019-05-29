@@ -3302,6 +3302,111 @@
 		power-domains = <&pd_lsio_gpt0>;
 	};
 
+	pwm0: pwm@5d000000 {
+		compatible = "fsl,imx8qxp-pwm", "fsl,imx27-pwm";
+		reg = <0x0 0x5d000000 0  0x10000>;
+		clocks = <&clk IMX8QXP_LSIO_PWM0_IPG_MSTR_CLK>,
+			 <&clk IMX8QXP_LSIO_PWM0_HF_CLK>;
+		clock-names = "ipg", "per";
+		assigned-clocks = <&clk IMX8QXP_LSIO_PWM0_HF_CLK>;
+		assigned-clock-rates = <24000000>;
+		#pwm-cells = <2>;
+		power-domains = <&pd_lsio_pwm0>;
+		status = "disabled";
+	};
+
+
+	pwm1: pwm@5d010000 {
+		compatible = "fsl,imx8qxp-pwm", "fsl,imx27-pwm";
+		reg = <0x0 0x5d010000 0  0x10000>;
+		clocks = <&clk IMX8QXP_LSIO_PWM1_IPG_MSTR_CLK>,
+			 <&clk IMX8QXP_LSIO_PWM1_HF_CLK>;
+		clock-names = "ipg", "per";
+		assigned-clocks = <&clk IMX8QXP_LSIO_PWM1_HF_CLK>;
+		assigned-clock-rates = <24000000>;
+		#pwm-cells = <2>;
+		power-domains = <&pd_lsio_pwm1>;
+		status = "disabled";
+	};
+
+	pwm2: pwm@5d020000 {
+		compatible = "fsl,imx8qxp-pwm", "fsl,imx27-pwm";
+		reg = <0x0 0x5d020000 0  0x10000>;
+		clocks = <&clk IMX8QXP_LSIO_PWM2_IPG_MSTR_CLK>,
+			 <&clk IMX8QXP_LSIO_PWM2_HF_CLK>;
+		clock-names = "ipg", "per";
+		assigned-clocks = <&clk IMX8QXP_LSIO_PWM2_HF_CLK>;
+		assigned-clock-rates = <24000000>;
+		#pwm-cells = <2>;
+		power-domains = <&pd_lsio_pwm2>;
+		status = "disabled";
+	};
+
+	pwm3: pwm@5d030000 {
+		compatible = "fsl,imx8qxp-pwm", "fsl,imx27-pwm";
+		reg = <0x0 0x5d030000 0  0x10000>;
+		clocks = <&clk IMX8QXP_LSIO_PWM3_IPG_MSTR_CLK>,
+			 <&clk IMX8QXP_LSIO_PWM3_HF_CLK>;
+		clock-names = "ipg", "per";
+		assigned-clocks = <&clk IMX8QXP_LSIO_PWM3_HF_CLK>;
+		assigned-clock-rates = <24000000>;
+		power-domains = <&pd_lsio_pwm3>;
+		#pwm-cells = <2>;
+		status = "disabled";
+	};
+
+	pwm4: pwm@5d040000 {
+		compatible = "fsl,imx8qxp-pwm", "fsl,imx27-pwm";
+		reg = <0x0 0x5d040000 0  0x10000>;
+		clocks = <&clk IMX8QXP_LSIO_PWM4_IPG_MSTR_CLK>,
+			 <&clk IMX8QXP_LSIO_PWM4_HF_CLK>;
+		clock-names = "ipg", "per";
+		assigned-clocks = <&clk IMX8QXP_LSIO_PWM4_HF_CLK>;
+		assigned-clock-rates = <24000000>;
+		#pwm-cells = <2>;
+		power-domains = <&pd_lsio_pwm4>;
+		status = "disabled";
+	};
+
+	pwm5: pwm@5d050000 {
+		compatible = "fsl,imx8qxp-pwm", "fsl,imx27-pwm";
+		reg = <0x0 0x5d050000 0  0x10000>;
+		clocks = <&clk IMX8QXP_LSIO_PWM5_IPG_MSTR_CLK>,
+			 <&clk IMX8QXP_LSIO_PWM5_HF_CLK>;
+		clock-names = "ipg", "per";
+		assigned-clocks = <&clk IMX8QXP_LSIO_PWM5_HF_CLK>;
+		assigned-clock-rates = <24000000>;
+		#pwm-cells = <2>;
+		power-domains = <&pd_lsio_pwm5>;
+		status = "disabled";
+	};
+
+	pwm6: pwm@5d060000 {
+		compatible = "fsl,imx8qxp-pwm", "fsl,imx27-pwm";
+		reg = <0x0 0x5d060000 0  0x10000>;
+		clocks = <&clk IMX8QXP_LSIO_PWM6_IPG_MSTR_CLK>,
+			 <&clk IMX8QXP_LSIO_PWM6_HF_CLK>;
+		clock-names = "ipg", "per";
+		assigned-clocks = <&clk IMX8QXP_LSIO_PWM6_HF_CLK>;
+		assigned-clock-rates = <24000000>;
+		#pwm-cells = <2>;
+		power-domains = <&pd_lsio_pwm6>;
+		status = "disabled";
+	};
+
+	pwm7: pwm@5d070000 {
+		compatible = "fsl,imx8qxp-pwm", "fsl,imx27-pwm";
+		reg = <0x0 0x5d070000 0  0x10000>;
+		clocks = <&clk IMX8QXP_LSIO_PWM7_IPG_MSTR_CLK>,
+			 <&clk IMX8QXP_LSIO_PWM7_HF_CLK>;
+		clock-names = "ipg", "per";
+		assigned-clocks = <&clk IMX8QXP_LSIO_PWM7_HF_CLK>;
+		assigned-clock-rates = <24000000>;
+		#pwm-cells = <2>;
+		power-domains = <&pd_lsio_pwm7>;
+		status = "disabled";
+	};
+
 	dsp: dsp@596e8000 {
 		compatible = "fsl,imx8qxp-dsp";
 		reserved-region = <&dsp_reserved>;
