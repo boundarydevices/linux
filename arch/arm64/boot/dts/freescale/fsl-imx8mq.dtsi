@@ -556,12 +556,11 @@
 		clocks = <&clk IMX8MQ_CLK_DISP_APB_ROOT>,
 			 <&clk IMX8MQ_CLK_DISP_AXI_ROOT>,
 			 <&clk IMX8MQ_CLK_DISP_RTRM_ROOT>,
-			 <&clk IMX8MQ_CLK_DUMMY>,
 			 <&clk IMX8MQ_VIDEO2_PLL_OUT>,
 			 <&clk IMX8MQ_CLK_DISP_DTRC>,
 			 <&clk IMX8MQ_VIDEO2_PLL1_REF_SEL>,
 			 <&clk IMX8MQ_CLK_PHY_27MHZ>;
-		clock-names = "apb", "axi", "rtrm", "pix_div", "pix_out",
+		clock-names = "apb", "axi", "rtrm", "pix",
 			"dtrc", "pll_src", "pll_phy_ref";
 		assigned-clocks = <&clk IMX8MQ_CLK_DC_PIXEL>,
 				  <&clk IMX8MQ_CLK_DISP_AXI>,
@@ -640,8 +639,9 @@
 		interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clk IMX8MQ_CLK_DSI_PHY_REF>,
 			 <&clk IMX8MQ_CLK_DSI_AHB>,
-			 <&clk IMX8MQ_CLK_DSI_IPG_DIV>;
-		clock-names = "phy_ref", "rx_esc", "tx_esc";
+			 <&clk IMX8MQ_CLK_DSI_IPG_DIV>,
+			 <&clk IMX8MQ_VIDEO_PLL1>;
+		clock-names = "phy_ref", "rx_esc", "tx_esc", "video_pll";
 		assigned-clocks = <&clk IMX8MQ_CLK_DSI_AHB>;
 		assigned-clock-parents = <&clk IMX8MQ_SYS1_PLL_80M>;
 		assigned-clock-rates = <80000000>;
