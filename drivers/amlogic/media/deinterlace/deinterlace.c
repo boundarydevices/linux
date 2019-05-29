@@ -61,6 +61,7 @@
 #endif
 #include <linux/amlogic/media/video_sink/video.h>
 #include "register.h"
+#include "register_nr4.h"
 #include "deinterlace.h"
 #include "deinterlace_dbg.h"
 #include "nr_downscale.h"
@@ -3072,13 +3073,16 @@ static void pre_de_process(void)
 		}
 	}
 
-	/*patch for SECAM signal format*/
+	/*patch for SECAM signal format from vlsi-feijun for all IC*/
 	if (di_pre_stru.di_inp_buf->vframe->sig_fmt ==
 		TVIN_SIG_FMT_CVBS_SECAM && secam_cfr_en) {
 		secam_cfr_fun((di_pre_stru.di_inp_buf->vframe->type &
 			VIDTYPE_TYPEMASK) == VIDTYPE_INTERLACE_TOP);
 	} else {
-		DI_Wr_reg_bits(NR2_SW_EN, 0, 7, 1);/*set cfr_en:1*/
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_TXLX))
+			DI_Wr_reg_bits(NR4_TOP_CTRL, 0, 12, 1);/*set cfr_en:0*/
+		else
+			DI_Wr_reg_bits(NR2_SW_EN, 0, 7, 1);/*set cfr_en:0*/
 		DI_Wr_reg_bits(NR2_CFR_PARA_CFG0, 2, 2, 2);
 	}
 

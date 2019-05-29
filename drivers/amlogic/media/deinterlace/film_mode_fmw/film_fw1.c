@@ -71,7 +71,7 @@ UINT8 FlmVOFSftInt(struct sFlmSftPar *pPar)
 	pPar->dif01rate = 20;
 	pPar->flag_di01th = 0;
 	pPar->numthd = 60;
-	pPar->flm32_dif02_gap_th = 7;
+	pPar->flm32_dif02_gap_th = 3;/*suggest from vlsi-yanling*/
 	pPar->flm32_luma_th = 90;
 	pPar->sF32Dif02M0 = 4096;/* mpeg-4096, cvbs-8192 */
 	pPar->sF32Dif02M1 = 4096;

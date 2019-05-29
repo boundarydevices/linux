@@ -24,7 +24,7 @@ int cmb32_blw_wnd = 180; /*192 */
 module_param(cmb32_blw_wnd, int, 0644);
 MODULE_PARM_DESC(cmb32_blw_wnd, "cmb32_blw_wnd");
 
-static int cmb32_wnd_ext = 11;
+static int cmb32_wnd_ext = 12;/*suggest from vlsi-yanling*/
 module_param(cmb32_wnd_ext, int, 0644);
 MODULE_PARM_DESC(cmb32_wnd_ext, "cmb32_wnd_ext");
 
