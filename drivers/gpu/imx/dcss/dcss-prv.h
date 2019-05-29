@@ -65,8 +65,7 @@ struct dcss_soc {
 
 	struct clk *apb_clk;
 	struct clk *axi_clk;
-	struct clk *pdiv_clk;
-	struct clk *pout_clk;
+	struct clk *pix_clk;
 	struct clk *rtrm_clk;
 	struct clk *dtrc_clk;
 	struct clk *pll_src_clk;
@@ -76,6 +75,7 @@ struct dcss_soc {
 
 	bool bus_freq_req;
 	bool clks_on;
+	bool hdmi_output;
 
 	struct pm_qos_request pm_qos_req;
 };

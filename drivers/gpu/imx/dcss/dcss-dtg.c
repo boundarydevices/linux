@@ -300,32 +300,26 @@ void dcss_dtg_sync_set(struct dcss_soc *dcss, struct videomode *vm)
 	dis_lrc_y = vm->vsync_len + vm->vfront_porch + vm->vback_porch +
 		    vm->vactive - 1;
 
+	clk_disable_unprepare(dcss->pix_clk);
 	if (dtg->hdmi_output) {
 		int err;
-		clk_disable_unprepare(dcss->pout_clk);
 		clk_disable_unprepare(dcss->pll_src_clk);
 		err = clk_set_parent(dcss->pll_src_clk, dcss->pll_phy_ref_clk);
 		if (err < 0)
 			dev_warn(dcss->dev, "clk_set_parent() returned %d",
 				 err);
-		clk_set_rate(dcss->pout_clk, vm->pixelclock);
 		clk_prepare_enable(dcss->pll_src_clk);
-		clk_prepare_enable(dcss->pout_clk);
-	} else {
-		clk_disable_unprepare(dcss->pout_clk);
-		clk_disable_unprepare(dcss->pdiv_clk);
-		clk_set_rate(dcss->pdiv_clk, vm->pixelclock);
-		actual_clk = clk_get_rate(dcss->pdiv_clk);
-		clk_prepare_enable(dcss->pdiv_clk);
-		clk_prepare_enable(dcss->pout_clk);
-		actual_clk = clk_get_rate(dcss->pdiv_clk);
-		if (vm->pixelclock != actual_clk) {
-			dev_info(dcss->dev,
-				"Pixel clock set to %u kHz instead of %lu kHz, "
-				"error is %d Hz\n",
-				(actual_clk / 1000), (vm->pixelclock / 1000),
-				(int)(actual_clk - vm->pixelclock));
-		}
+	}
+	clk_set_rate(dcss->pix_clk, vm->pixelclock);
+	clk_prepare_enable(dcss->pix_clk);
+
+	actual_clk = clk_get_rate(dcss->pix_clk);
+	if (vm->pixelclock != actual_clk) {
+		dev_info(dcss->dev,
+			"Pixel clock set to %u kHz instead of %lu kHz, "
+			"difference is %d Hz\n",
+			(actual_clk / 1000), (vm->pixelclock / 1000),
+			(int)(actual_clk - vm->pixelclock));
 	}
 
 	msleep(50);
