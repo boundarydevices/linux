@@ -1031,10 +1031,6 @@ int aml_check_sharebuffer_valid(struct frddr *fr, int ss_sel)
 		if (frddrs[i].in_use
 			&& (frddrs[i].fifo_id != current_fifo_id)
 			&& (frddrs[i].dest == ss_sel)) {
-
-			pr_debug("%s, ss_sel:%d used, not for share buffer at same time\n",
-				__func__,
-				ss_sel);
 			ret = 0;
 			break;
 		}

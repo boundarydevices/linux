@@ -675,7 +675,7 @@
 				system-clock-frequency = <12288000>;
 			};
 			tdmccodec: codec {
-				sound-dai = <&dummy_codec>;
+				sound-dai = <&dummy_codec  &dummy_codec>;
 			};
 		};
 
@@ -1106,7 +1106,8 @@
 		#sound-dai-cells = <0>;
 		reg = <0x31>;
 		status = "okay";
-		reset_pin = <&gpio GPIOAO_9 0>;
+		reset_pin = <&gpio_ao GPIOAO_9 0>;
+		enable_pin = <&gpio GPIOC_4 0>;
 		no_mclk;
 	};
 
@@ -1161,12 +1162,6 @@
 		 * 4: spdifout_b;
 		 */
 		samesource_sel = <3>;
-
-		/*enable default mclk(12.288M), before extern codec start*/
-		start_clk_enable = <1>;
-
-		/*tdm clk tuning enable*/
-		clk_tuning_enable = <1>;
 
 		status = "okay";
 	};
@@ -1256,10 +1251,7 @@
 
 		interrupt-names = "irq_spdifin";
 		pinctrl-names = "spdif_pins";
-		pinctrl-0 = <&spdifout>; /* bob remove &spdifin*/
-
-		/*spdif clk tuning enable*/
-		clk_tuning_enable = <1>;
+		pinctrl-0 = <&spdifout>;/* bob remove &spdifin*/
 
 		status = "okay";
 	};

@@ -43,8 +43,6 @@
 #include "spdif_hw.h"
 #include "tdm_match_table.c"
 #include "effects_v2.h"
-#include "spdif.h"
-
 
 /*#define __PTM_TDM_CLK__*/
 
@@ -491,9 +489,6 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 					fr, p_tdm->samesource_sel,
 					p_tdm->lane_ss,
 					p_tdm->chipinfo->reset_reg_offset);
-					/* sharebuffer default uses spdif_a */
-				spdif_set_audio_clk(p_tdm->samesource_sel - 3,
-					p_tdm->clk, runtime->rate*128, 1);
 		}
 
 		/* i2s source to hdmix */
@@ -959,7 +954,6 @@ static int aml_dai_tdm_hw_params(struct snd_pcm_substream *substream,
 		&& (aml_check_sharebuffer_valid(p_tdm->fddr,
 				p_tdm->samesource_sel))
 		&& p_tdm->en_share) {
-#if 0
 		int mux = 0, ratio = 0;
 
 			sharebuffer_get_mclk_fs_ratio(p_tdm->samesource_sel,
@@ -975,7 +969,6 @@ static int aml_dai_tdm_hw_params(struct snd_pcm_substream *substream,
 					rate * ratio);
 				clk_prepare_enable(p_tdm->samesrc_clk);
 			}
-#endif
 	}
 
 	if (!p_tdm->contns_clk && !IS_ERR(p_tdm->mclk)) {

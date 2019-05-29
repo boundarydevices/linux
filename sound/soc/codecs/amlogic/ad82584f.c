@@ -600,7 +600,7 @@ struct ad82584f_priv {
 	unsigned char Ch2_vol;
 	unsigned char master_vol;
 	unsigned char mute_val;
-
+	unsigned int inited;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
 #endif
@@ -699,6 +699,7 @@ static int ad82584f_set_bias_level(struct snd_soc_codec *codec,
 	return 0;
 }
 
+static int ad82584f_init(struct snd_soc_codec *codec);
 static int ad82584f_prepare(struct snd_pcm_substream *substream,
 				struct snd_soc_dai *dai)
 {
@@ -713,6 +714,14 @@ static int ad82584f_prepare(struct snd_pcm_substream *substream,
 
 	/*unmute,default power-on is mute.*/
 	snd_soc_write(codec, 0x02, 0x00);
+#else
+	struct snd_soc_codec *codec = dai->codec;
+	struct ad82584f_priv *ad82584f = snd_soc_codec_get_drvdata(codec);
+
+	if (ad82584f->inited == 0) {
+		ad82584f_init(codec);
+		ad82584f->inited = 1;
+	}
 #endif
 	return 0;
 
@@ -763,7 +772,6 @@ static int reset_ad82584f_GPIO(struct snd_soc_codec *codec)
 	struct ad82584f_priv *ad82584f = snd_soc_codec_get_drvdata(codec);
 	struct ad82584f_platform_data *pdata = ad82584f->pdata;
 	int ret = 0;
-
 	if (pdata->reset_pin < 0)
 		return 0;
 
@@ -1000,7 +1008,7 @@ static int ad82584f_i2c_probe(struct i2c_client *i2c,
 		return -ENOMEM;
 	}
 	ad82584f->pdata = pdata;
-
+	ad82584f->inited = 0;
 	ad82584f_parse_dt(ad82584f, i2c->dev.of_node);
 
 	ret = snd_soc_register_codec(&i2c->dev, &soc_codec_dev_ad82584f,

@@ -38,7 +38,6 @@
 #include "spdif_match_table.c"
 #include "resample.h"
 #include "resample_hw.h"
-#include "spdif.h"
 
 #define DRV_NAME "snd_spdif"
 
@@ -49,7 +48,6 @@
 /*#define __SPDIFIN_INSERT_CHNUM__*/
 
 /*#define __SPDIFIN_AUDIO_TYPE_HW__*/
-struct aml_spdif *spdif_priv[2];
 
 static int aml_dai_set_spdif_sysclk(struct snd_soc_dai *cpu_dai,
 				int clk_id, unsigned int freq, int dir);
@@ -117,7 +115,6 @@ struct aml_spdif {
 	bool mute;
 	enum SPDIF_SRC spdifin_src;
 	int clk_tuning_enable;
-	bool on;
 };
 
 static const struct snd_pcm_hardware aml_spdif_hardware = {
@@ -322,20 +319,6 @@ int spdifin_source_set_enum(
 	spdifin_set_src(src);
 	p_spdif->spdifin_src = src;
 
-	return 0;
-}
-
-
-int spdif_set_audio_clk(int id,
-		struct clk *clk_src, int rate, int same)
-{
-	if (spdif_priv[id]->on && same) {
-		pr_debug("spdif priority");
-		return 0;
-	}
-
-	clk_set_parent(spdif_priv[id]->clk_spdifout, clk_src);
-	clk_set_rate(spdif_priv[id]->clk_spdifout, rate);
 	return 0;
 }
 
@@ -766,7 +749,6 @@ static int aml_spdif_open(struct snd_pcm_substream *substream)
 	snd_soc_set_runtime_hwparams(substream, &aml_spdif_hardware);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		p_spdif->on = true;
 		p_spdif->fddr = aml_audio_register_frddr(dev,
 			p_spdif->actrl,
 			aml_spdif_ddr_isr, substream, false);
@@ -811,7 +793,6 @@ static int aml_spdif_close(struct snd_pcm_substream *substream)
 	pr_info("%s\n", __func__);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		p_spdif->on = false;
 		aml_audio_unregister_frddr(p_spdif->dev, substream);
 	} else {
 		aml_audio_unregister_toddr(p_spdif->dev, substream);
@@ -1346,13 +1327,8 @@ static void aml_set_spdifclk(struct aml_spdif *p_spdif)
 		mpll_freq = p_spdif->sysclk_freq * 58 / 2; /* 96k */
 #endif
 		clk_set_rate(p_spdif->sysclk, mpll_freq);
-		/*
 		clk_set_rate(p_spdif->clk_spdifout,
 			p_spdif->sysclk_freq);
-		*/
-		spdif_set_audio_clk(p_spdif->id,
-			p_spdif->sysclk,
-			p_spdif->sysclk_freq, 0);
 
 		ret = clk_prepare_enable(p_spdif->sysclk);
 		if (ret) {
@@ -1622,7 +1598,7 @@ static int aml_spdif_platform_probe(struct platform_device *pdev)
 		dev_err(dev, "devm_snd_soc_register_component failed\n");
 		return ret;
 	}
-	spdif_priv[aml_spdif->id] = aml_spdif;
+
 	pr_info("%s, register soc platform\n", __func__);
 
 	return devm_snd_soc_register_platform(dev, &aml_spdif_platform);
