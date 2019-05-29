@@ -1753,6 +1753,8 @@ static int sdhci_esdhc_suspend(struct device *dev)
 	struct pltfm_imx_data *imx_data = sdhci_pltfm_priv(pltfm_host);
 	int ret;
 
+	pm_runtime_get_sync(dev);
+
 	if (host->mmc->caps2 & MMC_CAP2_CQE) {
 		ret = cqhci_suspend(host->mmc);
 		if (ret)
@@ -1778,6 +1780,9 @@ static int sdhci_esdhc_suspend(struct device *dev)
 
 	ret = mmc_gpio_set_cd_wake(host->mmc, true);
 
+	pm_runtime_disable(dev);
+	pm_runtime_set_suspended(dev);
+
 	return ret;
 }
 
@@ -1785,6 +1790,9 @@ static int sdhci_esdhc_resume(struct device *dev)
 {
 	struct sdhci_host *host = dev_get_drvdata(dev);
 	int ret;
+
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
 
 	ret = pinctrl_pm_select_default_state(dev);
 	if (ret)
@@ -1802,6 +1810,9 @@ static int sdhci_esdhc_resume(struct device *dev)
 
 	if (!ret)
 		ret = mmc_gpio_set_cd_wake(host->mmc, false);
+
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
 
 	return ret;
 }
