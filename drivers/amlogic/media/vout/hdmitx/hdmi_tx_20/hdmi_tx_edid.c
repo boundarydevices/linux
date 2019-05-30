@@ -893,7 +893,8 @@ static void Edid_ParsingVendSpec(struct rx_cap *pRXCap,
 			dv->block_flag = ERROR_LENGTH;
 	}
 	if (dv->ver == 2) {
-		if (dv->length == 0x0B) {
+		if ((dv->length == 0xB) || (dv->length == 0xC)
+			|| (dv->length == 0xF)) {
 			dv->sup_2160p60hz = 0x1;/*default*/
 			dv->dm_version = (dat[pos] >> 2) & 0x7;
 			dv->sup_yuv422_12bit = dat[pos] & 0x1;
@@ -922,7 +923,7 @@ static void Edid_ParsingVendSpec(struct rx_cap *pRXCap,
 			dv->block_flag = ERROR_LENGTH;
 	}
 
-	if (pos > dv->length)
+	if (pos > (dv->length + 1))
 		pr_info("hdmitx: edid: maybe invalid dv%d data\n", dv->ver);
 }
 
@@ -2347,6 +2348,7 @@ bool hdmitx_edid_check_valid_mode(struct hdmitx_dev *hdev,
 {
 	bool valid = 0;
 	struct rx_cap *pRXCap = NULL;
+	const struct dv_info *dv = &(hdev->RXCap.dv_info);
 	unsigned int rx_max_tmds_clk = 0;
 	unsigned int calc_tmds_clk = 0;
 	int i = 0;
@@ -2441,9 +2443,11 @@ bool hdmitx_edid_check_valid_mode(struct hdmitx_dev *hdev,
 		/* Rx may not support Y444 */
 		if (!(pRXCap->native_Mode & (1 << 5)))
 			return 0;
-		if (pRXCap->dc_y444 && pRXCap->dc_30bit)
+		if ((pRXCap->dc_y444 && pRXCap->dc_30bit)
+			|| (dv->sup_10b_12b_444 == 0x1))
 			rx_y444_max_dc = COLORDEPTH_30B;
-		if (pRXCap->dc_y444 && pRXCap->dc_36bit)
+		if ((pRXCap->dc_y444 && pRXCap->dc_36bit)
+			|| (dv->sup_10b_12b_444 == 0x2))
 			rx_y444_max_dc = COLORDEPTH_36B;
 		if (para->cd <= rx_y444_max_dc)
 			valid = 1;
@@ -2457,7 +2461,8 @@ bool hdmitx_edid_check_valid_mode(struct hdmitx_dev *hdev,
 			return 0;
 		if (pRXCap->dc_y444 && pRXCap->dc_30bit)
 			rx_y422_max_dc = COLORDEPTH_30B;
-		if (pRXCap->dc_y444 && pRXCap->dc_36bit)
+		if ((pRXCap->dc_y444 && pRXCap->dc_36bit)
+			|| (dv->sup_yuv422_12bit))
 			rx_y422_max_dc = COLORDEPTH_36B;
 		if (para->cd <= rx_y422_max_dc)
 			valid = 1;
@@ -2467,9 +2472,9 @@ bool hdmitx_edid_check_valid_mode(struct hdmitx_dev *hdev,
 	}
 	if (para->cs == COLORSPACE_RGB444) {
 		/* Always assume RX supports RGB444 */
-		if (pRXCap->dc_30bit)
+		if ((pRXCap->dc_30bit) || (dv->sup_10b_12b_444 == 0x1))
 			rx_rgb_max_dc = COLORDEPTH_30B;
-		if (pRXCap->dc_36bit)
+		if ((pRXCap->dc_36bit) || (dv->sup_10b_12b_444 == 0x2))
 			rx_rgb_max_dc = COLORDEPTH_36B;
 		if (para->cd <= rx_rgb_max_dc)
 			valid = 1;

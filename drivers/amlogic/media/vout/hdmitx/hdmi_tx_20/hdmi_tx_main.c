@@ -2409,6 +2409,7 @@ static ssize_t show_dc_cap(struct device *dev,
 	enum hdmi_vic vic = HDMI_Unknown;
 	int pos = 0;
 	struct rx_cap *pRXCap = &(hdmitx_device.RXCap);
+	const struct dv_info *dv = &(hdmitx_device.RXCap.dv_info);
 
 #if 0
 	if (pRXCap->dc_48bit_420)
@@ -2443,9 +2444,9 @@ static ssize_t show_dc_cap(struct device *dev,
 	}
 next444:
 	if (pRXCap->dc_y444) {
-		if (pRXCap->dc_36bit)
+		if ((pRXCap->dc_36bit) || (dv->sup_10b_12b_444 == 0x2))
 			pos += snprintf(buf + pos, PAGE_SIZE, "444,12bit\n");
-		if (pRXCap->dc_30bit) {
+		if ((pRXCap->dc_30bit) || (dv->sup_10b_12b_444 == 0x1)) {
 			pos += snprintf(buf + pos, PAGE_SIZE, "444,10bit\n");
 			pos += snprintf(buf + pos, PAGE_SIZE, "444,8bit\n");
 		}
@@ -2453,7 +2454,7 @@ next444:
 		if (pRXCap->dc_48bit)
 			pos += snprintf(buf + pos, PAGE_SIZE, "444,16bit\n");
 #endif
-		if (pRXCap->dc_36bit)
+		if ((pRXCap->dc_36bit) || (dv->sup_yuv422_12bit))
 			pos += snprintf(buf + pos, PAGE_SIZE, "422,12bit\n");
 		if (pRXCap->dc_30bit) {
 			pos += snprintf(buf + pos, PAGE_SIZE, "422,10bit\n");
@@ -2471,9 +2472,9 @@ nextrgb:
 	if (pRXCap->dc_48bit)
 		pos += snprintf(buf + pos, PAGE_SIZE, "rgb,16bit\n");
 #endif
-	if (pRXCap->dc_36bit)
+	if ((pRXCap->dc_36bit) || (dv->sup_10b_12b_444 == 0x2))
 		pos += snprintf(buf + pos, PAGE_SIZE, "rgb,12bit\n");
-	if (pRXCap->dc_30bit)
+	if ((pRXCap->dc_30bit) || (dv->sup_10b_12b_444 == 0x1))
 		pos += snprintf(buf + pos, PAGE_SIZE, "rgb,10bit\n");
 	pos += snprintf(buf + pos, PAGE_SIZE, "rgb,8bit\n");
 	return pos;
