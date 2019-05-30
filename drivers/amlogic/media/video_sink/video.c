@@ -183,6 +183,10 @@ bool platform_type = 1;
 int bit_depth_flag = 8;
 
 bool omx_secret_mode;
+static int omx_continuous_drop_count;
+static bool omx_continuous_drop_flag;
+static u32 cur_disp_omx_index;
+#define OMX_CONTINUOUS_DROP_LEVEL 5
 #define DEBUG_FLAG_FFPLAY	(1<<0)
 #define DEBUG_FLAG_CALC_PTS_INC	(1<<1)
 
@@ -4006,6 +4010,10 @@ static void vsync_toggle_frame(struct vframe_s *vf, int line)
 		}
 	}
 	cur_dispbuf = vf;
+
+	if (cur_dispbuf && omx_secret_mode)
+		cur_disp_omx_index = cur_dispbuf->omx_index;
+
 	if (cur_dispbuf && (cur_dispbuf->type & VIDTYPE_MVC))
 		last_mvc_status = true;
 	else
@@ -6353,6 +6361,10 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			/*add  greatest common divisor of duration*/
 			/*1500(60fps) 3000(30fps) 3750(24fps) for some video*/
 			/*that pts is not evenly*/
+			if (debug_flag & DEBUG_FLAG_OMX_DEBUG_DROP_FRAME) {
+				pr_info("pcrscr_set sys_time=%d, omx_pts=%d, diff=%d",
+						system_time, omx_pts, diff);
+			}
 			timestamp_pcrscr_set(omx_pts + DURATION_GCD);
 		} else if (((diff - omx_pts_interval_upper / 2) > 0
 			|| (diff - omx_pts_interval_lower / 2) < 0)
@@ -6512,6 +6524,25 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 		judge_3d_fa_out_mode();
 	}
 	while (vf) {
+		if (debug_flag & DEBUG_FLAG_OMX_DEBUG_DROP_FRAME) {
+			pr_info("next pts= %d,index %d,pcr = %d,vpts = %d\n",
+				vf->pts, vf->omx_index,
+				timestamp_pcrscr_get(), timestamp_vpts_get());
+		}
+		if (omx_continuous_drop_flag
+			&& !(debug_flag
+				& DEBUG_FLAG_OMX_DISABLE_DROP_FRAME)) {
+			if (debug_flag & DEBUG_FLAG_OMX_DEBUG_DROP_FRAME) {
+				pr_info("drop omx_index %d, pts %d\n",
+					vf->omx_index, vf->pts);
+			}
+			vf = vf_get(RECEIVER_NAME);
+			if (vf)
+				vf_put(vf, RECEIVER_NAME);
+			vf = video_vf_peek();
+			continue;
+		}
+
 		if (vpts_expire(cur_dispbuf, vf, toggle_cnt) || show_nosync) {
 			ATRACE_COUNTER(MODULE_NAME,  __LINE__);
 			if (debug_flag & DEBUG_FLAG_PTS_TRACE)
@@ -8353,7 +8384,11 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		receive_frame_count = 0;
 		display_frame_count = 0;
 		//init_hdr_info();
-
+		mutex_lock(&omx_mutex);
+		omx_continuous_drop_count = 0;
+		omx_continuous_drop_flag = false;
+		cur_disp_omx_index = 0;
+		mutex_unlock(&omx_mutex);
 	} else if (type == VFRAME_EVENT_PROVIDER_RESET) {
 		video_vf_light_unreg_provider(1);
 	} else if (type == VFRAME_EVENT_PROVIDER_LIGHT_UNREG)
@@ -8363,6 +8398,7 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		drop_frame_count = 0;
 		receive_frame_count = 0;
 		display_frame_count = 0;
+		mutex_lock(&omx_mutex);
 		omx_run = false;
 		omx_pts_set_from_hwc_count = 0;
 		omx_pts_set_from_hwc_count_begin = 0;
@@ -8370,6 +8406,10 @@ static int video_receiver_event_fun(int type, void *data, void *private_data)
 		omx_need_drop_frame_num = 0;
 		omx_drop_done = false;
 		omx_pts_set_index = 0;
+		omx_continuous_drop_count = 0;
+		omx_continuous_drop_flag = false;
+		cur_disp_omx_index = 0;
+		mutex_unlock(&omx_mutex);
 		//init_hdr_info();
 
 #ifdef CONFIG_AM_VIDEO2
@@ -8758,7 +8798,28 @@ static void set_omx_pts(u32 *p)
 	if (debug_flag & DEBUG_FLAG_PTS_TRACE)
 		pr_info("[set_omx_pts]tmp_pts:%d, set_from_hwc:%d,frame_num=%d, not_reset=%d\n",
 			tmp_pts, set_from_hwc, frame_num, not_reset);
-
+	if (set_from_hwc == 1) {
+		if (frame_num >= cur_disp_omx_index) {
+			omx_continuous_drop_flag = false;
+			omx_continuous_drop_count = 0;
+		} else {
+			if (omx_continuous_drop_flag
+				&& (debug_flag
+					& DEBUG_FLAG_OMX_DEBUG_DROP_FRAME))
+				pr_info("ignore previous rendered frame %d\n",
+					frame_num);
+		}
+	} else {
+		omx_continuous_drop_count++;
+		if (omx_continuous_drop_count >= OMX_CONTINUOUS_DROP_LEVEL
+				&& !(debug_flag
+					& DEBUG_FLAG_OMX_DISABLE_DROP_FRAME)) {
+			omx_continuous_drop_flag = true;
+			if (debug_flag & DEBUG_FLAG_OMX_DEBUG_DROP_FRAME)
+				pr_info("countinous drop %d\n",
+					omx_continuous_drop_count);
+		}
+	}
 	if (not_reset == 0) {
 		time_setomxpts = sched_clock();
 		omx_pts = tmp_pts;

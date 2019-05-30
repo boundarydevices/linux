@@ -32,6 +32,8 @@
 #define DEBUG_FLAG_LATENCY             0x200000
 #define DEBUG_FLAG_PTS_TRACE            0x400000
 #define DEBUG_FLAG_FRAME_DETECT            0x800000
+#define DEBUG_FLAG_OMX_DEBUG_DROP_FRAME        0x1000000
+#define DEBUG_FLAG_OMX_DISABLE_DROP_FRAME        0x2000000
 
 /*for video.c's static int debug_flag;*/
 
