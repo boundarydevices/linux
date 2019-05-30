@@ -477,6 +477,32 @@ static ssize_t sn65dsi83_reg_store(struct device *dev, struct device_attribute *
 
 static DEVICE_ATTR(sn65dsi83_reg, 0644, sn65dsi83_reg_show, sn65dsi83_reg_store);
 
+static ssize_t sn65dsi83_enable_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct sn65dsi83_priv *sn = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%d\n", sn->chip_enabled);
+}
+
+static ssize_t sn65dsi83_enable_store(struct device *dev, struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	struct sn65dsi83_priv *sn = dev_get_drvdata(dev);
+	char *endp;
+	unsigned enable;
+
+	enable = simple_strtol(buf, &endp, 16);
+	if (enable) {
+		sn_powerup(sn);
+	} else {
+		sn_powerdown(sn);
+	}
+	return count;
+}
+
+static DEVICE_ATTR(sn65dsi83_enable, 0644, sn65dsi83_enable_show, sn65dsi83_enable_store);
+
 /*
  * I2C init/probing/exit functions
  */
@@ -575,6 +601,7 @@ static int sn65dsi83_probe(struct i2c_client *client,
 		dev_err(&client->dev, "fb_register_client failed(%d)\n", ret);
 		return ret;
 	}
+	ret = device_create_file(&client->dev, &dev_attr_sn65dsi83_enable);
 	ret = device_create_file(&client->dev, &dev_attr_sn65dsi83_reg);
 	if (ret < 0)
 		pr_warn("failed to add sn65dsi83 sysfs files\n");
@@ -589,6 +616,7 @@ static int sn65dsi83_remove(struct i2c_client *client)
 	struct sn65dsi83_priv *sn = i2c_get_clientdata(client);
 
 	device_remove_file(&client->dev, &dev_attr_sn65dsi83_reg);
+	device_remove_file(&client->dev, &dev_attr_sn65dsi83_enable);
 	fb_unregister_client(&sn->fbnb);
 	sn_powerdown(sn);
 	return 0;
