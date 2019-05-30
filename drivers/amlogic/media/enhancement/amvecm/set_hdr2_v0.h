@@ -108,6 +108,10 @@ struct hdr_proc_mtx_param_s {
 	int mtx_cgain[15];
 	int mtx_ogain[15];
 	int mtx_out[15];
+	int mtxi_pre_offset[3];
+	int mtxi_pos_offset[3];
+	int mtxo_pre_offset[3];
+	int mtxo_pos_offset[3];
 	unsigned int mtx_on;
 	enum hdr_process_sel p_sel;
 };

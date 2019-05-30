@@ -464,5 +464,6 @@ extern int amvecm_drm_gamma_disable(u32 index);
 extern int am_meson_ctm_set(u32 index, struct drm_color_ctm *ctm);
 extern int am_meson_ctm_disable(void);
 
+extern void enable_osd1_mtx(unsigned int en);
 #endif /* AMVECM_H */
 
