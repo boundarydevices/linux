@@ -40,6 +40,7 @@ source "drivers/mxc/mipi/Kconfig"
 source "drivers/mxc/vpu/Kconfig"
 source "drivers/mxc/hdmi-cec/Kconfig"
 
+source "drivers/mxc/vehicle/Kconfig"
 endmenu
 
 endif
