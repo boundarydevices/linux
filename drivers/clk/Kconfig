@@ -283,6 +283,12 @@ config COMMON_CLK_STM32H7
 	---help---
 	  Support for stm32h7 SoC family clocks
 
+config VEHICLE_CLK_POST_INIT
+	bool "Clock driver for shared peripherals"
+	---help---
+	  Shared peripherals are not accessible before other core release them
+	  Initialize these peripherals' clock after getting these resources.
+
 source "drivers/clk/actions/Kconfig"
 source "drivers/clk/bcm/Kconfig"
 source "drivers/clk/hisilicon/Kconfig"
