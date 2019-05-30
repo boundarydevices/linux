@@ -150,7 +150,7 @@ static void sn_enable_gp(struct gpio_desc *gp_en)
 {
 	msleep(15);	/* disabled for at least 10 ms */
 	gpiod_set_value(gp_en, 1);
-	msleep(1);
+	msleep(2);
 }
 
 static void sn_enable_irq(struct sn65dsi83_priv *sn)
