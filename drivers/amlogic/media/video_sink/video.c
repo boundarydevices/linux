@@ -8436,11 +8436,13 @@ static void pip_vf_unreg_provider(void)
 		try_free_keep_videopip(1);
 	}
 
-	if (cur_pipbuf)
+	if (cur_pipbuf && get_videopip_enabled())
 		keeped = vf_keep_pip_current_locked(cur_pipbuf, NULL);
+	else if (cur_pipbuf)
+		keeped = -1;
 
 	if (keeped < 0) {/*keep failed.*/
-		pr_info("videopip keep failed, disable video now!\n");
+		pr_info("videopip disable video now!\n");
 		safe_disble_videolayer2();
 		try_free_keep_videopip(1);
 	}
