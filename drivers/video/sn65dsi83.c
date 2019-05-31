@@ -87,8 +87,10 @@ struct sn65dsi83_priv
 	struct mutex		power_mutex;
 	struct notifier_block	fbnb;
 	struct notifier_block	drmnb;
+	struct delayed_work	sn_work;
+	struct workqueue_struct *sn_workqueue;
+	struct videomode	vm;
 	u32			int_cnt;
-	u32			pixelclock;
 	u8			chip_enabled;
 	u8			show_reg;
 	u8			dsi_lanes;
@@ -99,6 +101,10 @@ struct sn65dsi83_priv
 
 	u8			dsi_clk_divider;
 	u8			mipi_clk_index;
+#define SN_STATE_OFF		0
+#define SN_STATE_STANDBY	1
+#define SN_STATE_ON		2
+	u8			state;
 };
 
 /**
@@ -166,7 +172,7 @@ static int sn_get_dsi_clk_divider(struct sn65dsi83_priv *sn)
 	u32 mipi_clk_rate;
 	u8 mipi_clk_index;
 	int ret;
-	u32 pixelclock = sn->pixelclock;
+	u32 pixelclock = sn->vm.pixelclock;
 
 	mipi_clk_rate = clk_get_rate(sn->mipi_clk);
 	if (!mipi_clk_rate) {
@@ -190,11 +196,46 @@ static int sn_get_dsi_clk_divider(struct sn65dsi83_priv *sn)
 		mipi_clk_index = 8;
 	ret = (sn->dsi_clk_divider == dsi_clk_divider) &&
 		(sn->mipi_clk_index == mipi_clk_index);
-	if (!ret)
-		pr_info("dsi_clk_divider = %d, mipi_clk_index=%d, mipi_clk_rate=%d\n",
+	if (!ret) {
+		dev_info(&sn->client->dev,
+			"dsi_clk_divider = %d, mipi_clk_index=%d, mipi_clk_rate=%d\n",
 			dsi_clk_divider, mipi_clk_index, mipi_clk_rate);
-	sn->dsi_clk_divider = dsi_clk_divider;
-	sn->mipi_clk_index = mipi_clk_index;
+		sn->dsi_clk_divider = dsi_clk_divider;
+		sn->mipi_clk_index = mipi_clk_index;
+	}
+	return ret;
+}
+
+static int sn_check_videomode_change(struct sn65dsi83_priv *sn)
+{
+	struct videomode vm;
+	int ret;
+
+	ret = of_get_videomode(sn->disp_dsi, &vm, 0);
+	if (ret < 0)
+		return ret;
+
+	if (sn->vm.hactive != vm.hactive ||
+	    sn->vm.hsync_len != vm.hsync_len ||
+	    sn->vm.hback_porch != vm.hback_porch ||
+	    sn->vm.hfront_porch != vm.hfront_porch ||
+	    sn->vm.vactive != vm.vactive ||
+	    sn->vm.vsync_len != vm.vsync_len ||
+	    sn->vm.vback_porch != vm.vback_porch ||
+	    sn->vm.vfront_porch != vm.vfront_porch ||
+	    ((sn->vm.flags ^ vm.flags) & (DISPLAY_FLAGS_DE_LOW |
+			    DISPLAY_FLAGS_HSYNC_HIGH |DISPLAY_FLAGS_VSYNC_HIGH))) {
+		dev_info(&sn->client->dev,
+			"%s: pixelclock=%ld %dx%d, margins=%d,%d %d,%d  syncs=%d %d flags=%x\n",
+			__func__, vm.pixelclock, vm.hactive, vm.vactive,
+			vm.hback_porch, vm.hfront_porch,
+			vm.vback_porch, vm.vfront_porch,
+			vm.hsync_len, vm.vsync_len, vm.flags);
+		sn->vm = vm;
+		ret = 1;
+	}
+	if (!sn_get_dsi_clk_divider(sn))
+		ret |= 1;
 	return ret;
 }
 
@@ -203,14 +244,8 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 	unsigned i = 5;
 	int format = 0x10;
 	u32 pixelclock;
-	struct videomode vm;
-	int ret;
 
-	ret = of_get_videomode(sn->disp_dsi, &vm, 0);
-	if (ret < 0)
-		return ret;
-
-	pixelclock = vm.pixelclock;
+	pixelclock = sn->vm.pixelclock;
 	if (pixelclock) {
 		if (pixelclock > 37500000) {
 			i = (pixelclock - 12500000) / 25000000;
@@ -218,24 +253,17 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 				i = 5;
 		}
 	}
-	sn->pixelclock = pixelclock;
-	pr_info("pixelclock=%d %dx%d, margins=%d,%d %d,%d  syncs=%d %d\n",
-		pixelclock, vm.hactive, vm.vactive,
-		vm.hback_porch, vm.hfront_porch,
-		vm.vback_porch, vm.vfront_porch,
-		vm.hsync_len, vm.vsync_len);
 	sn_i2c_write_byte(sn, SN_CLK_SRC, (i << 1) | 1);
-	sn_get_dsi_clk_divider(sn);
 	sn_i2c_write_byte(sn, SN_CLK_DIV, (sn->dsi_clk_divider - 1) << 3);
 
 	sn_i2c_write_byte(sn, SN_DSI_LANES, ((4 - sn->dsi_lanes) << 3) | 0x20);
 	sn_i2c_write_byte(sn, SN_DSI_EQ, 0);
 	sn_i2c_write_byte(sn, SN_DSI_CLK, sn->mipi_clk_index);
-	if (vm.flags & DISPLAY_FLAGS_DE_LOW)
+	if (sn->vm.flags & DISPLAY_FLAGS_DE_LOW)
 		format |= BIT(7);
-	if (!(vm.flags & DISPLAY_FLAGS_HSYNC_HIGH))
+	if (!(sn->vm.flags & DISPLAY_FLAGS_HSYNC_HIGH))
 		format |= BIT(6);
-	if (!(vm.flags & DISPLAY_FLAGS_VSYNC_HIGH))
+	if (!(sn->vm.flags & DISPLAY_FLAGS_VSYNC_HIGH))
 		format |= BIT(5);
 	if (sn->dsi_bpp == 24) {
 		if (sn->spwg) {
@@ -254,20 +282,20 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 	sn_i2c_write_byte(sn, SN_LVDS_VOLTAGE, 4);
 	sn_i2c_write_byte(sn, SN_LVDS_TERM, 2);
 	sn_i2c_write_byte(sn, SN_LVDS_CM_VOLTAGE, 0);
-	sn_i2c_write_byte(sn, SN_HACTIVE_LOW, (u8)vm.hactive);
-	sn_i2c_write_byte(sn, SN_HACTIVE_HIGH, (u8)(vm.hactive >> 8));
-	sn_i2c_write_byte(sn, SN_VACTIVE_LOW, (u8)vm.vactive);
-	sn_i2c_write_byte(sn, SN_VACTIVE_HIGH, (u8)(vm.vactive >> 8));
+	sn_i2c_write_byte(sn, SN_HACTIVE_LOW, (u8)sn->vm.hactive);
+	sn_i2c_write_byte(sn, SN_HACTIVE_HIGH, (u8)(sn->vm.hactive >> 8));
+	sn_i2c_write_byte(sn, SN_VACTIVE_LOW, (u8)sn->vm.vactive);
+	sn_i2c_write_byte(sn, SN_VACTIVE_HIGH, (u8)(sn->vm.vactive >> 8));
 	sn_i2c_write_byte(sn, SN_SYNC_DELAY_LOW, (u8)sn->sync_delay);
 	sn_i2c_write_byte(sn, SN_SYNC_DELAY_HIGH, (u8)(sn->sync_delay >> 8));
-	sn_i2c_write_byte(sn, SN_HSYNC_LOW, (u8)vm.hsync_len);
-	sn_i2c_write_byte(sn, SN_HSYNC_HIGH, (u8)(vm.hsync_len >> 8));
-	sn_i2c_write_byte(sn, SN_VSYNC_LOW, (u8)vm.vsync_len);
-	sn_i2c_write_byte(sn, SN_VSYNC_HIGH, (u8)(vm.vsync_len >> 8));
-	sn_i2c_write_byte(sn, SN_HBP, (u8)vm.hback_porch);
-	sn_i2c_write_byte(sn, SN_VBP, (u8)vm.vback_porch);
-	sn_i2c_write_byte(sn, SN_HFP, (u8)vm.hfront_porch);
-	sn_i2c_write_byte(sn, SN_VFP, (u8)vm.vfront_porch);
+	sn_i2c_write_byte(sn, SN_HSYNC_LOW, (u8)sn->vm.hsync_len);
+	sn_i2c_write_byte(sn, SN_HSYNC_HIGH, (u8)(sn->vm.hsync_len >> 8));
+	sn_i2c_write_byte(sn, SN_VSYNC_LOW, (u8)sn->vm.vsync_len);
+	sn_i2c_write_byte(sn, SN_VSYNC_HIGH, (u8)(sn->vm.vsync_len >> 8));
+	sn_i2c_write_byte(sn, SN_HBP, (u8)sn->vm.hback_porch);
+	sn_i2c_write_byte(sn, SN_VBP, (u8)sn->vm.vback_porch);
+	sn_i2c_write_byte(sn, SN_HFP, (u8)sn->vm.hfront_porch);
+	sn_i2c_write_byte(sn, SN_VFP, (u8)sn->vm.vfront_porch);
 	sn_i2c_write_byte(sn, SN_TEST_PATTERN, 0);
 	return 0;
 }
@@ -284,7 +312,7 @@ static void sn_enable_pll(struct sn65dsi83_priv *sn)
 	msleep(5);
 	sn_i2c_write_byte(sn, SN_SOFT_RESET, 1);
 	sn_enable_irq(sn);
-	dev_info(dev, "%s:reg0a=%02x\n", __func__, sn_i2c_read_byte(sn, SN_CLK_SRC));
+	dev_dbg(dev, "%s:reg0a=%02x\n", __func__, sn_i2c_read_byte(sn, SN_CLK_SRC));
 }
 
 static void sn_disable_pll(struct sn65dsi83_priv *sn)
@@ -301,30 +329,78 @@ static void sn_init(struct sn65dsi83_priv *sn)
 	sn_i2c_write_byte(sn, SN_IRQ_EN, 1);
 }
 
-static void sn_prepare(struct sn65dsi83_priv *sn)
+static void sn_standby(struct sn65dsi83_priv *sn)
 {
-	sn_enable_gp(sn->gp_en);
-	sn_init(sn);
-	if (!sn->chip_enabled) {
-		sn->chip_enabled = 1;
-		enable_irq(sn->client->irq);
+	if (sn->state < SN_STATE_STANDBY) {
+		sn_enable_gp(sn->gp_en);
+		sn_init(sn);
+		if (!sn->chip_enabled) {
+			sn->chip_enabled = 1;
+			enable_irq(sn->client->irq);
+		}
+		sn_setup_regs(sn);
+		sn->state = SN_STATE_STANDBY;
 	}
-	sn_setup_regs(sn);
-	sn_enable_pll(sn);
 }
 
-static void sn_powerup(struct sn65dsi83_priv *sn)
+static void sn_prepare(struct sn65dsi83_priv *sn)
 {
-	mutex_lock(&sn->power_mutex);
-	sn_prepare(sn);
-	mutex_unlock(&sn->power_mutex);
+	if (sn->state < SN_STATE_STANDBY)
+		sn_standby(sn);
+	if (sn->state < SN_STATE_ON) {
+		msleep(2);
+		sn_enable_pll(sn);
+		sn->state = SN_STATE_ON;
+	}
 }
 
 static void sn_powerdown(struct sn65dsi83_priv *sn)
 {
+	dev_dbg(&sn->client->dev, "%s\n", __func__);
+	cancel_delayed_work(&sn->sn_work);
+	if (sn->state) {
+		mutex_lock(&sn->power_mutex);
+		sn_disable_pll(sn);
+		sn_disable(sn);
+		sn->state = SN_STATE_OFF;
+		mutex_unlock(&sn->power_mutex);
+	}
+}
+
+static void sn_powerup_begin(struct sn65dsi83_priv *sn)
+{
+	int ret = sn_check_videomode_change(sn);
+
+	if (ret) {
+		if (ret < 0) {
+			dev_info(&sn->client->dev, "%s: videomode error\n", __func__);
+			return;
+		}
+		sn_powerdown(sn);
+	}
+	dev_dbg(&sn->client->dev, "%s\n", __func__);
 	mutex_lock(&sn->power_mutex);
-	sn_disable_pll(sn);
-	sn_disable(sn);
+	sn_standby(sn);
+	mutex_unlock(&sn->power_mutex);
+	queue_delayed_work(sn->sn_workqueue, &sn->sn_work,
+		msecs_to_jiffies(1000));
+}
+
+static void sn_powerup(struct sn65dsi83_priv *sn)
+{
+	int ret = sn_check_videomode_change(sn);
+
+	cancel_delayed_work(&sn->sn_work);
+	if (ret) {
+		if (ret < 0) {
+			dev_info(&sn->client->dev, "%s: videomode error\n", __func__);
+			return;
+		}
+		sn_powerdown(sn);
+	}
+	dev_dbg(&sn->client->dev, "%s\n", __func__);
+	mutex_lock(&sn->power_mutex);
+	sn_prepare(sn);
 	mutex_unlock(&sn->power_mutex);
 }
 
@@ -503,6 +579,15 @@ static ssize_t sn65dsi83_enable_store(struct device *dev, struct device_attribut
 
 static DEVICE_ATTR(sn65dsi83_enable, 0644, sn65dsi83_enable_show, sn65dsi83_enable_store);
 
+
+static void sn_work_func(struct work_struct *work)
+{
+	struct sn65dsi83_priv *sn = container_of(to_delayed_work(work),
+			struct sn65dsi83_priv, sn_work);
+
+	sn_powerup(sn);
+}
+
 /*
  * I2C init/probing/exit functions
  */
@@ -555,6 +640,14 @@ static int sn65dsi83_probe(struct i2c_client *client,
 	sn->client = client;
 	sn->gp_en = gp_en;
 	mutex_init(&sn->power_mutex);
+
+	INIT_DELAYED_WORK(&sn->sn_work, sn_work_func);
+	sn->sn_workqueue = create_workqueue("sn65dsi83_wq");
+	if (!sn->sn_workqueue) {
+		pr_err("Failed to create sn work queue");
+		return -ENOMEM;
+	}
+
 	sn_init(sn);
 
 	sn->disp_dsi = of_parse_phandle(np, "display-dsi", 0);
@@ -606,7 +699,7 @@ static int sn65dsi83_probe(struct i2c_client *client,
 	if (ret < 0)
 		pr_warn("failed to add sn65dsi83 sysfs files\n");
 
-	sn_powerup(sn);
+	sn_powerup_begin(sn);
 	dev_info(&client->dev, "succeeded\n");
 	return 0;
 }
@@ -615,6 +708,8 @@ static int sn65dsi83_remove(struct i2c_client *client)
 {
 	struct sn65dsi83_priv *sn = i2c_get_clientdata(client);
 
+	cancel_delayed_work_sync(&sn->sn_work);
+	destroy_workqueue(sn->sn_workqueue);
 	device_remove_file(&client->dev, &dev_attr_sn65dsi83_reg);
 	device_remove_file(&client->dev, &dev_attr_sn65dsi83_enable);
 	fb_unregister_client(&sn->fbnb);
