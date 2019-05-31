@@ -1468,13 +1468,14 @@ static int osd_open(struct fb_info *info, int arg)
 	if ((osd_meson_dev.has_viu2)
 		&& (fb_index == osd_meson_dev.viu2_index)) {
 		int vpu_clkc_rate;
-
-		/* select mux0, if select mux1, mux0 must be set */
-		clk_prepare_enable(osd_meson_dev.vpu_clkc);
-		clk_set_rate(osd_meson_dev.vpu_clkc, CUR_VPU_CLKC_CLK);
-		vpu_clkc_rate = clk_get_rate(osd_meson_dev.vpu_clkc);
-		osd_log_info("vpu clkc clock is %d MHZ\n",
-			vpu_clkc_rate/1000000);
+		if (osd_get_logo_index() != LOGO_DEV_VIU2_OSD0) {
+			/* select mux0, if select mux1, mux0 must be set */
+			clk_prepare_enable(osd_meson_dev.vpu_clkc);
+			clk_set_rate(osd_meson_dev.vpu_clkc, CUR_VPU_CLKC_CLK);
+			vpu_clkc_rate = clk_get_rate(osd_meson_dev.vpu_clkc);
+			osd_log_info("vpu clkc clock is %d MHZ\n",
+				vpu_clkc_rate/1000000);
+		}
 		osd_init_viu2();
 	}
 	if (osd_meson_dev.osd_count <= fb_index)

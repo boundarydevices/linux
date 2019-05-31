@@ -9453,78 +9453,71 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 void osd_init_viu2(void)
 {
 	u32 idx, data32;
-	struct vinfo_s *vinfo;
 
-	set_viu2_rgb2yuv(1);
-
-	osd_vpu_power_on_viu2();
-
-	/* here we will init default value ,these value only set once . */
-	/* init vpu fifo control register */
-	osd_reg_write(VPP2_OFIFO_SIZE, 0x7ff00800);
-	/* init osd fifo control register
-	 * set DDR request priority to be urgent
-	 */
-	data32 = 1;
-	vinfo = get_current_vinfo2();
-
-	data32 |= VIU2_DEFAULT_HOLD_LINE << 5;  /* hold_fifo_lines */
-	/* burst_len_sel: 3=64, g12a = 5 */
-	if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
-		data32 |= 1 << 10;
-		data32 |= 1 << 31;
-	} else
-		data32 |= 3 << 10;
-	/*
-	 * bit 23:22, fifo_ctrl
-	 * 00 : for 1 word in 1 burst
-	 * 01 : for 2 words in 1 burst
-	 * 10 : for 4 words in 1 burst
-	 * 11 : reserved
-	 */
-	data32 |= 2 << 22;
-	/* bit 28:24, fifo_lim */
-	data32 |= 2 << 24;
-	/* data32_ = data32; */
-	/* fifo_depth_val: 32 or 64 *8 = 256 or 512 */
-	data32 |= (osd_hw.osd_meson_dev.osd_fifo_len
-		& 0xfffffff) << 12;
 	idx = osd_hw.osd_meson_dev.viu2_index;
-	osd_reg_write(
-		hw_osd_reg_array[idx].osd_fifo_ctrl_stat, data32);
-	/* osd_reg_write(VIU_OSD2_FIFO_CTRL_STAT, data32_); */
-	/* just disable osd to avoid booting hang up */
-	data32 = 0x1 << 0;
-	data32 |= OSD_GLOBAL_ALPHA_DEF << 12;
-	osd_reg_write(
-		hw_osd_reg_array[idx].osd_ctrl_stat, data32);
-	/* TODO: temp set at here, need move it to uboot */
-	osd_reg_set_bits(
-		hw_osd_reg_array[idx].osd_fifo_ctrl_stat,
-		1, 31, 1);
-	osd_reg_set_bits(
-		hw_osd_reg_array[idx].osd_fifo_ctrl_stat,
-		1, 10, 2);
-	/* TODO: temp set at here, need check for logo */
-	if (idx > 0)
+	if (osd_get_logo_index() != LOGO_DEV_VIU2_OSD0) {
+		set_viu2_rgb2yuv(1);
+		osd_vpu_power_on_viu2();
+
+		/* here we will init default value, these value only set once */
+		/* init vpu fifo control register */
+		osd_reg_write(VPP2_OFIFO_SIZE, 0x7ff00800);
+		/* init osd fifo control register
+		 * set DDR request priority to be urgent
+		 */
+
+		data32 = 0x1 << 0;
+		data32 |= OSD_GLOBAL_ALPHA_DEF << 12;
+		osd_reg_write(
+			hw_osd_reg_array[idx].osd_ctrl_stat, data32);
+
 		osd_reg_set_bits(
-			hw_osd_reg_array[idx].osd_ctrl_stat,
-			0, 0, 1);
+			hw_osd_reg_array[idx].osd_fifo_ctrl_stat,
+			1, 31, 1);
+		osd_reg_set_bits(
+			hw_osd_reg_array[idx].osd_fifo_ctrl_stat,
+			1, 10, 2);
+
+		data32 = 0;
+		data32 = osd_reg_read(
+			hw_osd_reg_array[idx].osd_ctrl_stat);
+		data32 |= 0x80000000;
+		osd_reg_write(
+			hw_osd_reg_array[idx].osd_ctrl_stat, data32);
+
+		data32 = 1;
+		data32 |= VIU2_DEFAULT_HOLD_LINE << 5;  /* hold_fifo_lines */
+		/* burst_len_sel: 3=64, g12a = 5 */
+		if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
+			data32 |= 1 << 10;
+			data32 |= 1 << 31;
+		} else
+			data32 |= 3 << 10;
+		/*
+		 * bit 23:22, fifo_ctrl
+		 * 00 : for 1 word in 1 burst
+		 * 01 : for 2 words in 1 burst
+		 * 10 : for 4 words in 1 burst
+		 * 11 : reserved
+		 */
+		data32 |= 2 << 22;
+		/* bit 28:24, fifo_lim */
+		data32 |= 2 << 24;
+		/* data32_ = data32; */
+		/* fifo_depth_val: 32 or 64 *8 = 256 or 512 */
+		data32 |= (osd_hw.osd_meson_dev.osd_fifo_len
+			& 0xfffffff) << 12;
+		osd_reg_write(
+			hw_osd_reg_array[idx].osd_fifo_ctrl_stat, data32);
+	}
+
 	/* enable for latch */
 	osd_hw.osd_use_latch[idx] = 1;
-	data32 = 0;
-	data32 = osd_reg_read(
-		hw_osd_reg_array[idx].osd_ctrl_stat);
-	data32 |= 0x80000000;
-	osd_reg_write(
-		hw_osd_reg_array[idx].osd_ctrl_stat, data32);
-
 	/* init osd reverse */
 	osd_get_reverse_hw(idx, &data32);
 	if (data32)
 		osd_set_reverse_hw(idx, data32, 1);
 	osd_hw.powered[idx] = 1;
-
 }
 
 void osd_cursor_hw(u32 index, s16 x, s16 y, s16 xstart, s16 ystart, u32 osd_w,

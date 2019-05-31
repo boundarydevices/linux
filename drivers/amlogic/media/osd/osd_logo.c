@@ -30,15 +30,11 @@
 /* Local Headers */
 #include "osd_hw.h"
 #include "osd_log.h"
+#include "osd.h"
 
 
 #undef pr_fmt
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
-
-#define LOGO_DEV_OSD0 0x0
-#define LOGO_DEV_OSD1 0x1
-#define LOGO_DEBUG    0x1001
-#define LOGO_LOADED   0x1002
 
 static DEFINE_MUTEX(logo_lock);
 
@@ -51,6 +47,7 @@ struct para_pair_s {
 static struct para_pair_s logo_args[] = {
 	{"osd0", LOGO_DEV_OSD0},
 	{"osd1", LOGO_DEV_OSD1},
+	{"viu2_osd0", LOGO_DEV_VIU2_OSD0},
 	{"debug", LOGO_DEBUG},
 	{"loaded", LOGO_LOADED},
 };
@@ -102,6 +99,9 @@ static int logo_info_init(char *para)
 		case LOGO_DEV_OSD1:
 			logo_info.index = LOGO_DEV_OSD1;
 			break;
+		case LOGO_DEV_VIU2_OSD0:
+			logo_info.index = LOGO_DEV_VIU2_OSD0;
+			break;
 		case LOGO_DEBUG:
 			logo_info.debug = 1;
 			break;
@@ -138,7 +138,8 @@ static int __init logo_setup(char *str)
 		return -EINVAL;
 
 	do {
-		if (!isalpha(*ptr) && !isdigit(*ptr)) {
+		/* search for a delimiter */
+		if (!isalpha(*ptr) && !isdigit(*ptr) && (*ptr != '_')) {
 			find = 1;
 			break;
 		}
