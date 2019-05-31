@@ -266,6 +266,18 @@ static int set_vout2_init_mode(void)
 	else
 		vmode = vout2_init_vmode;
 
+	if ((vmode & VMODE_MODE_BIT_MASK) < VMODE_NULL) {
+		if (IS_ERR_OR_NULL(vpu_clkc))
+			VOUTERR("vout2: vpu_clkc\n");
+		else {
+			if (vpu_clkc_state == 0) {
+				VOUTPR("vout2: enable vpu_clkc\n");
+				clk_prepare_enable(vpu_clkc);
+				vpu_clkc_state = 1;
+			}
+		}
+	}
+
 	memset(local_name, 0, sizeof(local_name));
 	snprintf(local_name, VMODE_NAME_LEN_MAX, "%s", init_mode_str);
 	ret = set_current_vmode2(vmode);
