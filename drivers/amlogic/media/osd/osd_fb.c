@@ -3336,6 +3336,33 @@ static ssize_t store_osd_hold_line(
 	return count;
 }
 
+static ssize_t show_osd_blend_bypass(
+	struct device *device, struct device_attribute *attr,
+	char *buf)
+{
+	int  blend_bypass;
+
+	blend_bypass = osd_get_blend_bypass();
+
+	return snprintf(buf, PAGE_SIZE, "0x%x\n", blend_bypass);
+}
+
+static ssize_t store_osd_blend_bypass(
+	struct device *device, struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	struct fb_info *fb_info = dev_get_drvdata(device);
+	int blend_bypass;
+	int ret = 0;
+
+	ret = kstrtoint(buf, 0, &blend_bypass);
+	if (ret < 0)
+		return -EINVAL;
+
+	osd_set_blend_bypass(fb_info->node, blend_bypass);
+	return count;
+}
+
 
 static inline  int str2lower(char *str)
 {
@@ -3551,7 +3578,8 @@ static struct device_attribute osd_attrs[] = {
 			show_osd_line_n_rdma, store_osd_line_n_rdma),
 	__ATTR(osd_hold_line, 0644,
 			show_osd_hold_line, store_osd_hold_line),
-
+	__ATTR(osd_blend_bypass, 0644,
+			show_osd_blend_bypass, store_osd_blend_bypass),
 };
 
 static struct device_attribute osd_attrs_viu2[] = {

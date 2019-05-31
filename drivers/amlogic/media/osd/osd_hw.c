@@ -2391,6 +2391,26 @@ u32 osd_get_line_n_rdma(void)
 	return osd_hw.line_n_rdma;
 }
 
+void osd_set_blend_bypass(int index, u32 blend_bypass)
+{
+	if (blend_bypass != osd_hw.blend_bypass) {
+		osd_hw.blend_bypass = blend_bypass;
+		if (blend_bypass) {
+			VSYNCOSD_WR_MPEG_REG_BITS
+				(hw_osd_reg_array[index].osd_mali_unpack_ctrl,
+				0x0, 28, 1);
+			VSYNCOSD_WR_MPEG_REG_BITS
+				(VIU_OSD_BLEND_CTRL,
+				0x1, 26, 1);
+		}
+	}
+}
+
+u32 osd_get_blend_bypass(void)
+{
+	return osd_hw.blend_bypass;
+}
+
 void osd_set_color_key_hw(u32 index, u32 color_index, u32 colorkey)
 {
 	u8 r = 0, g = 0, b = 0, a = (colorkey & 0xff000000) >> 24;
@@ -6673,10 +6693,13 @@ static void osd_set_freescale(u32 index,
 		osd_log_err("error osd index=%d\n", index);
 		return;
 	}
-	osd_hw.free_scale_enable[index] = 0x10001;
-	osd_hw.free_scale[index].h_enable = 1;
-	osd_hw.free_scale[index].v_enable = 1;
-	osd_hw.free_scale_mode[index] = 1;
+	if (!(osd_hw.osd_display_debug &&
+		!osd_hw.free_scale_enable[index])) {
+		osd_hw.free_scale_enable[index] = 0x10001;
+		osd_hw.free_scale[index].h_enable = 1;
+		osd_hw.free_scale[index].v_enable = 1;
+		osd_hw.free_scale_mode[index] = 1;
+	}
 	output_index = get_output_device_id(index);
 
 	if (index == OSD1) {
@@ -8030,7 +8053,8 @@ static void set_blend_reg(struct layer_blend_reg_s *blend_reg)
 	/* osd0 scale position before osd blend */
 	if (osd_hw.osd_meson_dev.osd0_sc_independ)
 		VSYNCOSD_WR_MPEG_REG(VPP_OSD_SCALE_CTRL, 0x01);
-
+	if (osd_hw.blend_bypass)
+		blend_reg->din0_byp_blend = 1;
 	/* osd blend ctrl */
 	VSYNCOSD_WR_MPEG_REG(VIU_OSD_BLEND_CTRL,
 		4				  << 29|
@@ -8299,7 +8323,7 @@ static int osd_setting_order(u32 output_index)
 				osd_hw.reg[DISP_FREESCALE_ENABLE]
 				.update_func(i);
 			}
-			if (osd_hw.premult_en[i])
+			if (osd_hw.premult_en[i] && !osd_hw.blend_bypass)
 				VSYNCOSD_WR_MPEG_REG_BITS(
 				osd_reg->osd_mali_unpack_ctrl, 0x1, 28, 1);
 			else

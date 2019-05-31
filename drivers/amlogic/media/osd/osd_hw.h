@@ -225,4 +225,6 @@ void  osd_set_line_n_rdma(u32 line_n_rdma);
 u32 get_output_device_id(u32 index);
 void osd_set_hold_line(u32 index, int hold_line);
 u32 osd_get_hold_line(u32 index);
+void osd_set_blend_bypass(int index, u32 blend_bypass);
+u32 osd_get_blend_bypass(void);
 #endif
