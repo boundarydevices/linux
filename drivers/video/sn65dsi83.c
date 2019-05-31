@@ -84,6 +84,7 @@ struct sn65dsi83_priv
 	struct device_node	*disp_dsi;
 	struct gpio_desc	*gp_en;
 	struct clk		*mipi_clk;
+	struct clk		*pixel_clk;
 	struct mutex		power_mutex;
 	struct notifier_block	fbnb;
 	struct notifier_block	drmnb;
@@ -185,7 +186,7 @@ static int sn_get_dsi_clk_divider(struct sn65dsi83_priv *sn)
 		mipi_clk_rate = 500000000;
 	}
 	if (pixelclock)
-		dsi_clk_divider = mipi_clk_rate / pixelclock;
+		dsi_clk_divider = (mipi_clk_rate +  (pixelclock >> 1)) / pixelclock;
 
 	if (dsi_clk_divider > 25)
 		dsi_clk_divider = 25;
@@ -209,13 +210,21 @@ static int sn_get_dsi_clk_divider(struct sn65dsi83_priv *sn)
 static int sn_check_videomode_change(struct sn65dsi83_priv *sn)
 {
 	struct videomode vm;
+	u32 pixelclock;
 	int ret;
 
 	ret = of_get_videomode(sn->disp_dsi, &vm, 0);
 	if (ret < 0)
 		return ret;
 
-	if (sn->vm.hactive != vm.hactive ||
+	if (!IS_ERR(sn->pixel_clk)) {
+		pixelclock = clk_get_rate(sn->pixel_clk);
+		if (pixelclock)
+			vm.pixelclock = pixelclock;
+	}
+
+	if (sn->vm.pixelclock != vm.pixelclock ||
+	    sn->vm.hactive != vm.hactive ||
 	    sn->vm.hsync_len != vm.hsync_len ||
 	    sn->vm.hback_porch != vm.hback_porch ||
 	    sn->vm.hfront_porch != vm.hfront_porch ||
@@ -679,6 +688,8 @@ static int sn65dsi83_probe(struct i2c_client *client,
 	sn->mipi_clk = devm_clk_get(&client->dev, "mipi_clk");
 	if (IS_ERR(sn->mipi_clk))
 		return PTR_ERR(sn->mipi_clk);
+
+	sn->pixel_clk = devm_clk_get(&client->dev, "pixel_clock");
 
 	ret = devm_request_threaded_irq(&client->dev, client->irq,
 			NULL, sn_irq_handler,
