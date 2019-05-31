@@ -835,8 +835,9 @@
 	status = "okay";
 
 	mipi_to_lvds: mipi-to-lvds@2c {
-		clocks = <&mipi_dsi 0>;
-		clock-names = "mipi_clk";
+		clocks = <&mipi_dsi 0>,
+			<&clk IMX8MM_CLK_LCDIF_PIXEL_DIV>;
+		clock-names = "mipi_clk", "pixel_clock";
 		compatible = "ti,sn65dsi83";
 		display = <&display_subsystem>;
 		display-dsi = <&fb_mipi>;
