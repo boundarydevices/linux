@@ -1945,12 +1945,9 @@ static irqreturn_t udc_irq(struct ci_hdrc *ci)
 	if (ci == NULL)
 		return IRQ_HANDLED;
 
-	spin_lock(&ci->lock);
-
 	if (ci->platdata->flags & CI_HDRC_REGS_SHARED) {
 		if (hw_read(ci, OP_USBMODE, USBMODE_CM) !=
 				USBMODE_CM_DC) {
-			spin_unlock(&ci->lock);
 			return IRQ_NONE;
 		}
 	}
@@ -1998,7 +1995,6 @@ static irqreturn_t udc_irq(struct ci_hdrc *ci)
 	} else {
 		retval = IRQ_NONE;
 	}
-	spin_unlock(&ci->lock);
 
 	return retval;
 }
