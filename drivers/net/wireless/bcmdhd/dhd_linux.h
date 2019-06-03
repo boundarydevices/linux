@@ -64,7 +64,7 @@ enum wifi_adapter_status {
 #define wifi_clr_adapter_status(adapter, stat) (clear_bit(stat, &(adapter)->status))
 #define wifi_chg_adapter_status(adapter, stat) (change_bit(stat, &(adapter)->status))
 
-#define DHD_REGISTRATION_TIMEOUT  12000  /* msec : allowed time to finished dhd registration */
+#define DHD_REGISTRATION_TIMEOUT  1000  /* msec : allowed time to finished dhd registration */
 #define DHD_FW_READY_TIMEOUT  5000  /* msec : allowed time to finished fw download */
 
 typedef struct wifi_adapter_info {
