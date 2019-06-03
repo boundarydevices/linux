@@ -14858,3 +14858,10 @@ F:	arch/arm64/boot/dts/amlogic/sm1_s905d3_ac202*
 AMLOGIC HYN_CST2XX TOUCHSCREEN
 M:	XINLIANG ZHANG <xinliang.zhang@amlogic.com>
 F:	drivers/amlogic/input/touchscreen/hyn_cst2xx/*
+
+AMLOGIC GXL P281 DTS
+M:  Luan Yuan <luan.yuan@amlogic.com>
+F:  arch/arm/boot/dts/amlogic/gxl_p281_1g.dts
+F:  arch/arm/boot/dts/amlogic/gxl_p281_2g.dts
+F:  arch/arm64/boot/dts/amlogic/gxl_p281_1g.dts
+F:  arch/arm64/boot/dts/amlogic/gxl_p281_2g.dts
