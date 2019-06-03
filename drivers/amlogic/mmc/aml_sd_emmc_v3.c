@@ -241,7 +241,7 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 					host->mux_parent[0]);
 			if (ret)
 				pr_warn("set comp0 as mux_clk parent error\n");
-		} else if (((host->data->chip_type >= MMC_CHIP_TL1)
+/*		} else if (((host->data->chip_type >= MMC_CHIP_TL1)
 				|| (host->data->chip_type == MMC_CHIP_G12B))
 				&& (clk_ios >= 166000000)) {
 			src0_clk = devm_clk_get(host->dev, "clkin2");
@@ -263,6 +263,7 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 					host->mux_parent[0]);
 			if (ret)
 				pr_warn("set comp0 as mux_clk parent error\n");
+*/
 		} else if (clk_get_rate(host->mux_parent[0]) > 200000000) {
 			pr_info("%s %d\n", __func__, __LINE__);
 			src0_clk = devm_clk_get(host->dev, "xtal");
@@ -505,7 +506,6 @@ void meson_mmc_set_ios_v3(struct mmc_host *mmc,
 			&& (host->init_volt == 0))
 		complete(&host->drv_completion);
 }
-
 
 irqreturn_t meson_mmc_irq_thread_v3(int irq, void *dev_id)
 {
