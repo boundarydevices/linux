@@ -803,6 +803,7 @@ void tsync_avevent_locked(enum avevent_e event, u32 param)
 	case VIDEO_STOP:
 		tsync_stat = TSYNC_STAT_PCRSCR_SETUP_NONE;
 		timestamp_vpts_set(0);
+		timestamp_pcrscr_set(0);
 		timestamp_pcrscr_enable(0);
 		timestamp_firstvpts_set(0);
 		tsync_video_started = 0;
