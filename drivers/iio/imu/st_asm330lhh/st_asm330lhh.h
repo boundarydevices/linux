@@ -134,15 +134,7 @@ enum st_asm330lhh_sensor_id {
 #ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
 	ST_ASM330LHH_ID_TEMP,
 #endif /* CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE */
-	ST_ASM330LHH_ID_MAX,
-};
-
-static const enum st_asm330lhh_sensor_id st_asm330lhh_main_sensor_list[] = {
-	 [0] = ST_ASM330LHH_ID_GYRO,
-	 [1] = ST_ASM330LHH_ID_ACC,
-#ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
-	 [2] = ST_ASM330LHH_ID_TEMP,
-#endif /* CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE */
+	ST_ASM330LHH_ID_MAX
 };
 
 enum st_asm330lhh_fifo_mode {
@@ -159,7 +151,6 @@ enum {
  * struct st_asm330lhh_sensor - ST IMU sensor instance
  * @id: Sensor identifier.
  * @hw: Pointer to instance of struct st_asm330lhh_hw.
- * @trig: Sensor iio trigger.
  * @gain: Configured sensor sensitivity.
  * @odr: Output data rate of the sensor [Hz].
  * @std_samples: Counter of samples to discard during sensor bootstrap.
@@ -173,8 +164,6 @@ struct st_asm330lhh_sensor {
 	enum st_asm330lhh_sensor_id id;
 	struct st_asm330lhh_hw *hw;
 
-	struct iio_trigger *trig;
-
 	u32 gain;
 	u16 odr;
 	u32 offset;
@@ -182,9 +171,6 @@ struct st_asm330lhh_sensor {
 #ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
 	__le16 old_data;
 #endif /* CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE */
-
-	u8 std_samples;
-	u8 std_level;
 
 	u16 max_watermark;
 	u16 watermark;
@@ -316,4 +302,5 @@ int st_asm330lhh_set_fifo_mode(struct st_asm330lhh_hw *hw,
 			     enum st_asm330lhh_fifo_mode fifo_mode);
 int __st_asm330lhh_set_sensor_batching_odr(struct st_asm330lhh_sensor *sensor,
 					 bool enable);
+int st_asm330lhh_update_batching(struct iio_dev *iio_dev, bool enable);
 #endif /* ST_ASM330LHH_H */

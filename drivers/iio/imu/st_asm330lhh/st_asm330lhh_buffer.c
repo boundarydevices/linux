@@ -15,9 +15,6 @@
 #include <linux/iio/events.h>
 #include <linux/iio/buffer.h>
 #include <asm/unaligned.h>
-#include <linux/iio/trigger_consumer.h>
-#include <linux/iio/triggered_buffer.h>
-#include <linux/iio/trigger.h>
 #include <linux/iio/buffer.h>
 #include "st_asm330lhh.h"
 
@@ -37,6 +34,8 @@
 #define ST_ASM330LHH_REG_TIMESTAMP2_ADDR	0x42
 #define ST_ASM330LHH_REG_FIFO_DATA_OUT_TAG_ADDR	0x78
 
+#define ST_ASM330LHH_SAMPLE_DISCHARD		0x7ffd
+
 /* Timestamp Tick 25us/LSB */
 #define ST_ASM330LHH_TS_DELTA_NS		25000ULL
 
@@ -48,6 +47,8 @@ enum {
 #endif /* CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE */
 	ST_ASM330LHH_TS_TAG = 0x04,
 };
+
+static bool delayed_enable_gyro;
 
 static inline s64 st_asm330lhh_get_time_ns(void)
 {
@@ -234,7 +235,6 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 	s64 ts_delta_hw_ts = 0;
 	s64 ts_irq;
 	int i, err, read_len = 0, word_len, fifo_len;
-	struct st_asm330lhh_sensor *sensor;
 	struct iio_dev *iio_dev;
 	__le16 fifo_status;
 	u16 fifo_depth;
@@ -242,6 +242,14 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 	int ts_processed = 0;
 	s64 hw_ts = 0ull;
 	s64 delta_hw_ts, cpu_timestamp;
+	__le16 usample[3];
+	int16_t isample[3];
+
+	/* Return if FIFO is already disabled. */
+	if (hw->fifo_mode == ST_ASM330LHH_FIFO_BYPASS) {
+		dev_warn(hw->dev, "%s: FIFO in bypass mode\n", __func__);
+		return 0;
+	}
 
 	ts_irq = hw->ts - hw->delta_ts;
 
@@ -296,9 +304,14 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 				if (!iio_dev)
 					continue;
 
-				sensor = iio_priv(iio_dev);
-				if (sensor->std_samples < sensor->std_level) {
-					sensor->std_samples++;
+				/* Skip samples if not ready */
+				memcpy(usample, ptr, ST_ASM330LHH_SAMPLE_SIZE);
+				isample[0] = le16_to_cpu(usample[0]);
+				isample[1] = le16_to_cpu(usample[1]);
+				isample[2] = le16_to_cpu(usample[2]);
+				if (isample[0] >= ST_ASM330LHH_SAMPLE_DISCHARD &&
+				    isample[1] >= ST_ASM330LHH_SAMPLE_DISCHARD &&
+				    isample[2] >= ST_ASM330LHH_SAMPLE_DISCHARD) {
 					continue;
 				}
 
@@ -420,11 +433,41 @@ int st_asm330lhh_suspend_fifo(struct st_asm330lhh_hw *hw)
 	return err;
 }
 
+int st_asm330lhh_update_batching(struct iio_dev *iio_dev, bool enable)
+{
+	struct st_asm330lhh_sensor *sensor = iio_priv(iio_dev);
+	struct st_asm330lhh_hw *hw = sensor->hw;
+	int err;
+
+	disable_irq(hw->irq);
+
+	err = st_asm330lhh_set_sensor_batching_odr(sensor, enable);
+	if (err < 0)
+		goto out;
+
+
+	/* Calc TS ODR */
+	hw->odr = st_asm330lhh_ts_odr(hw);
+
+out:
+	enable_irq(hw->irq);
+
+	return err;
+}
+
 static int st_asm330lhh_update_fifo(struct iio_dev *iio_dev, bool enable)
 {
 	struct st_asm330lhh_sensor *sensor = iio_priv(iio_dev);
 	struct st_asm330lhh_hw *hw = sensor->hw;
 	int err;
+
+	if (sensor->id == ST_ASM330LHH_ID_GYRO && !enable)
+		delayed_enable_gyro = true;
+
+	if (sensor->id == ST_ASM330LHH_ID_GYRO && enable && delayed_enable_gyro) {
+		msleep(10);
+		delayed_enable_gyro = false;
+	}
 
 	disable_irq(hw->irq);
 
@@ -542,6 +585,8 @@ int st_asm330lhh_buffers_setup(struct st_asm330lhh_hw *hw)
 	int i, err;
 
 	irq_type = irqd_get_trigger_type(irq_get_irq_data(hw->irq));
+	if (irq_type == IRQF_TRIGGER_NONE)
+		irq_type = IRQF_TRIGGER_FALLING;
 
 	switch (irq_type) {
 	case IRQF_TRIGGER_HIGH:
