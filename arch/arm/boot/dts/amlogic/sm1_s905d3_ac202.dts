@@ -1195,7 +1195,6 @@
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_B
 				&clkc CLKID_MPLL1>;
 		clock-names = "mclk", "clk_srcpll";
-		lb-src-sel = <1>;
 
 		/*
 		 * select tdmin_lb src;
