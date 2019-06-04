@@ -61,6 +61,16 @@ extern enum platform_type_t get_platform_type(void);
 
 extern u32 timestamp_pcrscr_enable_state(void);
 
+enum ppmgr_source_type {
+	DECODER_8BIT_NORMAL = 0,
+	DECODER_8BIT_BOTTOM,
+	DECODER_8BIT_TOP,
+	DECODER_10BIT_NORMAL,
+	DECODER_10BIT_BOTTOM,
+	DECODER_10BIT_TOP,
+	VDIN_8BIT_NORMAL,
+	VDIN_10BIT_NORMAL,
+};
 
 
 #endif

@@ -328,64 +328,141 @@ int vf_ppmgr_get_states(struct vframe_states *states)
 	return ret;
 }
 
-static int get_input_format(struct vframe_s *vf)
+static int get_source_type(struct vframe_s *vf)
 {
-	int format = GE2D_FORMAT_M24_YUV420;
+	enum ppmgr_source_type ret;
 	int interlace_mode;
 
 	interlace_mode = vf->type & VIDTYPE_TYPEMASK;
-	if (vf->type & VIDTYPE_VIU_422) {
-#if 0
-		if (vf->type & VIDTYPE_INTERLACE_BOTTOM)
-			format =
-					GE2D_FORMAT_S16_YUV422|
-					(GE2D_FORMAT_S16_YUV422B & (3<<3));
-
-		else if (vf->type & VIDTYPE_INTERLACE_TOP)
-			format =
-				GE2D_FORMAT_S16_YUV422|
-				(GE2D_FORMAT_S16_YUV422T & (3<<3));
-
+	if ((vf->source_type == VFRAME_SOURCE_TYPE_HDMI)
+		|| (vf->source_type == VFRAME_SOURCE_TYPE_CVBS)) {
+		if ((vf->bitdepth & BITDEPTH_Y10)
+			&& (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXL))
+			ret = VDIN_10BIT_NORMAL;
 		else
-			format = GE2D_FORMAT_S16_YUV422;
-
-#else
-		if (interlace_mode == VIDTYPE_INTERLACE_BOTTOM) {
-			format = GE2D_FORMAT_S16_YUV422;
-		} else if (interlace_mode == VIDTYPE_INTERLACE_TOP) {
-			format = GE2D_FORMAT_S16_YUV422;
-		} else {
-			format = GE2D_FORMAT_S16_YUV422
-					| (GE2D_FORMAT_S16_YUV422T & (3 << 3));
-		}
-#endif
-
-	} else if (vf->type & VIDTYPE_VIU_NV21) {
-		if (vf->type & VIDTYPE_INTERLACE_BOTTOM) {
-			format =
-					GE2D_FORMAT_M24_NV21 |
-					(GE2D_FORMAT_M24_NV21B & (3 << 3));
-		} else if (vf->type & VIDTYPE_INTERLACE_TOP) {
-			format =
-				GE2D_FORMAT_M24_NV21
-				| (GE2D_FORMAT_M24_NV21T & (3 << 3));
-		} else {
-			format = GE2D_FORMAT_M24_NV21;
-		}
+			ret = VDIN_8BIT_NORMAL;
 	} else {
-		if (vf->type & VIDTYPE_INTERLACE_BOTTOM) {
+		if ((vf->bitdepth & BITDEPTH_Y10)
+			&& (get_cpu_type() >= MESON_CPU_MAJOR_ID_TXL)) {
+			if (interlace_mode == VIDTYPE_INTERLACE_TOP)
+				ret = DECODER_10BIT_TOP;
+			else if (interlace_mode == VIDTYPE_INTERLACE_BOTTOM)
+				ret = DECODER_10BIT_BOTTOM;
+			else
+				ret = DECODER_10BIT_NORMAL;
+		} else {
+			if (interlace_mode == VIDTYPE_INTERLACE_TOP)
+				ret = DECODER_8BIT_TOP;
+			else if (interlace_mode == VIDTYPE_INTERLACE_BOTTOM)
+				ret = DECODER_8BIT_BOTTOM;
+			else
+				ret = DECODER_8BIT_NORMAL;
+		}
+	}
+	return ret;
+}
+
+static int get_input_format(struct vframe_s *vf)
+{
+	int format = GE2D_FORMAT_M24_YUV420;
+	enum ppmgr_source_type soure_type;
+
+	soure_type = get_source_type(vf);
+	switch (soure_type) {
+	case DECODER_8BIT_NORMAL:
+		if (vf->type & VIDTYPE_VIU_422)
+			format = GE2D_FORMAT_S16_YUV422;
+		else if (vf->type & VIDTYPE_VIU_NV21)
+			format = GE2D_FORMAT_M24_NV21;
+		else if (vf->type & VIDTYPE_VIU_444)
+			format = GE2D_FORMAT_S24_YUV444;
+		else
+			format = GE2D_FORMAT_M24_YUV420;
+		break;
+	case DECODER_8BIT_BOTTOM:
+		if (vf->type & VIDTYPE_VIU_422)
+			format = GE2D_FORMAT_S16_YUV422
+				| (GE2D_FORMAT_S16_YUV422B & (3 << 3));
+		else if (vf->type & VIDTYPE_VIU_NV21)
+			format = GE2D_FORMAT_M24_NV21
+				| (GE2D_FORMAT_M24_NV21B & (3 << 3));
+		else if (vf->type & VIDTYPE_VIU_444)
+			format = GE2D_FORMAT_S24_YUV444
+				| (GE2D_FORMAT_S24_YUV444B & (3 << 3));
+		else
 			format = GE2D_FORMAT_M24_YUV420
 				| (GE2D_FMT_M24_YUV420B & (3 << 3));
-
-		} else if (vf->type & VIDTYPE_INTERLACE_TOP) {
+		break;
+	case DECODER_8BIT_TOP:
+		if (vf->type & VIDTYPE_VIU_422)
+			format = GE2D_FORMAT_S16_YUV422
+				| (GE2D_FORMAT_S16_YUV422T & (3 << 3));
+		else if (vf->type & VIDTYPE_VIU_NV21)
+			format = GE2D_FORMAT_M24_NV21
+				| (GE2D_FORMAT_M24_NV21T & (3 << 3));
+		else if (vf->type & VIDTYPE_VIU_444)
+			format = GE2D_FORMAT_S24_YUV444
+				| (GE2D_FORMAT_S24_YUV444T & (3 << 3));
+		else
 			format = GE2D_FORMAT_M24_YUV420
-					| (GE2D_FORMAT_M24_YUV420T & (3 << 3));
-		} else {
-			format = GE2D_FORMAT_M24_YUV420;
+				| (GE2D_FMT_M24_YUV420T & (3 << 3));
+		break;
+	case DECODER_10BIT_NORMAL:
+		if (vf->type & VIDTYPE_VIU_422) {
+			if (vf->bitdepth & FULL_PACK_422_MODE)
+				format = GE2D_FORMAT_S16_10BIT_YUV422;
+			else
+				format = GE2D_FORMAT_S16_12BIT_YUV422;
 		}
+		break;
+	case DECODER_10BIT_BOTTOM:
+		if (vf->type & VIDTYPE_VIU_422) {
+			if (vf->bitdepth & FULL_PACK_422_MODE)
+				format = GE2D_FORMAT_S16_10BIT_YUV422
+					| (GE2D_FORMAT_S16_10BIT_YUV422B
+					& (3 << 3));
+			else
+				format = GE2D_FORMAT_S16_12BIT_YUV422
+					| (GE2D_FORMAT_S16_12BIT_YUV422B
+					& (3 << 3));
+		}
+		break;
+	case DECODER_10BIT_TOP:
+		if (vf->type & VIDTYPE_VIU_422) {
+			if (vf->bitdepth & FULL_PACK_422_MODE)
+				format = GE2D_FORMAT_S16_10BIT_YUV422
+					| (GE2D_FORMAT_S16_10BIT_YUV422T
+					& (3 << 3));
+			else
+				format = GE2D_FORMAT_S16_12BIT_YUV422
+					| (GE2D_FORMAT_S16_12BIT_YUV422T
+					& (3 << 3));
+		}
+		break;
+	case VDIN_8BIT_NORMAL:
+		if (vf->type & VIDTYPE_VIU_422)
+			format = GE2D_FORMAT_S16_YUV422;
+		else if (vf->type & VIDTYPE_VIU_NV21)
+			format = GE2D_FORMAT_M24_NV21;
+		else if (vf->type & VIDTYPE_VIU_444)
+			format = GE2D_FORMAT_S24_YUV444;
+		else
+			format = GE2D_FORMAT_M24_YUV420;
+		break;
+	case VDIN_10BIT_NORMAL:
+		if (vf->type & VIDTYPE_VIU_422) {
+			if (vf->bitdepth & FULL_PACK_422_MODE)
+				format = GE2D_FORMAT_S16_10BIT_YUV422;
+			else
+				format = GE2D_FORMAT_S16_12BIT_YUV422;
+		}
+		break;
+	default:
+		format = GE2D_FORMAT_M24_YUV420;
 	}
 	return format;
 }
+
 
 static void dma_flush(u32 buf_start, u32 buf_size)
 {
@@ -769,7 +846,7 @@ static void vf_rotate_adjust(struct vframe_s *vf, struct vframe_s *new_vf,
 }
 #ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
 static void display_mode_adjust(struct ge2d_context_s *context,
-		struct vframe_s *new_vf, int pic_struct)
+		struct vframe_s *new_vf)
 {
 	int canvas_width = ppmgr_device.canvas_width;
 	int canvas_height = ppmgr_device.canvas_height;
@@ -788,50 +865,48 @@ static void display_mode_adjust(struct ge2d_context_s *context,
 	}
 	if (ppmgr_device.display_mode == 0) {/*stretch full*/
 		stretchblt_noalpha(context, 0, 0, vf_width,
-				(pic_struct) ? (vf_height / 2) : vf_height,
+				vf_height,
 				0, 0, canvas_width,
 				canvas_height);
 	} else if (ppmgr_device.display_mode == 1) {/*keep size*/
 		stretchblt_noalpha(context, 0, 0, vf_width,
-				(pic_struct) ? (vf_height / 2) : vf_height,
+				vf_height,
 				(canvas_width - vf_width) / 2,
 				(canvas_height - vf_height) / 2,
 				vf_width, vf_height);
 	} else if (ppmgr_device.display_mode == 2) {/*keep ration black*/
 		int dw = 0, dh = 0;
-
 		if (vf_width / vf_height >= canvas_width / canvas_height) {
 			dw = canvas_width;
 			dh = dw * vf_height / vf_width;
 			stretchblt_noalpha(context, 0, 0, vf_width,
-				(pic_struct) ? (vf_height / 2) : vf_height,
+				vf_height,
 				(canvas_width - dw) / 2,
 				(canvas_height - dh) / 2, dw, dh);
 		} else {
 			dh = canvas_height;
 			dw = dh * vf_width / vf_height;
 			stretchblt_noalpha(context, 0, 0, vf_width,
-				(pic_struct) ? (vf_height / 2) : vf_height,
+				vf_height,
 				(canvas_width - dw) / 2,
 				(canvas_height - dh) / 2, dw, dh);
 		}
 	} else if (ppmgr_device.display_mode == 3) {
 		int dw = 0, dh = 0;
-
 		if (vf_width / vf_height
 				>= canvas_width / canvas_height) {
 			dh = canvas_height;
 			dw = dh * vf_width / vf_height;
 			stretchblt_noalpha(
 				context, 0, 0, vf_width,
-				(pic_struct) ? (vf_height / 2) : vf_height,
+				vf_height,
 				(canvas_width - dw) / 2,
 				(canvas_height - dh) / 2, dw, dh);
 		} else {
 			dw = canvas_width;
 			dh = dw * vf_height / vf_width;
 			stretchblt_noalpha(context, 0, 0, vf_width,
-				(pic_struct) ? (vf_height / 2) : vf_height,
+				vf_height,
 				(canvas_width - dw) / 2,
 				(canvas_height - dh) / 2, dw, dh);
 		}
@@ -1602,7 +1677,7 @@ static void process_vf_rotate(struct vframe_s *vf,
 	struct canvas_s cs0, cs1, cs2, cd;
 	int ret = 0;
 	unsigned int cur_angle = 0;
-	int pic_struct = 0, interlace_mode;
+	int interlace_mode;
 #ifdef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_3D_PROCESS
 	enum platform_type_t platform_type;
 #endif
@@ -1720,24 +1795,11 @@ static void process_vf_rotate(struct vframe_s *vf,
 	new_vf->orientation = vf->orientation;
 	new_vf->flag = vf->flag;
 
-	if (vf->type & VIDTYPE_VIU_422) {
-		if (interlace_mode == VIDTYPE_INTERLACE_TOP)
+	if ((vf->source_type == VFRAME_SOURCE_TYPE_HDMI)
+		|| (vf->source_type == VFRAME_SOURCE_TYPE_CVBS)) {
+		if ((interlace_mode == VIDTYPE_INTERLACE_TOP)
+			|| (interlace_mode == VIDTYPE_INTERLACE_BOTTOM))
 			vf->height >>= 1;
-		else if (interlace_mode == VIDTYPE_INTERLACE_BOTTOM)
-			vf->height >>= 1;
-		else
-			pic_struct = (GE2D_FORMAT_S16_YUV422T & (3 << 3));
-
-	} else if (vf->type & VIDTYPE_VIU_NV21) {
-		if (interlace_mode == VIDTYPE_INTERLACE_TOP)
-			pic_struct = (GE2D_FORMAT_M24_NV21T & (3 << 3));
-		else if (interlace_mode == VIDTYPE_INTERLACE_BOTTOM)
-			pic_struct = (GE2D_FORMAT_M24_NV21B & (3 << 3));
-	} else {
-		if (interlace_mode == VIDTYPE_INTERLACE_TOP)
-			pic_struct = (GE2D_FORMAT_M24_YUV420T & (3 << 3));
-		else if (interlace_mode == VIDTYPE_INTERLACE_BOTTOM)
-			pic_struct = (GE2D_FORMAT_M24_YUV420B & (3 << 3));
 	}
 
 #ifndef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
@@ -1909,8 +1971,7 @@ static void process_vf_rotate(struct vframe_s *vf,
 		ge2d_config->src_para.top = 0;
 		ge2d_config->src_para.left = 0;
 		ge2d_config->src_para.width = vf->width;
-		ge2d_config->src_para.height =
-				(pic_struct) ? (vf->height / 2) : vf->height;
+		ge2d_config->src_para.height = vf->height;
 
 		ge2d_config->src2_para.mem_type = CANVAS_TYPE_INVALID;
 
@@ -1936,8 +1997,6 @@ static void process_vf_rotate(struct vframe_s *vf,
 			return;
 		}
 		stretchblt_noalpha(context, 0, 0, vf->width,
-				(pic_struct) ?
-				(vf->height / 2) :
 				vf->height, 0, 0, dst_w,
 				dst_h);
 
@@ -2043,8 +2102,7 @@ static void process_vf_rotate(struct vframe_s *vf,
 	ge2d_config->src_para.top = 0;
 	ge2d_config->src_para.left = 0;
 	ge2d_config->src_para.width = vf->width;
-	ge2d_config->src_para.height =
-			(pic_struct) ? (vf->height / 2) : vf->height;
+	ge2d_config->src_para.height = vf->height;
 
 	ge2d_config->src2_para.mem_type = CANVAS_TYPE_INVALID;
 
@@ -2163,23 +2221,20 @@ static void process_vf_rotate(struct vframe_s *vf,
 				dh = rect_h;
 		}
 
-		stretchblt_noalpha(context, sx,
-				(pic_struct) ? (sy / 2) : sy, sw,
-				(pic_struct) ? (sh / 2) : sh, dx, dy, dw, dh);
+		stretchblt_noalpha(context, sx, sy, sw,
+				sh, dx, dy, dw, dh);
 	} else {
 		if (ppmgr_device.receiver == 0)
 			stretchblt_noalpha(context, 0, 0, vf->width,
-					(pic_struct) ?
-					(vf->height / 2) :
 					vf->height, 0, 0,
 					new_vf->width, new_vf->height);
 		else
-			display_mode_adjust(context, vf, pic_struct);
+			display_mode_adjust(context, vf);
 	}
 #else
 	stretchblt_noalpha(context, 0, 0,
 			vf->width,
-			(pic_struct)?(vf->height/2):vf->height,
+			vf->height,
 			0, 0, new_vf->width, new_vf->height);
 
 #endif
@@ -2204,7 +2259,7 @@ static void process_vf_change(struct vframe_s *vf,
 	struct vframe_s temp_vf;
 	struct ppframe_s *pp_vf = to_ppframe(vf);
 	struct canvas_s cs0, cs1, cs2, cd;
-	int pic_struct = 0, interlace_mode;
+	int interlace_mode;
 	unsigned int temp_angle = 0;
 	unsigned int cur_angle = 0;
 	int ret = 0;
@@ -2237,24 +2292,11 @@ static void process_vf_change(struct vframe_s *vf,
 
 	interlace_mode = vf->type & VIDTYPE_TYPEMASK;
 
-	if (vf->type & VIDTYPE_VIU_422)
-		if (interlace_mode == VIDTYPE_INTERLACE_TOP)
+	if ((vf->source_type == VFRAME_SOURCE_TYPE_HDMI)
+		|| (vf->source_type == VFRAME_SOURCE_TYPE_CVBS)) {
+		if ((interlace_mode == VIDTYPE_INTERLACE_TOP)
+			|| (interlace_mode == VIDTYPE_INTERLACE_BOTTOM))
 			vf->height >>= 1;
-		else if (interlace_mode == VIDTYPE_INTERLACE_BOTTOM)
-			vf->height >>= 1;
-		else
-			pic_struct = (GE2D_FORMAT_S16_YUV422T & (3 << 3));
-
-	else if (vf->type & VIDTYPE_VIU_NV21) {
-		if (interlace_mode == VIDTYPE_INTERLACE_TOP)
-			pic_struct = (GE2D_FORMAT_M24_NV21T & (3 << 3));
-		else if (interlace_mode == VIDTYPE_INTERLACE_BOTTOM)
-			pic_struct = (GE2D_FORMAT_M24_NV21B & (3 << 3));
-	} else {
-		if (interlace_mode == VIDTYPE_INTERLACE_TOP)
-			pic_struct = (GE2D_FORMAT_M24_YUV420T & (3 << 3));
-		else if (interlace_mode == VIDTYPE_INTERLACE_BOTTOM)
-			pic_struct = (GE2D_FORMAT_M24_YUV420B & (3 << 3));
 	}
 
 	memset(ge2d_config, 0, sizeof(struct config_para_ex_s));
@@ -2276,19 +2318,13 @@ static void process_vf_change(struct vframe_s *vf,
 		ge2d_config->src_planes[2].addr = cs2.addr;
 		ge2d_config->src_planes[2].w = cs2.width;
 		ge2d_config->src_planes[2].h = cs2.height;
-		if (vf->type & VIDTYPE_VIU_NV21)
-			ge2d_config->src_para.format =
-					GE2D_FORMAT_M24_NV21 | pic_struct;
-		else
-			ge2d_config->src_para.format =
-					GE2D_FORMAT_M24_YUV420 | pic_struct;
+		ge2d_config->src_para.format = get_input_format(vf);
 	} else {
 		canvas_read(vf->canvas0Addr & 0xff, &cd);
 		ge2d_config->src_planes[0].addr = cd.addr;
 		ge2d_config->src_planes[0].w = cd.width;
 		ge2d_config->src_planes[0].h = cd.height;
-		ge2d_config->src_para.format =
-				GE2D_FORMAT_S24_YUV444 | pic_struct;
+		ge2d_config->src_para.format = get_input_format(vf);
 	}
 
 	canvas_read(temp_vf.canvas0Addr & 0xff, &cd);
@@ -2311,8 +2347,7 @@ static void process_vf_change(struct vframe_s *vf,
 	ge2d_config->src_para.top = 0;
 	ge2d_config->src_para.left = 0;
 	ge2d_config->src_para.width = vf->width;
-	ge2d_config->src_para.height =
-			(pic_struct) ? (vf->height / 2) : vf->height;
+	ge2d_config->src_para.height = vf->height;
 
 	ge2d_config->src2_para.mem_type = CANVAS_TYPE_INVALID;
 
@@ -2348,7 +2383,7 @@ static void process_vf_change(struct vframe_s *vf,
 	}
 
 	stretchblt_noalpha(context, 0, 0, vf->width,
-			(pic_struct) ? (vf->height / 2) : vf->height,
+			vf->height,
 			0, 0, temp_vf.width,
 			temp_vf.height);
 
