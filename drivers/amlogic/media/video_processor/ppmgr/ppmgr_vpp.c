@@ -1666,7 +1666,6 @@ static int process_vf_deinterlace(struct vframe_s *vf,
 	return 1;
 }
 
-static int mycount;
 static void process_vf_rotate(struct vframe_s *vf,
 		struct ge2d_context_s *context,
 		struct config_para_ex_s *ge2d_config,
@@ -1768,13 +1767,10 @@ static void process_vf_rotate(struct vframe_s *vf,
 		return;
 	}
 #ifdef INTERLACE_DROP_MODE
-	if (interlace_mode) {
-		mycount++;
-		if (mycount % 2 == 0) {
-			ppmgr_vf_put_dec(vf);
-			vfq_push(&q_free, new_vf);
-			return;
-		}
+	if (interlace_mode == VIDTYPE_INTERLACE_BOTTOM) {
+		ppmgr_vf_put_dec(vf);
+		vfq_push(&q_free, new_vf);
+		return;
 	}
 	pp_vf->angle = cur_angle;
 	if (interlace_mode)
@@ -3378,9 +3374,7 @@ int ppmgr_buffer_init(int vout_mode)
 	struct vinfo_s vinfo = {.width = 1280, .height = 720, };
 	/* int flags = CODEC_MM_FLAGS_DMA; */
 	int flags = CODEC_MM_FLAGS_DMA | CODEC_MM_FLAGS_CMA_CLEAR;
-#ifdef INTERLACE_DROP_MODE
-	mycount = 0;
-#endif
+
 	switch (ppmgr_buffer_status) {
 	case 0:/*not config*/
 		break;
