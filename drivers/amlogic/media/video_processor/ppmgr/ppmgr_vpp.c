@@ -3810,17 +3810,26 @@ static void tb_detect_init(void)
 static int tb_task(void *data)
 {
 	int tbff_flag;
-	struct tbff_stats pReg;
+	struct tbff_stats *pReg = NULL;
 	ulong y5fld[5];
 	int is_top;
 	int inited = 0;
+	int i;
+	int inter_flag;
 	static const char * const detect_type[] = {"NC", "TFF", "BFF", "TBF"};
 	struct sched_param param = {.sched_priority = MAX_RT_PRIO - 1};
-
 	sched_setscheduler(current, SCHED_FIFO, &param);
 
+	inter_flag = 0;
+	pReg = kmalloc(sizeof(struct tbff_stats), GFP_KERNEL);
+	if (IS_ERR_OR_NULL(pReg)) {
+		PPMGRVPP_INFO("pReg malloc fail\n");
+		return 0;
+	}
+	memset(pReg, 0, sizeof(struct tbff_stats));
+
 	if (gfunc)
-		gfunc->stats_init((&pReg), TB_DETECT_H, TB_DETECT_W);
+		gfunc->stats_init(pReg, TB_DETECT_H, TB_DETECT_W);
 	allow_signal(SIGTERM);
 	while (down_interruptible(&tb_sem) == 0) {
 		if (kthread_should_stop() || tb_quit_flag)
@@ -3840,14 +3849,30 @@ static int tb_task(void *data)
 		y5fld[2] = detect_buf[tb_buff_rptr + 2].vaddr;
 		y5fld[3] = detect_buf[tb_buff_rptr + 1].vaddr;
 		y5fld[4] = detect_buf[tb_buff_rptr].vaddr;
-		if (gfunc)
-			gfunc->stats_get(y5fld, &pReg);
-
+		if (gfunc) {
+			if (IS_ERR_OR_NULL(pReg)) {
+				PPMGRVPP_INFO("pReg is NULL!\n");
+				return 0;
+			}
+			for (i = 0; i < 5; i++) {
+				if (IS_ERR_OR_NULL((void *)(y5fld[i]))) {
+					PPMGRVPP_INFO(
+						"y5fld[%d] is NULL!\n", i);
+					inter_flag = 1;
+					break;
+				}
+			}
+			if (inter_flag) {
+				inter_flag = 0;
+				continue;
+			}
+			gfunc->stats_get(y5fld, pReg);
+		}
 		is_top = is_top ^ 1;
 		tbff_flag = -1;
 		if (gfunc)
 			tbff_flag = gfunc->fwalg_get(
-				&pReg, is_top,
+				pReg, is_top,
 				(tb_first_frame_type == 3) ? 0 : 1,
 				tb_buff_rptr,
 				atomic_read(&tb_skip_flag),
@@ -3894,6 +3919,7 @@ static int tb_task(void *data)
 		}
 	}
 	atomic_set(&tb_run_flag, 0);
+	kfree(pReg);
 	while (!kthread_should_stop())
 		usleep_range(9000, 10000);
 	return 0;
