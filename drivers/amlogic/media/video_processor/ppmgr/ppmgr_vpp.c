@@ -1785,6 +1785,9 @@ static void process_vf_rotate(struct vframe_s *vf,
 	new_vf->duration_pulldown = vf->duration_pulldown;
 	new_vf->pts = vf->pts;
 	new_vf->pts_us64 = vf->pts_us64;
+	new_vf->bitdepth = BITDEPTH_Y8 | BITDEPTH_U8 | BITDEPTH_V8;
+	new_vf->signal_type = vf->signal_type;
+	new_vf->omx_index = vf->omx_index;
 	new_vf->type = VIDTYPE_VIU_444 | VIDTYPE_VIU_SINGLE_PLANE
 			| VIDTYPE_VIU_FIELD;
 	new_vf->canvas0Addr = new_vf->canvas1Addr = index2canvas(pp_vf->index);
@@ -2274,6 +2277,9 @@ static void process_vf_change(struct vframe_s *vf,
 	temp_vf.pts = vf->pts;
 	temp_vf.pts_us64 = vf->pts_us64;
 	temp_vf.flag = vf->flag;
+	temp_vf.bitdepth = BITDEPTH_Y8 | BITDEPTH_U8 | BITDEPTH_V8;
+	temp_vf.signal_type = vf->signal_type;
+	temp_vf.omx_index = vf->omx_index;
 	temp_vf.type = VIDTYPE_VIU_444 | VIDTYPE_VIU_SINGLE_PLANE
 			| VIDTYPE_VIU_FIELD;
 	temp_vf.canvas0Addr = temp_vf.canvas1Addr = ass_index;
