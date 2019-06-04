@@ -22,14 +22,12 @@
 
 	pinctrl_leds: ledsgrp {
 		fsl,pins = <
-			/* J14 pin 1 - Green LED */
-#define GP_LED_GREEN			<&gpio1 2 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x0b0b0
-
-			/* J14 pin 3 - Red LED */
+			/* J14 pin 1 - Red LED */
 #define GP_LED_RED			<&gpio1 3 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x0b0b0
-
+			/* J14 pin 3 - Green LED */
+#define GP_LED_GREEN			<&gpio1 2 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x0b0b0
 			/* J14 pin 8/9(dry contact) */
 #define GP_J14_POWER_ON			<&gpio3 29 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_EIM_D29__GPIO3_IO29		0x030b0
