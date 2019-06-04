@@ -519,14 +519,19 @@ static int extn_dai_trigger(struct snd_pcm_substream *substream, int cmd,
 
 			aml_frddr_enable(p_extn->fddr, false);
 		} else {
-			dev_info(substream->pcm->card->dev, "External Capture disable\n");
+			bool toddr_stopped = false;
 
 			if (src == FRATV)
 				fratv_enable(false);
 			else if (src == FRHDMIRX)
 				frhdmirx_enable(false);
+			dev_info(substream->pcm->card->dev, "External Capture disable\n");
 
-			aml_toddr_enable(p_extn->tddr, false);
+			toddr_stopped = aml_toddr_burst_finished(p_extn->tddr);
+			if (toddr_stopped)
+				aml_toddr_enable(p_extn->tddr, false);
+			else
+				pr_err("%s(), toddr may be stuck\n", __func__);
 		}
 		break;
 	default:

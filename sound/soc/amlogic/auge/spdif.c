@@ -1294,10 +1294,17 @@ static int aml_dai_spdif_trigger(struct snd_pcm_substream *substream, int cmd,
 				aml_frddr_check(p_spdif->fddr);
 			aml_frddr_enable(p_spdif->fddr, 0);
 		} else {
-			dev_info(substream->pcm->card->dev, "S/PDIF Capture disable\n");
-			aml_toddr_enable(p_spdif->tddr, 0);
+			bool toddr_stopped = false;
+
 			aml_spdif_enable(p_spdif->actrl,
 					substream->stream, p_spdif->id, false);
+			dev_info(substream->pcm->card->dev, "S/PDIF Capture disable\n");
+
+			toddr_stopped = aml_toddr_burst_finished(p_spdif->tddr);
+			if (toddr_stopped)
+				aml_toddr_enable(p_spdif->tddr, false);
+			else
+				pr_err("%s(), toddr may be stuck\n", __func__);
 		}
 
 		break;

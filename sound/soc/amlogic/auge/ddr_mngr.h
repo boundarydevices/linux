@@ -260,6 +260,7 @@ void aml_toddr_write(struct toddr *to, unsigned int val);
 unsigned int aml_toddr_read1(struct toddr *to);
 void aml_toddr_write1(struct toddr *to, unsigned int val);
 unsigned int aml_toddr_read_status2(struct toddr *to);
+bool aml_toddr_burst_finished(struct toddr *to);
 
 /* resample */
 void aml_set_resample(enum resample_idx id,

@@ -722,10 +722,17 @@ static int aml_dai_tdm_trigger(struct snd_pcm_substream *substream, int cmd,
 
 			aml_frddr_enable(p_tdm->fddr, false);
 		} else {
-			dev_info(substream->pcm->card->dev, "tdm capture stop\n");
-			aml_toddr_enable(p_tdm->tddr, false);
+			bool toddr_stopped = false;
+
 			aml_tdm_enable(p_tdm->actrl,
 				substream->stream, p_tdm->id, false);
+			dev_info(substream->pcm->card->dev, "tdm capture stop\n");
+
+			toddr_stopped = aml_toddr_burst_finished(p_tdm->tddr);
+			if (toddr_stopped)
+				aml_toddr_enable(p_tdm->tddr, false);
+			else
+				pr_err("%s(), toddr may be stuck\n", __func__);
 		}
 
 		break;

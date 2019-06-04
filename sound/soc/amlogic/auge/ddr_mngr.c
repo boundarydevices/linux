@@ -285,12 +285,7 @@ int aml_toddr_set_intrpt(struct toddr *to, unsigned int intrpt)
 
 unsigned int aml_toddr_get_position(struct toddr *to)
 {
-	struct aml_audio_controller *actrl = to->actrl;
-	unsigned int reg_base = to->reg_base;
-	unsigned int reg;
-
-	reg = calc_toddr_address(EE_AUDIO_TODDR_A_STATUS2, reg_base);
-	return aml_audiobus_read(actrl, reg);
+	return aml_toddr_read_status2(to);
 }
 
 unsigned int aml_toddr_get_addr(struct toddr *to, enum status_sel sel)
@@ -526,6 +521,35 @@ unsigned int aml_toddr_read_status2(struct toddr *to)
 	reg = calc_toddr_address(EE_AUDIO_TODDR_A_STATUS2, reg_base);
 
 	return aml_audiobus_read(actrl, reg);
+}
+
+bool aml_toddr_burst_finished(struct toddr *to)
+{
+	unsigned int addr_request, addr_reply, i = 0;
+	struct aml_audio_controller *actrl = to->actrl;
+	unsigned int reg_base = to->reg_base;
+	unsigned int reg;
+
+	/* max 200us delay */
+	for (i = 0; i < 200; i++) {
+		reg = calc_toddr_address(EE_AUDIO_TODDR_A_CTRL1, reg_base);
+		aml_audiobus_update_bits(actrl,	reg, 0xf << 8, 0x0 << 8);
+		addr_request = aml_toddr_get_position(to);
+
+		reg = calc_toddr_address(EE_AUDIO_TODDR_A_CTRL1, reg_base);
+		aml_audiobus_update_bits(actrl,	reg, 0xf << 8, 0x2 << 8);
+		addr_reply = aml_toddr_get_position(to);
+
+		if (addr_request == addr_reply)
+			return true;
+
+		udelay(1);
+		pr_debug("delay:[%dus]; FRDDR_STATUS2: [0x%x] [0x%x]\n",
+			i, addr_request, addr_reply);
+	}
+	pr_err("Error: 200us time out, TODDR_STATUS2: [0x%x] [0x%x]\n",
+				addr_request, addr_reply);
+	return false;
 }
 
 /* not for tl1 */

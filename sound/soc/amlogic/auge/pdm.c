@@ -960,16 +960,22 @@ static int aml_pdm_dai_trigger(
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+			bool toddr_stopped = false;
+
 			if (vad_pdm_is_running()
 				&& pm_audio_is_suspend()) {
 				/* switch to VAD buffer */
 				vad_update_buffer(1);
 				break;
 			}
-
-			dev_info(substream->pcm->card->dev, "pdm capture stop\n");
 			pdm_enable(0);
-			aml_toddr_enable(p_pdm->tddr, 0);
+			dev_info(substream->pcm->card->dev, "pdm capture stop\n");
+
+			toddr_stopped = aml_toddr_burst_finished(p_pdm->tddr);
+			if (toddr_stopped)
+				aml_toddr_enable(p_pdm->tddr, false);
+			else
+				pr_err("%s(), toddr may be stuck\n", __func__);
 		}
 		break;
 	default:

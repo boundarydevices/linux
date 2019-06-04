@@ -763,7 +763,8 @@ static int loopback_dai_trigger(
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		if (ss->stream == SNDRV_PCM_STREAM_CAPTURE) {
-			dev_info(ss->pcm->card->dev, "Loopback Capture disable\n");
+			bool toddr_stopped = false;
+
 			pdm_enable(0);
 
 			/* loopback */
@@ -771,8 +772,14 @@ static int loopback_dai_trigger(
 			/* tdminLB */
 			tdminlb_fifo_enable(false);
 			tdminlb_enable(p_loopback->datalb_src, false);
+			dev_info(ss->pcm->card->dev, "Loopback Capture disable\n");
 
-			aml_toddr_enable(p_loopback->tddr, false);
+			toddr_stopped =
+				aml_toddr_burst_finished(p_loopback->tddr);
+			if (toddr_stopped)
+				aml_toddr_enable(p_loopback->tddr, false);
+			else
+				pr_err("%s(), toddr may be stuck\n", __func__);
 		}
 		break;
 	default:
