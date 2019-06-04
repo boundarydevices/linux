@@ -2238,7 +2238,7 @@ static void process_vf_rotate(struct vframe_s *vf,
 
 #endif
 	ppmgr_vf_put_dec(vf);
-
+	new_vf->source_type = VFRAME_SOURCE_TYPE_PPMGR;
 	vfq_push(&q_ready, new_vf);
 
 #ifdef DDD

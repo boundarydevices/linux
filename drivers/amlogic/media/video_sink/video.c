@@ -112,13 +112,6 @@ static int video_pause_global = 1;
 
 static u32 cur_omx_index;
 
-#ifdef CONFIG_GE2D_KEEP_FRAME
-/* #if MESON_CPU_TYPE >= MESON_CPU_TYPE_MESON6 */
-/* #include <mach/mod_gate.h> */
-/* #endif */
-/* #include "mach/meson-secure.h" */
-#endif
-
 #if 1
 /*TODO for logo*/
 struct platform_resource_s {
@@ -8666,27 +8659,13 @@ static void video_vf_unreg_provider(void)
 		try_free_keep_video(1);
 	}
 
-#ifdef CONFIG_GE2D_KEEP_FRAME
-	if (cur_dispbuf) {
-		/* TODO: mod gate */
-		/* switch_mod_gate_by_name("ge2d", 1); */
-		keeped = vf_keep_current(cur_dispbuf, el_vf);
-		/* TODO: mod gate */
-		/* switch_mod_gate_by_name("ge2d", 0); */
-	}
-	if ((hdmi_in_onvideo == 0) && (video_start_post)) {
-		tsync_avevent(VIDEO_STOP, 0);
-		video_start_post = false;
-	}
-#else
-	/* if (!trickmode_fffb) */
 	if (cur_dispbuf)
 		keeped = vf_keep_current(cur_dispbuf, el_vf);
 	if ((hdmi_in_onvideo == 0) && (video_start_post)) {
 		tsync_avevent(VIDEO_STOP, 0);
 		video_start_post = false;
 	}
-#endif
+
 	if (keeped < 0) {/*keep failed.*/
 		pr_info("video keep failed, disable video now!\n");
 		safe_disble_videolayer();
