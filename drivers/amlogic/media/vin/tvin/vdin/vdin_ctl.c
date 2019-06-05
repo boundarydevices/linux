@@ -2950,6 +2950,9 @@ void vdin_hw_enable(unsigned int offset)
 
 void vdin_hw_disable(unsigned int offset)
 {
+	unsigned int def_canvas;
+
+	def_canvas = offset ? vdin_canvas_ids[1][0] : vdin_canvas_ids[0][0];
 	/* disable cm2 */
 	wr_bits(offset, VDIN_CM_BRI_CON_CTRL, 0, CM_TOP_EN_BIT, CM_TOP_EN_WID);
 	/* disable video data input */
@@ -2963,10 +2966,9 @@ void vdin_hw_disable(unsigned int offset)
 	wr(offset, VDIN_COM_CTRL0, 0x00000910);
 	vdin_delay_line(delay_line_num, offset);
 	if (enable_reset)
-		wr(offset, VDIN_WR_CTRL, 0x0b401000);
+		wr(offset, VDIN_WR_CTRL, 0x0b401000 | def_canvas);
 	else
-		wr(offset, VDIN_WR_CTRL, 0x0bc01000);
-
+		wr(offset, VDIN_WR_CTRL, 0x0bc01000 | def_canvas);
 	/* disable clock of blackbar, histogram, histogram, line fifo1, matrix,
 	 * hscaler, pre hscaler, clock0
 	 */

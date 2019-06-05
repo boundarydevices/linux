@@ -210,7 +210,7 @@ int vdin_open_fe(enum tvin_port_e port, int index,  struct vdin_dev_s *devp)
 	}
 
 	devp->frontend = fe;
-	devp->parm.port        = port;
+	devp->parm.port = port;
 	/* for atv snow function */
 	if ((port == TVIN_PORT_CVBS3) &&
 		(devp->parm.info.fmt == TVIN_SIG_FMT_NULL))
@@ -222,13 +222,6 @@ int vdin_open_fe(enum tvin_port_e port, int index,  struct vdin_dev_s *devp)
 	memset(&devp->pre_prop, 0, sizeof(devp->pre_prop));
 	 /* clear color para*/
 	memset(&devp->prop, 0, sizeof(devp->prop));
-
-	/*enable clk*/
-	vdin_clk_onoff(devp, true);
-	vdin_set_default_regmap(devp->addr_offset);
-	/*only for vdin0*/
-	if (devp->urgent_en && (devp->index == 0))
-		vdin_urgent_patch_resume(devp->addr_offset);
 
 	/* vdin msr clock gate enable */
 	if (devp->msr_clk != NULL)
@@ -269,7 +262,6 @@ void vdin_close_fe(struct vdin_dev_s *devp)
 	if (devp->msr_clk != NULL)
 		clk_disable_unprepare(devp->msr_clk);
 
-	vdin_hw_disable(devp->addr_offset);
 	del_timer_sync(&devp->timer);
 	if (devp->frontend && devp->frontend->dec_ops->close) {
 		devp->frontend->dec_ops->close(devp->frontend);
@@ -514,6 +506,12 @@ void vdin_start_dec(struct vdin_dev_s *devp)
 	if (is_meson_gxl_cpu() || is_meson_gxm_cpu() || is_meson_gxbb_cpu() ||
 		is_meson_txhd_cpu())
 		switch_vpu_clk_gate_vmod(VPU_VPU_CLKB, VPU_CLK_GATE_ON);
+
+	/*enable clk*/
+	vdin_clk_onoff(devp, true);
+	vdin_set_default_regmap(devp->addr_offset);
+	if (devp->urgent_en && (devp->index == 0))
+		vdin_urgent_patch_resume(devp->addr_offset);
 
 	vdin_get_format_convert(devp);
 	devp->curr_wr_vfe = NULL;
