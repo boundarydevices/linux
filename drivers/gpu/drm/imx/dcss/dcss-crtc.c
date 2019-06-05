@@ -249,6 +249,8 @@ static void dcss_crtc_atomic_enable(struct drm_crtc *crtc,
 	struct videomode vm;
 
 	drm_display_mode_to_videomode(mode, &vm);
+	/* Use crtc_clock instead of clock, for videomode */
+	vm.pixelclock = mode->crtc_clock * 1000;
 
 	pm_runtime_get_sync(dcss_crtc->dev->parent);
 
