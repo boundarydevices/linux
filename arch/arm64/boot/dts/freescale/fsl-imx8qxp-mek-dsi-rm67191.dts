@@ -16,6 +16,7 @@
 
 &mipi_dsi_bridge1 {
 	status = "okay";
+	clock-drop-level = <1>;
 
 	panel@0 {
 		compatible = "raydium,rm67191";
@@ -40,6 +41,7 @@
 
 &mipi_dsi_bridge2 {
 	status = "okay";
+	clock-drop-level = <1>;
 
 	panel@0 {
 		compatible = "raydium,rm67191";
