@@ -5440,13 +5440,16 @@ static void osd_update_enable(u32 index)
 		if ((osd_hw.osd_afbcd[index].enable == ENABLE)
 			&& (osd_hw.enable[index] == ENABLE)
 			&& !osd_hw.dim_layer[index]) {
-			/* enable mali afbc */
-			VSYNCOSD_WR_MPEG_REG(
-				VPU_MAFBC_IRQ_MASK, 0xf);
-			VSYNCOSD_WR_MPEG_REG_BITS(
-				VPU_MAFBC_SURFACE_CFG,
-				1, index, 1);
-			osd_hw.osd_afbcd[index].afbc_start = 1;
+			if (!osd_hw.osd_afbcd[index].afbc_start &&
+					osd_hw.osd_afbcd[index].phy_addr != 0) {
+				/* enable mali afbc */
+				VSYNCOSD_WR_MPEG_REG(
+					VPU_MAFBC_IRQ_MASK, 0xf);
+				VSYNCOSD_WR_MPEG_REG_BITS(
+					VPU_MAFBC_SURFACE_CFG,
+					1, index, 1);
+				osd_hw.osd_afbcd[index].afbc_start = 1;
+			}
 		} else {
 			/* disable mali afbc */
 			VSYNCOSD_WR_MPEG_REG_BITS(
