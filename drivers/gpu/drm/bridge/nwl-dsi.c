@@ -228,6 +228,7 @@ struct nwl_mipi_dsi {
 	struct drm_display_mode		*curr_mode;
 	struct list_head		valid_modes;
 	u32				lanes;
+	u32				clk_drop_lvl;
 	bool				no_clk_reset;
 	bool				enabled;
 };
@@ -494,7 +495,8 @@ static unsigned long nwl_dsi_get_lcm(unsigned long a, unsigned long b)
  * Also, the DC pixel clock must be lower than the actual clock in order to
  * have enough blanking space to send DSI commands, if the device is a panel.
  */
-static void nwl_dsi_setup_pll_config(struct mode_config *config, bool panel)
+static void nwl_dsi_setup_pll_config(struct mode_config *config,
+				     bool panel, u32 lvl)
 {
 	unsigned long pll_rate;
 	int div;
@@ -536,7 +538,7 @@ static void nwl_dsi_setup_pll_config(struct mode_config *config, bool panel)
 		 */
 		div = DIV_ROUND_CLOSEST(pll_rate, config->clock);
 		if (panel)
-			pll_rate -= config->phy_rates[i];
+			pll_rate -= config->phy_rates[i] * lvl;
 		crtc_clock = pll_rate / div;
 		config->pll_rates[i] = pll_rate;
 
@@ -633,7 +635,7 @@ static enum drm_mode_status nwl_dsi_bridge_mode_valid(struct drm_bridge *bridge,
 
 	pll_rate = config->pll_rates[config->phy_rate_idx];
 	if (dsi->pll_clk && !pll_rate) {
-		nwl_dsi_setup_pll_config(config, false);
+		nwl_dsi_setup_pll_config(config, false, 0);
 		if (config->clock != config->crtc_clock) {
 			config->pll_rates[config->phy_rate_idx] = 0;
 			return MODE_NOCLOCK;
@@ -1168,7 +1170,7 @@ static int nwl_dsi_connector_get_modes(struct drm_connector *connector)
 		config = nwl_dsi_mode_probe(dsi, mode);
 		if (!config)
 			continue;
-		nwl_dsi_setup_pll_config(config, true);
+		nwl_dsi_setup_pll_config(config, true, dsi->clk_drop_lvl);
 		if (config->crtc_clock)
 			mode->crtc_clock = config->crtc_clock / 1000;
 	}
@@ -1473,6 +1475,8 @@ static int nwl_dsi_probe(struct platform_device *pdev)
 	pm_runtime_enable(dev);
 
 	dsi->no_clk_reset = of_property_read_bool(dev->of_node, "no_clk_reset");
+	of_property_read_u32(dev->of_node, "clock-drop-level",
+		&dsi->clk_drop_lvl);
 
 	dsi->dev = dev;
 	platform_set_drvdata(pdev, dsi);
