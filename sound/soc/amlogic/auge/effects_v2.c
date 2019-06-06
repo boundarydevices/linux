@@ -49,8 +49,9 @@ enum {
 struct effect_chipinfo {
 	/* v1 is for G12X(g12a, g12b)
 	 * v2 is for tl1
+	 * v3 is for sm1/tm2
 	 */
-	bool v2;
+	int version;
 	bool reserved_frddr;
 };
 
@@ -95,17 +96,14 @@ int get_aed_dst(void)
 		return p_effect->effect_module;
 }
 
-bool check_aed_v2(void)
+int check_aed_version(void)
 {
 	struct audioeffect *p_effect = get_audioeffects();
 
-	if (!p_effect)
-		return false;
+	if ((!p_effect) || (!p_effect->chipinfo))
+		return -1;
 
-	if (p_effect->chipinfo && p_effect->chipinfo->v2)
-		return true;
-
-	return false;
+	return p_effect->chipinfo->version;
 }
 
 static int eqdrc_clk_set(struct audioeffect *p_effect)
@@ -531,7 +529,12 @@ int card_add_effect_v2_kcontrols(struct snd_soc_card *card)
 }
 
 static struct effect_chipinfo tl1_effect_chipinfo = {
-	.v2 = true,
+	.version = VERSION2,
+	.reserved_frddr = true,
+};
+
+static struct effect_chipinfo sm1_effect_chipinfo = {
+	.version = VERSION3,
 	.reserved_frddr = true,
 };
 
@@ -544,8 +547,8 @@ static const struct of_device_id effect_device_id[] = {
 		.data       = &tl1_effect_chipinfo,
 	},
 	{
-		.compatible = "amlogic, tl1-effect",
-		.data       = &tl1_effect_chipinfo,
+		.compatible = "amlogic, snd-effect-v3",
+		.data       = &sm1_effect_chipinfo,
 	},
 	{}
 };
@@ -650,8 +653,16 @@ static int effect_platform_probe(struct platform_device *pdev)
 	p_effect->ch_mask          = channel_mask;
 	p_effect->effect_module    = eqdrc_module;
 
+	p_effect->dev = dev;
+	s_effect = p_effect;
+	dev_set_drvdata(&pdev->dev, p_effect);
+
 	/*set eq/drc module lane & channels*/
-	aed_set_lane_and_channels(lane_mask, channel_mask);
+	if (check_aed_version() == VERSION3)
+		aed_set_lane_and_channels_v3(lane_mask, channel_mask);
+	else
+		aed_set_lane_and_channels(lane_mask, channel_mask);
+
 	/*set master & channel volume gain to 0dB*/
 	aed_set_volume(0xc0, 0x30, 0x30);
 	/*set default mixer gain*/
@@ -668,10 +679,6 @@ static int effect_platform_probe(struct platform_device *pdev)
 	aed_set_fullband_drc_param(2);
 	/*set EQ/DRC module enable*/
 	aml_set_aed(1, p_effect->effect_module);
-
-	p_effect->dev = dev;
-	s_effect = p_effect;
-	dev_set_drvdata(&pdev->dev, p_effect);
 
 	if (p_effect->chipinfo &&
 		p_effect->chipinfo->reserved_frddr) {

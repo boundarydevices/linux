@@ -1322,8 +1322,9 @@ void aml_frddr_set_format(struct frddr *fr,
 static void aml_aed_enable(struct frddr_attach *p_attach_aed, bool enable)
 {
 	struct frddr *fr = fetch_frddr_by_src(p_attach_aed->attach_module);
+	int aed_version = check_aed_version();
 
-	if (check_aed_v2()) {
+	if (aed_version == VERSION2 || aed_version == VERSION3) {
 		struct aml_audio_controller *actrl = fr->actrl;
 		unsigned int reg_base = fr->reg_base;
 		unsigned int reg;
@@ -1332,16 +1333,31 @@ static void aml_aed_enable(struct frddr_attach *p_attach_aed, bool enable)
 		if (enable) {
 			aml_audiobus_update_bits(actrl,
 				reg, 0x1 << 3, enable << 3);
-			aed_set_ctrl(enable, 0, p_attach_aed->attach_module);
-			aed_set_format(fr->msb, fr->type, fr->fifo_id);
+			if (aed_version == VERSION3) {
+				aed_set_ctrl(enable, 0,
+					p_attach_aed->attach_module, 1);
+				aed_set_format(fr->msb,
+					fr->type, fr->fifo_id, 1);
+			} else {
+				aed_set_ctrl(enable, 0,
+					p_attach_aed->attach_module, 0);
+				aed_set_format(fr->msb,
+					fr->type, fr->fifo_id, 0);
+			}
 			aed_enable(enable);
 		} else {
 			aed_enable(enable);
-			aed_set_ctrl(enable, 0, p_attach_aed->attach_module);
+			if (aed_version == VERSION3) {
+				aed_set_ctrl(enable, 0,
+					p_attach_aed->attach_module, 1);
+			} else {
+				aed_set_ctrl(enable, 0,
+					p_attach_aed->attach_module, 0);
+			}
 			aml_audiobus_update_bits(actrl,
 				reg, 0x1 << 3, enable << 3);
 		}
-	} else {
+	} else if (aed_version == VERSION1) {
 		if (enable) {
 			/* frddr type and bit depth for AED */
 			aml_aed_format_set(fr->dest);

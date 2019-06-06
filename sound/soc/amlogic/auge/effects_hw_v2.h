@@ -33,8 +33,11 @@ void aed_set_multiband_drc_enable(bool enable);
 void aed_set_volume(unsigned int master_volume,
 		unsigned int Lch_vol, unsigned int Rch_vol);
 void aed_set_lane_and_channels(int lane_mask, int ch_mask);
-void aed_set_ctrl(bool enable, int sel, enum frddr_dest module);
-void aed_set_format(int msb, enum ddr_types frddr_type, enum ddr_num source);
+void aed_set_lane_and_channels_v3(int lane_mask, int ch_mask);
+void aed_set_ctrl(bool enable, int sel,
+		enum frddr_dest module, int offset);
+void aed_set_format(int msb, enum ddr_types frddr_type,
+		enum ddr_num source, int offset);
 void aed_enable(bool enable);
 void aed_set_mixer_params(void);
 void aed_eq_taps(unsigned int eq1_taps);

@@ -235,7 +235,35 @@ void aed_set_lane_and_channels(int lane_mask, int ch_mask)
 		0xff << 12, (ch_num - 1) << 12);
 }
 
-void aed_set_ctrl(bool enable, int sel, enum frddr_dest module)
+/* max 16ch, 8 lane*/
+void aed_set_lane_and_channels_v3(int lane_mask, int ch_mask)
+{
+	int ch_num = 0, lane_num = 0, i = 0;
+	int val_ch = ch_mask & 0xffff;
+	int val_lane = lane_mask & 0xff;
+
+	for (i = 0; i < 16; i++) {
+		if ((val_ch & 0x1) == 0x1)
+			ch_num++;
+		if ((val_lane & 0x1) == 0x1)
+			lane_num = i;
+		val_ch >>= 1;
+		val_lane >>= 1;
+	}
+
+	eqdrc_update_bits(AED_TOP_CTL1,
+		0xf << 20 | 0xf << 16 | 0x1 << 5 | 0x1 << 4 | 0xf,
+		(lane_num * 2 + 1) << 20 | (lane_num * 2) << 16 |
+		0x1 << 5 | 0x1 << 4 | (ch_num - 1));
+
+	eqdrc_update_bits(AED_TOP_CTL2,
+		0xff << 12, (ch_num - 1) << 12);
+
+	/*pr_info("ch_num = %d, lane_num = %d", ch_num, lane_num);*/
+}
+
+
+void aed_set_ctrl(bool enable, int sel, enum frddr_dest module, int offset)
 {
 	int mask = 0, val = 0;
 
@@ -258,7 +286,8 @@ void aed_set_ctrl(bool enable, int sel, enum frddr_dest module)
 		return;
 	}
 
-	eqdrc_update_bits(AED_TOP_REQ_CTL, mask, val);
+	/*AED_TOP_REQ_CTL or AED_TOP_CTL2*/
+	eqdrc_update_bits((AED_TOP_REQ_CTL + offset), mask, val);
 
 	/* Effect Module */
 	if (module <= TDMOUT_C && module >= TDMOUT_A) {
@@ -271,11 +300,12 @@ void aed_set_ctrl(bool enable, int sel, enum frddr_dest module)
 
 }
 
-void aed_set_format(int msb, enum ddr_types frddr_type, enum ddr_num source)
+void aed_set_format(int msb, enum ddr_types frddr_type,
+				enum ddr_num source, int offset)
 {
 	eqdrc_update_bits(AED_TOP_CTL,
 		0x7 << 11 | 0x1f << 6 | 0x3 << 4,
-		frddr_type << 11 | msb << 6 | source << 4);
+		frddr_type << 11 | msb << 6 | source << (4 - offset));
 }
 
 void aed_enable(bool enable)

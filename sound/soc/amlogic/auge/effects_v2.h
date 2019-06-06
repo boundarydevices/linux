@@ -17,7 +17,13 @@
 #ifndef __EFFECTS_V2_H__
 #define __EFFECTS_V2_H__
 
-extern bool check_aed_v2(void);
+enum {
+	VERSION1 = 0,
+	VERSION2,
+	VERSION3
+};
+
+extern int check_aed_version(void);
 extern int card_add_effect_v2_kcontrols(struct snd_soc_card *card);
 extern int get_aed_dst(void);
 
