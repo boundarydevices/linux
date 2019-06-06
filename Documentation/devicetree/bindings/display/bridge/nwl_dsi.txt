@@ -35,6 +35,12 @@ Optional properties:
 			steer handling the MIPI DSI interrupts
 - assigned-clock-parents phandles to parent clocks that needs to be assigned as
 			parents to clocks defined in assigned-clocks
+- clock-drop-level	number used by internal logic to drop the crtc_clock when
+			a panel is used. The crtc_clock needs to be lower than
+			DSI clock in case of panels so that DSI commands have
+			enough blanking time to be sent. There is no upper limit,
+			but the user can play with this value until stable image
+			is obtained (usually: 0-4).
 
 * The clock assignments must follow the rules defined in:
 Documentation/devicetree/bindings/clock/clock-bindings.txt
