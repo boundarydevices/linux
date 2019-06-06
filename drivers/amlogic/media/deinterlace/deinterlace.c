@@ -1917,8 +1917,128 @@ static void config_canvas(struct di_buf_s *di_buf)
 
 #endif
 #ifdef CONFIG_CMA
+/**********************************************************
+ * ./include/linux/amlogic/media/codec_mm/codec_mm.h:
+ *	unsigned long codec_mm_alloc_for_dma(const char *owner,
+ *					int page_cnt,
+ *					int align2n,
+ *					int memflags);
+ *	int codec_mm_free_for_dma(const char *owner,
+ *				unsigned long phy_addr);
+ *	void *codec_mm_phys_to_virt(unsigned long phy_addr);
+ ***********************************************************/
+
+#define TVP_MEM_PAGES	0xffff
+/**********************************************************
+ * alloc mm from codec mm
+ * o: out:
+ * return:
+ *	true: seccuss
+ *	false: failed
+ ***********************************************************/
+static bool mm_codec_alloc(const char *owner, size_t count,
+			int cma_mode,
+			struct di_mm_s *o)
+{
+	int flags = 0;
+	bool istvp = false;
+
+	if (codec_mm_video_tvp_enabled()) {
+		istvp = true;
+		flags |= CODEC_MM_FLAGS_TVP;
+	} else {
+		flags |= CODEC_MM_FLAGS_RESERVED | CODEC_MM_FLAGS_CPU;
+	}
+
+	if (cma_mode == 4 && !istvp)
+		flags = CODEC_MM_FLAGS_CMA_FIRST |
+			CODEC_MM_FLAGS_CPU;
+
+
+	o->addr = codec_mm_alloc_for_dma(owner,
+					count,
+					0,
+					flags);
+
+	if (o->addr == 0) {
+		/*failed*/
+		pr_err("di:%s: failed\n", __func__);
+		return false;
+	}
+
+	if (istvp)
+		o->ppage = (struct page *) TVP_MEM_PAGES;
+	else
+		o->ppage = codec_mm_phys_to_virt(o->addr);
+
+	//pr_info("%s:page:0x%p,add:0x%lx\n", __func__, o->ppage, o->addr);
+	return true;
+}
+
+/**********************************************************
+ *	./include/linux/dma-contiguous.h:
+ * struct page *dma_alloc_from_contiguous(struct device *dev,
+ *					size_t count,
+ *					unsigned int order);
+ * bool dma_release_from_contiguous(struct device *dev,
+ *					struct page *pages,
+ *					int count);
+ *
+ ***********************************************************/
+
+/**********************************************************
+ * alloc mm by cma
+ * o: out:
+ * return:
+ *	true: seccuss
+ *	false: failed
+ ***********************************************************/
+static bool mm_cma_alloc(struct device *dev, size_t count,
+			struct di_mm_s *o)
+{
+	o->ppage = dma_alloc_from_contiguous(dev, count, 0);
+	if (o->ppage) {
+		o->addr = page_to_phys(o->ppage);
+		return true;
+	}
+	pr_err("di:%s: failed\n", __func__);
+	return false;
+}
+
+bool di_mm_alloc(int cma_mode, size_t count, struct di_mm_s *o)
+{
+	bool ret;
+
+	if (cma_mode == 3 || cma_mode == 4)
+		ret = mm_codec_alloc(DEVICE_NAME,
+			count,
+			cma_mode,
+			o);
+	else
+		ret = mm_cma_alloc(&(de_devp->pdev->dev), count, o);
+
+	return ret;
+}
+
+bool di_mm_release(int cma_mode,
+			struct page *pages,
+			int count,
+			unsigned long addr)
+{
+	bool ret = true;
+
+	if (cma_mode == 3 || cma_mode == 4)
+		codec_mm_free_for_dma(DEVICE_NAME, addr);
+	else
+		ret = dma_release_from_contiguous(&(de_devp->pdev->dev),
+			pages,
+			count);
+	return ret;
+}
+/***********************************************************/
 static unsigned int di_cma_alloc_total(struct di_dev_s *de_devp)
 {
+	#if 0
 	de_devp->total_pages =
 		dma_alloc_from_contiguous(&(de_devp->pdev->dev),
 		de_devp->mem_size >> PAGE_SHIFT, 0);
@@ -1936,8 +2056,28 @@ static unsigned int di_cma_alloc_total(struct di_dev_s *de_devp)
 	}
 
 	return 0;
+	#else
+	/*****************************************************/
+	struct di_mm_s omm;
+	bool ret;
 
+	ret = di_mm_alloc(de_devp->flag_cma,
+		de_devp->mem_size >> PAGE_SHIFT,
+		&omm);
 
+	if (!ret) /*failed*/
+		return 0;
+
+	de_devp->total_pages = omm.ppage;
+	de_devp->mem_start = omm.addr;
+
+	if (de_devp->flag_cma != 0 && de_devp->nrds_enable) {
+		nr_ds_buf_init(de_devp->flag_cma, 0,
+			&(de_devp->pdev->dev));
+	}
+
+	return 1;
+	#endif
 }
 
 static bool cma_print;
@@ -1947,10 +2087,12 @@ static unsigned int di_cma_alloc(struct di_dev_s *devp)
 	struct di_buf_s *buf_p = NULL;
 	int itmp, alloc_cnt = 0;
 	u8 *tmp;
+	bool aret;
+	struct di_mm_s omm;
 
 	start_time = jiffies_to_msecs(jiffies);
 	queue_for_each_entry(buf_p, ptmp, QUEUE_LOCAL_FREE, list) {
-
+#if 0
 		if (buf_p->pages == NULL) {
 			buf_p->pages =
 			dma_alloc_from_contiguous(&(devp->pdev->dev),
@@ -1973,6 +2115,34 @@ static unsigned int di_cma_alloc(struct di_dev_s *devp)
 			}
 		}
 		buf_p->nr_adr = page_to_phys(buf_p->pages);
+#else
+		if (buf_p->pages != NULL) {
+			pr_err("di:err1:%s:buf[%d] page:0x%p alloced skip\n",
+				__func__, buf_p->index, buf_p->pages);
+			continue;
+		}
+
+		aret = di_mm_alloc(devp->flag_cma,
+			devp->buffer_size >> PAGE_SHIFT,
+			&omm);
+
+
+		if (!aret) {
+			buf_p->pages = NULL;
+			pr_err("di:err2:%s: alloc failed %d fail.\n",
+				__func__,
+				buf_p->index);
+			return 0;
+		}
+
+		buf_p->pages = omm.ppage;
+		buf_p->nr_adr = omm.addr;
+		alloc_cnt++;
+		if (cma_print)
+			pr_info("DI CMA  allocate buf[%d]page:0x%p\n",
+				buf_p->index, buf_p->pages);
+
+#endif
 		if (cma_print)
 			pr_info(" addr 0x%lx ok.\n", buf_p->nr_adr);
 		if (di_pre_stru.buf_alloc_mode == 0) {
@@ -2009,6 +2179,7 @@ static unsigned int di_cma_alloc(struct di_dev_s *devp)
 	}
 	if (post_wr_en && post_wr_support) {
 		queue_for_each_entry(buf_p, ptmp, QUEUE_POST_FREE, list) {
+#if 0
 			if (buf_p->pages == NULL) {
 				buf_p->pages =
 					dma_alloc_from_contiguous(
@@ -2031,6 +2202,35 @@ static unsigned int di_cma_alloc(struct di_dev_s *devp)
 					buf_p->index, buf_p->pages);
 			}
 			buf_p->nr_adr = page_to_phys(buf_p->pages);
+
+#else
+			if (buf_p->pages != NULL) {
+				pr_err("di:err3:%s:buf[%d] page:0x%p skip\n",
+					__func__,
+					buf_p->index, buf_p->pages);
+				continue;
+			}
+
+			aret = di_mm_alloc(devp->flag_cma,
+				devp->post_buffer_size>>PAGE_SHIFT,
+				&omm);
+
+			if (!aret) {
+				buf_p->pages = NULL;
+				pr_err("di:err4:%s: alloc failed %d fail.\n",
+					__func__,
+					buf_p->index);
+				return 0;
+			}
+
+			buf_p->pages = omm.ppage;
+			buf_p->nr_adr = omm.addr;
+			alloc_cnt++;
+			if (cma_print)
+				pr_info("di:%s:pbuf[%d]page:0x%p\n",
+					__func__,
+					buf_p->index, buf_p->pages);
+#endif
 			if (cma_print)
 				pr_info(" addr 0x%lx ok.\n", buf_p->nr_adr);
 		}
@@ -2051,6 +2251,7 @@ static void di_cma_release(struct di_dev_s *devp)
 {
 	unsigned int i, ii, rels_cnt = 0, start_time, end_time, delta_time;
 	struct di_buf_s *buf_p, *keep_buf;
+	bool ret;
 
 	keep_buf = di_post_stru.keep_buf;
 	start_time = jiffies_to_msecs(jiffies);
@@ -2073,7 +2274,7 @@ static void di_cma_release(struct di_dev_s *devp)
 				di_unmap_phyaddr((u8 *)buf_p->mcinfo_vaddr);
 				buf_p->bflg_vmap = false;
 			}
-
+#if 0
 			if (dma_release_from_contiguous(&(devp->pdev->dev),
 					buf_p->pages,
 					devp->buffer_size >> PAGE_SHIFT)) {
@@ -2085,6 +2286,22 @@ static void di_cma_release(struct di_dev_s *devp)
 			} else {
 				pr_err("DI CMA  release buf[%d] fail.\n", i);
 			}
+#else
+
+			ret = di_mm_release(devp->flag_cma, buf_p->pages,
+				devp->buffer_size >> PAGE_SHIFT,
+				buf_p->nr_adr);
+			if (ret) {
+				buf_p->pages = NULL;
+				rels_cnt++;
+				if (cma_print)
+					pr_info(
+					"DI release buf[%d] ok.\n", i);
+			} else {
+				pr_err("di:err:%s:release buf[%d] fail.\n",
+					__func__, i);
+			}
+#endif
 		} else {
 			if (!IS_ERR_OR_NULL(buf_p->pages) && cma_print) {
 				pr_info("DI buf[%d] page:0x%p no release.\n",
@@ -2095,6 +2312,7 @@ static void di_cma_release(struct di_dev_s *devp)
 	if (post_wr_en && post_wr_support) {
 		for (i = 0; i < di_post_stru.di_post_num; i++) {
 			buf_p = &(di_buf_post[i]);
+#if 0
 			if (buf_p->pages != NULL) {
 				if (dma_release_from_contiguous(
 						&(devp->pdev->dev),
@@ -2111,6 +2329,28 @@ static void di_cma_release(struct di_dev_s *devp)
 						i);
 				}
 			}
+#else
+			if (buf_p->pages == NULL) {
+				pr_err("di:err2:%s:post buf[%d] is null\n",
+					__func__, i);
+				continue;
+			}
+
+			ret = di_mm_release(devp->flag_cma,
+					buf_p->pages,
+					devp->post_buffer_size >> PAGE_SHIFT,
+					buf_p->nr_adr);
+			if (ret) {
+				buf_p->pages = NULL;
+				rels_cnt++;
+				if (cma_print)
+					pr_info(
+					"DI release post buf[%d] ok.\n", i);
+			} else {
+				pr_err("di:err:%s:release post buf[%d] fail\n",
+					__func__, i);
+			}
+#endif
 		}
 	}
 	if (de_devp->nrds_enable) {
@@ -2312,7 +2552,8 @@ static int di_init_buf(int width, int height, unsigned char prog_flag)
 		}
 	}
 #ifdef CONFIG_CMA
-	if (de_devp->flag_cma == 1) {
+	if (de_devp->flag_cma == 1 || (de_devp->flag_cma == 4) ||
+		(de_devp->flag_cma == 3)) {
 		pr_dbg("%s:cma alloc req time: %u ms\n",
 			__func__, jiffies_to_msecs(jiffies));
 		atomic_set(&de_devp->mem_flag, 0);
@@ -6211,7 +6452,9 @@ static void di_unreg_process_irq(void)
 	di_pre_stru.unreg_req_flag = 0;
 	di_pre_stru.unreg_req_flag_irq = 0;
 #ifdef CONFIG_CMA
-	if (de_devp->flag_cma == 1) {
+	if (de_devp->flag_cma == 1 ||
+		(de_devp->flag_cma == 3) ||
+		(de_devp->flag_cma == 4)) {
 		pr_dbg("%s:cma release req time: %d ms\n",
 			__func__, jiffies_to_msecs(jiffies));
 		di_pre_stru.cma_release_req = 1;
@@ -7900,11 +8143,27 @@ static int di_probe(struct platform_device *pdev)
 	/*di pre h scaling down :sm1 tm2*/
 	di_devp->h_sc_down_en = pre_hsc_down_en;
 
+	pr_info("di:flag_cma=%d\n", di_devp->flag_cma);
 	if (di_devp->flag_cma >= 1) {
 #ifdef CONFIG_CMA
 		di_devp->pdev = pdev;
 		di_devp->flags |= DI_MAP_FLAG;
-		di_devp->mem_size = dma_get_cma_size_int_byte(&pdev->dev);
+		if (di_devp->flag_cma == 1
+			|| di_devp->flag_cma == 2)
+			di_devp->mem_size
+			= dma_get_cma_size_int_byte(&pdev->dev);
+
+		if (di_devp->mem_size <= 0x800000) {
+			di_devp->mem_size = 0x2800000;
+			//(flag_cma ? 3) reserved in
+			//codec mm : cma in codec mm
+			if (di_devp->flag_cma != 3) {
+				//no di cma, try use
+				//cma from codec mm
+				di_devp->flag_cma = 4;
+			}
+		}
+
 		pr_info("DI: CMA size 0x%x.\n", di_devp->mem_size);
 		if (di_devp->flag_cma == 2) {
 			if (di_cma_alloc_total(di_devp))

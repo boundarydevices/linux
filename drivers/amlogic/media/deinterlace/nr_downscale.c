@@ -28,6 +28,7 @@
 #include <linux/amlogic/media/canvas/canvas_mgr.h>
 #include "register.h"
 #include "nr_downscale.h"
+#include "deinterlace.h"
 
 static struct nr_ds_s nrds_dev;
 
@@ -65,16 +66,29 @@ void nr_ds_buf_init(unsigned int cma_flag, unsigned long mem_start,
 	struct device *dev)
 {
 	unsigned int i = 0;
+	bool ret;
+	struct di_mm_s omm;
 
 	if (cma_flag == 0) {
 		nrds_dev.nrds_addr = mem_start;
 	} else {
+		#if 0
 		nrds_dev.nrds_pages = dma_alloc_from_contiguous(dev,
 			NR_DS_PAGE_NUM, 0);
 		if (nrds_dev.nrds_pages)
 			nrds_dev.nrds_addr = page_to_phys(nrds_dev.nrds_pages);
 		else
 			pr_err("DI: alloc nr ds mem error.\n");
+		#else
+		ret = di_mm_alloc(cma_flag, NR_DS_PAGE_NUM, &omm);
+		if (ret) {
+			nrds_dev.nrds_pages = omm.ppage;
+			nrds_dev.nrds_addr = omm.addr;
+		} else {
+			pr_err("di:err: alloc nr ds mem error.\n");
+		}
+
+		#endif
 	}
 	for (i = 0; i < NR_DS_BUF_NUM; i++)
 		nrds_dev.buf[i] = nrds_dev.nrds_addr + (NR_DS_BUF_SIZE*i);
@@ -90,9 +104,16 @@ void nr_ds_buf_uninit(unsigned int cma_flag, struct device *dev)
 		nrds_dev.nrds_addr = 0;
 	} else {
 		if (nrds_dev.nrds_pages) {
+			#if 0
 			dma_release_from_contiguous(dev,
 				nrds_dev.nrds_pages,
 				NR_DS_PAGE_NUM);
+			#else
+			di_mm_release(cma_flag,
+				nrds_dev.nrds_pages,
+				NR_DS_PAGE_NUM,
+				nrds_dev.nrds_addr);
+			#endif
 			nrds_dev.nrds_addr = 0;
 			nrds_dev.nrds_pages = NULL;
 		} else

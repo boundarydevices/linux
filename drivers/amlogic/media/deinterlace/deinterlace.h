@@ -416,6 +416,16 @@ struct di_buf_pool_s {
 	struct di_buf_s *di_buf_ptr;
 	unsigned int size;
 };
+struct di_mm_s {
+	struct page	*ppage;
+	unsigned long	addr;
+};
+extern bool di_mm_alloc(int cma_mode, size_t count, struct di_mm_s *o);
+extern bool di_mm_release(int cma_mode,
+			struct page *pages,
+			int count,
+			unsigned long addr);
+
 
 unsigned char is_bypass(vframe_t *vf_in);
 
