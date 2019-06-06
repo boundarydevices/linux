@@ -858,6 +858,11 @@
 			"pcm_mclk",
 			"pcm_sclk";
 		pcm_mode = <1>; /* 0=slave mode, 1=master mode */
+		dai-format = "dsp_a";
+		dai-tdm-slot-tx-mask = <1>;
+		dai-tdm-slot-rx-mask = <1>;
+		dai-tdm-slot-num = <2>;
+		dai-tdm-slot-width = <16>;
 	};
 	i2s_plat: i2s_platform {
 		compatible = "amlogic, aml-i2s";

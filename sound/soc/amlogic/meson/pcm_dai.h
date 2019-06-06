@@ -18,10 +18,14 @@
 #ifndef AML_DAI_H
 #define AML_DAI_H
 
+#include <sound/soc.h>
+#include "audio_hw_pcm.h"
+
 struct aml_pcm {
 	struct clk *clk_mpll;
 	struct clk *clk_pcm_mclk;
 	struct clk *clk_pcm_sync;
 	int pcm_mode;
+	struct tdm_config cfg;
 };
 #endif

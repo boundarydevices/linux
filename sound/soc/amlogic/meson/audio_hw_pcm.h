@@ -23,8 +23,16 @@
 
 #include "audio_hw.h"
 
-void aml_set_pcm_format(int pcm_mode);
-void pcm_in_enable(struct snd_pcm_substream *substream, int flag);
+struct tdm_config {
+	unsigned int fmt;
+	unsigned int tx_slot_mask;
+	unsigned int rx_slot_mask;
+	unsigned int slots;
+	unsigned int slot_width;
+};
+
+void pcm_in_enable(struct snd_pcm_substream *substream,
+		struct tdm_config cfg, int enable);
 void pcm_in_set_buf(unsigned int addr, unsigned int size);
 int  pcm_in_is_enable(void);
 unsigned int pcm_in_rd_ptr(void);
@@ -32,7 +40,8 @@ unsigned int pcm_in_wr_ptr(void);
 unsigned int pcm_in_set_rd_ptr(unsigned int value);
 unsigned int pcm_in_fifo_int(void);
 
-void pcm_out_enable(struct snd_pcm_substream *substream, int flag);
+void pcm_out_enable(struct snd_pcm_substream *substream,
+		struct tdm_config cfg, int enable);
 void pcm_out_mute(int flag);
 void pcm_out_set_buf(unsigned int addr, unsigned int size);
 int  pcm_out_is_enable(void);
@@ -41,6 +50,8 @@ unsigned int pcm_out_rd_ptr(void);
 unsigned int pcm_out_wr_ptr(void);
 unsigned int pcm_out_set_wr_ptr(unsigned int value);
 
-void pcm_master_in_enable(struct snd_pcm_substream *substream, int flag);
-void pcm_master_out_enable(struct snd_pcm_substream *substream, int flag);
+void pcm_master_in_enable(struct snd_pcm_substream *substream,
+		struct tdm_config cfg, int enable);
+void pcm_master_out_enable(struct snd_pcm_substream *substream,
+		struct tdm_config cfg, int enable);
 #endif

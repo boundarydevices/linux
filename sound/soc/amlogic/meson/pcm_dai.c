@@ -25,6 +25,7 @@
 #include <linux/clk.h>
 #include <linux/gpio/consumer.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/of.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -34,10 +35,9 @@
 
 #include "pcm_dai.h"
 #include "pcm.h"
-#include "i2s.h"
+//#include "i2s.h"
 #include "audio_hw_pcm.h"
 
-#include <linux/of.h>
 
 #define DEV_NAME "aml-pcm-dai"
 
@@ -94,8 +94,13 @@ static int aml_pcm_dai_prepare(struct snd_pcm_substream *substream,
 	struct aml_pcm_runtime_data *prtd = runtime->private_data;
 	struct aml_pcm *pcm = snd_soc_dai_get_drvdata(dai);
 	int mclk_rate, pcm_bit;
+	unsigned int slots = pcm->cfg.slots;
 
-	pr_debug("***Entered %s\n", __func__);
+	pr_debug("***Entered %s, slots %d\n", __func__, slots);
+
+	/* if no slots is set, use the channel num */
+	if (slots == 0)
+		slots = runtime->channels;
 
 	/* set bclk */
 	if (runtime->format == SNDRV_PCM_FORMAT_S32_LE)
@@ -105,12 +110,12 @@ static int aml_pcm_dai_prepare(struct snd_pcm_substream *substream,
 	else
 		pcm_bit = 16;
 
-	mclk_rate = runtime->rate * pcm_bit * runtime->channels;
-	pr_info("%s rate:%d, bits:%d, channels:%d, mclk:%d\n",
+	mclk_rate = runtime->rate * pcm_bit * slots;
+	pr_info("%s rate:%d, bits:%d, slots:%d, mclk:%d\n",
 		__func__,
 		runtime->rate,
 		pcm_bit,
-		runtime->channels,
+		slots,
 		mclk_rate);
 
 	aml_pcm_set_clk(pcm, mclk_rate);
@@ -149,16 +154,16 @@ static int aml_pcm_dai_trigger(struct snd_pcm_substream *substream, int cmd,
 			pr_info("aiu pcm master stream %d enable\n\n",
 				substream->stream);
 			if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-				pcm_master_out_enable(substream, 1);
+				pcm_master_out_enable(substream, pcm_p->cfg, 1);
 			else
-				pcm_master_in_enable(substream, 1);
+				pcm_master_in_enable(substream, pcm_p->cfg, 1);
 		} else {
 			pr_info("aiu slave pcm stream %d enable\n\n",
 				substream->stream);
 			if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-				pcm_out_enable(substream, 1);
+				pcm_out_enable(substream, pcm_p->cfg, 1);
 			else
-				pcm_in_enable(substream, 1);
+				pcm_in_enable(substream, pcm_p->cfg, 1);
 		}
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -168,16 +173,16 @@ static int aml_pcm_dai_trigger(struct snd_pcm_substream *substream, int cmd,
 			pr_info("aiu master pcm stream %d disable\n\n",
 				substream->stream);
 			if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-				pcm_master_out_enable(substream, 0);
+				pcm_master_out_enable(substream, pcm_p->cfg, 0);
 			else
-				pcm_master_in_enable(substream, 0);
+				pcm_master_in_enable(substream, pcm_p->cfg, 0);
 		} else {
 			pr_info("aiu slave pcm stream %d disable\n\n",
 				substream->stream);
 			if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-				pcm_out_enable(substream, 0);
+				pcm_out_enable(substream, pcm_p->cfg, 0);
 			else
-				pcm_in_enable(substream, 0);
+				pcm_in_enable(substream, pcm_p->cfg, 0);
 		}
 		break;
 	default:
@@ -198,8 +203,6 @@ static int aml_pcm_dai_hw_params(struct snd_pcm_substream *substream,
 static int aml_pcm_dai_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
 	pr_debug("***Entered %s\n", __func__);
-
-	aml_set_pcm_format(fmt & SND_SOC_DAIFMT_FORMAT_MASK);
 
 	return 0;
 }
@@ -264,6 +267,36 @@ EXPORT_SYMBOL_GPL(aml_pcm_dai);
 static const struct snd_soc_component_driver aml_component = {
 	.name = DEV_NAME,
 };
+
+static int parse_tdm_configs(struct device_node *node, struct aml_pcm *pcm_p)
+{
+	struct tdm_config *cfg = &pcm_p->cfg;
+	unsigned int fmt = 0;
+
+	fmt = snd_soc_of_parse_daifmt(node, NULL, NULL, NULL);
+	cfg->fmt = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
+
+	snd_soc_of_parse_tdm_slot(node,
+			&cfg->tx_slot_mask,
+			&cfg->rx_slot_mask,
+			&cfg->slots,
+			&cfg->slot_width);
+	pr_info("tdm config: %#x, %#x, %d, %d\n",
+			cfg->tx_slot_mask,
+			cfg->rx_slot_mask,
+			cfg->slots,
+			cfg->slot_width);
+
+	if (cfg->fmt == 0)
+		cfg->fmt = SND_SOC_DAIFMT_DSP_A;
+
+	if (cfg->tx_slot_mask != cfg->rx_slot_mask) {
+		pr_info("%s(), rx equals to tx\n", __func__);
+		cfg->rx_slot_mask = cfg->tx_slot_mask;
+	}
+
+	return 0;
+}
 
 static int aml_pcm_dai_probe(struct platform_device *pdev)
 {
@@ -335,6 +368,7 @@ static int aml_pcm_dai_probe(struct platform_device *pdev)
 			"Can't enable pcm clk_pcm_sync clock: %d\n", ret);
 			goto err;
 		}
+		parse_tdm_configs((&pdev->dev)->of_node, pcm_p);
 	}
 
 	ret = snd_soc_register_component(&pdev->dev, &aml_component,

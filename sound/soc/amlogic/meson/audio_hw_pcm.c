@@ -58,15 +58,6 @@ static int valid_channel[] = {
 /* counter for pcm clk used */
 static int aml_pcm_clk_count;
 
-static unsigned int aml_pcm_format = SND_SOC_DAIFMT_DSP_B;
-
-void aml_set_pcm_format(int pcm_mode)
-{
-	pr_info(" %s, pcm format:0x%x\n", __func__, pcm_mode);
-
-	aml_pcm_format = pcm_mode;
-}
-
 static uint32_t aml_audin_read_bits(uint32_t reg, const uint32_t start,
 				   const uint32_t len)
 {
@@ -94,16 +85,18 @@ static void pcm_in_register_show(void)
 		  aml_audin_read(PCMIN_CTRL1));
 }
 
-void pcm_master_in_enable(struct snd_pcm_substream *substream, int flag)
+void pcm_master_in_enable(struct snd_pcm_substream *substream,
+		struct tdm_config cfg, int enable)
 {
 	unsigned int fs_offset;
+	unsigned int slots = cfg.slots;
 
-	if (aml_pcm_format == SND_SOC_DAIFMT_DSP_A)
+	if (cfg.fmt == SND_SOC_DAIFMT_DSP_A)
 		fs_offset = 1;
 	else {
 		fs_offset = 0;
 
-		if (aml_pcm_format != SND_SOC_DAIFMT_DSP_B)
+		if (cfg.fmt != SND_SOC_DAIFMT_DSP_B)
 			pr_err("Unsupport DSP mode\n");
 	}
 
@@ -127,12 +120,16 @@ RESET_FIFO:
 	/* disable pcmin */
 	aml_audin_update_bits(PCMIN_CTRL0, 1 << 31, 0 << 31);
 
-	if (flag) {
+	if (enable) {
 		unsigned int pcm_mode = 1, pcm_wlen = 16;
 		unsigned int num_slot = substream->runtime->channels;
 		unsigned int valid_slot = valid_channel[num_slot - 1];
 		unsigned int max_bits;
 		unsigned int valid_bits;
+
+		/* if no slots is set, use the channel num */
+		if (slots == 0)
+			slots = num_slot;
 
 		/* whatever pcm out is enable */
 		aml_pcm_clk_count++;
@@ -226,12 +223,12 @@ RESET_FIFO:
 			unsigned int bit_offset_s = 0, slot_offset_s = 0,
 				bit_offset_e = 0, slot_offset_e = 0;
 
-			if (aml_pcm_format == SND_SOC_DAIFMT_DSP_A) {
+			if (cfg.fmt == SND_SOC_DAIFMT_DSP_A) {
 				bit_offset_s = pcm_wlen - 1;
-				slot_offset_s = num_slot - 1;
+				slot_offset_s = slots - 1;
 				bit_offset_e = 0;
 				slot_offset_e = 0;
-			} else if (aml_pcm_format == SND_SOC_DAIFMT_DSP_B) {
+			} else if (cfg.fmt == SND_SOC_DAIFMT_DSP_B) {
 				bit_offset_s = 0;
 				slot_offset_s = 0;
 				bit_offset_e = 1;
@@ -248,7 +245,7 @@ RESET_FIFO:
 				/* underrun use mute constant */
 				(0 << 29) |
 				/* pcmo max slot number in one frame*/
-				((num_slot - 1) << 22) |
+				((slots - 1) << 22) |
 				/* pcmo max bit number in one slot*/
 				(valid_bits << 16) |
 				(valid_slot << 0)
@@ -286,21 +283,22 @@ RESET_FIFO:
 		}
 	}
 
-	pr_debug("PCMIN %s\n", flag ? "enable" : "disable");
+	pr_debug("PCMIN %s\n", enable ? "enable" : "disable");
 	pcm_in_register_show();
 }
 
 
-void pcm_in_enable(struct snd_pcm_substream *substream, int flag)
+void pcm_in_enable(struct snd_pcm_substream *substream,
+		struct tdm_config cfg, int enable)
 {
 	unsigned int fs_offset;
 
-	if (aml_pcm_format == SND_SOC_DAIFMT_DSP_A)
+	if (cfg.fmt == SND_SOC_DAIFMT_DSP_A)
 		fs_offset = 1;
 	else {
 		fs_offset = 0;
 
-		if (aml_pcm_format != SND_SOC_DAIFMT_DSP_B)
+		if (cfg.fmt != SND_SOC_DAIFMT_DSP_B)
 			pr_err("Unsupport DSP mode\n");
 	}
 	/* reset fifo */
@@ -322,7 +320,7 @@ void pcm_in_enable(struct snd_pcm_substream *substream, int flag)
 	/* disable pcmin */
 	aml_audin_update_bits(PCMIN_CTRL0, 1 << 31, 0 << 31);
 
-	if (flag) {
+	if (enable) {
 		unsigned int pcm_mode = 1;
 		unsigned int num_slot = substream->runtime->channels;
 		unsigned int valid_slot = valid_channel[num_slot - 1];
@@ -414,7 +412,7 @@ void pcm_in_enable(struct snd_pcm_substream *substream, int flag)
 			(1 << 0));	/* left justified */
 	}
 
-	pr_debug("PCMIN %s\n", flag ? "enable" : "disable");
+	pr_debug("PCMIN %s\n", enable ? "enable" : "disable");
 	pcm_in_register_show();
 }
 
@@ -505,7 +503,8 @@ static void pcm_out_register_show(void)
 		  aml_audin_read(PCMOUT_CTRL3));
 }
 
-void pcm_master_out_enable(struct snd_pcm_substream *substream, int flag)
+void pcm_master_out_enable(struct snd_pcm_substream *substream,
+		struct tdm_config cfg,  int enable)
 {
 	unsigned int pcm_mode = 1, pcm_wlen = 16;
 	unsigned int num_slot = substream->runtime->channels;
@@ -513,6 +512,11 @@ void pcm_master_out_enable(struct snd_pcm_substream *substream, int flag)
 	unsigned int valid_bits;
 	unsigned int bit_offset_s = 0, slot_offset_s = 0,
 			bit_offset_e = 0, slot_offset_e = 0;
+	unsigned int slots = cfg.slots;
+
+	/* if no slots is set, use the channel num */
+	if (slots == 0)
+		slots = num_slot;
 
 	switch (substream->runtime->format) {
 	case SNDRV_PCM_FORMAT_S32_LE:
@@ -532,12 +536,12 @@ void pcm_master_out_enable(struct snd_pcm_substream *substream, int flag)
 	pcm_mode = (pcm_wlen >> 3) - 1;
 	valid_bits = pcm_wlen - 1;
 
-	if (aml_pcm_format == SND_SOC_DAIFMT_DSP_A) {
+	if (cfg.fmt == SND_SOC_DAIFMT_DSP_A) {
 		bit_offset_s = pcm_wlen - 1;
-		slot_offset_s = num_slot - 1;
+		slot_offset_s = slots - 1;
 		bit_offset_e = 0;
 		slot_offset_e = 0;
-	} else if (aml_pcm_format == SND_SOC_DAIFMT_DSP_B) {
+	} else if (cfg.fmt == SND_SOC_DAIFMT_DSP_B) {
 		bit_offset_s = 0;
 		slot_offset_s = 0;
 		bit_offset_e = 1;
@@ -545,10 +549,12 @@ void pcm_master_out_enable(struct snd_pcm_substream *substream, int flag)
 	} else
 		pr_err("Unsupport DSP mode\n");
 
-	pr_info("pcm master out, pcm mode:%d, valid bits:0x%x, valid slot:0x%x\n",
+	pr_info("%s(), mode:%d, valid bits:0x%x, valid slot:0x%x, slots:%d\n",
+		__func__,
 		pcm_mode,
 		valid_bits,
-		valid_slot);
+		valid_slot,
+		slots);
 
 	/* reset fifo */
 	aml_audin_update_bits(AUDOUT_CTRL, 1 << 30, 1 << 30);
@@ -564,7 +570,7 @@ void pcm_master_out_enable(struct snd_pcm_substream *substream, int flag)
 		aml_audin_update_bits(PCMOUT_CTRL0, 1 << 31, 0 << 31);
 	}
 
-	if (flag) {
+	if (enable) {
 		/* set buffer start ptr end */
 		aml_audin_write(AUDOUT_BUF0_STA, pcmout_buffer_addr);
 		aml_audin_write(AUDOUT_BUF0_WPTR, pcmout_buffer_addr);
@@ -617,7 +623,7 @@ void pcm_master_out_enable(struct snd_pcm_substream *substream, int flag)
 			/* underrun use mute constant */
 			(0 << 29) |
 			/* pcmo max slot number in one frame */
-			((num_slot - 1) << 22) |
+			((slots - 1) << 22) |
 			/* pcmo max bit number in one slot */
 			(valid_bits << 16) |
 			/* pcmo valid slot. each bit for one slot */
@@ -680,11 +686,12 @@ void pcm_master_out_enable(struct snd_pcm_substream *substream, int flag)
 		}
 	}
 
-	pr_debug("PCMOUT %s\n", flag ? "enable" : "disable");
+	pr_debug("PCMOUT %s\n", enable ? "enable" : "disable");
 	pcm_out_register_show();
 }
 
-void pcm_out_enable(struct snd_pcm_substream *substream, int flag)
+void pcm_out_enable(struct snd_pcm_substream *substream,
+		struct tdm_config cfg, int enable)
 {
 	unsigned int pcm_mode = 1;
 	unsigned int num_slot = substream->runtime->channels;
@@ -692,13 +699,13 @@ void pcm_out_enable(struct snd_pcm_substream *substream, int flag)
 	unsigned int valid_bits = 0xf;
 	unsigned int bit_offset_s, slot_offset_s, bit_offset_e, slot_offset_e;
 
-	if (aml_pcm_format == SND_SOC_DAIFMT_DSP_A) {
+	if (cfg.fmt == SND_SOC_DAIFMT_DSP_A) {
 		bit_offset_s = 0xF;
 		slot_offset_s = num_slot - 1;
 		bit_offset_e = 0;
 		slot_offset_e = 0;
 	} else {
-		if (aml_pcm_format != SND_SOC_DAIFMT_DSP_B)
+		if (cfg.fmt != SND_SOC_DAIFMT_DSP_B)
 			pr_err("Unsupport DSP mode\n");
 
 		bit_offset_s = 0;
@@ -711,7 +718,7 @@ void pcm_out_enable(struct snd_pcm_substream *substream, int flag)
 	case SNDRV_PCM_FORMAT_S32_LE:
 		pcm_mode = 3;
 		valid_bits = 0x1f;
-		if (aml_pcm_format == SND_SOC_DAIFMT_DSP_A) {
+		if (cfg.fmt == SND_SOC_DAIFMT_DSP_A) {
 			bit_offset_s = 0xF;
 			slot_offset_s = (num_slot << 1) - 1;
 			bit_offset_e = 0;
@@ -721,7 +728,7 @@ void pcm_out_enable(struct snd_pcm_substream *substream, int flag)
 	case SNDRV_PCM_FORMAT_S24_LE:
 		pcm_mode = 2;
 		valid_bits = 0x1f;
-		if (aml_pcm_format == SND_SOC_DAIFMT_DSP_A) {
+		if (cfg.fmt == SND_SOC_DAIFMT_DSP_A) {
 			bit_offset_s = 0xF;
 			slot_offset_s = (num_slot << 1) - 8 - 1;
 			bit_offset_e = 0;
@@ -735,7 +742,7 @@ void pcm_out_enable(struct snd_pcm_substream *substream, int flag)
 	case SNDRV_PCM_FORMAT_S8:
 		pcm_mode = 0;
 		valid_bits = 0x7;
-		if (aml_pcm_format == SND_SOC_DAIFMT_DSP_A) {
+		if (cfg.fmt == SND_SOC_DAIFMT_DSP_A) {
 			bit_offset_s = 0x7;
 			slot_offset_s = (num_slot >> 1) - 1;
 			bit_offset_e = 0;
@@ -763,7 +770,7 @@ void pcm_out_enable(struct snd_pcm_substream *substream, int flag)
 	/* disable pcmout */
 	aml_audin_update_bits(PCMOUT_CTRL0, 1 << 31, 0 << 31);
 
-	if (flag) {
+	if (enable) {
 		/* set buffer start ptr end */
 		aml_audin_write(AUDOUT_BUF0_STA, pcmout_buffer_addr);
 		aml_audin_write(AUDOUT_BUF0_WPTR, pcmout_buffer_addr);
@@ -848,7 +855,7 @@ void pcm_out_enable(struct snd_pcm_substream *substream, int flag)
 			(0 << 0));
 	}
 
-	pr_debug("PCMOUT %s\n", flag ? "enable" : "disable");
+	pr_debug("PCMOUT %s\n", enable ? "enable" : "disable");
 	pcm_out_register_show();
 }
 
