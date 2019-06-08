@@ -70,6 +70,7 @@ struct pts_table_s {
 	unsigned long buf_start;
 	u32 buf_size;
 	int first_checkin_pts;
+	u64 first_checkin_pts_uS64;
 	int first_lookup_ok;
 	int first_lookup_is_fail;	/*1: first lookup fail;*/
 					   /*0: first lookup success */
@@ -444,25 +445,28 @@ static int pts_checkin_offset_inline(u8 type, u32 offset, u32 val, u64 uS64)
 
 		if (type == PTS_TYPE_VIDEO && pTable->first_checkin_pts == -1) {
 			pTable->first_checkin_pts = val;
+			pTable->first_checkin_pts_uS64 = uS64;
 			timestamp_checkin_firstvpts_set(val);
 			/*
 			 *if(tsync_get_debug_pts_checkin() &&
 			 * tsync_get_debug_vpts()) {
 			 */
-			pr_debug("first check in vpts <0x%x:0x%x> ok!\n",
-					offset,
-					val);
+			pr_debug(
+				"first check in vpts <0x%x:0x%x(0x%llx)> ok!\n",
+				offset, val, uS64);
 			/* } */
 		}
 		if (type == PTS_TYPE_AUDIO && pTable->first_checkin_pts == -1) {
 			pTable->first_checkin_pts = val;
+			pTable->first_checkin_pts_uS64 = uS64;
 			timestamp_checkin_firstapts_set(val);
 			/*
 			 *if (tsync_get_debug_pts_checkin() &&
 			 * tsync_get_debug_apts()) {
 			 */
-			pr_info("first check in apts <0x%x:0x%x> ok!\n", offset,
-					val);
+			pr_info(
+				"first check in apts <0x%x:0x%x(0x%llx)> ok!\n",
+				offset, val, uS64);
 			/* } */
 		}
 
@@ -928,7 +932,7 @@ static int pts_lookup_offset_inline_locked(u8 type, u32 offset, u32 *val,
 			 */
 			if (!pTable->first_lookup_ok) {
 				*val = pTable->first_checkin_pts;
-				*uS64 = (u64)(*val) << 32;
+				*uS64 = pTable->first_checkin_pts_uS64;
 				pTable->first_lookup_ok = 1;
 				pTable->first_lookup_is_fail = 1;
 
