@@ -991,7 +991,6 @@ static void ablkcipher_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 	struct ablkcipher_request *req = context;
 	struct ablkcipher_edesc *edesc;
 	struct crypto_ablkcipher *ablkcipher = crypto_ablkcipher_reqtfm(req);
-	struct caam_ctx *ctx = crypto_ablkcipher_ctx(ablkcipher);
 	int ivsize = crypto_ablkcipher_ivsize(ablkcipher);
 
 #ifdef DEBUG
@@ -1007,18 +1006,20 @@ static void ablkcipher_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 
 	/*
 	 * The crypto API expects us to set the IV (req->info) to the last
-	 * ciphertext block when running in CBC mode.
+	 * ciphertext block (CBC mode) or last counter (CTR mode).
+	 * This is used e.g. by the CTS mode.
 	 */
-	if ((ctx->cdata.algtype & OP_ALG_AAI_MASK) == OP_ALG_AAI_CBC)
-		scatterwalk_map_and_copy(req->info, req->dst, req->nbytes -
-					 ivsize, ivsize, 0);
+	if (ivsize) {
+		memcpy(req->info, (u8 *)edesc->sec4_sg + edesc->sec4_sg_bytes,
+		       ivsize);
 
 #ifdef DEBUG
-	if (ivsize)
 		print_hex_dump(KERN_ERR, "dstiv  @"__stringify(__LINE__)": ",
 			       DUMP_PREFIX_ADDRESS, 16, 4, req->info,
 			       edesc->src_nents > 1 ? 100 : ivsize, 1);
 #endif
+	}
+
 	caam_dump_sg(KERN_ERR, "dst    @" __stringify(__LINE__)": ",
 		     DUMP_PREFIX_ADDRESS, 16, 4, req->dst,
 		     edesc->dst_nents > 1 ? 100 : req->nbytes, 1);
@@ -1045,10 +1046,10 @@ static void ablkcipher_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 {
 	struct ablkcipher_request *req = context;
 	struct ablkcipher_edesc *edesc;
-#ifdef DEBUG
 	struct crypto_ablkcipher *ablkcipher = crypto_ablkcipher_reqtfm(req);
 	int ivsize = crypto_ablkcipher_ivsize(ablkcipher);
 
+#ifdef DEBUG
 	dev_err(jrdev, "%s %d: err 0x%x\n", __func__, __LINE__, err);
 #endif
 
@@ -1058,11 +1059,21 @@ static void ablkcipher_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 
 	ablkcipher_unmap(jrdev, edesc, req);
 
+	/*
+	 * The crypto API expects us to set the IV (req->iv) to the last
+	 * ciphertext block (CBC mode) or last counter (CTR mode).
+	 * This is used e.g. by the CTS mode.
+	 */
+	if (ivsize) {
+		memcpy(req->info, (u8 *)edesc->sec4_sg + edesc->sec4_sg_bytes,
+		       ivsize);
 #ifdef DEBUG
-	print_hex_dump(KERN_ERR, "dstiv  @"__stringify(__LINE__)": ",
-		       DUMP_PREFIX_ADDRESS, 16, 4, req->info,
-		       ivsize, 1);
+		print_hex_dump(KERN_ERR, "dstiv  @"__stringify(__LINE__)": ",
+			       DUMP_PREFIX_ADDRESS, 16, 4, req->info,
+			       ivsize, 1);
 #endif
+	}
+
 	caam_dump_sg(KERN_ERR, "dst    @" __stringify(__LINE__)": ",
 		     DUMP_PREFIX_ADDRESS, 16, 4, req->dst,
 		     edesc->dst_nents > 1 ? 100 : req->nbytes, 1);
@@ -1253,7 +1264,7 @@ static void init_ablkcipher_job(u32 *sh_desc, dma_addr_t ptr,
 	if (likely(req->src == req->dst)) {
 		dst_dma = src_dma + !!ivsize * sizeof(struct sec4_sg_entry);
 		out_options = in_options;
-	} else if (edesc->mapped_dst_nents == 1) {
+	} else if (!ivsize && edesc->mapped_dst_nents == 1) {
 		dst_dma = sg_dma_address(req->dst);
 	} else {
 		dst_dma = edesc->sec4_sg_dma + sec4_sg_index *
@@ -1261,7 +1272,7 @@ static void init_ablkcipher_job(u32 *sh_desc, dma_addr_t ptr,
 		out_options = LDST_SGF;
 	}
 
-	append_seq_out_ptr(desc, dst_dma, req->nbytes, out_options);
+	append_seq_out_ptr(desc, dst_dma, req->nbytes + ivsize, out_options);
 }
 
 /*
@@ -1655,7 +1666,14 @@ static struct ablkcipher_edesc *ablkcipher_edesc_alloc(struct ablkcipher_request
 	else
 		sec4_sg_ents = mapped_src_nents + !!ivsize;
 	dst_sg_idx = sec4_sg_ents;
-	sec4_sg_ents += mapped_dst_nents > 1 ? mapped_dst_nents : 0;
+
+	/*
+	 * Input, output HW S/G tables: [IV, src][dst, IV]
+	 * IV entries point to the same buffer
+	 * If src == dst, S/G entries are reused (S/G tables overlap)
+	 */
+	sec4_sg_ents += (mapped_dst_nents > 1 || ivsize) ?
+			!!ivsize + mapped_dst_nents : 0;
 	sec4_sg_bytes = sec4_sg_ents * sizeof(struct sec4_sg_entry);
 
 	/*
@@ -1677,14 +1695,14 @@ static struct ablkcipher_edesc *ablkcipher_edesc_alloc(struct ablkcipher_request
 	edesc->sec4_sg_bytes = sec4_sg_bytes;
 	edesc->sec4_sg = (struct sec4_sg_entry *)((u8 *)edesc->hw_desc +
 						  desc_bytes);
-	edesc->iv_dir = DMA_TO_DEVICE;
+	edesc->iv_dir = DMA_BIDIRECTIONAL;
 
 	/* Make sure IV is located in a DMAable area */
 	if (ivsize) {
-		iv = (u8 *)edesc->hw_desc + desc_bytes + sec4_sg_bytes;
+		iv = (u8 *)edesc->sec4_sg + sec4_sg_bytes;
 		memcpy(iv, req->info, ivsize);
 
-		iv_dma = dma_map_single(jrdev, iv, ivsize, DMA_TO_DEVICE);
+		iv_dma = dma_map_single(jrdev, iv, ivsize, DMA_BIDIRECTIONAL);
 		if (dma_mapping_error(jrdev, iv_dma)) {
 			dev_err(jrdev, "unable to map IV\n");
 			caam_unmap(jrdev, req->src, req->dst, src_nents,
@@ -1696,13 +1714,20 @@ static struct ablkcipher_edesc *ablkcipher_edesc_alloc(struct ablkcipher_request
 		dma_to_sec4_sg_one(edesc->sec4_sg, iv_dma, ivsize, 0);
 	}
 	if (dst_sg_idx)
-		sg_to_sec4_sg_last(req->src, req->nbytes, edesc->sec4_sg +
-				   !!ivsize, 0);
+		sg_to_sec4_sg(req->src, req->nbytes, edesc->sec4_sg + !!ivsize,
+			      0);
 
-	if (mapped_dst_nents > 1) {
-		sg_to_sec4_sg_last(req->dst, req->nbytes, edesc->sec4_sg +
-				   dst_sg_idx, 0);
-	}
+	if (req->src != req->dst && (ivsize || mapped_dst_nents > 1))
+		sg_to_sec4_sg(req->dst, req->nbytes, edesc->sec4_sg +
+			      dst_sg_idx, 0);
+
+	if (ivsize)
+		dma_to_sec4_sg_one(edesc->sec4_sg + dst_sg_idx +
+				   mapped_dst_nents, iv_dma, ivsize, 0);
+
+	if (ivsize || mapped_dst_nents > 1)
+		sg_to_sec4_set_last(edesc->sec4_sg + dst_sg_idx +
+				    mapped_dst_nents);
 
 	if (sec4_sg_bytes) {
 		edesc->sec4_sg_dma = dma_map_single(jrdev, edesc->sec4_sg,
@@ -1768,7 +1793,6 @@ static int ablkcipher_decrypt(struct ablkcipher_request *req)
 	struct ablkcipher_edesc *edesc;
 	struct crypto_ablkcipher *ablkcipher = crypto_ablkcipher_reqtfm(req);
 	struct caam_ctx *ctx = crypto_ablkcipher_ctx(ablkcipher);
-	int ivsize = crypto_ablkcipher_ivsize(ablkcipher);
 	struct device *jrdev = ctx->jrdev;
 	u32 *desc;
 	int ret = 0;
@@ -1777,14 +1801,6 @@ static int ablkcipher_decrypt(struct ablkcipher_request *req)
 	edesc = ablkcipher_edesc_alloc(req, DESC_JOB_IO_LEN * CAAM_CMD_SZ);
 	if (IS_ERR(edesc))
 		return PTR_ERR(edesc);
-
-	/*
-	 * The crypto API expects us to set the IV (req->info) to the last
-	 * ciphertext block when running in CBC mode.
-	 */
-	if ((ctx->cdata.algtype & OP_ALG_AAI_MASK) == OP_ALG_AAI_CBC)
-		scatterwalk_map_and_copy(req->info, req->src, req->nbytes -
-					 ivsize, ivsize, 0);
 
 	/* Create and submit job descriptor*/
 	init_ablkcipher_job(ctx->sh_desc_dec, ctx->sh_desc_dec_dma, edesc, req);
