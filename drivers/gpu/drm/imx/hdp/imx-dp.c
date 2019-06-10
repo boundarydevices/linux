@@ -393,9 +393,9 @@ void dp_mode_set(state_struct *state,
 	num_lanes = link.num_lanes;
 
 	/* Use the lower link rate if dp_link_rate is set */
-	if (hdp->dp_link_rate != 0) {
-		link_rate = min(hdp->dp_link_rate,
-			(u32)(drm_dp_link_rate_to_bw_code(link.rate)));
+	link_rate = min(hdp->dp_link_rate,
+		(u32)(drm_dp_link_rate_to_bw_code(link.rate)));
+	if ((hdp->dp_link_rate != 0) && (hdp->dp_link_rate != link_rate)) {
 		DRM_INFO("DP actual link rate:  0x%x\n", link_rate);
 		hdp->link_rate = link_rate;
 
