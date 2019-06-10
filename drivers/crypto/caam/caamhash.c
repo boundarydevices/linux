@@ -710,7 +710,7 @@ static int ahash_edesc_add_src(struct caam_hash_ctx *ctx,
 		struct sec4_sg_entry *sg = edesc->sec4_sg;
 		unsigned int sgsize = sizeof(*sg) * (first_sg + nents);
 
-		sg_to_sec4_sg_last(req->src, nents, sg + first_sg, 0);
+		sg_to_sec4_sg_last(req->src, to_hash, sg + first_sg, 0);
 
 		src_dma = dma_map_single(ctx->jrdev, sg, sgsize, DMA_TO_DEVICE);
 		if (dma_mapping_error(ctx->jrdev, src_dma)) {
@@ -767,8 +767,9 @@ static int ahash_update_ctx(struct ahash_request *req)
 	}
 
 	if (to_hash) {
-		src_nents = sg_nents_for_len(req->src,
-					     req->nbytes - (*next_buflen));
+		int src_len = req->nbytes - *next_buflen;
+
+		src_nents = sg_nents_for_len(req->src, src_len);
 		if (src_nents < 0) {
 			dev_err(jrdev, "Invalid number of src SG.\n");
 			return src_nents;
@@ -814,7 +815,7 @@ static int ahash_update_ctx(struct ahash_request *req)
 			goto unmap_ctx;
 
 		if (mapped_nents)
-			sg_to_sec4_sg_last(req->src, mapped_nents,
+			sg_to_sec4_sg_last(req->src, src_len,
 					   edesc->sec4_sg + sec4_sg_src_index,
 					   0);
 		else
@@ -1193,8 +1194,9 @@ static int ahash_update_no_ctx(struct ahash_request *req)
 	}
 
 	if (to_hash) {
-		src_nents = sg_nents_for_len(req->src,
-					     req->nbytes - *next_buflen);
+		int src_len = req->nbytes - *next_buflen;
+
+		src_nents = sg_nents_for_len(req->src, src_len);
 		if (src_nents < 0) {
 			dev_err(jrdev, "Invalid number of src SG.\n");
 			return src_nents;
@@ -1234,8 +1236,7 @@ static int ahash_update_no_ctx(struct ahash_request *req)
 		if (ret)
 			goto unmap_ctx;
 
-		sg_to_sec4_sg_last(req->src, mapped_nents,
-				   edesc->sec4_sg + 1, 0);
+		sg_to_sec4_sg_last(req->src, src_len, edesc->sec4_sg + 1, 0);
 
 		if (*next_buflen) {
 			scatterwalk_map_and_copy(next_buf, req->src,
