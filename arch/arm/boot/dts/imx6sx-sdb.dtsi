@@ -120,6 +120,7 @@
 		gpio = <&gpio2 11 GPIO_ACTIVE_HIGH>;
 		off-on-delay = <20000>;
 		enable-active-high;
+		regulator-always-on;
 	};
 
 	hannstar_cabc {
