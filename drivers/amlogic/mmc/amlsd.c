@@ -275,6 +275,33 @@ void aml_emmc_hw_reset(struct mmc_host *mmc)
 #endif
 }
 
+void sdio_clk_always_on(int on)
+{
+	u32 vconf = 0;
+	struct sd_emmc_config *pconf = (struct sd_emmc_config *)&vconf;
+	struct amlsd_platform *pdata = NULL;
+	struct amlsd_host *host = NULL;
+
+	if (sdio_host) {
+		pdata = mmc_priv(sdio_host);
+		host = pdata->host;
+
+		vconf = readl(host->base + SD_EMMC_CFG);
+		if (on) {
+			pconf->auto_clk = 0;
+			pconf->spare = 1;
+		} else {
+			pconf->auto_clk = 1;
+			pconf->spare = 0;
+		}
+		writel(vconf, host->base + SD_EMMC_CFG);
+
+		pr_info("clk always on (%d): cfg = %x\n",
+				on,	readl(host->base + SD_EMMC_CFG));
+	}
+}
+EXPORT_SYMBOL(sdio_clk_always_on);
+
 static void sdio_rescan(struct mmc_host *mmc)
 {
 	int ret;

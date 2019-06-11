@@ -2970,6 +2970,7 @@ static int aml_sd_emmc_card_busy(struct mmc_host *mmc)
 		vconf = readl(host->base + SD_EMMC_CFG);
 		pconf->auto_clk = 1;
 		writel(vconf, host->base + SD_EMMC_CFG);
+		host->sd_sdio_switch_volat_done = 0;
 		if ((host->mem->start == host->data->port_b_base)
 				&& host->data->tdma_f)
 			host->init_volt = 0;
