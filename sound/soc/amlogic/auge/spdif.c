@@ -325,7 +325,6 @@ int spdifin_source_set_enum(
 	return 0;
 }
 
-
 int spdif_set_audio_clk(int id,
 		struct clk *clk_src, int rate, int same)
 {
@@ -336,11 +335,14 @@ int spdif_set_audio_clk(int id,
 		return 0;
 	}
 
+	if (rate == 0)
+		return 0;
+
 	clk_set_parent(spdif_priv[id]->clk_spdifout, clk_src);
 	clk_set_rate(spdif_priv[id]->clk_spdifout, rate);
 	ret = clk_prepare_enable(spdif_priv[id]->clk_spdifout);
 	if (ret) {
-		pr_err("%s Can't enable clk_spdifout clock,ret  %d\n",
+		pr_err("%s Can't enable clk_spdifout clock, ret %d\n",
 		__func__, ret);
 	}
 	return 0;
@@ -1043,7 +1045,7 @@ static int aml_dai_spdif_startup(
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 
-		if (p_spdif->clk_cont) {
+		if (0/*p_spdif->clk_cont*/) {
 			pr_info("spdif_%s keep clk continuous\n",
 				(p_spdif->id == 0) ? "a":"b");
 			return 0;

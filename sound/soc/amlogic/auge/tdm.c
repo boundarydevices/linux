@@ -164,6 +164,9 @@ static int tdm_clk_set(struct snd_kcontrol *kcontrol,
 	}
 	mclk_rate += (value - 1000000);
 
+	mclk_rate >>= 1;
+	mclk_rate <<= 1;
+
 	aml_dai_set_tdm_sysclk(cpu_dai, 0, mclk_rate, 0);
 
 	return 0;
@@ -494,7 +497,8 @@ static int aml_dai_tdm_prepare(struct snd_pcm_substream *substream,
 					p_tdm->chipinfo->reset_reg_offset);
 					/* sharebuffer default uses spdif_a */
 				spdif_set_audio_clk(p_tdm->samesource_sel - 3,
-					p_tdm->clk, runtime->rate*128, 1);
+					p_tdm->clk,
+					(p_tdm->last_mclk_freq >> 1), 1);
 		}
 
 		/* i2s source to hdmix */
@@ -1344,6 +1348,7 @@ static int aml_set_default_tdm_clk(struct aml_tdm *tdm)
 	unsigned int mclk = 12288000;
 	unsigned int ratio = aml_mpll_mclk_ratio(mclk);
 	unsigned int lrclk_hi;
+	unsigned int pll = mclk * ratio;
 
 	/*set default i2s clk for codec sequence*/
 	tdm->setting.bclk_lrclk_ratio = 64;
@@ -1357,8 +1362,11 @@ static int aml_set_default_tdm_clk(struct aml_tdm *tdm)
 		tdm->clk_sel, lrclk_hi/2, lrclk_hi);
 
 	clk_prepare_enable(tdm->mclk);
-	clk_set_rate(tdm->clk, mclk*ratio);
+	clk_set_rate(tdm->clk, pll);
 	clk_set_rate(tdm->mclk, mclk);
+
+	tdm->last_mclk_freq = mclk;
+	tdm->last_mpll_freq = pll;
 
 	return 0;
 }
