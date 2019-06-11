@@ -14865,3 +14865,13 @@ F:  arch/arm/boot/dts/amlogic/gxl_p281_1g.dts
 F:  arch/arm/boot/dts/amlogic/gxl_p281_2g.dts
 F:  arch/arm64/boot/dts/amlogic/gxl_p281_1g.dts
 F:  arch/arm64/boot/dts/amlogic/gxl_p281_2g.dts
+
+AMLOGIC CAMERA GC2145 MIPI DRIVER
+M:  Guosong Zhou <guosong.zhou@amlogic.com>
+F:  arch/arm/boot/dts/amlogic/sm1_s905d3_ac202.dts
+F:  arch/arm/boot/dts/amlogic/sm1_s905d3_ac202_1g.dts
+F:  arch/arm/configs/meson64_a32_defconfig
+F:  arch/arm64/boot/dts/amlogic/sm1_s905d3_ac202.dts
+F:  arch/arm64/boot/dts/amlogic/sm1_s905d3_ac202_1g.dts
+F:  arch/arm64/configs/meson64_defconfig
+F:  drivers/amlogic/media/camera/gc2145_mipi.c

@@ -611,6 +611,22 @@ int __init gc2145_v4l2_probe(struct i2c_adapter *adapter)
 }
 #endif
 
+#if CONFIG_AMLOGIC_VIDEO_CAPTURE_GC2145_MIPI
+int __init gc2145_mipi_v4l2_probe(struct i2c_adapter *adapter)
+{
+	int ret = 0;
+	unsigned char reg[2];
+
+	reg[0] = aml_i2c_get_byte_add8(adapter, 0x3c, 0xf0);
+	reg[1] = aml_i2c_get_byte_add8(adapter, 0x3c, 0xf1);
+	/*datasheet chip id is error*/
+	if (reg[0] == 0x21 && reg[1] == 0x45)
+		ret = 1;
+	pr_info("%s, ret = %d\n", __func__, ret);
+	return ret;
+}
+#endif
+
 struct aml_cam_dev_info_s {
 	unsigned char addr;
 	char *name;
@@ -894,6 +910,15 @@ static const struct aml_cam_dev_info_s cam_devs[] = {
 		.pwdn = 1,
 		.max_cap_size = SIZE_1600X1200,
 		.probe_func = gc2145_v4l2_probe,
+	},
+#endif
+#if CONFIG_AMLOGIC_VIDEO_CAPTURE_GC2145_MIPI
+	{
+		.addr = 0x3c,
+		.name = "gc2145_mipi",
+		.pwdn = 1,
+		.max_cap_size = SIZE_1600X1200,
+		.probe_func = gc2145_mipi_v4l2_probe,
 	},
 #endif
 };
@@ -1201,12 +1226,14 @@ static int fill_cam_dev(struct device_node *p_node,
 
 	cam_dev->cam_vdd = of_get_named_gpio(p_node, "camvdd-gpios", 0);
 	pr_info("cam_dev->cam_vdd = %d\n", cam_dev->cam_vdd);
-	if (cam_dev->cam_vdd == 0)
+	if (cam_dev->cam_vdd > 0) {
+		ret = gpio_request(cam_dev->cam_vdd, "camera");
+		if (ret < 0)
+			pr_info("aml_cam_init cam_vdd request failed\n");
+		else
+			gpio_direction_output(cam_dev->cam_vdd, 0);
+	} else
 		pr_info("%s: failed to map gpio_cam_vdd !\n", cam_dev->name);
-	ret = gpio_request(cam_dev->cam_vdd, "camera");
-	if (ret < 0)
-		pr_info("aml_cam_init cam_vdd request failed\n");
-	gpio_direction_output(cam_dev->cam_vdd, 0);
 
 	cam_dev->pwdn_pin = of_get_named_gpio(p_node, "gpio_pwdn-gpios", 0);
 	if (cam_dev->pwdn_pin == 0) {

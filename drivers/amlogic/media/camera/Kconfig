@@ -186,6 +186,16 @@ config AMLOGIC_VIDEO_CAPTURE_GC2145
 	  Amlogic capture driver.
 	  Say Y here if you want this driver.
 
+config AMLOGIC_VIDEO_CAPTURE_GC2145_MIPI
+	tristate "Amlogic Platform Capture Driver for GC2145_MIPI"
+	depends on AMLOGIC_VIDEO_CAPTURE
+	default n
+	---help---
+	  Amlogic capture driver.
+	  Say Y here if you want this driver.
+	  Amlogic capture driver.
+	  Say Y here if you want this driver.
+
 config AMLOGIC_VIDEO_CAPTURE_OV5640
 	tristate "Amlogic Platform Capture Driver for OV5640"
 	depends on AMLOGIC_VIDEO_CAPTURE

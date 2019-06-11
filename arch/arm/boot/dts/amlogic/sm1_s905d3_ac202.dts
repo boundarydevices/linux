@@ -339,11 +339,10 @@
 		clocks = <&clkc CLKID_GEN_CLK>;
 		clock-names = "g12a_24m";
 		cam_0{
-			cam_name = "ov5640";
+			cam_name = "gc2145_mipi";
 			front_back = <0>;
-			camera-i2c-bus = <&i2c2>;
-			camvdd-gpios = <&gpio GPIOZ_5 GPIO_ACTIVE_HIGH>;
-			gpio_pwdn-gpios = <&gpio GPIOZ_6 GPIO_ACTIVE_HIGH>;
+			camera-i2c-bus = <&i2c0>;
+			gpio_pwdn-gpios = <&gpio GPIOZ_2 GPIO_ACTIVE_HIGH>;
 			gpio_rst-gpios = <&gpio GPIOZ_12 GPIO_ACTIVE_HIGH>;
 			mirror_flip = <1>;
 			vertical_flip = <1>;
@@ -1056,8 +1055,8 @@
 &i2c0 {
 	status = "okay";
 	pinctrl-names="default";
-	pinctrl-0=<&i2c0_master_pins2>;
-	clock-frequency = <400000>;
+	pinctrl-0=<&i2c0_master_pins1>;
+	clock-frequency = <100000>;
 
 	gt9xx@5d {
 		compatible = "goodix,gt9xx";
@@ -1749,7 +1748,7 @@
 };
 
 &sd_emmc_b {
-	status = "okay";
+	status = "disabled";
 	sd {
 		caps = "MMC_CAP_4_BIT_DATA",
 			 "MMC_CAP_MMC_HIGHSPEED",
