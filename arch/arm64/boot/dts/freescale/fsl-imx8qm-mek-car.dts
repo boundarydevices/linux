@@ -1085,3 +1085,7 @@
 &jpegenc {
 	status = "disabled";
 };
+
+&sata {
+	status = "disabled";
+};
