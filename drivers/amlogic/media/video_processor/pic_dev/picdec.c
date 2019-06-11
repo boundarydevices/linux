@@ -26,6 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/amlogic/media/frame_sync/ptsserv.h>
 #include <linux/amlogic/media/canvas/canvas.h>
+#include <linux/amlogic/media/canvas/canvas_mgr.h>
 #include <linux/amlogic/media/vfm/vframe.h>
 #include <linux/amlogic/media/vfm/vframe_provider.h>
 #include <linux/amlogic/media/vfm/vframe_receiver.h>
@@ -64,6 +65,9 @@ static int cma_layout_flag = 1;
 
 #define NO_TASK_MODE
 
+#undef pr_fmt
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #define aml_pr_info(level, fmt, arg...)	\
 do {					\
 	if (debug_flag >= level)	\
@@ -94,14 +98,6 @@ do {					\
 static int task_running;
 
 #define MAX_VF_POOL_SIZE 2
-
-#define PIC_DEC_CANVAS_START 3
-#define PIC_DEC_CANVAS_Y_FRONT (PIC_DEC_CANVAS_START + 1)
-#define PIC_DEC_CANVAS_UV_FRONT (PIC_DEC_CANVAS_Y_FRONT + 1)
-
-#define PIC_DEC_CANVAS_Y_BACK (PIC_DEC_CANVAS_UV_FRONT + 1)
-#define PIC_DEC_CANVAS_UV_BACK (PIC_DEC_CANVAS_Y_BACK + 1)
-#define PIC_DEC_SOURCE_CANVAS  (PIC_DEC_CANVAS_UV_BACK + 1)
 
 /*same as tvin pool*/
 static int PICDEC_POOL_SIZE = 2;
@@ -148,10 +144,11 @@ static void post_frame(void);
 /************************************************
  *
  *   buffer op for video sink.
+ *   3 canvas id: buffer1 + buffer2 + ge2d_src_buffer
  *
  ************************************************
  */
-static int picdec_canvas_table[2];
+static int picdec_canvas_table[3];
 static inline u32 index2canvas(u32 index)
 {
 	return picdec_canvas_table[index];
@@ -541,7 +538,7 @@ static int picdec_start(void)
 	unsigned int map_start, map_size = 0;
 
 	if (picdec_buffer_init() < 0) {
-		aml_pr_info(0, "no memory, open fail\n");
+		aml_pr_info(0, "no memory or canvas resource, open fail\n");
 		return -1;
 	}
 	get_picdec_buf_info(&buf_start, &buf_size, NULL);
@@ -887,22 +884,16 @@ static void rotate_adjust(int w_in, int h_in, int *w_out, int *h_out, int angle)
 static int copy_phybuf_to_file(ulong phys, u32 size,
 					   struct file *fp, loff_t pos)
 {
-	u32 i, span = SZ_1M;
-	u32 count = size / PAGE_ALIGN(span);
-	ulong addr = phys;
 	u8 *p;
 
-	for (i = 0; i < count; i++) {
-		addr = phys + i * span;
-		p = codec_mm_vmap(addr, span);
-		if (!p)
-			return -1;
-		codec_mm_dma_flush(p, span, DMA_FROM_DEVICE);
-		vfs_write(fp, (char *)p,
-			span, &pos);
-		pos += span;
-		codec_mm_unmap_phyaddr(p);
-	}
+	p = codec_mm_vmap(phys, size);
+	if (!p)
+		return -1;
+	codec_mm_dma_flush(p, size, DMA_FROM_DEVICE);
+	vfs_write(fp, (char *)p,
+		size, &pos);
+	codec_mm_unmap_phyaddr(p);
+
 	return 0;
 }
 
@@ -910,7 +901,7 @@ int picdec_fill_buffer(struct vframe_s *vf, struct ge2d_context_s *context,
 					   struct config_para_ex_s *ge2d_config)
 {
 	struct canvas_s cs0, cs1, cs2;
-	int canvas_id = PIC_DEC_SOURCE_CANVAS;
+	int src_canvas_id = picdec_canvas_table[2];
 	int canvas_width = (picdec_device.origin_width + 0x1f) & ~0x1f;
 	int canvas_height = (picdec_device.origin_height + 0xf) & ~0xf;
 	int frame_width = picdec_input.frame_width;
@@ -923,7 +914,7 @@ int picdec_fill_buffer(struct vframe_s *vf, struct ge2d_context_s *context,
 	mm_segment_t old_fs = get_fs();
 
 	fill_color(vf, context, ge2d_config);
-	canvas_config(PIC_DEC_SOURCE_CANVAS,
+	canvas_config(picdec_canvas_table[2],
 				  (ulong)(picdec_device.assit_buf_start),
 				  canvas_width * 3, canvas_height,
 				  CANVAS_ADDR_NOWRAP, CANVAS_BLKMODE_LINEAR);
@@ -939,9 +930,9 @@ int picdec_fill_buffer(struct vframe_s *vf, struct ge2d_context_s *context,
 	ge2d_config->bitmask_en = 0;
 	ge2d_config->src1_gb_alpha = 0;	/* 0xff; */
 	ge2d_config->dst_xy_swap = 0;
-	canvas_read((canvas_id & 0xff), &cs0);
-	canvas_read(((canvas_id >> 8) & 0xff), &cs1);
-	canvas_read(((canvas_id >> 16) & 0xff), &cs2);
+	canvas_read((src_canvas_id & 0xff), &cs0);
+	canvas_read(((src_canvas_id >> 8) & 0xff), &cs1);
+	canvas_read(((src_canvas_id >> 16) & 0xff), &cs2);
 	ge2d_config->src_planes[0].addr = cs0.addr;
 	ge2d_config->src_planes[0].w = cs0.width;
 	ge2d_config->src_planes[0].h = cs0.height;
@@ -956,7 +947,7 @@ int picdec_fill_buffer(struct vframe_s *vf, struct ge2d_context_s *context,
 	ge2d_config->src_key.key_enable = 0;
 	ge2d_config->src_key.key_mask = 0;
 	ge2d_config->src_key.key_mode = 0;
-	ge2d_config->src_para.canvas_index = PIC_DEC_SOURCE_CANVAS;
+	ge2d_config->src_para.canvas_index = src_canvas_id;
 	ge2d_config->src_para.mem_type = CANVAS_TYPE_INVALID;
 	ge2d_config->src_para.format = GE2D_FORMAT_S24_BGR;
 	ge2d_config->src_para.fill_color_en = 0;
@@ -1229,6 +1220,7 @@ int picdec_cma_buf_init(void)
 				picdec_device.buffer_size = (48*SZ_1M);
 			}
 		}
+
 		aml_pr_info(0, "cma memory is %x , size is  %x\n",
 		(unsigned int)picdec_device.buffer_start,
 		(unsigned int)picdec_device.buffer_size);
@@ -1326,30 +1318,52 @@ int picdec_buffer_init(void)
 	canvas_height = (picdec_device.disp_height + 0xf) & ~0xf;
 	decbuf_size = canvas_width * canvas_height;
 	if (picdec_device.output_format_mode) {
+		u32 canvas_table[3];
+
+		if (canvas_pool_alloc_canvas_table("picdec", canvas_table,
+					ARRAY_SIZE(canvas_table),
+					CANVAS_MAP_TYPE_1)) {
+			pr_err("%s allocate canvas error.\n", __func__);
+			return -1;
+		}
+		aml_pr_info(0, "canvas alloced id, %u~%u~%u.\n",
+			canvas_table[0], canvas_table[1], canvas_table[2]);
+
 		for (i = 0; i < MAX_VF_POOL_SIZE; i++) {
-			canvas_config(PIC_DEC_CANVAS_START + i,
+			canvas_config(canvas_table[i],
 					(unsigned int)(buf_start + offset),
 					canvas_width * 3,
 					canvas_height,
 					CANVAS_ADDR_NOWRAP,
 					CANVAS_BLKMODE_LINEAR);
 			offset = canvas_width * canvas_height * 3;
-			picdec_canvas_table[i] =
-				PIC_DEC_CANVAS_START + i;
+			picdec_canvas_table[i] = canvas_table[i];
 			vfbuf_use[i] = 0;
 		}
+		picdec_canvas_table[i] = canvas_table[i];
 	} else {
+		u32 canvas_table[5];
+
+		if (canvas_pool_alloc_canvas_table("picdec", canvas_table,
+					ARRAY_SIZE(canvas_table),
+					CANVAS_MAP_TYPE_1)) {
+			pr_err("%s allocate canvas error.\n", __func__);
+			return -1;
+		}
+		aml_pr_info(0, "canvas alloced id, %u~%u~%u.\n",
+			canvas_table[0], canvas_table[1], canvas_table[2]);
+
 		for (i = 0; i < MAX_VF_POOL_SIZE; i++) {
 			pr_info("%d addr is %x################\n",
 				   i, (unsigned int)(buf_start + offset));
-			canvas_config(PIC_DEC_CANVAS_START + 2 * i,
+			canvas_config(canvas_table[2 * i],
 					(unsigned int)(buf_start + offset),
 					canvas_width,
 					canvas_height,
 					CANVAS_ADDR_NOWRAP,
 					CANVAS_BLKMODE_LINEAR);
 			offset += canvas_width * canvas_height;
-			canvas_config(PIC_DEC_CANVAS_START + 2 * i + 1,
+			canvas_config(canvas_table[2 * i + 1],
 					(unsigned int)(buf_start + offset),
 					canvas_width,
 					canvas_height / 2,
@@ -1357,10 +1371,11 @@ int picdec_buffer_init(void)
 					CANVAS_BLKMODE_LINEAR);
 			offset += canvas_width * canvas_height / 2;
 			picdec_canvas_table[i] =
-				(PIC_DEC_CANVAS_START + 2 * i) |
-				((PIC_DEC_CANVAS_START + 2 * i + 1) << 8);
+				(canvas_table[2 * i] |
+				(canvas_table[2 * i + 1] << 8));
 			vfbuf_use[i] = 0;
 		}
+		picdec_canvas_table[i] = canvas_table[2 * i];
 	}
 
 	if (picdec_device.output_format_mode)
@@ -1601,6 +1616,7 @@ static int picdec_release(struct inode *inode, struct file *file)
 {
 	struct ge2d_context_s *context;
 	struct picdec_private_s *priv = file->private_data;
+	int i;
 
 	if (!cma_layout_flag)
 		context = (struct ge2d_context_s *) file->private_data;
@@ -1617,6 +1633,22 @@ static int picdec_release(struct inode *inode, struct file *file)
 		kfree(priv);
 		priv = NULL;
 	}
+
+	for (i = 0; i < ARRAY_SIZE(picdec_canvas_table); i++) {
+		if (picdec_canvas_table[i]) {
+			if (picdec_canvas_table[i] & 0xff)
+				canvas_pool_map_free_canvas(
+					picdec_canvas_table[i] & 0xff);
+			if ((picdec_canvas_table[i] >> 8) & 0xff)
+				canvas_pool_map_free_canvas(
+					(picdec_canvas_table[i] >> 8) & 0xff);
+			if ((picdec_canvas_table[i] >> 16) & 0xff)
+				canvas_pool_map_free_canvas(
+					(picdec_canvas_table[i] >> 16) & 0xff);
+		}
+		picdec_canvas_table[i] = 0;
+	}
+
 	aml_pr_info(0, "release one picdec device\n");
 	return -1;
 }
