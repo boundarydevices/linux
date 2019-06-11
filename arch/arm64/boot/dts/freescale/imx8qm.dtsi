@@ -198,6 +198,10 @@
 				reg = <0x1c6 6>;
 			};
 		};
+
+		rtc: rtc {
+			compatible = "fsl,imx8qm-sc-rtc";
+		};
 	};
 
 	/* sorted in register address */
