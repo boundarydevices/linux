@@ -1788,13 +1788,9 @@ static void process_vf_rotate(struct vframe_s *vf,
 	new_vf->orientation = vf->orientation;
 	new_vf->flag = vf->flag;
 
-	if ((vf->source_type == VFRAME_SOURCE_TYPE_HDMI)
-		|| (vf->source_type == VFRAME_SOURCE_TYPE_CVBS)) {
-		if ((interlace_mode == VIDTYPE_INTERLACE_TOP)
-			|| (interlace_mode == VIDTYPE_INTERLACE_BOTTOM))
-			vf->height >>= 1;
-	}
-
+	if ((interlace_mode == VIDTYPE_INTERLACE_TOP)
+		|| (interlace_mode == VIDTYPE_INTERLACE_BOTTOM))
+		vf->height >>= 1;
 #ifndef CONFIG_AMLOGIC_POST_PROCESS_MANAGER_PPSCALER
 	vf_rotate_adjust(vf, new_vf, cur_angle);
 #else
@@ -2365,12 +2361,9 @@ static void process_vf_change(struct vframe_s *vf,
 
 	interlace_mode = vf->type & VIDTYPE_TYPEMASK;
 
-	if ((vf->source_type == VFRAME_SOURCE_TYPE_HDMI)
-		|| (vf->source_type == VFRAME_SOURCE_TYPE_CVBS)) {
-		if ((interlace_mode == VIDTYPE_INTERLACE_TOP)
-			|| (interlace_mode == VIDTYPE_INTERLACE_BOTTOM))
-			vf->height >>= 1;
-	}
+	if ((interlace_mode == VIDTYPE_INTERLACE_TOP)
+		|| (interlace_mode == VIDTYPE_INTERLACE_BOTTOM))
+		vf->height >>= 1;
 
 	memset(ge2d_config, 0, sizeof(struct config_para_ex_s));
 	/* data operating. */
