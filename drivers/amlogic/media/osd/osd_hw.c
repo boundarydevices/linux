@@ -3686,21 +3686,30 @@ void osd_set_dimm_info(u32 index, u32 osd_dimm_layer, u32 osd_dimm_color)
 	osd_hw.dim_color[index] = osd_dimm_color;
 }
 
-void osd_set_hold_line(int hold_line)
+u32 osd_get_hold_line(u32 index)
 {
-	int i;
 	unsigned int data32 = 0, val = 0;
 
-	for (i = 0; i <= osd_hw.osd_meson_dev.viu1_osd_count; i++) {
-		if (osd_hw.powered[i]) {
-			data32 = VSYNCOSD_RD_MPEG_REG
-				(hw_osd_reg_array[i].osd_fifo_ctrl_stat);
-			val = (data32 >> 5) & 0x1f;
-			if (val != hold_line) {
-				VSYNCOSD_WR_MPEG_REG_BITS
-					(hw_osd_reg_array[i].osd_fifo_ctrl_stat,
-					hold_line & 0x1f, 5, 5);
-			}
+	if (osd_hw.powered[index]) {
+		data32 = VSYNCOSD_RD_MPEG_REG
+			(hw_osd_reg_array[index].osd_fifo_ctrl_stat);
+		val = (data32 >> 5) & 0x1f;
+	}
+	return val;
+}
+
+void osd_set_hold_line(u32 index, int hold_line)
+{
+	unsigned int data32 = 0, val = 0;
+
+	if (osd_hw.powered[index]) {
+		data32 = VSYNCOSD_RD_MPEG_REG
+			(hw_osd_reg_array[index].osd_fifo_ctrl_stat);
+		val = (data32 >> 5) & 0x1f;
+		if (val != hold_line) {
+			VSYNCOSD_WR_MPEG_REG_BITS
+				(hw_osd_reg_array[index].osd_fifo_ctrl_stat,
+				hold_line & 0x1f, 5, 5);
 		}
 	}
 }
@@ -9126,7 +9135,11 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 		 * set DDR request priority to be urgent
 		 */
 		data32 = 1;
-		data32 |= 4 << 5;  /* hold_fifo_lines */
+		/* hold_fifo_lines */
+		if (osd_hw.osd_meson_dev.osd_ver >= OSD_HIGH_ONE)
+			data32 |= VIU1_DEFAULT_HOLD_LINE << 5;
+		else
+			data32 |= MIN_HOLD_LINE << 5;
 		/* burst_len_sel: 3=64, g12a = 5 */
 		if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
 			data32 |= 1 << 10;
@@ -9240,6 +9253,9 @@ void osd_init_hw(u32 logo_loaded, u32 osd_probe,
 				osd_reg_set_bits(
 				hw_osd_reg_array[idx].osd_fifo_ctrl_stat,
 				1, 10, 2);
+				osd_reg_set_bits(
+				hw_osd_reg_array[idx].osd_fifo_ctrl_stat,
+				VIU1_DEFAULT_HOLD_LINE, 5, 5);
 				if (osd_hw.osd_meson_dev.cpu_id ==
 					__MESON_CPU_MAJOR_ID_G12B)
 					osd_reg_set_bits
@@ -9428,10 +9444,8 @@ void osd_init_viu2(void)
 	 */
 	data32 = 1;
 	vinfo = get_current_vinfo2();
-	if (vinfo && (!strcmp(vinfo->name, "dummy_panel"))) {
-		data32 |= MAX_HOLD_LINE << 5;  /* hold_fifo_lines */
-	} else
-		data32 |= DEFAULT_HOLD_LINE << 5;  /* hold_fifo_lines */
+
+	data32 |= VIU2_DEFAULT_HOLD_LINE << 5;  /* hold_fifo_lines */
 	/* burst_len_sel: 3=64, g12a = 5 */
 	if (osd_hw.osd_meson_dev.osd_ver == OSD_HIGH_ONE) {
 		data32 |= 1 << 10;

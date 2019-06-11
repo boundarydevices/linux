@@ -24,7 +24,9 @@
 #include "osd_drm.h"
 
 #define MAX_HOLD_LINE     0x1f
-#define DEFAULT_HOLD_LINE 0x04
+#define MIN_HOLD_LINE     0x04
+#define VIU1_DEFAULT_HOLD_LINE  0x08
+#define VIU2_DEFAULT_HOLD_LINE  0x04
 //#define REG_OFFSET (0x20)
 #define OSD_RELATIVE_BITS 0x33330
 #include "osd_rdma.h"
@@ -221,5 +223,6 @@ void osd_set_dimm_info(u32 index, u32 osd_dimm_layer, u32 osd_dimm_color);
 u32 osd_get_line_n_rdma(void);
 void  osd_set_line_n_rdma(u32 line_n_rdma);
 u32 get_output_device_id(u32 index);
-void osd_set_hold_line(int hold_line);
+void osd_set_hold_line(u32 index, int hold_line);
+u32 osd_get_hold_line(u32 index);
 #endif
