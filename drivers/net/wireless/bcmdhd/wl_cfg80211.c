@@ -3502,7 +3502,7 @@ channel_to_chanspec(struct wiphy *wiphy, struct net_device *dev, u32 channel, u3
 	int bw = 0, tmp_bw = 0;
 	int i;
 	u32 tmp_c;
-	u16 kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
+	gfp_t kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
 #define LOCAL_BUF_SIZE	1024
 	buf = (u8 *) kzalloc(LOCAL_BUF_SIZE, kflags);
 	if (!buf) {
@@ -11514,8 +11514,8 @@ static s32 wl_inform_single_bss(struct bcm_cfg80211 *cfg, struct wl_bss_info *bi
 	signal = notif_bss_info->rssi * 100;
 	if (!mgmt->u.probe_resp.timestamp) {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39))
-		struct timespec ts;
-		get_monotonic_boottime(&ts);
+		struct timespec64 ts;
+		ktime_get_boottime_ts64(&ts);
 		mgmt->u.probe_resp.timestamp = ((u64)ts.tv_sec*1000000)
 				+ ts.tv_nsec / 1000;
 #else
@@ -20973,7 +20973,7 @@ wl_cfg80211_tdls_config(struct bcm_cfg80211 *cfg, enum wl_tdls_config state, boo
 	/* Protect tdls config session */
 	mutex_lock(&cfg->tdls_sync);
 
-	if ((state == TDLS_STATE_TEARDOWN)) {
+	if (state == TDLS_STATE_TEARDOWN) {
 		/* Host initiated TDLS tear down */
 		err = dhd_tdls_enable(ndev, false, auto_mode, NULL);
 		goto exit;

@@ -1611,7 +1611,7 @@ dhd_rtt_convert_results_to_host(rtt_report_t *rtt_report, uint8 *p_data, uint16 
 	wl_proxd_session_state_t session_state;
 	wl_proxd_status_t proxd_status;
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39))
-	struct timespec ts;
+	struct timespec64 ts;
 #endif /* LINUX_VER >= 2.6.39 */
 	uint32 ratespec;
 	uint32 avg_dist;
@@ -1708,7 +1708,7 @@ dhd_rtt_convert_results_to_host(rtt_report_t *rtt_report, uint8 *p_data, uint16 
 	/* time stamp */
 	/* get the time elapsed from boot time */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39))
-	get_monotonic_boottime(&ts);
+	ktime_get_boottime_ts64(&ts);
 	rtt_report->ts = (uint64)TIMESPEC_TO_US(ts);
 #endif /* LINUX_VER >= 2.6.39 */
 
