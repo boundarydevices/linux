@@ -144,6 +144,12 @@
 #define	USB_TEST_PACKET		4
 #define	USB_TEST_FORCE_ENABLE	5
 
+/*
+ * OTG HNP and SRP REQD
+ */
+#define	OTG_SRP_REQD	6
+#define	OTG_HNP_REQD	7
+
 /* Status Type */
 #define USB_STATUS_TYPE_STANDARD	0
 #define USB_STATUS_TYPE_PTM		1

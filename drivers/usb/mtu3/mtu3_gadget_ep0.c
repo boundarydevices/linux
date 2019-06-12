@@ -294,8 +294,21 @@ static int handle_test_mode(struct mtu3 *mtu, struct usb_ctrlrequest *setup)
 		dev_dbg(mtu->dev, "USB_TEST_PACKET\n");
 		mtu->test_mode_nr = TEST_PACKET_MODE;
 		break;
+	case OTG_SRP_REQD:
+		dev_dbg(mtu->dev, "OTG_SRP_REQD\n");
+		mtu->ssusb->otg_srp_reqd = 1;
+		break;
+	case OTG_HNP_REQD:
+		dev_dbg(mtu->dev, "OTG_HNP_REQD\n");
+		mtu->ssusb->otg_hnp_reqd = 1;
+		break;
 	default:
 		handled = -EINVAL;
+		goto out;
+	}
+
+	if (mtu->ssusb->otg_srp_reqd || mtu->ssusb->otg_hnp_reqd) {
+		mtu->ep0_state = MU3D_EP0_STATE_SETUP;
 		goto out;
 	}
 

@@ -226,6 +226,8 @@ struct otg_switch_mtk {
  * @vusb33: usb3.3V shared by device/host IP
  * @dr_mode: works in which mode:
  *		host only, device only or dual-role mode
+ * @otg_srp_reqd: used for SRP request handling.
+ * @otg_hnp_reqd: used for HNP request handling.
  * @u2_ports: number of usb2.0 host ports
  * @u3_ports: number of usb3.0 host ports
  * @u2p_dis_msk: mask of disabling usb2 ports, e.g. bit0==1 to
@@ -253,6 +255,8 @@ struct ssusb_mtk {
 	/* otg */
 	struct otg_switch_mtk otg_switch;
 	enum usb_dr_mode dr_mode;
+	bool otg_srp_reqd;
+	bool otg_hnp_reqd;
 	bool is_host;
 	int u2_ports;
 	int u3_ports;
