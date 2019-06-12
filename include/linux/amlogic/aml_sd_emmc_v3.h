@@ -37,6 +37,10 @@ extern ssize_t emmc_clktest_show(struct device *dev,
 		struct device_attribute *attr, char *buf);
 
 
+extern ssize_t emmc_scan_cmd_win(struct device *dev,
+		struct device_attribute *attr, char *buf);
+
 DEVICE_ATTR(emmc_eyetest, 0444, emmc_eyetest_show, NULL);
 DEVICE_ATTR(emmc_clktest, 0444, emmc_clktest_show, NULL);
+DEVICE_ATTR(emmc_cmd_window, 0444, emmc_scan_cmd_win, NULL);
 #endif

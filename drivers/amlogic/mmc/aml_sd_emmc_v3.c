@@ -41,6 +41,8 @@
 #include <linux/mmc/emmc_partitions.h>
 #include <linux/amlogic/amlsd.h>
 #include <linux/amlogic/aml_sd_emmc_internal.h>
+#include <linux/time.h>
+#include <linux/random.h>
 
 int aml_fixdiv_calc(unsigned int *fixdiv, struct clock_lay_t *clk)
 {
@@ -241,7 +243,7 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 					host->mux_parent[0]);
 			if (ret)
 				pr_warn("set comp0 as mux_clk parent error\n");
-/*		} else if (((host->data->chip_type >= MMC_CHIP_TL1)
+		} else if (((host->data->chip_type >= MMC_CHIP_TL1)
 				|| (host->data->chip_type == MMC_CHIP_G12B))
 				&& (clk_ios >= 166000000)) {
 			src0_clk = devm_clk_get(host->dev, "clkin2");
@@ -263,7 +265,6 @@ static int meson_mmc_clk_set_rate_v3(struct mmc_host *mmc,
 					host->mux_parent[0]);
 			if (ret)
 				pr_warn("set comp0 as mux_clk parent error\n");
-*/
 		} else if (clk_get_rate(host->mux_parent[0]) > 200000000) {
 			pr_info("%s %d\n", __func__, __LINE__);
 			src0_clk = devm_clk_get(host->dev, "xtal");
@@ -606,7 +607,7 @@ irqreturn_t meson_mmc_irq_thread_v3(int irq, void *dev_id)
 			if (host->error_flag == 0)
 				host->is_tunning = 0;
 			delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
-			tmp = (((delay2 >> 24) & 0x3f) + 3) % 0x3f;
+			tmp = (((delay2 >> 24) & 0x3f) - 3) % 0x3f;
 			delay2 = (delay2 & ~(0x3f << 24)) | (tmp << 24);
 			writel(delay2, host->base + SD_EMMC_DELAY2_V3);
 			pr_err("retune cmd-delay:0x%x\n", delay2);
@@ -703,6 +704,35 @@ static int aml_sd_emmc_cali_v3(struct mmc_host *mmc,
 
 	mrq.cmd = &cmd;
 	mrq.stop = &stop;
+	mrq.data = &data;
+	host->mrq = &mrq;
+	mmc_wait_for_req(mmc, &mrq);
+	return data.error | cmd.error;
+}
+
+static int single_read_cmd_for_scan(struct mmc_host *mmc,
+	u8 opcode, u8 *blk_test, u32 blksz, u32 blocks, u32 offset) {
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
+	struct mmc_request mrq = {NULL};
+	struct mmc_command cmd = {0};
+	struct mmc_data data = {0};
+	struct scatterlist sg;
+
+	cmd.opcode = opcode;
+	cmd.arg = offset;
+	cmd.flags = MMC_RSP_R1 | MMC_CMD_ADTC;
+
+	data.blksz = blksz;
+	data.blocks = blocks;
+	data.flags = MMC_DATA_READ;
+	data.sg = &sg;
+	data.sg_len = 1;
+
+	memset(blk_test, 0, blksz * data.blocks);
+	sg_init_one(&sg, blk_test, blksz * data.blocks);
+
+	mrq.cmd = &cmd;
 	mrq.data = &data;
 	host->mrq = &mrq;
 	mmc_wait_for_req(mmc, &mrq);
@@ -978,6 +1008,150 @@ static unsigned int tl1_emmc_line_timing(struct mmc_host *mmc)
 
 }
 
+static void emmc_show_cmd_window(char *str, int repeat_times)
+{
+	int pre_status = 0;
+	int status = 0;
+	int single = 0;
+	int start = 0;
+	int i;
+
+	pr_info(">>>>>>>>>>>>>>scan command window>>>>>>>>>>>>>>>\n");
+	for (i = 0; i < 64; i++) {
+		if (str[i] == repeat_times)
+			status = 1;
+		else
+			status = -1;
+
+		if (i != 0 && pre_status != status) {
+			if (pre_status == 1 && single == 1)
+				pr_info(">>cmd delay [ 0x%x ] is ok\n",
+						i - 1);
+			else if (pre_status == 1 && single != 1)
+				pr_info(">>cmd delay [ 0x%x -- 0x%x ] is ok\n",
+						start, i - 1);
+			else if (pre_status != 1 &&  single == 1)
+				pr_info(">>cmd delay [ 0x%x ] is nok\n",
+						i - 1);
+			else if (pre_status != 1 && single != 1)
+				pr_info(">>cmd delay [ 0x%x -- 0x%x ] is nok\n",
+						start, i - 1);
+			start = i;
+			single = 1;
+		} else
+			single++;
+
+		if (i == 63) {
+			if (status == 1 && pre_status == 1)
+				pr_info(">>cmd delay [ 0x%x -- 0x%x ] is ok\n",
+						start, i);
+			else if (status != 1 && pre_status == -1)
+				pr_info(">>cmd delay [ 0x%x -- 0x%x ] is nok\n",
+						start, i);
+			else if (status == 1 && pre_status != 1)
+				pr_info(">>cmd delay [ 0x%x ] is ok\n", i);
+			else if (status != 1 && pre_status == 1)
+				pr_info(">>cmd delay [ 0x%x ] is nok\n", i);
+		}
+		pre_status = status;
+	}
+	pr_info("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+}
+
+static u32 emmc_search_cmd_delay(char *str, int repeat_times)
+{
+	int best_start = -1, best_size = -1;
+	int cur_start = -1, cur_size = 0;
+	u32 cmd_delay;
+	int i;
+
+	for (i = 0; i < 64; i++) {
+		if (str[i] == repeat_times) {
+			cur_size += 1;
+			if (cur_start == -1)
+				cur_start = i;
+		} else {
+			cur_size = 0;
+			cur_start = -1;
+		}
+
+		if (cur_size > best_size) {
+			best_size = cur_size;
+			best_start = cur_start;
+		}
+	}
+
+	cmd_delay =  (best_start + best_size / 2) << 24;
+
+	pr_info("best_start 0x%x, best_size %d\n",
+			best_start, best_size);
+
+	return cmd_delay;
+}
+
+static u32 scan_emmc_cmd_win(struct mmc_host *mmc)
+{
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
+	u32 delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
+	u32 cmd_delay = 0;
+	u32 delay2_bak = delay2;
+	u32 i, j, err;
+	int repeat_times = 100;
+	char str[64] = {0};
+	long long before_time;
+	long long after_time;
+	u32 capacity = 8 * SZ_1M;
+	u32 offset;
+
+	delay2 &= ~(0xff << 24);
+
+	host->cmd_retune = 0;
+	host->is_tunning = 1;
+	before_time = sched_clock();
+	for (i = 0; i < 64; i++) {
+		writel(delay2, host->base + SD_EMMC_DELAY2_V3);
+		offset = (u32)(get_random_long() % capacity);
+		for (j = 0; j < repeat_times; j++) {
+			err = single_read_cmd_for_scan(mmc,
+					MMC_READ_SINGLE_BLOCK,
+					host->blk_test, 512, 1,
+					offset);
+			if (!err)
+				str[i]++;
+			else
+				break;
+		}
+		pr_debug("delay2: 0x%x, send cmd %d times success %d times, is ok\n",
+				delay2, repeat_times, str[i]);
+		delay2 += (1 << 24);
+	}
+	after_time = sched_clock();
+	host->is_tunning = 0;
+	host->cmd_retune = 1;
+
+	pr_info("scan time distance: %llu ns\n", after_time - before_time);
+
+	writel(delay2_bak, host->base + SD_EMMC_DELAY2_V3);
+	cmd_delay = emmc_search_cmd_delay(str, repeat_times);
+	emmc_show_cmd_window(str, repeat_times);
+
+	return cmd_delay;
+}
+
+static void set_emmc_cmd_delay(struct mmc_host *mmc)
+{
+	struct amlsd_platform *pdata = mmc_priv(mmc);
+	struct amlsd_host *host = pdata->host;
+	u32 delay2 = readl(host->base + SD_EMMC_DELAY2_V3);
+	u32 cmd_delay = 0;
+
+	delay2 &= ~(0xff << 24);
+	cmd_delay = scan_emmc_cmd_win(mmc);
+	delay2 |= cmd_delay;
+	writel(delay2, host->base + SD_EMMC_DELAY2_V3);
+}
+
 static unsigned int get_emmc_cmd_win(struct mmc_host *mmc)
 {
 	struct amlsd_platform *pdata = mmc_priv(mmc);
@@ -1200,6 +1374,7 @@ static int emmc_data_alignment(struct mmc_host *mmc, int best_size)
 	u32 d[8];
 
 	host->is_tunning = 1;
+	host->find_win = 1;
 	gintf3->ds_sht_m = pdata->win_start + 4;
 	writel(intf3, host->base + SD_EMMC_INTF3);
 	for (line_x = 0; line_x < 8; line_x++) {
@@ -1214,7 +1389,7 @@ static int emmc_data_alignment(struct mmc_host *mmc, int best_size)
 			err = aml_sd_emmc_cali_v3(mmc, MMC_READ_MULTIPLE_BLOCK,
 				host->blk_test, blksz, 40, MMC_RANDOM_NAME);
 			if (err) {
-				pr_info("[%s]adjust line_x[%d]:%d\n",
+				pr_debug("[%s]adjust line_x[%d]:%d\n",
 						__func__, line_x, i);
 				d[line_x] = i;
 				delay1 = delay1_bak;
@@ -1258,6 +1433,7 @@ static int emmc_data_alignment(struct mmc_host *mmc, int best_size)
 			readl(host->base + SD_EMMC_DELAY2_V3));
 	}
 	host->is_tunning = 0;
+	host->find_win = 0;
 	return 0;
 }
 
@@ -1276,6 +1452,8 @@ static void aml_emmc_hs400_Revb(struct mmc_host *mmc)
 		readl(host->base + SD_EMMC_DELAY2_V3));
 	win_size = emmc_ds_manual_sht(mmc);
 	emmc_data_alignment(mmc, win_size);
+	set_emmc_cmd_delay(mmc);
+
 }
 /* test clock, return delay cells for one cycle
  */
@@ -1657,6 +1835,27 @@ retry:
 			pdata->align[9]);
 	writel(0, host->base + SD_EMMC_DELAY2_V3);
 	writel(clk_bak, host->base + SD_EMMC_CLOCK_V3);
+
+	delay2 = 0;
+	for (i = 0; i < 63; i++) {
+		retry_times = 0;
+		delay2 += (1 << 24);
+		writel(delay2, host->base + SD_EMMC_DELAY2_V3);
+retry1:
+		err = emmc_eyetest_log(mmc, 9);
+		if (err)
+			continue;
+
+		count = fbinary(pdata->align[9]);
+		if (count >= 8 && count <= 56) {
+			if (retry_times != 3) {
+				retry_times++;
+				goto retry1;
+			} else
+				break;
+		}
+	}
+
 	pr_info("[%s][%d] clk config:0x%x\n",
 		__func__, __LINE__, readl(host->base + SD_EMMC_CLOCK_V3));
 	return 0;
@@ -1948,6 +2147,18 @@ int aml_post_hs400_timming(struct mmc_host *mmc)
 	else
 		aml_emmc_hs400_general(mmc);
 	return 0;
+}
+
+ssize_t emmc_scan_cmd_win(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct amlsd_host *host = dev_get_drvdata(dev);
+	struct mmc_host *mmc = host->mmc;
+
+	mmc_claim_host(mmc);
+	scan_emmc_cmd_win(mmc);
+	mmc_release_host(mmc);
+	return sprintf(buf, "%s\n", "Emmc scan command window.\n");
 }
 
 ssize_t emmc_eyetest_show(struct device *dev,

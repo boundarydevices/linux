@@ -1309,8 +1309,7 @@
 			 "MMC_CAP_HW_RESET",
 			 "MMC_CAP_ERASE",
 			 "MMC_CAP_CMD23";
-		caps2 = "MMC_CAP2_HS200";
-		/* "MMC_CAP2_HS400";*/
+		caps2 = "MMC_CAP2_HS200", "MMC_CAP2_HS400";
 		f_min = <400000>;
 		f_max = <200000000>;
 	};
