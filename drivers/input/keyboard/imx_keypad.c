@@ -524,7 +524,7 @@ static int imx_keypad_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __maybe_unused imx_kbd_suspend_noirq(struct device *dev)
+static int __maybe_unused imx_kbd_noirq_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct imx_keypad *kbd = platform_get_drvdata(pdev);
@@ -552,7 +552,7 @@ static int __maybe_unused imx_kbd_suspend_noirq(struct device *dev)
 	return 0;
 }
 
-static int __maybe_unused imx_kbd_resume_noirq(struct device *dev)
+static int __maybe_unused imx_kbd_noirq_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct imx_keypad *kbd = platform_get_drvdata(pdev);
@@ -577,8 +577,7 @@ err_clk:
 }
 
 static const struct dev_pm_ops imx_kbd_pm_ops = {
-	.suspend_noirq = imx_kbd_suspend_noirq,
-	.resume_noirq = imx_kbd_resume_noirq,
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(imx_kbd_noirq_suspend, imx_kbd_noirq_resume)
 };
 
 static struct platform_driver imx_keypad_driver = {
