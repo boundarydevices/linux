@@ -157,12 +157,14 @@ static void ssusb_mode_sw_work(struct work_struct *work)
 		mtu3_stop(mtu);
 		switch_port_to_host(ssusb);
 		ssusb_set_vbus(otg_sx, 1);
+		ssusb_set_force_vbus(ssusb, false);
 		ssusb->is_host = true;
 		break;
 	case USB_ROLE_DEVICE:
 		ssusb_set_force_mode(ssusb, MTU3_DR_FORCE_DEVICE);
 		ssusb->is_host = false;
 		ssusb_set_vbus(otg_sx, 0);
+		ssusb_set_force_vbus(ssusb, true);
 		switch_port_to_device(ssusb);
 		mtu3_start(mtu);
 		break;
