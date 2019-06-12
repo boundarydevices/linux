@@ -72,6 +72,7 @@ struct ppmgr_device_t {
 	struct io_mapping *mapping;
 	void  __iomem *vir_addr;
 	struct platform_device *pdev;
+	unsigned int ppmgr_debug;
 };
 
 struct ppmgr_dev_reg_s {

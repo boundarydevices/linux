@@ -434,6 +434,30 @@ static ssize_t bypass_write(struct class *cla, struct class_attribute *attr,
 	return count;
 }
 
+static ssize_t ppmgr_debug_read(struct class *cla,
+		struct class_attribute *attr, char *buf)
+{
+	return snprintf(buf,
+		80,
+		"current ppmgr_debug is %d\n",
+		ppmgr_device.ppmgr_debug);
+}
+
+static ssize_t ppmgr_debug_write(struct class *cla,
+		struct class_attribute *attr, const char *buf, size_t count)
+{
+	long tmp;
+
+	int ret = kstrtol(buf, 0, &tmp);
+
+	if (ret != 0) {
+		PPMGRDRV_ERR("ERROR converting %s to long int!\n", buf);
+		return ret;
+	}
+	ppmgr_device.ppmgr_debug = tmp;
+	return count;
+}
+
 static ssize_t rect_read(struct class *cla, struct class_attribute *attr,
 				char *buf)
 {
@@ -1264,6 +1288,10 @@ __ATTR(bypass,
 	0644,
 	bypass_read,
 	bypass_write),
+__ATTR(ppmgr_debug,
+	0644,
+	ppmgr_debug_read,
+	ppmgr_debug_write),
 
 __ATTR(disp,
 	0644,
@@ -1594,6 +1622,7 @@ int init_ppmgr_device(void)
 	ppmgr_device.tb_detect_period = 0;
 	ppmgr_device.tb_detect_buf_len = 8;
 	ppmgr_device.tb_detect_init_mute = 0;
+	ppmgr_device.ppmgr_debug = 0;
 	PPMGRDRV_INFO("ppmgr_dev major:%d\n", ret);
 
 	ppmgr_device.cla = init_ppmgr_cls();
