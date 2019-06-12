@@ -376,6 +376,10 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 
 	/*config extern phy*/
 	if (internal_phy == 0) {
+		if (of_property_read_u32(np, "tx_delay", &external_tx_delay))
+			pr_debug("set exphy tx delay\n");
+		if (of_property_read_u32(np, "rx_delay", &external_rx_delay))
+			pr_debug("set exphy rx delay\n");
 		/* only exphy support wol since g12a*/
 		/*we enable/disable wol with item in dts with "wol=<1>"*/
 		if (of_property_read_u32(np, "wol",
