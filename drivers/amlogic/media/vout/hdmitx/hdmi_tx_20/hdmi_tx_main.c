@@ -2572,7 +2572,7 @@ static ssize_t show_valid_mode(struct device *dev,
 				valid_mode);
 			return pos;
 		}
-		para = hdmi_get_fmt_name(cvalid_mode, cvalid_mode);
+		para = hdmi_tst_fmt_name(cvalid_mode, cvalid_mode);
 	}
 	if (para) {
 		pr_info(SYS "sname = %s\n", para->sname);
@@ -3027,6 +3027,8 @@ static ssize_t store_cedst_policy(struct device *dev,
 			}
 			if (val == 2) /* Force mode */
 				hdev->cedst_policy = 1;
+			/* assgin cedst_en from dts or here */
+			hdev->cedst_en = hdev->cedst_policy;
 		} else
 			pr_info("only accept as 0, 1(auto), or 2(force)\n");
 	}
@@ -3999,6 +4001,7 @@ static void hdmitx_cedst_process(struct work_struct *work)
 static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 {
 	char bksv_buf[5];
+	struct vinfo_s *info = NULL;
 	struct hdmitx_dev *hdev = container_of((struct delayed_work *)work,
 		struct hdmitx_dev, work_hpd_plugin);
 
@@ -4042,7 +4045,9 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 		rx_set_receive_hdcp(bksv_buf, 1, 1, 0, 0);
 	}
 
-	hdmitx_set_audio(hdev, &(hdev->cur_audio_param));
+	info = hdmitx_get_current_vinfo();
+	if (info && (info->mode == VMODE_HDMI))
+		hdmitx_set_audio(hdev, &(hdev->cur_audio_param));
 	hdev->hpd_state = 1;
 	hdmitx_notify_hpd(hdev->hpd_state);
 
@@ -4147,6 +4152,7 @@ int tv_audio_support(int type, struct rx_cap *pRXCap)
 
 static int hdmi_task_handle(void *data)
 {
+	struct vinfo_s *info = NULL;
 	struct hdmitx_dev *hdmitx_device = (struct hdmitx_dev *)data;
 
 	hdmitx_extcon_hdmi->state = !!(hdmitx_device->HWOp.CntlMisc(
@@ -4190,6 +4196,13 @@ static int hdmi_task_handle(void *data)
 			MISC_TRIGGER_HPD, 0);
 
 	hdmitx_device->hdmi_init = 1;
+	info = hdmitx_get_current_vinfo();
+	if (!info || !info->name)
+		return 0;
+	if (info->mode == VMODE_HDMI)
+		hdmitx_device->para = hdmi_get_fmt_name(info->name,
+			hdmitx_device->fmt_attr);
+
 	return 0;
 }
 

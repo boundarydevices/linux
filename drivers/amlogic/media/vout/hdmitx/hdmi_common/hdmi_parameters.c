@@ -2853,6 +2853,71 @@ struct hdmi_format_para *hdmi_get_fmt_name(char const *name, char const *attr)
 	return para;
 }
 
+static struct hdmi_format_para tst_para;
+static inline void copy_para(struct hdmi_format_para *des,
+	struct hdmi_format_para *src)
+{
+	if (!des || !src)
+		return;
+	memcpy(des, src, sizeof(struct hdmi_format_para));
+}
+
+struct hdmi_format_para *hdmi_tst_fmt_name(char const *name, char const *attr)
+{
+	int i;
+	char *lname;
+	enum hdmi_vic vic = HDMI_Unknown;
+
+	copy_para(&tst_para, &fmt_para_non_hdmi_fmt);
+	if (!name)
+		return &tst_para;
+
+	for (i = 0; all_fmt_paras[i]; i++) {
+		lname = all_fmt_paras[i]->name;
+		if (lname && (strncmp(name, lname, strlen(lname)) == 0)) {
+			vic = all_fmt_paras[i]->vic;
+			break;
+		}
+		lname = all_fmt_paras[i]->sname;
+		if (lname && (strncmp(name, lname, strlen(lname)) == 0)) {
+			vic = all_fmt_paras[i]->vic;
+			break;
+		}
+	}
+	if ((vic != HDMI_Unknown) && (i != sizeof(all_fmt_paras) /
+		sizeof(struct hdmi_format_para *))) {
+		copy_para(&tst_para, all_fmt_paras[i]);
+		memset(&tst_para.ext_name[0], 0, sizeof(tst_para.ext_name));
+		memcpy(&tst_para.ext_name[0], name, sizeof(tst_para.ext_name));
+		hdmi_parse_attr(&tst_para, name);
+		hdmi_parse_attr(&tst_para, attr);
+	} else {
+		copy_para(&tst_para, &fmt_para_non_hdmi_fmt);
+		hdmi_parse_attr(&tst_para, name);
+		hdmi_parse_attr(&tst_para, attr);
+	}
+	if (strstr(name, "420"))
+		tst_para.cs = COLORSPACE_YUV420;
+
+	/* only 2160p60/50hz smpte60/50hz have Y420 mode */
+	if (tst_para.cs == COLORSPACE_YUV420) {
+		switch ((tst_para.vic) & 0xff) {
+		case HDMI_3840x2160p50_16x9:
+		case HDMI_3840x2160p60_16x9:
+		case HDMI_4096x2160p50_256x135:
+		case HDMI_4096x2160p60_256x135:
+		case HDMI_3840x2160p50_64x27:
+		case HDMI_3840x2160p60_64x27:
+			break;
+		default:
+			copy_para(&tst_para, &fmt_para_non_hdmi_fmt);
+			break;
+		}
+	}
+
+	return &tst_para;
+}
+
 struct vinfo_s *hdmi_get_valid_vinfo(char *mode)
 {
 	int i;
