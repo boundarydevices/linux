@@ -332,6 +332,7 @@ void vdin_canvas_auto_config(struct vdin_dev_s *devp)
 		pr_err("\nvdin%d canvas_max_num %d less than vfmem_max_cnt %d\n",
 			devp->index, devp->canvas_max_num, devp->vfmem_max_cnt);
 	}
+	devp->vfmem_max_cnt = min(devp->vfmem_max_cnt, devp->canvas_max_num);
 
 	if (devp->set_canvas_manual == 1) {
 		for (i = 0; i < 4; i++) {
