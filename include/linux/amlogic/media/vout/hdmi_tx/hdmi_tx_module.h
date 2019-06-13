@@ -591,6 +591,7 @@ struct hdmitx_dev {
 #define MISC_I2C_RESET		(CMD_MISC_OFFSET + 0x11) /* For g12 */
 #define MISC_READ_AVMUTE_OP     (CMD_MISC_OFFSET + 0x12)
 #define MISC_TMDS_CEDST		(CMD_MISC_OFFSET + 0x13)
+#define MISC_TRIGGER_HPD        (CMD_MISC_OFFSET + 0X14)
 
 /***********************************************************************
  *                          Get State //GetState

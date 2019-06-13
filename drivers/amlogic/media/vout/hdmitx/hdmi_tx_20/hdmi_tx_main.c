@@ -4185,9 +4185,9 @@ static int hdmi_task_handle(void *data)
 		hdmitx_device->HWOp.SetupIRQ(hdmitx_device);
 
 	/* Trigger HDMITX IRQ*/
-	hdmitx_device->HWOp.CntlMisc(hdmitx_device, MISC_HPD_MUX_OP, PIN_UNMUX);
-	mdelay(20);
-	hdmitx_device->HWOp.CntlMisc(hdmitx_device, MISC_HPD_MUX_OP, PIN_MUX);
+	if (hdmitx_device->HWOp.CntlMisc(hdmitx_device, MISC_HPD_GPI_ST, 0))
+		hdmitx_device->HWOp.CntlMisc(hdmitx_device,
+			MISC_TRIGGER_HPD, 0);
 
 	hdmitx_device->hdmi_init = 1;
 	return 0;

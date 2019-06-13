@@ -5035,6 +5035,9 @@ static int hdmitx_cntl_misc(struct hdmitx_dev *hdev, unsigned int cmd,
 		return hdmitx_hpd_hw_op(argv);
 	case MISC_HPD_GPI_ST:
 		return hdmitx_hpd_hw_op(HPD_READ_HPD_GPIO);
+	case MISC_TRIGGER_HPD:
+		hdmitx_wr_reg(HDMITX_TOP_INTR_STAT, 1 << 1);
+		return 0;
 	case MISC_HPLL_FAKE:
 		hdmitx_set_fake_vic(hdev);
 		break;
