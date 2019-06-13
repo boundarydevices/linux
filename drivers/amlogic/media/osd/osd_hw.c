@@ -2148,29 +2148,27 @@ void osd_set_pxp_mode(u32 mode)
 }
 void osd_set_afbc(u32 index, u32 enable)
 {
-	if (osd_hw.osd_meson_dev.afbc_type)
-		osd_hw.osd_afbcd[index].enable = enable;
-	osd_log_info("afbc_type=%d,enable=%d\n",
-		osd_hw.osd_meson_dev.afbc_type,
-		osd_hw.osd_afbcd[index].enable);
+	if (osd_hw.osd_meson_dev.osd_ver == OSD_NORMAL) {
+		if (osd_hw.osd_meson_dev.afbc_type)
+			osd_hw.osd_afbcd[index].enable = enable;
+		osd_log_info("afbc_type=%d,enable=%d\n",
+			osd_hw.osd_meson_dev.afbc_type,
+			osd_hw.osd_afbcd[index].enable);
+	}
 }
 
 u32 osd_get_afbc(u32 index)
 {
 	u32 afbc_type = 0;
-	u32 afbc_enalbe;
 
-	afbc_enalbe = osd_hw.osd_afbcd[index].enable;
-	if (afbc_enalbe) {
-		if (osd_hw.osd_meson_dev.cpu_id ==
-			__MESON_CPU_MAJOR_ID_GXM)
-			afbc_type = 1;
-		else if (osd_hw.osd_meson_dev.cpu_id >=
-			__MESON_CPU_MAJOR_ID_G12A)
-			afbc_type = 2;
-		else
-			afbc_type = 0;
-	}
+	if (osd_hw.osd_meson_dev.cpu_id ==
+		__MESON_CPU_MAJOR_ID_GXM)
+		afbc_type = 1;
+	else if (osd_hw.osd_meson_dev.cpu_id >=
+		__MESON_CPU_MAJOR_ID_G12A)
+		afbc_type = 2;
+	else
+		afbc_type = 0;
 	return afbc_type;
 }
 
