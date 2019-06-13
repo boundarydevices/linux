@@ -63,13 +63,29 @@ static const struct reg_default t9015_init_list[] = {
 	{POWER_CONFIG, 0x00010000},
 };
 
+static const struct reg_default t9015_init_list_V2[] = {
+	{AUDIO_CONFIG_BLOCK_ENABLE, 0x0000B00F},
+	{ADC_VOL_CTR_PGA_IN_CONFIG, 0x00000000},
+	{DAC_VOL_CTR_DAC_SOFT_MUTE, 0xFBFB0000},
+	{LINE_OUT_CONFIG, 0x00001111},
+	{POWER_CONFIG, 0x00010000},
+};
+
 static int aml_T9015_audio_reg_init(struct snd_soc_codec *codec)
 {
 	int i;
+	struct aml_T9015_audio_priv *T9015_audio =
+				snd_soc_codec_get_drvdata(codec);
 
-	for (i = 0; i < ARRAY_SIZE(t9015_init_list); i++)
-		snd_soc_write(codec, t9015_init_list[i].reg,
-				t9015_init_list[i].def);
+	if (T9015_audio && T9015_audio->is_auge_arch) {
+		for (i = 0; i < ARRAY_SIZE(t9015_init_list_V2); i++)
+			snd_soc_write(codec, t9015_init_list_V2[i].reg,
+					t9015_init_list_V2[i].def);
+	} else {
+		for (i = 0; i < ARRAY_SIZE(t9015_init_list); i++)
+			snd_soc_write(codec, t9015_init_list[i].reg,
+					t9015_init_list[i].def);
+	}
 
 	return 0;
 }
@@ -211,6 +227,43 @@ static const struct snd_soc_dapm_widget T9015_audio_dapm_widgets[] = {
 	/*DRV output */
 	SND_SOC_DAPM_OUT_DRV("LOLP_OUT_EN", AUDIO_CONFIG_BLOCK_ENABLE,
 			     VMID_GEN_EN, 0, NULL, 0),
+	SND_SOC_DAPM_OUT_DRV("LOLN_OUT_EN", SND_SOC_NOPM,
+			     0, 0, NULL, 0),
+	SND_SOC_DAPM_OUT_DRV("LORP_OUT_EN", SND_SOC_NOPM,
+			     0, 0, NULL, 0),
+	SND_SOC_DAPM_OUT_DRV("LORN_OUT_EN", SND_SOC_NOPM,
+			     0, 0, NULL, 0),
+
+	/*MUX output source select */
+	SND_SOC_DAPM_MUX("Lineout left P switch", SND_SOC_NOPM,
+			 0, 0, &line_out_lp_mux),
+	SND_SOC_DAPM_MUX("Lineout left N switch", SND_SOC_NOPM,
+			 0, 0, &line_out_ln_mux),
+	SND_SOC_DAPM_MUX("Lineout right P switch", SND_SOC_NOPM,
+			 0, 0, &line_out_rp_mux),
+	SND_SOC_DAPM_MUX("Lineout right N switch", SND_SOC_NOPM,
+			 0, 0, &line_out_rn_mux),
+};
+
+static const struct snd_soc_dapm_widget T9015_audio_dapm_widgets_V2[] = {
+
+	/*Output */
+	SND_SOC_DAPM_OUTPUT("Lineout left N"),
+	SND_SOC_DAPM_OUTPUT("Lineout left P"),
+	SND_SOC_DAPM_OUTPUT("Lineout right N"),
+	SND_SOC_DAPM_OUTPUT("Lineout right P"),
+
+	/*DAC playback stream */
+	SND_SOC_DAPM_DAC("Left DAC", "HIFI Playback",
+			 AUDIO_CONFIG_BLOCK_ENABLE,
+			 DACL_EN, 0),
+	SND_SOC_DAPM_DAC("Right DAC", "HIFI Playback",
+			 AUDIO_CONFIG_BLOCK_ENABLE,
+			 DACR_EN, 0),
+
+	/*DRV output */
+	SND_SOC_DAPM_OUT_DRV("LOLP_OUT_EN", SND_SOC_NOPM,
+			     0, 0, NULL, 0),
 	SND_SOC_DAPM_OUT_DRV("LOLN_OUT_EN", SND_SOC_NOPM,
 			     0, 0, NULL, 0),
 	SND_SOC_DAPM_OUT_DRV("LORP_OUT_EN", SND_SOC_NOPM,
@@ -496,6 +549,22 @@ static struct snd_soc_codec_driver soc_codec_dev_aml_T9015_audio = {
 	}
 };
 
+static struct snd_soc_codec_driver soc_codec_dev_aml_T9015_audio_V2 = {
+	.probe = aml_T9015_audio_probe,
+	.remove = aml_T9015_audio_remove,
+	.suspend = aml_T9015_audio_suspend,
+	.resume = aml_T9015_audio_resume,
+	.set_bias_level = aml_T9015_audio_set_bias_level,
+	.component_driver = {
+		.controls = T9015_audio_snd_controls,
+		.num_controls = ARRAY_SIZE(T9015_audio_snd_controls),
+		.dapm_widgets = T9015_audio_dapm_widgets_V2,
+		.num_dapm_widgets = ARRAY_SIZE(T9015_audio_dapm_widgets_V2),
+		.dapm_routes = T9015_audio_dapm_routes,
+		.num_dapm_routes = ARRAY_SIZE(T9015_audio_dapm_routes),
+	}
+};
+
 static const struct regmap_config t9015_codec_regmap_config = {
 	.reg_bits = 32,
 	.reg_stride = 4,
@@ -505,6 +574,17 @@ static const struct regmap_config t9015_codec_regmap_config = {
 	.num_reg_defaults = ARRAY_SIZE(t9015_init_list),
 	.cache_type = REGCACHE_RBTREE,
 };
+
+static const struct regmap_config t9015_codec_regmap_config_V2 = {
+	.reg_bits = 32,
+	.reg_stride = 4,
+	.val_bits = 32,
+	.max_register = 0x14,
+	.reg_defaults = t9015_init_list_V2,
+	.num_reg_defaults = ARRAY_SIZE(t9015_init_list_V2),
+	.cache_type = REGCACHE_RBTREE,
+};
+
 
 static int aml_T9015_audio_codec_probe(struct platform_device *pdev)
 {
@@ -530,9 +610,6 @@ static int aml_T9015_audio_codec_probe(struct platform_device *pdev)
 	regs = devm_ioremap_resource(&pdev->dev, res_mem);
 	if (IS_ERR(regs))
 		return PTR_ERR(regs);
-
-	regmap = devm_regmap_init_mmio(&pdev->dev, regs,
-					    &t9015_codec_regmap_config);
 
 	T9015_audio->is_auge_arch = of_property_read_bool(
 			pdev->dev.of_node,
@@ -561,12 +638,25 @@ static int aml_T9015_audio_codec_probe(struct platform_device *pdev)
 		T9015_audio->is_auge_arch ? "auge" : "meson",
 		T9015_audio->tdmout_index);
 
-	if (IS_ERR(regmap))
-		return PTR_ERR(regmap);
+	if (T9015_audio && T9015_audio->is_auge_arch) {
+		regmap = devm_regmap_init_mmio(&pdev->dev, regs,
+					&t9015_codec_regmap_config_V2);
+		if (IS_ERR(regmap))
+			return PTR_ERR(regmap);
 
-	ret = snd_soc_register_codec(&pdev->dev,
-				     &soc_codec_dev_aml_T9015_audio,
-				     &aml_T9015_audio_dai[0], 1);
+		ret = snd_soc_register_codec(&pdev->dev,
+					&soc_codec_dev_aml_T9015_audio_V2,
+					&aml_T9015_audio_dai[0], 1);
+	} else {
+		regmap = devm_regmap_init_mmio(&pdev->dev, regs,
+					&t9015_codec_regmap_config);
+		if (IS_ERR(regmap))
+			return PTR_ERR(regmap);
+
+		ret = snd_soc_register_codec(&pdev->dev,
+					&soc_codec_dev_aml_T9015_audio,
+					&aml_T9015_audio_dai[0], 1);
+	}
 	return ret;
 }
 

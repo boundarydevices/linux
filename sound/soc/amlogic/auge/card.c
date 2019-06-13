@@ -71,6 +71,7 @@ struct aml_card_data {
 	struct gpio_desc *avout_mute_desc;
 	struct timer_list timer;
 	struct work_struct work;
+	struct work_struct init_work;
 	bool hp_last_state;
 	bool hp_cur_state;
 	bool hp_det_status;
@@ -741,22 +742,39 @@ static int aml_card_parse_gpios(struct device_node *node,
 		priv->spk_mute_active_low = active_low;
 
 		ret = devm_gpio_request_one(dev, gpio, flags, "spk_mute");
-		if (ret < 0)
-			return ret;
-
-		ret = snd_soc_add_card_controls(soc_card, card_controls,
+		if (ret >= 0) {
+			snd_soc_add_card_controls(soc_card, card_controls,
 					ARRAY_SIZE(card_controls));
+		}
 	}
 
 	priv->avout_mute_desc = gpiod_get(dev,
-				"avout_mute",
-				GPIOD_OUT_HIGH);
+				"avout_mute", GPIOF_OUT_INIT_LOW);
+	if (!IS_ERR(priv->avout_mute_desc)) {
+		msleep(500);
+		gpiod_direction_output(priv->avout_mute_desc,
+			GPIOF_OUT_INIT_HIGH);
+		pr_info("av out status: %s\n",
+			gpiod_get_value(priv->avout_mute_desc) ?
+			"high" : "low");
 
-	gpiod_direction_output(priv->avout_mute_desc,
-		GPIOF_OUT_INIT_HIGH);
-	pr_info("set av out GPIOF_OUT_INIT_HIGH!\n");
+	}
 
 	return 0;
+}
+
+static void aml_init_work(struct work_struct *init_work)
+{
+	struct aml_card_data *priv = NULL;
+	struct device *dev = NULL;
+	struct device_node *np = NULL;
+
+	priv = container_of(init_work,
+			struct aml_card_data, init_work);
+	dev = aml_priv_to_dev(priv);
+	np = dev->of_node;
+
+	aml_card_parse_gpios(np, priv);
 }
 
 static int aml_card_parse_of(struct device_node *node,
@@ -963,9 +981,11 @@ static int aml_card_probe(struct platform_device *pdev)
 		audio_jack_detect(priv);
 		audio_extcon_register(priv, dev);
 	}
-	ret = aml_card_parse_gpios(np, priv);
-	if (ret >= 0)
-		return ret;
+
+	INIT_WORK(&priv->init_work, aml_init_work);
+	schedule_work(&priv->init_work);
+
+	return 0;
 err:
 	pr_err("%s error ret:%d\n", __func__, ret);
 	aml_card_clean_reference(&priv->snd_card);
