@@ -16,17 +16,11 @@
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_fb_cma_helper.h>
+#include <drm/drm_fb_helper.h>
 #include <drm/drm_gem_cma_helper.h>
 #include <linux/dma-buf.h>
 #include <linux/reservation.h>
 #include "imx-drm.h"
-
-static void imx_drm_output_poll_changed(struct drm_device *drm)
-{
-	struct imx_drm_device *imxdrm = drm->dev_private;
-
-	drm_fbdev_cma_hotplug_event(imxdrm->fbhelper);
-}
 
 static int imx_drm_atomic_check(struct drm_device *dev,
 				struct drm_atomic_state *state)
@@ -59,7 +53,7 @@ static int imx_drm_atomic_check(struct drm_device *dev,
 
 const struct drm_mode_config_funcs ipuv3_drm_mode_config_funcs = {
 	.fb_create = drm_fb_cma_create,
-	.output_poll_changed = imx_drm_output_poll_changed,
+	.output_poll_changed = drm_fb_helper_output_poll_changed,
 	.atomic_check = imx_drm_atomic_check,
 	.atomic_commit = drm_atomic_helper_commit,
 };

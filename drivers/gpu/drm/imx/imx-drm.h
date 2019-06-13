@@ -17,7 +17,6 @@ struct platform_device;
 struct imx_drm_device {
 	struct drm_device			*drm;
 	unsigned int				pipes;
-	struct drm_fbdev_cma			*fbhelper;
 	struct drm_atomic_state			*state;
 
 	struct workqueue_struct			*dpu_nonblock_commit_wq;

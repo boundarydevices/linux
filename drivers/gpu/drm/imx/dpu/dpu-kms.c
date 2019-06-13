@@ -16,6 +16,7 @@
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_fb_cma_helper.h>
+#include <drm/drm_fb_helper.h>
 #include <drm/drm_gem_cma_helper.h>
 #include <drm/drm_gem_framebuffer_helper.h>
 #include <linux/dma-buf.h>
@@ -25,13 +26,6 @@
 #include "dpu-crtc.h"
 #include "dpu-plane.h"
 #include "imx-drm.h"
-
-static void dpu_drm_output_poll_changed(struct drm_device *dev)
-{
-	struct imx_drm_device *imxdrm = dev->dev_private;
-
-	drm_fbdev_cma_hotplug_event(imxdrm->fbhelper);
-}
 
 static struct drm_plane_state **
 dpu_atomic_alloc_tmp_planes_per_crtc(struct drm_device *dev)
@@ -903,7 +897,7 @@ err:
 
 const struct drm_mode_config_funcs dpu_drm_mode_config_funcs = {
 	.fb_create = drm_gem_fb_create,
-	.output_poll_changed = dpu_drm_output_poll_changed,
+	.output_poll_changed = drm_fb_helper_output_poll_changed,
 	.atomic_check = dpu_drm_atomic_check,
 	.atomic_commit = dpu_drm_atomic_commit,
 };

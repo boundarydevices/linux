@@ -16,6 +16,7 @@
 #include <drm/drm_crtc.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_fb_cma_helper.h>
+#include <drm/drm_fb_helper.h>
 #include <drm/drm_gem_framebuffer_helper.h>
 #include <drm/drm_atomic.h>
 #include <drm/drm_gem_cma_helper.h>
@@ -24,13 +25,6 @@
 
 #include "imx-drm.h"
 #include "dcss-crtc.h"
-
-static void dcss_drm_output_poll_changed(struct drm_device *drm)
-{
-	struct imx_drm_device *imxdrm = drm->dev_private;
-
-	drm_fbdev_cma_hotplug_event(imxdrm->fbhelper);
-}
 
 static int dcss_drm_atomic_check(struct drm_device *drm,
 				 struct drm_atomic_state *state)
@@ -203,7 +197,7 @@ err_free:
 
 const struct drm_mode_config_funcs dcss_drm_mode_config_funcs = {
 	.fb_create = drm_gem_fb_create,
-	.output_poll_changed = dcss_drm_output_poll_changed,
+	.output_poll_changed = drm_fb_helper_output_poll_changed,
 	.atomic_check = dcss_drm_atomic_check,
 	.atomic_commit = dcss_drm_atomic_commit,
 };
