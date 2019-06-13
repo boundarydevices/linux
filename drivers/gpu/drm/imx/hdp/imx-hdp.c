@@ -1436,13 +1436,23 @@ static void hotplug_work_func(struct work_struct *work)
 
 	drm_helper_hpd_irq_event(connector->dev);
 
+	/* Cable Connected */
 	if (connector->status == connector_status_connected) {
-		/* Cable Connected */
-		/* For HDMI2.0 SCDC should setup again.
-		 * So recovery pre video mode if it is 4Kp60 */
-		if (drm_mode_equal(&hdp->video.pre_mode,
-				   &edid_cea_modes[g_default_mode]))
+		/*
+		 * When DRM fbdev enable, drm_bridge_funcs->mode_set will called
+		 * in drm_fb_helper_hotplug_event function.
+		 * skip call mode_set function for this case.
+		 */
+#ifndef CONFIG_DRM_FBDEV_EMULATION
+		/*
+		 * For the DP mode, driver should setup link for every cable plugin/out.
+		 * For the HDMI2.0 4Kp60, SCDC should setup again.
+		 */
+		u8 hdmi_4kp60 = drm_mode_match(&hdp->video.pre_mode, &edid_cea_modes[g_default_mode],
+				DRM_MODE_MATCH_TIMINGS | DRM_MODE_MATCH_CLOCK | DRM_MODE_MATCH_FLAGS);
+		if (hdp->is_dp == true || hdmi_4kp60)
 			imx_hdp_mode_setup(hdp, &hdp->video.pre_mode);
+#endif
 		DRM_INFO("HDMI/DP Cable Plug In\n");
 		enable_irq(hdp->irq[HPD_IRQ_OUT]);
 	} else if (connector->status == connector_status_disconnected) {
