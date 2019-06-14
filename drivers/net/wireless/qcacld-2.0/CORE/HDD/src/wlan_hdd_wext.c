@@ -12647,12 +12647,16 @@ static const struct iw_priv_args we_private_args[] = {
 
 const struct iw_handler_def we_handler_def = {
    .num_standard     = sizeof(we_handler) / sizeof(we_handler[0]),
+#ifdef CONFIG_WEXT_PRIV
    .num_private      = sizeof(we_private) / sizeof(we_private[0]),
    .num_private_args = sizeof(we_private_args) / sizeof(we_private_args[0]),
+#endif
 
    .standard         = (iw_handler *)we_handler,
+#ifdef CONFIG_WEXT_PRIV
    .private          = (iw_handler *)we_private,
    .private_args     = we_private_args,
+#endif
    .get_wireless_stats = get_wireless_stats,
 };
 
@@ -12941,7 +12945,9 @@ int hdd_register_wext(struct net_device *dev)
     }
     hdd_initialize_fils_info(pwextBuf);
     /* Register as a wireless device */
+#ifdef CONFIG_WIRELESS_EXT
     dev->wireless_handlers = (struct iw_handler_def *)&we_handler_def;
+#endif
 
     EXIT();
     return 0;
@@ -12952,9 +12958,11 @@ int hdd_UnregisterWext(struct net_device *dev)
 	hddLog(LOG1, FL("dev(%pK)"), dev);
 
 	if (dev != NULL) {
+#ifdef CONFIG_WIRELESS_EXT
 		rtnl_lock();
 		dev->wireless_handlers = NULL;
 		rtnl_unlock();
+#endif
 	}
 
 	return 0;
