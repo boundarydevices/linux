@@ -202,6 +202,23 @@ struct frac_rate_table {
 	u32 sync_den_dec;
 };
 
+struct ced_cnt {
+	bool ch0_valid;
+	u16 ch0_cnt:15;
+	bool ch1_valid;
+	u16 ch1_cnt:15;
+	bool ch2_valid;
+	u16 ch2_cnt:15;
+	u8 chksum;
+};
+
+struct scdc_locked_st {
+	u8 clock_detected:1;
+	u8 ch0_locked:1;
+	u8 ch1_locked:1;
+	u8 ch2_locked:1;
+};
+
 enum hdmi_hdr_transfer {
 	T_UNKNOWN = 0,
 	T_BT709,
@@ -302,6 +319,7 @@ struct hdmitx_dev {
 	struct notifier_block nb;
 	struct workqueue_struct *hdmi_wq;
 	struct workqueue_struct *rxsense_wq;
+	struct workqueue_struct *cedst_wq;
 	struct device *hdtx_dev;
 	struct device *pdev; /* for pinctrl*/
 	struct pinctrl_state *pinctrl_i2c;
@@ -310,6 +328,7 @@ struct hdmitx_dev {
 	struct delayed_work work_hpd_plugout;
 	struct delayed_work work_rxsense;
 	struct delayed_work work_internal_intr;
+	struct delayed_work work_cedst;
 	struct work_struct work_hdr;
 	struct delayed_work work_do_hdcp;
 #ifdef CONFIG_AML_HDMI_TX_14
@@ -422,6 +441,9 @@ struct hdmitx_dev {
 	/* 0.1% clock shift, 1080p60hz->59.94hz */
 	unsigned int frac_rate_policy;
 	unsigned int rxsense_policy;
+	unsigned int cedst_policy;
+	struct ced_cnt ced_cnt;
+	struct scdc_locked_st chlocked_st;
 	/* allm_mode: 1/game, 2/graphcis, 3/photo, 4/cinema */
 	unsigned int allm_mode;
 	unsigned int sspll;
@@ -449,6 +471,7 @@ struct hdmitx_dev {
 	unsigned int flag_3dtb:1;
 	unsigned int flag_3dss:1;
 	unsigned int dongle_mode:1;
+	unsigned int cedst_en:1; /* configure in DTS */
 	unsigned int drm_feature;/*Direct Rander Management*/
 };
 
@@ -564,9 +587,10 @@ struct hdmitx_dev {
 #define MISC_ESM_RESET		(CMD_MISC_OFFSET + 0x0d)
 #define MISC_HDCP_CLKDIS	(CMD_MISC_OFFSET + 0x0e)
 #define MISC_TMDS_RXSENSE	(CMD_MISC_OFFSET + 0x0f)
-#define MISC_I2C_REACTIVE       (CMD_MISC_OFFSET + 0x10)
-#define MISC_I2C_RESET		(CMD_MISC_OFFSET + 0x11)
+#define MISC_I2C_REACTIVE       (CMD_MISC_OFFSET + 0x10) /* For gxl */
+#define MISC_I2C_RESET		(CMD_MISC_OFFSET + 0x11) /* For g12 */
 #define MISC_READ_AVMUTE_OP     (CMD_MISC_OFFSET + 0x12)
+#define MISC_TMDS_CEDST		(CMD_MISC_OFFSET + 0x13)
 
 /***********************************************************************
  *                          Get State //GetState

@@ -109,6 +109,7 @@ struct extcon_dev *hdmitx_extcon_power;
 struct extcon_dev *hdmitx_extcon_hdr;
 struct extcon_dev *hdmitx_extcon_rxsense;
 struct extcon_dev *hdmitx_extcon_hdcp;
+struct extcon_dev *hdmitx_extcon_cedst;
 
 static inline void hdmitx_notify_hpd(int hpd)
 {
@@ -477,6 +478,8 @@ static int set_disp_mode_auto(void)
 		hdev->HWOp.CntlConfig(hdev, CONF_CLR_VSDB_PACKET, 0);
 		hdev->HWOp.CntlMisc(hdev, MISC_TMDS_PHY_OP, TMDS_PHY_DISABLE);
 		hdev->para = hdmi_get_fmt_name("invalid", hdev->fmt_attr);
+		if (hdev->cedst_policy)
+			cancel_delayed_work(&hdev->work_cedst);
 		return -1;
 	}
 	strncpy(mode, info->name, sizeof(mode));
@@ -573,6 +576,10 @@ static int set_disp_mode_auto(void)
 		}
 	}
 	hdmitx_set_audio(hdev, &(hdev->cur_audio_param));
+	if (hdev->cedst_policy) {
+		cancel_delayed_work(&hdev->work_cedst);
+		queue_delayed_work(hdev->cedst_wq, &hdev->work_cedst, 0);
+	}
 	hdev->output_blank_flag = 1;
 	hdev->ready = 1;
 	return ret;
@@ -2996,6 +3003,82 @@ static ssize_t show_rxsense_policy(struct device *dev,
 	return pos;
 }
 
+/* cedst_policy: 0, no CED feature
+ *	       1, auto mode, depends on RX scdc_present
+ *	       2, forced CED feature
+ */
+static ssize_t store_cedst_policy(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	int val = 0;
+	struct hdmitx_dev *hdev = &hdmitx_device;
+
+	if (isdigit(buf[0])) {
+		val = buf[0] - '0';
+		pr_info("hdmitx: set cedst_policy as %d\n", val);
+		if ((val == 0) || (val == 1) || (val == 2)) {
+			hdev->cedst_policy = val;
+			if (val == 1) { /* Auto mode, depends on Rx */
+				/* check RX scdc_present */
+				if (hdev->RXCap.scdc_present)
+					hdev->cedst_policy = 1;
+				else
+					hdev->cedst_policy = 0;
+			}
+			if (val == 2) /* Force mode */
+				hdev->cedst_policy = 1;
+		} else
+			pr_info("only accept as 0, 1(auto), or 2(force)\n");
+	}
+	if (hdev->cedst_policy)
+		queue_delayed_work(hdev->cedst_wq, &hdev->work_cedst, 0);
+	else
+		cancel_delayed_work(&hdev->work_cedst);
+
+
+	return count;
+}
+
+static ssize_t show_cedst_policy(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	int pos = 0;
+
+	pos += snprintf(buf + pos, PAGE_SIZE, "%d\n",
+		hdmitx_device.cedst_policy);
+
+	return pos;
+}
+
+static ssize_t show_cedst_count(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	int pos = 0;
+	struct ced_cnt *ced = &hdmitx_device.ced_cnt;
+	struct scdc_locked_st *ch_st = &hdmitx_device.chlocked_st;
+
+	if (!ch_st->clock_detected)
+		pos += snprintf(buf + pos, PAGE_SIZE, "clock undetected\n");
+	if (!ch_st->ch0_locked)
+		pos += snprintf(buf + pos, PAGE_SIZE, "CH0 unlocked\n");
+	if (!ch_st->ch1_locked)
+		pos += snprintf(buf + pos, PAGE_SIZE, "CH1 unlocked\n");
+	if (!ch_st->ch2_locked)
+		pos += snprintf(buf + pos, PAGE_SIZE, "CH2 unlocked\n");
+	if (ced->ch0_valid && ced->ch0_cnt)
+		pos += snprintf(buf + pos, PAGE_SIZE, "CH0 ErrCnt 0x%x\n",
+			ced->ch0_cnt);
+	if (ced->ch1_valid && ced->ch1_cnt)
+		pos += snprintf(buf + pos, PAGE_SIZE, "CH1 ErrCnt 0x%x\n",
+			ced->ch1_cnt);
+	if (ced->ch2_valid && ced->ch2_cnt)
+		pos += snprintf(buf + pos, PAGE_SIZE, "CH2 ErrCnt 0x%x\n",
+			ced->ch2_cnt);
+	memset(ced, 0, sizeof(*ced));
+
+	return pos;
+}
+
 static ssize_t store_sspll(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -3558,6 +3641,8 @@ static DEVICE_ATTR(sspll, 0664, show_sspll, store_sspll);
 static DEVICE_ATTR(frac_rate_policy, 0664, show_frac_rate, store_frac_rate);
 static DEVICE_ATTR(rxsense_policy, 0644, show_rxsense_policy,
 	store_rxsense_policy);
+static DEVICE_ATTR(cedst_policy, 0664, show_cedst_policy, store_cedst_policy);
+static DEVICE_ATTR(cedst_count, 0444, show_cedst_count, NULL);
 static DEVICE_ATTR(hdcp_clkdis, 0664, show_hdcp_clkdis, store_hdcp_clkdis);
 static DEVICE_ATTR(hdcp_pwr, 0664, show_hdcp_pwr, store_hdcp_pwr);
 static DEVICE_ATTR(hdcp_byp, 0200, NULL, store_hdcp_byp);
@@ -3644,6 +3729,11 @@ static int hdmitx_module_disable(enum vmode_e cur_vmod)
 		hdmitx_disable_vclk2_enci(hdev);
 	hdev->para = hdmi_get_fmt_name("invalid", hdev->fmt_attr);
 	hdmitx_validate_vmode("null");
+	if (hdev->cedst_policy)
+		cancel_delayed_work(&hdev->work_cedst);
+	if (hdev->rxsense_policy)
+		queue_delayed_work(hdmitx_device.rxsense_wq,
+			&hdmitx_device.work_rxsense, 0);
 
 	return 0;
 }
@@ -3893,6 +3983,19 @@ static void hdmitx_rxsense_process(struct work_struct *work)
 	queue_delayed_work(hdev->rxsense_wq, &hdev->work_rxsense, HZ);
 }
 
+static void hdmitx_cedst_process(struct work_struct *work)
+{
+	int ced;
+	struct hdmitx_dev *hdev = container_of((struct delayed_work *)work,
+		struct hdmitx_dev, work_cedst);
+
+	ced = hdev->HWOp.CntlMisc(hdev, MISC_TMDS_CEDST, 0);
+	/* firstly send as 0, then real ced, A trigger signal */
+	extcon_set_state_sync(hdmitx_extcon_cedst, EXTCON_DISP_HDMI, 0);
+	extcon_set_state_sync(hdmitx_extcon_cedst, EXTCON_DISP_HDMI, ced);
+	queue_delayed_work(hdev->cedst_wq, &hdev->work_cedst, HZ);
+}
+
 static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 {
 	char bksv_buf[5];
@@ -3916,6 +4019,7 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 	if (hdev->repeater_tx)
 		rx_repeat_hpd_state(1);
 	hdmitx_get_edid(hdev);
+	hdev->cedst_policy = hdev->cedst_en & hdev->RXCap.scdc_present;
 	hdmi_physcial_size_update(hdev);
 	if (hdev->RXCap.ieeeoui != HDMI_IEEEOUI)
 		hdev->HWOp.CntlConfig(hdev,
@@ -3945,6 +4049,10 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 	extcon_set_state_sync(hdmitx_extcon_hdmi, EXTCON_DISP_HDMI, 1);
 	extcon_set_state_sync(hdmitx_extcon_audio, EXTCON_DISP_HDMI, 1);
 	mutex_unlock(&setclk_mutex);
+	/* Should be started at end of output */
+	cancel_delayed_work(&hdev->work_cedst);
+	if (hdev->cedst_policy)
+		queue_delayed_work(hdev->cedst_wq, &hdev->work_cedst, 0);
 }
 
 static void clear_rx_vinfo(struct hdmitx_dev *hdev)
@@ -3969,6 +4077,8 @@ static void hdmitx_hpd_plugout_handler(struct work_struct *work)
 	hdev->HWOp.CntlDDC(hdev, DDC_HDCP_MUX_INIT, 1);
 	hdev->HWOp.CntlDDC(hdev, DDC_HDCP_OP, HDCP14_OFF);
 	mutex_lock(&setclk_mutex);
+	if (hdev->cedst_policy)
+		cancel_delayed_work(&hdev->work_cedst);
 	pr_info(SYS "plugout\n");
 	if (!!(hdev->HWOp.CntlMisc(hdev, MISC_HPD_GPI_ST, 0))) {
 		pr_info(SYS "hpd gpio high\n");
@@ -4063,6 +4173,10 @@ static int hdmi_task_handle(void *data)
 	hdmitx_device->rxsense_wq = alloc_workqueue(hdmitx_extcon_rxsense->name,
 		WQ_SYSFS | WQ_FREEZABLE, 0);
 	INIT_DELAYED_WORK(&hdmitx_device->work_rxsense, hdmitx_rxsense_process);
+	/* for cedst feature */
+	hdmitx_device->cedst_wq = alloc_workqueue(hdmitx_extcon_cedst->name,
+		WQ_SYSFS | WQ_FREEZABLE, 0);
+	INIT_DELAYED_WORK(&hdmitx_device->work_cedst, hdmitx_cedst_process);
 
 	hdmitx_device->tx_aud_cfg = 1; /* default audio configure is on */
 
@@ -4241,6 +4355,7 @@ void hdmitx_extcon_register(struct platform_device *pdev, struct device *dev)
 	ret = extcon_dev_register(edev);
 	if (ret < 0) {
 		pr_info(SYS "failed to register hdmitx extcon hdmi\n");
+		extcon_dev_free(edev);
 		return;
 	}
 	hdmitx_extcon_hdmi = edev;
@@ -4251,13 +4366,13 @@ void hdmitx_extcon_register(struct platform_device *pdev, struct device *dev)
 		pr_info(SYS "failed to allocate hdmitx extcon audio\n");
 		return;
 	}
-
 	edev->dev.parent = dev;
 	edev->name = "hdmitx_extcon_audio";
 	dev_set_name(&edev->dev, "hdmi_audio");
 	ret = extcon_dev_register(edev);
 	if (ret < 0) {
 		pr_info(SYS "failed to register hdmitx extcon audio\n");
+		extcon_dev_free(edev);
 		return;
 	}
 	hdmitx_extcon_audio = edev;
@@ -4268,13 +4383,13 @@ void hdmitx_extcon_register(struct platform_device *pdev, struct device *dev)
 		pr_info(SYS "failed to allocate hdmitx extcon power\n");
 		return;
 	}
-
 	edev->dev.parent = dev;
 	edev->name = "hdmitx_extcon_power";
 	dev_set_name(&edev->dev, "hdmi_power");
 	ret = extcon_dev_register(edev);
 	if (ret < 0) {
 		pr_info(SYS "failed to register extcon power\n");
+		extcon_dev_free(edev);
 		return;
 	}
 	hdmitx_extcon_power = edev;
@@ -4285,16 +4400,33 @@ void hdmitx_extcon_register(struct platform_device *pdev, struct device *dev)
 		pr_info(SYS "failed to allocate hdmitx extcon hdr\n");
 		return;
 	}
-
 	edev->dev.parent = dev;
 	edev->name = "hdmitx_extcon_hdr";
 	dev_set_name(&edev->dev, "hdmi_hdr");
 	ret = extcon_dev_register(edev);
 	if (ret < 0) {
 		pr_info(SYS "failed to register hdmitx extcon hdr\n");
+		extcon_dev_free(edev);
 		return;
 	}
 	hdmitx_extcon_hdr = edev;
+
+	/*hdmitx extcon CED */
+	edev = extcon_dev_allocate(hdmi_cable);
+	if (IS_ERR(edev)) {
+		pr_info(SYS "failed to allocate extcon rxsense\n");
+		return;
+	}
+	edev->dev.parent = dev;
+	edev->name = "hdmitx_extcon_cedst";
+	dev_set_name(&edev->dev, "hdmi_cedst");
+	ret = extcon_dev_register(edev);
+	if (ret < 0) {
+		pr_info(SYS "failed to register extcon cedst\n");
+		extcon_dev_free(edev);
+		return;
+	}
+	hdmitx_extcon_cedst = edev;
 
 	/*hdmitx extcon rxsense*/
 	edev = extcon_dev_allocate(hdmi_cable);
@@ -4302,13 +4434,13 @@ void hdmitx_extcon_register(struct platform_device *pdev, struct device *dev)
 		pr_info(SYS "failed to allocate extcon rxsense\n");
 		return;
 	}
-
 	edev->dev.parent = dev;
 	edev->name = "hdmitx_extcon_rxsense";
 	dev_set_name(&edev->dev, "hdmi_rxsense");
 	ret = extcon_dev_register(edev);
 	if (ret < 0) {
 		pr_info(SYS "failed to register extcon rxsense\n");
+		extcon_dev_free(edev);
 		return;
 	}
 	hdmitx_extcon_rxsense = edev;
@@ -4319,17 +4451,16 @@ void hdmitx_extcon_register(struct platform_device *pdev, struct device *dev)
 		pr_info(SYS "failed to allocate extcon hdcp\n");
 		return;
 	}
-
 	edev->dev.parent = dev;
 	edev->name = "hdmitx_extcon_hdcp";
 	dev_set_name(&edev->dev, "hdcp");
 	ret = extcon_dev_register(edev);
 	if (ret < 0) {
 		pr_info(SYS "failed to register extcon hdcp\n");
+		extcon_dev_free(edev);
 		return;
 	}
 	hdmitx_extcon_hdcp = edev;
-
 }
 
 static void hdmitx_init_parameters(struct hdmitx_info *info)
@@ -4457,6 +4588,11 @@ static int amhdmitx_get_dt_info(struct platform_device *pdev)
 		if (hdmitx_device.repeater_tx == 1)
 			hdmitx_device.topo_info = kzalloc(
 				sizeof(*hdmitx_device.topo_info), GFP_KERNEL);
+
+		ret = of_property_read_u32(pdev->dev.of_node,
+					   "cedst_en", &val);
+		if (!ret)
+			hdmitx_device.cedst_en = !!val;
 
 		/* Get vendor information */
 		ret = of_property_read_u32(pdev->dev.of_node,
@@ -4657,6 +4793,8 @@ static int amhdmitx_probe(struct platform_device *pdev)
 	ret = device_create_file(dev, &dev_attr_frac_rate_policy);
 	ret = device_create_file(dev, &dev_attr_sspll);
 	ret = device_create_file(dev, &dev_attr_rxsense_policy);
+	ret = device_create_file(dev, &dev_attr_cedst_policy);
+	ret = device_create_file(dev, &dev_attr_cedst_count);
 	ret = device_create_file(dev, &dev_attr_hdcp_clkdis);
 	ret = device_create_file(dev, &dev_attr_hdcp_pwr);
 	ret = device_create_file(dev, &dev_attr_hdcp_ksv_info);
@@ -4766,6 +4904,8 @@ static int amhdmitx_remove(struct platform_device *pdev)
 	device_remove_file(dev, &dev_attr_frac_rate_policy);
 	device_remove_file(dev, &dev_attr_sspll);
 	device_remove_file(dev, &dev_attr_rxsense_policy);
+	device_remove_file(dev, &dev_attr_cedst_policy);
+	device_remove_file(dev, &dev_attr_cedst_count);
 	device_remove_file(dev, &dev_attr_hdcp_pwr);
 	device_remove_file(dev, &dev_attr_div40);
 	device_remove_file(dev, &dev_attr_hdcp_repeater);

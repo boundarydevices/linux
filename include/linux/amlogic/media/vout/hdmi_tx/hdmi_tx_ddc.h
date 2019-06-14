@@ -19,7 +19,7 @@
 #define __HDMI_TX_DDC_H__
 
 #include <linux/types.h>
-#include <linux/amlogic/media/vout/hdmi_tx/hdmi_tx_module.h>
+#include "hdmi_tx_module.h"
 
 #define EDID_SLAVE	0x50
 	#define EDIDSEG_ADR	0x30
@@ -31,6 +31,9 @@ enum scdc_addr {
 	SINK_VER = 0x01,
 	SOURCE_VER, /* RW */
 	UPDATE_0 = 0x10, /* RW */
+#define STATUS_UPDATE	BIT(0)
+#define CED_UPDATE	BIT(1)
+#define RR_TEST		BIT(2)
 	UPDATE_1, /* RW */
 	TMDS_CFG = 0x20, /* RW */
 	SCRAMBLER_ST,
@@ -83,5 +86,6 @@ uint32_t hdcp_rd_hdcp14_ver(void);
 uint32_t hdcp_rd_hdcp22_ver(void);
 void scdc_config(struct hdmitx_dev *hdev);
 void edid_read_head_8bytes(void);
+int scdc_status_flags(struct hdmitx_dev *hdev);
 
 #endif  /* __HDMI_TX_SCDC_H__ */
