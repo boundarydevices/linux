@@ -78,6 +78,8 @@ static char cvbsmode[VMODE_NAME_LEN_MAX] = {
 static enum vmode_e last_vmode = VMODE_MAX;
 static int tvout_monitor_flag = 1;
 static unsigned int tvout_monitor_timeout_cnt = 20;
+/* 500ms: 1*HZ/2 */
+static unsigned int tvout_monitor_interval = 500;
 
 static struct delayed_work tvout_mode_work;
 
@@ -926,7 +928,8 @@ static void aml_tvout_mode_work(struct work_struct *work)
 	mutex_unlock(&vout_serve_mutex);
 
 	if (tvout_monitor_flag)
-		schedule_delayed_work(&tvout_mode_work, 1*HZ/2);
+		schedule_delayed_work(&tvout_mode_work,
+			msecs_to_jiffies(tvout_monitor_interval));
 	else
 		VOUTPR("%s: monitor stop\n", __func__);
 }
@@ -948,7 +951,8 @@ static void aml_tvout_mode_monitor(void)
 	refresh_tvout_mode();
 	mutex_unlock(&vout_serve_mutex);
 
-	schedule_delayed_work(&tvout_mode_work, 1*HZ/2);
+	schedule_delayed_work(&tvout_mode_work,
+		msecs_to_jiffies(tvout_monitor_interval));
 }
 
 static void aml_vout_extcon_register(struct platform_device *pdev)
@@ -980,6 +984,24 @@ static void aml_vout_extcon_free(void)
 	vout_excton_setmode = NULL;
 }
 
+static void aml_vout_get_dt_info(struct platform_device *pdev)
+{
+	int ret;
+	unsigned int para[2];
+
+	/* e.g. dts: tvout_monitor = <100 250>
+	 * interval = 100(ms), timeout_cnt = 250
+	 */
+	ret = of_property_read_u32_array(pdev->dev.of_node,
+			"tvout_monitor", para, 2);
+	if (!ret) {
+		tvout_monitor_interval = para[0];
+		tvout_monitor_timeout_cnt = para[1];
+	}
+	VOUTPR("tvout monitor interval:%d(ms), timeout cnt:%d\n",
+		tvout_monitor_interval, tvout_monitor_timeout_cnt);
+}
+
 /*****************************************************************
  **
  **	vout driver interface
@@ -1002,7 +1024,7 @@ static int aml_vout_probe(struct platform_device *pdev)
 
 	vout_register_server(&nulldisp_vout_server);
 	aml_vout_extcon_register(pdev);
-
+	aml_vout_get_dt_info(pdev);
 	set_vout_init_mode();
 	aml_tvout_mode_monitor();
 
