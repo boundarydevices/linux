@@ -7687,11 +7687,15 @@ static const iw_handler hostapd_private[] = {
 };
 const struct iw_handler_def hostapd_handler_def = {
    .num_standard     = sizeof(hostapd_handler) / sizeof(hostapd_handler[0]),
+#ifdef CONFIG_WEXT_PRIV
    .num_private      = sizeof(hostapd_private) / sizeof(hostapd_private[0]),
    .num_private_args = sizeof(hostapd_private_args) / sizeof(hostapd_private_args[0]),
+#endif
    .standard         = (iw_handler *)hostapd_handler,
+#ifdef CONFIG_WEXT_PRIV
    .private          = (iw_handler *)hostapd_private,
    .private_args     = hostapd_private_args,
+#endif
    .get_wireless_stats = NULL,
 };
 
@@ -7858,8 +7862,9 @@ VOS_STATUS hdd_init_ap_mode(hdd_adapter_t *pAdapter, bool reinit)
     sema_init(&(WLAN_HDD_GET_AP_CTX_PTR(pAdapter))->semWpsPBCOverlapInd, 1);
 
      // Register as a wireless device
+#ifdef CONFIG_WIRELESS_EXT
     dev->wireless_handlers = (struct iw_handler_def *)& hostapd_handler_def;
-
+#endif
     //Initialize the data path module
     status = hdd_softap_init_tx_rx(pAdapter);
     if ( !VOS_IS_STATUS_SUCCESS( status ))
@@ -8030,6 +8035,7 @@ VOS_STATUS hdd_unregister_hostapd(hdd_adapter_t *pAdapter, bool rtnl_held)
       detach the wireless device handlers */
    if (pAdapter->dev)
    {
+#ifdef CONFIG_WIRELESS_EXT
       if (rtnl_held)
           pAdapter->dev->wireless_handlers = NULL;
       else {
@@ -8037,6 +8043,7 @@ VOS_STATUS hdd_unregister_hostapd(hdd_adapter_t *pAdapter, bool rtnl_held)
           pAdapter->dev->wireless_handlers = NULL;
           rtnl_unlock();
       }
+#endif
    }
 
 #ifdef WLAN_FEATURE_MBSSID
