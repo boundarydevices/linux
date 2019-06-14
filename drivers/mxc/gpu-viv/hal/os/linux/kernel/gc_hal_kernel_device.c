@@ -2179,6 +2179,11 @@ gckGALDEVICE_Stop(
             continue;
         }
 
+        if (Device->isrInitializeds[i] == gcvFALSE)
+        {
+            continue;
+        }
+
         if (i == gcvCORE_VG)
         {
 #if gcdENABLE_VG
