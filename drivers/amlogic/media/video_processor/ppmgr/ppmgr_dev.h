@@ -73,6 +73,9 @@ struct ppmgr_device_t {
 	void  __iomem *vir_addr;
 	struct platform_device *pdev;
 	unsigned int ppmgr_debug;
+	unsigned int debug_first_frame;
+	unsigned int debug_10bit_frame;
+	char dump_path[32];
 };
 
 struct ppmgr_dev_reg_s {

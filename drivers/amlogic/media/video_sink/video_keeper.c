@@ -984,14 +984,101 @@ void video_pip_keeper_new_frame_notify(void)
 
 }
 
+#ifdef CONFIG_AMLOGIC_MEDIA_GE2D
+static unsigned int vf_ge2d_keep_frame_locked(struct vframe_s *cur_dispbuf)
+{
+	u32 cur_index;
+	u32 y_index, u_index, v_index;
+	struct canvas_s cs0, cs1, cs2, cd;
+
+#ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
+	if (codec_mm_video_tvp_enabled()) {
+		pr_info("keep exit is TVP\n");
+		return 0;
+	}
+#endif
+
+	if (cur_dispbuf->type & VIDTYPE_COMPRESS) {
+		/* todo: duplicate compressed video frame */
+		pr_info("keep exit is skip VIDTYPE_COMPRESS\n");
+		return 0;
+	}
+	cur_index = READ_VCBUS_REG(VD1_IF0_CANVAS0 +
+		get_video_cur_dev()->viu_off);
+	y_index = cur_index & 0xff;
+	u_index = (cur_index >> 8) & 0xff;
+	v_index = (cur_index >> 16) & 0xff;
+	canvas_read(y_index, &cd);
+
+	if ((cd.width * cd.height) <= 1920 * 1088 * 3
+		&& !keep_y_addr) {
+		alloc_keep_buffer();
+	}
+	if (!keep_y_addr) {
+		pr_info("%s:alloc keep buffer failed, keep_y_addr is NULL!\n",
+			__func__);
+		return 0;
+	}
+
+	if (get_video_debug_flags() & DEBUG_FLAG_BLACKOUT) {
+		pr_info("%s keep_y_addr=%p %x\n",
+			__func__, (void *)keep_y_addr,
+			canvas_get_addr(y_index));
+	}
+
+	if ((cur_dispbuf->type & VIDTYPE_VIU_422) == VIDTYPE_VIU_422) {
+		pr_info("%s:no support VIDTYPE_VIU_422\n", __func__);
+		return 0;
+	} else if ((cur_dispbuf->type & VIDTYPE_VIU_444) == VIDTYPE_VIU_444) {
+		if ((Y_BUFFER_SIZE < (cd.width * cd.height))) {
+			pr_info
+			    ("[%s::%d] error:data>buf size: %x,%x,%x, %x,%x\n",
+			     __func__, __LINE__, Y_BUFFER_SIZE,
+			     U_BUFFER_SIZE, V_BUFFER_SIZE,
+				cd.width, cd.height);
+			return 0;
+		}
+		ge2d_keeplastframe_block(cur_index, GE2D_FORMAT_S24_YUV444);
+		if (get_video_debug_flags() & DEBUG_FLAG_BLACKOUT)
+			pr_info("%s: VIDTYPE_VIU_444\n", __func__);
+	} else if ((cur_dispbuf->type & VIDTYPE_VIU_NV21) == VIDTYPE_VIU_NV21) {
+		canvas_read(y_index, &cs0);
+		canvas_read(u_index, &cs1);
+		if ((Y_BUFFER_SIZE < (cs0.width * cs0.height))
+			|| (U_BUFFER_SIZE < (cs1.width * cs1.height))) {
+			pr_info("## [%s::%d] error: yuv data size larger",
+				__func__, __LINE__);
+			return 0;
+		}
+		ge2d_keeplastframe_block(cur_index, GE2D_FORMAT_M24_NV21);
+		if (get_video_debug_flags() & DEBUG_FLAG_BLACKOUT)
+			pr_info("%s: VIDTYPE_VIU_NV21\n", __func__);
+	} else {
+		canvas_read(y_index, &cs0);
+		canvas_read(u_index, &cs1);
+		canvas_read(v_index, &cs2);
+
+		if ((Y_BUFFER_SIZE < (cs0.width * cs0.height))
+			|| (U_BUFFER_SIZE < (cs1.width * cs1.height))
+			|| (V_BUFFER_SIZE < (cs2.width * cs2.height))) {
+			pr_info("## [%s::%d] error: yuv data size larger",
+				__func__, __LINE__);
+			return 0;
+		}
+		ge2d_keeplastframe_block(cur_index, GE2D_FORMAT_M24_YUV420);
+		if (get_video_debug_flags() & DEBUG_FLAG_BLACKOUT)
+			pr_info("%s: VIDTYPE_VIU_420\n", __func__);
+	}
+	pr_info("%s: use ge2d keep video\n", __func__);
+	return 1;
+
+}
+#endif
 
 static unsigned int vf_keep_current_locked(
 	struct vframe_s *cur_dispbuf,
 	struct vframe_s *cur_dispbuf_el)
 {
-	u32 cur_index;
-	u32 y_index, u_index, v_index;
-	struct canvas_s cs0, cs1, cs2, cd;
 	int ret;
 
 	if (!cur_dispbuf) {
@@ -1024,185 +1111,23 @@ static unsigned int vf_keep_current_locked(
 	}
 
 	if (cur_dispbuf->source_type == VFRAME_SOURCE_TYPE_PPMGR) {
-		pr_info("use ge2d keep frame!\n");
-		goto GE2D_KEEP_FRAME;
-	}
-
-	ret = video_keeper_frame_keep_locked(
-		cur_dispbuf,
-		cur_dispbuf_el);
-	if (ret) {
-		/*keeped ok with codec keeper!*/
-		keep_video_on = 1;
-		return 1;
-	}
-GE2D_KEEP_FRAME:
-#ifdef CONFIG_AMLOGIC_MEDIA_MULTI_DEC
-	if (codec_mm_video_tvp_enabled()) {
-		pr_info("keep exit is TVP\n");
-		return 0;
-	}
-#endif
-
-	if (cur_dispbuf->type & VIDTYPE_COMPRESS) {
-		/* todo: duplicate compressed video frame */
-		pr_info("keep exit is skip VIDTYPE_COMPRESS\n");
-		return -1;
-	}
-	cur_index = READ_VCBUS_REG(VD1_IF0_CANVAS0 +
-		get_video_cur_dev()->viu_off);
-	y_index = cur_index & 0xff;
-	u_index = (cur_index >> 8) & 0xff;
-	v_index = (cur_index >> 16) & 0xff;
-	canvas_read(y_index, &cd);
-
-	if ((cd.width * cd.height) <= 1920 * 1088 * 3
-		&& !keep_y_addr) {
-		alloc_keep_buffer();
-	}
-	if (!keep_y_addr
-		|| (cur_dispbuf->type & VIDTYPE_VIU_422)
-		== VIDTYPE_VIU_422) {
-		/* no support VIDTYPE_VIU_422... */
-		pr_info("%s:no support VIDTYPE_VIU_422\n", __func__);
-		return -1;
-	}
-
-	if (get_video_debug_flags() & DEBUG_FLAG_BLACKOUT) {
-		pr_info("%s keep_y_addr=%p %x\n",
-			__func__, (void *)keep_y_addr,
-			canvas_get_addr(y_index));
-	}
-
-	if ((cur_dispbuf->type & VIDTYPE_VIU_422) == VIDTYPE_VIU_422) {
-		return -1;
-	} else if ((cur_dispbuf->type & VIDTYPE_VIU_444) == VIDTYPE_VIU_444) {
-		if ((Y_BUFFER_SIZE < (cd.width * cd.height))) {
-			pr_info
-			    ("[%s::%d] error:data>buf size: %x,%x,%x, %x,%x\n",
-			     __func__, __LINE__, Y_BUFFER_SIZE,
-			     U_BUFFER_SIZE, V_BUFFER_SIZE,
-				cd.width, cd.height);
-			return -1;
-		}
-#ifdef CONFIG_AMLOGIC_MEDIA_GE2D
-		ge2d_keeplastframe_block(cur_index, GE2D_FORMAT_S24_YUV444);
-#else
-		if (keep_phy_addr(keep_y_addr) != canvas_get_addr(y_index) &&
-			canvas_dup(keep_phy_addr(keep_y_addr),
-			canvas_get_addr(y_index),
-			(cd.width) * (cd.height))) {
-#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-			canvas_update_addr(disp_canvas_index[0][0],
-				keep_phy_addr(keep_y_addr));
-			canvas_update_addr(disp_canvas_index[1][0],
-				keep_phy_addr(keep_y_addr));
-#else
-			canvas_update_addr(y_index,
-				keep_phy_addr(keep_y_addr));
-#endif
-		}
-#endif
-		if (get_video_debug_flags() & DEBUG_FLAG_BLACKOUT)
-			pr_info("%s: VIDTYPE_VIU_444\n", __func__);
-	} else if ((cur_dispbuf->type & VIDTYPE_VIU_NV21) == VIDTYPE_VIU_NV21) {
-		canvas_read(y_index, &cs0);
-		canvas_read(u_index, &cs1);
-		if ((Y_BUFFER_SIZE < (cs0.width * cs0.height))
-			|| (U_BUFFER_SIZE < (cs1.width * cs1.height))) {
-			pr_info("## [%s::%d] error: yuv data size larger",
-				__func__, __LINE__);
-			return -1;
-		}
-#ifdef CONFIG_AMLOGIC_MEDIA_GE2D
-		ge2d_keeplastframe_block(cur_index, GE2D_FORMAT_M24_NV21);
-#else
-		if (keep_phy_addr(keep_y_addr) != canvas_get_addr(y_index) &&
-			canvas_dup(keep_phy_addr(keep_y_addr),
-			canvas_get_addr(y_index),
-			(cs0.width * cs0.height))
-			&& canvas_dup(keep_phy_addr(keep_u_addr),
-			canvas_get_addr(u_index),
-			(cs1.width * cs1.height))) {
-#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-			canvas_update_addr(disp_canvas_index[0][0],
-				keep_phy_addr(keep_y_addr));
-			canvas_update_addr(disp_canvas_index[1][0],
-				keep_phy_addr(keep_y_addr));
-			canvas_update_addr(disp_canvas_index[0][1],
-				keep_phy_addr(keep_u_addr));
-			canvas_update_addr(disp_canvas_index[1][1],
-				keep_phy_addr(keep_u_addr));
-#else
-			canvas_update_addr(y_index,
-				keep_phy_addr(keep_y_addr));
-			canvas_update_addr(u_index,
-				keep_phy_addr(keep_u_addr));
-#endif
-		}
-#endif
-		if (get_video_debug_flags() & DEBUG_FLAG_BLACKOUT)
-			pr_info("%s: VIDTYPE_VIU_NV21\n", __func__);
+		pr_info("ppmgr use ge2d keep frame!\n");
+		ret = vf_ge2d_keep_frame_locked(cur_dispbuf);
 	} else {
-		canvas_read(y_index, &cs0);
-		canvas_read(u_index, &cs1);
-		canvas_read(v_index, &cs2);
-
-		if ((Y_BUFFER_SIZE < (cs0.width * cs0.height))
-			|| (U_BUFFER_SIZE < (cs1.width * cs1.height))
-			|| (V_BUFFER_SIZE < (cs2.width * cs2.height))) {
-			pr_info("## [%s::%d] error: yuv data size larger than buf size: %x,%x,%x, %x,%x, %x,%x, %x,%x,\n",
-				__func__, __LINE__, Y_BUFFER_SIZE,
-				U_BUFFER_SIZE, V_BUFFER_SIZE, cs0.width,
-				cs0.height, cs1.width, cs1.height, cs2.width,
-				cs2.height);
-			return -1;
-		}
-#ifdef CONFIG_AMLOGIC_MEDIA_GE2D
-		ge2d_keeplastframe_block(cur_index, GE2D_FORMAT_M24_YUV420);
-#else
-		if (keep_phy_addr(keep_y_addr) != canvas_get_addr(y_index) &&
-			/*must not the same address */
-			canvas_dup(keep_phy_addr(keep_y_addr),
-			canvas_get_addr(y_index),
-			(cs0.width * cs0.height))
-			&& canvas_dup(keep_phy_addr(keep_u_addr),
-			canvas_get_addr(u_index),
-			(cs1.width * cs1.height))
-			&& canvas_dup(keep_phy_addr(keep_v_addr),
-			canvas_get_addr(v_index),
-			(cs2.width * cs2.height))) {
-#ifdef CONFIG_AMLOGIC_MEDIA_VSYNC_RDMA
-			canvas_update_addr(disp_canvas_index[0][0],
-				keep_phy_addr(keep_y_addr));
-			canvas_update_addr(disp_canvas_index[1][0],
-				keep_phy_addr(keep_y_addr));
-			canvas_update_addr(disp_canvas_index[0][1],
-				keep_phy_addr(keep_u_addr));
-			canvas_update_addr(disp_canvas_index[1][1],
-				keep_phy_addr(keep_u_addr));
-			canvas_update_addr(disp_canvas_index[0][2],
-				keep_phy_addr(keep_v_addr));
-			canvas_update_addr(disp_canvas_index[1][2],
-				keep_phy_addr(keep_v_addr));
-#else
-			canvas_update_addr(y_index,
-				keep_phy_addr(keep_y_addr));
-			canvas_update_addr(u_index,
-				keep_phy_addr(keep_u_addr));
-			canvas_update_addr(v_index,
-				keep_phy_addr(keep_v_addr));
-#endif
-		}
-
-		if (get_video_debug_flags() & DEBUG_FLAG_BLACKOUT)
-			pr_info("%s: VIDTYPE_VIU_420\n", __func__);
-#endif
+		pr_info("use keep buffer keep frame!\n");
+		ret = video_keeper_frame_keep_locked(
+			cur_dispbuf,
+			cur_dispbuf_el);
 	}
-	keep_video_on = 1;
-	pr_info("%s: keep video on with keep\n", __func__);
-	return 1;
 
+	if (ret) {
+		keep_video_on = 1;
+		pr_info("%s: keep video successful!\n", __func__);
+	} else {
+		keep_video_on = 0;
+		pr_info("%s: keep video failed!\n", __func__);
+	}
+	return ret;
 }
 
 unsigned int vf_keep_pip_current_locked(
