@@ -108,6 +108,11 @@ struct goodix_ts_data {
 	atomic_t open_count;
 	/* Protects power management calls and access to suspended flag */
 	struct mutex mutex;
+	struct device_node *disp_node;
+	struct notifier_block drmnb;
+	struct mutex irq_enable_mutex;
+	int irq_active;
+	int drm_disabled_irq;
 	u8 config[GOODIX_CONFIG_MAX_LENGTH];
 	unsigned short keymap[GOODIX_MAX_KEYS];
 	u8 main_clk[GOODIX_MAIN_CLK_LEN];
