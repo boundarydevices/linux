@@ -2125,6 +2125,9 @@ static int dolby_core2_set(
 	if (dolby_vision_flags & FLAG_CERTIFICAION)
 		reset = true;
 
+	if (dolby_vision_on_count == 0)
+		reset = true;
+
 	if (stb_core_setting_update_flag & FLAG_CHANGE_TC2)
 		set_lut = true;
 
@@ -2251,6 +2254,9 @@ static int dolby_core3_set(
 
 	if (!dolby_vision_on ||
 		(dolby_vision_flags & FLAG_CERTIFICAION))
+		reset = true;
+
+	if (dolby_vision_on_count == 0)
 		reset = true;
 #ifdef V2_4
 	if (((cur_dv_mode == DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL)
@@ -2479,9 +2485,9 @@ static void apply_stb_core_settings(
 				(vinfo->field_height < 720))
 				g_vpotch = 0x60;
 			else
-				g_vpotch = 0x8;
+				g_vpotch = 0x20;
 		} else
-			g_vpotch = 0x8;
+			g_vpotch = 0x20;
 	}
 
 	if (mask & 1) {
@@ -6517,9 +6523,9 @@ int register_dv_functions(const struct dolby_vision_func_s *func)
 					(vinfo->field_height < 720))
 					g_vpotch = 0x60;
 				else
-					g_vpotch = 0x8;
+					g_vpotch = 0x20;
 			} else
-				g_vpotch = 0x8;
+				g_vpotch = 0x20;
 		} else
 			g_vpotch = 0x8;
 	}
