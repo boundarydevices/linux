@@ -371,18 +371,21 @@
 
 	gpio_keypad{
 		compatible = "amlogic, gpio_keypad";
-		status = "okay";
+		status = "disabled";
 		scan_period = <20>;
-		key_num = <1>;
-		key_name = "power";
-		key_code = <116>;
-		key-gpios = <&gpio_ao  GPIOAO_3  GPIO_ACTIVE_HIGH>;
+		key_num = <4>;
+		key_name = "power", "vol-", "vol+", "mic_mute";
+		key_code = <116 114 115 65>;
+		key-gpios = <&gpio_ao  GPIOAO_7  GPIO_ACTIVE_HIGH
+				&gpio  GPIOC_3  GPIO_ACTIVE_HIGH
+			     &gpio  GPIOC_0  GPIO_ACTIVE_HIGH
+			     &gpio  GPIOA_0  GPIO_ACTIVE_HIGH>;
 		detect_mode = <0>;/*0:polling mode, 1:irq mode*/
 	};
 
 	adc_keypad {
 		compatible = "amlogic, adc_keypad";
-		status = "okay";
+		status = "disabled";
 		key_name = "vol-", "vol+", "enter";
 		key_num = <3>;
 		io-channels = <&saradc SARADC_CH2>;
