@@ -24,6 +24,9 @@
 #include <linux/of.h>
 #include <linux/pm_runtime.h>
 #include <asm/unaligned.h>
+#include <drm/drm_device.h>
+#include <drm/drm_notifier.h>
+#include <uapi/drm/drm_mode.h>
 #include "goodix.h"
 
 #define GOODIX_GPIO_INT_NAME		"irq"
@@ -544,16 +547,25 @@ static irqreturn_t goodix_ts_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static void goodix_free_irq(struct goodix_ts_data *ts)
+static void goodix_disable_irq(struct goodix_ts_data *ts)
 {
-	devm_free_irq(&ts->client->dev, ts->client->irq, ts);
+	mutex_lock(&ts->irq_enable_mutex);
+	if (ts->irq_active) {
+		ts->irq_active = 0;
+		disable_irq(ts->client->irq);
+	}
+	mutex_unlock(&ts->irq_enable_mutex);
 }
 
-static int goodix_request_irq(struct goodix_ts_data *ts)
+static int goodix_enable_irq(struct goodix_ts_data *ts)
 {
-	return devm_request_threaded_irq(&ts->client->dev, ts->client->irq,
-					 NULL, goodix_ts_irq_handler,
-					 ts->irq_flags, ts->client->name, ts);
+	mutex_lock(&ts->irq_enable_mutex);
+	if (!ts->irq_active) {
+		enable_irq(ts->client->irq);
+		ts->irq_active = 1;
+	}
+	mutex_unlock(&ts->irq_enable_mutex);
+	return 0;
 }
 
 static int goodix_check_cfg_8(struct goodix_ts_data *ts, const u8 *cfg, int len)
@@ -1102,14 +1114,14 @@ static void goodix_esd_work(struct work_struct *work)
 
 	if (!retries) {
 		dev_dbg(&ts->client->dev, "Performing ESD recovery.\n");
-		goodix_free_irq(ts);
+		goodix_disable_irq(ts);
 		goodix_reset(ts);
 		error = request_firmware(&cfg, ts->cfg_name, &ts->client->dev);
 		if (!error) {
 			goodix_send_cfg(ts, cfg->data, cfg->size);
 			release_firmware(cfg);
 		}
-		goodix_request_irq(ts);
+		goodix_enable_irq(ts);
 		goodix_enable_esd(ts);
 		return;
 	}
@@ -1454,9 +1466,49 @@ static int goodix_configure_dev(struct goodix_ts_data *ts)
 	return 0;
 }
 
+static int ts_drm_event(struct notifier_block *nb, unsigned long event, void *data)
+{
+	struct drm_device *drm_dev = data;
+	struct device_node *node = drm_dev->dev->of_node;
+	struct goodix_ts_data *ts = container_of(nb, struct goodix_ts_data, drmnb);
+	struct device *dev = &ts->client->dev;
+
+	dev_dbg(dev, "%s: event %lx\n", __func__, event);
+
+	if (node != ts->disp_node) {
+		dev_info(dev, "%s: event %lx, (%s)%p (%s)%p\n", __func__, event, node->name, node, ts->disp_node->name, ts->disp_node);
+		return 0;
+	}
+
+	switch (event) {
+	case DRM_MODE_DPMS_ON:
+		dev_dbg(dev, "%s: ON %lx\n", __func__, event);
+		if (ts->drm_disabled_irq) {
+			ts->drm_disabled_irq = 0;
+			goodix_enable_irq(ts);
+		}
+		break;
+	case DRM_MODE_DPMS_STANDBY:
+		break;
+	case DRM_MODE_DPMS_SUSPEND:
+	case DRM_MODE_DPMS_OFF:
+		dev_dbg(dev, "%s: OFF %lx\n", __func__, event);
+		if (!ts->drm_disabled_irq) {
+			ts->drm_disabled_irq = 1;
+			goodix_disable_irq(ts);
+		}
+		break;
+	default:
+		dev_info(dev, "%s: unknown event %lx\n", __func__, event);
+	}
+
+	return 0;
+}
+
 static int goodix_finish_setup(struct goodix_ts_data *ts)
 {
 	int error;
+        struct device_node *np = ts->client->dev.of_node;
 
 	/* Try overriding touchscreen parameters via device properties */
 	touchscreen_parse_properties(ts->input_dev, true, &ts->prop);
@@ -1531,9 +1583,25 @@ static int goodix_finish_setup(struct goodix_ts_data *ts)
 		ts->int_trigger_type = GOODIX_INT_TRIGGER;
 
 	ts->irq_flags = goodix_irq_flags[ts->int_trigger_type] | IRQF_ONESHOT;
-	error = goodix_request_irq(ts);
+	irq_set_status_flags(ts->client->irq, IRQ_NOAUTOEN);
+	error = devm_request_threaded_irq(&ts->client->dev, ts->client->irq,
+					 NULL, goodix_ts_irq_handler,
+					 ts->irq_flags, ts->client->name, ts);
+	if (error < 0) {
+		dev_err(&ts->client->dev, "request_threaded_irq failed(%d)\n", error);
+		return error;
+	}
+	ts->disp_node = of_parse_phandle(np, "display", 0);
+	if (ts->disp_node) {
+		ts->drmnb.notifier_call = ts_drm_event;
+		error = drm_register_client(&ts->drmnb);
+		if (error < 0)
+			dev_err(&ts->client->dev, "drm_register_client failed(%d)\n", error);
+	}
+
+	error = goodix_enable_irq(ts);
 	if (error) {
-		dev_err(&ts->client->dev, "request IRQ failed: %d\n", error);
+		dev_err(&ts->client->dev, "enable IRQ failed: %d\n", error);
 		return error;
 	}
 
@@ -1632,6 +1700,7 @@ static int goodix_ts_probe(struct i2c_client *client,
 	ts->contact_size = GOODIX_CONTACT_SIZE;
 	INIT_DELAYED_WORK(&ts->esd_work, goodix_esd_work);
 	mutex_init(&ts->mutex);
+	mutex_init(&ts->irq_enable_mutex);
 
 	error = goodix_get_gpio_config(ts);
 	if (error)
@@ -1727,8 +1796,6 @@ reset:
 				error);
 			goto err_sysfs_remove_group;
 		}
-
-		return 0;
 	} else {
 		error = goodix_configure_dev(ts);
 		if (error)
@@ -1737,7 +1804,6 @@ reset:
 		if (error)
 			return error;
 	}
-
 	return 0;
 
 err_sysfs_remove_group:
@@ -1750,6 +1816,8 @@ static void goodix_ts_remove(struct i2c_client *client)
 {
 	struct goodix_ts_data *ts = i2c_get_clientdata(client);
 
+	goodix_disable_irq(ts);
+	drm_unregister_client(&ts->drmnb);
 	if (ts->load_cfg_from_disk)
 		wait_for_completion(&ts->firmware_loading_complete);
 
@@ -1783,8 +1851,8 @@ static int __maybe_unused goodix_sleep(struct device *dev)
 
 	goodix_disable_esd(ts);
 
-	/* Free IRQ as IRQ pin is used as output in the suspend sequence */
-	goodix_free_irq(ts);
+	/* disable IRQ as IRQ pin is used as output in the suspend sequence */
+	goodix_disable_irq(ts);
 
 	/* Save reference (calibration) info if necessary */
 	goodix_save_bak_ref(ts);
@@ -1792,7 +1860,7 @@ static int __maybe_unused goodix_sleep(struct device *dev)
 	/* Output LOW on the INT pin for 5 ms */
 	error = goodix_irq_direction_output(ts, 0);
 	if (error) {
-		goodix_request_irq(ts);
+		goodix_enable_irq(ts);
 		goto out_error;
 	}
 
@@ -1802,7 +1870,7 @@ static int __maybe_unused goodix_sleep(struct device *dev)
 				    GOODIX_CMD_SCREEN_OFF);
 	if (error) {
 		goodix_irq_direction_input(ts);
-		goodix_request_irq(ts);
+		goodix_enable_irq(ts);
 		error = -EAGAIN;
 		goto out_error;
 	}
@@ -1872,7 +1940,7 @@ static int __maybe_unused goodix_wakeup(struct device *dev)
 		}
 	}
 
-	error = goodix_request_irq(ts);
+	error = goodix_enable_irq(ts);
 	if (error)
 		goto out_error;
 
