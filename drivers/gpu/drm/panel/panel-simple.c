@@ -388,13 +388,13 @@ static int panel_simple_unprepare(struct drm_panel *panel)
 	if (!p->prepared)
 		return 0;
 
+	if (p->desc->delay.unprepare)
+		msleep(p->desc->delay.unprepare);
 	gpiod_set_value_cansleep(p->reset, 1);
 	gpiod_set_value_cansleep(p->enable_gpio, 0);
 
 	regulator_disable(p->supply);
 
-	if (p->desc->delay.unprepare)
-		msleep(p->desc->delay.unprepare);
 
 	p->prepared = false;
 
@@ -586,6 +586,14 @@ static void panel_simple_parse_panel_timing_node(struct device *dev,
 		dev_err(dev, "Reject override mode: No display_timing found\n");
 }
 
+static void init_common(struct device_node *np, struct panel_desc *ds)
+{
+	of_property_read_u32(np, "delay-prepare", &ds->delay.prepare);
+	of_property_read_u32(np, "delay-enable", &ds->delay.enable);
+	of_property_read_u32(np, "delay-disable", &ds->delay.disable);
+	of_property_read_u32(np, "delay-unprepare", &ds->delay.unprepare);
+}
+
 static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 {
 	struct device_node *backlight, *ddc;
@@ -633,6 +641,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 			ds->bus_flags |= bridge_de_active ? DRM_BUS_FLAG_DE_HIGH
 					: DRM_BUS_FLAG_DE_LOW;
 		}
+
 		if (bridge_sync_active <= 1) {
 			dm->flags &= ~(
 				DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC |
@@ -645,6 +654,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 			ds->bus_flags |= DRM_BUS_FLAG_PIXDATA_NEGEDGE;
 		if (vm.flags & DISPLAY_FLAGS_PIXDATA_POSEDGE)
 			ds->bus_flags |= DRM_BUS_FLAG_PIXDATA_POSEDGE;
+		dev_info(dev, "vm.flags=%x bus_flags=%x flags=%x\n", vm.flags, ds->bus_flags, dm->flags);
 
 		err = of_property_read_string(np, "bus-format", &bf);
 		if (err) {
@@ -659,10 +669,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 			dev_err(dev, "unknown bus-format %s\n", bf);
 			return -EINVAL;
 		}
-		of_property_read_u32(np, "delay-prepare", &ds->delay.prepare);
-		of_property_read_u32(np, "delay-enable", &ds->delay.enable);
-		of_property_read_u32(np, "delay-disable", &ds->delay.disable);
-		of_property_read_u32(np, "delay-unprepare", &ds->delay.unprepare);
+		init_common(np, ds);
 		of_property_read_u32(np, "bits-per-color", &ds->bpc);
 		ds->modes = dm;
 		ds->num_modes = 1;
@@ -675,7 +682,11 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 				       &panel->mipi_cmds_enable);
 			check_for_cmds(cmds_np, "mipi-cmds-disable",
 				       &panel->mipi_cmds_disable);
+			init_common(cmds_np, ds);
 		}
+		pr_info("%s: delay %d %d, %d %d\n", __func__,
+			ds->delay.prepare, ds->delay.enable,
+			ds->delay.disable, ds->delay.unprepare);
 	}
 
 	panel->no_hpd = of_property_read_bool(dev->of_node, "no-hpd");
