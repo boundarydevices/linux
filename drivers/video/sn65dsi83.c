@@ -767,7 +767,7 @@ static int sn65dsi83_remove(struct i2c_client *client)
 	destroy_workqueue(sn->sn_workqueue);
 	device_remove_file(&client->dev, &dev_attr_sn65dsi83_reg);
 	device_remove_file(&client->dev, &dev_attr_sn65dsi83_enable);
-	fb_unregister_client(&sn->drmnb);
+	drm_unregister_client(&sn->drmnb);
 	fb_unregister_client(&sn->fbnb);
 	sn_powerdown(sn);
 	return 0;
