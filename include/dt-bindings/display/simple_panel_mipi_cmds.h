@@ -9,6 +9,11 @@
 #define S_DCS_READ	0x42
 #define S_DCS_READ4	0x47
 #define S_DCS_LENGTH	0x48
+#define S_IF_1_LANE	0x51
+#define S_IF_2_LANES	0x52
+#define S_IF_3_LANES	0x53
+#define S_IF_4_LANES	0x54
+
 #define S_GEN_S0P	0x81
 #define S_GEN_S1P	0x82
 #define S_GEN_L2P	0x83
