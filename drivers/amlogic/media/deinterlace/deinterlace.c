@@ -8363,8 +8363,8 @@ module_param_named(overturn, overturn, bool, 0664);
 module_param_named(queue_print_flag, queue_print_flag, int, 0664);
 module_param_named(full_422_pack, full_422_pack, bool, 0644);
 module_param_named(cma_print, cma_print, bool, 0644);
-#ifdef DEBUG_SUPPORT
 module_param_named(pulldown_enable, pulldown_enable, bool, 0644);
+#ifdef DEBUG_SUPPORT
 #ifdef RUN_DI_PROCESS_IN_IRQ
 module_param_named(input2pre, input2pre, uint, 0664);
 module_param_named(input2pre_buf_miss_count, input2pre_buf_miss_count,
