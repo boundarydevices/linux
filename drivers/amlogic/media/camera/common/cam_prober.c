@@ -611,7 +611,7 @@ int __init gc2145_v4l2_probe(struct i2c_adapter *adapter)
 }
 #endif
 
-#if CONFIG_AMLOGIC_VIDEO_CAPTURE_GC2145_MIPI
+#ifdef CONFIG_AMLOGIC_VIDEO_CAPTURE_GC2145_MIPI
 int __init gc2145_mipi_v4l2_probe(struct i2c_adapter *adapter)
 {
 	int ret = 0;
@@ -912,7 +912,7 @@ static const struct aml_cam_dev_info_s cam_devs[] = {
 		.probe_func = gc2145_v4l2_probe,
 	},
 #endif
-#if CONFIG_AMLOGIC_VIDEO_CAPTURE_GC2145_MIPI
+#ifdef CONFIG_AMLOGIC_VIDEO_CAPTURE_GC2145_MIPI
 	{
 		.addr = 0x3c,
 		.name = "gc2145_mipi",

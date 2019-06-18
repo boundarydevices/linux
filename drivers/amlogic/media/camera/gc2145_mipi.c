@@ -2736,7 +2736,7 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 		}
 
 		set_resolution_param(dev, res_param);
-
+		msleep(80);
 	} else {
 		res_param = get_resolution_param(dev, 0, fh->width, fh->height);
 		if (!res_param) {
@@ -2745,6 +2745,7 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 		}
 		set_resolution_param(dev, res_param);
 		prev_res = res_param;
+		msleep(100);
 	}
 
 	ret = 0;
