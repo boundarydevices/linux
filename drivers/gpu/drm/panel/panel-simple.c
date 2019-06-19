@@ -605,12 +605,13 @@ static void panel_simple_parse_panel_timing_node(struct device *dev,
 		dev_err(dev, "Reject override mode: No display_timing found\n");
 }
 
-static void init_common(struct device_node *np, struct panel_desc *ds)
+static void init_common(struct device_node *np, struct panel_desc *ds, struct drm_display_mode *dm)
 {
 	of_property_read_u32(np, "delay-prepare", &ds->delay.prepare);
 	of_property_read_u32(np, "delay-enable", &ds->delay.enable);
 	of_property_read_u32(np, "delay-disable", &ds->delay.disable);
 	of_property_read_u32(np, "delay-unprepare", &ds->delay.unprepare);
+	of_property_read_u32(np, "min-hs-clock-multiple", &dm->min_hs_clock_multiple);
 }
 
 static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
@@ -688,7 +689,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 			dev_err(dev, "unknown bus-format %s\n", bf);
 			return -EINVAL;
 		}
-		init_common(np, ds);
+		init_common(np, ds, dm);
 		of_property_read_u32(np, "bits-per-color", &ds->bpc);
 		ds->modes = dm;
 		ds->num_modes = 1;
@@ -701,7 +702,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 				       &panel->mipi_cmds_enable);
 			check_for_cmds(cmds_np, "mipi-cmds-disable",
 				       &panel->mipi_cmds_disable);
-			init_common(cmds_np, ds);
+			init_common(cmds_np, ds, dm);
 		}
 		pr_info("%s: delay %d %d, %d %d\n", __func__,
 			ds->delay.prepare, ds->delay.enable,
