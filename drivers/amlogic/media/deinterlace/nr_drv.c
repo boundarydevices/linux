@@ -284,7 +284,8 @@ static void dnr_config(struct DNR_PARM_s *dnr_parm_p,
 		DI_Wr(DNR_CTRL, 0x1df00 | (0x03 << 18)); //5 line
 	else
 		DI_Wr(DNR_CTRL, 0x1df00);
-	if (is_meson_gxlx_cpu()) {
+	if (is_meson_gxlx_cpu() || is_meson_g12a_cpu() ||
+		is_meson_g12b_cpu() || is_meson_sm1_cpu()) {
 		/* disable chroma dm according to baozheng */
 		DI_Wr_reg_bits(DNR_DM_CTRL, 0, 8, 1);
 		DI_Wr(DNR_CTRL, 0x1dd00);
