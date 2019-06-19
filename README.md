@@ -1,10 +1,10 @@
 linux-imx6
 ==========
 
-Boundary Devices Kernel tree for i.MX6.
+Boundary Devices Kernel tree for i.MX6/.MX7/i.MX8.
 
 This repository contains kernel source trees for Boundary Devices'
-i.MX6 based boards:
+i.MX6/i.MX7/i.MX8 based boards:
 
 * [BD-SL-i.MX6 (SABRE Lite)][sabrelite]
 * [Nitrogen6X][nitrogen6x]
@@ -16,6 +16,9 @@ i.MX6 based boards:
 * [Nitrogen6 SoloX][nitrogen6-sx]
 * [Nitrogen7][nitrogen7]
 * [Nitrogen8M][nitrogen8m]
+* [Nitrogen8M Mini][nitrogen8mm]
+* [Nitrogen8M SOM][nitrogen8m-som]
+* [Nitrogen8M Mini SOM][nitrogen8mm-som]
 
 It is based largely on Freescale's kernel trees at [git.freescale.com][freescale].
 
@@ -45,20 +48,25 @@ The latest 4.1.15 kernel is in branch [boundary-imx\_4.1.15\_2.0.0\_ga][latest-4
 
 The latest 4.9.x kernel is in branch [boundary-imx\_4.9.x\_2.0.0\_ga][latest-4.9.x]
 
+The latest 4.14.x kernel is in branch [boundary-imx\_4.14.x\_2.0.0\_ga][latest-4.14.x]
+
 These branches are based on Freescale releases of the same name (minus the 'boundary').
 
 
 [freescale]: http://git.freescale.com/git/cgit.cgi/imx/linux-2.6-imx.git/ "Freescale Git repository"
-[sabrelite]:http://boundarydevices.com/sabre-lite-imx6-sbc "SABRE Lite product page"
-[nitrogen6x]:http://boundarydevices.com/nitrogen6x-board-imx6-arm-cortex-a9-sbc "Nitrogen6X product page"
-[nitrogen6x-som]:http://boundarydevices.com/products/nitrogen6x-som "Nitrogen6X SOM product page"
-[nitrogen6x-somv2]:http://boundarydevices.com/product/nit6x-som-v2/ "Nitrogen6X SOM v2 product page"
-[nitrogen6-lite]:http://boundarydevices.com/products/nitrogen6_lite "Nitrogen6_Lite product page"
-[nitrogen6-max]:http://boundarydevices.com/product/nitrogen6max "Nitrogen6_MAX product page"
-[nitrogen6-vm]:http://boundarydevices.com/product/nitrogen6_vm_imx6 "Nitrogen6_VM product page"
-[nitrogen6-sx]:http://boundarydevices.com/product/nit6_solox-imx6 "Nit6_SoloX product page"
-[nitrogen7]:https://boundarydevices.com/product/nitrogen7 "Nitrogen7 product page"
-[nitrogen8m]:https://boundarydevices.com/product/nitrogen8m-imx8 "Nitrogen8M product page"
+[sabrelite]:https://boundarydevices.com/wiki/bd-sl-imx6 "SABRE Lite product page"
+[nitrogen6x]:https://boundarydevices.com/wiki/nitrogen6x "Nitrogen6X product page"
+[nitrogen6x-som]:https://boundarydevices.com/wiki/nitrogen6x-som-v1 "Nitrogen6X SOM product page"
+[nitrogen6x-somv2]:https://boundarydevices.com/wiki/nitrogen6x-som-v2 "Nitrogen6X SOM v2 product page"
+[nitrogen6-lite]:https://boundarydevices.com/wiki/nitrogen6_lite "Nitrogen6_Lite product page"
+[nitrogen6-max]:https://boundarydevices.com/wiki/nitrogen6max "Nitrogen6_MAX product page"
+[nitrogen6-vm]:https://boundarydevices.com/wiki/nitrogen6vm "Nitrogen6_VM product page"
+[nitrogen6-sx]:https://boundarydevices.com/wiki/nitrogen6_solox "Nit6_SoloX product page"
+[nitrogen7]:https://boundarydevices.com/wiki/nitrogen7 "Nitrogen7 product page"
+[nitrogen8m]:https://boundarydevices.com/wiki/nitrogen8m-sbc "Nitrogen8M product page"
+[nitrogen8mm]:https://boundarydevices.com/wiki/nitrogen8m-mini-sbc "Nitrogen8M_Mini product page"
+[nitrogen8m-som]:https://boundarydevices.com/wiki/nitrogen8m-som "Nitrogen8M SOM product page"
+[nitrogen8mm-som]:https://boundarydevices.com/wiki/Nitrogen8M_Mini-SOM "Nitrogen8M_Mini SOM product page"
 [latest-jellybean]:http://github.com/boundarydevices/linux-imx6/tree/boundary-jb4.3_1.0.0-ga "Boundary Jellybean kernel tree"
 [latest-kitkat]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-kk4.4.3_2.0.1-ga "Boundary KitKat kernel tree"
 [latest-lollipop]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-l5.1.1_2.1.0-ga "Boundary Lollipop kernel tree"
@@ -70,3 +78,4 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [latest-3.14.x]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.14.52_1.1.0_ga "Boundary 3.14.52-1.1.0 GA kernel tree"
 [latest-4.1.15]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_4.1.15_2.0.0_ga "Boundary 4.1.15-2.0.0 GA kernel tree"
 [latest-4.9.x]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx_4.9.x_2.0.0_ga "Boundary 4.9.x-2.0.0 GA kernel tree"
+[latest-4.14.x]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx_4.14.x_2.0.0_ga "Boundary 4.14.x-2.0.0 GA kernel tree"
