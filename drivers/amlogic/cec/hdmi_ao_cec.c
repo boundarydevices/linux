@@ -2572,8 +2572,6 @@ static ssize_t hdmitx_cec_read(struct file *f, char __user *buf,
 {
 	int ret;
 
-	if ((cec_dev->hal_flag & (1 << HDMI_OPTION_SYSTEM_CEC_CONTROL)))
-		rx_len = 0;
 	/*CEC_ERR("read msg start\n");*/
 	ret = wait_for_completion_timeout(&cec_dev->rx_ok, CEC_FRAME_DELAY);
 	if (ret <= 0) {
