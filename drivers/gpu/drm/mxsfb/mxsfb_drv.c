@@ -200,10 +200,15 @@ static struct clk *mxsfb_find_src_clk(struct mxsfb_drm_private *mxsfb,
 	}
 
 	while (!IS_ERR_OR_NULL(src)) {
+		unsigned long rate;
+
 		/* Check if current rate satisfies our needs */
 		src_rate = clk_get_rate(src);
-		*out_rate = clk_get_rate(mxsfb->clk_pll);
-		if (!(*out_rate % crtc_clock))
+		rate = clk_get_rate(mxsfb->clk_pll);
+		*out_rate = rate;
+		rate += 10;
+		rate %= crtc_clock;
+		if (rate <= 20)
 			break;
 
 		/* Find the highest rate that fits our needs */
@@ -221,6 +226,8 @@ static struct clk *mxsfb_find_src_clk(struct mxsfb_drm_private *mxsfb,
 			break;
 		}
 	}
+	if (!src)
+		dev_err(mxsfb->dev, "%s: could not get source clk\n", __func__);
 
 	return src;
 }
