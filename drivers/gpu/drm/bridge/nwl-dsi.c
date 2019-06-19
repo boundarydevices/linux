@@ -221,6 +221,9 @@ struct nwl_mipi_dsi {
 	u32				lanes;
 	bool				no_clk_reset;
 	bool				enabled;
+	u32				hsmult;
+	u32				bitclk;
+	u32				pixclock;
 };
 
 static inline void nwl_dsi_write(struct nwl_mipi_dsi *dsi, u32 reg, u32 val)
@@ -280,6 +283,45 @@ static enum dpi_pixel_format nwl_dsi_get_dpi_pixel_format(
 	default:
 		return DPI_FMT_24_BIT;
 	}
+}
+
+static int nwl_dsi_cvt_pixels_to_hs_byte_clocks(struct nwl_mipi_dsi *dsi, int pixels, int base, int min,
+		unsigned *pix_cnt, unsigned *hs_clk_cnt)
+{
+	int n;
+	unsigned long a;
+
+	*pix_cnt += pixels;
+	a = *pix_cnt;
+	a *= dsi->bitclk;
+	a += (dsi->pixclock * 4);
+	a /= (dsi->pixclock * 8);
+	n = a;
+	pr_debug("%s:pix_cnt = %d, bitclk = %d, pixel = %d, n=%d\n", __func__, *pix_cnt, dsi->bitclk, dsi->pixclock, n);
+
+	n *= dsi->lanes;
+	n -= *hs_clk_cnt;
+
+	if (n >= base + min)
+		n -= base;
+	else
+		n = min;
+	*hs_clk_cnt += n + base;
+
+	return n;
+}
+
+static int nwl_dsi_cvt_pixels_to_hs_byte_clocks_burst(struct nwl_mipi_dsi *dsi, int pixels, int bpp,
+		unsigned *pix_cnt, unsigned *hs_clk_cnt)
+{
+	int n;
+
+	*pix_cnt += pixels;
+	n = ((pixels * bpp) + (dsi->lanes * 8) - 1) / (dsi->lanes * 8);
+	n *= dsi->lanes;
+	*hs_clk_cnt += n;
+
+	return n;
 }
 
 static unsigned long nwl_dsi_get_bit_clock(struct nwl_mipi_dsi *dsi,
@@ -350,11 +392,16 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 {
 	struct device *dev = dsi->dev;
 	struct mipi_dsi_device *dsi_device = dsi->dsi_device;
+	int bpp = mipi_dsi_pixel_format_to_bpp(dsi_device->format);
 	struct videomode vm;
 	enum dpi_pixel_format pixel_format =
 		nwl_dsi_get_dpi_pixel_format(dsi_device->format);
 	enum dpi_interface_color_coding color_coding =
 		nwl_dsi_get_dpi_interface_color_coding(dsi_device->format);
+	bool burst_mode;
+	unsigned pix_cnt = 0;
+	unsigned hs_clk_cnt = 0;
+	unsigned hbp, hfp, hsa;
 
 	drm_display_mode_to_videomode(dsi->curr_mode, &vm);
 
@@ -373,7 +420,9 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 	 */
 	nwl_dsi_write(dsi, HSYNC_POLARITY, 0);
 
-	if (dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_BURST) {
+	burst_mode = (dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_BURST) &&
+			!(dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE);
+	if (burst_mode) {
 		nwl_dsi_write(dsi, VIDEO_MODE, VIDEO_MODE_SYNC_BURST);
 		/*
 		 *
@@ -398,9 +447,31 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 		nwl_dsi_write(dsi, PIXEL_FIFO_SEND_LEVEL, vm.hactive);
 	}
 
-	nwl_dsi_write(dsi, HFP, vm.hfront_porch);
-	nwl_dsi_write(dsi, HBP, vm.hback_porch);
-	nwl_dsi_write(dsi, HSA, vm.hsync_len);
+	if (burst_mode) {
+		if (vm.hback_porch <= 8) {
+			hbp = 1;
+			hfp = 7;
+			hsa = 4;
+		} else {
+			hbp = 2;
+			hfp = 7;
+			hsa = 6;
+		}
+	} else {
+		hbp = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, vm.hback_porch,
+				(dsi->lanes > 1) ? 14 : 10, 4, &pix_cnt,
+				&hs_clk_cnt);
+		nwl_dsi_cvt_pixels_to_hs_byte_clocks_burst(dsi, vm.hactive,
+				bpp, &pix_cnt, &hs_clk_cnt);
+		hfp = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, vm.hfront_porch,
+				(dsi->lanes > 1) ? 7 : 11, 4, &pix_cnt,
+				&hs_clk_cnt);
+		hsa = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, vm.hsync_len,
+				10, 2, &pix_cnt, &hs_clk_cnt);
+	}
+	nwl_dsi_write(dsi, HBP, hbp);
+	nwl_dsi_write(dsi, HFP, hfp);
+	nwl_dsi_write(dsi, HSA, hsa);
 
 	nwl_dsi_write(dsi, ENABLE_MULT_PKTS, 0x0);
 	nwl_dsi_write(dsi, BLLP_MODE, 0x1);
@@ -408,7 +479,7 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 	nwl_dsi_write(dsi, VC, 0x0);
 
 	nwl_dsi_write(dsi, PIXEL_PAYLOAD_SIZE, vm.hactive);
-	nwl_dsi_write(dsi, VACTIVE, vm.vactive);
+	nwl_dsi_write(dsi, VACTIVE, vm.vactive - 1);
 	nwl_dsi_write(dsi, VBP, vm.vback_porch);
 	nwl_dsi_write(dsi, VFP, vm.vfront_porch);
 }
@@ -497,12 +568,22 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 	list_for_each_entry(config, &dsi->valid_modes, list)
 		if (config->pixclock == pixclock)
 			return config;
-
+	dsi->pixclock = pixclock;
 	bit_clk = nwl_dsi_get_bit_clock(dsi, pixclock);
+	dsi->hsmult = 0;
+	if (mode->min_hs_clock_multiple) {
+		unsigned long bit_clkm = pixclock * mode->min_hs_clock_multiple;
+
+		if (bit_clk < bit_clkm) {
+			bit_clk = bit_clkm;
+			dsi->hsmult = mode->min_hs_clock_multiple;
+			pr_info("%s: %ld = %ld * %d\n", __func__, bit_clk, pixclock, dsi->hsmult);
+		}
+	}
 	phyref_rate = bit_clk;
-	/* Video pll must be from 380MHz to 2000 MHz */
-	if (phyref_rate < 380000000) {
-		int n = (380000000 + phyref_rate - 1) / phyref_rate;
+	/* Video pll must be from 200MHz to 2000 MHz */
+	if (phyref_rate < 200000000) {
+		int n = (200000000 + phyref_rate - 1) / phyref_rate;
 
 		phyref_rate *= n;
 		pr_info("%s: %d = %ld * %d\n", __func__, phyref_rate, bit_clk, n);
@@ -525,6 +606,7 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 
 		return NULL;
 	}
+	dsi->bitclk = ret;
 
 	config = devm_kzalloc(dev, sizeof(struct mode_config), GFP_KERNEL);
 	if (config) {
@@ -598,7 +680,7 @@ static void nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 		return;
 	}
 
-	mixel_phy_mipi_set_phy_speed(dsi->phy,
+	dsi->bitclk = mixel_phy_mipi_set_phy_speed(dsi->phy,
 			config->bitclock,
 			config->phyref_rate,
 			false);
