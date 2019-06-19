@@ -861,6 +861,7 @@
 
 	touchscreen@5d {
 		compatible = "goodix,gt9271";
+		display = <&display_subsystem>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_gt911>;
 		reg = <0x5d>;
@@ -997,7 +998,6 @@
 	fb_mipi: panel@0 {
 		bits-per-color = <8>;
 		bridge-de-active = <0>;
-		bridge-sync-active = <1>;
 		bus-format = "rgb888";
 		compatible = "panel,simple";
 		dsi-format = "rgb888";
