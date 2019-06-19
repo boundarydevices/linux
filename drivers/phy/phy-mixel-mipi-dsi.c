@@ -230,6 +230,7 @@ int mixel_phy_mipi_set_phy_speed(struct phy *phy,
 	unsigned long numerator;
 	unsigned long denominator;
 	unsigned max_d = 256;
+	unsigned long rate;
 
 	if (bit_clk > DATA_RATE_MAX_SPEED || bit_clk < DATA_RATE_MIN_SPEED)
 		return -EINVAL;
@@ -270,13 +271,14 @@ int mixel_phy_mipi_set_phy_speed(struct phy *phy,
 	priv->divider.cm = numerator;
 
 	priv->data_rate = bit_clk;
+	rate = ref_clk * numerator / denominator;
 	/* Divided by 2 because mipi output clock is DDR */
-	priv->frequency = ref_clk * numerator / (2 * denominator);
+	priv->frequency =  rate >> 1;
 	if (priv->dsi_clk.clk)
 		clk_set_rate(priv->dsi_clk.clk, priv->frequency);
 	pr_info("%s:%ld,%ld, ref_clk=%ld numerator=%ld, denominator=%ld\n",
 		__func__, priv->frequency, bit_clk, ref_clk, numerator, denominator);
-	return 0;
+	return rate;
 }
 EXPORT_SYMBOL_GPL(mixel_phy_mipi_set_phy_speed);
 
