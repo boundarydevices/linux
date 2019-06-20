@@ -231,7 +231,11 @@ static int send_mipi_cmd_list(struct panel_simple *panel, struct mipi_cmd *mc)
 			break;
 		}
 		if (ret < 0) {
-			if (len == 1) {
+			if (len == 6) {
+				dev_err(&dsi->dev,
+					"Failed to send DCS (%d), (%d)%02x %02x: %02x %02x %02x %02x\n",
+					ret, len, cmd[0], cmd[1], cmd[2], cmd[3], cmd[4], cmd[5]);
+			} else if (len == 1) {
 				dev_err(&dsi->dev,
 					"Failed to send DCS (%d), (%d)%02x\n",
 					ret, len, cmd[0]);
