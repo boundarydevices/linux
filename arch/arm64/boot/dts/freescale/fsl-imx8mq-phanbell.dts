@@ -734,9 +734,6 @@
 	status = "okay";
 };
 
-&usb3_0 {
-	status = "okay";
-};
 
 &usb_dwc3_0 {
 	status = "okay";
@@ -748,9 +745,6 @@
 	status = "okay";
 };
 
-&usb3_1 {
-	status = "okay";
-};
 
 &usb_dwc3_1 {
 	status = "okay";
