@@ -333,6 +333,7 @@ struct sec_mipi_dsim {
 	unsigned long def_pix_clk;
 	unsigned long byte_clock;
 	unsigned long pixelclock;
+	uint32_t hsmult;
 
 	struct completion pll_stable;
 	struct completion ph_tx_done;
@@ -436,6 +437,8 @@ static const struct dsim_hblank_par *sec_mipi_dsim_get_hblank_par(const char *na
 		return NULL;
 
 	switch (lanes) {
+	case 1:
+		return NULL;
 	case 2:
 		hblank = hblank_2lanes;
 		size   = ARRAY_SIZE(hblank_2lanes);
@@ -1012,16 +1015,43 @@ static int sec_mipi_dsim_config_pll(struct sec_mipi_dsim *dsim)
 	return 0;
 }
 
-static unsigned pix_to_delay_byte_clocks(struct sec_mipi_dsim *dsim, unsigned pix)
+static unsigned pix_to_delay_byte_clocks(struct sec_mipi_dsim *dsim, unsigned pixels, int base, int min,
+		unsigned *pix_cnt, unsigned *hs_clk_cnt)
 {
-	u64 delay = pix;
+	unsigned n;
+	unsigned long a;
 
-	delay *= dsim->byte_clock;
-	delay += (dsim->pixelclock >> 1);
-	do_div(delay, dsim->pixelclock);
-	if (!delay)
-		delay = 1;
-	return delay;
+	*pix_cnt += pixels;
+	a = *pix_cnt;
+	a *= dsim->byte_clock;
+	a += (dsim->pixelclock >> 1);
+	a /= dsim->pixelclock;
+	n = a;
+	pr_info("%s:pix_cnt = %d, byte_clock = %ld, pixelclock = %ld, n=%d\n", __func__, *pix_cnt, dsim->byte_clock, dsim->pixelclock, n);
+
+//	n *= dsim->lanes;
+	n -= *hs_clk_cnt;
+
+	if (n >= base + min)
+		n -= base;
+	else
+		n = min;
+	*hs_clk_cnt += n + base;
+
+	return n;
+}
+
+static unsigned pix_to_delay_byte_clocks_burst(struct sec_mipi_dsim *dsim, unsigned pixels, unsigned bpp,
+		unsigned *pix_cnt, unsigned *hs_clk_cnt)
+{
+	unsigned n;
+
+	*pix_cnt += pixels;
+	n = ((pixels * bpp) + (dsim->lanes * 8) - 1) / (dsim->lanes * 8);
+//	n *= dsim->lanes;
+	*hs_clk_cnt += n;
+
+	return n;
 }
 
 static void sec_mipi_dsim_set_main_mode(struct sec_mipi_dsim *dsim)
@@ -1029,8 +1059,12 @@ static void sec_mipi_dsim_set_main_mode(struct sec_mipi_dsim *dsim)
 	uint32_t bpp, hfp_wc, hbp_wc, hsa_wc;
 	uint32_t mdresol = 0, mvporch = 0, mhporch = 0, msync = 0;
 	struct videomode *vmode = &dsim->vmode;
+	unsigned pix_cnt = 0;
+	unsigned hs_clk_cnt = 0;
 
-	pr_debug("%s: hfp=%d hbp=%d hsync=%d\n", __func__, vmode->hfront_porch, vmode->hback_porch, vmode->hsync_len);
+	pr_debug("%s: hfp=%d hbp=%d hsync=%d byte_clock=%ld pixelclock=%ld\n", __func__,
+			vmode->hfront_porch, vmode->hback_porch, vmode->hsync_len,
+			dsim->byte_clock, dsim->pixelclock);
 	mdresol |= MDRESOL_SET_MAINVRESOL(vmode->vactive) |
 		   MDRESOL_SET_MAINHRESOL(vmode->hactive);
 	dsim_write(dsim, mdresol, DSIM_MDRESOL);
@@ -1044,23 +1078,20 @@ static void sec_mipi_dsim_set_main_mode(struct sec_mipi_dsim *dsim)
 
 	/* calculate hfp & hbp word counts */
 	if (dsim->panel || !dsim->hpar) {
-		hfp_wc = pix_to_delay_byte_clocks(dsim, vmode->hfront_porch);
-		hbp_wc = pix_to_delay_byte_clocks(dsim, vmode->hback_porch);
+		hbp_wc = pix_to_delay_byte_clocks(dsim, vmode->hback_porch, (dsim->lanes <= 1) ? 13 : 7, 0, &pix_cnt, &hs_clk_cnt);
+		pix_to_delay_byte_clocks_burst(dsim, vmode->hactive, bpp, &pix_cnt, &hs_clk_cnt);
+		hfp_wc = pix_to_delay_byte_clocks(dsim, vmode->hfront_porch, (dsim->lanes <= 1) ? 11 : 4, 0, &pix_cnt, &hs_clk_cnt);
+		hsa_wc = pix_to_delay_byte_clocks(dsim, vmode->hsync_len, 10/dsim->lanes, 0, &pix_cnt, &hs_clk_cnt);
 	} else {
-		hfp_wc = dsim->hpar->hfp_wc;
 		hbp_wc = dsim->hpar->hbp_wc;
+		hfp_wc = dsim->hpar->hfp_wc;
+		hsa_wc = dsim->hpar->hsa_wc;
 	}
 
 	mhporch |= MHPORCH_SET_MAINHFP(hfp_wc) |
 		   MHPORCH_SET_MAINHBP(hbp_wc);
 
 	dsim_write(dsim, mhporch, DSIM_MHPORCH);
-
-	/* calculate hsa word counts */
-	if (!dsim->hpar)
-		hsa_wc = pix_to_delay_byte_clocks(dsim, vmode->hsync_len);
-	else
-		hsa_wc = dsim->hpar->hsa_wc;
 
 	msync |= MSYNC_SET_MAINVSA(vmode->vsync_len) |
 		 MSYNC_SET_MAINHSA(hsa_wc);
@@ -1288,7 +1319,7 @@ static int sec_mipi_dsim_get_pms(struct sec_mipi_dsim *dsim, unsigned long bit_c
 	unsigned int c_pms;
 	int s = 0;
 
-#if 1
+#if 0
 	bit_clk = bit_clk * 4 / 3;
 #endif
 	/* 80 MHz to 750 MHz */
@@ -1421,6 +1452,14 @@ static int _sec_mipi_dsim_check_pll_out(struct sec_mipi_dsim *dsim)
 	dsim->hpar = NULL;
 
 	pr_debug("%s: %d = %ld * %d / %d\n", __func__, bit_clk, pix_clk, bpp, dsim->lanes);
+	if (dsim->hsmult) {
+		unsigned bit_clkm = pix_clk * dsim->hsmult;
+
+		if (bit_clk < bit_clkm) {
+			bit_clk = bit_clkm;
+			pr_info("%s: %d = %ld * %d (min)\n", __func__, bit_clk, pix_clk, dsim->hsmult);
+		}
+	}
 	ret = sec_mipi_dsim_get_pms(dsim, bit_clk, dsim->ref_clk);
 	if (ret < 0)
 		return ret;
@@ -1437,6 +1476,7 @@ int sec_mipi_dsim_check_pll_out(struct drm_bridge *bridge,
 	struct sec_mipi_dsim *dsim = bridge->driver_private;
 
 	dsim->def_pix_clk = mode->clock * 1000;
+	dsim->hsmult = mode->min_hs_clock_multiple;
 
 	if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE) {
 		hpar = sec_mipi_dsim_get_hblank_par(mode->name,
