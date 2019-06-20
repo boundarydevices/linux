@@ -1,0 +1,40 @@
+Texas Instruments - tlv320adc3101 Codec module
+
+The tlv320adc3101 serial control bus communicates through I2C protocols
+
+Required properties:
+ - compatible - "ti,tlv320adc3101"
+ - reg: I2C slave address
+ - supply-*: Required supply regulators are:
+    "iov" - digital IO power supply
+    "dv" - Digital core power supply
+    "av" - Analog core power supply
+ - rst-gpio: Reset-GPIO phandle with args as described in gpio/gpio.txt
+ - left-pin-select: default left ADC input selection for left PGA. values are
+ defined in sound/soc/codecs/tlv320adc3101.h
+ - right-pin-select: default right ADC input selection for right PGA. values are
+defined in sound/soc/codecs/tlv320adc3101.h
+
+		sound-name-prefix = "U18_";
+		reg = <0x18>;
+		rst-gpio = <&pio 34 0>;
+		left-pin-select = <1>;
+		right-pin-select = <1>;
+
+		av-supply  = <&pcm1865_3v3>;
+		dv-supply  = <&pcm1865_3v3>;
+		iov-supply = <&pcm1865_3v3>;
+
+
+Example:
+
+codec: tlv320adc3101@18 {
+		reg = <0x18>;
+		rst-gpio = <&pio 34 0>;
+		left-pin-select = <1>;
+		right-pin-select = <1>;
+
+		av-supply  = <&supply_3v3>;
+		dv-supply  = <&supply_3v3>;
+		iov-supply = <&supply_1v8>;
+};
