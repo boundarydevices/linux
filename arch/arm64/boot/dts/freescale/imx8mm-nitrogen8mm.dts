@@ -8,6 +8,7 @@
 #include "fsl-imx8mm.dtsi"
 #include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
+#include "panel-lcm-jm430.dtsi"
 #include "panel-com50h5n03ulc.dtsi"
 
 &iomuxc {
@@ -186,6 +187,13 @@
 	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
 		fsl,pins = <
 #define GP_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9	0x16
+		>;
+	};
+
+	pinctrl_mipi_lcm_jm430: mipi-lcm-jm430grp {
+		fsl,pins = <
+#define GP_TC358762_EN	<&gpio1 9 GPIO_ACTIVE_HIGH>
 			MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9	0x16
 		>;
 	};
@@ -489,12 +497,14 @@
 		lcdif = &lcdif;
 		mipi = &fb_mipi;
 		mipi_cmds_com50h5n03ulc = &mipi_cmds_com50h5n03ulc;
+		mipi_cmds_lcm_jm430 = &mipi_cmds_lcm_jm430;
 		mipi_cmds_ltk0680ytmdb = &mipi_cmds_ltk0680ytmdb;
 		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
 		mipi_cmds_m101nwwb = &mipi_cmds_ltk080a60a004t;		/* Same commands work for both */
 		mipi_dsi = &mipi_dsi;
 		mipi_to_lvds = &mipi_to_lvds;
 		pinctrl_com50h5n03ulc = &pinctrl_mipi_com50h5n03ulc;
+		pinctrl_lcm_jm430 = &pinctrl_mipi_lcm_jm430;
 		pinctrl_ltk0680ytmdb = &pinctrl_mipi_ltk0680ytmdb;
 		pinctrl_ltk080a60a004t = &pinctrl_mipi_ltk080a60a004t;
 		t_mipi = &t_mipi;
@@ -502,11 +512,14 @@
 
 	alias_create_phandles {
 		p1 = <&mipi_cmds_com50h5n03ulc>;
-		p2 = <&mipi_cmds_ltk0680ytmdb>;
-		p3 = <&mipi_cmds_ltk080a60a004t>;
-		p4 = <&pinctrl_mipi_com50h5n03ulc>;
-		p5 = <&pinctrl_mipi_ltk0680ytmdb>;
-		p6 = <&pinctrl_mipi_ltk080a60a004t>;
+		p2 = <&mipi_cmds_lcm_jm430>;
+		p3 = <&mipi_cmds_ltk0680ytmdb>;
+		p4 = <&mipi_cmds_ltk080a60a004t>;
+		p5 = <&mipi_to_lvds>;
+		p6 = <&pinctrl_mipi_com50h5n03ulc>;
+		p7 = <&pinctrl_mipi_lcm_jm430>;
+		p8 = <&pinctrl_mipi_ltk0680ytmdb>;
+		p9 = <&pinctrl_mipi_ltk080a60a004t>;
 	};
 
 	backlight_mipi: backlight-mipi {
