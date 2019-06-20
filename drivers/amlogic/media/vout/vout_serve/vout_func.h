@@ -41,6 +41,7 @@ struct vout_cdev_s {
 	dev_t         devno;
 	struct cdev   cdev;
 	struct device *dev;
+	wait_queue_head_t setmode_queue;
 };
 
 #ifdef CONFIG_AMLOGIC_HDMITX

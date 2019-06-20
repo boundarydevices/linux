@@ -35,6 +35,8 @@
 #include <linux/uaccess.h>
 #include <linux/extcon.h>
 #include <linux/cdev.h>
+#include <linux/poll.h>
+#include <linux/workqueue.h>
 
 /* Amlogic Headers */
 #include <linux/amlogic/media/vout/vout_notify.h>
@@ -223,6 +225,15 @@ char *get_vout_mode_uboot(void)
 }
 EXPORT_SYMBOL(get_vout_mode_uboot);
 
+static inline void vout_setmode_wakeup_queue(void)
+{
+	if (tvout_monitor_flag)
+		return;
+
+	if (vout_cdev)
+		wake_up(&vout_cdev->setmode_queue);
+}
+
 int set_vout_mode(char *name)
 {
 	enum vmode_e mode;
@@ -257,6 +268,7 @@ int set_vout_mode(char *name)
 	vout_notifier_call_chain(VOUT_EVENT_MODE_CHANGE, &mode);
 
 	extcon_set_state_sync(vout_excton_setmode, EXTCON_TYPE_DISP, 0);
+	vout_setmode_wakeup_queue();
 
 	return ret;
 }
@@ -678,6 +690,17 @@ static long vout_compat_ioctl(struct file *file, unsigned int cmd,
 }
 #endif
 
+static unsigned int vout_poll(struct file *file, poll_table *wait)
+{
+	struct vout_cdev_s *vcdev = file->private_data;
+	unsigned int mask = 0;
+
+	poll_wait(file, &vcdev->setmode_queue, wait);
+	mask = (POLLIN | POLLRDNORM);
+
+	return mask;
+}
+
 static const struct file_operations vout_fops = {
 	.owner          = THIS_MODULE,
 	.open           = vout_io_open,
@@ -686,6 +709,7 @@ static const struct file_operations vout_fops = {
 #ifdef CONFIG_COMPAT
 	.compat_ioctl   = vout_compat_ioctl,
 #endif
+	.poll = vout_poll,
 };
 
 static int vout_fops_create(void)
@@ -719,6 +743,8 @@ static int vout_fops_create(void)
 		VOUTERR("failed to create vout device: %d\n", ret);
 		goto vout_fops_err3;
 	}
+
+	init_waitqueue_head(&vout_cdev->setmode_queue);
 
 	VOUTPR("%s OK\n", __func__);
 	return 0;
