@@ -61,6 +61,10 @@
 		mipi_to_lvds = &mipi_to_lvds_som;
 	};
 
+	alias_create_phandles {
+		p5 = <&mipi_to_lvds_som>;
+	};
+
         mipi_xclk: mipi-xclk {
 		assigned-clocks = <&clk IMX8MM_CLK_PWM4_SRC>;
 		assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_40M>;
