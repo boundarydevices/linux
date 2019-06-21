@@ -4,7 +4,7 @@
 / {
 	mipi_cmds_lcm_jm430: mipi-cmds-lcm-jm430 {
 		mipi-cmds-enable = /bits/ 8 <
-			DELAY(5)	/* Delay after enable is high */
+			DELAY(1)
 
 			/* 1 data lane, 1 clock lane*/
 			S_IF_1_LANE  GEN_L5P(0x10,0x02, 0x03,0x00,0x00,0x00)	/* TC_DSI_LANEENABLE - 0x03  */
@@ -45,12 +45,12 @@
 			MRPS(4)
 			GEN_READ4(0xa0,0x04, 0x00,0x62,0x00,0x00) /* ChipID */
 #endif
+#if 0
+			DCS_S0P(0x11)		/* Exit sleep */
+			DELAY(5)
+#endif
 		>;
 #if 0
-		mipi-cmds-enable = /bits/ 8 <
-			DCS_S0P(0x11)		/* Exit sleep */
-			DELAY(120)		/* 5 is what spec says */
-		>;
 		mipi-cmds-disable = /bits/ 8 <
 			DCS_S0P(0x10)		/* Enter sleep */
 		>;
