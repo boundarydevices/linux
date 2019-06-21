@@ -2158,13 +2158,12 @@ void osd_set_pxp_mode(u32 mode)
 }
 void osd_set_afbc(u32 index, u32 enable)
 {
-	if (osd_hw.osd_meson_dev.osd_ver == OSD_NORMAL) {
-		if (osd_hw.osd_meson_dev.afbc_type)
-			osd_hw.osd_afbcd[index].enable = enable;
-		osd_log_info("afbc_type=%d,enable=%d\n",
-			osd_hw.osd_meson_dev.afbc_type,
-			osd_hw.osd_afbcd[index].enable);
-	}
+
+	if (osd_hw.osd_meson_dev.afbc_type)
+		osd_hw.osd_afbcd[index].enable = enable;
+	osd_log_info("afbc_type=%d,enable=%d\n",
+		osd_hw.osd_meson_dev.afbc_type,
+		osd_hw.osd_afbcd[index].enable);
 }
 
 u32 osd_get_afbc(u32 index)
