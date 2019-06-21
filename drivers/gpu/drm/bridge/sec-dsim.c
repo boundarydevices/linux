@@ -1557,6 +1557,20 @@ static void sec_mipi_dsim_disable_pll(struct sec_mipi_dsim *dsim)
 	dsim_write(dsim, pllctrl, DSIM_PLLCTRL);
 }
 
+static void sec_mipi_dsim_bridge_power_up(struct drm_bridge *bridge)
+{
+	struct sec_mipi_dsim *dsim = bridge->driver_private;
+
+	drm_panel_power_up(dsim->panel);
+}
+
+static void sec_mipi_dsim_bridge_power_down(struct drm_bridge *bridge)
+{
+	struct sec_mipi_dsim *dsim = bridge->driver_private;
+
+	drm_panel_power_down(dsim->panel);
+}
+
 static void sec_mipi_dsim_bridge_disable(struct drm_bridge *bridge)
 {
 	int ret;
@@ -1675,8 +1689,10 @@ static void sec_mipi_dsim_bridge_mode_set(struct drm_bridge *bridge,
 
 static const struct drm_bridge_funcs sec_mipi_dsim_bridge_funcs = {
 	.attach     = sec_mipi_dsim_bridge_attach,
+	.power_up   = sec_mipi_dsim_bridge_power_up,
 	.enable     = sec_mipi_dsim_bridge_enable,
 	.disable    = sec_mipi_dsim_bridge_disable,
+	.power_down = sec_mipi_dsim_bridge_power_down,
 	.mode_set   = sec_mipi_dsim_bridge_mode_set,
 	.mode_fixup = sec_mipi_dsim_bridge_mode_fixup,
 };
