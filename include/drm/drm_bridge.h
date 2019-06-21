@@ -220,6 +220,8 @@ struct drm_bridge_funcs {
 	 * The enable callback is optional.
 	 */
 	void (*enable)(struct drm_bridge *bridge);
+	void (*power_down)(struct drm_bridge *bridge);
+	void (*power_up)(struct drm_bridge *bridge);
 };
 
 /**
@@ -242,6 +244,7 @@ struct drm_bridge {
 	struct list_head list;
 
 	const struct drm_bridge_funcs *funcs;
+	int powered;
 	void *driver_private;
 };
 
