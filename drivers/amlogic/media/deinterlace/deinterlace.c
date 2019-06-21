@@ -7773,8 +7773,12 @@ static void set_di_flag(void)
 		use_2_interlace_buff = 0;
 		di_force_bit_mode = 8;
 	}
-	if (is_meson_tl1_cpu() || is_meson_tm2_cpu())
+	if (is_meson_tl1_cpu() || is_meson_tm2_cpu()
+		|| is_meson_g12a_cpu()
+		|| is_meson_g12b_cpu()
+		|| is_meson_sm1_cpu())
 		pulldown_enable = true;
+
 	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12A))
 		intr_mode = 3;
 	if (di_pre_rdma_enable) {
