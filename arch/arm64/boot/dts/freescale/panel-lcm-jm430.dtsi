@@ -3,7 +3,7 @@
 /* TC358762: mipi to rgb bridge */
 / {
 	mipi_cmds_lcm_jm430: mipi-cmds-lcm-jm430 {
-		mipi-cmds-init = /bits/ 8 <
+		mipi-cmds-enable = /bits/ 8 <
 			DELAY(5)	/* Delay after enable is high */
 
 			/* 1 data lane, 1 clock lane*/
