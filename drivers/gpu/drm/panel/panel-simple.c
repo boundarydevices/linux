@@ -67,10 +67,12 @@ struct panel_desc {
 	 *             to power itself down completely
 	 */
 	struct {
+		unsigned int power_up;
 		unsigned int prepare;
 		unsigned int enable;
 		unsigned int disable;
 		unsigned int unprepare;
+		unsigned int power_down;
 	} delay;
 
 	u32 bus_format;
@@ -95,7 +97,8 @@ struct panel_simple {
 	struct regulator *supply;
 	struct i2c_adapter *ddc;
 
-	struct gpio_desc *enable_gpio;
+	struct gpio_desc *gpd_power_enable;
+	struct gpio_desc *gpd_prepare_enable;
 	struct gpio_desc *reset;
 	struct videomode vm;
 	struct mipi_cmd mipi_cmds_init;
@@ -345,13 +348,35 @@ static int panel_simple_unprepare(struct drm_panel *panel)
 	if (p->desc->delay.unprepare)
 		msleep(p->desc->delay.unprepare);
 	gpiod_set_value_cansleep(p->reset, 1);
-	gpiod_set_value_cansleep(p->enable_gpio, 0);
+	gpiod_set_value_cansleep(p->gpd_prepare_enable, 0);
 
 	regulator_disable(p->supply);
 
 
 	p->prepared = false;
 
+	return 0;
+}
+
+static int panel_simple_power_down(struct drm_panel *panel)
+{
+	struct panel_simple *p = to_panel_simple(panel);
+
+	if (p->desc->delay.power_down)
+		msleep(p->desc->delay.power_down);
+	if (p->gpd_power_enable)
+		gpiod_set_value_cansleep(p->gpd_power_enable, 0);
+	return 0;
+}
+
+static int panel_simple_power_up(struct drm_panel *panel)
+{
+	struct panel_simple *p = to_panel_simple(panel);
+
+	if (p->gpd_power_enable)
+		gpiod_set_value_cansleep(p->gpd_power_enable, 1);
+	if (p->desc->delay.power_up)
+		msleep(p->desc->delay.power_up);
 	return 0;
 }
 
@@ -369,7 +394,7 @@ static int panel_simple_prepare(struct drm_panel *panel)
 		return err;
 	}
 
-	gpiod_set_value_cansleep(p->enable_gpio, 1);
+	gpiod_set_value_cansleep(p->gpd_prepare_enable, 1);
 	gpiod_set_value_cansleep(p->reset, 0);
 
 
@@ -412,8 +437,8 @@ static int panel_simple_enable(struct drm_panel *panel)
 fail:
 	if (p->reset)
 		gpiod_set_value_cansleep(p->reset, 1);
-	if (p->enable_gpio)
-		gpiod_set_value_cansleep(p->enable_gpio, 0);
+	if (p->gpd_prepare_enable)
+		gpiod_set_value_cansleep(p->gpd_prepare_enable, 0);
 	return ret;
 }
 
@@ -458,6 +483,8 @@ static int panel_simple_get_timings(struct drm_panel *panel,
 static const struct drm_panel_funcs panel_simple_funcs = {
 	.disable = panel_simple_disable,
 	.unprepare = panel_simple_unprepare,
+	.power_down = panel_simple_power_down,
+	.power_up = panel_simple_power_up,
 	.prepare = panel_simple_prepare,
 	.enable = panel_simple_enable,
 	.get_modes = panel_simple_get_modes,
@@ -491,10 +518,12 @@ void check_for_cmds(struct device_node *np, const char *dt_name, struct mipi_cmd
 
 static void init_common(struct device_node *np, struct panel_desc *ds, struct drm_display_mode *dm)
 {
+	of_property_read_u32(np, "delay-power-up", &ds->delay.power_up);
 	of_property_read_u32(np, "delay-prepare", &ds->delay.prepare);
 	of_property_read_u32(np, "delay-enable", &ds->delay.enable);
 	of_property_read_u32(np, "delay-disable", &ds->delay.disable);
 	of_property_read_u32(np, "delay-unprepare", &ds->delay.unprepare);
+	of_property_read_u32(np, "delay-power-down", &ds->delay.power_down);
 	of_property_read_u32(np, "min-hs-clock-multiple", &dm->min_hs_clock_multiple);
 }
 
@@ -603,10 +632,18 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 		return err;
 	}
 
-	panel->enable_gpio = devm_gpiod_get_optional(dev, "enable",
+	panel->gpd_prepare_enable = devm_gpiod_get_optional(dev, "prepare-enable",
 						     GPIOD_OUT_LOW);
-	if (IS_ERR(panel->enable_gpio)) {
-		err = PTR_ERR(panel->enable_gpio);
+	if (IS_ERR(panel->gpd_prepare_enable)) {
+		err = PTR_ERR(panel->gpd_prepare_enable);
+		dev_err(dev, "failed to request GPIO: %d\n", err);
+		return err;
+	}
+
+	panel->gpd_power_enable = devm_gpiod_get_optional(dev, "enable",
+						     GPIOD_OUT_LOW);
+	if (IS_ERR(panel->gpd_power_enable)) {
+		err = PTR_ERR(panel->gpd_power_enable);
 		if (err != -EPROBE_DEFER)
 			dev_err(dev, "failed to request GPIO: %d\n", err);
 		return err;
