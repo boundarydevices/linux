@@ -1384,6 +1384,20 @@ phy_err:
 	devm_free_irq(dev, dsi->irq, dsi);
 }
 
+static void nwl_dsi_bridge_power_up(struct drm_bridge *bridge)
+{
+	struct nwl_mipi_dsi *dsi = bridge->driver_private;
+
+	drm_panel_power_up(dsi->panel);
+}
+
+static void nwl_dsi_bridge_power_down(struct drm_bridge *bridge)
+{
+	struct nwl_mipi_dsi *dsi = bridge->driver_private;
+
+	drm_panel_power_down(dsi->panel);
+}
+
 static void nwl_dsi_bridge_disable(struct drm_bridge *bridge)
 {
 	struct nwl_mipi_dsi *dsi = bridge->driver_private;
@@ -1414,8 +1428,10 @@ static void nwl_dsi_bridge_disable(struct drm_bridge *bridge)
 }
 
 static const struct drm_bridge_funcs nwl_dsi_bridge_funcs = {
+	.power_up = nwl_dsi_bridge_power_up,
 	.enable = nwl_dsi_bridge_enable,
 	.disable = nwl_dsi_bridge_disable,
+	.power_down = nwl_dsi_bridge_power_down,
 	.mode_valid = nwl_dsi_bridge_mode_valid,
 	.mode_fixup = nwl_dsi_bridge_mode_fixup,
 	.mode_set = nwl_dsi_bridge_mode_set,
