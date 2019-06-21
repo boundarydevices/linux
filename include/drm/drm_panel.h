@@ -71,6 +71,8 @@ struct display_timing;
 struct drm_panel_funcs {
 	int (*disable)(struct drm_panel *panel);
 	int (*unprepare)(struct drm_panel *panel);
+	int (*power_down)(struct drm_panel *panel);
+	int (*power_up)(struct drm_panel *panel);
 	int (*prepare)(struct drm_panel *panel);
 	int (*enable)(struct drm_panel *panel);
 	int (*get_modes)(struct drm_panel *panel);
@@ -131,6 +133,22 @@ static inline int drm_panel_disable(struct drm_panel *panel)
 		return panel->funcs->disable(panel);
 
 	return panel ? -ENOSYS : -EINVAL;
+}
+
+static inline int drm_panel_power_down(struct drm_panel *panel)
+{
+	if (panel && panel->funcs && panel->funcs->power_down)
+		return panel->funcs->power_down(panel);
+
+	return 0;
+}
+
+static inline int drm_panel_power_up(struct drm_panel *panel)
+{
+	if (panel && panel->funcs && panel->funcs->power_up)
+		return panel->funcs->power_up(panel);
+
+	return 0;
 }
 
 /**

@@ -237,6 +237,8 @@ struct drm_bridge_funcs {
 	 * The enable callback is optional.
 	 */
 	void (*enable)(struct drm_bridge *bridge);
+	void (*power_down)(struct drm_bridge *bridge);
+	void (*power_up)(struct drm_bridge *bridge);
 };
 
 /**
@@ -292,6 +294,7 @@ struct drm_bridge {
 	const struct drm_bridge_timings *timings;
 	/** @funcs: control functions */
 	const struct drm_bridge_funcs *funcs;
+	int powered;
 	/** @driver_private: pointer to the bridge driver's internal context */
 	void *driver_private;
 };
