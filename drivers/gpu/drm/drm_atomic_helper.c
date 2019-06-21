@@ -1148,6 +1148,85 @@ crtc_set_mode(struct drm_device *dev, struct drm_atomic_state *old_state)
 	}
 }
 
+static void drm_atomic_helper_bridge_power_up(struct drm_device *dev,
+		struct drm_atomic_state *old_state)
+{
+	struct drm_bridge *bridge;
+	struct drm_connector *connector;
+	struct drm_connector_state *new_conn_state;
+	int i;
+
+	for_each_new_connector_in_state(old_state, connector, new_conn_state, i) {
+		struct drm_encoder *encoder;
+
+		if (!new_conn_state->best_encoder)
+			continue;
+
+		if (!new_conn_state->crtc->state->active ||
+		    !drm_atomic_crtc_needs_modeset(new_conn_state->crtc->state))
+			continue;
+
+		encoder = new_conn_state->best_encoder;
+		if (!encoder)
+			continue;
+
+		bridge = encoder->bridge;
+		while (bridge) {
+			if (bridge->funcs && bridge->funcs->power_up) {
+				bridge->powered = 1;
+				bridge->funcs->power_up(bridge);
+			}
+			bridge = bridge->next;
+		}
+	}
+}
+
+static void drm_atomic_bridge_power_down(struct drm_bridge *bridge)
+{
+	if (!bridge)
+		return;
+	drm_atomic_bridge_power_down(bridge->next);
+	if (bridge->funcs && bridge->powered &&
+			bridge->funcs->power_down) {
+		bridge->powered = 0;
+		bridge->funcs->power_down(bridge);
+	}
+}
+
+static void drm_atomic_helper_bridge_power_down(struct drm_device *dev,
+		struct drm_atomic_state *old_state)
+{
+	struct drm_connector *connector;
+	struct drm_connector_state *old_conn_state, *new_conn_state;
+	int i;
+
+	for_each_oldnew_connector_in_state(old_state, connector, old_conn_state, new_conn_state, i) {
+		struct drm_encoder *encoder;
+		struct drm_crtc_state *old_crtc_state;
+
+		/* Shut down everything that's in the changeset and currently
+		 * still on. So need to check the old, saved state. */
+		if (!old_conn_state->crtc)
+			continue;
+
+		old_crtc_state = drm_atomic_get_old_crtc_state(old_state, old_conn_state->crtc);
+
+		if (!old_crtc_state->active ||
+		    !drm_atomic_crtc_needs_modeset(old_conn_state->crtc->state))
+			continue;
+
+		encoder = old_conn_state->best_encoder;
+
+		/* We shouldn't get this far if we didn't previously have
+		 * an encoder.. but WARN_ON() rather than explode.
+		 */
+		if (!encoder)
+			continue;
+
+		drm_atomic_bridge_power_down(encoder->bridge);
+	}
+}
+
 /**
  * drm_atomic_helper_commit_modeset_disables - modeset commit to disable outputs
  * @dev: DRM device
@@ -1170,6 +1249,7 @@ void drm_atomic_helper_commit_modeset_disables(struct drm_device *dev,
 	drm_atomic_helper_update_legacy_modeset_state(dev, old_state);
 
 	crtc_set_mode(dev, old_state);
+	drm_atomic_helper_bridge_power_down(dev, old_state);
 }
 EXPORT_SYMBOL(drm_atomic_helper_commit_modeset_disables);
 
@@ -1217,6 +1297,8 @@ void drm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 	struct drm_connector *connector;
 	struct drm_connector_state *new_conn_state;
 	int i;
+
+	drm_atomic_helper_bridge_power_up(dev, old_state);
 
 	for_each_oldnew_crtc_in_state(old_state, crtc, old_crtc_state, new_crtc_state, i) {
 		const struct drm_crtc_helper_funcs *funcs;
