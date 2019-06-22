@@ -2791,8 +2791,8 @@ static ssize_t show_dv_cap(struct device *dev,
 	if (dv->ver == 2) {
 		pos += snprintf(buf + pos, PAGE_SIZE,
 			"VSVDB Version: V%d\n", dv->ver);
-		pos += snprintf(buf + pos, PAGE_SIZE,
-			"2160p60hz: 1\n");
+		pos += snprintf(buf + pos, PAGE_SIZE, "2160p%shz: 1\n",
+			dv->sup_2160p60hz ? "60" : "30");
 		pos += snprintf(buf + pos, PAGE_SIZE,
 			"Support mode:\n");
 		if ((dv->Interface != 0x00) && (dv->Interface != 0x01)) {

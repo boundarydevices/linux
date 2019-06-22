@@ -2194,6 +2194,7 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 	int i, j, ret_val;
 	int idx[4];
 	struct rx_cap *pRXCap = &(hdmitx_device->RXCap);
+	struct dv_info *dv = &(hdmitx_device->RXCap.dv_info);
 	struct vinfo_s *info = NULL;
 
 	if (check_dvi_hdmi_edid_valid(hdmitx_device->EDID_buf)) {
@@ -2413,6 +2414,13 @@ int hdmitx_edid_parse(struct hdmitx_dev *hdmitx_device)
 		(strncmp(info->name, "null", 4) == 0))) {
 			hdrinfo_to_vinfo(info, pRXCap);
 			rxlatency_to_vinfo(info, pRXCap);
+		}
+	}
+	/* if sup_2160p60hz of dv is true, check the MAX_TMDS*/
+	if (dv->sup_2160p60hz) {
+		if (pRXCap->Max_TMDS_Clock2 * 5 < 590) {
+			dv->sup_2160p60hz = 0;
+			pr_info(EDID "clear sup_2160p60hz\n");
 		}
 	}
 	return 0;
