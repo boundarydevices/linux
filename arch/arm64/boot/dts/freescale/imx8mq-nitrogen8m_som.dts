@@ -1116,7 +1116,6 @@
 	fb_mipi: panel@0 {
 		bits-per-color = <8>;
 		bridge-de-active = <0>;
-		bridge-sync-active = <1>;
 		bus-format = "rgb888";
 		compatible = "panel,simple";
 		dsi-format = "rgb888";
@@ -1142,8 +1141,8 @@
 				vfront-porch = <24>;
 				hsync-len = <1>;
 				vsync-len = <1>;
-				hsync-active = <0>;
-				vsync-active = <0>;
+				hsync-active = <1>;
+				vsync-active = <1>;
 				de-active = <1>;
 			};
 		};
