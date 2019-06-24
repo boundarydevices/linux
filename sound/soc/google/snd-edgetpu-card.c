@@ -42,7 +42,7 @@ static struct snd_soc_jack_pin headset_jack_pin = {
 static int card_init(struct snd_soc_pcm_runtime *rtd) {
 	int ret;
 
-	rt5645_sel_asrc_clk_src(rtd->codec,
+	rt5645_sel_asrc_clk_src(rtd->codec_dai->component,
 				RT5645_DA_STEREO_FILTER |
 				RT5645_AD_STEREO_FILTER |
 				RT5645_DA_MONO_L_FILTER |
@@ -64,7 +64,7 @@ static int card_init(struct snd_soc_pcm_runtime *rtd) {
 		return ret;
 	}
 
-	return rt5645_set_jack_detect(rtd->codec, &headset_jack, NULL, NULL);
+	return rt5645_set_jack_detect(rtd->codec_dai->component, &headset_jack, NULL, NULL);
 }
 
 static int hw_params(
