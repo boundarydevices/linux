@@ -160,6 +160,7 @@ static bool videopeek;
 static bool nopostvideostart;
 static struct video_frame_detect_s video_frame_detect;
 static long long time_setomxpts;
+static long long time_setomxpts_last;
 
 /*----omx_info  bit0: keep_last_frame, bit1~31: unused----*/
 static u32 omx_info = 0x1;
@@ -6339,10 +6340,10 @@ static irqreturn_t vsync_isr_in(int irq, void *dev_id)
 			/* is not update for a while, in case when */
 			/* paused, pcr is not paused */
 			delta1 = func_div(sched_clock() - time_setomxpts, 1000);
-			if (((diff - omx_pts_interval_upper * 3 / 2) > 0)
-				|| ((diff - omx_pts_interval_lower * 3 / 2)
-				< 0)) {
+			if ((time_setomxpts - time_setomxpts_last) >
+				(4 * vsync_pts_inc * 1000 / 90)) {
 				time_setomxpts = 0;
+				time_setomxpts_last = 0;
 				pr_info("omxpts is not update for a while,do not need compenstate\n");
 			} else {
 				diff -=  delta1 * 90 / 1000;
@@ -8249,6 +8250,7 @@ static void video_vf_unreg_provider(void)
 	show_first_frame_nosync = false;
 
 	time_setomxpts = 0;
+	time_setomxpts_last = 0;
 
 #ifdef PTS_LOGGING
 	{
@@ -8821,6 +8823,7 @@ static void set_omx_pts(u32 *p)
 		}
 	}
 	if (not_reset == 0) {
+		time_setomxpts_last = time_setomxpts;
 		time_setomxpts = sched_clock();
 		omx_pts = tmp_pts;
 		ATRACE_COUNTER("omxpts", omx_pts);
