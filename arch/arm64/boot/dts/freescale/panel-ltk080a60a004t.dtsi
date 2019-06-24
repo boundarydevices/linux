@@ -42,5 +42,6 @@
 			DELAY(1)
 #endif
 		>;
+		min-hs-clock-multiple = <8>;
 	};
 };
