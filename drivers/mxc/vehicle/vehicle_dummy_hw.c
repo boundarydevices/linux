@@ -17,6 +17,7 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/extcon.h>
+#include <linux/extcon-provider.h>
 #include <linux/of_platform.h>
 #include "vehicle_core.h"
 
