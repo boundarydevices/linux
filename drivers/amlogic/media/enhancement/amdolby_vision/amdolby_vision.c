@@ -298,9 +298,11 @@ MODULE_PARM_DESC(dolby_vision_graphic_min, "\n dolby_vision_graphic_min\n");
 module_param(dolby_vision_graphic_max, uint, 0664);
 MODULE_PARM_DESC(dolby_vision_graphic_max, "\n dolby_vision_graphic_max\n");
 
-static unsigned int dolby_vision_target_graphics_max[3] = {
-	300, 300, 100
-}; /* DOVI/HDR/SDR */
+static unsigned int dv_target_graphics_max[3][3] = {
+	{ 300, 300, 380 }, /* DOVI => DOVI/HDR/SDR */
+	{ 300, 300, 100 }, /* HDR =>  DOVI/HDR/SDR */
+	{ 300, 300, 100 }, /* SDR =>  DOVI/HDR/SDR */
+};
 static unsigned int dv_target_graphics_LL_max[3][3] = {
 	{ 300, 300, 100 }, /* DOVI => DOVI/HDR/SDR */
 	{ 210, 300, 100 }, /* HDR =>  DOVI/HDR/SDR */
@@ -5570,7 +5572,7 @@ int dolby_vision_parse_metadata(
 		graphic_max = dolby_vision_graphic_max;
 	else {
 		graphic_max =
-			dolby_vision_target_graphics_max[dst_format];
+			dv_target_graphics_max[src_format][dst_format];
 
 		if ((dolby_vision_flags & FLAG_FORCE_DOVI_LL) ||
 			(dolby_vision_ll_policy >= DOLBY_VISION_LL_YUV422)) {
