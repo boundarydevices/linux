@@ -1027,6 +1027,7 @@
 #else
 		mode-video-sync-pulse;
 #endif
+		min-hs-clock-multiple = <8>;
 		panel-height-mm = <136>;
 		panel-width-mm = <217>;
 		power-supply = <&reg_vref_5v>;
