@@ -3029,12 +3029,18 @@ void enable_dolby_vision(int enable)
 				else
 					VSYNC_WR_DV_REG_BITS(VPP_DOLBY_CTRL,
 						0, 3, 1);   /* bypass core3  */
-				VSYNC_WR_DV_REG(VPP_WRAP_OSD1_MATRIX_EN_CTRL,
-					0x0);
-				VSYNC_WR_DV_REG(VPP_WRAP_OSD2_MATRIX_EN_CTRL,
-					0x0);
-				VSYNC_WR_DV_REG(VPP_WRAP_OSD3_MATRIX_EN_CTRL,
-					0x0);
+
+				if (is_meson_g12()) {
+					/*g12a/g12b/sm1: osd1 green line*/
+					enable_osd1_mtx(0);
+				} else if (is_meson_tm2_stbmode()) {
+					VSYNC_WR_DV_REG(
+					VPP_WRAP_OSD1_MATRIX_EN_CTRL, 0x0);
+					VSYNC_WR_DV_REG(
+					VPP_WRAP_OSD2_MATRIX_EN_CTRL, 0x0);
+					VSYNC_WR_DV_REG(
+					VPP_WRAP_OSD3_MATRIX_EN_CTRL, 0x0);
+				}
 				if (dolby_vision_mask & 2)
 					VSYNC_WR_DV_REG_BITS(
 						DOLBY_PATH_CTRL,
@@ -3327,12 +3333,17 @@ void enable_dolby_vision(int enable)
 				memset(&dovi_setting, 0, sizeof(dovi_setting));
 				pr_dolby_dbg("Dolby Vision STB cores turn off\n");
 			} else if (is_meson_g12() || is_meson_tm2_stbmode()) {
-				VSYNC_WR_DV_REG(VPP_WRAP_OSD1_MATRIX_EN_CTRL,
-					0x1);
-				VSYNC_WR_DV_REG(VPP_WRAP_OSD2_MATRIX_EN_CTRL,
-					0x1);
-				VSYNC_WR_DV_REG(VPP_WRAP_OSD3_MATRIX_EN_CTRL,
-					0x1);
+				if (is_meson_g12()) {
+					/*g12a/g12b/sm1:osd1 green line*/
+					enable_osd1_mtx(1);
+				} else if (is_meson_tm2_stbmode()) {
+					VSYNC_WR_DV_REG(
+					VPP_WRAP_OSD1_MATRIX_EN_CTRL, 0x1);
+					VSYNC_WR_DV_REG(
+					VPP_WRAP_OSD2_MATRIX_EN_CTRL, 0x1);
+					VSYNC_WR_DV_REG(
+					VPP_WRAP_OSD3_MATRIX_EN_CTRL, 0x1);
+				}
 				VSYNC_WR_DV_REG_BITS(
 					DOLBY_PATH_CTRL,
 					(1 << 2) |	/* core2 bypass */
