@@ -738,17 +738,19 @@ static long vfm_ioctl(struct file *file, unsigned int cmd, ulong arg)
 	struct vfmctl *user_argp = (void __user *)arg;
 	struct vfmctl argp;
 
+	memset(&argp, 0, sizeof(struct vfmctl));
+
 	switch (cmd) {
 	case VFM_IOCTL_CMD_SET:{
 		ret =
-		copy_from_user(argp.name, user_argp->name, sizeof(argp.name));
+		copy_from_user(argp.name, user_argp->name, sizeof(argp.name)-1);
 		ret |=
-		copy_from_user(argp.val, user_argp->val, sizeof(argp.val));
+		copy_from_user(argp.val, user_argp->val, sizeof(argp.val) - 1);
 		if (ret)
 			ret = -EINVAL;
 		else
 		ret =
-		vfm_map_store(NULL, NULL, argp.val, sizeof(argp.val));
+		vfm_map_store(NULL, NULL, argp.val, sizeof(argp.val) - 1);
 		}
 		break;
 	case VFM_IOCTL_CMD_GET:{
@@ -765,9 +767,9 @@ static long vfm_ioctl(struct file *file, unsigned int cmd, ulong arg)
 		break;
 	case VFM_IOCTL_CMD_ADD:{
 		ret =
-		copy_from_user(argp.name, user_argp->name, sizeof(argp.name));
+		copy_from_user(argp.name, user_argp->name, sizeof(argp.name)-1);
 		ret |=
-		copy_from_user(argp.val, user_argp->val, sizeof(argp.val));
+		copy_from_user(argp.val, user_argp->val, sizeof(argp.val) - 1);
 		if (ret)
 			ret = -EINVAL;
 		else
@@ -776,7 +778,7 @@ static long vfm_ioctl(struct file *file, unsigned int cmd, ulong arg)
 		break;
 	case VFM_IOCTL_CMD_RM:{
 		ret =
-		copy_from_user(argp.val, user_argp->val, sizeof(argp.val));
+		copy_from_user(argp.val, user_argp->val, sizeof(argp.val) - 1);
 		if (ret)
 			ret = -EINVAL;
 		else
@@ -785,16 +787,15 @@ static long vfm_ioctl(struct file *file, unsigned int cmd, ulong arg)
 		break;
 	case VFM_IOCTL_CMD_DUMP:{
 		ret =
-		copy_from_user(argp.val, user_argp->val, sizeof(argp.val));
+		copy_from_user(argp.val, user_argp->val, sizeof(argp.val) - 1);
 		if (ret)
 			ret = -EINVAL;
-		argp.val[sizeof(argp.val) - 1] = '\0';
 		vfm_dump_provider(argp.val);
 		}
 		break;
 	case VFM_IOCTL_CMD_ADDDUMMY:{
 		ret =
-		copy_from_user(argp.val, user_argp->val, sizeof(argp.val));
+		copy_from_user(argp.val, user_argp->val, sizeof(argp.val) - 1);
 		if (ret)
 			ret = -EINVAL;
 		add_dummy_receiver(argp.val);
