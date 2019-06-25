@@ -713,7 +713,9 @@ void try_free_keep_video(int flags)
 		keep_video_on = 0;
 		if (!get_video_enabled()) {
 			/*if not disable video,changed to 2 for */
-			pr_info("disbled video for next before free keep buffer!\n");
+			if (get_video_debug_flags()) {
+				pr_info("disbled video for next before free keep buffer!\n");
+			}
 			_video_set_disable(VIDEO_DISABLE_FORNEXT);
 		} else if (get_video_enabled()) {
 			safe_disble_videolayer();
