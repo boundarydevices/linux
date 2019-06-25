@@ -2,6 +2,7 @@
 
 / {
 	mipi_cmds_com50h5n03ulc: mipi-cmds-com50h5n03ulc {
+		min-hs-clock-multiple = <8>;
 		mipi-cmds-enable = /bits/ 8 <
 			DELAY(122)
 			DCS_L3P(0xB9,0xFF,0x83,0x94)	/* SETEXTC */
