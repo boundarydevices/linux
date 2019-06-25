@@ -5416,6 +5416,11 @@ static void osd_update_enable(u32 index)
 			}
 			VSYNCOSD_WR_MPEG_REG_BITS(
 				osd_reg->osd_ctrl_stat2, 1, 15, 1);
+			if ((VSYNCOSD_RD_MPEG_REG(VIU_MISC_CTRL1) &
+				(0xff << 8)) != 0x9000) {
+				VSYNCOSD_WR_MPEG_REG_BITS(
+					VIU_MISC_CTRL1, 0x90, 8, 8);
+			}
 		} else {
 			if (osd_afbc_dec_enable) {
 				VSYNCOSD_WR_MPEG_REG(
@@ -5424,11 +5429,6 @@ static void osd_update_enable(u32 index)
 			}
 			VSYNCOSD_WR_MPEG_REG_BITS(
 				osd_reg->osd_ctrl_stat2, 0, 15, 1);
-		}
-		if ((VSYNCOSD_RD_MPEG_REG(VIU_MISC_CTRL1) &
-			(0xff << 8)) != 0x9000) {
-			VSYNCOSD_WR_MPEG_REG_BITS(
-				VIU_MISC_CTRL1, 0x90, 8, 8);
 		}
 	} else if (osd_hw.osd_meson_dev.afbc_type
 		== MALI_AFBC) {
