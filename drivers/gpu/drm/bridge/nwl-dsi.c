@@ -580,15 +580,20 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 			pr_info("%s: %ld = %ld * %d\n", __func__, bit_clk, pixclock, dsi->hsmult);
 		}
 	}
-	phyref_rate = bit_clk;
-	/* Video pll must be from 200MHz to 2000 MHz */
-	if (phyref_rate < 200000000) {
-		int n = (200000000 + phyref_rate - 1) / phyref_rate;
+	phyref_rate = pixclock;
+	/* Video pll must be from 500MHz to 2000 MHz */
+	if (phyref_rate < 500000000) {
+		int n = (500000000 + phyref_rate - 1) / phyref_rate;
 
 		phyref_rate *= n;
-		pr_info("%s: %d = %ld * %d\n", __func__, phyref_rate, bit_clk, n);
+		pr_info("%s: %d = %ld * %d\n", __func__, phyref_rate, pixclock, n);
 	}
-	clk_set_rate(dsi->video_pll.clk, phyref_rate);
+	ret = clk_set_rate(dsi->video_pll.clk, phyref_rate);
+	if (ret < 0) {
+		DRM_DEV_ERROR(dev, "clk_set_rate %d failed(%d)\n", phyref_rate, ret);
+		phyref_rate = clk_get_rate(dsi->video_pll.clk);
+		DRM_DEV_INFO(dev, "rate is %d\n", phyref_rate);
+	}
 
 	ret = mixel_phy_mipi_set_phy_speed(dsi->phy,
 			bit_clk,
