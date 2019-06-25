@@ -1118,6 +1118,7 @@
 		bridge-de-active = <0>;
 		bus-format = "rgb888";
 		compatible = "panel,simple";
+		delay-power-up = <2>;
 		dsi-format = "rgb888";
 		dsi-lanes = <4>;
 		mode-skip-eot;
