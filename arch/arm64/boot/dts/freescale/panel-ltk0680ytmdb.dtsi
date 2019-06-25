@@ -1,11 +1,7 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
 / {
-#ifdef TWO_LANE
-	mipi_cmds_ltk0680ytmdb_2lane: mipi-cmds-ltk0680ytmdb_2lane {
-#else
 	mipi_cmds_ltk0680ytmdb: mipi-cmds-ltk0680ytmdb {
-#endif
 		mipi-cmds-enable = /bits/ 8 <
 			DELAY(50)
 			GEN_S1P(0xCD,0xAA)
@@ -82,11 +78,8 @@
 			DELAY(1)
 			GEN_S1P(0x2D,0x31)
 			DELAY(1)
-#ifdef TWO_LANE
-			GEN_S1P(0x63,0x24)
-#else
-			GEN_S1P(0x63,0x04)
-#endif
+			S_IF_2_LANES GEN_S1P(0x63,0x24)
+			S_IF_4_LANES GEN_S1P(0x63,0x04)
 			DELAY(1)
 			GEN_S1P(0x4D,0x00)
 			DELAY(1)
