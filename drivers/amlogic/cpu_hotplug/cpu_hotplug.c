@@ -33,6 +33,7 @@
 #include <linux/sched/rt.h>
 #include <linux/notifier.h>
 #include "linux/amlogic/cpu_hotplug.h"
+#include <linux/delay.h>
 
 #define MAX_CLUSTRS		2
 struct cpu_hotplug_s {
@@ -102,7 +103,8 @@ void cpu_hotplug_set_max(unsigned int num, int clustr)
 		return;
 	}
 
-	mutex_lock(&hpg.mutex);
+	if (!mutex_trylock(&hpg.mutex))
+		return;
 	if (num > hpg.cpunum[clustr])
 		num = hpg.cpunum[clustr];
 	if (hpg.max_num[clustr] == num) {
@@ -157,7 +159,10 @@ static int __ref cpu_hotplug_thread(void *data)
 	while (1) {
 		if (kthread_should_stop())
 			break;
-		mutex_lock(&hpg.mutex);
+		if (!mutex_trylock(&hpg.mutex)) {
+			usleep_range(1000, 2000);
+			continue;
+		}
 		for (clustr = 0; clustr < hpg.clusters; clustr++) {
 			if (!hpg.flgs[clustr])
 				continue;
