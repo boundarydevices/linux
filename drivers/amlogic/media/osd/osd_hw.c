@@ -722,6 +722,15 @@ static unsigned int osd_filter_coefs_3point_bspline[] = {
 	0x10601000
 };
 
+static unsigned int osd_filter_coefs_repeat[] = { /* repeat coef0 */
+	0x00800000, 0x00800000, 0x00800000, 0x00800000, 0x00800000, 0x00800000,
+	0x00800000, 0x00800000, 0x00800000, 0x00800000, 0x00800000, 0x00800000,
+	0x00800000, 0x00800000, 0x00800000, 0x00800000, 0x00800000, 0x00800000,
+	0x00800000, 0x00800000, 0x00800000, 0x00800000, 0x00800000, 0x00800000,
+	0x00800000, 0x00800000, 0x00800000, 0x00800000, 0x00800000, 0x00800000,
+	0x00800000, 0x00800000, 0x00800000
+};
+
 static unsigned int *filter_table[] = {
 	osd_filter_coefs_bicubic_sharp,
 	osd_filter_coefs_bicubic,
@@ -731,7 +740,8 @@ static unsigned int *filter_table[] = {
 	osd_filter_coefs_3point_triangle,
 	osd_filter_coefs_4point_triangle,
 	vpp_filter_coefs_4point_bspline,
-	osd_filter_coefs_3point_bspline
+	osd_filter_coefs_3point_bspline,
+	osd_filter_coefs_repeat
 };
 
 #ifdef NEW_PPS_PHASE
