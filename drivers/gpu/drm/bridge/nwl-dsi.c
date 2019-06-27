@@ -772,6 +772,7 @@ static ssize_t nwl_dsi_host_transfer(struct mipi_dsi_host *dsi_host,
 	}
 
 	clk_disable_unprepare(dsi->rx_esc_clk);
+	dsi->xfer = NULL;
 
 	return ret;
 }
