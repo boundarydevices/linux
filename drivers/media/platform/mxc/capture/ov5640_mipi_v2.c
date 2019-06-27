@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011-2016 Freescale Semiconductor, Inc. All Rights Reserved.
  *
- * Copyright 2018 NXP
+ * Copyright 2018-2019 NXP
  *
  */
 
@@ -55,7 +55,7 @@ enum ov5640_mode {
 	ov5640_mode_720P_1280_720 = 3,
 	ov5640_mode_1080P_1920_1080 = 4,
 	ov5640_mode_QSXGA_2592_1944 = 5,
-	ov5640_mode_MAX = 6,
+	ov5640_mode_MAX = 5,
 	ov5640_mode_INIT = 0xff, /*only for sensor init*/
 };
 
