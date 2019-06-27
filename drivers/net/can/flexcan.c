@@ -954,7 +954,7 @@ static unsigned int flexcan_mailbox_read(struct can_rx_offload *offload, bool dr
 	struct flexcan_priv *priv = rx_offload_to_priv(offload);
 	struct flexcan_regs __iomem *regs = priv->regs;
 	u32 reg_ctrl, reg_id, reg_iflag1;
-	struct canfd_frame *cf;
+	struct canfd_frame *cf = NULL;
 	u32 i;
 
 	if (priv->devtype_data->quirks & FLEXCAN_QUIRK_USE_OFF_TIMESTAMP) {
@@ -991,7 +991,7 @@ static unsigned int flexcan_mailbox_read(struct can_rx_offload *offload, bool dr
 					     (struct can_frame **)&cf);
 	}
 
-	if (*skb) {
+	if (*skb && cf) {
 		/* increase timstamp to full 32 bit */
 		*timestamp = reg_ctrl << 16;
 
