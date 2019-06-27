@@ -1133,6 +1133,7 @@ static ssize_t nwl_dsi_host_transfer(struct mipi_dsi_host *host,
 			xfer.cmd);
 
 	nwl_dsi_disable_clocks(dsi, CLK_RX_ESC);
+	dsi->xfer = NULL;
 
 	return ret;
 }
