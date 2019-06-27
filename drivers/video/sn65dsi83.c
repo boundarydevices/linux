@@ -93,12 +93,14 @@ struct sn65dsi83_priv
 	struct videomode	vm;
 	u32			int_cnt;
 	u8			chip_enabled;
+	u8			irq_enabled;
 	u8			show_reg;
 	u8			dsi_lanes;
 	u8			spwg;	/* lvds lane 3 has MSBs of color */
 	u8			jeida;	/* lvds lane 3 has LSBs of color */
 	u8			dsi_bpp;
 	u16			sync_delay;
+	u16			hbp;
 
 	u8			dsi_clk_divider;
 	u8			mipi_clk_index;
@@ -144,12 +146,14 @@ static int sn_i2c_write_byte(struct sn65dsi83_priv *sn, u8 reg, u8 val)
 	return ret;
 }
 
-static void sn_disable(struct sn65dsi83_priv *sn)
+static void sn_disable(struct sn65dsi83_priv *sn, int skip_irq)
 {
-	if (sn->chip_enabled) {
+	if (sn->irq_enabled && !skip_irq) {
+		sn->irq_enabled = 0;
 		disable_irq(sn->client->irq);
-		sn->chip_enabled = 0;
+		sn->int_cnt = 0;
 	}
+	sn->chip_enabled = 0;
 	gpiod_set_value(sn->gp_en, 0);
 }
 
@@ -253,6 +257,7 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 	unsigned i = 5;
 	int format = 0x10;
 	u32 pixelclock;
+	int hbp, hfp, hsa;
 
 	pixelclock = sn->vm.pixelclock;
 	if (pixelclock) {
@@ -297,13 +302,32 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 	sn_i2c_write_byte(sn, SN_VACTIVE_HIGH, (u8)(sn->vm.vactive >> 8));
 	sn_i2c_write_byte(sn, SN_SYNC_DELAY_LOW, (u8)sn->sync_delay);
 	sn_i2c_write_byte(sn, SN_SYNC_DELAY_HIGH, (u8)(sn->sync_delay >> 8));
-	sn_i2c_write_byte(sn, SN_HSYNC_LOW, (u8)sn->vm.hsync_len);
-	sn_i2c_write_byte(sn, SN_HSYNC_HIGH, (u8)(sn->vm.hsync_len >> 8));
+	hsa = sn->vm.hsync_len;
+	hbp = sn->vm.hback_porch;
+	hfp = sn->vm.hfront_porch;
+	if (sn->hbp) {
+		int diff = sn->hbp - hbp;
+
+		hbp += diff;
+		hfp -= diff;
+		if (hfp < 1) {
+			diff = 1 - hfp;
+			hfp += diff;
+			hsa -= diff;
+			if (hsa < 1) {
+				diff = 1 - hsa;
+				hsa += diff;
+				hbp -= diff;
+			}
+		}
+	}
+	sn_i2c_write_byte(sn, SN_HSYNC_LOW, (u8)hsa);
+	sn_i2c_write_byte(sn, SN_HSYNC_HIGH, (u8)(hsa >> 8));
 	sn_i2c_write_byte(sn, SN_VSYNC_LOW, (u8)sn->vm.vsync_len);
 	sn_i2c_write_byte(sn, SN_VSYNC_HIGH, (u8)(sn->vm.vsync_len >> 8));
-	sn_i2c_write_byte(sn, SN_HBP, (u8)sn->vm.hback_porch);
+	sn_i2c_write_byte(sn, SN_HBP, (u8)hbp);
 	sn_i2c_write_byte(sn, SN_VBP, (u8)sn->vm.vback_porch);
-	sn_i2c_write_byte(sn, SN_HFP, (u8)sn->vm.hfront_porch);
+	sn_i2c_write_byte(sn, SN_HFP, (u8)hfp);
 	sn_i2c_write_byte(sn, SN_VFP, (u8)sn->vm.vfront_porch);
 	sn_i2c_write_byte(sn, SN_TEST_PATTERN, 0);
 	return 0;
@@ -343,10 +367,11 @@ static void sn_standby(struct sn65dsi83_priv *sn)
 	if (sn->state < SN_STATE_STANDBY) {
 		sn_enable_gp(sn->gp_en);
 		sn_init(sn);
-		if (!sn->chip_enabled) {
-			sn->chip_enabled = 1;
+		if (!sn->irq_enabled) {
+			sn->irq_enabled = 1;
 			enable_irq(sn->client->irq);
 		}
+		sn->chip_enabled = 1;
 		sn_setup_regs(sn);
 		sn->state = SN_STATE_STANDBY;
 	}
@@ -363,17 +388,22 @@ static void sn_prepare(struct sn65dsi83_priv *sn)
 	}
 }
 
-static void sn_powerdown(struct sn65dsi83_priv *sn)
+static void sn_powerdown1(struct sn65dsi83_priv *sn, int skip_irq)
 {
 	dev_dbg(&sn->client->dev, "%s\n", __func__);
 	cancel_delayed_work(&sn->sn_work);
 	if (sn->state) {
 		mutex_lock(&sn->power_mutex);
 		sn_disable_pll(sn);
-		sn_disable(sn);
+		sn_disable(sn, skip_irq);
 		sn->state = SN_STATE_OFF;
 		mutex_unlock(&sn->power_mutex);
 	}
+}
+
+static void sn_powerdown(struct sn65dsi83_priv *sn)
+{
+	sn_powerdown1(sn, 0);
 }
 
 static void sn_powerup_begin(struct sn65dsi83_priv *sn)
@@ -395,6 +425,13 @@ static void sn_powerup_begin(struct sn65dsi83_priv *sn)
 		msecs_to_jiffies(1000));
 }
 
+static void sn_powerup_lock(struct sn65dsi83_priv *sn)
+{
+	mutex_lock(&sn->power_mutex);
+	sn_prepare(sn);
+	mutex_unlock(&sn->power_mutex);
+}
+
 static void sn_powerup(struct sn65dsi83_priv *sn)
 {
 	int ret = sn_check_videomode_change(sn);
@@ -408,9 +445,7 @@ static void sn_powerup(struct sn65dsi83_priv *sn)
 		sn_powerdown(sn);
 	}
 	dev_dbg(&sn->client->dev, "%s\n", __func__);
-	mutex_lock(&sn->power_mutex);
-	sn_prepare(sn);
-	mutex_unlock(&sn->power_mutex);
+	sn_powerup_lock(sn);
 }
 
 static int sn_fb_event(struct notifier_block *nb, unsigned long event, void *data)
@@ -440,7 +475,7 @@ static int sn_fb_event(struct notifier_block *nb, unsigned long event, void *dat
 	}
 	case FB_EVENT_SUSPEND : {
 		dev_info(dev, "%s: suspend\n", __func__ );
-		sn_disable(sn);
+		sn_disable(sn, 0);
 		break;
 	}
 	case FB_EVENT_RESUME : {
@@ -472,15 +507,28 @@ static irqreturn_t sn_irq_handler(int irq, void *id)
 
 	if (status > 0) {
 		sn_i2c_write_byte(sn, SN_IRQ_STAT, status);
-		dev_info(&sn->client->dev, "%s: status %x %x %x\n", __func__,
-			status, sn_i2c_read_byte(sn, SN_CLK_SRC),
-			sn_i2c_read_byte(sn, SN_IRQ_MASK));
 //		if (status & 1)
 //			sn_i2c_write_byte(sn, SN_SOFT_RESET, 1);
-		if (sn->int_cnt++ > 10) {
-			disable_irq_nosync(sn->client->irq);
+		sn->int_cnt++;
+		if (sn->int_cnt > 64) {
+			dev_info(&sn->client->dev, "%s: status %x %x %x\n", __func__,
+				status, sn_i2c_read_byte(sn, SN_CLK_SRC),
+				sn_i2c_read_byte(sn, SN_IRQ_MASK));
+			if (sn->irq_enabled) {
+				sn->irq_enabled = 0;
+				disable_irq_nosync(sn->client->irq);
+				dev_err(&sn->client->dev, "%s: disabling irq\n", __func__);
+			}
 		} else {
-			msleep(100);
+			if (!(sn->int_cnt & 7) && sn->chip_enabled) {
+				dev_info(&sn->client->dev, "%s: trying to reinit, status %x %x %x\n", __func__,
+					status, sn_i2c_read_byte(sn, SN_CLK_SRC),
+					sn_i2c_read_byte(sn, SN_IRQ_MASK));
+				sn_powerdown1(sn, 1);
+				sn_powerup_lock(sn);
+			} else {
+				msleep(20);
+			}
 		}
 		return IRQ_HANDLED;
 	} else {
@@ -609,7 +657,7 @@ static int sn65dsi83_probe(struct i2c_client *client,
         struct device_node *np = client->dev.of_node;
 	struct gpio_desc *gp_en;
 	const char *df;
-	u32 sync_delay;
+	u32 sync_delay, hbp;
 	u32 dsi_lanes;
 
 	adapter = to_i2c_adapter(client->dev.parent);
@@ -671,6 +719,11 @@ static int sn65dsi83_probe(struct i2c_client *client,
 			return -EINVAL;
 		sn->sync_delay = sync_delay;
 	}
+	if (!of_property_read_u32(np, "hbp", &hbp)) {
+		if (hbp > 0xff)
+			return -EINVAL;
+		sn->hbp = hbp;
+	}
 	if (of_property_read_u32(sn->disp_dsi, "dsi-lanes", &dsi_lanes) < 0)
 		return -EINVAL;
 	if (dsi_lanes < 1 || dsi_lanes > 4)
@@ -691,12 +744,12 @@ static int sn65dsi83_probe(struct i2c_client *client,
 
 	sn->pixel_clk = devm_clk_get(&client->dev, "pixel_clock");
 
+	irq_set_status_flags(client->irq, IRQ_NOAUTOEN);
 	ret = devm_request_threaded_irq(&client->dev, client->irq,
 			NULL, sn_irq_handler,
 			IRQF_ONESHOT, client->name, sn);
 	if (ret)
 		pr_info("%s: request_irq failed, irq:%i\n", client_name, client->irq);
-	disable_irq(client->irq);
 
 	i2c_set_clientdata(client, sn);
 	sn->fbnb.notifier_call = sn_fb_event;
