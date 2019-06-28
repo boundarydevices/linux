@@ -24,6 +24,7 @@
 #include <linux/gpio/consumer.h>
 #include "dwmac1000.h"
 #include "dwmac_dma.h"
+#include <linux/amlogic/cpu_version.h>
 #endif
 #include "stmmac_platform.h"
 
@@ -380,6 +381,13 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 			pr_debug("set exphy tx delay\n");
 		if (of_property_read_u32(np, "rx_delay", &external_rx_delay))
 			pr_debug("set exphy rx delay\n");
+		if (is_meson_g12b_cpu()) {
+			if (is_meson_rev_a()) {
+				external_rx_delay = 0;
+				external_tx_delay = 0;
+				writel(0x1621, REG_ETH_reg0_addr);
+			}
+		}
 		/* only exphy support wol since g12a*/
 		/*we enable/disable wol with item in dts with "wol=<1>"*/
 		if (of_property_read_u32(np, "wol",
@@ -398,6 +406,12 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 			writel(cali_val, REG_ETH_reg0_addr +
 					REG_ETH_REG1_OFFSET);
 
+		if (is_meson_g12b_cpu()) {
+			if (is_meson_rev_a()) {
+				writel(0x10000, REG_ETH_reg0_addr +
+					REG_ETH_REG1_OFFSET);
+			}
+		}
 		pin_ctl = devm_pinctrl_get_select
 			(&pdev->dev, "external_eth_pins");
 		return REG_ETH_reg0_addr;
