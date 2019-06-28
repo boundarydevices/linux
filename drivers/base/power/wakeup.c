@@ -1069,8 +1069,16 @@ static int wakeup_sources_stats_show(struct seq_file *m, void *unused)
 		"last_change\tprevent_suspend_time\n");
 
 	srcuidx = srcu_read_lock(&wakeup_srcu);
-	list_for_each_entry_rcu(ws, &wakeup_sources, entry)
+	list_for_each_entry_rcu(ws, &wakeup_sources, entry) {
 		print_wakeup_source_stats(m, ws);
+#ifdef CONFIG_AMLOGIC_MODIFY
+		if (ws->entry.next == ws->entry.prev) {
+			pr_err(" <%s> name:%s <%p, %p>\n", __func__,
+				ws->name,  ws->entry.next, ws->entry.prev);
+			break;
+		}
+#endif
+	}
 	srcu_read_unlock(&wakeup_srcu, srcuidx);
 
 	print_wakeup_source_stats(m, &deleted_ws);
