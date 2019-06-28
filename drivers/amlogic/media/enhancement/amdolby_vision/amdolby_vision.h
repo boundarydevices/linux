@@ -359,7 +359,7 @@ struct dm_lut_ipcore_s {
 
 /** @brief hdmi metadata for IPCORE 3 */
 struct md_reister_ipcore_3_s {
-	uint32_t raw_metadata[128];
+	uint32_t raw_metadata[512];
 	uint32_t size;
 };
 

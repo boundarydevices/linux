@@ -2407,19 +2407,30 @@ static int dolby_core3_set(
 				p_core3_dm_regs[i]);
 	/* from addr 0x18 */
 
-	count = md_count;
-	for (i = 0; i < count; i++) {
+	if (scramble_en) {
+		if (md_count > 204) {
+			pr_dolby_error("core3 metadata size %d > 204 !\n",
+				md_count);
+		} else {
+			count = md_count;
+			for (i = 0; i < count; i++) {
 #ifdef FORCE_HDMI_META
-		if ((i == 20) && (p_core3_md_regs[i] == 0x5140a3e))
-			VSYNC_WR_DV_REG(DOLBY_CORE3_REG_START + 0x24 + i,
-				(p_core3_md_regs[i] & 0xffffff00) | 0x80);
-		else
+				if ((i == 20) &&
+					(p_core3_md_regs[i] == 0x5140a3e))
+					VSYNC_WR_DV_REG(
+					DOLBY_CORE3_REG_START + 0x24 + i,
+					(p_core3_md_regs[i] &
+					0xffffff00) | 0x80);
+				else
 #endif
-		VSYNC_WR_DV_REG(DOLBY_CORE3_REG_START + 0x24 + i,
-			p_core3_md_regs[i]);
+				VSYNC_WR_DV_REG(DOLBY_CORE3_REG_START +
+					0x24 + i, p_core3_md_regs[i]);
+			}
+			for (; i < 30; i++)
+				VSYNC_WR_DV_REG(DOLBY_CORE3_REG_START +
+					0x24 + i, 0);
+		}
 	}
-	for (; i < 30; i++)
-		VSYNC_WR_DV_REG(DOLBY_CORE3_REG_START + 0x24 + i, 0);
 
 	/* from addr 0x90 */
 	/* core3 metadata program done */
@@ -5229,10 +5240,12 @@ int dolby_vision_parse_metadata(
 				&src_format,
 				&ret_flags);
 			if (ret_flags && req.dv_enhance_exist
-				&& (frame_count == 0))
+				&& (frame_count == 0)) {
 				vf_notify_provider_by_name("dvbldec",
 					VFRAME_EVENT_RECEIVER_DOLBY_BYPASS_EL,
 					(void *)&req);
+				pr_info("bypass mel\n");
+			}
 			if (ret_flags == 1) {
 				mel_flag = true;
 			}
@@ -5418,7 +5431,7 @@ int dolby_vision_parse_metadata(
 		&current_mode, check_format)) {
 		if (!dolby_vision_wait_init)
 			dolby_vision_set_toggle_flag(1);
-		pr_dolby_dbg("[dolby_vision_parse_metadata] output change from %d to %d\n",
+		pr_info("[dolby_vision_parse_metadata] output change from %d to %d\n",
 			dolby_vision_mode, current_mode);
 		dolby_vision_mode = current_mode;
 		if (is_dolby_vision_stb_mode())
