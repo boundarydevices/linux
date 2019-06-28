@@ -149,6 +149,7 @@ static int fsl_asrc_dma_hw_params(struct snd_soc_component *component,
 	u8 dir = tx ? OUT : IN;
 	dma_cap_mask_t mask;
 	int ret, width;
+	enum sdma_peripheral_type be_peripheral_type;
 
 	/* Fetch the Back-End dma_data from DPCM */
 	for_each_dpcm_be(rtd, stream, dpcm) {
@@ -221,8 +222,16 @@ static int fsl_asrc_dma_hw_params(struct snd_soc_component *component,
 		/* Get DMA request of Back-End */
 		tmp_data = tmp_chan->private;
 		pair->dma_data.dma_request = tmp_data->dma_request;
+		be_peripheral_type = tmp_data->peripheral_type;
 		if (!be_chan)
 			dma_release_channel(tmp_chan);
+
+		if (tx && (be_peripheral_type == IMX_DMATYPE_SSI_DUAL ||
+			   be_peripheral_type == IMX_DMATYPE_SPDIF))
+			pair->dma_data.dst_dualfifo = true;
+		if (!tx && (be_peripheral_type == IMX_DMATYPE_SSI_DUAL ||
+			    be_peripheral_type == IMX_DMATYPE_SPDIF))
+			pair->dma_data.src_dualfifo = true;
 
 		/* Get DMA request of Front-End */
 		tmp_chan = asrc->get_dma_channel(pair, dir);
