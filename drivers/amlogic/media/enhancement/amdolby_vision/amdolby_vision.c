@@ -4118,6 +4118,28 @@ bool is_dovi_frame(struct vframe_s *vf)
 }
 EXPORT_SYMBOL(is_dovi_frame);
 
+bool is_dovi_dual_layer_frame(struct vframe_s *vf)
+{
+	struct provider_aux_req_s req;
+
+	req.vf = vf;
+	req.bot_flag = 0;
+	req.aux_buf = NULL;
+	req.aux_size = 0;
+	req.dv_enhance_exist = 0;
+
+	if (vf->source_type == VFRAME_SOURCE_TYPE_OTHERS) {
+		vf_notify_provider_by_name("dvbldec",
+			VFRAME_EVENT_RECEIVER_GET_AUX_DATA,
+			(void *)&req);
+		if (req.dv_enhance_exist)
+			return true;
+	}
+	return false;
+}
+EXPORT_SYMBOL(is_dovi_dual_layer_frame);
+
+
 #define signal_color_primaries ((vf->signal_type >> 16) & 0xff)
 #define signal_transfer_characteristic ((vf->signal_type >> 8) & 0xff)
 static bool is_hdr10_frame(struct vframe_s *vf)

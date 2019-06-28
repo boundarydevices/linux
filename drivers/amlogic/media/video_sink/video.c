@@ -8833,7 +8833,7 @@ static void set_omx_pts(u32 *p)
 	}
 	/* kodi may render first frame, then drop dozens of frames */
 	if (set_from_hwc == 0 && omx_run == true && frame_num <= 2
-			&& not_reset == 0) {
+			&& not_reset == 0 && omx_pts_set_from_hwc_count > 0) {
 		pr_info("reset omx_run to false.\n");
 		omx_run = false;
 	}
@@ -8856,6 +8856,7 @@ static void set_omx_pts(u32 *p)
 	} else if (set_from_hwc == 0 && !omx_run) {
 		struct vframe_s *vf = NULL;
 		u32 donot_drop = 0;
+		u32 dovi_dual_layer = 0;
 
 		while (try_cnt--) {
 			vf = vf_peek(RECEIVER_NAME);
@@ -8865,6 +8866,8 @@ static void set_omx_pts(u32 *p)
 				pr_info("set_omx_pts ignore the omx %d frames drop for dv frame\n",
 					frame_num);
 				donot_drop = 1;
+				if (is_dovi_dual_layer_frame(vf))
+					dovi_dual_layer = 1;
 				break;
 			}
 #endif
@@ -8884,6 +8887,13 @@ static void set_omx_pts(u32 *p)
 			pr_info("reset omx_run to true.\n");
 			omx_run = true;
 		}
+#ifdef CONFIG_AMLOGIC_MEDIA_ENHANCEMENT_DOLBYVISION
+		if (dovi_dual_layer) {
+			omx_run = true;
+			omx_drop_done = true;
+			pr_info("dolby dual layer donot drop.\n");
+		}
+#endif
 	}
 	mutex_unlock(&omx_mutex);
 }
