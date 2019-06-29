@@ -688,11 +688,11 @@ static void set_hpll_od3_clk_div(int div_sel)
 		hd_set_reg_bits(P_HHI_VID_PLL_CLK_DIV, 0, 18, 1);
 		hd_set_reg_bits(P_HHI_VID_PLL_CLK_DIV, 0, 16, 2);
 		hd_set_reg_bits(P_HHI_VID_PLL_CLK_DIV, 0, 15, 1);
-		hd_set_reg_bits(P_HHI_VID_PLL_CLK_DIV, 0, 0, 14);
+		hd_set_reg_bits(P_HHI_VID_PLL_CLK_DIV, 0, 0, 15);
 
 		hd_set_reg_bits(P_HHI_VID_PLL_CLK_DIV, shift_sel, 16, 2);
 		hd_set_reg_bits(P_HHI_VID_PLL_CLK_DIV, 1, 15, 1);
-		hd_set_reg_bits(P_HHI_VID_PLL_CLK_DIV, shift_val, 0, 14);
+		hd_set_reg_bits(P_HHI_VID_PLL_CLK_DIV, shift_val, 0, 15);
 		hd_set_reg_bits(P_HHI_VID_PLL_CLK_DIV, 0, 15, 1);
 	}
 	/* Enable the final output clock */
