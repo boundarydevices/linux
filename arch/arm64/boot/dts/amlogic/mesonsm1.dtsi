@@ -1096,7 +1096,7 @@
 	galcore {
 		compatible = "amlogic, galcore";
 		dev_name = "galcore";
-		status = "disabled";
+		status = "okay";
 		clocks = <&clkc CLKID_VNANOQ_AXI_CLK_COMP>,
 			<&clkc CLKID_VNANOQ_CORE_CLK_COMP>;
 		clock-names = "cts_vipnanoq_axi_clk_composite",
@@ -1113,6 +1113,7 @@
 			0x0 0xffd01088 0x0 0x0
 			/*0xffd01088:reset reg*/
 			>;
+		nn_efuse = <0xff63003c 0x20>;
 	};
 	aocec: aocec {
 		compatible = "amlogic, aocec-sm1";

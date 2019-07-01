@@ -1129,6 +1129,109 @@
 		pinctrl-0 = <&c_uart_pins>;
 	};
 
+
+	pcie_A: pcieA@fc000000 {
+		compatible = "amlogic, amlogic-pcie-v2", "snps,dw-pcie";
+		reg = <0xfc000000 0x400000
+			0xff648000 0x2000
+			0xfc400000 0x200000
+			0xff646000 0x2000
+			0xffd01080 0x10>;
+		reg-names = "elbi", "cfg", "config", "phy", "reset";
+		interrupts = <0 221 0>;
+		#interrupt-cells = <1>;
+		bus-range = <0x0 0xff>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &gic GIC_SPI 223 IRQ_TYPE_EDGE_RISING>;
+		device_type = "pci";
+		ranges = <0x81000000 0 0 0xfc600000 0x0 0x100000
+			/* downstream I/O */
+			0x82000000 0xfc700000 0x0 0xfc700000 0 0x1900000>;
+			/* non-prefetchable memory */
+		num-lanes = <1>;
+		pcie-num = <1>;
+
+		clocks = <&clkc CLKID_PCIE0_GATE
+			&clkc CLKID_PCIE1
+			&clkc CLKID_PCIE0PHY>;
+		clock-names = "pcie_refpll",
+				"pcie",
+				"pcie_phy";
+		/*reset-gpio-type 0:Shared pad(no reset)1:OD pad2:Normal pad*/
+		gpio-type = <2>;
+		pcie-apb-rst-bit = <15>;
+		pcie-phy-rst-bit = <14>;
+		pcie-ctrl-a-rst-bit = <12>;
+		pwr-ctl = <1>;
+		pcie-ctrl-sleep-shift = <18>;
+		pcie-hhi-mem-pd-shift = <26>;
+		pcie-hhi-mem-pd-mask = <0xf>;
+		pcie-ctrl-iso-shift = <18>;
+		status = "disabled";
+	};
+
+	pcie_B: pcieB@fc000000 {
+		compatible = "amlogic, amlogic-pcie-v2", "snps,dw-pcie";
+		reg = <0xfA000000 0x400000
+			0xff65E000 0x2000
+			0xfA400000 0x200000
+			0xff65C000 0x2000
+			0xffd01080 0x10>;
+		reg-names = "elbi", "cfg", "config", "phy",
+				"reset";
+		interrupts = <0 229 0>;
+		#interrupt-cells = <1>;
+		bus-range = <0x0 0xff>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &gic GIC_SPI 231 IRQ_TYPE_EDGE_RISING>;
+		device_type = "pci";
+		ranges = <0x81000000 0 0 0xfA600000 0x0 0x100000
+			/* downstream I/O */
+			0x82000000 0xfA700000 0x0 0xfA700000 0 0x1900000>;
+			/* non-prefetchable memory */
+		num-lanes = <1>;
+		pcie-num = <1>;
+
+		clocks = <&clkc CLKID_PCIE1_GATE
+			&clkc CLKID_PCIE1
+			&clkc CLKID_PCIE1PHY>;
+		clock-names = "pcie_refpll",
+				"pcie",
+				"pcie_phy";
+		/*reset-gpio-type 0:Shared pad(no reset)1:OD pad2:Normal pad*/
+		gpio-type = <2>;
+		pcie-apb-rst-bit = <30>;
+		pcie-phy-rst-bit = <29>;
+		pcie-ctrl-a-rst-bit = <28>;
+		pwr-ctl = <1>;
+		pcie-ctrl-sleep-shift = <20>;
+		pcie-hhi-mem-pd-shift = <4>;
+		pcie-hhi-mem-pd-mask = <0xf>;
+		pcie-ctrl-iso-shift = <20>;
+		status = "disabled";
+	};
+	galcore {
+		compatible = "amlogic, galcore";
+		dev_name = "galcore";
+		status = "okay";
+		interrupts = <0 147 4>;
+		interrupt-names = "galcore";
+		reg = <0xff100000 0x800
+			/*reg base value:0xff100000 */
+			0xff000000 0x400000
+			/*Sram bse value:0xff000000*/
+			0xff63c118 0x0
+			0xff63c11c 0x0
+			/*0xff63c118,0xff63c11c :nanoq mem regs*/
+			0xffd01088 0x0
+			/*0xffd01088:reset reg*/
+			>;
+		nn_efuse = <0xff63003c 0x20>;
+	};
 	sd_emmc_c: emmc@ffe07000 {
 		status = "disabled";
 		compatible = "amlogic, meson-mmc-tl1";
