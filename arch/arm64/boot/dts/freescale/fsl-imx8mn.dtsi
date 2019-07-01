@@ -194,18 +194,22 @@
 
 	power-domains {
 		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
 
 		/* HSIOMIX */
 		hsio_pd: power-domain@0 {
 			compatible = "fsl,imx8mn-pm-domain";
-			domain-id = <0>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 			#power-domain-cells = <0>;
 			domain-name = "HSIO_PD";
 			clocks = <&clk IMX8MN_CLK_USB1_CTRL_ROOT>;
 
 			usb_otg1_pd: power-domain@2{
+				reg = <2>;
 				#power-domain-cells = <0>;
-				domain-id = <2>;
 				domain-name = "USB_OTG1_PD";
 			};
 		};
@@ -213,7 +217,7 @@
 		/* GPU2D&3D */
 		gpumix_pd: power-domain@4 {
 			compatible = "fsl,imx8mn-pm-domain";
-			domain-id = <4>;
+			reg = <4>;
 			#power-domain-cells = <0>;
 			domain-name = "GPUMIX_PD";
 			clocks = <&clk IMX8MN_CLK_GPU_CORE_ROOT>,
@@ -224,14 +228,16 @@
 
 		dispmix_pd: power-domain@9 {
 			compatible = "fsl,imx8mn-pm-domain";
-			domain-id = <9>;
+			reg = <9>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 			#power-domain-cells = <0>;
 			domain-name = "DISPMIX_PD";
 			clocks = <&clk IMX8MN_CLK_DISP_AXI_ROOT>,
 				 <&clk IMX8MN_CLK_DISP_APB_ROOT>;
 
 			mipi_pd: power-domain@10 {
-				domain-id = <10>;
+				reg = <10>;
 				#power-domain-cells = <0>;
 				domain-name = "MIPI_PD";
 			};
