@@ -292,12 +292,12 @@ static int st_asm330lhh_reg_access(struct iio_dev *iio_dev,
 		ret = sensor->hw->tf->write(sensor->hw->dev, reg, 1,
 					    (u8 *)&writeval);
 	} else {
-		sensor->hw->tf->read(sensor->hw->dev, reg, 1, (u8 *)readval);
-		ret = 0;
+		ret = sensor->hw->tf->read(sensor->hw->dev, reg, 1,
+					   (u8 *)readval);
 	}
 	mutex_unlock(&iio_dev->mlock);
 
-	return ret;
+	return (ret < 0) ? ret : 0;
 }
 #endif /* CONFIG_DEBUG_FS */
 
@@ -507,11 +507,12 @@ unlock:
 		if (err < 0)
 			return err;
 
-		delay = 1000000 / sensor->odr;
+		/* Use big delay for data valid because of drdy mask enabled */
+		delay = 10000000 / sensor->odr;
 		usleep_range(delay, 2 * delay);
 
 		err = st_asm330lhh_read_atomic(sensor->hw, addr, sizeof(data),
-					     (u8 *)&data);
+					       (u8 *)&data);
 		if (err < 0)
 			return err;
 
