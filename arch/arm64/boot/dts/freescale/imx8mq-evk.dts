@@ -721,5 +721,6 @@
 };
 
 &vpu {
+	regulator-supply = <&sw1c_reg>;
 	status = "okay";
 };
