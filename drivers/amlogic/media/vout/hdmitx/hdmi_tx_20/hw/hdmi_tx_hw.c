@@ -726,11 +726,8 @@ static void enc_vpu_bridge_reset(int mode)
 
 	wr_clk = (hd_read_reg(P_VPU_HDMI_SETTING) & 0xf00) >> 8;
 	if (mode) {
-		hd_write_reg(P_ENCP_VIDEO_EN, 0);
 		hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 0, 2);
 		hd_set_reg_bits(P_VPU_HDMI_SETTING, 0, 8, 4);
-		mdelay(1);
-		hd_write_reg(P_ENCP_VIDEO_EN, 1);
 		mdelay(1);
 		hd_set_reg_bits(P_VPU_HDMI_SETTING, wr_clk, 8, 4);
 		mdelay(1);
@@ -1080,7 +1077,6 @@ static void hdmi_tvenc4k2k_set(struct hdmitx_vidpara *param)
 			(0 << 12)
 	);
 	hd_set_reg_bits(P_VPU_HDMI_SETTING, 1, 1, 1);
-	hd_write_reg(P_ENCP_VIDEO_EN, 1);
 }
 
 static void hdmi_tvenc480i_set(struct hdmitx_vidpara *param)
@@ -1772,7 +1768,6 @@ static void hdmi_tvenc_set(struct hdmitx_vidpara *param)
 			(0 << 12)
 		);
 		hd_set_reg_bits(P_VPU_HDMI_SETTING, 1, 1, 1);
-		hd_write_reg(P_ENCP_VIDEO_EN, 1); /* Enable VENC */
 		break;
 	case HDMI_480p60_16x9_rpt:
 	case HDMI_576p50_16x9_rpt:
@@ -2207,11 +2202,11 @@ static int hdmitx_set_dispmode(struct hdmitx_dev *hdev)
 
 	hdmitx_set_enc_hw(hdev);
 
-	hdmitx_set_hw(hdev);
-
 	/* For 3D, enable phy by SystemControl at last step */
 	if ((!hdev->flag_3dfp) && (!hdev->flag_3dtb) && (!hdev->flag_3dss))
 		hdmitx_set_phy(hdev);
+
+	hdmitx_set_hw(hdev);
 
 	return 0;
 }
@@ -5957,7 +5952,6 @@ static void config_hdmi20_tx(enum hdmi_vic vic,
 	/* Reset pulse */
 	hdmitx_rd_check_reg(HDMITX_DWC_MC_LOCKONCLOCK, 0xff, 0x9f);
 
-	hd_write_reg(P_ENCP_VIDEO_EN, 0);
 	hdmitx_wr_reg(HDMITX_DWC_MC_CLKDIS, 0xdf);
 	hdmitx_wr_reg(HDMITX_DWC_MC_SWRSTZREQ, 0);
 	mdelay(10);
@@ -5975,8 +5969,7 @@ static void config_hdmi20_tx(enum hdmi_vic vic,
 		hdmitx_rd_reg(HDMITX_DWC_FC_VSYNCINWIDTH));
 
 	hdmitx_wr_reg(HDMITX_DWC_MC_CLKDIS, 0);
-	hd_write_reg(P_ENCP_VIDEO_EN, 0xff);
-
+	hd_write_reg(P_ENCP_VIDEO_EN, 1); /* enable it finially */
 	hdmitx_set_reg_bits(HDMITX_DWC_FC_INVIDCONF, 0, 3, 1);
 	mdelay(1);
 	hdmitx_set_reg_bits(HDMITX_DWC_FC_INVIDCONF, 1, 3, 1);
