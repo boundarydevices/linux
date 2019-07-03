@@ -1111,13 +1111,13 @@ static void sec_mipi_dsim_config_dpi(struct sec_mipi_dsim *dsim)
 		if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_HSE)
 			config |= CONFIG_HSEDISABLEMODE;
 
-		if (dsim->mode_flags & (MIPI_DSI_MODE_VIDEO_HFP | MIPI_DSI_MODE_VIDEO_BURST))
+		if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_HFP)
 			config |= CONFIG_HFPDISABLEMODE;
 
-		if (dsim->mode_flags & (MIPI_DSI_MODE_VIDEO_HBP | MIPI_DSI_MODE_VIDEO_BURST))
+		if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_HBP)
 			config |= CONFIG_HBPDISABLEMODE;
 
-		if (dsim->mode_flags & (MIPI_DSI_MODE_VIDEO_HSA | MIPI_DSI_MODE_VIDEO_BURST))
+		if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_HSA)
 			config |= CONFIG_HSADISABLEMODE;
 	}
 
