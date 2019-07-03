@@ -70,6 +70,15 @@
 			reg = <0x0 0x05300000 0x0 0x2000000>;
 			no-map;
 		};
+
+		logo_reserved:linux,meson-fb {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x800000>;
+			alignment = <0x0 0x400000>;
+			alloc-ranges = <0x0 0x7f800000 0x0 0x800000>;
+		};
+
 		ion_reserved:linux,ion-dev {
 			compatible = "shared-dma-pool";
 			reusable;
@@ -751,6 +760,7 @@
 
 	meson-fb {
 		compatible = "amlogic, meson-gxm";
+		memory-region = <&logo_reserved>;
 		dev_name = "meson-fb";
 		status = "okay";
 		interrupts = <0 3 1
@@ -764,7 +774,7 @@
 		display_size_default = <1920 1080 1920 3240 32>;
 		/*1920*1080*4*3 = 0x17BB000*/
 		mem_alloc = <1>;
-		logo_addr = "0x7dc00000";
+		logo_addr = "0x7f800000";
 	};
 	ge2d {
 		compatible = "amlogic, ge2d-gxm";
