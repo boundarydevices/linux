@@ -1,0 +1,14 @@
+#include <dt-bindings/display/simple_panel_mipi_cmds.h>
+
+/ {
+	aliases {
+		mipi_cmds_m101nwwb = &mipi_cmds_m101nwwb;
+	};
+
+	mipi_cmds_m101nwwb: mipi-cmds-m101nwwb {
+		alias = <&mipi_cmds_m101nwwb>;
+		mode-video-hbp-disable;
+		mode-video-hfp-disable;
+		mode-video-hsa-disable;
+	};
+};
