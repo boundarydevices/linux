@@ -60,6 +60,7 @@ struct goodix_ts_data {
 	atomic_t open_count;
 	/* Protects power management calls and access to suspended flag */
 	struct mutex mutex;
+	struct mutex irq_enable_mutex;
 	int irq_active;
 	int drm_disabled_irq;
 };
@@ -365,18 +366,22 @@ static irqreturn_t goodix_ts_irq_handler(int irq, void *dev_id)
 
 static void goodix_disable_irq(struct goodix_ts_data *ts)
 {
+	mutex_lock(&ts->irq_enable_mutex);
 	if (ts->irq_active) {
 		ts->irq_active = 0;
 		disable_irq(ts->client->irq);
 	}
+	mutex_unlock(&ts->irq_enable_mutex);
 }
 
 static int goodix_enable_irq(struct goodix_ts_data *ts)
 {
+	mutex_lock(&ts->irq_enable_mutex);
 	if (!ts->irq_active) {
 		enable_irq(ts->client->irq);
 		ts->irq_active = 1;
 	}
+	mutex_unlock(&ts->irq_enable_mutex);
 	return 0;
 }
 
@@ -978,18 +983,74 @@ static int goodix_configure_dev(struct goodix_ts_data *ts)
 	return 0;
 }
 
+static int ts_drm_event(struct notifier_block *nb, unsigned long event, void *data)
+{
+	struct drm_device *drm_dev = data;
+	struct device_node *node = drm_dev->dev->of_node;
+	struct goodix_ts_data *ts = container_of(nb, struct goodix_ts_data, drmnb);
+	struct device *dev = &ts->client->dev;
+
+	dev_dbg(dev, "%s: event %lx\n", __func__, event);
+
+	if (node != ts->disp_node) {
+		dev_info(dev, "%s: event %lx, (%s)%p (%s)%p\n", __func__, event, node->name, node, ts->disp_node->name, ts->disp_node);
+		return 0;
+	}
+
+	switch (event) {
+	case DRM_MODE_DPMS_ON:
+		dev_dbg(dev, "%s: ON %lx\n", __func__, event);
+		if (ts->drm_disabled_irq) {
+			ts->drm_disabled_irq = 0;
+			goodix_enable_irq(ts);
+		}
+		break;
+	case DRM_MODE_DPMS_STANDBY:
+		break;
+	case DRM_MODE_DPMS_SUSPEND:
+	case DRM_MODE_DPMS_OFF:
+		dev_dbg(dev, "%s: OFF %lx\n", __func__, event);
+		if (!ts->drm_disabled_irq) {
+			ts->drm_disabled_irq = 1;
+			goodix_disable_irq(ts);
+		}
+		break;
+	default:
+		dev_info(dev, "%s: unknown event %lx\n", __func__, event);
+	}
+
+	return 0;
+}
+
 static int goodix_finish_setup(struct goodix_ts_data *ts)
 {
 	int error;
+        struct device_node *np = ts->client->dev.of_node;
 
 	error = goodix_request_input_dev(ts);
 	if (error)
 		return error;
 
 	ts->irq_flags = goodix_irq_flags[ts->int_trigger_type] | IRQF_ONESHOT;
+	irq_set_status_flags(ts->client->irq, IRQ_NOAUTOEN);
+	error = devm_request_threaded_irq(&ts->client->dev, ts->client->irq,
+					 NULL, goodix_ts_irq_handler,
+					 ts->irq_flags, ts->client->name, ts);
+	if (error < 0) {
+		dev_err(&ts->client->dev, "request_threaded_irq failed(%d)\n", error);
+		return error;
+	}
+	ts->disp_node = of_parse_phandle(np, "display", 0);
+	if (ts->disp_node) {
+		ts->drmnb.notifier_call = ts_drm_event;
+		error = drm_register_client(&ts->drmnb);
+		if (error < 0)
+			dev_err(&ts->client->dev, "drm_register_client failed(%d)\n", error);
+	}
+
 	error = goodix_enable_irq(ts);
 	if (error) {
-		dev_err(&ts->client->dev, "request IRQ failed: %d\n", error);
+		dev_err(&ts->client->dev, "enable IRQ failed: %d\n", error);
 		return error;
 	}
 
@@ -1046,49 +1107,9 @@ err_release_cfg:
 	complete_all(&ts->firmware_loading_complete);
 }
 
-static int ts_drm_event(struct notifier_block *nb, unsigned long event, void *data)
-{
-	struct drm_device *drm_dev = data;
-	struct device_node *node = drm_dev->dev->of_node;
-	struct goodix_ts_data *ts = container_of(nb, struct goodix_ts_data, drmnb);
-	struct device *dev = &ts->client->dev;
-
-	dev_dbg(dev, "%s: event %lx\n", __func__, event);
-
-	if (node != ts->disp_node) {
-		dev_info(dev, "%s: event %lx, (%s)%p (%s)%p\n", __func__, event, node->name, node, ts->disp_node->name, ts->disp_node);
-		return 0;
-	}
-
-	switch (event) {
-	case DRM_MODE_DPMS_ON:
-		dev_dbg(dev, "%s: ON %lx\n", __func__, event);
-		if (ts->drm_disabled_irq) {
-			ts->drm_disabled_irq = 0;
-			goodix_enable_irq(ts);
-		}
-		break;
-	case DRM_MODE_DPMS_STANDBY:
-		break;
-	case DRM_MODE_DPMS_SUSPEND:
-	case DRM_MODE_DPMS_OFF:
-		dev_dbg(dev, "%s: OFF %lx\n", __func__, event);
-		if (!ts->drm_disabled_irq) {
-			ts->drm_disabled_irq = 1;
-			goodix_disable_irq(ts);
-		}
-		break;
-	default:
-		dev_info(dev, "%s: unknown event %lx\n", __func__, event);
-	}
-
-	return 0;
-}
-
 static int goodix_ts_probe(struct i2c_client *client,
 			   const struct i2c_device_id *id)
 {
-        struct device_node *np = client->dev.of_node;
 	struct goodix_ts_data *ts;
 	int error, esd_timeout;
 
@@ -1108,6 +1129,7 @@ static int goodix_ts_probe(struct i2c_client *client,
 	init_completion(&ts->firmware_loading_complete);
 	INIT_DELAYED_WORK(&ts->esd_work, goodix_esd_work);
 	mutex_init(&ts->mutex);
+	mutex_init(&ts->irq_enable_mutex);
 
 	error = goodix_get_gpio_config(ts);
 	if (error)
@@ -1171,8 +1193,6 @@ static int goodix_ts_probe(struct i2c_client *client,
 				error);
 			goto err_sysfs_remove_group;
 		}
-
-		return 0;
 	} else {
 		error = goodix_configure_dev(ts);
 		if (error)
@@ -1180,22 +1200,6 @@ static int goodix_ts_probe(struct i2c_client *client,
 		error = goodix_finish_setup(ts);
 		if (error)
 			return error;
-	}
-	irq_set_status_flags(client->irq, IRQ_NOAUTOEN);
-	error = devm_request_threaded_irq(&ts->client->dev, ts->client->irq,
-					 NULL, goodix_ts_irq_handler,
-					 ts->irq_flags, ts->client->name, ts);
-	if (error < 0) {
-		dev_err(&client->dev, "request_threaded_irq failed(%d)\n", error);
-		goto err_sysfs_remove_group;
-	}
-
-	ts->disp_node = of_parse_phandle(np, "display", 0);
-	if (ts->disp_node) {
-		ts->drmnb.notifier_call = ts_drm_event;
-		error = drm_register_client(&ts->drmnb);
-		if (error < 0)
-			dev_err(&client->dev, "drm_register_client failed(%d)\n", error);
 	}
 	return 0;
 
@@ -1209,6 +1213,7 @@ static int goodix_ts_remove(struct i2c_client *client)
 {
 	struct goodix_ts_data *ts = i2c_get_clientdata(client);
 
+	goodix_disable_irq(ts);
 	if (!ts->gpiod_int || !ts->gpiod_rst)
 		return 0;
 
