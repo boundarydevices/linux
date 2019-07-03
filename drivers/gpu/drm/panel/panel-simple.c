@@ -516,7 +516,8 @@ void check_for_cmds(struct device_node *np, const char *dt_name, struct mipi_cmd
 	mc->length = data_len;
 }
 
-static void init_common(struct device_node *np, struct panel_desc *ds, struct drm_display_mode *dm)
+static void init_common(struct device_node *np, struct panel_desc *ds,
+		struct drm_display_mode *dm, struct mipi_dsi_device *dsi)
 {
 	of_property_read_u32(np, "delay-power-up", &ds->delay.power_up);
 	of_property_read_u32(np, "delay-prepare", &ds->delay.prepare);
@@ -525,9 +526,18 @@ static void init_common(struct device_node *np, struct panel_desc *ds, struct dr
 	of_property_read_u32(np, "delay-unprepare", &ds->delay.unprepare);
 	of_property_read_u32(np, "delay-power-down", &ds->delay.power_down);
 	of_property_read_u32(np, "min-hs-clock-multiple", &dm->min_hs_clock_multiple);
+	if (dsi) {
+		if (of_property_read_bool(np, "mode-video-hfp-disable"))
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_HFP;
+		if (of_property_read_bool(np, "mode-video-hbp-disable"))
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_HBP;
+		if (of_property_read_bool(np, "mode-video-hsa-disable"))
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_HSA;
+	}
 }
 
-static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
+static int panel_simple_probe(struct device *dev, const struct panel_desc *desc,
+		struct mipi_dsi_device *dsi)
 {
 	struct device_node *backlight, *ddc;
 	struct panel_simple *panel;
@@ -601,7 +611,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 			dev_err(dev, "unknown bus-format %s\n", bf);
 			return -EINVAL;
 		}
-		init_common(np, ds, dm);
+		init_common(np, ds, dm, dsi);
 		of_property_read_u32(np, "bits-per-color", &ds->bpc);
 		ds->modes = dm;
 		ds->num_modes = 1;
@@ -614,7 +624,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 				       &panel->mipi_cmds_enable);
 			check_for_cmds(cmds_np, "mipi-cmds-disable",
 				       &panel->mipi_cmds_disable);
-			init_common(cmds_np, ds, dm);
+			init_common(cmds_np, ds, dm, dsi);
 		}
 		pr_info("%s: delay %d %d, %d %d\n", __func__,
 			ds->delay.prepare, ds->delay.enable,
@@ -2986,7 +2996,7 @@ static int panel_simple_platform_probe(struct platform_device *pdev)
 	if (!id)
 		return -ENODEV;
 
-	return panel_simple_probe(&pdev->dev, id->data);
+	return panel_simple_probe(&pdev->dev, id->data, NULL);
 }
 
 static int panel_simple_platform_remove(struct platform_device *pdev)
@@ -3240,7 +3250,7 @@ static int panel_simple_dsi_probe(struct mipi_dsi_device *dsi)
 		if (of_property_read_bool(np, "mode-video-sync-pulse"))
 			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_SYNC_PULSE;
 	}
-	err = panel_simple_probe(&dsi->dev, pd);
+	err = panel_simple_probe(&dsi->dev, pd, dsi);
 	if (err < 0)
 		return err;
 
