@@ -94,5 +94,7 @@
 			DELAY(20)
 			DCS_S0P(0x10)		/* Enter sleep */
 		>;
+		mode-video-hfp-disable;
+		mode-video-hsa-disable;
 	};
 };
