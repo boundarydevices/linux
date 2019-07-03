@@ -9,6 +9,7 @@
 #include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
 #include "panel-lcm-jm430.dtsi"
+#include "panel-m101nwwb.dtsi"
 #include "panel-com50h5n03ulc.dtsi"
 
 &iomuxc {
@@ -500,7 +501,7 @@
 		mipi_cmds_lcm_jm430 = &mipi_cmds_lcm_jm430;
 		mipi_cmds_ltk0680ytmdb = &mipi_cmds_ltk0680ytmdb;
 		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
-		mipi_cmds_m101nwwb = &mipi_cmds_ltk080a60a004t;		/* Same commands work for both */
+		mipi_cmds_m101nwwb = &mipi_cmds_m101nwwb;
 		mipi_dsi = &mipi_dsi;
 		mipi_to_lvds = &mipi_to_lvds;
 		pinctrl_com50h5n03ulc = &pinctrl_mipi_com50h5n03ulc;
@@ -515,11 +516,12 @@
 		p2 = <&mipi_cmds_lcm_jm430>;
 		p3 = <&mipi_cmds_ltk0680ytmdb>;
 		p4 = <&mipi_cmds_ltk080a60a004t>;
-		p5 = <&mipi_to_lvds>;
-		p6 = <&pinctrl_mipi_com50h5n03ulc>;
-		p7 = <&pinctrl_mipi_lcm_jm430>;
-		p8 = <&pinctrl_mipi_ltk0680ytmdb>;
-		p9 = <&pinctrl_mipi_ltk080a60a004t>;
+		p5 = <&mipi_cmds_m101nwwb>;
+		p6 = <&mipi_to_lvds>;
+		p7 = <&pinctrl_mipi_com50h5n03ulc>;
+		p8 = <&pinctrl_mipi_lcm_jm430>;
+		p9 = <&pinctrl_mipi_ltk0680ytmdb>;
+		p10 = <&pinctrl_mipi_ltk080a60a004t>;
 	};
 
 	backlight_mipi: backlight-mipi {
