@@ -748,8 +748,10 @@ void adaptive_cue_adjust(unsigned int frame_diff, unsigned int field_diff)
 	struct CUE_PARM_s *pcue_parm = nr_param.pcue_parm;
 	unsigned int mask1, mask2;
 
-	if (is_meson_tl1_cpu() || is_meson_tm2_cpu()) {
+	//if (is_meson_tl1_cpu() || is_meson_tm2_cpu()) {
+	if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12B)) {
 		/*value from VLSI(yanling.liu) 2018-12-07: */
+		/*after G12B need new setting 2019-06-24: */
 		mask1 = 0x50332;
 		mask2 = 0x00054357;
 	} else { /*ori value*/

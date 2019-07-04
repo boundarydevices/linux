@@ -6830,6 +6830,8 @@ static void di_reg_process_irq(void)
 			di_printk_flag = 1;
 
 		di_print("%s: vframe come => di_init_buf\n", __func__);
+		if (cpu_after_eq(MESON_CPU_MAJOR_ID_GXLX))
+			di_wr_cue_int();
 
 		if (is_progressive(vframe) && (prog_proc_config & 0x10)) {
 #if (!(defined RUN_DI_PROCESS_IN_IRQ)) || (defined ENABLE_SPIN_LOCK_ALWAYS)

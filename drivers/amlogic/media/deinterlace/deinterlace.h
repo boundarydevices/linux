@@ -219,6 +219,7 @@ extern bool is_vsync_rdma_enable(void);
 #define DI_VPU_CLKB_SET 0x8
 
 #define TABLE_LEN_MAX 10000
+#define TABLE_FLG_END	(0xfffffffe)
 
 struct di_dev_s {
 	dev_t			   devt;
@@ -449,6 +450,9 @@ struct vframe_s **get_di_vframe_in(void);
 
 extern s32 di_request_afbc_hw(u8 id, bool on);
 u32 di_requeset_afbc(u32 onoff);
+/***********************/
+extern bool di_wr_cue_int(void);
+extern int reg_cue_int_show(struct seq_file *seq, void *v);
 
 /*---------------------*/
 

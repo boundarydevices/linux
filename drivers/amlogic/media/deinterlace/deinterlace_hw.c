@@ -3959,3 +3959,174 @@ module_param_named(line_num_post_frst, line_num_post_frst, ushort, 0644);
 module_param_named(line_num_pre_frst, line_num_pre_frst, ushort, 0644);
 module_param_named(pd22_flg_calc_en, pd22_flg_calc_en, bool, 0644);
 #endif
+
+/**********************/
+/* register table     */
+/**********************/
+struct reg_t {
+	unsigned int add;
+	unsigned int bit;
+	unsigned int wid;
+//	unsigned int id;
+	unsigned int df_val;
+	char *name;
+	char *bname;
+	char *info;
+};
+struct reg_acc {
+	void (*wr)(unsigned int adr, unsigned int val);
+	unsigned int (*rd)(unsigned int adr);
+	unsigned int (*bwr)(unsigned int adr, unsigned int val,
+			unsigned int start, unsigned int len);
+	unsigned int (*brd)(unsigned int adr, unsigned int start,
+			unsigned int len);
+
+};
+
+static unsigned int get_reg_bits(unsigned int val, unsigned int bstart,
+			unsigned int bw)
+{
+	//unsigned int valori;
+
+	//PR_INFO("%s\n", __func__);
+	//valori = reg_read(add);
+	//PR_INFO("read:0x%x,0x%x\n", add,valori);
+	return((val &
+		(((1L << bw) - 1) << bstart)) >> (bstart));
+
+}
+
+static void dbg_reg_tab(struct seq_file *s, const struct reg_t *pRegTab)
+{
+	struct reg_t creg;
+	int i;
+	unsigned int l_add;
+	unsigned int val32 = 1, val;
+	char *bname;
+	char *info;
+
+	i = 0;
+	l_add = 0;
+	creg = pRegTab[i];
+
+	do {
+		if (creg.add != l_add) {
+			val32 = Rd(creg.add);		/*RD*/
+			seq_printf(s, "add:0x%x = 0x%08x, %s\n",
+				creg.add, val32, creg.name);
+			l_add = creg.add;
+		}
+		val = get_reg_bits(val32, creg.bit, creg.wid);	/*RD_B*/
+
+		if (creg.bname)
+			bname = creg.bname;
+		else
+			bname = "";
+		if (creg.info)
+			info = creg.info;
+		else
+			info = "";
+
+		seq_printf(s, "\tbit[%d,%d]:\t0x%x[%d]:\t%s:\t%s\n",
+			creg.bit, creg.wid, val, val, bname, info);
+
+		i++;
+		creg = pRegTab[i];
+		if (i > TABLE_LEN_MAX) {
+			pr_info("warn: too long, stop\n");
+			break;
+		}
+	} while (creg.add != TABLE_FLG_END);
+}
+
+
+static const struct reg_t rtab_cue_int[] = {
+	//-----
+	{NR2_CUE_CON_DIF0, 0, 32, 0x1400, "NR2_CUE_CON_DIF0",
+			NULL,
+			NULL},
+	{NR2_CUE_CON_DIF1, 0, 32, 0x80064, "NR2_CUE_CON_DIF1",
+			NULL,
+			NULL},
+	{NR2_CUE_CON_DIF2, 0, 32, 0x80064, "NR2_CUE_CON_DIF2",
+			NULL,
+			NULL},
+	{NR2_CUE_CON_DIF3, 0, 32, 0x80a0a, "NR2_CUE_CON_DIF3",
+			NULL,
+			NULL},
+	{NR2_CUE_PRG_DIF, 0, 32, 0x80a0a, "NR2_CUE_PRG_DIF",
+			NULL,
+			NULL},
+	{TABLE_FLG_END, 0, 0, 0, "end", "end", ""},
+	//-----
+};
+/************************************************
+ * register table
+ ************************************************/
+static bool di_g_rtab_cue(const struct reg_t **tab, unsigned int *tabsize)
+{
+	*tab = &rtab_cue_int[0];
+	*tabsize = ARRAY_SIZE(rtab_cue_int);
+
+	return true;
+}
+static unsigned int dim_reg_read(unsigned int addr)
+{
+	return aml_read_vcbus(addr);
+}
+static const struct reg_acc di_pre_regset = {
+	.wr = DI_Wr,
+	.rd = dim_reg_read,
+	.bwr = RDMA_WR_BITS,
+	.brd = RDMA_RD_BITS,
+};
+
+static bool di_wr_tab(const struct reg_acc *ops,
+	const struct reg_t *ptab, unsigned int tabsize)
+{
+	int i;
+	const struct reg_t *pl;
+
+	pl = ptab;
+
+	if (!ops
+		|| !tabsize
+		|| !ptab)
+		return false;
+
+	for (i = 0; i < tabsize; i++) {
+		if (pl->add == TABLE_FLG_END
+			|| i > TABLE_LEN_MAX) {
+			break;
+		}
+
+		if (pl->wid == 32)
+			ops->wr(pl->add, pl->df_val);
+		else
+			ops->bwr(pl->add, pl->df_val, pl->bit, pl->wid);
+
+		pl++;
+	}
+
+	return true;
+}
+
+bool di_wr_cue_int(void)
+{
+	const struct reg_t *ptab;
+	unsigned int tabsize;
+
+	di_g_rtab_cue(&ptab, &tabsize);
+	di_wr_tab(&di_pre_regset,
+		ptab,
+		tabsize);
+	di_pr_info("%s:finish\n", __func__);
+
+	return true;
+}
+int reg_cue_int_show(struct seq_file *seq, void *v)
+{
+	dbg_reg_tab(seq, &rtab_cue_int[0]);
+	return 0;
+}
+

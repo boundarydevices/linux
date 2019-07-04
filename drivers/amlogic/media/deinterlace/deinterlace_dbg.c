@@ -1248,6 +1248,7 @@ DEFINE_SHOW_DI(seq_file_di_state);
 DEFINE_SHOW_DI(seq_file_dump_di_reg);
 DEFINE_SHOW_DI(seq_file_dump_mif_size_state);
 DEFINE_SHOW_DI(seq_file_afbc);
+DEFINE_SHOW_DI(reg_cue_int);
 
 struct di_debugfs_files_t {
 	const char *name;
@@ -1260,6 +1261,7 @@ static struct di_debugfs_files_t di_debugfs_files[] = {
 	{"dumpreg", S_IFREG | 0644, &seq_file_dump_di_reg_fops},
 	{"dumpmif", S_IFREG | 0644, &seq_file_dump_mif_size_state_fops},
 	{"dumpafbc", S_IFREG | 0644, &seq_file_afbc_fops},
+	{"reg_cue", S_IFREG | 0644, &reg_cue_int_fops},
 };
 
 void di_debugfs_init(void)
