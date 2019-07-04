@@ -250,9 +250,17 @@ static int parse_para(const char *para, int para_num, int *result)
 		return 0;
 
 	params = kstrdup(para, GFP_KERNEL);
+	if (!params) {
+		PPMGRDRV_INFO("para kstrdup failed\n");
+		return 0;
+	}
 	params_base = params;
 	token = params;
 	len = strlen(token);
+	if (len <= 0) {
+		PPMGRDRV_INFO("token is NULL\n");
+		return 0;
+	}
 	do {
 		token = strsep(&params, " ");
 		while (token && (isspace(*token)
@@ -582,6 +590,10 @@ static ssize_t dump_path_write(struct class *cla, struct class_attribute *attr,
 	char *tmp;
 
 	tmp = kstrdup(buf, GFP_KERNEL);
+	if (!tmp) {
+		PPMGRDRV_INFO("buf kstrdup failed\n");
+		return 0;
+	}
 	strcpy(ppmgr_device.dump_path, tmp);
 
 	return count;
@@ -597,8 +609,12 @@ static ssize_t disp_read(struct class *cla, struct class_attribute *attr,
 static void set_disp_para(const char *para)
 {
 	int parsed[2];
+	int ret;
 
-	if (likely(parse_para(para, 2, parsed) == 2)) {
+	ret = parse_para(para, 2, parsed);
+	if (ret <= 0)
+		return;
+	if (likely(ret == 2)) {
 		int w, h;
 
 		w = parsed[0];
@@ -614,6 +630,11 @@ static void set_disp_para(const char *para)
 static ssize_t disp_write(struct class *cla, struct class_attribute *attr,
 				const char *buf, size_t count)
 {
+	int buflen;
+
+	buflen = strlen(buf);
+	if (buflen <= 0)
+		return 0;
 	set_disp_para(buf);
 	return count;
 }
@@ -662,8 +683,13 @@ static ssize_t ppscaler_write(struct class *cla, struct class_attribute *attr,
 static void set_ppscaler_para(const char *para)
 {
 	int parsed[5];
+	int ret;
 
-	if (likely(parse_para(para, 5, parsed) == 5)) {
+	ret = parse_para(para, 5, parsed);
+	if (ret <= 0)
+		return;
+
+	if (likely(ret == 5)) {
 		ppmgr_device.scale_h_start = parsed[0];
 		ppmgr_device.scale_v_start = parsed[1];
 		ppmgr_device.scale_h_end = parsed[2];
@@ -695,6 +721,11 @@ static ssize_t ppscaler_rect_write(struct class *cla,
 					struct class_attribute *attr,
 					const char *buf, size_t count)
 {
+	int buflen;
+
+	buflen = strlen(buf);
+	if (buflen <= 0)
+		return 0;
 	set_ppscaler_para(buf);
 	return count;
 }
@@ -1239,8 +1270,12 @@ static ssize_t write_scale_width(struct class *cla,
 static void set_cut_window(const char *para)
 {
 	int parsed[2];
+	int ret;
 
-	if (likely(parse_para(para, 2, parsed) == 2)) {
+	ret = parse_para(para, 2, parsed);
+	if (ret <= 0)
+		return;
+	if (likely(ret == 2)) {
 		int top, left;
 
 		top = parsed[0];
@@ -1262,6 +1297,8 @@ static ssize_t cut_win_store(
 	struct class *cla, struct class_attribute *attr, const char *buf,
 	size_t count)
 {
+	if (strlen(buf) <= 0)
+		return 0;
 	set_cut_window(buf);
 	return strnlen(buf, count);
 }
@@ -1771,7 +1808,7 @@ static int ppmgr_driver_probe(struct platform_device *pdev)
 {
 	s32 r;
 
-	PPMGRDRV_ERR("ppmgr_driver_probe called\n");
+	PPMGRDRV_INFO("ppmgr_driver_probe called\n");
 	r = of_reserved_mem_device_init(&pdev->dev);
 	ppmgr_device.pdev = pdev;
 	init_ppmgr_device();
