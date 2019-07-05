@@ -49,7 +49,7 @@ static int card_init(struct snd_soc_pcm_runtime *rtd) {
 				RT5645_DA_MONO_R_FILTER,
 				RT5645_CLK_SEL_I2S1_ASRC);
 
-	ret = snd_soc_dai_set_sysclk(rtd->codec_dai, RT5645_SCLK_S_MCLK,
+	ret = snd_soc_dai_set_sysclk(rtd->codec_dai, RT5645_SCLK_S_PLL1,
 				     codec_clock, SND_SOC_CLOCK_IN);
 	if (ret < 0) {
 		dev_err(rtd->card->dev, "can't set sysclk: %d\n", ret);
