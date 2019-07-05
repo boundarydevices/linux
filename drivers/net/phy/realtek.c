@@ -132,20 +132,23 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 
 	phy_write(phydev, 0x11, reg);
 #ifdef CONFIG_AMLOGIC_ETH_PRIVE
+	/*switch page d08*/
+	phy_write(phydev, RTL8211F_PAGE_SELECT, 0xd08);
+	reg = phy_read(phydev, 0x15);
 	if (external_rx_delay) {
-	/*add 2ns delay for rx*/
-		phy_write(phydev, RTL8211F_PAGE_SELECT, 0xd08);
-		reg = phy_read(phydev, 0x15);
-		reg = phy_write(phydev, 0x15, reg | 0x8);
-		phy_write(phydev, RTL8211F_PAGE_SELECT, 0x0);
+		/*add 2ns delay for rx*/
+		phy_write(phydev, 0x15, reg | 0x8);
+	} else {
+		/*del 2ns rx*/
+		phy_write(phydev, 0x15, reg & 0xfff7);
 	}
+
 	if (external_tx_delay) {
-	/*add 2ns delay for tx*/
-		phy_write(phydev, RTL8211F_PAGE_SELECT, 0xd08);
 		reg = phy_read(phydev, 0x11);
-		reg = phy_write(phydev, 0x11, reg | 0x100);
-		phy_write(phydev, RTL8211F_PAGE_SELECT, 0x0);
+		phy_write(phydev, 0x11, reg | 0x100);
 	}
+	phy_write(phydev, RTL8211F_PAGE_SELECT, 0x0);
+
 	/*disable clk_out pin 35 set page 0x0a43 reg25.0 as 0*/
 	phy_write(phydev, RTL8211F_PAGE_SELECT, 0x0a43);
 	reg = phy_read(phydev, 0x19);
