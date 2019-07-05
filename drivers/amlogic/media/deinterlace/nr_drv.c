@@ -382,6 +382,7 @@ static void cue_config(struct CUE_PARM_s *pcue_parm, unsigned short field_type)
 {
 	pcue_parm->field_count = 8;
 	pcue_parm->frame_count = 8;
+	pcue_parm->field_count1 = 8;
 	if (field_type != VIDTYPE_PROGRESSIVE) {
 		DI_Wr_reg_bits(NR2_CUE_PRG_DIF, 0, 20, 1);
 		DI_Wr_reg_bits(DI_NR_CTRL0, 0, 26, 1);
@@ -772,10 +773,23 @@ void adaptive_cue_adjust(unsigned int frame_diff, unsigned int field_diff)
 			pcue_parm->field_count = pcue_parm->field_count > 0 ?
 				(pcue_parm->field_count - 1) : 0;
 		}
+		/*--------------------------*/
+		/*patch from vlsi-yanling to fix tv-7314 cue cause sawtooth*/
+		if (field_diff < pcue_parm->glb_mot_fieldthr ||
+			field_diff > pcue_parm->glb_mot_fieldthr1)
+			pcue_parm->field_count1 = pcue_parm->field_count1 + 1;
+		else if (pcue_parm->field_count1 > 8) {
+			pcue_parm->field_count1 = pcue_parm->field_count1 > 0 ?
+				(pcue_parm->field_count1 - 1) : 0;
+		}
+		/*--------------------------*/
 	}
 
 	if (cue_glb_mot_check_en) {
-		if (pcue_parm->frame_count > (pcue_parm->glb_mot_fieldnum - 6))
+		if (pcue_parm->frame_count >
+			(pcue_parm->glb_mot_fieldnum - 6) &&
+			pcue_parm->field_count1 >
+			(pcue_parm->glb_mot_fieldnum - 6))
 			cue_en = true;
 		else
 			cue_en = false;
@@ -1092,8 +1106,10 @@ static void cue_param_init(struct CUE_PARM_s *cue_parm_p)
 	cue_parm_p->glb_mot_framethr = 1000;
 	cue_parm_p->glb_mot_fieldnum = 20;
 	cue_parm_p->glb_mot_fieldthr = 10;
+	cue_parm_p->glb_mot_fieldthr1 = 1000;/*fix tv-7314 cue cause sawtooth*/
 	cue_parm_p->field_count = 8;
 	cue_parm_p->frame_count = 8;
+	cue_parm_p->field_count1 = 8;/*fix tv-7314 cue cause sawtooth*/
 }
 static int dnr_prm_init(DNR_PRM_t *pPrm)
 {

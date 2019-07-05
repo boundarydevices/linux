@@ -84,8 +84,10 @@ struct CUE_PARM_s {
 	int glb_mot_framethr;
 	int glb_mot_fieldnum;
 	int glb_mot_fieldthr;
+	int glb_mot_fieldthr1;
 	int field_count;
 	int frame_count;
+	int field_count1;
 };
 
 #define	NR_CTRL_REG_NUM	6
