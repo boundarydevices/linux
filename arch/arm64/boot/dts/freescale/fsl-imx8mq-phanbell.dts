@@ -655,7 +655,6 @@
 		realtek,dmic1-data-pin = <2>; // GPIO5
 		realtek,jd-mode = <0>;
 		realtek,jd-invert;
-		realtek,jd-low-volt-enable;
 		interrupt-parent = <&gpio5>;
 		interrupts = <4 IRQ_TYPE_EDGE_BOTH>;
 		hp-detect-gpios = <&gpio5 4 GPIO_ACTIVE_HIGH>;
