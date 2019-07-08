@@ -19,6 +19,11 @@
 #include <linux/ptp_clock_kernel.h>
 #include <linux/timecounter.h>
 
+#ifdef CONFIG_IMX_SCU_SOC
+#include <dt-bindings/firmware/imx/rsrc.h>
+#include <linux/firmware/imx/sci.h>
+#endif
+
 #if defined(CONFIG_M523x) || defined(CONFIG_M527x) || defined(CONFIG_M528x) || \
     defined(CONFIG_M520x) || defined(CONFIG_M532x) || defined(CONFIG_ARM) || \
     defined(CONFIG_ARM64) || defined(CONFIG_COMPILE_TEST)
@@ -567,6 +572,7 @@ struct fec_enet_private {
 	bool	bufdesc_ex;
 	int	pause_flag;
 	int	wol_flag;
+	int	wake_irq;
 	u32	quirks;
 
 	struct	napi_struct napi;
@@ -613,6 +619,10 @@ struct fec_enet_private {
 	unsigned int reload_period;
 	int pps_enable;
 	unsigned int next_counter;
+
+#ifdef CONFIG_IMX_SCU_SOC
+	struct imx_sc_ipc *ipc_handle;
+#endif
 
 	u64 ethtool_stats[];
 };
