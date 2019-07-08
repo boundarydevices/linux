@@ -982,23 +982,10 @@ u32 get_output_device_id(u32 index)
 	u32 output_index = VIU1;
 
 	if (osd_hw.osd_meson_dev.has_viu2) {
-		switch (osd_hw.osd_meson_dev.cpu_id) {
-		case __MESON_CPU_MAJOR_ID_G12A:
-		case __MESON_CPU_MAJOR_ID_G12B:
-			if (index == osd_hw.osd_meson_dev.viu2_index)
-				output_index = VIU2;
-			else
-				output_index = VIU1;
-			break;
-		case __MESON_CPU_MAJOR_ID_TL1:
-			if (index == osd_hw.osd_meson_dev.viu2_index)
-				output_index = VIU2;
-			else
-				output_index = VIU1;
-			break;
-		default:
-			break;
-		}
+		if (index == osd_hw.osd_meson_dev.viu2_index)
+			output_index = VIU2;
+		else
+			output_index = VIU1;
 	}
 	return output_index;
 }
