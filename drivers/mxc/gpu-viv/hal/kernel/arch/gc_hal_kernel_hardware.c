@@ -1326,6 +1326,12 @@ _QueryFeatureDatabase(
 
     case gcvFEATURE_GPIPE_CLOCK_GATE_FIX:
         available = gcvTRUE;
+
+        if(_IsHardwareMatch(Hardware, gcv7000, 0x6203))
+        {
+            available = gcvFALSE;
+        }
+
         break;
 
     case gcvFEATURE_NEW_GPIPE:
