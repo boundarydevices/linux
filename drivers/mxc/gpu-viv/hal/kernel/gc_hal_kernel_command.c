@@ -4322,7 +4322,7 @@ gckCOMMAND_DumpExecutingBuffer(
         gpuAddress &= 0xfffff000;
 
         /* Dump max 4096 bytes. */
-        bytes = (bytes - offset) > 1024 ? 1024 : (bytes - offset);
+        bytes = (bytes - offset) > 4096 ? 4096 : (bytes - offset);
 
         /* Kernel address of page where stall point stay. */
         entryDump = (gctUINT8_PTR)entryDump + offset;

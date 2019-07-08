@@ -44,9 +44,9 @@
 
 #define DESC_ABLKCIPHER_BASE		(3 * CAAM_CMD_SZ)
 #define DESC_ABLKCIPHER_ENC_LEN		(DESC_ABLKCIPHER_BASE + \
-					 20 * CAAM_CMD_SZ)
+					 21 * CAAM_CMD_SZ)
 #define DESC_ABLKCIPHER_DEC_LEN		(DESC_ABLKCIPHER_BASE + \
-					 15 * CAAM_CMD_SZ)
+					 16 * CAAM_CMD_SZ)
 
 void cnstr_shdsc_aead_null_encap(u32 * const desc, struct alginfo *adata,
 				 unsigned int icvsize, int era);

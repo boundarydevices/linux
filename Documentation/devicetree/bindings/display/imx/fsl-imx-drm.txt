@@ -230,7 +230,7 @@ Freescale i.MX DPU
 ====================
 
 Required properties:
-- compatible: Should be "fsl,<chip>-dpu"
+- compatible: should be "fsl,imx8mm-lcdif" or "fsl,imx8mn-lcdif"
 - reg: should be register base and length as documented in the
   datasheet
 - intsteer: phandle pointing to interrupt steer.

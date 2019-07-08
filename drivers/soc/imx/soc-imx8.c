@@ -205,6 +205,12 @@ static u32 imx8mm_soc_revision(void)
 	return imx_init_revision_from_atf();
 }
 
+static u32 imx8mn_soc_revision(void)
+{
+	imx8_soc_uid = imx8mq_soc_get_soc_uid();
+	return imx_init_revision_from_atf();
+}
+
 static struct imx8_soc_data imx8qm_soc_data = {
 	.name = "i.MX8QM",
 	.soc_revision = imx8qm_soc_revision,
@@ -225,11 +231,17 @@ static struct imx8_soc_data imx8mm_soc_data = {
 	.soc_revision = imx8mm_soc_revision,
 };
 
+static struct imx8_soc_data imx8mn_soc_data = {
+	.name = "i.MX8MN",
+	.soc_revision = imx8mn_soc_revision,
+};
+
 static const struct of_device_id imx8_soc_match[] = {
 	{ .compatible = "fsl,imx8qm", .data = &imx8qm_soc_data, },
 	{ .compatible = "fsl,imx8qxp", .data = &imx8qxp_soc_data, },
 	{ .compatible = "fsl,imx8mq", .data = &imx8mq_soc_data, },
 	{ .compatible = "fsl,imx8mm", .data = &imx8mm_soc_data, },
+	{ .compatible = "fsl,imx8mn", .data = &imx8mn_soc_data, },
 	{ }
 };
 
@@ -360,6 +372,10 @@ device_initcall(imx8_soc_init);
 #define OCOTP_CFG3			0x440
 #define OCOTP_CFG3_SPEED_GRADING_SHIFT	8
 #define OCOTP_CFG3_SPEED_GRADING_MASK	(0x7 << 8)
+#define OCOTP_CFG3_SPEED_GRADING_IMX8MN_MASK	(0x3F << 8)
+#define OCOTP_CFG3_SPEED_IMX8MN_1P5GHZ	0x8
+#define OCOTP_CFG3_SPEED_IMX8MN_1P4GHZ	0x9
+#define OCOTP_CFG3_SPEED_IMX8MN_1P2GHZ	0xb
 #define OCOTP_CFG3_SPEED_2GHZ		4
 #define OCOTP_CFG3_SPEED_1P8GHZ		3
 #define OCOTP_CFG3_SPEED_1P6GHZ		2
@@ -488,6 +504,57 @@ put_node:
 	of_node_put(np);
 }
 
+static void __init imx8mn_opp_check_speed_grading(struct device *cpu_dev)
+{
+	struct device_node *np;
+	void __iomem *base;
+	u32 val, market;
+
+	np = of_find_compatible_node(NULL, NULL, "fsl,imx8mq-ocotp");
+	if (!np) {
+		pr_warn("failed to find ocotp node\n");
+		return;
+	}
+
+	base = of_iomap(np, 0);
+	if (!base) {
+		pr_warn("failed to map ocotp\n");
+		goto put_node;
+	}
+	val = readl_relaxed(base + OCOTP_CFG3);
+	/* market segment bit[7:6] */
+	market = (val & OCOTP_CFG3_MKT_SEGMENT_MASK)
+		>> OCOTP_CFG3_MKT_SEGMENT_SHIFT;
+	/* speed grading bit[13:8] */
+	val = (val & OCOTP_CFG3_SPEED_GRADING_IMX8MN_MASK)
+		>> OCOTP_CFG3_SPEED_GRADING_SHIFT;
+
+	switch (market) {
+	case OCOTP_CFG3_CONSUMER:
+		if (val > OCOTP_CFG3_SPEED_IMX8MN_1P5GHZ)
+			if (dev_pm_opp_disable(cpu_dev, 1500000000))
+				pr_warn("failed to disable 1.5GHz OPP!\n");
+		if (val > OCOTP_CFG3_SPEED_IMX8MN_1P4GHZ)
+			if (dev_pm_opp_disable(cpu_dev, 1400000000))
+				pr_warn("failed to disable 1.4GHz OPP!\n");
+		break;
+	case OCOTP_CFG3_INDUSTRIAL:
+		if (dev_pm_opp_disable(cpu_dev, 1500000000))
+			pr_warn("failed to disable 1.5GHz OPP!\n");
+		if (val > OCOTP_CFG3_SPEED_IMX8MN_1P4GHZ)
+			if (dev_pm_opp_disable(cpu_dev, 1400000000))
+				pr_warn("failed to disable 1.4GHz OPP!\n");
+		break;
+	default:
+		break;
+	}
+
+	iounmap(base);
+
+put_node:
+	of_node_put(np);
+}
+
 static void __init imx8mq_opp_init(void)
 {
 	struct device_node *np;
@@ -512,6 +579,8 @@ static void __init imx8mq_opp_init(void)
 		imx8mq_opp_check_speed_grading(cpu_dev);
 	else if (of_machine_is_compatible("fsl,imx8mm"))
 		imx8mm_opp_check_speed_grading(cpu_dev);
+	else if (of_machine_is_compatible("fsl,imx8mn"))
+		imx8mn_opp_check_speed_grading(cpu_dev);
 
 put_node:
 	of_node_put(np);
@@ -520,7 +589,8 @@ put_node:
 static int __init imx8_register_cpufreq(void)
 {
 	if (of_machine_is_compatible("fsl,imx8mq") ||
-		of_machine_is_compatible("fsl,imx8mm")) {
+		of_machine_is_compatible("fsl,imx8mm") ||
+		of_machine_is_compatible("fsl,imx8mn")) {
 		imx8mq_opp_init();
 		platform_device_register_simple("imx8mq-cpufreq", -1, NULL, 0);
 	} else {

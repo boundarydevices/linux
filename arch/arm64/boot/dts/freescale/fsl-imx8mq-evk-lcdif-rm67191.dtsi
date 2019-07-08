@@ -39,7 +39,7 @@
 	max-res = <1080>, <1920>;
 
 	port@0 {
-		lcdif_mipi_dsi: mipi-dsi-endpoint {
+		lcdif_mipi_dsi: endpoint {
 			remote-endpoint = <&mipi_dsi_in>;
 		};
 	};
@@ -63,6 +63,7 @@
 
 &mipi_dsi_bridge {
 	status = "okay";
+	clock-drop-level = <2>;
 
 	panel@0 {
 		compatible = "raydium,rm67191";

@@ -271,29 +271,27 @@ static int dcss_clks_init(struct dcss_soc *dcss)
 	struct {
 		const char *id;
 		struct clk **clk;
-		bool optional;
+		bool required;
 	} clks[] = {
-		{"apb",		&dcss->apb_clk,		false},
-		{"axi",		&dcss->axi_clk,		false},
-		{"pix",		&dcss->pix_clk,		false},
-		{"rtrm",	&dcss->rtrm_clk,	false},
-		{"dtrc",	&dcss->dtrc_clk,	false},
-		{"pll",		&dcss->pll_clk,		true},
-		{"pll_src1",	&dcss->src_clk[0],	true},
-		{"pll_src2",	&dcss->src_clk[1],	true},
-		{"pll_src3",	&dcss->src_clk[2],	true},
+		{"apb",   &dcss->apb_clk, true},
+		{"axi",   &dcss->axi_clk, true},
+		{"pix",   &dcss->pix_clk, true},
+		{"rtrm",  &dcss->rtrm_clk, true},
+		{"dtrc",  &dcss->dtrc_clk, true},
+		{"pll_src",  &dcss->pll_src_clk, dcss->hdmi_output},
+		{"pll_phy_ref",  &dcss->pll_phy_ref_clk, dcss->hdmi_output},
 	};
 
 	for (i = 0; i < ARRAY_SIZE(clks); i++) {
 		*clks[i].clk = devm_clk_get(dcss->dev, clks[i].id);
-		if (IS_ERR(*clks[i].clk) && !clks[i].optional) {
+		if (IS_ERR(*clks[i].clk) && clks[i].required) {
 			dev_err(dcss->dev, "failed to get %s clock\n",
 				clks[i].id);
 			ret = PTR_ERR(*clks[i].clk);
 			goto err;
 		}
 
-		if (!clks[i].optional)
+		if (clks[i].required)
 			clk_prepare_enable(*clks[i].clk);
 	}
 
@@ -311,6 +309,10 @@ err:
 static void dcss_clocks_enable(struct dcss_soc *dcss, bool en)
 {
 	if (en && !dcss->clks_on) {
+		if (dcss->hdmi_output) {
+			clk_prepare_enable(dcss->pll_phy_ref_clk);
+			clk_prepare_enable(dcss->pll_src_clk);
+		}
 		clk_prepare_enable(dcss->axi_clk);
 		clk_prepare_enable(dcss->apb_clk);
 		clk_prepare_enable(dcss->rtrm_clk);
@@ -324,6 +326,10 @@ static void dcss_clocks_enable(struct dcss_soc *dcss, bool en)
 		clk_disable_unprepare(dcss->rtrm_clk);
 		clk_disable_unprepare(dcss->apb_clk);
 		clk_disable_unprepare(dcss->axi_clk);
+		if (dcss->hdmi_output) {
+			clk_disable_unprepare(dcss->pll_src_clk);
+			clk_disable_unprepare(dcss->pll_phy_ref_clk);
+		}
 	}
 
 	dcss->clks_on = en;
@@ -563,10 +569,12 @@ static void dcss_bus_freq(struct dcss_soc *dcss, bool en)
 
 static int dcss_probe(struct platform_device *pdev)
 {
-	int ret;
+	int ret, len;
 	struct resource *res;
 	struct dcss_soc *dcss;
 	const struct dcss_devtype *devtype;
+	struct device_node *node = pdev->dev.of_node;
+	const char *disp_dev;
 
 	devtype = of_device_get_match_data(&pdev->dev);
 	if (!devtype) {
@@ -588,6 +596,10 @@ static int dcss_probe(struct platform_device *pdev)
 	dcss->devtype = devtype;
 
 	platform_set_drvdata(pdev, dcss);
+
+	disp_dev = of_get_property(node, "disp-dev", &len);
+	if (!disp_dev || !strncmp(disp_dev, "hdmi_disp", 9))
+		dcss->hdmi_output = true;
 
 	ret = dcss_clks_init(dcss);
 	if (ret) {

@@ -64,6 +64,9 @@ extern unsigned int vpu_dbg_level_decoder;
 #define DEFAULT_LOG_DEPTH 20
 #define DEFAULT_FRMDBG_ENABLE 0
 #define DEFAULT_FRMDBG_LEVEL 0
+#define VPU_DEC_CMD_DATA_MAX_NUM	16
+#define VPU_DEC_MAX_WIDTH		8188
+#define VPU_DEC_MAX_HEIGTH		8188
 
 #define V4L2_EVENT_DECODE_ERROR		(V4L2_EVENT_PRIVATE_START + 1)
 #define V4L2_EVENT_SKIP			(V4L2_EVENT_PRIVATE_START + 2)
@@ -253,6 +256,7 @@ struct vpu_dev {
 	struct mutex fw_flow_mutex;
 	bool fw_is_ready;
 	bool firmware_started;
+	bool need_cleanup_firmware;
 	struct completion start_cmp;
 	struct completion snap_done_cmp;
 	struct workqueue_struct *workqueue;
@@ -277,6 +281,10 @@ struct vpu_dev {
 	struct dentry *debugfs_fwlog;
 
 	struct print_buf_desc *print_buf;
+	u8 precheck_pattern[64];
+	int precheck_next[64];
+	int precheck_num;
+	char precheck_content[1024];
 };
 
 struct vpu_statistic {
@@ -294,6 +302,16 @@ struct dma_buffer {
 	dma_addr_t dma_phy;
 	void *dma_virt;
 	u_int32 dma_size;
+};
+
+struct vpu_dec_cmd_request {
+	struct list_head list;
+	u32 request;
+	u32 response;
+	bool block;
+	u32 idx;
+	u32 num;
+	u32 data[VPU_DEC_CMD_DATA_MAX_NUM];
 };
 
 struct vpu_ctx {
@@ -340,6 +358,7 @@ struct vpu_ctx {
 	bool start_code_bypass;
 	bool hang_status;
 	bool fifo_low;
+	bool frame_decoded;
 	u32 req_frame_count;
 	u_int32 mbi_count;
 	u_int32 mbi_size;
@@ -366,6 +385,7 @@ struct vpu_ctx {
 	long total_write_bytes;
 	long total_consumed_bytes;
 	long total_ts_bytes;
+	u32 extra_size;
 	struct semaphore tsm_lock;
 	s64 output_ts;
 	s64 capture_ts;
@@ -375,14 +395,15 @@ struct vpu_ctx {
 
 	struct v4l2_fract fixed_frame_interval;
 	struct v4l2_fract frame_interval;
+
+	struct list_head cmd_q;
+	struct vpu_dec_cmd_request *pending;
+	struct mutex cmd_lock;
 };
 
-#define LVL_INFO		3
-#define LVL_EVENT		2
-#define LVL_WARN		1
-#define LVL_ERR			0
-#define LVL_MASK		0xf
-
+#define LVL_WARN		(1 << 1)
+#define LVL_EVENT		(1 << 2)
+#define LVL_INFO		(1 << 3)
 #define LVL_BIT_CMD		(1 << 4)
 #define LVL_BIT_EVT		(1 << 5)
 #define LVL_BIT_TS		(1 << 6)
@@ -393,12 +414,13 @@ struct vpu_ctx {
 #define LVL_BIT_BUFFER_DESC	(1 << 11)
 #define LVL_BIT_FUNC		(1 << 12)
 #define LVL_BIT_FLOW		(1 << 13)
+#define LVL_BIT_FRAME_COUNT	(1 << 14)
+
+#define vpu_err(fmt, arg...) pr_info("[VPU Decoder]\t " fmt, ## arg)
 
 #define vpu_dbg(level, fmt, arg...) \
 	do { \
-		if ((vpu_dbg_level_decoder & LVL_MASK) >= (level)) \
-			pr_info("[VPU Decoder]\t " fmt, ## arg); \
-		else if ((vpu_dbg_level_decoder & (~LVL_MASK)) & level) \
+		if (vpu_dbg_level_decoder & level) \
 			pr_info("[VPU Decoder]\t " fmt, ## arg); \
 	} while (0)
 

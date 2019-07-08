@@ -48,6 +48,16 @@ static int adv7180_probe(struct i2c_client *adapter,
 			 const struct i2c_device_id *id);
 static int adv7180_detach(struct i2c_client *client);
 
+#ifdef CONFIG_OF
+static const struct of_device_id adv7180_of_match[] = {
+	{ .compatible = "adv,adv7180",
+	},
+	{ /* sentinel */ }
+};
+
+MODULE_DEVICE_TABLE(of, adv7180_of_match);
+#endif
+
 static const struct i2c_device_id adv7180_id[] = {
 	{"adv7180", 0},
 	{},
@@ -59,6 +69,9 @@ static struct i2c_driver adv7180_i2c_driver = {
 	.driver = {
 		   .owner = THIS_MODULE,
 		   .name = "adv7180",
+#ifdef CONFIG_OF
+		   .of_match_table = of_match_ptr(adv7180_of_match),
+#endif
 		   },
 	.probe = adv7180_probe,
 	.remove = adv7180_detach,
@@ -1202,7 +1215,6 @@ static int adv7180_probe(struct i2c_client *client,
 
 	printk(KERN_ERR"DBG sensor data is at %p\n", &adv7180_data);
 
-	/* ov5640 pinctrl */
 	pinctrl = devm_pinctrl_get_select_default(dev);
 	if (IS_ERR(pinctrl)) {
 		dev_err(dev, "setup pinctrl failed\n");

@@ -17,6 +17,7 @@
  */
 
 #include <drm/drmP.h>
+#include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_crtc_helper.h>
@@ -28,7 +29,6 @@
 #include <drm/drm_simple_kms_helper.h>
 #include <linux/busfreq-imx.h>
 #include <linux/clk.h>
-#include <linux/clk-provider.h>
 #include <linux/iopoll.h>
 #include <linux/of_graph.h>
 #include <linux/platform_data/simplefb.h>
@@ -344,8 +344,6 @@ static void mxsfb_crtc_mode_set_nofb(struct mxsfb_drm_private *mxsfb)
 	const u32 bus_flags = mxsfb->connector->display_info.bus_flags;
 	u32 vdctrl0, vsync_pulse_len, hsync_pulse_len;
 	int err;
-	u32 pixclock = m->clock * 1000;
-	struct mode_config *config;
 
 	/*
 	 * It seems, you can't re-program the controller if it is still
@@ -358,27 +356,6 @@ static void mxsfb_crtc_mode_set_nofb(struct mxsfb_drm_private *mxsfb)
 	if (err)
 		return;
 
-	/*
-	 * Before setting the clock rate, we need to be sure that the clock
-	 * has the right source to output the required rate.
-	 */
-	list_for_each_entry(config, &mxsfb->valid_modes, list) {
-		if (config->clock == pixclock) {
-			struct clk *src;
-
-			src = clk_get_parent(mxsfb->clk_sel);
-			if (!clk_is_match(src, config->clk_src))
-				clk_set_parent(mxsfb->clk_sel, config->clk_src);
-			if (clk_get_rate(mxsfb->clk_pll) != config->out_rate)
-				clk_set_rate(mxsfb->clk_pll, config->out_rate);
-			DRM_DEV_DEBUG_DRIVER(mxsfb->dev,
-				"pll rate: %ld (actual %ld)\n",
-				config->out_rate, clk_get_rate(mxsfb->clk_pll));
-			pixclock = config->mode_clock;
-			break;
-		}
-	}
-
 	/* Clear the FIFOs */
 	writel(CTRL1_FIFO_CLEAR, mxsfb->base + LCDC_CTRL1 + REG_SET);
 
@@ -386,9 +363,9 @@ static void mxsfb_crtc_mode_set_nofb(struct mxsfb_drm_private *mxsfb)
 	if (err)
 		return;
 
-	clk_set_rate(mxsfb->clk, pixclock);
+	clk_set_rate(mxsfb->clk, m->crtc_clock * 1000);
 	DRM_DEV_DEBUG_DRIVER(mxsfb->dev, "Pixel clock: %dkHz (actual: %dkHz)\n",
-		pixclock / 1000, (int)(clk_get_rate(mxsfb->clk) / 1000));
+		m->crtc_clock, (int)(clk_get_rate(mxsfb->clk) / 1000));
 
 	DRM_DEV_DEBUG_DRIVER(mxsfb->dev,
 		"Connector bus_flags: 0x%08X\n", bus_flags);
@@ -472,14 +449,67 @@ void mxsfb_crtc_disable(struct mxsfb_drm_private *mxsfb)
 		release_bus_freq(BUS_FREQ_HIGH);
 }
 
+void mxsfb_set_fb_hcrop(struct mxsfb_drm_private *mxsfb, u32 src_w, u32 fb_w)
+{
+	u32 mask_cnt, htotal, hcount;
+	u32 vdctrl2, vdctrl3, vdctrl4, transfer_count;
+	u32 pigeon_12_0, pigeon_12_1, pigeon_12_2;
+
+	if (src_w == fb_w) {
+		writel(0x0, mxsfb->base + HW_EPDC_PIGEON_12_0);
+		writel(0x0, mxsfb->base + HW_EPDC_PIGEON_12_1);
+
+		return;
+	}
+
+	transfer_count = readl(mxsfb->base + LCDC_V4_TRANSFER_COUNT);
+	hcount = TRANSFER_COUNT_GET_HCOUNT(transfer_count);
+
+	transfer_count &= ~TRANSFER_COUNT_SET_HCOUNT(0xffff);
+	transfer_count |= TRANSFER_COUNT_SET_HCOUNT(fb_w);
+	writel(transfer_count, mxsfb->base + LCDC_V4_TRANSFER_COUNT);
+
+	vdctrl2 = readl(mxsfb->base + LCDC_VDCTRL2);
+	htotal  = VDCTRL2_GET_HSYNC_PERIOD(vdctrl2);
+	htotal  += fb_w - hcount;
+	vdctrl2 &= ~VDCTRL2_SET_HSYNC_PERIOD(0x3ffff);
+	vdctrl2 |= VDCTRL2_SET_HSYNC_PERIOD(htotal);
+	writel(vdctrl2, mxsfb->base + LCDC_VDCTRL2);
+
+	vdctrl4 = readl(mxsfb->base + LCDC_VDCTRL4);
+	vdctrl4 &= ~SET_DOTCLK_H_VALID_DATA_CNT(0x3ffff);
+	vdctrl4 |= SET_DOTCLK_H_VALID_DATA_CNT(fb_w);
+	writel(vdctrl4, mxsfb->base + LCDC_VDCTRL4);
+
+	/* configure related pigeon registers */
+	vdctrl3  = readl(mxsfb->base + LCDC_VDCTRL3);
+	mask_cnt = GET_HOR_WAIT_CNT(vdctrl3) - 5;
+
+	pigeon_12_0 = PIGEON_12_0_SET_STATE_MASK(0x24)		|
+		      PIGEON_12_0_SET_MASK_CNT(mask_cnt)	|
+		      PIGEON_12_0_SET_MASK_CNT_SEL(0x6)		|
+		      PIGEON_12_0_POL_ACTIVE_LOW		|
+		      PIGEON_12_0_EN;
+	writel(pigeon_12_0, mxsfb->base + HW_EPDC_PIGEON_12_0);
+
+	pigeon_12_1 = PIGEON_12_1_SET_CLR_CNT(src_w) |
+		      PIGEON_12_1_SET_SET_CNT(0x0);
+	writel(pigeon_12_1, mxsfb->base + HW_EPDC_PIGEON_12_1);
+
+	pigeon_12_2 = 0x0;
+	writel(pigeon_12_2, mxsfb->base + HW_EPDC_PIGEON_12_2);
+}
+
 void mxsfb_plane_atomic_update(struct mxsfb_drm_private *mxsfb,
 			       struct drm_plane_state *old_state)
 {
 	struct drm_simple_display_pipe *pipe = &mxsfb->pipe;
 	struct drm_crtc *crtc = &pipe->crtc;
+	struct drm_plane_state *state = pipe->plane.state;
 	struct drm_framebuffer *fb = pipe->plane.state->fb;
 	struct drm_framebuffer *old_fb = old_state->fb;
 	struct drm_pending_vblank_event *event;
+	u32 fb_addr, src_off, src_w, cpp, stride;
 	dma_addr_t paddr;
 
 	spin_lock_irq(&crtc->dev->event_lock);
@@ -495,15 +525,26 @@ void mxsfb_plane_atomic_update(struct mxsfb_drm_private *mxsfb,
 	}
 	spin_unlock_irq(&crtc->dev->event_lock);
 
+	if (!fb || !old_fb)
+		return;
+
 	paddr = mxsfb_get_fb_paddr(mxsfb);
+	cpp = fb->format->cpp[0];
+	src_off = (state->src_y >> 16) * fb->pitches[0] +
+		  (state->src_x >> 16) * cpp;
+	fb_addr = paddr + fb->offsets[0] + src_off;
+
 	if (paddr) {
 		clk_prepare_enable(mxsfb->clk_axi);
-		writel(paddr, mxsfb->base + mxsfb->devdata->next_buf);
+		writel(fb_addr, mxsfb->base + mxsfb->devdata->next_buf);
 		clk_disable_unprepare(mxsfb->clk_axi);
 	}
 
-	if (!fb || !old_fb)
-		return;
+	if (unlikely(drm_atomic_crtc_needs_modeset(state->crtc->state))) {
+		stride = DIV_ROUND_UP(fb->pitches[0], cpp);
+		src_w = state->src_w >> 16;
+		mxsfb_set_fb_hcrop(mxsfb, src_w, stride);
+	}
 
 	/*
 	 * TODO: Currently, we only support pixel format change, but we need

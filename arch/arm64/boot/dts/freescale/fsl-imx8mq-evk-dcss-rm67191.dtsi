@@ -34,13 +34,8 @@
 		 <&clk IMX8MQ_CLK_DISP_AXI_ROOT>,
 		 <&clk IMX8MQ_CLK_DISP_RTRM_ROOT>,
 		 <&clk IMX8MQ_CLK_DC_PIXEL>,
-		 <&clk IMX8MQ_CLK_DISP_DTRC>,
-		 <&clk IMX8MQ_VIDEO_PLL1>,
-		 <&clk IMX8MQ_CLK_27M>,
-		 <&clk IMX8MQ_CLK_25M>;
-	clock-names = "apb", "axi", "rtrm", "pix", "dtrc", "pll",
-		      "pll_src1", "pll_src2";
-
+		 <&clk IMX8MQ_CLK_DISP_DTRC>;
+	clock-names = "apb", "axi", "rtrm", "pix", "dtrc";
 	assigned-clocks = <&clk IMX8MQ_CLK_DC_PIXEL>,
 			  <&clk IMX8MQ_CLK_DISP_AXI>,
 			  <&clk IMX8MQ_CLK_DISP_RTRM>;
@@ -77,6 +72,7 @@
 
 &mipi_dsi_bridge {
 	status = "okay";
+	clock-drop-level = <2>;
 
 	panel@0 {
 		compatible = "raydium,rm67191";

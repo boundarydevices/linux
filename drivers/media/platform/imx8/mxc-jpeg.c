@@ -106,10 +106,14 @@ static const struct of_device_id mxc_jpeg_match[] = {
 	{ },
 };
 
+/* default configuration stream 64x64 yuv422 */
 static const unsigned char jpeg_soi[] = {0xFF, 0xD8};
 static const unsigned char jpeg_app0[] = {0xFF, 0xE0, 0x00, 0x10, 0x4A,
 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00,
 0x00, 0x01, 0x00, 0x01, 0x00, 0x00};
+static const unsigned char jpeg_app14[] = {
+0xFF, 0xEE, 0x00, 0x0E, 0x41, 0x64, 0x6F, 0x62,
+0x65, 0x00, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00};
 static const unsigned char jpeg_dqt[] = {0xFF, 0xDB,
 0x00, 0x84, 0x00, 0x10, 0x0B, 0x0C,
 0x0E, 0x0C, 0x0A, 0x10, 0x0E, 0x0D, 0x0E,
@@ -477,6 +481,11 @@ static irqreturn_t mxc_jpeg_dec_irq(int irq, void *priv)
 		mxc_jpeg_enc_mode_go(dev, reg);
 		goto job_unlock;
 	}
+	if (ctx->mode == MXC_JPEG_DECODE && ctx->dht_needed) {
+		ctx->dht_needed = false;
+		dev_dbg(dev, "Decoder DHT cfg finished. Start decoding...\n");
+		goto job_unlock;
+	}
 	if (ctx->mode == MXC_JPEG_ENCODE) {
 		payload_size = readl(reg + MXC_SLOT_OFFSET(slot, SLOT_BUF_PTR));
 		vb2_set_plane_payload(dst_buf, 0, payload_size);
@@ -518,20 +527,47 @@ job_unlock:
 
 static void mxc_jpeg_config_dec_desc(struct vb2_buffer *out_buf,
 			 int slot,
-			 struct mxc_jpeg_dev *jpeg,
+			 struct mxc_jpeg_ctx *ctx,
 			 struct vb2_buffer *src_buf, struct vb2_buffer *dst_buf)
 {
+	struct mxc_jpeg_dev *jpeg = ctx->mxc_jpeg;
 	void __iomem *reg = jpeg->base_reg;
 	struct mxc_jpeg_desc *desc = jpeg->slot_data[slot].desc;
+	struct mxc_jpeg_desc *cfg_desc = jpeg->slot_data[slot].cfg_desc;
 	dma_addr_t desc_handle = jpeg->slot_data[slot].desc_handle;
+	dma_addr_t cfg_desc_handle = jpeg->slot_data[slot].cfg_desc_handle;
+	dma_addr_t cfg_stream_handle = jpeg->slot_data[slot].cfg_stream_handle;
+	unsigned int cfg_stream_size = jpeg->slot_data[slot].cfg_stream_size;
 
+	if (ctx->dht_needed) {
+		/*
+		 * use the config descriptor to inject a default huffman table
+		 * by chaining it before the decoding descriptor
+		 */
+		cfg_desc->next_descpt_ptr = desc_handle | MXC_NXT_DESCPT_EN;
+		cfg_desc->buf_base0 = vb2_dma_contig_plane_dma_addr(dst_buf, 0);
+		cfg_desc->buf_base1 = 0;
+		cfg_desc->imgsize = MXC_JPEG_MIN_WIDTH << 16;
+		cfg_desc->imgsize |= MXC_JPEG_MIN_HEIGHT;
+		cfg_desc->line_pitch = MXC_JPEG_MIN_WIDTH * 2;
+		cfg_desc->stm_ctrl = STM_CTRL_IMAGE_FORMAT(MXC_JPEG_YUV422);
+		cfg_desc->stm_bufbase = cfg_stream_handle;
+		cfg_desc->stm_bufsize = mxc_jpeg_align(cfg_stream_size, 1024);
+		print_descriptor_info(jpeg->dev, cfg_desc);
+	}
+
+	desc->next_descpt_ptr = 0; /* end of chain */
 	mxc_jpeg_addrs(desc, dst_buf, src_buf, 0);
 	mxc_jpeg_set_bufsize(desc,
 			mxc_jpeg_align(vb2_plane_size(src_buf, 0), 1024));
 	print_descriptor_info(jpeg->dev, desc);
-
-	/* validate the decoding descriptor */
-	mxc_jpeg_set_desc(desc_handle, reg, slot);
+	if (ctx->dht_needed) {
+		/* validate the configuration descriptor */
+		mxc_jpeg_set_desc(cfg_desc_handle, reg, slot);
+	} else {
+		/* validate the decoding descriptor */
+		mxc_jpeg_set_desc(desc_handle, reg, slot);
+	}
 }
 
 static int mxc_jpeg_fixup_sof(struct mxc_jpeg_sof *sof,
@@ -611,11 +647,11 @@ static int mxc_jpeg_fixup_sos(struct mxc_jpeg_sos *sos,
 	return sos_length; /* not swaped */
 }
 
-static void mxc_jpeg_setup_cfg_stream(void *cfg_stream_vaddr,
-				      u32 fourcc,
-				      u16 w, u16 h)
+static unsigned int mxc_jpeg_setup_cfg_stream(void *cfg_stream_vaddr,
+					      u32 fourcc,
+					      u16 w, u16 h)
 {
-	int offset = 0;
+	unsigned int offset = 0;
 	u8 *cfg = (u8 *)cfg_stream_vaddr;
 	struct mxc_jpeg_sof *sof;
 	struct mxc_jpeg_sos *sos;
@@ -623,8 +659,14 @@ static void mxc_jpeg_setup_cfg_stream(void *cfg_stream_vaddr,
 	memcpy(cfg + offset, jpeg_soi, ARRAY_SIZE(jpeg_soi));
 	offset += ARRAY_SIZE(jpeg_soi);
 
-	memcpy(cfg + offset, jpeg_app0, sizeof(jpeg_app0));
-	offset += sizeof(jpeg_app0);
+	if (fourcc == V4L2_PIX_FMT_RGB24 ||
+	    fourcc == V4L2_PIX_FMT_ARGB32) {
+		memcpy(cfg + offset, jpeg_app14, sizeof(jpeg_app14));
+		offset += sizeof(jpeg_app14);
+	} else {
+		memcpy(cfg + offset, jpeg_app0, sizeof(jpeg_app0));
+		offset += sizeof(jpeg_app0);
+	}
 
 	memcpy(cfg + offset, jpeg_dqt, sizeof(jpeg_dqt));
 	offset += sizeof(jpeg_dqt);
@@ -647,6 +689,8 @@ static void mxc_jpeg_setup_cfg_stream(void *cfg_stream_vaddr,
 
 	memcpy(cfg + offset, jpeg_eoi, sizeof(jpeg_eoi));
 	offset += sizeof(jpeg_eoi);
+
+	return offset;
 }
 
 static void mxc_jpeg_config_enc_desc(struct vb2_buffer *out_buf,
@@ -720,6 +764,10 @@ static void mxc_jpeg_device_run(void *priv)
 		goto end;
 	}
 
+	/*
+	 * TODO: this reset should be removed, once we figure out
+	 * how to overcome hardware issues both on encoder and decoder
+	 */
 	mxc_jpeg_sw_reset(reg);
 	mxc_jpeg_enable(reg);
 	mxc_jpeg_set_l_endian(reg, 1);
@@ -736,7 +784,7 @@ static void mxc_jpeg_device_run(void *priv)
 	} else {
 		dev_dbg(dev, "Decoding on slot %d\n", slot);
 		print_nbuf_to_eoi(dev, src_buf, 0);
-		mxc_jpeg_config_dec_desc(dst_buf, slot, jpeg, src_buf, dst_buf);
+		mxc_jpeg_config_dec_desc(dst_buf, slot, ctx, src_buf, dst_buf);
 		mxc_jpeg_dec_mode_go(dev, reg);
 	}
 end:
@@ -932,7 +980,8 @@ static int get_sof(struct device *dev,
 
 static int mxc_jpeg_valid_comp_id(
 	struct device *dev,
-	const struct mxc_jpeg_sof *sof)
+	struct mxc_jpeg_sof *sof,
+	struct mxc_jpeg_sos *sos)
 {
 	int valid = 1;
 	int i;
@@ -942,6 +991,14 @@ static int mxc_jpeg_valid_comp_id(
 			valid = 0;
 			dev_err(dev, "Component %d has invalid ID: %d",
 				i, sof->comp[i].id);
+		}
+	if (!valid)
+		/* patch all comp IDs if at least one is invalid */
+		for (i = 0; i < sof->components_no; i++) {
+			dev_warn(dev, "Component %d ID patched to: %d",
+				 i, i + 1);
+			sof->comp[i].id = i + 1;
+			sos->comp[i].id = i + 1;
 		}
 
 	return valid;
@@ -1031,8 +1088,9 @@ static int mxc_jpeg_parse(struct mxc_jpeg_ctx *ctx,
 	enum v4l2_buf_type cap_type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 	struct mxc_jpeg_stream stream;
 	bool notfound = true;
-	struct mxc_jpeg_sof sof;
-	int byte;
+	struct mxc_jpeg_sof sof, *psof = 0;
+	struct mxc_jpeg_sos *psos = 0;
+	u8 byte, *next = 0;
 	enum mxc_jpeg_image_format img_fmt;
 	u32 fourcc;
 
@@ -1040,6 +1098,7 @@ static int mxc_jpeg_parse(struct mxc_jpeg_ctx *ctx,
 	stream.addr = src_addr;
 	stream.end = size;
 	stream.loc = 0;
+	ctx->dht_needed = true;
 	while (notfound) {
 		byte = get_byte(&stream);
 		if (byte == -1)
@@ -1054,6 +1113,10 @@ static int mxc_jpeg_parse(struct mxc_jpeg_ctx *ctx,
 		if (byte == 0)
 			continue;
 		switch (byte) {
+		case DHT:
+			/* DHT marker present, no need to inject default one */
+			ctx->dht_needed = false;
+			break;
 		case SOF2: /* Progressive DCF frame definition */
 			dev_err(dev,
 				"Progressive JPEG isn't supported by hardware");
@@ -1062,6 +1125,12 @@ static int mxc_jpeg_parse(struct mxc_jpeg_ctx *ctx,
 		case SOF0: /* Baseline sequential DCF frame definition */
 			if (get_sof(dev, &stream, &sof) == -1)
 				break;
+			next = stream.addr + stream.loc;
+			psof = (struct mxc_jpeg_sof *)next;
+			break;
+		case SOS:
+			next = stream.addr + stream.loc;
+			psos = (struct mxc_jpeg_sos *)next;
 			notfound = false;
 			break;
 		default:
@@ -1087,8 +1156,15 @@ static int mxc_jpeg_parse(struct mxc_jpeg_ctx *ctx,
 			sof.width, sof.height);
 		return -EINVAL;
 	}
-	if (sof.width > 0x2000 || sof.height > 0x2000) {
+	if (sof.width > MXC_JPEG_MAX_WIDTH ||
+	    sof.height > MXC_JPEG_MAX_HEIGHT) {
 		dev_err(dev, "JPEG width or height should be <= 8192: %dx%d\n",
+			sof.width, sof.height);
+		return -EINVAL;
+	}
+	if (sof.width < MXC_JPEG_MIN_WIDTH ||
+	    sof.height < MXC_JPEG_MIN_HEIGHT) {
+		dev_err(dev, "JPEG width or height should be > 64: %dx%d\n",
 			sof.width, sof.height);
 		return -EINVAL;
 	}
@@ -1097,10 +1173,10 @@ static int mxc_jpeg_parse(struct mxc_jpeg_ctx *ctx,
 			MXC_JPEG_MAX_COMPONENTS);
 		return -EINVAL;
 	}
-	if (!mxc_jpeg_valid_comp_id(dev, &sof)) {
-		dev_err(dev, "JPEG component identifiers should be 0-3 or 1-4");
-		return -EINVAL;
-	}
+	/* check and, if necessary, patch component IDs*/
+	if (!mxc_jpeg_valid_comp_id(dev, psof, psos))
+		dev_warn(dev, "JPEG component identifiers should be 0-3 or 1-4");
+
 	img_fmt = mxc_jpeg_get_image_format(dev, &sof);
 	if (img_fmt == MXC_JPEG_INVALID)
 		return -EINVAL;
@@ -1626,6 +1702,17 @@ static int mxc_jpeg_s_fmt(struct mxc_jpeg_ctx *ctx,
 				      MXC_JPEG_MAX_HEIGHT,
 				      q_data->fmt->v_align,
 				      0);
+		/*
+		 * the config stream contains a huffman table, use it
+		 * to inject a default huffman table for decoder
+		 */
+		if (q_data->fmt->flags == MXC_JPEG_FMT_TYPE_ENC) {
+			jpeg->slot_data[ctx->slot].cfg_stream_size =
+			mxc_jpeg_setup_cfg_stream(cfg_stream_vaddr,
+						  V4L2_PIX_FMT_YUYV,
+						  MXC_JPEG_MIN_WIDTH,
+						  MXC_JPEG_MIN_HEIGHT);
+		}
 	} else {
 		/*
 		 * align down the resolution for CAST IP,
@@ -1641,6 +1728,7 @@ static int mxc_jpeg_s_fmt(struct mxc_jpeg_ctx *ctx,
 				      q_data->fmt->v_align,
 				      0);
 		if (q_data->fmt->flags == MXC_JPEG_FMT_TYPE_RAW)
+			jpeg->slot_data[ctx->slot].cfg_stream_size =
 			mxc_jpeg_setup_cfg_stream(cfg_stream_vaddr,
 						  q_data->fmt->fourcc,
 						  q_data->w_adjusted,

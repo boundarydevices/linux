@@ -77,8 +77,8 @@ static const struct imx_pll14xx_rate_table imx8mm_pll1416x_tbl[] = {
 };
 
 static const struct imx_pll14xx_rate_table imx8mm_audiopll_tbl[] = {
-	PLL_1443X_RATE(786432000U, 262, 2, 2, 9437),
-	PLL_1443X_RATE(722534400U, 361, 3, 2, 17511),
+	PLL_1443X_RATE(393216000U, 262, 2, 3, 9437),
+	PLL_1443X_RATE(361267200U, 361, 3, 3, 17511),
 };
 
 static const struct imx_pll14xx_rate_table imx8mm_videopll_tbl[] = {
@@ -725,6 +725,9 @@ static void __init imx8mm_clocks_init(struct device_node *ccm_node)
 		for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 			clk_prepare_enable(clks[clks_init_on[i]]);
 	}
+
+	if (imx_src_is_m4_enabled())
+		clk_prepare_enable(clks[IMX8MM_CLK_QSPI_ROOT]);
 
 	clk_set_parent(clks[IMX8MM_CLK_AUDIO_AHB], clks[IMX8MM_SYS_PLL1_800M]);
 	clk_set_rate(clks[IMX8MM_CLK_AUDIO_AHB], 400000000);
