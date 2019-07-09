@@ -274,7 +274,7 @@ static const char * const imx8mq_clko2_sels[] = {"osc_25m", "sys2_pll_200m", "sy
 					  "sys3_pll_out", "audio_pll1_out", "video_pll1_out", "ckil", };
 
 static const char * const imx8mq_clk2_sels[] = {
-	"dummy", "dummy", "dummy", "dummy",
+	"osc_25m", "osc_27m", "dummy", "dummy",
 	"dummy", "dummy", "dummy", "dummy",
 	"dummy", "dummy", "dummy", "clk2_sys1_pll_out_div",
 	"clk2_sys2_pll_out_div", "clk2_sys3_pll_out_div", "clk2_dram_pll_out_div", "clk2_video2_pll_out_div",
