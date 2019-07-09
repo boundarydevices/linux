@@ -336,7 +336,6 @@ static ssize_t gpu3DMinClock_show(struct device_driver *dev, char *buf)
 
     galDevice = platform_get_drvdata(pdevice);
 
-    minf = 0;
     if (galDevice->kernels[gcvCORE_MAJOR])
     {
          gckHARDWARE_GetFscaleValue(galDevice->kernels[gcvCORE_MAJOR]->hardware,
@@ -526,7 +525,6 @@ static ssize_t gpu_govern_store(struct device_driver *dev, const char *buf, size
 #endif
             clk_set_rate(clk_core, core_freq);
             clk_set_rate(clk_shader, shader_freq);
-
 #ifdef CONFIG_PM
             pm_runtime_put_sync(priv->pmdev[core]);
 #endif
@@ -549,7 +547,13 @@ int init_gpu_opp_table(struct device *dev)
     int nr;
     int ret = 0;
     int i, p;
+    int core = gcvCORE_MAJOR;
     struct imx_priv *priv = &imxPriv;
+
+    struct clk *clk_core;
+    struct clk *clk_shader;
+
+    unsigned long core_freq, shader_freq;
 
     priv->imx_gpu_govern.num_modes = 0;
 
@@ -632,6 +636,30 @@ int init_gpu_opp_table(struct device *dev)
             dev_err(dev, "create gpu_govern attr failed (%d)\n", ret);
 	    return ret;
 	}
+
+	/*
+	 * This could be redundant, but it is useful for testing DTS with
+	 * different OPPs that have assigned-clock rates different than the
+	 * ones specified in OPP tuple array. Otherwise we will display
+	 * different clock values when the driver is loaded. Further
+	 * modifications of the governor will display correctly but not when
+	 * the driver has been loaded.
+	 */
+	core_freq = priv->imx_gpu_govern.core_clk_freq[priv->imx_gpu_govern.current_mode];
+	shader_freq = priv->imx_gpu_govern.shader_clk_freq[priv->imx_gpu_govern.current_mode];
+
+	if (core_freq && shader_freq) {
+		for (; core <= gcvCORE_3D_MAX; core++) {
+			clk_core = priv->imx_gpu_clks[core].clk_core;
+			clk_shader = priv->imx_gpu_clks[core].clk_shader;
+
+			if (clk_core != NULL && clk_shader != NULL) {
+				clk_set_rate(clk_core, core_freq);
+				clk_set_rate(clk_shader, shader_freq);
+			}
+		}
+	}
+
     }
 
     return ret;
@@ -959,6 +987,7 @@ static int patch_param(struct platform_device *pdev,
     if(args->compression == gcvCOMPRESSION_OPTION_DEFAULT)
     {
         const u32 *property;
+
         property = of_get_property(pdev->dev.of_node, "depth-compression", NULL);
         if (property && *property == 0)
         {
@@ -966,6 +995,7 @@ static int patch_param(struct platform_device *pdev,
         }
     }
 #endif
+
     res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "phys_baseaddr");
 
     if (res && !args->baseAddress && !args->physSize) {

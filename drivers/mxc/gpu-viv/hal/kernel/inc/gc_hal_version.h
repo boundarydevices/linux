@@ -62,9 +62,9 @@
 
 #define gcvVERSION_PATCH        0
 
-#define gcvVERSION_BUILD     207593
+#define gcvVERSION_BUILD     214261
 
-#define gcvVERSION_STRING    "6.4.0.beta.207593"
+#define gcvVERSION_STRING    "6.4.0.RC1.214261"
 
 #endif /* __gc_hal_version_h_ */
 

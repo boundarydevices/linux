@@ -342,11 +342,11 @@ _IdentifyHardwareByDatabase(
 
     gckOS_QueryOption(Hardware->os, "sRAMMode", (gctUINT64 *)&Hardware->sRAMNonExclusive);
 
-    if (gcmIS_SUCCESS(gckOS_QueryOption(Hardware->os, "sRAMBases", Device->sRAMBases[0])))
+    if (gcmIS_SUCCESS(gckOS_QueryOption(Hardware->os, "sRAMBases", Device->sRAMCPUBases[0])))
     {
         gckOS_MemCopy(
             Identity->sRAMBases,
-            Device->sRAMBases[Core],
+            Device->sRAMCPUBases[Core],
             sizeof(gctUINT64) * gcvSRAM_COUNT
             );
     }
@@ -1825,7 +1825,8 @@ _SetHardwareOptions(
 
     for (i = 0; i < gcvSRAM_COUNT; i++)
     {
-        options->sRAMBaseAddress[i] = gcvINVALID_ADDRESS;
+        options->sRAMBaseAddresses[i] = gcvINVALID_ADDRESS;
+        options->sRAMPhysicalBases[i] = gcvINVALID_PHYSICAL_ADDRESS;
     }
 
     options->secureMode = gcvSECURE_NONE;
@@ -3005,6 +3006,8 @@ gckHARDWARE_InitializeHardware(
 
     if (_IsHardwareMatch(Hardware, gcv4000, 0x5222)
      || _IsHardwareMatch(Hardware, gcv2000, 0x5108)
+     || _IsHardwareMatch(Hardware, gcv7000, 0x6202)
+     || _IsHardwareMatch(Hardware, gcv7000, 0x6203)
      || (gckHARDWARE_IsFeatureAvailable(Hardware, gcvFEATURE_TX_DESCRIPTOR)
        && !gckHARDWARE_IsFeatureAvailable(Hardware, gcvFEATURE_TX_DESC_CACHE_CLOCKGATE_FIX)
         )
@@ -7766,7 +7769,9 @@ gckHARDWARE_Flush(
     /* Vertex buffer and texture could be touched by SHL1 for SSBO and image load/store */
     if ((Flush & (gcvFLUSH_VERTEX | gcvFLUSH_TEXTURE)) && (pipe == 0x0))
     {
-        flush |= ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
+        if (Hardware->identity.chipModel != 0x8000 || Hardware->identity.chipRevision != 0x7120 || !Hardware->options.enableNNTPParallel)
+        {
+            flush |= ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
  5:5) - (0 ?
  5:5) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
@@ -7776,7 +7781,7 @@ gckHARDWARE_Flush(
  5:5) - (0 ?
  5:5) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ? 5:5) - (0 ? 5:5) + 1))))))) << (0 ? 5:5)))
-               | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
+                   | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
  10:10) - (0 ?
  10:10) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
@@ -7786,7 +7791,7 @@ gckHARDWARE_Flush(
  10:10) - (0 ?
  10:10) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ? 10:10) - (0 ? 10:10) + 1))))))) << (0 ? 10:10)))
-               | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
+                   | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
  11:11) - (0 ?
  11:11) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
@@ -7796,6 +7801,40 @@ gckHARDWARE_Flush(
  11:11) - (0 ?
  11:11) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ? 11:11) - (0 ? 11:11) + 1))))))) << (0 ? 11:11)));
+        }
+        else
+        {
+            flush |= ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
+ 5:5) - (0 ?
+ 5:5) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ?
+ 5:5) - (0 ?
+ 5:5) + 1))))))) << (0 ?
+ 5:5))) | (((gctUINT32) (0x0 & ((gctUINT32) ((((1 ?
+ 5:5) - (0 ?
+ 5:5) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 5:5) - (0 ? 5:5) + 1))))))) << (0 ? 5:5)))
+                   | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
+ 10:10) - (0 ?
+ 10:10) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ?
+ 10:10) - (0 ?
+ 10:10) + 1))))))) << (0 ?
+ 10:10))) | (((gctUINT32) (0x1 & ((gctUINT32) ((((1 ?
+ 10:10) - (0 ?
+ 10:10) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 10:10) - (0 ? 10:10) + 1))))))) << (0 ? 10:10)))
+                   | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
+ 11:11) - (0 ?
+ 11:11) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ?
+ 11:11) - (0 ?
+ 11:11) + 1))))))) << (0 ?
+ 11:11))) | (((gctUINT32) (0x0 & ((gctUINT32) ((((1 ?
+ 11:11) - (0 ?
+ 11:11) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 11:11) - (0 ? 11:11) + 1))))))) << (0 ? 11:11)));
+        }
     }
 
     /* See if there is a valid flush. */
@@ -9643,7 +9682,14 @@ _PmSetPowerOffDirection(
         gcmkONERROR(_PmClockControl(Hardware, gcvPOWER_OFF));
 
         /* Power off, clock off. */
-        gcmkONERROR(_PmClockOff(Hardware, gcvFALSE));
+        if(_IsHardwareMatch(Hardware, gcv600, 0x4653))
+        {
+            gcmkONERROR(_PmClockOff(Hardware, gcvTRUE));
+        }
+        else
+        {
+            gcmkONERROR(_PmClockOff(Hardware, gcvFALSE));
+        }
         break;
 
     default:

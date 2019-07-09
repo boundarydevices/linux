@@ -1336,6 +1336,7 @@ VIV:gcdUSE_MMU_EXCEPTION
 #endif
 
 #define gcdHAL_TEST 1
+#define gcdUSE_ZWP_SYNCHRONIZATION 1
 
 /*
     gcdUSE_SINGLE_CONTEXT
