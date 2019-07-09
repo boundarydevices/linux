@@ -1715,10 +1715,9 @@
 			 "MMC_CAP_ERASE",
 			 "MMC_CAP_CMD23",
 			 "MMC_CAP_DRIVER_TYPE_D";
-		caps2 = "MMC_CAP2_HS200";
-		/*MMC_CAP2_HS400"*/
+		caps2 = "MMC_CAP2_HS200", "MMC_CAP2_HS400";
 		f_min = <400000>;
-		f_max = <200000000>;
+		f_max = <166666666>;
 	};
 };
 
