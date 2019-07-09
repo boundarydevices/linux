@@ -310,6 +310,7 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 	void __iomem *REG_ETH_reg0_addr = NULL;
 	void __iomem *ETH_PHY_config_addr = NULL;
 	u32 internal_phy = 0;
+	int auto_cali_idx = -1;
 	is_internal_phy = 0;
 
 	pr_debug("g12a_network_interface_setup\n");
@@ -377,16 +378,28 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 
 	/*config extern phy*/
 	if (internal_phy == 0) {
+		if (of_property_read_u32(np, "auto_cali_idx", &auto_cali_idx))
+			pr_info("read auto_cali_idx fail\n");
+		else
+			pr_info("auto_cali_idx %d\n", auto_cali_idx);
+
+		if (auto_cali_idx != -1 && auto_cali_idx < 64) {
+			external_tx_delay = 0;
+			if ((auto_cali_idx >= 16) && (auto_cali_idx <= 47))
+				mc_val = 0x1629;
+			else
+				mc_val = 0x1621;
+
+			if (auto_cali_idx >= 32)
+				external_rx_delay = 1;
+			else
+				external_rx_delay = 0;
+			writel(mc_val, REG_ETH_reg0_addr);
+		} else {
 		if (of_property_read_u32(np, "tx_delay", &external_tx_delay))
 			pr_debug("set exphy tx delay\n");
 		if (of_property_read_u32(np, "rx_delay", &external_rx_delay))
 			pr_debug("set exphy rx delay\n");
-		if (is_meson_g12b_cpu()) {
-			if (is_meson_rev_a()) {
-				external_rx_delay = 0;
-				external_tx_delay = 0;
-				writel(0x1621, REG_ETH_reg0_addr);
-			}
 		}
 		/* only exphy support wol since g12a*/
 		/*we enable/disable wol with item in dts with "wol=<1>"*/
@@ -406,11 +419,10 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 			writel(cali_val, REG_ETH_reg0_addr +
 					REG_ETH_REG1_OFFSET);
 
-		if (is_meson_g12b_cpu()) {
-			if (is_meson_rev_a()) {
-				writel(0x10000, REG_ETH_reg0_addr +
-					REG_ETH_REG1_OFFSET);
-			}
+		if (auto_cali_idx != -1 && auto_cali_idx < 64) {
+			cali_val = ((auto_cali_idx % 16) << 16);
+			writel(cali_val, REG_ETH_reg0_addr +
+				REG_ETH_REG1_OFFSET);
 		}
 		pin_ctl = devm_pinctrl_get_select
 			(&pdev->dev, "external_eth_pins");
