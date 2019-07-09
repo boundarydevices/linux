@@ -2185,7 +2185,7 @@ gckVIDMEM_Lock(
             address = Kernel->internalBaseAddress + offset;
             break;
         case gcvPOOL_SRAM:
-            address = Kernel->sRAMBaseAddress[Kernel->sRAMIndex] + offset;
+            address = Kernel->sRAMBaseAddresses[Kernel->sRAMIndex] + offset;
             break;
         default:
             gcmkASSERT(Node->VidMem.pool == gcvPOOL_SYSTEM);
@@ -3619,10 +3619,10 @@ gckVIDMEM_NODE_LockCPU(
                                               vidMemBlock->physical,
                                               node->VirtualChunk.offset,
                                               node->VirtualChunk.bytes,
-                                              &logical));
+                                              &node->VirtualChunk.kvaddr));
             }
 
-            node->VirtualChunk.kvaddr = logical;
+            logical = node->VirtualChunk.kvaddr;
         }
     }
     else

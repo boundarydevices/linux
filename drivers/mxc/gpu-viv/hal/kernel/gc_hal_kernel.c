@@ -2121,6 +2121,7 @@ gckKERNEL_CacheOperation(
     gckVIDMEM_NODE nodeObject = gcvNULL;
     gcuVIDMEM_NODE_PTR node = gcvNULL;
     gckVIDMEM_BLOCK vidMemBlock = gcvNULL;
+    gctSIZE_T offset = 0;
     void *memHandle;
 
     gcmkHEADER_ARG("Kernel=%p pid=%u Node=%u op=%d Logical=%p Bytes=0x%lx",
@@ -2151,6 +2152,7 @@ gckKERNEL_CacheOperation(
     else if (vidMemBlock && vidMemBlock->object.type == gcvOBJ_VIDMEM_BLOCK)
     {
         memHandle = vidMemBlock->physical;
+        offset = node->VirtualChunk.offset;
     }
     else
     {
@@ -2164,7 +2166,7 @@ gckKERNEL_CacheOperation(
         status = gckOS_CacheFlush(Kernel->os,
                                   ProcessID,
                                   memHandle,
-                                  0,
+                                  offset,
                                   Logical,
                                   Bytes);
         break;
@@ -2173,7 +2175,7 @@ gckKERNEL_CacheOperation(
         status = gckOS_CacheClean(Kernel->os,
                                   ProcessID,
                                   memHandle,
-                                  0,
+                                  offset,
                                   Logical,
                                   Bytes);
         break;
@@ -2182,7 +2184,7 @@ gckKERNEL_CacheOperation(
         status = gckOS_CacheInvalidate(Kernel->os,
                                        ProcessID,
                                        memHandle,
-                                       0,
+                                       offset,
                                        Logical,
                                        Bytes);
         break;
@@ -2377,7 +2379,8 @@ _Commit(
                                        subCommit,
                                        ProcessId,
                                        Commit->shared,
-                                       &Commit->commitStamp);
+                                       &Commit->commitStamp,
+                                       &Commit->contextSwitched);
 
             if (status != gcvSTATUS_INTERRUPTED)
             {
@@ -5152,8 +5155,9 @@ gckDEVICE_Construct(
         /* Initialize device SRAM. */
         for (j = 0; j < gcvSRAM_COUNT; j++)
         {
-            device->sRAMBases[i][j] = gcvINVALID_PHYSICAL_ADDRESS;
-            device->sRAMSizes[i][j] = 0;
+            device->sRAMCPUBases[i][j] = gcvINVALID_PHYSICAL_ADDRESS;
+            device->sRAMBases[i][j]    = gcvINVALID_PHYSICAL_ADDRESS;
+            device->sRAMSizes[i][j]    = 0;
         }
     }
 

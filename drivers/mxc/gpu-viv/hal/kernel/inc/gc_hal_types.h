@@ -144,11 +144,6 @@ extern "C" {
 #   error "gcmINLINE: Platform could not be determined"
 #endif
 
-#if defined(CONFIG_KASAN)
-#   define gcmNOINLINE noinline
-#else
-#   define gcmNOINLINE
-#endif
 
 /* Possible debug flags. */
 #define gcdDEBUG_NONE           0
