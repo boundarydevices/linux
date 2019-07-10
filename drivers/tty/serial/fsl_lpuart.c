@@ -18,6 +18,8 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_dma.h>
+#include <linux/pm_domain.h>
+#include <linux/pm_runtime.h>
 #include <linux/serial_core.h>
 #include <linux/slab.h>
 #include <linux/tty_flip.h>
@@ -2658,6 +2660,29 @@ static int lpuart_global_reset(struct lpuart_port *sport)
 	return 0;
 }
 
+static int lpuart_attach_pd(struct device *dev)
+{
+	struct device *pd_uart;
+	struct device_link *link;
+
+	if (dev->pm_domain)
+		return 0;
+
+	pd_uart = dev_pm_domain_attach_by_name(dev, "uart");
+	if (IS_ERR(pd_uart))
+		return PTR_ERR(pd_uart);
+	link = device_link_add(dev, pd_uart, DL_FLAG_STATELESS |
+					     DL_FLAG_PM_RUNTIME |
+					     DL_FLAG_RPM_ACTIVE);
+	if (IS_ERR(link)) {
+		dev_err(dev, "Failed to add device_link to uart pd: %ld\n",
+			PTR_ERR(link));
+		return PTR_ERR(link);
+	}
+
+	return 0;
+}
+
 static int lpuart_probe(struct platform_device *pdev)
 {
 	const struct lpuart_soc_data *sdata = of_device_get_match_data(&pdev->dev);
@@ -2698,6 +2723,10 @@ static int lpuart_probe(struct platform_device *pdev)
 	else
 		sport->port.rs485_config = lpuart_config_rs485;
 	sport->port.rs485_supported = lpuart_rs485_supported;
+
+	ret = lpuart_attach_pd(&pdev->dev);
+	if (ret)
+		return ret;
 
 	sport->ipg_clk = devm_clk_get(&pdev->dev, "ipg");
 	if (IS_ERR(sport->ipg_clk)) {
