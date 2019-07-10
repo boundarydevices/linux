@@ -233,6 +233,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8ulp-evk.dtb imx8ulp-evk-lpspi-slave.dtb \
 			  imx8ulp-9x9-evk-lpspi.dtb imx8ulp-9x9-evk-lpspi-slave.dtb \
 			  imx8ulp-9x9-evk-i3c.dtb imx8ulp-9x9-evk-sof-btsco.dtb \
 			  imx8ulp-evk-lpa.dtb imx8ulp-9x9-evk-lpa.dtb
+
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek.dtb imx8qm-mek-ov5640.dtb \
 			  imx8qm-mek-enet2-tja1100.dtb imx8qm-mek-rpmsg.dtb \
 			  imx8qm-mek-hdmi.dtb \
@@ -390,3 +391,5 @@ dtb-$(CONFIG_ARCH_S32) += s32v234-evb.dtb \
 			  s32v234-sbc.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-sof-cs42888.dtb imx8qm-mek-sof-wm8960.dtb \
 			  imx8qm-mek-revd-sof-wm8962.dtb imx8qm-mek-sof.dtb
+
+dtb-$(CONFIG_ARCH_MXC) += imx8mq-bio.dtb \
