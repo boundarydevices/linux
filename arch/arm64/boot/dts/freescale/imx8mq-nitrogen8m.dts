@@ -162,6 +162,13 @@
 		>;
 	};
 
+	pinctrl_i2c3: i2c3grp {
+		fsl,pins = <
+			MX8MQ_IOMUXC_I2C3_SCL_I2C3_SCL			0x4000007f
+			MX8MQ_IOMUXC_I2C3_SDA_I2C3_SDA			0x4000007f
+		>;
+	};
+
 	pinctrl_i2c3_csi2: i2c3-csi2grp {
 		fsl,pins = <
 #define GP_CSI2_MIPI_PWDN	<&gpio3 2 GPIO_ACTIVE_HIGH>
@@ -171,17 +178,20 @@
 		>;
 	};
 
-	pinctrl_i2c3: i2c3grp {
-		fsl,pins = <
-			MX8MQ_IOMUXC_I2C3_SCL_I2C3_SCL			0x4000007f
-			MX8MQ_IOMUXC_I2C3_SDA_I2C3_SDA			0x4000007f
-		>;
-	};
-
 	pinctrl_i2c4: i2c4grp {
 		fsl,pins = <
 			MX8MQ_IOMUXC_I2C4_SCL_I2C4_SCL			0x4000007f
 			MX8MQ_IOMUXC_I2C4_SDA_I2C4_SDA			0x4000007f
+		>;
+	};
+
+	pinctrl_i2c4_ft5x06: i2c4-ft5x06grp {
+		fsl,pins = <
+#define GPIRQ_I2C4_FT5X06	<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
+#define GP_I2C4_FT5X06_WAKE	<&gpio3 12 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0x49
+#define GP_I2C4_FT5X06_RESET	<&gpio3 13 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	0x49
 		>;
 	};
 
@@ -196,13 +206,12 @@
 		>;
 	};
 
-	pinctrl_i2c4_ft5x06: i2c4-ft5x06grp {
+	pinctrl_i2c4_sn65dsi83: i2c4-sn65dsi83grp {
 		fsl,pins = <
-#define GPIRQ_I2C4_FT5X06	<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
-#define GP_I2C4_FT5X06_WAKE	<&gpio3 12 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0x49
-#define GP_I2C4_FT5X06_RESET	<&gpio3 13 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	0x49
+#define GPIRQ_I2C4_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
+			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x04
+#define GP_I2C4_SN65DSI83_EN	<&gpio3 15 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x06
 		>;
 	};
 
@@ -213,15 +222,6 @@
 			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0xd6
 #define GP_ST1633_RESET		<&gpio3 13 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	0x49
-		>;
-	};
-
-	pinctrl_i2c4_sn65dsi83: i2c4-sn65dsi83grp {
-		fsl,pins = <
-#define GPIRQ_I2C4_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
-			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x04
-#define GP_I2C4_SN65DSI83_EN	<&gpio3 15 GPIO_ACTIVE_HIGH>
-			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x06
 		>;
 	};
 
@@ -486,7 +486,7 @@
 
 	pinctrl_wdog: wdoggrp {
 		fsl,pins = <
-			MX8MQ_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B	0xc6
+			MX8MQ_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B		0xc6
 		>;
 	};
 };
