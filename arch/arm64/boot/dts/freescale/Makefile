@@ -132,7 +132,9 @@ dtb-$(CONFIG_ARCH_FSL_IMX8MQ) += fsl-imx8mq-ddr3l-arm2.dtb \
 				 fsl-imx8mq-evk-edp.dtb \
 				 fsl-imx8mq-phanbell.dtb \
 				 fsl-imx8mq-phanbell-no-product.dtb \
-				 fsl-imx8mq-evk-no-product.dtb
+				 fsl-imx8mq-evk-no-product.dtb \
+				 imx8mq-bio.dtb \
+
 dtb-$(CONFIG_ARCH_FSL_IMX8MM) += fsl-imx8mm-evk.dtb \
 				 fsl-imx8mm-evk-drm.dtb \
 				 fsl-imx8mm-evk-ak4497.dtb \
