@@ -391,6 +391,38 @@ void imx8mq_phy_reset(sc_ipc_t ipcHndl, struct hdp_mem *mem, u8 reset)
 	return;
 }
 
+int imx8mq_clock_init(struct hdp_clks *clks)
+{
+	struct imx_hdp *hdp = clks_to_imx_hdp(clks);
+	struct device *dev = hdp->dev;
+
+	clks->refclk = devm_clk_get(dev, "refclk");
+	if (IS_ERR(clks->refclk)) {
+		dev_dbg(dev, "failed to get refclk clk\n");
+		clks->refclk = NULL;
+	}
+	return true;
+}
+
+int imx8mq_pixel_clock_enable(struct hdp_clks *clks)
+{
+	struct imx_hdp *hdp = clks_to_imx_hdp(clks);
+	struct device *dev = hdp->dev;
+	int ret;
+
+	ret = clk_prepare_enable(clks->refclk);
+	if (ret < 0) {
+		dev_err(dev, "%s, pre refclk error\n", __func__);
+		return ret;
+	}
+	return ret;
+}
+
+void imx8mq_pixel_clock_disable(struct hdp_clks *clks)
+{
+	clk_disable_unprepare(clks->refclk);
+}
+
 int imx8qm_clock_init(struct hdp_clks *clks)
 {
 	struct imx_hdp *hdp = clks_to_imx_hdp(clks);
@@ -1354,7 +1386,10 @@ static struct hdp_ops imx8mq_ops = {
 	.mode_fixup = hdmi_mode_fixup_t28hpc,
 	.get_edid_block = hdmi_get_edid_block,
 	.get_hpd_state = hdmi_get_hpd_state,
+	.clock_init = imx8mq_clock_init,
 	.write_hdr_metadata = hdmi_write_hdr_metadata,
+	.pixel_clock_enable = imx8mq_pixel_clock_enable,
+	.pixel_clock_disable = imx8mq_pixel_clock_disable,
 	.pixel_clock_range = pixel_clock_range_t28hpc,
 	.pixel_engine_reset = hdmi_phy_pix_engine_reset_t28hpc,
 };

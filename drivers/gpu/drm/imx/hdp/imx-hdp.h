@@ -197,6 +197,7 @@ struct hdp_clks {
 	struct clk *dig_pll_div;
 	struct clk *clk_i2s;
 	struct clk *clk_i2s_bypass;
+	struct clk *refclk;
 };
 
 enum hdp_tx_irq {
