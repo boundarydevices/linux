@@ -4010,8 +4010,6 @@ static void hdmitx_hpd_plugin_handler(struct work_struct *work)
 	if (hdev->rxsense_policy) {
 		cancel_delayed_work(&hdev->work_rxsense);
 		queue_delayed_work(hdev->rxsense_wq, &hdev->work_rxsense, 0);
-		while (!(hdmitx_extcon_rxsense->state))
-			msleep_interruptible(1000);
 	}
 	mutex_lock(&setclk_mutex);
 	pr_info(SYS "plugin\n");
