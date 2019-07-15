@@ -9413,6 +9413,32 @@ _PmClockControl(
         gcmkONERROR(gckOS_WriteRegisterEx(Hardware->os, Hardware->core,
                                           0x00000,
                                           clock));
+#if gcdENABLE_FSCALE_VAL_ADJUST
+        if (State == gcvPOWER_ON)
+        {
+            gcmkVERIFY_OK(
+                gckOS_ReadRegisterEx(Hardware->os,
+                                     Hardware->core,
+                                     0x0010C,
+                                     &clock));
+
+            /* fscaleSh_clkSh = clkSh[7 :1 ];
+               fscaleShLoad_clkSh = clkSh [0 ];
+               enableAutoSh_clkSh = clkSh[16 ];
+               disableAuto_clkSh = clkSh[17 ];
+            */
+            gcmkONERROR(gckOS_WriteRegisterEx(Hardware->os,
+                                              Hardware->core,
+                                              0x0010C,
+                                              (clock & ~0xFE) | (Hardware->powerOnFscaleVal << 1) | 0x20001
+                                              ));
+
+            gcmkONERROR(gckOS_WriteRegisterEx(Hardware->os,
+                                              Hardware->core,
+                                              0x0010C,
+                                              clock));
+        }
+#endif
     }
 
     return gcvSTATUS_OK;
