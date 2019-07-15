@@ -44,10 +44,10 @@
 		mu2 = &lsio_mu2;
 		mu3 = &lsio_mu3;
 		mu4 = &lsio_mu4;
-		serial0 = &adma_lpuart0;
-		serial1 = &adma_lpuart1;
-		serial2 = &adma_lpuart2;
-		serial3 = &adma_lpuart3;
+		serial0 = &lpuart0;
+		serial1 = &lpuart1;
+		serial2 = &lpuart2;
+		serial3 = &lpuart3;
 		isi0 = &isi_0;
 		isi1 = &isi_1;
 		isi2 = &isi_2;
