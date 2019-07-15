@@ -170,6 +170,11 @@
 			  &lsio_mu1 1 0
 			  &lsio_mu1 3 3>;
 
+		pd: imx8qx-pd {
+			compatible = "fsl,imx8qxp-scu-pd", "fsl,scu-pd";
+			#power-domain-cells = <1>;
+		};
+
 		clk: clock-controller {
 			compatible = "fsl,imx8qxp-clk";
 			#clock-cells = <1>;
@@ -193,11 +198,6 @@
 			fec_mac1: mac@2c6 {
 				reg = <0x2c6 6>;
 			};
-		};
-
-		pd: imx8qx-pd {
-			compatible = "fsl,imx8qxp-scu-pd", "fsl,scu-pd";
-			#power-domain-cells = <1>;
 		};
 
 		scu_key: scu-key {
