@@ -3908,10 +3908,10 @@ static unsigned char pre_de_buf_config(void)
 #endif
 		}
 
+		vframe = vf_get(VFM_NAME);
+
 		if (vframe == NULL)
 			return 0;
-
-		vframe = vf_get(VFM_NAME);
 
 		/*for support compress from dec*/
 		if (IS_COMP_MODE(vframe->type) &&
@@ -3964,8 +3964,11 @@ jiffies_to_msecs(jiffies_64 - vframe->ready_jiffies64));
 				return 0;
 			} else if (!afbc_busy) {
 				/*afbc_busy = di_requeset_afbc(false);*/
-				di_pre_stru.wait_afbc = 0;
+				di_pre_stru.wait_afbc = false;
 				pr_info("di: afbc hw free\n");
+			} else {
+				di_pre_stru.wait_afbc = false;
+				pr_info("di: afbc wait timeout\n");
 			}
 		}
 
@@ -5936,7 +5939,7 @@ static int process_post_vframe(void)
 	int itmp;
 	int ready_count = list_count(QUEUE_PRE_READY);
 	bool check_drop = false;
-	u32 di_afbc = false;
+	bool di_afbc = false;
 
 	if (queue_empty(QUEUE_POST_FREE))
 		return 0;
@@ -5957,7 +5960,7 @@ static int process_post_vframe(void)
 	}
 
 	if (ready_di_buf->vframe->type & VIDTYPE_PRE_DI_AFBC) {
-		di_afbc = 1;
+		di_afbc = true;
 		/*pr_info("di afbc mode 0x%x\n", ready_di_buf->vframe->type);*/
 	}
 
@@ -6974,9 +6977,9 @@ static void di_process(void)
 				(pre_run_flag == DI_RUN_FLAG_STEP)) {
 				if (pre_run_flag == DI_RUN_FLAG_STEP)
 					pre_run_flag = DI_RUN_FLAG_STEP_DONE;
-				if (pre_de_buf_config() &&
-					(di_pre_stru.pre_de_process_flag == 0)
-					&& (!atomic_read(&di_flag_unreg)))
+				if ((!atomic_read(&di_flag_unreg))
+				&& (di_pre_stru.pre_de_process_flag == 0)
+				&& pre_de_buf_config())
 					pre_de_process();
 			}
 		}
@@ -7205,7 +7208,7 @@ static int di_receiver_event_fun(int type, void *data, void *arg)
 		ddbg_mod_save(eDI_DBG_MOD_UNREGB, 0, 0);
 		di_pre_stru.unreg_req_flag = 1;
 		di_pre_stru.vdin_source = false;
-		di_pre_stru.wait_afbc = false;
+
 		/*di_requeset_afbc(false);*/
 		trigger_pre_di_process(TRIGGER_PRE_BY_PROVERDER_UNREG);
 		di_pre_stru.unreg_req_flag_cnt = 0;
@@ -7214,7 +7217,10 @@ static int di_receiver_event_fun(int type, void *data, void *arg)
 			|| di_pre_stru.pre_de_busy) {
 			pr_info("di:w10\n");
 			usleep_range(10000, 10001);
+		} else {
+			pr_info("di:no w\n");
 		}
+		di_pre_stru.wait_afbc = false;
 		while (di_pre_stru.unreg_req_flag ||
 			di_pre_stru.reg_irq_busy) {
 			usleep_range(1000, 1001);
@@ -7423,6 +7429,7 @@ light_unreg:
 		pr_info("%s: vframe provider reg %s\n", __func__,
 			provider_name);
 		ddbg_mod_save(eDI_DBG_MOD_REGB, 0, 0);
+		di_pre_stru.wait_afbc = false;
 		atomic_set(&di_flag_unreg, 0); //ary
 		bypass_state = 0;
 		di_pre_stru.reg_req_flag = 1;
@@ -7725,8 +7732,10 @@ static void di_vf_put(vframe_t *vf, void *arg)
 		vf_put(vf, VFM_NAME);
 		vf_notify_provider(VFM_NAME,
 			VFRAME_EVENT_RECEIVER_PUT, NULL);
+		#if 0
 		if (!IS_ERR_OR_NULL(di_post_stru.keep_buf))
 			recycle_keep_buffer();
+		#endif
 		return;
 	}
 /* struct di_buf_s *p = NULL; */
@@ -7745,11 +7754,11 @@ static void di_vf_put(vframe_t *vf, void *arg)
 			__func__, vf);
 		return;
 	}
-	if (di_post_stru.keep_buf == di_buf) {
-		pr_info("[DI]recycle buffer %d, get cnt %d.\n",
-			di_buf->index, disp_frame_count);
+	//if (di_post_stru.keep_buf == di_buf) {
+	//	pr_info("[DI]recycle buffer %d, get cnt %d.\n",
+	//		di_buf->index, disp_frame_count);
 		recycle_keep_buffer();
-	}
+	//}
 
 	if (di_buf->type == VFRAME_TYPE_POST) {
 		di_lock_irqfiq_save(irq_flag2);
