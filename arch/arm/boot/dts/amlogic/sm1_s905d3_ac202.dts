@@ -373,15 +373,15 @@
 
 	gpio_keypad{
 		compatible = "amlogic, gpio_keypad";
-		status = "disabled";
+		status = "okay";
 		scan_period = <20>;
 		key_num = <4>;
 		key_name = "power", "vol-", "vol+", "mic_mute";
 		key_code = <116 114 115 65>;
 		key-gpios = <&gpio_ao  GPIOAO_7  GPIO_ACTIVE_HIGH
 				&gpio  GPIOC_3  GPIO_ACTIVE_HIGH
-			     &gpio  GPIOC_0  GPIO_ACTIVE_HIGH
-			     &gpio  GPIOA_0  GPIO_ACTIVE_HIGH>;
+				&gpio  GPIOC_0  GPIO_ACTIVE_HIGH
+				&gpio  GPIOA_0  GPIO_ACTIVE_HIGH>;
 		detect_mode = <0>;/*0:polling mode, 1:irq mode*/
 	};
 
@@ -585,7 +585,7 @@
 		aml-audio-card,name = "AML-AUGESOUND";
 
 		/*avout mute gpio*/
-		avout_mute-gpios = <&gpio_ao GPIOAO_2 GPIO_ACTIVE_HIGH>;
+		avout_mute-gpios = <&gpio_ao GPIOAO_8 GPIO_ACTIVE_HIGH>;
 
 		aml-audio-card,dai-link@0 {
 			format = "dsp_a";
@@ -1124,8 +1124,13 @@
 	tdma: tdm@0 {
 		compatible = "amlogic, sm1-snd-tdma";
 		#sound-dai-cells = <0>;
-		dai-tdm-lane-slot-mask-in = <0 1>;
-		dai-tdm-oe-lane-slot-mask-out = <1 0>;
+		dai-tdm-lane-slot-mask-in = <1 1>;
+		dai-tdm-oe-lane-slot-mask-out = <1 1>;
+		dai-format = "dsp_a";
+		dai-tdm-slot-tx-mask = <1>;
+		dai-tdm-slot-rx-mask = <1>;
+		dai-tdm-slot-num = <2>;
+		dai-tdm-slot-width = <16>;
 		dai-tdm-clk-sel = <0>;
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_A
 				&clkc CLKID_MPLL0>;
@@ -1151,8 +1156,8 @@
 		clock-names = "mclk", "clk_srcpll",
 			"samesource_srcpll", "samesource_clk";
 		pinctrl-names = "tdm_pins";
-		pinctrl-0 = <&tdmb_mclk &tdmout_b &tdmin_b>;
-
+		/*pinctrl-0 = <&tdmb_mclk &tdmout_b &tdmin_b>;*/
+		pinctrl-0 = < &tdmout_b &tdmin_b>;
 		mclk_pad = <0>;  /* 0: mclk_0; 1: mclk_1 */
 
 		/*
@@ -1508,7 +1513,7 @@
 		lane_mask = <0x1>;
 		/* max 0xff, each bit for one channel */
 		channel_mask = <0x3>;
-		status = "okay";
+		status = "disabled";
 	};
 }; /* end of audiobus */
 
@@ -1517,26 +1522,27 @@
 		mux { /* GPIOX_11, GPIOX_10, GPIOX_9 */
 			groups = "tdma_sclk",
 				"tdma_fs",
-				"tdma_dout0";
+				"tdma_dout0",
+				"tdma_dout1";
 			function = "tdma_out";
 		};
 	};
 
 	tdmin_a: tdmin_a {
 		mux { /* GPIOX_8 */
-			groups = "tdma_din1";
+			groups = "tdma_din0",
+					"tdma_din1";
 			function = "tdma_in";
 		};
 	};
 
-	tdmb_mclk: tdmb_mclk {
-		mux {
-			groups = "mclk0_a";
-			function = "mclk0";
-			drive-strength = <2>;
-		};
-	};
-
+	//tdmb_mclk: tdmb_mclk {
+	//	mux {
+	//		groups = "mclk0_a";
+	//		function = "mclk0";
+	//		drive-strength = <2>;
+	//	};
+	//};
 	tdmout_b: tdmout_b {
 		mux { /* GPIOA_1, GPIOA_2, GPIOA_3, GPIOA_4, */
 			  /* GPIOA_5, GPIOA_6, GPIOA_7, GPIOA_8, */
@@ -1693,7 +1699,7 @@
 	controller-type = <1>;
 };
 &ethmac {
-	status = "okay";
+	status = "disabled";
 	pinctrl-names = "internal_eth_pins";
 	pinctrl-0 = <&internal_eth_pins>;
 	mc_val = <0x4be04>;
@@ -1845,6 +1851,10 @@
 			size=<0x0 0x0>;
 		};
 	};
+};
+
+&remote{
+	status = "disable";
 };
 
 &pcie_A {
