@@ -16,6 +16,7 @@
 #include <linux/i2c.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
+#include <linux/of_gpio.h>
 #include <linux/property.h>
 #include <linux/regmap.h>
 #include <linux/serial_core.h>
@@ -334,6 +335,7 @@ struct sc16is7xx_port {
 	const struct sc16is7xx_devtype	*devtype;
 	struct regmap			*regmap;
 	struct clk			*clk;
+	struct gpio_desc		*reset_gpio;
 #ifdef CONFIG_GPIOLIB
 	struct gpio_chip		gpio;
 #endif
@@ -1368,6 +1370,7 @@ static int sc16is7xx_probe(struct device *dev,
 	u32 uartclk = 0;
 	int i, ret;
 	struct sc16is7xx_port *s;
+	struct gpio_desc *gpio;
 
 	if (IS_ERR(regmap))
 		return PTR_ERR(regmap);
@@ -1425,6 +1428,11 @@ static int sc16is7xx_probe(struct device *dev,
 		goto out_clk;
 	}
 	sched_set_fifo(s->kworker_task);
+	gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(gpio))
+		return PTR_ERR(gpio);
+
+	s->reset_gpio = gpio;
 
 #ifdef CONFIG_GPIOLIB
 	if (devtype->nr_gpio) {
@@ -1445,6 +1453,8 @@ static int sc16is7xx_probe(struct device *dev,
 	}
 #endif
 
+	gpiod_set_value_cansleep(s->reset_gpio, 0);
+	msleep(1);
 	/* reset device, purging any pending irq / data */
 	regmap_write(s->regmap, SC16IS7XX_IOCONTROL_REG << SC16IS7XX_REG_SHIFT,
 			SC16IS7XX_IOCONTROL_SRESET_BIT);
@@ -1581,6 +1591,7 @@ static void sc16is7xx_remove(struct device *dev)
 	kthread_stop(s->kworker_task);
 
 	clk_disable_unprepare(s->clk);
+	gpiod_set_value_cansleep(s->reset_gpio, 1);
 }
 
 static const struct of_device_id __maybe_unused sc16is7xx_dt_ids[] = {
