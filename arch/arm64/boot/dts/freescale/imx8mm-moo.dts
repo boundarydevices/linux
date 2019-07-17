@@ -510,6 +510,14 @@
 		status = "okay";
 	};
 
+	clocks {
+		clk1m8432: clk1m8432 {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <1843200>;
+		};
+	};
+
 	gpio_leds: leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
@@ -920,11 +928,13 @@
 };
 
 &i2c3b {
-	sc16is7xx-uart@49 {
-		compatible = "nxp,sc16is7xx-uart";
+	sc16is7xx-uart@4c {
+		clocks = <&clk1m8432>;
+		compatible = "nxp,sc16is752";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3b_sc16is7xx>;
-		reg = <0x49>;
+		reg = <0x4c>;
+		reset-gpios = GP_SC16IS7XX_RESET;
 		interrupts-extended = GPIRQ_SC16IS7XX;
 	};
 };
