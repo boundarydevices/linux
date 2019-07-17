@@ -720,9 +720,11 @@ static int imx7d_charger_secondary_detection(struct imx_usbmisc_data *data)
 {
 	struct imx_usbmisc *usbmisc = dev_get_drvdata(data->dev);
 	struct usb_phy *usb_phy = data->usb_phy;
+	unsigned long flags;
 	int val, bak_val;
 
 	/* Pull up DP */
+	spin_lock_irqsave(&usbmisc->lock, flags);
 	val = readl(usbmisc->base + MX7D_USBNC_USB_CTRL2);
 	bak_val = val;
 	val &= ~MX7D_USBNC_USB_CTRL2_DP_DM_MASK;
@@ -731,9 +733,11 @@ static int imx7d_charger_secondary_detection(struct imx_usbmisc_data *data)
 	val |= MX7D_USBNC_USB_CTRL2_TERMSEL_OVERRIDE_EN |
 		MX7D_USBNC_USB_CTRL2_TERMSEL_OVERRIDE_VAL;
 	writel(val, usbmisc->base + MX7D_USBNC_USB_CTRL2);
+	spin_unlock_irqrestore(&usbmisc->lock, flags);
 
 	msleep(80);
 
+	spin_lock_irqsave(&usbmisc->lock, flags);
 	val = readl(usbmisc->base + MX7D_USB_OTG_PHY_STATUS);
 	if (val & MX7D_USB_OTG_PHY_STATUS_LINE_STATE1) {
 		dev_dbg(data->dev, "It is a dedicate charging port\n");
@@ -743,6 +747,7 @@ static int imx7d_charger_secondary_detection(struct imx_usbmisc_data *data)
 		usb_phy->chg_type = CDP_TYPE;
 	}
 	writel(bak_val, usbmisc->base + MX7D_USBNC_USB_CTRL2);
+	spin_unlock_irqrestore(&usbmisc->lock, flags);
 
 	return 0;
 }
