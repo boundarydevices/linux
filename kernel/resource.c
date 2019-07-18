@@ -139,7 +139,7 @@ static int __init ioresources_init(void)
 {
 	proc_create_seq_data("ioports", 0, NULL, &resource_op,
 			&ioport_resource);
-	proc_create_seq_data("iomem", 0, NULL, &resource_op, &iomem_resource);
+	proc_create_seq_data("iomem", S_IRUSR, NULL, &resource_op, &iomem_resource);
 	return 0;
 }
 __initcall(ioresources_init);
