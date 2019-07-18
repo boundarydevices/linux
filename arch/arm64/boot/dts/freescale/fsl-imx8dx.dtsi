@@ -2251,7 +2251,10 @@
 		jpegdec: jpegdec@58400000 {
 			compatible = "fsl,imx8-jpgdec";
 			reg = <0x0 0x58400000 0x0 0x00040020 >;
-			interrupts = <GIC_SPI 309 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 309 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 310 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 311 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 312 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clk IMX8QXP_IMG_JPEG_DEC_IPG_CLK >,
 					<&clk IMX8QXP_IMG_JPEG_DEC_CLK >;
 			clock-names = "ipg", "per";
@@ -2265,7 +2268,10 @@
 		jpegenc: jpegenc@58450000 {
 			compatible = "fsl,imx8-jpgenc";
 			reg = <0x0 0x58450000 0x0 0x00240020 >;
-			interrupts = <GIC_SPI 305 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <GIC_SPI 305 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 306 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 307 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 308 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clk IMX8QXP_IMG_JPEG_ENC_IPG_CLK >,
 					<&clk IMX8QXP_IMG_JPEG_ENC_CLK >;
 			clock-names = "ipg", "per";
