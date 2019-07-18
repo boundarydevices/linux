@@ -1926,6 +1926,7 @@ static int mxc_jpeg_probe(struct platform_device *pdev)
 	int ret;
 	int mode;
 	const struct of_device_id *of_id;
+	unsigned int slot;
 
 	of_id = of_match_node(mxc_jpeg_match, dev->of_node);
 	mode = (int)(u64) of_id->data;
@@ -1937,29 +1938,32 @@ static int mxc_jpeg_probe(struct platform_device *pdev)
 	mutex_init(&jpeg->lock);
 	spin_lock_init(&jpeg->hw_lock);
 
-	if (dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32))) {
+	ret = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
+	if (ret) {
 		dev_err(&pdev->dev, "No suitable DMA available.\n");
-		return -EINVAL;
+		goto err_irq;
 	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	dec_irq = platform_get_irq(pdev, 0);
-	if (!res || dec_irq < 0) {
-		dev_err(&pdev->dev, "Failed to get dec_irq %d.\n", dec_irq);
-		ret = -EINVAL;
-		goto err_irq;
-	}
-	ret = devm_request_irq(&pdev->dev, dec_irq, mxc_jpeg_dec_irq, 0,
-			       pdev->name, jpeg);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to request dec_irq %d (%d)\n",
-			dec_irq, ret);
-		ret = -EINVAL;
-		goto err_irq;
-	}
 	jpeg->base_reg = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(jpeg->base_reg))
 		return PTR_ERR(jpeg->base_reg);
+
+	for (slot = 0; slot < MXC_MAX_SLOTS; slot++) {
+		dec_irq = platform_get_irq(pdev, slot);
+		if (dec_irq < 0) {
+			dev_err(&pdev->dev, "Failed to get irq %d.\n", dec_irq);
+			ret = dec_irq;
+			goto err_irq;
+		}
+		ret = devm_request_irq(&pdev->dev, dec_irq, mxc_jpeg_dec_irq, 0,
+				       pdev->name, jpeg);
+		if (ret) {
+			dev_err(&pdev->dev, "Failed to request irq %d (%d)\n",
+				dec_irq, ret);
+			goto err_irq;
+		}
+	}
 
 	jpeg->pdev = pdev;
 	jpeg->dev = dev;
