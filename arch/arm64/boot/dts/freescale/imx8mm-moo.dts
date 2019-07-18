@@ -516,6 +516,12 @@
 			#clock-cells = <0>;
 			clock-frequency = <1843200>;
 		};
+
+		clk16m: clk16m {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <16000000>;
+		};
 	};
 
 	gpio_leds: leds {
@@ -727,10 +733,15 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 
-	spidev@0 {
-		compatible = "spidev";
-		spi-max-frequency = <2000000>;
+	can0: can@0 {
+		clocks = <&clk16m>;
+		compatible = "microchip,mcp2515";
+		interrupts-extended = GPIRQ_MCP2515T;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ecspi2_mcp2515t>;
 		reg = <0>;
+		reset-gpios = GP_MCP_RESET;
+		xceiver-gpios = GP_CAN_EN;
 	};
 };
 
