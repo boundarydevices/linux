@@ -36,6 +36,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/netdevice.h>
+#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/property.h>
 #include <linux/regulator/consumer.h>
@@ -253,6 +254,8 @@ struct mcp251x_priv {
 
 	struct regulator *power;
 	struct regulator *transceiver;
+	struct gpio_desc *transceiver_gpio;
+	struct gpio_desc *reset_gpio;
 	struct clk *clk;
 #ifdef CONFIG_GPIOLIB
 	struct gpio_chip gpio;
@@ -945,6 +948,24 @@ static int mcp251x_power_enable(struct regulator *reg, int enable)
 		return regulator_disable(reg);
 }
 
+static int mcp251x_transceiver_enable(struct mcp251x_priv *priv, int enable)
+{
+	int ret;
+
+	ret = mcp251x_power_enable(priv->transceiver, enable);
+	gpiod_set_value_cansleep(priv->transceiver_gpio, enable);
+	return ret;
+}
+
+static int mcp251x_can_enable(struct mcp251x_priv *priv, int enable)
+{
+	int ret;
+
+	ret = mcp251x_power_enable(priv->power, enable);
+	gpiod_set_value_cansleep(priv->reset_gpio, enable ^ 1);
+	return ret;
+}
+
 static int mcp251x_stop(struct net_device *net)
 {
 	struct mcp251x_priv *priv = netdev_priv(net);
@@ -965,7 +986,7 @@ static int mcp251x_stop(struct net_device *net)
 
 	mcp251x_hw_sleep(spi);
 
-	mcp251x_power_enable(priv->transceiver, 0);
+	mcp251x_transceiver_enable(priv, 0);
 
 	priv->can.state = CAN_STATE_STOPPED;
 
@@ -1212,7 +1233,7 @@ static int mcp251x_open(struct net_device *net)
 	}
 
 	mutex_lock(&priv->mcp_lock);
-	mcp251x_power_enable(priv->transceiver, 1);
+	mcp251x_transceiver_enable(priv, 1);
 
 	priv->force_quit = 0;
 	priv->tx_skb = NULL;
@@ -1248,7 +1269,7 @@ out_free_irq:
 	free_irq(spi->irq, priv);
 	mcp251x_hw_sleep(spi);
 out_close:
-	mcp251x_power_enable(priv->transceiver, 0);
+	mcp251x_transceiver_enable(priv, 0);
 	close_candev(net);
 	mutex_unlock(&priv->mcp_lock);
 	return ret;
@@ -1304,6 +1325,7 @@ static int mcp251x_can_probe(struct spi_device *spi)
 	const void *match = device_get_match_data(&spi->dev);
 	struct net_device *net;
 	struct mcp251x_priv *priv;
+	struct gpio_desc *gpio;
 	struct clk *clk;
 	u32 freq;
 	int ret;
@@ -1365,8 +1387,17 @@ static int mcp251x_can_probe(struct spi_device *spi)
 		ret = -EPROBE_DEFER;
 		goto out_clk;
 	}
+	gpio = devm_gpiod_get_optional(&spi->dev, "xceiver", GPIOD_OUT_LOW);
+	if (IS_ERR(gpio))
+		return PTR_ERR(gpio);
+	priv->transceiver_gpio = gpio;
 
-	ret = mcp251x_power_enable(priv->power, 1);
+	gpio = devm_gpiod_get_optional(&spi->dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(gpio))
+		return PTR_ERR(gpio);
+	priv->reset_gpio = gpio;
+
+	ret = mcp251x_can_enable(priv, 1);
 	if (ret)
 		goto out_clk;
 
@@ -1426,7 +1457,7 @@ out_unregister_candev:
 error_probe:
 	destroy_workqueue(priv->wq);
 	priv->wq = NULL;
-	mcp251x_power_enable(priv->power, 0);
+	mcp251x_can_enable(priv, 0);
 
 out_clk:
 	clk_disable_unprepare(clk);
@@ -1445,7 +1476,7 @@ static void mcp251x_can_remove(struct spi_device *spi)
 
 	unregister_candev(net);
 
-	mcp251x_power_enable(priv->power, 0);
+	mcp251x_can_enable(priv, 0);
 
 	destroy_workqueue(priv->wq);
 	priv->wq = NULL;
@@ -1470,7 +1501,7 @@ static int __maybe_unused mcp251x_can_suspend(struct device *dev)
 		netif_device_detach(net);
 
 		mcp251x_hw_sleep(spi);
-		mcp251x_power_enable(priv->transceiver, 0);
+		mcp251x_transceiver_enable(priv, 0);
 		priv->after_suspend = AFTER_SUSPEND_UP;
 	} else {
 		priv->after_suspend = AFTER_SUSPEND_DOWN;
@@ -1488,9 +1519,9 @@ static int __maybe_unused mcp251x_can_resume(struct device *dev)
 	struct mcp251x_priv *priv = spi_get_drvdata(spi);
 
 	if (priv->after_suspend & AFTER_SUSPEND_POWER)
-		mcp251x_power_enable(priv->power, 1);
+		mcp251x_can_enable(priv, 1);
 	if (priv->after_suspend & AFTER_SUSPEND_UP)
-		mcp251x_power_enable(priv->transceiver, 1);
+		mcp251x_transceiver_enable(priv, 1);
 
 	if (priv->after_suspend & (AFTER_SUSPEND_POWER | AFTER_SUSPEND_UP))
 		queue_work(priv->wq, &priv->restart_work);
