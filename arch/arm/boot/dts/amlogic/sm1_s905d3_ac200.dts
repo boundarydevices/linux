@@ -136,13 +136,13 @@
 			//no-map;
 		};
 		/*  vdin0 CMA pool */
-		vdin0_cma_reserved:linux,vdin0_cma {
-			compatible = "shared-dma-pool";
-			reusable;
+		//vdin0_cma_reserved:linux,vdin0_cma {
+		//	compatible = "shared-dma-pool";
+		//	reusable;
 		/* 1920x1080x2x4  =16+4 M */
-			size = <0x04000000>;
-			alignment = <0x400000>;
-		};
+		//	size = <0x04000000>;
+		//	alignment = <0x400000>;
+		//};
 		/*  vdin1 CMA pool */
 		vdin1_cma_reserved:linux,vdin1_cma {
 			compatible = "shared-dma-pool";
@@ -1696,7 +1696,7 @@
 
 /*if you want to use vdin just modify status to "ok"*/
 &vdin0 {
-	memory-region = <&vdin0_cma_reserved>;
+	/*memory-region = <&vdin0_cma_reserved>;*/
 	status = "okay";
 	/*vdin write mem color depth support:
 	 *bit0:support 8bit
