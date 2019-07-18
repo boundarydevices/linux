@@ -42,7 +42,7 @@ conn_subsys: bus@5b000000 {
 		interrupts = <GIC_SPI 267 IRQ_TYPE_LEVEL_HIGH>;
 		fsl,usbphy = <&usbphy1>;
 		fsl,usbmisc = <&usbmisc1 0>;
-		clocks = <&conn_lpcg IMX_CONN_LPCG_USB2_AHB_CLK>;
+		clocks = <&usb2_lpcg 0>;
 		ahb-burst-config = <0x0>;
 		tx-burst-size-dword = <0x10>;
 		rx-burst-size-dword = <0x10>;
@@ -60,7 +60,7 @@ conn_subsys: bus@5b000000 {
 		compatible = "fsl,imx8qm-usbphy", "fsl,imx7ulp-usbphy",
 			"fsl,imx6ul-usbphy", "fsl,imx23-usbphy";
 		reg = <0x5b100000 0x1000>;
-		clocks = <&conn_lpcg IMX_CONN_LPCG_USB2_PHY_IPG_CLK>;
+		clocks = <&usb2_lpcg 1>;
 		power-domains = <&pd IMX_SC_R_USB_0_PHY>;
 		status = "disabled";
 	};
@@ -229,5 +229,16 @@ conn_subsys: bus@5b000000 {
 				     "enet1_lpcg_ipg_clk",
 				     "enet1_lpcg_ipg_s_clk";
 		power-domains = <&pd IMX_SC_R_ENET_1>;
+	};
+
+	usb2_lpcg: clock-controller@5b270000 {
+		compatible = "fsl,imx8qxp-lpcg";
+		reg = <0x5b270000 0x10000>;
+		#clock-cells = <1>;
+		clocks = <&conn_ahb_clk>, <&conn_ipg_clk>;
+		bit-offset = <24 28>;
+		clock-output-names = "usboh3_ahb_clk",
+				     "usboh3_phy_ipg_clk";
+		power-domains = <&pd IMX_SC_R_USB_0_PHY>;
 	};
 };
