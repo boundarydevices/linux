@@ -109,10 +109,29 @@
 		>;
 	};
 
+
+	pinctrl_i2c1_1: i2c1-1grp {
+		fsl,pins = <
+#define GP_I2C1_SCL	<&gpio5 14 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_I2C1_SCL_GPIO5_IO14		0x4000007f
+#define GP_I2C1_SDA	<&gpio5 15 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_I2C1_SDA_GPIO5_IO15		0x4000007f
+		>;
+	};
+
 	pinctrl_i2c2: i2c2grp {
 		fsl,pins = <
 			MX8MQ_IOMUXC_I2C2_SCL_I2C2_SCL			0x4000007f
 			MX8MQ_IOMUXC_I2C2_SDA_I2C2_SDA			0x4000007f
+		>;
+	};
+
+	pinctrl_i2c2_1: i2c2-1grp {
+		fsl,pins = <
+#define GP_I2C2_SCL	<&gpio5 16 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_I2C2_SCL_GPIO5_IO16		0x4000007f
+#define GP_I2C2_SDA	<&gpio5 17 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_I2C2_SDA_GPIO5_IO17		0x4000007f
 		>;
 	};
 
@@ -143,6 +162,15 @@
 		>;
 	};
 
+	pinctrl_i2c3_1: i2c3-1grp {
+		fsl,pins = <
+#define GP_I2C3_SCL	<&gpio5 18 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_I2C3_SCL_GPIO5_IO18		0x4000007f
+#define GP_I2C3_SDA	<&gpio5 19 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_I2C3_SDA_GPIO5_IO19		0x4000007f
+		>;
+	};
+
 	pinctrl_i2c3_rv4162: i2c3-rv4162grp {
 		fsl,pins = <
 #define GPIRQ_RV4162		<&gpio1 6 IRQ_TYPE_LEVEL_LOW>
@@ -154,6 +182,15 @@
 		fsl,pins = <
 			MX8MQ_IOMUXC_I2C4_SCL_I2C4_SCL			0x4000007f
 			MX8MQ_IOMUXC_I2C4_SDA_I2C4_SDA			0x4000007f
+		>;
+	};
+
+	pinctrl_i2c4_1: i2c4-1grp {
+		fsl,pins = <
+#define GP_I2C4_SCL	<&gpio5 20 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_I2C4_SCL_GPIO5_IO20		0x4000007f
+#define GP_I2C4_SDA	<&gpio5 21 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_I2C4_SDA_GPIO5_IO21		0x4000007f
 		>;
 	};
 
@@ -678,6 +715,8 @@
 };
 
 &A53_0 {
+	arm-supply = <&reg_sw3>;
+
 	operating-points = <
 		/* kHz    uV */
 		1500000 1000000
@@ -742,15 +781,118 @@
 
 &i2c1 {
 	clock-frequency = <400000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c1>;
+	pinctrl-1 = <&pinctrl_i2c1_1>;
+	scl-gpios = GP_I2C1_SCL;
+	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
+
+	pf8100@08 {
+		compatible = "nxp,pf8x00";
+		reg = <0x08>;
+
+		regulators {
+			reg_ldo1: ldo1 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <5000000>;
+				regulator-min-microvolt = <1500000>;
+			};
+
+			reg_ldo2: ldo2 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <5000000>;
+				regulator-min-microvolt = <1500000>;
+#if 0
+				/* vselect low is 3.3V, high is 1.8V */
+				vselect-en;
+#endif
+			};
+
+			reg_ldo3: ldo3 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <5000000>;
+				regulator-min-microvolt = <1500000>;
+			};
+
+			reg_ldo4: ldo4 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <5000000>;
+				regulator-min-microvolt = <1500000>;
+			};
+
+			reg_sw1: sw1 {
+				phase = <0>;
+				ilim-ma = <4500>;
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+			};
+
+			reg_sw2: sw2 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+			};
+
+			reg_sw3: sw3 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+			};
+
+			reg_sw4: sw4 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+			};
+
+			reg_sw5: sw5 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+			};
+
+			reg_sw6: sw6 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+			};
+
+			reg_sw7: sw7 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <4100000>;
+				regulator-min-microvolt = <1000000>;
+			};
+
+			reg_vsnvs: vsnvs {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <3300000>;
+				regulator-min-microvolt = <1800000>;
+			};
+		};
+	};
 };
 
 &i2c2 {
 	clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c2>;
+	pinctrl-1 = <&pinctrl_i2c2_1>;
+	scl-gpios = GP_I2C2_SCL;
+	sda-gpios = GP_I2C2_SDA;
 	status = "okay";
 
 	mipi_to_lvds: mipi-to-lvds@2c {
@@ -797,8 +939,11 @@
 
 &i2c3 {
 	clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c3>;
+	pinctrl-1 = <&pinctrl_i2c3_1>;
+	scl-gpios = GP_I2C3_SCL;
+	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
 	rtc@68 {
@@ -813,8 +958,11 @@
 
 &i2c4 {
 	clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c4>;
+	pinctrl-1 = <&pinctrl_i2c4_1>;
+	scl-gpios = GP_I2C4_SCL;
+	sda-gpios = GP_I2C4_SDA;
 	status = "okay";
 
 	i2cmux@70 {
