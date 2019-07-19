@@ -40,6 +40,7 @@
 		gpio2 = &gpio3;
 		gpio3 = &gpio4;
 		gpio4 = &gpio5;
+		wdog0 = &wdog1;
 	};
 
 	cpus {
