@@ -28,7 +28,6 @@
 struct imx_sii902x_data {
 	struct snd_soc_dai_link dai;
 	struct snd_soc_card card;
-	struct i2c_client *sii902x;
 };
 
 static int imx_sii902x_startup(struct snd_pcm_substream *substream)
@@ -65,9 +64,7 @@ static int imx_sii902x_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_dai *cpu_dai = asoc_rtd_to_cpu(rtd, 0);
 	struct snd_soc_card *card = rtd->card;
 	struct device *dev = card->dev;
-	struct imx_sii902x_data *data = snd_soc_card_get_drvdata(card);
 	int ret;
-	unsigned char reg;
 
 	/* set cpu DAI configuration */
 	ret = snd_soc_dai_set_fmt(cpu_dai,
@@ -91,62 +88,12 @@ static int imx_sii902x_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	/* sii90sx hdmi audio setup */
-	i2c_smbus_write_byte_data(data->sii902x, 0x26, 0x90);
-	i2c_smbus_write_byte_data(data->sii902x, 0x20, 0x2d);
-	i2c_smbus_write_byte_data(data->sii902x, 0x1f, 0x88);
-	i2c_smbus_write_byte_data(data->sii902x, 0x1f, 0x91);
-	i2c_smbus_write_byte_data(data->sii902x, 0x1f, 0xa2);
-	i2c_smbus_write_byte_data(data->sii902x, 0x1f, 0xb3);
-	i2c_smbus_write_byte_data(data->sii902x, 0x27, 0);
-	switch (params_rate(params)) {
-	case 44100:
-		reg = 0;
-		break;
-	case 48000:
-		reg = 0x2;
-		break;
-	case 32000:
-		reg = 0x3;
-		break;
-	case 88200:
-		reg = 0x8;
-		break;
-	case 96000:
-		reg = 0xa;
-		break;
-	case 176400:
-		reg = 0xc;
-		break;
-	case 192000:
-		reg = 0xe;
-		break;
-	default:
-		reg = 0x1;
-		break;
-	}
-	i2c_smbus_write_byte_data(data->sii902x, 0x24, reg);
-	i2c_smbus_write_byte_data(data->sii902x, 0x25, 0x0b);
-	i2c_smbus_write_byte_data(data->sii902x, 0x26, 0x80);
-
-	return 0;
-}
-
-static int imx_sii902x_hw_free(struct snd_pcm_substream *substream)
-{
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_card *card = rtd->card;
-	struct imx_sii902x_data *data = snd_soc_card_get_drvdata(card);
-
-	i2c_smbus_write_byte_data(data->sii902x, 0x26, 0x10);
-
 	return 0;
 }
 
 static struct snd_soc_ops imx_sii902x_ops = {
 	.startup = imx_sii902x_startup,
 	.hw_params = imx_sii902x_hw_params,
-	.hw_free = imx_sii902x_hw_free,
 };
 
 static int imx_sii902x_probe(struct platform_device *pdev)
@@ -168,13 +115,6 @@ static int imx_sii902x_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	sii902x_np = of_parse_phandle(pdev->dev.of_node, "hdmi-controler", 0);
-	if (!sii902x_np) {
-		dev_err(&pdev->dev, "sii902x phandle missing or invalid\n");
-		ret = -EINVAL;
-		goto fail;
-	}
-
 	cpu_pdev = of_find_device_by_node(cpu_np);
 	if (!cpu_pdev) {
 		dev_err(&pdev->dev, "failed to find SAI platform device\n");
@@ -185,13 +125,6 @@ static int imx_sii902x_probe(struct platform_device *pdev)
 	data = devm_kzalloc(&pdev->dev, sizeof(*data), GFP_KERNEL);
 	if (!data) {
 		ret = -ENOMEM;
-		goto fail;
-	}
-
-	data->sii902x = of_find_i2c_device_by_node(sii902x_np);
-	if (!data->sii902x) {
-		dev_err(&pdev->dev, "failed to find sii902x i2c client\n");
-		ret = -EPROBE_DEFER;
 		goto fail;
 	}
 
