@@ -322,6 +322,62 @@ static int __init imx_clk_init_on(struct device_node *np,
 	return 0;
 }
 
+struct init_clk {
+	unsigned clk;
+	unsigned parent;
+	unsigned rate;
+};
+
+static struct init_clk setup_clks[] = {
+	{IMX8MQ_CLK_AHB, IMX8MQ_SYS1_PLL_133M},
+	{IMX8MQ_CLK_NAND_USDHC_BUS, IMX8MQ_SYS1_PLL_266M},
+	{IMX8MQ_CLK_AUDIO_AHB, IMX8MQ_SYS2_PLL_500M},
+	/* config video_pll1 clock */
+	{IMX8MQ_VIDEO_PLL1_REF_SEL, IMX8MQ_CLK_27M},
+	{IMX8MQ_VIDEO_PLL1, 0, 593999999},
+	/* set pcie root's parent clk source */
+	{IMX8MQ_CLK_PCIE1_CTRL, IMX8MQ_SYS2_PLL_250M},
+	{IMX8MQ_CLK_PCIE1_PHY, IMX8MQ_SYS2_PLL_100M},
+	{IMX8MQ_CLK_PCIE2_CTRL, IMX8MQ_SYS2_PLL_250M},
+	{IMX8MQ_CLK_PCIE2_PHY, IMX8MQ_SYS2_PLL_100M},
+	{IMX8MQ_CLK_CSI1_CORE, IMX8MQ_SYS1_PLL_266M},
+	{IMX8MQ_CLK_CSI1_PHY_REF, IMX8MQ_SYS2_PLL_1000M},
+	{IMX8MQ_CLK_CSI1_ESC, IMX8MQ_SYS1_PLL_800M},
+	{IMX8MQ_CLK_CSI2_CORE, IMX8MQ_SYS1_PLL_266M},
+	{IMX8MQ_CLK_CSI2_PHY_REF, IMX8MQ_SYS2_PLL_1000M},
+	{IMX8MQ_CLK_CSI2_ESC, IMX8MQ_SYS1_PLL_800M},
+	{IMX8MQ_CLK_CLK2_SYS1_PLL_OUT_DIV, 0, 100000000},
+	{IMX8MQ_CLK_CLK2, IMX8MQ_CLK_CLK2_SYS1_PLL_OUT_DIV},
+};
+
+static void check_assigned_clocks(void)
+{
+	struct device_node *np;
+	struct of_phandle_args clkspec;
+	int i, index, rc, num_clks;
+
+	np = of_find_compatible_node(NULL, NULL, "fsl,imx8mq-ccm");
+	num_clks = of_count_phandle_with_args(np, "assigned-clocks",
+					 "#clock-cells");
+	for (index = 0; index < num_clks; index++) {
+		rc = of_parse_phandle_with_args(np, "assigned-clocks",
+			"#clock-cells", index, &clkspec);
+		if (rc < 0)
+			continue;
+		if (clkspec.np == np) {
+			int clk_num = clkspec.args[0];
+
+			for (i = 0; i < ARRAY_SIZE(setup_clks); i++) {
+				if (setup_clks[i].clk == clk_num) {
+					pr_info("%s: skipping %d\n", __func__, setup_clks[i].clk);
+					setup_clks[i].clk = 0;
+					break;
+				}
+			}
+		}
+	}
+}
+
 static void __init imx8mq_clocks_init(struct device_node *ccm_node)
 {
 	struct device_node *np;
@@ -613,31 +669,19 @@ static void __init imx8mq_clocks_init(struct device_node *ccm_node)
 			clk_prepare_enable(clks[clks_init_on[i]]);
 	}
 
-	clk_set_parent(clks[IMX8MQ_CLK_AHB], clks[IMX8MQ_SYS1_PLL_133M]);
-	clk_set_parent(clks[IMX8MQ_CLK_NAND_USDHC_BUS], clks[IMX8MQ_SYS1_PLL_266M]);
-	clk_set_parent(clks[IMX8MQ_CLK_AUDIO_AHB], clks[IMX8MQ_SYS2_PLL_500M]);
+	check_assigned_clocks();
 
-	/* config video_pll1 clock */
-	clk_set_parent(clks[IMX8MQ_VIDEO_PLL1_REF_SEL], clks[IMX8MQ_CLK_27M]);
-	clk_set_rate(clks[IMX8MQ_VIDEO_PLL1], 593999999);
+	for (i = 0; i < ARRAY_SIZE(setup_clks); i++) {
+		if (setup_clks[i].clk) {
+			if (setup_clks[i].parent)
+				clk_set_parent(clks[setup_clks[i].clk], clks[setup_clks[i].parent]);
+			if (setup_clks[i].rate)
+				clk_set_rate(clks[setup_clks[i].clk], setup_clks[i].rate);
 
+		}
+	}
 	/* increase NOC clock to achieve best DDR access performance */
 	clk_set_rate(clks[IMX8MQ_CLK_NOC], clk_get_rate(clks[IMX8MQ_SYS1_PLL_800M]));
-
-	/* set pcie root's parent clk source */
-	clk_set_parent(clks[IMX8MQ_CLK_PCIE1_CTRL], clks[IMX8MQ_SYS2_PLL_250M]);
-	clk_set_parent(clks[IMX8MQ_CLK_PCIE1_PHY], clks[IMX8MQ_SYS2_PLL_100M]);
-	clk_set_parent(clks[IMX8MQ_CLK_PCIE2_CTRL], clks[IMX8MQ_SYS2_PLL_250M]);
-	clk_set_parent(clks[IMX8MQ_CLK_PCIE2_PHY], clks[IMX8MQ_SYS2_PLL_100M]);
-
-	clk_set_parent(clks[IMX8MQ_CLK_CSI1_CORE], clks[IMX8MQ_SYS1_PLL_266M]);
-	clk_set_parent(clks[IMX8MQ_CLK_CSI1_PHY_REF], clks[IMX8MQ_SYS2_PLL_1000M]);
-	clk_set_parent(clks[IMX8MQ_CLK_CSI1_ESC], clks[IMX8MQ_SYS1_PLL_800M]);
-	clk_set_parent(clks[IMX8MQ_CLK_CSI2_CORE], clks[IMX8MQ_SYS1_PLL_266M]);
-	clk_set_parent(clks[IMX8MQ_CLK_CSI2_PHY_REF], clks[IMX8MQ_SYS2_PLL_1000M]);
-	clk_set_parent(clks[IMX8MQ_CLK_CSI2_ESC], clks[IMX8MQ_SYS1_PLL_800M]);
-	clk_set_rate(clks[IMX8MQ_CLK_CLK2_SYS1_PLL_OUT_DIV], 100000000);
-	clk_set_parent(clks[IMX8MQ_CLK_CLK2], clks[IMX8MQ_CLK_CLK2_SYS1_PLL_OUT_DIV]);
 
 	imx_register_uart_clocks(uart_clks);
 
