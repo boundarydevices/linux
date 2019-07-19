@@ -3672,8 +3672,8 @@ int stmmac_resume(struct device *dev)
 		phy_start(priv->phydev);
 
 #ifdef TX_MONITOR
-	queue_delayed_work(moniter_tx_wq, &moniter_tx_worker, HZ);
-	timeout_err = 1;
+	stmmac_release(priv_monitor->dev);
+	stmmac_open(priv_monitor->dev);
 #endif
 	return 0;
 }
