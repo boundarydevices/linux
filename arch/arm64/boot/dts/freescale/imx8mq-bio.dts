@@ -727,8 +727,9 @@
 };
 
 &clk {
-	assigned-clocks = <&clk IMX8MQ_AUDIO_PLL1>, <&clk IMX8MQ_AUDIO_PLL2>;
-	assigned-clock-rates = <786432000>, <722534400>;
+	assigned-clocks = <&clk IMX8MQ_CLK_CLK2>, <&clk IMX8MQ_AUDIO_PLL1>, <&clk IMX8MQ_AUDIO_PLL2>;
+	assigned-clock-parents = <&clk IMX8MQ_CLK_27M>;
+	assigned-clock-rates = <0>, <786432000>, <722534400>;
 };
 
 &csi1_bridge {
