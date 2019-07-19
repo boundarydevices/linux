@@ -72,7 +72,7 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x0 0x0>;
-			clocks = <&clk IMX_A53_CLK>;
+			clocks = <&clk IMX_SC_R_A53 IMX_SC_PM_CLK_CPU>;
 			enable-method = "psci";
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
@@ -89,7 +89,7 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x0 0x1>;
-			clocks = <&clk IMX_A53_CLK>;
+			clocks = <&clk IMX_SC_R_A53 IMX_SC_PM_CLK_CPU>;
 			enable-method = "psci";
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
@@ -106,7 +106,7 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x0 0x2>;
-			clocks = <&clk IMX_A53_CLK>;
+			clocks = <&clk IMX_SC_R_A53 IMX_SC_PM_CLK_CPU>;
 			enable-method = "psci";
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
@@ -123,7 +123,7 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x0 0x3>;
-			clocks = <&clk IMX_A53_CLK>;
+			clocks = <&clk IMX_SC_R_A53 IMX_SC_PM_CLK_CPU>;
 			enable-method = "psci";
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
@@ -236,6 +236,12 @@
 			     <GIC_PPI 14 IRQ_TYPE_LEVEL_LOW>, /* Physical Non-Secure */
 			     <GIC_PPI 11 IRQ_TYPE_LEVEL_LOW>, /* Virtual */
 			     <GIC_PPI 10 IRQ_TYPE_LEVEL_LOW>; /* Hypervisor */
+	};
+
+	clk_dummy: clock-dummy {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-output-names = "clk_dummy";
 	};
 
 	system-controller {
