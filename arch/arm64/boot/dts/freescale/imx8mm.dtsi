@@ -45,6 +45,7 @@
 		spi0 = &ecspi1;
 		spi1 = &ecspi2;
 		spi2 = &ecspi3;
+		wdog0 = &wdog1;
 	};
 
 	cpus {
