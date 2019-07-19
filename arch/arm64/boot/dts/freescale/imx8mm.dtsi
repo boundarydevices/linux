@@ -45,6 +45,7 @@
 		sai3 = &sai3;
 		sai5 = &sai5;
 		sai6 = &sai6;
+		wdog0 = &wdog1;
 	};
 
 	cpus {
