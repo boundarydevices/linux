@@ -135,7 +135,7 @@ static struct clk_mux g12b_cpu_clk = {
 		.hw.init = &(struct clk_init_data){
 			.name = "cpub_clk",
 			.ops = &clk_mux_ops,
-			.parent_names = (const char *[]){ "cpu_fixedpll_p",
+			.parent_names = (const char *[]){ "cpub_fixedpll_p",
 							 "sys_pll" },
 			.num_parents = 2,
 			.flags = CLK_GET_RATE_NOCACHE,
