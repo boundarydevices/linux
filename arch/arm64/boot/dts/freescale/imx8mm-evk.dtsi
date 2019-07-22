@@ -259,6 +259,11 @@
 		reg = <0x3d>;
 		adi,addr-cec = <0x3b>;
 		adi,dsi-lanes = <4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_synaptics_dsx_io>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <9 IRQ_TYPE_LEVEL_LOW>;
+
 		status = "okay";
 
 		port {
@@ -452,6 +457,12 @@
 		fsl,pins = <
 			MX8MM_IOMUXC_I2C2_SCL_I2C2_SCL			0x400001c3
 			MX8MM_IOMUXC_I2C2_SDA_I2C2_SDA			0x400001c3
+		>;
+	};
+
+	pinctrl_i2c2_synaptics_dsx_io: synaptics_dsx_iogrp {
+		fsl,pins = <
+			MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9               0x19    /* Touch int */
 		>;
 	};
 
