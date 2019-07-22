@@ -132,7 +132,6 @@
 			MX8MM_IOMUXC_GPIO1_IO14_GPIO1_IO14		0x180
 			/* test points */
 			MX8MM_IOMUXC_SAI3_TXD_SAI3_TX_DATA0		0x180	/* tp179 */
-			MX8MM_IOMUXC_SAI1_TXD6_GPIO4_IO18		0x180	/* tp180 */
 			MX8MM_IOMUXC_GPIO1_IO04_GPIO1_IO4		0x180	/* tp181 */
 			MX8MM_IOMUXC_GPIO1_IO06_GPIO1_IO6		0x180	/* tp182 */
 		>;
@@ -204,7 +203,7 @@
 
 	pinctrl_i2c3b_sc16is7xx: i2c3b-sc16is7xxgrp {
 		fsl,pins = <
-#define GPIRQ_SC16IS7XX		<&gpio4 3 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_SC16IS7XX		<&gpio4 3 IRQ_TYPE_EDGE_FALLING>
 			MX8MM_IOMUXC_SAI1_RXD1_GPIO4_IO3		0x1c0
 #define GP_SC16IS7XX_RESET	<&gpio4 5 GPIO_ACTIVE_LOW>
 			MX8MM_IOMUXC_SAI1_RXD3_GPIO4_IO5		0x100
@@ -347,6 +346,8 @@
 		fsl,pins = <
 			MX8MM_IOMUXC_UART4_RXD_UART4_DCE_RX		0x140
 			MX8MM_IOMUXC_UART4_TXD_UART4_DCE_TX		0x140
+#define GP_UART4_TX_EN		<&gpio4 18 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_SAI1_TXD6_GPIO4_IO18		0x180
 		>;
 	};
 
@@ -741,6 +742,7 @@
 		pinctrl-0 = <&pinctrl_ecspi2_mcp2515t>;
 		reg = <0>;
 		reset-gpios = GP_MCP_RESET;
+		spi-max-frequency = <10000000>;
 		xceiver-gpios = GP_CAN_EN;
 	};
 };
@@ -1017,8 +1019,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
 	assigned-clocks = <&clk IMX8MM_CLK_UART1_SRC>;
-	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_80M>;
-	fsl,uart-has-rtscts;
+	assigned-clock-parents = <&clk IMX8MM_CLK_24M>;
 	status = "okay";
 };
 
@@ -1026,7 +1027,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2>;
 	assigned-clocks = <&clk IMX8MM_CLK_UART2_SRC>;
-	assigned-clock-parents = <&clk IMX8MM_CLK_24M>;
+	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_80M>;
+	fsl,uart-has-rtscts;
 	status = "okay";
 };
 
@@ -1035,16 +1037,23 @@
 	pinctrl-0 = <&pinctrl_uart3>;
 	assigned-clocks = <&clk IMX8MM_CLK_UART3_SRC>;
 	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_80M>;
-	fsl,uart-has-rtscts;
 	status = "okay";
 };
 
 &uart4 { /* J56 - RS485*/
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart4>;
 	assigned-clocks = <&clk IMX8MM_CLK_UART4_SRC>;
 	assigned-clock-parents = <&clk IMX8MM_CLK_24M>;
+        control-gpios = GP_UART4_TX_EN;
+#define M_TX_EN         1
+        off_levels = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart4>;
+        rs485_levels = <0x0>;
+        rs485-mode = <1>;
+        rs485_txen_levels = <M_TX_EN>;
+        rs485_txen_mask = <M_TX_EN>;
 	status = "okay";
+        uart-has-rs485-half-duplex;
 };
 
 &usbotg1 {
