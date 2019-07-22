@@ -463,8 +463,7 @@ static void start_timer(struct aml_runtime_data *prtd)
 		hrtimer_start(&prtd->hrtimer, prtd->wakeups_per_second,
 				  HRTIMER_MODE_REL);
 #else
-		prtd->timer.expires = jiffies + 1;
-		add_timer(&prtd->timer);
+		mod_timer(&prtd->timer, jiffies + 1);
 #endif
 #endif
 		prtd->active = 1;
