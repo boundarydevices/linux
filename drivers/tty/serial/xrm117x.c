@@ -408,6 +408,7 @@ struct xrm117x_port {
 	struct spi_device		*spi_dev;
 	struct i2c_client 		*i2c_client;
 	struct clk			*clk;
+	struct gpio_desc		*reset_gpio;
 	unsigned			r_valid;
 	unsigned char			dev_cache[SC_REG_CNT - SC_CHAN_REG_CNT];
 
@@ -1635,15 +1636,15 @@ static int xrm117x_probe_common(struct device *dev,
 			goto out_uart;
 	}
 #endif
-	reset_gpio = devm_gpiod_get_index(dev, "reset", 0, GPIOD_OUT_HIGH);
-	if (!IS_ERR(reset_gpio)) {
+	reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(reset_gpio))
+		return PTR_ERR(reset_gpio);
+	if (reset_gpio) {
+		xr->reset_gpio = reset_gpio;
 		udelay(1);
 		gpiod_set_value(reset_gpio, 0);        /* release */
 		msleep(2);
-	} else {
-		pr_warn("%s: could not find reset\n", __func__);
 	}
-
 	mutex_init(&xr->mutex);
 	mutex_init(&xr->mutex_bus_access);
 	//I2C_Bus_init();
@@ -1743,6 +1744,7 @@ static int xrm117x_remove(struct device *dev)
 	uart_unregister_driver(&xr->uart);
 	if (!IS_ERR(xr->clk))
 		/*clk_disable_unprepare(xr->clk)*/;
+	gpiod_set_value_cansleep(xr->reset_gpio, 1);
 
 	return 0;
 }
