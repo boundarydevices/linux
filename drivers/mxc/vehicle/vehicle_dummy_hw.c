@@ -626,14 +626,14 @@ static int vehicle_dummy_init(void)
 	dummy_pdev = platform_device_alloc("vehicle-dummy", -1);
 	if (!dummy_pdev) {
 		pr_err("Failed to allocate dummy vehicle device\n");
-		return;
+		return -ENODEV;
 	}
 
 	err = platform_device_add(dummy_pdev);
 	if (err != 0) {
 		pr_err("Failed to register dummy regulator device: %d\n", err);
 		platform_device_put(dummy_pdev);
-		return;
+		return err;
 	}
 
 	err = platform_driver_register(&vehicle_dummy_hw_driver);
