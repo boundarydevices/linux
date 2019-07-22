@@ -515,12 +515,21 @@ static int sc16is7xx_set_baud(struct uart_port *port, int baud)
 	struct sc16is7xx_port *s = dev_get_drvdata(port->dev);
 	u8 lcr;
 	u8 prescaler = 0;
-	unsigned long clk = port->uartclk, div = clk / 16 / baud;
+	unsigned preshift = 0;
+	unsigned long clk = port->uartclk;
+	unsigned long div = clk / baud;
 
-	if (div > 0xffff) {
+	if (div > 0xfffff) {
 		prescaler = SC16IS7XX_MCR_CLKSEL_BIT;
-		div /= 4;
+		preshift = 2;
+		div >>= 2;
 	}
+	div += 8;
+	if (div > 0xfffff)
+		div = 0xfffff;
+	div &= ~0xf;
+	if (!div)
+		div += 16;
 
 	/* In an amazing feat of design, the Enhanced Features Register shares
 	 * the address of the Interrupt Identification Register, and is
@@ -566,14 +575,15 @@ static int sc16is7xx_set_baud(struct uart_port *port, int baud)
 
 	/* Write the new divisor */
 	regcache_cache_bypass(s->regmap, true);
-	sc16is7xx_port_write(port, SC16IS7XX_DLH_REG, div / 256);
-	sc16is7xx_port_write(port, SC16IS7XX_DLL_REG, div % 256);
+	sc16is7xx_port_write(port, SC16IS7XX_DLH_REG, div >> 12);
+	sc16is7xx_port_write(port, SC16IS7XX_DLL_REG, (div >> 4) & 0xff);
 	regcache_cache_bypass(s->regmap, false);
 
 	/* Put LCR back to the normal mode */
 	sc16is7xx_port_write(port, SC16IS7XX_LCR_REG, lcr);
 
-	return DIV_ROUND_CLOSEST(clk / 16, div);
+	div <<= preshift;
+	return DIV_ROUND_CLOSEST(clk, div);
 }
 
 static void sc16is7xx_handle_rx(struct uart_port *port, unsigned int rxlen,
