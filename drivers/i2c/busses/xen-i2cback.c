@@ -47,6 +47,15 @@ static bool i2cback_access_allowed(struct i2cback_info *info,
 {
 	int i;
 
+	if (req->is_smbus) {/*check for smbus access permission*/
+		for (i = 0; i < info->num_slaves; i++)
+			if (req->addr == info->allowed_slaves[i])
+				return true;
+
+		return false;
+	}
+
+	/*check for master_xfer access permission*/
 	if (req->num_msg == I2CIF_MAX_MSG) {
 		if (req->msg[0].addr != req->msg[1].addr)
 			return false;
@@ -66,8 +75,9 @@ static bool i2cback_handle_int(struct i2cback_info *info)
 	struct i2cif_request req;
 	struct i2cif_response *res;
 	RING_IDX rc, rp;
-	int more_to_do, notify, num_msg, ret;
+	int more_to_do, notify, num_msg = 0, ret;
 	struct i2c_msg msg[I2CIF_MAX_MSG];
+	union i2c_smbus_data smbus_data;
 	char tmp_buf[I2CIF_BUF_LEN];
 	unsigned long flags;
 	bool allow_access;
@@ -92,10 +102,12 @@ static bool i2cback_handle_int(struct i2cback_info *info)
 
 		req = *RING_GET_REQUEST(i2c_ring, rc);
 		allow_access = i2cback_access_allowed(info, &req);
-		if (allow_access) {
+		if (allow_access && !req.is_smbus) {
 			/* Write/Read sequence */
-			if (req.num_msg > I2CIF_MAX_MSG)
+			num_msg = req.num_msg;
+			if (num_msg > I2CIF_MAX_MSG)
 				num_msg = I2CIF_MAX_MSG;
+
 			for (i = 0; i < num_msg; i++) {
 				msg[i].addr = req.msg[i].addr;
 				msg[i].len = req.msg[i].len;
@@ -130,7 +142,7 @@ static bool i2cback_handle_int(struct i2cback_info *info)
 				memcpy(tmp_buf, req.write_buf, I2CIF_BUF_LEN);
 				ret = i2c_transfer(info->adapter, msg,
 						   num_msg);
-			} else if (req.num_msg == 1) {
+			} else if (num_msg == 1) {
 				msg[0].buf = tmp_buf;
 				if (!(msg[0].flags & I2C_M_RD))
 					memcpy(tmp_buf, req.write_buf,
@@ -142,24 +154,38 @@ static bool i2cback_handle_int(struct i2cback_info *info)
 
 				ret = -EIO;
 			}
+		} else if (allow_access && req.is_smbus) {
+			memcpy(&smbus_data, &req.write_buf, sizeof(smbus_data));
+
+			ret = i2c_smbus_xfer(info->adapter,
+								req.addr,
+								req.flags,
+								req.read_write,
+								req.command,
+								req.protocol,
+								&smbus_data);
 		}
 
 		spin_lock_irqsave(&info->i2c_ring_lock, flags);
 		res = RING_GET_RESPONSE(&info->i2c_ring,
 					info->i2c_ring.rsp_prod_pvt);
 
-		if (allow_access) {
+		if (allow_access && !req.is_smbus) {
 			res->result = ret;
 
 			if ((req.num_msg == 2) &&
 			    (!(msg[0].flags & I2C_M_RD)) &&
-			    (msg[1].flags & I2C_M_RD)) {
+			    (msg[1].flags & I2C_M_RD) && (ret >= 0)) {
 				memcpy(res->read_buf, tmp_buf, I2CIF_BUF_LEN);
 			} else if (req.num_msg == 1) {
-				if (msg[0].flags & I2C_M_RD)
+				if ((msg[0].flags & I2C_M_RD) && (ret >= 0))
 					memcpy(res->read_buf, tmp_buf,
 					       I2CIF_BUF_LEN);
 			}
+		} else if (allow_access && req.is_smbus) {
+			if (req.read_write == I2C_SMBUS_READ)
+				memcpy(&res->read_buf, &smbus_data, sizeof(smbus_data));
+			res->result = ret;
 		} else
 			res->result = -EPERM;
 

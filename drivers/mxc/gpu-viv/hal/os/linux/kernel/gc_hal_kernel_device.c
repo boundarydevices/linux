@@ -1229,7 +1229,10 @@ _SetupContiguousVidMem(
         }
     }
 
-    printk(KERN_INFO "Galcore ContiguousBase=0x%llx ContiguousSize=0x%x\n", device->contiguousBase, (gctUINT32)device->contiguousSize);
+    if (Args->showArgs)
+    {
+        gcmkPRINT("Galcore Info: ContiguousBase=0x%llx ContiguousSize=0x%zx\n", device->contiguousBase, device->contiguousSize);
+    }
 
 OnError:
     gcmkFOOTER();

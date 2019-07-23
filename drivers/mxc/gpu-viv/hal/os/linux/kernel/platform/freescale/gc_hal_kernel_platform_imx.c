@@ -291,6 +291,8 @@ static int thermal_hot_pm_notify(struct notifier_block *nb, unsigned long event,
     static gctBOOL bAlreadyTooHot = gcvFALSE;
     gckHARDWARE hardware;
     gckGALDEVICE galDevice;
+    gctUINT FscaleVal = orgFscale;
+    gctUINT core = gcvCORE_MAJOR;
 
     galDevice = platform_get_drvdata(pdevice);
     if (!galDevice)
@@ -313,14 +315,19 @@ static int thermal_hot_pm_notify(struct notifier_block *nb, unsigned long event,
 
     if (event && !bAlreadyTooHot) {
         gckHARDWARE_GetFscaleValue(hardware,&orgFscale,&minFscale, &maxFscale);
-        gckHARDWARE_SetFscaleValue(hardware, minFscale);
+        FscaleVal = minFscale;
         bAlreadyTooHot = gcvTRUE;
         printk("System is too hot. GPU3D will work at %d/64 clock.\n", minFscale);
     } else if (!event && bAlreadyTooHot) {
-        gckHARDWARE_SetFscaleValue(hardware, orgFscale);
         printk("Hot alarm is canceled. GPU3D clock will return to %d/64\n", orgFscale);
         bAlreadyTooHot = gcvFALSE;
     }
+
+    while (galDevice->kernels[core] && core <= gcvCORE_3D_MAX)
+    {
+        gckHARDWARE_SetFscaleValue(galDevice->kernels[core++]->hardware, FscaleVal);
+    }
+
     return NOTIFY_OK;
 }
 
@@ -336,7 +343,6 @@ static ssize_t gpu3DMinClock_show(struct device_driver *dev, char *buf)
 
     galDevice = platform_get_drvdata(pdevice);
 
-    minf = 0;
     if (galDevice->kernels[gcvCORE_MAJOR])
     {
          gckHARDWARE_GetFscaleValue(galDevice->kernels[gcvCORE_MAJOR]->hardware,
@@ -353,17 +359,20 @@ static ssize_t gpu3DMinClock_store(struct device_driver *dev, const char *buf, s
     gctINT fields;
     gctUINT MinFscaleValue;
     gckGALDEVICE galDevice;
+    gctUINT core = gcvCORE_MAJOR;
 
     galDevice = platform_get_drvdata(pdevice);
+    if (!galDevice)
+         return -EINVAL;
 
-    if (galDevice->kernels[gcvCORE_MAJOR])
+    fields = sscanf(buf, "%d", &MinFscaleValue);
+
+    if (fields < 1)
+         return -EINVAL;
+
+    while (galDevice->kernels[core] && core <= gcvCORE_3D_MAX)
     {
-         fields = sscanf(buf, "%d", &MinFscaleValue);
-
-         if (fields < 1)
-             return -EINVAL;
-
-         gckHARDWARE_SetMinFscaleValue(galDevice->kernels[gcvCORE_MAJOR]->hardware,MinFscaleValue);
+         gckHARDWARE_SetMinFscaleValue(galDevice->kernels[core++]->hardware,MinFscaleValue);
     }
 
     return count;
@@ -373,6 +382,54 @@ static ssize_t gpu3DMinClock_store(struct device_driver *dev, const char *buf, s
 static DRIVER_ATTR_RW(gpu3DMinClock);
 #else
 static DRIVER_ATTR(gpu3DMinClock, S_IRUGO | S_IWUSR, gpu3DMinClock_show, gpu3DMinClock_store);
+#endif
+
+static ssize_t gpu3DClockScale_show(struct device_driver *dev, char *buf)
+{
+    gctUINT currentf = 0, minf = 0, maxf = 0;
+    gckGALDEVICE galDevice;
+
+    galDevice = platform_get_drvdata(pdevice);
+
+    if (galDevice->kernels[gcvCORE_MAJOR])
+    {
+         gckHARDWARE_GetFscaleValue(galDevice->kernels[gcvCORE_MAJOR]->hardware,
+            &currentf, &minf, &maxf);
+    }
+
+    snprintf(buf, PAGE_SIZE, "%d\n", currentf);
+    return strlen(buf);
+}
+
+static ssize_t gpu3DClockScale_store(struct device_driver *dev, const char *buf, size_t count)
+{
+
+    gctINT fields;
+    gctUINT FscaleValue;
+    gckGALDEVICE galDevice;
+    gctUINT core = gcvCORE_MAJOR;
+
+    galDevice = platform_get_drvdata(pdevice);
+    if (!galDevice)
+         return -EINVAL;
+
+    fields = sscanf(buf, "%d", &FscaleValue);
+
+    if (fields < 1)
+         return -EINVAL;
+
+    while (galDevice->kernels[core] && core <= gcvCORE_3D_MAX)
+    {
+         gckHARDWARE_SetFscaleValue(galDevice->kernels[core++]->hardware,FscaleValue);
+    }
+
+    return count;
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+static DRIVER_ATTR_RW(gpu3DClockScale);
+#else
+static DRIVER_ATTR(gpu3DClockScale, S_IRUGO | S_IWUSR, gpu3DClockScale_show, gpu3DClockScale_store);
 #endif
 
 #endif
@@ -526,7 +583,6 @@ static ssize_t gpu_govern_store(struct device_driver *dev, const char *buf, size
 #endif
             clk_set_rate(clk_core, core_freq);
             clk_set_rate(clk_shader, shader_freq);
-
 #ifdef CONFIG_PM
             pm_runtime_put_sync(priv->pmdev[core]);
 #endif
@@ -549,7 +605,13 @@ int init_gpu_opp_table(struct device *dev)
     int nr;
     int ret = 0;
     int i, p;
+    int core = gcvCORE_MAJOR;
     struct imx_priv *priv = &imxPriv;
+
+    struct clk *clk_core;
+    struct clk *clk_shader;
+
+    unsigned long core_freq, shader_freq;
 
     priv->imx_gpu_govern.num_modes = 0;
 
@@ -632,6 +694,30 @@ int init_gpu_opp_table(struct device *dev)
             dev_err(dev, "create gpu_govern attr failed (%d)\n", ret);
 	    return ret;
 	}
+
+	/*
+	 * This could be redundant, but it is useful for testing DTS with
+	 * different OPPs that have assigned-clock rates different than the
+	 * ones specified in OPP tuple array. Otherwise we will display
+	 * different clock values when the driver is loaded. Further
+	 * modifications of the governor will display correctly but not when
+	 * the driver has been loaded.
+	 */
+	core_freq = priv->imx_gpu_govern.core_clk_freq[priv->imx_gpu_govern.current_mode];
+	shader_freq = priv->imx_gpu_govern.shader_clk_freq[priv->imx_gpu_govern.current_mode];
+
+	if (core_freq && shader_freq) {
+		for (; core <= gcvCORE_3D_MAX; core++) {
+			clk_core = priv->imx_gpu_clks[core].clk_core;
+			clk_shader = priv->imx_gpu_clks[core].clk_shader;
+
+			if (clk_core != NULL && clk_shader != NULL) {
+				clk_set_rate(clk_core, core_freq);
+				clk_set_rate(clk_shader, shader_freq);
+			}
+		}
+	}
+
     }
 
     return ret;
@@ -959,6 +1045,7 @@ static int patch_param(struct platform_device *pdev,
     if(args->compression == gcvCOMPRESSION_OPTION_DEFAULT)
     {
         const u32 *property;
+
         property = of_get_property(pdev->dev.of_node, "depth-compression", NULL);
         if (property && *property == 0)
         {
@@ -966,6 +1053,7 @@ static int patch_param(struct platform_device *pdev,
         }
     }
 #endif
+
     res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "phys_baseaddr");
 
     if (res && !args->baseAddress && !args->physSize) {
@@ -1217,6 +1305,11 @@ static inline int get_power(struct device *pdev)
 
     if (ret)
         dev_err(pdev, "create gpu3DMinClock attr failed (%d)\n", ret);
+
+    ret = driver_create_file(pdev->driver, &driver_attr_gpu3DClockScale);
+
+    if (ret)
+        dev_err(pdev, "create gpu3DClockScale attr failed (%d)\n", ret);
 #endif
 
 #if defined(CONFIG_PM_OPP)
@@ -1283,6 +1376,8 @@ static inline void put_power(void)
     UNREG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
 
     driver_remove_file(pdevice->dev.driver, &driver_attr_gpu3DMinClock);
+
+    driver_remove_file(pdevice->dev.driver, &driver_attr_gpu3DClockScale);
 #endif
 
 #if defined(CONFIG_PM_OPP)

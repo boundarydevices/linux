@@ -140,6 +140,24 @@ _AdjustParam(
             if (Args->bars[i] != -1)
             {
                 Args->irqs[coreIndex] = pcieDev->irq;
+
+                /* VIV bitfile: Merge last 4 cores to last one bar to support 8 cores. */
+                if (Args->bars[i] == 5)
+                {
+                    Args->registerBasesMapped[4] =
+                    pcie_platform->pcieInfo[devIndex].bar[i] =
+                        (gctPOINTER)pci_iomap(pcieDev, Args->bars[i], 0x500000);
+                    Args->registerBasesMapped[5] = Args->registerBasesMapped[4] + 0x100000;
+                    Args->registerBasesMapped[6] = Args->registerBasesMapped[5] + 0x100000;
+                    Args->registerBasesMapped[7] = Args->registerBasesMapped[6] + 0x100000;
+
+                    Args->irqs[5] =
+                    Args->irqs[6] =
+                    Args->irqs[7] = Args->irqs[4];
+
+                    continue;
+                }
+
                 Args->registerBasesMapped[coreIndex]    =
                 pcie_platform->pcieInfo[devIndex].bar[i] =
                     (gctPOINTER)pci_iomap(pcieDev, Args->bars[i], Args->registerSizes[coreIndex]);

@@ -622,7 +622,7 @@ struct _gckKERNEL
     gctUINT32                   sRAMIndex;
     gckVIDMEM                   sRAMVideoMem[gcvSRAM_COUNT];
     gctPHYS_ADDR                sRAMPhysical[gcvSRAM_COUNT];
-    gctUINT32                   sRAMBaseAddress[gcvSRAM_COUNT];
+    gctUINT32                   sRAMBaseAddresses[gcvSRAM_COUNT];
     gctUINT32                   sRAMSizes[gcvSRAM_COUNT];
     /* SRAM mode. */
     gctUINT32                   sRAMNonExclusive;
@@ -1385,9 +1385,14 @@ typedef struct _gcsDEVICE
     /* Same hardware type shares one MMU. */
     gckMMU                      mmus[gcvHARDWARE_NUM_TYPES];
 
+    /* CPU view physical address of SRAMs. */
+    gctUINT64                   sRAMCPUBases[gcvCORE_COUNT][gcvSRAM_COUNT];
+    /* GPU/VIP view physical address of SRAMs. */
     gctUINT64                   sRAMBases[gcvCORE_COUNT][gcvSRAM_COUNT];
+    /* SRAMs size. */
     gctUINT32                   sRAMSizes[gcvCORE_COUNT][gcvSRAM_COUNT];
-    gctUINT32                   sRAMBaseAddress[gcvCORE_COUNT][gcvSRAM_COUNT];
+    /* GPU/VIP virtual address of SRAMs. */
+    gctUINT32                   sRAMBaseAddresses[gcvCORE_COUNT][gcvSRAM_COUNT];
 
     /* Mutex to make sure stuck dump for multiple cores doesn't interleave. */
     gctPOINTER                  stuckDumpMutex;
@@ -2164,7 +2169,8 @@ gckCOMMAND_Commit(
     IN gcsHAL_SUBCOMMIT * SubCommit,
     IN gctUINT32 ProcessId,
     IN gctBOOL Shared,
-    OUT gctUINT64_PTR CommitStamp
+    OUT gctUINT64_PTR CommitStamp,
+    INOUT gctBOOL *contextSwitched
     );
 
 /* Reserve space in the command buffer. */

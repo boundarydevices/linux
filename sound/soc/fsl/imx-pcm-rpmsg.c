@@ -739,11 +739,25 @@ static struct snd_soc_component_driver imx_rpmsg_soc_component = {
 int imx_rpmsg_platform_register(struct device *dev)
 {
 	struct fsl_rpmsg_i2s  *rpmsg_i2s = dev_get_drvdata(dev);
+	struct snd_soc_component *component;
+	int ret;
 
 	i2s_info_g	=  &rpmsg_i2s->i2s_info;
 
-	return devm_snd_soc_register_component(dev, &imx_rpmsg_soc_component,
+	ret = devm_snd_soc_register_component(dev, &imx_rpmsg_soc_component,
 					       NULL, 0);
+	if (ret)
+		return ret;
+
+	component = snd_soc_lookup_component(dev, DRV_NAME);
+	if (!component)
+		return -EINVAL;
+
+#ifdef CONFIG_DEBUG_FS
+	component->debugfs_prefix = "dma";
+#endif
+
+	return 0;
 }
 EXPORT_SYMBOL_GPL(imx_rpmsg_platform_register);
 

@@ -192,7 +192,7 @@ static int cec_poll_worker(void *_cec)
 			cec_write(cec, TX_MSG_CMD, CEC_TX_STOP);
 			cec_transmit_done(cec->adap,
 					  CEC_TX_STATUS_MAX_RETRIES |
-					  CEC_TX_STATUS_ERROR, 0, 0, 0, 1);
+					  CEC_TX_STATUS_NACK, 0, 1, 0, 0);
 			break;
 		case CEC_STS_BUSY:
 		default:

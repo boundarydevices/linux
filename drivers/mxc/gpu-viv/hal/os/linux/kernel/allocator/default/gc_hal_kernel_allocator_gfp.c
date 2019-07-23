@@ -1172,7 +1172,9 @@ _GFPCache(
 {
     struct gfp_mdl_priv *mdlPriv = Mdl->priv;
     enum dma_data_direction dir;
-    gctINT numPages = GetPageCount(Bytes, Offset);
+    dma_addr_t dma_addr = (mdlPriv->dma_addr + Offset) & PAGE_MASK;
+    gctSIZE_T bytes = (mdlPriv->dma_addr + Offset + Bytes) - dma_addr;
+    gctINT numPages = GetPageCount(bytes, 0);
 
     switch (Operation)
     {
@@ -1182,7 +1184,7 @@ _GFPCache(
         if (mdlPriv->contiguous)
         {
             dma_sync_single_for_device(galcore_device,
-                    mdlPriv->dma_addr, numPages << PAGE_SHIFT, dir);
+                    dma_addr, numPages << PAGE_SHIFT, dir);
         }
         else
         {
@@ -1197,7 +1199,7 @@ _GFPCache(
         if (mdlPriv->contiguous)
         {
             dma_sync_single_for_device(galcore_device,
-                    mdlPriv->dma_addr, numPages << PAGE_SHIFT, dir);
+                    dma_addr, numPages << PAGE_SHIFT, dir);
         }
         else
         {
@@ -1210,7 +1212,7 @@ _GFPCache(
         if (mdlPriv->contiguous)
         {
             dma_sync_single_for_cpu(galcore_device,
-                    mdlPriv->dma_addr, numPages << PAGE_SHIFT, dir);
+                    dma_addr, numPages << PAGE_SHIFT, dir);
         }
         else
         {
@@ -1225,7 +1227,7 @@ _GFPCache(
         if (mdlPriv->contiguous)
         {
             dma_sync_single_for_cpu(galcore_device,
-                    mdlPriv->dma_addr, numPages << PAGE_SHIFT, dir);
+                    dma_addr, numPages << PAGE_SHIFT, dir);
         }
         else
         {
