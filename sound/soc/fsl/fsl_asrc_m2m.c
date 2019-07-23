@@ -988,6 +988,7 @@ static int fsl_asrc_m2m_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
 static void fsl_asrc_m2m_suspend(struct fsl_asrc *asrc_priv)
 {
 	struct fsl_asrc_pair *pair;
@@ -1043,3 +1044,4 @@ static void fsl_asrc_m2m_resume(struct fsl_asrc *asrc_priv)
 		spin_unlock_irqrestore(&asrc_priv->lock, lock_flags);
 	}
 }
+#endif
