@@ -40,7 +40,7 @@
 				/*we need use FirstStageMountVBootV2 if we enable avb*/
 				compatible = "android,vbmeta";
 				/*parts means the partition witch can be mount in first stage*/
-				parts = "vbmeta,boot,system,vendor";
+				parts = "vbmeta,dtbo,boot,system,vendor,product";
 			};
 		};
 	};
