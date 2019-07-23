@@ -950,6 +950,7 @@ static int fsl_easrc_m2m_init(struct fsl_asrc *asrc)
 	return ret;
 }
 
+#ifdef CONFIG_PM_SLEEP
 static void fsl_easrc_m2m_suspend(struct fsl_asrc *asrc)
 {
 	struct fsl_asrc_pair *ctx;
@@ -987,3 +988,4 @@ static void fsl_easrc_m2m_resume(struct fsl_asrc *asrc)
 {
 	/* null */
 }
+#endif
