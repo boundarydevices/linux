@@ -245,6 +245,13 @@
 		>;
 	};
 
+	pinctrl_reg_usbotg_vbus: reg-usbotg-vbusgrp {
+		fsl,pins = <
+#define GP_REG_USB_OTG_VBUS	<&gpio1 12 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_GPIO1_IO12_GPIO1_IO12	0x16
+		>;
+	};
+
 	pinctrl_reg_wlan_vmmc: reg-wlan-vmmcgrp {
 		fsl,pins = <
 #define GP_REG_WLAN_VMMC	<&gpio3 20 GPIO_ACTIVE_HIGH>
@@ -305,7 +312,6 @@
 
 	pinctrl_usb3_0: usb3-0grp {
 		fsl,pins = <
-			MX8MQ_IOMUXC_GPIO1_IO12_USB1_OTG_PWR		0x16
 			MX8MQ_IOMUXC_GPIO1_IO13_USB1_OTG_OC		0x16
 		>;
 	};
@@ -617,6 +623,17 @@
 		clock-frequency = <22000000>;
 		clock-output-names = "mipi_mclk";
 		pwms = <&pwm1 0 45>; /* 1 / 45 ns = 22 MHz */
+	};
+
+	reg_usb_otg_vbus: regulator-usb-otg-vbus {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usbotg_vbus>;
+		regulator-name = "usb_otg_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = GP_REG_USB_OTG_VBUS;
+		enable-active-high;
 	};
 
 	reg_vref_0v9: regulator-vref-0v9 {
@@ -1202,6 +1219,7 @@
 &usb_dwc3_0 {
 	status = "okay";
 	dr_mode = "otg";
+	vbus-supply = <&reg_usb_otg_vbus>;
 };
 
 &usb3_phy1 {
