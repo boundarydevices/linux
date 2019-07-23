@@ -208,6 +208,8 @@ static int import_page_map(struct um_desc *um,
         goto error;
     }
 
+    dma_sync_sg_for_cpu(galcore_device, um->sgt.sgl, um->sgt.nents, DMA_FROM_DEVICE);
+
     um->type = UM_PAGE_MAP;
     um->pages = pages;
 
@@ -405,12 +407,6 @@ _Import(
             get_user(data, (u32 *)vaddr);
             put_user(data, (u32 *)vaddr);
             vaddr += PAGE_SIZE;
-
-            /* Fix QM crash with test_buffers */
-            if (vaddr > memory + Size - 4)
-            {
-                vaddr = memory + Size - 4;
-            }
         }
 
         vma = find_vma(current->mm, memory);
@@ -590,11 +586,6 @@ static void release_physical_map(struct um_desc *um)
 static void release_page_map(struct um_desc *um)
 {
     int i;
-    dma_sync_sg_for_device(galcore_device,
-                    um->sgt.sgl, um->sgt.nents, DMA_TO_DEVICE);
-
-    dma_sync_sg_for_cpu(galcore_device,
-                    um->sgt.sgl, um->sgt.nents, DMA_FROM_DEVICE);
 
     dma_unmap_sg(galcore_device, um->sgt.sgl, um->sgt.nents, DMA_FROM_DEVICE);
 

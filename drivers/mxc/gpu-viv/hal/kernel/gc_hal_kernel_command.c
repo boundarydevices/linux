@@ -81,7 +81,7 @@
 **      gckCOMMAND Command
 **          gckCOMMAND object has been updated with a new command queue.
 */
-static gceSTATUS
+static gcmNOINLINE gceSTATUS
 _NewQueue(
     IN OUT gckCOMMAND Command,
     IN gctBOOL Stalled
@@ -173,7 +173,7 @@ OnError:
     return status;
 }
 
-static gceSTATUS
+static gcmNOINLINE gceSTATUS
 _IncrementCommitAtom(
     IN gckCOMMAND Command,
     IN gctBOOL Increment
@@ -234,7 +234,7 @@ OnError:
     return status;
 }
 
-static gceSTATUS
+static gcmNOINLINE gceSTATUS
 _CheckFlushMMU(
     IN gckCOMMAND Command,
     IN gckHARDWARE Hardware
@@ -348,7 +348,7 @@ OnError:
 }
 
 /* WaitLink FE only. */
-static gceSTATUS
+static gcmNOINLINE gceSTATUS
 _DummyDraw(
     IN gckCOMMAND Command
     )
@@ -1156,7 +1156,7 @@ OnError:
     return status;
 }
 
-static gceSTATUS
+static gcmNOINLINE gceSTATUS
 _HandlePatchList(
     IN gckCOMMAND Command,
     IN gcsHAL_COMMAND_LOCATION * CommandBuffer,
@@ -1251,7 +1251,7 @@ OnError:
     return status;
 }
 
-static gceSTATUS
+static gcmNOINLINE gceSTATUS
 _WaitForAsyncCommandStamp(
     IN gckCOMMAND Command,
     IN gctUINT64 Stamp
@@ -2174,8 +2174,7 @@ _CommitWaitLinkOnce(
     IN gcsHAL_COMMAND_LOCATION * CommandBuffer,
     IN gcsSTATE_DELTA_PTR StateDelta,
     IN gctUINT32 ProcessID,
-    IN gctBOOL Shared,
-    INOUT gctBOOL *contextSwitched
+    IN gctBOOL Shared
     )
 {
     gceSTATUS status;
@@ -2446,11 +2445,6 @@ _CommitWaitLinkOnce(
 
         /* Update the current context. */
         Command->currContext = Context;
-
-        if (contextSwitched)
-        {
-            *contextSwitched = gcvTRUE;
-        }
 
 #if gcdDUMP_IN_KERNEL
         contextDumpLogical = entryLogical;
@@ -3202,8 +3196,8 @@ OnError:
 **          Current process ID.
 **
 **  OUTPUT:
-**      gctBOOL *contextSwitched
-**          pass context Switch flag to upper
+**
+**      Nothing.
 */
 gceSTATUS
 gckCOMMAND_Commit(
@@ -3211,8 +3205,7 @@ gckCOMMAND_Commit(
     IN gcsHAL_SUBCOMMIT * SubCommit,
     IN gctUINT32 ProcessId,
     IN gctBOOL Shared,
-    OUT gctUINT64_PTR CommitStamp,
-    INOUT gctBOOL *contextSwitched
+    OUT gctUINT64_PTR CommitStamp
     )
 {
     gceSTATUS status;
@@ -3281,8 +3274,7 @@ gckCOMMAND_Commit(
                                          cmdLoc,
                                          delta,
                                          ProcessId,
-                                         Shared,
-                                         contextSwitched);
+                                         Shared);
         }
         else if (Command->feType == gcvHW_FE_MULTI_CHANNEL)
         {

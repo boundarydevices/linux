@@ -405,7 +405,7 @@ typedef struct _gcsHAL_QUERY_CHIP_IDENTITY
     /* Customer ID. */
     gctUINT32                   customerID;
 
-    /* CPU view physical address and size of SRAMs. */
+    /* SRAM physical addresses and sizes. */
     gctUINT64                   sRAMBases[gcvSRAM_COUNT];
     gctUINT32                   sRAMSizes[gcvSRAM_COUNT];
 
@@ -429,19 +429,9 @@ typedef struct _gcsHAL_QUERY_CHIP_OPTIONS
     gctUINT32                   uscL1CacheRatio;
     gctUINT32                   uscAttribCacheRatio;
     gctUINT32                   userClusterMask;
-
-    /* GPU/VIP virtual address of SRAMs. */
-    gctUINT32                   sRAMBaseAddresses[gcvSRAM_COUNT];
-    /* SRAMs size. */
-    gctUINT32                   sRAMSizes[gcvSRAM_COUNT];
-    /* GPU/VIP view physical address of SRAMs. */
-    gctPHYS_ADDR_T              sRAMPhysicalBases[gcvSRAM_COUNT];
-    /* CPU view physical address of SRAMs. */
-    gctPHYS_ADDR_T              sRAMCPUPhysicalBases[gcvSRAM_COUNT];
-
+    gctUINT32                   sRAMBaseAddress[gcvSRAM_COUNT];
     gceSECURE_MODE              secureMode;
-    gctBOOL                     enableNNTPParallel;
-    gctUINT                     enableSwtilingPhase1;
+
 }
 gcsHAL_QUERY_CHIP_OPTIONS;
 
@@ -787,8 +777,6 @@ typedef struct _gcsHAL_COMMIT
     gcsHAL_SUBCOMMIT            subCommit;
 
     gctBOOL                     shared;
-
-    gctBOOL                     contextSwitched;
 
     /* Commit stamp of this commit. */
     OUT gctUINT64               commitStamp;

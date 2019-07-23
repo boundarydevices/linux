@@ -197,9 +197,7 @@ typedef struct _gcsNN_UNIFIED_FEATURE
     gctUINT  axiSramOnlySWTiling : 1;
     gctUINT  imageNotPackedInSram : 1;
     gctUINT  coefDeltaCordOverFlowZRL8BitFix : 1;
-    gctUINT  lowEfficiencyOfIDWriteImgBufFix : 1;
     gctUINT  xyOffsetLimitationFix : 1;
-    gctUINT  kernelPerCoreLTOneThirdCoefFix : 1;
 } gcsNN_UNIFIED_FEATURE;
 
 /* Features are derived from above ones */
@@ -731,9 +729,7 @@ gcoHAL_QuerySRAM(
     IN gcoHAL Hal,
     IN gceSRAM Type,
     OUT gctUINT32 *Base,
-    OUT gctUINT32 *Size,
-    OUT gctPHYS_ADDR_T *gpuPhysical,
-    OUT gctPHYS_ADDR_T *cpuPhysical
+    OUT gctUINT32 *Size
     );
 
 #ifdef LINUX

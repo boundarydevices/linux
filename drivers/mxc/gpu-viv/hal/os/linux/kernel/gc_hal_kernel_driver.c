@@ -1032,6 +1032,7 @@ static int __devinit gpu_probe(struct platform_device *pdev)
 
     gcmkHEADER();
 
+    moduleParam.compression = compression;
     platform->device = pdev;
     galcore_device = &pdev->dev;
 
