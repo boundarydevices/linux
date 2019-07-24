@@ -3097,7 +3097,10 @@ static void config_di_mif(struct DI_MIF_s *di_mif, struct di_buf_s *di_buf)
 			di_mif->chroma_y_end0 =
 				di_buf->vframe->height / 2 - 1;
 		} else {
-			di_mif->src_prog = force_prog?1:0;
+			if (di_pre_stru.cur_inp_type  & VIDTYPE_INTERLACE)
+				di_mif->src_prog = 0;
+			else
+				di_mif->src_prog = force_prog?1:0;
 			di_mif->src_field_mode = 1;
 			if (
 				(di_buf->vframe->type & VIDTYPE_TYPEMASK) ==
