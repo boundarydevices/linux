@@ -59,6 +59,42 @@ In order to explain how to integrate STM sensors in a different kernel, please c
 
 >         obj-y += lsm6dsm/
 
+> * Add custom events into *include/uapi/linux/iio/types.h* (follow a sample patch for kernel 4.14):
+
+>         enum iio_modifier {
+>         @@ -89,6 +98,7 @@ enum iio_event_type {
+>                 IIO_EV_TYPE_THRESH_ADAPTIVE,
+>                 IIO_EV_TYPE_MAG_ADAPTIVE,
+>                 IIO_EV_TYPE_CHANGE,
+>         +       IIO_EV_TYPE_FIFO_FLUSH,
+>         };
+>
+>          enum iio_event_direction {
+>          @@ -96,6 +106,8 @@ enum iio_event_direction {
+>                 IIO_EV_DIR_RISING,
+>                 IIO_EV_DIR_FALLING,
+>                 IIO_EV_DIR_NONE,
+>         +       IIO_EV_DIR_FIFO_EMPTY,
+>         +       IIO_EV_DIR_FIFO_DATA,
+>         };
+
+> * Add custom channel types *include/uapi/linux/iio/types.h* depending on the custom sensor implemented into driver (follow a sample patch for kernel 4.14):
+
+>          @@ -43,6 +43,14 @@ enum iio_chan_type {
+>                  IIO_ELECTRICALCONDUCTIVITY,
+>                  IIO_COUNT,
+>                  IIO_INDEX,
+>          +       IIO_SIGN_MOTION,
+>          +       IIO_STEP_DETECTOR,
+>          +       IIO_STEP_COUNTER,
+>          +       IIO_TILT,
+>          +       IIO_TAP,
+>          +       IIO_TAP_TAP,
+>          +       IIO_WRIST_TILT_GESTURE,
+>          +       IIO_GESTURE,
+>                  IIO_GRAVITY,
+>          };
+
 ### Device Tree configuration
 
 > To enable driver probing, add the lsm6dsm node to the platform device tree as described below.
@@ -72,15 +108,16 @@ In order to explain how to integrate STM sensors in a different kernel, please c
 > *- interrupt-parent*: phandle to the parent interrupt controller as documented in [interrupts][4]
 
 > *- interrupts*: interrupt mapping for IRQ as documented in [interrupts][4]
-> 
+>
 >**Recommended properties for SPI bus usage:**
 
 > *- spi-max-frequency*: maximum SPI bus frequency as documented in [SPI][3]
-> 
+>
 > **Optional properties:**
 
 > *- st,drdy-int-pin*: MEMS sensor interrupt line to use (default 1)
 
+#### Device Tree Integration Examples
 > I2C example (based on Raspberry PI 3):
 
 >		&i2c0 {
@@ -112,7 +149,7 @@ In order to explain how to integrate STM sensors in a different kernel, please c
 ### Kernel configuration
 
 Configure kernel with *make menuconfig* (alternatively use *make xconfig* or *make qconfig*)
- 
+
 >		Device Drivers  --->
 >			<M> Industrial I/O support  --->
 >				Inertial measurement units  --->
@@ -134,7 +171,7 @@ More Information
 
 Copyright
 ===========
-Copyright (C) 2017 STMicroelectronics
+Copyright (C) 2019 STMicroelectronics
 
 This software is distributed under the GNU General Public License - see the accompanying COPYING file for more details.
 
