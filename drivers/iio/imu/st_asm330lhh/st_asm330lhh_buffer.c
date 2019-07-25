@@ -20,6 +20,7 @@
 
 #define ST_ASM330LHH_REG_FIFO_CTRL1_ADDR	0x07
 #define ST_ASM330LHH_REG_FIFO_WTM_MASK		GENMASK(8, 0)
+#define ST_ASM330LHH_REG_FIFO_STATUS_DIFF	GENMASK(9, 0)
 
 #define ST_ASM330LHH_REG_FIFO_CTRL4_ADDR	0x0a
 #define ST_ASM330LHH_REG_FIFO_MODE_MASK		GENMASK(2, 0)
@@ -258,7 +259,7 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 	if (err < 0)
 		return err;
 
-	fifo_depth = le16_to_cpu(fifo_status) & ST_ASM330LHH_REG_FIFO_WTM_MASK;
+	fifo_depth = le16_to_cpu(fifo_status) & ST_ASM330LHH_REG_FIFO_STATUS_DIFF;
 	if (!fifo_depth)
 		return 0;
 
