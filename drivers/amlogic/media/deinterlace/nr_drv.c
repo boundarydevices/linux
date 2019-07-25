@@ -768,23 +768,24 @@ void adaptive_cue_adjust(unsigned int frame_diff, unsigned int field_diff)
 	}
 	if (glb_fieldck_en) {
 		if (field_diff < pcue_parm->glb_mot_fieldthr)
-			pcue_parm->field_count = pcue_parm->field_count + 1;
-		else if (pcue_parm->field_count < pcue_parm->glb_mot_fieldnum) {
-			pcue_parm->field_count = pcue_parm->field_count > 0 ?
-				(pcue_parm->field_count - 1) : 0;
-		}
+			pcue_parm->field_count =
+			pcue_parm->field_count < pcue_parm->glb_mot_fieldnum ?
+			(pcue_parm->field_count + 1) :
+			pcue_parm->glb_mot_fieldnum;
+		else if (pcue_parm->field_count > 0)
+			pcue_parm->field_count = (pcue_parm->field_count - 1);
 		/*--------------------------*/
 		/*patch from vlsi-yanling to fix tv-7314 cue cause sawtooth*/
 		if (field_diff < pcue_parm->glb_mot_fieldthr ||
 			field_diff > pcue_parm->glb_mot_fieldthr1)
-			pcue_parm->field_count1 = pcue_parm->field_count1 + 1;
-		else if (pcue_parm->field_count1 > 8) {
-			pcue_parm->field_count1 = pcue_parm->field_count1 > 0 ?
-				(pcue_parm->field_count1 - 1) : 0;
-		}
+			pcue_parm->field_count1 =
+			pcue_parm->field_count1 < pcue_parm->glb_mot_fieldnum ?
+			(pcue_parm->field_count1 + 1) :
+			pcue_parm->glb_mot_fieldnum;
+		else if (pcue_parm->field_count1 > 0)
+			pcue_parm->field_count1 = pcue_parm->field_count1 - 1;
 		/*--------------------------*/
 	}
-
 	if (cue_glb_mot_check_en) {
 		if (pcue_parm->frame_count >
 			(pcue_parm->glb_mot_fieldnum - 6) &&
