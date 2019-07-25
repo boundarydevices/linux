@@ -18,6 +18,7 @@
 #include <linux/of_device.h>
 #include <linux/regmap.h>
 #include <linux/rtc.h>
+#include "rtc-core.h"
 
 #define RV3028_SEC			0x00
 #define RV3028_MIN			0x01
