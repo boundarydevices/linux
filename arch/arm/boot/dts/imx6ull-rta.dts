@@ -135,9 +135,9 @@
 		>;
 	};
 
-	pinctrl_i2c1_rv4162: i2c1_rv4162grp {
+	pinctrl_i2c1_rv3028: i2c1_rv3028grp {
 		fsl,pins = <
-#define GPIRQ_RTC_RV4162		<&gpio3 25 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_RTC_RV3028		<&gpio3 25 IRQ_TYPE_LEVEL_LOW>
 			MX6UL_PAD_LCD_DATA20__GPIO3_IO25	0x1b0b0
 		>;
 	};
@@ -549,12 +549,12 @@
 		reset-gpios = GP_I2C1_PCAL6416_RESET;
 	};
 
-	rv4162@68 {
-		compatible = "microcrystal,rv4162";
+	rv3028@68 {
+		compatible = "microcrystal,rv3028";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c1_rv4162>;
+		pinctrl-0 = <&pinctrl_i2c1_rv3028>;
 		reg = <0x68>;
-		interrupts-extended = GPIRQ_RTC_RV4162;
+		interrupts-extended = GPIRQ_RTC_RV3028;
 	};
 };
 
