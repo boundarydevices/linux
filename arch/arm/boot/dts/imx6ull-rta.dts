@@ -549,11 +549,11 @@
 		reset-gpios = GP_I2C1_PCAL6416_RESET;
 	};
 
-	rv3028@68 {
+	rv3028@52 {
 		compatible = "microcrystal,rv3028";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_rv3028>;
-		reg = <0x68>;
+		reg = <0x52>;
 		interrupts-extended = GPIRQ_RTC_RV3028;
 	};
 };
