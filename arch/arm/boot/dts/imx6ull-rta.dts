@@ -550,6 +550,7 @@
 	};
 
 	rv3028@52 {
+		backup-switchover-dsm;
 		compatible = "microcrystal,rv3028";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_rv3028>;
