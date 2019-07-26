@@ -1680,22 +1680,20 @@ static int sitronix_ts_probe(struct i2c_client *client, const struct i2c_device_
 	if (!pdata)
 	{
 		dev_err(&client->dev,"GTP Failed to allocate memory for pdata\n");
-		ret = -ENOMEM;
-		goto err_check_functionality_failed;
+		return -ENOMEM;
 	}
 	ts = devm_kzalloc(&client->dev, sizeof(struct sitronix_ts_data), GFP_KERNEL);
 	if (!ts)
 	{
 		dev_err(&client->dev,"GTP Failed to allocate memory for ts\n");
-		ret = -ENOMEM;
-		goto err_check_functionality_failed;
+		return -ENOMEM;
 	}
 	ret = init_class(ts);
 	if (ret)
-		goto err_check_functionality_failed;
+		return ret;
 	ret = sitronix_parse_dt(&client->dev, pdata, ts);
 	if (ret)
-		goto err_check_functionality_failed;
+		return ret;
 
 #if 0//for touchscreen reset
 	sitronix_ts_reset_ic();
@@ -1986,8 +1984,6 @@ err_input_dev_alloc_failed:
 #endif // SITRONIX_MONITOR_THREAD
 err_device_info_error:
 err_check_functionality_failed:
-	if (client->irq)
-		irq_set_irq_type(client->irq, IRQ_TYPE_NONE);
 
 	return ret;
 }
