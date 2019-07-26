@@ -348,7 +348,7 @@ static int i2c_device_probe(struct device *dev)
 			irq = 0;
 
 		client->irq = irq;
-		irq_trigger_changed = 1;
+		irq_trigger_changed = can_request_irq(irq, 0);
 	}
 
 	/*
@@ -426,6 +426,7 @@ put_sync_adapter:
 		 * select a different trigger
 		 */
 		irq_set_irq_type(client->irq, IRQ_TYPE_NONE);
+		client->irq = 0;
 	}
 	return status;
 }
