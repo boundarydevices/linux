@@ -635,7 +635,7 @@
 		clock-names = "per", "ipg";
 		assigned-clocks = <&clk_post IMX8QM_LVDS1_I2C0_CLK>;
 		assigned-clock-rates = <24000000>;
-		power-domains = <&pd_lvds1_i2c0>;
+		power-domains = <&pd_lvds1>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_lvds1_lpi2c1>;
 		clock-frequency = <400000>;
