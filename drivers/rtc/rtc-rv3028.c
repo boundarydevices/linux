@@ -692,7 +692,7 @@ static int rv3028_probe(struct i2c_client *client)
 		}
 	}
 
-	if (!device_property_present(&client->dev, "backup-switchover-dsm")) {
+	if (device_property_present(&client->dev, "backup-switchover-dsm")) {
 		ret = regmap_update_bits(rv3028->regmap, RV3028_BACKUP,
 				RV3028_BACKUP_BSM_MASK,
 				RV3028_BACKUP_BSM_DSM);
