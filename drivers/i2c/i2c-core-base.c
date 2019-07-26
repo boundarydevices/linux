@@ -315,6 +315,7 @@ static int i2c_device_probe(struct device *dev)
 	struct i2c_client	*client = i2c_verify_client(dev);
 	struct i2c_driver	*driver;
 	int status;
+	int irq_trigger_changed = 0;
 
 	if (!client)
 		return 0;
@@ -345,6 +346,7 @@ static int i2c_device_probe(struct device *dev)
 			irq = 0;
 
 		client->irq = irq;
+		irq_trigger_changed = 1;
 	}
 
 	/*
@@ -353,15 +355,19 @@ static int i2c_device_probe(struct device *dev)
 	 */
 	if (!driver->id_table &&
 	    !i2c_acpi_match_device(dev->driver->acpi_match_table, client) &&
-	    !i2c_of_match_device(dev->driver->of_match_table, client))
-		return -ENODEV;
+	    !i2c_of_match_device(dev->driver->of_match_table, client)) {
+		status = -ENODEV;
+		goto error1;
+	}
 
 	if (client->flags & I2C_CLIENT_WAKE) {
 		int wakeirq;
 
 		wakeirq = of_irq_get_byname(dev->of_node, "wakeup");
-		if (wakeirq == -EPROBE_DEFER)
-			return wakeirq;
+		if (wakeirq == -EPROBE_DEFER) {
+			status = wakeirq;
+			goto error1;
+		}
 
 		device_init_wakeup(&client->dev, true);
 
@@ -408,6 +414,14 @@ err_detach_pm_domain:
 err_clear_wakeup_irq:
 	dev_pm_clear_wake_irq(&client->dev);
 	device_init_wakeup(&client->dev, false);
+error1:
+	if (client->irq && irq_trigger_changed) {
+		/*
+		 * return irq to none so that another driver may
+		 * select a different trigger
+		 */
+		irq_set_irq_type(client->irq, IRQ_TYPE_NONE);
+	}
 	return status;
 }
 
