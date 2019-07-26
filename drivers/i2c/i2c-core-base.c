@@ -351,7 +351,7 @@ static int i2c_device_probe(struct device *dev)
 			irq = 0;
 
 		client->irq = irq;
-		irq_trigger_changed = 1;
+		irq_trigger_changed = can_request_irq(irq, 0);
 	}
 
 	/*
