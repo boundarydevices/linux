@@ -469,6 +469,7 @@ static int i2c_device_probe(struct device *dev)
 	struct i2c_driver	*driver;
 	bool do_power_on;
 	int status;
+	int irq_trigger_changed = 0;
 
 	if (!client)
 		return 0;
@@ -503,6 +504,7 @@ static int i2c_device_probe(struct device *dev)
 			irq = 0;
 
 		client->irq = irq;
+		irq_trigger_changed = 1;
 	}
 
 	driver = to_i2c_driver(dev->driver);
@@ -594,6 +596,13 @@ put_sync_adapter:
 	if (client->flags & I2C_CLIENT_HOST_NOTIFY)
 		pm_runtime_put_sync(&client->adapter->dev);
 
+	if (client->irq && irq_trigger_changed) {
+		/*
+		 * return irq to none so that another driver may
+		 * select a different trigger
+		 */
+		irq_set_irq_type(client->irq, IRQ_TYPE_NONE);
+	}
 	return status;
 }
 
