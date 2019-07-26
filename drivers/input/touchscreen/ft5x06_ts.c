@@ -604,8 +604,6 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	printk(KERN_WARNING "%s: ts_register failed\n", client_name);
 	ts_deregister(ts);
 exit1:
-	if (ts->client->irq)
-		irq_set_irq_type(ts->client->irq, IRQ_TYPE_NONE);
 	kfree(ts);
 	return err;
 }
