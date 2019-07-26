@@ -237,22 +237,19 @@ static int egalax_ts_probe(struct i2c_client *client,
 	error = egalax_firmware_version(client);
 	if (error) {
 		dev_err(&client->dev, "Failed to switch to I2C interface\n");
-		goto exit1;
+		return error;
 	}
 
 	ts = devm_kzalloc(&client->dev, sizeof(struct egalax_ts), GFP_KERNEL);
 	if (!ts) {
 		dev_err(&client->dev, "Failed to allocate memory\n");
-		error = -ENOMEM;
-		goto exit1;
+		return -ENOMEM;
 	}
 
 	ts->wakeup_gpio = devm_gpiod_get_index(&client->dev, "wakeup", 0,
 					       GPIOD_OUT_LOW);
-	if (IS_ERR(ts->wakeup_gpio)) {
-		error = -ENODEV;
-		goto exit1;
-	}
+	if (IS_ERR(ts->wakeup_gpio))
+		return -ENODEV;
 
 	/* controller may be in sleep, wake it up. */
 	error = egalax_wake_up_device(client, ts);
@@ -266,15 +263,13 @@ static int egalax_ts_probe(struct i2c_client *client,
 	ret = egalax_firmware_version(client);
 	if (ret < 0) {
 		dev_err(&client->dev, "Failed to read firmware version\n");
-		error = -EIO;
-		goto exit1;
+		return -EIO;
 	}
 
 	input_dev = devm_input_allocate_device(&client->dev);
 	if (!input_dev) {
 		dev_err(&client->dev, "Failed to allocate memory\n");
-		error = -ENOMEM;
-		goto exit1;
+		return -ENOMEM;
 	}
 
 	ts->client = client;
@@ -298,18 +293,13 @@ static int egalax_ts_probe(struct i2c_client *client,
 
 	error = egalax_irq_request(ts);
 	if (error < 0)
-		goto exit1;
+		return error;
 
 	error = input_register_device(ts->input_dev);
 	if (error)
-		goto exit1;
+		return error;
 
 	return 0;
-
-exit1:
-	if (client->irq)
-		irq_set_irq_type(client->irq, IRQ_TYPE_NONE);
-	return error;
 }
 
 static int egalax_ts_remove(struct i2c_client *client)
