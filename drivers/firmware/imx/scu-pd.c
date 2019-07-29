@@ -195,6 +195,10 @@ static const struct imx_sc_pd_range imx8qxp_scu_pd_ranges[] = {
 	{ "cm41-mu-a1", IMX_SC_R_M4_1_MU_1A, 1, false, 0},
 	{ "cm41-lpuart", IMX_SC_R_M4_1_UART, 1, false, 0},
 
+	/* CM41 SS */
+	{ "cm41_i2c", IMX_SC_R_M4_1_I2C, 1, false, 0 },
+	{ "cm41_intmux", IMX_SC_R_M4_1_INTMUX, 1, false, 0 },
+
 	/* IMAGE SS */
 	{ "img-pdma", IMX_SC_R_ISI_CH0, 8, true, 0 },
 	{ "img-csi0", IMX_SC_R_CSI_0, 1, false, 0 },
