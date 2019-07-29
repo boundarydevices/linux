@@ -20,9 +20,9 @@
 #include <linux/mfd/syscon/imx6q-iomuxc-gpr.h>
 #include <linux/mfd/syscon/imx7-iomuxc-gpr.h>
 #include <linux/module.h>
-#include <linux/of_gpio.h>
-#include <linux/of_device.h>
 #include <linux/of_address.h>
+#include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 #include <linux/of_pci.h>
 #include <linux/pci.h>
@@ -34,9 +34,9 @@
 #include <linux/signal.h>
 #include <linux/types.h>
 #include <linux/interrupt.h>
-#include <linux/reset.h>
 #include <linux/busfreq-imx.h>
 #include <linux/regulator/consumer.h>
+#include <linux/reset.h>
 
 #include "pcie-designware.h"
 
