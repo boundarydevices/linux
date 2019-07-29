@@ -2428,19 +2428,19 @@ static int imx_pcie_probe(struct platform_device *pdev)
 	/* Fetch GPIOs */
 	imx_pcie->clkreq_gpio = of_get_named_gpio(node, "clkreq-gpio", 0);
 	if (gpio_is_valid(imx_pcie->clkreq_gpio)) {
-		ret = devm_gpio_request_one(&pdev->dev, imx_pcie->clkreq_gpio,
+		ret = devm_gpio_request_one(dev, imx_pcie->clkreq_gpio,
 					    GPIOF_OUT_INIT_LOW, "PCIe CLKREQ");
 		if (ret) {
-			dev_err(&pdev->dev, "unable to get clkreq gpio\n");
+			dev_err(dev, "unable to get clkreq gpio\n");
 			return ret;
 		}
 	}
 	imx_pcie->dis_gpio = of_get_named_gpio(node, "disable-gpio", 0);
 	if (gpio_is_valid(imx_pcie->dis_gpio)) {
-		ret = devm_gpio_request_one(&pdev->dev, imx_pcie->dis_gpio,
+		ret = devm_gpio_request_one(dev, imx_pcie->dis_gpio,
 					    GPIOF_OUT_INIT_HIGH, "PCIe DIS");
 		if (ret) {
-			dev_err(&pdev->dev, "unable to get disable gpio\n");
+			dev_err(dev, "unable to get disable gpio\n");
 			return ret;
 		}
 	} else if (imx_pcie->dis_gpio == -EPROBE_DEFER) {
@@ -2449,12 +2449,12 @@ static int imx_pcie_probe(struct platform_device *pdev)
 
 	imx_pcie->power_on_gpio = of_get_named_gpio(node, "power-on-gpio", 0);
 	if (gpio_is_valid(imx_pcie->power_on_gpio)) {
-		ret = devm_gpio_request_one(&pdev->dev,
+		ret = devm_gpio_request_one(dev,
 					    imx_pcie->power_on_gpio,
 					    GPIOF_OUT_INIT_LOW,
 					    "PCIe power enable");
 		if (ret) {
-			dev_err(&pdev->dev, "unable to get power-on gpio\n");
+			dev_err(dev, "unable to get power-on gpio\n");
 			return ret;
 		}
 	} else if (imx_pcie->power_on_gpio == -EPROBE_DEFER) {
@@ -2462,7 +2462,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < ARRAY_SIZE(imx_pcie->reset_gpios); i++) {
-		struct gpio_desc *gd = devm_gpiod_get_index(&pdev->dev, "reset", i,
+		struct gpio_desc *gd = devm_gpiod_get_index(dev, "reset", i,
 					   GPIOD_OUT_HIGH);
 
 		if (PTR_ERR(gd) == -EPROBE_DEFER)
@@ -2491,17 +2491,17 @@ static int imx_pcie_probe(struct platform_device *pdev)
 
 	if (imx_pcie->ext_osc && (imx_pcie->variant == IMX6QP)) {
 		/* Change the pcie_bus clock to pcie external OSC */
-		imx_pcie->pcie_bus = devm_clk_get(&pdev->dev, "pcie_ext");
+		imx_pcie->pcie_bus = devm_clk_get(dev, "pcie_ext");
 		if (IS_ERR(imx_pcie->pcie_bus)) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"pcie_bus clock source missing or invalid\n");
 			return PTR_ERR(imx_pcie->pcie_bus);
 		}
 
-		imx_pcie->pcie_ext_src = devm_clk_get(&pdev->dev,
+		imx_pcie->pcie_ext_src = devm_clk_get(dev,
 				"pcie_ext_src");
 		if (IS_ERR(imx_pcie->pcie_ext_src)) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"pcie_ext_src clk src missing or invalid\n");
 			return PTR_ERR(imx_pcie->pcie_ext_src);
 		}
@@ -2531,11 +2531,11 @@ static int imx_pcie_probe(struct platform_device *pdev)
 		imx_pcie->reg_src =
 			syscon_regmap_lookup_by_compatible("fsl,imx7d-src");
 		if (IS_ERR(imx_pcie->reg_src)) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"imx7d pcie phy src missing or invalid\n");
 			return PTR_ERR(imx_pcie->reg_src);
 		}
-		imx_pcie->pcie_phy_regulator = devm_regulator_get(&pdev->dev,
+		imx_pcie->pcie_phy_regulator = devm_regulator_get(dev,
 				"pcie-phy");
 	} else if (imx_pcie->variant == IMX8MQ || imx_pcie->variant == IMX8MM) {
 		imx_pcie->iomuxc_gpr =
@@ -2546,29 +2546,29 @@ static int imx_pcie_probe(struct platform_device *pdev)
 		imx_pcie->reg_src =
 			syscon_regmap_lookup_by_compatible("fsl,imx8mq-src");
 		if (IS_ERR(imx_pcie->reg_src)) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"imx8mq pcie phy src missing or invalid\n");
 			return PTR_ERR(imx_pcie->reg_src);
 		}
-		imx_pcie->pcie_ext_src = devm_clk_get(&pdev->dev,
+		imx_pcie->pcie_ext_src = devm_clk_get(dev,
 				"pcie_ext_src");
 		if (IS_ERR(imx_pcie->pcie_ext_src)) {
 			if (PTR_ERR(imx_pcie->pcie_ext_src) == -EPROBE_DEFER)
 				return PTR_ERR(imx_pcie->pcie_ext_src);
 			imx_pcie->pcie_ext_src = NULL;
-			dev_info(&pdev->dev,
+			dev_info(dev,
 				"pcie_ext_src clk src missing or invalid\n");
 		}
 	} else if (imx_pcie->variant == IMX6SX) {
-		imx_pcie->pcie_inbound_axi = devm_clk_get(&pdev->dev,
+		imx_pcie->pcie_inbound_axi = devm_clk_get(dev,
 				"pcie_inbound_axi");
 		if (IS_ERR(imx_pcie->pcie_inbound_axi)) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"pcie clock source missing or invalid\n");
 			return PTR_ERR(imx_pcie->pcie_inbound_axi);
 		}
 
-		imx_pcie->pcie_phy_regulator = devm_regulator_get(&pdev->dev,
+		imx_pcie->pcie_phy_regulator = devm_regulator_get(dev,
 				"pcie-phy");
 
 		imx_pcie->iomuxc_gpr =
@@ -2576,15 +2576,14 @@ static int imx_pcie_probe(struct platform_device *pdev)
 			("fsl,imx6sx-iomuxc-gpr");
 	} else if (imx_pcie->variant == IMX8QM
 			|| imx_pcie->variant == IMX8QXP) {
-		imx_pcie->pcie_inbound_axi = devm_clk_get(&pdev->dev,
+		imx_pcie->pcie_inbound_axi = devm_clk_get(dev,
 				"pcie_inbound_axi");
 		if (IS_ERR(imx_pcie->pcie_inbound_axi)) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"pcie clock source missing or invalid\n");
 			return PTR_ERR(imx_pcie->pcie_inbound_axi);
 		}
-		imx_pcie->epdev_on = devm_regulator_get(&pdev->dev,
-							 "epdev_on");
+		imx_pcie->epdev_on = devm_regulator_get(dev, "epdev_on");
 		if (IS_ERR(imx_pcie->epdev_on))
 			return -EPROBE_DEFER;
 
@@ -2659,7 +2658,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 	if (ret)
 		imx_pcie->link_gen = 1;
 
-	imx_pcie->vpcie = devm_regulator_get_optional(&pdev->dev, "vpcie");
+	imx_pcie->vpcie = devm_regulator_get_optional(dev, "vpcie");
 	if (IS_ERR(imx_pcie->vpcie)) {
 		if (PTR_ERR(imx_pcie->vpcie) != -ENODEV)
 			return PTR_ERR(imx_pcie->vpcie);
@@ -2683,7 +2682,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 
 		/* add attributes for device */
 		imx_pcie_attrgroup.attrs = imx_pcie_ep_attrs;
-		ret = sysfs_create_group(&pdev->dev.kobj, &imx_pcie_attrgroup);
+		ret = sysfs_create_group(&dev->kobj, &imx_pcie_attrgroup);
 		if (ret)
 			return -EINVAL;
 
@@ -2692,7 +2691,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 		if (ret)
 			return ret;
 
-		ret = devm_request_pci_bus_resources(&pdev->dev, &res);
+		ret = devm_request_pci_bus_resources(dev, &res);
 		if (ret) {
 			dev_err(dev, "missing ranges property\n");
 			pci_free_resource_list(&res);
@@ -2780,14 +2779,14 @@ static int imx_pcie_probe(struct platform_device *pdev)
 		}
 
 		if (unlikely(dma_en == 0)) {
-			test_reg1 = devm_kzalloc(&pdev->dev,
+			test_reg1 = devm_kzalloc(dev,
 					test_region_size, GFP_KERNEL);
 			if (!test_reg1) {
 				ret = -ENOMEM;
 				return ret;
 			}
 
-			test_reg2 = devm_kzalloc(&pdev->dev,
+			test_reg2 = devm_kzalloc(dev,
 					test_region_size, GFP_KERNEL);
 			if (!test_reg2) {
 				ret = -ENOMEM;
@@ -2881,7 +2880,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 	} else {
 		/* add attributes for bus freq */
 		imx_pcie_attrgroup.attrs = imx_pcie_rc_attrs;
-		ret = sysfs_create_group(&pdev->dev.kobj, &imx_pcie_attrgroup);
+		ret = sysfs_create_group(&dev->kobj, &imx_pcie_attrgroup);
 		if (ret)
 			return -EINVAL;
 
@@ -2924,7 +2923,7 @@ static int imx_pcie_probe(struct platform_device *pdev)
 
 		if (IS_ENABLED(CONFIG_RC_MODE_IN_EP_RC_SYS)
 				&& (imx_pcie->hard_wired == 0))
-			imx_pcie_regions_setup(&pdev->dev);
+			imx_pcie_regions_setup(dev);
 	}
 	pci_imx_set_msi_en(&pci->pp);
 
