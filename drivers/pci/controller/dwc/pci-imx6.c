@@ -1573,57 +1573,37 @@ static void imx6_pcie_init_phy(struct imx6_pcie *imx6_pcie)
 
 		dev_info(imx6_pcie->pci->dev, "%s REF_CLK is used!.\n",
 			 imx6_pcie->ext_osc ? "EXT" : "PLL");
-		if (imx6_pcie->ext_osc) {
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MQ_GPR_PCIE_REF_USE_PAD, 0);
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MM_GPR_PCIE_REF_CLK_SEL,
-					   IMX8MM_GPR_PCIE_REF_CLK_SEL);
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MM_GPR_PCIE_AUX_EN,
-					   IMX8MM_GPR_PCIE_AUX_EN);
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MM_GPR_PCIE_POWER_OFF, 0);
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MM_GPR_PCIE_SSC_EN, 0);
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MM_GPR_PCIE_REF_CLK_SEL,
-					   IMX8MM_GPR_PCIE_REF_CLK_EXT);
-			udelay(100);
-			/* Do the PHY common block reset */
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MM_GPR_PCIE_CMN_RST,
-					   IMX8MM_GPR_PCIE_CMN_RST);
-			udelay(200);
-		} else {
+		regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
+				   IMX8MQ_GPR_PCIE_REF_USE_PAD, 0);
+		regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
+				   IMX8MM_GPR_PCIE_REF_CLK_SEL,
+				   IMX8MM_GPR_PCIE_REF_CLK_SEL);
+		regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
+				   IMX8MM_GPR_PCIE_AUX_EN,
+				   IMX8MM_GPR_PCIE_AUX_EN);
+		regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
+				   IMX8MM_GPR_PCIE_POWER_OFF, 0);
+		regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
+				   IMX8MM_GPR_PCIE_SSC_EN, 0);
+		regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
+				   IMX8MM_GPR_PCIE_REF_CLK_SEL,
+				   (imx6_pcie->ext_osc) ?
+					IMX8MM_GPR_PCIE_REF_CLK_EXT :
+					IMX8MM_GPR_PCIE_REF_CLK_PLL);
+		udelay(100);
+		if (!imx6_pcie->ext_osc) {
 			/* Configure the internal PLL as REF clock */
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MQ_GPR_PCIE_REF_USE_PAD, 0);
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MM_GPR_PCIE_REF_CLK_SEL,
-					   IMX8MM_GPR_PCIE_REF_CLK_SEL);
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MM_GPR_PCIE_AUX_EN,
-					   IMX8MM_GPR_PCIE_AUX_EN);
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MM_GPR_PCIE_POWER_OFF, 0);
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MM_GPR_PCIE_SSC_EN, 0);
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MM_GPR_PCIE_REF_CLK_SEL,
-					   IMX8MM_GPR_PCIE_REF_CLK_PLL);
-			udelay(100);
 			/* Configure the PHY */
 			writel(PCIE_PHY_CMN_REG62_PLL_CLK_OUT,
 			       imx6_pcie->phy_base + PCIE_PHY_CMN_REG62);
 			writel(PCIE_PHY_CMN_REG64_AUX_RX_TX_TERM,
 			       imx6_pcie->phy_base + PCIE_PHY_CMN_REG64);
-			/* Do the PHY common block reset */
-			regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
-					   IMX8MM_GPR_PCIE_CMN_RST,
-					   IMX8MM_GPR_PCIE_CMN_RST);
-			udelay(200);
 		}
+		/* Do the PHY common block reset */
+		regmap_update_bits(imx6_pcie->iomuxc_gpr, offset,
+				   IMX8MM_GPR_PCIE_CMN_RST,
+				   IMX8MM_GPR_PCIE_CMN_RST);
+		udelay(200);
 
 		/*
 		 * In order to pass the compliance tests.
@@ -1644,7 +1624,8 @@ static void imx6_pcie_init_phy(struct imx6_pcie *imx6_pcie)
 		regmap_update_bits(imx6_pcie->iomuxc_gpr,
 				   imx6_pcie_grp_offset(imx6_pcie),
 				   IMX8MQ_GPR_PCIE_REF_USE_PAD,
-				   IMX8MQ_GPR_PCIE_REF_USE_PAD);
+				   (imx6_pcie->ext_osc) ?
+					IMX8MQ_GPR_PCIE_REF_USE_PAD : 0);
 		/*
 		 * Regarding the datasheet, the PCIE_VPH is suggested
 		 * to be 1.8V. If the PCIE_VPH is supplied by 3.3V, the
