@@ -1220,6 +1220,7 @@ static int bd718xx_probe(struct platform_device *pdev)
 		const struct regulator_desc *desc;
 		struct regulator_dev *rdev;
 		const struct bd718xx_regulator_data *r;
+		bool force_controlled_by_status_machine = false;
 
 		r = &pmic_regulators[mfd->chip_type].r_datas[i];
 		desc = &r->desc;
@@ -1235,6 +1236,9 @@ static int bd718xx_probe(struct platform_device *pdev)
 			err = PTR_ERR(rdev);
 			goto err;
 		}
+
+		force_controlled_by_status_machine = of_property_read_bool(rdev->dev.of_node, "force-controlled-by-status-machine");
+		dev_info(&pdev->dev, "%s, force controlled by status machine %d", desc->name, force_controlled_by_status_machine);
 
 		/*
 		 * Regulator register gets the regulator constraints and
@@ -1252,8 +1256,8 @@ static int bd718xx_probe(struct platform_device *pdev)
 		 * enable SW control for crucial regulators if snvs state is
 		 * used
 		 */
-		if (!use_snvs || !rdev->constraints->always_on ||
-		    !rdev->constraints->boot_on) {
+		if ((!use_snvs || !rdev->constraints->always_on ||
+		    !rdev->constraints->boot_on) && (!force_controlled_by_status_machine)) {
 			err = regmap_update_bits(mfd->regmap, r->init.reg,
 						 r->init.mask, r->init.val);
 			if (err) {
