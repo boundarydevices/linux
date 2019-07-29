@@ -19,9 +19,8 @@
 #include <linux/mfd/syscon/imx7-iomuxc-gpr.h>
 #include <linux/module.h>
 #include <linux/of_address.h>
-#include <linux/of_gpio.h>
 #include <linux/of_device.h>
-#include <linux/of_address.h>
+#include <linux/of_gpio.h>
 #include <linux/of_pci.h>
 #include <linux/pci.h>
 #include <linux/platform_device.h>
@@ -31,9 +30,9 @@
 #include <linux/signal.h>
 #include <linux/types.h>
 #include <linux/interrupt.h>
-#include <linux/reset.h>
 #include <linux/pm_domain.h>
 #include <linux/pm_runtime.h>
+#include <linux/reset.h>
 #include "../../pci.h"
 
 #include "pcie-designware.h"
