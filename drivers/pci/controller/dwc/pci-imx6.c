@@ -643,7 +643,8 @@ static void imx6_pcie_init_phy(struct imx6_pcie *imx6_pcie)
 		regmap_update_bits(imx6_pcie->iomuxc_gpr,
 				   imx6_pcie_grp_offset(imx6_pcie),
 				   IMX8MQ_GPR_PCIE_REF_USE_PAD,
-				   IMX8MQ_GPR_PCIE_REF_USE_PAD);
+				   (imx6_pcie->ext_osc) ?
+					IMX8MQ_GPR_PCIE_REF_USE_PAD : 0);
 		/*
 		 * Regarding the datasheet, the PCIE_VPH is suggested
 		 * to be 1.8V. If the PCIE_VPH is supplied by 3.3V, the
