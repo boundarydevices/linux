@@ -1446,7 +1446,7 @@ static void imx6_pcie_init_phy(struct imx6_pcie *imx6_pcie)
 	int i;
 	unsigned int offset, val;
 
-	if (imx6_pcie->ext_osc && imx6_pcie->pcie_ext_src) {
+	if (imx6_pcie->pcie_ext_src) {
 		int ret;
 
 		imx6_pcie->ext_src_clk_enabled = 1;
