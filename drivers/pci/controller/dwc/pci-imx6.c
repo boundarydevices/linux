@@ -408,14 +408,22 @@ static void imx6_pcie_init_phy(struct imx6_pcie *imx6_pcie)
 		break;
 	case IMX8MQ:
 	case IMX8MQ_EP:
-		/*
-		 * TODO: Currently this code assumes external
-		 * oscillator is being used
-		 */
-		regmap_update_bits(imx6_pcie->iomuxc_gpr,
-				   imx6_pcie_grp_offset(imx6_pcie),
-				   IMX8MQ_GPR_PCIE_REF_USE_PAD,
-				   IMX8MQ_GPR_PCIE_REF_USE_PAD);
+		{
+			int ext_osc = 0;
+
+			if (of_property_read_u32(imx6_pcie->pci->dev->of_node,
+			    "ext_osc", &ext_osc) < 0)
+				ext_osc = 0;
+
+			/*
+			 * TODO: Currently i.mx8mq does not have phy to do this
+			 */
+			regmap_update_bits(imx6_pcie->iomuxc_gpr,
+				imx6_pcie_grp_offset(imx6_pcie),
+				IMX8MQ_GPR_PCIE_REF_USE_PAD,
+				(ext_osc) ? IMX8MQ_GPR_PCIE_REF_USE_PAD : 0);
+		}
+
 		/*
 		 * Regarding the datasheet, the PCIE_VPH is suggested
 		 * to be 1.8V. If the PCIE_VPH is supplied by 3.3V, the
