@@ -2540,7 +2540,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 	/* Fetch GPIOs */
 	imx6_pcie->clkreq_gpio = of_get_named_gpio(node, "clkreq-gpio", 0);
 	if (gpio_is_valid(imx6_pcie->clkreq_gpio)) {
-		devm_gpio_request_one(&pdev->dev, imx6_pcie->clkreq_gpio,
+		devm_gpio_request_one(dev, imx6_pcie->clkreq_gpio,
 				      GPIOF_OUT_INIT_LOW, "PCIe CLKREQ");
 	} else if (imx6_pcie->clkreq_gpio == -EPROBE_DEFER) {
 		return imx6_pcie->clkreq_gpio;
@@ -2548,23 +2548,23 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 
 	imx6_pcie->dis_gpio = of_get_named_gpio(node, "disable-gpio", 0);
 	if (gpio_is_valid(imx6_pcie->dis_gpio)) {
-		ret = devm_gpio_request_one(&pdev->dev, imx6_pcie->dis_gpio,
+		ret = devm_gpio_request_one(dev, imx6_pcie->dis_gpio,
 					    GPIOF_OUT_INIT_LOW, "PCIe DIS");
 		if (ret) {
-			dev_err(&pdev->dev, "unable to get disable gpio\n");
+			dev_err(dev, "unable to get disable gpio\n");
 			return ret;
 		}
 	} else if (imx6_pcie->dis_gpio == -EPROBE_DEFER) {
 		return imx6_pcie->dis_gpio;
 	}
 
-	imx6_pcie->epdev_on = devm_regulator_get(&pdev->dev,
+	imx6_pcie->epdev_on = devm_regulator_get(dev,
 						 "epdev_on");
 	if (IS_ERR(imx6_pcie->epdev_on))
 		return -EPROBE_DEFER;
 
 	for (i = 0; i < ARRAY_SIZE(imx6_pcie->reset_gpios); i++) {
-		struct gpio_desc *gd = devm_gpiod_get_index(&pdev->dev, "reset", i,
+		struct gpio_desc *gd = devm_gpiod_get_index(dev, "reset", i,
 							    GPIOD_OUT_HIGH);
 
 		if (PTR_ERR(gd) == -EPROBE_DEFER)
@@ -2594,13 +2594,13 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 		return PTR_ERR(imx6_pcie->pcie);
 	}
 
-	imx6_pcie->pcie_ext_src = devm_clk_get(&pdev->dev,
+	imx6_pcie->pcie_ext_src = devm_clk_get(dev,
 			"pcie_ext_src");
 	if (IS_ERR(imx6_pcie->pcie_ext_src)) {
 		if (PTR_ERR(imx6_pcie->pcie_ext_src) == -EPROBE_DEFER)
 			return PTR_ERR(imx6_pcie->pcie_ext_src);
 		imx6_pcie->pcie_ext_src = NULL;
-		dev_info(&pdev->dev,
+		dev_info(dev,
 			"pcie_ext_src clk src missing or invalid\n");
 	}
 
@@ -2659,10 +2659,10 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 			return PTR_ERR(imx6_pcie->pcie_per);
 		}
 
-		imx6_pcie->pcie_inbound_axi = devm_clk_get(&pdev->dev,
+		imx6_pcie->pcie_inbound_axi = devm_clk_get(dev,
 				"pcie_inbound_axi");
 		if (IS_ERR(imx6_pcie->pcie_inbound_axi)) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"pcie clock source missing or invalid\n");
 			return PTR_ERR(imx6_pcie->pcie_inbound_axi);
 		}
@@ -2766,7 +2766,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 	if (ret)
 		imx6_pcie->link_gen = 1;
 
-	imx6_pcie->vpcie = devm_regulator_get_optional(&pdev->dev, "vpcie");
+	imx6_pcie->vpcie = devm_regulator_get_optional(dev, "vpcie");
 	if (IS_ERR(imx6_pcie->vpcie)) {
 		if (PTR_ERR(imx6_pcie->vpcie) != -ENODEV)
 			return PTR_ERR(imx6_pcie->vpcie);
@@ -2800,7 +2800,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 
 		/* add attributes for device */
 		imx6_pcie_attrgroup.attrs = imx6_pcie_ep_attrs;
-		ret = sysfs_create_group(&pdev->dev.kobj, &imx6_pcie_attrgroup);
+		ret = sysfs_create_group(&dev->kobj, &imx6_pcie_attrgroup);
 		if (ret)
 			return -EINVAL;
 
@@ -2809,7 +2809,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 		if (ret)
 			return ret;
 
-		ret = devm_request_pci_bus_resources(&pdev->dev, &res);
+		ret = devm_request_pci_bus_resources(dev, &res);
 		if (ret) {
 			dev_err(dev, "missing ranges property\n");
 			pci_free_resource_list(&res);
@@ -2909,14 +2909,14 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 		}
 
 		if (unlikely(dma_en == 0)) {
-			test_reg1 = devm_kzalloc(&pdev->dev,
+			test_reg1 = devm_kzalloc(dev,
 					test_region_size, GFP_KERNEL);
 			if (!test_reg1) {
 				ret = -ENOMEM;
 				return ret;
 			}
 
-			test_reg2 = devm_kzalloc(&pdev->dev,
+			test_reg2 = devm_kzalloc(dev,
 					test_region_size, GFP_KERNEL);
 			if (!test_reg2) {
 				ret = -ENOMEM;
@@ -3023,7 +3023,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 
 		if (IS_ENABLED(CONFIG_RC_MODE_IN_EP_RC_SYS)
 				&& (imx6_pcie->hard_wired == 0))
-			imx6_pcie_regions_setup(&pdev->dev);
+			imx6_pcie_regions_setup(dev);
 
 		/*
 		 * If the L1SS is enabled, disable the over ride after link up.
