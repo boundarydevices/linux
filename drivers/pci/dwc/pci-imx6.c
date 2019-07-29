@@ -2545,11 +2545,11 @@ static int imx_pcie_probe(struct platform_device *pdev)
 		imx_pcie->reg_src =
 			 syscon_regmap_lookup_by_compatible("fsl,imx7d-src");
 		if (IS_ERR(imx_pcie->reg_src)) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"imx7d pcie phy src missing or invalid\n");
 			return PTR_ERR(imx_pcie->reg_src);
 		}
-		imx_pcie->pcie_phy_regulator = devm_regulator_get(&pdev->dev,
+		imx_pcie->pcie_phy_regulator = devm_regulator_get(dev,
 				"pcie-phy");
 	} else if (imx_pcie->variant == IMX8MQ || imx_pcie->variant == IMX8MM) {
 		imx_pcie->iomuxc_gpr =
@@ -2560,36 +2560,36 @@ static int imx_pcie_probe(struct platform_device *pdev)
 		imx_pcie->reg_src =
 			 syscon_regmap_lookup_by_compatible("fsl,imx8mq-src");
 		if (IS_ERR(imx_pcie->reg_src)) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"imx8mq pcie phy src missing or invalid\n");
 			return PTR_ERR(imx_pcie->reg_src);
 		}
 		imx_pcie->reg_gpc =
 			 syscon_regmap_lookup_by_compatible("fsl,imx8mq-gpc");
 		if (IS_ERR(imx_pcie->reg_gpc)) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"imx8mq pcie phy src missing or invalid\n");
 			return PTR_ERR(imx_pcie->reg_gpc);
 		}
-		imx_pcie->pcie_ext_src = devm_clk_get(&pdev->dev,
+		imx_pcie->pcie_ext_src = devm_clk_get(dev,
 				"pcie_ext_src");
 		if (IS_ERR(imx_pcie->pcie_ext_src)) {
 			if (PTR_ERR(imx_pcie->pcie_ext_src) == -EPROBE_DEFER)
 				return PTR_ERR(imx_pcie->pcie_ext_src);
 			imx_pcie->pcie_ext_src = NULL;
-			dev_info(&pdev->dev,
+			dev_info(dev,
 				"pcie_ext_src clk src missing or invalid\n");
 		}
 	} else if (imx_pcie->variant == IMX6SX) {
-		imx_pcie->pcie_inbound_axi = devm_clk_get(&pdev->dev,
+		imx_pcie->pcie_inbound_axi = devm_clk_get(dev,
 				"pcie_inbound_axi");
 		if (IS_ERR(imx_pcie->pcie_inbound_axi)) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"pcie clock source missing or invalid\n");
 			return PTR_ERR(imx_pcie->pcie_inbound_axi);
 		}
 
-		imx_pcie->pcie_phy_regulator = devm_regulator_get(&pdev->dev,
+		imx_pcie->pcie_phy_regulator = devm_regulator_get(dev,
 				"pcie-phy");
 
 		imx_pcie->iomuxc_gpr =
@@ -2605,10 +2605,10 @@ static int imx_pcie_probe(struct platform_device *pdev)
 
 		imx_pcie->iomuxc_gpr =
 			 syscon_regmap_lookup_by_phandle(node, "hsio");
-		imx_pcie->pcie_inbound_axi = devm_clk_get(&pdev->dev,
+		imx_pcie->pcie_inbound_axi = devm_clk_get(dev,
 				"pcie_inbound_axi");
 		if (IS_ERR(imx_pcie->pcie_inbound_axi)) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"pcie clock source missing or invalid\n");
 			return PTR_ERR(imx_pcie->pcie_inbound_axi);
 		}
