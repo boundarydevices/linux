@@ -494,8 +494,8 @@
 				regulator-min-microvolt = <700000>;
 				regulator-max-microvolt = <1300000>;
 				regulator-boot-on;
-				regulator-always-on;
 				rohm,dvs-run-voltage = <900000>;
+				force-controlled-by-status-machine;
 			};
 
 			sw1c_reg: regulator@3 {
@@ -594,7 +594,7 @@
 				regulator-min-microvolt = <900000>;
 				regulator-max-microvolt = <1800000>;
 				regulator-boot-on;
-				regulator-always-on;
+				force-controlled-by-status-machine;
 			};
 
 			ldo7_reg: regulator@14 {
