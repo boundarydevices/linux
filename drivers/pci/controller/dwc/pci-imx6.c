@@ -1148,10 +1148,10 @@ err_pcie_bus:
 	clk_disable_unprepare(imx_pcie->pcie);
 err_pcie:
 	if (imx_pcie->vpcie && regulator_is_enabled(imx_pcie->vpcie) > 0) {
-		ret = regulator_disable(imx_pcie->vpcie);
-		if (ret)
+		int ret1 = regulator_disable(imx_pcie->vpcie);
+		if (ret1)
 			dev_err(dev, "failed to disable vpcie regulator: %d\n",
-				ret);
+				ret1);
 	}
 	return ret;
 }
