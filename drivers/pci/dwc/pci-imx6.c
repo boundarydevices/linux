@@ -1534,9 +1534,8 @@ static irqreturn_t imx_pcie_msi_handler(int irq, void *arg)
 {
 	struct imx_pcie *imx_pcie = arg;
 	struct dw_pcie *pci = imx_pcie->pci;
-	struct pcie_port *pp = &pci->pp;
 
-	return dw_handle_msi_irq(pp);
+	return dw_handle_msi_irq(&pci->pp);
 }
 
 static void pci_imx_clk_disable(struct device *dev)
