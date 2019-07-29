@@ -1172,8 +1172,9 @@ static void imx_pcie_init_phy(struct imx_pcie *imx_pcie)
 	struct device_node *np;
 	void __iomem *base;
 
-	if (imx_pcie->variant == IMX8QM
-			|| imx_pcie->variant == IMX8QXP) {
+	switch (imx_pcie->variant) {
+	case IMX8QM:
+	case IMX8QXP:
 		switch (imx_pcie->hsio_cfg) {
 		case PCIEAX2SATA:
 			/*
@@ -1269,7 +1270,9 @@ static void imx_pcie_init_phy(struct imx_pcie *imx_pcie)
 				IMX8QM_CSR_MISC_IOB_A_0_TXOE
 				| IMX8QM_CSR_MISC_IOB_A_0_M1M0_2);
 		}
-	} else if (imx_pcie->variant == IMX8MQ || imx_pcie->variant == IMX8MM) {
+		break;
+	case IMX8MQ:
+	case IMX8MM:
 		imx_pcie_phy_pwr_up(imx_pcie);
 
 		if (imx_pcie->ctrl_id == 0)
@@ -1384,7 +1387,8 @@ static void imx_pcie_init_phy(struct imx_pcie *imx_pcie)
 			writel(PCIE_PHY_TRSV_REG6_GEN2_DEEMP,
 			       imx_pcie->phy_base + PCIE_PHY_TRSV_REG6);
 		}
-	} else if (imx_pcie->variant == IMX7D) {
+		break;
+	case IMX7D:
 		/* Enable PCIe PHY 1P0D */
 		regulator_set_voltage(imx_pcie->pcie_phy_regulator,
 				1000000, 1000000);
@@ -1396,7 +1400,8 @@ static void imx_pcie_init_phy(struct imx_pcie *imx_pcie)
 		/* pcie phy ref clock select; 1? internal pll : external osc */
 		regmap_update_bits(imx_pcie->iomuxc_gpr, IOMUXC_GPR12,
 				   IMX7D_GPR12_PCIE_PHY_REFCLK_SEL, 0);
-	} else if (imx_pcie->variant == IMX6SX) {
+		break;
+	case IMX6SX:
 		/* Force PCIe PHY reset */
 		regmap_update_bits(imx_pcie->iomuxc_gpr, IOMUXC_GPR5,
 				IMX6SX_GPR5_PCIE_BTNRST_RESET,
@@ -1411,6 +1416,10 @@ static void imx_pcie_init_phy(struct imx_pcie *imx_pcie)
 		regmap_update_bits(imx_pcie->iomuxc_gpr, IOMUXC_GPR12,
 				   IMX6SX_GPR12_PCIE_RX_EQ_MASK,
 				   IMX6SX_GPR12_PCIE_RX_EQ_2);
+		break;
+	case IMX6Q:
+	case IMX6QP:
+		break;
 	}
 
 	if (imx_pcie->pcie_bus_regulator != NULL) {
@@ -1766,7 +1775,7 @@ static const struct dw_pcie_host_ops imx_pcie_host_ops = {
 };
 
 static int imx_add_pcie_port(struct imx_pcie *imx_pcie,
-			      struct platform_device *pdev)
+			     struct platform_device *pdev)
 {
 	struct dw_pcie *pci = imx_pcie->pci;
 	struct pcie_port *pp = &pci->pp;
@@ -2544,8 +2553,24 @@ static int imx_pcie_probe(struct platform_device *pdev)
 		imx_pcie->pcie_bus_regulator = NULL;
 	}
 
-	/* Grab GPR config register range */
-	if (imx_pcie->variant == IMX7D) {
+	switch (imx_pcie->variant) {
+	case IMX6SX:
+		imx_pcie->pcie_inbound_axi = devm_clk_get(dev,
+				"pcie_inbound_axi");
+		if (IS_ERR(imx_pcie->pcie_inbound_axi)) {
+			dev_err(dev,
+				"pcie clock source missing or invalid\n");
+			return PTR_ERR(imx_pcie->pcie_inbound_axi);
+		}
+
+		imx_pcie->pcie_phy_regulator = devm_regulator_get(dev,
+				"pcie-phy");
+
+		imx_pcie->iomuxc_gpr =
+			 syscon_regmap_lookup_by_compatible
+			 ("fsl,imx6sx-iomuxc-gpr");
+		break;
+	case IMX7D:
 		imx_pcie->iomuxc_gpr =
 			 syscon_regmap_lookup_by_compatible
 			 ("fsl,imx7d-iomuxc-gpr");
@@ -2558,7 +2583,9 @@ static int imx_pcie_probe(struct platform_device *pdev)
 		}
 		imx_pcie->pcie_phy_regulator = devm_regulator_get(dev,
 				"pcie-phy");
-	} else if (imx_pcie->variant == IMX8MQ || imx_pcie->variant == IMX8MM) {
+		break;
+	case IMX8MM:
+	case IMX8MQ:
 		imx_pcie->iomuxc_gpr =
 			 syscon_regmap_lookup_by_compatible(
 			 (imx_pcie->variant == IMX8MM) ?
@@ -2587,23 +2614,9 @@ static int imx_pcie_probe(struct platform_device *pdev)
 			dev_info(dev,
 				"pcie_ext_src clk src missing or invalid\n");
 		}
-	} else if (imx_pcie->variant == IMX6SX) {
-		imx_pcie->pcie_inbound_axi = devm_clk_get(dev,
-				"pcie_inbound_axi");
-		if (IS_ERR(imx_pcie->pcie_inbound_axi)) {
-			dev_err(dev,
-				"pcie clock source missing or invalid\n");
-			return PTR_ERR(imx_pcie->pcie_inbound_axi);
-		}
-
-		imx_pcie->pcie_phy_regulator = devm_regulator_get(dev,
-				"pcie-phy");
-
-		imx_pcie->iomuxc_gpr =
-			 syscon_regmap_lookup_by_compatible
-			 ("fsl,imx6sx-iomuxc-gpr");
-	} else if (imx_pcie->variant == IMX8QM
-			|| imx_pcie->variant == IMX8QXP) {
+		break;
+	case IMX8QM:
+	case IMX8QXP:
 		imx_pcie->pcie_per = devm_clk_get(dev, "pcie_per");
 		if (IS_ERR(imx_pcie->pcie_per)) {
 			dev_err(dev, "pcie_per clock source missing or invalid\n");
@@ -2619,9 +2632,11 @@ static int imx_pcie_probe(struct platform_device *pdev)
 				"pcie clock source missing or invalid\n");
 			return PTR_ERR(imx_pcie->pcie_inbound_axi);
 		}
-	} else {
+		break;
+	default:
 		imx_pcie->iomuxc_gpr =
 		 syscon_regmap_lookup_by_compatible("fsl,imx6q-iomuxc-gpr");
+		break;
 	}
 
 	if (IS_ERR(imx_pcie->iomuxc_gpr)) {
