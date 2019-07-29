@@ -1270,10 +1270,10 @@ static void imx_pcie_init_phy(struct imx_pcie *imx_pcie)
 		else
 			val = IOMUXC_GPR16;
 
+		regmap_update_bits(imx_pcie->iomuxc_gpr, val,
+			IMX8MQ_GPR_PCIE_REF_USE_PAD,
+			(imx_pcie->ext_osc) ? IMX8MQ_GPR_PCIE_REF_USE_PAD : 0);
 		if (imx_pcie->ext_osc) {
-			regmap_update_bits(imx_pcie->iomuxc_gpr, val,
-					IMX8MQ_GPR_PCIE_REF_USE_PAD,
-					IMX8MQ_GPR_PCIE_REF_USE_PAD);
 			if (imx_pcie->variant == IMX8MM) {
 				dev_info(imx_pcie->pci->dev,
 					"Initialize PHY with EXT REfCLK!.\n");
