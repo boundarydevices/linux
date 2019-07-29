@@ -236,6 +236,8 @@ module_param(dif01_ratio,  int, 0644);
 MODULE_PARM_DESC(dif01_ratio, "dif01_ratio");
 
 
+static int flm22_force;
+
 int comsum;
 
 int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
@@ -444,7 +446,9 @@ int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
 	flm22_th = flm22_min/2;
 	avg_flag = abs(nDIF01[HISDIFNUM-1] - nDIF01[HISDIFNUM-2]) > flm22_th
 		? 1:0;
-	avg_flag = (nDIF01[HISDIFNUM-1] > (1<<16) && pRDat.iHeight == 288)
+	avg_flag =
+		(max(nDIF01[HISDIFNUM-1], nDIF01[HISDIFNUM-2]) > (1<<16)
+		&& pRDat.iHeight == 288)
 		? avg_flag : 0;
 	/*-----------------*/
 	/* rFlmPstGCm = 1; */
@@ -526,7 +530,7 @@ int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
 				else
 					nS1 = nS1 - pPar->flm22_comlev;
 			} else if ((dif01avg > pPar->flm22_dif01_avgth)
-				&& (avg_flag == 0)) {
+				&& (avg_flag == 0 || flm22_avg_flag == 1)) {
 				if (nS1 < pPar->flm22_comlev)
 					nS1 = 0;
 				else
@@ -559,6 +563,14 @@ int FlmVOFSftTop(UINT8 *rCmb32Spcl, unsigned short *rPstCYWnd0,
 		 */
 		 *rFlmPstMod = 0;
 		nS1 = 0;
+	}
+	if (flm22_force) {
+		*rFlmSltPre = nDIF01[HISDIFNUM-1] > nDIF01[HISDIFNUM-2] ? 1 : 0;
+		/* Post-processing: film mode,00: global combing,
+		 * 01: 2-2 film, 10: 2-3 film, 11:-others
+		 */
+		*rFlmPstMod = 1;
+		nS1 = 135;
 	}
 	pre_fld_motnum = glb_field_mot_num;
 
@@ -1619,8 +1631,10 @@ int Flm22DetSft(struct sFlmDatSt *pRDat, int *nDif02,
 	flm22_th = flm22_min/2;
 	dif_flag = abs(nDif01[HISDIFNUM-1]-nDif01[HISDIFNUM-2])
 		> flm22_th ? 1:0;
-	dif_flag = nDif01[HISDIFNUM-1] > (1<<16) ? dif_flag : 0;
-	if (flm22_flag && dif_flag) {
+	dif_flag =
+		max(nDif01[HISDIFNUM-1], nDif01[HISDIFNUM-2]) > (1<<16) ?
+		dif_flag : 0;
+	if (flm22_flag && (dif_flag || pPar->flm22_avg_flag)) {
 	/* ---------------------- */
 		if (pFlg[HISDETNUM-1] == 3
 				|| pFlg[HISDETNUM-1] == 1) {
@@ -1675,7 +1689,7 @@ static int DIweavedetec(struct sFlmSftPar *pPar, int nDif01)
 	int flag_di01th = pPar->flag_di01th;
 	int numthd = pPar->numthd;
 	static int numdif;
-	static int predifflag;
+	static int predifflag = 2;
 	static int predif01;
 	static int difflag;
 
@@ -1683,6 +1697,9 @@ static int DIweavedetec(struct sFlmSftPar *pPar, int nDif01)
 	if (abs(predif01 - nDif01) < dif01th && flag_di01th)
 		difflag = 2;
 	else {
+		if (pr_pd)
+			pr_info("predif01=%d,dif01=%d,predifflag=%d\n",
+				predif01, nDif01, predifflag);
 		if (predif01 < nDif01)
 			difflag = 1;
 		else
@@ -1695,9 +1712,15 @@ static int DIweavedetec(struct sFlmSftPar *pPar, int nDif01)
 			numdif = 0;
 			difflag = difflag^1;
 			predifflag = difflag;
-		} else
+		} else {
+			predifflag = difflag;
 			difflag = 2;
+		}
+		if (pr_pd)
+			pr_info("difflag=%d\n", difflag);
 	}
+	if (pr_pd)
+		pr_info("difflag=%d\n", difflag);
 	predif01 = nDif01;
 	return difflag;
 }

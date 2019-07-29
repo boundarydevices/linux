@@ -177,12 +177,16 @@ unsigned int pulldown_detection(struct pulldown_detected_s *res,
 
 		pr_info("%s", debug_str);
 	}
+	if (pr_pd)
+		pr_info("diff_flag=%d\n", difflag);
 
 	pulldown_mode_init(res);
 	if (difflag == 1 && flag_di_weave)
 		res->global_mode = PULL_DOWN_NORMAL;
 	else if (difflag == 0 && flag_di_weave == 1)
 		res->global_mode = PULL_DOWN_NORMAL_2;
+	else
+		res->global_mode = PULL_DOWN_NORMAL;
 
 	if (dectres.rFlmPstMod == 1)
 		cmb_sts->like_pulldown22_flag = dectres.rF22Flag;
