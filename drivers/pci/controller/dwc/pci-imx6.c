@@ -1304,12 +1304,6 @@ static void imx_pcie_init_phy(struct imx_pcie *imx_pcie)
 				dev_info(imx_pcie->pci->dev,
 					"PHY Initialization End!.\n");
 			}
-			ret = clk_prepare_enable(imx_pcie->pcie_ext_src);
-			if (ret)
-				dev_err(imx_pcie->pci->dev,
-					"unable to enable pcie_ext_src clock\n");
-			else
-				imx_pcie->ext_src_clk_enabled = 1;
 		} else {
 			if (imx_pcie->variant == IMX8MM) {
 				/* Configure the internal PLL as REF clock */
@@ -1377,6 +1371,12 @@ static void imx_pcie_init_phy(struct imx_pcie *imx_pcie)
 			writel(PCIE_PHY_TRSV_REG6_GEN2_DEEMP,
 			       imx_pcie->phy_base + PCIE_PHY_TRSV_REG6);
 		}
+		ret = clk_prepare_enable(imx_pcie->pcie_ext_src);
+		if (ret)
+			dev_err(imx_pcie->pci->dev,
+				"unable to enable pcie_ext_src clock\n");
+		else
+			imx_pcie->ext_src_clk_enabled = 1;
 		break;
 	case IMX7D:
 		/* Enable PCIe PHY 1P0D */
