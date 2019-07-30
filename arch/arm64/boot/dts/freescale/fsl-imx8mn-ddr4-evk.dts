@@ -13,7 +13,7 @@
  */
 
 /dts-v1/;
-
+#include <dt-bindings/usb/pd.h>
 #include "fsl-imx8mn.dtsi"
 
 / {
@@ -293,6 +293,12 @@
 		pinctrl_typec1: typec1grp {
 			fsl,pins = <
 				MX8MN_IOMUXC_SD1_STROBE_GPIO2_IO11		0x159
+			>;
+		};
+
+		pinctrl_typec2: typec2grp {
+			fsl,pins = <
+				MX8MN_IOMUXC_SD2_CD_B_GPIO2_IO12	0x159
 			>;
 		};
 
@@ -675,36 +681,46 @@
 		};
 	};
 
-	typec_ptn5110_1: ptn5110@50 {
-		compatible = "usb,tcpci";
+	typec1_ptn5110: tcpci@50 {
+		compatible = "nxp,ptn5110";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_typec1>;
 		reg = <0x50>;
 		interrupt-parent = <&gpio2>;
 		interrupts = <11 8>;
-		src-pdos = <0x380190c8>;
-		snk-pdos = <0x380190c8>;
-		max-snk-mv = <5000>;
-		max-snk-ma = <3000>;
-		op-snk-mw = <10000>;
-		max-snk-mw = <15000>;
-		port-type = "drp";
-		default-role = "sink";
 		status = "okay";
+
+		usb_con1: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			power-role = "dual";
+			data-role = "dual";
+			try-power-role = "sink";
+			source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
+			sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)
+				     PDO_VAR(5000, 20000, 3000)>;
+			op-sink-microwatt = <15000000>;
+			self-powered;
+		};
 	};
 
-	typec_ptn5110_2: ptn5110@52 {
-		compatible = "usb,tcpci";
+	typec2_ptn5110: tcpci@52 {
+		compatible = "nxp,ptn5110";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_typec2>;
 		reg = <0x52>;
-		src-pdos = <0x380190c8>;
-		snk-pdos = <0x380190c8 0x3802d0c8>;
-		max-snk-mv = <9000>;
-		max-snk-ma = <2000>;
-		op-snk-mw = <9000>;
-		max-snk-mw = <18000>;
-		port-type = "drp";
-		default-role = "sink";
+		interrupt-parent = <&gpio2>;
+		interrupts = <12 8>;
 		status = "disabled";
+
+		usb_con2: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			power-role = "sink";
+			sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_HIGHER_CAP)
+				     PDO_VAR(5000, 20000, 3000)>;
+			op-sink-microwatt = <15000000>;
+		};
 	};
 };
 
@@ -956,7 +972,7 @@
 
 &usbotg1 {
 	dr_mode = "otg";
-	extcon = <0>, <&typec_ptn5110_1>;
+	extcon = <0>, <&typec1_ptn5110>;
 	picophy,pre-emp-curr-control = <3>;
 	picophy,dc-vol-level-adjust = <7>;
 	status = "okay";
