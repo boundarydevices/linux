@@ -3535,8 +3535,9 @@ int sdhci_setup_host(struct sdhci_host *host)
 	 * be larger than 64 KiB though.
 	 */
 	if (host->flags & SDHCI_USE_ADMA) {
+#define MAX_ADMA_SEGMENT (SZ_64K - 64)
 		if (host->quirks & SDHCI_QUIRK_BROKEN_ADMA_ZEROLEN_DESC)
-			mmc->max_seg_size = 65535;
+			mmc->max_seg_size = MAX_ADMA_SEGMENT;
 		else
 			mmc->max_seg_size = 65536;
 	} else {
