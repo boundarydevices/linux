@@ -10,6 +10,8 @@
 #include "mt8183.dtsi"
 #include "mt6358.dtsi"
 
+#include <dt-bindings/gpio/gpio.h>
+
 / {
 	model = "MediaTek MT8183 evaluation board";
 	compatible = "mediatek,mt8183-evb", "mediatek,mt8183";
@@ -47,6 +49,13 @@
 		enable-active-high;
 		regulator-always-on;
 	};
+
+	vddio_touch_reg: vddio_touch_reg {
+		compatible = "regulator-fixed";
+		regulator-name = "vddio_touch";
+		gpio = <&pio 153 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
 };
 
 &auxadc {
@@ -63,6 +72,19 @@
 	pinctrl-0 = <&i2c_pins_0>;
 	status = "okay";
 	clock-frequency = <100000>;
+
+	gt5688@5d {
+		compatible = "goodix,gt5688";
+		reg = <0x5d>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ctp_pins_default>;
+		interrupt-parent = <&pio>;
+		interrupts = <189 IRQ_TYPE_EDGE_FALLING>;
+		irq-gpios = <&pio 176 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&pio 177 GPIO_ACTIVE_HIGH>;
+		AVDD28-supply = <&mt6358_vldo28_reg>;
+		VDDIO-supply = <&vddio_touch_reg>;
+	};
 };
 
 &i2c1 {
@@ -364,6 +386,19 @@
 	pwm_pins_1: pwm1 {
 		pins_pwm {
 			pinmux = <PINMUX_GPIO90__FUNC_PWM_A>;
+		};
+	};
+
+	ctp_pins_default: ctp_pins_default {
+		pins_eint_ctp {
+			pinmux = <PINMUX_GPIO176__FUNC_GPIO176>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_rst_ctp {
+			pinmux = <PINMUX_GPIO177__FUNC_GPIO177>;
+			output-low;
 		};
 	};
 };
