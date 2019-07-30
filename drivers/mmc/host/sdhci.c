@@ -4749,8 +4749,8 @@ int sdhci_setup_host(struct sdhci_host *host)
 	 */
 	if (host->flags & SDHCI_USE_ADMA) {
 		if (host->quirks & SDHCI_QUIRK_BROKEN_ADMA_ZEROLEN_DESC) {
-			host->max_adma = 65532; /* 32-bit alignment */
-			mmc->max_seg_size = 65535;
+			host->max_adma = 65536 - 64; /* 32-bit alignment */
+			mmc->max_seg_size = 65536 - 64;
 		} else {
 			mmc->max_seg_size = 65536;
 		}
