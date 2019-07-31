@@ -163,7 +163,10 @@ static int sm1_clk_gates_init(struct clk **clks, void __iomem *iobase)
 	}
 
 	for (clkid = 0; clkid < MCLK_BASE; clkid++) {
-		sm1_audio_clk_gates[clkid]->reg = iobase;
+		unsigned long offset =
+			(unsigned long)sm1_audio_clk_gates[clkid]->reg;
+		sm1_audio_clk_gates[clkid]->reg =
+			(void __iomem *)((unsigned long)iobase + offset);
 		clks[clkid] = clk_register(NULL, sm1_audio_clk_hws[clkid]);
 		WARN_ON(IS_ERR_OR_NULL(clks[clkid]));
 	}

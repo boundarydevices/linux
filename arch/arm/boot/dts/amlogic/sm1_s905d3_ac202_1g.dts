@@ -605,15 +605,15 @@
 			tdmacpu: cpu {
 				sound-dai = <&tdma>;
 				dai-tdm-slot-tx-mask =
-							<1 1 1 1 1 1 1 1>;
+							<1>;
 				dai-tdm-slot-rx-mask =
-							<1 1 1 1 1 1 1 1>;
-				dai-tdm-slot-num = <8>;
-				dai-tdm-slot-width = <32>;
-				system-clock-frequency = <24576000>;
+							<1>;
+				dai-tdm-slot-num = <2>;
+				dai-tdm-slot-width = <16>;
+				system-clock-frequency = <256000>;
 			};
 			tdmacodec: codec {
-				sound-dai = <&dummy_codec &dummy_codec>;
+				sound-dai = <&dummy_codec>;
 			};
 		};
 
@@ -1124,13 +1124,8 @@
 	tdma: tdm@0 {
 		compatible = "amlogic, sm1-snd-tdma";
 		#sound-dai-cells = <0>;
-		dai-tdm-lane-slot-mask-in = <1 1>;
-		dai-tdm-oe-lane-slot-mask-out = <1 1>;
-		dai-format = "dsp_a";
-		dai-tdm-slot-tx-mask = <1>;
-		dai-tdm-slot-rx-mask = <1>;
-		dai-tdm-slot-num = <2>;
-		dai-tdm-slot-width = <16>;
+		dai-tdm-lane-slot-mask-in = <0 1>;
+		dai-tdm-lane-slot-mask-out = <1 0>;
 		dai-tdm-clk-sel = <0>;
 		clocks = <&clkaudio CLKID_AUDIO_MCLK_A
 				&clkc CLKID_MPLL0>;
@@ -1522,16 +1517,14 @@
 		mux { /* GPIOX_11, GPIOX_10, GPIOX_9 */
 			groups = "tdma_sclk",
 				"tdma_fs",
-				"tdma_dout0",
-				"tdma_dout1";
+				"tdma_dout0";
 			function = "tdma_out";
 		};
 	};
 
 	tdmin_a: tdmin_a {
 		mux { /* GPIOX_8 */
-			groups = "tdma_din0",
-					"tdma_din1";
+			groups = "tdma_din1";
 			function = "tdma_in";
 		};
 	};
