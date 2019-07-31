@@ -1628,13 +1628,13 @@ int Flm22DetSft(struct sFlmDatSt *pRDat, int *nDif02,
 	/*DI:PQ patch fix 480i error into pulldown22(by yanling)*/
 	flm22_min = nDif01[HISDIFNUM-1] > nDif01[HISDIFNUM-2]
 		? nDif01[HISDIFNUM-2] : nDif01[HISDIFNUM-1];
-	flm22_th = flm22_min/2;
+	flm22_th = min(flm22_min / 2, 1 << 16);
 	dif_flag = abs(nDif01[HISDIFNUM-1]-nDif01[HISDIFNUM-2])
 		> flm22_th ? 1:0;
 	dif_flag =
 		max(nDif01[HISDIFNUM-1], nDif01[HISDIFNUM-2]) > (1<<16) ?
 		dif_flag : 0;
-	if (flm22_flag && (dif_flag || pPar->flm22_avg_flag)) {
+	if (flm22_flag && dif_flag) {
 	/* ---------------------- */
 		if (pFlg[HISDETNUM-1] == 3
 				|| pFlg[HISDETNUM-1] == 1) {
