@@ -194,6 +194,8 @@ static irqreturn_t exc3000_interrupt(int irq, void *dev_id)
 	int ret;
 
 	ret = exc3000_read_frame(data, buf);
+	if (!data->input)
+		goto out;
 	if (ret) {
 		/* Schedule a timer to release "stuck" contacts */
 		exc3000_schedule_timer(data);
@@ -364,11 +366,23 @@ static int exc3000_probe(struct i2c_client *client)
 		msleep(EXC3000_READY_MS);
 	}
 
+	/* probe for device */
+	error = i2c_master_send(client, NULL, 0);
+	if (error < 0) {
+		dev_err(&client->dev, "no device\n");
+		return -ENODEV;
+	}
+
+	error = devm_request_threaded_irq(&client->dev, client->irq,
+					  NULL, exc3000_interrupt, IRQF_ONESHOT,
+					  client->name, data);
+	if (error)
+		return error;
+
 	input = devm_input_allocate_device(&client->dev);
 	if (!input)
 		return -ENOMEM;
 
-	data->input = input;
 	input_set_drvdata(input, data);
 
 	input->name = data->info->name;
@@ -391,12 +405,6 @@ static int exc3000_probe(struct i2c_client *client)
 
 	error = devm_add_action_or_reset(&client->dev, exc3000_shutdown_timer,
 					 &data->timer);
-	if (error)
-		return error;
-
-	error = devm_request_threaded_irq(&client->dev, client->irq,
-					  NULL, exc3000_interrupt, IRQF_ONESHOT,
-					  client->name, data);
 	if (error)
 		return error;
 
@@ -431,6 +439,7 @@ static int exc3000_probe(struct i2c_client *client)
 	if (error)
 		return error;
 
+	data->input = input;
 	return 0;
 }
 
