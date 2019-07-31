@@ -81,7 +81,8 @@ static const struct ci_hdrc_imx_platform_flag imx6ul_usb_data = {
 };
 
 static const struct ci_hdrc_imx_platform_flag imx7d_usb_data = {
-	.flags = CI_HDRC_SUPPORTS_RUNTIME_PM,
+	.flags = CI_HDRC_SUPPORTS_RUNTIME_PM |
+		CI_HDRC_HOST_SUSP_PHY_LPM,
 };
 
 static const struct ci_hdrc_imx_platform_flag imx7ulp_usb_data = {
