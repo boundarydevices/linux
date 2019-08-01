@@ -289,6 +289,11 @@
 			};
 		};
 
+		watchdog {
+			compatible = "fsl,imx8qm-sc-wdt", "fsl,imx-sc-wdt";
+			timeout-sec = <60>;
+		};
+
 		tsens: thermal-sensor {
 			compatible = "fsl,imx8qm-sc-thermal";
 			tsens-num = <5>;
