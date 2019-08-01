@@ -204,6 +204,7 @@
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
 			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
+#define GPIRQ_I2C3_J6_LOW	<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
 #define GPIRQ_I2C3_J6		<&gpio1 9 IRQ_TYPE_EDGE_FALLING>
 #define GP_I2C3_J6		<&gpio1 9 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		/* I2C3 J6 interrupt */
@@ -884,7 +885,7 @@
 	touchscreen@2a {
 		compatible = "eeti,exc3000";
 		reg = <0x2a>;
-		interrupts-extended = GPIRQ_I2C3_J6;
+		interrupts-extended = GPIRQ_I2C3_J6_LOW;
 #if 0
 		touchscreen-size-x = <4096>;
 		touchscreen-size-y = <4096>;
