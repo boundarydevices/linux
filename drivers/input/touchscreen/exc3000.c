@@ -27,6 +27,7 @@
 #define EXC3000_LEN_FRAME		66
 #define EXC3000_LEN_POINT		10
 #define EXC3000_MT_EVENT		6
+#define EXC3000_MT_EVENT2		0x18
 #define EXC3000_TIMEOUT_MS		100
 
 struct exc3000_data {
@@ -80,7 +81,7 @@ static int exc3000_read_frame(struct i2c_client *client, u8 *buf)
 		return -EIO;
 
 	if (get_unaligned_le16(buf) != EXC3000_LEN_FRAME ||
-			buf[2] != EXC3000_MT_EVENT)
+	    (buf[2] != EXC3000_MT_EVENT && buf[2] != EXC3000_MT_EVENT2))
 		return -EINVAL;
 
 	return 0;
@@ -121,10 +122,13 @@ static irqreturn_t exc3000_interrupt(int irq, void *dev_id)
 	int slots, total_slots;
 	int error;
 
+	buf[3] = 0;
 	error = exc3000_read_data(data->client, buf, &total_slots);
 	if (!input)
 		goto out;
 	if (error) {
+		pr_debug("%s: buf = %02x %02x %02x %02x, ret=%d\n", __func__,
+			buf[0], buf[1], buf[2], buf[3], error);
 		/* Schedule a timer to release "stuck" contacts */
 		mod_timer(&data->timer,
 			  jiffies + msecs_to_jiffies(EXC3000_TIMEOUT_MS));
