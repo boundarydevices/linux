@@ -1014,6 +1014,7 @@
 
 					mscc_felix_port5: port@5 {
 						reg = <5>;
+						ethernet = <&enetc_port3>;
 						phy-mode = "internal";
 						status = "disabled";
 
