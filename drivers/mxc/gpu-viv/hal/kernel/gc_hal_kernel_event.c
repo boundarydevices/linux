@@ -730,7 +730,6 @@ gckEVENT_GetEvent(
     gctINT i, id;
     gceSTATUS status;
     gctBOOL acquired = gcvFALSE;
-    gctINT32 free;
 
     gcmkHEADER_ARG("Event=0x%x Source=%d", Event, Source);
 
@@ -765,18 +764,15 @@ gckEVENT_GetEvent(
                 Event->queues[id].source = Source;
 
                 /* Decrease the number of free events. */
-                free = --Event->freeQueueCount;
-
-                /* Make compiler happy. */
-                free = free;
+                --Event->freeQueueCount;
 
 #if gcdDYNAMIC_SPEED
-                if (free <= gcdDYNAMIC_EVENT_THRESHOLD)
+                if (Event->freeQueueCount <= gcdDYNAMIC_EVENT_THRESHOLD)
                 {
                     gcmkONERROR(gckOS_BroadcastHurry(
                         Event->os,
                         Event->kernel->hardware,
-                        gcdDYNAMIC_EVENT_THRESHOLD - free));
+                        gcdDYNAMIC_EVENT_THRESHOLD - Event->freeQueueCount));
                 }
 #endif
 

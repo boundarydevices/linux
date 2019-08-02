@@ -621,7 +621,7 @@ int init_gpu_opp_table(struct device *dev)
     }
 
     if (!prop->value) {
-	dev_err(dev, "operating-points invalid. Frequency scaling will not work\n");
+        dev_err(dev, "operating-points invalid. Frequency scaling will not work\n");
         return -ENODATA;
     }
 
@@ -1315,7 +1315,7 @@ static inline int get_power(struct device *pdev)
 #if defined(CONFIG_PM_OPP)
     ret = init_gpu_opp_table(pdev);
     if (ret)
-	dev_err(pdev, "OPP init failed!\n");
+        dev_err(pdev, "OPP init failed!\n");
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)

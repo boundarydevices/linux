@@ -128,6 +128,7 @@ gctCONST_STRING _DispatchText[] =
     gcmDEFINE2TEXT(gcvHAL_SET_DEBUG_LEVEL_ZONE),
     gcmDEFINE2TEXT(gcvHAL_DEBUG_DUMP),
     gcmDEFINE2TEXT(gcvHAL_UPDATE_DEBUG_CALLBACK),
+    gcmDEFINE2TEXT(gcvHAL_CONFIG_CTX_FRAMEWORK),
     gcmDEFINE2TEXT(gcvHAL_DUMP_GPU_STATE),
     gcmDEFINE2TEXT(gcvHAL_DUMP_EVENT),
     gcmDEFINE2TEXT(gcvHAL_DUMP_GPU_PROFILE),
@@ -2368,7 +2369,6 @@ _Commit(
             command  = kernel->command;
             eventObj = kernel->eventObj;
         }
-
         gcmkONERROR(gckOS_Broadcast(kernel->os,
                                     kernel->hardware,
                                     gcvBROADCAST_GPU_COMMIT));
