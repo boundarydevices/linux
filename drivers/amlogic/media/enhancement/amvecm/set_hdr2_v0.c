@@ -2170,6 +2170,16 @@ void hdr_func(enum hdr_module_sel module_sel,
 			hdr_mtx_param.mtx_out[i] = rgb2ycbcr_ncl2020[i];
 			if (i < 9)
 				hdr_mtx_param.mtx_gamut[i] = bypass_coeff[i];
+			if (i < 3) {
+				hdr_mtx_param.mtxi_pre_offset[i] =
+					yuv2rgbpre[i];
+				hdr_mtx_param.mtxi_pos_offset[i] =
+					yuv2rgbpos[i];
+				hdr_mtx_param.mtxo_pre_offset[i] =
+					rgb2yuvpre[i];
+				hdr_mtx_param.mtxo_pos_offset[i] =
+					rgb2yuvpos[i];
+			}
 		}
 		hdr_mtx_param.mtx_on = MTX_ON;
 		hdr_mtx_param.p_sel = HLG_HDR;
