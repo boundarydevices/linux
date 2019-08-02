@@ -50,6 +50,25 @@
 		regulator-always-on;
 	};
 
+	backlight_lcd0: backlight_lcd0 {
+		compatible = "pwm-backlight";
+		pwms = <&pwm0 0 500000>;
+		power-supply = <&bl_pp5000>;
+		brightness-levels = <0 1023>;
+		num-interpolated-steps = <1023>;
+		default-brightness-level = <576>;
+		status = "okay";
+	};
+
+	bl_pp5000: regulator@1 {
+		compatible = "regulator-fixed";
+		regulator-name = "bl_pp5000";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
 	vddio_touch_reg: vddio_touch_reg {
 		compatible = "regulator-fixed";
 		regulator-name = "vddio_touch";
@@ -397,6 +416,20 @@
 		};
 	};
 
+	panel_pins_default: panel_pins_default {
+		panel_reset {
+			pinmux = <PINMUX_GPIO45__FUNC_GPIO45>;
+			output-low;
+			bias-pull-up;
+		};
+	};
+
+	pwm0_pin_default: pwm0_pin_default {
+		disp_pwm {
+			pinmux = <PINMUX_GPIO43__FUNC_DISP_PWM>;
+		};
+	};
+
 	ctp_pins_default: ctp_pins_default {
 		pins_eint_ctp {
 			pinmux = <PINMUX_GPIO176__FUNC_GPIO176>;
@@ -502,4 +535,45 @@
 	status = "okay";
 	pinctrl-0 = <&pwm_pins_1>;
 	pinctrl-names = "default";
+};
+
+&mipi_tx0 {
+	status = "okay";
+};
+
+&pwm0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm0_pin_default>;
+};
+
+&dsi0 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	panel: panel@0 {
+		compatible = "sharp,nt35532";
+		reg = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&panel_pins_default>;
+		backlight = <&backlight_lcd0>;
+		reset-gpios = <&pio 45 0>;
+		pwr-gpios = <&pio 158 0>;
+		pwr2-gpios = <&pio 159 0>;
+		status = "okay";
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&dsi_out>;
+			};
+		};
+	};
+
+	ports {
+		port {
+			dsi_out: endpoint {
+				remote-endpoint = <&panel_in>;
+			};
+		};
+	};
 };
