@@ -13255,10 +13255,16 @@ static int __init video_early_init(void)
 		WRITE_VCBUS_REG_BITS(
 			SRSHARP0_SHARP_SYNC_CTRL, 1, 0, 1);
 		WRITE_VCBUS_REG_BITS(
+			SRSHARP0_SHARP_SYNC_CTRL, 1, 8, 1);
+		WRITE_VCBUS_REG_BITS(
 			SRSHARP1_SHARP_SYNC_CTRL, 1, 8, 1);
-	} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12B))
+	} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12B)) {
 		WRITE_VCBUS_REG_BITS(
 			SRSHARP0_SHARP_SYNC_CTRL, 1, 0, 1);
+		/* TODO: check if the bit8 is available */
+		/* WRITE_VCBUS_REG_BITS( */
+		/*	SRSHARP0_SHARP_SYNC_CTRL, 1, 8, 1); */
+	}
 	return 0;
 }
 
