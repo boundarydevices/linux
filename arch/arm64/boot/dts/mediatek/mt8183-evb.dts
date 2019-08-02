@@ -69,6 +69,14 @@
 		regulator-boot-on;
 	};
 
+	sound {
+		compatible = "mediatek,mt8183-mt6358-sound";
+		mediatek,platform = <&afe>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&aud_pins>;
+		status = "okay";
+	};
+
 	vddio_touch_reg: vddio_touch_reg {
 		compatible = "regulator-fixed";
 		regulator-name = "vddio_touch";
@@ -430,6 +438,19 @@
 		};
 	};
 
+	aud_pins: audiopins {
+		pins_bus {
+			pinmux = <PINMUX_GPIO136__FUNC_AUD_CLK_MOSI>,
+				<PINMUX_GPIO137__FUNC_AUD_SYNC_MOSI>,
+				<PINMUX_GPIO138__FUNC_AUD_DAT_MOSI0>,
+				<PINMUX_GPIO139__FUNC_AUD_DAT_MOSI1>,
+				<PINMUX_GPIO140__FUNC_AUD_CLK_MISO>,
+				<PINMUX_GPIO141__FUNC_AUD_SYNC_MISO>,
+				<PINMUX_GPIO142__FUNC_AUD_DAT_MISO0>,
+				<PINMUX_GPIO143__FUNC_AUD_DAT_MISO1>;
+		};
+	};
+
 	ctp_pins_default: ctp_pins_default {
 		pins_eint_ctp {
 			pinmux = <PINMUX_GPIO176__FUNC_GPIO176>;
@@ -576,4 +597,8 @@
 			};
 		};
 	};
+};
+
+&mt6358codec {
+	Avdd-supply = <&mt6358_vaud28_reg>;
 };
