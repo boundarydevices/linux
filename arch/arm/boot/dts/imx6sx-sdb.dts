@@ -121,12 +121,6 @@
 	pm-ignore-notify;
 	cap-power-off-card;
 	status = "okay";
-
-	brcmf: bcrmf@1 {
-		reg = <1>;
-		compatible = "brcm,bcm4329-fmac";
-	};
-
 };
 
 &uart3 { /* ttymxc2 for Murata BCM4339 V1 Bluetooth. */
