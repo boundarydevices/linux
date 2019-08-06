@@ -118,6 +118,7 @@
 		model = "wm8960-audio";
 		cpu-dai = <&sai1>;
 		audio-codec = <&wm8960>;
+		asrc-controller = <&asrc0>;
 		codec-master;
 		/*
 		 * hp-det = <hp-det-pin hp-det-polarity>;
@@ -126,8 +127,8 @@
 		 * hp-det-polarity = 1: hp detect high for speaker
 		 */
 		hp-det = <2 0>;
-		hp-det-gpios = <&gpio1 0 0>;
-		mic-det-gpios = <&gpio1 0 0>;
+		hp-det-gpios = <&gpio0 13 0>;
+		mic-det-gpios = <&gpio0 13 0>;
 		audio-routing =
 			"Headphone Jack", "HP_L",
 			"Headphone Jack", "HP_R",
@@ -162,53 +163,8 @@
 	status = "okay";
 };
 
-&audmix {
-	status = "okay";
-};
-
 &asrc0 {
 	fsl,asrc-rate  = <48000>;
-	status = "okay";
-};
-
-&esai0 {
-	compatible = "fsl,imx8qm-esai";
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_esai0>;
-	assigned-clocks = <&clk IMX8QXP_ACM_ESAI0_MCLK_SEL>,
-			<&clk IMX8QXP_AUD_PLL0_DIV>,
-			<&clk IMX8QXP_AUD_ACM_AUD_PLL_CLK0_DIV>,
-			<&clk IMX8QXP_AUD_ACM_AUD_REC_CLK0_DIV>,
-			<&clk IMX8QXP_AUD_ESAI_0_EXTAL_IPG>;
-	assigned-clock-parents = <&clk IMX8QXP_AUD_ACM_AUD_PLL_CLK0_CLK>;
-	assigned-clock-rates = <0>, <786432000>, <49152000>, <12288000>, <49152000>;
-	fsl,txm-rxs;
-	status = "okay";
-};
-
-&sai4 {
-	assigned-clocks = <&clk IMX8QXP_ACM_SAI4_MCLK_SEL>,
-			<&clk IMX8QXP_AUD_PLL1_DIV>,
-			<&clk IMX8QXP_AUD_ACM_AUD_PLL_CLK1_DIV>,
-			<&clk IMX8QXP_AUD_ACM_AUD_REC_CLK1_DIV>,
-			<&clk IMX8QXP_AUD_SAI_4_MCLK>;
-	assigned-clock-parents = <&clk IMX8QXP_AUD_ACM_AUD_PLL_CLK1_CLK>;
-	assigned-clock-rates = <0>, <786432000>, <98304000>, <12288000>, <98304000>;
-	fsl,sai-asynchronous;
-	fsl,txm-rxs;
-	status = "okay";
-};
-
-&sai5 {
-	assigned-clocks = <&clk IMX8QXP_ACM_SAI5_MCLK_SEL>,
-			<&clk IMX8QXP_AUD_PLL1_DIV>,
-			<&clk IMX8QXP_AUD_ACM_AUD_PLL_CLK1_DIV>,
-			<&clk IMX8QXP_AUD_ACM_AUD_REC_CLK1_DIV>,
-			<&clk IMX8QXP_AUD_SAI_5_MCLK>;
-	assigned-clock-parents = <&clk IMX8QXP_AUD_ACM_AUD_PLL_CLK1_CLK>;
-	assigned-clock-rates = <0>, <786432000>, <98304000>, <12288000>, <98304000>;
-	fsl,sai-asynchronous;
-	fsl,txm-rxs;
 	status = "okay";
 };
 
@@ -331,11 +287,11 @@
 
 		pinctrl_sai1: sai1grp {
 			fsl,pins = <
-				SC_P_SAI1_RXD_ADMA_SAI1_RXD	0x06000040
-				SC_P_SAI1_RXC_ADMA_SAI1_TXC	0x06000040
-				SC_P_SAI1_RXFS_ADMA_SAI1_TXFS	0x06000040
-				SC_P_SPI0_CS1_ADMA_SAI1_TXD	0x06000060
-				SC_P_SPI2_CS0_LSIO_GPIO1_IO00	0x06000040
+				SC_P_FLEXCAN1_TX_ADMA_SAI1_RXD	0x06000040
+				SC_P_FLEXCAN2_TX_ADMA_SAI1_RXC	0x06000040
+				SC_P_FLEXCAN2_RX_ADMA_SAI1_RXFS	0x06000040
+				SC_P_FLEXCAN1_RX_ADMA_SAI1_TXD	0x06000060
+				SC_P_SPI3_SCK_LSIO_GPIO0_IO13	0x06000040
 			>;
 		};
 
@@ -591,6 +547,7 @@
 	assigned-clock-rates = <786432000>, <49152000>, <12288000>, <49152000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
+	fsl,sai-synchronous-rx;
 	status = "okay";
 };
 
