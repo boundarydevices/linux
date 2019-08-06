@@ -1558,26 +1558,6 @@ static int mxc_jpeg_enum_fmt_vid_out(struct file *file, void *priv,
 				MXC_OUT_FORMAT);
 }
 
-static int mxc_jpeg_bound_align_image(u32 *w, unsigned int wmin,
-				       unsigned int wmax, unsigned int walign,
-				       u32 *h, unsigned int hmin,
-				       unsigned int hmax, unsigned int halign)
-{
-	int width, height, w_step, h_step;
-
-	width = *w;
-	height = *h;
-	w_step = 1 << walign;
-	h_step = 1 << halign;
-
-	v4l_bound_align_image(w, wmin, wmax, walign, h, hmin, hmax, halign, 0);
-	if (*w < width && (*w + w_step) <= wmax)
-		*w += w_step;
-	if (*h < height && (*h + h_step) <= hmax)
-		*h += h_step;
-
-	return (width != *w || height != *h);
-}
 static int mxc_jpeg_try_fmt(struct v4l2_format *f, struct mxc_jpeg_fmt *fmt,
 			    struct mxc_jpeg_ctx *ctx, int q_type)
 {
@@ -1593,14 +1573,24 @@ static int mxc_jpeg_try_fmt(struct v4l2_format *f, struct mxc_jpeg_fmt *fmt,
 	pix_mp->field = V4L2_FIELD_NONE;
 	pix_mp->num_planes = fmt->colplanes;
 	pix_mp->pixelformat = fmt->fourcc;
-	mxc_jpeg_bound_align_image(&w,
-					MXC_JPEG_MIN_WIDTH,
-					MXC_JPEG_MAX_WIDTH,
-					MXC_JPEG_W_ALIGN,
-					&h,
-					MXC_JPEG_MIN_HEIGHT,
-					MXC_JPEG_MAX_HEIGHT,
-					MXC_JPEG_H_ALIGN);
+
+	/*
+	 * use MXC_JPEG_H_ALIGN instead of fmt->v_align, for vertical alignment,
+	 * to loosen up the alignment to multiple of 8,
+	 * otherwise NV12-1080p fails as 1080 is not a multiple of 16
+	 */
+	v4l_bound_align_image(&w,
+			      MXC_JPEG_MIN_WIDTH,
+			      w, /* adjust downwards*/
+			      fmt->h_align,
+			      &h,
+			      MXC_JPEG_MIN_HEIGHT,
+			      h, /* adjust downwards*/
+			      MXC_JPEG_H_ALIGN,
+			      0);
+	pix_mp->width = w; /* negotiate the width */
+	pix_mp->height = h; /* negotiate the height */
+
 
 	for (i = 0; i < pix_mp->num_planes; i++) {
 		pfmt = &pix_mp->plane_fmt[i];
