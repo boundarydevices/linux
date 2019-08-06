@@ -574,6 +574,15 @@
 
 };
 
+&rpmsg{
+	/*
+	 * 64K for one rpmsg instance:
+	 */
+	vdev-nums = <2>;
+	reg = <0x0 0x90000000 0x0 0x20000>;
+	status = "okay";
+};
+
 &sai1 {
 	assigned-clocks = <&clk IMX8QXP_AUD_PLL0_DIV>,
 			<&clk IMX8QXP_AUD_ACM_AUD_PLL_CLK0_DIV>,
