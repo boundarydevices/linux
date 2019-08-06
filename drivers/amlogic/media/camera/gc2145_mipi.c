@@ -1596,6 +1596,14 @@ static struct resolution_param  capture_resolution_array[] = {
 		.size_type          = SIZE_800X600,
 		.reg_script         = GC2145_capture_SVGA_script,
 	}, {
+		.frmsize            = {1280, 720},
+		.active_frmsize     = {1280, 720},
+		.active_fps         = 30,
+		.lanes              = 2,
+		.bps                = 480,
+		.size_type          = SIZE_1280X720,
+		.reg_script         = GC2145_preview_720P_script,
+	}, {
 		.frmsize            = {1600, 1200},
 		.active_frmsize     = {1600, 1200},
 		.active_fps         = 20,
