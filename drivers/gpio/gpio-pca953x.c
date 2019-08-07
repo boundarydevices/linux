@@ -1336,6 +1336,7 @@ static const struct of_device_id pca953x_dt_ids[] = {
 	{ .compatible = "nxp,pca9555", .data = OF_953X(16, PCA_INT), },
 	{ .compatible = "nxp,pca9556", .data = OF_953X( 8, 0), },
 	{ .compatible = "nxp,pca9557", .data = OF_953X( 8, 0), },
+	{ .compatible = "nxp,pca9570", .data = OF_957X( 4, 0), },
 	{ .compatible = "nxp,pca9574", .data = OF_957X( 8, PCA_INT), },
 	{ .compatible = "nxp,pca9575", .data = OF_957X(16, PCA_INT), },
 	{ .compatible = "nxp,pca9698", .data = OF_953X(40, 0), },
