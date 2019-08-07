@@ -598,13 +598,6 @@ static int sec_mipi_dsim_host_attach(struct mipi_dsi_host *host,
 	if (dsim->channel)
 		return -EINVAL;
 
-	if (dsi->mode_flags & MIPI_DSI_MODE_VIDEO &&
-	    dsi->mode_flags & MIPI_DSI_MODE_VIDEO_BURST &&
-	    dsi->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE) {
-		dev_err(dev, "unsupported dsi mode\n");
-		return -EINVAL;
-	}
-
 	if (dsi->format != MIPI_DSI_FMT_RGB888 &&
 	    dsi->format != MIPI_DSI_FMT_RGB565 &&
 	    dsi->format != MIPI_DSI_FMT_RGB666 &&
