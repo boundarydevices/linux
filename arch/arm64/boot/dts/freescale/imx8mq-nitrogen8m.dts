@@ -994,6 +994,72 @@
 
 		wakeup-gpios = GP_ST1633_IRQ;
 	};
+
+	i2cmux@70 {
+		compatible = "pca9546";
+		reg = <0x70>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c4a: i2c4@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c4b: i2c4@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c4c: i2c4@2 {
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c4d: i2c4@3 {
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};
+
+&i2c4a {
+	clock-frequency = <100000>;
+
+	lt8912 {
+		compatible = "lontium,lt8912" ;
+		ddc-i2c-bus = <&i2c4b>;
+		reg = <0x48> ;
+		reset-gpios = <&pca9570 1 GPIO_ACTIVE_LOW>;
+		display-dsi = <&fb_mipi>;
+	};
+};
+
+
+&i2c4b {
+	clock-frequency = <100000>;
+	/* edid  @50 */
+};
+
+&i2c4c {
+	clock-frequency = <100000>;
+
+	/* Touch screens */
+};
+
+&i2c4d {
+	clock-frequency = <100000>;
+
+	pca9570: pca9570@24 {
+		compatible = "nxp,pca9570";
+		gpio-controller;
+		reg = <0x24>;
+		#gpio-cells = <2>;
+	};
 };
 
 &lcdif {
