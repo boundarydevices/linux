@@ -24,16 +24,11 @@
 		stdout-path = &lpuart0;
 	};
 
-	brcmfmac: brcmfmac {
-		compatible = "cypress,brcmfmac";
-		pinctrl-names = "init", "idle", "default";
-		pinctrl-0 = <&pinctrl_wifi_init>;
-		pinctrl-1 = <&pinctrl_wifi_init>;
-		pinctrl-2 = <&pinctrl_wifi>;
-	};
-
 	modem_reset: modem-reset {
 		compatible = "gpio-reset";
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&pinctrl_modem_reset>;
+		pinctrl-1 = <&pinctrl_modem_reset_sleep>;
 		reset-gpios = <&gpio3 1 GPIO_ACTIVE_LOW>;
 		reset-delay-us = <2000>;
 		reset-post-delay-ms = <40>;
@@ -85,10 +80,13 @@
 
 		epdev_on: fixedregulator@100 {
 			compatible = "regulator-fixed";
+			pinctrl-names = "default", "sleep";
+			pinctrl-0 = <&pinctrl_wlreg_on>;
+			pinctrl-1 = <&pinctrl_wlreg_on_sleep>;
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 			regulator-name = "epdev_on";
-			gpio = <&gpio4 18 GPIO_ACTIVE_HIGH>;
+			gpio = <&gpio3 3 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
 		};
 
@@ -285,6 +283,18 @@
 			>;
 		};
 
+		pinctrl_modem_reset: modemresetgrp {
+			fsl,pins = <
+				SC_P_CSI_MCLK_LSIO_GPIO3_IO01	0x06000021
+			>;
+		};
+
+		pinctrl_modem_reset_sleep: modemreset_sleepgrp {
+			fsl,pins = <
+				SC_P_CSI_MCLK_LSIO_GPIO3_IO01	0x07800021
+			>;
+		};
+
 		pinctrl_sai1: sai1grp {
 			fsl,pins = <
 				SC_P_FLEXCAN1_TX_ADMA_SAI1_RXD	0x06000040
@@ -397,7 +407,6 @@
 				SC_P_PCIE_CTRL0_PERST_B_LSIO_GPIO4_IO00		0x06000021
 				SC_P_PCIE_CTRL0_CLKREQ_B_LSIO_GPIO4_IO01	0x06000021
 				SC_P_PCIE_CTRL0_WAKE_B_LSIO_GPIO4_IO02		0x04000021
-				SC_P_CSI_RESET_LSIO_GPIO3_IO03				0x06000021
 				SC_P_CSI_PCLK_LSIO_GPIO3_IO00				0x06000021
 				SC_P_EMMC0_RESET_B_LSIO_GPIO4_IO18			0x06000021
 			>;
@@ -410,18 +419,17 @@
 			>;
 		};
 
-		pinctrl_wifi: wifigrp{
+		pinctrl_wlreg_on: wlregongrp{
 			fsl,pins = <
-				SC_P_SCU_BOOT_MODE3_SCU_DSC_RTC_CLOCK_OUTPUT_32K	0x20
+				SC_P_CSI_RESET_LSIO_GPIO3_IO03		0x06000000
 			>;
 		};
 
-		pinctrl_wifi_init: wifi_initgrp{
+		pinctrl_wlreg_on_sleep: wlregon_sleepgrp{
 			fsl,pins = <
-				/* reserve pin init/idle_state to support multiple wlan cards */
+				SC_P_CSI_RESET_LSIO_GPIO3_IO03		0x07800000
 			>;
 		};
-
 	};
 };
 
