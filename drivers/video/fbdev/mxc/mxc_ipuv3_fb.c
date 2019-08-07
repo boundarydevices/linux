@@ -469,21 +469,6 @@ static struct fb_info *found_registered_fb(ipu_channel_t ipu_ch, int ipu_id)
 	return fbi;
 }
 
-struct fb_info *find_registered_fb_from_dt(struct device_node *disp_node)
-{
-	int i;
-	struct fb_info *fbi = NULL;
-
-	for (i = 0; i < num_registered_fb; i++) {
-		fbi = registered_fb[i];
-		pr_debug("%s: %s(%p) %s(%p)\n", __func__, fbi->device->of_node->name, fbi->device->of_node, disp_node->name, disp_node);
-		if (fbi->device->of_node == disp_node)
-			return fbi;
-	}
-	return NULL;
-}
-EXPORT_SYMBOL(find_registered_fb_from_dt);
-
 static irqreturn_t mxcfb_irq_handler(int irq, void *dev_id);
 static irqreturn_t mxcfb_nf_irq_handler(int irq, void *dev_id);
 static int mxcfb_blank(int blank, struct fb_info *info);
