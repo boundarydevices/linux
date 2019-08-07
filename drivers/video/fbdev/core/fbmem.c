@@ -60,6 +60,21 @@ bool fb_center_logo __read_mostly;
 
 int fb_logo_count __read_mostly = -1;
 
+struct fb_info *find_registered_fb_from_dt(struct device_node *disp_node)
+{
+	int i;
+	struct fb_info *fbi = NULL;
+
+	for (i = 0; i < num_registered_fb; i++) {
+		fbi = registered_fb[i];
+		pr_info("%s: %s(%p) %s(%p)\n", __func__, fbi->device->of_node->name, fbi->device->of_node, disp_node->name, disp_node);
+		if (fbi->device->of_node == disp_node)
+			return fbi;
+	}
+	return NULL;
+}
+EXPORT_SYMBOL(find_registered_fb_from_dt);
+
 static struct fb_info *get_fb_info(unsigned int idx)
 {
 	struct fb_info *fb_info;
