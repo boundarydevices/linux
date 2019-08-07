@@ -52,6 +52,12 @@ config TC358778
 	help
 	  This initializes the Toshiba TC358778 bridge for output.
 
+config LT8912
+	tristate "mipi to lvds/hdmi bridge (LT8912)"
+	depends on I2C
+	help
+	  This initializes the LT8912 bridge for output.
+
 config VIDEOMODE_HELPERS
 	bool
 
