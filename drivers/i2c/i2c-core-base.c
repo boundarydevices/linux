@@ -428,6 +428,7 @@ error1:
 		 * select a different trigger
 		 */
 		irq_set_irq_type(client->irq, IRQ_TYPE_NONE);
+		client->irq = 0;
 	}
 	return status;
 }
