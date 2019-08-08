@@ -19,28 +19,39 @@
 #include <linux/types.h>
 #include <linux/errno.h>
 #include <linux/string.h>
-/*#include <linux/delay.h>*/
+#include <linux/spinlock.h>
 
 #include "pdm_hw.h"
 #include "regs.h"
 #include "iomap.h"
 #include "pdm_hw_coeff.c"
 
+static DEFINE_SPINLOCK(pdm_lock);
+static unsigned long pdm_enable_cnt;
 void pdm_enable(int is_enable)
 {
-	if (is_enable) {
-		aml_pdm_update_bits(
-			PDM_CTRL,
-			0x1 << 31,
-			is_enable << 31);
-	} else {
-		aml_pdm_update_bits(
-			PDM_CTRL,
-			0x1 << 31 | 0x1 << 16,
-			0 << 31 | 0 << 16);
+	unsigned long flags;
 
-		/*udelay(1000);*/
+	spin_lock_irqsave(&pdm_lock, flags);
+	if (is_enable) {
+		if (pdm_enable_cnt == 0)
+			aml_pdm_update_bits(
+				PDM_CTRL,
+				0x1 << 31,
+				is_enable << 31);
+		pdm_enable_cnt++;
+	} else {
+		if (WARN_ON(pdm_enable_cnt == 0))
+			goto exit;
+		if (--pdm_enable_cnt == 0)
+			aml_pdm_update_bits(
+				PDM_CTRL,
+				0x1 << 31 | 0x1 << 16,
+				0 << 31 | 0 << 16);
 	}
+
+exit:
+	spin_unlock_irqrestore(&pdm_lock, flags);
 }
 
 void pdm_fifo_reset(void)
