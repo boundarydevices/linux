@@ -76,6 +76,7 @@
 				SC_R_CSI_0_PWM_0
 				SC_R_CSI_0_I2C_0
 				SC_R_LVDS_1
+				SC_R_LVDS_1_I2C_0
 				SC_R_LVDS_1_PWM_0
 				SC_R_DC_1
 				SC_R_DC_1_BLIT0
@@ -97,6 +98,7 @@
 				SC_R_GPU_1_PID2
 				SC_R_GPU_1_PID3
 				SC_R_LVDS_1
+				SC_R_LVDS_1_I2C_0
 				SC_R_LVDS_1_PWM_0
 				SC_R_DC_1
 				SC_R_DC_1_BLIT0

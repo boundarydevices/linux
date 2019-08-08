@@ -176,6 +176,11 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 
+				pd_lvds1_i2c0: PD_LVDS1_I2C0 {
+					reg = <SC_R_LVDS_1_I2C_0>;
+					#power-domain-cells = <0>;
+					power-domains =<&pd_lvds1>;
+				};
 
 				pd_lvds1_pwm: PD_LVDS1_PWM {
 					reg = <SC_R_LVDS_1_PWM_0>;
@@ -2828,7 +2833,7 @@
 		clock-names = "per", "ipg";
 		assigned-clocks = <&clk IMX8QM_LVDS1_I2C0_CLK>;
 		assigned-clock-rates = <24000000>;
-		power-domains = <&pd_lvds1>;
+		power-domains = <&pd_lvds1_i2c0>;
 		status = "disabled";
 	};
 
