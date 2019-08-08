@@ -412,45 +412,48 @@ static ssize_t hexval_store(struct kobject *kobj, struct kobj_attribute *attr,
 				wie->kt_period = ktime_set(0, 50000);
 				hrtimer_start(&wie->htimer, wie->kt_period,
 						HRTIMER_MODE_REL);
-			}
-			/*
-			 * 48-bit Corporate 1000 Canem Wiegand Format
-			 * A = Company ID Code
-			 * B = Card ID Number
-			 * P = Parity Bit
-			 * E = Even Parity On X's
-			 * O = Odd Parity On X's
-			 * PP(22*A)(23*B)P
-			 * .E(15*.XX).
-			 * ..(15*XX.)O
-			 * O(47*X)
-			 */
-			else if (wie->length == 48) {
-				/* Canem 48bit Corporate 1000 format */
-				wie->last_scan = wie->this_scan;
-				/* Top bit is odd parity of all bits */
-				mask = 1ULL << (wie->length-1); /* Top bit */
-				wie->odd48_all_parity = wie->this_scan & mask;
-				/* Second to top bit */
-				mask = 1ULL << (wie->length-2);
-				wie->even48_parity = wie->this_scan & mask;
-				mask = 1ULL;
-				wie->odd48_parity = wie->this_scan & mask;
-				/*
-				 * mask is 1's everywhere except the 3 parity
-				 * bits - 00111...10
-				 */
-				mask = (1ULL << (wie->length-2)) - 2;
-				wie->this_payload = (wie->this_scan & mask)
-						>> 1;
-				pr_info("Wiegand: Payload: %llx\n",
-						wie->this_payload);
-				ret = verify48_parity(wie);
-				if (!ret) {
-					pr_info("Wiegand: Parity mismatch. Scan again.\n");
-					return count;
+			} else {
+				if (wie->length == 48) {
+					/*
+					 * 48-bit Corporate 1000 Canem Wiegand Format
+					 * A = Company ID Code
+					 * B = Card ID Number
+					 * P = Parity Bit
+					 * E = Even Parity On X's
+					 * O = Odd Parity On X's
+					 * PP(22*A)(23*B)P
+					 * .E(15*.XX).
+					 * ..(15*XX.)O
+					 * O(47*X)
+					 */
+					/* Canem 48bit Corporate 1000 format */
+					wie->last_scan = wie->this_scan;
+					/* Top bit is odd parity of all bits */
+					mask = 1ULL << (wie->length-1); /* Top bit */
+					wie->odd48_all_parity = wie->this_scan & mask;
+					/* Second to top bit */
+					mask = 1ULL << (wie->length-2);
+					wie->even48_parity = wie->this_scan & mask;
+					mask = 1ULL;
+					wie->odd48_parity = wie->this_scan & mask;
+					/*
+					 * mask is 1's everywhere except the 3 parity
+					 * bits - 00111...10
+					 */
+					mask = (1ULL << (wie->length-2)) - 2;
+					wie->this_payload = (wie->this_scan & mask)
+							>> 1;
+					pr_info("Wiegand: Payload: %llx\n",
+							wie->this_payload);
+					ret = verify48_parity(wie);
+					if (!ret) {
+						pr_info("Wiegand: Parity mismatch. Scan again.\n");
+						return count;
+					}
+					pr_info("Wiegand: Parity match!\n");
+				} else {
+					printk(KERN_INFO "Wiegand: Transmitting %d length without confirming parity.\n", wie->length);
 				}
-				pr_info("Wiegand: Parity match!\n");
 				wie->cur_time = 0;
 				wie->lock = 1;
 				/* Enable the timer */
