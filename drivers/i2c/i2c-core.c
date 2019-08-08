@@ -971,6 +971,7 @@ err_detach_pm_domain:
 		 * select a different trigger
 		 */
 		irq_set_irq_type(client->irq, IRQ_TYPE_NONE);
+		client->irq = 0;
 	}
 	dev_pm_domain_detach(&client->dev, true);
 err_clear_wakeup_irq:
