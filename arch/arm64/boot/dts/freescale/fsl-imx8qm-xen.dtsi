@@ -33,6 +33,7 @@
 		interrupts = <GIC_SPI 416 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 417 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma0-chan0-rx", "edma0-chan1-tx";
+		pdomains = <&pd_dma0_chan0>, <&pd_dma0_chan1>; /* lpspi0 */
 		fsl,sc_rsrc_id = <SC_R_DMA_0_CH0>,
 				 <SC_R_DMA_0_CH1>;
 		status = "okay";
@@ -47,6 +48,7 @@
 		interrupts = <GIC_SPI 422 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma0-chan6-rx", "edma0-chan7-tx";
+		pdomains =  <&pd_dma0_chan6>, <&pd_dma0_chan7>; /* lpspi3 */
 		fsl,sc_rsrc_id = <SC_R_DMA_0_CH6>,
 				 <SC_R_DMA_0_CH7>;
 		status = "okay";
@@ -61,6 +63,7 @@
 		interrupts = <GIC_SPI 434 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 435 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma0-chan12-rx", "edma0-chan13-tx";
+		pdomains = <&pd_dma0_chan12>, <&pd_dma0_chan13>; /* lpuart0 */
 		fsl,sc_rsrc_id = <SC_R_DMA_0_CH12>,
 				 <SC_R_DMA_0_CH13>;
 		status = "okay";
@@ -75,6 +78,7 @@
 		interrupts = <GIC_SPI 436 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 437 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma0-chan14-rx", "edma0-chan15-tx";
+		pdomains = <&pd_dma0_chan14>, <&pd_dma0_chan15>; /* lpuart1 */
 		fsl,sc_rsrc_id = <SC_R_DMA_0_CH14>,
 				 <SC_R_DMA_0_CH15>;
 		status = "okay";
@@ -89,6 +93,7 @@
 		interrupts = <GIC_SPI 438 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 439 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma0-chan16-rx", "edma0-chan17-tx";
+		pdomains = <&pd_dma0_chan16>, <&pd_dma0_chan17>; /* lpuart2 */
 		fsl,sc_rsrc_id = <SC_R_DMA_0_CH16>,
 				 <SC_R_DMA_0_CH17>;
 		status = "okay";
@@ -103,6 +108,7 @@
 		interrupts = <GIC_SPI 440 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 441 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma0-chan18-rx", "edma0-chan19-tx";
+		pdomains = <&pd_dma0_chan18>, <&pd_dma0_chan19>; /* lpuart3 */
 		fsl,sc_rsrc_id = <SC_R_DMA_0_CH18>,
 				 <SC_R_DMA_0_CH19>;
 		status = "okay";
@@ -117,6 +123,7 @@
 		interrupts = <GIC_SPI 442 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 443 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma0-chan20-rx", "edma0-chan21-tx";
+		pdomains = <&pd_dma0_chan20>, <&pd_dma0_chan21>; /* lpuart3 */
 		fsl,sc_rsrc_id = <SC_R_DMA_0_CH20>,
 				 <SC_R_DMA_0_CH21>;
 		status = "okay";
@@ -142,6 +149,8 @@
 		interrupt-names = "edma2-chan0-rx", "edma2-chan1-rx", /* asrc0 */
 				"edma2-chan2-rx", "edma2-chan3-tx",
 				"edma2-chan4-tx", "edma2-chan5-tx";
+		pdomains = <&pd_dma2_chan0>, <&pd_dma2_chan1>, <&pd_dma2_chan2>,
+			   <&pd_dma2_chan3>, <&pd_dma2_chan4>, <&pd_dma2_chan5>;
 		fsl,sc_rsrc_id = <SC_R_DMA_2_CH0>,
 				 <SC_R_DMA_2_CH1>,
 				 <SC_R_DMA_2_CH2>,
@@ -161,6 +170,7 @@
 		interrupts = <GIC_SPI 410 IRQ_TYPE_LEVEL_HIGH>, /* esai0 */
 			     <GIC_SPI 410 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma2-chan6-rx", "edma2-chan7-tx"; /* esai0 */
+		pdomains = <&pd_dma2_chan6>, <&pd_dma2_chan7>;
 		fsl,sc_rsrc_id = <SC_R_DMA_2_CH6>,
 				 <SC_R_DMA_2_CH7>;
 		status = "okay";
@@ -176,6 +186,7 @@
 		interrupts = <GIC_SPI 457 IRQ_TYPE_LEVEL_HIGH>, /* spdif0 */
 			     <GIC_SPI 459 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma2-chan8-rx", "edma2-chan9-tx"; /* spdif0 */
+		pdomains = <&pd_dma2_chan8>, <&pd_dma2_chan9>;
 		fsl,sc_rsrc_id = <SC_R_DMA_2_CH8>,
 				 <SC_R_DMA_2_CH9>;
 		status = "okay";
@@ -191,6 +202,7 @@
 		interrupts = <GIC_SPI 461 IRQ_TYPE_LEVEL_HIGH>, /* spdif1 */
 			     <GIC_SPI 463 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma2-chan10-rx", "edma2-chan11-tx"; /* spdif1 */
+		pdomains = <&pd_dma2_chan10>, <&pd_dma2_chan11>;
 		fsl,sc_rsrc_id = <SC_R_DMA_2_CH10>,
 				 <SC_R_DMA_2_CH11>;
 		status = "okay";
@@ -206,6 +218,7 @@
 		interrupts = <GIC_SPI 315 IRQ_TYPE_LEVEL_HIGH>, /* sai0 */
 			     <GIC_SPI 315 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma2-chan12-rx", "edma2-chan13-tx"; /* sai0 */
+		pdomains = <&pd_dma2_chan12>, <&pd_dma2_chan13>;
 		fsl,sc_rsrc_id = <SC_R_DMA_2_CH12>,
 				 <SC_R_DMA_2_CH13>;
 		status = "okay";
@@ -221,6 +234,7 @@
 		interrupts = <GIC_SPI 317 IRQ_TYPE_LEVEL_HIGH>, /* sai1 */
 			     <GIC_SPI 317 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "edma2-chan14-rx", "edma2-chan15-tx"; /* sai1 */
+		pdomains = <&pd_dma2_chan14>, <&pd_dma2_chan15>;
 		fsl,sc_rsrc_id = <SC_R_DMA_2_CH14>,
 				 <SC_R_DMA_2_CH15>;
 		status = "okay";
@@ -236,6 +250,7 @@
 		interrupts = <GIC_SPI 326 IRQ_TYPE_LEVEL_HIGH>, /* sai4 */
 			     <GIC_SPI 328 IRQ_TYPE_LEVEL_HIGH>; /* sai5 */
 		interrupt-names = "edma2-chan18-rx", "edma2-chan19-tx"; /* sai1 */
+		pdomains = <&pd_dma2_chan18>, <&pd_dma2_chan19>;
 		fsl,sc_rsrc_id = <SC_R_DMA_2_CH18>,
 				 <SC_R_DMA_2_CH19>;
 		status = "okay";

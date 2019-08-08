@@ -322,6 +322,7 @@
 			interrupts = <GIC_SPI 436 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 437 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "edma0-chan14-rx", "edma0-chan15-tx";
+			pdomains = <&pd_dma0_chan14>, <&pd_dma0_chan15>; /* lpuart1 */
 			status = "okay";
 		};
 
