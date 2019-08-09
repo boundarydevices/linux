@@ -91,7 +91,8 @@ dtb-$(CONFIG_ARCH_FSL_IMX8QXP) += fsl-imx8qxp-lpddr4-arm2.dtb \
 				  fsl-imx8dx-17x17-val.dtb \
 				  fsl-imx8dx-lpddr4-arm2.dtb \
 				  fsl-imx8dxp-lpddr4-arm2.dtb \
-				  fsl-imx8dxl-phantom-mek.dtb
+				  fsl-imx8dxl-phantom-mek.dtb \
+				  fsl-imx8dxl-phantom-mek-rpmsg.dtb
 dtb-$(CONFIG_ARCH_FSL_IMX8MQ) += fsl-imx8mq-ddr3l-arm2.dtb \
 				 fsl-imx8mq-ddr4-arm2.dtb \
 				 fsl-imx8mq-ddr4-arm2-gpmi-nand.dtb \
