@@ -40,23 +40,42 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		reg_can_en: regulator-can-gen {
+		reg_can0_en: regulator-can0-gen {
 			compatible = "regulator-fixed";
-			regulator-name = "can-en";
+			regulator-name = "can0-en";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&pca6416 2 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+		};
+
+		reg_can1_en: regulator-can1-gen {
+			compatible = "regulator-fixed";
+			regulator-name = "can1-en";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 			gpio = <&pca6416 3 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
 		};
 
-		reg_can_stby: regulator-can-stby {
+		reg_can0_stby: regulator-can0-stby {
 			compatible = "regulator-fixed";
-			regulator-name = "can-stby";
+			regulator-name = "can0-stby";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&pca6416 4 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+			vin-supply = <&reg_can0_en>;
+		};
+
+		reg_can1_stby: regulator-can1-stby {
+			compatible = "regulator-fixed";
+			regulator-name = "can1-stby";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 			gpio = <&pca6416 5 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
-			vin-supply = <&reg_can_en>;
+			vin-supply = <&reg_can1_en>;
 		};
 
 		reg_fec2_supply: fec2_nvcc {
@@ -248,8 +267,8 @@
 
 		pinctrl_flexcan2: flexcan1grp {
 			fsl,pins = <
-				SC_P_FLEXCAN1_TX_ADMA_FLEXCAN1_TX		0x21
-				SC_P_FLEXCAN1_RX_ADMA_FLEXCAN1_RX		0x21
+				SC_P_UART2_TX_ADMA_FLEXCAN1_TX		0x21
+				SC_P_UART2_RX_ADMA_FLEXCAN1_RX		0x21
 			>;
 		};
 
@@ -477,14 +496,14 @@
 &flexcan1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan1>;
-	xceiver-supply = <&reg_can_stby>;
+	xceiver-supply = <&reg_can0_stby>;
 	status = "okay";
 };
 
 &flexcan2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan2>;
-	xceiver-supply = <&reg_can_stby>;
+	xceiver-supply = <&reg_can1_stby>;
 	status = "okay";
 };
 
