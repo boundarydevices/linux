@@ -45,11 +45,19 @@
 	};
 };
 
-&reg_can_en {
+&reg_can0_en {
 	status = "disabled";
 };
 
-&reg_can_stby {
+&reg_can0_stby {
+	status = "disabled";
+};
+
+&reg_can1_en {
+	status = "disabled";
+};
+
+&reg_can1_stby {
 	status = "disabled";
 };
 
