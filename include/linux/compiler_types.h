@@ -110,82 +110,6 @@ struct ftrace_likely_data {
 #define __deprecated
 #define __deprecated_for_modules
 
-#endif /* __KERNEL__ */
-
-#endif /* __ASSEMBLY__ */
-
-/*
- * The below symbols may be defined for one or more, but not ALL, of the above
- * compilers. We don't consider that to be an error, so set them to nothing.
- * For example, some of them are for compiler specific plugins.
- */
-#ifndef __designated_init
-# define __designated_init
-#endif
-
-#ifndef __latent_entropy
-# define __latent_entropy
-#endif
-
-#ifndef __randomize_layout
-# define __randomize_layout __designated_init
-#endif
-
-#ifndef __no_randomize_layout
-# define __no_randomize_layout
-#endif
-
-#ifndef randomized_struct_fields_start
-# define randomized_struct_fields_start
-# define randomized_struct_fields_end
-#endif
-
-#ifndef __visible
-#define __visible
-#endif
-
-/*
- * Assume alignment of return value.
- */
-#ifndef __assume_aligned
-#define __assume_aligned(a, ...)
-#endif
-
-/* Are two types/vars the same type (ignoring qualifiers)? */
-#define __same_type(a, b) __builtin_types_compatible_p(typeof(a), typeof(b))
-
-/* Is this type a native word size -- useful for atomic operations */
-#define __native_word(t) \
-	(sizeof(t) == sizeof(char) || sizeof(t) == sizeof(short) || \
-	 sizeof(t) == sizeof(int) || sizeof(t) == sizeof(long))
-
-#ifndef __attribute_const__
-#define __attribute_const__	__attribute__((__const__))
-#endif
-
-#ifndef __noclone
-#define __noclone
-#endif
-
-/* Helpers for emitting diagnostics in pragmas. */
-#ifndef __diag
-#define __diag(string)
-#endif
-
-#ifndef __diag_GCC
-#define __diag_GCC(version, severity, string)
-#endif
-
-#define __diag_push()	__diag(push)
-#define __diag_pop()	__diag(pop)
-
-#define __diag_ignore(compiler, version, option, comment) \
-	__diag_ ## compiler(version, ignore, option)
-#define __diag_warn(compiler, version, option, comment) \
-	__diag_ ## compiler(version, warn, option)
-#define __diag_error(compiler, version, option, comment) \
-	__diag_ ## compiler(version, error, option)
-
 /*
  * From the GCC manual:
  *
@@ -281,5 +205,81 @@ struct ftrace_likely_data {
  * noinline_for_stack instead.  For documentation reasons.
  */
 #define noinline_for_stack noinline
+
+#endif /* __KERNEL__ */
+
+#endif /* __ASSEMBLY__ */
+
+/*
+ * The below symbols may be defined for one or more, but not ALL, of the above
+ * compilers. We don't consider that to be an error, so set them to nothing.
+ * For example, some of them are for compiler specific plugins.
+ */
+#ifndef __designated_init
+# define __designated_init
+#endif
+
+#ifndef __latent_entropy
+# define __latent_entropy
+#endif
+
+#ifndef __randomize_layout
+# define __randomize_layout __designated_init
+#endif
+
+#ifndef __no_randomize_layout
+# define __no_randomize_layout
+#endif
+
+#ifndef randomized_struct_fields_start
+# define randomized_struct_fields_start
+# define randomized_struct_fields_end
+#endif
+
+#ifndef __visible
+#define __visible
+#endif
+
+/*
+ * Assume alignment of return value.
+ */
+#ifndef __assume_aligned
+#define __assume_aligned(a, ...)
+#endif
+
+/* Are two types/vars the same type (ignoring qualifiers)? */
+#define __same_type(a, b) __builtin_types_compatible_p(typeof(a), typeof(b))
+
+/* Is this type a native word size -- useful for atomic operations */
+#define __native_word(t) \
+	(sizeof(t) == sizeof(char) || sizeof(t) == sizeof(short) || \
+	 sizeof(t) == sizeof(int) || sizeof(t) == sizeof(long))
+
+#ifndef __attribute_const__
+#define __attribute_const__	__attribute__((__const__))
+#endif
+
+#ifndef __noclone
+#define __noclone
+#endif
+
+/* Helpers for emitting diagnostics in pragmas. */
+#ifndef __diag
+#define __diag(string)
+#endif
+
+#ifndef __diag_GCC
+#define __diag_GCC(version, severity, string)
+#endif
+
+#define __diag_push()	__diag(push)
+#define __diag_pop()	__diag(pop)
+
+#define __diag_ignore(compiler, version, option, comment) \
+	__diag_ ## compiler(version, ignore, option)
+#define __diag_warn(compiler, version, option, comment) \
+	__diag_ ## compiler(version, warn, option)
+#define __diag_error(compiler, version, option, comment) \
+	__diag_ ## compiler(version, error, option)
 
 #endif /* __LINUX_COMPILER_TYPES_H */

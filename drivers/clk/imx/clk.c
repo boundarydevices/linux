@@ -9,7 +9,6 @@
 DEFINE_SPINLOCK(imx_ccm_lock);
 
 bool uart_from_osc;
-extern struct device_node *of_stdout;
 
 void __init imx_check_clocks(struct clk *clks[], unsigned int count)
 {
@@ -119,9 +118,9 @@ void __init imx_register_uart_clocks(struct clk ** const clks[])
 		int i;
 
 		imx_uart_clocks = clks;
-		for (i = 0; (earlycon_bits & BIT(i)) &&
-		     imx_uart_clocks[i]; i++)
-			clk_prepare_enable(*imx_uart_clocks[i]);
+		for (i = 0; imx_uart_clocks[i]; i++)
+			if (earlycon_bits & BIT(i))
+				clk_prepare_enable(*imx_uart_clocks[i]);
 	}
 }
 
@@ -130,9 +129,9 @@ static int __init imx_clk_disable_uart(void)
 	if (imx_keep_uart_clocks && imx_uart_clocks) {
 		int i;
 
-		for (i = 0; (earlycon_bits & BIT(i)) &&
-		     imx_uart_clocks[i]; i++)
-			clk_disable_unprepare(*imx_uart_clocks[i]);
+		for (i = 0; imx_uart_clocks[i]; i++)
+			if (earlycon_bits & BIT(i))
+				clk_disable_unprepare(*imx_uart_clocks[i]);
 	}
 
 	return 0;

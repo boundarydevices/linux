@@ -121,6 +121,7 @@ typedef struct _gcsNN_FIXED_FEATURE
     gctUINT  nnCoreCountInt8;       /* total nn core count supporting int8 */
     gctUINT  nnCoreCountInt16;      /* total nn core count supporting int16 */
     gctUINT  nnCoreCountFloat16;    /* total nn core count supporting float16 */
+    gctUINT  nnCoreCountBFloat;     /* total nn core count supporting bfloat */
     gctUINT  nnMadPerCore;
     gctUINT  nnInputBufferDepth;
     gctUINT  nnAccumBufferDepth;
@@ -200,6 +201,7 @@ typedef struct _gcsNN_UNIFIED_FEATURE
     gctUINT  lowEfficiencyOfIDWriteImgBufFix : 1;
     gctUINT  xyOffsetLimitationFix : 1;
     gctUINT  kernelPerCoreLTOneThirdCoefFix : 1;
+    gctUINT  diffConditionForCachelineModePreFix : 1;
 } gcsNN_UNIFIED_FEATURE;
 
 /* Features are derived from above ones */
@@ -270,6 +272,7 @@ gcsSystemInfo;
     gcvNULL, /* accessLock         */ \
     gcvNULL, /* GL FE compiler lock*/ \
     gcvNULL, /* CL FE compiler lock*/ \
+    gcvNULL, /* VX context lock    */ \
     gcvPATCH_NOTINIT,/* global patchID     */ \
     gcvNULL, /* global fenceID*/ \
     gcvFALSE, /* memory profile flag */ \
@@ -4490,7 +4493,7 @@ gckOS_DebugStatus2Name(
 **
 **      func    Function to evaluate.
 */
-#define _gcmERR_BREAK(prefix, func) \
+#define _gcmERR_BREAK(prefix, func){ \
     status = func; \
     if (gcmIS_ERROR(status)) \
     { \
@@ -4500,8 +4503,10 @@ gckOS_DebugStatus2Name(
             status, gcoOS_DebugStatus2Name(status), __FUNCTION__, __LINE__); \
         break; \
     } \
-    do { } while (gcvFALSE)
-#define _gcmkERR_BREAK(prefix, func) \
+    do { } while (gcvFALSE); \
+    }
+
+#define _gcmkERR_BREAK(prefix, func){ \
     status = func; \
     if (gcmIS_ERROR(status)) \
     { \
@@ -4511,7 +4516,9 @@ gckOS_DebugStatus2Name(
             status, gckOS_DebugStatus2Name(status), __FUNCTION__, __LINE__); \
         break; \
     } \
-    do { } while (gcvFALSE)
+    do { } while (gcvFALSE); \
+    }
+
 #define gcmERR_BREAK(func)          _gcmERR_BREAK(gcm, func)
 #define gcmkERR_BREAK(func)         _gcmkERR_BREAK(gcmk, func)
 

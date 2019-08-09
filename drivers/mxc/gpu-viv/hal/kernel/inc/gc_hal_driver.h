@@ -210,6 +210,7 @@ typedef enum _gceHAL_COMMAND_CODES
 
     /* Vsimulator only. */
     gcvHAL_UPDATE_DEBUG_CALLBACK,
+    gcvHAL_CONFIG_CTX_FRAMEWORK,
 
     /* Non paged memory management backup compatibility, windows, qnx. */
     gcvHAL_ALLOCATE_NON_PAGED_MEMORY,

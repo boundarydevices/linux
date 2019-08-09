@@ -947,6 +947,7 @@ static int mxs_dma_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
 static int mxs_dma_pm_suspend(struct device *dev)
 {
 	int ret;
@@ -967,6 +968,7 @@ static int mxs_dma_pm_resume(struct device *dev)
 
 	return 0;
 }
+#endif
 
 int mxs_dma_runtime_suspend(struct device *dev)
 {

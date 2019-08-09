@@ -317,7 +317,6 @@ _ProgramDescRingBuf(
     IN gctBOOL Priority
     )
 {
-#ifdef GCREG_MCFE_STD_DESC_RING_BUF_START_ADDR_Address
     gctUINT32 ringBufStartReg;
     gctUINT32 depthExpReg;
     gctUINT32 readPtrReg;
@@ -326,17 +325,17 @@ _ProgramDescRingBuf(
 
     if (Priority)
     {
-        ringBufStartReg = GCREG_MCFE_PRI_DESC_RING_BUF_START_ADDR_Address;
-        depthExpReg     = GCREG_MCFE_PRI_DESC_FIFO_DEPTH_EXP_Address;
-        readPtrReg      = GCREG_MCFE_PRI_DESC_FIFO_RD_PTR_Address;
-        writePtrReg     = GCREG_MCFE_PRI_DESC_FIFO_WR_PTR_Address;
+        ringBufStartReg = 0x03F00;
+        depthExpReg     = 0x11600;
+        readPtrReg      = 0x11800;
+        writePtrReg     = 0x11700;
     }
     else
     {
-        ringBufStartReg = GCREG_MCFE_STD_DESC_RING_BUF_START_ADDR_Address;
-        depthExpReg     = GCREG_MCFE_STD_DESC_FIFO_DEPTH_EXP_Address;
-        readPtrReg      = GCREG_MCFE_STD_DESC_FIFO_RD_PTR_Address;
-        writePtrReg     = GCREG_MCFE_STD_DESC_FIFO_WR_PTR_Address;
+        ringBufStartReg = 0x03300;
+        depthExpReg     = 0x03B00;
+        readPtrReg      = 0x03E00;
+        writePtrReg     = 0x03D00;
     }
 
     ringBufStartReg += Index << 2;
@@ -365,9 +364,6 @@ _ProgramDescRingBuf(
     Channel->readPtr = Channel->writePtr = data;
 
     return gcvSTATUS_OK;
-#else
-    return gcvSTATUS_NOT_SUPPORTED;
-#endif
 }
 
 static gceSTATUS
@@ -439,7 +435,6 @@ gckMCFE_Nop(
     IN OUT gctSIZE_T * Bytes
     )
 {
-#ifdef GCREG_MCFE_STD_DESC_RING_BUF_START_ADDR_Address
     gctUINT32_PTR logical = (gctUINT32_PTR) Logical;
     gceSTATUS status;
 
@@ -460,29 +455,25 @@ gckMCFE_Nop(
 
         /* Append NOP. */
         logical[0] = ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ?
- MCFE_COMMAND_OPCODE))) | (((gctUINT32) (MCFE_COMMAND_OPCODE_NOP & ((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
- ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ? MCFE_COMMAND_OPCODE)));
+ 31:27) - (0 ?
+ 31:27) + 1))))))) << (0 ?
+ 31:27))) | (((gctUINT32) (0x03 & ((gctUINT32) ((((1 ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 31:27) - (0 ? 31:27) + 1))))))) << (0 ? 31:27)));
         logical[1] = ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ?
- MCFE_COMMAND_OPCODE))) | (((gctUINT32) (MCFE_COMMAND_OPCODE_NOP & ((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
- ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ? MCFE_COMMAND_OPCODE)));
+ 31:27) - (0 ?
+ 31:27) + 1))))))) << (0 ?
+ 31:27))) | (((gctUINT32) (0x03 & ((gctUINT32) ((((1 ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 31:27) - (0 ? 31:27) + 1))))))) << (0 ? 31:27)));
 
         gcmkTRACE_ZONE(gcvLEVEL_INFO, gcvZONE_HARDWARE, "0x%x: NOP", Logical);
     }
@@ -501,9 +492,6 @@ OnError:
     /* Return the status. */
     gcmkFOOTER();
     return status;
-#else
-    return gcvSTATUS_NOT_SUPPORTED;
-#endif
 }
 
 
@@ -516,7 +504,6 @@ gckMCFE_Event(
     IN OUT gctUINT32 * Bytes
     )
 {
-#ifdef GCREG_MCFE_STD_DESC_RING_BUF_START_ADDR_Address
     gctUINT size;
     gctUINT32_PTR logical = (gctUINT32_PTR) Logical;
     gceSTATUS status;
@@ -544,43 +531,37 @@ gckMCFE_Event(
 
         /* Append EVENT(Event). */
         logical[0] = ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ?
- MCFE_COMMAND_OPCODE))) | (((gctUINT32) (MCFE_COMMAND_OPCODE_SUB_COMMAND & ((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
- ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ? MCFE_COMMAND_OPCODE)))
+ 31:27) - (0 ?
+ 31:27) + 1))))))) << (0 ?
+ 31:27))) | (((gctUINT32) (0x16 & ((gctUINT32) ((((1 ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 31:27) - (0 ? 31:27) + 1))))))) << (0 ? 31:27)))
                    | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
- MCFE_COMMAND_SUB_OPCODE) - (0 ?
- MCFE_COMMAND_SUB_OPCODE) + 1) == 32) ?
+ 25:16) - (0 ?
+ 25:16) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_SUB_OPCODE) - (0 ?
- MCFE_COMMAND_SUB_OPCODE) + 1))))))) << (0 ?
- MCFE_COMMAND_SUB_OPCODE))) | (((gctUINT32) (MCFE_COMMAND_SUB_OPCODE_INTERRUPT_EVENT & ((gctUINT32) ((((1 ?
- MCFE_COMMAND_SUB_OPCODE) - (0 ?
- MCFE_COMMAND_SUB_OPCODE) + 1) == 32) ?
- ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_SUB_OPCODE) - (0 ?
- MCFE_COMMAND_SUB_OPCODE) + 1))))))) << (0 ? MCFE_COMMAND_SUB_OPCODE)))
+ 25:16) - (0 ?
+ 25:16) + 1))))))) << (0 ?
+ 25:16))) | (((gctUINT32) (0x006 & ((gctUINT32) ((((1 ?
+ 25:16) - (0 ?
+ 25:16) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 25:16) - (0 ? 25:16) + 1))))))) << (0 ? 25:16)))
                    | Event;
 
         logical[1] = ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ?
- MCFE_COMMAND_OPCODE))) | (((gctUINT32) (MCFE_COMMAND_OPCODE_NOP & ((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
- ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ? MCFE_COMMAND_OPCODE)));
+ 31:27) - (0 ?
+ 31:27) + 1))))))) << (0 ?
+ 31:27))) | (((gctUINT32) (0x03 & ((gctUINT32) ((((1 ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 31:27) - (0 ? 31:27) + 1))))))) << (0 ? 31:27)));
 
 #if gcmIS_DEBUG(gcdDEBUG_TRACE)
         {
@@ -614,9 +595,6 @@ OnError:
     /* Return the status. */
     gcmkFOOTER();
     return status;
-#else
-    return gcvSTATUS_NOT_SUPPORTED;
-#endif
 }
 
 gceSTATUS
@@ -627,7 +605,6 @@ gckMCFE_SendSemaphore(
     IN OUT gctUINT32 * Bytes
     )
 {
-#ifdef GCREG_MCFE_STD_DESC_RING_BUF_START_ADDR_Address
     gctUINT32_PTR logical = (gctUINT32_PTR) Logical;
     gceSTATUS status;
 
@@ -649,43 +626,37 @@ gckMCFE_SendSemaphore(
 
         /* Append SEND_SEMAPHORE(SemaId). */
         logical[0] = ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ?
- MCFE_COMMAND_OPCODE))) | (((gctUINT32) (MCFE_COMMAND_OPCODE_SUB_COMMAND & ((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
- ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ? MCFE_COMMAND_OPCODE)))
+ 31:27) - (0 ?
+ 31:27) + 1))))))) << (0 ?
+ 31:27))) | (((gctUINT32) (0x16 & ((gctUINT32) ((((1 ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 31:27) - (0 ? 31:27) + 1))))))) << (0 ? 31:27)))
                    | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
- MCFE_COMMAND_SUB_OPCODE) - (0 ?
- MCFE_COMMAND_SUB_OPCODE) + 1) == 32) ?
+ 25:16) - (0 ?
+ 25:16) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_SUB_OPCODE) - (0 ?
- MCFE_COMMAND_SUB_OPCODE) + 1))))))) << (0 ?
- MCFE_COMMAND_SUB_OPCODE))) | (((gctUINT32) (MCFE_COMMAND_SUB_OPCODE_SEND_SEMAPHORE & ((gctUINT32) ((((1 ?
- MCFE_COMMAND_SUB_OPCODE) - (0 ?
- MCFE_COMMAND_SUB_OPCODE) + 1) == 32) ?
- ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_SUB_OPCODE) - (0 ?
- MCFE_COMMAND_SUB_OPCODE) + 1))))))) << (0 ? MCFE_COMMAND_SUB_OPCODE)))
+ 25:16) - (0 ?
+ 25:16) + 1))))))) << (0 ?
+ 25:16))) | (((gctUINT32) (0x002 & ((gctUINT32) ((((1 ?
+ 25:16) - (0 ?
+ 25:16) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 25:16) - (0 ? 25:16) + 1))))))) << (0 ? 25:16)))
                    | SemaId;
 
         logical[1] = ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ?
- MCFE_COMMAND_OPCODE))) | (((gctUINT32) (MCFE_COMMAND_OPCODE_NOP & ((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
- ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ? MCFE_COMMAND_OPCODE)));
+ 31:27) - (0 ?
+ 31:27) + 1))))))) << (0 ?
+ 31:27))) | (((gctUINT32) (0x03 & ((gctUINT32) ((((1 ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 31:27) - (0 ? 31:27) + 1))))))) << (0 ? 31:27)));
     }
 
     if (Bytes != gcvNULL)
@@ -701,9 +672,6 @@ OnError:
     /* Return the status. */
     gcmkFOOTER();
     return status;
-#else
-    return gcvSTATUS_NOT_SUPPORTED;
-#endif
 }
 
 gceSTATUS
@@ -714,7 +682,6 @@ gckMCFE_WaitSemaphore(
     IN OUT gctUINT32 * Bytes
     )
 {
-#ifdef GCREG_MCFE_STD_DESC_RING_BUF_START_ADDR_Address
     gctUINT32_PTR logical = (gctUINT32_PTR) Logical;
     gceSTATUS status;
 
@@ -736,43 +703,37 @@ gckMCFE_WaitSemaphore(
 
         /* Append WAIT_SEMAPHORE(SemaId). */
         logical[0] = ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ?
- MCFE_COMMAND_OPCODE))) | (((gctUINT32) (MCFE_COMMAND_OPCODE_SUB_COMMAND & ((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
- ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ? MCFE_COMMAND_OPCODE)))
+ 31:27) - (0 ?
+ 31:27) + 1))))))) << (0 ?
+ 31:27))) | (((gctUINT32) (0x16 & ((gctUINT32) ((((1 ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 31:27) - (0 ? 31:27) + 1))))))) << (0 ? 31:27)))
                    | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
- MCFE_COMMAND_SUB_OPCODE) - (0 ?
- MCFE_COMMAND_SUB_OPCODE) + 1) == 32) ?
+ 25:16) - (0 ?
+ 25:16) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_SUB_OPCODE) - (0 ?
- MCFE_COMMAND_SUB_OPCODE) + 1))))))) << (0 ?
- MCFE_COMMAND_SUB_OPCODE))) | (((gctUINT32) (MCFE_COMMAND_SUB_OPCODE_WAIT_SEMAPHORE & ((gctUINT32) ((((1 ?
- MCFE_COMMAND_SUB_OPCODE) - (0 ?
- MCFE_COMMAND_SUB_OPCODE) + 1) == 32) ?
- ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_SUB_OPCODE) - (0 ?
- MCFE_COMMAND_SUB_OPCODE) + 1))))))) << (0 ? MCFE_COMMAND_SUB_OPCODE)))
+ 25:16) - (0 ?
+ 25:16) + 1))))))) << (0 ?
+ 25:16))) | (((gctUINT32) (0x003 & ((gctUINT32) ((((1 ?
+ 25:16) - (0 ?
+ 25:16) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 25:16) - (0 ? 25:16) + 1))))))) << (0 ? 25:16)))
                    | SemaId;
 
         logical[1] = ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ?
- MCFE_COMMAND_OPCODE))) | (((gctUINT32) (MCFE_COMMAND_OPCODE_NOP & ((gctUINT32) ((((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1) == 32) ?
- ~0U : (~(~0U << ((1 ?
- MCFE_COMMAND_OPCODE) - (0 ?
- MCFE_COMMAND_OPCODE) + 1))))))) << (0 ? MCFE_COMMAND_OPCODE)));
+ 31:27) - (0 ?
+ 31:27) + 1))))))) << (0 ?
+ 31:27))) | (((gctUINT32) (0x03 & ((gctUINT32) ((((1 ?
+ 31:27) - (0 ?
+ 31:27) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 31:27) - (0 ? 31:27) + 1))))))) << (0 ? 31:27)));
     }
 
     if (Bytes != gcvNULL)
@@ -788,9 +749,6 @@ OnError:
     /* Return the status. */
     gcmkFOOTER();
     return status;
-#else
-    return gcvSTATUS_NOT_SUPPORTED;
-#endif
 }
 
 gceSTATUS
@@ -802,7 +760,6 @@ gckMCFE_Execute(
     IN gctUINT32 Bytes
     )
 {
-#ifdef GCREG_MCFE_STD_DESC_RING_BUF_START_ADDR_Address
     gctUINT32 regBase;
     gcsMCFE_DESCRIPTOR *desc;
     gcsMCFE_CHANNEL * channel  = &Hardware->mcFE->channels[ChannelId];
@@ -815,8 +772,8 @@ gckMCFE_Execute(
     while (_NextPtr(ringBuf->writePtr) == ringBuf->readPtr)
     {
         gctUINT32 data;
-        regBase = Priority ? GCREG_MCFE_PRI_DESC_FIFO_RD_PTR_Address
-                : GCREG_MCFE_STD_DESC_FIFO_RD_PTR_Address;
+        regBase = Priority ? 0x11800
+                : 0x03E00;
 
         gcmkVERIFY_OK(gckOS_ReadRegisterEx(Hardware->os,
                                            Hardware->core,
@@ -836,8 +793,8 @@ gckMCFE_Execute(
         }
     }
 
-    regBase = Priority ? GCREG_MCFE_PRI_DESC_FIFO_WR_PTR_Address
-            : GCREG_MCFE_STD_DESC_FIFO_WR_PTR_Address;
+    regBase = Priority ? 0x11700
+            : 0x03D00;
 
     /* ringBufLogical is in uint32, 2 uint32 contributes 1 descriptr. */
     desc = (gcsMCFE_DESCRIPTOR *)&ringBuf->ringBufLogical[ringBuf->writePtr * 2];
@@ -875,9 +832,6 @@ gckMCFE_Execute(
                                         ringBuf->writePtr));
 
     return gcvSTATUS_OK;
-#else
-    return gcvSTATUS_NOT_SUPPORTED;
-#endif
 }
 
 

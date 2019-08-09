@@ -834,7 +834,7 @@ static int tcpci_remove(struct i2c_client *client)
 	return 0;
 }
 
-static int tcpci_suspend(struct device *dev)
+static int __maybe_unused tcpci_suspend(struct device *dev)
 {
 	struct tcpci_chip *chip = dev_get_drvdata(dev);
 
@@ -846,7 +846,7 @@ static int tcpci_suspend(struct device *dev)
 	return 0;
 }
 
-static int tcpci_resume(struct device *dev)
+static int __maybe_unused tcpci_resume(struct device *dev)
 {
 	struct tcpci_chip *chip = dev_get_drvdata(dev);
 

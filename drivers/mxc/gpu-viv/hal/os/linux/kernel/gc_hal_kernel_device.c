@@ -1390,7 +1390,8 @@ static int threadRoutine(void *ctxt)
         int down;
 
         down = down_interruptible(&device->semas[core]);
-        if (down) {} /* To make gcc 4.6 happy. */
+        if (down && down != -EINTR)
+             return down;
 
         if (unlikely(device->killThread))
         {

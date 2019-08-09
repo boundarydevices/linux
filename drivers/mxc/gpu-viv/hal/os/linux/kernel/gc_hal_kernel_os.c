@@ -3008,7 +3008,7 @@ gckOS_GetTime(
 
     /* Return the time of day in microseconds. */
     ktime_get_real_ts64(&tv);
-    *Time = (tv.tv_sec * 1000000ULL) + (tv.tv_nsec * 1000);
+    *Time = (tv.tv_sec * 1000000ULL) + (tv.tv_nsec / 1000);
 #else
     struct timeval tv;
     gcmkHEADER();

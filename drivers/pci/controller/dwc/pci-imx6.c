@@ -1949,6 +1949,20 @@ static void imx_pcie_setup_ep(struct dw_pcie *pci)
 	writel(0, pci->dbi_base + (1 << 12) + PCI_BASE_ADDRESS_5);
 }
 
+static void pci_imx_set_msi_en(struct pcie_port *pp)
+{
+	u16 val;
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+
+	if (pci_msi_enabled()) {
+		val = dw_pcie_readw_dbi(pci, PCIE_RC_IMX6_MSI_CAP +
+					PCI_MSI_FLAGS);
+		val |= PCI_MSI_FLAGS_ENABLE;
+		dw_pcie_writew_dbi(pci, PCIE_RC_IMX6_MSI_CAP + PCI_MSI_FLAGS,
+				   val);
+	}
+}
+
 #ifdef CONFIG_PM_SLEEP
 /* PM_TURN_OFF */
 static void pci_imx_pm_turn_off(struct imx_pcie *imx_pcie)
@@ -2097,20 +2111,6 @@ static void pci_imx_ltssm_disable(struct device *dev)
 				val + IMX8QM_CSR_PCIE_CTRL2_OFFSET,
 				IMX8QM_CTRL_READY_ENTR_L23, 0);
 		break;
-	}
-}
-
-static void pci_imx_set_msi_en(struct pcie_port *pp)
-{
-	u16 val;
-	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
-
-	if (pci_msi_enabled()) {
-		val = dw_pcie_readw_dbi(pci, PCIE_RC_IMX6_MSI_CAP +
-					PCI_MSI_FLAGS);
-		val |= PCI_MSI_FLAGS_ENABLE;
-		dw_pcie_writew_dbi(pci, PCIE_RC_IMX6_MSI_CAP + PCI_MSI_FLAGS,
-				   val);
 	}
 }
 

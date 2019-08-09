@@ -82,6 +82,10 @@
 #define GLB_CTRL_L_ENDIAN(le)				((le) << 3)
 #define GLB_CTRL_SLOT_EN(slot)				(0x1 << (slot + 4))
 
+/* COM_STAUS fields */
+#define COM_STATUS_DEC_ONGOING(r)		(((r) & (1 << 31)) >> 31)
+#define COM_STATUS_CUR_SLOT(r)			(((r) & (0x3 << 29)) >> 29)
+
 /* STM_CTRL fields */
 #define STM_CTRL_PIXEL_PRECISION		(0x1 << 2)
 #define STM_CTRL_IMAGE_FORMAT(img_fmt)		((img_fmt) << 3)

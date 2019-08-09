@@ -3049,6 +3049,7 @@ OnError:
 static gceSTATUS
 _CommitMultiChannelOnce(
     IN gckCOMMAND Command,
+    IN gckCONTEXT Context,
     IN gcsHAL_COMMAND_LOCATION * CommandBuffer
     )
 {
@@ -3125,6 +3126,8 @@ _CommitMultiChannelOnce(
             (gctUINT32)CommandBuffer->channelId
             ));
     }
+
+    Command->currContext = Context;
 
     gckOS_AcquireMutex(Command->os, Command->mutexQueue, gcvINFINITE);
     acquired = gcvTRUE;
@@ -3286,7 +3289,7 @@ gckCOMMAND_Commit(
         }
         else if (Command->feType == gcvHW_FE_MULTI_CHANNEL)
         {
-            status = _CommitMultiChannelOnce(Command, cmdLoc);
+            status = _CommitMultiChannelOnce(Command, context, cmdLoc);
         }
         else
         {
@@ -4097,13 +4100,44 @@ gckCOMMAND_Attach(
     IN gctUINT32 ProcessID
     )
 {
+    gctUINT32 allocationSize;
+    gctPOINTER pointer;
+    gceSTATUS status;
+
     if (Command->feType == gcvHW_FE_WAIT_LINK)
     {
-        return _AttachWaitLinkFECommand(Command,
+        status = _AttachWaitLinkFECommand(Command,
                                         Context,
                                         MaxState,
                                         NumStates,
                                         ProcessID);
+    }
+    else if (Command->feType == gcvHW_FE_MULTI_CHANNEL)
+    {
+        /*
+         * For mcfe, we only allocate context which is used to
+         * store profile counters.
+         */
+        allocationSize = gcmSIZEOF(struct _gckCONTEXT);
+
+        /* Allocate the object. */
+        gckOS_Allocate(Command->os, allocationSize, &pointer);
+        if (!pointer)
+        {
+            return gcvSTATUS_OUT_OF_MEMORY;
+        }
+        *Context = pointer;
+        /* Reset the entire object. */
+        gckOS_ZeroMemory(*Context, allocationSize);
+
+        /* Initialize the gckCONTEXT object. */
+        (*Context)->object.type = gcvOBJ_CONTEXT;
+        (*Context)->os          = Command->os;
+        (*Context)->hardware    = Command->kernel->hardware;
+        *MaxState  = 0;
+        *NumStates = 0;
+
+        status = gcvSTATUS_OK;
     }
     else
     {
@@ -4112,8 +4146,10 @@ gckCOMMAND_Attach(
         *MaxState  = 0;
         *NumStates = 0;
 
-        return gcvSTATUS_OK;
+        status = gcvSTATUS_OK;
     }
+
+    return status;
 }
 #endif
 
@@ -4195,6 +4231,11 @@ gckCOMMAND_Detach(
     if (Command->feType == gcvHW_FE_WAIT_LINK)
     {
         return _DetachWaitLinkFECommand(Command, Context);
+    }
+    else if (Command->feType == gcvHW_FE_MULTI_CHANNEL)
+    {
+        gcmkOS_SAFE_FREE(Context->os, Context);
+        return gcvSTATUS_OK;
     }
     else
     {

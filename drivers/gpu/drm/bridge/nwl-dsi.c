@@ -152,6 +152,10 @@
 #define MULTI_BIT_ECC_ERR_MASK		BIT(1)
 #define CRC_ERR_MASK			BIT(2)
 
+#define VIDEO_MODE_SYNC_PULSE		0
+#define VIDEO_MODE_SYNC_EVENT		1
+#define VIDEO_MODE_SYNC_BURST		2
+
 static const char IRQ_NAME[] = "nwl-dsi";
 
 /* Possible valid PHY reference clock rates*/
@@ -357,7 +361,6 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 		nwl_dsi_get_dpi_pixel_format(dsi_device->format);
 	enum dpi_interface_color_coding color_coding =
 		nwl_dsi_get_dpi_interface_color_coding(dsi_device->format);
-	bool burst_mode;
 
 	drm_display_mode_to_videomode(dsi->curr_mode, &vm);
 
@@ -370,14 +373,14 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 	nwl_dsi_write(dsi, VSYNC_POLARITY, 0x00);
 	nwl_dsi_write(dsi, HSYNC_POLARITY, 0x00);
 
-	burst_mode = (dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_BURST) &&
-		!(dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE);
-
-	if (burst_mode) {
-		nwl_dsi_write(dsi, VIDEO_MODE, 0x2);
+	if (dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_BURST) {
+		nwl_dsi_write(dsi, VIDEO_MODE, VIDEO_MODE_SYNC_BURST);
 		nwl_dsi_write(dsi, PIXEL_FIFO_SEND_LEVEL, 256);
+	} else if (dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE) {
+		nwl_dsi_write(dsi, VIDEO_MODE, VIDEO_MODE_SYNC_PULSE);
+		nwl_dsi_write(dsi, PIXEL_FIFO_SEND_LEVEL, vm.hactive);
 	} else {
-		nwl_dsi_write(dsi, VIDEO_MODE, 0x0);
+		nwl_dsi_write(dsi, VIDEO_MODE, VIDEO_MODE_SYNC_EVENT);
 		nwl_dsi_write(dsi, PIXEL_FIFO_SEND_LEVEL, vm.hactive);
 	}
 
@@ -387,7 +390,6 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 
 	nwl_dsi_write(dsi, ENABLE_MULT_PKTS, 0x0);
 	nwl_dsi_write(dsi, BLLP_MODE, 0x1);
-	nwl_dsi_write(dsi, ENABLE_MULT_PKTS, 0x0);
 	nwl_dsi_write(dsi, USE_NULL_PKT_BLLP, 0x0);
 	nwl_dsi_write(dsi, VC, 0x0);
 

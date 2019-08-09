@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 NXP
+ * Copyright 2018-2019 NXP
  */
 
 /*
@@ -67,6 +67,8 @@ extern unsigned int vpu_dbg_level_decoder;
 #define VPU_DEC_CMD_DATA_MAX_NUM	16
 #define VPU_DEC_MAX_WIDTH		8188
 #define VPU_DEC_MAX_HEIGTH		8188
+#define VPU_DEC_FMT_DIVX_MASK		(1 << 20)
+#define VPU_DEC_FMT_RV_MASK		(1 << 21)
 
 #define V4L2_EVENT_DECODE_ERROR		(V4L2_EVENT_PRIVATE_START + 1)
 #define V4L2_EVENT_SKIP			(V4L2_EVENT_PRIVATE_START + 2)
@@ -127,6 +129,7 @@ typedef enum{
 #define VPU_PIX_FMT_RV          v4l2_fourcc('R', 'V', '0', '0')
 #define VPU_PIX_FMT_VP6         v4l2_fourcc('V', 'P', '6', '0')
 #define VPU_PIX_FMT_SPK         v4l2_fourcc('S', 'P', 'K', '0')
+#define VPU_PIX_FMT_DIV3        v4l2_fourcc('D', 'I', 'V', '3')
 #define VPU_PIX_FMT_DIVX        v4l2_fourcc('D', 'I', 'V', 'X')
 #define VPU_PIX_FMT_HEVC        v4l2_fourcc('H', 'E', 'V', 'C')
 #define VPU_PIX_FMT_LOGO        v4l2_fourcc('L', 'O', 'G', 'O')
@@ -278,6 +281,7 @@ struct vpu_dev {
 	struct shared_addr shared_mem;
 	struct vpu_ctx *ctx[VPU_MAX_NUM_STREAMS];
 	struct dentry *debugfs_root;
+	struct dentry *debugfs_dbglog;
 	struct dentry *debugfs_fwlog;
 
 	struct print_buf_desc *print_buf;
@@ -328,8 +332,6 @@ struct vpu_ctx {
 	char buffer_name[64];
 	struct device_attribute dev_attr_instance_flow;
 	char flow_name[64];
-	struct dentry *dbglog_dir;
-	char dbglog_name[64];
 	struct v4l2_ctrl *ctrls[V4L2_MAX_CTRLS];
 	struct v4l2_ctrl_handler ctrl_handler;
 	bool ctrl_inited;
@@ -359,6 +361,7 @@ struct vpu_ctx {
 	bool hang_status;
 	bool fifo_low;
 	bool frame_decoded;
+	bool first_dump_data_flag;
 	u32 req_frame_count;
 	u_int32 mbi_count;
 	u_int32 mbi_size;
@@ -399,6 +402,10 @@ struct vpu_ctx {
 	struct list_head cmd_q;
 	struct vpu_dec_cmd_request *pending;
 	struct mutex cmd_lock;
+
+	u_int64 start_time;
+	u_int64 last_decoded_time;
+	u_int64 last_ready_time;
 };
 
 #define LVL_WARN		(1 << 1)
@@ -430,5 +437,11 @@ struct vpu_ctx {
 #define V4L2_NXP_BUF_MASK_FLAGS		(V4L2_NXP_BUF_FLAG_CODECCONFIG | \
 					 V4L2_NXP_BUF_FLAG_TIMESTAMP_INVALID)
 
+#define VPU_DECODED_EVENT_PERF_MASK		(1 << 0)
+#define VPU_READY_EVENT_PERF_MASK		(1 << 1)
+
+pSTREAM_BUFFER_DESCRIPTOR_TYPE get_str_buffer_desc(struct vpu_ctx *ctx);
+u_int32 got_free_space(u_int32 wptr, u_int32 rptr, u_int32 start, u_int32 end);
+int copy_buffer_to_stream(struct vpu_ctx *ctx, void *buffer, uint32_t length);
 
 #endif
