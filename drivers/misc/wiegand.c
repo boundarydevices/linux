@@ -29,29 +29,15 @@ struct wiegand_data {
 
 	/* Current time within 2050us period */
 	unsigned int cur_time;
-	/* wie->lock on inputs, user must read 0 before sending a hexval */
+	/* lock on inputs, user must read 0 before sending a hexval */
 	unsigned int lock;
 	unsigned int length;
 	unsigned long long int this_scan;
-	/* Default different value at startup than wie->this_scan */
-	unsigned long long int last_scan;
-	/*
-	 * Stores payload of bits, same as wie->this_scan without top and bottom
-	 * bits of parity
-	 */
-	unsigned long long int this_payload;
 
 	struct timespec64 last_time;
-	/* 26-37 bit parity variables */
-	bool even_parity;
-	bool odd_parity;
-	/* 48 bit parity variables */
-	bool odd48_all_parity;
-	bool even48_parity;
-	bool odd48_parity;
 	unsigned long long int t_mask;
 
-/* Sending wie->states */
+/* Sending states */
 #define IDLE 0
 #define DRIVE 1
 #define STOP 2
@@ -64,167 +50,6 @@ struct wiegand_data {
 };
 
 static struct wiegand_data *g_wie;
-
-/*
- * ======================================================================
- *  26-37 bit parity verification functions
- * ======================================================================
- * even parity - top bits
- * parity is first floor( (wie->length-2)/2 ) bits
- */
-static bool verify_even_parity(struct wiegand_data *wie)
-{
-	int i;
-	unsigned int parity = 0;
-	unsigned long long int mask = 1ULL << (wie->length - 2 - 1);
-	int parity_bits = (wie->length - 2) / 2;
-
-	for (i = 0; i < parity_bits; i++) {
-		if (wie->this_payload & mask)
-			parity++;
-		mask >>= 1;
-	}
-	return (parity & 1) == 1;
-}
-
-/*
- * odd parity - bottom bits
- * parity is the rest of the bits
- * This is unlike the documentation for the converter,
- * but works with the converter.
- */
-static bool verify_odd_parity(struct wiegand_data *wie)
-{
-	int i;
-	unsigned int parity = 0;
-	unsigned long long int mask = 1ULL << (wie->length - 2 - 1);
-	int parity_bits = (wie->length - 2) / 2;
-
-	mask >>= parity_bits;
-	for (i = 0; i < (wie->length - 2 - parity_bits); i++) {
-		if (wie->this_payload & mask)
-			parity++;
-		mask >>= 1;
-	}
-	return (parity & 1) == 0;
-}
-
-static bool verify_parity(struct wiegand_data *wie)
-{
-	bool ret;
-
-	ret = verify_even_parity(wie);
-	if (ret != wie->even_parity)
-		return false;
-	ret = verify_odd_parity(wie);
-	if (ret != wie->odd_parity)
-		return false;
-	return true;
-}
-/*
- * End 26-37 bit parity verification functions
- * ======================================================================
- * 48 bit parity verification functions
- * ======================================================================
- * O(47*X)
- */
-static bool verify48_odd_all_parity(struct wiegand_data *wie)
-{
-	int i;
-	unsigned int parity = 0;
-	/* Mask goes from 0X0...0 down to 0...X */
-	unsigned long long int mask = 1ULL << (wie->length - 2);
-	int parity_bits = 47;
-
-	for (i = 0; i < parity_bits; i++) {
-		if (wie->this_scan & mask)
-			parity++;
-		mask >>= 1;
-	}
-	return (parity & 1) == 0;
-}
-/*
- * ..(15*XX.)O
- *          PP110110110110110110110110110110110110110110110P
- * Mask goes X000000000000000000000000000000000000000000000
- * Down to   00000000000000000000000000000000000000000000X0
- * parity_bits = 45 (48 - 3 parity bits)
- */
-static bool verify48_odd_parity(struct wiegand_data *wie)
-{
-	int i;
-	unsigned int parity = 0;
-	/*
-	 * mask is 110110110110110110110110110110110110110110110
-	 *  = 30158033218998 in decimal
-	 * payload XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-	 * result  ?????????????????????????????????????????????
-	 * iter    X00000000000000000000000000000000000000000000
-	 * shift = 45 times
-	 */
-	unsigned long long int mask = 1ULL << (wie->length - 3);
-	int parity_bits = 45;
-
-	for (i = 0; i < parity_bits / 3; i++) {
-		if (wie->this_scan & mask)
-			parity++;
-		mask >>= 1;
-		if (wie->this_scan & mask)
-			parity++;
-		mask >>= 2;
-	}
-	return (parity & 1) == 0;
-}
-
-/*
- * .E(15*.XX).
- * mask is         011011011011011011011011011011011011011011011
- *  = 15079016609499 in decimal
- * payload is      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
- * result is       ?????????????????????????????????????????????
- * iter is         X00000000000000000000000000000000000000000000
- * shift = 45 times
- */
-static bool verify48_even_parity(struct wiegand_data *wie)
-{
-	int i;
-	unsigned int parity = 0;
-	unsigned long long int mask = 1ULL << (wie->length - 3);
-	int parity_bits = 45;
-
-	for (i = 0; i < parity_bits / 3; i++) {
-		mask >>= 1;
-		if (wie->this_scan & mask)
-			parity++;
-		mask >>= 1;
-		if (wie->this_scan & mask)
-			parity++;
-		mask >>= 1;
-	}
-	return (parity & 1) == 1;
-}
-
-static bool verify48_parity(struct wiegand_data *wie)
-{
-	bool ret;
-
-	ret = verify48_odd_all_parity(wie);
-	if (ret != wie->odd48_all_parity) {
-		pr_info("Wiegand: failed 48oddAllParity\n");
-		return false;
-	}
-	ret = verify48_odd_parity(wie);
-	if (ret != wie->odd48_parity) {
-		pr_info("Wiegand: failed 48oddParity\n");
-		return false;
-	}
-	ret = verify48_even_parity(wie);
-	if (ret != wie->even48_parity) {
-		pr_info("Wiegand: failed 48evenParity\n");
-		return false;
-	}
-	return true;
-}
 
 /*
  * Wiegand is active-low, but our gp's have an inverter,
@@ -299,7 +124,7 @@ static enum hrtimer_restart function_timer(struct hrtimer *timer)
 	return HRTIMER_NORESTART;
 }
 
-/*Function called when /sys/kernel/wiegand/wie->length file is read */
+/*Function called when /sys/kernel/wiegand/length file is read */
 static ssize_t length_show(struct kobject *kobj, struct kobj_attribute *attr,
 		char *buf)
 {
@@ -308,7 +133,7 @@ static ssize_t length_show(struct kobject *kobj, struct kobj_attribute *attr,
 	return sprintf(buf, "%d\n", wie->length);
 }
 
-/*Function called when /sys/kernel/wiegand/wie->length file is written to */
+/*Function called when /sys/kernel/wiegand/length file is written to */
 static ssize_t length_store(struct kobject *kobj, struct kobj_attribute *attr,
 		const char *buf, size_t count)
 {
@@ -344,6 +169,57 @@ static ssize_t hexval_show(struct kobject *kobj, struct kobj_attribute *attr,
 	return sprintf(buf, "%llx\n", wie->this_scan);
 }
 
+static int get_parity(unsigned long long int val)
+{
+	unsigned v;
+
+	v = (unsigned)(val >> 32) ^ (unsigned)val;
+	v = (v >> 16) ^ v;
+	v = (v >> 8) ^ v;
+	v = (v >> 4) ^ v;
+	v = (v >> 2) ^ v;
+	v = (v >> 1) ^ v;
+	return (v & 1);
+}
+
+static bool verify_parity(int length, unsigned long long int scan)
+{
+	unsigned l = length - 2;
+	int top_bits = l / 2;
+	int bottom_bits = l - top_bits;
+	int ret;
+
+	ret = get_parity((scan >> (bottom_bits + 1)) & ((1ULL << top_bits) - 1));
+	if (ret != ((scan >> (length - 1)) & 1))
+		return false;
+	ret = get_parity((scan >> 1) & ((1ULL << bottom_bits) - 1)) ^ 1; /* odd parity */
+	if (ret != (scan & 1))
+		return false;
+	return true;
+}
+
+static bool verify48_parity(int length, unsigned long long int scan)
+{
+	int ret;
+
+	ret = get_parity(scan & ((1ULL << (length - 1)) - 1)) ^ 1; /* odd */
+	if (ret != ((scan >> (length - 1)) & 1)) {
+		pr_info("Wiegand: failed 48oddAllParity\n");
+		return false;
+	}
+	ret = get_parity(scan & ((1ULL << (length - 2)) - 1) & (0333333333333333333333ULL << 1));
+	if (ret != ((scan >> (length - 2)) & 1)) {
+		pr_info("Wiegand: failed 48evenParity\n");
+		return false;
+	}
+	ret = get_parity(scan & ((1ULL << (length - 2)) - 1) & (0666666666666666666666ULL << 1)) ^ 1; /* odd */
+	if (ret != (scan & 1)) {
+		pr_info("Wiegand: failed 48oddParity\n");
+		return false;
+	}
+	return true;
+}
+
 /*
  * Only store when unlocked and either 5 seconds has passed or a new scan is
  * detected that is not a duplicate.
@@ -353,118 +229,78 @@ static ssize_t hexval_store(struct kobject *kobj, struct kobj_attribute *attr,
 {
 	struct wiegand_data *wie = g_wie;
 	bool ret;
-	unsigned long long int mask;
-	struct timespec64 this_time;
+	int err;
+	int length;
+	unsigned long long int scan;
 
-	ktime_get_real_ts64(&this_time);
-	if (wie->lock == 0) { /* Only take hex input when a scan has cleared */
-		int err = kstrtoull(buf, 16, &wie->this_scan);
+	err = kstrtoull(buf, 16, &scan);
+	if (err)
+		return err;
 
-		if (err)
-			return err;
-		if ((wie->this_scan != wie->last_scan) ||
-				(this_time.tv_sec > wie->last_time.tv_sec+5)) {
-			/*Debounce inputs for 5 seconds */
-			pr_info("Wiegand: Got hexval input: %llx\n",
-					wie->this_scan);
-			/*
-			 * Handles 26/37 bit standard wiegand which works on
-			 * the little rs232 converter unit I have
-			 */
-			if ((wie->length >= 26) && (wie->length <= 37)) {
-				wie->last_scan = wie->this_scan;
-				/*
-				 * even parity bit is top bit
-				 * odd parity bit is bottom bit
-				 */
-				mask = 1ULL << (wie->length - 1);
-				wie->even_parity = wie->this_scan & mask;
-				mask = 1ULL;
-				wie->odd_parity = wie->this_scan & mask;
-				mask = (1ULL << (wie->length - 1)) - 2;
-				/*
-				 * top bit - 2 = payload without top and bottom
-				 * bits of parity
-				 */
-				wie->this_payload = (wie->this_scan & mask)
-						>> 1;
-				pr_info("Wiegand: Payload: %llx\n",
-						wie->this_payload);
-				ret = verify_parity(wie);
-				if (!ret) {
-					pr_info("Wiegand: Parity mismatch. Scan again.\n");
-					return count;
-				}
-				pr_info("Wiegand: Parity match!\n");
-				wie->cur_time = 0;
-				wie->lock = 1;
-				/* Enable the timer */
-				wie->state = DRIVE;
-				/*
-				 * reset mask. wie->this_scan includes
-				 *  parity bits
-				 */
-				wie->t_mask = 1ULL << (wie->length - 1);
-				/*
-				 * seconds,nanoseconds. Could be any
-				 * short time here.
-				 */
-				wie->kt_period = ktime_set(0, 50000);
-				hrtimer_start(&wie->htimer, wie->kt_period,
-						HRTIMER_MODE_REL);
-			} else {
-				if (wie->length == 48) {
-					/*
-					 * 48-bit Corporate 1000 Canem Wiegand Format
-					 * A = Company ID Code
-					 * B = Card ID Number
-					 * P = Parity Bit
-					 * E = Even Parity On X's
-					 * O = Odd Parity On X's
-					 * PP(22*A)(23*B)P
-					 * .E(15*.XX).
-					 * ..(15*XX.)O
-					 * O(47*X)
-					 */
-					/* Canem 48bit Corporate 1000 format */
-					wie->last_scan = wie->this_scan;
-					/* Top bit is odd parity of all bits */
-					mask = 1ULL << (wie->length-1); /* Top bit */
-					wie->odd48_all_parity = wie->this_scan & mask;
-					/* Second to top bit */
-					mask = 1ULL << (wie->length-2);
-					wie->even48_parity = wie->this_scan & mask;
-					mask = 1ULL;
-					wie->odd48_parity = wie->this_scan & mask;
-					/*
-					 * mask is 1's everywhere except the 3 parity
-					 * bits - 00111...10
-					 */
-					mask = (1ULL << (wie->length-2)) - 2;
-					wie->this_payload = (wie->this_scan & mask)
-							>> 1;
-					pr_info("Wiegand: Payload: %llx\n",
-							wie->this_payload);
-					ret = verify48_parity(wie);
-					if (!ret) {
-						pr_info("Wiegand: Parity mismatch. Scan again.\n");
-						return count;
-					}
-					pr_info("Wiegand: Parity match!\n");
-				} else {
-					printk(KERN_INFO "Wiegand: Transmitting %d length without confirming parity.\n", wie->length);
-				}
-				wie->cur_time = 0;
-				wie->lock = 1;
-				/* Enable the timer */
-				wie->state = DRIVE;
-				wie->t_mask = 1ULL << (wie->length-1);
-				wie->kt_period = ktime_set(0, 50000);
-				hrtimer_start(&wie->htimer, wie->kt_period,
-						HRTIMER_MODE_REL);
-			}
-		}
+	if (scan == wie->this_scan) {
+		struct timespec64 this_time;
+
+		ktime_get_real_ts64(&this_time);
+		/*Debounce inputs for 5 seconds */
+		if (this_time.tv_sec <= wie->last_time.tv_sec+5)
+			return -EINVAL;
 	}
+	pr_info("Wiegand: Got hexval input: %llx\n", scan);
+
+	/*
+	 * Handles 26/37 bit standard wiegand which works on
+	 * the little rs232 converter unit I have
+	 */
+	length = wie->length;
+	if ((length >= 26) && (length <= 37)) {
+		/*
+		 * even parity bit is top bit
+		 * odd parity bit is bottom bit
+		 */
+		ret = verify_parity(length, scan);
+		if (!ret) {
+			pr_info("Wiegand: Parity mismatch. Scan again.\n");
+			return -EINVAL;
+		}
+		pr_info("Wiegand: Parity match!\n");
+	} else if (length == 48) {
+		/*
+		 * 48-bit Corporate 1000 Canem Wiegand Format
+		 * A = Company ID Code
+		 * B = Card ID Number
+		 * P = Parity Bit
+		 * E = Even Parity On X's
+		 * O = Odd Parity On X's
+		 * PP(22*A)(23*B)P
+		 * .E(15*.XX).
+		 * ..(15*XX.)O
+		 * O(47*X)
+		 */
+		/* Canem 48bit Corporate 1000 format */
+		/* Top bit is odd parity of all bits */
+		/* Second to top bit, even parity */
+		ret = verify48_parity(length, scan);
+		if (!ret) {
+			pr_info("Wiegand: Parity mismatch. Scan again.\n");
+			return -EINVAL;
+		}
+		pr_info("Wiegand: Parity match!\n");
+	} else {
+		printk(KERN_INFO "Wiegand: Transmitting %d length without confirming parity.\n", length);
+	}
+	if (wie->lock) {
+		pr_info("Wiegand: busy\n");
+		return -EBUSY;
+	}
+	wie->lock = 1;
+	wie->this_scan = scan;
+	wie->cur_time = 0;
+	/* Enable the timer */
+	wie->state = DRIVE;
+	wie->t_mask = 1ULL << (length - 1);
+	wie->kt_period = ktime_set(0, 50000);
+	hrtimer_start(&wie->htimer, wie->kt_period,
+			HRTIMER_MODE_REL);
 	return count;
 }
 
@@ -500,7 +336,6 @@ static int wiegand_probe(struct platform_device *pdev)
 	if (!wie)
 		return -ENOMEM;
 	wie->length = 26;
-	wie->last_scan = 1;
 	hrtimer_init(&wie->htimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	wie->htimer.function = &function_timer;
 
