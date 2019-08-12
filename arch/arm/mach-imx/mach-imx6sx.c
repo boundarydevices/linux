@@ -32,6 +32,7 @@ static void __init imx6sx_enet_clk_sel(void)
 
 static inline void imx6sx_enet_init(void)
 {
+	imx6_enet_mac_init("fsl,imx6sx-fec", "fsl,imx6sx-ocotp");
 	imx6sx_enet_clk_sel();
 }
 
