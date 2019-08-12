@@ -125,6 +125,8 @@
 			reg = <0>;
 			reset-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
 			reset-assert-us = <10000>;
+			at803x,eee-disabled;
+			at803x,vddio-1p8v;
 		};
 	};
 };
