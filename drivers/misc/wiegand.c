@@ -184,16 +184,15 @@ static int get_parity(unsigned long long int val)
 
 static bool verify_parity(int length, unsigned long long int scan)
 {
-	unsigned l = length - 2;
-	int top_bits = l / 2;
-	int bottom_bits = l - top_bits;
+	int top_bits = length / 2;
+	int bottom_bits = length - top_bits;
 	int ret;
 
-	ret = get_parity((scan >> (bottom_bits + 1)) & ((1ULL << top_bits) - 1));
-	if (ret != ((scan >> (length - 1)) & 1))
+	ret = get_parity((scan >> bottom_bits) & ((1ULL << top_bits) - 1));
+	if (ret)	/* even parity */
 		return false;
-	ret = get_parity((scan >> 1) & ((1ULL << bottom_bits) - 1)) ^ 1; /* odd parity */
-	if (ret != (scan & 1))
+	ret = get_parity(scan & ((1ULL << bottom_bits) - 1));
+	if (!ret)	/* odd parity */
 		return false;
 	return true;
 }
@@ -202,18 +201,23 @@ static bool verify48_parity(int length, unsigned long long int scan)
 {
 	int ret;
 
-	ret = get_parity(scan & ((1ULL << (length - 1)) - 1)) ^ 1; /* odd */
-	if (ret != ((scan >> (length - 1)) & 1)) {
+	ret = get_parity(scan & ((1ULL << length) - 1));
+	if (!ret) { /* odd */
 		pr_info("Wiegand: failed 48oddAllParity\n");
 		return false;
 	}
-	ret = get_parity(scan & ((1ULL << (length - 2)) - 1) & (0333333333333333333333ULL << 1));
-	if (ret != ((scan >> (length - 2)) & 1)) {
+	length--;
+	scan &= ((1ULL << length) - 1);
+	ret = get_parity(scan &
+			((0333333333333333333333ULL << 1) | (1ULL << (length - 1))));
+	if (ret) {	/* even parity */
 		pr_info("Wiegand: failed 48evenParity\n");
 		return false;
 	}
-	ret = get_parity(scan & ((1ULL << (length - 2)) - 1) & (0666666666666666666666ULL << 1)) ^ 1; /* odd */
-	if (ret != (scan & 1)) {
+	length--;
+	scan &= ((1ULL << length) - 1);
+	ret = get_parity(scan & ((0666666666666666666666ULL << 1) | 1));
+	if (!ret) {	/* odd parity */
 		pr_info("Wiegand: failed 48oddParity\n");
 		return false;
 	}
