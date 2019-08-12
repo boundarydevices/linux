@@ -1066,6 +1066,7 @@
 					 <&clks IMX6QDL_CLK_ENET_REF>;
 				clock-names = "ipg", "ahb", "ptp", "enet_out";
 				fsl,stop-mode = <&gpr 0x34 27>;
+				fsl,wakeup_irq = <0>;
 				status = "disabled";
 			};
 
