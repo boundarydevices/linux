@@ -814,8 +814,11 @@ gckKERNEL_Destroy(
             gcmkVERIFY_OK(gckEVENT_Destroy(Kernel->eventObj));
         }
 
-        /* Destroy hardware resources before destroying MMU. */
-        gcmkVERIFY_OK(gckHARDWARE_PreDestroy(Kernel->hardware));
+        if (Kernel->hardware)
+        {
+            /* Destroy hardware resources before destroying MMU. */
+            gcmkVERIFY_OK(gckHARDWARE_PreDestroy(Kernel->hardware));
+        }
 
         if (Kernel->mmu)
         {
@@ -831,8 +834,11 @@ gckKERNEL_Destroy(
 #endif
         }
 
-        /* Destroy the gckHARDWARE object. */
-        gcmkVERIFY_OK(gckHARDWARE_Destroy(Kernel->hardware));
+        if (Kernel->hardware)
+        {
+            /* Destroy the gckHARDWARE object. */
+            gcmkVERIFY_OK(gckHARDWARE_Destroy(Kernel->hardware));
+        }
     }
 
     if (Kernel->atomClients)
