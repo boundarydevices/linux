@@ -2504,6 +2504,10 @@ static void apply_stb_core_settings(
 				g_vpotch = 0x60;
 			else
 				g_vpotch = 0x20;
+			if (vinfo->width > 1920)
+				htotal_add = 0xc0;
+			else
+				htotal_add = 0x140;
 		} else
 			g_vpotch = 0x20;
 	}
