@@ -1,0 +1,78 @@
+/*
+ * Copyright 2019 NXP
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/dts-v1/;
+
+#include "fsl-imx8dxl-phantom-mek.dtsi"
+
+/delete-node/ &i2c0_cm40;
+
+&i2c_rpbus_5 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	wm8960: wm8960@1a {
+		compatible = "wlf,wm8960";
+		reg = <0x1a>;
+		clocks = <&clk IMX8QXP_AUD_MCLKOUT0>;
+		clock-names = "mclk";
+		wlf,shared-lrclk;
+		power-domains = <&pd_mclk_out0>;
+		assigned-clocks = <&clk IMX8QXP_AUD_PLL0_DIV>,
+				<&clk IMX8QXP_AUD_ACM_AUD_PLL_CLK0_DIV>,
+				<&clk IMX8QXP_AUD_ACM_AUD_REC_CLK0_DIV>,
+				<&clk IMX8QXP_AUD_MCLKOUT0>;
+		assigned-clock-rates = <786432000>, <49152000>, <12288000>, <12288000>;
+	};
+
+	pca6416: gpio@20 {
+		compatible = "ti,tca6416";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+};
+
+&reg_can0_en {
+	status = "disabled";
+};
+
+&reg_can0_stby {
+	status = "disabled";
+};
+
+&reg_can1_en {
+	status = "disabled";
+};
+
+&reg_can1_stby {
+	status = "disabled";
+};
+
+&intmux_cm40 {
+	status = "disabled";
+};
+
+&flexcan1 {
+	status = "disabled";
+};
+
+&flexcan2 {
+	status = "disabled";
+};
+
+&flexspi0 {
+	status = "disabled";
+};
