@@ -16,6 +16,7 @@
 #include <linux/gpio.h>
 
 #include <linux/hrtimer.h>
+#include <linux/mutex.h>
 #include <linux/platform_device.h>
 #include <linux/sched.h>
 
@@ -29,8 +30,7 @@ struct wiegand_data {
 
 	/* Current time within 2050us period */
 	unsigned int cur_time;
-	/* lock on inputs, user must read 0 before sending a hexval */
-	unsigned int lock;
+	struct mutex mlock;
 	unsigned int length;
 	unsigned long long int this_scan;
 
@@ -116,7 +116,7 @@ static enum hrtimer_restart function_timer(struct hrtimer *timer)
 
 	case END:
 		wie->state = IDLE;
-		wie->lock = 0;
+		mutex_unlock(&wie->mlock);
 		return HRTIMER_NORESTART;
 	}
 
@@ -153,12 +153,12 @@ static ssize_t length_store(struct kobject *kobj, struct kobj_attribute *attr,
 	return lengthsetting;
 }
 
-static ssize_t lock_show(struct kobject *kobj, struct kobj_attribute *attr,
+static ssize_t busy_show(struct kobject *kobj, struct kobj_attribute *attr,
 		char *buf)
 {
 	struct wiegand_data *wie = g_wie;
 
-	return sprintf(buf, "%d\n", wie->lock);
+	return sprintf(buf, "%d\n", mutex_is_locked(&wie->mlock) ? 1 : 0);
 }
 
 static ssize_t hexval_show(struct kobject *kobj, struct kobj_attribute *attr,
@@ -170,7 +170,7 @@ static ssize_t hexval_show(struct kobject *kobj, struct kobj_attribute *attr,
 }
 
 /*
- * Only store when unlocked and either 5 seconds has passed or a new scan is
+ * Only store when either 5 seconds has passed or a new scan is
  * detected that is not a duplicate.
  */
 static ssize_t hexval_store(struct kobject *kobj, struct kobj_attribute *attr,
@@ -200,11 +200,7 @@ static ssize_t hexval_store(struct kobject *kobj, struct kobj_attribute *attr,
 	 * the little rs232 converter unit I have
 	 */
 	length = wie->length;
-	if (wie->lock) {
-		pr_info("Wiegand: busy\n");
-		return -EBUSY;
-	}
-	wie->lock = 1;
+	mutex_lock(&wie->mlock);
 	wie->this_scan = scan;
 	wie->cur_time = 0;
 	/* Enable the timer */
@@ -218,14 +214,13 @@ static ssize_t hexval_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 static struct kobj_attribute length_attr = __ATTR(length, 0660,
 		length_show, length_store);
-/* No lock_store function, it is controlled internally */
-static struct kobj_attribute lock_attr = __ATTR(lock, 0660, lock_show, NULL);
+static struct kobj_attribute busy_attr = __ATTR(busy, 0660, busy_show, NULL);
 static struct kobj_attribute hexval_attr = __ATTR(hexval, 0660,
 		hexval_show, hexval_store);
 
 static struct attribute *wiegand_attrs[] = {
 	&length_attr.attr,		/* WiegandNN where 37 >= NN >= 26 */
-	&lock_attr.attr,
+	&busy_attr.attr,
 	&hexval_attr.attr,
 	NULL,
 };
@@ -247,6 +242,7 @@ static int wiegand_probe(struct platform_device *pdev)
 	wie = devm_kzalloc(dev, sizeof(struct wiegand_data), GFP_KERNEL);
 	if (!wie)
 		return -ENOMEM;
+	mutex_init(&wie->mlock);
 	wie->length = 26;
 	hrtimer_init(&wie->htimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	wie->htimer.function = &function_timer;
