@@ -75,6 +75,13 @@
 		regulator-always-on;
 	};
 
+	reg_vref_3v3: regulator-adc-verf {
+		compatible = "regulator-fixed";
+		regulator-name = "vref-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+	};
+
 	sound-cs42888 {
 		compatible = "fsl,imx6-sabreauto-cs42888",
 			     "fsl,imx-audio-cs42888";
@@ -103,6 +110,16 @@
 		spdif-controller = <&spdif>;
 		spdif-in;
 	};
+};
+
+&adc1 {
+	vref-supply = <&reg_vref_3v3>;
+	status = "okay";
+};
+
+&adc2 {
+	vref-supply = <&reg_vref_3v3>;
+	status = "okay";
 };
 
 &anaclk2 {
