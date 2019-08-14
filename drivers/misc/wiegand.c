@@ -169,61 +169,6 @@ static ssize_t hexval_show(struct kobject *kobj, struct kobj_attribute *attr,
 	return sprintf(buf, "%llx\n", wie->this_scan);
 }
 
-static int get_parity(unsigned long long int val)
-{
-	unsigned v;
-
-	v = (unsigned)(val >> 32) ^ (unsigned)val;
-	v = (v >> 16) ^ v;
-	v = (v >> 8) ^ v;
-	v = (v >> 4) ^ v;
-	v = (v >> 2) ^ v;
-	v = (v >> 1) ^ v;
-	return (v & 1);
-}
-
-static bool verify_parity(int length, unsigned long long int scan)
-{
-	int top_bits = length / 2;
-	int bottom_bits = length - top_bits;
-	int ret;
-
-	ret = get_parity((scan >> bottom_bits) & ((1ULL << top_bits) - 1));
-	if (ret)	/* even parity */
-		return false;
-	ret = get_parity(scan & ((1ULL << bottom_bits) - 1));
-	if (!ret)	/* odd parity */
-		return false;
-	return true;
-}
-
-static bool verify48_parity(int length, unsigned long long int scan)
-{
-	int ret;
-
-	ret = get_parity(scan & ((1ULL << length) - 1));
-	if (!ret) { /* odd */
-		pr_info("Wiegand: failed 48oddAllParity\n");
-		return false;
-	}
-	length--;
-	scan &= ((1ULL << length) - 1);
-	ret = get_parity(scan &
-			((0333333333333333333333ULL << 1) | (1ULL << (length - 1))));
-	if (ret) {	/* even parity */
-		pr_info("Wiegand: failed 48evenParity\n");
-		return false;
-	}
-	length--;
-	scan &= ((1ULL << length) - 1);
-	ret = get_parity(scan & ((0666666666666666666666ULL << 1) | 1));
-	if (!ret) {	/* odd parity */
-		pr_info("Wiegand: failed 48oddParity\n");
-		return false;
-	}
-	return true;
-}
-
 /*
  * Only store when unlocked and either 5 seconds has passed or a new scan is
  * detected that is not a duplicate.
@@ -232,7 +177,6 @@ static ssize_t hexval_store(struct kobject *kobj, struct kobj_attribute *attr,
 		const char *buf, size_t count)
 {
 	struct wiegand_data *wie = g_wie;
-	bool ret;
 	int err;
 	int length;
 	unsigned long long int scan;
@@ -256,42 +200,6 @@ static ssize_t hexval_store(struct kobject *kobj, struct kobj_attribute *attr,
 	 * the little rs232 converter unit I have
 	 */
 	length = wie->length;
-	if ((length >= 26) && (length <= 37)) {
-		/*
-		 * even parity bit is top bit
-		 * odd parity bit is bottom bit
-		 */
-		ret = verify_parity(length, scan);
-		if (!ret) {
-			pr_info("Wiegand: Parity mismatch. Scan again.\n");
-			return -EINVAL;
-		}
-		pr_info("Wiegand: Parity match!\n");
-	} else if (length == 48) {
-		/*
-		 * 48-bit Corporate 1000 Canem Wiegand Format
-		 * A = Company ID Code
-		 * B = Card ID Number
-		 * P = Parity Bit
-		 * E = Even Parity On X's
-		 * O = Odd Parity On X's
-		 * PP(22*A)(23*B)P
-		 * .E(15*.XX).
-		 * ..(15*XX.)O
-		 * O(47*X)
-		 */
-		/* Canem 48bit Corporate 1000 format */
-		/* Top bit is odd parity of all bits */
-		/* Second to top bit, even parity */
-		ret = verify48_parity(length, scan);
-		if (!ret) {
-			pr_info("Wiegand: Parity mismatch. Scan again.\n");
-			return -EINVAL;
-		}
-		pr_info("Wiegand: Parity match!\n");
-	} else {
-		printk(KERN_INFO "Wiegand: Transmitting %d length without confirming parity.\n", length);
-	}
 	if (wie->lock) {
 		pr_info("Wiegand: busy\n");
 		return -EBUSY;
