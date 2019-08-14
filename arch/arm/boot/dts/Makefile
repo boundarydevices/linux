@@ -706,6 +706,7 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 	imx6sx-udoo-neo-full.dtb
 dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-14x14-evk.dtb \
+	imx6ul-14x14-evk-emmc.dtb \
 	imx6ul-ccimx6ulsbcexpress.dtb \
 	imx6ul-ccimx6ulsbcpro.dtb \
 	imx6ul-geam.dtb \
@@ -728,6 +729,7 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-tx6ul-0011.dtb \
 	imx6ul-tx6ul-mainboard.dtb \
 	imx6ull-14x14-evk.dtb \
+	imx6ull-14x14-evk-emmc.dtb \
 	imx6ull-colibri-aster.dtb \
 	imx6ull-colibri-emmc-aster.dtb \
 	imx6ull-colibri-emmc-eval-v3.dtb \
