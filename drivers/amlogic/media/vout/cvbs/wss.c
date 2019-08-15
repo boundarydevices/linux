@@ -38,8 +38,9 @@ static const char * const wss_576i_cmd[] = {"ar", "mode", "coding", "helper",
 
 static void wss_set_output(unsigned int cmd, unsigned int mode,
 				unsigned int line, unsigned int data,
-				unsigned int start, unsigned int length) {
-	int value;
+				unsigned int start, unsigned int length)
+{
+	unsigned int value;
 
 	pr_info("[%s], line = %d, data = 0x%x, start_bit = %d, length = %d\n",
 				__func__, line, data, start, length);
@@ -58,6 +59,21 @@ static void wss_set_output(unsigned int cmd, unsigned int mode,
 #endif
 		cvbs_out_reg_setb(ENCI_VBI_SETTING, 0x1, 0, 2);
 		break;
+	case WSS_480I_CMD_CGMS_A:
+		value = cvbs_out_reg_read(ENCI_VBI_CGMSDT_L);
+		value |= (cvbs_out_reg_read(ENCI_VBI_CGMSDT_H) << 16);
+
+		value = ((value & (~(((1L << length) - 1) << start))) |
+			((data & ((1L << length) - 1)) << start));
+
+		cvbs_out_reg_write(ENCI_VBI_CGMSDT_L, (value & 0xffff));
+		cvbs_out_reg_write(ENCI_VBI_CGMSDT_H, ((value >> 16) & 0xff));
+		cvbs_out_reg_write(ENCI_VBI_CGMS_LN, (line - 4));
+		cvbs_out_reg_setb(ENCI_VBI_SETTING, 0x3, 4, 2);
+		/*480i, enable even field for line 20*/
+		/*enable odd field for line 283 */
+		break;
+	case WSS_576I_CMD_CGMS_A:
 	default:
 		cvbs_out_reg_setb(ENCI_VBI_WSSDT, data, start, length);
 		value = cvbs_out_reg_read(ENCI_VBI_WSSDT);
