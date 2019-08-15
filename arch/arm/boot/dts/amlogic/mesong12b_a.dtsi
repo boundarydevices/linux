@@ -356,8 +356,9 @@
 		compatible = "amlogic, g12a-eth-dwmac","snps,dwmac";
 		reg = <0xff3f0000 0x10000
 			0xff634540 0x8
-			0xff64c000 0xa0>;
-		reg-names = "eth_base", "eth_cfg", "eth_pll";
+			0xff64c000 0xa0
+			0xffd01008 0x4>;
+		reg-names = "eth_base", "eth_cfg", "eth_pll", "eth_reset";
 		interrupts = <0 8 1>;
 		interrupt-names = "macirq";
 		status = "disabled";

@@ -55,6 +55,9 @@ static unsigned int is_internal_phy;
 struct meson_dwmac_data {
 	bool g12a_phy;
 };
+
+void __iomem *ee_reset_base;
+struct platform_device *ppdev;
 #endif
 
 struct meson_dwmac {
@@ -313,6 +316,7 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 	int auto_cali_idx = -1;
 	is_internal_phy = 0;
 
+	ppdev = pdev;
 	pr_debug("g12a_network_interface_setup\n");
 	/*map PRG_ETH_REG */
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "eth_cfg");
@@ -329,6 +333,21 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 
 	REG_ETH_reg0_addr = addr;
 	pr_info(" REG0:Addr = %p\n", REG_ETH_reg0_addr);
+
+	/*map ETH_RESET address*/
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "eth_reset");
+	if (!res) {
+		dev_err(&pdev->dev, "Unable to get resource(%d)\n", __LINE__);
+		ee_reset_base = NULL;
+	} else {
+		addr = devm_ioremap_resource(dev, res);
+		if (IS_ERR(addr)) {
+			dev_err(&pdev->dev, "Unable to map reset base\n");
+			return NULL;
+		}
+		ee_reset_base = addr;
+		pr_info(" ee eth reset:Addr = %p\n", ee_reset_base);
+	}
 
 	/*map ETH_PLL address*/
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "eth_pll");
@@ -494,6 +513,10 @@ static int meson6_dwmac_resume(struct device *dev)
 	struct pinctrl_state *turnon_tes = NULL;
 	pr_info("resuem inter = %d\n", is_internal_phy);
 	if ((is_internal_phy) && (support_mac_wol == 0)) {
+		if (ee_reset_base)
+			writel((1 << 11), (void __iomem	*)
+				(unsigned long)ee_reset_base);
+
 		pin_ctrl = devm_pinctrl_get(dev);
 		if (IS_ERR_OR_NULL(pin_ctrl)) {
 			pr_info("pinctrl is null\n");
@@ -504,7 +527,13 @@ static int meson6_dwmac_resume(struct device *dev)
 			devm_pinctrl_put(pin_ctrl);
 			pin_ctrl = NULL;
 		}
-		dwmac_meson_recover_analog(dev);
+		if (!ee_reset_base) {
+			dwmac_meson_recover_analog(dev);
+		} else {
+			dwmac_meson_cfg_pll(phy_analog_config_addr, ppdev);
+			dwmac_meson_cfg_analog(phy_analog_config_addr, ppdev);
+			dwmac_meson_cfg_ctrl(phy_analog_config_addr, ppdev);
+		}
 	}
 	ret = stmmac_pltfr_resume(dev);
 	return ret;
