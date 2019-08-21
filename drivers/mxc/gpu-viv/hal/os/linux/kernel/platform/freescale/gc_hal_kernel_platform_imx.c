@@ -1677,11 +1677,11 @@ _AdjustParam(
 {
     patch_param(Platform->device, Args);
 
+    if ((of_find_compatible_node(NULL, NULL, "fsl,imx8mq-gpu") ||
+        of_find_compatible_node(NULL, NULL, "fsl,imx8mm-gpu")) &&
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0)
-    if (of_find_compatible_node(NULL, NULL, "fsl,imx8mq-gpu") &&
         ((Args->baseAddress + totalram_pages() * PAGE_SIZE) > 0x100000000))
 #else
-     if (of_find_compatible_node(NULL, NULL, "fsl,imx8mq-gpu") &&
          ((Args->baseAddress + totalram_pages * PAGE_SIZE) > 0x100000000))
 #endif
     {
