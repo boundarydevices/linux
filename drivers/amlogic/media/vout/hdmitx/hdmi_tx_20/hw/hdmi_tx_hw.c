@@ -5970,9 +5970,6 @@ static void config_hdmi20_tx(enum hdmi_vic vic,
 
 	hdmitx_wr_reg(HDMITX_DWC_MC_CLKDIS, 0);
 	hd_write_reg(P_ENCP_VIDEO_EN, 1); /* enable it finially */
-	hdmitx_set_reg_bits(HDMITX_DWC_FC_INVIDCONF, 0, 3, 1);
-	mdelay(1);
-	hdmitx_set_reg_bits(HDMITX_DWC_FC_INVIDCONF, 1, 3, 1);
 } /* config_hdmi20_tx */
 
 static void hdmitx_csc_config(unsigned char input_color_format,
