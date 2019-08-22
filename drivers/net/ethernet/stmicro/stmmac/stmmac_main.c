@@ -54,7 +54,9 @@
 #include <linux/reset.h>
 #include <linux/of_mdio.h>
 #include "dwmac1000.h"
-
+#ifdef CONFIG_AMLOGIC_ETH_PRIVE
+#include "stmmac_platform.h"
+#endif
 #ifdef CONFIG_DWMAC_MESON
 #include <phy_debug.h>
 #endif
@@ -3672,8 +3674,10 @@ int stmmac_resume(struct device *dev)
 		phy_start(priv->phydev);
 
 #ifdef TX_MONITOR
-	stmmac_release(priv_monitor->dev);
-	stmmac_open(priv_monitor->dev);
+	if (!ee_reset_base) {
+		stmmac_release(priv_monitor->dev);
+		stmmac_open(priv_monitor->dev);
+	}
 #endif
 	return 0;
 }

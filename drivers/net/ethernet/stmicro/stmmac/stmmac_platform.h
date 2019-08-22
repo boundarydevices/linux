@@ -35,6 +35,7 @@ int stmmac_pltfr_suspend(struct device *dev);
 int stmmac_pltfr_resume(struct device *dev);
 extern unsigned int external_rx_delay;
 extern unsigned int external_tx_delay;
+extern void __iomem *ee_reset_base;
 #endif
 extern const struct dev_pm_ops stmmac_pltfr_pm_ops;
 
