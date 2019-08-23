@@ -128,6 +128,13 @@
 		>;
 	};
 
+	pinctrl_i2c2_gslx680: i2c2-gslx680grp {
+		fsl,pins = <
+#define GPIRQ_GSLX680	<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
+			MX8MM_IOMUXC_GPIO1_IO06_GPIO1_IO6		0x149
+		>;
+	};
+
 	pinctrl_i2c2_sn65dsi83: i2c2-sn65dsi83grp {
 		fsl,pins = <
 #define GPIRQ_I2C2_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
@@ -872,6 +879,17 @@
 		reg = <0x38>;
 		wakeup-gpios = GP_I2C2_FT5X06_WAKE;
 		reset-gpios = GP_I2C2_FT5X06_RESET;
+	};
+
+	touchscreen@40 {
+		compatible = "silead,gsl1680";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_gslx680>;
+		reg = <0x40>;
+		interrupts-extended = GPIRQ_GSLX680;
+		touchscreen-size-x = <480>;	/* swapped below */
+		touchscreen-size-y = <800>;
+		touchscreen-swapped-x-y;
 	};
 
 	touchscreen@5d {
