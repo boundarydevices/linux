@@ -35,6 +35,10 @@ else ifeq ($(DISTRO),stretch)
 	sudo apt install libc6-dev-i386 lib32stdc++-6-dev
 	sudo apt install g++-6-arm-linux-gnueabihf
 	$(call upd-alternatives,6,110,$(CROSS_COMPILE))
+else ifeq ($(DISTRO),bionic)
+	sudo apt install fakeroot kernel-wedge quilt ccache flex
+	sudo apt install bison libssl-dev crossbuild-essential-armhf
+#	$(call upd-alternatives,7,120,$(CROSS_COMPILE))
 else
 	$(error unknown DISTRO=$(DISTRO))
 endif
