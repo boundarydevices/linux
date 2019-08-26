@@ -2006,7 +2006,7 @@ static int set_resolution_param(struct gc2145_device *dev,
 		i++;
 	}
 	dev->cur_resolution_param = res_param;
-	set_flip(dev, NORMAL);
+	set_flip(dev, H_MIRROR);
 
 	return 0;
 }
