@@ -1201,6 +1201,8 @@ static int mxc_jpeg_parse(struct mxc_jpeg_ctx *ctx,
 	enum v4l2_buf_type cap_type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 	struct mxc_jpeg_stream stream;
 	bool notfound = true;
+	bool app14 = false;
+	u8 app14_transform = 0;
 	struct mxc_jpeg_sof sof, *psof = 0;
 	struct mxc_jpeg_sos *psos = 0;
 	u8 byte, *next = 0;
@@ -1245,6 +1247,16 @@ static int mxc_jpeg_parse(struct mxc_jpeg_ctx *ctx,
 			next = stream.addr + stream.loc;
 			psos = (struct mxc_jpeg_sos *)next;
 			notfound = false;
+			break;
+		case APP14:
+			app14 = true;
+			/*
+			 * Application Data Syntax is:
+			 * 2 bytes(APPn:0xFF,0xEE), 2 bytes(Lp), Ap1...ApLp-2
+			 * The transform flag is in Ap12
+			 * stream.loc is now on APPn-0xEE byte
+			 */
+			app14_transform = *(stream.addr + stream.loc + 12 + 1);
 			break;
 		default:
 			notfound = true;
@@ -1293,6 +1305,15 @@ static int mxc_jpeg_parse(struct mxc_jpeg_ctx *ctx,
 	img_fmt = mxc_jpeg_get_image_format(dev, &sof);
 	if (img_fmt == MXC_JPEG_INVALID)
 		return -EINVAL;
+
+	/*
+	 * If the transform flag from APP14 marker is 0, images that are
+	 * encoded with 3 components have RGB colorspace, see Recommendation
+	 * ITU-T T.872 chapter 6.5.3 APP14 marker segment for colour encoding
+	 */
+	if ((img_fmt == MXC_JPEG_YUV444) && app14 && (app14_transform == 0))
+		img_fmt = MXC_JPEG_RGB;
+
 	if (mxc_jpeg_imgfmt_to_fourcc(img_fmt, &fourcc)) {
 		dev_err(dev, "Fourcc not found for %d", img_fmt);
 		return -EINVAL;

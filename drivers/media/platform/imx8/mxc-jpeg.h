@@ -40,6 +40,7 @@
 #define SOF2				0xC2
 #define SOS				0xDA
 #define DHT				0xC4
+#define APP14				0xEE
 #define MXC_JPEG_ENC_CONF_DONE		1
 #define MXC_JPEG_MAX_PLANES		2
 
