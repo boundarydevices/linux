@@ -379,9 +379,9 @@
 
 		pinctrl_usdhc2_gpio: usdhc2gpiogrp {
 			fsl,pins = <
-				SC_P_USDHC1_RESET_B_CONN_USDHC1_RESET_B	0x00000021
-				SC_P_USDHC1_WP_CONN_USDHC1_WP			0x00000021
-				SC_P_USDHC1_CD_B_CONN_USDHC1_CD_B		0x00000021
+				SC_P_USDHC1_RESET_B_LSIO_GPIO4_IO19	0x00000021
+				SC_P_USDHC1_WP_LSIO_GPIO4_IO21		0x00000021
+				SC_P_USDHC1_CD_B_LSIO_GPIO4_IO22	0x00000021
 			>;
 		};
 
@@ -610,6 +610,8 @@
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>, <&pinctrl_usdhc2_gpio>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>, <&pinctrl_usdhc2_gpio>;
 	bus-width = <4>;
+	cd-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
+	wp-gpios = <&gpio4 21 GPIO_ACTIVE_HIGH>;
 	vmmc-supply = <&reg_usdhc2_vmmc>;
 	status = "okay";
 };

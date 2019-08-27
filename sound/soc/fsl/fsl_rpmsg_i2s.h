@@ -412,6 +412,7 @@ struct i2s_info {
 	int (*send_message)(struct i2s_rpmsg *msg, struct i2s_info *info);
 	dma_callback             callback[2];
 	spinlock_t               lock[2];
+	spinlock_t               wq_lock;
 	struct mutex             tx_lock;
 	struct mutex             i2c_lock;
 	struct stream_timer      stream_timer[2];

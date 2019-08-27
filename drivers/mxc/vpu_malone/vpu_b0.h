@@ -318,6 +318,27 @@ struct vpu_dec_cmd_request {
 	u32 data[VPU_DEC_CMD_DATA_MAX_NUM];
 };
 
+struct vpu_dec_perf_time {
+	u_int64 open_time;
+	u_int64 last_time;
+	u_int64 first_feed_interv;
+	u_int64 start_cmd_interv;
+	u_int64 start_done_interv;
+	u_int64 seq_hdr_found_interv;
+	u_int64 first_decoded_interv;
+	u_int64 first_ready_interv;
+
+	u_int64 first_decoded_time;
+	u_int64 last_decoded_time;
+	u_int64 cur_decoded_interv;
+	u_int64 decoded_fps;
+
+	u_int64 first_ready_time;
+	u_int64 last_ready_time;
+	u_int64 cur_ready_interv;
+	u_int64 ready_fps;
+};
+
 struct vpu_ctx {
 	struct vpu_dev *dev;
 	struct v4l2_fh fh;
@@ -332,6 +353,8 @@ struct vpu_ctx {
 	char buffer_name[64];
 	struct device_attribute dev_attr_instance_flow;
 	char flow_name[64];
+	struct device_attribute dev_attr_instance_perf;
+	char perf_name[64];
 	struct v4l2_ctrl *ctrls[V4L2_MAX_CTRLS];
 	struct v4l2_ctrl_handler ctrl_handler;
 	bool ctrl_inited;
@@ -403,14 +426,12 @@ struct vpu_ctx {
 	struct vpu_dec_cmd_request *pending;
 	struct mutex cmd_lock;
 
-	u_int64 start_time;
-	u_int64 last_decoded_time;
-	u_int64 last_ready_time;
+	struct vpu_dec_perf_time perf_time;
 };
 
-#define LVL_WARN		(1 << 1)
-#define LVL_EVENT		(1 << 2)
-#define LVL_INFO		(1 << 3)
+#define LVL_WARN		(1 << 0)
+#define LVL_EVENT		(1 << 1)
+#define LVL_INFO		(1 << 2)
 #define LVL_BIT_CMD		(1 << 4)
 #define LVL_BIT_EVT		(1 << 5)
 #define LVL_BIT_TS		(1 << 6)
@@ -439,6 +460,9 @@ struct vpu_ctx {
 
 #define VPU_DECODED_EVENT_PERF_MASK		(1 << 0)
 #define VPU_READY_EVENT_PERF_MASK		(1 << 1)
+
+#define V4L2_NXP_FRAME_VERTICAL_ALIGN		512
+#define V4L2_NXP_FRAME_HORIZONTAL_ALIGN		512
 
 pSTREAM_BUFFER_DESCRIPTOR_TYPE get_str_buffer_desc(struct vpu_ctx *ctx);
 u_int32 got_free_space(u_int32 wptr, u_int32 rptr, u_int32 start, u_int32 end);
