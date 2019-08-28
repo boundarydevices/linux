@@ -8130,18 +8130,13 @@ static void set_blend_reg(struct layer_blend_reg_s *blend_reg)
 		VSYNCOSD_WR_MPEG_REG(
 			VIU_OSD_BLEND_DIN0_SCOPE_H + reg_offset * i,
 			blend_reg->osd_blend_din_scope_h[i]);
+		}
+		if ((blend_reg->osd_blend_din_scope_v[i] & 0xffff0000) == 0)
+			blend_reg->osd_blend_din_scope_v[i] =
+				0xffffffff;
 		VSYNCOSD_WR_MPEG_REG(
 			VIU_OSD_BLEND_DIN0_SCOPE_V + reg_offset * i,
 			blend_reg->osd_blend_din_scope_v[i]);
-		}
-		else {
-			if ((blend_reg->osd_blend_din_scope_v[i] & 0xffff) == 0)
-				blend_reg->osd_blend_din_scope_v[i] =
-					0xffffffff;
-			VSYNCOSD_WR_MPEG_REG(
-				VIU_OSD_BLEND_DIN0_SCOPE_V + reg_offset * i,
-				blend_reg->osd_blend_din_scope_v[i]);
-		}
 	}
 
 	dv_core2_vsize = (blend_reg->osd_blend_blend0_size >> 16) & 0xfff;
