@@ -839,6 +839,14 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	 */
 	if (enabled && ssi->cpu_dai_drv.symmetric_rates)
 		return 0;
+	/*
+	 * SSI is properly configured if it is enabled and running in
+	 * the synchronous mode; Note that AC97 mode is an exception
+	 * that should set separate configurations for STCCR and SRCCR
+	 * despite running in the synchronous mode.
+	 */
+	if (ssi->streams && ssi->synchronous)
+		return 0;
 
 	if (!fsl_ssi_is_ac97(ssi)) {
 		/*
