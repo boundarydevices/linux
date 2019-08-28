@@ -301,6 +301,21 @@
 		dev_name = "ionvideo";
 		status = "okay";
 	};
+	amlvideo2_0 {
+		compatible = "amlogic, amlvideo2";
+		dev_name = "amlvideo2";
+		status = "okay";
+		amlvideo2_id = <0>;
+		cma_mode = <1>;
+	};
+
+	amlvideo2_1 {
+		compatible = "amlogic, amlvideo2";
+		dev_name = "amlvideo2";
+		status = "okay";
+		amlvideo2_id = <1>;
+		cma_mode = <1>;
+	};
 	vm0 {
 		compatible = "amlogic, vm";
 		memory-region = <&vm0_cma_reserved>;

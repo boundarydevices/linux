@@ -1215,7 +1215,7 @@
 		compatible = "amlogic, ge2d-sm1";
 		dev_name = "ge2d";
 		status = "okay";
-		interrupts = <0 146 1>;
+		interrupts = <0 150 1>;
 		interrupt-names = "ge2d";
 		clocks = <&clkc CLKID_VAPB_MUX>,
 			<&clkc CLKID_G2D>,
