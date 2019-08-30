@@ -818,6 +818,7 @@ static int aml_card_parse_of(struct device_node *node,
 			ret = aml_card_dai_link_of(np, priv,
 							   i, false);
 			if (ret < 0) {
+				dev_err(dev, "parse dai_link-%d fail\n", i);
 				of_node_put(np);
 				goto card_parse_end;
 			}

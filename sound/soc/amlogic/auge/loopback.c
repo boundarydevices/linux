@@ -75,7 +75,8 @@ struct loopback {
 	unsigned int datalb_chnum;
 	unsigned int datalb_chmask;
 	unsigned int datalb_lane_mask; /* related with data lane */
-
+	unsigned int lb_format;
+	unsigned int lb_lane_chmask;
 	unsigned int sysclk_freq;
 
 	struct toddr *tddr;
@@ -430,7 +431,7 @@ static int loopback_dai_startup(
 
 	/* datalb */
 	switch (p_loopback->datalb_src) {
-	case TDMINLB_TDMOUTA ... TDMINLB_PAD_TDMINC:
+	case TDMINLB_TDMOUTA ... TDMINLB_PAD_TDMINC_D:
 		/*tdminlb_startup(p_loopback);*/
 		break;
 	case SPDIFINLB_SPDIFOUTA ... SPDIFINLB_SPDIFOUTB:
@@ -472,7 +473,7 @@ static void loopback_dai_shutdown(
 
 	/* datalb */
 	switch (p_loopback->datalb_src) {
-	case TDMINLB_TDMOUTA ... TDMINLB_PAD_TDMINC:
+	case TDMINLB_TDMOUTA ... TDMINLB_PAD_TDMINC_D:
 		/*tdminlb_shutdown(p_loopback);*/
 		break;
 	case SPDIFINLB_SPDIFOUTA ... SPDIFINLB_SPDIFOUTB:
@@ -554,12 +555,7 @@ static int loopback_set_ctrl(struct loopback *p_loopback, int bitwidth)
 	}
 
 	switch (p_loopback->datalb_src) {
-	case TDMINLB_TDMOUTA:
-	case TDMINLB_TDMOUTB:
-	case TDMINLB_TDMOUTC:
-	case TDMINLB_PAD_TDMINA:
-	case TDMINLB_PAD_TDMINB:
-	case TDMINLB_PAD_TDMINC:
+	case TDMINLB_TDMOUTA ... TDMINLB_PAD_TDMINC_D:
 		if (bitwidth == 24) {
 			datalb_toddr_type = 4;
 			datalb_msb = 32 - 1;
@@ -603,9 +599,10 @@ static int loopback_set_ctrl(struct loopback *p_loopback, int bitwidth)
 	lb_set_datain_cfg(p_loopback->id, &datain_cfg);
 	lb_set_datalb_cfg(p_loopback->id, &datalb_cfg);
 
-	tdminlb_set_format(1); /* tdmin_lb i2s mode */
+	tdminlb_set_format(p_loopback->lb_format == SND_SOC_DAIFMT_I2S);
 	tdminlb_set_lanemask_and_chswap(0x76543210,
-		p_loopback->datalb_lane_mask);
+		p_loopback->datalb_lane_mask,
+		p_loopback->lb_lane_chmask);
 	tdminlb_set_ctrl(p_loopback->datalb_src);
 
 	return 0;
@@ -713,6 +710,10 @@ static int loopback_dai_prepare(
 		case TDMINLB_PAD_TDMINA:
 		case TDMINLB_PAD_TDMINB:
 		case TDMINLB_PAD_TDMINC:
+			break;
+		case TDMINLB_PAD_TDMINA_D:
+		case TDMINLB_PAD_TDMINB_D:
+		case TDMINLB_PAD_TDMINC_D:
 			break;
 		case SPDIFINLB_SPDIFOUTA:
 		case SPDIFINLB_SPDIFOUTB:
@@ -868,7 +869,7 @@ static int loopback_dai_hw_params(
 
 	/* datalb */
 	switch (p_loopback->datalb_src) {
-	case TDMINLB_TDMOUTA ... TDMINLB_PAD_TDMINC:
+	case TDMINLB_TDMOUTA ... TDMINLB_PAD_TDMINC_D:
 		/*datalb_tdminlb_set_clk(p_loopback);*/
 		break;
 	case SPDIFINLB_SPDIFOUTA ... SPDIFINLB_SPDIFOUTB:
@@ -1015,6 +1016,9 @@ static const char *const datalb_tdminlb_texts[] = {
 	"TDMIN_A",
 	"TDMIN_B",
 	"TDMIN_C",
+	"TDMIN_A_D",
+	"TDMIN_B_D",
+	"TDMIN_C_D",
 };
 
 static const struct soc_enum datalb_tdminlb_enum =
@@ -1254,6 +1258,39 @@ err:
 	return -EINVAL;
 }
 
+static unsigned int loopback_parse_format(struct device_node *node)
+{
+	unsigned int format = 0;
+	int ret = 0;
+	const char *str;
+	struct {
+		char *name;
+		unsigned int val;
+	} fmt_table[] = {
+		{"i2s", SND_SOC_DAIFMT_I2S},
+		{"dsp_a", SND_SOC_DAIFMT_DSP_A},
+		{"dsp_b", SND_SOC_DAIFMT_DSP_B}
+	};
+
+	ret = of_property_read_string(node, "datalb-format", &str);
+	if (ret == 0) {
+		int i;
+
+		for (i = 0; i < ARRAY_SIZE(fmt_table); i++) {
+			if (strcmp(str, fmt_table[i].name) == 0) {
+				format |= fmt_table[i].val;
+				break;
+			}
+		}
+	}
+
+	/* default format is I2S */
+	if (format == 0)
+		format = SND_SOC_DAIFMT_I2S;
+
+	return format;
+}
+
 static int loopback_parse_of(
 	struct device_node *node,
 	struct loopback *p_loopback)
@@ -1327,6 +1364,15 @@ static int loopback_parse_of(
 		goto fail;
 	}
 
+	p_loopback->lb_format = loopback_parse_format(node);
+	snd_soc_of_get_slot_mask
+		(node,
+		"datalb-channels-mask",
+		&p_loopback->lb_lane_chmask);
+	if (p_loopback->lb_lane_chmask == 0) {
+		/* default format is I2S and mask two channels */
+		p_loopback->lb_lane_chmask = 0x3;
+	}
 	pr_info("\tdatain_src:%d, datain_chnum:%d, datain_chumask:%x\n",
 		p_loopback->datain_src,
 		p_loopback->datain_chnum,
@@ -1338,6 +1384,8 @@ static int loopback_parse_of(
 	pr_info("\tdatain_lane_mask:0x%x, datalb_lane_mask:0x%x\n",
 		p_loopback->datain_lane_mask,
 		p_loopback->datalb_lane_mask);
+	pr_info("datalb_format: %d, chmask for lanes: %#x\n",
+		p_loopback->lb_format, p_loopback->lb_lane_chmask);
 
 	ret = datain_parse_of(node, p_loopback);
 	if (ret) {
