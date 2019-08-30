@@ -500,7 +500,6 @@
 		lvds-to-hdmi-bridge@4c {
 			compatible = "ite,it6263";
 			reg = <0x4c>;
-			reset-gpios = <&pca9557_a 6 GPIO_ACTIVE_LOW>;
 
 			port {
 				it6263_0_in: endpoint {
@@ -657,7 +656,6 @@
 		lvds-to-hdmi-bridge@4c {
 			compatible = "ite,it6263";
 			reg = <0x4c>;
-			reset-gpios = <&pca9557_b 7 GPIO_ACTIVE_LOW>;
 
 			port {
 				it6263_1_in: endpoint {
