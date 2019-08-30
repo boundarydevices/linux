@@ -77,7 +77,11 @@
 };
 
 &i2c1_lvds0 {
-	clock-frequency = <400000>;
+	clock-frequency = <500000>;
+};
+
+&i2c1_lvds1 {
+	clock-frequency = <500000>;
 };
 
 &lvds0_pwm {

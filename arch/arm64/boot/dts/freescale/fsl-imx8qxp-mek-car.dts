@@ -492,7 +492,7 @@
 		assigned-clocks = <&clk_post IMX8QXP_MIPI0_I2C0_DIV>;
 		assigned-clock-rates = <24000000>;
 		power-domains = <&pd_mipi_dsi_0_i2c0>;
-		clock-frequency = <400000>;
+		clock-frequency = <500000>;
 		status = "okay";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c0_mipi_lvds0>;
@@ -1154,7 +1154,7 @@
 };
 
 &i2c0_mipi_lvds1 {
-	clock-frequency = <400000>;
+	clock-frequency = <500000>;
         adv_bridge2: adv7535@3d {
                 status = "disabled";
         };

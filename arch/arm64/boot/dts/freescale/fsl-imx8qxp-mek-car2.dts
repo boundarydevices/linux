@@ -65,7 +65,7 @@
 };
 
 &i2c0_mipi_lvds0 {
-	clock-frequency = <400000>;
+	clock-frequency = <500000>;
 	adv_bridge1: adv7535@3d {
 		status = "disabled";
         };
@@ -116,7 +116,7 @@
 };
 
 &i2c0_mipi_lvds1 {
-	clock-frequency = <400000>;
+	clock-frequency = <500000>;
 	adv_bridge2: adv7535@3d {
 		status = "disabled";
         };
