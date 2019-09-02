@@ -6372,7 +6372,8 @@ static int vpp_matrix_update(
 	int hdmi_scs_type_changed = 0;
 	struct hdr10plus_para hdmitx_hdr10plus_param;
 
-	if (vinfo == NULL)
+	if (!vinfo || vinfo->mode == VMODE_NULL ||
+	    vinfo->mode == VMODE_INVALID)
 		return 0;
 
 	/* Tx hdr information */
@@ -6442,7 +6443,9 @@ int amvecm_matrix_process(
 	int i;
 
 	if ((get_cpu_type() < MESON_CPU_MAJOR_ID_GXTVBB) ||
-		is_meson_gxl_package_905M2() || (csc_en == 0))
+	    is_meson_gxl_package_905M2() || (csc_en == 0) ||
+	    !vinfo || vinfo->mode == VMODE_NULL ||
+	    vinfo->mode == VMODE_INVALID)
 		return 0;
 
 	if (reload_mtx) {
