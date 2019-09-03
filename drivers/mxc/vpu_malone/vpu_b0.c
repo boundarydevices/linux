@@ -2011,6 +2011,7 @@ static	struct v4l2_ctrl_config vpu_custom_g_cfg[] = {
 		.max = 10,
 		.step = 1,
 		.def = 1,
+		.flags = V4L2_CTRL_FLAG_VOLATILE,
 	},
 	{
 		.id = V4L2_CID_USER_FRAME_TRANSFERCHARS,
@@ -2020,6 +2021,7 @@ static	struct v4l2_ctrl_config vpu_custom_g_cfg[] = {
 		.max = 18,
 		.step = 1,
 		.def = 0,
+		.flags = V4L2_CTRL_FLAG_VOLATILE,
 	},
 	{
 		.id = V4L2_CID_USER_FRAME_MATRIXCOEFFS,
@@ -2029,6 +2031,7 @@ static	struct v4l2_ctrl_config vpu_custom_g_cfg[] = {
 		.max = 10,
 		.step = 1,
 		.def = 0,
+		.flags = V4L2_CTRL_FLAG_VOLATILE,
 	},
 	{
 		.id = V4L2_CID_USER_FRAME_FULLRANGE,
@@ -2038,6 +2041,7 @@ static	struct v4l2_ctrl_config vpu_custom_g_cfg[] = {
 		.max = 1,
 		.step = 1,
 		.def = 0,
+		.flags = V4L2_CTRL_FLAG_VOLATILE,
 	},
 	{
 		.id = V4L2_CID_USER_FRAME_VUIPRESENT,
@@ -2047,6 +2051,7 @@ static	struct v4l2_ctrl_config vpu_custom_g_cfg[] = {
 		.max = 1,
 		.step = 1,
 		.def = 0,
+		.flags = V4L2_CTRL_FLAG_VOLATILE,
 	}
 };
 
@@ -2101,6 +2106,15 @@ static	struct v4l2_ctrl_config vpu_custom_s_cfg[] = {
 		.min = 0,
 		.step = 1,
 		.def = 0,
+	},
+	{
+		.id = V4L2_CID_USER_STREAM_INPUT_MODE,
+		.name = "stream input mode",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 0,
+		.max = NON_FRAME_LVL,
+		.step = 1,
+		.def = 1,
 	}
 };
 
@@ -2134,6 +2148,9 @@ static int v4l2_custom_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_USER_BS_H_THRESHOLD:
 		ctx->bs_h_threshold = ctrl->val;
+		break;
+	case V4L2_CID_USER_STREAM_INPUT_MODE:
+		ctx->stream_input_mode = ctrl->val;
 		break;
 	default:
 		vpu_err("%s() Invalid costomer control(%d)\n",
@@ -2210,45 +2227,46 @@ static int v4l2_dec_g_v_ctrl(struct v4l2_ctrl *ctrl)
 	return 0;
 }
 
-static int add_stand_g_ctrl(struct vpu_ctx *This, uint32_t start)
+static int add_stand_g_ctrl(struct vpu_ctx *This)
 {
 	static const struct v4l2_ctrl_ops vpu_dec_ctrl_ops = {
 		.g_volatile_ctrl  = v4l2_dec_g_v_ctrl,
 	};
 	u_int32 i;
+	struct v4l2_ctrl *ctrl;
 
 	if (!This)
 		return -EINVAL;
 
 	for (i = 0; i < CNT_STAND_G_CTRLS; i++) {
-		This->ctrls[i+start] = v4l2_ctrl_new_std(&This->ctrl_handler,
-				&vpu_dec_ctrl_ops,
-				vpu_controls_dec[i].id,
-				vpu_controls_dec[i].minimum,
-				vpu_controls_dec[i].maximum,
-				vpu_controls_dec[i].step,
-				vpu_controls_dec[i].default_value
-				);
-		if (This->ctrl_handler.error ||
-				!This->ctrls[i+start]) {
-			vpu_err("%s() v4l2_ctrl_new_std failed(%d) This->ctrls[%d](%p)\n",
-					__func__, This->ctrl_handler.error, i+start, This->ctrls[i+start]);
+		ctrl = v4l2_ctrl_new_std(&This->ctrl_handler,
+					 &vpu_dec_ctrl_ops,
+					 vpu_controls_dec[i].id,
+					 vpu_controls_dec[i].minimum,
+					 vpu_controls_dec[i].maximum,
+					 vpu_controls_dec[i].step,
+					 vpu_controls_dec[i].default_value);
+		if (This->ctrl_handler.error || !ctrl) {
+			vpu_err("%s() v4l2_ctrl_new_std[%d] failed: %d\n",
+				__func__, i, This->ctrl_handler.error);
 			return This->ctrl_handler.error;
 		}
 
 		if (vpu_controls_dec[i].is_volatile)
-			This->ctrls[i]->flags |= V4L2_CTRL_FLAG_VOLATILE;
+			ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
 	}
 
+	ctrl = NULL;
 	return 0;
 }
 
-static int add_custom_s_ctrl(struct vpu_ctx *This, uint32_t start)
+static int add_custom_s_ctrl(struct vpu_ctx *This)
 {
 	static const struct v4l2_ctrl_ops vpu_custom_ctrl_ops = {
 		.s_ctrl = v4l2_custom_s_ctrl,
 	};
 	uint32_t i;
+	struct v4l2_ctrl *ctrl;
 
 	if (!This)
 		return -EINVAL;
@@ -2259,69 +2277,59 @@ static int add_custom_s_ctrl(struct vpu_ctx *This, uint32_t start)
 		if (vpu_custom_s_cfg[i].id == V4L2_CID_USER_FRAME_DEPTH)
 			vpu_custom_s_cfg[i].def = vpu_frm_depth;
 		if (vpu_custom_s_cfg[i].id == V4L2_CID_USER_BS_L_THRESHOLD ||
-				vpu_custom_s_cfg[i].id == V4L2_CID_USER_BS_H_THRESHOLD)
+		    vpu_custom_s_cfg[i].id == V4L2_CID_USER_BS_H_THRESHOLD)
 			vpu_custom_s_cfg[i].max = vpu_max_bufsize;
 
-		This->ctrls[i+start] = v4l2_ctrl_new_custom(&This->ctrl_handler,
-			&vpu_custom_s_cfg[i], NULL);
+		ctrl = v4l2_ctrl_new_custom(&This->ctrl_handler,
+					    &vpu_custom_s_cfg[i], NULL);
 
-		if (This->ctrl_handler.error ||
-				!This->ctrls[i+start]) {
-			vpu_err("%s() failed(%d) This->ctrls[%d](%p)\n",
-					__func__, This->ctrl_handler.error, i+start, This->ctrls[i+start]);
+		if (This->ctrl_handler.error || !ctrl) {
+			vpu_err("%s() v4l2_ctrl_new_std[%d] failed: %d\n",
+				__func__, i, This->ctrl_handler.error);
 			return This->ctrl_handler.error;
 		}
 	}
 
+	ctrl = NULL;
 	return 0;
 }
 
-static int add_custom_g_ctrl(struct vpu_ctx *This, uint32_t start)
+static int add_custom_g_ctrl(struct vpu_ctx *This)
 {
 	static const struct v4l2_ctrl_ops vpu_custom_g_ctrl_ops = {
 		.g_volatile_ctrl = v4l2_custom_g_ctrl,
 	};
 
 	uint32_t i;
+	struct v4l2_ctrl *ctrl;
 
 	if (!This)
 		return -EINVAL;
 
 	for (i = 0; i < CNT_CUSTOM_G_CFG; i++) {
 		vpu_custom_g_cfg[i].ops = &vpu_custom_g_ctrl_ops;
-		This->ctrls[i+start] = v4l2_ctrl_new_custom(&This->ctrl_handler,
-			&vpu_custom_g_cfg[i], NULL);
+		ctrl = v4l2_ctrl_new_custom(&This->ctrl_handler,
+					    &vpu_custom_g_cfg[i], NULL);
 
-		if (This->ctrl_handler.error ||
-				!This->ctrls[i+start]) {
-			vpu_err("%s() failed(%d) This->ctrls[%d](%p)\n",
-					__func__, This->ctrl_handler.error, i+start, This->ctrls[i+start]);
+		if (This->ctrl_handler.error || !ctrl) {
+			vpu_err("%s() v4l2_ctrl_new_std[%d] failed: %d\n",
+				__func__, i, This->ctrl_handler.error);
 			return This->ctrl_handler.error;
 		}
-
-		This->ctrls[i+start]->flags |= V4L2_CTRL_FLAG_VOLATILE;
 	}
 
+	ctrl = NULL;
 	return 0;
 }
 
 static int add_dec_ctrl(struct vpu_ctx *This)
 {
-	uint32_t start = 0;
-
 	if (!This)
 		return -EINVAL;
 
-	if (CNT_CTRLS_DEC > V4L2_MAX_CTRLS) {
-		vpu_err("error: v4l2 decode controls added count excedds the limit\n");
-		return -EINVAL;
-	}
-
-	add_stand_g_ctrl(This, start);
-	start += CNT_STAND_G_CTRLS;
-	add_custom_s_ctrl(This, start);
-	start += CNT_CUSTOM_S_CFG;
-	add_custom_g_ctrl(This, start);
+	add_stand_g_ctrl(This);
+	add_custom_s_ctrl(This);
+	add_custom_g_ctrl(This);
 
 	return 0;
 }
@@ -2354,14 +2362,13 @@ static int ctrls_setup_decoder(struct vpu_ctx *This)
 
 static void ctrls_delete_decoder(struct vpu_ctx *This)
 {
-	int i;
+	if (!This)
+		return;
 
 	if (This->ctrl_inited) {
 		v4l2_ctrl_handler_free(&This->ctrl_handler);
 		This->ctrl_inited = false;
 	}
-	for (i = 0; i < CNT_CTRLS_DEC; i++)
-		This->ctrls[i] = NULL;
 }
 
 static void update_wptr(struct vpu_ctx *ctx,
@@ -2656,11 +2663,12 @@ static void do_send_cmd_to_firmware(struct vpu_ctx *ctx,
 	vpu_log_cmd(cmdid, idx);
 	count_cmd(&ctx->statistic, cmdid);
 	record_log_info(ctx, LOG_COMMAND, cmdid, 0);
-	mutex_lock(&ctx->dev->cmd_mutex);
+
+	spin_lock(&ctx->dev->cmd_spinlock);
 	rpc_send_cmd_buf(&ctx->dev->shared_mem, idx, cmdid, cmdnum, local_cmddata);
-	mutex_unlock(&ctx->dev->cmd_mutex);
 	mb();
 	MU_SendMessage(ctx->dev->mu_base_virtaddr, 0, COMMAND);
+	spin_unlock(&ctx->dev->cmd_spinlock);
 }
 
 static struct vpu_dec_cmd_request vpu_dec_cmds[] = {
@@ -3289,18 +3297,18 @@ static int update_stream_addr_vpu(struct vpu_ctx *ctx, void *input_buffer, uint3
 
 static void fill_stream_buffer_info(struct vpu_ctx *ctx)
 {
-	pDEC_RPC_HOST_IFACE pSharedInterface = ctx->dev->shared_mem.pSharedInterface;
-	pBUFFER_INFO_TYPE buffer_info = &pSharedInterface->StreamBuffInfo[ctx->str_index];
+	pDEC_RPC_HOST_IFACE pSharedInterface;
+	pBUFFER_INFO_TYPE buffer_info;
 
 	if (!ctx)
 		return;
 
-	if (ctx->start_code_bypass) {
-		buffer_info->stream_input_mode = NON_FRAME_LVL;
+	pSharedInterface = ctx->dev->shared_mem.pSharedInterface;
+	buffer_info = &pSharedInterface->StreamBuffInfo[ctx->str_index];
+
+	buffer_info->stream_input_mode = ctx->stream_input_mode;
+	if (ctx->stream_input_mode == NON_FRAME_LVL)
 		buffer_info->stream_buffer_threshold = stream_buffer_threshold;
-	} else {
-		buffer_info->stream_input_mode = FRAME_LVL;
-	}
 
 	buffer_info->stream_pic_input_count = ctx->frm_total_num;
 }
@@ -3358,7 +3366,8 @@ static bool vpu_dec_stream_is_ready(struct vpu_ctx *ctx)
 	/*
 	 *frame depth need to be set by user and then the condition works
 	 */
-	if (vpu_frm_depth != INVALID_FRAME_DEPTH) {
+	if (vpu_frm_depth != INVALID_FRAME_DEPTH &&
+	    ctx->stream_input_mode == FRAME_LVL) {
 		if ((getTSManagerPreBufferCnt(ctx->tsm)) >= vpu_frm_depth)
 			return false;
 	}
@@ -3388,7 +3397,7 @@ static bool verify_decoded_frames(struct vpu_ctx *ctx)
 	pDEC_RPC_HOST_IFACE pSharedInterface = ctx->dev->shared_mem.pSharedInterface;
 	pBUFFER_INFO_TYPE buffer_info = &pSharedInterface->StreamBuffInfo[ctx->str_index];
 
-	if (ctx->start_code_bypass)
+	if (ctx->stream_input_mode != FRAME_LVL)
 		return true;
 
 	if (buffer_info->stream_pic_input_count != buffer_info->stream_pic_parsed_count) {
@@ -4510,6 +4519,7 @@ static irqreturn_t fsl_vpu_mu_isr(int irq, void *This)
 					VPU_REG_BASE);
 
 		/*CM0 use relative address*/
+		spin_lock(&dev->cmd_spinlock);
 		MU_sendMesgToFW(dev->mu_base_virtaddr,
 				RPC_BUF_OFFSET,
 				vpu_dec_cpu_phy_to_mu(dev,  dev->m0_rpc_phy));
@@ -4517,6 +4527,7 @@ static irqreturn_t fsl_vpu_mu_isr(int irq, void *This)
 				BOOT_ADDRESS,
 				dev->m0_p_fw_space_phy);
 		MU_sendMesgToFW(dev->mu_base_virtaddr, INIT_DONE, 2);
+		spin_unlock(&dev->cmd_spinlock);
 
 	} else if (msg == 0x55) {
 		dev->firmware_started = true;
@@ -5379,6 +5390,9 @@ static ssize_t show_instance_buffer_info(struct device *dev,
 	num += scnprintf(buf + num, PAGE_SIZE - num,
 			"\t%40s:%16d\n", "stream_buffer_threshold",
 			buffer_info->stream_buffer_threshold);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"\t%40s:%16d\n", "start_code_bypass",
+			ctx->start_code_bypass);
 
 	return num;
 }
@@ -5801,6 +5815,7 @@ static int v4l2_open(struct file *filp)
 	ctx->ctx_released = false;
 	ctx->b_dis_reorder = false;
 	ctx->start_code_bypass = false;
+	ctx->stream_input_mode = FRAME_LVL;
 	ctx->hang_status = false;
 	ctx->first_dump_data_flag = true;
 	INIT_LIST_HEAD(&ctx->cmd_q);
@@ -5837,6 +5852,7 @@ static int v4l2_open(struct file *filp)
 			if (!wait_for_completion_timeout(&ctx->dev->start_cmp, msecs_to_jiffies(10000))) {
 				vpu_err("error: don't get start interrupt\n");
 				ret = -1;
+				mutex_unlock(&dev->dev_mutex);
 				goto err_firmware_load;
 			}
 		}
@@ -6171,7 +6187,7 @@ static int init_vpudev_parameters(struct vpu_dev *dev)
 		return -EINVAL;
 
 	mutex_init(&dev->dev_mutex);
-	mutex_init(&dev->cmd_mutex);
+	spin_lock_init(&dev->cmd_spinlock);
 	mutex_init(&dev->fw_flow_mutex);
 	init_completion(&dev->start_cmp);
 	init_completion(&dev->snap_done_cmp);

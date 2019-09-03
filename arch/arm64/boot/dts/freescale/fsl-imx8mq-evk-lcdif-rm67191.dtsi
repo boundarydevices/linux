@@ -71,8 +71,10 @@
 		pinctrl-0 = <&pinctrl_mipi_dsi_en>;
 		reset-gpio = <&gpio5 6 GPIO_ACTIVE_HIGH>;
 		dsi-lanes = <4>;
+		video-mode = <2>;
 		panel-width-mm = <68>;
 		panel-height-mm = <121>;
+
 		port {
 			panel1_in: endpoint {
 				remote-endpoint = <&mipi_dsi_bridge_out>;
