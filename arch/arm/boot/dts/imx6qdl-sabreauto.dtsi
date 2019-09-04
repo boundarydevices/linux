@@ -128,6 +128,38 @@
 		vin-supply = <&reg_can_en>;
 	};
 
+	reg_si4763_vio1: regulator@3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vio1";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	reg_si4763_vio2: regulator@4 {
+		compatible = "regulator-fixed";
+		regulator-name = "vio2";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	reg_si4763_vd: regulator@5 {
+		compatible = "regulator-fixed";
+		regulator-name = "vd";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
+
+	reg_si4763_va: regulator@6 {
+		compatible = "regulator-fixed";
+		regulator-name = "va";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+	};
+
 	mxcfb1: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
 		disp_dev = "ldb";
@@ -190,6 +222,16 @@
 			"AIN1R", "Line In Jack",
 			"AIN2L", "Line In Jack",
 			"AIN2R", "Line In Jack";
+	};
+
+	sound-fm {
+		compatible = "fsl,imx-audio-si476x",
+			   "fsl,imx-tuner-si476x";
+		model = "imx-radio-si4763";
+		audio-cpu = <&ssi2>;
+		audio-codec = <&si476x_codec>;
+		mux-int-port = <2>;
+		mux-ext-port = <5>;
 	};
 
 	sound-spdif {
@@ -502,6 +544,20 @@
 		interrupt-parent = <&gpio2>;
 		interrupts = <28 IRQ_TYPE_EDGE_FALLING>;
 		wakeup-gpios = <&gpio2 28 GPIO_ACTIVE_HIGH>;
+	};
+
+	si4763: si4763@63 {
+		compatible = "si4761";
+		reg = <0x63>;
+		va-supply = <&reg_si4763_va>;
+		vd-supply = <&reg_si4763_vd>;
+		vio1-supply = <&reg_si4763_vio1>;
+		vio2-supply = <&reg_si4763_vio2>;
+		revision-a10; /* set to default A10 compatible command set */
+
+		si476x_codec: si476x-codec {
+			compatible = "si476x-codec";
+		};
 	};
 };
 
