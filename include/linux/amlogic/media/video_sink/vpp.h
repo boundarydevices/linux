@@ -220,11 +220,18 @@ enum select_scaler_path_e {
 * if core1 v disable,core1 input width max=4096;
 * gxlx only have core1,txhd/g12a only have core0
 */
-#define SUPER_CORE0_WIDTH_MAX  2048
-#define SUPER_CORE1_WIDTH_MAX  4096
 #define SUPER_CORE0_SUPPORT  (1 << 0)
 #define SUPER_CORE1_SUPPORT  (1 << 1)
 
+struct sr_info_s {
+	u32 sr_support;
+	u32 core0_v_enable_width_max;
+	u32 core0_v_disable_width_max;
+	u32 core1_v_enable_width_max;
+	u32 core1_v_disable_width_max;
+	u32 sr_reg_offt;
+	u32 sr_reg_offt2;	/*for tl1*/
+};
 
 #ifdef TV_3D_FUNCTION_OPEN
 /*cmd use for 3d operation*/

@@ -389,9 +389,7 @@ module_param(force_filter_mode, int, 0664);
 #endif
 /*temp disable sr for power test*/
 bool super_scaler = true;
-static unsigned int sr_support;
-static u32 sr_reg_offt;
-static u32 sr_reg_offt2;	/*for tl1*/
+struct sr_info_s sr_info;
 static unsigned int super_debug;
 module_param(super_debug, uint, 0664);
 MODULE_PARM_DESC(super_debug, "super_debug");
@@ -1731,11 +1729,21 @@ int vpp_set_super_scaler_regs(
 	int tmp_data = 0;
 	int tmp_data2 = 0;
 	unsigned int data_path_chose;
-	int sr_core0_max_width = SUPER_CORE0_WIDTH_MAX;
+	int sr_core0_max_width;
+	struct sr_info_s *sr;
+	u32 sr_reg_offt;
+	u32 sr_reg_offt2;
+	u32 sr_support;
 
+	sr = &sr_info;
+	sr_support = sr->sr_support;
+	sr_reg_offt = sr->sr_reg_offt;
+	sr_reg_offt2 = sr->sr_reg_offt2;
 	/* just work around for g12a not to disable sr core2 bit2 */
 	if (is_meson_g12a_cpu() && (reg_srscl0_vert_ratio == 0))
-		sr_core0_max_width = SUPER_CORE0_WIDTH_MAX << 1;
+		sr_core0_max_width = sr->core0_v_enable_width_max;
+	else
+		sr_core0_max_width = sr->core0_v_disable_width_max;
 
 	/* top config */
 	tmp_data = VSYNC_RD_MPEG_REG(VPP_SRSHARP0_CTRL);
@@ -1937,7 +1945,11 @@ static void vpp_set_super_scaler(
 	u32 src_width = next_frame_par->video_input_w;
 	u32 src_height = next_frame_par->video_input_h;
 	u32 sr_path;
+	struct sr_info_s *sr;
+	u32 sr_support;
 
+	sr = &sr_info;
+	sr_support = sr->sr_support;
 	/*for sr adjust*/
 	vpp_super_scaler_support();
 
@@ -1957,11 +1969,11 @@ static void vpp_set_super_scaler(
 	/* step1: judge core0&core1 vertical enable or disable*/
 	if (ver_sc_multiple_num >= 2*SUPER_SCALER_V_FACTOR) {
 		next_frame_par->supsc0_vert_ratio =
-			((src_width < SUPER_CORE0_WIDTH_MAX / 2) &&
+			((src_width < sr->core0_v_enable_width_max) &&
 			(sr_support & SUPER_CORE0_SUPPORT)) ? 1 : 0;
 		next_frame_par->supsc1_vert_ratio =
-			((width_out < SUPER_CORE1_WIDTH_MAX) &&
-			(src_width < SUPER_CORE1_WIDTH_MAX / 2) &&
+			((width_out < sr->core1_v_disable_width_max) &&
+			(src_width < sr->core1_v_enable_width_max) &&
 			(sr_support & SUPER_CORE1_SUPPORT)) ? 1 : 0;
 		if (next_frame_par->supsc0_vert_ratio &&
 			(ver_sc_multiple_num < 4 * SUPER_SCALER_V_FACTOR))
@@ -1979,19 +1991,19 @@ static void vpp_set_super_scaler(
 	/* step2: judge core0&core1 horizontal enable or disable*/
 	if ((hor_sc_multiple_num >= 2) &&
 		(vpp_wide_mode != VIDEO_WIDEOPTION_NONLINEAR)) {
-		if ((src_width > SUPER_CORE0_WIDTH_MAX) ||
-			((src_width > SUPER_CORE0_WIDTH_MAX / 2) &&
-			next_frame_par->supsc0_vert_ratio) ||
-			(((src_width << 1) > SUPER_CORE1_WIDTH_MAX / 2) &&
-			next_frame_par->supsc1_vert_ratio))
+		if ((src_width > sr->core0_v_disable_width_max) ||
+		    ((src_width > sr->core0_v_enable_width_max) &&
+		     next_frame_par->supsc0_vert_ratio) ||
+		    (((src_width << 1) > sr->core1_v_enable_width_max) &&
+		     next_frame_par->supsc1_vert_ratio))
 			next_frame_par->supsc0_hori_ratio = 0;
 		else if (sr_support & SUPER_CORE0_SUPPORT)
 			next_frame_par->supsc0_hori_ratio = 1;
-		if (((width_out >> 1) > SUPER_CORE1_WIDTH_MAX) ||
-			(((width_out >> 1) > SUPER_CORE1_WIDTH_MAX / 2) &&
-			next_frame_par->supsc1_vert_ratio) ||
-			(next_frame_par->supsc0_hori_ratio &&
-			(hor_sc_multiple_num < 4)))
+		if (((width_out >> 1) > sr->core1_v_disable_width_max) ||
+		    (((width_out >> 1) > sr->core1_v_enable_width_max) &&
+		     next_frame_par->supsc1_vert_ratio) ||
+		    (next_frame_par->supsc0_hori_ratio &&
+		    (hor_sc_multiple_num < 4)))
 			next_frame_par->supsc1_hori_ratio = 0;
 		else if (sr_support & SUPER_CORE1_SUPPORT)
 			next_frame_par->supsc1_hori_ratio = 1;
@@ -2022,7 +2034,7 @@ static void vpp_set_super_scaler(
 	/*double check core1 input width for core1_vert_ratio!!!*/
 	if (next_frame_par->supsc1_vert_ratio &&
 		(width_out >> next_frame_par->supsc1_hori_ratio >
-		SUPER_CORE1_WIDTH_MAX/2)) {
+		sr->core1_v_enable_width_max)) {
 		next_frame_par->supsc1_vert_ratio = 0;
 		if (next_frame_par->supsc1_hori_ratio == 0)
 			next_frame_par->supsc1_enable = 0;
@@ -2030,7 +2042,7 @@ static void vpp_set_super_scaler(
 
 	/* option add patch */
 	if ((ver_sc_multiple_num <= super_scaler_v_ratio) &&
-		(src_height >= SUPER_CORE0_WIDTH_MAX / 2) &&
+		(src_height >= sr->core0_v_enable_width_max) &&
 		(src_height <= 1088) &&
 		(ver_sc_multiple_num > SUPER_SCALER_V_FACTOR) &&
 		(vinfo->height >= 2000)) {
@@ -3226,42 +3238,58 @@ void vpp_disp_info_init(
 
 void vpp_super_scaler_support(void)
 {
+	struct sr_info_s *sr;
+
+	sr = &sr_info;
 	if (is_meson_gxlx_cpu()) {
-		sr_support &= ~SUPER_CORE0_SUPPORT;
-		sr_support |= SUPER_CORE1_SUPPORT;
-	} else if (is_meson_txhd_cpu() ||
-		is_meson_g12a_cpu() ||
+		sr->sr_support &= ~SUPER_CORE0_SUPPORT;
+		sr->sr_support |= SUPER_CORE1_SUPPORT;
+		sr->core1_v_disable_width_max = 4096;
+		sr->core1_v_enable_width_max = 2048;
+	} else if (is_meson_txhd_cpu()) {
+		/* 2k pannal */
+		sr->sr_support |= SUPER_CORE0_SUPPORT;
+		sr->sr_support &= ~SUPER_CORE1_SUPPORT;
+		sr->core0_v_disable_width_max = 2048;
+		sr->core0_v_enable_width_max = 1024;
+	} else if (is_meson_g12a_cpu() ||
 		is_meson_g12b_cpu() ||
 		is_meson_sm1_cpu()) {
-		sr_support |= SUPER_CORE0_SUPPORT;
-		sr_support &= ~SUPER_CORE1_SUPPORT;
+		sr->sr_support |= SUPER_CORE0_SUPPORT;
+		sr->sr_support &= ~SUPER_CORE1_SUPPORT;
+		sr->core0_v_disable_width_max = 4096;
+		sr->core0_v_enable_width_max = 2048;
 	} else if (is_meson_gxtvbb_cpu()
 		|| is_meson_txl_cpu()
 		|| is_meson_txlx_cpu()
 		|| is_meson_tl1_cpu()
 		|| is_meson_tm2_cpu()) {
-		sr_support |= SUPER_CORE0_SUPPORT;
-		sr_support |= SUPER_CORE1_SUPPORT;
+		sr->sr_support |= SUPER_CORE0_SUPPORT;
+		sr->sr_support |= SUPER_CORE1_SUPPORT;
+		sr->core0_v_disable_width_max = 2048;
+		sr->core0_v_enable_width_max = 1024;
+		sr->core1_v_disable_width_max = 4096;
+		sr->core1_v_enable_width_max = 2048;
 	} else {
-		sr_support &= ~SUPER_CORE0_SUPPORT;
-		sr_support &= ~SUPER_CORE1_SUPPORT;
+		sr->sr_support &= ~SUPER_CORE0_SUPPORT;
+		sr->sr_support &= ~SUPER_CORE1_SUPPORT;
 	}
 	if (super_scaler == 0) {
-		sr_support &= ~SUPER_CORE0_SUPPORT;
-		sr_support &= ~SUPER_CORE1_SUPPORT;
+		sr->sr_support &= ~SUPER_CORE0_SUPPORT;
+		sr->sr_support &= ~SUPER_CORE1_SUPPORT;
 	}
 	if (is_meson_g12a_cpu() ||
 		is_meson_g12b_cpu() ||
 		is_meson_sm1_cpu()) {
-		sr_reg_offt = 0xc00;
-		sr_reg_offt2 = 0x00;
+		sr->sr_reg_offt = 0xc00;
+		sr->sr_reg_offt2 = 0x00;
 	} else if (is_meson_tl1_cpu()
 		|| is_meson_tm2_cpu()) {
-		sr_reg_offt = 0xc00;
-		sr_reg_offt2 = 0xc80;
+		sr->sr_reg_offt = 0xc00;
+		sr->sr_reg_offt2 = 0xc80;
 	} else {
-		sr_reg_offt = 0;
-		sr_reg_offt2 = 0x00;
+		sr->sr_reg_offt = 0;
+		sr->sr_reg_offt2 = 0x00;
 	}
 }
 /*for gxlx only have core1 which will affact pip line*/
