@@ -1120,6 +1120,11 @@
 		compatible = "imx-ion-pool";
 		reg = <0x0 0xf8000000 0 0x8000000>;
 	};
+
+	limit3g@0x100000000 {
+		no-map;
+		reg = <1 0x00000000 0 0x40000000>;
+	};
 };
 
 &rpmsg{
