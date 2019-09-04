@@ -119,6 +119,7 @@
 		model = "wm8962-audio";
 		ssi-controller = <&ssi2>;
 		audio-codec = <&codec>;
+		audio-asrc = <&asrc>;
 		audio-routing =
 			"Headphone Jack", "HPOUTL",
 			"Headphone Jack", "HPOUTR",
@@ -565,6 +566,8 @@
 				MX6QDL_PAD_ENET_RXD0__GPIO1_IO27 0x80000000
 				MX6QDL_PAD_EIM_A25__GPIO5_IO02 0x80000000
 				MX6QDL_PAD_EIM_D23__GPIO3_IO23 0x80000000
+				MX6QDL_PAD_SD3_RST__GPIO7_IO08 0x80000000
+				MX6QDL_PAD_GPIO_9__GPIO1_IO09  0x80000000
 			>;
 		};
 
