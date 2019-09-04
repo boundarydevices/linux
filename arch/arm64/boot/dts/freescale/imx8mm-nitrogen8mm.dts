@@ -1088,6 +1088,13 @@
 	status = "okay";
 };
 
+&resmem {
+	limit3g@0x100000000 {
+		no-map;
+		reg = <1 0x00000000 0 0x40000000>;
+	};
+};
+
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
