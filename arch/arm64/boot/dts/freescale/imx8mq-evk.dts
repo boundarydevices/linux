@@ -1039,3 +1039,7 @@
 	regulator-supply = <&sw1c_reg>;
 	status = "okay";
 };
+
+&gpu3d {
+	status = "okay";
+};
