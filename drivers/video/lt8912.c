@@ -49,6 +49,20 @@
 /* size of audio and speaker info Block */
 #define AUDIO_DATA_SIZE 32
 
+#define MAIN_LANE_EN	0x40
+
+#define CEC_DSI_SETTLE	0x11
+#define CEC_DSI_LANE	0x13
+#define CEC_DSI_HSYNC	0x18
+#define CEC_DSI_VSYNC	0x19
+#define CEC_DSI_HACTIVE	0x1c
+#define CEC_DSI_HTOTAL	0x34
+#define CEC_DSI_VTOTAL	0x36
+#define CEC_DSI_VBP	0x38
+#define CEC_DSI_VFP	0x3a
+#define CEC_DSI_HBP	0x3c
+#define CEC_DSI_HFP	0x3e
+
 /* 0x94 interrupts */
 #define HPD_INT_ENABLE           BIT(7)
 #define MONITOR_SENSE_INT_ENABLE BIT(6)
@@ -133,7 +147,9 @@ struct lt {
 	int prev_connected;
 	struct device_node *disp_dsi;
 	struct i2c_adapter *ddc;
-	unsigned char last_reg;
+	u8 last_reg;
+	u8 last_reg_cec;
+	u8 dsi_lanes;
 };
 
 static char mdss_mdp_panel[MDSS_MAX_PANEL_LEN];
@@ -150,6 +166,8 @@ static struct lt8912_reg_cfg lt8912_init_setup[] = {
 	{I2C_ADDR_MAIN, 0x0b, 0x7c, 0},
 	/* HDCP */
 	{I2C_ADDR_MAIN, 0x0c, 0xff, 0},
+	{I2C_ADDR_MAIN, 0x42, 0x04, 0},
+
 /*Tx Analog*/
 	/* Fixed */
 	{I2C_ADDR_MAIN, 0x31, 0xb1, 0},  
@@ -180,127 +198,15 @@ static struct lt8912_reg_cfg lt8912_init_setup[] = {
 	{I2C_ADDR_MAIN, 0x3e, 0xd6, 0},  //0xde.  //0xf6 = pn swap
 	{I2C_ADDR_MAIN, 0x3f, 0xd4, 0},
 	{I2C_ADDR_MAIN, 0x41, 0x3c, 0},
+	{I2C_ADDR_MAIN, 0xB2, 0x00, 0},	/* 0 DVI, 1 HDMI */
+	{I2C_ADDR_CEC_DSI, 0x12,0x04, 0},
 };
 
 static struct lt8912_reg_cfg lt8912_mipi_basic_set[] = {
-	{I2C_ADDR_CEC_DSI, 0x12,0x04, 0}, 
-	{I2C_ADDR_CEC_DSI, 0x13,0x00, 0},  //0x02 = mipi 2 lane
 	{I2C_ADDR_CEC_DSI, 0x14,0x00, 0}, 
 	{I2C_ADDR_CEC_DSI, 0x15,0x00, 0},
 	{I2C_ADDR_CEC_DSI, 0x1a,0x03, 0}, 
 	{I2C_ADDR_CEC_DSI, 0x1b,0x03, 0}, 
-};
-
-#if 0
-static struct lt8912_reg_cfg lt8912_480p_mode[] = {
-	{I2C_ADDR_CEC_DSI, 0x10,0x01, 0}, 
-	{I2C_ADDR_CEC_DSI, 0x11,0x04, 0}, 
-	{I2C_ADDR_CEC_DSI, 0x18,0x60, 0},
-	{I2C_ADDR_CEC_DSI, 0x19,0x02, 0},
-	{I2C_ADDR_CEC_DSI, 0x1c,0x80, 0},
-	{I2C_ADDR_CEC_DSI, 0x1d,0x02, 0},
-	{I2C_ADDR_CEC_DSI, 0x2f,0x0c, 0},
-	{I2C_ADDR_CEC_DSI, 0x34,0x10, 0},
-	{I2C_ADDR_CEC_DSI, 0x35,0x03, 0},
-	{I2C_ADDR_CEC_DSI, 0x36,0x0d, 0},
-	{I2C_ADDR_CEC_DSI, 0x37,0x02, 0},
-	{I2C_ADDR_CEC_DSI, 0x38,0x0a, 0},
-	{I2C_ADDR_CEC_DSI, 0x39,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3a,0x21, 0},
-	{I2C_ADDR_CEC_DSI, 0x3b,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3c,0x28, 0},
-	{I2C_ADDR_CEC_DSI, 0x3d,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3e,0x08, 0},
-	{I2C_ADDR_CEC_DSI, 0x3f,0x00, 0},
-};
-#else
-static struct lt8912_reg_cfg lt8912_480p_mode[] = {
-	{I2C_ADDR_CEC_DSI, 0x10,0x01, 0}, 
-	{I2C_ADDR_CEC_DSI, 0x11,0x04, 0}, 
-	{I2C_ADDR_CEC_DSI, 0x18,0x80, 0},
-	{I2C_ADDR_CEC_DSI, 0x19,0x04, 0},
-	{I2C_ADDR_CEC_DSI, 0x1c,0x20, 0},
-	{I2C_ADDR_CEC_DSI, 0x1d,0x03, 0},
-	{I2C_ADDR_CEC_DSI, 0x2f,0x0c, 0},
-	{I2C_ADDR_CEC_DSI, 0x34,0x20, 0},
-	{I2C_ADDR_CEC_DSI, 0x35,0x04, 0},
-	{I2C_ADDR_CEC_DSI, 0x36,0x74, 0},
-	{I2C_ADDR_CEC_DSI, 0x37,0x02, 0},
-	{I2C_ADDR_CEC_DSI, 0x38,0x17, 0},
-	{I2C_ADDR_CEC_DSI, 0x39,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3a,0x01, 0},
-	{I2C_ADDR_CEC_DSI, 0x3b,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3c,0x58, 0},
-	{I2C_ADDR_CEC_DSI, 0x3d,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3e,0x28, 0},
-	{I2C_ADDR_CEC_DSI, 0x3f,0x00, 0},
-};
-#endif
-
-static struct lt8912_reg_cfg lt8912_720p_mode[] = {
-	{I2C_ADDR_CEC_DSI, 0x10,0x01, 0}, 
-	{I2C_ADDR_CEC_DSI, 0x11,0x0a, 0}, 
-	{I2C_ADDR_CEC_DSI, 0x18,0x28, 0},
-	{I2C_ADDR_CEC_DSI, 0x19,0x05, 0},
-	{I2C_ADDR_CEC_DSI, 0x1c,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x1d,0x05, 0},
-	{I2C_ADDR_CEC_DSI, 0x2f,0x0c, 0},
-	{I2C_ADDR_CEC_DSI, 0x34,0x72, 0},
-	{I2C_ADDR_CEC_DSI, 0x35,0x06, 0},
-	{I2C_ADDR_CEC_DSI, 0x36,0xee, 0},
-	{I2C_ADDR_CEC_DSI, 0x37,0x02, 0},
-	{I2C_ADDR_CEC_DSI, 0x38,0x14, 0},
-	{I2C_ADDR_CEC_DSI, 0x39,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3a,0x05, 0},
-	{I2C_ADDR_CEC_DSI, 0x3b,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3c,0xdc, 0},
-	{I2C_ADDR_CEC_DSI, 0x3d,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3e,0x6e, 0},
-	{I2C_ADDR_CEC_DSI, 0x3f,0x00, 0},
-};
-
-static struct lt8912_reg_cfg lt8912_1080p_mode[] = {
-	{I2C_ADDR_CEC_DSI, 0x10,0x01, 0}, 
-       {I2C_ADDR_CEC_DSI, 0x11,0x0a, 0}, 
-	{I2C_ADDR_CEC_DSI, 0x18,0x2c, 0},
-	{I2C_ADDR_CEC_DSI, 0x19,0x05, 0},
-	{I2C_ADDR_CEC_DSI, 0x1c,0x80, 0},
-	{I2C_ADDR_CEC_DSI, 0x1d,0x07, 0},
-	{I2C_ADDR_CEC_DSI, 0x2f,0x0c, 0},
-	{I2C_ADDR_CEC_DSI, 0x34,0x98, 0},  // 0x9c
-	{I2C_ADDR_CEC_DSI, 0x35,0x08, 0},
-	{I2C_ADDR_CEC_DSI, 0x36,0x65, 0},
-	{I2C_ADDR_CEC_DSI, 0x37,0x04, 0},
-	{I2C_ADDR_CEC_DSI, 0x38,0x24, 0},
-	{I2C_ADDR_CEC_DSI, 0x39,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3a,0x04, 0},
-	{I2C_ADDR_CEC_DSI, 0x3b,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3c,0x94, 0}, //0x98
-	{I2C_ADDR_CEC_DSI, 0x3d,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3e,0x58, 0},
-	{I2C_ADDR_CEC_DSI, 0x3f,0x00, 0},
-};
-
-static struct lt8912_reg_cfg lt8912_1280x800_mode[] = {
-	{I2C_ADDR_CEC_DSI, 0x10,0x01, 0}, 
-       {I2C_ADDR_CEC_DSI, 0x11,0x08, 0}, 
-	{I2C_ADDR_CEC_DSI, 0x18,0x80, 0},
-	{I2C_ADDR_CEC_DSI, 0x19,0x06, 0},
-	{I2C_ADDR_CEC_DSI, 0x1c,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x1d,0x05, 0},
-	{I2C_ADDR_CEC_DSI, 0x2f,0x0c, 0},
-	{I2C_ADDR_CEC_DSI, 0x34,0x90, 0},  // 0x9c
-	{I2C_ADDR_CEC_DSI, 0x35,0x06, 0},
-	{I2C_ADDR_CEC_DSI, 0x36,0x3f, 0},
-	{I2C_ADDR_CEC_DSI, 0x37,0x03, 0},
-	{I2C_ADDR_CEC_DSI, 0x38,0x16, 0},
-	{I2C_ADDR_CEC_DSI, 0x39,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3a,0x03, 0},
-	{I2C_ADDR_CEC_DSI, 0x3b,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3c,0xc8, 0}, //0x98
-	{I2C_ADDR_CEC_DSI, 0x3d,0x00, 0},
-	{I2C_ADDR_CEC_DSI, 0x3e,0x48, 0},
-	{I2C_ADDR_CEC_DSI, 0x3f,0x00, 0},
 };
 
 static struct lt8912_reg_cfg lt8912_ddsconfig[] = {
@@ -456,8 +362,8 @@ static int lt8912_write_w(struct lt *lt, u8 addr, u8 reg, u16 val)
 	}
 
 	wbuf[0] = reg;
-	wbuf[1] = val >> 8;
-	wbuf[2] = val & 0xff;
+	wbuf[1] = val & 0xff;
+	wbuf[2] = val >> 8;
 
 	msgs[0].addr = addr;
 	msgs[0].flags = 0;
@@ -699,8 +605,9 @@ int lt8912_read_edid(struct lt *lt, u32 size, char *edid_buf)
 static int lt8912_video_setup(struct lt *lt)
 {
 	struct videomode vm;
-	u32 h_total, hpw, hfp, hbp;
-	u32 v_total, vpw, vfp, vbp;
+	u32 hactive, h_total, hpw, hfp, hbp;
+	u32 vactive, v_total, vpw, vfp, vbp;
+	u8 settle = 0x08;
 	int ret;
 
 	if (!lt) {
@@ -712,38 +619,49 @@ static int lt8912_video_setup(struct lt *lt)
 	if (ret < 0)
 		return ret;
 
-	h_total = vm.hactive + vm.hfront_porch +
-		vm.hsync_len + vm.hback_porch;
-	v_total = vm.vactive + vm.vfront_porch +
-		vm.vsync_len + vm.vback_porch;
-
-	hpw = vm.hsync_len;
+	hactive = vm.hactive;
 	hfp = vm.hfront_porch;
+	hpw = vm.hsync_len;
 	hbp = vm.hback_porch;
+	h_total = hactive + hfp + hpw + hbp;
 
-	vpw = vm.vsync_len;
+	vactive = vm.vactive;
 	vfp = vm.vfront_porch;
+	vpw = vm.vsync_len;
 	vbp = vm.vback_porch;
+	v_total = vactive + vfp + vpw + vbp;
 
-	pr_debug("h_total 0x%x, xres 0x%x, hfp 0x%d, hpw 0x%x, hbp 0x%x\n",
-		h_total, vm.hactive, vm.hfront_porch,
-		vm.hsync_len, vm.hback_porch);
+	pr_debug("h_total 0x%x, xres 0x%x, hfp 0x%x, hpw 0x%x, hbp 0x%x, lanes %d\n",
+		h_total, hactive, hfp, hpw, hbp, lt->dsi_lanes);
 
 	pr_debug("v_total 0x%x, yres 0x%x, vfp 0x%x, vpw 0x%x, vbp 0x%x\n",
-		v_total, vm.vactive, vm.vfront_porch,
-		vm.vsync_len, vm.vback_porch);
+		v_total, vactive, vfp, vpw, vbp);
 
-#if 1
-	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, 0x28, h_total << 4);
-	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, 0x2A, hpw << 4);
-	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, 0x2C, hfp << 4);
-	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, 0x2E, hbp << 4);
-	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, 0x30, v_total << 4);
-	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, 0x32, vpw << 4);
-	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, 0x34, vfp << 4);
-	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, 0x36, vbp << 4);
-#endif
-	return vm.vactive;
+	if (vactive == 480)
+		settle = 4;
+	else if (vactive == 720)
+		settle = 0x0a;
+	else if (vactive == 1080)
+		settle = 0x0a;
+	else if (vactive == 800)
+		settle = 0x08;
+	else
+		pr_err("%s: unsupported yres = %d\n", __func__, vactive);
+
+	lt8912_write(lt, I2C_ADDR_CEC_DSI, 0x10, 0x01);
+	lt8912_write(lt, I2C_ADDR_CEC_DSI, CEC_DSI_SETTLE, settle);
+	lt8912_write(lt, I2C_ADDR_CEC_DSI, CEC_DSI_HSYNC, hpw);
+	lt8912_write(lt, I2C_ADDR_CEC_DSI, CEC_DSI_VSYNC, vpw);
+	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, CEC_DSI_HACTIVE, hactive);
+	lt8912_write(lt, I2C_ADDR_CEC_DSI, 0x2f, 0x0c);
+
+	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, CEC_DSI_HTOTAL, h_total);
+	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, CEC_DSI_VTOTAL, v_total);
+	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, CEC_DSI_VBP, vbp);
+	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, CEC_DSI_VFP, vfp);
+	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, CEC_DSI_HBP, hbp);
+	lt8912_write_w(lt, I2C_ADDR_CEC_DSI, CEC_DSI_HFP, hfp);
+	return vactive;
 }
 
 static int lt8912_video_on(struct lt *lt, bool on, u32 flags)
@@ -754,23 +672,10 @@ static int lt8912_video_on(struct lt *lt, bool on, u32 flags)
 	pr_debug("%s: enter\n", __func__);
 	mutex_lock(&lt->ops_mutex);
 
+
 	yres = lt8912_video_setup(lt);
 	if (yres < 0)
 		return yres;
-	if (yres == 480)
-		lt8912_write_array(lt, lt8912_480p_mode,
-			sizeof(lt8912_480p_mode));
-	else if (yres == 720)
-		lt8912_write_array(lt, lt8912_720p_mode,
-			sizeof(lt8912_720p_mode));
-	else if (yres == 1080)
-		lt8912_write_array(lt, lt8912_1080p_mode,
-			sizeof(lt8912_1080p_mode));
-	else if (yres == 800)
-		lt8912_write_array(lt, lt8912_1280x800_mode,
-			sizeof(lt8912_1280x800_mode));
-	else
-		pr_err("%s: unsupported yres = %d\n", __func__, yres);
 
 	lt8912_write_array(lt, lt8912_ddsconfig,
 				sizeof(lt8912_ddsconfig));
@@ -796,11 +701,19 @@ static int lt8912_power_on(struct lt *lt, bool on, u32 flags)
 	mutex_lock(&lt->ops_mutex);
 
 	if (on && !lt->is_power_on) {
+		u32 lanes = lt->dsi_lanes;
+
 		lt8912_write_array(lt, lt8912_init_setup,
 					sizeof(lt8912_init_setup));
 
+		lt8912_write(lt, I2C_ADDR_CEC_DSI, CEC_DSI_LANE,
+			lanes & 3);
+		lt8912_write(lt, I2C_ADDR_MAIN, MAIN_LANE_EN,
+			5 | (((1 << lanes) - 1) << (7 - lanes)));
+
 		lt8912_write_array(lt, lt8912_mipi_basic_set,
                                 sizeof(lt8912_mipi_basic_set));
+
 		lt->is_power_on = true;
 	} else if (!on) {
 		/* power down hdmi */
@@ -919,11 +832,6 @@ static void lt8912_check_hpd_work(struct work_struct *work)
 	queue_delayed_work(lt->workq, &lt->lt8912_check_hpd_work_id, 500);
 
 }
-
-static struct i2c_device_id lt8912_id[] = {
-	{ "lt8912", 0},
-	{}
-};
 
 /*static int lt8912_cec_enable(void *client, bool cec_on, u32 flags)
 {
@@ -1320,118 +1228,185 @@ static void lt8912_unregister_dba(struct lt *lt)
 }
 #endif
 
-unsigned char reg_bytes[] = {
-[0] = 1,
-[1] = 1,
-[2] = 1,
-[3] = 1,
-[4] = 1,
-[8] = 1,
-[9] = 1,
-[0xa] = 1,
-[0xb] = 1,
-[0xc] = 1,
-[0x31] = 1,
-[0x32] = 1,
-[0x33] = 1,
-[0x37] = 1,
-[0x38] = 1,
-[0x39] = 1,
-[0x3a] = 1,
-[0x3b] = 1,
-[0x3e] = 1,
-[0x3f] = 1,
-[0x41] = 1,
-[0x43] = 1,
-[0x44] = 2,
-[0x50] = 1,
-[0x51] = 1,
-[0x52] = 1,
-[0x55] = 1,
-[0x57] = 1,
-[0x5a] = 1,
-[0x60] = 1,
-[0x69] = 1,
-[0x6a] = 1,
-[0x6b] = 1,
-[0x6c] = 1,
-[0x7f] = 1,
-[0x94] = 1,
-[0x95] = 1,
-[0xa8] = 1,
-[0xb2] = 1,
-[0xc1] = 1,
+static const unsigned char main_reg_bytes[] = {
+	0x00, 0x0e, 1,
+	0x31, 0x43, 1,
+	0x44, 0x45, 2,
+	0x50, 0x52, 1,
+	0x55, 0x55, 1,
+	0x57, 0x57, 1,
+	0x5a, 0x5a, 1,
+	0x60, 0x60, 1,
+	0x69, 0x6c, 1,
+	0x7f, 0x7f, 1,
+	0x94, 0x95, 1,
+	0x99, 0x9f, 1,
+	0xa8, 0xa8, 1,
+	0xab, 0xab, 1,
+	0xb2, 0xb2, 1,
+	0xb4, 0xb4, 1,
+	0xc1, 0xc1, 1,
+	0, 0
 };
 
-static ssize_t show_reg(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
-	struct lt *lt = i2c_get_clientdata(client);
-	u8 val = 0;
-	int ret;
+static const unsigned char cec_reg_bytes[] = {
+	0x00, 0x1b, 1,
+	0x1c, 0x1d, 2,
+	0x1e, 0x2f, 1,
+	0x34, 0x3f, 2,
+	0x40, 0x40, 1,
+	0x42, 0x4d, 1,
+	0x51, 0x5c, 1,
+	0x70, 0x7f, 1,
+	0, 0
+};
 
-	pr_debug("%s:last_reg=%x\n", __func__, lt->last_reg);
-	if (!lt->last_reg) {
-		int reg;
-		int cnt = 0;
-		int n;
-		for (reg = 0; reg < ARRAY_SIZE(reg_bytes); reg++) {
-			if (!reg_bytes[reg])
-				continue;
-			ret = lt8912_read(lt, I2C_ADDR_MAIN, reg, &val, 1);
-			if (ret >= 0) {
-				n = sprintf(buf, "0x%02x:0x%02x\n", reg, val);
-				if (n > 0) {
-					cnt += n;
-					buf += n;
-				}
-			}
-		}
-		return cnt;
+static int reg_valid(const unsigned char *range, unsigned char val)
+{
+	while (range[1]) {
+		if (val < range[0])
+			return 0;
+		if (val <= range[1])
+			return range[2];
+		range += 3;
 	}
-	ret = lt8912_read(lt, I2C_ADDR_MAIN, lt->last_reg, &val, 1);
-	if (ret < 0)
-		return ret;
-	return sprintf(buf, "0x%02x", val);
+	return -EINVAL;
 }
 
-static ssize_t store_reg(struct device *dev, struct device_attribute *attr,
-	 const char *buf, size_t count)
+static ssize_t store_reg(struct lt *lt, const unsigned char *tbl, const enum lt8912_i2c_addr i2caddr, u8 *last_reg, const char *buf)
 {
-	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
-	struct lt *lt = i2c_get_clientdata(client);
-
-	unsigned reg, value, bytes;
+	unsigned reg, value;
 	int numscanned = sscanf(buf,"%x %x\n", &reg, &value);
+	int ret;
 
-	if (reg >= ARRAY_SIZE(reg_bytes)) {
-		dev_err(dev,"%s: invalid register: use form 0xREG [0xVAL]\n",
-			__func__);
-		return -EINVAL;
-	}
-	bytes = reg_bytes[reg];
-	if (!bytes || (bytes > 2)) {
-		dev_err(dev,"%s: invalid register: use form 0xREG [0xVAL]\n",
+	ret = reg_valid(tbl, reg);
+	if ((ret <= 0) || (ret > 2)) {
+		dev_err(&lt->client->dev,"%s: invalid register: use form 0xREG [0xVAL]\n",
 			__func__);
 		return -EINVAL;
 	}
 
 	if (numscanned == 2) {
-		int rval = lt8912_write(lt, I2C_ADDR_MAIN, reg, value);
+		int rval;
+
+		if (ret > 1)
+			rval = lt8912_write_w(lt, i2caddr, reg, value);
+		else
+			rval = lt8912_write(lt, i2caddr, reg, value);
 		if (rval)
-			dev_err(dev, "%s: error %d setting reg 0x%02x to 0x%02x\n",
+			dev_err(&lt->client->dev, "%s: error %d setting reg 0x%02x to 0x%02x\n",
 				__func__, rval, reg, value);
 	} else if (numscanned == 1) {
-		lt->last_reg = reg;
+		*last_reg = reg;
 	} else {
-		dev_err(dev,"%s: invalid register: use form 0xREG [0xVAL]\n",
+		dev_err(&lt->client->dev,"%s: invalid register: use form 0xREG [0xVAL]\n",
 			__func__);
 	}
+	return 0;
+}
+
+static ssize_t show_reg(struct lt *lt, const unsigned char *tbl, const enum lt8912_i2c_addr i2caddr, u8 *last_reg, char *buf)
+{
+	unsigned v;
+	u8 val[4];
+	int ret;
+	int size;
+	int n;
+	int reg;
+
+	pr_debug("%s:last_reg=%x\n", __func__, *last_reg);
+	if (!*last_reg) {
+		int cnt = 0;
+
+		reg = 0;
+		do {
+
+			size = reg_valid(tbl, reg);
+			if (size < 0)
+				break;
+			if (size) {
+				val[0] = val[1] = val[2] = val[3] = 0;
+				ret = lt8912_read(lt, i2caddr, reg, val, size);
+				if (ret >= 0) {
+					v = val[0] | (val[1] << 8) | (val[2] << 16) | (val[3] << 24);
+					if (size == 2)
+						n = sprintf(buf, "0x%02x:0x%04x\n", reg, v);
+					else
+						n = sprintf(buf, "0x%02x:0x%02x\n", reg, v);
+					if (n > 0) {
+						cnt += n;
+						buf += n;
+					}
+				}
+			}
+			reg += size ? size : 1;
+		} while (1);
+
+		return cnt;
+	}
+	reg = *last_reg;
+	size = reg_valid(tbl, reg);
+	if (size <= 0)
+		return 0;
+	val[0] = val[1] = val[2] = val[3] = 0;
+	ret = lt8912_read(lt, i2caddr, reg, val, size);
+	if (ret < 0)
+		return ret;
+	v = val[0] | (val[1] << 8) | (val[2] << 16) | (val[3] << 24);
+	if (size == 2)
+		n = sprintf(buf, "0x%04x\n", v);
+	else
+		n = sprintf(buf, "0x%02x\n", v);
+	return n;
+}
+
+static ssize_t main_show_reg(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
+	struct lt *lt = i2c_get_clientdata(client);
+
+	return show_reg(lt, main_reg_bytes, I2C_ADDR_MAIN, &lt->last_reg, buf);
+}
+
+static ssize_t main_store_reg(struct device *dev, struct device_attribute *attr,
+	 const char *buf, size_t count)
+{
+	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
+	struct lt *lt = i2c_get_clientdata(client);
+	int ret;
+
+	ret = store_reg(lt, main_reg_bytes, I2C_ADDR_MAIN, &lt->last_reg, buf);
+	if (ret < 0)
+		return ret;
 	return count;
 }
 
-static DEVICE_ATTR(lt8912_reg, S_IRUGO|S_IWUSR|S_IWGRP, show_reg, store_reg);
+static DEVICE_ATTR(lt8912_reg, S_IRUGO|S_IWUSR|S_IWGRP, main_show_reg, main_store_reg);
+
+static ssize_t cec_show_reg(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
+	struct lt *lt = i2c_get_clientdata(client);
+
+	return show_reg(lt, cec_reg_bytes, I2C_ADDR_CEC_DSI, &lt->last_reg_cec, buf);
+}
+
+static ssize_t cec_store_reg(struct device *dev, struct device_attribute *attr,
+	 const char *buf, size_t count)
+{
+	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
+	struct lt *lt = i2c_get_clientdata(client);
+	int ret;
+
+	ret = store_reg(lt, cec_reg_bytes, I2C_ADDR_CEC_DSI, &lt->last_reg_cec, buf);
+	if (ret < 0)
+		return ret;
+	return count;
+}
+
+static DEVICE_ATTR(lt8912_cec, S_IRUGO|S_IWUSR|S_IWGRP, cec_show_reg, cec_store_reg);
 
 static int lt8912_probe(struct i2c_client *client,
 	 const struct i2c_device_id *id)
@@ -1440,6 +1415,7 @@ static int lt8912_probe(struct i2c_client *client,
 	struct device_node *ddc;
 	static struct lt *lt;
 	int ret = 0;
+	u32 dsi_lanes;
 
 	pr_info("%s:\n", __func__);
 	if (!client || !client->dev.of_node) {
@@ -1466,6 +1442,11 @@ static int lt8912_probe(struct i2c_client *client,
 		pr_err("%s: display not linked, %d\n", __func__, ret);
 		goto err_dt_parse;
 	}
+	if (of_property_read_u32(lt->disp_dsi, "dsi-lanes", &dsi_lanes) < 0)
+		return -EINVAL;
+	if (dsi_lanes < 1 || dsi_lanes > 4)
+		return -EINVAL;
+	lt->dsi_lanes = dsi_lanes;
 
 	lt->i2c_client = client;
     
@@ -1550,6 +1531,8 @@ static int lt8912_probe(struct i2c_client *client,
 
 	if (device_create_file(&client->dev, &dev_attr_lt8912_reg))
 		dev_err(&client->dev, "Error on creating sysfs file for lt8912_reg\n");
+	if (device_create_file(&client->dev, &dev_attr_lt8912_cec))
+		dev_err(&client->dev, "Error on creating sysfs file for lt8912_cec\n");
 	return 0;
 
 err_workqueue:
@@ -1585,6 +1568,8 @@ static void lt8912_remove(struct i2c_client *client)
 
 	device_remove_file(&client->dev,
 		&dev_attr_lt8912_reg);
+	device_remove_file(&client->dev,
+		&dev_attr_lt8912_cec);
 
 	cancel_delayed_work_sync(&lt->lt8912_check_hpd_work_id);
 	if (lt->ddc)
@@ -1601,9 +1586,17 @@ static void lt8912_remove(struct i2c_client *client)
 }
 
 static const struct of_device_id lt8912_dt_match[] = {
-        {.compatible = "qcom,lt8912"},
+        {.compatible = "lontium,lt8912"},
         {}
 };
+MODULE_DEVICE_TABLE(of, lt8912_dt_match);
+
+static const struct i2c_device_id lt8912_id[] = {
+	{"lt8912", 0},
+	{},
+};
+
+MODULE_DEVICE_TABLE(i2c, lt8912_id);
 
 static struct i2c_driver lt8912_driver = {
 	.driver = {
