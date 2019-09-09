@@ -1264,7 +1264,6 @@ fec_stop(struct net_device *ndev)
 		val = readl(fep->hwp + FEC_ECNTRL);
 		val |= (FEC_ECR_MAGICEN | FEC_ECR_SLEEP);
 		writel(val, fep->hwp + FEC_ECNTRL);
-		fec_enet_stop_mode(fep, true);
 	}
 	writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
 
@@ -4146,6 +4145,7 @@ static int __maybe_unused fec_suspend(struct device *dev)
 			fec_irqs_disable(ndev);
 			pinctrl_pm_select_sleep_state(&fep->pdev->dev);
 		} else {
+			fec_enet_stop_mode(fep, true);
 			disable_irq(fep->wake_irq);
 			enable_irq_wake(fep->wake_irq);
 		}
