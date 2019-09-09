@@ -44,9 +44,7 @@ struct mode_config {
 	int				crtc_clock;
 	unsigned int			lanes;
 	unsigned long			bitclock;
-	unsigned long			phy_rates[3];
-	unsigned long			pll_rates[3];
-	int				phy_rate_idx;
+	unsigned long			phy_ref_rate;
 	struct list_head		list;
 };
 
@@ -72,6 +70,8 @@ struct nwl_dsi {
 
 	/* DSI clocks */
 	struct clk *phy_ref_clk;
+	unsigned long phy_ref_rate;
+	unsigned long phy_ref_enabled;
 	struct clk *rx_esc_clk;
 	struct clk *tx_esc_clk;
 	struct clk *pll_clk;
