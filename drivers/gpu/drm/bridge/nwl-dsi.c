@@ -485,6 +485,21 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 	nwl_dsi_write(dsi, VFP, vm.vfront_porch);
 }
 
+static void phyref_set_rate(struct nwl_mipi_dsi *dsi, u32 rate)
+{
+	if (dsi->phy_ref.rate != rate) {
+		if (dsi->phy_ref.enabled) {
+			clk_disable_unprepare(dsi->phy_ref.clk);
+			clk_set_rate(dsi->phy_ref.clk, rate);
+			clk_prepare_enable(dsi->phy_ref.clk);
+		} else {
+			clk_set_rate(dsi->phy_ref.clk, rate);
+		}
+		rate = clk_get_rate(dsi->phy_ref.clk);
+		dsi->phy_ref.rate = rate;
+	}
+}
+
 static void nwl_dsi_enable_clocks(struct nwl_mipi_dsi *dsi, u32 clks)
 {
 	struct device *dev = dsi->dev;
@@ -494,6 +509,7 @@ static void nwl_dsi_enable_clocks(struct nwl_mipi_dsi *dsi, u32 clks)
 		clk_prepare_enable(dsi->phy_ref.clk);
 		dsi->phy_ref.enabled = true;
 		rate = clk_get_rate(dsi->phy_ref.clk);
+		dsi->phy_ref.rate = rate;
 		DRM_DEV_DEBUG_DRIVER(dev,
 				"Enabled phy_ref clk (rate=%lu)\n", rate);
 	}
@@ -570,6 +586,16 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 		if (config->pixclock == pixclock)
 			return config;
 	dsi->pixclock = pixclock;
+
+	phyref_rate = pixclock;
+	while (phyref_rate >= 48000000)
+		phyref_rate >>= 1;
+	while (phyref_rate < 24000000)
+		phyref_rate <<= 1;
+
+	phyref_set_rate(dsi, phyref_rate);
+	pr_debug("%s: phyref %ld %d\n", __func__, dsi->phy_ref.rate, phyref_rate);
+
 	bit_clk = nwl_dsi_get_bit_clock(dsi, pixclock);
 	dsi->hsmult = 0;
 	if (mode->min_hs_clock_multiple) {
@@ -598,7 +624,7 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 
 	ret = mixel_phy_mipi_set_phy_speed(dsi->phy,
 			bit_clk,
-			phyref_rate,
+			dsi->phy_ref.rate,
 			false);
 
 	if (ret < 0) {
@@ -607,8 +633,8 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 			mode->hdisplay,
 			mode->vdisplay,
 			mode->clock);
-		DRM_DEV_DEBUG_DRIVER(dev, "phy_ref clk: %u, bit clk: %lu\n",
-			phyref_rate, bit_clk);
+		DRM_DEV_DEBUG_DRIVER(dev, "phy_ref clk: %lu, bit clk: %lu\n",
+			dsi->phy_ref.rate, bit_clk);
 
 		return NULL;
 	}
@@ -618,7 +644,7 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 	config->pixclock = pixclock;
 	config->lanes = lanes;
 	config->bitclock = bit_clk;
-	config->phyref_rate = phyref_rate;
+	config->phyref_rate = dsi->phy_ref.rate;
 	list_add(&config->list, &dsi->valid_modes);
 
 	return config;
@@ -670,7 +696,6 @@ static void nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 {
 	struct nwl_mipi_dsi *dsi = bridge->driver_private;
 	struct mode_config *config;
-	u32 actual_phy_rate;
 
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Setting mode:\n");
 	drm_mode_debug_printmodeline(adjusted);
@@ -682,18 +707,17 @@ static void nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 		drm_mode_debug_printmodeline(adjusted);
 		return;
 	}
+	phyref_set_rate(dsi, config->phyref_rate);
 
 	dsi->bitclk = mixel_phy_mipi_set_phy_speed(dsi->phy,
 			config->bitclock,
-			config->phyref_rate,
+			dsi->phy_ref.rate,
 			false);
-	clk_set_rate(dsi->phy_ref.clk, config->phyref_rate);
-	actual_phy_rate = clk_get_rate(dsi->phy_ref.clk);
 	dsi->dsi_device->lanes = config->lanes;
 	DRM_DEV_DEBUG_DRIVER(dsi->dev,
-		"Using phy_ref rate: %u (actual: %u), "
+		"Using phy_ref rate: %u, (actual: %lu), "
 		"bitclock: %lu, lanes: %u\n",
-		config->phyref_rate, actual_phy_rate,
+		config->phyref_rate, dsi->phy_ref.rate,
 		config->bitclock, config->lanes);
 
 	dsi->curr_mode = drm_mode_duplicate(bridge->dev, adjusted);
@@ -762,12 +786,12 @@ static int nwl_dsi_host_attach(struct mipi_dsi_host *host,
 		if (device->lanes != config->lanes)
 			return 0;
 
-		clk_set_rate(dsi->phy_ref.clk, config->phyref_rate);
+		phyref_set_rate(dsi, config->phyref_rate);
 		device->lanes = config->lanes;
 		DRM_DEV_DEBUG_DRIVER(dsi->dev,
 			"Using phy_ref rate: %d (actual: %ld), "
 			"bitclock: %lu, lanes: %d\n",
-			config->phyref_rate, clk_get_rate(dsi->phy_ref.clk),
+			config->phyref_rate, dsi->phy_ref.rate,
 			config->bitclock, config->lanes);
 	}
 
