@@ -983,14 +983,20 @@ static int pca953x_probe(struct i2c_client *client,
 
 	chip->client = client;
 
-	reg = devm_regulator_get(&client->dev, "vcc");
-	if (IS_ERR(reg))
-		return dev_err_probe(&client->dev, PTR_ERR(reg), "reg get err\n");
+	reg = devm_regulator_get_optional(&client->dev, "vcc");
+	if (IS_ERR(reg)) {
+		ret = dev_err_probe(&client->dev, PTR_ERR(reg), "reg get err\n");
+		if (ret == -EPROBE_DEFER)
+			return ret;
+		reg = NULL;
+	}
 
-	ret = regulator_enable(reg);
-	if (ret) {
-		dev_err(&client->dev, "reg en err: %d\n", ret);
-		return ret;
+	if (reg) {
+		ret = regulator_enable(reg);
+		if (ret) {
+			dev_err(&client->dev, "reg en err: %d\n", ret);
+			return ret;
+		}
 	}
 	chip->regulator = reg;
 
@@ -1084,7 +1090,8 @@ static int pca953x_probe(struct i2c_client *client,
 	return 0;
 
 err_exit:
-	regulator_disable(chip->regulator);
+	if (chip->regulator)
+		regulator_disable(chip->regulator);
 	return ret;
 }
 
@@ -1103,7 +1110,8 @@ static int pca953x_remove(struct i2c_client *client)
 		ret = 0;
 	}
 
-	regulator_disable(chip->regulator);
+	if (chip->regulator)
+		regulator_disable(chip->regulator);
 
 	return ret;
 }
@@ -1164,7 +1172,8 @@ static int pca953x_suspend(struct device *dev)
 	if (atomic_read(&chip->wakeup_path))
 		device_set_wakeup_path(dev);
 	else
-		regulator_disable(chip->regulator);
+		if (chip->regulator)
+			regulator_disable(chip->regulator);
 
 	return 0;
 }
@@ -1174,15 +1183,20 @@ static int pca953x_resume(struct device *dev)
 	struct pca953x_chip *chip = dev_get_drvdata(dev);
 	int ret;
 
+	regcache_cache_only(chip->regmap, false);
+
 	if (!atomic_read(&chip->wakeup_path)) {
-		ret = regulator_enable(chip->regulator);
-		if (ret) {
-			dev_err(dev, "Failed to enable regulator: %d\n", ret);
+		if (chip->regulator) {
+			ret = regulator_enable(chip->regulator);
+			if (ret) {
+				dev_err(dev, "Failed to enable regulator: %d\n", ret);
+				return 0;
+			}
+		} else {
 			return 0;
 		}
 	}
 
-	regcache_cache_only(chip->regmap, false);
 	regcache_mark_dirty(chip->regmap);
 	ret = pca953x_regcache_sync(dev);
 	if (ret)
