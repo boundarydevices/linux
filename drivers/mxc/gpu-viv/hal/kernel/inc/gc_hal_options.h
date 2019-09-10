@@ -1346,6 +1346,15 @@ VIV:gcdUSE_MMU_EXCEPTION
 #   define gcdUSE_SINGLE_CONTEXT                   0
 #endif
 
+/*
+    gcdKERNEL_QUERY_PERFORMANCE_COUNTER_V8
+        When enabled, will enable query new performance counter of V8.0 in kernel
+        space.
+ */
+#ifndef gcdKERNEL_QUERY_PERFORMANCE_COUNTER_V8
+#   define gcdKERNEL_QUERY_PERFORMANCE_COUNTER_V8  0
+#endif
+
 #endif /* __gc_hal_options_h_ */
 
 

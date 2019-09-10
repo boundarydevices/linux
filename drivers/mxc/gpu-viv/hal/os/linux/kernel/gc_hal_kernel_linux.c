@@ -169,9 +169,14 @@ gckKERNEL_GetVideoMemoryPool(
         videoMemory = device->contiguousVidMem;
         break;
 
-    case gcvPOOL_SRAM:
-        /* SRAM memory. */
-        videoMemory = Kernel->sRAMVideoMem[Kernel->sRAMIndex];
+    case gcvPOOL_INTERNAL_SRAM:
+        /* Internal SRAM memory. */
+        videoMemory = Kernel->sRAMVidMem[Kernel->sRAMIndex];
+        break;
+
+    case gcvPOOL_EXTERNAL_SRAM:
+        /* External SRAM memory. */
+        videoMemory = device->extSRAMVidMem[Kernel->extSRAMIndex];
         break;
 
     default:
@@ -338,11 +343,28 @@ gckKERNEL_MapVideoMemory(
         bytes = device->contiguousSize;
         break;
 
-    case gcvPOOL_SRAM:
-        /* SRAM memory. */
-        physHandle = (PLINUX_MDL)Kernel->sRAMPhysical[Kernel->sRAMIndex];
-        bytes = Kernel->sRAMSizes[Kernel->sRAMIndex];
+    case gcvPOOL_EXTERNAL_SRAM:
+        /* External shared SRAM memory. */
+        physHandle = (PLINUX_MDL)device->extSRAMPhysical[Kernel->extSRAMIndex];
+        bytes = device->extSRAMSizes[Kernel->extSRAMIndex];
         break;
+
+    case gcvPOOL_INTERNAL_SRAM:
+        /* Per core SRAM reserved usage. */
+        if (Kernel->sRAMPhysFaked[Kernel->sRAMIndex])
+        {
+            *Logical = gcvNULL;
+
+            gcmkFOOTER_NO();
+            return gcvSTATUS_OK;
+        }
+        /* Per core SRAM memory block. */
+        else
+        {
+            physHandle = (PLINUX_MDL)Kernel->sRAMPhysical[Kernel->sRAMIndex];
+            bytes = Kernel->sRAMSizes[Kernel->sRAMIndex];
+            break;
+        }
 
     default:
         /* Invalid memory pool. */

@@ -2184,8 +2184,11 @@ gckVIDMEM_Lock(
         case gcvPOOL_LOCAL_INTERNAL:
             address = Kernel->internalBaseAddress + offset;
             break;
-        case gcvPOOL_SRAM:
+        case gcvPOOL_INTERNAL_SRAM:
             address = Kernel->sRAMBaseAddresses[Kernel->sRAMIndex] + offset;
+            break;
+        case gcvPOOL_EXTERNAL_SRAM:
+            address = Kernel->extSRAMBaseAddresses[Kernel->extSRAMIndex] + offset;
             break;
         default:
             gcmkASSERT(Node->VidMem.pool == gcvPOOL_SYSTEM);

@@ -340,19 +340,17 @@ _IdentifyHardwareByDatabase(
     Identity->streamCount                   = database->Streams;
     Identity->clusterAvailMask              = database->ClusterAliveMask;
 
-    gckOS_QueryOption(Hardware->os, "sRAMMode", (gctUINT64 *)&Hardware->sRAMNonExclusive);
-
-    if (gcmIS_SUCCESS(gckOS_QueryOption(Hardware->os, "sRAMBases", Device->sRAMCPUBases[0])))
+    if (gcmIS_SUCCESS(gckOS_QueryOption(Hardware->os, "sRAMBases", Device->sRAMBases[0])))
     {
         gckOS_MemCopy(
             Identity->sRAMBases,
-            Device->sRAMCPUBases[Core],
-            sizeof(gctUINT64) * gcvSRAM_COUNT
+            Device->sRAMBases[Core],
+            sizeof(gctUINT64) * gcvSRAM_INTER_COUNT
             );
     }
     else
     {
-        for (i = 0; i < gcvSRAM_COUNT; i++)
+        for (i = 0; i < gcvSRAM_INTER_COUNT; i++)
         {
             Identity->sRAMBases[i] = gcvINVALID_PHYSICAL_ADDRESS;
         }
@@ -363,11 +361,11 @@ _IdentifyHardwareByDatabase(
         gckOS_MemCopy(
             Identity->sRAMSizes,
             Device->sRAMSizes[Core],
-            sizeof(gctUINT32) * gcvSRAM_COUNT
+            sizeof(gctUINT32) * gcvSRAM_INTER_COUNT
             );
     }
 
-    for (i = gcvSRAM_EXTERNAL0; i < gcvSRAM_COUNT; i++)
+    for (i = gcvSRAM_INTERNAL0; i < gcvSRAM_INTER_COUNT; i++)
     {
         if (Identity->sRAMSizes[i])
         {
@@ -375,16 +373,36 @@ _IdentifyHardwareByDatabase(
         }
     }
 
-    /* If module parameter doesn't set SRAM sizes. */
-    if (i == gcvSRAM_COUNT)
+    /* If module parameter doesn't set per-core SRAM sizes. */
+    if (i == gcvSRAM_INTER_COUNT)
     {
-        /* Set default mode to exclusive mode. */
-        Hardware->sRAMNonExclusive = gcvFALSE;
+        for (i = gcvSRAM_INTERNAL0; i < gcvSRAM_INTER_COUNT; i++)
+        {
+            /* Try to get SRAM sizes from database. */
+            Device->sRAMSizes[Core][i] = Identity->sRAMSizes[i] = database->VIP_SRAM_SIZE;
+        }
+    }
 
-        /* Try to get SRAM sizes from database. */
-        /* Need this path for VIP exclusive mode. */
-        Device->sRAMSizes[Core][gcvSRAM_INTERNAL] = Identity->sRAMSizes[gcvSRAM_INTERNAL] = database->VIP_SRAM_SIZE;
-        Device->sRAMSizes[Core][gcvSRAM_EXTERNAL0] = Identity->sRAMSizes[gcvSRAM_EXTERNAL0] = database->AXI_SRAM_SIZE;
+    gckOS_QueryOption(Hardware->os, "extSRAMBases", Device->extSRAMBases);
+
+    gckOS_QueryOption(Hardware->os, "extSRAMSizes", (gctUINT64 *)Device->extSRAMSizes);
+
+    for (i = gcvSRAM_EXTERNAL0; i < gcvSRAM_EXT_COUNT; i++)
+    {
+        if (Device->extSRAMSizes[i])
+        {
+            break;
+        }
+    }
+
+    /* If module parameter doesn't set external SRAM sizes. */
+    if (i == gcvSRAM_EXT_COUNT)
+    {
+        for (i = gcvSRAM_EXTERNAL0; i < gcvSRAM_EXT_COUNT; i++)
+        {
+            /* Try to get SRAM sizes from database. */
+            Device->extSRAMSizes[i] = database->AXI_SRAM_SIZE;
+        }
     }
 
     if (Identity->chipModel == gcv320)
@@ -1732,7 +1750,6 @@ _SetHardwareOptions(
     )
 {
     gceSTATUS status;
-    gctUINT i;
     gctUINT64 data = 0;
     gcsHAL_QUERY_CHIP_OPTIONS *options = &Hardware->options;
     gcsFEATURE_DATABASE *database = Hardware->featureDatabase;
@@ -1820,12 +1837,6 @@ _SetHardwareOptions(
         gcmkPRINT("%s(%d): user cluster mask(0x%x) must be a subset of available clusters(0x%x),ignored it!",
                   __FUNCTION__, __LINE__, options->userClusterMask, Hardware->identity.clusterAvailMask);
         options->userClusterMask= Hardware->identity.clusterAvailMask;
-    }
-
-    for (i = 0; i < gcvSRAM_COUNT; i++)
-    {
-        options->sRAMBaseAddresses[i] = gcvINVALID_ADDRESS;
-        options->sRAMPhysicalBases[i] = gcvINVALID_PHYSICAL_ADDRESS;
     }
 
     options->secureMode = gcvSECURE_NONE;
@@ -2003,42 +2014,46 @@ _SetupSRAMVidMem(
     gceSTATUS status = gcvSTATUS_OK;
     gctUINT i;
 
-    for (i = gcvSRAM_EXTERNAL0; i < gcvSRAM_COUNT; i++)
+    for (i = gcvSRAM_INTERNAL0; i < gcvSRAM_INTER_COUNT; i++)
     {
         if (Hardware->identity.sRAMSizes[i] &&
            (Hardware->identity.sRAMBases[i] != gcvINVALID_PHYSICAL_ADDRESS))
         {
-            char sRAMName[20];
-            gcmkSPRINTF(sRAMName, gcmSIZEOF(sRAMName) - 1, "GPU core%d axi sram%d", Hardware->core, i);
-
-            gcmkPRINT("%s\n", sRAMName);
-
+            /* If the internal SRAM usage is memory block. */
             status = gckVIDMEM_Construct(
                 Hardware->os,
                 Hardware->identity.sRAMBases[i],
                 Hardware->identity.sRAMSizes[i],
                 64,
                 0,
-                &Hardware->sRAMVideoMem[i]
+                &Hardware->sRAMVidMem[i]
                 );
 
             if (gcmIS_ERROR(status))
             {
                 Hardware->identity.sRAMSizes[i] = 0;
-                Hardware->sRAMVideoMem[i] = gcvNULL;
+                Hardware->sRAMVidMem[i] = gcvNULL;
             }
             else
             {
+                char sRAMName[20];
+                gctUINT64 data = 0;
+                gctBOOL sRAMRequested;
+
+                gcmkSPRINTF(sRAMName, gcmSIZEOF(sRAMName) - 1, "Galcore core%d sram%d", Hardware->core, i);
+                status = gckOS_QueryOption(Hardware->os, "sRAMRequested", (gctUINT64 *)&data);
+                sRAMRequested = (status == gcvSTATUS_OK) ? (data != 0) : gcvFALSE;
+
                 gcmkONERROR(gckOS_RequestReservedMemory(
                     Hardware->os,
                     Hardware->identity.sRAMBases[i],
                     Hardware->identity.sRAMSizes[i],
                     sRAMName,
-                    0,
+                    sRAMRequested,
                     &Hardware->sRAMPhysical[i]
                     ));
 
-                Hardware->sRAMVideoMem[i]->physical = Hardware->sRAMPhysical[i];
+                Hardware->sRAMVidMem[i]->physical = Hardware->sRAMPhysical[i];
             }
         }
     }
@@ -2118,10 +2133,7 @@ gckHARDWARE_Construct(
     gcmkONERROR(_IdentifyHardwareByDatabase(hardware, Os, Device, Core, &hardware->identity));
 
     /* Setup SRAM memory heap. */
-    if (hardware->sRAMNonExclusive)
-    {
-        gcmkONERROR(_SetupSRAMVidMem(hardware));
-    }
+    gcmkONERROR(_SetupSRAMVidMem(hardware));
 
     _SetHardwareOptions(hardware);
 
@@ -9983,8 +9995,7 @@ gckHARDWARE_SetPowerState(
              * global OFF, IDLE or SUSPEND.
              */
             status = gckOS_TryAcquireSemaphore(os, Hardware->globalSemaphore);
-
-            if (status != gcvSTATUS_TIMEOUT)
+            if (status != gcvSTATUS_TIMEOUT && Hardware->isLastPowerGlobal)
             {
                 gcmkONERROR(status);
             }
@@ -10000,6 +10011,7 @@ gckHARDWARE_SetPowerState(
 
     /* Save the new power state. */
     Hardware->chipPowerState = state;
+    Hardware->isLastPowerGlobal = global;
 
 #if gcdDVFS
     if (state == gcvPOWER_ON && Hardware->kernel->dvfs)
@@ -10826,7 +10838,6 @@ gckHARDWARE_UpdateContextProfile(
         resetValue = 0xFF;
         newCounters0 = gcvTRUE;
     }
-
     if (chipModel == gcv2100 || chipModel == gcv2000 || chipModel == gcv880)
     {
         gcmkONERROR(
@@ -12964,7 +12975,7 @@ _ResetGPU(
 
 #if gcdFPGA_BUILD
         /* Wait more time on FPGA for reset as lower frequency */
-        gcmkONERROR(gckOS_Delay(Os, 3));
+        gcmkONERROR(gckOS_Delay(Os, 10));
 #else
         /* Wait for reset. */
         gcmkONERROR(gckOS_Delay(Os, 1));

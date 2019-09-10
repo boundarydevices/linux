@@ -121,7 +121,7 @@ typedef struct _gcsNN_FIXED_FEATURE
     gctUINT  nnCoreCountInt8;       /* total nn core count supporting int8 */
     gctUINT  nnCoreCountInt16;      /* total nn core count supporting int16 */
     gctUINT  nnCoreCountFloat16;    /* total nn core count supporting float16 */
-    gctUINT  nnCoreCountBFloat;     /* total nn core count supporting bfloat */
+    gctUINT  nnCoreCountBFloat16;    /* total nn core count supporting Bfloat16 */
     gctUINT  nnMadPerCore;
     gctUINT  nnInputBufferDepth;
     gctUINT  nnAccumBufferDepth;
@@ -389,6 +389,8 @@ typedef enum _gcePOOL
     gcvPOOL_SRAM,
     gcvPOOL_VIRTUAL,
     gcvPOOL_USER,
+    gcvPOOL_INTERNAL_SRAM,
+    gcvPOOL_EXTERNAL_SRAM,
 
     gcvPOOL_NUMBER_OF_POOLS
 }
@@ -725,6 +727,7 @@ gcoHAL_QueryChipAxiBusWidth(
 gceSTATUS
 gcoHAL_QueryMultiGPUAffinityConfig(
     IN gceHARDWARE_TYPE Type,
+    IN gctBOOL IsVX,
     OUT gceMULTI_GPU_MODE *Mode,
     OUT gctUINT32_PTR CoreIndex
     );
@@ -732,7 +735,7 @@ gcoHAL_QueryMultiGPUAffinityConfig(
 gceSTATUS
 gcoHAL_QuerySRAM(
     IN gcoHAL Hal,
-    IN gceSRAM Type,
+    IN gcePOOL Type,
     OUT gctUINT32 *Base,
     OUT gctUINT32 *Size,
     OUT gctPHYS_ADDR_T *gpuPhysical,

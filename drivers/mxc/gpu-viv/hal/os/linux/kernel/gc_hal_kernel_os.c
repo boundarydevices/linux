@@ -7195,15 +7195,27 @@ gckOS_QueryOption(
     }
     else if (!strcmp(Option, "sRAMBases"))
     {
-        memcpy(Value, device->args.sRAMBases, gcmSIZEOF(gctUINT64) * gcvSRAM_COUNT * gcvCORE_COUNT);
+        memcpy(Value, device->args.sRAMBases, gcmSIZEOF(gctUINT64) * gcvSRAM_INTER_COUNT * gcvCORE_COUNT);
     }
     else if (!strcmp(Option, "sRAMSizes"))
     {
-        memcpy(Value, device->args.sRAMSizes, gcmSIZEOF(gctUINT32) * gcvSRAM_COUNT * gcvCORE_COUNT);
+        memcpy(Value, device->args.sRAMSizes, gcmSIZEOF(gctUINT32) * gcvSRAM_INTER_COUNT * gcvCORE_COUNT);
     }
-    else if (!strcmp(Option, "sRAMMode"))
+    else if (!strcmp(Option, "extSRAMBases"))
     {
-        *Value = device->args.sRAMMode;
+        memcpy(Value, device->args.extSRAMBases, gcmSIZEOF(gctUINT64) * gcvSRAM_EXT_COUNT);
+    }
+    else if (!strcmp(Option, "extSRAMSizes"))
+    {
+        memcpy(Value, device->args.extSRAMSizes, gcmSIZEOF(gctUINT32) * gcvSRAM_EXT_COUNT);
+    }
+    else if (!strcmp(Option, "sRAMRequested"))
+    {
+        *Value = device->args.sRAMRequested;
+    }
+    else if (!strcmp(Option, "sRAMLoopMode"))
+    {
+        *Value = device->args.sRAMLoopMode;
     }
     else if (!strcmp(Option, "platformFlagBits"))
     {

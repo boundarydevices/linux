@@ -69,9 +69,17 @@ _AdjustParam(
     OUT gcsMODULE_PARAMETERS *Args
     );
 
+gceSTATUS
+_GetGPUPhysical(
+    IN gcsPLATFORM * Platform,
+    IN gctPHYS_ADDR_T CPUPhysical,
+    OUT gctPHYS_ADDR_T *GPUPhysical
+    );
+
 static struct _gcsPLATFORM_OPERATIONS default_ops =
 {
     .adjustParam   = _AdjustParam,
+    .getGPUPhysical = _GetGPUPhysical,
 };
 
 #if USE_LINUX_PCIE
@@ -79,16 +87,29 @@ static struct _gcsPLATFORM_OPERATIONS default_ops =
 #define MAX_PCIE_DEVICE 4
 #define MAX_PCIE_BAR    6
 
+typedef struct _gcsBARINFO
+{
+    gctPHYS_ADDR_T base;
+    gctSIZE_T size;
+    gctPOINTER logical;
+}
+gcsBARINFO, *gckBARINFO;
+
 struct _gcsPCIEInfo
 {
-    gctPOINTER bar[MAX_PCIE_BAR];
+    gcsBARINFO bar[MAX_PCIE_BAR];
     struct pci_dev *pdev;
+    gctPHYS_ADDR_T sram_bases[gcvSRAM_EXT_COUNT];
+    gctPHYS_ADDR_T sram_gpu_bases[gcvSRAM_EXT_COUNT];
+    uint32_t sram_sizes[gcvSRAM_EXT_COUNT];
+    int sram_bars[gcvSRAM_EXT_COUNT];
+    int sram_offsets[gcvSRAM_EXT_COUNT];
 };
 
 struct _gcsPLATFORM_PCIE
 {
     struct _gcsPLATFORM base;
-    struct _gcsPCIEInfo pcieInfo[MAX_PCIE_DEVICE];
+    struct _gcsPCIEInfo pcie_info[MAX_PCIE_DEVICE];
     unsigned int device_number;
 };
 
@@ -101,6 +122,50 @@ struct _gcsPLATFORM_PCIE default_platform =
         .ops  = &default_ops,
     },
 };
+
+void
+_QueryBarInfo(
+    struct pci_dev *Pdev,
+    gctPHYS_ADDR_T *BarAddr,
+    gctSIZE_T *BarSize,
+    gctUINT BarNum
+    )
+{
+    gctUINT addr;
+    gctUINT size;
+
+    /* Read the bar address */
+    if (pci_read_config_dword(Pdev, PCI_BASE_ADDRESS_0 + BarNum * 0x4, &addr) < 0)
+    {
+        return;
+    }
+
+    /* Read the bar size */
+    if (pci_write_config_dword(Pdev, PCI_BASE_ADDRESS_0 + BarNum * 0x4, 0xffffffff) < 0)
+    {
+        return;
+    }
+
+    if (pci_read_config_dword(Pdev, PCI_BASE_ADDRESS_0 + BarNum * 0x4, &size) < 0)
+    {
+        return;
+    }
+
+    size &= 0xfffffff0;
+    size  = ~size;
+    size += 1;
+
+    /* Write back the bar address */
+    if (pci_write_config_dword(Pdev, PCI_BASE_ADDRESS_0 + BarNum * 0x4, addr) < 0)
+    {
+        return;
+    }
+
+    gcmkPRINT("Bar%d addr=0x%x size=0x%x", BarNum, addr, size);
+
+    *BarAddr = addr;
+    *BarSize = size;
+}
 
 #else
 
@@ -119,10 +184,12 @@ _AdjustParam(
 {
 #if USE_LINUX_PCIE
     struct _gcsPLATFORM_PCIE *pcie_platform = (struct _gcsPLATFORM_PCIE *)Platform;
-    struct pci_dev *pdev = pcie_platform->pcieInfo[0].pdev;
-    unsigned char   irqline = pdev->irq;
+    struct pci_dev *pdev = pcie_platform->pcie_info[0].pdev;
+    unsigned char irqline = pdev->irq;
     unsigned int i;
-    unsigned int devIndex, coreIndex = 0;
+
+    unsigned int dev_index, core_index = 0;
+    int sram_bar, sram_offset;
 
     if (Args->irqs[gcvCORE_2D] != -1)
     {
@@ -132,20 +199,32 @@ _AdjustParam(
     {
         Args->irqs[gcvCORE_MAJOR] = irqline;
     }
-    for (devIndex = 0; devIndex < pcie_platform->device_number; devIndex++)
+
+    for (dev_index = 0; dev_index < pcie_platform->device_number; dev_index++)
     {
-        struct pci_dev * pcieDev = pcie_platform->pcieInfo[devIndex].pdev;
+        struct pci_dev * pcieDev = pcie_platform->pcie_info[dev_index].pdev;
+
+        for (i = 0; i < MAX_PCIE_BAR; i++)
+        {
+            _QueryBarInfo(
+                pcieDev,
+                &pcie_platform->pcie_info[dev_index].bar[i].base,
+                &pcie_platform->pcie_info[dev_index].bar[i].size,
+                i
+                );
+        }
+
         for (i = 0; i < gcvCORE_COUNT; i++)
         {
             if (Args->bars[i] != -1)
             {
-                Args->irqs[coreIndex] = pcieDev->irq;
+                Args->irqs[core_index] = pcieDev->irq;
 
                 /* VIV bitfile: Merge last 4 cores to last one bar to support 8 cores. */
                 if (Args->bars[i] == 5)
                 {
                     Args->registerBasesMapped[4] =
-                    pcie_platform->pcieInfo[devIndex].bar[i] =
+                    pcie_platform->pcie_info[dev_index].bar[i].logical =
                         (gctPOINTER)pci_iomap(pcieDev, Args->bars[i], 0x500000);
                     Args->registerBasesMapped[5] = Args->registerBasesMapped[4] + 0x100000;
                     Args->registerBasesMapped[6] = Args->registerBasesMapped[5] + 0x100000;
@@ -158,18 +237,84 @@ _AdjustParam(
                     continue;
                 }
 
-                Args->registerBasesMapped[coreIndex]    =
-                pcie_platform->pcieInfo[devIndex].bar[i] =
-                    (gctPOINTER)pci_iomap(pcieDev, Args->bars[i], Args->registerSizes[coreIndex]);
-                coreIndex++;
+                if (Args->regOffsets[i])
+                {
+                    gcmkASSERT(Args->regOffsets[i] + Args->registerSizes[core_index]
+                               < pcie_platform->pcie_info[dev_index].bar[Args->bars[i]].size);
+                }
+
+                Args->registerBasesMapped[core_index] =
+                pcie_platform->pcie_info[dev_index].bar[i].logical =
+                    (gctPOINTER)pci_iomap(pcieDev, Args->bars[i], Args->registerSizes[core_index] + Args->regOffsets[i]) + Args->regOffsets[i];
+
+                core_index++;
+            }
+        }
+
+        for (i = 0; i < gcvSRAM_EXT_COUNT; i++)
+        {
+            pcie_platform->pcie_info[dev_index].sram_bases[i] =
+            pcie_platform->pcie_info[dev_index].sram_gpu_bases[i] = Args->extSRAMBases[i];
+
+            pcie_platform->pcie_info[dev_index].sram_sizes[i] = Args->extSRAMSizes[i];
+
+            pcie_platform->pcie_info[dev_index].sram_bars[i] = sram_bar = Args->sRAMBars[i];
+            pcie_platform->pcie_info[dev_index].sram_offsets[i] = sram_offset = Args->sRAMOffsets[i];
+
+            /* Get CPU view SRAM base address from bar address and bar inside offset. */
+            if (sram_bar != -1 && sram_offset != -1)
+            {
+                pcie_platform->pcie_info[dev_index].sram_bases[i] = Args->extSRAMBases[i]
+                                                                  = pcie_platform->pcie_info[dev_index].bar[sram_bar].base
+                                                                  + sram_offset;
             }
         }
     }
+
     Args->contiguousRequested = gcvTRUE;
 #endif
     return gcvSTATUS_OK;
 }
 
+gceSTATUS
+_GetGPUPhysical(
+    IN gcsPLATFORM * Platform,
+    IN gctPHYS_ADDR_T CPUPhysical,
+    OUT gctPHYS_ADDR_T *GPUPhysical
+    )
+{
+#if USE_LINUX_PCIE
+    struct _gcsPLATFORM_PCIE *pcie_platform = (struct _gcsPLATFORM_PCIE *)Platform;
+    /* Only support 1 external shared SRAM currently. */
+    gctPHYS_ADDR_T sram_base = pcie_platform->pcie_info[0].sram_bases[0];
+    gctPHYS_ADDR_T sram_gpu_base = pcie_platform->pcie_info[0].sram_gpu_bases[0];
+    uint32_t sram_size = pcie_platform->pcie_info[0].sram_sizes[0];
+
+    /* TODO: We should always set axi sram size by insmod parameters, never from feature database. */
+    if (!sram_size && Platform->dev && Platform->dev->extSRAMSizes[0])
+    {
+        sram_size = Platform->dev->extSRAMSizes[0];
+    }
+
+    if (sram_base != gcvINVALID_PHYSICAL_ADDRESS && sram_gpu_base != gcvINVALID_PHYSICAL_ADDRESS && sram_size)
+    {
+        if ((CPUPhysical >= sram_base) && (CPUPhysical < (sram_base + sram_size)))
+        {
+            *GPUPhysical = CPUPhysical - sram_base + sram_gpu_base;
+        }
+        else
+        {
+            *GPUPhysical = CPUPhysical;
+        }
+    }
+    else
+#endif
+    {
+        *GPUPhysical = CPUPhysical;
+    }
+
+    return gcvSTATUS_OK;
+}
 
 #if USE_LINUX_PCIE
 static const struct pci_device_id vivpci_ids[] = {
@@ -215,7 +360,7 @@ static int gpu_sub_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
         printk(KERN_ERR "galcore: Failed to enable MSI.\n");
     }
 #endif
-    default_platform.pcieInfo[default_platform.device_number++].pdev = pdev;
+    default_platform.pcie_info[default_platform.device_number++].pdev = pdev;
     return 0;
 }
 
@@ -283,16 +428,16 @@ int gckPLATFORM_Terminate(struct _gcsPLATFORM *platform)
 
 #if USE_LINUX_PCIE
     {
-        unsigned int devIndex;
+        unsigned int dev_index;
         struct _gcsPLATFORM_PCIE *pcie_platform = (struct _gcsPLATFORM_PCIE *)platform;
-        for (devIndex = 0; devIndex < pcie_platform->device_number; devIndex++)
+        for (dev_index = 0; dev_index < pcie_platform->device_number; dev_index++)
         {
             unsigned int i;
             for (i = 0; i < MAX_PCIE_BAR; i++)
             {
-                if (pcie_platform->pcieInfo[devIndex].bar[i] != 0)
+                if (pcie_platform->pcie_info[dev_index].bar[i].logical != 0)
                 {
-                    pci_iounmap(pcie_platform->pcieInfo[devIndex].pdev, pcie_platform->pcieInfo[devIndex]. bar[i]);
+                    pci_iounmap(pcie_platform->pcie_info[dev_index].pdev, pcie_platform->pcie_info[dev_index].bar[i].logical);
                 }
             }
         }
