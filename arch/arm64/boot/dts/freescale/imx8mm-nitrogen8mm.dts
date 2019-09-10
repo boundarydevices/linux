@@ -831,7 +831,7 @@
 
 	mipi_to_lvds: mipi-to-lvds@2c {
 		clocks = <&mipi_dsi 0>,
-			<&clk IMX8MM_CLK_LCDIF_PIXEL_DIV>;
+			<&clk IMX8MM_CLK_LCDIF_PIXEL>;
 		clock-names = "mipi_clk", "pixel_clock";
 		compatible = "ti,sn65dsi83";
 		display = <&display_subsystem>;
@@ -1052,18 +1052,18 @@
 };
 
 &mipi_dsi {
-	assigned-clocks = <&clk IMX8MM_CLK_DSI_CORE_SRC>,
-			  <&clk IMX8MM_CLK_DSI_PHY_REF_SRC>,
+	assigned-clocks = <&clk IMX8MM_CLK_DSI_CORE>,
+			  <&clk IMX8MM_CLK_DSI_PHY_REF>,
 			  <&clk IMX8MM_VIDEO_PLL1_REF_SEL>,
-			  <&clk IMX8MM_CLK_LCDIF_PIXEL_DIV>;
+			  <&clk IMX8MM_CLK_LCDIF_PIXEL>;
 	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_266M>,
 				 <&clk IMX8MM_VIDEO_PLL1_OUT>,
 				 <&clk IMX8MM_CLK_24M>;
 	assigned-clock-rates = <266000000>, <0>, <0>, <66000000>;
 
-	clocks = <&clk IMX8MM_CLK_DSI_CORE_DIV>,
-		 <&clk IMX8MM_CLK_DSI_PHY_REF_DIV>,
-		 <&clk IMX8MM_CLK_LCDIF_PIXEL_DIV>;
+	clocks = <&clk IMX8MM_CLK_DSI_CORE>,
+		 <&clk IMX8MM_CLK_DSI_PHY_REF>,
+		 <&clk IMX8MM_CLK_LCDIF_PIXEL>;
 	clock-names = "cfg", "pll-ref", "pixel_clock";
 	status = "okay";
 
@@ -1133,10 +1133,9 @@
 };
 
 &pwm2 {
-	assigned-clocks = <&clk IMX8MM_CLK_PWM2_SRC>,
-			<&clk IMX8MM_CLK_PWM2_DIV>;
+	assigned-clocks = <&clk IMX8MM_CLK_PWM2>;
 	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_40M>;
-	assigned-clock-rates = <0>, <40000000>;
+	assigned-clock-rates = <40000000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm2>;
 	status = "okay";
@@ -1164,10 +1163,9 @@
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
-	assigned-clocks = <&clk IMX8MM_CLK_SAI1_SRC>,
-			<&clk IMX8MM_CLK_SAI1_DIV>;
+	assigned-clocks = <&clk IMX8MM_CLK_SAI1>;
 	assigned-clock-parents = <&clk IMX8MM_AUDIO_PLL1_OUT>;
-	assigned-clock-rates = <0>, <12288000>;
+	assigned-clock-rates = <12288000>;
 	status = "okay";
 };
 
@@ -1192,7 +1190,7 @@
 &uart1 { /* BT */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
-	assigned-clocks = <&clk IMX8MM_CLK_UART1_SRC>;
+	assigned-clocks = <&clk IMX8MM_CLK_UART1>;
 	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_80M>;
 	fsl,uart-has-rtscts;
 	status = "okay";
@@ -1201,7 +1199,7 @@
 &uart2 { /* console */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2>;
-	assigned-clocks = <&clk IMX8MM_CLK_UART2_SRC>;
+	assigned-clocks = <&clk IMX8MM_CLK_UART2>;
 	assigned-clock-parents = <&clk IMX8MM_CLK_24M>;
 	status = "okay";
 };
@@ -1209,7 +1207,7 @@
 &uart3 { /* J15 */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
-	assigned-clocks = <&clk IMX8MM_CLK_UART3_SRC>;
+	assigned-clocks = <&clk IMX8MM_CLK_UART3>;
 	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_80M>;
 	fsl,uart-has-rtscts;
 	status = "okay";
@@ -1218,7 +1216,7 @@
 &uart4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4>;
-	assigned-clocks = <&clk IMX8MM_CLK_UART4_SRC>;
+	assigned-clocks = <&clk IMX8MM_CLK_UART4>;
 	assigned-clock-parents = <&clk IMX8MM_CLK_24M>;
 	status = "okay";
 };
