@@ -65,6 +65,7 @@ struct st_imu68_hw {
 	struct mutex lock;
 
 	s64 timestamp;
+	u8 enabled_mask;
 
 	struct iio_dev *iio_devs[ST_IMU68_ID_MAX];
 

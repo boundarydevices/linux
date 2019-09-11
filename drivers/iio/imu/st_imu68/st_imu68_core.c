@@ -1,9 +1,10 @@
 /*
  * STMicroelectronics st_imu68 sensor driver
  *
- * Copyright 2016 STMicroelectronics Inc.
+ * Copyright 2019 STMicroelectronics Inc.
  *
  * Lorenzo Bianconi <lorenzo.bianconi@st.com>
+ * Mario Tesi <mario.tesi@st.com>
  *
  * Licensed under the GPL-2.
  */
@@ -255,7 +256,7 @@ static int st_imu68_set_odr(struct st_imu68_sensor *sensor, u16 odr)
 	u8 val;
 
 	for (i = 0; i < ST_IMU68_ODR_LIST_SIZE; i++)
-		if (st_imu68_odr_table[id].odr_avl[i].hz == odr)
+		if (st_imu68_odr_table[id].odr_avl[i].hz >= odr)
 			break;
 
 	if (i == ST_IMU68_ODR_LIST_SIZE)
@@ -268,7 +269,7 @@ static int st_imu68_set_odr(struct st_imu68_sensor *sensor, u16 odr)
 	if (err < 0)
 		return err;
 
-	sensor->odr = odr;
+	sensor->odr = st_imu68_odr_table[id].odr_avl[i].hz;
 
 	return 0;
 }
@@ -388,19 +389,38 @@ static int st_imu68_write_raw(struct iio_dev *iio_dev,
 int st_imu68_sensor_enable(struct st_imu68_sensor *sensor, bool enable)
 {
 	int err;
+	enum st_imu68_sensor_id id = sensor->id;
 
 	if (enable) {
-		err = st_imu68_set_odr(sensor, sensor->odr);
-	} else {
-		enum st_imu68_sensor_id id = sensor->id;
+		u16 odr;
+		struct st_imu68_sensor *sensor_acc =
+			iio_priv(sensor->hw->iio_devs[ST_IMU68_ID_ACC]);
 
+		/* Check if Gyro enabling with Acc already on */
+		if ((id == ST_IMU68_ID_GYRO) &&
+		    (sensor->hw->enabled_mask & BIT(ST_IMU68_ID_ACC))) {
+			odr = max(sensor->odr, sensor_acc->odr);
+		} else {
+			odr = sensor->odr;
+		}
+
+		err = st_imu68_set_odr(sensor, odr);
+		if (err < 0)
+			return err;
+
+		sensor->hw->enabled_mask |= BIT(id);
+	} else {
 		err = st_imu68_write_with_mask(sensor->hw,
 					       st_imu68_odr_table[id].reg.addr,
 					       st_imu68_odr_table[id].reg.mask,
 					       0);
+		if (err < 0)
+			return err;
+
+		sensor->hw->enabled_mask &= ~BIT(id);
 	}
 
-	return err < 0 ? err : 0;
+	return 0;
 }
 
 static ssize_t st_imu68_get_sampling_frequency(struct device *dev,
@@ -538,6 +558,7 @@ int st_imu68_probe(struct device *dev, int irq, const char *name,
 	hw->dev = dev;
 	hw->irq = irq;
 	hw->tf = tf_ops;
+	hw->enabled_mask = 0;
 
 	err = st_imu68_check_whoami(hw);
 	if (err < 0)
@@ -602,5 +623,6 @@ int st_imu68_remove(struct device *dev)
 EXPORT_SYMBOL(st_imu68_remove);
 
 MODULE_AUTHOR("Lorenzo Bianconi <lorenzo.bianconi@st.com>");
+MODULE_AUTHOR("Mario Tesi <mario.tesi@st.com>");
 MODULE_DESCRIPTION("STMicroelectronics st_imu68 driver");
 MODULE_LICENSE("GPL v2");
