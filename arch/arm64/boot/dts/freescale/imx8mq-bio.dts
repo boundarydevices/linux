@@ -458,7 +458,7 @@
 		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
 		display = <&lcdif>;
-		pwms = <&pwm3 0 30000>;		/* 33.3 Khz */
+		pwms = <&pwm2 0 30000>;		/* 33.3 Khz */
 		status = "disabled";
 	};
 
