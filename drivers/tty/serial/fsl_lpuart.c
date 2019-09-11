@@ -242,6 +242,7 @@
 
 /* Rx DMA timeout in ms, which is used to calculate Rx ring buffer size */
 #define DMA_RX_TIMEOUT		(10)
+#define UART_AUTOSUSPEND_TIMEOUT	3000
 
 #define DRIVER_NAME	"fsl-lpuart"
 #define DEV_NAME	"ttyLP"
@@ -838,6 +839,20 @@ static void lpuart32_start_tx(struct uart_port *port)
 
 		if (lpuart32_read(port, UARTSTAT) & UARTSTAT_TDRE)
 			lpuart32_transmit_buffer(sport);
+	}
+}
+
+static void
+lpuart_uart_pm(struct uart_port *port, unsigned int state, unsigned int oldstate)
+{
+	switch (state) {
+	case UART_PM_STATE_OFF:
+		pm_runtime_mark_last_busy(port->dev);
+		pm_runtime_put_autosuspend(port->dev);
+		break;
+	default:
+		pm_runtime_get_sync(port->dev);
+		break;
 	}
 }
 
@@ -2407,6 +2422,7 @@ static const struct uart_ops lpuart_pops = {
 	.break_ctl	= lpuart_break_ctl,
 	.startup	= lpuart_startup,
 	.shutdown	= lpuart_shutdown,
+	.pm		= lpuart_uart_pm,
 	.set_termios	= lpuart_set_termios,
 	.type		= lpuart_type,
 	.request_port	= lpuart_request_port,
@@ -2431,6 +2447,7 @@ static const struct uart_ops lpuart32_pops = {
 	.break_ctl	= lpuart32_break_ctl,
 	.startup	= lpuart32_startup,
 	.shutdown	= lpuart32_shutdown,
+	.pm		= lpuart_uart_pm,
 	.set_termios	= lpuart32_set_termios,
 	.type		= lpuart_type,
 	.request_port	= lpuart_request_port,
@@ -2943,6 +2960,11 @@ static int lpuart_probe(struct platform_device *pdev)
 		handler = lpuart_int;
 	}
 
+	pm_runtime_use_autosuspend(&pdev->dev);
+	pm_runtime_set_autosuspend_delay(&pdev->dev, UART_AUTOSUSPEND_TIMEOUT);
+	pm_runtime_set_active(&pdev->dev);
+	pm_runtime_enable(&pdev->dev);
+
 	ret = lpuart_global_reset(sport);
 	if (ret)
 		goto failed_reset;
@@ -2967,6 +2989,9 @@ failed_irq_request:
 failed_attach_port:
 failed_get_rs485:
 failed_reset:
+	pm_runtime_disable(&pdev->dev);
+	pm_runtime_set_suspended(&pdev->dev);
+	pm_runtime_dont_use_autosuspend(&pdev->dev);
 	lpuart_disable_clks(sport);
 	return ret;
 }
@@ -2985,14 +3010,40 @@ static int lpuart_remove(struct platform_device *pdev)
 	if (sport->dma_rx_chan)
 		dma_release_channel(sport->dma_rx_chan);
 
+	pm_runtime_disable(&pdev->dev);
+	pm_runtime_set_suspended(&pdev->dev);
+	pm_runtime_dont_use_autosuspend(&pdev->dev);
 	return 0;
 }
+
+static int __maybe_unused lpuart_runtime_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct lpuart_port *sport = platform_get_drvdata(pdev);
+
+	lpuart_disable_clks(sport);
+
+	return 0;
+};
+
+static int __maybe_unused lpuart_runtime_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct lpuart_port *sport = platform_get_drvdata(pdev);
+
+	return lpuart_enable_clks(sport);
+};
 
 static int __maybe_unused lpuart_suspend(struct device *dev)
 {
 	struct lpuart_port *sport = dev_get_drvdata(dev);
 	unsigned long temp;
 	bool irq_wake;
+	int ret;
+
+	ret = clk_prepare_enable(sport->ipg_clk);
+	if (ret)
+		return ret;
 
 	if (lpuart_is_32(sport)) {
 		/* disable Rx/Tx and interrupts */
@@ -3006,10 +3057,14 @@ static int __maybe_unused lpuart_suspend(struct device *dev)
 		writeb(temp, sport->port.membase + UARTCR2);
 	}
 
+	clk_disable_unprepare(sport->ipg_clk);
+
 	uart_suspend_port(&lpuart_reg, &sport->port);
 
 	/* uart_suspend_port() might set wakeup flag */
 	irq_wake = irqd_is_wakeup_set(irq_get_irq_data(sport->port.irq));
+	if (sport->port.suspended && !irq_wake)
+		return 0;
 
 	if (sport->lpuart_dma_rx_use) {
 		/*
@@ -3040,9 +3095,6 @@ static int __maybe_unused lpuart_suspend(struct device *dev)
 		dmaengine_terminate_all(sport->dma_tx_chan);
 	}
 
-	if (sport->port.suspended && !irq_wake)
-		lpuart_disable_clks(sport);
-
 	return 0;
 }
 
@@ -3050,9 +3102,11 @@ static int __maybe_unused lpuart_resume(struct device *dev)
 {
 	struct lpuart_port *sport = dev_get_drvdata(dev);
 	bool irq_wake = irqd_is_wakeup_set(irq_get_irq_data(sport->port.irq));
+	int ret;
 
-	if (sport->port.suspended && !irq_wake)
-		lpuart_enable_clks(sport);
+	ret = clk_prepare_enable(sport->ipg_clk);
+	if (ret)
+		return ret;
 
 	if (lpuart_is_32(sport))
 		lpuart32_setup_watermark_enable(sport);
@@ -3073,12 +3127,18 @@ static int __maybe_unused lpuart_resume(struct device *dev)
 	if (lpuart_is_32(sport))
 		lpuart32_configure(sport);
 
+	clk_disable_unprepare(sport->ipg_clk);
+
 	uart_resume_port(&lpuart_reg, &sport->port);
 
 	return 0;
 }
 
-static SIMPLE_DEV_PM_OPS(lpuart_pm_ops, lpuart_suspend, lpuart_resume);
+static const struct dev_pm_ops lpuart_pm_ops = {
+	SET_RUNTIME_PM_OPS(lpuart_runtime_suspend,
+			   lpuart_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(lpuart_suspend, lpuart_resume)
+};
 
 static struct platform_driver lpuart_driver = {
 	.probe		= lpuart_probe,
