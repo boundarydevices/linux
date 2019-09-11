@@ -37,6 +37,7 @@
 #ifdef CONFIG_AMLOGIC_LCD
 #include <linux/amlogic/media/vout/lcd/lcd_notify.h>
 #include <linux/amlogic/media/vout/lcd/lcd_unifykey.h>
+#include <linux/amlogic/media/vout/lcd/lcd_vout.h>
 #endif
 #ifdef CONFIG_AMLOGIC_BL_EXTERN
 #include <linux/amlogic/media/vout/lcd/aml_bl_extern.h>
@@ -3280,7 +3281,14 @@ static const struct of_device_id bl_dt_match_table[] = {
 
 static void aml_bl_init_status_update(void)
 {
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	struct lcd_config_s *pconf;
 	unsigned int state;
+
+	pconf = lcd_drv->lcd_config;
+
+	if (pconf->lcd_boot_ctrl->lcd_init_level)
+		return;
 
 	state = bl_vcbus_read(ENCL_VIDEO_EN);
 	if (state == 0) /* default disable lcd & backlight */

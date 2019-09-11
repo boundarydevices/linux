@@ -409,6 +409,7 @@ int lcd_tcon_core_reg_get(unsigned char *buf, unsigned int size)
 
 int lcd_tcon_od_set(int flag)
 {
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
 	unsigned int reg, bit, temp;
 	int ret;
 
@@ -428,6 +429,9 @@ int lcd_tcon_od_set(int flag)
 			return -1;
 		}
 	}
+
+	if (!(lcd_drv->lcd_status & LCD_STATUS_IF_ON))
+		return -1;
 
 	reg = lcd_tcon_data->reg_core_od;
 	bit = lcd_tcon_data->bit_od_en;

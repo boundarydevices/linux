@@ -167,6 +167,7 @@ static struct lcd_boot_ctrl_s lcd_boot_ctrl_config = {
 	.lcd_type = LCD_TYPE_MAX,
 	.lcd_bits = 0,
 	.advanced_flag = 0,
+	.lcd_init_level = 0,
 	.debug_print_flag = 0,
 	.debug_test_pattern = 0,
 	.debug_para_source = 0,
@@ -310,6 +311,12 @@ static void lcd_power_encl_on(void)
 {
 	mutex_lock(&lcd_vout_mutex);
 
+	if (lcd_driver->lcd_status & LCD_STATUS_ENCL_ON) {
+		LCDPR("%s: on already\n", __func__);
+		mutex_unlock(&lcd_vout_mutex);
+		return;
+	}
+
 	lcd_driver->driver_init_pre();
 	lcd_driver->lcd_status |= LCD_STATUS_ENCL_ON;
 
@@ -336,6 +343,11 @@ static void lcd_power_encl_off(void)
 {
 	mutex_lock(&lcd_vout_mutex);
 
+	if (!(lcd_driver->lcd_status & LCD_STATUS_ENCL_ON)) {
+		LCDPR("%s: off already\n", __func__);
+		mutex_unlock(&lcd_vout_mutex);
+		return;
+	}
 	lcd_driver->lcd_status &= ~LCD_STATUS_ENCL_ON;
 	lcd_driver->driver_disable_post();
 
@@ -350,21 +362,21 @@ static void lcd_power_encl_off(void)
 static void lcd_power_if_on(void)
 {
 	mutex_lock(&lcd_vout_mutex);
-
-	lcd_driver->power_ctrl(1);
-	lcd_driver->lcd_status |= LCD_STATUS_IF_ON;
+	if (!(lcd_driver->lcd_status & LCD_STATUS_IF_ON)) {
+		lcd_driver->power_ctrl(1);
+		lcd_driver->lcd_status |= LCD_STATUS_IF_ON;
+	}
 	lcd_driver->lcd_config->change_flag = 0;
-
 	mutex_unlock(&lcd_vout_mutex);
 }
 
 static void lcd_power_if_off(void)
 {
 	mutex_lock(&lcd_vout_mutex);
-
-	lcd_driver->lcd_status &= ~LCD_STATUS_IF_ON;
-	lcd_driver->power_ctrl(0);
-
+	if (lcd_driver->lcd_status & LCD_STATUS_IF_ON) {
+		lcd_driver->lcd_status &= ~LCD_STATUS_IF_ON;
+		lcd_driver->power_ctrl(0);
+	}
 	mutex_unlock(&lcd_vout_mutex);
 }
 
@@ -1056,7 +1068,10 @@ static void lcd_config_default(void)
 	pconf->lcd_basic.v_active = lcd_vcbus_read(ENCL_VIDEO_VAVON_ELINE)
 			- lcd_vcbus_read(ENCL_VIDEO_VAVON_BLINE) + 1;
 	if (lcd_vcbus_read(ENCL_VIDEO_EN)) {
-		lcd_driver->lcd_status = LCD_STATUS_ON;
+		if (lcd_boot_ctrl_config.lcd_init_level)
+			lcd_driver->lcd_status = LCD_STATUS_ENCL_ON;
+		else
+			lcd_driver->lcd_status = LCD_STATUS_ON;
 		lcd_resume_flag = 1;
 	} else {
 		lcd_driver->lcd_status = 0;
@@ -1590,7 +1605,8 @@ static int __init lcd_boot_ctrl_setup(char *str)
 	lcd_boot_ctrl_config.lcd_type = 0xf & lcd_ctrl;
 	lcd_boot_ctrl_config.lcd_bits = 0xf & (lcd_ctrl >> 4);
 	lcd_boot_ctrl_config.advanced_flag = 0xff & (lcd_ctrl >> 8);
-	lcd_boot_ctrl_config.debug_print_flag = 0xf & (lcd_ctrl >> 16);
+	lcd_boot_ctrl_config.lcd_init_level = 0x1 & (lcd_ctrl >> 19);
+	lcd_boot_ctrl_config.debug_print_flag = 0xf & (lcd_ctrl >> 20);
 	lcd_boot_ctrl_config.debug_test_pattern = 0xf & (lcd_ctrl >> 24);
 	lcd_boot_ctrl_config.debug_para_source = 0x3 & (lcd_ctrl >> 28);
 	lcd_boot_ctrl_config.debug_lcd_mode = 0x3 & (lcd_ctrl >> 30);

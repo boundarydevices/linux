@@ -425,7 +425,8 @@ struct lcd_boot_ctrl_s {
 	unsigned char lcd_type;	//bit[3:0]
 	unsigned char lcd_bits; //bit[7:4] bits:6 or 8
 	unsigned char advanced_flag;	//bit[15:8]
-	unsigned char debug_print_flag;	//bit[19:16]
+	unsigned char lcd_init_level;	//bit[19]
+	unsigned char debug_print_flag;	//bit[23:20]
 	unsigned char debug_test_pattern;	//bit[27:24]
 	unsigned char debug_para_source;//bit[29:28]
 					//0:normal, 1:dts, 2:unifykey, 3:TBD
