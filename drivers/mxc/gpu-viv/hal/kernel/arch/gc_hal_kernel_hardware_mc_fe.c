@@ -325,17 +325,17 @@ _ProgramDescRingBuf(
 
     if (Priority)
     {
-        ringBufStartReg = 0x03F00;
-        depthExpReg     = 0x11600;
-        readPtrReg      = 0x11800;
-        writePtrReg     = 0x11700;
+        ringBufStartReg = 0x02800;
+        depthExpReg     = 0x02900;
+        readPtrReg      = 0x02B00;
+        writePtrReg     = 0x02A00;
     }
     else
     {
-        ringBufStartReg = 0x03300;
-        depthExpReg     = 0x03B00;
-        readPtrReg      = 0x03E00;
-        writePtrReg     = 0x03D00;
+        ringBufStartReg = 0x02400;
+        depthExpReg     = 0x02500;
+        readPtrReg      = 0x02700;
+        writePtrReg     = 0x02600;
     }
 
     ringBufStartReg += Index << 2;
@@ -772,8 +772,8 @@ gckMCFE_Execute(
     while (_NextPtr(ringBuf->writePtr) == ringBuf->readPtr)
     {
         gctUINT32 data;
-        regBase = Priority ? 0x11800
-                : 0x03E00;
+        regBase = Priority ? 0x02B00
+                : 0x02700;
 
         gcmkVERIFY_OK(gckOS_ReadRegisterEx(Hardware->os,
                                            Hardware->core,
@@ -793,8 +793,8 @@ gckMCFE_Execute(
         }
     }
 
-    regBase = Priority ? 0x11700
-            : 0x03D00;
+    regBase = Priority ? 0x02A00
+            : 0x02600;
 
     /* ringBufLogical is in uint32, 2 uint32 contributes 1 descriptr. */
     desc = (gcsMCFE_DESCRIPTOR *)&ringBuf->ringBufLogical[ringBuf->writePtr * 2];

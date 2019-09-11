@@ -197,6 +197,7 @@ struct _gckHARDWARE
     gctBOOL                     clockState;
     gctBOOL                     powerState;
     gctPOINTER                  globalSemaphore;
+    gctBOOL                     isLastPowerGlobal;
 
     /* Wait Link FE only. */
     gctUINT32                   lastWaitLink;
@@ -244,11 +245,9 @@ struct _gckHARDWARE
     /* Head for hardware list in gckMMU. */
     gcsLISTHEAD                 mmuHead;
 
-    /* SRAM mode. */
-    gctUINT32                   sRAMNonExclusive;
-    gckVIDMEM                   sRAMVideoMem[gcvSRAM_COUNT];
-    gctPHYS_ADDR                sRAMPhysical[gcvSRAM_COUNT];
-    gctPOINTER                  sRAMLogical[gcvSRAM_COUNT];
+    /* Internal SRAMs info. */
+    gckVIDMEM                   sRAMVidMem[gcvSRAM_INTER_COUNT];
+    gctPHYS_ADDR                sRAMPhysical[gcvSRAM_INTER_COUNT];
 
     gctPOINTER                  featureDatabase;
     gctBOOL                     hasL2Cache;

@@ -839,6 +839,7 @@ static int patch_param_imx8_subsystem(struct platform_device *pdev,
 {
     int i = 0;
     struct resource* res;
+    struct imx_priv *priv = &imxPriv;
     struct device_node *node = pdev->dev.of_node;
     struct device_node *core_node;
     int core = gcvCORE_MAJOR;
@@ -867,6 +868,9 @@ static int patch_param_imx8_subsystem(struct platform_device *pdev,
         if (!res)
             break;
 
+        while(!priv->pmdev[core] && core < gcvCORE_COUNT)
+            core++;
+
         args->irqs[core] = irqLine;
         args->registerBases[core] = res->start;
         args->registerSizes[core] = res->end - res->start + 1;
@@ -887,6 +891,7 @@ static inline int get_power_imx8_subsystem(struct device *pdev)
     struct clk *clk_core = NULL;
     struct clk *clk_shader = NULL;
     struct clk *clk_axi = NULL;
+    struct clk *clk_ahb = NULL;
 
     /* Initialize the clock structure */
     int i = 0;
@@ -898,19 +903,6 @@ static inline int get_power_imx8_subsystem(struct device *pdev)
     sc_err_t sciErr;
     uint32_t mu_id;
 
-    sciErr = sc_ipc_getMuID(&mu_id);
-
-    if (sciErr != SC_ERR_NONE) {
-        printk("galcore; cannot obtain mu id\n");
-        return -EINVAL;
-    }
-
-    sciErr = sc_ipc_open(&gpu_ipcHandle, mu_id);
-
-    if (sciErr != SC_ERR_NONE) {
-        printk("galcore: cannot open MU channel to SCU\n");
-        return -EINVAL;
-    }
 #endif
 
     while ((core_node = of_parse_phandle(node, "cores", i++)) != NULL) {
@@ -918,6 +910,7 @@ static inline int get_power_imx8_subsystem(struct device *pdev)
         clk_shader = NULL;
         clk_core = NULL;
         clk_axi = NULL;
+        clk_ahb = NULL;
 
         if (!of_device_is_available(core_node)) {
             of_node_put(core_node);
@@ -936,16 +929,22 @@ static inline int get_power_imx8_subsystem(struct device *pdev)
             break;
         }
 
-        clk_axi = clk_get(&pdev_gpu->dev, "bus");
+        clk_axi = clk_get(&pdev_gpu->dev, "axi");
 
         if (IS_ERR(clk_axi))
             clk_axi = NULL;
 
+        clk_ahb = clk_get(&pdev_gpu->dev, "ahb");
+
+        if (IS_ERR(clk_ahb))
+            clk_ahb = NULL;
+
         clk_shader = clk_get(&pdev_gpu->dev, "shader");
 
         if (IS_ERR(clk_shader)) {
-            printk("galcore: clk_get clk_3d_shader failed\n");
-            continue;
+            priv->gpu3dCount = core;
+            core = gcvCORE_2D;
+            clk_shader = NULL;
         }
 
 #if defined(CONFIG_ANDROID) && LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
@@ -962,10 +961,26 @@ static inline int get_power_imx8_subsystem(struct device *pdev)
         priv->imx_gpu_clks[core].clk_shader = clk_shader;
         priv->imx_gpu_clks[core].clk_core   = clk_core;
         priv->imx_gpu_clks[core].clk_axi    = clk_axi;
+        priv->imx_gpu_clks[core].clk_ahb    = clk_ahb;
 
 #if defined(IMX8_SCU_CONTROL)
         if (of_property_read_u32(core_node, "fsl,sc_gpu_pid", &priv->sc_gpu_pid[core])) {
             priv->sc_gpu_pid[core] = 0;
+        }
+        else if (!gpu_ipcHandle) {
+            sciErr = sc_ipc_getMuID(&mu_id);
+
+            if (sciErr != SC_ERR_NONE) {
+                printk("galcore; cannot obtain mu id\n");
+                return -EINVAL;
+            }
+
+            sciErr = sc_ipc_open(&gpu_ipcHandle, mu_id);
+
+            if (sciErr != SC_ERR_NONE) {
+                printk("galcore: cannot open MU channel to SCU\n");
+                return -EINVAL;
+            }
         }
 #endif
 
@@ -980,7 +995,8 @@ static inline int get_power_imx8_subsystem(struct device *pdev)
         ++core;
     }
 
-    priv->gpu3dCount = core;
+    if (core <= gcvCORE_3D_MAX)
+        priv->gpu3dCount = core;
 
     if (core_node)
         of_node_put(core_node);

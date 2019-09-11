@@ -410,7 +410,7 @@ gckMMU_GetPageEntry(
     );
 
 gceSTATUS
-gckMMU_SetupPerHardware(
+gckMMU_SetupSRAM(
     IN gckMMU Mmu,
     IN gckHARDWARE Hardware,
     IN gckDEVICE Device
@@ -618,14 +618,18 @@ struct _gckKERNEL
     gctUINT32                   externalBaseAddress;
     gctUINT32                   internalBaseAddress;
 
+    /* External shared SRAM. */
+    gctUINT32                   extSRAMBaseAddresses[gcvSRAM_EXT_COUNT];
+    gctUINT32                   extSRAMIndex;
+
     /* Per core SRAM description. */
     gctUINT32                   sRAMIndex;
-    gckVIDMEM                   sRAMVideoMem[gcvSRAM_COUNT];
-    gctPHYS_ADDR                sRAMPhysical[gcvSRAM_COUNT];
-    gctUINT32                   sRAMBaseAddresses[gcvSRAM_COUNT];
-    gctUINT32                   sRAMSizes[gcvSRAM_COUNT];
-    /* SRAM mode. */
-    gctUINT32                   sRAMNonExclusive;
+    gckVIDMEM                   sRAMVidMem[gcvSRAM_INTER_COUNT];
+    gctPHYS_ADDR                sRAMPhysical[gcvSRAM_INTER_COUNT];
+    gctUINT32                   sRAMBaseAddresses[gcvSRAM_INTER_COUNT];
+    gctUINT32                   sRAMSizes[gcvSRAM_INTER_COUNT];
+    gctBOOL                     sRAMPhysFaked[gcvSRAM_INTER_COUNT];
+    gctUINT64                   sRAMLoopMode;
 };
 
 struct _FrequencyHistory
@@ -1385,14 +1389,23 @@ typedef struct _gcsDEVICE
     /* Same hardware type shares one MMU. */
     gckMMU                      mmus[gcvHARDWARE_NUM_TYPES];
 
-    /* CPU view physical address of SRAMs. */
-    gctUINT64                   sRAMCPUBases[gcvCORE_COUNT][gcvSRAM_COUNT];
-    /* GPU/VIP view physical address of SRAMs. */
-    gctUINT64                   sRAMBases[gcvCORE_COUNT][gcvSRAM_COUNT];
-    /* SRAMs size. */
-    gctUINT32                   sRAMSizes[gcvCORE_COUNT][gcvSRAM_COUNT];
-    /* GPU/VIP virtual address of SRAMs. */
-    gctUINT32                   sRAMBaseAddresses[gcvCORE_COUNT][gcvSRAM_COUNT];
+    /* Physical address of internal SRAMs. */
+    gctUINT64                   sRAMBases[gcvCORE_COUNT][gcvSRAM_INTER_COUNT];
+    /* Internal SRAMs' size. */
+    gctUINT32                   sRAMSizes[gcvCORE_COUNT][gcvSRAM_INTER_COUNT];
+    /* GPU/VIP virtual address of internal SRAMs. */
+    gctUINT32                   sRAMBaseAddresses[gcvCORE_COUNT][gcvSRAM_INTER_COUNT];
+    gctBOOL                     sRAMPhysFaked[gcvCORE_COUNT][gcvSRAM_INTER_COUNT];
+
+    /* Physical address of external SRAMs. */
+    gctUINT64                   extSRAMBases[gcvSRAM_EXT_COUNT];
+    /* External SRAMs' size. */
+    gctUINT32                   extSRAMSizes[gcvSRAM_EXT_COUNT];
+    /* GPU/VIP virtual address of external SRAMs. */
+    gctUINT32                   extSRAMBaseAddresses[gcvSRAM_EXT_COUNT];
+
+    /* Show SRAM mapping info or not. */
+    gctUINT                     showSRAMMapInfo;
 
     /* Mutex to make sure stuck dump for multiple cores doesn't interleave. */
     gctPOINTER                  stuckDumpMutex;

@@ -518,6 +518,9 @@ gckKERNEL_Construct(
         _SetRecovery(kernel, recovery, stuckDump);
     }
 
+    status = gckOS_QueryOption(Os, "sRAMLoopMode", &data);
+    kernel->sRAMLoopMode = (status == gcvSTATUS_OK) ? data : 0;
+
     /* Need the kernel reference before gckKERNEL_Construct() completes.
        gckOS_MapPagesEx() is called to map kernel virtual command buffers. */
     *Kernel = kernel;
@@ -563,12 +566,14 @@ gckKERNEL_Construct(
         /* Set pointer to gckKERNEL object in gckHARDWARE object. */
         kernel->hardware->kernel = kernel;
 
-        kernel->sRAMNonExclusive = kernel->hardware->sRAMNonExclusive;
+        kernel->sRAMIndex = 0;
+        kernel->extSRAMIndex = 0;
 
-        for (i = gcvSRAM_EXTERNAL0; i < gcvSRAM_COUNT; i++)
+        for (i = gcvSRAM_INTERNAL0; i < gcvSRAM_INTER_COUNT; i++)
         {
-            kernel->sRAMVideoMem[i] = kernel->hardware->sRAMVideoMem[i];
-            kernel->sRAMPhysical[i] = kernel->hardware->sRAMPhysical[i];
+            kernel->sRAMVidMem[i]    = kernel->hardware->sRAMVidMem[i];
+            kernel->sRAMPhysical[i]  = kernel->hardware->sRAMPhysical[i];
+            kernel->sRAMPhysFaked[i] = gcvFALSE;
         }
 
         kernel->timeOut = kernel->hardware->type == gcvHARDWARE_2D
@@ -602,7 +607,7 @@ gckKERNEL_Construct(
         }
 
         gcmkONERROR(
-            gckMMU_SetupPerHardware(kernel->mmu, kernel->hardware, kernel->device));
+            gckMMU_SetupSRAM(kernel->mmu, kernel->hardware, kernel->device));
 
         if (kernel->hardware->mmuVersion && !kernel->mmu->dynamicAreaSetuped)
         {
@@ -1002,7 +1007,6 @@ gckKERNEL_AllocateVideoMemory(
     gctBOOL virtualPool4K = gcvFALSE;
     gctBOOL hasFastPools = gcvFALSE;
     gctSIZE_T bytes = *Bytes;
-    gctUINT32 sRAMIndex = 1;
 
     gcmkHEADER_ARG("Kernel=%p *Pool=%d *Bytes=%lu Alignment=%lu Type=%d",
                    Kernel, *Pool, *Bytes, Alignment, Type);
@@ -1188,9 +1192,13 @@ AllocateMemory:
         /* gcvPOOL_SYSTEM/gcvPOOL_SRAM can't be cacheable. */
         else if (cacheable == gcvFALSE && secure == gcvFALSE)
         {
-            /* Get pointer to gckVIDMEM object for pool. */
-            Kernel->sRAMIndex = sRAMIndex;
+#ifdef EMULATOR
+            /* Cmodel only support 1 SRAM currently. */
+            Kernel->sRAMIndex = 0;
+            Kernel->extSRAMIndex = 0;
+#endif
 
+            /* Get pointer to gckVIDMEM object for pool. */
             status = gckKERNEL_GetVideoMemoryPool(Kernel, pool, &videoMemory);
 
             if (gcmIS_SUCCESS(status))
@@ -1216,7 +1224,9 @@ AllocateMemory:
                                                            pool,
                                                            Type,
                                                            Alignment,
-                                                           (pool == gcvPOOL_SYSTEM || pool == gcvPOOL_SRAM),
+                                                           (pool == gcvPOOL_SYSTEM ||
+                                                            pool == gcvPOOL_INTERNAL_SRAM ||
+                                                            pool == gcvPOOL_EXTERNAL_SRAM),
                                                            &bytes,
                                                            &nodeObject);
                 }
@@ -1238,10 +1248,10 @@ AllocateMemory:
         else
         if (pool == gcvPOOL_LOCAL_EXTERNAL)
         {
-            if (Kernel->sRAMNonExclusive)
+            if (Kernel->sRAMLoopMode)
             {
-                /* Advance to SRAM memory. */
-                pool = gcvPOOL_SRAM;
+                /* Advance to Internal SRAM memory block. */
+                pool = gcvPOOL_INTERNAL_SRAM;
             }
             else
             {
@@ -1251,11 +1261,11 @@ AllocateMemory:
         }
 
         else
-        if (pool == gcvPOOL_SRAM)
+        if (pool == gcvPOOL_INTERNAL_SRAM)
         {
-            if (sRAMIndex < gcvSRAM_COUNT - 1)
+            if (Kernel->sRAMIndex < gcvSRAM_INTER_COUNT - 1 && !Kernel->sRAMPhysFaked[Kernel->sRAMIndex])
             {
-                sRAMIndex++;
+                Kernel->sRAMIndex++;
                 loopCount++;
             }
             else
@@ -1349,6 +1359,16 @@ _AllocateLinearMemory(
                    Kernel, pool, bytes, alignment, type);
 
     gcmkVERIFY_ARGUMENT(bytes != 0);
+
+    if (Interface->u.AllocateLinearVideoMemory.sRAMIndex >= 0)
+    {
+        Kernel->sRAMIndex = Interface->u.AllocateLinearVideoMemory.sRAMIndex;
+    }
+
+    if (Interface->u.AllocateLinearVideoMemory.extSRAMIndex >= 0)
+    {
+        Kernel->extSRAMIndex = Interface->u.AllocateLinearVideoMemory.extSRAMIndex;
+    }
 
     /* Allocate video memory node. */
     gcmkONERROR(
@@ -1560,7 +1580,7 @@ OnError:
         gckVIDMEM_NODE_UnlockCPU(Kernel, nodeObject, ProcessID, gcvTRUE);
     }
 
-    if (address)
+    if (address != gcvINVALID_ADDRESS)
     {
         gckVIDMEM_NODE_Unlock(Kernel, nodeObject, ProcessID, &asynchronous);
 
@@ -5158,13 +5178,20 @@ gckDEVICE_Construct(
     {
         device->coreInfoArray[i].type = gcvHARDWARE_INVALID;
 
-        /* Initialize device SRAM. */
-        for (j = 0; j < gcvSRAM_COUNT; j++)
+        /* Initialize internal SRAM. */
+        for (j = 0; j < gcvSRAM_INTER_COUNT; j++)
         {
-            device->sRAMCPUBases[i][j] = gcvINVALID_PHYSICAL_ADDRESS;
-            device->sRAMBases[i][j]    = gcvINVALID_PHYSICAL_ADDRESS;
-            device->sRAMSizes[i][j]    = 0;
+            device->sRAMBases[i][j] = gcvINVALID_PHYSICAL_ADDRESS;
+            device->sRAMSizes[i][j] = 0;
+            device->sRAMPhysFaked[i][j] = gcvFALSE;
         }
+    }
+
+    /* Initialize external SRAM. */
+    for (i = 0; i < gcvSRAM_EXT_COUNT; i++)
+    {
+        device->extSRAMBases[i] = gcvINVALID_PHYSICAL_ADDRESS;
+        device->extSRAMSizes[i] = 0;
     }
 
     device->defaultHwType = gcvHARDWARE_INVALID;
@@ -5173,6 +5200,7 @@ gckDEVICE_Construct(
     gcmkONERROR(gckOS_CreateMutex(Os, &device->commitMutex));
 
     device->os = Os;
+    device->showSRAMMapInfo = 0;
 
     *Device = device;
 

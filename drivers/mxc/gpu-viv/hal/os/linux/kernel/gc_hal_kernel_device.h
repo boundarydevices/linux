@@ -86,6 +86,12 @@ typedef struct _gckGALDEVICE
     gctPOINTER          externalLogical;
     gckVIDMEM           externalVidMem;
 
+    /* Shared external SRAMs. */
+    gctPHYS_ADDR_T      extSRAMBases[gcvSRAM_EXT_COUNT];
+    gctSIZE_T           extSRAMSizes[gcvSRAM_EXT_COUNT];
+    gctPHYS_ADDR        extSRAMPhysical[gcvSRAM_EXT_COUNT];
+    gckVIDMEM           extSRAMVidMem[gcvSRAM_EXT_COUNT];
+
     gctPHYS_ADDR_T      contiguousBase;
     gctSIZE_T           contiguousSize;
     gctPHYS_ADDR        contiguousPhysical;

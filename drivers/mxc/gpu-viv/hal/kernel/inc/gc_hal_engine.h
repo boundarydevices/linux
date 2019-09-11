@@ -127,13 +127,14 @@ typedef struct _gcoBUFOBJ *             gcoBUFOBJ;
 
 typedef enum _gcePROGRAM_STAGE
 {
-    gcvPROGRAM_STAGE_VERTEX   = 0x0,
-    gcvPROGRAM_STAGE_TCS      = 0x1,
-    gcvPROGRAM_STAGE_TES      = 0x2,
-    gcvPROGRAM_STAGE_GEOMETRY = 0x3,
-    gcvPROGRAM_STAGE_FRAGMENT = 0x4,
-    gcvPROGRAM_STAGE_COMPUTE  = 0x5,
-    gcvPROGRAM_STAGE_OPENCL   = 0x6,
+    gcvPROGRAM_STAGE_VERTEX         = 0x0,
+    gcvPROGRAM_STAGE_TCS            = 0x1,
+    gcvPROGRAM_STAGE_TES            = 0x2,
+    gcvPROGRAM_STAGE_GEOMETRY       = 0x3,
+    gcvPROGRAM_STAGE_FRAGMENT       = 0x4,
+    gcvPROGRAM_STAGE_GRAPHICS_COUNT = 0x5,
+    gcvPROGRAM_STAGE_COMPUTE        = 0x5,
+    gcvPROGRAM_STAGE_OPENCL         = 0x6,
     gcvPROGRAM_STAGE_LAST
 }
 gcePROGRAM_STAGE;

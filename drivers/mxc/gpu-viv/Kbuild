@@ -79,7 +79,9 @@ MODULE_NAME ?= galcore
 CUSTOMER_ALLOCATOR_OBJS    ?=
 ALLOCATOR_ARRAY_H_LOCATION ?= $(OS_KERNEL_DIR)/allocator/default/
 
+ifeq ($(CONFIG_KASAN),)
 EXTRA_CFLAGS += -Werror
+endif
 
 OBJS := $(OS_KERNEL_DIR)/gc_hal_kernel_device.o \
         $(OS_KERNEL_DIR)/gc_hal_kernel_linux.o \

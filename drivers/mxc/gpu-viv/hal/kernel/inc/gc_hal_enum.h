@@ -661,6 +661,7 @@ typedef enum _gceOPTION
     gcvOPTION_FBO_PREFER_MEM = 54,
     gcvOPTION_GPU_TEX_UPLOAD = 55,
     gcvOPTION_GPU_BUFOBJ_UPLOAD = 56,
+    gcvOPTION_NO_Y_INVERT = 60,
 
     /* OCL option */
     gcvOPTION_OCL_ASYNC_BLT = 200,
@@ -677,7 +678,6 @@ typedef enum _gceOPTION
     gcvOPTION_OVX_USE_MULTI_DEVICES,
     gcvOPTION_OVX_ENABLE_NN_DDR_BURST_SIZE_256B,
 #endif
-
     /* Insert option above this comment only */
     gcvOPTION_COUNT                     /* Not a OPTION*/
 }
@@ -2236,14 +2236,23 @@ typedef enum _gceMCFE_CHANNEL_TYPE
 }
 gceMCFE_CHANNEL_TYPE;
 
-typedef enum _gceSRAM
+typedef enum _gceSRAM_INTERNAL
 {
-    gcvSRAM_INTERNAL  = 0,
-    gcvSRAM_EXTERNAL0 = 1,
-    gcvSRAM_EXTERNAL1 = 2,
-    gcvSRAM_COUNT
+    gcvSRAM_INTERNAL0 = 0,
+    gcvSRAM_INTERNAL1,
+
+    gcvSRAM_INTER_COUNT
 }
-gceSRAM;
+gceSRAM_INTERNAL;
+
+typedef enum _gceSRAM_EXTERNAL
+{
+    gcvSRAM_EXTERNAL0 = 0,
+    gcvSRAM_EXTERNAL1,
+
+    gcvSRAM_EXT_COUNT
+}
+gceSRAM_EXTERNAL;
 
 typedef enum _gceFLATMAP_FLAG
 {

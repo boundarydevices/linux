@@ -407,8 +407,8 @@ typedef struct _gcsHAL_QUERY_CHIP_IDENTITY
     gctUINT32                   customerID;
 
     /* CPU view physical address and size of SRAMs. */
-    gctUINT64                   sRAMBases[gcvSRAM_COUNT];
-    gctUINT32                   sRAMSizes[gcvSRAM_COUNT];
+    gctUINT64                   sRAMBases[gcvSRAM_INTER_COUNT];
+    gctUINT32                   sRAMSizes[gcvSRAM_INTER_COUNT];
 
     gctUINT64                   platformFlagBits;
 }
@@ -431,14 +431,15 @@ typedef struct _gcsHAL_QUERY_CHIP_OPTIONS
     gctUINT32                   uscAttribCacheRatio;
     gctUINT32                   userClusterMask;
 
-    /* GPU/VIP virtual address of SRAMs. */
-    gctUINT32                   sRAMBaseAddresses[gcvSRAM_COUNT];
-    /* SRAMs size. */
-    gctUINT32                   sRAMSizes[gcvSRAM_COUNT];
-    /* GPU/VIP view physical address of SRAMs. */
-    gctPHYS_ADDR_T              sRAMPhysicalBases[gcvSRAM_COUNT];
-    /* CPU view physical address of SRAMs. */
-    gctPHYS_ADDR_T              sRAMCPUPhysicalBases[gcvSRAM_COUNT];
+    /* Internal SRAM size. */
+    gctUINT32                   sRAMSizes[gcvSRAM_INTER_COUNT];
+    /* Internal SRAM count. */
+    gctUINT32                   sRAMCount;
+
+    /* External SRAM size. */
+    gctUINT32                   extSRAMSizes[gcvSRAM_EXT_COUNT];
+    /* External SRAM count. */
+    gctUINT32                   extSRAMCount;
 
     gceSECURE_MODE              secureMode;
     gctBOOL                     enableNNTPParallel;
@@ -506,6 +507,11 @@ typedef struct _gcsHAL_ALLOCATE_LINEAR_VIDEO_MEMORY
 
     /* Memory pool to allocate from. */
     IN OUT gctUINT32            pool;
+
+    /* Internal SRAM index. */
+    IN gctINT32                 sRAMIndex;
+    /* External SRAM index. */
+    IN gctINT32                 extSRAMIndex;
 
     /* Allocated video memory. */
     OUT gctUINT32               node;
