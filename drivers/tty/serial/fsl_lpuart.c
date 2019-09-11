@@ -1563,7 +1563,15 @@ static void lpuart_set_mctrl(struct uart_port *port, unsigned int mctrl)
 
 static void lpuart32_set_mctrl(struct uart_port *port, unsigned int mctrl)
 {
+	unsigned long temp;
 
+	temp = lpuart32_read(port, UARTCTRL);
+	if (mctrl & TIOCM_LOOP)
+		temp |= UARTCTRL_LOOPS;
+	else
+		temp &= ~UARTCTRL_LOOPS;
+
+	lpuart32_write(port, temp, UARTCTRL);
 }
 
 static void lpuart_break_ctl(struct uart_port *port, int break_state)
