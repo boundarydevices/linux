@@ -393,9 +393,13 @@ static int nwl_dsi_config_dpi(struct nwl_dsi *dsi)
 	/*
 	 * Adjusting input polarity based on the video mode results in
 	 * a black screen so always pick active low:
+	 * (and polarity active high in LCDIF)
 	 */
 	nwl_dsi_write(dsi, NWL_DSI_VSYNC_POLARITY,
 		      NWL_DSI_VSYNC_POLARITY_ACTIVE_LOW);
+	/*
+	 * Our dsi-rgb converter needs 0 regardless of input polarity
+	 */
 	nwl_dsi_write(dsi, NWL_DSI_HSYNC_POLARITY,
 		      NWL_DSI_HSYNC_POLARITY_ACTIVE_LOW);
 
