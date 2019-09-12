@@ -395,8 +395,6 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 	enum dpi_interface_color_coding color_coding =
 		nwl_dsi_get_dpi_interface_color_coding(dsi_device->format);
 	bool burst_mode;
-	unsigned pix_cnt = 0;
-	unsigned hs_clk_cnt = 0;
 	unsigned hbp, hfp, hsa;
 
 	drm_display_mode_to_videomode(dsi->curr_mode, &vm);
@@ -436,13 +434,6 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 		 * maximum of about h. blanking period more.(just a guess)
 		 */
 		nwl_dsi_write(dsi, PIXEL_FIFO_SEND_LEVEL, 0 ? 480 : 256);
-	} else {
-		nwl_dsi_write(dsi, VIDEO_MODE,
-			(dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE) ? 0 : 1);
-		nwl_dsi_write(dsi, PIXEL_FIFO_SEND_LEVEL, vm.hactive);
-	}
-
-	if (burst_mode) {
 		if (vm.hback_porch <= 8) {
 			hbp = 1;
 			hfp = 7;
@@ -453,6 +444,13 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 			hsa = 6;
 		}
 	} else {
+		unsigned pix_cnt = 0;
+		unsigned hs_clk_cnt = 0;
+
+		nwl_dsi_write(dsi, VIDEO_MODE,
+			(dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE) ? 0 : 1);
+		nwl_dsi_write(dsi, PIXEL_FIFO_SEND_LEVEL, vm.hactive);
+
 		hbp = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, vm.hback_porch,
 				(dsi->lanes > 1) ? 14 : 10, 4, &pix_cnt,
 				&hs_clk_cnt);
