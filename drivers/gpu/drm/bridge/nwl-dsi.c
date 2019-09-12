@@ -1535,7 +1535,6 @@ static int nwl_dsi_remove(struct platform_device *pdev)
 	struct mode_config *config;
 	struct list_head *pos, *tmp;
 
-
 	drm_bridge_remove(&dsi->bridge);
 
 	list_for_each_safe(pos, tmp, &dsi->valid_modes) {
