@@ -377,9 +377,15 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 	DRM_DEV_DEBUG_DRIVER(dev, "DSI format is: %d (CC=%d, PF=%d)\n",
 			dsi_device->format, color_coding, pixel_format);
 
-	/*TODO: need to make polarity configurable */
-	nwl_dsi_write(dsi, VSYNC_POLARITY, 0x00);
-	nwl_dsi_write(dsi, HSYNC_POLARITY, 0x00);
+	/*
+	 * Something is weird with VSYNC_POLARITY, it must be 0
+	 * (and polarity active high in LCDIF)
+	 */
+	nwl_dsi_write(dsi, VSYNC_POLARITY, 0);
+	/*
+	 * Our dsi-rgb converter needs 0 regardless of input polarity
+	 */
+	nwl_dsi_write(dsi, HSYNC_POLARITY, 0);
 
 	if (dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_BURST) {
 		nwl_dsi_write(dsi, VIDEO_MODE, VIDEO_MODE_SYNC_BURST);
