@@ -1300,8 +1300,6 @@ static void nwl_dsi_bridge_detach(struct drm_bridge *bridge)
 		drm_panel_detach(dsi->panel);
 		drm_connector_cleanup(&dsi->connector);
 		dsi->panel = NULL;
-	} else if (dsi->next_bridge) {
-		dsi->next_bridge = NULL;
 	}
 	if (dsi->host.dev)
 		mipi_dsi_host_unregister(&dsi->host);
