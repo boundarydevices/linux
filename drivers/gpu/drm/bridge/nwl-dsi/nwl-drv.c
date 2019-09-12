@@ -561,6 +561,8 @@ nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Setting mode:\n");
 	drm_mode_debug_printmodeline(adjusted);
 
+	memcpy(&dsi->mode, adjusted, sizeof(dsi->mode));
+
 	config = nwl_dsi_mode_probe(dsi, adjusted);
 	/* New mode? This should NOT happen */
 	if (!config) {
@@ -580,8 +582,6 @@ nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 		    !strcmp(id, NWL_DSI_CLK_PIXEL))
 			clk_set_rate(clk, adjusted->crtc_clock * 1000);
 	}
-
-	memcpy(&dsi->mode, adjusted, sizeof(dsi->mode));
 
 	phy_ref_rate = config->phy_rates[config->phy_rate_idx];
 	clk_set_rate(dsi->phy_ref_clk, phy_ref_rate);
