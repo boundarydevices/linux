@@ -196,6 +196,7 @@ static void imx_nwl_dsi_set_clocks(struct imx_mipi_dsi *dsi, bool enable)
 				continue;
 			if (new_rate > 0)
 				clk_set_rate(clk, new_rate);
+
 			clk_prepare_enable(clk);
 			dsi->clk_config[i].enabled = true;
 			cur_rate = clk_get_rate(clk);
@@ -816,8 +817,6 @@ static int imx_nwl_dsi_bind(struct device *dev,
 		return ret;
 	}
 
-	dsi->next_bridge->encoder = &dsi->encoder;
-	dsi->encoder.bridge = dsi->next_bridge;
 	ret = drm_bridge_attach(&dsi->encoder, dsi->next_bridge, NULL);
 	if (ret)
 		drm_encoder_cleanup(&dsi->encoder);
