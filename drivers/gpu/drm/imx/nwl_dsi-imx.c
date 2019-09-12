@@ -213,6 +213,7 @@ static void imx_nwl_dsi_set_clocks(struct imx_mipi_dsi *dsi, bool enable)
 			DRM_DEV_DEBUG_DRIVER(dev, "Disabled %s clk\n", id);
 		}
 	}
+	msleep(2);
 }
 
 /*
