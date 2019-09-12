@@ -657,13 +657,14 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 	}
 	dsi->bitclk = ret;
 
-	config = devm_kzalloc(dsi->dev, sizeof(struct mode_config), GFP_KERNEL);
-	config->pixclock = pixclock;
-	config->lanes = lanes;
-	config->bitclock = bit_clk;
-	config->phyref_rate = dsi->phy_ref.rate;
-	list_add(&config->list, &dsi->valid_modes);
-
+	config = devm_kzalloc(dev, sizeof(struct mode_config), GFP_KERNEL);
+	if (config) {
+		config->pixclock = pixclock;
+		config->lanes = lanes;
+		config->bitclock = bit_clk;
+		config->phyref_rate = dsi->phy_ref.rate;
+		list_add(&config->list, &dsi->valid_modes);
+	}
 	return config;
 }
 
