@@ -473,17 +473,22 @@ static int nwl_dsi_config_dpi(struct nwl_dsi *dsi)
 		unsigned pix_cnt = 0;
 		unsigned hs_clk_cnt = 0;
 
+		pr_debug("%s: hbp=%d hfp=%d hsa=%d\n", __func__,
+			hback_porch, hfront_porch, hsync_len);
 		hback_porch = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, hback_porch,
-				(dsi->lanes > 1) ? 14 : 10, 4, &pix_cnt,
+				(dsi->lanes > 1) ? 14 : 11, 4, &pix_cnt,
 				&hs_clk_cnt);
 		nwl_dsi_cvt_pixels_to_hs_byte_clocks_burst(dsi, hactive,
 				bpp, &pix_cnt, &hs_clk_cnt);
 		hfront_porch = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, hfront_porch,
-				(dsi->lanes > 1) ? 7 : 11, 4, &pix_cnt,
+				(dsi->lanes > 1) ? 7 : 11, 2, &pix_cnt,
 				&hs_clk_cnt);
 		hsync_len = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, hsync_len,
 				10, 2, &pix_cnt, &hs_clk_cnt);
 
+		pr_debug("%s: hbp=%d hfp=%d hsa=%d %c\n", __func__,
+			hback_porch, hfront_porch, hsync_len,
+			(dsi->dsi_mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE) ? 'p' : 'e');
 		mode = ((dsi->dsi_mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE) ?
 				NWL_DSI_VM_BURST_MODE_WITH_SYNC_PULSES :
 				NWL_DSI_VM_NON_BURST_MODE_WITH_SYNC_EVENTS);
