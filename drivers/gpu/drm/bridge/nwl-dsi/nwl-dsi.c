@@ -250,8 +250,6 @@ static int nwl_dsi_config_dpi(struct nwl_dsi *dsi)
 	int hfront_porch, hback_porch, hactive, vfront_porch, vback_porch;
 	int hsync_len, vsync_len;
 	int bpp = mipi_dsi_pixel_format_to_bpp(dsi->format);
-	unsigned pix_cnt = 0;
-	unsigned hs_clk_cnt = 0;
 
 	hactive = dsi->mode.hdisplay;
 	hfront_porch = dsi->mode.hsync_start - hactive;
@@ -325,6 +323,9 @@ static int nwl_dsi_config_dpi(struct nwl_dsi *dsi)
 		 */
 		nwl_dsi_write(dsi, NWL_DSI_PIXEL_FIFO_SEND_LEVEL, 0 ? 480 : 256);
 	} else {
+		unsigned pix_cnt = 0;
+		unsigned hs_clk_cnt = 0;
+
 		hback_porch = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, hback_porch,
 				(dsi->lanes > 1) ? 14 : 10, 4, &pix_cnt,
 				&hs_clk_cnt);
