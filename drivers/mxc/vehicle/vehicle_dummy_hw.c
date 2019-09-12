@@ -98,6 +98,7 @@ static struct class* vehicle_dummy_class;
 
 void mcu_set_control_commands(u32 prop, u32 area, u32 value)
 {
+	dev_dbg("%s: prop %d, area %d, value %d \n", prop, area, value);
 	switch (prop) {
 	case HVAC_FAN_SPEED:
 		pr_info("set fan speed with value %d\n", value);
