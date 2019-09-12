@@ -452,16 +452,23 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 		nwl_dsi_write(dsi, PIXEL_FIFO_SEND_LEVEL, vm.hactive);
 
 		hbp = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, vm.hback_porch,
-				(dsi->lanes > 1) ? 14 : 10, 4, &pix_cnt,
-				&hs_clk_cnt);
+			(dsi->lanes > 1) ? 14 : 11, 4, &pix_cnt,
+			&hs_clk_cnt);
 		nwl_dsi_cvt_pixels_to_hs_byte_clocks_burst(dsi, vm.hactive,
-				bpp, &pix_cnt, &hs_clk_cnt);
+			bpp, &pix_cnt, &hs_clk_cnt);
 		hfp = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, vm.hfront_porch,
-				(dsi->lanes > 1) ? 7 : 11, 4, &pix_cnt,
-				&hs_clk_cnt);
+			(dsi->lanes > 1) ? 7 : 11, 2, &pix_cnt,
+			&hs_clk_cnt);
 		hsa = nwl_dsi_cvt_pixels_to_hs_byte_clocks(dsi, vm.hsync_len,
-				10, 2, &pix_cnt, &hs_clk_cnt);
+			10, 2, &pix_cnt, &hs_clk_cnt);
+
+		pr_debug("%s: hbp=%d,%d hfp=%d,%d hsa=%d,%d %c\n", __func__,
+			hbp, vm.hback_porch,
+			hfp, vm.hfront_porch,
+			hsa, vm.hsync_len,
+			(dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE) ? 'p' : 'e');
 	}
+
 	nwl_dsi_write(dsi, HBP, hbp);
 	nwl_dsi_write(dsi, HFP, hfp);
 	nwl_dsi_write(dsi, HSA, hsa);
