@@ -103,15 +103,13 @@ struct devtype {
 
 /* Possible clocks */
 #define CLK_CORE	"core"
-#define CLK_PHYREF	"phy_ref"
 #define CLK_BYPASS	"bypass"
 #define CLK_PIXEL	"pixel"
 
 #define NCLK_CORE	0
-#define NCLK_PHYREF	1
-#define NCLK_BYPASS	2
-#define NCLK_PIXEL	3
-	struct clk_config clk_config[4];
+#define NCLK_BYPASS	1
+#define NCLK_PIXEL	2
+	struct clk_config clk_config[3];
 };
 
 static int imx8qm_dsi_poweron(struct imx_mipi_dsi *dsi);
@@ -121,7 +119,6 @@ static struct devtype imx8qm_dev = {
 	.poweroff = &imx8qm_dsi_poweroff,
 	.clk_config = {
 		[NCLK_CORE]      = { .id = CLK_CORE,   .present = false },
-		[NCLK_PHYREF]    = { .id = CLK_PHYREF, .present = true },
 		[NCLK_BYPASS]    = { .id = CLK_BYPASS, .present = true },
 		[NCLK_PIXEL]     = { .id = CLK_PIXEL,  .present = true },
 	},
@@ -138,7 +135,6 @@ static struct devtype imx8qxp_dev = {
 	.poweroff = &imx8qxp_dsi_poweroff,
 	.clk_config = {
 		[NCLK_CORE]      = { .id = CLK_CORE,   .present = false },
-		[NCLK_PHYREF]    = { .id = CLK_PHYREF, .present = true },
 		[NCLK_BYPASS]    = { .id = CLK_BYPASS, .present = true },
 		[NCLK_PIXEL]     = { .id = CLK_PIXEL,  .present = true },
 	},
@@ -155,7 +151,6 @@ static struct devtype imx8mq_dev = {
 	.poweroff = &imx8mq_dsi_poweroff,
 	.clk_config = {
 		[NCLK_CORE]      = { .id = CLK_CORE,   .present = true },
-		[NCLK_PHYREF]    = { .id = CLK_PHYREF, .present = true },
 		[NCLK_BYPASS]    = { .id = CLK_BYPASS, .present = false },
 		[NCLK_PIXEL]     = { .id = CLK_PIXEL,  .present = false },
 	},
