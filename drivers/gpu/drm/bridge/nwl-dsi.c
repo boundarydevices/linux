@@ -725,6 +725,8 @@ static void nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Setting mode:\n");
 	drm_mode_debug_printmodeline(adjusted);
 
+	dsi->curr_mode = drm_mode_duplicate(bridge->dev, adjusted);
+
 	config = nwl_dsi_mode_probe(dsi, adjusted);
 	/* New mode? This should NOT happen */
 	if (!config) {
@@ -746,8 +748,6 @@ static void nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 		"bitclock: %lu, lanes: %u\n",
 		phy_rate, actual_phy_rate,
 		config->bitclock, config->lanes);
-
-	dsi->curr_mode = drm_mode_duplicate(bridge->dev, adjusted);
 }
 
 static int nwl_dsi_host_attach(struct mipi_dsi_host *host,
