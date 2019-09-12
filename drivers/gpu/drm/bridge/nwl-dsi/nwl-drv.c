@@ -307,12 +307,13 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_dsi *dsi,
 	}
 
 	config = devm_kzalloc(dsi->dev, sizeof(struct mode_config), GFP_KERNEL);
-	config->clock = clock;
-	config->lanes = lanes;
-	config->bitclock = bit_clk;
-	memcpy(&config->phy_rates, &phy_rates, sizeof(phy_rates));
-	list_add(&config->list, &dsi->valid_modes);
-
+	if (config) {
+		config->clock = clock;
+		config->lanes = lanes;
+		config->bitclock = bit_clk;
+		memcpy(&config->phy_rates, &phy_rates, sizeof(phy_rates));
+		list_add(&config->list, &dsi->valid_modes);
+	}
 	return config;
 }
 
