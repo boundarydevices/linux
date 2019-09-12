@@ -411,7 +411,10 @@ static void nwl_dsi_config_dpi(struct nwl_mipi_dsi *dsi)
 	 * (and polarity active high in LCDIF)
 	 */
 	nwl_dsi_write(dsi, VSYNC_POLARITY, 0);
-	nwl_dsi_write(dsi, HSYNC_POLARITY, (dsi->curr_mode->flags & DRM_MODE_FLAG_PHSYNC) ? 1 : 0);
+	/*
+	 * Our dsi-rgb converter needs 0 regardless of input polarity
+	 */
+	nwl_dsi_write(dsi, HSYNC_POLARITY, 0);
 
 	burst_mode = (dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_BURST) &&
 		!(dsi_device->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE);
