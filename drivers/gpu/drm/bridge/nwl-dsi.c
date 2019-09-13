@@ -567,6 +567,39 @@ static void nwl_dsi_init_interrupts(struct nwl_mipi_dsi *dsi)
 	nwl_dsi_write(dsi, IRQ_MASK, irq_enable);
 }
 
+static u32 set_pixclock(struct nwl_mipi_dsi *dsi, const struct drm_display_mode *mode)
+{
+	unsigned long pixclock = mode->clock * 1000;
+	u32 pixel_pll, n;
+	int ret;
+
+	pixel_pll = pixclock;
+	/* Video pll must be from 500MHz to 2000 MHz */
+	if (pixel_pll < 500000000) {
+		int n = (500000000 + pixel_pll - 1) / pixel_pll;
+		int bit;
+
+		do {
+			bit = __ffs(n);
+			if ((n >> bit) <= 7)
+				break;
+			n += (1 << bit);
+		} while (1);
+		pixel_pll *= n;
+		pr_debug("%s: %d = %ld * %d\n", __func__, pixel_pll, pixclock, n);
+	}
+	ret = clk_set_rate(dsi->pixel_pll.clk, pixel_pll);
+	if (ret < 0) {
+		DRM_DEV_ERROR(dsi->dev, "clk_set_rate %d failed(%d)\n", pixel_pll, ret);
+		pixel_pll = clk_get_rate(dsi->pixel_pll.clk);
+		DRM_DEV_INFO(dsi->dev, "rate is %d\n", pixel_pll);
+	}
+	n = (pixel_pll + (pixclock >> 1)) / pixclock;
+	pixclock = pixel_pll / n;
+	dsi->pixclock = pixclock;
+	return pixclock;
+}
+
 /*
  * This function will try the required phy speed for current mode
  * If the phy speed can be achieved, the phy will save the speed
@@ -577,7 +610,7 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 {
 	struct device *dev = dsi->dev;
 	struct mode_config *config;
-	unsigned long pixclock = mode->clock * 1000;
+	unsigned long pixclock = set_pixclock(dsi, mode);
 	unsigned long bit_clk = 0;
 	u32 phyref_rate = 0, lanes = dsi->lanes;
 	int ret = 0;
@@ -585,7 +618,6 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 	list_for_each_entry(config, &dsi->valid_modes, list)
 		if (config->pixclock == pixclock)
 			return config;
-	dsi->pixclock = pixclock;
 
 	phyref_rate = pixclock;
 	while (phyref_rate >= 48000000)
@@ -607,21 +639,6 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 			pr_info("%s: %ld = %ld * %d\n", __func__, bit_clk, pixclock, dsi->hsmult);
 		}
 	}
-	phyref_rate = pixclock;
-	/* Video pll must be from 500MHz to 2000 MHz */
-	if (phyref_rate < 500000000) {
-		int n = (500000000 + phyref_rate - 1) / phyref_rate;
-
-		phyref_rate *= n;
-		pr_info("%s: %d = %ld * %d\n", __func__, phyref_rate, pixclock, n);
-	}
-	ret = clk_set_rate(dsi->pixel_pll.clk, phyref_rate);
-	if (ret < 0) {
-		DRM_DEV_ERROR(dev, "clk_set_rate %d failed(%d)\n", phyref_rate, ret);
-		phyref_rate = clk_get_rate(dsi->pixel_pll.clk);
-		DRM_DEV_INFO(dev, "rate is %d\n", phyref_rate);
-	}
-
 	ret = mixel_phy_mipi_set_phy_speed(dsi->phy,
 			bit_clk,
 			dsi->phy_ref.rate,
@@ -773,7 +790,7 @@ static int nwl_dsi_host_attach(struct mipi_dsi_host *host,
 	 * to reconfigure the phy.
 	 */
 	if (dsi->curr_mode) {
-		unsigned long pixclock = dsi->curr_mode->clock * 1000;
+		unsigned long pixclock = set_pixclock(dsi, dsi->curr_mode);
 		struct mode_config *config;
 
 		DRM_DEV_DEBUG_DRIVER(dsi->dev, "Re-setting mode:\n");
@@ -1164,17 +1181,14 @@ static int nwl_dsi_connector_get_modes(struct drm_connector *connector)
 	 * for each mode
 	 */
 	list_for_each_entry(mode, &connector->probed_modes, head) {
-		struct mode_config *config;
-		u32 phy_rate;
+		struct mode_config *config = nwl_dsi_mode_probe(dsi, mode);
 
-		config = nwl_dsi_mode_probe(dsi, mode);
 		/* Unsupported mode */
 		if (!config)
 			continue;
 
 		/* Actual pixel clock that should be used by CRTC */
-		phy_rate = config->phyref_rate / 1000;
-		mode->crtc_clock = phy_rate * (mode->clock / phy_rate);
+		mode->crtc_clock = (config->pixclock + 500)/ 1000;
 	}
 
 	return num_modes;
