@@ -34,6 +34,7 @@
 /*if not g12a use genphy driver*/
 /* if it's internal phy we will shutdown analog*/
 static unsigned int is_internal_phy;
+static unsigned int external_invert_flag;
 /* Ethernet register for G12A PHY */
 #define REG_ETH_REG1_OFFSET 0x4
 #define ETH_PLL_CTL0 0x44
@@ -71,7 +72,26 @@ struct meson_dwmac {
 static void meson6_dwmac_fix_mac_speed(void *priv, unsigned int speed)
 {
 #ifdef CONFIG_AMLOGIC_ETH_PRIVE
+	struct meson_dwmac *dwmac = priv;
+	unsigned int val;
 
+	if ((dwmac->data->g12a_phy) && (!is_internal_phy)) {
+		if (!external_invert_flag)
+			return;
+		val = readl(dwmac->reg);
+
+		switch (speed) {
+		case SPEED_10:
+		case SPEED_100:
+			val &= ~(1 << 3);
+			break;
+		case SPEED_1000:
+			val |= (1 << 3);
+		break;
+		}
+
+		writel(val, dwmac->reg);
+	}
 #else
 	struct meson_dwmac *dwmac = priv;
 	unsigned int val;
@@ -315,6 +335,7 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 	u32 internal_phy = 0;
 	int auto_cali_idx = -1;
 	is_internal_phy = 0;
+	external_invert_flag = 0;
 
 	ppdev = pdev;
 	pr_debug("g12a_network_interface_setup\n");
@@ -420,6 +441,9 @@ static void __iomem *g12a_network_interface_setup(struct platform_device *pdev)
 		if (of_property_read_u32(np, "rx_delay", &external_rx_delay))
 			pr_debug("set exphy rx delay\n");
 		}
+
+		if (mc_val & (1 << 3))
+			external_invert_flag = 1;
 		/* only exphy support wol since g12a*/
 		/*we enable/disable wol with item in dts with "wol=<1>"*/
 		if (of_property_read_u32(np, "wol",
