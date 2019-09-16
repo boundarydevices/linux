@@ -258,6 +258,25 @@ static const struct snd_soc_dapm_route pcm1865_dapm_routes[] = {
 	{ "ADC2", NULL, "ADC2 Right Capture Source" },
 };
 
+static const unsigned int pcm186x_default_init_values[16][2] = {
+	{ PCM186X_PAGE, 0x00},
+	{ PCM186X_PCM_CFG, 0x13},
+	{ PCM186X_TDM_TX_SEL, 0x01},
+	{ PCM186X_ADC1_INPUT_SEL_L, 0x50},
+	{ PCM186X_ADC1_INPUT_SEL_R, 0x50},
+	{ PCM186X_ADC2_INPUT_SEL_L, 0x60},
+	{ PCM186X_ADC2_INPUT_SEL_R, 0x60},
+	{ PCM186X_DPGA_GAIN_CTRL, 0xFF},
+	{ PCM186X_PGA_VAL_CH1_L, 0x18},		/* 12dB */
+	{ PCM186X_PGA_VAL_CH1_R, 0x18},		/* 12dB */
+	{ PCM186X_PGA_VAL_CH2_L, 0x18},		/* 12dB */
+	{ PCM186X_PGA_VAL_CH2_R, 0x18},		/* 12dB */
+	{ PCM186X_DPGA_VAL_CH1_L, 0x28},	/* 0dB */
+	{ PCM186X_DPGA_VAL_CH1_R, 0x28},	/* 0dB */
+	{ PCM186X_DPGA_VAL_CH2_L, 0x28},	/* 0dB */
+	{ PCM186X_DPGA_VAL_CH2_R, 0x28},	/* 0dB */
+};
+
 static int pcm186x_hw_params(struct snd_pcm_substream *substream,
 			     struct snd_pcm_hw_params *params,
 			     struct snd_soc_dai *dai)
