@@ -185,8 +185,8 @@ extern "C" {
 #define DRM_FORMAT_MOD_VENDOR_VIVANTE 0x06
 #define DRM_FORMAT_MOD_VENDOR_BROADCOM 0x07
 #define DRM_FORMAT_MOD_VENDOR_ARM     0x08
-#define DRM_FORMAT_MOD_VENDOR_AMPHION  0x09
-#define DRM_FORMAT_MOD_VENDOR_VSI      0x0a
+#define DRM_FORMAT_MOD_VENDOR_AMPHION  0xf0
+#define DRM_FORMAT_MOD_VENDOR_VSI      0xf1
 /* add more to the end as needed */
 
 #define DRM_FORMAT_RESERVED	      ((1ULL << 56) - 1)
