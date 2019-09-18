@@ -1071,7 +1071,7 @@ static void sec_mipi_dsim_set_main_mode(struct sec_mipi_dsim *dsim)
 
 	/* calculate hfp & hbp word counts */
 	if (dsim->panel || !dsim->hpar) {
-		hbp_wc = pix_to_delay_byte_clocks(dsim, vmode->hback_porch, (dsim->lanes <= 1) ? 13 : 7, 0, &pix_cnt, &hs_clk_cnt);
+		hbp_wc = pix_to_delay_byte_clocks(dsim, vmode->hback_porch, (dsim->lanes <= 1) ? 13 : 7, 1, &pix_cnt, &hs_clk_cnt);
 		pix_to_delay_byte_clocks_burst(dsim, vmode->hactive, bpp, &pix_cnt, &hs_clk_cnt);
 		hfp_wc = pix_to_delay_byte_clocks(dsim, vmode->hfront_porch, (dsim->lanes <= 1) ? 11 : 4, 0, &pix_cnt, &hs_clk_cnt);
 		hsa_wc = pix_to_delay_byte_clocks(dsim, vmode->hsync_len, 10/dsim->lanes, 0, &pix_cnt, &hs_clk_cnt);
