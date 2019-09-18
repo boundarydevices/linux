@@ -8,8 +8,16 @@
 #include "fsl-imx8mm.dtsi"
 #include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
+&mipi_cmds_ltk0680ytmdb {
+	min-hs-clock-multiple = <8>;
+};
+
 #include "panel-lcm-jm430.dtsi"
 #include "panel-m101nwwb.dtsi"
+&mipi_cmds_m101nwwb {
+	min-hs-clock-multiple = <8>;
+};
+
 #include "panel-com50h5n03ulc.dtsi"
 
 &iomuxc {
@@ -1086,7 +1094,6 @@
 #else
 		mode-video-sync-pulse;
 #endif
-		min-hs-clock-multiple = <8>;
 		panel-height-mm = <136>;
 		panel-width-mm = <217>;
 		power-supply = <&reg_vref_5v>;
