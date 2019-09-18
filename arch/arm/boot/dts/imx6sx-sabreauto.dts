@@ -135,6 +135,18 @@
 	assigned-clock-rates = <0>, <0>, <24576000>;
 };
 
+&dcic1 {
+	dcic_id = <0>;
+	dcic_mux = "dcic-lcdif1";
+	status = "okay";
+};
+
+&dcic2 {
+	dcic_id = <1>;
+	dcic_mux = "dcic-lvds";
+	status = "okay";
+};
+
 &esai {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_esai>;
@@ -142,7 +154,6 @@
 			<&clks IMX6SX_CLK_ESAI_EXTAL>;
 	assigned-clock-parents = <&clks IMX6SX_CLK_PLL4_AUDIO_DIV>;
 	assigned-clock-rates = <0>, <24576000>;
-	status = "okay";
 };
 
 &fec1 {
