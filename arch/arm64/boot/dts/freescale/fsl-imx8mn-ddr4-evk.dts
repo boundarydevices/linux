@@ -17,6 +17,33 @@
 #include "fsl-imx8mn.dtsi"
 
 / {
+	trusty {
+		compatible = "android,trusty-smc-v1";
+		ranges;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		use-gicv3-workaround;
+		trusty-irq {
+			use-gicv3-workaround;
+			compatible = "android,trusty-irq-v1";
+			interrupt-templates = <&trusty_ipi 0>;
+			interrupt-ranges = < 0 15 0>;
+		};
+		trusty-virtio {
+			compatible = "android,trusty-virtio-v1";
+		};
+		trusty-log {
+			compatible = "android,trusty-log-v1";
+		};
+	};
+	trusty_ipi: interrupt-controller@0 {
+		compatible = "android,CustomIPI";
+		interrupt-controller;
+		#interrupt-cells = <1>;
+	};
+};
+
+/ {
 	model = "NXP i.MX8MNano DDR4 EVK board";
 	compatible = "fsl,imx8mn-ddr4-evk", "fsl,imx8mn";
 
@@ -1000,4 +1027,8 @@
 
 &cameradev {
 	status = "okay";
+};
+
+&crypto {
+	status = "disabled";
 };
