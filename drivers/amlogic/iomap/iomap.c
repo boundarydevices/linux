@@ -38,10 +38,14 @@ static const struct of_device_id iomap_dt_match[] = {
 };
 
 static void __iomem *meson_reg_map[IO_BUS_MAX] = { NULL };
+static uint meson_reg_max[IO_BUS_MAX] = { 0 };
 
 inline int aml_reg_read(u32 bus_type, unsigned int reg, unsigned int *val)
 {
-	if (bus_type < IO_BUS_MAX && (meson_reg_map[bus_type] != NULL)) {
+	if (
+		bus_type < IO_BUS_MAX &&
+		(meson_reg_map[bus_type]) &&
+		(meson_reg_max[bus_type] >= reg)) {
 		*val = readl((meson_reg_map[bus_type]+reg));
 		return 0;
 	} else
@@ -51,7 +55,10 @@ EXPORT_SYMBOL(aml_reg_read);
 
 inline int aml_reg_write(u32 bus_type, unsigned int reg, unsigned int val)
 {
-	if (bus_type < IO_BUS_MAX && (meson_reg_map[bus_type] != NULL)) {
+	if (
+		bus_type < IO_BUS_MAX &&
+		(meson_reg_map[bus_type]) &&
+		(meson_reg_max[bus_type] >= reg)) {
 		writel(val, (meson_reg_map[bus_type]+reg));
 		return 0;
 	} else
@@ -281,6 +288,7 @@ static int iomap_probe(struct platform_device *pdev)
 		if (of_address_to_resource(child, 0, &res))
 			return -1;
 		meson_reg_map[i] = ioremap(res.start, resource_size(&res));
+		meson_reg_max[i] = res.end  - res.start;
 		i++;
 	}
 	pr_info("amlogic iomap probe done\n");
