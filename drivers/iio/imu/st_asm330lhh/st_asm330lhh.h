@@ -15,11 +15,14 @@
 #include <linux/iio/iio.h>
 #include <linux/delay.h>
 
+#define ST_ASM330LHH_DEBUG_DISCHARGE
+
 #define ST_ASM330LHH_MAX_ODR 		833
 #define ST_ASM330LHH_ODR_LIST_SIZE	8
 
 #define ST_ASM330LHH_DEV_NAME		"asm330lhh"
 
+/* FIFO simple size and depth */
 #define ST_ASM330LHH_SAMPLE_SIZE	6
 #define ST_ASM330LHH_TS_SAMPLE_SIZE	4
 #define ST_ASM330LHH_TAG_SIZE		1
@@ -167,6 +170,9 @@ struct st_asm330lhh_sensor {
 	u32 gain;
 	u16 odr;
 	u32 offset;
+#ifdef ST_ASM330LHH_DEBUG_DISCHARGE
+	u32 discharged_samples;
+#endif /* ST_ASM330LHH_DEBUG_DISCHARGE */
 
 #ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
 	__le16 old_data;
@@ -213,16 +219,13 @@ struct st_asm330lhh_hw {
 	u32 enable_mask;
 	u32 requested_mask;
 
-	s32 odr_calib;
-
 	/* Timestamp sample ODR */
 	u16 odr;
 
+	u64 ts_delta_ns;
 	s64 ts_offset;
 	s64 hw_ts;
-	s64 hw_ts_high;
 	s64 tsample;
-	s64 hw_ts_old;
 	s64 delta_ts;
 	s64 delta_hw_ts;
 	s64 ts;

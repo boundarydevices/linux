@@ -72,6 +72,9 @@
 
 #define ST_ASM330LHH_INTERNAL_FREQ_FINE		0x63
 
+/* Timestamp Tick 25us/LSB */
+#define ST_ASM330LHH_TS_DELTA_NS		25000ULL
+
 /* Temperature in uC */
 #define ST_ASM330LHH_TEMP_GAIN			256
 #define ST_ASM330LHH_TEMP_FS_GAIN		(1000000 / ST_ASM330LHH_TEMP_GAIN)
@@ -246,6 +249,7 @@ static const struct iio_chan_spec st_asm330lhh_temp_channels[] = {
 			.endianness = IIO_LE,
 		}
 	},
+	ST_ASM330LHH_EVENT_CHANNEL(IIO_TEMP, flush),
 	IIO_CHAN_SOFT_TIMESTAMP(1),
 };
 #endif /* CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE */
@@ -264,8 +268,9 @@ int __st_asm330lhh_write_with_mask(struct st_asm330lhh_hw *hw, u8 addr, u8 mask,
 		goto out;
 	}
 
-	/* avoid to write same value */
 	data = (old_data & ~mask) | ((val << __ffs(mask)) & mask);
+
+	/* avoid to write same value */
 	if (old_data == data)
 		goto out;
 
@@ -325,6 +330,7 @@ static int st_asm330lhh_get_odr_calibration(struct st_asm330lhh_hw *hw)
 {
 	int err;
 	s8 data;
+	s64 odr_calib;
 
 	err = hw->tf->read(hw->dev,
 			   ST_ASM330LHH_INTERNAL_FREQ_FINE,
@@ -335,7 +341,10 @@ static int st_asm330lhh_get_odr_calibration(struct st_asm330lhh_hw *hw)
 		return err;
 	}
 
-	hw->odr_calib = (data * 15) / 10000;
+	odr_calib = (data * 37500) / 1000;
+	hw->ts_delta_ns = ST_ASM330LHH_TS_DELTA_NS - odr_calib;
+
+	dev_info(hw->dev, "Freq Fine %lld (ts %lld)\n", odr_calib, hw->ts_delta_ns);
 
 	return 0;
 }
@@ -689,6 +698,24 @@ static IIO_DEVICE_ATTR(in_temp_scale_available, 0444,
 static IIO_DEVICE_ATTR(hwfifo_flush, 0200, NULL, st_asm330lhh_flush_fifo, 0);
 static IIO_DEVICE_ATTR(hwfifo_watermark, 0644, st_asm330lhh_get_watermark,
 		       st_asm330lhh_set_watermark, 0);
+#ifdef ST_ASM330LHH_DEBUG_DISCHARGE
+ssize_t st_asm330lhh_get_discharded_samples(struct device *dev,
+				     struct device_attribute *attr, char *buf)
+{
+	struct iio_dev *iio_dev = dev_get_drvdata(dev);
+	struct st_asm330lhh_sensor *sensor = iio_priv(iio_dev);
+	int ret;
+
+	ret = sprintf(buf, "%d\n", sensor->discharged_samples);
+
+	/* reset counter */
+	sensor->discharged_samples = 0;
+
+	return ret;
+}
+static IIO_DEVICE_ATTR(discharded_samples, 0444,
+		       st_asm330lhh_get_discharded_samples, NULL, 0);
+#endif /* ST_ASM330LHH_DEBUG_DISCHARGE */
 
 static struct attribute *st_asm330lhh_acc_attributes[] = {
 	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
@@ -696,6 +723,9 @@ static struct attribute *st_asm330lhh_acc_attributes[] = {
 	&iio_dev_attr_hwfifo_watermark_max.dev_attr.attr,
 	&iio_dev_attr_hwfifo_watermark.dev_attr.attr,
 	&iio_dev_attr_hwfifo_flush.dev_attr.attr,
+#ifdef ST_ASM330LHH_DEBUG_DISCHARGE
+	&iio_dev_attr_discharded_samples.dev_attr.attr,
+#endif /* ST_ASM330LHH_DEBUG_DISCHARGE */
 	NULL,
 };
 
@@ -719,6 +749,9 @@ static struct attribute *st_asm330lhh_gyro_attributes[] = {
 	&iio_dev_attr_hwfifo_watermark_max.dev_attr.attr,
 	&iio_dev_attr_hwfifo_watermark.dev_attr.attr,
 	&iio_dev_attr_hwfifo_flush.dev_attr.attr,
+#ifdef ST_ASM330LHH_DEBUG_DISCHARGE
+	&iio_dev_attr_discharded_samples.dev_attr.attr,
+#endif /* ST_ASM330LHH_DEBUG_DISCHARGE */
 	NULL,
 };
 
@@ -893,6 +926,10 @@ static struct iio_dev *st_asm330lhh_alloc_iiodev(struct st_asm330lhh_hw *hw,
 	sensor->hw = hw;
 	sensor->watermark = 1;
 
+#ifdef ST_ASM330LHH_DEBUG_DISCHARGE
+	sensor->discharged_samples = 0;
+#endif /* ST_ASM330LHH_DEBUG_DISCHARGE */
+
 	switch (id) {
 	case ST_ASM330LHH_ID_ACC:
 		iio_dev->channels = st_asm330lhh_acc_channels;
@@ -1008,10 +1045,6 @@ int st_asm330lhh_probe(struct device *dev, int irq,
 	if (err)
 		return err;
 #endif /* CONFIG_PM && CONFIG_IIO_ST_ASM330LHH_MAY_WAKEUP */
-
-#ifdef TIMESTAMP_HW
-	hw->delta_hw_ts = 0ull;
-#endif /* TIMESTAMP_HW */
 
 	dev_info(dev, "Device probed\n");
 
