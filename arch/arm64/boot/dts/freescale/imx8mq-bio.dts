@@ -194,6 +194,16 @@
 		>;
 	};
 
+	pinctrl_i2c4_exc3000: i2c4-exc3000grp {
+		fsl,pins = <
+#define GPIRQ_EXC3000            <&gpio3 12 IRQ_TYPE_LEVEL_LOW>
+#define GP_EXC3000_IRQ           <&gpio3 12 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0xd6
+#define GP_EXC3000_RESET         <&gpio3 13 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	0xd6
+                >;
+        };
+
 	pinctrl_i2c4_gt911: i2c4-gt911grp {
 		fsl,pins = <
 #define GPIRQ_GT911 		<&gpio3 12 IRQ_TYPE_LEVEL_HIGH>
@@ -996,12 +1006,13 @@
 		reset-gpios = GP_GT911_RESET;
 	};
 
-	wm8960: codec@1a {
-		compatible = "wlf,wm8960";
-		reg = <0x1a>;
-		clocks = <&clk IMX8MQ_CLK_SAI1_ROOT>;
-		clock-names = "mclk";
-		wlf,shared-lrclk;
+	touchscreen@2a {
+		compatible = "eeti,exc3000";
+		interrupts-extended = GPIRQ_EXC3000;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c4_exc3000>;
+		reg = <0x2a>;
+		reset-gpios = GP_EXC3000_RESET;
 	};
 
 	touchscreen@38 {
@@ -1024,6 +1035,14 @@
 		reset-gpios = GP_ST1633_RESET;
 
 		wakeup-gpios = GP_ST1633_IRQ;
+	};
+
+	wm8960: codec@1a {
+		clocks = <&clk IMX8MQ_CLK_SAI1_ROOT>;
+		clock-names = "mclk";
+		compatible = "wlf,wm8960";
+		reg = <0x1a>;
+		wlf,shared-lrclk;
 	};
 };
 
