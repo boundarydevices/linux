@@ -18,6 +18,7 @@
 /dts-v1/;
 
 #include "mesonaxg.dtsi"
+#include "mesonaxg_skt-panel.dtsi"
 
 / {
 	model = "Amlogic";

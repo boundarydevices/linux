@@ -1,5 +1,5 @@
 /*
- * arch/arm64/boot/dts/amlogic/mesongxm_q200-panel.dtsi
+ * arch/arm64/boot/dts/amlogic/mesonaxg_s400-panel.dtsi
  *
  * Copyright (C) 2016 Amlogic, Inc. All rights reserved.
  *
@@ -221,6 +221,87 @@
 			power_off_step = <2 0 0 50
 					0 0 0 100
 					0xff 0 0 0>;
+			backlight_index = <0>;
+		};
+
+		lcd_4{
+			model_name = "480p";
+				/*interface(ttl,lvds,mipi)*/
+			interface = "mipi";
+			basic_setting = <720 480 /*h_active, v_active*/
+				858 525 /*h_period, v_period*/
+				8 /*lcd_bits*/
+				15 8>; /*screen_widht, screen_height*/
+			lcd_timing = <62 60 0 /*hs_width,hs_bp,hs_pol*/
+				6 30 0>; /*vs_width,vs_bp,vs_pol*/
+			clk_attr = <0 /*fr_adj_type(0=clock,1=htotal,2=vtotal)*/
+				0 /*clk_ss_level*/
+				1 /*clk_auto_generate*/
+				27027000>; /*pixel_clk(unit in Hz)*/
+			mipi_attr = <2 /*lane_num*/
+				330 /*bit_rate_max(MHz)*/
+				0 /*factor(*100, default 0 for auto)*/
+				0 /*operation_mode_init(0=video, 1=command)*/
+				0 /*operation_mode_display(0=video, 1=command)*/
+				1 /*
+				   *video_mode_type
+				   *(0=sync_pulse,1=sync_event,2=burst)
+				   */
+				0 /*clk_always_hs(0=disable,1=enable)*/
+				1>; /*phy_switch(0=auto,1=standard,2=slow)*/
+				/* dsi_init: data_type, num, data... */
+			dsi_init_on = <0xff 0>; /* ending flag */
+			dsi_init_off = <0xff 0>; /* ending flag */
+				/* extern_init: 0xff for invalid */
+			extern_init = <0xff>;
+				/* power step: type,index,value,delay(ms) */
+			power_on_step = <0 0 0 20
+					2 0 0 0
+					0xff 0 0 0>;
+			power_off_step = <2 0 0 100
+					0 0 0 100
+					0xff 0 0 0>;
+			backlight_index = <0>;
+		};
+
+		lcd_5{
+			model_name = "720p";
+			interface = "mipi";
+			basic_setting = <1280 720 /*h_active, v_active*/
+				1650 750 /*h_period, v_period*/
+				8 /*lcd_bits*/
+				16 9>; /*screen_widht, screen_height*/
+			lcd_timing = <40 220 0 /*hs_width, hs_bp, hs_pol*/
+				5 20 0>; /*vs_width, vs_bp, vs_pol*/
+			clk_attr = <0 /*fr_adj_type(0=clk, 1=htotal, 2=vtotal)*/
+				0 /*clk_ss_level */
+				1 /*clk_auto_generate*/
+				74250000>; /*pixel_clk(unit in Hz)*/
+			mipi_attr = <4 /*lane_num*/
+				500 /*bit_rate_max(MHz)*/
+				0 /*factor(*100, default 0 for auto)*/
+				0 /*operation_mode_init(0=video, 1=command)*/
+				0 /*operation_mode_display(0=video, 1=command)*/
+				0 /*
+				   *video_mode_type
+				   *(0=sync_pulse,1=sync_event,2=burst)
+				   */
+				1 /*clk_always_hs(0=disable,1=enable)*/
+				0>; /*phy_switch(0=auto,1=standard,2=slow)*/
+
+			/* dsi_init: data_type, num, data... */
+			dsi_init_on = <0xff 0x0>;    /*ending*/
+			dsi_init_off = <0xff 0x0>;    /*ending*/
+			extern_init = <0xff>; /*0xff for invalid*/
+
+			/* power step: type, index, value, delay(ms) */
+			power_on_step = <0 0 0 10
+				0 0 1 20
+				2 0 0 0
+				0xff 0 0 0>; /*ending*/
+			power_off_step = <2 0 0 50
+				0 0 0 100
+				0xff 0 0 0>; /*ending*/
 			backlight_index = <0>;
 		};
 	};

@@ -472,6 +472,10 @@ static void check_phy_status(void)
 
 static void dsi_phy_init(struct dsi_phy_s *dphy, unsigned char lane_num)
 {
+	struct aml_lcd_drv_s *lcd_drv = aml_lcd_get_driver();
+	struct lcd_config_s *pconf;
+
+	pconf = lcd_drv->lcd_config;
 	/* enable phy clock. */
 	dsi_phy_write(MIPI_DSI_PHY_CTRL,  0x1); /* enable DSI top clock. */
 	dsi_phy_write(MIPI_DSI_PHY_CTRL,
@@ -501,9 +505,18 @@ static void dsi_phy_init(struct dsi_phy_s *dphy, unsigned char lane_num)
 		(dphy->clk_zero << 16) | (dphy->clk_prepare << 24)));
 	dsi_phy_write(MIPI_DSI_CLK_TIM1, dphy->clk_pre); /* ?? */
 	/* 0x050f090d */
-	dsi_phy_write(MIPI_DSI_HS_TIM,
-		(dphy->hs_exit | (dphy->hs_trail << 8) |
-		(dphy->hs_zero << 16) | (dphy->hs_prepare << 24)));
+	if (pconf->lcd_timing.bit_rate > 500000000UL) { /*more than 500M*/
+		dsi_phy_write(MIPI_DSI_HS_TIM,
+			      (dphy->hs_exit | (dphy->hs_trail << 8) |
+			      (dphy->hs_zero << 16) |
+			      (dphy->hs_prepare << 24)));
+	} else {
+		LCDPR("bit_rata = %d\n", pconf->lcd_timing.bit_rate);
+		dsi_phy_write(MIPI_DSI_HS_TIM,
+			      (dphy->hs_exit | ((dphy->hs_trail / 2) << 8) |
+			      (dphy->hs_zero << 16) |
+			      (dphy->hs_prepare << 24)));
+	}
 	/* 0x4a370e0e */
 	dsi_phy_write(MIPI_DSI_LP_TIM,
 		(dphy->lp_lpx | (dphy->lp_ta_sure << 8) |
