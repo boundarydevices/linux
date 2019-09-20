@@ -505,34 +505,38 @@ static irqreturn_t sn_irq_handler(int irq, void *id)
 	struct sn65dsi83_priv *sn = id;
 	int status = sn_i2c_read_byte(sn, SN_IRQ_STAT);
 
-	if (status > 0) {
-		sn_i2c_write_byte(sn, SN_IRQ_STAT, status);
-//		if (status & 1)
-//			sn_i2c_write_byte(sn, SN_SOFT_RESET, 1);
-		sn->int_cnt++;
-		if (sn->int_cnt > 64) {
-			dev_info(&sn->client->dev, "%s: status %x %x %x\n", __func__,
-				status, sn_i2c_read_byte(sn, SN_CLK_SRC),
-				sn_i2c_read_byte(sn, SN_IRQ_MASK));
-			if (sn->irq_enabled) {
-				sn->irq_enabled = 0;
-				disable_irq_nosync(sn->client->irq);
-				dev_err(&sn->client->dev, "%s: disabling irq\n", __func__);
-			}
-		} else {
-			if (!(sn->int_cnt & 7) && sn->chip_enabled) {
-				dev_info(&sn->client->dev, "%s: trying to reinit, status %x %x %x\n", __func__,
-					status, sn_i2c_read_byte(sn, SN_CLK_SRC),
-					sn_i2c_read_byte(sn, SN_IRQ_MASK));
-				sn_powerdown1(sn, 1);
-				sn_powerup_lock(sn);
-			} else {
-				msleep(20);
-			}
-		}
-		return IRQ_HANDLED;
+	if (status >= 0) {
+		if (status)
+			sn_i2c_write_byte(sn, SN_IRQ_STAT, status);
 	} else {
 		dev_err(&sn->client->dev, "%s: read error %d\n", __func__, status);
+	}
+	sn->int_cnt++;
+	if (sn->int_cnt > 64) {
+		dev_info(&sn->client->dev, "%s: status %x %x %x\n", __func__,
+			status, sn_i2c_read_byte(sn, SN_CLK_SRC),
+			sn_i2c_read_byte(sn, SN_IRQ_MASK));
+		if (sn->irq_enabled) {
+			sn->irq_enabled = 0;
+			disable_irq_nosync(sn->client->irq);
+			dev_err(&sn->client->dev, "%s: disabling irq, status=0x%x\n", __func__, status);
+		}
+		return IRQ_NONE;
+	}
+
+	if (status > 0) {
+//		if (status & 1)
+//			sn_i2c_write_byte(sn, SN_SOFT_RESET, 1);
+		if (!(sn->int_cnt & 7) && sn->chip_enabled) {
+			dev_info(&sn->client->dev, "%s: trying to reinit, status %x %x %x\n", __func__,
+				status, sn_i2c_read_byte(sn, SN_CLK_SRC),
+				sn_i2c_read_byte(sn, SN_IRQ_MASK));
+			sn_powerdown1(sn, 1);
+			sn_powerup_lock(sn);
+		} else {
+			msleep(20);
+		}
+		return IRQ_HANDLED;
 	}
 	return IRQ_NONE;
 }
