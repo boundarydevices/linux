@@ -161,9 +161,12 @@ static const struct st_lsm6dso_ext_dev_settings st_lsm6dso_ext_dev_table[] = {
 static inline void st_lsm6dso_shub_wait_complete(struct st_lsm6dso_hw *hw)
 {
 	struct st_lsm6dso_sensor *sensor;
+	u16 odr;
 
 	sensor = iio_priv(hw->iio_devs[ST_LSM6DSO_ID_ACC]);
-	msleep((2000U / sensor->odr) + 1);
+	/* Check if acc is enabled */
+	odr = (hw->enable_mask & BIT(ST_LSM6DSO_ID_ACC)) ? sensor->odr : 13;
+	msleep((2000U / odr) + 1);
 }
 
 /*
