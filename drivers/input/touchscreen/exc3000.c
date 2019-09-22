@@ -113,21 +113,21 @@ static inline void exc3000_schedule_timer(struct exc3000_data *data)
 static int exc3000_read_frame(struct exc3000_data *data, u8 *buf)
 {
 	struct i2c_client *client = data->client;
+	unsigned char startch[] = { '\'', 0 };
+	struct i2c_msg readpkt[2] = {
+		{client->addr, 0, 2, startch},
+		{client->addr, I2C_M_RD, EXC3000_LEN_FRAME, buf}
+	};
 	int ret;
 
-	ret = i2c_master_send(client, "'", 2);
-	if (ret < 0)
-		return ret;
-
-	if (ret != 2)
-		return -EIO;
-
-	ret = i2c_master_recv(client, buf, EXC3000_LEN_FRAME);
-	if (ret < 0)
-		return ret;
-
-	if (ret != EXC3000_LEN_FRAME)
-		return -EIO;
+	ret = i2c_transfer(client->adapter, readpkt,
+			   ARRAY_SIZE(readpkt));
+	if (ret != ARRAY_SIZE(readpkt)) {
+		dev_err(&client->dev,
+			"i2c_transfer failed(%d)\n", ret);
+		msleep(100);
+		return (ret < 0) ? ret : -EIO;
+	}
 
 	if (get_unaligned_le16(buf) != EXC3000_LEN_FRAME)
 		return -EINVAL;
