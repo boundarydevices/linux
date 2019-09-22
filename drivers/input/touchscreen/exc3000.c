@@ -10,6 +10,7 @@
 #include <linux/bitops.h>
 #include <linux/delay.h>
 #include <linux/device.h>
+#include <linux/gpio.h>
 #include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/input.h>
@@ -18,6 +19,7 @@
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_gpio.h>
 #include <linux/sizes.h>
 #include <linux/timer.h>
 #include <asm/unaligned.h>
@@ -73,6 +75,7 @@ struct exc3000_data {
 	struct touchscreen_properties prop;
 	struct gpio_desc *reset;
 	struct timer_list timer;
+	struct gpio_desc	*reset_gpio;
 	u8 buf[2 * EXC3000_LEN_FRAME];
 	struct completion wait_event;
 	struct mutex query_lock;
@@ -313,7 +316,8 @@ static int exc3000_probe(struct i2c_client *client)
 {
 	struct exc3000_data *data;
 	struct input_dev *input;
-	int error, max_xy, retry;
+	int error, max_xy, retry = 0;
+	struct gpio_desc *gp;
 
 	data = devm_kzalloc(&client->dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
@@ -341,11 +345,29 @@ static int exc3000_probe(struct i2c_client *client)
 		msleep(EXC3000_READY_MS);
 	}
 
+	gp = devm_gpiod_get_optional(&client->dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(gp)) {
+		error = PTR_ERR(gp);
+		if (error != -EPROBE_DEFER)
+			dev_dbg(&client->dev, "Failed to get reset GPIO: %d\n", error);
+		return error;
+	}
+	/* release reset */
+	data->reset_gpio = gp;
+	msleep(1);
+	gpiod_set_value(gp, 0);
+
 	/* probe for device */
-	error = i2c_master_send(client, NULL, 0);
-	if (error < 0) {
-		dev_err(&client->dev, "no device\n");
-		return -ENODEV;
+	while (1) {
+		msleep(5);
+		error = i2c_master_send(client, NULL, 0);
+		if (error >= 0)
+			break;
+		retry++;
+		if (retry > 3) {
+			dev_err(&client->dev, "no device\n");
+			return -ENODEV;
+		}
 	}
 
 	error = devm_request_threaded_irq(&client->dev, client->irq,
@@ -406,6 +428,16 @@ static int exc3000_probe(struct i2c_client *client)
 		return error;
 
 	data->input = input;
+	i2c_set_clientdata(client, data);
+	return 0;
+}
+
+static int exc3000_remove(struct i2c_client *client)
+{
+	struct exc3000_data *data = i2c_get_clientdata(client);
+
+	if (data && data->reset_gpio)
+		gpiod_set_value(data->reset_gpio, 1);
 	return 0;
 }
 
@@ -434,6 +466,7 @@ static struct i2c_driver exc3000_driver = {
 	},
 	.id_table	= exc3000_id,
 	.probe_new	= exc3000_probe,
+	.remove		= exc3000_remove,
 };
 
 module_i2c_driver(exc3000_driver);
