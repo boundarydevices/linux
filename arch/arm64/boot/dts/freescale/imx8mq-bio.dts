@@ -194,7 +194,7 @@
 		>;
 	};
 
-	pinctrl_i2c4_exc3000: i2c4-exc3000grp {
+	pinctrl_i2c4a_exc3000: i2c4-exc3000grp {
 		fsl,pins = <
 #define GPIRQ_EXC3000            <&gpio3 12 IRQ_TYPE_LEVEL_LOW>
 #define GP_EXC3000_IRQ           <&gpio3 12 GPIO_ACTIVE_LOW>
@@ -204,7 +204,17 @@
                 >;
         };
 
-	pinctrl_i2c4_gt911: i2c4-gt911grp {
+	pinctrl_i2c4a_ft5x06: i2c4-ft5x06grp {
+		fsl,pins = <
+#define GPIRQ_I2C4_FT5X06	<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
+#define GP_I2C4_FT5X06_WAKE	<&gpio3 12 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0x49
+#define GP_I2C4_FT5X06_RESET	<&gpio3 13 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	0x49
+		>;
+	};
+
+	pinctrl_i2c4a_gt911: i2c4-gt911grp {
 		fsl,pins = <
 #define GPIRQ_GT911 		<&gpio3 12 IRQ_TYPE_LEVEL_HIGH>
 #define GP_GT911_IRQ 		<&gpio3 12 GPIO_ACTIVE_HIGH>
@@ -215,17 +225,7 @@
 		>;
 	};
 
-	pinctrl_i2c4_ft5x06: i2c4-ft5x06grp {
-		fsl,pins = <
-#define GPIRQ_I2C4_FT5X06	<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
-#define GP_I2C4_FT5X06_WAKE	<&gpio3 12 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0x49
-#define GP_I2C4_FT5X06_RESET	<&gpio3 13 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	0x49
-		>;
-	};
-
-	pinctrl_i2c4_st1633: i2c4-st1633grp {
+	pinctrl_i2c4a_st1633: i2c4-st1633grp {
 		fsl,pins = <
 #define GPIRQ_ST1633 		<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
 #define GP_ST1633_IRQ 		<&gpio3 12 GPIO_ACTIVE_LOW>
@@ -990,40 +990,23 @@
 			reg = <1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-
-			ov5640-mipi1@3c {
-				compatible = "ov5640_mipisubdev";
-				reg = <0x3c>;
-				status = "okay";
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_i2c2_csi1>;
-				clocks = <&clk IMX8MQ_CLK_CLKO2>;
-				clock-names = "csi_mclk";
-				assigned-clocks = <&clk IMX8MQ_CLK_CLKO2>;
-				assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_200M>;
-				assigned-clock-rates = <25000000>;
-				csi_id = <0>;
-				AVDD-supply = <&reg_ldo3>;
-				DVDD-supply = <&reg_vref_3v3>;
-				DOVDD-supply = <&reg_vref_1v8>;
-				pwn-gpios = GP_CSI1_MIPI_PWDN;
-				rst-gpios = GP_CSI1_MIPI_RESET;
-				mclk = <25000000>;
-				mipi_csi;
-
-				port {
-					ov5640_mipi1_ep: endpoint {
-						remote-endpoint = <&mipi1_sensor_ep>;
-					};
-				};
-			};
 		};
 	};
 
+	wm8960: codec@1a {
+		clocks = <&clk IMX8MQ_CLK_SAI1_ROOT>;
+		clock-names = "mclk";
+		compatible = "wlf,wm8960";
+		reg = <0x1a>;
+		wlf,shared-lrclk;
+	};
+};
+
+&i2c4a {
 	touchscreen@14 {
 		compatible = "goodix,gt9271";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_gt911>;
+		pinctrl-0 = <&pinctrl_i2c4a_gt911>;
 		reg = <0x14>;
 		esd-recovery-timeout-ms = <2000>;
 		interrupts-extended = GPIRQ_GT911;
@@ -1035,7 +1018,7 @@
 		compatible = "eeti,exc3000";
 		interrupts-extended = GPIRQ_EXC3000;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_exc3000>;
+		pinctrl-0 = <&pinctrl_i2c4a_exc3000>;
 		reg = <0x2a>;
 		reset-gpios = GP_EXC3000_RESET;
 	};
@@ -1044,7 +1027,7 @@
 		compatible = "ft5x06-ts";
 		interrupts-extended = GPIRQ_I2C4_FT5X06;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_ft5x06>;
+		pinctrl-0 = <&pinctrl_i2c4a_ft5x06>;
 		reg = <0x38>;
 		wakeup-gpios = GP_I2C4_FT5X06_WAKE;
 		reset-gpios = GP_I2C4_FT5X06_RESET;
@@ -1056,18 +1039,39 @@
 		interrupts-extended = GPIRQ_ST1633;
 		/* pins used by touchscreen */
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_st1633>;
+		pinctrl-0 = <&pinctrl_i2c4a_st1633>;
 		reset-gpios = GP_ST1633_RESET;
 
 		wakeup-gpios = GP_ST1633_IRQ;
 	};
+};
 
-	wm8960: codec@1a {
-		clocks = <&clk IMX8MQ_CLK_SAI1_ROOT>;
-		clock-names = "mclk";
-		compatible = "wlf,wm8960";
-		reg = <0x1a>;
-		wlf,shared-lrclk;
+&i2c4b {
+	ov5640-mipi1@3c {
+		compatible = "ov5640_mipisubdev";
+		reg = <0x3c>;
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_csi1>;
+		clocks = <&clk IMX8MQ_CLK_CLKO2>;
+		clock-names = "csi_mclk";
+		assigned-clocks = <&clk IMX8MQ_CLK_CLKO2>;
+		assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_200M>;
+		assigned-clock-rates = <25000000>;
+		csi_id = <0>;
+		AVDD-supply = <&reg_ldo3>;
+		DVDD-supply = <&reg_vref_3v3>;
+		DOVDD-supply = <&reg_vref_1v8>;
+		pwn-gpios = GP_CSI1_MIPI_PWDN;
+		rst-gpios = GP_CSI1_MIPI_RESET;
+		mclk = <25000000>;
+		mipi_csi;
+
+		port {
+			ov5640_mipi1_ep: endpoint {
+				remote-endpoint = <&mipi1_sensor_ep>;
+			};
+		};
 	};
 };
 
