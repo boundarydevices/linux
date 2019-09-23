@@ -1596,7 +1596,7 @@ static struct sdma_desc *sdma_transfer_init(struct sdma_channel *sdmac,
 	desc->num_bd = bds;
 	INIT_LIST_HEAD(&desc->node);
 
-	if (sdma_alloc_bd(desc))
+	if (bds && sdma_alloc_bd(desc))
 		goto err_desc_out;
 
 	if (sdma_load_context(sdmac))
