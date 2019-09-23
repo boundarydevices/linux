@@ -148,7 +148,7 @@ static ssize_t length_store(struct kobject *kobj, struct kobj_attribute *attr,
 	ret = sscanf(buf, "%du", &lengthsetting);
 	if (ret < 0)
 		return ret;
-	if ((lengthsetting >= 26) && (lengthsetting <= 48))
+	if ((lengthsetting >= 26) && (lengthsetting <= 64))
 		wie->length = lengthsetting;
 	return lengthsetting;
 }
