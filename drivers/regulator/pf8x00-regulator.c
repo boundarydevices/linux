@@ -165,6 +165,11 @@ enum chips {
 	PF8200 = 0x48,
 };
 
+struct id_name {
+	enum chips id;
+	const char *name;
+};
+
 struct pf8x_regulator {
 	struct regulator_desc desc;
 	unsigned char stby_reg;
@@ -246,6 +251,25 @@ static const struct of_device_id pf8x_dt_ids[] = {
 	{ }
 };
 MODULE_DEVICE_TABLE(of, pf8x_dt_ids);
+
+const struct id_name id_list[] = {
+	{PF8100, "PF8100"},
+	{PF8121A, "PF8121A"},
+	{PF8200, "PF8200"},
+	{0, "???"},
+};
+
+const struct id_name *get_id_name(enum chips id)
+{
+	const struct id_name *p = id_list;
+
+	while (p->id) {
+		if (p->id == id)
+			break;
+		p++;
+	}
+	return p;
+}
 
 struct dvs_ramp {
 	unsigned short up_down_slow_fast[4];
@@ -591,6 +615,7 @@ static inline struct device_node *match_of_node(int index)
 
 static int pf8x_identify(struct pf8x_chip *pf)
 {
+	const struct id_name *p;
 	unsigned int value;
 	int ret;
 
@@ -599,7 +624,8 @@ static int pf8x_identify(struct pf8x_chip *pf)
 		return ret;
 
 	pf->chip_id = value;
-	if ((value != PF8100) && (value != PF8121A) && (value != PF8200)) {
+	p = get_id_name(value);
+	if (p->id != value) {
 		dev_warn(pf->dev, "Illegal ID: %x\n", value);
 		return -ENODEV;
 	}
@@ -607,10 +633,8 @@ static int pf8x_identify(struct pf8x_chip *pf)
 	ret = regmap_read(pf->regmap, PF8X00_REVID, &value);
 	if (ret)
 		value = 0;
-	dev_info(pf->dev,
-		 "%s: Full layer: %x, Metal layer: %x\n",
-		 (pf->chip_id == PF8100) ? "PF8100" : "PF8200",
-		 (value & 0xf0) >> 4, value & 0x0f);
+	dev_info(pf->dev, "%s: Full layer: %x, Metal layer: %x\n",
+		 p->name, (value & 0xf0) >> 4, value & 0x0f);
 
 	return 0;
 }
@@ -660,9 +684,8 @@ static int pf8x00_regulator_probe(struct i2c_client *client,
 	if (ret)
 		return ret;
 
-	dev_info(&client->dev, "pf8%c00 found.\n",
-		(pf->chip_id == PF8100) ? '1' :
-		((pf->chip_id == PF8200) ? '2' : '?'));
+	dev_info(&client->dev, "%s found.\n",
+		get_id_name(pf->chip_id)->name);
 
 	memcpy(pf->regulator_descs, pf8x00_regulators,
 		sizeof(pf->regulator_descs));
