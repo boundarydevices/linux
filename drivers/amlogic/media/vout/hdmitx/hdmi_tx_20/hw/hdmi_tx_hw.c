@@ -669,7 +669,7 @@ static irqreturn_t intr_handler(int irq, void *dev)
 		hdev->hdmitx_event &= ~HDMI_TX_HPD_PLUGIN;
 		hdev->rhpd_state = 0;
 		queue_delayed_work(hdev->hdmi_wq,
-			&hdev->work_hpd_plugout, HZ / 20);
+			&hdev->work_hpd_plugout, HZ / 50);
 	}
 	/* internal interrupt */
 	if (dat_top & (1 << 0)) {
