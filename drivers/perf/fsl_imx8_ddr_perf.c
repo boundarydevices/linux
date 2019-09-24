@@ -51,49 +51,64 @@
 #define to_ddr_pmu(p)		container_of(p, struct ddr_pmu, pmu)
 
 #define DDR_PERF_DEV_NAME	"imx8_ddr"
+#define DB_PERF_DEV_NAME	"imx8_db"
 #define DDR_CPUHP_CB_NAME	DDR_PERF_DEV_NAME "_perf_pmu"
 
 static DEFINE_IDA(ddr_ida);
+static DEFINE_IDA(db_ida);
 
 /* DDR Perf hardware feature */
 #define DDR_CAP_AXI_ID_FILTER			0x1     /* support AXI ID filter */
 #define DDR_CAP_AXI_ID_FILTER_ENHANCED		0x3     /* support enhanced AXI ID filter */
 #define DDR_CAP_AXI_ID_PORT_CHANNEL_FILTER	0x4	/* support AXI ID PORT CHANNEL filter */
 
+/* Perf type */
+#define DDR_PERF_TYPE          0x1     /* ddr Perf */
+#define DB_PERF_TYPE           0x2     /* db Perf */
+
 struct fsl_ddr_devtype_data {
 	unsigned int quirks;    /* quirks needed for different DDR Perf core */
 	const char *identifier;	/* system PMU identifier for userspace */
+	unsigned int type;      /* types of Perf, point the location of Perf */
 };
 
-static const struct fsl_ddr_devtype_data imx8_devtype_data;
+static const struct fsl_ddr_devtype_data imx8_devtype_data = {
+	.type = DDR_PERF_TYPE,
+};
 
 static const struct fsl_ddr_devtype_data imx8m_devtype_data = {
 	.quirks = DDR_CAP_AXI_ID_FILTER,
+	.type = DDR_PERF_TYPE,
 };
 
 static const struct fsl_ddr_devtype_data imx8mq_devtype_data = {
 	.quirks = DDR_CAP_AXI_ID_FILTER,
 	.identifier = "i.MX8MQ",
+	.type = DDR_PERF_TYPE,
 };
 
 static const struct fsl_ddr_devtype_data imx8mm_devtype_data = {
 	.quirks = DDR_CAP_AXI_ID_FILTER,
 	.identifier = "i.MX8MM",
+	.type = DDR_PERF_TYPE,
 };
 
 static const struct fsl_ddr_devtype_data imx8mn_devtype_data = {
 	.quirks = DDR_CAP_AXI_ID_FILTER,
 	.identifier = "i.MX8MN",
+	.type = DDR_PERF_TYPE,
 };
 
 static const struct fsl_ddr_devtype_data imx8mp_devtype_data = {
 	.quirks = DDR_CAP_AXI_ID_FILTER_ENHANCED,
 	.identifier = "i.MX8MP",
+	.type = DDR_PERF_TYPE,
 };
 
 static const struct fsl_ddr_devtype_data imx8dxl_devtype_data = {
 	.quirks = DDR_CAP_AXI_ID_PORT_CHANNEL_FILTER,
 	.identifier = "i.MX8DXL",
+	.type = DDR_PERF_TYPE,
 };
 
 static const struct of_device_id imx_ddr_pmu_dt_ids[] = {
@@ -288,6 +303,18 @@ static const struct attribute_group ddr_perf_events_attr_group = {
 	.attrs = ddr_perf_events_attrs,
 };
 
+static struct attribute *db_perf_events_attrs[] = {
+	IMX8_DDR_PMU_EVENT_ATTR(cycles, EVENT_CYCLES_ID),
+	IMX8_DDR_PMU_EVENT_ATTR(axid-read, 0x41),
+	IMX8_DDR_PMU_EVENT_ATTR(axid-write, 0x42),
+	NULL,
+};
+
+static struct attribute_group db_perf_events_attr_group = {
+	.name = "events",
+	.attrs = db_perf_events_attrs,
+};
+
 PMU_FORMAT_ATTR(event, "config:0-7");
 PMU_FORMAT_ATTR(axi_id, "config1:0-15");
 PMU_FORMAT_ATTR(axi_mask, "config1:16-31");
@@ -308,12 +335,21 @@ static const struct attribute_group ddr_perf_format_attr_group = {
 	.attrs = ddr_perf_format_attrs,
 };
 
-static const struct attribute_group *attr_groups[] = {
+static const struct attribute_group *ddr_attr_groups[] = {
+
 	&ddr_perf_events_attr_group,
 	&ddr_perf_format_attr_group,
 	&ddr_perf_cpumask_attr_group,
 	&ddr_perf_filter_cap_attr_group,
 	&ddr_perf_identifier_attr_group,
+	NULL,
+};
+
+static const struct attribute_group *db_attr_groups[] = {
+	&db_perf_events_attr_group,
+	&ddr_perf_format_attr_group,
+	&ddr_perf_cpumask_attr_group,
+	&ddr_perf_filter_cap_attr_group,
 	NULL,
 };
 
@@ -659,7 +695,7 @@ static void ddr_perf_pmu_disable(struct pmu *pmu)
 				      false);
 }
 
-static int ddr_perf_init(struct ddr_pmu *pmu, void __iomem *base,
+static void ddr_perf_init(struct ddr_pmu *pmu, void __iomem *base,
 			 struct device *dev)
 {
 	*pmu = (struct ddr_pmu) {
@@ -667,7 +703,6 @@ static int ddr_perf_init(struct ddr_pmu *pmu, void __iomem *base,
 			.module	      = THIS_MODULE,
 			.capabilities = PERF_PMU_CAP_NO_EXCLUDE,
 			.task_ctx_nr = perf_invalid_context,
-			.attr_groups = attr_groups,
 			.event_init  = ddr_perf_event_init,
 			.add	     = ddr_perf_event_add,
 			.del	     = ddr_perf_event_del,
@@ -680,9 +715,6 @@ static int ddr_perf_init(struct ddr_pmu *pmu, void __iomem *base,
 		.base = base,
 		.dev = dev,
 	};
-
-	pmu->id = ida_simple_get(&ddr_ida, 0, 0, GFP_KERNEL);
-	return pmu->id;
 }
 
 static irqreturn_t ddr_perf_irq_handler(int irq, void *p)
@@ -752,7 +784,6 @@ static int ddr_perf_probe(struct platform_device *pdev)
 	struct device_node *np;
 	void __iomem *base;
 	char *name;
-	int num;
 	int ret;
 	int irq;
 
@@ -766,18 +797,26 @@ static int ddr_perf_probe(struct platform_device *pdev)
 	if (!pmu)
 		return -ENOMEM;
 
-	num = ddr_perf_init(pmu, base, &pdev->dev);
+	ddr_perf_init(pmu, base, &pdev->dev);
 
 	platform_set_drvdata(pdev, pmu);
 
-	name = devm_kasprintf(&pdev->dev, GFP_KERNEL, DDR_PERF_DEV_NAME "%d",
-			      num);
+	pmu->devtype_data = of_device_get_match_data(&pdev->dev);
+	if (pmu->devtype_data->type & DDR_PERF_TYPE) {
+		pmu->pmu.attr_groups = ddr_attr_groups;
+		pmu->id = ida_simple_get(&ddr_ida, 0, 0, GFP_KERNEL);
+		name = devm_kasprintf(&pdev->dev, GFP_KERNEL, DDR_PERF_DEV_NAME "%d", pmu->id);
+	} else if (pmu->devtype_data->type & DB_PERF_TYPE) {
+		pmu->pmu.attr_groups = db_attr_groups;
+		pmu->id = ida_simple_get(&db_ida, 0, 0, GFP_KERNEL);
+		name = devm_kasprintf(&pdev->dev, GFP_KERNEL, DB_PERF_DEV_NAME "%d", pmu->id);
+	} else
+		return -EINVAL;
+
 	if (!name) {
 		ret = -ENOMEM;
 		goto cpuhp_state_err;
 	}
-
-	pmu->devtype_data = of_device_get_match_data(&pdev->dev);
 
 	pmu->cpu = raw_smp_processor_id();
 	ret = cpuhp_setup_state_multi(CPUHP_AP_ONLINE_DYN,
@@ -835,7 +874,11 @@ ddr_perf_err:
 cpuhp_instance_err:
 	cpuhp_remove_multi_state(pmu->cpuhp_state);
 cpuhp_state_err:
-	ida_simple_remove(&ddr_ida, pmu->id);
+	if (pmu->devtype_data->type & DDR_PERF_TYPE)
+		ida_simple_remove(&ddr_ida, pmu->id);
+	else
+		ida_simple_remove(&db_ida, pmu->id);
+
 	dev_warn(&pdev->dev, "i.MX8 DDR Perf PMU failed (%d), disabled\n", ret);
 	return ret;
 }
@@ -849,7 +892,11 @@ static int ddr_perf_remove(struct platform_device *pdev)
 
 	perf_pmu_unregister(&pmu->pmu);
 
-	ida_simple_remove(&ddr_ida, pmu->id);
+	if (pmu->devtype_data->type & DDR_PERF_TYPE)
+		ida_simple_remove(&ddr_ida, pmu->id);
+	else
+		ida_simple_remove(&db_ida, pmu->id);
+
 	return 0;
 }
 
