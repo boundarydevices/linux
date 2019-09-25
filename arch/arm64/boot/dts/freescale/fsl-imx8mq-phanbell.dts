@@ -505,6 +505,7 @@
 				regulator-max-microvolt = <1300000>;
 				regulator-boot-on;
 				rohm,dvs-run-voltage = <1000000>;
+				force-controlled-by-status-machine;
 			};
 
 			buck5_reg: regulator@4 {
