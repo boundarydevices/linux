@@ -184,6 +184,7 @@ struct pf8x_regulator {
 
 struct pf8x_chip {
 	int	chip_id;
+	int	prog_id;
 	struct regmap *regmap;
 	struct device *dev;
 	struct pf8x_regulator regulator_descs[REG_NUM_REGULATORS];
@@ -616,7 +617,7 @@ static inline struct device_node *match_of_node(int index)
 static int pf8x_identify(struct pf8x_chip *pf)
 {
 	const struct id_name *p;
-	unsigned int value;
+	unsigned int value, id1, id2;
 	int ret;
 
 	ret = regmap_read(pf->regmap, PF8X00_DEVICEID, &value);
@@ -633,8 +634,16 @@ static int pf8x_identify(struct pf8x_chip *pf)
 	ret = regmap_read(pf->regmap, PF8X00_REVID, &value);
 	if (ret)
 		value = 0;
-	dev_info(pf->dev, "%s: Full layer: %x, Metal layer: %x\n",
-		 p->name, (value & 0xf0) >> 4, value & 0x0f);
+	ret = regmap_read(pf->regmap, PF8X00_EMREV, &id1);
+	if (ret)
+		id1 = 0;
+	ret = regmap_read(pf->regmap, PF8X00_PROGID, &id2);
+	if (ret)
+		id2 = 0;
+	pf->prog_id = (id1 << 8) | id2;
+
+	dev_info(pf->dev, "%s: Full layer: %x, Metal layer: %x, prog_id=0x%04x\n",
+		 p->name, (value & 0xf0) >> 4, value & 0x0f, pf->prog_id);
 
 	return 0;
 }
@@ -645,6 +654,33 @@ static const struct regmap_config pf8x_regmap_config = {
 	.max_register = PF8X_NUMREGS - 1,
 	.cache_type = REGCACHE_RBTREE,
 };
+
+struct otp_reg_lookup {
+	unsigned short prog_id;
+	unsigned char reg;
+	unsigned char value;
+};
+
+static const struct otp_reg_lookup otp_map[] = {
+	{ 0x401c, PF8X00_OTP_CTRL3, 0 },
+	{ 0x4008, PF8X00_OTP_CTRL3, 0x04 },
+	{ 0, 0, 0 },
+};
+
+static int get_otp_reg(struct pf8x_chip *pf, unsigned char reg)
+{
+	const struct otp_reg_lookup *p = otp_map;
+
+	while (p->reg) {
+		if ((pf->prog_id == p->prog_id) && (reg == p->reg))
+			return p->value;
+		p++;
+	}
+
+	dev_err(pf->dev, "reg(0x%02x) not found for 0x%04x\n",
+		 reg, pf->prog_id);
+	return -EINVAL;
+}
 
 static int pf8x00_regulator_probe(struct i2c_client *client,
 				    const struct i2c_device_id *id)
@@ -662,7 +698,8 @@ static int pf8x00_regulator_probe(struct i2c_client *client,
 	unsigned char quad_phase;
 	unsigned char dual_phase;
 	unsigned val;
-	unsigned ctrl3;
+	int ctrl3;
+	const char *format = NULL;
 
 	pf = devm_kzalloc(&client->dev, sizeof(*pf),
 			GFP_KERNEL);
@@ -752,36 +789,39 @@ static int pf8x00_regulator_probe(struct i2c_client *client,
 			PF8X00_LDO(REG_LDO2) + LDO_CONFIG2,
 				 0x18, val);
 
-	ret = regmap_write(pf->regmap, PF8X00_PAGE_SELECT, 1);
-	if (!ret)
-		ret = regmap_read(pf->regmap, PF8X00_OTP_CTRL3, &ctrl3);
-	if (!ret) {
+	ctrl3 = get_otp_reg(pf, PF8X00_OTP_CTRL3);
+	if (ctrl3 >= 0) {
 		quad_phase = pf->regulator_descs[REG_SW1].quad_phase;
 		dual_phase = pf->regulator_descs[REG_SW1].dual_phase;
 		if (quad_phase) {
 			if ((ctrl3 & 3) != 2)
-				dev_warn(pf->dev, "sw1 quad_phase not set in otp_ctrl3 %x\n", ctrl3);
+				format = "sw1 quad_phase not set in otp_ctrl3 %x\n";
+
 		} else if (dual_phase) {
 			if ((ctrl3 & 3) != 1)
-				dev_warn(pf->dev, "sw1 dual_phase not set in otp_ctrl3 %x\n", ctrl3);
+				format = "sw1 dual_phase not set in otp_ctrl3 %x\n";
 		} else if (ctrl3 & 3) {
-			dev_warn(pf->dev, "sw1 single_phase not set in otp_ctrl3 %x\n", ctrl3);
+			format = "sw1 single_phase not set in otp_ctrl3 %x\n";
 		}
 		if (!quad_phase) {
 			dual_phase = pf->regulator_descs[REG_SW4].dual_phase;
 			if (dual_phase) {
 				if ((ctrl3 & 0x0c) != 4)
-					dev_warn(pf->dev, "sw4 dual_phase not set in otp_ctrl3 %x\n", ctrl3);
+					format = "sw4 dual_phase not set in otp_ctrl3 %x\n";
 			} else if (ctrl3 & 0x0c) {
-				dev_warn(pf->dev, "sw4 single_phase not set in otp_ctrl3 %x\n", ctrl3);
+				format = "sw4 single_phase not set in otp_ctrl3 %x\n";
 			}
 		}
 		dual_phase = pf->regulator_descs[REG_SW5].dual_phase;
 		if (dual_phase) {
 			if ((ctrl3 & 0x30) != 0x10)
-				dev_warn(pf->dev, "sw5 dual_phase not set in otp_ctrl3 %x\n", ctrl3);
+				format = "sw5 dual_phase not set in otp_ctrl3 %x\n";
 		} else if (ctrl3 & 0x30) {
-			dev_warn(pf->dev, "sw5 single_phase not set in otp_ctrl3 %x\n", ctrl3);
+			format = "sw5 single_phase not set in otp_ctrl3 %x\n";
+		}
+		if (format) {
+			dev_err(pf->dev, format, ctrl3);
+			dev_err(pf->dev, "!!!try updating u-boot, boot.scr, or pmic\n");
 		}
 	}
 	return 0;
