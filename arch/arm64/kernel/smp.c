@@ -25,13 +25,13 @@
 #include <linux/seq_file.h>
 #include <linux/irq.h>
 #include <linux/irqchip/arm-gic-v3.h>
+#include <linux/irqdomain.h>
 #include <linux/percpu.h>
 #include <linux/clockchips.h>
 #include <linux/completion.h>
 #include <linux/of.h>
 #include <linux/irq_work.h>
 #include <linux/kexec.h>
-#include <linux/irqdomain.h>
 
 #include <asm/alternative.h>
 #include <asm/atomic.h>
