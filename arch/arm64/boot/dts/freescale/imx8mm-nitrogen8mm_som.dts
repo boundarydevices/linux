@@ -167,3 +167,7 @@
 &usbotg2 {
 	disable-over-current;
 };
+
+&wdog1 {
+	/delete-property/ reset-gpios;
+};
