@@ -508,6 +508,7 @@
 	compatible = "boundary,imx8mm-nitrogen8mm", "fsl,imx8mm";
 
 	aliases {
+		a53 = &A53_0;
 		backlight_mipi = &backlight_mipi;
 		fb_mipi = &fb_mipi;
 		lcdif = &lcdif;
@@ -523,6 +524,7 @@
 		pinctrl_lcm_jm430 = &pinctrl_mipi_lcm_jm430;
 		pinctrl_ltk0680ytmdb = &pinctrl_mipi_ltk0680ytmdb;
 		pinctrl_ltk080a60a004t = &pinctrl_mipi_ltk080a60a004t;
+		reg_sw4 = &reg_sw4;
 		t_mipi = &t_mipi;
 	};
 
@@ -537,6 +539,7 @@
 		p8 = <&pinctrl_mipi_lcm_jm430>;
 		p9 = <&pinctrl_mipi_ltk0680ytmdb>;
 		p10 = <&pinctrl_mipi_ltk080a60a004t>;
+		p11 = <&reg_sw4>;
 	};
 
 	backlight_mipi: backlight-mipi {
