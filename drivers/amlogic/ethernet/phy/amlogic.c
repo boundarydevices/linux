@@ -150,13 +150,12 @@ void custom_internal_config(struct phy_device *phydev)
 	 *if env tx_amp ==0 we will use the efuse
 	 */
 	efuse_amp = scpi_get_ethernet_calc();
+	pr_info("efuse tx_amp = %d\n", efuse_amp);
 	if (is_meson_g12b_cpu() && is_meson_rev_a()) {
-		pr_info("g12b a\n");
 		efuse_valid = (efuse_amp >> 3);
 		efuse_amp = efuse_amp & 0x7;
 	} else {
-		pr_info("others\n");
-		efuse_valid = (efuse_amp >> 4);
+		efuse_valid = ((efuse_amp >> 4) & 0x3);
 		efuse_amp = efuse_amp & 0xf;
 	}
 	env_valid = (tx_amp >> 7);
@@ -166,11 +165,9 @@ void custom_internal_config(struct phy_device *phydev)
 		if (env_valid) {
 			/*debug mode use env tx_amp*/
 			setup_amp = tx_amp & (~0x80);
-			pr_info("debug mode tx_amp = %d\n", setup_amp);
 		} else {
 			/* efuse is valid but env not*/
 			setup_amp = efuse_amp;
-			pr_info("use efuse tx_amp = %d\n", setup_amp);
 		}
 		/*Enable Analog and DSP register Bank access by*/
 		phy_write(phydev, 0x14, 0x0000);
