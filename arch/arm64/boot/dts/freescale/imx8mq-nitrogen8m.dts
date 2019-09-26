@@ -153,11 +153,11 @@
 		>;
 	};
 
-	pinctrl_i2c2_csi1: i2c2-csi1grp {
+	pinctrl_i2c2_ov5640_mipi: i2c2-ov5640-mipigrp {
 		fsl,pins = <
-#define GP_CSI1_MIPI_PWDN	<&gpio3 3 GPIO_ACTIVE_HIGH>
+#define GP_CSI1_OV5640_MIPI_POWER_DOWN	<&gpio3 3 GPIO_ACTIVE_HIGH>
 			MX8MQ_IOMUXC_NAND_CE2_B_GPIO3_IO3		0x61
-#define GP_CSI1_MIPI_RESET	<&gpio3 17 GPIO_ACTIVE_LOW>
+#define GP_CSI1_OV5640_MIPI_RESET	<&gpio3 17 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_NAND_WE_B_GPIO3_IO17		0x61
 		>;
 	};
@@ -169,11 +169,11 @@
 		>;
 	};
 
-	pinctrl_i2c3_csi2: i2c3-csi2grp {
+	pinctrl_i2c3_ov5640_mipi: i2c3-ov5640-mipigrp {
 		fsl,pins = <
-#define GP_CSI2_MIPI_PWDN	<&gpio3 2 GPIO_ACTIVE_HIGH>
+#define GP_CSI2_OV5640_MIPI_POWER_DOWN	<&gpio3 2 GPIO_ACTIVE_HIGH>
 			MX8MQ_IOMUXC_NAND_CE1_B_GPIO3_IO2		0x61
-#define GP_CSI2_MIPI_RESET	<&gpio2 19 GPIO_ACTIVE_LOW>
+#define GP_CSI2_OV5640_MIPI_RESET	<&gpio2 19 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_SD2_RESET_B_GPIO2_IO19		0x61
 		>;
 	};
@@ -892,28 +892,28 @@
 	status = "okay";
 
 	ov5640-mipi1@3c {
-		compatible = "ov5640_mipisubdev";
-		reg = <0x3c>;
-		status = "okay";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c2_csi1>;
-		clocks = <&clk IMX8MQ_CLK_CLKO2>;
-		clock-names = "csi_mclk";
+		AVDD-supply = <&reg_vref_2v5>;
+		DOVDD-supply = <&reg_vref_1v8>;
+		DVDD-supply = <&reg_vref_3v3>;
 		assigned-clocks = <&clk IMX8MQ_CLK_CLKO2>;
 		assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_200M>;
 		assigned-clock-rates = <25000000>;
+		clocks = <&clk IMX8MQ_CLK_CLKO2>;
+		clock-names = "csi_mclk";
+		compatible = "ov5640_mipisubdev";
 		csi_id = <0>;
-		AVDD-supply = <&reg_vref_2v5>;
-		DVDD-supply = <&reg_vref_3v3>;
-		DOVDD-supply = <&reg_vref_1v8>;
-		pwn-gpios = GP_CSI1_MIPI_PWDN;
-		rst-gpios = GP_CSI1_MIPI_RESET;
 		mclk = <25000000>;
 		mipi_csi;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_ov5640_mipi>;
+		pwn-gpios = GP_CSI1_OV5640_MIPI_POWER_DOWN;
+		reg = <0x3c>;
+		rst-gpios = GP_CSI1_OV5640_MIPI_RESET;
+		status = "okay";
 
 		port {
 			ov5640_mipi1_ep: endpoint {
-				remote-endpoint = <&mipi1_sensor_ep>;
+				remote-endpoint = <&mipi1_ov5640_ep>;
 			};
 		};
 	};
@@ -932,28 +932,28 @@
 	status = "okay";
 
 	ov5640-mipi2@3c {
-		compatible = "ov5640_mipisubdev";
-		reg = <0x3c>;
-		status = "okay";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c3_csi2>;
-		clocks = <&clk IMX8MQ_CLK_CLKO2>;
-		clock-names = "csi_mclk";
+		AVDD-supply = <&reg_vref_2v5>;
+		DOVDD-supply = <&reg_vref_1v8>;
+		DVDD-supply = <&reg_vref_3v3>;
 		assigned-clocks = <&clk IMX8MQ_CLK_CLKO2>;
 		assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_200M>;
 		assigned-clock-rates = <25000000>;
+		clocks = <&clk IMX8MQ_CLK_CLKO2>;
+		clock-names = "csi_mclk";
+		compatible = "ov5640_mipisubdev";
 		csi_id = <1>;
-		AVDD-supply = <&reg_vref_2v5>;
-		DVDD-supply = <&reg_vref_3v3>;
-		DOVDD-supply = <&reg_vref_1v8>;
-		pwn-gpios = GP_CSI2_MIPI_PWDN;
-		rst-gpios = GP_CSI2_MIPI_RESET;
 		mclk = <25000000>;
 		mipi_csi;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_ov5640_mipi>;
+		pwn-gpios = GP_CSI2_OV5640_MIPI_POWER_DOWN;
+		reg = <0x3c>;
+		rst-gpios = GP_CSI2_OV5640_MIPI_RESET;
+		status = "okay";
 
 		port {
 			ov5640_mipi2_ep: endpoint {
-				remote-endpoint = <&mipi2_sensor_ep>;
+				remote-endpoint = <&mipi2_ov5640_ep>;
 			};
 		};
 	};
@@ -1107,7 +1107,7 @@
 	#size-cells = <0>;
 	status = "okay";
 	port {
-		mipi1_sensor_ep: endpoint1 {
+		mipi1_ov5640_ep: endpoint1 {
 			remote-endpoint = <&ov5640_mipi1_ep>;
 			data-lanes = <1 2>;
 		};
@@ -1123,7 +1123,7 @@
 	#size-cells = <0>;
 	status = "okay";
 	port {
-		mipi2_sensor_ep: endpoint1 {
+		mipi2_ov5640_ep: endpoint1 {
 			remote-endpoint = <&ov5640_mipi2_ep>;
 			data-lanes = <1 2>;
 		};
