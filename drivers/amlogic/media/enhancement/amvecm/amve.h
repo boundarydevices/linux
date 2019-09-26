@@ -92,9 +92,10 @@ void ve_set_regmap(struct ve_regmap_s *p);
 extern void ve_enable_dnlp(void);
 extern void ve_disable_dnlp(void);
 
-extern void vpp_enable_lcd_gamma_table(void);
-extern void vpp_disable_lcd_gamma_table(void);
-extern void vpp_set_lcd_gamma_table(u16 *data, u32 rgb_mask);
+int vpp_get_encl_viu_mux(void);
+void vpp_enable_lcd_gamma_table(int viu_sel);
+void vpp_disable_lcd_gamma_table(int viu_sel);
+void vpp_set_lcd_gamma_table(u16 *data, u32 rgb_mask, int viu_sel);
 extern void amve_write_gamma_table(u16 *data, u32 rgb_mask);
 extern void vpp_set_rgb_ogo(struct tcon_rgb_ogo_s *p);
 extern void vpp_phase_lock_on_vs(unsigned int cycle,
