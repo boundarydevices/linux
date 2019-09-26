@@ -170,10 +170,6 @@
 /delete-node/ &imx_rpmsg;
 /delete-node/ &ocotp;
 
-&dispmix_gpr {
-	/delete-property/ compatible;
-};
-
 &sdma1 {
 	status = "disabled";
 };
