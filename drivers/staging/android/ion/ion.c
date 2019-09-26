@@ -1138,6 +1138,9 @@ int ion_sync_for_device(struct ion_client *client, int fd)
 {
 	struct dma_buf *dmabuf;
 	struct ion_buffer *buffer;
+#ifdef CONFIG_AMLOGIC_MODIFY
+	struct miscdevice *mdev;
+#endif
 
 	dmabuf = dma_buf_get(fd);
 	if (IS_ERR(dmabuf))
@@ -1152,8 +1155,14 @@ int ion_sync_for_device(struct ion_client *client, int fd)
 	}
 	buffer = dmabuf->priv;
 
+#ifdef CONFIG_AMLOGIC_MODIFY
+	mdev = &client->dev->dev;
+	dma_sync_sg_for_device(mdev->this_device, buffer->sg_table->sgl,
+			       buffer->sg_table->nents, DMA_BIDIRECTIONAL);
+#else
 	dma_sync_sg_for_device(NULL, buffer->sg_table->sgl,
 			       buffer->sg_table->nents, DMA_BIDIRECTIONAL);
+#endif
 	dma_buf_put(dmabuf);
 	return 0;
 }
