@@ -7,3 +7,4 @@ obj-$(CONFIG_HAVE_IMX_BUSFREQ) += busfreq-imx8mq.o
 obj-$(CONFIG_HAVE_IMX8_SOC) += soc-imx8.o
 obj-$(CONFIG_HAVE_IMX_GPC_PSCI) += gpc-psci.o
 obj-$(CONFIG_HAVE_IMX8_SECO) += seco_mu/
+obj-$(CONFIG_SECVIO_SC)	+= imx-secvio-sc.o
