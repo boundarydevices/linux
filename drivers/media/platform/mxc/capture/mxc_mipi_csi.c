@@ -154,6 +154,7 @@ MODULE_PARM_DESC(debug, "Debug level (0-2)");
 #define MIPI_CSIS_ISPCFG_DOUBLE_CMPNT        (1 << 12)
 #define MIPI_CSIS_ISPCFG_ALIGN_32BIT         (1 << 11)
 #define MIPI_CSIS_ISPCFG_FMT_YCBCR422_8BIT   (0x1e << 2)
+#define MIPI_CSIS_ISPCFG_FMT_RGB888		(0x24 << 2)
 #define MIPI_CSIS_ISPCFG_FMT_RAW8		(0x2a << 2)
 #define MIPI_CSIS_ISPCFG_FMT_RAW10		(0x2b << 2)
 #define MIPI_CSIS_ISPCFG_FMT_RAW12		(0x2c << 2)
@@ -318,12 +319,20 @@ static const struct csis_pix_format mipi_csis_formats[] = {
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_YCBCR422_8BIT,
 		.data_alignment = 16,
 	}, {
+		.code = MEDIA_BUS_FMT_UYVY8_1X16,
+		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_YCBCR422_8BIT,
+		.data_alignment = 16,
+	}, {
 		.code = MEDIA_BUS_FMT_VYUY8_2X8,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_YCBCR422_8BIT,
 		.data_alignment = 16,
 	}, {
 		.code = MEDIA_BUS_FMT_SBGGR8_1X8,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW8,
+		.data_alignment = 8,
+	}, {
+		.code = MEDIA_BUS_FMT_RGB888_1X24,
+		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RGB888,
 		.data_alignment = 8,
 	}
 };
@@ -734,7 +743,7 @@ static int mipi_csis_enum_mbus_code(struct v4l2_subdev *mipi_sd,
 
 	csis_fmt = find_csis_format(code->code);
 	if (csis_fmt == NULL) {
-		dev_err(state->dev, "format not match\n");
+		dev_err(state->dev, "format(0x%x) not match\n", code->code);
 		return -EINVAL;
 	}
 
