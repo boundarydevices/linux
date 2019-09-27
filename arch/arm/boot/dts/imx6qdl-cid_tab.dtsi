@@ -149,8 +149,6 @@
 			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0
 			/* TP86 */
 			MX6QDL_PAD_DISP0_DAT10__GPIO4_IO31	0x1b0b0
-			/* TP90 */
-			MX6QDL_PAD_DI0_PIN15__GPIO4_IO17	0x1b0b0
 			/* TP91 */
 			MX6QDL_PAD_SD1_DAT0__GPIO1_IO16		0x1b0b0
 			/* TP92 */
@@ -376,6 +374,13 @@
 		fsl,pins = <
 #define GP_REG_FP_5V_EN	<&gpio6 31 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_EIM_BCLK__GPIO6_IO31		0x030b0
+		>;
+	};
+
+	pinctrl_reg_usbh1: reg-usbh1grp {
+		fsl,pins = <
+#define GP_USBH1_PWR_EN	<&gpio4 17 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DI0_PIN15__GPIO4_IO17	0x030b0
 		>;
 	};
 
@@ -728,6 +733,18 @@
 		regulator-max-microvolt = <5000000>;
 		regulator-min-microvolt = <5000000>;
 		regulator-name = "vbus4";
+		vin-supply = <&reg_usbh1>;
+	};
+
+	reg_usbh1: regulator-usb-h1 {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_USBH1_PWR_EN;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usbh1>;
+		regulator-name = "usbh1";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
 	};
 
 	reg_wlan_en: regulator-wlan {
