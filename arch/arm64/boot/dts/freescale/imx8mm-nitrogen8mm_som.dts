@@ -17,7 +17,7 @@
 	};
 
 	/delete-node/ i2c3a-rv4162grp;
-	/delete-node/ i2c3b-csi1grp;
+	/delete-node/ i2c3b-ov5640-mipigrp;
 
 	pinctrl_i2c2_rv4162: i2c2-rv4162grp {
 		fsl,pins = <
@@ -27,13 +27,13 @@
 		>;
 	};
 
-	pinctrl_i2c3_csi1: i2c3-csi1grp {
+	pinctrl_i2c3_ov5640_mipi: i2c3-ov5640-mipigrp {
 		fsl,pins = <
-#undef GP_CSI1_MIPI_PWDN
-#define GP_CSI1_MIPI_PWDN	<&gpio1 11 GPIO_ACTIVE_HIGH>
+#undef GP_OV5640_MIPI_POWER_DOWN
+#define GP_OV5640_MIPI_POWER_DOWN	<&gpio1 11 GPIO_ACTIVE_HIGH>
 			MX8MM_IOMUXC_GPIO1_IO11_GPIO1_IO11		0x141
-#undef  GP_CSI1_MIPI_RESET
-#define GP_CSI1_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
+#undef  GP_OV5640_MIPI_RESET
+#define GP_OV5640_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
 			MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9		0x101
 		>;
 	};
@@ -99,21 +99,21 @@
 	/delete-node/ i2cmux@70;
 
 	ov5640-mipi1@3c {
-		compatible = "ov5640_mipisubdev";
-		reg = <0x3c>;
-		status = "okay";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c3_csi1>;
+		AVDD-supply = <&reg_vref_2v5>;
+		DOVDD-supply = <&reg_vref_1v8>;
+		DVDD-supply = <&reg_vref_3v3>;
 		clocks = <&mipi_xclk>;
 		clock-names = "csi_mclk";
+		compatible = "ov5640_mipisubdev";
 		csi_id = <0>;
-		AVDD-supply = <&reg_vref_2v5>;
-		DVDD-supply = <&reg_vref_3v3>;
-		DOVDD-supply = <&reg_vref_1v8>;
-		pwn-gpios = GP_CSI1_MIPI_PWDN;
-		rst-gpios = GP_CSI1_MIPI_RESET;
 		mclk = <20000000>;
 		mipi_csi;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_ov5640_mipi>;
+		pwn-gpios = GP_OV5640_MIPI_POWER_DOWN;
+		reg = <0x3c>;
+		rst-gpios = GP_OV5640_MIPI_RESET;
+		status = "okay";
 
 		port {
 			ov5640_mipi1_ep: endpoint {
