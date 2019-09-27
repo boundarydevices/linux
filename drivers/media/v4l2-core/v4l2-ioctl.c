@@ -3453,6 +3453,7 @@ out:
 	kfree(mbuf);
 	return err;
 }
+EXPORT_SYMBOL(video_usercopy);
 
 long video_ioctl2(struct file *file,
 	       unsigned int cmd, unsigned long arg)
