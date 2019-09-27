@@ -639,6 +639,17 @@ static int caam_probe(struct platform_device *pdev)
 	caam_imx = (bool)imx_soc_match;
 
 	if (imx_soc_match) {
+		np = of_find_compatible_node(NULL, NULL, "fsl,imx-scu");
+		ctrlpriv->scu_en = !!np;
+		of_node_put(np);
+
+		/*
+		 * CAAM clocks cannot be controlled from kernel.
+		 * They are automatically turned on by SCU f/w.
+		 */
+		if (ctrlpriv->scu_en)
+			goto iomap_ctrl;
+
 		if (!imx_soc_match->data) {
 			dev_err(dev, "No clock data provided for i.MX SoC");
 			return -EINVAL;
@@ -649,7 +660,7 @@ static int caam_probe(struct platform_device *pdev)
 			return ret;
 	}
 
-
+iomap_ctrl:
 	/* Get configuration properties from device tree */
 	/* First, get register page */
 	ctrl = devm_of_iomap(dev, nprop, 0, NULL);
@@ -689,7 +700,8 @@ static int caam_probe(struct platform_device *pdev)
 	caam_little_end = !(bool)(rd_reg32(&perfmon->status) &
 				  (CSTA_PLEND | CSTA_ALT_PLEND));
 	comp_params = rd_reg32(&perfmon->comp_parms_ms);
-	if (comp_params & CTPR_MS_PS && rd_reg32(&ctrl->mcr) & MCFGR_LONG_PTR)
+	if (!ctrlpriv->scu_en && comp_params & CTPR_MS_PS &&
+	    rd_reg32(&ctrl->mcr) & MCFGR_LONG_PTR)
 		caam_ptr_sz = sizeof(u64);
 	else
 		caam_ptr_sz = sizeof(u32);
@@ -754,6 +766,9 @@ static int caam_probe(struct platform_device *pdev)
 	}
 #endif
 
+	if (ctrlpriv->scu_en)
+		goto set_dma_mask;
+
 	/*
 	 * Enable DECO watchdogs and, if this is a PHYS_ADDR_T_64BIT kernel,
 	 * long pointers in master configuration register.
@@ -793,6 +808,7 @@ static int caam_probe(struct platform_device *pdev)
 			      JRSTART_JR1_START | JRSTART_JR2_START |
 			      JRSTART_JR3_START);
 
+set_dma_mask:
 	ret = dma_set_mask_and_coherent(dev, caam_get_dma_mask(dev));
 	if (ret) {
 		dev_err(dev, "dma_set_mask_and_coherent failed (%d)\n", ret);
@@ -834,6 +850,9 @@ static int caam_probe(struct platform_device *pdev)
 		dev_err(dev, "no queues configured, terminating\n");
 		return -ENOMEM;
 	}
+
+	if (ctrlpriv->scu_en)
+		goto report_live;
 
 	if (ctrlpriv->era < 10) {
 		rng_vid = (rd_reg32(&perfmon->cha_id_ls) &
@@ -915,6 +934,7 @@ static int caam_probe(struct platform_device *pdev)
 
 	/* NOTE: RTIC detection ought to go here, around Si time */
 
+report_live:
 	caam_id = (u64)rd_reg32(&perfmon->caam_id_ms) << 32 |
 		  (u64)rd_reg32(&perfmon->caam_id_ls);
 
