@@ -988,10 +988,6 @@
 	status = "disabled";
 };
 
-&wm8960 {
-	quick-probe;
-};
-
 &i2c0_hdmi {
 	status = "disabled";
 };

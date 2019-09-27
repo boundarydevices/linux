@@ -1075,16 +1075,16 @@
 	clock-frequency = <1000000>;
 };
 
-&wm8960 {
-	quick-probe;
-};
-
 &lvds_backlight0 {
 	status = "disabled";
 };
 
 &lvds_backlight1 {
         status = "disabled";
+};
+
+&pwm_mipi_lvds0 {
+	status = "disabled";
 };
 
 &pwm_mipi_lvds1 {

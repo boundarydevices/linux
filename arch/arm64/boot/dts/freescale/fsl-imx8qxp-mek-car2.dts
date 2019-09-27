@@ -49,6 +49,10 @@
 	quick-probe;
 };
 
+&pwm_mipi_lvds0 {
+	status = "disabled";
+};
+
 &pwm_mipi_lvds1 {
 	status = "disabled";
 };
@@ -75,6 +79,14 @@
 
 &mipi_dsi_bridge2 {
    status = "disabled";
+};
+
+&lvds_backlight0 {
+	status = "disabled";
+};
+
+&lvds_backlight1 {
+        status = "disabled";
 };
 
 &usdhc2 {

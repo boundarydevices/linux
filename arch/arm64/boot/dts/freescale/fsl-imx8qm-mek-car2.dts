@@ -114,6 +114,14 @@
 	status = "disabled";
 };
 
+&lvds_backlight0 {
+	status = "disabled";
+};
+
+&lvds_backlight1 {
+	status = "disabled";
+};
+
 &vehicle_core {
 	status = "okay";
 };
