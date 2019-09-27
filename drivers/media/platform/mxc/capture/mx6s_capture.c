@@ -129,6 +129,7 @@
 
 /* csi control reg 18 */
 #define BIT_CSI_ENABLE			(0x1 << 31)
+#define BIT_MIPI_DATA_FORMAT_RGB888		(0x24 << 25)
 #define BIT_MIPI_DATA_FORMAT_RAW8		(0x2a << 25)
 #define BIT_MIPI_DATA_FORMAT_RAW10		(0x2b << 25)
 #define BIT_MIPI_DATA_FORMAT_YUV422_8B	(0x1e << 25)
@@ -137,6 +138,7 @@
 #define BIT_DATA_FROM_MIPI		(0x1 << 22)
 #define BIT_MIPI_YU_SWAP		(0x1 << 21)
 #define BIT_MIPI_DOUBLE_CMPNT	(0x1 << 20)
+#define RGB888A_FORMAT_SEL			BIT(10)
 #define BIT_BASEADDR_CHG_ERR_EN	(0x1 << 9)
 #define BIT_BASEADDR_SWITCH_SEL	(0x1 << 5)
 #define BIT_BASEADDR_SWITCH_EN	(0x1 << 4)
@@ -249,6 +251,12 @@ static struct mx6s_fmt formats[] = {
 		.mbus_code	= MEDIA_BUS_FMT_UYVY8_2X8,
 		.bpp		= 2,
 	}, {
+		.name		= "UYVY-16b",
+		.fourcc		= V4L2_PIX_FMT_UYVY,
+		.pixelformat	= V4L2_PIX_FMT_UYVY,
+		.mbus_code	= MEDIA_BUS_FMT_UYVY8_1X16,
+		.bpp		= 2,
+	}, {
 		.name		= "YUYV-16",
 		.fourcc		= V4L2_PIX_FMT_YUYV,
 		.pixelformat	= V4L2_PIX_FMT_YUYV,
@@ -272,6 +280,30 @@ static struct mx6s_fmt formats[] = {
 		.pixelformat	= V4L2_PIX_FMT_SBGGR8,
 		.mbus_code	= MEDIA_BUS_FMT_SBGGR8_1X8,
 		.bpp		= 1,
+	}, {
+		.name		= "RGB888",
+		.fourcc		= V4L2_PIX_FMT_RGB24,
+		.pixelformat	= V4L2_PIX_FMT_RGB24,
+		.mbus_code	= MEDIA_BUS_FMT_RGB888_1X24,
+		.bpp		= 3,
+	}, {
+		.name		= "BGR888",
+		.fourcc		= V4L2_PIX_FMT_BGR24,
+		.pixelformat	= V4L2_PIX_FMT_BGR24,
+		.mbus_code	= MEDIA_BUS_FMT_RGB888_1X24,
+		.bpp		= 3,
+	}, {
+		.name		= "XRGB32",
+		.fourcc		= V4L2_PIX_FMT_XRGB32,
+		.pixelformat	= V4L2_PIX_FMT_XRGB32,
+		.mbus_code	= MEDIA_BUS_FMT_RGB888_1X24,
+		.bpp		= 4,
+	}, {
+		.name		= "XBGR32",
+		.fourcc		= V4L2_PIX_FMT_XBGR32,
+		.pixelformat	= V4L2_PIX_FMT_XBGR32,
+		.mbus_code	= MEDIA_BUS_FMT_RGB888_1X24,
+		.bpp		= 4,
 	}
 };
 
@@ -378,19 +410,6 @@ struct mx6s_fmt *format_by_fourcc(int fourcc)
 	}
 
 	pr_err("unknown pixelformat:'%4.4s'\n", (char *)&fourcc);
-	return NULL;
-}
-
-struct mx6s_fmt *format_by_mbus(u32 code)
-{
-	int i;
-
-	for (i = 0; i < NUM_FORMATS; i++) {
-		if (formats[i].mbus_code == code)
-			return formats + i;
-	}
-
-	pr_err("unknown mbus:0x%x\n", code);
 	return NULL;
 }
 
@@ -586,8 +605,6 @@ static void csi_dmareq_rff_enable(struct mx6s_csi_dev *csi_dev)
 	cr3 |= BIT_HRESP_ERR_EN;
 	cr3 &= ~BIT_RXFF_LEVEL;
 	cr3 |= 0x2 << 4;
-	if (csi_dev->csi_two_8bit_sensor_mode)
-		cr3 |= BIT_TWO_8BIT_SENSOR;
 
 	__raw_writel(cr3, csi_dev->regbase + CSI_CSICR3);
 	__raw_writel(cr2, csi_dev->regbase + CSI_CSICR2);
@@ -600,19 +617,6 @@ static void csi_dmareq_rff_disable(struct mx6s_csi_dev *csi_dev)
 	cr3 &= ~BIT_DMA_REQ_EN_RFF;
 	cr3 &= ~BIT_HRESP_ERR_EN;
 	__raw_writel(cr3, csi_dev->regbase + CSI_CSICR3);
-}
-
-static void csi_set_imagpara(struct mx6s_csi_dev *csi,
-					int width, int height)
-{
-	int imag_para = 0;
-	unsigned long cr3 = __raw_readl(csi->regbase + CSI_CSICR3);
-
-	imag_para = (width << 16) | height;
-	__raw_writel(imag_para, csi->regbase + CSI_CSIIMAG_PARA);
-
-	/* reflash the embeded DMA controller */
-	__raw_writel(cr3 | BIT_DMA_REFLASH_RFF, csi->regbase + CSI_CSICR3);
 }
 
 static void csi_error_recovery(struct mx6s_csi_dev *csi_dev)
@@ -653,13 +657,11 @@ static int mx6s_videobuf_setup(struct vb2_queue *vq,
 {
 	struct mx6s_csi_dev *csi_dev = vb2_get_drv_priv(vq);
 
-	dev_dbg(csi_dev->dev, "count=%d, size=%d\n", *count, sizes[0]);
+	dev_dbg(csi_dev->dev, "count=%d, size=%d,%d\n", *count, sizes[0], csi_dev->pix.sizeimage);
 
 	alloc_devs[0] = csi_dev->dev;
-
 	sizes[0] = csi_dev->pix.sizeimage;
 
-	pr_debug("size=%d\n", sizes[0]);
 	if (0 == *count)
 		*count = 32;
 	if (!*num_planes &&
@@ -754,8 +756,7 @@ static int mx6s_csi_enable(struct mx6s_csi_dev *csi_dev)
 	csi_dev->skipframe = 3;
 	csisw_reset(csi_dev);
 
-	if (pix->field == V4L2_FIELD_INTERLACED)
-		csi_tvdec_enable(csi_dev, true);
+	csi_tvdec_enable(csi_dev, (pix->field == V4L2_FIELD_INTERLACED) ? true : false);
 
 	/* For mipi csi input only */
 	if (csi_dev->csi_mipi_mode == true) {
@@ -829,8 +830,13 @@ static void mx6s_csi_disable(struct mx6s_csi_dev *csi_dev)
 static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 {
 	struct v4l2_pix_format *pix = &csi_dev->pix;
-	u32 cr1, cr18;
+	u32 cr1, cr3, cr18;
 	u32 width;
+
+	cr1 = csi_read(csi_dev, CSI_CSICR1);
+	cr1 &= ~BIT_PACK_DIR;
+	cr3 = csi_read(csi_dev, CSI_CSICR3);
+	cr3 &= ~(BIT_ZERO_PACK_EN | BIT_TWO_8BIT_SENSOR);
 
 	if (pix->field == V4L2_FIELD_INTERLACED) {
 		csi_deinterlace_enable(csi_dev, true);
@@ -841,51 +847,74 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 		csi_buf_stride_set(csi_dev, 0);
 	}
 
+	width = pix->width;
+	if (!csi_dev->csi_mipi_mode && csi_dev->csi_two_8bit_sensor_mode)
+		cr3 |= BIT_TWO_8BIT_SENSOR;
+
 	switch (csi_dev->fmt->pixelformat) {
-	case V4L2_PIX_FMT_YUV32:
+	case V4L2_PIX_FMT_XBGR32:
+		/* RGB888 1 cycle*/
+		cr18 = BIT_MIPI_DATA_FORMAT_RGB888 | BIT_PARALLEL24_EN;
+		break;
+	case V4L2_PIX_FMT_XRGB32:
+		cr18 = BIT_MIPI_DATA_FORMAT_RGB888 | BIT_PARALLEL24_EN | RGB888A_FORMAT_SEL;
+		cr1 |= BIT_PACK_DIR;
+		break;
+		/*
+		 * Note: for this to work, the data type input to mipi_csi
+		 * must be RAW8 as well
+		 */
+	case V4L2_PIX_FMT_RGB24:
+		cr1 |= BIT_PACK_DIR;
+		fallthrough;
+	case V4L2_PIX_FMT_BGR24:
+		/* RGB888 3 cycle*/
+		cr18 = BIT_MIPI_DATA_FORMAT_RAW8;
+		width = pix->width * 3;
+		break;
 	case V4L2_PIX_FMT_SBGGR8:
-		width = pix->width;
+		cr18 = BIT_MIPI_DATA_FORMAT_RAW8;
 		break;
 	case V4L2_PIX_FMT_UYVY:
 	case V4L2_PIX_FMT_YUYV:
 	case V4L2_PIX_FMT_YVYU:
-		if (csi_dev->csi_mipi_mode == true)
-			width = pix->width;
-		else
-			/* For parallel 8-bit sensor input */
+		if (csi_dev->csi_mipi_mode) {
+			if (csi_dev->csi_two_8bit_sensor_mode) {
+				cr3 |= BIT_TWO_8BIT_SENSOR;
+				cr18 = BIT_MIPI_DATA_FORMAT_YUV422_8B | BIT_MIPI_DOUBLE_CMPNT;
+			} else {
+				cr18 = BIT_MIPI_DATA_FORMAT_YUV422_8B;
+			}
+		} else {
+			/* For parallel 8-bit sensor input, width*2 */
+			cr18 = BIT_MIPI_DATA_FORMAT_YUV422_8B;
 			width = pix->width * 2;
+		}
+		break;
+	case V4L2_PIX_FMT_YUV32:
+		cr18 = BIT_MIPI_DATA_FORMAT_RGB888 | BIT_PARALLEL24_EN;
 		break;
 	default:
 		pr_debug("   case not supported\n");
 		return -EINVAL;
 	}
-	csi_set_imagpara(csi_dev, width, pix->height);
+
+	csi_write(csi_dev, (width << 16) | pix->height, CSI_CSIIMAG_PARA);
+	csi_write(csi_dev, (pix->sizeimage + 3) >> 2, CSI_CSIRXCNT);
+	cr3 |= BIT_DMA_REFLASH_RFF; /* reflash the embeded DMA controller */
 
 	if (csi_dev->csi_mipi_mode == true) {
-		cr1 = csi_read(csi_dev, CSI_CSICR1);
 		cr1 &= ~BIT_GCLK_MODE;
-		csi_write(csi_dev, cr1, CSI_CSICR1);
 
-		cr18 = csi_read(csi_dev, CSI_CSICR18);
-		cr18 &= ~BIT_MIPI_DATA_FORMAT_MASK;
+		cr18 |= csi_read(csi_dev, CSI_CSICR18) &
+			~(BIT_MIPI_DATA_FORMAT_MASK | RGB888A_FORMAT_SEL |
+			BIT_PARALLEL24_EN | BIT_MIPI_DOUBLE_CMPNT);
 		cr18 |= BIT_DATA_FROM_MIPI;
-
-		switch (csi_dev->fmt->pixelformat) {
-		case V4L2_PIX_FMT_UYVY:
-		case V4L2_PIX_FMT_YUYV:
-		case V4L2_PIX_FMT_YVYU:
-			cr18 |= BIT_MIPI_DATA_FORMAT_YUV422_8B;
-			break;
-		case V4L2_PIX_FMT_SBGGR8:
-			cr18 |= BIT_MIPI_DATA_FORMAT_RAW8;
-			break;
-		default:
-			pr_debug("   fmt not supported\n");
-			return -EINVAL;
-		}
 
 		csi_write(csi_dev, cr18, CSI_CSICR18);
 	}
+	csi_write(csi_dev, cr1, CSI_CSICR1);
+	csi_write(csi_dev, cr3, CSI_CSICR3);
 	return 0;
 }
 
@@ -907,9 +936,9 @@ static int mx6s_start_streaming(struct vb2_queue *vq, unsigned int count)
 	 * discard frames when no buffer is available.
 	 * Feel free to work on this ;)
 	 */
-	csi_dev->discard_size = csi_dev->pix.sizeimage;
+	csi_dev->discard_size = PAGE_ALIGN(csi_dev->pix.sizeimage);
 	csi_dev->discard_buffer = dma_alloc_coherent(csi_dev->v4l2_dev.dev,
-					PAGE_ALIGN(csi_dev->discard_size),
+					csi_dev->discard_size,
 					&csi_dev->discard_buffer_dma,
 					GFP_DMA | GFP_KERNEL);
 	if (!csi_dev->discard_buffer)
@@ -1142,6 +1171,10 @@ static irqreturn_t mx6s_csi_irq_handler(int irq, void *data)
 
 		csi_dev->skipframe++;
 		pr_debug("base address switching Change Err.\n");
+		if (csi_dev->nextfb == 0)
+			status |= BIT_DMA_TSF_DONE_FB1;
+		else
+			status |= BIT_DMA_TSF_DONE_FB2;
 	}
 
 	if ((status & BIT_DMA_TSF_DONE_FB1) &&
@@ -1377,36 +1410,55 @@ static int mx6s_vidioc_dqbuf(struct file *file, void *priv,
 	return vb2_dqbuf(&csi_dev->vb2_vidq, p, file->f_flags & O_NONBLOCK);
 }
 
+static int verify_mbus(struct v4l2_subdev *sd, u32 code)
+{
+	int ret;
+	struct v4l2_subdev_mbus_code_enum ecode = {
+		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+		.index = 0,
+	};
+
+	while (1) {
+		ret = v4l2_subdev_call(sd, pad, enum_mbus_code, NULL, &ecode);
+		if (ret < 0) {
+			/* no more formats */
+			break;
+		}
+		if (ecode.code == code)
+			return 0;
+		ecode.index++;
+	}
+	return -EINVAL;
+}
+
 static int mx6s_vidioc_enum_fmt_vid_cap(struct file *file, void  *priv,
 				       struct v4l2_fmtdesc *f)
 {
 	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
 	struct v4l2_subdev *sd = csi_dev->sd;
-	struct v4l2_subdev_mbus_code_enum code = {
-		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
-		.index = f->index,
-	};
+	int i = 0;
+	int found = 0;
 	struct mx6s_fmt *fmt;
-	int ret;
 
 	WARN_ON(priv != file->private_data);
 
-	ret = v4l2_subdev_call(sd, pad, enum_mbus_code, NULL, &code);
-	if (ret < 0) {
-		/* no more formats */
-		dev_dbg(csi_dev->dev, "No more fmt\n");
-		return -EINVAL;
+	while (1)  {
+		if (i >= ARRAY_SIZE(formats)) {
+			dev_dbg(csi_dev->dev, "No more fmt\n");
+			return -EINVAL;
+		}
+		if (!verify_mbus(sd, formats[i].mbus_code)) {
+			found++;
+			if (found > f->index)
+				break;
+		}
+		i++;
 	}
 
-	fmt = format_by_mbus(code.code);
-	if (!fmt) {
-		dev_err(csi_dev->dev, "mbus (0x%08x) invalid.\n", code.code);
-		return -EINVAL;
-	}
-
+	fmt = &formats[i];
 	strlcpy(f->description, fmt->name, sizeof(f->description));
 	f->pixelformat = fmt->pixelformat;
-
+	pr_debug("%s: %s: %x %x\n", __func__, fmt->name, fmt->mbus_code, fmt->pixelformat);
 	return 0;
 }
 
@@ -1490,7 +1542,7 @@ static int mx6s_vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 	csi_dev->pix.sizeimage = f->fmt.pix.sizeimage;
 	csi_dev->pix.field     = f->fmt.pix.field;
 	csi_dev->type          = f->type;
-	dev_dbg(csi_dev->dev, "set to pixelformat '%4.6s'\n",
+	dev_dbg(csi_dev->dev, "set to pixelformat '%s'\n",
 			(char *)&csi_dev->fmt->name);
 
 	/* Config csi */
