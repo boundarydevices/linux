@@ -74,6 +74,7 @@ struct tc358743_state {
 	struct media_pad pad;
 	struct v4l2_ctrl_handler hdl;
 	struct i2c_client *i2c_client;
+	u32 fps;
 	/* CONFCTL is modified in ops and tc358743_hdmi_sys_int_handler */
 	struct mutex confctl_mutex;
 
@@ -304,6 +305,7 @@ static inline unsigned fps(const struct v4l2_bt_timings *t)
 static int tc358743_get_detected_timings(struct v4l2_subdev *sd,
 				     struct v4l2_dv_timings *timings)
 {
+	struct tc358743_state *state = to_state(sd);
 	struct v4l2_bt_timings *bt = &timings->bt;
 	unsigned width, height, frame_width, frame_height, frame_interval, fps;
 
@@ -348,6 +350,9 @@ static int tc358743_get_detected_timings(struct v4l2_subdev *sd,
 		bt->pixelclock /= 2;
 	}
 
+	v4l2_dbg(2, debug, sd, "%s: width=%d height=%d fps=%d\n",
+		__func__, width, height, fps);
+	state->fps = fps;
 	return 0;
 }
 
@@ -634,6 +639,7 @@ static void tc358743_set_csi_color_space(struct v4l2_subdev *sd)
 	struct tc358743_state *state = to_state(sd);
 
 	switch (state->mbus_fmt_code) {
+	case MEDIA_BUS_FMT_UYVY8_2X8:
 	case MEDIA_BUS_FMT_UYVY8_1X16:
 		v4l2_dbg(2, debug, sd, "%s: YCbCr 422 16-bit\n", __func__);
 		i2c_wr8_and_or(sd, VOUT_SET2,
@@ -668,12 +674,20 @@ static unsigned tc358743_num_csi_lanes_needed(struct v4l2_subdev *sd)
 	struct tc358743_state *state = to_state(sd);
 	struct v4l2_bt_timings *bt = &state->timings.bt;
 	struct tc358743_platform_data *pdata = &state->pdata;
+	u32 lanes;
 	u32 bits_pr_pixel =
-		(state->mbus_fmt_code == MEDIA_BUS_FMT_UYVY8_1X16) ?  16 : 24;
+		(state->mbus_fmt_code == MEDIA_BUS_FMT_UYVY8_1X16) ? 16 :
+		(state->mbus_fmt_code == MEDIA_BUS_FMT_UYVY8_2X8)  ? 16 : 24;
 	u32 bps = bt->width * bt->height * fps(bt) * bits_pr_pixel;
 	u32 bps_pr_lane = (pdata->refclk_hz / pdata->pll_prd) * pdata->pll_fbd;
-
-	return DIV_ROUND_UP(bps, bps_pr_lane);
+	lanes = DIV_ROUND_UP(bps, bps_pr_lane);
+	if (lanes > 4)
+		lanes = 4;
+	else if (!lanes)
+		lanes = 1;
+	v4l2_dbg(3, debug, sd, "%s: %d x %d, lanes=%d\n",
+		__func__, bt->width, bt->height, lanes);
+	return lanes;
 }
 
 static void tc358743_set_csi(struct v4l2_subdev *sd)
@@ -682,7 +696,7 @@ static void tc358743_set_csi(struct v4l2_subdev *sd)
 	struct tc358743_platform_data *pdata = &state->pdata;
 	unsigned lanes = tc358743_num_csi_lanes_needed(sd);
 
-	v4l2_dbg(3, debug, sd, "%s:\n", __func__);
+	v4l2_dbg(3, debug, sd, "%s: lanes=%d\n", __func__, lanes);
 
 	state->csi_lanes_in_use = lanes;
 
@@ -1311,6 +1325,8 @@ static int tc358743_log_status(struct v4l2_subdev *sd)
 	v4l2_info(sd, "Color space: %s\n",
 			state->mbus_fmt_code == MEDIA_BUS_FMT_UYVY8_1X16 ?
 			"YCbCr 422 16-bit" :
+			(state->mbus_fmt_code == MEDIA_BUS_FMT_UYVY8_2X8) ?
+			"YCbCr 422 2x8-bit" :
 			state->mbus_fmt_code == MEDIA_BUS_FMT_RGB888_1X24 ?
 			"RGB 888 24-bit" : "Unsupported");
 
@@ -1645,6 +1661,9 @@ static int tc358743_enum_mbus_code(struct v4l2_subdev *sd,
 	case 1:
 		code->code = MEDIA_BUS_FMT_UYVY8_1X16;
 		break;
+	case 2:
+		code->code = MEDIA_BUS_FMT_UYVY8_2X8;
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -1655,35 +1674,38 @@ static int tc358743_get_fmt(struct v4l2_subdev *sd,
 		struct v4l2_subdev_state *sd_state,
 		struct v4l2_subdev_format *format)
 {
+	struct v4l2_mbus_framefmt *mf = &format->format;
 	struct tc358743_state *state = to_state(sd);
 	u8 vi_rep = i2c_rd8(sd, VI_REP);
 
 	if (format->pad != 0)
 		return -EINVAL;
 
-	format->format.code = state->mbus_fmt_code;
-	format->format.width = state->timings.bt.width;
-	format->format.height = state->timings.bt.height;
-	format->format.field = V4L2_FIELD_NONE;
+	mf->code = state->mbus_fmt_code;
+	mf->width = state->timings.bt.width;
+	mf->height = state->timings.bt.height;
+	mf->field = V4L2_FIELD_NONE;
 
 	switch (vi_rep & MASK_VOUT_COLOR_SEL) {
 	case MASK_VOUT_COLOR_RGB_FULL:
 	case MASK_VOUT_COLOR_RGB_LIMITED:
-		format->format.colorspace = V4L2_COLORSPACE_SRGB;
+		mf->colorspace = V4L2_COLORSPACE_SRGB;
 		break;
 	case MASK_VOUT_COLOR_601_YCBCR_LIMITED:
 	case MASK_VOUT_COLOR_601_YCBCR_FULL:
-		format->format.colorspace = V4L2_COLORSPACE_SMPTE170M;
+		mf->colorspace = V4L2_COLORSPACE_SMPTE170M;
 		break;
 	case MASK_VOUT_COLOR_709_YCBCR_FULL:
 	case MASK_VOUT_COLOR_709_YCBCR_LIMITED:
-		format->format.colorspace = V4L2_COLORSPACE_REC709;
+		mf->colorspace = V4L2_COLORSPACE_REC709;
 		break;
 	default:
-		format->format.colorspace = 0;
+		mf->colorspace = 0;
 		break;
 	}
-
+	v4l2_dbg(3, debug, sd, "%s: code=0x%x, %d x %d, colorspace=%d, vi_rep=0x%x\n",
+		__func__, mf->code, mf->width, mf->height, mf->colorspace,
+		vi_rep);
 	return 0;
 }
 
@@ -1701,9 +1723,11 @@ static int tc358743_set_fmt(struct v4l2_subdev *sd,
 	if (ret)
 		return ret;
 
+	v4l2_dbg(2, debug, sd, "%s: code=0x%x\n", __func__, code);
 	switch (code) {
 	case MEDIA_BUS_FMT_RGB888_1X24:
 	case MEDIA_BUS_FMT_UYVY8_1X16:
+	case MEDIA_BUS_FMT_UYVY8_2X8:
 		break;
 	default:
 		return -EINVAL;
@@ -2025,6 +2049,8 @@ static int tc358743_probe(struct i2c_client *client)
 	struct v4l2_subdev *sd;
 	u16 irq_mask = MASK_HDMI_MSK | MASK_CSI_MSK;
 	int err;
+	struct v4l2_dv_timings timings;
+	int tries;
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BYTE_DATA))
 		return -EIO;
@@ -2117,6 +2143,7 @@ static int tc358743_probe(struct i2c_client *client)
 	tc358743_initial_setup(sd);
 
 	tc358743_s_dv_timings(sd, &default_timing);
+	state->fps = 60;
 
 	tc358743_set_csi_color_space(sd);
 
@@ -2150,12 +2177,23 @@ static int tc358743_probe(struct i2c_client *client)
 	tc358743_enable_interrupts(sd, tx_5v_power_present(sd));
 	i2c_wr16(sd, INTMASK, ~irq_mask);
 
+	enable_stream(sd, true);
+	for (tries = 1; tries <= 10; tries++) {
+		if (!tc358743_get_detected_timings(sd, &timings)) {
+			tc358743_s_dv_timings(sd, &timings);
+			break;
+		}
+		msleep(10);
+	}
+	enable_stream(sd, false);
+
 	err = v4l2_ctrl_handler_setup(sd->ctrl_handler);
 	if (err)
 		goto err_work_queues;
 
-	v4l2_info(sd, "%s found @ 0x%x (%s)\n", client->name,
-		  client->addr << 1, client->adapter->name);
+	v4l2_info(sd, "%s found @ 0x%x (%s), %d x %d(%d tries)\n", client->name,
+		  client->addr << 1, client->adapter->name,
+		  state->timings.bt.width, state->timings.bt.height, tries);
 
 	return 0;
 
