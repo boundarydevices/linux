@@ -1904,7 +1904,9 @@ static void ov5640_set_virtual_channel(struct ov5640 *sensor, int channel)
 }
 
 /* download ov5640 settings to sensor through i2c */
-static int ov5640_download_firmware(struct ov5640 *sensor, const struct reg_value *pModeSetting, s32 ArySize)
+static int ov5640_download_firmware(struct ov5640 *sensor,
+				    const struct reg_value *pModeSetting,
+				    s32 ArySize)
 {
 	register u32 Delay_ms = 0;
 	register u16 RegAddr = 0;
