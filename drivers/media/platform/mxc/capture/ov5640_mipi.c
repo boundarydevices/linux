@@ -105,7 +105,7 @@ struct ov5640_mode_info {
 	enum ov5640_downsize_mode dn_mode;
 	u32 width;
 	u32 height;
-	struct reg_value *init_data_ptr;
+	const struct reg_value *init_data_ptr;
 	u32 init_data_size;
 };
 
@@ -118,6 +118,11 @@ struct ov5640 {
 	int focus_mode;
 	int focus_range;
 	int colorfx;
+	struct regulator *io_regulator;
+	struct regulator *core_regulator;
+	struct regulator *analog_regulator;
+	struct regulator *gpo_regulator;
+
 	struct i2c_client *i2c_client;
 	struct v4l2_pix_format pix;
 	struct v4l2_sensor_dimension spix;
@@ -182,204 +187,204 @@ struct ov5640 {
 #define OV5640_AF_ACK_SET	0x01
 #define OV5640_AF_ACK_DONE	0x00
 
-static struct reg_value brightness_neg4[] = {
+static const struct reg_value brightness_neg4[] = {
 	{0x3212, 0x03, 0, 0}, {0x5587, 0x40, 0, 0}, {0x5588, 0x09, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value brightness_neg3[] = {
+static const struct reg_value brightness_neg3[] = {
 	{0x3212, 0x03, 0, 0}, {0x5587, 0x30, 0, 0}, {0x5588, 0x09, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value brightness_neg2[] = {
+static const struct reg_value brightness_neg2[] = {
 	{0x3212, 0x03, 0, 0}, {0x5587, 0x20, 0, 0}, {0x5588, 0x09, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value brightness_neg1[] = {
+static const struct reg_value brightness_neg1[] = {
 	{0x3212, 0x03, 0, 0}, {0x5587, 0x10, 0, 0}, {0x5588, 0x09, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value brightness_zero[] = {
+static const struct reg_value brightness_zero[] = {
 	{0x3212, 0x03, 0, 0}, {0x5587, 0x00, 0, 0}, {0x5588, 0x01, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value brightness_pos1[] = {
+static const struct reg_value brightness_pos1[] = {
 	{0x3212, 0x03, 0, 0}, {0x5587, 0x10, 0, 0}, {0x5588, 0x01, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value brightness_pos2[] = {
+static const struct reg_value brightness_pos2[] = {
 	{0x3212, 0x03, 0, 0}, {0x5587, 0x20, 0, 0}, {0x5588, 0x01, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value brightness_pos3[] = {
+static const struct reg_value brightness_pos3[] = {
 	{0x3212, 0x03, 0, 0}, {0x5587, 0x30, 0, 0}, {0x5588, 0x01, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value brightness_pos4[] = {
+static const struct reg_value brightness_pos4[] = {
 	{0x3212, 0x03, 0, 0}, {0x5587, 0x40, 0, 0}, {0x5588, 0x01, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value contrast_neg4[] = {
+static const struct reg_value contrast_neg4[] = {
 	{0x3212, 0x03, 0, 0}, {0x5586, 0x10, 0, 0}, {0x5585, 0x10, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value contrast_neg3[] = {
+static const struct reg_value contrast_neg3[] = {
 	{0x3212, 0x03, 0, 0}, {0x5586, 0x14, 0, 0}, {0x5585, 0x14, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value contrast_neg2[] = {
+static const struct reg_value contrast_neg2[] = {
 	{0x3212, 0x03, 0, 0}, {0x5586, 0x18, 0, 0}, {0x5585, 0x18, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value contrast_neg1[] = {
+static const struct reg_value contrast_neg1[] = {
 	{0x3212, 0x03, 0, 0}, {0x5586, 0x1c, 0, 0}, {0x5585, 0x1c, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value contrast_zero[] = {
+static const struct reg_value contrast_zero[] = {
 	{0x3212, 0x03, 0, 0}, {0x5586, 0x20, 0, 0}, {0x5585, 0x00, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value contrast_pos1[] = {
+static const struct reg_value contrast_pos1[] = {
 	{0x3212, 0x03, 0, 0}, {0x5586, 0x24, 0, 0}, {0x5585, 0x10, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value contrast_pos2[] = {
+static const struct reg_value contrast_pos2[] = {
 	{0x3212, 0x03, 0, 0}, {0x5586, 0x28, 0, 0}, {0x5585, 0x18, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value contrast_pos3[] = {
+static const struct reg_value contrast_pos3[] = {
 	{0x3212, 0x03, 0, 0}, {0x5586, 0x2c, 0, 0}, {0x5585, 0x1c, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value contrast_pos4[] = {
+static const struct reg_value contrast_pos4[] = {
 	{0x3212, 0x03, 0, 0}, {0x5586, 0x30, 0, 0}, {0x5585, 0x20, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value saturation_neg4[] = {
+static const struct reg_value saturation_neg4[] = {
 	{0x3212, 0x03, 0, 0}, {0x5583, 0x00, 0, 0}, {0x5584, 0x00, 0, 0},
 	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
 	{0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value saturation_neg3[] = {
+static const struct reg_value saturation_neg3[] = {
 	{0x3212, 0x03, 0, 0}, {0x5583, 0x10, 0, 0}, {0x5584, 0x10, 0, 0},
 	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
 	{0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value saturation_neg2[] = {
+static const struct reg_value saturation_neg2[] = {
 	{0x3212, 0x03, 0, 0}, {0x5583, 0x20, 0, 0}, {0x5584, 0x20, 0, 0},
 	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
 	{0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value saturation_neg1[] = {
+static const struct reg_value saturation_neg1[] = {
 	{0x3212, 0x03, 0, 0}, {0x5583, 0x30, 0, 0}, {0x5584, 0x30, 0, 0},
 	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
 	{0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value saturation_zero[] = {
+static const struct reg_value saturation_zero[] = {
 	{0x3212, 0x03, 0, 0}, {0x5583, 0x40, 0, 0}, {0x5584, 0x40, 0, 0},
 	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
 	{0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value saturation_pos1[] = {
+static const struct reg_value saturation_pos1[] = {
 	{0x3212, 0x03, 0, 0}, {0x5583, 0x50, 0, 0}, {0x5584, 0x50, 0, 0},
 	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
 	{0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value saturation_pos2[] = {
+static const struct reg_value saturation_pos2[] = {
 	{0x3212, 0x03, 0, 0}, {0x5583, 0x60, 0, 0}, {0x5584, 0x60, 0, 0},
 	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
 	{0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value saturation_pos3[] = {
+static const struct reg_value saturation_pos3[] = {
 	{0x3212, 0x03, 0, 0}, {0x5583, 0x70, 0, 0}, {0x5584, 0x70, 0, 0},
 	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
 	{0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value saturation_pos4[] = {
+static const struct reg_value saturation_pos4[] = {
 	{0x3212, 0x03, 0, 0}, {0x5583, 0x80, 0, 0}, {0x5584, 0x80, 0, 0},
 	{0x5580, 0x02, 2, 0}, {0x5588, 0x40, 0x40, 0}, {0x3212, 0x13, 0, 0},
 	{0x3212, 0xa3, 0, 0}
 };
 
-static struct reg_value wb_cloudy[] = {
+static const struct reg_value wb_cloudy[] = {
 	{0x3400, 0x06, 0, 0}, {0x3401, 0x48, 0, 0}, {0x3402, 0x04, 0, 0},
 	{0x3403, 0x00, 0, 0}, {0x3404, 0x04, 0, 0}, {0x3405, 0xd3, 0, 0},
 };
 
-static struct reg_value wb_daylight[] = {
+static const struct reg_value wb_daylight[] = {
 	{0x3400, 0x06, 0, 0}, {0x3401, 0x1c, 0, 0}, {0x3402, 0x04, 0, 0},
 	{0x3403, 0x00, 0, 0}, {0x3404, 0x04, 0, 0}, {0x3405, 0xf3, 0, 0},
 };
 
-static struct reg_value wb_incandescence[] = {
+static const struct reg_value wb_incandescence[] = {
 	{0x3400, 0x04, 0, 0}, {0x3401, 0x10, 0, 0}, {0x3402, 0x04, 0, 0},
 	{0x3403, 0x00, 0, 0}, {0x3404, 0x08, 0, 0}, {0x3405, 0xb6, 0, 0},
 };
 
-static struct reg_value wb_fluorescent[] = {
+static const struct reg_value wb_fluorescent[] = {
 	{0x3400, 0x05, 0, 0}, {0x3401, 0x48, 0, 0}, {0x3402, 0x04, 0, 0},
 	{0x3403, 0x00, 0, 0}, {0x3404, 0x07, 0, 0}, {0x3405, 0xcf, 0, 0},
 };
 
-static struct reg_value colorfx_none[] = {
+static const struct reg_value colorfx_none[] = {
 	{0x5001, 0x7f, 0, 0}, {0x5580, 0x04, 0, 0},
 };
 
-static struct reg_value colorfx_bw[] = {
+static const struct reg_value colorfx_bw[] = {
 	{0x5001, 0xff, 0, 0}, {0x5580, 0x18, 0, 0}, {0x5583, 0x80, 0, 0},
 	{0x5584, 0x80, 0, 0},
 };
 
-static struct reg_value colorfx_sepia[] = {
+static const struct reg_value colorfx_sepia[] = {
 	{0x5001, 0xff, 0, 0}, {0x5580, 0x18, 0, 0}, {0x5583, 0x40, 0, 0},
 	{0x5584, 0xa0, 0, 0},
 };
 
-static struct reg_value colorfx_negative[] = {
+static const struct reg_value colorfx_negative[] = {
 	{0x5001, 0xff, 0, 0}, {0x5580, 0x40, 0, 0},
 };
 
-static struct reg_value colorfx_emboss[] = {
+static const struct reg_value colorfx_emboss[] = {
 	{0x5001, 0xff, 0, 0}, {0x5580, 0x18, 0, 0}, {0x5583, 0x80, 0, 0},
 	{0x5584, 0xc0, 0, 0},
 };
 
-static struct reg_value colorfx_sketch[] = {
+static const struct reg_value colorfx_sketch[] = {
 	{0x5001, 0xff, 0, 0}, {0x5580, 0x18, 0, 0}, {0x5583, 0x80, 0, 0},
 	{0x5584, 0xc0, 0, 0},
 };
 
-static struct reg_value colorfx_sky_blue[] = {
+static const struct reg_value colorfx_sky_blue[] = {
 	{0x5001, 0xff, 0, 0}, {0x5580, 0x18, 0, 0}, {0x5583, 0xa0, 0, 0},
 	{0x5584, 0x40, 0, 0},
 };
 
-static struct reg_value colorfx_grass_green[] = {
+static const struct reg_value colorfx_grass_green[] = {
 	{0x5001, 0xff, 0, 0}, {0x5580, 0x18, 0, 0}, {0x5583, 0x60, 0, 0},
 	{0x5584, 0x60, 0, 0},
 };
@@ -727,7 +732,7 @@ static uint8_t ov5640_af_firmware[] = {
 	0x8e, 0x83, 0x75, 0xf0, 0x04, 0xed, 0x02, 0x06, 0xa5
 };
 
-static struct reg_value ov5640_init_setting_30fps_VGA[] = {
+static const struct reg_value ov5640_init_setting_30fps_VGA[] = {
 
 	{0x3103, 0x11, 0, 0}, {0x3008, 0x82, 0, 5}, {0x3008, 0x42, 0, 0},
 	{0x3103, 0x03, 0, 0}, {0x3017, 0x00, 0, 0}, {0x3018, 0x00, 0, 0},
@@ -816,7 +821,7 @@ static struct reg_value ov5640_init_setting_30fps_VGA[] = {
 	{0x3a1f, 0x14, 0, 0}, {0x3008, 0x02, 0, 0}, {0x3c00, 0x04, 0, 300},
 };
 
-static struct reg_value ov5640_setting_30fps_VGA_640_480[] = {
+static const struct reg_value ov5640_setting_30fps_VGA_640_480[] = {
 
 	{0x3035, 0x14, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
@@ -838,7 +843,7 @@ static struct reg_value ov5640_setting_30fps_VGA_640_480[] = {
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0}, {0x3503, 0x00, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_VGA_640_480[] = {
+static const struct reg_value ov5640_setting_15fps_VGA_640_480[] = {
 	{0x3035, 0x22, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0}, {0x3814, 0x31, 0, 0},
@@ -859,7 +864,7 @@ static struct reg_value ov5640_setting_15fps_VGA_640_480[] = {
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_XGA_1024_768[] = {
+static const struct reg_value ov5640_setting_30fps_XGA_1024_768[] = {
 
 	{0x3035, 0x14, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
@@ -883,7 +888,7 @@ static struct reg_value ov5640_setting_30fps_XGA_1024_768[] = {
 	{0x380b, 0x00, 0, 0}, {0x3035, 0x12, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_XGA_1024_768[] = {
+static const struct reg_value ov5640_setting_15fps_XGA_1024_768[] = {
 	{0x3035, 0x22, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0}, {0x3814, 0x31, 0, 0},
@@ -905,7 +910,7 @@ static struct reg_value ov5640_setting_15fps_XGA_1024_768[] = {
 	{0x3809, 0x00, 0, 0}, {0x380a, 0x03, 0, 0}, {0x380b, 0x00, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_QVGA_320_240[] = {
+static const struct reg_value ov5640_setting_30fps_QVGA_320_240[] = {
 	{0x3035, 0x14, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0}, {0x3814, 0x31, 0, 0},
@@ -926,7 +931,7 @@ static struct reg_value ov5640_setting_30fps_QVGA_320_240[] = {
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_QVGA_320_240[] = {
+static const struct reg_value ov5640_setting_15fps_QVGA_320_240[] = {
 	{0x3035, 0x22, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0}, {0x3814, 0x31, 0, 0},
@@ -947,7 +952,7 @@ static struct reg_value ov5640_setting_15fps_QVGA_320_240[] = {
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_QCIF_176_144[] = {
+static const struct reg_value ov5640_setting_30fps_QCIF_176_144[] = {
 	{0x3035, 0x14, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0}, {0x3814, 0x31, 0, 0},
@@ -967,7 +972,7 @@ static struct reg_value ov5640_setting_30fps_QCIF_176_144[] = {
 	{0x4407, 0x04, 0, 0}, {0x460b, 0x35, 0, 0}, {0x460c, 0x22, 0, 0},
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
 };
-static struct reg_value ov5640_setting_15fps_QCIF_176_144[] = {
+static const struct reg_value ov5640_setting_15fps_QCIF_176_144[] = {
 	{0x3035, 0x22, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0}, {0x3814, 0x31, 0, 0},
@@ -988,7 +993,7 @@ static struct reg_value ov5640_setting_15fps_QCIF_176_144[] = {
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_NTSC_720_480[] = {
+static const struct reg_value ov5640_setting_30fps_NTSC_720_480[] = {
 	{0x3035, 0x12, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0}, {0x3814, 0x31, 0, 0},
@@ -1009,7 +1014,7 @@ static struct reg_value ov5640_setting_30fps_NTSC_720_480[] = {
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_NTSC_720_480[] = {
+static const struct reg_value ov5640_setting_15fps_NTSC_720_480[] = {
 	{0x3035, 0x22, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0}, {0x3814, 0x31, 0, 0},
@@ -1030,7 +1035,7 @@ static struct reg_value ov5640_setting_15fps_NTSC_720_480[] = {
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_PAL_720_576[] = {
+static const struct reg_value ov5640_setting_30fps_PAL_720_576[] = {
 	{0x3035, 0x12, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0}, {0x3814, 0x31, 0, 0},
@@ -1051,7 +1056,7 @@ static struct reg_value ov5640_setting_30fps_PAL_720_576[] = {
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_PAL_720_576[] = {
+static const struct reg_value ov5640_setting_15fps_PAL_720_576[] = {
 	{0x3035, 0x22, 0, 0}, {0x3036, 0x38, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0}, {0x3814, 0x31, 0, 0},
@@ -1072,7 +1077,7 @@ static struct reg_value ov5640_setting_15fps_PAL_720_576[] = {
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_720P_1280_720[] = {
+static const struct reg_value ov5640_setting_30fps_720P_1280_720[] = {
 	{0x3008, 0x42, 0, 0},
 	{0x3035, 0x21, 0, 0}, {0x3036, 0x54, 0, 0}, {0x3c07, 0x07, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
@@ -1095,7 +1100,7 @@ static struct reg_value ov5640_setting_30fps_720P_1280_720[] = {
 	{0x3008, 0x02, 0, 0}, {0x3503, 0,    0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_720P_1280_720[] = {
+static const struct reg_value ov5640_setting_15fps_720P_1280_720[] = {
 	{0x3035, 0x41, 0, 0}, {0x3036, 0x54, 0, 0}, {0x3c07, 0x07, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3820, 0x41, 0, 0}, {0x3821, 0x07, 0, 0}, {0x3814, 0x31, 0, 0},
@@ -1116,7 +1121,7 @@ static struct reg_value ov5640_setting_15fps_720P_1280_720[] = {
 	{0x3824, 0x04, 0, 0}, {0x5001, 0x83, 0, 0},
 };
 
-static struct reg_value ov5640_setting_30fps_1080P_1920_1080[] = {
+static const struct reg_value ov5640_setting_30fps_1080P_1920_1080[] = {
 	{0x3008, 0x42, 0, 0},
 	{0x3035, 0x21, 0, 0}, {0x3036, 0x54, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
@@ -1153,7 +1158,7 @@ static struct reg_value ov5640_setting_30fps_1080P_1920_1080[] = {
 	{0x3503, 0, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_1080P_1920_1080[] = {
+static const struct reg_value ov5640_setting_15fps_1080P_1920_1080[] = {
 	{0x3008, 0x42, 0, 0},
 	{0x3035, 0x21, 0, 0}, {0x3036, 0x54, 0, 0}, {0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
@@ -1189,7 +1194,7 @@ static struct reg_value ov5640_setting_15fps_1080P_1920_1080[] = {
 	{0x4005, 0x1a, 0, 0}, {0x3008, 0x02, 0, 0}, {0x3503, 0, 0, 0},
 };
 
-static struct reg_value ov5640_setting_15fps_QSXGA_2592_1944[] = {
+static const struct reg_value ov5640_setting_15fps_QSXGA_2592_1944[] = {
 	{0x4202, 0x0f, 0, 0},	/* stream off the sensor */
 	{0x3820, 0x40, 0, 0}, {0x3821, 0x06, 0, 0}, /*disable flip*/
 	{0x3035, 0x21, 0, 0}, {0x3036, 0x54, 0, 0}, {0x3c07, 0x08, 0, 0},
@@ -1213,7 +1218,7 @@ static struct reg_value ov5640_setting_15fps_QSXGA_2592_1944[] = {
 	{0x4202, 0x00, 0, 0},	/* stream on the sensor */
 };
 
-static struct ov5640_mode_info ov5640_mode_info_data[2][ov5640_mode_MAX + 1] = {
+static const struct ov5640_mode_info ov5640_mode_info_data[2][ov5640_mode_MAX + 1] = {
 	{
 		{ov5640_mode_VGA_640_480, SUBSAMPLING, 640,  480,
 		ov5640_setting_15fps_VGA_640_480,
@@ -1271,11 +1276,6 @@ static struct ov5640_mode_info ov5640_mode_info_data[2][ov5640_mode_MAX + 1] = {
 		ARRAY_SIZE(ov5640_setting_30fps_XGA_1024_768)},
 	},
 };
-
-static struct regulator *io_regulator;
-static struct regulator *core_regulator;
-static struct regulator *analog_regulator;
-static struct regulator *gpo_regulator;
 
 static int ov5640_probe(struct i2c_client *adapter,
 				const struct i2c_device_id *device_id);
@@ -1379,24 +1379,24 @@ static int ov5640_power_on(struct ov5640 *sensor)
 {
 	if (sensor->on)
 		return 0;
-	if (io_regulator)
-		if (regulator_enable(io_regulator) != 0) {
+	if (sensor->io_regulator)
+		if (regulator_enable(sensor->io_regulator) != 0) {
 			pr_err("%s:io set voltage error\n", __func__);
 			goto err1;
 		}
-	if (analog_regulator)
-		if (regulator_enable(analog_regulator) != 0) {
+	if (sensor->analog_regulator)
+		if (regulator_enable(sensor->analog_regulator) != 0) {
 			pr_err("%s:analog set voltage error\n",
 				__func__);
 			goto err4;
 		}
-	if (core_regulator)
-		if (regulator_enable(core_regulator) != 0) {
+	if (sensor->core_regulator)
+		if (regulator_enable(sensor->core_regulator) != 0) {
 			pr_err("%s:core set voltage error\n", __func__);
 			goto err2;
 		}
-	if (gpo_regulator)
-		if (regulator_enable(gpo_regulator) != 0) {
+	if (sensor->gpo_regulator)
+		if (regulator_enable(sensor->gpo_regulator) != 0) {
 			pr_err("%s:gpo set voltage error\n", __func__);
 			goto err3;
 		}
@@ -1405,14 +1405,14 @@ static int ov5640_power_on(struct ov5640 *sensor)
 	sensor->on = 1;
 	return 0;
 err4:
-	if (core_regulator)
-		regulator_disable(core_regulator);
+	if (sensor->core_regulator)
+		regulator_disable(sensor->core_regulator);
 err3:
-	if (analog_regulator)
-		regulator_disable(analog_regulator);
+	if (sensor->analog_regulator)
+		regulator_disable(sensor->analog_regulator);
 err2:
-	if (io_regulator)
-		regulator_disable(io_regulator);
+	if (sensor->io_regulator)
+		regulator_disable(sensor->io_regulator);
 err1:
 	return -EIO;
 }
@@ -1430,58 +1430,57 @@ void disable_mipi(void)
 }
 
 
-static int ov5640_power_off(struct ov5640 *sensor)
-{
-	if (!sensor->on)
-		return 0;
-	ov5640_standby(sensor, 1);
-	if (gpo_regulator)
-		regulator_disable(gpo_regulator);
-	if (core_regulator)
-		regulator_disable(core_regulator);
-	if (analog_regulator)
-		regulator_disable(analog_regulator);
-	if (io_regulator)
-		regulator_disable(io_regulator);
-	disable_mipi();
-	sensor->on = 0;
-	return 0;
-}
-
 static int ov5640_power_init(struct device *dev, struct ov5640 *sensor)
 {
-	io_regulator = devm_regulator_get(dev, "DOVDD");
-	if (!IS_ERR(io_regulator)) {
-		regulator_set_voltage(io_regulator,
+	sensor->io_regulator = devm_regulator_get(dev, "DOVDD");
+	if (!IS_ERR(sensor->io_regulator)) {
+		regulator_set_voltage(sensor->io_regulator,
 				      OV5640_VOLTAGE_DIGITAL_IO,
 				      OV5640_VOLTAGE_DIGITAL_IO);
 	} else {
 		pr_err("%s: cannot get io voltage error\n", __func__);
-		io_regulator = NULL;
+		sensor->io_regulator = NULL;
 	}
 
-	analog_regulator = devm_regulator_get(dev, "AVDD");
-	if (!IS_ERR(analog_regulator)) {
-		regulator_set_voltage(analog_regulator,
+	sensor->analog_regulator = devm_regulator_get(dev, "AVDD");
+	if (!IS_ERR(sensor->analog_regulator)) {
+		regulator_set_voltage(sensor->analog_regulator,
 				      OV5640_VOLTAGE_ANALOG,
 				      OV5640_VOLTAGE_ANALOG);
 	} else {
-		analog_regulator = NULL;
+		sensor->analog_regulator = NULL;
 		pr_err("%s: cannot get analog voltage error\n", __func__);
 	}
 
-	core_regulator = devm_regulator_get(dev, "DVDD");
-	if (!IS_ERR(core_regulator)) {
-		regulator_set_voltage(core_regulator,
+	sensor->core_regulator = devm_regulator_get(dev, "DVDD");
+	if (!IS_ERR(sensor->core_regulator)) {
+		regulator_set_voltage(sensor->core_regulator,
 				      OV5640_VOLTAGE_DIGITAL_CORE,
 				      OV5640_VOLTAGE_DIGITAL_CORE);
 	} else {
-		core_regulator = NULL;
+		sensor->core_regulator = NULL;
 		pr_err("%s: cannot get core voltage error\n", __func__);
 	}
 	return ov5640_power_on(sensor);
 }
 
+static int ov5640_power_off(struct ov5640 *sensor)
+{
+	if (!sensor->on)
+		return 0;
+	ov5640_standby(sensor, 1);
+	if (sensor->gpo_regulator)
+		regulator_disable(sensor->gpo_regulator);
+	if (sensor->core_regulator)
+		regulator_disable(sensor->core_regulator);
+	if (sensor->analog_regulator)
+		regulator_disable(sensor->analog_regulator);
+	if (sensor->io_regulator)
+		regulator_disable(sensor->io_regulator);
+	disable_mipi();
+	sensor->on = 0;
+	return 0;
+}
 
 static s32 ov5640_write_array(struct ov5640 *sensor, u16 len, u8 *data)
 {
@@ -1902,7 +1901,7 @@ static void ov5640_set_virtual_channel(struct ov5640 *sensor, int channel)
 }
 
 /* download ov5640 settings to sensor through i2c */
-static int ov5640_download_firmware(struct ov5640 *sensor, struct reg_value *pModeSetting, s32 ArySize)
+static int ov5640_download_firmware(struct ov5640 *sensor, const struct reg_value *pModeSetting, s32 ArySize)
 {
 	register u32 Delay_ms = 0;
 	register u16 RegAddr = 0;
@@ -1962,7 +1961,7 @@ err:
 static int ov5640_change_mode_exposure_calc(struct ov5640 *sensor,
 		enum ov5640_frame_rate frame_rate, enum ov5640_mode mode)
 {
-	struct reg_value *pModeSetting = NULL;
+	const struct reg_value *pModeSetting = NULL;
 	s32 ArySize = 0;
 	u8 average;
 	int prev_shutter, prev_gain16;
@@ -2090,7 +2089,7 @@ err:
 static int ov5640_change_mode_direct(struct ov5640 *sensor,
 		enum ov5640_frame_rate frame_rate, enum ov5640_mode mode)
 {
-	struct reg_value *pModeSetting = NULL;
+	const struct reg_value *pModeSetting = NULL;
 	s32 ArySize = 0;
 	int retval = 0;
 
@@ -2468,7 +2467,7 @@ static int ov5640_af_init(struct ov5640 *sensor)
 	int ret = -EIO;
 	int i, remaining, nb_groups;
 
-	static struct reg_value init_af_firmware[] = {
+	static const struct reg_value init_af_firmware[] = {
 		{OV5640_REG_AF_MODE, 0x00, 0, 0},
 		{OV5640_REG_AF_ACK, 0x00, 0, 0},
 		{OV5640_REG_AF_PARAM0, 0x00, 0, 0},
@@ -2735,7 +2734,7 @@ static int ov5640_init_mode(struct ov5640 *sensor,
 		enum ov5640_frame_rate frame_rate,
 		enum ov5640_mode mode, enum ov5640_mode orig_mode)
 {
-	struct reg_value *pModeSetting = NULL;
+	const struct reg_value *pModeSetting = NULL;
 	s32 ArySize = 0;
 	int retval = 0;
 	void *mipi_csi2_info;
