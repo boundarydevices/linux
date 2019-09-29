@@ -111,44 +111,45 @@ struct ov5640_mode_info {
 
 struct ov5640 {
 	struct sensor_data s;
-	int pwn_gpio;
-	int rst_gpio;
-	uint16_t roi_x;
-	uint16_t roi_y;
-	int focus_mode;
-	int focus_range;
-	int colorfx;
-	struct regulator *io_regulator;
-	struct regulator *core_regulator;
-	struct regulator *analog_regulator;
-	struct regulator *gpo_regulator;
-	int prev_sysclk;
-	int prev_HTS;
-	int AE_low;
-	int AE_high;
-	int AE_Target;
+	struct v4l2_sensor_dimension spix;
+	unsigned virtual_channel;
 
 	struct i2c_client *i2c_client;
 	struct v4l2_pix_format pix;
-	struct v4l2_sensor_dimension spix;
 	struct v4l2_captureparm streamcap;
 	bool on;
+
 	/* control settings */
 	int brightness;
 	int hue;
-	int red;
-	int blue;
 	int contrast;
 	int saturation;
+	int red;
+	int blue;
 	int ae_mode;
 	int mirror;
 	int vflip;
 	int wb;
 
 	u32 mclk;
-	int last_reg;
-	unsigned virtual_channel;
 
+	uint16_t roi_x;
+	uint16_t roi_y;
+	int focus_mode;
+	int focus_range;
+	int colorfx;
+	int pwn_gpio;
+	int rst_gpio;
+	int prev_sysclk;
+	int prev_HTS;
+	int AE_low;
+	int AE_high;
+	int AE_Target;
+	int last_reg;
+	struct regulator *io_regulator;
+	struct regulator *core_regulator;
+	struct regulator *analog_regulator;
+	struct regulator *gpo_regulator;
 };
 
 /* AF-related registers */
@@ -3668,7 +3669,7 @@ static int ov5640_probe(struct i2c_client *client,
 
 	if (device_create_file(dev, &dev_attr_ov5640_reg))
 		dev_err(dev, "%s: error creating ov5640_reg entry\n", __func__);
-	pr_info("camera ov5640_mipi is found\n");
+	dev_info(dev, "camera ov5640_mipi is found\n");
 	return retval;
 err1:
 	pr_warn("camera ov5640_mipi is not found\n");
@@ -3687,9 +3688,9 @@ static void ov5640_remove(struct i2c_client *client)
 {
 	struct ov5640 *sensor = i2c_get_clientdata(client);
 
+	device_remove_file(&client->dev, &dev_attr_ov5640_reg);
 	v4l2_int_device_unregister(&ov5640_int_device);
 	ov5640_power_off(sensor);
-	device_remove_file(&client->dev, &dev_attr_ov5640_reg);
 }
 
 /*!
