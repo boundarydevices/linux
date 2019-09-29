@@ -1550,6 +1550,7 @@ static s32 ov5640_write_reg(struct ov5640 *sensor, u16 reg, u8 val)
 
 static s32 ov5640_read_reg(struct ov5640 *sensor, u16 reg, u8 *val)
 {
+	struct device *dev = &sensor->i2c_client->dev;
 	struct i2c_client *client = sensor->i2c_client;
 	struct i2c_msg msgs[2];
 	u8 buf[2];
@@ -1569,11 +1570,11 @@ static s32 ov5640_read_reg(struct ov5640 *sensor, u16 reg, u8 *val)
 
 	ret = i2c_transfer(client->adapter, msgs, 2);
 	if (ret < 0) {
-		pr_err("%s(mipi):reg=%x ret=%d\n", __func__, reg, ret);
+		dev_err(dev, "%s(mipi):reg=%x ret=%d\n", __func__, reg, ret);
 		return ret;
 	}
 	*val = buf[0];
-	pr_debug("%s(mipi):reg=%x,val=%x\n", __func__, reg, buf[0]);
+	dev_dbg(dev, "%s(mipi):reg=%x,val=%x\n", __func__, reg, buf[0]);
 	return buf[0];
 }
 
@@ -2729,9 +2730,10 @@ static int ov5640_af_set_focus_lock(struct ov5640 *sensor, int value)
 }
 
 static int ov5640_init_mode(struct ov5640 *sensor,
-		enum ov5640_frame_rate frame_rate,
-		enum ov5640_mode mode, enum ov5640_mode orig_mode)
+			    enum ov5640_frame_rate frame_rate,
+			    enum ov5640_mode mode, enum ov5640_mode orig_mode)
 {
+	struct device *dev = &sensor->i2c_client->dev;
 	const struct reg_value *pModeSetting = NULL;
 	s32 ArySize = 0;
 	int retval = 0;
@@ -2741,7 +2743,7 @@ static int ov5640_init_mode(struct ov5640 *sensor,
 
 	if ((mode > ov5640_mode_MAX || mode < ov5640_mode_MIN)
 		&& (mode != ov5640_mode_INIT)) {
-		pr_err("Wrong ov5640 mode detected!\n");
+		dev_err(dev, "Wrong ov5640 mode detected!\n");
 		return -1;
 	}
 
