@@ -3693,37 +3693,7 @@ static void ov5640_remove(struct i2c_client *client)
 	ov5640_power_off(sensor);
 }
 
-/*!
- * ov5640 init function
- * Called by insmod ov5640_camera.ko.
- *
- * @return  Error code indicating success or failure
- */
-static __init int ov5640_init(void)
-{
-	u8 err;
-
-	err = i2c_add_driver(&ov5640_i2c_driver);
-	if (err != 0)
-		pr_err("%s:driver registration failed, error=%d\n",
-			__func__, err);
-
-	return err;
-}
-
-/*!
- * OV5640 cleanup function
- * Called on rmmod ov5640_camera.ko
- *
- * @return  Error code indicating success or failure
- */
-static void __exit ov5640_clean(void)
-{
-	i2c_del_driver(&ov5640_i2c_driver);
-}
-
-module_init(ov5640_init);
-module_exit(ov5640_clean);
+module_i2c_driver(ov5640_i2c_driver);
 
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("OV5640 MIPI Camera Driver");
