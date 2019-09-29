@@ -2131,10 +2131,9 @@ err:
 	return retval;
 }
 
-static int ov5640_set_brightness(struct v4l2_int_device *s, int value)
+static int ov5640_set_brightness(struct ov5640 *sensor, int value)
 {
 	int ret;
-	struct ov5640 *sensor = s->priv;
 
 	switch (value) {
 	case -4:
@@ -2188,10 +2187,9 @@ static int ov5640_set_brightness(struct v4l2_int_device *s, int value)
 	return 0;
 }
 
-static int ov5640_set_contrast(struct v4l2_int_device *s, int value)
+static int ov5640_set_contrast(struct ov5640 *sensor, int value)
 {
 	int ret;
-	struct ov5640 *sensor = s->priv;
 
 	switch (value) {
 	case -4:
@@ -2245,10 +2243,9 @@ static int ov5640_set_contrast(struct v4l2_int_device *s, int value)
 	return 0;
 }
 
-static int ov5640_set_saturation(struct v4l2_int_device *s, int value)
+static int ov5640_set_saturation(struct ov5640 *sensor, int value)
 {
 	int ret;
-	struct ov5640 *sensor = s->priv;
 
 	switch (value) {
 	case -4:
@@ -2302,10 +2299,9 @@ static int ov5640_set_saturation(struct v4l2_int_device *s, int value)
 	return 0;
 }
 
-static int ov5640_set_autowb(struct v4l2_int_device *s, int value)
+static int ov5640_set_autowb(struct ov5640 *sensor, int value)
 {
 	int ret;
-	struct ov5640 *sensor = s->priv;
 	u16 reg = 0x3406;
 	u8 val = value ? 0 : 1;
 
@@ -2322,16 +2318,15 @@ static int ov5640_set_autowb(struct v4l2_int_device *s, int value)
 	return 0;
 }
 
-static int ov5640_set_wb(struct v4l2_int_device *s, int value)
+static int ov5640_set_wb(struct ov5640 *sensor, int value)
 {
 	int ret;
-	struct ov5640 *sensor = s->priv;
 
 	if (value == V4L2_WHITE_BALANCE_AUTO) {
-		ret = ov5640_set_autowb(s, 1);
+		ret = ov5640_set_autowb(sensor, 1);
 		return ret;
 	} else {
-		ret = ov5640_set_autowb(s, 0);
+		ret = ov5640_set_autowb(sensor, 0);
 		if (ret < 0)
 			return ret;
 	}
@@ -2372,9 +2367,8 @@ static int ov5640_set_wb(struct v4l2_int_device *s, int value)
 	return 0;
 }
 
-static int ov5640_set_colorfx(struct v4l2_int_device *s, int value)
+static int ov5640_set_colorfx(struct ov5640 *sensor, int value)
 {
-	struct ov5640 *sensor = s->priv;
 	int ret;
 
 	switch (value) {
@@ -2433,8 +2427,7 @@ static int ov5640_set_colorfx(struct v4l2_int_device *s, int value)
 	return 0;
 }
 
-static int ioctl_send_command(struct v4l2_int_device *s, struct v4l2_send_command_control *vc) {
-	struct ov5640 *sensor = s->priv;
+static int ov5640_send_command(struct ov5640 *sensor, struct v4l2_send_command_control *vc) {
 	int ret = -1;
 	int retval1;
 	u8 regval;
@@ -2866,11 +2859,8 @@ err:
 }
 
 /* --------------- IOCTL functions from v4l2_int_ioctl_desc --------------- */
-
-static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
+static int ov5640_g_ifparm(struct ov5640 *sensor, struct v4l2_ifparm *p)
 {
-	struct ov5640 *sensor = s->priv;
-
 	memset(p, 0, sizeof(*p));
 	p->u.bt656.clock_curr = sensor->mclk;
 	pr_debug("   clock_curr=mclk=%d\n", sensor->mclk);
@@ -2884,17 +2874,15 @@ static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
 }
 
 /*!
- * ioctl_s_power - V4L2 sensor interface handler for VIDIOC_S_POWER ioctl
+ * ov5640_s_power - V4L2 sensor interface handler for VIDIOC_S_POWER ioctl
  * @s: pointer to standard V4L2 device structure
  * @on: indicates power mode (on or off)
  *
  * Turns the power on or off, depending on the value of on and returns the
  * appropriate error code.
  */
-static int ioctl_s_power(struct v4l2_int_device *s, int on)
+static int ov5640_s_power(struct ov5640 *sensor, int on)
 {
-	struct ov5640 *sensor = s->priv;
-
 	if (on)
 		return ov5640_power_on(sensor);
 	else
@@ -2902,15 +2890,14 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 }
 
 /*!
- * ioctl_g_parm - V4L2 sensor interface handler for VIDIOC_G_PARM ioctl
+ * ov5640_g_parm - V4L2 sensor interface handler for VIDIOC_G_PARM ioctl
  * @s: pointer to standard V4L2 device structure
  * @a: pointer to standard V4L2 VIDIOC_G_PARM ioctl structure
  *
  * Returns the sensor's video CAPTURE parameters.
  */
-static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
+static int ov5640_g_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 {
-	struct ov5640 *sensor = s->priv;
 	struct v4l2_captureparm *cparm = &a->parm.capture;
 	int ret = 0;
 
@@ -2945,7 +2932,7 @@ static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 }
 
 /*!
- * ioctl_s_parm - V4L2 sensor interface handler for VIDIOC_S_PARM ioctl
+ * ov5640_s_parm - V4L2 sensor interface handler for VIDIOC_S_PARM ioctl
  * @s: pointer to standard V4L2 device structure
  * @a: pointer to standard V4L2 VIDIOC_S_PARM ioctl structure
  *
@@ -2953,9 +2940,8 @@ static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
  * not possible, reverts to the old parameters and returns the
  * appropriate error code.
  */
-static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
+static int ov5640_s_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 {
-	struct ov5640 *sensor = s->priv;
 	struct v4l2_fract *timeperframe = &a->parm.capture.timeperframe;
 	u32 tgt_fps;	/* target frames per secound */
 	enum ov5640_frame_rate frame_rate;
@@ -3035,17 +3021,15 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 }
 
 /*!
- * ioctl_g_fmt_cap - V4L2 sensor interface handler for ioctl_g_fmt_cap
+ * ov5640_g_fmt_cap - V4L2 sensor interface handler for ioctl_g_fmt_cap
  * @s: pointer to standard V4L2 device structure
  * @f: pointer to standard V4L2 v4l2_format structure
  *
  * Returns the sensor's current pixel format in the v4l2_format
  * parameter.
  */
-static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
+static int ov5640_g_fmt_cap(struct ov5640 *sensor, struct v4l2_format *f)
 {
-	struct ov5640 *sensor = s->priv;
-
 	switch (f->type) {
 	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
 		f->fmt.pix = sensor->pix;
@@ -3071,7 +3055,7 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 }
 
 /*!
- * ioctl_g_ctrl - V4L2 sensor interface handler for VIDIOC_G_CTRL ioctl
+ * ov5640_g_ctrl - V4L2 sensor interface handler for VIDIOC_G_CTRL ioctl
  * @s: pointer to standard V4L2 device structure
  * @vc: standard V4L2 VIDIOC_G_CTRL ioctl structure
  *
@@ -3079,9 +3063,8 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
  * value from the video_control[] array.  Otherwise, returns -EINVAL
  * if the control is not supported.
  */
-static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
+static int ov5640_g_ctrl(struct ov5640 *sensor, struct v4l2_control *vc)
 {
-	struct ov5640 *sensor = s->priv;
 	int ret = 0;
 
 	switch (vc->id) {
@@ -3136,7 +3119,7 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 }
 
 /*!
- * ioctl_s_ctrl - V4L2 sensor interface handler for VIDIOC_S_CTRL ioctl
+ * ov5640_s_ctrl - V4L2 sensor interface handler for VIDIOC_S_CTRL ioctl
  * @s: pointer to standard V4L2 device structure
  * @vc: standard V4L2 VIDIOC_S_CTRL ioctl structure
  *
@@ -3144,17 +3127,16 @@ static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
  * value in HW (and updates the video_control[] array).  Otherwise,
  * returns -EINVAL if the control is not supported.
  */
-static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
+static int ov5640_s_ctrl(struct ov5640 *sensor, struct v4l2_control *vc)
 {
-	struct ov5640 *sensor = s->priv;
 	int retval = 0;
 
-	pr_debug("In ov5640:ioctl_s_ctrl %d\n",
+	pr_debug("In ov5640:ov5640_s_ctrl %d\n",
 		 vc->id);
 
 	switch (vc->id) {
 	case V4L2_CID_BRIGHTNESS:
-		retval = ov5640_set_brightness(s, vc->value);
+		retval = ov5640_set_brightness(sensor, vc->value);
 		break;
 	case V4L2_CID_3A_LOCK:
 		retval = ov5640_af_set_focus_lock(sensor, vc->value);
@@ -3177,18 +3159,18 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 		retval = ov5640_af_set_auto(sensor, !!vc->value);
 		break;
 	case V4L2_CID_CONTRAST:
-		retval = ov5640_set_contrast(s, vc->value);
+		retval = ov5640_set_contrast(sensor, vc->value);
 		break;
 	case V4L2_CID_SATURATION:
-		retval = ov5640_set_saturation(s, vc->value);
+		retval = ov5640_set_saturation(sensor, vc->value);
 		break;
 	case V4L2_CID_HUE:
 		break;
 	case V4L2_CID_AUTO_WHITE_BALANCE:
-		retval = ov5640_set_autowb(s, vc->value);
+		retval = ov5640_set_autowb(sensor, vc->value);
 		break;
 	case V4L2_CID_DO_WHITE_BALANCE:
-		retval = ov5640_set_wb(s, vc->value);
+		retval = ov5640_set_wb(sensor, vc->value);
 		break;
 	case V4L2_CID_RED_BALANCE:
 		break;
@@ -3207,7 +3189,7 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 	case V4L2_CID_VFLIP:
 		break;
 	case V4L2_CID_COLORFX:
-		retval = ov5640_set_colorfx(s, vc->value);
+		retval = ov5640_set_colorfx(sensor, vc->value);
 		break;
 	default:
 		retval = -EPERM;
@@ -3218,18 +3200,16 @@ static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 }
 
 /*!
- * ioctl_enum_framesizes - V4L2 sensor interface handler for
+ * ov5640_enum_framesizes - V4L2 sensor interface handler for
  *			   VIDIOC_ENUM_FRAMESIZES ioctl
  * @s: pointer to standard V4L2 device structure
  * @fsize: standard V4L2 VIDIOC_ENUM_FRAMESIZES ioctl structure
  *
  * Return 0 if successful, otherwise -EINVAL.
  */
-static int ioctl_enum_framesizes(struct v4l2_int_device *s,
+static int ov5640_enum_framesizes(struct ov5640 *sensor,
 				 struct v4l2_frmsizeenum *fsize)
 {
-	struct ov5640 *sensor = s->priv;
-
 	if (fsize->index > ov5640_mode_MAX)
 		return -EINVAL;
 
@@ -3245,17 +3225,16 @@ static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 }
 
 /*!
- * ioctl_enum_frameintervals - V4L2 sensor interface handler for
+ * ov5640_enum_frameintervals - V4L2 sensor interface handler for
  *			       VIDIOC_ENUM_FRAMEINTERVALS ioctl
  * @s: pointer to standard V4L2 device structure
  * @fival: standard V4L2 VIDIOC_ENUM_FRAMEINTERVALS ioctl structure
  *
  * Return 0 if successful, otherwise -EINVAL.
  */
-static int ioctl_enum_frameintervals(struct v4l2_int_device *s,
+static int ov5640_enum_frameintervals(struct ov5640 *sensor,
 					 struct v4l2_frmivalenum *fival)
 {
-	struct sensor_data *sensor = s->priv;
 	struct device *dev = &sensor->i2c_client->dev;
 	int i, j, count = 0;
 
@@ -3288,14 +3267,14 @@ static int ioctl_enum_frameintervals(struct v4l2_int_device *s,
 }
 
 /*!
- * ioctl_g_chip_ident - V4L2 sensor interface handler for
+ * ov5640_g_chip_ident - V4L2 sensor interface handler for
  *			VIDIOC_DBG_G_CHIP_IDENT ioctl
  * @s: pointer to standard V4L2 device structure
  * @id: pointer to int
  *
  * Return 0.
  */
-static int ioctl_g_chip_ident(struct v4l2_int_device *s, int *id)
+static int ov5640_g_chip_ident(struct ov5640 *sensor, int *id)
 {
 	((struct v4l2_dbg_chip_ident *)id)->match.type =
 					V4L2_CHIP_MATCH_I2C_DRIVER;
@@ -3306,27 +3285,15 @@ static int ioctl_g_chip_ident(struct v4l2_int_device *s, int *id)
 }
 
 /*!
- * ioctl_init - V4L2 sensor interface handler for VIDIOC_INT_INIT
- * @s: pointer to standard V4L2 device structure
- */
-static int ioctl_init(struct v4l2_int_device *s)
-{
-
-	return 0;
-}
-
-/*!
- * ioctl_enum_fmt_cap - V4L2 sensor interface handler for VIDIOC_ENUM_FMT
+ * ov5640_enum_fmt_cap - V4L2 sensor interface handler for VIDIOC_ENUM_FMT
  * @s: pointer to standard V4L2 device structure
  * @fmt: pointer to standard V4L2 fmt description structure
  *
  * Return 0.
  */
-static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
+static int ov5640_enum_fmt_cap(struct ov5640 *sensor,
 			      struct v4l2_fmtdesc *fmt)
 {
-	struct ov5640 *sensor = s->priv;
-
 	if (fmt->index > ov5640_mode_MAX)
 		return -EINVAL;
 
@@ -3336,14 +3303,13 @@ static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
 }
 
 /*!
- * ioctl_dev_init - V4L2 sensor interface handler for vidioc_int_dev_init_num
+ * ov5640_dev_init - V4L2 sensor interface handler for vidioc_int_dev_init_num
  * @s: pointer to standard V4L2 device structure
  *
  * Initialise the device when slave attaches to the master.
  */
-static int ioctl_dev_init(struct v4l2_int_device *s)
+static int ov5640_dev_init(struct ov5640 *sensor)
 {
-	struct ov5640 *sensor = s->priv;
 	u32 tgt_xclk;	/* target xclk */
 	u32 tgt_fps;	/* target frames per secound */
 	int ret;
@@ -3397,6 +3363,83 @@ static int ioctl_dev_exit(struct v4l2_int_device *s)
 {
 	disable_mipi();
 	return 0;
+}
+
+static int ioctl_send_command(struct v4l2_int_device *s, struct v4l2_send_command_control *vc)
+{
+	return ov5640_send_command(s->priv, vc);
+}
+
+static int ioctl_g_ifparm(struct v4l2_int_device *s, struct v4l2_ifparm *p)
+{
+	return ov5640_g_ifparm(s->priv, p);
+}
+
+static int ioctl_s_power(struct v4l2_int_device *s, int on)
+{
+	return ov5640_s_power(s->priv, on);
+}
+
+static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
+{
+	return ov5640_g_parm(s->priv, a);
+}
+
+static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
+{
+	return ov5640_s_parm(s->priv, a);
+}
+
+static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
+{
+	return ov5640_g_fmt_cap(s->priv, f);
+}
+
+static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
+{
+	return ov5640_g_ctrl(s->priv, vc);
+}
+
+static int ioctl_s_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
+{
+	return ov5640_s_ctrl(s->priv, vc);
+}
+
+static int ioctl_enum_framesizes(struct v4l2_int_device *s,
+				 struct v4l2_frmsizeenum *fsize)
+{
+	return ov5640_enum_framesizes(s->priv, fsize);
+}
+
+static int ioctl_enum_frameintervals(struct v4l2_int_device *s,
+					 struct v4l2_frmivalenum *fival)
+{
+	return ov5640_enum_frameintervals(s->priv, fival);
+}
+
+static int ioctl_g_chip_ident(struct v4l2_int_device *s, int *id)
+{
+	return ov5640_g_chip_ident(s->priv, id);
+}
+
+/*!
+ * ioctl_init - V4L2 sensor interface handler for VIDIOC_INT_INIT
+ * @s: pointer to standard V4L2 device structure
+ */
+static int ioctl_init(struct v4l2_int_device *s)
+{
+	return 0;
+}
+
+static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
+			      struct v4l2_fmtdesc *fmt)
+{
+	return ov5640_enum_fmt_cap(s->priv, fmt);
+}
+
+static int ioctl_dev_init(struct v4l2_int_device *s)
+{
+	return ov5640_dev_init(s->priv);
 }
 
 /*!
