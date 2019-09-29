@@ -1332,7 +1332,7 @@ static void ov5640_standby(struct ov5640 *sensor, s32 enable)
 	pr_debug("ov5640_mipi_camera_powerdown: powerdown=%x, power_gp=0x%x\n", enable, sensor->pwn_gpio);
 }
 
-static s32 update_device_addr(struct ov5640 *sensor)
+static int ov5640_update_slave_id(struct ov5640 *sensor)
 {
 	int ret;
 	u8 buf[4];
@@ -1376,7 +1376,7 @@ static void ov5640_reset(struct ov5640 *sensor)
 	/* >= 20 ms from reset high to SCCB initialized */
 	msleep(20);
 	pr_debug("%s(mipi): reset released\n", __func__);
-	update_device_addr(sensor);
+	ov5640_update_slave_id(sensor);
 	mxc_camera_common_unlock();
 
 	gpio_set_value(sensor->pwn_gpio, 1);
@@ -1531,7 +1531,7 @@ static s32 ov5640_write_reg(struct ov5640 *sensor, u16 reg, u8 val)
 
 		ret = i2c_master_send(sensor->i2c_client, au8Buf, 3);
 		pr_debug("%s(mipi): software reset %d\n", __func__, ret);
-		update_device_addr(sensor);
+		ov5640_update_slave_id(sensor);
 
 		mxc_camera_common_unlock();
 	} else
