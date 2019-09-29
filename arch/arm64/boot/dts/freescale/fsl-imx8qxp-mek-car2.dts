@@ -107,3 +107,13 @@
 &vehicle_core {
 	status = "okay";
 };
+
+/ {
+	firmware {
+		android {
+			fstab {
+				/delete-node/ system;
+			};
+		};
+	};
+};

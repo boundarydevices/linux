@@ -1067,3 +1067,13 @@
 &wm8960 {
 	quick-probe;
 };
+
+/ {
+	firmware {
+		android {
+			fstab {
+				/delete-node/ system;
+			};
+		};
+	};
+};
