@@ -112,9 +112,13 @@ struct ov5640_mode_info {
 struct ov5640 {
 	struct v4l2_subdev subdev;
 	struct v4l2_ctrl_handler hdl;
+	void (*io_init)(struct ov5640 *);
+	struct clk *sensor_clk;
+	int csi;
+	const struct ov5640_datafmt	*fmt;
+
 	struct i2c_client *i2c_client;
 	struct v4l2_pix_format pix;
-	const struct ov5640_datafmt	*fmt;
 	struct v4l2_captureparm streamcap;
 	bool on;
 
@@ -124,7 +128,6 @@ struct ov5640 {
 	int contrast;
 	int saturation;
 	int red;
-	int green;
 	int blue;
 	int ae_mode;
 	int mirror;
@@ -132,21 +135,20 @@ struct ov5640 {
 	int wb;
 
 	u32 mclk;
-	struct clk *sensor_clk;
-	int csi;
 
-	void (*io_init)(struct ov5640 *);
 	uint16_t roi_x;
 	uint16_t roi_y;
 	int focus_mode;
 	int focus_range;
 	int colorfx;
-	int pwn_gpio, rst_gpio;
+	int pwn_gpio;
+	int rst_gpio;
 	int prev_sysclk;
 	int prev_HTS;
 	int AE_low;
 	int AE_high;
 	int AE_Target;
+	int last_reg;
 	struct regulator *io_regulator;
 	struct regulator *core_regulator;
 	struct regulator *analog_regulator;
@@ -1594,12 +1596,12 @@ static s32 ov5640_read_reg(struct ov5640 *sensor, u16 reg, u8 *val)
 
 	ret = i2c_transfer(client->adapter, msgs, 2);
 	if (ret < 0) {
-		dev_err(dev, "%s: reg=%x ret=%d\n", __func__, reg, ret);
+		dev_err(dev, "%s(mipi): reg=%x ret=%d\n", __func__, reg, ret);
 		return -1;
 	}
 
 	*val = buf[0];
-	dev_dbg(dev, "%s: reg=%x, val=%x\n", __func__, reg, buf[0]);
+	dev_dbg(dev, "%s(mipi): reg=%x, val=%x\n", __func__, reg, buf[0]);
 
 	return buf[0];
 }
@@ -3459,6 +3461,40 @@ static const struct std_menu_ctrl s_menu_ctrl[]  = {
 	{&ctrl_ops, V4L2_CID_COLORFX, V4L2_COLORFX_GRASS_GREEN, ~0xff, V4L2_COLORFX_NONE},
 };
 
+static ssize_t show_reg(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct ov5640 *sensor = dev_get_drvdata(dev);
+	u8 val;
+	s32 rval = ov5640_read_reg(sensor, sensor->last_reg, &val);
+
+	return sprintf(buf, "ov5640[0x%04x]=0x%02x\n",sensor->last_reg, rval);
+}
+static ssize_t set_reg(struct device *dev,
+			struct device_attribute *attr,
+		       const char *buf, size_t count)
+{
+	struct ov5640 *sensor = dev_get_drvdata(dev);
+	int regnum, value;
+	int num_parsed = sscanf(buf, "%04x=%02x", &regnum, &value);
+	if (1 <= num_parsed) {
+		if (0xffff < (unsigned)regnum){
+			pr_err("%s:invalid regnum %x\n", __func__, regnum);
+			return 0;
+		}
+		sensor->last_reg = regnum;
+	}
+	if (2 == num_parsed) {
+		if (0xff < (unsigned)value) {
+			pr_err("%s:invalid value %x\n", __func__, value);
+			return 0;
+		}
+		ov5640_write_reg(sensor, sensor->last_reg, value);
+	}
+	return count;
+}
+static DEVICE_ATTR(ov5640_reg, S_IRUGO|S_IWUSR|S_IWGRP, show_reg, set_reg);
+
 /*!
  * ov5640 I2C probe function
  *
@@ -3647,6 +3683,8 @@ static int ov5640_probe(struct i2c_client *client,
 			retval);
 
 	OV5640_stream_off(sensor);
+	if (device_create_file(dev, &dev_attr_ov5640_reg))
+		dev_err(dev, "%s: error creating ov5640_reg entry\n", __func__);
 	dev_info(dev, "Camera is found\n");
 	return retval;
 }
@@ -3662,6 +3700,8 @@ static void ov5640_remove(struct i2c_client *client)
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct ov5640 *sensor = to_ov5640(client);
 
+	device_remove_file(&client->dev,
+		&dev_attr_ov5640_reg);
 	v4l2_async_unregister_subdev(sd);
 
 	clk_disable_unprepare(sensor->sensor_clk);
