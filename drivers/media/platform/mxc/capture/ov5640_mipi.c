@@ -1363,7 +1363,11 @@ static void ov5640_reset(struct ov5640 *sensor)
 	pr_debug("%s(mipi): reset released\n", __func__);
 	ov5640_update_slave_id(sensor);
 	mxc_camera_common_unlock();
+}
 
+static void ov5640_reset_pwrdn(struct ov5640 *sensor)
+{
+	ov5640_reset(sensor);
 	gpio_set_value(sensor->pwn_gpio, 1);
 }
 
@@ -1405,7 +1409,7 @@ static int power_up(struct ov5640 *sensor)
 			goto err4;
 		}
 	}
-	/* Make sure power on */
+	/* Make sure power is on */
 	ov5640_power_down(sensor, 0);
 	sensor->on = 1;
 	return 0;
@@ -2944,9 +2948,7 @@ static int ov5640_s_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 	enum ov5640_mode orig_mode;
 	int ret = 0;
 
-	/* Make sure power on */
-	if (gpio_get_value(sensor->pwn_gpio))
-		ov5640_power_down(sensor, 0);
+	power_up(sensor);	/* Make sure power is on */
 
 	switch (a->type) {
 	/* This is the only case currently handled. */
@@ -3485,9 +3487,9 @@ static struct v4l2_int_device ov5640_int_device = {
 	},
 };
 
-static void _ov5640_reset(void)
+static void _ov5640_reset_pwrdn(void)
 {
-	ov5640_reset(ov5640_int_device.priv);
+	ov5640_reset_pwrdn(ov5640_int_device.priv);
 }
 
 static ssize_t show_reg(struct device *dev,
@@ -3617,7 +3619,7 @@ static int ov5640_probe(struct i2c_client *client,
 
 	clk_prepare_enable(sensor->s.sensor_clk);
 
-	sensor->s.io_init = _ov5640_reset;
+	sensor->s.io_init = _ov5640_reset_pwrdn;
 	sensor->i2c_client = client;
 	sensor->pix.pixelformat = V4L2_PIX_FMT_UYVY;
 	sensor->pix.width = 640;
@@ -3632,8 +3634,6 @@ static int ov5640_probe(struct i2c_client *client,
 
 	ov5640_reset(sensor);
 
-	ov5640_power_down(sensor, 0);
-
 	retval = ov5640_read_reg(sensor, OV5640_CHIP_ID_HIGH_BYTE, &chip_id_high);
 	if (retval < 0 || chip_id_high != 0x56)
 		goto err1;
@@ -3647,7 +3647,6 @@ static int ov5640_probe(struct i2c_client *client,
 	if (retval < 0)
 		pr_err("%s: error downloading autofocus firmware\n", __func__);
 
-	ov5640_power_down(sensor, 1);
 	power_down(sensor);
 
 	ov5640_int_device.priv = sensor;
