@@ -827,7 +827,7 @@ static const struct reg_value ov5640_init_setting_30fps_VGA[] = {
 	{0x583b, 0x28, 0, 0}, {0x583c, 0x42, 0, 0}, {0x583d, 0xce, 0, 0},
 	{0x5025, 0x00, 0, 0}, {0x3a0f, 0x30, 0, 0}, {0x3a10, 0x28, 0, 0},
 	{0x3a1b, 0x30, 0, 0}, {0x3a1e, 0x26, 0, 0}, {0x3a11, 0x60, 0, 0},
-	{0x3a1f, 0x14, 0, 0}, {0x3008, 0x42, 0, 0}, {0x3c00, 0x04, 0, 300},
+	{0x3a1f, 0x14, 0, 0}, {0x3c00, 0x04, 0, 300},
 };
 
 static const struct reg_value ov5640_setting_30fps_QVGA_320_240[] = {
@@ -2815,6 +2815,7 @@ static int ov5640_init_mode(struct ov5640 *sensor,
 	const struct reg_value *pModeSetting = NULL;
 	s32 ArySize = 0;
 	int retval = 0;
+	u32 msec_wait4stable = 0;
 	enum ov5640_downsize_mode dn_mode, orig_dn_mode;
 
 	if ((mode > ov5640_mode_MAX || mode < ov5640_mode_MIN)
@@ -2859,7 +2860,18 @@ static int ov5640_init_mode(struct ov5640 *sensor,
 	OV5640_get_light_freq(sensor);
 	OV5640_set_bandingfilter(sensor);
 	ov5640_set_virtual_channel(sensor, sensor->csi);
-	msleep(10);
+
+	/* add delay to wait for sensor stable */
+	if (mode == ov5640_mode_QSXGA_2592_1944) {
+		/* dump the first two frames: 1/7.5*2
+		 * the frame rate of QSXGA is 7.5fps */
+		msec_wait4stable = 267;
+	} else {
+		/* dump the first 9/18 frames: 9/15 (15 fps), 18/30 (30 fps)  */
+		msec_wait4stable = 600;
+	}
+	msleep(msec_wait4stable);
+
 err:
 	return retval;
 }
