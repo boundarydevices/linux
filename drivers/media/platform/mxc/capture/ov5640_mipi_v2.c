@@ -1393,6 +1393,7 @@ static inline void ov5640_power_down(struct ov5640 *sensor, int enable)
 		gpio_set_value_cansleep(sensor->pwn_gpio, 1);
 
 	msleep(2);
+	pr_debug("ov5640_mipi_camera_powerdown: powerdown=%x, power_gp=0x%x\n", enable, sensor->pwn_gpio);
 }
 
 static int ov5640_update_slave_id(struct ov5640 *sensor)
@@ -1453,7 +1454,7 @@ static void ov5640_reset(struct ov5640 *sensor)
 	msleep(5);
 }
 
-static int power_up(struct ov5640 *sensor)
+static int ov5640_power_on(struct ov5640 *sensor)
 {
 	struct device *dev = &sensor->i2c_client->dev;
 	int ret = 0;
@@ -1506,6 +1507,10 @@ err1:
 	return ret;
 }
 
+void disable_mipi(void)
+{
+}
+
 static int ov5640_regulator_enable(struct ov5640 *sensor)
 {
 	struct device *dev = &sensor->i2c_client->dev;
@@ -1539,22 +1544,25 @@ static int ov5640_regulator_enable(struct ov5640 *sensor)
 		sensor->core_regulator = NULL;
 		dev_err(dev, "%s: cannot get core voltage error\n", __func__);
 	}
-	return power_up(sensor);
+	return ov5640_power_on(sensor);
 }
 
-static void ov5640_regulator_disable(struct ov5640 *sensor)
+static int ov5640_power_off(struct ov5640 *sensor)
 {
-	if (sensor->analog_regulator)
-		regulator_disable(sensor->analog_regulator);
-
-	if (sensor->core_regulator)
-		regulator_disable(sensor->core_regulator);
-
-	if (sensor->io_regulator)
-		regulator_disable(sensor->io_regulator);
-
+	if (!sensor->on)
+		return 0;
+	ov5640_power_down(sensor, 1);
 	if (sensor->gpo_regulator)
 		regulator_disable(sensor->gpo_regulator);
+	if (sensor->core_regulator)
+		regulator_disable(sensor->core_regulator);
+	if (sensor->analog_regulator)
+		regulator_disable(sensor->analog_regulator);
+	if (sensor->io_regulator)
+		regulator_disable(sensor->io_regulator);
+	disable_mipi();
+	sensor->on = 0;
+	return 0;
 }
 
 static s32 ov5640_write_array(struct ov5640 *sensor, u16 len, u8 *data)
@@ -2867,26 +2875,10 @@ static int ov5640_s_power(struct v4l2_subdev *sd, int on)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *sensor = to_ov5640(client);
 
-	if (on && !sensor->on) {
-		if (sensor->io_regulator)
-			if (regulator_enable(sensor->io_regulator) != 0)
-				return -EIO;
-		if (sensor->core_regulator)
-			if (regulator_enable(sensor->core_regulator) != 0)
-				return -EIO;
-		if (sensor->gpo_regulator)
-			if (regulator_enable(sensor->gpo_regulator) != 0)
-				return -EIO;
-		if (sensor->analog_regulator)
-			if (regulator_enable(sensor->analog_regulator) != 0)
-				return -EIO;
-	} else if (!on && sensor->on) {
-		ov5640_regulator_disable(sensor);
-	}
-
-	sensor->on = on;
-
-	return 0;
+	if (on)
+		return ov5640_power_on(sensor);
+	else
+		return ov5640_power_off(sensor);
 }
 
 /*!
@@ -3646,14 +3638,14 @@ static int ov5640_probe(struct i2c_client *client,
 				 &chip_id_high);
 	if (retval < 0 || chip_id_high != 0x56) {
 		dev_warn(dev, "Camera is not found\n");
-		ov5640_regulator_disable(sensor);
+		ov5640_power_off(sensor);
 		clk_disable_unprepare(sensor->sensor_clk);
 		return -ENODEV;
 	}
 	retval = ov5640_read_reg(sensor, OV5640_CHIP_ID_LOW_BYTE, &chip_id_low);
 	if (retval < 0 || chip_id_low != 0x40) {
 		dev_warn(dev, "Camera is not found\n");
-		ov5640_regulator_disable(sensor);
+		ov5640_power_off(sensor);
 		clk_disable_unprepare(sensor->sensor_clk);
 		return -ENODEV;
 	}
@@ -3665,7 +3657,7 @@ static int ov5640_probe(struct i2c_client *client,
 
 	retval = init_device(sensor);
 	if (retval < 0) {
-		ov5640_regulator_disable(sensor);
+		ov5640_power_off(sensor);
 		clk_disable_unprepare(sensor->sensor_clk);
 		dev_warn(dev, "Camera init failed\n");
 		ov5640_power_down(sensor, 1);
@@ -3733,9 +3725,7 @@ static void ov5640_remove(struct i2c_client *client)
 
 	clk_disable_unprepare(sensor->sensor_clk);
 
-	ov5640_power_down(sensor, 1);
-
-	ov5640_regulator_disable(sensor);
+	ov5640_power_off(sensor);
 }
 
 module_i2c_driver(ov5640_i2c_driver);
