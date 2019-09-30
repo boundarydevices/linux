@@ -1328,7 +1328,7 @@ static void ov5640_power_down(struct ov5640 *sensor, int enable)
 
 	gpio_set_value_cansleep(sensor->pwn_gpio, enable ? 1 : 0);
 
-	msleep(100);
+	msleep(2);
 	pr_debug("ov5640_mipi_camera_powerdown: powerdown=%x, power_gp=0x%x\n", enable, sensor->pwn_gpio);
 }
 
