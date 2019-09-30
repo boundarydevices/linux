@@ -1360,13 +1360,13 @@ static int ov5640_update_slave_id(struct ov5640 *sensor)
 
 static void ov5640_reset(struct ov5640 *sensor)
 {
-	mxc_camera_common_lock();
-
 	gpio_set_value(sensor->rst_gpio, 0);	/* camera reset */
 	gpio_set_value(sensor->pwn_gpio, 1);	/* camera power down */
 
 	/* >= 5 ms, Let power supply stabilize */
 	msleep(5);
+	mxc_camera_common_lock();
+
 	gpio_set_value(sensor->pwn_gpio, 0);
 
 	/* >= 1ms from powerup, to reset release*/
