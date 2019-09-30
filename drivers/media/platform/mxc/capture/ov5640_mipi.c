@@ -1923,7 +1923,7 @@ static void ov5640_set_virtual_channel(struct ov5640 *sensor, int channel)
 	ov5640_read_reg(sensor, 0x4814, &channel_id);
 	channel_id &= ~(3 << 6);
 	ov5640_write_reg(sensor, 0x4814, channel_id | (channel << 6));
-	pr_info("%s: virtual channel=%d\n", __func__, channel);
+	pr_debug("%s: virtual channel=%d\n", __func__, channel);
 }
 
 /* download ov5640 settings to sensor through i2c */
