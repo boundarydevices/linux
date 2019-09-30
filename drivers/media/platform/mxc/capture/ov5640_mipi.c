@@ -1637,7 +1637,7 @@ static const int sclk_rdiv_map[] = {1, 2, 4, 8};
 
 static int OV5640_get_sysclk(struct ov5640 *sensor)
 {
-	 /* calculate sysclk */
+	/* calculate sysclk */
 	int tmp;
 	unsigned Multiplier, PreDiv, SysDiv, Pll_rdiv, Bit_div2x = 1;
 	unsigned div, sclk_rdiv, sysclk;
@@ -1655,7 +1655,7 @@ static int OV5640_get_sysclk(struct ov5640 *sensor)
 		return tmp;
 	SysDiv = tmp >> 4;
 	if (SysDiv == 0)
-	       SysDiv = 16;
+		SysDiv = 16;
 
 	tmp = ov5640_read_reg(sensor, 0x3036, &temp);
 	if (tmp < 0)
@@ -1677,18 +1677,18 @@ static int OV5640_get_sysclk(struct ov5640 *sensor)
 	div = PreDiv * SysDiv * Pll_rdiv * Bit_div2x * sclk_rdiv;
 	if (!div) {
 		pr_err("%s:Error divide by 0, (%d * %d * %d * %d * %d)\n",
-			__func__, PreDiv, SysDiv, Pll_rdiv, Bit_div2x, sclk_rdiv);
+		       __func__, PreDiv, SysDiv, Pll_rdiv, Bit_div2x, sclk_rdiv);
 		return -EINVAL;
 	}
 	if (!sysclk) {
 		pr_err("%s:Error 0 clk, sensor->mclk=%d, Multiplier=%d\n",
-			__func__, sensor->mclk, Multiplier);
+		       __func__, sensor->mclk, Multiplier);
 		return -EINVAL;
 	}
 	sysclk /= div;
 	pr_debug("%s: sysclk(%d) = %d / 10000 * %d / (%d * %d * %d * %d * %d)\n",
-		__func__, sysclk, sensor->mclk, Multiplier,
-		PreDiv, SysDiv, Pll_rdiv, Bit_div2x, sclk_rdiv);
+		 __func__, sysclk, sensor->mclk, Multiplier,
+		 PreDiv, SysDiv, Pll_rdiv, Bit_div2x, sclk_rdiv);
 
 	return sysclk;
 }
