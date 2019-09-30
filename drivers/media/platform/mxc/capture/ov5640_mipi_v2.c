@@ -1434,21 +1434,30 @@ static void ov5640_reset(struct ov5640 *sensor)
 	if (sensor->rst_gpio < 0 || sensor->pwn_gpio < 0)
 		return;
 
-	/* camera reset */
-	gpio_set_value(sensor->rst_gpio, 1);
+	gpio_set_value(sensor->rst_gpio, 0);	/* camera reset */
+	gpio_set_value(sensor->pwn_gpio, 1);	/* camera power down */
 
-	/* camera power dowmn */
-	gpio_set_value(sensor->pwn_gpio, 1);
+	/* >= 5 ms, Let power supply stabilize */
 	msleep(5);
-
-	gpio_set_value(sensor->rst_gpio, 0);
-	msleep(1);
+	mutex_lock(&ov5640_mutex);
 
 	gpio_set_value(sensor->pwn_gpio, 0);
-	msleep(5);
 
+	/* >= 1ms from powerup, to reset release*/
+	msleep(1);
 	gpio_set_value(sensor->rst_gpio, 1);
-	msleep(5);
+
+	/* >= 20 ms from reset high to SCCB initialized */
+	msleep(20);
+	pr_debug("%s(mipi): reset released\n", __func__);
+	ov5640_update_slave_id(sensor);
+	mutex_unlock(&ov5640_mutex);
+}
+
+static void ov5640_reset_pwrdn(struct ov5640 *sensor)
+{
+	ov5640_reset(sensor);
+	gpio_set_value(sensor->pwn_gpio, 1);
 }
 
 static int ov5640_power_on(struct ov5640 *sensor)
@@ -1489,6 +1498,8 @@ static int ov5640_power_on(struct ov5640 *sensor)
 			goto err4;
 		}
 	}
+	/* Make sure power is on */
+	ov5640_power_down(sensor, 0);
 	sensor->on = 1;
 	return 0;
 err4:
@@ -2943,9 +2954,7 @@ static int ov5640_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 	enum ov5640_mode orig_mode;
 	int ret = 0;
 
-	/* Make sure power on */
-	if (gpio_get_value(sensor->pwn_gpio))
-		ov5640_power_down(sensor, 0);
+	ov5640_power_on(sensor);	/* Make sure power is on */
 
 	switch (a->type) {
 	/* This is the only case currently handled. */
@@ -3606,7 +3615,7 @@ static int ov5640_probe(struct i2c_client *client,
 		return -EINVAL;
 	}
 
-	sensor->io_init = ov5640_reset;
+	sensor->io_init = ov5640_reset_pwrdn;
 	sensor->i2c_client = client;
 	sensor->pix.pixelformat = V4L2_PIX_FMT_YUYV;
 	sensor->pix.width = 640;
@@ -3619,17 +3628,7 @@ static int ov5640_probe(struct i2c_client *client,
 
 	ov5640_regulator_enable(sensor);
 
-	mutex_lock(&ov5640_mutex);
-	{
-		ov5640_reset(sensor);
-		ov5640_power_down(sensor, 0);
-		retval = ov5640_update_slave_id(sensor);
-	}
-	mutex_unlock(&ov5640_mutex);
-	if (retval < 0) {
-		clk_disable_unprepare(sensor->sensor_clk);
-		return -ENODEV;
-	}
+	ov5640_reset(sensor);
 
 	retval = ov5640_read_reg(sensor, OV5640_CHIP_ID_HIGH_BYTE,
 				 &chip_id_high);
@@ -3657,7 +3656,7 @@ static int ov5640_probe(struct i2c_client *client,
 		ov5640_power_off(sensor);
 		clk_disable_unprepare(sensor->sensor_clk);
 		dev_warn(dev, "Camera init failed\n");
-		ov5640_power_down(sensor, 1);
+		ov5640_power_off(sensor);
 		return retval;
 	}
 
