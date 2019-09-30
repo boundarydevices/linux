@@ -2077,8 +2077,7 @@ err:
  * go through exposure calcualtion
  */
 static int ov5640_change_mode_exposure_calc(struct ov5640 *sensor,
-				enum ov5640_frame_rate frame_rate,
-				enum ov5640_mode mode)
+		enum ov5640_frame_rate frame_rate, enum ov5640_mode mode)
 {
 	const struct reg_value *pModeSetting = NULL;
 	s32 ArySize = 0;
