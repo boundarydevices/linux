@@ -827,7 +827,7 @@ static const struct reg_value ov5640_init_setting_30fps_VGA[] = {
 	{0x583b, 0x28, 0, 0}, {0x583c, 0x42, 0, 0}, {0x583d, 0xce, 0, 0},
 	{0x5025, 0x00, 0, 0}, {0x3a0f, 0x30, 0, 0}, {0x3a10, 0x28, 0, 0},
 	{0x3a1b, 0x30, 0, 0}, {0x3a1e, 0x26, 0, 0}, {0x3a11, 0x60, 0, 0},
-	{0x3a1f, 0x14, 0, 0}, {0x3008, 0x42, 0, 0}, {0x3c00, 0x04, 0, 300},
+	{0x3a1f, 0x14, 0, 0}, {0x3c00, 0x04, 0, 300},
 };
 
 static const struct reg_value ov5640_setting_30fps_QVGA_320_240[] = {
@@ -2867,7 +2867,7 @@ static int ov5640_init_mode(struct ov5640 *sensor,
 		 * the frame rate of QSXGA is 7.5fps */
 		msec_wait4stable = 267;
 	} else {
-		/* dump the first eighteen frames: 1/30*18 */
+		/* dump the first 9/18 frames: 9/15 (15 fps), 18/30 (30 fps)  */
 		msec_wait4stable = 600;
 	}
 	msleep(msec_wait4stable);
