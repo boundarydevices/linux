@@ -2104,9 +2104,6 @@ static int ov5640_change_mode_exposure_calc(struct ov5640 *sensor,
 		pModeSetting == NULL || ArySize == 0)
 		return -EINVAL;
 
-	/* auto focus */
-	/* OV5640_auto_focus();//if no af function, just skip it */
-
 	/* turn off AE/AG */
 	OV5640_turn_on_AE_AG(sensor, 0);
 
@@ -2126,7 +2123,7 @@ static int ov5640_change_mode_exposure_calc(struct ov5640 *sensor,
 	OV5640_set_night_mode(sensor);
 
 	/* turn off overlay */
-	/* ov5640_write_reg(0x3022, 0x06);//if no af function, just skip it */
+	/* ov5640_write_reg(sensor, 0x3022, 0x06);//if no af function, just skip it */
 
 	OV5640_stream_off(sensor);
 
