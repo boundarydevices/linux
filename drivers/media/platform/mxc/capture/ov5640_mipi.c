@@ -2105,8 +2105,6 @@ static int ov5640_change_mode_exposure_calc(struct ov5640 *sensor,
 	}
 	OV5640_set_shutter(sensor, cap_shutter);
 
-	OV5640_stream_on(sensor);
-
 err:
 	return retval;
 }
