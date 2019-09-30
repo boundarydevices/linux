@@ -1321,12 +1321,12 @@ static struct i2c_driver ov5640_i2c_driver = {
 	.id_table = ov5640_id,
 };
 
-static void ov5640_standby(struct ov5640 *sensor, s32 enable)
+static void ov5640_power_down(struct ov5640 *sensor, int enable)
 {
-	if (enable)
-		gpio_set_value(sensor->pwn_gpio, 1);
-	else
-		gpio_set_value(sensor->pwn_gpio, 0);
+	if (sensor->pwn_gpio < 0)
+		return;
+
+	gpio_set_value_cansleep(sensor->pwn_gpio, enable ? 1 : 0);
 
 	msleep(100);
 	pr_debug("ov5640_mipi_camera_powerdown: powerdown=%x, power_gp=0x%x\n", enable, sensor->pwn_gpio);
@@ -1421,7 +1421,7 @@ static int ov5640_power_on(struct ov5640 *sensor)
 		}
 	}
 	/* Make sure power on */
-	ov5640_standby(sensor, 0);
+	ov5640_power_down(sensor, 0);
 	sensor->on = 1;
 	return 0;
 err4:
@@ -1489,7 +1489,7 @@ static int ov5640_power_off(struct ov5640 *sensor)
 {
 	if (!sensor->on)
 		return 0;
-	ov5640_standby(sensor, 1);
+	ov5640_power_down(sensor, 1);
 	if (sensor->gpo_regulator)
 		regulator_disable(sensor->gpo_regulator);
 	if (sensor->core_regulator)
@@ -2967,7 +2967,7 @@ static int ov5640_s_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 
 	/* Make sure power on */
 	if (gpio_get_value(sensor->pwn_gpio))
-		ov5640_standby(sensor, 0);
+		ov5640_power_down(sensor, 0);
 
 	switch (a->type) {
 	/* This is the only case currently handled. */
@@ -3657,7 +3657,7 @@ static int ov5640_probe(struct i2c_client *client,
 
 	ov5640_reset(sensor);
 
-	ov5640_standby(sensor, 0);
+	ov5640_power_down(sensor, 0);
 
 	retval = ov5640_read_reg(sensor, OV5640_CHIP_ID_HIGH_BYTE, &chip_id_high);
 	if (retval < 0 || chip_id_high != 0x56)
@@ -3672,7 +3672,7 @@ static int ov5640_probe(struct i2c_client *client,
 	if (retval < 0)
 		pr_err("%s: error downloading autofocus firmware\n", __func__);
 
-	ov5640_standby(sensor, 1);
+	ov5640_power_down(sensor, 1);
 	ov5640_power_off(sensor);
 
 	ov5640_int_device.priv = sensor;
