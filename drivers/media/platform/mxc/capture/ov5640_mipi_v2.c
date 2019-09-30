@@ -1917,6 +1917,7 @@ static int OV5640_get_light_freq(struct ov5640 *sensor)
 			light_freq = 50;
 		} else {
 			/* 60Hz */
+			light_freq = 60;
 		}
 	}
 	return light_freq;
