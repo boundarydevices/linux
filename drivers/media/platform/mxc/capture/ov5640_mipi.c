@@ -1536,8 +1536,9 @@ again:
 
 static s32 ov5640_write_reg(struct ov5640 *sensor, u16 reg, u8 val)
 {
+	struct device *dev = &sensor->i2c_client->dev;
 	int ret;
-	u8 au8Buf[3] = {0};
+	u8 au8Buf[4];
 
 	au8Buf[0] = reg >> 8;
 	au8Buf[1] = reg & 0xff;
@@ -1559,11 +1560,11 @@ static s32 ov5640_write_reg(struct ov5640 *sensor, u16 reg, u8 val)
 	}
 
 	if (ret < 0) {
-		pr_err("%s(mipi):reg=%x,val=%x error=%d\n",
-			__func__, reg, val, ret);
+		dev_err(dev, "(mipi)Write reg error: reg=%x, val=%x, ret=%d\n",
+			reg, val, ret);
 		return ret;
 	}
-	pr_debug("%s(mipi):reg=%x,val=%x\n", __func__, reg, val);
+	dev_dbg(dev, "%s(mipi):reg=%x,val=%x\n", __func__, reg, val);
 	return 0;
 }
 
@@ -1589,11 +1590,13 @@ static s32 ov5640_read_reg(struct ov5640 *sensor, u16 reg, u8 *val)
 
 	ret = i2c_transfer(client->adapter, msgs, 2);
 	if (ret < 0) {
-		dev_err(dev, "%s(mipi):reg=%x ret=%d\n", __func__, reg, ret);
+		dev_err(dev, "%s(mipi): reg=%x ret=%d\n", __func__, reg, ret);
 		return ret;
 	}
+
 	*val = buf[0];
-	dev_dbg(dev, "%s(mipi):reg=%x,val=%x\n", __func__, reg, buf[0]);
+	dev_dbg(dev, "%s(mipi): reg=%x, val=%x\n", __func__, reg, buf[0]);
+
 	return buf[0];
 }
 
