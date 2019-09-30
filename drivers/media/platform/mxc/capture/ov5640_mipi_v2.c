@@ -1686,6 +1686,8 @@ static void OV5640_stream_off(struct ov5640 *sensor)
 	ov5640_write_reg(sensor, 0x3008, 0x42);
 }
 
+static const int sclk_rdiv_map[] = {1, 2, 4, 8};
+
 static int OV5640_get_sysclk(struct ov5640 *sensor)
 {
 	/* calculate sysclk */
@@ -1693,8 +1695,6 @@ static int OV5640_get_sysclk(struct ov5640 *sensor)
 	unsigned Multiplier, PreDiv, SysDiv, Pll_rdiv, Bit_div2x = 1;
 	unsigned div, sclk_rdiv, sysclk;
 	u8 temp;
-
-	int sclk_rdiv_map[] = {1, 2, 4, 8};
 
 	tmp = ov5640_read_reg(sensor, 0x3034, &temp);
 	if (tmp < 0)
@@ -1829,7 +1829,6 @@ static int OV5640_set_shutter(struct ov5640 *sensor, int shutter)
 
 	 return 0;
 }
-
 
 static int OV5640_get_gain16(struct ov5640 *sensor)
 {
