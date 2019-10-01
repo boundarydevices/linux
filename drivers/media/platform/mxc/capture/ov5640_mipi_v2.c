@@ -133,6 +133,7 @@ struct ov5640 {
 	int mirror;
 	int vflip;
 	int wb;
+	u8 reg4300;
 
 	u32 mclk;
 
@@ -774,7 +775,7 @@ static const struct reg_value ov5640_init_setting_30fps_VGA[] = {
 	{0x3a0d, 0x04, 0, 0}, {0x3a14, 0x03, 0, 0}, {0x3a15, 0xd8, 0, 0},
 	{0x4001, 0x02, 0, 0}, {0x4004, 0x02, 0, 0}, {0x3000, 0x00, 0, 0},
 	{0x3002, 0x1c, 0, 0}, {0x3004, 0xff, 0, 0}, {0x3006, 0xc3, 0, 0},
-	{0x300e, 0x45, 0, 0}, {0x302e, 0x08, 0, 0}, {0x4300, 0x32, 0, 0},
+	{0x300e, 0x45, 0, 0}, {0x302e, 0x08, 0, 0}, {0x4300, 0x30, 0, 0},
 	{0x501f, 0x00, 0, 0}, {0x4713, 0x03, 0, 0}, {0x4407, 0x04, 0, 0},
 	{0x440e, 0x00, 0, 0}, {0x460b, 0x35, 0, 0}, {0x460c, 0x22, 0, 0},
 	{0x4837, 0x0a, 0, 0}, {0x4800, 0x04, 0, 0}, {0x3824, 0x02, 0, 0},
@@ -1348,6 +1349,7 @@ static struct i2c_driver ov5640_i2c_driver = {
 };
 
 static const struct ov5640_datafmt ov5640_colour_fmts[] = {
+	{MEDIA_BUS_FMT_YUYV8_2X8, V4L2_COLORSPACE_JPEG},
 	{MEDIA_BUS_FMT_UYVY8_2X8, V4L2_COLORSPACE_JPEG},
 };
 
@@ -2042,8 +2044,14 @@ static int ov5640_download_firmware(struct ov5640 *sensor,
 		}
 
 		if ((RegAddr == 0x3037) &&
-				(sensor->mclk == OV5640_XCLK_20MHZ))
+				(sensor->mclk == OV5640_XCLK_20MHZ)) {
 			Val = 0x17;
+		} else if (RegAddr == 0x4300) {
+			Val = (sensor->fmt->code == MEDIA_BUS_FMT_UYVY8_2X8) ? 0x32 : 0x30;
+			sensor->reg4300 = Val;
+			pr_debug("%s: code=%x, Val=%x\n", __func__, sensor->fmt->code, Val);
+		}
+
 		/* Overwrite vflip value if provided in device tree */
 		if ((RegAddr == OV5640_TIMING_TC_REG20) &&
 		    (sensor->vflip != -1)) {
@@ -2062,6 +2070,15 @@ static int ov5640_download_firmware(struct ov5640 *sensor,
 				Val &= ~(OV5640_TIMING_TC_REG21_MIRROR);
 		}
 
+		if ((RegAddr == 0x3008) && (Val == 2)) {
+			int v = (sensor->fmt->code == MEDIA_BUS_FMT_UYVY8_2X8) ? 0x32 : 0x30;
+
+			if (sensor->reg4300 != v) {
+				sensor->reg4300 = v;
+				pr_debug("%s: code=%x, Val=%x\n", __func__, sensor->fmt->code, v);
+				retval = ov5640_write_reg(sensor, 0x4300, v);
+			}
+		}
 		retval = ov5640_write_reg(sensor, RegAddr, Val);
 		if (retval < 0)
 			goto err;
@@ -3046,6 +3063,7 @@ static int ov5640_set_fmt(struct v4l2_subdev *sd,
 		return 0;
 
 	sensor->fmt = fmt;
+	pr_debug("%s: code=%x\n", __func__, fmt->code);
 
 	capturemode = get_capturemode(mf->width, mf->height);
 	if (capturemode >= 0) {
@@ -3617,7 +3635,9 @@ static int ov5640_probe(struct i2c_client *client,
 
 	sensor->io_init = ov5640_reset_pwrdn;
 	sensor->i2c_client = client;
-	sensor->pix.pixelformat = V4L2_PIX_FMT_YUYV;
+	sensor->fmt = &ov5640_colour_fmts[0];
+	sensor->pix.pixelformat = (sensor->fmt->code == MEDIA_BUS_FMT_UYVY8_2X8)
+		? V4L2_PIX_FMT_UYVY : V4L2_PIX_FMT_YUYV;
 	sensor->pix.width = 640;
 	sensor->pix.height = 480;
 	sensor->streamcap.capability = V4L2_MODE_HIGHQUALITY |
