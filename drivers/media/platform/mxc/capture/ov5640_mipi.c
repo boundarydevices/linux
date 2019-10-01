@@ -51,6 +51,7 @@
 
 #define OV5640_XCLK_MIN 6000000
 #define OV5640_XCLK_MAX 24000000
+#define OV5640_XCLK_20MHZ 20000000
 
 #define OV5640_CHIP_ID_HIGH_BYTE	0x300A
 #define OV5640_CHIP_ID_LOW_BYTE		0x300B
@@ -1975,6 +1976,11 @@ static int ov5640_download_firmware(struct ov5640 *sensor,
 			RegVal &= ~(u8)Mask;
 			Val &= Mask;
 			Val |= RegVal;
+		}
+
+		if ((RegAddr == 0x3037) &&
+				(sensor->mclk == OV5640_XCLK_20MHZ)) {
+			Val = 0x17;
 		}
 
 		/* Overwrite vflip value if provided in device tree */
