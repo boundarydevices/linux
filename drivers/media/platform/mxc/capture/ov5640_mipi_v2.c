@@ -133,6 +133,7 @@ struct ov5640 {
 	int mirror;
 	int vflip;
 	int wb;
+	u8 reg4300;
 
 	u32 mclk;
 
@@ -1337,6 +1338,7 @@ static struct i2c_driver ov5640_i2c_driver = {
 
 static const struct ov5640_datafmt ov5640_colour_fmts[] = {
 	{MEDIA_BUS_FMT_YUYV8_2X8, V4L2_COLORSPACE_JPEG},
+	{MEDIA_BUS_FMT_UYVY8_2X8, V4L2_COLORSPACE_JPEG},
 };
 
 static int get_capturemode(int width, int height)
@@ -2001,6 +2003,10 @@ static int ov5640_download_firmware(struct ov5640 *sensor,
 		if ((RegAddr == 0x3037) &&
 				(sensor->mclk == OV5640_XCLK_20MHZ)) {
 			Val = 0x17;
+		} else if (RegAddr == 0x4300) {
+			Val = (sensor->fmt->code == MEDIA_BUS_FMT_UYVY8_2X8) ? 0x32 : 0x30;
+			sensor->reg4300 = Val;
+			pr_debug("%s: code=%x, Val=%x\n", __func__, sensor->fmt->code, Val);
 		}
 
 		/* Overwrite vflip value if provided in device tree */
@@ -2021,6 +2027,15 @@ static int ov5640_download_firmware(struct ov5640 *sensor,
 				Val &= ~(OV5640_TIMING_TC_REG21_MIRROR);
 		}
 
+		if ((RegAddr == 0x3008) && (Val == 2)) {
+			int v = (sensor->fmt->code == MEDIA_BUS_FMT_UYVY8_2X8) ? 0x32 : 0x30;
+
+			if (sensor->reg4300 != v) {
+				sensor->reg4300 = v;
+				pr_debug("%s: code=%x, Val=%x\n", __func__, sensor->fmt->code, v);
+				retval = ov5640_write_reg(sensor, 0x4300, v);
+			}
+		}
 		retval = ov5640_write_reg(sensor, RegAddr, Val);
 		if (retval < 0)
 			goto err;
@@ -3012,6 +3027,7 @@ static int ov5640_set_fmt(struct v4l2_subdev *sd,
 		return 0;
 
 	sensor->fmt = fmt;
+	pr_debug("%s: code=%x\n", __func__, fmt->code);
 
 	capturemode = get_capturemode(mf->width, mf->height);
 	if (capturemode >= 0) {
@@ -3583,7 +3599,9 @@ static int ov5640_probe(struct i2c_client *client,
 
 	sensor->io_init = ov5640_reset_pwrdn;
 	sensor->i2c_client = client;
-	sensor->pix.pixelformat = V4L2_PIX_FMT_YUYV;
+	sensor->fmt = &ov5640_colour_fmts[0];
+	sensor->pix.pixelformat = (sensor->fmt->code == MEDIA_BUS_FMT_UYVY8_2X8)
+		? V4L2_PIX_FMT_UYVY : V4L2_PIX_FMT_YUYV;
 	sensor->pix.width = 640;
 	sensor->pix.height = 480;
 	sensor->streamcap.capability = V4L2_MODE_HIGHQUALITY |
