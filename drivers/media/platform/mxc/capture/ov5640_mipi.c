@@ -86,6 +86,14 @@ static int ov5640_framerates[] = {
 	[ov5640_30_fps] = 30,
 };
 
+struct ov5640_datafmt {
+	u32	pixelformat;
+	u32	reg4300;
+	enum v4l2_colorspace	colorspace;
+	const char* name;
+	u32	code;
+};
+
 /* image size under 1280 * 960 are SUBSAMPLING
  * image size upper 1280 * 960 are SCALING
  */
@@ -114,6 +122,7 @@ struct ov5640 {
 	struct sensor_data s;
 	struct v4l2_sensor_dimension spix;
 	unsigned virtual_channel;
+	const struct ov5640_datafmt	*fmt;
 
 	struct i2c_client *i2c_client;
 	struct v4l2_pix_format pix;
@@ -131,6 +140,7 @@ struct ov5640 {
 	int mirror;
 	int vflip;
 	int wb;
+	u8 reg4300;
 
 	u32 mclk;
 
@@ -772,7 +782,7 @@ static const struct reg_value ov5640_init_setting_30fps_VGA[] = {
 	{0x3a0d, 0x04, 0, 0}, {0x3a14, 0x03, 0, 0}, {0x3a15, 0xd8, 0, 0},
 	{0x4001, 0x02, 0, 0}, {0x4004, 0x02, 0, 0}, {0x3000, 0x00, 0, 0},
 	{0x3002, 0x1c, 0, 0}, {0x3004, 0xff, 0, 0}, {0x3006, 0xc3, 0, 0},
-	{0x300e, 0x45, 0, 0}, {0x302e, 0x08, 0, 0}, {0x4300, 0x3f, 0, 0},
+	{0x300e, 0x45, 0, 0}, {0x302e, 0x08, 0, 0}, {0x4300, 0x30, 0, 0},
 	{0x501f, 0x00, 0, 0}, {0x4713, 0x03, 0, 0}, {0x4407, 0x04, 0, 0},
 	{0x440e, 0x00, 0, 0}, {0x460b, 0x35, 0, 0}, {0x460c, 0x22, 0, 0},
 	{0x4837, 0x0a, 0, 0}, {0x4800, 0x04, 0, 0}, {0x3824, 0x02, 0, 0},
@@ -1342,6 +1352,11 @@ static struct i2c_driver ov5640_i2c_driver = {
 	.probe  = ov5640_probe,
 	.remove = ov5640_remove,
 	.id_table = ov5640_id,
+};
+
+static const struct ov5640_datafmt ov5640_colour_fmts[] = {
+	{V4L2_PIX_FMT_YUYV, 0x32, V4L2_COLORSPACE_JPEG, "YUYV"},
+	{V4L2_PIX_FMT_UYVY, 0x32, V4L2_COLORSPACE_JPEG, "UYVY"},
 };
 
 static void ov5640_power_down(struct ov5640 *sensor, int enable)
@@ -1950,6 +1965,7 @@ static void ov5640_set_virtual_channel(struct ov5640 *sensor, int channel)
 	pr_debug("%s: virtual channel=%d\n", __func__, channel);
 }
 
+
 /* download ov5640 settings to sensor through i2c */
 static int ov5640_download_firmware(struct ov5640 *sensor,
 				    const struct reg_value *pModeSetting,
@@ -1981,6 +1997,10 @@ static int ov5640_download_firmware(struct ov5640 *sensor,
 		if ((RegAddr == 0x3037) &&
 				(sensor->mclk == OV5640_XCLK_20MHZ)) {
 			Val = 0x17;
+		} else if (RegAddr == 0x4300) {
+			Val = sensor->fmt->reg4300;
+			sensor->reg4300 = Val;
+			pr_debug("%s: pixelformat=%x, Val=%x\n", __func__, sensor->fmt->pixelformat, Val);
 		}
 
 		/* Overwrite vflip value if provided in device tree */
@@ -2001,6 +2021,15 @@ static int ov5640_download_firmware(struct ov5640 *sensor,
 				Val &= ~(OV5640_TIMING_TC_REG21_MIRROR);
 		}
 
+		if ((RegAddr == 0x3008) && (Val == 2)) {
+			int v = sensor->fmt->reg4300;
+
+			if (sensor->reg4300 != v) {
+				sensor->reg4300 = v;
+				pr_debug("%s: pixelformat=%x, Val=%x\n", __func__, sensor->fmt->pixelformat, v);
+				retval = ov5640_write_reg(sensor, 0x4300, v);
+			}
+		}
 		retval = ov5640_write_reg(sensor, RegAddr, Val);
 		if (retval < 0)
 			goto err;
@@ -2819,7 +2848,8 @@ static int ov5640_init_mode(struct ov5640 *sensor,
 	if (mode == ov5640_mode_INIT)
 		mipi_csi2_reset(mipi_csi2_info);
 
-	if (sensor->pix.pixelformat == V4L2_PIX_FMT_UYVY)
+	if ((sensor->pix.pixelformat == V4L2_PIX_FMT_UYVY) ||
+			(sensor->pix.pixelformat == V4L2_PIX_FMT_YUYV))
 		mipi_csi2_set_datatype(mipi_csi2_info, MIPI_DT_YUV422);
 	else if (sensor->pix.pixelformat == V4L2_PIX_FMT_RGB565)
 		mipi_csi2_set_datatype(mipi_csi2_info, MIPI_DT_RGB565);
@@ -3104,6 +3134,38 @@ static int ov5640_g_fmt_cap(struct ov5640 *sensor, struct v4l2_format *f)
 	return 0;
 }
 
+static int find_fmt(u32 pixelformat)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(ov5640_colour_fmts); i++) {
+		if (pixelformat == ov5640_colour_fmts[i].pixelformat)
+			return i;
+	}
+	return -EINVAL;
+}
+
+static int ov5640_s_fmt_cap(struct ov5640 *sensor, struct v4l2_format *f)
+{
+	int i;
+
+	switch (f->type) {
+	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+		i = find_fmt(f->fmt.pix.pixelformat);
+		if (i < 0)
+			return i;
+
+		sensor->pix.pixelformat = f->fmt.pix.pixelformat;
+		sensor->fmt = &ov5640_colour_fmts[i];
+		pr_debug("%s: %s\n", __func__, sensor->fmt->name);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 /*!
  * ov5640_g_ctrl - V4L2 sensor interface handler for VIDIOC_G_CTRL ioctl
  * @s: pointer to standard V4L2 device structure
@@ -3344,11 +3406,12 @@ static int ov5640_g_chip_ident(struct ov5640 *sensor, int *id)
 static int ov5640_enum_fmt_cap(struct ov5640 *sensor,
 			      struct v4l2_fmtdesc *fmt)
 {
-	if (fmt->index > ov5640_mode_MAX)
+	if (fmt->index > ARRAY_SIZE(ov5640_colour_fmts))
 		return -EINVAL;
 
-	fmt->pixelformat = sensor->pix.pixelformat;
-
+	fmt->pixelformat = ov5640_colour_fmts[fmt->index].pixelformat;
+	strncpy(fmt->description, ov5640_colour_fmts[fmt->index].name,
+			ARRAY_SIZE(fmt->description));
 	return 0;
 }
 
@@ -3445,6 +3508,11 @@ static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 	return ov5640_g_fmt_cap(s->priv, f);
 }
 
+static int ioctl_s_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
+{
+	return ov5640_s_fmt_cap(s->priv, f);
+}
+
 static int ioctl_g_ctrl(struct v4l2_int_device *s, struct v4l2_control *vc)
 {
 	return ov5640_g_ctrl(s->priv, vc);
@@ -3512,7 +3580,7 @@ static struct v4l2_int_ioctl_desc ov5640_ioctl_desc[] = {
 /*	{vidioc_int_try_fmt_cap_num,
 				(v4l2_int_ioctl_func *)ioctl_try_fmt_cap}, */
 	{vidioc_int_g_fmt_cap_num, (v4l2_int_ioctl_func *) ioctl_g_fmt_cap},
-/*	{vidioc_int_s_fmt_cap_num, (v4l2_int_ioctl_func *) ioctl_s_fmt_cap}, */
+	{vidioc_int_s_fmt_cap_num, (v4l2_int_ioctl_func *) ioctl_s_fmt_cap},
 	{vidioc_int_g_parm_num, (v4l2_int_ioctl_func *) ioctl_g_parm},
 	{vidioc_int_s_parm_num, (v4l2_int_ioctl_func *) ioctl_s_parm},
 /*	{vidioc_int_queryctrl_num, (v4l2_int_ioctl_func *)ioctl_queryctrl}, */
@@ -3677,7 +3745,8 @@ static int ov5640_probe(struct i2c_client *client,
 
 	sensor->s.io_init = _ov5640_reset_pwrdn;
 	sensor->i2c_client = client;
-	sensor->pix.pixelformat = V4L2_PIX_FMT_UYVY;
+	sensor->fmt = &ov5640_colour_fmts[0];
+	sensor->pix.pixelformat = sensor->fmt->pixelformat;
 	sensor->pix.width = 640;
 	sensor->pix.height = 480;
 	sensor->streamcap.capability = V4L2_MODE_HIGHQUALITY |
