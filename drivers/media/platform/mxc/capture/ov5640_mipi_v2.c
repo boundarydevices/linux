@@ -1994,6 +1994,11 @@ static int ov5640_download_firmware(struct ov5640 *sensor,
 			Val |= RegVal;
 		}
 
+		if ((RegAddr == 0x3037) &&
+				(sensor->mclk == OV5640_XCLK_20MHZ)) {
+			Val = 0x17;
+		}
+
 		/* Overwrite vflip value if provided in device tree */
 		if ((RegAddr == OV5640_TIMING_TC_REG20) &&
 		    (sensor->vflip != -1)) {
