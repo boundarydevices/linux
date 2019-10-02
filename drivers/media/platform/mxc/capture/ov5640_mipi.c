@@ -3661,6 +3661,40 @@ static ssize_t set_reg(struct device *dev,
 }
 static DEVICE_ATTR(ov5640_reg, S_IRUGO|S_IWUSR|S_IWGRP, show_reg, set_reg);
 
+static int ov5640_probe_v(struct ov5640 *sensor, struct clk *sensor_clk, u32 csi)
+{
+	struct device *dev = &sensor->i2c_client->dev;
+	int ret;
+
+	ov5640_power_off(sensor);
+
+	ret = of_property_read_u32(dev->of_node, "mclk_source",
+					(u32 *) &(sensor->s.mclk_source));
+	if (ret) {
+		dev_err(dev, "mclk_source missing or invalid\n");
+		return ret;
+	}
+
+	ret = of_property_read_u32(dev->of_node, "ipu_id",
+					&sensor->s.ipu_id);
+	if (ret) {
+		dev_err(dev, "ipu_id missing or invalid\n");
+		return ret;
+	}
+
+	sensor->virtual_channel = csi | (sensor->s.ipu_id << 1);
+	sensor->s.csi = csi;
+	sensor->s.io_init = _ov5640_reset_pwrdn;
+	sensor->s.mipi_camera = 1;
+	sensor->s.sensor_clk = sensor_clk;
+	ov5640_int_device.priv = sensor;
+	i2c_set_clientdata(sensor->i2c_client, sensor);
+	ret = v4l2_int_device_register(&ov5640_int_device);
+
+//	clk_disable_unprepare(sensor_clk);
+	return ret;
+}
+
 /*!
  * ov5640 I2C probe function
  *
@@ -3673,8 +3707,10 @@ static int ov5640_probe(struct i2c_client *client,
 	struct device *dev = &client->dev;
 	int retval;
 	u8 chip_id_high, chip_id_low;
+	struct clk *sensor_clk;
 	struct ov5640 *sensor;
 	struct gpio_desc *gd;
+	u32 csi;
 
 	sensor = devm_kzalloc(dev, sizeof(*sensor), GFP_KERNEL);
 	if (!sensor)
@@ -3700,10 +3736,14 @@ static int ov5640_probe(struct i2c_client *client,
 		dev_warn(dev, "no sensor reset pin available");
 	sensor->gpiod_rst = gd;
 
-	sensor->s.mipi_camera = 1;
-	sensor->s.sensor_clk = devm_clk_get(dev, "csi_mclk");
-	if (IS_ERR(sensor->s.sensor_clk))
-		return -EPROBE_DEFER;
+	sensor_clk = devm_clk_get(dev, "csi_mclk");
+	if (IS_ERR(sensor_clk)) {
+		/* assuming clock enabled by default */
+		retval = PTR_ERR(sensor_clk);
+		if (retval != EPROBE_DEFER)
+			dev_err(dev, "clock-frequency missing or invalid %d\n", retval);
+		return retval;
+	}
 
 	retval = of_property_read_u32(dev->of_node, "mclk",
 					&(sensor->mclk));
@@ -3712,22 +3752,7 @@ static int ov5640_probe(struct i2c_client *client,
 		return retval;
 	}
 
-	retval = of_property_read_u32(dev->of_node, "mclk_source",
-					(u32 *) &(sensor->s.mclk_source));
-	if (retval) {
-		dev_err(dev, "mclk_source missing or invalid\n");
-		return retval;
-	}
-
-	retval = of_property_read_u32(dev->of_node, "ipu_id",
-					&sensor->s.ipu_id);
-	if (retval) {
-		dev_err(dev, "ipu_id missing or invalid\n");
-		return retval;
-	}
-
-	retval = of_property_read_u32(dev->of_node, "csi_id",
-					&(sensor->s.csi));
+	retval = of_property_read_u32(dev->of_node, "csi_id", &csi);
 	if (retval) {
 		dev_err(dev, "csi id missing or invalid\n");
 		return retval;
@@ -3742,9 +3767,12 @@ static int ov5640_probe(struct i2c_client *client,
 	if (retval)
 		sensor->vflip= -1;
 
-	clk_prepare_enable(sensor->s.sensor_clk);
+	retval = clk_prepare_enable(sensor_clk);
+	if (retval < 0) {
+		dev_err(dev, "%s: enable sensor clk fail\n", __func__);
+		return -EINVAL;
+	}
 
-	sensor->s.io_init = _ov5640_reset_pwrdn;
 	sensor->i2c_client = client;
 	sensor->fmt = &ov5640_colour_fmts[0];
 	sensor->pix.pixelformat = sensor->fmt->pixelformat;
@@ -3760,36 +3788,35 @@ static int ov5640_probe(struct i2c_client *client,
 
 	ov5640_reset(sensor);
 
-	retval = ov5640_read_reg(sensor, OV5640_CHIP_ID_HIGH_BYTE, &chip_id_high);
+	retval = ov5640_read_reg(sensor, OV5640_CHIP_ID_HIGH_BYTE,
+				 &chip_id_high);
 	if (retval < 0 || chip_id_high != 0x56)
 		goto err1;
 	retval = ov5640_read_reg(sensor, OV5640_CHIP_ID_LOW_BYTE, &chip_id_low);
 	if (retval < 0 || chip_id_low != 0x40)
 		goto err1;
 
-	sensor->virtual_channel = sensor->s.csi | (sensor->s.ipu_id << 1);
-
 	retval = ov5640_af_init(sensor);
+	if (retval < 0) {
+		dev_err(dev, "error downloading autofocus firmware\n");
+		goto err2;
+	}
+
+	retval = ov5640_probe_v(sensor, sensor_clk, csi);
 	if (retval < 0)
-		pr_err("%s: error downloading autofocus firmware\n", __func__);
-
-	ov5640_power_off(sensor);
-
-	ov5640_int_device.priv = sensor;
-	i2c_set_clientdata(client, sensor);
-	retval = v4l2_int_device_register(&ov5640_int_device);
-
-//	clk_disable_unprepare(sensor->sensor_clk);
+		goto err2;
 
 	if (device_create_file(dev, &dev_attr_ov5640_reg))
-		dev_err(dev, "%s: error creating ov5640_reg entry\n", __func__);
-	dev_info(dev, "camera ov5640_mipi is found\n");
+		dev_err(dev, "error creating ov5640_reg entry\n");
+	dev_info(dev, "Camera ov5640_mipi is found\n");
 	return retval;
 err1:
-	pr_warn("camera ov5640_mipi is not found\n");
+	retval = -ENODEV;
+	dev_warn(dev, "Camera ov5640_mipi is not found\n");
+err2:
 	ov5640_power_off(sensor);
-	clk_disable_unprepare(sensor->s.sensor_clk);
-	return -ENODEV;
+	clk_disable_unprepare(sensor_clk);
+	return retval;
 }
 
 /*!
