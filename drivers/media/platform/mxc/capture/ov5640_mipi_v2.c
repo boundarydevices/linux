@@ -2895,28 +2895,13 @@ err:
  * Turns the power on or off, depending on the value of on and returns the
  * appropriate error code.
  */
-static int ov5640_s_power(struct v4l2_subdev *sd, int on)
+static int ov5640_s_power(struct ov5640 *sensor, int on)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct ov5640 *sensor = to_ov5640(client);
-
-	if (on)
-		return ov5640_power_on(sensor);
-	else
-		return ov5640_power_off(sensor);
+	return on ? ov5640_power_on(sensor) : ov5640_power_off(sensor);
 }
 
-/*!
- * ov5640_g_parm - V4L2 sensor interface handler for VIDIOC_G_PARM ioctl
- * @s: pointer to standard V4L2 sub device structure
- * @a: pointer to standard V4L2 VIDIOC_G_PARM ioctl structure
- *
- * Returns the sensor's video CAPTURE parameters.
- */
-static int ov5640_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
+static int ov5640_g_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct ov5640 *sensor = to_ov5640(client);
 	struct device *dev = &sensor->i2c_client->dev;
 	struct v4l2_captureparm *cparm = &a->parm.capture;
 	int ret = 0;
@@ -2951,19 +2936,8 @@ static int ov5640_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 	return ret;
 }
 
-/*!
- * ov5460_s_parm - V4L2 sensor interface handler for VIDIOC_S_PARM ioctl
- * @s: pointer to standard V4L2 sub device structure
- * @a: pointer to standard V4L2 VIDIOC_S_PARM ioctl structure
- *
- * Configures the sensor to use the input parameters, if possible.  If
- * not possible, reverts to the old parameters and returns the
- * appropriate error code.
- */
-static int ov5640_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
+static int ov5640_s_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct ov5640 *sensor = to_ov5640(client);
 	struct device *dev = &sensor->i2c_client->dev;
 	struct v4l2_fract *timeperframe = &a->parm.capture.timeperframe;
 	u32 tgt_fps;	/* target frames per secound */
@@ -3331,12 +3305,7 @@ static int ov5640_enum_frameintervals(struct v4l2_subdev *sd,
 	return -EINVAL;
 }
 
-/*!
- * dev_init - V4L2 sensor init
- * @s: pointer to standard V4L2 device structure
- *
- */
-static int init_device(struct ov5640 *sensor)
+static int ov5640_dev_init(struct ov5640 *sensor)
 {
 	struct device *dev = &sensor->i2c_client->dev;
 	u32 tgt_xclk;	/* target xclk */
@@ -3396,9 +3365,41 @@ static int ov5640_subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
 	}
 }
 
+/*!
+ * ov5640_g_parm - V4L2 sensor interface handler for VIDIOC_G_PARM ioctl
+ * @s: pointer to standard V4L2 sub device structure
+ * @a: pointer to standard V4L2 VIDIOC_G_PARM ioctl structure
+ *
+ * Returns the sensor's video CAPTURE parameters.
+ */
+static int _ov5640_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct ov5640 *sensor = to_ov5640(client);
+
+	return ov5640_g_parm(sensor, a);
+}
+
+/*!
+ * ov5460_s_parm - V4L2 sensor interface handler for VIDIOC_S_PARM ioctl
+ * @s: pointer to standard V4L2 sub device structure
+ * @a: pointer to standard V4L2 VIDIOC_S_PARM ioctl structure
+ *
+ * Configures the sensor to use the input parameters, if possible.  If
+ * not possible, reverts to the old parameters and returns the
+ * appropriate error code.
+ */
+static int _ov5640_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct ov5640 *sensor = to_ov5640(client);
+
+	return ov5640_s_parm(sensor, a);
+}
+
 static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
-	.g_parm = ov5640_g_parm,
-	.s_parm = ov5640_s_parm,
+	.g_parm = _ov5640_g_parm,
+	.s_parm = _ov5640_s_parm,
 	.s_stream = ov5640_s_stream,
 };
 
@@ -3410,8 +3411,16 @@ static const struct v4l2_subdev_pad_ops ov5640_subdev_pad_ops = {
 	.get_fmt               = ov5640_get_fmt,
 };
 
+static int _ov5640_s_power(struct v4l2_subdev *sd, int on)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct ov5640 *sensor = to_ov5640(client);
+
+	return ov5640_s_power(sensor, on);
+}
+
 static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
-	.s_power	= ov5640_s_power,
+	.s_power	= _ov5640_s_power,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	.g_register	= ov5640_get_register,
 	.s_register	= ov5640_set_register,
@@ -3671,7 +3680,7 @@ static int ov5640_probe(struct i2c_client *client,
 		pr_err("%s: error downloading autofocus firmware\n", __func__);
 
 
-	retval = init_device(sensor);
+	retval = ov5640_dev_init(sensor);
 	if (retval < 0) {
 		ov5640_power_off(sensor);
 		clk_disable_unprepare(sensor->sensor_clk);
