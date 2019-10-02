@@ -112,9 +112,8 @@ struct ov5640_mode_info {
 struct ov5640 {
 	struct v4l2_subdev subdev;
 	struct v4l2_ctrl_handler hdl;
-	void (*io_init)(struct ov5640 *);
 	struct clk *sensor_clk;
-	int csi;
+	unsigned virtual_channel;
 	const struct ov5640_datafmt	*fmt;
 
 	struct i2c_client *i2c_client;
@@ -1446,12 +1445,6 @@ static void ov5640_reset(struct ov5640 *sensor)
 	pr_debug("%s(mipi): reset released\n", __func__);
 	ov5640_update_slave_id(sensor);
 	mutex_unlock(&ov5640_mutex);
-}
-
-static void ov5640_reset_pwrdn(struct ov5640 *sensor)
-{
-	ov5640_reset(sensor);
-	gpiod_set_value_cansleep(sensor->gpiod_pwdn, 1);
 }
 
 static int ov5640_power_on(struct ov5640 *sensor)
@@ -2873,7 +2866,7 @@ static int ov5640_init_mode(struct ov5640 *sensor,
 	OV5640_set_AE_target(sensor, sensor->AE_Target);
 	OV5640_get_light_freq(sensor);
 	OV5640_set_bandingfilter(sensor);
-	ov5640_set_virtual_channel(sensor, sensor->csi);
+	ov5640_set_virtual_channel(sensor, sensor->virtual_channel);
 	msleep(10);
 err:
 	return retval;
@@ -3541,6 +3534,60 @@ static ssize_t set_reg(struct device *dev,
 }
 static DEVICE_ATTR(ov5640_reg, S_IRUGO|S_IWUSR|S_IWGRP, show_reg, set_reg);
 
+static int ov5640_probe_v(struct ov5640 *sensor, struct clk *sensor_clk, u32 csi)
+{
+	struct device *dev = &sensor->i2c_client->dev;
+	struct v4l2_ctrl_handler *hdl;
+	int i;
+	int ret;
+
+	sensor->virtual_channel = csi;
+	ret = ov5640_dev_init(sensor);
+	if (ret < 0) {
+		dev_warn(dev, "Camera init failed\n");
+		return ret;
+	}
+
+	sensor->sensor_clk = sensor_clk;
+	v4l2_i2c_subdev_init(&sensor->subdev, sensor->i2c_client, &ov5640_subdev_ops);
+	hdl = &sensor->hdl;
+	v4l2_ctrl_handler_init(hdl, ARRAY_SIZE(sctrl));
+
+	for (i = 0; i < ARRAY_SIZE(sctrl); i++) {
+		const struct std_ctrl *s = &sctrl[i];
+		v4l2_ctrl_new_std(hdl, s->ctrl_ops, s->id, s->min, s->max, s->step, s->def);
+
+		if (hdl->error) {
+			ret = hdl->error;
+			v4l2_ctrl_handler_free(hdl);
+			dev_err(dev, "%i:ctrl(0x%x) error(%d)\n", i, s->id, ret);
+			return ret;
+		}
+	}
+
+	for (i = 0; i < ARRAY_SIZE(s_menu_ctrl); i++) {
+		const struct std_menu_ctrl *s = &s_menu_ctrl[i];
+		v4l2_ctrl_new_std_menu(hdl, s->ctrl_ops, s->id, s->max, s->mask, s->def);
+
+		if (hdl->error) {
+			ret = hdl->error;
+			v4l2_ctrl_handler_free(hdl);
+			dev_err(dev, "%i:s_menu_ctrl(0x%x) error(%d)\n", i, s->id, ret);
+			return ret;
+		}
+	}
+
+	sensor->subdev.ctrl_handler = hdl;
+	v4l2_ctrl_handler_setup(hdl);
+
+	sensor->subdev.grp_id = 678;
+	ret = v4l2_async_register_subdev(&sensor->subdev);
+	if (ret < 0)
+		dev_err(dev, "Async register failed, ret=%d\n", ret);
+	OV5640_stream_off(sensor);
+	return 0;
+}
+
 /*!
  * ov5640 I2C probe function
  *
@@ -3553,10 +3600,10 @@ static int ov5640_probe(struct i2c_client *client,
 	struct device *dev = &client->dev;
 	int retval;
 	u8 chip_id_high, chip_id_low;
+	struct clk *sensor_clk;
 	struct ov5640 *sensor;
-	struct v4l2_ctrl_handler *hdl;
-	int i;
 	struct gpio_desc *gd;
+	u32 csi;
 
 	sensor = devm_kzalloc(dev, sizeof(*sensor), GFP_KERNEL);
 	if (!sensor)
@@ -3582,12 +3629,13 @@ static int ov5640_probe(struct i2c_client *client,
 		dev_warn(dev, "no sensor reset pin available");
 	sensor->gpiod_rst = gd;
 
-	sensor->sensor_clk = devm_clk_get(dev, "csi_mclk");
-	if (IS_ERR(sensor->sensor_clk)) {
+	sensor_clk = devm_clk_get(dev, "csi_mclk");
+	if (IS_ERR(sensor_clk)) {
 		/* assuming clock enabled by default */
-		sensor->sensor_clk = NULL;
-		dev_err(dev, "clock-frequency missing or invalid\n");
-		return PTR_ERR(sensor->sensor_clk);
+		retval = PTR_ERR(sensor_clk);
+		if (retval != EPROBE_DEFER)
+			dev_err(dev, "clock-frequency missing or invalid %d\n", retval);
+		return retval;
 	}
 
 	retval = of_property_read_u32(dev->of_node, "mclk",
@@ -3597,8 +3645,7 @@ static int ov5640_probe(struct i2c_client *client,
 		return retval;
 	}
 
-	retval = of_property_read_u32(dev->of_node, "csi_id",
-					&(sensor->csi));
+	retval = of_property_read_u32(dev->of_node, "csi_id", &csi);
 	if (retval) {
 		dev_err(dev, "csi id missing or invalid\n");
 		return retval;
@@ -3613,13 +3660,12 @@ static int ov5640_probe(struct i2c_client *client,
 	if (retval)
 		sensor->vflip= -1;
 
-	retval = clk_prepare_enable(sensor->sensor_clk);
+	retval = clk_prepare_enable(sensor_clk);
 	if (retval < 0) {
 		dev_err(dev, "%s: enable sensor clk fail\n", __func__);
 		return -EINVAL;
 	}
 
-	sensor->io_init = ov5640_reset_pwrdn;
 	sensor->i2c_client = client;
 	sensor->fmt = &ov5640_colour_fmts[0];
 	sensor->pix.pixelformat = sensor->fmt->pixelformat;
@@ -3637,75 +3683,32 @@ static int ov5640_probe(struct i2c_client *client,
 
 	retval = ov5640_read_reg(sensor, OV5640_CHIP_ID_HIGH_BYTE,
 				 &chip_id_high);
-	if (retval < 0 || chip_id_high != 0x56) {
-		dev_warn(dev, "Camera is not found\n");
-		ov5640_power_off(sensor);
-		clk_disable_unprepare(sensor->sensor_clk);
-		return -ENODEV;
-	}
+	if (retval < 0 || chip_id_high != 0x56)
+		goto err1;
 	retval = ov5640_read_reg(sensor, OV5640_CHIP_ID_LOW_BYTE, &chip_id_low);
-	if (retval < 0 || chip_id_low != 0x40) {
-		dev_warn(dev, "Camera is not found\n");
-		ov5640_power_off(sensor);
-		clk_disable_unprepare(sensor->sensor_clk);
-		return -ENODEV;
-	}
+	if (retval < 0 || chip_id_low != 0x40)
+		goto err1;
 
 	retval = ov5640_af_init(sensor);
-	if (retval < 0)
-		pr_err("%s: error downloading autofocus firmware\n", __func__);
-
-
-	retval = ov5640_dev_init(sensor);
 	if (retval < 0) {
-		ov5640_power_off(sensor);
-		clk_disable_unprepare(sensor->sensor_clk);
-		dev_warn(dev, "Camera init failed\n");
-		ov5640_power_off(sensor);
-		return retval;
+		dev_err(dev, "error downloading autofocus firmware\n");
+		goto err2;
 	}
 
-	v4l2_i2c_subdev_init(&sensor->subdev, client, &ov5640_subdev_ops);
-	hdl = &sensor->hdl;
-	v4l2_ctrl_handler_init(hdl, ARRAY_SIZE(sctrl));
-
-	for (i = 0; i < ARRAY_SIZE(sctrl); i++) {
-		const struct std_ctrl *s = &sctrl[i];
-		v4l2_ctrl_new_std(hdl, s->ctrl_ops, s->id, s->min, s->max, s->step, s->def);
-
-		if (hdl->error) {
-			retval = hdl->error;
-			v4l2_ctrl_handler_free(hdl);
-			pr_err("%s: %i:ctrl(0x%x) error(%d)\n", __func__, i, s->id, retval);
-			return retval;
-		}
-	}
-
-	for (i = 0; i < ARRAY_SIZE(s_menu_ctrl); i++) {
-		const struct std_menu_ctrl *s = &s_menu_ctrl[i];
-		v4l2_ctrl_new_std_menu(hdl, s->ctrl_ops, s->id, s->max, s->mask, s->def);
-
-		if (hdl->error) {
-			retval = hdl->error;
-			v4l2_ctrl_handler_free(hdl);
-			pr_err("%s: %i:s_menu_ctrl(0x%x) error(%d)\n", __func__, i, s->id, retval);
-			return retval;
-		}
-	}
-
-	sensor->subdev.ctrl_handler = hdl;
-	v4l2_ctrl_handler_setup(hdl);
-
-	sensor->subdev.grp_id = 678;
-	retval = v4l2_async_register_subdev(&sensor->subdev);
+	retval = ov5640_probe_v(sensor, sensor_clk, csi);
 	if (retval < 0)
-		dev_err(&client->dev, "Async register failed, ret=%d\n",
-			retval);
+		goto err2;
 
-	OV5640_stream_off(sensor);
 	if (device_create_file(dev, &dev_attr_ov5640_reg))
-		dev_err(dev, "%s: error creating ov5640_reg entry\n", __func__);
-	dev_info(dev, "Camera is found\n");
+		dev_err(dev, "error creating ov5640_reg entry\n");
+	dev_info(dev, "Camera ov5640_mipi is found\n");
+	return retval;
+err1:
+	retval = -ENODEV;
+	dev_warn(dev, "Camera ov5640_mipi is not found\n");
+err2:
+	ov5640_power_off(sensor);
+	clk_disable_unprepare(sensor_clk);
 	return retval;
 }
 
@@ -3724,9 +3727,8 @@ static void ov5640_remove(struct i2c_client *client)
 		&dev_attr_ov5640_reg);
 	v4l2_async_unregister_subdev(sd);
 
-	clk_disable_unprepare(sensor->sensor_clk);
-
 	ov5640_power_off(sensor);
+	clk_disable_unprepare(sensor->sensor_clk);
 }
 
 module_i2c_driver(ov5640_i2c_driver);
