@@ -48,8 +48,6 @@
 #define OV5640_CHIP_ID_HIGH_BYTE	0x300A
 #define OV5640_CHIP_ID_LOW_BYTE		0x300B
 
-#define DEFAULT_SCCB_ID 0x78
-
 #define OV5640_TIMING_TC_REG20		0x3820
 #define OV5640_TIMING_TC_REG20_VFLIP	0x06
 #define OV5640_TIMING_TC_REG21		0x3821
@@ -1401,37 +1399,29 @@ static inline void ov5640_power_down(struct ov5640 *sensor, int enable)
 static int ov5640_update_slave_id(struct ov5640 *sensor)
 {
 	struct device *dev = &sensor->i2c_client->dev;
-	u8 slave_id;
-	struct i2c_client *tmp_client;
-	s32 retval;
+	int ret;
+	u8 buf[4];
+	unsigned reg = 0x3100;
+	unsigned default_addr = 0x3c;
+	struct i2c_msg msg;
 
-	if (sensor->i2c_client->addr << 1 == DEFAULT_SCCB_ID)
-		return 0; /* nothing to do */
+	if (sensor->i2c_client->addr == default_addr)
+		return 0;
 
-	/* Change camera i2c slave address */
-	slave_id = (u8)(sensor->i2c_client->addr << 1); /* new slave id*/
-	tmp_client = sensor->i2c_client;
+	buf[0] = reg >> 8;
+	buf[1] = reg & 0xff;
+	buf[2] = sensor->i2c_client->addr << 1;
+	msg.addr = default_addr;
+	msg.flags = 0;
+	msg.len = 3;
+	msg.buf = buf;
 
-	sensor->i2c_client =
-		i2c_new_dummy_device(tmp_client->adapter, DEFAULT_SCCB_ID >> 1);
-	if (!sensor->i2c_client) {
-		dev_err(dev, "Failed to communicate on 0x%x\n",
-			DEFAULT_SCCB_ID);
-		return -1;
+	ret = i2c_transfer(sensor->i2c_client->adapter, &msg, 1);
+	if (ret < 0) {
+		dev_err(dev, "Failed to update i2c addr to 0x%x (%d)\n",
+				sensor->i2c_client->addr, ret);
 	}
-
-	retval = ov5640_write_reg(sensor, 0x3100, slave_id);
-	i2c_unregister_device(sensor->i2c_client);
-	sensor->i2c_client = tmp_client;
-	if (retval != 0) {
-		dev_err(dev, "Failed to update SCCB_ID to 0x%x\n", slave_id);
-		return -1;
-	}
-
-	ov5640_read_reg(sensor, 0x3100, &slave_id);
-	dev_dbg(dev, "Updated SCCB_ID 0x%x\n", slave_id);
-
-	return 0;
+	return ret;
 }
 
 static void ov5640_reset(struct ov5640 *sensor)
