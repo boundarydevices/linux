@@ -1372,6 +1372,7 @@ static void ov5640_power_down(struct ov5640 *sensor, int enable)
 
 static int ov5640_update_slave_id(struct ov5640 *sensor)
 {
+	struct device *dev = &sensor->i2c_client->dev;
 	int ret;
 	u8 buf[4];
 	unsigned reg = 0x3100;
@@ -1391,8 +1392,10 @@ static int ov5640_update_slave_id(struct ov5640 *sensor)
 
 
 	ret = i2c_transfer(sensor->i2c_client->adapter, &msg, 1);
-	if (ret < 0)
-		pr_err("%s: ov5640_mipi ret=%d\n", __func__, ret);
+	if (ret < 0) {
+		dev_err(dev, "Failed to update i2c addr to 0x%x (%d)\n",
+				sensor->i2c_client->addr, ret);
+	}
 	return ret;
 }
 
