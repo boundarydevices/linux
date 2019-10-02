@@ -24,7 +24,6 @@
 #include <linux/of_device.h>
 #include <linux/i2c.h>
 #include <linux/of_gpio.h>
-#include <linux/pinctrl/consumer.h>
 #include <linux/regulator/consumer.h>
 #include <linux/v4l2-mediabus.h>
 #include <media/v4l2-device.h>
@@ -3551,7 +3550,6 @@ static DEVICE_ATTR(ov5640_reg, S_IRUGO|S_IWUSR|S_IWGRP, show_reg, set_reg);
 static int ov5640_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
-	struct pinctrl *pinctrl;
 	struct device *dev = &client->dev;
 	int retval;
 	u8 chip_id_high, chip_id_low;
@@ -3566,11 +3564,6 @@ static int ov5640_probe(struct i2c_client *client,
 	sensor->focus_range = V4L2_AUTO_FOCUS_RANGE_NORMAL;
 	sensor->colorfx = V4L2_COLORFX_NONE;
 	sensor->AE_Target = 52;
-
-	/* ov5640 pinctrl */
-	pinctrl = devm_pinctrl_get_select_default(dev);
-	if (IS_ERR(pinctrl))
-		dev_warn(dev, "No pin available\n");
 
 	/* request power down pin */
 	sensor->pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
