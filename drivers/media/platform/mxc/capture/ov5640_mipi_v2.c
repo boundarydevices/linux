@@ -81,8 +81,11 @@ static int ov5640_framerates[] = {
 };
 
 struct ov5640_datafmt {
+	u32	pixelformat;
+	u32	reg4300;
+	enum v4l2_colorspace	colorspace;
+	const char* name;
 	u32	code;
-	enum v4l2_colorspace		colorspace;
 };
 
 /* image size under 1280 * 960 are SUBSAMPLING
@@ -1349,8 +1352,8 @@ static struct i2c_driver ov5640_i2c_driver = {
 };
 
 static const struct ov5640_datafmt ov5640_colour_fmts[] = {
-	{MEDIA_BUS_FMT_YUYV8_2X8, V4L2_COLORSPACE_JPEG},
-	{MEDIA_BUS_FMT_UYVY8_2X8, V4L2_COLORSPACE_JPEG},
+	{V4L2_PIX_FMT_YUYV, 0x30, V4L2_COLORSPACE_JPEG, NULL, MEDIA_BUS_FMT_YUYV8_2X8},
+	{V4L2_PIX_FMT_UYVY, 0x32, V4L2_COLORSPACE_JPEG, NULL, MEDIA_BUS_FMT_UYVY8_2X8},
 };
 
 static int get_capturemode(int width, int height)
@@ -2047,9 +2050,9 @@ static int ov5640_download_firmware(struct ov5640 *sensor,
 				(sensor->mclk == OV5640_XCLK_20MHZ)) {
 			Val = 0x17;
 		} else if (RegAddr == 0x4300) {
-			Val = (sensor->fmt->code == MEDIA_BUS_FMT_UYVY8_2X8) ? 0x32 : 0x30;
+			Val = sensor->fmt->reg4300;
 			sensor->reg4300 = Val;
-			pr_debug("%s: code=%x, Val=%x\n", __func__, sensor->fmt->code, Val);
+			pr_debug("%s: pixelformat=%x, Val=%x\n", __func__, sensor->fmt->pixelformat, Val);
 		}
 
 		/* Overwrite vflip value if provided in device tree */
@@ -2071,11 +2074,11 @@ static int ov5640_download_firmware(struct ov5640 *sensor,
 		}
 
 		if ((RegAddr == 0x3008) && (Val == 2)) {
-			int v = (sensor->fmt->code == MEDIA_BUS_FMT_UYVY8_2X8) ? 0x32 : 0x30;
+			int v = sensor->fmt->reg4300;
 
 			if (sensor->reg4300 != v) {
 				sensor->reg4300 = v;
-				pr_debug("%s: code=%x, Val=%x\n", __func__, sensor->fmt->code, v);
+				pr_debug("%s: pixelformat=%x, Val=%x\n", __func__, sensor->fmt->pixelformat, v);
 				retval = ov5640_write_reg(sensor, 0x4300, v);
 			}
 		}
@@ -3026,9 +3029,9 @@ static int ov5640_set_fmt(struct v4l2_subdev *sd,
 	int capturemode;
 
 	if (!fmt) {
-		mf->code	= ov5640_colour_fmts[0].code;
-		mf->colorspace	= ov5640_colour_fmts[0].colorspace;
-		fmt		= &ov5640_colour_fmts[0];
+		fmt = &ov5640_colour_fmts[0];
+		mf->code	= fmt->code;
+		mf->colorspace	= fmt->colorspace;
 	}
 
 	mf->field	= V4L2_FIELD_NONE;
@@ -3037,6 +3040,8 @@ static int ov5640_set_fmt(struct v4l2_subdev *sd,
 		return 0;
 
 	sensor->fmt = fmt;
+	sensor->pix.pixelformat = sensor->fmt->pixelformat;
+
 	pr_debug("%s: code=%x\n", __func__, fmt->code);
 
 	capturemode = get_capturemode(mf->width, mf->height);
@@ -3645,8 +3650,7 @@ static int ov5640_probe(struct i2c_client *client,
 	sensor->io_init = ov5640_reset_pwrdn;
 	sensor->i2c_client = client;
 	sensor->fmt = &ov5640_colour_fmts[0];
-	sensor->pix.pixelformat = (sensor->fmt->code == MEDIA_BUS_FMT_UYVY8_2X8)
-		? V4L2_PIX_FMT_UYVY : V4L2_PIX_FMT_YUYV;
+	sensor->pix.pixelformat = sensor->fmt->pixelformat;
 	sensor->pix.width = 640;
 	sensor->pix.height = 480;
 	sensor->streamcap.capability = V4L2_MODE_HIGHQUALITY |
