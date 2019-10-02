@@ -3258,7 +3258,7 @@ static int ov5640_enum_framesizes(struct v4l2_subdev *sd,
  * ov5640_enum_frameintervals - V4L2 sensor interface handler for
  *			       VIDIOC_ENUM_FRAMEINTERVALS ioctl
  * @s: pointer to standard V4L2 device structure
- * @fival: standard V4L2 VIDIOC_ENUM_FRAMEINTERVALS ioctl structure
+ * @fie: standard V4L2 VIDIOC_ENUM_FRAMEINTERVALS ioctl structure
  *
  * Return 0 if successful, otherwise -EINVAL.
  */
