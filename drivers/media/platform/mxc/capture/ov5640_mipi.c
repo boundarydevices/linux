@@ -2870,18 +2870,21 @@ static int ov5640_init_mode(struct ov5640 *sensor,
 
 		sensor->pix.width = 640;
 		sensor->pix.height = 480;
-		retval = ov5640_download_firmware(sensor, pModeSetting, ArySize);
+		retval = ov5640_download_firmware(sensor, pModeSetting,
+						  ArySize);
 		if (retval < 0)
 			goto err;
 
 		pModeSetting = ov5640_setting_30fps_VGA_640_480;
 		ArySize = ARRAY_SIZE(ov5640_setting_30fps_VGA_640_480);
-		retval = ov5640_download_firmware(sensor, pModeSetting, ArySize);
+		retval = ov5640_download_firmware(sensor, pModeSetting,
+						  ArySize);
 	} else if ((dn_mode == SUBSAMPLING && orig_dn_mode == SCALING) ||
 			(dn_mode == SCALING && orig_dn_mode == SUBSAMPLING)) {
 		/* change between subsampling and scaling
 		 * go through exposure calucation */
-		retval = ov5640_change_mode_exposure_calc(sensor, frame_rate, mode);
+		retval = ov5640_change_mode_exposure_calc(sensor,
+				frame_rate, mode);
 	} else {
 		/* change inside subsampling or scaling
 		 * download firmware directly */
@@ -2965,21 +2968,12 @@ static int ov5640_g_ifparm(struct ov5640 *sensor, struct v4l2_ifparm *p)
  */
 static int ov5640_s_power(struct ov5640 *sensor, int on)
 {
-	if (on)
-		return ov5640_power_on(sensor);
-	else
-		return ov5640_power_off(sensor);
+	return on ? ov5640_power_on(sensor) : ov5640_power_off(sensor);
 }
 
-/*!
- * ov5640_g_parm - V4L2 sensor interface handler for VIDIOC_G_PARM ioctl
- * @s: pointer to standard V4L2 device structure
- * @a: pointer to standard V4L2 VIDIOC_G_PARM ioctl structure
- *
- * Returns the sensor's video CAPTURE parameters.
- */
 static int ov5640_g_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 {
+	struct device *dev = &sensor->i2c_client->dev;
 	struct v4l2_captureparm *cparm = &a->parm.capture;
 	int ret = 0;
 
@@ -3005,7 +2999,7 @@ static int ov5640_g_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 		break;
 
 	default:
-		pr_debug("   type is unknown - %d\n", a->type);
+		dev_warn(dev, "Type is unknown - %d\n", a->type);
 		ret = -EINVAL;
 		break;
 	}
@@ -3013,17 +3007,9 @@ static int ov5640_g_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 	return ret;
 }
 
-/*!
- * ov5640_s_parm - V4L2 sensor interface handler for VIDIOC_S_PARM ioctl
- * @s: pointer to standard V4L2 device structure
- * @a: pointer to standard V4L2 VIDIOC_S_PARM ioctl structure
- *
- * Configures the sensor to use the input parameters, if possible.  If
- * not possible, reverts to the old parameters and returns the
- * appropriate error code.
- */
 static int ov5640_s_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 {
+	struct device *dev = &sensor->i2c_client->dev;
 	struct v4l2_fract *timeperframe = &a->parm.capture.timeperframe;
 	u32 tgt_fps;	/* target frames per secound */
 	enum ov5640_frame_rate frame_rate;
@@ -3062,7 +3048,8 @@ static int ov5640_s_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 		else if (tgt_fps == 30)
 			frame_rate = ov5640_30_fps;
 		else {
-			pr_err(" The camera frame rate is not supported!\n");
+			dev_warn(dev,
+				"The camera frame rate is not supported!\n");
 			return -EINVAL;
 		}
 
@@ -3085,14 +3072,13 @@ static int ov5640_s_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 	case V4L2_BUF_TYPE_VBI_OUTPUT:
 	case V4L2_BUF_TYPE_SLICED_VBI_CAPTURE:
 	case V4L2_BUF_TYPE_SLICED_VBI_OUTPUT:
-		pr_debug("   type is not " \
-			"V4L2_BUF_TYPE_VIDEO_CAPTURE but %d\n",
+		dev_warn(dev, "Type is not V4L2_BUF_TYPE_VIDEO_CAPTURE but %d\n",
 			a->type);
 		ret = -EINVAL;
 		break;
 
 	default:
-		pr_debug("   type is unknown - %d\n", a->type);
+		dev_warn(dev, "Type is unknown - %d\n", a->type);
 		ret = -EINVAL;
 		break;
 	}
@@ -3100,14 +3086,6 @@ static int ov5640_s_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 	return ret;
 }
 
-/*!
- * ov5640_g_fmt_cap - V4L2 sensor interface handler for ioctl_g_fmt_cap
- * @s: pointer to standard V4L2 device structure
- * @f: pointer to standard V4L2 v4l2_format structure
- *
- * Returns the sensor's current pixel format in the v4l2_format
- * parameter.
- */
 static int ov5640_g_fmt_cap(struct ov5640 *sensor, struct v4l2_format *f)
 {
 	switch (f->type) {
@@ -3255,6 +3233,8 @@ static int ov5640_s_ctrl(struct ov5640 *sensor, struct v4l2_control *vc)
 		break;
 	case V4L2_CID_AUTO_FOCUS_RANGE:
 		retval = ov5640_af_set_focus_range(sensor, vc->value);
+		break;
+	case V4L2_CID_AUTO_FOCUS_STATUS:
 		break;
 	case V4L2_CID_AUTO_FOCUS_START:
 		retval = ov5640_af_start_single(sensor);
@@ -3415,19 +3395,14 @@ static int ov5640_enum_fmt_cap(struct ov5640 *sensor,
 	return 0;
 }
 
-/*!
- * ov5640_dev_init - V4L2 sensor interface handler for vidioc_int_dev_init_num
- * @s: pointer to standard V4L2 device structure
- *
- * Initialise the device when slave attaches to the master.
- */
 static int ov5640_dev_init(struct ov5640 *sensor)
 {
+	struct device *dev = &sensor->i2c_client->dev;
 	u32 tgt_xclk;	/* target xclk */
 	u32 tgt_fps;	/* target frames per secound */
-	int ret;
 	enum ov5640_frame_rate frame_rate;
 	void *mipi_csi2_info;
+	int ret;
 
 	sensor->on = true;
 
@@ -3437,7 +3412,7 @@ static int ov5640_dev_init(struct ov5640 *sensor)
 	tgt_xclk = max(tgt_xclk, (u32)OV5640_XCLK_MIN);
 	sensor->mclk = tgt_xclk;
 
-	pr_debug("   Setting mclk to %d MHz\n", tgt_xclk / 1000000);
+	dev_dbg(dev, "Setting mclk to %d MHz\n", tgt_xclk / 1000000);
 
 	/* Default camera frame rate is set in probe */
 	tgt_fps = sensor->streamcap.timeperframe.denominator /
@@ -3461,7 +3436,8 @@ static int ov5640_dev_init(struct ov5640 *sensor)
 		return -EPERM;
 	}
 
-	ret = ov5640_init_mode(sensor, frame_rate, ov5640_mode_INIT, ov5640_mode_INIT);
+	ret = ov5640_init_mode(sensor, frame_rate, ov5640_mode_INIT,
+			       ov5640_mode_INIT);
 
 	return ret;
 }
@@ -3493,16 +3469,40 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 	return ov5640_s_power(s->priv, on);
 }
 
+/*!
+ * ov5640_g_parm - V4L2 sensor interface handler for VIDIOC_G_PARM ioctl
+ * @s: pointer to standard V4L2 device structure
+ * @a: pointer to standard V4L2 VIDIOC_G_PARM ioctl structure
+ *
+ * Returns the sensor's video CAPTURE parameters.
+ */
 static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 {
 	return ov5640_g_parm(s->priv, a);
 }
 
+/*!
+ * ov5640_s_parm - V4L2 sensor interface handler for VIDIOC_S_PARM ioctl
+ * @s: pointer to standard V4L2 device structure
+ * @a: pointer to standard V4L2 VIDIOC_S_PARM ioctl structure
+ *
+ * Configures the sensor to use the input parameters, if possible.  If
+ * not possible, reverts to the old parameters and returns the
+ * appropriate error code.
+ */
 static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 {
 	return ov5640_s_parm(s->priv, a);
 }
 
+/*!
+ * ov5640_g_fmt_cap - V4L2 sensor interface handler for ioctl_g_fmt_cap
+ * @s: pointer to standard V4L2 device structure
+ * @f: pointer to standard V4L2 v4l2_format structure
+ *
+ * Returns the sensor's current pixel format in the v4l2_format
+ * parameter.
+ */
 static int ioctl_g_fmt_cap(struct v4l2_int_device *s, struct v4l2_format *f)
 {
 	return ov5640_g_fmt_cap(s->priv, f);
@@ -3555,6 +3555,12 @@ static int ioctl_enum_fmt_cap(struct v4l2_int_device *s,
 	return ov5640_enum_fmt_cap(s->priv, fmt);
 }
 
+/*!
+ * ov5640_dev_init - V4L2 sensor interface handler for vidioc_int_dev_init_num
+ * @s: pointer to standard V4L2 device structure
+ *
+ * Initialise the device when slave attaches to the master.
+ */
 static int ioctl_dev_init(struct v4l2_int_device *s)
 {
 	return ov5640_dev_init(s->priv);
