@@ -142,8 +142,8 @@ struct ov5640 {
 	int focus_mode;
 	int focus_range;
 	int colorfx;
-	int pwn_gpio;
-	int rst_gpio;
+	struct gpio_desc *gpiod_pwdn;
+	struct gpio_desc *gpiod_rst;
 	int prev_sysclk;
 	int prev_HTS;
 	int AE_low;
@@ -1386,13 +1386,13 @@ static const struct ov5640_datafmt
 
 static inline void ov5640_power_down(struct ov5640 *sensor, int enable)
 {
-	if (sensor->pwn_gpio < 0)
+	if (!sensor->gpiod_pwdn)
 		return;
 
-	gpio_set_value_cansleep(sensor->pwn_gpio, enable ? 1 : 0);
+	gpiod_set_value_cansleep(sensor->gpiod_pwdn, enable ? 1 : 0);
 
 	msleep(2);
-	pr_debug("ov5640_mipi_camera_powerdown: powerdown=%x, power_gp=0x%x\n", enable, sensor->pwn_gpio);
+	pr_debug("ov5640_mipi_camera_powerdown: powerdown=%x\n", enable);
 }
 
 static int ov5640_update_slave_id(struct ov5640 *sensor)
@@ -1425,21 +1425,21 @@ static int ov5640_update_slave_id(struct ov5640 *sensor)
 
 static void ov5640_reset(struct ov5640 *sensor)
 {
-	if (sensor->rst_gpio < 0 || sensor->pwn_gpio < 0)
+	if (!sensor->gpiod_rst && !sensor->gpiod_pwdn)
 		return;
 
-	gpio_set_value(sensor->rst_gpio, 0);	/* camera reset */
-	gpio_set_value(sensor->pwn_gpio, 1);	/* camera power down */
+	gpiod_set_value_cansleep(sensor->gpiod_rst, 1);	/* camera reset */
+	gpiod_set_value_cansleep(sensor->gpiod_pwdn, 1);	/* camera power down */
 
 	/* >= 5 ms, Let power supply stabilize */
 	msleep(5);
 	mutex_lock(&ov5640_mutex);
 
-	gpio_set_value(sensor->pwn_gpio, 0);
+	gpiod_set_value_cansleep(sensor->gpiod_pwdn, 0);
 
 	/* >= 1ms from powerup, to reset release*/
 	msleep(1);
-	gpio_set_value(sensor->rst_gpio, 1);
+	gpiod_set_value_cansleep(sensor->gpiod_rst, 0);
 
 	/* >= 20 ms from reset high to SCCB initialized */
 	msleep(20);
@@ -1451,7 +1451,7 @@ static void ov5640_reset(struct ov5640 *sensor)
 static void ov5640_reset_pwrdn(struct ov5640 *sensor)
 {
 	ov5640_reset(sensor);
-	gpio_set_value(sensor->pwn_gpio, 1);
+	gpiod_set_value_cansleep(sensor->gpiod_pwdn, 1);
 }
 
 static int ov5640_power_on(struct ov5640 *sensor)
@@ -3556,6 +3556,7 @@ static int ov5640_probe(struct i2c_client *client,
 	struct ov5640 *sensor;
 	struct v4l2_ctrl_handler *hdl;
 	int i;
+	struct gpio_desc *gd;
 
 	sensor = devm_kzalloc(dev, sizeof(*sensor), GFP_KERNEL);
 	if (!sensor)
@@ -3566,32 +3567,20 @@ static int ov5640_probe(struct i2c_client *client,
 	sensor->AE_Target = 52;
 
 	/* request power down pin */
-	sensor->pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
-	if (!gpio_is_valid(sensor->pwn_gpio))
-		dev_warn(dev, "No sensor pwdn pin available");
-	else {
-		retval = devm_gpio_request_one(dev, sensor->pwn_gpio,
-				GPIOF_OUT_INIT_HIGH, "ov5640_mipi_pwdn");
-		if (retval < 0) {
-			dev_warn(dev, "Failed to set power pin\n");
-			dev_warn(dev, "retval=%d\n", retval);
-			return retval;
-		}
-	}
+	gd = devm_gpiod_get_index_optional(dev, "pwn", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd))
+		return PTR_ERR(gd);
+	if (!gd)
+		dev_warn(dev, "no sensor pwdn pin available");
+	sensor->gpiod_pwdn = gd;
 
 	/* request reset pin */
-	sensor->rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
-	if (!gpio_is_valid(sensor->rst_gpio))
-		dev_warn(dev, "No sensor reset pin available");
-	else {
-		retval = devm_gpio_request_one(dev, sensor->rst_gpio,
-				GPIOF_OUT_INIT_HIGH, "ov5640_mipi_reset");
-		if (retval < 0) {
-			dev_warn(dev, "Failed to set reset pin\n");
-			return retval;
-		}
-	}
-
+	gd = devm_gpiod_get_index_optional(dev, "rst", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd))
+		return PTR_ERR(gd);
+	if (!gd)
+		dev_warn(dev, "no sensor reset pin available");
+	sensor->gpiod_rst = gd;
 
 	sensor->sensor_clk = devm_clk_get(dev, "csi_mclk");
 	if (IS_ERR(sensor->sensor_clk)) {
