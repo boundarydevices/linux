@@ -3323,36 +3323,36 @@ static int ov5640_enum_framesizes(struct ov5640 *sensor,
  * ov5640_enum_frameintervals - V4L2 sensor interface handler for
  *			       VIDIOC_ENUM_FRAMEINTERVALS ioctl
  * @s: pointer to standard V4L2 device structure
- * @fival: standard V4L2 VIDIOC_ENUM_FRAMEINTERVALS ioctl structure
+ * @fie: standard V4L2 VIDIOC_ENUM_FRAMEINTERVALS ioctl structure
  *
  * Return 0 if successful, otherwise -EINVAL.
  */
 static int ov5640_enum_frameintervals(struct ov5640 *sensor,
-					 struct v4l2_frmivalenum *fival)
+					 struct v4l2_frmivalenum *fie)
 {
 	struct device *dev = &sensor->i2c_client->dev;
 	int i, j, count = 0;
 
-	if (fival->index < 0 || fival->index > ov5640_mode_MAX)
+	if (fie->index < 0 || fie->index > ov5640_mode_MAX)
 		return -EINVAL;
 
-	if (fival->width == 0 || fival->height == 0) {
-		dev_warn(dev, "Please assign pixel format, width and height.\n");
+	if (fie->width == 0 || fie->height == 0) {
+		dev_warn(dev, "Please assign pixel format, width and height\n");
 		return -EINVAL;
 	}
 
-	fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
-	fival->discrete.numerator = 1;
+	fie->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+	fie->discrete.numerator = 1;
 
 	for (i = 0; i < ARRAY_SIZE(ov5640_mode_info_data); i++) {
 		for (j = 0; j < (ov5640_mode_MAX + 1); j++) {
-			if (fival->width == ov5640_mode_info_data[i][j].width
-			 && fival->height == ov5640_mode_info_data[i][j].height
+			if (fie->width == ov5640_mode_info_data[i][j].width
+			 && fie->height == ov5640_mode_info_data[i][j].height
 			 && ov5640_mode_info_data[i][j].init_data_ptr != NULL) {
 				count++;
 			}
-			if (fival->index == (count - 1)) {
-				fival->discrete.denominator =
+			if (fie->index == (count - 1)) {
+				fie->discrete.denominator =
 						ov5640_framerates[i];
 				return 0;
 			}
@@ -3533,9 +3533,9 @@ static int ioctl_enum_framesizes(struct v4l2_int_device *s,
 }
 
 static int ioctl_enum_frameintervals(struct v4l2_int_device *s,
-					 struct v4l2_frmivalenum *fival)
+					 struct v4l2_frmivalenum *fie)
 {
-	return ov5640_enum_frameintervals(s->priv, fival);
+	return ov5640_enum_frameintervals(s->priv, fie);
 }
 
 static int ioctl_g_chip_ident(struct v4l2_int_device *s, int *id)
