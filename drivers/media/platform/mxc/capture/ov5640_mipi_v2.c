@@ -30,6 +30,7 @@
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-event.h>
 
+#define DRIVER_ID_STR	"ov5640_mipisubdev"
 #define OV5640_VOLTAGE_ANALOG               2800000
 #define OV5640_VOLTAGE_DIGITAL_CORE         1500000
 #define OV5640_VOLTAGE_DIGITAL_IO           1800000
@@ -1328,7 +1329,7 @@ MODULE_DEVICE_TABLE(of, ov5640_mipi_v2_of_match);
 #endif
 
 static const struct i2c_device_id ov5640_id[] = {
-	{"ov5640_mipisubdev", 0},
+	{DRIVER_ID_STR, 0},
 	{},
 };
 
@@ -1337,7 +1338,7 @@ MODULE_DEVICE_TABLE(i2c, ov5640_id);
 static struct i2c_driver ov5640_i2c_driver = {
 	.driver = {
 		  .owner = THIS_MODULE,
-		  .name  = "ov5640_mipisubdev",
+		  .name  = DRIVER_ID_STR,
 #ifdef CONFIG_OF
 		  .of_match_table = of_match_ptr(ov5640_mipi_v2_of_match),
 #endif
