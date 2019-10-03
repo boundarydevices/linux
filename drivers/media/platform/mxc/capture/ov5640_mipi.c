@@ -29,13 +29,8 @@
 #include <linux/of_device.h>
 #include <linux/i2c.h>
 #include <linux/of_gpio.h>
-#include <linux/pinctrl/consumer.h>
-#include <linux/proc_fs.h>
-#include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
-#include <linux/fsl_devices.h>
 #include <linux/mipi_csi2.h>
-#include <media/v4l2-chip-ident.h>
 #include "v4l2-int-device.h"
 #include "mxc_v4l2_capture.h"
 
