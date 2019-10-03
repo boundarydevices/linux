@@ -840,7 +840,7 @@ static const struct reg_value ov5640_setting_30fps_QVGA_320_240[] = {
 	{0x3802, 0x00, 0, 0}, {0x3803, 0x04, 0, 0}, {0x3804, 0x0a, 0, 0},
 	{0x3805, 0x3f, 0, 0}, {0x3806, 0x07, 0, 0}, {0x3807, 0x9b, 0, 0},
 	{0x3808, 0x01, 0, 0}, {0x3809, 0x40, 0, 0}, {0x380a, 0x00, 0, 0},
-	{0x380b, 0xF0, 0, 0}, {0x380c, 0x07, 0, 0}, {0x380d, 0x68, 0, 0},
+	{0x380b, 0xf0, 0, 0}, {0x380c, 0x07, 0, 0}, {0x380d, 0x68, 0, 0},
 	{0x380e, 0x04, 0, 0}, {0x380f, 0x38, 0, 0}, {0x3810, 0x00, 0, 0},
 	{0x3811, 0x10, 0, 0}, {0x3812, 0x00, 0, 0}, {0x3813, 0x06, 0, 0},
 	{0x3618, 0x00, 0, 0}, {0x3612, 0x29, 0, 0}, {0x3708, 0x64, 0, 0},
@@ -1384,11 +1384,10 @@ static const struct ov5640_datafmt
 	return NULL;
 }
 
-static inline void ov5640_power_down(struct ov5640 *sensor, int enable)
+static void ov5640_power_down(struct ov5640 *sensor, int enable)
 {
 	if (!sensor->gpiod_pwdn)
 		return;
-
 	gpiod_set_value_cansleep(sensor->gpiod_pwdn, enable ? 1 : 0);
 
 	msleep(2);
