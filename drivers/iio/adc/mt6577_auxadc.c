@@ -34,6 +34,9 @@
 #define MT6577_AUXADC_POWER_READY_MS          1
 #define MT6577_AUXADC_SAMPLE_READY_US         25
 
+#define MT6577_VOLTAGE_FULL_RANGE             1500
+#define MT6577_AUXADC_PRECISION               4096
+
 struct mtk_auxadc_compatible {
 	bool sample_data_cali;
 	bool check_global_idle;
@@ -62,6 +65,7 @@ static const struct mtk_auxadc_compatible mt6765_compat = {
 		.channel = (idx),				      \
 		.info_mask_separate = BIT(IIO_CHAN_INFO_PROCESSED) |  \
 				      BIT(IIO_CHAN_INFO_RAW),	      \
+		.info_mask_shared_by_type = BIT(IIO_CHAN_INFO_SCALE), \
 }
 
 static const struct iio_chan_spec mt6577_auxadc_iio_channels[] = {
@@ -202,6 +206,11 @@ static int mt6577_auxadc_read_raw(struct iio_dev *indio_dev,
 		*val = *val * VOLTAGE_FULL_RANGE / AUXADC_PRECISE;
 
 		return IIO_VAL_INT;
+
+	case IIO_CHAN_INFO_SCALE:
+		*val = MT6577_VOLTAGE_FULL_RANGE;
+		*val2 = MT6577_AUXADC_PRECISION;
+		return IIO_VAL_FRACTIONAL;
 
 	default:
 		return -EINVAL;
