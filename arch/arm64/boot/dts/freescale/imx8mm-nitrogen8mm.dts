@@ -175,11 +175,11 @@
 		>;
 	};
 
-	pinctrl_i2c3b_csi1: i2c3b-csi1grp {
+	pinctrl_i2c3b_ov5640_mipi: i2c3b-ov5640-mipigrp {
 		fsl,pins = <
-#define GP_CSI1_MIPI_PWDN	<&gpio1 8 GPIO_ACTIVE_HIGH>
+#define GP_OV5640_MIPI_POWER_DOWN	<&gpio1 8 GPIO_ACTIVE_HIGH>
 			MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8		0x141
-#define GP_CSI1_MIPI_RESET	<&gpio3 5 GPIO_ACTIVE_LOW>
+#define GP_OV5640_MIPI_RESET	<&gpio3 5 GPIO_ACTIVE_LOW>
 			MX8MM_IOMUXC_NAND_CLE_GPIO3_IO5			0x101
 		>;
 	};
@@ -1034,10 +1034,10 @@
 		mclk = <20000000>;
 		mipi_csi;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c3b_csi1>;
-		pwn-gpios = GP_CSI1_MIPI_PWDN;
+		pinctrl-0 = <&pinctrl_i2c3b_ov5640_mipi>;
+		pwn-gpios = GP_OV5640_MIPI_POWER_DOWN;
 		reg = <0x3c>;
-		rst-gpios = GP_CSI1_MIPI_RESET;
+		rst-gpios = GP_OV5640_MIPI_RESET;
 		status = "okay";
 
 		port {
