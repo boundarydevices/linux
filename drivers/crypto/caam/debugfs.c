@@ -78,7 +78,7 @@ void caam_debugfs_init(struct caam_drv_private *ctrlpriv, struct dentry *root)
 	debugfs_create_file("fault_status", 0444, ctrlpriv->ctl,
 			    &perfmon->status, &caam_fops_u32_ro);
 
-	if (ctrlpriv->scu_en)
+	if (ctrlpriv->scu_en || ctrlpriv->optee_en)
 		return;
 
 	/* Internal covering keys (useful in non-secure mode only) */
