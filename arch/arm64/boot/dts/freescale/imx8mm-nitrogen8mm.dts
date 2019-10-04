@@ -1024,21 +1024,21 @@
 
 &i2c3b {
 	ov5640-mipi1@3c {
-		compatible = "ov5640_mipisubdev";
-		reg = <0x3c>;
-		status = "okay";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c3b_csi1>;
+		AVDD-supply = <&reg_vref_2v5>;
+		DOVDD-supply = <&reg_vref_1v8>;
+		DVDD-supply = <&reg_vref_3v3>;
 		clocks = <&csi_mclk>;
 		clock-names = "csi_mclk";
+		compatible = "ov5640_mipisubdev";
 		csi_id = <0>;
-		AVDD-supply = <&reg_vref_2v5>;
-		DVDD-supply = <&reg_vref_3v3>;
-		DOVDD-supply = <&reg_vref_1v8>;
-		pwn-gpios = GP_CSI1_MIPI_PWDN;
-		rst-gpios = GP_CSI1_MIPI_RESET;
 		mclk = <20000000>;
 		mipi_csi;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3b_csi1>;
+		pwn-gpios = GP_CSI1_MIPI_PWDN;
+		reg = <0x3c>;
+		rst-gpios = GP_CSI1_MIPI_RESET;
+		status = "okay";
 
 		port {
 			ov5640_mipi1_ep: endpoint {
