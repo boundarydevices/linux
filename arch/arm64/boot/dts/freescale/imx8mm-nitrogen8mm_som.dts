@@ -117,7 +117,7 @@
 
 		port {
 			ov5640_mipi1_ep: endpoint {
-				remote-endpoint = <&mipi1_sensor_ep>;
+				remote-endpoint = <&mipi1_ov5640_ep>;
 			};
 		};
 	};
