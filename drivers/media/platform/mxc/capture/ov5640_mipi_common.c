@@ -1,4 +1,9 @@
 
+static int ov5640_framerates[] = {
+	[ov5640_15_fps] = 15,
+	[ov5640_30_fps] = 30,
+};
+
 static const struct reg_value brightness_neg4[] = {
 	{0x3212, 0x03, 0, 0}, {0x5587, 0x40, 0, 0}, {0x5588, 0x09, 0, 0},
 	{0x5580, 0x04, 4, 0}, {0x3212, 0x13, 0, 0}, {0x3212, 0xa3, 0, 0}
