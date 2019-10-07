@@ -40,6 +40,9 @@ struct can_rx_offload {
 
 int can_rx_offload_add_timestamp(struct net_device *dev, struct can_rx_offload *offload);
 int can_rx_offload_add_fifo(struct net_device *dev, struct can_rx_offload *offload, unsigned int weight);
+int can_rx_offload_add_manual(struct net_device *dev,
+			      struct can_rx_offload *offload,
+			      unsigned int weight);
 int can_rx_offload_irq_offload_timestamp(struct can_rx_offload *offload, u64 reg);
 int can_rx_offload_irq_offload_fifo(struct can_rx_offload *offload);
 int can_rx_offload_queue_sorted(struct can_rx_offload *offload,
