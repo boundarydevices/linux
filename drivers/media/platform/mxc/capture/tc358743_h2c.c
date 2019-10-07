@@ -29,15 +29,12 @@
 #include <linux/ctype.h>
 #include <linux/types.h>
 #include <linux/delay.h>
-#include <linux/device.h>
 #include <linux/clk.h>
+#include <linux/of_device.h>
 #include <linux/i2c.h>
 #include <linux/of_gpio.h>
 #include <linux/regulator/consumer.h>
-#include <linux/fsl_devices.h>
-#include <linux/mutex.h>
 #include <linux/mipi_csi2.h>
-#include <media/v4l2-chip-ident.h>
 #include "v4l2-int-device.h"
 #include <sound/core.h>
 #include <sound/pcm.h>
