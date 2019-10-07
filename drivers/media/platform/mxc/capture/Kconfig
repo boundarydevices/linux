@@ -88,6 +88,20 @@ config TC358743_AUDIO
 	help
 	  Enables audio support from HDMI input
 
+config MXC_HDMI_CSI2_TC358743_V2
+	tristate "Toshiba tc358743 Hdmi to CSI 2 bridge(v2)"
+	depends on !VIDEO_MXC_EMMA_CAMERA && I2C
+	select MXC_MIPI_CSI2 if ARCH_MX6Q
+	select MXC_CAMERA_SENSOR_CLK
+	help
+	  Toshina HDMI to MIPI-CSI2 bridge for i.MX8M
+
+config TC358743_AUDIO_V2
+	bool "Audio support for Toshiba tc358743(v2)"
+	depends on MXC_HDMI_CSI2_TC358743_V2
+	help
+	  Enables audio support from HDMI input
+
 config MXC_TVIN_ADV7180
 	tristate "Analog Device adv7180 TV Decoder Input support"
 	depends on !VIDEO_MXC_EMMA_CAMERA && I2C
