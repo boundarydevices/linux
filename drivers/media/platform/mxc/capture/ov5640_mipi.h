@@ -40,11 +40,6 @@ enum ov5640_frame_rate {
 	ov5640_30_fps
 };
 
-static int ov5640_framerates[] = {
-	[ov5640_15_fps] = 15,
-	[ov5640_30_fps] = 30,
-};
-
 /* image size under 1280 * 960 are SUBSAMPLING
  * image size upper 1280 * 960 are SCALING
  */
