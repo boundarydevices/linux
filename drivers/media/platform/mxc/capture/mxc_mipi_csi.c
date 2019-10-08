@@ -673,16 +673,37 @@ static void mipi_csis_log_counters(struct csi_state *state, bool non_errors)
 	spin_unlock_irqrestore(&state->slock, flags);
 }
 
+static int mipi_csis_set_mbus_config(struct v4l2_subdev *mipi_sd, unsigned pad,
+				struct v4l2_mbus_config *cfg)
+{
+	struct csi_state *state = mipi_sd_to_csi_state(mipi_sd);
+
+	if ((cfg->bus.mipi_csi2.num_data_lanes > 4) ||
+	    (cfg->bus.mipi_csi2.num_data_lanes < 1)) {
+		return -EINVAL;
+	}
+	state->num_lanes = cfg->bus.mipi_csi2.num_data_lanes;
+	v4l2_dbg(1, debug, mipi_sd, "%s: lanes=%d\n",
+		__func__, state->num_lanes);
+	return 0;
+}
+
 /*
  * V4L2 subdev operations
  */
 static int mipi_csis_s_power(struct v4l2_subdev *mipi_sd, int on)
 {
+	struct v4l2_mbus_config cfg;
 	struct csi_state *state = mipi_sd_to_csi_state(mipi_sd);
 	struct device *dev = &state->pdev->dev;
 
 	v4l2_subdev_call(state->sensor_sd, core, s_power, on);
-
+	if (on) {
+		cfg.bus.mipi_csi2.num_data_lanes = 0;
+		v4l2_subdev_call(state->sensor_sd, pad, get_mbus_config, 0, &cfg);
+		if (cfg.bus.mipi_csi2.num_data_lanes)
+			mipi_csis_set_mbus_config(mipi_sd, 0, &cfg);
+	}
 	if (on)
 		return pm_runtime_get_sync(dev);
 
@@ -873,7 +894,6 @@ static struct v4l2_subdev_core_ops mipi_csis_core_ops = {
 static struct v4l2_subdev_video_ops mipi_csis_video_ops = {
 	.s_rx_buffer = mipi_csis_s_rx_buffer,
 	.s_stream = mipi_csis_s_stream,
-
 	.s_parm = mipi_csis_s_parm,
 	.g_parm = mipi_csis_g_parm,
 };
