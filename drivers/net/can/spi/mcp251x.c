@@ -34,7 +34,6 @@
 #include <linux/can/core.h>
 #include <linux/can/dev.h>
 #include <linux/can/led.h>
-#include <linux/can/platform/mcp251x.h>
 #include <linux/clk.h>
 #include <linux/completion.h>
 #include <linux/delay.h>
@@ -1019,20 +1018,20 @@ MODULE_DEVICE_TABLE(spi, mcp251x_id_table);
 static int mcp251x_can_probe(struct spi_device *spi)
 {
 	const void *match = device_get_match_data(&spi->dev);
-	struct mcp251x_platform_data *pdata = dev_get_platdata(&spi->dev);
 	struct net_device *net;
 	struct mcp251x_priv *priv;
 	struct gpio_desc *gpio;
 	struct clk *clk;
-	int freq, ret;
+	u32 freq;
+	int ret;
 
 	clk = devm_clk_get_optional(&spi->dev, NULL);
 	if (IS_ERR(clk))
 		return PTR_ERR(clk);
 
 	freq = clk_get_rate(clk);
-	if (freq == 0 && pdata)
-		freq = pdata->oscillator_frequency;
+	if (freq == 0)
+		device_property_read_u32(&spi->dev, "clock-frequency", &freq);
 
 	/* Sanity check */
 	if (freq < 1000000 || freq > 25000000)
