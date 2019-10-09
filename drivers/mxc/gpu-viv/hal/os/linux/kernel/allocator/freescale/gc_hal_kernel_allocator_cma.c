@@ -147,9 +147,9 @@ _CMAFSLAlloc(
 
     gcmkHEADER_ARG("Mdl=%p NumPages=0x%zx", Mdl, NumPages);
 
-    if (os->allocatorLimitMarker && !(Flags & gcvALLOC_FLAG_CMA_PREEMPT))
+    if (os->allocatorLimitMarker)
     {
-        if (Flags & gcvALLOC_FLAG_CMA_LIMIT)
+        if ((Flags & gcvALLOC_FLAG_CMA_LIMIT) && !(Flags & gcvALLOC_FLAG_CMA_PREEMPT))
         {
             priv->cmaLimitRequest = gcvTRUE;
         }
@@ -580,7 +580,11 @@ _CMAFSLAlloctorInit(
 #endif
                           ;
 #if defined(CONFIG_ARM64)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0)
+    Os->allocatorLimitMarker = (Os->device->baseAddress + totalram_pages() * PAGE_SIZE) > 0x100000000;
+#else
     Os->allocatorLimitMarker = (Os->device->baseAddress + totalram_pages * PAGE_SIZE) > 0x100000000;
+#endif
 #else
     Os->allocatorLimitMarker = gcvFALSE;
 #endif
@@ -589,9 +593,8 @@ _CMAFSLAlloctorInit(
     if (Os->allocatorLimitMarker)
     {
         allocator->capability |= gcvALLOC_FLAG_CMA_LIMIT;
+        allocator->capability |= gcvALLOC_FLAG_CMA_PREEMPT;
     }
-
-    allocator->capability |= gcvALLOC_FLAG_CMA_PREEMPT;
 
     *Allocator = allocator;
 
