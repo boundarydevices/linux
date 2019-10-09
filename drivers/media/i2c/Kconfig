@@ -32,7 +32,6 @@ comment "audio, video and radio I2C drivers auto-selected by 'Autoselect ancilla
 #
 
 menu "Audio decoders, processors and mixers"
-	visible if !MEDIA_HIDE_ANCILLARY_SUBDRV
 
 config VIDEO_TVAUDIO
 	tristate "Simple audio decoder chips"
