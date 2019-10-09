@@ -1055,7 +1055,8 @@ CDEFINES :=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DFEATURE_WLAN_CH144 \
 		-DHTC_CRP_DEBUG \
 		-DWLAN_VOWIFI_DEBUG \
-		-DATH_SUPPORT_DFS
+		-DATH_SUPPORT_DFS \
+		-Wno-shift-count-negative
 #-Werror is omitted
 #-Wno-misleading-indentation is omitted
 
