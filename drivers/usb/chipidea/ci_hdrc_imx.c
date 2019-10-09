@@ -623,6 +623,13 @@ static int __maybe_unused imx_controller_suspend(struct device *dev,
 		return ret;
 	}
 
+	ret = imx_usbmisc_vbus_comparator_on(data->usbmisc_data, false);
+	if (ret) {
+		dev_err(dev,
+			"vbus comparator off failed, ret=%d\n", ret);
+		return ret;
+	}
+
 	imx_disable_unprepare_clks(dev);
 	release_bus_freq(BUS_FREQ_HIGH);
 	if (data->plat_data->flags & CI_HDRC_PMQOS)
@@ -661,8 +668,15 @@ static int __maybe_unused imx_controller_resume(struct device *dev,
 		goto clk_disable;
 	}
 
+	ret = imx_usbmisc_vbus_comparator_on(data->usbmisc_data, true);
+	if (ret) {
+		dev_err(dev,
+			"vbus comparator on failed, ret=%d\n", ret);
+		goto vbus_comparator_off;
+	}
 	return 0;
 
+vbus_comparator_off:
 clk_disable:
 	imx_disable_unprepare_clks(dev);
 	return ret;
