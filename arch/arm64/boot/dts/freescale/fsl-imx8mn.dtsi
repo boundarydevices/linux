@@ -39,12 +39,22 @@
 					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
 					fsmgr_flags = "wait,slotselect,avb";
 				};
+				product {
+					compatible = "android,product";
+					/* sd card node which used if androidboot.boot_device_root=mmcblk1 */
+					dev_mmcblk1 = "/dev/block/platform/30b50000.mmc/by-name/product";
+					/* emmc node which used if androidboot.boot_device_root=mmcblk2 */
+					dev_mmcblk2 = "/dev/block/platform/30b60000.mmc/by-name/product";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,slotselect,avb";
+				};
 			};
 			vbmeta {
 				/*we need use FirstStageMountVBootV2 if we enable avb*/
 				compatible = "android,vbmeta";
 				/*parts means the partition witch can be mount in first stage*/
-				parts = "vbmeta,dtbo,boot,system,vendor";
+				parts = "vbmeta,dtbo,boot,system,vendor,product";
 			};
 		};
 	};
