@@ -22,7 +22,6 @@ config VIDEO_IR_I2C
 #
 
 menu "I2C Encoders, decoders, sensors and other helper chips"
-	visible if !MEDIA_SUBDRV_AUTOSELECT || COMPILE_TEST
 
 comment "Audio decoders, processors and mixers"
 
