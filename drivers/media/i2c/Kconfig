@@ -26,7 +26,6 @@ comment "I2C drivers hidden by 'Autoselect ancillary drivers'"
 	depends on MEDIA_HIDE_ANCILLARY_SUBDRV
 
 menu "I2C Encoders, decoders, sensors and other helper chips"
-	visible if !MEDIA_HIDE_ANCILLARY_SUBDRV
 
 comment "Audio decoders, processors and mixers"
 
