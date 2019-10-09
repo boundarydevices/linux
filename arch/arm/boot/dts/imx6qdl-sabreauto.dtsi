@@ -435,6 +435,8 @@
 			mma8451@1c {
 				compatible = "fsl,mma8451";
 				reg = <0x1c>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_mma8451_int>;
 				position = <7>;
 				interrupt-parent = <&gpio6>;
 				interrupts = <31 IRQ_TYPE_LEVEL_LOW>;
@@ -953,6 +955,12 @@
 				MX6QDL_PAD_ENET_TXD1__MLB_CLK 0x80000000
 				MX6QDL_PAD_GPIO_6__MLB_SIG    0x80000000
 				MX6QDL_PAD_GPIO_2__MLB_DATA   0x80000000
+			>;
+		};
+
+		pinctrl_mma8451_int: mma8451intgrp {
+			fsl,pins = <
+				MX6QDL_PAD_EIM_BCLK__GPIO6_IO31		0xb0b1
 			>;
 		};
 
