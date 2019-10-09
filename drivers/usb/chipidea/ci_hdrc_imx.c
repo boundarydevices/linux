@@ -642,6 +642,14 @@ static int imx_controller_suspend(struct device *dev)
 				"usbmisc hsic_set_clk failed, ret=%d\n", ret);
 			return ret;
 		}
+
+	}
+
+	ret = imx_usbmisc_vbus_comparator_on(data->usbmisc_data, false);
+	if (ret) {
+		dev_err(dev,
+			"vbus comparator off failed, ret=%d\n", ret);
+		return ret;
 	}
 
 	imx_disable_unprepare_clks(dev);
@@ -689,6 +697,13 @@ static int imx_controller_resume(struct device *dev)
 		goto clk_disable;
 	}
 
+	ret = imx_usbmisc_vbus_comparator_on(data->usbmisc_data, true);
+	if (ret) {
+		dev_err(dev,
+			"vbus comparator on failed, ret=%d\n", ret);
+		goto vbus_comparator_off;
+	}
+
 	ret = imx_usbmisc_hsic_set_clk(data->usbmisc_data, true);
 	if (ret) {
 		dev_err(dev, "usbmisc hsic_set_clk failed, ret=%d\n", ret);
@@ -698,6 +713,8 @@ static int imx_controller_resume(struct device *dev)
 	return 0;
 
 hsic_set_clk_fail:
+	imx_usbmisc_vbus_comparator_on(data->usbmisc_data, false);
+vbus_comparator_off:
 	imx_usbmisc_set_wakeup(data->usbmisc_data, true);
 clk_disable:
 	imx_disable_unprepare_clks(dev);
