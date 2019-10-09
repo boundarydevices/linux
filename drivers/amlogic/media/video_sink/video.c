@@ -8198,9 +8198,9 @@ SET_FILTER:
 			if (cur_frame_par->sr0_position)
 				vpp_misc_set |=
 					PREBLD_SR0_VD1_SCALER;
-			else
+			else /* SR0_AFTER_DNLP */
 				vpp_misc_set &=
-					~SR0_AFTER_DNLP;
+					~PREBLD_SR0_VD1_SCALER;
 		else
 			vpp_misc_set |=
 				PREBLD_SR0_VD1_SCALER;
@@ -8211,9 +8211,9 @@ SET_FILTER:
 			if (cur_frame_par->sr1_position)
 				vpp_misc_set |=
 					DNLP_SR1_CM;
-			else
+			else /* SR1_AFTER_POSTBLEN */
 				vpp_misc_set &=
-					~SR1_AFTER_POSTBLEN;
+					~DNLP_SR1_CM;
 		else
 			vpp_misc_set |=
 				DNLP_SR1_CM;
@@ -13261,9 +13261,8 @@ static int __init video_early_init(void)
 	} else if (cpu_after_eq(MESON_CPU_MAJOR_ID_G12B)) {
 		WRITE_VCBUS_REG_BITS(
 			SRSHARP0_SHARP_SYNC_CTRL, 1, 0, 1);
-		/* TODO: check if the bit8 is available */
-		/* WRITE_VCBUS_REG_BITS( */
-		/*	SRSHARP0_SHARP_SYNC_CTRL, 1, 8, 1); */
+		WRITE_VCBUS_REG_BITS(
+			SRSHARP0_SHARP_SYNC_CTRL, 1, 8, 1);
 	}
 	return 0;
 }

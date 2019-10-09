@@ -2009,6 +2009,16 @@ static void vpp_set_super_scaler(
 			next_frame_par->supsc1_vert_ratio ? 1 : 0;
 		next_frame_par->supsc1_hori_ratio = 0;
 	}
+
+	/*double check core0 input width for core0_vert_ratio!!!*/
+	if (next_frame_par->supsc0_vert_ratio &&
+	    (width_out >> next_frame_par->supsc0_hori_ratio >
+	     sr->core0_v_enable_width_max)) {
+		next_frame_par->supsc0_vert_ratio = 0;
+		if (next_frame_par->supsc0_hori_ratio == 0)
+			next_frame_par->supsc0_enable = 0;
+	}
+
 	/*double check core1 input width for core1_vert_ratio!!!*/
 	if (next_frame_par->supsc1_vert_ratio &&
 		(width_out >> next_frame_par->supsc1_hori_ratio >
@@ -2017,6 +2027,7 @@ static void vpp_set_super_scaler(
 		if (next_frame_par->supsc1_hori_ratio == 0)
 			next_frame_par->supsc1_enable = 0;
 	}
+
 	/* option add patch */
 	if ((ver_sc_multiple_num <= super_scaler_v_ratio) &&
 		(src_height >= SUPER_CORE0_WIDTH_MAX / 2) &&
