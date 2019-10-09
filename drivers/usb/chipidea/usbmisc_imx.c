@@ -120,6 +120,7 @@
 #define TXPREEMPAMPTUNE0_MASK		(3 << 28)
 #define TXVREFTUNE0_BIT			20
 #define TXVREFTUNE0_MASK		(0xf << 20)
+
 #define MX7D_USB_OTG_PHY_CFG2_DRVVBUS0		BIT(16)
 #define MX7D_USB_OTG_PHY_CFG2_CHRG_DCDENB	BIT(3)
 #define MX7D_USB_OTG_PHY_CFG2_CHRG_VDATSRCENB0	BIT(2)
@@ -151,7 +152,7 @@ struct usbmisc_ops {
 	int (*power_lost_check)(struct imx_usbmisc_data *data);
 	/* usb charger detection */
 	int (*charger_detection)(struct imx_usbmisc_data *data);
-	void (*vbus_comparator_on)(struct imx_usbmisc_data *data, bool on);
+	int (*vbus_comparator_on)(struct imx_usbmisc_data *data, bool on);
 };
 
 struct imx_usbmisc {
@@ -892,7 +893,7 @@ static int imx7d_charger_detection(struct imx_usbmisc_data *data)
 	return ret;
 }
 
-static void usbmisc_imx7d_vbus_comparator_on(struct imx_usbmisc_data *data,
+static int usbmisc_imx7d_vbus_comparator_on(struct imx_usbmisc_data *data,
 					     bool on)
 {
 	unsigned long flags;
@@ -900,7 +901,7 @@ static void usbmisc_imx7d_vbus_comparator_on(struct imx_usbmisc_data *data,
 	u32 val;
 
 	if (data->hsic)
-		return;
+		return 0;
 
 	spin_lock_irqsave(&usbmisc->lock, flags);
 	/*
@@ -917,6 +918,7 @@ static void usbmisc_imx7d_vbus_comparator_on(struct imx_usbmisc_data *data,
 
 	writel(val, usbmisc->base + MX7D_USB_OTG_PHY_CFG2);
 	spin_unlock_irqrestore(&usbmisc->lock, flags);
+	return 0;
 }
 
 static int usbmisc_imx6sx_power_lost_check(struct imx_usbmisc_data *data)
@@ -1000,6 +1002,7 @@ static int usbmisc_imx7ulp_init(struct imx_usbmisc_data *data)
 
 	return 0;
 }
+
 static const struct usbmisc_ops imx25_usbmisc_ops = {
 	.init = usbmisc_imx25_init,
 	.post = usbmisc_imx25_post,
@@ -1223,6 +1226,21 @@ hsic_set_clk_fail:
 	return ret;
 }
 EXPORT_SYMBOL_GPL(imx_usbmisc_resume);
+
+int imx_usbmisc_vbus_comparator_on(struct imx_usbmisc_data *data,
+				   bool on)
+{
+	struct imx_usbmisc *usbmisc;
+
+	if (!data)
+		return 0;
+
+	usbmisc = dev_get_drvdata(data->dev);
+	if (!usbmisc->ops->vbus_comparator_on)
+		return 0;
+	return usbmisc->ops->vbus_comparator_on(data, on);
+}
+EXPORT_SYMBOL_GPL(imx_usbmisc_vbus_comparator_on);
 
 static const struct of_device_id usbmisc_imx_dt_ids[] = {
 	{
