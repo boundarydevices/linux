@@ -35,6 +35,7 @@ static const char * const wss_480i_cmd[] = {"ar", "cgms", "psp",
 		"prerec", "CC", "off"};
 static const char * const wss_576i_cmd[] = {"ar", "mode", "coding", "helper",
 		"ttxsubt", "opensubt", "surrsnd", "cgms", "full", "CC", "off"};
+static unsigned int cgms_ntsc_crc[] = {0x0, 0x5, 0xa, 0xf};
 
 static void wss_set_output(unsigned int cmd, unsigned int mode,
 				unsigned int line, unsigned int data,
@@ -60,15 +61,14 @@ static void wss_set_output(unsigned int cmd, unsigned int mode,
 		cvbs_out_reg_setb(ENCI_VBI_SETTING, 0x1, 0, 2);
 		break;
 	case WSS_480I_CMD_CGMS_A:
-		value = cvbs_out_reg_read(ENCI_VBI_CGMSDT_L);
-		value |= (cvbs_out_reg_read(ENCI_VBI_CGMSDT_H) << 16);
-
-		value = ((value & (~(((1L << length) - 1) << start))) |
-			((data & ((1L << length) - 1)) << start));
+		data = (data > 3) ? 0 : data;
+		value = ((data << start) | (cgms_ntsc_crc[data] << 14));
 
 		cvbs_out_reg_write(ENCI_VBI_CGMSDT_L, (value & 0xffff));
 		cvbs_out_reg_write(ENCI_VBI_CGMSDT_H, ((value >> 16) & 0xff));
-		cvbs_out_reg_write(ENCI_VBI_CGMS_LN, (line - 4));
+		/* bit[7:0] even, bit[15:8] odd */
+		cvbs_out_reg_write(ENCI_VBI_CGMS_LN,
+				   ((line - 4) | (line - 3) << 8));
 		cvbs_out_reg_setb(ENCI_VBI_SETTING, 0x3, 4, 2);
 		/*480i, enable even field for line 20*/
 		/*enable odd field for line 283 */
@@ -94,7 +94,10 @@ static void wss_set_output(unsigned int cmd, unsigned int mode,
 static void wss_close_output(unsigned int mode)
 {
 	pr_info("[%s] close mode = %d\n", __func__, mode);
-	cvbs_out_reg_setb(ENCI_VBI_SETTING, 0x0, 2, 2);
+	if (mode == 480)
+		cvbs_out_reg_setb(ENCI_VBI_SETTING, 0x0, 2, 4);
+	else
+		cvbs_out_reg_setb(ENCI_VBI_SETTING, 0x0, 2, 2);
 }
 
 /* for 576i, according to <ETSI EN 300294 V1.4.1> */

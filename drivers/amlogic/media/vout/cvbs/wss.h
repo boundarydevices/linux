@@ -98,7 +98,7 @@
 #define WSS_480I_AR_BITS_169					0x2
 #define WSS_480I_AR_BITS_RESERVED				0x3
 
-#define WSS_480I_CGMS_A_START					0x7
+#define WSS_480I_CGMS_A_START					0x6
 #define WSS_480I_CGMS_A_LENGTH					0x2
 #define WSS_480I_CGMS_A_MASK					0x3
 #define	WSS_480I_CGMS_A_PERMITTED				0x0
