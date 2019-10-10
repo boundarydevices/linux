@@ -204,3 +204,4 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mm-c2.dtb \
 			  imx8mm-kea.dtb \
 			  imx8mm-moo.dtb \
 			  imx8mm-nitrogen8mm.dtb imx8mm-nitrogen8mm-m4.dtb \
+			  imx8mm-nitrogen8mm-tc358743.dtb \
