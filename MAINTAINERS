@@ -14564,6 +14564,13 @@ M: Qiufang Dai <qiufang.dai@amlogic.com>
 F: arch/arm64/boot/dts/amlogic/g12b_a311d_skt.dts
 F: arch/arm64/boot/dts/amlogic/g12b_a311d_w400.dts
 
+AMLOGIC G12B w200 dts
+M: Qiufang Dai <qiufang.dai@amlogic.com>
+F: arch/arm/boot/dts/amlogic/g12b_a311d_w200_a.dts
+F: arch/arm/boot/dts/amlogic/g12b_a311d_w200.dts
+F: arch/arm64/boot/dts/amlogic/g12b_a311d_w200_a.dts
+F: arch/arm64/boot/dts/amlogic/g12b_a311d_w200.dts
+
 AMLOGIC G12B clock
 M: Qiufang Dai <qiufang.dai@amlogic.com>
 F: drivers/amlogic/clk/g12b/*
