@@ -75,24 +75,40 @@ struct exc3000_data {
 	struct touchscreen_properties prop;
 	struct gpio_desc *reset;
 	struct timer_list timer;
+	u32 query_resolution;
 	u8 buf[EXC3000_LEN_FRAME];
 	struct completion wait_event;
 	struct mutex query_lock;
 	u8 slots_in_second_frame;
 };
 
-static void exc3000_report_slots(struct input_dev *input,
-				 struct touchscreen_properties *prop,
+static void exc3000_report_slots(struct exc3000_data *data,
+				 struct input_dev *input,
 				 const u8 *buf, int num)
 {
+	struct touchscreen_properties *prop = &data->prop;
+	u32 r = data->info->max_xy;
+	u32 q = data->query_resolution;
+
 	for (; num--; buf += EXC3000_LEN_POINT) {
 		if (buf[0] & BIT(0)) {
+			unsigned i, j;
 			input_mt_slot(input, buf[1]);
 			input_mt_report_slot_state(input, MT_TOOL_FINGER, true);
-			touchscreen_report_pos(input, prop,
-					       get_unaligned_le16(buf + 2),
-					       get_unaligned_le16(buf + 4),
-					       true);
+
+			i = get_unaligned_le16(buf + 2);
+			j = get_unaligned_le16(buf + 4);
+			if (r != q) {
+				if (r == (q >> 2)) {
+					i <<= 2; j <<= 2;
+				} else if ((r >> 2) == q) {
+					i >>= 2; j >>= 2;
+				} else {
+					i = (i * q) / r;
+					j = (j * q) / r;
+				}
+			}
+			touchscreen_report_pos(input, prop, i, j, true);
 		}
 	}
 }
@@ -118,6 +134,7 @@ static int exc3000_read_frame(struct exc3000_data *data, u8 *buf)
 		{client->addr, 0, 2, startch},
 		{client->addr, I2C_M_RD, EXC3000_LEN_FRAME, buf}
 	};
+	struct eeti_dev_info *info;
 	int ret;
 
 	ret = i2c_transfer(client->adapter, readpkt,
@@ -132,6 +149,15 @@ static int exc3000_read_frame(struct exc3000_data *data, u8 *buf)
 	if (get_unaligned_le16(buf) != EXC3000_LEN_FRAME)
 		return -EINVAL;
 
+	if (buf[2] == EXC3000_MT1_EVENT) {
+		info = &exc3000_info[EETI_EXC3000];
+	} else if (buf[2] == EXC3000_MT2_EVENT) {
+		info = &exc3000_info[EETI_EXC80H60];
+	} else {
+		return -EINVAL;
+	}
+	if (data->info->max_xy != info->max_xy)
+		data->info = info;
 	return 0;
 }
 
@@ -168,7 +194,7 @@ static int exc3000_handle_mt_event(struct exc3000_data *data)
 	else
 		slots = min(total_slots, EXC3000_SLOTS_PER_FRAME);
 
-	exc3000_report_slots(input, &data->prop, buf + 4, slots);
+	exc3000_report_slots(data, input, buf + 4, slots);
 
 	input_mt_sync_frame(input);
 	input_sync(input);
@@ -188,6 +214,7 @@ static irqreturn_t exc3000_interrupt(int irq, void *dev_id)
 	u8 *buf = data->buf;
 	int ret;
 
+	buf[3] = 0;
 	ret = exc3000_read_frame(data, buf);
 	if (!data->input)
 		goto out;
@@ -346,6 +373,9 @@ static int exc3000_probe(struct i2c_client *client)
 			i2c_match_id(exc3000_id, client)->driver_data;
 		data->info = &exc3000_info[eeti_dev_id];
 	}
+	max_xy = data->info->max_xy;
+
+	data->query_resolution = max_xy;
 	timer_setup(&data->timer, exc3000_timer, 0);
 	init_completion(&data->wait_event);
 	mutex_init(&data->query_lock);
