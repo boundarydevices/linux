@@ -39,6 +39,7 @@
 			0 56 1>;
 		interrupt-names = "vsync","vsync2";
 		pinctrl_version = <2>; /* for uboot */
+		clk_path = <1>; /* default gp0 pll */
 
 		/* power type:
 		 *    (0=cpu_gpio, 1=pmu_gpio, 2=signal,3=extern, 0xff=ending)
