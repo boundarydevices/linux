@@ -111,7 +111,7 @@ static inline struct tc358743_state *to_state(struct v4l2_subdev *sd)
 
 /* --------------- I2C --------------- */
 
-static void i2c_rd(struct v4l2_subdev *sd, u16 reg, u8 *values, u32 n)
+static int i2c_rd(struct v4l2_subdev *sd, u16 reg, u8 *values, u32 n)
 {
 	struct tc358743_state *state = to_state(sd);
 	struct i2c_client *client = state->i2c_client;
@@ -136,7 +136,9 @@ static void i2c_rd(struct v4l2_subdev *sd, u16 reg, u8 *values, u32 n)
 	if (err != ARRAY_SIZE(msgs)) {
 		v4l2_err(sd, "%s: reading register 0x%x from 0x%x failed\n",
 				__func__, reg, client->addr);
+		return err < 0 ? err : -EINVAL;
 	}
+	return 0;
 }
 
 static void i2c_wr(struct v4l2_subdev *sd, u16 reg, u8 *values, u32 n)
@@ -225,9 +227,15 @@ static void i2c_wr8_and_or(struct v4l2_subdev *sd, u16 reg,
 	i2c_wrreg(sd, reg, (i2c_rdreg(sd, reg, 1) & mask) | val, 1);
 }
 
-static u16 i2c_rd16(struct v4l2_subdev *sd, u16 reg)
+static int i2c_rd16(struct v4l2_subdev *sd, u16 reg)
 {
-	return i2c_rdreg(sd, reg, 2);
+	int ret;
+	__le32 val = 0;
+
+	ret = i2c_rd(sd, reg, (u8 __force *)&val, 2);
+	if (ret < 0)
+		return ret;
+	return le32_to_cpu(val);
 }
 
 static void i2c_wr16(struct v4l2_subdev *sd, u16 reg, u16 val)
@@ -2051,6 +2059,7 @@ static int tc358743_probe(struct i2c_client *client)
 	int err;
 	struct v4l2_dv_timings timings;
 	int tries;
+	int chipid;
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BYTE_DATA))
 		return -EIO;
@@ -2081,7 +2090,8 @@ static int tc358743_probe(struct i2c_client *client)
 	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
 
 	/* i2c access */
-	if ((i2c_rd16(sd, CHIPID) & MASK_CHIPID) != 0) {
+	chipid = i2c_rd16(sd, CHIPID);
+	if ((chipid < 0) || (chipid & MASK_CHIPID) != 0) {
 		v4l2_info(sd, "not a TC358743 on address 0x%x\n",
 			  client->addr << 1);
 		return -ENODEV;
