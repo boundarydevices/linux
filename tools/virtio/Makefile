@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0
-all: test mod
+all: test mod virtio-ivshmem-console
 test: virtio_test vringh_test
 virtio_test: virtio_ring.o virtio_test.o
 vringh_test: vringh_test.o vringh.o virtio_ring.o
+virtio-ivshmem-console: virtio-ivshmem-console.o
 
 CFLAGS += -g -O2 -Werror -Wno-maybe-uninitialized -Wall -I. -I../include/ -I ../../usr/include/ -Wno-pointer-sign -fno-strict-overflow -fno-strict-aliasing -fno-common -MMD -U_FORTIFY_SOURCE -include ../../include/linux/kconfig.h
 LDFLAGS += -lpthread
@@ -38,5 +39,6 @@ oot-clean: OOT_BUILD+=clean
 .PHONY: all test mod clean vhost oot oot-clean oot-build
 clean:
 	${RM} *.o vringh_test virtio_test vhost_test/*.o vhost_test/.*.cmd \
-              vhost_test/Module.symvers vhost_test/modules.order *.d
+              vhost_test/Module.symvers vhost_test/modules.order *.d \
+              virtio-ivshmem-console
 -include *.d
