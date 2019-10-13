@@ -225,6 +225,8 @@ static void mxc_mipi_csi2_hc_config(struct mxc_mipi_csi2_dev *csi2dev)
 	/* vid_vc */
 	writel(1, csi2dev->base_regs + 0x184);
 	writel(csi2dev->send_level, csi2dev->base_regs + 0x188);
+	v4l2_dbg(1, debug, &csi2dev->v4l2_dev, "%s: lanes=%d\n",
+		__func__, csi2dev->num_lanes);
 }
 
 static int mipi_csi2_clk_init(struct mxc_mipi_csi2_dev *csi2dev)
@@ -287,6 +289,21 @@ static int mipi_csi2_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	return 0;
 }
 
+static int mipi_csis_set_mbus_config(struct v4l2_subdev *sd, unsigned pad,
+				struct v4l2_mbus_config *cfg)
+{
+	struct mxc_mipi_csi2_dev *csi2dev = sd_to_mxc_mipi_csi2_dev(sd);
+
+	if ((cfg->bus.mipi_csi2.num_data_lanes > 4) ||
+	    (cfg->bus.mipi_csi2.num_data_lanes < 1)) {
+		return -EINVAL;
+	}
+	csi2dev->num_lanes = cfg->bus.mipi_csi2.num_data_lanes;
+	dev_dbg(&csi2dev->pdev->dev, "%s: lanes=%d\n",
+		__func__, csi2dev->num_lanes);
+	return 0;
+}
+
 /*
  * V4L2 subdev operations
  */
@@ -307,8 +324,16 @@ static int mipi_csi2_s_stream(struct v4l2_subdev *sd, int enable)
 
 	if (enable) {
 		if (!csi2dev->running) {
+			struct v4l2_mbus_config cfg;
+
 			pm_runtime_get_sync(dev);
 			mxc_mipi_csi2_phy_reset(csi2dev);
+
+			cfg.bus.mipi_csi2.num_data_lanes = 0;
+			v4l2_subdev_call(sensor_sd, pad, get_mbus_config, 0, &cfg);
+			if (cfg.bus.mipi_csi2.num_data_lanes)
+				mipi_csis_set_mbus_config(sd, 0, &cfg);
+
 			mxc_mipi_csi2_hc_config(csi2dev);
 			mxc_mipi_csi2_enable(csi2dev);
 			mxc_mipi_csi2_reg_dump(csi2dev);
@@ -427,7 +452,6 @@ static struct v4l2_subdev_core_ops mipi_csi2_core_ops = {
 
 static struct v4l2_subdev_video_ops mipi_csi2_video_ops = {
 	.s_stream = mipi_csi2_s_stream,
-
 	.s_parm = mipi_csis_s_parm,
 	.g_parm = mipi_csis_g_parm,
 };
