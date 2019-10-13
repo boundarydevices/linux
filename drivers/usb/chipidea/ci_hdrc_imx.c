@@ -545,16 +545,19 @@ static void ci_hdrc_imx_shutdown(struct platform_device *pdev)
 	ci_hdrc_imx_remove(pdev);
 }
 
-static int __maybe_unused imx_controller_suspend(struct device *dev)
+static int __maybe_unused imx_controller_suspend(struct device *dev,
+						 pm_message_t msg)
 {
 	struct ci_hdrc_imx_data *data = dev_get_drvdata(dev);
 	int ret = 0;
 
 	dev_dbg(dev, "at %s\n", __func__);
 
-	ret = imx_usbmisc_hsic_set_clk(data->usbmisc_data, false);
+	ret = imx_usbmisc_suspend(data->usbmisc_data,
+				  PMSG_IS_AUTO(msg) || device_may_wakeup(dev));
 	if (ret) {
-		dev_err(dev, "usbmisc hsic_set_clk failed, ret=%d\n", ret);
+		dev_err(dev,
+			"usbmisc suspend failed, ret=%d\n", ret);
 		return ret;
 	}
 
@@ -568,7 +571,8 @@ static int __maybe_unused imx_controller_suspend(struct device *dev)
 	return 0;
 }
 
-static int __maybe_unused imx_controller_resume(struct device *dev)
+static int __maybe_unused imx_controller_resume(struct device *dev,
+						pm_message_t msg)
 {
 	struct ci_hdrc_imx_data *data = dev_get_drvdata(dev);
 	int ret = 0;
@@ -588,22 +592,15 @@ static int __maybe_unused imx_controller_resume(struct device *dev)
 
 	data->in_lpm = false;
 
-	ret = imx_usbmisc_set_wakeup(data->usbmisc_data, false);
+	ret = imx_usbmisc_resume(data->usbmisc_data,
+				 PMSG_IS_AUTO(msg) || device_may_wakeup(dev));
 	if (ret) {
-		dev_err(dev, "usbmisc set_wakeup failed, ret=%d\n", ret);
+		dev_err(dev, "usbmisc resume failed, ret=%d\n", ret);
 		goto clk_disable;
-	}
-
-	ret = imx_usbmisc_hsic_set_clk(data->usbmisc_data, true);
-	if (ret) {
-		dev_err(dev, "usbmisc hsic_set_clk failed, ret=%d\n", ret);
-		goto hsic_set_clk_fail;
 	}
 
 	return 0;
 
-hsic_set_clk_fail:
-	imx_usbmisc_set_wakeup(data->usbmisc_data, true);
 clk_disable:
 	imx_disable_unprepare_clks(dev);
 	return ret;
@@ -619,16 +616,7 @@ static int __maybe_unused ci_hdrc_imx_suspend(struct device *dev)
 		/* The core's suspend doesn't run */
 		return 0;
 
-	if (device_may_wakeup(dev)) {
-		ret = imx_usbmisc_set_wakeup(data->usbmisc_data, true);
-		if (ret) {
-			dev_err(dev, "usbmisc set_wakeup failed, ret=%d\n",
-					ret);
-			return ret;
-		}
-	}
-
-	ret = imx_controller_suspend(dev);
+	ret = imx_controller_suspend(dev, PMSG_SUSPEND);
 	if (ret)
 		return ret;
 
@@ -642,7 +630,7 @@ static int __maybe_unused ci_hdrc_imx_resume(struct device *dev)
 	int ret;
 
 	pinctrl_pm_select_default_state(dev);
-	ret = imx_controller_resume(dev);
+	ret = imx_controller_resume(dev, PMSG_RESUME);
 	if (!ret && data->supports_runtime_pm) {
 		pm_runtime_disable(dev);
 		pm_runtime_set_active(dev);
@@ -655,23 +643,16 @@ static int __maybe_unused ci_hdrc_imx_resume(struct device *dev)
 static int __maybe_unused ci_hdrc_imx_runtime_suspend(struct device *dev)
 {
 	struct ci_hdrc_imx_data *data = dev_get_drvdata(dev);
-	int ret;
 
 	if (data->in_lpm)
 		return 0;
 
-	ret = imx_usbmisc_set_wakeup(data->usbmisc_data, true);
-	if (ret) {
-		dev_err(dev, "usbmisc set_wakeup failed, ret=%d\n", ret);
-		return ret;
-	}
-
-	return imx_controller_suspend(dev);
+	return imx_controller_suspend(dev, PMSG_AUTO_SUSPEND);
 }
 
 static int __maybe_unused ci_hdrc_imx_runtime_resume(struct device *dev)
 {
-	return imx_controller_resume(dev);
+	return imx_controller_resume(dev, PMSG_AUTO_RESUME);
 }
 
 static const struct dev_pm_ops ci_hdrc_imx_pm_ops = {
