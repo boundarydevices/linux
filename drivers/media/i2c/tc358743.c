@@ -1679,18 +1679,15 @@ static int tc358743_enum_mbus_code(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int tc358743_get_fmt(struct v4l2_subdev *sd,
-		struct v4l2_subdev_state *sd_state,
-		struct v4l2_subdev_format *format)
+static int tc358743_get_format(struct v4l2_subdev *sd,
+		struct v4l2_mbus_framefmt *mf, u32 code)
 {
-	struct v4l2_mbus_framefmt *mf = &format->format;
 	struct tc358743_state *state = to_state(sd);
+	u32 colorspace = 0;
 	u8 vi_rep = i2c_rd8(sd, VI_REP);
 
-	if (format->pad != 0)
-		return -EINVAL;
 
-	mf->code = state->mbus_fmt_code;
+	mf->code = code;
 	mf->width = state->timings.bt.width;
 	mf->height = state->timings.bt.height;
 	mf->field = V4L2_FIELD_NONE;
@@ -1698,24 +1695,39 @@ static int tc358743_get_fmt(struct v4l2_subdev *sd,
 	switch (vi_rep & MASK_VOUT_COLOR_SEL) {
 	case MASK_VOUT_COLOR_RGB_FULL:
 	case MASK_VOUT_COLOR_RGB_LIMITED:
-		mf->colorspace = V4L2_COLORSPACE_SRGB;
+		colorspace = V4L2_COLORSPACE_SRGB;
 		break;
 	case MASK_VOUT_COLOR_601_YCBCR_LIMITED:
 	case MASK_VOUT_COLOR_601_YCBCR_FULL:
-		mf->colorspace = V4L2_COLORSPACE_SMPTE170M;
+		colorspace = V4L2_COLORSPACE_SMPTE170M;
 		break;
 	case MASK_VOUT_COLOR_709_YCBCR_FULL:
 	case MASK_VOUT_COLOR_709_YCBCR_LIMITED:
-		mf->colorspace = V4L2_COLORSPACE_REC709;
-		break;
-	default:
-		mf->colorspace = 0;
+		colorspace = V4L2_COLORSPACE_REC709;
 		break;
 	}
+	if (code == MEDIA_BUS_FMT_RGB888_1X24)
+		colorspace = V4L2_COLORSPACE_SRGB;
+	else if ((colorspace == V4L2_COLORSPACE_SRGB) || !colorspace)
+		colorspace = V4L2_COLORSPACE_SMPTE170M;
+
+	mf->colorspace = colorspace;
 	v4l2_dbg(3, debug, sd, "%s: code=0x%x, %d x %d, colorspace=%d, vi_rep=0x%x\n",
 		__func__, mf->code, mf->width, mf->height, mf->colorspace,
 		vi_rep);
 	return 0;
+}
+
+static int tc358743_get_fmt(struct v4l2_subdev *sd,
+		struct v4l2_subdev_state *sd_state,
+		struct v4l2_subdev_format *format)
+{
+	struct tc358743_state *state = to_state(sd);
+
+	if (format->pad != 0)
+		return -EINVAL;
+
+	return tc358743_get_format(sd, &format->format, state->mbus_fmt_code);
 }
 
 static int tc358743_set_fmt(struct v4l2_subdev *sd,
@@ -1723,17 +1735,14 @@ static int tc358743_set_fmt(struct v4l2_subdev *sd,
 		struct v4l2_subdev_format *format)
 {
 	struct tc358743_state *state = to_state(sd);
+	struct v4l2_mbus_framefmt *mf = &format->format;
 
-	u32 code = format->format.code; /* is overwritten by get_fmt */
-	int ret = tc358743_get_fmt(sd, sd_state, format);
-
-	format->format.code = code;
+	int ret = tc358743_get_format(sd, mf, mf->code);
 
 	if (ret)
 		return ret;
 
-	v4l2_dbg(2, debug, sd, "%s: code=0x%x\n", __func__, code);
-	switch (code) {
+	switch (mf->code) {
 	case MEDIA_BUS_FMT_RGB888_1X24:
 	case MEDIA_BUS_FMT_UYVY8_1X16:
 	case MEDIA_BUS_FMT_UYVY8_2X8:
@@ -1745,7 +1754,7 @@ static int tc358743_set_fmt(struct v4l2_subdev *sd,
 	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
 		return 0;
 
-	state->mbus_fmt_code = format->format.code;
+	state->mbus_fmt_code = mf->code;
 
 	enable_stream(sd, false);
 	tc358743_set_pll(sd);
