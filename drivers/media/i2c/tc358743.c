@@ -1478,6 +1478,7 @@ static int tc358743_isr(struct v4l2_subdev *sd, u32 status, bool *handled)
 
 	intstatus = i2c_rd16(sd, INTSTATUS);
 	if (intstatus) {
+		i2c_wr16(sd, INTSTATUS, intstatus);
 		v4l2_dbg(1, debug, sd,
 				"%s: Unhandled IntStatus interrupts: 0x%02x\n",
 				__func__, intstatus);
