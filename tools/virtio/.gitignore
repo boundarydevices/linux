@@ -3,4 +3,5 @@
 virtio_test
 vringh_test
 virtio-trace/trace-agent
+virtio-ivshmem-block
 virtio-ivshmem-console
