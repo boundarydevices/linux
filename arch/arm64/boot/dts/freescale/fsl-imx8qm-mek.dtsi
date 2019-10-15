@@ -35,6 +35,8 @@
 				};
 				product {
 					compatible = "android,product";
+					/* default emmc node used for GSI */
+					dev = "/dev/block/platform/5b010000.usdhc/by-name/product";
 					/* sd card node which used if androidboot.storage_type=sd */
 					dev_mmcblk1 = "/dev/block/platform/5b020000.usdhc/by-name/product";
 					/* emmc node which used if androidboot.storage_type=emmc */
