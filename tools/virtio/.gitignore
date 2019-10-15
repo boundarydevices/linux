@@ -2,4 +2,5 @@
 *.d
 virtio_test
 vringh_test
+virtio-ivshmem-block
 virtio-ivshmem-console
