@@ -40,15 +40,15 @@
 };
 
 &ldb1_phy {
-	status = "disabled";
+	status = "okay";
 };
 
 &ldb1 {
-	status = "disabled";
+	status = "okay";
 };
 
 &i2c1_lvds0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &irqsteer_hdmi {
