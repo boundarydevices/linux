@@ -2272,6 +2272,12 @@ gckHARDWARE_Construct(
     hardware->minFscaleValue = 1;
     hardware->waitCount = 200;
 
+    if (_IsHardwareMatch(hardware, gcv600, 0x4653)
+        || _IsHardwareMatch(hardware, gcv400, 0x4645))
+    {
+        hardware->minFscaleValue = 20;
+    }
+
     gckSTATETIMER_Reset(&hardware->powerStateCounter, 0);
 
 #if gcdLINK_QUEUE_SIZE
