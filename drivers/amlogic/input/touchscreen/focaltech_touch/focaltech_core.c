@@ -492,8 +492,19 @@ static int fts_input_dev_report_b(struct ts_event *event, struct fts_ts_data *da
             }
             input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR, event->area[i]);
 
-            input_report_abs(data->input_dev, ABS_MT_POSITION_X, event->au16_x[i]);
-            input_report_abs(data->input_dev, ABS_MT_POSITION_Y, event->au16_y[i]);
+	if (data->pdata->rotation) {
+		input_report_abs(data->input_dev, ABS_MT_POSITION_X,
+				 data->pdata->x_max - event->au16_y[i]);
+		input_report_abs(data->input_dev, ABS_MT_POSITION_Y,
+				 event->au16_x[i]);
+
+	} else {
+		input_report_abs(data->input_dev, ABS_MT_POSITION_X,
+				 event->au16_x[i]);
+		input_report_abs(data->input_dev, ABS_MT_POSITION_Y,
+				 event->au16_y[i]);
+	}
+
             touchs |= BIT(event->au8_finger_id[i]);
             data->touchs |= BIT(event->au8_finger_id[i]);
 
@@ -994,10 +1005,15 @@ static int fts_parse_dt(struct device *dev, struct fts_ts_platform_data *pdata)
     rc = of_property_read_u32(np, "y_max", &temp_val);
     if (!rc)
     {
-        pdata->x_max = temp_val;
-        FTS_DEBUG("y_max=%d", pdata->x_max);
+	pdata->y_max = temp_val;
+	FTS_DEBUG("y_max=%d", pdata->y_max);
     }
 
+	rc = of_property_read_u32(np, "rotation", &temp_val);
+	if (!rc) {
+		pdata->rotation = temp_val;
+		FTS_DEBUG("rotation = %d", pdata->rotation);
+	}
 
     FTS_FUNC_EXIT();
     return 0;

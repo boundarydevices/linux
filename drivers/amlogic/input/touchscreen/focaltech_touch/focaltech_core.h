@@ -109,20 +109,21 @@
 
 struct fts_ts_platform_data
 {
-    s32 irq_gpio;
-    u32 irq_gpio_flags;
-    s32 reset_gpio;
-    u32 reset_gpio_flags;
-    bool have_key;
-    u32 key_number;
-    u32 keys[4];
-    u32 key_y_coord;
-    u32 key_x_coords[4];
-    u32 x_max;
-    u32 y_max;
-    u32 x_min;
-    u32 y_min;
-    u32 max_touch_number;
+	s32 irq_gpio;
+	u32 irq_gpio_flags;
+	s32 reset_gpio;
+	u32 reset_gpio_flags;
+	bool have_key;
+	u32 key_number;
+	u32 keys[4];
+	u32 key_y_coord;
+	u32 key_x_coords[4];
+	u32 x_max;
+	u32 y_max;
+	u32 x_min;
+	u32 y_min;
+	u32 max_touch_number;
+	u32 rotation;
 };
 
 struct ts_event
