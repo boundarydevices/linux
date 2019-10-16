@@ -2071,7 +2071,11 @@ static void vpp_set_super_scaler(
 			is_meson_g12a_cpu() ||
 			is_meson_g12b_cpu() ||
 			is_meson_sm1_cpu()) {
-			next_frame_par->supscl_path = CORE0_BEFORE_PPS;
+			if (next_frame_par->supsc0_hori_ratio &&
+			    next_frame_par->supsc0_vert_ratio)
+				next_frame_par->supscl_path = CORE0_BEFORE_PPS;
+			else
+				next_frame_par->supscl_path = CORE0_AFTER_PPS;
 		} else
 			next_frame_par->supscl_path = CORE0_PPS_CORE1;
 	} else
