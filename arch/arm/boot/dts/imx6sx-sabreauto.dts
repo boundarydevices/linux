@@ -135,6 +135,15 @@
 	assigned-clock-rates = <0>, <0>, <24576000>;
 };
 
+&csi2 {
+	status = "okay";
+	port {
+		csi2_ep: endpoint {
+			remote-endpoint = <&vadc_ep>;
+		};
+	};
+};
+
 &dcic1 {
 	dcic_id = <0>;
 	dcic_mux = "dcic-lcdif1";
@@ -716,6 +725,17 @@
 	assigned-clocks = <&clks IMX6SX_CLK_SPDIF_PODF>;
 	assigned-clock-rates = <24576000>;
 	status = "okay";
+};
+
+&vadc {
+	vadc_in = <0>;
+	csi_id = <1>;
+	status = "okay";
+	port {
+		vadc_ep: endpoint {
+			remote-endpoint = <&csi2_ep>;
+		};
+	};
 };
 
 &wdog1 {
