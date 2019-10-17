@@ -510,20 +510,33 @@ static int fg_read_vfsoc(struct max77823_fuelgauge_data *fuelgauge)
 }
 
 #ifdef CONFIG_FUELGAUGE_MAX77823_COULOMB_COUNTING
+/*
+ * The register passed in here has units of 5uVh for the lsb.
+ * With a 10 mohm sense resistor, this is 5uVh/10 mohm = .5mAh
+ *
+ * The output is in units of uWh
+ */
 static int fg_read_power(struct max77823_fuelgauge_data *fuelgauge, int reg)
 {
 
 	int ret;
 
 	ret = max77823_read_word(fuelgauge->i2c, reg);
-	if (ret < 0)
+	if (ret < 0) {
 		pr_err("%s: Failed to read 0x%x(%d)\n", __func__, reg, ret);
+		return 0;
+	}
 	/*
 	 * convert from uVh to uWh, with a 10 mOhm sense resistor
 	 *  uVh/(.010 Ohms) =  uVh * 100/Ohms =  100uAh
 	 *  uAh * V = uWh
+	 *
+	 *  reg * 5 uVh / 10 mOhm * 3.7 V
+	 *  reg * 500 uAh * 3.7 V
+	 *  reg * 500 uAh * 3.7 V
+	 *  reg * 5 * 370 uWh
 	 */
-	return ret * 370 ;	/* 3.7 Volts nominal */
+	return ret * (5 * 370) ;	/* 3.7 Volts nominal */
 }
 #endif
 
