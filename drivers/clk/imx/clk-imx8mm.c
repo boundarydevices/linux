@@ -292,6 +292,32 @@ static const char *imx8mm_clko2_sels[] = {"osc_24m", "sys_pll2_200m", "sys_pll1_
 static struct clk_hw_onecell_data *clk_hw_data;
 static struct clk_hw **hws;
 
+static int __init imx_clk_init_on(struct device_node *np,
+				  struct clk * const clks[])
+{
+	u32 *array;
+	int i, ret, elems;
+
+	elems = of_property_count_u32_elems(np, "init-on-array");
+	if (elems < 0)
+		return elems;
+	array = kcalloc(elems, sizeof(elems), GFP_KERNEL);
+	if (IS_ERR_OR_NULL(array))
+		return PTR_ERR(array);
+
+	ret = of_property_read_u32_array(np, "init-on-array", array, elems);
+	if (ret)
+		return ret;
+
+	for (i = 0; i < elems; i++) {
+		ret = clk_prepare_enable(clks[array[i]]);
+		if (ret)
+			pr_err("clk_prepare_enable failed %d\n", array[i]);
+	}
+
+	return 0;
+}
+
 static int imx8mm_clocks_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -622,6 +648,8 @@ static int imx8mm_clocks_probe(struct platform_device *pdev)
 
 		uart_hws[i] = &hws[index]->clk;
 	}
+
+	imx_clk_init_on(np, clks);
 
 	clk_set_parent(clks[IMX8MM_CLK_PCIE1_CTRL], clks[IMX8MM_SYS_PLL2_250M]);
 	clk_set_parent(clks[IMX8MM_CLK_PCIE1_PHY], clks[IMX8MM_SYS_PLL2_100M]);
