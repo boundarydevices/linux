@@ -98,6 +98,7 @@ struct tc358743_state {
 	struct gpio_desc *reset_gpio;
 
 	struct cec_adapter *cec_adap;
+	u32 last_reg;
 };
 
 static void tc358743_enable_interrupts(struct v4l2_subdev *sd,
@@ -1356,6 +1357,19 @@ static int tc358743_log_status(struct v4l2_subdev *sd)
 	return 0;
 }
 
+static int tc358743_get_reg_size(u16 address)
+{
+	/* REF_01 p. 66-72 */
+	if (address <= 0x00ff)
+		return 2;
+	else if ((address >= 0x0100) && (address <= 0x06FF))
+		return 4;
+	else if ((address >= 0x0700) && (address <= 0x84ff))
+		return 2;
+	else
+		return 1;
+}
+
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 static void tc358743_print_register_map(struct v4l2_subdev *sd)
 {
@@ -1375,19 +1389,6 @@ static void tc358743_print_register_map(struct v4l2_subdev *sd)
 	v4l2_info(sd, "0x9000-0x90FF: HDMIRX GBD Extraction Control\n");
 	v4l2_info(sd, "0x9100-0x92FF: HDMIRX GBD RAM read\n");
 	v4l2_info(sd, "0x9300-      : Reserved\n");
-}
-
-static int tc358743_get_reg_size(u16 address)
-{
-	/* REF_01 p. 66-72 */
-	if (address <= 0x00ff)
-		return 2;
-	else if ((address >= 0x0100) && (address <= 0x06FF))
-		return 4;
-	else if ((address >= 0x0700) && (address <= 0x84ff))
-		return 2;
-	else
-		return 1;
 }
 
 static int tc358743_g_register(struct v4l2_subdev *sd,
@@ -2058,6 +2059,50 @@ static inline int tc358743_probe_of(struct tc358743_state *state)
 }
 #endif
 
+static ssize_t show_reg(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct v4l2_subdev *sd = dev_get_drvdata(dev);
+	struct tc358743_state *state = to_state(sd);
+	u32 val;
+	int size = tc358743_get_reg_size(state->last_reg);
+
+	val = i2c_rdreg(sd, state->last_reg, size);
+	if (size == 1)
+		return sprintf(buf, "[0x%04x]=%02x\n", state->last_reg, val & 0xff);
+	else if (size == 2)
+		return sprintf(buf, "[0x%04x]=%04x\n", state->last_reg, val & 0xffff);
+	return sprintf(buf, "[0x%04x]=%08x", state->last_reg, val);
+}
+
+static ssize_t set_reg(struct device *dev,
+			struct device_attribute *attr,
+		       const char *buf, size_t count)
+{
+	struct v4l2_subdev *sd = dev_get_drvdata(dev);
+	struct tc358743_state *state = to_state(sd);
+	int regnum, value;
+	int num_parsed = sscanf(buf, "%04x %02x", &regnum, &value);
+	int size;
+	__le32 raw;
+
+	if (1 <= num_parsed) {
+		if (0xffff < (unsigned)regnum){
+			pr_err("%s:invalid regnum %x\n", __func__, regnum);
+			return 0;
+		}
+		size = tc358743_get_reg_size(regnum);
+		state->last_reg = regnum;
+	}
+	if (2 == num_parsed) {
+		raw = cpu_to_le32(value);
+		i2c_wr(sd, regnum, (u8*)&raw, size);
+	}
+	return count;
+}
+
+static DEVICE_ATTR(tc358743_reg, S_IRUGO|S_IWUSR|S_IWGRP, show_reg, set_reg);
+
 static int tc358743_probe(struct i2c_client *client)
 {
 	static struct v4l2_dv_timings default_timing =
@@ -2215,6 +2260,11 @@ static int tc358743_probe(struct i2c_client *client)
 		  client->addr << 1, client->adapter->name,
 		  state->timings.bt.width, state->timings.bt.height, tries);
 
+	err = device_create_file(&client->dev, &dev_attr_tc358743_reg);
+	if (err) {
+		pr_err("%s: create tc358743_reg failed, error=%d\n",
+			__func__, err);
+	}
 	return 0;
 
 err_work_queues:
@@ -2234,6 +2284,7 @@ static void tc358743_remove(struct i2c_client *client)
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct tc358743_state *state = to_state(sd);
 
+	device_remove_file(&client->dev, &dev_attr_tc358743_reg);
 	if (!state->i2c_client->irq) {
 		del_timer_sync(&state->timer);
 		flush_work(&state->work_i2c_poll);
