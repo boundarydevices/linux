@@ -652,8 +652,8 @@ static void tc358743_set_csi_color_space(struct v4l2_subdev *sd)
 	case MEDIA_BUS_FMT_UYVY8_1X16:
 		v4l2_dbg(2, debug, sd, "%s: YCbCr 422 16-bit\n", __func__);
 		i2c_wr8_and_or(sd, VOUT_SET2,
-				~(MASK_SEL422 | MASK_VOUT_422FIL_100) & 0xff,
-				MASK_SEL422 | MASK_VOUT_422FIL_100);
+			~(MASK_SEL422 | MASK_VOUT_422FIL_100 | MASK_VOUTCOLORMODE) & 0xff,
+			MASK_VOUTCOLORMODE_AUTO | MASK_SEL422 | MASK_VOUT_422FIL_100);
 		i2c_wr8_and_or(sd, VI_REP, ~MASK_VOUT_COLOR_SEL & 0xff,
 				MASK_VOUT_COLOR_601_YCBCR_LIMITED);
 		mutex_lock(&state->confctl_mutex);
@@ -664,8 +664,8 @@ static void tc358743_set_csi_color_space(struct v4l2_subdev *sd)
 	case MEDIA_BUS_FMT_RGB888_1X24:
 		v4l2_dbg(2, debug, sd, "%s: RGB 888 24-bit\n", __func__);
 		i2c_wr8_and_or(sd, VOUT_SET2,
-				~(MASK_SEL422 | MASK_VOUT_422FIL_100) & 0xff,
-				0x00);
+			~(MASK_SEL422 | MASK_VOUT_422FIL_100 | MASK_VOUTCOLORMODE) & 0xff,
+			MASK_VOUTCOLORMODE_THROUGH);
 		i2c_wr8_and_or(sd, VI_REP, ~MASK_VOUT_COLOR_SEL & 0xff,
 				MASK_VOUT_COLOR_RGB_FULL);
 		mutex_lock(&state->confctl_mutex);
