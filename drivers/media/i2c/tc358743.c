@@ -654,6 +654,7 @@ static void tc358743_set_csi_color_space(struct v4l2_subdev *sd)
 		i2c_wr8_and_or(sd, VOUT_SET2,
 			~(MASK_SEL422 | MASK_VOUT_422FIL_100 | MASK_VOUTCOLORMODE) & 0xff,
 			MASK_VOUTCOLORMODE_AUTO | MASK_SEL422 | MASK_VOUT_422FIL_100);
+		i2c_wr8(sd, VOUT_SET3, MASK_VOUT_EXTCNT);
 		i2c_wr8_and_or(sd, VI_REP, ~MASK_VOUT_COLOR_SEL & 0xff,
 				MASK_VOUT_COLOR_601_YCBCR_LIMITED);
 		mutex_lock(&state->confctl_mutex);
@@ -666,6 +667,7 @@ static void tc358743_set_csi_color_space(struct v4l2_subdev *sd)
 		i2c_wr8_and_or(sd, VOUT_SET2,
 			~(MASK_SEL422 | MASK_VOUT_422FIL_100 | MASK_VOUTCOLORMODE) & 0xff,
 			MASK_VOUTCOLORMODE_THROUGH);
+		i2c_wr8(sd, VOUT_SET3, 0);
 		i2c_wr8_and_or(sd, VI_REP, ~MASK_VOUT_COLOR_SEL & 0xff,
 				MASK_VOUT_COLOR_RGB_FULL);
 		mutex_lock(&state->confctl_mutex);
