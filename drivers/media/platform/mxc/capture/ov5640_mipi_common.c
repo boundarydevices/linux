@@ -2895,7 +2895,7 @@ static int ov5640_dev_init(struct ov5640 *sensor)
 static ssize_t show_reg(struct device *dev,
 			struct device_attribute *attr, char *buf)
 {
-	struct ov5640 *sensor = dev_get_drvdata(dev);
+	struct ov5640 *sensor = dev_to_ov5640_v(dev);
 	u8 val;
 	s32 rval = ov5640_read_reg(sensor, sensor->last_reg, &val);
 
@@ -2906,7 +2906,7 @@ static ssize_t set_reg(struct device *dev,
 			struct device_attribute *attr,
 		       const char *buf, size_t count)
 {
-	struct ov5640 *sensor = dev_get_drvdata(dev);
+	struct ov5640 *sensor = dev_to_ov5640_v(dev);
 	int regnum, value;
 	int num_parsed = sscanf(buf, "%04x=%02x", &regnum, &value);
 	if (1 <= num_parsed) {
