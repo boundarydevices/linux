@@ -246,6 +246,11 @@ static int ov5640_probe_v(struct ov5640 *sensor, struct clk *sensor_clk, u32 csi
 	return ret;
 }
 
+static struct ov5640 *dev_to_ov5640_v(struct device *dev)
+{
+	return dev_get_drvdata(dev);
+}
+
 /*!
  * ov5640 I2C detach function
  *
