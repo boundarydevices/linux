@@ -228,6 +228,11 @@ static struct ov5640 *to_ov5640(const struct i2c_client *client)
 	return container_of(i2c_get_clientdata(client), struct ov5640, subdev);
 }
 
+static struct ov5640 *dev_to_ov5640_v(struct device *dev)
+{
+	return container_of(dev_get_drvdata(dev), struct ov5640, subdev);
+}
+
 /*!
  * ov5640 I2C detach function
  *
