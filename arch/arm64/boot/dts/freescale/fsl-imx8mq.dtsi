@@ -556,7 +556,7 @@
 		assigned-clocks = <&clk IMX8MQ_CLK_CSI1_CORE>,
 				  <&clk IMX8MQ_CLK_CSI1_PHY_REF>,
 				  <&clk IMX8MQ_CLK_CSI1_ESC>;
-		assigned-clock-rates = <133000000>, <100000000>, <66000000>;
+		assigned-clock-rates = <266000000>, <333000000>, <66000000>;
 		power-domains = <&mipi_csi1_pd>;
 		csis-phy-reset = <&src 0x4c 7>;
 		phy-gpr = <&gpr 0x88>;
@@ -575,7 +575,7 @@
 		assigned-clocks = <&clk IMX8MQ_CLK_CSI2_CORE>,
 				  <&clk IMX8MQ_CLK_CSI2_PHY_REF>,
 				  <&clk IMX8MQ_CLK_CSI2_ESC>;
-		assigned-clock-rates = <133000000>, <100000000>, <66000000>;
+		assigned-clock-rates = <266000000>, <333000000>, <66000000>;
 		power-domains = <&mipi_csi2_pd>;
 		csis-phy-reset = <&src 0x50 7>;
 		phy-gpr = <&gpr 0xa4>;
