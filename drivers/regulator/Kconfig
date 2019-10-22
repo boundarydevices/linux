@@ -1036,5 +1036,11 @@ config REGULATOR_WM8994
 	  This driver provides support for the voltage regulators on the
 	  WM8994 CODEC.
 
+config REGULATOR_PCA9450
+    tristate "NXP PCA9450 Power Regulator"
+    depends on MFD_PCA9450
+    help
+      This driver supports PCA9450 voltage regulator chips.
+
 endif
 
