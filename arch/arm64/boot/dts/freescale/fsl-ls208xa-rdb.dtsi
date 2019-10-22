@@ -49,7 +49,7 @@
 		reg = <0x75>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		i2c-mux-never-disable;
+		idle-state = <0>;
 		i2c@1 {
 			#address-cells = <1>;
 			#size-cells = <0>;
