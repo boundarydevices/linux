@@ -237,7 +237,11 @@ static ssize_t temp_left_store(struct device *dev,
 	temp = simple_strtoul(buf, NULL, 10);
 	if (temp != vehicle_dummy->temp_left) {
 		vehicle_dummy->temp_left = temp;
+#ifdef CONFIG_VEHICLE_DRIVER_OREO
 		vehicle_hal_set_property(VEHICLE_AC_TEMP, AC_TEMP_LEFT_INDEX, temp);
+#else
+		vehicle_hal_set_property(VEHICLE_AC_TEMP, PIE_AC_TEMP_LEFT_INDEX, temp);
+#endif
 	}
 	return size;
 }
@@ -264,7 +268,11 @@ static ssize_t temp_right_store(struct device *dev,
 	temp = simple_strtoul(buf, NULL, 10);
 	if (temp != vehicle_dummy->temp_right) {
 		vehicle_dummy->temp_right = temp;
+#ifdef CONFIG_VEHICLE_DRIVER_OREO
 		vehicle_hal_set_property(VEHICLE_AC_TEMP, AC_TEMP_RIGHT_INDEX, temp);
+#else
+		vehicle_hal_set_property(VEHICLE_AC_TEMP, PIE_AC_TEMP_RIGHT_INDEX, temp);
+#endif
 	}
 	return size;
 }
