@@ -1,0 +1,152 @@
+/*
+ * Copyright 2019 NXP
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "fsl-imx8qm-mek-rpmsg.dts"
+
+&i2c0 {
+	clock-frequency = <1000000>;
+};
+
+&i2c1 {
+	clock-frequency = <1000000>;
+};
+
+&i2c2 {
+	clock-frequency = <1000000>;
+};
+
+&i2c3 {
+	clock-frequency = <1000000>;
+};
+
+&i2c4 {
+	clock-frequency = <1000000>;
+};
+
+&i2c0_cm40 {
+	clock-frequency = <1000000>;
+};
+
+&wm8960 {
+	quick-probe;
+};
+
+&i2c1_lvds0 {
+	clock-frequency = <500000>;
+};
+
+&i2c1_lvds1 {
+	clock-frequency = <500000>;
+};
+
+&lvds0_pwm {
+	status = "disabled";
+};
+
+&usdhc2 {
+	status = "disabled";
+};
+
+&audmix {
+	status = "disabled";
+};
+
+&asrc0 {
+	status = "disabled";
+};
+
+&i2c0_mipi_csi1 {
+	status = "disabled";
+};
+
+&jpegdec {
+	status = "disabled";
+};
+
+&jpegenc {
+	status = "disabled";
+};
+
+&vehicle_core {
+	status = "okay";
+};
+
+/ {
+	firmware {
+		android {
+			fstab {
+				/delete-node/ system;
+			};
+		};
+	};
+};
+
+/ {
+	sound-hdmi-tx {
+		compatible = "fsl,imx-audio-cdnhdmi";
+		model = "imx-audio-hdmi-tx";
+		audio-cpu = <&sai_hdmi_tx>;
+		protocol = <1>;
+		hdmi-out;
+	};
+
+	sound-amix-sai {
+		status = "disabled";
+	};
+
+	sound-hdmi-arc {
+		compatible = "fsl,imx-audio-spdif";
+		model = "imx-hdmi-arc";
+		spdif-controller = <&spdif1>;
+		spdif-in;
+		spdif-out;
+	};
+};
+
+&irqsteer_hdmi {
+	status = "okay";
+};
+
+&hdmi {
+	compatible = "fsl,imx8qm-hdmi";
+	assigned-clocks = <&clk IMX8QM_HDMI_PXL_SEL>,
+					<&clk IMX8QM_HDMI_PXL_LINK_SEL>,
+					<&clk IMX8QM_HDMI_PXL_MUX_SEL>;
+	assigned-clock-parents = <&clk IMX8QM_HDMI_AV_PLL_CLK>,
+							<&clk IMX8QM_HDMI_AV_PLL_CLK>,
+							<&clk IMX8QM_HDMI_AV_PLL_CLK>;
+	fsl,cec;
+	status = "okay";
+};
+
+&sai_hdmi_tx {
+	assigned-clocks =<&clk IMX8QM_ACM_HDMI_TX_SAI0_MCLK_SEL>,
+			<&clk IMX8QM_AUD_PLL0_DIV>,
+			<&clk IMX8QM_AUD_ACM_AUD_PLL_CLK0_DIV>,
+			<&clk IMX8QM_AUD_ACM_AUD_REC_CLK0_DIV>,
+			<&clk IMX8QM_AUD_SAI_HDMITX0_MCLK>;
+	assigned-clock-parents = <&clk IMX8QM_AUD_ACM_AUD_PLL_CLK0_CLK>;
+	assigned-clock-rates = <0>, <786432000>, <49152000>, <12288000>, <49152000>;
+	fsl,sai-asynchronous;
+	status = "okay";
+};
+
+&spdif1 {
+	assigned-clocks =<&clk IMX8QM_AUD_PLL0_DIV>,
+			<&clk IMX8QM_AUD_ACM_AUD_PLL_CLK0_DIV>,
+			<&clk IMX8QM_AUD_ACM_AUD_REC_CLK0_DIV>;
+	assigned-clock-rates = <786432000>, <49152000>, <12288000>;
+	status = "okay";
+};
+
