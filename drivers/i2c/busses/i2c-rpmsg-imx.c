@@ -112,6 +112,8 @@ struct i2c_rpmsg_info {
 
 	u8 bus_id;
 	u16 addr;
+	bool check_msg_id;
+	u8 msg_id;
 };
 
 static struct i2c_rpmsg_info i2c_rpmsg;
@@ -128,10 +130,27 @@ static int i2c_rpmsg_cb(struct rpmsg_device *rpdev, void *data, int len,
 	if (msg->header.type != I2C_RPMSG_TYPE_RESPONSE)
 		return -EINVAL;
 
+	if (i2c_rpmsg.check_msg_id && msg->buf[msg->len] != i2c_rpmsg.msg_id) {
+		dev_err(&rpdev->dev,
+		"expected msg_id:%d, received msg_id:%d, drop this recv\n",
+		i2c_rpmsg.msg_id, msg->buf[msg->len]);
+
+		/*
+		 * This response does not match the request id.
+		 * Drop it and wait for the right response.
+		 */
+		return 0;
+	}
+
 	if (msg->bus_id != i2c_rpmsg.bus_id || msg->addr != i2c_rpmsg.addr) {
 		dev_err(&rpdev->dev,
 		"expected bus_id:%d, addr:%2x, received bus_id:%d, addr:%2x\n",
 		i2c_rpmsg.bus_id, i2c_rpmsg.addr, msg->bus_id, msg->addr);
+
+		/*
+		 * The bus_id or addr of this response does not match the
+		 * request, but the msg_id match. So return error.
+		 */
 		return -EINVAL;
 	}
 
@@ -164,7 +183,10 @@ static int rpmsg_xfer(struct i2c_rpmsg_msg *rmsg, struct i2c_rpmsg_info *info)
 	ret = wait_for_completion_timeout(&info->cmd_complete,
 					msecs_to_jiffies(I2C_RPMSG_TIMEOUT));
 	if (!ret) {
-		dev_err(&info->rpdev->dev, "%s failed: timeout\n", __func__);
+		dev_err(&info->rpdev->dev, "%s failed: timeout, "
+				"target busid=%-2d, addr=0x%02X, %s\n",
+				__func__, rmsg->bus_id, rmsg->addr,
+				(rmsg->flags & I2C_M_RD) ? "R" : "W");
 		return -ETIMEDOUT;
 	}
 
@@ -208,6 +230,16 @@ static int i2c_rpmsg_read(struct i2c_msg *msg, struct i2c_rpmsg_info *info,
 	else
 		rmsg.flags = msg->flags;
 	rmsg.len = (msg->len);
+
+	/*
+	 * Add a message id for each send msg in the unused buffer field,
+	 * which will be send back by M4 in the buffer. So we can check
+	 * if this received frame is the actual response for my request
+	 * frame. This is useful when the timeouts occur in several
+	 * consecutive frames.
+	 */
+	if (info->check_msg_id)
+		rmsg.buf[rmsg.len] = info->msg_id;
 
 	reinit_completion(&info->cmd_complete);
 
@@ -261,6 +293,9 @@ int i2c_rpmsg_write(struct i2c_msg *msg, struct i2c_rpmsg_info *info,
 
 	for (i = 0; i < rmsg.len; i++)
 		rmsg.buf[i] = msg->buf[i];
+
+	if (info->check_msg_id)
+		rmsg.buf[rmsg.len] = info->msg_id;
 
 	reinit_completion(&info->cmd_complete);
 
@@ -331,6 +366,19 @@ static int i2c_rpbus_xfer(struct i2c_adapter *adapter,
 
 		i2c_rpmsg.bus_id = rdata->adapter.nr;
 		i2c_rpmsg.addr = pmsg->addr;
+		if (i2c_rpmsg.msg_id >= 0xFF)
+			i2c_rpmsg.msg_id = 0;
+		i2c_rpmsg.msg_id++;
+
+		if (pmsg->len == I2C_RPMSG_MAX_BUF_SIZE)
+			/*
+			 * The msg length is too long, cannot add msg_id
+			 * for this request. Will not check the msg_id
+			 * when receive response.
+			 */
+			i2c_rpmsg.check_msg_id = false;
+		else
+			i2c_rpmsg.check_msg_id = true;
 
 		if (pmsg->flags & I2C_M_RD) {
 			ret = i2c_rpmsg_read(pmsg, &i2c_rpmsg,
