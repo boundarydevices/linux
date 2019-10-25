@@ -390,6 +390,7 @@ struct usb_composite_driver {
 };
 
 extern int usb_composite_probe(struct usb_composite_driver *driver);
+extern int usb_composite_probe_udc_name(struct usb_composite_driver *driver, char *udc_name);
 extern void usb_composite_unregister(struct usb_composite_driver *driver);
 
 /**
@@ -467,6 +468,7 @@ struct usb_composite_dev {
 	struct usb_request		*os_desc_req;
 
 	struct usb_configuration	*config;
+	void *private_data;
 
 	/* OS String is a custom (yet popular) extension to the USB standard. */
 	u8				qw_sign[OS_STRING_QW_SIGN_LEN];

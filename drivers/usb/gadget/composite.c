@@ -2488,7 +2488,7 @@ static const struct usb_gadget_driver composite_driver_template = {
  * while it was binding.  That would usually be done in order to wait for
  * some userspace participation.
  */
-int usb_composite_probe(struct usb_composite_driver *driver)
+int usb_composite_probe_udc_name(struct usb_composite_driver *driver, char *udc_name)
 {
 	struct usb_gadget_driver *gadget_driver;
 
@@ -2500,12 +2500,19 @@ int usb_composite_probe(struct usb_composite_driver *driver)
 
 	driver->gadget_driver = composite_driver_template;
 	gadget_driver = &driver->gadget_driver;
+	gadget_driver->udc_name = udc_name;
 
 	gadget_driver->function =  (char *) driver->name;
 	gadget_driver->driver.name = driver->name;
 	gadget_driver->max_speed = driver->max_speed;
 
 	return usb_gadget_register_driver(gadget_driver);
+}
+EXPORT_SYMBOL_GPL(usb_composite_probe_udc_name);
+
+int usb_composite_probe(struct usb_composite_driver *driver)
+{
+	return usb_composite_probe_udc_name(driver, NULL);
 }
 EXPORT_SYMBOL_GPL(usb_composite_probe);
 
