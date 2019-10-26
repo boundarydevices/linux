@@ -1343,7 +1343,8 @@
 			 "MMC_CAP_ERASE",
 			 "MMC_CAP_CMD23",
 			 "MMC_CAP_DRIVER_TYPE_A";
-		caps2 = "MMC_CAP2_HS200", "MMC_CAP2_HS400";
+		caps2 = "MMC_CAP2_HS200";
+		/*MMC_CAP2_HS400"*/
 		f_min = <400000>;
 		f_max = <200000000>;
 	};
@@ -1468,6 +1469,10 @@
 };
 &ethmac {
 	status = "okay";
+/*	//conflict with isp i2c
+	pinctrl-names = "internal_eth_pins";
+	pinctrl-0 = <&internal_eth_pins>;
+*/
 	mc_val = <0x4be04>;
 
 	internal_phy=<1>;

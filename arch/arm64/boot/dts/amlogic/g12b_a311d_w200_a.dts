@@ -1446,6 +1446,10 @@
 };
 &ethmac {
 	status = "okay";
+/*	//conflict with isp i2c
+	pinctrl-names = "internal_eth_pins";
+	pinctrl-0 = <&internal_eth_pins>;
+*/
 	mc_val = <0x4be04>;
 
 	internal_phy=<1>;
