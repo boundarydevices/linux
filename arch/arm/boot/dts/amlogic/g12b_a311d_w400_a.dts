@@ -498,6 +498,9 @@
 		gamma_en = <0>;/*1:enabel ;0:disable*/
 		wb_en = <0>;/*1:enabel ;0:disable*/
 		cm_en = <0>;/*1:enabel ;0:disable*/
+
+		interrupts = <0 56 1>;
+		interrupt-names = "vsync2";
 	};
 	amdolby_vision {
 		compatible = "amlogic, dolby_vision_g12a";
@@ -780,7 +783,7 @@
 	sensor: sensor {
 		compatible = "soc, sensor";
 		status = "okay";
-		sensor-name = "imx290"; /*imx290;os08a10;imx227*/
+		sensor-name = "os08a10"; /*imx290;os08a10;imx227*/
 		pinctrl-names="default";
 		pinctrl-0=<&clk12_24_z_pins>;
 		clocks = <&clkc CLKID_24M>;
@@ -793,7 +796,7 @@
 	iq: iq {
 		compatible = "soc, iq";
 		status = "okay";
-		sensor-name = "imx290"; /*imx290;os08a10;imx227*/
+		sensor-name = "os08a10"; /*imx290;os08a10;imx227*/
 	};
 }; /* end of / */
 
@@ -878,12 +881,13 @@
 
 	touchscreen@38 {
 		compatible = "focaltech,fts";
-		status = "disabled";
+		status = "okay";
 		reg = <0x38>;
 		reset-gpio = <&gpio GPIOZ_9 GPIO_ACTIVE_HIGH>;
 		irq-gpio = <&gpio GPIOZ_3 GPIO_ACTIVE_HIGH>;
-		x_max = <720>;
-		y_max = <1280>;
+		x_max = <1280>;
+		y_max = <720>;
+		rotation = <1>;
 		max-touch-number = <10>;
 	};
 };
@@ -901,6 +905,7 @@
 		reg = <0x31>;
 		status = "okay";
 		reset_pin = <&gpio GPIOA_5 0>;
+		no_mclk;
 	};
 
 	tlv320adc3101_32: tlv320adc3101_32@32 {
