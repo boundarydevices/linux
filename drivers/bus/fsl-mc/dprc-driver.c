@@ -486,8 +486,9 @@ out:
 /*
  * Disable and clear interrupt for a given DPRC object
  */
-static int disable_dprc_irq(struct fsl_mc_device *mc_dev)
+int disable_dprc_irq(struct fsl_mc_device *mc_dev)
 {
+	struct fsl_mc_bus *mc_bus = to_fsl_mc_bus(mc_dev);
 	int error;
 	struct fsl_mc_io *mc_io = mc_dev->mc_io;
 
@@ -524,7 +525,16 @@ static int disable_dprc_irq(struct fsl_mc_device *mc_dev)
 		return error;
 	}
 
+	mc_bus->irq_enabled = 0;
+
 	return 0;
+}
+
+int get_dprc_irq_state(struct fsl_mc_device *mc_dev)
+{
+	struct fsl_mc_bus *mc_bus = to_fsl_mc_bus(mc_dev);
+
+	return mc_bus->irq_enabled;
 }
 
 static int register_dprc_irq_handler(struct fsl_mc_device *mc_dev)
@@ -553,8 +563,9 @@ static int register_dprc_irq_handler(struct fsl_mc_device *mc_dev)
 	return 0;
 }
 
-static int enable_dprc_irq(struct fsl_mc_device *mc_dev)
+int enable_dprc_irq(struct fsl_mc_device *mc_dev)
 {
+	struct fsl_mc_bus *mc_bus = to_fsl_mc_bus(mc_dev);
 	int error;
 
 	/*
@@ -581,6 +592,8 @@ static int enable_dprc_irq(struct fsl_mc_device *mc_dev)
 
 		return error;
 	}
+
+	mc_bus->irq_enabled = 1;
 
 	return 0;
 }
