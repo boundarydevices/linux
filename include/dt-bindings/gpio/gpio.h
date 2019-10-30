@@ -33,4 +33,7 @@
 #define GPIO_SLEEP_MAINTAIN_VALUE 0
 #define GPIO_SLEEP_MAY_LOOSE_VALUE 8
 
+/* Bit 4 output changes immediately to input */
+#define GPIO_PULSE_HIGH 0x10
+
 #endif

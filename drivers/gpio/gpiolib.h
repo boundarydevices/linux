@@ -202,6 +202,7 @@ struct gpio_desc {
 #define FLAG_USED_AS_IRQ 9	/* GPIO is connected to an IRQ */
 #define FLAG_IS_HOGGED	11	/* GPIO is hogged */
 #define FLAG_SLEEP_MAY_LOOSE_VALUE 12	/* GPIO may loose value in sleep */
+#define FLAG_PULSE_HIGH	13	/* GPIO set as input immediate after output */
 
 	/* Connection label */
 	const char		*label;

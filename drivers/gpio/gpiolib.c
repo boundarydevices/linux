@@ -2301,6 +2301,7 @@ static int _gpiod_direction_output_raw(struct gpio_desc *desc, int value)
 	struct gpio_chip *gc = desc->gdev->chip;
 	int val = !!value;
 	int ret;
+	int hwgpio = gpio_chip_hwgpio(desc);
 
 	/* GPIOs used for IRQs shall not be set as output */
 	if (test_bit(FLAG_USED_AS_IRQ, &desc->flags)) {
@@ -2312,7 +2313,7 @@ static int _gpiod_direction_output_raw(struct gpio_desc *desc, int value)
 
 	if (test_bit(FLAG_OPEN_DRAIN, &desc->flags)) {
 		/* First see if we can enable open drain in hardware */
-		ret = gpio_set_drive_single_ended(gc, gpio_chip_hwgpio(desc),
+		ret = gpio_set_drive_single_ended(gc, hwgpio,
 						  PIN_CONFIG_DRIVE_OPEN_DRAIN);
 		if (!ret)
 			goto set_output_value;
@@ -2321,7 +2322,7 @@ static int _gpiod_direction_output_raw(struct gpio_desc *desc, int value)
 			return gpiod_direction_input(desc);
 	}
 	else if (test_bit(FLAG_OPEN_SOURCE, &desc->flags)) {
-		ret = gpio_set_drive_single_ended(gc, gpio_chip_hwgpio(desc),
+		ret = gpio_set_drive_single_ended(gc, hwgpio,
 						  PIN_CONFIG_DRIVE_OPEN_SOURCE);
 		if (!ret)
 			goto set_output_value;
@@ -2329,7 +2330,7 @@ static int _gpiod_direction_output_raw(struct gpio_desc *desc, int value)
 		if (!val)
 			return gpiod_direction_input(desc);
 	} else {
-		gpio_set_drive_single_ended(gc, gpio_chip_hwgpio(desc),
+		gpio_set_drive_single_ended(gc, hwgpio,
 					    PIN_CONFIG_DRIVE_PUSH_PULL);
 	}
 
@@ -2341,9 +2342,18 @@ set_output_value:
 		return -EIO;
 	}
 
-	ret = gc->direction_output(gc, gpio_chip_hwgpio(desc), val);
-	if (!ret)
-		set_bit(FLAG_IS_OUT, &desc->flags);
+	if (val && test_bit(FLAG_PULSE_HIGH, &desc->flags) && gc->direction_out_in)
+		ret = gc->direction_out_in(gc, hwgpio, val);
+	else
+		ret = gc->direction_output(gc, hwgpio, val);
+	if (!ret) {
+		if (val && test_bit(FLAG_PULSE_HIGH, &desc->flags)) {
+			if (!gc->direction_out_in)
+				gc->direction_input(gc, hwgpio);
+		} else {
+			set_bit(FLAG_IS_OUT, &desc->flags);
+		}
+	}
 	trace_gpio_value(desc_to_gpio(desc), 0, val);
 	trace_gpio_direction(desc_to_gpio(desc), 0, ret);
 	return ret;
@@ -3273,6 +3283,8 @@ int gpiod_configure_flags(struct gpio_desc *desc, const char *con_id,
 		set_bit(FLAG_OPEN_DRAIN, &desc->flags);
 	if (lflags & GPIO_OPEN_SOURCE)
 		set_bit(FLAG_OPEN_SOURCE, &desc->flags);
+	if (lflags & GPIO_PULSE_HIGH)
+		set_bit(FLAG_PULSE_HIGH, &desc->flags);
 	if (lflags & GPIO_SLEEP_MAY_LOOSE_VALUE)
 		set_bit(FLAG_SLEEP_MAY_LOOSE_VALUE, &desc->flags);
 
@@ -3408,6 +3420,8 @@ struct gpio_desc *fwnode_get_named_gpiod(struct fwnode_handle *fwnode,
 			active_low = flags & OF_GPIO_ACTIVE_LOW;
 			single_ended = flags & OF_GPIO_SINGLE_ENDED;
 			open_drain = flags & OF_GPIO_OPEN_DRAIN;
+			if (flags & OF_GPIO_PULSE_HIGH)
+				lflags |= GPIO_PULSE_HIGH;
 		}
 	} else if (is_acpi_node(fwnode)) {
 		struct acpi_gpio_info info;
