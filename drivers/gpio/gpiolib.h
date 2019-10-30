@@ -167,6 +167,7 @@ struct gpio_desc {
 #define FLAG_EDGE_FALLING    17	/* GPIO CDEV detects falling edge events */
 #define FLAG_EVENT_CLOCK_REALTIME	18 /* GPIO CDEV reports REALTIME timestamps in events */
 #define FLAG_EVENT_CLOCK_HTE		19 /* GPIO CDEV reports hardware timestamps in events */
+#define FLAG_PULSE_HIGH	20 /* GPIO set as input immediate after output */
 
 	/* Connection label */
 	const char		*label;

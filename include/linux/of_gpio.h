@@ -30,6 +30,7 @@ enum of_gpio_flags {
 	OF_GPIO_PULL_UP = 0x10,
 	OF_GPIO_PULL_DOWN = 0x20,
 	OF_GPIO_PULL_DISABLE = 0x40,
+	OF_GPIO_PULSE_HIGH = 0x80,
 };
 
 #ifdef CONFIG_OF_GPIO
