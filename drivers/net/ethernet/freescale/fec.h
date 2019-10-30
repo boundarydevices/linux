@@ -637,6 +637,8 @@ struct fec_enet_private {
 	unsigned int next_counter;
 
 	struct fec_enet_stop_mode gpr;
+	struct gpio_desc *gd_mdc;
+	struct gpio_desc *gd_mdio;
 
 	u64 ethtool_stats[0];
 };
