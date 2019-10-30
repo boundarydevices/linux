@@ -589,6 +589,12 @@ static void gpiochip_setup_devs(void)
 	}
 }
 
+static int default_direction_out_in(struct gpio_chip *gc, unsigned int gpio, int val)
+{
+	gc->set(gc, gpio, val);
+	return gc->direction_input(gc, gpio);
+}
+
 int gpiochip_add_data_with_key(struct gpio_chip *gc, void *data,
 			       struct lock_class_key *lock_key,
 			       struct lock_class_key *request_key)
@@ -600,6 +606,8 @@ int gpiochip_add_data_with_key(struct gpio_chip *gc, void *data,
 	int		base = gc->base;
 	struct gpio_device *gdev;
 
+	if (!gc->direction_out_in)
+		gc->direction_out_in = default_direction_out_in;
 	/*
 	 * First: allocate and populate the internal stat container, and
 	 * set up the struct device.
@@ -2235,6 +2243,7 @@ int gpiod_direction_input(struct gpio_desc *desc)
 {
 	struct gpio_chip	*gc;
 	int			ret = 0;
+	int hwgpio = gpio_chip_hwgpio(desc);
 
 	VALIDATE_DESC(desc);
 	gc = desc->gdev->chip;
@@ -2258,9 +2267,13 @@ int gpiod_direction_input(struct gpio_desc *desc)
 	 * assume we are in input mode after this.
 	 */
 	if (gc->direction_input) {
-		ret = gc->direction_input(gc, gpio_chip_hwgpio(desc));
+		if (test_bit(FLAG_PULSE_HIGH, &desc->flags)) {
+			ret = gc->direction_out_in(gc, hwgpio, 1);
+		} else {
+			ret = gc->direction_input(gc, hwgpio);
+		}
 	} else if (gc->get_direction &&
-		  (gc->get_direction(gc, gpio_chip_hwgpio(desc)) != 1)) {
+		  (gc->get_direction(gc, hwgpio) != 1)) {
 		gpiod_warn(desc,
 			   "%s: missing direction_input() operation and line is output\n",
 			   __func__);
@@ -2282,6 +2295,7 @@ static int gpiod_direction_output_raw_commit(struct gpio_desc *desc, int value)
 	struct gpio_chip *gc = desc->gdev->chip;
 	int val = !!value;
 	int ret = 0;
+	int hwgpio = gpio_chip_hwgpio(desc);
 
 	/*
 	 * It's OK not to specify .direction_output() if the gpiochip is
@@ -2296,11 +2310,19 @@ static int gpiod_direction_output_raw_commit(struct gpio_desc *desc, int value)
 	}
 
 	if (gc->direction_output) {
-		ret = gc->direction_output(gc, gpio_chip_hwgpio(desc), val);
+		if (val && test_bit(FLAG_PULSE_HIGH, &desc->flags)) {
+			ret = gc->direction_out_in(gc, hwgpio, val);
+			if (!ret)
+				clear_bit(FLAG_IS_OUT, &desc->flags);
+		} else {
+			ret = gc->direction_output(gc, hwgpio, val);
+			if (!ret)
+				set_bit(FLAG_IS_OUT, &desc->flags);
+		}
 	} else {
 		/* Check that we are in output mode if we can */
 		if (gc->get_direction &&
-		    gc->get_direction(gc, gpio_chip_hwgpio(desc))) {
+		    gc->get_direction(gc, hwgpio)) {
 			gpiod_warn(desc,
 				"%s: missing direction_output() operation\n",
 				__func__);
@@ -2310,11 +2332,10 @@ static int gpiod_direction_output_raw_commit(struct gpio_desc *desc, int value)
 		 * If we can't actively set the direction, we are some
 		 * output-only chip, so just drive the output as desired.
 		 */
-		gc->set(gc, gpio_chip_hwgpio(desc), val);
+		gc->set(gc, hwgpio, val);
+		set_bit(FLAG_IS_OUT, &desc->flags);
 	}
 
-	if (!ret)
-		set_bit(FLAG_IS_OUT, &desc->flags);
 	trace_gpio_value(desc_to_gpio(desc), 0, val);
 	trace_gpio_direction(desc_to_gpio(desc), 0, ret);
 	return ret;
@@ -2820,10 +2841,25 @@ static void gpio_set_open_source_value_commit(struct gpio_desc *desc, bool value
 static void gpiod_set_raw_value_commit(struct gpio_desc *desc, bool value)
 {
 	struct gpio_chip	*gc;
+	int hwgpio = gpio_chip_hwgpio(desc);
+	int ret;
 
 	gc = desc->gdev->chip;
 	trace_gpio_value(desc_to_gpio(desc), 0, value);
-	gc->set(gc, gpio_chip_hwgpio(desc), value);
+
+	if (test_bit(FLAG_PULSE_HIGH, &desc->flags)) {
+		if (value) {
+			ret = gc->direction_out_in(gc, hwgpio, value);
+			if (!ret)
+				clear_bit(FLAG_IS_OUT, &desc->flags);
+		} else {
+			ret = gc->direction_output(gc, hwgpio, value);
+			if (!ret)
+				set_bit(FLAG_IS_OUT, &desc->flags);
+		}
+	} else {
+		gc->set(gc, hwgpio, value);
+	}
 }
 
 /*
@@ -3835,6 +3871,8 @@ int gpiod_configure_flags(struct gpio_desc *desc, const char *con_id,
 
 	if (lflags & GPIO_OPEN_SOURCE)
 		set_bit(FLAG_OPEN_SOURCE, &desc->flags);
+	if (lflags & GPIO_PULSE_HIGH)
+		set_bit(FLAG_PULSE_HIGH, &desc->flags);
 
 	if ((lflags & GPIO_PULL_UP) && (lflags & GPIO_PULL_DOWN)) {
 		gpiod_err(desc,

@@ -39,4 +39,9 @@
 /* Bit 5 express pull down */
 #define GPIO_PULL_DOWN 32
 
+/*
+ * Bit 6 changing to input pulses high 1st,
+ * high output changes immediately to input */
+#define GPIO_PULSE_HIGH 0x40
+
 #endif
