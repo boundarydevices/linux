@@ -647,6 +647,8 @@ struct fec_enet_private {
 
 	struct imx_sc_ipc *ipc_handle;
 
+	struct gpio_desc *gd_mdc;
+	struct gpio_desc *gd_mdio;
 	u64 ethtool_stats[];
 };
 

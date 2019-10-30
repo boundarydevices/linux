@@ -1895,6 +1895,99 @@ static void fec_enet_adjust_link(struct net_device *ndev)
 		phy_print_status(phy_dev);
 }
 
+static void bangout(struct fec_enet_private *fep, unsigned val, int cnt)
+{
+	int bit_val;
+	int prev_bit_val = 2;
+
+	while (cnt) {
+		cnt--;
+		gpiod_set_value(fep->gd_mdc, 0);
+		bit_val = (val >> cnt) & 1;
+		if (prev_bit_val != bit_val) {
+			prev_bit_val = bit_val;
+			if (bit_val)
+				gpiod_direction_input(fep->gd_mdio);
+			else
+				gpiod_direction_output(fep->gd_mdio, 0);
+		}
+		gpiod_set_value(fep->gd_mdc, 1);
+	}
+}
+
+static int phy_preamble(struct fec_enet_private *fep)
+{
+	bangout(fep, 0xffffffff, 32);
+	if (gpiod_get_value(fep->gd_mdio) != 1) {
+		bangout(fep, 0xffffffff, 32);
+		if (gpiod_get_value(fep->gd_mdio) != 1) {
+			dev_err(&fep->pdev->dev, "mdio is still low!\n");
+			return -EIO;
+		}
+	}
+	return 0;
+}
+
+static int fec_enet_mdio_read_bb(struct mii_bus *bus, int mii_id, int regnum)
+{
+	struct fec_enet_private *fep = bus->priv;
+	int val, ret;
+	int i;
+
+	val = FEC_MMFR_ST | FEC_MMFR_OP_READ |
+			FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
+			FEC_MMFR_TA;
+
+	ret = phy_preamble(fep);
+	if (ret)
+		return ret;
+	bangout(fep, val >> 17, 32 - 17);
+	gpiod_direction_input(fep->gd_mdio);
+
+	val = 0;
+	for (i = 0; i < 17; i++) {
+		val <<= 1;
+		gpiod_set_value(fep->gd_mdc, 0);
+		/* transferred with rising edge of MDC, sample on falling*/
+		if (gpiod_get_value(fep->gd_mdio))
+			val |= 1;
+		gpiod_set_value(fep->gd_mdc, 1);
+	}
+
+	dev_dbg(&fep->pdev->dev, "%s: phy: %02x reg:%02x val:%#x\n", __func__, mii_id,
+		regnum, val);
+	if (val & BIT(16)) {
+		if ((regnum != 2) && (regnum != 3)) {
+			dev_err(&fep->pdev->dev,
+				"%s: phy not responding: adr=0x%02x regnum:0x%02x val:0x%x\n",
+				__func__, mii_id, regnum, val);
+			msleep(1);
+		}
+		val = 0xffff; /* could return -EIO, but mii-tool looks for 0xffff */
+	}
+	return val;
+}
+
+static int fec_enet_mdio_write_bb(struct mii_bus *bus, int mii_id, int regnum,
+		   u16 value)
+{
+	struct fec_enet_private *fep = bus->priv;
+	int val;
+	int ret;
+
+	val = FEC_MMFR_ST | FEC_MMFR_OP_WRITE |
+			FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
+			FEC_MMFR_TA | FEC_MMFR_DATA(value);
+
+	ret = phy_preamble(fep);
+	if (ret)
+		return ret;
+	bangout(fep, val, 32);
+
+	gpiod_direction_input(fep->gd_mdio);
+	return 0;
+}
+
 static int fec_enet_mdio_wait(struct fec_enet_private *fep)
 {
 	uint ievent;
@@ -2325,8 +2418,13 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	}
 
 	fep->mii_bus->name = "fec_enet_mii_bus";
-	fep->mii_bus->read = fec_enet_mdio_read;
-	fep->mii_bus->write = fec_enet_mdio_write;
+	if (fep->gd_mdc && fep->gd_mdio) {
+		fep->mii_bus->read = fec_enet_mdio_read_bb;
+		fep->mii_bus->write = fec_enet_mdio_write_bb;
+	} else {
+		fep->mii_bus->read = fec_enet_mdio_read;
+		fep->mii_bus->write = fec_enet_mdio_write;
+	}
 	snprintf(fep->mii_bus->id, MII_BUS_ID_SIZE, "%s-%x",
 		pdev->name, fep->dev_id + 1);
 	fep->mii_bus->priv = fep;
@@ -3847,6 +3945,7 @@ fec_probe(struct platform_device *pdev)
 	char irq_name[8];
 	int irq_cnt;
 	struct fec_devinfo *dev_info;
+	struct gpio_desc *gd;
 
 	fec_enet_get_queue_num(pdev, &num_tx_qs, &num_rx_qs);
 
@@ -3900,6 +3999,26 @@ fec_probe(struct platform_device *pdev)
 	ret = fec_enet_ipc_handle_init(fep);
 	if (ret)
 		goto failed_ipc_init;
+
+	gd = devm_gpiod_get_optional(&pdev->dev, "mdc", GPIOD_OUT_HIGH);
+	if (IS_ERR(gd)) {
+		if (PTR_ERR(gd) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Failed to get mdc gpio: %ld\n",
+				PTR_ERR(gd));
+		ret = PTR_ERR(gd);
+		goto failed_ipc_init;
+	}
+	fep->gd_mdc = gd;
+
+	gd = devm_gpiod_get_optional(&pdev->dev, "mdio", GPIOD_IN);
+	if (IS_ERR(gd)) {
+		if (PTR_ERR(gd) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Failed to get mdio gpio: %ld\n",
+				PTR_ERR(gd));
+		ret = PTR_ERR(gd);
+		goto failed_ipc_init;
+	}
+	fep->gd_mdio = gd;
 
 	if (of_get_property(np, "fsl,magic-packet", NULL))
 		fep->wol_flag |= FEC_WOL_HAS_MAGIC_PACKET;
