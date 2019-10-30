@@ -1847,12 +1847,10 @@ static void bangout(struct fec_enet_private *fep, unsigned val, int cnt)
 	int prev_bit_val = 1;
 
 	gpiod_direction_input(fep->gd_mdio);
-	udelay(1);
 	gpiod_direction_output(fep->gd_mdc, 1);
 
 	while (cnt) {
 		cnt--;
-		udelay(1);
 		gpiod_direction_output(fep->gd_mdc, 0);
 		bit_val = (val >> cnt) & 1;
 		if (prev_bit_val != bit_val) {
@@ -1862,7 +1860,6 @@ static void bangout(struct fec_enet_private *fep, unsigned val, int cnt)
 			else
 				gpiod_direction_output(fep->gd_mdio, 0);
 		}
-		udelay(1);
 		gpiod_direction_output(fep->gd_mdc, 1);
 	}
 }
@@ -1884,11 +1881,9 @@ static int fec_enet_mdio_read_bb(struct mii_bus *bus, int mii_id, int regnum)
 	val = 0;
 	for (i = 0; i < 17; i++) {
 		val <<= 1;
-		udelay(1);
 		if (gpiod_get_value(fep->gd_mdio))
 			val |= 1;
 		gpiod_direction_output(fep->gd_mdc, 0);
-		udelay(1);
 		gpiod_direction_output(fep->gd_mdc, 1);
 	}
 	val &= 0xffff;
