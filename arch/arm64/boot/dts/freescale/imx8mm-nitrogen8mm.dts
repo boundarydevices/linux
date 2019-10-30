@@ -41,9 +41,11 @@
 
 	pinctrl_fec1: fec1grp {
 		fsl,pins = <
-			MX8MM_IOMUXC_ENET_MDC_ENET1_MDC			0x00
 			/* PAD_CTL_ODE is screwy on 8mm mini, avoid it */
-			MX8MM_IOMUXC_ENET_MDIO_ENET1_MDIO		0x00
+#define GP_MII_MDC	<&gpio1 16 GPIO_PULSE_HIGH>
+			MX8MM_IOMUXC_ENET_MDC_GPIO1_IO16		0x00
+#define GP_MII_MDIO	<&gpio1 17 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_ENET_MDIO_GPIO1_IO17		0x00
 			MX8MM_IOMUXC_ENET_RD0_ENET1_RGMII_RD0		0x91
 			MX8MM_IOMUXC_ENET_RD1_ENET1_RGMII_RD1		0x91
 			MX8MM_IOMUXC_ENET_RD2_ENET1_RGMII_RD2		0x91
@@ -716,6 +718,8 @@
 };
 
 &fec1 {
+	mdc-gpios = GP_MII_MDC;
+	mdio-gpios = GP_MII_MDIO;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_fec1>;
 #if 0
