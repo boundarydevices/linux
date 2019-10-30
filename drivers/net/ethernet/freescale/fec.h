@@ -693,6 +693,8 @@ struct fec_enet_private {
 	/* XDP BPF Program */
 	struct bpf_prog *xdp_prog;
 
+	struct gpio_desc *gd_mdc;
+	struct gpio_desc *gd_mdio;
 	u64 ethtool_stats[];
 };
 
