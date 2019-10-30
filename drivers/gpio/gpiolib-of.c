@@ -357,6 +357,8 @@ struct gpio_desc *gpiod_get_from_of_node(struct device_node *node,
 
 	if (transitory)
 		lflags |= GPIO_TRANSITORY;
+	if (flags & OF_GPIO_PULSE_HIGH)
+		lflags |= GPIO_PULSE_HIGH;
 
 	ret = gpiod_configure_flags(desc, propname, lflags, dflags);
 	if (ret < 0) {
@@ -533,6 +535,8 @@ struct gpio_desc *of_find_gpio(struct device *dev, const char *con_id,
 
 	if (of_flags & OF_GPIO_TRANSITORY)
 		*flags |= GPIO_TRANSITORY;
+	if (of_flags & OF_GPIO_PULSE_HIGH)
+		*flags |= GPIO_PULSE_HIGH;
 
 	if (of_flags & OF_GPIO_PULL_UP)
 		*flags |= GPIO_PULL_UP;
