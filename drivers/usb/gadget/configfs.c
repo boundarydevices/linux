@@ -1763,6 +1763,7 @@ static struct config_group *gadgets_make(
 	gi->composite.resume = NULL;
 	gi->composite.max_speed = USB_SPEED_SUPER;
 
+	spin_lock_init(&gi->spinlock);
 	mutex_init(&gi->lock);
 	spin_lock_init(&gi->spinlock);
 	INIT_LIST_HEAD(&gi->string_list);
