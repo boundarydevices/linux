@@ -41,5 +41,9 @@
 
 /* Bit 6 express pull disable */
 #define GPIO_PULL_DISABLE 64
+/*
+ * Bit 7 changing to input pulses high 1st,
+ * high output changes immediately to input */
+#define GPIO_PULSE_HIGH 0x80
 
 #endif

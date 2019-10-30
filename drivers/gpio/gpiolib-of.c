@@ -306,6 +306,8 @@ static unsigned long of_convert_gpio_flags(enum of_gpio_flags flags)
 
 	if (flags & OF_GPIO_TRANSITORY)
 		lflags |= GPIO_TRANSITORY;
+	if (flags & OF_GPIO_PULSE_HIGH)
+		lflags |= GPIO_PULSE_HIGH;
 
 	if (flags & OF_GPIO_PULL_UP)
 		lflags |= GPIO_PULL_UP;
