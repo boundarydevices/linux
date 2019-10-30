@@ -1947,9 +1947,9 @@ static int max77823_charger_resume(struct device *dev)
 #define max77823_charger_resume NULL
 #endif
 
-static void max77823_charger_shutdown(struct device *dev)
+static void max77823_charger_shutdown(struct platform_device *pdev)
 {
-	struct max77823_charger_data *charger = dev_get_drvdata(dev);
+	struct max77823_charger_data *charger = platform_get_drvdata(pdev);
 	struct sec_charging_current *ci = get_charging_info(charger, POWER_SUPPLY_TYPE_MAINS);
 
 	pr_debug("%s: MAX77823 Charger driver shutdown\n", __func__);
@@ -1993,13 +1993,13 @@ static struct platform_driver max77823_charger_driver = {
 #ifdef CONFIG_PM
 		.pm = &max77823_charger_pm_ops,
 #endif
-		.shutdown = max77823_charger_shutdown,
 #ifdef CONFIG_OF
 		.of_match_table = max77823_charger_dt_ids,
 #endif
 	},
 	.probe = max77823_charger_probe,
 	.remove = max77823_charger_remove,
+	.shutdown = max77823_charger_shutdown,
 };
 
 static int __init max77823_charger_init(void)
