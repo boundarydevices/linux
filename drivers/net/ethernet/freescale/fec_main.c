@@ -1841,6 +1841,83 @@ static void fec_enet_adjust_link(struct net_device *ndev)
 		phy_print_status(phy_dev);
 }
 
+static void bangout(struct fec_enet_private *fep, unsigned val, int cnt)
+{
+	int bit_val;
+	int prev_bit_val = 1;
+
+	gpiod_direction_input(fep->gd_mdio);
+	udelay(1);
+	gpiod_direction_output(fep->gd_mdc, 1);
+
+	while (cnt) {
+		cnt--;
+		udelay(1);
+		gpiod_direction_output(fep->gd_mdc, 0);
+		bit_val = (val >> cnt) & 1;
+		if (prev_bit_val != bit_val) {
+			prev_bit_val = bit_val;
+			if (bit_val)
+				gpiod_direction_input(fep->gd_mdio);
+			else
+				gpiod_direction_output(fep->gd_mdio, 0);
+		}
+		udelay(1);
+		gpiod_direction_output(fep->gd_mdc, 1);
+	}
+}
+
+static int fec_enet_mdio_read_bb(struct mii_bus *bus, int mii_id, int regnum)
+{
+	struct fec_enet_private *fep = bus->priv;
+	int val;
+	int i;
+
+	val = FEC_MMFR_ST | FEC_MMFR_OP_READ |
+			FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
+			FEC_MMFR_TA;
+
+	bangout(fep, 0xffffffff, 32);
+	bangout(fep, val >> 17, 32 - 17);
+	gpiod_direction_input(fep->gd_mdio);
+
+	val = 0;
+	for (i = 0; i < 17; i++) {
+		val <<= 1;
+		udelay(1);
+		if (gpiod_get_value(fep->gd_mdio))
+			val |= 1;
+		gpiod_direction_output(fep->gd_mdc, 0);
+		udelay(1);
+		gpiod_direction_output(fep->gd_mdc, 1);
+	}
+	val &= 0xffff;
+
+	gpiod_direction_input(fep->gd_mdc);
+
+	dev_dbg(&fep->pdev->dev, "%s: phy: %02x reg:%02x val:%#x\n", __func__, mii_id,
+		regnum, val);
+	return val;
+}
+
+static int fec_enet_mdio_write_bb(struct mii_bus *bus, int mii_id, int regnum,
+		   u16 value)
+{
+	struct fec_enet_private *fep = bus->priv;
+	uint32_t val;
+
+	val = FEC_MMFR_ST | FEC_MMFR_OP_WRITE |
+			FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
+			FEC_MMFR_TA | FEC_MMFR_DATA(value);
+
+	bangout(fep, 0xffffffff, 32);
+	bangout(fep, val, 32);
+
+	gpiod_direction_input(fep->gd_mdc);
+	gpiod_direction_input(fep->gd_mdio);
+	return 0;
+}
+
 static int fec_enet_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
 {
 	struct fec_enet_private *fep = bus->priv;
@@ -2144,8 +2221,13 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	}
 
 	fep->mii_bus->name = "fec_enet_mii_bus";
-	fep->mii_bus->read = fec_enet_mdio_read;
-	fep->mii_bus->write = fec_enet_mdio_write;
+	if (fep->gd_mdc && fep->gd_mdio) {
+		fep->mii_bus->read = fec_enet_mdio_read_bb;
+		fep->mii_bus->write = fec_enet_mdio_write_bb;
+	} else {
+		fep->mii_bus->read = fec_enet_mdio_read;
+		fep->mii_bus->write = fec_enet_mdio_write;
+	}
 	snprintf(fep->mii_bus->id, MII_BUS_ID_SIZE, "%s-%x",
 		pdev->name, fep->dev_id + 1);
 	fep->mii_bus->priv = fep;
@@ -3664,6 +3746,7 @@ fec_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node, *phy_node;
 	int num_tx_qs;
 	int num_rx_qs;
+	struct gpio_desc *gd;
 
 	fec_enet_get_queue_num(pdev, &num_tx_qs, &num_rx_qs);
 
@@ -3714,6 +3797,24 @@ fec_probe(struct platform_device *pdev)
 		fep->quirks |= FEC_QUIRK_ERR006687;
 
 	fec_enet_of_parse_stop_mode(pdev);
+
+	gd = devm_gpiod_get_optional(&pdev->dev, "mdc", GPIOD_IN);
+	if (IS_ERR(gd)) {
+		if (PTR_ERR(gd) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Failed to get mdc gpio: %ld\n",
+				PTR_ERR(gd));
+		return PTR_ERR(gd);
+	}
+	fep->gd_mdc = gd;
+
+	gd = devm_gpiod_get_optional(&pdev->dev, "mdio", GPIOD_IN);
+	if (IS_ERR(gd)) {
+		if (PTR_ERR(gd) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Failed to get mdio gpio: %ld\n",
+				PTR_ERR(gd));
+		return PTR_ERR(gd);
+	}
+	fep->gd_mdio = gd;
 
 	if (of_get_property(np, "fsl,magic-packet", NULL))
 		fep->wol_flag |= FEC_WOL_HAS_MAGIC_PACKET;
