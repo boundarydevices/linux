@@ -700,6 +700,8 @@ struct fec_enet_private {
 		u8 at_inc_corr;
 	} ptp_saved_state;
 
+	struct gpio_desc *gd_mdc;
+	struct gpio_desc *gd_mdio;
 	u64 ethtool_stats[];
 };
 
