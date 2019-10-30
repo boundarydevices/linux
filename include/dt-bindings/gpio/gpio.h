@@ -33,4 +33,9 @@
 #define GPIO_PERSISTENT 0
 #define GPIO_TRANSITORY 8
 
+/*
+ * Bit 4 changing to input pulses high 1st,
+ * high output changes immediately to input */
+#define GPIO_PULSE_HIGH 0x10
+
 #endif
