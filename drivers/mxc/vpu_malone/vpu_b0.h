@@ -3,12 +3,12 @@
  */
 
 /*
- * The code contained herein is licensed under the GNU Lesser General
- * Public License.  You may obtain a copy of the GNU Lesser General
- * Public License Version 2.1 or later at the following locations:
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
  *
- * http://www.opensource.org/licenses/lgpl-license.html
- * http://www.gnu.org/copyleft/lgpl.html
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
  */
 
 /*!
@@ -56,6 +56,7 @@ extern unsigned int vpu_dbg_level_decoder;
 #define MAX_MBI_NUM 18 // same with MEDIA_PLAYER_MAX_MBI_UNIT defined in firmware
 #define MAX_TIMEOUT_COUNT 10
 #define VPU_REG_BASE 0x40000000
+#define VPU_MAX_STEP_STRING_LENGTH 40
 
 #define V4L2_PIX_FMT_NV12_10BIT    v4l2_fourcc('N', 'T', '1', '2') /*  Y/CbCr 4:2:0 for 10bit  */
 #define INVALID_FRAME_DEPTH -1
@@ -213,12 +214,11 @@ struct queue_data {
 	unsigned int width;
 	unsigned int height;
 	unsigned int stride;
-	unsigned int bytesperline;
+	unsigned int field;
 	unsigned int num_planes;
 	unsigned int sizeimage[2];
 	unsigned int fourcc;
 	unsigned int vdec_std;
-	struct v4l2_rect rect;
 	int buf_type; // v4l2_buf_type
 	bool vb2_q_inited;
 	struct vb2_queue vb2_q;    // vb2 queue
@@ -321,13 +321,6 @@ struct vpu_dec_cmd_request {
 
 struct vpu_dec_perf_time {
 	u_int64 open_time;
-	u_int64 last_time;
-	u_int64 first_feed_interv;
-	u_int64 start_cmd_interv;
-	u_int64 start_done_interv;
-	u_int64 seq_hdr_found_interv;
-	u_int64 first_decoded_interv;
-	u_int64 first_ready_interv;
 
 	u_int64 first_decoded_time;
 	u_int64 last_decoded_time;
@@ -338,6 +331,12 @@ struct vpu_dec_perf_time {
 	u_int64 last_ready_time;
 	u_int64 cur_ready_interv;
 	u_int64 ready_fps;
+};
+
+struct vpu_dec_perf_queue {
+	struct list_head list;
+	char str[VPU_MAX_STEP_STRING_LENGTH];
+	u_int64 time;
 };
 
 struct vpu_ctx {
@@ -372,7 +371,6 @@ struct vpu_ctx {
 	MediaIPFW_Video_SeqInfo seqinfo;
 	bool b_dis_reorder;
 	bool b_firstseq;
-	bool start_flag;
 	bool wait_rst_done;
 	bool wait_res_change_done;
 	bool seek_flag;
@@ -387,6 +385,7 @@ struct vpu_ctx {
 	bool fifo_low;
 	bool frame_decoded;
 	bool first_dump_data_flag;
+	bool first_data_flag;
 	u32 req_frame_count;
 	u_int32 mbi_count;
 	u_int32 mbi_size;
@@ -432,6 +431,9 @@ struct vpu_ctx {
 	int res_change_occu_count;
 	int res_change_send_count;
 	int res_change_done_count;
+
+	struct list_head perf_q;
+	struct mutex perf_lock;
 };
 
 #define LVL_WARN		(1 << 0)
@@ -449,12 +451,12 @@ struct vpu_ctx {
 #define LVL_BIT_FLOW		(1 << 13)
 #define LVL_BIT_FRAME_COUNT	(1 << 14)
 
-#define vpu_err(fmt, arg...) pr_info("[VPU Decoder]\t " fmt, ## arg)
+#define vpu_err(fmt, arg...) pr_info("[VPU Decoder] " fmt, ## arg)
 
 #define vpu_dbg(level, fmt, arg...) \
 	do { \
 		if (vpu_dbg_level_decoder & (level)) \
-			pr_info("[VPU Decoder]\t " fmt, ## arg); \
+			pr_info("[VPU Decoder] " fmt, ## arg); \
 	} while (0)
 
 #define V4L2_NXP_BUF_FLAG_CODECCONFIG		0x00200000

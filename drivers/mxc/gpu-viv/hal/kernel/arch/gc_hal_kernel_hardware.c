@@ -2272,6 +2272,12 @@ gckHARDWARE_Construct(
     hardware->minFscaleValue = 1;
     hardware->waitCount = 200;
 
+    if (_IsHardwareMatch(hardware, gcv600, 0x4653)
+        || _IsHardwareMatch(hardware, gcv400, 0x4645))
+    {
+        hardware->minFscaleValue = 20;
+    }
+
     gckSTATETIMER_Reset(&hardware->powerStateCounter, 0);
 
 #if gcdLINK_QUEUE_SIZE
@@ -4744,6 +4750,9 @@ gckHARDWARE_SetMMU(
                        "Setting page table to 0x%08X",
                        address);
 
+        /* Trigger a possible dummy draw. */
+        Hardware->kernel->command->dummyDraw = gcvTRUE;
+
         /* Write the AQMemoryFePageTable register. */
         gcmkONERROR(
             gckOS_WriteRegisterEx(Hardware->os,
@@ -5060,6 +5069,9 @@ gckHARDWARE_SetMMU(
  ~0U : (~(~0U << ((1 ? 0:0) - (0 ? 0:0) + 1))))))) << (0 ? 0:0)))
                     ));
             }
+
+            /* Trigger a possible dummy draw. */
+            Hardware->kernel->command->dummyDraw = gcvTRUE;
         }
     }
 
@@ -9432,9 +9444,6 @@ _PmInitializeGPU(
 
     /* Force the command queue to reload the next context. */
     Command->currContext = gcvNULL;
-
-    /* Trigger a possible dummy draw. */
-    Command->dummyDraw = gcvTRUE;
 
 OnError:
     return status;
