@@ -383,11 +383,16 @@ static int bgpio_simple_dir_out(struct gpio_chip *gc, unsigned int gpio,
 static int bgpio_dir_in(struct gpio_chip *gc, unsigned int gpio)
 {
 	unsigned long flags;
+	unsigned long dir, dir_new;
 
 	spin_lock_irqsave(&gc->bgpio_lock, flags);
 
-	gc->bgpio_dir &= ~gc->pin2mask(gc, gpio);
-	gc->write_reg(gc->reg_dir, gc->bgpio_dir);
+	dir = gc->bgpio_dir;
+	dir_new = dir & ~gc->pin2mask(gc, gpio);
+	if (dir != dir_new) {
+		gc->bgpio_dir = dir_new;
+		gc->write_reg(gc->reg_dir, dir_new);
+	}
 
 	spin_unlock_irqrestore(&gc->bgpio_lock, flags);
 
@@ -403,12 +408,17 @@ static int bgpio_get_dir(struct gpio_chip *gc, unsigned int gpio)
 static int bgpio_dir_out(struct gpio_chip *gc, unsigned int gpio, int val)
 {
 	unsigned long flags;
+	unsigned long dir, dir_new;
 
 	spin_lock_irqsave(&gc->bgpio_lock, flags);
 
 	gc->set_locked(gc, gpio, val);
-	gc->bgpio_dir |= gc->pin2mask(gc, gpio);
-	gc->write_reg(gc->reg_dir, gc->bgpio_dir);
+	dir = gc->bgpio_dir;
+	dir_new = dir | gc->pin2mask(gc, gpio);
+	if (dir != dir_new) {
+		gc->bgpio_dir = dir_new;
+		gc->write_reg(gc->reg_dir, dir_new);
+	}
 
 	spin_unlock_irqrestore(&gc->bgpio_lock, flags);
 
@@ -418,8 +428,8 @@ static int bgpio_dir_out(struct gpio_chip *gc, unsigned int gpio, int val)
 static int bgpio_dir_out_in(struct gpio_chip *gc, unsigned int gpio, int val)
 {
 	unsigned long flags;
-	unsigned mask = gc->pin2mask(gc, gpio);
-	unsigned dir, dir_new;
+	unsigned long dir, dir_new;
+	unsigned long mask = gc->pin2mask(gc, gpio);
 
 	spin_lock_irqsave(&gc->bgpio_lock, flags);
 
@@ -428,7 +438,7 @@ static int bgpio_dir_out_in(struct gpio_chip *gc, unsigned int gpio, int val)
 	if (dir == dir_new) {
 		gc->set_locked(gc, gpio, val);
 	} else {
-		gc->bgpio_dir = dir;
+		gc->bgpio_dir = dir_new;
 		gc->set_locked2(gc, gpio, val, gc->reg_dir, dir_new);
 	}
 
@@ -440,11 +450,16 @@ static int bgpio_dir_out_in(struct gpio_chip *gc, unsigned int gpio, int val)
 static int bgpio_dir_in_inv(struct gpio_chip *gc, unsigned int gpio)
 {
 	unsigned long flags;
+	unsigned long dir, dir_new;
 
 	spin_lock_irqsave(&gc->bgpio_lock, flags);
 
-	gc->bgpio_dir |= gc->pin2mask(gc, gpio);
-	gc->write_reg(gc->reg_dir, gc->bgpio_dir);
+	dir = gc->bgpio_dir;
+	dir_new = dir | gc->pin2mask(gc, gpio);
+	if (dir != dir_new) {
+		gc->bgpio_dir = dir_new;
+		gc->write_reg(gc->reg_dir, dir_new);
+	}
 
 	spin_unlock_irqrestore(&gc->bgpio_lock, flags);
 
@@ -454,13 +469,17 @@ static int bgpio_dir_in_inv(struct gpio_chip *gc, unsigned int gpio)
 static int bgpio_dir_out_inv(struct gpio_chip *gc, unsigned int gpio, int val)
 {
 	unsigned long flags;
-
+	unsigned long dir, dir_new;
 
 	spin_lock_irqsave(&gc->bgpio_lock, flags);
 
 	gc->set_locked(gc, gpio, val);
-	gc->bgpio_dir &= ~gc->pin2mask(gc, gpio);
-	gc->write_reg(gc->reg_dir, gc->bgpio_dir);
+	dir = gc->bgpio_dir;
+	dir_new = dir & ~gc->pin2mask(gc, gpio);
+	if (dir != dir_new) {
+		gc->bgpio_dir = dir_new;
+		gc->write_reg(gc->reg_dir, dir_new);
+	}
 
 	spin_unlock_irqrestore(&gc->bgpio_lock, flags);
 
@@ -470,8 +489,8 @@ static int bgpio_dir_out_inv(struct gpio_chip *gc, unsigned int gpio, int val)
 static int bgpio_dir_out_in_inv(struct gpio_chip *gc, unsigned int gpio, int val)
 {
 	unsigned long flags;
-	unsigned mask = gc->pin2mask(gc, gpio);
-	unsigned dir, dir_new;
+	unsigned long dir, dir_new;
+	unsigned long mask = gc->pin2mask(gc, gpio);
 
 	spin_lock_irqsave(&gc->bgpio_lock, flags);
 
@@ -481,7 +500,7 @@ static int bgpio_dir_out_in_inv(struct gpio_chip *gc, unsigned int gpio, int val
 	if (dir == dir_new) {
 		gc->set_locked(gc, gpio, val);
 	} else {
-		gc->bgpio_dir = dir;
+		gc->bgpio_dir = dir_new;
 		gc->set_locked2(gc, gpio, val, gc->reg_dir, dir_new);
 	}
 
