@@ -133,6 +133,9 @@ struct gpio_chip {
 						unsigned offset, int value);
 	void			(*set_locked)(struct gpio_chip *chip,
 						unsigned offset, int value);
+	void			(*set_locked2)(struct gpio_chip *chip,
+						unsigned offset, int value,
+						void __iomem *reg, unsigned long data);
 	void			(*set_multiple)(struct gpio_chip *chip,
 						unsigned long *mask,
 						unsigned long *bits);
@@ -152,7 +155,8 @@ struct gpio_chip {
 #if IS_ENABLED(CONFIG_GPIO_GENERIC)
 	unsigned long (*read_reg)(void __iomem *reg);
 	void (*write_reg)(void __iomem *reg, unsigned long data);
-	void (*write_reg2)(void __iomem *reg, unsigned long data, unsigned long data2);
+	void (*write_reg2)(void __iomem *reg, unsigned long data,
+			void __iomem *reg2, unsigned long data2);
 	unsigned long (*pin2mask)(struct gpio_chip *gc, unsigned int pin);
 	void __iomem *reg_dat;
 	void __iomem *reg_set;
