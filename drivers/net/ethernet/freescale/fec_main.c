@@ -1864,17 +1864,32 @@ static void bangout(struct fec_enet_private *fep, unsigned val, int cnt)
 	}
 }
 
+static int phy_preamble(struct fec_enet_private *fep)
+{
+	bangout(fep, 0xffffffff, 32);
+	if (gpiod_get_value(fep->gd_mdio) != 1) {
+		bangout(fep, 0xffffffff, 32);
+		if (gpiod_get_value(fep->gd_mdio) != 1) {
+			dev_err(&fep->pdev->dev, "mdio is still low!\n");
+			return -EIO;
+		}
+	}
+	return 0;
+}
+
 static int fec_enet_mdio_read_bb(struct mii_bus *bus, int mii_id, int regnum)
 {
 	struct fec_enet_private *fep = bus->priv;
-	int val;
+	int val, ret;
 	int i;
 
 	val = FEC_MMFR_ST | FEC_MMFR_OP_READ |
 			FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
 			FEC_MMFR_TA;
 
-	bangout(fep, 0xffffffff, 32);
+	ret = phy_preamble(fep);
+	if (ret)
+		return ret;
 	bangout(fep, val >> 17, 32 - 17);
 	gpiod_direction_input(fep->gd_mdio);
 
@@ -1886,12 +1901,14 @@ static int fec_enet_mdio_read_bb(struct mii_bus *bus, int mii_id, int regnum)
 		gpiod_direction_output(fep->gd_mdc, 0);
 		gpiod_direction_output(fep->gd_mdc, 1);
 	}
-	val &= 0xffff;
 
 	gpiod_direction_input(fep->gd_mdc);
-
 	dev_dbg(&fep->pdev->dev, "%s: phy: %02x reg:%02x val:%#x\n", __func__, mii_id,
 		regnum, val);
+	if (val & BIT(16)) {
+		dev_err(&fep->pdev->dev, "phy not responding(%x)!!!\n", val);
+		val = 0xffff; /* could return -EIO, but mii-tool looks for 0xffff */
+	}
 	return val;
 }
 
@@ -1899,13 +1916,16 @@ static int fec_enet_mdio_write_bb(struct mii_bus *bus, int mii_id, int regnum,
 		   u16 value)
 {
 	struct fec_enet_private *fep = bus->priv;
-	uint32_t val;
+	int val;
+	int ret;
 
 	val = FEC_MMFR_ST | FEC_MMFR_OP_WRITE |
 			FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
 			FEC_MMFR_TA | FEC_MMFR_DATA(value);
 
-	bangout(fep, 0xffffffff, 32);
+	ret = phy_preamble(fep);
+	if (ret)
+		return ret;
 	bangout(fep, val, 32);
 
 	gpiod_direction_input(fep->gd_mdc);
