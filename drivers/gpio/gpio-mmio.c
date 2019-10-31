@@ -70,10 +70,10 @@ static void bgpio_write8(void __iomem *reg, unsigned long data)
 }
 
 static void bgpio_write8_2(void __iomem *reg, unsigned long data,
-		unsigned long data2)
+		void __iomem *reg2, unsigned long data2)
 {
 	writeb(data, reg);
-	writeb(data2, reg);
+	__raw_writeb(data2, reg2);
 }
 
 static unsigned long bgpio_read8(void __iomem *reg)
@@ -86,10 +86,11 @@ static void bgpio_write16(void __iomem *reg, unsigned long data)
 	writew(data, reg);
 }
 
-static void bgpio_write16_2(void __iomem *reg, unsigned long data, unsigned long data2)
+static void bgpio_write16_2(void __iomem *reg, unsigned long data,
+		void __iomem *reg2, unsigned long data2)
 {
 	writew(data, reg);
-	writew(data2, reg);
+	__raw_writew(cpu_to_le16(data2), reg2);
 }
 
 static unsigned long bgpio_read16(void __iomem *reg)
@@ -102,10 +103,11 @@ static void bgpio_write32(void __iomem *reg, unsigned long data)
 	writel(data, reg);
 }
 
-static void bgpio_write32_2(void __iomem *reg, unsigned long data, unsigned long data2)
+static void bgpio_write32_2(void __iomem *reg, unsigned long data,
+		void __iomem *reg2, unsigned long data2)
 {
 	writel(data, reg);
-	writel(data2, reg);
+	__raw_writel(__cpu_to_le32(data2), reg2);
 }
 
 static unsigned long bgpio_read32(void __iomem *reg)
@@ -119,10 +121,11 @@ static void bgpio_write64(void __iomem *reg, unsigned long data)
 	writeq(data, reg);
 }
 
-static void bgpio_write64_2(void __iomem *reg, unsigned long data, unsigned long data2)
+static void bgpio_write64_2(void __iomem *reg, unsigned long data,
+		void __iomem *reg2, unsigned long data2)
 {
 	writeq(data, reg);
-	writeq(data2, reg);
+	__raw_writeq(__cpu_to_le64(data2), reg2);
 }
 
 static unsigned long bgpio_read64(void __iomem *reg)
@@ -136,10 +139,11 @@ static void bgpio_write16be(void __iomem *reg, unsigned long data)
 	iowrite16be(data, reg);
 }
 
-static void bgpio_write16be_2(void __iomem *reg, unsigned long data, unsigned long data2)
+static void bgpio_write16be_2(void __iomem *reg, unsigned long data,
+		void __iomem *reg2, unsigned long data2)
 {
 	iowrite16be(data, reg);
-	iowrite16be(data2, reg);
+	iowrite16be(data2, reg2);
 }
 
 static unsigned long bgpio_read16be(void __iomem *reg)
@@ -152,10 +156,11 @@ static void bgpio_write32be(void __iomem *reg, unsigned long data)
 	iowrite32be(data, reg);
 }
 
-static void bgpio_write32be_2(void __iomem *reg, unsigned long data, unsigned long data2)
+static void bgpio_write32be_2(void __iomem *reg, unsigned long data,
+		void __iomem *reg2, unsigned long data2)
 {
 	iowrite32be(data, reg);
-	iowrite32be(data2, reg);
+	iowrite32be(data2, reg2);
 }
 
 static unsigned long bgpio_read32be(void __iomem *reg)
@@ -193,6 +198,11 @@ static void bgpio_set_none(struct gpio_chip *gc, unsigned int gpio, int val)
 {
 }
 
+static void bgpio_set_none2(struct gpio_chip *gc, unsigned int gpio, int val,
+			   void __iomem *reg, unsigned long data)
+{
+}
+
 static void bgpio_set_locked(struct gpio_chip *gc, unsigned int gpio, int val)
 {
 	unsigned long mask = gc->pin2mask(gc, gpio);
@@ -203,6 +213,19 @@ static void bgpio_set_locked(struct gpio_chip *gc, unsigned int gpio, int val)
 		gc->bgpio_data &= ~mask;
 
 	gc->write_reg(gc->reg_dat, gc->bgpio_data);
+}
+
+static void bgpio_set_locked2(struct gpio_chip *gc, unsigned int gpio, int val,
+		void __iomem *reg, unsigned long data)
+{
+	unsigned long mask = gc->pin2mask(gc, gpio);
+
+	if (val)
+		gc->bgpio_data |= mask;
+	else
+		gc->bgpio_data &= ~mask;
+
+	gc->write_reg2(gc->reg_dat, gc->bgpio_data, reg, data);
 }
 
 static void bgpio_set(struct gpio_chip *gc, unsigned int gpio, int val)
@@ -225,6 +248,17 @@ static void bgpio_set_with_clear(struct gpio_chip *gc, unsigned int gpio,
 		gc->write_reg(gc->reg_clr, mask);
 }
 
+static void bgpio_set_with_clear2(struct gpio_chip *gc, unsigned int gpio,
+				 int val, void __iomem *reg, unsigned long data)
+{
+	unsigned long mask = gc->pin2mask(gc, gpio);
+
+	if (val)
+		gc->write_reg2(gc->reg_set, mask, reg, data);
+	else
+		gc->write_reg2(gc->reg_clr, mask, reg, data);
+}
+
 static void bgpio_set_set_locked(struct gpio_chip *gc, unsigned int gpio, int val)
 {
 	unsigned long mask = gc->pin2mask(gc, gpio);
@@ -235,6 +269,19 @@ static void bgpio_set_set_locked(struct gpio_chip *gc, unsigned int gpio, int va
 		gc->bgpio_data &= ~mask;
 
 	gc->write_reg(gc->reg_set, gc->bgpio_data);
+}
+
+static void bgpio_set_set_locked2(struct gpio_chip *gc, unsigned int gpio,
+		int val, void __iomem *reg, unsigned long data)
+{
+	unsigned long mask = gc->pin2mask(gc, gpio);
+
+	if (val)
+		gc->bgpio_data |= mask;
+	else
+		gc->bgpio_data &= ~mask;
+
+	gc->write_reg2(gc->reg_set, gc->bgpio_data, reg, data);
 }
 
 static void bgpio_set_set(struct gpio_chip *gc, unsigned int gpio, int val)
@@ -372,14 +419,18 @@ static int bgpio_dir_out_in(struct gpio_chip *gc, unsigned int gpio, int val)
 {
 	unsigned long flags;
 	unsigned mask = gc->pin2mask(gc, gpio);
-	unsigned dir;
+	unsigned dir, dir_new;
 
 	spin_lock_irqsave(&gc->bgpio_lock, flags);
 
-	gc->set_locked(gc, gpio, val);
-	dir = gc->bgpio_dir & ~mask;
-	gc->bgpio_dir = dir;
-	gc->write_reg2(gc->reg_dir, dir | mask, dir);
+	dir = gc->bgpio_dir;
+	dir_new = dir & ~mask;
+	if (dir == dir_new) {
+		gc->set_locked(gc, gpio, val);
+	} else {
+		gc->bgpio_dir = dir;
+		gc->set_locked2(gc, gpio, val, gc->reg_dir, dir_new);
+	}
 
 	spin_unlock_irqrestore(&gc->bgpio_lock, flags);
 
@@ -420,14 +471,19 @@ static int bgpio_dir_out_in_inv(struct gpio_chip *gc, unsigned int gpio, int val
 {
 	unsigned long flags;
 	unsigned mask = gc->pin2mask(gc, gpio);
-	unsigned dir;
+	unsigned dir, dir_new;
 
 	spin_lock_irqsave(&gc->bgpio_lock, flags);
 
 	gc->set_locked(gc, gpio, val);
-	dir = gc->bgpio_dir | mask;
-	gc->bgpio_dir = dir;
-	gc->write_reg2(gc->reg_dir, dir & ~mask, dir);
+	dir = gc->bgpio_dir;
+	dir_new = dir | mask;
+	if (dir == dir_new) {
+		gc->set_locked(gc, gpio, val);
+	} else {
+		gc->bgpio_dir = dir;
+		gc->set_locked2(gc, gpio, val, gc->reg_dir, dir_new);
+	}
 
 	spin_unlock_irqrestore(&gc->bgpio_lock, flags);
 
@@ -535,19 +591,23 @@ static int bgpio_setup_io(struct gpio_chip *gc,
 		gc->reg_clr = clr;
 		gc->set = bgpio_set_with_clear;
 		gc->set_locked = bgpio_set_with_clear;
+		gc->set_locked2 = bgpio_set_with_clear2;
 		gc->set_multiple = bgpio_set_multiple_with_clear;
 	} else if (set && !clr) {
 		gc->reg_set = set;
 		gc->set = bgpio_set_set;
 		gc->set_locked = bgpio_set_set_locked;
+		gc->set_locked2 = bgpio_set_set_locked2;
 		gc->set_multiple = bgpio_set_multiple_set;
 	} else if (flags & BGPIOF_NO_OUTPUT) {
 		gc->set = bgpio_set_none;
 		gc->set_locked = bgpio_set_none;
+		gc->set_locked2 = bgpio_set_none2;
 		gc->set_multiple = NULL;
 	} else {
 		gc->set = bgpio_set;
 		gc->set_locked = bgpio_set_locked;
+		gc->set_locked2 = bgpio_set_locked2;
 		gc->set_multiple = bgpio_set_multiple;
 	}
 
