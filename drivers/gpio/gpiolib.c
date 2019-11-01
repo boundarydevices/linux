@@ -1095,6 +1095,12 @@ static void gpiochip_setup_devs(void)
 	}
 }
 
+static int default_direction_out_in(struct gpio_chip *gc, unsigned int gpio, int val)
+{
+	gc->set(gc, gpio, val);
+	return gc->direction_input(gc, gpio);
+}
+
 /**
  * gpiochip_add_data() - register a gpio_chip
  * @chip: the chip to register, with chip->base initialized
@@ -1126,6 +1132,8 @@ int gpiochip_add_data(struct gpio_chip *chip, void *data)
 	int		base = chip->base;
 	struct gpio_device *gdev;
 
+	if (!chip->direction_out_in)
+		chip->direction_out_in = default_direction_out_in;
 	/*
 	 * First: allocate and populate the internal stat container, and
 	 * set up the struct device.
@@ -2267,6 +2275,7 @@ int gpiod_direction_input(struct gpio_desc *desc)
 {
 	struct gpio_chip	*chip;
 	int			status = -EINVAL;
+	int hwgpio = gpio_chip_hwgpio(desc);
 
 	VALIDATE_DESC(desc);
 	chip = desc->gdev->chip;
@@ -2278,7 +2287,11 @@ int gpiod_direction_input(struct gpio_desc *desc)
 		return -EIO;
 	}
 
-	status = chip->direction_input(chip, gpio_chip_hwgpio(desc));
+	if (test_bit(FLAG_PULSE_HIGH, &desc->flags)) {
+		status = chip->direction_out_in(chip, hwgpio, 1);
+	} else {
+		status = chip->direction_input(chip, hwgpio);
+	}
 	if (status == 0)
 		clear_bit(FLAG_IS_OUT, &desc->flags);
 
@@ -2342,17 +2355,14 @@ set_output_value:
 		return -EIO;
 	}
 
-	if (val && test_bit(FLAG_PULSE_HIGH, &desc->flags) && gc->direction_out_in)
+	if (val && test_bit(FLAG_PULSE_HIGH, &desc->flags)) {
 		ret = gc->direction_out_in(gc, hwgpio, val);
-	else
+		if (!ret)
+			clear_bit(FLAG_IS_OUT, &desc->flags);
+	} else {
 		ret = gc->direction_output(gc, hwgpio, val);
-	if (!ret) {
-		if (val && test_bit(FLAG_PULSE_HIGH, &desc->flags)) {
-			if (!gc->direction_out_in)
-				gc->direction_input(gc, hwgpio);
-		} else {
+		if (!ret)
 			set_bit(FLAG_IS_OUT, &desc->flags);
-		}
 	}
 	trace_gpio_value(desc_to_gpio(desc), 0, val);
 	trace_gpio_direction(desc_to_gpio(desc), 0, ret);
