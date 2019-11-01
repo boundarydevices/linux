@@ -1847,7 +1847,6 @@ static void bangout(struct fec_enet_private *fep, unsigned val, int cnt)
 	int prev_bit_val = 1;
 
 	gpiod_direction_input(fep->gd_mdio);
-	gpiod_direction_output(fep->gd_mdc, 1);
 
 	while (cnt) {
 		cnt--;
@@ -1860,7 +1859,7 @@ static void bangout(struct fec_enet_private *fep, unsigned val, int cnt)
 			else
 				gpiod_direction_output(fep->gd_mdio, 0);
 		}
-		gpiod_direction_output(fep->gd_mdc, 1);
+		gpiod_direction_input(fep->gd_mdc);
 	}
 }
 
@@ -1899,10 +1898,9 @@ static int fec_enet_mdio_read_bb(struct mii_bus *bus, int mii_id, int regnum)
 		if (gpiod_get_value(fep->gd_mdio))
 			val |= 1;
 		gpiod_direction_output(fep->gd_mdc, 0);
-		gpiod_direction_output(fep->gd_mdc, 1);
+		gpiod_direction_input(fep->gd_mdc);
 	}
 
-	gpiod_direction_input(fep->gd_mdc);
 	dev_dbg(&fep->pdev->dev, "%s: phy: %02x reg:%02x val:%#x\n", __func__, mii_id,
 		regnum, val);
 	if (val & BIT(16)) {
@@ -1928,7 +1926,6 @@ static int fec_enet_mdio_write_bb(struct mii_bus *bus, int mii_id, int regnum,
 		return ret;
 	bangout(fep, val, 32);
 
-	gpiod_direction_input(fep->gd_mdc);
 	gpiod_direction_input(fep->gd_mdio);
 	return 0;
 }
