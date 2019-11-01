@@ -664,6 +664,7 @@ struct otp_reg_lookup {
 static const struct otp_reg_lookup otp_map[] = {
 	{ 0x401c, PF8X00_OTP_CTRL3, 0 },
 	{ 0x4008, PF8X00_OTP_CTRL3, 0x04 },
+	{ 0x301d, PF8X00_OTP_CTRL3, 0x04 },	/* test only */
 	{ 0, 0, 0 },
 };
 
