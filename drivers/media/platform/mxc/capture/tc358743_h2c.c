@@ -251,7 +251,7 @@ static struct tc_data *to_tc358743(const struct i2c_client *client)
 	return i2c_get_clientdata(client);
 }
 
-static struct ov5640 *dev_to_tc_data_v(struct device *dev)
+static struct tc_data *dev_to_tc_data_v(struct device *dev)
 {
 	return dev_get_drvdata(dev);
 }
