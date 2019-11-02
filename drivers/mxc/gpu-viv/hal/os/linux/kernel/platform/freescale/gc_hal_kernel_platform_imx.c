@@ -73,7 +73,7 @@
 #   include <linux/platform_device.h>
 #endif
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0)) || defined(IMX8_SCU_CONTROL)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0)
 #  define IMX_GPU_SUBSYSTEM   1
 #  include <linux/component.h>
 #endif
@@ -88,17 +88,20 @@
 #    include <linux/busfreq-imx6.h>
 #    include <linux/reset.h>
 #  else
-#if !defined(IMX8_SCU_CONTROL)
 #      include <linux/busfreq-imx.h>
-#    endif
 #    include <linux/reset.h>
 #  endif
 #endif
 
 #include <linux/clk.h>
 
-#if defined(IMX8_SCU_CONTROL)
-#  include <soc/imx8/sc/sci.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0)
+#include <linux/firmware/imx/ipc.h>
+#include <linux/firmware/imx/svc/misc.h>
+#include <dt-bindings/firmware/imx/rsrc.h>
+static struct imx_sc_ipc *gpu_ipcHandle;
+#elif defined(IMX8_SCU_CONTROL)
+#include <soc/imx8/sc/sci.h>
 static sc_ipc_t gpu_ipcHandle;
 #endif
 
@@ -288,14 +291,9 @@ static int thermal_hot_pm_notify(struct notifier_block *nb, unsigned long event,
        void *dummy)
 {
     static gctUINT orgFscale, minFscale, maxFscale;
-    static unsigned long prev_event = 0xffffffff;
+    static gctBOOL bAlreadyTooHot = gcvFALSE;
     gckHARDWARE hardware;
     gckGALDEVICE galDevice;
-    gctUINT FscaleVal = orgFscale;
-    gctUINT core = gcvCORE_MAJOR;
-
-    if (event == prev_event)
-        return NOTIFY_OK;
 
     galDevice = platform_get_drvdata(pdevice);
     if (!galDevice)
@@ -316,33 +314,16 @@ static int thermal_hot_pm_notify(struct notifier_block *nb, unsigned long event,
         return NOTIFY_OK;
     }
 
-    if (prev_event == 0xffffffff) /* get initial value of Fscale */
+    if (event && !bAlreadyTooHot) {
         gckHARDWARE_GetFscaleValue(hardware,&orgFscale,&minFscale, &maxFscale);
-    prev_event = event;
-
-    switch (event) {
-        case 0:
-            gckHARDWARE_SetFscaleValue(hardware, orgFscale);
-            printk("Hot alarm is canceled. GPU3D clock will return to %d/64\n", orgFscale);
-            break;
-        case 1:
-            gckHARDWARE_SetFscaleValue(hardware, maxFscale >> 1); /* switch to 1/2 of max frequency */
-            printk("System is a little hot. GPU3D clock will work at %d/64\n", maxFscale >> 1);
-            break;
-        case 2:
-            gckHARDWARE_SetFscaleValue(hardware, minFscale);
-            printk("System is too hot. GPU3D will work at %d/64 clock.\n", minFscale);
-            break;
-        default:
-            printk("System don't support such event: %ld.\n", event);
-            break;
+        gckHARDWARE_SetFscaleValue(hardware, minFscale, ~0U);
+        bAlreadyTooHot = gcvTRUE;
+        printk("System is too hot. GPU3D will work at %d/64 clock.\n", minFscale);
+    } else if (!event && bAlreadyTooHot) {
+        gckHARDWARE_SetFscaleValue(hardware, orgFscale, ~0U);
+        printk("Hot alarm is canceled. GPU3D clock will return to %d/64\n", orgFscale);
+        bAlreadyTooHot = gcvFALSE;
     }
-
-    while (galDevice->kernels[core] && core <= gcvCORE_3D_MAX)
-    {
-        gckHARDWARE_SetFscaleValue(galDevice->kernels[core++]->hardware, FscaleVal);
-    }
-
     return NOTIFY_OK;
 }
 
@@ -374,20 +355,17 @@ static ssize_t gpu3DMinClock_store(struct device_driver *dev, const char *buf, s
     gctINT fields;
     gctUINT MinFscaleValue;
     gckGALDEVICE galDevice;
-    gctUINT core = gcvCORE_MAJOR;
 
     galDevice = platform_get_drvdata(pdevice);
-    if (!galDevice)
-         return -EINVAL;
 
-    fields = sscanf(buf, "%d", &MinFscaleValue);
-
-    if (fields < 1)
-         return -EINVAL;
-
-    while (galDevice->kernels[core] && core <= gcvCORE_3D_MAX)
+    if (galDevice->kernels[gcvCORE_MAJOR])
     {
-         gckHARDWARE_SetMinFscaleValue(galDevice->kernels[core++]->hardware,MinFscaleValue);
+         fields = sscanf(buf, "%d", &MinFscaleValue);
+
+         if (fields < 1)
+             return -EINVAL;
+
+         gckHARDWARE_SetMinFscaleValue(galDevice->kernels[gcvCORE_MAJOR]->hardware,MinFscaleValue);
     }
 
     return count;
@@ -435,7 +413,7 @@ static ssize_t gpu3DClockScale_store(struct device_driver *dev, const char *buf,
 
     while (galDevice->kernels[core] && core <= gcvCORE_3D_MAX)
     {
-         gckHARDWARE_SetFscaleValue(galDevice->kernels[core++]->hardware,FscaleValue);
+         gckHARDWARE_SetFscaleValue(galDevice->kernels[core++]->hardware,FscaleValue,FscaleValue);
     }
 
     return count;
@@ -512,9 +490,7 @@ struct imx_priv
     struct reset_control *rstc[gcdMAX_GPU_COUNT];
 #endif
 
-#if defined(IMX8_SCU_CONTROL)
-    sc_rsrc_t sc_gpu_pid[gcdMAX_GPU_COUNT];
-#endif
+    uint32_t sc_gpu_pid[gcdMAX_GPU_COUNT];
 
     int gpu3dCount;
 
@@ -869,7 +845,7 @@ static int patch_param_imx8_subsystem(struct platform_device *pdev,
         if (!res)
             break;
 
-        while(!priv->pmdev[core] && core < gcvCORE_COUNT)
+        while(!priv->pmdev[core] && core < (gcvCORE_COUNT-1))
             core++;
 
         args->irqs[core] = irqLine;
@@ -899,12 +875,6 @@ static inline int get_power_imx8_subsystem(struct device *pdev)
     struct device_node *node = pdev->of_node;
     struct device_node *core_node;
     int core = gcvCORE_MAJOR;
-
-#if defined(IMX8_SCU_CONTROL)
-    sc_err_t sciErr;
-    uint32_t mu_id;
-
-#endif
 
     while ((core_node = of_parse_phandle(node, "cores", i++)) != NULL) {
         struct platform_device *pdev_gpu = NULL;
@@ -964,11 +934,21 @@ static inline int get_power_imx8_subsystem(struct device *pdev)
         priv->imx_gpu_clks[core].clk_axi    = clk_axi;
         priv->imx_gpu_clks[core].clk_ahb    = clk_ahb;
 
-#if defined(IMX8_SCU_CONTROL)
         if (of_property_read_u32(core_node, "fsl,sc_gpu_pid", &priv->sc_gpu_pid[core])) {
             priv->sc_gpu_pid[core] = 0;
         }
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0)
         else if (!gpu_ipcHandle) {
+            uint32_t ret = imx_scu_get_handle(&gpu_ipcHandle);
+            if (ret != 0) {
+                printk("galcore: cannot open MU channel to SCU\n");
+                return ret;
+            }
+	}
+#elif defined(IMX8_SCU_CONTROL)
+        else if (!gpu_ipcHandle) {
+            sc_err_t sciErr;
+            uint32_t mu_id;
             sciErr = sc_ipc_getMuID(&mu_id);
 
             if (sciErr != SC_ERR_NONE) {
@@ -1051,6 +1031,38 @@ static int patch_param_imx6(struct platform_device *pdev,
     return 0;
 }
 
+static bool is_layerscape;
+
+static int patch_param_ls(struct platform_device *pdev,
+		gcsMODULE_PARAMETERS *args)
+{
+	struct device_node *node = pdev->dev.of_node;
+	struct resource *res;
+	int core = gcvCORE_MAJOR;
+	struct platform_device *pdev_gpu;
+	int irqLine = -1;
+
+	pdev_gpu = of_find_device_by_node(node);
+	if (!pdev_gpu)
+		return gcvSTATUS_DEVICE;
+
+	of_node_put(node);
+
+	irqLine = platform_get_irq(pdev_gpu, 0);
+	if (irqLine < 0)
+		return gcvSTATUS_NOT_FOUND;
+
+	res = platform_get_resource(pdev_gpu, IORESOURCE_MEM, 0);
+	if (!res)
+		return gcvSTATUS_NOT_FOUND;
+
+	args->irqs[core] = irqLine;
+	args->registerBases[core] = res->start;
+	args->registerSizes[core] = res->end - res->start + 1;
+
+	return 0;
+}
+
 static int patch_param(struct platform_device *pdev,
                 gcsMODULE_PARAMETERS *args)
 {
@@ -1066,12 +1078,16 @@ static int patch_param(struct platform_device *pdev,
 
     pdevice = pdev;
 
+	if (is_layerscape) {
+		patch_param_ls(pdev, args);
+	} else {
 #ifdef IMX_GPU_SUBSYSTEM
-    if (pdev->dev.of_node && use_imx_gpu_subsystem)
-        patch_param_imx8_subsystem(pdev, args);
-    else
+		if (pdev->dev.of_node && use_imx_gpu_subsystem)
+			patch_param_imx8_subsystem(pdev, args);
+		else
 #endif
-        patch_param_imx6(pdev, args);
+			patch_param_imx6(pdev, args);
+	}
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
     if(args->compression == gcvCOMPRESSION_OPTION_DEFAULT)
@@ -1416,7 +1432,7 @@ static inline void put_power(void)
     remove_gpu_opp_table();
 #endif
 
-#if defined(IMX8_SCU_CONTROL)
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,0,0)) && defined(IMX8_SCU_CONTROL)
     if (gpu_ipcHandle)
         sc_ipc_close(gpu_ipcHandle);
 #endif
@@ -1446,7 +1462,28 @@ static inline int set_power(int gpu, int enable)
         pm_runtime_get_sync(priv->pmdev[gpu]);
 #endif
 
-#if defined(IMX8_SCU_CONTROL)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0)
+        if (priv->sc_gpu_pid[gpu]) {
+            uint32_t ret = imx_sc_misc_set_control(gpu_ipcHandle, priv->sc_gpu_pid[gpu], IMX_SC_C_ID, gpu);
+            if (ret) {
+                printk("galcore: failed to set gpu id for 3d_%d\n", gpu);
+                return ret;
+            }
+            if (priv->gpu3dCount > 1) {
+                ret = imx_sc_misc_set_control(gpu_ipcHandle, priv->sc_gpu_pid[gpu], IMX_SC_C_SINGLE_MODE, 0);
+                if (ret) {
+                    printk("galcore: failed to set gpu dual mode for 3d_%d\n", gpu);
+                    return ret;
+                }
+            } else {
+                ret = imx_sc_misc_set_control(gpu_ipcHandle, priv->sc_gpu_pid[gpu], IMX_SC_C_SINGLE_MODE, 1);
+                if (ret) {
+                printk("galcore: failed to set gpu single mode for 3d_%d\n", gpu);
+                return ret;
+                }
+            }
+        }
+#elif defined(IMX8_SCU_CONTROL)
         if (priv->sc_gpu_pid[gpu]) {
             sc_err_t sciErr = sc_misc_set_control(gpu_ipcHandle, priv->sc_gpu_pid[gpu], SC_C_ID, gpu);
             if (sciErr != SC_ERR_NONE)
@@ -1457,9 +1494,9 @@ static inline int set_power(int gpu, int enable)
                 if (sciErr != SC_ERR_NONE)
                     printk("galcore: failed to set gpu dual mode for 3d_%d\n", gpu);
             } else {
-                 sciErr = sc_misc_set_control(gpu_ipcHandle, priv->sc_gpu_pid[gpu], SC_C_SINGLE_MODE, 1);
-                 if (sciErr != SC_ERR_NONE)
-                     printk("galcore: failed to set gpu single mode for 3d_%d\n", gpu);
+                sciErr = sc_misc_set_control(gpu_ipcHandle, priv->sc_gpu_pid[gpu], SC_C_SINGLE_MODE, 1);
+                if (sciErr != SC_ERR_NONE)
+                    printk("galcore: failed to set gpu single mode for 3d_%d\n", gpu);
             }
         }
 #endif
@@ -1641,13 +1678,11 @@ _AdjustParam(
     patch_param(Platform->device, Args);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0)
-    if ((of_find_compatible_node(NULL, NULL, "fsl,imx8mq-gpu") ||
-        of_find_compatible_node(NULL, NULL, "fsl,imx8mm-gpu")) &&
+    if (of_find_compatible_node(NULL, NULL, "fsl,imx8mq-gpu") &&
         ((Args->baseAddress + totalram_pages() * PAGE_SIZE) > 0x100000000))
 #else
-    if ((of_find_compatible_node(NULL, NULL, "fsl,imx8mq-gpu") ||
-        of_find_compatible_node(NULL, NULL, "fsl,imx8mm-gpu")) &&
-        ((Args->baseAddress + totalram_pages * PAGE_SIZE) > 0x100000000))
+     if (of_find_compatible_node(NULL, NULL, "fsl,imx8mq-gpu") &&
+         ((Args->baseAddress + totalram_pages * PAGE_SIZE) > 0x100000000))
 #endif
     {
         Platform->flagBits |= gcvPLATFORM_FLAG_LIMIT_4G_ADDRESS;
@@ -1742,6 +1777,20 @@ static struct _gcsPLATFORM imx_platform =
     .ops  = &imx_platform_ops,
 };
 
+static const struct of_device_id gpu_match[] = {
+	{ .compatible = "fsl,ls1028a-gpu"},
+	{ /* sentinel */ }
+};
+
+struct _gcsPLATFORM_OPERATIONS ls_platform_ops = {
+	.adjustParam  = _AdjustParam,
+};
+
+static struct _gcsPLATFORM ls_platform = {
+	.name = __FILE__,
+	.ops  = &ls_platform_ops,
+};
+
 int gckPLATFORM_Init(struct platform_driver *pdrv,
             struct _gcsPLATFORM **platform)
 {
@@ -1756,6 +1805,14 @@ int gckPLATFORM_Init(struct platform_driver *pdrv,
     }
 #endif
 
+	if (of_find_compatible_node(NULL, NULL, "fsl,ls1028a-gpu")) {
+		is_layerscape = 1;
+		pdrv->driver.of_match_table = gpu_match;
+		*platform = &ls_platform;
+
+		return 0;
+	}
+
     adjust_platform_driver(pdrv);
     init_priv();
 
@@ -1769,6 +1826,9 @@ int gckPLATFORM_Init(struct platform_driver *pdrv,
 
 int gckPLATFORM_Terminate(struct _gcsPLATFORM *platform)
 {
+	if (is_layerscape)
+		return 0;
+
 #ifdef IMX_GPU_SUBSYSTEM
     unregister_mxc_gpu_sub_driver();
 #endif

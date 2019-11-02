@@ -1870,6 +1870,19 @@ gckSTATETIMER_Reset(
     gckOS_ZeroMemory(StateTimer->elapse, gcmSIZEOF(StateTimer->elapse));
 }
 
+gceSTATUS
+gckHARDWARE_StartTimerReset(
+    IN gckHARDWARE Hardware
+    )
+{
+    gceSTATUS status = gcvSTATUS_OK;
+    gcmkHEADER();
+
+    gckSTATETIMER_Reset(&Hardware->powerStateCounter, 0);
+
+    gcmkFOOTER();
+    return status;
+}
 
 static void
 gckSTATETIMER_Accumulate(
@@ -2278,8 +2291,6 @@ gckHARDWARE_Construct(
         hardware->minFscaleValue = 20;
     }
 
-    gckSTATETIMER_Reset(&hardware->powerStateCounter, 0);
-
 #if gcdLINK_QUEUE_SIZE
     gcmkONERROR(gckQUEUE_Allocate(hardware->os, &hardware->linkQueue, gcdLINK_QUEUE_SIZE));
 #endif
@@ -2416,6 +2427,7 @@ gckHARDWARE_PreDestroy(
             Hardware->kernel,
             Hardware->auxFuncVideoMem,
             0,
+            gcvFALSE,
             gcvFALSE
             ));
 
@@ -2434,6 +2446,7 @@ gckHARDWARE_PreDestroy(
             Hardware->kernel,
             Hardware->mmuFuncVideoMem,
             0,
+            gcvFALSE,
             gcvFALSE
             ));
 
@@ -2452,6 +2465,7 @@ gckHARDWARE_PreDestroy(
             Hardware->kernel,
             Hardware->pagetableArray.videoMem,
             0,
+            gcvFALSE,
             gcvFALSE
             ));
 
@@ -10222,7 +10236,8 @@ gckHARDWARE_SetGpuProfiler(
 gceSTATUS
 gckHARDWARE_SetFscaleValue(
     IN gckHARDWARE Hardware,
-    IN gctUINT32   FscaleValue
+    IN gctUINT32   FscaleValue,
+    IN gctUINT32   ShaderFscaleValue
     )
 {
     gceSTATUS status;
@@ -10371,6 +10386,7 @@ gckHARDWARE_SetFscaleValue(
  11:11) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ? 11:11) - (0 ? 11:11) + 1))))))) << (0 ? 11:11)))));
 
+        /* Scale the core clock. */
         clock = ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
  0:0) - (0 ?
  0:0) + 1) == 32) ?
@@ -10431,6 +10447,73 @@ gckHARDWARE_SetFscaleValue(
  9:9) - (0 ?
  9:9) + 1) == 32) ?
  ~0U : (~(~0U << ((1 ? 9:9) - (0 ? 9:9) + 1))))))) << (0 ? 9:9)))));
+
+        /* A option to support shader clock scaling. */
+        if (ShaderFscaleValue != ~0U && ShaderFscaleValue > 0 && ShaderFscaleValue < 64)
+        {
+            /* Scale the shader clock. */
+            clock = ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
+ 16:16) - (0 ?
+ 16:16) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ?
+ 16:16) - (0 ?
+ 16:16) + 1))))))) << (0 ?
+ 16:16))) | (((gctUINT32) ((gctUINT32) (0) & ((gctUINT32) ((((1 ?
+ 16:16) - (0 ?
+ 16:16) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 16:16) - (0 ? 16:16) + 1))))))) << (0 ? 16:16)))
+                  | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
+ 17:17) - (0 ?
+ 17:17) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ?
+ 17:17) - (0 ?
+ 17:17) + 1))))))) << (0 ?
+ 17:17))) | (((gctUINT32) ((gctUINT32) (1) & ((gctUINT32) ((((1 ?
+ 17:17) - (0 ?
+ 17:17) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 17:17) - (0 ? 17:17) + 1))))))) << (0 ? 17:17)))
+                  | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
+ 7:1) - (0 ?
+ 7:1) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ?
+ 7:1) - (0 ?
+ 7:1) + 1))))))) << (0 ?
+ 7:1))) | (((gctUINT32) ((gctUINT32) (ShaderFscaleValue) & ((gctUINT32) ((((1 ?
+ 7:1) - (0 ?
+ 7:1) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 7:1) - (0 ? 7:1) + 1))))))) << (0 ? 7:1)))
+                  | ((((gctUINT32) (0)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
+ 0:0) - (0 ?
+ 0:0) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ?
+ 0:0) - (0 ?
+ 0:0) + 1))))))) << (0 ?
+ 0:0))) | (((gctUINT32) ((gctUINT32) (1) & ((gctUINT32) ((((1 ?
+ 0:0) - (0 ?
+ 0:0) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 0:0) - (0 ? 0:0) + 1))))))) << (0 ? 0:0)));
+
+
+            gcmkONERROR(gckOS_WriteRegisterEx(Hardware->os,
+                                              Hardware->core,
+                                              0x0010C,
+                                              clock));
+
+            /* Done loading the frequency scaler. */
+            gcmkONERROR(gckOS_WriteRegisterEx(Hardware->os,
+                                              Hardware->core,
+                                              0x0010C,
+                                              ((((gctUINT32) (clock)) & ~(((gctUINT32) (((gctUINT32) ((((1 ?
+ 0:0) - (0 ?
+ 0:0) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ?
+ 0:0) - (0 ?
+ 0:0) + 1))))))) << (0 ?
+ 0:0))) | (((gctUINT32) ((gctUINT32) (0) & ((gctUINT32) ((((1 ?
+ 0:0) - (0 ?
+ 0:0) + 1) == 32) ?
+ ~0U : (~(~0U << ((1 ? 0:0) - (0 ? 0:0) + 1))))))) << (0 ? 0:0)))));
+        }
 
         /* Restore all clock gating. */
         gcmkONERROR(
