@@ -156,6 +156,16 @@
 		>;
 	};
 
+	pinctrl_i2c2_st1633: i2c2-st1633grp {
+		fsl,pins = <
+#define GPIRQ_ST1633 		<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
+#define GP_ST1633_IRQ 		<&gpio1 6 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_GPIO1_IO06_GPIO1_IO6		0x1d6
+#define GP_ST1633_RESET		<&gpio1 7 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_GPIO1_IO07_GPIO1_IO7		0x149
+		>;
+	};
+
 	pinctrl_i2c3: i2c3grp {
 		fsl,pins = <
 			MX8MM_IOMUXC_I2C3_SCL_I2C3_SCL			0x400001c3
@@ -908,6 +918,17 @@
 		touchscreen-size-x = <480>;	/* swapped below */
 		touchscreen-size-y = <800>;
 		touchscreen-swapped-x-y;
+	};
+
+	touchscreen@55 {
+		compatible = "sitronix,st1633i";
+		reg = <0x55>;
+		interrupts-extended = GPIRQ_ST1633;
+		/* pins used by touchscreen */
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_st1633>;
+		reset-gpios = GP_ST1633_RESET;
+		wakeup-gpios = GP_ST1633_IRQ;
 	};
 
 	touchscreen@5d {
