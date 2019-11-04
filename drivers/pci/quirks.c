@@ -2565,6 +2565,9 @@ DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_SI, 0x0761, quirk_disable_all_msi);
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_SAMSUNG, 0xa5e3, quirk_disable_all_msi);
 DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_BROADCOM, 0x43ec, quirk_disable_all_msi);
 DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_BROADCOM, 0x43ef, quirk_disable_all_msi);
+DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_MARVELL_EXT, 0x2b42, quirk_disable_all_msi);
+DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_MARVELL_EXT, 0x2b43, quirk_disable_all_msi);
+DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_MARVELL_EXT, 0x2b44, quirk_disable_all_msi);
 
 /* Disable MSI on chipsets that are known to not support it */
 static void quirk_disable_msi(struct pci_dev *dev)
