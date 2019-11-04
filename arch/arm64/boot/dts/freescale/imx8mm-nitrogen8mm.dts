@@ -142,6 +142,8 @@
 		fsl,pins = <
 #define GPIRQ_GSLX680	<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
 			MX8MM_IOMUXC_GPIO1_IO06_GPIO1_IO6		0x149
+#define GP_I2C2_GSLX680_POWER	<&gpio1 7 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_GPIO1_IO07_GPIO1_IO7		0x109
 		>;
 	};
 
@@ -902,6 +904,7 @@
 		pinctrl-0 = <&pinctrl_i2c2_gslx680>;
 		reg = <0x40>;
 		interrupts-extended = GPIRQ_GSLX680;
+		power-gpios = GP_I2C2_GSLX680_POWER;
 		touchscreen-size-x = <480>;	/* swapped below */
 		touchscreen-size-y = <800>;
 		touchscreen-swapped-x-y;
