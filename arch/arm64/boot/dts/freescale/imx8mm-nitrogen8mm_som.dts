@@ -83,6 +83,8 @@
 &i2c2 {
 	/delete-node/ mipi-to-lvds@2c;
 	/delete-node/ touchscreen@38;
+	/delete-node/ touchscreen@40;
+	/delete-node/ touchscreen@55;
 	/delete-node/ touchscreen@5d;
 
 	rtc@68 {
@@ -146,6 +148,29 @@
 		reg = <0x38>;
 		wakeup-gpios = GP_I2C2_FT5X06_WAKE;
 		reset-gpios = GP_I2C2_FT5X06_RESET;
+	};
+
+	touchscreen@40 {
+		compatible = "silead,gsl1680";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_gslx680>;
+		reg = <0x40>;
+		interrupts-extended = GPIRQ_GSLX680;
+		power-gpios = GP_I2C2_GSLX680_POWER;
+		touchscreen-size-x = <480>;	/* swapped below */
+		touchscreen-size-y = <800>;
+		touchscreen-swapped-x-y;
+	};
+
+	touchscreen@55 {
+		compatible = "sitronix,st1633i";
+		reg = <0x55>;
+		interrupts-extended = GPIRQ_ST1633;
+		/* pins used by touchscreen */
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_st1633>;
+		reset-gpios = GP_ST1633_RESET;
+		wakeup-gpios = GP_ST1633_IRQ;
 	};
 
 	touchscreen@5d {
