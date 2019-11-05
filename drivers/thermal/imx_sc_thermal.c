@@ -126,9 +126,9 @@ static const struct thermal_zone_device_ops imx_sc_thermal_ops = {
 static int imx_sc_thermal_probe(struct platform_device *pdev)
 {
 	struct imx_sc_sensor *sensor;
-	const struct thermal_trip *trip;
+	struct thermal_trip trip;
 	const int *resource_id;
-	int i, ret;
+	int i, j, ret;
 
 	ret = imx_scu_get_handle(&thermal_ipc_handle);
 	if (ret)
@@ -172,33 +172,38 @@ static int imx_sc_thermal_probe(struct platform_device *pdev)
 
 		devm_thermal_add_hwmon_sysfs(&pdev->dev, sensor->tzd);
 
-		trip = of_thermal_get_trip_points(sensor->tzd);
-		sensor->temp_passive = trip[0].temperature;
-		sensor->temp_critical = trip[1].temperature;
+		for (j = 0; j < thermal_zone_get_num_trips(sensor->tzd); j++) {
+			ret = thermal_zone_get_trip(sensor->tzd, j, &trip);
+			if (ret)
+				continue;
 
-		/* first thermal zone takes care of system-wide device cooling */
-		if (i == 0) {
-			sensor->cdev = devfreq_cooling_register();
-			if (IS_ERR(sensor->cdev)) {
-				dev_err(&pdev->dev,
-					"failed to register devfreq cooling device: %d\n",
-					ret);
-				return ret;
+			if (trip.type == THERMAL_TRIP_CRITICAL) {
+				sensor->temp_critical = trip.temperature;
+			} else if(trip.type == THERMAL_TRIP_PASSIVE) {
+				sensor->temp_passive = trip.temperature;
 			}
+		}
 
-			ret = thermal_zone_bind_cooling_device(sensor->tzd,
-				IMX_TRIP_PASSIVE,
-				sensor->cdev,
-				THERMAL_NO_LIMIT,
-				THERMAL_NO_LIMIT,
-				THERMAL_WEIGHT_DEFAULT);
-			if (ret) {
-				dev_err(&sensor->tzd->device,
-					"binding zone %s with cdev %s failed:%d\n",
-					sensor->tzd->type, sensor->cdev->type, ret);
-				devfreq_cooling_unregister(sensor->cdev);
-				return ret;
-			}
+		sensor->cdev = devfreq_cooling_register();
+		if (IS_ERR(sensor->cdev)) {
+			dev_err(&pdev->dev,
+				"failed to register devfreq cooling device: %d\n",
+				ret);
+			return ret;
+		}
+
+		ret = thermal_zone_bind_cooling_device(sensor->tzd,
+			IMX_TRIP_PASSIVE,
+			sensor->cdev,
+			THERMAL_NO_LIMIT,
+			THERMAL_NO_LIMIT,
+			THERMAL_WEIGHT_DEFAULT);
+		if (ret) {
+			dev_err(&sensor->tzd->device,
+				"binding zone %s with cdev %s failed:%d\n",
+				sensor->tzd->type, sensor->cdev->type, ret);
+			devfreq_cooling_unregister(sensor->cdev);
+			return ret;
 		}
 	}
 
