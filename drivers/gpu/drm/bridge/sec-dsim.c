@@ -396,29 +396,34 @@ static const struct dsim_hblank_par hblank_2lanes[] = {
  * 0 1  2  3  8 11 30
  * 1 0  1  1  3  4 11
  */
-static void get_best_ratio(unsigned long *pnum, unsigned long *pdenom, unsigned max_n, unsigned max_d)
+static void get_best_ratio_bigger(unsigned long *pnum, unsigned long *pdenom, unsigned max_n, unsigned max_d)
 {
 	unsigned long a = *pnum;
 	unsigned long b = *pdenom;
 	unsigned long c;
 	unsigned n[] = {0, 1};
 	unsigned d[] = {1, 0};
+	unsigned _n, _d;
 	unsigned whole;
 	unsigned i = 1;
 	while (b) {
 		i ^= 1;
 		whole = a / b;
-		n[i] += (n[i ^ 1] * whole);
-		d[i] += (d[i ^ 1] * whole);
+		_n = n[i] + (n[i ^ 1] * whole);
+		_d = d[i] + (d[i ^ 1] * whole);
 //		printf("cf=%i n=%i d=%i\n", whole, n[i], d[i]);
-		if ((n[i] > max_n) || (d[i] > max_d)) {
+		if ((_n > max_n) || (_d > max_d)) {
 			i ^= 1;
 			break;
 		}
+		n[i] = _n;
+		d[i] = _d;
 		c = a - (b * whole);
 		a = b;
 		b = c;
 	}
+	if (b)
+		i = 1;
 	*pnum = n[i];
 	*pdenom = d[i];
 }
@@ -1285,6 +1290,7 @@ static int sec_mipi_dsim_get_pms(struct sec_mipi_dsim *dsim, unsigned long bit_c
 	unsigned p,m;
 	unsigned int c_pms;
 	int s = 0;
+	unsigned long b = bit_clk;
 
 #if 0
 	bit_clk = bit_clk * 4 / 3;
@@ -1296,7 +1302,7 @@ static int sec_mipi_dsim_get_pms(struct sec_mipi_dsim *dsim, unsigned long bit_c
 	do {
 		numerator = bit_clk << s;
 		denominator = ref_clk;
-		get_best_ratio(&numerator, &denominator, 125, max_d >> s);
+		get_best_ratio_bigger(&numerator, &denominator, 125, max_d >> s);
 		denominator <<= s;
 		s++;
 	} while ((denominator >> __ffs(denominator)) > 33);
@@ -1371,8 +1377,8 @@ static int sec_mipi_dsim_get_pms(struct sec_mipi_dsim *dsim, unsigned long bit_c
 		pms->m = m;
 		pms->s = s;
 		pms->bit_clk = bit_clk;
-		pr_info("%s: bit_clk=%ld ref_clk=%ld, p=%d, m=%d, s=%d, lanes=%d\n",
-			__func__, bit_clk, ref_clk, p, m, s, dsim->lanes);
+		pr_info("%s: bit_clk=%ld %ld ref_clk=%ld, p=%d, m=%d, s=%d, lanes=%d\n",
+			__func__, b, bit_clk, ref_clk, p, m, s, dsim->lanes);
 	}
 	/* Divided by 2 because mipi output clock is DDR */
 	dsim->frequency = bit_clk / 2;
