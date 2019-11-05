@@ -398,31 +398,79 @@ static const struct dsim_hblank_par hblank_2lanes[] = {
  * 0 1  2  3  8 11 30
  * 1 0  1  1  3  4 11
  */
-static void get_best_ratio(unsigned long *pnum, unsigned long *pdenom, unsigned max_n, unsigned max_d)
+static void get_best_ratio_bigger(unsigned long *pnum, unsigned long *pdenom, unsigned max_n, unsigned max_d)
 {
 	unsigned long a = *pnum;
 	unsigned long b = *pdenom;
 	unsigned long c;
-	unsigned n[] = {0, 1};
-	unsigned d[] = {1, 0};
+	unsigned n0 = 0;
+	unsigned n1 = 1;
+	unsigned d0 = 1;
+	unsigned d1 = 0;
+	unsigned _n = 0;
+	unsigned _d = 1;
 	unsigned whole;
-	unsigned i = 1;
+
 	while (b) {
-		i ^= 1;
 		whole = a / b;
-		n[i] += (n[i ^ 1] * whole);
-		d[i] += (d[i ^ 1] * whole);
-//		printf("cf=%i n=%i d=%i\n", whole, n[i], d[i]);
-		if ((n[i] > max_n) || (d[i] > max_d)) {
-			i ^= 1;
+		/* n0/d0 is the earlier term */
+		n0 = n0 + (n1 * whole);
+		d0 = d0 + (d1 * whole);
+
+		c = a - (b * whole);
+		a = b;
+		b = c;
+
+		if (b) {
+			/* n1/d1 is the earlier term */
+			whole = a / b;
+			_n = n1 + (n0 * whole);
+			_d = d1 + (d0 * whole);
+		} else {
+			_n = n0;
+			_d = d0;
+		}
+		pr_debug("%s: cf=%i %d/%d, %d/%d\n", __func__, whole, n0, d0, _n, _d);
+		if ((_n > max_n) || (_d > max_d)) {
+			unsigned h;
+
+			h = n0;
+			if (h) {
+				_n = max_n - n1;
+				_n /= h;
+				if (whole > _n)
+					whole = _n;
+			}
+			h = d0;
+			if (h) {
+				_d = max_d - d1;
+				_d /= h;
+				if (whole > _d)
+					whole = _d;
+			}
+			_n = n1 + (n0 * whole);
+			_d = d1 + (d0 * whole);
+			pr_debug("%s: b=%ld, n=%d of %d, d=%d of %d\n", __func__, b, _n, max_n, _d, max_d);
+			if (!_d) {
+				/* Don't choose infinite for a bigger ratio */
+				_n = n0 + 1;
+				_d = d0;
+				pr_err("%s: %d/%d is too big\n", __func__, _n, _d);
+			}
 			break;
 		}
+
+		if (!b)
+			break;
+		n1 = _n;
+		d1 = _d;
 		c = a - (b * whole);
 		a = b;
 		b = c;
 	}
-	*pnum = n[i];
-	*pdenom = d[i];
+
+	*pnum = _n;
+	*pdenom = _d;
 }
 
 static const struct dsim_hblank_par *sec_mipi_dsim_get_hblank_par(const char *name,
@@ -481,35 +529,70 @@ static int _sec_mipi_dsim_pll_enable(struct sec_mipi_dsim *dsim, int enable)
 	return 1;
 }
 
+#define MIN_FREQ	6000000
+
+unsigned fixup_div(unsigned long clk, unsigned div)
+{
+	unsigned max = clk / MIN_FREQ;
+
+	while ((div >= max * 7 / 2) && !(div % 7))
+		div /= 7;
+	while ((div >= max * 5 / 2) && !(div % 5))
+		div /= 5;
+	while ((div >= max * 3 / 2) && !(div % 3))
+		div /= 3;
+	while ((div >= max * 2 / 2) && !(div % 2))
+		div >>= 1;
+
+	while (div > max) {
+		if (!(div % 2))
+			div >>= 1;
+		else if (!(div % 3))
+			div /=  3;
+		else if (!(div % 5))
+			div /= 5;
+		else if (!(div % 7))
+			div /= 7;
+		else
+			div = max;
+	}
+	return div;
+}
+
 static int sec_mipi_choose_ref_clk(struct sec_mipi_dsim *dsim, unsigned long pix_clk)
 {
 	unsigned long ref_clk, bit_clk;
 	struct clk *clk_ref_parent;
 	unsigned bpp = mipi_dsi_pixel_format_to_bpp(dsim->format);
+	unsigned div = 0;
+	unsigned ref_parent_clk;
 
 	if (bpp < 0)
 		return -EINVAL;
 
 	bit_clk = DIV_ROUND_UP_ULL((u64)pix_clk * bpp, dsim->lanes);
 	clk_ref_parent = clk_get_parent(dsim->clk_pllref);
-	ref_clk = bit_clk;
+	ref_parent_clk = ref_clk = bit_clk;
 	if (clk_ref_parent) {
-		unsigned ref_parent_clk = clk_get_rate(clk_ref_parent);
-		unsigned div = 0;
+		ref_parent_clk = clk_get_rate(clk_ref_parent);
 
-		if (ref_parent_clk) {
-			div = (ref_parent_clk + 4) / pix_clk;
-			if (div)
-				ref_clk = ref_parent_clk / div;
-		}
+		if (ref_parent_clk)
+			div = (ref_parent_clk + (pix_clk >> 1)) / pix_clk;
+
 		pr_debug("%s: ref_clk=%ld, ref_parent_clk=%d, pix_clk=%ld, div=%d\n",
 			__func__, ref_clk, ref_parent_clk, pix_clk, div);
 	}
+	pr_debug("%s: %ld = %d/%d\n", __func__, ref_clk, ref_parent_clk, div);
+	if (div) {
+		div = fixup_div(ref_parent_clk, div);
+		ref_clk = (ref_parent_clk + (div >> 1)) / div;
+		pr_debug("%s: %ld = %d/%d\n", __func__, ref_clk, ref_parent_clk, div);
+	} else {
+		while (ref_clk < MIN_FREQ)
+			ref_clk <<= 1;
+	}
 	while (ref_clk > 48000000) {
 		ref_clk >>= 1;
-	}
-	while (ref_clk < 24000000) {
-		ref_clk <<= 1;
 	}
 	return ref_clk;
 }
@@ -1311,6 +1394,7 @@ static int sec_mipi_dsim_get_pms(struct sec_mipi_dsim *dsim, unsigned long bit_c
 	unsigned p,m;
 	unsigned int c_pms;
 	int s = 0;
+	unsigned long b = bit_clk;
 
 #if 0
 	bit_clk = bit_clk * 4 / 3;
@@ -1321,8 +1405,13 @@ static int sec_mipi_dsim_get_pms(struct sec_mipi_dsim *dsim, unsigned long bit_c
 	/* s is power of 2: 1, 2, 4, 8, 16, 32, 64, 128 */
 	do {
 		numerator = bit_clk << s;
-		denominator = ref_clk;
-		get_best_ratio(&numerator, &denominator, 125, max_d >> s);
+		/*
+		 * Increase ref clock so that finding bigger will also find
+		 * very slightly smaller. Needed for rounding errors in
+		 * (pixel clock * 24)
+		 */
+		denominator = ref_clk + 2;
+		get_best_ratio_bigger(&numerator, &denominator, 125, max_d >> s);
 		denominator <<= s;
 		s++;
 	} while ((denominator >> __ffs(denominator)) > 33);
@@ -1397,8 +1486,8 @@ static int sec_mipi_dsim_get_pms(struct sec_mipi_dsim *dsim, unsigned long bit_c
 		pms->m = m;
 		pms->s = s;
 		pms->bit_clk = bit_clk;
-		pr_info("%s: bit_clk=%ld ref_clk=%ld, p=%d, m=%d, s=%d, lanes=%d\n",
-			__func__, bit_clk, ref_clk, p, m, s, dsim->lanes);
+		pr_info("%s: bit_clk=%ld %ld ref_clk=%ld, p=%d, m=%d, s=%d, lanes=%d\n",
+			__func__, b, bit_clk, ref_clk, p, m, s, dsim->lanes);
 	}
 	/* Divided by 2 because mipi output clock is DDR */
 	dsim->frequency = bit_clk / 2;
