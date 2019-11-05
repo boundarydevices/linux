@@ -244,6 +244,12 @@ config USB_CONFIGFS_UEVENT
 	  state changes. The gadget can be in any of the following
 	  three states: "CONNECTED/DISCONNECTED/CONFIGURED"
 
+config USB_CONFIGFS_WAKELOCK
+	bool "Keep wakelock in CONNECTED State"
+	depends on USB_CONFIGFS_UEVENT
+	help
+	  Keep wakelock in CONNECTED State.
+
 config USB_CONFIGFS_SERIAL
 	bool "Generic serial bulk in/out"
 	depends on USB_CONFIGFS
