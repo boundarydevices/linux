@@ -2281,7 +2281,7 @@ static const struct clk_ops dsim_clk_ops = {
 	.set_rate = dsim_clk_set_rate,
 };
 
-static const char refname[] = "dsi_phy_ref_div";
+static const char refname[] = "dsi_phy_ref";
 static const char *parents[] = { refname, };
 
 static struct clk *sec_mipi_dsim_clk_register_clk(struct sec_mipi_dsim *dsim)
