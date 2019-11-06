@@ -697,7 +697,8 @@ dtb-$(CONFIG_SOC_IMX6SL) += \
 	imx6sl-warp.dtb
 dtb-$(CONFIG_SOC_IMX6SLL) += \
 	imx6sll-evk.dtb \
-	imx6sll-evk-btwifi.dtb
+	imx6sll-evk-reva.dtb \
+	imx6sll-evk-btwifi.dtb \
 	imx6sll-kobo-clarahd.dtb \
 	imx6sll-kobo-librah2o.dtb
 dtb-$(CONFIG_SOC_IMX6SX) += \
