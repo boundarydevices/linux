@@ -742,9 +742,10 @@ static void imx_uart_dma_tx(struct imx_port *sport)
 			spin_lock_irqsave(&sport->port.lock, flags);
 			goto out1;
 		}
-		desc = dmaengine_prep_slave_sg(chan, sgl, sport->dma_tx_nents,
+		desc = dmaengine_prep_slave_sg(chan, sgl, ret,
 						DMA_MEM_TO_DEV, DMA_PREP_INTERRUPT);
 		if (!desc) {
+			dma_unmap_sg(dev, sgl, sport->dma_tx_nents, DMA_TO_DEVICE);
 			dev_err(dev, "We cannot prepare for the TX slave dma!\n");
 			sport->dma_is_txing = 0;
 			spin_lock_irqsave(&sport->port.lock, flags);
