@@ -24,6 +24,7 @@ dtb-$(CONFIG_ARCH_FSL_IMX8QM) += fsl-imx8qm-lpddr4-arm2.dtb \
 				 fsl-imx8qm-mek.dtb \
 				 fsl-imx8qm-mek-rpmsg.dtb \
 				 fsl-imx8qm-mek-car.dtb \
+				 fsl-imx8qm-mek-car-md.dtb \
 				 fsl-imx8qm-mek-car2.dtb \
 				 fsl-imx8qm-mek-car2-md.dtb \
 				 fsl-imx8qm-mek-dsp.dtb \
