@@ -157,6 +157,7 @@ static const int ov5640_framerates[] = {
 	[OV5640_15_FPS] = 15,
 	[OV5640_30_FPS] = 30,
 	[OV5640_60_FPS] = 60,
+	[OV5640_07_FPS] = 8,
 };
 
 /* regulator supplies */
@@ -362,6 +363,7 @@ static const struct reg_value ov5640_init_setting_30fps_VGA[] = {
 };
 
 static const struct reg_value ov5640_setting_VGA_640_480[] = {
+	{0x3008, 0x42, 0, 0},
 	{0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3814, 0x31, 0, 0},
@@ -378,6 +380,7 @@ static const struct reg_value ov5640_setting_VGA_640_480[] = {
 	{0x4001, 0x02, 0, 0}, {0x4004, 0x02, 0, 0},
 	{0x4407, 0x04, 0, 0}, {0x460b, 0x35, 0, 0}, {0x460c, 0x22, 0, 0},
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
+	{0x3008, 0x02, 0, 10},
 };
 
 static const struct reg_value ov5640_setting_XGA_1024_768[] = {
@@ -402,6 +405,7 @@ static const struct reg_value ov5640_setting_XGA_1024_768[] = {
 };
 
 static const struct reg_value ov5640_setting_QVGA_320_240[] = {
+	{0x3008, 0x42, 0, 0},
 	{0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3814, 0x31, 0, 0},
@@ -418,9 +422,11 @@ static const struct reg_value ov5640_setting_QVGA_320_240[] = {
 	{0x4001, 0x02, 0, 0}, {0x4004, 0x02, 0, 0},
 	{0x4407, 0x04, 0, 0}, {0x460b, 0x35, 0, 0}, {0x460c, 0x22, 0, 0},
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
+	{0x3008, 0x02, 0, 10},
 };
 
 static const struct reg_value ov5640_setting_QCIF_176_144[] = {
+	{0x3008, 0x42, 0, 0},
 	{0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3814, 0x31, 0, 0},
@@ -437,9 +443,11 @@ static const struct reg_value ov5640_setting_QCIF_176_144[] = {
 	{0x4001, 0x02, 0, 0}, {0x4004, 0x02, 0, 0},
 	{0x4407, 0x04, 0, 0}, {0x460b, 0x35, 0, 0}, {0x460c, 0x22, 0, 0},
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
+	{0x3008, 0x02, 0, 10},
 };
 
 static const struct reg_value ov5640_setting_NTSC_720_480[] = {
+	{0x3008, 0x42, 0, 0},
 	{0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3814, 0x31, 0, 0},
@@ -456,9 +464,11 @@ static const struct reg_value ov5640_setting_NTSC_720_480[] = {
 	{0x4001, 0x02, 0, 0}, {0x4004, 0x02, 0, 0},
 	{0x4407, 0x04, 0, 0}, {0x460b, 0x35, 0, 0}, {0x460c, 0x22, 0, 0},
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
+	{0x3008, 0x02, 0, 10},
 };
 
 static const struct reg_value ov5640_setting_PAL_720_576[] = {
+	{0x3008, 0x42, 0, 0},
 	{0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3814, 0x31, 0, 0},
@@ -475,6 +485,7 @@ static const struct reg_value ov5640_setting_PAL_720_576[] = {
 	{0x4001, 0x02, 0, 0}, {0x4004, 0x02, 0, 0},
 	{0x4407, 0x04, 0, 0}, {0x460b, 0x35, 0, 0}, {0x460c, 0x22, 0, 0},
 	{0x3824, 0x02, 0, 0}, {0x5001, 0xa3, 0, 0},
+	{0x3008, 0x02, 0, 10},
 };
 
 static const struct reg_value ov5640_setting_720P_1280_720[] = {
@@ -526,7 +537,7 @@ static const struct reg_value ov5640_setting_1080P_1920_1080[] = {
 	{0x3a0e, 0x03, 0, 0}, {0x3a0d, 0x04, 0, 0}, {0x3a14, 0x04, 0, 0},
 	{0x3a15, 0x60, 0, 0}, {0x4407, 0x04, 0, 0},
 	{0x460b, 0x37, 0, 0}, {0x460c, 0x20, 0, 0}, {0x3824, 0x04, 0, 0},
-	{0x4005, 0x1a, 0, 0},
+	{0x4005, 0x1a, 0, 0}, {0x3008, 0x02, 0, 10},
 };
 
 static const struct reg_value ov5640_setting_QSXGA_2592_1944[] = {
@@ -1563,7 +1574,14 @@ ov5640_find_mode(struct ov5640_dev *sensor, enum ov5640_frame_rate fr,
 		if (((mode->id == OV5640_MODE_1080P_1920_1080) && (fr != OV5640_15_FPS)) ||
 		    ((mode->id == OV5640_MODE_QSXGA_2592_1944) && (fr != OV5640_07_FPS)))
 			return NULL;
+	/*
+	 * MIPI mode only support 2592x1944@15
+	 */
+	} else if (sensor->ep.bus_type == V4L2_MBUS_CSI2_DPHY) {
+		if ((mode->id == OV5640_MODE_QSXGA_2592_1944) && (fr != OV5640_15_FPS))
+			return NULL;
 	}
+
 
 	if (!mode ||
 	    (!nearest && (mode->hact != width || mode->vact != height)))
@@ -1959,7 +1977,7 @@ static int ov5640_set_power_mipi(struct ov5640_dev *sensor, bool on)
 
 	if (!on) {
 		/* Reset MIPI bus settings to their default values. */
-		ov5640_write_reg(sensor, OV5640_REG_IO_MIPI_CTRL00, 0x58);
+		ov5640_write_reg(sensor, OV5640_REG_IO_MIPI_CTRL00, 0x40);
 		ov5640_write_reg(sensor, OV5640_REG_MIPI_CTRL00, 0x04);
 		ov5640_write_reg(sensor, OV5640_REG_PAD_OUTPUT00, 0x00);
 		return 0;
@@ -1975,7 +1993,7 @@ static int ov5640_set_power_mipi(struct ov5640_dev *sensor, bool on)
 	 * [3] = 0	: Power up MIPI LS Rx
 	 * [2] = 0	: MIPI interface disabled
 	 */
-	ret = ov5640_write_reg(sensor, OV5640_REG_IO_MIPI_CTRL00, 0x40);
+	ret = ov5640_write_reg(sensor, OV5640_REG_IO_MIPI_CTRL00, 0x45);
 	if (ret)
 		return ret;
 
@@ -2018,7 +2036,7 @@ static int ov5640_set_power_dvp(struct ov5640_dev *sensor, bool on)
 
 	if (!on) {
 		/* Reset settings to their default values. */
-		ov5640_write_reg(sensor, OV5640_REG_IO_MIPI_CTRL00, 0x58);
+		ov5640_write_reg(sensor, OV5640_REG_IO_MIPI_CTRL00, 0x00);
 		ov5640_write_reg(sensor, OV5640_REG_POLARITY_CTRL00, 0x20);
 		ov5640_write_reg(sensor, OV5640_REG_PAD_OUTPUT_ENABLE01, 0x00);
 		ov5640_write_reg(sensor, OV5640_REG_PAD_OUTPUT_ENABLE02, 0x00);
@@ -2076,7 +2094,7 @@ static int ov5640_set_power_dvp(struct ov5640_dev *sensor, bool on)
 	 * 3:	 PWDN PHY RX
 	 * 2:	 MIPI enable
 	 */
-	ret = ov5640_write_reg(sensor, OV5640_REG_IO_MIPI_CTRL00, 0x18);
+	ret = ov5640_write_reg(sensor, OV5640_REG_IO_MIPI_CTRL00, 0x58);
 	if (ret)
 		return ret;
 
