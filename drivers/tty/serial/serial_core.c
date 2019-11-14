@@ -2200,7 +2200,8 @@ int uart_resume_port(struct uart_driver *drv, struct uart_port *uport)
 
 		if (console_suspend_enabled)
 			uart_change_pm(state, UART_PM_STATE_ON);
-		uport->ops->set_termios(uport, &termios, NULL);
+		if (!port_no_tty)
+			uport->ops->set_termios(uport, &termios, NULL);
 		if (console_suspend_enabled)
 			console_start(uport->cons);
 	}
