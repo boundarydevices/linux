@@ -38,6 +38,7 @@
 #include <linux/videodev2.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-device.h>
+#include <media/v4l2-ctrls.h>
 
 static int debug;
 module_param(debug, int, 0644);
@@ -292,6 +293,8 @@ struct csi_state {
 
 	struct csis_hw_reset hw_reset;
 	struct regulator     *mipi_phy_regulator;
+
+	struct v4l2_ctrl_handler ctrl_handler;
 };
 
 /**
@@ -968,6 +971,9 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 	if (state->fwnode == dev_fwnode(subdev->dev))
 		state->sensor_sd = subdev;
 
+	v4l2_ctrl_add_handler(state->mipi_sd.ctrl_handler, subdev->ctrl_handler,
+		  NULL, true);
+
 	v4l2_info(&state->v4l2_dev, "Registered sensor subdevice: %s\n",
 		  subdev->name);
 
@@ -1180,12 +1186,20 @@ static int mipi_csis_probe(struct platform_device *pdev)
 		goto e_clkdis;
 	}
 
+	/* Add the control handler */
+	v4l2_ctrl_handler_init(&state->ctrl_handler, 10);
+	if (state->ctrl_handler.error) {
+		ret = state->ctrl_handler.error;
+		goto e_clkdis;
+	}
+	state->mipi_sd.ctrl_handler = &state->ctrl_handler;
+
 	/* First register a v4l2 device */
 	ret = v4l2_device_register(dev, &state->v4l2_dev);
 	if (ret) {
 		v4l2_err(dev->driver,
 			"Unable to register v4l2 device.\n");
-		goto e_clkdis;
+		goto e_handler;
 	}
 	v4l2_info(&state->v4l2_dev, "mipi csi v4l2 device registered\n");
 
@@ -1222,6 +1236,8 @@ e_sd_host:
 	v4l2_device_unregister(&state->v4l2_dev);
 e_sd_mipi:
 	v4l2_async_unregister_subdev(&state->mipi_sd);
+e_handler:
+	v4l2_ctrl_handler_free(&state->ctrl_handler);
 e_clkdis:
 	mipi_csis_clk_disable(state);
 	return ret;
@@ -1323,6 +1339,7 @@ static int mipi_csis_remove(struct platform_device *pdev)
 	v4l2_async_nf_cleanup(&state->subdev_notifier);
 	v4l2_async_nf_unregister(&state->subdev_notifier);
 	v4l2_device_unregister(&state->v4l2_dev);
+	v4l2_ctrl_handler_free(&state->ctrl_handler);
 
 	pm_runtime_disable(&pdev->dev);
 	mipi_csis_pm_suspend(&pdev->dev, true);

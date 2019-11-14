@@ -25,6 +25,7 @@
 #include <media/v4l2-fwnode.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-device.h>
+#include <media/v4l2-ctrls.h>
 
 #include "mxc-mipi-csi2.h"
 static int debug;
@@ -522,6 +523,9 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 	if (csi2dev->fwnode == of_fwnode_handle(subdev->dev->of_node))
 		csi2dev->sensor_sd = subdev;
 
+	v4l2_ctrl_add_handler(csi2dev->sd.ctrl_handler, subdev->ctrl_handler,
+		  NULL, true);
+
 	v4l2_info(&csi2dev->v4l2_dev, "Registered sensor subdevice: %s\n",
 		  subdev->name);
 
@@ -647,11 +651,18 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	csi2dev->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 	csi2dev->sd.dev = &pdev->dev;
 
+	/* Add the control handler */
+	v4l2_ctrl_handler_init(&csi2dev->ctrl_handler, 10);
+	if (csi2dev->ctrl_handler.error)
+		return csi2dev->ctrl_handler.error;
+	csi2dev->sd.ctrl_handler = &csi2dev->ctrl_handler;
+
 	/* First register a v4l2 device */
 	ret = v4l2_device_register(dev, &csi2dev->v4l2_dev);
 	if (ret) {
 		dev_err(&pdev->dev, "Unable to register v4l2 device.\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto e_handler;
 	}
 	ret = v4l2_async_register_subdev(&csi2dev->sd);
 	if (ret < 0) {
@@ -688,6 +699,8 @@ e_clkdis:
 	v4l2_async_unregister_subdev(&csi2dev->sd);
 e_v4l_dev:
 	v4l2_device_unregister(&csi2dev->v4l2_dev);
+e_handler:
+	v4l2_ctrl_handler_free(&csi2dev->ctrl_handler);
 	return ret;
 }
 
@@ -699,6 +712,8 @@ static int mipi_csi2_remove(struct platform_device *pdev)
 	v4l2_async_nf_cleanup(&csi2dev->subdev_notifier);
 	mipi_csi2_clk_disable(csi2dev);
 	pm_runtime_disable(&pdev->dev);
+	v4l2_ctrl_handler_free(sd->ctrl_handler);
+	sd->ctrl_handler = NULL;
 
 	return 0;
 }
