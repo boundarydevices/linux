@@ -1788,6 +1788,102 @@ static int mx6s_vidioc_enum_frameintervals(struct file *file, void *priv,
 	return 0;
 }
 
+static int mx6s_vidioc_queryctrl(struct file *file, void *priv,
+				 struct v4l2_queryctrl *a)
+{
+	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
+	struct v4l2_subdev *sd = csi_dev->sd;
+
+	if (!sd || !sd->ctrl_handler)
+		return -ENOTTY;
+
+	return v4l2_queryctrl(sd->ctrl_handler, a);
+}
+
+static int mx6s_vidioc_query_ext_ctrl(struct file *file, void *priv,
+				      struct v4l2_query_ext_ctrl *a)
+{
+	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
+	struct v4l2_subdev *sd = csi_dev->sd;
+
+	if (!sd || !sd->ctrl_handler)
+		return -ENOTTY;
+
+	return v4l2_query_ext_ctrl(sd->ctrl_handler, a);
+}
+
+static int mx6s_vidioc_g_ctrl(struct file *file, void *priv,
+			      struct v4l2_control *a)
+{
+	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
+	struct v4l2_subdev *sd = csi_dev->sd;
+
+	if (!sd || !sd->ctrl_handler)
+		return -ENOTTY;
+
+	return v4l2_g_ctrl(sd->ctrl_handler, a);
+}
+
+static int mx6s_vidioc_s_ctrl(struct file *file, void *priv,
+			      struct v4l2_control *a)
+{
+	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
+	struct v4l2_subdev *sd = csi_dev->sd;
+
+	if (!sd || !sd->ctrl_handler)
+		return -ENOTTY;
+
+	return v4l2_s_ctrl(NULL, sd->ctrl_handler, a);
+}
+
+static int mx6s_vidioc_g_ext_ctrls(struct file *file, void *priv,
+				   struct v4l2_ext_controls *a)
+{
+	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
+	struct v4l2_subdev *sd = csi_dev->sd;
+
+	if (!sd || !sd->ctrl_handler)
+		return -ENOTTY;
+
+	return v4l2_g_ext_ctrls(sd->ctrl_handler, csi_dev->vdev, NULL, a);
+}
+
+static int mx6s_vidioc_s_ext_ctrls(struct file *file, void *priv,
+				   struct v4l2_ext_controls *a)
+{
+	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
+	struct v4l2_subdev *sd = csi_dev->sd;
+
+	if (!sd || !sd->ctrl_handler)
+		return -ENOTTY;
+
+	return v4l2_s_ext_ctrls(NULL, sd->ctrl_handler, csi_dev->vdev, NULL, a);
+}
+
+static int mx6s_vidioc_try_ext_ctrls(struct file *file, void *priv,
+				     struct v4l2_ext_controls *a)
+{
+	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
+	struct v4l2_subdev *sd = csi_dev->sd;
+
+	if (!sd || !sd->ctrl_handler)
+		return -ENOTTY;
+
+	return v4l2_try_ext_ctrls(sd->ctrl_handler, csi_dev->vdev, NULL, a);
+}
+
+static int mx6s_vidioc_querymenu(struct file *file, void *priv,
+				 struct v4l2_querymenu *a)
+{
+	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
+	struct v4l2_subdev *sd = csi_dev->sd;
+
+	if (!sd || !sd->ctrl_handler)
+		return -ENOTTY;
+
+	return v4l2_querymenu(sd->ctrl_handler, a);
+}
+
 static const struct v4l2_ioctl_ops mx6s_csi_ioctl_ops = {
 	.vidioc_querycap          = mx6s_vidioc_querycap,
 	.vidioc_enum_fmt_vid_cap  = mx6s_vidioc_enum_fmt_vid_cap,
@@ -1814,6 +1910,14 @@ static const struct v4l2_ioctl_ops mx6s_csi_ioctl_ops = {
 	.vidioc_s_parm        = mx6s_vidioc_s_parm,
 	.vidioc_enum_framesizes = mx6s_vidioc_enum_framesizes,
 	.vidioc_enum_frameintervals = mx6s_vidioc_enum_frameintervals,
+	.vidioc_queryctrl      = mx6s_vidioc_queryctrl,
+	.vidioc_query_ext_ctrl = mx6s_vidioc_query_ext_ctrl,
+	.vidioc_g_ctrl         = mx6s_vidioc_g_ctrl,
+	.vidioc_s_ctrl         = mx6s_vidioc_s_ctrl,
+	.vidioc_g_ext_ctrls    = mx6s_vidioc_g_ext_ctrls,
+	.vidioc_s_ext_ctrls    = mx6s_vidioc_s_ext_ctrls,
+	.vidioc_try_ext_ctrls  = mx6s_vidioc_try_ext_ctrls,
+	.vidioc_querymenu      = mx6s_vidioc_querymenu,
 };
 
 static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
@@ -1938,7 +2042,7 @@ static int mx6sx_register_subdevs(struct mx6s_csi_dev *csi_dev)
 					&csi_dev->subdev_notifier);
 	if (ret)
 		dev_err(csi_dev->dev,
-					"Error register async notifier regoster\n");
+					"Error registering async notifier\n");
 
 	return ret;
 }

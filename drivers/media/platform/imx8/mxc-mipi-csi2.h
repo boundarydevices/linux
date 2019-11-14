@@ -7,6 +7,7 @@
 #define MXC_MIPI_CSI2_H_
 
 #include <media/v4l2-device.h>
+#include <media/v4l2-ctrls.h>
 
 #define MXC_MIPI_CSI2_DRIVER_NAME	"mxc-mipi-csi2"
 #define MXC_MIPI_CSI2_SUBDEV_NAME	MXC_MIPI_CSI2_DRIVER_NAME
@@ -252,6 +253,8 @@ struct mxc_mipi_csi2_dev {
 	struct v4l2_async_notifier	subdev_notifier;
 
 	struct mutex lock;
+
+	struct v4l2_ctrl_handler ctrl_handler;
 
 	int	 id;
 	u32 hs_settle;
