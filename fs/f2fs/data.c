@@ -548,19 +548,8 @@ static struct bio *f2fs_grab_read_bio(struct inode *inode, block_t blkaddr,
 	if (!f2fs_is_valid_blkaddr(sbi, blkaddr, DATA_GENERIC))
 		return ERR_PTR(-EFAULT);
 
-	if (f2fs_encrypted_file(inode)) {
-		ctx = fscrypt_get_ctx(inode, GFP_NOFS);
-		if (IS_ERR(ctx))
-			return ERR_CAST(ctx);
-
-		/* wait the page to be moved by cleaning */
-		f2fs_wait_on_block_writeback(sbi, blkaddr);
-	}
-
 	bio = f2fs_bio_alloc(sbi, min_t(int, nr_pages, BIO_MAX_PAGES), false);
 	if (!bio)
-		if (ctx)
-			fscrypt_release_ctx(ctx);
 		return ERR_PTR(-ENOMEM);
 	f2fs_target_device(sbi, blkaddr, bio);
 	bio->bi_end_io = f2fs_read_end_io;
