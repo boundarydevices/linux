@@ -42,6 +42,7 @@
 #include <linux/highmem.h>
 #include <linux/idr.h>
 #include <linux/platform_data/x86/apple.h>
+#include <linux/pinctrl/consumer.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/spi.h>

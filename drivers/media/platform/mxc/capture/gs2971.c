@@ -44,6 +44,7 @@
 #include <media/v4l2-chip-ident.h>
 #include "mxc_v4l2_capture.h"
 #include <linux/proc_fs.h>
+#include <linux/pinctrl/consumer.h>
 
 #include "gs2971.h"
 

@@ -34,6 +34,7 @@
 #ifdef CONFIG_PPC
 #include <asm/machdep.h>
 #endif
+#include <linux/pinctrl/consumer.h>
 #include "sdhci-pltfm.h"
 
 unsigned int sdhci_pltfm_clk_get_max_clock(struct sdhci_host *host)

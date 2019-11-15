@@ -43,6 +43,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pinctrl/consumer.h>
 
 #ifdef CONFIG_ARCH_MXC_ARM64
 #include <soc/imx8/sc/sci.h>

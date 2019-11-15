@@ -26,6 +26,7 @@
 #include <linux/mfd/syscon.h>
 #include <linux/regulator/consumer.h>
 #include <linux/busfreq-imx.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/pm_qos.h>
 #include <linux/usb/of.h>
 
