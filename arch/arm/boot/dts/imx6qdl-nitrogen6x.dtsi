@@ -212,7 +212,10 @@
 #define GP_OV5642_POWER_DOWN	<&gpio1 6 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_6__GPIO1_IO06			0x000b0
 #define GP_OV5642_RESET		<&gpio1 8 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_8__GPIO1_IO08			0x000b0
+			MX6QDL_PAD_GPIO_8__GPIO1_IO08			0x030b0
+/* SOM1 boards need this */
+#define GP_OV5642_RESET2	<&gpio6 11 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_NANDF_CS0__GPIO6_IO11		0x030b0
 		>;
 	};
 
@@ -892,7 +895,7 @@
 		AVDD-supply = <&reg_2p5v>;
 		DVDD-supply = <&reg_1p8v>;
 		pwn-gpios = GP_OV5642_POWER_DOWN;
-		rst-gpios = GP_OV5642_RESET;
+		rst-gpios = GP_OV5642_RESET, GP_OV5642_RESET2;
 		ipu_id = <0>;
 		csi_id = <0>;
 		mclk = <24000000>;
