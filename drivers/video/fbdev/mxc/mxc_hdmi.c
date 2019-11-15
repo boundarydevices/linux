@@ -2958,8 +2958,8 @@ static int mxc_hdmi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to allocate extcon device\n");
 		goto edispdrv;
 	}
-	res = devm_extcon_dev_register(&pdev->dev,hdmi_edev);
-	if (res < 0) {
+	ret = devm_extcon_dev_register(&pdev->dev,hdmi_edev);
+	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to register extcon device\n");
 		goto edispdrv;
 	}
