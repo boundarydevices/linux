@@ -143,6 +143,7 @@ struct ov5642_mode_info {
 static struct sensor_data ov5642_data;
 struct gpio_desc *gpiod_pwdn;
 struct gpio_desc *gpiod_rst;
+struct gpio_desc *gpiod_rst2;
 static int focus_mode = V4L2_CID_AUTO_FOCUS_STOP;
 static int focus_range = V4L2_AUTO_FOCUS_RANGE_NORMAL;
 static uint16_t roi_x = 0;
@@ -5131,7 +5132,9 @@ static void ov5642_reset(void)
 	if (!gpiod_rst && !gpiod_pwdn)
 		return;
 
-	gpiod_set_value_cansleep(gpiod_rst, 1);	/* camera reset */
+	if (gpiod_rst2)
+		gpiod_set_value_cansleep(gpiod_rst2, 1); /* camera reset */
+	gpiod_set_value_cansleep(gpiod_rst, 1);		/* camera reset */
 	gpiod_set_value_cansleep(gpiod_pwdn, 1);	/* camera power down */
 
 	/* >= 5 ms, Let power supply stabilize */
@@ -5142,6 +5145,8 @@ static void ov5642_reset(void)
 
 	/* >= 1ms from powerup, to reset release*/
 	msleep(1);
+	if (gpiod_rst2)
+		gpiod_set_value_cansleep(gpiod_rst2, 0);
 	gpiod_set_value_cansleep(gpiod_rst, 0);
 
 	/* >= 20 ms from reset high to SCCB initialized */
@@ -6517,6 +6522,10 @@ static int ov5642_probe(struct i2c_client *client,
 	if (!gd)
 		dev_warn(dev, "no sensor reset pin available");
 	gpiod_rst = gd;
+	gd = devm_gpiod_get_index_optional(dev, "rst", 1, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd))
+		return PTR_ERR(gd);
+	gpiod_rst2 = gd;
 
 	/* Set initial values for the sensor struct. */
 	memset(&ov5642_data, 0, sizeof(ov5642_data));
