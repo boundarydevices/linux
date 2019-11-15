@@ -2956,7 +2956,6 @@ static int __must_check ffs_do_single_desc_len(char *data, unsigned len)
 {
 	struct usb_descriptor_header *_ds = (void *)data;
 	u8 length;
-	int ret;
 
 	ENTER();
 
@@ -3090,10 +3089,10 @@ static int _ffs_func_bind(struct usb_configuration *c,
 			goto error;
 		}
 	} else if(!super&&func->ffs->ss_descs_count) {
-		int i=0,ret=0,len=0;
+		int i;
+		int ret=0, len=0;
 		ss_len=0;
-		for(i;i< ffs->ss_descs_count;i++ )
-		{
+		for (i = 0; i< ffs->ss_descs_count; i++ ) {
 			ret = ffs_do_single_desc_len( vla_ptr(vlabuf,d,raw_descs)+fs_len+hs_len+ss_len,d_raw_descs__sz-fs_len-hs_len-ss_len);
 			len=ret;
 			ss_len +=len;
