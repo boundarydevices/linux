@@ -304,6 +304,7 @@ static int do_read_inode(struct inode *inode)
 	if (!sanity_check_inode(inode, node_page)) {
 		f2fs_put_page(node_page, 1);
 		return -EINVAL;
+	}
 	fi->i_extra_isize = f2fs_has_extra_attr(inode) ?
 					le16_to_cpu(ri->i_extra_isize) : 0;
 
