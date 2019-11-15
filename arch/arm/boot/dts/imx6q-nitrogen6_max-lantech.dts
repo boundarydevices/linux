@@ -85,9 +85,8 @@
 	};
 
 	regulators {
-		reg_isl76534: regulator@5 {
+		reg_isl76534: regulator-6v {
 			compatible = "regulator-fixed";
-			reg = <5>;
 			regulator-name = "reg_isl76534";
 			regulator-min-microvolt = <6000000>;
 			regulator-max-microvolt = <6000000>;
