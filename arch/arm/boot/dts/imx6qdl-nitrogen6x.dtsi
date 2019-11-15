@@ -163,6 +163,13 @@
 		>;
 	};
 
+	pinctrl_i2c1_rv4162: i2c1-rv4162grp {
+		fsl,pins = <
+#define GPIRQ_RTC_RV4162	<&gpio6 7 IRQ_TYPE_LEVEL_LOW>
+			MX6QDL_PAD_NANDF_CLE__GPIO6_IO07	0x1b0b0
+		>;
+	};
+
 	pinctrl_i2c1_sgtl5000: i2c1-sgtl5000grp {
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* sys_mclk */
@@ -859,6 +866,14 @@
 		clocks = <&clks IMX6QDL_CLK_CKO>;
 		VDDA-supply = <&reg_2p5v>;
 		VDDIO-supply = <&reg_3p3v>;
+	};
+
+	rv4162@68 {
+		compatible = "microcrystal,rv4162";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c1_rv4162>;
+		reg = <0x68>;
+		interrupts-extended = GPIRQ_RTC_RV4162;
 	};
 
 	isl1208@6f {
