@@ -52,7 +52,7 @@ struct rmem_unmapped {
 
 	char name[32];
 };
-static struct rmem_unmapped unmapped_data[MAX_UNMAPPED_AREA] = {0};
+static struct rmem_unmapped unmapped_data[MAX_UNMAPPED_AREA];
 uint32_t unmapped_count = 0;
 
 struct ion_unmapped_heap {
