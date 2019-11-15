@@ -28,7 +28,8 @@
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
-
+#include <linux/of_device.h>
+#include <linux/firmware.h>
 #include <asm/unaligned.h>
 
 #define WORK_REGISTER_THRESHOLD		0x00
@@ -71,6 +72,74 @@
 
 #define EDT_DEFAULT_NUM_X		1024
 #define EDT_DEFAULT_NUM_Y		1024
+
+#define EDT_MAX_FW_SIZE			(60 * 1024)
+#define EDT_MAX_NB_TRIES		30
+#define EDT_CMD_RESET			0x07
+#define EDT_CMD_READ_ID			0x90
+#define EDT_CMD_ERASE_APP		0x61
+#define EDT_CMD_WRITE			0xBF
+#define EDT_CMD_FLASH_STATUS		0x6A
+#define EDT_CMD_CHIP_ID			0xA3
+#define EDT_CMD_CHIP_ID2		0x9F
+#define EDT_CMD_START1			0x55
+#define EDT_CMD_START2			0xAA
+#define EDT_CMD_START_DELAY		12
+
+#define EDT_UPGRADE_AA			0xAA
+#define EDT_UPGRADE_55			0x55
+
+#define EDT_RETRIES_WRITE		100
+#define EDT_RETRIES_DELAY_WRITE		1
+#define EDT_UPGRADE_LOOP		30
+
+#define EDT_DELAY_UPGRADE_RESET		80
+#define EDT_DELAY_UPGRADE_AA		10
+#define EDT_DELAY_UPGRADE_55		80
+#define EDT_DELAY_READ_ID		20
+#define EDT_DELAY_ERASE			500
+#define EDT_INTERVAL_READ_REG		200
+#define EDT_TIMEOUT_READ_REG		1000
+
+#define EDT_FLASH_PACKET_LENGTH		32
+#define EDT_CMD_WRITE_LEN		6
+
+#define BYTE_OFF_0(x)			(u8)((x) & 0xFF)
+#define BYTE_OFF_8(x)			(u8)(((x) >> 8) & 0xFF)
+#define BYTE_OFF_16(x)			(u8)(((x) >> 16) & 0xFF)
+
+enum edt_fw_status {
+	EDT_RUN_IN_ERROR,
+	EDT_RUN_IN_APP,
+	EDT_RUN_IN_ROM,
+	EDT_RUN_IN_PRAM,
+	EDT_RUN_IN_BOOTLOADER,
+};
+
+struct edt_fw_param {
+	u8 model;
+	u16 bootloader_id;
+	u16 chip_id;
+	u16 flash_status_ok;
+	u16 fw_len_offset;
+	u8 cmd_upgrade;
+	u16 start_addr;
+};
+
+#define EDT_FW_PARAMS(_model, _bid, _cid, _fs, _fo, _cu, _sa) \
+	{ \
+		.model = _model, \
+		.bootloader_id = _bid, \
+		.chip_id = _cid, \
+		.flash_status_ok = _fs, \
+		.fw_len_offset = _fo,  \
+		.cmd_upgrade = _cu, \
+		.start_addr = _sa, \
+	}
+
+static struct edt_fw_param edt_fw_params[] = {
+	EDT_FW_PARAMS(0x5F, 0x7918, 0x3600, 0xB002, 0x100, 0xBC, 0),
+};
 
 enum edt_pmode {
 	EDT_PMODE_NOT_SUPPORTED,
@@ -130,6 +199,7 @@ struct edt_ft5x06_ts_data {
 
 	struct edt_reg_addr reg_addr;
 	enum edt_ver version;
+	struct edt_fw_param *fw_param;
 };
 
 struct edt_i2c_chip_data {
@@ -508,6 +578,467 @@ out:
 	return error ?: count;
 }
 
+static inline int edt_ft5x06_write_delay(struct edt_ft5x06_ts_data *tsdata,
+				   u16 wr_len, u8 *wr_buf,
+				   u16 delay)
+{
+	struct i2c_client *client = tsdata->client;
+	int ret;
+
+	ret = edt_ft5x06_ts_readwrite(client, wr_len, wr_buf, 0, NULL);
+	if (ret < 0) {
+		dev_err(&client->dev, "write cmd failed\n");
+		return ret;
+	}
+
+	if (delay > 0)
+		msleep(delay);
+
+	return 0;
+}
+
+static inline bool edt_ft5x06_wait_tp_to_valid(
+			struct edt_ft5x06_ts_data *tsdata)
+{
+	struct i2c_client *client = tsdata->client;
+	int ret;
+	int cnt = 0;
+	u8 idh;
+	u8 idl;
+	u8 cmd;
+	u16 chip_id;
+
+	do {
+		cmd = EDT_CMD_CHIP_ID;
+		ret = edt_ft5x06_ts_readwrite(client, 1, &cmd, 1, &idh);
+		if (ret < 0) {
+			dev_err(&client->dev, "read chip failed\n");
+			return false;
+		}
+		cmd = EDT_CMD_CHIP_ID2;
+		ret = edt_ft5x06_ts_readwrite(client, 1, &cmd, 1, &idl);
+
+		if (ret < 0) {
+			dev_err(&client->dev, "read chip2 failed\n");
+			return false;
+		}
+
+		chip_id = (((u16)idh) << 8) + idl;
+
+		if (tsdata->fw_param->chip_id == chip_id)
+			return true;
+
+		cnt++;
+		msleep(EDT_INTERVAL_READ_REG);
+	} while ((cnt * EDT_INTERVAL_READ_REG) < EDT_TIMEOUT_READ_REG);
+
+	return false;
+}
+
+static int edt_ft5x06_fwupg_get_boot_state(struct edt_ft5x06_ts_data *tsdata,
+				    enum edt_fw_status *fw_sts)
+{
+	struct i2c_client *client = tsdata->client;
+	int ret;
+	u8 cmd[4];
+	u8 val[2];
+	u16 bootloader_id;
+
+	*fw_sts = EDT_RUN_IN_ERROR;
+	cmd[0] = EDT_CMD_START1;
+	cmd[1] = EDT_CMD_START2;
+	ret = edt_ft5x06_write_delay(tsdata, 2,
+					cmd, EDT_CMD_START_DELAY);
+	if (ret < 0) {
+		dev_err(&client->dev, "write 55 aa failed\n");
+		return ret;
+	}
+
+	cmd[0] = EDT_CMD_READ_ID;
+	cmd[1] = cmd[2] = cmd[3] = 0x00;
+	ret = edt_ft5x06_ts_readwrite(client, 4, cmd, 2, val);
+	if (ret < 0) {
+		dev_err(&client->dev, "write 90 failed\n");
+		return ret;
+	}
+	bootloader_id = (((u16)val[0]) << 8) + val[1];
+
+	if (tsdata->fw_param->bootloader_id == bootloader_id)
+		*fw_sts = EDT_RUN_IN_BOOTLOADER;
+
+	return 0;
+}
+
+static int edt_ft5x06_reset(struct edt_ft5x06_ts_data *tsdata)
+{
+	u8 cmd = EDT_CMD_RESET;
+
+	return edt_ft5x06_write_delay(tsdata, sizeof(cmd),
+					&cmd, EDT_DELAY_UPGRADE_RESET);
+}
+
+static int edt_ft5x06_fwupg_reset_to_boot(struct edt_ft5x06_ts_data *tsdata)
+{
+	struct i2c_client *client = tsdata->client;
+	int ret;
+	u8 buf[2];
+
+	buf[0] = tsdata->fw_param->cmd_upgrade;
+	buf[1] = EDT_UPGRADE_AA;
+	ret = edt_ft5x06_write_delay(tsdata, sizeof(buf),
+					buf, EDT_DELAY_UPGRADE_AA);
+
+	if (ret < 0) {
+		dev_err(&client->dev, "write AA failed\n");
+		return ret;
+	}
+
+	buf[1] = EDT_UPGRADE_55;
+	ret = edt_ft5x06_write_delay(tsdata, sizeof(buf),
+					buf, EDT_DELAY_UPGRADE_55);
+
+	if (ret < 0) {
+		dev_err(&client->dev, "write 55 failed\n");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int edt_ft5x06_fwupg_reset_in_boot(struct edt_ft5x06_ts_data *tsdata)
+{
+	struct i2c_client *client = tsdata->client;
+	int ret;
+	u8 cmd = EDT_CMD_RESET;
+
+	ret = edt_ft5x06_write_delay(tsdata, sizeof(cmd),
+					&cmd, EDT_DELAY_UPGRADE_RESET);
+
+	if (ret < 0) {
+		dev_err(&client->dev, "write cmd reset failed\n");
+		return ret;
+	}
+
+	return ret;
+}
+
+static bool edt_ft5x06_fwupg_check_state(struct edt_ft5x06_ts_data *tsdata,
+					enum edt_fw_status rstate)
+{
+	int ret;
+	int i;
+	enum edt_fw_status cstate;
+
+	for (i = 0; i < EDT_UPGRADE_LOOP; i++) {
+		ret = edt_ft5x06_fwupg_get_boot_state(tsdata, &cstate);
+		if (cstate == rstate)
+			return true;
+		msleep(EDT_DELAY_READ_ID);
+	}
+
+	return false;
+}
+
+static bool edt_ft5x06_check_flash_status(
+	struct edt_ft5x06_ts_data *tsdata,
+	u16 flash_status,
+	int retries,
+	int retries_delay)
+{
+	struct i2c_client *client = tsdata->client;
+	int ret;
+	int i;
+	u8 cmd[4] = { 0 };
+	u8 val[2];
+	u16 read_status;
+
+	cmd[0] = EDT_CMD_FLASH_STATUS;
+	for (i = 0; i < retries; i++) {
+		ret = edt_ft5x06_ts_readwrite(client, 4, cmd, 2, val);
+		if (ret < 0) {
+			dev_err(&client->dev, "cmd flash status failed\n");
+			return 0;
+		}
+		read_status = (((u16)val[0]) << 8) + val[1];
+		if (flash_status == read_status)
+			return 1;
+
+		msleep(retries_delay);
+	}
+
+	return 0;
+}
+
+static int edt_ft5x06_enter_bl(struct edt_ft5x06_ts_data *tsdata)
+{
+	struct i2c_client *client = tsdata->client;
+	int ret;
+	bool fwvalid;
+	enum edt_fw_status state;
+
+	fwvalid = edt_ft5x06_wait_tp_to_valid(tsdata);
+	if (fwvalid) {
+		ret = edt_ft5x06_fwupg_reset_to_boot(tsdata);
+		if (ret < 0) {
+			dev_err(&client->dev, "enter into bootloader fail\n");
+			return ret;
+		}
+	} else {
+		ret = edt_ft5x06_fwupg_reset_in_boot(tsdata);
+		if (ret < 0) {
+			dev_err(&client->dev, "boot id when fw invalid fail\n");
+			return ret;
+		}
+	}
+
+	state = edt_ft5x06_fwupg_check_state(tsdata, EDT_RUN_IN_BOOTLOADER);
+	if (!state) {
+		dev_err(&client->dev, "fw not in bootloader, fail\n");
+		return -EIO;
+	}
+
+	return ret;
+}
+static int edt_ft5x06_erase(struct edt_ft5x06_ts_data *tsdata)
+{
+	struct i2c_client *client = tsdata->client;
+	int ret;
+	u8 cmd;
+	bool flag;
+
+	cmd = EDT_CMD_ERASE_APP;
+	ret = edt_ft5x06_write_delay(tsdata, sizeof(cmd),
+					&cmd, EDT_DELAY_ERASE);
+	if (ret < 0) {
+		dev_err(&client->dev, "erase failed\n");
+		return ret;
+	}
+	flag = edt_ft5x06_check_flash_status(tsdata,
+			tsdata->fw_param->flash_status_ok, 50, 100);
+	if (!flag) {
+		dev_err(&client->dev, "ecc flash status check fail\n");
+		return -EIO;
+	}
+
+	return 0;
+}
+
+static int edt_ft5x06_write_fw(struct edt_ft5x06_ts_data *tsdata,
+				u32 start_addr, u8 *buf, u32 len)
+{
+	struct i2c_client *client = tsdata->client;
+	int ret;
+	u32 i;
+	u32 j;
+	u32 packet_number;
+	u32 packet_len;
+	u32 addr;
+	u32 offset;
+	u32 remainder;
+	u8 packet_buf[EDT_FLASH_PACKET_LENGTH + EDT_CMD_WRITE_LEN];
+	u8 ecc_in_host = 0;
+	u8 cmd[4];
+	u8 val[2];
+	u16 read_status;
+	u16 wr_ok;
+
+	packet_number = len / EDT_FLASH_PACKET_LENGTH;
+	remainder = len % EDT_FLASH_PACKET_LENGTH;
+	if (remainder > 0)
+		packet_number++;
+	packet_len = EDT_FLASH_PACKET_LENGTH;
+
+	packet_buf[0] = EDT_CMD_WRITE;
+	for (i = 0; i < packet_number; i++) {
+		offset = i * EDT_FLASH_PACKET_LENGTH;
+		addr = start_addr + offset;
+		packet_buf[1] = BYTE_OFF_16(addr);
+		packet_buf[2] = BYTE_OFF_8(addr);
+		packet_buf[3] = BYTE_OFF_0(addr);
+
+		/* last packet */
+		if ((i == (packet_number - 1)) && remainder)
+			packet_len = remainder;
+
+		packet_buf[4] = BYTE_OFF_8(packet_len);
+		packet_buf[5] = BYTE_OFF_0(packet_len);
+
+		for (j = 0; j < packet_len; j++) {
+			packet_buf[EDT_CMD_WRITE_LEN + j] = buf[offset + j];
+			ecc_in_host ^= packet_buf[EDT_CMD_WRITE_LEN + j];
+		}
+
+		ret = edt_ft5x06_write_delay(tsdata,
+						packet_len + EDT_CMD_WRITE_LEN,
+						packet_buf, 0);
+		if (ret < 0) {
+			dev_err(&client->dev, "write packet failed\n");
+			return ret;
+		}
+		mdelay(1);
+
+		/* read status */
+		cmd[0] = EDT_CMD_FLASH_STATUS;
+		cmd[1] = 0x00;
+		cmd[2] = 0x00;
+		cmd[3] = 0x00;
+		wr_ok = tsdata->fw_param->flash_status_ok + i + 1;
+		for (j = 0; j < EDT_RETRIES_WRITE; j++) {
+			ret = edt_ft5x06_ts_readwrite(client, 4, cmd, 2, val);
+			read_status = (((u16)val[0]) << 8) + val[1];
+
+			if (wr_ok == read_status)
+				break;
+
+			mdelay(EDT_RETRIES_DELAY_WRITE);
+		}
+
+	}
+
+	return (int)ecc_in_host;
+}
+
+static int edt_ft5x06_ecc_cal(struct edt_ft5x06_ts_data *tsdata)
+{
+	struct i2c_client *client = tsdata->client;
+	int ret;
+	u8 reg_val = 0;
+	u8 cmd = 0xCC;
+
+	ret = edt_ft5x06_ts_readwrite(client, 1, &cmd, 1, &reg_val);
+	if (ret < 0) {
+		dev_err(&client->dev, "write cmd ecc failed\n");
+		return ret;
+	}
+
+	return reg_val;
+}
+
+static int edt_ft5x06_i2c_do_update_firmware(struct edt_ft5x06_ts_data *ts,
+					u32 start_addr,
+					const struct firmware *fw)
+{
+	struct i2c_client *client = ts->client;
+	int ecc_in_host;
+	int ecc_in_tp;
+	u32 fw_length;
+	int ret;
+
+	if (fw->size == 0 || fw->size > EDT_MAX_FW_SIZE) {
+		dev_err(&client->dev, "Invalid firmware length\n");
+		return -EINVAL;
+	}
+	fw_length = ((u32)fw->data[ts->fw_param->fw_len_offset] << 8) +
+			fw->data[ts->fw_param->fw_len_offset+1];
+
+	ret = edt_ft5x06_enter_bl(ts);
+	if (ret) {
+		dev_err(&client->dev, "Unable to enter bl %d\n", ret);
+		return ret;
+	}
+
+	ret = edt_ft5x06_erase(ts);
+	if (ret < 0) {
+		dev_err(&client->dev, "Error erase %d\n", ret);
+		goto fw_reset;
+	}
+
+	ecc_in_host = edt_ft5x06_write_fw(ts, start_addr, fw->data, fw_length);
+	if (ecc_in_host < 0) {
+		dev_err(&client->dev, "Error write fw %d\n", ecc_in_host);
+		goto fw_reset;
+	}
+
+	ecc_in_tp = edt_ft5x06_ecc_cal(ts);
+	if (ecc_in_tp < 0) {
+		dev_err(&client->dev, "Error read ecc %d\n", ecc_in_tp);
+		goto fw_reset;
+	}
+
+	if (ecc_in_tp != ecc_in_host) {
+		dev_err(&client->dev, "Error check ecc\n");
+		goto fw_reset;
+	}
+
+	ret = edt_ft5x06_reset(ts);
+	if (ret < 0) {
+		dev_err(&client->dev, "Error reset normal\n");
+		return -EIO;
+	}
+
+	msleep(200);
+
+	return 0;
+
+fw_reset:
+	ret = edt_ft5x06_reset(ts);
+	if (ret < 0)
+		dev_err(&client->dev, "Error reset normal\n");
+
+	return -EIO;
+}
+
+static int edt_ft5x06_i2c_fw_update(struct edt_ft5x06_ts_data *ts)
+{
+	struct i2c_client *client = ts->client;
+	const struct firmware *fw = NULL;
+	char *fw_file;
+	int error;
+
+	if (!ts->fw_param) {
+		dev_dbg(&client->dev, "firmware update not supported\n");
+		return -EINVAL;
+	}
+
+	fw_file = kasprintf(GFP_KERNEL, "ft5x06_%02X.bin", ts->fw_param->model);
+	if (!fw_file)
+		return -ENOMEM;
+
+	dev_dbg(&client->dev, "firmware name: %s\n", fw_file);
+
+	error = request_firmware(&fw, fw_file, &client->dev);
+	if (error) {
+		dev_err(&client->dev, "Unable to open firmware %s\n", fw_file);
+		goto out_free_fw_file;
+	}
+
+	disable_irq(client->irq);
+
+	error = edt_ft5x06_i2c_do_update_firmware(ts,
+						ts->fw_param->start_addr, fw);
+	if (error) {
+		dev_err(&client->dev, "firmware update failed: %d\n", error);
+		goto out_enable_irq;
+	}
+
+out_enable_irq:
+	enable_irq(client->irq);
+	msleep(100);
+
+	release_firmware(fw);
+
+out_free_fw_file:
+	kfree(fw_file);
+
+	return error;
+}
+
+static ssize_t edt_ft5x06_update_fw_store(struct device *dev,
+					   struct device_attribute *attr,
+					   const char *buf, size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct edt_ft5x06_ts_data *tsdata = i2c_get_clientdata(client);
+	int ret;
+
+	mutex_lock(&tsdata->mutex);
+
+	ret = edt_ft5x06_i2c_fw_update(tsdata);
+
+	mutex_unlock(&tsdata->mutex);
+	return ret ?: count;
+}
+
 /* m06, m09: range 0-31, m12: range 0-5 */
 static EDT_ATTR(gain, S_IWUSR | S_IRUGO, WORK_REGISTER_GAIN,
 		M09_REGISTER_GAIN, EV_REGISTER_GAIN, 0, 31);
@@ -527,6 +1058,8 @@ static EDT_ATTR(threshold, S_IWUSR | S_IRUGO, WORK_REGISTER_THRESHOLD,
 static EDT_ATTR(report_rate, S_IWUSR | S_IRUGO, WORK_REGISTER_REPORT_RATE,
 		NO_REGISTER, NO_REGISTER, 0, 255);
 
+static DEVICE_ATTR(update_fw, S_IWUSR, NULL, edt_ft5x06_update_fw_store);
+
 static struct attribute *edt_ft5x06_attrs[] = {
 	&edt_ft5x06_attr_gain.dattr.attr,
 	&edt_ft5x06_attr_offset.dattr.attr,
@@ -534,6 +1067,7 @@ static struct attribute *edt_ft5x06_attrs[] = {
 	&edt_ft5x06_attr_offset_y.dattr.attr,
 	&edt_ft5x06_attr_threshold.dattr.attr,
 	&edt_ft5x06_attr_report_rate.dattr.attr,
+	&dev_attr_update_fw.attr,
 	NULL
 };
 
@@ -827,6 +1361,7 @@ static int edt_ft5x06_ts_identify(struct i2c_client *client,
 	char *p;
 	int error;
 	char *model_name = tsdata->name;
+	int i;
 
 	/* see what we find if we assume it is a M06 *
 	 * if we get less than EDT_NAME_LEN, we don't want
@@ -931,6 +1466,13 @@ static int edt_ft5x06_ts_identify(struct i2c_client *client,
 			snprintf(model_name, EDT_NAME_LEN,
 				 "generic ft5x06 (%02x)",
 				 rdbuf[0]);
+
+			for (i = 0; i < ARRAY_SIZE(edt_fw_params); i++) {
+				if (edt_fw_params[i].model == rdbuf[0]) {
+					tsdata->fw_param = &edt_fw_params[i];
+					break;
+				}
+			}
 			break;
 		}
 	}
