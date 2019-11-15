@@ -141,7 +141,8 @@ struct ov5642_mode_info {
  * Maintains the information on the current state of the sesor.
  */
 static struct sensor_data ov5642_data;
-static int pwn_gpio, rst_gpio;
+struct gpio_desc *gpiod_pwdn;
+struct gpio_desc *gpiod_rst;
 static int focus_mode = V4L2_CID_AUTO_FOCUS_STOP;
 static int focus_range = V4L2_AUTO_FOCUS_RANGE_NORMAL;
 static uint16_t roi_x = 0;
@@ -5089,14 +5090,14 @@ static struct i2c_driver ov5642_i2c_driver = {
 	.id_table = ov5642_id,
 };
 
-static void ov5642_standby(s32 enable)
+static void ov5642_power_down_sensor(int enable)
 {
-	if (enable)
-		gpio_set_value(pwn_gpio, 1);
-	else
-		gpio_set_value(pwn_gpio, 0);
+	if (!gpiod_pwdn)
+		return;
+	gpiod_set_value_cansleep(gpiod_pwdn, enable ? 1 : 0);
 
 	msleep(2);
+	pr_debug("ov5640_mipi_camera_powerdown: powerdown=%x\n", enable);
 }
 
 static s32 update_device_addr(struct sensor_data *sensor)
@@ -5127,27 +5128,30 @@ static s32 update_device_addr(struct sensor_data *sensor)
 
 static void ov5642_reset(void)
 {
+	if (!gpiod_rst && !gpiod_pwdn)
+		return;
+
+	gpiod_set_value_cansleep(gpiod_rst, 1);	/* camera reset */
+	gpiod_set_value_cansleep(gpiod_pwdn, 1);	/* camera power down */
+
+	/* >= 5 ms, Let power supply stabilize */
+	msleep(5);
 	mxc_camera_common_lock();
 
-	/* camera reset */
-	gpio_set_value(rst_gpio, 1);
+	gpiod_set_value_cansleep(gpiod_pwdn, 0);
 
-	/* camera power down */
-	gpio_set_value(pwn_gpio, 1);
-	msleep(5);
-
-	gpio_set_value(pwn_gpio, 0);
-	msleep(5);
-
-	gpio_set_value(rst_gpio, 0);
+	/* >= 1ms from powerup, to reset release*/
 	msleep(1);
+	gpiod_set_value_cansleep(gpiod_rst, 0);
 
-	gpio_set_value(rst_gpio, 1);
+	/* >= 20 ms from reset high to SCCB initialized */
 	msleep(20);
+	pr_debug("%s(mipi): reset released\n", __func__);
+
 	update_device_addr(&ov5642_data);
 	mxc_camera_common_unlock();
 
-	gpio_set_value(pwn_gpio, 1);
+	gpiod_set_value_cansleep(gpiod_pwdn, 1);
 }
 
 static int ov5642_power_on(struct device *dev)
@@ -5771,8 +5775,9 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 			if (regulator_enable(analog_regulator) != 0)
 				return -EIO;
 		/* Make sure power on */
-		ov5642_standby(0);
+		ov5642_power_down_sensor(0);
 	} else if (!on && sensor->on) {
+		ov5642_power_down_sensor(1);
 		if (analog_regulator)
 			regulator_disable(analog_regulator);
 		if (core_regulator)
@@ -5781,8 +5786,6 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 			regulator_disable(io_regulator);
 		if (gpo_regulator)
 			regulator_disable(gpo_regulator);
-
-		ov5642_standby(1);
 	}
 
 	sensor->on = on;
@@ -5851,7 +5854,7 @@ static int ioctl_s_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 	int ret = 0;
 
 	/* Make sure power on */
-	ov5642_standby(0);
+	ov5642_power_down_sensor(0);
 
 	switch (a->type) {
 	/* This is the only case currently handled. */
@@ -6490,6 +6493,7 @@ static int ov5642_probe(struct i2c_client *client,
 	int retval;
 	u8 chip_id_high, chip_id_low;
 	struct sensor_data *sensor = &ov5642_data;
+	struct gpio_desc *gd;
 
 	/* ov5642 pinctrl */
 	pinctrl = devm_pinctrl_get_select_default(dev);
@@ -6499,26 +6503,20 @@ static int ov5642_probe(struct i2c_client *client,
 	}
 
 	/* request power down pin */
-	pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
-	if (!gpio_is_valid(pwn_gpio)) {
+	gd = devm_gpiod_get_index_optional(dev, "pwn", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd))
+		return PTR_ERR(gd);
+	if (!gd)
 		dev_warn(dev, "no sensor pwdn pin available");
-		return -EINVAL;
-	}
-	retval = devm_gpio_request_one(dev, pwn_gpio, GPIOF_OUT_INIT_HIGH,
-					"ov5642_pwdn");
-	if (retval < 0)
-		return retval;
+	gpiod_pwdn = gd;
 
 	/* request reset pin */
-	rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
-	if (!gpio_is_valid(rst_gpio)) {
+	gd = devm_gpiod_get_index_optional(dev, "rst", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd))
+		return PTR_ERR(gd);
+	if (!gd)
 		dev_warn(dev, "no sensor reset pin available");
-		return -EINVAL;
-	}
-	retval = devm_gpio_request_one(dev, rst_gpio, GPIOF_OUT_INIT_HIGH,
-					"ov5642_reset");
-	if (retval < 0)
-		return retval;
+	gpiod_rst = gd;
 
 	/* Set initial values for the sensor struct. */
 	memset(&ov5642_data, 0, sizeof(ov5642_data));
@@ -6575,7 +6573,7 @@ static int ov5642_probe(struct i2c_client *client,
 
 	ov5642_reset();
 
-	ov5642_standby(0);
+	ov5642_power_down_sensor(0);
 
 	retval = ov5642_read_reg(OV5642_CHIP_ID_HIGH_BYTE, &chip_id_high);
 	if (retval < 0 || chip_id_high != 0x56) {
@@ -6594,7 +6592,7 @@ static int ov5642_probe(struct i2c_client *client,
 	if (retval < 0)
 		pr_err("%s: error downloading autofocus firmware\n", __func__);
 
-	ov5642_standby(1);
+	ov5642_power_down_sensor(1);
 
 	ov5642_int_device.priv = &ov5642_data;
 
