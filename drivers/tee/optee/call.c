@@ -362,7 +362,7 @@ int optee_cancel_req(struct tee_context *ctx, u32 cancel_id, u32 session)
 {
 	struct optee_context_data *ctxdata = ctx->data;
 	struct tee_shm *shm;
-	struct optee_msg_arg *msg_arg;
+	struct optee_msg_arg *msg_arg = NULL;
 	phys_addr_t msg_parg;
 	struct optee_session *sess;
 
