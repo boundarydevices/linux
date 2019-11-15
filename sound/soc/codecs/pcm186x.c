@@ -73,46 +73,46 @@ static const unsigned int pcm186x_adc_input_channel_sel_value[] = {
 
 static const char * const pcm186x_adcl_input_channel_sel_text[] = {
 	"No Select",
-	"VINL1[SE]",					/* Default for ADC1L */
-	"VINL2[SE]",					/* Default for ADC2L */
-	"VINL2[SE] + VINL1[SE]",
-	"VINL3[SE]",
-	"VINL3[SE] + VINL1[SE]",
-	"VINL3[SE] + VINL2[SE]",
-	"VINL3[SE] + VINL2[SE] + VINL1[SE]",
-	"VINL4[SE]",
-	"VINL4[SE] + VINL1[SE]",
-	"VINL4[SE] + VINL2[SE]",
-	"VINL4[SE] + VINL2[SE] + VINL1[SE]",
-	"VINL4[SE] + VINL3[SE]",
-	"VINL4[SE] + VINL3[SE] + VINL1[SE]",
-	"VINL4[SE] + VINL3[SE] + VINL2[SE]",
-	"VINL4[SE] + VINL3[SE] + VINL2[SE] + VINL1[SE]",
-	"{VIN1P, VIN1M}[DIFF]",
-	"{VIN4P, VIN4M}[DIFF]",
-	"{VIN1P, VIN1M}[DIFF] + {VIN4P, VIN4M}[DIFF]"
+	"VINL1_SE",					/* Default for ADC1L */
+	"VINL2_SE",					/* Default for ADC2L */
+	"VINL2_SE + VINL1_SE",
+	"VINL3_SE",
+	"VINL3_SE + VINL1_SE",
+	"VINL3_SE + VINL2_SE",
+	"VINL3_SE + VINL2_SE + VINL1_SE",
+	"VINL4_SE",
+	"VINL4_SE + VINL1_SE",
+	"VINL4_SE + VINL2_SE",
+	"VINL4_SE + VINL2_SE + VINL1_SE",
+	"VINL4_SE + VINL3_SE",
+	"VINL4_SE + VINL3_SE + VINL1_SE",
+	"VINL4_SE + VINL3_SE + VINL2_SE",
+	"VINL4_SE + VINL3_SE + VINL2_SE + VINL1_SE",
+	"VIN1P_DIFF - VIN1M_DIFF",
+	"VIN4P_DIFF - VIN4M_DIFF",
+	"VIN1P_DIFF - VIN1M_DIFF + VIN4P_DIFF - VIN4M_DIFF"
 };
 
 static const char * const pcm186x_adcr_input_channel_sel_text[] = {
 	"No Select",
-	"VINR1[SE]",					/* Default for ADC1R */
-	"VINR2[SE]",					/* Default for ADC2R */
-	"VINR2[SE] + VINR1[SE]",
-	"VINR3[SE]",
-	"VINR3[SE] + VINR1[SE]",
-	"VINR3[SE] + VINR2[SE]",
-	"VINR3[SE] + VINR2[SE] + VINR1[SE]",
-	"VINR4[SE]",
-	"VINR4[SE] + VINR1[SE]",
-	"VINR4[SE] + VINR2[SE]",
-	"VINR4[SE] + VINR2[SE] + VINR1[SE]",
-	"VINR4[SE] + VINR3[SE]",
-	"VINR4[SE] + VINR3[SE] + VINR1[SE]",
-	"VINR4[SE] + VINR3[SE] + VINR2[SE]",
-	"VINR4[SE] + VINR3[SE] + VINR2[SE] + VINR1[SE]",
-	"{VIN2P, VIN2M}[DIFF]",
-	"{VIN3P, VIN3M}[DIFF]",
-	"{VIN2P, VIN2M}[DIFF] + {VIN3P, VIN3M}[DIFF]"
+	"VINR1_SE",					/* Default for ADC1R */
+	"VINR2_SE",					/* Default for ADC2R */
+	"VINR2_SE + VINR1_SE",
+	"VINR3_SE",
+	"VINR3_SE + VINR1_SE",
+	"VINR3_SE + VINR2_SE",
+	"VINR3_SE + VINR2_SE + VINR1_SE",
+	"VINR4_SE",
+	"VINR4_SE + VINR1_SE",
+	"VINR4_SE + VINR2_SE",
+	"VINR4_SE + VINR2_SE + VINR1_SE",
+	"VINR4_SE + VINR3_SE",
+	"VINR4_SE + VINR3_SE + VINR1_SE",
+	"VINR4_SE + VINR3_SE + VINR2_SE",
+	"VINR4_SE + VINR3_SE + VINR2_SE + VINR1_SE",
+	"VIN2P_DIFF - VIN2M_DIFF",
+	"VIN3P_DIFF - VIN3M_DIFF",
+	"VIN2P_DIFF - VIN2M_DIFF + VIN3P_DIFF - VIN3M_DIFF"
 };
 
 static const struct soc_enum pcm186x_adc_input_channel_sel[] = {
