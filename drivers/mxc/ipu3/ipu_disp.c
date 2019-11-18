@@ -500,7 +500,7 @@ void __ipu_dp_csc_setup(struct ipu_soc *ipu,
 		ipu_dp_write(ipu, reg, DP_COM_CONF(dp));
 	}
 
-	coeff = dp_csc_param.coeff;
+	coeff = (const int (*)[5][3])dp_csc_param.coeff;
 
 	if (coeff) {
 		ipu_dp_write(ipu, mask_a((*coeff)[0][0]) |
