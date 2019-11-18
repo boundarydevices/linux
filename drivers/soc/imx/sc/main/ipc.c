@@ -73,8 +73,8 @@ void sc_call_rpc(sc_ipc_t handle, sc_rpc_msg_t *msg, sc_bool_t no_resp)
 	reinit_completion(&rx_completion);
 	rx_msg = msg;
 	if (xen_initial_domain()) {
-		arm_smccc_hvc(FSL_HVC_SC, (uint64_t)msg, no_resp, 0, 0, 0,
-			      0, 0, &res);
+		arm_smccc_hvc(FSL_HVC_SC, (uint64_t)msg, no_resp, 0, 0, 0, 0,
+			      0, &res);
 		if (res.a0)
 			printk("Error FSL_HVC_SC %ld\n", res.a0);
 	} else {
@@ -376,8 +376,7 @@ int __init imx8_mu_init(void)
 
 		/* Init MU */
 		MU_Init(mu_base_virtaddr);
-		if (!xen_initial_domain())
-			MU_EnableRxFullInt(mu_base_virtaddr, 0);
+		MU_EnableRxFullInt(mu_base_virtaddr, 0);
 
 #if 1
 		/* Enable all RX interrupts */
