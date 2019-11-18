@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
  * SPDX-License-Identifier:     GPL-2.0+
  */
@@ -9,7 +9,7 @@
  * Header file containing the public API for the System Controller (SC)
  * Pad Control (PAD) function.
  *
- * @addtogroup PAD_SVC (SVC) Pad Service
+ * @addtogroup PAD_SVC PAD: Pad Service
  *
  * Module for the Pad Control (PAD) service.
  *
@@ -508,7 +508,7 @@ sc_err_t sc_pad_set_gp_28fdsoi_hsic(sc_ipc_t ipc, sc_pad_t pad,
  */
 sc_err_t sc_pad_get_gp_28fdsoi_hsic(sc_ipc_t ipc, sc_pad_t pad,
 				    sc_pad_28fdsoi_dse_t *dse, sc_bool_t *hys,
-				    sc_pad_28fdsoi_pus_t * pus, sc_bool_t *pke,
+				    sc_pad_28fdsoi_pus_t *pus, sc_bool_t *pke,
 				    sc_bool_t *pue);
 
 /*!

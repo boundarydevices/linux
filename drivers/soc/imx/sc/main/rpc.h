@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2019 NXP
  *
  * SPDX-License-Identifier:     GPL-2.0+
  */
@@ -20,7 +20,7 @@
 /* Defines */
 
 #define SCFW_API_VERSION_MAJOR  1U
-#define SCFW_API_VERSION_MINOR  7U
+#define SCFW_API_VERSION_MINOR  15U
 
 #define SC_RPC_VERSION          1U
 
@@ -31,9 +31,13 @@
 #define RPC_SVC(MESG)           ((MESG)->svc)
 #define RPC_FUNC(MESG)          ((MESG)->func)
 #define RPC_R8(MESG)            ((MESG)->func)
+#define RPC_I64(MESG, IDX)      ((I64(RPC_U32((MESG), (IDX))) << 32ULL) \
+									| I64(RPC_U32((MESG), (IDX) + 4U)))
 #define RPC_I32(MESG, IDX)      ((MESG)->DATA.i32[(IDX) / 4U])
 #define RPC_I16(MESG, IDX)      ((MESG)->DATA.i16[(IDX) / 2U])
 #define RPC_I8(MESG, IDX)       ((MESG)->DATA.i8[(IDX)])
+#define RPC_U64(MESG, IDX)      ((U64(RPC_U32((MESG), (IDX))) << 32ULL) \
+									| U64(RPC_U32((MESG), (IDX) + 4U)))
 #define RPC_U32(MESG, IDX)      ((MESG)->DATA.u32[(IDX) / 4U])
 #define RPC_U16(MESG, IDX)      ((MESG)->DATA.u16[(IDX) / 2U])
 #define RPC_U8(MESG, IDX)       ((MESG)->DATA.u8[(IDX)])
@@ -70,14 +74,14 @@
 #define U32(X)      ((uint32_t) (X))
 #define U64(X)      ((uint64_t) (X))
 
-#define PTR_I8(X)   ((int8_t*) (X))
-#define PTR_I16(X)  ((int16_t*) (X))
-#define PTR_I32(X)  ((int32_t*) (X))
-#define PTR_I64(X)  ((int64_t*) (X))
-#define PTR_U8(X)   ((uint8_t*) (X))
-#define PTR_U16(X)  ((uint16_t*) (X))
-#define PTR_U32(X)  ((uint32_t*) (X))
-#define PTR_U64(X)  ((uint64_t*) (X))
+#define PTR_I8(X)   ((int8_t *) (X))
+#define PTR_I16(X)  ((int16_t *) (X))
+#define PTR_I32(X)  ((int32_t *) (X))
+#define PTR_I64(X)  ((int64_t *) (X))
+#define PTR_U8(X)   ((uint8_t *) (X))
+#define PTR_U16(X)  ((uint16_t *) (X))
+#define PTR_U32(X)  ((uint32_t *) (X))
+#define PTR_U64(X)  ((uint64_t *) (X))
 
 #define U2B(X)      (((X) != 0U) ? SC_TRUE : SC_FALSE)
 #define U2B32(X)    (((X) != 0UL) ? SC_TRUE : SC_FALSE)
@@ -127,31 +131,5 @@ typedef struct {
  * and returns the result in \a msg.
  */
 void sc_call_rpc(sc_ipc_t ipc, sc_rpc_msg_t *msg, sc_bool_t no_resp);
-
-/*!
- * This is an internal function to dispath an RPC call that has
- * arrived via IPC over an MU. It is called by server-side SCFW.
- *
- * @param[in]     mu          MU message arrived on
- * @param[in,out] msg         handle to a message
- *
- * The function result is returned in \a msg.
- */
-void sc_rpc_dispatch(sc_rsrc_t mu, sc_rpc_msg_t *msg);
-
-/*!
- * This function translates an RPC message and forwards on to the
- * normal RPC API.  It is used only by hypervisors.
- *
- * @param[in]     ipc         IPC handle
- * @param[in,out] msg         handle to a message
- *
- * This function decodes a message, calls macros to translate the
- * resources, pads, addresses, partitions, memory regions, etc. and
- * then forwards on to the hypervisors SCFW API.Return results are
- * translated back abd placed back into the message to be returned
- * to the original API.
- */
-void sc_rpc_xlate(sc_ipc_t ipc, sc_rpc_msg_t *msg);
 
 #endif				/* SC_RPC_H */
