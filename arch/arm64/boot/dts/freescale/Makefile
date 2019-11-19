@@ -58,6 +58,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk.dtb imx8mm-evk-rpmsg.dtb imx8mm-evk-rm67191
 			  imx8mm-moo.dtb \
 			  imx8mm-nitrogen8mm.dtb \
 			  imx8mm-nitrogen8mm-m4.dtb \
+			  imx8mm-nitrogen8mm_rev2.dtb \
+			  imx8mm-nitrogen8mm_rev2-m4.dtb \
 			  imx8mm-nitrogen8mm-tc358743.dtb \
 			  imx8mm-nitrogen8mm_som.dtb \
 			  imx8mm-nitrogen8mm_som-m4.dtb \
