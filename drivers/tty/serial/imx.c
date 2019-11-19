@@ -1377,12 +1377,15 @@ static int imx_uart_startup(struct uart_port *port)
 	/* Reset fifo's and state machines */
 	i = 100;
 
-	ucr2 = imx_uart_readl(sport, UCR2);
-	ucr2 &= ~UCR2_SRST;
-	imx_uart_writel(sport, ucr2, UCR2);
 
-	while (!(imx_uart_readl(sport, UCR2) & UCR2_SRST) && (--i > 0))
-		udelay(1);
+	if (!uart_console(port)) {
+		ucr2 = imx_uart_readl(sport, UCR2);
+		ucr2 &= ~UCR2_SRST;
+		imx_uart_writel(sport, ucr2, UCR2);
+
+		while (!(imx_uart_readl(sport, UCR2) & UCR2_SRST) && (--i > 0))
+			udelay(1);
+	}
 
 	/*
 	 * Finally, clear and enable interrupts
