@@ -3,9 +3,9 @@
  * Copyright 2018 Boundary Devices
  */
 /dts-v1/;
-#define _MX8MMN(a)	MX8MM_##a
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
+#include <dt-bindings/phy/phy-imx8-pcie.h>
 #include "imx8mm.dtsi"
 #include "imx8mmn-nitrogen8mm_rev2.dtsi"
 
@@ -53,20 +53,14 @@
 };
 
 / {
-	model = "Boundary Devices i.MX8MMini Nitrogen8MM";
-	compatible = "boundary,imx8mm-nitrogen8mm", "fsl,imx8mm";
+	model = "Boundary Devices i.MX8MMini Nitrogen8MM Rev2";
+	compatible = "boundary,imx8mm-nitrogen8mm_rev2", "fsl,imx8mm";
 
 	clocks {
 		clk16m: clk16m {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
 			clock-frequency = <16000000>;
-		};
-
-		pcie0_refclk: pcie0-refclk {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <100000000>;
 		};
 	};
 
@@ -131,30 +125,33 @@
 		reg = <0x1a>;
 		wlf,gpio-cfg = <1 3>;
 		/* JD2: hp detect high for headphone*/
-		wlf,hp-cfg = <2 0 3>;
+		wlf,hp-cfg = <2 2 3>;
 		wlf,shared-lrclk;
 	};
 };
 
 &pcie0 {
 	assigned-clocks = <&clk IMX8MM_CLK_PCIE1_AUX>,
-			  <&clk IMX8MM_CLK_PCIE1_PHY>,
 			  <&clk IMX8MM_CLK_PCIE1_CTRL>;
-	assigned-clock-rates = <10000000>, <100000000>, <250000000>;
 	assigned-clock-parents = <&clk IMX8MM_SYS_PLL2_50M>,
-				 <&clk IMX8MM_SYS_PLL2_100M>,
 				 <&clk IMX8MM_SYS_PLL2_250M>;
+	assigned-clock-rates = <10000000>, <250000000>;
 	clocks = <&clk IMX8MM_CLK_PCIE1_ROOT>,
 		 <&clk IMX8MM_CLK_PCIE1_AUX>,
-		 <&clk IMX8MM_CLK_PCIE1_PHY>,
-		 <&pcie0_refclk>;
-	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
+		 <&clk IMX8MM_CLK_PCIE1_PHY>;
+	clock-names = "pcie", "pcie_aux", "pcie_bus";
 	disable-gpio = GP_PCIE0_DISABLE;
-	ext_osc = <0>;
-	l1ss-disabled;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie0>;
 	reset-gpio = GP_PCIE0_RESET;
+	status = "okay";
+};
+
+&pcie_phy {
+	fsl,clkreq-unsupported;
+	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
+	fsl,tx-deemph-gen1 = <0x2d>;
+	fsl,tx-deemph-gen2 = <0xf>;
 	status = "okay";
 };
 
