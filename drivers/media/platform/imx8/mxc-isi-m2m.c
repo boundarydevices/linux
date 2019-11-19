@@ -1114,7 +1114,7 @@ void mxc_isi_m2m_frame_write_done(struct mxc_isi_dev *mxc_isi)
 						struct mxc_isi_buffer, list);
 		dst_vb2 = &dst_buf->v4l2_buf.vb2_buf;
 		list_del_init(&dst_buf->list);
-		dst_buf->v4l2_buf.vb2_buf.timestamp = ktime_get_ns();
+		dst_buf->v4l2_buf.vb2_buf.timestamp = src_vb2->timestamp;
 		v4l2_m2m_buf_done(to_vb2_v4l2_buffer(dst_vb2), VB2_BUF_STATE_DONE);
 
 #if 0 // for debug
