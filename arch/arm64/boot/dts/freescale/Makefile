@@ -238,3 +238,4 @@ dtb-$(CONFIG_ARCH_S32) += s32v234-evb.dtb \
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-c2.dtb \
 			  imx8mm-c2-mid.dtb \
 			  imx8mm-dwe.dtb \
+			  imx8mm-hl8mm.dtb \
