@@ -537,13 +537,13 @@ unsigned fixup_div(unsigned long clk, unsigned div)
 {
 	unsigned max = clk / MIN_FREQ;
 
-	while ((div >= max * 7) && !(div % 7))
+	while ((div >= max * 7 / 2) && !(div % 7))
 		div /= 7;
-	while ((div >= max * 5) && !(div % 5))
+	while ((div >= max * 5 / 2) && !(div % 5))
 		div /= 5;
-	while ((div >= max * 3) && !(div % 3))
+	while ((div >= max * 3 / 2) && !(div % 3))
 		div /= 3;
-	while ((div >= max * 2) && !(div % 2))
+	while ((div >= max * 2 / 2) && !(div % 2))
 		div >>= 1;
 
 	while (div > max) {
@@ -1374,12 +1374,6 @@ static int sec_mipi_dsim_get_pms(struct sec_mipi_dsim *dsim, unsigned long bit_c
 	int s = 0;
 	unsigned long b = bit_clk;
 
-	/*
-	 * Increase ref clock so that finding bigger will also find
-	 * very slightly smaller. Needed for rounding errors in
-	 * (pixel clock * 24)
-	 */
-	ref_clk += 2;
 #if 0
 	bit_clk = bit_clk * 4 / 3;
 #endif
@@ -1389,7 +1383,12 @@ static int sec_mipi_dsim_get_pms(struct sec_mipi_dsim *dsim, unsigned long bit_c
 	/* s is power of 2: 1, 2, 4, 8, 16, 32, 64, 128 */
 	do {
 		numerator = bit_clk << s;
-		denominator = ref_clk;
+		/*
+		 * Increase ref clock so that finding bigger will also find
+		 * very slightly smaller. Needed for rounding errors in
+		 * (pixel clock * 24)
+		 */
+		denominator = ref_clk + 2;
 		get_best_ratio_bigger(&numerator, &denominator, 125, max_d >> s);
 		denominator <<= s;
 		s++;
