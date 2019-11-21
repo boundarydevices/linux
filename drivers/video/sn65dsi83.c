@@ -98,6 +98,7 @@ struct sn65dsi83_priv
 	u8			dsi_lanes;
 	u8			spwg;	/* lvds lane 3 has MSBs of color */
 	u8			jeida;	/* lvds lane 3 has LSBs of color */
+	u8			split_mode;
 	u8			dsi_bpp;
 	u16			sync_delay;
 	u16			hbp;
@@ -291,6 +292,8 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 			format |= BIT(1);
 		}
 	}
+	if (sn->split_mode)
+		format &= BIT(4);
 	sn_i2c_write_byte(sn, SN_FORMAT, format);
 
 	sn_i2c_write_byte(sn, SN_LVDS_VOLTAGE, 4);
@@ -733,8 +736,13 @@ static int sn65dsi83_probe(struct i2c_client *client,
 	if (dsi_lanes < 1 || dsi_lanes > 4)
 		return -EINVAL;
 	sn->dsi_lanes = dsi_lanes;
-	sn->spwg = of_property_read_bool(sn->disp_dsi, "spwg");
-	sn->jeida = of_property_read_bool(sn->disp_dsi, "jeida");
+	sn->spwg = of_property_read_bool(np, "spwg");
+	sn->jeida = of_property_read_bool(np, "jeida");
+	if (!sn->spwg && !sn->jeida) {
+		sn->spwg = of_property_read_bool(sn->disp_dsi, "spwg");
+		sn->jeida = of_property_read_bool(sn->disp_dsi, "jeida");
+	}
+	sn->split_mode = of_property_read_bool(np, "split-mode");
 	ret = of_property_read_string(sn->disp_dsi, "dsi-format", &df);
 	if (ret) {
 		dev_err(&client->dev, "dsi-format missing in display node%d\n", ret);
