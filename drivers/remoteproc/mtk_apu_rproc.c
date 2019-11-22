@@ -122,10 +122,39 @@ static void mtk_vpu_rproc_kick(struct rproc *rproc, int vqid)
 	vpu_write32(vpu_rproc, CORE_CTL_XTENSA_INT, 1 << vqid);
 }
 
+int mtk_vpu_elf_sanity_check(struct rproc *rproc, const struct firmware *fw)
+{
+	const u8 *elf_data = fw->data;
+	struct elf32_hdr *ehdr;
+	struct elf32_phdr *phdr;
+	int ret;
+	int i;
+
+	ret = rproc_elf_sanity_check(rproc, fw);
+	if (ret)
+		return ret;
+
+	ehdr = (struct elf32_hdr *)elf_data;
+	phdr = (struct elf32_phdr *)(elf_data + ehdr->e_phoff);
+
+	for (i = 0; i < ehdr->e_phnum; i++, phdr++) {
+		/* Remove empty PT_LOAD section */
+		if (phdr->p_type == PT_LOAD && !phdr->p_paddr)
+			phdr->p_type = PT_NULL;
+	}
+
+	return 0;
+}
+
 static const struct rproc_ops mtk_vpu_rproc_ops = {
-	.start		= mtk_vpu_rproc_start,
-	.stop		= mtk_vpu_rproc_stop,
-	.kick		= mtk_vpu_rproc_kick,
+	.start			= mtk_vpu_rproc_start,
+	.stop			= mtk_vpu_rproc_stop,
+	.kick			= mtk_vpu_rproc_kick,
+	.load			= rproc_elf_load_segments,
+	.parse_fw		= rproc_elf_load_rsc_table,
+	.find_loaded_rsc_table	= rproc_elf_find_loaded_rsc_table,
+	.sanity_check		= mtk_vpu_elf_sanity_check,
+	.get_boot_addr		= rproc_elf_get_boot_addr,
 };
 
 static irqreturn_t mtk_vpu_rproc_callback(int irq, void *data)
