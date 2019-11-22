@@ -485,7 +485,7 @@
 		};
 
 		usb0: usb@2f00000 {
-			compatible = "snps,dwc3";
+			compatible = "fsl,ls1012a-dwc3", "snps,dwc3";
 			reg = <0x0 0x2f00000 0x0 0x10000>;
 			interrupts = <0 60 0x4>;
 			dr_mode = "host";
@@ -493,6 +493,7 @@
 			snps,dis_rxdet_inp3_quirk;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
 			snps,host-vbus-glitches;
+			dma-coherent;
 		};
 
 		sata: sata@3200000 {
