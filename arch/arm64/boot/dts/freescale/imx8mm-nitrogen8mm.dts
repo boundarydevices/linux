@@ -14,10 +14,6 @@
 
 #include "panel-lcm-jm430.dtsi"
 #include "panel-m101nwwb.dtsi"
-&mipi_cmds_m101nwwb {
-	min-hs-clock-multiple = <8>;
-};
-
 #include "panel-com50h5n03ulc.dtsi"
 
 &iomuxc {
@@ -538,6 +534,7 @@
 		pinctrl_lcm_jm430 = &pinctrl_mipi_lcm_jm430;
 		pinctrl_ltk0680ytmdb = &pinctrl_mipi_ltk0680ytmdb;
 		pinctrl_ltk080a60a004t = &pinctrl_mipi_ltk080a60a004t;
+		pwm_mipi = &pwm3;
 		reg_sw4 = &reg_sw4;
 		t_mipi = &t_mipi;
 	};
