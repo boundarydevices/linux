@@ -108,6 +108,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mq-bio.dtb \
 			  imx8mq-nitrogen8m_som-ags-m4.dtb \
 			  imx8mq-nitrogen8m_som-m4.dtb \
 			  imx8mq-nitrogen8m_som_sd.dtb \
+			  imx8mq-son.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek.dtb imx8qm-mek-ov5640.dtb \
 			  imx8qm-mek-enet2-tja1100.dtb imx8qm-mek-rpmsg.dtb \
