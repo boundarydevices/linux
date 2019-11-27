@@ -9,6 +9,7 @@
 #include <linux/bsearch.h>
 #include <linux/clk-provider.h>
 #include <linux/err.h>
+#include <linux/firmware/imx/svc/rm.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/pm_domain.h>
@@ -669,6 +670,9 @@ struct clk_hw *imx_clk_scu_alloc_dev(const char *name,
 
 	if (!imx_scu_clk_is_valid(rsrc_id))
 		return ERR_PTR(-EINVAL);
+
+	if (!imx_sc_rm_is_resource_owned(ccm_ipc_handle, rsrc_id))
+		return NULL;
 
 	pdev = platform_device_alloc(name, PLATFORM_DEVID_NONE);
 	if (!pdev) {
