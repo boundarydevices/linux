@@ -18,18 +18,6 @@
 #include <linux/iio/buffer.h>
 #include "st_asm330lhh.h"
 
-#define ST_ASM330LHH_REG_FIFO_CTRL1_ADDR	0x07
-#define ST_ASM330LHH_REG_FIFO_WTM_MASK		GENMASK(8, 0)
-#define ST_ASM330LHH_REG_FIFO_STATUS_DIFF	GENMASK(9, 0)
-
-#define ST_ASM330LHH_REG_FIFO_CTRL4_ADDR	0x0a
-#define ST_ASM330LHH_REG_FIFO_MODE_MASK		GENMASK(2, 0)
-#define ST_ASM330LHH_REG_DEC_TS_MASK		GENMASK(7, 6)
-
-#define ST_ASM330LHH_REG_CTRL3_C_ADDR		0x12
-#define ST_ASM330LHH_REG_PP_OD_MASK		BIT(4)
-#define ST_ASM330LHH_REG_H_LACTIVE_MASK		BIT(5)
-
 #define ST_ASM330LHH_REG_FIFO_STATUS1_ADDR	0x3a
 #define ST_ASM330LHH_REG_TIMESTAMP0_ADDR	0x40
 #define ST_ASM330LHH_REG_TIMESTAMP2_ADDR	0x42
@@ -118,24 +106,6 @@ int __st_asm330lhh_set_sensor_batching_odr(struct st_asm330lhh_sensor *sensor,
 
 	return __st_asm330lhh_write_with_mask(hw, sensor->batch_reg.addr,
 					  sensor->batch_reg.mask, data);
-}
-
-static u16 st_asm330lhh_ts_odr(struct st_asm330lhh_hw *hw)
-{
-	struct st_asm330lhh_sensor *sensor;
-	u16 odr = 0;
-	u8 i;
-
-	for (i = ST_ASM330LHH_ID_GYRO; i < ST_ASM330LHH_ID_MAX; i++) {
-		if (!hw->iio_devs[i])
-			continue;
-
-		sensor = iio_priv(hw->iio_devs[i]);
-		if (hw->enable_mask & BIT(sensor->id))
-			odr = max_t(u16, odr, sensor->odr);
-	}
-
-	return odr;
 }
 
 static inline int
@@ -413,10 +383,6 @@ int st_asm330lhh_update_batching(struct iio_dev *iio_dev, bool enable)
 	if (err < 0)
 		goto out;
 
-
-	/* Calc TS ODR */
-	hw->odr = st_asm330lhh_ts_odr(hw);
-
 out:
 	enable_irq(hw->irq);
 
@@ -479,9 +445,6 @@ static int st_asm330lhh_update_fifo(struct iio_dev *iio_dev, bool enable)
 	err = st_asm330lhh_update_watermark(sensor, sensor->watermark);
 	if (err < 0)
 		goto out;
-
-	/* Calc TS ODR */
-	hw->odr = st_asm330lhh_ts_odr(hw);
 
 	if (enable && hw->fifo_mode == ST_ASM330LHH_FIFO_BYPASS) {
 		st_asm330lhh_reset_hwts(hw);

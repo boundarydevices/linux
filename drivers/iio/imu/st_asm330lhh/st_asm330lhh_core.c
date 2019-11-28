@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics st_asm330lhh sensor driver
  *
- * Copyright 2018 STMicroelectronics Inc.
+ * Copyright 2019 STMicroelectronics Inc.
  *
  * Lorenzo Bianconi <lorenzo.bianconi@st.com>
  *
@@ -28,7 +28,7 @@
 
 #define ST_ASM330LHH_REG_INT1_CTRL_ADDR		0x0d
 #define ST_ASM330LHH_REG_INT2_CTRL_ADDR		0x0e
-#define ST_ASM330LHH_REG_FIFO_TH_MASK		BIT(3)
+#define ST_ASM330LHH_REG_INT_FIFO_TH_MASK	BIT(3)
 
 #define ST_ASM330LHH_REG_WHOAMI_ADDR		0x0f
 #define ST_ASM330LHH_WHOAMI_VAL			0x6b
@@ -65,11 +65,6 @@
 #define ST_ASM330LHH_REG_TAP_CFG0_ADDR		0x56
 #define ST_ASM330LHH_REG_LIR_MASK		BIT(0)
 
-#define ST_ASM330LHH_REG_MD1_CFG_ADDR		0x5e
-#define ST_ASM330LHH_REG_MD2_CFG_ADDR		0x5f
-#define ST_ASM330LHH_REG_INT2_TIMESTAMP_MASK	BIT(0)
-#define ST_ASM330LHH_REG_INT_EMB_FUNC_MASK	BIT(1)
-
 #define ST_ASM330LHH_INTERNAL_FREQ_FINE		0x63
 
 /* Timestamp Tick 25us/LSB */
@@ -79,6 +74,66 @@
 #define ST_ASM330LHH_TEMP_GAIN			256
 #define ST_ASM330LHH_TEMP_FS_GAIN		(1000000 / ST_ASM330LHH_TEMP_GAIN)
 #define ST_ASM330LHH_TEMP_OFFSET		(6400)
+
+static struct st_asm330lhh_suspend_resume_entry
+	st_asm330lhh_suspend_resume[ST_ASM330LHH_SUSPEND_RESUME_REGS] = {
+		[ST_ASM330LHH_CTRL1_XL_REG] = {
+			.addr = ST_ASM330LHH_CTRL1_XL_ADDR,
+			.mask = GENMASK(3, 2),
+		},
+		[ST_ASM330LHH_CTRL2_G_REG] = {
+			.addr = ST_ASM330LHH_CTRL2_G_ADDR,
+			.mask = GENMASK(3, 2),
+		},
+		[ST_ASM330LHH_REG_CTRL3_C_REG] = {
+			.addr = ST_ASM330LHH_REG_CTRL3_C_ADDR,
+			.mask = ST_ASM330LHH_REG_BDU_MASK	|
+				ST_ASM330LHH_REG_PP_OD_MASK	|
+				ST_ASM330LHH_REG_H_LACTIVE_MASK,
+		},
+		[ST_ASM330LHH_REG_CTRL4_C_REG] = {
+			.addr = ST_ASM330LHH_REG_CTRL4_C_ADDR,
+			.mask = ST_ASM330LHH_REG_DRDY_MASK,
+		},
+		[ST_ASM330LHH_REG_CTRL5_C_REG] = {
+			.addr = ST_ASM330LHH_REG_CTRL5_C_ADDR,
+			.mask = ST_ASM330LHH_REG_ROUNDING_MASK,
+		},
+		[ST_ASM330LHH_REG_CTRL10_C_REG] = {
+			.addr = ST_ASM330LHH_REG_CTRL10_C_ADDR,
+			.mask = ST_ASM330LHH_REG_TIMESTAMP_EN_MASK,
+		},
+		[ST_ASM330LHH_REG_TAP_CFG0_REG] = {
+			.addr = ST_ASM330LHH_REG_TAP_CFG0_ADDR,
+			.mask = ST_ASM330LHH_REG_LIR_MASK,
+		},
+		[ST_ASM330LHH_REG_INT1_CTRL_REG] = {
+			.addr = ST_ASM330LHH_REG_INT1_CTRL_ADDR,
+			.mask = ST_ASM330LHH_REG_INT_FIFO_TH_MASK,
+		},
+		[ST_ASM330LHH_REG_INT2_CTRL_REG] = {
+			.addr = ST_ASM330LHH_REG_INT2_CTRL_ADDR,
+			.mask = ST_ASM330LHH_REG_INT_FIFO_TH_MASK,
+		},
+		[ST_ASM330LHH_REG_FIFO_CTRL1_REG] = {
+			.addr = ST_ASM330LHH_REG_FIFO_CTRL1_ADDR,
+			.mask = GENMASK(7, 0),
+		},
+		[ST_ASM330LHH_REG_FIFO_CTRL2_REG] = {
+			.addr = ST_ASM330LHH_REG_FIFO_CTRL2_ADDR,
+			.mask = ST_ASM330LHH_REG_FIFO_WTM8_MASK,
+		},
+		[ST_ASM330LHH_REG_FIFO_CTRL3_REG] = {
+			.addr = ST_ASM330LHH_REG_FIFO_CTRL3_ADDR,
+			.mask = ST_ASM330LHH_REG_BDR_XL_MASK |
+				ST_ASM330LHH_REG_BDR_GY_MASK,
+		},
+		[ST_ASM330LHH_REG_FIFO_CTRL4_REG] = {
+			.addr = ST_ASM330LHH_REG_FIFO_CTRL4_ADDR,
+			.mask = ST_ASM330LHH_REG_DEC_TS_MASK |
+				ST_ASM330LHH_REG_ODT_T_BATCH_MASK,
+		},
+	};
 
 static const struct st_asm330lhh_odr_table_entry st_asm330lhh_odr_table[] = {
 	[ST_ASM330LHH_ID_ACC] = {
@@ -847,26 +902,6 @@ static int st_asm330lhh_reset_device(struct st_asm330lhh_hw *hw)
 	return err;
 }
 
-static int st_asm330lhh_init_timestamp_engine(struct st_asm330lhh_hw *hw,
-					    bool enable)
-{
-	int err;
-
-	/* Init timestamp engine. */
-	err = st_asm330lhh_write_with_mask(hw, ST_ASM330LHH_REG_CTRL10_C_ADDR,
-					   ST_ASM330LHH_REG_TIMESTAMP_EN_MASK,
-					   enable);
-	if (err < 0)
-		return err;
-
-	/* Enable timestamp rollover interrupt on INT2. */
-	err = st_asm330lhh_write_with_mask(hw, ST_ASM330LHH_REG_MD2_CFG_ADDR,
-					   ST_ASM330LHH_REG_INT2_TIMESTAMP_MASK,
-					   enable);
-
-	return err;
-}
-
 static int st_asm330lhh_init_device(struct st_asm330lhh_hw *hw)
 {
 	u8 drdy_reg;
@@ -889,7 +924,9 @@ static int st_asm330lhh_init_device(struct st_asm330lhh_hw *hw)
 	if (err < 0)
 		return err;
 
-	err = st_asm330lhh_init_timestamp_engine(hw, true);
+	/* init timestamp engine */
+	err = st_asm330lhh_write_with_mask(hw, ST_ASM330LHH_REG_CTRL10_C_ADDR,
+					ST_ASM330LHH_REG_TIMESTAMP_EN_MASK, 1);
 	if (err < 0)
 		return err;
 
@@ -897,7 +934,7 @@ static int st_asm330lhh_init_device(struct st_asm330lhh_hw *hw)
 	if (err < 0)
 		return err;
 
-	/* Enable DRDY MASK for filters settling time */
+	/* enable DRDY MASK for filters settling time */
 	err = st_asm330lhh_write_with_mask(hw, ST_ASM330LHH_REG_CTRL4_C_ADDR,
 					 ST_ASM330LHH_REG_DRDY_MASK, 1);
 	if (err < 0)
@@ -905,7 +942,7 @@ static int st_asm330lhh_init_device(struct st_asm330lhh_hw *hw)
 
 	/* enable FIFO watermak interrupt */
 	return st_asm330lhh_write_with_mask(hw, drdy_reg,
-					 ST_ASM330LHH_REG_FIFO_TH_MASK, 1);
+					 ST_ASM330LHH_REG_INT_FIFO_TH_MASK, 1);
 }
 
 static struct iio_dev *st_asm330lhh_alloc_iiodev(struct st_asm330lhh_hw *hw,
@@ -1052,34 +1089,96 @@ int st_asm330lhh_probe(struct device *dev, int irq,
 }
 EXPORT_SYMBOL(st_asm330lhh_probe);
 
+static int __maybe_unused st_asm330lhh_bk_regs(struct st_asm330lhh_hw *hw)
+{
+	int i, err = 0;
+	u8 data, addr;
+
+	mutex_lock(&hw->page_lock);
+	for (i = 0; i < ST_ASM330LHH_SUSPEND_RESUME_REGS; i++) {
+		addr = st_asm330lhh_suspend_resume[i].addr;
+		err = hw->tf->read(hw->dev, addr, sizeof(data), &data);
+		if (err < 0) {
+			dev_err(hw->dev, "failed to read whoami register\n");
+			goto out_lock;
+		}
+
+		st_asm330lhh_suspend_resume[i].val = data;
+	}
+
+out_lock:
+	mutex_unlock(&hw->page_lock);
+
+	return err;
+}
+
+static int __maybe_unused st_asm330lhh_restore_regs(struct st_asm330lhh_hw *hw)
+{
+	int i, err = 0;
+	u8 data, addr;
+
+	mutex_lock(&hw->page_lock);
+	for (i = 0; i < ST_ASM330LHH_SUSPEND_RESUME_REGS; i++) {
+		addr = st_asm330lhh_suspend_resume[i].addr;
+		err = hw->tf->read(hw->dev, addr, sizeof(data), &data);
+		if (err < 0) {
+			dev_err(hw->dev, "failed to read %02x reg\n", addr);
+			goto out_lock;
+		}
+
+		data &= ~st_asm330lhh_suspend_resume[i].mask;
+		data |= (st_asm330lhh_suspend_resume[i].val &
+			 st_asm330lhh_suspend_resume[i].mask);
+
+		err = hw->tf->write(hw->dev, addr, sizeof(data), &data);
+		if (err < 0) {
+			dev_err(hw->dev, "failed to write %02x reg\n", addr);
+			goto out_lock;
+		}
+	}
+
+out_lock:
+	mutex_unlock(&hw->page_lock);
+
+	return err;
+}
+
 static int __maybe_unused st_asm330lhh_suspend(struct device *dev)
 {
 	struct st_asm330lhh_hw *hw = dev_get_drvdata(dev);
 	struct st_asm330lhh_sensor *sensor;
 	int i, err = 0;
 
+	dev_info(dev, "Suspending device\n");
+
 	for (i = 0; i < ST_ASM330LHH_ID_MAX; i++) {
-		sensor = iio_priv(hw->iio_devs[i]);
 		if (!hw->iio_devs[i])
 			continue;
 
+		sensor = iio_priv(hw->iio_devs[i]);
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 
+		/* power off enabled sensors */
 		err = st_asm330lhh_set_odr(sensor, 0);
 		if (err < 0)
 			return err;
 	}
 
-	if (st_asm330lhh_is_fifo_enabled(hw))
+	if (st_asm330lhh_is_fifo_enabled(hw)) {
 		err = st_asm330lhh_suspend_fifo(hw);
+		if (err < 0)
+			return err;
+	}
+
+	err = st_asm330lhh_bk_regs(hw);
+
 #ifdef CONFIG_IIO_ST_ASM330LHH_MAY_WAKEUP
 	if (device_may_wakeup(dev))
 		enable_irq_wake(hw->irq);
 #endif /* CONFIG_IIO_ST_ASM330LHH_MAY_WAKEUP */
-	dev_info(dev, "Suspending device\n");
 
-	return err;
+	return err < 0 ? err : 0;
 }
 
 static int __maybe_unused st_asm330lhh_resume(struct device *dev)
@@ -1089,16 +1188,21 @@ static int __maybe_unused st_asm330lhh_resume(struct device *dev)
 	int i, err = 0;
 
 	dev_info(dev, "Resuming device\n");
+
 #ifdef CONFIG_IIO_ST_ASM330LHH_MAY_WAKEUP
 	if (device_may_wakeup(dev))
 		disable_irq_wake(hw->irq);
 #endif /* CONFIG_IIO_ST_ASM330LHH_MAY_WAKEUP */
 
+	err = st_asm330lhh_restore_regs(hw);
+	if (err < 0)
+		return err;
+
 	for (i = 0; i < ST_ASM330LHH_ID_MAX; i++) {
-		sensor = iio_priv(hw->iio_devs[i]);
 		if (!hw->iio_devs[i])
 			continue;
 
+		sensor = iio_priv(hw->iio_devs[i]);
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 
@@ -1110,7 +1214,7 @@ static int __maybe_unused st_asm330lhh_resume(struct device *dev)
 	if (st_asm330lhh_is_fifo_enabled(hw))
 		err = st_asm330lhh_set_fifo_mode(hw, ST_ASM330LHH_FIFO_CONT);
 
-	return err;
+	return err < 0 ? err : 0;
 }
 
 const struct dev_pm_ops st_asm330lhh_pm_ops = {

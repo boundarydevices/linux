@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics st_asm330lhh sensor driver
  *
- * Copyright 2018 STMicroelectronics Inc.
+ * Copyright 2019 STMicroelectronics Inc.
  *
  * Lorenzo Bianconi <lorenzo.bianconi@st.com>
  *
@@ -21,6 +21,21 @@
 #define ST_ASM330LHH_ODR_LIST_SIZE	8
 
 #define ST_ASM330LHH_DEV_NAME		"asm330lhh"
+
+#define ST_ASM330LHH_REG_FIFO_CTRL1_ADDR	0x07
+#define ST_ASM330LHH_REG_FIFO_CTRL2_ADDR	0x08
+#define ST_ASM330LHH_REG_FIFO_WTM_MASK		GENMASK(8, 0)
+#define ST_ASM330LHH_REG_FIFO_WTM8_MASK		BIT(0)
+#define ST_ASM330LHH_REG_FIFO_STATUS_DIFF	GENMASK(9, 0)
+
+#define ST_ASM330LHH_REG_FIFO_CTRL4_ADDR	0x0a
+#define ST_ASM330LHH_REG_FIFO_MODE_MASK		GENMASK(2, 0)
+#define ST_ASM330LHH_REG_DEC_TS_MASK		GENMASK(7, 6)
+#define ST_ASM330LHH_REG_ODT_T_BATCH_MASK	GENMASK(5, 4)
+
+#define ST_ASM330LHH_REG_CTRL3_C_ADDR		0x12
+#define ST_ASM330LHH_REG_PP_OD_MASK		BIT(4)
+#define ST_ASM330LHH_REG_H_LACTIVE_MASK		BIT(5)
 
 /* FIFO simple size and depth */
 #define ST_ASM330LHH_SAMPLE_SIZE	6
@@ -88,6 +103,28 @@ struct st_asm330lhh_reg {
 	u8 mask;
 };
 
+enum st_asm330lhh_suspend_resume_register {
+	ST_ASM330LHH_CTRL1_XL_REG = 0,
+	ST_ASM330LHH_CTRL2_G_REG,
+	ST_ASM330LHH_REG_CTRL3_C_REG,
+	ST_ASM330LHH_REG_CTRL4_C_REG,
+	ST_ASM330LHH_REG_CTRL5_C_REG,
+	ST_ASM330LHH_REG_CTRL10_C_REG,
+	ST_ASM330LHH_REG_TAP_CFG0_REG,
+	ST_ASM330LHH_REG_INT1_CTRL_REG,
+	ST_ASM330LHH_REG_INT2_CTRL_REG,
+	ST_ASM330LHH_REG_FIFO_CTRL1_REG,
+	ST_ASM330LHH_REG_FIFO_CTRL2_REG,
+	ST_ASM330LHH_REG_FIFO_CTRL3_REG,
+	ST_ASM330LHH_REG_FIFO_CTRL4_REG,
+	ST_ASM330LHH_SUSPEND_RESUME_REGS,
+};
+
+struct st_asm330lhh_suspend_resume_entry {
+	u8 addr;
+	u8 val;
+	u8 mask;
+};
 struct st_asm330lhh_odr {
 	u16 hz;
 	u8 val;
@@ -195,12 +232,11 @@ struct st_asm330lhh_sensor {
  * @state: hw operational state.
  * @enable_mask: Enabled sensor bitmask.
  * @ts_offset: Hw timestamp offset.
+ * @ts_delta_ns: Calibrate delta time tick.
  * @hw_ts: Latest hw timestamp from the sensor.
- * @hw_ts_high: Manage timestamp rollover
- * @tsample:
- * @hw_ts_old:
+ * @tsample: Timestamp for each sensor sample.
  * @delta_ts: Delta time between two consecutive interrupts.
- * @delta_hw_ts:
+ * @delta_hw_ts: Delta HW Timestamp.
  * @ts: Latest timestamp from irq handler.
  * @iio_devs: Pointers to acc/gyro iio_dev instances.
  * @tf: Transfer function structure used by I/O operations.
@@ -217,13 +253,9 @@ struct st_asm330lhh_hw {
 	enum st_asm330lhh_fifo_mode fifo_mode;
 	unsigned long state;
 	u32 enable_mask;
-	u32 requested_mask;
 
-	/* Timestamp sample ODR */
-	u16 odr;
-
-	u64 ts_delta_ns;
 	s64 ts_offset;
+	u64 ts_delta_ns;
 	s64 hw_ts;
 	s64 tsample;
 	s64 delta_ts;
