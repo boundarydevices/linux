@@ -57,6 +57,7 @@ struct trusty_state {
 	u16 ffa_local_id;
 	u16 ffa_remote_id;
 	struct mutex share_memory_msg_lock; /* protects share_memory_msg */
+	bool gicv3_workaround;
 };
 
 static inline unsigned long smc(unsigned long r0, unsigned long r1,
@@ -137,7 +138,13 @@ static unsigned long trusty_std_call_helper(struct device *dev,
 	struct trusty_state *s = platform_get_drvdata(to_platform_device(dev));
 
 	while (true) {
-		local_irq_disable();
+		/*
+		 * In GICv3, we don't use non-secure world generated interrupt
+		 * so no need disable IRQ here. Or the non-secure IRQ will never
+		 * be handle before the SMC process exited.
+		 */
+		if (!s->gicv3_workaround)
+			local_irq_disable();
 
 		/* tell Trusty scheduler what the current priority is */
 		if (s->trusty_sched_share_state) {
@@ -167,7 +174,8 @@ static unsigned long trusty_std_call_helper(struct device *dev,
 			 */
 			trusty_enqueue_nop(dev, NULL);
 		}
-		local_irq_enable();
+		if (!s->gicv3_workaround)
+			local_irq_enable();
 
 		if ((int)ret != SM_ERR_BUSY)
 			break;
@@ -1016,6 +1024,11 @@ static int trusty_probe(struct platform_device *pdev)
 		goto err_add_children;
 	}
 
+	if (of_find_property(s->dev->of_node, "use-gicv3-workaround", NULL)) {
+		s->gicv3_workaround = true;
+	} else {
+		s->gicv3_workaround = false;
+	}
 	return 0;
 
 err_add_children:
