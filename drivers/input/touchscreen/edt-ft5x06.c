@@ -824,7 +824,7 @@ static int edt_ft5x06_erase(struct edt_ft5x06_ts_data *tsdata)
 }
 
 static int edt_ft5x06_write_fw(struct edt_ft5x06_ts_data *tsdata,
-				u32 start_addr, u8 *buf, u32 len)
+				u32 start_addr, const u8 *buf, u32 len)
 {
 	struct i2c_client *client = tsdata->client;
 	int ret;
