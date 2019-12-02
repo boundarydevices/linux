@@ -65,17 +65,37 @@ static void sof_of_probe_complete(struct device *dev)
 	pm_runtime_put_autosuspend(dev);
 }
 
+int sof_of_parse(struct platform_device *pdev)
+{
+	struct snd_sof_pdata *sof_pdata = platform_get_drvdata(pdev);
+	struct device_node *np = pdev->dev.of_node;
+	int ret;
+
+	/* firmware-name is optional in DT */
+	of_property_read_string(np, "firmware-name", &sof_pdata->fw_filename);
+
+	ret = of_property_read_string(np, "tplg-name",
+				      &sof_pdata->tplg_filename);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
 static int sof_of_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	const struct sof_dev_desc *desc;
 	struct snd_sof_pdata *sof_pdata;
+	int ret;
 
 	dev_info(&pdev->dev, "DT DSP detected");
 
 	sof_pdata = devm_kzalloc(dev, sizeof(*sof_pdata), GFP_KERNEL);
 	if (!sof_pdata)
 		return -ENOMEM;
+
+	platform_set_drvdata(pdev, sof_pdata);
 
 	desc = device_get_match_data(dev);
 	if (!desc)
@@ -93,6 +113,16 @@ static int sof_of_probe(struct platform_device *pdev)
 	/* TODO: read alternate fw and tplg filenames from DT */
 	sof_pdata->fw_filename_prefix = sof_pdata->desc->default_fw_path;
 	sof_pdata->tplg_filename_prefix = sof_pdata->desc->default_tplg_path;
+
+	ret = sof_of_parse(pdev);
+	if (ret < 0) {
+		dev_err(dev, "Could not parse SOF OF DSP node\n");
+		return ret;
+	}
+
+	/* use default fw filename if none provided in DT */
+	if (!sof_pdata->fw_filename)
+		sof_pdata->fw_filename = desc->default_fw_filename;
 
 	/* set callback to be called on successful device probe to enable runtime_pm */
 	sof_pdata->sof_probe_complete = sof_of_probe_complete;
