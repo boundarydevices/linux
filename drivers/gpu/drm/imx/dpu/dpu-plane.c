@@ -618,7 +618,7 @@ static void dpu_plane_atomic_update(struct drm_plane *plane,
 	unsigned int mt_w = 0, mt_h = 0;	/* w/h in a micro-tile */
 	int bpp, lb_id;
 	bool need_fetcheco, need_hscaler = false, need_vscaler = false;
-	bool prefetch_start, uv_prefetch_start;
+	bool prefetch_start;
 	bool crtc_use_pc = dpstate->left_src_w || dpstate->right_src_w;
 	bool update_aux_source = false;
 	bool use_prefetch;
@@ -638,7 +638,6 @@ static void dpu_plane_atomic_update(struct drm_plane *plane,
 again:
 	need_fetcheco = false;
 	prefetch_start = false;
-	uv_prefetch_start = false;
 
 	source = update_aux_source ? dpstate->aux_source : dpstate->source;
 	blend = update_aux_source ? dpstate->aux_blend : dpstate->blend;
@@ -782,11 +781,6 @@ again:
 		if (fe_id == ID_NONE)
 			return;
 
-		if (use_prefetch &&
-		    (fe->ops->get_stream_id(fe) == DPU_PLANE_SRC_DISABLED ||
-		     need_modeset))
-			uv_prefetch_start = true;
-
 		fetchdecode_pixengcfg_dynamic_src_sel(fu,
 						(fd_dynamic_src_sel_t)fe_id);
 		fe->ops->set_burstlength(fe, src_w, mt_w, bpp, uv_baseaddr,
@@ -874,7 +868,7 @@ again:
 			       src_w, src_h, src_x, src_y,
 			       fb->pitches[0], fb->format->format,
 			       fb->modifier, baseaddr, uv_baseaddr,
-			       prefetch_start, uv_prefetch_start,
+			       prefetch_start, false,
 			       fb_is_interlaced);
 
 		if (need_modeset)
@@ -887,7 +881,7 @@ again:
 
 		dprc_reg_update(dprc);
 
-		if (prefetch_start || uv_prefetch_start) {
+		if (prefetch_start) {
 			dprc_first_frame_handle(dprc);
 
 			if (!need_modeset)
