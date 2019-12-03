@@ -901,7 +901,7 @@ again:
 			DRM_DEBUG_KMS("[PLANE:%d:%s] use prefetch\n",
 						plane->base.id, plane->name);
 	} else if (dprc) {
-		dprc_disable(dprc);
+		dprc_disable(dprc, need_modeset);
 
 		if (update_aux_source)
 			DRM_DEBUG_KMS("[PLANE:%d:%s] bypass aux prefetch\n",
