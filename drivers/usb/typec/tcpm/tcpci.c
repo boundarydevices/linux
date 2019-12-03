@@ -653,7 +653,12 @@ irqreturn_t tcpci_irq(struct tcpci *tcpci)
 		tcpm_cc_change(tcpci->port);
 
 	if (status & TCPC_ALERT_POWER_STATUS) {
+		unsigned int reg;
+
+		/* Read power status to clear the event */
+		regmap_read(tcpci->regmap, TCPC_POWER_STATUS, &raw);
 		regmap_read(tcpci->regmap, TCPC_POWER_STATUS_MASK, &raw);
+
 		/*
 		 * If power status mask has been reset, then the TCPC
 		 * has reset.
