@@ -2320,7 +2320,7 @@ static int gpmi_init_last(struct gpmi_nand_data *this)
 	if ((GPMI_IS_MX6(this) || GPMI_IS_MX8(this))  &&
 		((bch_geo->gf_len * bch_geo->ecc_strength) % 8) == 0) {
 		ecc->read_subpage = gpmi_ecc_read_subpage;
-		chip->options |= NAND_SUBPAGE_READ;
+		chip->options |= NAND_SUBPAGE_READ | NAND_BBM_FIRSTPAGE | NAND_BBM_SECONDPAGE;
 	}
 
 	return 0;
