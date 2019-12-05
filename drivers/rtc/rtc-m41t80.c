@@ -156,6 +156,7 @@ struct m41t80_data {
 	struct clk_hw sqw;
 	unsigned long freq;
 	unsigned int sqwe;
+	unsigned int always_on;
 #endif
 };
 
@@ -481,10 +482,8 @@ static long m41t80_sqw_round_rate(struct clk_hw *hw, unsigned long rate,
 	return 1 << ilog2(rate);
 }
 
-static int m41t80_sqw_set_rate(struct clk_hw *hw, unsigned long rate,
-			       unsigned long parent_rate)
+static int _m41t80_sqw_set_rate(struct m41t80_data *m41t80, unsigned long rate)
 {
-	struct m41t80_data *m41t80 = sqw_to_m41t80_data(hw);
 	struct i2c_client *client = m41t80->client;
 	int reg_sqw = (m41t80->features & M41T80_FEATURE_SQ_ALT) ?
 		M41T80_REG_WDAY : M41T80_REG_SQW;
@@ -509,6 +508,12 @@ static int m41t80_sqw_set_rate(struct clk_hw *hw, unsigned long rate,
 	return ret;
 }
 
+static int m41t80_sqw_set_rate(struct clk_hw *hw, unsigned long rate,
+			       unsigned long parent_rate)
+{
+	return _m41t80_sqw_set_rate(sqw_to_m41t80_data(hw), rate);
+}
+
 static int m41t80_sqw_control(struct clk_hw *hw, bool enable)
 {
 	struct m41t80_data *m41t80 = sqw_to_m41t80_data(hw);
@@ -518,6 +523,8 @@ static int m41t80_sqw_control(struct clk_hw *hw, bool enable)
 	if (ret < 0)
 		return ret;
 
+	if (m41t80->always_on)
+		enable = true;
 	if (enable)
 		ret |= M41T80_ALMON_SQWE;
 	else
@@ -559,14 +566,23 @@ static struct clk *m41t80_sqw_register_clk(struct m41t80_data *m41t80)
 	struct device_node *node = client->dev.of_node;
 	struct clk *clk;
 	struct clk_init_data init;
+	int rate = 0;
 	int ret;
 
-	/* First disable the clock */
+	of_property_read_u32(node, "sqw-freq", &rate);
+	if (rate)
+		_m41t80_sqw_set_rate(m41t80, rate);
+
 	ret = i2c_smbus_read_byte_data(client, M41T80_REG_ALARM_MON);
 	if (ret < 0)
 		return ERR_PTR(ret);
-	ret = i2c_smbus_write_byte_data(client, M41T80_REG_ALARM_MON,
-					ret & ~(M41T80_ALMON_SQWE));
+	if (rate) {
+		ret |= M41T80_ALMON_SQWE;	/* enable the clock */
+		m41t80->always_on = true;
+	} else {
+		ret &= ~(M41T80_ALMON_SQWE);	/* disable the clock */
+	}
+	ret = i2c_smbus_write_byte_data(client, M41T80_REG_ALARM_MON, ret);
 	if (ret < 0)
 		return ERR_PTR(ret);
 
