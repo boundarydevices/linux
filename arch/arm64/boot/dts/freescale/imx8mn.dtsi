@@ -1102,7 +1102,7 @@
 				};
 			};
 
-			display-subsystem {
+			display_subsystem: display-subsystem {
 				compatible = "fsl,imx-display-subsystem";
 				ports = <&lcdif_disp0>;
 			};
