@@ -148,7 +148,7 @@ err_clk:
 static int gpmi_init(struct gpmi_nand_data *this)
 {
 	struct resources *r = &this->resources;
-	int ret;
+	int ret = 0;
 
 	ret = pm_runtime_resume_and_get(this->dev);
 	if (ret < 0)
@@ -733,7 +733,7 @@ static int common_nfc_set_geometry(struct gpmi_nand_data *this)
 static int bch_set_geometry(struct gpmi_nand_data *this)
 {
 	struct resources *r = &this->resources;
-	int ret;
+	int ret = 0;
 
 	ret = common_nfc_set_geometry(this);
 	if (ret)
@@ -757,7 +757,6 @@ static int bch_set_geometry(struct gpmi_nand_data *this)
 	/* Set *all* chip selects to use layout 0. */
 	writel(0, r->bch_regs + HW_BCH_LAYOUTSELECT);
 
-	ret = 0;
 err_out:
 	pm_runtime_mark_last_busy(this->dev);
 	pm_runtime_put_autosuspend(this->dev);
@@ -2801,7 +2800,7 @@ static int gpmi_nand_probe(struct platform_device *pdev)
 	return 0;
 
 exit_nfc_init:
-	pm_runtime_put(&pdev->dev);
+	pm_runtime_dont_use_autosuspend(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 	release_resources(this);
 exit_acquire_resources:
@@ -2815,7 +2814,6 @@ static void gpmi_nand_remove(struct platform_device *pdev)
 	struct nand_chip *chip = &this->nand;
 	int ret;
 
-	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 
 	ret = mtd_device_unregister(nand_to_mtd(chip));
@@ -2847,7 +2845,7 @@ static int gpmi_pm_resume(struct device *dev)
 		return ret;
 	}
 
-	pinctrl_pm_select_sleep_state(dev);
+	pinctrl_pm_select_default_state(dev);
 
 	/* re-init the GPMI registers */
 	ret = gpmi_init(this);
@@ -2866,6 +2864,9 @@ static int gpmi_pm_resume(struct device *dev)
 		dev_err(this->dev, "Error setting BCH : %d\n", ret);
 		return ret;
 	}
+
+	/* re-apply the timing setting */
+	this->hw.must_apply_timings = true;
 
 	return 0;
 }
