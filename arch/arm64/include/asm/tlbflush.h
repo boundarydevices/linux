@@ -251,9 +251,9 @@ static inline void flush_tlb_mm(struct mm_struct *mm)
 
 	dsb(ishst);
 	asid = __TLBI_VADDR(0, ASID(mm));
-	if (TKT340553_SW_WORKAROUND && ASID(mm) >> 12) {
+	if (TKT340553_SW_WORKAROUND) {
 		__tlbi(vmalle1is);
-	}  else {
+	} else {
 		__tlbi(aside1is, asid);
 		__tlbi_user(aside1is, asid);
 	}
@@ -267,8 +267,8 @@ static inline void flush_tlb_page_nosync(struct vm_area_struct *vma,
 
 	dsb(ishst);
 	addr = __TLBI_VADDR(uaddr, ASID(vma->vm_mm));
-	if (TKT340553_SW_WORKAROUND && (uaddr >> 36 || (ASID(vma->vm_mm) >> 12))) {
-                __tlbi(vmalle1is);
+	if (TKT340553_SW_WORKAROUND) {
+		__tlbi(vmalle1is);
 	} else {
 		__tlbi(vale1is, addr);
 		__tlbi_user(vale1is, addr);
@@ -341,7 +341,7 @@ static inline void __flush_tlb_range(struct vm_area_struct *vma,
 		if (!system_supports_tlb_range() ||
 		    pages % 2 == 1) {
 			addr = __TLBI_VADDR(start, asid);
-			if (TKT340553_SW_WORKAROUND && (addr & mask || (ASID(vma->vm_mm) >> 12))) {
+			if (TKT340553_SW_WORKAROUND) {
 				__tlbi(vmalle1is);
 			} else if (last_level) {
 				__tlbi_level(vale1is, addr, tlb_level);
@@ -359,7 +359,7 @@ static inline void __flush_tlb_range(struct vm_area_struct *vma,
 		if (num >= 0) {
 			addr = __TLBI_VADDR_RANGE(start, asid, scale,
 						  num, tlb_level);
-			if (TKT340553_SW_WORKAROUND && (addr & mask || (ASID(vma->vm_mm) >> 12))) {
+			if (TKT340553_SW_WORKAROUND) {
 				__tlbi(vmalle1is);
 			} else if (last_level) {
 				__tlbi(rvale1is, addr);
@@ -373,6 +373,7 @@ static inline void __flush_tlb_range(struct vm_area_struct *vma,
 		}
 		scale++;
 	}
+
 	dsb(ish);
 }
 
@@ -401,8 +402,8 @@ static inline void flush_tlb_kernel_range(unsigned long start, unsigned long end
 
 	dsb(ishst);
 	for (addr = start; addr < end; addr += 1 << (PAGE_SHIFT - 12)) {
-		if (TKT340553_SW_WORKAROUND && addr >> 24)
-                        __tlbi(vmalle1is);
+		if (TKT340553_SW_WORKAROUND)
+			__tlbi(vmalle1is);
 		else
 			__tlbi(vaale1is, addr);
 	}
@@ -419,7 +420,7 @@ static inline void __flush_tlb_kernel_pgtable(unsigned long kaddr)
 	unsigned long addr = __TLBI_VADDR(kaddr, 0);
 
 	dsb(ishst);
-	if (TKT340553_SW_WORKAROUND && addr >> 24)
+	if (TKT340553_SW_WORKAROUND)
 		__tlbi(vmalle1is);
 	else
 		__tlbi(vaae1is, addr);
