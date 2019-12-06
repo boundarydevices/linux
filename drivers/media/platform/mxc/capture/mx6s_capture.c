@@ -270,6 +270,12 @@ static struct mx6s_fmt formats[] = {
 		.mbus_code	= MEDIA_BUS_FMT_YUYV8_2X8,
 		.bpp		= 2,
 	}, {
+		.name		= "YUYV-16",
+		.fourcc		= V4L2_PIX_FMT_YUYV,
+		.pixelformat	= V4L2_PIX_FMT_YUYV,
+		.mbus_code	= MEDIA_BUS_FMT_UYVY8_2X8,
+		.bpp		= 2,
+	}, {
 		.name		= "YVYU-16",
 		.fourcc		= V4L2_PIX_FMT_YVYU,
 		.pixelformat	= V4L2_PIX_FMT_YVYU,
@@ -404,19 +410,6 @@ static inline struct mx6s_csi_dev
 				*notifier_to_mx6s_dev(struct v4l2_async_notifier *n)
 {
 	return container_of(n, struct mx6s_csi_dev, subdev_notifier);
-}
-
-struct mx6s_fmt *format_by_fourcc(int fourcc)
-{
-	int i;
-
-	for (i = 0; i < NUM_FORMATS; i++) {
-		if (formats[i].pixelformat == fourcc)
-			return formats + i;
-	}
-
-	pr_err("unknown pixelformat:'%4.4s'\n", (char *)&fourcc);
-	return NULL;
 }
 
 static struct mx6s_buffer *mx6s_ibuf_to_buf(struct mx6s_buf_internal *int_buf)
@@ -881,8 +874,11 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 	case V4L2_PIX_FMT_SBGGR8:
 		cr18 = BIT_MIPI_DATA_FORMAT_RAW8;
 		break;
-	case V4L2_PIX_FMT_UYVY:
 	case V4L2_PIX_FMT_YUYV:
+		if (csi_dev->fmt->mbus_code == MEDIA_BUS_FMT_UYVY8_2X8)
+			cr1 |= BIT_PACK_DIR;
+		/* Fall through */
+	case V4L2_PIX_FMT_UYVY:
 	case V4L2_PIX_FMT_YVYU:
 		if (csi_dev->csi_mipi_mode) {
 			if (csi_dev->csi_two_8bit_sensor_mode) {
@@ -1448,6 +1444,23 @@ static int verify_mbus(struct v4l2_subdev *sd, u32 code)
 	return -EINVAL;
 }
 
+static struct mx6s_fmt *format_by_fourcc(struct v4l2_subdev *sd, int fourcc)
+{
+	struct mx6s_fmt *fmt = formats;
+	int i;
+
+	for (i = 0; i < NUM_FORMATS; i++, fmt++) {
+		if (fmt->pixelformat == fourcc) {
+			if (!verify_mbus(sd, fmt->mbus_code)) {
+				return fmt;
+			}
+		}
+	}
+
+	pr_err("unknown pixelformat:'%4.4s'\n", (char *)&fourcc);
+	return NULL;
+}
+
 static int mx6s_vidioc_enum_fmt_vid_cap(struct file *file, void  *priv,
 				       struct v4l2_fmtdesc *f)
 {
@@ -1491,7 +1504,7 @@ static int mx6s_vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 	struct mx6s_fmt *fmt;
 	int ret;
 
-	fmt = format_by_fourcc(f->fmt.pix.pixelformat);
+	fmt = format_by_fourcc(sd, f->fmt.pix.pixelformat);
 	if (!fmt) {
 		dev_err(csi_dev->dev, "Fourcc format (0x%08x) invalid.",
 			f->fmt.pix.pixelformat);
@@ -1546,7 +1559,9 @@ static int mx6s_vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 			return -EINVAL;
 	}
 
-	csi_dev->fmt           = format_by_fourcc(f->fmt.pix.pixelformat);
+	csi_dev->fmt           = format_by_fourcc(sd, f->fmt.pix.pixelformat);
+	if (!csi_dev->fmt)
+		return -EINVAL;
 	csi_dev->mbus_code     = csi_dev->fmt->mbus_code;
 	csi_dev->pix.pixelformat = f->fmt.pix.pixelformat;
 	csi_dev->pix.width     = f->fmt.pix.width;
@@ -1716,7 +1731,9 @@ static int mx6s_vidioc_enum_framesizes(struct file *file, void *priv,
 	};
 	int ret;
 
-	fmt = format_by_fourcc(fsize->pixel_format);
+	fmt = format_by_fourcc(sd, fsize->pixel_format);
+	if (!fmt)
+		return -EINVAL;
 	if (fmt->pixelformat != fsize->pixel_format)
 		return -EINVAL;
 	fse.code = fmt->mbus_code;
@@ -1758,7 +1775,9 @@ static int mx6s_vidioc_enum_frameintervals(struct file *file, void *priv,
 	};
 	int ret;
 
-	fmt = format_by_fourcc(interval->pixel_format);
+	fmt = format_by_fourcc(sd, interval->pixel_format);
+	if (!fmt)
+		return -EINVAL;
 	if (fmt->pixelformat != interval->pixel_format)
 		return -EINVAL;
 	fie.code = fmt->mbus_code;
