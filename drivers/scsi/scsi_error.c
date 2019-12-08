@@ -2222,7 +2222,7 @@ int scsi_error_handler(void *data)
 		 * and HDD are accessed simultaneously.
 		 */
 		if ((shost->host_failed == 0 && shost->host_eh_scheduled == 0) ||
-		    ((shost->host_failed != atomic_read(&shost->host_busy)) &&
+		    ((shost->host_failed != scsi_host_busy(shost)) &&
 		    (sg_io_buffer_hack == NULL) && (shost->host_failed > 0))) {
 			SCSI_LOG_ERROR_RECOVERY(1,
 				shost_printk(KERN_INFO, shost,
