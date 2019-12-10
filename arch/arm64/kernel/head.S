@@ -362,10 +362,21 @@ __primary_switched:
 0:
 #endif
 	add	sp, sp, #16
+
+	adr	x29, 10f
+	adrp    x30, abort_just_enabled
+	str     x29, [x30, :lo12:abort_just_enabled]
+	msr daifclr, #0x4
+10:	msr daifset, #0x4
+
 	mov	x29, #0
 	mov	x30, #0
 	b	start_kernel
 ENDPROC(__primary_switched)
+
+.globl  abort_just_enabled
+.section .data.abort_just_enabled ; .align 3
+abort_just_enabled: .quad 0
 
 /*
  * end early head section, begin head code that is also used for
