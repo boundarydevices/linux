@@ -2176,10 +2176,6 @@ static int __maybe_unused flexcan_suspend(struct device *device)
 		} else {
 			flexcan_chip_stop(dev);
 
-			err = pm_runtime_force_suspend(device);
-			if (err)
-				return err;
-
 			pinctrl_pm_select_sleep_state(device);
 		}
 		netif_stop_queue(dev);
@@ -2207,10 +2203,6 @@ static int __maybe_unused flexcan_resume(struct device *device)
 				return err;
 		} else {
 			pinctrl_pm_select_default_state(device);
-
-			err = pm_runtime_force_resume(device);
-			if (err)
-				return err;
 
 			err = flexcan_chip_start(dev);
 			if (err)
@@ -2244,8 +2236,16 @@ static int __maybe_unused flexcan_noirq_suspend(struct device *device)
 	struct net_device *dev = dev_get_drvdata(device);
 	struct flexcan_priv *priv = netdev_priv(dev);
 
-	if (netif_running(dev) && device_may_wakeup(device))
-		flexcan_enable_wakeup_irq(priv, true);
+	if (netif_running(dev)) {
+		int err;
+
+		if (device_may_wakeup(device))
+			flexcan_enable_wakeup_irq(priv, true);
+
+		err = pm_runtime_force_suspend(device);
+		if (err)
+			return err;
+	}
 
 	return 0;
 }
@@ -2255,8 +2255,16 @@ static int __maybe_unused flexcan_noirq_resume(struct device *device)
 	struct net_device *dev = dev_get_drvdata(device);
 	struct flexcan_priv *priv = netdev_priv(dev);
 
-	if (netif_running(dev) && device_may_wakeup(device))
-		flexcan_enable_wakeup_irq(priv, false);
+	if (netif_running(dev)) {
+		int err;
+
+		err = pm_runtime_force_resume(device);
+		if (err)
+			return err;
+
+		if (device_may_wakeup(device))
+			flexcan_enable_wakeup_irq(priv, false);
+	}
 
 	return 0;
 }
