@@ -95,6 +95,12 @@ static irqreturn_t imx_snvs_pwrkey_interrupt(int irq, void *dev_id)
 	if (pdata->clk)
 		clk_enable(pdata->clk);
 
+	if (pdata->suspended) {
+		pdata->keystate = 1;
+		input_event(input, EV_KEY, pdata->keycode, 1);
+		input_sync(input);
+	}
+
 	regmap_read(pdata->snvs, SNVS_LPSR_REG, &lp_status);
 	if (lp_status & SNVS_LPSR_SPO) {
 		if (pdata->minor_rev == 0) {
