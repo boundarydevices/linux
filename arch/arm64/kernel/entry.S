@@ -539,7 +539,16 @@ el1_fiq_invalid:
 ENDPROC(el1_fiq_invalid)
 
 el1_error_invalid:
-	inv_entry 1, BAD_ERROR
+	stp	x0, x1, [sp, #16 * 0]
+	adrp    x0, abort_just_enabled
+	ldr     x1, [x0, :lo12:abort_just_enabled]
+	mrs     x0, elr_el1
+	cmp     x0, x1
+	ldp	x0, x1, [sp, #16 * 0]
+	bne     1f
+	eret
+
+1:	inv_entry 1, BAD_ERROR
 ENDPROC(el1_error_invalid)
 
 /*
