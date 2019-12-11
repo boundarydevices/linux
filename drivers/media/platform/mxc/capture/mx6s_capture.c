@@ -874,7 +874,7 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 		break;
 	case V4L2_PIX_FMT_YUYV:
 		if (csi_dev->fmt->mbus_code == MEDIA_BUS_FMT_UYVY8_2X8)
-			cr1 |= BIT_PACK_DIR;
+			cr1 |= BIT_PACK_DIR | BIT_SWAP16_EN;
 		fallthrough;
 	case V4L2_PIX_FMT_UYVY:
 	case V4L2_PIX_FMT_YVYU:
