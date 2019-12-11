@@ -46,6 +46,10 @@
 #include <media/videobuf2-core.h>
 #include <media/videobuf2-dma-contig.h>
 
+static int debug;
+module_param(debug, int, 0644);
+MODULE_PARM_DESC(debug, "Debug level (0-2)");
+
 #define MX6S_CAM_DRV_NAME "mx6s-csi"
 #define MX6S_CAM_VERSION "0.0.1"
 #define MX6S_CAM_DRIVER_DESCRIPTION "i.MX6S_CSI"
@@ -1471,7 +1475,7 @@ static int mx6s_vidioc_enum_fmt_vid_cap(struct file *file, void  *priv,
 	fmt = &formats[i];
 	strlcpy(f->description, fmt->name, sizeof(f->description));
 	f->pixelformat = fmt->pixelformat;
-	pr_debug("%s: %s: %x %x\n", __func__, fmt->name, fmt->mbus_code, fmt->pixelformat);
+	dev_dbg(csi_dev->dev, "enum format %s 0x%x 0x%x\n", fmt->name, fmt->mbus_code, fmt->pixelformat);
 	return 0;
 }
 
