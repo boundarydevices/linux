@@ -76,7 +76,6 @@ struct flash_info {
 					 * bit. Must be used with
 					 * SPI_NOR_HAS_LOCK.
 					 */
-#define	SPI_NOR_DDR_QUAD_READ	BIT(10)  /* Flash supports DDR Quad Read */
 };
 
 #define JEDEC_MFR(info)	((info)->id[0])
@@ -148,21 +147,6 @@ static int read_cr(struct spi_nor *nor)
 static inline int spi_nor_read_dummy_cycles(struct spi_nor *nor)
 {
 	switch (nor->flash_read) {
-	case SPI_NOR_DDR_QUAD:
-	{
-		struct device_node *np = spi_nor_get_flash_node(nor);
-		u32 dummy;
-
-		/*
-		* The m25p80.c can not support the DDR quad read.
-		* We set the dummy cycles to 8 by default. The SPI NOR
-		* controller driver can set it in its child DT node.
-		* We parse it out here.
-		*/
-		if (!of_property_read_u32(np, "spi-nor,ddr-quad-read-dummy",
-					 &dummy))
-			return dummy;
-	}
 	case SPI_NOR_FAST:
 	case SPI_NOR_DUAL:
 	case SPI_NOR_QUAD:
@@ -903,7 +887,7 @@ static const struct flash_info spi_nor_ids[] = {
 	{ "mx25l12855e", INFO(0xc22618, 0, 64 * 1024, 256, 0) },
 	{ "mx25l25635e", INFO(0xc22019, 0, 64 * 1024, 512, 0) },
 	{ "mx25l25655e", INFO(0xc22619, 0, 64 * 1024, 512, 0) },
-	{ "mx25l51245g", INFO(0xc2201a, 0, 64 * 1024, 1024, SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | SPI_NOR_DDR_QUAD_READ) },
+	{ "mx25l51245g", INFO(0xc2201a, 0, 64 * 1024, 1024, SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
 	{ "mx66l51235l", INFO(0xc2201a, 0, 64 * 1024, 1024, SPI_NOR_QUAD_READ) },
 	{ "mx66l1g55g",  INFO(0xc2261b, 0, 64 * 1024, 2048, SPI_NOR_QUAD_READ) },
 
@@ -914,7 +898,7 @@ static const struct flash_info spi_nor_ids[] = {
 	{ "n25q064a",    INFO(0x20bb17, 0, 64 * 1024,  128, SECT_4K | SPI_NOR_QUAD_READ) },
 	{ "n25q128a11",  INFO(0x20bb18, 0, 64 * 1024,  256, SECT_4K | SPI_NOR_QUAD_READ) },
 	{ "n25q128a13",  INFO(0x20ba18, 0, 64 * 1024,  256, SECT_4K | SPI_NOR_QUAD_READ) },
-	{ "n25q256a",    INFO(0x20ba19, 0, 64 * 1024,  512, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | SPI_NOR_DDR_QUAD_READ) },
+	{ "n25q256a",    INFO(0x20ba19, 0, 64 * 1024,  512, SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
 	{ "n25q512a",    INFO(0x20bb20, 0, 64 * 1024, 1024, SECT_4K | USE_FSR | SPI_NOR_QUAD_READ) },
 	{ "n25q512ax3",  INFO(0x20ba20, 0, 64 * 1024, 1024, SECT_4K | USE_FSR | SPI_NOR_QUAD_READ) },
 	{ "n25q00",      INFO(0x20ba21, 0, 64 * 1024, 2048, SECT_4K | USE_FSR | SPI_NOR_QUAD_READ) },
@@ -937,7 +921,7 @@ static const struct flash_info spi_nor_ids[] = {
 	{ "s25sl12800", INFO(0x012018, 0x0300, 256 * 1024,  64, 0) },
 	{ "s25sl12801", INFO(0x012018, 0x0301,  64 * 1024, 256, 0) },
 	{ "s25fl128s",	INFO6(0x012018, 0x4d0180, 64 * 1024, 256, SECT_4K | SPI_NOR_QUAD_READ) },
-	{ "s25fl128s",	INFO(0x012018, 0x4d0180, 64 * 1024, 256, SPI_NOR_QUAD_READ | SPI_NOR_DDR_QUAD_READ) },
+	{ "s25fl128s",	INFO(0x012018, 0x4d0180, 64 * 1024, 256, SPI_NOR_QUAD_READ) },
 	{ "s25fl129p0", INFO(0x012018, 0x4d00, 256 * 1024,  64, SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
 	{ "s25fl129p1", INFO(0x012018, 0x4d01,  64 * 1024, 256, SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ) },
 	{ "s25sl004a",  INFO(0x010212,      0,  64 * 1024,   8, 0) },
@@ -1301,24 +1285,6 @@ static int spansion_quad_enable(struct spi_nor *nor)
 	return 0;
 }
 
-static int set_ddr_quad_mode(struct spi_nor *nor, const struct flash_info *info)
-{
-	int status;
-
-	switch (JEDEC_MFR(info)) {
-	case CFI_MFR_AMD: /* Spansion, actually */
-		status = spansion_quad_enable(nor);
-		if (status) {
-			dev_err(nor->dev,
-				"Spansion DDR quad-read not enabled\n");
-			return status;
-		}
-		return status;
-	default:
-		return -EINVAL;
-	}
-}
-
 static int set_quad_mode(struct spi_nor *nor, const struct flash_info *info)
 {
 	int status;
@@ -1487,15 +1453,8 @@ int spi_nor_scan(struct spi_nor *nor, const char *name, enum read_mode mode)
 	if (info->flags & SPI_NOR_NO_FR)
 		nor->flash_read = SPI_NOR_NORMAL;
 
-	/* DDR Quad/Quad/Dual-read mode takes precedence over fast/normal */
-	if (mode == SPI_NOR_DDR_QUAD && info->flags & SPI_NOR_DDR_QUAD_READ) {
-		ret = set_ddr_quad_mode(nor, info);
-		if (ret) {
-			dev_err(dev, "DDR quad mode not supported\n");
-			return ret;
-		}
-		nor->flash_read = SPI_NOR_DDR_QUAD;
-	} else if (mode == SPI_NOR_QUAD && info->flags & SPI_NOR_QUAD_READ) {
+	/* Quad/Dual-read mode takes precedence over fast/normal */
+	if (mode == SPI_NOR_QUAD && info->flags & SPI_NOR_QUAD_READ) {
 		ret = set_quad_mode(nor, info);
 		if (ret) {
 			dev_err(dev, "quad mode not supported\n");
@@ -1508,14 +1467,6 @@ int spi_nor_scan(struct spi_nor *nor, const char *name, enum read_mode mode)
 
 	/* Default commands */
 	switch (nor->flash_read) {
-	case SPI_NOR_DDR_QUAD:
-		if (JEDEC_MFR(info) == CFI_MFR_AMD) { /* Spansion */
-			nor->read_opcode = SPINOR_OP_READ_1_4_4_D;
-		} else {
-			dev_err(dev, "DDR Quad Read is not supported.\n");
-			return -EINVAL;
-		}
-		break;
 	case SPI_NOR_QUAD:
 		nor->read_opcode = SPINOR_OP_READ_1_1_4;
 		break;
@@ -1543,9 +1494,6 @@ int spi_nor_scan(struct spi_nor *nor, const char *name, enum read_mode mode)
 		if (JEDEC_MFR(info) == SNOR_MFR_SPANSION) {
 			/* Dedicated 4-byte command set */
 			switch (nor->flash_read) {
-			case SPI_NOR_DDR_QUAD:
-				nor->read_opcode = SPINOR_OP_READ4_1_4_4_D;
-				break;
 			case SPI_NOR_QUAD:
 				nor->read_opcode = SPINOR_OP_READ4_1_1_4;
 				break;
