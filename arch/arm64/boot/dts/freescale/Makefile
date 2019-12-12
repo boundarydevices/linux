@@ -60,7 +60,10 @@ dtb-$(CONFIG_ARCH_FSL_IMX8QM) += fsl-imx8qm-lpddr4-arm2.dtb \
 				 fsl-imx8qm-lpddr4-arm2-hsic.dtb \
 				 fsl-imx8dm-lpddr4-arm2.dtb \
 				 fsl-imx8qp-lpddr4-arm2.dtb \
-				 fsl-imx8qm-lpddr4-arm2-dp-dig-pll.dtb
+				 fsl-imx8qm-lpddr4-arm2-dp-dig-pll.dtb \
+				 fsl-imx8qm-mek-car-no-product.dtb \
+				 fsl-imx8qm-mek-car2-no-product.dtb \
+				 fsl-imx8qm-mek-ov5640-no-product.dtb
 dtb-$(CONFIG_ARCH_FSL_IMX8QXP) += fsl-imx8qxp-lpddr4-arm2.dtb \
 				  fsl-imx8qxp-mek.dtb \
 				  fsl-imx8qxp-mek-car.dtb \
@@ -98,7 +101,10 @@ dtb-$(CONFIG_ARCH_FSL_IMX8QXP) += fsl-imx8qxp-lpddr4-arm2.dtb \
 				  fsl-imx8dx-lpddr4-arm2.dtb \
 				  fsl-imx8dxp-lpddr4-arm2.dtb \
 				  fsl-imx8dxl-phantom-mek.dtb \
-				  fsl-imx8dxl-phantom-mek-rpmsg.dtb
+				  fsl-imx8dxl-phantom-mek-rpmsg.dtb \
+				  fsl-imx8qxp-mek-car-no-product.dtb \
+				  fsl-imx8qxp-mek-car2-no-product.dtb \
+				  fsl-imx8qxp-mek-ov5640-no-product.dtb
 dtb-$(CONFIG_ARCH_FSL_IMX8MQ) += fsl-imx8mq-ddr3l-arm2.dtb \
 				 fsl-imx8mq-ddr4-arm2.dtb \
 				 fsl-imx8mq-ddr4-arm2-gpmi-nand.dtb \
@@ -124,7 +130,9 @@ dtb-$(CONFIG_ARCH_FSL_IMX8MQ) += fsl-imx8mq-ddr3l-arm2.dtb \
 				 fsl-imx8mq-evk-inmate.dtb \
 				 fsl-imx8mq-evk-dp.dtb \
 				 fsl-imx8mq-evk-edp.dtb \
-				 fsl-imx8mq-phanbell.dtb
+				 fsl-imx8mq-phanbell.dtb \
+				 fsl-imx8mq-phanbell-no-product.dtb \
+				 fsl-imx8mq-evk-no-product.dtb
 dtb-$(CONFIG_ARCH_FSL_IMX8MM) += fsl-imx8mm-evk.dtb \
 				 fsl-imx8mm-evk-drm.dtb \
 				 fsl-imx8mm-evk-ak4497.dtb \
@@ -140,10 +148,13 @@ dtb-$(CONFIG_ARCH_FSL_IMX8MM) += fsl-imx8mm-evk.dtb \
 				 fsl-imx8mm-evk-revb.dtb \
 				 fsl-imx8mm-evk-revb-rm67191.dtb \
 				 fsl-imx8mm-ddr4-evk-rm67191.dtb \
-				 fsl-imx8mm-ddr4-qca9377-evk.dtb
+				 fsl-imx8mm-ddr4-qca9377-evk.dtb \
+				 fsl-imx8mm-evk-no-product.dtb \
+				 fsl-imx8mm-ddr4-evk-no-product.dtb
 dtb-$(CONFIG_ARCH_FSL_IMX8MN) += fsl-imx8mn-ddr4-evk.dtb \
 				 fsl-imx8mn-ddr4-evk-rpmsg.dtb \
 				 fsl-imx8mn-ddr4-evk-rm67191.dtb \
 				 fsl-imx8mn-ddr4-evk-ak5558.dtb \
 				 fsl-imx8mn-ddr4-evk-root.dtb \
-				 fsl-imx8mn-ddr4-evk-inmate.dtb
+				 fsl-imx8mn-ddr4-evk-inmate.dtb \
+				 fsl-imx8mn-ddr4-evk-no-product.dtb
