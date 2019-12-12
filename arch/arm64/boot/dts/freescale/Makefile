@@ -237,3 +237,10 @@ dtb-$(CONFIG_ARCH_S32) += s32v234-evb.dtb \
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-md.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-powersave.dtb imx8mp-evk-powersave-non-rpmsg.dtb \
 			  imx8mp-evk-hifiberry-dacpp-m-rpmsg.dtb
+
+dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk-no-product.dtb imx8mm-ddr4-evk-no-product.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8mn-evk-no-product.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-no-product.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk-no-product.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-ov5640-no-product.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek-ov5640-rpmsg-no-product.dtb
