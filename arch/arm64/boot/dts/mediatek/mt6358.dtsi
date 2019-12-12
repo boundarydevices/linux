@@ -275,6 +275,7 @@
 				regulator-min-microvolt = <2900000>;
 				regulator-max-microvolt = <3300000>;
 				regulator-enable-ramp-delay = <60>;
+				regulator-always-on;
 			};
 
 			mt6358_vio28_reg: ldo_vio28 {
