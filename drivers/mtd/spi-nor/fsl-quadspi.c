@@ -65,11 +65,6 @@
 #define QUADSPI_MCR_SWRSTSD_SHIFT	0
 #define QUADSPI_MCR_SWRSTSD_MASK	(1 << QUADSPI_MCR_SWRSTSD_SHIFT)
 
-#define QUADSPI_FLSHCR			0x0c
-#define QUADSPI_FLSHCR_TDH_SHIFT	16
-#define QUADSPI_FLSHCR_TDH_MASK		(3 << QUADSPI_FLSHCR_TDH_SHIFT)
-#define QUADSPI_FLSHCR_TDH_DDR_EN	(1 << QUADSPI_FLSHCR_TDH_SHIFT)
-
 #define QUADSPI_IPCR			0x08
 #define QUADSPI_IPCR_SEQID_SHIFT	24
 #define QUADSPI_IPCR_SEQID_MASK		(0xF << QUADSPI_IPCR_SEQID_SHIFT)
@@ -865,14 +860,6 @@ static void fsl_qspi_init_abh_read(struct fsl_qspi *q)
 			reg |= MX6SX_QUADSPI_MCR_TX_DDR_DELAY_EN_MASK;
 
 		qspi_writel(q, reg, q->iobase + QUADSPI_MCR);
-
-		if ((q->devtype_data->devtype == FSL_QUADSPI_IMX6UL) ||
-		    (q->devtype_data->devtype == FSL_QUADSPI_IMX7D)) {
-			reg = readl(q->iobase + QUADSPI_FLSHCR);
-			reg &= ~QUADSPI_FLSHCR_TDH_MASK;
-			reg |= QUADSPI_FLSHCR_TDH_DDR_EN;
-			qspi_writel(q, reg, q->iobase + QUADSPI_FLSHCR);
-		}
 	}
 }
 
