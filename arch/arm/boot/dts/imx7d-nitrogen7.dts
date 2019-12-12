@@ -697,8 +697,11 @@
 	status = "okay";
 
 	flash: m25p80@0 {
-		compatible = "winbond,w25q128";
+		compatible = "winbond,w25q128", "jedec,spi-nor";
+		m25p,fast-read;
 		spi-max-frequency = <20000000>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <4>;
 		reg = <0>;
 		#address-cells = <1>;
 		#size-cells = <1>;
