@@ -186,3 +186,10 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-sof-cs42888.dtb imx8qm-mek-sof-wm8960.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8dxl-evk-root.dtb imx8dxl-evk-inmate.dtb
 dtb-$(CONFIG_ARCH_S32) += s32v234-evb.dtb \
 			  s32v234-sbc.dtb
+
+dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk-no-product.dtb imx8mm-ddr4-evk-no-product.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8mn-ddr4-evk-no-product.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-no-product.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk-no-product.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-ov5640-no-product.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek-ov5640-rpmsg-no-product.dtb
