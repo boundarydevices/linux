@@ -234,9 +234,10 @@ struct st_asm330lhh_sensor {
  * @ts_offset: Hw timestamp offset.
  * @ts_delta_ns: Calibrate delta time tick.
  * @hw_ts: Latest hw timestamp from the sensor.
+ * @val_ts_old: Hold hw timestamp for timer rollover.
+ * @hw_ts_high: Save MSB hw timestamp.
  * @tsample: Timestamp for each sensor sample.
  * @delta_ts: Delta time between two consecutive interrupts.
- * @delta_hw_ts: Delta HW Timestamp.
  * @ts: Latest timestamp from irq handler.
  * @iio_devs: Pointers to acc/gyro iio_dev instances.
  * @tf: Transfer function structure used by I/O operations.
@@ -257,9 +258,10 @@ struct st_asm330lhh_hw {
 	s64 ts_offset;
 	u64 ts_delta_ns;
 	s64 hw_ts;
+	u32 val_ts_old;
+	u32 hw_ts_high;
 	s64 tsample;
 	s64 delta_ts;
-	s64 delta_hw_ts;
 	s64 ts;
 
 	struct iio_dev *iio_devs[ST_ASM330LHH_ID_MAX];

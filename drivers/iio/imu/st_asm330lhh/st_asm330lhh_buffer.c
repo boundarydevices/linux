@@ -69,6 +69,8 @@ static inline int st_asm330lhh_reset_hwts(struct st_asm330lhh_hw *hw)
 
 	hw->ts = st_asm330lhh_get_time_ns();
 	hw->ts_offset = hw->ts;
+	hw->val_ts_old = 0;
+	hw->hw_ts_high = 0;
 	hw->tsample = 0ull;
 
 	return st_asm330lhh_write_atomic(hw, ST_ASM330LHH_REG_TIMESTAMP2_ADDR,
@@ -161,6 +163,7 @@ int st_asm330lhh_update_watermark(struct st_asm330lhh_sensor *sensor,
 	wdata = cpu_to_le16(fifo_watermark);
 	err = st_asm330lhh_write_atomic(hw, ST_ASM330LHH_REG_FIFO_CTRL1_ADDR,
 				      sizeof(wdata), (u8 *)&wdata);
+
 out:
 	mutex_unlock(&hw->lock);
 
@@ -237,8 +240,16 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 
 			if (tag == ST_ASM330LHH_TS_TAG) {
 				val = get_unaligned_le32(ptr);
+
+				if (hw->val_ts_old > val)
+					hw->hw_ts_high++;
+
 				hw_ts_old = hw->hw_ts;
-				hw->hw_ts = val * hw->ts_delta_ns;
+
+				/* check hw rollover */
+				hw->val_ts_old = val;
+				hw->hw_ts = (val + ((s64)hw->hw_ts_high << 32)) *
+					    hw->ts_delta_ns;
 				hw->ts_offset = st_asm330lhh_ewma(hw->ts_offset,
 						ts_irq - hw->hw_ts,
 						ST_ASM330LHH_EWMA_LEVEL);
