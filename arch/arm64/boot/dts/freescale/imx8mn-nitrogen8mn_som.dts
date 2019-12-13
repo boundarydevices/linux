@@ -3,7 +3,7 @@
  * Copyright 2019 Boundary Devices
  */
 
-#include "imx8mm-nitrogen8mm.dts"
+#include "imx8mn-nitrogen8mn.dts"
 
 &iomuxc {
 	pinctrl_i2c2_sn65dsi83: i2c2-sn65dsi83grp {
@@ -43,18 +43,11 @@
 			MX8MMN(IOMUXC_GPIO1_IO15_PWM4_OUT, 0x16)
 		>;
 	};
-
-	pinctrl_usbotg2: usbotg2grp {
-		fsl,pins = <
-			MX8MMN(IOMUXC_GPIO1_IO14_USB2_OTG_PWR, 0x16)
-			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x16)
-		>;
-	};
 };
 
 / {
-	model = "Boundary Devices i.MX8MMini Nitrogen8MM Som";
-	compatible = "boundary,imx8mm-nitrogen8mm_som", "fsl,imx8mm";
+	model = "Boundary Devices i.MX8MNano Nitrogen8MN Som";
+	compatible = "boundary,imx8mn-nitrogen8mn_som", "fsl,imx8mn";
 
 	aliases {
 		mipi_to_lvds = &mipi_to_lvds_som;
@@ -186,10 +179,6 @@
 
 &reg_sw4 {
 	/delete-property/ dual-phase;
-};
-
-&usbotg2 {
-	disable-over-current;
 };
 
 &wdog1 {
