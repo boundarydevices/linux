@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics st_asm330lhh spi driver
  *
- * Copyright 2018 STMicroelectronics Inc.
+ * Copyright 2019 STMicroelectronics Inc.
  *
  * Lorenzo Bianconi <lorenzo.bianconi@st.com>
  *
