@@ -340,4 +340,5 @@ int st_asm330lhh_set_fifo_mode(struct st_asm330lhh_hw *hw,
 int __st_asm330lhh_set_sensor_batching_odr(struct st_asm330lhh_sensor *sensor,
 					 bool enable);
 int st_asm330lhh_update_batching(struct iio_dev *iio_dev, bool enable);
+int st_asm330lhh_reset_hwts(struct st_asm330lhh_hw *hw);
 #endif /* ST_ASM330LHH_H */

@@ -1211,6 +1211,10 @@ static int __maybe_unused st_asm330lhh_resume(struct device *dev)
 			return err;
 	}
 
+	err = st_asm330lhh_reset_hwts(hw);
+	if (err < 0)
+		return err;
+
 	if (st_asm330lhh_is_fifo_enabled(hw))
 		err = st_asm330lhh_set_fifo_mode(hw, ST_ASM330LHH_FIFO_CONT);
 

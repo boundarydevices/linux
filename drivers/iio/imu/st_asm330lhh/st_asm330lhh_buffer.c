@@ -63,7 +63,7 @@ static inline s64 st_asm330lhh_ewma(s64 old, s64 new, int weight)
 	return old + incr;
 }
 
-static inline int st_asm330lhh_reset_hwts(struct st_asm330lhh_hw *hw)
+inline int st_asm330lhh_reset_hwts(struct st_asm330lhh_hw *hw)
 {
 	u8 data = 0xaa;
 
@@ -253,6 +253,7 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 				hw->ts_offset = st_asm330lhh_ewma(hw->ts_offset,
 						ts_irq - hw->hw_ts,
 						ST_ASM330LHH_EWMA_LEVEL);
+
 				ts_irq += hw->hw_ts;
 
 				if (!hw->tsample)
