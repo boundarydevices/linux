@@ -371,7 +371,6 @@ ssize_t st_asm330lhh_flush_fifo(struct device *dev,
 	hw->ts = ts;
 	set_bit(ST_ASM330LHH_HW_FLUSH, &hw->state);
 	count = st_asm330lhh_read_fifo(hw);
-
 	mutex_unlock(&hw->fifo_lock);
 
 	type = count > 0 ? IIO_EV_DIR_FIFO_DATA : IIO_EV_DIR_FIFO_EMPTY;
@@ -387,10 +386,8 @@ int st_asm330lhh_suspend_fifo(struct st_asm330lhh_hw *hw)
 	int err;
 
 	mutex_lock(&hw->fifo_lock);
-
 	st_asm330lhh_read_fifo(hw);
 	err = st_asm330lhh_set_fifo_mode(hw, ST_ASM330LHH_FIFO_BYPASS);
-
 	mutex_unlock(&hw->fifo_lock);
 
 	return err;
@@ -405,10 +402,6 @@ int st_asm330lhh_update_batching(struct iio_dev *iio_dev, bool enable)
 	disable_irq(hw->irq);
 
 	err = st_asm330lhh_set_sensor_batching_odr(sensor, enable);
-	if (err < 0)
-		goto out;
-
-out:
 	enable_irq(hw->irq);
 
 	return err;
@@ -500,10 +493,8 @@ static irqreturn_t st_asm330lhh_handler_thread(int irq, void *private)
 	struct st_asm330lhh_hw *hw = (struct st_asm330lhh_hw *)private;
 
 	mutex_lock(&hw->fifo_lock);
-
 	st_asm330lhh_read_fifo(hw);
 	clear_bit(ST_ASM330LHH_HW_FLUSH, &hw->state);
-
 	mutex_unlock(&hw->fifo_lock);
 
 	return IRQ_HANDLED;

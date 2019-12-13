@@ -257,7 +257,6 @@ static const struct st_asm330lhh_fs_table_entry st_asm330lhh_fs_table[] = {
 	[ST_ASM330LHH_ID_TEMP] = {
 		.size = ST_ASM330LHH_FS_TEMP_LIST_SIZE,
 		.fs_avl[0] = {
-			.reg = { 0 },
 			.gain = ST_ASM330LHH_TEMP_FS_GAIN,
 			.val = 0x0
 		},
@@ -677,14 +676,13 @@ static int st_asm330lhh_write_raw(struct iio_dev *iio_dev,
 			if (sensor->hw->enable_mask & BIT(sensor->id)) {
 				switch (sensor->id) {
 				case ST_ASM330LHH_ID_GYRO:
-				case ST_ASM330LHH_ID_ACC: {
+				case ST_ASM330LHH_ID_ACC:
 					err = st_asm330lhh_set_odr(sensor,
 								   sensor->odr);
 					if (err < 0)
 						break;
 
 					st_asm330lhh_update_batching(iio_dev, 1);
-					}
 					break;
 				default:
 					break;
