@@ -195,12 +195,20 @@ static struct iio_dev *st_asm330lhh_get_iiodev_from_tag(struct st_asm330lhh_hw *
 	return iio_dev;
 }
 
+static inline void st_asm330lhh_sync_hw_ts(struct st_asm330lhh_hw *hw, s64 ts)
+{
+	s64 delta = ts - hw->hw_ts;
+
+	hw->ts_offset = st_asm330lhh_ewma(hw->ts_offset, delta,
+					  ST_ASM330LHH_EWMA_LEVEL);
+}
+
 static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 {
 	u8 iio_buf[ALIGN(ST_ASM330LHH_SAMPLE_SIZE, sizeof(s64)) + sizeof(s64)];
 	u8 buf[6 * ST_ASM330LHH_FIFO_SAMPLE_SIZE], tag, *ptr;
 	s64 ts_irq, hw_ts_old;
-	int i, err, word_len, fifo_len, read_len = 0;
+	int i, err, word_len, fifo_len, read_len;
 	struct iio_dev *iio_dev;
 	struct st_asm330lhh_sensor *sensor;
 	__le16 fifo_status;
@@ -208,7 +216,7 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 	s16 drdymask;
 	u32 val;
 
-	/* Return if FIFO is already disabled. */
+	/* return if FIFO is already disabled */
 	if (hw->fifo_mode == ST_ASM330LHH_FIFO_BYPASS) {
 		dev_warn(hw->dev, "%s: FIFO in bypass mode\n", __func__);
 		return 0;
@@ -226,6 +234,7 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 		return 0;
 
 	fifo_len = fifo_depth * ST_ASM330LHH_FIFO_SAMPLE_SIZE;
+	read_len = 0;
 	while (read_len < fifo_len) {
 		word_len = min_t(int, fifo_len - read_len, sizeof(buf));
 		err = st_asm330lhh_read_atomic(hw,
@@ -254,6 +263,10 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 						ts_irq - hw->hw_ts,
 						ST_ASM330LHH_EWMA_LEVEL);
 
+				if (!test_bit(ST_ASM330LHH_HW_FLUSH, &hw->state))
+					/* sync ap timestamp and sensor one */
+					st_asm330lhh_sync_hw_ts(hw, ts_irq);
+
 				ts_irq += hw->hw_ts;
 
 				if (!hw->tsample)
@@ -265,7 +278,7 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 				if (!iio_dev)
 					continue;
 
-				/* Skip samples if not ready. */
+				/* skip samples if not ready */
 				sensor = iio_priv(iio_dev);
 				drdymask = (s16)le16_to_cpu(get_unaligned_le16(ptr));
 				if (unlikely(drdymask >= ST_ASM330LHH_SAMPLE_DISCHARD)) {
