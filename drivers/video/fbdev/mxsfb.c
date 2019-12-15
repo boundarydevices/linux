@@ -2161,8 +2161,10 @@ static void mxsfb_overlay_suspend(struct mxsfb_info *fbi)
 #else
 static void mxsfb_overlay_init(struct mxsfb_info *fbi) {}
 static void mxsfb_overlay_exit(struct mxsfb_info *fbi) {}
+#ifdef CONFIG_PM_SLEEP
 static void mxsfb_overlay_resume(struct mxsfb_info *fbi) {}
 static void mxsfb_overlay_suspend(struct mxsfb_info *fbi) {}
+#endif
 #endif
 
 static int mxsfb_probe(struct platform_device *pdev)
