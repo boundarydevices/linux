@@ -53,6 +53,16 @@ config MTK_SCP
 
 	  It's safe to say N here.
 
+config MTK_APU
+	tristate "Mediatek APU remoteproc support"
+	depends on ARCH_MEDIATEK
+	depends on MTK_IOMMU
+	help
+	  Say y to support the Mediatek's Accelerated Processing Unit (APU) via
+	  the remote processor framework.
+
+	  It's safe to say N here.
+
 config OMAP_REMOTEPROC
 	tristate "OMAP remoteproc support"
 	depends on ARCH_OMAP4 || SOC_OMAP5 || SOC_DRA7XX
