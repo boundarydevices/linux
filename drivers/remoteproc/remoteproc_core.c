@@ -137,7 +137,7 @@ static void rproc_disable_iommu(struct rproc *rproc)
 	struct iommu_domain *domain = rproc->domain;
 	struct device *dev = rproc->dev.parent;
 
-	if (!domain)
+	if (!domain || !rproc->has_iommu)
 		return;
 
 	iommu_detach_device(domain, dev);
