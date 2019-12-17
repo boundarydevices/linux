@@ -314,6 +314,24 @@ static struct mx6s_fmt formats[] = {
 		.pixelformat	= V4L2_PIX_FMT_XBGR32,
 		.mbus_code	= MEDIA_BUS_FMT_RGB888_1X24,
 		.bpp		= 4,
+	}, {
+		.name		= "Grey 10bit",
+		.fourcc		= V4L2_PIX_FMT_Y10,
+		.pixelformat	= V4L2_PIX_FMT_Y10,
+		.mbus_code	= MEDIA_BUS_FMT_Y10_1X10,
+		.bpp		= 2,
+	}, {
+		.name		= "RAW10 (SBGGR10)",
+		.fourcc		= V4L2_PIX_FMT_SBGGR10,
+		.pixelformat	= V4L2_PIX_FMT_SBGGR10,
+		.mbus_code	= MEDIA_BUS_FMT_SBGGR10_1X10,
+		.bpp		= 2,
+	}, {
+		.name		= "RAW10 (SGRBG10)",
+		.fourcc		= V4L2_PIX_FMT_SGRBG10,
+		.pixelformat	= V4L2_PIX_FMT_SGRBG10,
+		.mbus_code	= MEDIA_BUS_FMT_SGRBG10_1X10,
+		.bpp		= 2,
 	}
 };
 
@@ -873,6 +891,11 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 	case V4L2_PIX_FMT_SBGGR8:
 		cr18 = BIT_MIPI_DATA_FORMAT_RAW8;
 		break;
+	case V4L2_PIX_FMT_SBGGR10:
+	case V4L2_PIX_FMT_SGRBG10:
+	case V4L2_PIX_FMT_Y10:
+		cr18 |= BIT_MIPI_DATA_FORMAT_RAW10;
+		break;
 	case V4L2_PIX_FMT_YUYV:
 		if (csi_dev->fmt->mbus_code == MEDIA_BUS_FMT_UYVY8_2X8)
 			cr1 |= BIT_PACK_DIR | BIT_SWAP16_EN;
@@ -906,6 +929,14 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 
 	if (csi_dev->csi_mipi_mode == true) {
 		cr1 &= ~BIT_GCLK_MODE;
+
+		if ((V4L2_PIX_FMT_SBGGR10 == csi_dev->fmt->pixelformat) ||
+			(V4L2_PIX_FMT_SGRBG10 == csi_dev->fmt->pixelformat) ||
+			(V4L2_PIX_FMT_Y10 == csi_dev->fmt->pixelformat)) {
+			cr1 |= BIT_PIXEL_BIT;
+		} else {
+			cr1 &= ~BIT_PIXEL_BIT;
+		}
 
 		cr18 |= csi_read(csi_dev, CSI_CSICR18) &
 			~(BIT_MIPI_DATA_FORMAT_MASK | RGB888A_FORMAT_SEL |
