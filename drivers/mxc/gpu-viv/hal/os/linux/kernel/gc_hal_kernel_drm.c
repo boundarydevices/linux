@@ -776,7 +776,11 @@ static const struct file_operations viv_drm_fops = {
 };
 
 static struct drm_driver viv_drm_driver = {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+    .driver_features    = DRIVER_GEM | DRIVER_RENDER,
+#else
     .driver_features    = DRIVER_GEM | DRIVER_PRIME | DRIVER_RENDER,
+#endif
     .open = viv_drm_open,
     .postclose = viv_drm_postclose,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,7,0)
