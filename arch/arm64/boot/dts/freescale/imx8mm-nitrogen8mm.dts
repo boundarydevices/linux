@@ -10,6 +10,20 @@
 #include "imx8mmn-nitrogen8mm.dtsi"
 
 &iomuxc {
+	/* mcp2515t: can controller */
+	pinctrl_ecspi2_mcp2515t: ecspi2-mcp2515tgrp {
+		fsl,pins = <
+#define GPIRQ_MCP2515T	<&gpio4 14 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_SAI1_TXD2_GPIO4_IO14, 0x1c0)
+#define GP_MCP2515T_RESET <&gpio4 1 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_RXC_GPIO4_IO1, 0x100)
+#define GP_CAN_ERR	<&gpio4 15 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_TXD3_GPIO4_IO15, 0x1c0)
+#define GP_CAN_EN	<&gpio3 19 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI5_RXFS_GPIO3_IO19, 0x100)
+                >;
+        };
+
 	pinctrl_pcie0: pcie0grp {
 		fsl,pins = <
 #define GP_PCIE0_RESET		<&gpio4 31 GPIO_ACTIVE_LOW>
@@ -41,6 +55,14 @@
 / {
 	model = "Boundary Devices i.MX8MMini Nitrogen8MM";
 	compatible = "boundary,imx8mm-nitrogen8mm", "fsl,imx8mm";
+
+	clocks {
+		clk16m: clk16m {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <16000000>;
+		};
+	};
 
 	sound-wm8960 {
 		compatible = "fsl,imx-audio-wm8960";
@@ -78,6 +100,20 @@
 		csi1_ep: endpoint {
 			remote-endpoint = <&csi1_mipi_ep>;
 		};
+	};
+};
+
+&ecspi2 {
+	can0: can@0 {
+		clocks = <&clk16m>;
+		compatible = "microchip,mcp2515";
+		interrupts-extended = GPIRQ_MCP2515T;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ecspi2_mcp2515t>;
+		reg = <0>;
+		reset-gpios = GP_MCP2515T_RESET;
+		spi-max-frequency = <10000000>;
+		xceiver-gpios = GP_CAN_EN;
 	};
 };
 
