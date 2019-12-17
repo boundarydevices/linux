@@ -25,7 +25,7 @@
 		fsl,pins = <
 			/* J15 */
 #define GP_ECSPI2_CS0	<&gpio5 13 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_ECSPI2_SS0_GPIO5_IO13, 0x19)	/* Pin 39 */
+			MX8MMN(IOMUXC_ECSPI2_SS0_GPIO5_IO13, 0x140)	/* Pin 39 */
 			MX8MMN(IOMUXC_ECSPI2_MISO_ECSPI2_MISO, 0x19)	/* Pin 41 */
 			MX8MMN(IOMUXC_ECSPI2_SCLK_ECSPI2_SCLK, 0x19)	/* Pin 43 */
 			MX8MMN(IOMUXC_ECSPI2_MOSI_ECSPI2_MOSI, 0x19)	/* Pin 45 */
@@ -296,7 +296,6 @@
 	pinctrl_sai5: sai5grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_SAI5_MCLK_SAI5_MCLK, 0xd6)
-			MX8MMN(IOMUXC_SAI5_RXFS_SAI5_RX_SYNC, 0xd6)
 			MX8MMN(IOMUXC_SAI5_RXD0_SAI5_RX_DATA0, 0xd6)
 			MX8MMN(IOMUXC_SAI5_RXD1_SAI5_RX_DATA1, 0xd6)
 			MX8MMN(IOMUXC_SAI5_RXD2_SAI5_RX_DATA2, 0xd6)
@@ -623,12 +622,6 @@
 	status = "okay";
 	#address-cells = <1>;
 	#size-cells = <0>;
-
-	spidev@0 {
-		compatible = "spidev";
-		spi-max-frequency = <2000000>;
-		reg = <0>;
-	};
 };
 
 &fec1 {

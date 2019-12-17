@@ -15,6 +15,14 @@
 	compatible = "boundary,imx8mn-nitrogen8mn", "fsl,imx8mn";
 };
 
+&ecspi2 {
+	spidev@0 {
+		compatible = "spidev";
+		spi-max-frequency = <2000000>;
+		reg = <0>;
+	};
+};
+
 &mipi_csi_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
