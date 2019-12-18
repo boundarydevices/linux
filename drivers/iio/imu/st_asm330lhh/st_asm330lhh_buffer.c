@@ -215,9 +215,9 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 {
 	u8 iio_buf[ALIGN(ST_ASM330LHH_SAMPLE_SIZE, sizeof(s64)) + sizeof(s64)];
 	u8 buf[6 * ST_ASM330LHH_FIFO_SAMPLE_SIZE], tag, *ptr;
-	s64 ts_irq, hw_ts_old;
 	int i, err, word_len, fifo_len, read_len;
 	struct iio_dev *iio_dev;
+	s64 ts_irq, hw_ts_old;
 	__le16 fifo_status;
 	u16 fifo_depth;
 	s16 drdymask;
@@ -317,8 +317,7 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 ssize_t st_asm330lhh_get_max_watermark(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
-	struct iio_dev *iio_dev = dev_get_drvdata(dev);
-	struct st_asm330lhh_sensor *sensor = iio_priv(iio_dev);
+	struct st_asm330lhh_sensor *sensor = iio_priv(dev_get_drvdata(dev));
 
 	return sprintf(buf, "%d\n", sensor->max_watermark);
 }
@@ -326,8 +325,7 @@ ssize_t st_asm330lhh_get_max_watermark(struct device *dev,
 ssize_t st_asm330lhh_get_watermark(struct device *dev,
 				 struct device_attribute *attr, char *buf)
 {
-	struct iio_dev *iio_dev = dev_get_drvdata(dev);
-	struct st_asm330lhh_sensor *sensor = iio_priv(iio_dev);
+	struct st_asm330lhh_sensor *sensor = iio_priv(dev_get_drvdata(dev));
 
 	return sprintf(buf, "%d\n", sensor->watermark);
 }
@@ -367,9 +365,9 @@ ssize_t st_asm330lhh_flush_fifo(struct device *dev,
 	struct iio_dev *iio_dev = dev_get_drvdata(dev);
 	struct st_asm330lhh_sensor *sensor = iio_priv(iio_dev);
 	struct st_asm330lhh_hw *hw = sensor->hw;
-	s64 type;
 	s64 event;
 	int count;
+	s64 type;
 	s64 ts;
 
 	mutex_lock(&hw->fifo_lock);
@@ -423,7 +421,8 @@ static int st_asm330lhh_update_fifo(struct iio_dev *iio_dev, bool enable)
 	if (sensor->id == ST_ASM330LHH_ID_GYRO && !enable)
 		delayed_enable_gyro = true;
 
-	if (sensor->id == ST_ASM330LHH_ID_GYRO && enable && delayed_enable_gyro) {
+	if (sensor->id == ST_ASM330LHH_ID_GYRO &&
+	    enable && delayed_enable_gyro) {
 		delayed_enable_gyro = false;
 		msleep(delay_gyro);
 	}
@@ -440,8 +439,8 @@ static int st_asm330lhh_update_fifo(struct iio_dev *iio_dev, bool enable)
 
 #ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
 	/*
-	 * this is an auxiliary sensor, it need to get batched
-	 * toghether at least with a primary sensor (Acc/Gyro)
+	 * This is an auxiliary sensor, it need to get batched
+	 * toghether at least with a primary sensor (Acc/Gyro).
 	 */
 	if (sensor->id == ST_ASM330LHH_ID_TEMP) {
 		if (!(hw->enable_mask & (BIT(ST_ASM330LHH_ID_ACC) |

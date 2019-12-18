@@ -9,10 +9,10 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/iio/iio.h>
 #include <linux/iio/sysfs.h>
 #include <linux/interrupt.h>
+#include <linux/module.h>
 #include <linux/pm.h>
 
 #include <linux/platform_data/st_sensors_pdata.h>
@@ -21,63 +21,63 @@
 
 static struct st_asm330lhh_suspend_resume_entry
 	st_asm330lhh_suspend_resume[ST_ASM330LHH_SUSPEND_RESUME_REGS] = {
-		[ST_ASM330LHH_CTRL1_XL_REG] = {
-			.addr = ST_ASM330LHH_CTRL1_XL_ADDR,
-			.mask = GENMASK(3, 2),
-		},
-		[ST_ASM330LHH_CTRL2_G_REG] = {
-			.addr = ST_ASM330LHH_CTRL2_G_ADDR,
-			.mask = GENMASK(3, 2),
-		},
-		[ST_ASM330LHH_REG_CTRL3_C_REG] = {
-			.addr = ST_ASM330LHH_REG_CTRL3_C_ADDR,
-			.mask = ST_ASM330LHH_REG_BDU_MASK	|
-				ST_ASM330LHH_REG_PP_OD_MASK	|
-				ST_ASM330LHH_REG_H_LACTIVE_MASK,
-		},
-		[ST_ASM330LHH_REG_CTRL4_C_REG] = {
-			.addr = ST_ASM330LHH_REG_CTRL4_C_ADDR,
-			.mask = ST_ASM330LHH_REG_DRDY_MASK,
-		},
-		[ST_ASM330LHH_REG_CTRL5_C_REG] = {
-			.addr = ST_ASM330LHH_REG_CTRL5_C_ADDR,
-			.mask = ST_ASM330LHH_REG_ROUNDING_MASK,
-		},
-		[ST_ASM330LHH_REG_CTRL10_C_REG] = {
-			.addr = ST_ASM330LHH_REG_CTRL10_C_ADDR,
-			.mask = ST_ASM330LHH_REG_TIMESTAMP_EN_MASK,
-		},
-		[ST_ASM330LHH_REG_TAP_CFG0_REG] = {
-			.addr = ST_ASM330LHH_REG_TAP_CFG0_ADDR,
-			.mask = ST_ASM330LHH_REG_LIR_MASK,
-		},
-		[ST_ASM330LHH_REG_INT1_CTRL_REG] = {
-			.addr = ST_ASM330LHH_REG_INT1_CTRL_ADDR,
-			.mask = ST_ASM330LHH_REG_INT_FIFO_TH_MASK,
-		},
-		[ST_ASM330LHH_REG_INT2_CTRL_REG] = {
-			.addr = ST_ASM330LHH_REG_INT2_CTRL_ADDR,
-			.mask = ST_ASM330LHH_REG_INT_FIFO_TH_MASK,
-		},
-		[ST_ASM330LHH_REG_FIFO_CTRL1_REG] = {
-			.addr = ST_ASM330LHH_REG_FIFO_CTRL1_ADDR,
-			.mask = GENMASK(7, 0),
-		},
-		[ST_ASM330LHH_REG_FIFO_CTRL2_REG] = {
-			.addr = ST_ASM330LHH_REG_FIFO_CTRL2_ADDR,
-			.mask = ST_ASM330LHH_REG_FIFO_WTM8_MASK,
-		},
-		[ST_ASM330LHH_REG_FIFO_CTRL3_REG] = {
-			.addr = ST_ASM330LHH_REG_FIFO_CTRL3_ADDR,
-			.mask = ST_ASM330LHH_REG_BDR_XL_MASK |
-				ST_ASM330LHH_REG_BDR_GY_MASK,
-		},
-		[ST_ASM330LHH_REG_FIFO_CTRL4_REG] = {
-			.addr = ST_ASM330LHH_REG_FIFO_CTRL4_ADDR,
-			.mask = ST_ASM330LHH_REG_DEC_TS_MASK |
-				ST_ASM330LHH_REG_ODR_T_BATCH_MASK,
-		},
-	};
+    [ST_ASM330LHH_CTRL1_XL_REG] = {
+		.addr = ST_ASM330LHH_CTRL1_XL_ADDR,
+		.mask = GENMASK(3, 2),
+	},
+	[ST_ASM330LHH_CTRL2_G_REG] = {
+		.addr = ST_ASM330LHH_CTRL2_G_ADDR,
+		.mask = GENMASK(3, 2),
+	},
+	[ST_ASM330LHH_REG_CTRL3_C_REG] = {
+		.addr = ST_ASM330LHH_REG_CTRL3_C_ADDR,
+		.mask = ST_ASM330LHH_REG_BDU_MASK	|
+			ST_ASM330LHH_REG_PP_OD_MASK	|
+			ST_ASM330LHH_REG_H_LACTIVE_MASK,
+	},
+	[ST_ASM330LHH_REG_CTRL4_C_REG] = {
+		.addr = ST_ASM330LHH_REG_CTRL4_C_ADDR,
+		.mask = ST_ASM330LHH_REG_DRDY_MASK,
+	},
+	[ST_ASM330LHH_REG_CTRL5_C_REG] = {
+		.addr = ST_ASM330LHH_REG_CTRL5_C_ADDR,
+		.mask = ST_ASM330LHH_REG_ROUNDING_MASK,
+	},
+	[ST_ASM330LHH_REG_CTRL10_C_REG] = {
+		.addr = ST_ASM330LHH_REG_CTRL10_C_ADDR,
+		.mask = ST_ASM330LHH_REG_TIMESTAMP_EN_MASK,
+	},
+	[ST_ASM330LHH_REG_TAP_CFG0_REG] = {
+		.addr = ST_ASM330LHH_REG_TAP_CFG0_ADDR,
+		.mask = ST_ASM330LHH_REG_LIR_MASK,
+	},
+	[ST_ASM330LHH_REG_INT1_CTRL_REG] = {
+		.addr = ST_ASM330LHH_REG_INT1_CTRL_ADDR,
+		.mask = ST_ASM330LHH_REG_INT_FIFO_TH_MASK,
+	},
+	[ST_ASM330LHH_REG_INT2_CTRL_REG] = {
+		.addr = ST_ASM330LHH_REG_INT2_CTRL_ADDR,
+		.mask = ST_ASM330LHH_REG_INT_FIFO_TH_MASK,
+	},
+	[ST_ASM330LHH_REG_FIFO_CTRL1_REG] = {
+		.addr = ST_ASM330LHH_REG_FIFO_CTRL1_ADDR,
+		.mask = GENMASK(7, 0),
+	},
+	[ST_ASM330LHH_REG_FIFO_CTRL2_REG] = {
+		.addr = ST_ASM330LHH_REG_FIFO_CTRL2_ADDR,
+		.mask = ST_ASM330LHH_REG_FIFO_WTM8_MASK,
+	},
+	[ST_ASM330LHH_REG_FIFO_CTRL3_REG] = {
+		.addr = ST_ASM330LHH_REG_FIFO_CTRL3_ADDR,
+		.mask = ST_ASM330LHH_REG_BDR_XL_MASK |
+			ST_ASM330LHH_REG_BDR_GY_MASK,
+	},
+	[ST_ASM330LHH_REG_FIFO_CTRL4_REG] = {
+		.addr = ST_ASM330LHH_REG_FIFO_CTRL4_ADDR,
+		.mask = ST_ASM330LHH_REG_DEC_TS_MASK |
+			ST_ASM330LHH_REG_ODR_T_BATCH_MASK,
+	},
+};
 
 static const struct st_asm330lhh_odr_table_entry st_asm330lhh_odr_table[] = {
 	[ST_ASM330LHH_ID_ACC] = {
@@ -317,8 +317,8 @@ static __maybe_unused int st_asm330lhh_reg_access(struct iio_dev *iio_dev,
 
 static int st_asm330lhh_check_whoami(struct st_asm330lhh_hw *hw)
 {
-	int err;
 	u8 data;
+	int err;
 
 	err = hw->tf->read(hw->dev, ST_ASM330LHH_REG_WHOAMI_ADDR, sizeof(data),
 			   &data);
@@ -337,9 +337,9 @@ static int st_asm330lhh_check_whoami(struct st_asm330lhh_hw *hw)
 
 static int st_asm330lhh_get_odr_calibration(struct st_asm330lhh_hw *hw)
 {
+	s64 odr_calib;
 	int err;
 	s8 data;
-	s64 odr_calib;
 
 	err = hw->tf->read(hw->dev,
 			   ST_ASM330LHH_INTERNAL_FREQ_FINE,
@@ -466,10 +466,10 @@ static u16 st_asm330lhh_check_odr_dependency(struct st_asm330lhh_hw *hw,
 static int st_asm330lhh_set_odr(struct st_asm330lhh_sensor *sensor, int req_odr,
 				int req_uodr)
 {
-	struct st_asm330lhh_hw *hw = sensor->hw;
 	enum st_asm330lhh_sensor_id id = sensor->id;
-	int err;
+	struct st_asm330lhh_hw *hw = sensor->hw;
 	u8 val = 0;
+	int err;
 
 	switch (id) {
 #ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
@@ -620,7 +620,7 @@ static int st_asm330lhh_write_raw(struct iio_dev *iio_dev,
 				struct iio_chan_spec const *chan,
 				int val, int val2, long mask)
 {
-	struct st_asm330lhh_sensor *sensor = iio_priv(iio_dev);
+	struct st_asm330lhh_sensor *s = iio_priv(iio_dev);
 	int err;
 
 	switch (mask) {
@@ -629,28 +629,28 @@ static int st_asm330lhh_write_raw(struct iio_dev *iio_dev,
 		if (err)
 			return err;
 
-		err = st_asm330lhh_set_full_scale(sensor, val2);
+		err = st_asm330lhh_set_full_scale(s, val2);
 		iio_device_release_direct_mode(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		int todr, tuodr;
 		u8 data;
 
-		err = st_asm330lhh_get_odr_val(sensor, val, val2, &todr, &tuodr, &data);
+		err = st_asm330lhh_get_odr_val(s, val, val2, &todr, &tuodr, &data);
 		if (!err) {
-			sensor->odr = val;
-			sensor->uodr = tuodr;
+			s->odr = val;
+			s->uodr = tuodr;
 
 			/*
 			 * VTS test testSamplingRateHotSwitchOperation not
 			 * toggle the enable status of sensor after changing
 			 * the ODR -> force it
 			 */
-			if (sensor->hw->enable_mask & BIT(sensor->id)) {
-				switch (sensor->id) {
+			if (s->hw->enable_mask & BIT(s->id)) {
+				switch (s->id) {
 				case ST_ASM330LHH_ID_GYRO:
 				case ST_ASM330LHH_ID_ACC:
-					err = st_asm330lhh_set_odr(sensor, sensor->odr, sensor->uodr);
+					err = st_asm330lhh_set_odr(s, s->odr, s->uodr);
 					if (err < 0)
 						break;
 
