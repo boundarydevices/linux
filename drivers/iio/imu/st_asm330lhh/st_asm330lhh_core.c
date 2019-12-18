@@ -131,45 +131,56 @@ static struct st_asm330lhh_suspend_resume_entry
 		[ST_ASM330LHH_REG_FIFO_CTRL4_REG] = {
 			.addr = ST_ASM330LHH_REG_FIFO_CTRL4_ADDR,
 			.mask = ST_ASM330LHH_REG_DEC_TS_MASK |
-				ST_ASM330LHH_REG_ODT_T_BATCH_MASK,
+				ST_ASM330LHH_REG_ODR_T_BATCH_MASK,
 		},
 	};
 
 static const struct st_asm330lhh_odr_table_entry st_asm330lhh_odr_table[] = {
 	[ST_ASM330LHH_ID_ACC] = {
+		.size = 7,
 		.reg = {
 			.addr = ST_ASM330LHH_CTRL1_XL_ADDR,
 			.mask = GENMASK(7, 4),
 		},
-		.odr_avl[0] = {   0, 0x00 },
-		.odr_avl[1] = {  13, 0x01 },
-		.odr_avl[2] = {  26, 0x02 },
-		.odr_avl[3] = {  52, 0x03 },
-		.odr_avl[4] = { 104, 0x04 },
-		.odr_avl[5] = { 208, 0x05 },
-		.odr_avl[6] = { 416, 0x06 },
-		.odr_avl[7] = { 833, 0x07 },
+		.batching_reg = {
+			.addr = ST_ASM330LHH_REG_FIFO_CTRL3_ADDR,
+			.mask = GENMASK(3, 0),
+		},
+		.odr_avl[0] = {  12, 500000,  0x01,  0x01 },
+		.odr_avl[1] = {  26,      0,  0x02,  0x02 },
+		.odr_avl[2] = {  52,      0,  0x03,  0x03 },
+		.odr_avl[3] = { 104,      0,  0x04,  0x04 },
+		.odr_avl[4] = { 208,      0,  0x05,  0x05 },
+		.odr_avl[5] = { 416,      0,  0x06,  0x06 },
+		.odr_avl[6] = { 833,      0,  0x07,  0x07 },
 	},
 	[ST_ASM330LHH_ID_GYRO] = {
+		.size = 7,
 		.reg = {
 			.addr = ST_ASM330LHH_CTRL2_G_ADDR,
 			.mask = GENMASK(7, 4),
 		},
-		.odr_avl[0] = {   0, 0x00 },
-		.odr_avl[1] = {  13, 0x01 },
-		.odr_avl[2] = {  26, 0x02 },
-		.odr_avl[3] = {  52, 0x03 },
-		.odr_avl[4] = { 104, 0x04 },
-		.odr_avl[5] = { 208, 0x05 },
-		.odr_avl[6] = { 416, 0x06 },
-		.odr_avl[7] = { 833, 0x07 },
+		.batching_reg = {
+			.addr = ST_ASM330LHH_REG_FIFO_CTRL3_ADDR,
+			.mask = GENMASK(7, 4),
+		},
+		.odr_avl[0] = {  12, 500000,  0x01,  0x01 },
+		.odr_avl[1] = {  26,      0,  0x02,  0x02 },
+		.odr_avl[2] = {  52,      0,  0x03,  0x03 },
+		.odr_avl[3] = { 104,      0,  0x04,  0x04 },
+		.odr_avl[4] = { 208,      0,  0x05,  0x05 },
+		.odr_avl[5] = { 416,      0,  0x06,  0x06 },
+		.odr_avl[6] = { 833,      0,  0x07,  0x07 },
 	},
 #ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
 	[ST_ASM330LHH_ID_TEMP] = {
-		.odr_avl[0] = {   0, 0x00 },
-		.odr_avl[1] = {   2, 0x01 },
-		.odr_avl[2] = {  13, 0x02 },
-		.odr_avl[3] = {  52, 0x03 },
+		.size = 2,
+		.batching_reg = {
+			.addr = ST_ASM330LHH_REG_FIFO_CTRL4_ADDR,
+			.mask = GENMASK(5, 4),
+		},
+		.odr_avl[0] = { 12, 500000,   0x02,  0x02 },
+		.odr_avl[1] = { 52,      0,   0x03,  0x03 },
 	},
 #endif /* CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE */
 };
@@ -430,31 +441,69 @@ static int st_asm330lhh_set_full_scale(struct st_asm330lhh_sensor *sensor,
 	return 0;
 }
 
-int st_asm330lhh_get_odr_val(enum st_asm330lhh_sensor_id id, u16 odr, u8 *val)
+static int st_asm330lhh_get_odr_val(struct st_asm330lhh_sensor *sensor, int odr,
+			     int uodr, int *podr, int *puodr, u8 *val)
 {
+	int required_odr = ST_ASM330LHH_ODR_EXPAND(odr, uodr);
+	enum st_asm330lhh_sensor_id id = sensor->id;
+	int sensor_odr;
 	int i;
 
-	for (i = 0; i < ST_ASM330LHH_ODR_LIST_SIZE; i++)
-		if (st_asm330lhh_odr_table[id].odr_avl[i].hz >= odr)
+	for (i = 0; i < st_asm330lhh_odr_table[id].size; i++) {
+		sensor_odr = ST_ASM330LHH_ODR_EXPAND(
+				st_asm330lhh_odr_table[id].odr_avl[i].hz,
+				st_asm330lhh_odr_table[id].odr_avl[i].uhz);
+		if (sensor_odr >= required_odr)
 			break;
+	}
 
-	if (i == ST_ASM330LHH_ODR_LIST_SIZE)
+	if (i == st_asm330lhh_odr_table[id].size)
 		return -EINVAL;
 
 	*val = st_asm330lhh_odr_table[id].odr_avl[i].val;
+
+	if (podr && puodr) {
+		*podr = st_asm330lhh_odr_table[id].odr_avl[i].hz;
+		*puodr = st_asm330lhh_odr_table[id].odr_avl[i].uhz;
+    }
+
+	return 0;
+}
+
+int st_asm330lhh_get_batch_val(struct st_asm330lhh_sensor *sensor,
+			       int odr, int uodr, u8 *val)
+{
+	int required_odr = ST_ASM330LHH_ODR_EXPAND(odr, uodr);
+	enum st_asm330lhh_sensor_id id = sensor->id;
+	int sensor_odr;
+	int i;
+
+	for (i = 0; i < st_asm330lhh_odr_table[id].size; i++) {
+		sensor_odr = ST_ASM330LHH_ODR_EXPAND(
+				st_asm330lhh_odr_table[id].odr_avl[i].hz,
+				st_asm330lhh_odr_table[id].odr_avl[i].uhz);
+		if (sensor_odr >= required_odr)
+			break;
+	}
+
+	if (i == st_asm330lhh_odr_table[id].size)
+		return -EINVAL;
+
+	*val = st_asm330lhh_odr_table[id].odr_avl[i].batch_val;
 
 	return 0;
 }
 
 static u16 st_asm330lhh_check_odr_dependency(struct st_asm330lhh_hw *hw,
-					   u16 odr,
+					   int odr, int uodr,
 					   enum st_asm330lhh_sensor_id ref_id)
 {
 	struct st_asm330lhh_sensor *ref = iio_priv(hw->iio_devs[ref_id]);
-	bool enable = odr > 0;
+	bool enable = ST_ASM330LHH_ODR_EXPAND(odr, uodr) > 0;
 	u16 ret;
 
 	if (enable) {
+		/* uodr not used */
 		if (hw->enable_mask & BIT(ref_id))
 			ret = max_t(u16, ref->odr, odr);
 		else
@@ -466,7 +515,8 @@ static u16 st_asm330lhh_check_odr_dependency(struct st_asm330lhh_hw *hw,
 	return ret;
 }
 
-static int st_asm330lhh_set_odr(struct st_asm330lhh_sensor *sensor, u16 req_odr)
+static int st_asm330lhh_set_odr(struct st_asm330lhh_sensor *sensor, int req_odr,
+				int req_uodr)
 {
 	struct st_asm330lhh_hw *hw = sensor->hw;
 	enum st_asm330lhh_sensor_id id = sensor->id;
@@ -478,7 +528,7 @@ static int st_asm330lhh_set_odr(struct st_asm330lhh_sensor *sensor, u16 req_odr)
 	case ST_ASM330LHH_ID_TEMP:
 #endif /* CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE */
 	case ST_ASM330LHH_ID_ACC: {
-		u16 odr;
+		int odr;
 		int i;
 
 		id = ST_ASM330LHH_ID_ACC;
@@ -489,7 +539,8 @@ static int st_asm330lhh_set_odr(struct st_asm330lhh_sensor *sensor, u16 req_odr)
 			if (i == sensor->id)
 				continue;
 
-			odr = st_asm330lhh_check_odr_dependency(hw, req_odr, i);
+			odr = st_asm330lhh_check_odr_dependency(hw, req_odr,
+								req_uodr, i);
 			if (odr != req_odr) {
 				/* device already configured */
 				return 0;
@@ -501,27 +552,27 @@ static int st_asm330lhh_set_odr(struct st_asm330lhh_sensor *sensor, u16 req_odr)
 		break;
 	}
 
-	err = st_asm330lhh_get_odr_val(id, req_odr, &val);
+	err = st_asm330lhh_get_odr_val(sensor, req_odr, req_uodr, NULL,
+				       NULL, &val);
 	if (err < 0)
 		return err;
 
 	err = st_asm330lhh_write_with_mask(hw,
-					   st_asm330lhh_odr_table[id].reg.addr,
-					   st_asm330lhh_odr_table[id].reg.mask,
+					   st_asm330lhh_odr_table[sensor->id].reg.addr,
+					   st_asm330lhh_odr_table[sensor->id].reg.mask,
 					   val);
-	if (err < 0)
-		return err;
 
-	return 0;
+	return err < 0 ? err : 0;
 }
 
 int st_asm330lhh_sensor_set_enable(struct st_asm330lhh_sensor *sensor,
 				 bool enable)
 {
-	u16 odr = enable ? sensor->odr : 0;
+	int uodr = enable ? sensor->uodr : 0;
+	int odr = enable ? sensor->odr : 0;
 	int err;
 
-	err = st_asm330lhh_set_odr(sensor, odr);
+	err = st_asm330lhh_set_odr(sensor, odr, uodr);
 	if (err < 0)
 		return err;
 
@@ -618,8 +669,9 @@ static int st_asm330lhh_read_raw(struct iio_dev *iio_dev,
 		}
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ:
-		*val = sensor->odr;
-		ret = IIO_VAL_INT;
+		*val = (int)sensor->odr;
+		*val2 = (int)sensor->uodr;
+		ret = IIO_VAL_INT_PLUS_MICRO;
 		break;
 	case IIO_CHAN_INFO_SCALE:
 		switch (ch->type) {
@@ -662,11 +714,13 @@ static int st_asm330lhh_write_raw(struct iio_dev *iio_dev,
 		err = st_asm330lhh_set_full_scale(sensor, val2);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
+		int todr, tuodr;
 		u8 data;
 
-		err = st_asm330lhh_get_odr_val(sensor->id, val, &data);
+		err = st_asm330lhh_get_odr_val(sensor, val, val2, &todr, &tuodr, &data);
 		if (!err) {
 			sensor->odr = val;
+			sensor->uodr = tuodr;
 
 			/*
 			 * VTS test testSamplingRateHotSwitchOperation not
@@ -677,8 +731,7 @@ static int st_asm330lhh_write_raw(struct iio_dev *iio_dev,
 				switch (sensor->id) {
 				case ST_ASM330LHH_ID_GYRO:
 				case ST_ASM330LHH_ID_ACC:
-					err = st_asm330lhh_set_odr(sensor,
-								   sensor->odr);
+					err = st_asm330lhh_set_odr(sensor, sensor->odr, sensor->uodr);
 					if (err < 0)
 						break;
 
@@ -710,12 +763,10 @@ st_asm330lhh_sysfs_sampling_freq_avail(struct device *dev,
 	enum st_asm330lhh_sensor_id id = sensor->id;
 	int i, len = 0;
 
-	for (i = 0; i < ST_ASM330LHH_ODR_LIST_SIZE; i++) {
-		if (!st_asm330lhh_odr_table[id].odr_avl[i].hz)
-			continue;
-
-		len += scnprintf(buf + len, PAGE_SIZE - len, "%d ",
-				 st_asm330lhh_odr_table[id].odr_avl[i].hz);
+	for (i = 0; i < st_asm330lhh_odr_table[id].size; i++) {
+		len += scnprintf(buf + len, PAGE_SIZE - len, "%d.%06d ",
+				 st_asm330lhh_odr_table[id].odr_avl[i].hz,
+				 st_asm330lhh_odr_table[id].odr_avl[i].uhz);
 	}
 
 	buf[len - 1] = '\n';
@@ -960,11 +1011,18 @@ static struct iio_dev *st_asm330lhh_alloc_iiodev(struct st_asm330lhh_hw *hw,
 	sensor->id = id;
 	sensor->hw = hw;
 	sensor->watermark = 1;
+	sensor->odr = st_asm330lhh_odr_table[id].odr_avl[1].hz;
+	sensor->uodr = st_asm330lhh_odr_table[id].odr_avl[1].uhz;
 
 #ifdef ST_ASM330LHH_DEBUG_DISCHARGE
 	sensor->discharged_samples = 0;
 #endif /* ST_ASM330LHH_DEBUG_DISCHARGE */
 
+	/*
+	 * for acc/gyro the default Android full scale settings are:
+	 * Acc FS 8g (78.40 m/s^2)
+	 * Gyro FS 1000dps (16.45 radians/sec)
+	 */
 	switch (id) {
 	case ST_ASM330LHH_ID_ACC:
 		iio_dev->channels = st_asm330lhh_acc_channels;
@@ -973,12 +1031,8 @@ static struct iio_dev *st_asm330lhh_alloc_iiodev(struct st_asm330lhh_hw *hw,
 		iio_dev->info = &st_asm330lhh_acc_info;
 		iio_dev->available_scan_masks =
 					st_asm330lhh_available_scan_masks;
-
-		sensor->batch_reg.addr = ST_ASM330LHH_REG_FIFO_CTRL3_ADDR;
-		sensor->batch_reg.mask = ST_ASM330LHH_REG_BDR_XL_MASK;
 		sensor->max_watermark = ST_ASM330LHH_MAX_FIFO_DEPTH;
-		sensor->odr = st_asm330lhh_odr_table[id].odr_avl[1].hz;
-		sensor->gain = st_asm330lhh_fs_table[id].fs_avl[0].gain;
+		sensor->gain = st_asm330lhh_fs_table[id].fs_avl[2].gain;
 		sensor->offset = 0;
 		break;
 	case ST_ASM330LHH_ID_GYRO:
@@ -988,12 +1042,8 @@ static struct iio_dev *st_asm330lhh_alloc_iiodev(struct st_asm330lhh_hw *hw,
 		iio_dev->info = &st_asm330lhh_gyro_info;
 		iio_dev->available_scan_masks =
 					st_asm330lhh_available_scan_masks;
-
-		sensor->batch_reg.addr = ST_ASM330LHH_REG_FIFO_CTRL3_ADDR;
-		sensor->batch_reg.mask = ST_ASM330LHH_REG_BDR_GY_MASK;
 		sensor->max_watermark = ST_ASM330LHH_MAX_FIFO_DEPTH;
-		sensor->odr = st_asm330lhh_odr_table[id].odr_avl[1].hz;
-		sensor->gain = st_asm330lhh_fs_table[id].fs_avl[0].gain;
+		sensor->gain = st_asm330lhh_fs_table[id].fs_avl[2].gain;
 		sensor->offset = 0;
 		break;
 #ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
@@ -1002,11 +1052,7 @@ static struct iio_dev *st_asm330lhh_alloc_iiodev(struct st_asm330lhh_hw *hw,
 		iio_dev->num_channels = ARRAY_SIZE(st_asm330lhh_temp_channels);
 		iio_dev->name = "asm330lhh_temp";
 		iio_dev->info = &st_asm330lhh_temp_info;
-
-		sensor->batch_reg.addr = ST_ASM330LHH_REG_FIFO_CTRL4_ADDR;
-		sensor->batch_reg.mask = ST_ASM330LHH_REG_BDR_TEMP_MASK;
 		sensor->max_watermark = ST_ASM330LHH_MAX_FIFO_DEPTH;
-		sensor->odr = st_asm330lhh_odr_table[id].odr_avl[1].hz;
 		sensor->gain = st_asm330lhh_fs_table[id].fs_avl[0].gain;
 		sensor->offset = ST_ASM330LHH_TEMP_OFFSET;
 		break;
@@ -1014,6 +1060,8 @@ static struct iio_dev *st_asm330lhh_alloc_iiodev(struct st_asm330lhh_hw *hw,
 	default:
 		return NULL;
 	}
+
+	st_asm330lhh_set_full_scale(sensor, sensor->gain);
 
 	return iio_dev;
 }
@@ -1037,6 +1085,7 @@ int st_asm330lhh_probe(struct device *dev, int irq,
 	hw->dev = dev;
 	hw->irq = irq;
 	hw->tf = tf_ops;
+	hw->odr_table_entry = st_asm330lhh_odr_table;
 
 	err = st_asm330lhh_check_whoami(hw);
 	if (err < 0)
@@ -1158,7 +1207,7 @@ static int __maybe_unused st_asm330lhh_suspend(struct device *dev)
 			continue;
 
 		/* power off enabled sensors */
-		err = st_asm330lhh_set_odr(sensor, 0);
+		err = st_asm330lhh_set_odr(sensor, 0, 0);
 		if (err < 0)
 			return err;
 	}
@@ -1204,7 +1253,7 @@ static int __maybe_unused st_asm330lhh_resume(struct device *dev)
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 
-		err = st_asm330lhh_set_odr(sensor, sensor->odr);
+		err = st_asm330lhh_set_odr(sensor, sensor->odr, sensor->uodr);
 		if (err < 0)
 			return err;
 	}

@@ -93,21 +93,24 @@ int st_asm330lhh_set_fifo_mode(struct st_asm330lhh_hw *hw,
 	return 0;
 }
 
-int __st_asm330lhh_set_sensor_batching_odr(struct st_asm330lhh_sensor *sensor,
+int __st_asm330lhh_set_sensor_batching_odr(struct st_asm330lhh_sensor *s,
 					 bool enable)
 {
-	struct st_asm330lhh_hw *hw = sensor->hw;
+	enum st_asm330lhh_sensor_id id = s->id;
+	struct st_asm330lhh_hw *hw = s->hw;
 	u8 data = 0;
 	int err;
 
 	if (enable) {
-		err = st_asm330lhh_get_odr_val(sensor->id, sensor->odr, &data);
+		err = st_asm330lhh_get_batch_val(s, s->odr, s->uodr, &data);
 		if (err < 0)
 			return err;
 	}
 
-	return __st_asm330lhh_write_with_mask(hw, sensor->batch_reg.addr,
-					  sensor->batch_reg.mask, data);
+	return __st_asm330lhh_write_with_mask(hw,
+					      hw->odr_table_entry[id].batching_reg.addr,
+					      hw->odr_table_entry[id].batching_reg.mask,
+					      data);
 }
 
 static inline int
@@ -444,15 +447,16 @@ static int st_asm330lhh_update_fifo(struct iio_dev *iio_dev, bool enable)
 
 			acc_sensor = iio_priv(hw->iio_devs[ST_ASM330LHH_ID_ACC]);
 			if (enable) {
-				err = st_asm330lhh_get_odr_val(ST_ASM330LHH_ID_ACC,
-						sensor->odr, &data);
+				err = st_asm330lhh_get_batch_val(acc_sensor,
+						sensor->odr, sensor->uodr,
+						&data);
 				if (err < 0)
 					goto out;
 			}
 
 			err = st_asm330lhh_write_with_mask(hw,
-					acc_sensor->batch_reg.addr,
-					acc_sensor->batch_reg.mask,
+					hw->odr_table_entry[ST_ASM330LHH_ID_ACC].batching_reg.addr,
+					hw->odr_table_entry[ST_ASM330LHH_ID_ACC].batching_reg.mask,
 					data);
 			if (err < 0)
 				goto out;

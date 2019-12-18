@@ -19,6 +19,7 @@
 
 #define ST_ASM330LHH_MAX_ODR 		833
 #define ST_ASM330LHH_ODR_LIST_SIZE	8
+#define ST_ASM330LHH_ODR_EXPAND(odr, uodr)	((odr * 1000000) + uodr)
 
 #define ST_ASM330LHH_DEV_NAME		"asm330lhh"
 
@@ -31,7 +32,7 @@
 #define ST_ASM330LHH_REG_FIFO_CTRL4_ADDR	0x0a
 #define ST_ASM330LHH_REG_FIFO_MODE_MASK		GENMASK(2, 0)
 #define ST_ASM330LHH_REG_DEC_TS_MASK		GENMASK(7, 6)
-#define ST_ASM330LHH_REG_ODT_T_BATCH_MASK	GENMASK(5, 4)
+#define ST_ASM330LHH_REG_ODR_T_BATCH_MASK	GENMASK(5, 4)
 
 #define ST_ASM330LHH_REG_CTRL3_C_ADDR		0x12
 #define ST_ASM330LHH_REG_PP_OD_MASK		BIT(4)
@@ -98,6 +99,11 @@ struct st_asm330lhh_transfer_function {
 	int (*write)(struct device *dev, u8 addr, int len, const u8 *data);
 };
 
+/**
+ * struct st_asm330lhh_reg - Generic sensor register description (addr + mask)
+ * @addr: Address of register.
+ * @mask: Bitmask register for proper usage.
+ */
 struct st_asm330lhh_reg {
 	u8 addr;
 	u8 mask;
@@ -125,16 +131,40 @@ struct st_asm330lhh_suspend_resume_entry {
 	u8 val;
 	u8 mask;
 };
+/**
+ * struct st_asm330lhh_odr - Single ODR entry
+ * @hz: Most significant part of the sensor ODR (Hz).
+ * @uhz: Less significant part of the sensor ODR (micro Hz).
+ * @val: ODR register value.
+ * @batch_val: Batching ODR register value.
+ */
 struct st_asm330lhh_odr {
 	u16 hz;
+	u32 uhz;
 	u8 val;
+	u8 batch_val;
 };
 
+/**
+ * struct st_asm330lhh_odr_table_entry - Sensor ODR table
+ * @size: Size of ODR table.
+ * @reg: ODR register.
+ * @batching_reg: ODR register for batching on fifo.
+ * @odr_avl: Array of supported ODR value.
+ */
 struct st_asm330lhh_odr_table_entry {
+	u8 size;
 	struct st_asm330lhh_reg reg;
+	struct st_asm330lhh_reg batching_reg;
 	struct st_asm330lhh_odr odr_avl[ST_ASM330LHH_ODR_LIST_SIZE];
 };
 
+/**
+ * struct st_asm330lhh_fs - Full Scale sensor table entry
+ * @reg: Register description for FS settings.
+ * @gain: Sensor sensitivity (mdps/LSB, mg/LSB and uC/LSB).
+ * @val: FS register value.
+ */
 struct st_asm330lhh_fs {
 	struct st_asm330lhh_reg reg;
 	u32 gain;
@@ -147,6 +177,12 @@ struct st_asm330lhh_fs {
 #ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
 #define ST_ASM330LHH_FS_TEMP_LIST_SIZE		1
 #endif /* CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE */
+
+/**
+ * struct st_asm330lhh_fs_table_entry - Full Scale sensor table
+ * @size: Full Scale sensor table size.
+ * @fs_avl: Full Scale list entries.
+ */
 struct st_asm330lhh_fs_table_entry {
 	u8 size;
 	struct st_asm330lhh_fs fs_avl[ST_ASM330LHH_FS_LIST_SIZE];
@@ -169,7 +205,7 @@ struct st_asm330lhh_ext_dev_info {
 };
 
 enum st_asm330lhh_sensor_id {
-	ST_ASM330LHH_ID_GYRO,
+	ST_ASM330LHH_ID_GYRO = 0,
 	ST_ASM330LHH_ID_ACC,
 #ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
 	ST_ASM330LHH_ID_TEMP,
@@ -192,21 +228,19 @@ enum {
  * @id: Sensor identifier.
  * @hw: Pointer to instance of struct st_asm330lhh_hw.
  * @gain: Configured sensor sensitivity.
+ * @offset: Sensor data offset.
  * @odr: Output data rate of the sensor [Hz].
- * @std_samples: Counter of samples to discard during sensor bootstrap.
- * @std_level: Samples to discard threshold.
+ * @uodr: Output data rate of the sensor [uHz].
  * @max_watermark: Max supported watermark level.
  * @watermark: Sensor watermark level.
- * @batch_mask: Sensor mask for FIFO batching register
- * @batch_reg: Batching register info (addr + mask).
  */
 struct st_asm330lhh_sensor {
 	enum st_asm330lhh_sensor_id id;
 	struct st_asm330lhh_hw *hw;
-
 	u32 gain;
-	u16 odr;
 	u32 offset;
+	int odr;
+	int uodr;
 #ifdef ST_ASM330LHH_DEBUG_DISCHARGE
 	u32 discharged_samples;
 #endif /* ST_ASM330LHH_DEBUG_DISCHARGE */
@@ -217,8 +251,6 @@ struct st_asm330lhh_sensor {
 
 	u16 max_watermark;
 	u16 watermark;
-
-	struct st_asm330lhh_reg batch_reg;
 };
 
 /**
@@ -239,6 +271,7 @@ struct st_asm330lhh_sensor {
  * @tsample: Timestamp for each sensor sample.
  * @delta_ts: Delta time between two consecutive interrupts.
  * @ts: Latest timestamp from irq handler.
+ * @odr_table_entry: Sensors ODR table.
  * @iio_devs: Pointers to acc/gyro iio_dev instances.
  * @tf: Transfer function structure used by I/O operations.
  * @tb: Transfer buffers used by SPI I/O operations.
@@ -263,7 +296,7 @@ struct st_asm330lhh_hw {
 	s64 tsample;
 	s64 delta_ts;
 	s64 ts;
-
+	const struct st_asm330lhh_odr_table_entry *odr_table_entry;
 	struct iio_dev *iio_devs[ST_ASM330LHH_ID_MAX];
 
 	const struct st_asm330lhh_transfer_function *tf;
@@ -321,7 +354,8 @@ int st_asm330lhh_probe(struct device *dev, int irq,
 int st_asm330lhh_sensor_set_enable(struct st_asm330lhh_sensor *sensor,
 				 bool enable);
 int st_asm330lhh_buffers_setup(struct st_asm330lhh_hw *hw);
-int st_asm330lhh_get_odr_val(enum st_asm330lhh_sensor_id id, u16 odr, u8 *val);
+int st_asm330lhh_get_batch_val(struct st_asm330lhh_sensor *sensor, int odr,
+			       int uodr, u8 *val);
 int st_asm330lhh_update_watermark(struct st_asm330lhh_sensor *sensor,
 				u16 watermark);
 ssize_t st_asm330lhh_flush_fifo(struct device *dev,
