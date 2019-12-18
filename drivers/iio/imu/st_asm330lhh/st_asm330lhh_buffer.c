@@ -539,7 +539,6 @@ static int st_asm330lhh_fifo_init(struct st_asm330lhh_hw *hw)
 
 int st_asm330lhh_buffers_setup(struct st_asm330lhh_hw *hw)
 {
-	struct device_node *np = hw->dev->of_node;
 	struct iio_buffer *buffer;
 	unsigned long irq_type;
 	bool irq_active_low;
@@ -569,7 +568,7 @@ int st_asm330lhh_buffers_setup(struct st_asm330lhh_hw *hw)
 	if (err < 0)
 		return err;
 
-	if (np && of_property_read_bool(np, "drive-open-drain")) {
+	if (device_property_read_bool(hw->dev, "drive-open-drain")) {
 		err = st_asm330lhh_write_with_mask(hw,
 					ST_ASM330LHH_REG_CTRL3_C_ADDR,
 					ST_ASM330LHH_REG_PP_OD_MASK,

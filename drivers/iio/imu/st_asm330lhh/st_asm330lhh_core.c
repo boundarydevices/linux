@@ -806,12 +806,10 @@ static const unsigned long st_asm330lhh_available_scan_masks[] = { 0x7, 0x0 };
 
 static int st_asm330lhh_of_get_pin(struct st_asm330lhh_hw *hw, int *pin)
 {
-	struct device_node *np = hw->dev->of_node;
-
-	if (!np)
+	if (!dev_fwnode(hw->dev))
 		return -EINVAL;
 
-	return of_property_read_u32(np, "st,int-pin", pin);
+	return device_property_read_u32(hw->dev, "st,int-pin", pin);
 }
 
 static int st_asm330lhh_get_int_reg(struct st_asm330lhh_hw *hw, u8 *drdy_reg)
