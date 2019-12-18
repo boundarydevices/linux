@@ -355,7 +355,10 @@ static __maybe_unused int st_asm330lhh_reg_access(struct iio_dev *iio_dev,
 	struct st_asm330lhh_sensor *sensor = iio_priv(iio_dev);
 	int ret;
 
-	mutex_lock(&iio_dev->mlock);
+	ret = iio_device_claim_direct_mode(iio_dev);
+	if (ret)
+		return ret;
+
 	if (readval == NULL) {
 		ret = sensor->hw->tf->write(sensor->hw->dev, reg, 1,
 					    (u8 *)&writeval);
@@ -363,7 +366,7 @@ static __maybe_unused int st_asm330lhh_reg_access(struct iio_dev *iio_dev,
 		ret = sensor->hw->tf->read(sensor->hw->dev, reg, 1,
 					   (u8 *)readval);
 	}
-	mutex_unlock(&iio_dev->mlock);
+	iio_device_release_direct_mode(iio_dev);
 
 	return (ret < 0) ? ret : 0;
 }
@@ -616,14 +619,12 @@ static int st_asm330lhh_read_raw(struct iio_dev *iio_dev,
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
-		mutex_lock(&iio_dev->mlock);
-		if (iio_buffer_enabled(iio_dev)) {
-			ret = -EBUSY;
-			mutex_unlock(&iio_dev->mlock);
+		ret = iio_device_claim_direct_mode(iio_dev);
+		if (ret)
 			break;
-		}
+
 		ret = st_asm330lhh_read_oneshot(sensor, ch->address, val);
-		mutex_unlock(&iio_dev->mlock);
+		iio_device_release_direct_mode(iio_dev);
 		break;
 	case IIO_CHAN_INFO_OFFSET:
 		switch (ch->type) {
@@ -674,11 +675,14 @@ static int st_asm330lhh_write_raw(struct iio_dev *iio_dev,
 	struct st_asm330lhh_sensor *sensor = iio_priv(iio_dev);
 	int err;
 
-	mutex_lock(&iio_dev->mlock);
-
 	switch (mask) {
 	case IIO_CHAN_INFO_SCALE:
+		err = iio_device_claim_direct_mode(iio_dev);
+		if (err)
+			return err;
+
 		err = st_asm330lhh_set_full_scale(sensor, val2);
+		iio_device_release_direct_mode(iio_dev);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		int todr, tuodr;
@@ -715,8 +719,6 @@ static int st_asm330lhh_write_raw(struct iio_dev *iio_dev,
 		err = -EINVAL;
 		break;
 	}
-
-	mutex_unlock(&iio_dev->mlock);
 
 	return err;
 }
