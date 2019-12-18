@@ -82,7 +82,7 @@ static struct i2c_driver st_asm330lhh_driver = {
 	.driver = {
 		.name = "st_asm330lhh_i2c",
 		.pm = &st_asm330lhh_pm_ops,
-		.of_match_table = of_match_ptr(st_asm330lhh_i2c_of_match),
+		.of_match_table = st_asm330lhh_i2c_of_match,
 	},
 	.probe = st_asm330lhh_i2c_probe,
 	.id_table = st_asm330lhh_i2c_id_table,
