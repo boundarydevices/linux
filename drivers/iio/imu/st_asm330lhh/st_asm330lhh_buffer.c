@@ -218,7 +218,6 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 	s64 ts_irq, hw_ts_old;
 	int i, err, word_len, fifo_len, read_len;
 	struct iio_dev *iio_dev;
-	struct st_asm330lhh_sensor *sensor;
 	__le16 fifo_status;
 	u16 fifo_depth;
 	s16 drdymask;
@@ -288,10 +287,11 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 					continue;
 
 				/* skip samples if not ready */
-				sensor = iio_priv(iio_dev);
 				drdymask = (s16)le16_to_cpu(get_unaligned_le16(ptr));
 				if (unlikely(drdymask >= ST_ASM330LHH_SAMPLE_DISCHARD)) {
 #ifdef ST_ASM330LHH_DEBUG_DISCHARGE
+					struct st_asm330lhh_sensor *sensor = iio_priv(iio_dev);
+
 					sensor->discharged_samples++;
 #endif /* ST_ASM330LHH_DEBUG_DISCHARGE */
 					continue;
