@@ -90,6 +90,11 @@ int st_asm330lhh_set_fifo_mode(struct st_asm330lhh_hw *hw,
 
 	hw->fifo_mode = fifo_mode;
 
+	if (fifo_mode == ST_ASM330LHH_FIFO_BYPASS)
+		clear_bit(ST_ASM330LHH_HW_OPERATIONAL, &hw->state);
+	else
+		set_bit(ST_ASM330LHH_HW_OPERATIONAL, &hw->state);
+
 	return 0;
 }
 
@@ -220,8 +225,9 @@ static int st_asm330lhh_read_fifo(struct st_asm330lhh_hw *hw)
 	u32 val;
 
 	/* return if FIFO is already disabled */
-	if (hw->fifo_mode == ST_ASM330LHH_FIFO_BYPASS) {
+	if (!test_bit(ST_ASM330LHH_HW_OPERATIONAL, &hw->state)) {
 		dev_warn(hw->dev, "%s: FIFO in bypass mode\n", __func__);
+
 		return 0;
 	}
 
