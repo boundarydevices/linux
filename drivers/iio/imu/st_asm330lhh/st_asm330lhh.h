@@ -245,10 +245,6 @@ struct st_asm330lhh_sensor {
 	u32 discharged_samples;
 #endif /* ST_ASM330LHH_DEBUG_DISCHARGE */
 
-#ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
-	__le16 old_data;
-#endif /* CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE */
-
 	u16 max_watermark;
 	u16 watermark;
 };

@@ -587,50 +587,20 @@ static int st_asm330lhh_read_oneshot(struct st_asm330lhh_sensor *sensor,
 	int err, delay;
 	__le16 data;
 
-#ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
-	if (sensor->id == ST_ASM330LHH_ID_TEMP) {
-		u8 status;
+	err = st_asm330lhh_sensor_set_enable(sensor, true);
+	if (err < 0)
+		return err;
 
-		mutex_lock(&sensor->hw->fifo_lock);
-		err = sensor->hw->tf->read(sensor->hw->dev,
-					   ST_ASM330LHH_REG_STATUS_ADDR,
-					   sizeof(status), &status);
-		if (err < 0)
-			goto unlock;
+	/* Use big delay for data valid because of drdy mask enabled */
+	delay = 10000000 / sensor->odr;
+	usleep_range(delay, 2 * delay);
 
-		if (status & ST_ASM330LHH_REG_STATUS_TDA) {
-			err = sensor->hw->tf->read(sensor->hw->dev,
-						   addr, sizeof(data),
-						   (u8 *)&data);
-			if (err < 0)
-				goto unlock;
+	err = st_asm330lhh_read_atomic(sensor->hw, addr, sizeof(data),
+				       (u8 *)&data);
+	if (err < 0)
+		return err;
 
-			sensor->old_data = data;
-		} else {
-			data = sensor->old_data;
-		}
-unlock:
-		mutex_unlock(&sensor->hw->fifo_lock);
-
-	} else {
-#endif /* CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE */
-		err = st_asm330lhh_sensor_set_enable(sensor, true);
-		if (err < 0)
-			return err;
-
-		/* Use big delay for data valid because of drdy mask enabled */
-		delay = 10000000 / sensor->odr;
-		usleep_range(delay, 2 * delay);
-
-		err = st_asm330lhh_read_atomic(sensor->hw, addr, sizeof(data),
-					       (u8 *)&data);
-		if (err < 0)
-			return err;
-
-		st_asm330lhh_sensor_set_enable(sensor, false);
-#ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
-	}
-#endif /* CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE */
+	err = st_asm330lhh_sensor_set_enable(sensor, false);
 
 	*val = (s16)le16_to_cpu(data);
 
