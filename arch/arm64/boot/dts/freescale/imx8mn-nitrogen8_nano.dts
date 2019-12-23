@@ -1,0 +1,28 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2018 Boundary Devices
+ */
+
+/dts-v1/;
+#define MX8MMN(a, b)	MX8MN_##a b
+#define IMX8MMN(a)	IMX8MN_##a
+#define IMX8MN_CLK_LCDIF_PIXEL IMX8MN_CLK_DISP_PIXEL_ROOT
+#include "imx8mn.dtsi"
+#include "imx8mmn-nitrogen8_nano.dtsi"
+
+/ {
+	model = "Boundary Devices i.MX8M Nano Nitrogen8_nano";
+	compatible = "boundary,imx8mn-nitrogen8_nano", "fsl,imx8mn";
+};
+
+&cameradev {
+	status = "okay";
+};
+
+&isi_0 {
+	status = "okay";
+
+	cap_device {
+		status = "okay";
+	};
+};
