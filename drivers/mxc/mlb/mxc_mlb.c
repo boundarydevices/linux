@@ -2397,7 +2397,7 @@ static ssize_t mxc_mlb150_write(struct file *filp, const char __user *buf,
 
 	if (count > pdevinfo->buf_size) {
 		/* too many data to write */
-		pr_warning("mxc_mlb150: overflow write data\n");
+		pr_warn("mxc_mlb150: overflow write data\n");
 		return -EFBIG;
 	}
 
