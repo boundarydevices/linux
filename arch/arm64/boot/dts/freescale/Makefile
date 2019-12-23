@@ -94,7 +94,9 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mn-ddr4-evk-root.dtb imx8mn-ddr4-evk-inmate.dtb im
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-ab2.dtb imx8mn-ddr4-ab2.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-var-som-symphony.dtb
 
-dtb-$(CONFIG_ARCH_MXC) += imx8mn-nitrogen8mn.dtb \
+dtb-$(CONFIG_ARCH_MXC) += imx8mn-nitrogen8_nano.dtb \
+			  imx8mn-nitrogen8_nano-m4.dtb \
+			  imx8mn-nitrogen8mn.dtb \
 			  imx8mn-nitrogen8mn_som.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk.dtb imx8mp-evk-rm67191.dtb imx8mp-evk-it6263-lvds-dual-channel.dtb \
