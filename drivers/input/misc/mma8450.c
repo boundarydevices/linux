@@ -152,7 +152,6 @@ static int mma8450_probe(struct i2c_client *c,
 			 const struct i2c_device_id *id)
 {
 	struct input_dev *input;
-	int err;
 	int err, client_id;
 	struct i2c_adapter *adapter = NULL;
 
