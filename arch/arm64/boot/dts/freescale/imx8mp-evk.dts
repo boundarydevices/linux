@@ -226,6 +226,27 @@
 	};
 };
 
+&i2c2 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c2>;
+	status = "okay";
+
+	adv_bridge: adv7535@3d {
+		compatible = "adi,adv7533";
+		reg = <0x3d>;
+		adi,addr-cec = <0x3b>;
+		adi,dsi-lanes = <4>;
+		status = "okay";
+
+		port {
+			adv7535_from_dsim: endpoint {
+				remote-endpoint = <&dsim_to_adv7535>;
+			};
+		};
+	};
+};
+
 &i2c3 {
 	clock-frequency = <400000>;
 	pinctrl-names = "default";
@@ -237,6 +258,21 @@
 		reg = <0x20>;
 		gpio-controller;
 		#gpio-cells = <2>;
+	};
+};
+
+&lcdif1 {
+	status = "okay";
+};
+
+&mipi_dsi {
+	status = "okay";
+
+	port@1 {
+		dsim_to_adv7535: endpoint {
+			remote-endpoint = <&adv7535_from_dsim>;
+			attach-bridge;
+		};
 	};
 };
 
@@ -375,6 +411,13 @@
 		fsl,pins = <
 			MX8MP_IOMUXC_I2C1_SCL__I2C1_SCL		0x400001c3
 			MX8MP_IOMUXC_I2C1_SDA__I2C1_SDA		0x400001c3
+		>;
+	};
+
+	pinctrl_i2c2: i2c2grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_I2C2_SCL__I2C2_SCL		0x400001c3
+			MX8MP_IOMUXC_I2C2_SDA__I2C2_SDA		0x400001c3
 		>;
 	};
 
