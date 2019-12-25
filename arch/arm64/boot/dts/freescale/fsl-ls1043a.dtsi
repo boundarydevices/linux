@@ -825,6 +825,7 @@
 				snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
 				snps,host-vbus-glitches;
 				configure-gfladj;
+				dma-coherent;
 				status = "disabled";
 			};
 
@@ -840,6 +841,7 @@
 				snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
 				snps,host-vbus-glitches;
 				configure-gfladj;
+				dma-coherent;
 				status = "disabled";
 			};
 
@@ -855,6 +857,7 @@
 				snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
 				snps,host-vbus-glitches;
 				configure-gfladj;
+				dma-coherent;
 				status = "disabled";
 			};
 

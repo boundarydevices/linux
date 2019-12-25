@@ -723,6 +723,7 @@
 				usb3-lpm-capable;
 				snps,dis-u1u2-when-u3-quirk;
 				snps,host-vbus-glitches;
+				dma-coherent;
 			};
 
 			usb1: usb@3000000 {
@@ -736,6 +737,7 @@
 				usb3-lpm-capable;
 				snps,dis-u1u2-when-u3-quirk;
 				snps,host-vbus-glitches;
+				dma-coherent;
 			};
 
 			usb2: usb@3100000 {
@@ -749,6 +751,7 @@
 				usb3-lpm-capable;
 				snps,dis-u1u2-when-u3-quirk;
 				snps,host-vbus-glitches;
+				dma-coherent;
 			};
 
 			sata: sata@3200000 {
