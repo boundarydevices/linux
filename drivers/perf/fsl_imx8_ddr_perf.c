@@ -14,6 +14,7 @@
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
 #include <linux/perf_event.h>
+#include <linux/spinlock.h>
 #include <linux/slab.h>
 
 #define COUNTER_CNTL		0x0
@@ -82,6 +83,7 @@ struct ddr_pmu {
 	const struct fsl_ddr_devtype_data *devtype_data;
 	int irq;
 	int id;
+	spinlock_t lock;
 };
 
 enum ddr_perf_filter_capabilities {
@@ -368,16 +370,19 @@ static void ddr_perf_event_update(struct perf_event *event)
 	struct hw_perf_event *hwc = &event->hw;
 	u64 delta, prev_raw_count, new_raw_count;
 	int counter = hwc->idx;
+	unsigned long flags;
 
-	do {
-		prev_raw_count = local64_read(&hwc->prev_count);
-		new_raw_count = ddr_perf_read_counter(pmu, counter);
-	} while (local64_cmpxchg(&hwc->prev_count, prev_raw_count,
-			new_raw_count) != prev_raw_count);
+	spin_lock_irqsave(&pmu->lock, flags);
+
+	prev_raw_count = local64_read(&hwc->prev_count);
+	new_raw_count = ddr_perf_read_counter(pmu, counter);
 
 	delta = (new_raw_count - prev_raw_count) & 0xFFFFFFFF;
 
 	local64_add(delta, &event->count);
+	local64_set(&hwc->prev_count, new_raw_count);
+
+	spin_unlock_irqrestore(&pmu->lock, flags);
 }
 
 static void ddr_perf_counter_enable(struct ddr_pmu *pmu, int config,
@@ -402,6 +407,15 @@ static void ddr_perf_counter_enable(struct ddr_pmu *pmu, int config,
 		val = readl_relaxed(pmu->base + reg) & CNTL_EN_MASK;
 		writel(val, pmu->base + reg);
 	}
+}
+
+static bool ddr_perf_counter_overflow(struct ddr_pmu *pmu, int counter)
+{
+	int val;
+
+	val = readl_relaxed(pmu->base + counter * 4 + COUNTER_CNTL);
+
+	return val & CNTL_OVER ? true : false;
 }
 
 static void ddr_perf_event_start(struct perf_event *event, int flags)
@@ -535,7 +549,7 @@ static int ddr_perf_init(struct ddr_pmu *pmu, void __iomem *base,
 
 static irqreturn_t ddr_perf_irq_handler(int irq, void *p)
 {
-	int i;
+	int i, ret;
 	struct ddr_pmu *pmu = (struct ddr_pmu *) p;
 	struct perf_event *event, *cycle_event = NULL;
 
@@ -547,7 +561,7 @@ static irqreturn_t ddr_perf_irq_handler(int irq, void *p)
 	/*
 	 * When the cycle counter overflows, all counters are stopped,
 	 * and an IRQ is raised. If any other counter overflows, it
-	 * continues counting, and no IRQ is raised.
+	 * stop counting, and no IRQ is raised.
 	 *
 	 * Cycles occur at least 4 times as often as other events, so we
 	 * can update all events on a cycle counter overflow and not
@@ -567,12 +581,37 @@ static irqreturn_t ddr_perf_irq_handler(int irq, void *p)
 			cycle_event = event;
 	}
 
+	spin_lock(&pmu->lock);
+
+	for (i = 0; i < NUM_COUNTERS; i++) {
+		if (!pmu->events[i])
+			continue;
+
+		event = pmu->events[i];
+
+		if (event->hw.idx == EVENT_CYCLES_COUNTER)
+			continue;
+
+		/* check non-cycle counters overflow */
+		ret = ddr_perf_counter_overflow(pmu, event->hw.idx);
+		if (ret)
+			dev_warn(pmu->dev, "Event Counter%d overflow happened, data incorrect!!\n", i);
+
+		/* clear non-cycle counters */
+		ddr_perf_counter_enable(pmu, event->attr.config, event->hw.idx, true);
+
+		local64_set(&event->hw.prev_count, 0);
+	}
+
+	if (cycle_event)
+		local64_set(&cycle_event->hw.prev_count, 0);
+
+	spin_unlock(&pmu->lock);
+
 	ddr_perf_counter_enable(pmu,
 			      EVENT_CYCLES_ID,
 			      EVENT_CYCLES_COUNTER,
 			      true);
-	if (cycle_event)
-		ddr_perf_event_update(cycle_event);
 
 	return IRQ_HANDLED;
 }
@@ -620,6 +659,7 @@ static int ddr_perf_probe(struct platform_device *pdev)
 	num = ddr_perf_init(pmu, base, &pdev->dev);
 
 	platform_set_drvdata(pdev, pmu);
+	spin_lock_init(&pmu->lock);
 
 	name = devm_kasprintf(&pdev->dev, GFP_KERNEL, DDR_PERF_DEV_NAME "%d",
 			      num);
