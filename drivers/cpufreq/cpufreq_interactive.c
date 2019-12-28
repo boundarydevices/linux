@@ -640,9 +640,11 @@ static struct notifier_block cpufreq_notifier_block = {
 static unsigned int *get_tokenized_data(const char *buf, int *num_tokens)
 {
 	const char *cp = buf;
+	const char *next;
 	int ntokens = 1, i = 0;
 	unsigned int *tokenized_data;
 	int err = -EINVAL;
+	unsigned char tmp[20];
 
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;
@@ -658,13 +660,21 @@ static unsigned int *get_tokenized_data(const char *buf, int *num_tokens)
 
 	cp = buf;
 	while (i < ntokens) {
+		next = strpbrk(cp, " :");
+		if (next) {
+			int n = next - cp;
+			if (n > sizeof(tmp) - 1)
+				n = sizeof(tmp) - 1;
+			memcpy(tmp, cp, n);
+			tmp[n] = 0;
+			cp = tmp;
+		}
 		if (kstrtouint(cp, 0, &tokenized_data[i++]) < 0)
 			goto err_kfree;
 
-		cp = strpbrk(cp, " :");
-		if (!cp)
+		if (!next)
 			break;
-		cp++;
+		cp = next + 1;
 	}
 
 	if (i != ntokens)
