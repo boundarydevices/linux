@@ -180,11 +180,13 @@ struct pf8x_regulator {
 	unsigned char vselect_en;
 	unsigned char quad_phase;
 	unsigned char dual_phase;
+	unsigned char fast_slew;
 };
 
 struct pf8x_chip {
 	int	chip_id;
 	int	prog_id;
+	int	clk_freq;
 	struct regmap *regmap;
 	struct device *dev;
 	struct pf8x_regulator regulator_descs[REG_NUM_REGULATORS];
@@ -293,34 +295,20 @@ static int pf8x00_regulator_set_voltage_time_sel(struct regulator_dev *rdev,
 		unsigned int old_sel, unsigned int new_sel)
 {
 	struct pf8x_chip *pf = rdev_get_drvdata(rdev);
+	struct pf8x_regulator *rdesc = container_of(rdev->desc, struct pf8x_regulator, desc);
 	const unsigned int *volt_table = rdev->desc->volt_table;
 	int old_v = volt_table[old_sel];
 	int new_v = volt_table[new_sel];
 	unsigned change = (new_v - old_v);
-	unsigned clk_index = 0;
 	unsigned index;
-	unsigned fast = 0;
 	unsigned slew;
-	int ret;
 
-	ret = regmap_read(pf->regmap, rdev->desc->enable_reg +
-			SW_CONFIG2 - SW_MODE1, &fast);
-	fast &= 0x20;
-	if (ret < 0)
-		fast = 0;
-	ret = regmap_read(pf->regmap, PF8X00_FREQ_CTRL, &index);
-	index &= 0xf;
-	if (ret < 0)
-		index = 0;
-	if (((index & 7) > 4) || (index == 8))
-		index = 0;
-
-	index = fast ? 2 : 0;
+	index = (rdesc->fast_slew & 1) ? 2 : 0;
 	if (change < 0) {
 		change = -change;
 		index++;
 	}
-	slew = ramp_table[clk_index].up_down_slow_fast[index];
+	slew = ramp_table[pf->clk_freq].up_down_slow_fast[index];
 	return DIV_ROUND_UP(change, slew);
 }
 
@@ -367,6 +355,7 @@ static int pf8x00_of_parse_cb(struct device_node *np,
 	unsigned char dual_phase = 0;
 	int ilim;
 	int phase;
+	int fast_slew;
 	int ret;
 
 	ret = of_property_read_u32(np, "ilim-ma",
@@ -379,6 +368,10 @@ static int pf8x00_of_parse_cb(struct device_node *np,
 		phase = -1;
 	ilim = encode_ilim(pf, ilim);
 	phase = encode_phase(pf, phase);
+
+	ret = of_property_read_u32(np, "fast-slew", &fast_slew);
+	if (ret)
+		fast_slew = -1;
 
 	if (of_get_property(np, "hw-en", NULL))
 		hw_en = 1;
@@ -424,10 +417,11 @@ static int pf8x00_of_parse_cb(struct device_node *np,
 	rdesc->vselect_en = vselect_en;
 	rdesc->quad_phase = quad_phase;
 	rdesc->dual_phase = dual_phase;
+	rdesc->fast_slew = fast_slew;
 	pr_debug("%s:id=%d ilim=%d, phase=%d, hw_en=%d vselect_en=%d"
-		" quad_phase=%d dual_phase=%d\n",
+		" quad_phase=%d dual_phase=%d fast_slew=%d\n",
 		__func__, desc->id, ilim, phase, hw_en, vselect_en,
-		quad_phase, dual_phase);
+		quad_phase, dual_phase, fast_slew);
 	return 0;
 }
 
@@ -701,6 +695,7 @@ static int pf8x00_regulator_probe(struct i2c_client *client,
 	unsigned val;
 	int ctrl3;
 	const char *format = NULL;
+	unsigned clk_freq = 0;
 
 	pf = devm_kzalloc(&client->dev, sizeof(*pf),
 			GFP_KERNEL);
@@ -724,6 +719,14 @@ static int pf8x00_regulator_probe(struct i2c_client *client,
 
 	dev_info(&client->dev, "%s found.\n",
 		get_id_name(pf->chip_id)->name);
+
+	ret = regmap_read(pf->regmap, PF8X00_FREQ_CTRL, &clk_freq);
+	clk_freq &= 0xf;
+	if (ret < 0)
+		clk_freq = 0;
+	if (((clk_freq & 7) > 4) || (clk_freq == 8))
+		clk_freq = 0;
+	pf->clk_freq = clk_freq;
 
 	memcpy(pf->regulator_descs, pf8x00_regulators,
 		sizeof(pf->regulator_descs));
@@ -764,6 +767,7 @@ static int pf8x00_regulator_probe(struct i2c_client *client,
 			unsigned mask = 0;
 			unsigned val = 0;
 			unsigned reg = PF8X00_SW(i) + SW_CONFIG2;
+			unsigned fast_slew = pf->regulator_descs[i].fast_slew;
 
 			if (phase <= 7) {
 				mask |= 7;
@@ -773,11 +777,22 @@ static int pf8x00_regulator_probe(struct i2c_client *client,
 				mask |= 3 << 3;
 				val |= ilim << 3;
 			}
+			if (fast_slew <= 1) {
+				mask |= 1 << 5;
+				val |= fast_slew << 5;
+			}
 			if (mask) {
 				pr_debug("%s:reg=0x%x, mask=0x%x, val=0x%x\n",
 					__func__, reg, mask, val);
 				ret = regmap_update_bits(pf->regmap, reg, mask,
 						val);
+			}
+			if (fast_slew > 1) {
+				ret = regmap_read(pf->regmap, reg, &fast_slew);
+				fast_slew &= 0x20;
+				if (ret < 0)
+					fast_slew = 0;
+				pf->regulator_descs[i].fast_slew = fast_slew >> 5;
 			}
 		}
 	}
