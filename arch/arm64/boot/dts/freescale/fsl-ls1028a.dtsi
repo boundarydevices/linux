@@ -375,6 +375,7 @@
 			snps,dis_rxdet_inp3_quirk;
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			dma-coherent;
 		};
 
 		usb1: usb@3110000 {
@@ -385,6 +386,7 @@
 			snps,dis_rxdet_inp3_quirk;
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			dma-coherent;
 		};
 
 		sata: sata@3200000 {
@@ -538,8 +540,9 @@
 			reg = <0x0 0xf100000 0x0 0x10000>;
 			interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clockgen 4 1>, <&clockgen 4 1>,
-				 <&clockgen 4 1>, <&clockgen 4 1>;
-			clock-names = "bus", "mclk1", "mclk2", "mclk3";
+				 <&clockgen 4 1>, <&clockgen 4 1>,
+				 <&clockgen 4 1>;
+			clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 			dma-names = "tx", "rx";
 			dmas = <&edma0 1 4>,
 			       <&edma0 1 3>;
@@ -552,8 +555,9 @@
 			reg = <0x0 0xf110000 0x0 0x10000>;
 			interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clockgen 4 1>, <&clockgen 4 1>,
-				 <&clockgen 4 1>, <&clockgen 4 1>;
-			clock-names = "bus", "mclk1", "mclk2", "mclk3";
+				 <&clockgen 4 1>, <&clockgen 4 1>,
+				 <&clockgen 4 1>;
+			clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 			dma-names = "tx", "rx";
 			dmas = <&edma0 1 6>,
 			       <&edma0 1 5>;
@@ -566,8 +570,9 @@
 			reg = <0x0 0xf130000 0x0 0x10000>;
 			interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clockgen 4 1>, <&clockgen 4 1>,
-				 <&clockgen 4 1>, <&clockgen 4 1>;
-			clock-names = "bus", "mclk1", "mclk2", "mclk3";
+				 <&clockgen 4 1>, <&clockgen 4 1>,
+				 <&clockgen 4 1>;
+			clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 			dma-names = "tx", "rx";
 			dmas = <&edma0 1 10>,
 			       <&edma0 1 9>;

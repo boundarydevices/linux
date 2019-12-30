@@ -17,30 +17,22 @@
 
 #include "clk-scu.h"
 
-static const char *sdhc0_sels[] = {
-	"dummy",
-	"conn_pll0_clk",
-	"conn_pll1_clk",
-	"dummy",
-	"dummy",
-};
-
 static const char *pll0_sels[] = {
-	"dummy",
+	"clk_dummy",
 	"pi_dpll_clk",
-	"dummy",
-	"dummy",
-	"dummy",
+	"clk_dummy",
+	"clk_dummy",
+	"clk_dummy",
 };
 
 static const char *enet0_rgmii_txc_sels[] = {
 	"enet0_ref_div",
-	"dummy",
+	"clk_dummy",
 };
 
 static const char *enet1_rgmii_txc_sels[] = {
 	"enet1_ref_div",
-	"dummy",
+	"clk_dummy",
 };
 
 static const char *dc0_sels[] = {
@@ -60,11 +52,19 @@ static const char *dc1_sels[] = {
 };
 
 static const char *hdmi_sels[] = {
-	"dummy",
+	"clk_dummy",
 	"hdmi_dig_pll_clk",
-	"dummy",
-	"dummy",
+	"clk_dummy",
+	"clk_dummy",
 	"hdmi_av_pll_clk",
+};
+
+static const char *mipi_sels[] = {
+	"clk_dummy",
+	"clk_dummy",
+	"mipi_pll_div2_clk",
+	"clk_dummy",
+	"clk_dummy",
 };
 
 static const struct of_device_id imx8qxp_match[] = {
@@ -139,7 +139,7 @@ static int imx8qxp_clk_probe(struct platform_device *pdev)
 	imx_clk_scu("audio_rec_clk1_clk", IMX_SC_R_AUDIO_PLL_1, IMX_SC_PM_CLK_MISC1);
 
 	/* Connectivity */
-	imx_clk_scu2("sdhc0_clk", sdhc0_sels, ARRAY_SIZE(sdhc0_sels), IMX_SC_R_SDHC_0, IMX_SC_PM_CLK_PER);
+	imx_clk_scu("sdhc0_clk", IMX_SC_R_SDHC_0, IMX_SC_PM_CLK_PER);
 	imx_clk_scu("sdhc1_clk", IMX_SC_R_SDHC_1, IMX_SC_PM_CLK_PER);
 	imx_clk_scu("sdhc2_clk", IMX_SC_R_SDHC_2, IMX_SC_PM_CLK_PER);
 	imx_clk_scu("enet0_root_clk", IMX_SC_R_ENET_0, IMX_SC_PM_CLK_PER);
@@ -181,9 +181,9 @@ static int imx8qxp_clk_probe(struct platform_device *pdev)
 	imx_clk_scu("lvds0_pixel_clk", IMX_SC_R_LVDS_0, IMX_SC_PM_CLK_MISC2);
 	imx_clk_scu("lvds0_bypass_clk", IMX_SC_R_LVDS_0, IMX_SC_PM_CLK_BYPASS);
 	imx_clk_scu("lvds0_phy_clk", IMX_SC_R_LVDS_0, IMX_SC_PM_CLK_MISC3);
-	imx_clk_scu("mipi0_dsi_tx_esc_clk", IMX_SC_R_MIPI_0, IMX_SC_PM_CLK_MST_BUS);
-	imx_clk_scu("mipi0_dsi_rx_esc_clk", IMX_SC_R_MIPI_0, IMX_SC_PM_CLK_SLV_BUS);
-	imx_clk_scu("mipi0_dsi_phy_clk", IMX_SC_R_MIPI_0, IMX_SC_PM_CLK_PHY);
+	imx_clk_scu2("mipi0_dsi_tx_esc_clk", mipi_sels, ARRAY_SIZE(mipi_sels), IMX_SC_R_MIPI_0, IMX_SC_PM_CLK_MST_BUS);
+	imx_clk_scu2("mipi0_dsi_rx_esc_clk", mipi_sels, ARRAY_SIZE(mipi_sels), IMX_SC_R_MIPI_0, IMX_SC_PM_CLK_SLV_BUS);
+	imx_clk_scu2("mipi0_dsi_phy_clk", mipi_sels, ARRAY_SIZE(mipi_sels), IMX_SC_R_MIPI_0, IMX_SC_PM_CLK_PHY);
 	imx_clk_scu("mipi0_i2c0_clk", IMX_SC_R_MIPI_0_I2C_0, IMX_SC_PM_CLK_MISC2);
 	imx_clk_scu("mipi0_i2c1_clk", IMX_SC_R_MIPI_0_I2C_1, IMX_SC_PM_CLK_MISC2);
 	imx_clk_scu("mipi0_pwm_clk", IMX_SC_R_MIPI_0_PWM_0, IMX_SC_PM_CLK_PER);
@@ -193,9 +193,9 @@ static int imx8qxp_clk_probe(struct platform_device *pdev)
 	imx_clk_scu("lvds1_pixel_clk", IMX_SC_R_LVDS_1, IMX_SC_PM_CLK_MISC2);
 	imx_clk_scu("lvds1_bypass_clk", IMX_SC_R_LVDS_1, IMX_SC_PM_CLK_BYPASS);
 	imx_clk_scu("lvds1_phy_clk", IMX_SC_R_LVDS_1, IMX_SC_PM_CLK_MISC3);
-	imx_clk_scu("mipi1_dsi_tx_esc_clk", IMX_SC_R_MIPI_1, IMX_SC_PM_CLK_MST_BUS);
-	imx_clk_scu("mipi1_dsi_rx_esc_clk", IMX_SC_R_MIPI_1, IMX_SC_PM_CLK_SLV_BUS);
-	imx_clk_scu("mipi1_dsi_phy_clk", IMX_SC_R_MIPI_1, IMX_SC_PM_CLK_PHY);
+	imx_clk_scu2("mipi1_dsi_tx_esc_clk", mipi_sels, ARRAY_SIZE(mipi_sels), IMX_SC_R_MIPI_1, IMX_SC_PM_CLK_MST_BUS);
+	imx_clk_scu2("mipi1_dsi_rx_esc_clk", mipi_sels, ARRAY_SIZE(mipi_sels), IMX_SC_R_MIPI_1, IMX_SC_PM_CLK_SLV_BUS);
+	imx_clk_scu2("mipi1_dsi_phy_clk", mipi_sels, ARRAY_SIZE(mipi_sels), IMX_SC_R_MIPI_1, IMX_SC_PM_CLK_PHY);
 	imx_clk_scu("mipi1_i2c0_clk", IMX_SC_R_MIPI_1_I2C_0, IMX_SC_PM_CLK_MISC2);
 	imx_clk_scu("mipi1_i2c1_clk", IMX_SC_R_MIPI_1_I2C_1, IMX_SC_PM_CLK_MISC2);
 	imx_clk_scu("mipi1_pwm_clk", IMX_SC_R_MIPI_1_PWM_0, IMX_SC_PM_CLK_PER);

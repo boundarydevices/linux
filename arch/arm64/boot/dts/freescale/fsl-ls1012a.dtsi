@@ -404,8 +404,9 @@
 			reg = <0x0 0x2b50000 0x0 0x10000>;
 			interrupts = <0 148 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clockgen 4 3>, <&clockgen 4 3>,
-				 <&clockgen 4 3>, <&clockgen 4 3>;
-			clock-names = "bus", "mclk1", "mclk2", "mclk3";
+				 <&clockgen 4 3>, <&clockgen 4 3>,
+				 <&clockgen 4 3>;
+			clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 			dma-names = "tx", "rx";
 			dmas = <&edma0 1 47>,
 			       <&edma0 1 46>;
@@ -418,8 +419,9 @@
 			reg = <0x0 0x2b60000 0x0 0x10000>;
 			interrupts = <0 149 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clockgen 4 3>, <&clockgen 4 3>,
-				 <&clockgen 4 3>, <&clockgen 4 3>;
-			clock-names = "bus", "mclk1", "mclk2", "mclk3";
+				 <&clockgen 4 3>, <&clockgen 4 3>,
+				 <&clockgen 4 3>;
+			clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 			dma-names = "tx", "rx";
 			dmas = <&edma0 1 45>,
 			       <&edma0 1 44>;
@@ -443,7 +445,7 @@
 		};
 
 		usb0: usb3@2f00000 {
-			compatible = "snps,dwc3";
+			compatible = "fsl,ls1012a-dwc3", "snps,dwc3";
 			reg = <0x0 0x2f00000 0x0 0x10000>;
 			interrupts = <0 60 0x4>;
 			dr_mode = "host";
@@ -451,6 +453,7 @@
 			snps,dis_rxdet_inp3_quirk;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
 			snps,host-vbus-glitches;
+			dma-coherent;
 		};
 
 		sata: sata@3200000 {

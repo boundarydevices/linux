@@ -1,5 +1,5 @@
 /* Copyright 2015 Freescale Semiconductor Inc.
- * Copyright 2018 NXP
+ * Copyright 2018-2019 NXP
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -158,12 +158,16 @@ static void dpaa2_mac_link_changed(struct net_device *netdev)
 		netif_carrier_off(netdev);
 	}
 
-	if (priv->old_state.up != state.up ||
-	    priv->old_state.rate != state.rate ||
-	    priv->old_state.options != state.options) {
-		priv->old_state = state;
-		phy_print_status(phydev);
-	}
+	/* Call the dpmac_set_link_state() only if there is a change in the
+	 * link configuration
+	 */
+	if (priv->old_state.up == state.up &&
+	    priv->old_state.rate == state.rate &&
+	    priv->old_state.options == state.options)
+		return;
+
+	priv->old_state = state;
+	phy_print_status(phydev);
 
 	if (cmp_dpmac_ver(priv, DPMAC_LINK_AUTONEG_VER_MAJOR,
 			  DPMAC_LINK_AUTONEG_VER_MINOR) < 0) {
@@ -478,12 +482,11 @@ static irqreturn_t dpaa2_mac_irq_handler(int irq_num, void *arg)
 		configure_link(priv, &link_cfg);
 	}
 
-	if (status & DPMAC_IRQ_EVENT_LINK_UP_REQ)
-		phy_start(ndev->phydev);
-
 	if (status & DPMAC_IRQ_EVENT_LINK_DOWN_REQ)
 		phy_stop(ndev->phydev);
 
+	if (status & DPMAC_IRQ_EVENT_LINK_UP_REQ)
+		phy_start(ndev->phydev);
 out:
 	dpmac_clear_irq_status(mc_dev->mc_io, 0, mc_dev->mc_handle,
 			       DPMAC_IRQ_INDEX, status);
@@ -661,9 +664,6 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
 	netdev->netdev_ops = &dpaa2_mac_ndo_ops;
 	netdev->ethtool_ops = &dpaa2_mac_ethtool_ops;
 
-	/* phy starts up enabled so netdev should be up too */
-	netdev->flags |= IFF_UP;
-
 	err = register_netdev(priv->netdev);
 	if (err < 0) {
 		dev_err(dev, "register_netdev error %d\n", err);
@@ -772,7 +772,8 @@ static int dpaa2_mac_remove(struct fsl_mc_device *mc_dev)
 	struct dpaa2_mac_priv	*priv = dev_get_drvdata(dev);
 	struct net_device	*netdev = priv->netdev;
 
-	dpaa2_mac_stop(netdev);
+	if (netdev->flags & IFF_UP)
+		dpaa2_mac_stop(netdev);
 
 	if (phy_is_pseudo_fixed_link(netdev->phydev))
 		fixed_phy_unregister(netdev->phydev);
