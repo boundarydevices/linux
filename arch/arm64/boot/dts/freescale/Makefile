@@ -37,7 +37,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk.dtb imx8mm-evk-rpmsg.dtb imx8mm-evk-rm67191
 			  imx8mm-ddr4-evk-revb-rm67191.dtb imx8mm-ddr4-evk-no-product.dtb \
 			  imx8mm-evk-no-product.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk-ak4497.dtb imx8mm-evk-ak5558.dtb imx8mm-evk-audio-tdm.dtb
-dtb-$(CONFIG_ARCH_MXC) += imx8mn-evk.dtb imx8mn-ddr4-evk.dtb imx8mn-ddr4-evk-ak5558.dtb \
+dtb-$(CONFIG_ARCH_MXC) += imx8mn-evk.dtb imx8mn-evk-rm67191.dtb imx8mn-ddr4-evk.dtb imx8mn-ddr4-evk-ak5558.dtb \
 			  imx8mn-ddr4-evk-rm67191.dtb imx8mn-ddr4-evk-rpmsg.dtb \
 			  imx8mn-ddr4-evk-no-product.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-ddr4-evk-root.dtb imx8mn-ddr4-evk-inmate.dtb
@@ -64,15 +64,17 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek.dtb imx8qm-mek-ov5640.dtb \
 			  imx8qm-mek-ca72.dtb imx8qm-lpddr4-val-ca53.dtb \
 			  imx8qm-lpddr4-val-ca72.dtb imx8qm-ddr4-val.dtb \
 			  imx8qm-lpddr4-val-lpspi.dtb imx8qm-lpddr4-val-lpspi-slave.dtb \
-			  imx8qm-mek-dsi-rm67191.dtb \
+			  imx8qm-mek-dsi-rm67191.dtb imx8qm-lpddr4-val-dp.dtb\
 			  imx8qm-mek-ov5640-no-product.dtb \
 			  imx8qp-lpddr4-val.dtb imx8dm-lpddr4-val.dtb
-dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-dom0.dtb imx8qm-mek-domu.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-dom0.dtb imx8qm-mek-domu.dtb \
+			  imx8qm-mek-root.dtb imx8qm-mek-inmate.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-ai_ml.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8dxl-phantom-mek.dtb \
 			  imx8dxl-phantom-mek-rpmsg.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek.dtb imx8qxp-mek-dsp.dtb imx8qxp-mek-ov5640.dtb \
-			  imx8qxp-mek-enet2.dtb imx8qxp-mek-enet2-tja1100.dtb imx8qxp-mek-sof.dtb \
+			  imx8qxp-mek-enet2.dtb imx8qxp-mek-enet2-tja1100.dtb \
+			  imx8qxp-mek-sof-cs42888.dtb imx8qxp-mek-sof-wm8960.dtb \
 			  imx8qxp-mek-rpmsg.dtb imx8qxp-mek-a0.dtb \
 			  imx8qxp-mek-it6263-lvds0-dual-channel.dtb \
 			  imx8qxp-mek-it6263-lvds1-dual-channel.dtb \
@@ -86,7 +88,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek.dtb imx8qxp-mek-dsp.dtb imx8qxp-mek-ov5640
 			  imx8qxp-17x17-val.dtb imx8dx-lpddr4-val.dtb imx8dx-17x17-val.dtb \
 			  imx8qxp-lpddr4-val-mlb.dtb \
 			  imx8qxp-mek-ov5640-no-product.dtb
-dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek-dom0.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek-dom0.dtb imx8qxp-mek-root.dtb \
+			  imx8qxp-mek-inmate.dtb
 
 dtb-$(CONFIG_ARCH_S32) += s32v234-evb.dtb \
 			  s32v234-sbc.dtb

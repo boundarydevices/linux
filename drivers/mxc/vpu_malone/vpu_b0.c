@@ -67,6 +67,8 @@ static int vpu_show_perf_ena;
 static int vpu_show_perf_idx = (1 << VPU_MAX_NUM_STREAMS) - 1;
 static int vpu_show_perf_ent;
 static int vpu_datadump_ena;
+static unsigned short frame_threshold[VPU_MAX_NUM_STREAMS];
+module_param_array(frame_threshold, ushort, NULL, 0644);
 
 /* Generic End of content startcodes to differentiate from those naturally in the stream/file */
 #define EOS_GENERIC_HEVC 0x7c010000
@@ -2295,6 +2297,62 @@ static int add_custom_g_ctrl(struct vpu_ctx *This)
 	return 0;
 }
 
+static int set_frame_threshold(struct v4l2_ctrl *ctrl)
+{
+	struct vpu_ctx *ctx = v4l2_ctrl_to_ctx(ctrl);
+
+	ctrl->val = max_t(s32, ctrl->val, ctrl->minimum);
+	ctrl->val = min_t(s32, ctrl->val, ctrl->maximum);
+	frame_threshold[ctx->str_index] = ctrl->val;
+	return 0;
+}
+
+static int get_frame_threshold(struct v4l2_ctrl *ctrl)
+{
+	struct vpu_ctx *ctx = v4l2_ctrl_to_ctx(ctrl);
+
+	ctrl->val = frame_threshold[ctx->str_index];
+	ctrl->val = max_t(s32, ctrl->val, ctrl->minimum);
+	ctrl->val = min_t(s32, ctrl->val, ctrl->maximum);
+	return 0;
+}
+
+static int add_ctrl_frame_threshold(struct vpu_ctx *ctx)
+{
+	static const struct v4l2_ctrl_ops ctrl_frame_threshold_ops = {
+		.s_ctrl = set_frame_threshold,
+		.g_volatile_ctrl = get_frame_threshold,
+	};
+	struct v4l2_ctrl_config ctrl_config = {
+		.id = V4L2_CID_USER_FRAME_THRESHOLD,
+		.name = "stream frame threshold",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 0,
+		.max = USHRT_MAX,
+		.step = 1,
+		.ops = &ctrl_frame_threshold_ops,
+	};
+	struct v4l2_ctrl *ctrl;
+
+	if (!ctx)
+		return -EINVAL;
+
+	ctrl_config.def = frame_threshold[ctx->str_index];
+	ctrl = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&ctrl_config,
+					NULL);
+	if (ctx->ctrl_handler.error || !ctrl) {
+		vpu_err("add frame threshold ctrl fail : %d\n",
+				ctx->ctrl_handler.error);
+		return ctx->ctrl_handler.error;
+	}
+
+	ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
+	ctrl->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+
+	return 0;
+}
+
 static int add_dec_ctrl(struct vpu_ctx *This)
 {
 	if (!This)
@@ -2303,6 +2361,7 @@ static int add_dec_ctrl(struct vpu_ctx *This)
 	add_stand_g_ctrl(This);
 	add_custom_s_ctrl(This);
 	add_custom_g_ctrl(This);
+	add_ctrl_frame_threshold(This);
 
 	return 0;
 }
@@ -2555,10 +2614,12 @@ static int add_scode(struct vpu_ctx *ctx, u_int32 uStrBufIdx, VPU_PADDING_SCODE_
 
 	mutex_lock(&ctx->instance_mutex);
 	size = add_scode_vpu(ctx, uStrBufIdx, eScodeType, bUpdateWr);
-	if (size > 0)
-		set_pic_end_flag(ctx);
-	else
+	if (size > 0) {
+		if (!(eScodeType == BUFFLUSH_PADDING_TYPE && ctx->b_dis_reorder))
+			set_pic_end_flag(ctx);
+	} else {
 		size = 0;
+	}
 	mutex_unlock(&ctx->instance_mutex);
 	return size;
 }
@@ -3025,8 +3086,8 @@ static int send_abort_cmd(struct vpu_ctx *ctx)
 	record_log_info(ctx, LOG_PADDING, 0, 0);
 	if (size <= 0)
 		vpu_err("%s(): failed to fill abort padding data\n", __func__);
-	v4l2_vpu_send_cmd(ctx, ctx->str_index, VID_API_CMD_ABORT, 1, &size);
 	reinit_completion(&ctx->completion);
+	v4l2_vpu_send_cmd(ctx, ctx->str_index, VID_API_CMD_ABORT, 1, &size);
 	if (!wait_for_completion_timeout(&ctx->completion, msecs_to_jiffies(1000))) {
 		ctx->hang_status = true;
 		vpu_err("the path id:%d firmware timeout after send VID_API_CMD_ABORT\n",
@@ -3048,8 +3109,8 @@ static int send_stop_cmd(struct vpu_ctx *ctx)
 
 	ctx->wait_rst_done = true;
 	vpu_dbg(LVL_BIT_FLOW, "ctx[%d] send STOP CMD\n", ctx->str_index);
-	v4l2_vpu_send_cmd(ctx, ctx->str_index, VID_API_CMD_STOP, 0, NULL);
 	reinit_completion(&ctx->stop_cmp);
+	v4l2_vpu_send_cmd(ctx, ctx->str_index, VID_API_CMD_STOP, 0, NULL);
 	if (!wait_for_completion_timeout(&ctx->stop_cmp, msecs_to_jiffies(1000))) {
 		vpu_dec_clear_pending_cmd(ctx);
 		ctx->hang_status = true;
@@ -3227,16 +3288,22 @@ static void fill_stream_buffer_info(struct vpu_ctx *ctx)
 {
 	pDEC_RPC_HOST_IFACE pSharedInterface;
 	pBUFFER_INFO_TYPE buffer_info;
+	int idx;
 
-	if (!ctx)
+	if (!ctx || ctx->str_index < 0 || ctx->str_index >= VPU_MAX_NUM_STREAMS)
 		return;
 
+	idx = ctx->str_index;
 	pSharedInterface = ctx->dev->shared_mem.pSharedInterface;
-	buffer_info = &pSharedInterface->StreamBuffInfo[ctx->str_index];
+	buffer_info = &pSharedInterface->StreamBuffInfo[idx];
 
 	buffer_info->stream_input_mode = ctx->stream_input_mode;
 	if (ctx->stream_input_mode == NON_FRAME_LVL)
 		buffer_info->stream_buffer_threshold = stream_buffer_threshold;
+	else if (frame_threshold[idx] > 0)
+		buffer_info->stream_buffer_threshold = frame_threshold[idx];
+	else
+		buffer_info->stream_buffer_threshold = 0;
 
 	buffer_info->stream_pic_input_count = ctx->frm_total_num;
 }
@@ -6131,9 +6198,9 @@ static int swreset_vpu_firmware(struct vpu_dev *dev, u_int32 idx)
 	dev->firmware_started = false;
 	kfifo_reset(&dev->mu_msg_fifo);
 
+	reinit_completion(&dev->start_cmp);
 	do_send_cmd_to_firmware(ctx, 0, VID_API_CMD_FIRM_RESET, 0, NULL);
 
-	reinit_completion(&dev->start_cmp);
 	if (!wait_for_completion_timeout(&dev->start_cmp, msecs_to_jiffies(10000))) {
 		vpu_err("error: %s() fail\n", __func__);
 		return -1;
@@ -6499,7 +6566,7 @@ static void vpu_dec_resume_work(struct vpu_dev *vpudev)
 	int i;
 
 	mutex_lock(&vpudev->dev_mutex);
-	schedule_work(&vpudev->msg_work);
+	queue_work(vpudev->workqueue, &vpudev->msg_work);
 	for (i = 0; i < VPU_MAX_NUM_STREAMS; i++) {
 		struct vpu_ctx *ctx = vpudev->ctx[i];
 
@@ -6520,8 +6587,8 @@ static int __maybe_unused vpu_suspend(struct device *dev)
 	if (vpudev->hang_mask != vpudev->instance_mask) {
 
 		/*if there is an available device, send snapshot command to firmware*/
-		v4l2_vpu_send_snapshot(vpudev);
 		reinit_completion(&vpudev->snap_done_cmp);
+		v4l2_vpu_send_snapshot(vpudev);
 		if (!wait_for_completion_timeout(&vpudev->snap_done_cmp, msecs_to_jiffies(1000))) {
 			vpu_err("error: wait for vpu decoder snapdone event timeout!\n");
 			ret = -1;
@@ -6560,9 +6627,9 @@ static int resume_from_snapshot(struct vpu_dev *vpudev)
 {
 	int ret = 0;
 
+	reinit_completion(&vpudev->start_cmp);
 	enable_csr_reg(vpudev);
 	/*wait for firmware resotre done*/
-	reinit_completion(&vpudev->start_cmp);
 	if (!wait_for_completion_timeout(&vpudev->start_cmp, msecs_to_jiffies(1000))) {
 		vpu_err("error: wait for vpu decoder resume done timeout!\n");
 		ret = -1;
