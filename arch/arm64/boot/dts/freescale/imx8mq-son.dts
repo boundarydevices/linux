@@ -36,16 +36,17 @@
 		>;
 	};
 
-	pinctrl_ecspi1_mcp2515: ecspi1-mcp2515grp {
+	pinctrl_ecspi1_mcp2515t: ecspi1-mcp2515tgrp {
 		fsl,pins = <
-#define GP_MCP2515_RESET	<&gpio1 4 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_GPIO1_IO04_GPIO1_IO4		0x06
-#define GPIRQ_MCP2515		<&gpio1 8 IRQ_TYPE_EDGE_FALLING>
+#define GPIRQ_MCP2515T		<&gpio1 8 IRQ_TYPE_LEVEL_LOW>
 			MX8MQ_IOMUXC_GPIO1_IO08_GPIO1_IO8		0xc6
-#define GP_MCP2515_ENABLE	<&gpio1 3 GPIO_ACTIVE_HIGH>
-			MX8MQ_IOMUXC_GPIO1_IO03_GPIO1_IO3		0x06
-#define GPIRQ_MCP2515_ERR	<&gpio1 0 IRQ_TYPE_EDGE_FALLING>
+#define GP_MCP2515T_RESET	<&gpio1 4 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_GPIO1_IO04_GPIO1_IO4		0x06
+
+#define GPIRQ_CAN_ERR	<&gpio1 0 IRQ_TYPE_LEVEL_LOW>
 			MX8MQ_IOMUXC_GPIO1_IO00_GPIO1_IO0		0xc6
+#define GP_CAN_EN		<&gpio1 3 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_GPIO1_IO03_GPIO1_IO3		0x06
 		>;
 	};
 
@@ -808,18 +809,16 @@
 
 	/* can bus */
 	mcp2515: mcp2515@0 {
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ecspi1_mcp2515>;
-		compatible = "microchip,mcp2515";
 		clocks = <&clk16m>;
-		interrupts-extended = GPIRQ_MCP2515;
+		compatible = "microchip,mcp2515";
+		err-gpios = GPIRQ_CAN_ERR;
+		interrupts-extended = GPIRQ_MCP2515T;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ecspi1_mcp2515t>;
 		reg = <0>;
-		reset-gpios = GP_MCP2515_RESET;
-		enable-gpios = GP_MCP2515_ENABLE;
-		err-gpios = GPIRQ_MCP2515_ERR;
+		reset-gpios = GP_MCP2515T_RESET;
 		spi-max-frequency = <10000000>;
-		#address-cells = <1>;
-		#size-cells = <1>;
+		xceiver-gpios = GP_CAN_EN;
 	};
 };
 
