@@ -25,7 +25,15 @@
 #include <linux/mfd/syscon.h>
 #include <linux/mutex.h>
 #include <linux/of_device.h>
+#include <linux/extcon-provider.h>
 
+#ifdef CONFIG_EXTCON
+static const unsigned int cdns_hdmi_extcon_cables[] = {
+	EXTCON_DISP_HDMI,
+	EXTCON_NONE,
+};
+struct extcon_dev *cdns_hdmi_edev;
+#endif
 static void hdmi_sink_config(struct cdns_mhdp_device *mhdp)
 {
 	struct drm_scdc *scdc = &mhdp->connector.base.display_info.hdmi.scdc;
@@ -474,12 +482,18 @@ static void hotplug_work_func(struct work_struct *work)
 	if (connector->status == connector_status_connected) {
 		DRM_INFO("HDMI Cable Plug In\n");
 		enable_irq(mhdp->irq[IRQ_OUT]);
+#ifdef CONFIG_EXTCON
+		extcon_set_state_sync(cdns_hdmi_edev, EXTCON_DISP_HDMI, 1);
+#endif
 	} else if (connector->status == connector_status_disconnected) {
 		/* Cable Disconnedted  */
 		DRM_INFO("HDMI Cable Plug Out\n");
 		/* force mode set for cable replugin to recovery HDMI2.0 video modes */
 		mhdp->force_mode_set = true;
 		enable_irq(mhdp->irq[IRQ_IN]);
+#ifdef CONFIG_EXTCON
+		extcon_set_state_sync(cdns_hdmi_edev, EXTCON_DISP_HDMI, 0);
+#endif
 	}
 }
 
@@ -560,6 +574,18 @@ static int __cdns_hdmi_probe(struct platform_device *pdev,
 		return -ENXIO;
 	}
 
+#ifdef CONFIG_EXTCON
+	cdns_hdmi_edev = devm_extcon_dev_allocate(&pdev->dev, cdns_hdmi_extcon_cables);
+	if (IS_ERR(cdns_hdmi_edev)) {
+		dev_err(&pdev->dev, "failed to allocate extcon device\n");
+		goto out;
+	}
+	if (devm_extcon_dev_register(&pdev->dev,cdns_hdmi_edev) < 0) {
+		dev_err(&pdev->dev, "failed to register extcon device\n");
+		goto out;
+	}
+out:
+#endif
 	/* Enable Hotplug Detect thread */
 	irq_set_status_flags(mhdp->irq[IRQ_IN], IRQ_NOAUTOEN);
 	ret = devm_request_threaded_irq(dev, mhdp->irq[IRQ_IN],
@@ -585,10 +611,17 @@ static int __cdns_hdmi_probe(struct platform_device *pdev,
 
 	cdns_hdmi_parse_dt(mhdp);
 
-	if (cdns_mhdp_read_hpd(mhdp))
+	if (cdns_mhdp_read_hpd(mhdp)) {
 		enable_irq(mhdp->irq[IRQ_OUT]);
-	else
+#ifdef CONFIG_EXTCON
+		extcon_set_state_sync(cdns_hdmi_edev, EXTCON_DISP_HDMI, 1);
+#endif
+	} else {
 		enable_irq(mhdp->irq[IRQ_IN]);
+#ifdef CONFIG_EXTCON
+		extcon_set_state_sync(cdns_hdmi_edev, EXTCON_DISP_HDMI, 0);
+#endif
+	}
 
 	mhdp->bridge.base.driver_private = mhdp;
 	mhdp->bridge.base.funcs = &cdns_hdmi_bridge_funcs;
