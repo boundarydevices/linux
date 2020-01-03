@@ -358,7 +358,7 @@ static int encx24j600_receive_packet(struct encx24j600_priv *priv,
 	dev->stats.rx_packets++;
 	dev->stats.rx_bytes += rsv->len;
 
-	netif_rx(skb);
+	netif_rx_ni(skb);
 
 	return 0;
 }
