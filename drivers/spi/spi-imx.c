@@ -1454,22 +1454,28 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	spi_imx->devtype_data->setup_wml(spi_imx);
 
 	nents = rx->nents;
-	bpw = spi_imx->tx_config.dst_addr_width;
+	bpw = spi_imx->rx_config.src_addr_width;
 	/*
 	 * Adjust the transfer lenth of the last scattlist if there are
 	 * some tail data, use PIO read to get the tail data since DMA
 	 * sometimes miss the last tail interrupt.
 	 */
-	left = rem = transfer->len % (spi_imx->tx_config.dst_maxburst * bpw);
+	left = rem = transfer->len % (spi_imx->rx_config.src_maxburst * bpw);
 	while (rem) {
 		struct scatterlist *sgl_last = &rx->sgl[nents - 1];
 
 		if (sgl_last->length > rem) {
 			sgl_last->length -= rem;
+#ifdef CONFIG_NEED_SG_DMA_LENGTH
+			sgl_last->dma_length = sgl_last->length;
+#endif
 			break;
 		}
 		rem -= sgl_last->length;
 		sgl_last->length = 0;
+#ifdef CONFIG_NEED_SG_DMA_LENGTH
+		sgl_last->dma_length = 0;
+#endif
 		nents--;
 		rx->nents--;
 	}
