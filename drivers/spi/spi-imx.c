@@ -1599,12 +1599,14 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 		spi_imx_tail_pio_set(spi_imx, left);
 		reinit_completion(&spi_imx->xfer_done);
 
-		spi_imx->devtype_data->intctrl(spi_imx, MXC_INT_TCEN);
+		spi_imx->devtype_data->intctrl(spi_imx, MXC_INT_TCEN | MXC_INT_RR);
 
 		ret = wait_for_completion_timeout(&spi_imx->xfer_done,
 					transfer_timeout);
 		if (!ret) {
-			dev_err(spi_imx->dev, "I/O Error in RX tail\n");
+			dev_err(spi_imx->dev, "I/O Error in RX tail len=%d left=%d txfifo=%d width=%d\n",
+				transfer->len, left, spi_imx->txfifo, spi_imx->rx_config.src_addr_width);
+
 			return -ETIMEDOUT;
 		}
 	}
