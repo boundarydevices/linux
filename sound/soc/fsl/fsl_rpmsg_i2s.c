@@ -30,7 +30,7 @@
 				SNDRV_PCM_RATE_48000)
 #define FSL_RPMSG_I2S_FORMATS	SNDRV_PCM_FMTBIT_S16_LE
 
-struct wakeup_source lpa_rpmsg_wakeup_source;
+struct wakeup_source *lpa_rpmsg_wakeup_source;
 #define LPA_RPMSG_WAKEUP_HOLD_TIME_MS 200
 
 static int i2s_send_message(struct i2s_rpmsg *msg,
@@ -333,7 +333,9 @@ static int fsl_rpmsg_i2s_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	wakeup_source_init(&lpa_rpmsg_wakeup_source, "lpa_rpmsg_wakelock");
+	lpa_rpmsg_wakeup_source = wakeup_source_register(NULL, "lpa_rpmsg_wakelock");
+	if (!lpa_rpmsg_wakeup_source)
+		return -ENOMEM;
 	return imx_rpmsg_platform_register(&pdev->dev);
 }
 
@@ -344,6 +346,8 @@ static int fsl_rpmsg_i2s_remove(struct platform_device *pdev)
 
 	if (i2s_info->rpmsg_wq)
 		destroy_workqueue(i2s_info->rpmsg_wq);
+	if (lpa_rpmsg_wakeup_source)
+		wakeup_source_unregister(lpa_rpmsg_wakeup_source);
 
 	return 0;
 }
@@ -402,7 +406,7 @@ static int fsl_rpmsg_i2s_resume(struct device *dev)
 	rpmsg_rx->send_msg.header.cmd = I2S_RX_RESUME;
 	i2s_send_message(rpmsg_rx, i2s_info);
 
-	__pm_wakeup_event(&lpa_rpmsg_wakeup_source, LPA_RPMSG_WAKEUP_HOLD_TIME_MS);
+	__pm_wakeup_event(lpa_rpmsg_wakeup_source, LPA_RPMSG_WAKEUP_HOLD_TIME_MS);
 	return 0;
 }
 #endif /* CONFIG_PM_SLEEP */
