@@ -281,15 +281,31 @@ static void ion_dma_buf_unmap(struct dma_buf *dmabuf, unsigned long offset,
 	heap->buf_ops.unmap(dmabuf, offset, addr);
 }
 
+static void *ion_dma_buf_vmap_default(struct dma_buf *dmabuf)
+{
+	struct ion_buffer *buffer = dmabuf->priv;
+
+	if (ion_dma_buf_begin_cpu_access(dmabuf, DMA_BIDIRECTIONAL) != 0)
+		return NULL;
+
+	return buffer->vaddr;
+}
+
 static void *ion_dma_buf_vmap(struct dma_buf *dmabuf)
 {
 	struct ion_buffer *buffer = dmabuf->priv;
 	struct ion_heap *heap = buffer->heap;
 
-	if (!heap->buf_ops.vmap)
-		return ERR_PTR(-EOPNOTSUPP);
+	if (!heap->buf_ops.vmap) {
+		return ion_dma_buf_vmap_default(dmabuf);
+	}
 
 	return heap->buf_ops.vmap(dmabuf);
+}
+
+static void ion_dma_buf_vunmap_default(struct dma_buf *dmabuf)
+{
+	ion_dma_buf_end_cpu_access(dmabuf, DMA_BIDIRECTIONAL);
 }
 
 static void ion_dma_buf_vunmap(struct dma_buf *dmabuf, void *vaddr)
@@ -297,8 +313,10 @@ static void ion_dma_buf_vunmap(struct dma_buf *dmabuf, void *vaddr)
 	struct ion_buffer *buffer = dmabuf->priv;
 	struct ion_heap *heap = buffer->heap;
 
-	if (!heap->buf_ops.vunmap)
+	if (!heap->buf_ops.vunmap) {
+		ion_dma_buf_vunmap_default(dmabuf);
 		return;
+	}
 
 	return heap->buf_ops.vunmap(dmabuf, vaddr);
 }
