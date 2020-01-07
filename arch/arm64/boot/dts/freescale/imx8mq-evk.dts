@@ -678,22 +678,6 @@
 	power-supply = <&sw1c_reg>;
 };
 
-&qspi0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_qspi>;
-	status = "okay";
-
-	n25q256a: flash@0 {
-		reg = <0>;
-		#address-cells = <1>;
-		#size-cells = <1>;
-		compatible = "micron,n25q256a", "jedec,spi-nor";
-		spi-max-frequency = <29000000>;
-		spi-tx-bus-width = <1>;
-		spi-rx-bus-width = <4>;
-	};
-};
-
 &sai1 {
 	pinctrl-names = "default", "pcm_b2m", "dsd";
 	pinctrl-0 = <&pinctrl_sai1_pcm>;
