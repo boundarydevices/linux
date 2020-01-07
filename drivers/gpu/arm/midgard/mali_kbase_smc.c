@@ -35,6 +35,7 @@ static noinline u64 invoke_smc_fid(u64 function_id,
 	register u64 x2 asm("x2") = arg1;
 	register u64 x3 asm("x3") = arg2;
 
+#define __asmeq(x, y)  ".ifnc " x "," y " ; .err ; .endif\n\t"
 	asm volatile(
 			__asmeq("%0", "x0")
 			__asmeq("%1", "x1")
@@ -43,7 +44,7 @@ static noinline u64 invoke_smc_fid(u64 function_id,
 			"smc    #0\n"
 			: "+r" (x0)
 			: "r" (x1), "r" (x2), "r" (x3));
-
+#undef __asmeq
 	return x0;
 }
 

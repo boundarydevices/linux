@@ -30,7 +30,7 @@
 #include <linux/list.h>
 #include <linux/lockdep.h>
 #include <linux/mutex.h>
-#include <linux/reservation.h>
+#include <linux/dma-resv.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
@@ -59,7 +59,7 @@ static int
 kbase_dma_fence_lock_reservations(struct kbase_dma_fence_resv_info *info,
 				  struct ww_acquire_ctx *ctx)
 {
-	struct reservation_object *content_res = NULL;
+	struct dma_resv *content_res = NULL;
 	unsigned int content_res_idx = 0;
 	unsigned int r;
 	int err = 0;
@@ -225,7 +225,7 @@ kbase_dma_fence_cb(struct dma_fence *fence, struct dma_fence_cb *cb)
 
 static int
 kbase_dma_fence_add_reservation_callback(struct kbase_jd_atom *katom,
-					 struct reservation_object *resv,
+					 struct dma_resv *resv,
 					 bool exclusive)
 {
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0))
@@ -238,7 +238,7 @@ kbase_dma_fence_add_reservation_callback(struct kbase_jd_atom *katom,
 	unsigned int shared_count = 0;
 	int err, i;
 
-	err = reservation_object_get_fences_rcu(resv,
+	err = dma_resv_get_fences_rcu(resv,
 						&excl_fence,
 						&shared_count,
 						&shared_fences);
@@ -250,7 +250,7 @@ kbase_dma_fence_add_reservation_callback(struct kbase_jd_atom *katom,
 						excl_fence,
 						kbase_dma_fence_cb);
 
-		/* Release our reference, taken by reservation_object_get_fences_rcu(),
+		/* Release our reference, taken by dma_resv_get_fences_rcu(),
 		 * to the fence. We have set up our callback (if that was possible),
 		 * and it's the fence's owner is responsible for singling the fence
 		 * before allowing it to disappear.
@@ -272,7 +272,7 @@ kbase_dma_fence_add_reservation_callback(struct kbase_jd_atom *katom,
 	}
 
 	/* Release all our references to the shared fences, taken by
-	 * reservation_object_get_fences_rcu(). We have set up our callback (if
+	 * dma_resv_get_fences_rcu(). We have set up our callback (if
 	 * that was possible), and it's the fence's owner is responsible for
 	 * signaling the fence before allowing it to disappear.
 	 */
@@ -292,7 +292,7 @@ out:
 	return err;
 }
 
-void kbase_dma_fence_add_reservation(struct reservation_object *resv,
+void kbase_dma_fence_add_reservation(struct dma_resv *resv,
 				     struct kbase_dma_fence_resv_info *info,
 				     bool exclusive)
 {
@@ -344,10 +344,10 @@ int kbase_dma_fence_wait(struct kbase_jd_atom *katom,
 	}
 
 	for (i = 0; i < info->dma_fence_resv_count; i++) {
-		struct reservation_object *obj = info->resv_objs[i];
+		struct dma_resv *obj = info->resv_objs[i];
 
 		if (!test_bit(i, info->dma_fence_excl_bitmap)) {
-			err = reservation_object_reserve_shared(obj);
+			err = dma_resv_reserve_shared(obj, 1);
 			if (err) {
 				dev_err(katom->kctx->kbdev->dev,
 					"Error %d reserving space for shared fence.\n", err);
@@ -361,7 +361,7 @@ int kbase_dma_fence_wait(struct kbase_jd_atom *katom,
 				goto end;
 			}
 
-			reservation_object_add_shared_fence(obj, fence);
+			dma_resv_add_shared_fence(obj, fence);
 		} else {
 			err = kbase_dma_fence_add_reservation_callback(katom, obj, true);
 			if (err) {
@@ -370,7 +370,7 @@ int kbase_dma_fence_wait(struct kbase_jd_atom *katom,
 				goto end;
 			}
 
-			reservation_object_add_excl_fence(obj, fence);
+			dma_resv_add_excl_fence(obj, fence);
 		}
 	}
 

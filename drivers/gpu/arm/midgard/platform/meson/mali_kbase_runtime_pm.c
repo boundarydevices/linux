@@ -63,7 +63,7 @@ static int pm_soft_reset(struct kbase_device *kbdev)
 {
 	struct reset_control *rstc;
 
-	rstc = of_reset_control_array_get(kbdev->dev->of_node, false, false);
+	rstc = of_reset_control_array_get(kbdev->dev->of_node, false, false, true);
 	if (!IS_ERR(rstc)) {
 		reset_control_assert(rstc);
 		udelay(10);
