@@ -950,6 +950,7 @@
 &usbotg1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg1>;
+	dr_mode = "host";
 	srp-disable;
 	hnp-disable;
 	adp-disable;
