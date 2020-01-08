@@ -21,6 +21,7 @@
 #include <asm/cpufeature.h>
 #include <asm/ptrace.h>
 #include <asm/memory.h>
+#include <asm/compiler.h>
 #include <asm/extable.h>
 
 #define get_fs()	(current_thread_info()->addr_limit)
