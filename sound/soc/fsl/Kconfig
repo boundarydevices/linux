@@ -95,6 +95,13 @@ config SND_SOC_FSL_EASRC
 	  destination sample rate. It is a new design module compare with the
 	  old ASRC.
 
+config SND_SOC_FSL_AUD2HTX
+	tristate "AUDIO TO HDMI TX module support"
+	select REGMAP_MMIO
+	select SND_SOC_GENERIC_DMAENGINE_PCM
+	help
+	  Say Y if you want to add AUDIO TO HDMI TX support for NXP.
+
 config SND_SOC_FSL_UTILS
 	tristate
 
@@ -361,6 +368,7 @@ config SND_SOC_IMX_CDNHDMI
 	select SND_SOC_IMX_PCM_DMA
 	select SND_SOC_FSL_SAI
 	select SND_SOC_HDMI_CODEC
+	select SND_SOC_FSL_AUD2HTX
 	help
 	  SoC Audio support for i.MX boards with CDN HDMI audio
 	  Say Y if you want to add support for SoC audio on an i.MX board with
