@@ -277,6 +277,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-sof-cs42888.dtb imx8qm-mek-sof-wm8960.dtb i
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-c2.dtb \
 			  imx8mm-c2-mid.dtb \
+			  imx8mm-dwe.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-bio.dtb \
 			  imx8mq-ds.dtb \
