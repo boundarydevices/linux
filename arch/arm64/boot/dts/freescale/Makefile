@@ -150,7 +150,9 @@ dtb-$(CONFIG_ARCH_FSL_IMX8MM) += fsl-imx8mm-evk.dtb \
 				 fsl-imx8mm-ddr4-evk-rm67191.dtb \
 				 fsl-imx8mm-ddr4-qca9377-evk.dtb \
 				 fsl-imx8mm-evk-no-product.dtb \
-				 fsl-imx8mm-ddr4-evk-no-product.dtb
+				 fsl-imx8mm-ddr4-evk-no-product.dtb \
+				 imx8mm-dwe.dtb \
+
 dtb-$(CONFIG_ARCH_FSL_IMX8MN) += fsl-imx8mn-ddr4-evk.dtb \
 				 fsl-imx8mn-ddr4-evk-rpmsg.dtb \
 				 fsl-imx8mn-ddr4-evk-rm67191.dtb \
