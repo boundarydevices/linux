@@ -1022,11 +1022,11 @@
 };
 
 &i2c3a {
-	rtc@68 {
+	rtc@52 {
 		compatible = "microcrystal,rv3028";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3a_rv3028>;
-		reg = <0x68>;
+		reg = <0x52>;
 		interrupts-extended = GPIRQ_RV3028;
 		wakeup-source;
 	};
