@@ -199,3 +199,4 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek-ov5640-rpmsg-no-product.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-c2.dtb \
 			  imx8mm-c2-mid.dtb \
+			  imx8mm-dwe.dtb \
