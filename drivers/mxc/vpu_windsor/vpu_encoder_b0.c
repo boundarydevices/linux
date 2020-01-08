@@ -38,6 +38,7 @@
 #include <linux/mx8_mu.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
+#include <linux/debugfs.h>
 
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>
@@ -411,25 +412,24 @@ static int vpu_enc_v4l2_ioctl_enum_framesizes(struct file *file, void *fh,
 static int vpu_enc_v4l2_ioctl_enum_frameintervals(struct file *file, void *fh,
 						struct v4l2_frmivalenum *fival)
 {
-	u32 framerate;
 	struct vpu_ctx *ctx = v4l2_fh_to_ctx(fh);
 	struct vpu_dev *vdev = ctx->dev;
 
 
-	if (!fival)
+	if (!fival || fival->index)
 		return -EINVAL;
 	if (!vdev)
 		return -EINVAL;
 
 	vpu_log_func();
-	framerate = vdev->supported_fps.min +
-			fival->index * vdev->supported_fps.step;
-	if (framerate > vdev->supported_fps.max)
-		return -EINVAL;
 
-	fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
-	fival->discrete.numerator = 1;
-	fival->discrete.denominator = framerate;
+	fival->type = V4L2_FRMIVAL_TYPE_CONTINUOUS;
+	fival->stepwise.min.numerator = 1;
+	fival->stepwise.min.denominator = 65535;
+	fival->stepwise.max.numerator = 65535;
+	fival->stepwise.max.denominator = 1;
+	fival->stepwise.step.numerator = 1;
+	fival->stepwise.step.denominator = 1;
 
 	return 0;
 }
@@ -502,7 +502,6 @@ static int initialize_enc_param(struct vpu_ctx *ctx)
 	pMEDIAIP_ENC_PARAM param = &attr->param;
 
 	mutex_lock(&ctx->instance_mutex);
-
 	param->eCodecMode = MEDIAIP_ENC_FMT_H264;
 	param->tEncMemDesc.uMemPhysAddr = 0;
 	param->tEncMemDesc.uMemVirtAddr = 0;
@@ -516,8 +515,11 @@ static int initialize_enc_param(struct vpu_ctx *ctx)
 	param->uSrcCropHeight = VPU_ENC_HEIGHT_DEFAULT;
 	param->uOutWidth = VPU_ENC_WIDTH_DEFAULT;
 	param->uOutHeight = VPU_ENC_HEIGHT_DEFAULT;
-	param->uFrameRate = VPU_ENC_FRAMERATE_DEFAULT;
 	param->uMinBitRate = BITRATE_LOW_THRESHOLD;
+
+	attr->fival.numerator = 1;
+	attr->fival.denominator = VPU_ENC_FRAMERATE_DEFAULT;
+	param->uFrameRate = VPU_ENC_FRAMERATE_DEFAULT;
 
 	mutex_unlock(&ctx->instance_mutex);
 
@@ -772,47 +774,35 @@ static int vpu_enc_v4l2_ioctl_g_parm(struct file *file, void *fh,
 	vpu_log_func();
 	parm->parm.capture.capability = V4L2_CAP_TIMEPERFRAME;
 	parm->parm.capture.capturemode = V4L2_CAP_TIMEPERFRAME;
-	parm->parm.capture.timeperframe.numerator = 1;
-	parm->parm.capture.timeperframe.denominator = param->uFrameRate;
+	parm->parm.capture.timeperframe.numerator = attr->fival.numerator;
+	parm->parm.capture.timeperframe.denominator = attr->fival.denominator;
 	parm->parm.capture.readbuffers = 0;
 
 	return 0;
 }
 
-static int find_proper_framerate(struct vpu_dev *dev, struct v4l2_fract *fival)
+static u32 __calc_coprime(u32 *a, u32 *b)
 {
-	u32 min_delta = INT_MAX;
-	struct v4l2_fract target_fival = {0, 0};
-	u32 framerate;
+	int m = *a;
+	int n = *b;
 
-	if (!fival || !dev)
-		return -EINVAL;
+	if (m == 0)
+		return n;
+	if (n == 0)
+		return m;
 
-	framerate = dev->supported_fps.min;
+	while (n != 0) {
+		int tmp = m % n;
 
-	while (framerate <= dev->supported_fps.max) {
-		u32 delta;
-
-		delta = abs(fival->numerator * framerate -
-				fival->denominator);
-		if (!delta)
-			return 0;
-		if (delta < min_delta) {
-			target_fival.numerator = 1;
-			target_fival.denominator = framerate;
-			min_delta = delta;
-		}
-
-		framerate += dev->supported_fps.step;
+		m = n;
+		n = tmp;
 	}
-	if (!target_fival.numerator || !target_fival.denominator)
-		return -EINVAL;
+	*a = (*a) / m;
+	*b = (*b) / m;
 
-	fival->numerator = target_fival.numerator;
-	fival->denominator = target_fival.denominator;
-
-	return 0;
+	return m;
 }
+
 
 static int vpu_enc_v4l2_ioctl_s_parm(struct file *file, void *fh,
 				struct v4l2_streamparm *parm)
@@ -820,7 +810,6 @@ static int vpu_enc_v4l2_ioctl_s_parm(struct file *file, void *fh,
 	struct vpu_ctx *ctx = v4l2_fh_to_ctx(fh);
 	struct vpu_attr *attr = NULL;
 	struct v4l2_fract fival;
-	int ret;
 
 	if (!parm || !ctx)
 		return -EINVAL;
@@ -833,19 +822,13 @@ static int vpu_enc_v4l2_ioctl_s_parm(struct file *file, void *fh,
 	if (!fival.numerator || !fival.denominator)
 		return -EINVAL;
 
-	ret = find_proper_framerate(ctx->dev, &fival);
-	if (ret) {
-		vpu_err("Unsupported FPS : %d / %d\n",
-				fival.numerator, fival.denominator);
-		return ret;
-	}
-
+	__calc_coprime(&fival.numerator, &fival.denominator);
 	mutex_lock(&ctx->instance_mutex);
-	attr->param.uFrameRate = fival.denominator / fival.numerator;
+	attr->fival.numerator = fival.numerator;
+	attr->fival.denominator = fival.denominator;
+	attr->param.uFrameRate =
+		DIV_ROUND_CLOSEST(fival.denominator, fival.numerator);
 	mutex_unlock(&ctx->instance_mutex);
-
-	parm->parm.capture.timeperframe.numerator = fival.numerator;
-	parm->parm.capture.timeperframe.denominator = fival.denominator;
 
 	return 0;
 }
@@ -1670,7 +1653,8 @@ static int process_core_hang(struct core_device *core)
 	return 0;
 }
 
-static void show_codec_configure(pMEDIAIP_ENC_PARAM param)
+static void show_codec_configure(pMEDIAIP_ENC_PARAM param,
+		pMEDIAIP_ENC_EXPERT_MODE_PARAM pEncExpertModeParam)
 {
 	if (!param)
 		return;
@@ -1688,8 +1672,10 @@ static void show_codec_configure(pMEDIAIP_ENC_PARAM param)
 			"Mem Virt Addr", param->tEncMemDesc.uMemVirtAddr);
 	vpu_dbg(LVL_INFO, "\t%20s:%16d\n",
 			"Mem Size", param->tEncMemDesc.uMemSize);
-	vpu_dbg(LVL_INFO, "\t%20s:%16d\n",
-			"Frame Rate", param->uFrameRate);
+	vpu_dbg(LVL_INFO, "\t%20s:%16d(%d / %d)\n",
+			"Frame Rate", param->uFrameRate,
+			pEncExpertModeParam->Config.frame_rate_num,
+			pEncExpertModeParam->Config.frame_rate_den);
 	vpu_dbg(LVL_INFO, "\t%20s:%16d\n",
 			"Source Stride", param->uSrcStride);
 	vpu_dbg(LVL_INFO, "\t%20s:%16d\n",
@@ -1892,7 +1878,7 @@ static int do_configure_codec(struct vpu_ctx *ctx)
 	memcpy(enc_param, &attr->param, sizeof(attr->param));
 	vpu_ctx_send_cmd(ctx, GTB_ENC_CMD_CONFIGURE_CODEC, 0, NULL);
 
-	show_codec_configure(enc_param);
+	show_codec_configure(enc_param, pEncExpertModeParam);
 
 	return 0;
 }
@@ -2660,6 +2646,8 @@ static int handle_event_start_done(struct vpu_ctx *ctx)
 static int handle_event_mem_request(struct vpu_ctx *ctx,
 				MEDIAIP_ENC_MEM_REQ_DATA *req_data)
 {
+	pMEDIAIP_ENC_EXPERT_MODE_PARAM pEncExpertModeParam = NULL;
+	struct vpu_attr *attr = NULL;
 	int ret;
 
 	if (!ctx || !req_data)
@@ -2670,6 +2658,10 @@ static int handle_event_mem_request(struct vpu_ctx *ctx,
 		vpu_err("fail to alloc encoder memory\n");
 		return ret;
 	}
+	pEncExpertModeParam = get_rpc_expert_mode_param(ctx);
+	attr = get_vpu_ctx_attr(ctx);
+	pEncExpertModeParam->Config.frame_rate_num = attr->fival.numerator;
+	pEncExpertModeParam->Config.frame_rate_den = attr->fival.denominator;
 	vpu_ctx_send_cmd(ctx, GTB_ENC_CMD_STREAM_START, 0, NULL);
 	set_bit(VPU_ENC_STATUS_START_SEND, &ctx->status);
 
@@ -2819,7 +2811,6 @@ static void vpu_enc_event_handler(struct vpu_ctx *ctx,
 				u_int32 uEvent, u_int32 *event_data)
 {
 	vpu_log_event(uEvent, ctx->str_index);
-	count_event(ctx, uEvent);
 	vpu_enc_check_mem_overstep(ctx);
 
 	switch (uEvent) {
@@ -2997,6 +2988,19 @@ static int process_ctx_msg(struct vpu_ctx *ctx, struct msg_header *header)
 	return ret;
 }
 
+static void vpu_enc_notify_msg_event(struct core_device *core)
+{
+	int i;
+
+	for (i = 0; i < core->supported_instance_count; i++) {
+		struct vpu_ctx *ctx = core->ctx[i];
+
+		if (!ctx || is_event_msg_empty(ctx))
+			continue;
+		queue_work(ctx->instance_wq, &ctx->instance_work);
+	}
+}
+
 static int process_msg(struct core_device *core)
 {
 	struct msg_header header;
@@ -3015,6 +3019,7 @@ static int process_msg(struct core_device *core)
 	mutex_lock(&core->vdev->dev_mutex);
 	ctx = get_ctx_by_index(core, header.idx);
 	if (ctx != NULL) {
+		count_event(ctx, header.msgid);
 		process_ctx_msg(ctx, &header);
 		queue_work(ctx->instance_wq, &ctx->instance_work);
 	} else {
@@ -3065,6 +3070,10 @@ static void vpu_enc_receive_msg_event(struct core_device *core_dev)
 
 	if (rpc_MediaIPFW_Video_message_check_encoder(This) == API_MSG_BUFFER_ERROR)
 		vpu_err("MSG num is too big to handle\n");
+
+	mutex_lock(&core_dev->vdev->dev_mutex);
+	vpu_enc_notify_msg_event(core_dev);
+	mutex_unlock(&core_dev->vdev->dev_mutex);
 }
 
 static void vpu_enc_handle_msg_data(struct core_device *core_dev, u_int32 data)
@@ -3702,8 +3711,11 @@ static int init_vpu_ctx(struct vpu_ctx *ctx)
 static int show_encoder_param(struct vpu_attr *attr,
 		pMEDIAIP_ENC_PARAM param, char *buf, u32 size)
 {
+	pMEDIAIP_ENC_EXPERT_MODE_PARAM pEncExpertModeParam = NULL;
 	int num = 0;
 
+	pEncExpertModeParam = rpc_get_expert_mode_param(&attr->core->shared_mem,
+							attr->index);
 	num += scnprintf(buf + num, size - num,
 			"encoder param:[setting/take effect]\n");
 	num += scnprintf(buf + num, size - num,
@@ -3716,8 +3728,14 @@ static int show_encoder_param(struct vpu_attr *attr,
 			"\t%-18s:%10d;%10d\n", "Level",
 			attr->param.uLevel, param->uLevel);
 	num += scnprintf(buf + num, size - num,
-			"\t%-18s:%10d;%10d\n", "Frame Rate",
-			attr->param.uFrameRate, param->uFrameRate);
+			"\t%-18s:%2d(%d / %d);%2d(%d / %d)\n",
+			"Frame Rate",
+			attr->param.uFrameRate,
+			attr->fival.numerator,
+			attr->fival.denominator,
+			param->uFrameRate,
+			pEncExpertModeParam->Config.frame_rate_num,
+			pEncExpertModeParam->Config.frame_rate_den);
 	num += scnprintf(buf + num, size - num,
 			"\t%-18s:%10d;%10d\n", "Source Stride",
 			attr->param.uSrcStride, param->uSrcStride);
@@ -3937,11 +3955,13 @@ static int show_v4l2_buf_status(struct vpu_ctx *ctx, char *buf, u32 size)
 	num += scnprintf(buf + num, size - num,
 			" %d:error", VB2_BUF_STATE_ERROR);
 	num += scnprintf(buf + num, size - num - num, ")\n");
-	num += scnprintf(buf + num, size - num, "\tOUTPUT:");
+	num += scnprintf(buf + num, size - num, "\tOUTPUT(0x%lx):",
+			ctx->q_data[V4L2_SRC].rw_flag);
 	num += show_queue_buffer_info(&ctx->q_data[V4L2_SRC],
 					buf + num,
 					size - num);
-	num += scnprintf(buf + num, size - num, "    CAPTURE:");
+	num += scnprintf(buf + num, size - num, "    CAPTURE(0x%lx):",
+			ctx->q_data[V4L2_DST].rw_flag);
 	num += show_queue_buffer_info(&ctx->q_data[V4L2_DST],
 					buf + num,
 					size - num);
@@ -3982,6 +4002,9 @@ static int show_instance_stream_buffer_desc(struct vpu_ctx *ctx,
 	num += scnprintf(buf + num, size - num,
 			"\t%-13s:0x%x\n", "wptr",
 			get_ptr(stream_buffer_desc->wptr));
+	num += scnprintf(buf + num, size - num,
+			"\t%-13s:0x%x\n", "free space",
+			get_free_space(ctx));
 	return num;
 }
 
@@ -4013,6 +4036,9 @@ static int show_instance_others(struct vpu_attr *attr, char *buf, u32 size)
 	mutex_lock(&vpudev->dev_mutex);
 	ctx = get_vpu_attr_ctx(attr);
 	if (ctx) {
+		num += scnprintf(buf + num, size - num,
+			"\tis the msg queue empty    :%d\n",
+			is_event_msg_empty(ctx));
 		num += scnprintf(buf + num, size - num,
 			"\ttotal frame obj count     :%lld\n",
 			atomic64_read(&ctx->q_data[V4L2_DST].frame_count));
@@ -4361,8 +4387,10 @@ static ssize_t show_fpsinfo(struct device *dev,
 			num += scnprintf(buf + num, PAGE_SIZE - num,
 					"\t[%d]", j);
 			num += scnprintf(buf + num, PAGE_SIZE - num,
-					"  %3d(setting)  ",
-					attr->param.uFrameRate);
+					"  %3d(%d / %d)(setting)  ",
+					attr->param.uFrameRate,
+					attr->fival.numerator,
+					attr->fival.denominator);
 			num += show_fps_info(attr->statistic.fps,
 					ARRAY_SIZE(attr->statistic.fps),
 					buf + num, PAGE_SIZE - num);
@@ -4403,11 +4431,6 @@ static ssize_t show_vpuinfo(struct device *dev,
 	num += scnprintf(buf + num, PAGE_SIZE - num, " %dx%d(max)\n",
 			vdev->supported_size.max_width,
 			vdev->supported_size.max_height);
-	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"supported frame rate : %d(min); %d(step); %d(max)\n",
-			vdev->supported_fps.min,
-			vdev->supported_fps.step,
-			vdev->supported_fps.max);
 
 	return num;
 }
@@ -4934,10 +4957,6 @@ static int parse_dt_info(struct vpu_dev *dev, struct device_node *np)
 	dev->supported_size.max_height = VPU_ENC_HEIGHT_MAX;
 	dev->supported_size.step_height = VPU_ENC_HEIGHT_STEP;
 
-	dev->supported_fps.min = VPU_ENC_FRAMERATE_MIN;
-	dev->supported_fps.max = VPU_ENC_FRAMERATE_MAX;
-	dev->supported_fps.step = VPU_ENC_FRAMERATE_STEP;
-
 	ret = of_property_read_u32_index(np, "resolution-max", 0, &val);
 	if (!ret)
 		dev->supported_size.max_width = val;
@@ -4945,10 +4964,6 @@ static int parse_dt_info(struct vpu_dev *dev, struct device_node *np)
 	ret = of_property_read_u32_index(np, "resolution-max", 1, &val);
 	if (!ret)
 		dev->supported_size.max_height = val;
-
-	ret = of_property_read_u32_index(np, "fps-max", 0, &val);
-	if (!ret)
-		dev->supported_fps.max = val;
 
 	return 0;
 }
@@ -5121,6 +5136,7 @@ static void handle_vpu_core_watchdog(struct core_device *core)
 	if (core->snapshot)
 		return;
 
+	vpu_enc_notify_msg_event(core);
 	check_vpu_core_is_hang(core);
 }
 
@@ -5172,56 +5188,12 @@ static void statistic_fps_info(struct vpu_statistic *sts)
 		calc_rt_fps(&sts->fps[i], encoded_count, &ts);
 }
 
-static void print_firmware_debug(char *ptr, u32 size)
-{
-	u32 total = 0;
-	u32 len;
-
-	while (total < size) {
-		len = min_t(u32, size - total, 256);
-		total += len;
-	}
-}
-
-static void handle_core_firmware_debug(struct core_device *core)
-{
-	char *ptr;
-	u32 rptr;
-	u32 wptr;
-
-	if (!core || !core->print_buf)
-		return;
-
-	if (!test_bit(core->id, &debug_firmware_bitmap))
-		return;
-
-	rptr = core->print_buf->read;
-	wptr = core->print_buf->write;
-	if (rptr == wptr)
-		return;
-
-	ptr = core->print_buf->buffer;
-	if (rptr > wptr) {
-		print_firmware_debug(ptr + rptr, core->print_buf->bytes - rptr);
-		rptr = 0;
-	}
-	if (rptr < wptr) {
-		print_firmware_debug(ptr + rptr, wptr - rptr);
-		rptr = wptr;
-	}
-	if (rptr >= core->print_buf->bytes)
-		rptr = 0;
-	core->print_buf->read = rptr;
-}
-
 static void handle_core_minors(struct core_device *core)
 {
 	int i;
 
 	for (i = 0; i < core->supported_instance_count; i++)
 		statistic_fps_info(&core->attr[i].statistic);
-
-	handle_core_firmware_debug(core);
 }
 
 static void vpu_enc_watchdog_handler(struct work_struct *work)
@@ -5247,6 +5219,114 @@ static void vpu_enc_watchdog_handler(struct work_struct *work)
 	vdev->heartbeat++;
 	schedule_delayed_work(&vdev->watchdog,
 			msecs_to_jiffies(VPU_WATCHDOG_INTERVAL_MS));
+}
+
+static int fwlog_show(struct seq_file *s, void *data)
+{
+	struct core_device *core = s->private;
+	int length;
+	u32 rptr;
+	u32 wptr;
+	int ret = 0;
+
+	if (!core->print_buf)
+		return 0;
+
+	rptr = core->print_buf->read;
+	wptr = core->print_buf->write;
+
+	if (rptr == wptr)
+		return 0;
+	else if (rptr < wptr)
+		length = wptr - rptr;
+	else
+		length = core->print_buf->bytes + wptr - rptr;
+
+	if (s->count + length >= s->size) {
+		s->count = s->size;
+		return 0;
+	}
+
+	if (rptr + length > core->print_buf->bytes) {
+		int num = core->print_buf->bytes - rptr;
+
+		if (seq_write(s, core->print_buf->buffer + rptr, num))
+			ret = -1;
+		length -= num;
+		rptr = 0;
+	}
+
+	if (seq_write(s, core->print_buf->buffer + rptr, length))
+		ret = -1;
+	rptr += length;
+	rptr %= core->print_buf->bytes;
+	if (!ret)
+		core->print_buf->read = rptr;
+
+	return 0;
+}
+
+static int fwlog_open(struct inode *inode, struct file *filp)
+{
+	return single_open(filp, fwlog_show, inode->i_private);
+}
+
+static const struct file_operations fwlog_fops = {
+	.owner = THIS_MODULE,
+	.open = fwlog_open,
+	.release = single_release,
+	.read = seq_read,
+};
+
+static void vpu_enc_create_debugfs_file(struct vpu_dev *dev)
+{
+	struct core_device *core;
+	char name[64];
+	int i;
+
+	if (dev->debugfs_root == NULL) {
+		dev->debugfs_root = debugfs_create_dir("vpu_windsor", NULL);
+		if (!dev->debugfs_root) {
+			vpu_err("error: create debugfs_root fail\n");
+			return;
+		}
+	}
+
+	for (i = 0; i < dev->core_num; i++) {
+		core = &dev->core_dev[i];
+
+		if (core->debugfs_fwlog)
+			continue;
+
+		scnprintf(name, sizeof(name), "vpu_windsor_log%d", i);
+		core->debugfs_fwlog = debugfs_create_file((const char *)name,
+						VERIFY_OCTAL_PERMISSIONS(0444),
+						dev->debugfs_root,
+						core,
+						&fwlog_fops);
+		if (!core->debugfs_fwlog) {
+			vpu_err("error: create debugfs_fwlog fail\n");
+			continue;
+		}
+	}
+}
+
+static void vpu_enc_remove_debugfs_file(struct vpu_dev *dev)
+{
+	struct core_device *core;
+	int i;
+
+	if (!dev)
+		return;
+
+	for (i = 0; i < dev->core_num; i++) {
+		core = &dev->core_dev[i];
+
+		debugfs_remove(core->debugfs_fwlog);
+		core->debugfs_fwlog = NULL;
+	}
+	debugfs_remove_recursive(dev->debugfs_root);
+	dev->debugfs_root = NULL;
 }
 
 static int init_vpu_core_dev(struct core_device *core_dev)
@@ -5488,6 +5568,7 @@ static int vpu_enc_probe(struct platform_device *pdev)
 	device_create_file(&pdev->dev, &dev_attr_buffer);
 	device_create_file(&pdev->dev, &dev_attr_fpsinfo);
 	device_create_file(&pdev->dev, &dev_attr_vpuinfo);
+	vpu_enc_create_debugfs_file(dev);
 	init_vpu_enc_watchdog(dev);
 	vpu_dbg(LVL_INFO, "VPU Encoder registered\n");
 
@@ -5532,6 +5613,7 @@ static int vpu_enc_remove(struct platform_device *pdev)
 	u_int32 i;
 
 	cancel_delayed_work_sync(&dev->watchdog);
+	vpu_enc_remove_debugfs_file(dev);
 	device_remove_file(&pdev->dev, &dev_attr_vpuinfo);
 	device_remove_file(&pdev->dev, &dev_attr_fpsinfo);
 	device_remove_file(&pdev->dev, &dev_attr_buffer);
