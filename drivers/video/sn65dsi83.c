@@ -274,7 +274,7 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 	unsigned i = 5;
 	int format = 0x10;
 	u32 pixelclock;
-	int hbp, hfp, hsa, hactive;
+	int hbp, hfp, hsa, hactive, sync_delay;
 
 	pixelclock = sn->vm.pixelclock;
 	if (pixelclock) {
@@ -319,8 +319,7 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 	sn_i2c_write_byte(sn, SN_LVDS_CM_VOLTAGE, 0);
 	sn_i2c_write_byte(sn, SN_VACTIVE_LOW, (u8)sn->vm.vactive);
 	sn_i2c_write_byte(sn, SN_VACTIVE_HIGH, (u8)(sn->vm.vactive >> 8));
-	sn_i2c_write_byte(sn, SN_SYNC_DELAY_LOW, (u8)sn->sync_delay);
-	sn_i2c_write_byte(sn, SN_SYNC_DELAY_HIGH, (u8)(sn->sync_delay >> 8));
+	sync_delay = sn->sync_delay;
 	hactive = sn->vm.hactive;
 	hsa = sn->vm.hsync_len;
 	hbp = sn->vm.hback_porch;
@@ -347,6 +346,7 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 		hsa >>= 1;
 		hbp >>= 1;
 		hfp >>= 1;
+		sync_delay >>= 1;
 		if (!hsa) {
 			hsa++;
 			if (hbp > 1)
@@ -371,6 +371,8 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 	}
 	sn_i2c_write_byte(sn, SN_HACTIVE_LOW, (u8)hactive);
 	sn_i2c_write_byte(sn, SN_HACTIVE_HIGH, (u8)(hactive >> 8));
+	sn_i2c_write_byte(sn, SN_SYNC_DELAY_LOW, (u8)sync_delay);
+	sn_i2c_write_byte(sn, SN_SYNC_DELAY_HIGH, (u8)(sync_delay >> 8));
 	sn_i2c_write_byte(sn, SN_HSYNC_LOW, (u8)hsa);
 	sn_i2c_write_byte(sn, SN_HSYNC_HIGH, (u8)(hsa >> 8));
 	sn_i2c_write_byte(sn, SN_VSYNC_LOW, (u8)sn->vm.vsync_len);
