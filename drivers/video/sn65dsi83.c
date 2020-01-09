@@ -283,10 +283,11 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 	if (sn->dsi_bpp == 24) {
 		if (sn->spwg) {
 			/* lvds lane 3 has MSBs of color */
-			format |= BIT(3);
+			format |= (sn->split_mode) ? BIT(3) | BIT(2) : BIT(3);
 		} else if (sn->jeida) {
 			/* lvds lane 3 has LSBs of color */
-			format |= BIT(3) | BIT(1);
+			format |= (sn->split_mode) ? BIT(3) | BIT(2) | BIT(1) :
+					BIT(3) | BIT(1);
 		} else {
 			/* unused lvds lane 3 has LSBs of color */
 			format |= BIT(1);
