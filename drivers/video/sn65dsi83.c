@@ -288,7 +288,8 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 			format |= (sn->split_mode) ? BIT(3) | BIT(2) : BIT(3);
 		} else if (sn->jeida) {
 			/* lvds lane 3 has LSBs of color */
-			format |= (sn->split_mode) ? BIT(3) | BIT(2) | BIT(1) :
+			format |= (sn->split_mode) ?
+					BIT(3) | BIT(2) | BIT(1) | BIT(0) :
 					BIT(3) | BIT(1);
 		} else {
 			/* unused lvds lane 3 has LSBs of color */
