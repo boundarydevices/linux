@@ -300,7 +300,7 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 		format &= ~BIT(4);
 	sn_i2c_write_byte(sn, SN_FORMAT, format);
 
-	sn_i2c_write_byte(sn, SN_LVDS_VOLTAGE, 4);
+	sn_i2c_write_byte(sn, SN_LVDS_VOLTAGE, 5);
 	sn_i2c_write_byte(sn, SN_LVDS_TERM, 2);
 	sn_i2c_write_byte(sn, SN_LVDS_CM_VOLTAGE, 0);
 	sn_i2c_write_byte(sn, SN_HACTIVE_LOW, (u8)sn->vm.hactive);
