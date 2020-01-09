@@ -192,6 +192,8 @@ static int sn_get_dsi_clk_divider(struct sn65dsi83_priv *sn)
 	}
 	if (pixelclock)
 		dsi_clk_divider = (mipi_clk_rate +  (pixelclock >> 1)) / pixelclock;
+	if (sn->split_mode)
+		dsi_clk_divider <<= 1;	/* double the divisor for split mode */
 
 	if (dsi_clk_divider > 25)
 		dsi_clk_divider = 25;
