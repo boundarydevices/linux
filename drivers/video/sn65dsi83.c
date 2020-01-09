@@ -293,7 +293,7 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 		}
 	}
 	if (sn->split_mode)
-		format &= BIT(4);
+		format &= ~BIT(4);
 	sn_i2c_write_byte(sn, SN_FORMAT, format);
 
 	sn_i2c_write_byte(sn, SN_LVDS_VOLTAGE, 4);
