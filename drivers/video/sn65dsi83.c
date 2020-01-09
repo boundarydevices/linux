@@ -274,7 +274,7 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 	unsigned i = 5;
 	int format = 0x10;
 	u32 pixelclock;
-	int hbp, hfp, hsa;
+	int hbp, hfp, hsa, hactive;
 
 	pixelclock = sn->vm.pixelclock;
 	if (pixelclock) {
@@ -317,12 +317,11 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 	sn_i2c_write_byte(sn, SN_LVDS_VOLTAGE, 5);
 	sn_i2c_write_byte(sn, SN_LVDS_TERM, 3);
 	sn_i2c_write_byte(sn, SN_LVDS_CM_VOLTAGE, 0);
-	sn_i2c_write_byte(sn, SN_HACTIVE_LOW, (u8)sn->vm.hactive);
-	sn_i2c_write_byte(sn, SN_HACTIVE_HIGH, (u8)(sn->vm.hactive >> 8));
 	sn_i2c_write_byte(sn, SN_VACTIVE_LOW, (u8)sn->vm.vactive);
 	sn_i2c_write_byte(sn, SN_VACTIVE_HIGH, (u8)(sn->vm.vactive >> 8));
 	sn_i2c_write_byte(sn, SN_SYNC_DELAY_LOW, (u8)sn->sync_delay);
 	sn_i2c_write_byte(sn, SN_SYNC_DELAY_HIGH, (u8)(sn->sync_delay >> 8));
+	hactive = sn->vm.hactive;
 	hsa = sn->vm.hsync_len;
 	hbp = sn->vm.hback_porch;
 	hfp = sn->vm.hfront_porch;
@@ -342,6 +341,36 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 			}
 		}
 	}
+	if (sn->split_mode) {
+		hsa += (hbp & 1) + (hfp & 1);
+		hactive >>= 1;
+		hsa >>= 1;
+		hbp >>= 1;
+		hfp >>= 1;
+		if (!hsa) {
+			hsa++;
+			if (hbp > 1)
+				hbp--;
+			else if (hfp > 1)
+				hfp--;
+		}
+		if (!hbp) {
+			hbp++;
+			if (hsa > 1)
+				hsa--;
+			else if (hfp > 1)
+				hfp--;
+		}
+		if (!hfp) {
+			hfp++;
+			if (hsa > 1)
+				hsa--;
+			else if (hbp > 1)
+				hbp--;
+		}
+	}
+	sn_i2c_write_byte(sn, SN_HACTIVE_LOW, (u8)hactive);
+	sn_i2c_write_byte(sn, SN_HACTIVE_HIGH, (u8)(hactive >> 8));
 	sn_i2c_write_byte(sn, SN_HSYNC_LOW, (u8)hsa);
 	sn_i2c_write_byte(sn, SN_HSYNC_HIGH, (u8)(hsa >> 8));
 	sn_i2c_write_byte(sn, SN_VSYNC_LOW, (u8)sn->vm.vsync_len);
