@@ -35,6 +35,7 @@
 struct drm_device;
 struct drm_crtc;
 struct drm_vblank_work;
+struct drm_fence_event;
 
 /**
  * struct drm_pending_vblank_event - pending vblank event tracking
@@ -237,6 +238,9 @@ void drm_crtc_arm_vblank_event(struct drm_crtc *crtc,
 void drm_vblank_set_event(struct drm_pending_vblank_event *e,
 			  u64 *seq,
 			  ktime_t *now);
+void drm_crtc_arm_fence_event(struct drm_crtc *crtc,
+			     struct drm_fence_event *e);
+bool drm_crtc_handle_fence(struct drm_crtc *crtc);
 bool drm_handle_vblank(struct drm_device *dev, unsigned int pipe);
 bool drm_crtc_handle_vblank(struct drm_crtc *crtc);
 int drm_crtc_vblank_get(struct drm_crtc *crtc);
