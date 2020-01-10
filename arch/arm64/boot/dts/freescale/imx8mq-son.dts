@@ -13,7 +13,7 @@
 
 	pinctrl_backlight: backlightgrp {
 		fsl,pins = <
-#define GP_BACKLIGHT_EN	<&gpio3 24 GPIO_ACTIVE_LOW>
+#define GP_BACKLIGHT_EN	<&gpio3 24 GPIO_ACTIVE_HIGH>
 			MX8MQ_IOMUXC_SAI5_RXD3_GPIO3_IO24		0x03
 		>;
 	};
