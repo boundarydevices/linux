@@ -263,6 +263,8 @@ static int sn_setup_regs(struct sn65dsi83_priv *sn)
 	int hbp, hfp, hsa;
 
 	pixelclock = sn->vm.pixelclock;
+	if (sn->split_mode)
+		pixelclock >>= 1;
 	if (pixelclock) {
 		if (pixelclock > 37500000) {
 			i = (pixelclock - 12500000) / 25000000;
@@ -473,6 +475,7 @@ static int sn_fb_event(struct notifier_block *nb, unsigned long event, void *dat
 	case FB_EVENT_BLANK: {
 		blank_type = *((int *)evdata->data);
 		if (blank_type == FB_BLANK_UNBLANK) {
+			sn_powerup_begin(sn);
 			sn_powerup(sn);
 		} else {
 			sn_powerdown(sn);
