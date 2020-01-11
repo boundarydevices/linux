@@ -144,6 +144,8 @@ static const struct edid_quirk {
 	{ "LPL", 0, EDID_QUIRK_DETAILED_USE_MAXIMUM_SIZE },
 	{ "LPL", 0x2a00, EDID_QUIRK_DETAILED_USE_MAXIMUM_SIZE },
 
+	{ "MPI", 0x5001, EDID_QUIRK_DETAILED_SYNC_PP },
+
 	/* Samsung SyncMaster 205BW.  Note: irony */
 	{ "SAM", 541, EDID_QUIRK_DETAILED_SYNC_PP },
 	/* Samsung SyncMaster 22[5-6]BW */
