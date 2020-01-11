@@ -87,6 +87,7 @@ static int oui(u8 first, u8 second, u8 third)
 #define EDID_QUIRK_FORCE_10BPC			(1 << 11)
 /* Non desktop display (i.e. HMD) */
 #define EDID_QUIRK_NON_DESKTOP			(1 << 12)
+#define EDID_QUIRK_FORCE_CLOCK_29700		(1 << 13)
 
 #define MICROSOFT_IEEE_OUI	0xca125c
 
@@ -153,6 +154,8 @@ static const struct edid_quirk {
 	/* LG Philips LCD LP154W01-A5 */
 	EDID_QUIRK('L', 'P', 'L', 0, EDID_QUIRK_DETAILED_USE_MAXIMUM_SIZE),
 	EDID_QUIRK('L', 'P', 'L', 0x2a00, EDID_QUIRK_DETAILED_USE_MAXIMUM_SIZE),
+
+	EDID_QUIRK('M', 'P', 'I', 0x5001, EDID_QUIRK_DETAILED_SYNC_PP | EDID_QUIRK_FORCE_CLOCK_29700),
 
 	/* Samsung SyncMaster 205BW.  Note: irony */
 	EDID_QUIRK('S', 'A', 'M', 541, EDID_QUIRK_DETAILED_SYNC_PP),
@@ -3325,6 +3328,8 @@ static struct drm_display_mode *drm_mode_detailed(struct drm_device *dev,
 		mode->clock = 1088 * 10;
 	else
 		mode->clock = le16_to_cpu(timing->pixel_clock) * 10;
+	if ((quirks & EDID_QUIRK_FORCE_CLOCK_29700) && (mode->clock == 29570))
+		mode->clock = 29700;
 
 	mode->hdisplay = hactive;
 	mode->hsync_start = mode->hdisplay + hsync_offset;
