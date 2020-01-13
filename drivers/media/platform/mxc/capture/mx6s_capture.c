@@ -640,6 +640,7 @@ static void csi_error_recovery(struct mx6s_csi_dev *csi_dev)
 	cr3 |= BIT_DMA_REFLASH_RFF;
 	csi_write(csi_dev, cr3, CSI_CSICR3);
 
+	csi_write(csi_dev, BIT_RFF_OR_INT | BIT_HRESP_ERR_INT, CSI_CSISR);
 	/* Ensable csi  */
 	cr18 |= BIT_CSI_ENABLE;
 	csi_write(csi_dev, cr18, CSI_CSICR18);
@@ -1124,7 +1125,7 @@ static void mx6s_csi_frame_done(struct mx6s_csi_dev *csi_dev,
 static irqreturn_t mx6s_csi_irq_handler(int irq, void *data)
 {
 	struct mx6s_csi_dev *csi_dev =  data;
-	unsigned long status;
+	unsigned status;
 	u32 cr3, cr18;
 
 	pr_debug("%s:\n", __func__);
@@ -1143,14 +1144,17 @@ static irqreturn_t mx6s_csi_irq_handler(int irq, void *data)
 	}
 
 	if (status & BIT_RFF_OR_INT) {
-		dev_warn(csi_dev->dev, "%s Rx fifo overflow\n", __func__);
-		if (csi_dev->soc->rx_fifo_rst)
+		dev_warn(csi_dev->dev, "%s Rx fifo overflow, %x\n", __func__,
+			status);
+		if (csi_dev->soc->rx_fifo_rst) {
 			csi_error_recovery(csi_dev);
+			status &= ~BIT_HRESP_ERR_INT;
+		}
 	}
 
 	if (status & BIT_HRESP_ERR_INT) {
-		dev_warn(csi_dev->dev, "%s Hresponse error detected\n",
-			__func__);
+		dev_warn(csi_dev->dev, "%s Hresponse error detected, %x\n",
+			__func__, status);
 		csi_error_recovery(csi_dev);
 	}
 
