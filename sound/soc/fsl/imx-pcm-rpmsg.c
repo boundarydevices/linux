@@ -44,8 +44,9 @@ static struct snd_pcm_hardware imx_rpmsg_pcm_hardware = {
 	.fifo_size = 0,
 };
 
-static int imx_rpmsg_pcm_hw_params(struct snd_pcm_substream *substream,
-			      struct snd_pcm_hw_params *params)
+static int imx_rpmsg_pcm_hw_params(struct snd_soc_component *component,
+				   struct snd_pcm_substream *substream,
+				   struct snd_pcm_hw_params *params)
 {
 
 	struct snd_pcm_runtime *runtime = substream->runtime;
@@ -91,13 +92,13 @@ static int imx_rpmsg_pcm_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int imx_rpmsg_pcm_hw_free(struct snd_pcm_substream *substream)
+static int imx_rpmsg_pcm_hw_free(struct snd_soc_component *component, struct snd_pcm_substream *substream)
 {
 	snd_pcm_set_runtime_buffer(substream, NULL);
 	return 0;
 }
 
-static snd_pcm_uframes_t imx_rpmsg_pcm_pointer(
+static snd_pcm_uframes_t imx_rpmsg_pcm_pointer(struct snd_soc_component *component,
 				struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -154,7 +155,7 @@ static void imx_rpmsg_timer_callback(struct timer_list *t)
 	spin_unlock_irqrestore(&i2s_info->wq_lock, flags);
 }
 
-static int imx_rpmsg_pcm_open(struct snd_pcm_substream *substream)
+static int imx_rpmsg_pcm_open(struct snd_soc_component *component, struct snd_pcm_substream *substream)
 {
 	int ret = 0;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -211,7 +212,7 @@ static int imx_rpmsg_pcm_open(struct snd_pcm_substream *substream)
 	return ret;
 }
 
-static int imx_rpmsg_pcm_close(struct snd_pcm_substream *substream)
+static int imx_rpmsg_pcm_close(struct snd_soc_component *component, struct snd_pcm_substream *substream)
 {
 	int ret = 0;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -243,7 +244,7 @@ static int imx_rpmsg_pcm_close(struct snd_pcm_substream *substream)
 	return ret;
 }
 
-static int imx_rpmsg_pcm_prepare(struct snd_pcm_substream *substream)
+static int imx_rpmsg_pcm_prepare(struct snd_soc_component *component, struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -265,8 +266,9 @@ static int imx_rpmsg_pcm_prepare(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static int imx_rpmsg_pcm_mmap(struct snd_pcm_substream *substream,
-	struct vm_area_struct *vma)
+static int imx_rpmsg_pcm_mmap(struct snd_soc_component *component,
+			      struct snd_pcm_substream *substream,
+			      struct vm_area_struct *vma)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 
@@ -489,7 +491,7 @@ static int imx_rpmsg_terminate_all(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-int imx_rpmsg_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
+int imx_rpmsg_pcm_trigger(struct snd_soc_component *component, struct snd_pcm_substream *substream, int cmd)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -535,7 +537,7 @@ int imx_rpmsg_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	return 0;
 }
 
-int imx_rpmsg_pcm_ack(struct snd_pcm_substream *substream)
+int imx_rpmsg_pcm_ack(struct snd_soc_component *component, struct snd_pcm_substream *substream)
 {
 	/*send the hw_avail size through rpmsg*/
 	struct snd_pcm_runtime *runtime = substream->runtime;
@@ -613,19 +615,6 @@ int imx_rpmsg_pcm_ack(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static struct snd_pcm_ops imx_rpmsg_pcm_ops = {
-	.open		= imx_rpmsg_pcm_open,
-	.close		= imx_rpmsg_pcm_close,
-	.ioctl		= snd_pcm_lib_ioctl,
-	.hw_params	= imx_rpmsg_pcm_hw_params,
-	.hw_free	= imx_rpmsg_pcm_hw_free,
-	.trigger	= imx_rpmsg_pcm_trigger,
-	.pointer	= imx_rpmsg_pcm_pointer,
-	.mmap		= imx_rpmsg_pcm_mmap,
-	.ack		= imx_rpmsg_pcm_ack,
-	.prepare	= imx_rpmsg_pcm_prepare,
-};
-
 static int imx_rpmsg_pcm_preallocate_dma_buffer(struct snd_pcm *pcm,
 	int stream, int size)
 {
@@ -644,7 +633,7 @@ static int imx_rpmsg_pcm_preallocate_dma_buffer(struct snd_pcm *pcm,
 	return 0;
 }
 
-static void imx_rpmsg_pcm_free_dma_buffers(struct snd_pcm *pcm)
+static void imx_rpmsg_pcm_free_dma_buffers(struct snd_soc_component *component, struct snd_pcm *pcm)
 {
 	struct snd_pcm_substream *substream;
 	struct snd_dma_buffer *buf;
@@ -666,7 +655,7 @@ static void imx_rpmsg_pcm_free_dma_buffers(struct snd_pcm *pcm)
 	}
 }
 
-static int imx_rpmsg_pcm_new(struct snd_soc_pcm_runtime *rtd)
+static int imx_rpmsg_pcm_new(struct snd_soc_component *component, struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_card *card = rtd->card->snd_card;
 	struct snd_pcm *pcm = rtd->pcm;
@@ -698,16 +687,25 @@ static int imx_rpmsg_pcm_new(struct snd_soc_pcm_runtime *rtd)
 out:
 	/* free preallocated buffers in case of error */
 	if (ret)
-		imx_rpmsg_pcm_free_dma_buffers(pcm);
+		imx_rpmsg_pcm_free_dma_buffers(component, pcm);
 
 	return ret;
 }
 
 static struct snd_soc_component_driver imx_rpmsg_soc_component = {
 	.name		= DRV_NAME,
-	.ops		= &imx_rpmsg_pcm_ops,
-	.pcm_new	= imx_rpmsg_pcm_new,
-	.pcm_free	= imx_rpmsg_pcm_free_dma_buffers,
+	.pcm_construct	= imx_rpmsg_pcm_new,
+	.pcm_destruct	= imx_rpmsg_pcm_free_dma_buffers,
+	.open		= imx_rpmsg_pcm_open,
+	.close		= imx_rpmsg_pcm_close,
+	.ioctl		= snd_soc_pcm_lib_ioctl,
+	.hw_params	= imx_rpmsg_pcm_hw_params,
+	.hw_free	= imx_rpmsg_pcm_hw_free,
+	.trigger	= imx_rpmsg_pcm_trigger,
+	.pointer	= imx_rpmsg_pcm_pointer,
+	.mmap		= imx_rpmsg_pcm_mmap,
+	.ack		= imx_rpmsg_pcm_ack,
+	.prepare	= imx_rpmsg_pcm_prepare,
 };
 
 int imx_rpmsg_platform_register(struct device *dev)
