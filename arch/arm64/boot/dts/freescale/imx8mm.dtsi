@@ -1236,6 +1236,7 @@
 					<&clk IMX8MM_CLK_CSI1_ROOT>,
 					<&clk IMX8MM_CLK_DISP_APB_ROOT>;
 				clock-names = "disp-axi", "csi_mclk", "disp_dcic";
+				dma-coherent;
 				power-domains = <&disp_blk_ctrl IMX8MM_DISPBLK_PD_CSI_BRIDGE>;
 				status = "disabled";
 			};
