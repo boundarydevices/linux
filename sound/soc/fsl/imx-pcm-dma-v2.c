@@ -46,8 +46,9 @@ static bool imx_dma_filter_fn(struct dma_chan *chan, void *param)
 }
 
 /* this may get called several times by oss emulation */
-static int imx_pcm_hw_params(struct snd_pcm_substream *substream,
-			      struct snd_pcm_hw_params *params)
+static int imx_pcm_hw_params(struct snd_soc_component *component,
+			     struct snd_pcm_substream *substream,
+			     struct snd_pcm_hw_params *params)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -88,13 +89,15 @@ static int imx_pcm_hw_params(struct snd_pcm_substream *substream,
 	return dmaengine_slave_config(chan, &config);
 }
 
-static int imx_pcm_hw_free(struct snd_pcm_substream *substream)
+static int imx_pcm_hw_free(struct snd_soc_component *component,
+			   struct snd_pcm_substream *substream)
 {
 	snd_pcm_set_runtime_buffer(substream, NULL);
 	return 0;
 }
 
-static snd_pcm_uframes_t imx_pcm_pointer(struct snd_pcm_substream *substream)
+static snd_pcm_uframes_t imx_pcm_pointer(struct snd_soc_component *component,
+					 struct snd_pcm_substream *substream)
 {
 	return snd_dmaengine_pcm_pointer(substream);
 }
@@ -124,7 +127,8 @@ static void imx_pcm_free_dma_buffers(struct snd_pcm_substream *substream)
 	}
 }
 
-static int imx_pcm_open(struct snd_pcm_substream *substream)
+static int imx_pcm_open(struct snd_soc_component *component,
+			struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_dmaengine_dai_dma_data *dma_data;
@@ -222,8 +226,9 @@ static int imx_pcm_open(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static int imx_pcm_mmap(struct snd_pcm_substream *substream,
-	struct vm_area_struct *vma)
+static int imx_pcm_mmap(struct snd_soc_component *component,
+			struct snd_pcm_substream *substream,
+			struct vm_area_struct *vma)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 
@@ -233,25 +238,15 @@ static int imx_pcm_mmap(struct snd_pcm_substream *substream,
 			   runtime->dma_bytes);
 }
 
-static int imx_pcm_close(struct snd_pcm_substream *substream)
+static int imx_pcm_close(struct snd_soc_component *component,
+			 struct snd_pcm_substream *substream)
 {
 	imx_pcm_free_dma_buffers(substream);
 
 	return snd_dmaengine_pcm_close_release_chan(substream);
 }
 
-static struct snd_pcm_ops imx_pcm_ops = {
-	.open		= imx_pcm_open,
-	.close		= imx_pcm_close,
-	.ioctl		= snd_pcm_lib_ioctl,
-	.hw_params	= imx_pcm_hw_params,
-	.hw_free	= imx_pcm_hw_free,
-	.trigger	= snd_dmaengine_pcm_trigger,
-	.pointer	= imx_pcm_pointer,
-	.mmap		= imx_pcm_mmap,
-};
-
-static int imx_pcm_new(struct snd_soc_pcm_runtime *rtd)
+static int imx_pcm_new(struct snd_soc_component *component, struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_card *card = rtd->card->snd_card;
 	int ret = 0;
@@ -263,10 +258,23 @@ static int imx_pcm_new(struct snd_soc_pcm_runtime *rtd)
 	return ret;
 }
 
+static int imx_pcm_trigger(struct snd_soc_component *component,
+			   struct snd_pcm_substream *substream, int cmd)
+{
+	return snd_dmaengine_pcm_trigger(substream, cmd);
+}
+
 static struct snd_soc_component_driver imx_soc_platform = {
 	.name           = "imx-pcm-dma-v2",
-	.ops		= &imx_pcm_ops,
-	.pcm_new	= imx_pcm_new,
+	.pcm_construct	= imx_pcm_new,
+	.open		= imx_pcm_open,
+	.close		= imx_pcm_close,
+	.ioctl		= snd_soc_pcm_lib_ioctl,
+	.hw_params	= imx_pcm_hw_params,
+	.hw_free	= imx_pcm_hw_free,
+	.trigger	= imx_pcm_trigger,
+	.pointer	= imx_pcm_pointer,
+	.mmap		= imx_pcm_mmap,
 };
 
 int imx_pcm_platform_register(struct device *dev)
