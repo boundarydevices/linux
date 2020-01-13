@@ -39,6 +39,7 @@ struct pcm186x_priv {
 	unsigned int sysclk;
 	unsigned int tdm_offset;
 	unsigned int tdm_additional_offset;
+	unsigned int tdm_max_channels;
 	bool is_tdm_mode;
 	bool is_master_mode;
 	unsigned int  adc1_left_input_select;
@@ -324,15 +325,22 @@ static int pcm186x_hw_params(struct snd_pcm_substream *substream,
 	div_lrck = width * channels;
 
 	if (priv->is_tdm_mode) {
+		/* limitating the number of channels looking at the number
+		 * of allocated tdm slots
+		 */
+		if (priv->tdm_max_channels < channels)
+			channels = priv->tdm_max_channels;
+
 		/* Select TDM transmission data */
 		switch (channels) {
 		case 2:
 			tdm_tx_sel = PCM186X_TDM_TX_SEL_2CH;
 			break;
 		case 4:
-		case 6:
-		case 8:
 			tdm_tx_sel = PCM186X_TDM_TX_SEL_4CH;
+			break;
+		case 6:
+			tdm_tx_sel = PCM186X_TDM_TX_SEL_6CH;
 			break;
 		default:
 			return -EINVAL;
@@ -470,6 +478,7 @@ static int pcm186x_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 	}
 
 	priv->tdm_offset = tdm_offset;
+	priv->tdm_max_channels = last_slot - first_slot + 1;
 
 	snd_soc_component_write(component, PCM186X_TDM_TX_OFFSET,
 				priv->tdm_offset);
@@ -671,6 +680,8 @@ int pcm186x_probe(struct device *dev, enum pcm186x_type type, int irq,
 
 	dev_set_drvdata(dev, priv);
 	priv->regmap = regmap;
+	/* the maximum number of channels that can be outputted on TDM is 6 */
+	priv->tdm_max_channels = 6;
 
 	for (i = 0; i < ARRAY_SIZE(priv->supplies); i++)
 		priv->supplies[i].supply = pcm186x_supply_names[i];
