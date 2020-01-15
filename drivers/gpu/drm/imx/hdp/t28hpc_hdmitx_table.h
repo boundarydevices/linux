@@ -55,7 +55,7 @@
 
 #define T28HPC_HDMITX_CLOCK_CONTROL_TABLE_ROWS_PIXEL_OUT 47
 
-#define T28HPC_HDMITX_PLL_TUNING_TABLE_ROWS_PIXEL_OUT 27
+#define T28HPC_HDMITX_PLL_TUNING_TABLE_ROWS_PIXEL_OUT 28
 
 /* Table 6. HDMI TX clock control settings (pixel clock is input) */
 typedef enum {
