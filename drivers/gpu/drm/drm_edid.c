@@ -85,6 +85,7 @@
 #define EDID_QUIRK_FORCE_10BPC			(1 << 11)
 /* Non desktop display (i.e. HMD) */
 #define EDID_QUIRK_NON_DESKTOP			(1 << 12)
+#define EDID_QUIRK_FORCE_CLOCK_29700		(1 << 13)
 
 struct detailed_mode_closure {
 	struct drm_connector *connector;
@@ -144,7 +145,7 @@ static const struct edid_quirk {
 	{ "LPL", 0, EDID_QUIRK_DETAILED_USE_MAXIMUM_SIZE },
 	{ "LPL", 0x2a00, EDID_QUIRK_DETAILED_USE_MAXIMUM_SIZE },
 
-	{ "MPI", 0x5001, EDID_QUIRK_DETAILED_SYNC_PP },
+	{ "MPI", 0x5001, EDID_QUIRK_DETAILED_SYNC_PP | EDID_QUIRK_FORCE_CLOCK_29700 },
 
 	/* Samsung SyncMaster 205BW.  Note: irony */
 	{ "SAM", 541, EDID_QUIRK_DETAILED_SYNC_PP },
@@ -2333,6 +2334,8 @@ static struct drm_display_mode *drm_mode_detailed(struct drm_device *dev,
 		timing->pixel_clock = cpu_to_le16(1088);
 
 	mode->clock = le16_to_cpu(timing->pixel_clock) * 10;
+	if ((quirks & EDID_QUIRK_FORCE_CLOCK_29700) && (mode->clock == 29570))
+		mode->clock = 29700;
 
 	mode->hdisplay = hactive;
 	mode->hsync_start = mode->hdisplay + hsync_offset;
