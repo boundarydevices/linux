@@ -186,6 +186,10 @@ static const struct of_device_id imx_sec_dsim_dt_ids[] = {
 		.compatible = "fsl,imx8mn-mipi-dsim",
 		.data = &imx8mm_mipi_dsim_plat_data,
 	},
+	{
+		.compatible = "fsl,imx8mp-mipi-dsim",
+		.data = &imx8mm_mipi_dsim_plat_data,
+	},
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, imx_sec_dsim_dt_ids);
@@ -200,6 +204,15 @@ static int sec_dsim_of_parse_resets(struct imx_sec_dsim_device *dsim)
 	struct reset_control *rstc;
 	const char *compat;
 	uint32_t len, rstc_num = 0;
+
+	/* TODO: bypass resets for imx8mp platform */
+	compat = of_get_property(np, "compatible", NULL);
+	if (unlikely(!compat))
+		return -ENODEV;
+
+	len = strlen(compat);
+	if (!of_compat_cmp(compat, "fsl,imx8mp-mipi-dsim", len))
+		return 0;
 
 	ret = of_parse_phandle_with_args(np, "resets", "#reset-cells",
 					 0, &args);

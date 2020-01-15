@@ -223,7 +223,7 @@
 #define FLEXCAN_QUIRK_BROKEN_WERR_STATE	BIT(1) /* [TR]WRN_INT not connected */
 #define FLEXCAN_QUIRK_DISABLE_RXFG	BIT(2) /* Disable RX FIFO Global mask */
 #define FLEXCAN_QUIRK_ENABLE_EACEN_RRS	BIT(3) /* Enable EACEN and RRS bit in ctrl2 */
-#define FLEXCAN_QUIRK_DISABLE_MECR	BIT(4) /* Disable Memory error detection */
+#define FLEXCAN_QUIRK_DISABLE_MECR	BIT(4) /* Disable non-correctable errors interrupt and freeze mode */
 #define FLEXCAN_QUIRK_USE_OFF_TIMESTAMP	BIT(5) /* Use timestamp based offloading */
 #define FLEXCAN_QUIRK_BROKEN_PERR_STATE	BIT(6) /* No interrupt for error passive */
 #define FLEXCAN_QUIRK_DEFAULT_BIG_ENDIAN	BIT(7) /* default to BE register access */
@@ -280,7 +280,16 @@ struct flexcan_regs {
 	u32 rximr[64];		/* 0x880 */
 	u32 _reserved5[24];	/* 0x980 */
 	u32 gfwr_mx6;		/* 0x9e0 - MX6 */
-	u32 _reserved6[63];	/* 0x9e4 */
+	u32 _reserved6[39];	/* 0x9e4 */
+	u32 _rxfir[6];		/* 0xa80 */
+	u32 _reserved8[2];	/* 0xa98 */
+	u32 _rxmgmask;		/* 0xaa0 */
+	u32 _rxfgmask;		/* 0xaa4 */
+	u32 _rx14mask;		/* 0xaa8 */
+	u32 _rx15mask;		/* 0xaac */
+	u32 tx_smb[4];		/* 0xab0 */
+	u32 rx_smb0[4];		/* 0xac0 */
+	u32 rx_smb1[4];		/* 0xad0 */
 	u32 mecr;		/* 0xae0 */
 	u32 erriar;		/* 0xae4 */
 	u32 erridpr;		/* 0xae8 */
@@ -293,6 +302,10 @@ struct flexcan_regs {
 	u32 fdctrl;		/* 0xc00 */
 	u32 fdcbt;		/* 0xc04 */
 	u32 fdcrc;		/* 0xc08 */
+	u32 _reserved9[199];	/* 0xc0c */
+	u32 tx_smb_fd[18];	/* 0xf28 */
+	u32 rx_smb0_fd[18];	/* 0xf70 */
+	u32 rx_smb1_fd[18];	/* 0xfb8 */
 };
 
 struct flexcan_devtype_data {
@@ -1306,6 +1319,78 @@ static void flexcan_set_bittiming(struct net_device *dev)
 	}
 }
 
+static void flexcan_init_ram(struct net_device *dev)
+{
+	struct flexcan_priv *priv = netdev_priv(dev);
+	struct flexcan_regs __iomem *regs = priv->regs;
+	u32 reg_ctrl2;
+	int i, size;
+
+	/* CTRL2[WRMFRZ] grants write access to all memory positions that
+	 * require initialization. MCR[RFEN] must not be set during FlexCAN
+	 * memory initialization.
+	 */
+	reg_ctrl2 = priv->read(&regs->ctrl2);
+	reg_ctrl2 |= FLEXCAN_CTRL2_WRMFRZ;
+	priv->write(reg_ctrl2, &regs->ctrl2);
+
+	/* initialize MBs RAM */
+	size = sizeof(regs->mb) / sizeof(u32);
+	for (i = 0; i < size; i++)
+		priv->write(0, &regs->mb[0][0] + sizeof(u32) * i);
+
+	/* initialize RXIMRs RAM */
+	size = sizeof(regs->rximr) / sizeof(u32);
+	for (i = 0; i < size; i++)
+		priv->write(0, &regs->rximr[i]);
+
+	/* initialize RXFIRs RAM */
+	size = sizeof(regs->_rxfir) / sizeof(u32);
+	for (i = 0; i < size; i++)
+		priv->write(0, &regs->_rxfir[i]);
+
+	/* initialize RXMGMASK, RXFGMASK, RX14MASK, RX15MASK RAM */
+	priv->write(0, &regs->_rxmgmask);
+	priv->write(0, &regs->_rxfgmask);
+	priv->write(0, &regs->_rx14mask);
+	priv->write(0, &regs->_rx15mask);
+
+	/* initialize TX_SMB RAM */
+	size = sizeof(regs->tx_smb) / sizeof(u32);
+	for (i = 0; i < size; i++)
+		priv->write(0, &regs->tx_smb[i]);
+
+	/* initialize RX_SMB0 RAM */
+	size = sizeof(regs->rx_smb0) / sizeof(u32);
+	for (i = 0; i < size; i++)
+		priv->write(0, &regs->rx_smb0[i]);
+
+	/* initialize RX_SMB1 RAM */
+	size = sizeof(regs->rx_smb1) / sizeof(u32);
+	for (i = 0; i < size; i++)
+		priv->write(0, &regs->rx_smb1[i]);
+
+	if (priv->can.ctrlmode & CAN_CTRLMODE_FD) {
+		/* initialize TX_SMB_FD RAM */
+		size = sizeof(regs->tx_smb_fd) / sizeof(u32);
+		for (i = 0; i < size; i++)
+			priv->write(0, &regs->tx_smb_fd[i]);
+
+		/* initialize RX_SMB0_FD RAM */
+		size = sizeof(regs->rx_smb0_fd) / sizeof(u32);
+		for (i = 0; i < size; i++)
+			priv->write(0, &regs->rx_smb0_fd[i]);
+
+		/* initialize RX_SMB1_FD RAM */
+		size = sizeof(regs->rx_smb1_fd) / sizeof(u32);
+		for (i = 0; i < size; i++)
+			priv->write(0, &regs->rx_smb0_fd[i]);
+	}
+
+	reg_ctrl2 &= ~FLEXCAN_CTRL2_WRMFRZ;
+	priv->write(reg_ctrl2, &regs->ctrl2);
+}
+
 /* flexcan_chip_start
  *
  * this functions is entered with clocks enabled
@@ -1331,6 +1416,9 @@ static int flexcan_chip_start(struct net_device *dev)
 		goto out_chip_disable;
 
 	flexcan_set_bittiming(dev);
+
+	if (priv->devtype_data->quirks & FLEXCAN_QUIRK_DISABLE_MECR)
+		flexcan_init_ram(dev);
 
 	/* MCR
 	 *
@@ -1479,8 +1567,8 @@ static int flexcan_chip_start(struct net_device *dev)
 	for (i = 0; i < priv->mb_count; i++)
 		priv->write(0, &regs->rximr[i]);
 
-	/* On Vybrid, disable memory error detection interrupts
-	 * and freeze mode.
+	/* On Vybrid, disable non-correctable errors interrupt and freeze
+	 * mode. It still can correct the correctable errors when HW supports ECC.
 	 * This also works around errata e5295 which generates
 	 * false positive memory errors and put the device in
 	 * freeze mode.
@@ -1488,19 +1576,32 @@ static int flexcan_chip_start(struct net_device *dev)
 	if (priv->devtype_data->quirks & FLEXCAN_QUIRK_DISABLE_MECR) {
 		/* Follow the protocol as described in "Detection
 		 * and Correction of Memory Errors" to write to
-		 * MECR register
+		 * MECR register (step 1 - 5)
+		 * 1. By default, CTRL2[ECRWRE] = 0, MECR[ECRWRDIS] = 1
+		 * 2. set CTRL2[ECRWRE]
 		 */
 		reg_ctrl2 = priv->read(&regs->ctrl2);
 		reg_ctrl2 |= FLEXCAN_CTRL2_ECRWRE;
 		priv->write(reg_ctrl2, &regs->ctrl2);
 
+		/* 3. clear MECR[ECRWRDIS] */
 		reg_mecr = priv->read(&regs->mecr);
 		reg_mecr &= ~FLEXCAN_MECR_ECRWRDIS;
 		priv->write(reg_mecr, &regs->mecr);
-		reg_mecr |= FLEXCAN_MECR_ECCDIS;
+
+		/* 4. all writes to MECR must keep MECR[ECRWRDIS] cleared */
 		reg_mecr &= ~(FLEXCAN_MECR_NCEFAFRZ | FLEXCAN_MECR_HANCEI_MSK |
 			      FLEXCAN_MECR_FANCEI_MSK);
 		priv->write(reg_mecr, &regs->mecr);
+
+		/* 5. after configuration done, lock MECR by either setting
+		 * MECR[ECRWRDIS] or clearing CTRL2[ECRWRE]
+		 */
+		reg_mecr |= FLEXCAN_MECR_ECRWRDIS;
+		priv->write(reg_mecr, &regs->mecr);
+		reg_ctrl2 &= ~FLEXCAN_CTRL2_ECRWRE;
+		priv->write(reg_ctrl2, &regs->ctrl2);
+
 	}
 
 	err = flexcan_transceiver_enable(priv);

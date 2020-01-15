@@ -162,6 +162,15 @@
 		reg = <0x0 0x40000000 0 0x80000000>;
 	};
 
+	/* global autoconfigured region for contiguous allocations */
+	linux,cma {
+		compatible = "shared-dma-pool";
+		reusable;
+		size = <0 0x3c000000>;
+		alloc-ranges = <0 0x96000000 0 0x3c000000>;
+		linux,cma-default;
+	};
+
 	osc_32k: clock-osc-32k {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -798,6 +807,15 @@
 				status = "disabled";
 			};
 
+			mu: mu@30aa0000 {
+				compatible = "fsl,imx8mp-mu", "fsl,imx6sx-mu";
+				reg = <0x30aa0000 0x10000>;
+				interrupts = <GIC_SPI 88 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clk IMX8MP_CLK_MU_ROOT>;
+				clock-names = "mu";
+				#mbox-cells = <2>;
+			};
+
 			i2c5: i2c@30ad0000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -1094,7 +1112,7 @@
 				#size-cells = <0>;
 				compatible = "fsl,imx8mp-mipi-dsim";
 				reg = <0x32e60000 0x10000>;
-				clocks = <&clk IMX8MP_CLK_DUMMY>,
+				clocks = <&clk IMX8MP_CLK_MEDIA_APB_ROOT>,
 					 <&clk IMX8MP_CLK_MEDIA_MIPI_PHY1_REF>;
 				clock-names = "cfg", "pll-ref";
 				assigned-clocks = <&clk IMX8MP_CLK_MEDIA_MIPI_PHY1_REF>;
@@ -1127,6 +1145,7 @@
 							 <&clk IMX8MP_SYS_PLL1_800M>;
 				assigned-clock-rates = <594000000>, <500000000>, <200000000>;
 				interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
+				blk-ctl = <&mediamix_blk_ctl>;
 				status = "disabled";
 
 				lcdif_disp0: port@0 {
@@ -1138,6 +1157,11 @@
 				};
 			};
 
+			mediamix_blk_ctl: blk-ctl@32ec0000 {
+				compatible = "fsl,imx8mp-mediamix-blk-ctl",
+					     "syscon";
+				reg = <0x32ec0000 0x10000>;
+			};
 		};
 	};
 
@@ -1352,6 +1376,87 @@
 		status = "disabled";
 	};
 
+	usb3_phy0: usb-phy@381f0040 {
+		compatible = "fsl,imx8mp-usb-phy";
+		reg = <0 0x381f0040 0 0x40>;
+		clocks = <&clk IMX8MP_CLK_USB_PHY_ROOT>;
+		clock-names = "phy";
+		assigned-clocks = <&clk IMX8MP_CLK_USB_PHY_REF>;
+		assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
+		#phy-cells = <0>;
+		status = "disabled";
+	};
+
+	usb3_0: usb@32f10100 {
+		compatible = "fsl,imx8mp-dwc3";
+		reg = <0 0x32f10100 0 0x8>;
+		clocks = <&clk IMX8MP_CLK_HSIO_AXI_DIV>,
+			 <&clk IMX8MP_CLK_USB_ROOT>;
+		clock-names = "bus", "sleep";
+		assigned-clocks = <&clk IMX8MP_CLK_HSIO_AXI_SRC>;
+		assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>;
+		assigned-clock-rates = <500000000>;
+		interrupts = <GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH>;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+		status = "disabled";
+
+		usb_dwc3_0: dwc3@38100000 {
+			compatible = "snps,dwc3";
+			reg = <0 0x38100000 0 0x10000>;
+			interrupts = <GIC_SPI 40 IRQ_TYPE_LEVEL_HIGH>;
+			phys = <&usb3_phy0>, <&usb3_phy0>;
+			phy-names = "usb2-phy", "usb3-phy";
+			xhci-no-64bit-support;
+			usb3-resume-missing-cas;
+			snps,dis-u2-freeclk-exists-quirk;
+			snps,dis_u3_susphy_quirk;
+			status = "disabled";
+		};
+
+	};
+
+	usb3_phy1: usb-phy@382f0040 {
+		compatible = "fsl,imx8mp-usb-phy";
+		reg = <0 0x382f0040 0 0x40>;
+		clocks = <&clk IMX8MP_CLK_USB_PHY_ROOT>;
+		clock-names = "phy";
+		assigned-clocks = <&clk IMX8MP_CLK_USB_PHY_REF>;
+		assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
+		#phy-cells = <0>;
+		status = "disabled";
+	};
+
+	usb3_1: usb@32f10108 {
+		compatible = "fsl,imx8mp-dwc3";
+		reg = <0 0x32f10108 0 0x8>;
+		clocks = <&clk IMX8MP_CLK_HSIO_AXI_DIV>,
+			 <&clk IMX8MP_CLK_USB_ROOT>;
+		clock-names = "bus", "sleep";
+		assigned-clocks = <&clk IMX8MP_CLK_HSIO_AXI_SRC>;
+		assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>;
+		assigned-clock-rates = <500000000>;
+		interrupts = <GIC_SPI 149 IRQ_TYPE_LEVEL_HIGH>;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+		status = "disabled";
+
+		usb_dwc3_1: dwc3@38200000 {
+			compatible = "snps,dwc3";
+			reg = <0 0x38200000 0 0x10000>;
+			interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>;
+			phys = <&usb3_phy1>, <&usb3_phy1>;
+			phy-names = "usb2-phy", "usb3-phy";
+			xhci-no-64bit-support;
+			usb3-resume-missing-cas;
+			snps,dis-u2-freeclk-exists-quirk;
+			snps,dis_u3_susphy_quirk;
+			status = "disabled";
+		};
+	};
+
 	vpu_g1: vpu_g1@38300000 {
 		compatible = "nxp,imx8mm-hantro","nxp,imx8mp-hantro";
 		reg = <0x0 0x38300000 0x0 0x100000>;
@@ -1398,8 +1503,8 @@
 		compatible = "fsl,imx8-gpu";
 		reg = <0x0 0x38500000 0x0 0x20000>;
 		interrupts = <GIC_SPI 13 IRQ_TYPE_LEVEL_HIGH>;
-		clocks = <&clk IMX8MP_CLK_ML_SRC>,
-				<&clk IMX8MP_CLK_ML_SRC>,
+		clocks = <&clk IMX8MP_CLK_NPU_ROOT>,
+				<&clk IMX8MP_CLK_NPU_ROOT>,
 				<&clk IMX8MP_CLK_ML_AXI>,
 				<&clk IMX8MP_CLK_ML_AHB>;
 		clock-names = "core", "shader", "axi", "ahb";
@@ -1490,8 +1595,22 @@
 	mix_gpu_ml: mix_gpu_ml {
 		compatible = "fsl,imx8mp-gpu", "fsl,imx8-gpu-ss";
 		cores = <&gpu_3d>, <&ml_vipsi>, <&gpu_2d>;
-		reg = <0x0 0x40000000 0x0 0x10000000>, <0x0 0x0 0x0 0x8000000>;
+		reg = <0x0 0x40000000 0x0 0xC0000000>, <0x0 0x0 0x0 0x10000000>;
 		reg-names = "phys_baseaddr", "contiguous_mem";
+		status = "disabled";
+	};
+
+	rpmsg: rpmsg{
+		compatible = "fsl,imx8mq-rpmsg";
+		/* up to now, the following channels are used in imx rpmsg
+		 * - tx1/rx1: messages channel.
+		 * - general interrupt1: remote proc finish re-init rpmsg stack
+		 *   when A core is partition reset.
+		 */
+		mbox-names = "tx", "rx", "rxdb";
+		mboxes = <&mu 0 1
+			  &mu 1 1
+			  &mu 3 1>;
 		status = "disabled";
 	};
 

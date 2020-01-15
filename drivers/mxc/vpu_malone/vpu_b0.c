@@ -181,6 +181,7 @@ static char *bufstat[] = {
 	"FRAME_DECODED",
 	"FRAME_READY",
 	"FRAME_RELEASE",
+	"FRAME_SKIP",
 };
 
 static int alloc_vpu_buffer(struct vpu_ctx *ctx);
@@ -3549,7 +3550,7 @@ static void report_buffer_done(struct vpu_ctx *ctx, void *frame_info)
 		if (fs_id == MEDIA_PLAYER_SKIPPED_FRAME_ID) {
 			down(&This->drv_q_lock);
 			p_data_req = &This->vb2_reqs[buffer_id];
-			set_data_req_status(p_data_req, FRAME_READY);
+			set_data_req_status(p_data_req, FRAME_SKIP);
 			up(&This->drv_q_lock);
 
 			vpu_dec_skip_ts(ctx);
@@ -3682,6 +3683,9 @@ static void add_buffer_to_queue(struct queue_data *q_data, struct vb2_data_req *
 		return;
 	if (data_req->queued == true)
 		return;
+	if (data_req->vb2_buf->state != VB2_BUF_STATE_ACTIVE)
+		return;
+
 	list_add_tail(&data_req->list, &q_data->drv_q);
 	data_req->queued = true;
 }
@@ -4410,7 +4414,6 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 					vpu_dec_skip_ts(ctx);
 					send_skip_event(ctx);
 				}
-				add_buffer_to_queue(This, p_data_req);
 			}
 			if (p_data_req->status != FRAME_ALLOC) {
 				set_data_req_status(p_data_req, FRAME_RELEASE);
@@ -4420,6 +4423,7 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 					"frame[%d] already released\n",
 					p_data_req->id);
 			}
+			add_buffer_to_queue(This, p_data_req);
 			respond_req_frame(ctx, This, false);
 		} else if (fsrel->eType == MEDIAIP_MBI_REQ) {
 			vpu_dbg(LVL_INFO, "ctx[%d] relase MEDIAIP_MBI_REQ frame[%d]\n",

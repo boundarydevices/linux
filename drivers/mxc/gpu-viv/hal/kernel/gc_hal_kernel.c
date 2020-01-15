@@ -1358,6 +1358,7 @@ _AllocateLinearMemory(
     gceVIDMEM_TYPE type = (Interface->u.AllocateLinearVideoMemory.type & 0xFF);
     gctUINT32 flag = Interface->u.AllocateLinearVideoMemory.flag;
     gctUINT64 mappingInOne  = 1;
+    gctBOOL isContiguous;
 
     gcmkHEADER_ARG("Kernel=%p pool=%d bytes=%lu alignment=%lu type=%d",
                    Kernel, pool, bytes, alignment, type);
@@ -1406,6 +1407,13 @@ _AllocateLinearMemory(
     dbType = gcvDB_VIDEO_MEMORY
            | (type << gcdDB_VIDEO_MEMORY_TYPE_SHIFT)
            | (pool << gcdDB_VIDEO_MEMORY_POOL_SHIFT);
+
+    gcmkONERROR(gckVIDMEM_NODE_IsContiguous(Kernel, nodeObject, &isContiguous));
+
+    if (isContiguous)
+    {
+        dbType |= (gcvDB_CONTIGUOUS << gcdDB_VIDEO_MEMORY_DBTYPE_SHIFT);
+    }
 
     /* Record in process db. */
     gcmkONERROR(
@@ -1469,6 +1477,7 @@ _ReleaseVideoMemory(
     gceSTATUS status;
     gckVIDMEM_NODE nodeObject;
     gceDATABASE_TYPE type;
+    gctBOOL isContiguous;
 
     gcmkHEADER_ARG("Kernel=%p ProcessID=%d Handle=%d",
                    Kernel, ProcessID, Handle);
@@ -1479,6 +1488,13 @@ _ReleaseVideoMemory(
     type = gcvDB_VIDEO_MEMORY
          | (nodeObject->type << gcdDB_VIDEO_MEMORY_TYPE_SHIFT)
          | (nodeObject->pool << gcdDB_VIDEO_MEMORY_POOL_SHIFT);
+
+    gcmkONERROR(gckVIDMEM_NODE_IsContiguous(Kernel, nodeObject, &isContiguous));
+
+    if (isContiguous)
+    {
+        type |= (gcvDB_CONTIGUOUS << gcdDB_VIDEO_MEMORY_DBTYPE_SHIFT);
+    }
 
     gcmkONERROR(
         gckKERNEL_RemoveProcessDB(Kernel,
@@ -1782,6 +1798,7 @@ _WrapUserMemory(
     gckVIDMEM_NODE nodeObject = gcvNULL;
     gceDATABASE_TYPE type;
     gctUINT32 handle = 0;
+    gctBOOL isContiguous;
 
     gcmkONERROR(
         gckVIDMEM_NODE_WrapUserMemory(Kernel,
@@ -1799,6 +1816,13 @@ _WrapUserMemory(
     type = gcvDB_VIDEO_MEMORY
          | (nodeObject->type << gcdDB_VIDEO_MEMORY_TYPE_SHIFT)
          | (nodeObject->pool << gcdDB_VIDEO_MEMORY_POOL_SHIFT);
+
+    gcmkONERROR(gckVIDMEM_NODE_IsContiguous(Kernel, nodeObject, &isContiguous));
+
+    if (isContiguous)
+    {
+        type |= (gcvDB_CONTIGUOUS << gcdDB_VIDEO_MEMORY_DBTYPE_SHIFT);
+    }
 
     gcmkONERROR(
         gckKERNEL_AddProcessDB(Kernel,
@@ -2090,6 +2114,14 @@ gckKERNEL_QueryDatabase(
                                  !Interface->u.Database.validProcessID,
                                  gcvDB_NON_PAGED,
                                  &Interface->u.Database.nonPaged));
+
+    /* Query contiguous memory. */
+    gcmkONERROR(
+        gckKERNEL_QueryProcessDB(Kernel,
+                                 Interface->u.Database.processID,
+                                 !Interface->u.Database.validProcessID,
+                                 gcvDB_CONTIGUOUS,
+                                 &Interface->u.Database.contiguous));
 
     /* Query GPU idle time. */
     gcmkONERROR(

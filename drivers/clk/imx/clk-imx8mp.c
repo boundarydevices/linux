@@ -13,6 +13,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/types.h>
+#include <soc/imx/soc.h>
 
 #include "clk.h"
 
@@ -115,6 +116,8 @@ static const char *sys_pll3_bypass_sels[] = {"sys_pll3", "sys_pll3_ref_sel", };
 static const char *imx8mp_a53_sels[] = {"osc_24m", "arm_pll_out", "sys_pll2_500m", "sys_pll2_1000m",
 					"sys_pll1_800m", "sys_pll1_400m", "audio_pll1_out",
 					"sys_pll3_out", };
+
+static const char *imx8mp_a53_core_sels[] = {"arm_a53_div", "arm_pll_out", };
 
 static const char *imx8mp_m7_sels[] = {"osc_24m", "sys_pll2_200m", "sys_pll2_250m", "vpu_pll_out",
 				       "sys_pll1_800m", "audio_pll1_out", "video_pll1_out",
@@ -522,6 +525,8 @@ static int imx8mp_clocks_probe(struct platform_device *pdev)
 	void __iomem *base;
 	int ret;
 
+	check_m4_enabled();
+
 	clks[IMX8MP_CLK_DUMMY] = imx_clk_fixed("dummy", 0);
 	clks[IMX8MP_CLK_24M] = of_clk_get_by_name(np, "osc_24m");
 	clks[IMX8MP_CLK_32K] = of_clk_get_by_name(np, "osc_32k");
@@ -649,6 +654,9 @@ static int imx8mp_clocks_probe(struct platform_device *pdev)
 	clks[IMX8MP_CLK_HSIO_AXI_DIV] = imx_clk_divider2("hsio_axi_div", "hsio_axi_cg", base + 0x8380, 0, 3);
 	clks[IMX8MP_CLK_MEDIA_ISP_DIV] = imx_clk_divider2("media_isp_div", "media_isp_cg", base + 0x8400, 0, 3);
 
+	/* CORE SEL */
+	clks[IMX8MP_CLK_A53_CORE] = imx_clk_mux2_flags("arm_a53_core", base + 0x9880, 24, 1, imx8mp_a53_core_sels, ARRAY_SIZE(imx8mp_a53_core_sels), CLK_IS_CRITICAL);
+
 	/* BUS */
 	clks[IMX8MP_CLK_MAIN_AXI] = imx8m_clk_composite_critical("main_axi", imx8mp_main_axi_sels, base + 0x8800);
 	clks[IMX8MP_CLK_ENET_AXI] = imx8m_clk_composite("enet_axi", imx8mp_enet_axi_sels, base + 0x8880);
@@ -771,6 +779,7 @@ static int imx8mp_clocks_probe(struct platform_device *pdev)
 	clks[IMX8MP_CLK_I2C2_ROOT] = imx_clk_gate4("i2c2_root_clk", "i2c2", base + 0x4180, 0);
 	clks[IMX8MP_CLK_I2C3_ROOT] = imx_clk_gate4("i2c3_root_clk", "i2c3", base + 0x4190, 0);
 	clks[IMX8MP_CLK_I2C4_ROOT] = imx_clk_gate4("i2c4_root_clk", "i2c4", base + 0x41a0, 0);
+	clks[IMX8MP_CLK_MU_ROOT] = imx_clk_gate4("mu_root_clk", "ipg_root", base + 0x4210, 0);
 	clks[IMX8MP_CLK_PCIE_ROOT] = imx_clk_gate4("pcie_root_clk", "pcie_aux", base + 0x4250, 0);
 	clks[IMX8MP_CLK_PWM1_ROOT] = imx_clk_gate4("pwm1_root_clk", "pwm1", base + 0x4280, 0);
 	clks[IMX8MP_CLK_PWM2_ROOT] = imx_clk_gate4("pwm2_root_clk", "pwm2", base + 0x4290, 0);
@@ -822,11 +831,14 @@ static int imx8mp_clocks_probe(struct platform_device *pdev)
 	clks[IMX8MP_CLK_VPU_ROOT] = imx_clk_gate4("vpu_root_clk", "vpu_bus", base + 0x4630, 0);
 	clks[IMX8MP_CLK_AUDIO_ROOT] = imx_clk_gate4("audio_root_clk", "ipg_root", base + 0x4650, 0);
 
-	clks[IMX8MP_CLK_ARM] = imx_clk_cpu("arm", "arm_a53_div",
-					   clks[IMX8MP_CLK_A53_DIV],
-					   clks[IMX8MP_CLK_A53_SRC],
+	clk_set_parent(clks[IMX8MP_CLK_A53_SRC], clks[IMX8MP_SYS_PLL1_800M]);
+	clk_set_parent(clks[IMX8MP_CLK_A53_CORE], clks[IMX8MP_ARM_PLL_OUT]);
+
+	clks[IMX8MP_CLK_ARM] = imx_clk_cpu("arm", "arm_a53_core",
+					   clks[IMX8MP_CLK_A53_CORE],
+					   clks[IMX8MP_CLK_A53_CORE],
 					   clks[IMX8MP_ARM_PLL_OUT],
-					   clks[IMX8MP_SYS_PLL1_800M]);
+					   clks[IMX8MP_CLK_A53_DIV]);
 
 	imx_check_clocks(clks, ARRAY_SIZE(clks));
 
