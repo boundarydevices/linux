@@ -136,7 +136,7 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, tmu);
 
-	tmu->cdev = devfreq_cooling_register();
+	tmu->cdev = devfreq_cooling_register(NULL, 1);
 	if (IS_ERR(tmu->cdev)) {
 		ret = PTR_ERR(tmu->cdev);
 		if (ret != -EPROBE_DEFER)
