@@ -250,20 +250,6 @@
 		>;
 	};
 
-	/* i2c4 wm8960 - Amplifier Mute, TDA7491LP13TR */
-	pinctrl_i2c4_wm8960: i2c4-wm8960grp {
-		fsl,pins = <
-#define GP_WM8960_AMP_STDBY	<&gpio4 28 GPIO_ACTIVE_LOW>		/* Low is standby */
-			MX8MQ_IOMUXC_SAI3_RXFS_GPIO4_IO28	0x06
-#define GP_WM8960_AMP_MUTE	<&gpio4 31 GPIO_ACTIVE_LOW>		/* Low is muted */
-			MX8MQ_IOMUXC_SAI3_TXFS_GPIO4_IO31	0x06
-#define GP_WM8960_AMP_G0	<&gpio5 0 GPIO_ACTIVE_HIGH>
-			MX8MQ_IOMUXC_SAI3_TXC_GPIO5_IO0		0x06
-#define GP_WM8960_AMP_G1	<&gpio5 1 GPIO_ACTIVE_HIGH>
-			MX8MQ_IOMUXC_SAI3_TXD_GPIO5_IO1		0x06
-		>;
-	};
-
 	pinctrl_leds: ledsgrp {
 		fsl,pins = <
 #define GP_J9_PIN6			<&gpio3 11 GPIO_ACTIVE_HIGH>
@@ -348,6 +334,20 @@
 			MX8MQ_IOMUXC_SAI1_TXC_SAI1_TX_BCLK		0xd6
 			MX8MQ_IOMUXC_SAI1_TXD0_SAI1_TX_DATA0		0xd6
 			MX8MQ_IOMUXC_SAI1_RXD0_SAI1_RX_DATA0		0xd6
+		>;
+	};
+
+	/* i2c4 wm8960 - Amplifier Mute, TDA7491LP13TR */
+	pinctrl_sound_wm8960: sound-wm8960grp {
+		fsl,pins = <
+#define GP_WM8960_AMP_STDBY	<&gpio4 28 GPIO_ACTIVE_LOW>		/* Low is standby */
+			MX8MQ_IOMUXC_SAI3_RXFS_GPIO4_IO28	0x06
+#define GP_WM8960_AMP_MUTE	<&gpio4 31 GPIO_ACTIVE_LOW>		/* Low is muted */
+			MX8MQ_IOMUXC_SAI3_TXFS_GPIO4_IO31	0x06
+#define GP_WM8960_AMP_G0	<&gpio5 0 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_SAI3_TXC_GPIO5_IO0		0x06
+#define GP_WM8960_AMP_G1	<&gpio5 1 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_SAI3_TXD_GPIO5_IO1		0x06
 		>;
 	};
 
@@ -749,27 +749,26 @@
 	};
 
 	sound-wm8960 {
+		amp-gain-gpios = GP_WM8960_AMP_G0, GP_WM8960_AMP_G1;
+		/* amp-gain-seq = /bits/ 8 <0 1 2 3>; */ /* default */
 		amp-mute-gpios = GP_WM8960_AMP_MUTE;
 		/* delay between mute and standby enter */
 		amp-standby-enter-wait-ms = <50>;
 		/* delay between standby exit and unmute */
 		amp-standby-exit-delay-ms = <100>;
 		amp-standby-gpios = GP_WM8960_AMP_STDBY;
-		amp-gain-gpios = GP_WM8960_AMP_G0, GP_WM8960_AMP_G1;
-		/* amp-gain-seq = /bits/ 8 <0 1 2 3>; */ /* default */
-
-		compatible = "fsl,imx-audio-wm8960";
-		model = "wm8960-audio";
-		cpu-dai = <&sai1>;
-		codec-master;
 		audio-codec = <&wm8960>;
 		audio-routing =
 			"Ext Spk", "HP_L",
 			"Ext Spk", "HP_R",
 			"LINPUT1", "Main MIC",
 			"Main MIC", "MICB";
-		/* JD2: hp detect high for headphone*/
-		hp-det = <2 0>;
+		codec-master;
+		compatible = "fsl,imx-audio-wm8960";
+		cpu-dai = <&sai1>;
+		model = "wm8960-audio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
 
 	sound_hdmi: sound-hdmi {
@@ -1096,8 +1095,6 @@
 		compatible = "wlf,wm8960";
 		clock-names = "mclk";
 		clocks = <&clk IMX8MQ_CLK_SAI1_ROOT>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_wm8960>;
 		reg = <0x1a>;
 		wlf,shared-lrclk;
 	};
