@@ -162,7 +162,7 @@ int dev_pm_opp_set_sharing_cpus(struct device *cpu_dev,
 	struct device *dev;
 	int cpu, ret = 0;
 
-	opp_table = _find_opp_table(cpu_dev);
+	opp_table = _find_opp_table(cpu_dev, NULL);
 	if (IS_ERR(opp_table))
 		return PTR_ERR(opp_table);
 
@@ -210,7 +210,7 @@ int dev_pm_opp_get_sharing_cpus(struct device *cpu_dev, struct cpumask *cpumask)
 	struct opp_table *opp_table;
 	int ret = 0;
 
-	opp_table = _find_opp_table(cpu_dev);
+	opp_table = _find_opp_table(cpu_dev, NULL);
 	if (IS_ERR(opp_table))
 		return PTR_ERR(opp_table);
 
