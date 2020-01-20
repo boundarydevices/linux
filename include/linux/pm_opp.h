@@ -90,7 +90,8 @@ struct dev_pm_set_opp_data {
 #if defined(CONFIG_PM_OPP)
 
 struct opp_table *dev_pm_opp_get_opp_table(struct device *dev);
-struct opp_table *dev_pm_opp_get_opp_table_indexed(struct device *dev, int index);
+struct opp_table *dev_pm_opp_get_opp_table_np(struct device *dev, struct device_node *np);
+struct opp_table *dev_pm_opp_get_opp_table_indexed(struct device *dev, struct device_node *np, int index);
 void dev_pm_opp_put_opp_table(struct opp_table *opp_table);
 
 unsigned long dev_pm_opp_get_voltage(struct dev_pm_opp *opp);
@@ -119,6 +120,9 @@ struct dev_pm_opp *dev_pm_opp_find_freq_ceil_by_volt(struct device *dev,
 						     unsigned long u_volt);
 
 struct dev_pm_opp *dev_pm_opp_find_freq_ceil(struct device *dev,
+					     unsigned long *freq);
+struct dev_pm_opp *dev_pm_opp_find_freq_ceil_np(struct device *dev,
+					     struct device_node *np,
 					     unsigned long *freq);
 void dev_pm_opp_put(struct dev_pm_opp *opp);
 
@@ -158,12 +162,12 @@ int dev_pm_opp_get_sharing_cpus(struct device *cpu_dev, struct cpumask *cpumask)
 void dev_pm_opp_remove_table(struct device *dev);
 void dev_pm_opp_cpumask_remove_table(const struct cpumask *cpumask);
 #else
-static inline struct opp_table *dev_pm_opp_get_opp_table(struct device *dev)
+static inline struct opp_table *dev_pm_opp_get_opp_table(struct device *dev, struct device_node *np)
 {
 	return ERR_PTR(-ENOTSUPP);
 }
 
-static inline struct opp_table *dev_pm_opp_get_opp_table_indexed(struct device *dev, int index)
+static inline struct opp_table *dev_pm_opp_get_opp_table_indexed(struct device *dev, struct device_node *np, int index)
 {
 	return ERR_PTR(-ENOTSUPP);
 }
@@ -241,6 +245,12 @@ static inline struct dev_pm_opp *dev_pm_opp_find_freq_ceil_by_volt(struct device
 
 static inline struct dev_pm_opp *dev_pm_opp_find_freq_ceil(struct device *dev,
 					unsigned long *freq)
+{
+	return ERR_PTR(-ENOTSUPP);
+}
+
+static inline struct dev_pm_opp *dev_pm_opp_find_freq_ceil_np(struct device *dev,
+		struct device_node *np, unsigned long *freq)
 {
 	return ERR_PTR(-ENOTSUPP);
 }
@@ -370,13 +380,18 @@ static inline void dev_pm_opp_cpumask_remove_table(const struct cpumask *cpumask
 #endif		/* CONFIG_PM_OPP */
 
 #if defined(CONFIG_PM_OPP) && defined(CONFIG_OF)
+void opp_return_volts(struct dev_pm_opp *opp, unsigned long *u_volt,
+		unsigned long *u_volt_min, unsigned long *u_volt_max);
 int dev_pm_opp_of_add_table(struct device *dev);
 int dev_pm_opp_of_add_table_indexed(struct device *dev, int index);
+int dev_pm_opp_of_add_table_np(struct device *dev, struct device_node *np,
+		struct device_node **ref_np, int max_tables);
 void dev_pm_opp_of_remove_table(struct device *dev);
 int dev_pm_opp_of_cpumask_add_table(const struct cpumask *cpumask);
 void dev_pm_opp_of_cpumask_remove_table(const struct cpumask *cpumask);
 int dev_pm_opp_of_get_sharing_cpus(struct device *cpu_dev, struct cpumask *cpumask);
 struct device_node *dev_pm_opp_of_get_opp_desc_node(struct device *dev);
+struct device_node *dev_pm_opp_of_get_opp_desc_node_indexed(struct device *dev, int index);
 struct device_node *dev_pm_opp_get_of_node(struct dev_pm_opp *opp);
 int of_get_required_opp_performance_state(struct device_node *np, int index);
 int dev_pm_opp_of_find_icc_paths(struct device *dev, struct opp_table *opp_table);
@@ -386,6 +401,11 @@ static inline void dev_pm_opp_of_unregister_em(struct device *dev)
 	em_dev_unregister_perf_domain(dev);
 }
 #else
+void opp_return_volts(struct dev_pm_opp *opp, unsigned long *u_volt,
+		unsigned long *u_volt_min, unsigned long *u_volt_max)
+{
+}
+
 static inline int dev_pm_opp_of_add_table(struct device *dev)
 {
 	return -ENOTSUPP;
