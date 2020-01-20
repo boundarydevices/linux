@@ -215,7 +215,7 @@ void dev_pm_opp_get(struct dev_pm_opp *opp);
 bool _opp_remove_all_static(struct opp_table *opp_table);
 void _get_opp_table_kref(struct opp_table *opp_table);
 int _get_opp_count(struct opp_table *opp_table);
-struct opp_table *_find_opp_table(struct device *dev);
+struct opp_table *_find_opp_table(struct device *dev, struct device_node *np);
 struct opp_device *_add_opp_dev(const struct device *dev, struct opp_table *opp_table);
 struct dev_pm_opp *_opp_allocate(struct opp_table *opp_table);
 void _opp_free(struct dev_pm_opp *opp);
@@ -227,15 +227,15 @@ struct opp_table *_add_opp_table(struct device *dev);
 void _put_opp_list_kref(struct opp_table *opp_table);
 
 #ifdef CONFIG_OF
-void _of_init_opp_table(struct opp_table *opp_table, struct device *dev, int index);
+void _of_init_opp_table(struct opp_table *opp_table, struct device *dev);
 void _of_clear_opp_table(struct opp_table *opp_table);
-struct opp_table *_managed_opp(struct device *dev, int index);
+struct opp_table *_managed_opp(struct device *dev, struct device_node *np);
 void _of_opp_free_required_opps(struct opp_table *opp_table,
 				struct dev_pm_opp *opp);
 #else
-static inline void _of_init_opp_table(struct opp_table *opp_table, struct device *dev, int index) {}
+static inline void _of_init_opp_table(struct opp_table *opp_table, struct device *dev) {}
 static inline void _of_clear_opp_table(struct opp_table *opp_table) {}
-static inline struct opp_table *_managed_opp(struct device *dev, int index) { return NULL; }
+static inline struct opp_table *_managed_opp(struct device *dev, struct device_node *np) { return NULL; }
 static inline void _of_opp_free_required_opps(struct opp_table *opp_table,
 					      struct dev_pm_opp *opp) {}
 #endif
