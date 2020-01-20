@@ -103,8 +103,11 @@ static void opp_list_debug_create_dir(struct opp_device *opp_dev,
 {
 	const struct device *dev = opp_dev->dev;
 	struct dentry *d;
+	char *name = opp_table->dentry_name;
 
-	opp_set_dev_name(dev, opp_table->dentry_name);
+	if (!name[0])
+		opp_set_dev_name(dev, name);
+
 
 	/* Create device specific directory */
 	d = debugfs_create_dir(opp_table->dentry_name, rootdir);
