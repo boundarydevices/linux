@@ -109,6 +109,21 @@ static bool _opp_is_supported(struct device *dev, struct opp_table *opp_table,
 	return true;
 }
 
+void opp_return_volts(struct dev_pm_opp *opp, unsigned long *u_volt,
+		unsigned long *u_volt_min, unsigned long *u_volt_max)
+{
+	struct dev_pm_opp_supply *supply = &opp->supplies[0];
+	if (supply) {
+		if (u_volt)
+			*u_volt = supply->u_volt;
+		if (u_volt_min)
+			*u_volt_min = supply->u_volt_min;
+		if (u_volt_max)
+			*u_volt_max = supply->u_volt_max;
+	}
+}
+EXPORT_SYMBOL_GPL(opp_return_volts);
+
 static int opp_parse_supplies(struct dev_pm_opp *opp, struct device *dev,
 			      struct opp_table *opp_table)
 {
@@ -405,7 +420,7 @@ static int _of_add_opp_table_v2(struct device *dev, struct device_node *opp_np)
 		goto put_opp_table;
 	}
 
-	opp_table = dev_pm_opp_get_opp_table(dev);
+	opp_table = dev_pm_opp_get_opp_table(dev, opp_np);
 	if (!opp_table)
 		return -ENOMEM;
 
@@ -444,7 +459,6 @@ static int _of_add_opp_table_v2(struct device *dev, struct device_node *opp_np)
 	if (pstate_count)
 		opp_table->genpd_performance_state = true;
 
-	opp_table->np = opp_np;
 	if (of_property_read_bool(opp_np, "opp-shared"))
 		opp_table->shared_opp = OPP_TABLE_ACCESS_SHARED;
 	else
@@ -457,14 +471,14 @@ put_opp_table:
 }
 
 /* Initializes OPP tables based on old-deprecated bindings */
-static int _of_add_opp_table_v1(struct device *dev)
+static int _of_add_opp_table_v1(struct device *dev, struct device_node *np)
 {
 	struct opp_table *opp_table;
 	const struct property *prop;
 	const __be32 *val;
 	int nr, ret = 0;
 
-	prop = of_find_property(dev->of_node, "operating-points", NULL);
+	prop = of_find_property(np, "operating-points", NULL);
 	if (!prop)
 		return -ENODEV;
 	if (!prop->value)
@@ -480,7 +494,7 @@ static int _of_add_opp_table_v1(struct device *dev)
 		return -EINVAL;
 	}
 
-	opp_table = dev_pm_opp_get_opp_table(dev);
+	opp_table = dev_pm_opp_get_opp_table(dev, np);
 	if (!opp_table)
 		return -ENOMEM;
 
@@ -520,27 +534,51 @@ static int _of_add_opp_table_v1(struct device *dev)
  * -ENODATA	when empty 'operating-points' property is found
  * -EINVAL	when invalid entries are found in opp-v2 table
  */
-int dev_pm_opp_of_add_table(struct device *dev)
+int dev_pm_opp_of_add_table_np(struct device *dev, struct device_node *np,
+		struct device_node **ref_np, int max_tables)
 {
-	struct device_node *opp_np;
-	int ret;
+	struct device_node *opp_np = NULL;
+	int ret = 0;
+	int i = 0;
 
 	/*
 	 * OPPs have two version of bindings now. The older one is deprecated,
 	 * try for the new binding first.
 	 */
-	opp_np = dev_pm_opp_of_get_opp_desc_node(dev);
-	if (!opp_np) {
+	while (i < max_tables) {
+		opp_np = _opp_of_get_opp_desc_node(np, i);
+		if (!opp_np)
+			break;
+		ret = _of_add_opp_table_v2(dev, opp_np);
+		*ref_np++ = opp_np;
+		i++;
+		if (ret)
+			break;
+	}
+
+	if (!i) {
 		/*
 		 * Try old-deprecated bindings for backward compatibility with
 		 * older dtbs.
 		 */
-		return _of_add_opp_table_v1(dev);
+		ret = _of_add_opp_table_v1(dev, np);
+		if (!ret) {
+			opp_np = np;
+			of_node_get(opp_np);
+		}
+		*ref_np = opp_np;
 	}
+	return ret;
+}
+EXPORT_SYMBOL_GPL(dev_pm_opp_of_add_table_np);
 
-	ret = _of_add_opp_table_v2(dev, opp_np);
-	of_node_put(opp_np);
+int dev_pm_opp_of_add_table(struct device *dev)
+{
+	struct device_node *opp_np = NULL;
+	int ret = dev_pm_opp_of_add_table_np(dev, dev->of_node, &opp_np, 1);
 
+	if (opp_np)
+		of_node_put(opp_np);
 	return ret;
 }
 EXPORT_SYMBOL_GPL(dev_pm_opp_of_add_table);
@@ -740,7 +778,7 @@ struct dev_pm_opp *of_dev_pm_opp_find_required_opp(struct device *dev,
 	struct device_node *required_np;
 	struct opp_table *opp_table;
 
-	opp_table = _find_opp_table(dev);
+	opp_table = _find_opp_table(dev, NULL);
 	if (IS_ERR(opp_table))
 		return ERR_CAST(opp_table);
 
