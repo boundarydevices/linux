@@ -1005,6 +1005,11 @@
 	status = "okay";
 };
 
+&vpumix_pd {
+	dvfs-supply = <&reg_sw5>;
+	idle-microvolt = <850000 805000 900000>;
+};
+
 &wdog1 {
 	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_wdog>;
