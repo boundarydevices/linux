@@ -269,6 +269,60 @@
 				 <&clk IMX8MM_CLK_GPU3D_ROOT>;
 		};
 
+		vpu_opp_table_g1: vpu-opp-table-g1 {
+			compatible = "operating-points-v2";
+			dentry-name = "g1";
+
+			opp-450000000 {
+				opp-hz = /bits/ 64 <450000000>;
+				opp-microvolt = <850000 805000 900000>;
+			};
+			opp-650000000 {
+				opp-hz = /bits/ 64 <650000000>;
+				opp-microvolt = <900000 855000 950000>;
+			};
+			opp-750000000 {
+				opp-hz = /bits/ 64 <750000000>;
+				opp-microvolt = <950000 900000 1000000>;
+			};
+		};
+
+		vpu_opp_table_g2: vpu-opp-table-g2 {
+			compatible = "operating-points-v2";
+			dentry-name = "g2";
+
+			opp-450000000 {
+				opp-hz = /bits/ 64 <450000000>;
+				opp-microvolt = <850000 805000 900000>;
+			};
+			opp-600000000 {
+				opp-hz = /bits/ 64 <600000000>;
+				opp-microvolt = <900000 855000 950000>;
+			};
+			opp-700000000 {
+				opp-hz = /bits/ 64 <700000000>;
+				opp-microvolt = <950000 900000 1000000>;
+			};
+		};
+
+		vpu_opp_table_h1: vpu-opp-table-h1 {
+			compatible = "operating-points-v2";
+			dentry-name = "h1";
+
+			opp-450000000 {
+				opp-hz = /bits/ 64 <450000000>;
+				opp-microvolt = <850000 805000 900000>;
+			};
+			opp-650000000 {
+				opp-hz = /bits/ 64 <650000000>;
+				opp-microvolt = <900000 855000 950000>;
+			};
+			opp-750000000 {
+				opp-hz = /bits/ 64 <750000000>;
+				opp-microvolt = <950000 900000 1000000>;
+			};
+		};
+
 		/* VPU SS */
 		vpumix_pd: vpumix-pd {
 			compatible = "fsl,imx8m-pm-domain";
@@ -285,6 +339,7 @@
 			domain-name = "vpu_g1";
 			parent-domains = <&vpumix_pd>;
 			clocks = <&clk IMX8MM_CLK_VPU_G1_ROOT>;
+			operating-points-v2 = <&vpu_opp_table_g1>;
 		};
 
 		vpu_g2_pd: vpug2-pd {
@@ -294,6 +349,7 @@
 			domain-name = "vpu_g2";
 			parent-domains = <&vpumix_pd>;
 			clocks = <&clk IMX8MM_CLK_VPU_G2_ROOT>;
+			operating-points-v2 = <&vpu_opp_table_g2>;
 		};
 
 		vpu_h1_pd: vpuh1-pd {
@@ -303,6 +359,7 @@
 			domain-name = "vpu_h1";
 			parent-domains = <&vpumix_pd>;
 			clocks = <&clk IMX8MM_CLK_VPU_H1_ROOT>;
+			operating-points-v2 = <&vpu_opp_table_h1>;
 		};
 
 		/* DISP SS */
