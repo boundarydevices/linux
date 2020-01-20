@@ -1,5 +1,21 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2019 NXP Semiconductor, Inc. All Rights Reserved.
+ * Freescale i.MX8MN/P SoC series MIPI-CSI V3.3 receiver driver
+ * Copyright (C) 2015-2016 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2019 NXP
+ * Copyright 2020 NXP
+ *
+ * Samsung S5P/EXYNOS SoC series MIPI-CSI receiver driver
+ *
+ * Copyright (C) 2011 - 2013 Samsung Electronics Co., Ltd.
+ * Copyright (C) 2015-2016 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright 2019 NXP
+ * Author: Sylwester Nawrocki <s.nawrocki@samsung.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
  */
 
 #include <linux/clk.h>
@@ -327,7 +343,6 @@ struct csi_state {
 	struct phy *phy;
 	void __iomem *regs;
 	struct clk *mipi_clk;
-	struct clk *phy_clk;
 	struct clk *disp_axi;
 	struct clk *disp_apb;
 	int irq;
@@ -338,7 +353,6 @@ struct csi_state {
 	u32 clk_settle;
 	u32 num_lanes;
 	u32 max_num_lanes;
-	int id;
 	u8 wclk_ext;
 
 	u8 vchannel;
@@ -695,12 +709,6 @@ static int mipi_csis_clk_enable(struct csi_state *state)
 		return ret;
 	}
 
-	ret = clk_prepare_enable(state->phy_clk);
-	if (ret) {
-		dev_err(dev, "enable phy_clk failed!\n");
-		return ret;
-	}
-
 	ret = clk_prepare_enable(state->disp_axi);
 	if (ret) {
 		dev_err(dev, "enable disp_axi clk failed!\n");
@@ -719,7 +727,6 @@ static int mipi_csis_clk_enable(struct csi_state *state)
 static void mipi_csis_clk_disable(struct csi_state *state)
 {
 	clk_disable_unprepare(state->mipi_clk);
-	clk_disable_unprepare(state->phy_clk);
 	clk_disable_unprepare(state->disp_axi);
 	clk_disable_unprepare(state->disp_apb);
 }
@@ -732,12 +739,6 @@ static int mipi_csis_clk_get(struct csi_state *state)
 	state->mipi_clk = devm_clk_get(dev, "mipi_clk");
 	if (IS_ERR(state->mipi_clk)) {
 		dev_err(dev, "Could not get mipi csi clock\n");
-		return -ENODEV;
-	}
-
-	state->phy_clk = devm_clk_get(dev, "phy_clk");
-	if (IS_ERR(state->phy_clk)) {
-		dev_err(dev, "Could not get mipi phy clock\n");
 		return -ENODEV;
 	}
 
@@ -771,6 +772,9 @@ static int disp_mix_sft_rstn(struct reset_control *reset, bool enable)
 {
 	int ret;
 
+	if (!reset)
+		return 0;
+
 	ret = enable ? reset_control_assert(reset) :
 			 reset_control_deassert(reset);
 	return ret;
@@ -779,6 +783,9 @@ static int disp_mix_sft_rstn(struct reset_control *reset, bool enable)
 static int disp_mix_clks_enable(struct reset_control *reset, bool enable)
 {
 	int ret;
+
+	if (!reset)
+		return 0;
 
 	ret = enable ? reset_control_assert(reset) :
 			 reset_control_deassert(reset);
@@ -1184,7 +1191,7 @@ static int mipi_csis_parse_dt(struct platform_device *pdev,
 {
 	struct device_node *node = pdev->dev.of_node;
 
-	state->id = of_alias_get_id(node, "csi");
+	state->index = of_alias_get_id(node, "csi");
 
 	if (of_property_read_u32(node, "clock-frequency", &state->clk_frequency))
 		state->clk_frequency = DEFAULT_SCLK_CSIS_FREQ;
@@ -1337,10 +1344,12 @@ static int mipi_csis_probe(struct platform_device *pdev)
 		return PTR_ERR(state->gasket);
 	}
 
-	ret = mipi_csis_of_parse_resets(state);
-	if (ret < 0) {
-		dev_err(dev, "Can not parse reset control\n");
-		return ret;
+	if (!of_property_read_bool(dev->of_node, "no-reset-control")) {
+		ret = mipi_csis_of_parse_resets(state);
+		if (ret < 0) {
+			dev_err(dev, "Can not parse reset control\n");
+			return ret;
+		}
 	}
 
 	mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);

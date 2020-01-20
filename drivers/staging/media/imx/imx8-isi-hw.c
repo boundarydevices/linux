@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2019 NXP Semiconductor
+ * Copyright 2019-2020 NXP
  *
  */
 #include <dt-bindings/pinctrl/pads-imx8qxp.h>
@@ -234,31 +234,31 @@ void mxc_isi_channel_source_config(struct mxc_isi_dev *mxc_isi)
 
 	switch (mxc_isi->interface[IN_PORT]) {
 	case ISI_INPUT_INTERFACE_MIPI0_CSI2:
-		val |= CHNL_CTRL_SRC_INPUT_MIPI0;
+		val |= mxc_isi->pdata->chan_src->src_mipi0;
 		if (mxc_isi->interface[SUB_IN_PORT] <= CHNL_CTRL_MIPI_VC_ID_VC3 &&
 		    mxc_isi->interface[SUB_IN_PORT] >= CHNL_CTRL_MIPI_VC_ID_VC0)
 			val |= (mxc_isi->interface[SUB_IN_PORT] << CHNL_CTRL_MIPI_VC_ID_OFFSET);
 		break;
 	case ISI_INPUT_INTERFACE_MIPI1_CSI2:
-		val |= CHNL_CTRL_SRC_INPUT_MIPI1;
+		val |= mxc_isi->pdata->chan_src->src_mipi1;
 		if (mxc_isi->interface[SUB_IN_PORT] <= CHNL_CTRL_MIPI_VC_ID_VC3 &&
 		    mxc_isi->interface[SUB_IN_PORT] >= CHNL_CTRL_MIPI_VC_ID_VC0)
 			val |= (mxc_isi->interface[SUB_IN_PORT] << CHNL_CTRL_MIPI_VC_ID_OFFSET);
 		break;
 	case ISI_INPUT_INTERFACE_DC0:
-		val |= CHNL_CTRL_SRC_INPUT_DC0;
+		val |= mxc_isi->pdata->chan_src->src_dc0;
 		break;
 	case ISI_INPUT_INTERFACE_DC1:
-		val |= CHNL_CTRL_SRC_INPUT_DC1;
+		val |= mxc_isi->pdata->chan_src->src_dc1;
 		break;
 	case ISI_INPUT_INTERFACE_HDMI:
-		val |= CHNL_CTRL_SRC_INPUT_HDMI;
+		val |= mxc_isi->pdata->chan_src->src_hdmi;
 		break;
 	case ISI_INPUT_INTERFACE_PARALLEL_CSI:
-		val |= CHNL_CTRL_SRC_INPUT_CSI;
+		val |= mxc_isi->pdata->chan_src->src_csi;
 		break;
 	case ISI_INPUT_INTERFACE_MEM:
-		val |= CHNL_CTRL_SRC_INPUT_MEMORY;
+		val |= mxc_isi->pdata->chan_src->src_mem;
 		val |= (CHNL_CTRL_SRC_TYPE_MEMORY << CHNL_CTRL_SRC_TYPE_OFFSET);
 		break;
 	default:
@@ -358,6 +358,25 @@ void mxc_isi_channel_set_alpha(struct mxc_isi_dev *mxc_isi)
 			(CHNL_IMG_CTRL_GBL_ALPHA_EN_ENABLE << CHNL_IMG_CTRL_GBL_ALPHA_EN_OFFSET));
 
 	writel(val, mxc_isi->regs + CHNL_IMG_CTRL);
+}
+
+void mxc_isi_channel_set_panic_threshold(struct mxc_isi_dev *mxc_isi)
+{
+	struct mxc_isi_set_thd *set_thd = mxc_isi->pdata->set_thd;
+	u32 val;
+
+	val = readl(mxc_isi->regs + CHNL_OUT_BUF_CTRL);
+
+	val &= ~(set_thd->panic_set_thd_y.mask);
+	val |= set_thd->panic_set_thd_y.threshold << set_thd->panic_set_thd_y.offset;
+
+	val &= ~(set_thd->panic_set_thd_u.mask);
+	val |= set_thd->panic_set_thd_u.threshold << set_thd->panic_set_thd_u.offset;
+
+	val &= ~(set_thd->panic_set_thd_v.mask);
+	val |= set_thd->panic_set_thd_v.threshold << set_thd->panic_set_thd_v.offset;
+
+	writel(val, mxc_isi->regs + CHNL_OUT_BUF_CTRL);
 }
 
 void mxc_isi_channel_set_chain_buf(struct mxc_isi_dev *mxc_isi)
@@ -593,6 +612,8 @@ void mxc_isi_channel_config(struct mxc_isi_dev *mxc_isi,
 
 	mxc_isi_channel_set_alpha(mxc_isi);
 
+	mxc_isi_channel_set_panic_threshold(mxc_isi);
+
 	val = readl(mxc_isi->regs + CHNL_CTRL);
 	val &= ~CHNL_CTRL_CHNL_BYPASS_MASK;
 
@@ -655,22 +676,28 @@ void mxc_isi_channel_disable(struct mxc_isi_dev *mxc_isi)
 
 void  mxc_isi_enable_irq(struct mxc_isi_dev *mxc_isi)
 {
+	struct mxc_isi_ier_reg *ier_reg = mxc_isi->pdata->ier_reg;
 	u32 val;
 
 	val = CHNL_IER_FRM_RCVD_EN_MASK |
-		CHNL_IER_OFLW_Y_BUF_EN_MASK |
 		CHNL_IER_AXI_WR_ERR_U_EN_MASK |
 		CHNL_IER_AXI_WR_ERR_V_EN_MASK |
-		CHNL_IER_AXI_WR_ERR_Y_EN_MASK |
-		CHNL_IER_OFLW_PANIC_V_BUF_EN_MASK |
-		CHNL_IER_EXCS_OFLW_V_BUF_EN_MASK |
-		CHNL_IER_OFLW_V_BUF_EN_MASK |
-		CHNL_IER_OFLW_PANIC_U_BUF_EN_MASK |
-		CHNL_IER_EXCS_OFLW_U_BUF_EN_MASK |
-		CHNL_IER_OFLW_U_BUF_EN_MASK |
-		CHNL_IER_OFLW_PANIC_Y_BUF_EN_MASK |
-		CHNL_IER_EXCS_OFLW_Y_BUF_EN_MASK |
-		CHNL_IER_OFLW_Y_BUF_EN_MASK;
+		CHNL_IER_AXI_WR_ERR_Y_EN_MASK;
+
+	/* Y/U/V overflow enable */
+	val |= ier_reg->oflw_y_buf_en.mask |
+	       ier_reg->oflw_u_buf_en.mask |
+	       ier_reg->oflw_v_buf_en.mask;
+
+	/* Y/U/V excess overflow enable */
+	val |= ier_reg->excs_oflw_y_buf_en.mask |
+	       ier_reg->excs_oflw_u_buf_en.mask |
+	       ier_reg->excs_oflw_v_buf_en.mask;
+
+	/* Y/U/V panic enable */
+	val |= ier_reg->panic_y_buf_en.mask |
+	       ier_reg->panic_u_buf_en.mask |
+	       ier_reg->panic_v_buf_en.mask;
 
 	writel(val, mxc_isi->regs + CHNL_IER);
 }

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2019 NXP Semiconductor
+ * Copyright 2019-2020 NXP
  *
  */
 
@@ -50,12 +50,6 @@
 #define  CHNL_CTRL_SRC_TYPE_MEMORY		1
 #define  CHNL_CTRL_SRC_INPUT_OFFSET		0
 #define  CHNL_CTRL_SRC_INPUT_MASK		0x7
-#define  CHNL_CTRL_SRC_INPUT_DC0		0
-#define  CHNL_CTRL_SRC_INPUT_DC1		1
-#define  CHNL_CTRL_SRC_INPUT_MIPI0		2
-#define  CHNL_CTRL_SRC_INPUT_MIPI1		3
-#define  CHNL_CTRL_SRC_INPUT_HDMI		4
-#define  CHNL_CTRL_SRC_INPUT_CSI		4
 #define  CHNL_CTRL_SRC_INPUT_MEMORY		5
 
 /* Channel Image Control Register */
@@ -164,33 +158,6 @@
 #define  CHNL_IER_AXI_RD_ERR_EN_OFFSET		25
 #define  CHNL_IER_AXI_RD_ERR_EN_MASK		0x2000000
 #define  CHNL_IER_AXI_RD_ERR_EN_ENABLE		1
-#define  CHNL_IER_OFLW_PANIC_V_BUF_EN_OFFSET	24
-#define  CHNL_IER_OFLW_PANIC_V_BUF_EN_MASK	0x1000000
-#define  CHNL_IER_OFLW_PANIC_V_BUF_EN_ENABLE	1
-#define  CHNL_IER_EXCS_OFLW_V_BUF_EN_OFFSET	23
-#define  CHNL_IER_EXCS_OFLW_V_BUF_EN_MASK	0x800000
-#define  CHNL_IER_EXCS_OFLW_V_BUF_EN_ENABLE	1
-#define  CHNL_IER_OFLW_V_BUF_EN_OFFSET		22
-#define  CHNL_IER_OFLW_V_BUF_EN_MASK		0x400000
-#define  CHNL_IER_OFLW_V_BUF_EN_ENABLE		1
-#define  CHNL_IER_OFLW_PANIC_U_BUF_EN_OFFSET	21
-#define  CHNL_IER_OFLW_PANIC_U_BUF_EN_MASK	0x200000
-#define  CHNL_IER_OFLW_PANIC_U_BUF_EN_ENABLE	1
-#define  CHNL_IER_EXCS_OFLW_U_BUF_EN_OFFSET	20
-#define  CHNL_IER_EXCS_OFLW_U_BUF_EN_MASK	0x100000
-#define  CHNL_IER_EXCS_OFLW_U_BUF_EN_ENABLE	1
-#define  CHNL_IER_OFLW_U_BUF_EN_OFFSET		19
-#define  CHNL_IER_OFLW_U_BUF_EN_MASK		0x80000
-#define  CHNL_IER_OFLW_U_BUF_EN_ENABLE		1
-#define  CHNL_IER_OFLW_PANIC_Y_BUF_EN_OFFSET	18
-#define  CHNL_IER_OFLW_PANIC_Y_BUF_EN_MASK	0x40000
-#define  CHNL_IER_OFLW_PANIC_Y_BUF_EN_ENABLE	1
-#define  CHNL_IER_EXCS_OFLW_Y_BUF_EN_OFFSET	17
-#define  CHNL_IER_EXCS_OFLW_Y_BUF_EN_MASK	0x20000
-#define  CHNL_IER_EXCS_OFLW_Y_BUF_EN_ENABLE	1
-#define  CHNL_IER_OFLW_Y_BUF_EN_OFFSET		16
-#define  CHNL_IER_OFLW_Y_BUF_EN_MASK		0x10000
-#define  CHNL_IER_OFLW_Y_BUF_EN_ENABLE		1
 
 /* Channel Status Register */
 #define  CHNL_STS				0x14
@@ -478,6 +445,7 @@ void mxc_isi_channel_set_chain_buf(struct mxc_isi_dev *mxc_isi);
 void mxc_isi_channel_set_deinterlace(struct mxc_isi_dev *mxc_isi);
 void mxc_isi_channel_set_crop(struct mxc_isi_dev *mxc_isi);
 void mxc_isi_channel_set_memory_image(struct mxc_isi_dev *mxc_isi);
+void mxc_isi_channel_set_panic_threshold(struct mxc_isi_dev *mxc_isi);
 
 void mxc_isi_channel_set_scaling(struct mxc_isi_dev *mxc_isi,
 				 struct mxc_isi_frame *src_f,
