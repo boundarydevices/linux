@@ -77,8 +77,9 @@ static void __init imx6ul_enet_phy_init(void)
 static void __init imx6ul_opp_check_speed_grading(struct device *cpu_dev)
 {
 	struct device_node *np;
-	void __iomem *base;
-	u32 val;
+	struct regmap *map;
+	int ret;
+	u32 val = 0;
 
 	if (cpu_is_imx6ul())
 		np = of_find_compatible_node(NULL, NULL, "fsl,imx6ul-ocotp");
@@ -87,13 +88,15 @@ static void __init imx6ul_opp_check_speed_grading(struct device *cpu_dev)
 
 	if (!np) {
 		pr_warn("failed to find ocotp node\n");
-		return;
-	}
-
-	base = of_iomap(np, 0);
-	if (!base) {
-		pr_warn("failed to map ocotp\n");
-		goto put_node;
+	} else {
+		map = syscon_node_to_regmap(np);
+		if (!map) {
+			pr_warn("regmap failed for ocotp node\n");
+		} else {
+			ret = regmap_read(map, OCOTP_CFG3, &val);
+			if (ret)
+				pr_err("failed to read OCOTP_CFG3: %d\n", ret);
+		}
 	}
 
 	/*
@@ -104,9 +107,9 @@ static void __init imx6ul_opp_check_speed_grading(struct device *cpu_dev)
 	 * 2b'11: 900000000Hz(i.MX6ULL);
 	 * We need to set the max speed of ARM according to fuse map.
 	 */
-	val = readl_relaxed(base + OCOTP_CFG3);
 	val >>= OCOTP_CFG3_SPEED_SHIFT;
 	val &= 0x3;
+	pr_warn("Speed grading is %d\n", val);
 	if (cpu_is_imx6ul()) {
 		if (val < OCOTP_CFG3_SPEED_696MHZ) {
 			if (dev_pm_opp_disable(cpu_dev, 696000000))
@@ -115,19 +118,17 @@ static void __init imx6ul_opp_check_speed_grading(struct device *cpu_dev)
 	}
 
 	if (cpu_is_imx6ull()) {
-		if (val != OCOTP_CFG3_SPEED_696MHZ) {
+		if (val < OCOTP_CFG3_SPEED_696MHZ) {
 			if (dev_pm_opp_disable(cpu_dev, 792000000))
 				pr_warn("Failed to disable 792MHz OPP\n");
 		}
 
-		if (val != OCOTP_CFG3_SPEED_900MHZ) {
+		if (val < OCOTP_CFG3_SPEED_900MHZ) {
 			if(dev_pm_opp_disable(cpu_dev, 900000000))
 				pr_warn("Failed to disable 900MHz OPP\n");
 		}
 	}
-	iounmap(base);
 
-put_node:
 	of_node_put(np);
 }
 
