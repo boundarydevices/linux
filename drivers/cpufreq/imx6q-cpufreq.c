@@ -342,7 +342,7 @@ put_node:
 
 static int imx6ul_opp_check_speed_grading(struct device *dev)
 {
-	u32 val;
+	u32 val = 0;
 	int ret = 0;
 
 	if (of_find_property(dev->of_node, "nvmem-cells", NULL)) {
@@ -351,21 +351,22 @@ static int imx6ul_opp_check_speed_grading(struct device *dev)
 			return ret;
 	} else {
 		struct device_node *np;
-		void __iomem *base;
+		struct regmap *map;
 
 		np = of_find_compatible_node(NULL, NULL, "fsl,imx6ul-ocotp");
-		if (!np)
-			return -ENOENT;
-
-		base = of_iomap(np, 0);
-		of_node_put(np);
-		if (!base) {
-			dev_err(dev, "failed to map ocotp\n");
-			return -EFAULT;
+		if (!np) {
+			ret = -ENOENT;
+		} else {
+			map = syscon_node_to_regmap(np);
+			of_node_put(np);
+			if (!map) {
+				dev_err(dev, "failed to map ocotp\n");
+			} else {
+				ret = regmap_read(map, OCOTP_CFG3, &val);
+				if (ret)
+					dev_err(dev, "failed to read OCOTP_CFG3: %d\n", ret);
+			}
 		}
-
-		val = readl_relaxed(base + OCOTP_CFG3);
-		iounmap(base);
 	}
 
 	/*
