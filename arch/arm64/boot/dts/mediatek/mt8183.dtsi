@@ -1411,13 +1411,13 @@
 		};
 
 		gpu: gpu@13040000 {
-			compatible = "mediatek,mt8183-mali", "arm,mali-bifrost";
+			compatible = "mediatek,mt8183-mali", "arm,mali-bifrost", "arm,mali-midgard";
 			reg = <0 0x13040000 0 0x4000>;
 			interrupts =
 				<GIC_SPI 280 IRQ_TYPE_LEVEL_LOW>,
 				<GIC_SPI 279 IRQ_TYPE_LEVEL_LOW>,
 				<GIC_SPI 278 IRQ_TYPE_LEVEL_LOW>;
-			interrupt-names = "job", "mmu", "gpu";
+			interrupt-names = "JOB", "MMU", "GPU";
 
 			clocks = <&topckgen CLK_TOP_MFGPLL_CK>;
 

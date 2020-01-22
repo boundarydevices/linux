@@ -611,9 +611,9 @@
 };
 
 &gpu {
-	supply-names = "mali","mali_sram";
+	supply-names = "mali","shadercores";
 	mali-supply = <&mt6358_vgpu_reg>;
-	mali_sram-supply = <&mt6358_vsram_gpu_reg>;
+	shadercores-supply = <&mt6358_vsram_gpu_reg>;
 	operating-points-v2 = <&gpu_opp_table>;
 	power_model@0 {
 		compatible = "arm,mali-simple-power-model";
