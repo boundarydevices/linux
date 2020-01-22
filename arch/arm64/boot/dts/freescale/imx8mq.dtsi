@@ -1625,6 +1625,62 @@
 			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
+		gpu_opp_table: gpu-opp-table {
+			compatible = "operating-points-v2";
+			dentry-name = "gpu";
+
+			opp-800000000 {
+				opp-hz = /bits/ 64 <800000000>;
+				opp-microvolt = <900000 810000 1050000>;
+			};
+			opp-1000000000 {
+				opp-hz = /bits/ 64 <1000000000>;
+				opp-microvolt = <950000 900000 1050000>;
+			};
+		};
+
+		vpu_opp_table_dec: vpu-opp-table-dec {
+			compatible = "operating-points-v2";
+			dentry-name = "axi-dec";
+
+			opp-588000000 {
+				opp-hz = /bits/ 64 <588000000>;
+				opp-microvolt = <900000 810000 1050000>;
+			};
+			opp-800000000 {
+				opp-hz = /bits/ 64 <800000000>;
+				opp-microvolt = <950000 900000 1050000>;
+			};
+		};
+
+		vpu_opp_table_g1: vpu-opp-table-g1 {
+			compatible = "operating-points-v2";
+			dentry-name = "g1";
+
+			opp-500000000 {
+				opp-hz = /bits/ 64 <500000000>;
+				opp-microvolt = <900000 810000 1050000>;
+			};
+			opp-600000000 {
+				opp-hz = /bits/ 64 <600000000>;
+				opp-microvolt = <950000 900000 1050000>;
+			};
+		};
+
+		vpu_opp_table_g2: vpu-opp-table-g2 {
+			compatible = "operating-points-v2";
+			dentry-name = "g2";
+
+			opp-550000000 {
+				opp-hz = /bits/ 64 <550000000>;
+				opp-microvolt = <900000 810000 1050000>;
+			};
+			opp-660000000 {
+				opp-hz = /bits/ 64 <660000000>;
+				opp-microvolt = <950000 900000 1050000>;
+			};
+		};
+
 		vpu: vpu@38300000 {
 			compatible = "nxp,imx8mq-hantro";
 			reg = <0x38300000 0x200000>;
