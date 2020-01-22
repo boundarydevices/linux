@@ -493,6 +493,9 @@
 	};
 };
 
+/delete-node/ &gpu_pd;
+/delete-node/ &vpu_pd;
+
 / {
 	model = "Boundary Devices i.MX8MQ Nitrogen8M_som";
 	compatible = "boundary,imx8mq-nitrogen8m_som", "fsl,imx8mq";
@@ -651,6 +654,40 @@
 		protocol = <1>;
 		status = "okay";
 	};
+
+	vpugpu_pd: power-domain@ffffffff {
+		compatible = "fsl,imx8mq-pm-domain";
+		domain-id = <0xffffffff>;
+		domain-name = "VPUGPU_PD";
+		dvfs-supply = <&reg_soc_gpu_vpu>;
+		idle-microvolt = <900000 837000 990000>;
+		#power-domain-cells = <0>;
+
+		gpu_pd: gpc_power_domain@4 {
+			clocks = <&clk IMX8MQ_CLK_GPU_AXI>,
+				<&clk IMX8MQ_CLK_GPU_SHADER_DIV>,
+				<&clk IMX8MQ_CLK_GPU_ROOT>,
+				<&clk IMX8MQ_CLK_GPU_AHB>;
+			compatible = "fsl,imx8mq-pm-domain";
+			domain-id = <4>;
+			domain-name = "GPU_PD";
+			operating-points-v2 = <&gpu_opp_table>;
+			#power-domain-cells = <0>;
+		};
+
+		vpu_pd: gpc_power_domain@5 {
+			clocks = <&clk IMX8MQ_CLK_VPU_G1_ROOT>,
+				<&clk IMX8MQ_CLK_VPU_G2_ROOT>,
+				<&clk IMX8MQ_CLK_VPU_DEC_ROOT>;
+			compatible = "fsl,imx8mq-pm-domain";
+			domain-id = <5>;
+			domain-name = "VPU_PD";
+			operating-points-v2 = <&vpu_opp_table_g1>,
+					<&vpu_opp_table_g2>,
+					<&vpu_opp_table_dec>;
+			#power-domain-cells = <0>;
+		};
+	};
 };
 
 &A53_0 {
@@ -737,25 +774,7 @@
 };
 
 &gpu {
-#if 0
-	clocks = <&clk IMX8MQ_CLK_GPU_ROOT>,
-		 <&clk IMX8MQ_CLK_GPU_SHADER_DIV>,
-		 <&clk IMX8MQ_CLK_GPU_AXI_DIV>,
-		 <&clk IMX8MQ_CLK_GPU_AHB_DIV>;
-	clock-names = "gpu3d_clk", "gpu3d_shader_clk", "gpu3d_axi_clk", "gpu3d_ahb_clk";
-	assigned-clocks = <&clk IMX8MQ_CLK_GPU_CORE_SRC>,
-			  <&clk IMX8MQ_CLK_GPU_SHADER_SRC>,
-			  <&clk IMX8MQ_CLK_GPU_AXI_SRC>,
-			  <&clk IMX8MQ_CLK_GPU_AHB_SRC>;
-	assigned-clock-parents = <&clk IMX8MQ_GPU_PLL_OUT>,
-				 <&clk IMX8MQ_SYS2_PLL_1000M>,
-				 <&clk IMX8MQ_GPU_PLL_OUT>,
-				 <&clk IMX8MQ_GPU_PLL_OUT>;
-	assigned-clock-rates =  <800000000>,
-				<1000000000>,
-				<800000000>,
-				<800000000>;
-#endif
+	power-domains = <&gpu_pd>;
 	status = "okay";
 };
 
@@ -1349,6 +1368,7 @@
 };
 
 &vpu {
+	power-domains = <&vpu_pd>;
 	regulator-supply = <&reg_vref_0v9>;
 	status = "okay";
 };
