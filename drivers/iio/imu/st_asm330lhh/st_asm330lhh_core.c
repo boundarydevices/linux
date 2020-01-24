@@ -1108,6 +1108,13 @@ static int st_asm330lhh_reset_device(struct st_asm330lhh_hw *hw)
 {
 	int err;
 
+
+	/* set configuration bit */
+	err = st_asm330lhh_write_with_mask(hw, ST_ASM330LHH_REG_CTRL9_XL_ADDR,
+				           ST_ASM330LHH_REG_DEVICE_CONF_MASK, 1);
+	if (err < 0)
+		return err;
+
 	/* sw reset */
 	err = st_asm330lhh_write_with_mask(hw, ST_ASM330LHH_REG_CTRL3_C_ADDR,
 					 ST_ASM330LHH_REG_SW_RESET_MASK, 1);
