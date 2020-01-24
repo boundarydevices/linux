@@ -270,11 +270,6 @@ struct st_asm330lhh_fs_table_entry {
 #define ST_ASM330LHH_GYRO_FS_2000_GAIN	IIO_DEGREE_TO_RAD(70000)
 #define ST_ASM330LHH_GYRO_FS_4000_GAIN	IIO_DEGREE_TO_RAD(140000)
 
-struct st_asm330lhh_ext_dev_info {
-	const struct st_asm330lhh_ext_dev_settings *ext_dev_settings;
-	u8 ext_dev_i2c_addr;
-};
-
 enum st_asm330lhh_sensor_id {
 	ST_ASM330LHH_ID_GYRO = 0,
 	ST_ASM330LHH_ID_ACC,
