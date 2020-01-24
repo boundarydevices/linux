@@ -44,14 +44,6 @@ module_param(delay_gyro, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 MODULE_PARM_DESC(delay_gyro, "Delay for Gyro arming");
 static bool delayed_enable_gyro;
 
-static inline s64 st_asm330lhh_get_time_ns(void)
-{
-	struct timespec ts;
-
-	get_monotonic_boottime(&ts);
-	return timespec_to_ns(&ts);
-}
-
 static inline s64 st_asm330lhh_ewma(s64 old, s64 new, int weight)
 {
 	s64 diff, incr;
@@ -504,7 +496,7 @@ static irqreturn_t st_asm330lhh_handler_thread(int irq, void *private)
 	clear_bit(ST_ASM330LHH_HW_FLUSH, &hw->state);
 	mutex_unlock(&hw->fifo_lock);
 
-	return IRQ_HANDLED;
+	return st_asm330lhh_event_handler(hw);
 }
 
 static int st_asm330lhh_fifo_preenable(struct iio_dev *iio_dev)
@@ -589,7 +581,7 @@ int st_asm330lhh_buffers_setup(struct st_asm330lhh_hw *hw)
 		return err;
 	}
 
-	for (i = ST_ASM330LHH_ID_GYRO; i < ST_ASM330LHH_ID_MAX; i++) {
+	for (i = 0; i < ST_ASM330LHH_ID_EVENT; i++) {
 		if (!hw->iio_devs[i])
 			continue;
 

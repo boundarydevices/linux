@@ -23,6 +23,13 @@
 
 #define ST_ASM330LHH_DEV_NAME		"asm330lhh"
 
+#define ST_ASM330LHH_DEFAULT_XL_FS_INDEX	2
+#define ST_ASM330LHH_DEFAULT_XL_ODR_INDEX	1
+#define ST_ASM330LHH_DEFAULT_G_FS_INDEX		2
+#define ST_ASM330LHH_DEFAULT_G_ODR_INDEX	1
+#define ST_ASM330LHH_DEFAULT_T_FS_INDEX		0
+#define ST_ASM330LHH_DEFAULT_T_ODR_INDEX	1
+
 #define ST_ASM330LHH_REG_FIFO_CTRL1_ADDR	0x07
 #define ST_ASM330LHH_REG_FIFO_CTRL2_ADDR	0x08
 #define ST_ASM330LHH_REG_FIFO_WTM_MASK		GENMASK(8, 0)
@@ -79,6 +86,18 @@
 
 #define ST_ASM330LHH_REG_TAP_CFG0_ADDR		0x56
 #define ST_ASM330LHH_REG_LIR_MASK		BIT(0)
+
+#define ST_ASM330LHH_REG_THS_6D_ADDR		0x59
+#define ST_ASM330LHH_SIXD_THS_MASK		GENMASK(6, 5)
+
+#define ST_ASM330LHH_REG_WAKE_UP_THS_ADDR	0x5b
+#define ST_ASM330LHH_WAKE_UP_THS_MASK		GENMASK(5, 0)
+
+#define ST_ASM330LHH_REG_WAKE_UP_DUR_ADDR	0x5c
+#define ST_ASM330LHH_WAKE_UP_DUR_MASK		GENMASK(6, 5)
+
+#define ST_ASM330LHH_REG_FREE_FALL_ADDR		0x5d
+#define ST_ASM330LHH_FF_THS_MASK		GENMASK(2, 0)
 
 #define ST_ASM330LHH_INTERNAL_FREQ_FINE		0x63
 
@@ -262,7 +281,13 @@ enum st_asm330lhh_sensor_id {
 #ifdef CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE
 	ST_ASM330LHH_ID_TEMP,
 #endif /* CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE */
-	ST_ASM330LHH_ID_MAX
+	ST_ASM330LHH_ID_EVENT,
+	ST_ASM330LHH_ID_FF = ST_ASM330LHH_ID_EVENT,
+	ST_ASM330LHH_ID_SC,
+	ST_ASM330LHH_ID_TRIGGER,
+	ST_ASM330LHH_ID_WK = ST_ASM330LHH_ID_TRIGGER,
+	ST_ASM330LHH_ID_6D,
+	ST_ASM330LHH_ID_MAX,
 };
 
 enum st_asm330lhh_fifo_mode {
@@ -281,6 +306,7 @@ enum {
  * @hw: Pointer to instance of struct st_asm330lhh_hw.
  * @gain: Configured sensor sensitivity.
  * @offset: Sensor data offset.
+ * @conf: Used in case of sensor event to manage configuration.
  * @odr: Output data rate of the sensor [Hz].
  * @uodr: Output data rate of the sensor [uHz].
  * @max_watermark: Max supported watermark level.
@@ -289,22 +315,37 @@ enum {
 struct st_asm330lhh_sensor {
 	enum st_asm330lhh_sensor_id id;
 	struct st_asm330lhh_hw *hw;
-	u32 gain;
-	u32 offset;
-	int odr;
-	int uodr;
+	struct iio_trigger *trig;
+
+	union {
+		/* sensor with odrs, gain and offset */
+		struct {
+			u32 gain;
+			u32 offset;
+			int odr;
+			int uodr;
+
 #ifdef ST_ASM330LHH_DEBUG_DISCHARGE
-	u32 discharged_samples;
+			u32 discharged_samples;
 #endif /* ST_ASM330LHH_DEBUG_DISCHARGE */
 
-	u16 max_watermark;
-	u16 watermark;
+			u16 max_watermark;
+			u16 watermark;
+		};
+
+		/* sensor specific data configuration */
+		struct {
+			u32 conf[6];
+		};
+	};
+
 };
 
 /**
  * struct st_asm330lhh_hw - ST IMU MEMS hw instance
  * @dev: Pointer to instance of struct device (I2C or SPI).
  * @irq: Device interrupt line (I2C or SPI).
+ * @int_pin: Save interrupt pin used by sensor.
  * @lock: Mutex to protect read and write operations.
  * @fifo_lock: Mutex to prevent concurrent access to the hw FIFO.
  * @page_lock: Mutex to prevent concurrent memory page configuration.
@@ -323,10 +364,12 @@ struct st_asm330lhh_sensor {
  * @iio_devs: Pointers to acc/gyro iio_dev instances.
  * @tf: Transfer function structure used by I/O operations.
  * @tb: Transfer buffers used by SPI I/O operations.
+ * @orientation: sensor chip orientation relative to main hardware.
  */
 struct st_asm330lhh_hw {
 	struct device *dev;
 	int irq;
+	int int_pin;
 
 	struct mutex lock;
 	struct mutex fifo_lock;
@@ -349,6 +392,28 @@ struct st_asm330lhh_hw {
 
 	const struct st_asm330lhh_transfer_function *tf;
 	struct st_asm330lhh_transfer_buffer tb;
+
+	struct iio_mount_matrix orientation;
+};
+
+/**
+ * struct st_asm330lhh_ff_th - Free Fall threshold table
+ * @mg: Threshold in mg.
+ * @val: Register value.
+ */
+struct st_asm330lhh_ff_th {
+	u32 mg;
+	u8 val;
+};
+
+/**
+ * struct st_asm330lhh_6D_th - 6D threshold table
+ * @deg: Threshold in degrees.
+ * @val: Register value.
+ */
+struct st_asm330lhh_6D_th {
+	u8 deg;
+	u8 val;
 };
 
 extern const struct dev_pm_ops st_asm330lhh_pm_ops;
@@ -397,6 +462,14 @@ static inline bool st_asm330lhh_is_fifo_enabled(struct st_asm330lhh_hw *hw)
 				  BIT(ST_ASM330LHH_ID_ACC));
 }
 
+static inline s64 st_asm330lhh_get_time_ns(void)
+{
+	struct timespec ts;
+
+	get_monotonic_boottime(&ts);
+	return timespec_to_ns(&ts);
+}
+
 int st_asm330lhh_probe(struct device *dev, int irq,
 		     const struct st_asm330lhh_transfer_function *tf_ops);
 int st_asm330lhh_sensor_set_enable(struct st_asm330lhh_sensor *sensor,
@@ -423,4 +496,12 @@ int __st_asm330lhh_set_sensor_batching_odr(struct st_asm330lhh_sensor *sensor,
 					 bool enable);
 int st_asm330lhh_update_batching(struct iio_dev *iio_dev, bool enable);
 int st_asm330lhh_reset_hwts(struct st_asm330lhh_hw *hw);
+int st_asm330lhh_event_handler(struct st_asm330lhh_hw *hw);
+int st_asm330lhh_probe_event(struct st_asm330lhh_hw *hw);
+int st_asm330lhh_set_wake_up_thershold(struct st_asm330lhh_hw *hw, int th_ug);
+int st_asm330lhh_set_wake_up_duration(struct st_asm330lhh_hw *hw, int dur_ms);
+int st_asm330lhh_set_freefall_threshold(struct st_asm330lhh_hw *hw, int th_mg);
+int st_asm330lhh_set_6D_threshold(struct st_asm330lhh_hw *hw, int deg);
+int st_asm330lhh_read_with_mask(struct st_asm330lhh_hw *hw, u8 addr, u8 mask,
+				u8 *val);
 #endif /* ST_ASM330LHH_H */
