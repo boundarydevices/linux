@@ -13,6 +13,8 @@ Required properties:
 Optional properties:
  - vdd-supply: Regulator that powers the CAN controller.
  - xceiver-supply: Regulator that powers the CAN transceiver.
+ - rx-int-gpios: GPIO phandle of GPIO connected to to INT1 pin of the
+   MCP25XXFD, which signals a pending RX interrupt.
 
 Example:
 	can0: can@0 {
@@ -24,6 +26,7 @@ Example:
 		spi-max-frequency = <20000000>;
 		interrupt-parent = <&gpio>;
 		interrupts = <13 IRQ_TYPE_LEVEL_LOW>;
+		rx-int-gpios = <&gpio 27 GPIO_ACTIVE_LOW>;
 		vdd-supply = <&reg5v0>;
 		xceiver-supply = <&reg5v0>;
 	};
