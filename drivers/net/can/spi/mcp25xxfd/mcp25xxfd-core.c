@@ -543,6 +543,21 @@ static int mcp25xxfd_set_bittiming(const struct mcp25xxfd_priv *priv)
 	return regmap_write(priv->map, MCP25XXFD_CAN_TDC, val);
 }
 
+static int mcp25xxfd_chip_pinctrl_init(const struct mcp25xxfd_priv *priv)
+{
+	u32 val;
+
+	if (!priv->rx_int)
+		return 0;
+
+	/* Configure GPIOs:
+	 * - PIN0: GPIO Input
+	 * - PIN1: RX Interrupt
+	 */
+	val = MCP25XXFD_IOCON_PM0 | MCP25XXFD_IOCON_TRIS0;
+	return regmap_write(priv->map, MCP25XXFD_IOCON, val);
+}
+
 static int mcp25xxfd_chip_fifo_compute(struct mcp25xxfd_priv *priv)
 {
 	int tef_obj_size, tx_obj_size, rx_obj_size;
@@ -778,6 +793,10 @@ static int mcp25xxfd_chip_start(struct mcp25xxfd_priv *priv)
 		goto out_chip_set_mode_sleep;
 
 	err = mcp25xxfd_set_bittiming(priv);
+	if (err)
+		goto out_chip_set_mode_sleep;
+
+	err = mcp25xxfd_chip_pinctrl_init(priv);
 	if (err)
 		goto out_chip_set_mode_sleep;
 
@@ -1578,6 +1597,21 @@ static irqreturn_t mcp25xxfd_irq(int irq, void *dev_id)
 	irqreturn_t handled = IRQ_NONE;
 	int err;
 
+	if (priv->rx_int)
+		do {
+			int rx_pending;
+
+			rx_pending = gpiod_get_value_cansleep(priv->rx_int);
+			if (!rx_pending)
+				break;
+
+			err = mcp25xxfd_handle(priv, rxif);
+			if (err)
+				goto out_fail;
+
+			handled = IRQ_HANDLED;
+		} while (1);
+
 	do {
 		u32 intf_pending, intf_pending_clearable;
 
@@ -1938,6 +1972,32 @@ static int mcp25xxfd_register_chip_detect(struct mcp25xxfd_priv *priv)
 	return 0;
 }
 
+static int mcp25xxfd_register_check_rx_int(struct mcp25xxfd_priv *priv)
+{
+	int err, rx_pending;
+
+	if (!priv->rx_int)
+		return 0;
+
+	err = mcp25xxfd_chip_pinctrl_init(priv);
+	if (err)
+		return err;
+
+	/* Check if RX_INT is properly working. The RX-INT should not
+	 * be active after a softreset.
+	 */
+	rx_pending = gpiod_get_value_cansleep(priv->rx_int);
+	if (!rx_pending)
+		return 0;
+
+	netdev_info(priv->ndev,
+		   "RX-INT active after softreset, disabling RX-INT support.");
+	devm_gpiod_put(&priv->spi->dev, priv->rx_int);
+	priv->rx_int = NULL;
+
+	return 0;
+}
+
 static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 {
 	struct net_device *ndev = priv->ndev;
@@ -1964,13 +2024,17 @@ static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 	if (err)
 		goto out_chip_set_mode_sleep;
 
+	err = mcp25xxfd_register_check_rx_int(priv);
+	if (err)
+		goto out_chip_set_mode_sleep;
+
 	err = register_candev(ndev);
 	if (err)
 		goto out_chip_set_mode_sleep;
 
 	if (priv->model == CAN_MCP2517FD) {
-		netdev_info(ndev, "MCP%xFD successfully initialized.\n",
-			    priv->model);
+		netdev_info(ndev, "MCP%xFD %ssuccessfully initialized.\n",
+			    priv->model, priv->rx_int ? "(+RX-INT) " : "");
 	} else {
 		u32 devid;
 
@@ -1978,10 +2042,11 @@ static int mcp25xxfd_register(struct mcp25xxfd_priv *priv)
 		if (err)
 			goto out_unregister_candev;
 
-		netdev_info(ndev, "MCP%xFD rev%lu.%lu successfully initialized.\n",
+		netdev_info(ndev, "MCP%xFD rev%lu.%lu %ssuccessfully initialized.\n",
 			    priv->model,
 			    FIELD_GET(MCP25XXFD_DEVID_ID_MASK, devid),
-			    FIELD_GET(MCP25XXFD_DEVID_REV_MASK, devid));
+			    FIELD_GET(MCP25XXFD_DEVID_REV_MASK, devid),
+			    priv->rx_int ? "(+RX-INT) " : "");
 	}
 
 	/* Put core into sleep mode and let pm_runtime_put() disable
@@ -2057,10 +2122,17 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 	const void *match;
 	struct net_device *ndev;
 	struct mcp25xxfd_priv *priv;
+	struct gpio_desc *rx_int;
 	struct regulator *reg_vdd, *reg_xceiver;
 	struct clk *clk;
 	u32 freq;
 	int err;
+
+	rx_int = devm_gpiod_get_optional(&spi->dev, "rx-int", GPIOD_IN);
+	if (PTR_ERR(rx_int) == -EPROBE_DEFER)
+		return -EPROBE_DEFER;
+	else if (IS_ERR(rx_int))
+		return PTR_ERR(rx_int);
 
 	reg_vdd = devm_regulator_get_optional(&spi->dev, "vdd");
 	if (PTR_ERR(reg_vdd) == -EPROBE_DEFER)
@@ -2121,6 +2193,7 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 		CAN_CTRLMODE_BERR_REPORTING;
 	priv->ndev = ndev;
 	priv->spi = spi;
+	priv->rx_int = rx_int;
 	priv->clk = clk;
 	priv->reg_vdd = reg_vdd;
 	priv->reg_xceiver = reg_xceiver;
