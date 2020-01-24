@@ -134,6 +134,7 @@
 		.storagebits = sb,					\
 		.endianness = IIO_LE,					\
 	},								\
+	.ext_info = st_asm330lhh_ext_info,				\
 }
 
 static const struct iio_event_spec st_asm330lhh_flush_event = {

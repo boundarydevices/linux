@@ -273,6 +273,21 @@ static const struct st_asm330lhh_6D_th st_asm330lhh_6D_threshold[] = {
 	},
 };
 
+static const inline struct iio_mount_matrix *
+st_asm330lhh_get_mount_matrix(const struct iio_dev *iio_dev,
+			      const struct iio_chan_spec *chan)
+{
+	struct st_asm330lhh_sensor *sensor = iio_priv(iio_dev);
+	struct st_asm330lhh_hw *hw = sensor->hw;
+
+	return &hw->orientation;
+}
+
+static const struct iio_chan_spec_ext_info st_asm330lhh_ext_info[] = {
+	IIO_MOUNT_MATRIX(IIO_SHARED_BY_ALL, st_asm330lhh_get_mount_matrix),
+	{},
+};
+
 static const struct iio_chan_spec st_asm330lhh_acc_channels[] = {
 	ST_ASM330LHH_DATA_CHANNEL(IIO_ACCEL, ST_ASM330LHH_REG_OUTX_L_A_ADDR,
 				1, IIO_MOD_X, 0, 16, 16, 's'),
@@ -1289,6 +1304,10 @@ int st_asm330lhh_probe(struct device *dev, int irq,
 
 	err = st_asm330lhh_init_device(hw);
 	if (err < 0)
+		return err;
+
+	err = of_iio_read_mount_matrix(hw->dev, "mount-matrix", &hw->orientation);
+	if (err)
 		return err;
 
 	for (i = 0; i < ST_ASM330LHH_ID_EVENT; i++) {
