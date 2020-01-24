@@ -13,6 +13,7 @@
 #include <linux/can/core.h>
 #include <linux/can/dev.h>
 #include <linux/can/rx-offload.h>
+#include <linux/gpio/consumer.h>
 #include <linux/kernel.h>
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
@@ -573,6 +574,7 @@ struct mcp25xxfd_priv {
 
 	struct mcp25xxfd_reg_write_buf update_bits_buf;
 
+	struct gpio_desc *rx_int;
 	struct clk *clk;
 	struct regulator *reg_vdd;
 	struct regulator *reg_xceiver;
