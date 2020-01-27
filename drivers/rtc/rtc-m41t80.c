@@ -160,6 +160,19 @@ struct m41t80_data {
 #endif
 };
 
+static int update_alarm_mon(struct m41t80_data *m41t80, int val)
+{
+	if (m41t80->always_on) {
+		if (!(val & M41T80_ALMON_SQWE)) {
+			pr_info("%s: alarm_mon sqwe was clear %x\n",
+					__func__, val);
+			val |= M41T80_ALMON_SQWE;
+		}
+	}
+	return i2c_smbus_write_byte_data(m41t80->client,
+			M41T80_REG_ALARM_MON, val);
+}
+
 static irqreturn_t m41t80_handle_irq(int irq, void *dev_id)
 {
 	struct i2c_client *client = dev_id;
@@ -191,8 +204,7 @@ static irqreturn_t m41t80_handle_irq(int irq, void *dev_id)
 	if (events) {
 		rtc_update_irq(m41t80->rtc, 1, events);
 		i2c_smbus_write_byte_data(client, M41T80_REG_FLAGS, flags);
-		i2c_smbus_write_byte_data(client, M41T80_REG_ALARM_MON,
-					  flags_afe);
+		update_alarm_mon(m41t80, flags_afe);
 	}
 
 	mutex_unlock(lock);
@@ -264,12 +276,31 @@ static int m41t80_set_datetime(struct i2c_client *client, struct rtc_time *tm)
 		buf[M41T80_REG_WDAY] |= (val & 0xf0);
 	}
 
+#if 1
 	err = i2c_smbus_write_i2c_block_data(client, M41T80_REG_SSEC,
 					     sizeof(buf), buf);
 	if (err < 0) {
 		dev_err(&client->dev, "Unable to write to date registers\n");
 		return err;
 	}
+#else
+	{
+		int i;
+
+		for (i = 0; i < sizeof(buf); i++) {
+			pr_info("%s: %x: %02x\n", __func__, i, buf[i]);
+			err = i2c_smbus_write_byte_data(client,
+					M41T80_REG_SSEC + i, buf[i]);
+			if (err) {
+				dev_err(&client->dev,
+					"Unable to write register 0x%x (%d)\n",
+					M41T80_REG_SSEC + i, err);
+				return -EIO;
+			}
+		}
+		pr_info("%s: c\n", __func__);
+	}
+#endif
 
 	/* Clear the OF bit of Flags Register */
 	flags = i2c_smbus_read_byte_data(client, M41T80_REG_FLAGS);
@@ -312,6 +343,7 @@ static int m41t80_rtc_set_time(struct device *dev, struct rtc_time *tm)
 static int m41t80_alarm_irq_enable(struct device *dev, unsigned int enabled)
 {
 	struct i2c_client *client = to_i2c_client(dev);
+	struct m41t80_data *m41t80 = i2c_get_clientdata(client);
 	int flags, retval;
 
 	flags = i2c_smbus_read_byte_data(client, M41T80_REG_ALARM_MON);
@@ -323,7 +355,7 @@ static int m41t80_alarm_irq_enable(struct device *dev, unsigned int enabled)
 	else
 		flags &= ~M41T80_ALMON_AFE;
 
-	retval = i2c_smbus_write_byte_data(client, M41T80_REG_ALARM_MON, flags);
+	retval = update_alarm_mon(m41t80, flags);
 	if (retval < 0) {
 		dev_err(dev, "Unable to enable alarm IRQ %d\n", retval);
 		return retval;
@@ -334,6 +366,7 @@ static int m41t80_alarm_irq_enable(struct device *dev, unsigned int enabled)
 static int m41t80_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 {
 	struct i2c_client *client = to_i2c_client(dev);
+	struct m41t80_data *m41t80 = i2c_get_clientdata(client);
 	u8 alarmvals[5];
 	int ret, err;
 
@@ -347,8 +380,7 @@ static int m41t80_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	ret = i2c_smbus_read_byte_data(client, M41T80_REG_ALARM_MON);
 	if (ret < 0)
 		return ret;
-	err = i2c_smbus_write_byte_data(client, M41T80_REG_ALARM_MON,
-					ret & ~(M41T80_ALMON_AFE));
+	err = update_alarm_mon(m41t80, ret & ~(M41T80_ALMON_AFE));
 	if (err < 0) {
 		dev_err(dev, "Unable to clear AFE bit\n");
 		return err;
@@ -369,6 +401,12 @@ static int m41t80_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	}
 
 	/* Write the alarm */
+	if (m41t80->always_on) {
+		if (!(alarmvals[0] & M41T80_ALMON_SQWE)) {
+			pr_info("%s: alarm_mon sqwe was clear %x\n", __func__, alarmvals[0]);
+			alarmvals[0] |= M41T80_ALMON_SQWE;
+		}
+	}
 	err = i2c_smbus_write_i2c_block_data(client, M41T80_REG_ALARM_MON,
 					     5, alarmvals);
 	if (err)
@@ -377,8 +415,7 @@ static int m41t80_set_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	/* Enable the alarm interrupt */
 	if (alrm->enabled) {
 		alarmvals[0] |= M41T80_ALMON_AFE;
-		err = i2c_smbus_write_byte_data(client, M41T80_REG_ALARM_MON,
-						alarmvals[0]);
+		err = update_alarm_mon(m41t80, alarmvals[0]);
 		if (err)
 			return err;
 	}
@@ -530,7 +567,7 @@ static int m41t80_sqw_control(struct clk_hw *hw, bool enable)
 	else
 		ret &= ~M41T80_ALMON_SQWE;
 
-	ret = i2c_smbus_write_byte_data(client, M41T80_REG_ALARM_MON, ret);
+	ret = update_alarm_mon(m41t80, ret);
 	if (!ret)
 		m41t80->sqwe = enable;
 	return ret;
@@ -582,7 +619,7 @@ static struct clk *m41t80_sqw_register_clk(struct m41t80_data *m41t80)
 	} else {
 		ret &= ~(M41T80_ALMON_SQWE);	/* disable the clock */
 	}
-	ret = i2c_smbus_write_byte_data(client, M41T80_REG_ALARM_MON, ret);
+	ret = update_alarm_mon(m41t80, ret);
 	if (ret < 0)
 		return ERR_PTR(ret);
 
