@@ -20,4 +20,5 @@
 
 &wdog1 {
 	/delete-property/ reset-gpios;
+	/delete-property/ pinctrl-1;
 };
