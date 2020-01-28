@@ -64,15 +64,15 @@
 		p6 = <&mipi_to_lvds_som>;
 	};
 
-        mipi_xclk: mipi-xclk {
+	mipi_xclk: mipi-xclk {
 		assigned-clocks = <&clk IMX8MMN(CLK_PWM4)>;
 		assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_40M)>;
-                compatible = "pwm-clock";
-                #clock-cells = <0>;
-                clock-frequency = <20000000>;
-                clock-output-names = "mipi_pwm4";
-                pwms = <&pwm4 0 50>; /* 20 MHz */
-        };
+		compatible = "pwm-clock";
+		#clock-cells = <0>;
+		clock-frequency = <20000000>;
+		clock-output-names = "mipi_pwm4";
+		pwms = <&pwm4 0 50>; /* 20 MHz */
+	};
 };
 
 &A53_0 {
@@ -194,4 +194,5 @@
 
 &wdog1 {
 	/delete-property/ reset-gpios;
+	/delete-property/ pinctrl-1;
 };
