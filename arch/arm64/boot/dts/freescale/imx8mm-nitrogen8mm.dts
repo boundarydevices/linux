@@ -139,8 +139,8 @@
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
-	assigned-clocks = <&clk IMX8MM_CLK_SAI1>;
-	assigned-clock-parents = <&clk IMX8MM_AUDIO_PLL1_OUT>;
+	assigned-clocks = <&clk IMX8MMN(CLK_SAI1)>;
+	assigned-clock-parents = <&clk IMX8MMN(AUDIO_PLL1_OUT)>;
 	assigned-clock-rates = <12288000>;
 	status = "okay";
 };
