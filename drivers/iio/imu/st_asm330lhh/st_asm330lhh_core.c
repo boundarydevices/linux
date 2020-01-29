@@ -620,7 +620,7 @@ static int st_asm330lhh_set_full_scale(struct st_asm330lhh_sensor *sensor,
 	u8 val;
 
 	/* for other sensors gain is fixed */
-	if (id >= ST_ASM330LHH_ID_TEMP)
+	if (id > ST_ASM330LHH_ID_ACC)
 		return 0;
 
 	for (i = 0; i < st_asm330lhh_fs_table[id].size; i++)
