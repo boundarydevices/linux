@@ -1,0 +1,247 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2019 Boundary Devices
+ */
+
+#include "imx8mm-nitrogen8mm_som.dts"
+&iomuxc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hog>;
+
+	/delete-node/ ecspi2-mcp2515tgrp;
+	/delete-node/ i2c2-gt911grp;
+	/delete-node/ i2c2-ft5x06grp;
+	/delete-node/ i2c2-gslx680grp;
+	/delete-node/ i2c2-sn65dsi83grp;
+	/delete-node/ i2c2-st1633grp;
+	/delete-node/ i2c3b-ov5640-mipigrp;
+	/delete-node/ mipi-lcm-jm430grp;
+	/delete-node/ mipi-ltk0680ytmdbgrp;
+	/delete-node/ mipi-ltk080a60a004tgrp;
+	/delete-node/ pwm1grp;
+	/delete-node/ pwm2grp;
+	/delete-node/ pwm3grp;
+	/delete-node/ pwm4grp;
+	/delete-node/ sai1grp;
+	/delete-node/ sai2grp;
+	/delete-node/ sai3grp;
+	/delete-node/ sai5grp;
+	/delete-node/ sound-wm8960grp;
+	/delete-node/ wdog-gpiogrp;
+
+	pinctrl_ecspi2: ecspi2grp {
+		fsl,pins = <
+			/* U5 XBEE */
+#define GP_ECSPI2_CS0	<&gpio5 13 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_ECSPI2_SS0_GPIO5_IO13		0x140
+			MX8MM_IOMUXC_ECSPI2_MISO_ECSPI2_MISO		0x19
+			MX8MM_IOMUXC_ECSPI2_SCLK_ECSPI2_SCLK		0x19
+			MX8MM_IOMUXC_ECSPI2_MOSI_ECSPI2_MOSI		0x19
+#define GP_XBEE_DTR     <&gpio4 2 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_SAI1_RXD0_GPIO4_IO2		0x140
+#define GP_XBEE_RESET   <&gpio4 1 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_SAI1_RXC_GPIO4_IO1                 0x100
+#define GP_XBEE_SLEEP   <&gpio4 0 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_SAI1_RXFS_GPIO4_IO0                0x100
+#if 0
+#define GP_XBEE_EN      <&gpio4 7 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_SAI1_RXD5_GPIO4_IO7                0x100
+#endif
+		>;
+	};
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			/* Silex, J12 pin 2 */
+			MX8MM_IOMUXC_SD1_STROBE_GPIO2_IO11		0x100
+			/* Silex, J12 pin 4 */
+			MX8MM_IOMUXC_SAI2_RXFS_GPIO4_IO21		0x100 /*WL_WAKE_HOST*/
+
+			MX8MM_IOMUXC_SAI2_TXC_GPIO4_IO25		0x100 /*SUSPEND*/
+			MX8MM_IOMUXC_SAI2_RXD0_GPIO4_IO23		0x100 /*WAKEUP*/
+                        MX8MM_IOMUXC_SAI5_RXFS_GPIO3_IO19               0x100 /*GPIO_2*/
+                        MX8MM_IOMUXC_SAI1_TXD1_GPIO4_IO13               0x100 /*GPI_0*/
+                        MX8MM_IOMUXC_SAI1_TXD2_GPIO4_IO14               0x100 /*GPI_1*/
+                        MX8MM_IOMUXC_SAI1_TXC_GPIO4_IO11                0x100 /*GPO_0*/
+                        MX8MM_IOMUXC_SAI1_TXD0_GPIO4_IO12               0x100 /*GPO_1*/
+                        MX8MM_IOMUXC_SAI2_TXD0_GPIO4_IO26               0x100 /*BOOT0*/
+                        MX8MM_IOMUXC_SAI2_RXC_GPIO4_IO22                0x100 /*BOOT1*/
+                        MX8MM_IOMUXC_SAI5_RXD3_GPIO3_IO24               0x140 /*GPIO_5*/
+                        MX8MM_IOMUXC_SAI3_TXD_GPIO5_IO1                 0x140 /*LED_LINK100*/
+                        MX8MM_IOMUXC_SAI5_RXD2_GPIO3_IO23               0x1c0 /*GPIO_3*/
+                        MX8MM_IOMUXC_SAI1_TXD7_GPIO4_IO19               0x100 /*GPIO_0*/
+                        MX8MM_IOMUXC_SAI5_RXD1_GPIO3_IO22               0x100 /*GPIO_1*/
+                        MX8MM_IOMUXC_SAI5_RXD0_GPIO3_IO21               0x100 /*GPIO_4*/
+                        MX8MM_IOMUXC_SAI1_TXFS_GPIO4_IO10               0x100 /*COMPUTE_PWR_EN*/
+                        MX8MM_IOMUXC_SAI1_TXD6_GPIO4_IO18               0x100 /*ROOT_RST*/
+                        MX8MM_IOMUXC_SAI1_TXD5_GPIO4_IO17               0x100 /*RS485_AUX_TXEN*/
+                        MX8MM_IOMUXC_SAI1_TXD4_GPIO4_IO16               0x100 /*RS485_METERING_TXEN*/
+                        MX8MM_IOMUXC_SAI1_TXD3_GPIO4_IO15               0x100 /*RS485_INVERTER_TXEN*/
+                        MX8MM_IOMUXC_SAI1_RXD5_GPIO4_IO7                0x100 /*XBEE_PWR_EN*/
+		>;
+	};
+
+	pinctrl_i2c2a_sc16is7xx: i2c2a-sc16is7xxgrp {
+		fsl,pins = <
+#define GPIRQ_SC16IS7XX		<&gpio4 3 IRQ_TYPE_EDGE_FALLING>
+			MX8MM_IOMUXC_SAI1_RXD1_GPIO4_IO3		0x1c0
+#define GP_SC16IS7XX_RESET	<&gpio4 5 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_SAI1_RXD3_GPIO4_IO5		0x100
+		>;
+	};
+
+	pinctrl_i2c2b_sc16is7xx: i2c2b-sc16is7xxgrp {
+		fsl,pins = <
+#define GPIRQ2_SC16IS7XX	<&gpio4 4 IRQ_TYPE_EDGE_FALLING>
+			MX8MM_IOMUXC_SAI1_RXD2_GPIO4_IO4		0x1c0
+#define GP_SC16IS7XX_RESET2	<&gpio4 6 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_SAI1_RXD4_GPIO4_IO6		0x100
+		>;
+	};
+
+	pinctrl_pcie0: pcie0grp {
+		fsl,pins = <
+#define GP_PCIE0_RESET		<&gpio4 31 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_SAI3_TXFS_GPIO4_IO31		0x100
+#define GP_PCIE0_DISABLE	<&gpio1 4 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_GPIO1_IO04_GPIO1_IO4		0x100
+#define GP_PCIE0_PWEN	        <&gpio4 8 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_SAI1_RXD6_GPIO4_IO8                0x140
+
+		>;
+	};
+
+	pinctrl_usbotg1: usbotg1grp {
+		fsl,pins = <
+			MX8MM_IOMUXC_GPIO1_IO12_USB1_OTG_PWR		0x16
+			MX8MM_IOMUXC_GPIO1_IO13_USB1_OTG_OC		0x16
+#define GP_USB_UART_nXRES               <&gpio4 9 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_SAI1_RXD7_GPIO4_IO9                0x140
+		>;
+	};
+
+	pinctrl_usbotg2: usbotg2grp {
+		fsl,pins = <
+#define GP_OTG2_HUB_RESET		<&gpio3 5 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_NAND_CLE_GPIO3_IO5			0x140
+		>;
+	};
+
+};
+
+/ {
+	model = "Boundary Devices i.MX8MMini Span";
+	compatible = "boundary,imx8mm-span", "fsl,imx8mm";
+
+	/delete-node/ alias_create_phandles;
+	/delete-node/ backlight-mipi;
+	/delete-node/ csi-mclk;
+	/delete-node/ mipi-xclk;
+	/delete-node/ sound-wm8960;
+
+	aliases {
+		/delete-property/ a53;
+		/delete-property/ backlight_mipi;
+		/delete-property/ fb_mipi;
+		/delete-property/ lcdif;
+		/delete-property/ mipi;
+		/delete-property/ mipi_cmds_com50h5n03ulc;
+		/delete-property/ mipi_cmds_lcm_jm430;
+		/delete-property/ mipi_cmds_ltk0680ytmdb;
+		/delete-property/ mipi_cmds_ltk080a60a004t;
+		/delete-property/ mipi_cmds_m101nwwb;
+		/delete-property/ mipi_dsi;
+		/delete-property/ mipi_to_lvds;
+		/delete-property/ pinctrl_com50h5n03ulc;
+		/delete-property/ pinctrl_lcm_jm430;
+		/delete-property/ pinctrl_ltk0680ytmdb;
+		/delete-property/ pinctrl_ltk080a60a004t;
+		/delete-property/ pwm_mipi;
+		/delete-property/ reg_sw4;
+		/delete-property/ t_mipi;
+	};
+
+	clocks {
+		clk1m8432: clk1m8432 {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <1843200>;
+		};
+
+	};
+
+};
+
+/delete-node/ &csi1_bridge;
+/delete-node/ &display_subsystem;
+/delete-node/ &lcdif;
+/delete-node/ &mipi_csi_1;
+/delete-node/ &mipi_dsi;
+/delete-node/ &pwm1;
+/delete-node/ &pwm2;
+/delete-node/ &pwm3;
+/delete-node/ &pwm4;
+/delete-node/ &sai1;
+/delete-node/ &sai2;
+/delete-node/ &sai3;
+/delete-node/ &sai5;
+
+&ecspi2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi2>;
+	fsl,spi-num-chipselects = <1>;
+	cs-gpios = GP_ECSPI2_CS0;
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	/delete-node/ can@0;
+};
+
+&i2c2 {
+	/delete-node/ i2cmux@70;
+
+	sc16is7xx-uart@4c {
+                clocks = <&clk1m8432>;
+                compatible = "nxp,sc16is752";
+                pinctrl-names = "default";
+                pinctrl-0 = <&pinctrl_i2c2a_sc16is7xx>;
+                reg = <0x4c>;
+                reset-gpios = GP_SC16IS7XX_RESET;
+                interrupts-extended = GPIRQ_SC16IS7XX;
+        };
+
+        sc16is7xx-uart@4d {
+                clocks = <&clk1m8432>;
+                compatible = "nxp,sc16is752";
+                pinctrl-names = "default";
+                pinctrl-0 = <&pinctrl_i2c2b_sc16is7xx>;
+                reg = <0x4d>;
+                reset-gpios = GP_SC16IS7XX_RESET2;
+                interrupts-extended = GPIRQ2_SC16IS7XX;
+        };
+
+};
+
+&i2c3 {
+	/delete-node/ ov5640-mipi1@3c;
+};
+
+&i2c4 {
+	/delete-node/ mipi-to-lvds@2c;
+	/delete-node/ touchscreen@38;
+	/delete-node/ touchscreen@40;
+	/delete-node/ touchscreen@55;
+	/delete-node/ touchscreen@5d;
+	/delete-node/ codec@1a;
+};
+
+&usbotg2 {
+	disable-over-current;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbotg2>;
+	power-polarity-active-high;
+	reset-gpios = GP_OTG2_HUB_RESET;
+	dr_mode = "host";
+	status = "okay";
+};
