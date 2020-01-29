@@ -91,4 +91,4 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek-dom0.dtb imx8qxp-mek-root.dtb \
 			  imx8qxp-mek-inmate.dtb
 
 dtb-$(CONFIG_ARCH_S32) += s32v234-evb.dtb
-dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-sof-cs42888.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-sof-cs42888.dtb imx8qm-mek-sof-wm8960.dtb
