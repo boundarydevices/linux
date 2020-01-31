@@ -219,6 +219,7 @@ static const struct st_asm330lhh_fs_table_entry st_asm330lhh_fs_table[] = {
 #endif /* CONFIG_IIO_ST_ASM330LHH_EN_TEMPERATURE */
 };
 
+#ifdef CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES
 static const struct st_asm330lhh_ff_th st_asm330lhh_free_fall_threshold[] = {
 	[0] = {
 		.val = 0x00,
@@ -272,6 +273,7 @@ static const struct st_asm330lhh_6D_th st_asm330lhh_6D_threshold[] = {
 		.deg = 50,
 	},
 };
+#endif /* CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES */
 
 static const inline struct iio_mount_matrix *
 st_asm330lhh_get_mount_matrix(const struct iio_dev *iio_dev,
@@ -361,7 +363,7 @@ out:
 	return (err < 0) ? err : 0;
 }
 
-int st_asm330lhh_read_with_mask(struct st_asm330lhh_hw *hw, u8 addr, u8 mask,
+int __maybe_unused st_asm330lhh_read_with_mask(struct st_asm330lhh_hw *hw, u8 addr, u8 mask,
 				u8 *val)
 {
 	u8 data;
@@ -379,6 +381,7 @@ out:
 	return (err < 0) ? err : 0;
 }
 
+#ifdef CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES
 /*
  * st_asm330lhh_set_wake_up_thershold - set wake-up threshold in ug
  * @hw - ST IMU MEMS hw instance
@@ -545,6 +548,7 @@ int st_asm330lhh_set_6D_threshold(struct st_asm330lhh_hw *hw, int deg)
 
 	return 0;
 }
+#endif /* CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES */
 
 static __maybe_unused int st_asm330lhh_reg_access(struct iio_dev *iio_dev,
 				 unsigned int reg, unsigned int writeval,
@@ -1108,7 +1112,6 @@ static int st_asm330lhh_reset_device(struct st_asm330lhh_hw *hw)
 {
 	int err;
 
-
 	/* set configuration bit */
 	err = st_asm330lhh_write_with_mask(hw, ST_ASM330LHH_REG_CTRL9_XL_ADDR,
 				           ST_ASM330LHH_REG_DEVICE_CONF_MASK, 1);
@@ -1175,6 +1178,7 @@ static int st_asm330lhh_init_device(struct st_asm330lhh_hw *hw)
 					 ST_ASM330LHH_REG_INT_FIFO_TH_MASK, 1);
 }
 
+#ifdef CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES
 static int st_asm330lhh_post_init_device(struct st_asm330lhh_hw *hw)
 {
 	int err;
@@ -1197,6 +1201,7 @@ static int st_asm330lhh_post_init_device(struct st_asm330lhh_hw *hw)
 	/* setting default 6D threshold to 60 degrees */
 	return st_asm330lhh_set_6D_threshold(hw, 60);
 }
+#endif /* CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES */
 
 static struct iio_dev *st_asm330lhh_alloc_iiodev(struct st_asm330lhh_hw *hw,
 					       enum st_asm330lhh_sensor_id id)
@@ -1338,6 +1343,7 @@ int st_asm330lhh_probe(struct device *dev, int irq,
 			return err;
 	}
 
+#ifdef CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES
 	err = st_asm330lhh_probe_event(hw);
 	if (err < 0)
 		return err;
@@ -1345,6 +1351,7 @@ int st_asm330lhh_probe(struct device *dev, int irq,
 	err = st_asm330lhh_post_init_device(hw);
 	if (err < 0)
 		return err;
+#endif /* CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES */
 
 #if defined(CONFIG_PM) && defined(CONFIG_IIO_ST_ASM330LHH_MAY_WAKEUP)
 	err = device_init_wakeup(dev, 1);

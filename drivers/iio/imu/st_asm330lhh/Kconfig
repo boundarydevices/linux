@@ -32,3 +32,9 @@ config IIO_ST_ASM330LHH_EN_TEMPERATURE
 	depends on IIO_ST_ASM330LHH
 	help
 	  Enable internal temperature sensor channel
+
+config IIO_ST_ASM330LHH_EN_BASIC_FEATURES
+	bool "Enable internal basic features event detection"
+	depends on IIO_ST_ASM330LHH
+	help
+	  Enable internal basic features event detection sensor

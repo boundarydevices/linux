@@ -20,6 +20,8 @@
 
 #include "st_asm330lhh.h"
 
+#ifdef CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES
+
 #define ST_ASM330LHH_REG_ALL_INT_SRC_ADDR	0x1a
 #define ST_ASM330LHH_FF_IA_MASK			BIT(0)
 #define ST_ASM330LHH_WU_IA_MASK			BIT(1)
@@ -516,7 +518,6 @@ static irqreturn_t st_asm330lhh_6D_handler_thread(int irq, void *p)
 	u8 buffer[sizeof(u8) + sizeof(s64)];
 
 	st_asm330lhh_get_6D(sensor->hw, buffer);
-printk("6D %x\n", buffer[0]);
 	iio_push_to_buffers_with_timestamp(iio_dev, buffer,
 					   st_asm330lhh_get_time_ns());
 	iio_trigger_notify_done(sensor->trig);
@@ -532,7 +533,6 @@ static irqreturn_t st_asm330lhh_wk_handler_thread(int irq, void *p)
 	u8 buffer[sizeof(u8) + sizeof(s64)];
 
 	st_asm330lhh_get_wk(sensor->hw, buffer);
-printk("WK %x\n", buffer[0]);
 	iio_push_to_buffers_with_timestamp(iio_dev, buffer,
 					   st_asm330lhh_get_time_ns());
 	iio_trigger_notify_done(sensor->trig);
@@ -615,3 +615,4 @@ int st_asm330lhh_probe_event(struct st_asm330lhh_hw *hw)
 
 	return 0;
 }
+#endif /* CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES */

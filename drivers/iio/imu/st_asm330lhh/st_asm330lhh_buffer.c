@@ -496,7 +496,11 @@ static irqreturn_t st_asm330lhh_handler_thread(int irq, void *private)
 	clear_bit(ST_ASM330LHH_HW_FLUSH, &hw->state);
 	mutex_unlock(&hw->fifo_lock);
 
+#ifdef CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES
 	return st_asm330lhh_event_handler(hw);
+#else /* CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES */
+	return IRQ_HANDLED;
+#endif /* CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES */
 }
 
 static int st_asm330lhh_fifo_preenable(struct iio_dev *iio_dev)

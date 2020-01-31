@@ -495,6 +495,7 @@ int __st_asm330lhh_set_sensor_batching_odr(struct st_asm330lhh_sensor *sensor,
 					 bool enable);
 int st_asm330lhh_update_batching(struct iio_dev *iio_dev, bool enable);
 int st_asm330lhh_reset_hwts(struct st_asm330lhh_hw *hw);
+#ifdef CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES
 int st_asm330lhh_event_handler(struct st_asm330lhh_hw *hw);
 int st_asm330lhh_probe_event(struct st_asm330lhh_hw *hw);
 int st_asm330lhh_set_wake_up_thershold(struct st_asm330lhh_hw *hw, int th_ug);
@@ -503,4 +504,5 @@ int st_asm330lhh_set_freefall_threshold(struct st_asm330lhh_hw *hw, int th_mg);
 int st_asm330lhh_set_6D_threshold(struct st_asm330lhh_hw *hw, int deg);
 int st_asm330lhh_read_with_mask(struct st_asm330lhh_hw *hw, u8 addr, u8 mask,
 				u8 *val);
+#endif /* CONFIG_IIO_ST_ASM330LHH_EN_BASIC_FEATURES */
 #endif /* ST_ASM330LHH_H */
