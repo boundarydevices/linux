@@ -967,6 +967,7 @@
 				 <&infracfg CLK_INFRA_AUXADC>;
 			clock-names = "therm", "auxadc";
 			resets = <&infracfg  MT8183_INFRACFG_AO_THERM_SW_RST>;
+			#reset-cells = <1>;
 			interrupts = <0 76 IRQ_TYPE_LEVEL_LOW>;
 			mediatek,auxadc = <&auxadc>;
 			mediatek,apmixedsys = <&apmixedsys>;
