@@ -1144,6 +1144,11 @@ static bool is_pll_freq_available(unsigned int source, unsigned int target)
 	target *= 4;
 	Ndiv = target / source;
 
+	if (Ndiv < 6) {
+		source >>= 1;
+		Ndiv = target / source;
+	}
+
 	if ((Ndiv < 6) || (Ndiv > 12))
 		return false;
 
