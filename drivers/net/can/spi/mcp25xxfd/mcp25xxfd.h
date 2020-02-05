@@ -19,6 +19,30 @@
 #include <linux/regulator/consumer.h>
 #include <linux/spi/spi.h>
 
+static inline void __dump(const void *d, unsigned int len)
+{
+	const u8 *data = d;
+	unsigned int i;
+
+	for (i = 0; i < len; i++) {
+		if ((i % 8) == 0) {
+			if (i == 0)
+				pr_info("%16s = %02x", "data", data[i]);
+			else
+				pr_info("                   %02x", data[i]);
+		} else if ((i % 4) == 0) {
+			pr_cont("  %02x", data[i]);
+		} else if ((i % 8) == 7) {
+			pr_cont(" %02x\n", data[i]);
+		} else {
+			pr_cont(" %02x", data[i]);
+		}
+	}
+
+	if (i % 8)
+		pr_cont("\n");
+}
+
 /* MPC25xx registers */
 
 /* CAN FD Controller Module SFR */
@@ -506,6 +530,14 @@ struct __packed mcp25xxfd_reg_write_buf {
 	u8 data[4];
 } ____cacheline_aligned;
 
+struct mcp25xxfd_crc_buf {
+	struct __packed {
+		__be16 cmd;
+		u8 len;
+	} addr;
+	__be16 crc;
+} ____cacheline_aligned;
+
 struct mcp25xxfd_tef_ring {
 	unsigned int head;
 	unsigned int tail;
@@ -564,6 +596,7 @@ struct mcp25xxfd_priv {
 	struct net_device *ndev;
 
 	struct regmap *map;
+	struct regmap *map_crc;
 	struct spi_device *spi;
 
 	struct mcp25xxfd_tef_ring tef;
@@ -573,6 +606,7 @@ struct mcp25xxfd_priv {
 	u32 intf;
 
 	struct mcp25xxfd_reg_write_buf update_bits_buf;
+	struct mcp25xxfd_crc_buf crc_buf;
 
 	struct gpio_desc *rx_int;
 	struct clk *clk;
@@ -708,5 +742,7 @@ static inline u8 mcp25xxfd_get_rx_linear_len(const struct mcp25xxfd_priv *priv)
 }
 
 int mcp25xxfd_regmap_init(struct mcp25xxfd_priv *priv);
+u16 mcp25xxfd_crc16_compute(const void *cmd, size_t cmd_size,
+			    const void *data, size_t data_size);
 
 #endif
