@@ -754,7 +754,6 @@ static struct opp_table *_allocate_opp_table(struct device *dev, struct device_n
 	struct opp_table *opp_table;
 	struct opp_device *opp_dev;
 	int ret;
-	const char *dentry_name;
 
 	/*
 	 * Allocate a new OPP table. In the infrequent case where a new
@@ -765,12 +764,16 @@ static struct opp_table *_allocate_opp_table(struct device *dev, struct device_n
 		return NULL;
 
 	opp_table->np = np;
+#ifdef CONFIG_DEBUG_FS
 	if (np) {
+		const char *dentry_name;
+
 		ret = of_property_read_string(np, "dentry-name",
 				      &dentry_name);
 		if (!ret)
 			snprintf(opp_table->dentry_name, NAME_MAX, "%s-%s", dentry_name, dev_name(dev));
 	}
+#endif
 	INIT_LIST_HEAD(&opp_table->dev_list);
 
 	opp_dev = _add_opp_dev(dev, opp_table);
