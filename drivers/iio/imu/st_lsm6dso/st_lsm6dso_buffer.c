@@ -449,6 +449,41 @@ int st_lsm6dso_suspend_fifo(struct st_lsm6dso_hw *hw)
 	return err;
 }
 
+/**
+ * Update ODR batching in FIFO and Timestamp
+ *
+ * @param  iio_dev: Linux IIO device
+ * @param  enable: enable/disable batcing in FIFO
+ * @return  < 0 if error, 0 otherwise
+ */
+int st_lsm6dso_update_batching(struct iio_dev *iio_dev, bool enable)
+{
+	struct st_lsm6dso_sensor *sensor = iio_priv(iio_dev);
+	struct st_lsm6dso_hw *hw = sensor->hw;
+	int err;
+
+	disable_irq(hw->irq);
+
+	err = st_lsm6dso_set_sensor_batching_odr(sensor, enable);
+	if (err < 0)
+		goto out;
+
+	/* Calc TS ODR */
+	hw->odr = st_lsm6dso_ts_odr(hw);
+
+out:
+	enable_irq(hw->irq);
+
+	return err;
+}
+
+/**
+ * Update FIFO watermark value based to the enabled sensors
+ *
+ * @param  iio_dev: Linux IIO device
+ * @param  enable: enable/disable batcing in FIFO
+ * @return  < 0 if error, 0 otherwise
+ */
 static int st_lsm6dso_update_fifo(struct iio_dev *iio_dev, bool enable)
 {
 	struct st_lsm6dso_sensor *sensor = iio_priv(iio_dev);

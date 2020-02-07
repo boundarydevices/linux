@@ -382,4 +382,5 @@ int st_lsm6dso_embfunc_sensor_set_enable(struct st_lsm6dso_sensor *sensor,
 int st_lsm6dso_step_counter_set_enable(struct st_lsm6dso_sensor *sensor,
 				       bool enable);
 int st_lsm6dso_reset_step_counter(struct iio_dev *iio_dev);
+int st_lsm6dso_update_batching(struct iio_dev *iio_dev, bool enable);
 #endif /* ST_LSM6DSO_H */
