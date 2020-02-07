@@ -156,19 +156,40 @@ static const struct iio_event_spec st_lsm6dso_thr_event = {
 	.num_event_specs = 1,				\
 }
 
-#define ST_LSM6DSO_RX_MAX_LENGTH	64
-#define ST_LSM6DSO_TX_MAX_LENGTH	16
+#define ST_LSM6DSO_RX_MAX_LENGTH		64
+#define ST_LSM6DSO_TX_MAX_LENGTH		16
 
+/**
+ * @struct st_lsm6dso_transfer_buffer
+ * @brief Buffer support for data transfer
+ *
+ * rx_buf: Data receive buffer.
+ * tx_buf: Data transmit buffer.
+ */
 struct st_lsm6dso_transfer_buffer {
 	u8 rx_buf[ST_LSM6DSO_RX_MAX_LENGTH];
 	u8 tx_buf[ST_LSM6DSO_TX_MAX_LENGTH] ____cacheline_aligned;
 };
 
+/**
+ * @struct st_lsm6dso_transfer_function
+ * @brief Bus Transfer Function
+ *
+ * read: Bus read funtion to get register value from sensor.
+ * write: Bus write funtion to set register value to sensor.
+ */
 struct st_lsm6dso_transfer_function {
 	int (*read)(struct device *dev, u8 addr, int len, u8 *data);
 	int (*write)(struct device *dev, u8 addr, int len, const u8 *data);
 };
 
+/**
+ * @struct st_lsm6dso_reg
+ * @brief Generic sensor register description
+ *
+ * addr: Register arress value.
+ * mask: Register bitmask.
+ */
 struct st_lsm6dso_reg {
 	u8 addr;
 	u8 mask;
@@ -197,24 +218,61 @@ struct st_lsm6dso_suspend_resume_entry {
 	u8 mask;
 };
 
+/**
+ * @struct st_lsm6dso_odr
+ * @brief ODR sensor table entry
+ *
+ * In the ODR table the possible ODR supported by sensor can be defined in the
+ * following format:
+ *    .odr_avl[0] = {   0, 0,       0x00 },
+ *    .odr_avl[1] = {  12, 500000,  0x01 }, ..... it means 12.5 Hz
+ *    .odr_avl[2] = {  26, 0,       0x02 }, ..... it means 26.0 Hz
+ *
+ * hz: Most significant part of ODR value (in Hz).
+ * uhz: Least significant part of ODR value (in micro Hz).
+ * val: Register value tu set ODR.
+ */
 struct st_lsm6dso_odr {
 	int hz;
 	int uhz;
 	u8 val;
 };
 
+/**
+ * @struct st_lsm6dso_odr_table_entry
+ * @brief ODR sensor table
+ *
+ * odr_size: ODR table size.
+ * reg: Sensor register description for ODR (address and mask).
+ * odr_avl: All supported ODR values.
+ */
 struct st_lsm6dso_odr_table_entry {
 	u8 odr_size;
 	struct st_lsm6dso_reg reg;
 	struct st_lsm6dso_odr odr_avl[ST_LSM6DSO_ODR_LIST_SIZE];
 };
 
+/**
+ * @struct st_lsm6dso_fs
+ * @brief Full scale entry
+ *
+ * reg: Sensor register description for FS (address and mask).
+ * gain: The gain to obtain data value from raw data (LSB).
+ * val: Register value.
+ */
 struct st_lsm6dso_fs {
 	struct st_lsm6dso_reg reg;
 	u32 gain;
 	u8 val;
 };
 
+/**
+ * @struct st_lsm6dso_fs_table_entry
+ * @brief Full scale table
+ *
+ * size: Full scale number of entry.
+ * fs_avl: Full scale entry.
+ */
 #define ST_LSM6DSO_FS_LIST_SIZE			4
 #define ST_LSM6DSO_FS_ACC_LIST_SIZE		4
 #define ST_LSM6DSO_FS_GYRO_LIST_SIZE		4
@@ -239,6 +297,10 @@ struct st_lsm6dso_ext_dev_info {
 	u8 ext_dev_i2c_addr;
 };
 
+/**
+ * @enum st_lsm6dso_sensor_id
+ * @brief Sensor Identifier
+ */
 enum st_lsm6dso_sensor_id {
 	ST_LSM6DSO_ID_GYRO,
 	ST_LSM6DSO_ID_ACC,
@@ -259,6 +321,10 @@ enum st_lsm6dso_sensor_id {
 	ST_LSM6DSO_ID_MAX,
 };
 
+/**
+ * @enum st_lsm6dso_sensor_id
+ * @brief Sensor Table Identifier
+ */
 static const enum st_lsm6dso_sensor_id st_lsm6dso_main_sensor_list[] = {
 	 [0] = ST_LSM6DSO_ID_GYRO,
 	 [1] = ST_LSM6DSO_ID_ACC,
@@ -276,12 +342,19 @@ static const enum st_lsm6dso_sensor_id st_lsm6dso_main_sensor_list[] = {
 	[13] = ST_LSM6DSO_ID_TILT,
 };
 
+/**
+ * @enum st_lsm6dso_fifo_mode
+ * @brief FIFO Modes
+ */
 enum st_lsm6dso_fifo_mode {
 	ST_LSM6DSO_FIFO_BYPASS = 0x0,
 	ST_LSM6DSO_FIFO_CONT = 0x6,
 };
 
-enum {
+/**
+ * @enum st_lsm6dso_fifo_mode - FIFO Buffer Status
+ */
+enum st_lsm6dso_fifo_status {
 	ST_LSM6DSO_HW_FLUSH,
 	ST_LSM6DSO_HW_OPERATIONAL,
 };
@@ -394,6 +467,10 @@ struct st_lsm6dso_hw {
 	struct st_lsm6dso_transfer_buffer tb;
 };
 
+/**
+ * @struct dev_pm_ops
+ * @brief Power mamagement callback function structure
+ */
 extern const struct dev_pm_ops st_lsm6dso_pm_ops;
 
 static inline int st_lsm6dso_read_atomic(struct st_lsm6dso_hw *hw, u8 addr,
@@ -435,11 +512,12 @@ static inline int st_lsm6dso_write_with_mask(struct st_lsm6dso_hw *hw, u8 addr,
 }
 
 static inline int st_lsm6dso_set_page_access(struct st_lsm6dso_hw *hw,
-						u8 mask, u8 data)
+					     u8 mask, u8 data)
 {
 	int err;
 
-	err = __st_lsm6dso_write_with_mask(hw, ST_LSM6DSO_REG_FUNC_CFG_ACCESS_ADDR,
+	err = __st_lsm6dso_write_with_mask(hw,
+					   ST_LSM6DSO_REG_FUNC_CFG_ACCESS_ADDR,
 					   mask, data);
 	usleep_range(100, 150);
 
@@ -449,10 +527,10 @@ static inline int st_lsm6dso_set_page_access(struct st_lsm6dso_hw *hw,
 static inline bool st_lsm6dso_is_fifo_enabled(struct st_lsm6dso_hw *hw)
 {
 	return hw->enable_mask & (BIT(ST_LSM6DSO_ID_STEP_COUNTER) |
-				  BIT(ST_LSM6DSO_ID_GYRO) |
-				  BIT(ST_LSM6DSO_ID_EXT0) |
-				  BIT(ST_LSM6DSO_ID_EXT1) |
-				  BIT(ST_LSM6DSO_ID_ACC));
+				  BIT(ST_LSM6DSO_ID_GYRO)	  |
+				  BIT(ST_LSM6DSO_ID_ACC)	  |
+				  BIT(ST_LSM6DSO_ID_EXT0)	  |
+				  BIT(ST_LSM6DSO_ID_EXT1));
 }
 
 int st_lsm6dso_probe(struct device *dev, int irq,
@@ -470,9 +548,11 @@ ssize_t st_lsm6dso_flush_fifo(struct device *dev,
 			      struct device_attribute *attr,
 			      const char *buf, size_t size);
 ssize_t st_lsm6dso_get_max_watermark(struct device *dev,
-				     struct device_attribute *attr, char *buf);
+				     struct device_attribute *attr,
+				     char *buf);
 ssize_t st_lsm6dso_get_watermark(struct device *dev,
-				 struct device_attribute *attr, char *buf);
+				 struct device_attribute *attr,
+				 char *buf);
 ssize_t st_lsm6dso_set_watermark(struct device *dev,
 				 struct device_attribute *attr,
 				 const char *buf, size_t size);

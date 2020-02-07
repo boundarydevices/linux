@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics st_lsm6dso embedded function sensor driver
  *
- * Copyright 2017 STMicroelectronics Inc.
+ * Copyright 2020 STMicroelectronics Inc.
  *
  * Lorenzo Bianconi <lorenzo.bianconi@st.com>
  *
@@ -16,6 +16,7 @@
 
 #define ST_LSM6DSO_REG_PAGE_SEL_ADDR			0x02
 #define ST_LSM6DSO_REG_PAGE_SEL_RST_MASK		BIT(0)
+
 #define ST_LSM6DSO_REG_EMB_FUNC_EN_A_ADDR		0x04
 #define ST_LSM6DSO_REG_PAGE_ADDRESS			0x08
 #define ST_LSM6DSO_REG_PAGE_VALUE			0x09
@@ -24,16 +25,23 @@
 #define ST_LSM6DSO_REG_PEDO_EN_MASK			BIT(3)
 #define ST_LSM6DSO_REG_TILT_EN_MASK			BIT(4)
 #define ST_LSM6DSO_REG_SIGN_MOTION_EN_MASK		BIT(5)
+
+#define ST_LSM6DSO_REG_INT_DTAP_MASK			BIT(3)
+#define ST_LSM6DSO_REG_INT_STAP_MASK			BIT(6)
+
 #define ST_LSM6DSO_REG_EMB_FUNC_EN_B_ADDR		0x05
 #define ST_LSM6DSO_REG_FSM_EN_MASK			BIT(0)
 #define ST_LSM6DSO_REG_INT_STEP_DET_MASK		BIT(3)
 #define ST_LSM6DSO_REG_INT_TILT_MASK			BIT(4)
 #define ST_LSM6DSO_REG_INT_SIGMOT_MASK			BIT(5)
+
 #define ST_LSM6DSO_PAGE_RW_ADDR				0x17
 #define ST_LSM6DSO_REG_WR_MASK				GENMASK(6, 5)
 #define ST_LSM6DSO_REG_EMB_FUNC_LIR_MASK		BIT(7)
+
 #define ST_LSM6DSO_REG_EMB_FUNC_FIFO_CFG_ADDR		0x44
 #define ST_LSM6DSO_REG_PEDO_FIFO_EN_MASK		BIT(6)
+
 #define ST_LSM6DSO_REG_FSM_ENABLE_A_ADDR		0x46
 #define ST_LSM6DSO_REG_FSM_OUTS6_ADDR			0x51
 #define ST_LSM6DSO_REG_ORIENTATION_0_MASK		BIT(5)
@@ -57,6 +65,27 @@
 
 #define ST_LSM6DSO_FSM_MAX_SIZE				255
 
+/**
+ * @struct st_lsm6dso_fsm_sensor
+ * @brief Single FSM description entry
+ *
+ * Implements #595543 Feature
+ *
+ * The following FSM state machine LSM6DSO features listed in EX_FUN_FSM_SENSOR:
+ *
+ * SENSOR_TYPE_GLANCE_GESTURE
+ * SENSOR_TYPE_MOTION_DETECT
+ * SENSOR_TYPE_STATIONARY_DETECT
+ * SENSOR_TYPE_WAKE_GESTURE
+ * SENSOR_TYPE_PICK_UP_GESTURE
+ * SENSOR_TYPE_WRIST_TILT_GESTURE
+ *
+ * will be managed as event sensors
+ *
+ * data: FSM binary data block.
+ * id: Sensor Identifier.
+ * FSM binary data block len.
+ */
 struct st_lsm6dso_fsm_sensor {
 	u8 data[ST_LSM6DSO_FSM_MAX_SIZE];
 	enum st_lsm6dso_sensor_id id;
@@ -82,7 +111,7 @@ static const struct st_lsm6dso_fsm_sensor st_lsm6dso_fsm_sensor_list[] = {
 		.data = {
 			0x51, 0x10, 0x16, 0x00, 0x00, 0x00, 0x66, 0x3c,
 			0x02, 0x00, 0x00, 0x7d, 0x00, 0xc7, 0x05, 0x99,
-			0x33, 0x53, 0x44, 0xf5, 0x22, 0x00, 
+			0x33, 0x53, 0x44, 0xf5, 0x22, 0x00,
 		},
 		.len = 22,
 	},
@@ -161,7 +190,7 @@ int st_lsm6dso_fsm_set_access(struct st_lsm6dso_hw *hw, bool enable)
 }
 
 static int st_lsm6dso_fsm_write(struct st_lsm6dso_hw *hw, u16 base_addr,
-				    int len, const u8 *data)
+				int len, const u8 *data)
 {
 	u8 msb, lsb;
 	int i, err;
@@ -205,8 +234,9 @@ static int st_lsm6dso_fsm_write(struct st_lsm6dso_hw *hw, u16 base_addr,
 	return err;
 }
 
-static int st_lsm6dso_ef_sensor_set_enable(struct st_lsm6dso_sensor *sensor,
-					   u8 mask, u8 irq_mask, bool enable)
+static int st_lsm6dso_ef_pg1_sensor_set_enable(struct st_lsm6dso_sensor *sensor,
+					       u8 mask, u8 irq_mask,
+					       bool enable)
 {
 	struct st_lsm6dso_hw *hw = sensor->hw;
 	int err;
@@ -221,7 +251,8 @@ static int st_lsm6dso_ef_sensor_set_enable(struct st_lsm6dso_sensor *sensor,
 	if (err < 0)
 		goto unlock;
 
-	err = __st_lsm6dso_write_with_mask(hw, ST_LSM6DSO_REG_EMB_FUNC_EN_A_ADDR,
+	err = __st_lsm6dso_write_with_mask(hw,
+					   ST_LSM6DSO_REG_EMB_FUNC_EN_A_ADDR,
 					   mask, enable);
 	if (err < 0)
 		goto reset_page;
@@ -236,6 +267,13 @@ unlock:
 	return err;
 }
 
+/**
+ * FSM Function sensor [FSM_FUN]
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  enable: Enable/Disable sensor
+ * @return  < 0 if error, 0 otherwise
+ */
 static int st_lsm6dso_fsm_set_enable(struct st_lsm6dso_sensor *sensor,
 				     bool enable)
 {
@@ -280,6 +318,13 @@ unlock:
 	return err;
 }
 
+/**
+ * Enable Embedded Function sensor [EMB_FUN]
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  enable: Enable/Disable sensor
+ * @return  < 0 if error, 0 otherwise
+ */
 int st_lsm6dso_embfunc_sensor_set_enable(struct st_lsm6dso_sensor *sensor,
 					 bool enable)
 {
@@ -287,19 +332,19 @@ int st_lsm6dso_embfunc_sensor_set_enable(struct st_lsm6dso_sensor *sensor,
 
 	switch (sensor->id) {
 	case ST_LSM6DSO_ID_STEP_DETECTOR:
-		err = st_lsm6dso_ef_sensor_set_enable(sensor,
-						ST_LSM6DSO_REG_PEDO_EN_MASK,
-						ST_LSM6DSO_REG_INT_STEP_DET_MASK,
-						enable);
+		err = st_lsm6dso_ef_pg1_sensor_set_enable(sensor,
+					ST_LSM6DSO_REG_PEDO_EN_MASK,
+					ST_LSM6DSO_REG_INT_STEP_DET_MASK,
+					enable);
 		break;
 	case ST_LSM6DSO_ID_SIGN_MOTION:
-		err = st_lsm6dso_ef_sensor_set_enable(sensor,
-						ST_LSM6DSO_REG_SIGN_MOTION_EN_MASK,
-						ST_LSM6DSO_REG_INT_SIGMOT_MASK,
-						enable);
+		err = st_lsm6dso_ef_pg1_sensor_set_enable(sensor,
+					ST_LSM6DSO_REG_SIGN_MOTION_EN_MASK,
+					ST_LSM6DSO_REG_INT_SIGMOT_MASK,
+					enable);
 		break;
 	case ST_LSM6DSO_ID_TILT:
-		err = st_lsm6dso_ef_sensor_set_enable(sensor,
+		err = st_lsm6dso_ef_pg1_sensor_set_enable(sensor,
 						ST_LSM6DSO_REG_TILT_EN_MASK,
 						ST_LSM6DSO_REG_TILT_EN_MASK,
 						enable);
@@ -321,6 +366,13 @@ int st_lsm6dso_embfunc_sensor_set_enable(struct st_lsm6dso_sensor *sensor,
 	return err;
 }
 
+/**
+ * Enable Step Counter Sensor [EMB_FUN]
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  enable: Enable/Disable sensor
+ * @return  < 0 if error, 0 otherwise
+ */
 int st_lsm6dso_step_counter_set_enable(struct st_lsm6dso_sensor *sensor,
 				       bool enable)
 {
@@ -345,9 +397,9 @@ int st_lsm6dso_step_counter_set_enable(struct st_lsm6dso_sensor *sensor,
 		goto reset_page;
 
 	err = __st_lsm6dso_write_with_mask(hw,
-					   ST_LSM6DSO_REG_EMB_FUNC_FIFO_CFG_ADDR,
-					   ST_LSM6DSO_REG_PEDO_FIFO_EN_MASK,
-					   enable);
+					ST_LSM6DSO_REG_EMB_FUNC_FIFO_CFG_ADDR,
+					ST_LSM6DSO_REG_PEDO_FIFO_EN_MASK,
+					enable);
 
 reset_page:
 	st_lsm6dso_set_page_access(hw, ST_LSM6DSO_REG_FUNC_CFG_MASK, false);
@@ -357,6 +409,12 @@ unlock:
 	return err;
 }
 
+/**
+ * Reset Step Counter value [EMB_FUN]
+ *
+ * @param  iio_dev: IIO device
+ * @return  < 0 if error, 0 otherwise
+ */
 int st_lsm6dso_reset_step_counter(struct iio_dev *iio_dev)
 {
 	struct st_lsm6dso_sensor *sensor = iio_priv(iio_dev);
@@ -412,6 +470,13 @@ unlock_iio_dev:
 	return err;
 }
 
+/**
+ * Read Orientation data sensor [EMB_FUN]
+ *
+ * @param  hw: ST IMU MEMS hw instance.
+ * @param  out: Out data buffer.
+ * @return  < 0 if error, 0 otherwise
+ */
 int st_lsm6dso_fsm_get_orientation(struct st_lsm6dso_hw *hw, u8 *out)
 {
 	int err;
@@ -454,10 +519,19 @@ unlock:
 	return err;
 }
 
+
+/**
+ * Initialize Finite State Machine HW block [FSM_FUN]
+ *
+ * @param  hw: ST IMU MEMS hw instance
+ * @return  < 0 if error, 0 otherwise
+ */
 int st_lsm6dso_fsm_init(struct st_lsm6dso_hw *hw)
 {
-	u8 nfsm[] = { ARRAY_SIZE(st_lsm6dso_fsm_sensor_list),
-		      ARRAY_SIZE(st_lsm6dso_fsm_sensor_list) };
+	u8 nfsm[] = {
+		ARRAY_SIZE(st_lsm6dso_fsm_sensor_list),
+		ARRAY_SIZE(st_lsm6dso_fsm_sensor_list)
+	};
 	__le16 irq_mask, fsm_addr = ST_LSM6DSO_FSM_BASE_ADDRESS;
 	u8 val[2] = {};
 	int i, err;
@@ -478,9 +552,9 @@ int st_lsm6dso_fsm_init(struct st_lsm6dso_hw *hw)
 
 	/* gest rec ODR 52Hz */
 	err = __st_lsm6dso_write_with_mask(hw,
-					   ST_LSM6DSO_REG_EMB_FUNC_ODR_CFG_B_ADDR,
-					   ST_LSM6DSO_REG_FSM_ODR_MASK,
-					   ST_LSM6DSO_FSM_ODR_52);
+					ST_LSM6DSO_REG_EMB_FUNC_ODR_CFG_B_ADDR,
+					ST_LSM6DSO_REG_FSM_ODR_MASK,
+					ST_LSM6DSO_FSM_ODR_52);
 	if (err < 0)
 		goto reset_page;
 
@@ -501,7 +575,8 @@ int st_lsm6dso_fsm_init(struct st_lsm6dso_hw *hw)
 	/* enable latched interrupts */
 	err  = __st_lsm6dso_write_with_mask(hw,
 					    ST_LSM6DSO_PAGE_RW_ADDR,
-					    ST_LSM6DSO_REG_EMB_FUNC_LIR_MASK, 1);
+					    ST_LSM6DSO_REG_EMB_FUNC_LIR_MASK,
+					    1);
 	if (err < 0)
 		goto reset_page;
 
@@ -536,7 +611,7 @@ reset_access:
 
 	__st_lsm6dso_write_with_mask(hw,
 				     ST_LSM6DSO_REG_PAGE_SEL_ADDR,
-				     ST_LSM6DSO_REG_PAGE_SEL_RST_MASK, 1); 
+				     ST_LSM6DSO_REG_PAGE_SEL_RST_MASK, 1);
 reset_page:
 	st_lsm6dso_set_page_access(hw, ST_LSM6DSO_REG_FUNC_CFG_MASK, false);
 unlock:
