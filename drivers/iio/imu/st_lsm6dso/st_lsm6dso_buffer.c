@@ -47,6 +47,8 @@
 
 #define ST_LSM6DSO_TS_DELTA_NS			25000ULL /* 25us/LSB */
 
+#define ST_LSM6DSO_SAMPLE_DISCHARD		0x7ffd
+
 enum {
 	ST_LSM6DSO_GYRO_TAG = 0x01,
 	ST_LSM6DSO_ACC_TAG = 0x02,
@@ -261,6 +263,7 @@ static int st_lsm6dso_read_fifo(struct st_lsm6dso_hw *hw)
 	struct iio_dev *iio_dev;
 	__le16 fifo_status;
 	u16 fifo_depth;
+	s16 drdymask;
 	u32 val;
 	int ts_processed = 0;
 	s64 hw_ts = 0ull;
@@ -315,13 +318,18 @@ static int st_lsm6dso_read_fifo(struct st_lsm6dso_hw *hw)
 						div_s64(hw->delta_hw_ts * ST_LSM6DSO_MAX_ODR, hw->odr));
 
 			} else {
-				iio_dev = st_lsm6dso_get_iiodev_from_tag(hw, tag);
+				iio_dev =
+					st_lsm6dso_get_iiodev_from_tag(hw, tag);
 				if (!iio_dev)
 					continue;
 
 				sensor = iio_priv(iio_dev);
-				if (sensor->std_samples < sensor->std_level) {
-					sensor->std_samples++;
+
+				/* skip samples if not ready */
+				drdymask =
+				      (s16)le16_to_cpu(get_unaligned_le16(ptr));
+				if (unlikely(drdymask >=
+						ST_LSM6DSO_SAMPLE_DISCHARD)) {
 					continue;
 				}
 
