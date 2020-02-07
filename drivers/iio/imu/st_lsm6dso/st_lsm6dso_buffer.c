@@ -50,6 +50,7 @@
 enum {
 	ST_LSM6DSO_GYRO_TAG = 0x01,
 	ST_LSM6DSO_ACC_TAG = 0x02,
+	ST_LSM6DSO_TEMP_TAG = 0x03,
 	ST_LSM6DSO_TS_TAG = 0x04,
 	ST_LSM6DSO_EXT0_TAG = 0x0f,
 	ST_LSM6DSO_EXT1_TAG = 0x10,
@@ -224,6 +225,9 @@ static struct iio_dev *st_lsm6dso_get_iiodev_from_tag(struct st_lsm6dso_hw *hw,
 		break;
 	case ST_LSM6DSO_ACC_TAG:
 		iio_dev = hw->iio_devs[ST_LSM6DSO_ID_ACC];
+		break;
+	case ST_LSM6DSO_TEMP_TAG:
+		iio_dev = hw->iio_devs[ST_LSM6DSO_ID_TEMP];
 		break;
 	case ST_LSM6DSO_EXT0_TAG:
 		if (hw->enable_mask & BIT(ST_LSM6DSO_ID_EXT0))
@@ -450,6 +454,7 @@ static int st_lsm6dso_update_fifo(struct iio_dev *iio_dev, bool enable)
 	struct st_lsm6dso_sensor *sensor = iio_priv(iio_dev);
 	struct st_lsm6dso_hw *hw = sensor->hw;
 	int err;
+	int podr, puodr;
 
 	disable_irq(hw->irq);
 
@@ -471,6 +476,34 @@ static int st_lsm6dso_update_fifo(struct iio_dev *iio_dev, bool enable)
 
 			err = st_lsm6dso_set_sensor_batching_odr(sensor,
 								 enable);
+			if (err < 0)
+				goto out;
+		}
+	}
+
+	/*
+	 * this is an auxiliary sensor, it need to get batched
+	 * toghether at least with a primary sensor (Acc/Gyro)
+	 */
+	if (sensor->id == ST_LSM6DSO_ID_TEMP) {
+		if (!(hw->enable_mask & (BIT(ST_LSM6DSO_ID_ACC) |
+					 BIT(ST_LSM6DSO_ID_GYRO)))) {
+			struct st_lsm6dso_sensor *acc_sensor;
+			u8 data = 0;
+
+			acc_sensor = iio_priv(hw->iio_devs[ST_LSM6DSO_ID_ACC]);
+			if (enable) {
+				err = st_lsm6dso_get_odr_val(ST_LSM6DSO_ID_ACC,
+						sensor->odr, sensor->uodr,
+						&podr, &puodr, &data);
+				if (err < 0)
+					goto out;
+			}
+
+			err = st_lsm6dso_write_with_mask(hw,
+					acc_sensor->batch_reg.addr,
+					acc_sensor->batch_reg.mask,
+					data);
 			if (err < 0)
 				goto out;
 		}

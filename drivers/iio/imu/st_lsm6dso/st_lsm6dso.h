@@ -21,6 +21,15 @@
 
 #define ST_LSM6DSO_DEV_NAME			"lsm6dso"
 
+#define ST_LSM6DSO_REG_FIFO_CTRL4_ADDR		0x0a
+#define ST_LSM6DSO_REG_ODR_T_BATCH_MASK		GENMASK(5, 4)
+
+#define ST_LSM6DSO_REG_OUT_TEMP_L_ADDR		0x20
+
+#define ST_LSM6DSO_TEMP_GAIN			256
+#define ST_LSM6DSO_TEMP_FS_GAIN			(1000000 / ST_LSM6DSO_TEMP_GAIN)
+#define ST_LSM6DSO_TEMP_OFFSET			6400
+
 #define ST_LSM6DSO_SAMPLE_SIZE			6
 #define ST_LSM6DSO_TS_SAMPLE_SIZE		4
 #define ST_LSM6DSO_TAG_SIZE			1
@@ -108,9 +117,10 @@ struct st_lsm6dso_fs {
 	u8 val;
 };
 
-#define ST_LSM6DSO_FS_LIST_SIZE		4
-#define ST_LSM6DSO_FS_ACC_LIST_SIZE	4
-#define ST_LSM6DSO_FS_GYRO_LIST_SIZE	4
+#define ST_LSM6DSO_FS_LIST_SIZE			4
+#define ST_LSM6DSO_FS_ACC_LIST_SIZE		4
+#define ST_LSM6DSO_FS_GYRO_LIST_SIZE		4
+#define ST_LSM6DSO_FS_TEMP_LIST_SIZE		1
 struct st_lsm6dso_fs_table_entry {
 	u8 size;
 	struct st_lsm6dso_fs fs_avl[ST_LSM6DSO_FS_LIST_SIZE];
@@ -134,6 +144,7 @@ struct st_lsm6dso_ext_dev_info {
 enum st_lsm6dso_sensor_id {
 	ST_LSM6DSO_ID_GYRO,
 	ST_LSM6DSO_ID_ACC,
+	ST_LSM6DSO_ID_TEMP,
 	ST_LSM6DSO_ID_EXT0,
 	ST_LSM6DSO_ID_EXT1,
 	ST_LSM6DSO_ID_STEP_COUNTER,
@@ -153,17 +164,18 @@ enum st_lsm6dso_sensor_id {
 static const enum st_lsm6dso_sensor_id st_lsm6dso_main_sensor_list[] = {
 	 [0] = ST_LSM6DSO_ID_GYRO,
 	 [1] = ST_LSM6DSO_ID_ACC,
-	 [2] = ST_LSM6DSO_ID_STEP_COUNTER,
-	 [3] = ST_LSM6DSO_ID_STEP_DETECTOR,
-	 [4] = ST_LSM6DSO_ID_SIGN_MOTION,
-	 [5] = ST_LSM6DSO_ID_GLANCE,
-	 [6] = ST_LSM6DSO_ID_MOTION,
-	 [7] = ST_LSM6DSO_ID_NO_MOTION,
-	 [8] = ST_LSM6DSO_ID_WAKEUP,
-	 [9] = ST_LSM6DSO_ID_PICKUP,
-	[10] = ST_LSM6DSO_ID_ORIENTATION,
-	[11] = ST_LSM6DSO_ID_WRIST_TILT,
-	[12] = ST_LSM6DSO_ID_TILT,
+	 [2] = ST_LSM6DSO_ID_TEMP,
+	 [3] = ST_LSM6DSO_ID_STEP_COUNTER,
+	 [4] = ST_LSM6DSO_ID_STEP_DETECTOR,
+	 [5] = ST_LSM6DSO_ID_SIGN_MOTION,
+	 [6] = ST_LSM6DSO_ID_GLANCE,
+	 [7] = ST_LSM6DSO_ID_MOTION,
+	 [8] = ST_LSM6DSO_ID_NO_MOTION,
+	 [9] = ST_LSM6DSO_ID_WAKEUP,
+	[10] = ST_LSM6DSO_ID_PICKUP,
+	[11] = ST_LSM6DSO_ID_ORIENTATION,
+	[12] = ST_LSM6DSO_ID_WRIST_TILT,
+	[13] = ST_LSM6DSO_ID_TILT,
 };
 
 enum st_lsm6dso_fifo_mode {
@@ -203,6 +215,7 @@ struct st_lsm6dso_sensor {
 	int odr;
 	int uodr;
 
+	u32 offset;
 	u8 std_samples;
 	u8 std_level;
 

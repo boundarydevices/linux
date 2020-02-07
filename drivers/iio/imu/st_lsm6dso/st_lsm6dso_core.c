@@ -106,6 +106,11 @@ static const struct st_lsm6dso_odr_table_entry st_lsm6dso_odr_table[] = {
 		.odr_avl[6] = { 416, 0,       0x06 },
 		.odr_avl[7] = { 833, 0,       0x07 },
 	},
+	[ST_LSM6DSO_ID_TEMP] = {
+		.odr_size = 2,
+		.odr_avl[0] = {  0, 0,        0x00 },
+		.odr_avl[1] = { 12, 500000,   0x02 },
+	},
 };
 
 static const struct st_lsm6dso_fs_table_entry st_lsm6dso_fs_table[] = {
@@ -178,7 +183,15 @@ static const struct st_lsm6dso_fs_table_entry st_lsm6dso_fs_table[] = {
 			.gain = ST_LSM6DSO_GYRO_FS_2000_GAIN,
 			.val = 0x0C,
 		},
-	}
+	},
+	[ST_LSM6DSO_ID_TEMP] = {
+		.size = ST_LSM6DSO_FS_TEMP_LIST_SIZE,
+		.fs_avl[0] = {
+			.reg = { 0 },
+			.gain = ST_LSM6DSO_TEMP_FS_GAIN,
+			.val = 0x0
+		},
+	},
 };
 
 static const struct iio_chan_spec st_lsm6dso_acc_channels[] = {
@@ -228,6 +241,26 @@ static const struct iio_chan_spec st_lsm6dso_sign_motion_channels[] = {
 
 static const struct iio_chan_spec st_lsm6dso_tilt_channels[] = {
 	ST_LSM6DSO_EVENT_CHANNEL(IIO_TILT, thr),
+};
+
+static const struct iio_chan_spec st_lsm6dso_temp_channels[] = {
+	{
+		.type = IIO_TEMP,
+		.address = ST_LSM6DSO_REG_OUT_TEMP_L_ADDR,
+		.info_mask_separate = BIT(IIO_CHAN_INFO_RAW) |
+				      BIT(IIO_CHAN_INFO_OFFSET) |
+				      BIT(IIO_CHAN_INFO_SCALE),
+		.info_mask_shared_by_all = BIT(IIO_CHAN_INFO_SAMP_FREQ),
+		.scan_index = 0,
+		.scan_type = {
+			.sign = 's',
+			.realbits = 16,
+			.storagebits = 16,
+			.endianness = IIO_LE,
+		}
+	},
+	ST_LSM6DSO_EVENT_CHANNEL(IIO_TEMP, flush),
+	IIO_CHAN_SOFT_TIMESTAMP(1),
 };
 
 static const struct iio_chan_spec st_lsm6dso_glance_channels[] = {
@@ -430,10 +463,11 @@ static int st_lsm6dso_set_odr(struct st_lsm6dso_sensor *sensor, int req_odr,
 	int err;
 	u8 val;
 
-	switch (sensor->id) {
+	switch (id) {
 	case ST_LSM6DSO_ID_STEP_COUNTER:
 	case ST_LSM6DSO_ID_STEP_DETECTOR:
 	case ST_LSM6DSO_ID_SIGN_MOTION:
+	case ST_LSM6DSO_ID_TILT:
 	case ST_LSM6DSO_ID_NO_MOTION:
 	case ST_LSM6DSO_ID_MOTION:
 	case ST_LSM6DSO_ID_GLANCE:
@@ -441,7 +475,7 @@ static int st_lsm6dso_set_odr(struct st_lsm6dso_sensor *sensor, int req_odr,
 	case ST_LSM6DSO_ID_PICKUP:
 	case ST_LSM6DSO_ID_ORIENTATION:
 	case ST_LSM6DSO_ID_WRIST_TILT:
-	case ST_LSM6DSO_ID_TILT:
+	case ST_LSM6DSO_ID_TEMP:
 	case ST_LSM6DSO_ID_EXT0:
 	case ST_LSM6DSO_ID_EXT1:
 	case ST_LSM6DSO_ID_ACC: {
@@ -546,15 +580,38 @@ static int st_lsm6dso_read_raw(struct iio_dev *iio_dev,
 		ret = st_lsm6dso_read_oneshot(sensor, ch->address, val);
 		mutex_unlock(&iio_dev->mlock);
 		break;
+	case IIO_CHAN_INFO_OFFSET:
+		switch (ch->type) {
+		case IIO_TEMP:
+			*val = sensor->offset;
+			ret = IIO_VAL_INT;
+			break;
+		default:
+			return -EINVAL;
+		}
+		break;
 	case IIO_CHAN_INFO_SAMP_FREQ:
 		*val = (int)sensor->odr;
 		*val2 = (int)sensor->uodr;
 		ret = IIO_VAL_INT_PLUS_MICRO;
 		break;
 	case IIO_CHAN_INFO_SCALE:
-		*val = 0;
-		*val2 = sensor->gain;
-		ret = IIO_VAL_INT_PLUS_MICRO;
+		switch (ch->type) {
+		case IIO_TEMP:
+			*val = 1;
+			*val2 = ST_LSM6DSO_TEMP_GAIN;
+			ret = IIO_VAL_FRACTIONAL;
+			break;
+		case IIO_ACCEL:
+		case IIO_ANGL_VEL: {
+			*val = 0;
+			*val2 = sensor->gain;
+			ret = IIO_VAL_INT_PLUS_MICRO;
+			}
+			break;
+		default:
+			return -EINVAL;
+		}
 		break;
 	default:
 		ret = -EINVAL;
@@ -691,6 +748,8 @@ static IIO_DEVICE_ATTR(in_accel_scale_available, 0444,
 		       st_lsm6dso_sysfs_scale_avail, NULL, 0);
 static IIO_DEVICE_ATTR(in_anglvel_scale_available, 0444,
 		       st_lsm6dso_sysfs_scale_avail, NULL, 0);
+static IIO_DEVICE_ATTR(in_temp_scale_available, 0444,
+		       st_lsm6dso_sysfs_scale_avail, NULL, 0);
 static IIO_DEVICE_ATTR(hwfifo_watermark_max, 0444,
 		       st_lsm6dso_get_max_watermark, NULL, 0);
 static IIO_DEVICE_ATTR(hwfifo_flush, 0200, NULL, st_lsm6dso_flush_fifo, 0);
@@ -735,6 +794,25 @@ static const struct attribute_group st_lsm6dso_gyro_attribute_group = {
 static const struct iio_info st_lsm6dso_gyro_info = {
 	.driver_module = THIS_MODULE,
 	.attrs = &st_lsm6dso_gyro_attribute_group,
+	.read_raw = st_lsm6dso_read_raw,
+	.write_raw = st_lsm6dso_write_raw,
+};
+
+static struct attribute *st_lsm6dso_temp_attributes[] = {
+	&iio_dev_attr_sampling_frequency_available.dev_attr.attr,
+	&iio_dev_attr_in_temp_scale_available.dev_attr.attr,
+	&iio_dev_attr_hwfifo_watermark_max.dev_attr.attr,
+	&iio_dev_attr_hwfifo_watermark.dev_attr.attr,
+	&iio_dev_attr_hwfifo_flush.dev_attr.attr,
+	NULL,
+};
+
+static const struct attribute_group st_lsm6dso_temp_attribute_group = {
+	.attrs = st_lsm6dso_temp_attributes,
+};
+
+static const struct iio_info st_lsm6dso_temp_info = {
+	.attrs = &st_lsm6dso_temp_attribute_group,
 	.read_raw = st_lsm6dso_read_raw,
 	.write_raw = st_lsm6dso_write_raw,
 };
@@ -1080,6 +1158,20 @@ static struct iio_dev *st_lsm6dso_alloc_iiodev(struct st_lsm6dso_hw *hw,
 		sensor->max_watermark = ST_LSM6DSO_MAX_FIFO_DEPTH;
 		sensor->odr = st_lsm6dso_odr_table[id].odr_avl[1].hz;
 		sensor->gain = st_lsm6dso_fs_table[id].fs_avl[0].gain;
+		break;
+	case ST_LSM6DSO_ID_TEMP:
+		iio_dev->channels = st_lsm6dso_temp_channels;
+		iio_dev->num_channels = ARRAY_SIZE(st_lsm6dso_temp_channels);
+		iio_dev->name = "lsm6dso_temp";
+		iio_dev->info = &st_lsm6dso_temp_info;
+
+		sensor->batch_reg.addr = ST_LSM6DSO_REG_FIFO_CTRL4_ADDR;
+		sensor->batch_reg.mask = ST_LSM6DSO_REG_ODR_T_BATCH_MASK;
+		sensor->max_watermark = ST_LSM6DSO_MAX_FIFO_DEPTH;
+		sensor->odr = st_lsm6dso_odr_table[id].odr_avl[1].hz;
+		sensor->uodr = st_lsm6dso_odr_table[id].odr_avl[1].uhz;
+		sensor->gain = st_lsm6dso_fs_table[id].fs_avl[0].gain;
+		sensor->offset = ST_LSM6DSO_TEMP_OFFSET;
 		break;
 	case ST_LSM6DSO_ID_STEP_COUNTER:
 		iio_dev->channels = st_lsm6dso_step_counter_channels;
