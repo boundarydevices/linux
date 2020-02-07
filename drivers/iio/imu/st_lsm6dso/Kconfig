@@ -1,4 +1,3 @@
-
 config IIO_ST_LSM6DSO
 	tristate "STMicroelectronics LSM6DSO sensor"
 	depends on (I2C || SPI)

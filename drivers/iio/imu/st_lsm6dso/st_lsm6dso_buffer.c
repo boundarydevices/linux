@@ -113,21 +113,25 @@ int __st_lsm6dso_set_sensor_batching_odr(struct st_lsm6dso_sensor *sensor,
 	struct st_lsm6dso_hw *hw = sensor->hw;
 	u8 data = 0;
 	int err;
+	int podr, puodr;
 
 	if (enable) {
-		err = st_lsm6dso_get_odr_val(sensor->id, sensor->odr, &data);
+		err = st_lsm6dso_get_odr_val(sensor->id, sensor->odr,
+					     sensor->uodr, &podr, &puodr,
+					     &data);
 		if (err < 0)
 			return err;
 	}
 
-	return __st_lsm6dso_write_with_mask(hw, sensor->batch_reg.addr,
-					  sensor->batch_reg.mask, data);
+	err = __st_lsm6dso_write_with_mask(hw, sensor->batch_reg.addr,
+					   sensor->batch_reg.mask, data);
+	return err < 0 ? err : 0;
 }
 
 static u16 st_lsm6dso_ts_odr(struct st_lsm6dso_hw *hw)
 {
 	struct st_lsm6dso_sensor *sensor;
-	u16 odr = 0;
+	int odr = 0;
 	u8 i;
 
 	for (i = ST_LSM6DSO_ID_GYRO; i <= ST_LSM6DSO_ID_EXT1; i++) {
@@ -135,8 +139,9 @@ static u16 st_lsm6dso_ts_odr(struct st_lsm6dso_hw *hw)
 			continue;
 
 		sensor = iio_priv(hw->iio_devs[i]);
-		if (hw->enable_mask & BIT(sensor->id))
-			odr = max_t(u16, odr, sensor->odr);
+		if (hw->enable_mask & BIT(sensor->id)) {
+			odr = max_t(int, odr, sensor->odr);
+		}
 	}
 
 	return odr;
