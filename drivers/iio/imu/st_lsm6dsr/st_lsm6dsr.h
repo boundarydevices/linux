@@ -15,17 +15,18 @@
 #include <linux/iio/iio.h>
 #include <linux/delay.h>
 
-#define ST_LSM6DSR_MAX_ODR 		833
-#define ST_LSM6DSR_ODR_LIST_SIZE	8
+#define ST_LSM6DSR_MAX_ODR 			833
+#define ST_LSM6DSR_ODR_LIST_SIZE		8
+#define ST_LSM6DSR_ODR_EXPAND(odr, uodr)	((odr * 1000000) + uodr)
 
-#define ST_LSM6DSR_DEV_NAME		"lsm6dsr"
+#define ST_LSM6DSR_DEV_NAME			"lsm6dsr"
 
-#define ST_LSM6DSR_SAMPLE_SIZE		6
-#define ST_LSM6DSR_TS_SAMPLE_SIZE	4
-#define ST_LSM6DSR_TAG_SIZE		1
-#define ST_LSM6DSR_FIFO_SAMPLE_SIZE	(ST_LSM6DSR_SAMPLE_SIZE + \
-					 ST_LSM6DSR_TAG_SIZE)
-#define ST_LSM6DSR_MAX_FIFO_DEPTH	416
+#define ST_LSM6DSR_SAMPLE_SIZE			6
+#define ST_LSM6DSR_TS_SAMPLE_SIZE		4
+#define ST_LSM6DSR_TAG_SIZE			1
+#define ST_LSM6DSR_FIFO_SAMPLE_SIZE		(ST_LSM6DSR_SAMPLE_SIZE + \
+						 ST_LSM6DSR_TAG_SIZE)
+#define ST_LSM6DSR_MAX_FIFO_DEPTH		416
 
 #define ST_LSM6DSR_REG_FUNC_CFG_ACCESS_ADDR	0x01
 #define ST_LSM6DSR_REG_SHUB_REG_MASK		BIT(6)
@@ -90,11 +91,13 @@ struct st_lsm6dsr_reg {
 };
 
 struct st_lsm6dsr_odr {
-	u16 hz;
+	int hz;
+	int uhz;
 	u8 val;
 };
 
 struct st_lsm6dsr_odr_table_entry {
+	u8 odr_size;
 	struct st_lsm6dsr_reg reg;
 	struct st_lsm6dsr_odr odr_avl[ST_LSM6DSR_ODR_LIST_SIZE];
 };
@@ -198,7 +201,8 @@ struct st_lsm6dsr_sensor {
 	struct iio_trigger *trig;
 
 	u32 gain;
-	u16 odr;
+	int odr;
+	int uodr;
 
 	u8 std_samples;
 	u8 std_level;
@@ -253,8 +257,8 @@ struct st_lsm6dsr_hw {
 	u8 ext_data_len;
 	s32 odr_calib;
 
-	/* Timestamp sample ODR */
-	u16 odr;
+	int odr;
+	int uodr;
 
 	s64 ts_offset;
 	s64 hw_ts;
@@ -334,14 +338,15 @@ static inline bool st_lsm6dsr_is_fifo_enabled(struct st_lsm6dsr_hw *hw)
 
 int st_lsm6dsr_probe(struct device *dev, int irq,
 		     const struct st_lsm6dsr_transfer_function *tf_ops);
+int st_lsm6dsr_shub_set_enable(struct st_lsm6dsr_sensor *sensor, bool enable);
+int st_lsm6dsr_shub_probe(struct st_lsm6dsr_hw *hw);
 int st_lsm6dsr_sensor_set_enable(struct st_lsm6dsr_sensor *sensor,
 				 bool enable);
-int st_lsm6dsr_shub_set_enable(struct st_lsm6dsr_sensor *sensor, bool enable);
 int st_lsm6dsr_buffers_setup(struct st_lsm6dsr_hw *hw);
-int st_lsm6dsr_get_odr_val(enum st_lsm6dsr_sensor_id id, u16 odr, u8 *val);
+int st_lsm6dsr_get_odr_val(enum st_lsm6dsr_sensor_id id, int odr, int uodr,
+			   int *podr, int *puodr, u8 *val);
 int st_lsm6dsr_update_watermark(struct st_lsm6dsr_sensor *sensor,
 				u16 watermark);
-int st_lsm6dsr_shub_probe(struct st_lsm6dsr_hw *hw);
 ssize_t st_lsm6dsr_flush_fifo(struct device *dev,
 			      struct device_attribute *attr,
 			      const char *buf, size_t size);

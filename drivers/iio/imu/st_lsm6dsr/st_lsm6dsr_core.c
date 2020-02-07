@@ -77,33 +77,35 @@ struct st_lsm6dsr_std_entry st_lsm6dsr_std_table[] = {
 
 static const struct st_lsm6dsr_odr_table_entry st_lsm6dsr_odr_table[] = {
 	[ST_LSM6DSR_ID_ACC] = {
+		.odr_size = 8,
 		.reg = {
 			.addr = ST_LSM6DSR_CTRL1_XL_ADDR,
 			.mask = GENMASK(7, 4),
 		},
-		.odr_avl[0] = {   0, 0x00 },
-		.odr_avl[1] = {  12, 0x01 },
-		.odr_avl[2] = {  26, 0x02 },
-		.odr_avl[3] = {  52, 0x03 },
-		.odr_avl[4] = { 104, 0x04 },
-		.odr_avl[5] = { 208, 0x05 },
-		.odr_avl[6] = { 416, 0x06 },
-		.odr_avl[7] = { 833, 0x07 },
+		.odr_avl[0] = {   0, 0,       0x00 },
+		.odr_avl[1] = {  12, 500000,  0x01 },
+		.odr_avl[2] = {  26, 0,       0x02 },
+		.odr_avl[3] = {  52, 0,       0x03 },
+		.odr_avl[4] = { 104, 0,       0x04 },
+		.odr_avl[5] = { 208, 0,       0x05 },
+		.odr_avl[6] = { 416, 0,       0x06 },
+		.odr_avl[7] = { 833, 0,       0x07 },
 	},
 	[ST_LSM6DSR_ID_GYRO] = {
+		.odr_size = 8,
 		.reg = {
 			.addr = ST_LSM6DSR_CTRL2_G_ADDR,
 			.mask = GENMASK(7, 4),
 		},
-		.odr_avl[0] = {   0, 0x00 },
-		.odr_avl[1] = {  12, 0x01 },
-		.odr_avl[2] = {  26, 0x02 },
-		.odr_avl[3] = {  52, 0x03 },
-		.odr_avl[4] = { 104, 0x04 },
-		.odr_avl[5] = { 208, 0x05 },
-		.odr_avl[6] = { 416, 0x06 },
-		.odr_avl[7] = { 833, 0x07 },
-	}
+		.odr_avl[0] = {   0, 0,       0x00 },
+		.odr_avl[1] = {  12, 500000,  0x01 },
+		.odr_avl[2] = {  26, 0,       0x02 },
+		.odr_avl[3] = {  52, 0,       0x03 },
+		.odr_avl[4] = { 104, 0,       0x04 },
+		.odr_avl[5] = { 208, 0,       0x05 },
+		.odr_avl[6] = { 416, 0,       0x06 },
+		.odr_avl[7] = { 833, 0,       0x07 },
+	},
 };
 
 static const struct st_lsm6dsr_fs_table_entry st_lsm6dsr_fs_table[] = {
@@ -365,18 +367,27 @@ static int st_lsm6dsr_set_full_scale(struct st_lsm6dsr_sensor *sensor,
 	return 0;
 }
 
-int st_lsm6dsr_get_odr_val(enum st_lsm6dsr_sensor_id id, u16 odr, u8 *val)
+int st_lsm6dsr_get_odr_val(enum st_lsm6dsr_sensor_id id, int odr, int uodr,
+			   int *podr, int *puodr, u8 *val)
 {
 	int i;
+	int sensor_odr;
+	int all_odr = ST_LSM6DSR_ODR_EXPAND(odr, uodr);
 
-	for (i = 0; i < ST_LSM6DSR_ODR_LIST_SIZE; i++)
-		if (st_lsm6dsr_odr_table[id].odr_avl[i].hz >= odr)
+	for (i = 0; i < st_lsm6dsr_odr_table[id].odr_size; i++) {
+		sensor_odr =
+		   ST_LSM6DSR_ODR_EXPAND(st_lsm6dsr_odr_table[id].odr_avl[i].hz,
+		   st_lsm6dsr_odr_table[id].odr_avl[i].uhz);
+		if (sensor_odr >= all_odr)
 			break;
+	}
 
-	if (i == ST_LSM6DSR_ODR_LIST_SIZE)
+	if (i == st_lsm6dsr_odr_table[id].odr_size)
 		return -EINVAL;
 
 	*val = st_lsm6dsr_odr_table[id].odr_avl[i].val;
+	*podr = st_lsm6dsr_odr_table[id].odr_avl[i].hz;
+	*puodr = st_lsm6dsr_odr_table[id].odr_avl[i].uhz;
 
 	return 0;
 }
@@ -398,7 +409,8 @@ static int st_lsm6dsr_set_std_level(struct st_lsm6dsr_sensor *sensor, u16 odr)
 	return 0;
 }
 
-static u16 st_lsm6dsr_check_odr_dependency(struct st_lsm6dsr_hw *hw, u16 odr,
+static u16 st_lsm6dsr_check_odr_dependency(struct st_lsm6dsr_hw *hw,
+					   int odr, int uodr,
 					   enum st_lsm6dsr_sensor_id ref_id)
 {
 	struct st_lsm6dsr_sensor *ref = iio_priv(hw->iio_devs[ref_id]);
@@ -406,8 +418,9 @@ static u16 st_lsm6dsr_check_odr_dependency(struct st_lsm6dsr_hw *hw, u16 odr,
 	u16 ret;
 
 	if (enable) {
+		/* uodr not used */
 		if (hw->enable_mask & BIT(ref_id))
-			ret = max_t(u16, ref->odr, odr);
+			ret = max_t(int, ref->odr, odr);
 		else
 			ret = odr;
 	} else {
@@ -417,7 +430,8 @@ static u16 st_lsm6dsr_check_odr_dependency(struct st_lsm6dsr_hw *hw, u16 odr,
 	return ret;
 }
 
-static int st_lsm6dsr_set_odr(struct st_lsm6dsr_sensor *sensor, u16 req_odr)
+static int st_lsm6dsr_set_odr(struct st_lsm6dsr_sensor *sensor, int req_odr,
+			      int req_uodr)
 {
 	struct st_lsm6dsr_hw *hw = sensor->hw;
 	enum st_lsm6dsr_sensor_id id = sensor->id;
@@ -439,7 +453,7 @@ static int st_lsm6dsr_set_odr(struct st_lsm6dsr_sensor *sensor, u16 req_odr)
 	case ST_LSM6DSR_ID_EXT0:
 	case ST_LSM6DSR_ID_EXT1:
 	case ST_LSM6DSR_ID_ACC: {
-		u16 odr;
+		int odr;
 		int i;
 
 		id = ST_LSM6DSR_ID_ACC;
@@ -450,7 +464,9 @@ static int st_lsm6dsr_set_odr(struct st_lsm6dsr_sensor *sensor, u16 req_odr)
 			if (i == sensor->id)
 				continue;
 
-			odr = st_lsm6dsr_check_odr_dependency(hw, req_odr, i);
+			/* req_uodr not used */
+			odr = st_lsm6dsr_check_odr_dependency(hw, req_odr,
+							      req_uodr, i);
 			if (odr != req_odr)
 				/* device already configured */
 				return 0;
@@ -461,7 +477,8 @@ static int st_lsm6dsr_set_odr(struct st_lsm6dsr_sensor *sensor, u16 req_odr)
 		break;
 	}
 
-	err = st_lsm6dsr_get_odr_val(id, req_odr, &val);
+	err = st_lsm6dsr_get_odr_val(id, req_odr, req_uodr, &req_odr,
+				       &req_uodr, &val);
 	if (err < 0)
 		return err;
 
@@ -473,10 +490,16 @@ static int st_lsm6dsr_set_odr(struct st_lsm6dsr_sensor *sensor, u16 req_odr)
 int st_lsm6dsr_sensor_set_enable(struct st_lsm6dsr_sensor *sensor,
 				 bool enable)
 {
-	u16 odr = enable ? sensor->odr : 0;
+	int uodr = 0;
+	int odr = 0;
 	int err;
 
-	err = st_lsm6dsr_set_odr(sensor, odr);
+	if (enable) {
+		odr = sensor->odr;
+		uodr = sensor->uodr;
+	}
+
+	err = st_lsm6dsr_set_odr(sensor, odr, uodr);
 	if (err < 0)
 		return err;
 
@@ -532,8 +555,9 @@ static int st_lsm6dsr_read_raw(struct iio_dev *iio_dev,
 		mutex_unlock(&iio_dev->mlock);
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ:
-		*val = sensor->odr;
-		ret = IIO_VAL_INT;
+		*val = (int)sensor->odr;
+		*val2 = (int)sensor->uodr;
+		ret = IIO_VAL_INT_PLUS_MICRO;
 		break;
 	case IIO_CHAN_INFO_SCALE:
 		*val = 0;
@@ -563,14 +587,18 @@ static int st_lsm6dsr_write_raw(struct iio_dev *iio_dev,
 		break;
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		u8 data;
+		int todr, tuodr;
 
 		err = st_lsm6dsr_set_std_level(sensor, val);
 		if (err < 0)
 			break;
 
-		err = st_lsm6dsr_get_odr_val(sensor->id, val, &data);
-		if (!err)
-			sensor->odr = val;
+		err = st_lsm6dsr_get_odr_val(sensor->id, val, val2, &todr,
+					     &tuodr, &data);
+		if (!err) {
+			sensor->odr = todr;
+			sensor->uodr = tuodr;
+		}
 		break;
 	}
 	default:
@@ -623,8 +651,13 @@ st_lsm6dsr_sysfs_sampling_frequency_avail(struct device *dev,
 		if (!st_lsm6dsr_odr_table[id].odr_avl[i].hz)
 			continue;
 
-		len += scnprintf(buf + len, PAGE_SIZE - len, "%d ",
-				 st_lsm6dsr_odr_table[id].odr_avl[i].hz);
+		if (st_lsm6dsr_odr_table[id].odr_avl[i].uhz == 0)
+			len += scnprintf(buf + len, PAGE_SIZE - len, "%d ",
+				st_lsm6dsr_odr_table[id].odr_avl[i].hz);
+		else
+			len += scnprintf(buf + len, PAGE_SIZE - len, "%d.%d ",
+				st_lsm6dsr_odr_table[id].odr_avl[i].hz,
+				st_lsm6dsr_odr_table[id].odr_avl[i].uhz);
 	}
 
 	buf[len - 1] = '\n';
@@ -1026,6 +1059,7 @@ static struct iio_dev *st_lsm6dsr_alloc_iiodev(struct st_lsm6dsr_hw *hw,
 		sensor->batch_reg.mask = ST_LSM6DSR_REG_BDR_XL_MASK;
 		sensor->max_watermark = ST_LSM6DSR_MAX_FIFO_DEPTH;
 		sensor->odr = st_lsm6dsr_odr_table[id].odr_avl[1].hz;
+		sensor->uodr = st_lsm6dsr_odr_table[id].odr_avl[1].uhz;
 		sensor->gain = st_lsm6dsr_fs_table[id].fs_avl[0].gain;
 		break;
 	case ST_LSM6DSR_ID_GYRO:
@@ -1039,6 +1073,7 @@ static struct iio_dev *st_lsm6dsr_alloc_iiodev(struct st_lsm6dsr_hw *hw,
 		sensor->batch_reg.mask = ST_LSM6DSR_REG_BDR_GY_MASK;
 		sensor->max_watermark = ST_LSM6DSR_MAX_FIFO_DEPTH;
 		sensor->odr = st_lsm6dsr_odr_table[id].odr_avl[1].hz;
+		sensor->uodr = st_lsm6dsr_odr_table[id].odr_avl[1].uhz;
 		sensor->gain = st_lsm6dsr_fs_table[id].fs_avl[0].gain;
 		break;
 	case ST_LSM6DSR_ID_STEP_COUNTER:
@@ -1052,6 +1087,8 @@ static struct iio_dev *st_lsm6dsr_alloc_iiodev(struct st_lsm6dsr_hw *hw,
 		sensor->max_watermark = 1;
 		sensor->odr =
 			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].hz;
+		sensor->uodr =
+			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].uhz;
 		break;
 	case ST_LSM6DSR_ID_STEP_DETECTOR:
 		iio_dev->channels = st_lsm6dsr_step_detector_channels;
@@ -1063,6 +1100,8 @@ static struct iio_dev *st_lsm6dsr_alloc_iiodev(struct st_lsm6dsr_hw *hw,
 
 		sensor->odr =
 			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].hz;
+		sensor->uodr =
+			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].uhz;
 		break;
 	case ST_LSM6DSR_ID_SIGN_MOTION:
 		iio_dev->channels = st_lsm6dsr_sign_motion_channels;
@@ -1074,6 +1113,8 @@ static struct iio_dev *st_lsm6dsr_alloc_iiodev(struct st_lsm6dsr_hw *hw,
 
 		sensor->odr =
 			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].hz;
+		sensor->uodr =
+			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].uhz;
 		break;
 	case ST_LSM6DSR_ID_TILT:
 		iio_dev->channels = st_lsm6dsr_tilt_channels;
@@ -1084,6 +1125,8 @@ static struct iio_dev *st_lsm6dsr_alloc_iiodev(struct st_lsm6dsr_hw *hw,
 
 		sensor->odr =
 			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].hz;
+		sensor->uodr =
+			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].uhz;
 		break;
 	case ST_LSM6DSR_ID_GLANCE:
 		iio_dev->channels = st_lsm6dsr_glance_channels;
@@ -1094,6 +1137,8 @@ static struct iio_dev *st_lsm6dsr_alloc_iiodev(struct st_lsm6dsr_hw *hw,
 
 		sensor->odr =
 			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].hz;
+		sensor->uodr =
+			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].uhz;
 		break;
 	case ST_LSM6DSR_ID_MOTION:
 		iio_dev->channels = st_lsm6dsr_motion_channels;
@@ -1104,6 +1149,8 @@ static struct iio_dev *st_lsm6dsr_alloc_iiodev(struct st_lsm6dsr_hw *hw,
 
 		sensor->odr =
 			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].hz;
+		sensor->uodr =
+			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].uhz;
 		break;
 	case ST_LSM6DSR_ID_NO_MOTION:
 		iio_dev->channels = st_lsm6dsr_no_motion_channels;
@@ -1114,6 +1161,8 @@ static struct iio_dev *st_lsm6dsr_alloc_iiodev(struct st_lsm6dsr_hw *hw,
 
 		sensor->odr =
 			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].hz;
+		sensor->uodr =
+			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].uhz;
 		break;
 	case ST_LSM6DSR_ID_WAKEUP:
 		iio_dev->channels = st_lsm6dsr_wakeup_channels;
@@ -1124,6 +1173,8 @@ static struct iio_dev *st_lsm6dsr_alloc_iiodev(struct st_lsm6dsr_hw *hw,
 
 		sensor->odr =
 			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].hz;
+		sensor->uodr =
+			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].uhz;
 		break;
 	case ST_LSM6DSR_ID_PICKUP:
 		iio_dev->channels = st_lsm6dsr_pickup_channels;
@@ -1134,6 +1185,8 @@ static struct iio_dev *st_lsm6dsr_alloc_iiodev(struct st_lsm6dsr_hw *hw,
 
 		sensor->odr =
 			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].hz;
+		sensor->uodr =
+			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].uhz;
 		break;
 	case ST_LSM6DSR_ID_ORIENTATION:
 		iio_dev->channels = st_lsm6dsr_orientation_channels;
@@ -1144,6 +1197,8 @@ static struct iio_dev *st_lsm6dsr_alloc_iiodev(struct st_lsm6dsr_hw *hw,
 
 		sensor->odr =
 			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].hz;
+		sensor->uodr =
+			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].uhz;
 		break;
 	case ST_LSM6DSR_ID_WRIST_TILT:
 		iio_dev->channels = st_lsm6dsr_wrist_channels;
@@ -1154,6 +1209,8 @@ static struct iio_dev *st_lsm6dsr_alloc_iiodev(struct st_lsm6dsr_hw *hw,
 
 		sensor->odr =
 			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].hz;
+		sensor->uodr =
+			st_lsm6dsr_odr_table[ST_LSM6DSR_ID_ACC].odr_avl[2].uhz;
 		break;
 	default:
 		return NULL;
@@ -1255,7 +1312,7 @@ static int __maybe_unused st_lsm6dsr_suspend(struct device *dev)
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 
-		err = st_lsm6dsr_set_odr(sensor, 0);
+		err = st_lsm6dsr_set_odr(sensor, 0, 0);
 		if (err < 0)
 			return err;
 	}
@@ -1291,7 +1348,7 @@ static int __maybe_unused st_lsm6dsr_resume(struct device *dev)
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 
-		err = st_lsm6dsr_set_odr(sensor, sensor->odr);
+		err = st_lsm6dsr_set_odr(sensor, sensor->odr, sensor->uodr);
 		if (err < 0)
 			return err;
 	}

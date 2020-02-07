@@ -78,14 +78,20 @@ static const struct st_lsm6dsr_ext_dev_settings st_lsm6dsr_ext_dev_table[] = {
 		.wai_addr = 0x4f,
 		.wai_val = 0x40,
 		.odr_table = {
+			.odr_size = 5,
 			.reg = {
 				.addr = 0x60,
 				.mask = GENMASK(3, 2),
 			},
-			.odr_avl[0] = {  10, 0x0 },
-			.odr_avl[1] = {  20, 0x1 },
-			.odr_avl[2] = {  50, 0x2 },
-			.odr_avl[3] = { 100, 0x3 },
+			/*
+			 * added 5Hz for CTS coverage, reg value is the same
+			 * for 5 and 10 Hz
+			 */
+			.odr_avl[0] = {   5,  1,  0x0 },
+			.odr_avl[1] = {  10,  0,  0x0 },
+			.odr_avl[2] = {  20,  0,  0x1 },
+			.odr_avl[3] = {  50,  0,  0x2 },
+			.odr_avl[4] = { 100,  0,  0x3 },
 		},
 		.fs_table = {
 			.size = 1,
@@ -135,14 +141,15 @@ static const struct st_lsm6dsr_ext_dev_settings st_lsm6dsr_ext_dev_table[] = {
 		.wai_addr = 0x0f,
 		.wai_val = 0xb1,
 		.odr_table = {
+			.odr_size = 4,
 			.reg = {
 				.addr = 0x10,
 				.mask = GENMASK(6, 4),
 			},
-			.odr_avl[0] = {  1, 0x1 },
-			.odr_avl[1] = { 10, 0x2 },
-			.odr_avl[2] = { 25, 0x3 },
-			.odr_avl[3] = { 50, 0x4 },
+			.odr_avl[0] = {  1,  0,  0x1 },
+			.odr_avl[1] = { 10,  0,  0x2 },
+			.odr_avl[2] = { 25,  0,  0x3 },
+			.odr_avl[3] = { 50,  0,  0x4 },
 		},
 		.fs_table = {
 			.size = 1,
@@ -402,11 +409,11 @@ static int st_lsm6dsr_shub_get_odr_val(struct st_lsm6dsr_sensor *sensor,
 	struct st_lsm6dsr_ext_dev_info *ext_info = &sensor->ext_dev_info;
 	int i;
 
-	for (i = 0; i < ST_LSM6DSR_ODR_LIST_SIZE; i++)
+	for (i = 0; i < ext_info->ext_dev_settings->odr_table.odr_size; i++)
 		if (ext_info->ext_dev_settings->odr_table.odr_avl[i].hz <= odr)
 			break;
 
-	if (i == ST_LSM6DSR_ODR_LIST_SIZE)
+	if (i == ext_info->ext_dev_settings->odr_table.odr_size)
 		return -EINVAL;
 
 	*val = ext_info->ext_dev_settings->odr_table.odr_avl[i].val;
