@@ -361,6 +361,7 @@ struct st_lsm6dso_hw {
 
 	u16 fsm_enable_mask;
 	u8 embfunc_irq_reg;
+	u8 embfunc_pg0_irq_reg;
 
 	u8 ext_data_len;
 
