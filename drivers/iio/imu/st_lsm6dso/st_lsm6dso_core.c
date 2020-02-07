@@ -1164,6 +1164,9 @@ static struct iio_dev *st_lsm6dso_alloc_iiodev(struct st_lsm6dso_hw *hw,
 	sensor->hw = hw;
 	sensor->watermark = 1;
 
+	sensor->decimator = 0;
+	sensor->dec_counter = 0;
+
 	switch (id) {
 	case ST_LSM6DSO_ID_ACC:
 		iio_dev->channels = st_lsm6dso_acc_channels;

@@ -287,19 +287,23 @@ enum {
 };
 
 /**
- * struct st_lsm6dso_sensor - ST IMU sensor instance
- * @id: Sensor identifier.
- * @hw: Pointer to instance of struct st_lsm6dso_hw.
- * @ext_dev_info: Sensor hub i2c slave settings.
- * @trig: Sensor iio trigger.
- * @gain: Configured sensor sensitivity.
- * @odr: Output data rate of the sensor [Hz].
- * @std_samples: Counter of samples to discard during sensor bootstrap.
- * @std_level: Samples to discard threshold.
- * @max_watermark: Max supported watermark level.
- * @watermark: Sensor watermark level.
- * @batch_mask: Sensor mask for FIFO batching register
- * @batch_reg: Batching register info (addr + mask).
+ * @struct st_lsm6dso_sensor
+ * @brief ST IMU sensor instance
+ *
+ * id: Sensor identifier
+ * hw: Pointer to instance of struct st_lsm6dso_hw
+ * ext_dev_info: Sensor hub i2c slave settings.
+ * trig: Sensor iio trigger.
+ * gain: Configured sensor sensitivity
+ * odr: Output data rate of the sensor [Hz]
+ * uodr: Output data rate of the sensor [uHz]
+ * offset: Sensor data offset
+ * decimator: Sensor decimator
+ * dec_counter: Sensor decimator counter
+ * old_data: Saved sensor data
+ * max_watermark: Max supported watermark level
+ * watermark: Sensor watermark level
+ * batch_reg: Sensor reg/mask for FIFO batching register
  */
 struct st_lsm6dso_sensor {
 	enum st_lsm6dso_sensor_id id;
@@ -314,6 +318,8 @@ struct st_lsm6dso_sensor {
 	int uodr;
 
 	u32 offset;
+	u8 decimator;
+	u8 dec_counter;
 
 	u16 max_watermark;
 	u16 watermark;
