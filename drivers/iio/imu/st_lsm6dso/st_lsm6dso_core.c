@@ -1067,37 +1067,27 @@ static int st_lsm6dso_reset_device(struct st_lsm6dso_hw *hw)
 {
 	int err;
 
+	/* disable I3C */
+	err = st_lsm6dso_write_with_mask(hw, ST_LSM6DSO_REG_CTRL9_XL_ADDR,
+					 ST_LSM6DSO_REG_I3C_DISABLE_MASK, 1);
+	if (err < 0)
+		return err;
+
 	/* sw reset */
-	err = st_lsm6dso_write_with_mask(hw, ST_LSM6DSO_REG_CTRL3_C_ADDR,
+	err = st_lsm6dso_write_with_mask(hw,
+					 ST_LSM6DSO_REG_CTRL3_C_ADDR,
 					 ST_LSM6DSO_REG_SW_RESET_MASK, 1);
 	if (err < 0)
 		return err;
 
-	msleep(50);
+	usleep_range(15, 20);
 
 	/* boot */
-	err = st_lsm6dso_write_with_mask(hw, ST_LSM6DSO_REG_CTRL3_C_ADDR,
+	err = st_lsm6dso_write_with_mask(hw,
+					 ST_LSM6DSO_REG_CTRL3_C_ADDR,
 					 ST_LSM6DSO_REG_BOOT_MASK, 1);
 
-	msleep(50);
-
-	return err;
-}
-
-static int st_lsm6dso_init_timestamp_engine(struct st_lsm6dso_hw *hw,
-					    bool enable)
-{
-	int err;
-
-	/* Init timestamp engine. */
-	err = st_lsm6dso_write_with_mask(hw, ST_LSM6DSO_REG_CTRL10_C_ADDR,
-					 ST_LSM6DSO_REG_TIMESTAMP_EN_MASK, enable);
-	if (err < 0)
-		return err;
-
-	/* Enable timestamp rollover interrupt on INT2. */
-	err = st_lsm6dso_write_with_mask(hw, ST_LSM6DSO_REG_MD2_CFG_ADDR,
-					 ST_LSM6DSO_REG_INT2_TIMESTAMP_MASK, enable);
+	msleep(20);
 
 	return err;
 }
@@ -1124,7 +1114,10 @@ static int st_lsm6dso_init_device(struct st_lsm6dso_hw *hw)
 	if (err < 0)
 		return err;
 
-	err = st_lsm6dso_init_timestamp_engine(hw, true);
+	/* init timestamp engine */
+	err = st_lsm6dso_write_with_mask(hw,
+					 ST_LSM6DSO_REG_CTRL10_C_ADDR,
+					 ST_LSM6DSO_REG_TIMESTAMP_EN_MASK, 1);
 	if (err < 0)
 		return err;
 
