@@ -790,6 +790,7 @@ int kbase_mem_copy_from_extres(struct kbase_context *kctx,
 #ifdef CONFIG_DMA_SHARED_BUFFER
 	case KBASE_MEM_TYPE_IMPORTED_UMM: {
 		struct dma_buf *dma_buf = gpu_alloc->imported.umm.dma_buf;
+		void *dma_kernel;
 
 		KBASE_DEBUG_ASSERT(dma_buf != NULL);
 		if (dma_buf->size > buf_data->nr_extres_pages * PAGE_SIZE)
@@ -805,9 +806,9 @@ int kbase_mem_copy_from_extres(struct kbase_context *kctx,
 		if (ret)
 			goto out_unlock;
 
+		dma_kernel = dma_buf_vmap(dma_buf);
 		for (i = 0; i < dma_to_copy/PAGE_SIZE; i++) {
-
-			void *extres_page = dma_buf_kmap(dma_buf, i);
+			void *extres_page = dma_kernel + i * PAGE_SIZE;
 
 			if (extres_page)
 				kbase_mem_copy_from_extres_page(kctx,
@@ -816,10 +817,10 @@ int kbase_mem_copy_from_extres(struct kbase_context *kctx,
 						&target_page_nr,
 						offset, &to_copy);
 
-			dma_buf_kunmap(dma_buf, i, extres_page);
 			if (target_page_nr >= buf_data->nr_pages)
 				break;
 		}
+		dma_buf_vunmap(dma_buf, dma_kernel);
 		dma_buf_end_cpu_access(dma_buf,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0) && !defined(CONFIG_CHROMEOS)
 				0, dma_to_copy,
