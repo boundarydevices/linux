@@ -30,6 +30,8 @@
 
 #define ST_LSM6DSO_REG_OUT_TEMP_L_ADDR		0x20
 
+#define ST_LSM6DSO_TS_DELTA_NS			25000ULL
+
 #define ST_LSM6DSO_TEMP_GAIN			256
 #define ST_LSM6DSO_TEMP_FS_GAIN			(1000000 / ST_LSM6DSO_TEMP_GAIN)
 #define ST_LSM6DSO_TEMP_OFFSET			6400
@@ -269,12 +271,12 @@ struct st_lsm6dso_hw {
 	u8 embfunc_irq_reg;
 
 	u8 ext_data_len;
-	s32 odr_calib;
 
 	int odr;
 	int uodr;
 
 	s64 ts_offset;
+	u64 ts_delta_ns;
 	s64 hw_ts;
 	s64 hw_ts_high;
 	s64 tsample;
