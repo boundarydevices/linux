@@ -1418,10 +1418,6 @@ int st_lsm6dso_probe(struct device *dev, int irq,
 		return err;
 #endif /* CONFIG_PM && CONFIG_IIO_ST_LSM6DSO_MAY_WAKEUP */
 
-#ifdef TIMESTAMP_HW
-	hw->delta_hw_ts = 0ull;
-#endif /* TIMESTAMP_HW */
-
 	dev_info(dev, "Device probed\n");
 
 	return 0;

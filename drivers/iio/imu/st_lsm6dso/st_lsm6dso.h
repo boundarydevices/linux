@@ -322,29 +322,34 @@ struct st_lsm6dso_sensor {
 };
 
 /**
- * struct st_lsm6dso_hw - ST IMU MEMS hw instance
- * @dev: Pointer to instance of struct device (I2C or SPI).
- * @irq: Device interrupt line (I2C or SPI).
- * @lock: Mutex to protect read and write operations.
- * @fifo_lock: Mutex to prevent concurrent access to the hw FIFO.
- * @page_lock: Mutex to prevent concurrent memory page configuration.
- * @fifo_mode: FIFO operating mode supported by the device.
- * @state: hw operational state.
- * @enable_mask: Enabled sensor bitmask.
- * @fsm_enable_mask: FSM Enabled sensor bitmask.
- * @embfunc_irq_reg: Embedded function irq configutation register.
- * @ext_data_len: Number of i2c slave devices connected to I2C master.
- * @ts_offset: Hw timestamp offset.
- * @hw_ts: Latest hw timestamp from the sensor.
- * @hw_ts_high: Manage timestamp rollover
- * @tsample:
- * @hw_ts_old:
- * @delta_ts: Delta time between two consecutive interrupts.
- * @delta_hw_ts:
- * @ts: Latest timestamp from irq handler.
- * @iio_devs: Pointers to acc/gyro iio_dev instances.
- * @tf: Transfer function structure used by I/O operations.
- * @tb: Transfer buffers used by SPI I/O operations.
+ * @struct st_lsm6dso_hw
+ * @brief ST IMU MEMS hw instance
+ *
+ * dev: Pointer to instance of struct device (I2C or SPI).
+ * irq: Device interrupt line (I2C or SPI).
+ * lock: Mutex to protect read and write operations.
+ * fifo_lock: Mutex to prevent concurrent access to the hw FIFO.
+ * page_lock: Mutex to prevent concurrent memory page configuration.
+ * fifo_mode: FIFO operating mode supported by the device.
+ * state: hw operational state.
+ * enable_mask: Enabled sensor bitmask.
+ * fsm_enable_mask: FSM Enabled sensor bitmask.
+ * embfunc_pg0_irq_reg: Embedded function irq configutation register (page 0).
+ * embfunc_irq_reg: Embedded function irq configutation register (other).
+ * ext_data_len: Number of i2c slave devices connected to I2C master.
+ * odr: Timestamp sample ODR [Hz]
+ * uodr: Timestamp sample ODR [uHz]
+ * ts_offset: Hw timestamp offset.
+ * hw_ts: Latest hw timestamp from the sensor.
+ * hw_ts_high: Manage timestamp rollover
+ * tsample:
+ * hw_ts_old:
+ * delta_ts: Delta time between two consecutive interrupts.
+ * delta_hw_ts:
+ * ts: Latest timestamp from irq handler.
+ * iio_devs: Pointers to acc/gyro iio_dev instances.
+ * tf: Transfer function structure used by I/O operations.
+ * tb: Transfer buffers used by SPI I/O operations.
  */
 struct st_lsm6dso_hw {
 	struct device *dev;
@@ -371,11 +376,10 @@ struct st_lsm6dso_hw {
 	s64 ts_offset;
 	u64 ts_delta_ns;
 	s64 hw_ts;
-	s64 hw_ts_high;
+	u32 val_ts_old;
+	u32 hw_ts_high;
 	s64 tsample;
-	s64 hw_ts_old;
 	s64 delta_ts;
-	s64 delta_hw_ts;
 	s64 ts;
 
 	struct iio_dev *iio_devs[ST_LSM6DSO_ID_MAX];
