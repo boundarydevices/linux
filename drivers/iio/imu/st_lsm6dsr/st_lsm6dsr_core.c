@@ -656,6 +656,26 @@ static int st_lsm6dsr_write_raw(struct iio_dev *iio_dev,
 			sensor->odr = todr;
 			sensor->uodr = tuodr;
 		}
+
+		/*
+		 * VTS test testSamplingRateHotSwitchOperation not toggle the
+		 * enable status of sensor after changing the ODR -> force it
+		 */
+		if (sensor->hw->enable_mask & BIT(sensor->id)) {
+			switch(sensor->id) {
+			case ST_LSM6DSR_ID_GYRO:
+			case ST_LSM6DSR_ID_ACC:
+				err = st_lsm6dsr_set_odr(sensor, sensor->odr,
+							 sensor->uodr);
+				/* I2C interface err can be positive */
+				if (err < 0)
+					break;
+
+				err = st_lsm6dsr_update_batching(iio_dev, 1);
+			default:
+				break;
+			}
+		}
 		break;
 	}
 	default:
@@ -750,6 +770,7 @@ st_lsm6dsr_sysfs_reset_step_counter(struct device *dev,
 
 	return err < 0 ? err : size;
 }
+
 static IIO_DEV_ATTR_SAMP_FREQ_AVAIL(st_lsm6dsr_sysfs_sampling_frequency_avail);
 static IIO_DEVICE_ATTR(in_accel_scale_available, 0444,
 		       st_lsm6dsr_sysfs_scale_avail, NULL, 0);

@@ -450,6 +450,41 @@ int st_lsm6dsr_suspend_fifo(struct st_lsm6dsr_hw *hw)
 	return err;
 }
 
+/**
+ * Update ODR batching in FIFO and Timestamp
+ *
+ * @param  iio_dev: Linux IIO device
+ * @param  enable: enable/disable batcing in FIFO
+ * @return  < 0 if error, 0 otherwise
+ */
+int st_lsm6dsr_update_batching(struct iio_dev *iio_dev, bool enable)
+{
+	struct st_lsm6dsr_sensor *sensor = iio_priv(iio_dev);
+	struct st_lsm6dsr_hw *hw = sensor->hw;
+	int err;
+
+	disable_irq(hw->irq);
+
+	err = st_lsm6dsr_set_sensor_batching_odr(sensor, enable);
+	if (err < 0)
+		goto out;
+
+	/* Calc TS ODR */
+	hw->odr = st_lsm6dsr_ts_odr(hw);
+
+out:
+	enable_irq(hw->irq);
+
+	return err;
+}
+
+/**
+ * Update FIFO watermark value based to the enabled sensors
+ *
+ * @param  iio_dev: Linux IIO device
+ * @param  enable: enable/disable batcing in FIFO
+ * @return  < 0 if error, 0 otherwise
+ */
 static int st_lsm6dsr_update_fifo(struct iio_dev *iio_dev, bool enable)
 {
 	struct st_lsm6dsr_sensor *sensor = iio_priv(iio_dev);
@@ -699,6 +734,7 @@ static int st_lsm6dsr_fifo_init(struct st_lsm6dsr_hw *hw)
 }
 
 static const struct iio_trigger_ops st_lsm6dsr_trigger_ops = {
+	.owner = THIS_MODULE,
 };
 
 static int st_lsm6dsr_buffer_preenable(struct iio_dev *iio_dev)
