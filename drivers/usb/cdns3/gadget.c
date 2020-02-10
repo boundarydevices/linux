@@ -373,6 +373,36 @@ static int cdns3_start_all_request(struct cdns3_device *priv_dev,
 	return ret;
 }
 
+static void __cdns3_descmiss_copy_data(struct usb_request *request,
+	struct usb_request *descmiss_req, struct scatterlist *s)
+{
+	int length = request->actual + descmiss_req->actual;
+
+	if (!s) {
+		if (length <= request->length) {
+			memcpy(&((u8 *)request->buf)[request->actual],
+			       descmiss_req->buf,
+			       descmiss_req->actual);
+			request->actual = length;
+		} else {
+			/* It should never occures */
+			request->status = -ENOMEM;
+		}
+	} else {
+		if (length <= sg_dma_len(s)) {
+			void *p = phys_to_virt(sg_dma_address(s));
+
+			memcpy(&((u8 *)p)[request->actual],
+				descmiss_req->buf,
+				descmiss_req->actual);
+			request->actual = length;
+		} else {
+			request->status = -ENOMEM;
+		}
+	}
+}
+
+
 /**
  * cdns3_descmiss_copy_data copy data from internal requests to request queued
  * by class driver.
@@ -384,10 +414,10 @@ static void cdns3_descmiss_copy_data(struct cdns3_endpoint *priv_ep,
 {
 	struct usb_request *descmiss_req;
 	struct cdns3_request *descmiss_priv_req;
+	struct scatterlist *s = NULL;
 
 	while (!list_empty(&priv_ep->descmiss_req_list)) {
 		int chunk_end;
-		int length;
 
 		descmiss_priv_req =
 			cdns3_next_priv_request(&priv_ep->descmiss_req_list);
@@ -398,17 +428,10 @@ static void cdns3_descmiss_copy_data(struct cdns3_endpoint *priv_ep,
 			break;
 
 		chunk_end = descmiss_priv_req->flags & REQUEST_INTERNAL_CH;
-		length = request->actual + descmiss_req->actual;
+		if (request->num_sgs)
+			s = request->sg;
 
-		if (length <= request->length) {
-			memcpy(&((u8 *)request->buf)[request->actual],
-			       descmiss_req->buf,
-			       descmiss_req->actual);
-			request->actual = length;
-		} else {
-			/* It should never occures */
-			request->status = -ENOMEM;
-		}
+		__cdns3_descmiss_copy_data(request, descmiss_req, s);
 
 		list_del_init(&descmiss_priv_req->list);
 
@@ -451,6 +474,8 @@ void cdns3_gadget_giveback(struct cdns3_endpoint *priv_ep,
 		       request->length);
 
 	priv_req->flags &= ~(REQUEST_PENDING | REQUEST_UNALIGNED);
+	/* All TRBs have finished, clear the flag */
+	priv_req->finished_trb = 0;
 	trace_cdns3_gadget_giveback(priv_req);
 
 	/* WA2: */
@@ -587,11 +612,12 @@ int cdns3_ep_run_transfer(struct cdns3_endpoint *priv_ep,
 	int address;
 	u32 control;
 	int pcs;
+	struct scatterlist *s = NULL;
 
 	if (priv_ep->type == USB_ENDPOINT_XFER_ISOC)
 		num_trb = priv_ep->interval;
 	else
-		num_trb = request->num_sgs ? request->num_sgs : 1;
+		num_trb = request->num_mapped_sgs ? request->num_mapped_sgs : 1;
 
 	if (num_trb > priv_ep->free_trbs) {
 		priv_ep->flags |= EP_RING_FULL;
@@ -642,6 +668,9 @@ int cdns3_ep_run_transfer(struct cdns3_endpoint *priv_ep,
 
 	/* set incorrect Cycle Bit for first trb*/
 	control = priv_ep->pcs ? 0 : TRB_CYCLE;
+	if (request->num_mapped_sgs)
+		s = request->sg;
+
 	do {
 		u32 length;
 		u8 td_size = 0;
@@ -649,11 +678,11 @@ int cdns3_ep_run_transfer(struct cdns3_endpoint *priv_ep,
 		/* fill TRB */
 		control |= TRB_TYPE(TRB_NORMAL);
 		trb->buffer = TRB_BUFFER(request->num_sgs == 0
-				? trb_dma : request->sg[sg_iter].dma_address);
-		if (likely(!request->num_sgs))
+				? trb_dma : sg_dma_address(s));
+		if (!request->num_sgs)
 			length = request->length;
 		else
-			length = request->sg[sg_iter].length;
+			length = sg_dma_len(s);
 
 		if (priv_dev->dev_ver == DEV_VER_V2)
 			td_size = DIV_ROUND_UP(length,
@@ -686,6 +715,8 @@ int cdns3_ep_run_transfer(struct cdns3_endpoint *priv_ep,
 		control = 0;
 
 		++sg_iter;
+		if (request->num_mapped_sgs)
+			s = sg_next(s);
 		priv_req->end_trb = priv_ep->enqueue;
 		cdns3_ep_inc_enq(priv_ep);
 		trb = priv_ep->trb_pool + priv_ep->enqueue;
@@ -694,6 +725,7 @@ int cdns3_ep_run_transfer(struct cdns3_endpoint *priv_ep,
 	trb = priv_req->trb;
 
 	priv_req->flags |= REQUEST_PENDING;
+	priv_req->num_of_trb = num_trb;
 
 	/* give the TD to the consumer*/
 	if (sg_iter == 1)
@@ -711,8 +743,8 @@ int cdns3_ep_run_transfer(struct cdns3_endpoint *priv_ep,
 	dma_index = (readl(&priv_dev->regs->ep_traddr) -
 			 priv_ep->trb_pool_dma) / TRB_SIZE;
 
-	cdns3_dbg(priv_dev, "dorbel %d, dma_index %d, prev_enqueu %d",
-		  doorbell, dma_index, prev_enqueue);
+	cdns3_dbg(priv_dev, "dorbel %d, dma_index %d, prev_enqueu %d, num_trb %d",
+		  doorbell, dma_index, prev_enqueue, num_trb);
 
 	if (!doorbell || dma_index != priv_ep->wa1_trb_index)
 		cdns3_wa1_restore_cycle_bit(priv_ep);
@@ -834,9 +866,13 @@ static bool cdns3_request_handled(struct cdns3_endpoint *priv_ep,
 			 priv_ep->trb_pool_dma) / TRB_SIZE;
 
 	/* current trb doesn't belong to this request */
-	if ((priv_req->start_trb < priv_req->end_trb) &&
-		(priv_ep->dequeue > priv_req->end_trb))
-		goto finish;
+	if (priv_req->start_trb < priv_req->end_trb) {
+		if (priv_ep->dequeue > priv_req->end_trb)
+			goto finish;
+
+		if (priv_ep->dequeue < priv_req->start_trb)
+			goto finish;
+	}
 
 	if ((priv_req->start_trb > priv_req->end_trb) &&
 		(priv_ep->dequeue > priv_req->end_trb) &&
@@ -874,7 +910,7 @@ static void cdns3_transfer_completed(struct cdns3_device *priv_dev,
 	struct cdns3_request *priv_req;
 	struct usb_request *request;
 	struct cdns3_trb *trb;
-	bool trb_handled = false;
+	bool request_handled = false;
 
 	while (!list_empty(&priv_ep->pending_req_list)) {
 		request = cdns3_next_request(&priv_ep->pending_req_list);
@@ -886,7 +922,9 @@ static void cdns3_transfer_completed(struct cdns3_device *priv_dev,
 		cdns3_select_ep(priv_dev, priv_ep->endpoint.address);
 
 		while (cdns3_request_handled(priv_ep, priv_req)) {
-			trb_handled = true;
+			priv_req->finished_trb++;
+			if (priv_req->finished_trb >= priv_req->num_of_trb)
+				request_handled = true;
 			trb = priv_ep->trb_pool + priv_ep->dequeue;
 			trace_cdns3_complete_trb(priv_ep, trb);
 
@@ -894,9 +932,9 @@ static void cdns3_transfer_completed(struct cdns3_device *priv_dev,
 			cdns3_ep_inc_deq(priv_ep);
 		}
 
-		if (trb_handled) {
+		if (request_handled) {
 			cdns3_gadget_giveback(priv_ep, priv_req, 0);
-			trb_handled = false;
+			request_handled = false;
 		} else {
 			return;
 		}

@@ -452,7 +452,7 @@ static const char *imx8mp_media_cam2_pix_sels[] = {"osc_24m", "sys_pll1_266m", "
 						   "sys_pll1_800m", "sys_pll2_1000m", "sys_pll3_out",
 						   "audio_pll2_out", "video_pll1_out", };
 
-static const char *imx8mp_media_mipi_phy2_ref_sels[] = {"osc_24m", "sys_pll2_333m", "sys_pll2_100m",
+static const char *imx8mp_media_ldb_sels[] = {"osc_24m", "sys_pll2_333m", "sys_pll2_100m",
 							"sys_pll1_800m", "sys_pll2_1000m", "clk_ext2",
 							"audio_pll2_out", "video_pll1_out", };
 
@@ -747,7 +747,7 @@ static int imx8mp_clocks_probe(struct platform_device *pdev)
 	clks[IMX8MP_CLK_MEDIA_MIPI_PHY1_REF] = imx8m_clk_composite("media_mipi_phy1_ref", imx8mp_media_mipi_phy1_ref_sels, base + 0xbd80);
 	clks[IMX8MP_CLK_MEDIA_DISP1_PIX] = imx8m_clk_composite("media_disp1_pix", imx8mp_media_disp1_pix_sels, base + 0xbe00);
 	clks[IMX8MP_CLK_MEDIA_CAM2_PIX] = imx8m_clk_composite("media_cam2_pix", imx8mp_media_cam2_pix_sels, base + 0xbe80);
-	clks[IMX8MP_CLK_MEDIA_MIPI_PHY2_REF] = imx8m_clk_composite("media_mipi_phy2_ref", imx8mp_media_mipi_phy2_ref_sels, base + 0xbf00);
+	clks[IMX8MP_CLK_MEDIA_LDB] = imx8m_clk_composite("media_ldb", imx8mp_media_ldb_sels, base + 0xbf00);
 	clks[IMX8MP_CLK_MEDIA_MIPI_CSI2_ESC] = imx8m_clk_composite("media_mipi_csi2_esc", imx8mp_media_mipi_csi2_esc_sels, base + 0xbf80);
 	clks[IMX8MP_CLK_PCIE2_CTRL] = imx8m_clk_composite("pcie2_ctrl", imx8mp_pcie2_ctrl_sels, base + 0xc000);
 	clks[IMX8MP_CLK_PCIE2_PHY] = imx8m_clk_composite("pcie2_phy", imx8mp_pcie2_phy_sels, base + 0xc080);
@@ -782,6 +782,7 @@ static int imx8mp_clocks_probe(struct platform_device *pdev)
 	clks[IMX8MP_CLK_I2C3_ROOT] = imx_clk_gate4("i2c3_root_clk", "i2c3", base + 0x4190, 0);
 	clks[IMX8MP_CLK_I2C4_ROOT] = imx_clk_gate4("i2c4_root_clk", "i2c4", base + 0x41a0, 0);
 	clks[IMX8MP_CLK_MU_ROOT] = imx_clk_gate4("mu_root_clk", "ipg_root", base + 0x4210, 0);
+	clks[IMX8MP_CLK_OCOTP_ROOT] = imx_clk_gate4("ocotp_root_clk", "ipg_root", base + 0x4220, 0);
 	clks[IMX8MP_CLK_PCIE_ROOT] = imx_clk_gate4("pcie_root_clk", "pcie_aux", base + 0x4250, 0);
 	clks[IMX8MP_CLK_PWM1_ROOT] = imx_clk_gate4("pwm1_root_clk", "pwm1", base + 0x4280, 0);
 	clks[IMX8MP_CLK_PWM2_ROOT] = imx_clk_gate4("pwm2_root_clk", "pwm2", base + 0x4290, 0);
@@ -831,7 +832,7 @@ static int imx8mp_clocks_probe(struct platform_device *pdev)
 	clks[IMX8MP_CLK_HDMI_ROOT] = imx_clk_gate4("hdmi_root_clk", "hdmi_axi", base + 0x45f0, 0);
 	clks[IMX8MP_CLK_TSENSOR_ROOT] = imx_clk_gate4("tsensor_root_clk", "ipg_root", base + 0x4620, 0);
 	clks[IMX8MP_CLK_VPU_ROOT] = imx_clk_gate4("vpu_root_clk", "vpu_bus", base + 0x4630, 0);
-	clks[IMX8MP_CLK_AUDIO_ROOT] = imx_clk_gate4("audio_root_clk", "ipg_root", base + 0x4650, 0);
+	clks[IMX8MP_CLK_AUDIO_ROOT] = imx_clk_gate4("audio_root_clk", "ipg_audio_root", base + 0x4650, 0);
 
 	clk_set_parent(clks[IMX8MP_CLK_A53_SRC], clks[IMX8MP_SYS_PLL1_800M]);
 	clk_set_parent(clks[IMX8MP_CLK_A53_CORE], clks[IMX8MP_ARM_PLL_OUT]);
