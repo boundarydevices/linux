@@ -61,6 +61,7 @@ struct json_event {
 	char *pmu;
 	char *unit;
 	char *perpkg;
+	char *socname;
 	char *aggr_mode;
 	char *metric_expr;
 	char *metric_name;
@@ -370,6 +371,8 @@ static int print_events_table_entry(void *data, struct json_event *je)
 		fprintf(outfp, "\t.unit = \"%s\",\n", je->unit);
 	if (je->perpkg)
 		fprintf(outfp, "\t.perpkg = \"%s\",\n", je->perpkg);
+	if (je->socname)
+		fprintf(outfp, "\t.socname = \"%s\",\n", je->socname);
 	if (je->aggr_mode)
 		fprintf(outfp, "\t.aggr_mode = \"%d\",\n", convert(je->aggr_mode));
 	if (je->metric_expr)
@@ -396,6 +399,7 @@ struct event_struct {
 	char *pmu;
 	char *unit;
 	char *perpkg;
+	char *socname;
 	char *aggr_mode;
 	char *metric_expr;
 	char *metric_name;
@@ -426,6 +430,7 @@ struct event_struct {
 	op(pmu);						\
 	op(unit);						\
 	op(perpkg);						\
+	op(socname);						\
 	op(aggr_mode);						\
 	op(metric_expr);					\
 	op(metric_name);					\
@@ -627,6 +632,8 @@ static int json_events(const char *fn,
 				addfield(map, &je.unit, "", "", val);
 			} else if (json_streq(map, field, "PerPkg")) {
 				addfield(map, &je.perpkg, "", "", val);
+			} else if (json_streq(map, field, "SocName")) {
+				addfield(map, &je.socname, "", "", val);
 			} else if (json_streq(map, field, "AggregationMode")) {
 				addfield(map, &je.aggr_mode, "", "", val);
 			} else if (json_streq(map, field, "Deprecated")) {
@@ -689,6 +696,7 @@ free_strings:
 		free(je.pmu);
 		free(filter);
 		free(je.perpkg);
+		free(je.socname);
 		free(je.aggr_mode);
 		free(je.deprecated);
 		free(je.unit);

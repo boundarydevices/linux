@@ -19,6 +19,7 @@ struct pmu_event {
 	const char *pmu;
 	const char *unit;
 	const char *perpkg;
+	const char *socname;
 	const char *aggr_mode;
 	const char *metric_expr;
 	const char *metric_name;
