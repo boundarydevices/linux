@@ -449,7 +449,7 @@ static int st_lsm6dsr_shub_get_odr_val(struct st_lsm6dsr_sensor *sensor,
 	int i;
 
 	for (i = 0; i < ext_info->ext_dev_settings->odr_table.odr_size; i++)
-		if (ext_info->ext_dev_settings->odr_table.odr_avl[i].hz <= odr)
+		if (ext_info->ext_dev_settings->odr_table.odr_avl[i].hz >= odr)
 			break;
 
 	if (i == ext_info->ext_dev_settings->odr_table.odr_size)
