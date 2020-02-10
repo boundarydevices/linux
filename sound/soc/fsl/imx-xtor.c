@@ -180,6 +180,27 @@ static struct snd_soc_ops imx_xtor_be_ops = {
 	.hw_free = imx_xtor_hw_free,
 };
 
+SND_SOC_DAILINK_DEFS(hifi,
+	DAILINK_COMP_ARRAY(COMP_EMPTY()),
+	DAILINK_COMP_ARRAY(COMP_DUMMY()),
+	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+
+SND_SOC_DAILINK_DEFS(hifi_fe,
+	DAILINK_COMP_ARRAY(COMP_EMPTY()),
+	DAILINK_COMP_ARRAY(COMP_DUMMY()),
+	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+
+SND_SOC_DAILINK_DEFS(hifi_be,
+	DAILINK_COMP_ARRAY(COMP_EMPTY()),
+	DAILINK_COMP_ARRAY(COMP_DUMMY()),
+	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+
+static struct snd_soc_dai_link imx_xtor_dai[3] = {
+	{SND_SOC_DAILINK_REG(hifi),},
+	{SND_SOC_DAILINK_REG(hifi_fe),},
+	{SND_SOC_DAILINK_REG(hifi_be),},
+};
+
 static int imx_xtor_probe(struct platform_device *pdev)
 {
 	struct device_node *cpu_np, *xtor_np = NULL;
@@ -233,12 +254,12 @@ static int imx_xtor_probe(struct platform_device *pdev)
 	}
 	data->cpu_priv.slots = 2;
 
+	memcpy(data->dai, imx_xtor_dai, sizeof(imx_xtor_dai));
+
 	data->dai[0].name = "xtor hifi";
 	data->dai[0].stream_name = "xtor hifi";
-	data->dai[0].codec_dai_name = "snd-soc-dummy-dai";
-	data->dai[0].codec_name = "snd-soc-dummy";
-	data->dai[0].cpu_dai_name = dev_name(&cpu_pdev->dev);
-	data->dai[0].platform_of_node = cpu_np;
+	data->dai[0].cpus->dai_name = dev_name(&cpu_pdev->dev);
+	data->dai[0].platforms->of_node = cpu_np;
 	data->dai[0].ops = &imx_xtor_ops;
 	data->dai[0].playback_only = false;
 	data->dai[0].capture_only = false;
@@ -251,20 +272,16 @@ static int imx_xtor_probe(struct platform_device *pdev)
 	if (asrc_pdev) {
 		data->dai[1].name = "HiFi-ASRC-FE";
 		data->dai[1].stream_name = "HiFi-ASRC-FE";
-		data->dai[1].codec_dai_name = "snd-soc-dummy-dai";
-		data->dai[1].codec_name = "snd-soc-dummy";
-		data->dai[1].cpu_of_node    = asrc_np;
-		data->dai[1].platform_of_node   = asrc_np;
+		data->dai[1].cpus->of_node    = asrc_np;
+		data->dai[1].platforms->of_node   = asrc_np;
 		data->dai[1].dynamic   = 1;
 		data->dai[1].dpcm_playback  = 1;
 		data->dai[1].dpcm_capture   = 1;
 
 		data->dai[2].name = "HiFi-ASRC-BE";
 		data->dai[2].stream_name = "HiFi-ASRC-BE";
-		data->dai[2].codec_dai_name  = "snd-soc-dummy-dai";
-		data->dai[2].codec_name      = "snd-soc-dummy";
-		data->dai[2].cpu_of_node     = cpu_np;
-		data->dai[2].platform_name   = "snd-soc-dummy";
+		data->dai[2].cpus->of_node     = cpu_np;
+		data->dai[2].platforms->name   = "snd-soc-dummy";
 		data->dai[2].no_pcm   = 1;
 		data->dai[2].dpcm_playback  = 1;
 		data->dai[2].dpcm_capture   = 1;
