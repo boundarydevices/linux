@@ -60,21 +60,6 @@
 #define ST_LSM6DSR_REG_EMB_FUNC_INT1_ADDR	0x0a
 #define ST_LSM6DSR_REG_EMB_FUNC_INT2_ADDR	0x0e
 
-struct st_lsm6dsr_std_entry {
-	u16 odr;
-	u8 val;
-};
-
-struct st_lsm6dsr_std_entry st_lsm6dsr_std_table[] = {
-	{  12, 7 },
-	{  26, 7 },
-	{  52, 8 },
-	{ 104, 8 },
-	{ 208, 8 },
-	{ 416, 8 },
-	{ 833, 8 },
-};
-
 static const struct st_lsm6dsr_odr_table_entry st_lsm6dsr_odr_table[] = {
 	[ST_LSM6DSR_ID_ACC] = {
 		.odr_size = 8,
@@ -425,23 +410,6 @@ int st_lsm6dsr_get_odr_val(enum st_lsm6dsr_sensor_id id, int odr, int uodr,
 	return 0;
 }
 
-static int st_lsm6dsr_set_std_level(struct st_lsm6dsr_sensor *sensor, u16 odr)
-{
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(st_lsm6dsr_std_table); i++)
-		if (st_lsm6dsr_std_table[i].odr == odr)
-			break;
-
-	if (i == ARRAY_SIZE(st_lsm6dsr_std_table))
-		return -EINVAL;
-
-	sensor->std_level = st_lsm6dsr_std_table[i].val;
-	sensor->std_samples = 0;
-
-	return 0;
-}
-
 static u16 st_lsm6dsr_check_odr_dependency(struct st_lsm6dsr_hw *hw,
 					   int odr, int uodr,
 					   enum st_lsm6dsr_sensor_id ref_id)
@@ -645,10 +613,6 @@ static int st_lsm6dsr_write_raw(struct iio_dev *iio_dev,
 	case IIO_CHAN_INFO_SAMP_FREQ: {
 		u8 data;
 		int todr, tuodr;
-
-		err = st_lsm6dsr_set_std_level(sensor, val);
-		if (err < 0)
-			break;
 
 		err = st_lsm6dsr_get_odr_val(sensor->id, val, val2, &todr,
 					     &tuodr, &data);
@@ -1109,6 +1073,11 @@ static int st_lsm6dsr_init_device(struct st_lsm6dsr_hw *hw)
 		return err;
 
 	err = st_lsm6dsr_get_int_reg(hw, &drdy_reg, &ef_irq_reg);
+	if (err < 0)
+		return err;
+
+	err = st_lsm6dsr_write_with_mask(hw, ST_LSM6DSR_REG_CTRL4_C_ADDR,
+					 ST_LSM6DSR_REG_DRDY_MASK, 1);
 	if (err < 0)
 		return err;
 

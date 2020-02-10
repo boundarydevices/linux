@@ -15,7 +15,7 @@
 #include <linux/iio/iio.h>
 #include <linux/delay.h>
 
-#define ST_LSM6DSR_MAX_ODR 			833
+#define ST_LSM6DSR_MAX_ODR			833
 #define ST_LSM6DSR_ODR_LIST_SIZE		8
 #define ST_LSM6DSR_ODR_EXPAND(odr, uodr)	((odr * 1000000) + uodr)
 
@@ -23,6 +23,10 @@
 
 #define ST_LSM6DSR_REG_FIFO_CTRL4_ADDR		0x0a
 #define ST_LSM6DSR_REG_ODR_T_BATCH_MASK		GENMASK(5, 4)
+
+#define ST_LSM6DSR_REG_CTRL4_C_ADDR		0x13
+#define ST_LSM6DSR_REG_DRDY_MASK		BIT(3)
+
 
 #define ST_LSM6DSR_REG_OUT_TEMP_L_ADDR		0x20
 
@@ -217,8 +221,6 @@ struct st_lsm6dsr_sensor {
 	int uodr;
 
 	u32 offset;
-	u8 std_samples;
-	u8 std_level;
 
 	u16 max_watermark;
 	u16 watermark;
