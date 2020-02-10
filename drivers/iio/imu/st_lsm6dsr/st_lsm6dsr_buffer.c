@@ -756,6 +756,8 @@ int st_lsm6dsr_buffers_setup(struct st_lsm6dsr_hw *hw)
 	int i, err;
 
 	irq_type = irqd_get_trigger_type(irq_get_irq_data(hw->irq));
+	if (irq_type == IRQF_TRIGGER_NONE)
+		irq_type = IRQF_TRIGGER_HIGH;
 
 	switch (irq_type) {
 	case IRQF_TRIGGER_HIGH:
