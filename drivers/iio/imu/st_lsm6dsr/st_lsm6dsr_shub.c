@@ -173,6 +173,45 @@ static const struct st_lsm6dsr_ext_dev_settings st_lsm6dsr_ext_dev_table[] = {
 		.ext_chan_depth = 3,
 		.data_len = 3,
 	},
+	/* LPS22HH */
+	{
+		.i2c_addr = { 0x5c, 0x5d },
+		.wai_addr = 0x0f,
+		.wai_val = 0xb3,
+		.odr_table = {
+			.odr_size = 5,
+			.reg = {
+				.addr = 0x10,
+				.mask = GENMASK(6, 4),
+			},
+			.odr_avl[0] = {   1,  0,  0x1 },
+			.odr_avl[1] = {  10,  0,  0x2 },
+			.odr_avl[2] = {  25,  0,  0x3 },
+			.odr_avl[3] = {  50,  0,  0x4 },
+			.odr_avl[4] = { 100,  0,  0x6 },
+		},
+		.fs_table = {
+			.size = 1,
+			/* hPa miscro scale */
+			.fs_avl[0] = {
+				.gain = 1000000UL/4096UL,
+				.val = 0x0,
+			},
+		},
+		.bdu_reg = {
+			.addr = 0x10,
+			.mask = BIT(1),
+		},
+		.ext_available_scan_masks = { 0x1, 0x0 },
+		.ext_channels[0] = ST_LSM6DSR_DATA_CHANNEL(IIO_PRESSURE, 0x28,
+							   0, IIO_NO_MOD, 0,
+							   24, 32, 'u'),
+		.ext_channels[1] = ST_LSM6DSR_EVENT_CHANNEL(IIO_PRESSURE,
+							    flush),
+		.ext_channels[2] = IIO_CHAN_SOFT_TIMESTAMP(1),
+		.ext_chan_depth = 3,
+		.data_len = 3,
+	},
 };
 
 /*
