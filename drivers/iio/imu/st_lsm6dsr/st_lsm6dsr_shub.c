@@ -457,6 +457,11 @@ static int st_lsm6dsr_shub_get_odr_val(struct st_lsm6dsr_sensor *sensor,
 
 	*val = ext_info->ext_dev_settings->odr_table.odr_avl[i].val;
 
+	/* set decimator for low ODR */
+	sensor->decimator =
+		ext_info->ext_dev_settings->odr_table.odr_avl[i].uhz;
+	sensor->dec_counter = 0;
+
 	return 0;
 }
 
@@ -728,6 +733,8 @@ static struct iio_dev *st_lsm6dsr_shub_alloc_iio_dev(struct st_lsm6dsr_hw *hw,
 	sensor->watermark = 1;
 	sensor->ext_dev_info.ext_dev_i2c_addr = i2c_addr;
 	sensor->ext_dev_info.ext_dev_settings = ext_settings;
+	sensor->decimator = 0;
+	sensor->dec_counter = 0;
 
 	return iio_dev;
 }

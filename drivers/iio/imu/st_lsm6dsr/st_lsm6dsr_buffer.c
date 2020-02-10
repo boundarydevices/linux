@@ -335,9 +335,15 @@ static int st_lsm6dsr_read_fifo(struct st_lsm6dsr_hw *hw)
 						    st_lsm6dsr_get_time_ns(),
 						    hw->tsample);
 
-				iio_push_to_buffers_with_timestamp(iio_dev,
+				/* support decimation for ODR < 12.5 Hz */
+				if (sensor->dec_counter > 0) {
+					sensor->dec_counter--;
+				} else {
+					sensor->dec_counter = sensor->decimator;
+					iio_push_to_buffers_with_timestamp(iio_dev,
 								   iio_buf,
 								   hw->tsample);
+				}
 			}
 		}
 		read_len += word_len;
@@ -412,7 +418,7 @@ ssize_t st_lsm6dsr_flush_fifo(struct device *dev,
 	hw->ts = ts;
 	set_bit(ST_LSM6DSR_HW_FLUSH, &hw->state);
 	count = st_lsm6dsr_read_fifo(hw);
-
+	sensor->dec_counter = 0;
 	mutex_unlock(&hw->fifo_lock);
 
 	type = count > 0 ? IIO_EV_DIR_FIFO_DATA : IIO_EV_DIR_FIFO_EMPTY;
