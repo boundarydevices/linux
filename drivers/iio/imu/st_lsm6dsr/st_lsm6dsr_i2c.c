@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics st_lsm6dsr i2c driver
  *
- * Copyright 2019 STMicroelectronics Inc.
+ * Copyright 2020 STMicroelectronics Inc.
  *
  * Lorenzo Bianconi <lorenzo.bianconi@st.com>
  *
@@ -16,7 +16,8 @@
 
 #include "st_lsm6dsr.h"
 
-static int st_lsm6dsr_i2c_read(struct device *dev, u8 addr, int len, u8 *data)
+static int st_lsm6dsr_i2c_read(struct device *dev, u8 addr,
+			       int len, u8 *data)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct i2c_msg msg[2];

@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics st_lsm6dsr FIFO buffer library driver
  *
- * Copyright 2019 STMicroelectronics Inc.
+ * Copyright 2020 STMicroelectronics Inc.
  *
  * Lorenzo Bianconi <lorenzo.bianconi@st.com>
  *
@@ -21,18 +21,21 @@
 #include "st_lsm6dsr.h"
 
 #define ST_LSM6DSR_REG_EMB_FUNC_STATUS_MAINPAGE		0x35
-#define ST_LSM6DSR_REG_INT_STEP_DET_MASK	BIT(3)
-#define ST_LSM6DSR_REG_INT_TILT_MASK		BIT(4)
-#define ST_LSM6DSR_REG_INT_SIGMOT_MASK		BIT(5)
-#define ST_LSM6DSR_REG_INT_GLANCE_MASK		BIT(0)
-#define ST_LSM6DSR_REG_INT_MOTION_MASK		BIT(1)
-#define ST_LSM6DSR_REG_INT_NO_MOTION_MASK	BIT(2)
-#define ST_LSM6DSR_REG_INT_WAKEUP_MASK		BIT(3)
-#define ST_LSM6DSR_REG_INT_PICKUP_MASK		BIT(4)
-#define ST_LSM6DSR_REG_INT_ORIENTATION_MASK	BIT(5)
-#define ST_LSM6DSR_REG_INT_WRIST_MASK		BIT(6)
+#define ST_LSM6DSR_REG_INT_STEP_DET_MASK		BIT(3)
+#define ST_LSM6DSR_REG_INT_TILT_MASK			BIT(4)
+#define ST_LSM6DSR_REG_INT_SIGMOT_MASK			BIT(5)
+#define ST_LSM6DSR_REG_INT_GLANCE_MASK			BIT(0)
+#define ST_LSM6DSR_REG_INT_MOTION_MASK			BIT(1)
+#define ST_LSM6DSR_REG_INT_NO_MOTION_MASK		BIT(2)
+#define ST_LSM6DSR_REG_INT_WAKEUP_MASK			BIT(3)
+#define ST_LSM6DSR_REG_INT_PICKUP_MASK			BIT(4)
+#define ST_LSM6DSR_REG_INT_ORIENTATION_MASK		BIT(5)
+#define ST_LSM6DSR_REG_INT_WRIST_MASK			BIT(6)
 
-#define ST_LSM6DSR_SAMPLE_DISCHARD		0x7ffd
+#define ST_LSM6DSR_SAMPLE_DISCHARD			0x7ffd
+
+#define ST_LSM6DSR_EWMA_LEVEL				120
+#define ST_LSM6DSR_EWMA_DIV				128
 
 enum {
 	ST_LSM6DSR_GYRO_TAG = 0x01,
@@ -44,6 +47,11 @@ enum {
 	ST_LSM6DSR_SC_TAG = 0x12,
 };
 
+/**
+ * Get Linux timestamp (SW)
+ *
+ * @return  timestamp in ns
+ */
 static inline s64 st_lsm6dsr_get_time_ns(void)
 {
 	struct timespec ts;
@@ -52,19 +60,31 @@ static inline s64 st_lsm6dsr_get_time_ns(void)
 	return timespec_to_ns(&ts);
 }
 
-#define ST_LSM6DSR_EWMA_LEVEL			120
-#define ST_LSM6DSR_EWMA_DIV			128
+/**
+ * Timestamp low pass filter
+ *
+ * @param  old: ST IMU MEMS hw instance
+ * @param  new: ST IMU MEMS hw instance
+ * @param  weight: ST IMU MEMS hw instance
+ * @return  estimation of the timestamp average
+ */
 static inline s64 st_lsm6dsr_ewma(s64 old, s64 new, int weight)
 {
 	s64 diff, incr;
 
 	diff = new - old;
 	incr = div_s64((ST_LSM6DSR_EWMA_DIV - weight) * diff,
-		       ST_LSM6DSR_EWMA_DIV);
+			ST_LSM6DSR_EWMA_DIV);
 
 	return old + incr;
 }
 
+/**
+ * Reset HW Timestamp counter and clear timestamp data structure
+ *
+ * @param  hw: ST IMU MEMS hw instance
+ * @return  < 0 if error, 0 otherwise
+ */
 inline int st_lsm6dsr_reset_hwts(struct st_lsm6dsr_hw *hw)
 {
 	u8 data = 0xaa;
@@ -79,6 +99,13 @@ inline int st_lsm6dsr_reset_hwts(struct st_lsm6dsr_hw *hw)
 				       sizeof(data), &data);
 }
 
+/**
+ * Setting FIFO mode
+ *
+ * @param  hw: ST IMU MEMS hw instance
+ * @param  fifo_mode: ST_LSM6DSR_FIFO_BYPASS or ST_LSM6DSR_FIFO_CONT
+ * @return  0 FIFO configured accordingly, non zero otherwise
+ */
 int st_lsm6dsr_set_fifo_mode(struct st_lsm6dsr_hw *hw,
 			     enum st_lsm6dsr_fifo_mode fifo_mode)
 {
@@ -95,6 +122,13 @@ int st_lsm6dsr_set_fifo_mode(struct st_lsm6dsr_hw *hw,
 	return 0;
 }
 
+/**
+ * Setting sensor ODR in batching mode
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  enable: enable or disable batching mode
+ * @return  0 FIFO configured accordingly, non zero otherwise
+ */
 int __st_lsm6dsr_set_sensor_batching_odr(struct st_lsm6dsr_sensor *sensor,
 					 bool enable)
 {
@@ -116,7 +150,13 @@ int __st_lsm6dsr_set_sensor_batching_odr(struct st_lsm6dsr_sensor *sensor,
 	return err < 0 ? err : 0;
 }
 
-static u16 st_lsm6dsr_ts_odr(struct st_lsm6dsr_hw *hw)
+/**
+ * Setting timestamp ODR in batching mode
+ *
+ * @param  hw: ST IMU MEMS hw instance
+ * @return  Timestamp ODR
+ */
+static int st_lsm6dsr_ts_odr(struct st_lsm6dsr_hw *hw)
 {
 	struct st_lsm6dsr_sensor *sensor;
 	int odr = 0;
@@ -135,6 +175,13 @@ static u16 st_lsm6dsr_ts_odr(struct st_lsm6dsr_hw *hw)
 	return odr;
 }
 
+/**
+ * Setting sensor ODR in batching mode
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  enable: enable or disable batching mode
+ * @return  0 FIFO configured accordingly, non zero otherwise
+ */
 static inline int
 st_lsm6dsr_set_sensor_batching_odr(struct st_lsm6dsr_sensor *sensor,
 				   bool enable)
@@ -149,7 +196,15 @@ st_lsm6dsr_set_sensor_batching_odr(struct st_lsm6dsr_sensor *sensor,
 	return err;
 }
 
-int st_lsm6dsr_update_watermark(struct st_lsm6dsr_sensor *sensor, u16 watermark)
+/**
+ * Update watermark level in FIFO
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  watermark: New watermark level
+ * @return  0 if FIFO configured, non zero for error
+ */
+int st_lsm6dsr_update_watermark(struct st_lsm6dsr_sensor *sensor,
+				u16 watermark)
 {
 	u16 fifo_watermark = ST_LSM6DSR_MAX_FIFO_DEPTH, cur_watermark = 0;
 	struct st_lsm6dsr_hw *hw = sensor->hw;
@@ -167,8 +222,8 @@ int st_lsm6dsr_update_watermark(struct st_lsm6dsr_sensor *sensor, u16 watermark)
 		if (!(hw->enable_mask & BIT(cur_sensor->id)))
 			continue;
 
-		cur_watermark = (cur_sensor == sensor) ? watermark
-						       : cur_sensor->watermark;
+		cur_watermark = (cur_sensor == sensor) ? watermark :
+							 cur_sensor->watermark;
 
 		fifo_watermark = min_t(u16, fifo_watermark, cur_watermark);
 	}
@@ -193,6 +248,12 @@ out:
 	return err < 0 ? err : 0;
 }
 
+/**
+ * Timestamp correlation finction
+ *
+ * @param  hw: ST IMU MEMS hw instance
+ * @param  ts: New timestamp
+ */
 static inline void st_lsm6dsr_sync_hw_ts(struct st_lsm6dsr_hw *hw, s64 ts)
 {
 	s64 delta = ts - hw->hw_ts;
@@ -201,8 +262,16 @@ static inline void st_lsm6dsr_sync_hw_ts(struct st_lsm6dsr_hw *hw, s64 ts)
 					ST_LSM6DSR_EWMA_LEVEL);
 }
 
-static struct iio_dev *st_lsm6dsr_get_iiodev_from_tag(struct st_lsm6dsr_hw *hw,
-						      u8 tag)
+/**
+ * Return the iio device structure based on FIFO TAG ID
+ *
+ * @param  hw: ST IMU MEMS hw instance
+ * @param  tag: FIFO sample TAG ID
+ * @return  0 if FIFO configured, non zero for error
+ */
+static struct
+iio_dev *st_lsm6dsr_get_iiodev_from_tag(struct st_lsm6dsr_hw *hw,
+					u8 tag)
 {
 	struct iio_dev *iio_dev;
 
@@ -236,6 +305,12 @@ static struct iio_dev *st_lsm6dsr_get_iiodev_from_tag(struct st_lsm6dsr_hw *hw,
 	return iio_dev;
 }
 
+/**
+ * Read all FIFO data stored after WTM FIFO irq fired interrupt
+ *
+ * @param hw: ST IMU MEMS hw instance
+ * @return Number of read bytes in FIFO or error if negative
+ */
 static int st_lsm6dsr_read_fifo(struct st_lsm6dsr_hw *hw)
 {
 	u8 iio_buf[ALIGN(ST_LSM6DSR_SAMPLE_SIZE, sizeof(s64)) + sizeof(s64)];
@@ -320,7 +395,10 @@ static int st_lsm6dsr_read_fifo(struct st_lsm6dsr_hw *hw)
 					continue;
 				}
 
-				/* hw ts in not queued in FIFO if only step counter enabled */
+				/*
+				 * hw ts in not queued in FIFO if only step
+				 * counter enabled
+				 */
 				if (sensor->id == ST_LSM6DSR_ID_STEP_COUNTER) {
 					val = get_unaligned_le32(ptr + 2);
 					hw->tsample = (val +
@@ -352,8 +430,17 @@ static int st_lsm6dsr_read_fifo(struct st_lsm6dsr_hw *hw)
 	return read_len;
 }
 
+/**
+ * Return the max FIFO watermark level accepted
+ *
+ * @param  dev: Linux Device
+ * @param  attr: Device Attribute
+ * @param  buf: User Buffer
+ * @return  Number of chars printed into the buffer
+ */
 ssize_t st_lsm6dsr_get_max_watermark(struct device *dev,
-				     struct device_attribute *attr, char *buf)
+				     struct device_attribute *attr,
+				     char *buf)
 {
 	struct iio_dev *iio_dev = dev_get_drvdata(dev);
 	struct st_lsm6dsr_sensor *sensor = iio_priv(iio_dev);
@@ -361,8 +448,17 @@ ssize_t st_lsm6dsr_get_max_watermark(struct device *dev,
 	return sprintf(buf, "%d\n", sensor->max_watermark);
 }
 
+/**
+ * Return the FIFO watermark level
+ *
+ * @param  dev: Linux Device
+ * @param  attr: Device Attribute
+ * @param  buf: User Buffer
+ * @return  Number of chars printed into the buffer
+ */
 ssize_t st_lsm6dsr_get_watermark(struct device *dev,
-				 struct device_attribute *attr, char *buf)
+				 struct device_attribute *attr,
+				 char *buf)
 {
 	struct iio_dev *iio_dev = dev_get_drvdata(dev);
 	struct st_lsm6dsr_sensor *sensor = iio_priv(iio_dev);
@@ -370,6 +466,15 @@ ssize_t st_lsm6dsr_get_watermark(struct device *dev,
 	return sprintf(buf, "%d\n", sensor->watermark);
 }
 
+/**
+ * Set the FIFO watermark level
+ *
+ * @param  dev: Linux Device
+ * @param  attr: Device Attribute
+ * @param  buf: User Buffer
+ * @param  size: New FIFO watermark level
+ * @return  Watermark level if >= 0, error otherwise
+ */
 ssize_t st_lsm6dsr_set_watermark(struct device *dev,
 				 struct device_attribute *attr,
 				 const char *buf, size_t size)
@@ -400,6 +505,15 @@ out:
 	return err < 0 ? err : size;
 }
 
+/**
+ * Flush internal HW FIFO
+ *
+ * @param  dev: Linux Device
+ * @param  attr: Device Attribute
+ * @param  buf: User Buffer
+ * @param  size: unused
+ * @return  Watermark level if >= 0, error otherwise
+ */
 ssize_t st_lsm6dsr_flush_fifo(struct device *dev,
 			      struct device_attribute *attr,
 			      const char *buf, size_t size)
@@ -429,6 +543,12 @@ ssize_t st_lsm6dsr_flush_fifo(struct device *dev,
 	return size;
 }
 
+/**
+ * Empty FIFO and set HW FIFO in Bypass mode
+ *
+ * @param  hw: ST IMU MEMS hw instance
+ * @return  Watermark level if >= 0, error otherwise
+ */
 int st_lsm6dsr_suspend_fifo(struct st_lsm6dsr_hw *hw)
 {
 	int err;
@@ -556,6 +676,13 @@ out:
 	return err;
 }
 
+/**
+ * Bottom handler for FSM Orientation sensor event generation
+ *
+ * @param  irq: IIO trigger irq number
+ * @param  p: iio poll function environment
+ * @return  IRQ_HANDLED or < 0 for error
+ */
 static irqreturn_t st_lsm6dsr_buffer_handler_thread(int irq, void *p)
 {
 	struct iio_poll_func *pf = p;
@@ -576,6 +703,13 @@ out:
 	return IRQ_HANDLED;
 }
 
+/**
+ * Top handler for sensor event generation + FIFO management
+ *
+ * @param  irq: IIO trigger irq number
+ * @param  private: iio poll function environment
+ * @return  IRQ_HANDLED or < 0 for error
+ */
 static irqreturn_t st_lsm6dsr_handler_irq(int irq, void *private)
 {
 	struct st_lsm6dsr_hw *hw = (struct st_lsm6dsr_hw *)private;
@@ -587,10 +721,16 @@ static irqreturn_t st_lsm6dsr_handler_irq(int irq, void *private)
 	return IRQ_WAKE_THREAD;
 }
 
+/**
+ * Bottom handler for sensor event generation + FIFO management
+ *
+ * @param  irq: irq line number
+ * @param  private: device private environment pointer
+ * @return  IRQ_HANDLED or < 0 for error
+ */
 static irqreturn_t st_lsm6dsr_handler_thread(int irq, void *private)
 {
 	struct st_lsm6dsr_hw *hw = (struct st_lsm6dsr_hw *)private;
-	int err;
 
 	mutex_lock(&hw->fifo_lock);
 	st_lsm6dsr_read_fifo(hw);
@@ -610,6 +750,7 @@ static irqreturn_t st_lsm6dsr_handler_thread(int irq, void *private)
 		struct iio_dev *iio_dev;
 		u8 status[3];
 		s64 event;
+		int err;
 
 		err = hw->tf->read(hw->dev,
 				   ST_LSM6DSR_REG_EMB_FUNC_STATUS_MAINPAGE,
@@ -703,24 +844,46 @@ static irqreturn_t st_lsm6dsr_handler_thread(int irq, void *private)
 	return IRQ_HANDLED;
 }
 
+/**
+ * IIO fifo pre enabled callback function
+ *
+ * @param  iio_dev: IIO device
+ * @return  < 0 if error, 0 otherwise
+ */
 static int st_lsm6dsr_fifo_preenable(struct iio_dev *iio_dev)
 {
 	return st_lsm6dsr_update_fifo(iio_dev, true);
 }
 
+/**
+ * IIO fifo post disable callback function
+ *
+ * @param  iio_dev: IIO device
+ * @return  < 0 if error, 0 otherwise
+ */
 static int st_lsm6dsr_fifo_postdisable(struct iio_dev *iio_dev)
 {
 	return st_lsm6dsr_update_fifo(iio_dev, false);
 }
 
+/**
+ * IIO fifo callback registruction structure
+ */
 static const struct iio_buffer_setup_ops st_lsm6dsr_fifo_ops = {
 	.preenable = st_lsm6dsr_fifo_preenable,
 	.postdisable = st_lsm6dsr_fifo_postdisable,
 };
 
+/**
+ * Enable HW FIFO
+ *
+ * @param  hw: ST IMU MEMS hw instance
+ * @return  < 0 if error, 0 otherwise
+ */
 static int st_lsm6dsr_fifo_init(struct st_lsm6dsr_hw *hw)
 {
-	return st_lsm6dsr_write_with_mask(hw, ST_LSM6DSR_REG_FIFO_CTRL4_ADDR,
+	return st_lsm6dsr_write_with_mask(hw,
+					  ST_LSM6DSR_REG_FIFO_CTRL4_ADDR,
 					  ST_LSM6DSR_REG_DEC_TS_MASK, 1);
 }
 
@@ -745,6 +908,12 @@ static const struct iio_buffer_setup_ops st_lsm6dsr_buffer_ops = {
 	.postdisable = st_lsm6dsr_buffer_postdisable,
 };
 
+/**
+ * Init IIO buffers and triggers
+ *
+ * @param  hw: ST IMU MEMS hw instance
+ * @return  < 0 if error, 0 otherwise
+ */
 int st_lsm6dsr_buffers_setup(struct st_lsm6dsr_hw *hw)
 {
 	struct device_node *np = hw->dev->of_node;
@@ -780,7 +949,8 @@ int st_lsm6dsr_buffers_setup(struct st_lsm6dsr_hw *hw)
 		return err;
 
 	if (np && of_property_read_bool(np, "drive-open-drain")) {
-		err = st_lsm6dsr_write_with_mask(hw, ST_LSM6DSR_REG_CTRL3_C_ADDR,
+		err = st_lsm6dsr_write_with_mask(hw,
+						 ST_LSM6DSR_REG_CTRL3_C_ADDR,
 						 ST_LSM6DSR_REG_PP_OD_MASK, 1);
 		if (err < 0)
 			return err;

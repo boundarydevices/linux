@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics st_lsm6dsr spi driver
  *
- * Copyright 2019 STMicroelectronics Inc.
+ * Copyright 2020 STMicroelectronics Inc.
  *
  * Lorenzo Bianconi <lorenzo.bianconi@st.com>
  *

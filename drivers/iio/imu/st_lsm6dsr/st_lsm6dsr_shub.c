@@ -1,7 +1,7 @@
 /*
  * STMicroelectronics st_lsm6dsr sensor hub library driver
  *
- * Copyright 2019 STMicroelectronics Inc.
+ * Copyright 2020 STMicroelectronics Inc.
  *
  * Lorenzo Bianconi <lorenzo.bianconi@st.com>
  *
@@ -32,28 +32,35 @@
 #define ST_LSM6DSR_REG_SLV0_OUT_ADDR		0x02
 #define ST_LSM6DSR_MAX_SLV_NUM			2
 
+/**
+ * @struct  st_lsm6dsr_ext_pwr
+ * @brief  External device Power Management description
+ * reg: Generic sensor register description.
+ * off_val: Value to write into register to power off external sensor.
+ * on_val: Value to write into register for power on external sensor.
+ */
 struct st_lsm6dsr_ext_pwr {
 	struct st_lsm6dsr_reg reg;
 	u8 off_val;
 	u8 on_val;
 };
 
-/*
- * struct st_lsm6dsr_ext_dev_settings - ST IMU sensor HUB devices
- * @i2c_addr: Device Address on I2C master interface (I2C only)
- * @wai_addr: WHOAMI register address
- * @wai_val: WHOAMI register value
- * @odr_table: List of supported ODR values (please consider I2C master
- *             support max 100 Hz)
- * @fs_table: Sensor Full Scale table
- * @temp_comp_reg: Temperature compensation register description (addr + mask)
- * @pwr_table: Power management register description (addr + on/off value)
- * @off_canc_reg: Offset Cancellation register description (addr + mask)
- * @bdu_reg: BDU register description (addr + mask)
- * @ext_available_scan_masks: IIO scan mask
- * @ext_channels: IIO Channel Specification structure
- * @ext_chan_depth: IIO Channel number
- * @data_len: Output data size
+/**
+ * @struct  st_lsm6dsr_ext_dev_settings
+ * @brief  External sensor descritor entry
+ * i2c_addr: External I2C device address (max two).
+ * wai_addr: Device ID address.
+ * wai_val: Device ID value.
+ * odr_table: ODR sensor table.
+ * fs_table: Full scale table.
+ * temp_comp_reg: Temperature compensation registers.
+ * pwr_table: External device Power Management description.
+ * off_canc_reg: Offset cancellation registers.
+ * bdu_reg: Block Data Update registers.
+ * ext_available_scan_masks: IIO device scan mask.
+ * ext_channels:IIO device channel specifications.
+ * ext_chan_depth: Max number of IIO device channel specifications.
+ * data_len: Sensor output data len.
  */
 struct st_lsm6dsr_ext_dev_settings {
 	u8 i2c_addr[2];
@@ -214,12 +221,15 @@ static const struct st_lsm6dsr_ext_dev_settings st_lsm6dsr_ext_dev_table[] = {
 	},
 };
 
-/*
- * st_lsm6dsr_shub_wait_complete - wait write trigger
+/**
+ * Wait write trigger [SHUB]
  *
  * In write on external deivce register, each operation is triggered
  * by accel/gyro data ready, this means that wait time depends on ODR
  * plus i2c time
+ * NOTE: Be sure to enable Acc or Gyro before this operation
+ *
+ * @param  hw: ST IMU MEMS hw instance.
  */
 static inline void st_lsm6dsr_shub_wait_complete(struct st_lsm6dsr_hw *hw)
 {
@@ -227,14 +237,21 @@ static inline void st_lsm6dsr_shub_wait_complete(struct st_lsm6dsr_hw *hw)
 	u16 odr;
 
 	sensor = iio_priv(hw->iio_devs[ST_LSM6DSR_ID_ACC]);
+	/* check if acc is enabled */
 	odr = (hw->enable_mask & BIT(ST_LSM6DSR_ID_ACC)) ? sensor->odr : 13;
 	msleep((2000U / odr) + 1);
 }
 
-/*
- * st_lsm6dsr_shub_read_reg - read from sensor hub bank register
+/**
+ * Read from sensor hub bank register [SHUB]
  *
- * uses page_lock
+ * NOTE: uses page_lock
+ *
+ * @param  hw: ST IMU MEMS hw instance.
+ * @param  addr: Remote address register.
+ * @param  data: Data buffer.
+ * @param  len: Data read len.
+ * @return  0 if OK, < 0 if ERROR
  */
 static int st_lsm6dsr_shub_read_reg(struct st_lsm6dsr_hw *hw, u8 addr,
 				    u8 *data, int len)
@@ -256,10 +273,16 @@ out:
 	return err;
 }
 
-/*
- * st_lsm6dsr_shub_write_reg - write to sensor hub bank register
+/**
+ * Write to sensor hub bank register [SHUB]
  *
- * uses page_lock
+ * NOTE: uses page_lock
+ *
+ * @param  hw: ST IMU MEMS hw instance.
+ * @param  addr: Remote address register.
+ * @param  data: Data buffer.
+ * @param  len: Data read len.
+ * @return  0 if OK, < 0 if ERROR
  */
 static int st_lsm6dsr_shub_write_reg(struct st_lsm6dsr_hw *hw, u8 addr,
 				     u8 *data, int len)
@@ -281,10 +304,14 @@ out:
 	return err;
 }
 
-/*
- * st_lsm6dsr_shub_master_enable - enable sensor hub interface
+/**
+ * Enable sensor hub interface [SHUB]
  *
- * uses page_lock
+ * NOTE: uses page_lock
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  enable: Master Enable/Disable.
+ * @return  0 if OK, < 0 if ERROR
  */
 static int st_lsm6dsr_shub_master_enable(struct st_lsm6dsr_sensor *sensor,
 					 bool enable)
@@ -316,7 +343,17 @@ out:
 	return err;
 }
 
-/* use SLV3 i2c slave for one-shot read operation */
+/**
+ * Read sensor data register from shub interface
+ *
+ * NOTE: use SLV3 i2c slave for one-shot read operation
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  addr: Remote address register.
+ * @param  data: Data buffer.
+ * @param  len: Data read len.
+ * @return  0 if OK, < 0 if ERROR
+ */
 static int st_lsm6dsr_shub_read(struct st_lsm6dsr_sensor *sensor, u8 addr,
 				u8 *data, int len)
 {
@@ -350,7 +387,17 @@ static int st_lsm6dsr_shub_read(struct st_lsm6dsr_sensor *sensor, u8 addr,
 					 config, sizeof(config));
 }
 
-/* use SLV0 i2c slave for write operation */
+/**
+ * Write sensor data register from shub interface
+ *
+ * NOTE: use SLV0 i2c slave for write operation
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  addr: Remote address register.
+ * @param  data: Data buffer.
+ * @param  len: Data read len.
+ * @return  0 if OK, < 0 if ERROR
+ */
 static int st_lsm6dsr_shub_write(struct st_lsm6dsr_sensor *sensor, u8 addr,
 				 u8 *data, int len)
 {
@@ -375,8 +422,9 @@ static int st_lsm6dsr_shub_write(struct st_lsm6dsr_sensor *sensor, u8 addr,
 		if (err < 0)
 			return err;
 
-		err = st_lsm6dsr_shub_write_reg(hw, ST_LSM6DSR_REG_DATAWRITE_SLV0_ADDR,
-						&data[i], 1);
+		err = st_lsm6dsr_shub_write_reg(hw,
+					ST_LSM6DSR_REG_DATAWRITE_SLV0_ADDR,
+					&data[i], 1);
 		if (err < 0)
 			return err;
 
@@ -393,6 +441,15 @@ static int st_lsm6dsr_shub_write(struct st_lsm6dsr_sensor *sensor, u8 addr,
 					 config, sizeof(config));
 }
 
+/**
+ * Write sensor data register from shub interface using register bitmask
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  addr: Remote address register.
+ * @param  mask: Register bitmask.
+ * @param  val: Data buffer.
+ * @return  0 if OK, < 0 if ERROR
+ */
 static int st_lsm6dsr_shub_write_with_mask(struct st_lsm6dsr_sensor *sensor,
 					   u8 addr, u8 mask, u8 val)
 {
@@ -408,7 +465,15 @@ static int st_lsm6dsr_shub_write_with_mask(struct st_lsm6dsr_sensor *sensor,
 	return st_lsm6dsr_shub_write(sensor, addr, &data, sizeof(data));
 }
 
-/* use SLV1/SLV2 i2c slave for FIFO read operation */
+/**
+ * Configure external sensor connected on master I2C interface
+ *
+ * NOTE: use SLV1/SLV2 i2c slave for FIFO read operation
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  enable: Enable/Disable sensor.
+ * @return  0 if OK, < 0 if ERROR
+ */
 static int st_lsm6dsr_shub_config_channels(struct st_lsm6dsr_sensor *sensor,
 					   bool enable)
 {
@@ -431,7 +496,8 @@ static int st_lsm6dsr_shub_config_channels(struct st_lsm6dsr_sensor *sensor,
 
 		ext_info = &cur_sensor->ext_dev_info;
 		config[j] = (ext_info->ext_dev_i2c_addr << 1) | 1;
-		config[j + 1] = ext_info->ext_dev_settings->ext_channels[0].address;
+		config[j + 1] =
+			ext_info->ext_dev_settings->ext_channels[0].address;
 		config[j + 2] = ST_LSM6DSR_REG_BATCH_EXT_SENS_EN_MASK |
 				(ext_info->ext_dev_settings->data_len &
 				 ST_LSM6DSR_REG_SLAVE_NUMOP_MASK);
@@ -442,6 +508,16 @@ static int st_lsm6dsr_shub_config_channels(struct st_lsm6dsr_sensor *sensor,
 					 config, sizeof(config));
 }
 
+/**
+ * Get a valid ODR [SHUB]
+ *
+ * Check a valid ODR closest to the passed value
+ *
+ * @param  sensor: SST IMU sensor instance.
+ * @param  odr: ODR value (in Hz).
+ * @param  val: ODR register value data pointer.
+ * @return  0 if OK, negative value for ERROR
+ */
 static int st_lsm6dsr_shub_get_odr_val(struct st_lsm6dsr_sensor *sensor,
 				       u16 odr, u8 *val)
 {
@@ -465,6 +541,15 @@ static int st_lsm6dsr_shub_get_odr_val(struct st_lsm6dsr_sensor *sensor,
 	return 0;
 }
 
+/**
+ * Set new ODR to sensor [SHUB]
+ *
+ * Set a valid ODR closest to the passed value
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  odr: ODR value (in Hz).
+ * @return  0 if OK, negative value for ERROR
+ */
 static int st_lsm6dsr_shub_set_odr(struct st_lsm6dsr_sensor *sensor, u16 odr)
 {
 	struct st_lsm6dsr_ext_dev_info *ext_info = &sensor->ext_dev_info;
@@ -485,6 +570,13 @@ static int st_lsm6dsr_shub_set_odr(struct st_lsm6dsr_sensor *sensor, u16 odr)
 				odr_val);
 }
 
+/**
+ * Enable or Disable sensor [SHUB]
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  enable: Enable or disable the sensor [true,false].
+ * @return  0 if OK, negative value for ERROR
+ */
 int st_lsm6dsr_shub_set_enable(struct st_lsm6dsr_sensor *sensor, bool enable)
 {
 	struct st_lsm6dsr_ext_dev_info *ext_info = &sensor->ext_dev_info;
@@ -528,6 +620,14 @@ static inline u32 st_lsm6dsr_get_unaligned_le24(const u8 *p)
 	return (s32)((p[0] | p[1] << 8 | p[2] << 16) << 8) >> 8;
 }
 
+/**
+ * Single sensor read operation [SHUB]
+ *
+ * @param  sensor: ST IMU sensor instance
+ * @param  ch: IIO Channel.
+ * @param  val: Output data register value.
+ * @return  IIO_VAL_INT if OK, negative value for ERROR
+ */
 static int st_lsm6dsr_shub_read_oneshot(struct st_lsm6dsr_sensor *sensor,
 					struct iio_chan_spec const *ch,
 					int *val)
@@ -562,6 +662,16 @@ static int st_lsm6dsr_shub_read_oneshot(struct st_lsm6dsr_sensor *sensor,
 	return IIO_VAL_INT;
 }
 
+/**
+ * Read Sensor data configuration [SHUB]
+ *
+ * @param  iio_dev: IIO Device.
+ * @param  ch: IIO Channel.
+ * @param  val: Data Buffer (MSB).
+ * @param  val2: Data Buffer (LSB).
+ * @param  mask: Data Mask.
+ * @return  0 if OK, -EINVAL value for ERROR
+ */
 static int st_lsm6dsr_shub_read_raw(struct iio_dev *iio_dev,
 				    struct iio_chan_spec const *ch,
 				    int *val, int *val2, long mask)
@@ -597,6 +707,16 @@ static int st_lsm6dsr_shub_read_raw(struct iio_dev *iio_dev,
 	return ret;
 }
 
+/**
+ * Write Sensor data configuration [SHUB]
+ *
+ * @param  iio_dev: IIO Device.
+ * @param  chan: IIO Channel.
+ * @param  val: Data Buffer (MSB).
+ * @param  val2: Data Buffer (LSB).
+ * @param  mask: Data Mask.
+ * @return  0 if OK, -EINVAL value for ERROR
+ */
 static int st_lsm6dsr_shub_write_raw(struct iio_dev *iio_dev,
 				     struct iio_chan_spec const *chan,
 				     int val, int val2, long mask)
@@ -615,6 +735,9 @@ static int st_lsm6dsr_shub_write_raw(struct iio_dev *iio_dev,
 			sensor->odr = val;
 		break;
 	}
+	case IIO_CHAN_INFO_SCALE:
+		err = 0;
+		break;
 	default:
 		err = -EINVAL;
 		break;
@@ -625,6 +748,16 @@ static int st_lsm6dsr_shub_write_raw(struct iio_dev *iio_dev,
 	return err;
 }
 
+/**
+ * Get a list of available sensor ODR [SHUB]
+ *
+ * List of available ODR returned separated by commas
+ *
+ * @param  dev: IIO Device.
+ * @param  attr: IIO Channel attribute.
+ * @param  buf: User buffer.
+ * @return  buffer len
+ */
 static ssize_t
 st_lsm6dsr_sysfs_shub_sampling_freq_avail(struct device *dev,
 					  struct device_attribute *attr,
@@ -646,6 +779,16 @@ st_lsm6dsr_sysfs_shub_sampling_freq_avail(struct device *dev,
 	return len;
 }
 
+/**
+ * Get a list of available sensor Full Scale [SHUB]
+ *
+ * List of available Full Scale returned separated by commas
+ *
+ * @param  dev: IIO Device.
+ * @param  attr: IIO Channel attribute.
+ * @param  buf: User buffer.
+ * @return  buffer len
+ */
 static ssize_t st_lsm6dsr_sysfs_shub_scale_avail(struct device *dev,
 						 struct device_attribute *attr,
 						 char *buf)
@@ -694,6 +837,15 @@ static const struct iio_info st_lsm6dsr_ext_info = {
 	.write_raw = st_lsm6dsr_shub_write_raw,
 };
 
+/**
+ * Allocate IIO device [SHUB]
+ *
+ * @param  hw: ST IMU MEMS hw instance.
+ * @param  ext_settings: xternal sensor descritor entry.
+ * @param  id: Sensor Identifier.
+ * @param  i2c_addr: external I2C address on master bus.
+ * @return  struct iio_dev *, NULL if ERROR
+ */
 static struct iio_dev *st_lsm6dsr_shub_alloc_iio_dev(struct st_lsm6dsr_hw *hw,
 			const struct st_lsm6dsr_ext_dev_settings *ext_settings,
 			enum st_lsm6dsr_sensor_id id, u8 i2c_addr)
@@ -762,6 +914,12 @@ static int st_lsm6dsr_shub_init_remote_sensor(struct st_lsm6dsr_sensor *sensor)
 	return err;
 }
 
+/**
+ * Probe device function [SHUB]
+ *
+ * @param  hw: ST IMU MEMS hw instance.
+ * @return  0 if OK, negative for ERROR
+ */
 int st_lsm6dsr_shub_probe(struct st_lsm6dsr_hw *hw)
 {
 	const struct st_lsm6dsr_ext_dev_settings *settings;
