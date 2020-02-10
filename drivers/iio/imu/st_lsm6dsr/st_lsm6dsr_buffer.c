@@ -261,7 +261,7 @@ static int st_lsm6dsr_read_fifo(struct st_lsm6dsr_hw *hw)
 	if (err < 0)
 		return err;
 
-	fifo_depth = le16_to_cpu(fifo_status) & ST_LSM6DSR_REG_FIFO_WTM_MASK;
+	fifo_depth = le16_to_cpu(fifo_status) & ST_LSM6DSR_REG_FIFO_STATUS_DIFF;
 	if (!fifo_depth)
 		return 0;
 
