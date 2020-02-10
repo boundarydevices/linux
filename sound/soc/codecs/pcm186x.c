@@ -57,6 +57,8 @@ static const struct snd_kcontrol_new pcm1863_snd_controls[] = {
 			   pcm186x_pga_tlv),
 };
 
+static const DECLARE_TLV_DB_SCALE(pcm1865_dpga_tlv, 0, 50, 0);
+
 static const struct snd_kcontrol_new pcm1865_snd_controls[] = {
 	SOC_DOUBLE_R_S_TLV("ADC1 Capture Volume", PCM186X_PGA_VAL_CH1_L,
 			   PCM186X_PGA_VAL_CH1_R, 0, -24, 80, 7, 0,
@@ -64,6 +66,16 @@ static const struct snd_kcontrol_new pcm1865_snd_controls[] = {
 	SOC_DOUBLE_R_S_TLV("ADC2 Capture Volume", PCM186X_PGA_VAL_CH2_L,
 			   PCM186X_PGA_VAL_CH2_R, 0, -24, 80, 7, 0,
 			   pcm186x_pga_tlv),
+	SOC_DOUBLE_R_S_TLV("ADC1 Digital Capture Volume",
+			   PCM186X_DPGA_VAL_CH1_L,
+			   PCM186X_DPGA_VAL_CH1_R,
+			   0, 0x28, 0x37, 7, 0,
+			   pcm1865_dpga_tlv),
+	SOC_DOUBLE_R_S_TLV("ADC2 Digital Capture Volume",
+			   PCM186X_DPGA_VAL_CH2_L,
+			   PCM186X_DPGA_VAL_CH2_R,
+			   0, 0x28, 0x37, 7, 0,
+			   pcm1865_dpga_tlv),
 };
 
 static const unsigned int pcm186x_adc_input_channel_sel_value[] = {
@@ -259,15 +271,11 @@ static const struct snd_soc_dapm_route pcm1865_dapm_routes[] = {
 	{ "ADC2", NULL, "ADC2 Right Capture Source" },
 };
 
-static const unsigned int pcm186x_default_volume_values[8][2] = {
-	{ PCM186X_PGA_VAL_CH1_L, 0x18},		/* 12dB */
-	{ PCM186X_PGA_VAL_CH1_R, 0x18},		/* 12dB */
-	{ PCM186X_PGA_VAL_CH2_L, 0x18},		/* 12dB */
-	{ PCM186X_PGA_VAL_CH2_R, 0x18},		/* 12dB */
-	{ PCM186X_DPGA_VAL_CH1_L, 0x28},	/* 0dB */
-	{ PCM186X_DPGA_VAL_CH1_R, 0x28},	/* 0dB */
-	{ PCM186X_DPGA_VAL_CH2_L, 0x28},	/* 0dB */
-	{ PCM186X_DPGA_VAL_CH2_R, 0x28},	/* 0dB */
+static const unsigned int pcm1865_digital_gain_registers[] = {
+	PCM186X_DPGA_VAL_CH1_L,
+	PCM186X_DPGA_VAL_CH1_R,
+	PCM186X_DPGA_VAL_CH2_L,
+	PCM186X_DPGA_VAL_CH2_R,
 };
 
 static int pcm186x_hw_params(struct snd_pcm_substream *substream,
@@ -777,13 +785,13 @@ int pcm186x_probe(struct device *dev, enum pcm186x_type type, int irq,
 		return ret;
 	}
 
-	/* Setting the default volume values */
-	for (i = 0; i < ARRAY_SIZE(pcm186x_default_volume_values); i++) {
-		ret = regmap_write(regmap, pcm186x_default_volume_values[i][0],
-				pcm186x_default_volume_values[i][1]);
+	/* Setting the digital gains to 0dB to be in the documentation range */
+	for (i = 0; i < ARRAY_SIZE(pcm1865_digital_gain_registers); i++) {
+		ret = regmap_write(regmap, pcm1865_digital_gain_registers[i],
+				PCM186X_DPGA_0DB);
 		if (ret) {
 			dev_err(dev, "failed to write val at addr 0x%x: %d\n",
-				pcm186x_default_volume_values[i][0], ret);
+				pcm1865_digital_gain_registers[i], ret);
 			return ret;
 		}
 	}
