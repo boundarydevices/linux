@@ -46,8 +46,6 @@
 #define ST_LSM6DSR_REG_TIMESTAMP2_ADDR		0x42
 #define ST_LSM6DSR_REG_FIFO_DATA_OUT_TAG_ADDR	0x78
 
-#define ST_LSM6DSR_TS_DELTA_NS			25000ULL /* 25us/LSB */
-
 #define ST_LSM6DSR_SAMPLE_DISCHARD		0x7ffd
 
 enum {
@@ -296,7 +294,7 @@ static int st_lsm6dsr_read_fifo(struct st_lsm6dsr_hw *hw)
 
 			if (tag == ST_LSM6DSR_TS_TAG) {
 				val = get_unaligned_le32(ptr);
-				hw->hw_ts = (val * ST_LSM6DSR_TS_DELTA_NS) + hw->hw_ts_high;
+				hw->hw_ts = (val * hw->ts_delta_ns) + hw->hw_ts_high;
 				ts_delta_hw_ts = hw->hw_ts - hw->hw_ts_old;
 				hw_ts += ts_delta_hw_ts;
 				hw->ts_offset = st_lsm6dsr_ewma(hw->ts_offset,
