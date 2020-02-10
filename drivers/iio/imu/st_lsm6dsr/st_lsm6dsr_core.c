@@ -656,6 +656,28 @@ static int st_lsm6dsr_write_raw(struct iio_dev *iio_dev,
 	return err;
 }
 
+#ifdef CONFIG_DEBUG_FS
+static int st_lsm6dsr_reg_access(struct iio_dev *iio_dev, unsigned int reg,
+				 unsigned int writeval, unsigned int *readval)
+{
+	struct st_lsm6dsr_sensor *sensor = iio_priv(iio_dev);
+	int ret;
+
+	mutex_lock(&iio_dev->mlock);
+	if (readval == NULL) {
+		ret = sensor->hw->tf->write(sensor->hw->dev, reg, 1,
+					    (u8 *)&writeval);
+	} else {
+		sensor->hw->tf->read(sensor->hw->dev, reg, 1,
+				     (u8 *)readval);
+		ret = 0;
+	}
+	mutex_unlock(&iio_dev->mlock);
+
+	return ret;
+}
+#endif /* CONFIG_DEBUG_FS */
+
 static int st_lsm6dsr_read_event_config(struct iio_dev *iio_dev,
 					const struct iio_chan_spec *chan,
 					enum iio_event_type type,
@@ -771,6 +793,10 @@ static const struct iio_info st_lsm6dsr_acc_info = {
 	.attrs = &st_lsm6dsr_acc_attribute_group,
 	.read_raw = st_lsm6dsr_read_raw,
 	.write_raw = st_lsm6dsr_write_raw,
+#ifdef CONFIG_DEBUG_FS
+	/* connect debug info to first device */
+	.debugfs_reg_access = st_lsm6dsr_reg_access,
+#endif /* CONFIG_DEBUG_FS */
 };
 
 static struct attribute *st_lsm6dsr_gyro_attributes[] = {
