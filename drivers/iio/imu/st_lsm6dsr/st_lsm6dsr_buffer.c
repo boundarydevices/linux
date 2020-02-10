@@ -71,8 +71,8 @@ inline int st_lsm6dsr_reset_hwts(struct st_lsm6dsr_hw *hw)
 
 	hw->ts = st_lsm6dsr_get_time_ns();
 	hw->ts_offset = hw->ts;
-	hw->hw_ts_old = 0ull;
-	hw->hw_ts_high = 0ull;
+	hw->val_ts_old = 0;
+	hw->hw_ts_high = 0;
 	hw->tsample = 0ull;
 
 	return st_lsm6dsr_write_atomic(hw, ST_LSM6DSR_REG_TIMESTAMP2_ADDR,
@@ -241,18 +241,14 @@ static int st_lsm6dsr_read_fifo(struct st_lsm6dsr_hw *hw)
 	u8 iio_buf[ALIGN(ST_LSM6DSR_SAMPLE_SIZE, sizeof(s64)) + sizeof(s64)];
 	/* acc + gyro + 2 ext + ts + sc */
 	u8 buf[6 * ST_LSM6DSR_FIFO_SAMPLE_SIZE], tag, *ptr;
-	s64 ts_delta_hw_ts = 0;
-	s64 ts_irq;
-	int i, err, read_len = 0, word_len, fifo_len;
+	int i, err, word_len, fifo_len, read_len;
 	struct st_lsm6dsr_sensor *sensor;
 	struct iio_dev *iio_dev;
+	s64 ts_irq, hw_ts_old;
 	__le16 fifo_status;
 	u16 fifo_depth;
 	s16 drdymask;
 	u32 val;
-	int ts_processed = 0;
-	s64 hw_ts = 0ull;
-	s64 delta_hw_ts, cpu_timestamp;
 
 	ts_irq = hw->ts - hw->delta_ts;
 
@@ -266,11 +262,13 @@ static int st_lsm6dsr_read_fifo(struct st_lsm6dsr_hw *hw)
 		return 0;
 
 	fifo_len = fifo_depth * ST_LSM6DSR_FIFO_SAMPLE_SIZE;
+	read_len = 0;
+
 	while (read_len < fifo_len) {
 		word_len = min_t(int, fifo_len - read_len, sizeof(buf));
 		err = st_lsm6dsr_read_atomic(hw,
-					     ST_LSM6DSR_REG_FIFO_DATA_OUT_TAG_ADDR,
-					     word_len, buf);
+					ST_LSM6DSR_REG_FIFO_DATA_OUT_TAG_ADDR,
+					word_len, buf);
 		if (err < 0)
 			return err;
 
@@ -280,28 +278,32 @@ static int st_lsm6dsr_read_fifo(struct st_lsm6dsr_hw *hw)
 
 			if (tag == ST_LSM6DSR_TS_TAG) {
 				val = get_unaligned_le32(ptr);
-				hw->hw_ts = (val * hw->ts_delta_ns) + hw->hw_ts_high;
-				ts_delta_hw_ts = hw->hw_ts - hw->hw_ts_old;
-				hw_ts += ts_delta_hw_ts;
+
+				if (hw->val_ts_old > val)
+					hw->hw_ts_high++;
+
+				hw_ts_old = hw->hw_ts;
+
+				/* check hw rollover */
+				hw->val_ts_old = val;
+				hw->hw_ts = (val +
+					     ((s64)hw->hw_ts_high << 32)) *
+					     hw->ts_delta_ns;
 				hw->ts_offset = st_lsm6dsr_ewma(hw->ts_offset,
-						ts_irq - hw->hw_ts +
-						div_s64(hw->delta_hw_ts * ST_LSM6DSR_MAX_ODR, hw->odr),
+						ts_irq - hw->hw_ts,
 						ST_LSM6DSR_EWMA_LEVEL);
 
-				ts_irq += (hw->hw_ts +
-					div_s64(hw->delta_hw_ts * ST_LSM6DSR_MAX_ODR, hw->odr));
-				hw->hw_ts_old = hw->hw_ts;
-				ts_processed++;
+				if (!test_bit(ST_LSM6DSR_HW_FLUSH, &hw->state))
+					/* sync ap timestamp and sensor one */
+					st_lsm6dsr_sync_hw_ts(hw, ts_irq);
+
+				ts_irq += hw->hw_ts;
 
 				if (!hw->tsample)
-					hw->tsample = hw->ts_offset +
-						(hw->hw_ts +
-						div_s64(hw->delta_hw_ts * ST_LSM6DSR_MAX_ODR, hw->odr));
+					hw->tsample = hw->ts_offset + hw->hw_ts;
 				else
 					hw->tsample = hw->tsample +
-						(ts_delta_hw_ts +
-						div_s64(hw->delta_hw_ts * ST_LSM6DSR_MAX_ODR, hw->odr));
-
+						      hw->hw_ts - hw_ts_old;
 			} else {
 				iio_dev =
 					st_lsm6dsr_get_iiodev_from_tag(hw, tag);
@@ -321,18 +323,17 @@ static int st_lsm6dsr_read_fifo(struct st_lsm6dsr_hw *hw)
 				/* hw ts in not queued in FIFO if only step counter enabled */
 				if (sensor->id == ST_LSM6DSR_ID_STEP_COUNTER) {
 					val = get_unaligned_le32(ptr + 2);
-					hw->tsample = val * ST_LSM6DSR_TS_DELTA_NS;
+					hw->tsample = (val +
+						((s64)hw->hw_ts_high << 32)) *
+						hw->ts_delta_ns;
 				}
 
 				memcpy(iio_buf, ptr, ST_LSM6DSR_SAMPLE_SIZE);
 
-				/* Check if timestamp is in the future. */
-				cpu_timestamp = st_lsm6dsr_get_time_ns();
-
-				/* Avoid samples in the future. */
-				if (hw->tsample > cpu_timestamp) {
-					hw->tsample = cpu_timestamp;
-				}
+				/* avoid samples in the future */
+				hw->tsample = min_t(s64,
+						    st_lsm6dsr_get_time_ns(),
+						    hw->tsample);
 
 				iio_push_to_buffers_with_timestamp(iio_dev,
 								   iio_buf,
@@ -341,12 +342,6 @@ static int st_lsm6dsr_read_fifo(struct st_lsm6dsr_hw *hw)
 		}
 		read_len += word_len;
 	}
-
-	delta_hw_ts = div_s64(hw->delta_ts - hw_ts, ts_processed);
-	delta_hw_ts = div_s64(delta_hw_ts * hw->odr, ST_LSM6DSR_MAX_ODR);
-	hw->delta_hw_ts = st_lsm6dsr_ewma(hw->delta_hw_ts,
-					  delta_hw_ts,
-					  ST_LSM6DSR_EWMA_LEVEL);
 
 	return read_len;
 }
@@ -433,10 +428,8 @@ int st_lsm6dsr_suspend_fifo(struct st_lsm6dsr_hw *hw)
 	int err;
 
 	mutex_lock(&hw->fifo_lock);
-
 	st_lsm6dsr_read_fifo(hw);
 	err = st_lsm6dsr_set_fifo_mode(hw, ST_LSM6DSR_FIFO_BYPASS);
-
 	mutex_unlock(&hw->fifo_lock);
 
 	return err;
