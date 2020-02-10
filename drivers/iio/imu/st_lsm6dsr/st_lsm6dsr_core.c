@@ -1038,11 +1038,13 @@ static int st_lsm6dsr_get_int_reg(struct st_lsm6dsr_hw *hw, u8 *drdy_reg,
 
 	switch (int_pin) {
 	case 1:
+		hw->embfunc_pg0_irq_reg = ST_LSM6DSR_REG_MD1_CFG_ADDR;
 		hw->embfunc_irq_reg = ST_LSM6DSR_REG_EMB_FUNC_INT1_ADDR;
 		*ef_irq_reg = ST_LSM6DSR_REG_MD1_CFG_ADDR;
 		*drdy_reg = ST_LSM6DSR_REG_INT1_CTRL_ADDR;
 		break;
 	case 2:
+		hw->embfunc_pg0_irq_reg = ST_LSM6DSR_REG_MD2_CFG_ADDR;
 		hw->embfunc_irq_reg = ST_LSM6DSR_REG_EMB_FUNC_INT2_ADDR;
 		*ef_irq_reg = ST_LSM6DSR_REG_MD2_CFG_ADDR;
 		*drdy_reg = ST_LSM6DSR_REG_INT2_CTRL_ADDR;
