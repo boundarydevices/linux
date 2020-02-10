@@ -32,20 +32,6 @@
 #define ST_LSM6DSR_REG_INT_ORIENTATION_MASK	BIT(5)
 #define ST_LSM6DSR_REG_INT_WRIST_MASK		BIT(6)
 
-#define ST_LSM6DSR_REG_FIFO_CTRL1_ADDR		0x07
-#define ST_LSM6DSR_REG_FIFO_WTM_MASK		GENMASK(8, 0)
-#define ST_LSM6DSR_REG_FIFO_DIFF_MASK		GENMASK(9, 0)
-#define ST_LSM6DSR_REG_FIFO_CTRL4_ADDR		0x0a
-#define ST_LSM6DSR_REG_FIFO_MODE_MASK		GENMASK(2, 0)
-#define ST_LSM6DSR_REG_DEC_TS_MASK		GENMASK(7, 6)
-#define ST_LSM6DSR_REG_CTRL3_C_ADDR		0x12
-#define ST_LSM6DSR_REG_PP_OD_MASK		BIT(4)
-#define ST_LSM6DSR_REG_H_LACTIVE_MASK		BIT(5)
-#define ST_LSM6DSR_REG_FIFO_STATUS1_ADDR	0x3a
-#define ST_LSM6DSR_REG_TIMESTAMP0_ADDR		0x40
-#define ST_LSM6DSR_REG_TIMESTAMP2_ADDR		0x42
-#define ST_LSM6DSR_REG_FIFO_DATA_OUT_TAG_ADDR	0x78
-
 #define ST_LSM6DSR_SAMPLE_DISCHARD		0x7ffd
 
 enum {
@@ -79,7 +65,7 @@ static inline s64 st_lsm6dsr_ewma(s64 old, s64 new, int weight)
 	return old + incr;
 }
 
-static inline int st_lsm6dsr_reset_hwts(struct st_lsm6dsr_hw *hw)
+inline int st_lsm6dsr_reset_hwts(struct st_lsm6dsr_hw *hw)
 {
 	u8 data = 0xaa;
 
@@ -275,7 +261,7 @@ static int st_lsm6dsr_read_fifo(struct st_lsm6dsr_hw *hw)
 	if (err < 0)
 		return err;
 
-	fifo_depth = le16_to_cpu(fifo_status) & ST_LSM6DSR_REG_FIFO_DIFF_MASK;
+	fifo_depth = le16_to_cpu(fifo_status) & ST_LSM6DSR_REG_FIFO_WTM_MASK;
 	if (!fifo_depth)
 		return 0;
 

@@ -19,46 +19,65 @@
 
 #include "st_lsm6dsr.h"
 
-#define ST_LSM6DSR_REG_INT1_CTRL_ADDR		0x0d
-#define ST_LSM6DSR_REG_INT2_CTRL_ADDR		0x0e
-#define ST_LSM6DSR_REG_FIFO_TH_MASK		BIT(3)
-#define ST_LSM6DSR_REG_WHOAMI_ADDR		0x0f
-#define ST_LSM6DSR_WHOAMI_VAL			0x6b
-#define ST_LSM6DSR_CTRL1_XL_ADDR		0x10
-#define ST_LSM6DSR_CTRL2_G_ADDR			0x11
-#define ST_LSM6DSR_REG_CTRL3_C_ADDR		0x12
-#define ST_LSM6DSR_REG_SW_RESET_MASK		BIT(0)
-#define ST_LSM6DSR_REG_BOOT_MASK		BIT(7)
-#define ST_LSM6DSR_REG_BDU_MASK			BIT(6)
-#define ST_LSM6DSR_REG_CTRL5_C_ADDR		0x14
-#define ST_LSM6DSR_REG_ROUNDING_MASK		GENMASK(6, 5)
-#define ST_LSM6DSR_REG_CTRL10_C_ADDR		0x19
-#define ST_LSM6DSR_REG_TIMESTAMP_EN_MASK	BIT(5)
-
-#define ST_LSM6DSR_REG_OUTX_L_A_ADDR		0x28
-#define ST_LSM6DSR_REG_OUTY_L_A_ADDR		0x2a
-#define ST_LSM6DSR_REG_OUTZ_L_A_ADDR		0x2c
-
-#define ST_LSM6DSR_REG_OUTX_L_G_ADDR		0x22
-#define ST_LSM6DSR_REG_OUTY_L_G_ADDR		0x24
-#define ST_LSM6DSR_REG_OUTZ_L_G_ADDR		0x26
-
-#define ST_LSM6DSR_REG_TAP_CFG0_ADDR		0x56
-#define ST_LSM6DSR_REG_LIR_MASK			BIT(0)
-
-#define ST_LSM6DSR_REG_FIFO_CTRL3_ADDR		0x09
-#define ST_LSM6DSR_REG_BDR_XL_MASK		GENMASK(3, 0)
-#define ST_LSM6DSR_REG_BDR_GY_MASK		GENMASK(7, 4)
-
-#define ST_LSM6DSR_REG_MD1_CFG_ADDR		0x5e
-#define ST_LSM6DSR_REG_MD2_CFG_ADDR		0x5f
-#define ST_LSM6DSR_REG_INT2_TIMESTAMP_MASK	BIT(0)
-#define ST_LSM6DSR_REG_INT_EMB_FUNC_MASK	BIT(1)
-#define ST_LSM6DSR_INTERNAL_FREQ_FINE		0x63
-
-/* Embedded function */
-#define ST_LSM6DSR_REG_EMB_FUNC_INT1_ADDR	0x0a
-#define ST_LSM6DSR_REG_EMB_FUNC_INT2_ADDR	0x0e
+static struct st_lsm6dsr_suspend_resume_entry
+	st_lsm6dsr_suspend_resume[ST_LSM6DSR_SUSPEND_RESUME_REGS] = {
+		[ST_LSM6DSR_CTRL1_XL_REG] = {
+			.addr = ST_LSM6DSR_CTRL1_XL_ADDR,
+			.mask = GENMASK(3, 2),
+		},
+		[ST_LSM6DSR_CTRL2_G_REG] = {
+			.addr = ST_LSM6DSR_CTRL2_G_ADDR,
+			.mask = GENMASK(3, 2),
+		},
+		[ST_LSM6DSR_REG_CTRL3_C_REG] = {
+			.addr = ST_LSM6DSR_REG_CTRL3_C_ADDR,
+			.mask = ST_LSM6DSR_REG_BDU_MASK       |
+				ST_LSM6DSR_REG_PP_OD_MASK     |
+				ST_LSM6DSR_REG_H_LACTIVE_MASK,
+		},
+		[ST_LSM6DSR_REG_CTRL4_C_REG] = {
+			.addr = ST_LSM6DSR_REG_CTRL4_C_ADDR,
+			.mask = ST_LSM6DSR_REG_DRDY_MASK,
+		},
+		[ST_LSM6DSR_REG_CTRL5_C_REG] = {
+			.addr = ST_LSM6DSR_REG_CTRL5_C_ADDR,
+			.mask = ST_LSM6DSR_REG_ROUNDING_MASK,
+		},
+		[ST_LSM6DSR_REG_CTRL10_C_REG] = {
+			.addr = ST_LSM6DSR_REG_CTRL10_C_ADDR,
+			.mask = ST_LSM6DSR_REG_TIMESTAMP_EN_MASK,
+		},
+		[ST_LSM6DSR_REG_TAP_CFG0_REG] = {
+			.addr = ST_LSM6DSR_REG_TAP_CFG0_ADDR,
+			.mask = ST_LSM6DSR_REG_LIR_MASK,
+		},
+		[ST_LSM6DSR_REG_INT1_CTRL_REG] = {
+			.addr = ST_LSM6DSR_REG_INT1_CTRL_ADDR,
+			.mask = ST_LSM6DSR_REG_INT_FIFO_TH_MASK,
+		},
+		[ST_LSM6DSR_REG_INT2_CTRL_REG] = {
+			.addr = ST_LSM6DSR_REG_INT2_CTRL_ADDR,
+			.mask = ST_LSM6DSR_REG_INT_FIFO_TH_MASK,
+		},
+		[ST_LSM6DSR_REG_FIFO_CTRL1_REG] = {
+			.addr = ST_LSM6DSR_REG_FIFO_CTRL1_ADDR,
+			.mask = GENMASK(7, 0),
+		},
+		[ST_LSM6DSR_REG_FIFO_CTRL2_REG] = {
+			.addr = ST_LSM6DSR_REG_FIFO_CTRL2_ADDR,
+			.mask = ST_LSM6DSR_REG_FIFO_WTM8_MASK,
+		},
+		[ST_LSM6DSR_REG_FIFO_CTRL3_REG] = {
+			.addr = ST_LSM6DSR_REG_FIFO_CTRL3_ADDR,
+			.mask = ST_LSM6DSR_REG_BDR_XL_MASK |
+				ST_LSM6DSR_REG_BDR_GY_MASK,
+		},
+		[ST_LSM6DSR_REG_FIFO_CTRL4_REG] = {
+			.addr = ST_LSM6DSR_REG_FIFO_CTRL4_ADDR,
+			.mask = ST_LSM6DSR_REG_DEC_TS_MASK |
+				ST_LSM6DSR_REG_ODR_T_BATCH_MASK,
+		},
+	};
 
 static const struct st_lsm6dsr_odr_table_entry st_lsm6dsr_odr_table[] = {
 	[ST_LSM6DSR_ID_ACC] = {
@@ -1113,7 +1132,7 @@ static int st_lsm6dsr_init_device(struct st_lsm6dsr_hw *hw)
 
 	/* enable FIFO watermak interrupt */
 	err = st_lsm6dsr_write_with_mask(hw, drdy_reg,
-					 ST_LSM6DSR_REG_FIFO_TH_MASK, 1);
+					 ST_LSM6DSR_REG_INT_FIFO_TH_MASK, 1);
 	if (err < 0)
 		return err;
 
@@ -1410,34 +1429,96 @@ int st_lsm6dsr_probe(struct device *dev, int irq,
 }
 EXPORT_SYMBOL(st_lsm6dsr_probe);
 
+static int __maybe_unused st_lsm6dsr_bk_regs(struct st_lsm6dsr_hw *hw)
+{
+       int i, err = 0;
+       u8 data, addr;
+
+       mutex_lock(&hw->page_lock);
+       for (i = 0; i < ST_LSM6DSR_SUSPEND_RESUME_REGS; i++) {
+               addr = st_lsm6dsr_suspend_resume[i].addr;
+               err = hw->tf->read(hw->dev, addr, sizeof(data), &data);
+               if (err < 0) {
+                       dev_err(hw->dev, "failed to read whoami register\n");
+                       goto out_lock;
+               }
+
+               st_lsm6dsr_suspend_resume[i].val = data;
+       }
+
+out_lock:
+       mutex_unlock(&hw->page_lock);
+
+       return err;
+}
+
+static int __maybe_unused st_lsm6dsr_restore_regs(struct st_lsm6dsr_hw *hw)
+{
+       int i, err = 0;
+       u8 data, addr;
+
+       mutex_lock(&hw->page_lock);
+       for (i = 0; i < ST_LSM6DSR_SUSPEND_RESUME_REGS; i++) {
+               addr = st_lsm6dsr_suspend_resume[i].addr;
+               err = hw->tf->read(hw->dev, addr, sizeof(data), &data);
+               if (err < 0) {
+                       dev_err(hw->dev, "failed to read %02x reg\n", addr);
+                       goto out_lock;
+               }
+
+               data &= ~st_lsm6dsr_suspend_resume[i].mask;
+               data |= (st_lsm6dsr_suspend_resume[i].val &
+                        st_lsm6dsr_suspend_resume[i].mask);
+
+               err = hw->tf->write(hw->dev, addr, sizeof(data), &data);
+               if (err < 0) {
+                       dev_err(hw->dev, "failed to write %02x reg\n", addr);
+                       goto out_lock;
+               }
+       }
+
+out_lock:
+       mutex_unlock(&hw->page_lock);
+
+       return err;
+}
+
 static int __maybe_unused st_lsm6dsr_suspend(struct device *dev)
 {
 	struct st_lsm6dsr_hw *hw = dev_get_drvdata(dev);
 	struct st_lsm6dsr_sensor *sensor;
 	int i, err = 0;
 
+	dev_info(dev, "Suspending device\n");
+
 	for (i = 0; i < ST_LSM6DSR_ID_MAX; i++) {
-		sensor = iio_priv(hw->iio_devs[i]);
 		if (!hw->iio_devs[i])
 			continue;
 
+		sensor = iio_priv(hw->iio_devs[i]);
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 
+		/* power off enabled sensors */
 		err = st_lsm6dsr_set_odr(sensor, 0, 0);
 		if (err < 0)
 			return err;
 	}
 
-	if (st_lsm6dsr_is_fifo_enabled(hw))
+	if (st_lsm6dsr_is_fifo_enabled(hw)) {
 		err = st_lsm6dsr_suspend_fifo(hw);
+		if (err < 0)
+			return err;
+	}
+
+	err = st_lsm6dsr_bk_regs(hw);
+
 #ifdef CONFIG_IIO_ST_LSM6DSR_MAY_WAKEUP
 	if (device_may_wakeup(dev))
 		enable_irq_wake(hw->irq);
 #endif /* CONFIG_IIO_ST_LSM6DSR_MAY_WAKEUP */
-	dev_info(dev, "Suspending device\n");
 
-	return err;
+	return err < 0 ? err : 0;
 }
 
 static int __maybe_unused st_lsm6dsr_resume(struct device *dev)
@@ -1447,16 +1528,21 @@ static int __maybe_unused st_lsm6dsr_resume(struct device *dev)
 	int i, err = 0;
 
 	dev_info(dev, "Resuming device\n");
+
 #ifdef CONFIG_IIO_ST_LSM6DSR_MAY_WAKEUP
 	if (device_may_wakeup(dev))
 		disable_irq_wake(hw->irq);
 #endif /* CONFIG_IIO_ST_LSM6DSR_MAY_WAKEUP */
 
+	err = st_lsm6dsr_restore_regs(hw);
+	if (err < 0)
+		return err;
+
 	for (i = 0; i < ST_LSM6DSR_ID_MAX; i++) {
-		sensor = iio_priv(hw->iio_devs[i]);
 		if (!hw->iio_devs[i])
 			continue;
 
+		sensor = iio_priv(hw->iio_devs[i]);
 		if (!(hw->enable_mask & BIT(sensor->id)))
 			continue;
 
@@ -1465,10 +1551,14 @@ static int __maybe_unused st_lsm6dsr_resume(struct device *dev)
 			return err;
 	}
 
+	err = st_lsm6dsr_reset_hwts(hw);
+	if (err < 0)
+		return err;
+
 	if (st_lsm6dsr_is_fifo_enabled(hw))
 		err = st_lsm6dsr_set_fifo_mode(hw, ST_LSM6DSR_FIFO_CONT);
 
-	return err;
+	return err < 0 ? err : 0;
 }
 
 const struct dev_pm_ops st_lsm6dsr_pm_ops = {
