@@ -50,13 +50,13 @@ struct imx_sc_msg_gpio_get_pad_wakeup {
 			u8 wakeup;
 		} resp;
 	} data;
-} __packed;
+} __packed __aligned(4);
 
 struct imx_sc_msg_gpio_set_pad_wakeup {
 	struct imx_sc_rpc_msg hdr;
 	u16 pad;
 	u8 wakeup;
-} __packed;
+} __packed __aligned(4);
 
 #endif
 
