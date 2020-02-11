@@ -901,6 +901,8 @@ static int mcp25xxfd_check_tef_tail(struct mcp25xxfd_priv *priv)
 	if (err)
 		return err;
 
+	mcp25xxfd_log_hw_tef_tail(priv, tef_tail_chip);
+
 	tef_tail = mcp25xxfd_get_tef_tail(priv);
 	if (tef_tail_chip != tef_tail) {
 		netdev_err(priv->ndev,
@@ -982,6 +984,8 @@ mcp25xxfd_handle_tefif_one(struct mcp25xxfd_priv *priv,
 	if (seq_masked != tef_tail_masked)
 		return mcp25xxfd_handle_tefif_recover(priv, seq);
 
+	mcp25xxfd_log(priv, hw_tef_obj->id);
+
 	stats->tx_bytes +=
 		can_rx_offload_get_echo_skb(&priv->offload,
 					    mcp25xxfd_get_tef_tail(priv),
@@ -1020,6 +1024,8 @@ static int mcp25xxfd_tef_ring_update(struct mcp25xxfd_priv *priv)
 		new_head += priv->tx.obj_num;
 
 	priv->tef.head = min(new_head, priv->tx.head);
+
+	mcp25xxfd_log_hw_tx_ci(priv, tx_ci);
 
 	return mcp25xxfd_check_tef_tail(priv);
 }
@@ -1082,6 +1088,7 @@ static int mcp25xxfd_handle_tefif(struct mcp25xxfd_priv *priv)
 	}
 
  out_netif_wake_queue:
+	mcp25xxfd_log_wake(priv, hw_tef_obj->id);
 	netif_wake_queue(priv->ndev);
 
 	return 0;
@@ -1713,6 +1720,8 @@ static irqreturn_t mcp25xxfd_irq(int irq, void *dev_id)
 
  out_fail:
 	netdev_err(priv->ndev, "IRQ handler returned %d.\n", err);
+	mcp25xxfd_dump(priv);
+	mcp25xxfd_log_dump(priv);
 	mcp25xxfd_chip_interrupts_disable(priv);
 
 	return handled;
@@ -1806,11 +1815,14 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 {
 	struct mcp25xxfd_priv *priv = netdev_priv(ndev);
 	struct mcp25xxfd_tx_obj *tx_obj;
+	const canid_t can_id = ((struct canfd_frame *)skb->data)->can_id;
 	u8 tx_head;
 	int err;
 
 	if (can_dropped_invalid_skb(ndev, skb))
 		return NETDEV_TX_OK;
+
+	mcp25xxfd_log(priv, can_id);
 
 	if (priv->tx.head - priv->tx.tail >= priv->tx.obj_num) {
 		netdev_info(priv->ndev,
@@ -1818,6 +1830,7 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 			   priv->tx.head, priv->tx.tail,
 			   priv->tx.head - priv->tx.tail);
 
+		mcp25xxfd_log_busy(priv, can_id);
 		netif_stop_queue(ndev);
 
 		return NETDEV_TX_BUSY;
@@ -1833,8 +1846,10 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 	/* Stop queue if we occupy the complete TX FIFO */
 	tx_head = mcp25xxfd_get_tx_head(priv);
 	priv->tx.head++;
-	if (priv->tx.head - priv->tx.tail >= priv->tx.obj_num)
+	if (priv->tx.head - priv->tx.tail >= priv->tx.obj_num) {
+		mcp25xxfd_log_stop(priv, can_id);
 		netif_stop_queue(ndev);
+	}
 
 	can_put_echo_skb(skb, ndev, tx_head);
 
@@ -1846,6 +1861,8 @@ static netdev_tx_t mcp25xxfd_start_xmit(struct sk_buff *skb,
 
  out_err:
 	netdev_err(priv->ndev, "ERROR in %s: %d\n", __func__, err);
+	mcp25xxfd_dump(priv);
+	mcp25xxfd_log_dump(priv);
 
 	return NETDEV_TX_OK;
 }
@@ -2197,6 +2214,7 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 	priv->clk = clk;
 	priv->reg_vdd = reg_vdd;
 	priv->reg_xceiver = reg_xceiver;
+	atomic_set(&priv->cnt, 0);
 
 	match = device_get_match_data(&spi->dev);
 	if (match)

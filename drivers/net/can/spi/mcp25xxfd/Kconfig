@@ -14,3 +14,12 @@ config CAN_MCP25XXFD_SANITY
 	  that compares various internal counters with the in chip
 	  variants. This comes with a runtime overhead.
 	  Disable if unsure.
+
+config CAN_MCP25XXFD_LOG
+	depends on CAN_MCP25XXFD
+	bool "Logging"
+	help
+	  This option enables logging of events in the driver, that
+	  help debugging. This comes with a very small runtime
+	  overhead.
+	  Disable if unsure.
