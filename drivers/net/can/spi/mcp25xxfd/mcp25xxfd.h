@@ -19,6 +19,8 @@
 #include <linux/regulator/consumer.h>
 #include <linux/spi/spi.h>
 
+#include "mcp25xxfd-log.h"
+
 static inline void __dump(const void *d, unsigned int len)
 {
 	const u8 *data = d;
@@ -614,6 +616,12 @@ struct mcp25xxfd_priv {
 	struct regulator *reg_xceiver;
 
 	enum mcp25xxfd_model model;
+
+	struct mcp25xxfd_dump dump;
+	atomic_t cnt;
+#ifdef CONFIG_CAN_MCP25XXFD_LOG
+	struct mcp25xxfd_log log[64];
+#endif
 };
 
 static inline u8 mcp25xxfd_first_byte_set(u32 mask)
@@ -741,6 +749,7 @@ static inline u8 mcp25xxfd_get_rx_linear_len(const struct mcp25xxfd_priv *priv)
 	return min_t(u8, len, priv->rx.obj_num - mcp25xxfd_get_rx_tail(priv));
 }
 
+void mcp25xxfd_dump(struct mcp25xxfd_priv *priv);
 int mcp25xxfd_regmap_init(struct mcp25xxfd_priv *priv);
 u16 mcp25xxfd_crc16_compute(const void *cmd, size_t cmd_size,
 			    const void *data, size_t data_size);
