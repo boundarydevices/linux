@@ -161,13 +161,6 @@ static int be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	return 0;
 }
 
-static const struct snd_soc_dapm_route audio_map[] = {
-	{"Playback",  NULL, "CPU-Playback"},
-	{"CPU-Capture",  NULL, "Capture"},
-	{"CPU-Playback",  NULL, "ASRC-Playback"},
-	{"ASRC-Capture",  NULL, "CPU-Capture"},
-};
-
 static struct snd_soc_ops imx_xtor_ops = {
 	.startup = imx_xtor_startup,
 	.shutdown  = imx_xtor_shutdown,
@@ -265,8 +258,6 @@ static int imx_xtor_probe(struct platform_device *pdev)
 	data->dai[0].capture_only = false;
 	data->card.num_links = 1;
 	data->card.dai_link = data->dai;
-	data->card.dapm_routes = audio_map;
-	data->card.num_dapm_routes = 2;
 
 	/*if there is no asrc controller, we only enable one device*/
 	if (asrc_pdev) {
