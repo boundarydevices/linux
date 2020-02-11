@@ -1,0 +1,73 @@
+MT8183 Vision Processor Unit (VPU) devices
+=======================
+
+DSP Device Node:
+================
+Each DSP Core sub-system is represented as a single DT node.
+
+Required properties:
+--------------------
+The following are the mandatory properties:
+
+- compatible:		Should be one of the following,
+			    "mediatek,mt8183-apu" for DSPs on MT8183 SoCs
+- reg:			Should contain an entry for each value in 'reg-names'.
+			Each entry should have the memory region's start address
+			and the size of the region, the representation matching
+			the parent node's '#address-cells' and '#size-cells' values.
+- reg-names:		Should contain strings with the following names, each
+			representing a specific internal memory region or a
+			specific register space. Should be "mmio".
+- interrupts:		The interrupt number used to receive the interrupts
+			from the DSP.
+- clocks:		Clocks for co-processor (See: ../clock/clock-bindings.txt)
+			Three clocks are expected for AXI, IPU and JTAG.
+			The JTAG clock seems to be required to run the DSP,
+			even when JTAG is not in use.
+- clock-names:		The name of clocks, must be ipu, axi and jtag
+- iommu:		IOMMU (See: ../iommu/iommu.txt)
+- memory-region:	Reserved memory (See: ../reserved-memory/reserved-memory.txt)
+- power-domains:	Power domain (see: ../power/power_domain.txt)
+
+Optional properties:
+--------------------
+pinctrl-0, pinctrl-1:	pinctrl handles, required to configure pins for JTAG.
+pinctrl-names:		pinctrl name, must be "default", "jtag".
+			"default" must configure the pins when JTAG is disabled.
+			"jtag" must configure the pins for JTAG operations.
+
+Example:
+--------
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		vpu_ram: vpu_ram@0x60000000 {
+			compatible = "shared-dma-pool";
+			reg = <0 0x60000000 0 0x040000000>;
+			no-map;
+			linux,cma-default;
+		};
+	};
+
+	vpu0: vpu@0x19100000 {
+		compatible = "mediatek,mt8183-apu";
+		reg = <0 0x19180000 0 0x14000>;
+		reg-names = "mmio";
+		interrupts = <GIC_SPI 292 IRQ_TYPE_LEVEL_LOW>;
+
+		iommus = <&iommu M4U_PORT_IMG_IPUO>,
+			 <&iommu M4U_PORT_IMG_IPU3O>,
+			 <&iommu M4U_PORT_IMG_IPUI>;
+
+		clocks = <&ipu_core0 CLK_IPU_CORE0_AXI>,
+			 <&ipu_core0 CLK_IPU_CORE0_IPU>,
+			 <&ipu_core0 CLK_IPU_CORE0_JTAG>;
+
+		clock-names = "axi", "ipu", "jtag";
+
+		power-domains = <&scpsys MT8183_POWER_DOMAIN_VPU_CORE0>;
+		memory-region = <&vpu_ram>;
+	};
