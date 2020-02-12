@@ -522,6 +522,13 @@ static void show_hdcp_supported(struct imx_hdp *hdp)
 		DRM_INFO("HDCP is disabled\n");
 }
 
+void imx_hdcp_init_struct(struct imx_hdcp *hdcp)
+{
+	mutex_init(&hdcp->mutex);
+	INIT_DELAYED_WORK(&hdcp->check_work, imx_hdcp_check_work);
+	INIT_WORK(&hdcp->prop_work, imx_hdcp_prop_work);
+}
+
 int imx_hdcp_init(struct imx_hdp *hdp, struct device_node *of_node)
 {
 	int ret;
@@ -561,9 +568,6 @@ int imx_hdcp_init(struct imx_hdp *hdp, struct device_node *of_node)
 		return ret;
 
 	/*connector->hdcp_shim = hdcp_shim;*/
-	mutex_init(&hdp->hdcp.mutex);
-	INIT_DELAYED_WORK(&hdp->hdcp.check_work, imx_hdcp_check_work);
-	INIT_WORK(&hdp->hdcp.prop_work, imx_hdcp_prop_work);
 	return 0;
 }
 
