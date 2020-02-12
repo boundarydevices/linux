@@ -206,8 +206,6 @@
 		#size-cells = <0>;
 		sgmii_phy0: ethernet-phy@2 {
 			reg = <0x2>;
-			interrupt-parent = <&gpio1>;
-			interrupts = <25 IRQ_TYPE_EDGE_FALLING>;
 		};
 	};
 };
@@ -217,50 +215,52 @@
 };
 
 &enetc_mdio_pf3 {
-	qsgmii_phy1: ethernet-phy@4 {
+	qsgmii_phy1: ethernet-phy@10 {
 		reg = <0x10>;
-		interrupt-parent = <&gpio1>;
-		interrupts = <25 IRQ_TYPE_EDGE_FALLING>;
 	};
 
-	qsgmii_phy2: ethernet-phy@5 {
+	qsgmii_phy2: ethernet-phy@11 {
 		reg = <0x11>;
-		interrupt-parent = <&gpio1>;
-		interrupts = <25 IRQ_TYPE_EDGE_FALLING>;
 	};
 
-	qsgmii_phy3: ethernet-phy@6 {
+	qsgmii_phy3: ethernet-phy@12 {
 		reg = <0x12>;
-		interrupt-parent = <&gpio1>;
-		interrupts = <25 IRQ_TYPE_EDGE_FALLING>;
 	};
 
-	qsgmii_phy4: ethernet-phy@7 {
+	qsgmii_phy4: ethernet-phy@13 {
 		reg = <0x13>;
-		interrupt-parent = <&gpio1>;
-		interrupts = <25 IRQ_TYPE_EDGE_FALLING>;
 	};
 };
 
 /* l2switch ports */
-&switch_port0 {
-	phy-handle = <&qsgmii_phy1>;
-	phy-connection-type = "qsgmii";
-};
+&mscc_felix_ports {
+	port@0 {
+		status = "okay";
+		phy-handle = <&qsgmii_phy1>;
+		phy-mode = "qsgmii";
+		managed = "in-band-status";
+	};
 
-&switch_port1 {
-	phy-handle = <&qsgmii_phy2>;
-	phy-connection-type = "qsgmii";
-};
+	port@1 {
+		status = "okay";
+		phy-handle = <&qsgmii_phy2>;
+		phy-mode = "qsgmii";
+		managed = "in-band-status";
+	};
 
-&switch_port2 {
-	phy-handle = <&qsgmii_phy3>;
-	phy-connection-type = "qsgmii";
-};
+	port@2 {
+		status = "okay";
+		phy-handle = <&qsgmii_phy3>;
+		phy-mode = "qsgmii";
+		managed = "in-band-status";
+	};
 
-&switch_port3 {
-	phy-handle = <&qsgmii_phy4>;
-	phy-connection-type = "qsgmii";
+	port@3 {
+		status = "okay";
+		phy-handle = <&qsgmii_phy4>;
+		phy-mode = "qsgmii";
+		managed = "in-band-status";
+	};
 };
 
 &sai4 {

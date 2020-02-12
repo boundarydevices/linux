@@ -11,8 +11,8 @@
 #include <linux/iopoll.h>
 #include "ocelot.h"
 #include <soc/mscc/ocelot_sys.h>
-#include "ocelot_ana.h"
-#include "ocelot_qsys.h"
+#include <soc/mscc/ocelot_ana.h>
+#include <soc/mscc/ocelot_qsys.h>
 #include "ocelot_rew.h"
 #include "ocelot_dev_gmii.h"
 #include "ocelot_tsn.h"
@@ -752,7 +752,7 @@ static int streamid_multi_forward_set(struct ocelot *ocelot, u32 index,
 	u32 bucket;
 	u32 val;
 	int m, n, i;
-	u8 pgid_val, fwdport;
+	u8 pgid_val = 0, fwdport;
 	u32 dst_idx;
 
 	m_index = index / 4;

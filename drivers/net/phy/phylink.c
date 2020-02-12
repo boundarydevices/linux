@@ -296,6 +296,16 @@ static int phylink_parse_mode(struct phylink *pl, struct fwnode_handle *fwnode)
 			phylink_set(pl->supported, 2500baseX_Full);
 			break;
 
+		case PHY_INTERFACE_MODE_USXGMII:
+			phylink_set(pl->supported, 10baseT_Half);
+			phylink_set(pl->supported, 10baseT_Full);
+			phylink_set(pl->supported, 100baseT_Half);
+			phylink_set(pl->supported, 100baseT_Full);
+			phylink_set(pl->supported, 1000baseT_Half);
+			phylink_set(pl->supported, 1000baseT_Full);
+			phylink_set(pl->supported, 2500baseX_Full);
+			break;
+
 		case PHY_INTERFACE_MODE_10GKR:
 			phylink_set(pl->supported, 10baseT_Half);
 			phylink_set(pl->supported, 10baseT_Full);
@@ -356,9 +366,7 @@ static void phylink_mac_config_up(struct phylink *pl,
 static void phylink_mac_an_restart(struct phylink *pl)
 {
 	if (pl->link_config.an_enabled &&
-	    (phy_interface_mode_is_8023z(pl->link_config.interface) ||
-	     pl->link_config.interface == PHY_INTERFACE_MODE_SGMII ||
-	     pl->link_config.interface == PHY_INTERFACE_MODE_QSGMII))
+	    phy_interface_mode_is_8023z(pl->link_config.interface))
 		pl->ops->mac_an_restart(pl->config);
 }
 
@@ -1013,7 +1021,8 @@ void phylink_start(struct phylink *pl)
 		if (irq <= 0)
 			mod_timer(&pl->link_poll, jiffies + HZ);
 	}
-	if (pl->link_an_mode == MLO_AN_FIXED && pl->get_fixed_state)
+	if ((pl->link_an_mode == MLO_AN_FIXED && pl->get_fixed_state) ||
+	    pl->config->pcs_poll)
 		mod_timer(&pl->link_poll, jiffies + HZ);
 	if (pl->phydev)
 		phy_start(pl->phydev);

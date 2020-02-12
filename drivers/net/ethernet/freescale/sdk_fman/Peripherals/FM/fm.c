@@ -602,8 +602,10 @@ do {                                    \
         FM_G_CALL_10G_MAC_ISR(0);
     if (pending & INTR_EN_10G_MAC1)
         FM_G_CALL_10G_MAC_ISR(1);
+#ifdef CONFIG_FSL_SDK_FMAN_RTC_API
     if (pending & INTR_EN_TMR)
         p_Fm->intrMng[e_FM_EV_TMR].f_Isr(p_Fm->intrMng[e_FM_EV_TMR].h_SrcHandle);
+#endif
 }
 
 #if (DPAA_VERSION >= 11)
@@ -4318,8 +4320,10 @@ void FM_EventIsr(t_Handle h_Fm)
         p_Fm->intrMng[e_FM_EV_PRS].f_Isr(p_Fm->intrMng[e_FM_EV_PRS].h_SrcHandle);
     if (pending & INTR_EN_PLCR)
         p_Fm->intrMng[e_FM_EV_PLCR].f_Isr(p_Fm->intrMng[e_FM_EV_PLCR].h_SrcHandle);
+#ifdef CONFIG_FSL_SDK_FMAN_RTC_API
     if (pending & INTR_EN_TMR)
             p_Fm->intrMng[e_FM_EV_TMR].f_Isr(p_Fm->intrMng[e_FM_EV_TMR].h_SrcHandle);
+#endif
 
     /* MAC events may belong to different partitions */
     if (pending & INTR_EN_1G_MAC0)
@@ -4800,6 +4804,7 @@ uint32_t FM_GetCounter(t_Handle h_Fm, e_FmCounters counter)
     {
         case (e_FM_COUNTERS_DEQ_1):
         case (e_FM_COUNTERS_DEQ_2):
+            /* fall through */
         case (e_FM_COUNTERS_DEQ_3):
             if ((p_Fm->p_FmStateStruct->revInfo.majorRev == 4) ||
                 (p_Fm->p_FmStateStruct->revInfo.majorRev >= 6))
@@ -4807,12 +4812,14 @@ uint32_t FM_GetCounter(t_Handle h_Fm, e_FmCounters counter)
                 REPORT_ERROR(MAJOR, E_NOT_SUPPORTED, ("Requested counter not supported"));
                 return 0;
             }
+            /* fall through */
         case (e_FM_COUNTERS_ENQ_TOTAL_FRAME):
         case (e_FM_COUNTERS_DEQ_TOTAL_FRAME):
         case (e_FM_COUNTERS_DEQ_0):
         case (e_FM_COUNTERS_DEQ_FROM_DEFAULT):
         case (e_FM_COUNTERS_DEQ_FROM_CONTEXT):
         case (e_FM_COUNTERS_DEQ_FROM_FD):
+            /* fall through */
         case (e_FM_COUNTERS_DEQ_CONFIRM):
             if (!(GET_UINT32(p_Fm->p_FmQmiRegs->fmqm_gc) & QMI_CFG_EN_COUNTERS))
             {

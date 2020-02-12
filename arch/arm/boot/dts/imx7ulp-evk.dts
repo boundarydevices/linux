@@ -133,8 +133,9 @@
 
 		reg_usb_otg1_vbus: regulator-usb-otg1-vbus {
 			compatible = "regulator-fixed";
-			pinctrl-names = "default";
+			pinctrl-names = "default", "sleep";
 			pinctrl-0 = <&pinctrl_usbotg1_vbus>;
+			pinctrl-1 = <&pinctrl_usbotg1_vbus>;
 			regulator-name = "usb_otg1_vbus";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
@@ -409,12 +410,13 @@
 
 &usbotg1 {
 	vbus-supply = <&reg_usb_otg1_vbus>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_usbotg1_id>;
+	pinctrl-1 = <&pinctrl_usbotg1_id>;
 	srp-disable;
 	hnp-disable;
 	adp-disable;
-	over-current-active-low;
+	disable-over-current;
 	status = "okay";
 };
 
@@ -523,7 +525,6 @@
 	pinctrl_usbotg1_id: otg1idgrp {
 		fsl,pins = <
 			IMX7ULP_PAD_PTC13__USB0_ID	0x10003
-			IMX7ULP_PAD_PTC16__USB1_OC2	0x10003
 		>;
 	};
 

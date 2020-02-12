@@ -511,8 +511,15 @@ static int imx6q_pcie_abort_handler(unsigned long addr,
 		unsigned int fsr, struct pt_regs *regs)
 {
 	unsigned long pc = instruction_pointer(regs);
-	unsigned long instr = *(unsigned long *)pc;
-	int reg = (instr >> 12) & 15;
+	unsigned long instr;
+	int reg ;
+
+	/* if the abort from user-space, just return and report it */
+	if (user_mode(regs))
+		return 1;
+
+	instr = *(unsigned long *)pc;
+	reg = (instr >> 12) & 15;
 
 	/*
 	 * If the instruction being executed was a read,
@@ -1685,8 +1692,11 @@ static void imx6_pcie_setup_ep(struct dw_pcie *pci)
 
 	/* get iATU unroll support */
 	val = dw_pcie_readl_dbi(pci, PCIE_ATU_VIEWPORT);
-	if (val == 0xffffffff)
+	if (val == 0xffffffff) {
 		pci->iatu_unroll_enabled = 1;
+		if (!pci->atu_base)
+			pci->atu_base = pci->dbi_base + DEFAULT_DBI_ATU_OFFSET;
+	}
 	dev_info(pci->dev, "iATU unroll: %s\n",
 		pci->iatu_unroll_enabled ? "enabled" : "disabled");
 
@@ -1949,9 +1959,21 @@ static int imx6_pcie_suspend_noirq(struct device *dev)
 
 	if (!(imx6_pcie->drvdata->flags & IMX6_PCIE_FLAG_SUPPORTS_SUSPEND))
 		return 0;
-	imx6_pcie_pm_turnoff(imx6_pcie);
-	imx6_pcie_ltssm_disable(dev);
-	imx6_pcie_clk_disable(imx6_pcie);
+	if (unlikely(imx6_pcie->drvdata->variant == IMX6Q)) {
+		/*
+		 * L2 can exit by 'reset' or Inband beacon (from remote EP)
+		 * toggling phy_powerdown has same effect as 'inband beacon'
+		 * So, toggle bit18 of GPR1, used as a workaround of errata
+		 * ERR005723 "PCIe PCIe does not support L2 Power Down"
+		 */
+		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
+				   IMX6Q_GPR1_PCIE_TEST_PD,
+				   IMX6Q_GPR1_PCIE_TEST_PD);
+	} else {
+		imx6_pcie_pm_turnoff(imx6_pcie);
+		imx6_pcie_ltssm_disable(dev);
+		imx6_pcie_clk_disable(imx6_pcie);
+	}
 
 	return 0;
 }
@@ -1964,16 +1986,26 @@ static int imx6_pcie_resume_noirq(struct device *dev)
 
 	if (!(imx6_pcie->drvdata->flags & IMX6_PCIE_FLAG_SUPPORTS_SUSPEND))
 		return 0;
+	if (unlikely(imx6_pcie->drvdata->variant == IMX6Q)) {
+		/*
+		 * L2 can exit by 'reset' or Inband beacon (from remote EP)
+		 * toggling phy_powerdown has same effect as 'inband beacon'
+		 * So, toggle bit18 of GPR1, used as a workaround of errata
+		 * ERR005723 "PCIe PCIe does not support L2 Power Down"
+		 */
+		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
+				IMX6Q_GPR1_PCIE_TEST_PD, 0);
+	} else {
+		imx6_pcie_assert_core_reset(imx6_pcie);
+		imx6_pcie_init_phy(imx6_pcie);
+		imx6_pcie_deassert_core_reset(imx6_pcie);
+		dw_pcie_setup_rc(pp);
+		pci_imx_set_msi_en(pp);
 
-	imx6_pcie_assert_core_reset(imx6_pcie);
-	imx6_pcie_init_phy(imx6_pcie);
-	imx6_pcie_deassert_core_reset(imx6_pcie);
-	dw_pcie_setup_rc(pp);
-	pci_imx_set_msi_en(pp);
-
-	ret = imx6_pcie_establish_link(imx6_pcie);
-	if (ret < 0)
-		dev_info(dev, "pcie link is down after resume.\n");
+		ret = imx6_pcie_establish_link(imx6_pcie);
+		if (ret < 0)
+			dev_info(dev, "pcie link is down after resume.\n");
+	}
 
 	return 0;
 }
@@ -2536,6 +2568,7 @@ static const struct imx6_pcie_drvdata drvdata[] = {
 	[IMX6Q] = {
 		.variant = IMX6Q,
 		.flags = IMX6_PCIE_FLAG_IMX6_PHY |
+			 IMX6_PCIE_FLAG_SUPPORTS_SUSPEND |
 			 IMX6_PCIE_FLAG_IMX6_SPEED_CHANGE,
 		.dbi_length = 0x200,
 	},

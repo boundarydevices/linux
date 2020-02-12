@@ -20,8 +20,16 @@ struct felix_info {
 	int				num_ports;
 	int				switch_pci_bar;
 	int				imdio_pci_bar;
-	unsigned long			quirks;
-	int (*mdio_bus_alloc)(struct ocelot *ocelot);
+	int	(*mdio_bus_alloc)(struct ocelot *ocelot);
+	void	(*mdio_bus_free)(struct ocelot *ocelot);
+	void	(*pcs_init)(struct ocelot *ocelot, int port,
+			    unsigned int link_an_mode,
+			    const struct phylink_link_state *state);
+	void	(*pcs_an_restart)(struct ocelot *ocelot, int port);
+	void	(*pcs_link_state)(struct ocelot *ocelot, int port,
+				  struct phylink_link_state *state);
+	int	(*prevalidate_phy_mode)(struct ocelot *ocelot, int port,
+					phy_interface_t phy_mode);
 };
 
 extern struct felix_info		felix_info_vsc9959;

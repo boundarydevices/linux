@@ -95,6 +95,8 @@ struct nwl_dsi_platform_data {
 	u32 reg_tx_ulps;
 	u32 reg_pxl2dpi;
 	u32 max_instances;
+	u32 tx_clk_rate;
+	u32 rx_clk_rate;
 	bool mux_present;
 	bool shared_phy;
 };
@@ -372,6 +374,13 @@ static void nwl_dsi_bridge_pre_enable(struct drm_bridge *bridge)
 		return;
 	}
 
+	/*
+	 * We need to force call enable for the panel here, in order to
+	 * make the panel initialization execute before our call to
+	 * bridge_enable, where we will enable the DPI and start streaming
+	 * pixels on the data lanes.
+	 */
+	drm_bridge_enable(dsi->panel_bridge);
 }
 
 static void nwl_dsi_bridge_enable(struct drm_bridge *bridge)
@@ -558,6 +567,8 @@ nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 			clk_set_rate(clk, adjusted->crtc_clock * 1000);
 	}
 
+	memcpy(&dsi->mode, adjusted, sizeof(dsi->mode));
+
 	phy_ref_rate = config->phy_rates[config->phy_rate_idx];
 	clk_set_rate(dsi->phy_ref_clk, phy_ref_rate);
 	ret = nwl_dsi_get_dphy_params(dsi, adjusted, &new_cfg);
@@ -577,8 +588,6 @@ nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 	/* Save the new desired phy config */
 	memcpy(&dsi->phy_cfg, &new_cfg, sizeof(new_cfg));
 
-	memcpy(&dsi->mode, adjusted, sizeof(dsi->mode));
-	drm_mode_debug_printmodeline(adjusted);
 }
 
 static int nwl_dsi_bridge_attach(struct drm_bridge *bridge)
@@ -586,6 +595,7 @@ static int nwl_dsi_bridge_attach(struct drm_bridge *bridge)
 	struct nwl_dsi *dsi = bridge->driver_private;
 	struct drm_bridge *panel_bridge;
 	struct drm_panel *panel;
+	struct clk *phy_parent;
 	int ret;
 
 	ret = drm_of_find_panel_or_bridge(dsi->dev->of_node, 1, 0, &panel,
@@ -604,6 +614,27 @@ static int nwl_dsi_bridge_attach(struct drm_bridge *bridge)
 
 	if (!dsi->panel_bridge)
 		return -EPROBE_DEFER;
+
+	phy_parent = devm_clk_get(dsi->dev, "phy_parent");
+	if (!IS_ERR_OR_NULL(phy_parent)) {
+		ret = clk_set_parent(dsi->phy_ref_clk, phy_parent);
+		ret |= clk_set_parent(dsi->tx_esc_clk, phy_parent);
+		ret |= clk_set_parent(dsi->rx_esc_clk, phy_parent);
+
+		if (ret) {
+			dev_err(dsi->dev,
+				 "Error re-parenting phy/tx/rx clocks: %d",
+				 ret);
+
+			return ret;
+		}
+
+		if (dsi->pdata->tx_clk_rate)
+			clk_set_rate(dsi->tx_esc_clk, dsi->pdata->tx_clk_rate);
+
+		if (dsi->pdata->rx_clk_rate)
+			clk_set_rate(dsi->rx_esc_clk, dsi->pdata->rx_clk_rate);
+	}
 
 	return drm_bridge_attach(bridge->encoder, dsi->panel_bridge, bridge);
 }
@@ -1025,6 +1056,8 @@ static const struct nwl_dsi_platform_data imx8qm_dev = {
 	.reg_tx_ulps = 0x00,
 	.reg_pxl2dpi = 0x04,
 	.max_instances = 2,
+	.tx_clk_rate = 18000000,
+	.rx_clk_rate = 72000000,
 	.shared_phy = false,
 };
 
@@ -1039,6 +1072,8 @@ static const struct nwl_dsi_platform_data imx8qx_dev = {
 	.reg_tx_ulps = 0x30,
 	.reg_pxl2dpi = 0x40,
 	.max_instances = 2,
+	.tx_clk_rate = 18000000,
+	.rx_clk_rate = 72000000,
 	.shared_phy = true,
 };
 
