@@ -16,6 +16,7 @@
 
 bool is_hdcp_supported(struct imx_hdp *hdp);
 int imx_hdcp_init(struct imx_hdp *hdp, struct device_node *of_node);
+void imx_hdcp_init_struct(struct imx_hdcp *hdcp);
 int imx_hdcp_enable(struct imx_hdp *hdp);
 int imx_hdcp_disable(struct imx_hdp *hdp);
 void imx_hdcp_atomic_check(struct drm_connector *connector,
