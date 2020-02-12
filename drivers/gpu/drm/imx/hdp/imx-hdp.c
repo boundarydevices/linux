@@ -1519,6 +1519,7 @@ static int imx_hdp_imx_bind(struct device *dev, struct device *master,
 	connector = &hdp->connector;
 
 	mutex_init(&hdp->mutex);
+	imx_hdcp_init_struct(&hdp->hdcp);
 
 	hdp->irq[HPD_IRQ_IN] = platform_get_irq_byname(pdev, "plug_in");
 	if (hdp->irq[HPD_IRQ_IN] < 0)
