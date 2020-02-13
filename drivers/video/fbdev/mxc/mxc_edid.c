@@ -216,25 +216,41 @@ int mxc_edid_fb_mode_is_equal(bool use_aspect,
 static void get_detailed_timing(unsigned char *block,
 				struct fb_videomode *mode)
 {
+	u32 h_total, v_total, pixel_clock;
+	u32 h_blanking, v_blanking;
+
 	mode->xres = H_ACTIVE;
 	mode->yres = V_ACTIVE;
-	mode->pixclock = PIXEL_CLOCK;
-	mode->pixclock /= 1000;
-	mode->pixclock = KHZ2PICOS(mode->pixclock);
 	mode->right_margin = H_SYNC_OFFSET;
-	mode->left_margin = (H_ACTIVE + H_BLANKING) -
-		(H_ACTIVE + H_SYNC_OFFSET + H_SYNC_WIDTH);
-	mode->upper_margin = V_BLANKING - V_SYNC_OFFSET -
-		V_SYNC_WIDTH;
 	mode->lower_margin = V_SYNC_OFFSET;
 	mode->hsync_len = H_SYNC_WIDTH;
 	mode->vsync_len = V_SYNC_WIDTH;
+	h_blanking = H_BLANKING;
+	v_blanking = V_BLANKING;
+	mode->left_margin = h_blanking - mode->right_margin - mode->hsync_len;
+	mode->upper_margin = v_blanking - mode->lower_margin - mode->vsync_len;
 	if (HSYNC_POSITIVE)
 		mode->sync |= FB_SYNC_HOR_HIGH_ACT;
 	if (VSYNC_POSITIVE)
 		mode->sync |= FB_SYNC_VERT_HIGH_ACT;
-	mode->refresh = PIXEL_CLOCK/((H_ACTIVE + H_BLANKING) *
-				     (V_ACTIVE + V_BLANKING));
+
+	pixel_clock = PIXEL_CLOCK;
+	h_total = mode->xres + h_blanking;
+	v_total = mode->yres + v_blanking;
+	if (h_total && v_total) {
+		mode->refresh = pixel_clock/(h_total * v_total);
+	} else {
+		mode->refresh = 0;
+		pr_err("%s:error h_total=%d, v_total=%d\n", __func__, h_total, v_total);
+	}
+	pixel_clock /= 1000;
+	if (pixel_clock) {
+		pixel_clock = KHZ2PICOS(pixel_clock);
+	} else {
+		pr_err("%s:error pixel_clock=%d\n", __func__, pixel_clock);
+	}
+	mode->pixclock = pixel_clock;
+
 	if (INTERLACED) {
 		mode->yres *= 2;
 		mode->upper_margin *= 2;
