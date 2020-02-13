@@ -902,7 +902,7 @@ done:
 void fb_var_to_videomode(struct fb_videomode *mode,
 			 const struct fb_var_screeninfo *var)
 {
-	u32 pixclock, hfreq, htotal, vtotal;
+	u32 pixclock, htotal, vtotal;
 
 	mode->name = NULL;
 	mode->xres = var->xres;
@@ -934,8 +934,11 @@ void fb_var_to_videomode(struct fb_videomode *mode,
 	if (var->vmode & FB_VMODE_DOUBLE)
 		vtotal *= 2;
 
-	hfreq = pixclock/htotal;
-	mode->refresh = hfreq/vtotal;
+	if (htotal && vtotal) {
+		mode->refresh = pixclock/ (htotal * vtotal);
+	} else {
+		pr_err("%s:error htotal=%d, vtotal=%d\n", __func__, htotal, vtotal);
+	}
 }
 
 /**
