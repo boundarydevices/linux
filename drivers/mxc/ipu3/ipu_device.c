@@ -2484,7 +2484,7 @@ static void vdi_split_process(struct ipu_soc *ipu, struct ipu_task_entry *t)
 		base_off = page_address(pfn_to_page(t->output.paddr >> PAGE_SHIFT));
 		base_off += t->output.paddr & ((1 << PAGE_SHIFT) - 1);
 	} else {
-		base_off = (char *)ioremap_nocache(t->output.paddr,
+		base_off = (char *)ioremap(t->output.paddr,
 				t->output.width * t->output.height *
 				fmt_to_bpp(t->output.format)/8);
 	}
