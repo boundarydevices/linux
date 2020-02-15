@@ -162,7 +162,7 @@ static struct virtqueue *rp_find_vq(struct virtio_device *vdev,
 		return ERR_PTR(-ENOMEM);
 
 	/* ioremap'ing normal memory, so we cast away sparse's complaints */
-	rpvq->addr = (__force void *) ioremap_nocache(virdev->vring[index],
+	rpvq->addr = (__force void *) ioremap(virdev->vring[index],
 							RPMSG_RING_SIZE);
 	if (!rpvq->addr) {
 		err = -ENOMEM;
