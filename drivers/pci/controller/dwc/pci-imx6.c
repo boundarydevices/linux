@@ -2406,7 +2406,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 			}
 		}
 
-		pcie_arb_base_addr = ioremap_nocache(pp->mem_base,
+		pcie_arb_base_addr = ioremap(pp->mem_base,
 					test_region_size);
 		if (!pcie_arb_base_addr) {
 			dev_err(dev, "ioremap error in ep io test\n");
