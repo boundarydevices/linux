@@ -685,7 +685,7 @@ static int __init imx_amp_power_init(void)
 
 	amp_power_mutex = imx_sema4_mutex_create(0, MCC_POWER_SHMEM_NUMBER);
 
-	shared_mem_base = ioremap_nocache(shared_mem_paddr, shared_mem_size);
+	shared_mem_base = ioremap(shared_mem_paddr, shared_mem_size);
 
 	if (!amp_power_mutex) {
 		pr_err("Failed to create sema4 mutex!\n");
