@@ -126,12 +126,16 @@ enum ci_revision {
  * struct ci_role_driver - host/gadget role driver
  * @start: start this role
  * @stop: stop this role
+ * @suspend: system suspend handler for this role
+ * @resume: system resume handler for this role
  * @irq: irq handler for this role
  * @name: role name string (host/gadget)
  */
 struct ci_role_driver {
 	int		(*start)(struct ci_hdrc *);
 	void		(*stop)(struct ci_hdrc *);
+	void		(*suspend)(struct ci_hdrc *);
+	void		(*resume)(struct ci_hdrc *, bool power_lost);
 	irqreturn_t	(*irq)(struct ci_hdrc *);
 	const char	*name;
 };
@@ -203,6 +207,8 @@ struct hw_bank {
  * @in_lpm: if the core in low power mode
  * @wakeup_int: if wakeup interrupt occur
  * @rev: The revision number for controller
+ * @power_lost_work: work item when controller power is lost
+ * @power_lost_wq: work queue for controller power is lost
  */
 struct ci_hdrc {
 	struct device			*dev;
@@ -255,6 +261,19 @@ struct ci_hdrc {
 	bool				in_lpm;
 	bool				wakeup_int;
 	enum ci_revision		rev;
+	struct work_struct		power_lost_work;
+	struct workqueue_struct		*power_lost_wq;
+	/* register save area for suspend&resume */
+	u32				pm_command;
+	u32				pm_status;
+	u32				pm_intr_enable;
+	u32				pm_frame_index;
+	u32				pm_segment;
+	u32				pm_frame_list;
+	u32				pm_async_next;
+	u32				pm_configured_flag;
+	u32				pm_portsc;
+	u32				pm_usbmode;
 };
 
 static inline struct ci_role_driver *ci_role(struct ci_hdrc *ci)
