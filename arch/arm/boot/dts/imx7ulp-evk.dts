@@ -38,6 +38,15 @@
 			reg = <0x9FF00000 0x100000>;
 		};
 
+		ramoops@0x99b00000 {
+			compatible = "ramoops";
+			reg = <0x99b00000 0x00100000>;
+			record-size     = <0x00020000>;
+			console-size    = <0x00020000>;
+			ftrace-size     = <0x00020000>;
+			pmsg-size       = <0x00020000>;
+		};
+
 	};
 
 	backlight {
@@ -55,11 +64,10 @@
 		#reset-cells = <0>;
 	};
 
-	modem_reset: modem-reset {
-		compatible = "gpio-reset";
-		reset-gpios = <&rpmsg_gpio0 15 GPIO_ACTIVE_LOW>;
-		reset-delay-us = <1000>;
-		#reset-cells = <0>;
+	bt_rfkill {
+		compatible = "fsl,mxc_bt_rfkill";
+		bt-power-gpios = <&rpmsg_gpio0 15 GPIO_ACTIVE_LOW>;
+		status ="okay";
 	};
 
 	pf1550-rpmsg {
@@ -125,8 +133,9 @@
 
 		reg_usb_otg1_vbus: regulator-usb-otg1-vbus {
 			compatible = "regulator-fixed";
-			pinctrl-names = "default";
+			pinctrl-names = "default", "sleep";
 			pinctrl-0 = <&pinctrl_usbotg1_vbus>;
+			pinctrl-1 = <&pinctrl_usbotg1_vbus>;
 			regulator-name = "usb_otg1_vbus";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
@@ -320,7 +329,6 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_lpuart6>;
 	pinctrl-1 = <&pinctrl_lpuart6>;
-	resets = <&modem_reset>;
 	status = "okay";
 };
 
@@ -402,12 +410,13 @@
 
 &usbotg1 {
 	vbus-supply = <&reg_usb_otg1_vbus>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_usbotg1_id>;
+	pinctrl-1 = <&pinctrl_usbotg1_id>;
 	srp-disable;
 	hnp-disable;
 	adp-disable;
-	over-current-active-low;
+	disable-over-current;
 	status = "okay";
 };
 
@@ -516,7 +525,6 @@
 	pinctrl_usbotg1_id: otg1idgrp {
 		fsl,pins = <
 			IMX7ULP_PAD_PTC13__USB0_ID	0x10003
-			IMX7ULP_PAD_PTC16__USB1_OC2	0x10003
 		>;
 	};
 

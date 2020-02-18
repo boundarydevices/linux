@@ -63,6 +63,33 @@
 };
 
 / {
+	trusty {
+		compatible = "android,trusty-smc-v1";
+		ranges;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		use-gicv3-workaround;
+		trusty-irq {
+			use-gicv3-workaround;
+			compatible = "android,trusty-irq-v1";
+			interrupt-templates = <&trusty_ipi 0>;
+			interrupt-ranges = < 0 15 0>;
+		};
+		trusty-virtio {
+			compatible = "android,trusty-virtio-v1";
+		};
+		trusty-log {
+			compatible = "android,trusty-log-v1";
+		};
+	};
+	trusty_ipi: interrupt-controller@0 {
+		compatible = "android,CustomIPI";
+		interrupt-controller;
+		#interrupt-cells = <1>;
+	};
+};
+
+/ {
 	model = "NXP i.MX8MQ EVK";
 	compatible = "fsl,imx8mq-evk", "fsl,imx8mq";
 
@@ -86,27 +113,16 @@
 		};
 	};
 
-	modem_reset: modem-reset {
-		compatible = "gpio-reset";
-		reset-gpios = <&gpio3 5 GPIO_ACTIVE_LOW>;
-		reset-delay-us = <2000>;
-		reset-post-delay-ms = <40>;
-		#reset-cells = <0>;
+	bt_rfkill {
+		compatible = "fsl,mxc_bt_rfkill";
+		bt-power-gpios = <&gpio3 5 GPIO_ACTIVE_LOW>;
+		status ="okay";
 	};
 
 	resmem: reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
-
-		/* global autoconfigured region for contiguous allocations */
-		linux,cma {
-			compatible = "shared-dma-pool";
-			reusable;
-			size = <0 0x3c000000>;
-			alloc-ranges = <0 0x40000000 0 0x40000000>;
-			linux,cma-default;
-		};
 	};
 
 	pcie0_refclk: pcie0-refclk {
@@ -734,7 +750,6 @@
 	assigned-clocks = <&clk IMX8MQ_CLK_UART3>;
 	assigned-clock-parents = <&clk IMX8MQ_SYS1_PLL_80M>;
 	fsl,uart-has-rtscts;
-	resets = <&modem_reset>;
 	status = "okay";
 };
 
@@ -764,20 +779,6 @@
 &usb_dwc3_1 {
 	dr_mode = "host";
 	status = "okay";
-};
-
-&qspi0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_qspi>;
-	status = "okay";
-
-	n25q256a: flash@0 {
-		reg = <0>;
-		#address-cells = <1>;
-		#size-cells = <1>;
-		compatible = "micron,n25q256a", "jedec,spi-nor";
-		spi-max-frequency = <29000000>;
-	};
 };
 
 &usdhc1 {
@@ -1166,6 +1167,58 @@
 	port@1 {
 		hdmi_in: endpoint {
 			remote-endpoint = <&dcss_out>;
+		};
+	};
+};
+
+&tmu {
+	throttle-cfgs {
+		throttle_devfreq: devfreq {
+			throttle,max_state = <2>;
+			#cooling-cells = <2>;
+		};
+	};
+};
+
+&thermal_zones {
+	cpu-thermal {
+		polling-delay-passive = <250>;
+		polling-delay = <2000>;
+		thermal-sensors = <&tmu 0>;
+
+		trips {
+			cpu_alert0: trip0 {
+				temperature = <80000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+			cpu_alert1: trip1 {
+				temperature = <85000>;
+				hysteresis = <2000>;
+				type = "passive";
+			};
+			cpu-crit {
+				temperature = <90000>;
+				hysteresis = <2000>;
+				type = "critical";
+			};
+		};
+
+		cooling-maps {
+			map0 {
+				trip = <&cpu_alert0>;
+				cooling-device =
+					<&throttle_devfreq 0 1>,
+					<&A53_0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+					<&A53_1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+					<&A53_2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
+					<&A53_3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+			};
+			map1 {
+				trip = <&cpu_alert1>;
+				cooling-device =
+					<&throttle_devfreq 0 2>;
+			};
 		};
 	};
 };

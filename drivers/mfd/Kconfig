@@ -473,6 +473,12 @@ config MFD_IMX_AUDIOMIX
 	help
 	  Enable audiomix support
 
+config MFD_MXC_HDMI_ANDROID
+	tristate "Freescale HDMI Core on Android"
+	depends on MFD_MXC_HDMI
+	help
+	  Select this if build on android system.
+
 config MFD_HI6421_PMIC
 	tristate "HiSilicon Hi6421 PMU/Codec IC"
 	depends on OF

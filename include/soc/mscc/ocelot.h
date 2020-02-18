@@ -404,23 +404,10 @@ enum ocelot_tag_prefix {
 	OCELOT_TAG_PREFIX_LONG,
 };
 
-/* Hardware quirks (differences between switch instantiations) */
-enum {
-	OCELOT_PCS_PERFORMS_RATE_ADAPTATION	= BIT(0),
-};
-
 struct ocelot;
 
 struct ocelot_ops {
-	void (*pcs_init)(struct ocelot *ocelot, int port,
-			 unsigned int link_an_mode,
-			 const struct phylink_link_state *state);
-	void (*pcs_an_restart)(struct ocelot *ocelot, int port);
-	void (*pcs_link_state)(struct ocelot *ocelot, int port,
-			       struct phylink_link_state *state);
-	void (*pcs_validate)(struct ocelot *ocelot, int port,
-			     unsigned long *supported,
-			     struct phylink_link_state *state);
+	void (*pcs_init)(struct ocelot *ocelot, int port);
 	int (*reset)(struct ocelot *ocelot);
 };
 
@@ -438,6 +425,8 @@ struct ocelot_port {
 	u8				ptp_cmd;
 	struct sk_buff_head		tx_skbs;
 	u8				ts_id;
+
+	phy_interface_t			phy_mode;
 };
 
 struct ocelot {
@@ -477,8 +466,6 @@ struct ocelot {
 	struct delayed_work		stats_work;
 	struct workqueue_struct		*stats_queue;
 
-	unsigned long			quirks;
-
 	u8				ptp:1;
 	struct ptp_clock		*ptp_clock;
 	struct ptp_clock_info		ptp_info;
@@ -487,6 +474,8 @@ struct ocelot {
 	struct mutex			ptp_lock;
 	/* Protects the PTP clock */
 	spinlock_t			ptp_clock_lock;
+
+	void (*port_pcs_init)(struct ocelot_port *port);
 };
 
 #define ocelot_read_ix(ocelot, reg, gi, ri) __ocelot_read_ix(ocelot, reg, reg##_GSZ * (gi) + reg##_RSZ * (ri))
@@ -524,12 +513,17 @@ void ocelot_deinit(struct ocelot *ocelot);
 void ocelot_init_port(struct ocelot *ocelot, int port);
 
 /* DSA callbacks */
+void ocelot_port_enable(struct ocelot *ocelot, int port,
+			struct phy_device *phy);
+void ocelot_port_disable(struct ocelot *ocelot, int port);
 void ocelot_get_strings(struct ocelot *ocelot, int port, u32 sset, u8 *data);
 void ocelot_get_ethtool_stats(struct ocelot *ocelot, int port, u64 *data);
 int ocelot_get_sset_count(struct ocelot *ocelot, int port, int sset);
 int ocelot_get_ts_info(struct ocelot *ocelot, int port,
 		       struct ethtool_ts_info *info);
 void ocelot_set_ageing_time(struct ocelot *ocelot, unsigned int msecs);
+void ocelot_adjust_link(struct ocelot *ocelot, int port,
+			struct phy_device *phydev);
 void ocelot_port_vlan_filtering(struct ocelot *ocelot, int port,
 				bool vlan_aware);
 void ocelot_bridge_stp_state_set(struct ocelot *ocelot, int port, u8 state);
@@ -598,21 +592,4 @@ int ocelot_rtag_parse_enable(struct ocelot *ocelot, u8 port);
 int ocelot_dscp_set(struct ocelot *ocelot, int port,
 		    bool enable, const u8 dscp_ix,
 		    struct tsn_qos_switch_dscp_conf *c);
-void ocelot_phylink_validate(struct ocelot *ocelot, int port,
-			     unsigned long *supported,
-			     struct phylink_link_state *state);
-void ocelot_phylink_mac_pcs_get_state(struct ocelot *ocelot, int port,
-				      struct phylink_link_state *state);
-void ocelot_phylink_mac_an_restart(struct ocelot *ocelot, int port);
-void ocelot_phylink_mac_config(struct ocelot *ocelot, int port,
-			       unsigned int link_an_mode,
-			       const struct phylink_link_state *state);
-void ocelot_phylink_mac_link_down(struct ocelot *ocelot, int port,
-				  unsigned int link_an_mode,
-				  phy_interface_t interface);
-void ocelot_phylink_mac_link_up(struct ocelot *ocelot, int port,
-				unsigned int link_an_mode,
-				phy_interface_t interface,
-				struct phy_device *phy);
-
 #endif

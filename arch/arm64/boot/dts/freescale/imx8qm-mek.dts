@@ -63,6 +63,31 @@
 };
 
 / {
+	trusty {
+		compatible = "android,trusty-smc-v1";
+		ranges;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		trusty-irq {
+			compatible = "android,trusty-irq-v1";
+			interrupt-templates = <&trusty_ipi 0>;
+			interrupt-ranges = < 0 15 0>;
+		};
+		trusty-virtio {
+			compatible = "android,trusty-virtio-v1";
+		};
+		trusty-log {
+			compatible = "android,trusty-log-v1";
+		};
+	};
+	trusty_ipi: interrupt-controller@0 {
+		compatible = "android,CustomIPI";
+		interrupt-controller;
+		#interrupt-cells = <1>;
+	};
+};
+
+/ {
 	model = "Freescale i.MX8QM MEK";
 	compatible = "fsl,imx8qm-mek", "fsl,imx8qm";
 
@@ -119,15 +144,10 @@
 		default-brightness-level = <80>;
 	};
 
-	modem_reset: modem-reset {
-		compatible = "gpio-reset";
-		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&pinctrl_modem_reset>;
-		pinctrl-1 = <&pinctrl_modem_reset_sleep>;
-		reset-gpios = <&lsio_gpio4 22 GPIO_ACTIVE_LOW>;
-		reset-delay-us = <2000>;
-		reset-post-delay-ms = <40>;
-		#reset-cells = <0>;
+	bt_rfkill {
+		compatible = "fsl,mxc_bt_rfkill";
+		bt-power-gpios = <&lsio_gpio4 22 GPIO_ACTIVE_LOW>;
+		status ="okay";
 	};
 
 	cbtl04gp {
@@ -177,6 +197,14 @@
 			no-map;
 			reg = <0 0x90400000 0 0x100000>;
 		};
+		ramoops@0x91f00000 {
+			compatible = "ramoops";
+			reg = <0 0x91f00000 0 0x00100000>;
+			record-size     = <0x00020000>;
+			console-size    = <0x00020000>;
+			ftrace-size     = <0x00020000>;
+			pmsg-size       = <0x00020000>;
+		};
 		decoder_rpc: decoder_rpc@0x92000000 {
 			no-map;
 			reg = <0 0x92000000 0 0x200000>;
@@ -192,15 +220,6 @@
 		encoder_reserved: encoder_reserved@0x94400000 {
 			no-map;
 			reg = <0 0x94400000 0 0x800000>;
-		};
-
-		/* global autoconfigured region for contiguous allocations */
-		linux,cma {
-			compatible = "shared-dma-pool";
-			reusable;
-			size = <0 0x3c000000>;
-			alloc-ranges = <0 0x96000000 0 0x3c000000>;
-			linux,cma-default;
 		};
 
 	};
@@ -330,6 +349,15 @@
 			"Main MIC", "MICB",
 			"Playback", "CPU-Playback",
 			"CPU-Capture", "Capture";
+	};
+
+	sound-xtor {
+		compatible = "fsl,imx-audio-xtor";
+		model = "xtor-audio";
+		cpu-dai = <&sai0>;
+		tx-codec-slave = <1>;
+		rx-codec-slave = <1>;
+		status = "okay";
 	};
 };
 
@@ -483,6 +511,17 @@
 	assigned-clock-parents = <&aud_pll_div0_lpcg 0>;
 	assigned-clock-rates = <0>, <786432000>, <49152000>, <12288000>, <49152000>;
 	fsl,txm-rxs;
+	status = "okay";
+};
+
+&sai0 {
+	assigned-clocks = <&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_PLL>,
+			<&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_SLV_BUS>,
+			<&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_MST_BUS>,
+			<&sai0_lpcg 0>;
+	assigned-clock-rates = <786432000>, <49152000>, <12288000>, <49152000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai0>;
 	status = "okay";
 };
 
@@ -813,7 +852,6 @@
 &lpuart1 { /* BT */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_lpuart1>;
-	resets = <&modem_reset>;
 	status = "okay";
 };
 
@@ -956,6 +994,7 @@
 &usbotg1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg1>;
+	dr_mode = "host";
 	srp-disable;
 	hnp-disable;
 	adp-disable;
@@ -1458,6 +1497,7 @@
 			IMX8QM_UART1_TX_DMA_UART1_TX		0x06000020
 			IMX8QM_UART1_CTS_B_DMA_UART1_CTS_B	0x06000020
 			IMX8QM_UART1_RTS_B_DMA_UART1_RTS_B	0x06000020
+			IMX8QM_QSPI1A_DQS_LSIO_GPIO4_IO22	0x00000021
 		>;
 	};
 
@@ -1487,18 +1527,6 @@
 		>;
 	};
 
-	pinctrl_modem_reset: modemresetgrp {
-		fsl,pins = <
-			IMX8QM_QSPI1A_DQS_LSIO_GPIO4_IO22		0x06000021
-		>;
-	};
-
-	pinctrl_modem_reset_sleep: modemreset_sleepgrp {
-		fsl,pins = <
-			IMX8QM_QSPI1A_DQS_LSIO_GPIO4_IO22		0x07800021
-		>;
-	};
-
 	pinctrl_pciea: pcieagrp{
 		fsl,pins = <
 			IMX8QM_PCIE_CTRL0_WAKE_B_LSIO_GPIO4_IO28		0x04000021
@@ -1514,11 +1542,19 @@
 		>;
 	};
 
+	pinctrl_sai0: sai0grp {
+		fsl,pins = <
+			IMX8QM_SPI0_CS1_AUD_SAI0_TXC				0x06000040
+			IMX8QM_SPI2_CS1_AUD_SAI0_TXFS				0x06000040
+			IMX8QM_SAI1_RXFS_AUD_SAI0_RXD				0x06000040
+			IMX8QM_SAI1_RXC_AUD_SAI0_TXD				0x06000060
+		>;
+	};
+
 	pinctrl_sai1: sai1grp {
 		fsl,pins = <
 			IMX8QM_SAI1_RXD_AUD_SAI1_RXD			0x06000040
-			IMX8QM_SAI1_RXC_AUD_SAI1_RXC			0x06000040
-			IMX8QM_SAI1_RXFS_AUD_SAI1_RXFS			0x06000040
+			IMX8QM_SAI1_TXFS_AUD_SAI1_TXFS			0x06000040
 			IMX8QM_SAI1_TXD_AUD_SAI1_TXD			0x06000060
 			IMX8QM_SAI1_TXC_AUD_SAI1_TXC			0x06000040
 		>;

@@ -30,7 +30,7 @@
 
 #include "imx-drm.h"
 
-static int legacyfb_depth = 16;
+static int legacyfb_depth = 32;
 module_param(legacyfb_depth, int, 0444);
 
 DEFINE_DRM_GEM_CMA_FOPS(imx_drm_driver_fops);
@@ -286,8 +286,8 @@ static int imx_drm_bind(struct device *dev)
 	 * crtcs/connectors/encoders must not change after this point.
 	 */
 	if (legacyfb_depth != 16 && legacyfb_depth != 32) {
-		dev_warn(dev, "Invalid legacyfb_depth.  Defaulting to 16bpp\n");
-		legacyfb_depth = 16;
+		dev_warn(dev, "Invalid legacyfb_depth.  Defaulting to 32bpp\n");
+		legacyfb_depth = 32;
 	}
 
 	drm_kms_helper_poll_init(drm);

@@ -287,6 +287,8 @@ static void *read_file(const char *filename)
 	}
 	if (read(fd, buf, st.st_size) != st.st_size) {
 		perror("fixdep: read");
+		free(buf);
+		close(fd);
 		exit(2);
 	}
 	buf[st.st_size] = '\0';

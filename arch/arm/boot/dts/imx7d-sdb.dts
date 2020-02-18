@@ -44,7 +44,7 @@
 };
 
 / {
-	model = "Freescale i.MX7 SabreSD Board";
+	model = "Freescale i.MX7D SabreSD Board";
 	compatible = "fsl,imx7d-sdb", "fsl,imx7d";
 
 	chosen {
@@ -66,6 +66,15 @@
 			reusable;
 			size = <0x14000000>;
 			linux,cma-default;
+		};
+
+		ramoops@0xbbf00000 {
+			compatible = "ramoops";
+			reg = <0xbbf00000 0x00100000>;
+			record-size     = <0x00020000>;
+			console-size    = <0x00020000>;
+			ftrace-size     = <0x00020000>;
+			pmsg-size       = <0x00020000>;
 		};
 	};
 
@@ -283,10 +292,10 @@
 		interrupt-parent = <&gpio2>;
 		interrupts = <29 0>;
 		pendown-gpio = <&gpio2 29 GPIO_ACTIVE_HIGH>;
-		ti,x-min = /bits/ 16 <0>;
-		ti,x-max = /bits/ 16 <0>;
-		ti,y-min = /bits/ 16 <0>;
-		ti,y-max = /bits/ 16 <0>;
+		ti,x-min = /bits/ 16 <304>;
+		ti,x-max = /bits/ 16 <3600>;
+		ti,y-min = /bits/ 16 <768>;
+		ti,y-max = /bits/ 16 <3472>;
 		ti,pressure-max = /bits/ 16 <0>;
 		ti,x-plate-ohms = /bits/ 16 <400>;
 		wakeup-source;
@@ -518,7 +527,7 @@
 		pinctrl-0 = <&pinctrl_sii902x>;
 		interrupt-parent = <&gpio2>;
 		interrupts = <13 IRQ_TYPE_EDGE_FALLING>;
-		mode_str ="1280x720M@60";
+		mode_str ="640x480M@60";
 		bits-per-pixel = <16>;
 		reg = <0x39>;
 		status = "okay";

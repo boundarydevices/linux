@@ -49,18 +49,6 @@
 	model = "Freescale i.MX6 SoloLite EVK Board";
 	compatible = "fsl,imx6sl-evk", "fsl,imx6sl";
 
-	battery: max8903@0 {
-		compatible = "fsl,max8903-charger";
-		pinctrl-names = "default";
-		dok_input = <&gpio4 13 1>;
-		uok_input = <&gpio4 13 1>;
-		chg_input = <&gpio4 15 1>;
-		flt_input = <&gpio4 14 1>;
-		fsl,dcm_always_high;
-		fsl,dc_valid;
-		fsl,adc_disable;
-		status = "okay";
-	};
 
 	chosen {
 		stdout-path = &uart1;
@@ -82,6 +70,16 @@
 			size = <0x14000000>;
 			linux,cma-default;
 		};
+
+		ramoops@0xaff00000 {
+			compatible = "ramoops";
+			reg = <0xaff00000 0x00100000>;
+			record-size     = <0x00020000>;
+			console-size    = <0x00020000>;
+			ftrace-size     = <0x00020000>;
+			pmsg-size       = <0x00020000>;
+		};
+
 	};
 
 	backlight_display: backlight_display {
@@ -842,14 +840,15 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_kpp>;
 	linux,keymap = <
-			MATRIX_KEY(0x0, 0x0, KEY_UP)         /* ROW0, COL0 */
-			MATRIX_KEY(0x0, 0x1, KEY_DOWN)       /* ROW0, COL1 */
-			MATRIX_KEY(0x0, 0x2, KEY_ENTER)      /* ROW0, COL2 */
-			MATRIX_KEY(0x1, 0x0, KEY_HOME)       /* ROW1, COL0 */
-			MATRIX_KEY(0x1, 0x1, KEY_RIGHT)      /* ROW1, COL1 */
-			MATRIX_KEY(0x1, 0x2, KEY_LEFT)       /* ROW1, COL2 */
-			MATRIX_KEY(0x2, 0x0, KEY_VOLUMEDOWN) /* ROW2, COL0 */
-			MATRIX_KEY(0x2, 0x1, KEY_VOLUMEUP)   /* ROW2, COL1 */
+			MATRIX_KEY(0x1, 0x1, KEY_UP)
+			MATRIX_KEY(0x2, 0x1, KEY_DOWN)
+			MATRIX_KEY(0x2, 0x0, KEY_BACK)
+			MATRIX_KEY(0x1, 0x2, KEY_POWER)
+			MATRIX_KEY(0x0, 0x2, KEY_RIGHT)
+			MATRIX_KEY(0x1, 0x0, KEY_LEFT)
+			MATRIX_KEY(0x0, 0x1, KEY_VOLUMEDOWN)
+			MATRIX_KEY(0x0, 0x0, KEY_VOLUMEUP)
+
 	>;
 	status = "okay";
 };

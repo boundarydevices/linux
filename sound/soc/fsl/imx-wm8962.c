@@ -21,6 +21,7 @@
 #include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/clk.h>
+#include <linux/extcon-provider.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
 #include <sound/control.h>
@@ -43,6 +44,10 @@ struct imx_wm8962_data {
 	bool is_codec_master;
 };
 
+#ifdef CONFIG_EXTCON
+struct extcon_dev *wm8962_edev;
+#endif
+
 struct imx_priv {
 	int hp_gpio;
 	int hp_active_low;
@@ -60,6 +65,13 @@ struct imx_priv {
 };
 static struct imx_priv card_priv;
 
+#ifdef CONFIG_EXTCON
+static const unsigned int imx_wm8962_extcon_cables[] = {
+	EXTCON_JACK_MICROPHONE,
+	EXTCON_JACK_HEADPHONE,
+	EXTCON_NONE,
+};
+#endif
 #ifdef CONFIG_SND_SOC_IMX_WM8962_ANDROID
 static int sample_rate = 44100;
 static snd_pcm_format_t sample_format = SNDRV_PCM_FORMAT_S16_LE;
@@ -114,10 +126,16 @@ static int hpjack_status_check(void *data)
 	if (hp_status != priv->hp_active_low) {
 		snprintf(buf, 32, "STATE=%d", 2);
 		snd_soc_dapm_disable_pin(snd_soc_component_get_dapm(priv->component), "Ext Spk");
+#ifdef CONFIG_EXTCON
+		extcon_set_state_sync(wm8962_edev, EXTCON_JACK_HEADPHONE, 1);
+#endif
 		ret = imx_hp_jack_gpio.report;
 	} else {
 		snprintf(buf, 32, "STATE=%d", 0);
 		snd_soc_dapm_enable_pin(snd_soc_component_get_dapm(priv->component), "Ext Spk");
+#ifdef CONFIG_EXTCON
+		extcon_set_state_sync(wm8962_edev, EXTCON_JACK_HEADPHONE, 0);
+#endif
 		ret = 0;
 	}
 
@@ -793,6 +811,18 @@ audmux_bypass:
 	platform_set_drvdata(pdev, &data->card);
 	snd_soc_card_set_drvdata(&data->card, data);
 
+#ifdef CONFIG_EXTCON
+	wm8962_edev  = devm_extcon_dev_allocate(&pdev->dev, imx_wm8962_extcon_cables);
+	if (IS_ERR(wm8962_edev)) {
+		dev_err(&pdev->dev, "failed to allocate extcon device\n");
+		goto fail;
+	}
+	ret = devm_extcon_dev_register(&pdev->dev,wm8962_edev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to register extcon device\n");
+		goto fail;
+	}
+#endif
 	ret = devm_snd_soc_register_card(&pdev->dev, &data->card);
 	if (ret) {
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n", ret);

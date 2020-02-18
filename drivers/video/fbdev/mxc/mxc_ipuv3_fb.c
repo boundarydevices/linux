@@ -2975,6 +2975,52 @@ static ssize_t show_disp_dev(struct device *dev,
 }
 static DEVICE_ATTR(fsl_disp_dev_property, S_IRUGO, show_disp_dev, NULL);
 
+static ssize_t mxcfb_get_vsync(struct device *dev,
+                 struct device_attribute *attr, char *buf)
+{
+	struct fb_info *info = dev_get_drvdata(dev);
+	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)info->par;
+	int retval = 0;
+	u64 timestamp = 0LL;
+
+	if (mxc_fbi->ipu_ch == MEM_FG_SYNC) {
+		/* BG should poweron */
+		struct mxcfb_info *bg_mxcfbi = NULL;
+		struct fb_info *fbi_tmp;
+
+		fbi_tmp = found_registered_fb(MEM_BG_SYNC, mxc_fbi->ipu_id);
+		if (fbi_tmp)
+			bg_mxcfbi = ((struct mxcfb_info *)(fbi_tmp->par));
+
+		if (!bg_mxcfbi) {
+			return -EINVAL;
+		}
+		if (bg_mxcfbi->cur_blank != FB_BLANK_UNBLANK) {
+			return -EINVAL;
+		}
+	}
+	if (mxc_fbi->cur_blank != FB_BLANK_UNBLANK) {
+		return -EINVAL;
+	}
+
+	init_completion(&mxc_fbi->vsync_complete);
+	ipu_clear_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_nf_irq);
+	ipu_enable_irq(mxc_fbi->ipu, mxc_fbi->ipu_ch_nf_irq);
+	retval = wait_for_completion_interruptible_timeout(
+		&mxc_fbi->vsync_complete, HZ/10);
+	timestamp = ktime_to_ns(mxc_fbi->vsync_nf_timestamp);
+	dev_vdbg(dev, "ts = %llu", timestamp);
+
+	if (retval == 0) {
+		dev_err(dev,
+			"MXCFB_WAIT_FOR_VSYNC: timeout %d\n",
+			retval);
+	}
+
+	return snprintf(buf, PAGE_SIZE, "VSYNC=%llu", timestamp);
+}
+static DEVICE_ATTR(vsync, S_IRUGO, mxcfb_get_vsync, NULL);
+
 static int mxcfb_get_crtc(struct device *dev, struct mxcfb_info *mxcfbi,
 			  enum crtc crtc)
 {
@@ -3454,6 +3500,7 @@ static int mxcfb_probe(struct platform_device *pdev)
 	struct ipuv3_fb_platform_data *plat_data;
 	struct fb_info *fbi;
 	struct mxcfb_info *mxcfbi;
+	struct device *disp_dev;
 	struct resource *res;
 	int ret = 0;
 
@@ -3565,6 +3612,13 @@ static int mxcfb_probe(struct platform_device *pdev)
 			dev_err(mxcfbi->ovfbi->dev, "Error %d on creating "
 						    "file for disp device "
 						    "propety\n", ret);
+
+		ret = device_create_file(mxcfbi->ovfbi->dev,
+					 &dev_attr_vsync);
+		if (ret)
+			dev_err(mxcfbi->ovfbi->dev, "Error %d on creating "
+						    "file for disp vsync "
+						    "propety\n", ret);
 	} else {
 		mxcfbi->ipu_ch_irq = IPU_IRQ_DC_SYNC_EOF;
 		mxcfbi->ipu_ch_nf_irq = IPU_IRQ_DC_SYNC_NFACK;
@@ -3589,6 +3643,20 @@ static int mxcfb_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Error %d on creating file for disp "
 				    " device propety\n", ret);
 
+	ret = device_create_file(fbi->dev, &dev_attr_vsync);
+	if (ret)
+		dev_err(&pdev->dev, "Error %d on creating file for disp "
+				    " vsync propety\n", ret);
+
+	disp_dev = mxc_dispdrv_getdev(mxcfbi->dispdrv);
+	if (disp_dev) {
+		ret = sysfs_create_link(&fbi->dev->kobj,
+					&disp_dev->kobj, "disp_dev");
+		if (ret)
+			dev_err(&pdev->dev,
+					"Error %d on creating file\n", ret);
+	}
+
 	return 0;
 
 mxcfb_setupoverlay_failed:
@@ -3609,6 +3677,7 @@ static int mxcfb_remove(struct platform_device *pdev)
 	struct fb_info *fbi = platform_get_drvdata(pdev);
 	struct mxcfb_info *mxc_fbi = fbi->par;
 
+	device_remove_file(fbi->dev, &dev_attr_vsync);
 	device_remove_file(fbi->dev, &dev_attr_fsl_disp_dev_property);
 	device_remove_file(fbi->dev, &dev_attr_fsl_disp_property);
 	mxcfb_blank(FB_BLANK_POWERDOWN, fbi);
@@ -3616,6 +3685,7 @@ static int mxcfb_remove(struct platform_device *pdev)
 	mxcfb_unmap_video_memory(fbi);
 
 	if (mxc_fbi->ovfbi) {
+		device_remove_file(mxc_fbi->ovfbi->dev, &dev_attr_vsync);
 		device_remove_file(mxc_fbi->ovfbi->dev,
 				   &dev_attr_fsl_disp_dev_property);
 		device_remove_file(mxc_fbi->ovfbi->dev,
