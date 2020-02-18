@@ -792,14 +792,14 @@ static void mcp251x_restart_work_handler(struct work_struct *ws)
 	struct net_device *net = priv->net;
 
 	mutex_lock(&priv->mcp_lock);
+	if (priv->power_lost) {
+		mcp251x_hw_reset(spi);
+		mcp251x_setup(net, spi);
+		priv->power_lost = 0;
+	} else {
+		mcp251x_hw_wake(spi);
+	}
 	if (priv->after_suspend) {
-		if (priv->power_lost) {
-			mcp251x_hw_reset(spi);
-			mcp251x_setup(net, spi);
-			priv->power_lost = 0;
-		} else {
-			mcp251x_hw_wake(spi);
-		}
 		priv->force_quit = 0;
 		if (priv->after_suspend & AFTER_SUSPEND_RESTART) {
 			mcp251x_set_normal_mode(spi);
@@ -996,12 +996,13 @@ static int mcp251x_open(struct net_device *net)
 	INIT_WORK(&priv->tx_work, mcp251x_tx_work_handler);
 	INIT_WORK(&priv->restart_work, mcp251x_restart_work_handler);
 
-	ret = mcp251x_hw_wake(spi);
+	ret = (priv->power_lost) ? mcp251x_hw_reset(spi) : mcp251x_hw_wake(spi);
 	if (ret)
 		goto out_free_wq;
 	ret = mcp251x_setup(net, spi);
 	if (ret)
 		goto out_free_wq;
+	priv->power_lost = 0;
 	ret = mcp251x_set_normal_mode(spi);
 	if (ret)
 		goto out_free_wq;
