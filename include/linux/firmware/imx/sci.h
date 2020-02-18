@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017~2018 NXP
+ * Copyright 2017~2018,2020 NXP
  *
  * Header file containing the public System Controller Interface (SCI)
  * definitions.
@@ -15,6 +15,7 @@
 #include <linux/firmware/imx/svc/misc.h>
 #include <linux/firmware/imx/svc/pm.h>
 #include <linux/firmware/imx/svc/rm.h>
+#include <linux/firmware/imx/svc/seco.h>
 
 #if IS_ENABLED(CONFIG_IMX_SCU)
 int imx_scu_enable_general_irq_channel(struct device *dev);
