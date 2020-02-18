@@ -247,11 +247,11 @@ struct mcp251x_priv {
 	int after_suspend;
 #define AFTER_SUSPEND_UP 1
 #define AFTER_SUSPEND_DOWN 2
-#define AFTER_SUSPEND_POWER 4
 #define AFTER_SUSPEND_RESTART 8
 	int restart_tx;
 	bool tx_busy;
 
+	int power_lost;
 	struct regulator *power;
 	struct regulator *transceiver;
 	struct gpio_desc *transceiver_gpio;
@@ -963,6 +963,8 @@ static int mcp251x_can_enable(struct mcp251x_priv *priv, int enable)
 
 	ret = mcp251x_power_enable(priv->power, enable);
 	gpiod_set_value_cansleep(priv->reset_gpio, enable ^ 1);
+	if (!enable)
+		priv->power_lost = 1;
 	return ret;
 }
 
@@ -1044,14 +1046,15 @@ static void mcp251x_restart_work_handler(struct work_struct *ws)
 	struct net_device *net = priv->net;
 
 	mutex_lock(&priv->mcp_lock);
+	if (priv->power_lost) {
+		mcp251x_hw_reset(spi);
+		mcp251x_setup(net, spi);
+		mcp251x_gpio_restore(spi);
+		priv->power_lost = 0;
+	} else {
+		mcp251x_hw_wake(spi);
+	}
 	if (priv->after_suspend) {
-		if (priv->after_suspend & AFTER_SUSPEND_POWER) {
-			mcp251x_hw_reset(spi);
-			mcp251x_setup(net, spi);
-			mcp251x_gpio_restore(spi);
-		} else {
-			mcp251x_hw_wake(spi);
-		}
 		priv->force_quit = 0;
 		if (priv->after_suspend & AFTER_SUSPEND_RESTART) {
 			mcp251x_set_normal_mode(spi);
@@ -1250,12 +1253,13 @@ static int mcp251x_open(struct net_device *net)
 		goto out_close;
 	}
 
-	ret = mcp251x_hw_wake(spi);
+	ret = (priv->power_lost) ? mcp251x_hw_reset(spi) : mcp251x_hw_wake(spi);
 	if (ret)
 		goto out_free_irq;
 	ret = mcp251x_setup(net, spi);
 	if (ret)
 		goto out_free_irq;
+	priv->power_lost = 0;
 	ret = mcp251x_set_normal_mode(spi);
 	if (ret)
 		goto out_free_irq;
@@ -1396,6 +1400,7 @@ static int mcp251x_can_probe(struct spi_device *spi)
 	if (IS_ERR(gpio))
 		return PTR_ERR(gpio);
 	priv->reset_gpio = gpio;
+	priv->power_lost = 1;
 
 	ret = mcp251x_can_enable(priv, 1);
 	if (ret)
@@ -1507,8 +1512,7 @@ static int __maybe_unused mcp251x_can_suspend(struct device *dev)
 		priv->after_suspend = AFTER_SUSPEND_DOWN;
 	}
 
-	mcp251x_power_enable(priv->power, 0);
-	priv->after_suspend |= AFTER_SUSPEND_POWER;
+	mcp251x_can_enable(priv, 0);
 
 	return 0;
 }
@@ -1518,12 +1522,12 @@ static int __maybe_unused mcp251x_can_resume(struct device *dev)
 	struct spi_device *spi = to_spi_device(dev);
 	struct mcp251x_priv *priv = spi_get_drvdata(spi);
 
-	if (priv->after_suspend & AFTER_SUSPEND_POWER)
+	if (priv->power_lost)
 		mcp251x_can_enable(priv, 1);
 	if (priv->after_suspend & AFTER_SUSPEND_UP)
 		mcp251x_transceiver_enable(priv, 1);
 
-	if (priv->after_suspend & (AFTER_SUSPEND_POWER | AFTER_SUSPEND_UP))
+	if (priv->power_lost || (priv->after_suspend & AFTER_SUSPEND_UP))
 		queue_work(priv->wq, &priv->restart_work);
 	else
 		priv->after_suspend = 0;
