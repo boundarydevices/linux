@@ -27,6 +27,13 @@
 		stdout-path = "serial0:921600n8";
 	};
 
+	firmware {
+		optee: optee@4fd00000 {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
+	};
+
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -36,6 +43,13 @@
 			compatible = "shared-dma-pool";
 			reg = <0 0x50000000 0 0x2900000>;
 			no-map;
+		};
+
+		vpu_ram: vpu_ram@0x60000000 {
+			compatible = "shared-dma-pool";
+			reg = <0 0x60000000 0 0x04000000>;
+			no-map;
+			linux,cma-default;
 		};
 	};
 
@@ -55,7 +69,15 @@
 		};
 	};
 
-	ntc {
+	sound {
+		compatible = "mediatek,mt8183-mt6358-sound";
+		mediatek,platform = <&afe>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&aud_pins>;
+		status = "okay";
+	};
+
+	ntc@0 {
 		compatible = "murata,ncp03wf104";
 		pullup-uv = <1800000>;
 		pullup-ohm = <390000>;
@@ -78,6 +100,33 @@
 	pinctrl-0 = <&i2c_pins_0>;
 	status = "okay";
 	clock-frequency = <100000>;
+
+	tusb322i: tusb322i@47 {
+		compatible = "ti,tusb322i";
+		reg = <0x47>;
+		irq-gpios = <&pio 166 GPIO_ACTIVE_LOW>;
+		pinctrl-0 = <&tusb322i_pins_default>;
+		pinctrl-names = "default";
+		status = "okay";
+
+		usb_con: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+		};
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@1 {
+				reg = <1>;
+
+				tusb322i_ep: endpoint {
+					remote-endpoint = <&ssusb_ep>;
+				};
+			};
+		};
+	};
 };
 
 &i2c1 {
@@ -119,7 +168,29 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c6_pins>;
 	status = "okay";
-	clock-frequency = <100000>;
+	clock-frequency = <400000>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	it66121hdmitx: it66121hdmitx@4c {
+		compatible = "ite,it66121";
+		pinctrl-names = "default";
+		pinctrl-0 = <&ite_pins_default>;
+		vcn33-supply = <&mt6358_vcn33_wifi_reg>;
+		vcn18-supply = <&mt6358_vcn18_reg>;
+		vrf12-supply = <&mt6358_vrf12_reg>;
+		reset-gpios = <&pio 160 GPIO_ACTIVE_LOW>;
+		interrupt-parent = <&pio>;
+		interrupts = <4 IRQ_TYPE_LEVEL_LOW>;
+		reg = <0x4c>;
+		pclk-dual-edge;
+
+		port {
+			it66121_in: endpoint {
+				remote-endpoint = <&dpi_out>;
+			};
+		};
+	};
 };
 
 &mmc0 {
@@ -332,10 +403,161 @@
 			input-enable;
 		};
 	};
+
+	ite_pins_default: ite_pins_default {
+		pins_rst_ite {
+			pinmux = <PINMUX_GPIO160__FUNC_GPIO160>;
+			output-high;
+		};
+	};
+
+	tusb322i_pins_default: tusb322i_pins_default {
+		pins_irq {
+			pinmux = <PINMUX_GPIO166__FUNC_GPIO166>;
+			input-enable;
+		};
+	};
+
+	dpi_pin_func: dpi_pin_func {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO12__FUNC_I2S5_BCK>,
+				<PINMUX_GPIO46__FUNC_I2S5_LRCK>,
+				<PINMUX_GPIO47__FUNC_I2S5_DO>,
+				<PINMUX_GPIO13__FUNC_DBPI_D0>,
+				<PINMUX_GPIO14__FUNC_DBPI_D1>,
+				<PINMUX_GPIO15__FUNC_DBPI_D2>,
+				<PINMUX_GPIO16__FUNC_DBPI_D3>,
+				<PINMUX_GPIO17__FUNC_DBPI_D4>,
+				<PINMUX_GPIO18__FUNC_DBPI_D5>,
+				<PINMUX_GPIO19__FUNC_DBPI_D6>,
+				<PINMUX_GPIO20__FUNC_DBPI_D7>,
+				<PINMUX_GPIO21__FUNC_DBPI_D8>,
+				<PINMUX_GPIO22__FUNC_DBPI_D9>,
+				<PINMUX_GPIO23__FUNC_DBPI_D10>,
+				<PINMUX_GPIO24__FUNC_DBPI_D11>,
+				<PINMUX_GPIO25__FUNC_DBPI_HSYNC>,
+				<PINMUX_GPIO26__FUNC_DBPI_VSYNC>,
+				<PINMUX_GPIO27__FUNC_DBPI_DE>,
+				<PINMUX_GPIO28__FUNC_DBPI_CK>;
+		};
+	};
+
+	dpi_pin_gpio: dpi_pin_gpio {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO12__FUNC_GPIO12>,
+				<PINMUX_GPIO46__FUNC_GPIO46>,
+				<PINMUX_GPIO47__FUNC_GPIO47>,
+				<PINMUX_GPIO13__FUNC_GPIO13>,
+				<PINMUX_GPIO14__FUNC_GPIO14>,
+				<PINMUX_GPIO15__FUNC_GPIO15>,
+				<PINMUX_GPIO16__FUNC_GPIO16>,
+				<PINMUX_GPIO17__FUNC_GPIO17>,
+				<PINMUX_GPIO18__FUNC_GPIO18>,
+				<PINMUX_GPIO19__FUNC_GPIO19>,
+				<PINMUX_GPIO20__FUNC_GPIO20>,
+				<PINMUX_GPIO21__FUNC_GPIO21>,
+				<PINMUX_GPIO22__FUNC_GPIO22>,
+				<PINMUX_GPIO23__FUNC_GPIO23>,
+				<PINMUX_GPIO24__FUNC_GPIO24>,
+				<PINMUX_GPIO25__FUNC_GPIO25>,
+				<PINMUX_GPIO26__FUNC_GPIO26>,
+				<PINMUX_GPIO27__FUNC_GPIO27>,
+				<PINMUX_GPIO28__FUNC_GPIO28>;
+		};
+	};
+
+	usb_pins: usb_pins {
+		pins_usb {
+			pinmux = <PINMUX_GPIO42__FUNC_GPIO42>;
+			output-low;
+		};
+	};
+
+	vpu_jtag_disabled: vpu_jtag_disabled {
+		pins_jtag_trst {
+			pinmux = <PINMUX_GPIO116__FUNC_GPIO116>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tdo {
+			pinmux = <PINMUX_GPIO117__FUNC_GPIO117>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tdi {
+			pinmux = <PINMUX_GPIO118__FUNC_GPIO118>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tck {
+			pinmux = <PINMUX_GPIO119__FUNC_GPIO119>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tms {
+			pinmux = <PINMUX_GPIO120__FUNC_GPIO120>;
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	vpu_jtag_enabled: vpu_jtag_enabled {
+		pins_jtag_trst {
+			pinmux = <PINMUX_GPIO116__FUNC_IPU_JTAG_TRST>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tdo {
+			pinmux = <PINMUX_GPIO117__FUNC_IPU_JTAG_TDO>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tdi {
+			pinmux = <PINMUX_GPIO118__FUNC_IPU_JTAG_TDI>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tck {
+			pinmux = <PINMUX_GPIO119__FUNC_IPU_JTAG_TCK>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tms {
+			pinmux = <PINMUX_GPIO120__FUNC_IPU_JTAG_TMS>;
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	aud_pins: audiopins {
+		pins_bus {
+			pinmux = <PINMUX_GPIO136__FUNC_AUD_CLK_MOSI>,
+				<PINMUX_GPIO137__FUNC_AUD_SYNC_MOSI>,
+				<PINMUX_GPIO138__FUNC_AUD_DAT_MOSI0>,
+				<PINMUX_GPIO139__FUNC_AUD_DAT_MOSI1>,
+				<PINMUX_GPIO140__FUNC_AUD_CLK_MISO>,
+				<PINMUX_GPIO141__FUNC_AUD_SYNC_MISO>,
+				<PINMUX_GPIO142__FUNC_AUD_DAT_MISO0>,
+				<PINMUX_GPIO143__FUNC_AUD_DAT_MISO1>;
+		};
+	};
+
 };
 
 &mfg {
 	domain-supply = <&mt6358_vgpu_reg>;
+};
+
+&cci {
+	proc-supply = <&mt6358_vproc12_reg>;
 };
 
 &cpu0 {
@@ -378,6 +600,55 @@
 	status = "okay";
 };
 
+&mt6358codec {
+	Avdd-supply = <&mt6358_vaud28_reg>;
+};
+
+&ssusb {
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb_pins>;
+	mediatek,force-vbus;
+	usb-role-switch;
+	maximum-speed = "high-speed";
+	dr_mode = "otg";
+	vusb33-supply = <&mt6358_vusb_reg>;
+	status = "okay";
+
+	port {
+		ssusb_ep: endpoint {
+			remote-endpoint = <&tusb322i_ep>;
+		};
+	};
+};
+
+&usb_host {
+	vusb33-supply = <&mt6358_vusb_reg>;
+	status = "okay";
+};
+
+&dpi0 {
+	dpi_dual_edge;
+	dpi_pin_mode_swap;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&dpi_pin_func>;
+	pinctrl-1 = <&dpi_pin_gpio>;
+	status = "okay";
+
+	port {
+		dpi_out: endpoint {
+			remote-endpoint = <&it66121_in>;
+		};
+	};
+};
+
 &dsi0 {
 	status = "disabled";
+};
+
+&vpu0 {
+	memory-region = <&vpu_ram>;
+	pinctrl-names = "default", "jtag";
+	pinctrl-0 = <&vpu_jtag_disabled>;
+	pinctrl-1 = <&vpu_jtag_enabled>;
+	status = "okay";
 };
