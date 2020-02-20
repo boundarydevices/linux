@@ -822,13 +822,14 @@ static irqreturn_t mcp251x_can_ist(int irq, void *dev_id)
 	while (!priv->force_quit) {
 		enum can_state new_state;
 		u8 intf, eflag;
-		u8 clear_intf = 0;
+		u8 clear_intf;
 		int can_id = 0, data1 = 0;
 
 		mcp251x_read_2regs(spi, CANINTF, &intf, &eflag);
 
 		/* mask out flags we don't care about */
 		intf &= CANINTF_RX | CANINTF_TX | CANINTF_ERR;
+		clear_intf = intf;
 
 		/* receive buffer 0 */
 		if (intf & CANINTF_RX0IF) {
@@ -839,19 +840,18 @@ static irqreturn_t mcp251x_can_ist(int irq, void *dev_id)
 			if (mcp251x_is_2510(spi))
 				mcp251x_write_bits(spi, CANINTF,
 						   CANINTF_RX0IF, 0x00);
+			clear_intf &= ~CANINTF_RX0IF;
 		}
 
 		/* receive buffer 1 */
 		if (intf & CANINTF_RX1IF) {
 			mcp251x_hw_rx(spi, 1);
 			/* The MCP2515/25625 does this automatically. */
-			if (mcp251x_is_2510(spi))
-				clear_intf |= CANINTF_RX1IF;
+			if (!mcp251x_is_2510(spi))
+				clear_intf &= ~CANINTF_RX1IF;
 		}
 
 		/* any error or tx interrupt we need to clear? */
-		if (intf & (CANINTF_ERR | CANINTF_TX))
-			clear_intf |= intf & (CANINTF_ERR | CANINTF_TX);
 		if (clear_intf)
 			mcp251x_write_bits(spi, CANINTF, clear_intf, 0x00);
 
