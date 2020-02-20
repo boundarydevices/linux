@@ -2510,6 +2510,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 			}
 			return ret;
 		}
+		pci_imx_set_msi_en(&imx6_pcie->pci->pp);
 
 		if (IS_ENABLED(CONFIG_RC_MODE_IN_EP_RC_SYS)
 				&& (imx6_pcie->hard_wired == 0))
