@@ -25,7 +25,7 @@
 #include <linux/delay.h>
 #include <linux/extcon.h>
 #include <linux/extcon-provider.h>
-#include <soc/imx8/sc/sci.h>
+#include <linux/firmware/imx/sci.h>
 #include <linux/slab.h>
 #include <linux/of_platform.h>
 #include <linux/of.h>
@@ -340,10 +340,9 @@ static int vehicle_rpmsg_cb(struct rpmsg_device *rpdev,
 static void vehicle_init_handler(struct work_struct *work)
 {
 	struct vehicle_rpmsg_data msg;
-	sc_ipc_t ipc_handle;
-	sc_rm_pt_t os_part;
-	sc_err_t err;
-	uint32_t mu_id;
+	struct imx_sc_ipc *ipc_handle;
+	u8 os_part;
+	int err;
 
 	msg.header.cate = IMX_RPMSG_VEHICLE;
 	msg.header.major = IMX_RMPSG_MAJOR;
@@ -353,19 +352,10 @@ static void vehicle_init_handler(struct work_struct *work)
 	msg.client = 0;
 	msg.reserved1 = 0;
 
-	err = sc_ipc_getMuID(&mu_id);
-	if (err != SC_ERR_NONE) {
-		pr_err("Cannot obtain MU ID\n");
-		return;
-	}
+	imx_scu_get_handle(&ipc_handle);
 
-	err = sc_ipc_open(&ipc_handle, mu_id);
-	if (err != SC_ERR_NONE) {
-		pr_err("sc_ipc_open failed!\n");
-		return;
-	}
-	err = sc_rm_get_partition(ipc_handle, &os_part);
-	if (err != SC_ERR_NONE) {
+	err = imx_sc_rm_get_partition(ipc_handle, &os_part);
+	if (err != 0) {
 		pr_err("sc_rm_get_partition failed!\n");
 		msg.partition_id = 0xff;
 	} else {
