@@ -47,6 +47,18 @@ struct caam_jrentry_info {
 	u32 desc_size;	/* Stored size for postprocessing, header derived */
 };
 
+#ifdef CONFIG_PM_SLEEP
+struct caam_jr_state {
+	dma_addr_t inpbusaddr;
+	dma_addr_t outbusaddr;
+};
+#endif
+
+struct caam_jr_dequeue_params {
+	struct device *dev;
+	int enable_itr;
+};
+
 /* Private sub-storage for a single JobR */
 struct caam_drv_private_jr {
 	struct list_head	list_node;	/* Job Ring device list */
@@ -54,6 +66,7 @@ struct caam_drv_private_jr {
 	int ridx;
 	struct caam_job_ring __iomem *rregs;	/* JobR's register space */
 	struct tasklet_struct irqtask;
+	struct caam_jr_dequeue_params tasklet_params;
 	int irq;			/* One per queue */
 	bool hwrng;
 
@@ -71,7 +84,20 @@ struct caam_drv_private_jr {
 	int tail;			/* entinfo (s/w ring) tail index */
 	void *outring;			/* Base of output ring, DMA-safe */
 	struct crypto_engine *engine;
+
+#ifdef CONFIG_PM_SLEEP
+	struct caam_jr_state state;	/* State of the JR during PM */
+#endif
 };
+
+#ifdef CONFIG_PM_SLEEP
+struct caam_ctl_state {
+	struct masterid deco_mid[16];
+	struct masterid jr_mid[4];
+	u32 mcr;
+	u32 scfgr;
+};
+#endif
 
 /*
  * Driver-private storage for a single CAAM block instance
@@ -119,6 +145,11 @@ struct caam_drv_private {
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *ctl; /* controller dir */
 	struct debugfs_blob_wrapper ctl_kek_wrap, ctl_tkek_wrap, ctl_tdsk_wrap;
+#endif
+
+#ifdef CONFIG_PM_SLEEP
+	int caam_off_during_pm;		/* If the CAAM is reset after suspend */
+	struct caam_ctl_state state;	/* State of the CTL during PM */
 #endif
 };
 
