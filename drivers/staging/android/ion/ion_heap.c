@@ -14,6 +14,7 @@
 #include <uapi/linux/sched/types.h>
 #include <linux/scatterlist.h>
 #include <linux/vmalloc.h>
+#include <asm/cacheflush.h>
 
 #include "ion_private.h"
 
@@ -196,6 +197,8 @@ int ion_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 				      vma->vm_page_prot);
 		if (ret)
 			return ret;
+		if (buffer->flags & ION_FLAG_CACHED)
+			__flush_cache_user_range(vma->vm_start, vma->vm_end);
 		addr += len;
 		if (addr >= vma->vm_end)
 			return 0;
