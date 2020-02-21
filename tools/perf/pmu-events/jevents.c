@@ -258,6 +258,7 @@ static struct map {
 	{ "SBO", "uncore_sbox" },
 	{ "iMPH-U", "uncore_arb" },
 	{ "CPU-M-CF", "cpum_cf" },
+	{ "imx8_ddr", "imx8_ddr"},
 	{ "CPU-M-SF", "cpum_sf" },
 	{ "UPI LL", "uncore_upi" },
 	{ "hisi_sccl,ddrc", "hisi_sccl,ddrc" },
