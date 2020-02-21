@@ -104,6 +104,9 @@
 };
 
 &ecspi2 {
+	assigned-clocks = <&clk IMX8MMN(CLK_ECSPI2)>;
+	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_40M)>;
+	assigned-clock-rates = <40000000>;
 	can0: can@0 {
 		clocks = <&clk16m>;
 		compatible = "microchip,mcp2515";
