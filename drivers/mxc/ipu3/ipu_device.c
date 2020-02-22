@@ -82,12 +82,12 @@ do {									\
 } while (0)
 
 #define DECLARE_PERF_VAR						\
-	struct timespec ts_queue;					\
-	struct timespec ts_dotask;					\
-	struct timespec ts_waitirq;					\
-	struct timespec ts_sche;					\
-	struct timespec ts_rel;						\
-	struct timespec ts_frame
+	struct timespec64 ts_queue;					\
+	struct timespec64 ts_dotask;					\
+	struct timespec64 ts_waitirq;					\
+	struct timespec64 ts_sche;					\
+	struct timespec64 ts_rel;						\
+	struct timespec64 ts_frame
 
 #define PRINT_TASK_STATISTICS						\
 do {									\
@@ -321,12 +321,12 @@ struct ipu_task_entry {
 	} vdoa_dma;
 
 #ifdef DBG_IPU_PERF
-	struct timespec ts_queue;
-	struct timespec ts_dotask;
-	struct timespec ts_waitirq;
-	struct timespec ts_inirq;
-	struct timespec ts_wakeup;
-	struct timespec ts_rel;
+	struct timespec64 ts_queue;
+	struct timespec64 ts_dotask;
+	struct timespec64 ts_waitirq;
+	struct timespec64 ts_inirq;
+	struct timespec64 ts_wakeup;
+	struct timespec64 ts_rel;
 #endif
 };
 
@@ -368,7 +368,7 @@ static struct device *ipu_dev;
 static int debug;
 module_param(debug, int, 0600);
 #ifdef DBG_IPU_PERF
-static struct timespec ts_frame_max;
+static struct timespec64 ts_frame_max;
 static u32 ts_frame_avg;
 static atomic_t frame_cnt;
 #endif
