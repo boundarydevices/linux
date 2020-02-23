@@ -8,7 +8,7 @@
 #include "imx8mp-evk.dts"
 
 / {
-	sound-aud2htx {
+	sound-hdmi {
 		status = "okay";
 	};
 
@@ -47,11 +47,13 @@
 };
 
 &hdmi {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hdmi>;
 	status = "okay";
 };
 
 &hdmiphy {
+	status = "okay";
+};
+
+&aud2htx {
 	status = "okay";
 };

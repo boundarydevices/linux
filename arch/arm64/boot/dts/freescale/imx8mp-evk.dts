@@ -173,9 +173,19 @@
 		};
 	};
 
-	tcm@00800000 {
-		compatible = "fsl,tcm";
-		reg = <0x0 0x00800000 0 0x1000>;
+	sound-hdmi {
+		compatible = "fsl,imx-audio-cdnhdmi";
+		model = "audio-hdmi";
+		audio-cpu = <&aud2htx>;
+		hdmi-out;
+		constraint-rate = <44100>,
+				<88200>,
+				<176400>,
+				<32000>,
+				<48000>,
+				<96000>,
+				<192000>;
+		status = "disabled";
 	};
 
 	sound-wm8960 {
@@ -209,6 +219,31 @@
 		compatible = "fsl,imx-audio-micfil";
 		model = "imx-audio-micfil";
 		cpu-dai = <&micfil>;
+	};
+
+	sound-earc {
+		compatible = "fsl,imx-audio-xcvr";
+		model = "imx-audio-earc";
+		cpu-dai = <&earc>;
+	};
+
+	lvds_backlight: lvds_backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm2 0 100000>;
+		status = "okay";
+
+		brightness-levels = < 0  1  2  3  4  5  6  7  8  9
+				     10 11 12 13 14 15 16 17 18 19
+				     20 21 22 23 24 25 26 27 28 29
+				     30 31 32 33 34 35 36 37 38 39
+				     40 41 42 43 44 45 46 47 48 49
+				     50 51 52 53 54 55 56 57 58 59
+				     60 61 62 63 64 65 66 67 68 69
+				     70 71 72 73 74 75 76 77 78 79
+				     80 81 82 83 84 85 86 87 88 89
+				     90 91 92 93 94 95 96 97 98 99
+				    100>;
+		default-brightness-level = <80>;
 	};
 };
 
@@ -462,6 +497,7 @@
 			compatible = "usb-c-connector";
 			label = "USB-C";
 			power-role = "dual";
+			data-role = "dual";
 			try-power-role = "sink";
 			source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
 			sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)
@@ -605,6 +641,28 @@
 	status = "okay";
 };
 
+&pcie{
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie>;
+	disable-gpio = <&gpio2 6 GPIO_ACTIVE_LOW>;
+	reset-gpio = <&gpio2 7 GPIO_ACTIVE_LOW>;
+	ext_osc = <0>;
+	clocks = <&clk IMX8MP_CLK_HSIO_AXI_DIV>,
+		 <&clk IMX8MP_CLK_PCIE_AUX>,
+		 <&clk IMX8MP_CLK_PCIE_PHY>,
+		 <&clk IMX8MP_CLK_PCIE_ROOT>;
+	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
+	assigned-clocks = <&clk IMX8MP_CLK_HSIO_AXI_SRC>,
+			  <&clk IMX8MP_CLK_PCIE_AUX>;
+	assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>,
+				 <&clk IMX8MP_SYS_PLL2_50M>;
+	status = "okay";
+};
+
+&pcie_phy{
+	status = "okay";
+};
+
 &sai3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai3>;
@@ -616,6 +674,17 @@
 		 <&clk IMX8MP_CLK_DUMMY>;
 	clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 	fsl,sai-mclk-direction-output;
+	status = "okay";
+};
+
+&earc {
+	/**
+	 * Bit 0: TX enabled
+	 * Bit 1: RX enabled
+	 * Bits 3..2: 0=SPDIF, 1=ARC, 2=EARC, 3=RESERVED
+	 */
+	fsl,xcvr-mode = <0xb>; /* EARC,  RX + TX */
+	#sound-dai-cells = <0>;
 	status = "okay";
 };
 
@@ -724,6 +793,16 @@
 
 &iomuxc {
 	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hog>;
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_HDMI_DDC_SCL__HDMIMIX_EARC_SCL	0x400001c3
+			MX8MP_IOMUXC_HDMI_DDC_SDA__HDMIMIX_EARC_SDA	0x400001c3
+			MX8MP_IOMUXC_HDMI_HPD__HDMIMIX_EARC_DC_HPD	0x40000019
+			MX8MP_IOMUXC_HDMI_CEC__HDMIMIX_EARC_CEC		0x40000019
+		>;
+	};
 
 	pinctrl_pwm1: pwm1grp {
 		fsl,pins = <
@@ -867,6 +946,14 @@
 		>;
 	};
 
+	pinctrl_pcie: pciegrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_I2C4_SCL__HSIOMIX_PCIE_CLKREQ_B	0x61 /* open drain, pull up */
+			MX8MP_IOMUXC_SD1_DATA4__GPIO2_IO06		0x41
+			MX8MP_IOMUXC_SD1_DATA5__GPIO2_IO07		0x41
+		>;
+	};
+
 	pinctrl_pmic: pmicirq {
 		fsl,pins = <
 			MX8MP_IOMUXC_GPIO1_IO03__GPIO1_IO03	0x41
@@ -904,6 +991,12 @@
 			MX8MP_IOMUXC_SAI3_MCLK__AUDIOMIX_SAI3_MCLK	0xd6
 			MX8MP_IOMUXC_SAI3_RXFS__GPIO4_IO28		0xd6
 			MX8MP_IOMUXC_SAI3_RXC__GPIO4_IO29		0xd6
+		>;
+	};
+
+	pinctrl_i2c2_synaptics_dsx_io: synaptics_dsx_iogrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO09__GPIO1_IO09		0x16
 		>;
 	};
 
@@ -1080,14 +1173,6 @@
 			MX8MP_IOMUXC_GPIO1_IO15__CCMSRCGPCMIX_CLKO2	0x59
 		>;
 	};
-
-	pinctrl_hdmi: hdmigrp {
-		fsl,pins = <
-			MX8MP_IOMUXC_HDMI_DDC_SCL__HDMIMIX_EARC_SCL 0x400001c3
-			MX8MP_IOMUXC_HDMI_DDC_SDA__HDMIMIX_EARC_SDA 0x400001c3
-			MX8MP_IOMUXC_HDMI_HPD__HDMIMIX_EARC_DC_HPD  0x40000019
-		>;
-	};
 };
 
 &vpu_g1 {
@@ -1170,4 +1255,8 @@
 	cap_device {
 		status = "okay";
 	};
+};
+
+&dsp {
+	status = "okay";
 };

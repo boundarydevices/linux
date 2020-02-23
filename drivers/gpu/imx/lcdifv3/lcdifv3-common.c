@@ -63,6 +63,13 @@ static struct lcdifv3_soc_pdata imx8mp_lcdif1_pdata = {
 	.hdmimix     = false,
 };
 
+static struct lcdifv3_soc_pdata imx8mp_lcdif2_pdata = {
+	.hsync_invert = false,
+	.vsync_invert = false,
+	.de_invert    = true,
+	.hdmimix      = false,
+};
+
 static struct lcdifv3_soc_pdata imx8mp_lcdif3_pdata = {
 	.hsync_invert = false,
 	.vsync_invert = false,
@@ -71,6 +78,7 @@ static struct lcdifv3_soc_pdata imx8mp_lcdif3_pdata = {
 };
 static const struct of_device_id imx_lcdifv3_dt_ids[] = {
 	{ .compatible = "fsl,imx8mp-lcdif1", .data = &imx8mp_lcdif1_pdata, },
+	{ .compatible = "fsl,imx8mp-lcdif2", .data = &imx8mp_lcdif2_pdata, },
 	{ .compatible = "fsl,imx8mp-lcdif3", .data = &imx8mp_lcdif3_pdata,},
 	{ /* sentinel */ }
 };
@@ -338,8 +346,8 @@ void lcdifv3_set_fb_hcrop(struct lcdifv3_soc *lcdifv3, u32 src_w,
 	 *    be less than AXI bus width.
 	 * 2. P_SIZE should never be less than T_SIZE.
 	 */
-	ctrldescl0_3 |= CTRLDESCL0_3_P_SIZE(1);
-	ctrldescl0_3 |= CTRLDESCL0_3_T_SIZE(1);
+	ctrldescl0_3 |= CTRLDESCL0_3_P_SIZE(2);
+	ctrldescl0_3 |= CTRLDESCL0_3_T_SIZE(2);
 
 	/* config pitch */
 	ctrldescl0_3 |= CTRLDESCL0_3_PITCH(pitch);
@@ -516,9 +524,12 @@ static void platform_device_unregister_children(struct platform_device *pdev)
 	device_for_each_child(&pdev->dev, NULL, platform_remove_device_fn);
 }
 
+static DEFINE_MUTEX(lcdifv3_client_id_mutex);
+static int lcdifv3_client_id;
+
 static int lcdifv3_add_client_devices(struct lcdifv3_soc *lcdifv3)
 {
-	int ret = 0, i;
+	int ret = 0, i, id;
 	struct device *dev = lcdifv3->dev;
 	struct platform_device *pdev = NULL;
 	struct device_node *of_node;
@@ -532,7 +543,11 @@ static int lcdifv3_add_client_devices(struct lcdifv3_soc *lcdifv3)
 		}
 		of_node_put(of_node);
 
-		pdev = platform_device_alloc(client_reg[i].name, i);
+		mutex_lock(&lcdifv3_client_id_mutex);
+		id = lcdifv3_client_id++;
+		mutex_unlock(&lcdifv3_client_id_mutex);
+
+		pdev = platform_device_alloc(client_reg[i].name, id);
 		if (!pdev) {
 			dev_err(dev, "Can't allocate port pdev\n");
 			ret = -ENOMEM;

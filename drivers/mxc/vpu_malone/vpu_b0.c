@@ -83,7 +83,6 @@ static int find_first_available_instance(struct vpu_dev *dev);
 static int remove_instance_file(struct vpu_ctx *ctx);
 static void fill_stream_buffer_info(struct vpu_ctx *ctx);
 static void set_pic_end_flag(struct vpu_ctx *ctx);
-static void clear_pic_end_flag(struct vpu_ctx *ctx);
 static void send_skip_event(struct vpu_ctx* ctx);
 static void reset_mbi_dcp_count(struct vpu_ctx *ctx);
 static bool verify_frame_buffer_size(struct queue_data *q_data,
@@ -94,7 +93,7 @@ static int send_stop_cmd(struct vpu_ctx *ctx);
 static int vpu_dec_cmd_reset(struct vpu_ctx *ctx);
 static void vpu_dec_event_decode_error(struct vpu_ctx *ctx);
 static void vpu_calculate_performance(struct vpu_ctx *ctx, u_int32 uEvent, const char *str);
-static void vpu_notify_msg_event(struct vpu_dev *dev);
+static void vpu_dec_cancel_work(struct vpu_dev *vpudev);
 
 #define CHECK_BIT(var, pos) (((var) >> (pos)) & 1)
 
@@ -373,6 +372,7 @@ static void show_beginning_of_data(unsigned long index,
 	u32 show_count;
 	char temp[1028];
 	int i;
+	int ret;
 
 	if (!precheck_show_bytes)
 		return;
@@ -386,15 +386,18 @@ static void show_beginning_of_data(unsigned long index,
 		return;
 	show_count = min_t(u32, precheck_show_bytes, length);
 	for (i = 0; i < show_count; i++) {
-		bytes += scnprintf(temp + bytes,
+		ret = scnprintf(temp + bytes,
 				sizeof(temp) - bytes,
 				"%s0x%02x",
 				i ? " " : "",
 				pdata[i]);
+		if (ret == 0)
+			break;
+		bytes += ret;
 		if (bytes >= sizeof(temp))
 			break;
 	}
-	vpu_dbg(LVL_WARN, "[%12ld]%s\n", index, temp);
+	vpu_dbg(LVL_WARN, "[%12ld][%12d/%12d]%s\n", index, i, length, temp);
 }
 
 static void precheck_vb_data(struct vpu_ctx *ctx, struct vb2_buffer *vb)
@@ -1276,58 +1279,6 @@ static u_int32 get_mbi_size(struct queue_data *queue)
 	return ALIGN(mbi_size, uAlign);
 }
 
-static int alloc_mbi_buffer(struct vpu_ctx *ctx, u32 index)
-{
-	struct dma_buffer *mbi_buffer = NULL;
-	u_int32 ret = 0;
-
-	if (index >= ARRAY_SIZE(ctx->mbi_buffer)) {
-		vpu_err("request mbi buffer number(%d) out of range\n", index);
-		return -EINVAL;
-	}
-	if (!ctx->mbi_size) {
-		vpu_err("mbi buffer size is not initialized\n");
-		return -EINVAL;
-	}
-
-	mbi_buffer = &ctx->mbi_buffer[index];
-	if (mbi_buffer->dma_virt && mbi_buffer->dma_size >= ctx->mbi_size)
-		return 0;
-
-	free_dma_buffer(ctx, mbi_buffer);
-	mbi_buffer->dma_size = ctx->mbi_size;
-	ret = alloc_dma_buffer(ctx, mbi_buffer);
-	if (ret) {
-		vpu_err("error: alloc mbi buffer[%d] fail\n", index);
-		return ret;
-	}
-
-	return 0;
-}
-
-static int alloc_dcp_buffer(struct vpu_ctx *ctx, uint32_t index)
-{
-	struct dma_buffer *dcp_buffer = NULL;
-	int ret = 0;
-
-	if (index >= ARRAY_SIZE(ctx->dcp_buffer))
-		return -EINVAL;
-
-	dcp_buffer = &ctx->dcp_buffer[index];
-	if (dcp_buffer->dma_virt && dcp_buffer->dma_size >= DCP_SIZE)
-		return 0;
-
-	free_dma_buffer(ctx, dcp_buffer);
-	dcp_buffer->dma_size = DCP_SIZE;
-	ret = alloc_dma_buffer(ctx, dcp_buffer);
-	if (ret) {
-		vpu_err("error: alloc dcp buffer[%d] fail\n", index);
-		return ret;
-	}
-
-	return 0;
-}
-
 static int free_mbi_buffers(struct vpu_ctx *ctx)
 {
 	u_int32 i;
@@ -1542,7 +1493,6 @@ static int v4l2_ioctl_qbuf(struct file *file,
 		return -EINVAL;
 	}
 
-	vpu_notify_msg_event(ctx->dev);
 	ret = vpu_dec_queue_qbuf(q_data, buf);
 	if (ret) {
 		vpu_err("error: %s() return ret=%d\n", __func__, ret);
@@ -1636,7 +1586,6 @@ static int v4l2_ioctl_dqbuf(struct file *file,
 	else
 		return -EINVAL;
 
-	vpu_notify_msg_event(ctx->dev);
 	ret = vpu_dec_queue_dqbuf(q_data, buf, file->f_flags & O_NONBLOCK);
 
 	if (ret) {
@@ -1737,9 +1686,9 @@ static int v4l2_ioctl_decoder_cmd(struct file *file,
 		break;
 	case IMX_V4L2_DEC_CMD_RESET:
 		v4l2_update_stream_addr(ctx, 0);
-		mutex_lock(&ctx->dev->fw_flow_mutex);
+		mutex_lock(&ctx->fw_flow_mutex);
 		ret = vpu_dec_cmd_reset(ctx);
-		mutex_unlock(&ctx->dev->fw_flow_mutex);
+		mutex_unlock(&ctx->fw_flow_mutex);
 		break;
 	default:
 		return -EINVAL;
@@ -1841,9 +1790,9 @@ static int v4l2_ioctl_streamoff(struct file *file,
 	up(&q_data->drv_q_lock);
 
 	if (is_need_abort(ctx, i)) {
-		mutex_lock(&ctx->dev->fw_flow_mutex);
+		mutex_lock(&ctx->fw_flow_mutex);
 		send_abort_cmd(ctx);
-		mutex_unlock(&ctx->dev->fw_flow_mutex);
+		mutex_unlock(&ctx->fw_flow_mutex);
 	}
 
 	if (V4L2_TYPE_IS_OUTPUT(i))
@@ -1883,6 +1832,10 @@ static int vpu_dec_v4l2_ioctl_g_parm(struct file *file, void *fh,
 	parm->parm.capture.timeperframe.denominator = denominator;
 
 	mutex_unlock(&ctx->instance_mutex);
+	vpu_dbg(LVL_BIT_FLOW, "%s g_parm : %d / %d\n",
+			V4L2_TYPE_IS_OUTPUT(parm->type) ? "OUTPUT" : "CAPTURE",
+			parm->parm.capture.timeperframe.numerator,
+			parm->parm.capture.timeperframe.denominator);
 
 	return 0;
 }
@@ -2417,8 +2370,8 @@ static void update_wptr(struct vpu_ctx *ctx,
 	length = (wptr + size - pStrBufDesc->wptr) % size;
 	ctx->total_write_bytes += length;
 
-	vpu_dbg(LVL_BIT_WPTR, "wptr : 0x%08x -> 0x%08x\n",
-			pStrBufDesc->wptr, wptr);
+	vpu_dbg(LVL_BIT_WPTR, "ctx[%d] wptr : 0x%08x -> 0x%08x\n",
+			ctx->str_index, pStrBufDesc->wptr, wptr);
 	pStrBufDesc->wptr = wptr;
 }
 
@@ -3015,7 +2968,6 @@ static u32 got_used_space(u32 wptr, u32 rptr, u32 start, u32 end)
 	return stream_size;
 }
 
-
 int copy_buffer_to_stream(struct vpu_ctx *ctx, void *buffer, uint32_t length)
 {
 	pSTREAM_BUFFER_DESCRIPTOR_TYPE pStrBufDesc;
@@ -3084,7 +3036,6 @@ static int send_abort_cmd(struct vpu_ctx *ctx)
 		return 0;
 
 	ctx->wait_rst_done = true;
-	vpu_dbg(LVL_INFO, "%s(): send VID_API_CMD_ABORT\n", __func__);
 	vpu_dbg(LVL_BIT_FLOW, "ctx[%d] send ABORT CMD\n", ctx->str_index);
 	size = add_scode(ctx, 0, BUFABORT_PADDING_TYPE, false);
 	record_log_info(ctx, LOG_PADDING, 0, 0);
@@ -3094,8 +3045,8 @@ static int send_abort_cmd(struct vpu_ctx *ctx)
 	v4l2_vpu_send_cmd(ctx, ctx->str_index, VID_API_CMD_ABORT, 1, &size);
 	if (!wait_for_completion_timeout(&ctx->completion, msecs_to_jiffies(1000))) {
 		ctx->hang_status = true;
-		vpu_err("the path id:%d firmware timeout after send VID_API_CMD_ABORT\n",
-					ctx->str_index);
+		vpu_err("the path id: %d firmware timeout after send %s\n",
+			ctx->str_index, get_cmd_str(VID_API_CMD_ABORT));
 		vpu_dec_clear_pending_cmd(ctx);
 		return -EBUSY;
 	}
@@ -3116,9 +3067,11 @@ static int send_stop_cmd(struct vpu_ctx *ctx)
 	reinit_completion(&ctx->stop_cmp);
 	v4l2_vpu_send_cmd(ctx, ctx->str_index, VID_API_CMD_STOP, 0, NULL);
 	if (!wait_for_completion_timeout(&ctx->stop_cmp, msecs_to_jiffies(1000))) {
+
 		vpu_dec_clear_pending_cmd(ctx);
 		ctx->hang_status = true;
-		vpu_err("the path id:%d firmware hang after send VID_API_CMD_STOP\n", ctx->str_index);
+		vpu_err("the path id: %d firmware timeout after send %s\n",
+			ctx->str_index, get_cmd_str(VID_API_CMD_STOP));
 		return -EBUSY;
 	}
 
@@ -3326,20 +3279,6 @@ static void set_pic_end_flag(struct vpu_ctx *ctx)
 	buffer_info->stream_pic_end_flag = 0x1;
 }
 
-static void clear_pic_end_flag(struct vpu_ctx *ctx)
-{
-	pDEC_RPC_HOST_IFACE pSharedInterface;
-	pBUFFER_INFO_TYPE buffer_info;
-
-	if (!ctx)
-		return;
-
-	pSharedInterface = ctx->dev->shared_mem.pSharedInterface;
-	buffer_info = &pSharedInterface->StreamBuffInfo[ctx->str_index];
-
-	buffer_info->stream_pic_end_flag = 0x0;
-}
-
 static bool vpu_dec_stream_is_ready(struct vpu_ctx *ctx)
 {
 	pSTREAM_BUFFER_DESCRIPTOR_TYPE pStrBufDesc;
@@ -3349,6 +3288,7 @@ static bool vpu_dec_stream_is_ready(struct vpu_ctx *ctx)
 
 	if (ctx->fifo_low)
 		return true;
+
 	if (ctx->tsm_sync_flag)
 		return true;
 
@@ -3561,12 +3501,14 @@ static void report_buffer_done(struct vpu_ctx *ctx, void *frame_info)
 		vpu_err("error: find buffer_id(%d) and firmware return id(%d) doesn't match\n",
 				buffer_id, fs_id);
 	}
+
 	ctx->frm_dis_delay--;
 	vpu_dbg(LVL_INFO, "frame total: %d; depth: %d; delay: [dec, dis] = [%d, %d]\n", ctx->frm_total_num,
 		vpu_frm_depth, ctx->frm_dec_delay, ctx->frm_dis_delay);
 
 	down(&This->drv_q_lock);
 	p_data_req = &This->vb2_reqs[buffer_id];
+
 	if (p_data_req->status != FRAME_DECODED)
 		vpu_err("error: buffer(%d) need to set FRAME_READY, but previous state %s is not FRAME_DECODED\n",
 				buffer_id, bufstat[p_data_req->status]);
@@ -3631,9 +3573,13 @@ static void send_source_change_event(struct vpu_ctx *ctx)
 static void reset_mbi_dcp_count(struct vpu_ctx *ctx)
 {
 	free_mbi_buffers(ctx);
+	ctx->mbi_index = 0;
 	ctx->mbi_count = 0;
+	ctx->req_mbi_count = 0;
 	free_dcp_buffers(ctx);
+	ctx->dcp_index = 0;
 	ctx->dcp_count = 0;
+	ctx->req_dcp_count = 0;
 }
 
 static void reset_frame_buffer(struct vpu_ctx *ctx)
@@ -3859,6 +3805,65 @@ static bool alloc_frame_buffer(struct vpu_ctx *ctx,
 	return true;
 }
 
+static bool alloc_mbi_to_firmware(struct vpu_ctx *ctx,
+				struct queue_data *queue)
+{
+	struct dma_buffer *buffer;
+	u_int32 local_cmddata[10];
+	u32 index;
+
+	if (!ctx || !queue || !ctx->mbi_size)
+		return false;
+
+	buffer = &ctx->mbi_buffer[ctx->mbi_index];
+	if (!buffer->dma_virt || buffer->dma_size < ctx->mbi_size)
+		return false;
+
+	index = ctx->str_index;
+	local_cmddata[0] = ctx->mbi_index | (ctx->seqinfo.uActiveSeqTag<<24);
+	local_cmddata[1] = ctx->mbi_buffer[ctx->mbi_index].dma_phy;
+	local_cmddata[2] = ctx->mbi_buffer[ctx->mbi_index].dma_size;
+	local_cmddata[3] = 0;
+	local_cmddata[4] = 0;
+	local_cmddata[5] = 0;
+	local_cmddata[6] = MEDIAIP_MBI_REQ;
+	v4l2_vpu_send_cmd(ctx, index, VID_API_CMD_FS_ALLOC, 7, local_cmddata);
+	vpu_dbg(LVL_INFO, "VID_API_CMD_FS_ALLOC, ctx[%d] eType=%d, index=%d\n",
+		ctx->str_index, MEDIAIP_MBI_REQ, ctx->mbi_index);
+	ctx->mbi_index++;
+
+	return true;
+}
+
+static bool alloc_dcp_to_firmware(struct vpu_ctx *ctx,
+				struct queue_data *queue)
+{
+	struct dma_buffer *buffer;
+	u_int32 local_cmddata[10];
+	u32 index;
+
+	if (!ctx || !queue)
+		return false;
+
+	buffer = &ctx->dcp_buffer[ctx->dcp_index];
+	if (!buffer->dma_virt || buffer->dma_size < DCP_SIZE)
+		return false;
+
+	index = ctx->str_index;
+	local_cmddata[0] = ctx->dcp_index | (ctx->seqinfo.uActiveSeqTag<<24);
+	local_cmddata[1] = ctx->dcp_buffer[ctx->dcp_index].dma_phy;
+	local_cmddata[2] = DCP_SIZE;
+	local_cmddata[3] = 0;
+	local_cmddata[4] = 0;
+	local_cmddata[5] = 0;
+	local_cmddata[6] = MEDIAIP_DCP_REQ;
+	v4l2_vpu_send_cmd(ctx, index, VID_API_CMD_FS_ALLOC, 7, local_cmddata);
+	vpu_dbg(LVL_INFO, "VID_API_CMD_FS_ALLOC, ctx[%d] eType=%d, index=%d\n",
+		ctx->str_index, MEDIAIP_DCP_REQ, ctx->dcp_index);
+	ctx->dcp_index++;
+	return true;
+}
+
 static void check_wait_res_changed(struct vpu_ctx *ctx)
 {
 	struct queue_data *q_data = &ctx->q_data[V4L2_DST];
@@ -3907,6 +3912,18 @@ static void respond_req_frame(struct vpu_ctx *ctx,
 		if (!queue->enable)
 			break;
 		if (!alloc_frame_buffer(ctx, queue))
+			break;
+	}
+	while (ctx->mbi_index < ctx->mbi_count) {
+		if (!queue->enable)
+			break;
+		if (!alloc_mbi_to_firmware(ctx, queue))
+			break;
+	}
+	while (ctx->dcp_index < ctx->dcp_count) {
+		if (!queue->enable)
+			break;
+		if (!alloc_dcp_to_firmware(ctx, queue))
 			break;
 	}
 }
@@ -4164,6 +4181,7 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		ctx->firmware_stopped = false;
 		ctx->firmware_finished = false;
 		ctx->req_frame_count = 0;
+		reset_mbi_dcp_count(ctx);
 		vpu_calculate_performance(ctx, uEvent, "start done");
 		break;
 	case VID_API_EVENT_STOPPED: {
@@ -4280,11 +4298,15 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		int wait_times = 0;
 
 		get_seq_info(&info, event_data, &pSeqInfo[ctx->str_index]);
-		if (!check_seq_info_is_valid(ctx->str_index, &info))
+		if (!check_seq_info_is_valid(ctx->str_index, &info)) {
+			vpu_dec_event_decode_error(ctx);
 			break;
+		}
 
 		while (ctx->wait_res_change_done && wait_times++ < 100) {
 			if (!vpu_dec_is_active(ctx))
+				break;
+			if (ctx->wait_rst_done)
 				break;
 			mdelay(10);
 		}
@@ -4344,50 +4366,38 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		break;
 	case VID_API_EVENT_REQ_FRAME_BUFF: {
 		MEDIA_PLAYER_FSREQ *pFSREQ = (MEDIA_PLAYER_FSREQ *)event_data;
-		u_int32 local_cmddata[10];
 		struct queue_data *This = &ctx->q_data[V4L2_DST];
 
 		vpu_dbg(LVL_INFO, "VID_API_EVENT_REQ_FRAME_BUFF, type=%d, size=%ld\n", pFSREQ->eType, sizeof(MEDIA_PLAYER_FSREQ));
-		if (pFSREQ->eType == MEDIAIP_DCP_REQ) {
-			if (ctx->dcp_count >= MAX_DCP_NUM) {
-				vpu_err("error: request dcp buffers number is over MAX_DCP_NUM\n");
-				break;
+		down(&This->drv_q_lock);
+		switch (pFSREQ->eType) {
+		case MEDIAIP_DCP_REQ:
+			ctx->req_dcp_count++;
+			if (ctx->req_dcp_count > MAX_DCP_NUM) {
+				vpu_err("error: request dcp count over %d\n",
+						MAX_DCP_NUM);
+				ctx->req_dcp_count = MAX_DCP_NUM;
 			}
-			if (alloc_dcp_buffer(ctx, ctx->dcp_count))
-				break;
-
-			local_cmddata[0] = ctx->dcp_count | (ctx->seqinfo.uActiveSeqTag<<24);
-			local_cmddata[1] = ctx->dcp_buffer[ctx->dcp_count].dma_phy;
-			local_cmddata[2] = DCP_SIZE;
-			local_cmddata[3] = 0;
-			local_cmddata[4] = 0;
-			local_cmddata[5] = 0;
-			local_cmddata[6] = pFSREQ->eType;
-			v4l2_vpu_send_cmd(ctx, uStrIdx, VID_API_CMD_FS_ALLOC, 7, local_cmddata);
-			vpu_dbg(LVL_INFO, "VID_API_CMD_FS_ALLOC, ctx[%d] eType=%d, index=%d\n",
-					ctx->str_index, pFSREQ->eType, ctx->dcp_count);
-			ctx->dcp_count++;
-		} else if (pFSREQ->eType == MEDIAIP_MBI_REQ) {
-			if (alloc_mbi_buffer(ctx, ctx->mbi_count))
-				break;
-
-			local_cmddata[0] = ctx->mbi_count | (ctx->seqinfo.uActiveSeqTag<<24);
-			local_cmddata[1] = ctx->mbi_buffer[ctx->mbi_count].dma_phy;
-			local_cmddata[2] = ctx->mbi_buffer[ctx->mbi_count].dma_size;
-			local_cmddata[3] = 0;
-			local_cmddata[4] = 0;
-			local_cmddata[5] = 0;
-			local_cmddata[6] = pFSREQ->eType;
-			v4l2_vpu_send_cmd(ctx, uStrIdx, VID_API_CMD_FS_ALLOC, 7, local_cmddata);
-			vpu_dbg(LVL_INFO, "VID_API_CMD_FS_ALLOC, ctx[%d] eType=%d, index=%d\n",
-					ctx->str_index, pFSREQ->eType, ctx->mbi_count);
-			ctx->mbi_count++;
-		} else {
-			down(&This->drv_q_lock);
+			break;
+		case MEDIAIP_MBI_REQ:
+			ctx->req_mbi_count++;
+			if (ctx->req_mbi_count > MAX_MBI_NUM) {
+				vpu_err("error: request mbi count over %d\n",
+						MAX_MBI_NUM);
+				ctx->req_mbi_count = MAX_MBI_NUM;
+			}
+			break;
+		default:
 			ctx->req_frame_count++;
-			respond_req_frame(ctx, This, false);
-			up(&This->drv_q_lock);
+			break;
 		}
+		up(&This->drv_q_lock);
+		if (ctx->mbi_count < ctx->req_mbi_count ||
+		    ctx->dcp_count < ctx->req_dcp_count)
+			schedule_work(ctx->alloc_work);
+		down(&This->drv_q_lock);
+		respond_req_frame(ctx, This, false);
+		up(&This->drv_q_lock);
 		}
 		break;
 	case VID_API_EVENT_REL_FRAME_BUFF: {
@@ -4511,7 +4521,6 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		ctx->tsm_sync_flag = true;
 		up(&queue->drv_q_lock);
 
-		clear_pic_end_flag(ctx);
 		ctx->frm_dis_delay = 0;
 		ctx->frm_dec_delay = 0;
 		ctx->frm_total_num = 0;
@@ -4581,14 +4590,14 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		verify_decoded_frames(ctx);
 		vpu_dbg(LVL_BIT_FLOW, "ctx[%d] FINISHED\n", ctx->str_index);
 		vpu_dbg(LVL_INFO, "receive VID_API_EVENT_FINISHED and notfiy app eos\n");
-		clear_pic_end_flag(ctx);
 		vpu_log_buffer_state(ctx);
 		send_eos_event(ctx); //notfiy app stream eos reached
 	}	break;
 	case VID_API_EVENT_FIRMWARE_XCPT: {
 		char *xcpt_info = (char*)event_data;
 
-		vpu_err("warning: VID_API_EVENT_FIRMWARE_XCPT,exception info: %s\n", xcpt_info);
+		vpu_err("ctx[%d] warning: VID_API_EVENT_FIRMWARE_XCPT,exception info: %s\n",
+				ctx->str_index, xcpt_info);
 		ctx->hang_status = true;
 		send_eos_event(ctx);
 		}
@@ -4626,6 +4635,7 @@ static void release_vpu_ctx(struct vpu_ctx *ctx)
 	mutex_destroy(&ctx->instance_mutex);
 	mutex_destroy(&ctx->cmd_lock);
 	mutex_destroy(&ctx->perf_lock);
+	mutex_destroy(&ctx->fw_flow_mutex);
 	clear_bit(ctx->str_index, &ctx->dev->instance_mask);
 	ctx->dev->ctx[ctx->str_index] = NULL;
 	pm_runtime_put_sync(ctx->dev->generic_dev);
@@ -4667,8 +4677,7 @@ static int vpu_next_free_instance(struct vpu_dev *dev)
 {
 	int idx;
 
-	if (dev->hang_mask == dev->instance_mask
-			&& dev->instance_mask != 0) {
+	if (dev->hang_mask == dev->instance_mask && dev->instance_mask != 0) {
 		idx = get_reset_index(dev);
 		if (idx < 0 || idx >= VPU_MAX_NUM_STREAMS)
 			return -EBUSY;
@@ -4726,26 +4735,6 @@ static bool receive_msg_queue(struct vpu_ctx *ctx, struct event_msg *msg)
 		return false;
 }
 
-static void vpu_notify_msg_event(struct vpu_dev *dev)
-{
-	int i;
-
-	mutex_lock(&dev->dev_mutex);
-	if (dev->suspend)
-		goto exit;
-
-	for (i = 0; i < VPU_MAX_NUM_STREAMS; i++) {
-		struct vpu_ctx *ctx = dev->ctx[i];
-
-		if (!ctx || ctx->ctx_released || !kfifo_len(&ctx->msg_fifo))
-			continue;
-		queue_work(ctx->instance_wq, &ctx->instance_work);
-	}
-exit:
-	mutex_unlock(&dev->dev_mutex);
-}
-
-extern u_int32 rpc_MediaIPFW_Video_message_check(struct shared_addr *This);
 static void vpu_receive_msg_event(struct vpu_dev *dev)
 {
 	struct event_msg msg;
@@ -4759,22 +4748,26 @@ static void vpu_receive_msg_event(struct vpu_dev *dev)
 	memset(&msg, 0, sizeof(struct event_msg));
 	while (rpc_MediaIPFW_Video_message_check(This) == API_MSG_AVAILABLE) {
 		rpc_receive_msg_buf(This, &msg);
+
 		mutex_lock(&dev->dev_mutex);
 		ctx = dev->ctx[msg.idx];
 		if (ctx)
 			count_event(&ctx->statistic, msg.msgid);
-		if (ctx != NULL) {
-			if (!ctx->ctx_released) {
-				send_msg_queue(ctx, &msg);
-				queue_work(ctx->instance_wq, &ctx->instance_work);
-			}
+		if (ctx != NULL && !ctx->ctx_released) {
+			send_msg_queue(ctx, &msg);
+			queue_work(ctx->instance_wq, ctx->instance_work);
+			queue_delayed_work(ctx->instance_wq,
+					ctx->delayed_instance_work,
+					msecs_to_jiffies(10));
+		} else {
+			vpu_err("msg [%d] %d is missed!%s\n",
+				msg.idx, msg.msgid,
+				ctx == NULL ? " ctx is NULL" : " ctx released");
 		}
 		mutex_unlock(&dev->dev_mutex);
 	}
 	if (rpc_MediaIPFW_Video_message_check(This) == API_MSG_BUFFER_ERROR)
 		vpu_err("error: message size is too big to handle\n");
-
-	vpu_notify_msg_event(dev);
 }
 
 static void vpu_handle_msg_data(struct vpu_dev *dev, u32 data)
@@ -4814,10 +4807,29 @@ static void vpu_msg_run_work(struct work_struct *work)
 		vpu_handle_msg_data(dev, data);
 }
 
+static void vpu_msg_run_delayed_work(struct work_struct *work)
+{
+	struct delayed_work *dwork;
+	struct vpu_dev *dev;
+
+	dwork = to_delayed_work(work);
+	dev = container_of(dwork, struct vpu_dev, delayed_msg_work);
+	if (!kfifo_len(&dev->mu_msg_fifo))
+		return;
+
+	queue_work(dev->workqueue, &dev->msg_work);
+}
+
 static void vpu_msg_instance_work(struct work_struct *work)
 {
-	struct vpu_ctx *ctx = container_of(work, struct vpu_ctx, instance_work);
+	struct vpu_ctx_work *ctx_work;
+	struct vpu_ctx *ctx;
 	struct event_msg msg;
+
+	ctx_work = container_of(work, struct vpu_ctx_work, instance_work);
+	ctx = ctx_work->dev->ctx[ctx_work->str_index];
+	if (!ctx || ctx->ctx_released)
+		return;
 
 	memset(&msg, 0, sizeof(struct event_msg));
 
@@ -4825,6 +4837,100 @@ static void vpu_msg_instance_work(struct work_struct *work)
 		vpu_api_event_handler(ctx, msg.idx, msg.msgid, msg.msgdata);
 		memset(&msg, 0, sizeof(struct event_msg));
 	}
+}
+
+static void vpu_msg_delayed_instance_work(struct work_struct *work)
+{
+	struct delayed_work *dwork;
+	struct vpu_ctx_work *ctx_work;
+	struct vpu_ctx *ctx;
+
+	dwork = to_delayed_work(work);
+	ctx_work = container_of(dwork, struct vpu_ctx_work,
+				delayed_instance_work);
+	ctx = ctx_work->dev->ctx[ctx_work->str_index];
+	if (!ctx || ctx->ctx_released || !kfifo_len(&ctx->msg_fifo))
+		return;
+
+	queue_work(ctx->instance_wq, ctx->instance_work);
+}
+
+static bool vpu_dec_alloc_buffer_item(struct vpu_ctx *ctx,
+					u32 index, u32 count, u32 size,
+					struct dma_buffer *buffers,
+					const char *desc)
+{
+	struct queue_data *queue = &ctx->q_data[V4L2_DST];
+	struct dma_buffer buffer;
+	int ret;
+
+	if (index >= count)
+		return false;
+
+	if (buffers[index].dma_virt && buffers[index].dma_size >= size)
+		return true;
+
+	free_dma_buffer(ctx, &buffers[index]);
+
+	vpu_dbg(LVL_BIT_FLOW, "alloc %s[%d], size = %d\n", desc, index, size);
+	buffer.dma_size = size;
+
+	up(&queue->drv_q_lock);
+	ret = alloc_dma_buffer(ctx, &buffer);
+	down(&queue->drv_q_lock);
+	if (ret) {
+		vpu_err("error: alloc %s buffer[%d] fail\n", desc, index);
+		return false;
+	}
+	memcpy(&buffers[index], &buffer, sizeof(buffer));
+	return true;
+}
+
+static void vpu_dec_alloc_mbi_dcp(struct vpu_ctx *ctx)
+{
+	struct queue_data *queue = &ctx->q_data[V4L2_DST];
+	int ret;
+
+	down(&queue->drv_q_lock);
+	if (ctx->b_firstseq)
+		goto exit;
+	while (ctx->mbi_count < ctx->req_mbi_count) {
+		ret = vpu_dec_alloc_buffer_item(ctx,
+						ctx->mbi_count,
+						ctx->req_mbi_count,
+						ctx->mbi_size,
+						ctx->mbi_buffer,
+						"mbi");
+		if (!ret)
+			break;
+		ctx->mbi_count++;
+	}
+	while (ctx->dcp_count < ctx->req_dcp_count) {
+		ret = vpu_dec_alloc_buffer_item(ctx,
+						ctx->dcp_count,
+						ctx->req_dcp_count,
+						DCP_SIZE,
+						ctx->dcp_buffer,
+						"dcp");
+		if (!ret)
+			break;
+		ctx->dcp_count++;
+	}
+	respond_req_frame(ctx, queue, false);
+exit:
+	up(&queue->drv_q_lock);
+}
+
+static void vpu_alloc_work(struct work_struct *work)
+{
+	struct vpu_ctx_work *ctx_work;
+	struct vpu_ctx *ctx;
+
+	ctx_work = container_of(work, struct vpu_ctx_work, alloc_work);
+	ctx = ctx_work->dev->ctx[ctx_work->str_index];
+	if (!ctx || ctx->ctx_released)
+		return;
+	vpu_dec_alloc_mbi_dcp(ctx);
 }
 
 static int vpu_queue_setup(struct vb2_queue *vq,
@@ -5468,6 +5574,12 @@ static ssize_t show_instance_buffer_info(struct device *dev,
 			ctx->seqinfo.uNumDFEAreas);
 
 	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"\t%40s:%16d/%16d/%16d\n", "mbi_count",
+			ctx->mbi_index, ctx->mbi_count, ctx->req_mbi_count);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"\t%40s:%16d/%16d/%16d\n", "dcp_count",
+			ctx->dcp_index, ctx->dcp_count, ctx->req_dcp_count);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
 			"\t%40s:%16d\n", "stream_pic_input_count",
 			buffer_info->stream_pic_input_count);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
@@ -5500,6 +5612,14 @@ static ssize_t show_instance_buffer_info(struct device *dev,
 	num += scnprintf(buf + num, PAGE_SIZE - num,
 			"\t%40s:%16d\n", "msg kfifo length",
 			kfifo_len(&ctx->msg_fifo));
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"\t%40s:%16d\n", "mu kfifo length",
+			kfifo_len(&ctx->dev->mu_msg_fifo));
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"\t%40s:%12d.%d.%d\n", "firmware version",
+			(pSharedInterface->FWVersion & 0x00ff0000) >> 16,
+			(pSharedInterface->FWVersion & 0x0000ff00) >> 8,
+			pSharedInterface->FWVersion & 0x000000ff);
 
 	return num;
 }
@@ -5913,11 +6033,14 @@ static int v4l2_open(struct file *filp)
 		ret = -ENOMEM;
 		goto err_alloc_wq;
 	}
-	INIT_WORK(&ctx->instance_work, vpu_msg_instance_work);
+	ctx->instance_work = &dev->ctx_work[idx].instance_work;
+	ctx->delayed_instance_work = &dev->ctx_work[idx].delayed_instance_work;
+	ctx->alloc_work = &dev->ctx_work[idx].alloc_work;
 
 	mutex_init(&ctx->instance_mutex);
 	mutex_init(&ctx->cmd_lock);
 	mutex_init(&ctx->perf_lock);
+	mutex_init(&ctx->fw_flow_mutex);
 	if (kfifo_alloc(&ctx->msg_fifo,
 			sizeof(struct event_msg) * VID_API_MESSAGE_LIMIT,
 			GFP_KERNEL)) {
@@ -6014,6 +6137,7 @@ err_alloc_fifo:
 	mutex_destroy(&ctx->instance_mutex);
 	mutex_destroy(&ctx->cmd_lock);
 	mutex_destroy(&ctx->perf_lock);
+	mutex_destroy(&ctx->fw_flow_mutex);
 	destroy_workqueue(ctx->instance_wq);
 err_alloc_wq:
 	ctrls_delete_decoder(ctx);
@@ -6047,9 +6171,9 @@ static void vpu_dec_disable(struct vpu_ctx *ctx, struct queue_data *queue)
 		V4L2_TYPE_IS_OUTPUT(queue->vb2_q.type) ? "Output" : "Capture",
 		ctx->str_index);
 	if (!V4L2_TYPE_IS_OUTPUT(queue->vb2_q.type)) {
-		mutex_lock(&ctx->dev->fw_flow_mutex);
+		mutex_lock(&ctx->fw_flow_mutex);
 		send_abort_cmd(ctx);
-		mutex_unlock(&ctx->dev->fw_flow_mutex);
+		mutex_unlock(&ctx->fw_flow_mutex);
 		ctx->capture_ts = TSM_TIMESTAMP_NONE;
 	} else {
 		ctx->output_ts = TSM_TIMESTAMP_NONE;
@@ -6078,17 +6202,20 @@ static int v4l2_release(struct file *filp)
 	vpu_dec_disable(ctx, &ctx->q_data[V4L2_SRC]);
 	vpu_dec_disable(ctx, &ctx->q_data[V4L2_DST]);
 
-	mutex_lock(&ctx->dev->fw_flow_mutex);
+	mutex_lock(&ctx->fw_flow_mutex);
 	send_stop_cmd(ctx);
-	mutex_unlock(&ctx->dev->fw_flow_mutex);
+	mutex_unlock(&ctx->fw_flow_mutex);
 
 	mutex_lock(&ctx->dev->dev_mutex);
 	ctx->ctx_released = true;
-	cancel_work_sync(&ctx->instance_work);
+	mutex_unlock(&ctx->dev->dev_mutex);
+
+	cancel_delayed_work_sync(ctx->delayed_instance_work);
+	cancel_work_sync(ctx->instance_work);
+	cancel_work_sync(ctx->alloc_work);
 	kfifo_free(&ctx->msg_fifo);
 	if (ctx->instance_wq)
 		destroy_workqueue(ctx->instance_wq);
-	mutex_unlock(&ctx->dev->dev_mutex);
 
 	if (ctx->tsm) {
 		destroyTSManager(ctx->tsm);
@@ -6118,7 +6245,6 @@ static unsigned int v4l2_poll(struct file *filp, poll_table *wait)
 
 	vpu_dbg(LVL_BIT_FUNC, "%s()\n", __func__);
 
-	vpu_notify_msg_event(ctx->dev);
 	poll_wait(filp, &ctx->fh.wait, wait);
 
 	if (v4l2_event_pending(&ctx->fh)) {
@@ -6236,7 +6362,6 @@ static int swreset_vpu_firmware(struct vpu_dev *dev, u_int32 idx)
 
 	reinit_completion(&dev->start_cmp);
 	do_send_cmd_to_firmware(ctx, 0, VID_API_CMD_FIRM_RESET, 0, NULL);
-
 	if (!wait_for_completion_timeout(&dev->start_cmp, msecs_to_jiffies(10000))) {
 		vpu_err("error: %s() fail\n", __func__);
 		return -1;
@@ -6345,7 +6470,6 @@ static int init_vpudev_parameters(struct vpu_dev *dev)
 {
 	mutex_init(&dev->dev_mutex);
 	mutex_init(&dev->cmd_mutex);
-	mutex_init(&dev->fw_flow_mutex);
 	init_completion(&dev->start_cmp);
 	init_completion(&dev->snap_done_cmp);
 	dev->firmware_started = false;
@@ -6377,6 +6501,22 @@ static int init_vpudev_parameters(struct vpu_dev *dev)
 	memset_io(dev->m0_rpc_virt, 0, dev->m0_rpc_size);
 
 	return 0;
+}
+
+static void vpu_dec_init_ctx_work(struct vpu_dev *dev)
+{
+	int i;
+
+	for (i = 0; i < VPU_MAX_NUM_STREAMS; i++) {
+		struct vpu_ctx_work *ctx_work = &dev->ctx_work[i];
+
+		ctx_work->str_index = i;
+		ctx_work->dev = dev;
+		INIT_WORK(&ctx_work->instance_work, vpu_msg_instance_work);
+		INIT_DELAYED_WORK(&ctx_work->delayed_instance_work,
+				vpu_msg_delayed_instance_work);
+		INIT_WORK(&ctx_work->alloc_work, vpu_alloc_work);
+	}
 }
 
 static int vpu_probe(struct platform_device *pdev)
@@ -6450,6 +6590,7 @@ static int vpu_probe(struct platform_device *pdev)
 	}
 
 	INIT_WORK(&dev->msg_work, vpu_msg_run_work);
+	INIT_DELAYED_WORK(&dev->delayed_msg_work, vpu_msg_run_delayed_work);
 
 	vpu_enable_hw(dev);
 	pm_runtime_enable(&pdev->dev);
@@ -6463,6 +6604,7 @@ static int vpu_probe(struct platform_device *pdev)
 
 	pm_runtime_put_sync(&pdev->dev);
 	device_create_file(&pdev->dev, &dev_attr_precheck_pattern);
+	vpu_dec_init_ctx_work(dev);
 
 	return 0;
 
@@ -6510,6 +6652,7 @@ static int vpu_remove(struct platform_device *pdev)
 	dev->debugfs_dbglog = NULL;
 	dev->debugfs_fwlog = NULL;
 	kfifo_free(&dev->mu_msg_fifo);
+	vpu_dec_cancel_work(dev);
 	destroy_workqueue(dev->workqueue);
 	if (dev->m0_p_fw_space_vir)
 		iounmap(dev->m0_p_fw_space_vir);
@@ -6586,17 +6729,18 @@ static void vpu_dec_cancel_work(struct vpu_dev *vpudev)
 
 	mutex_lock(&vpudev->dev_mutex);
 	vpudev->suspend = true;
+	mutex_unlock(&vpudev->dev_mutex);
+
+	cancel_delayed_work_sync(&vpudev->delayed_msg_work);
 	cancel_work_sync(&vpudev->msg_work);
 	for (i = 0; i < VPU_MAX_NUM_STREAMS; i++) {
-		struct vpu_ctx *ctx = vpudev->ctx[i];
+		struct vpu_ctx_work *ctx_work = &vpudev->ctx_work[i];
 
-		if (!ctx)
-			continue;
-		cancel_work_sync(&vpudev->ctx[i]->instance_work);
+		cancel_delayed_work_sync(&ctx_work->delayed_instance_work);
+		cancel_work_sync(&ctx_work->instance_work);
+		cancel_work_sync(&ctx_work->alloc_work);
 	}
-	mutex_unlock(&vpudev->dev_mutex);
 }
-
 
 static void vpu_dec_resume_work(struct vpu_dev *vpudev)
 {
@@ -6608,10 +6752,10 @@ static void vpu_dec_resume_work(struct vpu_dev *vpudev)
 	for (i = 0; i < VPU_MAX_NUM_STREAMS; i++) {
 		struct vpu_ctx *ctx = vpudev->ctx[i];
 
-		if (!ctx)
+		if (!ctx || ctx->ctx_released)
 			continue;
-		if (!ctx->ctx_released)
-			queue_work(ctx->instance_wq, &ctx->instance_work);
+		schedule_work(ctx->alloc_work);
+		queue_work(ctx->instance_wq, ctx->instance_work);
 	}
 	mutex_unlock(&vpudev->dev_mutex);
 }
@@ -6622,6 +6766,7 @@ static int __maybe_unused vpu_suspend(struct device *dev)
 	int ret = 0;
 
 	vpu_dbg(LVL_INFO, "suspend\n");
+
 	if (vpudev->hang_mask != vpudev->instance_mask) {
 
 		/*if there is an available device, send snapshot command to firmware*/

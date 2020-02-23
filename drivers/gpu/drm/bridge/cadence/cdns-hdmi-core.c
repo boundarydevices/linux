@@ -481,6 +481,7 @@ static void hotplug_work_func(struct work_struct *work)
 
 	if (connector->status == connector_status_connected) {
 		DRM_INFO("HDMI Cable Plug In\n");
+		mhdp->force_mode_set = true;
 		enable_irq(mhdp->irq[IRQ_OUT]);
 #ifdef CONFIG_EXTCON
 		extcon_set_state_sync(cdns_hdmi_edev, EXTCON_DISP_HDMI, 1);

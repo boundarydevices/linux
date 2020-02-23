@@ -266,6 +266,14 @@ struct vpu_sc_chan {
 	struct mbox_chan *ch;
 };
 
+struct vpu_ctx_work {
+	struct work_struct instance_work;
+	struct delayed_work delayed_instance_work;
+	struct work_struct alloc_work;
+	int str_index;
+	struct vpu_dev *dev;
+};
+
 struct vpu_ctx;
 struct vpu_dev {
 	struct device *generic_dev;
@@ -281,7 +289,6 @@ struct vpu_dev {
 	u_int32 m0_rpc_size;
 	struct mutex dev_mutex;
 	struct mutex cmd_mutex;
-	struct mutex fw_flow_mutex;
 	bool fw_is_ready;
 	bool firmware_started;
 	bool need_cleanup_firmware;
@@ -290,6 +297,7 @@ struct vpu_dev {
 	struct completion snap_done_cmp;
 	struct workqueue_struct *workqueue;
 	struct work_struct msg_work;
+	struct delayed_work delayed_msg_work;
 	unsigned long instance_mask;
 	unsigned long hang_mask; //this is used to deal with hang issue to reset firmware
 	struct clk *vpu_clk;
@@ -305,6 +313,7 @@ struct vpu_dev {
 
 	struct shared_addr shared_mem;
 	struct vpu_ctx *ctx[VPU_MAX_NUM_STREAMS];
+	struct vpu_ctx_work ctx_work[VPU_MAX_NUM_STREAMS];
 	struct dentry *debugfs_root;
 	struct dentry *debugfs_dbglog;
 	struct dentry *debugfs_fwlog;
@@ -383,7 +392,6 @@ struct vpu_ctx {
 	struct v4l2_fh fh;
 
 	struct vpu_statistic statistic;
-	atomic64_t total_alloc_size;
 	struct device_attribute dev_attr_instance_command;
 	char command_name[64];
 	struct device_attribute dev_attr_instance_event;
@@ -402,7 +410,9 @@ struct vpu_ctx {
 	struct queue_data q_data[2];
 	struct kfifo msg_fifo;
 	struct mutex instance_mutex;
-	struct work_struct instance_work;
+	struct work_struct *instance_work;
+	struct delayed_work *delayed_instance_work;
+	struct work_struct *alloc_work;
 	struct workqueue_struct *instance_wq;
 	struct completion completion;
 	struct completion stop_cmp;
@@ -426,9 +436,13 @@ struct vpu_ctx {
 	bool first_dump_data_flag;
 	bool first_data_flag;
 	u32 req_frame_count;
+	u32 req_mbi_count;
+	u32 req_dcp_count;
 	u_int32 mbi_count;
 	u_int32 mbi_size;
 	u_int32 dcp_count;
+	u32 mbi_index;
+	u32 dcp_index;
 	struct dma_buffer dpb_buffer;
 	struct dma_buffer dcp_buffer[MAX_DCP_NUM];
 	struct dma_buffer mbi_buffer[MAX_MBI_NUM];
@@ -473,6 +487,8 @@ struct vpu_ctx {
 
 	struct list_head perf_q;
 	struct mutex perf_lock;
+
+	struct mutex fw_flow_mutex;
 };
 
 #define LVL_WARN		(1 << 0)

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2018,2020 NXP
  *	Dong Aisheng <aisheng.dong@nxp.com>
  *
  * Implementation of the SCU based Power Domains
@@ -115,6 +115,7 @@ static const struct imx_sc_pd_range imx8qxp_scu_pd_ranges[] = {
 	/* CONN SS */
 	{ "usb", IMX_SC_R_USB_0, 2, true, 0 },
 	{ "usb0phy", IMX_SC_R_USB_0_PHY, 1, false, 0 },
+	{ "usb1phy", IMX_SC_R_USB_1_PHY, 1, false, 0},
 	{ "usb2", IMX_SC_R_USB_2, 1, false, 0 },
 	{ "usb2phy", IMX_SC_R_USB_2_PHY, 1, false, 0 },
 	{ "sdhc", IMX_SC_R_SDHC_0, 3, true, 0 },
@@ -255,6 +256,9 @@ static const struct imx_sc_pd_range imx8qxp_scu_pd_ranges[] = {
 
 	/* BOARD SS */
 	{ "board", IMX_SC_R_BOARD_R0, 8, true, 0},
+
+	/* SECO SS */
+	{ "seco_mu", IMX_SC_R_SECO_MU_2, 3, true, 2},
 };
 
 static const struct imx_sc_pd_soc imx8qxp_scu_pd = {
@@ -363,14 +367,6 @@ static int imx_sc_pd_power(struct generic_pm_domain *domain, bool power_on)
 	if (ret)
 		dev_err(&domain->dev, "failed to power %s resource %d ret %d\n",
 			power_on ? "up" : "off", pd->rsrc, ret);
-
-	/* keep HDMI TX resource power on */
-	if (power_on && (pd->rsrc == IMX_SC_R_HDMI ||
-					pd->rsrc == IMX_SC_R_HDMI_I2S ||
-					pd->rsrc == IMX_SC_R_HDMI_I2C_0 ||
-					pd->rsrc == IMX_SC_R_HDMI_PLL_0 ||
-					pd->rsrc == IMX_SC_R_HDMI_PLL_1))
-		pd->pd.flags |= GENPD_FLAG_ALWAYS_ON;
 
 	return ret;
 }
