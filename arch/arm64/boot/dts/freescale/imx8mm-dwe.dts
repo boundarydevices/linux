@@ -800,7 +800,11 @@
 
 &uart3 { /* J15 */
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart3>;
+	pinctrl-0 = <&pinctrl_uart3>, <&pinctrl_zwave>;
+	control-gpios = GP_ZWAVE_RESET;
+#define M_RESET		1
+	off_levels = <M_RESET>;
+	rs232_levels = <0>;
 	assigned-clocks = <&clk IMX8MMN(CLK_UART3)>;
 	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_80M)>;
 	fsl,uart-has-rtscts;
