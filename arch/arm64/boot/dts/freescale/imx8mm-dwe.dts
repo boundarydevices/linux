@@ -418,7 +418,7 @@
 
 	pinctrl_zwave: zwavegrp {
 		fsl,pins = <
-#define GP_ZWAVE_RESET		<&gpio4 30 GPIO_ACTIVE_LOW>
+#define GP_ZWAVE_RESET		<&gpio4 30 GPIO_ACTIVE_HIGH>
 			MX8MMN(IOMUXC_SAI3_RXD_GPIO4_IO30, 0x100)
 		>;
 	};
@@ -803,8 +803,8 @@
 	pinctrl-0 = <&pinctrl_uart3>, <&pinctrl_zwave>;
 	control-gpios = GP_ZWAVE_RESET;
 #define M_RESET		1
-	off_levels = <M_RESET>;
-	rs232_levels = <0>;
+	off_levels = <0>;
+	rs232_levels = <M_RESET>;
 	assigned-clocks = <&clk IMX8MMN(CLK_UART3)>;
 	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_80M)>;
 	fsl,uart-has-rtscts;
