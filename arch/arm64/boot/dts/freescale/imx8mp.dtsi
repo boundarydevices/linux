@@ -703,7 +703,7 @@
 
 		aips2: bus@30400000 {
 			compatible = "fsl,aips-bus", "simple-bus";
-			reg = <0x30400000 0x400000>;
+			reg = <0x30400000 0x100000>;
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges;
@@ -763,7 +763,7 @@
 
 		aips3: bus@30800000 {
 			compatible = "fsl,aips-bus", "simple-bus";
-			reg = <0x30800000 0x400000>;
+			reg = <0x30800000 0x100000>;
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges;
@@ -1181,6 +1181,14 @@
 					     "syscon";
 				reg = <0x32ec0000 0x10000>;
 			};
+		};
+
+		aips5: bus@30c00000 {
+			compatible = "fsl,aips-bus", "simple-bus";
+			reg = <0x30c00000 0x10000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges;
 		};
 
 		gic: interrupt-controller@38800000 {
