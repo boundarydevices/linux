@@ -614,9 +614,9 @@ static int imx8mn_clocks_probe(struct platform_device *pdev)
 
 	imx_clk_init_on(np, hws);
 
-	clk_set_parent(clks[IMX8MN_CLK_AUDIO_AHB], clks[IMX8MN_SYS_PLL1_800M]);
-	clk_set_rate(clks[IMX8MN_CLK_AUDIO_AHB], 400000000);
-	clk_set_rate(clks[IMX8MN_CLK_IPG_AUDIO_ROOT], 400000000);
+	clk_set_parent(hws[IMX8MN_CLK_AUDIO_AHB]->clk, hws[IMX8MN_SYS_PLL1_800M]->clk);
+	clk_set_rate(hws[IMX8MN_CLK_AUDIO_AHB]->clk, 400000000);
+	clk_set_rate(hws[IMX8MN_CLK_IPG_AUDIO_ROOT]->clk, 400000000);
 
 	imx_register_uart_clocks(4);
 
