@@ -2559,8 +2559,9 @@ static void camera_callback(u32 mask, void *dev)
 		 * timestamp. Users can use this information to judge
 		 * the frame's usage.
 		 */
-		done_frame->buffer.timestamp =
-			ns_to_timeval(ts.tv_sec * 1000000000ULL + ts.tv_nsec);
+
+		done_frame->buffer.timestamp.tv_sec = ts.tv_sec;
+		done_frame->buffer.timestamp.tv_usec = ts.tv_nsec / NSEC_PER_USEC;
 
 		if (done_frame->buffer.flags & V4L2_BUF_FLAG_QUEUED) {
 			done_frame->buffer.flags |= V4L2_BUF_FLAG_DONE;
