@@ -323,7 +323,7 @@ static int imx8mm_clocks_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
 	void __iomem *base;
-	int ret, i;
+	int ret;
 
 	check_m4_enabled();
 
@@ -641,12 +641,6 @@ static int imx8mm_clocks_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(dev, "failed to register clks for i.MX8MM\n");
 		goto unregister_hws;
-	}
-
-	for (i = 0; i < ARRAY_SIZE(uart_clk_ids); i++) {
-		int index = uart_clk_ids[i];
-
-		uart_hws[i] = &hws[index]->clk;
 	}
 
 	imx_clk_init_on(np, clks);
