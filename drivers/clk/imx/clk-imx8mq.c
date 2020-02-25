@@ -284,7 +284,7 @@ static struct clk_hw_onecell_data *clk_hw_data;
 static struct clk_hw **hws;
 
 static int __init imx_clk_init_on(struct device_node *np,
-				  struct clk * const clks[])
+				  struct clk_hw * const clks[])
 {
 	u32 *array;
 	int i, ret, elems;
@@ -301,7 +301,7 @@ static int __init imx_clk_init_on(struct device_node *np,
 		return ret;
 
 	for (i = 0; i < elems; i++) {
-		ret = clk_prepare_enable(clks[array[i]]);
+		ret = clk_prepare_enable(clks[array[i]]->clk);
 		if (ret)
 			pr_err("clk_prepare_enable failed %d\n", array[i]);
 	}
@@ -641,7 +641,7 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
 	}
 
 	/* enable all the clocks just for bringup */
-	imx_clk_init_on(np, clks);
+	imx_clk_init_on(np, hws);
 
 	clk_set_parent(clks[IMX8MQ_CLK_CSI1_CORE], clks[IMX8MQ_SYS1_PLL_266M]);
 	clk_set_parent(clks[IMX8MQ_CLK_CSI1_PHY_REF], clks[IMX8MQ_SYS2_PLL_1000M]);
