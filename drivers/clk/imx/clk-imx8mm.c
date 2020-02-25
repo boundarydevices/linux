@@ -658,11 +658,12 @@ static int imx8mm_clocks_probe(struct platform_device *pdev)
 
 	imx_clk_init_on(np, hws);
 
-	clk_set_parent(clks[IMX8MM_CLK_PCIE1_CTRL], clks[IMX8MM_SYS_PLL2_250M]);
-	clk_set_parent(clks[IMX8MM_CLK_PCIE1_PHY], clks[IMX8MM_SYS_PLL2_100M]);
-	clk_set_parent(clks[IMX8MM_CLK_CSI1_CORE], clks[IMX8MM_SYS_PLL2_1000M]);
-	clk_set_parent(clks[IMX8MM_CLK_CSI1_PHY_REF], clks[IMX8MM_SYS_PLL2_1000M]);
-	clk_set_parent(clks[IMX8MM_CLK_CSI1_ESC], clks[IMX8MM_SYS_PLL1_800M]);
+	clk_set_parent(hws[IMX8MM_CLK_PCIE1_CTRL]->clk, hws[IMX8MM_SYS_PLL2_250M]->clk);
+	clk_set_parent(hws[IMX8MM_CLK_PCIE1_PHY]->clk, hws[IMX8MM_SYS_PLL2_100M]->clk);
+
+	clk_set_parent(hws[IMX8MM_CLK_CSI1_CORE]->clk, hws[IMX8MM_SYS_PLL2_1000M]->clk);
+	clk_set_parent(hws[IMX8MM_CLK_CSI1_PHY_REF]->clk, hws[IMX8MM_SYS_PLL2_1000M]->clk);
+	clk_set_parent(hws[IMX8MM_CLK_CSI1_ESC]->clk, hws[IMX8MM_SYS_PLL1_800M]->clk);
 
 	imx_register_uart_clocks(4);
 
