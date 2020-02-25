@@ -1085,7 +1085,6 @@ static const struct snd_soc_component_driver imx_hdmi_component = {
 	.pcm_destruct	= imx_hdmi_dma_pcm_free,
 	.open		= hdmi_dma_open,
 	.close		= hdmi_dma_close,
-	.ioctl		= snd_soc_pcm_lib_ioctl,
 	.hw_params	= hdmi_dma_hw_params,
 	.hw_free	= hdmi_dma_hw_free,
 	.trigger	= hdmi_dma_trigger,
