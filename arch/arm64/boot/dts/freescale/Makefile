@@ -53,13 +53,17 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk.dtb imx8mm-evk-rpmsg.dtb imx8mm-evk-rm67191
 			  imx8mm-ddr4-evk-rm67191.dtb imx8mm-evk-revb.dtb imx8mm-ddr4-evk-revb.dtb \
 			  imx8mm-ddr4-evk-revb-rm67191.dtb imx8mm-ddr4-evk-no-product.dtb \
 			  imx8mm-evk-no-product.dtb
-dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk-ak4497.dtb imx8mm-evk-ak5558.dtb imx8mm-evk-audio-tdm.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk-ak4497.dtb imx8mm-evk-ak5558.dtb imx8mm-evk-audio-tdm.dtb \
+			  imx8mm-ddr4-evk-no-dynamic_partition.dtb imx8mm-ddr4-evk-no-product-no-dynamic_partition.dtb \
+			  imx8mm-evk-no-dynamic_partition.dtb imx8mm-evk-no-product-no-dynamic_partition.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-evk.dtb imx8mn-evk-rm67191.dtb imx8mn-ddr4-evk.dtb imx8mn-ddr4-evk-ak5558.dtb \
 			  imx8mn-ddr4-evk-rm67191.dtb imx8mn-ddr4-evk-rpmsg.dtb \
-			  imx8mn-ddr4-evk-no-product.dtb
+			  imx8mn-ddr4-evk-no-product.dtb imx8mn-ddr4-evk-no-dynamic_partition.dtb \
+			  imx8mn-ddr4-evk-no-product-no-dynamic_partition.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-ddr4-evk-root.dtb imx8mn-ddr4-evk-inmate.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk.dtb imx8mq-evk-rpmsg.dtb imx8mq-evk-pcie1-m2.dtb \
-			  imx8mq-evk-no-product.dtb
+			  imx8mq-evk-no-product.dtb imx8mq-evk-no-dynamic_partition.dtb \
+			  imx8mq-evk-no-product-no-dynamic_partition.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk-ak4497.dtb imx8mq-evk-audio-tdm.dtb imx8mq-evk-pdm.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk-root.dtb imx8mq-evk-inmate.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk-lcdif-rm67191.dtb imx8mq-evk-lcdif-adv7535.dtb
@@ -85,6 +89,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek.dtb imx8qm-mek-ov5640.dtb \
 			  imx8qm-lpddr4-val-lpspi.dtb imx8qm-lpddr4-val-lpspi-slave.dtb \
 			  imx8qm-mek-dsi-rm67191.dtb imx8qm-lpddr4-val-dp.dtb\
 			  imx8qm-mek-ov5640-no-product.dtb \
+			  imx8qm-mek-ov5640-no-dynamic_partition.dtb \
+			  imx8qm-mek-ov5640-no-product-no-dynamic_partition.dtb \
 			  imx8qp-lpddr4-val.dtb imx8dm-lpddr4-val.dtb \
 			  imx8qm-mek-car.dtb imx8qm-mek-car-md.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-dom0.dtb imx8qm-mek-domu.dtb imx8qm-mek-domu-car.dtb \
@@ -109,7 +115,9 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek.dtb imx8qxp-mek-dsp.dtb imx8qxp-mek-ov5640
 			  imx8qxp-17x17-val.dtb imx8dx-lpddr4-val.dtb imx8dx-17x17-val.dtb \
 			  imx8qxp-lpddr4-val-mlb.dtb \
 			  imx8qxp-mek-ov5640-no-product.dtb \
-			  imx8qxp-mek-car.dtb
+			  imx8qxp-mek-car.dtb \
+			  imx8qxp-mek-ov5640-no-dynamic_partition.dtb \
+			  imx8qxp-mek-ov5640-no-product-no-dynamic_partition.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek-dom0.dtb imx8qxp-mek-root.dtb \
 			  imx8qxp-mek-inmate.dtb
 

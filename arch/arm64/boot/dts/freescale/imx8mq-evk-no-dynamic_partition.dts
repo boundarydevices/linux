@@ -1,0 +1,62 @@
+/*
+ * Copyright 2019 NXP
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/dts-v1/;
+
+#include "imx8mq-evk.dts"
+
+/ {
+	firmware {
+		android {
+			fstab {
+				system {
+					compatible = "android,system";
+					/* default emmc node used for GSI */
+					dev = "/dev/block/platform/soc@0/soc@0:bus@30800000/30b40000.mmc/by-name/system";
+					/* sd card node which used if androidboot.boot_device_root=mmcblk1 */
+					dev_mmcblk1 = "/dev/block/platform/soc@0/soc@0:bus@30800000/30b50000.mmc/by-name/system";
+					/* emmc node which used if androidboot.boot_device_root=mmcblk0 */
+					dev_mmcblk0 = "/dev/block/platform/soc@0/soc@0:bus@30800000/30b40000.mmc/by-name/system";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,slotselect,avb,avb_keys=/avb/q-gsi.avbpubkey:/avb/r-gsi.avbpubkey:/avb/s-gsi.avbpubkey";
+				};
+				vendor {
+					compatible = "android,vendor";
+					/* default emmc node used for GSI */
+					dev = "/dev/block/platform/soc@0/soc@0:bus@30800000/30b40000.mmc/by-name/vendor";
+					/* sd card node which used if androidboot.boot_device_root=mmcblk1 */
+					dev_mmcblk1 = "/dev/block/platform/soc@0/soc@0:bus@30800000/30b50000.mmc/by-name/vendor";
+					/* emmc node which used if androidboot.boot_device_root=mmcblk0 */
+					dev_mmcblk0 = "/dev/block/platform/soc@0/soc@0:bus@30800000/30b40000.mmc/by-name/vendor";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,slotselect,avb";
+				};
+				product {
+					compatible = "android,product";
+					/* default emmc node used for GSI */
+					dev = "/dev/block/platform/soc@0/soc@0:bus@30800000/30b40000.mmc/by-name/product";
+					/* sd card node which used if androidboot.boot_device_root=mmcblk1 */
+					dev_mmcblk1 = "/dev/block/platform/soc@0/soc@0:bus@30800000/30b50000.mmc/by-name/product";
+					/* emmc node which used if androidboot.boot_device_root=mmcblk0 */
+					dev_mmcblk0 = "/dev/block/platform/soc@0/soc@0:bus@30800000/30b40000.mmc/by-name/product";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,slotselect,avb";
+				};
+			};
+		};
+	};
+};

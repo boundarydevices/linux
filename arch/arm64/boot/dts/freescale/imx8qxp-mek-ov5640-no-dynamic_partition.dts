@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 NXP
+ * Copyright 2019 NXP
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -12,103 +12,24 @@
  * GNU General Public License for more details.
  */
 
-#include "imx8qxp-mek-rpmsg.dts"
-
-&i2c0 {
-	clock-frequency = <1000000>;
-};
-
-&i2c2 {
-	clock-frequency = <1000000>;
-};
-
-&i2c3 {
-	clock-frequency = <1000000>;
-};
-
-&i2c_mipi_csi0 {
-	clock-frequency = <1000000>;
-};
-
-&i2c0_mipi_lvds0 {
-	clock-frequency = <500000>;
-	adv7535@3d {
-		status = "disabled";
-	};
-};
-
-&i2c0_mipi_lvds1 {
-	clock-frequency = <500000>;
-	adv7535@3d {
-		status = "disabled";
-	};
-};
-
-&pwm_mipi_lvds0 {
-	status = "disabled";
-};
-
-&lvds_backlight0 {
-	status = "disabled";
-};
-
-&pwm_mipi_lvds1 {
-	status = "disabled";
-};
-
-&lvds_backlight1 {
-	status = "disabled";
-};
-
-&mipi0_dphy {
-	status = "disabled";
-};
-
-&mipi0_dsi_host {
-	status = "disabled";
-};
-
-&mipi1_dphy {
-	status = "disabled";
-};
-
-&mipi1_dsi_host {
-	status = "disabled";
-};
-
-&usdhc2 {
-	status = "disabled";
-};
-
-&amix {
-	status = "disabled";
-};
-
-&asrc0 {
-	status = "disabled";
-};
-
-&jpegdec {
-	status = "disabled";
-};
-
-&jpegenc {
-	status = "disabled";
-};
-
-&wm8960 {
-	quick-probe;
-};
-
-&vehicle_core {
-	status = "okay";
-};
+#include "imx8qxp-mek-ov5640.dts"
 
 / {
 	firmware {
 		android {
 			fstab {
-				/delete-node/ system;
+				system {
+					compatible = "android,system";
+					/* default emmc node used for GSI */
+					dev = "/dev/block/platform/bus@5b000000/5b010000.mmc/by-name/system";
+					/* sd card node which used if androidboot.boot_device_root=mmcblk1 */
+					dev_mmcblk1 = "/dev/block/platform/bus@5b000000/5b020000.mmc/by-name/system";
+					/* emmc node which used if androidboot.boot_device_root=mmcblk0 */
+					dev_mmcblk0 = "/dev/block/platform/bus@5b000000/5b010000.mmc/by-name/system";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,slotselect,avb,avb_keys=/avb/q-gsi.avbpubkey:/avb/r-gsi.avbpubkey:/avb/s-gsi.avbpubkey";
+				};
 				vendor {
 					compatible = "android,vendor";
 					/* default emmc node used for GSI */
