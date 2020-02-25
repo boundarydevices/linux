@@ -269,7 +269,6 @@ static struct snd_soc_component_driver imx_soc_platform = {
 	.pcm_construct	= imx_pcm_new,
 	.open		= imx_pcm_open,
 	.close		= imx_pcm_close,
-	.ioctl		= snd_soc_pcm_lib_ioctl,
 	.hw_params	= imx_pcm_hw_params,
 	.hw_free	= imx_pcm_hw_free,
 	.trigger	= imx_pcm_trigger,
