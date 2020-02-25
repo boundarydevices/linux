@@ -698,7 +698,6 @@ static struct snd_soc_component_driver imx_rpmsg_soc_component = {
 	.pcm_destruct	= imx_rpmsg_pcm_free_dma_buffers,
 	.open		= imx_rpmsg_pcm_open,
 	.close		= imx_rpmsg_pcm_close,
-	.ioctl		= snd_soc_pcm_lib_ioctl,
 	.hw_params	= imx_rpmsg_pcm_hw_params,
 	.hw_free	= imx_rpmsg_pcm_hw_free,
 	.trigger	= imx_rpmsg_pcm_trigger,
