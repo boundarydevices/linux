@@ -375,11 +375,11 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
 	hws[IMX8MQ_VIDEO_PLL1_BYPASS] = imx_clk_hw_mux("video_pll1_bypass", base + 0x10, 14, 1, video_pll1_bypass_sels, ARRAY_SIZE(video_pll1_bypass_sels));
 
 	/* unbypass all the plls */
-	clk_set_parent(clks[IMX8MQ_GPU_PLL_BYPASS], clks[IMX8MQ_GPU_PLL]);
-	clk_set_parent(clks[IMX8MQ_VPU_PLL_BYPASS], clks[IMX8MQ_VPU_PLL]);
-	clk_set_parent(clks[IMX8MQ_AUDIO_PLL1_BYPASS], clks[IMX8MQ_AUDIO_PLL1]);
-	clk_set_parent(clks[IMX8MQ_AUDIO_PLL2_BYPASS], clks[IMX8MQ_AUDIO_PLL2]);
-	clk_set_parent(clks[IMX8MQ_VIDEO_PLL1_BYPASS], clks[IMX8MQ_VIDEO_PLL1]);
+	clk_set_parent(hws[IMX8MQ_GPU_PLL_BYPASS]->clk, hws[IMX8MQ_GPU_PLL]->clk);
+	clk_set_parent(hws[IMX8MQ_VPU_PLL_BYPASS]->clk, hws[IMX8MQ_VPU_PLL]->clk);
+	clk_set_parent(hws[IMX8MQ_AUDIO_PLL1_BYPASS]->clk, hws[IMX8MQ_AUDIO_PLL1]->clk);
+	clk_set_parent(hws[IMX8MQ_AUDIO_PLL2_BYPASS]->clk, hws[IMX8MQ_AUDIO_PLL2]->clk);
+	clk_set_parent(hws[IMX8MQ_VIDEO_PLL1_BYPASS]->clk, hws[IMX8MQ_VIDEO_PLL1]->clk);
 
 	/* PLL OUT GATE */
 	hws[IMX8MQ_ARM_PLL_OUT] = imx_clk_hw_gate("arm_pll_out", "arm_pll_bypass", base + 0x28, 21);
@@ -643,12 +643,12 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
 	/* enable all the clocks just for bringup */
 	imx_clk_init_on(np, hws);
 
-	clk_set_parent(clks[IMX8MQ_CLK_CSI1_CORE], clks[IMX8MQ_SYS1_PLL_266M]);
-	clk_set_parent(clks[IMX8MQ_CLK_CSI1_PHY_REF], clks[IMX8MQ_SYS2_PLL_1000M]);
-	clk_set_parent(clks[IMX8MQ_CLK_CSI1_ESC], clks[IMX8MQ_SYS1_PLL_800M]);
-	clk_set_parent(clks[IMX8MQ_CLK_CSI2_CORE], clks[IMX8MQ_SYS1_PLL_266M]);
-	clk_set_parent(clks[IMX8MQ_CLK_CSI2_PHY_REF], clks[IMX8MQ_SYS2_PLL_1000M]);
-	clk_set_parent(clks[IMX8MQ_CLK_CSI2_ESC], clks[IMX8MQ_SYS1_PLL_800M]);
+	clk_set_parent(hws[IMX8MQ_CLK_CSI1_CORE]->clk, hws[IMX8MQ_SYS1_PLL_266M]->clk);
+	clk_set_parent(hws[IMX8MQ_CLK_CSI1_PHY_REF]->clk, hws[IMX8MQ_SYS2_PLL_1000M]->clk);
+	clk_set_parent(hws[IMX8MQ_CLK_CSI1_ESC]->clk, hws[IMX8MQ_SYS1_PLL_800M]->clk);
+	clk_set_parent(hws[IMX8MQ_CLK_CSI2_CORE]->clk, hws[IMX8MQ_SYS1_PLL_266M]->clk);
+	clk_set_parent(hws[IMX8MQ_CLK_CSI2_PHY_REF]->clk, hws[IMX8MQ_SYS2_PLL_1000M]->clk);
+	clk_set_parent(hws[IMX8MQ_CLK_CSI2_ESC]->clk, hws[IMX8MQ_SYS1_PLL_800M]->clk);
 
 	imx_register_uart_clocks(4);
 
