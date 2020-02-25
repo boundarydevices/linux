@@ -296,7 +296,7 @@ static int adv7535_probe(struct i2c_client *client,
 	}
 
 	dev_info(dev, "dsi cec addr = 0x%x\n", addr);
-	info->i2c_dsi_cec = i2c_new_dummy(client->adapter, addr >> 1);
+	info->i2c_dsi_cec = i2c_new_dummy_device(client->adapter, addr >> 1);
 	if (!info->i2c_dsi_cec) {
 		dev_err(dev, "Failed to allocate I2C device for dsi_cec\n");
 		ret = -ENOMEM;
