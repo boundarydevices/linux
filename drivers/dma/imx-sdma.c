@@ -1655,8 +1655,8 @@ static void sdma_free_chan_resources(struct dma_chan *chan)
 
 	sdma_wait_tasklet(chan);
 
-	sdma_event_disable(sdmac, sdmac->event_id0);
-
+	if (sdmac->event_id0 >= 0)
+		sdma_event_disable(sdmac, sdmac->event_id0);
 	if (sdmac->event_id1)
 		sdma_event_disable(sdmac, sdmac->event_id1);
 
