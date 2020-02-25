@@ -294,7 +294,7 @@ static struct clk_hw_onecell_data *clk_hw_data;
 static struct clk_hw **hws;
 
 static int __init imx_clk_init_on(struct device_node *np,
-				  struct clk * const clks[])
+				  struct clk_hw * const clks[])
 {
 	u32 *array;
 	int i, ret, elems;
@@ -311,7 +311,7 @@ static int __init imx_clk_init_on(struct device_node *np,
 		return ret;
 
 	for (i = 0; i < elems; i++) {
-		ret = clk_prepare_enable(clks[array[i]]);
+		ret = clk_prepare_enable(clks[array[i]]->clk);
 		if (ret)
 			pr_err("clk_prepare_enable failed %d\n", array[i]);
 	}
@@ -612,7 +612,7 @@ static int imx8mn_clocks_probe(struct platform_device *pdev)
 		goto unregister_hws;
 	}
 
-	imx_clk_init_on(np, clks);
+	imx_clk_init_on(np, hws);
 
 	clk_set_parent(clks[IMX8MN_CLK_AUDIO_AHB], clks[IMX8MN_SYS_PLL1_800M]);
 	clk_set_rate(clks[IMX8MN_CLK_AUDIO_AHB], 400000000);
