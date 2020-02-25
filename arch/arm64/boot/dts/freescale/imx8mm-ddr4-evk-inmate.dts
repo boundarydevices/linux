@@ -66,7 +66,6 @@
 	};
 };
 
-/delete-node/ &{/memory@40000000};
 /delete-node/ &{/reserved-memory};
 /delete-node/ &{/busfreq};
 /delete-node/ &{/soc@0/ddr-pmu@3d800000};
