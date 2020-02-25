@@ -306,7 +306,7 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
 	void __iomem *base;
-	int err, i;
+	int err;
 
 	check_m4_enabled();
 
@@ -635,12 +635,6 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
 	if (err < 0) {
 		dev_err(dev, "failed to register hws for i.MX8MQ\n");
 		goto unregister_hws;
-	}
-
-	for (i = 0; i < ARRAY_SIZE(uart_clk_ids); i++) {
-		int index = uart_clk_ids[i];
-
-		uart_hws[i] = &hws[index]->clk;
 	}
 
 	/* enable all the clocks just for bringup */
