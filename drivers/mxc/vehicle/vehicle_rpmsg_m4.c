@@ -238,24 +238,60 @@ void mcu_set_control_commands(u32 prop, u32 area, u32 value)
 	}
 }
 
+static int update_dt_prop(struct device_node *dn, char* name, void* value, int len)
+{
+	struct property *new_prop;
+
+	new_prop = kzalloc(sizeof(*new_prop), GFP_KERNEL);
+	if (!new_prop)
+		return -ENOMEM;
+	new_prop->name = kstrdup(name, GFP_KERNEL);
+	if (!new_prop->name) {
+		kfree(new_prop);
+		return -ENOMEM;
+	}
+	new_prop->length = len;
+	new_prop->value = kzalloc(new_prop->length, GFP_KERNEL);
+	if (!new_prop->value) {
+		kfree(new_prop->name);
+		kfree(new_prop);
+		return -ENOMEM;
+	}
+	memcpy(new_prop->value, value, len);
+
+	of_update_property(dn, new_prop);
+
+	return 0;
+}
+
+const struct of_device_id of_shared_match_table[] = {
+	{ .compatible = "simple-bus", },
+	{} /* Empty terminated list */
+};
 static void notice_evs_released(struct rpmsg_device *rpdev)
 {
-	struct device_node *camera;
-	camera = of_find_node_by_name (vehicle_rpmsg->vehicle_dev->of_node, "camera");
-	if (camera) {
-		if (of_platform_populate(camera, NULL, NULL, vehicle_rpmsg->vehicle_dev)) {
-			dev_err(&rpdev->dev, "failed to populate camera child nodes\n");
-		}
-		of_node_clear_flag(camera, OF_POPULATED_BUS);
-	}
-	of_node_put(camera);
+	struct device_node *dev_node, *shared_node;
+	int i, err;
 
-	int count = of_get_available_child_count(vehicle_rpmsg->vehicle_dev->of_node);
+	dev_node = vehicle_rpmsg->vehicle_dev->of_node;
+	int count = of_get_available_child_count(dev_node);
 	if (count) {
-		if (of_platform_populate(vehicle_rpmsg->vehicle_dev->of_node,
+		if (of_platform_populate(dev_node,
 			NULL, NULL, vehicle_rpmsg->vehicle_dev)) {
 			dev_err(&rpdev->dev, "failed to populate child nodes\n");
 		}
+	}
+
+	for (i=0; ;i++) {
+		shared_node = of_parse_phandle(dev_node, "fsl,resources", i);
+		if (!shared_node)
+			break;
+		err = update_dt_prop(shared_node, "status", "okay", sizeof("okay"));
+		if (err)
+			dev_err(&rpdev->dev, "failed to update %pOF status, err:%d\n",shared_node, err);
+
+		of_node_clear_flag(shared_node, OF_POPULATED_BUS);
+		of_platform_populate(shared_node, of_shared_match_table, NULL, vehicle_rpmsg->vehicle_dev);
 	}
 }
 
