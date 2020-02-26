@@ -71,6 +71,10 @@ static const struct of_device_id imx8qxp_match[] = {
 	{ .compatible = "fsl,scu-clk", },
 	{ .compatible = "fsl,imx8qxp-clk", &imx_clk_scu_rsrc_imx8qxp, },
 	{ .compatible = "fsl,imx8qm-clk", &imx_clk_scu_rsrc_imx8qm, },
+#ifdef CONFIG_VEHICLE_POST_INIT
+	{ .compatible = "fsl,imx8qxp-clk-post", &imx_clk_post_scu_rsrc_imx8qxp, },
+	{ .compatible = "fsl,imx8qm-clk-post", &imx_clk_post_scu_rsrc_imx8qm, },
+#endif
 	{ /* sentinel */ }
 };
 
@@ -81,7 +85,13 @@ static int imx8qxp_clk_probe(struct platform_device *pdev)
 	struct device_node *ccm_node = pdev->dev.of_node;
 	int ret;
 
-	ret = imx_clk_scu_init(ccm_node, of_id->data);
+#ifdef CONFIG_VEHICLE_POST_INIT
+	if (strstr(of_id->compatible, "post"))
+		ret = imx_clk_post_scu_init(ccm_node, of_id->data);
+	else
+#endif
+		ret = imx_clk_scu_init(ccm_node, of_id->data);
+
 	if (ret)
 		return ret;
 
@@ -245,7 +255,12 @@ static int imx8qxp_clk_probe(struct platform_device *pdev)
 	imx_clk_scu("hdmi_i2s_bypass_clk", IMX_SC_R_HDMI_I2S, IMX_SC_PM_CLK_BYPASS);
 	imx_clk_scu("hdmi_i2s_clk", IMX_SC_R_HDMI_I2S, IMX_SC_PM_CLK_MISC0);
 
-	return of_clk_add_hw_provider(ccm_node, imx_scu_of_clk_src_get, imx_scu_clks);
+#ifdef CONFIG_VEHICLE_POST_INIT
+	if (strstr(of_id->compatible, "post"))
+		return 0;
+	else
+#endif
+		return of_clk_add_hw_provider(ccm_node, imx_scu_of_clk_src_get, imx_scu_clks);
 }
 
 static struct platform_driver imx8qxp_clk_driver = {
