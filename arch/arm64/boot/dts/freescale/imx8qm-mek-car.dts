@@ -1,0 +1,77 @@
+// SPDX-License-Identifier: GPL-2.0+
+// Copyright NXP 2020
+
+#include "imx8qm-mek-rpmsg.dts"
+
+&img_subsys {
+	status = "disabled";
+};
+
+&dc1_subsys {
+	status = "disabled";
+};
+
+&lvds2_subsys {
+	status = "disabled";
+};
+
+&vehicle_core {
+	status = "okay";
+};
+
+&vehicle_rpmsg_m4 {
+	#address-cells = <2>;
+	#size-cells = <2>;
+	status = "okay";
+	ranges;
+	fsl,resources = <&lvds2_subsys>,
+			<&dc1_subsys>,
+			<&img_subsys>;
+
+	pd_post: imx8qm-pd {
+		compatible = "fsl,imx8qm-scu-pd-post";
+		#power-domain-cells = <1>;
+	};
+
+	clk_post: clk1 {
+		compatible = "fsl,imx8qm-clk-post";
+		#clock-cells = <2>;
+	};
+};
+
+
+&lvds_backlight0 {
+	status = "disabled";
+};
+
+&lvds_backlight1 {
+        status = "disabled";
+};
+
+&mipi0_dphy {
+        status = "disabled";
+};
+
+&mipi0_dsi_host {
+        status = "disabled";
+};
+
+&adv_bridge0 {
+        status = "disabled";
+};
+
+&mipi1_dphy {
+	status = "disabled";
+};
+
+&mipi1_dsi_host {
+	status = "disabled";
+};
+
+&adv_bridge1 {
+	status = "disabled";
+};
+
+&sata {
+       status = "disabled";
+};
