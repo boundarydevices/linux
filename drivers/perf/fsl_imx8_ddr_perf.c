@@ -440,7 +440,14 @@ static void ddr_perf_event_start(struct perf_event *event, int flags)
 	struct hw_perf_event *hwc = &event->hw;
 	int counter = hwc->idx;
 
-	local64_set(&hwc->prev_count, 0);
+	/* Workaround for i.MX865 */
+	if ((pmu->devtype_data->quirks & DDR_CAP_AXI_ID_FILTER_ENHANCED) ==
+	     DDR_CAP_AXI_ID_FILTER_ENHANCED) {
+		if (counter == EVENT_CYCLES_COUNTER)
+			local64_set(&hwc->prev_count, 0xe8000000);
+	} else {
+		local64_set(&hwc->prev_count, 0);
+	}
 
 	ddr_perf_counter_enable(pmu, event->attr.config, counter, true);
 
@@ -619,8 +626,15 @@ static irqreturn_t ddr_perf_irq_handler(int irq, void *p)
 		local64_set(&event->hw.prev_count, 0);
 	}
 
-	if (cycle_event)
-		local64_set(&cycle_event->hw.prev_count, 0);
+	/* Workaround for i.MX865 */
+	if ((pmu->devtype_data->quirks & DDR_CAP_AXI_ID_FILTER_ENHANCED) ==
+	    DDR_CAP_AXI_ID_FILTER_ENHANCED) {
+		if (cycle_event)
+			local64_set(&cycle_event->hw.prev_count, 0xe8000000);
+	} else {
+		if (cycle_event)
+			local64_set(&cycle_event->hw.prev_count, 0);
+	}
 
 	spin_unlock(&pmu->lock);
 
