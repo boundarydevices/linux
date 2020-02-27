@@ -5,6 +5,7 @@
  */
 
 #include <linux/bitfield.h>
+#include <linux/clk.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -135,6 +136,8 @@ struct ddr_pmu {
 	const struct fsl_ddr_devtype_data *devtype_data;
 	int irq;
 	int id;
+	struct clk *clk_ipg;
+	struct clk *clk_cnt;
 };
 
 static ssize_t ddr_perf_identifier_show(struct device *dev,
@@ -352,6 +355,27 @@ static const struct attribute_group *db_attr_groups[] = {
 	&ddr_perf_filter_cap_attr_group,
 	NULL,
 };
+
+static int ddr_perf_clks_enable(struct ddr_pmu *pmu)
+{
+	int err;
+
+	err = clk_prepare_enable(pmu->clk_ipg);
+	if (err)
+		return err;
+
+	err = clk_prepare_enable(pmu->clk_cnt);
+	if (err)
+		clk_disable_unprepare(pmu->clk_ipg);
+
+	return err;
+}
+
+static void ddr_perf_clks_disable(struct ddr_pmu *pmu)
+{
+	clk_disable_unprepare(pmu->clk_cnt);
+	clk_disable_unprepare(pmu->clk_ipg);
+}
 
 static bool ddr_perf_is_filtered(struct perf_event *event)
 {
@@ -810,6 +834,22 @@ static int ddr_perf_probe(struct platform_device *pdev)
 		pmu->pmu.attr_groups = db_attr_groups;
 		pmu->id = ida_simple_get(&db_ida, 0, 0, GFP_KERNEL);
 		name = devm_kasprintf(&pdev->dev, GFP_KERNEL, DB_PERF_DEV_NAME "%d", pmu->id);
+
+		pmu->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
+		if (IS_ERR(pmu->clk_ipg)) {
+			dev_err(&pdev->dev, "no ipg clock defined\n");
+			return PTR_ERR(pmu->clk_ipg);
+		}
+
+		pmu->clk_cnt = devm_clk_get(&pdev->dev, "cnt");
+		if (IS_ERR(pmu->clk_cnt)) {
+			dev_err(&pdev->dev, "no cnt clock defined\n");
+			return PTR_ERR(pmu->clk_cnt);
+		}
+
+		ret = ddr_perf_clks_enable(pmu);
+		if (ret)
+			return ret;
 	} else
 		return -EINVAL;
 
@@ -876,8 +916,10 @@ cpuhp_instance_err:
 cpuhp_state_err:
 	if (pmu->devtype_data->type & DDR_PERF_TYPE)
 		ida_simple_remove(&ddr_ida, pmu->id);
-	else
+	else {
+		ddr_perf_clks_disable(pmu);
 		ida_simple_remove(&db_ida, pmu->id);
+	}
 
 	dev_warn(&pdev->dev, "i.MX8 DDR Perf PMU failed (%d), disabled\n", ret);
 	return ret;
@@ -894,8 +936,10 @@ static int ddr_perf_remove(struct platform_device *pdev)
 
 	if (pmu->devtype_data->type & DDR_PERF_TYPE)
 		ida_simple_remove(&ddr_ida, pmu->id);
-	else
+	else {
+		ddr_perf_clks_disable(pmu);
 		ida_simple_remove(&db_ida, pmu->id);
+	}
 
 	return 0;
 }
