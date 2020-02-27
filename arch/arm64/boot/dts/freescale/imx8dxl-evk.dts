@@ -46,12 +46,20 @@
 			reg = <0 0x90400000 0 0x100000>;
 		};
 
+/*
+ *		Memory reserved for optee usage. Please do not use.
+ *		This will be automaticky added to dtb if OP-TEE is installed.
+ *		optee@96000000 {
+ *   			reg = <0 0x96000000 0 0x2000000>;
+ *			no-map;
+ *		};
+ */
 		/* global autoconfigured region for contiguous allocations */
 		linux,cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0 0x3c000000>;
-			alloc-ranges = <0 0x96000000 0 0x3c000000>;
+			size = <0 0x14000000>;
+			alloc-ranges = <0 0x98000000 0 0x14000000>;
 			linux,cma-default;
 		};
 	};
@@ -84,6 +92,18 @@
 		off-on-delay-us = <3480>;
 	};
 
+	reg_vref_1v8: regulator-adc-vref {
+		compatible = "regulator-fixed";
+		regulator-name = "vref_1v8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
+
+};
+
+&adc0 {
+	vref-supply = <&reg_vref_1v8>;
+	status = "okay";
 };
 
 &flexspi0 {

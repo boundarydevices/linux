@@ -123,7 +123,7 @@
 
 		opp-1200000000 {
 			opp-hz = /bits/ 64 <1200000000>;
-			opp-microvolt = <950000>;
+			opp-microvolt = <850000>;
 			opp-supported-hw = <0x8a0>, <0x7>;
 			clock-latency-ns = <150000>;
 			opp-suspend;
@@ -155,7 +155,6 @@
 	edacmc: memory-controller@3d400000 {
 		compatible = "fsl,imx8mp-ddrc";
 		reg = <0x0 0x3d400000 0x0 0x400000>;
-		interrupt-parent = <&gic>;
 		interrupts = <GIC_SPI 147 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
@@ -178,7 +177,15 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
-
+		
+/*
+ *		Memory reserved for optee usage. Please do not use.
+ *		This will be automaticky added to dtb if OP-TEE is installed.
+ *		optee@56000000 {
+ *   			reg = <0 0x56000000 0 0x2000000>;
+ *			no-map;
+ *		};
+ */
 		/* global autoconfigured region for contiguous allocations */
 		linux,cma {
 			compatible = "shared-dma-pool";
@@ -297,6 +304,7 @@
 			domain-index = <4>;
 			domain-name = "mlmix";
 			clocks = <&clk IMX8MP_CLK_ML_AXI>,
+				 <&clk IMX8MP_CLK_ML_AHB>,
 				 <&clk IMX8MP_CLK_NPU_ROOT>;
 		};
 
@@ -314,7 +322,8 @@
 			#power-domain-cells = <0>;
 			domain-index = <6>;
 			domain-name = "gpumix";
-			clocks = <&clk IMX8MP_CLK_GPU_ROOT>;
+			clocks = <&clk IMX8MP_CLK_GPU_ROOT>, <&clk IMX8MP_CLK_GPU_AHB>,
+				 <&clk IMX8MP_CLK_GPU_AXI>;
 		};
 
 		gpu2d_pd: gpu2d-pd {
@@ -1552,7 +1561,7 @@
 				reg = <0x32fc2000 0x1000>;
 				interrupts = <GIC_SPI 43 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-controller;
-				interrupt-parent = <&gpc>;
+				interrupt-parent = <&gic>;
 				#interrupt-cells = <1>;
 				fsl,channel = <1>;
 				fsl,num-irqs = <64>;
