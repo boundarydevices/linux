@@ -646,7 +646,7 @@ int wm8960_configure_sysclk(struct wm8960_priv *wm8960, int mclk,
 	lrclk = wm8960->lrclk;
 
 	/* check if the sysclk frequency is available. */
-	for (i = 0; i < ARRAY_SIZE(sysclk_divs); ++i) {
+	for (i = ARRAY_SIZE(sysclk_divs) - 1; i >= 0 ; --i) {
 		if (sysclk_divs[i] == -1)
 			continue;
 		sysclk = mclk / sysclk_divs[i];
@@ -722,10 +722,10 @@ int wm8960_configure_pll(struct snd_soc_component *component, int freq_in,
 			sysclk = lrclk * dac_divs[j];
 			freq_out = sysclk * sysclk_divs[i];
 
-			for (k = 0; k < ARRAY_SIZE(bclk_divs); ++k) {
-				if (!is_pll_freq_available(freq_in, freq_out))
-					continue;
+			if (!is_pll_freq_available(freq_in, freq_out))
+				continue;
 
+			for (k = 0; k < ARRAY_SIZE(bclk_divs); ++k) {
 				diff = sysclk - bclk * bclk_divs[k] / 10;
 				if (diff == 0) {
 					*sysclk_idx = i;
