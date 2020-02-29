@@ -15,6 +15,13 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
+	pinctrl_backlight_edp: backlight-edpgrp {
+		fsl,pins = <
+#define GP_BACKLIGHT_EDP	<&gpio1 4 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_GPIO1_IO04_GPIO1_IO4		0x19
+		>;
+	};
+
 	pinctrl_bt_rfkill: bt-rfkillgrp {
 		fsl,pins = <
 #define GP_BT_RFKILL_RESET	<&gpio3 19 GPIO_ACTIVE_LOW>
@@ -120,8 +127,6 @@
 
 			/* Clock for both CSI1 and CSI2 */
 			MX8MQ_IOMUXC_GPIO1_IO15_CCMSRCGPCMIX_CLKO2	0x07
-			/* test points */
-			MX8MQ_IOMUXC_GPIO1_IO04_GPIO1_IO4		0xc1	/* TP87 */
 		>;
 	};
 
@@ -518,7 +523,7 @@
 		pinctrl_lcm_jm430 = &pinctrl_mipi_lcm_jm430;
 		pinctrl_ltk0680ytmdb = &pinctrl_mipi_ltk0680ytmdb;
 		pinctrl_ltk080a60a004t = &pinctrl_mipi_ltk080a60a004t;
-		pwm_mipi = &pwm1;
+		pwm_mipi = &pwm3;
 		sound_hdmi = &sound_hdmi;
 		t_mipi = &t_mipi;
 	};
@@ -533,6 +538,18 @@
 		p7 = <&pinctrl_mipi_lcm_jm430>;
 		p8 = <&pinctrl_mipi_ltk0680ytmdb>;
 		p9 = <&pinctrl_mipi_ltk080a60a004t>;
+	};
+
+	backlight_edp: backlight-edp {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <8>;
+		display = <&fb_dcss>;
+		enable-gpios = GP_BACKLIGHT_EDP;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight_edp>;
+		pwms = <&pwm1 0 30000>;		/* 33.3 Khz */
+		status = "okay";
 	};
 
 	backlight_mipi: backlight-mipi {
@@ -573,6 +590,7 @@
 		clock-frequency = <22000000>;
 		clock-output-names = "mipi_mclk";
 		pwms = <&pwm1 0 45>; /* 1 / 45 ns = 22 MHz */
+		status = "disabled";
 	};
 
 	reg_usb_otg_vbus: regulator-usb-otg-vbus {
