@@ -584,9 +584,12 @@
 			reg = <0x00 0x03400000 0x0 0x00100000>,
 			      <0x20 0x00000000 0x8 0x00000000>;
 			reg-names = "regs", "addr_space";
+			interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>; /* PME interrupt */
+			interrupt-names = "pme";
 			num-ib-windows = <24>;
 			num-ob-windows = <256>;
 			max-functions = /bits/ 8 <2>;
+			big-endian;
 			status = "disabled";
 		};
 
@@ -621,8 +624,11 @@
 			reg = <0x00 0x03500000 0x0 0x00100000>,
 			      <0x28 0x00000000 0x8 0x00000000>;
 			reg-names = "regs", "addr_space";
+			interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>; /* PME interrupt */
+			interrupt-names = "pme";
 			num-ib-windows = <6>;
 			num-ob-windows = <6>;
+			big-endian;
 			status = "disabled";
 		};
 
@@ -657,8 +663,11 @@
 			reg = <0x00 0x03600000 0x0 0x00100000>,
 			      <0x30 0x00000000 0x8 0x00000000>;
 			reg-names = "regs", "addr_space";
+			interrupts = <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>; /* PME interrupt */
+			interrupt-names = "pme";
 			num-ib-windows = <6>;
 			num-ob-windows = <6>;
+			big-endian;
 			status = "disabled";
 		};
 
