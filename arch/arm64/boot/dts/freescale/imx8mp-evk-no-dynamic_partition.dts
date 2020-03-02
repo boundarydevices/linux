@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2019 NXP
+ */
+
+/dts-v1/;
+
+#include "imx8mp-evk.dts"
+/ {
+	firmware {
+		android {
+			fstab {
+                                system {
+					compatible = "android,system";
+					/* default emmc node used for GSI */
+					dev = "/dev/block/platform/soc@0/30800000.bus/30b60000.mmc/by-name/system";
+					/* sd card node which used if androidboot.boot_device_root=mmcblk1 */
+					dev_mmcblk1 = "/dev/block/platform/soc@0/30800000.bus/30b50000.mmc/by-name/system";
+					/* emmc node which used if androidboot.boot_device_root=mmcblk2 */
+					dev_mmcblk2 = "/dev/block/platform/soc@0/30800000.bus/30b60000.mmc/by-name/system";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,slotselect,avb,avb_keys=/avb/q-gsi.avbpubkey:/avb/r-gsi.avbpubkey:/avb/s-gsi.avbpubkey";
+				};
+				vendor {
+					compatible = "android,vendor";
+					/* default emmc node used for GSI */
+					dev = "/dev/block/platform/soc@0/30800000.bus/30b60000.mmc/by-name/vendor";
+					/* sd card node which used if androidboot.boot_device_root=mmcblk1 */
+					dev_mmcblk1 = "/dev/block/platform/soc@0/30800000.bus/30b50000.mmc/by-name/vendor";
+					/* emmc node which used if androidboot.boot_device_root=mmcblk2 */
+					dev_mmcblk2 = "/dev/block/platform/soc@0/30800000.bus/30b60000.mmc/by-name/vendor";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,slotselect,avb";
+				};
+                                product {
+					compatible = "android,product";
+					/* default emmc node used for GSI */
+					dev = "/dev/block/platform/soc@0/30800000.bus/30b60000.mmc/by-name/product";
+					/* sd card node which used if androidboot.boot_device_root=mmcblk1 */
+					dev_mmcblk1 = "/dev/block/platform/soc@0/30800000.bus/30b50000.mmc/by-name/product";
+					/* emmc node which used if androidboot.boot_device_root=mmcblk2 */
+					dev_mmcblk2 = "/dev/block/platform/soc@0/30800000.bus/30b60000.mmc/by-name/product";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,slotselect,avb";
+				};
+			};
+			vbmeta {
+				/*we need use FirstStageMountVBootV2 if we enable avb*/
+				compatible = "android,vbmeta";
+				/*parts means the partition witch can be mount in first stage*/
+				parts = "vbmeta,dtbo,boot,system,vendor,product";
+			};
+		};
+	};
+};
