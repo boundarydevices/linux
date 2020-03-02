@@ -48,7 +48,7 @@
 			};
 		};
 
-		A72_0: cpu@100 {
+		A72_0: cpu@0 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a72", "arm,armv8";
 			reg = <0x0 0x100>;
@@ -59,7 +59,7 @@
 			#cooling-cells = <2>;
 		};
 
-		A72_1: cpu@101 {
+		A72_1: cpu@1 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a72", "arm,armv8";
 			reg = <0x0 0x101>;
@@ -70,7 +70,7 @@
 			#cooling-cells = <2>;
 		};
 
-		A53_0: cpu@0 {
+		A53_0: cpu@2 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53", "arm,armv8";
 			reg = <0x0 0x0>;
@@ -81,7 +81,7 @@
 			#cooling-cells = <2>;
 		};
 
-		A53_1: cpu@1 {
+		A53_1: cpu@3 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53", "arm,armv8";
 			reg = <0x0 0x1>;
@@ -92,7 +92,7 @@
 			#cooling-cells = <2>;
 		};
 
-		A53_2: cpu@2 {
+		A53_2: cpu@4 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53", "arm,armv8";
 			reg = <0x0 0x2>;
@@ -103,7 +103,7 @@
 			#cooling-cells = <2>;
 		};
 
-		A53_3: cpu@3 {
+		A53_3: cpu@5 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53", "arm,armv8";
 			reg = <0x0 0x3>;
