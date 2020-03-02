@@ -65,6 +65,7 @@ int imx_sc_rm_get_resource_owner(struct imx_sc_ipc *ipc, u16 resource, u8 *pt);
 int imx_sc_rm_set_memreg_permissions(struct imx_sc_ipc *ipc, u8 mr,
 				     u8 pt, u8 perm);
 int imx_sc_rm_get_did(struct imx_sc_ipc *ipc, u8 *did);
+int imx_sc_rm_get_partition(struct imx_sc_ipc *ipc, u8 *pt);
 #else
 static inline bool
 imx_sc_rm_is_resource_owned(struct imx_sc_ipc *ipc, u16 resource)
@@ -96,6 +97,12 @@ static inline
 int imx_sc_rm_get_did(struct imx_sc_ipc *ipc, u8 *did)
 {
 	return -EOPNOTSUPP;
+
+}
+
+static inline int imx_sc_rm_get_partition(struct imx_sc_ipc *ipc, u8 *pt)
+{
+	return -ENOENT;
 }
 #endif
 #endif
