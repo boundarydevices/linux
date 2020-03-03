@@ -1136,6 +1136,9 @@
 				clocks = <&clk IMX8MN_CLK_QSPI_ROOT>,
 					 <&clk IMX8MN_CLK_QSPI_ROOT>;
 				clock-names = "fspi_en", "fspi";
+				assigned-clock-rates = <80000000>;
+				assigned-clocks = <&clk IMX8MN_CLK_QSPI>;
+				assigned-clock-parents = <&clk IMX8MN_SYS_PLL1_400M>;
 				status = "disabled";
 			};
 
