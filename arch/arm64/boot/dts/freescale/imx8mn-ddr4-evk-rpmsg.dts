@@ -1,0 +1,99 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2019 NXP
+ */
+
+#include "imx8mn-ddr4-evk.dts"
+
+/ {
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		m_core_reserved: m_core@0x80000000 {
+			no-map;
+			reg = <0 0x80000000 0 0x1000000>;
+		};
+
+		rpmsg_reserved: rpmsg@0xb8000000 {
+			no-map;
+			reg = <0 0xb8000000 0 0x400000>;
+		};
+	};
+
+	sound-wm8524 {
+		status = "disabled";
+	};
+
+	wm8524: audio-codec {
+		status = "disabled";
+	};
+
+	rpmsg_audio: rpmsg_audio {
+		compatible = "fsl,imx8mn-rpmsg-audio";
+		model = "wm8524-audio";
+		fsl,enable-lpa;
+		fsl,rpmsg-out;
+		clocks = <&clk IMX8MN_CLK_SAI3_IPG>,
+			 <&clk IMX8MN_CLK_SAI3_ROOT>,
+			 <&clk IMX8MN_CLK_SDMA3_ROOT>,
+			 <&clk IMX8MN_AUDIO_PLL1_OUT>,
+			 <&clk IMX8MN_AUDIO_PLL2_OUT>;
+		clock-names = "bus", "mclk", "dma", "pll8k", "pll11k";
+		status = "okay";
+	};
+};
+
+&clk {
+	init-on-array = <
+	IMX8MN_CLK_UART4_ROOT
+	>;
+};
+
+/*
+ * ATTENTION: M core may use IPs like below
+ * ECSPI2, GPIO1/GPIO5, GPT1, I2C3, I2S3, WDOG1, UART4, PWM3, SDMA1/3 and PDM
+ */
+
+&ecspi2 {
+	status = "disabled";
+};
+
+&i2c3 {
+	status = "disabled";
+};
+
+&pwm3 {
+	status = "disabled";
+};
+
+&rpmsg{
+	/*
+	 * 64K for one rpmsg instance:
+	 * --0xb8000000~0xb800ffff: pingpong
+	 */
+	vdev-nums = <1>;
+	reg = <0x0 0xb8000000 0x0 0x10000>;
+	status = "okay";
+};
+
+&sai3 {
+	status = "disabled";
+};
+
+&uart4 {
+	status = "disabled";
+};
+
+&wdog1 {
+	status = "disabled";
+};
+
+&sdma1{
+	status = "disabled";
+};
+
+&sdma3 {
+	status = "disabled";
+};

@@ -1080,6 +1080,7 @@
 				reg = <0x30aa0000 0x10000>;
 				interrupts = <GIC_SPI 88 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk IMX8MN_CLK_MU_ROOT>;
+				clock-names = "mu";
 				#mbox-cells = <2>;
 			};
 
@@ -1357,6 +1358,20 @@
 			reg = <0x3d800000 0x400000>;
 			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
 		};
+	};
+
+	rpmsg: rpmsg{
+		compatible = "fsl,imx8mq-rpmsg";
+		/* up to now, the following channels are used in imx rpmsg
+		 * - tx1/rx1: messages channel.
+		 * - general interrupt1: remote proc finish re-init rpmsg stack
+		 *   when A core is partition reset.
+		 */
+		mbox-names = "tx", "rx", "rxdb";
+		mboxes = <&mu 0 1
+			  &mu 1 1
+			  &mu 3 1>;
+		status = "disabled";
 	};
 
 	usbphynop1: usbphynop1 {
