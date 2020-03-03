@@ -274,7 +274,7 @@
 		method = "smc";
 	};
 
-	thermal-zones {
+	thermal: thermal-zones {
 		cpu-thermal {
 			polling-delay-passive = <250>;
 			polling-delay = <2000>;
