@@ -76,7 +76,7 @@ struct imx_sc_msg_req_set_resource_power_mode {
 	struct imx_sc_rpc_msg hdr;
 	u16 resource;
 	u8 mode;
-} __packed;
+} __packed __aligned(4);
 
 #define IMX_SCU_PD_NAME_SIZE 20
 struct imx_sc_pm_domain {
@@ -416,14 +416,6 @@ static int imx_sc_pd_power(struct generic_pm_domain *domain, bool power_on)
 	if (ret)
 		dev_err(&domain->dev, "failed to power %s resource %d ret %d\n",
 			power_on ? "up" : "off", pd->rsrc, ret);
-
-	/* keep HDMI TX resource power on */
-	if (power_on && (pd->rsrc == IMX_SC_R_HDMI ||
-					pd->rsrc == IMX_SC_R_HDMI_I2S ||
-					pd->rsrc == IMX_SC_R_HDMI_I2C_0 ||
-					pd->rsrc == IMX_SC_R_HDMI_PLL_0 ||
-					pd->rsrc == IMX_SC_R_HDMI_PLL_1))
-		pd->pd.flags |= GENPD_FLAG_ALWAYS_ON;
 
 	return ret;
 }

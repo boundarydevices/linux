@@ -185,9 +185,11 @@ static int gpmi_init(struct gpmi_nand_data *this)
 
 	/*
 	 * Decouple the chip select from dma channel. We use dma0 for all
-	 * the chips.
+	 * the chips, force all NAND RDY_BUSY inputs to be sourced from
+	 * RDY_BUSY0.
 	 */
-	writel(BM_GPMI_CTRL1_DECOUPLE_CS, r->gpmi_regs + HW_GPMI_CTRL1_SET);
+	writel(BM_GPMI_CTRL1_DECOUPLE_CS | BM_GPMI_CTRL1_GANGED_RDYBUSY,
+	       r->gpmi_regs + HW_GPMI_CTRL1_SET);
 
 err_out:
 	pm_runtime_mark_last_busy(this->dev);
@@ -2942,9 +2944,6 @@ static int gpmi_nand_probe(struct platform_device *pdev)
 	ret = gpmi_nand_init(this);
 	if (ret)
 		goto exit_nfc_init;
-
-	pm_runtime_mark_last_busy(&pdev->dev);
-	pm_runtime_put_autosuspend(&pdev->dev);
 
 	dev_info(this->dev, "driver registered.\n");
 
