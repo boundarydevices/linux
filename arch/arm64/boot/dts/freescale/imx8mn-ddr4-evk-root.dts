@@ -22,7 +22,7 @@ TODO: need uncomment when linux ready
 			compatible = "shared-dma-pool";
 			reusable;
 			size = <0 0x28000000>;
-			alloc-ranges = <0 0x40000000 0 0x93c00000>;
+			alloc-ranges = <0 0x40000000 0 0x40000000>;
 			linux,cma-default;
 		};
 
