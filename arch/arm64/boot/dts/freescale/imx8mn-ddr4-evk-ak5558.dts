@@ -1,0 +1,26 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2019 NXP
+ */
+
+#include "imx8mn-ddr4-evk.dts"
+
+/ {
+	sound-wm8524 {
+		asrc-controller = <0>;
+	};
+	sound-ak5558 {
+		status = "okay";
+	};
+	sound-micfil {
+		status = "disabled";
+	};
+};
+
+&micfil {
+	status = "disabled";
+};
+
+&sai5 {
+	status = "okay";
+};
