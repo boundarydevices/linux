@@ -39,6 +39,8 @@
 		spi0 = &ecspi1;
 		spi1 = &ecspi2;
 		spi2 = &ecspi3;
+		isi0 = &isi_0;
+		csi0 = &mipi_csi_1;
 	};
 
 	cpus {
@@ -283,6 +285,60 @@
 			     <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
 		clock-frequency = <8000000>;
 		arm,no-tick-in-suspend;
+	};
+
+	mipi2csi_gasket: gasket@32e28060 {
+		compatible = "syscon";
+		reg = <0x0 0x32e28060 0x0 0x28>;
+	};
+
+	cameradev: camera {
+		compatible = "fsl,mxc-md", "simple-bus";
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+		status = "disabled";
+
+		isi_0: isi@32e20000 {
+			compatible = "fsl,imx8mn-isi";
+			reg = <0x0 0x32e20000 0x0 0x2000>;
+			power-domains = <&disp_blk_ctrl IMX8MN_DISPBLK_PD_ISI>;
+			interrupts = <GIC_SPI 16 IRQ_TYPE_LEVEL_HIGH>;
+			interface = <2 0 2>;
+			clocks = <&clk IMX8MN_CLK_DISP_AXI>,
+				 <&clk IMX8MN_CLK_DISP_APB>,
+				 <&clk IMX8MN_CLK_DISP_AXI_ROOT>,
+				 <&clk IMX8MN_CLK_DISP_APB_ROOT>;
+			clock-names = "disp_axi", "disp_apb", "disp_axi_root", "disp_apb_root";
+			assigned-clocks = <&clk IMX8MN_CLK_DISP_AXI_ROOT>,
+					  <&clk IMX8MN_CLK_DISP_APB_ROOT>;
+			assigned-clock-rates = <500000000>, <200000000>;
+			no-reset-control;
+			status = "disabled";
+
+			cap_device {
+				compatible = "imx-isi-capture";
+				status = "disabled";
+			};
+		};
+
+		mipi_csi_1: csi@32e30000 {
+			compatible = "fsl,imx8mn-mipi-csi";
+			reg = <0x0 0x32e30000 0x0 0x10000>;
+			interrupts = <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>;
+			clock-frequency = <333000000>;
+			clocks = <&clk IMX8MN_CLK_CAMERA_PIXEL>,
+				 <&clk IMX8MN_CLK_DISP_AXI_ROOT>,
+				 <&clk IMX8MN_CLK_DISP_APB_ROOT>;
+			clock-names = "mipi_clk", "disp_axi", "disp_apb";
+			assigned-clocks = <&clk IMX8MN_CLK_CAMERA_PIXEL>;
+			assigned-clock-parents = <&clk IMX8MN_SYS_PLL2_1000M>;
+			assigned-clock-rates = <333000000>;
+			bus-width = <4>;
+			csi-gpr = <&mipi2csi_gasket>;
+			power-domains = <&disp_blk_ctrl IMX8MN_DISPBLK_PD_MIPI_CSI>;
+			status = "disabled";
+		};
 	};
 
 	soc: soc@0 {
