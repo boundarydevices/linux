@@ -837,6 +837,7 @@
 
 &usdhc1 {
 	bus-width = <8>;
+	no-cqe;
 	no-mmc-hs400;
 	non-removable;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
