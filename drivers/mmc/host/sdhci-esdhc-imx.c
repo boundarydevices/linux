@@ -1440,7 +1440,7 @@ static void sdhci_esdhc_imx_hwinit(struct sdhci_host *host)
 		 * otherwise DCMD will always meet timeout waiting for
 		 * hardware interrupt issue.
 		 */
-		if (imx_data->socdata->flags & ESDHC_FLAG_CQHCI) {
+		if (host->mmc->caps2 & MMC_CAP2_CQE) {
 			tmp = readl(host->ioaddr + ESDHC_VEND_SPEC2);
 			tmp |= ESDHC_VEND_SPEC2_EN_BUSY_IRQ;
 			writel(tmp, host->ioaddr + ESDHC_VEND_SPEC2);
@@ -1608,13 +1608,16 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	if (of_find_property(np, "enable-sdma", NULL))
 		imx_data->enable_caps |= SDHCI_CAN_DO_SDMA;
 
+	if (of_find_property(np, "no-mmc-hs400", NULL))
+		imx_data->disable_caps1 |= SDHCI_SUPPORT_HS400;
+
+	if (of_find_property(np, "no-cqe", NULL))
+		host->mmc->caps2 &= ~MMC_CAP2_CQE;
+
 	if (imx_data->disable_caps | imx_data->enable_caps) {
 		dev_info(mmc_dev(host->mmc), "disable_caps=%x enable_caps=%x\n",
 				imx_data->disable_caps, imx_data->enable_caps);
 	}
-
-	if (of_find_property(np, "no-mmc-hs400", NULL))
-		imx_data->disable_caps1 |= SDHCI_SUPPORT_HS400;
 
 	of_property_read_u32(np, "fsl,strobe-dll-delay-target",
 				&boarddata->strobe_dll_delay_target);
@@ -1751,7 +1754,14 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 					esdhc_hs400_enhanced_strobe;
 	}
 
-	if (imx_data->socdata->flags & ESDHC_FLAG_CQHCI) {
+	if (imx_data->socdata->flags & ESDHC_FLAG_CQHCI)
+		host->mmc->caps2 |= MMC_CAP2_CQE;
+
+	err = sdhci_esdhc_imx_probe_dt(pdev, host, imx_data);
+	if (err)
+		goto disable_ahb_clk;
+
+	if (host->mmc->caps2 & MMC_CAP2_CQE) {
 		host->mmc->caps2 |= MMC_CAP2_CQE | MMC_CAP2_CQE_DCMD;
 		cq_host = devm_kzalloc(&pdev->dev, sizeof(*cq_host), GFP_KERNEL);
 		if (!cq_host) {
@@ -1767,9 +1777,6 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 			goto disable_ahb_clk;
 	}
 
-	err = sdhci_esdhc_imx_probe_dt(pdev, host, imx_data);
-	if (err)
-		goto disable_ahb_clk;
 	imx_data->max_clock = ~0;
 	if (imx_data->boarddata.max_clock) {
 		imx_data->max_clock = imx_data->boarddata.max_clock;
