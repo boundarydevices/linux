@@ -13,13 +13,16 @@
  */
 
 #include "fsl-imx8mq-evk.dts"
+/ {
+	model = "Freescale i.MX8MQ EVK edp";
+};
 
 &hdmi {
 	compatible = "fsl,imx8mq-dp";
-	lane_mapping = <0xc6>;
+	dp-lane-mapping = <0x1b>;
+	dp-link-rate = <0x6>;
+	dp-num-lanes = <0x2>;
 	fsl,edp;
-	edp_link_rate = <0x6>;
-	edp_num_lanes = <0x4>;
 	status = "okay";
 };
 
