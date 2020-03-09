@@ -39,7 +39,9 @@ struct mxc_isi_dev *mxc_isi_get_hostdata(struct platform_device *pdev)
 	if (!pdev || !pdev->dev.parent)
 		return NULL;
 
-	device_lock(pdev->dev.parent);
+	if (!device_trylock(pdev->dev.parent))
+		return NULL;
+
 	mxc_isi = (struct mxc_isi_dev *)dev_get_drvdata(pdev->dev.parent);
 	if (!mxc_isi) {
 		dev_err(&pdev->dev, "Cann't get host data\n");
