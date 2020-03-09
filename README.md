@@ -34,7 +34,7 @@ This repository contains Linux kernel v4.14 with STMicroelectronics MEMS sensor 
 
 ### Pressure:
 
-> LPS22HB, LPS22HD, LPS25H, LPS331AP, LPS001WP, LPS33HW, LPS35HW, LPS22HH
+> LPS22HB, LPS22HD, LPS25H, LPS331AP, LPS001WP, LPS33HW, LPS35HW, LPS22HH, LPS27HHW
 
 
 

@@ -266,7 +266,7 @@ config ST_LPS33HW_SPI_IIO
 	depends on ST_LPS33HW_IIO
 
 config ST_LPS22HH_IIO
-	tristate "STMicroelectronics LPS22HH sensor"
+	tristate "STMicroelectronics LPS22HH/LPS27HHW sensor"
 	depends on (I2C || SPI_MASTER) && SYSFS
 	select IIO_BUFFER
 	select IIO_KFIFO_BUF
