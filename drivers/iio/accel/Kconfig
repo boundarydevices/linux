@@ -148,6 +148,45 @@ config HID_SENSOR_ACCEL_3D
 	  To compile this driver as a module, choose M here: the
 	  module will be called hid-sensor-accel-3d.
 
+config IIO_ST_ACC33
+	tristate "STMicroelectronics LIS3DH/LIS2DH/LIS2DH12/LSM303AGR/IIS2DH Accelerometer driver"
+	depends on (I2C || SPI_MASTER) && SYSFS
+	select IIO_ST_ACC33_I2C if (I2C)
+	select IIO_ST_ACC33_SPI if (SPI_MASTER)
+	select IIO_BUFFER
+	select IIO_KFIFO_BUF
+	help
+	  Say yes here to build support for STMicroelectronics accelerometers:
+	  LIS3DH, LIS2DH, LIS2DH12, LSM303AGR, IIS2DH.
+
+	  This driver can also be built as a module. If so, will be created
+	  these modules:
+	  - st_ac33_core (core functions for the driver [it is mandatory]);
+	  - st_ac33_i2c (necessary for the I2C devices [optional*]);
+	  - st_ac33_spi (necessary for the SPI devices [optional*]);
+
+	  (*) one of these is necessary to do something.
+
+config IIO_ST_ACC33_I2C
+	tristate
+	depends on IIO_ST_ACC33
+
+config IIO_ST_ACC33_SPI
+	tristate
+	depends on IIO_ST_ACC33
+
+config IIO_ST_LIS3DHH
+	tristate "STMicroelectronics LIS3DHH/IIS3DHHC Accelerometer driver"
+	depends on SPI_MASTER && SYSFS
+	select IIO_BUFFER
+	select IIO_KFIFO_BUF
+	help
+	  Say yes here to build support for STMicroelectronics LIS3DHH and
+	  IIS3DHHC accelerometers
+
+	  This driver can also be built as a module. If so, will be named
+	  st_lis3dhh
+
 config IIO_ST_ACCEL_3AXIS
 	tristate "STMicroelectronics accelerometers 3-Axis Driver"
 	depends on (I2C || SPI_MASTER) && SYSFS
@@ -372,5 +411,122 @@ config STK8BA50
 
 	  Choosing M will build the driver as a module. If so, the module
 	  will be called stk8ba50.
+
+menuconfig IIO_ST_LIS2DS12
+	tristate "STMicroelectronics LIS2DS12/LSM303AH Accelerometer Driver"
+	depends on (I2C || SPI_MASTER) && SYSFS
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	select IIO_ST_LIS2DS12_I2C if (I2C)
+	select IIO_ST_LIS2DS12_SPI if (SPI)
+	help
+	  Say yes here to build support for the LIS2DS12 and LSM303AH
+	  accelerometers.
+
+if IIO_ST_LIS2DS12
+config IIO_ST_LIS2DS12_I2C
+	tristate
+	depends on IIO_ST_LIS2DS12
+	depends on I2C
+
+config IIO_ST_LIS2DS12_SPI
+	tristate
+	depends on IIO_ST_LIS2DS12
+	depends on SPI
+
+config ST_LIS2DS12_IIO_LIMIT_FIFO
+	int "Limit fifo read lenght (#n byte)"
+	depends on IIO_ST_LIS2DS12
+	range 0 1536
+	default 0
+	help
+	  Limit atomic fifo read to #n byte. In some platform i2c/spi read
+	  can be limited by software or hardware.
+
+	  Set 0 to disable the limit.
+
+endif #IIO_ST_LIS2DS12
+
+menuconfig IIO_ST_ISM303DAC_ACCEL
+	tristate "STMicroelectronics ISM303DAC Accelerometer Driver"
+	depends on (I2C || SPI_MASTER) && SYSFS
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	select IIO_ST_ISM303DAC_ACCEL_I2C if (I2C)
+	select IIO_ST_ISM303DAC_ACCEL_SPI if (SPI)
+	help
+	  Say yes here to build support for the ISM303DAC
+	  accelerometers.
+
+if IIO_ST_ISM303DAC_ACCEL
+config IIO_ST_ISM303DAC_ACCEL_I2C
+	tristate
+	depends on IIO_ST_ISM303DAC_ACCEL
+	depends on I2C
+
+config IIO_ST_ISM303DAC_ACCEL_SPI
+	tristate
+	depends on IIO_ST_ISM303DAC_ACCEL
+	depends on SPI
+
+config ST_ISM303DAC_ACCEL_IIO_LIMIT_FIFO
+	int "Limit fifo read lenght (#n byte)"
+	depends on IIO_ST_ISM303DAC_ACCEL
+	range 0 1536
+	default 0
+	help
+	  Limit atomic fifo read to #n byte. In some platform i2c/spi read
+	  can be limited by software or hardware.
+
+	  Set 0 to disable the limit.
+
+endif #IIO_ST_ISM303DAC_ACCEL
+
+config IIO_ST_LIS2HH12
+	tristate "STMicroelectronics LIS2HH12 Accelerometer driver"
+	depends on (I2C || SPI_MASTER) && SYSFS
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	select IIO_ST_LIS2HH12_I2C if (I2C)
+	select IIO_ST_LIS2HH12_SPI if (SPI)
+	help
+	  Say yes here to build support for the LIS2HH12 accelerometer.
+
+config IIO_ST_LIS2HH12_I2C
+	tristate
+	depends on IIO_ST_LIS2HH12
+	depends on I2C
+
+config IIO_ST_LIS2HH12_SPI
+	tristate
+	depends on IIO_ST_LIS2HH12
+
+config IIO_ST_LIS2DW12
+	tristate "STMicroelectronics LIS2DW12 Accelerometer Driver"
+	depends on (I2C || SPI)
+	select IIO_BUFFER
+	select IIO_KFIFO_BUF
+	select IIO_ST_LIS2DW12_I2C if (I2C)
+	select IIO_ST_LIS2DW12_SPI if (SPI)
+	help
+	  Say yes here to build support for the LIS2DW12 accelerometer.
+
+	  This driver can also be built as a module. If so, will be created
+	  these modules:
+	  - st_lisdw12 (core functions for the driver [it is mandatory]);
+	  - st_lisdw12_i2c (necessary for the I2C devices [optional*]);
+	  - st_lisdw12_spi (necessary for the SPI devices [optional*]);
+
+	  (*) one of these is necessary to do something.
+
+config IIO_ST_LIS2DW12_I2C
+	tristate
+	depends on IIO_ST_LIS2DW12
+	depends on I2C
+
+config IIO_ST_LIS2DW12_SPI
+	tristate
+	depends on IIO_ST_LIS2DW12
+	depends on SPI
 
 endmenu
