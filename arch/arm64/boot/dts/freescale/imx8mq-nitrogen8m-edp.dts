@@ -23,8 +23,8 @@
 
 &hdmi {
 	compatible = "fsl,imx8mq-dp";
-	dp-lane-mapping = <0xe1>;
-	dp-link-rate = <0x6>;
+	dp-lane-mapping = <0xe4>;
+	dp-link-rate = <0xa>;
 	dp-num-lanes = <2>;
 	fsl,edp;
 	status = "okay";
