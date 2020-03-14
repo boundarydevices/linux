@@ -549,7 +549,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_edp>;
 		pwms = <&pwm1 0 30000>;		/* 33.3 Khz */
-		status = "okay";
+		status = "disabled";
 	};
 
 	backlight_mipi: backlight-mipi {

@@ -17,6 +17,10 @@
 
 #include "imx8mq-nitrogen8m.dts"
 
+&backlight_edp {
+	status = "okay";
+};
+
 &hdmi {
 	compatible = "fsl,imx8mq-dp";
 	dp-lane-mapping = <0xe1>;
