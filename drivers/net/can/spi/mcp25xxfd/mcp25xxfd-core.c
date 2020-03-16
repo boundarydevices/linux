@@ -15,6 +15,7 @@
 #include <linux/bitfield.h>
 #include <linux/clk.h>
 #include <linux/device.h>
+#include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/netdevice.h>
 #include <linux/of.h>
