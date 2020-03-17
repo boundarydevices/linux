@@ -308,7 +308,7 @@ static struct mxc_hs_info hs_setting[] = {
 	{1280, 720,  15, 0x16},
 
 	{1024, 768,  30, 0x11},
-	{1024, 768,  15, 0x16},
+	{1024, 768,  15, 0x23},
 
 	{720,  576,  30, 0x1E},
 	{720,  576,  15, 0x23},
@@ -628,6 +628,7 @@ static int mxc_csi2_get_sensor_fmt(struct mxc_mipi_csi2_dev *csi2dev)
 	if (!sen_sd)
 		return -EINVAL;
 
+	memset(&src_fmt, 0, sizeof(src_fmt));
 	src_fmt.pad = source_pad->index;
 	src_fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 	ret = v4l2_subdev_call(sen_sd, pad, get_fmt, NULL, &src_fmt);

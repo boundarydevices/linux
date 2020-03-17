@@ -191,7 +191,7 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			size = <0 0x3c000000>;
-			alloc-ranges = <0 0x40000000 0 0x70000000>;
+			alloc-ranges = <0 0x40000000 0 0xC0000000>;
 			linux,cma-default;
 		};
 
@@ -341,7 +341,8 @@
 			domain-index = <8>;
 			domain-name = "gpu3d";
 			parent-domains = <&gpumix_pd>;
-			clocks = <&clk IMX8MP_CLK_GPU3D_ROOT>;
+			clocks = <&clk IMX8MP_CLK_GPU3D_ROOT>,
+				 <&clk IMX8MP_CLK_GPU3D_SHADER_DIV>;
 		};
 
 		vpumix_pd: vpumix-pd {
@@ -384,8 +385,8 @@
 			#power-domain-cells = <0>;
 			domain-index = <13>;
 			domain-name = "mediamix";
-			clocks = <&clk IMX8MP_CLK_MEDIA_AXI>,
-				 <&clk IMX8MP_CLK_MEDIA_APB>;
+			clocks = <&clk IMX8MP_CLK_MEDIA_AXI_ROOT>,
+				 <&clk IMX8MP_CLK_MEDIA_APB_ROOT>;
 		};
 
 		ispdwp_pd: power-domain@14 {
@@ -1302,14 +1303,14 @@
 					status = "disabled";
 				};
 
-				earc: earc@30cc0000 {
+				xcvr: xcvr@30cc0000 {
 					compatible = "fsl,imx8mp-xcvr";
 					reg = <0x30cc0000 0x10000>;
-					interrupts = /* eARC IRQ 0 */
+					interrupts = /* XCVR IRQ 0 */
 						     <GIC_SPI 128 IRQ_TYPE_LEVEL_HIGH>,
-						     /* eARC IRQ 1 */
+						     /* XCVR IRQ 1 */
 						     <GIC_SPI 129 IRQ_TYPE_LEVEL_HIGH>,
-						     /* eARC PHY - SPDIF wakeup IRQ */
+						     /* XCVR PHY - SPDIF wakeup IRQ */
 						     <GIC_SPI 146 IRQ_TYPE_LEVEL_HIGH>;
 					clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_EARC_IPG>,
 						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_EARC_PHY>,
@@ -1325,7 +1326,7 @@
 			};
 
 			sdma3: dma-controller@30e00000 {
-				compatible = "fsl,imx8mq-sdma", "fsl,imx7d-sdma";
+				compatible = "fsl,imx8mp-sdma", "fsl,imx7d-sdma";
 				reg = <0x30e00000 0x10000>;
 				interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SDMA3_ROOT>,
@@ -1339,7 +1340,7 @@
 			};
 
 			sdma2: dma-controller@30e10000 {
-				compatible = "fsl,imx8mq-sdma", "fsl,imx7d-sdma";
+				compatible = "fsl,imx8mp-sdma", "fsl,imx7d-sdma";
 				reg = <0x30e10000 0x10000>;
 				interrupts = <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SDMA2_ROOT>,
@@ -1561,7 +1562,6 @@
 				reg = <0x32fc2000 0x1000>;
 				interrupts = <GIC_SPI 43 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-controller;
-				interrupt-parent = <&gic>;
 				#interrupt-cells = <1>;
 				fsl,channel = <1>;
 				fsl,num-irqs = <64>;
@@ -1736,6 +1736,11 @@
 						compatible = "imx-isi-capture";
 						status = "disabled";
 					};
+
+					m2m_device{
+						compatible = "imx-isi-m2m";
+						status = "disabled";
+					};
 				};
 
 				isi_1: isi@32e02000 {
@@ -1896,6 +1901,7 @@
 					 <&clk IMX8MP_SYS_PLL1_800M>;
 		assigned-clock-rates = <1000000000>, <1000000000>,
 				       <800000000>, <400000000>;
+		power-domains = <&gpu3d_pd>;
 		status = "disabled";
 	};
 
@@ -1914,6 +1920,7 @@
 					 <&clk IMX8MP_SYS_PLL1_800M>,
 					 <&clk IMX8MP_SYS_PLL1_800M>;
 		assigned-clock-rates = <1000000000>, <800000000>, <400000000>;
+		power-domains = <&gpu2d_pd>;
 		status = "disabled";
 	};
 
@@ -2056,6 +2063,7 @@
 					 <&clk IMX8MP_SYS_PLL1_800M>,
 					 <&clk IMX8MP_SYS_PLL1_800M>;
 		assigned-clock-rates = <1000000000>, <800000000>, <400000000>;
+		power-domains = <&mlmix_pd>;
 		status = "disabled";
 	};
 
