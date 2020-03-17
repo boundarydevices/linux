@@ -104,11 +104,7 @@ audio_subsys: bus@59000000 {
 		fsl,asrc-rate  = <8000>;
 		fsl,asrc-width = <16>;
 		fsl,asrc-clk-map = <0>;
-		power-domains = <&pd IMX_SC_R_ASRC_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_1>,
-				<&pd IMX_SC_R_AUDIO_PLL_0>,
-				<&pd IMX_SC_R_AUDIO_PLL_1>;
+		power-domains = <&pd IMX_SC_R_ASRC_0>;
 		status = "disabled";
         };
 
@@ -123,11 +119,7 @@ audio_subsys: bus@59000000 {
 		clock-names = "core", "extal", "fsys", "spba";
 		dmas = <&edma0 6 0 1>, <&edma0 7 0 0>;
 		dma-names = "rx", "tx";
-		power-domains = <&pd IMX_SC_R_ESAI_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_1>,
-				<&pd IMX_SC_R_AUDIO_PLL_0>,
-				<&pd IMX_SC_R_AUDIO_PLL_1>;
+		power-domains = <&pd IMX_SC_R_ESAI_0>;
 		status = "disabled";
 	};
 
@@ -153,11 +145,7 @@ audio_subsys: bus@59000000 {
 				"rxtx7", "spba";
 		dmas = <&edma0 8 0 5>, <&edma0 9 0 4>;
 		dma-names = "rx", "tx";
-		power-domains = <&pd IMX_SC_R_SPDIF_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_1>,
-				<&pd IMX_SC_R_AUDIO_PLL_0>,
-				<&pd IMX_SC_R_AUDIO_PLL_1>;
+		power-domains = <&pd IMX_SC_R_SPDIF_0>;
 		status = "disabled";
 	};
 
@@ -183,11 +171,7 @@ audio_subsys: bus@59000000 {
 			      "rxtx7", "spba";
 		dmas = <&edma0 10 0 5>, <&edma0 11 0 4>;
 		dma-names = "rx", "tx";
-		power-domains = <&pd IMX_SC_R_SPDIF_1>,
-				<&pd IMX_SC_R_AUDIO_CLK_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_1>,
-				<&pd IMX_SC_R_AUDIO_PLL_0>,
-				<&pd IMX_SC_R_AUDIO_PLL_1>;
+		power-domains = <&pd IMX_SC_R_SPDIF_1>;
 		status = "disabled";
 	};
 
@@ -203,11 +187,7 @@ audio_subsys: bus@59000000 {
 		clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 		dma-names = "rx", "tx";
 		dmas = <&edma0 12 0 1>, <&edma0 13 0 0>;
-		power-domains = <&pd IMX_SC_R_SAI_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_1>,
-				<&pd IMX_SC_R_AUDIO_PLL_0>,
-				<&pd IMX_SC_R_AUDIO_PLL_1>;
+		power-domains = <&pd IMX_SC_R_SAI_0>;
 		status = "disabled";
 	};
 
@@ -223,11 +203,7 @@ audio_subsys: bus@59000000 {
 		clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 		dma-names = "rx", "tx";
 		dmas = <&edma0 14 0 1>, <&edma0 15 0 0>;
-		power-domains = <&pd IMX_SC_R_SAI_1>,
-				<&pd IMX_SC_R_AUDIO_CLK_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_1>,
-				<&pd IMX_SC_R_AUDIO_PLL_0>,
-				<&pd IMX_SC_R_AUDIO_PLL_1>;
+		power-domains = <&pd IMX_SC_R_SAI_1>;
 		status = "disabled";
 	};
 
@@ -243,11 +219,7 @@ audio_subsys: bus@59000000 {
 		clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 		dma-names = "rx";
 		dmas = <&edma0 16 0 1>;
-		power-domains = <&pd IMX_SC_R_SAI_2>,
-				<&pd IMX_SC_R_AUDIO_CLK_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_1>,
-				<&pd IMX_SC_R_AUDIO_PLL_0>,
-				<&pd IMX_SC_R_AUDIO_PLL_1>;
+		power-domains = <&pd IMX_SC_R_SAI_2>;
 		status = "disabled";
 	};
 
@@ -263,11 +235,7 @@ audio_subsys: bus@59000000 {
 		clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 		dma-names = "rx";
 		dmas = <&edma0 17 0 1>;
-		power-domains = <&pd IMX_SC_R_SAI_3>,
-				<&pd IMX_SC_R_AUDIO_CLK_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_1>,
-				<&pd IMX_SC_R_AUDIO_PLL_0>,
-				<&pd IMX_SC_R_AUDIO_PLL_1>;
+		power-domains = <&pd IMX_SC_R_SAI_3>;
 		status = "disabled";
 	};
 
@@ -308,11 +276,7 @@ audio_subsys: bus@59000000 {
 		fsl,asrc-rate  = <8000>;
 		fsl,asrc-width = <16>;
 		fsl,asrc-clk-map = <1>;
-		power-domains = <&pd IMX_SC_R_ASRC_1>,
-				<&pd IMX_SC_R_AUDIO_CLK_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_1>,
-				<&pd IMX_SC_R_AUDIO_PLL_0>,
-				<&pd IMX_SC_R_AUDIO_PLL_1>;
+		power-domains = <&pd IMX_SC_R_ASRC_1>;
 		status = "disabled";
 	};
 
@@ -328,11 +292,7 @@ audio_subsys: bus@59000000 {
 		clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 		dma-names = "rx", "tx";
 		dmas = <&edma1 8 0 1>, <&edma1 9 0 0>;
-		power-domains = <&pd IMX_SC_R_SAI_4>,
-				<&pd IMX_SC_R_AUDIO_CLK_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_1>,
-				<&pd IMX_SC_R_AUDIO_PLL_0>,
-				<&pd IMX_SC_R_AUDIO_PLL_1>;
+		power-domains = <&pd IMX_SC_R_SAI_4>;
 		status = "disabled";
 	};
 
@@ -348,11 +308,7 @@ audio_subsys: bus@59000000 {
 		clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 		dma-names = "tx";
 		dmas = <&edma1 10 0 0>;
-		power-domains = <&pd IMX_SC_R_SAI_5>,
-				<&pd IMX_SC_R_AUDIO_CLK_0>,
-				<&pd IMX_SC_R_AUDIO_CLK_1>,
-				<&pd IMX_SC_R_AUDIO_PLL_0>,
-				<&pd IMX_SC_R_AUDIO_PLL_1>;
+		power-domains = <&pd IMX_SC_R_SAI_5>;
 		status = "disabled";
 	};
 
