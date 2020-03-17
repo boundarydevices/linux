@@ -1051,7 +1051,7 @@ static int fsl_asrc_probe(struct platform_device *pdev)
 
 	asrc->paddr = res->start;
 
-	asrc->regmap = devm_regmap_init_mmio_clk(&pdev->dev, "mem", regs,
+	asrc->regmap = devm_regmap_init_mmio_clk(&pdev->dev, NULL, regs,
 						 &fsl_asrc_regmap_config);
 	if (IS_ERR(asrc->regmap)) {
 		dev_err(&pdev->dev, "failed to init regmap\n");
@@ -1146,11 +1146,17 @@ static int fsl_asrc_probe(struct platform_device *pdev)
 		}
 	}
 
+	ret = clk_prepare_enable(asrc->mem_clk);
+	if (ret)
+		return ret;
+
 	ret = fsl_asrc_init(asrc);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to init asrc %d\n", ret);
 		return ret;
 	}
+
+	clk_disable_unprepare(asrc->mem_clk);
 
 	asrc->channel_avail = 10;
 
