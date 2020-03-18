@@ -14,11 +14,11 @@
 
 /dts-v1/;
 
-#include "fsl-imx8mm.dtsi"
+#include "fsl-imx8mn.dtsi"
 
 / {
 	model = "Freescale i.MX8MN EVK";
-	compatible = "fsl,imx8mm-evk", "fsl,imx8mm";
+	compatible = "fsl,imx8mn-evk", "fsl,imx8mn";
 
 	timer {
 		compatible = "arm,armv8-timer";
@@ -89,35 +89,11 @@
 	status = "disabled";
 };
 
-&pcie0_pd {
-	status = "disabled";
-};
-
 &usb_otg1_pd {
 	status = "disabled";
 };
 
-&usb_otg2_pd {
-	status = "disabled";
-};
-
 &gpumix_pd {
-	status = "disabled";
-};
-
-&vpumix_pd {
-	status = "disabled";
-};
-
-&vpu_g1_pd {
-	status = "disabled";
-};
-
-&vpu_g2_pd {
-	status = "disabled";
-};
-
-&vpu_h1_pd {
 	status = "disabled";
 };
 
@@ -169,10 +145,6 @@
 /delete-node/ &imx_rpmsg;
 /delete-node/ &ocotp;
 
-&dispmix_gpr {
-	/delete-property/ compatible;
-};
-
 &sdma1 {
 	status = "disabled";
 };
@@ -186,7 +158,6 @@
 };
 
 /delete-node/ &{/imx_ion};
-/delete-node/ &pcie0;
 /delete-node/ &crypto;
 /delete-node/ &caam_sm;
 /delete-node/ &caam_snvs;
