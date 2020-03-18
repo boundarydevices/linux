@@ -129,10 +129,6 @@
 	status = "disabled";
 };
 
-&i2c_mipi_csi1 {
-	status = "disabled";
-};
-
 &pwm_lvds0 {
 	status = "disabled";
 };
@@ -171,4 +167,8 @@
 
 &wm8960 {
 	quick-probe;
+};
+
+&lsio_gpio1 {
+    /delete-property/ power-domains;
 };

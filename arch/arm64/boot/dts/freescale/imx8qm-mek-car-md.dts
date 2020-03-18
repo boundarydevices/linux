@@ -3,6 +3,10 @@
 
 #include "imx8qm-mek-car.dts"
 
+&i2c0_mipi0 {
+	status = "okay";
+};
+
 &mipi0_dphy {
         status = "okay";
 };
@@ -15,6 +19,10 @@
         status = "okay";
 };
 
+&i2c0_mipi1 {
+	status = "okay";
+};
+
 &mipi1_dphy {
 	status = "okay";
 };
@@ -25,8 +33,4 @@
 
 &adv_bridge1 {
 	status = "okay";
-};
-
-&lsio_gpio1 {
-	/delete-property/ power-domains;
 };
