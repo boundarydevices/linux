@@ -36,9 +36,6 @@
 
 #define MIPI_FIFO_TIMEOUT msecs_to_jiffies(500)
 
-/* Maximum Video PLL frequency */
-#define MAX_PLL_FREQ 1200000000
-
 /* DSI HOST registers */
 #define CFG_NUM_LANES			0x0
 #define CFG_NONCONTINUOUS_CLK		0x4
@@ -158,6 +155,22 @@
 
 static const char IRQ_NAME[] = "nwl-dsi";
 
+/*
+ * TODO: Currently, filter-out unsupported modes by their clocks.
+ * Need to find a better way to do this.
+ * These are the pixel clocks that the controller can handle successfully.
+ */
+static int valid_clocks[] = {
+	162000,
+	148500,
+	135000,
+	132000,
+	108000,
+	74250,
+	49500,
+	31500,
+};
+
 /* Possible valid PHY reference clock rates*/
 static u32 phyref_rates[] = {
 	27000000,
@@ -197,13 +210,10 @@ struct clk_config {
 };
 
 struct mode_config {
-	int				clock;
-	int				crtc_clock;
+	int				pixclock;
 	unsigned int			lanes;
 	unsigned long			bitclock;
-	unsigned long			phy_rates[3];
-	unsigned long			pll_rates[3];
-	int				phy_rate_idx;
+	u32				phyref_rate;
 	struct list_head		list;
 };
 
@@ -222,7 +232,6 @@ struct nwl_mipi_dsi {
 	struct clk_config		phy_ref;
 	struct clk_config		rx_esc;
 	struct clk_config		tx_esc;
-	struct clk			*pll_clk;
 
 	void __iomem			*base;
 	int				irq;
@@ -493,94 +502,6 @@ static void nwl_dsi_init_interrupts(struct nwl_mipi_dsi *dsi)
 }
 
 /*
- * Utility function to calculate least commom multiple, using an improved
- * version of the Euclidean algorithm for greatest common factor.
- */
-static unsigned long nwl_dsi_get_lcm(unsigned long a, unsigned long b)
-{
-	u32 gcf = 0; /* greatest common factor */
-	unsigned long tmp_a = a;
-	unsigned long tmp_b = b;
-
-	if (!a || !b)
-		return 0;
-
-	while (tmp_a % tmp_b) {
-		gcf = tmp_a % tmp_b;
-		tmp_a = tmp_b;
-		tmp_b = gcf;
-	}
-
-	if (!gcf)
-		return a;
-
-	return ((unsigned long long)a * b) / gcf;
-}
-
-/*
- * This function tries to adjust the crtc_clock for a DSI device in such a way
- * that the video pll will be able to satisfy both Display Controller pixel
- * clock (feeding out DPI interface) and our input phy_ref clock.
- * Also, the DC pixel clock must be lower than the actual clock in order to
- * have enough blanking space to send DSI commands, if the device is a panel.
- */
-static void nwl_dsi_setup_pll_config(struct mode_config *config, bool panel)
-{
-	unsigned long pll_rate;
-	int div;
-	size_t i, num_rates = ARRAY_SIZE(config->phy_rates);
-
-	config->crtc_clock = 0;
-
-	for (i = 0; i < num_rates; i++) {
-		int crtc_clock;
-
-		if (!config->phy_rates[i])
-			break;
-		/*
-		 * First, we need to check if phy_ref can actually be obtained
-		 * from pixel clock. To do this, we check their lowest common
-		 * multiple, which has to be in PLL range.
-		 */
-		pll_rate = nwl_dsi_get_lcm(config->clock, config->phy_rates[i]);
-		if (pll_rate > MAX_PLL_FREQ) {
-			/* Drop pll_rate to a realistic value */
-			while (pll_rate > MAX_PLL_FREQ)
-				pll_rate >>= 1;
-			/* Make sure pll_rate can provide phy_ref rate */
-			div = DIV_ROUND_UP(pll_rate, config->phy_rates[i]);
-			pll_rate = config->phy_rates[i] * div;
-		} else {
-			/*
-			 * Increase the pll rate to highest possible rate for
-			 * better accuracy.
-			 */
-			while (pll_rate <= MAX_PLL_FREQ)
-				pll_rate <<= 1;
-			pll_rate >>= 1;
-		}
-
-		/*
-		 * Next, we need to tweak the pll_rate to a value that can also
-		 * satisfy the crtc_clock.
-		 */
-		div = DIV_ROUND_CLOSEST(pll_rate, config->clock);
-		if (panel)
-			pll_rate -= config->phy_rates[i];
-		crtc_clock = pll_rate / div;
-		config->pll_rates[i] = pll_rate;
-
-		/* Pick a crtc_clock which is closest to pixel clock */
-		if ((config->clock - crtc_clock) <
-		    (config->clock - config->crtc_clock)) {
-			config->crtc_clock = crtc_clock;
-			config->phy_rate_idx = i;
-		}
-	}
-}
-
-
-/*
  * This function will try the required phy speed for current mode
  * If the phy speed can be achieved, the phy will save the speed
  * configuration
@@ -590,59 +511,53 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 {
 	struct device *dev = dsi->dev;
 	struct mode_config *config;
-	unsigned long clock = mode->clock * 1000;
+	unsigned long pixclock = mode->clock * 1000;
 	unsigned long bit_clk = 0;
-	unsigned long phy_rates[3] = {0};
-	int match_rates = 0;
-	u32 lanes = dsi->lanes;
+	u32 phyref_rate = 0, lanes = dsi->lanes;
 	size_t i = 0, num_rates = ARRAY_SIZE(phyref_rates);
+	int ret = 0;
 
 	list_for_each_entry(config, &dsi->valid_modes, list)
-		if (config->clock == clock)
+		if (config->pixclock == pixclock)
 			return config;
 
 	while (i < num_rates) {
-		int ret;
-
-		bit_clk = nwl_dsi_get_bit_clock(dsi, clock);
-
+		bit_clk = nwl_dsi_get_bit_clock(dsi, pixclock);
+		phyref_rate = phyref_rates[i];
 		ret = mixel_phy_mipi_set_phy_speed(dsi->phy,
 			bit_clk,
-			phyref_rates[i],
+			phyref_rate,
 			false);
 
-		/* Pick the non-failing rate, and search for more */
-		if (!ret) {
-			phy_rates[match_rates++] = phyref_rates[i++];
-			continue;
-		}
-
-		if (match_rates)
+		/* Pick the first non-failing rate */
+		if (!ret)
 			break;
 
 		/* Reached the end of phyref_rates, try another lane config */
-		if ((i++ == num_rates - 1) && (--lanes > 2)) {
+		if ((i++ == num_rates - 1) && (--lanes > 1)) {
 			i = 0;
 			continue;
 		}
 	}
 
-	if (!match_rates) {
+	if (ret < 0) {
 		DRM_DEV_DEBUG_DRIVER(dev,
 			"Cannot setup PHY for mode: %ux%u @%d kHz\n",
 			mode->hdisplay,
 			mode->vdisplay,
 			mode->clock);
+		DRM_DEV_DEBUG_DRIVER(dev, "phy_ref clk: %u, bit clk: %lu\n",
+			phyref_rate, bit_clk);
 
 		return NULL;
 	}
 
 	config = devm_kzalloc(dev, sizeof(struct mode_config), GFP_KERNEL);
 	if (config) {
-		config->clock = clock;
+		config->pixclock = pixclock;
 		config->lanes = lanes;
 		config->bitclock = bit_clk;
-		memcpy(&config->phy_rates, &phy_rates, sizeof(phy_rates));
+		config->phyref_rate = phyref_rate;
 		list_add(&config->list, &dsi->valid_modes);
 	}
 	return config;
@@ -652,24 +567,23 @@ static enum drm_mode_status nwl_dsi_bridge_mode_valid(struct drm_bridge *bridge,
 			   const struct drm_display_mode *mode)
 {
 	struct nwl_mipi_dsi *dsi = bridge->driver_private;
-	struct mode_config *config;
-	unsigned long pll_rate;
+	size_t i, num_modes = ARRAY_SIZE(valid_clocks);
+	bool clock_ok = false;
 
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Validating mode:");
 	drm_mode_debug_printmodeline(mode);
 
-	config = nwl_dsi_mode_probe(dsi, mode);
-	if (!config)
+	for (i = 0; i < num_modes; i++)
+		if (mode->clock == valid_clocks[i]) {
+			clock_ok = true;
+			break;
+		}
+
+	if (!clock_ok)
 		return MODE_NOCLOCK;
 
-	pll_rate = config->pll_rates[config->phy_rate_idx];
-	if (dsi->pll_clk && !pll_rate) {
-		nwl_dsi_setup_pll_config(config, false);
-		if (config->clock != config->crtc_clock) {
-			config->pll_rates[config->phy_rate_idx] = 0;
-			return MODE_NOCLOCK;
-		}
-	}
+	if (!nwl_dsi_mode_probe(dsi, mode))
+		return MODE_NOCLOCK;
 
 	return MODE_OK;
 }
@@ -680,7 +594,6 @@ static bool nwl_dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 {
 	struct nwl_mipi_dsi *dsi = bridge->driver_private;
 	struct mode_config *config;
-	unsigned long pll_rate;
 
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Fixup mode:\n");
 	drm_mode_debug_printmodeline(adjusted);
@@ -691,23 +604,12 @@ static bool nwl_dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "lanes=%u, data_rate=%lu\n",
 			     config->lanes, config->bitclock);
-	if (config->lanes < 2 || config->lanes > 4)
+	if (config->lanes < 1 || config->lanes > 4)
 		return false;
 
 	/* Max data rate for this controller is 1.5Gbps */
 	if (config->bitclock > 1500000000)
 		return false;
-
-	pll_rate = config->pll_rates[config->phy_rate_idx];
-	if (dsi->pll_clk && pll_rate) {
-		clk_set_rate(dsi->pll_clk, pll_rate);
-		DRM_DEV_DEBUG_DRIVER(dsi->dev,
-			"Video pll rate: %lu (actual: %lu)",
-			pll_rate, clk_get_rate(dsi->pll_clk));
-	}
-	/* Update the crtc_clock to be used by display controller */
-	if (config->crtc_clock)
-		adjusted->crtc_clock = config->crtc_clock / 1000;
 
 	return true;
 }
@@ -718,7 +620,7 @@ static void nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 {
 	struct nwl_mipi_dsi *dsi = bridge->driver_private;
 	struct mode_config *config;
-	unsigned long phy_rate, actual_phy_rate;
+	u32 actual_phy_rate;
 
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Setting mode:\n");
 	drm_mode_debug_printmodeline(adjusted);
@@ -733,18 +635,17 @@ static void nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 		return;
 	}
 
-	phy_rate = config->phy_rates[config->phy_rate_idx];
 	mixel_phy_mipi_set_phy_speed(dsi->phy,
 			config->bitclock,
-			phy_rate,
+			config->phyref_rate,
 			false);
-	clk_set_rate(dsi->phy_ref.clk, phy_rate);
+	clk_set_rate(dsi->phy_ref.clk, config->phyref_rate);
 	actual_phy_rate = clk_get_rate(dsi->phy_ref.clk);
 	dsi->dsi_device->lanes = config->lanes;
 	DRM_DEV_DEBUG_DRIVER(dsi->dev,
-		"Using phy_ref rate: %lu (actual: %lu), "
+		"Using phy_ref rate: %u (actual: %u), "
 		"bitclock: %lu, lanes: %u\n",
-		phy_rate, actual_phy_rate,
+		config->phyref_rate, actual_phy_rate,
 		config->bitclock, config->lanes);
 }
 
@@ -801,27 +702,25 @@ static int nwl_dsi_host_attach(struct mipi_dsi_host *host,
 	 * to reconfigure the phy.
 	 */
 	if (dsi->curr_mode) {
-		unsigned long clock = dsi->curr_mode->clock * 1000;
-		unsigned long phy_rate;
+		unsigned long pixclock = dsi->curr_mode->clock * 1000;
 		struct mode_config *config;
 
 		DRM_DEV_DEBUG_DRIVER(dsi->dev, "Re-setting mode:\n");
 		drm_mode_debug_printmodeline(dsi->curr_mode);
 		drm_mode_destroy(dsi->bridge.dev, dsi->curr_mode);
 		list_for_each_entry(config, &dsi->valid_modes, list)
-			if (config->clock == clock)
+			if (config->pixclock == pixclock)
 				break;
 
 		if (device->lanes != config->lanes)
 			return 0;
 
-		phy_rate = config->phy_rates[config->phy_rate_idx];
-		clk_set_rate(dsi->phy_ref.clk, phy_rate);
+		clk_set_rate(dsi->phy_ref.clk, config->phyref_rate);
 		device->lanes = config->lanes;
 		DRM_DEV_DEBUG_DRIVER(dsi->dev,
-			"Using phy_ref rate: %lu (actual: %ld), "
+			"Using phy_ref rate: %d (actual: %ld), "
 			"bitclock: %lu, lanes: %d\n",
-			phy_rate, clk_get_rate(dsi->phy_ref.clk),
+			config->phyref_rate, clk_get_rate(dsi->phy_ref.clk),
 			config->bitclock, config->lanes);
 	}
 
@@ -1182,7 +1081,6 @@ static int nwl_dsi_connector_get_modes(struct drm_connector *connector)
 	struct nwl_mipi_dsi *dsi = container_of(connector,
 						struct nwl_mipi_dsi,
 						connector);
-	struct mode_config *config;
 	int num_modes = 0;
 	struct drm_display_mode *mode;
 
@@ -1192,17 +1090,20 @@ static int nwl_dsi_connector_get_modes(struct drm_connector *connector)
 
 	/*
 	 * We need to inform the CRTC about the actual bit clock that we need
-	 * for each mode. So, set crtc_clock down with 10% from the actual
-	 * pixel clock so that we will have enough space in the display timing
-	 * to send DSI commands.
+	 * for each mode
 	 */
 	list_for_each_entry(mode, &connector->probed_modes, head) {
+		struct mode_config *config;
+		u32 phy_rate;
+
 		config = nwl_dsi_mode_probe(dsi, mode);
+		/* Unsupported mode */
 		if (!config)
 			continue;
-		nwl_dsi_setup_pll_config(config, true);
-		if (config->crtc_clock)
-			mode->crtc_clock = config->crtc_clock / 1000;
+
+		/* Actual pixel clock that should be used by CRTC */
+		phy_rate = config->phyref_rate / 1000;
+		mode->crtc_clock = phy_rate * (mode->clock / phy_rate);
 	}
 
 	return num_modes;
@@ -1471,11 +1372,6 @@ static int nwl_dsi_probe(struct platform_device *pdev)
 	dsi->phy_ref.clk = clk;
 	dsi->phy_ref.rate = clk_get_rate(clk);
 	dsi->phy_ref.enabled = false;
-
-	/* The video_pll clock is optional */
-	clk = devm_clk_get(dev, "video_pll");
-	if (!IS_ERR(clk))
-		dsi->pll_clk = clk;
 
 	clk = devm_clk_get(dev, "rx_esc");
 	if (IS_ERR(clk)) {
