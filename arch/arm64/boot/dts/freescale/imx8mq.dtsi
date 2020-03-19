@@ -1069,6 +1069,7 @@
 			};
 
 			dphy: dphy@30a00300 {
+				#clock-cells = <1>;
 				compatible = "fsl,imx8mq-mipi-dphy";
 				reg = <0x30a00300 0x100>;
 				clocks = <&clk IMX8MQ_CLK_DSI_PHY_REF>;
