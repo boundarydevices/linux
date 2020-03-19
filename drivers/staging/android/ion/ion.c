@@ -238,16 +238,6 @@ static int ion_assign_heap_id(struct ion_heap *heap, struct ion_device *dev)
 	case ION_HEAP_TYPE_SYSTEM:
 		id_bit = __ffs(ION_HEAP_SYSTEM);
 		break;
-	case ION_HEAP_TYPE_SYSTEM_CONTIG:
-		id_bit = __ffs(ION_HEAP_SYSTEM_CONTIG);
-		break;
-	case ION_HEAP_TYPE_CHUNK:
-		id_bit = __ffs(ION_HEAP_CHUNK);
-		break;
-	case ION_HEAP_TYPE_CARVEOUT:
-		start_bit = __ffs(ION_HEAP_CARVEOUT_START);
-		end_bit = __ffs(ION_HEAP_CARVEOUT_END);
-		break;
 	case ION_HEAP_TYPE_DMA:
 		start_bit = __ffs(ION_HEAP_DMA_START);
 		end_bit = __ffs(ION_HEAP_DMA_END);
@@ -424,7 +414,6 @@ static int ion_device_create(void)
 
 	idev->debug_root = debugfs_create_dir("ion", NULL);
 	init_rwsem(&idev->lock);
-	mutex_init(&idev->buffer_lock);
 	plist_head_init(&idev->heaps);
 	internal_dev = idev;
 	return 0;
