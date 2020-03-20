@@ -2377,7 +2377,7 @@ static int mxsfb_remove(struct platform_device *pdev)
 		mxsfb_disable_controller(fb_info);
 
 	if (host->devdata->flags & MXSFB_FLAG_PMQOS)
-		pm_qos_remove_request(&host->pm_qos_req);
+		cpu_latency_qos_remove_request(&host->pm_qos_req);
 
 	pm_runtime_disable(&host->pdev->dev);
 	mxsfb_overlay_exit(host);
@@ -2416,7 +2416,7 @@ static int mxsfb_runtime_suspend(struct device *dev)
 		release_bus_freq(BUS_FREQ_HIGH);
 
 	if (host->devdata->flags & MXSFB_FLAG_PMQOS)
-		pm_qos_remove_request(&host->pm_qos_req);
+		cpu_latency_qos_remove_request(&host->pm_qos_req);
 
 	dev_dbg(dev, "mxsfb busfreq high release.\n");
 
@@ -2431,8 +2431,7 @@ static int mxsfb_runtime_resume(struct device *dev)
 		request_bus_freq(BUS_FREQ_HIGH);
 
 	if (host->devdata->flags & MXSFB_FLAG_PMQOS)
-		pm_qos_add_request(&host->pm_qos_req,
-			PM_QOS_CPU_DMA_LATENCY, 0);
+		cpu_latency_qos_add_request(&host->pm_qos_req, 0);
 
 	dev_dbg(dev, "mxsfb busfreq high request.\n");
 
