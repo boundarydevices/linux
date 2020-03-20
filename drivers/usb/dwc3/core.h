@@ -1176,6 +1176,7 @@ struct dwc3 {
 	struct clk		*ref_clk;
 	struct clk		*susp_clk;
 
+	bool			core_inited;
 	struct reset_control	*reset;
 
 	struct usb_phy		*usb2_phy;
