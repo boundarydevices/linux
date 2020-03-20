@@ -1947,7 +1947,7 @@ static int mx6s_csi_probe(struct platform_device *pdev)
 	video_set_drvdata(csi_dev->vdev, csi_dev);
 	mutex_lock(&csi_dev->lock);
 
-	ret = video_register_device(csi_dev->vdev, VFL_TYPE_GRABBER, -1);
+	ret = video_register_device(csi_dev->vdev, VFL_TYPE_VIDEO, -1);
 	if (ret < 0) {
 		video_device_release(csi_dev->vdev);
 		mutex_unlock(&csi_dev->lock);
