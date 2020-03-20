@@ -2386,7 +2386,8 @@ static int sdma_probe(struct platform_device *pdev)
 	 * instance.
 	 */
 	if (pdata) {
-		ret = sdma_get_firmware(sdma, pdata->fw_name);
+		fw_name = pdata->fw_name;
+		ret = sdma_get_firmware(sdma, fw_name);
 		if (ret)
 			dev_warn(&pdev->dev, "failed to get firmware from platform data\n");
 	} else {
