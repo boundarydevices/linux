@@ -466,8 +466,6 @@ struct snd_sof_dsp_ops sof_imx8_ops = {
 			SNDRV_PCM_INFO_NO_PERIOD_WAKEUP,
 
 	/* PM */
-	.suspend		= imx8_dsp_suspend,
-	.resume			= imx8_dsp_resume,
 	.runtime_suspend	= imx8_dsp_suspend,
 	.runtime_resume		= imx8_dsp_resume,
 
@@ -521,8 +519,6 @@ struct snd_sof_dsp_ops sof_imx8x_ops = {
 	.num_drv = ARRAY_SIZE(imx8_dai),
 
 	/* PM */
-	.suspend		= imx8_dsp_suspend,
-	.resume			= imx8_dsp_resume,
 	.runtime_suspend	= imx8_dsp_suspend,
 	.runtime_resume		= imx8_dsp_resume,
 
