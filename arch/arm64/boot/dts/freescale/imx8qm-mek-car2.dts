@@ -66,10 +66,6 @@
 	status = "disabled";
 };
 
-&i2c_mipi_csi1 {
-	status = "disabled";
-};
-
 &pwm_lvds0 {
 	status = "disabled";
 };
