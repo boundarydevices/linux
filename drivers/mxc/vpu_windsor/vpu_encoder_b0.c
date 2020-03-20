@@ -5031,7 +5031,7 @@ static int create_vpu_video_device(struct vpu_dev *dev)
 	video_set_drvdata(dev->pvpu_encoder_dev, dev);
 
 	ret = video_register_device(dev->pvpu_encoder_dev,
-					VFL_TYPE_GRABBER,
+					VFL_TYPE_VIDEO,
 					ENCODER_NODE_NUMBER);
 	if (ret) {
 		vpu_err("unable to register video encoder device\n");
