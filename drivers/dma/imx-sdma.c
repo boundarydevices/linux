@@ -2457,7 +2457,8 @@ static int sdma_probe(struct platform_device *pdev)
 	 * instance.
 	 */
 	if (pdata) {
-		ret = sdma_get_firmware(sdma, pdata->fw_name);
+		fw_name = pdata->fw_name;
+		ret = sdma_get_firmware(sdma, fw_name);
 		if (ret)
 			dev_warn(&pdev->dev, "failed to get firmware from platform data\n");
 	} else {
@@ -2468,9 +2469,9 @@ static int sdma_probe(struct platform_device *pdev)
 		 */
 		ret = of_property_read_string(np, "fsl,sdma-ram-script-name",
 					      &fw_name);
-		if (ret)
+		if (ret) {
 			dev_warn(&pdev->dev, "failed to get firmware name\n");
-		else {
+		} else {
 			ret = sdma_get_firmware(sdma, fw_name);
 			if (ret)
 				dev_warn(&pdev->dev, "failed to get firmware from device tree\n");
