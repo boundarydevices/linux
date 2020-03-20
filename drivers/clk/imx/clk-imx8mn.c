@@ -4,6 +4,7 @@
  */
 
 #include <dt-bindings/clock/imx8mn-clock.h>
+#include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/err.h>
 #include <linux/io.h>
