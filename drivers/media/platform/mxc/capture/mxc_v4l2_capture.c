@@ -2812,7 +2812,7 @@ static int mxc_v4l2_probe(struct platform_device *pdev)
 	v4l2_int_device_register(cam->self);
 
 	/* register v4l video device */
-	if (video_register_device(cam->video_dev, VFL_TYPE_GRABBER, video_nr)
+	if (video_register_device(cam->video_dev, VFL_TYPE_VIDEO, video_nr)
 		< 0) {
 		kfree(cam);
 		cam = NULL;
