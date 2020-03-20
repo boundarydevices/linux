@@ -1647,7 +1647,7 @@ static int fsl_sai_runtime_suspend(struct device *dev)
 	clk_disable_unprepare(sai->bus_clk);
 
 	if (sai->soc_data->flags & SAI_FLAG_PMQOS)
-		pm_qos_remove_request(&sai->pm_qos_req);
+		cpu_latency_qos_remove_request(&sai->pm_qos_req);
 
 	regcache_cache_only(sai->regmap, true);
 
@@ -1681,8 +1681,8 @@ static int fsl_sai_runtime_resume(struct device *dev)
 	request_bus_freq(BUS_FREQ_AUDIO);
 
 	if (sai->soc_data->flags & SAI_FLAG_PMQOS)
-		pm_qos_add_request(&sai->pm_qos_req,
-				PM_QOS_CPU_DMA_LATENCY, 0);
+		cpu_latency_qos_add_request(&sai->pm_qos_req, 0);
+
 
 	regcache_cache_only(sai->regmap, false);
 	regcache_mark_dirty(sai->regmap);
