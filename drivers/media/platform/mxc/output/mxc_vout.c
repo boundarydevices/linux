@@ -2200,7 +2200,7 @@ static int mxc_vout_setup_output(struct mxc_vout_dev *dev)
 		video_set_drvdata(vout->vfd, vout);
 
 		if (video_register_device(vout->vfd,
-			VFL_TYPE_GRABBER, video_nr + i) < 0) {
+			VFL_TYPE_VIDEO, video_nr + i) < 0) {
 			ret = -ENODEV;
 			break;
 		}
