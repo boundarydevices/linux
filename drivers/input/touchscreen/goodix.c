@@ -1359,6 +1359,8 @@ static int goodix_ts_remove(struct i2c_client *client)
 	struct goodix_ts_data *ts = i2c_get_clientdata(client);
 
 	goodix_disable_irq(ts);
+	if (ts->client->irq)
+		irq_set_irq_type(ts->client->irq, IRQ_TYPE_NONE);
 	if (!ts->gpiod_int || !ts->gpiod_rst)
 		return 0;
 
