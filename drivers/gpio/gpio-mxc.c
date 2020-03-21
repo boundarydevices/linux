@@ -79,7 +79,6 @@ struct mxc_gpio_port {
 	u32 both_edges;
 	struct mxc_gpio_reg_saved gpio_saved_reg;
 	bool power_off;
-	int saved_reg[6];
 	int suspend_saved_reg[6];
 	bool gpio_ranges;
 #ifdef CONFIG_GPIO_MXC_PAD_WAKEUP
@@ -781,6 +780,8 @@ static int __maybe_unused mxc_gpio_noirq_suspend(struct device *dev)
 #endif
 	if (mxc_gpio_hwtype == IMX21_GPIO)
 		return 0;
+	if (!port->power_off)
+		return 0;
 
 	ret = clk_prepare_enable(port->clk);
 	if (ret)
@@ -812,6 +813,8 @@ static int __maybe_unused mxc_gpio_noirq_resume(struct device *dev)
 #endif
 
 	if (mxc_gpio_hwtype == IMX21_GPIO)
+		return 0;
+	if (!port->power_off)
 		return 0;
 
 	ret = clk_prepare_enable(port->clk);
