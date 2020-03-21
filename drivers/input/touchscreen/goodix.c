@@ -1817,6 +1817,8 @@ static void goodix_ts_remove(struct i2c_client *client)
 	struct goodix_ts_data *ts = i2c_get_clientdata(client);
 
 	goodix_disable_irq(ts);
+	if (ts->client->irq)
+		irq_set_irq_type(ts->client->irq, IRQ_TYPE_NONE);
 	drm_unregister_client(&ts->drmnb);
 	if (ts->load_cfg_from_disk)
 		wait_for_completion(&ts->firmware_loading_complete);
