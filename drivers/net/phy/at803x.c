@@ -318,34 +318,28 @@ static int at803x_config_init(struct phy_device *phydev)
 {
 	int ret;
 	struct at803x_priv *priv = phydev->priv;
+	bool delay_rx = false, delay_tx = false;
 
 	ret = genphy_config_init(phydev);
 	if (ret < 0)
 		return ret;
 
-	/* Firstly clear the default status in HW reset or
-	 * the bits set by bootloader.
-	 */
-	ret = at803x_set_rx_delay(phydev, false);
+	if (phydev->interface == PHY_INTERFACE_MODE_RGMII ||
+			phydev->interface == PHY_INTERFACE_MODE_RGMII_ID ||
+			phydev->interface == PHY_INTERFACE_MODE_RGMII_RXID)
+		delay_rx = true;
+
+	if (phydev->interface == PHY_INTERFACE_MODE_RGMII ||
+			phydev->interface == PHY_INTERFACE_MODE_RGMII_ID ||
+			phydev->interface == PHY_INTERFACE_MODE_RGMII_TXID)
+		delay_tx = true;
+
+	ret = at803x_set_rx_delay(phydev, delay_rx);
 	if (ret < 0)
 		return ret;
-	ret = at803x_set_tx_delay(phydev, false);
+	ret = at803x_set_tx_delay(phydev, delay_tx);
 	if (ret < 0)
 		return ret;
-
-	if (phydev->interface == PHY_INTERFACE_MODE_RGMII_RXID ||
-			phydev->interface == PHY_INTERFACE_MODE_RGMII_ID) {
-		ret = at803x_set_rx_delay(phydev, true);
-		if (ret < 0)
-			return ret;
-	}
-
-	if (phydev->interface == PHY_INTERFACE_MODE_RGMII_TXID ||
-			phydev->interface == PHY_INTERFACE_MODE_RGMII_ID) {
-		ret = at803x_set_tx_delay(phydev, true);
-		if (ret < 0)
-			return ret;
-	}
 
 	if (priv->quirks & AT803X_VDDIO_1P8V) {
 		ret = at803x_set_vddio_1p8v(phydev);
