@@ -398,28 +398,31 @@ static int mxsfb_load(struct drm_device *drm, unsigned long flags)
 
 	drm_kms_helper_poll_init(drm);
 
+	return 0;
+
+err_irq:
+	drm_panel_detach(mxsfb->panel);
+	return ret;
+
+}
+
+static int mxsfb_load_finish(struct drm_device *drm, unsigned long flags)
+{
+	struct mxsfb_drm_private *mxsfb = drm->dev_private;
+	int ret;
+
 	mxsfb->fbdev = drm_fbdev_cma_init(drm, 32,
 					  drm->mode_config.num_connector);
 	if (IS_ERR(mxsfb->fbdev)) {
 		ret = PTR_ERR(mxsfb->fbdev);
 		mxsfb->fbdev = NULL;
 		dev_err(drm->dev, "Failed to init FB CMA area\n");
-		goto err_cma;
+		return ret;
 	}
 
-
 	drm_helper_hpd_irq_event(drm);
-
 	pm_runtime_enable(drm->dev);
-
 	return 0;
-
-err_cma:
-	drm_irq_uninstall(drm);
-err_irq:
-	drm_panel_detach(mxsfb->panel);
-
-	return ret;
 }
 
 static void mxsfb_unload(struct drm_device *drm)
@@ -438,7 +441,7 @@ static void mxsfb_unload(struct drm_device *drm)
 
 	drm->dev_private = NULL;
 
-	pm_runtime_disable(drm->dev);
+	drm_panel_detach(mxsfb->panel);
 }
 
 static void mxsfb_lastclose(struct drm_device *drm)
@@ -546,8 +549,13 @@ static int mxsfb_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_unload;
 
+	ret = mxsfb_load_finish(drm, 0);
+	if (ret)
+		goto err_disable;
 	return 0;
 
+err_disable:
+	pm_runtime_disable(drm->dev);
 err_unload:
 	mxsfb_unload(drm);
 err_free:
