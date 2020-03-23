@@ -5,6 +5,7 @@
 
 #include <linux/bitops.h>
 #include <linux/clk.h>
+#include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -14,6 +15,7 @@
 #include <linux/highmem.h>
 #include <linux/module.h>
 #include <linux/of_reserved_mem.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/remoteproc.h>
 
@@ -47,6 +49,11 @@
 #define CORE_DEFAULT1				(0x00000140)
 #define  CORE_DEFAULT0_ARUSER_IDMA_USE_IOMMU	(0x10 << 0)
 #define  CORE_DEFAULT0_AWUSER_IDMA_USE_IOMMU	(0x10 << 5)
+#define CORE_DEFAULT2				(0x00000144)
+#define CORE_DEFAULT2_DBG_EN			BIT(3)
+#define CORE_DEFAULT2_NIDEN			BIT(2)
+#define CORE_DEFAULT2_SPNIDEN			BIT(1)
+#define CORE_DEFAULT2_SPIDEN			BIT(0)
 #define CORE_XTENSA_ALTRESETVEC			(0x000001F8)
 
 struct mtk_vpu_rproc {
@@ -58,6 +65,13 @@ struct mtk_vpu_rproc {
 	struct clk *axi;
 	struct clk *ipu;
 	struct clk *jtag;
+
+#ifdef CONFIG_MTK_APU_JTAG
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pinctrl_default;
+	struct pinctrl_state *pinctrl_jtag;
+	bool jtag_enabled;
+#endif
 };
 
 static u32 vpu_read32(struct mtk_vpu_rproc *vpu_rproc, u32 off)
@@ -177,6 +191,133 @@ static irqreturn_t handle_event(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_MTK_APU_JTAG
+
+static int vpu_enable_jtag(struct mtk_vpu_rproc *vpu_rproc)
+{
+	int ret = 0;
+
+	if (vpu_rproc->jtag_enabled)
+		return -EINVAL;
+
+	ret = pinctrl_select_state(vpu_rproc->pinctrl,
+				   vpu_rproc->pinctrl_jtag);
+	if (ret < 0) {
+		dev_err(vpu_rproc->dev, "Failed to configure pins for JTAG\n");
+		return ret;
+	}
+
+	vpu_write32(vpu_rproc, CORE_DEFAULT2,
+		    CORE_DEFAULT2_SPNIDEN | CORE_DEFAULT2_SPIDEN |
+		    CORE_DEFAULT2_NIDEN | CORE_DEFAULT2_DBG_EN);
+
+	vpu_rproc->jtag_enabled = 1;
+
+	return ret;
+}
+
+static int vpu_disable_jtag(struct mtk_vpu_rproc *vpu_rproc)
+{
+	int ret = 0;
+
+	if (!vpu_rproc->jtag_enabled)
+		return -EINVAL;
+
+	vpu_write32(vpu_rproc, CORE_DEFAULT2, 0);
+
+	ret = pinctrl_select_state(vpu_rproc->pinctrl,
+				   vpu_rproc->pinctrl_default);
+	if (ret < 0) {
+		dev_err(vpu_rproc->dev,
+			"Failed to configure pins to default\n");
+		return ret;
+	}
+
+	vpu_rproc->jtag_enabled = 0;
+
+	return ret;
+}
+
+static ssize_t rproc_jtag_read(struct file *filp, char __user *userbuf,
+			       size_t count, loff_t *ppos)
+{
+	struct rproc *rproc = filp->private_data;
+	struct mtk_vpu_rproc *vpu_rproc = (struct mtk_vpu_rproc *)rproc->priv;
+	char *buf = vpu_rproc->jtag_enabled ? "enabled\n" : "disabled\n";
+
+	return simple_read_from_buffer(userbuf, count, ppos, buf, strlen(buf));
+}
+
+static ssize_t rproc_jtag_write(struct file *filp, const char __user *user_buf,
+				size_t count, loff_t *ppos)
+{
+	struct rproc *rproc = filp->private_data;
+	struct mtk_vpu_rproc *vpu_rproc = (struct mtk_vpu_rproc *)rproc->priv;
+	char buf[10];
+	int ret;
+
+	if (count < 1 || count > sizeof(buf))
+		return -EINVAL;
+
+	ret = copy_from_user(buf, user_buf, count);
+	if (ret)
+		return -EFAULT;
+
+	/* remove end of line */
+	if (buf[count - 1] == '\n')
+		buf[count - 1] = '\0';
+
+	if (!strncmp(buf, "1", count) || !strncmp(buf, "enabled", count))
+		ret = vpu_enable_jtag(vpu_rproc);
+	else if (!strncmp(buf, "0", count) || !strncmp(buf, "disabled", count))
+		ret = vpu_disable_jtag(vpu_rproc);
+	else
+		return -EINVAL;
+
+	return ret ? ret : count;
+}
+
+static const struct file_operations rproc_jtag_ops = {
+	.read = rproc_jtag_read,
+	.write = rproc_jtag_write,
+	.open = simple_open,
+};
+
+static int vpu_jtag_probe(struct mtk_vpu_rproc *vpu_rproc)
+{
+	int ret;
+
+	if (!vpu_rproc->rproc->dbg_dir)
+		return -ENODEV;
+
+	debugfs_create_file("jtag", 0600, vpu_rproc->rproc->dbg_dir,
+			    vpu_rproc->rproc, &rproc_jtag_ops);
+
+	vpu_rproc->pinctrl = devm_pinctrl_get(vpu_rproc->dev);
+	if (IS_ERR(vpu_rproc->pinctrl)) {
+		dev_warn(vpu_rproc->dev, "Failed to find JTAG pinctrl\n");
+		return PTR_ERR(vpu_rproc->pinctrl);
+	}
+
+	vpu_rproc->pinctrl_default = pinctrl_lookup_state(vpu_rproc->pinctrl,
+							PINCTRL_STATE_DEFAULT);
+	if (IS_ERR(vpu_rproc->pinctrl_default))
+		return PTR_ERR(vpu_rproc->pinctrl_default);
+
+	vpu_rproc->pinctrl_jtag = pinctrl_lookup_state(vpu_rproc->pinctrl,
+						       "jtag");
+	if (IS_ERR(vpu_rproc->pinctrl_jtag))
+		return PTR_ERR(vpu_rproc->pinctrl_jtag);
+
+	ret = pinctrl_select_state(vpu_rproc->pinctrl,
+				   vpu_rproc->pinctrl_default);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+#endif /* CONFIG_MTK_APU_JTAG */
+
 static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -256,16 +397,16 @@ static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 		goto clk_disable_ipu;
 	}
 
-	vpu_rproc->jtag = devm_clk_get_optional(dev, "jtag");
+	vpu_rproc->jtag = devm_clk_get(vpu_rproc->dev, "jtag");
 	if (IS_ERR(vpu_rproc->jtag)) {
-		dev_err(dev, "Failed to enable jtag clock\n");
+		dev_err(vpu_rproc->dev, "Failed to get jtag clock\n");
 		ret = PTR_ERR(vpu_rproc->jtag);
 		goto clk_disable_axi;
 	}
 
 	ret = clk_prepare_enable(vpu_rproc->jtag);
 	if (ret) {
-		dev_err(dev, "Failed to enable jtag clock\n");
+		dev_err(vpu_rproc->dev, "Failed to enable jtag clock\n");
 		goto clk_disable_axi;
 	}
 
@@ -280,6 +421,12 @@ static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 		dev_err(dev, "rproc_add failed: %d\n", ret);
 		goto free_mem;
 	}
+
+#ifdef CONFIG_MTK_APU_JTAG
+	ret = vpu_jtag_probe(vpu_rproc);
+	if (ret)
+		dev_warn(dev, "Failed to configure jtag\n");
+#endif
 
 	return 0;
 
@@ -305,6 +452,9 @@ static int mtk_vpu_rproc_remove(struct platform_device *pdev)
 
 	disable_irq(vpu_rproc->irq);
 
+#ifdef CONFIG_MTK_APU_JTAG
+	vpu_disable_jtag(vpu_rproc);
+#endif
 	rproc_del(rproc);
 	of_reserved_mem_device_release(dev);
 	clk_disable_unprepare(vpu_rproc->jtag);
