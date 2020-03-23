@@ -120,8 +120,10 @@ obj-$(CONFIG_SOC_IMX7D) += suspend-imx7.o
 obj-$(CONFIG_SOC_IMX53) += suspend-imx53.o
 obj-$(CONFIG_SOC_IMX7ULP) += suspend-imx7ulp.o
 endif
+ifeq ($(CONFIG_ARM_CPU_SUSPEND),y)
 AFLAGS_resume-imx6.o :=-Wa,-march=armv7-a
 obj-$(CONFIG_SOC_IMX6) += resume-imx6.o
+endif
 obj-$(CONFIG_SOC_IMX6) += pm-imx6.o
 AFLAGS_smp_wfe.o :=-Wa,-march=armv7-a
 AFLAGS_ddr3_freq_imx7d.o :=-Wa,-march=armv7-a
