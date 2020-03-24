@@ -345,7 +345,7 @@ static int fsl_xcvr_trigger(struct snd_pcm_substream *substream, int cmd,
 						"err updating isr %d\n", ret);
 					return ret;
 				}
-
+				fallthrough;
 			case FSL_XCVR_AMODE_SPDIF:
 				ret = regmap_update_bits(xcvr->regmap,
 					 FSL_XCVR_TX_DPTH_CTRL_SET,
@@ -410,7 +410,7 @@ static int fsl_xcvr_trigger(struct snd_pcm_substream *substream, int cmd,
 					dev_err(dai->dev, "Failed to clr TX_DPTH_CTRL_STRT_DATA_TX: %d\n", ret);
 					return ret;
 				}
-				/* fall through ...*/
+				fallthrough;
 			case FSL_XCVR_AMODE_EARC:
 				/* clear ISR_CMDC_TX_EN, W1C */
 				ret = regmap_update_bits(xcvr->regmap,
