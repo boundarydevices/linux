@@ -359,7 +359,7 @@ static int imx_mu_seco_rxdb(struct imx_mu_priv *priv, struct imx_mu_con_priv *cp
 	struct imx_sc_rpc_msg_max msg;
 	u32 *data = (u32 *)&msg;
 	u32 byte_size;
-	int err;
+	int err = 0;
 	int i;
 
 	dev_dbg(priv->dev, "Receiving message\n");
@@ -371,7 +371,8 @@ static int imx_mu_seco_rxdb(struct imx_mu_priv *priv, struct imx_mu_con_priv *cp
 	if (byte_size > sizeof(msg)) {
 		dev_err(priv->dev, "Exceed max msg size (%li) on RX, got: %i\n",
 			sizeof(msg), byte_size);
-		return -EINVAL;
+		err = -EINVAL;
+		goto error;
 	}
 
 	/* Read message waiting they are written */
@@ -380,7 +381,7 @@ static int imx_mu_seco_rxdb(struct imx_mu_priv *priv, struct imx_mu_con_priv *cp
 		err = imx_mu_rx_waiting_read(priv, data++, i);
 		if (err) {
 			dev_err(priv->dev, "Timeout rx %d\n", i);
-			return err;
+			goto error;
 		}
 	}
 
@@ -394,7 +395,13 @@ static int imx_mu_seco_rxdb(struct imx_mu_priv *priv, struct imx_mu_con_priv *cp
 	dev_dbg(priv->dev, "Sending message to client\n");
 	mbox_chan_received_data(cp->chan, (void *)&msg);
 
-	return 0;
+	goto exit;
+
+error:
+	mbox_chan_received_data(cp->chan, ERR_PTR(err));
+
+exit:
+	return err;
 }
 
 static void imx_mu_txdb_tasklet(unsigned long data)
