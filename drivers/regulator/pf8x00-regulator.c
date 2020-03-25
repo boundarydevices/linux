@@ -299,17 +299,16 @@ static int pf8x00_regulator_set_voltage_time_sel(struct regulator_dev *rdev,
 	const unsigned int *volt_table = rdev->desc->volt_table;
 	int old_v = volt_table[old_sel];
 	int new_v = volt_table[new_sel];
-	unsigned change = (new_v - old_v);
+	int change = (new_v - old_v);
 	unsigned index;
 	unsigned slew;
 
 	index = (rdesc->fast_slew & 1) ? 2 : 0;
-	if (change < 0) {
-		change = -change;
+	if (change < 0)
 		index++;
-	}
 	slew = ramp_table[pf->clk_freq].up_down_slow_fast[index];
-	return DIV_ROUND_UP(change, slew);
+
+	return DIV_ROUND_UP(abs(change), slew);
 }
 
 static short ilim_table[] = {
