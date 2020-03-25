@@ -418,7 +418,7 @@ static int pf8x00_of_parse_cb(struct device_node *np,
 	rdesc->quad_phase = quad_phase;
 	rdesc->dual_phase = dual_phase;
 	rdesc->fast_slew = fast_slew;
-	pr_debug("%s:id=%d ilim=%d, phase=%d, hw_en=%d vselect_en=%d"
+	dev_dbg(pf->dev, "%s:id=%d ilim=%d, phase=%d, hw_en=%d vselect_en=%d"
 		" quad_phase=%d dual_phase=%d fast_slew=%d\n",
 		__func__, desc->id, ilim, phase, hw_en, vselect_en,
 		quad_phase, dual_phase, fast_slew);
@@ -782,8 +782,8 @@ static int pf8x00_regulator_probe(struct i2c_client *client,
 				val |= fast_slew << 5;
 			}
 			if (mask) {
-				pr_debug("%s:reg=0x%x, mask=0x%x, val=0x%x\n",
-					__func__, reg, mask, val);
+				dev_dbg(pf->dev, "%s: reg=0x%x, mask=0x%x, "
+					"val=0x%x\n", __func__, reg, mask, val);
 				ret = regmap_update_bits(pf->regmap, reg, mask,
 						val);
 			}
