@@ -18,10 +18,24 @@
 			reg = <0 0x80000000 0 0x1000000>;
 		};
 
-		rpmsg_dma_reserved:rpmsg_dma@0xb8400000 {
-			compatible = "shared-dma-pool";
+		vdev0vring0: vdev0vring0@b8000000 {
+			reg = <0 0xb8000000 0 0x8000>;
 			no-map;
+		};
+
+		vdev0vring1: vdev0vring1@b8008000 {
+			reg = <0 0xb8008000 0 0x8000>;
+			no-map;
+		};
+
+		vdevbuffer: vdevbuffer@b8400000 {
+			compatible = "shared-dma-pool";
 			reg = <0 0xb8400000 0 0x100000>;
+			no-map;
+		};
+
+		rsc_table: rsc_table@b8000000 {
+			reg = <0 0xb8000000 0 0x8000>;
 		};
 	};
 
@@ -54,6 +68,18 @@
 		clock-names = "bus", "mclk", "dma", "pll8k", "pll11k";
 		status = "okay";
 	};
+
+	imx8mm-cm4 {
+		compatible = "fsl,imx8mm-cm4";
+		rsc-da = <0xb8000000>;
+		clocks = <&clk IMX8MM_CLK_M4_DIV>;
+		mbox-names = "tx", "rx", "rxdb";
+		mboxes = <&mu 0 1
+			  &mu 1 1
+			  &mu 3 1>;
+		memory-region = <&vdevbuffer>, <&vdev0vring0>, <&vdev0vring1>, <&rsc_table>;
+		syscon = <&src>;
+	};
 };
 
 &clk {
@@ -84,8 +110,8 @@
 	 */
 	vdev-nums = <1>;
 	reg = <0x0 0xb8000000 0x0 0x10000>;
-	memory-region = <&rpmsg_dma_reserved>;
-	status = "okay";
+	memory-region = <&vdevbuffer>;
+	status = "disabled";
 };
 
 &sdma1{
