@@ -88,6 +88,7 @@
 
 #define EDT_UPGRADE_AA			0xAA
 #define EDT_UPGRADE_55			0x55
+#define EDT_ID				0xA6
 
 #define EDT_RETRIES_WRITE		100
 #define EDT_RETRIES_DELAY_WRITE		1
@@ -1039,6 +1040,19 @@ static ssize_t edt_ft5x06_update_fw_store(struct device *dev,
 	return ret ?: count;
 }
 
+static ssize_t fw_version_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct edt_ft5x06_ts_data *tsdata = i2c_get_clientdata(client);
+	int ret = edt_ft5x06_register_read(tsdata, EDT_ID);
+	if (ret < 0)
+		return ret;
+	else
+		return sprintf(buf, "0x%02x\n", ret);
+}
+
 /* m06, m09: range 0-31, m12: range 0-5 */
 static EDT_ATTR(gain, S_IWUSR | S_IRUGO, WORK_REGISTER_GAIN,
 		M09_REGISTER_GAIN, EV_REGISTER_GAIN, 0, 31);
@@ -1059,6 +1073,7 @@ static EDT_ATTR(report_rate, S_IWUSR | S_IRUGO, WORK_REGISTER_REPORT_RATE,
 		NO_REGISTER, NO_REGISTER, 0, 255);
 
 static DEVICE_ATTR(update_fw, S_IWUSR, NULL, edt_ft5x06_update_fw_store);
+static DEVICE_ATTR_RO(fw_version);
 
 static struct attribute *edt_ft5x06_attrs[] = {
 	&edt_ft5x06_attr_gain.dattr.attr,
@@ -1068,6 +1083,7 @@ static struct attribute *edt_ft5x06_attrs[] = {
 	&edt_ft5x06_attr_threshold.dattr.attr,
 	&edt_ft5x06_attr_report_rate.dattr.attr,
 	&dev_attr_update_fw.attr,
+	&dev_attr_fw_version.attr,
 	NULL
 };
 
