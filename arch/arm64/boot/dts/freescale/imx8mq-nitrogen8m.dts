@@ -526,6 +526,9 @@
 		pwm_mipi = &pwm3;
 		sound_hdmi = &sound_hdmi;
 		t_mipi = &t_mipi;
+		ts_ft5x06 = &ts_ft5x06;
+		ts_goodix = &ts_goodix;
+		ts_st1633i = &ts_st1633i;
 	};
 
 	alias_create_phandles {
@@ -978,7 +981,43 @@
 	pinctrl-0 = <&pinctrl_i2c4>;
 	status = "okay";
 
-	touchscreen@5d {
+	mipi_to_lvds: mipi-to-lvds@2c {
+		clocks = <&mipi_dsi_phy 0>;
+		clock-names = "mipi_clk";
+		compatible = "ti,sn65dsi83";
+		display = <&lcdif>;
+		display-dsi = <&fb_mipi>;
+		enable-gpios = GP_I2C4_SN65DSI83_EN;
+		interrupts-extended = GPIRQ_I2C4_SN65DSI83;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c4_sn65dsi83>;
+		reg = <0x2c>;
+		status = "disabled";
+	};
+
+	ts_ft5x06: touchscreen@38 {
+		compatible = "ft5x06-ts";
+		interrupts-extended = GPIRQ_I2C4_FT5X06;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c4_ft5x06>;
+		reg = <0x38>;
+		wakeup-gpios = GP_I2C4_FT5X06_WAKE;
+		reset-gpios = GP_I2C4_FT5X06_RESET;
+	};
+
+	ts_st1633i: touchscreen@55 {
+		compatible = "sitronix,st1633i";
+		reg = <0x55>;
+		interrupts-extended = GPIRQ_ST1633;
+		/* pins used by touchscreen */
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c4_st1633>;
+		reset-gpios = GP_ST1633_RESET;
+
+		wakeup-gpios = GP_ST1633_IRQ;
+	};
+
+	ts_goodix: touchscreen@5d {
 		compatible = "goodix,gt9271";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c4_gt911>;
@@ -995,42 +1034,6 @@
 		clocks = <&clk IMX8MQ_CLK_SAI1_ROOT>;
 		clock-names = "mclk";
 		wlf,shared-lrclk;
-	};
-
-	mipi_to_lvds: mipi-to-lvds@2c {
-		clocks = <&mipi_dsi_phy 0>;
-		clock-names = "mipi_clk";
-		compatible = "ti,sn65dsi83";
-		display = <&lcdif>;
-		display-dsi = <&fb_mipi>;
-		enable-gpios = GP_I2C4_SN65DSI83_EN;
-		interrupts-extended = GPIRQ_I2C4_SN65DSI83;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_sn65dsi83>;
-		reg = <0x2c>;
-		status = "disabled";
-	};
-
-	touchscreen@38 {
-		compatible = "ft5x06-ts";
-		interrupts-extended = GPIRQ_I2C4_FT5X06;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_ft5x06>;
-		reg = <0x38>;
-		wakeup-gpios = GP_I2C4_FT5X06_WAKE;
-		reset-gpios = GP_I2C4_FT5X06_RESET;
-	};
-
-	touchscreen@55 {
-		compatible = "sitronix,st1633i";
-		reg = <0x55>;
-		interrupts-extended = GPIRQ_ST1633;
-		/* pins used by touchscreen */
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_st1633>;
-		reset-gpios = GP_ST1633_RESET;
-
-		wakeup-gpios = GP_ST1633_IRQ;
 	};
 
 	i2cmux@70 {
