@@ -59,7 +59,10 @@ void ssusb_set_force_vbus(struct ssusb_mtk *ssusb, bool vbus_on)
 		u2ctl &= ~SSUSB_U2_PORT_OTG_SEL;
 		misc |= VBUS_FRC_EN | VBUS_ON;
 	} else {
-		u2ctl |= SSUSB_U2_PORT_OTG_SEL;
+		/* FIXME The following commented line of code
+		 * is causing the crash of the host controller
+		 */
+		//u2ctl |= SSUSB_U2_PORT_OTG_SEL;
 		misc &= ~(VBUS_FRC_EN | VBUS_ON);
 	}
 	mtu3_writel(ssusb->ippc_base, SSUSB_U2_CTRL(0), u2ctl);
