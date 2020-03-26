@@ -343,6 +343,10 @@ static int imx_drm_bind(struct device *dev)
 
 	drm_mode_config_reset(drm);
 
+	dev_set_drvdata(dev, drm);
+	ret = drm_dev_register(drm, 0);
+	if (ret)
+		goto err_fbhelper;
 	/*
 	 * All components are now initialised, so setup the fb helper.
 	 * The fb helper takes copies of key hardware information, so the
@@ -360,25 +364,18 @@ static int imx_drm_bind(struct device *dev)
 	ret = drm_fb_cma_fbdev_init(drm, legacyfb_depth, MAX_CRTC);
 	if (ret)
 
-		goto err_unbind;
+		goto err_unregister;
 #endif
 
 	drm_kms_helper_poll_init(drm);
-
-	ret = drm_dev_register(drm, 0);
-	if (ret)
-		goto err_fbhelper;
-
-	dev_set_drvdata(dev, drm);
-
 	return 0;
 
+#if IS_ENABLED(CONFIG_DRM_FBDEV_EMULATION)
+err_unregister:
+	drm_dev_unregister(drm);
+#endif
 err_fbhelper:
 	drm_kms_helper_poll_fini(drm);
-#if IS_ENABLED(CONFIG_DRM_FBDEV_EMULATION)
-	drm_fb_cma_fbdev_fini(drm);
-err_unbind:
-#endif
 	component_unbind_all(drm->dev, drm);
 err_kms:
 	drm_mode_config_cleanup(drm);
