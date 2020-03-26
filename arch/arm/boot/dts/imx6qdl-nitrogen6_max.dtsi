@@ -509,6 +509,12 @@
 		rtc1 = &snvs_rtc;
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
+		ts_atmel_mt = &ts_atmel_mt;
+		ts_egalax = &ts_egalax;
+		ts_ft5x06 = &ts_ft5x06;
+		ts_goodix = &ts_goodix;
+		ts_ili210x = &ts_ili210x;
+		ts_tsc2004 = &ts_tsc2004;
 	};
 
 	backlight_lcd: backlight-lcd {
@@ -1017,7 +1023,7 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-	atmel_maxtouch@4a {
+	ts_atmel_mt: atmel_maxtouch@4a {
 		compatible = "atmel,maxtouch";
 		reg = <0x4a>;
 		interrupts-extended = GPIRQ_I2C3_J7;
@@ -1025,21 +1031,21 @@
 		reset-gpios = GP_I2C3_ATMEL_RESET;
 	};
 
-	egalax_ts@04 {
+	ts_egalax: egalax_ts@4 {
 		compatible = "eeti,egalax_ts";
 		reg = <0x04>;
 		interrupts-extended = GPIRQ_I2C3_J7;
 		wakeup-gpios = GP_I2C3_J7;
 	};
 
-	ft5x06_ts@38 {
+	ts_ft5x06:ft5x06_ts@38 {
 		compatible = "ft5x06-ts";
 		reg = <0x38>;
 		interrupts-extended = GPIRQ_I2C3_J7;
 		wakeup-gpios = GP_I2C3_J7;
 	};
 
-	gt911@14 {
+	ts_goodix: gt911@14 {
 		compatible = "goodix,gt911";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_gt911>;
@@ -1061,7 +1067,7 @@
 		reset-gpios = GP_GT911_RESET;
 	};
 
-	ili210x@41 {
+	ts_ili210x: ili210x@41 {
 		compatible = "ili210x";
 		reg = <0x41>;
 		interrupts-extended = GPIRQ_I2C3_J7;
@@ -1085,7 +1091,7 @@
 		mclk_source = <0>;
 	};
 
-	tsc2004: tsc2004@48 {
+	ts_tsc2004: tsc2004@48 {
 		compatible = "tsc2004,tsc2004";
 		reg = <0x48>;
 		pinctrl-names = "default";
