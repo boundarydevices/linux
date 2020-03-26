@@ -21,7 +21,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/usb/role.h>
 
-#define USB_GPIO_DEB_MS		20	/* ms */
+#define USB_GPIO_DEB_MS		1000	/* ms */
 #define USB_GPIO_DEB_US		((USB_GPIO_DEB_MS) * 1000)	/* us */
 
 #define USB_CONN_IRQF	\
