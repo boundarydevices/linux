@@ -526,6 +526,16 @@
 				<PINMUX_GPIO28__FUNC_GPIO28>;
 		};
 	};
+
+	usb_pins: usb_pins {
+		pins_usb {
+			pinmux = <PINMUX_GPIO42__FUNC_USB_DRVVBUS>;
+		};
+		pins_iddig {
+			pinmux = <PINMUX_GPIO41__FUNC_IDDIG>;
+			mediatek,pull-up-adv = <3>;
+		};
+	};
 };
 
 &mfg {
@@ -652,6 +662,30 @@
 			};
 		};
 	};
+};
+
+&ssusb {
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb_pins>;
+	mediatek,force-vbus;
+	usb-role-switch;
+	maximum-speed = "high-speed";
+	dr_mode = "otg";
+	vusb33-supply = <&mt6358_vusb_reg>;
+	vbus-supply = <&usb_vbus>;
+	status = "okay";
+	connector {
+		compatible = "gpio-usb-b-connector", "usb-b-connector";
+		type = "mini";
+		id-gpios = <&pio 41 GPIO_ACTIVE_HIGH>;
+		vbus-supply = <&usb_vbus>;
+	};
+};
+
+&usb_host {
+	vusb33-supply = <&mt6358_vusb_reg>;
+	vbus-supply = <&usb_vbus>;
+	status = "okay";
 };
 
 &mt6358codec {
