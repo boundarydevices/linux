@@ -159,6 +159,10 @@
 		/delete-property/ pwm_mipi;
 		/delete-property/ reg_sw4;
 		/delete-property/ t_mipi;
+		/delete-property/ ts_ft5x06;
+		/delete-property/ ts_gsl1680;
+		/delete-property/ ts_goodix;
+		/delete-property/ ts_st1633i;
 	};
 
 	clocks {
