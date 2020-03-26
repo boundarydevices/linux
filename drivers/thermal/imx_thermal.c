@@ -683,7 +683,7 @@ MODULE_DEVICE_TABLE(of, of_imx_thermal_match);
 static int imx_thermal_register_legacy_cooling(struct imx_thermal_data *data)
 {
 	struct device_node *np;
-	int ret;
+	int ret = 0;
 
 	data->policy = cpufreq_cpu_get(0);
 	if (!data->policy) {
@@ -698,7 +698,7 @@ static int imx_thermal_register_legacy_cooling(struct imx_thermal_data *data)
 		if (IS_ERR(data->cdev[0])) {
 			ret = PTR_ERR(data->cdev[0]);
 			cpufreq_cpu_put(data->policy);
-			return ret;
+			goto end;
 		}
 	}
 
@@ -710,10 +710,11 @@ static int imx_thermal_register_legacy_cooling(struct imx_thermal_data *data)
 				ret);
 			cpufreq_cooling_unregister(data->cdev[0]);
 		}
-		return ret;
 	}
+end:
+	of_node_put(np);
 
-	return 0;
+	return ret;
 }
 
 static void imx_thermal_unregister_legacy_cooling(struct imx_thermal_data *data)
