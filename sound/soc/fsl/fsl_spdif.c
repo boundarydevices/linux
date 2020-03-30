@@ -18,7 +18,6 @@
 #include <linux/of_irq.h>
 #include <linux/regmap.h>
 #include <linux/pm_runtime.h>
-#include <linux/pm_domain.h>
 #include <linux/busfreq-imx.h>
 
 #include <sound/asoundef.h>
@@ -1362,7 +1361,6 @@ static int fsl_spdif_probe(struct platform_device *pdev)
 	void __iomem *regs;
 	int irq, ret, i;
 	char tmp[16];
-	int num_domains = 0;
 
 	if (!np)
 		return -ENODEV;
@@ -1394,7 +1392,7 @@ static int fsl_spdif_probe(struct platform_device *pdev)
 		return PTR_ERR(regs);
 
 	spdif_priv->regmap = devm_regmap_init_mmio_clk(&pdev->dev,
-			"core", regs, &fsl_spdif_regmap_config);
+			NULL, regs, &fsl_spdif_regmap_config);
 	if (IS_ERR(spdif_priv->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
 		return PTR_ERR(spdif_priv->regmap);
@@ -1426,24 +1424,6 @@ static int fsl_spdif_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "could not claim irq %u\n", irq);
 			return ret;
 		}
-	}
-
-	num_domains = of_count_phandle_with_args(np, "power-domains",
-						 "#power-domain-cells");
-	for (i = 0; i < num_domains; i++) {
-		struct device *pd_dev;
-		struct device_link *link;
-
-		pd_dev = dev_pm_domain_attach_by_id(&pdev->dev, i);
-		if (IS_ERR(pd_dev))
-			return PTR_ERR(pd_dev);
-
-		link = device_link_add(&pdev->dev, pd_dev,
-			DL_FLAG_STATELESS |
-			DL_FLAG_PM_RUNTIME |
-			DL_FLAG_RPM_ACTIVE);
-		if (IS_ERR(link))
-			return PTR_ERR(link);
 	}
 
 	for (i = 0; i < STC_TXCLK_SRC_MAX; i++) {
@@ -1514,11 +1494,18 @@ static int fsl_spdif_probe(struct platform_device *pdev)
 	spdif_priv->dma_params_tx.addr = res->start + REG_SPDIF_STL;
 	spdif_priv->dma_params_rx.addr = res->start + REG_SPDIF_SRL;
 
-	/*Clear the val bit for Tx*/
+	ret = clk_prepare_enable(spdif_priv->coreclk);
+	if (ret)
+		return ret;
+
+	/*Cleer the val bit for Tx*/
 	regmap_update_bits(spdif_priv->regmap, REG_SPDIF_SCR,
 					SCR_VAL_MASK, 1 << SCR_VAL_OFFSET);
 
+	clk_disable_unprepare(spdif_priv->coreclk);
+
 	pm_runtime_enable(&pdev->dev);
+	regcache_cache_only(spdif_priv->regmap, true);
 
 	/* Register with ASoC */
 	dev_set_drvdata(&pdev->dev, spdif_priv);

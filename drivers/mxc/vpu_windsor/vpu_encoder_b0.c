@@ -1253,7 +1253,6 @@ static int vpu_enc_v4l2_ioctl_dqbuf(struct file *file,
 	if (buf->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		if (!ret)
 			count_h264_output(ctx);
-		buf->flags = q_data->vb2_reqs[buf->index].buffer_flags;
 	}
 
 	return ret;
@@ -1459,6 +1458,7 @@ static int vpu_enc_v4l2_ioctl_encoder_cmd(struct file *file,
 			ctx->core_dev->id, ctx->str_index);
 	switch (cmd->cmd) {
 	case V4L2_ENC_CMD_START:
+		vb2_clear_last_buffer_dequeued(&ctx->q_data[V4L2_DST].vb2_q);
 		break;
 	case V4L2_ENC_CMD_STOP:
 		request_eos(ctx);
@@ -1768,6 +1768,7 @@ static void init_ctx_seq_info(struct vpu_ctx *ctx)
 	ctx->sequence = 0;
 	for (i = 0; i < ARRAY_SIZE(ctx->timestams); i++)
 		ctx->timestams[i] = VPU_ENC_INVALID_TIMESTAMP;
+	ctx->timestamp = VPU_ENC_INVALID_TIMESTAMP;
 }
 
 static void fill_ctx_seq(struct vpu_ctx *ctx, struct vb2_data_req *p_data_req)
@@ -1785,6 +1786,8 @@ static void fill_ctx_seq(struct vpu_ctx *ctx, struct vb2_data_req *p_data_req)
 			p_data_req->sequence);
 	}
 	ctx->timestams[idx] = p_data_req->vb2_buf->timestamp;
+	if (ctx->timestamp < (s64)p_data_req->vb2_buf->timestamp)
+		ctx->timestamp = p_data_req->vb2_buf->timestamp;
 }
 
 static s64 get_ctx_seq_timestamp(struct vpu_ctx *ctx, u32 sequence)
@@ -1806,6 +1809,13 @@ static void fill_vb_sequence(struct vb2_buffer *vb, u32 sequence)
 	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
 
 	vbuf->sequence = sequence;
+}
+
+static void set_vb_flags(struct vb2_buffer *vb, u32 buffer_flags)
+{
+	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
+
+	vbuf->flags |= buffer_flags;
 }
 
 static struct vb2_data_req *find_vb2_data_by_sequence(struct queue_data *queue,
@@ -2374,6 +2384,24 @@ static int append_empty_end_frame(struct vb2_data_req *p_data_req)
 	return 0;
 }
 
+static s64 calculate_timestamp_for_eos(struct vpu_ctx *ctx)
+{
+	struct vpu_attr *attr = NULL;
+	struct v4l2_fract *fival;
+	s64 timestamp;
+	u64 delta = 0;
+
+	timestamp = ctx->timestamp;
+	attr = get_vpu_ctx_attr(ctx);
+	fival = &attr->fival;
+	if (ctx->timestamp != VPU_ENC_INVALID_TIMESTAMP && fival->denominator) {
+		delta = NSEC_PER_SEC * fival->numerator / fival->denominator;
+		timestamp += delta;
+	}
+
+	return timestamp;
+}
+
 static bool is_valid_frame_read_pos(u32 ptr, struct vpu_frame_info *frame)
 {
 	if (ptr < frame->start || ptr >= frame->end)
@@ -2555,10 +2583,9 @@ static bool process_frame_done(struct queue_data *queue)
 		transfer_stream_output(ctx, frame, p_data_req);
 
 	update_stream_desc_rptr(ctx, frame->rptr);
-	if (!frame->eos) {
-		fill_vb_sequence(p_data_req->vb2_buf, frame->info.uFrameID);
-		p_data_req->vb2_buf->timestamp = frame->timestamp;
-	}
+	fill_vb_sequence(p_data_req->vb2_buf, frame->info.uFrameID);
+	set_vb_flags(p_data_req->vb2_buf, p_data_req->buffer_flags);
+	p_data_req->vb2_buf->timestamp = frame->timestamp;
 	if (!frame->bytesleft) {
 		put_frame_idle(frame);
 		frame = NULL;
@@ -2786,12 +2813,13 @@ static int handle_event_stop_done(struct vpu_ctx *ctx)
 	disable_fps_sts(get_vpu_ctx_attr(ctx));
 
 	set_bit(VPU_ENC_STATUS_STOP_DONE, &ctx->status);
-	notify_eos(ctx);
 
 	down(&queue->drv_q_lock);
 	frame = get_idle_frame(queue);
 	if (frame) {
 		frame->eos = true;
+		frame->timestamp = calculate_timestamp_for_eos(ctx);
+		frame->info.uFrameID = ctx->sequence;
 		list_add_tail(&frame->list, &queue->frame_q);
 	} else {
 		vpu_err("fail to alloc memory for last frame\n");
@@ -2800,6 +2828,7 @@ static int handle_event_stop_done(struct vpu_ctx *ctx)
 
 	process_stream_output(ctx);
 
+	notify_eos(ctx);
 	clear_start_status(ctx);
 	init_ctx_seq_info(ctx);
 	complete(&ctx->stop_cmp);
@@ -2985,7 +3014,7 @@ static int process_ctx_msg(struct vpu_ctx *ctx, struct msg_header *header)
 
 	return ret;
 error:
-	rpc_read_msg_array(&ctx->core_dev->shared_mem, NULL, msg->number);
+	rpc_read_msg_array(&ctx->core_dev->shared_mem, NULL, header->msgnum);
 	return ret;
 }
 
@@ -3170,6 +3199,7 @@ static int vpu_start_streaming(struct vb2_queue *q, unsigned int count)
 
 	vpu_dbg(LVL_BUF, "%s(), %s, (%d, %d)\n", __func__, q_data->desc,
 			q_data->ctx->core_dev->id, q_data->ctx->str_index);
+	vb2_clear_last_buffer_dequeued(q);
 
 	return 0;
 }
@@ -4661,12 +4691,17 @@ static unsigned int vpu_enc_v4l2_poll(struct file *filp, poll_table *wait)
 		rc |= POLLERR;
 		return rc;
 	}
+	if (test_bit(VPU_ENC_STATUS_EOS_SEND, &ctx->status) &&
+			!list_empty(&dst_q->done_list))
+		rc &= ~POLLPRI;
 
 	poll_wait(filp, &src_q->done_wq, wait);
 	if (!list_empty(&src_q->done_list))
 		rc |= POLLOUT | POLLWRNORM;
 	poll_wait(filp, &dst_q->done_wq, wait);
 	if (!list_empty(&dst_q->done_list))
+		rc |= POLLIN | POLLRDNORM;
+	if (dst_q->last_buffer_dequeued)
 		rc |= POLLIN | POLLRDNORM;
 
 	return rc;

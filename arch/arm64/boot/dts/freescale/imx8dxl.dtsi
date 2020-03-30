@@ -17,6 +17,8 @@
 	#size-cells = <2>;
 
 	aliases {
+		ethernet0 = &fec1;
+		ethernet1 = &eqos;
 		gpio0 = &lsio_gpio0;
 		gpio1 = &lsio_gpio1;
 		gpio2 = &lsio_gpio2;
@@ -35,6 +37,8 @@
 		can0 = &flexcan1;
 		can1 = &flexcan2;
 		can2 = &flexcan3;
+		mmc0 = &usdhc1;
+		mmc1 = &usdhc2;
 	};
 
 	cpus: cpus {
@@ -50,6 +54,7 @@
 			next-level-cache = <&A35_L2>;
 			clocks = <&clk IMX_SC_R_A35 IMX_SC_PM_CLK_CPU>;
 			#cooling-cells = <2>;
+			operating-points-v2 = <&a35_opp_table>;
 		};
 
 		A35_1: cpu@1 {
@@ -60,6 +65,7 @@
 			next-level-cache = <&A35_L2>;
 			clocks = <&clk IMX_SC_R_A35 IMX_SC_PM_CLK_CPU>;
 			#cooling-cells = <2>;
+			operating-points-v2 = <&a35_opp_table>;
 		};
 
 		A35_L2: l2-cache0 {
@@ -148,7 +154,8 @@
 		pd: imx8dxl-pd {
 			compatible = "fsl,imx8dxl-scu-pd", "fsl,scu-pd";
 			#power-domain-cells = <1>;
-			wakeup-irq = <235 236 237 258 262 228 229 230 231>;
+			wakeup-irq = <160 235 236 237 228 229 230 231 238
+				     239 240 166 169>;
 		};
 
 		clk: clock-controller {

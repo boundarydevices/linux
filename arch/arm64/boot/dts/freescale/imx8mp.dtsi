@@ -265,11 +265,11 @@
 		/* HSIO SS */
 		hsiomix_pd: hsiomix-pd {
 			compatible = "fsl,imx8m-pm-domain";
+			active-wakeup;
+			rpm-always-on;
 			#power-domain-cells = <0>;
 			domain-index = <0>;
 			domain-name = "hsiomix";
-			clocks = <&clk IMX8MP_CLK_HSIO_AXI_DIV>,
-				 <&clk IMX8MP_CLK_HSIO_ROOT>;
 		};
 
 		pcie_pd: pcie-pd {
@@ -419,7 +419,9 @@
 			#power-domain-cells = <0>;
 			domain-index = <17>;
 			domain-name = "hdmimix";
-			clocks = <&clk IMX8MP_CLK_HDMI_ROOT>;
+			clocks = <&clk IMX8MP_CLK_HDMI_ROOT>,
+				 <&clk IMX8MP_CLK_HDMI_APB>,
+				 <&clk IMX8MP_CLK_HDMI_REF_266M>;
 		};
 
 		hdmi_phy_pd: hdmiphy-pd {
@@ -434,6 +436,13 @@
 	psci {
 		compatible = "arm,psci-1.0";
 		method = "smc";
+	};
+
+	pmu {
+		compatible = "arm,armv8-pmuv3";
+		interrupts = <GIC_PPI 7
+			     (GIC_CPU_MASK_SIMPLE(6) | IRQ_TYPE_LEVEL_HIGH)>;
+		interrupt-affinity = <&A53_0>, <&A53_1>, <&A53_2>, <&A53_3>;
 	};
 
 	timer {
@@ -1343,8 +1352,8 @@
 				compatible = "fsl,imx8mp-sdma", "fsl,imx7d-sdma";
 				reg = <0x30e10000 0x10000>;
 				interrupts = <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SDMA2_ROOT>,
-					 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SDMA2_ROOT>;
+				clocks = <&clk IMX8MP_CLK_IPG_AUDIO_ROOT>,
+					 <&clk IMX8MP_CLK_AUDIO_AHB>;
 				clock-names = "ipg", "ahb";
 				#dma-cells = <3>;
 				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx7d.bin";
@@ -1696,6 +1705,8 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 				gpr = <&mediamix_blk_ctl>;
+				clocks = <&clk IMX8MP_CLK_MEDIA_APB_ROOT>;
+				clock-names = "apb";
 				status = "disabled";
 
 				ldb_phy1: port@0 {
@@ -1862,7 +1873,7 @@
 		num-lanes = <1>;
 		interrupts = <GIC_SPI 140 IRQ_TYPE_LEVEL_HIGH>,
 				<GIC_SPI 127 IRQ_TYPE_LEVEL_HIGH>; /* eDMA */
-		interrupt-names = "msi";
+		interrupt-names = "msi", "dma";
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0x7>;
 		interrupt-map = <0 0 0 1 &gic GIC_SPI 126 IRQ_TYPE_LEVEL_HIGH>,
@@ -1959,6 +1970,7 @@
 			xhci-no-64bit-support;
 			usb3-resume-missing-cas;
 			snps,dis-u2-freeclk-exists-quirk;
+			snps,soft-itp-sync;
 			snps,dis_u3_susphy_quirk;
 			status = "disabled";
 		};
@@ -2000,6 +2012,7 @@
 			xhci-no-64bit-support;
 			usb3-resume-missing-cas;
 			snps,dis-u2-freeclk-exists-quirk;
+			snps,soft-itp-sync;
 			snps,dis_u3_susphy_quirk;
 			status = "disabled";
 		};
@@ -2016,6 +2029,7 @@
 		assigned-clocks = <&clk IMX8MP_CLK_VPU_G1>, <&clk IMX8MP_CLK_VPU_BUS>;
 		assigned-clock-parents = <&clk IMX8MP_SYS_PLL3_OUT>, <&clk IMX8MP_SYS_PLL3_OUT>;
 		assigned-clock-rates = <600000000>, <600000000>;
+		power-domains = <&vpu_g1_pd>;
 		status = "disabled";
 	};
 
@@ -2030,6 +2044,7 @@
 		assigned-clocks = <&clk IMX8MP_CLK_VPU_G2>, <&clk IMX8MP_CLK_VPU_BUS>;
 		assigned-clock-parents = <&clk IMX8MP_VPU_PLL_OUT>, <&clk IMX8MP_SYS_PLL3_OUT>;
 		assigned-clock-rates = <400000000>, <600000000>;
+		power-domains = <&vpu_g2_pd>;
 		status = "disabled";
 	};
 
@@ -2044,6 +2059,7 @@
 		assigned-clocks = <&clk IMX8MP_CLK_VPU_VC8000E>,<&clk IMX8MP_CLK_VPU_BUS>;
 		assigned-clock-parents = <&clk IMX8MP_VPU_PLL_OUT>, <&clk IMX8MP_SYS_PLL3_OUT>;
 		assigned-clock-rates = <400000000>, <600000000>;
+		power-domains = <&vpu_h1_pd>;
 		status = "disabled";
 	};
 

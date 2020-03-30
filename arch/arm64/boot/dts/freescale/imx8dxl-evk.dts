@@ -152,7 +152,7 @@
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		regulator-name = "clk_ext_sel";
-		gpio = <&pca6416_1 10 GPIO_ACTIVE_LOW>;
+		gpio = <&pca6416_1 10 GPIO_ACTIVE_HIGH>;
 		regulator-always-on;
 	};
 
@@ -345,7 +345,6 @@
 				clocks = <&clock_mclk_out1>;
 				clock-names = "mclk";
 				wlf,shared-lrclk;
-				power-domains = <&pd IMX_SC_R_MCLK_OUT_1>;
 				assigned-clocks = <&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_PLL>,
 						  <&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_SLV_BUS>,
 						  <&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_MST_BUS>,
@@ -365,7 +364,6 @@
 				clocks = <&clock_mclk_out1>;
 				clock-names = "mclk";
 				wlf,shared-lrclk;
-				power-domains = <&pd IMX_SC_R_MCLK_OUT_1>;
 				assigned-clocks = <&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_PLL>,
 						  <&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_SLV_BUS>,
 						  <&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_MST_BUS>,
@@ -385,7 +383,6 @@
 				clocks = <&clock_mclk_out1>;
 				clock-names = "mclk";
 				wlf,shared-lrclk;
-				power-domains = <&pd IMX_SC_R_MCLK_OUT_1>;
 				assigned-clocks = <&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_PLL>,
 						  <&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_SLV_BUS>,
 						  <&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_MST_BUS>,
@@ -509,7 +506,7 @@
 	pinctrl-0 = <&pinctrl_pcieb>;
 	clkreq-gpio = <&lsio_gpio4 1 GPIO_ACTIVE_LOW>;
 	reset-gpio = <&lsio_gpio4 0 GPIO_ACTIVE_LOW>;
-	ext_osc = <1>;
+	ext_osc = <0>;
 	epdev_on-supply = <&epdev_on>;
 	status = "disabled";
 };
@@ -612,6 +609,8 @@
 	pinctrl-0 = <&pinctrl_eqos>;
 	phy-mode = "rgmii-id";
 	phy-handle = <&ethphy0>;
+	nvmem-cells = <&fec_mac1>;
+	nvmem-cell-names = "mac-address";
 	snps,reset-gpios = <&pca6416_1 2 GPIO_ACTIVE_LOW>;
 	snps,reset-delays-us = <10 20 200000>;
 	status = "okay";
@@ -639,6 +638,8 @@
 	phy-handle = <&ethphy1>;
 	fsl,magic-packet;
 	fsl,rgmii_rxc_dly;
+	nvmem-cells = <&fec_mac0>;
+	nvmem-cell-names = "mac-address";
 	phy-reset-gpios = <&pca6416_1 0 GPIO_ACTIVE_LOW>;
 	phy-reset-duration = <10>;
 	phy-reset-post-delay = <150>;

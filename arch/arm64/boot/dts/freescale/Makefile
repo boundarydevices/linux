@@ -51,7 +51,7 @@ dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-lx2160a-rdb.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk.dtb imx8mm-evk-rpmsg.dtb imx8mm-evk-rm67191.dtb \
 			  imx8mm-ddr4-evk.dtb imx8mm-evk-root.dtb imx8mm-evk-inmate.dtb \
 			  imx8mm-ddr4-evk-rm67191.dtb imx8mm-evk-revb.dtb imx8mm-ddr4-evk-revb.dtb \
-			  imx8mm-ddr4-evk-revb-rm67191.dtb imx8mm-ddr4-evk-no-product.dtb \
+			  imx8mm-ddr4-evk-revb-rm67191.dtb imx8mm-ddr3l-val.dtb imx8mm-ddr4-evk-no-product.dtb \
 			  imx8mm-evk-no-product.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk-ak4497.dtb imx8mm-evk-ak5558.dtb imx8mm-evk-audio-tdm.dtb \
 			  imx8mm-ddr4-evk-no-dynamic_partition.dtb imx8mm-ddr4-evk-no-product-no-dynamic_partition.dtb \
@@ -96,7 +96,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek.dtb imx8qm-mek-ov5640.dtb imx8qm-mek-md.dtb
 			  imx8qm-mek-ov5640-no-product.dtb \
 			  imx8qm-mek-ov5640-no-dynamic_partition.dtb \
 			  imx8qm-mek-ov5640-no-product-no-dynamic_partition.dtb \
-			  imx8qp-lpddr4-val.dtb imx8dm-lpddr4-val.dtb \
+			  imx8qp-lpddr4-val.dtb imx8dm-lpddr4-val.dtb imx8qm-pcieax2pciebx1.dtb \
 			  imx8qm-mek-car.dtb imx8qm-mek-car-md.dtb \
 			  imx8qm-mek-car-a72.dtb imx8qm-mek-car-md-a72.dtb \
 			  imx8qm-mek-car2-a72.dtb imx8qm-mek-car2-md-a72.dtb
@@ -116,6 +116,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek.dtb imx8qxp-mek-dsp.dtb imx8qxp-mek-ov5640
 			  imx8qxp-mek-jdi-wuxga-lvds0-panel.dtb \
 			  imx8qxp-mek-jdi-wuxga-lvds1-panel.dtb \
 			  imx8qxp-mek-dsi-rm67191.dtb \
+			  imx8qxp-mek-ov5640-rpmsg.dtb \
 			  imx8dx-mek.dtb imx8dx-mek-dsp.dtb imx8dx-mek-rpmsg.dtb \
 			  imx8qxp-lpddr4-val-a0.dtb \
 			  imx8qxp-lpddr4-val.dtb imx8qxp-lpddr4-val-mqs.dtb imx8qxp-ddr3l-val.dtb \
@@ -130,6 +131,6 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek.dtb imx8qxp-mek-dsp.dtb imx8qxp-mek-ov5640
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek-dom0.dtb imx8qxp-mek-root.dtb \
 			  imx8qxp-mek-inmate.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8dxl-evk.dtb imx8dxl-evk-rpmsg.dtb \
-			  imx8dxl-evk-enet0.dtb
+			  imx8dxl-evk-enet0.dtb imx8dxl-ddr3-evk.dtb
 dtb-$(CONFIG_ARCH_S32) += s32v234-evb.dtb \
 			  s32v234-sbc.dtb

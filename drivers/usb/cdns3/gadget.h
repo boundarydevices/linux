@@ -969,7 +969,7 @@ struct cdns3_trb {
  */
 #define TRB_TOGGLE		BIT(1)
 /*
- * The controller will set it if OUTSMM is detected,
+ * The controller will set it if OUTSMM (OUT size mismatch) is detected,
  * this bit is for normal TRB
  */
 #define TRB_SMM			BIT(1)

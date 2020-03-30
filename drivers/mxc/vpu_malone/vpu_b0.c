@@ -40,7 +40,7 @@
 #include <media/v4l2-mem2mem.h>
 #include <media/videobuf2-v4l2.h>
 #include <media/videobuf2-dma-contig.h>
-#include <media/videobuf2-dma-sg.h>
+#include <media/videobuf2-vmalloc.h>
 
 #include "vpu_b0.h"
 #include "insert_startcode.h"
@@ -888,9 +888,22 @@ static bool set_video_standard(struct vpu_ctx *ctx,
 			if (!check_fmt_is_support(ctx, &pformat_table[i]))
 				return false;
 			q_data->vdec_std = pformat_table[i].vdec_std;
+			q_data->num_planes = pformat_table[i].num_planes;
+			q_data->fourcc = f->fmt.pix_mp.pixelformat;
 		}
 	}
 	return true;
+}
+
+static void set_output_default_sizeimage(struct queue_data *q_data)
+{
+	u32 i;
+
+	for (i = 0; i < q_data->num_planes; i++) {
+		if (q_data->sizeimage[i])
+			continue;
+		q_data->sizeimage[i] = q_data->width * q_data->height;
+	}
 }
 
 static int v4l2_ioctl_s_fmt(struct file *file,
@@ -917,7 +930,6 @@ static int v4l2_ioctl_s_fmt(struct file *file,
 		q_data = &ctx->q_data[V4L2_DST];
 		if (!set_video_standard(ctx, q_data, f, formats_yuv_dec, ARRAY_SIZE(formats_yuv_dec)))
 			return -EINVAL;
-		pix_mp->num_planes = 2;
 		pix_mp->colorspace = V4L2_COLORSPACE_REC709;
 	} else if (f->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		q_data = &ctx->q_data[V4L2_SRC];
@@ -926,8 +938,7 @@ static int v4l2_ioctl_s_fmt(struct file *file,
 	} else
 		return -EINVAL;
 
-	q_data->num_planes = pix_mp->num_planes;
-	q_data->fourcc = pix_mp->pixelformat;
+	pix_mp->num_planes = q_data->num_planes;
 
 	down(&q_data->drv_q_lock);
 	if (V4L2_TYPE_IS_OUTPUT(f->type) || ctx->b_firstseq) {
@@ -945,6 +956,8 @@ static int v4l2_ioctl_s_fmt(struct file *file,
 		pix_mp->width = q_data->width;
 		pix_mp->height = q_data->height;
 	}
+	if (V4L2_TYPE_IS_OUTPUT(f->type))
+		set_output_default_sizeimage(q_data);
 	up(&q_data->drv_q_lock);
 
 	if (f->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
@@ -4249,11 +4262,14 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 			ctx->pos += wr_size;
 		}
 
-		vpu_dbg(LVL_INFO, "PICINFO GET: uPicType:%d uPicStruct:%d uPicStAddr:0x%x uFrameStoreID:%d uPercentInErr:%d, uRbspBytesCount=%d, ulLumBaseAddr[0]=%x, pQMeterInfo:%p, pPicInfo:%p, pDispInfo:%p, pPerfInfo:%p, pPerfDcpInfo:%p, uPicStartAddr=0x%x, uDpbmcCrc:%x\n",
-				pPicInfo[uStrIdx].uPicType, pPicInfo[uStrIdx].uPicStruct,
-				pPicInfo[uStrIdx].uPicStAddr, pPicInfo[uStrIdx].uFrameStoreID,
-				pPicInfo[uStrIdx].uPercentInErr, pPerfInfo->uRbspBytesCount, event_data[0],
-				pQMeterInfo, pPicInfo, pDispInfo, pPerfInfo, pPerfDcpInfo, uPicStartAddr, uDpbmcCrc);
+		vpu_dbg(LVL_BIT_FRAME_BYTES, "PICINFO GET: uPicType:%d uPicStruct:%d uPicStAddr:0x%x uFrameStoreID:%d uPercentInErr:%d, uRbspBytesCount=%d, uDpbmcCrc:%x\n",
+			pPicInfo[uStrIdx].uPicType, pPicInfo[uStrIdx].uPicStruct,
+			pPicInfo[uStrIdx].uPicStAddr, pPicInfo[uStrIdx].uFrameStoreID,
+			pPicInfo[uStrIdx].uPercentInErr, pPerfInfo->uRbspBytesCount,
+			uDpbmcCrc);
+		vpu_dbg(LVL_BIT_FRAME_BYTES, "PICINFO GET: ulLumBaseAddr[0]=%x, uPicStartAddr=0x%x, pQMeterInfo:%p, pPicInfo:%p, pDispInfo:%p, pPerfInfo:%p, pPerfDcpInfo:%p\n",
+			event_data[0], uPicStartAddr, pQMeterInfo, pPicInfo,
+			pDispInfo, pPerfInfo, pPerfDcpInfo);
 
 		down(&ctx->q_data[V4L2_SRC].drv_q_lock);
 		if (tsm_use_consumed_length)
@@ -5080,10 +5096,15 @@ static void init_vb2_queue(struct queue_data *This, unsigned int type, struct vp
 	// initialize vb2 queue
 	vb2_q->type = type;
 	vb2_q->io_modes = VB2_MMAP | VB2_USERPTR | VB2_DMABUF;
-	vb2_q->gfp_flags = GFP_KERNEL | GFP_DMA32 | __GFP_NOWARN;
 	vb2_q->ops = &v4l2_qops;
 	vb2_q->drv_priv = This;
-	vb2_q->mem_ops = (struct vb2_mem_ops *)&vb2_dma_contig_memops;
+	if (V4L2_TYPE_IS_OUTPUT(type)) {
+		vb2_q->mem_ops = &vb2_vmalloc_memops;
+		vb2_q->gfp_flags = GFP_KERNEL;
+	} else {
+		vb2_q->mem_ops = &vb2_dma_contig_memops;
+		vb2_q->gfp_flags = GFP_KERNEL | GFP_DMA32 | __GFP_NOWARN;
+	}
 	vb2_q->timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_COPY;
 	vb2_q->dev = &ctx->dev->plat_dev->dev;
 	ret = vb2_queue_init(vb2_q);
@@ -5855,8 +5876,7 @@ static int create_instance_file(struct vpu_ctx *ctx)
 	create_instance_buffer_file(ctx);
 	create_instance_flow_file(ctx);
 	create_instance_perf_file(ctx);
-	atomic64_set(&ctx->statistic.total_dma_size, 0);
-	atomic64_set(&ctx->statistic.total_alloc_size, 0);
+
 
 	return 0;
 }
@@ -6023,12 +6043,21 @@ static int v4l2_open(struct file *filp)
 	mutex_init(&ctx->cmd_lock);
 	mutex_init(&ctx->perf_lock);
 	mutex_init(&ctx->fw_flow_mutex);
-	if (kfifo_alloc(&ctx->msg_fifo,
-			sizeof(struct event_msg) * VID_API_MESSAGE_LIMIT,
-			GFP_KERNEL)) {
+	atomic64_set(&ctx->statistic.total_dma_size, 0);
+	atomic64_set(&ctx->statistic.total_alloc_size, 0);
+
+	ctx->msg_buffer_size = sizeof(struct event_msg) * VID_API_MESSAGE_LIMIT;
+	ctx->msg_buffer = vzalloc(ctx->msg_buffer_size);
+	if (!ctx->msg_buffer) {
 		vpu_err("fail to alloc fifo when open\n");
 		ret = -ENOMEM;
 		goto err_alloc_fifo;
+	}
+	atomic64_add(ctx->msg_buffer_size, &ctx->statistic.total_alloc_size);
+	if (kfifo_init(&ctx->msg_fifo, ctx->msg_buffer, ctx->msg_buffer_size)) {
+		vpu_err("fail to init fifo when open\n");
+		ret = -EINVAL;
+		goto err_init_kfifo;
 	}
 	ctx->dev = dev;
 	ctx->str_index = idx;
@@ -6113,8 +6142,12 @@ err_open_crc:
 	ctx->tsm = NULL;
 err_create_tsm:
 	remove_instance_file(ctx);
-	kfifo_free(&ctx->msg_fifo);
 	dev->ctx[idx] = NULL;
+err_init_kfifo:
+	vfree(ctx->msg_buffer);
+	atomic64_sub(ctx->msg_buffer_size, &ctx->statistic.total_alloc_size);
+	ctx->msg_buffer = NULL;
+	ctx->msg_buffer_size = 0;
 err_alloc_fifo:
 	mutex_destroy(&ctx->instance_mutex);
 	mutex_destroy(&ctx->cmd_lock);
@@ -6194,7 +6227,10 @@ static int v4l2_release(struct file *filp)
 
 	cancel_delayed_work_sync(ctx->delayed_instance_work);
 	cancel_work_sync(ctx->instance_work);
-	kfifo_free(&ctx->msg_fifo);
+	vfree(ctx->msg_buffer);
+	atomic64_sub(ctx->msg_buffer_size, &ctx->statistic.total_alloc_size);
+	ctx->msg_buffer = NULL;
+	ctx->msg_buffer_size = 0;
 	if (ctx->instance_wq)
 		destroy_workqueue(ctx->instance_wq);
 
@@ -6236,7 +6272,8 @@ static unsigned int v4l2_poll(struct file *filp, poll_table *wait)
 	src_q = &ctx->q_data[V4L2_SRC].vb2_q;
 	dst_q = &ctx->q_data[V4L2_DST].vb2_q;
 
-	if (ctx->firmware_finished && !list_empty(&dst_q->done_list))
+	if ((ctx->firmware_finished || ctx->wait_res_change_done) &&
+	     !list_empty(&dst_q->done_list))
 		rc = 0;
 
 	poll_wait(filp, &src_q->done_wq, wait);
@@ -6554,12 +6591,18 @@ static int vpu_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_rm_vdev;
 
-	ret = kfifo_alloc(&dev->mu_msg_fifo,
-			  sizeof(u_int32) * VPU_MAX_NUM_STREAMS * VID_API_MESSAGE_LIMIT,
-			  GFP_KERNEL);
-	if (ret) {
+	dev->mu_msg_buffer_size =
+		sizeof(u_int32) * VPU_MAX_NUM_STREAMS * VID_API_MESSAGE_LIMIT;
+	dev->mu_msg_buffer = vzalloc(dev->mu_msg_buffer_size);
+	if (!dev->mu_msg_buffer) {
 		vpu_err("error: fail to alloc mu msg fifo\n");
 		goto err_rm_vdev;
+	}
+	ret = kfifo_init(&dev->mu_msg_fifo,
+			dev->mu_msg_buffer, dev->mu_msg_buffer_size);
+	if (ret) {
+		vpu_err("error: fail to init mu msg fifo\n");
+		goto err_free_fifo;
 	}
 
 	dev->workqueue = alloc_workqueue("vpu", WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
@@ -6594,7 +6637,9 @@ err_poweroff:
 	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 err_free_fifo:
-	kfifo_free(&dev->mu_msg_fifo);
+	vfree(dev->mu_msg_buffer);
+	dev->mu_msg_buffer = NULL;
+	dev->mu_msg_buffer_size = 0;
 err_rm_vdev:
 	if (dev->pvpu_decoder_dev) {
 		video_unregister_device(dev->pvpu_decoder_dev);
@@ -6631,7 +6676,9 @@ static int vpu_remove(struct platform_device *pdev)
 	dev->debugfs_root = NULL;
 	dev->debugfs_dbglog = NULL;
 	dev->debugfs_fwlog = NULL;
-	kfifo_free(&dev->mu_msg_fifo);
+	vfree(dev->mu_msg_buffer);
+	dev->mu_msg_buffer = NULL;
+	dev->mu_msg_buffer_size = 0;
 	vpu_dec_cancel_work(dev);
 	destroy_workqueue(dev->workqueue);
 	if (dev->m0_p_fw_space_vir)
