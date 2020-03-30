@@ -3115,8 +3115,6 @@ static int detect_device(struct i2c_client *client)
 		sizeof(buffer),
 		&buffer
 	};
-	if (!i2c_check_functionality(adapter, I2C_FUNC_I2C))
-		return -ENODEV;
 	if (i2c_transfer(adapter, &pkt, 1) != 1)
 		return -ENODEV;
 	return 0;
@@ -3125,8 +3123,12 @@ static int detect_device(struct i2c_client *client)
 static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct mxt_data *data;
+	struct gpio_desc *reset_gpio;
 	int error;
+	unsigned long max_timeout;
 
+	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
+		return -ENODEV;
 	/*
 	 * Ignore devices that do not have device properties attached to
 	 * them, as we need help determining whether we are dealing with
@@ -3152,10 +3154,29 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (ACPI_COMPANION(&client->dev) && client->addr < 0x40)
 		return -ENXIO;
 
-	error = detect_device(client);
-	if (error) {
-		dev_err(&client->dev, "not detected\n");
+	reset_gpio = devm_gpiod_get_optional(&client->dev,
+						   "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(reset_gpio)) {
+		error = PTR_ERR(reset_gpio);
+		dev_err(&client->dev, "Failed to get reset gpio: %d\n", error);
 		return error;
+	}
+
+	if (reset_gpio) {
+		msleep(MXT_RESET_TIME + 100);	/* +70 fails, +75 works */
+		gpiod_set_value(reset_gpio, 0);
+		msleep(100);
+	}
+	max_timeout = jiffies + msecs_to_jiffies(MXT_RESET_TIMEOUT);
+	while (1) {
+		error = detect_device(client);
+		if (!error)
+			break;
+		if (time_after(jiffies, max_timeout)) {
+			dev_err(&client->dev, "not detected\n");
+			return error;
+		}
+		msleep(100);
 	}
 	data = devm_kzalloc(&client->dev, sizeof(struct mxt_data), GFP_KERNEL);
 	if (!data)
@@ -3166,6 +3187,7 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	data->client = client;
 	data->irq = client->irq;
+	data->reset_gpio = reset_gpio;
 	i2c_set_clientdata(client, data);
 
 	init_completion(&data->bl_completion);
@@ -3179,14 +3201,10 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (error)
 		return error;
 
-	data->reset_gpio = devm_gpiod_get_optional(&client->dev,
-						   "reset", GPIOD_OUT_HIGH);
-	if (IS_ERR(data->reset_gpio)) {
-		error = PTR_ERR(data->reset_gpio);
-		dev_err(&client->dev, "Failed to get reset gpio: %d\n", error);
-		return error;
+	if (reset_gpio) {
+		data->in_bootloader = true;
+		reinit_completion(&data->bl_completion);
 	}
-
 	error = devm_request_threaded_irq(&client->dev, client->irq,
 					  NULL, mxt_interrupt, IRQF_ONESHOT,
 					  client->name, data);
@@ -3197,11 +3215,12 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	disable_irq(client->irq);
 
-	if (data->reset_gpio) {
-		msleep(100);	/* 70 fails, 75 works */
-		msleep(MXT_RESET_GPIO_TIME);
-		gpiod_set_value(data->reset_gpio, 0);
-		msleep(MXT_RESET_INVALID_CHG);
+	if (reset_gpio) {
+		error = mxt_wait_for_completion(data, &data->bl_completion,
+						MXT_RESET_TIMEOUT);
+		if (error)
+			return error;
+		data->in_bootloader = false;
 	}
 
 	error = mxt_initialize(data);
