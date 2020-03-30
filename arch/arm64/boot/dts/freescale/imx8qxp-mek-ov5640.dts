@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0+
 // Copyright NXP 2019
 
-#include "imx8qxp-mek-rpmsg.dts"
+#include "imx8qxp-mek.dts"
 
 &isi_1 {
 	status = "disabled";
