@@ -631,7 +631,7 @@ MODULE_DEVICE_TABLE(i2c, ts_idtable);
 
 static const struct of_device_id ft5x06_dt_ids[] = {
        {
-               .compatible = "ft5x06,ft5x06-touch",
+               .compatible = "edt,ft5x06-ts",
        }, {
                /* sentinel */
        }
