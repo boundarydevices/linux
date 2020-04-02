@@ -338,6 +338,9 @@
 		pwm_lcd = &pwm1;
 		pwm_lvds = &pwm4;
 		t_lvds = &t_lvds;
+		ts_egalax = &ts_egalax;
+		ts_ft5x06 = &ts_ft5x06;
+		ts_gsl1680 = &ts_gsl1680;
 	};
 
 	backlight_lcd: backlight-lcd {
@@ -578,24 +581,24 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-	egalax-ts@04 {
+	ts_egalax: touchscreen@4 {
 		compatible = "eeti,egalax_ts";
+		interrupts-extended = GPIRQ_TOUCH;
 		reg = <0x04>;
-		interrupts-extended = GPIRQ_TOUCH;
 		wakeup-gpios = GP_TOUCH;
 	};
 
-	ft5x06-ts@38 {
+	ts_ft5x06: touchscreen@38 {
 		compatible = "ft5x06-ts,ft5x06-ts";
-		reg = <0x38>;
 		interrupts-extended = GPIRQ_TOUCH;
+		reg = <0x38>;
 		wakeup-gpios = GP_TOUCH;
 	};
 
-	gslx680-ts@40 {
+	ts_gsl1680: touchscreen@40 {
 		compatible = "silead,gsl1680";
-		reg = <0x40>;
 		interrupts-extended = GPIRQ_GSLX680;
+		reg = <0x40>;
 		touchscreen-size-x = <480>;	/* swapped below */
 		touchscreen-size-y = <800>;
 		touchscreen-swapped-x-y;
