@@ -409,10 +409,11 @@
 		pwm_mipi = &pwm4;
 		reg_sw4 = &reg_sw4;
 		t_mipi = &t_mipi;
+		ts_ft5x06 = &ts_ft5x06;
 	};
 
 	alias_create_phandles {
-		p11 = <&reg_sw4>;
+		p1 = <&reg_sw4>;
 	};
 
 	backlight_mipi: backlight-mipi {
@@ -767,8 +768,8 @@
 	sda-gpios = GP_I2C4_SDA;
 	status = "okay";
 
-	touchscreen@38 {
-		compatible = "ft5x06-ts";
+	ts_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
 		interrupts-extended = GPIRQ_I2C4_FT5X06;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c4_ft5x06>;
