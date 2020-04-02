@@ -315,6 +315,9 @@
 		pwm_lcd = &pwm1;
 		pwm_lvds = &pwm4;
 		t_lvds = &t_lvds;
+		ts_egalax = &ts_egalax;
+		ts_ft5x06 = &ts_ft5x06;
+		ts_tsc2004 = &ts_tsc2004;
 	};
 
 	backlight_lcd: backlight-lcd {
@@ -613,7 +616,8 @@
 		VDDA-supply = <&reg_2p5v>;
 		VDDIO-supply = <&reg_3p3v>;
 	};
-	isl1208@6f {
+
+	rtc@6f {
 		compatible = "isil,isl1208";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_isl1208>;
@@ -647,20 +651,6 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-	egalax-ts@04 {
-		compatible = "eeti,egalax_ts";
-		reg = <0x04>;
-		interrupts-extended = GPIRQ_I2C3_J7;
-		wakeup-gpios = GP_I2C3_J7;
-	};
-
-	ft5x06-ts@38 {
-		compatible = "ft5x06-ts";
-		reg = <0x38>;
-		interrupts-extended = GPIRQ_I2C3_J7;
-		wakeup-gpios = GP_I2C3_J7;
-	};
-
 	ov5640_mipi: ov5640-mipi@3c {
 		compatible = "ovti,ov5640_mipi";
 		reg = <0x3c>;
@@ -679,12 +669,26 @@
 		mclk_source = <0>;
 	};
 
-	tsc2004: tsc2004@48 {
+	ts_egalax: touchscreen@4 {
+		compatible = "eeti,egalax_ts";
+		interrupts-extended = GPIRQ_I2C3_J7;
+		reg = <0x04>;
+		wakeup-gpios = GP_I2C3_J7;
+	};
+
+	ts_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = GPIRQ_I2C3_J7;
+		reg = <0x38>;
+		wakeup-gpios = GP_I2C3_J7;
+	};
+
+	ts_tsc2004: touchscreen@48 {
 		compatible = "tsc2004,tsc2004";
+		interrupts-extended = GPIRQ_TSC2004;
 		reg = <0x48>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_tsc2004>;
-		interrupts-extended = GPIRQ_TSC2004;
 		wakeup-gpios = GP_TSC2004;
 	};
 };
