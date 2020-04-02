@@ -385,6 +385,9 @@
 		pwm_lcd = &pwm3;
 		pwm_lvds = &pwm4;
 		t_lvds = &t_lvds;
+		ts_egalax = &ts_egalax;
+		ts_ft5x06 = &ts_ft5x06;
+		ts_goodix = &ts_goodix;
 	};
 
 	alias_create_phandles {
@@ -665,23 +668,7 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-	ar1021@4d {
-		compatible = "ar1020_i2c";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c3_ar1021>;
-		reg = <0x4d>;
-		interrupts-extended = GPIRQ_AR1021;
-		wakeup-gpios = GP_AR1021;
-	};
-
-	egalax_ts@04 {
-		compatible = "eeti,egalax_ts";
-		reg = <0x04>;
-		interrupts-extended = GPIRQ_PCAP_TOUCH;
-		wakeup-gpios = GP_PCAP_TOUCH;
-	};
-
-	tc358778: bridge@0e {
+	tc358778: bridge@e {
 		clocks = <&clks IMX6QDL_CLK_IPU1_DI0>;
 		clock-names = "pixel";
 		compatible = "tc358778";
@@ -696,21 +683,37 @@
 		reset-gpios = GP_TC358778_RESET;
 	};
 
-	ft5x06_ts@38 {
-		compatible = "ft5x06-ts";
+	touchscreen@4d {
+		compatible = "ar1020_i2c";
+		interrupts-extended = GPIRQ_AR1021;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_ar1021>;
+		reg = <0x4d>;
+		wakeup-gpios = GP_AR1021;
+	};
+
+	ts_egalax: touchscreen@4 {
+		compatible = "eeti,egalax_ts";
+		interrupts-extended = GPIRQ_PCAP_TOUCH;
+		reg = <0x04>;
+		wakeup-gpios = GP_PCAP_TOUCH;
+	};
+
+	ts_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
 		reg = <0x38>;
 		interrupts-extended = GPIRQ_PCAP_TOUCH;
 		wakeup-gpios = GP_PCAP_TOUCH;
 	};
 
-	gt911@5d {
+	ts_goodix: touchscreen@5d {
 		compatible = "goodix,gt9271";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c3_gt911>;
-		reg = <0x5d>;
 		esd-recovery-timeout-ms = <2000>;
 		interrupts-extended = GPIRQ_GT911;
 		irq-gpios = GP_GT911_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_gt911>;
+		reg = <0x5d>;
 		reset-gpios = GP_GT911_RESET;
 	};
 };
