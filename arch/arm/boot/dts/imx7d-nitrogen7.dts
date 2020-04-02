@@ -489,6 +489,7 @@
 		mmc1 = &usdhc3;
 		mmc2 = &usdhc2;
 		t_lcd = &t_lcd;
+		ts_tsc2004 = &ts_tsc2004;
 	};
 
 	backlight-j9 {
@@ -876,12 +877,12 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-	tsc2004: tsc2004@48 {
+	ts_tsc2004: touchscreen@48 {
 		compatible = "tsc2004,tsc2004";
+		interrupts-extended = <&gpio3 4 IRQ_TYPE_EDGE_FALLING>;
 		reg = <0x48>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_tsc2004>;
-		interrupts-extended = <&gpio3 4 IRQ_TYPE_EDGE_FALLING>;
 		wakeup-gpios = <&gpio3 4 GPIO_ACTIVE_LOW>;
 	};
 };
