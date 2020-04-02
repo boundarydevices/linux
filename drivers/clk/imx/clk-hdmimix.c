@@ -54,7 +54,6 @@ static int imx_hdmimix_clk_probe(struct platform_device *pdev)
 	struct device_node *np = dev->of_node;
 	void __iomem *base;
 	struct clk *clk_dummy;
-	int i;
 	int ret;
 
 	pm_runtime_enable(dev);
@@ -123,9 +122,6 @@ static int imx_hdmimix_clk_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		pr_err("failed to register clks for i.MX8MP\n");
 		return -EINVAL;
-	}
-	for (i = 0; i < IMX8MP_CLK_HDMIMIX_END; i++) {
-		clk_prepare_enable(clks[i]);
 	}
 
 	pm_runtime_put(dev);
