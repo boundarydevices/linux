@@ -390,6 +390,11 @@
 		pwm_lcd = &pwm3;
 		pwm_lvds = &pwm4;
 		t_lvds = &t_lvds;
+		ts_egalax = &ts_egalax;
+		ts_ft5x06 = &ts_ft5x06;
+		ts_gsl1680 = &ts_gsl1680;
+		ts_ili210x = &ts_ili210x;
+		ts_tsc2004 = &ts_tsc2004;
 	};
 
 	backlight-j7 {
@@ -721,47 +726,48 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-	egalax-ts@04 {
+	ts_egalax: touchscreen@4 {
 		compatible = "eeti,egalax_ts";
+		interrupts-extended = GPIRQ_TOUCH;
 		reg = <0x04>;
-		interrupts-extended = GPIRQ_TOUCH;
-		wakeup-gpios = GP_TOUCH;
-	};
-	ft5x06-ts@38 {
-		compatible = "ft5x06-ts";
-		reg = <0x38>;
-		interrupts-extended = GPIRQ_TOUCH;
 		wakeup-gpios = GP_TOUCH;
 	};
 
-	gslx680-ts@40 {
+	ts_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = GPIRQ_TOUCH;
+		reg = <0x38>;
+		wakeup-gpios = GP_TOUCH;
+	};
+
+	ts_gsl1680: touchscreen@40 {
 		compatible = "silead,gsl1680";
+		interrupts-extended = GPIRQ_GSLX680;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_gslx680>;
 		reg = <0x40>;
-		interrupts-extended = GPIRQ_GSLX680;
 		power-gpios = GP_GSLX680_POWER;
 		touchscreen-size-x = <480>;	/* swapped below */
 		touchscreen-size-y = <800>;
 		touchscreen-swapped-x-y;
 	};
 
-	ili210x@41 {
+	ts_ili210x: touchscreen@41 {
 		compatible = "ili210x";
-		reg = <0x41>;
 		interrupts-extended = GPIRQ_TOUCH;
+		reg = <0x41>;
 		wakeup-gpios = GP_TOUCH;
 	};
 
-	tsc2004@48 {
+	ts_tsc2004: touchscreen@48 {
 		compatible = "tsc2004,tsc2004";
-		reg = <0x48>;
 		interrupts-extended = GPIRQ_TSC2004;
-		wakeup-gpios = GP_TSC2004;
+		reg = <0x48>;
 		reset-gpios = GP_TSC2004_RESET;
+		wakeup-gpios = GP_TSC2004;
 	};
 
-	isl1208@6f {
+	rtc@6f {
 		compatible = "isl,isl1208";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_rtc>;
