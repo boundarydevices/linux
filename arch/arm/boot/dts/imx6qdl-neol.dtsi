@@ -385,6 +385,10 @@
 		mxcfb0 = &fb_lcd;
 		mxcfb1 = &fb_hdmi;
 		pwm_lcd = &pwm1;
+		ts_egalax = &ts_egalax;
+		ts_ft5x06 = &ts_ft5x06;
+		ts_ili210x = &ts_ili210x;
+		ts_tsc2004 = &ts_tsc2004;
 	};
 
 	backlight_lcd: backlight-lcd {
@@ -631,31 +635,31 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-	egalax-ts@04 {
+	ts_egalax: touchscreen@4 {
 		compatible = "eeti,egalax_ts";
+		interrupts-extended = GPIRQ_I2C3_J7;
 		reg = <0x04>;
-		interrupts-extended = GPIRQ_I2C3_J7;
 		wakeup-gpios = GP_I2C3_J7;
 	};
 
-	ft5x06-ts@38 {
-		compatible = "ft5x06-ts";
+	ts_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = GPIRQ_I2C3_J7;
 		reg = <0x38>;
-		interrupts-extended = GPIRQ_I2C3_J7;
 		wakeup-gpios = GP_I2C3_J7;
 	};
 
-	ili210x@41 {
+	ts_ili210x: touchscreen@41 {
 		compatible = "ili210x";
-		reg = <0x41>;
 		interrupts-extended = GPIRQ_I2C3_J7;
+		reg = <0x41>;
 		wakeup-gpios = GP_I2C3_J7;
 	};
 
-	tsc2004: tsc2004@48 {
+	ts_tsc2004: touchscreen@48 {
 		compatible = "tsc2004";
-		reg = <0x48>;
 		interrupts-extended = GPIRQ_I2C3_J7;
+		reg = <0x48>;
 		wakeup-gpios = GP_I2C3_J7;
 	};
 };
