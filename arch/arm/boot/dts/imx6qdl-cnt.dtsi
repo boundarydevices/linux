@@ -228,6 +228,7 @@
 		mxcfb0 = &fb_lvds;
 		pwm_lvds = &pwm4;
 		t_lvds = &t_lvds;
+		ts_atmel_mt = &ts_atmel_mt;
 	};
 
 	backlight_lvds: backlight_lvds {
@@ -447,7 +448,7 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-	touchscreen@4d {
+	ts_atmel_mt: touchscreen@4d {
 		compatible = "atmel,maxtouch";
 		reg = <0x4d>;
 		pinctrl-names = "default";
