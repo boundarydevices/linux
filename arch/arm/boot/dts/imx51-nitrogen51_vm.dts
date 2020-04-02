@@ -815,7 +815,7 @@
 		reg = <0x4c>;
 	};
 
-	pic16f616: pic16f616@22 {
+	touchscreen@22 {
 		compatible = "Pic16F616-ts";
 		interrupts-extended = GPIRQ_PIC16F616;
 		pinctrl-names = "default";
