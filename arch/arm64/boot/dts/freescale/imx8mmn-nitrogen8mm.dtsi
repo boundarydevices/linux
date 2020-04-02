@@ -507,8 +507,8 @@
 		reg_sw4 = &reg_sw4;
 		t_mipi = &t_mipi;
 		ts_ft5x06 = &ts_ft5x06;
-		ts_gsl1680 = &ts_gsl1680;
 		ts_goodix = &ts_goodix;
+		ts_gsl1680 = &ts_gsl1680;
 		ts_st1633i = &ts_st1633i;
 	};
 
@@ -800,22 +800,34 @@
 	};
 
 	ts_ft5x06: touchscreen@38 {
-		compatible = "ft5x06-ts";
+		compatible = "edt,ft5x06-ts";
 		interrupts-extended = GPIRQ_I2C2_FT5X06;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_ft5x06>;
 		reg = <0x38>;
-		wakeup-gpios = GP_I2C2_FT5X06_WAKE;
 		reset-gpios = GP_I2C2_FT5X06_RESET;
+		wakeup-gpios = GP_I2C2_FT5X06_WAKE;
+	};
+
+	ts_goodix: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		display = <&display_subsystem>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_gt911>;
+		reg = <0x5d>;
+		reset-gpios = GP_GT911_RESET;
 	};
 
 	ts_gsl1680: touchscreen@40 {
 		compatible = "silead,gsl1680";
+		interrupts-extended = GPIRQ_GSLX680;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_gslx680>;
-		reg = <0x40>;
-		interrupts-extended = GPIRQ_GSLX680;
 		power-gpios = GP_I2C2_GSLX680_POWER;
+		reg = <0x40>;
 		touchscreen-size-x = <480>;	/* swapped below */
 		touchscreen-size-y = <800>;
 		touchscreen-swapped-x-y;
@@ -823,25 +835,13 @@
 
 	ts_st1633i: touchscreen@55 {
 		compatible = "sitronix,st1633i";
-		reg = <0x55>;
 		interrupts-extended = GPIRQ_ST1633;
+		reg = <0x55>;
 		/* pins used by touchscreen */
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_st1633>;
 		reset-gpios = GP_ST1633_RESET;
 		wakeup-gpios = GP_ST1633_IRQ;
-	};
-
-	ts_goodix: touchscreen@5d {
-		compatible = "goodix,gt9271";
-		display = <&display_subsystem>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c2_gt911>;
-		reg = <0x5d>;
-		esd-recovery-timeout-ms = <2000>;
-		interrupts-extended = GPIRQ_GT911;
-		irq-gpios = GP_GT911_IRQ;
-		reset-gpios = GP_GT911_RESET;
 	};
 
 	i2cmux@70 {
