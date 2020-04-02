@@ -452,6 +452,8 @@
 		rtc1 = &snvs_rtc;
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
+		ts_ft5x06 = &ts_ft5x06;
+		ts_ft5x06_2 = &ts_ft5x06_2;
 	};
 
 	backlight_lvds: backlight-lvds {
@@ -729,8 +731,8 @@
 &i2c1b {
 	clock-frequency = <100000>;
 
-	ft5x06-ts@38 {
-		compatible = "ft5x06-ts";
+	ts_ft5x06_2: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1b_ft5x06>;
 		reg = <0x38>;
@@ -747,8 +749,8 @@
 &i2c1d {
 	clock-frequency = <100000>;
 
-	ft5x06-ts@38 {
-		compatible = "ft5x06-ts";
+	ts_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1d_ft5x06>;
 		reg = <0x38>;
