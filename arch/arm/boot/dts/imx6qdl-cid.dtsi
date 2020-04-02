@@ -525,6 +525,7 @@
 		mxcfb0 = &fb_mipi;
 		pwm_mipi = &pwm1;
 		t_mipi = &t_mipi;
+		ts_atmel_mt = &ts_atmel_mt;
 	};
 
 	alias_create_phandles {
@@ -1008,7 +1009,7 @@
 		interrupts-extended = GPIRQ_RTC;
 	};
 
-	atmel-maxtouch@4a {
+	ts_atmel_mt: touchscreen@4a {
 		compatible = "atmel,maxtouch";
 		interrupts-extended = GPIRQ_TOUCH;
 		pinctrl-names = "default";
