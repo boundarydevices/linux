@@ -687,7 +687,7 @@
 		VDDIO-supply = <&reg_3p3v>;
 	};
 
-	isl1208@6f {
+	rtc@6f {
 		compatible = "isl,isl1208";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_isl1208>;
