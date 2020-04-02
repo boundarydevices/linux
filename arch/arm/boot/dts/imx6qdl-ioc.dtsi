@@ -761,7 +761,7 @@
 	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
-	ar1020-i2c@4d {
+	touchscreen@4d {
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_ar1020>;
 		compatible = "ar1020_i2c";
@@ -770,7 +770,7 @@
 		wakeup-gpios = GP_AR1020_IRQ;
 	};
 
-	isl1208@6f {
+	rtc@6f {
 		compatible = "isl,isl1208";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_isl1208>;
