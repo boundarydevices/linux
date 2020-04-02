@@ -424,6 +424,8 @@
 		pwm_lvds2 = &pwm2;
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
+		ts_goodix = &ts_goodix;
+		ts_goodix2 = &ts_goodix2;
 	};
 
 	bt-rfkill {
@@ -737,7 +739,7 @@
 		reg = <0x50>;
 	};
 
-	gt911@5d {
+	ts_goodix2: touchscreen@5d {
 		compatible = "goodix,gt911";
 		esd-recovery-timeout-ms = <2000>;
 		interrupts-extended = GPIRQ_I2C2_SER2_TOUCH;
@@ -770,7 +772,7 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-	gt911@5d {
+	ts_goodix: touchscreen@5d {
 		compatible = "goodix,gt911";
 		esd-recovery-timeout-ms = <2000>;
 		interrupts-extended = GPIRQ_I2C3_SER1_TOUCH;
