@@ -503,6 +503,12 @@
 		pwm_lvds = &pwm4;
 		rtc1 = &snvs_rtc;
 		t_lvds = &t_lvds;
+		ts_egalax = &ts_egalax;
+		ts_ft5x06 = &ts_ft5x06;
+		ts_goodix = &ts_goodix;
+		ts_goodix2 = &ts_goodix2;
+		ts_ili210x = &ts_ili210x;
+		ts_tsc2004 = &ts_tsc2004;
 	};
 
 	backlight_lcd: backlight-lcd {
@@ -868,7 +874,7 @@
 		VDDIO-supply = <&reg_3p3v>;
 	};
 
-	rv4162@68 {
+	rtc@68 {
 		compatible = "microcrystal,rv4162";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_rv4162>;
@@ -876,7 +882,7 @@
 		interrupts-extended = GPIRQ_RTC_RV4162;
 	};
 
-	isl1208@6f {
+	rtc@6f {
 		compatible = "isil,isl1208";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_isl1208>;
@@ -983,31 +989,6 @@
 		cvbs = <1>;
 	};
 
-	egalax-ts@04 {
-		compatible = "eeti,egalax_ts";
-		reg = <0x04>;
-		interrupts-extended = GPIRQ_I2C3_J7;
-		wakeup-gpios = GP_I2C3_J7;
-	};
-
-	gt911@14 {
-		compatible = "goodix,gt911";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c3_gt911>;
-		reg = <0x14>;
-		esd-recovery-timeout-ms = <2000>;
-		interrupts-extended = GPIRQ_GT911;
-		irq-gpios = GP_GT911_IRQ;
-		reset-gpios = GP_GT911_RESET;
-	};
-
-	ft5x06-ts@38 {
-		compatible = "ft5x06-ts";
-		reg = <0x38>;
-		interrupts-extended = GPIRQ_I2C3_J7;
-		wakeup-gpios = GP_I2C3_J7;
-	};
-
 	ov5640: ov5640@3c {
 		compatible = "ov5640_int";
 		reg = <0x3c>;
@@ -1025,30 +1006,56 @@
 		mclk_source = <0>;
 	};
 
-	gt911@5d {
-		compatible = "goodix,gt911";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c3_gt911>;
-		reg = <0x5d>;
-		esd-recovery-timeout-ms = <2000>;
-		interrupts-extended = GPIRQ_GT911;
-		irq-gpios = GP_GT911_IRQ;
-		reset-gpios = GP_GT911_RESET;
-	};
-
-	ili210x@41 {
-		compatible = "ili210x";
-		reg = <0x41>;
+	ts_egalax: touchscreen@4 {
+		compatible = "eeti,egalax_ts";
 		interrupts-extended = GPIRQ_I2C3_J7;
+		reg = <0x04>;
 		wakeup-gpios = GP_I2C3_J7;
 	};
 
-	tsc2004: tsc2004@48 {
+	ts_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = GPIRQ_I2C3_J7;
+		reg = <0x38>;
+		wakeup-gpios = GP_I2C3_J7;
+		wakeup-source;
+	};
+
+	ts_goodix: touchscreen@14 {
+		compatible = "goodix,gt911";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_gt911>;
+		reg = <0x14>;
+		reset-gpios = GP_GT911_RESET;
+	};
+
+	ts_goodix2: touchscreen@5d {
+		compatible = "goodix,gt911";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_gt911>;
+		reg = <0x5d>;
+		reset-gpios = GP_GT911_RESET;
+	};
+
+	ts_ili210x: touchscreen@41 {
+		compatible = "ili210x";
+		interrupts-extended = GPIRQ_I2C3_J7;
+		reg = <0x41>;
+		wakeup-gpios = GP_I2C3_J7;
+	};
+
+	ts_tsc2004: touchscreen@48 {
 		compatible = "tsc2004,tsc2004";
-		reg = <0x48>;
+		interrupts-extended = GPIRQ_TSC2004;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_tsc2004>;
-		interrupts-extended = GPIRQ_TSC2004;
+		reg = <0x48>;
 		wakeup-gpios = GP_TSC2004;
 	};
 };
