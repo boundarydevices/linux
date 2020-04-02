@@ -370,6 +370,11 @@
 		pwm_lvds = &pwm4;
 		t_lvds = &t_lvds;
 		uart1 = &uart1;
+		ts_cyttsp5 = &ts_cyttsp5;
+		ts_egalax = &ts_egalax;
+		ts_exc3000 = &ts_exc3000;
+		ts_ft5x06 = &ts_ft5x06;
+		ts_ili210x = &ts_ili210x;
 	};
 
 	backlight_lvds: backlight-lvds {
@@ -742,36 +747,15 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-	egalax-ts@04 {
-		compatible = "eeti,egalax_ts";
-		reg = <0x04>;
-		interrupts-extended = GPIRQ_I2C3_J6;
-		wakeup-gpios = GP_I2C3_J6;
-	};
-
-	ft5x06-ts@38 {
-		compatible = "ft5x06-ts";
-		reg = <0x38>;
-		interrupts-extended = GPIRQ_I2C3_J6;
-		wakeup-gpios = GP_I2C3_J6;
-	};
-
-	ili210x@41 {
-		compatible = "ili210x";
-		reg = <0x41>;
-		interrupts-extended = GPIRQ_I2C3_J6;
-		wakeup-gpios = GP_I2C3_J6;
-	};
-
-	tsc@24 {
+	ts_cyttsp5: touchscreen@24 {
 		compatible = "cy,cyttsp5_i2c_adapter";
-		reg = <0x24>;
-		interrupts-extended = GPIRQ_I2C3_J6;
 		cy,adapter_id = "cyttsp5_i2c_adapter";
-		wakeup-gpios = GP_I2C3_J6;
+		interrupts-extended = GPIRQ_I2C3_J6;
+		reg = <0x24>;
 #if 0
 		reset-gpios = GP_I2C3_J6_RESET;
 #endif
+		wakeup-gpios = GP_I2C3_J6;
 
 		cy,core {
 			cy,name = "cyttsp5_core";
@@ -849,16 +833,37 @@
 		};
 	};
 
-	touchscreen@2a {
+	ts_egalax: touchscreen@4 {
+		compatible = "eeti,egalax_ts";
+		interrupts-extended = GPIRQ_I2C3_J6;
+		reg = <0x04>;
+		wakeup-gpios = GP_I2C3_J6;
+	};
+
+	ts_exc3000: touchscreen@2a {
 		compatible = "eeti,exc3000";
-		reg = <0x2a>;
 		interrupts-extended = GPIRQ_I2C3_J6_LOW;
+		reg = <0x2a>;
 #if 0
 		touchscreen-size-x = <4096>;
 		touchscreen-size-y = <4096>;
 		touchscreen-inverted-x;
 		touchscreen-swapped-x-y;
 #endif
+	};
+
+	ts_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = GPIRQ_I2C3_J6;
+		reg = <0x38>;
+		wakeup-gpios = GP_I2C3_J6;
+	};
+
+	ts_ili210x: touchscreen@41 {
+		compatible = "ili210x";
+		interrupts-extended = GPIRQ_I2C3_J6;
+		reg = <0x41>;
+		wakeup-gpios = GP_I2C3_J6;
 	};
 };
 
