@@ -1148,9 +1148,8 @@
 				compatible = "fsl,imx6q-fec";
 				reg = <0x2188000 0x4000>;
 				interrupt-names = "int0", "pps";
-				interrupts-extended =
-					<&gpc 0 118 IRQ_TYPE_LEVEL_HIGH>,
-					<&gpc 0 119 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts = <0 118 IRQ_TYPE_LEVEL_HIGH>,
+					     <0 119 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clks IMX6QDL_CLK_ENET>,
 					 <&clks IMX6QDL_CLK_ENET>,
 					 <&clks IMX6QDL_CLK_ENET_REF>;
