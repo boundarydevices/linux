@@ -418,6 +418,7 @@
 		mmc0 = &usdhc4;
 		mxcfb0 = &fb_lcd;
 		pwm_lcd = &pwm1;
+		ts_crtouch = &ts_crtouch;
 	};
 
 	backlight_lcd_day: backlight_lcd_day {
@@ -694,7 +695,7 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-        crtouch@49 {
+	ts_crtouch: touchscreen@49 {
 		compatible = "crtouch";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_crtouch>;
