@@ -464,7 +464,7 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-	isl1208@6f {
+	rtc@6f {
 		compatible = "isl,isl1208";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_rtc>;
