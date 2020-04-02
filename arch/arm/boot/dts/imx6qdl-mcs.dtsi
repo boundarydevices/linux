@@ -463,7 +463,7 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-	ar1020_i2c@4d {
+	touchscreen@4d {
 		compatible = "ar1020_i2c";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_ar1021>;
