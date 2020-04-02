@@ -383,6 +383,7 @@
 		mmc1 = &usdhc4;
 		mxcfb0 = &fb_lcd;
 		pwm_lcd = &pwm3;
+		ts_gsl1680 = &ts_gsl1680;
 	};
 
 	backlight_lcd: backlight_lcd {
@@ -599,7 +600,7 @@
 		interrupts-extended = GPIRQ_PRINT_ALERT;
 	};
 
-	gslx680_ts@40 {
+	ts_gsl1680: touchscreen@40 {
 		compatible = "silead,gsl1680";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_gslx680>;
