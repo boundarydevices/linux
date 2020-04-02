@@ -492,6 +492,8 @@
 		mmc2 = &usdhc3;
 		t_lcd = &t_lcd;
 		t_lvds = &t_lvds;
+		ts_egalax = &ts_egalax;
+		ts_ft5x06 = &ts_ft5x06;
 	};
 
 	backlight-lvds {
@@ -812,17 +814,17 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-        egalax-ts@04 {
-                compatible = "eeti,egalax_ts";
-                reg = <0x04>;
-                interrupts-extended = GPIRQ_I2C3_J18;
-                wakeup-gpios = GP_I2C3_J18;
-        };
+	ts_egalax: touchscreen@4 {
+		compatible = "eeti,egalax_ts";
+		interrupts-extended = GPIRQ_I2C3_J18;
+		reg = <0x04>;
+		wakeup-gpios = GP_I2C3_J18;
+	};
 
-	ft5x06-ts@38 {
-		compatible = "ft5x06-ts";
+	ts_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = GPIRQ_I2C3_J18;
 		reg = <0x38>;
-                interrupts-extended = GPIRQ_I2C3_J18;
 		wakeup-gpios = GP_I2C3_J18;
 	};
 
