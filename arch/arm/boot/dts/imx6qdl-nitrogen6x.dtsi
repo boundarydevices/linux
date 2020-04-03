@@ -466,6 +466,8 @@
 		pwm_lcd = &pwm1;
 		pwm_lvds = &pwm4;
 		rtc1 = &snvs_rtc;
+		rtc_isl1208 = &rtc_isl1208;
+		rtc_rv4162 = &rtc_rv4162;
 		t_lvds = &t_lvds;
 		ts_egalax = &ts_egalax;
 		ts_ft5x06 = &ts_ft5x06;
@@ -898,20 +900,22 @@
 		VDDIO-supply = <&reg_3p3v>;
 	};
 
-	rtc@68 {
+	rtc_rv4162: rtc@68 {
 		compatible = "microcrystal,rv4162";
+		interrupts-extended = GPIRQ_RTC_RV4162;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_rv4162>;
 		reg = <0x68>;
-		interrupts-extended = GPIRQ_RTC_RV4162;
+		status = "okay";
 	};
 
-	rtc@6f {
+	rtc_isl1208: rtc@6f {
 		compatible = "isil,isl1208";
+		interrupts-extended = GPIRQ_RTC_ISL1208;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_isl1208>;
 		reg = <0x6f>;
-		interrupts-extended = GPIRQ_RTC_ISL1208;
+		status = "disabled";
 	};
 };
 
