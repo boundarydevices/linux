@@ -243,9 +243,9 @@ struct imx_port {
 	unsigned		rs485_txen_levels;
 
 	/* DMA fields */
-	unsigned int		dma_is_enabled:1;
-	unsigned int		dma_is_rxing:1;
-	unsigned int		dma_is_txing:1;
+	unsigned char		dma_is_enabled;
+	unsigned char		dma_is_rxing;
+	unsigned char		dma_is_txing;
 	struct dma_chan		*dma_chan_rx, *dma_chan_tx;
 	struct scatterlist	rx_sgl, tx_sgl[2];
 	void			*rx_buf;
