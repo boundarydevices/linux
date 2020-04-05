@@ -644,6 +644,7 @@ static void imx_uart_dma_tx_callback(void *data)
 		return;
 	}
 
+	dma_unmap_sg(sport->port.dev, sgl, sport->dma_tx_nents, DMA_TO_DEVICE);
 	ucr1 = imx_uart_readl(sport, UCR1);
 	ucr1 &= ~UCR1_TXDMAEN;
 	imx_uart_writel(sport, ucr1, UCR1);
@@ -660,8 +661,6 @@ static void imx_uart_dma_tx_callback(void *data)
 		imx_uart_writel(sport, ucr4, UCR4);
 	}
 	spin_unlock_irqrestore(&sport->port.lock, flags);
-
-	dma_unmap_sg(sport->port.dev, sgl, sport->dma_tx_nents, DMA_TO_DEVICE);
 
 	dev_dbg(sport->port.dev, "we finish the TX DMA.\n");
 
@@ -1719,7 +1718,7 @@ static void imx_uart_flush_buffer(struct uart_port *port)
 		return;
 
 	sport->tx_bytes = 0;
-	dmaengine_terminate_all(sport->dma_chan_tx);
+	dmaengine_terminate_async(sport->dma_chan_tx);
 	if (sport->dma_is_txing) {
 		u32 ucr1;
 
