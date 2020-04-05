@@ -656,12 +656,14 @@ static void imx_uart_dma_tx_callback(void *data)
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 
-	dma_unmap_sg(sport->port.dev, sgl, sport->dma_tx_nents, DMA_TO_DEVICE);
+	if (sport->dma_is_txing) {
+		dma_unmap_sg(sport->port.dev, sgl, sport->dma_tx_nents, DMA_TO_DEVICE);
 
-	ucr1 = imx_uart_readl(sport, UCR1);
-	ucr1 &= ~UCR1_TXDMAEN;
-	imx_uart_writel(sport, ucr1, UCR1);
-
+		ucr1 = imx_uart_readl(sport, UCR1);
+		ucr1 &= ~UCR1_TXDMAEN;
+		imx_uart_writel(sport, ucr1, UCR1);
+		sport->dma_is_txing = 0;
+	}
 	/* update the stat */
 	xmit->tail = (xmit->tail + sport->tx_bytes) & (UART_XMIT_SIZE - 1);
 	sport->port.icount.tx += sport->tx_bytes;
@@ -675,8 +677,6 @@ static void imx_uart_dma_tx_callback(void *data)
 	}
 
 	dev_dbg(sport->port.dev, "we finish the TX DMA.\n");
-
-	sport->dma_is_txing = 0;
 
 	if (pending < WAKEUP_CHARS)
 		uart_write_wakeup(&sport->port);
@@ -1726,7 +1726,7 @@ static void imx_uart_flush_buffer(struct uart_port *port)
 		return;
 
 	sport->tx_bytes = 0;
-	dmaengine_terminate_all(sport->dma_chan_tx);
+	dmaengine_terminate_async(sport->dma_chan_tx);
 	if (sport->dma_is_txing) {
 		u32 ucr1;
 
