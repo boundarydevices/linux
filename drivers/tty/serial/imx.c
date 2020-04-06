@@ -645,16 +645,12 @@ static inline int imx_uart_transmit_buffer(struct imx_port *sport)
 	return 0;
 }
 
-static void imx_uart_dma_tx_callback(void *data)
+static void imx_uart_dma_tx_complete(struct imx_port *sport)
 {
-	struct imx_port *sport = data;
 	struct scatterlist *sgl = &sport->tx_sgl[0];
 	struct circ_buf *xmit = &sport->port.state->xmit;
-	unsigned long flags;
 	u32 ucr1, ucr4;
 	unsigned pending;
-
-	spin_lock_irqsave(&sport->port.lock, flags);
 
 	if (sport->dma_is_txing) {
 		dma_unmap_sg(sport->port.dev, sgl, sport->dma_tx_nents, DMA_TO_DEVICE);
@@ -680,7 +676,16 @@ static void imx_uart_dma_tx_callback(void *data)
 
 	if (pending < WAKEUP_CHARS)
 		uart_write_wakeup(&sport->port);
+}
 
+static void imx_uart_dma_tx_callback(void *data)
+{
+	struct imx_port *sport = data;
+	unsigned long flags;
+
+	spin_lock_irqsave(&sport->port.lock, flags);
+
+	imx_uart_dma_tx_complete(sport);
 	imx_uart_dma_tx(sport);
 
 	spin_unlock_irqrestore(&sport->port.lock, flags);
@@ -1659,19 +1664,16 @@ static void imx_uart_shutdown(struct uart_port *port)
 
 	if (sport->dma_is_enabled) {
 		dmaengine_terminate_sync(sport->dma_chan_tx);
-		if (sport->dma_is_txing) {
-			dma_unmap_sg(sport->port.dev, &sport->tx_sgl[0],
-				     sport->dma_tx_nents, DMA_TO_DEVICE);
-			sport->dma_is_txing = 0;
-		}
 		dmaengine_terminate_sync(sport->dma_chan_rx);
+		spin_lock_irqsave(&sport->port.lock, flags);
+		imx_uart_dma_tx_complete(sport);
+
 		if (sport->dma_is_rxing) {
 			dma_unmap_sg(sport->port.dev, &sport->rx_sgl,
 				     1, DMA_FROM_DEVICE);
 			sport->dma_is_rxing = 0;
 		}
 
-		spin_lock_irqsave(&sport->port.lock, flags);
 		imx_uart_stop_tx(port);
 		imx_uart_stop_rx(port);
 		imx_uart_disable_dma(sport);
@@ -1718,7 +1720,6 @@ static void imx_uart_shutdown(struct uart_port *port)
 static void imx_uart_flush_buffer(struct uart_port *port)
 {
 	struct imx_port *sport = (struct imx_port *)port;
-	struct scatterlist *sgl = &sport->tx_sgl[0];
 	u32 ucr2;
 	int i = 100, ubir, ubmr, uts;
 
@@ -1727,16 +1728,7 @@ static void imx_uart_flush_buffer(struct uart_port *port)
 
 	sport->tx_bytes = 0;
 	dmaengine_terminate_async(sport->dma_chan_tx);
-	if (sport->dma_is_txing) {
-		u32 ucr1;
-
-		dma_unmap_sg(sport->port.dev, sgl, sport->dma_tx_nents,
-			     DMA_TO_DEVICE);
-		ucr1 = imx_uart_readl(sport, UCR1);
-		ucr1 &= ~UCR1_TXDMAEN;
-		imx_uart_writel(sport, ucr1, UCR1);
-		sport->dma_is_txing = 0;
-	}
+	imx_uart_dma_tx_complete(sport);
 
 	/*
 	 * According to the Reference Manual description of the UART SRST bit:
