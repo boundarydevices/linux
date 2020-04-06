@@ -266,8 +266,10 @@
 #define CLKID_NNA_CORE_CLK_DIV			266
 #define CLKID_MIPI_DSI_PXCLK_DIV		268
 #define CLKID_CTS_ENCL_SEL			272
+#define CLKID_VDIN_MEAS_SEL			273
+#define CLKID_VDIN_MEAS_DIV			274
 
-#define NR_CLKS					273
+#define NR_CLKS					275
 
 /* include the CLKIDs that have been made part of the DT binding */
 #include <dt-bindings/clock/g12a-clkc.h>
