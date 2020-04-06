@@ -39,12 +39,14 @@ struct vid_pll_div {
 	}
 
 static const struct vid_pll_div vid_pll_div_table[] = {
+	VID_PLL_DIV(0xffff, 0, 1, 1),	/* 1/1  => /1 */
 	VID_PLL_DIV(0x0aaa, 0, 2, 1),	/* 2/1  => /2 */
 	VID_PLL_DIV(0x5294, 2, 5, 2),	/* 5/2  => /2.5 */
 	VID_PLL_DIV(0x0db6, 0, 3, 1),	/* 3/1  => /3 */
 	VID_PLL_DIV(0x36cc, 1, 7, 2),	/* 7/2  => /3.5 */
 	VID_PLL_DIV(0x6666, 2, 15, 4),	/* 15/4 => /3.75 */
 	VID_PLL_DIV(0x0ccc, 0, 4, 1),	/* 4/1  => /4 */
+	VID_PLL_DIV(0x0ccc, 1, 467, 100), /* 467/100  => /4.67 */
 	VID_PLL_DIV(0x739c, 2, 5, 1),	/* 5/1  => /5 */
 	VID_PLL_DIV(0x0e38, 0, 6, 1),	/* 6/1  => /6 */
 	VID_PLL_DIV(0x0000, 3, 25, 4),	/* 25/4 => /6.25 */
