@@ -3752,6 +3752,66 @@ static struct clk_regmap g12a_mipi_dsi_pxclk = {
 	},
 };
 
+/* VDIN Frame duration measure clock */
+
+static const struct clk_parent_data g12a_vdin_meas_parent_data[] = {
+	{ .fw_name = "xtal", },
+	{ .hw = &g12a_fclk_div4.hw },
+	{ .hw = &g12a_fclk_div3.hw },
+	{ .hw = &g12a_fclk_div5.hw },
+	{ },
+	{ },
+	{ .hw = &g12a_fclk_div2.hw },
+	{ .hw = &g12a_fclk_div7.hw },
+};
+
+static struct clk_regmap g12a_vdin_meas_sel = {
+	.data = &(struct clk_regmap_mux_data){
+		.offset = HHI_VDIN_MEAS_CLK_CNTL,
+		.mask = 0x7,
+		.shift = 21,
+		.flags = CLK_MUX_ROUND_CLOSEST,
+	},
+	.hw.init = &(struct clk_init_data){
+		.name = "vdin_meas_sel",
+		.ops = &clk_regmap_mux_ops,
+		.parent_data = g12a_vdin_meas_parent_data,
+		.num_parents = ARRAY_SIZE(g12a_vdin_meas_parent_data),
+		.flags = CLK_SET_RATE_NO_REPARENT,
+	},
+};
+
+static struct clk_regmap g12a_vdin_meas_div = {
+	.data = &(struct clk_regmap_div_data){
+		.offset = HHI_VDIN_MEAS_CLK_CNTL,
+		.shift = 12,
+		.width = 7,
+	},
+	.hw.init = &(struct clk_init_data){
+		.name = "vdin_meas_div",
+		.ops = &clk_regmap_divider_ops,
+		.parent_hws = (const struct clk_hw *[]) {
+					&g12a_vdin_meas_sel.hw },
+		.num_parents = 1,
+		.flags = CLK_SET_RATE_PARENT,
+	},
+};
+
+static struct clk_regmap g12a_vdin_meas = {
+	.data = &(struct clk_regmap_gate_data){
+		.offset = HHI_VDIN_MEAS_CLK_CNTL,
+		.bit_idx = 20,
+	},
+	.hw.init = &(struct clk_init_data) {
+		.name = "vdin_meas",
+		.ops = &clk_regmap_gate_ops,
+		.parent_hws = (const struct clk_hw *[]) {
+					&g12a_vdin_meas_div.hw },
+		.num_parents = 1,
+		.flags = CLK_SET_RATE_PARENT,
+	},
+};
+
 /* HDMI Clocks */
 
 static const struct clk_parent_data g12a_hdmi_parent_data[] = {
@@ -4502,6 +4562,9 @@ static struct clk_hw_onecell_data g12a_hw_onecell_data = {
 		[CLKID_MIPI_DSI_PXCLK_SEL]	= &g12a_mipi_dsi_pxclk_sel.hw,
 		[CLKID_MIPI_DSI_PXCLK_DIV]	= &g12a_mipi_dsi_pxclk_div.hw,
 		[CLKID_MIPI_DSI_PXCLK]		= &g12a_mipi_dsi_pxclk.hw,
+		[CLKID_VDIN_MEAS_SEL]		= &g12a_vdin_meas_sel.hw,
+		[CLKID_VDIN_MEAS_DIV]		= &g12a_vdin_meas_div.hw,
+		[CLKID_VDIN_MEAS]		= &g12a_vdin_meas.hw,
 		[NR_CLKS]			= NULL,
 	},
 	.num = NR_CLKS,
@@ -4768,6 +4831,9 @@ static struct clk_hw_onecell_data g12b_hw_onecell_data = {
 		[CLKID_MIPI_DSI_PXCLK_SEL]	= &g12a_mipi_dsi_pxclk_sel.hw,
 		[CLKID_MIPI_DSI_PXCLK_DIV]	= &g12a_mipi_dsi_pxclk_div.hw,
 		[CLKID_MIPI_DSI_PXCLK]		= &g12a_mipi_dsi_pxclk.hw,
+		[CLKID_VDIN_MEAS_SEL]		= &g12a_vdin_meas_sel.hw,
+		[CLKID_VDIN_MEAS_DIV]		= &g12a_vdin_meas_div.hw,
+		[CLKID_VDIN_MEAS]		= &g12a_vdin_meas.hw,
 		[NR_CLKS]			= NULL,
 	},
 	.num = NR_CLKS,
@@ -5019,6 +5085,9 @@ static struct clk_hw_onecell_data sm1_hw_onecell_data = {
 		[CLKID_MIPI_DSI_PXCLK_SEL]	= &g12a_mipi_dsi_pxclk_sel.hw,
 		[CLKID_MIPI_DSI_PXCLK_DIV]	= &g12a_mipi_dsi_pxclk_div.hw,
 		[CLKID_MIPI_DSI_PXCLK]		= &g12a_mipi_dsi_pxclk.hw,
+		[CLKID_VDIN_MEAS_SEL]		= &g12a_vdin_meas_sel.hw,
+		[CLKID_VDIN_MEAS_DIV]		= &g12a_vdin_meas_div.hw,
+		[CLKID_VDIN_MEAS]		= &g12a_vdin_meas.hw,
 		[NR_CLKS]			= NULL,
 	},
 	.num = NR_CLKS,
@@ -5271,6 +5340,9 @@ static struct clk_regmap *const g12a_clk_regmaps[] = {
 	&g12a_mipi_dsi_pxclk_sel,
 	&g12a_mipi_dsi_pxclk_div,
 	&g12a_mipi_dsi_pxclk,
+	&g12a_vdin_meas_sel,
+	&g12a_vdin_meas_div,
+	&g12a_vdin_meas,
 };
 
 static const struct reg_sequence g12a_init_regs[] = {
