@@ -6,6 +6,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/of_gpio.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
@@ -548,6 +549,7 @@ disable_hsic_regulator:
 static int ci_hdrc_imx_remove(struct platform_device *pdev)
 {
 	struct ci_hdrc_imx_data *data = platform_get_drvdata(pdev);
+	int i;
 
 	if (data->supports_runtime_pm) {
 		pm_runtime_get_sync(&pdev->dev);
