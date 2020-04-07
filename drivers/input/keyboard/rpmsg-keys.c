@@ -83,8 +83,8 @@ static int key_send_message(struct key_rpmsg_data *msg,
 		return -EINVAL;
 	}
 
-	pm_qos_add_request(&info->pm_qos_req,
-			PM_QOS_CPU_DMA_LATENCY, 0);
+	cpu_latency_qos_add_request(&info->pm_qos_req,
+			0);
 
 	if (ack) {
 		info->ack = true;
@@ -119,7 +119,7 @@ static int key_send_message(struct key_rpmsg_data *msg,
 
 err_out:
 	info->ack = true;
-	pm_qos_remove_request(&info->pm_qos_req);
+	cpu_latency_qos_remove_request(&info->pm_qos_req);
 
 	return err;
 }
