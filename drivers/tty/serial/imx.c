@@ -626,7 +626,7 @@ static void imx_uart_dma_tx_callback(void *data)
 	struct scatterlist *sgl = &sport->tx_sgl[0];
 	struct circ_buf *xmit = &sport->port.state->xmit;
 	unsigned long flags;
-	u32 ucr1;
+	u32 ucr1, ucr4;
 	unsigned pending;
 
 	spin_lock_irqsave(&sport->port.lock, flags);
@@ -644,9 +644,9 @@ static void imx_uart_dma_tx_callback(void *data)
 	pending = uart_circ_chars_pending(xmit);
 	if (!pending && sport->txing &&
 			(sport->port.rs485.flags & SER_RS485_ENABLED)) {
-		u32 temp = readl(sport->port.membase + UCR4);
-		temp |= UCR4_TCEN;
-		writel(temp, sport->port.membase + UCR4);
+		ucr4 = imx_uart_readl(sport, UCR4);
+		ucr4 |= UCR4_TCEN;
+		imx_uart_writel(sport, ucr4, UCR4);
 	}
 
 	dev_dbg(sport->port.dev, "we finish the TX DMA.\n");
