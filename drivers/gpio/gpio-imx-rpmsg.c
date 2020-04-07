@@ -99,8 +99,8 @@ static int gpio_send_message(struct imx_rpmsg_gpio_port *port,
 	}
 
 	mutex_lock(&info->lock);
-	pm_qos_add_request(&info->pm_qos_req,
-			PM_QOS_CPU_DMA_LATENCY, 0);
+	cpu_latency_qos_add_request(&info->pm_qos_req,
+			0);
 
 	reinit_completion(&info->cmd_complete);
 
@@ -135,7 +135,7 @@ static int gpio_send_message(struct imx_rpmsg_gpio_port *port,
 	}
 
 err_out:
-	pm_qos_remove_request(&info->pm_qos_req);
+	cpu_latency_qos_remove_request(&info->pm_qos_req);
 	mutex_unlock(&info->lock);
 
 	return err;
