@@ -162,13 +162,16 @@ static int dsp_platform_compr_set_params(struct snd_compr_stream *cstream,
 			drv->codec_type, ret);
 		goto err_pool_alloc;
 	}
-
+	if (sysfs_streq(dsp_priv->audio_iface, "sai"))
+		drv->renderer_type = RENDER_SAI;
+	else
+		drv->renderer_type = RENDER_ESAI;
 	ret = xaf_comp_create(drv->client, p_proxy, &drv->component[1],
-			      RENDER_ESAI);
+			      drv->renderer_type);
 	if (ret) {
 		dev_err(component->dev,
 			"create component failed, type = %d, err = %d\n",
-			RENDER_ESAI, ret);
+			drv->renderer_type, ret);
 		goto err_comp0_create;
 	}
 
@@ -178,14 +181,14 @@ static int dsp_platform_compr_set_params(struct snd_compr_stream *cstream,
 		dev_err(component->dev,
 			"add component failed, type = %d, err = %d\n",
 			drv->codec_type, ret);
-		goto err_comp1_create;
+		goto err_comp0_create;
 	}
 
 	ret = xaf_comp_add(&drv->pipeline, &drv->component[1]);
 	if (ret) {
 		dev_err(component->dev,
 			"add component failed, type = %d, err = %d\n",
-			drv->codec_type, ret);
+			drv->renderer_type, ret);
 		goto err_comp1_create;
 	}
 
@@ -347,13 +350,26 @@ static int dsp_platform_compr_pointer(struct snd_compr_stream *cstream,
 	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, FSL_DSP_COMP_NAME);
 	struct fsl_dsp *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
+	struct xf_get_param_msg g_param[2];
+	int ret;
+
+	g_param[0].id = XA_RENDERER_CONFIG_PARAM_SAMPLE_RATE;
+	g_param[1].id = XA_RENDERER_CONFIG_PARAM_CONSUMED;
+	ret = xaf_comp_get_config(drv->client, &drv->component[1], 2, &g_param);
+	if (ret) {
+		dev_err(component->dev,
+			"get param[cmd:0x%x|val:0x%x] error, err = %d\n",
+			g_param[0].id, g_param[0].mixData.value, ret);
+		goto out;
+	}
 
 	tstamp->copied_total = drv->client->input_bytes;
 	tstamp->byte_offset = drv->client->input_bytes;
 	tstamp->pcm_frames = 0x900;
-	tstamp->pcm_io_frames = 0,
-	tstamp->sampling_rate = 48000;
+	tstamp->pcm_io_frames = g_param[0].mixData.value,
+	tstamp->sampling_rate = g_param[1].mixData.value;
 
+out:
 	return 0;
 }
 

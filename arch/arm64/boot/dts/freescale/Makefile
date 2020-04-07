@@ -65,7 +65,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk.dtb imx8mp-evk-root.dtb imx8mp-evk-inmate.d
 			  imx8mp-evk-rm67191.dtb imx8mp-evk-hdmi.dtb \
 			  imx8mp-evk-no-dynamic_partition.dts imx8mp-evk-no-product-no-dynamic_partition.dts \
 			  imx8mp-evk-it6263-lvds-dual-channel.dtb imx8mp-evk-it6263-lvds-channel0.dtb \
-			  imx8mp-evk-jdi-wuxga-lvds-panel.dtb imx8mp-ab2.dtb imx8mp-evk-sof-wm8960.dtb
+			  imx8mp-evk-jdi-wuxga-lvds-panel.dtb imx8mp-ab2.dtb imx8mp-evk-sof-wm8960.dtb \
+			  imx8mp-evk-dsp.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk.dtb imx8mq-evk-rpmsg.dtb imx8mq-evk-pcie1-m2.dtb \
 			  imx8mq-evk-no-product.dtb imx8mq-evk-no-dynamic_partition.dtb \
 			  imx8mq-evk-no-product-no-dynamic_partition.dtb
@@ -116,8 +117,11 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek.dtb imx8qxp-mek-dsp.dtb imx8qxp-mek-ov5640
 			  imx8qxp-mek-jdi-wuxga-lvds0-panel.dtb \
 			  imx8qxp-mek-jdi-wuxga-lvds1-panel.dtb \
 			  imx8qxp-mek-dsi-rm67191.dtb \
+			  imx8qxp-mek-dsi-rm67191-rpmsg.dtb \
 			  imx8qxp-mek-ov5640-rpmsg.dtb \
 			  imx8dx-mek.dtb imx8dx-mek-dsp.dtb imx8dx-mek-rpmsg.dtb \
+			  imx8dx-mek-ov5640.dtb \
+			  imx8dx-mek-ov5640-rpmsg.dtb \
 			  imx8qxp-lpddr4-val-a0.dtb \
 			  imx8qxp-lpddr4-val.dtb imx8qxp-lpddr4-val-mqs.dtb imx8qxp-ddr3l-val.dtb \
 			  imx8qxp-lpddr4-val-lpspi.dtb imx8qxp-lpddr4-val-lpspi-slave.dtb \

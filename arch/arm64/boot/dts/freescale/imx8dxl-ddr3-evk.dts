@@ -101,6 +101,8 @@
 };
 
 &adc0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_adc>;
 	vref-supply = <&reg_vref_1v8>;
 	status = "okay";
 };
@@ -304,6 +306,14 @@
 
 &lsio_gpio5 {
 	status = "okay";
+};
+
+&gpmi {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_gpmi_nand_1>;
+	status = "okay";
+	nand-on-flash-bbt;
+	max-cs = <1>;
 };
 
 &pcieb{
@@ -525,6 +535,27 @@
 			>;
 		};
 
+		pinctrl_gpmi_nand_1: gpmi-nand-1 {
+			fsl,pins = <
+				IMX8DXL_EMMC0_DATA0_CONN_NAND_DATA00	0x0e00004c
+				IMX8DXL_EMMC0_DATA1_CONN_NAND_DATA01	0x0e00004c
+				IMX8DXL_EMMC0_DATA2_CONN_NAND_DATA02	0x0e00004c
+				IMX8DXL_EMMC0_DATA3_CONN_NAND_DATA03	0x0e00004c
+				IMX8DXL_EMMC0_DATA4_CONN_NAND_DATA04	0x0e00004c
+				IMX8DXL_EMMC0_DATA5_CONN_NAND_DATA05	0x0e00004c
+				IMX8DXL_EMMC0_DATA6_CONN_NAND_DATA06	0x0e00004c
+				IMX8DXL_EMMC0_DATA7_CONN_NAND_DATA07	0x0e00004c
+				IMX8DXL_EMMC0_CLK_CONN_NAND_READY_B	0x0e00004c
+				IMX8DXL_EMMC0_STROBE_CONN_NAND_CLE		0x0e00004c
+				IMX8DXL_EMMC0_RESET_B_CONN_NAND_WP_B	0x0e00004c
+				IMX8DXL_EMMC0_CMD_CONN_NAND_DQS		0x0e00004c
+
+				IMX8DXL_USDHC1_RESET_B_CONN_NAND_WE_B	0x0e00004c
+				IMX8DXL_USDHC1_WP_CONN_NAND_ALE		0x0e00004c
+				IMX8DXL_USDHC1_VSELECT_CONN_NAND_RE_B  	0x0e00004c
+			>;
+		};
+
 		pinctrl_lpspi3: lpspi3grp {
 			fsl,pins = <
 				IMX8DXL_SPI3_SCK_ADMA_SPI3_SCK		0x600004c
@@ -652,6 +683,15 @@
 				IMX8DXL_PCIE_CTRL0_PERST_B_LSIO_GPIO4_IO00	0x06000021
 				IMX8DXL_PCIE_CTRL0_CLKREQ_B_LSIO_GPIO4_IO01	0x06000021
 				IMX8DXL_PCIE_CTRL0_WAKE_B_LSIO_GPIO4_IO02	0x04000021
+			>;
+		};
+
+		pinctrl_adc: adcgrp{
+			fsl,pins = <
+				IMX8DXL_ADC_IN0_ADMA_ADC_IN0	0x06000021
+				IMX8DXL_ADC_IN1_ADMA_ADC_IN1	0x06000021
+				IMX8DXL_ADC_IN4_ADMA_ADC_IN4	0x06000021
+				IMX8DXL_ADC_IN5_ADMA_ADC_IN5	0x06000021
 			>;
 		};
 };

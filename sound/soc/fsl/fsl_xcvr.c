@@ -25,6 +25,7 @@ struct fsl_xcvr {
 	const char *fw_name;
 	u8 streams;
 	u32 mode;
+	u32 arc_mode_idx;
 	void __iomem *ram_addr;
 	struct snd_dmaengine_dai_dma_data dma_prms_rx;
 	struct snd_dmaengine_dai_dma_data dma_prms_tx;
@@ -38,12 +39,6 @@ static const struct snd_pcm_hw_constraint_list fsl_xcvr_earc_channels_constr = {
 	.list = fsl_xcvr_earc_channels,
 };
 
-static const u32 fsl_xcvr_earc_bits[] = { 24, };
-static const struct snd_pcm_hw_constraint_list fsl_xcvr_earc_bits_constr = {
-	.count = ARRAY_SIZE(fsl_xcvr_earc_bits),
-	.list = fsl_xcvr_earc_bits,
-};
-
 static const u32 fsl_xcvr_earc_rates[] = {
 	32000, 44100, 48000, 64000, 88200, 96000,
 	128000, 176400, 192000, 256000, 352800, 384000,
@@ -55,7 +50,17 @@ static const struct snd_pcm_hw_constraint_list fsl_xcvr_earc_rates_constr = {
 };
 
 static const u32 fsl_xcvr_spdif_channels[] = { 2, };
-static const u32 fsl_xcvr_spdif_bits[] = { 16, 20, 24, };
+
+static const int fsl_xcvr_arc_mode_ints[] = {
+	FSL_XCVR_ISR_SET_ARC_SE_INT, FSL_XCVR_ISR_SET_ARC_CM_INT,
+};
+
+static const char * const fsl_xcvr_arc_mode[] = {
+	"ARC Single Ended", "ARC Common",
+};
+
+static const struct soc_enum fsl_xcvr_arc_mode_enum =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(fsl_xcvr_arc_mode), fsl_xcvr_arc_mode);
 
 /*
  * pll_phy:  pll 0; phy 1;
@@ -112,6 +117,8 @@ static int fsl_xcvr_prepare(struct snd_pcm_substream *substream,
 		break;
 	case FSL_XCVR_AMODE_ARC:
 		/* Enable ISR */
+		m_isr |= fsl_xcvr_arc_mode_ints[xcvr->arc_mode_idx];
+		v_isr |= fsl_xcvr_arc_mode_ints[xcvr->arc_mode_idx];
 		break;
 	case FSL_XCVR_AMODE_EARC:
 		/* clear CMDC RESET */
@@ -132,7 +139,7 @@ static int fsl_xcvr_prepare(struct snd_pcm_substream *substream,
 
 	ret = regmap_update_bits(xcvr->regmap, FSL_XCVR_ISR_SET, m_isr, v_isr);
 	if (ret < 0) {
-		dev_err(dai->dev, "Error while setting MO ISR: %d\n", ret);
+		dev_err(dai->dev, "Error while setting M0 ISR: %d\n", ret);
 		return ret;
 	}
 
@@ -140,17 +147,11 @@ static int fsl_xcvr_prepare(struct snd_pcm_substream *substream,
 }
 
 static int fsl_xcvr_constr(const struct snd_pcm_substream *substream,
-			   const struct snd_pcm_hw_constraint_list *bits,
 			   const struct snd_pcm_hw_constraint_list *channels,
 			   const struct snd_pcm_hw_constraint_list *rates)
 {
 	struct snd_pcm_runtime *rt = substream->runtime;
 	int ret;
-
-	ret = snd_pcm_hw_constraint_list(rt, 0, SNDRV_PCM_HW_PARAM_SAMPLE_BITS,
-					 bits);
-	if (ret < 0)
-		return ret;
 
 	ret = snd_pcm_hw_constraint_list(rt, 0, SNDRV_PCM_HW_PARAM_CHANNELS,
 					 channels);
@@ -189,8 +190,7 @@ static int fsl_xcvr_startup(struct snd_pcm_substream *substream,
 		ret = 0; /* @todo */
 		break;
 	case FSL_XCVR_AMODE_EARC:
-		ret = fsl_xcvr_constr(substream, &fsl_xcvr_earc_bits_constr,
-				      &fsl_xcvr_earc_channels_constr,
+		ret = fsl_xcvr_constr(substream, &fsl_xcvr_earc_channels_constr,
 				      &fsl_xcvr_earc_rates_constr);
 		break;
 	}
@@ -514,15 +514,6 @@ err_firmware:
 		return ret;
 	}
 
-	/* configure RX DATAPATH */
-	mask = FSL_XCVR_RX_DPTH_CTRL_CSA | FSL_XCVR_RX_DPTH_CTRL_UDA;
-	ret = regmap_update_bits(xcvr->regmap, FSL_XCVR_RX_DPTH_CTRL_SET, mask,
-				 mask);
-	if (ret < 0) {
-		dev_err(dev, "Failed to configure RX DPATH: %d\n", ret);
-		return ret;
-	}
-
 	return 0;
 }
 
@@ -531,6 +522,15 @@ static int fsl_xcvr_type_iec958_info(struct snd_kcontrol *kcontrol,
 {
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_IEC958;
 	uinfo->count = 1;
+
+	return 0;
+}
+
+static int fsl_xcvr_type_bytes_info(struct snd_kcontrol *kcontrol,
+				    struct snd_ctl_elem_info *uinfo)
+{
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
+	uinfo->count = FIELD_SIZEOF(struct snd_aes_iec958, status);
 
 	return 0;
 }
@@ -568,8 +568,33 @@ static int fsl_xcvr_tx_cs_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int fsl_xcvr_arc_mode_put(struct snd_kcontrol *kcontrol,
+				 struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_xcvr *xcvr = snd_soc_dai_get_drvdata(dai);
+	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	unsigned int *item = ucontrol->value.enumerated.item;
+	int val = snd_soc_enum_item_to_val(e, item[0]);
+
+	xcvr->arc_mode_idx = val;
+
+	return 0;
+}
+
+static int fsl_xcvr_arc_mode_get(struct snd_kcontrol *kcontrol,
+				 struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_xcvr *xcvr = snd_soc_dai_get_drvdata(dai);
+
+	ucontrol->value.enumerated.item[0] = xcvr->arc_mode_idx;
+
+	return 0;
+}
+
 static struct snd_kcontrol_new fsl_xcvr_rx_ctls[] = {
-	/* Status chanel controller */
+	/* Channel status controller */
 	{
 		.iface = SNDRV_CTL_ELEM_IFACE_PCM,
 		.name = SNDRV_CTL_NAME_IEC958("", CAPTURE, DEFAULT),
@@ -577,10 +602,20 @@ static struct snd_kcontrol_new fsl_xcvr_rx_ctls[] = {
 		.info = fsl_xcvr_type_iec958_info,
 		.get = fsl_xcvr_rx_cs_get,
 	},
+	/* Capture channel status, bytes */
+	{
+		.iface = SNDRV_CTL_ELEM_IFACE_PCM,
+		.name = "Capture Channel Status",
+		.access = SNDRV_CTL_ELEM_ACCESS_READ,
+		.info = fsl_xcvr_type_bytes_info,
+		.get = fsl_xcvr_rx_cs_get,
+	},
+	SOC_ENUM_EXT("ARC Mode", fsl_xcvr_arc_mode_enum,
+		     fsl_xcvr_arc_mode_get, fsl_xcvr_arc_mode_put),
 };
 
 static struct snd_kcontrol_new fsl_xcvr_tx_ctls[] = {
-	/* Status chanel controller */
+	/* Channel status controller */
 	{
 		.iface = SNDRV_CTL_ELEM_IFACE_PCM,
 		.name = SNDRV_CTL_NAME_IEC958("", PLAYBACK, DEFAULT),
@@ -663,12 +698,6 @@ static const struct reg_default fsl_xcvr_reg_defaults[] = {
 	{ FSL_XCVR_RX_DPTH_CTRL_SET,	0x00002C89 },
 	{ FSL_XCVR_RX_DPTH_CTRL_CLR,	0x00002C89 },
 	{ FSL_XCVR_RX_DPTH_CTRL_TOG,	0x00002C89 },
-	{ FSL_XCVR_RX_CS_DATA_0,	0x00000000 },
-	{ FSL_XCVR_RX_CS_DATA_1,	0x00000000 },
-	{ FSL_XCVR_RX_CS_DATA_2,	0x00000000 },
-	{ FSL_XCVR_RX_CS_DATA_3,	0x00000000 },
-	{ FSL_XCVR_RX_CS_DATA_4,	0x00000000 },
-	{ FSL_XCVR_RX_CS_DATA_5,	0x00000000 },
 	{ FSL_XCVR_TX_DPTH_CTRL,	0x00000000 },
 	{ FSL_XCVR_TX_DPTH_CTRL_SET,	0x00000000 },
 	{ FSL_XCVR_TX_DPTH_CTRL_CLR,	0x00000000 },
@@ -710,12 +739,6 @@ static bool fsl_xcvr_readable_reg(struct device *dev, unsigned int reg)
 	case FSL_XCVR_RX_DPTH_CTRL_SET:
 	case FSL_XCVR_RX_DPTH_CTRL_CLR:
 	case FSL_XCVR_RX_DPTH_CTRL_TOG:
-	case FSL_XCVR_RX_CS_DATA_0:
-	case FSL_XCVR_RX_CS_DATA_1:
-	case FSL_XCVR_RX_CS_DATA_2:
-	case FSL_XCVR_RX_CS_DATA_3:
-	case FSL_XCVR_RX_CS_DATA_4:
-	case FSL_XCVR_RX_CS_DATA_5:
 	case FSL_XCVR_TX_DPTH_CTRL:
 	case FSL_XCVR_TX_DPTH_CTRL_SET:
 	case FSL_XCVR_TX_DPTH_CTRL_CLR:
@@ -796,20 +819,35 @@ static irqreturn_t irq0_isr(int irq, void *devid)
 	struct fsl_xcvr *xcvr = (struct fsl_xcvr *)devid;
 	struct device *dev = &xcvr->pdev->dev;
 	struct regmap *regmap = xcvr->regmap;
-	u32 isr, val, csv, i;
+	void __iomem *reg_ctrl, *reg_buff;
+	u32 isr, val;
 
 	regmap_read(regmap, FSL_XCVR_EXT_ISR, &isr);
 	regmap_write(regmap, FSL_XCVR_EXT_ISR_CLR, isr);
 
 	if (isr & FSL_XCVR_IRQ_NEW_CS) {
 		dev_dbg(dev, "Received new CS block\n");
-		for (i = 0; i < 6; i++) {
-			regmap_read(regmap, FSL_XCVR_RX_CS_DATA_0 + 4*i, &val);
-			csv = bitrev32(val);
-			xcvr->rx_iec958.status[0 + (i*4)] = (csv >> 24) & 0xFF;
-			xcvr->rx_iec958.status[1 + (i*4)] = (csv >> 16) & 0xFF;
-			xcvr->rx_iec958.status[2 + (i*4)] = (csv >>  8) & 0xFF;
-			xcvr->rx_iec958.status[3 + (i*4)] = (csv >>  0) & 0xFF;
+		/* Data RAM is 4KiB, last two pages: 8 and 9. Select page 8. */
+		regmap_update_bits(xcvr->regmap, FSL_XCVR_EXT_CTRL,
+				   FSL_XCVR_EXT_CTRL_PAGE_MASK,
+				   FSL_XCVR_EXT_CTRL_PAGE(8));
+
+		/* Find updated CS buffer */
+		reg_ctrl = xcvr->ram_addr + FSL_XCVR_RX_CS_CTRL_0;
+		reg_buff = xcvr->ram_addr + FSL_XCVR_RX_CS_BUFF_0;
+		memcpy_fromio(&val, reg_ctrl, sizeof(val));
+		if (!val) {
+			reg_ctrl = xcvr->ram_addr + FSL_XCVR_RX_CS_CTRL_1;
+			reg_buff = xcvr->ram_addr + FSL_XCVR_RX_CS_BUFF_1;
+			memcpy_fromio(&val, reg_ctrl, sizeof(val));
+		}
+
+		if (val) {
+			/* copy CS buffer */
+			memcpy_fromio(&xcvr->rx_iec958.status, reg_buff,
+				      sizeof(xcvr->rx_iec958.status));
+			/* clear CS control register */
+			memset_io(reg_ctrl, 0, sizeof(val));
 		}
 	}
 	if (isr & FSL_XCVR_IRQ_NEW_UD)
@@ -820,6 +858,17 @@ static irqreturn_t irq0_isr(int irq, void *devid)
 		dev_dbg(dev, "RX/TX FIFO full/empty\n");
 	if (isr & FSL_XCVR_IRQ_ARC_MODE)
 		dev_dbg(dev, "CMDC SM falls out of eARC mode\n");
+	if (isr & FSL_XCVR_IRQ_CMDC_STATUS_UPD) {
+		dev_dbg(dev, "CMDC status update\n");
+		regmap_read(regmap, FSL_XCVR_EXT_STATUS, &val);
+		if (val & FSL_XCVR_EXT_STUS_RX_CMDC_COTO) {
+			dev_dbg(dev, "RX CMDC comma timeout\n");
+			/* Set eARC fallback mode*/
+			val = fsl_xcvr_arc_mode_ints[xcvr->arc_mode_idx];
+			regmap_update_bits(xcvr->regmap, FSL_XCVR_ISR_SET,
+					   val, val);
+		}
+	}
 	if (isr & FSL_XCVR_IRQ_DMA_RD_REQ)
 		dev_dbg(dev, "DMA read request\n");
 	if (isr & FSL_XCVR_IRQ_DMA_WR_REQ)

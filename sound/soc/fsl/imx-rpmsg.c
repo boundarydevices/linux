@@ -11,6 +11,7 @@
 
 #include <linux/module.h>
 #include <linux/of_platform.h>
+#include <linux/of_reserved_mem.h>
 #include <linux/i2c.h>
 #include <linux/of_gpio.h>
 #include <linux/slab.h>
@@ -47,6 +48,7 @@ static const unsigned int imx_rpmsg_extcon_cables[] = {
 static int imx_rpmsg_probe(struct platform_device *pdev)
 {
 	struct device_node *cpu_np;
+	struct device_node *codec_np = NULL;
 	struct platform_device *cpu_pdev;
 	struct imx_rpmsg_data *data;
 	struct fsl_rpmsg_i2s         *rpmsg_i2s;
@@ -77,7 +79,20 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	ret = of_reserved_mem_device_init_by_idx(&pdev->dev, pdev->dev.of_node, 0);
+	if (ret)
+		dev_warn(&pdev->dev, "no reserved DMA memory for rpmsg device\n");
+
 	rpmsg_i2s = platform_get_drvdata(cpu_pdev);
+
+	if (rpmsg_i2s->codec_in_dt) {
+		codec_np = of_parse_phandle(pdev->dev.of_node, "audio-codec", 0);
+		if (!codec_np) {
+			dev_err(&pdev->dev, "phandle missing or invalid\n");
+			ret = -EINVAL;
+			goto fail;
+		}
+	}
 
 	data->dai[0].cpus = &dlc[0];
 	data->dai[0].num_cpus = 1;
@@ -90,11 +105,16 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	data->dai[0].stream_name = "rpmsg hifi";
 	data->dai[0].dai_fmt = SND_SOC_DAIFMT_I2S |
 			    SND_SOC_DAIFMT_NB_NF |
-			    SND_SOC_DAIFMT_CBM_CFM;
+			    SND_SOC_DAIFMT_CBS_CFS;
 
 	if (rpmsg_i2s->codec_wm8960) {
-		data->dai[0].codecs->dai_name = "rpmsg-wm8960-hifi";
-		data->dai[0].codecs->name = "rpmsg-audio-codec-wm8960";
+		if (rpmsg_i2s->codec_in_dt) {
+			data->dai[0].codecs->of_node = codec_np;
+			data->dai[0].codecs->dai_name = "rpmsg-wm8960-hifi";
+		} else {
+			data->dai[0].codecs->dai_name = "rpmsg-wm8960-hifi";
+			data->dai[0].codecs->name = "rpmsg-audio-codec-wm8960";
+		}
 	}
 
 	if (rpmsg_i2s->codec_dummy) {
