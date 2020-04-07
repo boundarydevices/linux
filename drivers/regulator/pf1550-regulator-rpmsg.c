@@ -109,7 +109,7 @@ static int pf1550_send_message(struct pf1550_regulator_rpmsg *msg,
 	}
 
 	mutex_lock(&info->lock);
-	pm_qos_add_request(&info->pm_qos_req, PM_QOS_CPU_DMA_LATENCY, 0);
+	cpu_latency_qos_add_request(&info->pm_qos_req, 0);
 
 	msg->header.cate = IMX_RPMSG_PMIC;
 	msg->header.major = IMX_RMPSG_MAJOR;
@@ -137,7 +137,7 @@ static int pf1550_send_message(struct pf1550_regulator_rpmsg *msg,
 	err = 0;
 
 err_out:
-	pm_qos_remove_request(&info->pm_qos_req);
+	cpu_latency_qos_remove_request(&info->pm_qos_req);
 	mutex_unlock(&info->lock);
 
 	dev_dbg(&info->rpdev->dev, "cmd:%d, reg:%d, resp:%d.\n",
