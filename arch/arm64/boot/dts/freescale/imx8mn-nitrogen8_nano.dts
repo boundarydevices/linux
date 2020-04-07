@@ -8,11 +8,11 @@
 #define IMX8MMN(a)	IMX8MN_##a
 #define IMX8MN_CLK_LCDIF_PIXEL IMX8MN_CLK_DISP_PIXEL_ROOT
 #include "fsl-imx8mn.dtsi"
-#include "imx8mmn-nitrogen8_2eth.dtsi"
+#include "imx8mmn-nitrogen8_nano.dtsi"
 
 / {
-	model = "Boundary Devices i.MX8M Nano Nitrogen8_2eth";
-	compatible = "boundary,imx8mn-nitrogen8_2eth", "fsl,imx8mn";
+	model = "Boundary Devices i.MX8M Nano Nitrogen8_nano";
+	compatible = "boundary,imx8mn-nitrogen8_nano", "fsl,imx8mn";
 };
 
 &mipi_csi_1 {

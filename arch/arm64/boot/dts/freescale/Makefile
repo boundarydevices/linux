@@ -183,7 +183,7 @@ dtb-$(CONFIG_ARCH_FSL_IMX8MN) += fsl-imx8mn-ddr4-evk.dtb \
 				 fsl-imx8mn-ddr4-evk-root.dtb \
 				 fsl-imx8mn-ddr4-evk-inmate.dtb \
 				 fsl-imx8mn-ddr4-evk-no-product.dtb \
-				 imx8mn-nitrogen8_2eth.dtb \
+				 imx8mn-nitrogen8_nano.dtb \
 				 imx8mn-nitrogen8mn.dtb \
 				 imx8mn-nitrogen8mn_som.dtb \
 
