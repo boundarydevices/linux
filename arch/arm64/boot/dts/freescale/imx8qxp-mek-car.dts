@@ -1,7 +1,18 @@
-// SPDX-License-Identifier: GPL-2.0+
-// Copyright NXP 2020
+/*
+ * Copyright 2020 NXP
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
 
-#include "imx8qxp-mek-rpmsg.dts"
+#include "imx8qxp-mek-car2.dts"
 
 &img_subsys {
 	status = "disabled";
@@ -13,10 +24,6 @@
 
 &lvds_subsys {
 	status = "disabled";
-};
-
-&vehicle_core {
-	status = "okay";
 };
 
 &vehicle_rpmsg_m4 {
@@ -46,122 +53,3 @@
 	/delete-property/ reset-gpios;
 };
 
-/ {
-	firmware {
-		android {
-			fstab {
-				/delete-node/ system;
-				vendor {
-					compatible = "android,vendor";
-					/* default emmc node used for GSI */
-					dev = "/dev/block/platform/bus@5b000000/5b010000.mmc/by-name/vendor";
-					/* sd card node which used if androidboot.boot_device_root=mmcblk1 */
-					dev_mmcblk1 = "/dev/block/platform/bus@5b000000/5b020000.mmc/by-name/vendor";
-					/* emmc node which used if androidboot.boot_device_root=mmcblk0 */
-					dev_mmcblk0 = "/dev/block/platform/bus@5b000000/5b010000.mmc/by-name/vendor";
-					type = "ext4";
-					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
-					fsmgr_flags = "wait,slotselect,avb";
-				};
-				product {
-					compatible = "android,product";
-					/* default emmc node used for GSI */
-					dev = "/dev/block/platform/bus@5b000000/5b010000.mmc/by-name/product";
-					/* sd card node which used if androidboot.boot_device_root=mmcblk1 */
-					dev_mmcblk1 = "/dev/block/platform/bus@5b000000/5b020000.mmc/by-name/product";
-					/* emmc node which used if androidboot.boot_device_root=mmcblk0 */
-					dev_mmcblk0 = "/dev/block/platform/bus@5b000000/5b010000.mmc/by-name/product";
-					type = "ext4";
-					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
-					fsmgr_flags = "wait,slotselect,avb";
-				};
-			};
-		};
-	};
-};
-
-&i2c0 {
-	clock-frequency = <1000000>;
-};
-
-&i2c2 {
-	clock-frequency = <1000000>;
-};
-
-&i2c3 {
-	clock-frequency = <1000000>;
-};
-
-&i2c_mipi_csi0 {
-	clock-frequency = <1000000>;
-};
-
-&i2c0_mipi_lvds0 {
-	clock-frequency = <500000>;
-	adv7535@3d {
-		status = "disabled";
-	};
-};
-
-&i2c0_mipi_lvds1 {
-	clock-frequency = <500000>;
-	adv7535@3d {
-		status = "disabled";
-	};
-};
-
-&pwm_mipi_lvds0 {
-	status = "disabled";
-};
-
-&lvds_backlight0 {
-	status = "disabled";
-};
-
-&pwm_mipi_lvds1 {
-	status = "disabled";
-};
-
-&lvds_backlight1 {
-	status = "disabled";
-};
-
-&mipi0_dphy {
-	status = "disabled";
-};
-
-&mipi0_dsi_host {
-	status = "disabled";
-};
-
-&mipi1_dphy {
-	status = "disabled";
-};
-
-&mipi1_dsi_host {
-	status = "disabled";
-};
-
-&usdhc2 {
-	status = "disabled";
-};
-
-&amix {
-	status = "disabled";
-};
-
-&asrc0 {
-	status = "disabled";
-};
-
-&jpegdec {
-	status = "disabled";
-};
-
-&jpegenc {
-	status = "disabled";
-};
-
-&wm8960 {
-	quick-probe;
-};

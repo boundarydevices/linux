@@ -14,6 +14,10 @@
 
 #include "imx8qm-mek-rpmsg.dts"
 
+&sata {
+	status = "disabled";
+};
+
 &i2c0 {
 	clock-frequency = <1000000>;
 };
