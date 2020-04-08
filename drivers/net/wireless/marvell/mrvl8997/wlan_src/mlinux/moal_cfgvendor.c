@@ -380,7 +380,7 @@ woal_cfg80211_subcmd_get_valid_channels(struct wiphy *wiphy,
 {
 	struct net_device *dev = wdev->netdev;
 	moal_private *priv = (moal_private *)woal_get_netdev_priv(dev);
-	struct nlattr *tb[ATTR_WIFI_MAX];
+	struct nlattr *tb[ATTR_WIFI_MAX + 1];
 	t_u32 band = 0;
 	int ch_out[MAX_CHANNEL_NUM];
 	t_u32 nchannel = 0;
