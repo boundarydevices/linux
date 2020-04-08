@@ -1069,9 +1069,9 @@ static void imx_break_ctl(struct uart_port *port, int break_state)
  * This is our per-port timeout handler, for checking the
  * modem status signals.
  */
-static void imx_timeout(unsigned long data)
+static void imx_timeout(struct timer_list *t)
 {
-	struct imx_port *sport = (struct imx_port *)data;
+	struct imx_port *sport = from_timer(sport, t, timer);
 	unsigned long flags;
 
 	if (sport->port.state) {
@@ -2412,7 +2412,7 @@ static int serial_imx_probe(struct platform_device *pdev)
 	sport->port.fifosize = 32;
 	sport->port.ops = &imx_pops;
 	sport->port.flags = UPF_BOOT_AUTOCONF;
-	setup_timer(&sport->timer, imx_timeout, (unsigned long)sport);
+	timer_setup(&sport->timer, imx_timeout, 0);
 	INIT_DELAYED_WORK(&sport->rxact_work, rxact_work_func);
 
 	sport->gpios = mctrl_gpio_init(&sport->port, 0);
