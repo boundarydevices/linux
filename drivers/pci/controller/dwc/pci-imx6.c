@@ -576,7 +576,7 @@ static int imx6_pcie_attach_pd(struct device *dev)
 	if (!imx6_pcie->pd_pcie)
 		return 0;
 	link = device_link_add(dev, imx6_pcie->pd_pcie,
-			DL_FLAG_STATELESS |
+			DL_FLAG_AUTOREMOVE_CONSUMER |
 			DL_FLAG_PM_RUNTIME |
 			DL_FLAG_RPM_ACTIVE);
 	if (!link) {
@@ -589,7 +589,7 @@ static int imx6_pcie_attach_pd(struct device *dev)
 		return PTR_ERR(imx6_pcie->pd_pcie_phy);
 
 	link = device_link_add(dev, imx6_pcie->pd_pcie_phy,
-			DL_FLAG_STATELESS |
+			DL_FLAG_AUTOREMOVE_CONSUMER |
 			DL_FLAG_PM_RUNTIME |
 			DL_FLAG_RPM_ACTIVE);
 	if (!link) {
@@ -616,7 +616,7 @@ static int imx6_pcie_attach_pd(struct device *dev)
 			return PTR_ERR(imx6_pcie->pd_hsio_gpio);
 
 		link = device_link_add(dev, imx6_pcie->pd_hsio_gpio,
-				DL_FLAG_STATELESS |
+				DL_FLAG_AUTOREMOVE_CONSUMER |
 				DL_FLAG_PM_RUNTIME |
 				DL_FLAG_RPM_ACTIVE);
 		if (!link) {
