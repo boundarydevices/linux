@@ -7,7 +7,7 @@
 #define MX8MMN(a, b)	MX8MN_##a b
 #define IMX8MMN(a)	IMX8MN_##a
 #define IMX8MN_CLK_LCDIF_PIXEL IMX8MN_CLK_DISP_PIXEL_ROOT
-#include "fsl-imx8mn.dtsi"
+#include "imx8mn.dtsi"
 #include "imx8mmn-nitrogen8_2eth.dtsi"
 
 / {
