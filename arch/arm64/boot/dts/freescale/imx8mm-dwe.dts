@@ -7,7 +7,7 @@
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
 
-#include "fsl-imx8mm.dtsi"
+#include "imx8mm.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
