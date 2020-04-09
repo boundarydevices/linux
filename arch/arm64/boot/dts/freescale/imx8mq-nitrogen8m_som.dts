@@ -493,8 +493,8 @@
 	};
 };
 
-/delete-node/ &gpu_pd;
-/delete-node/ &vpu_pd;
+/delete-node/ &pgc_gpu;
+/delete-node/ &pgc_vpu;
 
 / {
 	model = "Boundary Devices i.MX8MQ Nitrogen8M_som";
@@ -513,8 +513,8 @@
 		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
 		mipi_cmds_m101nwwb = &mipi_cmds_ltk080a60a004t;		/* Same commands work for both */
 		mipi_dsi = &mipi_dsi;
-		mipi_dsi_bridge = &mipi_dsi_bridge;
-		mipi_dsi_phy = &mipi_dsi_phy;
+		mipi_dsi_bridge = &mipi_dsi;
+		mipi_dsi_phy = &dphy;
 		mipi_to_lvds = &mipi_to_lvds;
 		pinctrl_com50h5n03ulc = &pinctrl_mipi_com50h5n03ulc;
 		pinctrl_lcm_jm430 = &pinctrl_mipi_lcm_jm430;
@@ -659,7 +659,7 @@
 	};
 
 	power-domains {
-		vpugpu_pd: power-domain@ffffffff {
+		vpupgc_gpu: power-domain@ffffffff {
 			compatible = "fsl,imx8mq-pm-domain";
 			reg = <0xffffffff>;
 			domain-name = "VPUGPU_PD";
@@ -669,7 +669,7 @@
 			#power-domain-cells = <0>;
 			#size-cells = <0>;
 
-			gpu_pd: power-domain@4 {
+			pgc_gpu: power-domain@4 {
 				clocks = <&clk IMX8MQ_CLK_GPU_AXI>,
 					 <&clk IMX8MQ_CLK_GPU_SHADER_DIV>,
 					 <&clk IMX8MQ_CLK_GPU_ROOT>,
@@ -681,7 +681,7 @@
 				#power-domain-cells = <0>;
 			};
 
-			vpu_pd: power-domain@5 {
+			pgc_vpu: power-domain@5 {
 				clocks = <&clk IMX8MQ_CLK_VPU_G1_ROOT>,
 					 <&clk IMX8MQ_CLK_VPU_G2_ROOT>,
 					 <&clk IMX8MQ_CLK_VPU_DEC_ROOT>;
@@ -781,7 +781,7 @@
 };
 
 &gpu {
-	power-domains = <&gpu_pd>;
+	power-domains = <&pgc_gpu>;
 	status = "okay";
 };
 
@@ -872,7 +872,7 @@
 
 &i2c1d {
 	mipi_to_lvds: mipi-to-lvds@2c {
-		clocks = <&mipi_dsi_phy 0>;
+		clocks = <&dphy 0>;
 		clock-names = "mipi_clk";
 		compatible = "ti,sn65dsi83";
 		display = <&lcdif>;
@@ -1114,7 +1114,7 @@
 	};
 };
 
-&mipi_dsi_phy {
+&dphy {
 	status = "disabled";
 };
 
@@ -1137,7 +1137,7 @@
 	};
 };
 
-&mipi_dsi_bridge {
+&mipi_dsi {
 	/delete-property/ no_clk_reset;
 	status = "disabled";
 
@@ -1178,13 +1178,13 @@
 
 		port {
 			panel1_in: endpoint {
-				remote-endpoint = <&mipi_dsi_bridge_out>;
+				remote-endpoint = <&mipi_dsi_out>;
 			};
 		};
 	};
 
 	port@1 {
-		mipi_dsi_bridge_out: endpoint {
+		mipi_dsi_out: endpoint {
 			remote-endpoint = <&panel1_in>;
 		};
 	};
@@ -1236,13 +1236,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm4>;
 	status = "okay";
-};
-
-&resmem {
-	limit3g@0x100000000 {
-		no-map;
-		reg = <1 0x00000000 0 0x40000000>;
-	};
 };
 
 &sai1 {
@@ -1369,7 +1362,7 @@
 };
 
 &vpu {
-	power-domains = <&vpu_pd>;
+	power-domains = <&pgc_vpu>;
 	regulator-supply = <&reg_vref_0v9>;
 	status = "okay";
 };
