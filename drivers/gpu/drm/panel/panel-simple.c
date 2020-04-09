@@ -31,6 +31,7 @@
 
 #include <video/display_timing.h>
 #include <video/of_display_timing.h>
+#include <video/of_videomode.h>
 #include <video/videomode.h>
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
