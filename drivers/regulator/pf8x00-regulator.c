@@ -751,7 +751,7 @@ static int pf8x00_regulator_probe(struct i2c_client *client,
 		config.init_data = init_data;
 		config.driver_data = pf;
 		config.of_node = match_of_node(i);
-		config.ena_gpio = -EINVAL;
+		config.ena_gpiod = NULL;
 
 		pf->regulators[i] =
 			devm_regulator_register(&client->dev, desc, &config);
