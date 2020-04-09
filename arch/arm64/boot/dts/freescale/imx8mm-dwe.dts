@@ -769,6 +769,16 @@
 };
 
 &resmem {
+
+	/* global autoconfigured region for contiguous allocations */
+	linux,cma {
+		compatible = "shared-dma-pool";
+		reusable;
+		size = <0 0x10000000>;
+		alloc-ranges = <0 0x40000000 0 0x60000000>;
+		linux,cma-default;
+	};
+
 	limit3g@0x100000000 {
 		no-map;
 		reg = <1 0x00000000 0 0x40000000>;
