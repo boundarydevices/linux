@@ -629,7 +629,6 @@
 };
 
 &fec1 {
-	mdc-gpios = GP_MII_MDC;
 	mdio-gpios = GP_MII_MDIO;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_fec1>;
