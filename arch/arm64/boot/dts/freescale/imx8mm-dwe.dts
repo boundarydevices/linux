@@ -59,8 +59,8 @@
 
 	pinctrl_gpio_keys: gpio_keysgrp {
 		fsl,pins = <
-#define GP_GPIOKEY_POWER_FAIL	<&gpio1 3 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, 0x140)
+#define GP_GPIOKEY_POWER_FAIL	<&gpio1 3 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, 0x00)
 		>;
 	};
 
@@ -450,7 +450,7 @@
 		power-fail {
 			label = "Power failure";
 			gpios = GP_GPIOKEY_POWER_FAIL;
-			linux,code = <KEY_POWER>;
+			linux,code = <KEY_STOP>;
 			gpio-key,wakeup;
 		};
 	};
