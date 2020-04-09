@@ -5,7 +5,7 @@
 
 /dts-v1/;
 
-#include "fsl-imx8mm.dtsi"
+#include "imx8mm.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
