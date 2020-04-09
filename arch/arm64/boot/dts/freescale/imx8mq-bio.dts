@@ -5,7 +5,7 @@
 
 /dts-v1/;
 
-#include "fsl-imx8mq.dtsi"
+#include "imx8mq.dtsi"
 #include "panel-com50h5n03ulc.dtsi"
 #include "panel-ltk0680ytmdb.dtsi"
 #include "panel-m101nwwb.dtsi"
