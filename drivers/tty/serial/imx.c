@@ -250,6 +250,7 @@ struct imx_port {
 	dma_cookie_t		rx_cookie;
 	unsigned int		tx_bytes;
 	unsigned int		dma_tx_nents;
+	struct work_struct	tsk_dma_tx;
 	unsigned int            saved_reg[10];
 	bool			context_saved;
 
@@ -666,6 +667,16 @@ static void imx_uart_dma_tx_callback(void *data)
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 }
 
+static void dma_tx_work(struct work_struct *w)
+{
+	struct imx_port *sport = container_of(w, struct imx_port, tsk_dma_tx);
+	unsigned long flags;
+
+	spin_lock_irqsave(&sport->port.lock, flags);
+	imx_uart_dma_tx(sport);
+	spin_unlock_irqrestore(&sport->port.lock, flags);
+}
+
 /* called with port.lock taken and irqs off */
 static void imx_uart_dma_tx(struct imx_port *sport)
 {
@@ -790,7 +801,7 @@ static void imx_uart_start_tx(struct uart_port *port)
 
 		if (!uart_circ_empty(&port->state->xmit) &&
 		    !uart_tx_stopped(port))
-			imx_uart_dma_tx(sport);
+			schedule_work(&sport->tsk_dma_tx);
 	} else {
 		ucr1 = imx_uart_readl(sport, UCR1);
 		imx_uart_writel(sport, ucr1 | UCR1_TXMPTYEN, UCR1);
@@ -1501,6 +1512,9 @@ static int imx_uart_startup(struct uart_port *port)
 	if (!uart_console(port) && imx_uart_dma_init(sport) == 0)
 		dma_is_inited = 1;
 
+	if (dma_is_inited)
+		INIT_WORK(&sport->tsk_dma_tx, dma_tx_work);
+
 	spin_lock_irqsave(&sport->port.lock, flags);
 	/* Reset fifo's and state machines */
 	i = 100;
@@ -1601,6 +1615,7 @@ static void imx_uart_shutdown(struct uart_port *port)
 				     1, DMA_FROM_DEVICE);
 			sport->dma_is_rxing = 0;
 		}
+		cancel_work_sync(&sport->tsk_dma_tx);
 
 		spin_lock_irqsave(&sport->port.lock, flags);
 		imx_uart_stop_tx(port);
