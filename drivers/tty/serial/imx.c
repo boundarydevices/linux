@@ -1622,9 +1622,10 @@ static void imx_uart_shutdown(struct uart_port *port)
 
 	if (sport->dma_is_enabled) {
 		dmaengine_terminate_sync(sport->dma_chan_tx);
+		dmaengine_terminate_sync(sport->dma_chan_rx);
+		spin_lock_irqsave(&sport->port.lock, flags);
 		imx_uart_dma_tx_complete(sport);
 
-		dmaengine_terminate_sync(sport->dma_chan_rx);
 		if (sport->dma_is_rxing) {
 			dma_unmap_sg(sport->port.dev, &sport->rx_sgl,
 				     1, DMA_FROM_DEVICE);
@@ -1632,7 +1633,6 @@ static void imx_uart_shutdown(struct uart_port *port)
 		}
 		cancel_work_sync(&sport->tsk_dma_tx);
 
-		spin_lock_irqsave(&sport->port.lock, flags);
 		imx_uart_stop_tx(port);
 		imx_uart_stop_rx(port);
 		imx_uart_disable_dma(sport);
