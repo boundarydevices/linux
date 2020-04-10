@@ -905,7 +905,7 @@ static irqreturn_t imx_uart_txint(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static void rxact_work_func(struct work_struct *work)
+static void imx_uart_rxact_work_func(struct work_struct *work)
 {
 	struct imx_port *sport = container_of(work, struct imx_port,
 			rxact_work.work);
@@ -2575,7 +2575,7 @@ static int imx_uart_probe(struct platform_device *pdev)
 //	sport->port.rs485_config = imx_uart_rs485_config;
 	sport->port.flags = UPF_BOOT_AUTOCONF;
 	timer_setup(&sport->timer, imx_uart_timeout, 0);
-	INIT_DELAYED_WORK(&sport->rxact_work, rxact_work_func);
+	INIT_DELAYED_WORK(&sport->rxact_work, imx_uart_rxact_work_func);
 
 	sport->gpios = mctrl_gpio_init(&sport->port, 0);
 	if (IS_ERR(sport->gpios))
