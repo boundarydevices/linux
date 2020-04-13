@@ -2034,7 +2034,6 @@ static int udc_id_switch_for_device(struct ci_hdrc *ci)
 		/* Clear and enable BSV irq */
 		hw_write_otgsc(ci, OTGSC_BSVIS | OTGSC_BSVIE,
 					OTGSC_BSVIS | OTGSC_BSVIE);
-		ci->vbus_glitch_check_event = true;
 		ci_otg_queue_work(ci);
 	}
 
@@ -2074,7 +2073,6 @@ static void udc_resume_from_power_lost(struct ci_hdrc *ci)
 	if (ci->is_otg) {
 		hw_write_otgsc(ci, OTGSC_BSVIS | OTGSC_BSVIE,
 					OTGSC_BSVIS | OTGSC_BSVIE);
-		ci->vbus_glitch_check_event = true;
 		ci_otg_queue_work(ci);
 	}
 }

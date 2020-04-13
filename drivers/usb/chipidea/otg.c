@@ -143,8 +143,7 @@ void ci_handle_vbus_connected(struct ci_hdrc *ci)
 		return;
 
 	bsv = hw_read_otgsc(ci, OTGSC_BSV) ? 1 : 0;
-
-	if (bsv && !ci_is_vbus_glitch(ci))
+	if (bsv)
 		usb_gadget_vbus_connect(&ci->gadget);
 
 	extcon_set_state(ci->extcon, 2, bsv);

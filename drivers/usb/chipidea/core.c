@@ -122,6 +122,13 @@ static const u8 ci_regs_lpm[] = {
 	[OP_ENDPTCTRL]		= 0xECU,
 };
 
+static const unsigned int extcon_cables[] = {
+	EXTCON_USB_HOST,
+	EXTCON_CHG_USB_SDP,
+	EXTCON_USB,
+	EXTCON_NONE,
+};
+
 static void hw_alloc_regmap(struct ci_hdrc *ci, bool is_lpm)
 {
 	int i;
