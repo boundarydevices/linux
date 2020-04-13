@@ -22,10 +22,7 @@
 };
 
 &hdmi {
-	compatible = "fsl,imx8mq-dp";
-	dp-lane-mapping = <0xe4>;
-	dp-link-rate = <0xa>;
-	dp-num-lanes = <2>;
-	fsl,edp;
+	compatible = "cdn,imx8mq-dp";
+	lane-mapping = <0xe4>;
 	status = "okay";
 };
