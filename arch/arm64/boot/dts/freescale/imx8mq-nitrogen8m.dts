@@ -762,7 +762,12 @@
 
 &dcss {
 	status = "okay";
-	disp-dev = "hdmi_disp";
+
+	port@0 {
+		dcss_out: endpoint {
+			  remote-endpoint = <&hdmi_in>;
+		};
+	};
 };
 
 &ecspi2 {
@@ -810,7 +815,15 @@
 };
 
 &hdmi {
+	compatible = "cdn,imx8mq-hdmi";
+	lane-mapping = <0xe4>;
 	status = "okay";
+
+	port@1 {
+		hdmi_in: endpoint {
+			remote-endpoint = <&dcss_out>;
+		};
+	};
 };
 
 &i2c1 {
@@ -1172,17 +1185,6 @@
 				 <&clk IMX8MQ_CLK_25M>;
 	assigned-clock-rates = <266000000>;
 
-	port@1 {
-		mipi_dsi_in: endpoint {
-			remote-endpoint = <&lcdif_mipi_dsi>;
-		};
-	};
-};
-
-&mipi_dsi {
-	/delete-property/ no_clk_reset;
-	status = "disabled";
-
 	fb_mipi: panel@0 {
 		bits-per-color = <8>;
 		bridge-de-active = <0>;
@@ -1228,9 +1230,22 @@
 		};
 	};
 
-	port@1 {
-		mipi_dsi_out: endpoint {
-			remote-endpoint = <&panel1_in>;
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			mipi_dsi_in: endpoint {
+				remote-endpoint = <&lcdif_mipi_dsi>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			mipi_dsi_out: endpoint {
+				remote-endpoint = <&panel1_in>;
+			};
 		};
 	};
 };
