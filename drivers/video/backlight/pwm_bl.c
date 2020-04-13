@@ -28,6 +28,8 @@ struct pwm_bl_data {
 	bool			enabled;
 	struct regulator	*power_supply;
 	struct gpio_descs	*enable_gpios;
+	struct gpio_descs	legacy_enable;
+	struct gpio_desc	*legacy_desc;	/* part of above struct gpio_descs */
 	unsigned int		scale;
 	bool			legacy;
 	unsigned int		post_pwm_on_delay;
@@ -94,8 +96,8 @@ static void pwm_backlight_power_off(struct pwm_bl_data *pb)
 	if (!pb->enabled)
 		return;
 
-	if (pb->enable_gpio)
-		gpiod_set_value_cansleep(pb->enable_gpio, 0);
+	if (pb->enable_gpios)
+		set_gpios(pb->enable_gpios, 0);
 
 	if (pb->pwm_off_delay)
 		msleep(pb->pwm_off_delay);
@@ -460,17 +462,6 @@ static int pwm_backlight_initial_power_state(const struct pwm_bl_data *pb)
 	if (!node || !node->phandle)
 		return FB_BLANK_UNBLANK;
 
-	/*
-	 * If the driver is probed from the device tree and there is a
-	 * phandle link pointing to the backlight node, it is safe to
-	 * assume that another driver will enable the backlight at the
-	 * appropriate time. Therefore, if it is disabled, keep it so.
-	 */
-
-	/* if the enable GPIO is disabled, do not enable the backlight */
-	if (pb->enable_gpio && gpiod_get_value_cansleep(pb->enable_gpio) == 0)
-		return FB_BLANK_POWERDOWN;
-
 	/* The regulator is disabled, do not enable the backlight */
 	if (!regulator_is_enabled(pb->power_supply))
 		return FB_BLANK_POWERDOWN;
@@ -543,9 +534,10 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 			goto err_alloc;
 		}
 
-		pb->enable_gpios.desc[0] = gpio_to_desc(data->enable_gpio);
-		pb->enable_gpios.ndescs = 1;
-		gpiod_direction_output(pb->enable_gpios.desc[0], 1);
+		pb->legacy_enable.desc[0] = gpio_to_desc(data->enable_gpio);
+		pb->legacy_enable.ndescs = 1;
+		pb->enable_gpios = &pb->legacy_enable;
+		gpiod_direction_output(pb->legacy_enable.desc[0], 1);
 	}
 
 	pb->power_supply = devm_regulator_get(&pdev->dev, "power");
