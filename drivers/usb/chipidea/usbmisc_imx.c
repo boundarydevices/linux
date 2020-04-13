@@ -427,7 +427,7 @@ static int usbmisc_imx6q_init(struct imx_usbmisc_data *data)
 	u32 reg;
 	unsigned index = data->index;
 
-	if (dataindex > 3)
+	if (index > 3)
 		return -EINVAL;
 
 	spin_lock_irqsave(&usbmisc->lock, flags);
