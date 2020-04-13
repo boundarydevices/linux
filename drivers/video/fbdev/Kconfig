@@ -129,6 +129,14 @@ config FB_PROVIDE_GET_FB_UNMAPPED_AREA
 	  Allow generic frame-buffer to provide get_fb_unmapped_area
 	  function.
 
+config FB_EXTENDED_EVENTS
+	bool "Enable extended events notifications"
+	depends on FB
+	default y
+	help
+	  This menu will let you enable support for more events such as
+	  suspend/resume/registered/unregistered.
+
 menuconfig FB_FOREIGN_ENDIAN
 	bool "Framebuffer foreign endianness support"
 	depends on FB
