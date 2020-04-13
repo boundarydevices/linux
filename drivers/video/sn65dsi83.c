@@ -364,27 +364,13 @@ static int sn_fb_event(struct notifier_block *nb, unsigned long event, void *dat
 		return 0;
 
 	switch (event) {
-	case FB_R_EARLY_EVENT_BLANK:
-		blank_type = *((int *)evdata->data);
-		if (blank_type == FB_BLANK_UNBLANK) {
-			sn_disable(sn);
-		} else {
-			sn_enable_pll(sn);
-		}
-		break;
-	case FB_EARLY_EVENT_BLANK:
-		blank_type = *((int *)evdata->data);
-		if (blank_type == FB_BLANK_UNBLANK) {
-			sn_prepare(sn);
-		} else {
-			sn_disable_pll(sn);
-		}
-		break;
 	case FB_EVENT_BLANK: {
 		blank_type = *((int *)evdata->data);
 		if (blank_type == FB_BLANK_UNBLANK) {
+			sn_prepare(sn);
 			sn_enable_pll(sn);
 		} else {
+			sn_disable_pll(sn);
 			sn_disable(sn);
 		}
 		dev_info(dev, "%s: blank type 0x%x\n", __func__, blank_type );
