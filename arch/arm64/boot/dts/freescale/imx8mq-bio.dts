@@ -727,6 +727,7 @@
 		audio-cpu = <&sai4>;
 		constraint-rate = <32000 44100 48000 96000 192000>;
 		protocol = <1>;
+		hdmi-out;
 		status = "okay";
 	};
 
