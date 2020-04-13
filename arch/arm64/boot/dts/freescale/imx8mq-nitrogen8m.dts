@@ -1123,13 +1123,16 @@
 	};
 };
 
+&irqsteer {
+	status = "okay";
+};
+
 &lcdif {
 	status = "disabled";
 	assigned-clocks = <&clk IMX8MQ_CLK_LCDIF_PIXEL>,
 			  <&clk IMX8MQ_VIDEO_PLL1_REF_SEL>;
 	assigned-clock-parents = <&clk IMX8MQ_VIDEO_PLL1_OUT>,
 				 <&clk IMX8MQ_CLK_25M>;
-	max-res = <1920>, <1920>;
 
 	port@0 {
 		lcdif_mipi_dsi: endpoint {
@@ -1177,7 +1180,6 @@
 &mipi_dsi {
 	/delete-property/ no_clk_reset;
 	status = "disabled";
-	as_bridge;
 	assigned-clocks = <&clk IMX8MQ_CLK_DSI_CORE>,
 			  <&clk IMX8MQ_CLK_DSI_PHY_REF>,
 			  <&clk IMX8MQ_VIDEO_PLL1_REF_SEL>;
