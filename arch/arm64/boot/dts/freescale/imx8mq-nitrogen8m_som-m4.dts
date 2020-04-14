@@ -6,6 +6,9 @@
 #include "imx8mq-nitrogen8m_som.dts"
 
 / {
+	model = "Boundary Devices i.MX8MQ Nitrogen8M SOM M4";
+	compatible = "boundary,imx8mq-nitrogen8m_som-m4", "fsl,imx8mq";
+
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
