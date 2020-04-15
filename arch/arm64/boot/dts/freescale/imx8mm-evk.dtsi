@@ -620,6 +620,12 @@
 	status = "disabled";
 };
 
+&sai6 {
+	fsl,sai-monitor-spdif;
+	fsl,sai-asynchronous;
+	status = "okay";
+};
+
 &snvs_pwrkey {
 	status = "okay";
 };
