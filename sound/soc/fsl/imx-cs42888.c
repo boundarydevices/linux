@@ -494,7 +494,18 @@ static struct platform_driver imx_cs42888_driver = {
 		.of_match_table = imx_cs42888_dt_ids,
 	},
 };
-module_platform_driver(imx_cs42888_driver);
+
+static int __init imx_cs42888_init(void)
+{
+	return platform_driver_register(&imx_cs42888_driver);
+}
+late_initcall_sync(imx_cs42888_init);
+
+static void __exit imx_cs42888_exit(void)
+{
+	platform_driver_unregister(&imx_cs42888_driver);
+}
+module_exit(imx_cs42888_exit);
 
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("ALSA SoC cs42888 Machine Layer Driver");

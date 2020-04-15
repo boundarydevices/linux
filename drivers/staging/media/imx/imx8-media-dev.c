@@ -1065,7 +1065,17 @@ static struct platform_driver mxc_md_driver = {
 	.remove = mxc_md_remove,
 };
 
-module_platform_driver(mxc_md_driver);
+static int __init mxc_md_init(void)
+{
+	return platform_driver_register(&mxc_md_driver);
+}
+late_initcall_sync(mxc_md_init);
+
+static void __exit mxc_md_exit(void)
+{
+	platform_driver_unregister(&mxc_md_driver);
+}
+module_exit(mxc_md_exit);
 
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("MXC Media Device driver");
