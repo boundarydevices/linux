@@ -52,3 +52,12 @@ config BRCMFMAC_PCIE_BARWIN_SZ
 	  window size. Say Y to allow developers to use custom PCIE
 	  BAR window size when HOST PCIE IP can support less then 4MB
 	  BAR window.
+
+config BRCMFMAC_BT_SHARED_SDIO
+	bool "FMAC shares SDIO bus to Bluetooth"
+	depends on BRCMFMAC
+	depends on BRCMFMAC_SDIO
+	default n
+	help
+	  Selecting this to enables sharing the SDIO bus interface between
+	  Cypress BT and WiFi host drivers.
