@@ -39,6 +39,7 @@
 #include "common.h"
 #include "bcdc.h"
 #include "fwil.h"
+#include "bt_shared_sdio.h"
 
 #define DCMD_RESP_TIMEOUT	msecs_to_jiffies(2500)
 #define CTL_DONE_TIMEOUT	msecs_to_jiffies(2500)
@@ -951,6 +952,20 @@ static int brcmf_sdio_clkctl(struct brcmf_sdio *bus, uint target, bool pendok)
 		break;
 
 	case CLK_SDONLY:
+#ifdef CONFIG_BRCMFMAC_BT_SHARED_SDIO
+		/* If the request is to switch off backplane clock,
+		 * confirm that BT is inactive before doing so.
+		 * If this call had come from Non Watchdog context any way
+		 * the Watchdog would switch off the clock again when
+		 * nothing is to be done & BT has finished using the bus.
+		 */
+		if (brcmf_btsdio_bus_count(bus->sdiodev->bus_if)) {
+			brcmf_dbg(SDIO, "BT is active, not switching off\n");
+			brcmf_sdio_wd_timer(bus, true);
+			break;
+		}
+
+#endif /* CONFIG_BRCMFMAC_BT_SHARED_SDIO */
 		/* Remove HT request, or bring up SD clock */
 		if (bus->clkstate == CLK_NONE)
 			brcmf_sdio_sdclk(bus, true);
@@ -962,6 +977,19 @@ static int brcmf_sdio_clkctl(struct brcmf_sdio *bus, uint target, bool pendok)
 		break;
 
 	case CLK_NONE:
+#ifdef CONFIG_BRCMFMAC_BT_SHARED_SDIO
+		/* If the request is to switch off backplane clock,
+		 * confirm that BT is inactive before doing so.
+		 * If this call had come from non-watchdog context any way
+		 * the watchdog would switch off the clock again when
+		 * nothing is to be done & BT has finished using the bus.
+		 */
+		if (brcmf_btsdio_bus_count(bus->sdiodev->bus_if)) {
+			brcmf_dbg(SDIO, "BT is active, not switching off\n");
+			break;
+		}
+#endif /* CONFIG_BRCMFMAC_BT_SHARED_SDIO */
+
 		/* Make sure to remove HT request */
 		if (bus->clkstate == CLK_AVAIL)
 			brcmf_sdio_htclk(bus, false, false);
@@ -985,6 +1013,29 @@ brcmf_sdio_bus_sleep(struct brcmf_sdio *bus, bool sleep, bool pendok)
 	brcmf_dbg(SDIO, "Enter: request %s currently %s\n",
 		  (sleep ? "SLEEP" : "WAKE"),
 		  (bus->sleeping ? "SLEEP" : "WAKE"));
+
+#ifdef CONFIG_BRCMFMAC_BT_SHARED_SDIO
+	/* The following is the assumption based on which the hook is placed.
+	 * From WLAN driver, either from the active contexts OR from the
+	 * watchdog contexts, we will be attempting to go to sleep. At that
+	 * moment if we see that BT is still actively using the bus, we will
+	 * return -EBUSY from here, and the bus sleep state would not have
+	 * changed, so the caller can then schedule the watchdog again
+	 * which will come and attempt to sleep at a later point.
+	 *
+	 * In case if BT is the only one and is the last user, we don't switch
+	 * off the clock immediately, we allow the WLAN to decide when to sleep
+	 * i.e from the watchdog.
+	 * Now if the watchdog becomes active and attempts to switch off the
+	 * clock and if another WLAN context is active they are any way
+	 * serialized with sdlock.
+	 */
+	if (brcmf_btsdio_bus_count(bus->sdiodev->bus_if)) {
+		brcmf_dbg(SDIO, "Cannot sleep when BT is active\n");
+		err = -EBUSY;
+		goto done;
+	}
+#endif /* CONFIG_BRCMFMAC_BT_SHARED_SDIO */
 
 	/* If SR is enabled control bus state with KSO */
 	if (bus->sr_enabled) {
@@ -2844,6 +2895,9 @@ static void brcmf_sdio_dpc(struct brcmf_sdio *bus)
 		atomic_set(&bus->fcstate,
 			   !!(newstatus & (I_HMB_FC_STATE | I_HMB_FC_CHANGE)));
 		intstatus |= (newstatus & bus->hostintmask);
+#ifdef CONFIG_BRCMFMAC_BT_SHARED_SDIO
+		brcmf_btsdio_int_handler(bus->sdiodev->bus_if);
+#endif /* CONFIG_BRCMFMAC_BT_SHARED_SDIO */
 	}
 
 	/* Handle host mailbox indication */
@@ -3937,7 +3991,8 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio *bus)
 #endif				/* DEBUG */
 
 	/* On idle timeout clear activity flag and/or turn off clock */
-	if (!bus->dpc_triggered) {
+	if (!bus->dpc_triggered &&
+	    brcmf_btsdio_bus_count(bus->sdiodev->bus_if) == 0) {
 		rmb();
 		if ((!bus->dpc_running) && (bus->idletime > 0) &&
 		    (bus->clkstate == CLK_AVAIL)) {
@@ -4592,6 +4647,14 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 		goto claim;
 	}
 
+#ifdef CONFIG_BRCMFMAC_BT_SHARED_SDIO
+	err = brcmf_btsdio_init(bus_if);
+	if (err) {
+		brcmf_err("brcmf_btsdio_init failed\n");
+		goto free;
+	}
+#endif /* CONFIG_BRCMFMAC_BT_SHARED_SDIO */
+
 	/* Attach to the common layer, reserve hdr space */
 	err = brcmf_attach(sdiod->dev, !bus->sdiodev->ulp);
 	if (err != 0) {
@@ -4814,6 +4877,9 @@ void brcmf_sdio_remove(struct brcmf_sdio *bus)
 		}
 		if (bus->sdiodev->settings)
 			brcmf_release_module_param(bus->sdiodev->settings);
+#ifdef CONFIG_BRCMFMAC_BT_SHARED_SDIO
+		brcmf_btsdio_detach(bus->sdiodev->bus_if);
+#endif /* CONFIG_BRCMFMAC_BT_SHARED_SDIO */
 
 		release_firmware(bus->sdiodev->clm_fw);
 		bus->sdiodev->clm_fw = NULL;
