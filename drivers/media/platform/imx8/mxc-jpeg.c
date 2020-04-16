@@ -17,6 +17,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/pm_domain.h>
 #include <linux/string.h>
+#include <linux/timekeeping.h>
 
 #include <media/v4l2-mem2mem.h>
 #include <media/v4l2-ioctl.h>
@@ -606,6 +607,8 @@ static irqreturn_t mxc_jpeg_dec_irq(int irq, void *priv)
 			vb2_get_plane_payload(&dst_buf->vb2_buf, 1));
 	}
 
+	dst_buf->vb2_buf.timestamp = ktime_get_ns();
+
 	/* short preview of the results */
 	dev_dbg(dev, "src_buf preview: ");
 	print_buf_preview(dev, &src_buf->vb2_buf);
@@ -911,6 +914,8 @@ static void mxc_jpeg_device_run(void *priv)
 
 	mxc_jpeg_enable_slot(reg, ctx->slot);
 	mxc_jpeg_enable_irq(reg, ctx->slot);
+
+	src_buf->vb2_buf.timestamp = ktime_get_ns();
 
 	if (ctx->mode == MXC_JPEG_ENCODE) {
 		dev_dbg(dev, "Encoding on slot %d\n", ctx->slot);
