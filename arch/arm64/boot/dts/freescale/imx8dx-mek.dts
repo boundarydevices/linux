@@ -8,25 +8,103 @@
 #include "imx8x-mek.dtsi"
 
 / {
+	firmware {
+		android {
+			compatible = "android,firmware";
+			/* default emmc node used for GSI */
+			boot_devices = "bus@5b000000/5b010000.mmc";
+			/* sd card node which used if androidboot.boot_device_root=mmcblk1 */
+			boot_devices_mmcblk1 = "bus@5b000000/5b020000.mmc";
+			/* emmc node which used if androidboot.boot_device_root=mmcblk0 */
+			boot_devices_mmcblk0 = "bus@5b000000/5b010000.mmc";
+			fstab {
+				compatible = "android,fstab";
+				system {
+					compatible = "android,system";
+					dev = "system";
+					type = "ext4";
+					mnt_flags = "noatime,errors=panic,ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,slotselect,avb,avb_keys=/avb/q-gsi.avbpubkey:/avb/r-gsi.avbpubkey:/avb/s-gsi.avbpubkey,logical,first_stage_mount";
+				};
+				vendor {
+					compatible = "android,vendor";
+					dev = "vendor";
+					type = "ext4";
+					mnt_flags = "noatime,errors=panic,ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,slotselect,avb,logical,first_stage_mount";
+				};
+				product {
+					compatible = "android,product";
+					dev = "product";
+					type = "ext4";
+					mnt_flags = "noatime,errors=panic,ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,slotselect,avb,logical,first_stage_mount";
+				};
+			};
+			vbmeta {
+				/*we need use FirstStageMountVBootV2 if we enable avb*/
+				compatible = "android,vbmeta";
+				/*parts means the partition witch can be mount in first stage*/
+				parts = "vbmeta,dtbo,boot,system,vendor,product";
+			};
+		};
+	};
+};
+
+/ {
+	trusty {
+		compatible = "android,trusty-smc-v1";
+		ranges;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		trusty-irq {
+			compatible = "android,trusty-irq-v1";
+			interrupt-templates = <&trusty_ipi 0>;
+			interrupt-ranges = < 0 15 0>;
+		};
+		trusty-virtio {
+			compatible = "android,trusty-virtio-v1";
+		};
+		trusty-log {
+			compatible = "android,trusty-log-v1";
+		};
+	};
+	trusty_ipi: interrupt-controller@0 {
+		compatible = "android,CustomIPI";
+		interrupt-controller;
+		#interrupt-cells = <1>;
+	};
+};
+
+/ {
 	model = "Freescale i.MX8DX MEK";
 	compatible = "fsl,imx8dx-mek", "fsl,imx8dx", "fsl,imx8qxp";
 
+	bt_rfkill {
+		compatible = "fsl,mxc_bt_rfkill";
+		bt-power-gpios = <&pca9557_a 1 GPIO_ACTIVE_LOW>;
+		status ="okay";
+	};
+
 	reserved-memory {
-/*
- *		Memory reserved for optee usage. Please do not use.
- *		This will be automaticky added to dtb if OP-TEE is installed.
- *		optee@96000000 {
- *   			reg = <0 0x96000000 0 0x2000000>;
- *			no-map;
- *		};
- */
-		linux,cma {
-			compatible = "shared-dma-pool";
-			reusable;
-			size = <0 0x14000000>;
-			alloc-ranges = <0 0x98000000 0 0x14000000>;
-			linux,cma-default;
+		ramoops@0x91f00000 {
+			compatible = "ramoops";
+			reg = <0 0x91f00000 0 0x00100000>;
+			record-size     = <0x00020000>;
+			console-size    = <0x00020000>;
+			ftrace-size     = <0x00020000>;
+			pmsg-size       = <0x00020000>;
 		};
+		/delete-node/ linux,cma;
+	};
+
+	sound-xtor {
+		compatible = "fsl,imx-audio-xtor";
+		model = "xtor-audio";
+		cpu-dai = <&sai0>;
+		tx-codec-slave = <1>;
+		rx-codec-slave = <1>;
+		status = "okay";
 	};
 };
 
@@ -46,3 +124,36 @@
 	reg = <0x80000000 0x40000000>, <0x0 0x08000000>;
 	reg-names = "phys_baseaddr", "contiguous_mem";
 };
+
+&sai0 {
+	assigned-clocks = <&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_PLL>,
+			<&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_SLV_BUS>,
+			<&clk IMX_SC_R_AUDIO_PLL_0 IMX_SC_PM_CLK_MST_BUS>,
+			<&sai0_lpcg 0>;
+	assigned-clock-rates = <786432000>, <49152000>, <12288000>, <49152000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai0>;
+	status = "okay";
+};
+
+&iomuxc {
+	pinctrl_sai0: sai0grp {
+		fsl,pins = <
+			IMX8QXP_SAI0_RXD_ADMA_SAI0_RXD              0x06000040
+			IMX8QXP_SAI0_TXC_ADMA_SAI0_TXC              0x06000040
+			IMX8QXP_SAI0_TXFS_ADMA_SAI0_TXFS            0x06000040
+			IMX8QXP_SAI0_TXD_ADMA_SAI0_TXD              0x06000060
+		>;
+	};
+};
+
+&usbotg1 {
+	dr_mode = "host";
+};
+
+/delete-node/ &modem_reset;
+
+&lpuart1 {
+	/delete-property/ resets;
+};
+
