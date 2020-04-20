@@ -138,6 +138,16 @@ static irqreturn_t mtk_vpu_rproc_callback(int irq, void *data)
 	return IRQ_WAKE_THREAD;
 }
 
+static irqreturn_t handle_event(int irq, void *data)
+{
+	struct rproc *rproc = (struct rproc *)data;
+
+	rproc_vq_interrupt(rproc, 0);
+	rproc_vq_interrupt(rproc, 1);
+
+	return IRQ_HANDLED;
+}
+
 static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -183,7 +193,7 @@ static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 	}
 
 	ret = devm_request_threaded_irq(dev, vpu_rproc->irq,
-					mtk_vpu_rproc_callback, NULL,
+					mtk_vpu_rproc_callback, handle_event,
 					IRQF_SHARED | IRQF_ONESHOT,
 					"mtk_vpu-remoteproc", rproc);
 	if (ret) {
