@@ -1698,14 +1698,15 @@ static struct sk_buff *dpaa_cleanup_tx_fd(const struct dpaa_priv *priv,
 		}
 	}
 
-	if (qm_fd_get_format(fd) == qm_fd_sg)
+	if (qm_fd_get_format(fd) == qm_fd_sg) {
 #ifndef CONFIG_PPC
 		if (dpaa_errata_a010022)
 			put_page(virt_to_page(sgt));
 		else
 #endif
 		/* Free the page frag that we allocated on Tx */
-		skb_free_frag(phys_to_virt(addr));
+		skb_free_frag(skbh);
+	}
 
 	return skb;
 }
