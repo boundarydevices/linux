@@ -38,6 +38,13 @@
 			reg = <0 0x50000000 0 0x2900000>;
 			no-map;
 		};
+
+		vpu_ram: vpu_ram@0x60000000 {
+			compatible = "shared-dma-pool";
+			reg = <0 0x60000000 0 0x04000000>;
+			no-map;
+			linux,cma-default;
+		};
 	};
 
 	usb_vbus: regulator@0 {
@@ -719,4 +726,9 @@
 			};
 		};
 	};
+};
+
+&vpu0 {
+	memory-region = <&vpu_ram>;
+	status = "okay";
 };
