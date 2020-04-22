@@ -50,6 +50,9 @@
 			reg = <0x0>;
 			clock-latency = <61036>;
 			clocks = <&clk IMX8MP_CLK_ARM>;
+			operating-points-v2 = <&a53_opp_table>;
+			nvmem-cells = <&cpu_speed_grade>;
+			nvmem-cell-names = "speed_grade";
 			enable-method = "psci";
 			next-level-cache = <&A53_L2>;
 			#cooling-cells = <2>;
@@ -61,6 +64,7 @@
 			reg = <0x1>;
 			clock-latency = <61036>;
 			clocks = <&clk IMX8MP_CLK_ARM>;
+			operating-points-v2 = <&a53_opp_table>;
 			enable-method = "psci";
 			next-level-cache = <&A53_L2>;
 			#cooling-cells = <2>;
@@ -72,6 +76,7 @@
 			reg = <0x2>;
 			clock-latency = <61036>;
 			clocks = <&clk IMX8MP_CLK_ARM>;
+			operating-points-v2 = <&a53_opp_table>;
 			enable-method = "psci";
 			next-level-cache = <&A53_L2>;
 			#cooling-cells = <2>;
@@ -83,6 +88,7 @@
 			reg = <0x3>;
 			clock-latency = <61036>;
 			clocks = <&clk IMX8MP_CLK_ARM>;
+			operating-points-v2 = <&a53_opp_table>;
 			enable-method = "psci";
 			next-level-cache = <&A53_L2>;
 			#cooling-cells = <2>;
@@ -90,6 +96,35 @@
 
 		A53_L2: l2-cache0 {
 			compatible = "cache";
+		};
+	};
+
+	a53_opp_table: opp-table {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-1200000000 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <850000>;
+			opp-supported-hw = <0x8a0>, <0x7>;
+			clock-latency-ns = <150000>;
+			opp-suspend;
+		};
+
+		opp-1600000000 {
+			opp-hz = /bits/ 64 <1600000000>;
+			opp-microvolt = <950000>;
+			opp-supported-hw = <0xa0>, <0x7>;
+			clock-latency-ns = <150000>;
+			opp-suspend;
+		};
+
+		opp-1800000000 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <1000000>;
+			opp-supported-hw = <0x20>, <0x3>;
+			clock-latency-ns = <150000>;
+			opp-suspend;
 		};
 	};
 
