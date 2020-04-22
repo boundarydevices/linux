@@ -99,6 +99,11 @@
 		};
 	};
 
+	display-subsystem {
+		compatible = "fsl,imx-display-subsystem";
+		ports = <&lcdif_disp0>;
+	};
+
 	a53_opp_table: opp-table {
 		compatible = "operating-points-v2";
 		opp-shared;
