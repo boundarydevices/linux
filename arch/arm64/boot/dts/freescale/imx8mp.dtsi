@@ -186,6 +186,179 @@
 		};
 	};
 
+	power-domains {
+		compatible = "simple-bus";
+
+		/* HSIO SS */
+		hsiomix_pd: hsiomix-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			active-wakeup;
+			rpm-always-on;
+			#power-domain-cells = <0>;
+			domain-index = <0>;
+			domain-name = "hsiomix";
+		};
+
+		pcie_pd: pcie-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <1>;
+			domain-name = "pcie";
+			parent-domains = <&hsiomix_pd>;
+		};
+
+		usb_otg1_pd: usbotg1-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <2>;
+			domain-name = "usb_otg1";
+			parent-domains = <&hsiomix_pd>;
+		};
+
+		usb_otg2_pd: usbotg2-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <3>;
+			domain-name = "usb_otg2";
+			parent-domains = <&hsiomix_pd>;
+		};
+
+		/* MLMIX */
+		mlmix_pd: mlmix-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <4>;
+			domain-name = "mlmix";
+			clocks = <&clk IMX8MP_CLK_ML_AXI>,
+				 <&clk IMX8MP_CLK_ML_AHB>,
+				 <&clk IMX8MP_CLK_NPU_ROOT>;
+		};
+
+		audiomix_pd: audiomix-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <5>;
+			domain-name = "audiomix";
+			clocks = <&clk IMX8MP_CLK_AUDIO_ROOT>,
+				 <&clk IMX8MP_CLK_AUDIO_AXI_DIV>;
+		};
+
+		gpumix_pd: gpumix-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <6>;
+			domain-name = "gpumix";
+			clocks = <&clk IMX8MP_CLK_GPU_ROOT>, <&clk IMX8MP_CLK_GPU_AHB>,
+				 <&clk IMX8MP_CLK_GPU_AXI>;
+		};
+
+		gpu2d_pd: gpu2d-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <7>;
+			domain-name = "gpu2d";
+			parent-domains = <&gpumix_pd>;
+			clocks = <&clk IMX8MP_CLK_GPU2D_ROOT>;
+		};
+
+		gpu3d_pd: gpu3d-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <8>;
+			domain-name = "gpu3d";
+			parent-domains = <&gpumix_pd>;
+			clocks = <&clk IMX8MP_CLK_GPU3D_ROOT>,
+				 <&clk IMX8MP_CLK_GPU3D_SHADER_DIV>;
+		};
+
+		vpumix_pd: vpumix-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <9>;
+			domain-name = "vpumix";
+			clocks =<&clk IMX8MP_CLK_VPU_ROOT>;
+		};
+
+		vpu_g1_pd: vpug1-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <10>;
+			domain-name = "vpu_g1";
+			parent-domains = <&vpumix_pd>;
+			clocks = <&clk IMX8MP_CLK_VPU_G1_ROOT>;
+		};
+
+		vpu_g2_pd: vpug2-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <11>;
+			domain-name = "vpu_g2";
+			parent-domains = <&vpumix_pd>;
+			clocks = <&clk IMX8MP_CLK_VPU_G2_ROOT>;
+		};
+
+		vpu_h1_pd: vpuh1-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <12>;
+			domain-name = "vpu_h1";
+			parent-domains = <&vpumix_pd>;
+			clocks = <&clk IMX8MP_CLK_VPU_VC8KE_ROOT>;
+		};
+
+		mediamix_pd: mediamix-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <13>;
+			domain-name = "mediamix";
+			clocks = <&clk IMX8MP_CLK_MEDIA_AXI_ROOT>,
+				 <&clk IMX8MP_CLK_MEDIA_APB_ROOT>;
+		};
+
+		ispdwp_pd: power-domain@14 {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <14>;
+			domain-name = "ispdwp";
+			parent-domains = <&mediamix_pd>;
+			clocks = <&clk IMX8MP_CLK_MEDIA_ISP_DIV>;
+		};
+
+		mipi_phy1_pd: mipiphy1-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <15>;
+			domain-name = "mipi_phy1";
+			parent-domains = <&mediamix_pd>;
+		};
+
+		mipi_phy2_pd: mipiphy2-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <16>;
+			domain-name = "mipi_phy2";
+			parent-domains = <&mediamix_pd>;
+		};
+
+		hdmimix_pd: hdmimix-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <17>;
+			domain-name = "hdmimix";
+			clocks = <&clk IMX8MP_CLK_HDMI_ROOT>,
+				 <&clk IMX8MP_CLK_HDMI_APB>,
+				 <&clk IMX8MP_CLK_HDMI_REF_266M>;
+		};
+
+		hdmi_phy_pd: hdmiphy-pd {
+			compatible = "fsl,imx8m-pm-domain";
+			#power-domain-cells = <0>;
+			domain-index = <18>;
+			domain-name = "hdmi_phy";
+			parent-domains = <&hdmimix_pd>;
+		};
+	};
+
 	pmu {
 		compatible = "arm,cortex-a53-pmu";
 		interrupts = <GIC_PPI 7
