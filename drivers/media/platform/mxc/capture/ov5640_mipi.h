@@ -25,13 +25,10 @@ enum ov5640_mode {
 	ov5640_mode_VGA_640_480 = 0,
 	ov5640_mode_QVGA_320_240 = 1,
 	ov5640_mode_NTSC_720_480 = 2,
-	ov5640_mode_PAL_720_576 = 3,
-	ov5640_mode_720P_1280_720 = 4,
-	ov5640_mode_1080P_1920_1080 = 5,
-	ov5640_mode_QSXGA_2592_1944 = 6,
-	ov5640_mode_QCIF_176_144 = 7,
-	ov5640_mode_XGA_1024_768 = 8,
-	ov5640_mode_MAX = 8,
+	ov5640_mode_720P_1280_720 = 3,
+	ov5640_mode_1080P_1920_1080 = 4,
+	ov5640_mode_QSXGA_2592_1944 = 5,
+	ov5640_mode_MAX = 5,
 	ov5640_mode_INIT = 0xff, /*only for sensor init*/
 };
 
