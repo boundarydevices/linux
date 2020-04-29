@@ -186,7 +186,9 @@ static int ov5640_probe_v(struct ov5640 *sensor, struct clk *sensor_clk, u32 csi
 	sensor->sensor_clk = sensor_clk;
 	v4l2_i2c_subdev_init(&sensor->subdev, sensor->i2c_client, &ov5640_subdev_ops);
 	hdl = &sensor->hdl;
-	v4l2_ctrl_handler_init(hdl, ARRAY_SIZE(sctrl));
+	ret = v4l2_ctrl_handler_init(hdl, ARRAY_SIZE(sctrl));
+	if (ret)
+		return ret;
 
 	for (i = 0; i < ARRAY_SIZE(sctrl); i++) {
 		const struct std_ctrl *s = &sctrl[i];
