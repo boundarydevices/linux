@@ -262,7 +262,7 @@
 				<&vdev1vring0>, <&vdev1vring1>;
 		core-index = <0>;
 		core-id = <IMX_SC_R_M4_0_PID0>;
-		status = "okay";
+		status = "disabled";
 		power-domains = <&pd IMX_SC_R_M4_0_PID0>,
 				<&pd IMX_SC_R_M4_0_MU_1A>;
 	};
@@ -938,7 +938,7 @@
 	vdev-nums = <2>;
 	reg = <0x0 0x90000000 0x0 0x20000>;
 	memory-region = <&vdevbuffer>;
-	status = "disabled";
+	status = "okay";
 };
 
 &usbphy1 {
