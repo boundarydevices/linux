@@ -40,6 +40,7 @@
 #include "bcdc.h"
 #include "fwil.h"
 #include "bt_shared_sdio.h"
+#include "trxhdr.h"
 
 #define DCMD_RESP_TIMEOUT	msecs_to_jiffies(2500)
 #define CTL_DONE_TIMEOUT	msecs_to_jiffies(2500)
@@ -3619,17 +3620,26 @@ brcmf_sdio_verifymemory(struct brcmf_sdio_dev *sdiodev, u32 ram_addr,
 static int brcmf_sdio_download_code_file(struct brcmf_sdio *bus,
 					 const struct firmware *fw)
 {
+	struct trx_header_le *trx = (struct trx_header_le *)fw->data;
+	u32 fw_size;
+	u32 address;
 	int err;
 
 	brcmf_dbg(TRACE, "Enter\n");
 
-	err = brcmf_sdiod_ramrw(bus->sdiodev, true, bus->ci->rambase,
-				(u8 *)fw->data, fw->size);
+	address = bus->ci->rambase;
+	fw_size = fw->size;
+	if (trx->magic == cpu_to_le32(TRX_MAGIC)) {
+		address -= sizeof(struct trx_header_le);
+		fw_size = le32_to_cpu(trx->len);
+	}
+	err = brcmf_sdiod_ramrw(bus->sdiodev, true, address,
+				(u8 *)fw->data, fw_size);
 	if (err)
 		brcmf_err("error %d on writing %d membytes at 0x%08x\n",
-			  err, (int)fw->size, bus->ci->rambase);
-	else if (!brcmf_sdio_verifymemory(bus->sdiodev, bus->ci->rambase,
-					  (u8 *)fw->data, fw->size))
+			  err, (int)fw_size, address);
+	else if (!brcmf_sdio_verifymemory(bus->sdiodev, address,
+					  (u8 *)fw->data, fw_size))
 		err = -EIO;
 
 	return err;
