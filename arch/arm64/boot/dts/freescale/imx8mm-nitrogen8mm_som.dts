@@ -61,7 +61,7 @@
 	};
 
 	alias_create_phandles {
-		p6 = <&mipi_to_lvds_som>;
+		p7 = <&mipi_to_lvds_som>;
 	};
 
 	mipi_xclk: mipi-xclk {
