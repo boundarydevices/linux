@@ -813,14 +813,14 @@ static void dw_hdmi_gp_audio_enable(struct dw_hdmi *hdmi)
 	hdmi_set_cts_n(hdmi, hdmi->audio_cts, hdmi->audio_n);
 	hdmi_enable_audio_clk(hdmi, true);
 
-	hdmi_writeb(hdmi, 0x1, HDMI_FC_AUDSCHNL0);
-	hdmi_writeb(hdmi, hdmi->channels, HDMI_FC_AUDSCHNL2);
-	hdmi_writeb(hdmi, 0x22, HDMI_FC_AUDSCHNL3);
-	hdmi_writeb(hdmi, 0x22, HDMI_FC_AUDSCHNL4);
-	hdmi_writeb(hdmi, 0x11, HDMI_FC_AUDSCHNL5);
-	hdmi_writeb(hdmi, 0x11, HDMI_FC_AUDSCHNL6);
-	hdmi_writeb(hdmi, (0x3 << 4) | sample_freq, HDMI_FC_AUDSCHNL7);
-	hdmi_writeb(hdmi, (org_sample_freq << 4) | 0xb, HDMI_FC_AUDSCHNL8);
+	hdmi_writeb(hdmi, 0x1, HDMI_FC_AUDSCHNLS0);
+	hdmi_writeb(hdmi, hdmi->channels, HDMI_FC_AUDSCHNLS2);
+	hdmi_writeb(hdmi, 0x22, HDMI_FC_AUDSCHNLS3);
+	hdmi_writeb(hdmi, 0x22, HDMI_FC_AUDSCHNLS4);
+	hdmi_writeb(hdmi, 0x11, HDMI_FC_AUDSCHNLS5);
+	hdmi_writeb(hdmi, 0x11, HDMI_FC_AUDSCHNLS6);
+	hdmi_writeb(hdmi, (0x3 << 4) | sample_freq, HDMI_FC_AUDSCHNLS7);
+	hdmi_writeb(hdmi, (org_sample_freq << 4) | 0xb, HDMI_FC_AUDSCHNLS8);
 
 	hdmi_writeb(hdmi, ch_mask, HDMI_GP_CONF1);
 	hdmi_writeb(hdmi, 0x02, HDMI_GP_CONF2);
