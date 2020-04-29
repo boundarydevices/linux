@@ -11,9 +11,13 @@
 #include <linux/regmap.h>
 #include <linux/reset.h>
 #include <sound/dmaengine_pcm.h>
+#include <sound/pcm_iec958.h>
+#include <sound/pcm_params.h>
 
 #include "fsl_xcvr.h"
 #include "imx-pcm.h"
+
+#define FSL_XCVR_CAPDS_SIZE	256
 
 struct fsl_xcvr {
 	struct platform_device *pdev;
@@ -31,6 +35,17 @@ struct fsl_xcvr {
 	struct snd_dmaengine_dai_dma_data dma_prms_tx;
 	struct snd_aes_iec958 rx_iec958;
 	struct snd_aes_iec958 tx_iec958;
+	u8 cap_ds[FSL_XCVR_CAPDS_SIZE];
+};
+
+static const struct fsl_xcvr_pll_conf {
+	u8 mfi;   /* min=0x18, max=0x38 */
+	u32 mfn;  /* signed int, 2's compl., min=0x3FFF0000, max=0x00010000 */
+	u32 mfd;  /* unsigned int */
+	u32 fout; /* Fout = Fref*(MFI + MFN/MFD), Fref is 24MHz */
+} fsl_xcvr_pll_cfg[] = {
+	{ .mfi = 32, .mfn = 96, .mfd = 125, .fout = 786432000, },
+	{ .mfi = 30, .mfn = 66, .mfd = 625, .fout = 722534400, },
 };
 
 static const u32 fsl_xcvr_earc_channels[] = { 1, 2, 8, 16, 32, }; /* one bit 6, 12 ? */
@@ -51,39 +66,217 @@ static const struct snd_pcm_hw_constraint_list fsl_xcvr_earc_rates_constr = {
 
 static const u32 fsl_xcvr_spdif_channels[] = { 2, };
 
+static int fsl_xcvr_arc_mode_put(struct snd_kcontrol *kcontrol,
+				 struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_xcvr *xcvr = snd_soc_dai_get_drvdata(dai);
+	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	unsigned int *item = ucontrol->value.enumerated.item;
+
+	xcvr->arc_mode_idx = snd_soc_enum_item_to_val(e, item[0]);
+
+	return 0;
+}
+
+static int fsl_xcvr_arc_mode_get(struct snd_kcontrol *kcontrol,
+				 struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_xcvr *xcvr = snd_soc_dai_get_drvdata(dai);
+
+	ucontrol->value.enumerated.item[0] = xcvr->arc_mode_idx;
+
+	return 0;
+}
+
 static const int fsl_xcvr_arc_mode_ints[] = {
 	FSL_XCVR_ISR_SET_ARC_SE_INT, FSL_XCVR_ISR_SET_ARC_CM_INT,
 };
 
-static const char * const fsl_xcvr_arc_mode[] = {
-	"ARC Single Ended", "ARC Common",
-};
-
+static const char * const fsl_xcvr_arc_mode[] = { "Single Ended", "Common", };
 static const struct soc_enum fsl_xcvr_arc_mode_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(fsl_xcvr_arc_mode), fsl_xcvr_arc_mode);
+static struct snd_kcontrol_new fsl_xcvr_arc_mode_kctl =
+	SOC_ENUM_EXT("ARC Mode", fsl_xcvr_arc_mode_enum,
+		     fsl_xcvr_arc_mode_get, fsl_xcvr_arc_mode_put);
 
-/*
- * pll_phy:  pll 0; phy 1;
-*/
-static int fsl_xcvr_phy_write(struct fsl_xcvr *xcvr, int reg, int data, int pll_phy)
+/* Capabilities data structure, bytes */
+static int fsl_xcvr_type_capds_bytes_info(struct snd_kcontrol *kcontrol,
+					  struct snd_ctl_elem_info *uinfo)
 {
-	int val;
-	int idx0, idx1;
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
+	uinfo->count = FSL_XCVR_CAPDS_SIZE;
 
-	idx0 = pll_phy > 0 ? 26 : 24;
-	idx1 = pll_phy > 0 ? 24 : 26;
+	return 0;
+}
 
+static int fsl_xcvr_capds_get(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_xcvr *xcvr = snd_soc_dai_get_drvdata(dai);
+
+	memcpy(ucontrol->value.bytes.data, xcvr->cap_ds, FSL_XCVR_CAPDS_SIZE);
+
+	return 0;
+}
+
+static int fsl_xcvr_capds_put(struct snd_kcontrol *kcontrol,
+			      struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_xcvr *xcvr = snd_soc_dai_get_drvdata(dai);
+
+	memcpy(xcvr->cap_ds, ucontrol->value.bytes.data, FSL_XCVR_CAPDS_SIZE);
+
+	return 0;
+}
+
+static struct snd_kcontrol_new fsl_xcvr_earc_capds_kctl = {
+	.iface = SNDRV_CTL_ELEM_IFACE_PCM,
+	.name = "Capabilities Data Structure",
+	.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
+	.info = fsl_xcvr_type_capds_bytes_info,
+	.get = fsl_xcvr_capds_get,
+	.put = fsl_xcvr_capds_put,
+};
+
+static int fsl_xcvr_activate_ctl(struct snd_soc_dai *dai, const char *name,
+				 bool active)
+{
+	struct snd_soc_card *card = dai->component->card;
+	struct snd_kcontrol *kctl;
+	bool enabled;
+
+	kctl = snd_soc_card_get_kcontrol(card, name);
+	if (kctl == NULL)
+		return -ENOENT;
+
+	enabled = ((kctl->vd[0].access & SNDRV_CTL_ELEM_ACCESS_WRITE) != 0);
+	if (active == enabled)
+		return 0; /* nothing to do */
+
+	if (active)
+		kctl->vd[0].access |=  SNDRV_CTL_ELEM_ACCESS_WRITE;
+	else
+		kctl->vd[0].access &= ~SNDRV_CTL_ELEM_ACCESS_WRITE;
+
+	snd_ctl_notify(card->snd_card, SNDRV_CTL_EVENT_MASK_INFO, &kctl->id);
+
+	return 1;
+}
+
+static int fsl_xcvr_mode_put(struct snd_kcontrol *kcontrol,
+			     struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_xcvr *xcvr = snd_soc_dai_get_drvdata(dai);
+	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	unsigned int *item = ucontrol->value.enumerated.item;
+
+	xcvr->mode = snd_soc_enum_item_to_val(e, item[0]);
+
+	fsl_xcvr_activate_ctl(dai, fsl_xcvr_arc_mode_kctl.name,
+			      (xcvr->mode == FSL_XCVR_MODE_ARC));
+	fsl_xcvr_activate_ctl(dai, fsl_xcvr_earc_capds_kctl.name,
+			      (xcvr->mode == FSL_XCVR_MODE_EARC));
+	return 0;
+}
+
+static int fsl_xcvr_mode_get(struct snd_kcontrol *kcontrol,
+			     struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_xcvr *xcvr = snd_soc_dai_get_drvdata(dai);
+
+	ucontrol->value.enumerated.item[0] = xcvr->mode;
+
+	return 0;
+}
+
+static const char * const fsl_xcvr_mode[] = { "SPDIF", "ARC RX", "eARC", };
+static const struct soc_enum fsl_xcvr_mode_enum =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(fsl_xcvr_mode), fsl_xcvr_mode);
+static struct snd_kcontrol_new fsl_xcvr_mode_kctl =
+	SOC_ENUM_EXT("XCVR Mode", fsl_xcvr_mode_enum,
+		     fsl_xcvr_mode_get, fsl_xcvr_mode_put);
+
+/** phy: true => phy, false => pll */
+static int fsl_xcvr_ai_write(struct fsl_xcvr *xcvr, u8 reg, u32 data, bool phy)
+{
+	u32 val, idx, tidx;
+
+	idx  = BIT(phy ? 26 : 24);
+	tidx = BIT(phy ? 27 : 25);
+
+	regmap_write(xcvr->regmap, FSL_XCVR_PHY_AI_CTRL_CLR, 0xFF);
+	regmap_write(xcvr->regmap, FSL_XCVR_PHY_AI_CTRL_SET, reg);
 	regmap_write(xcvr->regmap, FSL_XCVR_PHY_AI_WDATA, data);
-	regmap_read(xcvr->regmap, FSL_XCVR_PHY_AI_CTRL, &val);
-
-	val = ((~(val & BIT(idx0))) & BIT(idx0)) | (val & BIT(idx1)) | reg | BIT(15);
-
-	regmap_write(xcvr->regmap, FSL_XCVR_PHY_AI_CTRL, val);
+	regmap_write(xcvr->regmap, FSL_XCVR_PHY_AI_CTRL_TOG, idx);
 
 	do {
 		regmap_read(xcvr->regmap, FSL_XCVR_PHY_AI_CTRL, &val);
-	} while ((val & BIT(idx0)) != ((val & BIT(idx0 + 1)) >> 1));
+	} while ((val & idx) != ((val & tidx) >> 1));
 
+	return 0;
+}
+
+static int fsl_xcvr_en_phy(struct fsl_xcvr *xcvr, bool earc, u32 freq)
+{
+	struct device *dev = &xcvr->pdev->dev;
+	u32 i, div = 0, log2;
+
+	for (i = 0; i < ARRAY_SIZE(fsl_xcvr_pll_cfg); i++) {
+		if (fsl_xcvr_pll_cfg[i].fout % freq == 0) {
+			div = fsl_xcvr_pll_cfg[i].fout / freq;
+			break;
+		}
+	}
+
+	if (!div || i >= ARRAY_SIZE(fsl_xcvr_pll_cfg))
+		return -EINVAL;
+
+	log2 = ilog2(div);
+
+	/* PLL: CTRL0: DIV_INTEGER */
+	fsl_xcvr_ai_write(xcvr, FSL_XCVR_PLL_CTRL0, fsl_xcvr_pll_cfg[i].mfi, 0);
+	/* PLL: NUMERATOR: MFN */
+	fsl_xcvr_ai_write(xcvr, FSL_XCVR_PLL_NUM, fsl_xcvr_pll_cfg[i].mfn, 0);
+	/* PLL: DENOMINATOR: MFD */
+	fsl_xcvr_ai_write(xcvr, FSL_XCVR_PLL_DEN, fsl_xcvr_pll_cfg[i].mfd, 0);
+	/* PLL: CTRL0_SET: HOLD_RING_OFF, POWER_UP */
+	fsl_xcvr_ai_write(xcvr, FSL_XCVR_PLL_CTRL0_SET,
+			  FSL_XCVR_PLL_CTRL0_HROFF | FSL_XCVR_PLL_CTRL0_PWP, 0);
+	udelay(25);
+	/* PLL: CTRL0: Clear Hold Ring Off */
+	fsl_xcvr_ai_write(xcvr, FSL_XCVR_PLL_CTRL0_CLR,
+			  FSL_XCVR_PLL_CTRL0_HROFF, 0);
+	udelay(100);
+	/* PLL: POSTDIV: PDIV0 */
+	fsl_xcvr_ai_write(xcvr, FSL_XCVR_PLL_PDIV, log2, 0);
+	/* PLL: CTRL_SET: CLKMUX0_EN */
+	fsl_xcvr_ai_write(xcvr, FSL_XCVR_PLL_CTRL0_SET,
+			  FSL_XCVR_PLL_CTRL0_CM0_EN, 0);
+
+	if (earc) { /* eARC mode */
+		/* PHY: CTRL_SET: TX_DIFF_OE, PHY_EN */
+		fsl_xcvr_ai_write(xcvr, FSL_XCVR_PHY_CTRL_SET,
+				  FSL_XCVR_PHY_CTRL_TSDIFF_OE |
+				  FSL_XCVR_PHY_CTRL_PHY_EN, 1);
+		/* PHY: CTRL2_SET: EARC_TX_MODE */
+		fsl_xcvr_ai_write(xcvr, FSL_XCVR_PHY_CTRL2_SET,
+				  FSL_XCVR_PHY_CTRL2_EARC_TXMS, 1);
+
+	} else { /* SPDIF mode */
+		/* PHY: CTRL_SET: SPDIF_EN */
+		fsl_xcvr_ai_write(xcvr, FSL_XCVR_PHY_CTRL_SET,
+				  FSL_XCVR_PHY_CTRL_SPDIF_EN, 1);
+	}
+
+	dev_dbg(dev, "PLL Fexp: %u, Fout: %u, mfi: %u, mfn: %u, mfd: %d, div: %u, pdiv0: %u\n",
+		freq, fsl_xcvr_pll_cfg[i].fout, fsl_xcvr_pll_cfg[i].mfi,
+		fsl_xcvr_pll_cfg[i].mfn, fsl_xcvr_pll_cfg[i].mfd, div, log2);
 	return 0;
 }
 
@@ -92,8 +285,27 @@ static int fsl_xcvr_prepare(struct snd_pcm_substream *substream,
 {
 	struct fsl_xcvr *xcvr = snd_soc_dai_get_drvdata(dai);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
-	u32 m_ctl = 0, v_ctl = 0, m_isr = 0, v_isr = 0;
+	u32 m_ctl = 0, v_ctl = 0, m_isr = 0, v_isr = 0, val;
 	int ret = 0;
+
+	if (tx && xcvr->mode == FSL_XCVR_MODE_SPDIF) {
+		val  = FSL_XCVR_TX_DPTH_CTRL_BYPASS_FEM;
+		val |= FSL_XCVR_TX_DPTH_CTRL_FRM_FMT;
+		ret = regmap_write(xcvr->regmap, FSL_XCVR_TX_DPTH_CTRL_SET, val);
+		if (ret < 0) {
+			dev_err(dai->dev, "Failed to set TX_DPTH: %d\n", ret);
+			return ret;
+		}
+	} else {
+		/* Release M0+ reset */
+		ret = regmap_update_bits(xcvr->regmap, FSL_XCVR_EXT_CTRL,
+					 FSL_XCVR_EXT_CTRL_CORE_RESET, 0);
+		if (ret < 0) {
+			dev_err(dai->dev, "M0+ core release failed: %d\n", ret);
+			return ret;
+		}
+		mdelay(100);
+	}
 
 	ret = regmap_update_bits(xcvr->regmap, FSL_XCVR_EXT_IER0,
 				 FSL_XCVR_IRQ_EARC_ALL, FSL_XCVR_IRQ_EARC_ALL);
@@ -103,8 +315,8 @@ static int fsl_xcvr_prepare(struct snd_pcm_substream *substream,
 	}
 
 	/* configure EXT_CTRL */
-	switch (xcvr->mode & FSL_XCVR_AMODE_MASK) {
-	case FSL_XCVR_AMODE_SPDIF:
+	switch (xcvr->mode) {
+	case FSL_XCVR_MODE_SPDIF:
 		/* set SPDIF MODE */
 		m_ctl |= FSL_XCVR_EXT_CTRL_SPDIF_MODE;
 		v_ctl |= FSL_XCVR_EXT_CTRL_SPDIF_MODE;
@@ -115,12 +327,12 @@ static int fsl_xcvr_prepare(struct snd_pcm_substream *substream,
 			v_isr |= FSL_XCVR_ISR_DMAC_SPARE_INT;
 		}
 		break;
-	case FSL_XCVR_AMODE_ARC:
+	case FSL_XCVR_MODE_ARC:
 		/* Enable ISR */
 		m_isr |= fsl_xcvr_arc_mode_ints[xcvr->arc_mode_idx];
 		v_isr |= fsl_xcvr_arc_mode_ints[xcvr->arc_mode_idx];
 		break;
-	case FSL_XCVR_AMODE_EARC:
+	case FSL_XCVR_MODE_EARC:
 		/* clear CMDC RESET */
 		m_ctl |= FSL_XCVR_EXT_CTRL_CMDC_RESET(tx);
 		/* set TX_RX_MODE */
@@ -173,23 +385,17 @@ static int fsl_xcvr_startup(struct snd_pcm_substream *substream,
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
 	int ret = 0;
 
-	/* check stream direction is enabled in DTS */
-	if (!(xcvr->mode & BIT(substream->stream))) {
-		dev_err(dai->dev, "%sX not supported\n", tx ? "T" : "R");
-		return -EINVAL;
-	}
-
 	if (xcvr->streams & BIT(substream->stream)) {
 		dev_err(dai->dev, "%sX busy\n", tx ? "T" : "R");
 		return -EBUSY;
 	}
 
-	switch (xcvr->mode & FSL_XCVR_AMODE_MASK) {
-	case FSL_XCVR_AMODE_SPDIF:
-	case FSL_XCVR_AMODE_ARC:
+	switch (xcvr->mode) {
+	case FSL_XCVR_MODE_SPDIF:
+	case FSL_XCVR_MODE_ARC:
 		ret = 0; /* @todo */
 		break;
-	case FSL_XCVR_AMODE_EARC:
+	case FSL_XCVR_MODE_EARC:
 		ret = fsl_xcvr_constr(substream, &fsl_xcvr_earc_channels_constr,
 				      &fsl_xcvr_earc_rates_constr);
 		break;
@@ -199,44 +405,10 @@ static int fsl_xcvr_startup(struct snd_pcm_substream *substream,
 
 	xcvr->streams |= BIT(substream->stream);
 
-	switch (xcvr->mode & FSL_XCVR_AMODE_MASK) {
-	case FSL_XCVR_AMODE_SPDIF:
-		if (tx) {
-			fsl_xcvr_phy_write(xcvr, 0x54, 0x1, 0);
-			fsl_xcvr_phy_write(xcvr, 0x4, 0x1, 1);
-			fsl_xcvr_phy_write(xcvr, 0x0, 0x28, 0);
-			fsl_xcvr_phy_write(xcvr, 0x20, 0x60, 0);
-			fsl_xcvr_phy_write(xcvr, 0x30, 0x64, 0);
-			fsl_xcvr_phy_write(xcvr, 0x4, 0x1006000, 0);
-			udelay(25);
-			fsl_xcvr_phy_write(xcvr, 0x8, 0x2000, 0);
-			udelay(100);
-			fsl_xcvr_phy_write(xcvr, 0x40, 0x5, 0);
-
-			fsl_xcvr_phy_write(xcvr, 0x4,  0x20, 1);
-			fsl_xcvr_phy_write(xcvr, 0x74, 0x4000, 1);
-		}
-		break;
-	case FSL_XCVR_AMODE_EARC:
-		if (tx) {
-			fsl_xcvr_phy_write(xcvr, 0x54, 0x1, 0);
-			fsl_xcvr_phy_write(xcvr, 0x4, 0x1, 1);
-			fsl_xcvr_phy_write(xcvr, 0x0, 0x28, 0);
-			fsl_xcvr_phy_write(xcvr, 0x20, 0x60, 0);
-			fsl_xcvr_phy_write(xcvr, 0x30, 0x64, 0);
-			fsl_xcvr_phy_write(xcvr, 0x4, 0x1006000, 0);
-			udelay(25);
-			fsl_xcvr_phy_write(xcvr, 0x8, 0x2000, 0);
-			udelay(100);
-			fsl_xcvr_phy_write(xcvr, 0x40, 0x1, 0);
-
-			fsl_xcvr_phy_write(xcvr, 0x4,  0x20, 1);
-			fsl_xcvr_phy_write(xcvr, 0x74, 0x4000, 1);
-		}
-		break;
-	default:
-		break;
-	}
+	/* Disable XCVR controls if there is stream started */
+	fsl_xcvr_activate_ctl(dai, fsl_xcvr_mode_kctl.name, false);
+	fsl_xcvr_activate_ctl(dai, fsl_xcvr_arc_mode_kctl.name, false);
+	fsl_xcvr_activate_ctl(dai, fsl_xcvr_earc_capds_kctl.name, false);
 
 	return 0;
 }
@@ -250,6 +422,15 @@ static void fsl_xcvr_shutdown(struct snd_pcm_substream *substream,
 	int ret;
 
 	xcvr->streams &= ~BIT(substream->stream);
+
+	/* Enable XCVR controls if there is no stream started */
+	if (!xcvr->streams) {
+		fsl_xcvr_activate_ctl(dai, fsl_xcvr_mode_kctl.name, true);
+		fsl_xcvr_activate_ctl(dai, fsl_xcvr_arc_mode_kctl.name,
+				      (xcvr->mode == FSL_XCVR_MODE_ARC));
+		fsl_xcvr_activate_ctl(dai, fsl_xcvr_earc_capds_kctl.name,
+				      (xcvr->mode == FSL_XCVR_MODE_EARC));
+	}
 	ret = regmap_update_bits(xcvr->regmap, FSL_XCVR_EXT_IER0,
 				 FSL_XCVR_IRQ_EARC_ALL, 0);
 	if (ret < 0) {
@@ -257,12 +438,12 @@ static void fsl_xcvr_shutdown(struct snd_pcm_substream *substream,
 		return;
 	}
 
-	switch (xcvr->mode & FSL_XCVR_AMODE_MASK) {
-	case FSL_XCVR_AMODE_SPDIF:
+	switch (xcvr->mode) {
+	case FSL_XCVR_MODE_SPDIF:
 		/* clear SPDIF MODE */
 		mask |= FSL_XCVR_EXT_CTRL_SPDIF_MODE;
 		break;
-	case FSL_XCVR_AMODE_EARC:
+	case FSL_XCVR_MODE_EARC:
 		/* set CMDC RESET */
 		mask |= FSL_XCVR_EXT_CTRL_CMDC_RESET(tx);
 		val  |= FSL_XCVR_EXT_CTRL_CMDC_RESET(tx);
@@ -286,53 +467,64 @@ static int fsl_xcvr_hw_params(struct snd_pcm_substream *substream,
 {
 	struct fsl_xcvr *xcvr = snd_soc_dai_get_drvdata(dai);
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
-	u32 mask, val, r = params_rate(params), ch = params_channels(params);
-	int ret;
+	u32 r = params_rate(params), ch = params_channels(params);
+	snd_pcm_format_t f = params_format(params);
+	u32 reg, val, bclk = 32 * r * ch;
+	int i, ret;
 
-	if (tx) {
-		mask  = FSL_XCVR_CS_DATA_0_FS_MASK;
-		mask |= FSL_XCVR_CS_DATA_0_CH_MASK;
+	if (!tx)
+		return 0;
 
-		switch (r) {
-		case 32000:  val = FSL_XCVR_CS_DATA_0_FS_32000;  break;
-		case 44100:  val = FSL_XCVR_CS_DATA_0_FS_44100;  break;
-		case 48000:  val = FSL_XCVR_CS_DATA_0_FS_48000;  break;
-		case 64000:  val = FSL_XCVR_CS_DATA_0_FS_64000;  break;
-		case 88200:  val = FSL_XCVR_CS_DATA_0_FS_88200;  break;
-		case 96000:  val = FSL_XCVR_CS_DATA_0_FS_96000;  break;
-		case 176400: val = FSL_XCVR_CS_DATA_0_FS_176400; break;
-		case 192000: val = FSL_XCVR_CS_DATA_0_FS_192000; break;
-		default:
-			dev_err(dai->dev, "Unsupported rate: %u\n", r);
-			return -EINVAL;
-		}
-		val |= FSL_XCVR_CS_DATA_0_CH_UMLPCM;
+	ret = snd_pcm_create_iec958_consumer_hw_params(params,
+		xcvr->tx_iec958.status, ARRAY_SIZE(xcvr->tx_iec958.status));
+	if (ret < 0) {
+		dev_err(dai->dev, "Creating IEC958 CS failed %d\n", ret);
+		return ret;
+	}
 
-		/* Update TX CS data bits 0 */
-		ret = regmap_update_bits(xcvr->regmap, FSL_XCVR_TX_CS_DATA_0,
-					 mask, val);
+	for (i = 0; i < 6; i++) {
+		val = (xcvr->tx_iec958.status[4 * i + 0] << 24) |
+		      (xcvr->tx_iec958.status[4 * i + 1] << 16) |
+		      (xcvr->tx_iec958.status[4 * i + 2] <<  8) |
+		      (xcvr->tx_iec958.status[4 * i + 3] <<  0);
+		/* Update TX CS data bits */
+		ret = regmap_write(xcvr->regmap, FSL_XCVR_TX_CS_DATA_0 + 4 * i,
+				   val);
 		if (ret < 0) {
-			dev_err(dai->dev, "Failed to set TX CS 0: %d\n", ret);
+			dev_err(dai->dev, "Failed to set TXCS%d: %d\n", i, ret);
 			return ret;
 		}
+	}
 
-		switch (ch) {
-		case 2:  val = FSL_XCVR_CS_DATA_1_CH_2;  break;
-		case 8:  val = FSL_XCVR_CS_DATA_1_CH_8;  break;
-		case 16: val = FSL_XCVR_CS_DATA_1_CH_16; break;
-		case 32: val = FSL_XCVR_CS_DATA_1_CH_32; break;
-		default:
-			dev_err(dai->dev, "Unsupported channels: %u\n", ch);
-			return -EINVAL;
-		}
+	switch (xcvr->mode) {
+	case FSL_XCVR_MODE_EARC:
+		bclk *= 10;
+		break;
+	case FSL_XCVR_MODE_SPDIF:
+		bclk *= 2;
+		break;
+	}
 
-		/* Update TX CS data bits 1 */
-		ret = regmap_update_bits(xcvr->regmap, FSL_XCVR_TX_CS_DATA_1,
-					 FSL_XCVR_CS_DATA_1_CH_MASK, val);
-		if (ret < 0) {
-			dev_err(dai->dev, "Failed to set TX CS 1: %d\n", ret);
-			return ret;
-		}
+	ret = fsl_xcvr_en_phy(xcvr, (xcvr->mode == FSL_XCVR_MODE_EARC), bclk);
+	if (ret < 0) {
+		dev_err(dai->dev, "Failed to set TX freq %u: %d\n", bclk, ret);
+		return ret;
+	}
+
+	/* enable/disable IEC958 encoding as function of input format */
+	val  = FSL_XCVR_TX_DPTH_CTRL_CS_MOD;
+	val |= FSL_XCVR_TX_DPTH_CTRL_EN_PREAMBLE;
+	val |= FSL_XCVR_TX_DPTH_CTRL_EN_PARITY;
+
+	if (f == SNDRV_PCM_FORMAT_IEC958_SUBFRAME_LE)
+		reg = FSL_XCVR_TX_DPTH_CTRL_CLR; /* disable IEC958 encoding */
+	else
+		reg = FSL_XCVR_TX_DPTH_CTRL_SET; /* enable IEC958 encoding */
+
+	ret = regmap_write(xcvr->regmap, reg, val);
+	if (ret < 0) {
+		dev_err(dai->dev, "Failed to en/dis IEC958 encode: %d\n", ret);
+		return ret;
 	}
 
 	return 0;
@@ -350,13 +542,12 @@ static int fsl_xcvr_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		if (tx) {
-			switch (xcvr->mode & FSL_XCVR_AMODE_MASK) {
-			case FSL_XCVR_AMODE_EARC:
+			switch (xcvr->mode) {
+			case FSL_XCVR_MODE_EARC:
 				/* set isr_cmdc_tx_en, w1c */
-				ret = regmap_update_bits(xcvr->regmap,
-							 FSL_XCVR_ISR_SET,
-							 FSL_XCVR_ISR_CMDC_TX_EN,
-							 FSL_XCVR_ISR_CMDC_TX_EN);
+				ret = regmap_write(xcvr->regmap,
+						   FSL_XCVR_ISR_SET,
+						   FSL_XCVR_ISR_CMDC_TX_EN);
 				if (ret < 0) {
 					dev_err(dai->dev,
 						"err updating isr %d\n", ret);
@@ -364,36 +555,15 @@ static int fsl_xcvr_trigger(struct snd_pcm_substream *substream, int cmd,
 				}
 				/* fall through */
 
-			case FSL_XCVR_AMODE_SPDIF:
-				ret = regmap_update_bits(xcvr->regmap,
+			case FSL_XCVR_MODE_SPDIF:
+				ret = regmap_write(xcvr->regmap,
 					 FSL_XCVR_TX_DPTH_CTRL_SET,
-					 FSL_XCVR_TX_DPTH_CTRL_STRT_DATA_TX,
 					 FSL_XCVR_TX_DPTH_CTRL_STRT_DATA_TX);
 				if (ret < 0) {
 					dev_err(dai->dev, "Failed to set TX_DPTH_CTRL_STRT_DATA_TX: %d\n", ret);
 					return ret;
 				}
 				break;
-			}
-		} else {
-			/* Clear RX FIFO */
-			ret = regmap_update_bits(xcvr->regmap,
-					 FSL_XCVR_RX_DPTH_CTRL_SET,
-					 FSL_XCVR_RX_DPTH_CTRL_CLR_RX_FIFO,
-					 FSL_XCVR_RX_DPTH_CTRL_CLR_RX_FIFO);
-			if (ret < 0) {
-				dev_err(dai->dev, "Failed to clear RX FIFO: %d\n", ret);
-				return ret;
-			}
-
-			/* Flip RX FIFO bits */
-			ret = regmap_update_bits(xcvr->regmap,
-					 FSL_XCVR_RX_DPTH_CTRL_SET,
-					 FSL_XCVR_RX_DPTH_CTRL_STORE_FMT,
-					 FSL_XCVR_RX_DPTH_CTRL_STORE_FMT);
-			if (ret < 0) {
-				dev_err(dai->dev, "Failed to set reverse bit in RX FIFO: %d\n", ret);
-				return ret;
 			}
 		}
 
@@ -418,23 +588,21 @@ static int fsl_xcvr_trigger(struct snd_pcm_substream *substream, int cmd,
 		}
 
 		if (tx) {
-			switch (xcvr->mode & FSL_XCVR_AMODE_MASK) {
-			case FSL_XCVR_AMODE_SPDIF:
-				ret = regmap_update_bits(xcvr->regmap,
+			switch (xcvr->mode) {
+			case FSL_XCVR_MODE_SPDIF:
+				ret = regmap_write(xcvr->regmap,
 					 FSL_XCVR_TX_DPTH_CTRL_CLR,
-					 FSL_XCVR_TX_DPTH_CTRL_STRT_DATA_TX,
 					 FSL_XCVR_TX_DPTH_CTRL_STRT_DATA_TX);
 				if (ret < 0) {
 					dev_err(dai->dev, "Failed to clr TX_DPTH_CTRL_STRT_DATA_TX: %d\n", ret);
 					return ret;
 				}
 				/* fall through ...*/
-			case FSL_XCVR_AMODE_EARC:
+			case FSL_XCVR_MODE_EARC:
 				/* clear ISR_CMDC_TX_EN, W1C */
-				ret = regmap_update_bits(xcvr->regmap,
-							 FSL_XCVR_ISR_CLR,
-							 FSL_XCVR_ISR_CMDC_TX_EN,
-							 FSL_XCVR_ISR_CMDC_TX_EN);
+				ret = regmap_write(xcvr->regmap,
+						   FSL_XCVR_ISR_CLR,
+						   FSL_XCVR_ISR_CMDC_TX_EN);
 				if (ret < 0) {
 					dev_err(dai->dev,
 						"Err updating ISR %d\n", ret);
@@ -507,13 +675,40 @@ err_firmware:
 	val |= FSL_XCVR_EXT_CTRL_TX_FWM(FSL_XCVR_FIFO_WMK_TX);
 	/* disable DMA RD/WR */
 	mask |= FSL_XCVR_EXT_CTRL_DMA_RD_DIS | FSL_XCVR_EXT_CTRL_DMA_WR_DIS;
-	val |= FSL_XCVR_EXT_CTRL_DMA_RD_DIS | FSL_XCVR_EXT_CTRL_DMA_WR_DIS;
+	val  |= FSL_XCVR_EXT_CTRL_DMA_RD_DIS | FSL_XCVR_EXT_CTRL_DMA_WR_DIS;
+	/* Data RAM is 4KiB, last two pages: 8 and 9. Select page 8. */
+	mask |= FSL_XCVR_EXT_CTRL_PAGE_MASK;
+	val  |= FSL_XCVR_EXT_CTRL_PAGE(8);
+
 	ret = regmap_update_bits(xcvr->regmap, FSL_XCVR_EXT_CTRL, mask, val);
 	if (ret < 0) {
 		dev_err(dev, "Failed to set watermarks: %d\n", ret);
 		return ret;
 	}
 
+	/* Flip RX FIFO bits */
+	ret = regmap_write(xcvr->regmap, FSL_XCVR_RX_DPTH_CTRL_SET,
+			   FSL_XCVR_RX_DPTH_CTRL_STORE_FMT);
+	if (ret < 0) {
+		dev_err(dev, "Failed to set reverse bit in RX FIFO: %d\n", ret);
+		return ret;
+	}
+
+	/* Store Capabilities Data Structure into Data RAM */
+	memcpy_toio(xcvr->ram_addr + FSL_XCVR_CAP_DATA_STR, xcvr->cap_ds,
+		    FSL_XCVR_CAPDS_SIZE);
+
+	/* Release AI interface from reset */
+	ret = regmap_write(xcvr->regmap, FSL_XCVR_PHY_AI_CTRL_SET,
+			   FSL_XCVR_PHY_AI_CTRL_AI_RESETN);
+	if (ret < 0) {
+		dev_err(dev, "Error while setting IER0: %d\n", ret);
+		return ret;
+	}
+
+	/* PLL: BANDGAP_SET: EN_VBG (enable bandgap) */
+	fsl_xcvr_ai_write(xcvr, FSL_XCVR_PLL_BANDGAP_SET,
+			  FSL_XCVR_PLL_BANDGAP_EN_VBG, 0);
 	return 0;
 }
 
@@ -526,8 +721,8 @@ static int fsl_xcvr_type_iec958_info(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int fsl_xcvr_type_bytes_info(struct snd_kcontrol *kcontrol,
-				    struct snd_ctl_elem_info *uinfo)
+static int fsl_xcvr_type_iec958_bytes_info(struct snd_kcontrol *kcontrol,
+					   struct snd_ctl_elem_info *uinfo)
 {
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
 	uinfo->count = FIELD_SIZEOF(struct snd_aes_iec958, status);
@@ -568,31 +763,6 @@ static int fsl_xcvr_tx_cs_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int fsl_xcvr_arc_mode_put(struct snd_kcontrol *kcontrol,
-				 struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
-	struct fsl_xcvr *xcvr = snd_soc_dai_get_drvdata(dai);
-	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
-	unsigned int *item = ucontrol->value.enumerated.item;
-	int val = snd_soc_enum_item_to_val(e, item[0]);
-
-	xcvr->arc_mode_idx = val;
-
-	return 0;
-}
-
-static int fsl_xcvr_arc_mode_get(struct snd_kcontrol *kcontrol,
-				 struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
-	struct fsl_xcvr *xcvr = snd_soc_dai_get_drvdata(dai);
-
-	ucontrol->value.enumerated.item[0] = xcvr->arc_mode_idx;
-
-	return 0;
-}
-
 static struct snd_kcontrol_new fsl_xcvr_rx_ctls[] = {
 	/* Channel status controller */
 	{
@@ -607,11 +777,9 @@ static struct snd_kcontrol_new fsl_xcvr_rx_ctls[] = {
 		.iface = SNDRV_CTL_ELEM_IFACE_PCM,
 		.name = "Capture Channel Status",
 		.access = SNDRV_CTL_ELEM_ACCESS_READ,
-		.info = fsl_xcvr_type_bytes_info,
+		.info = fsl_xcvr_type_iec958_bytes_info,
 		.get = fsl_xcvr_rx_cs_get,
 	},
-	SOC_ENUM_EXT("ARC Mode", fsl_xcvr_arc_mode_enum,
-		     fsl_xcvr_arc_mode_get, fsl_xcvr_arc_mode_put),
 };
 
 static struct snd_kcontrol_new fsl_xcvr_tx_ctls[] = {
@@ -621,6 +789,15 @@ static struct snd_kcontrol_new fsl_xcvr_tx_ctls[] = {
 		.name = SNDRV_CTL_NAME_IEC958("", PLAYBACK, DEFAULT),
 		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
 		.info = fsl_xcvr_type_iec958_info,
+		.get = fsl_xcvr_tx_cs_get,
+		.put = fsl_xcvr_tx_cs_put,
+	},
+	/* Playback channel status, bytes */
+	{
+		.iface = SNDRV_CTL_ELEM_IFACE_PCM,
+		.name = "Playback Channel Status",
+		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
+		.info = fsl_xcvr_type_iec958_bytes_info,
 		.get = fsl_xcvr_tx_cs_get,
 		.put = fsl_xcvr_tx_cs_put,
 	},
@@ -641,38 +818,38 @@ static int fsl_xcvr_dai_probe(struct snd_soc_dai *dai)
 	snd_soc_dai_init_dma_data(dai, &xcvr->dma_prms_tx, &xcvr->dma_prms_rx);
 	snd_soc_dai_set_drvdata(dai, xcvr);
 
-	if (xcvr->mode & FSL_XCVR_DMODE_TX)
-		snd_soc_add_dai_controls(dai, fsl_xcvr_tx_ctls,
-					 ARRAY_SIZE(fsl_xcvr_tx_ctls));
-	if (xcvr->mode & FSL_XCVR_DMODE_RX)
-		snd_soc_add_dai_controls(dai, fsl_xcvr_rx_ctls,
-					 ARRAY_SIZE(fsl_xcvr_rx_ctls));
+	snd_soc_add_dai_controls(dai, &fsl_xcvr_mode_kctl, 1);
+	snd_soc_add_dai_controls(dai, &fsl_xcvr_arc_mode_kctl, 1);
+	snd_soc_add_dai_controls(dai, &fsl_xcvr_earc_capds_kctl, 1);
+	snd_soc_add_dai_controls(dai, fsl_xcvr_tx_ctls,
+				 ARRAY_SIZE(fsl_xcvr_tx_ctls));
+	snd_soc_add_dai_controls(dai, fsl_xcvr_rx_ctls,
+				 ARRAY_SIZE(fsl_xcvr_rx_ctls));
 	return 0;
 }
-
-static const struct snd_soc_pcm_stream playback = {
-	.stream_name = "CPU-Playback",
-	.channels_min = 1,
-	.channels_max = 32,
-	.rate_min = 32000,
-	.rate_max = 1536000,
-	.rates = SNDRV_PCM_RATE_KNOT,
-	.formats = FSL_XCVR_FORMATS,
-};
-
-static const struct snd_soc_pcm_stream capture = {
-	.stream_name = "CPU-Capture",
-	.channels_min = 1,
-	.channels_max = 32,
-	.rate_min = 32000,
-	.rate_max = 1536000,
-	.rates = SNDRV_PCM_RATE_KNOT,
-	.formats = FSL_XCVR_FORMATS,
-};
 
 static struct snd_soc_dai_driver fsl_xcvr_dai = {
 	.probe  = fsl_xcvr_dai_probe,
 	.ops = &fsl_xcvr_dai_ops,
+	.playback = {
+		.stream_name = "CPU-Playback",
+		.channels_min = 1,
+		.channels_max = 32,
+		.rate_min = 32000,
+		.rate_max = 1536000,
+		.rates = SNDRV_PCM_RATE_KNOT,
+		.formats = SNDRV_PCM_FMTBIT_S24_LE |
+			   SNDRV_PCM_FMTBIT_IEC958_SUBFRAME_LE,
+	},
+	.capture = {
+		.stream_name = "CPU-Capture",
+		.channels_min = 1,
+		.channels_max = 32,
+		.rate_min = 32000,
+		.rate_max = 1536000,
+		.rates = SNDRV_PCM_RATE_KNOT,
+		.formats = SNDRV_PCM_FMTBIT_IEC958_SUBFRAME_LE,
+	},
 };
 
 static const struct snd_soc_component_driver fsl_xcvr_comp = {
@@ -972,39 +1149,6 @@ static int fsl_xcvr_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = of_property_read_u32(np, "fsl,xcvr-mode", &xcvr->mode);
-	if (ret) {
-		dev_err(dev, "failed to get fsl,xcvr-mode: %d\n", ret);
-		return ret;
-	}
-
-	dev_info(dev, "fsl,xcvr-mode: %x\n", xcvr->mode);
-	switch (xcvr->mode & FSL_XCVR_AMODE_MASK) {
-	case FSL_XCVR_AMODE_SPDIF:
-		dev_info(dev, "Setting SPDIF mode ...\n");
-		break;
-	case FSL_XCVR_AMODE_ARC:
-		dev_info(dev, "Setting ARC mode ...\n");
-		break;
-	case FSL_XCVR_AMODE_EARC:
-		dev_info(dev, "Setting EARC mode ...\n");
-		break;
-	default:
-		dev_err(dev, "Unknown mode ...\n");
-		break;
-	}
-
-	if (!(xcvr->mode & FSL_XCVR_DMODE_MASK)) {
-		dev_err(dev, "RX, TX or both must be set, mode=%x\n",
-			xcvr->mode);
-		return -EINVAL;
-	}
-
-	if ((xcvr->mode & FSL_XCVR_AMODE_MASK) == FSL_XCVR_AMODE_RESERVED) {
-		dev_err(dev, "wrong AMODE set, mode=%x\n", xcvr->mode);
-		return -EINVAL;
-	}
-
 	/* get IRQs */
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
@@ -1051,12 +1195,6 @@ static int fsl_xcvr_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, xcvr);
 	pm_runtime_enable(dev);
-
-	if (xcvr->mode & FSL_XCVR_DMODE_TX)
-		fsl_xcvr_dai.playback = playback;
-
-	if (xcvr->mode & FSL_XCVR_DMODE_RX)
-		fsl_xcvr_dai.capture = capture;
 
 	ret = devm_snd_soc_register_component(dev, &fsl_xcvr_comp,
 					      &fsl_xcvr_dai, 1);
@@ -1136,14 +1274,6 @@ static int fsl_xcvr_runtime_resume(struct device *dev)
 	ret = fsl_xcvr_load_firmware(xcvr);
 	if (ret) {
 		dev_err(dev, "failed to load firmware.\n");
-		return ret;
-	}
-
-	/* Release M0+ reset */
-	ret = regmap_update_bits(xcvr->regmap, FSL_XCVR_EXT_CTRL,
-				 FSL_XCVR_EXT_CTRL_CORE_RESET, 0);
-	if (ret < 0) {
-		dev_err(dev, "Failed to release M0+ core: %d\n", ret);
 		return ret;
 	}
 

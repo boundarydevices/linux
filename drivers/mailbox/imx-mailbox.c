@@ -11,7 +11,9 @@
 #include <linux/mailbox_controller.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/slab.h>
+#include <linux/jiffies.h>
 
 #define IMX_MU_xSR_GIPn(x)	BIT(28 + (3 - (x)))
 #define IMX_MU_xSR_RFn(x)	BIT(24 + (3 - (x)))
@@ -29,6 +31,9 @@
 
 #define IMX_MU_CHANS		16
 #define IMX_MU_CHAN_NAME_SIZE	20
+
+#define IMX_MU_SECO_TX_TOUT (msecs_to_jiffies(3000))
+#define IMX_MU_SECO_RX_TOUT (msecs_to_jiffies(3000))
 
 enum imx_mu_chan_type {
 	IMX_MU_TYPE_TX,		/* Tx */
@@ -98,7 +103,7 @@ static u32 imx_mu_read(struct imx_mu_priv *priv, u32 offs)
 
 static int imx_mu_tx_waiting_write(struct imx_mu_priv *priv, u32 idx, u32 val)
 {
-	u32 timeout = 500;
+	u64 timeout_time = get_jiffies_64() + IMX_MU_SECO_TX_TOUT;
 	u32 status;
 	u32 can_write;
 
@@ -107,10 +112,9 @@ static int imx_mu_tx_waiting_write(struct imx_mu_priv *priv, u32 idx, u32 val)
 	do {
 		status = imx_mu_read(priv, priv->dcfg->xSR);
 		can_write = status & IMX_MU_xSR_TEn(idx % 4);
-		timeout--;
-	} while (!can_write && timeout > 0);
+	} while (!can_write && time_is_after_jiffies64(timeout_time));
 
-	if (timeout == 0) {
+	if (!can_write) {
 		dev_err(priv->dev, "timeout trying to write %.8x at %d(%.8x)\n",
 			val, idx, status);
 		return -ETIME;
@@ -123,7 +127,7 @@ static int imx_mu_tx_waiting_write(struct imx_mu_priv *priv, u32 idx, u32 val)
 
 static int imx_mu_rx_waiting_read(struct imx_mu_priv *priv, u32 idx, u32 *val)
 {
-	u32 timeout = 500;
+	u64 timeout_time = get_jiffies_64() + IMX_MU_SECO_RX_TOUT;
 	u32 status;
 	u32 can_read;
 
@@ -132,10 +136,9 @@ static int imx_mu_rx_waiting_read(struct imx_mu_priv *priv, u32 idx, u32 *val)
 	do {
 		status = imx_mu_read(priv, priv->dcfg->xSR);
 		can_read = status & IMX_MU_xSR_RFn(idx % 4);
-		timeout--;
-	} while (!can_read && timeout > 0);
+	} while (!can_read && time_is_after_jiffies64(timeout_time));
 
-	if (timeout == 0) {
+	if (!can_read) {
 		dev_err(priv->dev, "timeout trying to read idx %d (%.8x)\n",
 			idx, status);
 		return -ETIME;
@@ -278,7 +281,7 @@ static int imx_mu_seco_rxdb(struct imx_mu_priv *priv, struct imx_mu_con_priv *cp
 	struct imx_sc_rpc_msg_max msg;
 	u32 *data = (u32 *)&msg;
 	u32 byte_size;
-	int err;
+	int err = 0;
 	int i;
 
 	dev_dbg(priv->dev, "Receiving message\n");
@@ -290,7 +293,8 @@ static int imx_mu_seco_rxdb(struct imx_mu_priv *priv, struct imx_mu_con_priv *cp
 	if (byte_size > sizeof(msg)) {
 		dev_err(priv->dev, "Exceed max msg size (%li) on RX, got: %i\n",
 			sizeof(msg), byte_size);
-		return -EINVAL;
+		err = -EINVAL;
+		goto error;
 	}
 
 	/* Read message waiting they are written */
@@ -299,7 +303,7 @@ static int imx_mu_seco_rxdb(struct imx_mu_priv *priv, struct imx_mu_con_priv *cp
 		err = imx_mu_rx_waiting_read(priv, i, data++);
 		if (err) {
 			dev_err(priv->dev, "Timeout rx %d\n", i);
-			return err;
+			goto error;
 		}
 	}
 
@@ -313,7 +317,13 @@ static int imx_mu_seco_rxdb(struct imx_mu_priv *priv, struct imx_mu_con_priv *cp
 	dev_dbg(priv->dev, "Sending message to client\n");
 	mbox_chan_received_data(cp->chan, (void *)&msg);
 
-	return 0;
+	goto exit;
+
+error:
+	mbox_chan_received_data(cp->chan, ERR_PTR(err));
+
+exit:
+	return err;
 }
 
 static void imx_mu_txdb_tasklet(unsigned long data)
@@ -384,6 +394,7 @@ static int imx_mu_startup(struct mbox_chan *chan)
 	struct imx_mu_con_priv *cp = chan->con_priv;
 	int ret;
 
+	pm_runtime_get_sync(priv->dev);
 	if (cp->type == IMX_MU_TYPE_TXDB) {
 		/* Tx doorbell don't have ACK support */
 		tasklet_init(&cp->txdb_tasklet, imx_mu_txdb_tasklet,
@@ -420,6 +431,7 @@ static void imx_mu_shutdown(struct mbox_chan *chan)
 
 	if (cp->type == IMX_MU_TYPE_TXDB) {
 		tasklet_kill(&cp->txdb_tasklet);
+		pm_runtime_put_sync(priv->dev);
 		return;
 	}
 
@@ -438,6 +450,7 @@ static void imx_mu_shutdown(struct mbox_chan *chan)
 	}
 
 	free_irq(priv->irq, chan);
+	pm_runtime_put_sync(priv->dev);
 }
 
 static const struct mbox_chan_ops imx_mu_ops = {
@@ -578,7 +591,27 @@ static int imx_mu_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, priv);
 
-	return devm_mbox_controller_register(dev, &priv->mbox);
+	ret = devm_mbox_controller_register(dev, &priv->mbox);
+	if (ret)
+		return ret;
+
+	pm_runtime_enable(dev);
+
+	ret = pm_runtime_get_sync(dev);
+	if (ret < 0) {
+		pm_runtime_put_noidle(dev);
+		goto disable_runtime_pm;
+	}
+
+	ret = pm_runtime_put_sync(dev);
+	if (ret < 0)
+		goto disable_runtime_pm;
+
+	return 0;
+
+disable_runtime_pm:
+	pm_runtime_disable(dev);
+	return ret;
 }
 
 static int imx_mu_remove(struct platform_device *pdev)
@@ -586,6 +619,7 @@ static int imx_mu_remove(struct platform_device *pdev)
 	struct imx_mu_priv *priv = platform_get_drvdata(pdev);
 
 	clk_disable_unprepare(priv->clk);
+	pm_runtime_disable(priv->dev);
 
 	return 0;
 }
@@ -603,7 +637,16 @@ static int imx_mu_resume_noirq(struct device *dev)
 {
 	struct imx_mu_priv *priv = dev_get_drvdata(dev);
 
-	imx_mu_write(priv, priv->xcr, priv->dcfg->xCR);
+	/*
+	 * ONLY restore MU when context lost, the TIE could
+	 * be set during noirq resume as there is MU data
+	 * communication going on, and restore the saved
+	 * value will overwrite the TIE and cause MU data
+	 * send failed, may lead to system freeze. This issue
+	 * is observed by testing freeze mode suspend.
+	 */
+	if (!imx_mu_read(priv, priv->dcfg->xCR))
+		imx_mu_write(priv, priv->xcr, priv->dcfg->xCR);
 
 	return 0;
 }

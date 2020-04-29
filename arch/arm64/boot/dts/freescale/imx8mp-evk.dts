@@ -77,7 +77,7 @@
 };
 
 / {
-	model = "FSL i.MX8MP EVK";
+	model = "NXP i.MX8MPlus EVK board";
 	compatible = "fsl,imx8mp-evk", "fsl,imx8mp";
 
 	reserved-memory {
@@ -85,9 +85,9 @@
 		#size-cells = <2>;
 		ranges;
 
-		rpmsg_reserved: rpmsg@0xb8000000 {
+		rpmsg_reserved: rpmsg@0x55800000 {
 			no-map;
-			reg = <0 0xb8000000 0 0x400000>;
+			reg = <0 0x55800000 0 0x800000>;
 		};
 	};
 
@@ -187,7 +187,7 @@
 				<48000>,
 				<96000>,
 				<192000>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	sound-wm8960 {
@@ -247,6 +247,10 @@
 				    100>;
 		default-brightness-level = <80>;
 	};
+};
+
+&aud2htx {
+	status = "okay";
 };
 
 &clk {
@@ -481,6 +485,18 @@
 		};
 	};
 
+	lvds_bridge: lvds-to-hdmi-bridge@4c {
+		compatible = "ite,it6263";
+		reg = <0x4c>;
+		reset-gpios = <&gpio1 10 GPIO_ACTIVE_LOW>;
+
+		port {
+			it6263_in: endpoint {
+				remote-endpoint = <&lvds_out>;
+			};
+		};
+	};
+
 	ptn5110: tcpc@50 {
 		compatible = "nxp,ptn5110";
 		pinctrl-names = "default";
@@ -599,6 +615,10 @@
 	};
 };
 
+&irqsteer_hdmi {
+	status = "okay";
+};
+
 &flexcan1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan1>;
@@ -614,7 +634,57 @@
 	status = "disabled";/* can2 pin conflict with pdm: gpio low select pdm, gpio high select can2 */
 };
 
+&hdmimix_clk {
+	status = "okay";
+};
+
+&hdmimix_reset {
+	status = "okay";
+};
+
+&hdmi_pavi {
+	status = "okay";
+};
+
+&hdmi {
+	status = "okay";
+};
+
+&hdmiphy {
+	status = "okay";
+};
+
 &lcdif1 {
+	status = "okay";
+};
+
+&lcdif2 {
+	status = "okay";
+};
+
+&lcdif3 {
+	status = "okay";
+};
+
+&ldb {
+	status = "okay";
+
+	lvds-channel@0 {
+		fsl,data-mapping = "jeida";
+		fsl,data-width = <24>;
+		status = "okay";
+
+		port@1 {
+			reg = <1>;
+
+			lvds_out: endpoint {
+				remote-endpoint = <&it6263_in>;
+			};
+		};
+	};
+};
+
+&ldb_phy {
 	status = "okay";
 };
 
@@ -681,12 +751,6 @@
 };
 
 &xcvr {
-	/**
-	 * Bit 0: TX enabled
-	 * Bit 1: RX enabled
-	 * Bits 3..2: 0=SPDIF, 1=ARC, 2=EARC, 3=RESERVED
-	 */
-	fsl,xcvr-mode = <0xa>; /* EARC,  RX */
 	#sound-dai-cells = <0>;
 	status = "okay";
 };

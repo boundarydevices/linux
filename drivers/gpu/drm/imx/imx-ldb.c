@@ -277,12 +277,6 @@ static void imx_ldb_set_clock(struct imx_ldb *ldb, int mux, int chno,
 	}
 
 	if (ldb->is_imx8m) {
-		struct clk *clk_pll;
-		struct clk *clk_root_parent;
-
-		clk_root_parent = clk_get_parent(ldb->clk_root);
-		clk_pll = clk_get_parent(clk_root_parent);
-		clk_set_rate(clk_pll, dual ? (serial_clk * 2) : serial_clk);
 		clk_set_rate(ldb->clk_root, serial_clk);
 		return;
 	}
@@ -1137,14 +1131,10 @@ static int imx_ldb_bind(struct device *dev, struct device *master, void *data)
 			of_match_device(imx_ldb_dt_ids, dev);
 	const struct devtype *devtype = of_id->data;
 	struct device_node *auxldb_np = NULL, *child;
-	struct imx_ldb *imx_ldb;
+	struct imx_ldb *imx_ldb = dev_get_drvdata(dev);
 	int dual;
 	int ret;
 	int i;
-
-	imx_ldb = devm_kzalloc(dev, sizeof(*imx_ldb), GFP_KERNEL);
-	if (!imx_ldb)
-		return -ENOMEM;
 
 	imx_ldb->regmap = syscon_regmap_lookup_by_phandle(np, "gpr");
 	if (IS_ERR(imx_ldb->regmap)) {
@@ -1413,7 +1403,6 @@ get_phy:
 		}
 	}
 
-	dev_set_drvdata(dev, imx_ldb);
 
 	return 0;
 
@@ -1448,8 +1437,6 @@ static void imx_ldb_unbind(struct device *dev, struct device *master,
 		kfree(channel->edid);
 		i2c_put_adapter(channel->ddc);
 	}
-
-	dev_set_drvdata(dev, NULL);
 }
 
 static const struct component_ops imx_ldb_ops = {
@@ -1459,7 +1446,16 @@ static const struct component_ops imx_ldb_ops = {
 
 static int imx_ldb_probe(struct platform_device *pdev)
 {
-	return component_add(&pdev->dev, &imx_ldb_ops);
+	struct device *dev = &pdev->dev;
+	struct imx_ldb *imx_ldb;
+
+	imx_ldb = devm_kzalloc(dev, sizeof(*imx_ldb), GFP_KERNEL);
+	if (!imx_ldb)
+		return -ENOMEM;
+
+	dev_set_drvdata(dev, imx_ldb);
+
+	return component_add(dev, &imx_ldb_ops);
 }
 
 static int imx_ldb_remove(struct platform_device *pdev)

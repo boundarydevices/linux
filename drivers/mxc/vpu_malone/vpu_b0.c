@@ -1293,6 +1293,30 @@ static u_int32 get_mbi_size(struct queue_data *queue)
 	return ALIGN(mbi_size, uAlign);
 }
 
+#define DCP_FIXED_MB_ALLOC_TYPICAL	250
+#define DCP_FIXED_MB_ALLOC_WORSTCASE	400
+#define DCP_FIXED_MB_ALLOC		DCP_FIXED_MB_ALLOC_TYPICAL
+static u32 get_dcp_size(struct vpu_ctx *ctx)
+{
+	u32 uNumDcpChunks = ((ctx->seqinfo.uNumDFEAreas >> 16) & 0xff);
+	u32 uNumMbs;
+	u32 width;
+	u32 height;
+	u32 uTotalBinSize;
+
+	if (!uNumDcpChunks)
+		return DCP_SIZE;
+
+	width = ctx->seqinfo.uHorDecodeRes;
+	height = ctx->seqinfo.uVerDecodeRes;
+	uNumMbs = DIV_ROUND_UP(width, 16) * DIV_ROUND_UP(height, 16);
+	uTotalBinSize = uNumMbs * DCP_FIXED_MB_ALLOC * uNumDcpChunks;
+	uTotalBinSize = min_t(u32, uTotalBinSize, DCP_SIZE);
+	uTotalBinSize = max_t(u32, uTotalBinSize, DCP_SIZE_MINIMUM);
+
+	return uTotalBinSize;
+}
+
 static int free_mbi_buffers(struct vpu_ctx *ctx)
 {
 	u_int32 i;
@@ -1734,7 +1758,10 @@ static int v4l2_ioctl_streamon(struct file *file,
 	vpu_dbg(LVL_BIT_FLOW, "ctx[%d] %s on\n", ctx->str_index,
 		V4L2_TYPE_IS_OUTPUT(i) ? "OUTPUT" : "CAPTURE");
 
-	ctx->firmware_finished = false;
+	if (V4L2_TYPE_IS_OUTPUT(i)) {
+		ctx->firmware_finished = false;
+		ctx->eos_stop_added = false;
+	}
 
 	ret = vpu_dec_queue_enable(q_data, i);
 	if (!ret)
@@ -3859,17 +3886,17 @@ static bool alloc_dcp_to_firmware(struct vpu_ctx *ctx,
 	u_int32 local_cmddata[10];
 	u32 index;
 
-	if (!ctx || !queue)
+	if (!ctx || !queue || !ctx->dcp_size)
 		return false;
 
 	buffer = &ctx->dcp_buffer[ctx->dcp_index];
-	if (!buffer->dma_virt || buffer->dma_size < DCP_SIZE)
+	if (!buffer->dma_virt || buffer->dma_size < ctx->dcp_size)
 		return false;
 
 	index = ctx->str_index;
 	local_cmddata[0] = ctx->dcp_index | (ctx->seqinfo.uActiveSeqTag<<24);
 	local_cmddata[1] = ctx->dcp_buffer[ctx->dcp_index].dma_phy;
-	local_cmddata[2] = DCP_SIZE;
+	local_cmddata[2] = ctx->dcp_size;
 	local_cmddata[3] = 0;
 	local_cmddata[4] = 0;
 	local_cmddata[5] = 0;
@@ -4357,7 +4384,7 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 			ctx->seqinfo.uNumDPBFrms,
 			num,
 			ctx->seqinfo.uNumRefFrms,
-			ctx->seqinfo.uNumDFEAreas,
+			ctx->seqinfo.uNumDFEAreas & 0xff,
 			ctx->seqinfo.uProgressive ? "progressive" : "interlaced");
 		vpu_dbg(LVL_BIT_FLOW,
 			"uColorDesc = %d, uTransferChars = %d, uMatrixCoeffs = %d, uVideoFullRangeFlag = %d, uVUIPresent = %d\n",
@@ -4368,9 +4395,9 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 			ctx->seqinfo.uVUIPresent);
 		down(&ctx->q_data[V4L2_DST].drv_q_lock);
 		calculate_frame_size(ctx);
+		ctx->dcp_size = get_dcp_size(ctx);
 		if (ctx->b_firstseq) {
 			ctx->b_firstseq = false;
-			reset_mbi_dcp_count(ctx);
 			ctx->mbi_size = get_mbi_size(&ctx->q_data[V4L2_DST]);
 			reset_frame_buffer(ctx);
 			ctx->q_data[V4L2_DST].enable = false;
@@ -4551,6 +4578,7 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		down(&This->drv_q_lock);
 		reset_mbi_dcp_count(ctx);
 		ctx->mbi_size = get_mbi_size(This);
+		ctx->dcp_size = get_dcp_size(ctx);
 		reset_frame_buffer(ctx);
 		up(&This->drv_q_lock);
 		vpu_dbg(LVL_BIT_FLOW,
@@ -4597,9 +4625,6 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 	case VID_API_EVENT_STR_FMT_CHANGE:
 		break;
 	case VID_API_EVENT_FINISHED: {
-		if (ctx->eos_stop_added == false)
-			vpu_err("warning: receive VID_API_EVENT_FINISHED before eos_stop_added set\n");
-		ctx->eos_stop_added = false;
 		if (ctx->firmware_finished == true)
 			vpu_err("warning: receive VID_API_EVENT_FINISHED when firmware_finished == true\n");
 		ctx->firmware_finished = true;
@@ -4922,7 +4947,7 @@ static void vpu_dec_alloc_mbi_dcp(struct vpu_ctx *ctx)
 		ret = vpu_dec_alloc_buffer_item(ctx,
 						ctx->dcp_count,
 						ctx->req_dcp_count,
-						DCP_SIZE,
+						ctx->dcp_size,
 						ctx->dcp_buffer,
 						"dcp");
 		if (!ret)
@@ -5575,14 +5600,18 @@ static ssize_t show_instance_buffer_info(struct device *dev,
 			ctx->seqinfo.uVerDecodeRes,
 			ctx->seqinfo.uNumDPBFrms,
 			ctx->seqinfo.uNumRefFrms,
-			ctx->seqinfo.uNumDFEAreas);
+			ctx->seqinfo.uNumDFEAreas & 0xff);
 
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%16d/%16d/%16d\n", "mbi_count",
-			ctx->mbi_index, ctx->mbi_count, ctx->req_mbi_count);
+			"\t%40s:%16d/%16d/%16d(0x%x)\n", "mbi_count",
+			ctx->mbi_index, ctx->mbi_count, ctx->req_mbi_count,
+			ctx->mbi_size);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%16d/%16d/%16d\n", "dcp_count",
-			ctx->dcp_index, ctx->dcp_count, ctx->req_dcp_count);
+			"\t%40s:%16d/%16d/%16d(0x%x, %d, %d)\n", "dcp_count",
+			ctx->dcp_index, ctx->dcp_count, ctx->req_dcp_count,
+			ctx->dcp_size,
+			ctx->seqinfo.uNumDFEAreas >> 16,
+			DCP_FIXED_MB_ALLOC);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
 			"\t%40s:%16d\n", "stream_pic_input_count",
 			buffer_info->stream_pic_input_count);
@@ -5602,15 +5631,6 @@ static ssize_t show_instance_buffer_info(struct device *dev,
 			"\t%40s:%16d\n", "start_code_bypass",
 			ctx->start_code_bypass);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%16d\n", "res change occur",
-			ctx->res_change_occu_count);
-	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%16d\n", "res change send",
-			ctx->res_change_send_count);
-	num += scnprintf(buf + num, PAGE_SIZE - num,
-			"\t%40s:%16d\n", "res change done",
-			ctx->res_change_done_count);
-	num += scnprintf(buf + num, PAGE_SIZE - num,
 			"\t%40s:%16d\n", "ctx released",
 			ctx->ctx_released);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
@@ -5619,6 +5639,10 @@ static ssize_t show_instance_buffer_info(struct device *dev,
 	num += scnprintf(buf + num, PAGE_SIZE - num,
 			"\t%40s:%16d\n", "mu kfifo length",
 			kfifo_len(&ctx->dev->mu_msg_fifo));
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"\t%40s:%16lld,%16lld\n", "memory used",
+			atomic64_read(&ctx->statistic.total_alloc_size),
+			atomic64_read(&ctx->statistic.total_dma_size));
 	num += scnprintf(buf + num, PAGE_SIZE - num,
 			"\t%40s:%12d.%d.%d\n", "firmware version",
 			(pSharedInterface->FWVersion & 0x00ff0000) >> 16,
@@ -6047,6 +6071,8 @@ static int v4l2_open(struct file *filp)
 	atomic64_set(&ctx->statistic.total_alloc_size, 0);
 
 	ctx->msg_buffer_size = sizeof(struct event_msg) * VID_API_MESSAGE_LIMIT;
+	if (!is_power_of_2(ctx->msg_buffer_size))
+		ctx->msg_buffer_size = roundup_pow_of_two(ctx->msg_buffer_size);
 	ctx->msg_buffer = vzalloc(ctx->msg_buffer_size);
 	if (!ctx->msg_buffer) {
 		vpu_err("fail to alloc fifo when open\n");
@@ -6271,6 +6297,9 @@ static unsigned int v4l2_poll(struct file *filp, poll_table *wait)
 
 	src_q = &ctx->q_data[V4L2_SRC].vb2_q;
 	dst_q = &ctx->q_data[V4L2_DST].vb2_q;
+
+	if (ctx->firmware_finished && !src_q->streaming && !dst_q->streaming)
+		return POLLERR;
 
 	if ((ctx->firmware_finished || ctx->wait_res_change_done) &&
 	     !list_empty(&dst_q->done_list))
@@ -6548,23 +6577,16 @@ static int vpu_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	dev->plat_dev = pdev;
-	dev->generic_dev = get_device(&pdev->dev);
-
 	ret = vpu_attach_pm_domains(dev);
 	if (ret)
 		goto err_put_dev;
-
-	ret = vpu_mu_request(dev);
-	if (ret)
-		goto err_det_pm;
-
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	dev->regs_base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(dev->regs_base)) {
 		vpu_err("error: %s could not map regs_base\n", __func__);
 		ret = PTR_ERR(dev->regs_base);
-		goto err_free_mu;
+		goto err_det_pm;
 	}
 
 	ret = parse_dt_info(dev, np);
@@ -6593,6 +6615,8 @@ static int vpu_probe(struct platform_device *pdev)
 
 	dev->mu_msg_buffer_size =
 		sizeof(u_int32) * VPU_MAX_NUM_STREAMS * VID_API_MESSAGE_LIMIT;
+	if (!is_power_of_2(dev->mu_msg_buffer_size))
+		dev->mu_msg_buffer_size = roundup_pow_of_two(dev->mu_msg_buffer_size);
 	dev->mu_msg_buffer = vzalloc(dev->mu_msg_buffer_size);
 	if (!dev->mu_msg_buffer) {
 		vpu_err("error: fail to alloc mu msg fifo\n");
@@ -6615,9 +6639,12 @@ static int vpu_probe(struct platform_device *pdev)
 	INIT_WORK(&dev->msg_work, vpu_msg_run_work);
 	INIT_DELAYED_WORK(&dev->delayed_msg_work, vpu_msg_run_delayed_work);
 
-	vpu_enable_hw(dev);
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_get_sync(&pdev->dev);
+
+	vpu_enable_hw(dev);
+
+	dev->generic_dev = get_device(&pdev->dev);
 
 	ret = init_vpudev_parameters(dev);
 	if (ret) {
@@ -6650,8 +6677,6 @@ err_unreg_v4l2:
 err_dev_iounmap:
 	if (dev->regs_base)
 		iounmap(dev->regs_base);
-err_free_mu:
-	vpu_mu_free(dev);
 err_det_pm:
 	vpu_detach_pm_domains(dev);
 err_put_dev:
@@ -6668,8 +6693,6 @@ err_put_dev:
 static int vpu_remove(struct platform_device *pdev)
 {
 	struct vpu_dev *dev = platform_get_drvdata(pdev);
-
-	vpu_mu_free(dev);
 
 	device_remove_file(&pdev->dev, &dev_attr_precheck_pattern);
 	debugfs_remove_recursive(dev->debugfs_root);
@@ -6705,6 +6728,10 @@ static int vpu_remove(struct platform_device *pdev)
 	v4l2_device_unregister(&dev->v4l2_dev);
 
 	vpu_detach_pm_domains(dev);
+	if (dev->generic_dev) {
+		put_device(dev->generic_dev);
+		dev->generic_dev = NULL;
+	}
 	devm_kfree(&pdev->dev, dev);
 
 	return 0;
@@ -6712,12 +6739,23 @@ static int vpu_remove(struct platform_device *pdev)
 
 static int vpu_runtime_suspend(struct device *dev)
 {
+	struct vpu_dev *vpudev = (struct vpu_dev *)dev_get_drvdata(dev);
+
+	if (vpudev->generic_dev)
+		vpu_mu_free(vpudev);
+
 	return 0;
 }
 
 static int vpu_runtime_resume(struct device *dev)
 {
-	return 0;
+	int ret = 0;
+	struct vpu_dev *vpudev = (struct vpu_dev *)dev_get_drvdata(dev);
+
+	if (vpudev->generic_dev)
+		ret = vpu_mu_request(vpudev);
+
+	return ret;
 }
 
 static int find_first_available_instance(struct vpu_dev *dev)

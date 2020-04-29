@@ -15,11 +15,9 @@
 #include <linux/module.h>
 #include <sound/sof.h>
 #include <sound/sof/xtensa.h>
-#include <linux/firmware/imx/ipc.h>
 #include <linux/firmware/imx/dsp.h>
 #include <linux/clk.h>
 
-#include <dt-bindings/firmware/imx/rsrc.h>
 #include "../ops.h"
 #include "../../fsl/fsl_dsp_audiomix.h"
 
@@ -40,11 +38,13 @@
 #define MBOX_OFFSET	0x800000
 #define MBOX_SIZE	0x1000
 
-#define IMX8M_DSP_CLK_NUM	3
+#define IMX8M_DSP_CLK_NUM	5
 static const char *imx8m_dsp_clks[IMX8M_DSP_CLK_NUM] = {
 	"ocram",
 	"core",
 	"debug",
+	"sdma3",
+	"sai3_ipg",
 };
 
 struct imx8m_priv {
@@ -214,7 +214,7 @@ static int imx8m_probe(struct snd_sof_dev *sdev)
 
 	priv->pd_dev = devm_kmalloc_array(&pdev->dev, priv->num_domains,
 					  sizeof(*priv->pd_dev), GFP_KERNEL);
-	if (!priv)
+	if (!priv->pd_dev)
 		return -ENOMEM;
 
 	priv->link = devm_kmalloc_array(&pdev->dev, priv->num_domains,
@@ -401,6 +401,12 @@ struct snd_sof_dsp_ops sof_imx8m_ops = {
 	/* DAI drivers */
 	.drv = imx8m_dai,
 	.num_drv = 1, /* we have only 1 ESAI interface on i.MX8 */
+
+	.hw_info = SNDRV_PCM_INFO_MMAP |
+		SNDRV_PCM_INFO_MMAP_VALID |
+		SNDRV_PCM_INFO_INTERLEAVED |
+		SNDRV_PCM_INFO_PAUSE |
+		SNDRV_PCM_INFO_NO_PERIOD_WAKEUP,
 };
 EXPORT_SYMBOL(sof_imx8m_ops);
 

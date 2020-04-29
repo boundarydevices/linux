@@ -57,6 +57,7 @@ extern unsigned int vpu_dbg_level_decoder;
 #define MMAP_BUF_TYPE_SHIFT 28
 #define MMAP_BUF_TYPE_MASK 0xF0000000
 #define DCP_SIZE 0x3000000
+#define DCP_SIZE_MINIMUM	0x100000
 #define MAX_BUFFER_SIZE 0xc00000
 #define UDATA_BUFFER_SIZE 0x1000
 #define MAX_DCP_NUM 2
@@ -440,9 +441,10 @@ struct vpu_ctx {
 	u32 req_frame_count;
 	u32 req_mbi_count;
 	u32 req_dcp_count;
-	u_int32 mbi_count;
-	u_int32 mbi_size;
-	u_int32 dcp_count;
+	u32 mbi_count;
+	u32 mbi_size;
+	u32 dcp_count;
+	u32 dcp_size;
 	u32 mbi_index;
 	u32 dcp_index;
 	struct dma_buffer dpb_buffer;

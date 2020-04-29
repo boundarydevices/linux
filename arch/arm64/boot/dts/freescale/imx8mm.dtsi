@@ -40,6 +40,11 @@
 		gpio2 = &gpio3;
 		gpio3 = &gpio4;
 		gpio4 = &gpio5;
+		sai1 = &sai1;
+		sai2 = &sai2;
+		sai3 = &sai3;
+		sai5 = &sai5;
+		sai6 = &sai6;
 	};
 
 	cpus {
@@ -132,7 +137,7 @@
 
 		opp-1600000000 {
 			opp-hz = /bits/ 64 <1600000000>;
-			opp-microvolt = <900000>;
+			opp-microvolt = <950000>;
 			opp-supported-hw = <0xc>, <0x7>;
 			clock-latency-ns = <150000>;
 			opp-suspend;

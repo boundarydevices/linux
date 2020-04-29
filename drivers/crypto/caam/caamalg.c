@@ -1033,10 +1033,12 @@ static void aead_crypt_done(struct device *jrdev, u32 *desc, u32 err,
 	struct caam_drv_private_jr *jrp = dev_get_drvdata(jrdev);
 	struct aead_edesc *edesc;
 	int ecode = 0;
+	bool has_bklog;
 
 	dev_dbg(jrdev, "%s %d: err 0x%x\n", __func__, __LINE__, err);
 
 	edesc = rctx->edesc;
+	has_bklog = edesc->bklog;
 
 	if (err)
 		ecode = caam_jr_strstatus(jrdev, err);
@@ -1049,7 +1051,7 @@ static void aead_crypt_done(struct device *jrdev, u32 *desc, u32 err,
 	 * If no backlog flag, the completion of the request is done
 	 * by CAAM, not crypto engine.
 	 */
-	if (!edesc->bklog)
+	if (!has_bklog)
 		aead_request_complete(req, ecode);
 	else
 		crypto_finalize_aead_request(jrp->engine, req, ecode);
@@ -1065,10 +1067,12 @@ static void skcipher_crypt_done(struct device *jrdev, u32 *desc, u32 err,
 	struct caam_drv_private_jr *jrp = dev_get_drvdata(jrdev);
 	int ivsize = crypto_skcipher_ivsize(skcipher);
 	int ecode = 0;
+	bool has_bklog;
 
 	dev_dbg(jrdev, "%s %d: err 0x%x\n", __func__, __LINE__, err);
 
 	edesc = rctx->edesc;
+	has_bklog = edesc->bklog;
 	if (err)
 		ecode = caam_jr_strstatus(jrdev, err);
 
@@ -1098,7 +1102,7 @@ static void skcipher_crypt_done(struct device *jrdev, u32 *desc, u32 err,
 	 * If no backlog flag, the completion of the request is done
 	 * by CAAM, not crypto engine.
 	 */
-	if (!edesc->bklog)
+	if (!has_bklog)
 		skcipher_request_complete(req, ecode);
 	else
 		crypto_finalize_skcipher_request(jrp->engine, req, ecode);
@@ -1781,7 +1785,7 @@ static struct skcipher_edesc *skcipher_edesc_alloc(struct skcipher_request *req,
 
 	if (ivsize || mapped_dst_nents > 1)
 		sg_to_sec4_set_last(edesc->sec4_sg + dst_sg_idx +
-				    mapped_dst_nents);
+				    mapped_dst_nents - 1 + !!ivsize);
 
 	if (sec4_sg_bytes) {
 		edesc->sec4_sg_dma = dma_map_single(jrdev, edesc->sec4_sg,

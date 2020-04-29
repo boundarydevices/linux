@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 NXP
+ * Copyright 2018-2020 NXP
  */
 
 /*
@@ -261,6 +261,10 @@ struct vpu_attr {
 	struct vpu_statistic statistic;
 	MEDIAIP_ENC_PARAM param;
 	struct v4l2_fract fival;
+	u32 h264_vui_sar_enable;
+	u32 h264_vui_sar_idc;
+	u32 h264_vui_sar_width;
+	u32 h264_vui_sar_height;
 
 	unsigned long ts_start[2];
 	unsigned long msg_count;
@@ -308,7 +312,7 @@ struct core_device {
 	struct mutex cmd_mutex;
 	bool fw_is_ready;
 	bool firmware_started;
-	struct completion start_cmp;
+	struct completion boot_cmp;
 	struct completion snap_done_cmp;
 	struct workqueue_struct *workqueue;
 	struct work_struct msg_work;
@@ -456,6 +460,7 @@ struct vpu_ctx {
 	MEDIAIP_ENC_MEM_REQ_DATA mem_req;
 	struct core_device *core_dev;
 
+	struct completion start_cmp;
 	struct completion stop_cmp;
 	bool power_status;
 
@@ -483,7 +488,8 @@ struct vpu_ctx {
 #define LVL_MSG		(1 << 10)
 #define LVL_MEM		(1 << 11)
 #define LVL_BUF		(1 << 12)
-#define LVL_FRAME	(1 << 13)
+#define LVL_FLOW	(1 << 13)
+#define LVL_FRAME	(1 << 14)
 #define LVL_FUNC	(1 << 16)
 
 #ifndef TAG

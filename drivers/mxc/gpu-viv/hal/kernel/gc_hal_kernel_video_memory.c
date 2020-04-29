@@ -4083,6 +4083,7 @@ static void _dmabuf_release(struct dma_buf *dmabuf)
     gcmkVERIFY_OK(gckVIDMEM_NODE_Dereference(nodeObject->kernel, nodeObject));
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 static void *_dmabuf_kmap(struct dma_buf *dmabuf, unsigned long offset)
 {
     gckVIDMEM_NODE nodeObject = dmabuf->priv;
@@ -4146,6 +4147,7 @@ static void _dmabuf_kunmap(struct dma_buf *dmabuf, unsigned long offset, void *p
     gcmkVERIFY_OK(gckOS_DestroyKernelMapping(
             nodeObject->kernel->os, physical, (gctPOINTER*)&kvaddr));
 }
+#endif
 
 static struct dma_buf_ops _dmabuf_ops =
 {
@@ -4153,7 +4155,8 @@ static struct dma_buf_ops _dmabuf_ops =
     .unmap_dma_buf = _dmabuf_unmap,
     .mmap = _dmabuf_mmap,
     .release = _dmabuf_release,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,5,0)
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0)
     .map = _dmabuf_kmap,
     .unmap = _dmabuf_kunmap,
 #  elif LINUX_VERSION_CODE >= KERNEL_VERSION(4,12,0)

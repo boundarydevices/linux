@@ -807,7 +807,8 @@ static int fsl_edma3_alloc_chan_resources(struct dma_chan *chan)
 				32, 0);
 	pm_runtime_get_sync(fsl_chan->dev);
 	/* clear meaningless pending irq anyway */
-	writel(1, fsl_chan->membase + EDMA_CH_INT);
+	if (readl(fsl_chan->membase + EDMA_CH_INT))
+		writel(1, fsl_chan->membase + EDMA_CH_INT);
 
 	ret = devm_request_irq(&pdev->dev, fsl_chan->txirq,
 			fsl_edma3_tx_handler, fsl_chan->edma3->irqflag,
@@ -837,8 +838,15 @@ static void fsl_edma3_free_chan_resources(struct dma_chan *chan)
 
 	vchan_dma_desc_free_list(&fsl_chan->vchan, &head);
 	dma_pool_destroy(fsl_chan->tcd_pool);
+
+	spin_lock_irqsave(&fsl_chan->vchan.lock, flags);
 	fsl_chan->tcd_pool = NULL;
 	fsl_chan->used = false;
+	/* Clear interrupt before power off */
+	if (readl(fsl_chan->membase + EDMA_CH_INT))
+		writel(1, fsl_chan->membase + EDMA_CH_INT);
+	spin_unlock_irqrestore(&fsl_chan->vchan.lock, flags);
+
 	pm_runtime_put_sync(fsl_chan->dev);
 }
 

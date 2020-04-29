@@ -224,10 +224,14 @@ static const struct imx_sc_pd_range imx8qxp_scu_pd_ranges[] = {
 	/* CM40 SS */
 	{ "cm40_i2c", IMX_SC_R_M4_0_I2C, 1, false, 0 },
 	{ "cm40_intmux", IMX_SC_R_M4_0_INTMUX, 1, false, 0 },
+	{ "cm40_pid", IMX_SC_R_M4_0_PID0, 5, true, 0},
+	{ "cm40_mu1a", IMX_SC_R_M4_0_MU_1A, 1, false, 0},
 
 	/* CM41 SS */
 	{ "cm41_i2c", IMX_SC_R_M4_1_I2C, 1, false, 0 },
 	{ "cm41_intmux", IMX_SC_R_M4_1_INTMUX, 1, false, 0 },
+	{ "cm41_pid", IMX_SC_R_M4_1_PID0, 5, true, 0},
+	{ "cm41_mu1a", IMX_SC_R_M4_1_MU_1A, 1, false, 0},
 
 	/* IMAGE SS */
 	{ "img-pdma", IMX_SC_R_ISI_CH0, 8, true, 0 },
@@ -261,6 +265,11 @@ static const struct imx_sc_pd_range imx8qxp_scu_pd_ranges[] = {
 
 	/* SECO SS */
 	{ "seco_mu", IMX_SC_R_SECO_MU_2, 3, true, 2},
+
+	/* V2X SS */
+	{ "v2x_mu", IMX_SC_R_V2X_MU_0, 2, true, 0},
+	{ "v2x_mu", IMX_SC_R_V2X_MU_2, 1, true, 2},
+	{ "v2x_mu", IMX_SC_R_V2X_MU_3, 2, true, 3},
 
 	/* DB SS */
 	{ "perf", IMX_SC_R_PERF, 1, false, 0},
