@@ -1588,11 +1588,11 @@ void v4l2_ctrl_fill(u32 id, const char **name, enum v4l2_ctrl_type *type,
 	case V4L2_CID_FOCUS_RELATIVE:
 	case V4L2_CID_IRIS_RELATIVE:
 	case V4L2_CID_ZOOM_RELATIVE:
+	case V4L2_CID_FOCUS_AUTO:
 		*flags |= V4L2_CTRL_FLAG_WRITE_ONLY |
 			  V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
 		break;
 	case V4L2_CID_FLASH_STROBE_STATUS:
-	case V4L2_CID_AUTO_FOCUS_STATUS:
 	case V4L2_CID_FLASH_READY:
 	case V4L2_CID_DV_TX_HOTPLUG:
 	case V4L2_CID_DV_TX_RXSENSE:
@@ -1609,6 +1609,7 @@ void v4l2_ctrl_fill(u32 id, const char **name, enum v4l2_ctrl_type *type,
 	case V4L2_CID_CAMERA_SENSOR_ROTATION:
 		*flags |= V4L2_CTRL_FLAG_READ_ONLY;
 		break;
+	case V4L2_CID_AUTO_FOCUS_STATUS:
 	case V4L2_CID_RF_TUNER_PLL_LOCK:
 		*flags |= V4L2_CTRL_FLAG_VOLATILE;
 		break;
