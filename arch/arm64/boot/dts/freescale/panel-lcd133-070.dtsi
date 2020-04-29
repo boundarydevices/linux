@@ -1,0 +1,20 @@
+#include <dt-bindings/display/simple_panel_mipi_cmds.h>
+
+/ {
+	mipi_cmds_lcd133_070: mipi-cmds-lcd133-070 {
+		mipi-cmds-enable = /bits/ 8 <
+			DELAY(50)
+			DCS_S0P(0x11)		/* Exit sleep */
+			DELAY(120)		/* 5 is what spec says */
+			DCS_S0P(0x29)		/* MIPI_DCS_SET_DISPLAY_ON */
+			DELAY(20)
+		>;
+		mipi-cmds-disable = /bits/ 8 <
+			DCS_S0P(0x28)		/* MIPI_DCS_SET_DISPLAY_OFF */
+			DELAY(20)
+			DCS_S0P(0x10)		/* Enter sleep */
+		>;
+		mode-video-hfp-disable;
+		mode-video-hsa-disable;
+	};
+};
