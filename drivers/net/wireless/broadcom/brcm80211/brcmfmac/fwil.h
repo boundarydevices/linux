@@ -79,6 +79,7 @@
 #define BRCMF_C_SET_VAR				263
 #define BRCMF_C_SET_WSEC_PMK			268
 
+#define BRCMF_FW_BADARG				2
 #define BRCMF_FW_UNSUPPORTED			23
 
 s32 brcmf_fil_cmd_data_set(struct brcmf_if *ifp, u32 cmd, void *data, u32 len);
