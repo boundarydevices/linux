@@ -508,6 +508,7 @@
 		mipi_dsi = &mipi_dsi;
 		mipi_to_lvds = &mipi_to_lvds;
 		pinctrl_com50h5n03ulc = &pinctrl_mipi_com50h5n03ulc;
+		pinctrl_lcd133_070 = &pinctrl_mipi_lcd133_070;
 		pinctrl_lcm_jm430 = &pinctrl_mipi_lcm_jm430;
 		pinctrl_ltk0680ytmdb = &pinctrl_mipi_ltk0680ytmdb;
 		pinctrl_ltk080a60a004t = &pinctrl_mipi_ltk080a60a004t;
