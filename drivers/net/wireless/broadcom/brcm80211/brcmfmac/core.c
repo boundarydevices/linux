@@ -1709,9 +1709,11 @@ brcmf_pktfilter_add_remove(struct net_device *ndev, int filter_num, bool add)
 
 	} else {
 		/* Delete filter */
+		ifp->fwil_fwerr = true;
 		ret = brcmf_fil_iovar_int_set(ifp, "pkt_filter_delete",
 					      pkt_filter->id);
-		if (ret == -ENOENT)
+		ifp->fwil_fwerr = false;
+		if (ret == -BRCMF_FW_BADARG)
 			ret = 0;
 		if (ret)
 			goto failed;
