@@ -216,6 +216,7 @@ static int ov5640_probe_v(struct ov5640 *sensor, struct clk *sensor_clk, u32 csi
 	v4l2_ctrl_handler_setup(hdl);
 
 	sensor->subdev.grp_id = 678;
+	sensor->subdev.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 	ret = v4l2_async_register_subdev(&sensor->subdev);
 	if (ret < 0)
 		dev_err(dev, "Async register failed, ret=%d\n", ret);
