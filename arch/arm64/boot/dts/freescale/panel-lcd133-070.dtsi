@@ -1,0 +1,42 @@
+#include <dt-bindings/display/simple_panel_mipi_cmds.h>
+
+/ {
+	aliases {
+		mipi_cmds_lcd133_070 = &mipi_cmds_lcd133_070;
+		pinctrl_lcd133_070 = &pinctrl_mipi_lcd133_070;
+	};
+
+	mipi_cmds_lcd133_070: mipi-cmds-lcd133-070 {
+		alias = <&mipi_cmds_lcd133_070>;
+		aliasp = <&pinctrl_mipi_lcd133_070>;
+#if 0
+		delay-power-up = <100>;
+		delay-prepare = <1000>;
+#endif
+		mipi-cmds-enable = /bits/ 8 <
+			DELAY(50)
+#if 0
+			DCS_S1P(0x02, 0x5a)	/* bist enable */
+#endif
+#if 0
+			MRPS(4)
+			DCS_L2P(0x50, 0x5a, 0x0c)	/* set bank */
+			GEN_READ4(0x81,0x00, 0x68, 0x58, 0x02, 0xbc) /* resolution_set */
+			MRPS(3)
+			GEN_READ3(0x85,0x00, 0x5c, 0xb8, 0x05) /* resolution_set */
+#endif
+			DCS_S0P(0x11)		/* Exit sleep */
+			DELAY(150)		/* 5 is what spec says */
+			DCS_S0P(0x29)		/* MIPI_DCS_SET_DISPLAY_ON */
+			DELAY(150)
+		>;
+		mipi-cmds-disable = /bits/ 8 <
+			DCS_S0P(0x28)		/* MIPI_DCS_SET_DISPLAY_OFF */
+			DELAY(20)
+			DCS_S0P(0x10)		/* Enter sleep */
+		>;
+		mode-video-hbp-disable;
+		mode-video-hfp-disable;
+		mode-video-hsa-disable;
+	};
+};
