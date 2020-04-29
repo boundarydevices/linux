@@ -2407,11 +2407,11 @@ static int ov5640_init_mode(struct ov5640 *sensor,
 
 	/* add delay to wait for sensor stable */
 	if (frame_rate == ov5640_15_fps) {
-		/* dump the first two frames: 1/15*2 */
-		msec_wait4stable = 133;
+		/* dump the first 4 frames: 1/15*4 */
+		msec_wait4stable = 266;
 	} else if (frame_rate == ov5640_30_fps) {
-		/* dump the first two frames: 1/30*2 */
-		msec_wait4stable = 67;
+		/* dump the first 4 frames: 1/30*4 */
+		msec_wait4stable = 133;
 	}
 	msleep(msec_wait4stable);
 
