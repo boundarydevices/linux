@@ -543,6 +543,19 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 	return 0;
 }
 
+static int subdev_notifier_complete(struct v4l2_async_notifier *notifier)
+{
+	struct mxc_mipi_csi2_dev *csi_dev = notifier_to_mipi_dev(notifier);
+	struct v4l2_device *v4l2_dev = &csi_dev->v4l2_dev;
+	int ret;
+
+	ret = v4l2_device_register_subdev_nodes(v4l2_dev);
+	if (ret)
+		v4l2_info(v4l2_dev, "Failed to register subdev nodes\n");
+
+	return ret;
+}
+
 static int mipi_csis_subdev_host(struct mxc_mipi_csi2_dev *csi2dev)
 {
 	struct device *dev = &csi2dev->pdev->dev;
@@ -582,6 +595,7 @@ static int mipi_csis_subdev_host(struct mxc_mipi_csi2_dev *csi2dev)
 	csi2dev->subdev_notifier.subdevs = csi2dev->async_subdevs;
 	csi2dev->subdev_notifier.num_subdevs = 1;
 	csi2dev->subdev_notifier.bound = subdev_notifier_bound;
+	csi2dev->subdev_notifier.complete = subdev_notifier_complete;
 
 	ret = v4l2_async_notifier_register(&csi2dev->v4l2_dev,
 					   &csi2dev->subdev_notifier);
