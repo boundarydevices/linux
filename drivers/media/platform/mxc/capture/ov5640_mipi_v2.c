@@ -141,7 +141,7 @@ static const struct std_ctrl sctrl[]  = {
 		 V4L2_AUTO_FOCUS_STATUS_REACHED |
 		 V4L2_AUTO_FOCUS_STATUS_FAILED),
 		0, V4L2_AUTO_FOCUS_STATUS_IDLE},
-	{&ctrl_ops, V4L2_CID_FOCUS_ABSOLUTE, 0, 0xffffffff, 1, 0},
+	{&ctrl_ops, V4L2_CID_FOCUS_ABSOLUTE, 0, 0xfffffff, 1, 0},
 	{&ctrl_ops, V4L2_CID_FOCUS_AUTO, 0, 1, 1, 1},
 	{&ctrl_ops, V4L2_CID_CONTRAST, -4, 4, 1, 0},
 	{&ctrl_ops, V4L2_CID_SATURATION, -4, 4, 1, 0},
