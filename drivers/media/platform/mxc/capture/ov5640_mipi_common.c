@@ -2229,6 +2229,8 @@ static int ov5640_af_set_region(struct ov5640 *sensor, uint16_t x, uint16_t y)
 		pr_err("Wrong region values: x %d y %d\n", x, y);
 		return -EINVAL;
 	}
+	if ((sensor->roi_x == x) && (sensor->roi_y == y))
+		return 0;
 
 	/* Setting the region */
 	err = ov5640_write_reg(sensor, OV5640_REG_AF_PARAM0, x);
