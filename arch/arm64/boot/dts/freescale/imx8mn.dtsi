@@ -13,64 +13,6 @@
 #include "imx8mn-pinfunc.h"
 
 / {
-	firmware {
-		android {
-			compatible = "android,firmware";
-			/* default emmc node used for GSI */
-			boot_devices = "soc@0/30800000.bus/30b60000.mmc";
-			/* sd card node which used if androidboot.boot_device_root=mmcblk1 */
-			boot_devices_mmcblk1 = "soc@0/30800000.bus/30b50000.mmc";
-			/* emmc node which used if androidboot.boot_device_root=mmcblk2 */
-			boot_devices_mmcblk2 = "soc@0/30800000.bus/30b60000.mmc";
-			fstab {
-				compatible = "android,fstab";
-				system {
-					compatible = "android,system";
-					dev = "system";
-					type = "ext4";
-					mnt_flags = "noatime,errors=panic,ro,barrier=1,inode_readahead_blks=8";
-					fsmgr_flags = "wait,slotselect,avb,avb_keys=/avb,logical,first_stage_mount";
-				};
-				system_ext {
-					compatible = "android,system_ext";
-					dev = "system_ext";
-					type = "ext4";
-					mnt_flags = "noatime,ro,errors=panic";
-					fsmgr_flags = "wait,slotselect,avb,logical,first_stage_mount";
-				};
-				vendor {
-					compatible = "android,vendor";
-					dev = "vendor";
-					type = "ext4";
-					mnt_flags = "noatime,errors=panic,ro,barrier=1,inode_readahead_blks=8";
-					fsmgr_flags = "wait,slotselect,avb,logical,first_stage_mount";
-				};
-				product {
-					compatible = "android,product";
-					dev = "product";
-					type = "ext4";
-					mnt_flags = "noatime,errors=panic,ro,barrier=1,inode_readahead_blks=8";
-					fsmgr_flags = "wait,slotselect,avb,logical,first_stage_mount";
-				};
-				metadata {
-					compatible = "android,metadata";
-					dev = "/dev/block/by-name/metadata";
-					type = "ext4";
-					mnt_flags = "noatime,nosuid,nodev,discard,sync";
-					fsmgr_flags = "wait,formattable,first_stage_mount,check";
-				};
-			};
-			vbmeta {
-				/*we need use FirstStageMountVBootV2 if we enable avb*/
-				compatible = "android,vbmeta";
-				/*parts means the partition witch can be mount in first stage*/
-				parts = "vbmeta,dtbo,boot,system,vendor,product";
-			};
-		};
-	};
-};
-
-/ {
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;
@@ -99,6 +41,33 @@
 		isi0 = &isi_0;
 		csi0 = &mipi_csi_1;
 		wdog0 = &wdog1;
+	};
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			fstab {
+				compatible = "android,fstab";
+				system {
+					compatible = "android,system";
+					dev = "/dev/block/platform/soc@0/30800000.bus/30b40000.mmc/by-name/system";
+					type = "ext4";
+					mnt_flags = "noatime,errors=panic,ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,avb";
+				};
+				vendor {
+					compatible = "android,vendor";
+					dev = "/dev/block/platform/soc@0/30800000.bus/30b40000.mmc/by-name/vendor";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,avb";
+				};
+			};
+			vbmeta {
+				compatible = "android,vbmeta";
+				parts = "vbmeta,dtbo,boot,system,vendor";
+			};
+		};
 	};
 
 	cpus {
