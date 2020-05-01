@@ -1345,8 +1345,8 @@
 					compatible = "fsl,imx8mq-sai", "fsl,imx6sx-sai";
 					reg = <0x30c10000 0x10000>;
 					interrupts = <GIC_SPI 95 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SAI1_IPG>, <&clk IMX8MP_CLK_DUMMY>,
-						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SAI1_MCLK1>, <&clk IMX8MP_CLK_DUMMY>,
+					clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI1_IPG>, <&clk IMX8MP_CLK_DUMMY>,
+						 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI1_MCLK1>, <&clk IMX8MP_CLK_DUMMY>,
 						 <&clk IMX8MP_CLK_DUMMY>;
 					clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 					dmas = <&sdma2 0 2 0>, <&sdma2 1 2 0>;
@@ -1361,8 +1361,8 @@
 					compatible = "fsl,imx8mq-sai", "fsl,imx6sx-sai";
 					reg = <0x30c20000 0x10000>;
 					interrupts = <GIC_SPI 96 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SAI2_IPG>, <&clk IMX8MP_CLK_DUMMY>,
-						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SAI2_MCLK1>, <&clk IMX8MP_CLK_DUMMY>,
+					clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI2_IPG>, <&clk IMX8MP_CLK_DUMMY>,
+						 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI2_MCLK1>, <&clk IMX8MP_CLK_DUMMY>,
 						 <&clk IMX8MP_CLK_DUMMY>;
 					clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 					dmas = <&sdma2 2 2 0>, <&sdma2 3 2 0>;
@@ -1377,8 +1377,8 @@
 					compatible = "fsl,imx8mq-sai", "fsl,imx6sx-sai";
 					reg = <0x30c30000 0x10000>;
 					interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SAI3_IPG>, <&clk IMX8MP_CLK_DUMMY>,
-						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SAI3_MCLK1>, <&clk IMX8MP_CLK_DUMMY>,
+					clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI3_IPG>, <&clk IMX8MP_CLK_DUMMY>,
+						 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI3_MCLK1>, <&clk IMX8MP_CLK_DUMMY>,
 						 <&clk IMX8MP_CLK_DUMMY>;
 					clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 					dmas = <&sdma2 4 2 0>, <&sdma2 5 2 0>;
@@ -1393,8 +1393,8 @@
 					compatible = "fsl,imx8mq-sai", "fsl,imx6sx-sai";
 					reg = <0x30c50000 0x10000>;
 					interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SAI5_IPG>, <&clk IMX8MP_CLK_DUMMY>,
-						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SAI5_MCLK1>, <&clk IMX8MP_CLK_DUMMY>,
+					clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI5_IPG>, <&clk IMX8MP_CLK_DUMMY>,
+						 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI5_MCLK1>, <&clk IMX8MP_CLK_DUMMY>,
 						 <&clk IMX8MP_CLK_DUMMY>;
 					clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 					dmas = <&sdma2 8 2 0>, <&sdma2 9 2 0>;
@@ -1409,9 +1409,9 @@
 					compatible = "fsl,imx8mq-sai", "fsl,imx6sx-sai";
 					reg = <0x30c60000 0x10000>;
 					interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SAI6_IPG>,
+					clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI6_IPG>,
 						 <&clk IMX8MP_CLK_DUMMY>,
-						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SAI6_MCLK1>,
+						 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI6_MCLK1>,
 						 <&clk IMX8MP_CLK_DUMMY>,
 						 <&clk IMX8MP_CLK_DUMMY>;
 					clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
@@ -1426,8 +1426,8 @@
 					compatible = "fsl,imx8mq-sai", "fsl,imx6sx-sai";
 					reg = <0x30c80000 0x10000>;
 					interrupts = <GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SAI7_IPG>, <&clk IMX8MP_CLK_DUMMY>,
-						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SAI7_MCLK1>, <&clk IMX8MP_CLK_DUMMY>,
+					clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI7_IPG>, <&clk IMX8MP_CLK_DUMMY>,
+						 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI7_MCLK1>, <&clk IMX8MP_CLK_DUMMY>,
 						 <&clk IMX8MP_CLK_DUMMY>;
 					clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 					dmas = <&sdma2 12 2 0>, <&sdma2 13 2 0>;
@@ -1441,7 +1441,7 @@
 					compatible = "fsl,imx8mn-easrc";
 					reg = <0x30c90000 0x10000>;
 					interrupts = <GIC_SPI 122 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_ASRC_IPG>;
+					clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_ASRC_IPG>;
 					clock-names = "mem";
 					dmas = <&sdma2 16 23 0> , <&sdma2 17 23 0>,
 					       <&sdma2 18 23 0> , <&sdma2 19 23 0>,
@@ -1465,8 +1465,8 @@
 						     <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>,
 						     <GIC_SPI 44 IRQ_TYPE_LEVEL_HIGH>,
 						     <GIC_SPI 45 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_PDM_IPG>,
-						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_PDM_ROOT>,
+					clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_PDM_IPG>,
+						 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_PDM_ROOT>,
 						 <&clk IMX8MP_AUDIO_PLL1_OUT>,
 						 <&clk IMX8MP_AUDIO_PLL2_OUT>,
 						 <&clk IMX8MP_CLK_EXT3>;
@@ -1482,7 +1482,7 @@
 					compatible = "fsl,imx8mp-aud2htx";
 					reg = <0x30cb0000 0x10000>;
 					interrupts = <GIC_SPI 130 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_AUD2HTX_IPG>;
+					clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_AUD2HTX_IPG>;
 					clock-names = "bus";
 					dmas = <&sdma2 26 2 0>;
 					dma-names = "tx";
@@ -1499,14 +1499,14 @@
 						     <GIC_SPI 129 IRQ_TYPE_LEVEL_HIGH>,
 						     /* XCVR PHY - SPDIF wakeup IRQ */
 						     <GIC_SPI 146 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_EARC_IPG>,
-						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_EARC_PHY>,
-						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SPBA2_ROOT>;
+					clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_EARC_IPG>,
+						 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_EARC_PHY>,
+						 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SPBA2_ROOT>;
 					clock-names = "ipg", "phy", "spba";
 					dmas = <&sdma2 30 2 0>, <&sdma2 31 2 0>;
 					dma-names = "rx", "tx";
 					fsl,xcvr-fw = "imx/xcvr/xcvr-imx8mp.bin";
-					resets = <&audiomix_reset 0>;
+					resets = <&audio_blk_ctrl 0>;
 					power-domains = <&audiomix_pd>;
 					status = "disabled";
 				};
@@ -1516,8 +1516,8 @@
 				compatible = "fsl,imx8mp-sdma", "fsl,imx7d-sdma";
 				reg = <0x30e00000 0x10000>;
 				interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SDMA3_ROOT>,
-					 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SDMA3_ROOT>;
+				clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SDMA3_ROOT>,
+					 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SDMA3_ROOT>;
 				clock-names = "ipg", "ahb";
 				#dma-cells = <3>;
 				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx7d.bin";
@@ -1530,8 +1530,8 @@
 				compatible = "fsl,imx8mp-sdma", "fsl,imx7d-sdma";
 				reg = <0x30e10000 0x10000>;
 				interrupts = <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SDMA2_ROOT>,
-					 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SDMA2_ROOT>;
+				clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SDMA2_ROOT>,
+					 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SDMA2_ROOT>;
 				clock-names = "ipg", "ahb";
 				#dma-cells = <3>;
 				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx7d.bin";
@@ -1540,13 +1540,22 @@
 				status = "disabled";
 			};
 
+			audio_blk_ctrl: audio-blk-ctrl@30e20000 {
+				compatible = "fsl,imx8mp-audio-blk-ctrl", "syscon";
+				reg = <0x30e20000 0x50C>;
+				power-domains = <&audiomix_pd>;
+
+				#clock-cells = <1>;
+				#reset-cells = <1>;
+			};
+
 			mu2: mu2@30e60000 {
 				compatible = "fsl,imx8-mu-dsp", "fsl,imx6sx-mu";
 				reg = <0x30E60000 0x10000>;
 				interrupts = <GIC_SPI 136 IRQ_TYPE_LEVEL_HIGH>;
 				fsl,dsp_ap_mu_id = <2>;
 				 #mbox-cells = <2>;
-				clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_MU2_ROOT>;
+				clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_MU2_ROOT>;
 				status = "okay";
 			};
 
@@ -1858,10 +1867,10 @@
 		compatible = "fsl,imx8mp-dsp-v1";
 		memory-region = <&dsp_reserved>;
 		reg = <0x0 0x3B6E8000 0x0 0x88000>;
-		clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_OCRAMA_IPG>,
-			 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_DSP_ROOT>,
-			 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_DSPDBG_ROOT>,
-			 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_MU2_ROOT>;
+		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_OCRAMA_IPG>,
+			 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_DSP_ROOT>,
+			 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_DSPDBG_ROOT>,
+			 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_MU2_ROOT>;
 		clock-names = "ocram", "core", "debug", "mu2";
 		fsl,dsp-firmware = "imx/dsp/hifi4.bin";
 		power-domains = <&audiomix_pd>;
