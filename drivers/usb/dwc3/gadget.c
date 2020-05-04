@@ -2488,9 +2488,6 @@ static int dwc3_gadget_ep_reclaim_trb_sg(struct dwc3_ep *dep,
 	for_each_sg(sg, s, pending, i) {
 		trb = &dep->trb_pool[dep->trb_dequeue];
 
-		if (trb->ctrl & DWC3_TRB_CTRL_HWO && !req->skip_remain_trbs)
-			break;
-
 		req->sg = sg_next(s);
 		req->num_pending_sgs--;
 
