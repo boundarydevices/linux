@@ -143,6 +143,10 @@ struct imx6_pcie {
 	struct device		*pd_pcie_phy;
 	/* power domain for hsio gpio used by pcie */
 	struct device		*pd_hsio_gpio;
+	struct device_link	*pd_link;
+	struct device_link	*pd_hsio_link;
+	struct device_link	*pd_phy_link;
+
 	const struct imx6_pcie_drvdata *drvdata;
 	struct regulator	*epdev_on;
 	struct phy		*phy;
@@ -545,8 +549,34 @@ static int imx6q_pcie_abort_handler(unsigned long addr,
 }
 #endif
 
+static void imx6_pcie_detach_pd(struct device *dev)
+{
+	struct imx6_pcie *imx6_pcie = dev_get_drvdata(dev);
+
+	if (imx6_pcie->pd_hsio_link && !IS_ERR(imx6_pcie->pd_hsio_link))
+		device_link_del(imx6_pcie->pd_hsio_link);
+	if (imx6_pcie->pd_hsio_gpio && !IS_ERR(imx6_pcie->pd_hsio_gpio))
+		dev_pm_domain_detach(imx6_pcie->pd_hsio_gpio, true);
+	if (imx6_pcie->pd_phy_link && !IS_ERR(imx6_pcie->pd_phy_link))
+		device_link_del(imx6_pcie->pd_phy_link);
+	if (imx6_pcie->pd_pcie_phy && !IS_ERR(imx6_pcie->pd_pcie_phy))
+		dev_pm_domain_detach(imx6_pcie->pd_pcie_phy, true);
+	if (imx6_pcie->pd_link && !IS_ERR(imx6_pcie->pd_link))
+		device_link_del(imx6_pcie->pd_link);
+	if (imx6_pcie->pd_pcie && !IS_ERR(imx6_pcie->pd_pcie))
+		dev_pm_domain_detach(imx6_pcie->pd_pcie, true);
+
+	imx6_pcie->pd_hsio_gpio = NULL;
+	imx6_pcie->pd_hsio_link = NULL;
+	imx6_pcie->pd_pcie_phy = NULL;
+	imx6_pcie->pd_phy_link = NULL;
+	imx6_pcie->pd_pcie = NULL;
+	imx6_pcie->pd_link = NULL;
+}
+
 static int imx6_pcie_attach_pd(struct device *dev)
 {
+	int ret = 0;
 	struct imx6_pcie *imx6_pcie = dev_get_drvdata(dev);
 	struct device_link *link;
 
@@ -561,25 +591,32 @@ static int imx6_pcie_attach_pd(struct device *dev)
 	if (!imx6_pcie->pd_pcie)
 		return 0;
 	link = device_link_add(dev, imx6_pcie->pd_pcie,
-			DL_FLAG_AUTOREMOVE_CONSUMER |
+			DL_FLAG_STATELESS |
 			DL_FLAG_PM_RUNTIME |
 			DL_FLAG_RPM_ACTIVE);
 	if (!link) {
 		dev_err(dev, "Failed to add device_link to pcie pd.\n");
 		return -EINVAL;
+	} else {
+		imx6_pcie->pd_link = link;
 	}
 
 	imx6_pcie->pd_pcie_phy = dev_pm_domain_attach_by_name(dev, "pcie_phy");
-	if (IS_ERR(imx6_pcie->pd_pcie_phy))
-		return PTR_ERR(imx6_pcie->pd_pcie_phy);
+	if (IS_ERR(imx6_pcie->pd_pcie_phy)) {
+		ret = PTR_ERR(imx6_pcie->pd_pcie_phy);
+		goto err_ret;
+	}
 
 	link = device_link_add(dev, imx6_pcie->pd_pcie_phy,
-			DL_FLAG_AUTOREMOVE_CONSUMER |
+			DL_FLAG_STATELESS |
 			DL_FLAG_PM_RUNTIME |
 			DL_FLAG_RPM_ACTIVE);
 	if (!link) {
 		dev_err(dev, "Failed to add device_link to pcie_phy pd.\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto err_ret;
+	} else {
+		imx6_pcie->pd_phy_link = link;
 	}
 
 	switch (imx6_pcie->drvdata->variant) {
@@ -591,22 +628,29 @@ static int imx6_pcie_attach_pd(struct device *dev)
 		 */
 		if (imx6_pcie->controller_id) {
 			imx6_pcie->pd_pcie_per = dev_pm_domain_attach_by_name(dev, "pcie_per");
-			if (IS_ERR(imx6_pcie->pd_pcie_per))
-				return PTR_ERR(imx6_pcie->pd_pcie_per);
+			if (IS_ERR(imx6_pcie->pd_pcie_per)) {
+				ret = PTR_ERR(imx6_pcie->pd_pcie_per);
+				goto err_ret;
+			}
 		}
 		fallthrough;
 	case IMX8QXP:
 		imx6_pcie->pd_hsio_gpio = dev_pm_domain_attach_by_name(dev, "hsio_gpio");
-		if (IS_ERR(imx6_pcie->pd_hsio_gpio))
-			return PTR_ERR(imx6_pcie->pd_hsio_gpio);
+		if (IS_ERR(imx6_pcie->pd_hsio_gpio)) {
+			ret = PTR_ERR(imx6_pcie->pd_hsio_gpio);
+			goto err_ret;
+		}
 
 		link = device_link_add(dev, imx6_pcie->pd_hsio_gpio,
-				DL_FLAG_AUTOREMOVE_CONSUMER |
+				DL_FLAG_STATELESS |
 				DL_FLAG_PM_RUNTIME |
 				DL_FLAG_RPM_ACTIVE);
 		if (!link) {
 			dev_err(dev, "Failed to add device_link to hsio_gpio pd.\n");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto err_ret;
+		} else {
+			imx6_pcie->pd_hsio_link = link;
 		}
 
 		break;
@@ -614,7 +658,9 @@ static int imx6_pcie_attach_pd(struct device *dev)
 		break;
 	}
 
-	return 0;
+err_ret:
+	imx6_pcie_detach_pd(dev);
+	return ret;
 }
 
 static unsigned int imx6_pcie_grp_offset(const struct imx6_pcie *imx6_pcie)
@@ -2249,6 +2295,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 			dev_info(dev, "To do the compliance tests.\n");
 			ret = 0;
 		} else {
+			imx6_pcie_detach_pd(dev);
 			return ret;
 		}
 	}
