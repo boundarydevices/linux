@@ -36,9 +36,10 @@ endif
 config VIDEO_IMX_CAPTURE
 	tristate "i.MX V4L2 media core driver"
 	depends on ARCH_MXC || COMPILE_TEST
-	depends on MEDIA_CONTROLLER && VIDEO_V4L2
-	depends on VIDEO_V4L2_SUBDEV_API
+	depends on VIDEO_V4L2
 	depends on HAS_DMA
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
 	select VIDEOBUF2_DMA_CONTIG
 	select V4L2_FWNODE
 	help
