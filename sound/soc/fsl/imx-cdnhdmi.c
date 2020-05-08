@@ -76,7 +76,7 @@ static int imx_cdnhdmi_hw_params(struct snd_pcm_substream *substream,
 				     struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_dai *cpu_dai = asoc_rtd_to_cpu(rtd, 0);
 	struct snd_soc_card *card = rtd->card;
 	struct device *dev = card->dev;
 	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
@@ -147,7 +147,7 @@ static int get_edid_info(struct snd_soc_card *card)
 {
 	struct snd_soc_pcm_runtime *rtd = list_first_entry(
 		&card->rtd_list, struct snd_soc_pcm_runtime, list);
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 0);
 	struct snd_soc_component *component = codec_dai->component;
 	struct hdmi_codec_pdata *hcd = component->dev->platform_data;
 	struct imx_cdnhdmi_data *data = snd_soc_card_get_drvdata(card);
@@ -280,7 +280,7 @@ static int get_edid_rx_info(struct snd_soc_card *card)
 {
 	struct snd_soc_pcm_runtime *rtd = list_first_entry(
 		&card->rtd_list, struct snd_soc_pcm_runtime, list);
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 0);
 	struct snd_soc_component *component = codec_dai->component;
 	struct hdmi_codec_pdata *hcd = component->dev->platform_data;
 	struct imx_cdnhdmi_data *data = snd_soc_card_get_drvdata(card);
