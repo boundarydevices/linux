@@ -52,12 +52,13 @@ static int imx_pcm_hw_params(struct snd_soc_component *component,
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *cpu_dai = asoc_rtd_to_cpu(rtd, 0);
 	struct snd_dmaengine_dai_dma_data *dma_data;
 	struct dma_slave_config config;
 	struct dma_chan *chan;
 	int err = 0;
 
-	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+	dma_data = snd_soc_dai_get_dma_data(cpu_dai, substream);
 
 	/* return if this is a bufferless transfer e.g.
 	 * codec <--> BT codec or GSM modem -- lg FIXME
@@ -131,6 +132,7 @@ static int imx_pcm_open(struct snd_soc_component *component,
 			struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *cpu_dai = asoc_rtd_to_cpu(rtd, 0);
 	struct snd_dmaengine_dai_dma_data *dma_data;
 	struct dma_slave_caps dma_caps;
 	struct dma_chan *chan;
@@ -140,13 +142,13 @@ static int imx_pcm_open(struct snd_soc_component *component,
 	int ret;
 	int i;
 
-	dma_data = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+	dma_data = snd_soc_dai_get_dma_data(cpu_dai, substream);
 
 	/* DT boot: filter_data is the DMA name */
-	if (rtd->cpu_dai->dev->of_node) {
+	if (cpu_dai->dev->of_node) {
 		struct dma_chan *chan;
 
-		chan = dma_request_slave_channel(rtd->cpu_dai->dev,
+		chan = dma_request_slave_channel(cpu_dai->dev,
 						 dma_data->chan_name);
 		ret = snd_dmaengine_pcm_open(substream, chan);
 		if (ret)
