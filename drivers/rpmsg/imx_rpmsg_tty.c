@@ -3,6 +3,7 @@
  * Copyright 2019 NXP
  */
 
+#include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
