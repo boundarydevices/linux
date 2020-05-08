@@ -19,6 +19,7 @@ static int imx_spdif_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *cpu_dai = asoc_rtd_to_cpu(rtd, 0);
 	struct device *dev = rtd->card->dev;
 	int ret = 0;
 	u64 rate = params_rate(params);
@@ -26,7 +27,7 @@ static int imx_spdif_hw_params(struct snd_pcm_substream *substream,
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		freq = do_div(rate, 8000) ? CLK_11K_FREQ : CLK_8K_FREQ;
-		ret = snd_soc_dai_set_sysclk(rtd->cpu_dai, STC_TXCLK_SPDIF_ROOT,
+		ret = snd_soc_dai_set_sysclk(cpu_dai, STC_TXCLK_SPDIF_ROOT,
 			freq, SND_SOC_CLOCK_OUT);
 		if (ret)
 			dev_err(dev, "failed to set cpu sysclk: %d\n", ret);
