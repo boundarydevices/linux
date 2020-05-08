@@ -767,11 +767,11 @@ static const struct file_operations dsp_fops = {
 	.release	= fsl_dsp_close,
 };
 
-extern struct snd_compr_ops dsp_platform_compr_ops;
+extern struct snd_compress_ops dsp_platform_compress_ops;
 
 static const struct snd_soc_component_driver dsp_soc_platform_drv  = {
 	.name		= FSL_DSP_COMP_NAME,
-	.compr_ops      = &dsp_platform_compr_ops,
+	.compress_ops	= &dsp_platform_compress_ops
 };
 
 static int fsl_dsp_probe(struct platform_device *pdev)

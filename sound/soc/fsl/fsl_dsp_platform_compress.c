@@ -48,11 +48,11 @@ void dsp_platform_process(struct work_struct *w)
 	}
 }
 
-static int dsp_platform_compr_open(struct snd_compr_stream *cstream)
+static int dsp_platform_compr_open(struct snd_soc_component *component,
+				   struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, FSL_DSP_COMP_NAME);
-	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_dai *cpu_dai = asoc_rtd_to_cpu(rtd, 0);
 	struct fsl_dsp  *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
 
@@ -73,11 +73,11 @@ static int dsp_platform_compr_open(struct snd_compr_stream *cstream)
 	return 0;
 }
 
-static int dsp_platform_compr_free(struct snd_compr_stream *cstream)
+static int dsp_platform_compr_free(struct snd_soc_component *component,
+				   struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, FSL_DSP_COMP_NAME);
-	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_dai *cpu_dai = asoc_rtd_to_cpu(rtd, 0);
 	struct fsl_dsp  *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
 	int ret;
@@ -110,12 +110,11 @@ static int dsp_platform_compr_free(struct snd_compr_stream *cstream)
 	return 0;
 }
 
-static int dsp_platform_compr_set_params(struct snd_compr_stream *cstream,
+static int dsp_platform_compr_set_params(struct snd_soc_component *component,
+					struct snd_compr_stream *cstream,
                                         struct snd_compr_params *params)
 {
 	/* accroding to the params, load the library and create component*/
-	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, FSL_DSP_COMP_NAME);
 	struct fsl_dsp  *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
 	struct xf_proxy *p_proxy = &dsp_priv->proxy;
@@ -314,7 +313,8 @@ static int dsp_platform_compr_trigger_drain(struct snd_compr_stream *cstream)
 	return 0;
 }
 
-static int dsp_platform_compr_trigger(struct snd_compr_stream *cstream, int cmd)
+static int dsp_platform_compr_trigger(struct snd_soc_component *component,
+				      struct snd_compr_stream *cstream, int cmd)
 {
 	int ret = 0;
 
@@ -340,11 +340,10 @@ static int dsp_platform_compr_trigger(struct snd_compr_stream *cstream, int cmd)
 	return ret;
 }
 
-static int dsp_platform_compr_pointer(struct snd_compr_stream *cstream,
+static int dsp_platform_compr_pointer(struct snd_soc_component *component,
+					struct snd_compr_stream *cstream,
 					struct snd_compr_tstamp *tstamp)
 {
-	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, FSL_DSP_COMP_NAME);
 	struct fsl_dsp *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
 
@@ -357,12 +356,11 @@ static int dsp_platform_compr_pointer(struct snd_compr_stream *cstream,
 	return 0;
 }
 
-static int dsp_platform_compr_copy(struct snd_compr_stream *cstream,
+static int dsp_platform_compr_copy(struct snd_soc_component *component,
+					struct snd_compr_stream *cstream,
 					char __user *buf,
 					size_t count)
 {
-	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
-	struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, FSL_DSP_COMP_NAME);
 	struct fsl_dsp *dsp_priv = snd_soc_component_get_drvdata(component);
 	struct dsp_data *drv = &dsp_priv->dsp_data;
 	struct xaf_comp *p_comp = &drv->component[0];
@@ -398,7 +396,8 @@ static int dsp_platform_compr_copy(struct snd_compr_stream *cstream,
 	return copied;
 }
 
-static int dsp_platform_compr_get_caps(struct snd_compr_stream *cstream,
+static int dsp_platform_compr_get_caps(struct snd_soc_component *component,
+					struct snd_compr_stream *cstream,
 					struct snd_compr_caps *caps)
 {
 	caps->num_codecs = NUM_CODEC;
@@ -448,7 +447,8 @@ static struct snd_compr_codec_caps caps_aac = {
 				SND_AUDIOSTREAMFORMAT_RAW),
 };
 
-static int dsp_platform_compr_get_codec_caps(struct snd_compr_stream *cstream,
+static int dsp_platform_compr_get_codec_caps(struct snd_soc_component *component,
+						struct snd_compr_stream *cstream,
 						struct snd_compr_codec_caps *codec)
 {
 	if (codec->codec == SND_AUDIOCODEC_MP3)
@@ -461,13 +461,14 @@ static int dsp_platform_compr_get_codec_caps(struct snd_compr_stream *cstream,
 	return 0;
 }
 
-static int dsp_platform_compr_set_metadata(struct snd_compr_stream *cstream,
+static int dsp_platform_compr_set_metadata(struct snd_soc_component *component,
+						struct snd_compr_stream *cstream,
 						struct snd_compr_metadata *metadata)
 {
 	return 0;
 }
 
-const struct snd_compr_ops dsp_platform_compr_ops = {
+const struct snd_compress_ops dsp_platform_compress_ops = {
 	.open = dsp_platform_compr_open,
 	.free = dsp_platform_compr_free,
 	.set_params = dsp_platform_compr_set_params,
