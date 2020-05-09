@@ -201,6 +201,16 @@
 		>;
 	};
 
+	pinctrl_i2c4_ft7250: i2c4-ft7250grp {
+		fsl,pins = <
+#define GPIRQ_I2C4_FT7250	<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
+#define GP_I2C4_FT7250_WAKE	<&gpio3 12 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0x49
+#define GP_I2C4_FT7250_RESET	<&gpio3 13 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	0x49
+		>;
+	};
+
 	pinctrl_i2c4_gt911: i2c4-gt911grp {
 		fsl,pins = <
 #define GPIRQ_GT911 		<&gpio3 12 IRQ_TYPE_LEVEL_HIGH>
@@ -240,7 +250,10 @@
 
 	pinctrl_mipi_lcd133_070: mipi-lcd133-070grp {
 		fsl,pins = <
-			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x16
+#define GP_LCD133_070_RESET		<&gpio1 1 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x04
+#define GP_LCD133_070_ENABLE		<&gpio3 15 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x04
 		>;
 	};
 
@@ -536,6 +549,7 @@
 		sound_hdmi = &sound_hdmi;
 		t_mipi = &t_mipi;
 		ts_ft5x06 = &ts_ft5x06;
+		ts_ft7250 = &ts_ft7250;
 		ts_goodix = &ts_goodix;
 		ts_st1633i = &ts_st1633i;
 	};
@@ -1020,6 +1034,17 @@
 		reset-gpios = GP_I2C4_FT5X06_RESET;
 		status = "disabled";
 		wakeup-gpios = GP_I2C4_FT5X06_WAKE;
+	};
+
+	ts_ft7250: touchscreen_ft7250@38 {
+		compatible = "edt,ft7250";
+		interrupts-extended = GPIRQ_I2C4_FT7250;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c4_ft7250>;
+		reg = <0x38>;
+		reset-gpios = GP_I2C4_FT7250_RESET;
+		wakeup-gpios = GP_I2C4_FT7250_WAKE;
+		status = "disabled";
 	};
 
 	ts_goodix: touchscreen@5d {
