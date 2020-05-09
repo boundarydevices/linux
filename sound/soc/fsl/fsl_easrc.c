@@ -1876,6 +1876,7 @@ static int fsl_easrc_probe(struct platform_device *pdev)
 	struct device_node *np;
 	void __iomem *regs;
 	int ret, irq;
+	int width;
 
 	easrc = devm_kzalloc(dev, sizeof(*easrc), GFP_KERNEL);
 	if (!easrc)
@@ -1937,8 +1938,25 @@ static int fsl_easrc_probe(struct platform_device *pdev)
 
 	ret = of_property_read_u32(np, "fsl,asrc-format", &easrc->asrc_format);
 	if (ret) {
-		dev_err(dev, "failed to asrc format\n");
-		return ret;
+		ret = of_property_read_u32(np, "fsl,asrc-width", &width);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to decide output format\n");
+			return ret;
+		}
+
+		switch (width) {
+		case 16:
+			easrc->asrc_format = SNDRV_PCM_FORMAT_S16_LE;
+			break;
+		case 24:
+			easrc->asrc_format = SNDRV_PCM_FORMAT_S24_LE;
+			break;
+		default:
+			dev_warn(&pdev->dev,
+				 "unsupported width, use default S24_LE\n");
+			easrc->asrc_format = SNDRV_PCM_FORMAT_S24_LE;
+			break;
+		}
 	}
 
 	if (!(FSL_EASRC_FORMATS & (1ULL << easrc->asrc_format))) {
