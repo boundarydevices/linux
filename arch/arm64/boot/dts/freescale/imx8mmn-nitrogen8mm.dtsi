@@ -142,6 +142,16 @@
 		>;
 	};
 
+	pinctrl_i2c2_ft7250: i2c2-ft7250grp {
+		fsl,pins = <
+#define GPIRQ_I2C2_FT7250	<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
+#define GP_I2C2_FT7250_WAKE	<&gpio1 6 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, 0x149)
+#define GP_I2C2_FT7250_RESET	<&gpio1 7 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, 0x109)
+		>;
+	};
+
 	pinctrl_i2c2_gslx680: i2c2-gslx680grp {
 		fsl,pins = <
 #define GPIRQ_GSLX680	<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
@@ -227,7 +237,10 @@
 
 	pinctrl_mipi_lcd133_070: mipi-lcd133-070grp {
 		fsl,pins = <
-			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
+#define GP_LCD133_070_RESET		<&gpio1 1 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x116)
+#define GP_LCD133_070_ENABLE		<&gpio1 9 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x116)
 		>;
 	};
 
@@ -526,6 +539,7 @@
 		reg_sw4 = &reg_sw4;
 		t_mipi = &t_mipi;
 		ts_ft5x06 = &ts_ft5x06;
+		ts_ft7250 = &ts_ft7250;
 		ts_goodix = &ts_goodix;
 		ts_gsl1680 = &ts_gsl1680;
 		ts_st1633i = &ts_st1633i;
@@ -829,6 +843,17 @@
 		reset-gpios = GP_I2C2_FT5X06_RESET;
 		status = "disabled";
 		wakeup-gpios = GP_I2C2_FT5X06_WAKE;
+	};
+
+	ts_ft7250: touchscreen_ft7250@38 {
+		compatible = "edt,ft7250";
+		interrupts-extended = GPIRQ_I2C2_FT7250;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_ft7250>;
+		reg = <0x38>;
+		reset-gpios = GP_I2C2_FT7250_RESET;
+		wakeup-gpios = GP_I2C2_FT7250_WAKE;
+		status = "disabled";
 	};
 
 	ts_goodix: touchscreen@5d {
