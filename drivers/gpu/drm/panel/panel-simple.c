@@ -144,6 +144,8 @@ static int send_mipi_cmd_list(struct panel_simple *panel, struct mipi_cmd *mc)
 	int match = 0;
 	int readval, matchval;
 	int skip = 0;
+	int match_index;
+	int i;
 
 	pr_debug("%s:%d\n", __func__, length);
 	if (!cmd || !length)
@@ -186,36 +188,34 @@ static int send_mipi_cmd_list(struct panel_simple *panel, struct mipi_cmd *mc)
 				ret = mipi_dsi_set_maximum_return_packet_size(
 					dsi, cmd[0]);
 				len = 1;
-		} else if (len == S_DCS_READ) {
-			data[0] = 0;
-			if (!skip) {
-				ret =  mipi_dsi_dcs_read(dsi, cmd[0], data, 1);
-				pr_debug("Read DCS(%d): (%x) %x cmp %x\n",
-					ret, cmd[0], data[0], cmd[1]);
-				if (data[0] != cmd[1])
-					match = -EINVAL;
-			}
-			len = 2;
-		} else if (len == S_DCS_READ4) {
+		} else if ((len >= S_DCS_READ1) && (len <= S_DCS_READ4)) {
 			data[0] = data[1] = data[2] = data[3] = 0;
-			len = generic ? 6 : 5;
+			len = len - S_DCS_READ1 + 1;
 			if (!skip) {
 				if (generic) {
-					ret =  mipi_dsi_generic_read(dsi, cmd, 2, data, 4);
-					readval = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
-					matchval = cmd[2] | (cmd[3] << 8) | (cmd[4] << 16) | (cmd[5] << 24);
+					ret =  mipi_dsi_generic_read(dsi, cmd, 2, data, len);
+					match_index = 2;
+				} else {
+					ret =  mipi_dsi_dcs_read(dsi, cmd[0], data, len);
+					match_index = 1;
+				}
+				readval = 0;
+				matchval = 0;
+				for (i = 0; i < len; i++) {
+					readval |= data[i] << (i << 3);
+					matchval |= cmd[match_index + i] << (i << 3);
+				}
+				if (generic) {
 					pr_debug("Read GEN(%d): (%02x %02x) %08x cmp %08x\n",
 						ret, cmd[0], cmd[1], readval, matchval);
 				} else {
-					ret =  mipi_dsi_dcs_read(dsi, cmd[0], data, 4);
-					readval = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
-					matchval = cmd[1] | (cmd[2] << 8) | (cmd[3] << 16) | (cmd[4] << 24);
-					pr_debug("Read DCS(%d): (%x) %x cmp %x\n",
+					pr_debug("Read DCS(%d): (%02x) %x cmp %x\n",
 						ret, cmd[0], readval, matchval);
 				}
 				if (readval != matchval)
 					match = -EINVAL;
 			}
+			len = generic ? len + 2 : len + 1;
 		} else if (len == S_DELAY) {
 			if (!skip)
 				msleep(cmd[0]);
