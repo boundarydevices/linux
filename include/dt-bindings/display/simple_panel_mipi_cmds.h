@@ -35,8 +35,8 @@
 #define DCS_READ3(cmd, c1, c2, c3)	S_DCS_READ3 cmd c1 c2 c3
 #define DCS_READ4(cmd, c1, c2, c3, c4)	S_DCS_READ4 cmd c1 c2 c3 c4
 #define GEN_READ1(addrl, addrh, c1)	S_GEN_READ1 addrl addrh c1
-#define GEN_READ2(addrl, addrh, c1)	S_GEN_READ2 addrl addrh c1 c2
-#define GEN_READ3(addrl, addrh, c1)	S_GEN_READ3 addrl addrh c1 c2 c3
+#define GEN_READ2(addrl, addrh, c1, c2)	S_GEN_READ2 addrl addrh c1 c2
+#define GEN_READ3(addrl, addrh, c1, c2, c3)	S_GEN_READ3 addrl addrh c1 c2 c3
 #define GEN_READ4(addrl, addrh, c1, c2, c3, c4)	S_GEN_READ4 addrl addrh c1 c2 c3 c4
 #define DCS_S0P(cmd)			S_DCS_S0P cmd			/* DCS_Short_Write_NP */
 #define DCS_S1P(cmd, p1)		S_DCS_S1P cmd p1		/* DCS_Short_Write_1P */
