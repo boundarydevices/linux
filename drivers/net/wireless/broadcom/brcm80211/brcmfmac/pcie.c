@@ -50,10 +50,10 @@ enum brcmf_pcie_state {
 BRCMF_FW_DEF(43602, "brcmfmac43602-pcie");
 BRCMF_FW_DEF(4350, "brcmfmac4350-pcie");
 BRCMF_FW_DEF(4350C, "brcmfmac4350c2-pcie");
-BRCMF_FW_CLM_DEF(4356, "brcmfmac4356-pcie");
-BRCMF_FW_CLM_DEF(43570, "brcmfmac43570-pcie");
+CY_FW_DEF(4356, "cyfmac4356-pcie");
+CY_FW_DEF(43570, "cyfmac43570-pcie");
 BRCMF_FW_DEF(4358, "brcmfmac4358-pcie");
-BRCMF_FW_DEF(4359, "brcmfmac4359-pcie");
+CY_FW_DEF(4359, "cyfmac4359-pcie");
 BRCMF_FW_DEF(4364, "brcmfmac4364-pcie");
 BRCMF_FW_DEF(4365B, "brcmfmac4365b-pcie");
 BRCMF_FW_DEF(4365C, "brcmfmac4365c-pcie");
@@ -61,8 +61,8 @@ BRCMF_FW_DEF(4366B, "brcmfmac4366b-pcie");
 BRCMF_FW_DEF(4366C, "brcmfmac4366c-pcie");
 BRCMF_FW_DEF(4371, "brcmfmac4371-pcie");
 BRCMF_FW_CLM_DEF(4378B1, "brcmfmac4378b1-pcie");
-BRCMF_FW_DEF(4355, "brcmfmac89459-pcie");
-BRCMF_FW_DEF(54591, "brcmfmac54591-pcie");
+CY_FW_DEF(4355, "cyfmac89459-pcie");
+CY_FW_DEF(54591, "cyfmac54591-pcie");
 
 /* firmware config files */
 MODULE_FIRMWARE(BRCMF_FW_DEFAULT_PATH "brcmfmac*-pcie.txt");
