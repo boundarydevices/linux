@@ -261,11 +261,11 @@ endif
 # add -Wno-packed-bitfield-compat when GCC version greater than 4.4
 GCC_VERSION := $(shell echo `gcc -dumpversion | cut -f1-2 -d.` \>= 4.4 | sed -e 's/\./*100+/g' | bc )
 ifeq ($(GCC_VERSION),1)
-	ccflags-y += -Wno-packed-bitfield-compat
+#	ccflags-y += -Wno-packed-bitfield-compat
 endif
-	ccflags-y += -Wno-stringop-overflow
-	ccflags-y += -Wno-tautological-compare
-	ccflags-y += -Wno-packed-bitfield-compat
+#	ccflags-y += -Wno-stringop-overflow
+#	ccflags-y += -Wno-tautological-compare
+#	ccflags-y += -Wno-packed-bitfield-compat
 
 #############################################################################
 # Make Targets
