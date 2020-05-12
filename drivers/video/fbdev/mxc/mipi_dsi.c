@@ -234,7 +234,7 @@ static int send_mipi_cmd_list(struct mipi_dsi_info *dsi, struct mipi_cmd *mc)
 					MIPI_DSI_SET_MAXIMUM_RETURN_PACKET_SIZE,
 					&data, 0);
 				len = 1;
-		} else if (len == S_DCS_READ) {
+		} else if (len == S_DCS_READ1) {
 			data = cmd[0];
 			ret =  dsi->mipi_dsi_pkt_read(dsi,
 					MIPI_DSI_DCS_READ,
