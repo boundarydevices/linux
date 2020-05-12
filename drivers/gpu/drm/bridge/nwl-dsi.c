@@ -143,6 +143,7 @@ struct nwl_dsi {
 	struct nwl_dsi_transfer *xfer;
 	struct list_head valid_modes;
 	u32 clk_drop_lvl;
+	bool use_dcss;
 };
 
 static const struct regmap_config nwl_dsi_regmap_config = {
@@ -1036,16 +1037,16 @@ static int nwl_dsi_get_dphy_params(struct nwl_dsi *dsi,
 
 static bool nwl_dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 				      const struct drm_display_mode *mode,
-				      struct drm_display_mode *adjusted_mode)
+				      struct drm_display_mode *adjusted)
 {
 	struct nwl_dsi *dsi = bridge_to_dsi(bridge);
 	struct mode_config *config;
 	unsigned long pll_rate;
 
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Fixup mode:\n");
-	drm_mode_debug_printmodeline(adjusted_mode);
+	drm_mode_debug_printmodeline(adjusted);
 
-	config = nwl_dsi_mode_probe(dsi, adjusted_mode);
+	config = nwl_dsi_mode_probe(dsi, adjusted);
 	if (!config)
 		return false;
 
@@ -1067,12 +1068,16 @@ static bool nwl_dsi_bridge_mode_fixup(struct drm_bridge *bridge,
 	}
 	/* Update the crtc_clock to be used by display controller */
 	if (config->crtc_clock)
-		adjusted_mode->crtc_clock = config->crtc_clock / 1000;
+		adjusted->crtc_clock = config->crtc_clock / 1000;
 
-
-	/* At least LCDIF + NWL needs active high sync */
-	adjusted_mode->flags |= (DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC);
-	adjusted_mode->flags &= ~(DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC);
+	if (!dsi->use_dcss) {
+		/* At least LCDIF + NWL needs active high sync */
+		adjusted->flags |= (DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC);
+		adjusted->flags &= ~(DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC);
+	} else {
+		adjusted->flags &= ~(DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC);
+		adjusted->flags |= (DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC);
+	}
 
 	return true;
 }
@@ -1400,6 +1405,9 @@ static int nwl_dsi_select_input(struct nwl_dsi *dsi)
 		DRM_DEV_ERROR(dsi->dev, "Failed to select input: %d\n", ret);
 
 	of_node_put(remote);
+
+	dsi->use_dcss = use_dcss;
+
 	return ret;
 }
 
