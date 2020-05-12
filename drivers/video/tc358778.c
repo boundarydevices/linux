@@ -712,7 +712,7 @@ static int send_mipi_cmd_list(struct tc358778_priv *tc, struct mipi_cmd *mc)
 			ret = tc_mipi_dsi_pkt_write(tc,
 					MIPI_DSI_SET_MAXIMUM_RETURN_PACKET_SIZE,
 					cmd, len);
-		} else if (len == S_DCS_READ) {
+		} else if (len == S_DCS_READ1) {
 			buf[0] = cmd[0];
 			ret =  tc_mipi_dsi_pkt_read(tc,
 					MIPI_DSI_DCS_READ,
