@@ -135,12 +135,6 @@
 		default-brightness-level = <80>;
 	};
 
-	bt_rfkill {
-		compatible = "fsl,mxc_bt_rfkill";
-		bt-power-gpios = <&lsio_gpio4 22 GPIO_ACTIVE_LOW>;
-		status ="okay";
-	};
-
 	cbtl04gp {
 		compatible = "nxp,cbtl04gp";
 		pinctrl-names = "default";

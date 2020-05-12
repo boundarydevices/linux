@@ -104,12 +104,6 @@
 		};
 	};
 
-	bt_rfkill {
-		compatible = "fsl,mxc_bt_rfkill";
-		bt-power-gpios = <&gpio3 5 GPIO_ACTIVE_LOW>;
-		status ="okay";
-	};
-
 	resmem: reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;

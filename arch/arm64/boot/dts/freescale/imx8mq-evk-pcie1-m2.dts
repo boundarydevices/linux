@@ -15,9 +15,6 @@
 #include "imx8mq-evk.dts"
 
 / {
-	bt_rfkill {
-		bt-power-gpios = <&gpio3 5 GPIO_ACTIVE_HIGH>;
-	};
 };
 
 &pcie0{

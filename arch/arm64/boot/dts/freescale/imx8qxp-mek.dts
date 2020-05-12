@@ -81,13 +81,6 @@
 	model = "Freescale i.MX8QXP MEK";
 	compatible = "fsl,imx8qxp-mek", "fsl,imx8qxp";
 
-	bt_rfkill {
-		compatible = "fsl,mxc_bt_rfkill";
-		bt-power-gpios = <&pca9557_a 1 GPIO_ACTIVE_LOW>;
-		status ="okay";
-	};
-
-
 	reserved-memory {
 		ramoops@0x91f00000 {
 			compatible = "ramoops";
