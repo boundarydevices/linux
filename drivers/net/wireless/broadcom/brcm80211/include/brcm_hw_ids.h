@@ -57,8 +57,7 @@
 #define CY_CC_43012_CHIP_ID		43012
 #define CY_CC_43752_CHIP_ID		43752
 #define CY_CC_89459_CHIP_ID		0x4355
-#define CY_CC_89459_CHIP_ID		0x4355
-
+#define CY_CC_55560_CHIP_ID		0xd908
 
 /* USB Device IDs */
 #define BRCM_USB_43143_DEVICE_ID	0xbd1e
@@ -97,6 +96,7 @@
 #define CY_PCIE_54591_DEVICE_ID         0x4417
 #define CY_PCIE_54590_DEVICE_ID		0x4416
 #define CY_PCIE_54594_DEVICE_ID		0x441a
+#define CY_PCIE_55560_DEVICE_ID		0xbd31
 
 /* brcmsmac IDs */
 #define BCM4313_D11N2G_ID	0x4727	/* 4313 802.11n 2.4G device */
