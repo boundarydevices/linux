@@ -16,6 +16,7 @@
 #include <soc/imx/src.h>
 
 #define REV_B1				0x21
+#define IMX_CHIP_REVISION_UNKNOWN	0
 
 #define IMX8MQ_SW_INFO_B1		0x40
 #define IMX8MQ_SW_MAGIC_B1		0xff0055aa
@@ -33,6 +34,18 @@ struct imx8_soc_data {
 	u32 (*soc_revision)(void);
 };
 
+static u32 imx8_soc_rev = IMX_CHIP_REVISION_UNKNOWN;
+
+static inline void imx8_set_soc_revision(u32 rev)
+{
+	imx8_soc_rev = rev;
+}
+
+unsigned int imx8_get_soc_revision(void)
+{
+	return imx8_soc_rev;
+}
+
 static u64 soc_uid;
 
 static ssize_t soc_uid_show(struct device *dev,
@@ -46,13 +59,15 @@ static DEVICE_ATTR_RO(soc_uid);
 static u32 imx8mq_soc_revision_from_atf(void)
 {
 	struct arm_smccc_res res;
+	u32 rev;
 
 	arm_smccc_smc(IMX_SIP_GET_SOC_INFO, 0, 0, 0, 0, 0, 0, 0, &res);
 
+	rev = res.a0 & 0xff;
 	if (res.a0 == SMCCC_RET_NOT_SUPPORTED)
-		return 0;
-	else
-		return res.a0 & 0xff;
+		rev = 0;
+	imx8_set_soc_revision(rev);
+	return rev;
 }
 
 static u32 __init imx8mq_soc_revision(void)
@@ -88,6 +103,7 @@ static u32 __init imx8mq_soc_revision(void)
 
 out:
 	of_node_put(np);
+	imx8_set_soc_revision(rev);
 	return rev;
 }
 
