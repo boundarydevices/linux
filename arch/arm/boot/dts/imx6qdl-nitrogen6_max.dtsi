@@ -658,7 +658,8 @@
 	};
 
 	memory@10000000 {
-		reg = <0x10000000 0xeffffc00>;
+		device_type = "memory";
+		reg = <0x10000000 0xF0000000>;
 	};
 
 	mipi_mclk: mipi-mclk {
