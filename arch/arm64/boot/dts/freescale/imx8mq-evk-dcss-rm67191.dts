@@ -72,7 +72,8 @@
 
 		port@0 {
 			reg = <0>;
-			mipi_dsi_in: endpoint {
+			mipi_dsi_in: endpoint@1 {
+				reg = <1>;
 				remote-endpoint = <&dcss_out>;
 			};
 		};

@@ -61,7 +61,8 @@
 
 		port@0 {
 			reg = <0>;
-			mipi_dsi_in: endpoint {
+			mipi_dsi_in: endpoint@0 {
+				reg = <0>;
 				remote-endpoint = <&lcdif_mipi_dsi>;
 			};
 		};
