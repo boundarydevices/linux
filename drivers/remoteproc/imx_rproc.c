@@ -628,7 +628,7 @@ static int check_dt_rsc_table(struct rproc *rproc)
 	/*Parse device tree to get resource table */
 	elems = of_property_count_u32_elems(np, "rsrc-table");
 	if (elems < 0) {
-		dev_err(&rproc->dev, "no rsrc-table\n");
+		dev_err(&rproc->dev, "no dtb rsrc-table\n");
 		return elems;
 	}
 
@@ -716,6 +716,12 @@ static int imx_rproc_parse_fw(struct rproc *rproc, const struct firmware *fw)
 		}
 
 		table = (struct resource_table *)priv->rsc_va;
+
+		if (table->ver != 1 || table->reserved[0] || table->reserved[1]) {
+			dev_err(priv->dev, "Invalid rsrc table header\n");
+			return 0;
+		}
+
 		/* Assuming that the resource table fits in 1kB is fair */
 		rproc->cached_table = kmemdup(table, SZ_1K, GFP_KERNEL);
 		if (!rproc->cached_table)
@@ -784,7 +790,7 @@ static void imx_rproc_kick(struct rproc *rproc, int vqid)
 
 	mmsg = vqid << 16;
 
-	priv->cl.tx_tout = 20;
+	priv->cl.tx_tout = 50;
 	err = mbox_send_message(priv->tx_ch, (void *)&mmsg);
 	if (err < 0)
 		dev_err(priv->dev, "%s: failed (%d, err:%d)\n",
@@ -966,7 +972,7 @@ static int imx_rproc_db_channel_init(struct rproc *rproc)
 	cl = &priv->cl_txdb;
 	cl->dev = dev;
 	cl->tx_block = true;
-	cl->tx_tout = 20;
+	cl->tx_tout = 50;
 	cl->knows_txdone = false;
 
 	/* txdb is optional */
@@ -1011,7 +1017,7 @@ static int imx_rproc_xtr_mbox_init(struct rproc *rproc)
 	cl = &priv->cl;
 	cl->dev = dev;
 	cl->tx_block = true;
-	cl->tx_tout = 20;
+	cl->tx_tout = 50;
 	cl->knows_txdone = false;
 	cl->rx_callback = imx_rproc_rx_callback;
 

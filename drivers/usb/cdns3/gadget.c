@@ -1910,7 +1910,7 @@ found:
 	link_trb = priv_req->trb;
 
 	/* Update ring only if removed request is on pending_req_list list */
-	if (req_on_hw_ring) {
+	if (req_on_hw_ring && link_trb) {
 		link_trb->buffer = TRB_BUFFER(priv_ep->trb_pool_dma +
 			((priv_req->end_trb + 1) * TRB_SIZE));
 		link_trb->control = (link_trb->control & TRB_CYCLE) |
@@ -2036,10 +2036,13 @@ static int cdns3_gadget_pullup(struct usb_gadget *gadget, int is_on)
 	if (!priv_dev->start_gadget)
 		return 0;
 
-	if (is_on)
+	if (is_on) {
 		writel(USB_CONF_DEVEN, &priv_dev->regs->usb_conf);
-	else
+	} else {
+		writel(~0, &priv_dev->regs->ep_ists);
+		writel(~0, &priv_dev->regs->usb_ists);
 		writel(USB_CONF_DEVDS, &priv_dev->regs->usb_conf);
+	}
 
 	return 0;
 }
@@ -2077,6 +2080,8 @@ static void cdns3_gadget_config(struct cdns3_device *priv_dev)
 	else
 		priv_dev->gadget.sg_supported = 0;
 
+	/*  keep Fast Access bit */
+	writel(PUSB_PWR_FST_REG_ACCESS, &priv_dev->regs->usb_pwr);
 	cdns3_gadget_pullup(&priv_dev->gadget, 1);
 }
 
@@ -2144,6 +2149,7 @@ static int cdns3_gadget_udc_stop(struct usb_gadget *gadget)
 
 	/* disable interrupt for device */
 	writel(0, &priv_dev->regs->usb_ien);
+	writel(0, &priv_dev->regs->usb_pwr);
 	writel(USB_CONF_DEVDS, &priv_dev->regs->usb_conf);
 
 	return ret;
@@ -2268,27 +2274,11 @@ err:
 	return -ENOMEM;
 }
 
-static void cdns3_gadget_disable(struct cdns3 *cdns)
-{
-	struct cdns3_device *priv_dev;
-
-	priv_dev = cdns->gadget_dev;
-
-	if (priv_dev->gadget_driver) {
-		priv_dev->gadget_driver->disconnect(&priv_dev->gadget);
-		usb_gadget_disconnect(&priv_dev->gadget);
-	}
-
-	priv_dev->gadget.speed = USB_SPEED_UNKNOWN;
-}
-
 void cdns3_gadget_exit(struct cdns3 *cdns)
 {
 	struct cdns3_device *priv_dev;
 
 	priv_dev = cdns->gadget_dev;
-
-	cdns3_gadget_disable(cdns);
 
 	pm_runtime_mark_last_busy(cdns->dev);
 	pm_runtime_put_autosuspend(cdns->dev);
@@ -2377,6 +2367,7 @@ static int __cdns3_gadget_init(struct cdns3 *cdns)
 	priv_dev->gadget.name = "usb-ss-gadget";
 	priv_dev->gadget.sg_supported = 1;
 	priv_dev->gadget.quirk_avoids_skb_reserve = 1;
+	priv_dev->gadget.irq = cdns->irq;
 
 	spin_lock_init(&priv_dev->lock);
 	INIT_WORK(&priv_dev->pending_status_wq,
@@ -2440,12 +2431,13 @@ static void __cdns3_gadget_stop(struct cdns3 *cdns)
 	struct cdns3_device *priv_dev = cdns->gadget_dev;
 	unsigned long flags;
 
-	cdns3_gadget_disable(cdns);
-	spin_lock_irqsave(&priv_dev->lock, flags);
-	usb_gadget_set_state(&priv_dev->gadget, USB_STATE_NOTATTACHED);
 	/* disable interrupt for device */
 	writel(0, &priv_dev->regs->usb_ien);
-	writel(USB_CONF_DEVDS, &priv_dev->regs->usb_conf);
+	if (priv_dev->gadget_driver)
+		usb_gadget_disconnect(&priv_dev->gadget);
+
+	spin_lock_irqsave(&priv_dev->lock, flags);
+	usb_gadget_set_state(&priv_dev->gadget, USB_STATE_NOTATTACHED);
 	priv_dev->start_gadget = 0;
 	spin_unlock_irqrestore(&priv_dev->lock, flags);
 }

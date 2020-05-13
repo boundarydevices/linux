@@ -236,7 +236,7 @@ static int fsl_aud2htx_probe(struct platform_device *pdev)
 		return PTR_ERR(regs);
 	}
 
-	aud2htx->regmap = devm_regmap_init_mmio_clk(&pdev->dev, "bus", regs,
+	aud2htx->regmap = devm_regmap_init_mmio_clk(&pdev->dev, NULL, regs,
 						    &fsl_aud2htx_regmap_config);
 	if (IS_ERR(aud2htx->regmap)) {
 		dev_err(&pdev->dev, "failed to init regmap");
@@ -280,7 +280,7 @@ static int fsl_aud2htx_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = imx_pcm_dma_init(pdev, IMX_DEFAULT_DMABUF_SIZE);
+	ret = imx_pcm_platform_register(&pdev->dev);
 	if (ret)
 		dev_err(&pdev->dev, "failed to init imx pcm dma: %d\n", ret);
 

@@ -672,6 +672,8 @@
 					compatible = "fsl,sec-v4.0-pwrkey";
 					regmap = <&snvs>;
 					interrupts = <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>;
+					clocks = <&clk IMX8MP_CLK_SNVS_ROOT>;
+					clock-names = "snvs";
 					linux,keycode = <KEY_POWER>;
 					wakeup-source;
 				};
@@ -1325,8 +1327,9 @@
 						     <GIC_SPI 146 IRQ_TYPE_LEVEL_HIGH>;
 					clocks = <&audiomix_clk IMX8MP_CLK_AUDIOMIX_EARC_IPG>,
 						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_EARC_PHY>,
-						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SPBA2_ROOT>;
-					clock-names = "ipg", "phy", "spba";
+						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_SPBA2_ROOT>,
+						 <&audiomix_clk IMX8MP_CLK_AUDIOMIX_AUDPLL_ROOT>;
+					clock-names = "ipg", "phy", "spba", "pll_ipg";
 					dmas = <&sdma2 30 2 0>, <&sdma2 31 2 0>;
 					dma-names = "rx", "tx";
 					fsl,xcvr-fw = "imx/xcvr/xcvr-imx8mp.bin";
@@ -1714,6 +1717,7 @@
 				gpr = <&mediamix_blk_ctl>;
 				clocks = <&clk IMX8MP_CLK_MEDIA_APB_ROOT>;
 				clock-names = "apb";
+				power-domains = <&mediamix_pd>;
 				status = "disabled";
 
 				ldb_phy1: port@0 {
@@ -1787,6 +1791,32 @@
 						compatible = "imx-isi-capture";
 						status = "disabled";
 					};
+				};
+
+				isp_0: isp@32e10000 {
+					compatible = "fsl,imx8mp-isp";
+					reg = <0x32e10000 0x10000>;
+					interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
+					clocks = <&clk IMX8MP_CLK_MEDIA_ISP_SRC>;
+					clock-names = "isp_root";
+					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_ISP_SRC>;
+					assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>;
+					assigned-clock-rates = <500000000>;
+					power-domains = <&ispdwp_pd>;
+					status = "disabled";
+				};
+
+				isp_1: isp@32e20000 {
+					compatible = "fsl,imx8mp-isp";
+					reg = <0x32e20000 0x10000>;
+					interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
+					clocks = <&clk IMX8MP_CLK_MEDIA_ISP_SRC>;
+					clock-names = "isp_root";
+					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_ISP_SRC>;
+					assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>;
+					assigned-clock-rates = <500000000>;
+					power-domains = <&ispdwp_pd>;
+					status = "disabled";
 				};
 
 				mipi_csi_0: csi@32e40000 {
@@ -1993,7 +2023,6 @@
 			usb3-resume-missing-cas;
 			snps,dis-u2-freeclk-exists-quirk;
 			snps,soft-itp-sync;
-			snps,dis_u3_susphy_quirk;
 			status = "disabled";
 		};
 
@@ -2037,7 +2066,6 @@
 			usb3-resume-missing-cas;
 			snps,dis-u2-freeclk-exists-quirk;
 			snps,soft-itp-sync;
-			snps,dis_u3_susphy_quirk;
 			status = "disabled";
 		};
 	};
@@ -2088,7 +2116,7 @@
 	};
 
 	ml_vipsi: vipsi@38500000 {
-		compatible = "fsl,imx8-gpu";
+		compatible = "fsl,imx8-gpu", "fsl,imx8-vipsi";
 		reg = <0x0 0x38500000 0x0 0x20000>;
 		interrupts = <GIC_SPI 13 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clk IMX8MP_CLK_NPU_ROOT>,

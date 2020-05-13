@@ -229,9 +229,7 @@ static int imx_mu_seco_tx(struct imx_mu_priv *priv, struct imx_mu_con_priv *cp,
 			 * The real message size can be different to
 			 * struct imx_sc_rpc_msg_max size
 			 */
-			dev_err(priv->dev,
-				"Exceed max msg size (%li) on TX, got: %i\n",
-				sizeof(*msg), byte_size);
+			dev_err(priv->dev, "Maximal message size (%zu bytes) exceeded on TX; got: %i bytes\n", sizeof(*msg), byte_size);
 			return -EINVAL;
 		}
 
@@ -291,8 +289,7 @@ static int imx_mu_seco_rxdb(struct imx_mu_priv *priv, struct imx_mu_con_priv *cp
 	*data++ = imx_mu_read(priv, priv->dcfg->xRR[0]);
 	byte_size = msg.hdr.size * sizeof(u32);
 	if (byte_size > sizeof(msg)) {
-		dev_err(priv->dev, "Exceed max msg size (%li) on RX, got: %i\n",
-			sizeof(msg), byte_size);
+		dev_err(priv->dev, "Maximal message size (%zu bytes) exceeded on RX; got: %i bytes\n", sizeof(msg), byte_size);
 		err = -EINVAL;
 		goto error;
 	}
@@ -392,6 +389,7 @@ static int imx_mu_startup(struct mbox_chan *chan)
 {
 	struct imx_mu_priv *priv = to_imx_mu_priv(chan->mbox);
 	struct imx_mu_con_priv *cp = chan->con_priv;
+	unsigned long irq_flag = IRQF_SHARED;
 	int ret;
 
 	pm_runtime_get_sync(priv->dev);
@@ -402,8 +400,12 @@ static int imx_mu_startup(struct mbox_chan *chan)
 		return 0;
 	}
 
-	ret = request_irq(priv->irq, imx_mu_isr, IRQF_SHARED |
-			  IRQF_NO_SUSPEND, cp->irq_desc, chan);
+	/* IPC MU should be with IRQF_NO_SUSPEND set */
+	if (!priv->dev->pm_domain)
+		irq_flag |= IRQF_NO_SUSPEND;
+
+	ret = request_irq(priv->irq, imx_mu_isr, irq_flag,
+			  cp->irq_desc, chan);
 	if (ret) {
 		dev_err(priv->dev,
 			"Unable to acquire IRQ %d\n", priv->irq);
@@ -607,6 +609,8 @@ static int imx_mu_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto disable_runtime_pm;
 
+	clk_disable_unprepare(priv->clk);
+
 	return 0;
 
 disable_runtime_pm:
@@ -618,7 +622,6 @@ static int imx_mu_remove(struct platform_device *pdev)
 {
 	struct imx_mu_priv *priv = platform_get_drvdata(pdev);
 
-	clk_disable_unprepare(priv->clk);
 	pm_runtime_disable(priv->dev);
 
 	return 0;
@@ -628,7 +631,8 @@ static int imx_mu_suspend_noirq(struct device *dev)
 {
 	struct imx_mu_priv *priv = dev_get_drvdata(dev);
 
-	priv->xcr = imx_mu_read(priv, priv->dcfg->xCR);
+	if (!priv->clk)
+		priv->xcr = imx_mu_read(priv, priv->dcfg->xCR);
 
         return 0;
 }
@@ -645,15 +649,38 @@ static int imx_mu_resume_noirq(struct device *dev)
 	 * send failed, may lead to system freeze. This issue
 	 * is observed by testing freeze mode suspend.
 	 */
-	if (!imx_mu_read(priv, priv->dcfg->xCR))
+	if (!imx_mu_read(priv, priv->dcfg->xCR) && !priv->clk)
 		imx_mu_write(priv, priv->xcr, priv->dcfg->xCR);
 
 	return 0;
 }
 
+static int imx_mu_runtime_suspend(struct device *dev)
+{
+	struct imx_mu_priv *priv = dev_get_drvdata(dev);
+
+	clk_disable_unprepare(priv->clk);
+
+	return 0;
+}
+
+static int imx_mu_runtime_resume(struct device *dev)
+{
+	struct imx_mu_priv *priv = dev_get_drvdata(dev);
+	int ret;
+
+	ret = clk_prepare_enable(priv->clk);
+	if (ret)
+		dev_err(dev, "failed to enable clock\n");
+
+	return ret;
+}
+
 static const struct dev_pm_ops imx_mu_pm_ops = {
 	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(imx_mu_suspend_noirq,
 				      imx_mu_resume_noirq)
+	SET_RUNTIME_PM_OPS(imx_mu_runtime_suspend,
+			   imx_mu_runtime_resume, NULL)
 };
 
 static const struct imx_mu_dcfg imx_mu_cfg_imx6sx = {
