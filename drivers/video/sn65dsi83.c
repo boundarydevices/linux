@@ -483,9 +483,10 @@ static int sn_fb_event(struct notifier_block *nb, unsigned long event, void *dat
 		dev_info(dev, "%s: blank type 0x%x\n", __func__, blank_type );
 		break;
 	}
+#ifdef CONFIG_FB_EXTENDED_EVENTS
 	case FB_EVENT_SUSPEND : {
 		dev_info(dev, "%s: suspend\n", __func__ );
-		sn_disable(sn, 0);
+		sn_powerdown(sn);
 		break;
 	}
 	case FB_EVENT_RESUME : {
@@ -493,12 +494,11 @@ static int sn_fb_event(struct notifier_block *nb, unsigned long event, void *dat
 		break;
 	}
 	case FB_EVENT_FB_REGISTERED : {
-		if (clk_get_rate(sn->mipi_clk)) {
-			sn_prepare(sn);
-			sn_enable_pll(sn);
-		}
+		if (clk_get_rate(sn->mipi_clk))
+			sn_powerup_begin(sn);
 		break;
 	}
+#endif
 	default:
 		dev_info(dev, "%s: unknown event %lx\n", __func__, event);
 	}
