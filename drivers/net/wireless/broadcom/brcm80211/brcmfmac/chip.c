@@ -233,6 +233,32 @@ struct sbsocramregs {
 /* Minimum PMU resource mask for 4373 */
 #define CY_4373_PMU_MIN_RES_MASK       0xFCAFF7F
 
+/* CYW55560 dedicated space and RAM base */
+#define CYW55560_TCAM_SIZE	0x800
+#define CYW55560_TRXHDR_SIZE	0x2b4
+#define CYW55560_RAM_BASE	(0x370000 + \
+				 CYW55560_TCAM_SIZE + CYW55560_TRXHDR_SIZE)
+
+#define BRCMF_BLHS_POLL_INTERVAL			10	/* msec */
+#define BRCMF_BLHS_D2H_READY_TIMEOUT			100	/* msec */
+#define BRCMF_BLHS_D2H_TRXHDR_PARSE_DONE_TIMEOUT	50	/* msec */
+#define BRCMF_BLHS_D2H_VALDN_DONE_TIMEOUT		250	/* msec */
+
+/* Bootloader handshake flags - dongle to host */
+#define BRCMF_BLHS_D2H_START			BIT(0)
+#define BRCMF_BLHS_D2H_READY			BIT(1)
+#define BRCMF_BLHS_D2H_STEADY			BIT(2)
+#define BRCMF_BLHS_D2H_TRXHDR_PARSE_DONE	BIT(3)
+#define BRCMF_BLHS_D2H_VALDN_START		BIT(4)
+#define BRCMF_BLHS_D2H_VALDN_RESULT		BIT(5)
+#define BRCMF_BLHS_D2H_VALDN_DONE		BIT(6)
+
+/* Bootloader handshake flags - host to dongle */
+#define BRCMF_BLHS_H2D_DL_FW_START		BIT(0)
+#define BRCMF_BLHS_H2D_DL_FW_DONE		BIT(1)
+#define BRCMF_BLHS_H2D_DL_NVRAM_DONE		BIT(2)
+#define BRCMF_BLHS_H2D_BL_RESET_ON_ERROR	BIT(3)
+
 struct brcmf_core_priv {
 	struct brcmf_core pub;
 	u32 wrapbase;
@@ -755,6 +781,8 @@ static u32 brcmf_chip_tcm_rambase(struct brcmf_chip_priv *ci)
 		return 0x352000;
 	case CY_CC_89459_CHIP_ID:
 		return ((ci->pub.chiprev < 9) ? 0x180000 : 0x160000);
+	case CY_CC_55560_CHIP_ID:
+		return CYW55560_RAM_BASE;
 	default:
 		brcmf_err("unknown chip: %s\n", ci->pub.name);
 		break;
@@ -773,6 +801,9 @@ int brcmf_chip_get_raminfo(struct brcmf_chip *pub)
 	if (mem) {
 		mem_core = container_of(mem, struct brcmf_core_priv, pub);
 		ci->pub.ramsize = brcmf_chip_tcm_ramsize(mem_core);
+		if (ci->pub.chip == CY_CC_55560_CHIP_ID)
+			ci->pub.ramsize -= (CYW55560_TCAM_SIZE +
+					    CYW55560_TRXHDR_SIZE);
 		ci->pub.rambase = brcmf_chip_tcm_rambase(ci);
 		if (ci->pub.rambase == INVALID_RAMBASE) {
 			brcmf_err("RAM base not provided with ARM CR4 core\n");
@@ -976,6 +1007,144 @@ u32 brcmf_chip_enum_base(u16 devid)
 	return SI_ENUM_BASE_DEFAULT;
 }
 
+static void brcmf_blhs_init(struct brcmf_chip *pub)
+{
+	struct brcmf_chip_priv *chip;
+	u32 addr;
+
+	chip = container_of(pub, struct brcmf_chip_priv, pub);
+	addr = pub->blhs->h2d;
+	pub->blhs->write(chip->ctx, addr, 0);
+}
+
+static int brcmf_blhs_is_bootloader_ready(struct brcmf_chip_priv *chip)
+{
+	u32 regdata;
+	u32 addr;
+
+	addr = chip->pub.blhs->d2h;
+	SPINWAIT_MS((chip->pub.blhs->read(chip->ctx, addr) &
+		     BRCMF_BLHS_D2H_READY) == 0,
+		    BRCMF_BLHS_D2H_READY_TIMEOUT, BRCMF_BLHS_POLL_INTERVAL);
+
+	regdata = chip->pub.blhs->read(chip->ctx, addr);
+	if (!(regdata & BRCMF_BLHS_D2H_READY)) {
+		brcmf_err("Timeout waiting for bootloader ready\n");
+		return -EPERM;
+	}
+
+	return 0;
+}
+
+static int brcmf_blhs_prep_fw_download(struct brcmf_chip *pub)
+{
+	struct brcmf_chip_priv *chip;
+	u32 addr;
+	int err;
+
+	/* Host indication for bootloader to start the init */
+	brcmf_blhs_init(pub);
+
+	chip = container_of(pub, struct brcmf_chip_priv, pub);
+	err = brcmf_blhs_is_bootloader_ready(chip);
+	if (err)
+		return err;
+
+	/* Host notification about FW download start */
+	addr = pub->blhs->h2d;
+	pub->blhs->write(chip->ctx, addr, BRCMF_BLHS_H2D_DL_FW_START);
+
+	return 0;
+}
+
+static int brcmf_blhs_post_fw_download(struct brcmf_chip *pub)
+{
+	struct brcmf_chip_priv *chip;
+	u32 addr;
+	u32 regdata;
+
+	chip = container_of(pub, struct brcmf_chip_priv, pub);
+	addr = pub->blhs->h2d;
+	pub->blhs->write(chip->ctx, addr, BRCMF_BLHS_H2D_DL_FW_DONE);
+	addr = pub->blhs->d2h;
+	SPINWAIT_MS((pub->blhs->read(chip->ctx, addr) &
+		     BRCMF_BLHS_D2H_TRXHDR_PARSE_DONE) == 0,
+		    BRCMF_BLHS_D2H_TRXHDR_PARSE_DONE_TIMEOUT,
+		    BRCMF_BLHS_POLL_INTERVAL);
+
+	regdata = pub->blhs->read(chip->ctx, addr);
+	if (!(regdata & BRCMF_BLHS_D2H_TRXHDR_PARSE_DONE)) {
+		brcmf_err("TRX header parsing failed\n");
+
+		/* Host indication for bootloader to get reset on error */
+		addr = pub->blhs->h2d;
+		regdata = pub->blhs->read(chip->ctx, addr);
+		regdata |= BRCMF_BLHS_H2D_BL_RESET_ON_ERROR;
+		pub->blhs->write(chip->ctx, addr, regdata);
+
+		return -EPERM;
+	}
+
+	return 0;
+}
+
+static void brcmf_blhs_post_nvram_download(struct brcmf_chip *pub)
+{
+	struct brcmf_chip_priv *chip;
+	u32 addr;
+	u32 regdata;
+
+	chip = container_of(pub, struct brcmf_chip_priv, pub);
+	addr = pub->blhs->h2d;
+	regdata = pub->blhs->read(chip->ctx, addr);
+	regdata |= BRCMF_BLHS_H2D_DL_NVRAM_DONE;
+	pub->blhs->write(chip->ctx, addr, regdata);
+}
+
+static int brcmf_blhs_chk_validation(struct brcmf_chip *pub)
+{
+	struct brcmf_chip_priv *chip;
+	u32 addr;
+	u32 regdata;
+
+	chip = container_of(pub, struct brcmf_chip_priv, pub);
+	addr = pub->blhs->d2h;
+	SPINWAIT_MS((pub->blhs->read(chip->ctx, addr) &
+		     BRCMF_BLHS_D2H_VALDN_DONE) == 0,
+		    BRCMF_BLHS_D2H_VALDN_DONE_TIMEOUT,
+		    BRCMF_BLHS_POLL_INTERVAL);
+
+	regdata = pub->blhs->read(chip->ctx, addr);
+	if (!(regdata & BRCMF_BLHS_D2H_VALDN_DONE) ||
+	    !(regdata & BRCMF_BLHS_D2H_VALDN_RESULT)) {
+		brcmf_err("TRX image validation check failed\n");
+
+		/* Host notification for bootloader to get reset on error */
+		addr = pub->blhs->h2d;
+		regdata = pub->blhs->read(chip->ctx, addr);
+		regdata |= BRCMF_BLHS_H2D_BL_RESET_ON_ERROR;
+		pub->blhs->write(chip->ctx, addr, regdata);
+
+		return -EPERM;
+	}
+
+	return 0;
+}
+
+static int brcmf_blhs_post_watchdog_reset(struct brcmf_chip *pub)
+{
+	struct brcmf_chip_priv *chip;
+	int err;
+
+	/* Host indication for bootloader to start the init */
+	brcmf_blhs_init(pub);
+
+	chip = container_of(pub, struct brcmf_chip_priv, pub);
+	err = brcmf_blhs_is_bootloader_ready(chip);
+
+	return err;
+}
+
 static int brcmf_chip_recognition(struct brcmf_chip_priv *ci)
 {
 	struct brcmf_core *core;
@@ -1127,6 +1296,7 @@ struct brcmf_chip *brcmf_chip_attach(void *ctx, u16 devid,
 				     const struct brcmf_buscore_ops *ops)
 {
 	struct brcmf_chip_priv *chip;
+	struct brcmf_blhs *blhs;
 	int err = 0;
 
 	if (WARN_ON(!ops->read32))
@@ -1154,6 +1324,26 @@ struct brcmf_chip *brcmf_chip_attach(void *ctx, u16 devid,
 	if (err < 0)
 		goto fail;
 
+	blhs = NULL;
+	if (chip->ops->blhs_attach) {
+		err = chip->ops->blhs_attach(chip->ctx, &blhs,
+					     BRCMF_BLHS_D2H_READY,
+					     BRCMF_BLHS_D2H_READY_TIMEOUT,
+					     BRCMF_BLHS_POLL_INTERVAL);
+		if (err < 0)
+			goto fail;
+
+		if (blhs) {
+			blhs->init = brcmf_blhs_init;
+			blhs->prep_fwdl = brcmf_blhs_prep_fw_download;
+			blhs->post_fwdl = brcmf_blhs_post_fw_download;
+			blhs->post_nvramdl = brcmf_blhs_post_nvram_download;
+			blhs->chk_validation = brcmf_blhs_chk_validation;
+			blhs->post_wdreset = brcmf_blhs_post_watchdog_reset;
+		}
+	}
+	chip->pub.blhs = blhs;
+
 	err = brcmf_chip_recognition(chip);
 	if (err < 0)
 		goto fail;
@@ -1180,6 +1370,7 @@ void brcmf_chip_detach(struct brcmf_chip *pub)
 		list_del(&core->list);
 		kfree(core);
 	}
+	kfree(pub->blhs);
 	kfree(chip);
 }
 
@@ -1320,7 +1511,8 @@ brcmf_chip_cr4_set_passive(struct brcmf_chip_priv *chip)
 {
 	struct brcmf_core *core;
 
-	brcmf_chip_disable_arm(chip, BCMA_CORE_ARM_CR4);
+	if (!chip->pub.blhs)
+		brcmf_chip_disable_arm(chip, BCMA_CORE_ARM_CR4);
 
 	core = brcmf_chip_get_core(&chip->pub, BCMA_CORE_80211);
 	brcmf_chip_resetcore(core, D11_BCMA_IOCTL_PHYRESET |
@@ -1624,4 +1816,3 @@ void brcmf_chip_reset_watchdog(struct brcmf_chip *pub)
 		break;
 	}
 }
-
