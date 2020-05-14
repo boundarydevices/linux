@@ -654,6 +654,21 @@
 		enable-active-high;
 	};
 
+	resmem: reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0 0x3c000000>;
+			alloc-ranges = <0 0x40000000 0 0x40000000>;
+			linux,cma-default;
+		};
+	};
+
 	sound-wm8960 {
 		compatible = "fsl,imx-audio-wm8960";
 		model = "wm8960-audio";
@@ -684,7 +699,10 @@
 	};
 
 	power-domains {
-		vpupgc_gpu: power-domain@ffffffff {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		pgc_gpuvpu: power-domain@ffffffff {
 			compatible = "fsl,imx8mq-pm-domain";
 			reg = <0xffffffff>;
 			domain-name = "VPUGPU_PD";
@@ -1135,7 +1153,7 @@
 				 <&clk IMX8MQ_CLK_25M>;
 
 	port@0 {
-		lcdif_mipi_dsi: endpoint {
+		lcdif_mipi_dsi_out: endpoint {
 			remote-endpoint = <&mipi_dsi_in>;
 		};
 	};
@@ -1171,10 +1189,6 @@
 			remote-endpoint = <&csi2_ep>;
 		};
 	};
-};
-
-&dphy {
-	status = "disabled";
 };
 
 &mipi_dsi {
@@ -1239,13 +1253,15 @@
 
 		port@0 {
 			reg = <0>;
+
 			mipi_dsi_in: endpoint {
-				remote-endpoint = <&lcdif_mipi_dsi>;
+				remote-endpoint = <&lcdif_mipi_dsi_out>;
 			};
 		};
 
 		port@1 {
 			reg = <1>;
+
 			mipi_dsi_out: endpoint {
 				remote-endpoint = <&panel1_in>;
 			};
