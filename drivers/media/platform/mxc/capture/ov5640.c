@@ -1984,7 +1984,7 @@ static int ov5640_probe(struct i2c_client *client,
 	ov5640_data.streamcap.timeperframe.denominator = DEFAULT_FPS;
 	ov5640_data.streamcap.timeperframe.numerator = 1;
 
-	ov5640_regulator_enable(&client->dev);
+	ov5640_regulator_enable(dev);
 
 	ov5640_reset();
 
