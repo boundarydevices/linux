@@ -44,7 +44,7 @@
 &i2c2 {
 	/delete-node/ ov5640-mipi1@3c;
 
-	tc358743_mipi@0f {
+	tc358743_mipi@f {
 		AVDD-supply = <&reg_vref_2v5>;
 		DOVDD-supply = <&reg_vref_1v8>;
 		DVDD-supply = <&reg_vref_1v8>;
@@ -79,7 +79,7 @@
 &i2c3 {
 	/delete-node/ ov5640-mipi2@3c;
 
-	tc358743_mipi@0f {
+	tc358743_mipi@f {
 		AVDD-supply = <&reg_vref_2v5>;
 		DOVDD-supply = <&reg_vref_1v8>;
 		DVDD-supply = <&reg_vref_1v8>;

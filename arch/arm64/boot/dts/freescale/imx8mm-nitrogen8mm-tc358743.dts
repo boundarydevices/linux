@@ -7,6 +7,7 @@
 
 / {
 	model = "Boundary Devices i.MX8MMini Nitrogen8MM-tc358743";
+	compatible = "boundary,imx8mm-nitrogen8mm-tc358743", "fsl,imx8mm";
 
 	clk27m: clk27m {
 		compatible = "fixed-clock";
