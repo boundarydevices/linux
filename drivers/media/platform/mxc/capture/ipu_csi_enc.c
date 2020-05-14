@@ -208,14 +208,14 @@ static int csi_enc_enabling_tasks(void *private)
 	if (cam->dummy_frame.vaddress &&
 		cam->dummy_frame.buffer.length
 		< PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage)) {
-		dma_free_coherent(0, cam->dummy_frame.buffer.length,
+		dma_free_coherent(cam->dev, cam->dummy_frame.buffer.length,
 				  cam->dummy_frame.vaddress,
 				  cam->dummy_frame.paddress);
 		cam->dummy_frame.vaddress = 0;
 	}
 
 	if (!cam->dummy_frame.vaddress) {
-		cam->dummy_frame.vaddress = dma_alloc_coherent(0,
+		cam->dummy_frame.vaddress = dma_alloc_coherent(cam->dev,
 				       PAGE_ALIGN(cam->v2f.fmt.pix.sizeimage),
 				       &cam->dummy_frame.paddress,
 				       GFP_DMA | GFP_KERNEL);
