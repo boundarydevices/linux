@@ -100,6 +100,7 @@ static const struct brcmf_firmware_mapping brcmf_pcie_fwnames[] = {
 	BRCMF_FW_ENTRY(CY_CC_55560_CHIP_ID, 0xFFFFFFFF, 55560),
 };
 
+#define BRCMF_PCIE_READ_SHARED_TIMEOUT		5000 /* msec */
 #define BRCMF_PCIE_FW_UP_TIMEOUT		5000 /* msec */
 
 #define BRCMF_PCIE_REG_MAP_SIZE			(32 * 1024)
@@ -479,6 +480,9 @@ static void brcmf_pcie_setup(struct device *dev, int ret,
 			     struct brcmf_fw_request *fwreq);
 static struct brcmf_fw_request *
 brcmf_pcie_prepare_fw_request(struct brcmf_pciedev_info *devinfo);
+static void brcmf_pcie_bus_console_init(struct brcmf_pciedev_info *devinfo);
+static void brcmf_pcie_bus_console_read(struct brcmf_pciedev_info *devinfo,
+					bool error);
 
 static void
 brcmf_pcie_fwcon_timer(struct brcmf_pciedev_info *devinfo, bool active);
@@ -1000,6 +1004,34 @@ static void brcmf_pcie_attach(struct brcmf_pciedev_info *devinfo)
 }
 
 
+static int brcmf_pcie_bus_readshared(struct brcmf_pciedev_info *devinfo,
+				     u32 nvram_csm)
+{
+	struct brcmf_bus *bus = dev_get_drvdata(&devinfo->pdev->dev);
+	u32 loop_counter;
+	u32 addr_le;
+	u32 addr = 0;
+
+	loop_counter = BRCMF_PCIE_READ_SHARED_TIMEOUT / 50;
+	while ((addr == 0 || addr == nvram_csm) && (loop_counter)) {
+		msleep(50);
+		addr_le = brcmf_pcie_read_ram32(devinfo,
+						devinfo->ci->ramsize - 4);
+		addr = le32_to_cpu(addr_le);
+		loop_counter--;
+	}
+	if (addr == 0 || addr == nvram_csm || addr < devinfo->ci->rambase ||
+	    addr >= devinfo->ci->rambase + devinfo->ci->ramsize) {
+		brcmf_err(bus, "Invalid shared RAM address 0x%08x\n", addr);
+		return -ENODEV;
+	}
+	devinfo->shared.tcm_base_address = addr;
+	brcmf_dbg(PCIE, "Shared RAM addr: 0x%08x\n", addr);
+
+	brcmf_pcie_bus_console_init(devinfo);
+	return 0;
+}
+
 static int brcmf_pcie_enter_download_state(struct brcmf_pciedev_info *devinfo)
 {
 	struct brcmf_bus *bus = dev_get_drvdata(&devinfo->pdev->dev);
@@ -1019,8 +1051,13 @@ static int brcmf_pcie_enter_download_state(struct brcmf_pciedev_info *devinfo)
 
 	if (devinfo->ci->blhs) {
 		err = devinfo->ci->blhs->prep_fwdl(devinfo->ci);
-		if (err)
+		if (err) {
 			brcmf_err(bus, "FW download preparation failed");
+			return err;
+		}
+
+		if (!brcmf_pcie_bus_readshared(devinfo, 0))
+			brcmf_pcie_bus_console_read(devinfo, false);
 	}
 
 	return err;
@@ -1038,6 +1075,7 @@ static int brcmf_pcie_exit_download_state(struct brcmf_pciedev_info *devinfo,
 	}
 
 	if (devinfo->ci->blhs) {
+		brcmf_pcie_bus_console_read(devinfo, false);
 		devinfo->ci->blhs->post_nvramdl(devinfo->ci);
 	} else {
 		if (!brcmf_chip_set_active(devinfo->ci, resetintr))
@@ -1142,6 +1180,7 @@ static void brcmf_pcie_bus_console_init(struct brcmf_pciedev_info *devinfo)
 {
 	struct brcmf_pcie_shared_info *shared;
 	struct brcmf_pcie_console *console;
+	u32 buf_addr;
 	u32 addr;
 
 	shared = &devinfo->shared;
@@ -1150,7 +1189,12 @@ static void brcmf_pcie_bus_console_init(struct brcmf_pciedev_info *devinfo)
 	console->base_addr = brcmf_pcie_read_tcm32(devinfo, addr);
 
 	addr = console->base_addr + BRCMF_CONSOLE_BUFADDR_OFFSET;
-	console->buf_addr = brcmf_pcie_read_tcm32(devinfo, addr);
+	buf_addr = brcmf_pcie_read_tcm32(devinfo, addr);
+	/* reset console index when buffer address is updated */
+	if (console->buf_addr != buf_addr) {
+		console->buf_addr = buf_addr;
+		console->read_idx = 0;
+	}
 	addr = console->base_addr + BRCMF_CONSOLE_BUFSIZE_OFFSET;
 	console->bufsize = brcmf_pcie_read_tcm32(devinfo, addr);
 
@@ -2067,6 +2111,7 @@ static int brcmf_pcie_download_fw_nvram(struct brcmf_pciedev_info *devinfo,
 	release_firmware(fw);
 
 	if (devinfo->ci->blhs) {
+		brcmf_pcie_bus_console_read(devinfo, false);
 		err = devinfo->ci->blhs->post_fwdl(devinfo->ci);
 		if (err) {
 			brcmf_err(bus, "FW download failed, err=%d\n", err);
@@ -2120,6 +2165,9 @@ static int brcmf_pcie_download_fw_nvram(struct brcmf_pciedev_info *devinfo,
 	err = brcmf_pcie_exit_download_state(devinfo, resetintr);
 	if (err)
 		return err;
+
+	if (!brcmf_pcie_bus_readshared(devinfo, nvram_csm))
+		brcmf_pcie_bus_console_read(devinfo, false);
 
 	brcmf_dbg(PCIE, "Wait for FW init\n");
 	sharedram_addr = sharedram_addr_written;
@@ -2594,8 +2642,11 @@ static void brcmf_pcie_setup(struct device *dev, int ret,
 	brcmf_pcie_adjust_ramsize(devinfo, (u8 *)fw->data, fw->size);
 
 	ret = brcmf_pcie_download_fw_nvram(devinfo, fw, nvram, nvram_len);
-	if (ret)
+	if (ret) {
+		if (devinfo->ci->blhs && !brcmf_pcie_bus_readshared(devinfo, 0))
+			brcmf_pcie_bus_console_read(devinfo, true);
 		goto fail;
+	}
 
 	devinfo->state = BRCMFMAC_PCIE_STATE_UP;
 
