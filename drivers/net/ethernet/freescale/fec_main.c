@@ -646,7 +646,7 @@ fec_enet_txq_put_data_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 			((bdp == txq->bd.last) ? BD_SC_WRAP : 0);
 	/* Handle the last BD specially */
 	if (last_tcp)
-			status |= BD_ENET_TX_LAST;
+		status |= BD_ENET_TX_LAST;
 	if (is_last)
 		status |= BD_ENET_TX_INTR;
 
@@ -1617,12 +1617,6 @@ static int fec_rxq(struct net_device *ndev, struct fec_enet_priv_rx_q *rxq,
 		}
 
 rx_processing_done:
-		/* Clear the status flags for this buffer */
-		status &= ~BD_ENET_RX_STATS;
-
-		/* Mark the buffer empty */
-		status |= BD_ENET_RX_EMPTY;
-
 		if (fep->bufdesc_ex) {
 			struct bufdesc_ex *ebdp = (struct bufdesc_ex *)bdp;
 
@@ -1634,7 +1628,8 @@ rx_processing_done:
 		 * performed before transferring ownership.
 		 */
 		dma_wmb();
-		bdp->cbd_sc = cpu_to_fec16(status);
+		bdp->cbd_sc = cpu_to_fec16(BD_ENET_RX_EMPTY |
+				((bdp == rxq->bd.last) ? BD_SC_WRAP : 0));
 
 		/* Update BD pointer to next entry */
 		bdp = fec_enet_get_nextdesc(bdp, &rxq->bd);
