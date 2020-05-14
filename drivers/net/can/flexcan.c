@@ -24,9 +24,9 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
-#include <linux/of_gpio.h>	
 #include <linux/regulator/consumer.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/regmap.h>
@@ -629,26 +629,26 @@ static void flexcan_clks_disable(const struct flexcan_priv *priv)
 
 static inline int flexcan_transceiver_enable(const struct flexcan_priv *priv)
 {
-	if (!priv->reg_xceiver)
-		return 0;
-
 	if (gpio_is_valid(priv->stby_gpio)) {
 		gpio_set_value(priv->stby_gpio,
 			(priv->stby_gpio_flags & OF_GPIO_ACTIVE_LOW) ? 1 : 0);
 	}
+
+	if (!priv->reg_xceiver)
+		return 0;
 
 	return regulator_enable(priv->reg_xceiver);
 }
 
 static inline int flexcan_transceiver_disable(const struct flexcan_priv *priv)
 {
-	if (!priv->reg_xceiver)
-		return 0;
-
 	if (gpio_is_valid(priv->stby_gpio)) {
 		gpio_set_value(priv->stby_gpio,
 			(priv->stby_gpio_flags & OF_GPIO_ACTIVE_LOW) ? 0 : 1);
 	}
+
+	if (!priv->reg_xceiver)
+		return 0;
 
 	return regulator_disable(priv->reg_xceiver);
 }
