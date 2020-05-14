@@ -455,18 +455,18 @@ static void __init init_ipu_clk(void __iomem *anatop_base)
 static void disable_anatop_clocks(void __iomem *anatop_base)
 {
 	unsigned int reg;
-	struct clk *parent = clk_get_parent(clk[IMX6QDL_CLK_PERIPH_PRE]);
+	struct clk *parent = clk_get_parent(hws[IMX6QDL_CLK_PERIPH_PRE]->clk);
 
 	/* Make sure PLL2 PFDs 0-2 are gated */
 	reg = readl_relaxed(anatop_base + CCM_ANALOG_PFD_528);
 	reg |= PFD1_CLKGATE;				/* Disable PFD1 */
 
 	/* Cannot gate PFD2 if pll2_pfd2_396m is the parent of MMDC clock */
-	if (parent == clk[IMX6QDL_CLK_PLL2_PFD0_352M]) {
+	if (parent == hws[IMX6QDL_CLK_PLL2_PFD0_352M]->clk) {
 		reg |= PFD2_CLKGATE;			/* Disable PFD2 */
 	} else {
 		reg |= PFD0_CLKGATE;			/* Disable PFD0 */
-		if (parent == clk[IMX6QDL_CLK_PLL2_BUS])
+		if (parent == hws[IMX6QDL_CLK_PLL2_BUS]->clk)
 			reg |= PFD2_CLKGATE;		/* Disable PFD2 */
 	}
 	writel_relaxed(reg, anatop_base + CCM_ANALOG_PFD_528);
