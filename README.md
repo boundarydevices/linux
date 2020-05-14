@@ -1,7 +1,7 @@
 linux-imx6
 ==========
 
-Boundary Devices Kernel tree for i.MX6/.MX7/i.MX8.
+Boundary Devices Kernel tree for i.MX6/i.MX7/i.MX8.
 
 This repository contains kernel source trees for Boundary Devices'
 i.MX6/i.MX7/i.MX8 based boards:
@@ -16,11 +16,13 @@ i.MX6/i.MX7/i.MX8 based boards:
 * [Nitrogen6 SoloX][nitrogen6-sx]
 * [Nitrogen7][nitrogen7]
 * [Nitrogen8M][nitrogen8m]
-* [Nitrogen8M Mini][nitrogen8mm]
 * [Nitrogen8M SOM][nitrogen8m-som]
+* [Nitrogen8M Mini][nitrogen8mm]
 * [Nitrogen8M Mini SOM][nitrogen8mm-som]
+* [Nitrogen8M Nano][nitrogen8mn]
+* [Nitrogen8M Nano SOM][nitrogen8mn-som]
 
-It is based largely on Freescale's kernel trees at [git.freescale.com][freescale].
+It is based largely on NXP's kernel tree at [codeaurora.org/external/imx][nxp].
 
 Latest kernel releases:
 
@@ -36,6 +38,10 @@ Latest Nougat sources are in branch [boundary-imx-n7.1.1\_1.0.0-ga][latest-nouga
 
 Latest Oreo sources are in branch [boundary-imx-o8.1.0\_1.3.0\_8m-ga][latest-oreo]
 
+Latest Pie sources are in branch [boundary-imx-p9.0.0\_1.0.0-gaa][latest-pie]
+
+Latest Android 10 sources are in branch [boundary-android-10.0.0\_1.0.0][latest-10]
+
 Non-Android
 ------------------
 The latest 3.0.35 kernel is in branch [boundary-imx\_3.0.35\_4.1.0][latest-3.0.35]
@@ -50,10 +56,12 @@ The latest 4.9.x kernel is in branch [boundary-imx\_4.9.x\_2.0.0\_ga][latest-4.9
 
 The latest 4.14.x kernel is in branch [boundary-imx\_4.14.x\_2.0.0\_ga][latest-4.14.x]
 
+The latest 4.19.x kernel is in branch [boundary-imx\_4.19.x\_1.1.0][latest-4.19.x]
+
 These branches are based on Freescale releases of the same name (minus the 'boundary').
 
 
-[freescale]: http://git.freescale.com/git/cgit.cgi/imx/linux-2.6-imx.git/ "Freescale Git repository"
+[nxp]: https://source.codeaurora.org/external/imx/linux-imx/ "NXP Git repository"
 [sabrelite]:https://boundarydevices.com/wiki/bd-sl-imx6 "SABRE Lite product page"
 [nitrogen6x]:https://boundarydevices.com/wiki/nitrogen6x "Nitrogen6X product page"
 [nitrogen6x-som]:https://boundarydevices.com/wiki/nitrogen6x-som-v1 "Nitrogen6X SOM product page"
@@ -64,18 +72,23 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [nitrogen6-sx]:https://boundarydevices.com/wiki/nitrogen6_solox "Nit6_SoloX product page"
 [nitrogen7]:https://boundarydevices.com/wiki/nitrogen7 "Nitrogen7 product page"
 [nitrogen8m]:https://boundarydevices.com/wiki/nitrogen8m-sbc "Nitrogen8M product page"
-[nitrogen8mm]:https://boundarydevices.com/wiki/nitrogen8m-mini-sbc "Nitrogen8M_Mini product page"
 [nitrogen8m-som]:https://boundarydevices.com/wiki/nitrogen8m-som "Nitrogen8M SOM product page"
+[nitrogen8mm]:https://boundarydevices.com/wiki/nitrogen8m-mini-sbc "Nitrogen8M_Mini product page"
 [nitrogen8mm-som]:https://boundarydevices.com/wiki/Nitrogen8M_Mini-SOM "Nitrogen8M_Mini SOM product page"
+[nitrogen8mn]:https://boundarydevices.com/wiki/nitrogen8m-nano-sbc "Nitrogen8M Nano product page"
+[nitrogen8mn-som]:https://boundarydevices.com/wiki/nitrogen8m-nano-som "Nitrogen8M Nano SOM product page"
 [latest-jellybean]:http://github.com/boundarydevices/linux-imx6/tree/boundary-jb4.3_1.0.0-ga "Boundary Jellybean kernel tree"
 [latest-kitkat]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-kk4.4.3_2.0.1-ga "Boundary KitKat kernel tree"
 [latest-lollipop]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-l5.1.1_2.1.0-ga "Boundary Lollipop kernel tree"
 [latest-marshmallow]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-m6.0.1_1.0.0-ga "Boundary Marshmallow kernel tree"
 [latest-nougat]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-n7.1.1_1.0.0-ga "Boundary Nougat kernel tree"
 [latest-oreo]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-o8.1.0_1.3.0_8m-ga "Boundary Oreo kernel tree"
+[latest-pie]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-p9.0.0_1.0.0-ga "Boundary Pie kernel tree"
+[latest-10]:http://github.com/boundarydevices/linux-imx6/tree/boundary-android-10.0.0_1.0.0 "Boundary Android 10 kernel tree"
 [latest-3.0.35]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.0.35_4.1.0 "Boundary 3.0.35 4.1.0 kernel tree"
 [latest-3.10.x]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.10.53_1.1.1_ga "Boundary 3.10.53-1.1.1 GA kernel tree"
 [latest-3.14.x]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.14.52_1.1.0_ga "Boundary 3.14.52-1.1.0 GA kernel tree"
 [latest-4.1.15]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx_4.1.15_2.0.0_ga "Boundary 4.1.15-2.0.0 GA kernel tree"
 [latest-4.9.x]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx_4.9.x_2.0.0_ga "Boundary 4.9.x-2.0.0 GA kernel tree"
 [latest-4.14.x]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx_4.14.x_2.0.0_ga "Boundary 4.14.x-2.0.0 GA kernel tree"
+[latest-4.19.x]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx_4.19.x_1.1.0 "Boundary 4.19.x-1.1.0 kernel tree"
