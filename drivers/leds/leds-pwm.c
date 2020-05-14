@@ -275,6 +275,17 @@ static int led_pwm_set(struct led_classdev *led_cdev,
 	return 0;
 }
 
+static void led_pwm_cleanup(struct led_pwm_priv *priv)
+{
+	while (priv->num_leds--) {
+		struct led_pwm_data *led_dat = &priv->leds[priv->num_leds];
+
+		device_remove_file(led_dat->cdev.dev, &dev_attr_note);
+		device_remove_file(led_dat->cdev.dev, &dev_attr_frequency);
+		device_remove_file(led_dat->cdev.dev, &dev_attr_period);
+	}
+}
+
 static int led_pwm_add(struct device *dev, struct led_pwm_priv *priv,
 		       struct led_pwm *led, struct fwnode_handle *fwnode)
 {
@@ -407,8 +418,10 @@ static int led_pwm_probe(struct platform_device *pdev)
 		ret = led_pwm_create_fwnode(&pdev->dev, priv);
 	}
 
-	if (ret)
+	if (ret) {
+		led_pwm_cleanup(priv);
 		return ret;
+	}
 
 	platform_set_drvdata(pdev, priv);
 
@@ -419,13 +432,7 @@ static int led_pwm_remove(struct platform_device *pdev)
 {
 	struct led_pwm_priv *priv = platform_get_drvdata(pdev);
 
-	while (priv->num_leds--) {
-		struct led_pwm_data *led_dat = &priv->leds[priv->num_leds];
-
-		device_remove_file(led_dat->cdev.dev, &dev_attr_note);
-		device_remove_file(led_dat->cdev.dev, &dev_attr_frequency);
-		device_remove_file(led_dat->cdev.dev, &dev_attr_period);
-	}
+	led_pwm_cleanup(priv);
 
 	return 0;
 }
