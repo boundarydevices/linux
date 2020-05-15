@@ -682,8 +682,18 @@ static struct platform_driver imx8mq_clk_driver = {
 		.of_match_table = imx8mq_clk_of_match,
 	},
 };
-module_platform_driver(imx8mq_clk_driver);
 
+static int __init imx8mq_clk_driver_init(void)
+{
+	return platform_driver_register(&imx8mq_clk_driver);
+}
+subsys_initcall(imx8mq_clk_driver_init);
+
+static void __exit imx8mq_clk_driver_exit(void)
+{
+	platform_driver_unregister(&imx8mq_clk_driver);
+}
+module_exit(imx8mq_clk_driver_exit);
 MODULE_AUTHOR("Abel Vesa <abel.vesa@nxp.com>");
 MODULE_DESCRIPTION("NXP i.MX8MQ clock driver");
 MODULE_LICENSE("GPL v2");
