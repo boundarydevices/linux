@@ -596,6 +596,8 @@ static int do_fbcon_takeover(int show_logo)
 static void update_logo_shown(struct vc_data *vc)
 {
 #ifdef CONFIG_LOGO
+	if (logo_shown == FBCON_LOGO_DONTSHOW)
+		return;
 	if (!logo_lines || (fg_console != vc->vc_num))
 		return;
 
@@ -607,7 +609,7 @@ static void update_logo_shown(struct vc_data *vc)
 	if (logo_lines > vc->vc_bottom) {
 		logo_shown = FBCON_LOGO_CANSHOW;
 		pr_info("fbcon_init: boot-logo may be bigger than screen.\n");
-	} else if (logo_shown != FBCON_LOGO_DONTSHOW) {
+	} else {
 		logo_shown = FBCON_LOGO_DRAW;
 		vc->vc_top = logo_lines;
 	}
@@ -696,9 +698,6 @@ static void fbcon_prepare_logo(struct vc_data *vc, struct fb_info *info,
 		vc->vc_pos += logo_lines * vc->vc_size_row;
 		kfree(save);
 	}
-
-	if (logo_shown == FBCON_LOGO_DONTSHOW)
-		return;
 
 	update_logo_shown(vc);
 }
