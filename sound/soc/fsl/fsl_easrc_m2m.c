@@ -10,6 +10,7 @@ struct fsl_easrc_m2m {
 	unsigned int easrc_active;
 	unsigned int first_convert;
 	unsigned int sg_nodes[2];
+	unsigned int in_filled_len;
 	struct scatterlist sg[2][9];
 	struct dma_async_tx_descriptor *desc[2];
 	spinlock_t lock;  /* protect mem resource */
@@ -183,17 +184,15 @@ static long fsl_easrc_calc_outbuf_len(struct fsl_easrc_m2m *m2m,
 	in_width = snd_pcm_format_physical_width(ctx_priv->in_params.sample_format) / 8;
 	out_width = snd_pcm_format_physical_width(ctx_priv->out_params.sample_format) / 8;
 
-	in_samples = pbuf->input_buffer_length / (in_width * channels);
-	out_samples = ctx_priv->out_params.sample_rate * in_samples /
-				ctx_priv->in_params.sample_rate;
-	out_length = out_samples * out_width * channels;
-
-	if (out_samples <= ctx_priv->out_missed_sample) {
+	m2m->in_filled_len += pbuf->input_buffer_length;
+	if (m2m->in_filled_len <= ctx_priv->in_filled_sample * in_width * channels) {
 		out_length = 0;
-		ctx_priv->out_missed_sample -= out_samples;
 	} else {
-		out_length -= ctx_priv->out_missed_sample * out_width * channels;
-		ctx_priv->out_missed_sample = 0;
+		in_samples = m2m->in_filled_len / (in_width * channels) - ctx_priv->in_filled_sample;
+		out_samples = ctx_priv->out_params.sample_rate * in_samples /
+				ctx_priv->in_params.sample_rate;
+		out_length = out_samples * out_width * channels;
+		m2m->in_filled_len = ctx_priv->in_filled_sample * in_width * channels;
 	}
 
 	return out_length;
@@ -963,6 +962,7 @@ static void fsl_easrc_m2m_suspend(struct fsl_asrc *asrc)
 		}
 
 		m2m->first_convert = 1;
+		m2m->in_filled_len = 0;
 		fsl_easrc_stop_context(ctx);
 		spin_unlock_irqrestore(&asrc->lock, lock_flags);
 	}
