@@ -13,6 +13,7 @@ obj-$(CONFIG_GENERIC_PHY)	+= phy/
 
 # GPIO must come after pinctrl as gpios may need to mux pins etc
 obj-$(CONFIG_PINCTRL)		+= pinctrl/
+obj-y				+= clk/
 obj-$(CONFIG_GPIOLIB)		+= gpio/
 obj-y				+= pwm/
 
@@ -33,7 +34,6 @@ obj-$(CONFIG_ACPI)		+= acpi/
 obj-$(CONFIG_PNP)		+= pnp/
 obj-y				+= amba/
 
-obj-y				+= clk/
 # Many drivers will want to use DMA so this has to be made available
 # really early.
 obj-$(CONFIG_DMADEVICES)	+= dma/
