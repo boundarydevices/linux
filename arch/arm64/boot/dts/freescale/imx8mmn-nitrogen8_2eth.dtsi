@@ -382,7 +382,7 @@
 	pinctrl_usbotg1: usbotg1grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_GPIO1_IO12_USB1_OTG_PWR, 0x16)
-			MX8MMN(IOMUXC_GPIO1_IO13_USB1_OTG_OC, 0x16)
+			MX8MMN(IOMUXC_GPIO1_IO13_USB1_OTG_OC, 0x156)
 		>;
 	};
 
@@ -673,11 +673,6 @@
 	arm-supply = <&reg_sw3>;
 };
 
-&clk {
-	assigned-clocks = <&clk IMX8MMN(AUDIO_PLL1)>, <&clk IMX8MMN(AUDIO_PLL2)>;
-	assigned-clock-rates = <786432000>, <722534400>;
-};
-
 &ecspi1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi1>;
@@ -762,7 +757,7 @@
 	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
-	pf8100@08 {
+	pf8100@8 {
 		compatible = "nxp,pf8x00";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_pf8100>;
@@ -1199,6 +1194,9 @@
 };
 
 &sai3 {
+	assigned-clocks = <&clk IMX8MMN(AUDIO_PLL1)>, <&clk IMX8MMN(AUDIO_PLL2)>, <&clk IMX8MMN(CLK_SAI3)>;
+	assigned-clock-parents = <0>, <0>, <&clk IMX8MMN(AUDIO_PLL1_OUT)>;
+	assigned-clock-rates = <786432000>, <722534400>, <12288000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai3>;
 	status = "okay";
@@ -1236,10 +1234,11 @@
 };
 
 &usbotg1 {
+	dr_mode = "otg";
+	over-current-active-low;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg1>;
-	power-polarity-active-high;
-	dr_mode = "otg";
+	power-active-high;
 	status = "okay";
 };
 
