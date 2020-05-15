@@ -21,6 +21,7 @@
 
 / {
 	model = "Boundary Devices i.MX8MMini Nitrogen8MM Som mcp25625";
+	compatible = "boundary,imx8mm-nitrogen8mm_som-mcp25625", "fsl,imx8mm";
 
 	clocks {
 		/delete-node/ clk16m;
