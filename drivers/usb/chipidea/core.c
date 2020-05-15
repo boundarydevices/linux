@@ -122,13 +122,6 @@ static const u8 ci_regs_lpm[] = {
 	[OP_ENDPTCTRL]		= 0xECU,
 };
 
-static const unsigned int extcon_cables[] = {
-	EXTCON_USB_HOST,
-	EXTCON_CHG_USB_SDP,
-	EXTCON_USB,
-	EXTCON_NONE,
-};
-
 static void hw_alloc_regmap(struct ci_hdrc *ci, bool is_lpm)
 {
 	int i;
@@ -1009,6 +1002,13 @@ static void ci_get_otg_capable(struct ci_hdrc *ci)
 	}
 }
 
+static const unsigned int extcon_cables[] = {
+	EXTCON_USB_HOST,
+	EXTCON_CHG_USB_SDP,
+	EXTCON_USB,
+	EXTCON_NONE,
+};
+
 static ssize_t role_show(struct device *dev, struct device_attribute *attr,
 			  char *buf)
 {
@@ -1265,12 +1265,6 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 		}
 	}
 
-	ci->role = ci_get_role(ci);
-	if (ci->is_otg) {
-		extcon_set_state(ci->extcon, ci->role, 1);
-		extcon_set_state(ci->extcon, ci->role ^ 1, 0);
-	}
-
 	if (ci_role_switch.fwnode) {
 		ci->role_switch = usb_role_switch_register(dev,
 					&ci_role_switch);
@@ -1300,6 +1294,10 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	}
 
 	ci->role = ci_get_role(ci);
+	if (ci->is_otg) {
+		extcon_set_state(ci->extcon, ci->role, 1);
+		extcon_set_state(ci->extcon, ci->role ^ 1, 0);
+	}
 	/* only update vbus status for peripheral */
 	if (ci->role == CI_ROLE_GADGET) {
 		/* Let DP pull down if it isn't currently */
