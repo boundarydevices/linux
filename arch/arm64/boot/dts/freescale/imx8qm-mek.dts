@@ -42,6 +42,13 @@
 					mnt_flags = "noatime,errors=panic,ro,barrier=1,inode_readahead_blks=8";
 					fsmgr_flags = "wait,slotselect,avb,logical,first_stage_mount";
 				};
+				metadata {
+					compatible = "android,metadata";
+					dev = "/dev/block/by-name/metadata";
+					type = "ext4";
+					mnt_flags = "noatime,nosuid,nodev,discard,sync";
+					fsmgr_flags = "wait,formattable,first_stage_mount";
+				};
 			};
 			vbmeta {
 				/*we need use FirstStageMountVBootV2 if we enable avb*/
