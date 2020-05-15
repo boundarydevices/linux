@@ -3928,7 +3928,8 @@ fec_probe(struct platform_device *pdev)
 		if (PTR_ERR(gd) != -EPROBE_DEFER)
 			dev_err(&pdev->dev, "Failed to get mdc gpio: %ld\n",
 				PTR_ERR(gd));
-		return PTR_ERR(gd);
+		ret = PTR_ERR(gd);
+		goto failed_ipc_init;
 	}
 	fep->gd_mdc = gd;
 
@@ -3937,7 +3938,8 @@ fec_probe(struct platform_device *pdev)
 		if (PTR_ERR(gd) != -EPROBE_DEFER)
 			dev_err(&pdev->dev, "Failed to get mdio gpio: %ld\n",
 				PTR_ERR(gd));
-		return PTR_ERR(gd);
+		ret = PTR_ERR(gd);
+		goto failed_ipc_init;
 	}
 	fep->gd_mdio = gd;
 
