@@ -260,7 +260,7 @@
 	pinctrl_usbotg1: usbotg1grp {
 		fsl,pins = <
 			MX8MM_IOMUXC_GPIO1_IO12_USB1_OTG_PWR		0x16
-			MX8MM_IOMUXC_GPIO1_IO13_USB1_OTG_OC		0x16
+			MX8MM_IOMUXC_GPIO1_IO13_USB1_OTG_OC		0x156
 		>;
 	};
 
@@ -503,11 +503,6 @@
 	arm-supply = <&reg_sw3>;
 };
 
-&clk {
-	assigned-clocks = <&clk IMX8MM_AUDIO_PLL1>, <&clk IMX8MM_AUDIO_PLL2>;
-	assigned-clock-rates = <786432000>, <722534400>;
-};
-
 &csi1_bridge {
 	fsl,mipi-mode;
 	status = "okay";
@@ -557,7 +552,7 @@
 	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
-	pf8100@08 {
+	pf8100@8 {
 		compatible = "nxp,pf8x00";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_pf8100>;
@@ -929,18 +924,20 @@
 };
 
 &usbotg1 {
+	dr_mode = "otg";
+	over-current-active-low;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg1>;
-	power-polarity-active-high;
-	dr_mode = "otg";
+	power-active-high;
 	status = "okay";
 };
 
 &usbotg2 {
 	dr_mode = "host";
+	over-current-active-low;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg2>;
-	power-polarity-active-high;
+	power-active-high;
 	reset-gpios = GP_OTG2_HUB_RESET;
 	status = "okay";
 };
