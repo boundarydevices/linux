@@ -2258,7 +2258,6 @@ static struct snd_soc_ops imxpac_tc358743_snd_ops = {
 static struct snd_soc_dai_link imxpac_tc358743_dai = {
 	.name		= "tc358743",
 	.stream_name	= "tc358743",
-	.codec_dai_name	= "tc358743-hifi",
 	.ops		= &imxpac_tc358743_snd_ops,
 };
 
@@ -2311,6 +2310,7 @@ static struct snd_soc_component_driver soc_component_dev_tc358743;
 static int imx_tc358743_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
+	struct snd_soc_dai_link_component *comp;
 	struct tc_data *td;
 	struct device_node *cpu_np;
 	struct snd_soc_dai_link *link = imxpac_tc358743.dai_link;
@@ -2327,11 +2327,23 @@ static int imx_tc358743_probe(struct platform_device *pdev)
 		dev_err(dev, "cpu-dai missing or invalid\n");
 		return -EINVAL;
 	}
-	link->cpu_of_node = cpu_np;
-	link->platform_of_node = cpu_np;
+	comp = devm_kzalloc(&pdev->dev, 3 * sizeof(*comp), GFP_KERNEL);
+	if (!comp) {
+		return -ENOMEM;
+	}
 
+	link->cpus          = &comp[0];
+	link->codecs        = &comp[1];
+	link->platforms     = &comp[2];
+
+	link->num_cpus      = 1;
+	link->num_codecs    = 1;
+	link->num_platforms = 1;
+	link->codecs->dai_name = "tc358743-hifi";
+	link->cpus->of_node = cpu_np;
+	link->platforms->of_node = cpu_np;
 	/* codec and card node are the same */
-	link->codec_of_node = np;
+	link->codecs->of_node = np;
 
 	ret = of_property_read_u32(np, "mux-int-port", &int_port);
 	if (ret) {
