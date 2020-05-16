@@ -20,7 +20,7 @@
 
 
 struct imx_wm5102_data {
-	struct snd_soc_dai_link dai[1];
+	struct snd_soc_dai_link dai;
 	struct snd_soc_card card;
 	int sysclk_rate;
 	int asyncclk_rate;
@@ -164,8 +164,6 @@ static struct snd_soc_dai_link dai_wm5102[] = {
 	{
 		.name = "HiFi",
 		.stream_name = "HiFi",
-		.codec_dai_name = "wm5102-aif1",
-		.codec_name = "wm5102-codec",
 		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF
 				| SND_SOC_DAIFMT_CBM_CFM,
 	},
@@ -186,6 +184,7 @@ static const struct snd_soc_card wm5102_card = {
 static int imx_wm5102_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
+	struct snd_soc_dai_link_component *comp;
 	struct device_node *ssi_np;
 	struct platform_device *ssi_pdev;
 	struct imx_wm5102_data *data;
@@ -248,15 +247,33 @@ static int imx_wm5102_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto fail;
 	}
+	comp = devm_kzalloc(&pdev->dev, 3 * sizeof(*comp), GFP_KERNEL);
+	if (!comp) {
+		ret = -ENOMEM;
+		goto fail;
+	}
+
 	data->sysclk_rate = 45158400;
 	data->asyncclk_rate = 49152000;
 	data->card = wm5102_card;
-	data->dai[0] = data->card.dai_link[0];
-	data->card.dai_link = data->dai;
+	data->dai = data->card.dai_link[0];
+
+	data->dai.cpus          = &comp[0];
+	data->dai.codecs        = &comp[1];
+	data->dai.platforms     = &comp[2];
+
+	data->dai.num_cpus      = 1;
+	data->dai.num_codecs    = 1;
+	data->dai.num_platforms = 1;
+	data->dai.codecs->dai_name = "wm5102-aif1";
+	data->dai.codecs->name = "wm5102-codec";
+	data->dai.cpus->of_node = ssi_np;
+	data->dai.platforms->of_node = ssi_np;
+
+	data->card.dai_link = &data->dai;
 	data->card.dev = &pdev->dev;
-	data->card.dai_link[0].cpu_of_node = ssi_np;
-	data->card.dai_link[0].platform_of_node = ssi_np;
 	data->card.drvdata = data;
+
 	ret = snd_soc_of_parse_card_name(&data->card, "model");
 	if (ret)
 		goto fail;
