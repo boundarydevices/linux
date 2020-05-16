@@ -1955,9 +1955,8 @@ static int max77823_fg_set_property(struct power_supply *psy,
 			fuelgauge->initial_update_of_soc = true;
 			if (!max77823_fg_reset(fuelgauge))
 				return -EINVAL;
-			else
-				break;
 		}
+		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		/* Target Temperature */
 	case POWER_SUPPLY_PROP_TEMP_AMBIENT:
