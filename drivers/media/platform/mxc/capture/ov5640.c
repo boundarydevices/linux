@@ -699,6 +699,7 @@ static void ov5640_regulator_disable(void)
 
 static s32 ov5640_write_reg(u16 reg, u8 val)
 {
+	int ret;
 	u8 au8Buf[3] = {0};
 
 	au8Buf[0] = reg >> 8;
