@@ -151,8 +151,7 @@ void drm_bridge_detach(struct drm_bridge *bridge)
 {
 	if (WARN_ON(!bridge))
 		return;
-
-	if (WARN_ON(!bridge->dev))
+	if (!bridge->dev)
 		return;
 
 	if (bridge->funcs->detach)
