@@ -88,7 +88,7 @@ static int gpio_backlight_probe_dt(struct platform_device *pdev,
 	}
 
 	for (i = 0 ; i < ARRAY_SIZE(gbl->disp_node); i++) {
-		gbl->disp_node[i] = of_parse_phandle(np, "display", i);
+		gbl->disp_node[i] = of_parse_phandle(dev->of_node, "display", i);
 		if (!gbl->disp_node[i])
 			break;
 	}
