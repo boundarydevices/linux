@@ -16,6 +16,7 @@
 #include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/fb.h>
+#include <linux/gpio.h>
 #include <linux/gpio/consumer.h>
 #include <linux/interrupt.h>
 #include <linux/spi/spi.h>
@@ -26,6 +27,7 @@
 #include <linux/spinlock.h>
 #include <linux/dma-mapping.h>
 #include <linux/of.h>
+#include <linux/of_gpio.h>
 #include <video/mipi_display.h>
 
 #include "fbtft.h"
