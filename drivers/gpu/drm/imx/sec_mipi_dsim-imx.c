@@ -376,6 +376,8 @@ static int imx_sec_dsim_bind(struct device *dev, struct device *master,
 				 dsim_dev->base, dsim_dev->irq, pdata);
 	if (ret) {
 		dev_err(dev, "failed to bind sec dsim bridge: %d\n", ret);
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "failed to bind sec dsim bridge: %d\n", ret);
 		drm_encoder_cleanup(encoder);
 
 		/* If no panel or bridge connected, just return 0
