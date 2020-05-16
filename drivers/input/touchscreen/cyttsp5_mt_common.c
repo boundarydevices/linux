@@ -198,10 +198,15 @@ static void cyttsp5_get_mt_touches(struct cyttsp5_mt_data *md,
 	struct cyttsp5_sysinfo *si = md->si;
 	int sig;
 	int i, j, t = 0;
-	DECLARE_BITMAP(ids, si->tch_abs[CY_TCH_T].max);
+	DECLARE_BITMAP(ids, 256);
 	int mt_sync_count = 0;
 	u8 *tch_addr;
 
+	if (si->tch_abs[CY_TCH_T].max > 256) {
+		dev_err(dev, "%s: failed max=%d\n",
+			__func__, si->tch_abs[CY_TCH_T].max);
+		return;
+	}
 	bitmap_zero(ids, si->tch_abs[CY_TCH_T].max);
 	memset(tch->abs, 0, sizeof(tch->abs));
 
