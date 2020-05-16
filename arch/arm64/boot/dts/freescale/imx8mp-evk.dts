@@ -87,7 +87,7 @@
 				<48000>,
 				<96000>,
 				<192000>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	sound-wm8960 {
@@ -186,6 +186,10 @@
 &pwm4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm4>;
+	status = "okay";
+};
+
+&aud2htx {
 	status = "okay";
 };
 
@@ -376,11 +380,39 @@
 	};
 };
 
+&irqsteer_hdmi {
+	status = "okay";
+};
+
+&hdmimix_clk {
+	status = "okay";
+};
+
+&hdmimix_reset {
+	status = "okay";
+};
+
+&hdmi_pavi {
+	status = "okay";
+};
+
+&hdmi {
+	status = "okay";
+};
+
+&hdmiphy {
+	status = "okay";
+};
+
 &lcdif1 {
 	status = "okay";
 };
 
 &lcdif2 {
+	status = "okay";
+};
+
+&lcdif3 {
 	status = "okay";
 };
 
