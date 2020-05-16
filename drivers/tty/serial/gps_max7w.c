@@ -25,6 +25,7 @@
 #include <linux/sysrq.h>
 #include <linux/tty.h>
 #include <linux/tty_flip.h>
+#include <uapi/linux/sched/types.h>
 
 struct i2c_work;
 struct uart_max7w_sc;
