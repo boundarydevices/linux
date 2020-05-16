@@ -1625,7 +1625,7 @@ static int parse_regulators_dt(struct device *dev, const struct device_node *np,
 		config.init_data = reg_matches[i].init_data;
 		config.driver_data = charger;
 		config.of_node = reg_matches[i].of_node;
-		config.ena_gpio = -EINVAL;
+		config.ena_gpiod = NULL;
 
 		charger->regulators[i] =
 			devm_regulator_register(dev, desc, &config);
