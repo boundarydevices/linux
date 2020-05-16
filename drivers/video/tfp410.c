@@ -101,7 +101,7 @@ struct tfp410_priv
 	int			displayoff;
 	char			display_id[16];
 #ifdef TESTING
-	struct timeval	lastInterruptTime;
+	struct timespec64	lastInterruptTime;
 #endif
 };
 
@@ -327,12 +327,12 @@ static irqreturn_t tfp_interrupt(int irq, void *id)
 	wake_up(&tfp->sample_waitq);
 #ifdef TESTING
 	{
-		suseconds_t     tv_usec = tfp->lastInterruptTime.tv_usec;
+		suseconds_t     tv_nsec = tfp->lastInterruptTime.tv_nsec;
 		int delta;
-		do_gettimeofday(&tfp->lastInterruptTime);
-		delta = tfp->lastInterruptTime.tv_usec - tv_usec;
-		if (delta<0) delta += 1000000;
-		pr_info("(delta=%ius gp%i)\n",delta, tfp->gp);
+		ktime_get_real_ts64(&tfp->lastInterruptTime);
+		delta = tfp->lastInterruptTime.tv_nsec - tv_nsec;
+		if (delta < 0) delta += 1000000000;
+		pr_info("(delta=%ius gp%i)\n",delta / 1000, tfp->gp);
 	}
 #endif
 	return IRQ_HANDLED;
