@@ -310,7 +310,8 @@ static int imx_sec_dsim_bind(struct device *dev, struct device *master,
 	/* bind sec dsim bridge */
 	ret = sec_mipi_dsim_bind(dev, master, data, encoder, res, irq, pdata);
 	if (ret) {
-		dev_err(dev, "failed to bind sec dsim bridge: %d\n", ret);
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "failed to bind sec dsim bridge: %d\n", ret);
 		pm_runtime_disable(dev);
 		drm_encoder_cleanup(encoder);
 		sec_dsim_of_put_resets(dsim_dev);
