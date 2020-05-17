@@ -691,7 +691,7 @@
 		VDDIO-supply = <&reg_3p3v>;
 	};
 
-	sgtl5000b: sgtl5000@0a {
+	sgtl5000b: sgtl5000@a {
 		compatible = "fsl,sgtl5000";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_sgtl5000b>;
