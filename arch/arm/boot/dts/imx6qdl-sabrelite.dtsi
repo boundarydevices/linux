@@ -909,7 +909,7 @@
 		mclk_source = <0>;
 	};
 
-	tc358743_mipi: tc358743-mipi@0f {
+	tc358743_mipi: tc358743-mipi@f {
 		compatible = "tc358743_mipi";
 		reg = <0x0f>;
 		pinctrl-names = "default";
