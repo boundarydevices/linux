@@ -275,7 +275,7 @@
 };
 
 &i2c1 {
-	/delete-node/ sgtl5000@0a;
+	/delete-node/ sgtl5000@a;
 	/delete-node/ rv4162@68;
 #if 0
 	max5813@1f {
