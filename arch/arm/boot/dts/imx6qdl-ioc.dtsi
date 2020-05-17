@@ -778,7 +778,7 @@
 		interrupts-extended = GPIRQ_RTC_ISL1208;
 	};
 
-	sgtl5000: sgtl5000@0a {
+	sgtl5000: sgtl5000@a {
 		compatible = "fsl,sgtl5000";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_sgtl5000>;
