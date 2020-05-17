@@ -621,7 +621,7 @@
 	sda-gpios = GP_I2C2_SDA;
 	status = "okay";
 
-	tc358743_mipi: tc358743_mipi@0f {
+	tc358743_mipi: tc358743-mipi@f {
 		compatible = "tc358743_mipi";
 		reg = <0x0f>;
 		pinctrl-names = "default";
