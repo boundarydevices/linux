@@ -545,7 +545,7 @@
 	sda-gpios = GP_I2C2_SDA;
 	status = "okay";
 
-	pmic: pfuze100@08 {
+	pmic: pfuze100@8 {
 		compatible = "fsl,pfuze100";
 		reg = <0x08>;
 
