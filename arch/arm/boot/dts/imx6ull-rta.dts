@@ -442,6 +442,12 @@
 	};
 };
 
+&can1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_can1>;
+	status = "okay";
+};
+
 &ecspi1 {
 	fsl,spi-num-chipselects = <1>;
 	cs-gpios = GP_ECSPI1_NOR_CS;
@@ -519,12 +525,6 @@
 #endif
 		};
 	};
-};
-
-&flexcan1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_can1>;
-	status = "okay";
 };
 
 &i2c1 {
