@@ -853,11 +853,6 @@
 	>;
 };
 
-&clk {
-	assigned-clocks = <&clk IMX8MQ_AUDIO_PLL1>, <&clk IMX8MQ_AUDIO_PLL2>;
-	assigned-clock-rates = <786432000>, <722534400>;
-};
-
 &dcss {
 	status = "okay";
 
@@ -1325,9 +1320,9 @@
 &sai1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
-	assigned-clocks = <&clk IMX8MQ_CLK_SAI1>;
-	assigned-clock-parents = <&clk IMX8MQ_AUDIO_PLL1_OUT>;
-	assigned-clock-rates = <12288000>;
+	assigned-clocks = <&clk IMX8MQ_AUDIO_PLL1>, <&clk IMX8MQ_CLK_SAI1>;
+	assigned-clock-parents = <0>, <&clk IMX8MQ_AUDIO_PLL1_OUT>;
+	assigned-clock-rates = <786432000>, <12288000>;
 	status = "okay";
 };
 
