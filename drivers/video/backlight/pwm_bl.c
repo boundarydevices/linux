@@ -75,10 +75,11 @@ static void pwm_backlight_power_on(struct pwm_bl_data *pb)
 
 	if (pb->on_delay)
 		msleep(pb->on_delay);
-	err = regulator_enable(pb->power_supply);
-	if (err < 0)
-		dev_err(pb->dev, "failed to enable power supply\n");
-
+	if (pb->power_supply) {
+		err = regulator_enable(pb->power_supply);
+		if (err < 0)
+			dev_err(pb->dev, "failed to enable power supply\n");
+	}
 	state.enabled = true;
 	pwm_apply_state(pb->pwm, &state);
 
@@ -109,7 +110,8 @@ static void pwm_backlight_power_off(struct pwm_bl_data *pb)
 	state.duty_cycle = 0;
 	pwm_apply_state(pb->pwm, &state);
 
-	regulator_disable(pb->power_supply);
+	if (pb->power_supply)
+		regulator_disable(pb->power_supply);
 	pb->enabled = false;
 }
 
@@ -490,7 +492,7 @@ static int pwm_backlight_initial_power_state(const struct pwm_bl_data *pb)
 		return FB_BLANK_UNBLANK;
 
 	/* The regulator is disabled, do not enable the backlight */
-	if (!regulator_is_enabled(pb->power_supply))
+	if (pb->power_supply && (!regulator_is_enabled(pb->power_supply)))
 		return FB_BLANK_POWERDOWN;
 #if 0
 	/* The PWM is disabled, keep it like this */
@@ -502,24 +504,25 @@ static int pwm_backlight_initial_power_state(const struct pwm_bl_data *pb)
 
 static int pwm_backlight_probe(struct platform_device *pdev)
 {
-	struct platform_pwm_backlight_data *data = dev_get_platdata(&pdev->dev);
+	struct device *dev = &pdev->dev;
+	struct platform_pwm_backlight_data *data = dev_get_platdata(dev);
 	struct platform_pwm_backlight_data defdata;
 	struct backlight_properties props;
 	struct backlight_device *bl;
-	struct device_node *node = pdev->dev.of_node;
+	struct device_node *node = dev->of_node;
 	struct pwm_bl_data *pb;
 	struct pwm_state state;
 	unsigned int i;
 	int ret;
 
-	pb = devm_kzalloc(&pdev->dev, sizeof(*pb), GFP_KERNEL);
+	pb = devm_kzalloc(dev, sizeof(*pb), GFP_KERNEL);
 	if (!pb)
 		return -ENOMEM;
 
 	if (!data) {
-		ret = pwm_backlight_parse_dt(&pdev->dev, &defdata, pb);
+		ret = pwm_backlight_parse_dt(dev, &defdata, pb);
 		if (ret < 0) {
-			dev_err(&pdev->dev, "failed to find platform data\n");
+			dev_err(dev, "failed to find platform data\n");
 			return ret;
 		}
 
@@ -527,7 +530,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	}
 
 	if (data->init) {
-		ret = data->init(&pdev->dev);
+		ret = data->init(dev);
 		if (ret < 0)
 			return ret;
 	}
@@ -536,12 +539,12 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	pb->notify_after = data->notify_after;
 	pb->check_fb = data->check_fb;
 	pb->exit = data->exit;
-	pb->dev = &pdev->dev;
+	pb->dev = dev;
 	pb->enabled = false;
 	pb->post_pwm_on_delay = data->post_pwm_on_delay;
 	pb->pwm_off_delay = data->pwm_off_delay;
 
-	pb->enable_gpios = devm_gpiod_get_array_optional(&pdev->dev, "enable",
+	pb->enable_gpios = devm_gpiod_get_array_optional(dev, "enable",
 							 GPIOD_OUT_LOW);
 	if (IS_ERR(pb->enable_gpios)) {
 		ret = PTR_ERR(pb->enable_gpios);
@@ -553,10 +556,10 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	 * platform data. Must go away soon.
 	 */
 	if (!pb->enable_gpios && gpio_is_valid(data->enable_gpio)) {
-		ret = devm_gpio_request_one(&pdev->dev, data->enable_gpio,
+		ret = devm_gpio_request_one(dev, data->enable_gpio,
 					    GPIOF_OUT_INIT_HIGH, "enable");
 		if (ret < 0) {
-			dev_err(&pdev->dev, "failed to request GPIO#%d: %d\n",
+			dev_err(dev, "failed to request GPIO#%d: %d\n",
 				data->enable_gpio, ret);
 			goto err_alloc;
 		}
@@ -567,15 +570,17 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		gpiod_direction_output(pb->legacy_enable.desc[0], 1);
 	}
 
-	pb->power_supply = devm_regulator_get(&pdev->dev, "power");
+	pb->power_supply = devm_regulator_get_optional(dev, "power");
 	if (IS_ERR(pb->power_supply)) {
 		ret = PTR_ERR(pb->power_supply);
-		goto err_alloc;
+		if (ret != -ENODEV)
+			goto err_alloc;
+		pb->power_supply = NULL;
 	}
 
-	pb->pwm = devm_pwm_get(&pdev->dev, NULL);
+	pb->pwm = devm_pwm_get(dev, NULL);
 	if (IS_ERR(pb->pwm) && PTR_ERR(pb->pwm) != -EPROBE_DEFER && !node) {
-		dev_err(&pdev->dev, "unable to request PWM, trying legacy API\n");
+		dev_err(dev, "unable to request PWM, trying legacy API\n");
 		pb->legacy = true;
 		pb->pwm = pwm_request(data->pwm_id, "pwm-backlight");
 	}
@@ -583,11 +588,11 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	if (IS_ERR(pb->pwm)) {
 		ret = PTR_ERR(pb->pwm);
 		if (ret != -EPROBE_DEFER)
-			dev_err(&pdev->dev, "unable to request PWM\n");
+			dev_err(dev, "unable to request PWM\n");
 		goto err_alloc;
 	}
 
-	dev_dbg(&pdev->dev, "got pwm for backlight\n");
+	dev_dbg(dev, "got pwm for backlight\n");
 
 	/* Sync up PWM state. */
 	pwm_init_state(pb->pwm, &state);
@@ -603,7 +608,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 
 	ret = pwm_apply_state(pb->pwm, &state);
 	if (ret) {
-		dev_err(&pdev->dev, "failed to apply initial PWM state: %d\n",
+		dev_err(dev, "failed to apply initial PWM state: %d\n",
 			ret);
 		goto err_alloc;
 	}
@@ -639,10 +644,10 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		/* Get the PWM period (in nanoseconds) */
 		pwm_get_state(pb->pwm, &state);
 
-		ret = pwm_backlight_brightness_default(&pdev->dev, data,
+		ret = pwm_backlight_brightness_default(dev, data,
 						       state.period);
 		if (ret < 0) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"failed to setup default brightness table\n");
 			goto err_alloc;
 		}
@@ -667,10 +672,10 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 
 	props.type = BACKLIGHT_RAW;
 	props.max_brightness = data->max_brightness;
-	bl = backlight_device_register(dev_name(&pdev->dev), &pdev->dev, pb,
+	bl = backlight_device_register(dev_name(dev), dev, pb,
 				       &pwm_backlight_ops, &props);
 	if (IS_ERR(bl)) {
-		dev_err(&pdev->dev, "failed to register backlight\n");
+		dev_err(dev, "failed to register backlight\n");
 		ret = PTR_ERR(bl);
 		if (pb->legacy)
 			pwm_free(pb->pwm);
@@ -678,7 +683,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	}
 
 	if (data->dft_brightness > data->max_brightness) {
-		dev_warn(&pdev->dev,
+		dev_warn(dev,
 			 "invalid default brightness level: %u, using %u\n",
 			 data->dft_brightness, data->max_brightness);
 		data->dft_brightness = data->max_brightness;
@@ -693,7 +698,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 
 err_alloc:
 	if (data->exit)
-		data->exit(&pdev->dev);
+		data->exit(dev);
 	return ret;
 }
 
