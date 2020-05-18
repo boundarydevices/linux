@@ -32,6 +32,8 @@
 		i2c1 = &i2c2;
 		i2c2 = &i2c3;
 		i2c3 = &i2c4;
+		mmc0 = &usdhc1;
+		mmc1 = &usdhc2;
 		serial0 = &uart1;
 		serial1 = &uart2;
 		serial2 = &uart3;
@@ -798,7 +800,7 @@
 				 <0x08000000 0x08000000 0x10000000>;
 
 			spdif1: spdif@30810000 {
-				compatible = "fsl,imx8mq-spdif", "fsl,imx35-spdif";
+				compatible = "fsl,imx8mm-spdif", "fsl,imx35-spdif";
 				reg = <0x30810000 0x10000>;
 				interrupts = <GIC_SPI 6 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk IMX8MQ_CLK_IPG_ROOT>, /* core */
@@ -891,7 +893,7 @@
 			};
 
 			spdif2: spdif@308a0000 {
-				compatible = "fsl,imx8mq-spdif", "fsl,imx35-spdif";
+				compatible = "fsl,imx8mm-spdif", "fsl,imx35-spdif";
 				reg = <0x308a0000 0x10000>;
 				interrupts = <GIC_SPI 13 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk IMX8MQ_CLK_IPG_ROOT>, /* core */

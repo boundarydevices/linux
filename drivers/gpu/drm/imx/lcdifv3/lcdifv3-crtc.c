@@ -133,7 +133,11 @@ static void lcdifv3_crtc_atomic_begin(struct drm_crtc *crtc,
 static void lcdifv3_crtc_atomic_flush(struct drm_crtc *crtc,
 				    struct drm_crtc_state *old_crtc_state)
 {
-	/* LCDIFV3 doesn't have command buffer */
+	struct lcdifv3_crtc *lcdifv3_crtc = to_lcdifv3_crtc(crtc);
+	struct lcdifv3_soc *lcdifv3 = dev_get_drvdata(lcdifv3_crtc->dev->parent);
+
+	/* kick shadow load for plane config */
+	lcdifv3_en_shadow_load(lcdifv3);
 }
 
 static void lcdifv3_crtc_atomic_enable(struct drm_crtc *crtc,
@@ -164,10 +168,8 @@ static void lcdifv3_crtc_atomic_enable(struct drm_crtc *crtc,
 	/* config LCDIF output bus format */
 	lcdifv3_set_bus_fmt(lcdifv3, imx_crtc_state->bus_format);
 
-	/* defer the lcdifv3 controller enable to plane update,
-	 * since until then the lcdifv3 config is complete to
-	 * enable the controller to run actually.
-	 */
+	/* run LCDIFv3 */
+	lcdifv3_enable_controller(lcdifv3);
 }
 
 static void lcdifv3_crtc_atomic_disable(struct drm_crtc *crtc,
