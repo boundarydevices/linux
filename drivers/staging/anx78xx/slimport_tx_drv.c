@@ -770,14 +770,14 @@ static u8 sp_tx_get_cable_type(struct anx78xx *anx78xx,
 
 	switch (det_cable_type_state) {
 	case CHECK_AUXCH:
-		if (AUX_OK == aux_status) {
-			sp_tx_aux_dpcdread_bytes(anx78xx, 0x00, 0x00, 0, 0x0c,
-					data_buf);
-			det_cable_type_state = GETTED_CABLE_TYPE;
-		} else {
+		if (AUX_OK != aux_status) {
 			dev_err(dev, " AUX access error\n");
 			break;
 		}
+		sp_tx_aux_dpcdread_bytes(anx78xx, 0x00, 0x00, 0, 0x0c,
+					 data_buf);
+		det_cable_type_state = GETTED_CABLE_TYPE;
+		/* fall through */
 	case GETTED_CABLE_TYPE:
 		switch ((ds_port_preset  & (BIT(1) | BIT(2))) >> 1) {
 		case 0x00:
@@ -843,6 +843,7 @@ static void sp_sink_connection(struct anx78xx *anx78xx)
 	switch (sp.tx_sc_state) {
 	case SC_INIT:
 		sp.tx_sc_state++;
+		/* fall through */
 	case SC_CHECK_CABLE_TYPE:
 	case SC_WAITTING_CABLE_TYPE:
 	default:
@@ -857,6 +858,7 @@ static void sp_sink_connection(struct anx78xx *anx78xx)
 		}
 
 		sp.tx_sc_state = SC_SINK_CONNECTED;
+		/* fall through */
 	case SC_SINK_CONNECTED:
 		if (sp_tx_get_downstream_connection(anx78xx))
 			goto_next_system_state(anx78xx);
