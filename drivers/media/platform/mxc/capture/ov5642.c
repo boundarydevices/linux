@@ -3000,6 +3000,16 @@ static int ov5642_remove(struct i2c_client *client);
 static s32 ov5642_read_reg(u16 reg, u8 *val);
 static s32 ov5642_write_reg(u16 reg, u8 val);
 
+#ifdef CONFIG_OF
+static const struct of_device_id ov5642_of_match[] = {
+	{ .compatible = "ovti," "ov5642",
+	},
+	{ /* sentinel */ }
+};
+
+MODULE_DEVICE_TABLE(of, ov5642_of_match);
+#endif
+
 static const struct i2c_device_id ov5642_id[] = {
 	{"ov5642", 0},
 	{"ov564x", 0},
@@ -3012,6 +3022,9 @@ static struct i2c_driver ov5642_i2c_driver = {
 	.driver = {
 		  .owner = THIS_MODULE,
 		  .name  = "ov5642",
+#ifdef CONFIG_OF
+		  .of_match_table = of_match_ptr(ov5642_of_match),
+#endif
 		  },
 	.probe  = ov5642_probe,
 	.remove = ov5642_remove,
