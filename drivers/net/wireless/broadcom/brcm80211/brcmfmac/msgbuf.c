@@ -11,6 +11,7 @@
 #include <linux/types.h>
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
+#include <linux/net_tstamp.h>
 
 #include <brcmu_utils.h>
 #include <brcmu_wifi.h>
@@ -722,6 +723,7 @@ static void brcmf_msgbuf_txflow(struct brcmf_msgbuf *msgbuf, u16 flowid)
 				 brcmf_flowring_qlen(flow, flowid));
 			break;
 		}
+		skb_tx_timestamp(skb);
 		skb_orphan(skb);
 		if (brcmf_msgbuf_alloc_pktid(msgbuf->drvr->bus_if->dev,
 					     msgbuf->tx_pktids, skb, ETH_HLEN,
