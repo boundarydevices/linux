@@ -963,7 +963,7 @@ static int mxc_v4l2_g_ctrl(cam_data *cam, struct v4l2_control *c)
 {
 	int status = 0;
 
-	pr_debug("%s\n", __func__);
+	pr_debug("%s: id=0x%x\n", __func__, c->id);
 
 	/* probably don't need to store the values that can be retrieved,
 	 * locally, but they are for now. */
@@ -1065,6 +1065,9 @@ static int mxc_v4l2_g_ctrl(cam_data *cam, struct v4l2_control *c)
 			pr_err("ERROR: v4l2 capture: slave not found!\n");
 			status = -ENODEV;
 		}
+		break;
+	case V4L2_CID_MIN_BUFFERS_FOR_CAPTURE:
+		c->value = 2;
 		break;
 	default:
 		pr_err("ERROR: v4l2 capture: unsupported ioctl: %#08x\n", c->id);
