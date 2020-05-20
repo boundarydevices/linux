@@ -1607,6 +1607,7 @@
 				assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_800M>;
 				assigned-clock-rates = <200000000>;
 				resets = <&hdmimix_reset IMX_HDMIMIX_IRQ_STEER_RESET>;
+				power-domains = <&hdmimix_pd>;
 				status = "disabled";
 			};
 
@@ -1619,6 +1620,7 @@
 				resets = <&hdmimix_reset IMX_HDMIMIX_HDMI_PAI_RESET>,
 						<&hdmimix_reset IMX_HDMIMIX_HDMI_PVI_RESET>;
 				reset-names = "pai_rst", "pvi_rst";
+				power-domains = <&hdmimix_pd>;
 				status = "disabled";
 			};
 
@@ -1715,6 +1717,7 @@
 				clock-output-names = "hdmi_phy";
 				#phy-cells = <0>;
 				resets = <&hdmimix_reset IMX_HDMIMIX_HDMI_PHY_RESET>;
+				power-domains = <&hdmi_phy_pd>;
 				status = "disabled";
 			};
 
