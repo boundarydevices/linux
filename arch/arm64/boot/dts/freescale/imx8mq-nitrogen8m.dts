@@ -972,7 +972,7 @@
 		assigned-clock-rates = <25000000>;
 		clocks = <&clk IMX8MQ_CLK_CLKO2>;
 		clock-names = "csi_mclk";
-		compatible = "ov5640_mipisubdev";
+		compatible = "ovti,ov5640_mipisubdev";
 		csi_id = <0>;
 		mclk = <25000000>;
 		mipi_csi;
@@ -1012,7 +1012,7 @@
 		assigned-clock-rates = <25000000>;
 		clocks = <&clk IMX8MQ_CLK_CLKO2>;
 		clock-names = "csi_mclk";
-		compatible = "ov5640_mipisubdev";
+		compatible = "ovti,ov5640_mipisubdev";
 		csi_id = <1>;
 		mclk = <25000000>;
 		mipi_csi;
