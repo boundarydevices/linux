@@ -929,7 +929,7 @@
 	status = "okay";
 
 	ov5640-mipi1@3c {
-		compatible = "ov5640_mipisubdev";
+		compatible = "ovti,ov5640_mipisubdev";
 		reg = <0x3c>;
 		status = "okay";
 		pinctrl-names = "default";
@@ -969,7 +969,7 @@
 	status = "okay";
 
 	ov5640-mipi2@3c {
-		compatible = "ov5640_mipisubdev";
+		compatible = "ovti,ov5640_mipisubdev";
 		reg = <0x3c>;
 		status = "okay";
 		pinctrl-names = "default";
