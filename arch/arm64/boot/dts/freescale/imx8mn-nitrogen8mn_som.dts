@@ -98,7 +98,7 @@
 		DVDD-supply = <&reg_vref_3v3>;
 		clocks = <&mipi_xclk>;
 		clock-names = "csi_mclk";
-		compatible = "ov5640_mipisubdev";
+		compatible = "ovti,ov5640_mipisubdev";
 		csi_id = <0>;
 		mclk = <20000000>;
 		mipi_csi;
