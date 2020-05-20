@@ -501,6 +501,10 @@
 	};
 };
 
+&cm40_intmux {
+	status = "okay";
+};
+
 &lpuart0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_lpuart0>;
@@ -511,6 +515,12 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_lpuart1>;
 	resets = <&modem_reset>;
+	status = "okay";
+};
+
+&cm40_lpuart {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_cm40_lpuart>;
 	status = "okay";
 };
 
@@ -725,6 +735,13 @@
 			IMX8DXL_SPI1_SDO_ADMA_I2C2_SCL		0x06000021
 		>;
 	};
+
+		pinctrl_cm40_lpuart: cm40_lpuartgrp {
+			fsl,pins = <
+				IMX8DXL_ADC_IN2_M40_UART0_RX		0x06000020
+				IMX8DXL_ADC_IN3_M40_UART0_TX		0x06000020
+			>;
+		};
 
 	pinctrl_i2c3: i2c3grp {
 		fsl,pins = <
