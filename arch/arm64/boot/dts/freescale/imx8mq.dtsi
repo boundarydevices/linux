@@ -680,7 +680,7 @@
 				broken-wake-request-signals;
 				#interrupt-cells = <3>;
 
-				pgc {
+				pgc: pgc {
 					#address-cells = <1>;
 					#size-cells = <0>;
 
