@@ -973,7 +973,7 @@ struct opp_device *_add_opp_dev(const struct device *dev,
 	return opp_dev;
 }
 
-static struct opp_table *_allocate_opp_table(struct device *dev, struct device_node *np, int index)
+static struct opp_table *_allocate_opp_table(struct device *dev, struct device_node *np)
 {
 	struct opp_table *opp_table;
 	struct opp_device *opp_dev;
@@ -1012,7 +1012,7 @@ static struct opp_table *_allocate_opp_table(struct device *dev, struct device_n
 		return NULL;
 	}
 
-	_of_init_opp_table(opp_table, dev, index);
+	_of_init_opp_table(opp_table, dev);
 
 	/* Find clk for the device */
 	opp_table->clk = clk_get(dev, NULL);
@@ -1044,10 +1044,9 @@ static struct opp_table *_opp_get_opp_table(struct device *dev, struct device_no
 	struct device_node *np1 = NULL;
 
 	if (!np) {
-		np1 = dev_pm_opp_of_get_opp_desc_node(dev);
-		np = np1;
+		np = np1 = dev_pm_opp_of_get_opp_desc_node_indexed(dev, index);
 		if (!np)
-			np = dev->of_node;
+			np = np1 = of_node_get(dev->of_node);
 	}
 
 	/* Hold our table modification lock here */
@@ -1057,7 +1056,7 @@ static struct opp_table *_opp_get_opp_table(struct device *dev, struct device_no
 	if (!IS_ERR(opp_table))
 		goto unlock;
 
-	opp_table = _managed_opp(dev, index);
+	opp_table = _managed_opp(dev, np);
 	if (opp_table) {
 		if (!_add_opp_dev_unlocked(dev, opp_table)) {
 			dev_pm_opp_put_opp_table(opp_table);
@@ -1066,7 +1065,7 @@ static struct opp_table *_opp_get_opp_table(struct device *dev, struct device_no
 		goto unlock;
 	}
 
-	opp_table = _allocate_opp_table(dev, np, index);
+	opp_table = _allocate_opp_table(dev, np);
 
 unlock:
 	mutex_unlock(&opp_table_lock);

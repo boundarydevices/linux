@@ -220,15 +220,15 @@ struct opp_table *_add_opp_table(struct device *dev);
 void _put_opp_list_kref(struct opp_table *opp_table);
 
 #ifdef CONFIG_OF
-void _of_init_opp_table(struct opp_table *opp_table, struct device *dev, int index);
+void _of_init_opp_table(struct opp_table *opp_table, struct device *dev);
 void _of_clear_opp_table(struct opp_table *opp_table);
-struct opp_table *_managed_opp(struct device *dev, int index);
+struct opp_table *_managed_opp(struct device *dev, struct device_node *np);
 void _of_opp_free_required_opps(struct opp_table *opp_table,
 				struct dev_pm_opp *opp);
 #else
-static inline void _of_init_opp_table(struct opp_table *opp_table, struct device *dev, int index) {}
+static inline void _of_init_opp_table(struct opp_table *opp_table, struct device *dev) {}
 static inline void _of_clear_opp_table(struct opp_table *opp_table) {}
-static inline struct opp_table *_managed_opp(struct device *dev, int index) { return NULL; }
+static inline struct opp_table *_managed_opp(struct device *dev, struct device_node *np) { return NULL; }
 static inline void _of_opp_free_required_opps(struct opp_table *opp_table,
 					      struct dev_pm_opp *opp) {}
 #endif

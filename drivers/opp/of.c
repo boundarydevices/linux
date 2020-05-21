@@ -39,14 +39,16 @@ struct device_node *dev_pm_opp_of_get_opp_desc_node(struct device *dev)
 }
 EXPORT_SYMBOL_GPL(dev_pm_opp_of_get_opp_desc_node);
 
-struct opp_table *_managed_opp(struct device *dev, int index)
+/* Returns opp descriptor node for a device, caller must do of_node_put() */
+struct device_node *dev_pm_opp_of_get_opp_desc_node_indexed(struct device *dev, int index)
+{
+	return _opp_of_get_opp_desc_node(dev->of_node, index);
+}
+EXPORT_SYMBOL_GPL(dev_pm_opp_of_get_opp_desc_node_indexed);
+
+struct opp_table *_managed_opp(struct device *dev, struct device_node *np)
 {
 	struct opp_table *opp_table, *managed_table = NULL;
-	struct device_node *np;
-
-	np = _opp_of_get_opp_desc_node(dev->of_node, index);
-	if (!np)
-		return NULL;
 
 	list_for_each_entry(opp_table, &opp_tables, node) {
 		if (opp_table->np == np) {
@@ -65,8 +67,6 @@ struct opp_table *_managed_opp(struct device *dev, int index)
 			break;
 		}
 	}
-
-	of_node_put(np);
 
 	return managed_table;
 }
@@ -216,8 +216,7 @@ put_np:
 	of_node_put(np);
 }
 
-void _of_init_opp_table(struct opp_table *opp_table, struct device *dev,
-			int index)
+void _of_init_opp_table(struct opp_table *opp_table, struct device *dev)
 {
 	struct device_node *np, *opp_np;
 	u32 val;
@@ -229,6 +228,9 @@ void _of_init_opp_table(struct opp_table *opp_table, struct device *dev,
 	np = of_node_get(dev->of_node);
 	if (!np)
 		return;
+	if (!opp_table->np)
+		return;
+	opp_np = of_node_get(opp_table->np);
 
 	if (!of_property_read_u32(np, "clock-latency", &val))
 		opp_table->clock_latency_ns_max = val;
@@ -238,19 +240,13 @@ void _of_init_opp_table(struct opp_table *opp_table, struct device *dev,
 	if (of_find_property(np, "#power-domain-cells", NULL))
 		opp_table->is_genpd = true;
 
-	/* Get OPP table node */
-	opp_np = _opp_of_get_opp_desc_node(np, index);
 	of_node_put(np);
-
-	if (!opp_np)
-		return;
 
 	if (of_property_read_bool(opp_np, "opp-shared"))
 		opp_table->shared_opp = OPP_TABLE_ACCESS_SHARED;
 	else
 		opp_table->shared_opp = OPP_TABLE_ACCESS_EXCLUSIVE;
 
-	opp_table->np = opp_np;
 
 	_opp_table_alloc_required_tables(opp_table, dev, opp_np);
 	of_node_put(opp_np);
