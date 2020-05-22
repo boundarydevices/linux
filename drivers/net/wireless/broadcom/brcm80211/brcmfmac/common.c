@@ -370,8 +370,10 @@ int brcmf_c_preinit_dcmds(struct brcmf_if *ifp)
 					       eventmask_msg, msglen);
 		if (err) {
 			brcmf_err("Set event_msgs_ext error (%d)\n", err);
+			kfree(eventmask_msg);
 			goto done;
 		}
+		kfree(eventmask_msg);
 	}
 	/* Setup default scan channel time */
 	err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_SCAN_CHANNEL_TIME,
