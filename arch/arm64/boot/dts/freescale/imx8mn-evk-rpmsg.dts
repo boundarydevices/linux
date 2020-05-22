@@ -94,6 +94,10 @@
 	status = "disabled";
 };
 
+&flexspi {
+	status = "disabled";
+};
+
 &i2c3 {
 	status = "disabled";
 };
