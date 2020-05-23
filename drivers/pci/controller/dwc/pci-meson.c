@@ -459,11 +459,8 @@ static int meson_pcie_probe(struct platform_device *pdev)
 		goto err_phy;
 	}
 
-	return 0;
-
 err_phy:
-	meson_pcie_power_off(mp);
-	return ret;
+	return 0;
 }
 
 static const struct of_device_id meson_pcie_of_match[] = {
