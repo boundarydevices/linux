@@ -90,7 +90,18 @@
 			ftrace-size     = <0x00020000>;
 			pmsg-size       = <0x00020000>;
 		};
+		pmem@0x94c00000 {
+			no-map;
+			reg = <0 0x94c00000 0 0x00010000>;
+		};
 		/delete-node/ linux,cma;
+	};
+	pmem@0x94c00000 {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		compatible = "pmem-region";
+		reg = <0 0x94c00000 0 0x00010000>;
+		volatile;
 	};
 
 	sound-xtor {
