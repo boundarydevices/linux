@@ -70,6 +70,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mn-evk.dtb imx8mn-evk-rm67191.dtb imx8mn-ddr4-evk.
 			  imx8mn-ddr4-evk-rm67191.dtb imx8mn-ddr4-evk-rpmsg.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-ddr4-evk-root.dtb imx8mn-ddr4-evk-inmate.dtb \
 			  imx8mn-nitrogen8_nano.dtb \
+			  imx8mn-nitrogen8_nano-m4.dtb \
 			  imx8mn-nitrogen8mn.dtb \
 			  imx8mn-nitrogen8mn_som.dtb \
 
