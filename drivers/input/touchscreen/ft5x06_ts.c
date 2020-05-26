@@ -97,9 +97,14 @@ struct ft5x06_ts {
 	unsigned		max_x;
 	unsigned		max_y;
 	unsigned		firmware_bug_hit;
+	const char		*client_name;
+	unsigned		max_touch;
+	unsigned		readable_mask[256 / 32];
+	unsigned		writeable_mask[256 / 32];
+	struct point		points[MAX_TOUCHES];
+	unsigned char		buf[4 + (6*MAX_TOUCHES)];
 	struct regmap		*regmap;
 };
-static const char *client_name = "ft5x06";
 
 static int ts_startup(struct ft5x06_ts *ts);
 static void ts_shutdown(struct ft5x06_ts *ts);
@@ -232,9 +237,9 @@ static inline int ts_register(struct ft5x06_ts *ts)
 	else if (num_registered_fb > 0)
 		ts->max_y = registered_fb[0]->var.yres - 1;
 
-	pr_info("%s resolution is %dx%d\n", client_name, ts->max_x + 1, ts->max_y + 1);
+	pr_info("%s resolution is %dx%d\n", ts->client_name, ts->max_x + 1, ts->max_y + 1);
 	ts->idev = idev;
-	idev->name      = client_name;
+	idev->name      = ts->client_name;
 	idev->id.bustype = BUS_I2C;
 	idev->id.product = ts->client->addr;
 	idev->open      = ts_open;
@@ -248,7 +253,7 @@ static inline int ts_register(struct ft5x06_ts *ts)
 	input_mt_init_slots(idev, 16, 0);
 	input_set_abs_params(idev, ABS_MT_POSITION_X, 0, ts->max_x, 0, 0);
 	input_set_abs_params(idev, ABS_MT_POSITION_Y, 0, ts->max_y, 0, 0);
-	input_set_abs_params(idev, ABS_MT_TRACKING_ID, 0, MAX_TOUCHES, 0, 0);
+	input_set_abs_params(idev, ABS_MT_TRACKING_ID, 0, ts->max_touch, 0, 0);
 #endif
 #ifdef USE_ABS_SINGLE
 	__set_bit(BTN_TOUCH, idev->keybit);
@@ -292,13 +297,11 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 {
 	struct ft5x06_ts *ts = id;
 	int ret;
-	struct point points[MAX_TOUCHES];
-	unsigned char buf[3+(6*MAX_TOUCHES)];
 
 	unsigned char startch[1] = { 0 };
 	struct i2c_msg readpkt[2] = {
 		{ts->client->addr, 0, 1, startch},
-		{ts->client->addr, I2C_M_RD, sizeof(buf), buf}
+		{ts->client->addr, I2C_M_RD, 3 + (6 * ts->max_touch), ts->buf}
 	};
 	int buttons = 0 ;
 	int i;
@@ -315,12 +318,12 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 			msleep(100);
 			continue;
 		}
-		p = buf+3;
+		p = ts->buf+3;
 #ifdef DEBUG
 		printHex(buf, sizeof(buf));
 #endif
-		buttons = buf[2];
-		if (buttons > MAX_TOUCHES) {
+		buttons = ts->buf[2];
+		if (buttons > ts->max_touch) {
 			int interrupting = gpiod_get_value(ts->wakeup_gpio);
 			if (!interrupting) {
 				dev_info(&ts->client->dev,
@@ -331,16 +334,16 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 			/* not garbage from POR */
 			dev_err(&ts->client->dev,
 				"invalid button count 0x%02x\n", buttons);
-			buttons = MAX_TOUCHES;
+			buttons = ts->max_touch;
 		}
 		for (i = 0; i < buttons; i++) {
-			points[i].x = (((p[0] & 0x0f) << 8) | p[1]) & 0x7ff;
-			points[i].id = (p[2]>>4);
-			points[i].y = (((p[2] & 0x0f) << 8) | p[3]) & 0x7ff;
-			if (points[i].x > ts->max_x)
-				points[i].x = ts->max_x;
-			if (points[i].y > ts->max_y)
-				points[i].y = ts->max_y;
+			ts->points[i].x = (((p[0] & 0x0f) << 8) | p[1]) & 0x7ff;
+			ts->points[i].id = (p[2]>>4);
+			ts->points[i].y = (((p[2] & 0x0f) << 8) | p[3]) & 0x7ff;
+			if (ts->points[i].x > ts->max_x)
+				ts->points[i].x = ts->max_x;
+			if (ts->points[i].y > ts->max_y)
+				ts->points[i].y = ts->max_y;
 			p += 6;
 		}
 
@@ -348,52 +351,14 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 		printk(KERN_ERR "%s: buttons = %d, "
 				"points[0].x = %d, "
 				"points[0].y = %d\n",
-		       client_name, buttons, points[0].x, points[0].y);
+		       ts->client_name, buttons, points[0].x, points[0].y);
 #endif
-		ts_evt_add(ts, buttons, points);
+		ts_evt_add(ts, buttons, ts->points);
 	}
 	if (ts->down_mask)
 		mod_timer(&ts->release_timer, jiffies + msecs_to_jiffies(100));
 	return IRQ_HANDLED;
 }
-
-#define ID_G_THGROUP		0x80
-#define ID_G_THPEAK		0x81
-#define ID_G_THCAL		0x82
-#define ID_G_THWATER		0x83
-#define ID_G_THTEMP		0x84
-#define ID_G_CTRL		0x86
-#define ID_G_TIME_ENTER_MONITOR	0x87
-#define ID_G_PERIODACTIVE	0x88
-#define ID_G_PERIODMONITOR	0x89
-#define ID_G_AUTO_CLB_MODE	0xa0
-#define ID_G_LIB_VERSION_H	0xa1
-#define ID_G_LIB_VERSION_L	0xa2
-#define ID_G_CIPHER		0xa3
-#define ID_G_MODE		0xa4
-#define ID_G_FIRMID		0xa6
-#define ID_G_FT5201ID		0xa8
-#define ID_G_ERR		0xa9
-#define ID_G_CLB		0xaa
-#define ID_G_B_AREA_TH		0xae
-#define FT5x06_MAX_REG_OFFSET	0xae
-
-/* Undocumented registers */
-#define FT5X0X_REG_HEIGHT_B		0x8a
-#define FT5X0X_REG_MAX_FRAME		0x8b
-#define FT5X0X_REG_FEG_FRAME		0x8e
-#define FT5X0X_REG_LEFT_RIGHT_OFFSET	0x92
-#define FT5X0X_REG_UP_DOWN_OFFSET	0x93
-#define FT5X0X_REG_DISTANCE_LEFT_RIGHT	0x94
-#define FT5X0X_REG_DISTANCE_UP_DOWN	0x95
-#define FT5X0X_REG_MAX_X_HIGH		0x98
-#define FT5X0X_REG_MAX_X_LOW		0x99
-#define FT5X0X_REG_MAX_Y_HIGH		0x9a
-#define FT5X0X_REG_MAX_Y_LOW		0x9b
-#define FT5X0X_REG_K_X_HIGH		0x9c
-#define FT5X0X_REG_K_X_LOW		0x9d
-#define FT5X0X_REG_K_Y_HIGH		0x9e
-#define FT5X0X_REG_K_Y_LOW		0x9f
 
 static int ts_startup(struct ft5x06_ts *ts)
 {
@@ -406,7 +371,7 @@ static int ts_startup(struct ft5x06_ts *ts)
 
 	ret = request_threaded_irq(ts->irq, NULL, ts_interrupt,
 				     IRQF_TRIGGER_LOW | IRQF_ONESHOT,
-				     client_name, ts);
+				     ts->client_name, ts);
 	if (ret) {
 		pr_err("%s: error requesting irq %d\n", __func__, ts->irq);
 		goto out;
@@ -463,52 +428,27 @@ static int ts_detect(struct i2c_client *client,
 
 static bool ft5x06_readable(struct device *dev, unsigned int reg)
 {
-	switch (reg) {
-	case ID_G_THGROUP:
-	case ID_G_THPEAK:
-	case ID_G_THCAL:
-	case ID_G_THWATER:
-	case ID_G_THTEMP:
-	case ID_G_CTRL:
-	case ID_G_TIME_ENTER_MONITOR:
-	case ID_G_PERIODACTIVE:
-	case ID_G_PERIODMONITOR:
-	case ID_G_AUTO_CLB_MODE:
-	case ID_G_LIB_VERSION_H:
-	case ID_G_LIB_VERSION_L:
-	case ID_G_CIPHER:
-	case ID_G_MODE:
-	case ID_G_FIRMID:
-	case ID_G_FT5201ID:
-	case ID_G_ERR:
-	case ID_G_CLB:
-	case ID_G_B_AREA_TH:
-		return true;
-	default:
+	struct ft5x06_ts *ts = dev_get_drvdata(dev);
+
+	if (reg >= 256)
 		return false;
-	}
+	if (ts->readable_mask[reg >> 5] & (1 << (reg & 0x1f)))
+		return true;
+	return false;
 }
 
 static bool ft5x06_writeable(struct device *dev, unsigned int reg)
 {
-	switch (reg) {
-	case ID_G_THGROUP:
-	case ID_G_THPEAK:
-	case ID_G_THCAL:
-	case ID_G_THWATER:
-	case ID_G_THTEMP:
-	case ID_G_CTRL:
-	case ID_G_TIME_ENTER_MONITOR:
-	case ID_G_PERIODACTIVE:
-	case ID_G_PERIODMONITOR:
-	case ID_G_AUTO_CLB_MODE:
-	case ID_G_CLB:
-	case ID_G_B_AREA_TH:
-		return true;
-	default:
+	struct ft5x06_ts *ts = dev_get_drvdata(dev);
+
+	if (reg >= 256)
 		return false;
-	}
+	if (ts->writeable_mask[reg >> 5] & (1 << (reg & 0x1f)))
+		return true;
+	return false;
 }
+
+#define FT5x06_MAX_REG_OFFSET	0xae
 
 static const struct regmap_config ft5x06_regmap = {
 	.reg_bits = 8,
@@ -528,6 +468,13 @@ static ssize_t show_missed_releases(struct device *dev,
 
 static DEVICE_ATTR(missed_releases, S_IRUGO, show_missed_releases, NULL);
 
+struct ft_data {
+	const unsigned char *name;
+	int max_touch;
+	const unsigned char *readable_regs;
+	const unsigned char *writeable_regs;
+};
+
 static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int err = 0;
@@ -538,14 +485,39 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	int val[ARRAY_SIZE(screenres)];
 	struct device_node *np = client->dev.of_node;
 	struct gpio_desc *wakeup_gpio;
+	const struct ft_data *match;
+	const unsigned char *p;
+	int i;
+
+	match = device_get_match_data(&client->dev);
+	if (!match)
+		match = (const struct ft_data *)id->driver_data;
+	if (!match) {
+		dev_err(&client->dev, "unknown device model\n");
+		return -ENODEV;
+	}
 
 	ts = kzalloc(sizeof(struct ft5x06_ts), GFP_KERNEL);
 	if (!ts) {
-		dev_err(dev, "Couldn't allocate memory for %s\n", client_name);
+		dev_err(dev, "Couldn't allocate memory for %s\n", match->name);
 		return -ENOMEM;
 	}
 	ts->client = client;
-	ts->irq = client->irq ;
+	ts->irq = client->irq;
+	ts->client_name = match->name;
+	ts->max_touch = MAX_TOUCHES;
+	if (ts->max_touch > match->max_touch)
+		ts->max_touch = match->max_touch;
+	p = match->readable_regs;
+	while (*p) {
+		i = *p++;
+		ts->readable_mask[i >> 5] |= (1 << (i & 0x1f));
+	}
+	p = match->writeable_regs;
+	while (*p) {
+		i = *p++;
+		ts->writeable_mask[i >> 5] |= (1 << (i & 0x1f));
+	}
 
 	gp = devm_gpiod_get_index(dev, "reset", 0, GPIOD_OUT_HIGH);
 	dev_info(dev, "reset %p\n", gp);
@@ -601,7 +573,7 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		return 0;
 	}
 
-	printk(KERN_WARNING "%s: ts_register failed\n", client_name);
+	printk(KERN_WARNING "%s: ts_register failed\n", ts->client_name);
 	ts_deregister(ts);
 exit1:
 	kfree(ts);
@@ -621,20 +593,134 @@ static int ts_remove(struct i2c_client *client)
 }
 
 
+#define ID_G_THGROUP		0x80
+#define ID_G_THPEAK		0x81
+#define ID_G_THCAL		0x82
+#define ID_G_THWATER		0x83
+#define ID_G_THTEMP		0x84
+#define ID_G_CTRL		0x86
+#define ID_G_TIME_ENTER_MONITOR	0x87
+#define ID_G_PERIODACTIVE	0x88
+#define ID_G_PERIODMONITOR	0x89
+#define ID_G_AUTO_CLB_MODE	0xa0
+#define ID_G_LIB_VERSION_H	0xa1
+#define ID_G_LIB_VERSION_L	0xa2
+#define ID_G_CIPHER		0xa3
+#define ID_G_MODE		0xa4
+#define ID_G_FIRMID		0xa6
+#define ID_G_FT5201ID		0xa8
+#define ID_G_ERR		0xa9
+#define ID_G_CLB		0xaa
+#define ID_G_B_AREA_TH		0xae
+
+/* Undocumented registers */
+#define FT5X0X_REG_HEIGHT_B		0x8a
+#define FT5X0X_REG_MAX_FRAME		0x8b
+#define FT5X0X_REG_FEG_FRAME		0x8e
+#define FT5X0X_REG_LEFT_RIGHT_OFFSET	0x92
+#define FT5X0X_REG_UP_DOWN_OFFSET	0x93
+#define FT5X0X_REG_DISTANCE_LEFT_RIGHT	0x94
+#define FT5X0X_REG_DISTANCE_UP_DOWN	0x95
+#define FT5X0X_REG_MAX_X_HIGH		0x98
+#define FT5X0X_REG_MAX_X_LOW		0x99
+#define FT5X0X_REG_MAX_Y_HIGH		0x9a
+#define FT5X0X_REG_MAX_Y_LOW		0x9b
+#define FT5X0X_REG_K_X_HIGH		0x9c
+#define FT5X0X_REG_K_X_LOW		0x9d
+#define FT5X0X_REG_K_Y_HIGH		0x9e
+#define FT5X0X_REG_K_Y_LOW		0x9f
+
+const unsigned char ft5x06_readable_a[] = {
+	ID_G_THGROUP,
+	ID_G_THPEAK,
+	ID_G_THCAL,
+	ID_G_THWATER,
+	ID_G_THTEMP,
+	ID_G_CTRL,
+	ID_G_TIME_ENTER_MONITOR,
+	ID_G_PERIODACTIVE,
+	ID_G_PERIODMONITOR,
+	ID_G_AUTO_CLB_MODE,
+	ID_G_LIB_VERSION_H,
+	ID_G_LIB_VERSION_L,
+	ID_G_CIPHER,
+	ID_G_MODE,
+	ID_G_FIRMID,
+	ID_G_FT5201ID,
+	ID_G_ERR,
+	ID_G_CLB,
+	ID_G_B_AREA_TH,
+	0
+};
+
+const unsigned char ft5x06_writeable_a[] = {
+	ID_G_THGROUP,
+	ID_G_THPEAK,
+	ID_G_THCAL,
+	ID_G_THWATER,
+	ID_G_THTEMP,
+	ID_G_CTRL,
+	ID_G_TIME_ENTER_MONITOR,
+	ID_G_PERIODACTIVE,
+	ID_G_PERIODMONITOR,
+	ID_G_AUTO_CLB_MODE,
+	ID_G_CLB,
+	ID_G_B_AREA_TH,
+	0
+};
+
+const unsigned char ft7250_readable_a[] = {
+	ID_G_CTRL,
+	ID_G_TIME_ENTER_MONITOR,
+	ID_G_PERIODACTIVE,
+	ID_G_PERIODMONITOR,
+	ID_G_LIB_VERSION_H,
+	ID_G_LIB_VERSION_L,
+	ID_G_CIPHER,
+	ID_G_MODE,
+	ID_G_FIRMID,
+	ID_G_FT5201ID,
+	0
+};
+
+const unsigned char ft7250_writeable_a[] = {
+	ID_G_CTRL,
+	ID_G_TIME_ENTER_MONITOR,
+	ID_G_PERIODACTIVE,
+	ID_G_PERIODMONITOR,
+	0
+};
+
+const struct ft_data ft5x06_data = {
+	.name = "ft5x06",
+	.max_touch = 12,
+	.readable_regs = ft5x06_readable_a,
+	.writeable_regs = ft5x06_writeable_a,
+};
+
+const struct ft_data ft7250_data = {
+	.name = "ft7250",
+	.max_touch = 10,
+	.readable_regs = ft7250_readable_a,
+	.writeable_regs = ft7250_writeable_a,
+};
 /*-----------------------------------------------------------------------*/
 
 static const struct i2c_device_id ts_idtable[] = {
-	{ "ft5x06-ts", 0 },
+	{ "ft5x06-ts", .driver_data = (long)&ft5x06_data },
+	{ "ft7250", .driver_data = (long)&ft7250_data },
 	{ }
 };
 MODULE_DEVICE_TABLE(i2c, ts_idtable);
 
 static const struct of_device_id ft5x06_dt_ids[] = {
-       {
-               .compatible = "edt,ft5x06-ts",
-       }, {
-               /* sentinel */
-       }
+	{
+		.compatible = "edt,ft5x06-ts", .data = &ft5x06_data,
+	}, {
+		.compatible = "edt,ft7250", .data = &ft7250_data,
+	}, {
+		/* sentinel */
+	}
 };
 MODULE_DEVICE_TABLE(of, ft5x06_dt_ids);
 
