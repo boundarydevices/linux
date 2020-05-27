@@ -6,6 +6,9 @@ Required properties:
 - reg:		The base address and length of the registers
 - clocks:	Phandles to the clocks for each clock listed in clock-names
 - clock-names:	Must contain "phy"
+- clk_mode:	Specify the reference clock source. Three clock sources can be
+  used as PCIe PHY reference clock on iMX8MP PCIe. Use clk_mode to specify it.
+  1: PLL_XO, 2: EXT_OSC, 3: PLL_SYS.
 - power-domains: Phandle to the power domain that the device is part of
 
 Example:
