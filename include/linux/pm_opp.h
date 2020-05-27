@@ -143,7 +143,12 @@ int dev_pm_opp_get_sharing_cpus(struct device *cpu_dev, struct cpumask *cpumask)
 void dev_pm_opp_remove_table(struct device *dev);
 void dev_pm_opp_cpumask_remove_table(const struct cpumask *cpumask);
 #else
-static inline struct opp_table *dev_pm_opp_get_opp_table(struct device *dev, struct device_node *np)
+static inline struct opp_table *dev_pm_opp_get_opp_table(struct device *dev)
+{
+	return ERR_PTR(-ENOTSUPP);
+}
+
+static inline struct opp_table *dev_pm_opp_get_opp_table_np(struct device *dev, struct device_node *np)
 {
 	return ERR_PTR(-ENOTSUPP);
 }
@@ -365,9 +370,7 @@ int of_get_required_opp_performance_state(struct device_node *np, int index);
 void dev_pm_opp_of_register_em(struct cpumask *cpus);
 #else
 void opp_return_volts(struct dev_pm_opp *opp, unsigned long *u_volt,
-		unsigned long *u_volt_min, unsigned long *u_volt_max)
-{
-}
+		unsigned long *u_volt_min, unsigned long *u_volt_max);
 
 static inline int dev_pm_opp_of_add_table(struct device *dev)
 {
@@ -375,6 +378,12 @@ static inline int dev_pm_opp_of_add_table(struct device *dev)
 }
 
 static inline int dev_pm_opp_of_add_table_indexed(struct device *dev, int index)
+{
+	return -ENOTSUPP;
+}
+
+static inline int dev_pm_opp_of_add_table_np(struct device *dev, struct device_node *np,
+		struct device_node **ref_np, int max_tables)
 {
 	return -ENOTSUPP;
 }
