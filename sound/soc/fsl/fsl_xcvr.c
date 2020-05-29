@@ -66,6 +66,18 @@ static const struct snd_pcm_hw_constraint_list fsl_xcvr_earc_rates_constr = {
 };
 
 static const u32 fsl_xcvr_spdif_channels[] = { 2, };
+static const struct snd_pcm_hw_constraint_list fsl_xcvr_spdif_channels_constr = {
+	.count = ARRAY_SIZE(fsl_xcvr_spdif_channels),
+	.list = fsl_xcvr_spdif_channels,
+};
+
+static const u32 fsl_xcvr_spdif_rates[] = {
+	32000, 44100, 48000, 88200, 96000, 176400, 192000,
+};
+static const struct snd_pcm_hw_constraint_list fsl_xcvr_spdif_rates_constr = {
+	.count = ARRAY_SIZE(fsl_xcvr_spdif_rates),
+	.list = fsl_xcvr_spdif_rates,
+};
 
 static int fsl_xcvr_arc_mode_put(struct snd_kcontrol *kcontrol,
 				 struct snd_ctl_elem_value *ucontrol)
@@ -175,6 +187,8 @@ static int fsl_xcvr_mode_put(struct snd_kcontrol *kcontrol,
 	struct fsl_xcvr *xcvr = snd_soc_dai_get_drvdata(dai);
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	unsigned int *item = ucontrol->value.enumerated.item;
+	struct snd_soc_card *card = dai->component->card;
+	struct snd_soc_pcm_runtime *rtd;
 
 	xcvr->mode = snd_soc_enum_item_to_val(e, item[0]);
 
@@ -182,6 +196,10 @@ static int fsl_xcvr_mode_put(struct snd_kcontrol *kcontrol,
 			      (xcvr->mode == FSL_XCVR_MODE_ARC));
 	fsl_xcvr_activate_ctl(dai, fsl_xcvr_earc_capds_kctl.name,
 			      (xcvr->mode == FSL_XCVR_MODE_EARC));
+	/* Allow playback for SPDIF only */
+	rtd = snd_soc_get_pcm_runtime(card, card->dai_link[0].name);
+	rtd->pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream_count =
+		(xcvr->mode == FSL_XCVR_MODE_SPDIF ? 1 : 0);
 	return 0;
 }
 
@@ -457,7 +475,8 @@ static int fsl_xcvr_startup(struct snd_pcm_substream *substream,
 	switch (xcvr->mode) {
 	case FSL_XCVR_MODE_SPDIF:
 	case FSL_XCVR_MODE_ARC:
-		ret = 0; /* @todo */
+		ret = fsl_xcvr_constr(substream, &fsl_xcvr_spdif_channels_constr,
+				      &fsl_xcvr_spdif_rates_constr);
 		break;
 	case FSL_XCVR_MODE_EARC:
 		ret = fsl_xcvr_constr(substream, &fsl_xcvr_earc_channels_constr,
@@ -1118,9 +1137,7 @@ static int fsl_xcvr_probe(struct platform_device *pdev)
 	struct device_node *np = dev->of_node;
 	const struct of_device_id *of_id;
 	struct fsl_xcvr *xcvr;
-	struct resource *res,
-		ram_res = { .flags = IORESOURCE_MEM, },
-		regs_res = { .flags = IORESOURCE_MEM, };
+	struct resource *ram_res, *regs_res, *rx_res, *tx_res;
 	void __iomem *regs;
 	int ret, irq;
 
@@ -1157,17 +1174,13 @@ static int fsl_xcvr_probe(struct platform_device *pdev)
 		return PTR_ERR(xcvr->pll_ipg_clk);
 	}
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-
-	ram_res.start = res->start;
-	ram_res.end = res->start + FSL_XCVR_REG_OFFSET - 1;
-	xcvr->ram_addr = devm_ioremap_resource(dev, &ram_res);
+	ram_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ram");
+	xcvr->ram_addr = devm_ioremap_resource(dev, ram_res);
 	if (IS_ERR(xcvr->ram_addr))
 		return PTR_ERR(xcvr->ram_addr);
 
-	regs_res.start = res->start + FSL_XCVR_REG_OFFSET;
-	regs_res.end = res->end;
-	regs = devm_ioremap_resource(dev, &regs_res);
+	regs_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "regs");
+	regs = devm_ioremap_resource(dev, regs_res);
 	if (IS_ERR(regs))
 		return PTR_ERR(regs);
 
@@ -1224,10 +1237,12 @@ static int fsl_xcvr_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	rx_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "rxfifo");
+	tx_res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "txfifo");
 	xcvr->dma_prms_rx.chan_name = "rx";
 	xcvr->dma_prms_tx.chan_name = "tx";
-	xcvr->dma_prms_rx.addr = res->start + FSL_XCVR_RX_FIFO_ADDR;
-	xcvr->dma_prms_tx.addr = res->start + FSL_XCVR_TX_FIFO_ADDR;
+	xcvr->dma_prms_rx.addr = rx_res->start;
+	xcvr->dma_prms_tx.addr = tx_res->start;
 	xcvr->dma_prms_rx.maxburst = FSL_XCVR_MAXBURST_RX;
 	xcvr->dma_prms_tx.maxburst = FSL_XCVR_MAXBURST_TX;
 

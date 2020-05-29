@@ -440,6 +440,7 @@
 
 	pmu {
 		compatible = "arm,armv8-pmuv3";
+		interrupt-parent = <&gic>;
 		interrupts = <GIC_PPI 7
 			     (GIC_CPU_MASK_SIMPLE(6) | IRQ_TYPE_LEVEL_HIGH)>;
 		interrupt-affinity = <&A53_0>, <&A53_1>, <&A53_2>, <&A53_3>;
@@ -1318,7 +1319,12 @@
 
 				xcvr: xcvr@30cc0000 {
 					compatible = "fsl,imx8mp-xcvr";
-					reg = <0x30cc0000 0x10000>;
+					reg = <0x30cc0000 0x800>,
+					      <0x30cc0800 0x400>,
+					      <0x30cc0c00 0x080>,
+					      <0x30cc0e00 0x080>;
+					reg-names = "ram", "regs", "rxfifo",
+						    "txfifo";
 					interrupts = /* XCVR IRQ 0 */
 						     <GIC_SPI 128 IRQ_TYPE_LEVEL_HIGH>,
 						     /* XCVR IRQ 1 */

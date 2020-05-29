@@ -129,6 +129,7 @@ static void dec_frame(struct vpu_frame_info *frame);
 static int submit_input_and_encode(struct vpu_ctx *ctx);
 static int process_stream_output(struct vpu_ctx *ctx);
 static u32 get_ptr(u32 ptr);
+static int is_vpu_enc_poweroff(struct core_device *core);
 
 static char *get_event_str(u32 event)
 {
@@ -3214,21 +3215,6 @@ static void vpu_enc_fw_init(struct core_device *core_dev)
 
 	vpu_dbg(LVL_ALL, "enable mu for core[%d]\n", core_dev->id);
 
-	rpc_init_shared_memory_encoder(&core_dev->shared_mem,
-				cpu_phy_to_mu(core_dev, core_dev->m0_rpc_phy),
-				core_dev->m0_rpc_virt, core_dev->rpc_buf_size,
-				&core_dev->rpc_actual_size);
-	rpc_set_system_cfg_value_encoder(core_dev->shared_mem.pSharedInterface,
-				core_dev->vdev->reg_rpc_system, core_dev->id);
-
-	if (core_dev->rpc_actual_size > core_dev->rpc_buf_size)
-		vpu_err("rpc actual size(0x%x) > (0x%x), may occur overlay\n",
-			core_dev->rpc_actual_size, core_dev->rpc_buf_size);
-
-	mu_addr = cpu_phy_to_mu(core_dev, core_dev->m0_rpc_phy + core_dev->rpc_buf_size);
-	rpc_set_print_buffer(&core_dev->shared_mem, mu_addr, core_dev->print_buf_size);
-	core_dev->print_buf = core_dev->m0_rpc_virt + core_dev->rpc_buf_size;
-
 	mu_addr = cpu_phy_to_mu(core_dev, core_dev->m0_rpc_phy);
 	vpu_enc_mu_send_msg(core_dev, RPC_BUF_OFFSET, mu_addr);
 	vpu_enc_mu_send_msg(core_dev, BOOT_ADDRESS, core_dev->m0_p_fw_space_phy);
@@ -4916,17 +4902,11 @@ static void vpu_enc_setup(struct vpu_dev *This)
 	vpu_dbg(LVL_IRQ, "%s read_data=%x\n", __func__, read_data);
 }
 
-static void vpu_enc_reset(struct vpu_dev *This)
-{
-	const off_t offset = SCB_XREG_SLV_BASE + SCB_SCB_BLK_CTRL;
-
-	vpu_log_func();
-	write_vpu_reg(This, 0x7, offset + SCB_BLK_CTRL_CACHE_RESET_CLR);
-}
-
 static int vpu_enc_enable_hw(struct vpu_dev *This)
 {
 	vpu_log_func();
+	if (This->hw_enable)
+		return 0;
 	vpu_enc_setup(This);
 
 	This->hw_enable = true;
@@ -4937,7 +4917,6 @@ static int vpu_enc_enable_hw(struct vpu_dev *This)
 static void vpu_enc_disable_hw(struct vpu_dev *This)
 {
 	This->hw_enable = false;
-	vpu_enc_reset(This);
 	if (This->regs_base) {
 		iounmap(This->regs_base);
 		This->regs_base = NULL;
@@ -5031,7 +5010,7 @@ static int parse_dt_cores(struct vpu_dev *dev, struct device_node *np)
 	dev->core_num = 0;
 	for (i = 0; i < VPU_ENC_MAX_CORE_NUM; i++) {
 		scnprintf(core_name, sizeof(core_name), "core%d", i);
-		node = of_find_node_by_name(np, core_name);
+		node = of_find_node_by_name(of_node_get(np), core_name);
 		if (!node) {
 			vpu_dbg(LVL_INFO, "can't find %s\n", core_name);
 			break;
@@ -5518,6 +5497,41 @@ static void vpu_enc_remove_debugfs_file(struct vpu_dev *dev)
 	dev->debugfs_root = NULL;
 }
 
+static void vpu_enc_init_core_rpc(struct core_device *core_dev)
+{
+	u32 mu_addr;
+
+	cleanup_firmware_memory(core_dev);
+	memset_io(core_dev->m0_rpc_virt, 0, core_dev->rpc_buf_size);
+
+	rpc_init_shared_memory_encoder(&core_dev->shared_mem,
+				cpu_phy_to_mu(core_dev, core_dev->m0_rpc_phy),
+				core_dev->m0_rpc_virt, core_dev->rpc_buf_size,
+				&core_dev->rpc_actual_size);
+	rpc_set_system_cfg_value_encoder(core_dev->shared_mem.pSharedInterface,
+				core_dev->vdev->reg_rpc_system, core_dev->id);
+
+	if (core_dev->rpc_actual_size > core_dev->rpc_buf_size)
+		vpu_err("rpc actual size(0x%x) > (0x%x), may occur overlay\n",
+			core_dev->rpc_actual_size, core_dev->rpc_buf_size);
+
+	mu_addr = cpu_phy_to_mu(core_dev, core_dev->m0_rpc_phy + core_dev->rpc_buf_size);
+	rpc_set_print_buffer(&core_dev->shared_mem, mu_addr, core_dev->print_buf_size);
+	core_dev->print_buf = core_dev->m0_rpc_virt + core_dev->rpc_buf_size;
+
+	reset_vpu_core_dev(core_dev);
+}
+
+static void vpu_enc_restore_core_rpc(struct core_device *core_dev)
+{
+	rpc_restore_shared_memory_encoder(&core_dev->shared_mem,
+				cpu_phy_to_mu(core_dev, core_dev->m0_rpc_phy),
+				core_dev->m0_rpc_virt);
+	core_dev->print_buf = core_dev->m0_rpc_virt + core_dev->rpc_buf_size;
+	sw_reset_firmware(core_dev, 0);
+	set_core_fw_status(core_dev, true);
+}
+
 static int init_vpu_core_dev(struct core_device *core_dev)
 {
 	int ret = 0;
@@ -5556,8 +5570,6 @@ static int init_vpu_core_dev(struct core_device *core_dev)
 		goto err_free_fifo;
 	}
 
-	cleanup_firmware_memory(core_dev);
-
 	core_dev->m0_rpc_virt =
 		ioremap_wc(core_dev->m0_rpc_phy,
 			core_dev->rpc_buf_size + core_dev->print_buf_size);
@@ -5567,9 +5579,10 @@ static int init_vpu_core_dev(struct core_device *core_dev)
 		goto err_free_fifo;
 	}
 
-	memset_io(core_dev->m0_rpc_virt, 0, core_dev->rpc_buf_size);
-
-	reset_vpu_core_dev(core_dev);
+	if (is_vpu_enc_poweroff(core_dev))
+		vpu_enc_init_core_rpc(core_dev);
+	else
+		vpu_enc_restore_core_rpc(core_dev);
 
 	init_vpu_attrs(core_dev);
 
@@ -5707,30 +5720,24 @@ static int vpu_enc_probe(struct platform_device *pdev)
 		goto error_iounmap;
 	}
 
-	ret = v4l2_device_register(&pdev->dev, &dev->v4l2_dev);
-	if (ret) {
-		vpu_err("%s unable to register v4l2 dev\n", __func__);
-		goto error_reserved_mem;
-	}
-
 	platform_set_drvdata(pdev, dev);
-
-	ret = create_vpu_video_device(dev);
-	if (ret) {
-		vpu_err("create vpu video device fail\n");
-		goto error_unreg_v4l2;
-	}
-
-	pm_runtime_enable(&pdev->dev);
-	pm_runtime_get_sync(&pdev->dev);
-
-	vpu_enc_enable_hw(dev);
-
 	mutex_init(&dev->dev_mutex);
 	for (i = 0; i < dev->core_num; i++) {
 		dev->core_dev[i].id = i;
 		dev->core_dev[i].generic_dev = get_device(dev->generic_dev);
 		dev->core_dev[i].vdev = dev;
+	}
+
+	pm_runtime_enable(&pdev->dev);
+	ret = pm_runtime_get_sync(&pdev->dev);
+	if (ret < 0) {
+		vpu_err("fail to request mailbox, ret = %d\n", ret);
+		pm_runtime_set_suspended(&pdev->dev);
+		goto error_pm_runtime_get_sync;
+	}
+
+	mutex_init(&dev->dev_mutex);
+	for (i = 0; i < dev->core_num; i++) {
 		ret = init_vpu_core_dev(&dev->core_dev[i]);
 		if (ret)
 			break;
@@ -5744,8 +5751,22 @@ static int vpu_enc_probe(struct platform_device *pdev)
 	}
 
 	dev->core_num = i;
+	vpu_enc_enable_hw(dev);
 
 	pm_runtime_put_sync(&pdev->dev);
+
+	ret = v4l2_device_register(&pdev->dev, &dev->v4l2_dev);
+	if (ret) {
+		vpu_err("%s unable to register v4l2 dev\n", __func__);
+		goto error_init_core;
+	}
+
+	ret = create_vpu_video_device(dev);
+	if (ret) {
+		vpu_err("create vpu video device fail\n");
+		goto error_unreg_v4l2;
+	}
+
 
 	device_create_file(&pdev->dev, &dev_attr_meminfo);
 	device_create_file(&pdev->dev, &dev_attr_buffer);
@@ -5757,21 +5778,21 @@ static int vpu_enc_probe(struct platform_device *pdev)
 
 	return 0;
 
+error_unreg_v4l2:
+	v4l2_device_unregister(&dev->v4l2_dev);
 error_init_core:
 	for (i = 0; i < dev->core_num; i++)
 		uninit_vpu_core_dev(&dev->core_dev[i]);
 
 	vpu_enc_disable_hw(dev);
 	pm_runtime_put_sync(&pdev->dev);
+error_pm_runtime_get_sync:
 	pm_runtime_disable(&pdev->dev);
 
 	if (dev->pvpu_encoder_dev) {
 		video_unregister_device(dev->pvpu_encoder_dev);
 		dev->pvpu_encoder_dev = NULL;
 	}
-error_unreg_v4l2:
-	v4l2_device_unregister(&dev->v4l2_dev);
-error_reserved_mem:
 	vpu_enc_release_reserved_memory(&dev->reserved_mem);
 error_iounmap:
 	if (dev->regs_base) {
@@ -5785,7 +5806,6 @@ error_put_dev:
 		put_device(dev->generic_dev);
 		dev->generic_dev = NULL;
 	}
-	devm_kfree(&pdev->dev, dev);
 
 	return ret;
 }
@@ -5824,8 +5844,6 @@ static int vpu_enc_remove(struct platform_device *pdev)
 		put_device(dev->generic_dev);
 		dev->generic_dev = NULL;
 	}
-
-	devm_kfree(&pdev->dev, dev);
 
 	return 0;
 }
