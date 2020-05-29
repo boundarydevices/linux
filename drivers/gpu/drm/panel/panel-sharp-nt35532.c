@@ -18,12 +18,12 @@
  */
 
 #include <linux/backlight.h>
+#include <linux/delay.h>
 #include <linux/gpio/consumer.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/regulator/consumer.h>
 
-#include <drm/drmP.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_mipi_dsi.h>
 #include <drm/drm_panel.h>
@@ -179,7 +179,7 @@ static int sharp_nt_panel_enable(struct drm_panel *panel)
 }
 
 static const struct drm_display_mode default_mode = {
-	.clock = 148500,
+	.clock = 137380,
 	.hdisplay = 1080,
 	.hsync_start = 1080 + 72,
 	.hsync_end = 1080 + 72 + 8,
@@ -188,27 +188,27 @@ static const struct drm_display_mode default_mode = {
 	.vsync_start = 1920 + 14,
 	.vsync_end = 1920 + 14 + 2,
 	.vtotal = 1920 + 14 + 2 + 6,
-	.vrefresh = 60,
 };
 
-static int sharp_nt_panel_get_modes(struct drm_panel *panel)
+static int sharp_nt_panel_get_modes(struct drm_panel *panel,
+				    struct drm_connector *connector)
 {
 	struct drm_display_mode *mode;
 
-	mode = drm_mode_duplicate(panel->drm, &default_mode);
+	mode = drm_mode_duplicate(connector->dev, &default_mode);
 	if (!mode) {
-		dev_err(panel->drm->dev, "failed to add mode %ux%ux@%u\n",
+		dev_err(panel->dev, "failed to add mode %ux%ux@%u\n",
 				default_mode.hdisplay, default_mode.vdisplay,
-				default_mode.vrefresh);
+				drm_mode_vrefresh(&default_mode));
 		return -ENOMEM;
 	}
 
 	drm_mode_set_name(mode);
 
-	drm_mode_probed_add(panel->connector, mode);
+	drm_mode_probed_add(connector, mode);
 
-	panel->connector->display_info.width_mm = 68;
-	panel->connector->display_info.height_mm = 120;
+	connector->display_info.width_mm = 68;
+	connector->display_info.height_mm = 120;
 
 	return 1;
 }
@@ -256,11 +256,12 @@ static int sharp_nt_panel_add(struct sharp_nt_panel *sharp_nt)
 		return PTR_ERR(sharp_nt->backlight);
 	}
 
-	drm_panel_init(&sharp_nt->base);
-	sharp_nt->base.funcs = &sharp_nt_panel_funcs;
-	sharp_nt->base.dev = &sharp_nt->dsi->dev;
+	drm_panel_init(&sharp_nt->base, &sharp_nt->dsi->dev,
+		       &sharp_nt_panel_funcs, DRM_MODE_CONNECTOR_DSI);
 
-	return drm_panel_add(&sharp_nt->base);
+	drm_panel_add(&sharp_nt->base);
+
+	return 0;
 }
 
 static void sharp_nt_panel_del(struct sharp_nt_panel *sharp_nt)
