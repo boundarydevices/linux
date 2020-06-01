@@ -3511,6 +3511,12 @@ woal_is_scan_result_expired(moal_private *priv)
 	mlan_scan_resp scan_resp;
 	struct timeval t;
 	ENTER();
+
+	if(GET_BSS_ROLE(priv) == MLAN_BSS_ROLE_UAP){
+		LEAVE();
+		return MTRUE;
+	}
+
 	if (!woal_is_any_interface_active(priv->phandle)) {
 		LEAVE();
 		return MTRUE;
