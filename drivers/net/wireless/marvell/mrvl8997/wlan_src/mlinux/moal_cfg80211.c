@@ -3943,6 +3943,9 @@ woal_chandef_create(moal_private *priv, struct cfg80211_chan_def *chandef,
 	mlan_status status = MLAN_STATUS_SUCCESS;
 
 	ENTER();
+
+	memset(chandef,0, sizeof(struct cfg80211_chan_def));
+
 	chandef->center_freq2 = 0;
 	if (pchan_info->bandcfg.chanBand == BAND_2GHZ)
 		band = IEEE80211_BAND_2GHZ;
