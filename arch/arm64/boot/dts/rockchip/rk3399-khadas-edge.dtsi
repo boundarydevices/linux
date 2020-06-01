@@ -835,3 +835,17 @@
 &vopl_mmu {
 	status = "okay";
 };
+
+
+&spi1 {
+    max-freq = <104000000>;
+    status = "okay";
+
+    spiflash: flash@0 {
+    u-boot,dm-pre-reloc;
+    compatible = "winbond,w25q128fw", "jedec,spi-nor";
+    reg = <0>;
+    spi-max-frequency = <104000000>;
+    };
+};
+
