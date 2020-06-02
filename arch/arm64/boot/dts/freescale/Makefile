@@ -132,6 +132,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek.dtb imx8qxp-mek-dsp.dtb imx8qxp-mek-ov5640
 			  imx8qxp-mek-dpu-lcdif-rpmsg.dtb \
 			  imx8qxp-mek-ov5640-rpmsg.dtb \
 			  imx8dx-mek.dtb imx8dx-mek-dsp.dtb imx8dx-mek-rpmsg.dtb \
+			  imx8dx-mek-enet2-tja1100.dtb \
 			  imx8dx-mek-ov5640.dtb \
 			  imx8dx-mek-ov5640-rpmsg.dtb \
 			  imx8dx-mek-it6263-lvds0-dual-channel.dtb \
@@ -157,7 +158,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek.dtb imx8qxp-mek-dsp.dtb imx8qxp-mek-ov5640
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek-dom0.dtb imx8qxp-mek-root.dtb \
 			  imx8qxp-mek-inmate.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8dxl-evk.dtb imx8dxl-evk-rpmsg.dtb \
-			  imx8dxl-evk-enet0.dtb imx8dxl-evk-pcie.dtb \
+			  imx8dxl-evk-enet0.dtb imx8dxl-evk-enet0-tja1100.dtb imx8dxl-evk-pcie.dtb \
 			  imx8dxl-evk-lpspi-slave.dtb \
 			  imx8dxl-ddr3-evk.dtb
 dtb-$(CONFIG_ARCH_S32) += s32v234-evb.dtb \
