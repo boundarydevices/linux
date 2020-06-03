@@ -82,11 +82,6 @@
 				IMX_SC_R_VPU_PID5
 				IMX_SC_R_VPU_PID6
 				IMX_SC_R_VPU_PID7
-				IMX_SC_R_VPU_UART
-				IMX_SC_R_VPUCORE_0
-				IMX_SC_R_VPUCORE_1
-				IMX_SC_R_VPUCORE_2
-				IMX_SC_R_VPUCORE_3
 				IMX_SC_R_VPU
 				IMX_SC_R_VPU_DEC_0
 				IMX_SC_R_VPU_ENC_0
@@ -186,9 +181,6 @@
 				IMX_SC_R_CSI_0_I2C_0
 				IMX_SC_R_CSI_1
 				IMX_SC_R_CSI_1_I2C_0
-				IMX_SC_R_PI_0
-				IMX_SC_R_PI_0_PLL
-				IMX_SC_R_PI_0_I2C_0
 				IMX_SC_R_ISI_CH0
 				IMX_SC_R_ISI_CH1
 				IMX_SC_R_ISI_CH2
@@ -286,9 +278,15 @@
 				IMX8QM_MIPI_DSI1_GPIO0_01
 
 				IMX8QM_SCU_GPIO0_07
+
+				IMX8QM_SPI0_CS1
+				IMX8QM_SPI2_CS1
+				IMX8QM_SAI1_RXFS
+				IMX8QM_SAI1_RXC
 			>;
 
 			gpios = <&lsio_gpio1 13 GPIO_ACTIVE_LOW>,
+				<&lsio_gpio1 19 GPIO_ACTIVE_LOW>,
 				<&lsio_gpio1 27 GPIO_ACTIVE_LOW>,
 				<&lsio_gpio1 28 GPIO_ACTIVE_LOW>,
 				<&lsio_gpio1 30 GPIO_ACTIVE_LOW>,
@@ -583,8 +581,6 @@
 	#stream-id-cells = <1>;
 	iommus = <&smmu>;
 	fsl,sc_rsrc_id = <IMX_SC_R_VPU_DEC_0>,
-			 <IMX_SC_R_VPU_ENC_0>,
-			 <IMX_SC_R_VPU_ENC_1>,
 			 <IMX_SC_R_VPU_TS_0>,
 			 <IMX_SC_R_VPU_PID0>,
 			 <IMX_SC_R_VPU_PID1>,
@@ -666,6 +662,11 @@
 
 &{/cbtl04gp} {
 	status = "disabled";
+};
+
+&audio_subsys {
+	reg = <0 0x59000000 0 0x1000000>;
+	xen,passthrough;
 };
 
 /* Passthrough baseboard audio to DomU */
