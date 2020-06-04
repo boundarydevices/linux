@@ -201,12 +201,6 @@
 		clock-names = "apb_pclk";
 	};
 
-	bt_rfkill {
-		compatible = "fsl,mxc_bt_rfkill";
-		bt-power-gpios = <&lsio_gpio4 22 GPIO_ACTIVE_LOW>;
-		status ="okay";
-	};
-
 	passthrough {
 		compatible = "simple-bus";
 		ranges;
@@ -594,15 +588,6 @@
 };
 
 &iomuxc {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hog>;
-
-	pinctrl_hog: hoggrp {
-		fsl,pins = <
-			IMX8QM_QSPI1A_DQS_LSIO_GPIO4_IO22               0x06000021
-		>;
-	};
-
 	pinctrl_wifi: wifigrp{
 		fsl,pins = <
 			IMX8QM_SCU_GPIO0_07_SCU_DSC_RTC_CLOCK_OUTPUT_32K	0x20
