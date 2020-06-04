@@ -10,7 +10,6 @@
 #include "vdec_helpers.h"
 #include "hevc_regs.h"
 
-#define MMU_COMPRESS_HEADER_SIZE 0x48000
 #define MMU_MAP_SIZE 0x4800
 
 const u16 vdec_hevc_parser_cmd[] = {

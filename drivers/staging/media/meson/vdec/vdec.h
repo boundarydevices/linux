@@ -17,6 +17,9 @@
 
 #include "vdec_platform.h"
 
+/* MMU header size for codecs using the IOMMU + FBC */
+#define MMU_COMPRESS_HEADER_SIZE 0x48000
+
 /* 32 buffers in 3-plane YUV420 */
 #define MAX_CANVAS (32 * 3)
 

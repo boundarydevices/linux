@@ -192,6 +192,7 @@ static int vdec_queue_setup(struct vb2_queue *q, unsigned int *num_buffers,
 {
 	struct amvdec_session *sess = vb2_get_drv_priv(q);
 	u32 output_size = amvdec_get_output_size(sess);
+	u32 revision = sess->core->platform->revision;
 
 	if (*num_planes) {
 		switch (q->type) {
@@ -213,6 +214,12 @@ static int vdec_queue_setup(struct vb2_queue *q, unsigned int *num_buffers,
 				    sizes[0] < output_size ||
 				    sizes[1] < output_size / 4 ||
 				    sizes[2] < output_size / 4)
+					return -EINVAL;
+				break;
+			case V4L2_PIX_FMT_YUV420_8BIT:
+			case V4L2_PIX_FMT_YUV420_10BIT:
+				if (*num_planes != 1 ||
+				    sizes[0] < MMU_COMPRESS_HEADER_SIZE)
 					return -EINVAL;
 				break;
 			default:
@@ -243,6 +250,24 @@ static int vdec_queue_setup(struct vb2_queue *q, unsigned int *num_buffers,
 			sizes[1] = output_size / 4;
 			sizes[2] = output_size / 4;
 			*num_planes = 3;
+			break;
+		case V4L2_PIX_FMT_YUV420_8BIT:
+			if (revision >= VDEC_REVISION_G12A)
+				sizes[0] = MMU_COMPRESS_HEADER_SIZE;
+			else
+				sizes[0] = amvdec_amfbc_size(sess->width,
+							     sess->height,
+							     0, 0);
+			*num_planes = 1;
+			break;
+		case V4L2_PIX_FMT_YUV420_10BIT:
+			if (revision >= VDEC_REVISION_G12A)
+				sizes[0] = MMU_COMPRESS_HEADER_SIZE;
+			else
+				sizes[0] = amvdec_amfbc_size(sess->width,
+							     sess->height,
+							     1, 0);
+			*num_planes = 1;
 			break;
 		default:
 			return -EINVAL;
@@ -496,6 +521,7 @@ vdec_try_fmt_common(struct amvdec_session *sess, u32 size,
 	struct v4l2_plane_pix_format *pfmt = pixmp->plane_fmt;
 	const struct amvdec_format *fmts = sess->core->platform->formats;
 	const struct amvdec_format *fmt_out = NULL;
+	u32 revision = sess->core->platform->revision;
 	u32 output_size = 0;
 
 	memset(pfmt[0].reserved, 0, sizeof(pfmt[0].reserved));
@@ -548,6 +574,26 @@ vdec_try_fmt_common(struct amvdec_session *sess, u32 size,
 			pfmt[2].sizeimage = output_size / 2;
 			pfmt[2].bytesperline = ALIGN(pixmp->width, 32) / 2;
 			pixmp->num_planes = 3;
+		} else if (pixmp->pixelformat == V4L2_PIX_FMT_YUV420_8BIT) {
+			if (revision >= VDEC_REVISION_G12A) {
+				pfmt[0].sizeimage = MMU_COMPRESS_HEADER_SIZE;
+			} else {
+				pfmt[0].sizeimage =
+					amvdec_amfbc_size(pixmp->width,
+							  pixmp->height, 0, 0);
+				pfmt[0].bytesperline = pixmp->width;
+			}
+			pixmp->num_planes = 1;
+		} else if (pixmp->pixelformat == V4L2_PIX_FMT_YUV420_10BIT) {
+			if (revision >= VDEC_REVISION_G12A) {
+				pfmt[0].sizeimage = MMU_COMPRESS_HEADER_SIZE;
+			} else {
+				pfmt[0].sizeimage =
+					amvdec_amfbc_size(pixmp->width,
+							  pixmp->height, 1, 0);
+				pfmt[0].bytesperline = pixmp->width;
+			}
+			pixmp->num_planes = 1;
 		}
 	}
 
