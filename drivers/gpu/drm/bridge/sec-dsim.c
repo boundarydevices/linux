@@ -815,6 +815,8 @@ static int sec_mipi_dsim_read_pl_from_sfr_fifo(struct sec_mipi_dsim *dsim,
 	uint8_t data_type;
 	uint16_t word_count = 0;
 	uint32_t fifoctrl, ph, pl;
+	int extra;
+	unsigned char *dst = payload;
 
 	fifoctrl = dsim_read(dsim, DSIM_FIFOCTRL);
 
@@ -825,39 +827,42 @@ static int sec_mipi_dsim_read_pl_from_sfr_fifo(struct sec_mipi_dsim *dsim,
 	data_type = PKTHDR_GET_DT(ph);
 	switch (data_type) {
 	case MIPI_DSI_RX_ACKNOWLEDGE_AND_ERROR_REPORT:
-		dev_err(dsim->dev, "peripheral report error: (0-7)%x, (8-15)%x\n",
-			PKTHDR_GET_DATA0(ph), PKTHDR_GET_DATA1(ph));
+		dev_err(dsim->dev, "peripheral report error: (0-7)%x, (8-15)%x 0x%08x\n",
+			PKTHDR_GET_DATA0(ph), PKTHDR_GET_DATA1(ph), ph);
 		return -EPROTO;
 	case MIPI_DSI_RX_DCS_SHORT_READ_RESPONSE_2BYTE:
 	case MIPI_DSI_RX_GENERIC_SHORT_READ_RESPONSE_2BYTE:
 		if (!WARN_ON(length < 2)) {
-			((u8 *)payload)[1] = PKTHDR_GET_DATA1(ph);
+			dst[1] = PKTHDR_GET_DATA1(ph);
 			word_count++;
 		}
 		fallthrough;
 	case MIPI_DSI_RX_DCS_SHORT_READ_RESPONSE_1BYTE:
 	case MIPI_DSI_RX_GENERIC_SHORT_READ_RESPONSE_1BYTE:
-		((u8 *)payload)[0] = PKTHDR_GET_DATA0(ph);
+		dst[0] = PKTHDR_GET_DATA0(ph);
 		word_count++;
 		length = word_count;
 		break;
 	case MIPI_DSI_RX_DCS_LONG_READ_RESPONSE:
 	case MIPI_DSI_RX_GENERIC_LONG_READ_RESPONSE:
 		word_count = PKTHDR_GET_WC(ph);
+		extra = 0;
 		if (word_count > length) {
-			dev_err(dsim->dev, "invalid receive buffer length\n");
-			return -EINVAL;
+			extra = ((word_count + 3) >> 2) - ((length + 3) >> 2);
+			dev_err(dsim->dev, "invalid receive buffer length, %d vs %ld, 0x%08x\n", word_count, length, ph);
+			word_count = length;
+			length = -EINVAL;
+		} else {
+			length = word_count;
 		}
-
-		length = word_count;
 
 		while (word_count >= 4) {
 			pl = dsim_read(dsim, DSIM_RXFIFO);
-			((u8 *)payload)[0] = pl & 0xff;
-			((u8 *)payload)[1] = (pl >> 8)  & 0xff;
-			((u8 *)payload)[2] = (pl >> 16) & 0xff;
-			((u8 *)payload)[3] = (pl >> 24) & 0xff;
-			payload += 4;
+			dst[0] = pl & 0xff;
+			dst[1] = (pl >> 8)  & 0xff;
+			dst[2] = (pl >> 16) & 0xff;
+			dst[3] = (pl >> 24) & 0xff;
+			dst += 4;
 			word_count -= 4;
 		}
 
@@ -866,15 +871,20 @@ static int sec_mipi_dsim_read_pl_from_sfr_fifo(struct sec_mipi_dsim *dsim,
 
 			switch (word_count) {
 			case 3:
-				((u8 *)payload)[2] = (pl >> 16) & 0xff;
+				dst[2] = (pl >> 16) & 0xff;
 				fallthrough;
 			case 2:
-				((u8 *)payload)[1] = (pl >> 8) & 0xff;
+				dst[1] = (pl >> 8) & 0xff;
 				fallthrough;
 			case 1:
-				((u8 *)payload)[0] = pl & 0xff;
+				dst[0] = pl & 0xff;
 				break;
 			}
+		}
+		while (extra) {
+			pl = dsim_read(dsim, DSIM_RXFIFO);
+			dev_err(dsim->dev, "extra, 0x%x\n", pl);
+			extra--;
 		}
 
 		break;
