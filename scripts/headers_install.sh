@@ -64,7 +64,7 @@ configs=$(sed -e '
 	d
 ' $OUTFILE)
 
-# The entries in the following list do not result in an error.
+# The entries in the following list are not warned.
 # Please do not add a new entry. This list is only for existing ones.
 # The list will be reduced gradually, and deleted eventually. (hopefully)
 #
@@ -93,19 +93,18 @@ include/uapi/linux/pktcdvd.h:CONFIG_CDROM_PKTCDVD_WCACHE
 
 for c in $configs
 do
-	leak_error=1
+	warn=1
 
 	for ignore in $config_leak_ignores
 	do
 		if echo "$INFILE:$c" | grep -q "$ignore$"; then
-			leak_error=
+			warn=
 			break
 		fi
 	done
 
-	if [ "$leak_error" = 1 ]; then
-		echo "error: $INFILE: leak $c to user-space" >&2
-		exit 1
+	if [ "$warn" = 1 ]; then
+		echo "warning: $INFILE: leak $c to user-space" >&2
 	fi
 done
 
