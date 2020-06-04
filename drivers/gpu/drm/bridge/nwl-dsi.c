@@ -960,7 +960,8 @@ static void nwl_dsi_bridge_disable(struct drm_bridge *bridge)
 }
 
 static unsigned long nwl_dsi_get_bit_clock(struct nwl_dsi *dsi,
-		unsigned long pixclock, u32 lanes, unsigned int min_hs_clock_multiple)
+		unsigned long pixclock, u32 lanes, unsigned int min_hs_clock_multiple,
+		unsigned int mipi_dsi_multiple)
 {
 	int bpp;
 	unsigned long bit_clk = 0;
@@ -970,7 +971,7 @@ static unsigned long nwl_dsi_get_bit_clock(struct nwl_dsi *dsi,
 
 	bpp = mipi_dsi_pixel_format_to_bpp(dsi->format);
 	bit_clk = (unsigned long)phy_mipi_dphy_get_hs_clk(pixclock, bpp, lanes,
-			dsi->dsi_mode_flags, min_hs_clock_multiple);
+			dsi->dsi_mode_flags, min_hs_clock_multiple, mipi_dsi_multiple);
 
 	if (pixclock * min_hs_clock_multiple == bit_clk) {
 		dsi->hsmult = min_hs_clock_multiple;
@@ -1061,7 +1062,7 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_dsi *dsi,
 	phy_mipi_dphy_get_default_config(clock,
 		mipi_dsi_pixel_format_to_bpp(dsi->format),
 		lanes, &phy_opts.mipi_dphy, dsi->dsi_mode_flags,
-		mode->min_hs_clock_multiple);
+		mode->min_hs_clock_multiple, mode->mipi_dsi_multiple);
 	bit_clk = phy_opts.mipi_dphy.hs_clk_rate;
 	if (clock * mode->min_hs_clock_multiple == bit_clk)
 		dsi->hsmult = mode->min_hs_clock_multiple;
@@ -1105,7 +1106,7 @@ static int nwl_dsi_get_dphy_params(struct nwl_dsi *dsi,
 		get_pixclock(dsi, mode->clock * 1000),
 		mipi_dsi_pixel_format_to_bpp(dsi->format), dsi->lanes,
 		&phy_opts->mipi_dphy, dsi->dsi_mode_flags,
-		mode->min_hs_clock_multiple);
+		mode->min_hs_clock_multiple, mode->mipi_dsi_multiple);
 	if (ret < 0)
 		return ret;
 
@@ -1176,7 +1177,7 @@ nwl_dsi_bridge_mode_valid(struct drm_bridge *bridge,
 	int bit_rate;
 
 	bit_rate = nwl_dsi_get_bit_clock(dsi, get_pixclock(dsi, mode->clock * 1000), dsi->lanes,
-			mode->min_hs_clock_multiple);
+			mode->min_hs_clock_multiple, mode->mipi_dsi_multiple);
 
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Validating mode:");
 	drm_mode_debug_printmodeline(mode);
