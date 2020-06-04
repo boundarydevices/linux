@@ -30,8 +30,11 @@ const u16 vdec_hevc_parser_cmd[] = {
 void codec_hevc_setup_decode_head(struct amvdec_session *sess, int is_10bit)
 {
 	struct amvdec_core *core = sess->core;
-	u32 body_size = amvdec_am21c_body_size(sess->width, sess->height);
-	u32 head_size = amvdec_am21c_head_size(sess->width, sess->height);
+	u32 use_mmu = codec_hevc_use_mmu(core->platform->revision,
+					 sess->pixfmt_cap, is_10bit);
+	u32 body_size = amvdec_amfbc_body_size(sess->width, sess->height,
+					       is_10bit, use_mmu);
+	u32 head_size = amvdec_amfbc_head_size(sess->width, sess->height);
 
 	if (!codec_hevc_use_fbc(sess->pixfmt_cap, is_10bit)) {
 		/* Enable 2-plane reference read mode */
@@ -154,7 +157,12 @@ void codec_hevc_free_fbc_buffers(struct amvdec_session *sess,
 				 struct codec_hevc_common *comm)
 {
 	struct device *dev = sess->core->dev;
-	u32 am21_size = amvdec_am21c_size(sess->width, sess->height);
+	u32 use_mmu = codec_hevc_use_mmu(sess->core->platform->revision,
+					 sess->pixfmt_cap,
+					 sess->bitdepth == 10 ? 1 : 0);
+	u32 am21_size = amvdec_amfbc_size(sess->width, sess->height,
+					  sess->bitdepth == 10 ? 1 : 0,
+					  use_mmu);
 	int i;
 
 	for (i = 0; i < MAX_REF_PIC_NUM; ++i) {
@@ -173,7 +181,12 @@ static int codec_hevc_alloc_fbc_buffers(struct amvdec_session *sess,
 {
 	struct device *dev = sess->core->dev;
 	struct v4l2_m2m_buffer *buf;
-	u32 am21_size = amvdec_am21c_size(sess->width, sess->height);
+	u32 use_mmu = codec_hevc_use_mmu(sess->core->platform->revision,
+					 sess->pixfmt_cap,
+					 sess->bitdepth == 10 ? 1 : 0);
+	u32 am21_size = amvdec_amfbc_size(sess->width, sess->height,
+					  sess->bitdepth == 10 ? 1 : 0,
+					  use_mmu);
 
 	v4l2_m2m_for_each_dst_buf(sess->m2m_ctx, buf) {
 		u32 idx = buf->vb.vb2_buf.index;
@@ -280,7 +293,12 @@ void codec_hevc_fill_mmu_map(struct amvdec_session *sess,
 			     struct codec_hevc_common *comm,
 			     struct vb2_buffer *vb)
 {
-	u32 size = amvdec_am21c_size(sess->width, sess->height);
+	u32 use_mmu = codec_hevc_use_mmu(sess->core->platform->revision,
+					 sess->pixfmt_cap,
+					 sess->bitdepth == 10 ? 1 : 0);
+	u32 size = amvdec_amfbc_size(sess->width, sess->height,
+				     sess->bitdepth == 10 ? 1 : 0,
+				     use_mmu);
 	u32 nb_pages = size / PAGE_SIZE;
 	u32 *mmu_map = comm->mmu_map_vaddr;
 	u32 first_page;

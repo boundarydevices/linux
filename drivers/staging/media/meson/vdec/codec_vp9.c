@@ -1147,6 +1147,8 @@ static void codec_vp9_set_mc(struct amvdec_session *sess,
 			     struct codec_vp9 *vp9)
 {
 	struct amvdec_core *core = sess->core;
+	u32 use_mmu = codec_hevc_use_mmu(core->platform->revision,
+					 sess->pixfmt_cap, vp9->is_10bit);
 	u32 scale = 0;
 	u32 sz;
 	int i;
@@ -1166,8 +1168,9 @@ static void codec_vp9_set_mc(struct amvdec_session *sess,
 		    vp9->frame_refs[i]->height != vp9->height)
 			scale = 1;
 
-		sz = amvdec_am21c_body_size(vp9->frame_refs[i]->width,
-					    vp9->frame_refs[i]->height);
+		sz = amvdec_amfbc_body_size(vp9->frame_refs[i]->width,
+					    vp9->frame_refs[i]->height,
+					    vp9->is_10bit, use_mmu);
 
 		amvdec_write_dos(core, VP9D_MPP_REFINFO_DATA,
 				 vp9->frame_refs[i]->width);

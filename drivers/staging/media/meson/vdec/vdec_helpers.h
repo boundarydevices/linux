@@ -27,9 +27,11 @@ void amvdec_clear_dos_bits(struct amvdec_core *core, u32 reg, u32 val);
 u32 amvdec_read_parser(struct amvdec_core *core, u32 reg);
 void amvdec_write_parser(struct amvdec_core *core, u32 reg, u32 val);
 
-u32 amvdec_am21c_body_size(u32 width, u32 height);
-u32 amvdec_am21c_head_size(u32 width, u32 height);
-u32 amvdec_am21c_size(u32 width, u32 height);
+/* Helpers for the Amlogic compressed framebuffer format */
+u32 amvdec_amfbc_body_size(u32 width, u32 height, u32 is_10bit, u32 use_mmu);
+u32 amvdec_amfbc_head_size(u32 width, u32 height);
+u32 amvdec_amfbc_size(u32 width, u32 height, u32 is_10bit, u32 use_mmu);
+u32 amvdec_is_dst_fbc(struct amvdec_session *sess);
 
 /**
  * amvdec_dst_buf_done_idx() - Signal that a buffer is done decoding
