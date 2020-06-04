@@ -886,6 +886,7 @@ static void init_common(struct device_node *np, struct panel_desc *ds,
 	of_property_read_u32(np, "delay-unprepare", &ds->delay.unprepare);
 	of_property_read_u32(np, "delay-power-down", &ds->delay.power_down);
 	of_property_read_u32(np, "min-hs-clock-multiple", &dm->min_hs_clock_multiple);
+	of_property_read_u32(np, "mipi-dsi-multiple", &dm->mipi_dsi_multiple);
 	if (dsi) {
 		if (of_property_read_bool(np, "mode-video-hfp-disable"))
 			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_HFP;
