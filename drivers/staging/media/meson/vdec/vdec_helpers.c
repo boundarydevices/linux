@@ -436,7 +436,7 @@ void amvdec_set_par_from_dar(struct amvdec_session *sess,
 EXPORT_SYMBOL_GPL(amvdec_set_par_from_dar);
 
 void amvdec_src_change(struct amvdec_session *sess, u32 width,
-		       u32 height, u32 dpb_size)
+		       u32 height, u32 dpb_size, u32 bitdepth)
 {
 	static const struct v4l2_event ev = {
 		.type = V4L2_EVENT_SOURCE_CHANGE,
@@ -451,7 +451,8 @@ void amvdec_src_change(struct amvdec_session *sess, u32 width,
 	if (sess->streamon_cap &&
 	    sess->width == width &&
 	    sess->height == height &&
-	    dpb_size <= sess->num_dst_bufs) {
+	    dpb_size <= sess->num_dst_bufs &&
+	    sess->bitdepth == bitdepth) {
 		sess->fmt_out->codec_ops->resume(sess);
 		return;
 	}
@@ -460,9 +461,10 @@ void amvdec_src_change(struct amvdec_session *sess, u32 width,
 	sess->width = width;
 	sess->height = height;
 	sess->status = STATUS_NEEDS_RESUME;
+	sess->bitdepth = bitdepth;
 
-	dev_dbg(sess->core->dev, "Res. changed (%ux%u), DPB size %u\n",
-		width, height, dpb_size);
+	dev_dbg(sess->core->dev, "Res. changed (%ux%u), DPB %u, bitdepth %u\n",
+		width, height, dpb_size, bitdepth);
 	v4l2_event_queue_fh(&sess->fh, &ev);
 }
 EXPORT_SYMBOL_GPL(amvdec_src_change);

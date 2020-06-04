@@ -2132,7 +2132,8 @@ static irqreturn_t codec_vp9_threaded_isr(struct amvdec_session *sess)
 
 	codec_vp9_fetch_rpm(sess);
 	if (codec_vp9_process_rpm(vp9)) {
-		amvdec_src_change(sess, vp9->width, vp9->height, 16);
+		amvdec_src_change(sess, vp9->width, vp9->height, 16,
+				  vp9->is_10bit ? 10 : 8);
 
 		/* No frame is actually processed */
 		vp9->cur_frame = NULL;

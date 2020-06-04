@@ -76,9 +76,10 @@ void amvdec_set_par_from_dar(struct amvdec_session *sess,
  * @width: picture width detected by the hardware
  * @height: picture height detected by the hardware
  * @dpb_size: Decoded Picture Buffer size (= amount of buffers for decoding)
+ * @bitdepth: Bit depth (usually 10 or 8) of the coded content
  */
 void amvdec_src_change(struct amvdec_session *sess, u32 width,
-		       u32 height, u32 dpb_size);
+		       u32 height, u32 dpb_size, u32 bitdepth);
 
 /**
  * amvdec_abort() - Abort the current decoding session
