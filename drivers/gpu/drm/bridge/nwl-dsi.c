@@ -222,6 +222,7 @@ struct nwl_mipi_dsi {
 	bool				no_clk_reset;
 	bool				enabled;
 	u32				hsmult;
+	u32				mipi_dsi_multiple;
 	u32				bitclk;
 	u32				pixclock;
 };
@@ -634,6 +635,7 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 
 	bit_clk = nwl_dsi_get_bit_clock(dsi, pixclock);
 	dsi->hsmult = 0;
+	dsi->mipi_dsi_multiple = mode->mipi_dsi_multiple;
 	if (mode->min_hs_clock_multiple) {
 		unsigned long bit_clkm = pixclock * mode->min_hs_clock_multiple;
 
@@ -643,6 +645,16 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 			pr_info("%s: %ld = %ld * %d\n", __func__, bit_clk, pixclock, dsi->hsmult);
 		}
 	}
+	if (dsi->mipi_dsi_multiple) {
+		bit_clk += dsi->mipi_dsi_multiple - 1;
+		bit_clk /= dsi->mipi_dsi_multiple;
+		bit_clk *= dsi->mipi_dsi_multiple;
+	}
+	if (!(bit_clk % pixclock))
+		dsi->hsmult = bit_clk / pixclock;
+	else
+		dsi->hsmult = 0;
+
 	ret = mixel_phy_mipi_set_phy_speed(dsi->phy,
 			bit_clk,
 			dsi->phy_ref.rate,

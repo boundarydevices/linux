@@ -425,6 +425,7 @@ struct drm_display_mode {
 	 */
 	struct list_head export_head;
 	unsigned int min_hs_clock_multiple;
+	unsigned int mipi_dsi_multiple;
 };
 
 /**
