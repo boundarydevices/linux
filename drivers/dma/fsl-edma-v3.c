@@ -873,7 +873,7 @@ static struct device *fsl_edma3_attach_pd(struct device *dev,
 	}
 
 	pd_chan = dev_pm_domain_attach_by_name(dev, domn);
-	if (!pd_chan)
+	if (IS_ERR_OR_NULL(pd_chan))
 		return NULL;
 
 	link = device_link_add(dev, pd_chan, DL_FLAG_STATELESS |
