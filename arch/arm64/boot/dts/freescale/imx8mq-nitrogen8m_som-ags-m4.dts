@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2020 Boundary Devices
+ */
+
+#include "imx8mq-nitrogen8m_som-ags.dts"
+
+/ {
+	model = "Boundary Devices i.MX8MQ Nitrogen8M SOM AGS M4";
+	compatible = "boundary,imx8mq-nitrogen8m_som-ags-m4", "fsl,imx8mq";
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		m4_reserved: m4@0x80000000 {
+			no-map;
+			reg = <0 0x80000000 0 0x1000000>;
+		};
+
+	};
+};
+
+&rpmsg {
+	/*
+	 * 64K for one rpmsg instance:
+	 * --0xb8000000~0xb800ffff: pingpong
+	 */
+	vdev-nums = <1>;
+	reg = <0x0 0xb8000000 0x0 0x10000>;
+	status = "okay";
+};
+
+&uart2 {
+	status = "disabled";
+};
+
+&wdog3 {
+	status = "disabled";
+};
