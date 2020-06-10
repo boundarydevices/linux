@@ -1,0 +1,163 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2020 Boundary Devices
+ */
+
+#include "imx8mq-nitrogen8m_som-sd.dts"
+
+/ {
+	model = "Boundary Devices i.MX8MQ Nitrogen8M SOM AGS";
+	compatible = "boundary,imx8mq-nitrogen8m_som-ags", "fsl,imx8mq";
+
+	aliases {
+		/delete-property/ csi0;
+		/delete-property/ csi1;
+	};
+
+	/delete-node/ sound-wm8960;
+};
+
+&iomuxc {
+	/delete-node/ i2c2-csi1grp;
+	/delete-node/ i2c3-csi2grp;
+	/delete-node/ i2c4-pca9546grp;
+	/delete-node/ i2c4b-wm8960grp;
+	/delete-node/ pcie0grp;
+
+	pinctrl_pcie1: pcie1grp {
+		fsl,pins = <
+#define GP_PCIE1_RESET		<&gpio1 10 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_GPIO1_IO10_GPIO1_IO10		0x19	/* Pin 105 */
+		>;
+	};
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			/* J1 connector, odd */
+			MX8MQ_IOMUXC_GPIO1_IO10_GPIO1_IO10		0x19	/* Pin 105 */
+			MX8MQ_IOMUXC_GPIO1_IO05_GPIO1_IO5		0x19	/* Pin 143 */
+			MX8MQ_IOMUXC_GPIO1_IO03_GPIO1_IO3		0x19	/* Pin 145 */
+			MX8MQ_IOMUXC_NAND_CE1_B_GPIO3_IO2		0x19	/* Pin 147 */
+			MX8MQ_IOMUXC_NAND_CE3_B_GPIO3_IO4		0x19	/* Pin 149 */
+			MX8MQ_IOMUXC_NAND_READY_B_GPIO3_IO16		0x19	/* Pin 153 */
+			MX8MQ_IOMUXC_NAND_DATA05_GPIO3_IO11		0x19	/* Pin 155 */
+			MX8MQ_IOMUXC_NAND_WP_B_GPIO3_IO18		0x19	/* Pin 157 */
+
+			/* J1 connector, even */
+			MX8MQ_IOMUXC_NAND_DATA04_GPIO3_IO10		0x19	/* Pin 82 */
+			MX8MQ_IOMUXC_NAND_DATA03_GPIO3_IO9		0x19	/* Pin 84 */
+			MX8MQ_IOMUXC_NAND_DATA02_GPIO3_IO8		0x19	/* Pin 86 */
+			MX8MQ_IOMUXC_NAND_DATA01_GPIO3_IO7		0x19	/* Pin 88 */
+			MX8MQ_IOMUXC_NAND_DATA00_GPIO3_IO6		0x19	/* Pin 90 */
+			MX8MQ_IOMUXC_NAND_CE0_B_GPIO3_IO1		0x19	/* Pin 92 */
+			MX8MQ_IOMUXC_NAND_ALE_GPIO3_IO0			0x19	/* Pin 96 */
+			MX8MQ_IOMUXC_SAI1_TXD1_GPIO4_IO13		0x19	/* Pin 132 */
+			MX8MQ_IOMUXC_SAI1_TXD2_GPIO4_IO14		0x19	/* Pin 134 */
+			MX8MQ_IOMUXC_SAI1_TXD3_GPIO4_IO15		0x19	/* Pin 136 */
+			MX8MQ_IOMUXC_SAI1_TXD4_GPIO4_IO16		0x19	/* Pin 138 */
+			MX8MQ_IOMUXC_SAI1_TXD5_GPIO4_IO17		0x19	/* Pin 140 */
+			MX8MQ_IOMUXC_SAI1_TXD6_GPIO4_IO18		0x19	/* Pin 142 */
+			MX8MQ_IOMUXC_SAI1_TXD7_GPIO4_IO19		0x19	/* Pin 144 */
+			MX8MQ_IOMUXC_SAI1_RXD1_GPIO4_IO3		0x19	/* Pin 146 */
+			MX8MQ_IOMUXC_SAI1_RXD2_GPIO4_IO4		0x19	/* Pin 148 */
+			MX8MQ_IOMUXC_SAI1_RXD3_GPIO4_IO5		0x19	/* Pin 150 */
+			MX8MQ_IOMUXC_SAI1_RXD4_GPIO4_IO6		0x19	/* Pin 152 */
+			MX8MQ_IOMUXC_SAI1_RXD5_GPIO4_IO7		0x19	/* Pin 154 */
+			MX8MQ_IOMUXC_SAI1_RXD6_GPIO4_IO8		0x19	/* Pin 156 */
+			MX8MQ_IOMUXC_SAI1_RXD7_GPIO4_IO9		0x19	/* Pin 158 */
+			MX8MQ_IOMUXC_SAI1_RXC_GPIO4_IO1			0x19	/* Pin 160 */
+			MX8MQ_IOMUXC_SAI1_RXFS_GPIO4_IO0		0x19	/* Pin 162 */
+			MX8MQ_IOMUXC_SAI3_RXFS_GPIO4_IO28		0x19	/* Pin 198 */
+			MX8MQ_IOMUXC_SAI3_RXC_GPIO4_IO29		0x19	/* Pin 200 */
+
+			/* J13 Pin 2, BT_FUNC5 (TiWI only) */
+			MX8MQ_IOMUXC_SAI5_RXD2_GPIO3_IO23		0xd6
+			/* J13 Pin 4, WL_IRQ, not needed for Silex */
+			MX8MQ_IOMUXC_SAI5_RXD0_GPIO3_IO21		0xd6
+			/* J13 Pin 41, BT_CLK_REQ */
+			MX8MQ_IOMUXC_SAI5_RXD1_GPIO3_IO22		0xd6
+			/* J13 Pin 42, BT_HOST_WAKE */
+			MX8MQ_IOMUXC_SAI5_MCLK_GPIO3_IO25		0xd6
+			MX8MQ_IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5		0x19	/* TP79 */
+			MX8MQ_IOMUXC_GPIO1_IO08_GPIO1_IO8		0x49	/* TP80 */
+
+			/* Clock for both CSI1 and CSI2 */
+			MX8MQ_IOMUXC_GPIO1_IO15_CCMSRCGPCMIX_CLKO2	0x07
+		>;
+	};
+
+	pinctrl_usdhc2: usdhc2grp {
+		fsl,pins = <
+			MX8MQ_IOMUXC_SD2_CLK_USDHC2_CLK			0x03
+			MX8MQ_IOMUXC_SD2_CMD_USDHC2_CMD			0xc3
+			MX8MQ_IOMUXC_SD2_DATA0_USDHC2_DATA0		0xc3
+			MX8MQ_IOMUXC_SD2_DATA1_USDHC2_DATA1		0xc3
+			MX8MQ_IOMUXC_SD2_DATA2_USDHC2_DATA2		0xc3
+			MX8MQ_IOMUXC_SD2_DATA3_USDHC2_DATA3		0xc3
+#define GP_USDHC2_CD	<&gpio2 12 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12		0x19
+		>;
+	};
+};
+
+/delete-node/ &csi1_bridge;
+/delete-node/ &csi2_bridge;
+/delete-node/ &mipi_csi_1;
+/delete-node/ &mipi_csi_2;
+
+&i2c2 {
+	/delete-node/ ov5640-mipi1@3c;
+};
+
+&i2c3 {
+	/delete-node/ ov5640-mipi2@3c;
+};
+
+&i2c4 {
+	/delete-node/ i2cmux@70;
+
+	rtc@68 {
+		compatible = "microcrystal,rv4162";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c4d_rv4162>;
+		reg = <0x68>;
+		interrupts-extended = GPIRQ_RV4162;
+		wakeup-source;
+	};
+};
+
+/delete-node/ &pcie0;
+
+&pcie1 {
+	/delete-property/ hard-wired;
+	assigned-clocks = <&clk IMX8MQ_CLK_PCIE2_AUX>,
+			  <&clk IMX8MQ_CLK_PCIE2_PHY>,
+			  <&clk IMX8MQ_CLK_PCIE2_CTRL>;
+	assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_50M>,
+				 <&clk IMX8MQ_SYS2_PLL_100M>,
+				 <&clk IMX8MQ_SYS2_PLL_250M>;
+	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
+		<&clk IMX8MQ_CLK_PCIE2_AUX>,
+		<&clk IMX8MQ_CLK_PCIE2_PHY>,
+		<&pcie1_refclk>;
+	clock-names = "pcie", "pcie_bus", "pcie_phy", "pcie_ext_src";
+	ext_osc = <0>;
+#if 0
+	/* Leave in hog group for now */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie1>;
+#endif
+	reset-gpio = GP_PCIE1_RESET;
+	status = "okay";
+};
+
+&usdhc2 {
+	/delete-property/ non-removable;
+	/delete-property/ vmmc-supply;
+	/* carrier has 1.8 to 3.3 level translator */
+	vqmmc-1-8-v;
+	bus-width = <4>;
+	cd-gpios = GP_USDHC2_CD;
+	pinctrl-names = "default";
+	status = "okay";
+};

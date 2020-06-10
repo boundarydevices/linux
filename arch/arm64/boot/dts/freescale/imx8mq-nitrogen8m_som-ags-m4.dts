@@ -1,0 +1,185 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2020 Boundary Devices
+ */
+
+#include "imx8mq-nitrogen8m_som-ags.dts"
+
+/ {
+	model = "Boundary Devices i.MX8MQ Nitrogen8M SOM AGS M4";
+	compatible = "boundary,imx8mq-nitrogen8m_som-ags-m4", "fsl,imx8mq";
+
+	aliases {
+		/delete-property/ mipi_cmds_com50h5n03ulc;
+		/delete-property/ mipi_cmds_lcm_jm430;
+		/delete-property/ mipi_cmds_ltk0680ytmdb;
+		/delete-property/ mipi_to_lvds;
+		/delete-property/ pinctrl_com50h5n03ulc;
+		/delete-property/ pinctrl_lcm_jm430;
+		/delete-property/ pinctrl_ltk0680ytmdb;
+		/delete-property/ ts_ft5x06;
+		/delete-property/ ts_goodix;
+		/delete-property/ ts_st1633i;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		m4_reserved: m4@0x80000000 {
+			no-map;
+			reg = <0 0x80000000 0 0x1000000>;
+		};
+
+		vdev0vring0: vdev0vring0@b8000000 {
+			compatible = "shared-dma-pool";
+			reg = <0 0xb8000000 0 0x8000>;
+			no-map;
+		};
+
+		vdev0vring1: vdev0vring1@b8008000 {
+			compatible = "shared-dma-pool";
+			reg = <0 0xb8008000 0 0x8000>;
+			no-map;
+		};
+
+		vdevbuffer: vdevbuffer@b8400000 {
+			compatible = "shared-dma-pool";
+			reg = <0 0xb8400000 0 0x100000>;
+			no-map;
+		};
+
+		rsc_table: rsc_table@b8000000 {
+			reg = <0 0xb8000000 0 0x8000>;
+		};
+	};
+
+	imx8mq-cm4 {
+		compatible = "fsl,imx8mq-cm4";
+		rsc-da = <0xb8000000>;
+		clocks = <&clk IMX8MQ_CLK_M4_DIV>;
+		mbox-names = "tx", "rx", "rxdb";
+		mboxes = <&mu 0 1
+			  &mu 1 1
+			  &mu 3 1>;
+		memory-region = <&vdevbuffer>, <&vdev0vring0>, <&vdev0vring1>,
+				<&rsc_table>, <&m4_reserved>;
+		syscon = <&src>;
+	};
+
+	/delete-node/ bt-rfkill;
+};
+
+/delete-node/ &mipi_cmds_com50h5n03ulc;
+/delete-node/ &mipi_cmds_lcm_jm430;
+/delete-node/ &mipi_cmds_ltk0680ytmdb;
+/delete-node/ &mipi_to_lvds;
+
+/delete-node/ &pinctrl_bt_rfkill;
+/delete-node/ &pinctrl_i2c1d_gt911;
+/delete-node/ &pinctrl_i2c1d_ft5x06;
+/delete-node/ &pinctrl_i2c1d_sn65dsi83;
+/delete-node/ &pinctrl_i2c1d_st1633;
+/delete-node/ &pinctrl_mipi_com50h5n03ulc;
+/delete-node/ &pinctrl_mipi_lcm_jm430;
+/delete-node/ &pinctrl_mipi_ltk0680ytmdb;
+/delete-node/ &pinctrl_reg_wlan_vmmc;
+
+/delete-node/ &reg_wlan_vmmc;
+/delete-node/ &ts_goodix;
+/delete-node/ &ts_ft5x06;
+/delete-node/ &ts_st1633i;
+
+&ecspi2 {
+	status = "disabled";
+};
+
+&fb_mipi {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ sn65dsi83;
+};
+
+&i2c3 {
+	status = "disabled";
+};
+
+&gpio3 {
+	status = "disabled";
+};
+
+&gpio4 {
+	status = "disabled";
+};
+
+&gpio5 {
+	status = "disabled";
+};
+
+&pwm2 {
+	status = "disabled";
+};
+
+&pwm3 {
+	status = "disabled";
+};
+
+&pwm4 {
+	status = "disabled";
+};
+
+&reg_arm_dram {
+	/delete-property/ vsel-gpios;
+};
+
+&rpmsg {
+	/*
+	 * 64K for one rpmsg instance:
+	 * --0xb8000000~0xb800ffff: pingpong
+	 */
+	vdev-nums = <1>;
+	reg = <0x0 0xb8000000 0x0 0x10000>;
+	memory-region = <&vdevbuffer>;
+	status = "disabled";
+};
+
+&sai1 {
+	status = "disabled";
+};
+
+&sai2 {
+	status = "disabled";
+};
+
+&sai3 {
+	status = "disabled";
+};
+
+&sai4 {
+	status = "disabled";
+};
+
+&sai5 {
+	status = "disabled";
+};
+
+&uart2 {
+	status = "disabled";
+};
+
+&uart3 {
+	status = "disabled";
+};
+
+&uart4 {
+	status = "disabled";
+};
+
+&usb_dwc3_0 {
+	dr_mode = "host";
+};
+
+&wdog3 {
+	status = "disabled";
+};
