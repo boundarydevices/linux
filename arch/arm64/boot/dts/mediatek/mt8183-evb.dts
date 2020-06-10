@@ -543,6 +543,70 @@
 			mediatek,pull-up-adv = <3>;
 		};
 	};
+
+	vpu_jtag_disabled: vpu_jtag_disabled {
+		pins_jtag_trst {
+			pinmux = <PINMUX_GPIO116__FUNC_GPIO116>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tdo {
+			pinmux = <PINMUX_GPIO117__FUNC_GPIO117>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tdi {
+			pinmux = <PINMUX_GPIO118__FUNC_GPIO118>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tck {
+			pinmux = <PINMUX_GPIO119__FUNC_GPIO119>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tms {
+			pinmux = <PINMUX_GPIO120__FUNC_GPIO120>;
+			input-enable;
+			bias-disable;
+		};
+	};
+
+	vpu_jtag_enabled: vpu_jtag_enabled {
+		pins_jtag_trst {
+			pinmux = <PINMUX_GPIO116__FUNC_IPU_JTAG_TRST>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tdo {
+			pinmux = <PINMUX_GPIO117__FUNC_IPU_JTAG_TDO>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tdi {
+			pinmux = <PINMUX_GPIO118__FUNC_IPU_JTAG_TDI>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tck {
+			pinmux = <PINMUX_GPIO119__FUNC_IPU_JTAG_TCK>;
+			input-enable;
+			bias-disable;
+		};
+
+		pins_jtag_tms {
+			pinmux = <PINMUX_GPIO120__FUNC_IPU_JTAG_TMS>;
+			input-enable;
+			bias-disable;
+		};
+	};
 };
 
 &mfg {
@@ -748,5 +812,8 @@
 
 &vpu0 {
 	memory-region = <&vpu_ram>;
+	pinctrl-names = "default", "jtag";
+	pinctrl-0 = <&vpu_jtag_disabled>;
+	pinctrl-1 = <&vpu_jtag_enabled>;
 	status = "okay";
 };
