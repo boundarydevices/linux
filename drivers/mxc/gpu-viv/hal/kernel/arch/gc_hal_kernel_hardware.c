@@ -8567,16 +8567,8 @@ gckHARDWARE_SetPowerState(
         /* Delayed power off. */
         Hardware->nextPowerState = gcvPOWER_OFF_TIMEOUT;
 
-        if (_IsHardwareMatch(Hardware, gcv8000, 0x8002))
-        {
-                /* Start a timer to power off GPU when GPU enters IDLE or SUSPEND. */
-                gcmkVERIFY_OK(gckOS_StartTimer(os, Hardware->powerStateTimer, 10 * gcdPOWEROFF_TIMEOUT));
-        }
-        else
-        {
-                /* Start a timer to power off GPU when GPU enters IDLE or SUSPEND. */
-                gcmkVERIFY_OK(gckOS_StartTimer(os, Hardware->powerStateTimer, gcdPOWEROFF_TIMEOUT));
-        }
+        /* Start a timer to power off GPU when GPU enters IDLE or SUSPEND. */
+        gcmkVERIFY_OK(gckOS_StartTimer(os, Hardware->powerStateTimer, gcdPOWEROFF_TIMEOUT));
     }
 #endif
 
