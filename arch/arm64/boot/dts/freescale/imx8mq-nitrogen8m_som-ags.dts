@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2020 Boundary Devices
+ */
+
+#include "imx8mq-nitrogen8m_som_sd.dts"
+
+/ {
+	model = "Boundary Devices i.MX8MQ Nitrogen8M SOM AGS";
+	compatible = "boundary,imx8mq-nitrogen8m_som-ags", "fsl,imx8mq";
+
+	pcie1_refclk: pcie1-refclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <100000000>;
+	};
+};
+
+&pcie0 {
+	status = "disabled";
+};
+
+&pcie1 {
+	/delete-property/ hard-wired;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie0>;
+	reset-gpio = GP_PCIE0_RESET;
+	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
+		<&clk IMX8MQ_CLK_PCIE2_AUX>,
+		<&clk IMX8MQ_CLK_PCIE2_PHY>,
+		<&pcie1_refclk>;
+	clock-names = "pcie", "pcie_bus", "pcie_phy", "pcie_ext_src";
+	ext_osc = <0>;
+	status = "okay";
+};
