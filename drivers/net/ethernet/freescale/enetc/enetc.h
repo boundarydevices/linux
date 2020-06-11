@@ -11,6 +11,9 @@
 #include <linux/if_vlan.h>
 #include <linux/phylink.h>
 #include <linux/dim.h>
+#ifdef CONFIG_ENETC_TSN
+#include <net/tsn.h>
+#endif
 
 #include "enetc_hw.h"
 
@@ -200,6 +203,28 @@ struct enetc_msg_swbd {
 	int size;
 };
 
+#ifdef CONFIG_ENETC_TSN
+/* Credit-Based Shaper parameters */
+struct cbs {
+	u8 tc;
+	bool enable;
+	u8 bw;
+	u32 hi_credit;
+	u32 lo_credit;
+	u32 idle_slope;
+	u32 send_slope;
+	u32 tc_max_sized_frame;
+	u32 max_interfrence_size;
+};
+
+struct enetc_cbs {
+	u32 port_transmit_rate;
+	u32 port_max_size_frame;
+	u8 tc_nums;
+	struct cbs cbs[0];
+};
+#endif
+
 #define ENETC_REV1	0x1
 enum enetc_errata {
 	ENETC_ERR_VLAN_ISOL	= BIT(0),
@@ -207,6 +232,7 @@ enum enetc_errata {
 };
 
 #define ENETC_SI_F_QBV BIT(0)
+#define ENETC_SI_F_QBU BIT(1)
 #define ENETC_SI_F_PSFP BIT(1)
 
 /* PCI IEP device data */
@@ -225,6 +251,9 @@ struct enetc_si {
 	int num_rss; /* number of RSS buckets */
 	unsigned short pad;
 	int hw_features;
+#ifdef CONFIG_ENETC_TSN
+	struct enetc_cbs *ecbs;
+#endif
 };
 
 #define ENETC_SI_ALIGN	32
@@ -299,6 +328,7 @@ enum enetc_active_offloads {
 	ENETC_F_RX_TSTAMP		= BIT(8),
 	ENETC_F_QBV			= BIT(9),
 	ENETC_F_QCI			= BIT(10),
+	ENETC_F_QBU			= BIT(11),
 };
 
 enum enetc_flags_bit {
@@ -498,4 +528,16 @@ static inline int enetc_psfp_disable(struct enetc_ndev_priv *priv)
 {
 	return 0;
 }
+#endif
+#ifdef CONFIG_ENETC_TSN
+void enetc_tsn_pf_init(struct net_device *netdev, struct pci_dev *pdev);
+void enetc_tsn_pf_deinit(struct net_device *netdev);
+#ifndef CONFIG_FSL_ENETC_QOS
+void enetc_pspeed_set(struct enetc_ndev_priv *priv, int speed);
+#undef enetc_sched_speed_set
+#define enetc_sched_speed_set(priv, speed) enetc_pspeed_set(priv, speed)
+#endif
+#else
+#define enetc_tsn_pf_init(netdev, pdev) (void)0
+#define enetc_tsn_pf_deinit(netdev) (void)0
 #endif
