@@ -384,11 +384,7 @@
 	status = "okay";
 };
 
-&hdmimix_clk {
-	status = "okay";
-};
-
-&hdmimix_reset {
+&hdmi_blk_ctrl {
 	status = "okay";
 };
 

@@ -1561,27 +1561,13 @@
 				status = "okay";
 			};
 
-			/* TODO for HDMI PHY power on */
-			hdmi_blk: hdmi-blk@32fc0000 {
-				compatible = "syscon";
+			hdmi_blk_ctrl: hdmi-blk-ctrl@32fc0000 {
+				compatible = "fsl,imx8mp-hdmi-blk-ctrl", "syscon";
 				reg = <0x32fc0000 0x1000>;
-			};
+				power-domains = <&hdmimix_pd>;
 
-			hdmimix: hdmimix@32fc0000 {
-				compatible = "fsl,imx8mp-mix";
-				reg = <0x32fc0000 0x1000>;
-
-				hdmimix_clk: clock-controller {
-					compatible = "fsl,imx8mp-hdmimix-clk";
-					#clock-cells = <1>;
-					status = "disabled";
-				};
-
-				hdmimix_reset: reset-controller {
-					compatible = "fsl,imx8mp-hdmimix-reset";
-					#reset-cells = <1>;
-					status = "disabled";
-				};
+				#clock-cells = <1>;
+				#reset-cells = <1>;
 			};
 
 			irqsteer_hdmi: irqsteer@32fc2000 {
@@ -1592,23 +1578,23 @@
 				#interrupt-cells = <1>;
 				fsl,channel = <1>;
 				fsl,num-irqs = <64>;
-				clocks = <&hdmimix_clk IMX8MP_CLK_HDMIMIX_IRQS_STEER_CLK>;
+				clocks = <&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_IRQS_STEER_CLK>;
 				clock-names = "ipg";
 				assigned-clocks = <&clk IMX8MP_CLK_HDMI_APB>;
 				assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_800M>;
 				assigned-clock-rates = <200000000>;
-				resets = <&hdmimix_reset IMX_HDMIMIX_IRQ_STEER_RESET>;
+				resets = <&hdmi_blk_ctrl IMX8MP_HDMI_BLK_CTRL_IRQ_STEER_RESET>;
 				status = "disabled";
 			};
 
 			hdmi_pavi: hdmi-pai-pvi@32fc4000 {
 				compatible = "fsl,imx8mp-hdmi-pavi";
 				reg = <0x32fc4000 0x1000>;
-				clocks = <&hdmimix_clk IMX8MP_CLK_HDMIMIX_TX_VID_LINK_PIX_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_TX_GPA_CLK>;
+				clocks = <&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_TX_VID_LINK_PIX_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_TX_GPA_CLK>;
 				clock-names = "pvi_clk", "pai_clk";
-				resets = <&hdmimix_reset IMX_HDMIMIX_HDMI_PAI_RESET>,
-						<&hdmimix_reset IMX_HDMIMIX_HDMI_PVI_RESET>;
+				resets = <&hdmi_blk_ctrl IMX8MP_HDMI_BLK_CTRL_HDMI_PAI_RESET>,
+						<&hdmi_blk_ctrl IMX8MP_HDMI_BLK_CTRL_HDMI_PVI_RESET>;
 				reset-names = "pai_rst", "pvi_rst";
 				status = "disabled";
 			};
@@ -1621,16 +1607,16 @@
 				clocks = <&hdmiphy 0>,
 						<&clk IMX8MP_CLK_HDMI_AXI>,
 						<&clk IMX8MP_CLK_HDMI_APB>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_GLOBAL_APB_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_GLOBAL_B_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_GLOBAL_XTAL24M_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_GLOBAL_TX_PIX_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_LCDIF_APB_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_LCDIF_B_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_LCDIF_PDI_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_LCDIF_PIX_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_LCDIF_SPU_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_NOC_HDMI_CLK>;
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_GLOBAL_APB_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_GLOBAL_B_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_GLOBAL_XTAL24M_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_GLOBAL_TX_PIX_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_LCDIF_APB_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_LCDIF_B_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_LCDIF_PDI_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_LCDIF_PIX_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_LCDIF_SPU_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_NOC_HDMI_CLK>;
 				clock-names = "pix", "disp-axi", "disp-apb",
 							"mix_apb","mix_axi", "xtl_24m", "mix_pix", "lcdif_apb",
 							"lcdif_axi", "lcdif_pdi", "lcdif_pix", "lcdif_spu",
@@ -1642,7 +1628,7 @@
 				assigned-clock-rates = <500000000>, <200000000>;
 				interrupts = <8 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-parent = <&irqsteer_hdmi>;
-				resets = <&hdmimix_reset IMX_HDMIMIX_LCDIF_RESET>;
+				resets = <&hdmi_blk_ctrl IMX8MP_HDMI_BLK_CTRL_LCDIF_RESET>;
 				power-domains = <&hdmimix_pd>;
 				status = "disabled";
 
@@ -1662,16 +1648,16 @@
 				interrupt-parent = <&irqsteer_hdmi>;
 				clocks = <&clk IMX8MP_CLK_HDMI_APB>,
 						<&clk IMX8MP_CLK_HDMI_24M>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_TX_PHY_INT_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_TX_PREP_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_TX_SKP_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_TX_SFR_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_TX_PIXEL_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_TX_CEC_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_TX_APB_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_TX_HPI_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_FDCC_REF_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_TX_PIPE_CLK_SEL>;
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_TX_PHY_INT_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_TX_PREP_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_TX_SKP_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_TX_SFR_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_TX_PIXEL_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_TX_CEC_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_TX_APB_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_TX_HPI_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_FDCC_REF_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_TX_PIPE_CLK_SEL>;
 				clock-names = "iahb", "isfr",
 								"phy_int", "prep_clk", "skp_clk", "sfr_clk", "pix_clk",
 								"cec_clk", "apb_clk", "hpi_clk", "fdcc_ref", "pipe_clk";
@@ -1684,8 +1670,8 @@
 				assigned-clock-rates = <200000000>, <500000000>, <24000000>;
 				phys = <&hdmiphy>;
 				phy-names = "hdmi";
-				resets = <&hdmimix_reset IMX_HDMIMIX_HDMI_TX_RESET>;
-				gpr = <&hdmi_blk>;
+				resets = <&hdmi_blk_ctrl IMX8MP_HDMI_BLK_CTRL_HDMI_TX_RESET>;
+				gpr = <&hdmi_blk_ctrl>;
 				power-domains = <&hdmi_phy_pd>;
 				status = "disabled";
 
@@ -1700,12 +1686,12 @@
 				compatible = "fsl,samsung-hdmi-phy";
 				reg = <0x32fdff00 0x100>;
 				#clock-cells = <1>;
-				clocks = <&hdmimix_clk IMX8MP_CLK_HDMIMIX_TX_PHY_APB_CLK>,
-						<&hdmimix_clk IMX8MP_CLK_HDMIMIX_GLOBAL_XTAL24M_CLK>;
+				clocks = <&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_TX_PHY_APB_CLK>,
+						<&hdmi_blk_ctrl IMX8MP_CLK_HDMI_BLK_CTRL_GLOBAL_XTAL24M_CLK>;
 				clock-names = "apb", "ref";
 				clock-output-names = "hdmi_phy";
 				#phy-cells = <0>;
-				resets = <&hdmimix_reset IMX_HDMIMIX_HDMI_PHY_RESET>;
+				resets = <&hdmi_blk_ctrl IMX8MP_HDMI_BLK_CTRL_HDMI_PHY_RESET>;
 				status = "disabled";
 			};
 		};
