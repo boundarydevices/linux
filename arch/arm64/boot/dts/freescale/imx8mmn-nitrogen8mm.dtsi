@@ -79,9 +79,9 @@
 
 	pinctrl_i2c1_1: i2c1_1grp {
 		fsl,pins = <
-#define GP_I2C1_SCL	<&gpio5 14 GPIO_ACTIVE_HIGH>
+#define GP_I2C1_SCL	<&gpio5 14 GPIO_OPEN_DRAIN>
 			MX8MMN(IOMUXC_I2C1_SCL_GPIO5_IO14, 0x400001c3)
-#define GP_I2C1_SDA	<&gpio5 15 GPIO_ACTIVE_HIGH>
+#define GP_I2C1_SDA	<&gpio5 15 GPIO_OPEN_DRAIN>
 			MX8MMN(IOMUXC_I2C1_SDA_GPIO5_IO15, 0x400001c3)
 		>;
 	};
@@ -104,9 +104,9 @@
 
 	pinctrl_i2c2_1: i2c2_1grp {
 		fsl,pins = <
-#define GP_I2C2_SCL	<&gpio5 16 GPIO_ACTIVE_HIGH>
+#define GP_I2C2_SCL	<&gpio5 16 GPIO_OPEN_DRAIN>
 			MX8MMN(IOMUXC_I2C2_SCL_GPIO5_IO16, 0x400001c3)
-#define GP_I2C2_SDA	<&gpio5 17 GPIO_ACTIVE_HIGH>
+#define GP_I2C2_SDA	<&gpio5 17 GPIO_OPEN_DRAIN>
 			MX8MMN(IOMUXC_I2C2_SDA_GPIO5_IO17, 0x400001c3)
 		>;
 	};
@@ -179,9 +179,9 @@
 
 	pinctrl_i2c3_1: i2c3_1grp {
 		fsl,pins = <
-#define GP_I2C3_SCL	<&gpio5 18 GPIO_ACTIVE_HIGH>
+#define GP_I2C3_SCL	<&gpio5 18 GPIO_OPEN_DRAIN>
 			MX8MMN(IOMUXC_I2C3_SCL_GPIO5_IO18, 0x400001c3)
-#define GP_I2C3_SDA	<&gpio5 19 GPIO_ACTIVE_HIGH>
+#define GP_I2C3_SDA	<&gpio5 19 GPIO_OPEN_DRAIN>
 			MX8MMN(IOMUXC_I2C3_SDA_GPIO5_IO19, 0x400001c3)
 		>;
 	};
@@ -211,9 +211,9 @@
 
 	pinctrl_i2c4_1: i2c4_1grp {
 		fsl,pins = <
-#define GP_I2C4_SCL	<&gpio5 20 GPIO_ACTIVE_HIGH>
+#define GP_I2C4_SCL	<&gpio5 20 GPIO_OPEN_DRAIN>
 			MX8MMN(IOMUXC_I2C4_SCL_GPIO5_IO20, 0x400001c3)
-#define GP_I2C4_SDA	<&gpio5 21 GPIO_ACTIVE_HIGH>
+#define GP_I2C4_SDA	<&gpio5 21 GPIO_OPEN_DRAIN>
 			MX8MMN(IOMUXC_I2C4_SDA_GPIO5_IO21, 0x400001c3)
 		>;
 	};
