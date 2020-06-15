@@ -138,6 +138,15 @@
 		>;
 	};
 
+	pinctrl_i2c1_1: i2c1_1grp {
+		fsl,pins = <
+#define GP_I2C1_SCL	<&gpio5 14 GPIO_OPEN_DRAIN>
+			MX8MQ_IOMUXC_I2C1_SCL_GPIO5_IO14		0x4000007f
+#define GP_I2C1_SDA	<&gpio5 15 GPIO_OPEN_DRAIN>
+			MX8MQ_IOMUXC_I2C1_SDA_GPIO5_IO15		0x4000007f
+		>;
+	};
+
 	pinctrl_i2c1_pca9546: i2c1-pca9546grp {
 		fsl,pins = <
 #define GP_I2C1_PCA9546_RESET	<&gpio1 8 GPIO_ACTIVE_LOW>
@@ -159,6 +168,15 @@
 		>;
 	};
 
+	pinctrl_i2c2_1: i2c2_1grp {
+		fsl,pins = <
+#define GP_I2C2_SCL	<&gpio5 16 GPIO_OPEN_DRAIN>
+			MX8MQ_IOMUXC_I2C2_SCL_GPIO5_IO16		0x4000007f
+#define GP_I2C2_SDA	<&gpio5 17 GPIO_OPEN_DRAIN>
+			MX8MQ_IOMUXC_I2C2_SDA_GPIO5_IO17		0x4000007f
+		>;
+	};
+
 	pinctrl_i2c2_ov5640_mipi: i2c2-ov5640-mipigrp {
 		fsl,pins = <
 #define GP_CSI1_OV5640_MIPI_POWER_DOWN	<&gpio3 3 GPIO_ACTIVE_HIGH>
@@ -175,6 +193,15 @@
 		>;
 	};
 
+	pinctrl_i2c3_1: i2c3_1grp {
+		fsl,pins = <
+#define GP_I2C3_SCL	<&gpio5 18 GPIO_OPEN_DRAIN>
+			MX8MQ_IOMUXC_I2C3_SCL_GPIO5_IO18		0x4000007f
+#define GP_I2C3_SDA	<&gpio5 19 GPIO_OPEN_DRAIN>
+			MX8MQ_IOMUXC_I2C3_SDA_GPIO5_IO19		0x4000007f
+		>;
+	};
+
 	pinctrl_i2c3_ov5640_mipi: i2c3-ov5640-mipigrp {
 		fsl,pins = <
 #define GP_CSI2_OV5640_MIPI_POWER_DOWN	<&gpio3 2 GPIO_ACTIVE_HIGH>
@@ -188,6 +215,15 @@
 		fsl,pins = <
 			MX8MQ_IOMUXC_I2C4_SCL_I2C4_SCL			0x4000007f
 			MX8MQ_IOMUXC_I2C4_SDA_I2C4_SDA			0x4000007f
+		>;
+	};
+
+	pinctrl_i2c4_1: i2c4_1grp {
+		fsl,pins = <
+#define GP_I2C4_SCL	<&gpio5 20 GPIO_OPEN_DRAIN>
+			MX8MQ_IOMUXC_I2C4_SCL_GPIO5_IO20		0x4000007f
+#define GP_I2C4_SDA	<&gpio5 21 GPIO_OPEN_DRAIN>
+			MX8MQ_IOMUXC_I2C4_SDA_GPIO5_IO21		0x4000007f
 		>;
 	};
 
@@ -841,8 +877,11 @@
 
 &i2c1 {
 	clock-frequency = <400000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c1>;
+	pinctrl-1 = <&pinctrl_i2c1_1>;
+	scl-gpios = GP_I2C1_SCL;
+	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
 	i2cmux@70 {
@@ -933,8 +972,11 @@
 
 &i2c2 {
 	clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c2>;
+	pinctrl-1 = <&pinctrl_i2c2_1>;
+	scl-gpios = GP_I2C2_SCL;
+	sda-gpios = GP_I2C2_SDA;
 	status = "okay";
 
 	ov5640-mipi1@3c {
@@ -973,8 +1015,11 @@
 
 &i2c3 {
 	clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c3>;
+	pinctrl-1 = <&pinctrl_i2c3_1>;
+	scl-gpios = GP_I2C3_SCL;
+	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
 	ov5640-mipi2@3c {
@@ -1007,8 +1052,11 @@
 
 &i2c4 {
 	clock-frequency = <100000>;
-	pinctrl-names = "default";
+	pinctrl-names = "default", "gpio";
 	pinctrl-0 = <&pinctrl_i2c4>;
+	pinctrl-1 = <&pinctrl_i2c4_1>;
+	scl-gpios = GP_I2C4_SCL;
+	sda-gpios = GP_I2C4_SDA;
 	status = "okay";
 
 	mipi_to_lvds: mipi-to-lvds@2c {
