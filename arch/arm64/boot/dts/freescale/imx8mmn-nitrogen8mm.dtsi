@@ -3,6 +3,7 @@
  * Copyright 2018 Boundary Devices
  */
 
+#include "panel-dmt050wvnxcmi.dtsi"
 #include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
 &mipi_cmds_ltk0680ytmdb {
