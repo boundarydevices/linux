@@ -1426,7 +1426,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2>;
 	assigned-clocks = <&clk IMX8MQ_CLK_UART2>;
-	assigned-clock-parents = <&clk IMX8MQ_CLK_25M>;
+	assigned-clock-parents = <&clk IMX8MQ_SYS1_PLL_80M>;
 	status = "okay";
 };
 
@@ -1443,7 +1443,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4>;
 	assigned-clocks = <&clk IMX8MQ_CLK_UART4>;
-	assigned-clock-parents = <&clk IMX8MQ_CLK_25M>;
+	assigned-clock-parents = <&clk IMX8MQ_SYS1_PLL_80M>;
 	status = "okay";
 };
 
