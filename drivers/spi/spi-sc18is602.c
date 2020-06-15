@@ -163,8 +163,12 @@ static int sc18is602_setup_transfer(struct sc18is602 *hw, u32 hz, u8 mode)
 		return 0;
 
 	ret = i2c_smbus_write_byte_data(hw->client, 0xf0, ctrl);
-	if (ret < 0)
-		return ret;
+	if (ret < 0) {
+		sc18is602_wait_ready(hw, SC18IS602_BUFSIZ);
+		ret = i2c_smbus_write_byte_data(hw->client, 0xf0, ctrl);
+		if (ret < 0)
+			return ret;
+	}
 
 	hw->ctrl = ctrl;
 
