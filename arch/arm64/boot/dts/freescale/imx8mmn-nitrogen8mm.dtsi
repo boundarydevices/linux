@@ -1197,7 +1197,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4>;
 	assigned-clocks = <&clk IMX8MMN(CLK_UART4)>;
-	assigned-clock-parents = <&clk IMX8MMN(CLK_24M)>;
+	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_80M)>;
 	status = "okay";
 };
 
