@@ -323,6 +323,13 @@
 		>;
 	};
 
+	pinctrl_sc18is602b: sc18is602bgrp {
+		fsl,pins = <
+#define GP_SC18IS602B_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x101)
+		>;
+	};
+
 	pinctrl_sound_wm8960: sound-wm8960grp {
 		fsl,pins = <
 #define GP_WM8960_MIC_DET		<&gpio1 10 GPIO_ACTIVE_HIGH>
@@ -527,6 +534,7 @@
 		pinctrl_ltk080a60a004t = &pinctrl_mipi_ltk080a60a004t;
 		pwm_mipi = &pwm3;
 		reg_sw4 = &reg_sw4;
+		spi_lcd = &spi_lcd;
 		t_mipi = &t_mipi;
 		ts_ft5x06 = &ts_ft5x06;
 		ts_ft7250 = &ts_ft7250;
@@ -822,6 +830,23 @@
 		pinctrl-0 = <&pinctrl_i2c2_sn65dsi83>;
 		reg = <0x2c>;
 		status = "disabled";
+	};
+
+	spi_lcd: spi@2f {
+		compatible = "nxp,sc18is602b";
+		reg = <0x2f>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_sc18is602b>;
+		reset-gpios = GP_SC18IS602B_RESET;
+		status = "disabled";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		spidev_lcd: spidev@0 {
+			compatible = "spidev";
+			spi-max-frequency = <20000000>;
+			reg = <0>;
+		};
 	};
 
 	ts_ft5x06: touchscreen@38 {

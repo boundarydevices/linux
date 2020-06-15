@@ -46,6 +46,14 @@
 		>;
 	};
 
+	pinctrl_sc18is602b: sc18is602bgrp {
+		fsl,pins = <
+#undef  GP_SC18IS602B_RESET
+#define GP_SC18IS602B_RESET	<&gpio5 0 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x101)
+		>;
+	};
+
 	pinctrl_usbotg2: usbotg2grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_GPIO1_IO14_USB2_OTG_PWR, 0x16)
@@ -93,6 +101,7 @@
 
 &i2c2 {
 	/delete-node/ mipi-to-lvds@2c;
+	/delete-node/ spi@2f;
 	/delete-node/ touchscreen@38;
 	/delete-node/ touchscreen@40;
 	/delete-node/ touchscreen@55;
@@ -149,6 +158,27 @@
 		pinctrl-0 = <&pinctrl_i2c2_sn65dsi83>;
 		reg = <0x2c>;
 		status = "disabled";
+	};
+
+	spi_lcd: spi@2f {
+		assigned-clocks = <&clk IMX8MMN(VIDEO_PLL1)>;
+		assigned-clock-rates = <384000000>;
+		compatible = "nxp,sc18is602b";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_sc18is602b>;
+		reset-gpios = GP_SC18IS602B_RESET;
+		reg = <0x2f>;
+		status = "disabled";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		spidev_lcd: spidev@0 {
+			compatible = "spidev";
+			spi-cpha;
+			spi-cpol;
+			spi-max-frequency = <20000000>;
+			reg = <0>;
+		};
 	};
 
 	ts_ft5x06: touchscreen@38 {
