@@ -260,9 +260,13 @@ void mxc_isi_cap_frame_write_done(struct mxc_isi_dev *mxc_isi)
 	struct device *dev = &isi_cap->pdev->dev;
 	struct mxc_isi_buffer *buf;
 	struct vb2_buffer *vb2;
+	unsigned long flags;
+
+	spin_lock_irqsave(&isi_cap->slock, flags);
 
 	if (list_empty(&isi_cap->out_active)) {
 		dev_warn(dev, "trying to access empty active list\n");
+		spin_unlock_irqrestore(&isi_cap->slock, flags);
 		return;
 	}
 
@@ -275,6 +279,7 @@ void mxc_isi_cap_frame_write_done(struct mxc_isi_dev *mxc_isi)
 	if ((is_buf_active(mxc_isi, 1) && buf->id == MXC_ISI_BUF1) ||
 	    (is_buf_active(mxc_isi, 2) && buf->id == MXC_ISI_BUF2)) {
 		dev_dbg(dev, "status=0x%x id=%d\n", mxc_isi->status, buf->id);
+		spin_unlock_irqrestore(&isi_cap->slock, flags);
 		return;
 	}
 
@@ -292,6 +297,7 @@ void mxc_isi_cap_frame_write_done(struct mxc_isi_dev *mxc_isi)
 	if (list_empty(&isi_cap->out_pending)) {
 		if (list_empty(&isi_cap->out_discard)) {
 			dev_warn(dev, "trying to access empty discard list\n");
+			spin_unlock_irqrestore(&isi_cap->slock, flags);
 			return;
 		}
 
@@ -300,6 +306,7 @@ void mxc_isi_cap_frame_write_done(struct mxc_isi_dev *mxc_isi)
 		buf->v4l2_buf.sequence = isi_cap->frame_count;
 		mxc_isi_channel_set_outbuf(mxc_isi, buf);
 		list_move_tail(isi_cap->out_discard.next, &isi_cap->out_active);
+		spin_unlock_irqrestore(&isi_cap->slock, flags);
 		return;
 	}
 
@@ -310,6 +317,7 @@ void mxc_isi_cap_frame_write_done(struct mxc_isi_dev *mxc_isi)
 	vb2 = &buf->v4l2_buf.vb2_buf;
 	vb2->state = VB2_BUF_STATE_ACTIVE;
 	list_move_tail(isi_cap->out_pending.next, &isi_cap->out_active);
+	spin_unlock_irqrestore(&isi_cap->slock, flags);
 }
 
 static int cap_vb2_queue_setup(struct vb2_queue *q,
