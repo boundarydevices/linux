@@ -713,13 +713,15 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 	unsigned int rate_reg = mt8183_rate_transform(afe->dev,
 						      rate, i2s_id);
 	snd_pcm_format_t format = params_format(params);
+	unsigned int channels = params_channels(params);
 	unsigned int i2s_con = 0, fmt_con = I2S_FMT_I2S << I2S_FMT_SFT;
 	int ret = 0;
 
-	dev_info(afe->dev, "%s(), id %d, rate %d, format %d\n",
+	dev_info(afe->dev, "%s(), id %d, rate %d, format %d, channels %d\n",
 		 __func__,
 		 i2s_id,
-		 rate, format);
+		 rate, format,
+		 channels);
 
 	if (i2s_priv) {
 		i2s_priv->rate = rate;
@@ -755,6 +757,10 @@ static int mtk_dai_i2s_config(struct mtk_base_afe *afe,
 		i2s_con |= get_i2s_wlen(format) << I2S3_WLEN_SFT;
 		regmap_update_bits(afe->regmap, AFE_I2S_CON2,
 				   0xffffeffe, i2s_con);
+		if (channels > 2)
+			regmap_update_bits(afe->regmap, AFE_MEMIF_PBUF_SIZE,
+							   VUL12_4CH_MASK_SFT,
+							   VUL12_4CH_MASK_SFT);
 		break;
 	case MT8183_DAI_I2S_3:
 		i2s_con = rate_reg << I2S4_OUT_MODE_SFT;
@@ -931,7 +937,7 @@ static struct snd_soc_dai_driver mtk_dai_i2s_driver[] = {
 		.capture = {
 			.stream_name = "I2S2",
 			.channels_min = 1,
-			.channels_max = 2,
+			.channels_max = 4,
 			.rates = MTK_I2S_RATES,
 			.formats = MTK_I2S_FORMATS,
 		},

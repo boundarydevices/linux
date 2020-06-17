@@ -29,5 +29,7 @@
 #define I_DL3_CH2 24
 #define I_I2S2_CH1 25
 #define I_I2S2_CH2 26
+#define I_I2S2_CH3 27
+#define I_I2S2_CH4 28
 
 #endif
