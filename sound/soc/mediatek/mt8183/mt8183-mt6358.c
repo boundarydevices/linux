@@ -14,6 +14,14 @@
 
 #include "mt8183-afe-common.h"
 
+static const struct snd_soc_dapm_widget mt8183_mt6358_dapm_widgets[] = {
+	SND_SOC_DAPM_INPUT("4ch Mic"),
+};
+
+static const struct snd_soc_dapm_route mt8183_mt6358_routes[] = {
+	{"I2S2", NULL, "4ch Mic"},
+};
+
 static int mt8183_mt6358_i2s_hw_params(struct snd_pcm_substream *substream,
 				       struct snd_pcm_hw_params *params)
 {
@@ -29,6 +37,19 @@ static int mt8183_mt6358_i2s_hw_params(struct snd_pcm_substream *substream,
 static const struct snd_soc_ops mt8183_mt6358_i2s_ops = {
 	.hw_params = mt8183_mt6358_i2s_hw_params,
 };
+
+static int mt8183_i2s_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
+				      struct snd_pcm_hw_params *params)
+{
+	dev_dbg(rtd->dev, "%s(), fix format to 32bit\n", __func__);
+
+	/* fix BE i2s format to 32bit, clean param mask first */
+	snd_mask_reset_range(hw_param_mask(params, SNDRV_PCM_HW_PARAM_FORMAT),
+			     0, SNDRV_PCM_FORMAT_LAST);
+
+	params_set_format(params, SNDRV_PCM_FORMAT_S32_LE);
+	return 0;
+}
 
 /* FE */
 SND_SOC_DAILINK_DEFS(playback1,
@@ -70,6 +91,11 @@ SND_SOC_DAILINK_DEFS(capture_mono,
 SND_SOC_DAILINK_DEFS(primary_codec,
 	DAILINK_COMP_ARRAY(COMP_CPU("ADDA")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("mt6358-sound", "mt6358-snd-codec-aif1")),
+	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+
+SND_SOC_DAILINK_DEFS(i2s2,
+	DAILINK_COMP_ARRAY(COMP_CPU("I2S2")),
+	DAILINK_COMP_ARRAY(COMP_DUMMY()),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
 static struct snd_soc_dai_link mt8183_mt6358_dai_links[] = {
@@ -146,6 +172,15 @@ static struct snd_soc_dai_link mt8183_mt6358_dai_links[] = {
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(primary_codec),
 	},
+	{
+		.name = "I2S2",
+		.no_pcm = 1,
+		.dpcm_capture = 1,
+		.ignore_suspend = 1,
+		.be_hw_params_fixup = mt8183_i2s_hw_params_fixup,
+		.ops = &mt8183_mt6358_i2s_ops,
+		SND_SOC_DAILINK_REG(i2s2),
+	},
 };
 
 static struct snd_soc_card mt8183_mt6358_card = {
@@ -153,6 +188,10 @@ static struct snd_soc_card mt8183_mt6358_card = {
 	.owner = THIS_MODULE,
 	.dai_link = mt8183_mt6358_dai_links,
 	.num_links = ARRAY_SIZE(mt8183_mt6358_dai_links),
+	.dapm_routes = mt8183_mt6358_routes,
+	.num_dapm_routes = ARRAY_SIZE(mt8183_mt6358_routes),
+	.dapm_widgets = mt8183_mt6358_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(mt8183_mt6358_dapm_widgets),
 };
 
 static int mt8183_mt6358_dev_probe(struct platform_device *pdev)
