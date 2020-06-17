@@ -935,6 +935,7 @@
 };
 
 &usbotg2 {
+	disable-over-current;
 	dr_mode = "host";
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg2>;
