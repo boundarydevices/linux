@@ -45,28 +45,39 @@ static int system_in_suspend;
 
 struct mxc_bt_rfkill_data {
 	int bt_power_gpio;
+	s32 delay_us;
+	s32 post_delay_ms;
 };
 
 struct mxc_bt_rfkill_pdata {
 };
 
-static void mxc_bt_rfkill_reset(void *rfkdata)
+static int mxc_bt_rfkill_reset(void *rfkdata)
 {
 	struct mxc_bt_rfkill_data *data = rfkdata;
+
+	if (data->delay_us < 0)
+		return -ENOSYS;
+
 	printk(KERN_INFO "mxc_bt_rfkill_reset\n");
 	if (gpio_is_valid(data->bt_power_gpio)) {
 		gpio_set_value_cansleep(data->bt_power_gpio, 0);
-		msleep(40);
+		udelay(data->delay_us);
 		gpio_set_value_cansleep(data->bt_power_gpio, 1);
-		msleep(40);
+		if (data->post_delay_ms > 0)
+			msleep(data->post_delay_ms);
 	}
+
+	return 0;
 }
 
 static int mxc_bt_rfkill_power_change(void *rfkdata, int status)
 {
+	int ret = 0;
+
 	if (status)
-		mxc_bt_rfkill_reset(rfkdata);
-	return 0;
+		ret = mxc_bt_rfkill_reset(rfkdata);
+	return ret;
 }
 static int mxc_bt_set_block(void *rfkdata, bool blocked)
 {
@@ -144,6 +155,7 @@ static int mxc_bt_rfkill_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct mxc_bt_rfkill_pdata *pdata = pdev->dev.platform_data;
 	struct device_node *np = pdev->dev.of_node;
+	int ret;
 
 	data = devm_kzalloc(dev, sizeof(struct mxc_bt_rfkill_data), GFP_KERNEL);
 	if (!data)
@@ -157,6 +169,17 @@ static int mxc_bt_rfkill_probe(struct platform_device *pdev)
 	}
 
 	data->bt_power_gpio = of_get_named_gpio(np, "bt-power-gpios", 0);
+
+	ret = of_property_read_u32(np, "reset-delay-us", &data->delay_us);
+	if (ret < 0)
+		data->delay_us = -1;
+	else if (data->delay_us < 0)
+		dev_warn(&pdev->dev, "reset delay too high\n");
+
+	ret = of_property_read_u32(np, "reset-post-delay-ms", &data->post_delay_ms);
+	if (ret < 0)
+		data->post_delay_ms = -1;
+
 	if (data->bt_power_gpio == -EPROBE_DEFER) {
 		printk(KERN_INFO "mxc_bt_rfkill: gpio not ready, need defer\n");
 		return -EPROBE_DEFER;
