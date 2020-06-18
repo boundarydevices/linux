@@ -303,7 +303,11 @@ static const struct dev_pm_ops imx_blk_ctrl_pm_ops = {
 };
 
 static const struct of_device_id imx_blk_ctrl_of_match[] = {
-       { /* Sentinel */ }
+	{
+		.compatible = "fsl,imx8mp-audio-blk-ctrl",
+		.data = &imx8mp_audio_blk_ctrl_dev_data
+	},
+	{ /* Sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, imx_blk_ctrl_of_match);
 
