@@ -1088,7 +1088,7 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_dsi *dsi,
 {
 	struct mode_config *config;
 	union phy_configure_opts phy_opts;
-	unsigned long clock = get_pixclock(dsi, mode->clock * 1000);
+	unsigned long clock = mode->clock * 1000;
 	unsigned long bit_clk = 0;
 	unsigned long phy_ref_rate = 0;
 	u32 lanes = dsi->lanes;
@@ -1098,7 +1098,7 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_dsi *dsi,
 		if (config->clock == clock)
 			return config;
 
-	phy_ref_rate = clock;
+	clock = phy_ref_rate = get_pixclock(dsi, clock);
 	while (phy_ref_rate >= 48000000)
 		phy_ref_rate >>= 1;
 	while (phy_ref_rate < 24000000)
