@@ -121,6 +121,62 @@ static struct imx_blk_ctrl_hw imx8mp_hdmi_blk_ctrl_hws[] = {
 	IMX_BLK_CTRL_RESET_MASK(IMX8MP_HDMI_BLK_CTRL_LCDIF_RESET, 0x20, 4, 0x3),
 };
 
+static struct imx_blk_ctrl_hw imx8mp_media_blk_ctrl_hws[] = {
+	/* clocks */
+	IMX_BLK_CTRL_CLK_GATE("mipi_dsi_pclk", IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_DSI_PCLK, 0x4, 0, "media_apb_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("mipi_dsi_clkref", IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_DSI_CLKREF, 0x4, 1, "media_mipi_phy1_ref"),
+	IMX_BLK_CTRL_CLK_GATE("mipi_csi_pclk", IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_CSI_PCLK, 0x4, 2, "media_apb_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("mipi_csi_aclk", IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_CSI_ACLK, 0x4, 3, "media_cam1_pix_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("lcdif_pixel_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_LCDIF_PIXEL, 0x4, 4, "media_disp1_pix_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("lcdif_apb_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_LCDIF_APB, 0x4, 5, "media_apb_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("isi_proc_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_ISI_PROC, 0x4, 6, "media_axi_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("isi_apb_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_ISI_APB, 0x4, 7, "media_apb_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("bus_blk_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_BUS_BLK, 0x4, 8, "media_axi_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("mipi_csi2_pclk", IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_CSI2_PCLK, 0x4, 9, "media_apb_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("mipi_csi2_aclk", IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_CSI2_ACLK, 0x4, 10, "media_cam2_pix_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("lcdif2_pixel_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_LCDIF2_PIXEL, 0x4, 11, "media_disp2_pix_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("lcdif2_apb_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_LCDIF2_APB, 0x4, 12, "media_apb_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("isp1_cor_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_ISP1_COR, 0x4, 13, "media_isp_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("isp1_axi_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_ISP1_AXI, 0x4, 14, "media_axi_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("isp1_ahb_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_ISP1_AHB, 0x4, 15, "media_apb_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("isp0_cor_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_ISP0_COR, 0x4, 16, "media_isp_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("isp0_axi_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_ISP0_AXI, 0x4, 17, "media_axi_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("isp0_ahb_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_ISP0_AHB, 0x4, 18, "media_apb_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("dwe_cor_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_DWE_COR, 0x4, 19, "media_axi_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("dwe_axi_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_DWE_AXI, 0x4, 20, "media_axi_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("dwe_ahb_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_DWE_AHB, 0x4, 21, "media_apb_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("mipi_dsi2_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_DSI2, 0x4, 22, "media_mipi_phy1_ref"),
+	IMX_BLK_CTRL_CLK_GATE("lcdif_axi_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_LCDIF_AXI, 0x4, 23, "media_axi_root_clk"),
+	IMX_BLK_CTRL_CLK_GATE("lcdif2_axi_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_LCDIF2_AXI, 0x4, 24, "media_axi_root_clk"),
+
+	/* resets */
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_MIPI_DSI_PCLK, 0, 0),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_MIPI_DSI_CLKREF, 0, 1),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_MIPI_CSI_PCLK, 0, 2),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_MIPI_CSI_ACLK, 0, 3),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_LCDIF_PIXEL, 0, 4),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_LCDIF_APB, 0, 5),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_ISI_PROC, 0, 6),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_ISI_APB, 0, 7),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_BUS_BLK, 0, 8),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_MIPI_CSI2_PCLK, 0, 9),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_MIPI_CSI2_ACLK, 0, 10),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_LCDIF2_PIXEL, 0, 11),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_LCDIF2_APB, 0, 12),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_ISP1_COR, 0, 13),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_ISP1_AXI, 0, 14),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_ISP1_AHB, 0, 15),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_ISP0_COR, 0, 16),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_ISP0_AXI, 0, 17),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_ISP0_AHB, 0, 18),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_DWE_COR, 0, 19),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_DWE_AXI, 0, 20),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_DWE_AHB, 0, 21),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_MIPI_DSI2, 0, 22),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_LCDIF_AXI, 0, 23),
+	IMX_BLK_CTRL_RESET(IMX8MP_MEDIA_BLK_CTRL_RESET_LCDIF2_AXI, 0, 24)
+};
+
 static struct imx_blk_ctrl_hw imx8mp_audio_blk_ctrl_hws[] = {
 	/* clocks */
 	IMX_BLK_CTRL_CLK_MUX("sai_pll_ref_sel", IMX8MP_CLK_AUDIO_BLK_CTRL_SAI_PLL_REF_SEL, 0x400, 0, 2, imx_sai_pll_ref_sels),
@@ -192,6 +248,18 @@ const struct imx_blk_ctrl_dev_data imx8mp_hdmi_blk_ctrl_dev_data __initconst = {
 	.clocks_max = IMX8MP_CLK_HDMI_BLK_CTRL_END,
 	.resets_max = IMX8MP_HDMI_BLK_CTRL_RESET_NUM,
 	.pm_runtime_saved_regs_num = 0
+};
+
+const struct imx_blk_ctrl_dev_data imx8mp_media_blk_ctrl_dev_data __initconst = {
+	.hws = imx8mp_media_blk_ctrl_hws,
+	.hws_num = ARRAY_SIZE(imx8mp_media_blk_ctrl_hws),
+	.clocks_max = IMX8MP_CLK_MEDIA_BLK_CTRL_END,
+	.resets_max = IMX8MP_MEDIA_BLK_CTRL_RESET_NUM,
+	.pm_runtime_saved_regs_num = 2,
+	.pm_runtime_saved_regs = {
+		IMX_MEDIA_BLK_CTRL_SFT_RSTN,
+		IMX_MEDIA_BLK_CTRL_CLK_EN,
+	},
 };
 
 const struct imx_blk_ctrl_dev_data imx8mp_audio_blk_ctrl_dev_data __initconst = {
