@@ -1591,6 +1591,9 @@
 
 				#clock-cells = <1>;
 				#reset-cells = <1>;
+
+				assigned-clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI_PLL_BYPASS>;
+				assigned-clock-parents = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI_PLL>;
 			};
 
 			mu2: mu2@30e60000 {
