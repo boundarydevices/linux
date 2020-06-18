@@ -614,7 +614,7 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 {
 	struct device *dev = dsi->dev;
 	struct mode_config *config;
-	unsigned long pixclock = set_pixclock(dsi, mode);
+	unsigned long pixclock = mode->clock * 1000;
 	unsigned long bit_clk = 0;
 	u32 phyref_rate = 0, lanes = dsi->lanes;
 	int ret = 0;
@@ -623,7 +623,7 @@ static struct mode_config *nwl_dsi_mode_probe(struct nwl_mipi_dsi *dsi,
 		if (config->pixclock == pixclock)
 			return config;
 
-	phyref_rate = pixclock;
+	phyref_rate = set_pixclock(dsi, mode);
 	while (phyref_rate >= 48000000)
 		phyref_rate >>= 1;
 	while (phyref_rate < 24000000)
