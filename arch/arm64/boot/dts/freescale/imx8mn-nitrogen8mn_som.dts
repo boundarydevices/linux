@@ -3,15 +3,16 @@
  * Copyright 2019 Boundary Devices
  */
 
+#define TOUCHSCREEN_I2C_BUS	i2c4
 #include "imx8mn-nitrogen8mn.dts"
 
 &iomuxc {
-	pinctrl_i2c2_sn65dsi83: i2c2-sn65dsi83grp {
+	pinctrl_sn65dsi83: sn65dsi83grp {
 		fsl,pins = <
-#define GPIRQ_I2C2_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
+#define GPIRQ_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
 			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x04)
-#undef  GP_I2C2_SN65DSI83_EN
-#define GP_I2C2_SN65DSI83_EN	<&gpio5 0 GPIO_ACTIVE_HIGH>
+#undef  GP_SN65DSI83_EN
+#define GP_SN65DSI83_EN	<&gpio5 0 GPIO_ACTIVE_HIGH>
 			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x106)
 		>;
 	};
@@ -38,9 +39,51 @@
 		>;
 	};
 
+	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
+		fsl,pins = <
+#undef GP_MIPI_RESET
+#define GP_MIPI_RESET	<&gpio5 0 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x16)
+		>;
+	};
+
+	pinctrl_mipi_lcd133_070: mipi-lcd133-070grp {
+		fsl,pins = <
+#define GP_LCD133_070_RESET		<&gpio1 1 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x116)
+#undef GP_LCD133_070_ENABLE
+#define GP_LCD133_070_ENABLE		<&gpio5 0 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x116)
+		>;
+	};
+
+	pinctrl_mipi_lcm_jm430: mipi-lcm-jm430grp {
+		fsl,pins = <
+#undef GP_TC358762_EN
+#define GP_TC358762_EN	<&gpio5 0 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x16)
+		>;
+	};
+
+	pinctrl_mipi_ltk0680ytmdb: mipi-ltk0680ytmdbgrp {
+		fsl,pins = <
+#undef GP_MIPI_RESET
+#define GP_MIPI_RESET	<&gpio5 0 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x16)
+		>;
+	};
+
 	pinctrl_pwm4: pwm4grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_GPIO1_IO15_PWM4_OUT, 0x16)
+		>;
+	};
+
+	pinctrl_sc18is602b: sc18is602bgrp {
+		fsl,pins = <
+#undef  GP_SC18IS602B_RESET
+#define GP_SC18IS602B_RESET	<&gpio5 0 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x101)
 		>;
 	};
 };
@@ -49,23 +92,15 @@
 	model = "Boundary Devices i.MX8MNano Nitrogen8MN Som";
 	compatible = "boundary,imx8mn-nitrogen8mn_som", "fsl,imx8mn";
 
-	aliases {
-		mipi_to_lvds = &mipi_to_lvds_som;
-	};
-
-	alias_create_phandles {
-		p7 = <&mipi_to_lvds_som>;
-	};
-
-        mipi_xclk: mipi-xclk {
+	mipi_xclk: mipi-xclk {
 		assigned-clocks = <&clk IMX8MMN(CLK_PWM4)>;
 		assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_40M)>;
-                compatible = "pwm-clock";
-                #clock-cells = <0>;
-                clock-frequency = <20000000>;
-                clock-output-names = "mipi_pwm4";
-                pwms = <&pwm4 0 50>; /* 20 MHz */
-        };
+		compatible = "pwm-clock";
+		#clock-cells = <0>;
+		clock-frequency = <20000000>;
+		clock-output-names = "mipi_pwm4";
+		pwms = <&pwm4 0 50>; /* 20 MHz */
+	};
 };
 
 &A53_0 {
@@ -73,12 +108,6 @@
 };
 
 &i2c2 {
-	/delete-node/ mipi-to-lvds@2c;
-	/delete-node/ touchscreen@38;
-	/delete-node/ touchscreen@40;
-	/delete-node/ touchscreen@55;
-	/delete-node/ touchscreen@5d;
-
 	rtc@68 {
 		compatible = "microcrystal,rv4162";
 		pinctrl-names = "default";
@@ -117,72 +146,16 @@
 	};
 };
 
-&i2c4 {
-	mipi_to_lvds_som: mipi-to-lvds@2c {
-		clocks = <&mipi_dsi 0>;
-		clock-names = "mipi_clk";
-		compatible = "ti,sn65dsi83";
-		display = <&display_subsystem>;
-		display-dsi = <&fb_mipi>;
-		enable-gpios = GP_I2C2_SN65DSI83_EN;
-		interrupts-extended = GPIRQ_I2C2_SN65DSI83;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c2_sn65dsi83>;
-		reg = <0x2c>;
-		status = "disabled";
-	};
-
-	ts_ft5x06: touchscreen@38 {
-		compatible = "edt,ft5x06-ts";
-		interrupts-extended = GPIRQ_I2C2_FT5X06;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c2_ft5x06>;
-		reg = <0x38>;
-		reset-gpios = GP_I2C2_FT5X06_RESET;
-		status = "disabled";
-		wakeup-gpios = GP_I2C2_FT5X06_WAKE;
-	};
-
-	ts_gsl1680: touchscreen@40 {
-		compatible = "silead,gsl1680";
-		interrupts-extended = GPIRQ_GSLX680;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c2_gslx680>;
-		power-gpios = GP_I2C2_GSLX680_POWER;
-		reg = <0x40>;
-		status = "disabled";
-		touchscreen-size-x = <480>;	/* swapped below */
-		touchscreen-size-y = <800>;
-		touchscreen-swapped-x-y;
-	};
-
-	ts_st1633i: touchscreen@55 {
-		compatible = "sitronix,st1633i";
-		interrupts-extended = GPIRQ_ST1633;
-		/* pins used by touchscreen */
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c2_st1633>;
-		reg = <0x55>;
-		reset-gpios = GP_ST1633_RESET;
-		status = "disabled";
-		wakeup-gpios = GP_ST1633_IRQ;
-	};
-
-	ts_goodix: touchscreen@5d {
-		compatible = "goodix,gt9271";
-		esd-recovery-timeout-ms = <2000>;
-		interrupts-extended = GPIRQ_GT911;
-		irq-gpios = GP_GT911_IRQ;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c2_gt911>;
-		reg = <0x5d>;
-		reset-gpios = GP_GT911_RESET;
-		status = "disabled";
-	};
+&mipi_to_lvds {
+	enable-gpios = GP_SN65DSI83_EN;
 };
 
 &reg_sw4 {
 	/delete-property/ dual-phase;
+};
+
+&spi_lcd {
+	reset-gpios = GP_SC18IS602B_RESET;
 };
 
 &wdog1 {
