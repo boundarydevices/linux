@@ -308,6 +308,10 @@ static const struct of_device_id imx_blk_ctrl_of_match[] = {
 		.data = &imx8mp_audio_blk_ctrl_dev_data
 	},
 	{
+		.compatible = "fsl,imx8mp-media-blk-ctrl",
+		.data = &imx8mp_media_blk_ctrl_dev_data
+	},
+	{
 		.compatible = "fsl,imx8mp-hdmi-blk-ctrl",
 		.data = &imx8mp_hdmi_blk_ctrl_dev_data
 	},
