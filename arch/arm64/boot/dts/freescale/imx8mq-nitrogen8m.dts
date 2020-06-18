@@ -6,6 +6,8 @@
 /dts-v1/;
 
 #include "fsl-imx8mq.dtsi"
+#define TC358867_I2C_BUS	<&i2c4>
+#include "panel-dmt050wvnxcmi.dtsi"
 #include "panel-lcd133-070.dtsi"
 #include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
@@ -416,6 +418,13 @@
 		>;
 	};
 
+	pinctrl_sc18is602b: sc18is602bgrp {
+		fsl,pins = <
+#define GP_SC18IS602B_RESET	<&gpio3 15 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x06
+		>;
+	};
+
 	pinctrl_uart1: uart1grp {
 		fsl,pins = <
 			MX8MQ_IOMUXC_UART1_RXD_UART1_DCE_RX		0x45
@@ -583,6 +592,7 @@
 		pinctrl_ltk080a60a004t = &pinctrl_mipi_ltk080a60a004t;
 		pwm_mipi = &pwm3;
 		sound_hdmi = &sound_hdmi;
+		spi_lcd = &spi_lcd;
 		t_mipi = &t_mipi;
 		ts_ft5x06 = &ts_ft5x06;
 		ts_ft7250 = &ts_ft7250;
@@ -1071,6 +1081,25 @@
 		pinctrl-0 = <&pinctrl_i2c4_sn65dsi83>;
 		reg = <0x2c>;
 		status = "disabled";
+	};
+
+	spi_lcd: spi@2f {
+		compatible = "nxp,sc18is602b";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_sc18is602b>;
+		reg = <0x2f>;
+		reset-gpios = GP_SC18IS602B_RESET;
+		status = "disabled";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		spidev_lcd: spidev@0 {
+			compatible = "spidev";
+			spi-cpha;
+			spi-cpol;
+			spi-max-frequency = <20000000>;
+			reg = <0>;
+		};
 	};
 
 	ts_ft5x06: touchscreen@38 {
