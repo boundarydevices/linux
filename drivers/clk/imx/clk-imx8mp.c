@@ -66,6 +66,61 @@ static const char *imx_pdm_sels[] = {"pdm_root", "sai_pll_div2", "dummy", "dummy
 static const char *imx_sai_pll_ref_sels[] = {"osc_24m", "dummy", "dummy", "dummy", };
 static const char *imx_sai_pll_bypass_sels[] = {"sai_pll", "sai_pll_ref_sel", };
 
+static const char *imx_hdmi_phy_clks_sels[] = { "hdmi_glb_24m", "dummy",};
+static const char *imx_lcdif_clks_sels[] = { "dummy", "hdmi_glb_pix", };
+static const char *imx_hdmi_pipe_clks_sels[] = {"dummy","hdmi_glb_pix", };
+
+static struct imx_blk_ctrl_hw imx8mp_hdmi_blk_ctrl_hws[] = {
+	/* clocks */
+	IMX_BLK_CTRL_CLK_GATE("hdmi_glb_apb", IMX8MP_CLK_HDMI_BLK_CTRL_GLOBAL_APB_CLK, 0x40, 0, "hdmi_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_glb_b", IMX8MP_CLK_HDMI_BLK_CTRL_GLOBAL_B_CLK, 0x40, 1, "hdmi_axi"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_glb_ref_266m", IMX8MP_CLK_HDMI_BLK_CTRL_GLOBAL_REF266M_CLK, 0x40, 2, "hdmi_ref_266m"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_glb_24m", IMX8MP_CLK_HDMI_BLK_CTRL_GLOBAL_XTAL24M_CLK, 0x40, 4, "hdmi_24m"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_glb_32k", IMX8MP_CLK_HDMI_BLK_CTRL_GLOBAL_XTAL32K_CLK, 0x40, 5, "osc_32k"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_glb_pix", IMX8MP_CLK_HDMI_BLK_CTRL_GLOBAL_TX_PIX_CLK, 0x40, 7, "hdmi_phy"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_irq_steer", IMX8MP_CLK_HDMI_BLK_CTRL_IRQS_STEER_CLK, 0x40, 9, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_noc", IMX8MP_CLK_HDMI_BLK_CTRL_NOC_HDMI_CLK, 0x40, 10, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdcp_noc", IMX8MP_CLK_HDMI_BLK_CTRL_NOC_HDCP_CLK, 0x40, 11,  "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("lcdif3_apb", IMX8MP_CLK_HDMI_BLK_CTRL_LCDIF_APB_CLK, 0x40, 16, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("lcdif3_b", IMX8MP_CLK_HDMI_BLK_CTRL_LCDIF_B_CLK, 0x40, 17, "hdmi_glb_b"),
+	IMX_BLK_CTRL_CLK_GATE("lcdif3_pdi", IMX8MP_CLK_HDMI_BLK_CTRL_LCDIF_PDI_CLK, 0x40, 18, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("lcdif3_pxl", IMX8MP_CLK_HDMI_BLK_CTRL_LCDIF_PIX_CLK, 0x40, 19, "hdmi_glb_pix"),
+	IMX_BLK_CTRL_CLK_GATE("lcdif3_spu", IMX8MP_CLK_HDMI_BLK_CTRL_LCDIF_SPU_CLK, 0x40, 20, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_fdcc_ref", IMX8MP_CLK_HDMI_BLK_CTRL_FDCC_REF_CLK, 0x50, 2, "hdmi_fdcc_tst"),
+	IMX_BLK_CTRL_CLK_GATE("hrv_mwr_apb", IMX8MP_CLK_HDMI_BLK_CTRL_HRV_MWR_APB_CLK, 0x50, 3, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hrv_mwr_b", IMX8MP_CLK_HDMI_BLK_CTRL_HRV_MWR_B_CLK, 0x50, 4, "hdmi_glb_axi"),
+	IMX_BLK_CTRL_CLK_GATE("hrv_mwr_cea", IMX8MP_CLK_HDMI_BLK_CTRL_HRV_MWR_CEA_CLK, 0x50, 5, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("vsfd_cea", IMX8MP_CLK_HDMI_BLK_CTRL_VSFD_CEA_CLK, 0x50, 6, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_tx_hpi", IMX8MP_CLK_HDMI_BLK_CTRL_TX_HPI_CLK, 0x50, 13, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_tx_apb", IMX8MP_CLK_HDMI_BLK_CTRL_TX_APB_CLK, 0x50, 14, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_cec", IMX8MP_CLK_HDMI_BLK_CTRL_TX_CEC_CLK, 0x50, 15, "hdmi_glb_32k"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_esm", IMX8MP_CLK_HDMI_BLK_CTRL_TX_ESM_CLK, 0x50, 16, "hdmi_glb_ref_266m"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_tx_gpa", IMX8MP_CLK_HDMI_BLK_CTRL_TX_GPA_CLK, 0x50, 17, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_tx_pix", IMX8MP_CLK_HDMI_BLK_CTRL_TX_PIXEL_CLK, 0x50, 18, "hdmi_glb_pix"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_tx_sfr", IMX8MP_CLK_HDMI_BLK_CTRL_TX_SFR_CLK, 0x50, 19, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_tx_skp", IMX8MP_CLK_HDMI_BLK_CTRL_TX_SKP_CLK, 0x50, 20, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_tx_prep", IMX8MP_CLK_HDMI_BLK_CTRL_TX_PREP_CLK, 0x50, 21, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_phy_apb", IMX8MP_CLK_HDMI_BLK_CTRL_TX_PHY_APB_CLK, 0x50, 22, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_phy_int", IMX8MP_CLK_HDMI_BLK_CTRL_TX_PHY_INT_CLK, 0x50, 24, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_sec_mem", IMX8MP_CLK_HDMI_BLK_CTRL_TX_SEC_MEM_CLK, 0x50, 25, "hdmi_glb_ref_266m"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_trng_skp", IMX8MP_CLK_HDMI_BLK_CTRL_TX_TRNG_SKP_CLK, 0x50, 27, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_vid_pix",  IMX8MP_CLK_HDMI_BLK_CTRL_TX_VID_LINK_PIX_CLK, 0x50, 28, "hdmi_glb_pix"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_trng_apb", IMX8MP_CLK_HDMI_BLK_CTRL_TX_TRNG_APB_CLK, 0x50, 30, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_MUX("hdmi_phy_sel", IMX8MP_CLK_HDMI_BLK_CTRL_HTXPHY_CLK_SEL, 0x50, 10, 1, imx_hdmi_phy_clks_sels),
+	IMX_BLK_CTRL_CLK_MUX("lcdif_clk_sel", IMX8MP_CLK_HDMI_BLK_CTRL_LCDIF_CLK_SEL, 0x50, 11, 1, imx_lcdif_clks_sels),
+	IMX_BLK_CTRL_CLK_MUX("hdmi_pipe_sel", IMX8MP_CLK_HDMI_BLK_CTRL_TX_PIPE_CLK_SEL, 0x50, 12, 1, imx_hdmi_pipe_clks_sels),
+
+	/* resets */
+	IMX_BLK_CTRL_RESET_MASK(IMX8MP_HDMI_BLK_CTRL_HDMI_TX_RESET, 0x20, 6, 0x33),
+	IMX_BLK_CTRL_RESET(IMX8MP_HDMI_BLK_CTRL_HDMI_PHY_RESET, 0x20, 12),
+	IMX_BLK_CTRL_RESET(IMX8MP_HDMI_BLK_CTRL_HDMI_PAI_RESET, 0x20, 18),
+	IMX_BLK_CTRL_RESET(IMX8MP_HDMI_BLK_CTRL_HDMI_PAI_RESET, 0x20, 22),
+	IMX_BLK_CTRL_RESET(IMX8MP_HDMI_BLK_CTRL_HDMI_TRNG_RESET, 0x20, 20),
+	IMX_BLK_CTRL_RESET(IMX8MP_HDMI_BLK_CTRL_IRQ_STEER_RESET, 0x20, 16),
+	IMX_BLK_CTRL_RESET(IMX8MP_HDMI_BLK_CTRL_HDMI_HDCP_RESET, 0x20, 13),
+	IMX_BLK_CTRL_RESET_MASK(IMX8MP_HDMI_BLK_CTRL_LCDIF_RESET, 0x20, 4, 0x3),
+};
+
 static struct imx_blk_ctrl_hw imx8mp_audio_blk_ctrl_hws[] = {
 	/* clocks */
 	IMX_BLK_CTRL_CLK_MUX("sai_pll_ref_sel", IMX8MP_CLK_AUDIO_BLK_CTRL_SAI_PLL_REF_SEL, 0x400, 0, 2, imx_sai_pll_ref_sels),
@@ -129,6 +184,14 @@ static struct imx_blk_ctrl_hw imx8mp_audio_blk_ctrl_hws[] = {
 	/* resets */
 	IMX_BLK_CTRL_RESET(IMX8MP_AUDIO_BLK_CTRL_EARC_RESET, 0x200, 0),
 	IMX_BLK_CTRL_RESET(IMX8MP_AUDIO_BLK_CTRL_EARC_PHY_RESET, 0x200, 1),
+};
+
+const struct imx_blk_ctrl_dev_data imx8mp_hdmi_blk_ctrl_dev_data __initconst = {
+	.hws = imx8mp_hdmi_blk_ctrl_hws,
+	.hws_num = ARRAY_SIZE(imx8mp_hdmi_blk_ctrl_hws),
+	.clocks_max = IMX8MP_CLK_HDMI_BLK_CTRL_END,
+	.resets_max = IMX8MP_HDMI_BLK_CTRL_RESET_NUM,
+	.pm_runtime_saved_regs_num = 0
 };
 
 const struct imx_blk_ctrl_dev_data imx8mp_audio_blk_ctrl_dev_data __initconst = {
