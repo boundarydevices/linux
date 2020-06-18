@@ -9,12 +9,15 @@
 	pinctrl-0 = <&pinctrl_hog>;
 
 	/delete-node/ ecspi2-mcp2515tgrp;
-	/delete-node/ i2c2-gt911grp;
-	/delete-node/ i2c2-ft5x06grp;
-	/delete-node/ i2c2-gslx680grp;
-	/delete-node/ i2c2-sn65dsi83grp;
-	/delete-node/ i2c2-st1633grp;
+	/delete-node/ sn65dsi83grp;
+	/delete-node/ ts-gt911grp;
+	/delete-node/ ts-ft5x06grp;
+	/delete-node/ ts-ft7250grp;
+	/delete-node/ ts-gslx680grp;
+	/delete-node/ ts-st1633grp;
 	/delete-node/ i2c3b-ov5640-mipigrp;
+	/delete-node/ mipi-com50h5n03ulcgrp;
+	/delete-node/ mipi-lcd133-070grp;
 	/delete-node/ mipi-lcm-jm430grp;
 	/delete-node/ mipi-ltk0680ytmdbgrp;
 	/delete-node/ mipi-ltk080a60a004tgrp;
@@ -137,6 +140,7 @@
 	/delete-node/ backlight-mipi;
 	/delete-node/ csi-mclk;
 	/delete-node/ mipi-xclk;
+	/delete-node/ mipi-cmds-dmt050wvnxcmi;
 	/delete-node/ sound-wm8960;
 
 	aliases {
@@ -146,6 +150,7 @@
 		/delete-property/ lcdif;
 		/delete-property/ mipi;
 		/delete-property/ mipi_cmds_com50h5n03ulc;
+		/delete-property/ mipi_cmds_dmt050wvnxcmi;
 		/delete-property/ mipi_cmds_lcm_jm430;
 		/delete-property/ mipi_cmds_ltk0680ytmdb;
 		/delete-property/ mipi_cmds_ltk080a60a004t;
@@ -153,15 +158,18 @@
 		/delete-property/ mipi_dsi;
 		/delete-property/ mipi_to_lvds;
 		/delete-property/ pinctrl_com50h5n03ulc;
+		/delete-property/ pinctrl_lcd133_070;
 		/delete-property/ pinctrl_lcm_jm430;
 		/delete-property/ pinctrl_ltk0680ytmdb;
 		/delete-property/ pinctrl_ltk080a60a004t;
 		/delete-property/ pwm_mipi;
 		/delete-property/ reg_sw4;
+		/delete-property/ spi_lcd;
 		/delete-property/ t_mipi;
 		/delete-property/ ts_ft5x06;
-		/delete-property/ ts_gsl1680;
+		/delete-property/ ts_ft7250;
 		/delete-property/ ts_goodix;
+		/delete-property/ ts_gsl1680;
 		/delete-property/ ts_st1633i;
 	};
 
@@ -232,10 +240,13 @@
 
 &i2c4 {
 	/delete-node/ mipi-to-lvds@2c;
+	/delete-node/ spi@2f;
 	/delete-node/ touchscreen@38;
+	/delete-node/ touchscreen_ft7250@38;
 	/delete-node/ touchscreen@40;
 	/delete-node/ touchscreen@55;
 	/delete-node/ touchscreen@5d;
+	/delete-node/ i2cmux@70;
 	/delete-node/ codec@1a;
 };
 
