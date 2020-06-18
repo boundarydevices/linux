@@ -41,6 +41,8 @@
 #define TMU_VER1		0x1
 #define TMU_VER2		0x2
 
+#define MAX_SENSOR_NUMBER	2
+
 struct thermal_soc_data {
 	u32 num_sensors;
 	u32 version;
@@ -90,6 +92,9 @@ static int imx8mp_tmu_get_temp(void *data, int *temp)
 	struct imx8mm_tmu *tmu = sensor->priv;
 	unsigned long val;
 	bool ready;
+
+	if (sensor->hw_id > (MAX_SENSOR_NUMBER - 1))
+		return -EINVAL;
 
 	val = readl_relaxed(tmu->base + TRITSR);
 	ready = test_bit(probe_status_offset(sensor->hw_id), &val);
