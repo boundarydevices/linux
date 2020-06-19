@@ -370,9 +370,23 @@ static int fsl_hdmi_soc_startup(struct snd_pcm_substream *substream,
 	struct imx_hdmi *hdmi_data = snd_soc_dai_get_drvdata(dai);
 	int ret;
 
-	clk_prepare_enable(hdmi_data->mipi_core_clk);
-	clk_prepare_enable(hdmi_data->isfr_clk);
-	clk_prepare_enable(hdmi_data->iahb_clk);
+	ret = clk_prepare_enable(hdmi_data->mipi_core_clk);
+	if (ret) {
+		dev_err(dai->dev, "failed to enable mipi_core_clk clock\n");
+		return ret;
+	}
+
+	ret = clk_prepare_enable(hdmi_data->isfr_clk);
+	if (ret) {
+		dev_err(dai->dev, "failed to enable isfr_clk clock\n");
+		goto disable_mipi_core_clk;
+	}
+
+	ret = clk_prepare_enable(hdmi_data->iahb_clk);
+	if (ret) {
+		dev_err(dai->dev, "failed to enable iahb_clk clock\n");
+		goto disable_isfr_clk;
+	}
 
 	dev_dbg(dai->dev, "%s hdmi clks: mipi_core: %d isfr:%d iahb:%d\n", __func__,
 			(int)clk_get_rate(hdmi_data->mipi_core_clk),
@@ -381,12 +395,20 @@ static int fsl_hdmi_soc_startup(struct snd_pcm_substream *substream,
 
 	ret = fsl_hdmi_update_constraints(substream);
 	if (ret < 0)
-		return ret;
+		goto disable_iahb_clk;
 
 	/* Indicates the subpacket represents a flatline sample */
 	hdmi_audio_writeb(FC_AUDSCONF, AUD_PACKET_SAMPFIT, 0x0);
 
 	return 0;
+
+disable_iahb_clk:
+	clk_disable_unprepare(hdmi_data->iahb_clk);
+disable_isfr_clk:
+	clk_disable_unprepare(hdmi_data->isfr_clk);
+disable_mipi_core_clk:
+	clk_disable_unprepare(hdmi_data->mipi_core_clk);
+	return ret;
 }
 
 static void fsl_hdmi_soc_shutdown(struct snd_pcm_substream *substream,
