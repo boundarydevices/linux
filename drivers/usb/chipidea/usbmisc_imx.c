@@ -500,14 +500,12 @@ static int usbmisc_imx6q_init(struct imx_usbmisc_data *data)
 
 	spin_lock_irqsave(&usbmisc->lock, flags);
 
-	reg = readl(usbmisc->base + index * 4);
+	reg = readl(usbmisc->base + index * 4) & ~(MX6_BM_OVER_CUR_DIS | MX6_BM_OVER_CUR_POLARITY);
 	if (data->disable_oc) {
 		reg |= MX6_BM_OVER_CUR_DIS;
-	} else if (data->oc_polarity == 1) {
-		/* High active */
-		reg &= ~(MX6_BM_OVER_CUR_DIS | MX6_BM_OVER_CUR_POLARITY);
-	} else {
-		reg &= ~(MX6_BM_OVER_CUR_DIS);
+	} else if (data->oc_polarity == 0) {
+		/* low active */
+		reg |= MX6_BM_OVER_CUR_POLARITY;
 	}
 	writel(reg, usbmisc->base + index * 4);
 
@@ -635,12 +633,12 @@ static int usbmisc_imx7d_init(struct imx_usbmisc_data *data)
 		return -EINVAL;
 
 	spin_lock_irqsave(&usbmisc->lock, flags);
-	reg = readl(usbmisc->base);
+	reg = readl(usbmisc->base) & ~(MX6_BM_OVER_CUR_DIS | MX6_BM_OVER_CUR_POLARITY);
 	if (data->disable_oc) {
 		reg |= MX6_BM_OVER_CUR_DIS;
-	} else if (data->oc_polarity == 1) {
-		/* High active */
-		reg &= ~(MX6_BM_OVER_CUR_DIS | MX6_BM_OVER_CUR_POLARITY);
+	} else if (data->oc_polarity == 0) {
+		/* low active */
+		reg |= MX6_BM_OVER_CUR_POLARITY;
 	}
 
 	if (data->pwr_polarity)
@@ -945,12 +943,12 @@ static int usbmisc_imx7ulp_init(struct imx_usbmisc_data *data)
 		return -EINVAL;
 
 	spin_lock_irqsave(&usbmisc->lock, flags);
-	reg = readl(usbmisc->base);
+	reg = readl(usbmisc->base) & ~(MX6_BM_OVER_CUR_DIS | MX6_BM_OVER_CUR_POLARITY);
 	if (data->disable_oc) {
 		reg |= MX6_BM_OVER_CUR_DIS;
-	} else if (data->oc_polarity == 1) {
-		/* High active */
-		reg &= ~(MX6_BM_OVER_CUR_DIS | MX6_BM_OVER_CUR_POLARITY);
+	} else if (data->oc_polarity == 0) {
+		/* low active */
+		reg |= MX6_BM_OVER_CUR_POLARITY;
 	}
 
 	if (data->pwr_polarity)
