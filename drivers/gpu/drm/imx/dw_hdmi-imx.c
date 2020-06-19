@@ -395,6 +395,9 @@ static int dw_hdmi_imx_bind(struct device *dev, struct device *master,
 	memset(hdmi, 0, sizeof(*hdmi));
 
 	match = of_match_node(dw_hdmi_imx_dt_ids, pdev->dev.of_node);
+	if (!match)
+		return -ENODEV;
+
 	plat_data = devm_kmemdup(&pdev->dev, match->data,
 					     sizeof(*plat_data), GFP_KERNEL);
 	if (!plat_data)
