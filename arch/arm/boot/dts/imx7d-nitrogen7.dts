@@ -122,7 +122,6 @@
 	pinctrl_i2c3_tsc2004: i2c3tsc2004grp {
 		fsl,pins = <
 			MX7D_PAD_LCD_RESET__GPIO3_IO4	0x79
-			MX7D_PAD_SD2_WP__GPIO5_IO10	0x7d
 		>;
 	};
 
@@ -261,6 +260,13 @@
 			MX7D_PAD_ECSPI1_SCLK__UART6_DCE_RX 	0x79
 			MX7D_PAD_ECSPI1_SS0__UART6_DCE_CTS 	0x79
 			MX7D_PAD_ECSPI1_MISO__UART6_DCE_RTS	0x79
+		>;
+	};
+
+	pinctrl_usbotg1_2: usbotg1_2grp {
+		fsl,pins = <
+			/* OTG1_ID routed both to OTG1_ID and SD2_WP, disable SD2_WP */
+			MX7D_PAD_SD2_WP__GPIO5_IO10		0x04
 		>;
 	};
 
@@ -427,10 +433,15 @@
 		>;
 	};
 
+	pinctrl_reg_usb_otg1_vbus: reg-usb-otg1-vbusgrp {
+		fsl,pins = <
+			MX7D_PAD_LPSR_GPIO1_IO05__GPIO1_IO5	0x14
+		>;
+	};
+
 	pinctrl_usbotg1: usbotg1grp {
 		fsl,pins = <
 			MX7D_PAD_LPSR_GPIO1_IO04__USB_OTG1_OC	0x7d
-			MX7D_PAD_LPSR_GPIO1_IO05__GPIO1_IO5	0x14
 		>;
 	};
 
@@ -514,6 +525,8 @@
 
 	reg_usb_otg1_vbus: regulator-usb-otg1-vbus {
 		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usb_otg1_vbus>;
 		regulator-name = "usb_otg1_vbus";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
@@ -1014,7 +1027,7 @@
 &usbotg1 {
 	vbus-supply = <&reg_usb_otg1_vbus>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usbotg1>;
+	pinctrl-0 = <&pinctrl_usbotg1>, <&pinctrl_usbotg1_2>;
 	status = "okay";
 };
 
