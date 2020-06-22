@@ -8,7 +8,7 @@
  * Copyright (C) 2004 Pengutronix
  */
 
-#if defined(CONFIG_SERIAL_IMX_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
+#if IS_ENABLED(CONFIG_SERIAL_IMX_CONSOLE) && IS_ENABLED(CONFIG_MAGIC_SYSRQ)
 #define SUPPORT_SYSRQ
 #endif
 
@@ -369,7 +369,7 @@ static inline int imx_uart_is_imx6q(struct imx_port *sport)
 /*
  * Save and restore functions for UCR1, UCR2 and UCR3 registers
  */
-#if defined(CONFIG_SERIAL_IMX_CONSOLE)
+#if IS_ENABLED(CONFIG_SERIAL_IMX_CONSOLE)
 static void imx_uart_ucrs_save(struct imx_port *sport,
 			       struct imx_port_ucrs *ucr)
 {
@@ -1941,7 +1941,7 @@ static const struct uart_ops imx_uart_pops = {
 
 static struct imx_port *imx_uart_ports[UART_NR];
 
-#ifdef CONFIG_SERIAL_IMX_CONSOLE
+#if  IS_ENABLED(CONFIG_SERIAL_IMX_CONSOLE)
 static void imx_uart_console_putchar(struct uart_port *port, int ch)
 {
 	struct imx_port *sport = (struct imx_port *)port;
