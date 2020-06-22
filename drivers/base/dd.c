@@ -243,6 +243,7 @@ static int __driver_deferred_probe_check_state(struct device *dev)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(driver_deferred_probe_check_state);
 
 /**
  * driver_deferred_probe_check_state() - Check deferred probe state
