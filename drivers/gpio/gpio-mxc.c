@@ -9,6 +9,7 @@
 
 #include <linux/clk.h>
 #include <linux/err.h>
+#include <linux/module.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
@@ -896,3 +897,4 @@ static int __init gpio_mxc_init(void)
 	return platform_driver_register(&mxc_gpio_driver);
 }
 subsys_initcall(gpio_mxc_init);
+MODULE_LICENSE("GPL v2");
