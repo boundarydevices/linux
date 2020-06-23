@@ -758,17 +758,19 @@ static int cdns3_gadget_ep0_queue(struct usb_ep *ep,
 	int erdy_sent = 0;
 	int ret = 0;
 
+	spin_lock_irqsave(&priv_dev->lock, flags);
 	cdns3_dbg(priv_ep->cdns3_dev, "Queue to Ep0%s L: %d\n",
 		  priv_dev->ep0_data_dir ? "IN" : "OUT",
 		  request->length);
 
 	/* cancel the request if controller receive new SETUP packet. */
-	if (cdns3_check_new_setup(priv_dev))
+	if (cdns3_check_new_setup(priv_dev)) {
+		spin_unlock_irqrestore(&priv_dev->lock, flags);
 		return -ECONNRESET;
+	}
 
 	/* send STATUS stage. Should be called only for SET_CONFIGURATION */
 	if (priv_dev->ep0_stage == CDNS3_STATUS_STAGE) {
-		spin_lock_irqsave(&priv_dev->lock, flags);
 		cdns3_select_ep(priv_dev, 0x00);
 
 		erdy_sent = !priv_dev->hw_configured_flag;
@@ -791,7 +793,6 @@ static int cdns3_gadget_ep0_queue(struct usb_ep *ep,
 		return 0;
 	}
 
-	spin_lock_irqsave(&priv_dev->lock, flags);
 	if (!list_empty(&priv_ep->pending_req_list)) {
 		dev_err(priv_dev->dev,
 			"can't handle multiple requests for ep0\n");
