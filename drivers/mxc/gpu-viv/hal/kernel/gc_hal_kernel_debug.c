@@ -752,7 +752,7 @@ _PrintBuffer(
     if (command)
     {
         buffer[indent] = '\0';
-        gcmkSTRCAT(buffer, gcmSIZEOF(buffer), "] -- command\n");
+        gcmkSTRCATSAFE(buffer, gcmSIZEOF(buffer), "] -- command\n");
         gcmkOUTPUT_STRING(buffer);
     }
 }

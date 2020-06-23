@@ -96,6 +96,9 @@ typedef va_list gctARGUMENTS;
 #define gcmkSTRCAT(Destination, Size, String) \
     strncat(Destination, String, Size)
 
+#define gcmkSTRCATSAFE(Destination, Size, String) \
+    strncat(Destination, String, (Size) - 1)
+
 #define gcmkMEMCPY(Destination, Source, Size) \
     memcpy(Destination, Source, Size)
 
