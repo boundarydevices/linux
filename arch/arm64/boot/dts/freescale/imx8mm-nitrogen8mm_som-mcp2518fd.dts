@@ -6,7 +6,6 @@
 #include "imx8mm-nitrogen8mm_som.dts"
 
 &iomuxc {
-	/delete-node/ ecspi2-mcp2515tgrp;
 	/delete-node/ i2c3-ov5640-mipigrp;
 
 	pinctrl_ecspi2_mcp2518fd: ecspi2-mcp2518fdgrp {
@@ -30,14 +29,18 @@
 	};
 };
 
-&can0 {
-	clocks = <&clk40m>;
-	compatible = "microchip,mcp2518fd";
-	interrupts-extended = GPIRQ_MCP2518FD;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_ecspi2_mcp2518fd>;
-	reg = <0>;
-	spi-max-frequency = <20000000>;
+&ecspi2 {
+	/delete-node/ spidev@0;
+
+	can0: can@0 {
+		clocks = <&clk40m>;
+		compatible = "microchip,mcp2518fd";
+		interrupts-extended = GPIRQ_MCP2518FD;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ecspi2_mcp2518fd>;
+		reg = <0>;
+		spi-max-frequency = <20000000>;
+	};
 };
 
 /delete-node/ &csi1_bridge;
