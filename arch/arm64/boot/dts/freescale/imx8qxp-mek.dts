@@ -103,15 +103,6 @@
 		reg = <0 0x94c00000 0 0x00010000>;
 		volatile;
 	};
-
-	sound-xtor {
-		compatible = "fsl,imx-audio-xtor";
-		model = "xtor-audio";
-		cpu-dai = <&sai0>;
-		tx-codec-slave = <1>;
-		rx-codec-slave = <1>;
-		status = "okay";
-	};
 };
 
 &sai0 {

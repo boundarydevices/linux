@@ -370,14 +370,6 @@
 			"CPU-Capture", "Capture";
 	};
 
-	sound-xtor {
-		compatible = "fsl,imx-audio-xtor";
-		model = "xtor-audio";
-		cpu-dai = <&sai0>;
-		tx-codec-slave = <1>;
-		rx-codec-slave = <1>;
-		status = "okay";
-	};
 
 	imx8qm_cm40: imx8qm_cm4@0 {
 		compatible = "fsl,imx8qm-cm4";
