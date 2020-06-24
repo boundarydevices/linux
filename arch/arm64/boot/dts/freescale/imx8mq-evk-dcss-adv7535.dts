@@ -69,8 +69,11 @@
 		#size-cells = <0>;
 
 		port@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
 			reg = <0>;
-			mipi_dsi_in: endpoint {
+			mipi_dsi_in: endpoint@1 {
+				reg = <1>;
 				remote-endpoint = <&dcss_out>;
 			};
 		};

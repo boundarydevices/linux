@@ -60,6 +60,8 @@
 		#size-cells = <0>;
 
 		port@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
 			reg = <0>;
 			mipi_dsi_in: endpoint@0 {
 				reg = <0>;
