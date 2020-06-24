@@ -17,6 +17,7 @@
 #include <sound/sof/xtensa.h>
 #include <linux/firmware/imx/dsp.h>
 #include <linux/clk.h>
+#include <linux/bits.h>
 
 #include "../ops.h"
 #include "../../fsl/fsl_dsp_audiomix.h"
@@ -38,6 +39,11 @@
 #define MBOX_OFFSET	0x800000
 #define MBOX_SIZE	0x1000
 
+#define IMX8M_DAP_DEBUG		0x28800000
+#define IMX8M_DAP_DEBUG_SIZE	(64 * 1024)
+#define IMX8M_DAP_PWRCTL	(0x4000 + 0x3020)
+#define IMX8M_PWRCTL_CORERESET		BIT(16)
+
 #define IMX8M_DSP_CLK_NUM	5
 static const char *imx8m_dsp_clks[IMX8M_DSP_CLK_NUM] = {
 	"ocram",
@@ -50,6 +56,7 @@ static const char *imx8m_dsp_clks[IMX8M_DSP_CLK_NUM] = {
 struct imx8m_priv {
 	struct device *dev;
 	struct snd_sof_dev *sdev;
+	bool suspended;
 
 	struct imx_audiomix_dsp_data *audiomix;
 
@@ -63,6 +70,7 @@ struct imx8m_priv {
 	struct device_link **link;
 
 	struct clk *clks[IMX8M_DSP_CLK_NUM];
+	void __iomem *dap;
 };
 
 int imx8m_dsp_configure_audmix(struct imx8m_priv *dsp_priv)
@@ -175,6 +183,29 @@ static int imx8m_run(struct snd_sof_dev *sdev)
 	return 0;
 }
 
+static int imx8m_reset(struct snd_sof_dev *sdev) {
+
+	struct imx8m_priv *dsp_priv = (struct imx8m_priv *)sdev->private;
+	u32 pwrctl;
+
+	/* put DSP into reset and stall */
+	pwrctl = readl(dsp_priv->dap + IMX8M_DAP_PWRCTL);
+	pwrctl |= IMX8M_PWRCTL_CORERESET;
+	writel(pwrctl, dsp_priv->dap + IMX8M_DAP_PWRCTL);
+
+	/* keep reset asserted for 10 cycles */
+	usleep_range(1, 2);
+
+	imx_audiomix_dsp_stall(dsp_priv->audiomix);
+
+	/* take the DSP out of reset and keep stalled for FW loading */
+	pwrctl = readl(dsp_priv->dap + IMX8M_DAP_PWRCTL);
+	pwrctl &= ~IMX8M_PWRCTL_CORERESET;
+	writel(pwrctl, dsp_priv->dap + IMX8M_DAP_PWRCTL);
+
+	return 0;
+}
+
 static int imx8m_probe(struct snd_sof_dev *sdev)
 {
 	struct platform_device *pdev =
@@ -268,6 +299,12 @@ done_pm:
 		dev_err(sdev->dev, "error: failed to get DSP base at idx 0\n");
 		ret = -EINVAL;
 		goto exit_pdev_unregister;
+	}
+
+	priv->dap = devm_ioremap(sdev->dev, IMX8M_DAP_DEBUG, IMX8M_DAP_DEBUG_SIZE);
+	if (!priv->dap ) {
+		dev_err(sdev->dev, "error: failed to map DAP debug memory area");
+		return -ENODEV;
 	}
 
 	sdev->bar[SOF_FW_BLK_TYPE_IRAM] = devm_ioremap(sdev->dev, base, size);
@@ -371,6 +408,68 @@ static struct snd_soc_dai_driver imx8m_dai[] = {
 },
 };
 
+int imx8m_resume(struct snd_sof_dev *sdev)
+{
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
+	int i;
+
+	for (i = 0; i < IMX8M_DSP_CLK_NUM; i++)
+		clk_prepare_enable(priv->clks[i]);
+
+	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
+		imx_dsp_request_channel(priv->dsp_ipc, i);
+
+	return 0;
+}
+
+int imx8m_suspend(struct snd_sof_dev *sdev)
+{
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
+	int i;
+
+	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
+		imx_dsp_free_channel(priv->dsp_ipc, i);
+
+	for (i = 0; i < IMX8M_DSP_CLK_NUM; i++)
+		clk_disable_unprepare(priv->clks[i]);
+
+	return 0;
+}
+
+static int imx8m_dsp_runtime_resume(struct snd_sof_dev *sdev)
+{
+	return imx8m_resume(sdev);
+}
+
+static int imx8m_dsp_runtime_suspend(struct snd_sof_dev *sdev)
+{
+	return imx8m_suspend(sdev);
+}
+
+static int imx8m_dsp_resume(struct snd_sof_dev *sdev)
+{
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
+
+	if (priv->suspended) {
+		imx8m_resume(sdev);
+		priv->suspended = false;
+	}
+
+	return 0;
+}
+
+static int imx8m_dsp_suspend(struct snd_sof_dev *sdev)
+{
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
+
+	if (!priv->suspended) {
+		imx8m_suspend(sdev);
+		priv->suspended = true;
+	}
+
+	return 0;
+}
+
 /* i.MX8 ops */
 struct snd_sof_dsp_ops sof_imx8m_ops = {
 	/* probe and remove */
@@ -378,6 +477,7 @@ struct snd_sof_dsp_ops sof_imx8m_ops = {
 	.remove		= imx8m_remove,
 	/* DSP core boot */
 	.run		= imx8m_run,
+	.reset		= imx8m_reset,
 
 	/* Block IO */
 	.block_read	= sof_block_read,
@@ -401,6 +501,12 @@ struct snd_sof_dsp_ops sof_imx8m_ops = {
 	/* DAI drivers */
 	.drv = imx8m_dai,
 	.num_drv = 1, /* we have only 1 ESAI interface on i.MX8 */
+
+	.suspend	= imx8m_dsp_suspend,
+	.resume		= imx8m_dsp_resume,
+
+	.runtime_suspend = imx8m_dsp_runtime_suspend,
+	.runtime_resume = imx8m_dsp_runtime_resume,
 
 	.hw_info = SNDRV_PCM_INFO_MMAP |
 		SNDRV_PCM_INFO_MMAP_VALID |

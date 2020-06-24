@@ -170,7 +170,7 @@ static int imx8qm_acm_clk_probe(struct platform_device *pdev)
 
 
 	clks[IMX_ADMA_ACM_AUD_CLK0_SEL] = imx_dev_clk_mux(dev, "acm_aud_clk0_sel", base+0x000000, 0, 5, aud_clk_sels, ARRAY_SIZE(aud_clk_sels));
-	clks[IMX_ADMA_ACM_AUD_CLK1_CLK]	= imx_dev_clk_mux(dev, "acm_aud_clk1_sel", base+0x010000, 0, 5, aud_clk_sels, ARRAY_SIZE(aud_clk_sels));
+	clks[IMX_ADMA_ACM_AUD_CLK1_SEL]	= imx_dev_clk_mux(dev, "acm_aud_clk1_sel", base+0x010000, 0, 5, aud_clk_sels, ARRAY_SIZE(aud_clk_sels));
 
 	clks[IMX_ADMA_ACM_MCLKOUT0_SEL]	= imx_dev_clk_mux(dev, "acm_mclkout0_sel", base+0x020000, 0, 3, mclk_out_sels, ARRAY_SIZE(mclk_out_sels));
 	clks[IMX_ADMA_ACM_MCLKOUT1_SEL]	= imx_dev_clk_mux(dev, "acm_mclkout1_sel", base+0x030000, 0, 3, mclk_out_sels, ARRAY_SIZE(mclk_out_sels));
@@ -296,3 +296,4 @@ static int __init imx8qm_acm_init(void)
 	return platform_driver_register(&imx8qm_acm_clk_driver);
 }
 fs_initcall(imx8qm_acm_init);
+MODULE_LICENSE("GPL v2");

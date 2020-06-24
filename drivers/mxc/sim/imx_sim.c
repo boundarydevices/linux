@@ -1590,7 +1590,11 @@ copy_data:
 			break;
 		}
 
-		sim_check_baud_rate(&sim->baud_rate);
+		ret = sim_check_baud_rate(&sim->baud_rate);
+		if (ret) {
+			pr_err("Invalid baud rate value\n");
+			errval = ret;
+		}
 
 		break;
 	case SIM_IOCTL_WAIT:
@@ -1638,8 +1642,11 @@ static int sim_open(struct inode *inode, struct file *file)
 		return errval;
 	}
 
-	if (!sim->open_cnt)
-		clk_prepare_enable(sim->clk);
+	if (!sim->open_cnt) {
+		errval = clk_prepare_enable(sim->clk);
+		if (errval)
+			return errval;
+	}
 
 	sim->open_cnt = 1;
 
@@ -1821,13 +1828,17 @@ static int sim_suspend(struct platform_device *pdev, pm_message_t state)
 static int sim_resume(struct platform_device *pdev)
 {
 	struct sim_t *sim = platform_get_drvdata(pdev);
+	int err = 0;
 
-	if (sim->open_cnt)
-		clk_prepare_enable(sim->clk);
+	if (sim->open_cnt) {
+		err = clk_prepare_enable(sim->clk);
+		if (err)
+			return err;
+	}
 
 	pinctrl_pm_select_default_state(&pdev->dev);
 
-	return 0;
+	return err;
 }
 #else
 #define sim_suspend NULL

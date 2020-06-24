@@ -6,6 +6,7 @@
 #include <linux/clk-provider.h>
 #include <linux/err.h>
 #include <linux/io.h>
+#include <linux/module.h>
 #include <linux/slab.h>
 #include "clk.h"
 
@@ -87,7 +88,7 @@ struct clk *imx_dev_clk_gate_shared(struct device *dev, const char *name,
 
 	init.name = name;
 	init.ops = &clk_gate_shared_ops;
-	init.flags = CLK_OPS_PARENT_ENABLE;
+	init.flags = CLK_OPS_PARENT_ENABLE | CLK_SET_RATE_PARENT;
 	init.parent_names = parent ? &parent : NULL;
 	init.num_parents = parent ? 1 : 0;
 
@@ -104,3 +105,5 @@ struct clk *imx_dev_clk_gate_shared(struct device *dev, const char *name,
 
 	return clk;
 }
+EXPORT_SYMBOL_GPL(imx_dev_clk_gate_shared);
+MODULE_LICENSE("GPL v2");

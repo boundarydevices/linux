@@ -51,6 +51,8 @@ static void cdns3_ep0_run_transfer(struct cdns3_device *priv_dev,
 	writel(EP_TRADDR_TRADDR(priv_ep->trb_pool_dma), &regs->ep_traddr);
 	trace_cdns3_doorbell_ep0(priv_dev->ep0_data_dir ? "ep0in" : "ep0out",
 				 readl(&regs->ep_traddr));
+	/* Resume controller before arming transfer. */
+	__cdns3_gadget_wakeup(priv_dev);
 
 	/* TRB should be prepared before starting transfer */
 	writel(EP_CMD_DRDY, &regs->ep_cmd);
@@ -315,7 +317,8 @@ static int cdns3_ep0_feature_handle_device(struct cdns3_device *priv_dev,
 		if (!set || (tmode & 0xff) != 0)
 			return -EINVAL;
 
-		switch (tmode >> 8) {
+		tmode >>= 8;
+		switch (tmode) {
 		case TEST_J:
 		case TEST_K:
 		case TEST_SE0_NAK:
