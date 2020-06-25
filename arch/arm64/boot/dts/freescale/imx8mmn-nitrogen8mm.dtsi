@@ -872,17 +872,6 @@
 		};
 	};
 
-	ts_ft5x06: touchscreen@38 {
-		compatible = "edt,ft5x06-ts";
-		interrupts-extended = GPIRQ_TS_FT5X06;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_ft5x06>;
-		reg = <0x38>;
-		reset-gpios = GP_TS_FT5X06_RESET;
-		wakeup-gpios = GP_TS_FT5X06_WAKE;
-		status = "disabled";
-	};
-
 	ts_ft7250: touchscreen_ft7250@38 {
 		compatible = "edt,ft7250";
 		interrupts-extended = GPIRQ_TS_FT7250;
@@ -891,6 +880,17 @@
 		reg = <0x38>;
 		reset-gpios = GP_TS_FT7250_RESET;
 		wakeup-gpios = GP_TS_FT7250_WAKE;
+		status = "disabled";
+	};
+
+	ts_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = GPIRQ_TS_FT5X06;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_ft5x06>;
+		reg = <0x38>;
+		reset-gpios = GP_TS_FT5X06_RESET;
+		wakeup-gpios = GP_TS_FT5X06_WAKE;
 		status = "disabled";
 	};
 
