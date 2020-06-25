@@ -1,0 +1,135 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2020 Boundary Devices
+ */
+
+#include "imx8mq-nitrogen8m.dts"
+
+/ {
+	model = "Boundary Devices i.MX8MQ Nitrogen8M TC358840";
+	compatible = "boundary,imx8mq-nitrogen8m-tc358840", "fsl,imx8mq";
+
+	clk48m: clk48m {
+		compatible = "fixed-clock";
+		clock-output-names = "clk48m";
+		clock-frequency = <48000000>;
+		#clock-cells = <0>;
+	};
+
+	reg_tc358840: regulator-tc358840 {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_tc358840>;
+		regulator-name = "tc358840";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio3 3 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+};
+
+&iomuxc {
+	/delete-node/ i2c2-ov5640-mipigrp;
+	/delete-node/ i2c3-ov5640-mipigrp;
+
+	pinctrl_i2c3_tc358840_mipi: i2c3-tc358840-mipigrp {
+		fsl,pins = <
+#define GPIRQ_CSI_TC358840	<&gpio3 5 IRQ_TYPE_LEVEL_HIGH>
+			MX8MQ_IOMUXC_NAND_CLE_GPIO3_IO5			0x45
+#define GP_CSI2_TC358840_RESET	<&gpio3 2 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_CE1_B_GPIO3_IO2		0x05
+		>;
+	};
+
+	pinctrl_reg_tc358840: reg-tc358840grp {
+		fsl,pins = <
+			MX8MQ_IOMUXC_NAND_CE2_B_GPIO3_IO3		0x45
+		>;
+	};
+};
+
+&i2c2 {
+	/delete-node/ ov5640-mipi1@3c;
+};
+
+&i2c3 {
+	/delete-node/ ov5640-mipi2@3c;
+
+	tc358840-mipi@1f {
+		compatible = "toshiba,tc358840";
+		reg = <0x1f>;
+		clocks = <&clk48m>;
+		clock-names = "refclk";
+		interrupts-extended = GPIRQ_CSI_TC358840;
+		reset-gpios = GP_CSI2_TC358840_RESET;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_tc358840_mipi>;
+		status = "okay";
+		/* undocumented properties */
+		ddc5v_delay = <1>; /* 50ms */
+		csi_port = <1>; /* Single-link */
+		/* PLL = 600Mbps to get up to 1080p@60fps */
+		pll_prd = /bits/ 16 <7>;
+		pll_frs = /bits/ 16 <0>;
+		pll_fbd = /bits/ 16 <99>;
+		/* Values from Toshiba spreadsheet */
+		lineinitcnt = <0x00001388>;
+		lptxtimecnt = <0x00000005>;
+		tclk_headercnt = <0x00230205>;
+		tclk_trailcnt = <0x000C0007>;
+		ths_headercnt = <0x00120006>;
+		twakeup = <0x00005A00>;
+		tclk_postcnt = <0x0000000E>;
+		ths_trailcnt = <0x00080008>;
+		hstxvregcnt = <0x00000020>;
+
+		port@0 {
+			tc358840_mipi1_ep: endpoint {
+				remote-endpoint = <&mipi1_tc358840_ep>;
+				data-lanes = <1 2 3 4>;
+				clock-lanes = <0>;
+				clock-noncontinuous;
+				link-frequencies = /bits/ 64 <297000000>;
+			};
+		};
+
+		port@1 {
+			tc358840_mipi2_ep: endpoint {
+				remote-endpoint = <&mipi2_tc358840_ep>;
+				data-lanes = <1 2 3 4>;
+				clock-lanes = <0>;
+				clock-noncontinuous;
+				link-frequencies = /bits/ 64 <297000000>;
+			};
+		};
+	};
+};
+
+&mipi_csi_1 {
+	port {
+		/delete-node/ endpoint@1;
+
+		mipi1_tc358840_ep: endpoint@1 {
+			remote-endpoint = <&tc358840_mipi1_ep>;
+			data-lanes = <1 2 3 4>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+	};
+};
+
+&mipi_csi_2 {
+	port {
+		/delete-node/ endpoint@1;
+
+		mipi2_tc358840_ep: endpoint@1 {
+			remote-endpoint = <&tc358840_mipi2_ep>;
+			data-lanes = <1 2 3 4>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+	};
+};
