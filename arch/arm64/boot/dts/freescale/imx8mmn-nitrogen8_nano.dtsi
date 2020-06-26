@@ -571,10 +571,10 @@
 	};
 
 	clocks {
-		clk16m: clk16m {
+		clk40m: clk40m {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
-			clock-frequency = <16000000>;
+			clock-frequency = <40000000>;
 		};
 	};
 
@@ -705,15 +705,15 @@
 	#size-cells = <0>;
 
 	can0: can@0 {
-		clocks = <&clk16m>;
-		compatible = "microchip,mcp2515";
+		clocks = <&clk40m>;
+		compatible = "microchip,mcp2518fd";
 		err-gpios = GPIRQ_CAN_ERR;
 		interrupts-extended = GPIRQ_MCP2515T;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ecspi2_mcp2515t>;
 		reg = <0>;
 		reset-gpios = GP_MCP2515T_RESET;
-		spi-max-frequency = <10000000>;
+		spi-max-frequency = <20000000>;
 		xceiver-gpios = GP_CAN_EN;
 	};
 };
