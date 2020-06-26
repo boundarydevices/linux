@@ -44,7 +44,7 @@
 
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
-#define GP_ECSPI2_MCP2515	<&gpio5 13 GPIO_ACTIVE_LOW>
+#define GP_ECSPI2_MCP2518FD	<&gpio5 13 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_ECSPI2_SS0_GPIO5_IO13, 0x159)
 			MX8MMN(IOMUXC_ECSPI2_MISO_ECSPI2_MISO, 0x19)
 			MX8MMN(IOMUXC_ECSPI2_SCLK_ECSPI2_SCLK, 0x19)
@@ -52,12 +52,12 @@
 		>;
 	};
 
-	pinctrl_ecspi2_mcp2515t: ecspi2-mcp2515tgrp {
+	pinctrl_ecspi2_mcp2518fd: ecspi2-mcp2518fdgrp {
 		fsl,pins = <
-			/* MCP2515T - can controller */
-#define GPIRQ_MCP2515T	<&gpio5 4 IRQ_TYPE_LEVEL_LOW>
+			/* MCP2518FD - can controller */
+#define GPIRQ_MCP2518FD	<&gpio5 4 IRQ_TYPE_LEVEL_LOW>
 			MX8MMN(IOMUXC_SPDIF_RX_GPIO5_IO4, 0x1c0)
-#define GP_MCP2515T_RESET <&gpio1 3 GPIO_ACTIVE_LOW>
+#define GP_MCP2518FD_RESET <&gpio1 3 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, 0x100)
 
 #define GPIRQ_CAN_ERR	<&gpio4 29 IRQ_TYPE_LEVEL_LOW>
@@ -699,7 +699,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi2>;
 	fsl,spi-num-chipselects = <1>;
-	cs-gpios = GP_ECSPI2_MCP2515;
+	cs-gpios = GP_ECSPI2_MCP2518FD;
 	status = "okay";
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -708,11 +708,11 @@
 		clocks = <&clk40m>;
 		compatible = "microchip,mcp2518fd";
 		err-gpios = GPIRQ_CAN_ERR;
-		interrupts-extended = GPIRQ_MCP2515T;
+		interrupts-extended = GPIRQ_MCP2518FD;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ecspi2_mcp2515t>;
+		pinctrl-0 = <&pinctrl_ecspi2_mcp2518fd>;
 		reg = <0>;
-		reset-gpios = GP_MCP2515T_RESET;
+		reset-gpios = GP_MCP2518FD_RESET;
 		spi-max-frequency = <20000000>;
 		xceiver-gpios = GP_CAN_EN;
 	};
