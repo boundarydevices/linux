@@ -374,7 +374,7 @@
 		fsl,pins = <
 			MX8MMN(IOMUXC_UART4_RXD_UART4_DCE_RX, 0x140)
 			MX8MMN(IOMUXC_UART4_TXD_UART4_DCE_TX, 0x140)
-#define GP_UART4_TXEN		<&gpio1 11 GPIO_ACTIVE_HIGH>
+#define GP_UART4_TX_EN		<&gpio1 11 GPIO_ACTIVE_HIGH>
 			MX8MMN(IOMUXC_GPIO1_IO11_GPIO1_IO11, 0x100)
 		>;
 	};
@@ -1228,11 +1228,23 @@
 };
 
 &uart4 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart4>;
 	assigned-clocks = <&clk IMX8MMN(CLK_UART4)>;
 	assigned-clock-parents = <&clk IMX8MMN(CLK_24M)>;
+	control-gpios = GP_UART4_TX_EN;
+	off_levels = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart4>;
+	rs232_levels = <0>;
+	rs232_txen_mask = <0>;
+	rs232_txen_levels = <0>;
+	rs485_levels = <0>;
+	rs485_txen_mask = <1>;
+	rs485_txen_levels = <1>;
+	rs485-mode = <1>;	/* 1 to enable */
+	rxact_mask = <0>;
+	rxact_levels = <0>;
 	status = "okay";
+	uart-has-rs485-half-duplex;
 };
 
 &usbotg1 {
