@@ -7,6 +7,7 @@
  * Copyright 2015-2020 Cisco Systems, Inc. and/or its affiliates. All rights reserved.
  */
 
+#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/hdmi.h>
 #include <linux/interrupt.h>
@@ -2842,9 +2843,18 @@ static bool tc358840_parse_dt(struct tc358840_platform_data *pdata,
 	struct device_node *node = client->dev.of_node;
 	struct v4l2_fwnode_endpoint endpoint = { .bus_type = 0 };
 	struct device_node *ep;
+	struct clk *refclk;
 	int ret;
 
 	v4l_dbg(1, debug, client, "Device Tree Parameters:\n");
+
+	refclk = devm_clk_get(&client->dev, "refclk");
+	if (IS_ERR(refclk)) {
+		if (PTR_ERR(refclk) != -EPROBE_DEFER)
+			dev_err(&client->dev, "failed to get refclk: %ld\n",
+				PTR_ERR(refclk));
+		return PTR_ERR(refclk);
+	}
 
 	pdata->reset_gpio = of_get_named_gpio(node, "reset-gpios", 0);
 	if (pdata->reset_gpio == 0)
@@ -2860,8 +2870,7 @@ static bool tc358840_parse_dt(struct tc358840_platform_data *pdata,
 		goto put_node;
 	pdata->endpoint = endpoint;
 
-	if (of_property_read_u32(node, "refclk_hz", &pdata->refclk_hz) ||
-	    of_property_read_u32(node, "ddc5v_delay", &pdata->ddc5v_delay) ||
+	if (of_property_read_u32(node, "ddc5v_delay", &pdata->ddc5v_delay) ||
 	    of_property_read_u32(node, "csi_port", &pdata->csi_port) ||
 	    of_property_read_u32(node, "lineinitcnt", &pdata->lineinitcnt) ||
 	    of_property_read_u32(node, "lptxtimecnt", &pdata->lptxtimecnt) ||
@@ -2877,6 +2886,13 @@ static bool tc358840_parse_dt(struct tc358840_platform_data *pdata,
 	    of_property_read_u16(node, "pll_frs", &pdata->pll_frs) ||
 	    of_property_read_u16(node, "pll_fbd", &pdata->pll_fbd))
 		goto free_endpoint;
+
+	ret = clk_prepare_enable(refclk);
+	if (ret) {
+		dev_err(&client->dev, "Failed! to enable clock\n");
+		goto free_endpoint;
+	}
+	pdata->refclk_hz = clk_get_rate(refclk);
 
 	if (pdata->ddc5v_delay > DDC5V_DELAY_MAX)
 		pdata->ddc5v_delay = DDC5V_DELAY_MAX;
