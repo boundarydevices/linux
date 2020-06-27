@@ -139,19 +139,25 @@ static inline int mcp25xxfd_vdd_disable(const struct mcp25xxfd_priv *priv)
 static inline int
 mcp25xxfd_transceiver_enable(const struct mcp25xxfd_priv *priv)
 {
-	if (!priv->reg_xceiver)
-		return 0;
+	int ret = 0;
 
-	return regulator_enable(priv->reg_xceiver);
+	if (priv->reg_xceiver)
+		ret = regulator_enable(priv->reg_xceiver);
+	if (priv->gpiod_xceiver)
+		gpiod_set_value_cansleep(priv->gpiod_xceiver, 1);
+	return ret;
 }
 
 static inline int
 mcp25xxfd_transceiver_disable(const struct mcp25xxfd_priv *priv)
 {
-	if (!priv->reg_xceiver)
-		return 0;
+	int ret = 0;
 
-	return regulator_disable(priv->reg_xceiver);
+	if (priv->gpiod_xceiver)
+		gpiod_set_value_cansleep(priv->gpiod_xceiver, 0);
+	if (priv->reg_xceiver)
+		ret = regulator_disable(priv->reg_xceiver);
+	return ret;
 }
 
 static int mcp25xxfd_clks_and_vdd_enable(const struct mcp25xxfd_priv *priv)
@@ -2141,6 +2147,7 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 	struct net_device *ndev;
 	struct mcp25xxfd_priv *priv;
 	struct gpio_desc *rx_int;
+	struct gpio_desc *gpiod_xceiver;
 	struct regulator *reg_vdd, *reg_xceiver;
 	struct clk *clk;
 	u32 freq;
@@ -2151,6 +2158,10 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 		return -EPROBE_DEFER;
 	else if (IS_ERR(rx_int))
 		return PTR_ERR(rx_int);
+
+	gpiod_xceiver = devm_gpiod_get_optional(&spi->dev, "xceiver", GPIOD_OUT_LOW);
+	if (IS_ERR(gpiod_xceiver))
+		return PTR_ERR(gpiod_xceiver);
 
 	reg_vdd = devm_regulator_get_optional(&spi->dev, "vdd");
 	if (PTR_ERR(reg_vdd) == -EPROBE_DEFER)
@@ -2215,6 +2226,7 @@ static int mcp25xxfd_probe(struct spi_device *spi)
 	priv->clk = clk;
 	priv->reg_vdd = reg_vdd;
 	priv->reg_xceiver = reg_xceiver;
+	priv->gpiod_xceiver = gpiod_xceiver;
 	atomic_set(&priv->cnt, 0);
 
 	match = device_get_match_data(&spi->dev);
