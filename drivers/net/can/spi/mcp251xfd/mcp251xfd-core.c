@@ -156,19 +156,25 @@ static inline int mcp251xfd_vdd_disable(const struct mcp251xfd_priv *priv)
 static inline int
 mcp251xfd_transceiver_enable(const struct mcp251xfd_priv *priv)
 {
-	if (!priv->reg_xceiver)
-		return 0;
+	int ret = 0;
 
-	return regulator_enable(priv->reg_xceiver);
+	if (priv->reg_xceiver)
+		ret = regulator_enable(priv->reg_xceiver);
+	if (priv->gpiod_xceiver)
+		gpiod_set_value_cansleep(priv->gpiod_xceiver, 1);
+	return ret;
 }
 
 static inline int
 mcp251xfd_transceiver_disable(const struct mcp251xfd_priv *priv)
 {
-	if (!priv->reg_xceiver)
-		return 0;
+	int ret = 0;
 
-	return regulator_disable(priv->reg_xceiver);
+	if (priv->gpiod_xceiver)
+		gpiod_set_value_cansleep(priv->gpiod_xceiver, 0);
+	if (priv->reg_xceiver)
+		ret = regulator_disable(priv->reg_xceiver);
+	return ret;
 }
 
 static int mcp251xfd_clks_and_vdd_enable(const struct mcp251xfd_priv *priv)
@@ -1987,6 +1993,7 @@ static int mcp251xfd_probe(struct spi_device *spi)
 	struct net_device *ndev;
 	struct mcp251xfd_priv *priv;
 	struct gpio_desc *rx_int;
+	struct gpio_desc *gpiod_xceiver;
 	struct regulator *reg_vdd, *reg_xceiver;
 	struct clk *clk;
 	bool pll_enable = false;
@@ -2002,6 +2009,10 @@ static int mcp251xfd_probe(struct spi_device *spi)
 	if (IS_ERR(rx_int))
 		return dev_err_probe(&spi->dev, PTR_ERR(rx_int),
 				     "Failed to get RX-INT!\n");
+
+	gpiod_xceiver = devm_gpiod_get_optional(&spi->dev, "xceiver", GPIOD_OUT_LOW);
+	if (IS_ERR(gpiod_xceiver))
+		return PTR_ERR(gpiod_xceiver);
 
 	reg_vdd = devm_regulator_get_optional(&spi->dev, "vdd");
 	if (PTR_ERR(reg_vdd) == -ENODEV)
@@ -2075,6 +2086,7 @@ static int mcp251xfd_probe(struct spi_device *spi)
 	priv->pll_enable = pll_enable;
 	priv->reg_vdd = reg_vdd;
 	priv->reg_xceiver = reg_xceiver;
+	priv->gpiod_xceiver = gpiod_xceiver;
 
 	match = device_get_match_data(&spi->dev);
 	if (match)
