@@ -647,6 +647,7 @@ struct mcp251xfd_priv {
 	struct delayed_work timestamp;
 
 	struct gpio_desc *rx_int;
+	struct gpio_desc *gpiod_xceiver;
 	struct clk *clk;
 	bool pll_enable;
 	struct regulator *reg_vdd;
