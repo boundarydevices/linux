@@ -969,7 +969,7 @@
 &i2c2a {
 	clock-frequency = <100000>;
 
-	lt8912 {
+	lt8912@48 {
 		compatible = "lontium,lt8912" ;
 		ddc-i2c-bus = <&i2c2b>;
 		reg = <0x48> ;
