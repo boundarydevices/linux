@@ -590,6 +590,7 @@ struct mcp251xfd_priv {
 	struct mcp251xfd_regs_status regs_status;
 
 	struct gpio_desc *rx_int;
+	struct gpio_desc *gpiod_xceiver;
 	struct clk *clk;
 	struct regulator *reg_vdd;
 	struct regulator *reg_xceiver;
