@@ -611,6 +611,7 @@ struct mcp25xxfd_priv {
 	struct mcp25xxfd_crc_buf crc_buf;
 
 	struct gpio_desc *rx_int;
+	struct gpio_desc *gpiod_xceiver;
 	struct clk *clk;
 	struct regulator *reg_vdd;
 	struct regulator *reg_xceiver;
