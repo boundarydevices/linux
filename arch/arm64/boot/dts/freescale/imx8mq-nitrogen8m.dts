@@ -1191,7 +1191,7 @@
 &i2c4a {
 	clock-frequency = <100000>;
 
-	lt8912 {
+	lt8912@48 {
 		compatible = "lontium,lt8912" ;
 		ddc-i2c-bus = <&i2c4b>;
 		reg = <0x48> ;
