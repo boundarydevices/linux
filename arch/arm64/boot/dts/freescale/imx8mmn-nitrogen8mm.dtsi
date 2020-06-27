@@ -934,7 +934,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			lt8912 {
+			lt8912@48 {
 				compatible = "lontium,lt8912" ;
 				ddc-i2c-bus = <&ddc_i2c_bus>;
 				reg = <0x48> ;
