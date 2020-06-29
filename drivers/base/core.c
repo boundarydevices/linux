@@ -517,7 +517,7 @@ static void device_link_wait_for_optional_supplier(struct device *consumer)
  * The caller of device_link_wait_for_supplier() is expected to call this once
  * it's aware of potential suppliers becoming available.
  */
-void device_link_add_missing_supplier_links(void)
+static void device_link_add_missing_supplier_links(void)
 {
 	struct device *dev, *tmp;
 

@@ -506,9 +506,6 @@ int of_platform_default_populate(struct device_node *root,
 }
 EXPORT_SYMBOL_GPL(of_platform_default_populate);
 
-#ifdef CONFIG_VEHICLE_CORE
-bool of_devlink_defer = false;
-#endif
 #ifndef CONFIG_PPC
 static const struct of_device_id reserved_mem_matches[] = {
 	{ .compatible = "qcom,rmtfs-mem" },
@@ -540,15 +537,7 @@ static int __init of_platform_default_populate_init(void)
 	}
 
 	/* Populate everything else. */
-#ifdef CONFIG_VEHICLE_CORE
-	of_devlink_defer = true;
-#endif
 	of_platform_default_populate(NULL, NULL, NULL);
-#ifdef CONFIG_VEHICLE_CORE
-	of_devlink_defer = false;
-	device_link_add_missing_supplier_links();
-	driver_deferred_probe_trigger();
-#endif
 
 	return 0;
 }

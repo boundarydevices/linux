@@ -132,11 +132,7 @@ void driver_deferred_probe_del(struct device *dev)
 	mutex_unlock(&deferred_probe_mutex);
 }
 
-#ifdef CONFIG_VEHICLE_CORE
-static bool driver_deferred_probe_enable = true;
-#else
 static bool driver_deferred_probe_enable = false;
-#endif
 /**
  * driver_deferred_probe_trigger() - Kick off re-probing deferred devices
  *
@@ -155,7 +151,7 @@ static bool driver_deferred_probe_enable = false;
  * changes in the midst of a probe, then deferred processing should be triggered
  * again.
  */
-void driver_deferred_probe_trigger(void)
+static void driver_deferred_probe_trigger(void)
 {
 	if (!driver_deferred_probe_enable)
 		return;
