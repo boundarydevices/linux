@@ -12,7 +12,7 @@ config VIDEOBUF2_MEMOPS
 	select FRAME_VECTOR
 
 config VIDEOBUF2_DMA_CONTIG
-	tristate
+	tristate "video dma buffer interface"
 	select VIDEOBUF2_CORE
 	select VIDEOBUF2_MEMOPS
 	select DMA_SHARED_BUFFER
