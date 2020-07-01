@@ -6,6 +6,7 @@
 //
 // Hardware interface for audio DSP on i.MX8
 
+#include <linux/clk.h>
 #include <linux/firmware.h>
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
@@ -40,6 +41,22 @@
 #define MBOX_OFFSET	0x800000
 #define MBOX_SIZE	0x1000
 
+#define IMX8_DSP_CLK_NUM	3
+static const char *imx8_dsp_clks_names[IMX8_DSP_CLK_NUM] =
+{
+	/* DSP clocks */
+	"ipg", "ocram", "core",
+};
+
+#define IMX8_DAI_CLK_NUM	9
+static const char *imx8_dai_clks_names[IMX8_DAI_CLK_NUM] =
+{
+	/* ESAI0 clocks */
+	"esai0_core", "esai0_extal", "esai0_fsys", "esai0_spba",
+	/* SAI1 clocks */
+	"sai1_bus", "sai1_mclk0", "sai1_mclk1", "sai1_mclk2", "sai1_mclk3",
+};
+
 struct imx8_priv {
 	struct device *dev;
 	struct snd_sof_dev *sdev;
@@ -56,7 +73,74 @@ struct imx8_priv {
 	struct device **pd_dev;
 	struct device_link **link;
 
+	struct clk *dsp_clks[IMX8_DSP_CLK_NUM];
+	struct clk *dai_clks[IMX8_DAI_CLK_NUM];
 };
+
+static int imx8_init_clocks(struct snd_sof_dev *sdev)
+{
+	int i;
+	struct imx8_priv *priv = (struct imx8_priv *)sdev->pdata->hw_pdata;
+
+	for (i = 0; i < IMX8_DSP_CLK_NUM; i++) {
+		priv->dsp_clks[i] = devm_clk_get(priv->dev, imx8_dsp_clks_names[i]);
+		if (IS_ERR(priv->dsp_clks[i]))
+		    return PTR_ERR(priv->dsp_clks[i]);
+	}
+
+	for (i = 0; i < IMX8_DAI_CLK_NUM; i++)
+		priv->dai_clks[i] = devm_clk_get_optional(priv->dev, imx8_dai_clks_names[i]);
+
+	return 0;
+}
+
+static int imx8_prepare_clocks(struct snd_sof_dev *sdev)
+{
+	int i, j, ret;
+	struct imx8_priv *priv = (struct imx8_priv *)sdev->pdata->hw_pdata;
+
+	for (i = 0; i < IMX8_DSP_CLK_NUM; i++) {
+		ret = clk_prepare_enable(priv->dsp_clks[i]);
+		if (ret < 0) {
+			dev_err(priv->dev, "Failed to enable clk %s\n",
+				imx8_dsp_clks_names[i]);
+			goto err_dsp_clks;
+		}
+	}
+
+	for (j = 0; j < IMX8_DAI_CLK_NUM; j++) {
+		ret = clk_prepare_enable(priv->dai_clks[j]);
+		if (ret < 0) {
+			dev_err(priv->dev, "Failed to enable clk %s\n",
+				imx8_dai_clks_names[j]);
+			goto err_dai_clks;
+		}
+	}
+
+	return 0;
+
+err_dai_clks:
+	while (--j >= 0)
+		clk_disable_unprepare(priv->dai_clks[j]);
+
+err_dsp_clks:
+	while (--i >= 0)
+		clk_disable_unprepare(priv->dsp_clks[i]);
+
+	return ret;
+}
+
+static void imx8_disable_clocks(struct snd_sof_dev *sdev)
+{
+	int i;
+	struct imx8_priv *priv = (struct imx8_priv *)sdev->pdata->hw_pdata;
+
+	for (i = 0; i < IMX8_DSP_CLK_NUM; i++)
+		clk_disable_unprepare(priv->dsp_clks[i]);
+
+	for (i = 0; i < IMX8_DAI_CLK_NUM; i++)
+		clk_disable_unprepare(priv->dai_clks[i]);
+}
 
 static void imx8_get_reply(struct snd_sof_dev *sdev)
 {
@@ -333,6 +417,9 @@ static int imx8_probe(struct snd_sof_dev *sdev)
 
 	/* set default mailbox offset for FW ready message */
 	sdev->dsp_box.offset = MBOX_OFFSET;
+
+	imx8_init_clocks(sdev);
+	imx8_prepare_clocks(sdev);
 
 	return 0;
 
