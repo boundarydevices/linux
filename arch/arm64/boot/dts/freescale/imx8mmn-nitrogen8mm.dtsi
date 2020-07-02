@@ -21,6 +21,9 @@
 #include "panel-com50h5n03ulc.dtsi"
 
 &iomuxc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hog>;
+
 	pinctrl_bt_rfkill: bt-rfkillgrp {
 		fsl,pins = <
 #define GP_BT_RFKILL_RESET	<&gpio3 14 GPIO_ACTIVE_LOW>
@@ -73,6 +76,13 @@
 			MX8MMN(IOMUXC_NAND_DATA01_QSPI_A_DATA1, 0x82)
 			MX8MMN(IOMUXC_NAND_DATA02_QSPI_A_DATA2, 0x82)
 			MX8MMN(IOMUXC_NAND_DATA03_QSPI_A_DATA3, 0x82)
+		>;
+	};
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, 0x09)
+			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x09)
 		>;
 	};
 
