@@ -144,6 +144,7 @@ extern int fscrypt_d_revalidate(struct dentry *dentry, unsigned int flags);
 extern int fscrypt_ioctl_set_policy(struct file *, const void __user *);
 extern int fscrypt_ioctl_get_policy(struct file *, void __user *);
 extern int fscrypt_ioctl_get_policy_ex(struct file *, void __user *);
+extern int fscrypt_ioctl_get_nonce(struct file *filp, void __user *arg);
 extern int fscrypt_has_permitted_context(struct inode *, struct inode *);
 extern int fscrypt_inherit_context(struct inode *, struct inode *,
 					void *, bool);
@@ -303,6 +304,11 @@ static inline int fscrypt_ioctl_get_policy(struct file *filp, void __user *arg)
 
 static inline int fscrypt_ioctl_get_policy_ex(struct file *filp,
 					      void __user *arg)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline int fscrypt_ioctl_get_nonce(struct file *filp, void __user *arg)
 {
 	return -EOPNOTSUPP;
 }
@@ -536,6 +542,11 @@ extern bool fscrypt_mergeable_bio(struct bio *bio, const struct inode *inode,
 extern bool fscrypt_mergeable_bio_bh(struct bio *bio,
 				     const struct buffer_head *next_bh);
 
+bool fscrypt_dio_supported(struct kiocb *iocb, struct iov_iter *iter);
+
+int fscrypt_limit_dio_pages(const struct inode *inode, loff_t pos,
+			    int nr_pages);
+
 #else /* CONFIG_FS_ENCRYPTION_INLINE_CRYPT */
 static inline bool fscrypt_inode_uses_inline_crypto(const struct inode *inode)
 {
@@ -567,6 +578,20 @@ static inline bool fscrypt_mergeable_bio_bh(struct bio *bio,
 					    const struct buffer_head *next_bh)
 {
 	return true;
+}
+
+static inline bool fscrypt_dio_supported(struct kiocb *iocb,
+					 struct iov_iter *iter)
+{
+	const struct inode *inode = file_inode(iocb->ki_filp);
+
+	return !fscrypt_needs_contents_encryption(inode);
+}
+
+static inline int fscrypt_limit_dio_pages(const struct inode *inode, loff_t pos,
+					  int nr_pages)
+{
+	return nr_pages;
 }
 #endif /* !CONFIG_FS_ENCRYPTION_INLINE_CRYPT */
 

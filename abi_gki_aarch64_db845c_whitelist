@@ -51,9 +51,11 @@
   destroy_workqueue
   dev_driver_string
   _dev_err
+  dev_fwnode
   dev_get_regmap
   device_create_file
   device_init_wakeup
+  device_match_fwnode
   device_property_present
   device_property_read_string
   device_property_read_u32_array
@@ -65,6 +67,7 @@
   __dev_kfree_skb_any
   devm_add_action
   devm_clk_bulk_get
+  devm_clk_bulk_get_all
   devm_clk_get
   devm_clk_get_optional
   devm_clk_hw_register
@@ -87,7 +90,9 @@
   devm_reset_control_array_get
   __devm_reset_control_get
   devm_reset_controller_register
+  devm_usb_get_phy_by_phandle
   devm_watchdog_register_device
+  _dev_notice
   dev_set_name
   _dev_warn
   disable_irq
@@ -133,6 +138,7 @@
   extcon_register_notifier
   extcon_unregister_notifier
   find_next_bit
+  find_next_zero_bit
   finish_wait
   fput
   free_irq
@@ -158,11 +164,17 @@
   init_timer_key
   init_wait_entry
   __init_waitqueue_head
+  iommu_present
   __ioremap
   iounmap
+  irq_chip_mask_parent
+  irq_chip_set_type_parent
+  irq_chip_unmask_parent
   __irq_domain_add
+  irq_domain_free_irqs_common
   irq_domain_remove
   irq_find_mapping
+  irq_find_matching_fwspec
   irq_modify_status
   irq_of_parse_and_map
   irq_set_chained_handler_and_data
@@ -182,6 +194,8 @@
   kstrtouint
   ktime_get
   ktime_get_mono_fast_ns
+  __list_add_valid
+  __list_del_entry_valid
   memcpy
   memset
   mii_ethtool_gset
@@ -215,18 +229,22 @@
   of_get_next_available_child
   of_get_next_child
   of_graph_get_remote_node
+  of_iomap
+  of_irq_find_parent
   of_match_device
   of_match_node
   of_parse_phandle
   of_phy_simple_xlate
   of_platform_depopulate
   of_platform_populate
+  of_property_count_elems_of_size
   of_property_read_string
   of_property_read_u32_index
   of_property_read_variable_u32_array
   param_ops_bool
   param_ops_int
   param_ops_uint
+  pci_bus_type
   pci_dev_put
   pci_match_id
   pci_read_config_byte
@@ -248,6 +266,7 @@
   pinctrl_pm_select_default_state
   pinctrl_pm_select_sleep_state
   pinctrl_utils_free_map
+  platform_bus_type
   platform_device_add
   platform_device_add_properties
   platform_device_add_resources
@@ -279,7 +298,6 @@
   printk
   put_device
   __put_task_struct
-  qcom_scm_is_available
   queue_delayed_work_on
   queue_work_on
   radix_tree_delete
@@ -339,6 +357,7 @@
   strlen
   strncmp
   __sw_hweight32
+  __sw_hweight64
   synchronize_irq
   syscon_node_to_regmap
   syscon_regmap_lookup_by_phandle
@@ -376,22 +395,7 @@
   usb_deregister
   usb_disabled
   usb_get_dr_mode
-  usb_hcd_check_unlink_urb
-  usb_hcd_end_port_resume
-  usb_hcd_giveback_urb
   usb_hc_died
-  usb_hcd_is_primary_hcd
-  usb_hcd_link_urb_to_ep
-  usb_hcd_pci_pm_ops
-  usb_hcd_pci_probe
-  usb_hcd_pci_remove
-  usb_hcd_pci_shutdown
-  usb_hcd_platform_shutdown
-  usb_hcd_poll_rh_status
-  usb_hcd_resume_root_hub
-  usb_hcds_loaded
-  usb_hcd_start_port_resume
-  usb_hcd_unlink_urb_from_ep
   usb_hub_clear_tt_buffer
   usbnet_disconnect
   usbnet_get_endpoints
@@ -425,124 +429,20 @@
   __warn_printk
   watchdog_init_timeout
 
-# required by asix.ko
-  eth_mac_addr
-  eth_platform_get_mac_address
-  genphy_resume
-  get_random_bytes
-  mdiobus_alloc_size
-  mdiobus_free
-  __mdiobus_register
-  mdiobus_unregister
-  memmove
-  mii_check_media
-  mii_link_ok
-  netdev_err
-  phy_connect
-  phy_disconnect
-  phy_ethtool_get_link_ksettings
-  phy_ethtool_nway_reset
-  phy_ethtool_set_link_ksettings
-  phy_mii_ioctl
-  phy_print_status
-  phy_start
-  phy_stop
-  skb_copy_expand
-  usbnet_change_mtu
-  usbnet_get_drvinfo
-  usbnet_get_link
-  usbnet_get_link_ksettings
-  usbnet_set_link_ksettings
-  usbnet_unlink_rx_urbs
-
-# required by ax88179_178a.ko
-  ethtool_op_get_link
-  mii_ethtool_get_link_ksettings
-  mii_ethtool_set_link_ksettings
-  netif_carrier_on
-  pskb_expand_head
-  skb_trim
+# required by regmap-spmi.ko
+  __devm_regmap_init
+  __regmap_init
+  spmi_ext_register_read
+  spmi_ext_register_readl
+  spmi_ext_register_write
+  spmi_ext_register_writel
+  spmi_register_read
+  spmi_register_write
+  spmi_register_zero_write
 
 # required by btqca.ko
   __hci_cmd_send
   __hci_cmd_sync_ev
-
-# required by clk-qcom.ko
-  __clk_determine_rate
-  __clk_get_name
-  clk_hw_get_flags
-  clk_hw_get_name
-  clk_hw_get_num_parents
-  clk_hw_get_parent_by_index
-  clk_hw_round_rate
-  __clk_is_enabled
-  __clk_mux_determine_rate_closest
-  divider_ro_round_rate_parent
-  of_find_node_opts_by_path
-  of_genpd_add_provider_onecell
-  of_genpd_del_provider
-  of_prop_next_u32
-  pm_genpd_add_subdomain
-  pm_genpd_init
-  pm_genpd_remove_subdomain
-
-# required by clk-rpmh.ko
-  clk_hw_is_prepared
-
-# required by clk-scmi.ko
-  clk_hw_set_rate_range
-  scmi_driver_register
-  scmi_driver_unregister
-
-# required by dwc3-qcom.ko
-  devm_extcon_register_notifier
-  of_clk_get_parent_count
-
-# required by dwc3.ko
-  device_property_read_u8_array
-  devm_kmemdup
-  extcon_find_edev_by_node
-  extcon_get_extcon_dev
-  of_usb_get_phy_mode
-  phy_pm_runtime_get_sync
-  phy_pm_runtime_put_sync
-  platform_get_irq_byname_optional
-  system_freezable_wq
-  usb_add_gadget_udc
-  usb_decode_ctrl
-  usb_del_gadget_udc
-  usb_ep_set_maxpacket_limit
-  usb_gadget_giveback_request
-  usb_gadget_map_request_by_dev
-  usb_gadget_set_state
-  usb_gadget_udc_reset
-  usb_gadget_unmap_request_by_dev
-  usb_get_maximum_speed
-
-# required by ehci-hcd.ko
-  device_remove_file
-  ehci_cf_port_reset_rwsem
-  hrtimer_cancel
-  ktime_get_with_offset
-  usb_for_each_dev
-
-# required by ehci-pci.ko
-  pci_clear_mwi
-  pci_find_capability
-  usb_amd_hang_symptom_quirk
-
-# required by ehci-platform.ko
-  device_pm_wait_for_dev
-  usb_of_get_companion_dev
-
-# required by extcon-usb-gpio.ko
-  devm_extcon_dev_allocate
-  devm_extcon_dev_register
-  extcon_set_state_sync
-  gpiod_get_value_cansleep
-  gpiod_set_debounce
-  gpiod_to_irq
-  system_power_efficient_wq
 
 # required by hci_uart.ko
   bit_wait_timeout
@@ -577,14 +477,44 @@
   tty_unthrottle
   wake_up_bit
 
-# required by i2c-qcom-geni.ko
-  i2c_get_dma_safe_msg_buf
-  i2c_put_dma_safe_msg_buf
-  of_machine_is_compatible
+# required by clk-scmi.ko
+  clk_hw_set_rate_range
+  scmi_driver_register
+  scmi_driver_unregister
 
-# required by i2c-qup.ko
-  _dev_notice
-  __usecs_to_jiffies
+# required by clk-qcom.ko
+  __clk_determine_rate
+  __clk_get_name
+  clk_hw_get_flags
+  clk_hw_get_name
+  clk_hw_get_num_parents
+  clk_hw_get_parent_by_index
+  clk_hw_round_rate
+  __clk_is_enabled
+  __clk_mux_determine_rate_closest
+  divider_ro_round_rate_parent
+  of_find_node_opts_by_path
+  of_genpd_add_provider_onecell
+  of_genpd_del_provider
+  of_prop_next_u32
+  pm_genpd_add_subdomain
+  pm_genpd_init
+  pm_genpd_remove_subdomain
+
+# required by clk-rpmh.ko
+  clk_hw_is_prepared
+
+# required by extcon-usb-gpio.ko
+  devm_extcon_dev_allocate
+  devm_extcon_dev_register
+  extcon_set_state_sync
+  gpiod_get_value_cansleep
+  gpiod_set_debounce
+  gpiod_to_irq
+  system_power_efficient_wq
+
+# required by qcom-scm-64.ko
+  __arm_smccc_smc
 
 # required by lt9611.ko
   __devm_regmap_init_i2c
@@ -600,11 +530,6 @@
   mipi_dsi_device_unregister
   of_find_mipi_dsi_host_by_node
   regmap_multi_reg_write
-
-# required by mdt_loader.ko
-  qcom_scm_pas_init_image
-  qcom_scm_pas_mem_setup
-  request_firmware_into_buf
 
 # required by msm.ko
   __bitmap_andnot
@@ -634,7 +559,6 @@
   devfreq_resume_device
   devfreq_suspend_device
   device_find_child
-  devm_clk_bulk_get_all
   devm_clk_register
   devm_devfreq_add_device
   devm_ioremap_nocache
@@ -820,7 +744,6 @@
   drm_universal_plane_init
   drm_vblank_init
   fd_install
-  find_next_zero_bit
   flush_workqueue
   get_pid_task
   get_unused_fd_flags
@@ -840,7 +763,6 @@
   iommu_domain_alloc
   iommu_domain_free
   iommu_map_sg
-  iommu_present
   iommu_set_fault_handler
   iommu_unmap
   irq_domain_xlate_onecell
@@ -883,13 +805,8 @@
   of_icc_get
   of_property_read_string_helper
   param_ops_charp
-  platform_bus_type
   put_pid
   put_unused_fd
-  qcom_scm_hdcp_available
-  qcom_scm_hdcp_req
-  qcom_scm_pas_auth_and_reset
-  qcom_scm_set_remote_state
   _raw_read_lock
   _raw_read_unlock
   _raw_write_lock
@@ -906,7 +823,6 @@
   shmem_truncate_range
   strncpy
   strstr
-  __sw_hweight64
   sync_file_create
   sync_file_get_fence
   timespec64_to_jiffies
@@ -922,37 +838,148 @@
   ww_mutex_lock_interruptible
   ww_mutex_unlock
 
-# required by msm_serial.ko
-  iomem_resource
-  __release_region
-  __request_region
-  tty_termios_baud_rate
+# required by qcom_hwspinlock.ko
+  devm_regmap_field_alloc
+  hwspin_lock_register
+  hwspin_lock_unregister
+  regmap_field_read
+  regmap_field_update_bits_base
+
+# required by i2c-qcom-geni.ko
+  i2c_get_dma_safe_msg_buf
+  i2c_put_dma_safe_msg_buf
+  of_machine_is_compatible
+
+# required by i2c-qup.ko
+  __usecs_to_jiffies
+
+# required by pm8941-pwrkey.ko
+  devm_input_allocate_device
+  input_event
+  input_register_device
+  input_set_capability
+
+# required by qnoc-sdm845.ko
+  icc_link_create
+  icc_node_add
+  icc_node_create
+  icc_node_del
+  icc_node_destroy
+  icc_provider_add
+  icc_provider_del
+  of_icc_xlate_onecell
+  rpmh_invalidate
+  rpmh_write_batch
+
+# required by arm_smmu.ko
+  alloc_io_pgtable_ops
+  amba_bustype
+  bus_set_iommu
+  device_link_add
+  devm_free_irq
+  driver_find_device
+  free_io_pgtable_ops
+  generic_device_group
+  iommu_alloc_resv_region
+  iommu_device_link
+  iommu_device_register
+  iommu_device_sysfs_add
+  iommu_device_sysfs_remove
+  iommu_device_unlink
+  iommu_device_unregister
+  iommu_dma_get_resv_regions
+  iommu_fwspec_add_ids
+  iommu_fwspec_free
+  iommu_get_dma_cookie
+  iommu_group_get_for_dev
+  iommu_group_put
+  iommu_group_ref_get
+  iommu_group_remove_device
+  iommu_put_dma_cookie
+  of_dma_is_coherent
+  pci_device_group
+  __udelay
+
+# required by qcom-pdc.ko
+  irq_chip_disable_parent
+  irq_chip_enable_parent
+  irq_chip_eoi_parent
+  irq_chip_get_parent_state
+  irq_chip_retrigger_hierarchy
+  irq_chip_set_affinity_parent
+  irq_chip_set_parent_state
+  irq_chip_set_vcpu_affinity_parent
+  irq_domain_alloc_irqs_parent
+  irq_domain_create_hierarchy
+  irq_domain_set_hwirq_and_chip
+  irq_domain_update_bus_token
+
+# required by qcom-spmi-pmic.ko
+  __spmi_driver_register
+
+# required by sdhci-msm.ko
+  mmc_of_parse
+  mmc_send_tuning
+  regulator_is_supported_voltage
+  sdhci_add_host
+  sdhci_enable_clk
+  sdhci_get_property
+  sdhci_pltfm_free
+  sdhci_pltfm_init
+  sdhci_remove_host
+  sdhci_reset
+  sdhci_set_bus_width
+
+# required by asix.ko
+  eth_mac_addr
+  eth_platform_get_mac_address
+  genphy_resume
+  get_random_bytes
+  mdiobus_alloc_size
+  mdiobus_free
+  __mdiobus_register
+  mdiobus_unregister
+  memmove
+  mii_check_media
+  mii_link_ok
+  netdev_err
+  phy_connect
+  phy_disconnect
+  phy_ethtool_get_link_ksettings
+  phy_ethtool_nway_reset
+  phy_ethtool_set_link_ksettings
+  phy_mii_ioctl
+  phy_print_status
+  phy_start
+  phy_stop
+  skb_copy_expand
+  usbnet_change_mtu
+  usbnet_get_drvinfo
+  usbnet_get_link
+  usbnet_get_link_ksettings
+  usbnet_set_link_ksettings
+  usbnet_unlink_rx_urbs
+
+# required by ax88179_178a.ko
+  ethtool_op_get_link
+  mii_ethtool_get_link_ksettings
+  mii_ethtool_set_link_ksettings
+  netif_carrier_on
+  pskb_expand_head
+  skb_trim
 
 # required by nvmem_qfprom.ko
   devm_nvmem_register
 
-# required by ohci-hcd.ko
-  flush_work
-  gen_pool_dma_alloc_align
-  gen_pool_dma_zalloc_align
-  gen_pool_free_owner
-  sb800_prefetch
-
-# required by ohci-pci.ko
-  pci_get_slot
-  usb_amd_prefetch_quirk
-
 # required by phy-qcom-qmp.ko
   of_clk_get_by_name
   of_clk_hw_simple_get
-  of_iomap
   __of_reset_control_get
 
 # required by phy-qcom-qusb2.ko
   devm_nvmem_cell_get
 
 # required by phy-qcom-usb-hs.ko
-  of_property_count_elems_of_size
   of_property_read_variable_u8_array
   reset_control_reset
 
@@ -963,21 +990,18 @@
   device_get_match_data
   gpiochip_populate_parent_fwspec_fourcell
   irq_chip_ack_parent
-  irq_chip_mask_parent
-  irq_chip_set_type_parent
   irq_chip_set_wake_parent
-  irq_chip_unmask_parent
-  irq_find_matching_fwspec
-  of_irq_find_parent
 
 # required by pinctrl-spmi-mpp.ko
   platform_irq_count
 
-# required by pm8941-pwrkey.ko
-  devm_input_allocate_device
-  input_event
-  input_register_device
-  input_set_capability
+# required by reboot-mode.ko
+  devres_add
+  devres_alloc_node
+  devres_free
+  devres_release
+  kfree_const
+  kstrdup_const
 
 # required by qcom-rpmh-regulator.ko
   of_get_regulator_init_data
@@ -985,11 +1009,84 @@
   regulator_list_voltage_linear_range
   rpmh_write
 
-# required by qcom-spmi-pmic.ko
-  __spmi_driver_register
+# required by qcom_spmi-regulator.ko
+  jiffies_to_usecs
+  regulator_disable_regmap
+  regulator_enable_regmap
+  regulator_is_enabled_regmap
+  smp_call_function_single
 
-# required by qcom-wdt.ko
-  platform_get_irq_optional
+# required by rtc-pm8xxx.ko
+  devm_request_any_context_irq
+  devm_rtc_device_register
+  rtc_time64_to_tm
+  rtc_tm_to_time64
+  rtc_update_irq
+  rtc_valid_tm
+
+# required by ufs-qcom.ko
+  print_hex_dump
+  ufshcd_dme_get_attr
+  ufshcd_dme_set_attr
+  ufshcd_dump_regs
+  ufshcd_get_local_unipro_ver
+  ufshcd_get_pwr_dev_param
+  ufshcd_hold
+  ufshcd_pltfrm_init
+  ufshcd_pltfrm_resume
+  ufshcd_pltfrm_runtime_idle
+  ufshcd_pltfrm_runtime_resume
+  ufshcd_pltfrm_runtime_suspend
+  ufshcd_pltfrm_shutdown
+  ufshcd_pltfrm_suspend
+  ufshcd_release
+  ufshcd_remove
+  ufshcd_uic_hibern8_enter
+  ufshcd_uic_hibern8_exit
+
+# required by mdt_loader.ko
+  request_firmware_into_buf
+
+# required by rmtfs_mem.ko
+  alloc_chrdev_region
+  cdev_device_add
+  cdev_device_del
+  cdev_init
+  __class_register
+  class_unregister
+  default_llseek
+  device_initialize
+  devm_memremap
+  of_reserved_mem_lookup
+  remap_pfn_range
+  unregister_chrdev_region
+
+# required by smem.ko
+  devm_ioremap_wc
+  hwspin_lock_free
+  hwspin_lock_request_specific
+  __hwspin_lock_timeout
+  __hwspin_unlock
+  of_hwspin_lock_get_id
+
+# required by smsm.ko
+  handle_nested_irq
+  irq_domain_xlate_twocell
+  qcom_smem_state_register
+  qcom_smem_state_unregister
+
+# required by spmi-pmic-arb.ko
+  handle_edge_irq
+  irq_domain_set_info
+  spmi_controller_add
+  spmi_controller_alloc
+  spmi_controller_remove
+
+# required by msm_serial.ko
+  iomem_resource
+  __release_region
+  __request_region
+  tty_termios_baud_rate
 
 # required by qcom_geni_serial.ko
   console_stop
@@ -1004,31 +1101,120 @@
   uart_parse_options
   uart_set_options
 
-# required by qcom_hwspinlock.ko
-  devm_regmap_field_alloc
-  hwspin_lock_register
-  hwspin_lock_unregister
-  regmap_field_read
-  regmap_field_update_bits_base
+# required by ulpi.ko
+  bus_register
+  bus_unregister
+  driver_register
+  of_device_modalias
+  of_device_request_module
+  of_device_uevent_modalias
+  __request_module
 
-# required by qcom_spmi-regulator.ko
-  jiffies_to_usecs
-  regulator_disable_regmap
-  regulator_enable_regmap
-  regulator_is_enabled_regmap
-  smp_call_function_single
+# required by dwc3-qcom.ko
+  devm_extcon_register_notifier
+  of_clk_get_parent_count
 
-# required by qnoc-sdm845.ko
-  icc_link_create
-  icc_node_add
-  icc_node_create
-  icc_node_del
-  icc_node_destroy
-  icc_provider_add
-  icc_provider_del
-  of_icc_xlate_onecell
-  rpmh_invalidate
-  rpmh_write_batch
+# required by dwc3.ko
+  device_property_read_u8_array
+  devm_usb_get_phy
+  extcon_find_edev_by_node
+  extcon_get_extcon_dev
+  of_usb_get_phy_mode
+  phy_pm_runtime_get_sync
+  phy_pm_runtime_put_sync
+  platform_get_irq_byname_optional
+  system_freezable_wq
+  usb_add_gadget_udc
+  usb_decode_ctrl
+  usb_del_gadget_udc
+  usb_ep_set_maxpacket_limit
+  usb_gadget_giveback_request
+  usb_gadget_map_request_by_dev
+  usb_gadget_set_state
+  usb_gadget_udc_reset
+  usb_gadget_unmap_request_by_dev
+  usb_get_maximum_speed
+
+# required by ehci-hcd.ko
+  device_remove_file
+  ehci_cf_port_reset_rwsem
+  hrtimer_cancel
+  ktime_get_with_offset
+  usb_for_each_dev
+
+# required by ehci-pci.ko
+  pci_clear_mwi
+  pci_find_capability
+  usb_amd_hang_symptom_quirk
+
+# required by ehci-platform.ko
+  device_pm_wait_for_dev
+  usb_of_get_companion_dev
+
+# required by ohci-hcd.ko
+  flush_work
+  gen_pool_dma_alloc_align
+  gen_pool_dma_zalloc_align
+  gen_pool_free_owner
+  sb800_prefetch
+
+# required by ohci-pci.ko
+  pci_get_slot
+  usb_amd_prefetch_quirk
+
+# required by xhci-hcd.ko
+  add_timer
+  cancel_delayed_work
+  mod_delayed_work_on
+  __num_online_cpus
+  param_ops_ullong
+  pci_alloc_irq_vectors_affinity
+  pci_free_irq_vectors
+  pci_irq_vector
+  radix_tree_maybe_preload
+  sg_pcopy_from_buffer
+  sg_pcopy_to_buffer
+  trace_print_symbols_seq
+  usb_amd_pt_check_port
+  usb_asmedia_modifyflowcontrol
+  usb_disable_xhci_ports
+  usb_hcd_irq
+  usb_hcd_map_urb_for_dma
+  usb_wakeup_notification
+  wait_for_completion
+
+# required by xhci-pci-renesas.ko
+  device_release_driver
+  pci_dev_get
+  pci_write_config_dword
+  request_firmware_nowait
+
+# required by xhci-pci.ko
+  pci_d3cold_disable
+  pci_set_power_state
+  usb_create_shared_hcd
+  usb_enable_intel_xhci_ports
+
+# required by xhci-plat-hcd.ko
+  of_usb_host_tpl_support
+  __usb_create_hcd
+
+# required by roles.ko
+  __class_create
+  class_destroy
+  class_find_device
+  device_connection_find_match
+  device_match_name
+  fwnode_connection_find_match
+  fwnode_get_parent
+  fwnode_property_present
+  kstrtobool
+  module_put
+  __sysfs_match_string
+  try_module_get
+
+# required by qcom-wdt.ko
+  platform_get_irq_optional
 
 # required by qrtr-tun.ko
   _copy_to_iter
@@ -1076,181 +1262,6 @@
   sock_register
   sock_unregister
 
-# required by reboot-mode.ko
-  devres_add
-  devres_alloc_node
-  devres_free
-  devres_release
-  kfree_const
-  kstrdup_const
-
-# required by regmap-spmi.ko
-  __devm_regmap_init
-  __regmap_init
-  spmi_ext_register_read
-  spmi_ext_register_readl
-  spmi_ext_register_write
-  spmi_ext_register_writel
-  spmi_register_read
-  spmi_register_write
-  spmi_register_zero_write
-
-# required by rmtfs_mem.ko
-  alloc_chrdev_region
-  cdev_device_add
-  cdev_device_del
-  cdev_init
-  __class_register
-  class_unregister
-  default_llseek
-  device_initialize
-  devm_memremap
-  of_reserved_mem_lookup
-  qcom_scm_assign_mem
-  remap_pfn_range
-  unregister_chrdev_region
-
-# required by roles.ko
-  __class_create
-  class_destroy
-  class_find_device
-  dev_fwnode
-  device_connection_find_match
-  device_match_fwnode
-  device_match_name
-  fwnode_connection_find_match
-  fwnode_get_parent
-  fwnode_property_present
-  kstrtobool
-  module_put
-  __sysfs_match_string
-  try_module_get
-
-# required by rtc-pm8xxx.ko
-  devm_request_any_context_irq
-  devm_rtc_device_register
-  rtc_time64_to_tm
-  rtc_tm_to_time64
-  rtc_update_irq
-  rtc_valid_tm
-
-# required by sdcardfs.ko
-  __break_lease
-  call_rcu
-  clear_inode
-  clear_nlink
-  configfs_register_subsystem
-  configfs_unregister_subsystem
-  config_group_init
-  config_group_init_type_name
-  config_item_init_type_name
-  copy_fs_struct
-  d_drop
-  dentry_open
-  dget_parent
-  d_invalidate
-  d_make_root
-  d_path
-  dput
-  d_rehash
-  d_set_d_op
-  d_splice_alias
-  filemap_write_and_wait
-  filp_close
-  filp_open
-  free_fs_struct
-  fscrypt_register_key_removal_notifier
-  fscrypt_unregister_key_removal_notifier
-  fs_parse
-  fsstack_copy_inode_size
-  generic_delete_inode
-  __generic_file_fsync
-  generic_file_llseek
-  generic_permission
-  generic_read_dir
-  iget5_locked
-  igrab
-  init_special_inode
-  inode_init_once
-  inode_newsize_ok
-  iput
-  iterate_dir
-  kern_path
-  kill_anon_super
-  kmem_cache_alloc
-  kmem_cache_create
-  kmem_cache_destroy
-  kmem_cache_free
-  kstrtoull
-  lockref_get
-  lock_rename
-  lookup_one_len_unlocked
-  mntget
-  names_cachep
-  notify_change2
-  override_creds
-  path_get
-  path_put
-  prepare_creds
-  __put_cred
-  __rcu_read_lock
-  __rcu_read_unlock
-  register_filesystem
-  revert_creds
-  setattr_prepare
-  set_fs_pwd
-  set_nlink
-  shrink_dcache_sb
-  strcasecmp
-  strncasecmp
-  strrchr
-  synchronize_rcu
-  touch_atime
-  truncate_inode_pages
-  truncate_setsize
-  unlock_new_inode
-  unlock_rename
-  unregister_filesystem
-  vfs_create2
-  vfs_fsync_range
-  vfs_getattr
-  vfs_get_super
-  vfs_mkdir2
-  vfs_path_lookup
-  vfs_read
-  vfs_rename2
-  vfs_rmdir2
-  vfs_statfs
-  vfs_unlink2
-  vfs_write
-
-# required by sdhci-msm.ko
-  mmc_of_parse
-  mmc_send_tuning
-  regulator_is_supported_voltage
-  sdhci_add_host
-  sdhci_enable_clk
-  sdhci_get_property
-  sdhci_pltfm_free
-  sdhci_pltfm_init
-  sdhci_remove_host
-  sdhci_reset
-  sdhci_set_bus_width
-
-# required by smem.ko
-  devm_ioremap_wc
-  hwspin_lock_free
-  hwspin_lock_request_specific
-  __hwspin_lock_timeout
-  __hwspin_unlock
-  of_hwspin_lock_get_id
-
-# required by smsm.ko
-  handle_nested_irq
-  irq_domain_xlate_twocell
-  qcom_smem_state_register
-  qcom_smem_state_unregister
-
 # required by snd-soc-hdmi-codec.ko
   devm_snd_soc_register_component
   snd_ctl_add
@@ -1261,77 +1272,3 @@
   snd_pcm_hw_constraint_eld
   snd_soc_dapm_add_routes
   snd_soc_jack_report
-
-# required by spmi-pmic-arb.ko
-  handle_edge_irq
-  irq_domain_free_irqs_common
-  irq_domain_set_info
-  spmi_controller_add
-  spmi_controller_alloc
-  spmi_controller_remove
-
-# required by ufs-qcom.ko
-  print_hex_dump
-  ufshcd_dme_get_attr
-  ufshcd_dme_set_attr
-  ufshcd_dump_regs
-  ufshcd_get_local_unipro_ver
-  ufshcd_get_pwr_dev_param
-  ufshcd_hold
-  ufshcd_pltfrm_init
-  ufshcd_pltfrm_resume
-  ufshcd_pltfrm_runtime_idle
-  ufshcd_pltfrm_runtime_resume
-  ufshcd_pltfrm_runtime_suspend
-  ufshcd_pltfrm_shutdown
-  ufshcd_pltfrm_suspend
-  ufshcd_release
-  ufshcd_remove
-  ufshcd_uic_hibern8_enter
-  ufshcd_uic_hibern8_exit
-
-# required by ulpi.ko
-  bus_register
-  bus_unregister
-  driver_register
-  of_device_modalias
-  of_device_request_module
-  of_device_uevent_modalias
-  __request_module
-
-# required by xhci-hcd.ko
-  add_timer
-  cancel_delayed_work
-  mod_delayed_work_on
-  __num_online_cpus
-  param_ops_ullong
-  pci_alloc_irq_vectors_affinity
-  pci_free_irq_vectors
-  pci_irq_vector
-  radix_tree_maybe_preload
-  sg_pcopy_from_buffer
-  sg_pcopy_to_buffer
-  usb_amd_pt_check_port
-  usb_asmedia_modifyflowcontrol
-  usb_disable_xhci_ports
-  usb_hcd_irq
-  usb_hcd_map_urb_for_dma
-  usb_wakeup_notification
-  wait_for_completion
-
-# required by xhci-pci-renesas.ko
-  device_release_driver
-  pci_dev_get
-  pci_write_config_dword
-  request_firmware_nowait
-
-# required by xhci-pci.ko
-  pci_d3cold_disable
-  pci_set_power_state
-  usb_create_shared_hcd
-  usb_enable_intel_xhci_ports
-
-# required by xhci-plat-hcd.ko
-  of_usb_host_tpl_support
-  pci_bus_type
-  __usb_create_hcd

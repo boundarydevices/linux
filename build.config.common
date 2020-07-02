@@ -1,11 +1,11 @@
-BRANCH=android-5.4
+BRANCH=android-5.4-stable
 KERNEL_DIR=common
 
 CC=clang
 LD=ld.lld
 NM=llvm-nm
 OBJCOPY=llvm-objcopy
-CLANG_PREBUILT_BIN=prebuilts-master/clang/host/linux-x86/clang-r377782b/bin
+CLANG_PREBUILT_BIN=prebuilts-master/clang/host/linux-x86/clang-r383902/bin
 BUILDTOOLS_PREBUILT_BIN=build/build-tools/path/linux-x86
 
 EXTRA_CMDS=''

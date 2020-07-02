@@ -92,6 +92,7 @@ out:
 	up_read(&dev->lock);
 	return num_heaps;
 }
+EXPORT_SYMBOL_GPL(ion_query_heaps_kernel);
 
 static int ion_query_heaps(struct ion_heap_query *query)
 {
@@ -431,7 +432,7 @@ void ion_device_remove_heap(struct ion_heap *heap)
 	dev->heap_cnt--;
 	up_write(&dev->lock);
 }
-EXPORT_SYMBOL(ion_device_remove_heap);
+EXPORT_SYMBOL_GPL(ion_device_remove_heap);
 
 static int ion_device_create(void)
 {
