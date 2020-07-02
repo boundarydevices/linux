@@ -87,6 +87,7 @@ struct at803x_priv {
 	bool phy_reset:1;
 	struct gpio_desc *gpiod_reset;
 	u32 quirks;
+	u32 phy_clock_out;
 };
 
 struct at803x_context {
@@ -142,6 +143,37 @@ static inline int at803x_set_vddio_1p8v(struct phy_device *phydev)
 {
 	return at803x_debug_reg_mask(phydev, AT803X_DEBUG_REG_31, 0,
 					AT803X_VDDIO_1P8V_EN);
+}
+
+static int at803x_select_phy_clock_out(struct phy_device *phydev, u32 freq)
+{
+	int ret;
+	u32 regval;
+
+	ret = phy_write(phydev, AT803X_MMD_ACCESS_CONTROL, 0x0007);
+	if (ret < 0)
+		return ret;
+	ret = phy_write(phydev, AT803X_MMD_ACCESS_CONTROL_DATA, 0x8016);
+	if (ret < 0)
+		return ret;
+	ret = phy_write(phydev, AT803X_MMD_ACCESS_CONTROL, 0x4007);
+	regval = phy_read(phydev, AT803X_MMD_ACCESS_CONTROL_DATA);
+	if (ret < 0)
+		return ret;
+	regval &= ~0x11c;
+	regval |= 0x80;	/* 1/2 drive strength */
+	if (freq >= 125000000) {
+		regval |= 0x18;
+	} else if (freq >= 62500000) {
+		regval |= 0x10;
+	} else if (freq >= 50000000) {
+		regval |= 0x08;
+	} else if (freq == 0) {
+		/* 1/4 drive strength since off was requested */
+		regval |= 0x180;
+	}
+	ret = phy_write(phydev, AT803X_MMD_ACCESS_CONTROL_DATA, regval);
+	return ret;
 }
 
 static int at803x_disable_eee(struct phy_device *phydev)
@@ -313,6 +345,11 @@ static int at803x_probe(struct phy_device *phydev)
 	if (of_property_read_bool(dev->of_node, "at803x,vddio-1p8v"))
 		priv->quirks |= AT803X_VDDIO_1P8V;
 
+	if (of_property_read_u32(dev->of_node, "at803x,phy-clock-out", &priv->phy_clock_out))
+		priv->phy_clock_out = 0xffffffff;
+	else
+		dev_info(dev, "%s, phy-clock-out= %d\n", __func__, priv->phy_clock_out);
+
 	if (phydev->drv->phy_id != ATH8030_PHY_ID)
 		goto does_not_require_reset_workaround;
 
@@ -361,6 +398,11 @@ static int at803x_config_init(struct phy_device *phydev)
 		ret = at803x_disable_eee(phydev);
 		if (ret < 0)
 			return ret;
+	}
+	if (priv->phy_clock_out != 0xffffffff) {
+		ret = at803x_select_phy_clock_out(phydev, priv->phy_clock_out);
+		if (ret < 0)
+			dev_warn(&phydev->mdio.dev, "at803x_select_phy_clock_out failed\n");
 	}
 
 	return 0;
