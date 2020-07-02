@@ -30,6 +30,29 @@
 #define POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX_VALUE 500000
 #define POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX_VALUE 5000000
 
+struct dummy_usb_property{
+    int online;
+};
+struct dummy_usb_property *usb_property;
+
+struct dummy_battery_property{
+    int status;
+    int health;
+    int present;
+    int technology;
+    int capacity;
+    int voltage_now;
+    int current_now;
+    int cycle_count;
+    int temp;
+    int charge_full;
+    int charge_counter;
+    int constant_charge_current_max;
+    int constant_charge_voltage_max;
+    int online;
+};
+struct dummy_battery_property *battery_property;
+
 static enum power_supply_property dummy_battery_props[] = {
     POWER_SUPPLY_PROP_STATUS,
     POWER_SUPPLY_PROP_HEALTH,
@@ -58,13 +81,35 @@ static int dummy_usb_get_property(struct power_supply *psy,
     int ret = 0;
     switch (psp) {
         case POWER_SUPPLY_PROP_ONLINE:
-            val->intval = 1;
+            val->intval = usb_property->online;
             break;
         default:
             ret = -EINVAL;
             break;
     }
     return ret;
+}
+
+static int dummy_usb_set_property(struct power_supply *psy,
+                                  enum power_supply_property psp,
+                                  union power_supply_propval *val)
+{
+    int ret = 0;
+    switch (psp) {
+        case POWER_SUPPLY_PROP_ONLINE:
+            usb_property->online = val->intval;
+            break;
+        default:
+            ret = -EINVAL;
+            break;
+    }
+    return ret;
+}
+
+static int dummy_usb_property_is_writeable(struct power_supply *psy,
+                                  enum power_supply_property psp)
+{
+    return psp == POWER_SUPPLY_PROP_ONLINE;
 }
 
 static int dummy_battery_get_property(struct power_supply *psy,
@@ -113,7 +158,7 @@ static int dummy_battery_get_property(struct power_supply *psy,
             val->intval = POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE_MAX_VALUE;
             break;
         case POWER_SUPPLY_PROP_ONLINE:
-            val->intval = true;
+            val->intval = battery_property->online;
             break;
         default:
             ret = -EINVAL;
@@ -122,20 +167,46 @@ static int dummy_battery_get_property(struct power_supply *psy,
     return ret;
 }
 
+static int dummy_battery_set_property(struct power_supply *psy,
+                                  enum power_supply_property psp,
+                                  union power_supply_propval *val)
+{
+    int ret = 0;
+    switch (psp) {
+        case POWER_SUPPLY_PROP_ONLINE:
+            battery_property->online = val->intval;
+            break;
+        default:
+            ret = -EINVAL;
+            break;
+    }
+    return ret;
+}
+
+static int dummy_battery_property_is_writeable(struct power_supply *psy,
+                                  enum power_supply_property psp)
+{
+    return psp == POWER_SUPPLY_PROP_ONLINE;
+}
+
 static struct power_supply *dummy_power_supplies[DUMMY_POWER_NUM];
 static const struct power_supply_desc dummy_power_desc[] = {
     {
         .properties = dummy_battery_props,
         .num_properties = ARRAY_SIZE(dummy_battery_props),
+        .set_property = dummy_battery_set_property,
         .get_property = dummy_battery_get_property,
         .name = "battery",
+        .property_is_writeable = dummy_battery_property_is_writeable,
         .type = POWER_SUPPLY_TYPE_BATTERY,
     },
     {
         .properties = dummy_usb_props,
         .num_properties = ARRAY_SIZE(dummy_usb_props),
+        .set_property = dummy_usb_set_property,
         .get_property = dummy_usb_get_property,
         .name = "usb",
+        .property_is_writeable = dummy_usb_property_is_writeable,
         .type = POWER_SUPPLY_TYPE_MAINS,
     }
 };
@@ -145,6 +216,13 @@ static int __init dummy_power_init(void)
     struct power_supply_config psy_cfg = {};
     int i;
     int ret;
+
+    usb_property = (struct dummy_usb_property*)kmalloc(sizeof(struct dummy_usb_property*),GFP_KERNEL);
+    usb_property->online = 1;
+
+    battery_property = (struct dummy_battery_property*)kmalloc(sizeof(struct dummy_battery_property*),GFP_KERNEL);
+    battery_property->online = 1;
+
     for (i = 0; i < ARRAY_SIZE(dummy_power_supplies); i++) {
         dummy_power_supplies[i] = power_supply_register(NULL,
                                                         &dummy_power_desc[i],
@@ -167,6 +245,8 @@ static void __exit dummy_power_exit(void)
     for (i = 0; i < ARRAY_SIZE(dummy_power_supplies); i++) {
         power_supply_unregister(dummy_power_supplies[i]);
     }
+    kfree(usb_property);
+    kfree(battery_property);
 }
 
 module_init(dummy_power_init);
