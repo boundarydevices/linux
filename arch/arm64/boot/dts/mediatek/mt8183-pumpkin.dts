@@ -486,6 +486,11 @@
 			pinmux = <PINMUX_GPIO42__FUNC_GPIO42>;
 			output-low;
 		};
+
+		pins_hub_rst {
+			pinmux = <PINMUX_GPIO8__FUNC_GPIO8>;
+			output-high;
+		};
 	};
 
 	vpu_jtag_disabled: vpu_jtag_disabled {
