@@ -673,6 +673,8 @@ static int sn65dsi83_probe(struct i2c_client *client,
 	const char *df;
 	u32 sync_delay, hbp;
 	u32 dsi_lanes;
+	struct clk *mipi_clk;
+	struct clk *pixel_clk;
 
 	adapter = to_i2c_adapter(client->dev.parent);
 
@@ -683,6 +685,11 @@ static int sn65dsi83_probe(struct i2c_client *client,
 		dev_err(&client->dev, "i2c_check_functionality failed\n");
 		return -ENODEV;
 	}
+	/* This is early because it may defer probing */
+	mipi_clk = devm_clk_get(&client->dev, "mipi_clk");
+	if (IS_ERR(mipi_clk))
+		return PTR_ERR(mipi_clk);
+	pixel_clk = devm_clk_get(&client->dev, "pixel_clock");
 
 	gp_en = devm_gpiod_get_optional(&client->dev, "enable", GPIOD_OUT_LOW);
 	if (IS_ERR(gp_en)) {
@@ -710,16 +717,11 @@ static int sn65dsi83_probe(struct i2c_client *client,
 		return -ENOMEM;
 	sn->client = client;
 	sn->gp_en = gp_en;
+	sn->mipi_clk = mipi_clk;
+	sn->pixel_clk = pixel_clk;
 	mutex_init(&sn->power_mutex);
 
 	INIT_DELAYED_WORK(&sn->sn_work, sn_work_func);
-	sn->sn_workqueue = create_workqueue("sn65dsi83_wq");
-	if (!sn->sn_workqueue) {
-		pr_err("Failed to create sn work queue");
-		return -ENOMEM;
-	}
-
-	sn_init(sn);
 
 	sn->disp_dsi = of_parse_phandle(np, "display-dsi", 0);
 	if (!sn->disp_dsi)
@@ -757,11 +759,6 @@ static int sn65dsi83_probe(struct i2c_client *client,
 	}
 	sn->dsi_bpp = !strcmp(df, "rgb666") ? 18 : 24;
 
-	sn->mipi_clk = devm_clk_get(&client->dev, "mipi_clk");
-	if (IS_ERR(sn->mipi_clk))
-		return PTR_ERR(sn->mipi_clk);
-
-	sn->pixel_clk = devm_clk_get(&client->dev, "pixel_clock");
 
 	irq_set_status_flags(client->irq, IRQ_NOAUTOEN);
 	ret = devm_request_threaded_irq(&client->dev, client->irq,
@@ -771,20 +768,32 @@ static int sn65dsi83_probe(struct i2c_client *client,
 		pr_info("%s: request_irq failed, irq:%i\n", client_name, client->irq);
 
 	i2c_set_clientdata(client, sn);
+	sn->sn_workqueue = create_workqueue("sn65dsi83_wq");
+	if (!sn->sn_workqueue) {
+		pr_err("Failed to create sn work queue");
+		return -ENOMEM;
+	}
+
 	sn->fbnb.notifier_call = sn_fb_event;
 	ret = fb_register_client(&sn->fbnb);
 	if (ret < 0) {
 		dev_err(&client->dev, "fb_register_client failed(%d)\n", ret);
-		return ret;
+		goto exit2;
 	}
 	ret = device_create_file(&client->dev, &dev_attr_sn65dsi83_enable);
 	ret = device_create_file(&client->dev, &dev_attr_sn65dsi83_reg);
 	if (ret < 0)
 		pr_warn("failed to add sn65dsi83 sysfs files\n");
 
+	sn_init(sn);
+
 	sn_powerup_begin(sn);
 	dev_info(&client->dev, "succeeded\n");
 	return 0;
+exit2:
+	destroy_workqueue(sn->sn_workqueue);
+	sn->sn_workqueue = NULL;
+	return ret;
 }
 
 static int sn65dsi83_remove(struct i2c_client *client)
