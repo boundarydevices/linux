@@ -800,6 +800,13 @@ static int sn65dsi83_remove(struct i2c_client *client)
 	return 0;
 }
 
+static const struct of_device_id sn65dsi83_dt_match[] = {
+	{.compatible = "ti,sn65dsi83"},
+	{}
+};
+
+MODULE_DEVICE_TABLE(of, sn65dsi83_dt_match);
+
 static const struct i2c_device_id sn65dsi83_id[] = {
 	{"sn65dsi83", 0},
 	{},
@@ -810,6 +817,7 @@ MODULE_DEVICE_TABLE(i2c, sn65dsi83_id);
 static struct i2c_driver sn65dsi83_driver = {
 	.driver = {
 		   .name = "sn65dsi83",
+		   .of_match_table = sn65dsi83_dt_match,
 		   .owner = THIS_MODULE,
 		   },
 	.probe = sn65dsi83_probe,
