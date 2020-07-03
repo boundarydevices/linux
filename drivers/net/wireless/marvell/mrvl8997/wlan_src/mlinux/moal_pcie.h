@@ -65,7 +65,7 @@ Change log:
 
 /** Default firmaware name */
 
-#define DEFAULT_AP_STA_FW_NAME "nxp/pcieuart8997_combo_v4.bin"
+#define DEFAULT_AP_STA_FW_NAME "pcieuart8997_combo_v4.bin"
 #define DEFAULT_WLAN_FW_NAME "nxp/pcie8997_wlan_v4.bin"
 
 #ifndef DEFAULT_AP_STA_FW_NAME

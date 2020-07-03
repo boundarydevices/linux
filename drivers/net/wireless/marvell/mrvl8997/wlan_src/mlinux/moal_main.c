@@ -161,7 +161,7 @@ int napi;
 char *dpd_data_cfg;
 
 /** CAL data config file */
-char *cal_data_cfg;
+char *cal_data_cfg = "none";
 /** Init config file (MAC address, register etc.) */
 char *init_cfg;
 
@@ -173,13 +173,15 @@ int cntry_txpwr = 0;
 /** Init hostcmd file */
 char *init_hostcmd_cfg;
 
-#if defined(STA_WEXT) || defined(UAP_WEXT)
+//#if defined(STA_WEXT) || defined(UAP_WEXT)
 /** CFG80211 and WEXT mode */
-int cfg80211_wext = STA_WEXT_MASK | UAP_WEXT_MASK;
-#else
+//int cfg80211_wext = STA_WEXT_MASK | UAP_WEXT_MASK;
+//#else
 /** CFG80211 mode */
-int cfg80211_wext = STA_CFG80211_MASK | UAP_CFG80211_MASK;
-#endif
+//int cfg80211_wext = STA_CFG80211_MASK | UAP_CFG80211_MASK;
+//#endif
+
+int cfg80211_wext = STA_CFG80211_MASK | UAP_CFG80211_MASK | STA_WEXT_MASK | UAP_WEXT_MASK;
 
 int fw_region = 0;
 
@@ -202,7 +204,7 @@ int dts_enable = 1;
 #if defined(WIFI_DIRECT_SUPPORT)
 #if defined(STA_CFG80211) && defined(UAP_CFG80211)
 #if CFG80211_VERSION_CODE >= WIFI_DIRECT_KERNEL_VERSION
-int p2p_enh;
+int p2p_enh = 1;
 #endif
 #endif
 #endif
@@ -7719,7 +7721,7 @@ void woal_wakeup_source_trash(struct wakeup_source *ws)
         return;
     }
     wakeup_source_remove(ws);
-    __pm_relax(ws);    
+    __pm_relax(ws);
 
     LEAVE();
 }

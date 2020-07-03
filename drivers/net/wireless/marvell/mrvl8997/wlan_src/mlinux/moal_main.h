@@ -198,9 +198,9 @@ Change log:
 /**
 * interface name
 */
-#define default_mlan_name    "mlan%d"
-#define default_uap_name    "uap%d"
-#define default_wfd_name    "wfd%d"
+#define default_mlan_name    "wlan%d"
+#define default_uap_name    "wlan%d"
+#define default_wfd_name    "p2p%d"
 #define default_nan_name    "nan%d"
 #define default_mpl_name    "mpl%d"
 #define default_11p_name    "ocb%d"
@@ -954,7 +954,7 @@ typedef struct _wait_queue {
 /** Default WIFIDIRECT BSS */
 #define DEF_WIFIDIRECT_BSS        1
 #if defined(STA_CFG80211) && defined(UAP_CFG80211)
-#define DEF_VIRTUAL_BSS			  0
+#define DEF_VIRTUAL_BSS			  1
 #endif
 #endif /* WIFI_DIRECT_SUPPORT && V14_FEATURE */
 /** Driver mode NAN bit */
