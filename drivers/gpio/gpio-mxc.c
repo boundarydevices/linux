@@ -549,12 +549,11 @@ static int mxc_gpio_probe(struct platform_device *pdev)
 
 	return 0;
 
-out_pm_dis:
-	pm_runtime_disable(&pdev->dev);
-	clk_disable_unprepare(port->clk);
 out_irqdomain_remove:
 	irq_domain_remove(port->domain);
 out_bgio:
+out_pm_dis:
+	pm_runtime_disable(&pdev->dev);
 	clk_disable_unprepare(port->clk);
 	dev_info(&pdev->dev, "%s failed with errno %d\n", __func__, err);
 	return err;
