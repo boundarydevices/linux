@@ -694,3 +694,8 @@
 	pinctrl-1 = <&vpu_jtag_enabled>;
 	status = "okay";
 };
+
+&vpu1 {
+	memory-region = <&vpu_ram>;
+	status = "okay";
+};

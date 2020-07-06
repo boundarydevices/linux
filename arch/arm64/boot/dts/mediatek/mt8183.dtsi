@@ -2086,7 +2086,7 @@
 			#clock-cells = <1>;
 		};
 
-		vpu0: vpu@0x19100000 {
+		vpu0: vpu0@0x19100000 {
 			compatible = "mediatek,mt8183-apu";
 			reg = <0 0x19180000 0 0x14000>;
 			reg-names = "mmio";
@@ -2105,6 +2105,26 @@
 
 			status = "disabled";
 		};
+
+		vpu1: vpu1@0x19200000 {
+			compatible = "mediatek,mt8183-apu";
+			reg = <0 0x19280000 0 0x14000>;
+			reg-names = "mmio";
+			interrupts = <GIC_SPI 293 IRQ_TYPE_LEVEL_LOW>;
+
+			iommus = <&iommu M4U_PORT_CAM_IPUO>,
+			       <&iommu M4U_PORT_CAM_IPU2O>,
+			       <&iommu M4U_PORT_CAM_IPU3O>;
+
+			clocks = <&ipu_core1 CLK_IPU_CORE1_AXI>,
+			       <&ipu_core1 CLK_IPU_CORE1_IPU>,
+			       <&ipu_core1 CLK_IPU_CORE1_JTAG>;
+			clock-names = "axi", "ipu", "jtag";
+
+			power-domains = <&scpsys MT8183_POWER_DOMAIN_VPU_CORE1>;
+
+			status = "disabled";
+		      };
 
 		ipu_core0: syscon@19180000 {
 			compatible = "mediatek,mt8183-ipu_core0", "syscon";
