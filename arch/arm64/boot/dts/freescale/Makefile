@@ -125,6 +125,7 @@ dtb-$(CONFIG_ARCH_FSL_IMX8MQ) += fsl-imx8mq-ddr3l-arm2.dtb \
 				 imx8mq-nitrogen8m_som.dtb \
 				 imx8mq-nitrogen8m_som_sd.dtb \
 				 imx8mq-nitrogen8m_som-ags.dtb \
+				 imx8mq-nitrogen8m_som-ags-m4.dtb \
 				 imx8mq-nitrogen8m_som-m4.dtb \
 				 imx8mq-son.dtb \
 
