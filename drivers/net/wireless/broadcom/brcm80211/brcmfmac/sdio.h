@@ -28,12 +28,16 @@
 #define REG_F0_REG_MASK		0x7FF
 #define REG_F1_MISC_MASK	0x1FFFF
 
+#define BRCMF_SDIO_REG_DAR_H2D_MSG_0	0x10030
+#define BRCMF_SDIO_REG_DAR_D2H_MSG_0	0x10038
+
 /* function 0 vendor specific CCCR registers */
 
 #define SDIO_CCCR_BRCM_CARDCAP			0xf0
 #define SDIO_CCCR_BRCM_CARDCAP_CMD14_SUPPORT	BIT(1)
 #define SDIO_CCCR_BRCM_CARDCAP_CMD14_EXT	BIT(2)
 #define SDIO_CCCR_BRCM_CARDCAP_CMD_NODEC	BIT(3)
+#define SDIO_CCCR_BRCM_CARDCAP_SECURE_MODE	BIT(7)
 
 /* Interrupt enable bits for each function */
 #define SDIO_CCCR_IEN_FUNC0			BIT(0)
