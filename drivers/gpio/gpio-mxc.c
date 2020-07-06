@@ -166,7 +166,11 @@ static int gpio_set_irq_type(struct irq_data *d, u32 type)
 	u32 gpio_idx = d->hwirq;
 	int edge;
 	void __iomem *reg = port->base;
+	int ret;
 
+	ret = clk_prepare_enable(port->clk);
+	if (ret)
+		return ret;
 	port->both_edges &= ~(1 << gpio_idx);
 	switch (type) {
 	case IRQ_TYPE_EDGE_RISING:
@@ -198,7 +202,8 @@ static int gpio_set_irq_type(struct irq_data *d, u32 type)
 		edge = GPIO_INT_HIGH_LEV;
 		break;
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
+		goto exit1;
 	}
 
 	if (GPIO_EDGE_SEL >= 0) {
@@ -221,6 +226,8 @@ static int gpio_set_irq_type(struct irq_data *d, u32 type)
 	writel(1 << gpio_idx, port->base + GPIO_ISR);
 	port->pad_type[gpio_idx] = type;
 
+exit1:
+	clk_disable_unprepare(port->clk);
 	return 0;
 }
 
