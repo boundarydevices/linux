@@ -168,7 +168,11 @@ static int gpio_set_irq_type(struct irq_data *d, u32 type)
 	u32 gpio_idx = d->hwirq;
 	int edge;
 	void __iomem *reg = port->base;
+	int ret;
 
+	ret = clk_prepare_enable(port->clk);
+	if (ret)
+		return ret;
 	port->both_edges &= ~(1 << gpio_idx);
 	switch (type) {
 	case IRQ_TYPE_EDGE_RISING:
@@ -200,7 +204,8 @@ static int gpio_set_irq_type(struct irq_data *d, u32 type)
 		edge = GPIO_INT_HIGH_LEV;
 		break;
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
+		goto exit1;
 	}
 
 	raw_spin_lock_irqsave(&port->gc.bgpio_lock, flags);
@@ -227,7 +232,10 @@ static int gpio_set_irq_type(struct irq_data *d, u32 type)
 
 	raw_spin_unlock_irqrestore(&port->gc.bgpio_lock, flags);
 
-	return port->gc.direction_input(&port->gc, gpio_idx);
+	ret = port->gc.direction_input(&port->gc, gpio_idx);
+exit1:
+	clk_disable_unprepare(port->clk);
+	return ret;
 }
 
 static void mxc_flip_edge(struct mxc_gpio_port *port, u32 gpio)
