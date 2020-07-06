@@ -2,8 +2,18 @@
 #ifndef __ASM_VDSOCLOCKSOURCE_H
 #define __ASM_VDSOCLOCKSOURCE_H
 
+enum vdso_arch_clockmode {
+	/* vdso clocksource not usable */
+	VDSO_CLOCKMODE_NONE,
+	/* vdso clocksource for both 32 and 64bit tasks */
+	VDSO_CLOCKMODE_ARCHTIMER,
+	/* vdso clocksource for 64bit tasks only */
+	VDSO_CLOCKMODE_ARCHTIMER_NOCOMPAT,
+};
+
 struct arch_clocksource_data {
-	bool vdso_direct;	/* Usable for direct VDSO access? */
+	/* Usable for direct VDSO access? */
+	enum vdso_arch_clockmode clock_mode;
 };
 
 #endif
