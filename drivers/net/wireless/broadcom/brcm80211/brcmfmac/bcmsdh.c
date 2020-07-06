@@ -963,6 +963,9 @@ out:
 #define BRCMF_SDIO_DEVICE(dev_id)	\
 	{SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, dev_id)}
 
+#define CYF_SDIO_DEVICE(dev_id)	\
+	{SDIO_DEVICE(SDIO_VENDOR_ID_CYPRESS, dev_id)}
+
 /* devices we support, null terminated */
 static const struct sdio_device_id brcmf_sdmmc_ids[] = {
 	BRCMF_SDIO_DEVICE(SDIO_DEVICE_ID_BROADCOM_43143),
@@ -988,6 +991,7 @@ static const struct sdio_device_id brcmf_sdmmc_ids[] = {
 	BRCMF_SDIO_DEVICE(SDIO_DEVICE_ID_BROADCOM_CYPRESS_43439),
 	BRCMF_SDIO_DEVICE(SDIO_DEVICE_ID_BROADCOM_CYPRESS_43752),
 	BRCMF_SDIO_DEVICE(SDIO_DEVICE_ID_BROADCOM_CYPRESS_89359),
+	CYF_SDIO_DEVICE(SDIO_DEVICE_ID_CYPRESS_43439),
 	{ /* end: all zeroes */ }
 };
 MODULE_DEVICE_TABLE(sdio, brcmf_sdmmc_ids);
