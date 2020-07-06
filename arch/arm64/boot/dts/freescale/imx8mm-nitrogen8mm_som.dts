@@ -7,7 +7,11 @@
 #include "imx8mm-nitrogen8mm.dts"
 
 &iomuxc {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+
 	/delete-node/ ecspi2-mcp2515tgrp;
+	/delete-node/ hoggrp;
 
 	pinctrl_sn65dsi83: sn65dsi83grp {
 		fsl,pins = <
