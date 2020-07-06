@@ -1645,6 +1645,7 @@ bool brcmf_chip_sr_capable(struct brcmf_chip *pub)
 		reg = chip->ops->read32(chip->ctx, addr);
 		return reg != 0;
 	case CY_CC_4373_CHIP_ID:
+	case CY_CC_55560_CHIP_ID:
 	case CY_CC_89459_CHIP_ID:
 		/* explicitly check SR engine enable bit */
 		addr = CORE_CC_REG(base, sr_control0);
