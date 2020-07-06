@@ -71,6 +71,10 @@
 #define CY_89459_MES_WATERMARK	0x40
 #define CY_89459_MESBUSYCTRL	(CY_89459_MES_WATERMARK | \
 				 SBSDIO_MESBUSYCTRL_ENAB)
+#define CYW55560_F2_WATERMARK	0x40
+#define CYW55560_MES_WATERMARK	0x40
+#define CYW55560_F1_MESBUSYCTRL	(CYW55560_MES_WATERMARK | \
+				 SBSDIO_MESBUSYCTRL_ENAB)
 
 #ifdef DEBUG
 
@@ -648,6 +652,7 @@ CY_FW_DEF(4373, "cyfmac4373-sdio");
 CY_FW_DEF(43012, "cyfmac43012-sdio");
 BRCMF_FW_CLM_DEF(43752, "brcmfmac43752-sdio");
 CY_FW_DEF(89459, "cyfmac54591-sdio");
+CY_FW_TRXSE_DEF(55560, "cyfmac55560-sdio");
 
 /* firmware config files */
 MODULE_FIRMWARE(BRCMF_FW_DEFAULT_PATH "brcmfmac*-sdio.*.txt");
@@ -682,7 +687,8 @@ static const struct brcmf_firmware_mapping brcmf_sdio_fwnames[] = {
 	BRCMF_FW_ENTRY(CY_CC_43012_CHIP_ID, 0xFFFFFFFF, 43012),
 	BRCMF_FW_ENTRY(CY_CC_43439_CHIP_ID, 0xFFFFFFFF, 43439),
 	BRCMF_FW_ENTRY(CY_CC_43752_CHIP_ID, 0xFFFFFFFF, 43752),
-	BRCMF_FW_ENTRY(CY_CC_89459_CHIP_ID, 0xFFFFFFFF, 89459)
+	BRCMF_FW_ENTRY(CY_CC_89459_CHIP_ID, 0xFFFFFFFF, 89459),
+	BRCMF_FW_ENTRY(CY_CC_55560_CHIP_ID, 0xFFFFFFFF, 55560)
 };
 
 #define TXCTL_CREDITS	2
@@ -743,7 +749,8 @@ brcmf_sdio_kso_control(struct brcmf_sdio *bus, bool on)
 	 * fail. Thereby just bailing out immediately after clearing KSO
 	 * bit, to avoid polling of KSO bit.
 	 */
-	if (!on && bus->ci->chip == CY_CC_43012_CHIP_ID)
+	if (!on && ((bus->ci->chip == CY_CC_43012_CHIP_ID) ||
+		    (bus->ci->chip == CY_CC_55560_CHIP_ID)))
 		return err;
 
 	if (on) {
@@ -2545,7 +2552,8 @@ static bool brcmf_chip_is_ulp(struct brcmf_chip *ci)
 
 static bool brcmf_sdio_use_ht_avail(struct brcmf_chip *ci)
 {
-	if (ci->chip == CY_CC_4373_CHIP_ID)
+	if (ci->chip == CY_CC_4373_CHIP_ID ||
+	    ci->chip == CY_CC_55560_CHIP_ID)
 		return true;
 	else
 		return false;
@@ -3677,12 +3685,38 @@ static int brcmf_sdio_download_firmware(struct brcmf_sdio *bus,
 	rstvec = get_unaligned_le32(fw->data);
 	brcmf_dbg(SDIO, "firmware rstvec: %x\n", rstvec);
 
+	if (bus->ci->blhs) {
+		bcmerror = bus->ci->blhs->prep_fwdl(bus->ci);
+		if (bcmerror) {
+			brcmf_err("FW download preparation failed\n");
+			release_firmware(fw);
+			brcmf_fw_nvram_free(nvram);
+			goto err;
+		}
+	}
+
 	bcmerror = brcmf_sdio_download_code_file(bus, fw);
 	release_firmware(fw);
 	if (bcmerror) {
 		brcmf_err("dongle image file download failed\n");
 		brcmf_fw_nvram_free(nvram);
 		goto err;
+	}
+
+	if (bus->ci->blhs) {
+		bcmerror = bus->ci->blhs->post_fwdl(bus->ci);
+		if (bcmerror) {
+			brcmf_err("FW download failed, err=%d\n", bcmerror);
+			brcmf_fw_nvram_free(nvram);
+			goto err;
+		}
+
+		bcmerror = bus->ci->blhs->chk_validation(bus->ci);
+		if (bcmerror) {
+			brcmf_err("FW valication failed, err=%d\n", bcmerror);
+			brcmf_fw_nvram_free(nvram);
+			goto err;
+		}
 	}
 
 	bcmerror = brcmf_sdio_download_nvram(bus, nvram, nvlen);
@@ -3692,11 +3726,15 @@ static int brcmf_sdio_download_firmware(struct brcmf_sdio *bus,
 		goto err;
 	}
 
-	/* Take arm out of reset */
-	if (!brcmf_chip_set_active(bus->ci, rstvec)) {
-		brcmf_err("error getting out of ARM core reset\n");
-		bcmerror = -EIO;
-		goto err;
+	if (bus->ci->blhs) {
+		bus->ci->blhs->post_nvramdl(bus->ci);
+	} else {
+		/* Take arm out of reset */
+		if (!brcmf_chip_set_active(bus->ci, rstvec)) {
+			brcmf_err("error getting out of ARM core reset\n");
+			bcmerror = -EIO;
+			goto err;
+		}
 	}
 
 err:
@@ -3710,6 +3748,7 @@ static bool brcmf_sdio_aos_no_decode(struct brcmf_sdio *bus)
 	if (bus->ci->chip == CY_CC_43012_CHIP_ID ||
 	    bus->ci->chip == CY_CC_43752_CHIP_ID ||
 	    bus->ci->chip == CY_CC_4373_CHIP_ID ||
+	    bus->ci->chip == CY_CC_55560_CHIP_ID ||
 	    bus->ci->chip == BRCM_CC_4339_CHIP_ID ||
 	    bus->ci->chip == BRCM_CC_4345_CHIP_ID ||
 	    bus->ci->chip == BRCM_CC_4354_CHIP_ID ||
@@ -4134,6 +4173,20 @@ brcmf_sdio_drivestrengthinit(struct brcmf_sdio_dev *sdiodev,
 	}
 }
 
+static u32 brcmf_sdio_buscore_blhs_read(void *ctx, u32 reg_offset)
+{
+	struct brcmf_sdio_dev *sdiodev = (struct brcmf_sdio_dev *)ctx;
+
+	return (u32)brcmf_sdiod_readb(sdiodev, reg_offset, NULL);
+}
+
+static void brcmf_sdio_buscore_blhs_write(void *ctx, u32 reg_offset, u32 value)
+{
+	struct brcmf_sdio_dev *sdiodev = (struct brcmf_sdio_dev *)ctx;
+
+	brcmf_sdiod_writeb(sdiodev, reg_offset, (u8)value, NULL);
+}
+
 static int brcmf_sdio_buscoreprep(void *ctx)
 {
 	struct brcmf_sdio_dev *sdiodev = ctx;
@@ -4230,11 +4283,39 @@ static void brcmf_sdio_buscore_write32(void *ctx, u32 addr, u32 val)
 	brcmf_sdiod_writel(sdiodev, addr, val, NULL);
 }
 
+static int brcmf_sdio_buscore_blhs_attach(void *ctx, struct brcmf_blhs **blhs,
+					  u32 flag, uint timeout, uint interval)
+{
+	struct brcmf_sdio_dev *sdiodev = (struct brcmf_sdio_dev *)ctx;
+	struct brcmf_blhs *blhsh;
+	u8 cardcap;
+
+	if (sdiodev->func1->vendor != SDIO_VENDOR_ID_CYPRESS)
+		return 0;
+
+	cardcap = brcmf_sdiod_func0_rb(sdiodev, SDIO_CCCR_BRCM_CARDCAP, NULL);
+	if (cardcap & SDIO_CCCR_BRCM_CARDCAP_SECURE_MODE) {
+		blhsh = kzalloc(sizeof(*blhsh), GFP_KERNEL);
+		if (!blhsh)
+			return -ENOMEM;
+
+		blhsh->d2h = BRCMF_SDIO_REG_DAR_D2H_MSG_0;
+		blhsh->h2d = BRCMF_SDIO_REG_DAR_H2D_MSG_0;
+		blhsh->read = brcmf_sdio_buscore_blhs_read;
+		blhsh->write = brcmf_sdio_buscore_blhs_write;
+
+		*blhs = blhsh;
+	}
+
+	return 0;
+}
+
 static const struct brcmf_buscore_ops brcmf_sdio_buscore_ops = {
 	.prepare = brcmf_sdio_buscoreprep,
 	.activate = brcmf_sdio_buscore_activate,
 	.read32 = brcmf_sdio_buscore_read32,
 	.write32 = brcmf_sdio_buscore_write32,
+	.blhs_attach = brcmf_sdio_buscore_blhs_attach,
 };
 
 static bool
@@ -4346,17 +4427,21 @@ brcmf_sdio_probe_attach(struct brcmf_sdio *bus)
 	if (err)
 		goto fail;
 
-	/* set PMUControl so a backplane reset does PMU state reload */
-	reg_addr = CORE_CC_REG(brcmf_chip_get_pmu(bus->ci)->base, pmucontrol);
-	reg_val = brcmf_sdiod_readl(sdiodev, reg_addr, &err);
-	if (err)
-		goto fail;
+	if (!bus->ci->blhs) {
+		/* set PMUControl so a backplane reset does PMU state reload */
+		reg_addr = CORE_CC_REG(brcmf_chip_get_pmu(bus->ci)->base,
+				       pmucontrol);
+		reg_val = brcmf_sdiod_readl(sdiodev, reg_addr, &err);
+		if (err)
+			goto fail;
 
-	reg_val |= (BCMA_CC_PMU_CTL_RES_RELOAD << BCMA_CC_PMU_CTL_RES_SHIFT);
+		reg_val |= (BCMA_CC_PMU_CTL_RES_RELOAD <<
+			    BCMA_CC_PMU_CTL_RES_SHIFT);
 
-	brcmf_sdiod_writel(sdiodev, reg_addr, reg_val, &err);
-	if (err)
-		goto fail;
+		brcmf_sdiod_writel(sdiodev, reg_addr, reg_val, &err);
+		if (err)
+			goto fail;
+	}
 
 	sdio_release_host(sdiodev->func1);
 
@@ -4639,6 +4724,19 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 			brcmf_sdiod_writeb(sdiod, SBSDIO_FUNC1_MESBUSYCTRL,
 					   CY_89459_MESBUSYCTRL, &err);
 			break;
+		case SDIO_DEVICE_ID_CYPRESS_55560:
+			brcmf_dbg(INFO, "set F2 watermark to 0x%x*4 bytes\n",
+				  CYW55560_F2_WATERMARK);
+			brcmf_sdiod_writeb(sdiod, SBSDIO_WATERMARK,
+					   CYW55560_F2_WATERMARK, &err);
+			devctl = brcmf_sdiod_readb(sdiod, SBSDIO_DEVICE_CTL,
+						   &err);
+			devctl |= SBSDIO_DEVCTL_F2WM_ENAB;
+			brcmf_sdiod_writeb(sdiod, SBSDIO_DEVICE_CTL, devctl,
+					   &err);
+			brcmf_sdiod_writeb(sdiod, SBSDIO_FUNC1_MESBUSYCTRL,
+					   CYW55560_F1_MESBUSYCTRL, &err);
+			break;
 		default:
 			brcmf_sdiod_writeb(sdiod, SBSDIO_WATERMARK,
 					   DEFAULT_F2_WATERMARK, &err);
@@ -4746,6 +4844,9 @@ brcmf_sdio_prepare_fw_request(struct brcmf_sdio *bus)
 		{ ".clm_blob", bus->sdiodev->clm_name },
 	};
 
+	if (bus->ci->blhs)
+		fwnames[BRCMF_SDIO_FW_CODE].extension = ".trxse";
+
 	fwreq = brcmf_fw_alloc_request(bus->ci->chip, bus->ci->chiprev,
 				       brcmf_sdio_fwnames,
 				       ARRAY_SIZE(brcmf_sdio_fwnames),
@@ -4754,6 +4855,10 @@ brcmf_sdio_prepare_fw_request(struct brcmf_sdio *bus)
 		return NULL;
 
 	fwreq->items[BRCMF_SDIO_FW_CODE].type = BRCMF_FW_TYPE_BINARY;
+	if (bus->ci->blhs)
+		fwreq->items[BRCMF_SDIO_FW_CODE].type = BRCMF_FW_TYPE_TRXSE;
+	else
+		fwreq->items[BRCMF_SDIO_FW_CODE].type = BRCMF_FW_TYPE_BINARY;
 	fwreq->items[BRCMF_SDIO_FW_NVRAM].type = BRCMF_FW_TYPE_NVRAM;
 	fwreq->items[BRCMF_SDIO_FW_CLM].type = BRCMF_FW_TYPE_BINARY;
 	fwreq->items[BRCMF_SDIO_FW_CLM].flags = BRCMF_FW_REQF_OPTIONAL;
@@ -4910,10 +5015,16 @@ void brcmf_sdio_remove(struct brcmf_sdio *bus)
 				} else {
 					brcmf_chip_set_passive(bus->ci);
 				}
+
+				if (bus->ci->blhs)
+					bus->ci->blhs->init(bus->ci);
 				/* Reset the PMU, backplane and all the
 				 * cores by using the PMUWatchdogCounter.
 				 */
 				brcmf_chip_reset_watchdog(bus->ci);
+				if (bus->ci->blhs)
+					bus->ci->blhs->post_wdreset(bus->ci);
+
 				brcmf_sdio_clkctl(bus, CLK_NONE, false);
 				sdio_release_host(bus->sdiodev->func1);
 			}
