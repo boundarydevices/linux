@@ -293,7 +293,7 @@
 			domain-index = <5>;
 			domain-name = "audiomix";
 			clocks = <&clk IMX8MP_CLK_AUDIO_ROOT>,
-				 <&clk IMX8MP_CLK_AUDIO_AXI_DIV>;
+				 <&clk IMX8MP_CLK_AUDIO_AXI>;
 		};
 
 		gpumix_pd: gpumix-pd {
