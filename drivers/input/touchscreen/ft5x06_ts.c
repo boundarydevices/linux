@@ -120,11 +120,14 @@ static void write_reg(struct ft5x06_ts *ts, int regnum, int value)
 		ts->client->addr, 0, sizeof(regnval), regnval
 	};
 	int ret = i2c_transfer(ts->client->adapter, &pkt, 1);
-	if (ret != 1)
-		printk(KERN_WARNING "%s: i2c_transfer failed\n", __func__);
-	else
-		printk(KERN_DEBUG "%s: set register 0x%02x to 0x%02x\n",
+	if (ret != 1) {
+		ret = i2c_transfer(ts->client->adapter, &pkt, 1);
+		if (ret != 1)
+			pr_warn("%s: i2c_transfer failed\n", __func__);
+	} else {
+		pr_debug("%s: set register 0x%02x to 0x%02x\n",
 		       __func__, regnum, value);
+	}
 }
 
 static void set_mode(struct ft5x06_ts *ts, int mode)
@@ -293,6 +296,17 @@ static void printHex(u8 const *buf, unsigned len)
 }
 #endif
 
+static void ts_reset(struct ft5x06_ts *ts)
+{
+	if (ts->reset_gpio) {
+		gpiod_set_value(ts->reset_gpio, 1);
+		msleep(3);
+		gpiod_set_value(ts->reset_gpio, 0);
+		msleep(3);
+	}
+	set_mode(ts, WORK_MODE);
+}
+
 static irqreturn_t ts_interrupt(int irq, void *id)
 {
 	struct ft5x06_ts *ts = id;
@@ -306,6 +320,7 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 	int buttons = 0 ;
 	int i;
 	unsigned char *p;
+	int fails = 0;
 
 	del_timer_sync(&ts->release_timer);
 	while (gpiod_get_value(ts->wakeup_gpio)) {
@@ -315,9 +330,16 @@ static irqreturn_t ts_interrupt(int irq, void *id)
 		if (ret != ARRAY_SIZE(readpkt)) {
 			dev_err(&ts->client->dev,
 				"i2c_transfer failed(%d)\n", ret);
-			msleep(100);
+			if (fails > 2) {
+				ts_reset(ts);
+				fails = 0;
+			} else {
+				msleep(100);
+				fails++;
+			}
 			continue;
 		}
+		fails = 0;
 		p = ts->buf+3;
 #ifdef DEBUG
 		printHex(buf, sizeof(buf));
@@ -468,6 +490,18 @@ static ssize_t show_missed_releases(struct device *dev,
 
 static DEVICE_ATTR(missed_releases, S_IRUGO, show_missed_releases, NULL);
 
+static ssize_t reset_store(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	struct ft5x06_ts *ts = dev_get_drvdata(dev);
+
+	ts_reset(ts);
+	return count;
+}
+
+static DEVICE_ATTR(reset, S_IWUSR, NULL, reset_store);
+
 struct ft_data {
 	const unsigned char *name;
 	int max_touch;
@@ -570,6 +604,8 @@ static int ts_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		setup_timer(&ts->release_timer, ts_release_timer, (unsigned long)ts);
 		if (device_create_file(dev, &dev_attr_missed_releases))
 			dev_err(dev, "%s: error creating missed_releases entry\n", __func__);
+		if (device_create_file(dev, &dev_attr_reset))
+			dev_err(dev, "%s: error creating reset entry\n", __func__);
 		return 0;
 	}
 
@@ -584,6 +620,7 @@ static int ts_remove(struct i2c_client *client)
 {
 	struct ft5x06_ts *ts = i2c_get_clientdata(client);
 
+	device_remove_file(&client->dev, &dev_attr_reset);
 	device_remove_file(&client->dev, &dev_attr_missed_releases);
 	ts_deregister(ts);
 	if (ts->reset_gpio)
