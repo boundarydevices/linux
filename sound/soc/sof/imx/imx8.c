@@ -468,16 +468,38 @@ static int imx8_ipc_pcm_params(struct snd_sof_dev *sdev,
 	return 0;
 }
 
-int imx8_dsp_resume(struct snd_sof_dev *sdev)
+int imx8_dsp_runtime_resume(struct snd_sof_dev *sdev)
 {
-	/* nothing to do for now */
-	return 0;
+	const struct sof_dsp_power_state target_dsp_state = {
+		.state = SOF_DSP_PM_D0,
+		.substate = 0,
+	};
+	struct imx8_priv *priv = (struct imx8_priv *)sdev->private;
+	int i;
+
+	imx8_prepare_clocks(sdev);
+
+	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
+		imx_dsp_request_channel(priv->dsp_ipc, i);
+
+	return snd_sof_dsp_set_power_state(sdev, &target_dsp_state);
 }
 
-int imx8_dsp_suspend(struct snd_sof_dev *sdev)
+int imx8_dsp_runtime_suspend(struct snd_sof_dev *sdev)
 {
-	/* nothing to do for now */
-	return 0;
+	struct imx8_priv *priv = (struct imx8_priv *)sdev->private;
+	const struct sof_dsp_power_state target_dsp_state = {
+		.state = SOF_DSP_PM_D3,
+		.substate = 0,
+	};
+	int i;
+
+	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
+		imx_dsp_free_channel(priv->dsp_ipc, i);
+
+	imx8_disable_clocks(priv->sdev);
+
+	return snd_sof_dsp_set_power_state(sdev, &target_dsp_state);
 }
 
 static struct snd_soc_dai_driver imx8_dai[] = {
@@ -561,8 +583,8 @@ struct snd_sof_dsp_ops sof_imx8_ops = {
 			SNDRV_PCM_INFO_NO_PERIOD_WAKEUP,
 
 	/* PM */
-	.runtime_suspend	= imx8_dsp_suspend,
-	.runtime_resume		= imx8_dsp_resume,
+	.runtime_suspend	= imx8_dsp_runtime_suspend,
+	.runtime_resume		= imx8_dsp_runtime_resume,
 
 	.set_power_state	= imx8_dsp_set_power_state,
 	/* ALSA HW info flags */
@@ -615,8 +637,8 @@ struct snd_sof_dsp_ops sof_imx8x_ops = {
 	.num_drv = ARRAY_SIZE(imx8_dai),
 
 	/* PM */
-	.runtime_suspend	= imx8_dsp_suspend,
-	.runtime_resume		= imx8_dsp_resume,
+	.runtime_suspend	= imx8_dsp_runtime_suspend,
+	.runtime_resume		= imx8_dsp_runtime_resume,
 
 	.set_power_state	= imx8_dsp_set_power_state,
 
