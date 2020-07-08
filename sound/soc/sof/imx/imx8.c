@@ -505,6 +505,14 @@ static struct snd_soc_dai_driver imx8_dai[] = {
 },
 };
 
+int imx8_dsp_set_power_state(struct snd_sof_dev *sdev,
+			     const struct sof_dsp_power_state *target_state)
+{
+	sdev->dsp_power_state = *target_state;
+
+	return 0;
+}
+
 /* i.MX8 ops */
 struct snd_sof_dsp_ops sof_imx8_ops = {
 	/* probe and remove */
@@ -556,6 +564,7 @@ struct snd_sof_dsp_ops sof_imx8_ops = {
 	.runtime_suspend	= imx8_dsp_suspend,
 	.runtime_resume		= imx8_dsp_resume,
 
+	.set_power_state	= imx8_dsp_set_power_state,
 	/* ALSA HW info flags */
 	.hw_info =	SNDRV_PCM_INFO_MMAP |
 			SNDRV_PCM_INFO_MMAP_VALID |
@@ -608,6 +617,8 @@ struct snd_sof_dsp_ops sof_imx8x_ops = {
 	/* PM */
 	.runtime_suspend	= imx8_dsp_suspend,
 	.runtime_resume		= imx8_dsp_resume,
+
+	.set_power_state	= imx8_dsp_set_power_state,
 
 	/* ALSA HW info flags */
 	.hw_info =	SNDRV_PCM_INFO_MMAP |
