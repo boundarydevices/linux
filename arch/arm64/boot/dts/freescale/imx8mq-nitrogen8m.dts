@@ -1187,7 +1187,7 @@
 		compatible = "lontium,lt8912" ;
 		ddc-i2c-bus = <&i2c4b>;
 		reg = <0x48> ;
-		reset-gpios = <&pca9570 1 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&max7323 0 GPIO_ACTIVE_LOW>;
 		display-dsi = <&fb_mipi>;
 	};
 };
@@ -1207,10 +1207,10 @@
 &i2c4d {
 	clock-frequency = <100000>;
 
-	pca9570: pca9570@24 {
-		compatible = "nxp,pca9570";
+	max7323: max7323@68 {
+		compatible = "maxim,max7323";
 		gpio-controller;
-		reg = <0x24>;
+		reg = <0x68>;
 		#gpio-cells = <2>;
 	};
 };
