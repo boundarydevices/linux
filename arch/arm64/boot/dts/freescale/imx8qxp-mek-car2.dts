@@ -132,10 +132,6 @@
 	status = "disabled";
 };
 
-&fec1 {
-	status = "disabled";
-};
-
 &fec2 {
 	status = "disabled";
 };
