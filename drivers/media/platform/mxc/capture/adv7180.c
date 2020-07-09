@@ -296,6 +296,15 @@ static int adv7180_regulator_enable(struct adv7180_priv *adv, struct device *dev
 	return ret;
 }
 
+static void adv7180_regulator_disable(struct adv7180_priv *adv, struct device *dev)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(adv->regulators); i++)
+		if (!IS_ERR(adv->regulators[i]))
+			regulator_disable(adv->regulators[i]);
+}
+
 
 /***********************************************************************
  * I2C transfer.
@@ -1368,26 +1377,26 @@ static int adv7180_probe(struct i2c_client *client,
 					&adv->cea861);
 	if (ret) {
 		dev_err(dev, "cea861 missing or invalid\n");
-		goto exit1;
+		goto exit2;
 	}
 	pr_info("%s: cea861=%d\n", __func__, adv->cea861);
 
 	adv->pinctrl = devm_pinctrl_get(dev);
 	if (IS_ERR(adv->pinctrl)) {
 		ret = PTR_ERR(adv->pinctrl);
-		goto exit1;
+		goto exit2;
 	}
 
 
 	pins = pinctrl_lookup_state(adv->pinctrl, adv->cea861 ? "cea861" : "no_cea861");
 	if (IS_ERR(pins)) {
 		ret = PTR_ERR(pins);
-		goto exit1;
+		goto exit2;
 	}
 
 	ret = pinctrl_select_state(adv->pinctrl, pins);
 	if (ret)
-		goto exit1;
+		goto exit2;
 
 	if (!adv7180_gpio_state(adv, GPIO_STANDBY, 0))
 		msleep(2);
@@ -1423,7 +1432,7 @@ static int adv7180_probe(struct i2c_client *client,
 					&adv->sen.mclk);
 	if (ret) {
 		dev_err(dev, "mclk frequency is invalid\n");
-		goto exit1;
+		goto exit2;
 	}
 
 	ret = of_property_read_u32(
@@ -1431,21 +1440,21 @@ static int adv7180_probe(struct i2c_client *client,
 		(u32 *) &(adv->sen.mclk_source));
 	if (ret) {
 		dev_err(dev, "mclk_source invalid\n");
-		goto exit1;
+		goto exit2;
 	}
 
 	ret = of_property_read_u32(dev->of_node, "ipu_id",
 					&adv->sen.ipu_id);
 	if (ret) {
 		dev_err(dev, "ipu_id missing or invalid\n");
-		goto exit1;
+		goto exit2;
 	}
 
 	ret = of_property_read_u32(dev->of_node, "csi_id",
 					&(adv->sen.csi));
 	if (ret) {
 		dev_err(dev, "csi_id invalid\n");
-		goto exit1;
+		goto exit2;
 	}
 
 	if (!IS_ERR(adv->sen.sensor_clk))
@@ -1459,7 +1468,7 @@ static int adv7180_probe(struct i2c_client *client,
 	rev_id = adv7180_read(adv, ADV7180_IDENT);
 	if (rev_id < 0) {
 		ret = rev_id;
-		goto exit1;
+		goto exit2;
 	}
 	dev_dbg(dev,
 		"%s:Analog Device adv7%2X0 detected!\n", __func__,
@@ -1494,6 +1503,10 @@ static int adv7180_probe(struct i2c_client *client,
 		dev_err(dev, "created sysfs entry for reading regs\n");
 	return ret;
 
+exit2:
+	adv7180_regulator_disable(adv, dev);
+	if (!IS_ERR(adv->sen.sensor_clk))
+		clk_disable_unprepare(adv->sen.sensor_clk);
 exit1:
 	kfree(adv);
 	return ret;
