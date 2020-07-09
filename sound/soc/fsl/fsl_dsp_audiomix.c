@@ -43,6 +43,18 @@ bool imx_audiomix_dsp_reset(struct imx_audiomix_dsp_data *data)
 }
 EXPORT_SYMBOL(imx_audiomix_dsp_reset);
 
+bool imx_audiomix_dsp_pwaitmode(struct imx_audiomix_dsp_data *data)
+{
+	u32 val;
+
+	regmap_read(data->regmap, AudioDSP_REG2, &val);
+	if (val & AudioDSP_REG2_PWAITMODE)
+		return true;
+	else
+		return false;
+}
+EXPORT_SYMBOL(imx_audiomix_dsp_pwaitmode);
+
 static int imx_audiomix_dsp_probe(struct platform_device *pdev)
 {
 	struct imx_audiomix_dsp_data *drvdata;
