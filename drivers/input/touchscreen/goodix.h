@@ -111,8 +111,10 @@ struct goodix_ts_data {
 	struct device_node *disp_node;
 	struct notifier_block drmnb;
 	struct mutex irq_enable_mutex;
-	int irq_active;
-	int drm_disabled_irq;
+	unsigned char irq_active;
+	unsigned char drm_disabled_irq;
+	unsigned char irq_requested;
+	unsigned char wake_irq_requested;
 	u8 config[GOODIX_CONFIG_MAX_LENGTH];
 	unsigned short keymap[GOODIX_MAX_KEYS];
 	u8 main_clk[GOODIX_MAIN_CLK_LEN];
