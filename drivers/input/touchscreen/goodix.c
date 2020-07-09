@@ -133,8 +133,10 @@ struct goodix_ts_data {
 	struct device_node *disp_node;
 	struct notifier_block drmnb;
 	struct mutex irq_enable_mutex;
-	int irq_active;
-	int drm_disabled_irq;
+	unsigned char irq_active;
+	unsigned char drm_disabled_irq;
+	unsigned char irq_requested;
+	unsigned char wake_irq_requested;
 };
 
 static int goodix_check_cfg_8(struct goodix_ts_data *ts,
@@ -780,6 +782,32 @@ static int goodix_int_sync(struct goodix_ts_data *ts)
 	return 0;
 }
 
+static int goodix_request_irq(struct goodix_ts_data *ts)
+{
+	int ret;
+
+	ret = devm_request_threaded_irq(&ts->client->dev, ts->client->irq,
+			NULL, goodix_ts_irq_handler,
+			ts->irq_flags, ts->client->name, ts);
+	if (ret < 0)
+		dev_err(&ts->client->dev, "request_threaded_irq failed(%d)\n", ret);
+	else
+		ts->irq_requested = 1;
+	return ret;
+}
+
+static int goodix_release_irq(struct goodix_ts_data *ts)
+{
+	unsigned char irq_requested = ts->irq_requested;
+
+	if (irq_requested) {
+		ts->irq_requested = 0;
+		goodix_disable_irq(ts);
+		devm_free_irq(&ts->client->dev, ts->client->irq, ts);
+	}
+	return irq_requested;
+}
+
 /**
  * goodix_reset - Reset device during power on
  *
@@ -787,6 +815,7 @@ static int goodix_int_sync(struct goodix_ts_data *ts)
  */
 static int goodix_reset(struct goodix_ts_data *ts)
 {
+	unsigned char irq_was_requested = goodix_release_irq(ts);
 	int error;
 
 	/* begin select I2C slave addr */
@@ -813,6 +842,8 @@ static int goodix_reset(struct goodix_ts_data *ts)
 	if (error)
 		return error;
 
+	if (irq_was_requested)
+		goodix_request_irq(ts);
 	return 0;
 }
 
@@ -1454,13 +1485,9 @@ static int goodix_finish_setup(struct goodix_ts_data *ts)
 
 	ts->irq_flags = goodix_irq_flags[ts->int_trigger_type] | IRQF_ONESHOT;
 	irq_set_status_flags(ts->client->irq, IRQ_NOAUTOEN);
-	error = devm_request_threaded_irq(&ts->client->dev, ts->client->irq,
-					 NULL, goodix_ts_irq_handler,
-					 ts->irq_flags, ts->client->name, ts);
-	if (error < 0) {
-		dev_err(&ts->client->dev, "request_threaded_irq failed(%d)\n", error);
+	error = goodix_request_irq(ts);
+	if (error < 0)
 		return error;
-	}
 	ts->disp_node = of_parse_phandle(np, "display", 0);
 	if (ts->disp_node) {
 		ts->drmnb.notifier_call = ts_drm_event;
@@ -1693,6 +1720,7 @@ static int __maybe_unused goodix_sleep(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct goodix_ts_data *ts = i2c_get_clientdata(client);
+	unsigned char irq_was_requested;
 	int error = 0;
 
 	if (ts->load_cfg_from_disk)
@@ -1712,7 +1740,8 @@ static int __maybe_unused goodix_sleep(struct device *dev)
 	goodix_disable_esd(ts);
 
 	/* disable IRQ as IRQ pin is used as output in the suspend sequence */
-	goodix_disable_irq(ts);
+	irq_was_requested = goodix_release_irq(ts);
+	ts->wake_irq_requested = irq_was_requested;
 
 	/* Output LOW on the INT pin for 5 ms */
 	error = goodix_irq_direction_output(ts, 0);
@@ -1728,7 +1757,10 @@ static int __maybe_unused goodix_sleep(struct device *dev)
 	if (error) {
 		dev_err(&ts->client->dev, "Screen off command failed\n");
 		goodix_irq_direction_input(ts);
-		goodix_enable_irq(ts);
+		if (irq_was_requested) {
+			goodix_request_irq(ts);
+			goodix_enable_irq(ts);
+		}
 		error = -EAGAIN;
 		goto out_error;
 	}
@@ -1801,9 +1833,15 @@ static int __maybe_unused goodix_wakeup(struct device *dev)
 			return error;
 	}
 
-	error = goodix_enable_irq(ts);
-	if (error)
-		goto out_error;
+	if (ts->wake_irq_requested) {
+		ts->wake_irq_requested = 0;
+		error = goodix_request_irq(ts);
+		if (error)
+			goto out_error;
+		error = goodix_enable_irq(ts);
+		if (error)
+			goto out_error;
+	}
 
 	error = goodix_enable_esd(ts);
 	if (error)
