@@ -279,6 +279,15 @@
 		>;
 	};
 
+	pinctrl_lt8912: lt8912grp {
+		fsl,pins = <
+#define GP_LT8912_RESET	<&gpio3 15 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x16
+#define GPIRQ_LT8912	<&gpio1 1 IRQ_TYPE_LEVEL_LOW>
+			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x04
+		>;
+	};
+
 	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
 		fsl,pins = <
 #define GP_MIPI_RESET	<&gpio3 15 GPIO_ACTIVE_LOW>
@@ -585,6 +594,8 @@
 		mipi_dsi_bridge = &mipi_dsi_bridge;
 		mipi_dsi_phy = &mipi_dsi_phy;
 		mipi_to_lvds = &mipi_to_lvds;
+		pca9540 = &pca9540;
+		pca9546 = &pca9546;
 		pinctrl_com50h5n03ulc = &pinctrl_mipi_com50h5n03ulc;
 		pinctrl_lcd133_070 = &pinctrl_mipi_lcd133_070;
 		pinctrl_lcm_jm430 = &pinctrl_mipi_lcm_jm430;
@@ -1156,70 +1167,92 @@
 		wlf,shared-lrclk;
 	};
 
-	i2cmux@70 {
-		compatible = "pca9546";
+	pca9540: i2cmux9540@70 {
+		compatible = "pca9540";
 		reg = <0x70>;
+		status = "disabled";
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		i2c4a: i2c4@0 {
+		i2c4@0 {
+			clock-frequency = <100000>;
 			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+
+			/* Touch screens */
 		};
 
-		i2c4b: i2c4@1 {
+		i2c4@1 {
+			clock-frequency = <100000>;
 			reg = <1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+
+			lt8912: lt8912@48 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_lt8912>;
+				compatible = "lontium,lt8912" ;
+				interrupts-extended = GPIRQ_LT8912;
+				reg = <0x48> ;
+				reset-gpios = GP_LT8912_RESET;
+				display-dsi = <&fb_mipi>;
+			};
+		};
+	};
+
+	pca9546: i2cmux9546@70 {
+		compatible = "pca9546";
+		reg = <0x70>;
+		status = "disabled";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c4@0 {
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			lt8912@48 {
+				compatible = "lontium,lt8912" ;
+				ddc-i2c-bus = <&ddc_i2c_bus>;
+				reg = <0x48> ;
+				reset-gpios = <&max7323 0 GPIO_ACTIVE_LOW>;
+				display-dsi = <&fb_mipi>;
+			};
 		};
 
-		i2c4c: i2c4@2 {
+		ddc_i2c_bus: i2c4@1 {
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			/* edid  @50 */
+		};
+
+		i2c4@2 {
+			clock-frequency = <100000>;
 			reg = <2>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+
+			/* Touch screens */
 		};
 
-		i2c4d: i2c4@3 {
+		i2c4@3 {
+			clock-frequency = <100000>;
 			reg = <3>;
 			#address-cells = <1>;
 			#size-cells = <0>;
+
+			max7323: max7323@68 {
+				compatible = "maxim,max7323";
+				gpio-controller;
+				reg = <0x68>;
+				#gpio-cells = <2>;
+			};
 		};
-	};
-};
-
-&i2c4a {
-	clock-frequency = <100000>;
-
-	lt8912@48 {
-		compatible = "lontium,lt8912" ;
-		ddc-i2c-bus = <&i2c4b>;
-		reg = <0x48> ;
-		reset-gpios = <&max7323 0 GPIO_ACTIVE_LOW>;
-		display-dsi = <&fb_mipi>;
-	};
-};
-
-
-&i2c4b {
-	clock-frequency = <100000>;
-	/* edid  @50 */
-};
-
-&i2c4c {
-	clock-frequency = <100000>;
-
-	/* Touch screens */
-};
-
-&i2c4d {
-	clock-frequency = <100000>;
-
-	max7323: max7323@68 {
-		compatible = "maxim,max7323";
-		gpio-controller;
-		reg = <0x68>;
-		#gpio-cells = <2>;
 	};
 };
 
