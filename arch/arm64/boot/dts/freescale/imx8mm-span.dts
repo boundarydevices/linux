@@ -157,6 +157,8 @@
 		/delete-property/ mipi_cmds_m101nwwb;
 		/delete-property/ mipi_dsi;
 		/delete-property/ mipi_to_lvds;
+		/delete-property/ pca9540;
+		/delete-property/ pca9546;
 		/delete-property/ pinctrl_com50h5n03ulc;
 		/delete-property/ pinctrl_lcd133_070;
 		/delete-property/ pinctrl_lcm_jm430;
@@ -246,7 +248,8 @@
 	/delete-node/ touchscreen@40;
 	/delete-node/ touchscreen@55;
 	/delete-node/ touchscreen@5d;
-	/delete-node/ i2cmux@70;
+	/delete-node/ i2cmux9540@70;
+	/delete-node/ i2cmux9546@70;
 	/delete-node/ codec@1a;
 };
 
