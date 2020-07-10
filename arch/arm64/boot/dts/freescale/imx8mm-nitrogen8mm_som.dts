@@ -45,6 +45,16 @@
 		>;
 	};
 
+	pinctrl_lt8912: lt8912grp {
+		fsl,pins = <
+#undef GP_LT8912_RESET
+#define GP_LT8912_RESET	<&gpio5 0 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x16)
+#define GPIRQ_LT8912	<&gpio1 1 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x116)
+		>;
+	};
+
 	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
 		fsl,pins = <
 #undef GP_MIPI_RESET
@@ -167,6 +177,10 @@
 			};
 		};
 	};
+};
+
+&lt8912 {
+	reset-gpios = GP_LT8912_RESET;
 };
 
 &mipi_to_lvds {
