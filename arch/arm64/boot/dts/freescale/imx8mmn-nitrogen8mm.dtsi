@@ -234,6 +234,15 @@
 		>;
 	};
 
+	pinctrl_lt8912: lt8912grp {
+		fsl,pins = <
+#define GP_LT8912_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
+#define GPIRQ_LT8912	<&gpio1 1 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x116)
+		>;
+	};
+
 	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
 		fsl,pins = <
 #define GP_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
@@ -543,6 +552,8 @@
 		mipi_cmds_m101nwwb = &mipi_cmds_m101nwwb;
 		mipi_dsi = &mipi_dsi;
 		mipi_to_lvds = &mipi_to_lvds;
+		pca9540 = &pca9540;
+		pca9546 = &pca9546;
 		pinctrl_com50h5n03ulc = &pinctrl_mipi_com50h5n03ulc;
 		pinctrl_lcd133_070 = &pinctrl_mipi_lcd133_070;
 		pinctrl_lcm_jm430 = &pinctrl_mipi_lcm_jm430;
@@ -932,9 +943,44 @@
 		wakeup-gpios = GP_ST1633_IRQ;
 	};
 
-	i2cmux@70 {
+	pca9540: i2cmux9540@70 {
+		compatible = "pca9540";
+		reg = <0x70>;
+		status = "disabled";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		TOUCHSCREEN_I2C_BUS@0 {
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* Touch screens */
+		};
+
+		TOUCHSCREEN_I2C_BUS@1 {
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			lt8912: lt8912@48 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_lt8912>;
+				compatible = "lontium,lt8912" ;
+				interrupts-extended = GPIRQ_LT8912;
+				reg = <0x48> ;
+				reset-gpios = GP_LT8912_RESET;
+				display-dsi = <&fb_mipi>;
+			};
+		};
+	};
+
+	pca9546: i2cmux9546@70 {
 		compatible = "pca9546";
 		reg = <0x70>;
+		status = "disabled";
 		#address-cells = <1>;
 		#size-cells = <0>;
 
