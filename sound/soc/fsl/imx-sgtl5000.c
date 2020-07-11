@@ -106,28 +106,29 @@ static int hpjack_status_check(void *_data)
 
 static int hp_init(struct device *dev, struct imx_sgtl5000_data *data)
 {
+	struct snd_soc_jack_gpio *gpios = &data->hp_jack_gpio;
 	int ret;
 
 	data->hp_jack_pins.pin = "Headphone Jack";
 	data->hp_jack_pins.mask = SND_JACK_HEADPHONE;
-	data->hp_jack_gpio.name = "headphone detect";
-	data->hp_jack_gpio.report = SND_JACK_HEADPHONE;
-	data->hp_jack_gpio.debounce_time = 250;
-
-	data->hp_jack_gpio.gpiod_dev = dev;
-	data->hp_jack_gpio.name = "hp-detect";
-	data->hp_jack_gpio.jack_status_check = hpjack_status_check;
-	data->hp_jack_gpio.data = data;
+	gpios->name = "hp-detect";
+	gpios->report = SND_JACK_HEADPHONE;
+	gpios->debounce_time = 250;
+	gpios->gpiod_dev = dev;
+	gpios->jack_status_check = hpjack_status_check;
+	gpios->data = data;
 
 	ret = snd_soc_card_jack_new(&data->card, "Headphone Jack", SND_JACK_HEADPHONE,
 		&data->hp_jack, &data->hp_jack_pins, 1);
 
-	ret = snd_soc_jack_add_gpios(&data->hp_jack, 1, &data->hp_jack_gpio);
-	if (!ret)
-		data->hp_det_status = gpiod_get_value_cansleep(data->hp_jack_gpio.desc);
-	else
+	gpios->desc = gpiod_get_index(dev, gpios->name, gpios->idx, GPIOD_IN);
+	if (IS_ERR(gpios->desc)) {
 		snd_soc_jack_report(&data->hp_jack, SND_JACK_HEADPHONE, SND_JACK_HEADPHONE);
+		return PTR_ERR(gpios->desc);
+	}
 
+	ret = snd_soc_jack_add_gpios(&data->hp_jack, 1, gpios);
+	data->hp_det_status = gpiod_get_value_cansleep(gpios->desc);
 	return ret;
 }
 
