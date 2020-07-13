@@ -88,6 +88,18 @@ config TYPEC_QCOM_PMIC
 	  It will also enable the VBUS output to connected devices when a
 	  DFP connection is made.
 
+config TYPEC_TUSB322I
+	tristate "TI TUSB322I CC Logic and Port Control driver"
+	depends on I2C
+	select USB_ROLE_SWITCH
+	select REGMAP_I2C
+	select GPIOLIB
+	help
+	  Say Y or M here if your system has TI TUSB322I controller.
+
+	  If you choose to build this driver as a dynamically linked module, the
+	  module will be called tusb322i.ko.
+
 source "drivers/usb/typec/mux/Kconfig"
 
 source "drivers/usb/typec/altmodes/Kconfig"
