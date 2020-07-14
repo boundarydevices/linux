@@ -715,10 +715,9 @@
 
 &dpi0 {
 	dpi_dual_edge;
-	dpi_pin_mode_swap;
-	pinctrl-names = "gpiomode", "dpimode";
-	pinctrl-0 = <&dpi_pin_gpio>;
-	pinctrl-1 = <&dpi_pin_func>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&dpi_pin_func>;
+	pinctrl-1 = <&dpi_pin_gpio>;
 	status = "okay";
 	port {
 		dpi_out: endpoint {
