@@ -202,7 +202,8 @@ static bool imx8mp_hdmi_check_clk_rate(int rate_khz)
 }
 
 static enum drm_mode_status
-imx8mp_hdmi_mode_valid(struct drm_connector *con,
+imx8mp_hdmi_mode_valid(struct dw_hdmi *hdmi, void *data,
+		       const struct drm_display_info *info,
 		       const struct drm_display_mode *mode)
 {
 	if (mode->clock < 13500)
