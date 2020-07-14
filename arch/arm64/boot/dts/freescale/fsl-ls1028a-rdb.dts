@@ -277,6 +277,10 @@
 	status = "okay";
 };
 
+&pwm0 {
+	status = "okay";
+};
+
 &sai4 {
 	status = "okay";
 };
