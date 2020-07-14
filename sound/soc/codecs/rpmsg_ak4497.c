@@ -179,13 +179,9 @@ static const struct soc_enum ak4497_dac_enum2[] = {
 static int ak4497_read(struct snd_soc_component *component, unsigned int reg,
 	unsigned int *val)
 {
-	int ret;
+	*val = snd_soc_component_read(component, reg);
 
-	ret = snd_soc_component_read(component, reg, val);
-	if (ret < 0)
-		dev_err(component->dev, "Register %u read failed, ret=%d.\n", reg, ret);
-
-	return ret;
+	return 0;
 }
 
 static int ak4497_get_dsdsel(struct snd_kcontrol *kcontrol,
