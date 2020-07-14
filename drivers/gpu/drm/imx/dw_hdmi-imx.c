@@ -244,7 +244,8 @@ static struct dw_hdmi_plat_data imx6dl_hdmi_drv_data = {
 };
 
 static int imx8mp_hdmi_phy_init(struct dw_hdmi *dw_hdmi, void *data,
-			     struct drm_display_mode *mode)
+				const struct drm_display_info *display,
+				const struct drm_display_mode *mode)
 {
 	struct imx_hdmi *hdmi = (struct imx_hdmi *)data;
 	int val;

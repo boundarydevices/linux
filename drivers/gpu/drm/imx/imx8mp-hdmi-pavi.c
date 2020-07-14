@@ -81,7 +81,7 @@ void imx8mp_hdmi_pai_powerdown(void)
 EXPORT_SYMBOL(imx8mp_hdmi_pai_powerdown);
 
 /* PVI APIs  */
-void imx8mp_hdmi_pvi_enable(struct drm_display_mode *mode)
+void imx8mp_hdmi_pvi_enable(const struct drm_display_mode *mode)
 {
 	clk_prepare_enable(gpavi->clk_pvi);
 
