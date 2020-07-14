@@ -29,7 +29,7 @@ void imx8mp_hdmi_pai_disable(void);
 void imx8mp_hdmi_pai_powerup(void);
 void imx8mp_hdmi_pai_powerdown(void);
 
-void imx8mp_hdmi_pvi_enable(struct drm_display_mode *mode);
+void imx8mp_hdmi_pvi_enable(const struct drm_display_mode *mode);
 void imx8mp_hdmi_pvi_disable(void);
 void imx8mp_hdmi_pvi_powerup(void);
 void imx8mp_hdmi_pvi_powerdown(void);
