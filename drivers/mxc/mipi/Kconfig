@@ -8,7 +8,7 @@ config MXC_MIPI_CSI2
 	tristate "MIPI CSI2 support"
 	depends on (SOC_IMX6 || SOC_IMX7D)
 	default n
-	---help---
+	help
 	Say Y to get the MIPI CSI2 support.
 
 endmenu
