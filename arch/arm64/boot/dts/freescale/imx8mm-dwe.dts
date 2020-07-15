@@ -101,9 +101,7 @@
 			MX8MMN(IOMUXC_SAI1_TXFS_GPIO4_IO10, 0x1c0)	/* ET_NET_MODE */
 			MX8MMN(IOMUXC_SAI1_TXC_GPIO4_IO11, 0x1c0)	/* ET_ON_OFF */
 			MX8MMN(IOMUXC_SAI1_TXD0_GPIO4_IO12, 0x1c0)	/* ET_USIM_DETECT */
-			MX8MMN(IOMUXC_SAI1_TXD1_GPIO4_IO13, 0x1c0)	/* ET_RESET_N */
 			MX8MMN(IOMUXC_SAI1_TXD2_GPIO4_IO14, 0x1c0)	/* ET_WAKE_UP */
-			MX8MMN(IOMUXC_SAI1_TXD3_GPIO4_IO15, 0x1c0)	/* ET_USB_BOOT */
 			MX8MMN(IOMUXC_SAI1_TXD4_GPIO4_IO16, 0x1c0)	/* ET_RI */
 			MX8MMN(IOMUXC_SAI1_TXD5_GPIO4_IO17, 0x1c0)	/* ET_AP_READY */
 			MX8MMN(IOMUXC_SAI1_RXFS_GPIO4_IO0, 0x1c0)	/* ET_STAT */
@@ -289,7 +287,11 @@
 	pinctrl_usbotg2: usbotg2grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_GPIO1_IO14_USB2_OTG_PWR, 0x16)
-			MX8MMN(IOMUXC_GPIO1_IO15_USB2_OTG_OC, 0x16)
+			MX8MMN(IOMUXC_GPIO1_IO15_USB2_OTG_OC, 0x156)
+#define GP_EC21_RESET		<&gpio4 13 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_TXD1_GPIO4_IO13, 0x1c0)	/* ET_RESET_N */
+#define GP_EC21_BOOT		<&gpio4 15 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI1_TXD3_GPIO4_IO15, 0x1c0)	/* ET_USB_BOOT */
 		>;
 	};
 
@@ -542,6 +544,17 @@
 		regulator-name = "vref-3v3";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
+	};
+
+	reg_vref_3v7: regulator-vref-3v7 {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_3p7v>;
+		regulator-name = "ec21_3v7";
+		regulator-min-microvolt = <3700000>;
+		regulator-max-microvolt = <3700000>;
+		gpio = GP_REG_3P7V;
+		enable-active-high;
 	};
 
 	reg_wlan_vmmc: regulator-wlan-vmmc {
@@ -842,7 +855,9 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg2>;
 	power-polarity-active-high;
+	reset-gpios = GP_EC21_BOOT, GP_EC21_RESET;
 	status = "okay";
+	vbus-supply = <&reg_vref_3v7>;
 };
 
 &usdhc1 {
