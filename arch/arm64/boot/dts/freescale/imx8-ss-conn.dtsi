@@ -165,23 +165,22 @@ conn_subsys: bus@5b000000 {
 		status = "disabled";
 	};
 
-	usb3phynop1: usb3-phy {
-		compatible = "usb-nop-xceiv";
+	usb3_phy: usb-phy@5b160000 {
+		compatible = "nxp,salvo-phy";
+		reg = <0x5B160000 0x40000>;
 		clocks = <&usb3_lpcg 4>;
-		clock-names = "main_clk";
+		clock-names = "salvo_phy_clk";
 		power-domains = <&pd IMX_SC_R_USB_2_PHY>;
+		#phy-cells = <0>;
 		status = "disabled";
-	};
+        };
 
-	usbotg3: usb3@5b110000 {
-		compatible = "Cadence,usb3";
-		reg = <0x5B110000 0x10000>,
-			<0x5B130000 0x10000>,
-			<0x5B140000 0x10000>,
-			<0x5B160000 0x40000>,
-			<0x5B120000 0x10000>;
-		interrupt-parent = <&gic>;
-		interrupts = <GIC_SPI 271 IRQ_TYPE_LEVEL_HIGH>;
+	usbotg3: usb@5b110000 {
+		compatible = "fsl,imx8qm-usb3";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		reg = <0x5B110000 0x10000>;
 		clocks = <&usb3_lpcg 1>,
 			 <&usb3_lpcg 0>,
 			 <&usb3_lpcg 5>,
@@ -189,9 +188,31 @@ conn_subsys: bus@5b000000 {
 			 <&usb3_lpcg 3>;
 		clock-names = "usb3_lpm_clk", "usb3_bus_clk", "usb3_aclk",
 			"usb3_ipg_clk", "usb3_core_pclk";
+		assigned-clocks = <&clk IMX_SC_R_USB_2 IMX_SC_PM_CLK_PER>,
+			<&clk IMX_SC_R_USB_2 IMX_SC_PM_CLK_MISC>,
+			<&clk IMX_SC_R_USB_2 IMX_SC_PM_CLK_MST_BUS>;
+		assigned-clock-rates = <125000000>, <12000000>, <250000000>;
 		power-domains = <&pd IMX_SC_R_USB_2>;
-		cdns3,usbphy = <&usb3phynop1>;
 		status = "disabled";
+
+		usbotg3_cdns3: usb@5b120000 {
+			compatible = "cdns,usb3";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			interrupt-parent = <&gic>;
+			interrupts = <GIC_SPI 271 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 271 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 271 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 271 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "host", "peripheral", "otg", "wakeup";
+			reg = <0x5B130000 0x10000>,     /* memory area for HOST registers */
+				<0x5B140000 0x10000>,   /* memory area for DEVICE registers */
+				<0x5B120000 0x10000>;   /* memory area for OTG/DRD registers */
+			reg-names = "xhci", "dev", "otg";
+			phys = <&usb3_phy>;
+			phy-names = "cdns3,usb3-phy";
+			status = "disabled";
+		};
 	};
 
 	/* LPCG clocks */

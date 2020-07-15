@@ -35,6 +35,10 @@
 	/delete-property/ iommus;
 };
 
+&usbotg3_cdns3 {
+	/delete-property/ iommus;
+};
+
 &smmu {
 	/* xen only supports legacy bindings for now */
 	#iommu-cells = <0>;
