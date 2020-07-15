@@ -469,3 +469,8 @@
 	/delete-property/ iommus;
 	status = "disabled";
 };
+
+&usbotg3_cdns3 {
+	/delete-property/ iommus;
+	status = "disabled";
+};
