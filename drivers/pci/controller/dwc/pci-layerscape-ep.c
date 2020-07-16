@@ -299,6 +299,10 @@ static int __init ls_pcie_ep_probe(struct platform_device *pdev)
 
 	pci->dbi_base2 = pci->dbi_base + PCIE_DBI2_OFFSET;
 
+	/* set 64-bit DMA mask and coherent DMA mask */
+	if (dma_set_mask_and_coherent(dev, DMA_BIT_MASK(64)))
+		dev_warn(dev, "Failed to set 64-bit DMA mask.\n");
+
 	platform_set_drvdata(pdev, pcie);
 
 	ret = ls_add_pcie_ep(pcie, pdev);
