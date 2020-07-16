@@ -273,6 +273,10 @@ static int __init ls_pcie_ep_probe(struct platform_device *pdev)
 	pcie->max_width = (dw_pcie_readw_dbi(pci, PCIE_LINK_CAP) >>
 			  MAX_LINK_W_SHIFT) & MAX_LINK_W_MASK;
 
+	/* set 64-bit DMA mask and coherent DMA mask */
+	if (dma_set_mask_and_coherent(dev, DMA_BIT_MASK(64)))
+		dev_warn(dev, "Failed to set 64-bit DMA mask.\n");
+
 	platform_set_drvdata(pdev, pcie);
 
 	ret = dw_pcie_ep_init(&pci->ep);
