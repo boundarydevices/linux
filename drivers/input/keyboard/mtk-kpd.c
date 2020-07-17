@@ -17,6 +17,8 @@
 #define MTK_KPD_DEBOUNCE	0x0018
 #define MTK_KPD_DEBOUNCE_MASK	GENMASK(13, 0)
 #define MTK_KPD_DEBOUNCE_MAX_US	256000
+#define MTK_KPD_SEL		0x0020
+#define MTK_KPD_SEL_DOUBLE_KP_MODE	BIT(0)
 #define MTK_KPD_NUM_MEMS	5
 #define MTK_KPD_NUM_BITS	136	/* 4*32+8 MEM5 only use 8 BITS */
 
@@ -27,6 +29,7 @@ struct mtk_keypad {
 	void __iomem *base;
 	u32 n_rows;
 	u32 n_cols;
+	bool double_keys;
 	DECLARE_BITMAP(keymap_state, MTK_KPD_NUM_BITS);
 };
 
@@ -133,6 +136,9 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 
 	wakeup = device_property_read_bool(&pdev->dev, "wakeup-source");
 
+	keypad->double_keys =
+		device_property_read_bool(&pdev->dev, "mediatek,double-keys");
+
 	dev_dbg(&pdev->dev, "n_row=%d n_col=%d debounce=%d\n",
 		keypad->n_rows, keypad->n_cols, debounce);
 
@@ -148,6 +154,11 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 
 	regmap_write(keypad->regmap, MTK_KPD_DEBOUNCE,
 		     debounce * 32 / 1000 & MTK_KPD_DEBOUNCE_MASK);
+
+	if (keypad->double_keys)
+		regmap_update_bits(keypad->regmap, MTK_KPD_SEL,
+				   MTK_KPD_SEL_DOUBLE_KP_MODE,
+				   MTK_KPD_SEL_DOUBLE_KP_MODE);
 
 	keypad->clk = devm_clk_get(&pdev->dev, "kpd");
 	if (IS_ERR(keypad->clk))
