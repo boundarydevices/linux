@@ -488,8 +488,8 @@
 		};
 
 		pins_hub_rst {
-			pinmux = <PINMUX_GPIO8__FUNC_GPIO8>;
-			output-high;
+			pinmux = <PINMUX_GPIO9__FUNC_GPIO9>;
+			output-low;
 		};
 	};
 
