@@ -635,6 +635,7 @@
 
 &keypad {
 	mediatek,debounce-us = <32000>;
+	mediatek,double-keys;
 	keypad,num-rows = <2>;
 	keypad,num-columns = <1>;
 	linux,keymap =
