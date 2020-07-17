@@ -72,6 +72,10 @@ properties:
     value is 16000
     maximum: 256000
 
+  mediatek,double-keys:
+    description: use double key matrix instead of single key
+    type: boolean
+
 required:
   - compatible
   - reg
