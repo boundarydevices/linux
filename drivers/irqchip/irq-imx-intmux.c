@@ -15,6 +15,7 @@
 #include <linux/irqdomain.h>
 #include <linux/of_platform.h>
 #include <linux/spinlock.h>
+#include <linux/pm_runtime.h>
 
 #define CHANCSR(n)	(0x0 + 0x40 * n)
 #define CHANVEC(n)	(0x4 + 0x40 * n)
@@ -22,6 +23,7 @@
 #define CHANIPR(n)	(0x20 + (0x40 * n))
 
 struct intmux_irqchip_data {
+	struct irq_chip chip;
 	int chanidx;
 	int irq;
 	struct irq_domain *domain;
@@ -35,6 +37,9 @@ struct intmux_data {
 	void __iomem *regs;
 	struct clk *ipg_clk;
 	int channum;
+#ifdef CONFIG_PM
+	u32 *saved_reg;
+#endif
 	struct intmux_irqchip_data irqchip_data[];
 };
 
@@ -86,8 +91,10 @@ static struct irq_chip imx_intmux_irq_chip = {
 static int imx_intmux_irq_map(struct irq_domain *h, unsigned int irq,
 				irq_hw_number_t hwirq)
 {
+	struct intmux_irqchip_data *irqchip_data = h->host_data;
+
 	irq_set_chip_data(irq, h->host_data);
-	irq_set_chip_and_handler(irq, &imx_intmux_irq_chip, handle_edge_irq);
+	irq_set_chip_and_handler(irq, &irqchip_data->chip, handle_edge_irq);
 
 	return 0;
 }
@@ -161,13 +168,18 @@ static int imx_intmux_probe(struct platform_device *pdev)
 	intmux_data->pdev = pdev;
 	spin_lock_init(&intmux_data->lock);
 
-	ret = clk_prepare_enable(intmux_data->ipg_clk);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to enable ipg clk: %d\n", ret);
-		return ret;
+	if (IS_ENABLED(CONFIG_PM)) {
+		/* save CHANIER register */
+		intmux_data->saved_reg = devm_kzalloc(&pdev->dev,
+						      sizeof(u32) * channum,
+						      GFP_KERNEL);
+		if (!intmux_data->saved_reg)
+			return -ENOMEM;
 	}
 
 	for (i = 0; i < channum; i++) {
+		intmux_data->irqchip_data[i].chip = imx_intmux_irq_chip;
+		intmux_data->irqchip_data[i].chip.parent_device = &pdev->dev;
 		intmux_data->irqchip_data[i].chanidx = i;
 		intmux_data->irqchip_data[i].irq = platform_get_irq(pdev, i);
 		if (intmux_data->irqchip_data[i].irq <= 0) {
@@ -192,6 +204,21 @@ static int imx_intmux_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, intmux_data);
 
+	pm_runtime_get_noresume(&pdev->dev);
+	pm_runtime_set_active(&pdev->dev);
+	pm_runtime_enable(&pdev->dev);
+
+	ret = clk_prepare_enable(intmux_data->ipg_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to enable ipg clk: %d\n", ret);
+		return ret;
+	}
+	/*
+	 * Let pm_runtime_put() disable clock.
+	 * If CONFIG_PM is not enabled, the clock will stay powered.
+	 */
+	pm_runtime_put(&pdev->dev);
+
 	return 0;
 }
 
@@ -207,10 +234,62 @@ static int imx_intmux_remove(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, NULL);
+	pm_runtime_disable(&pdev->dev);
+
+	return 0;
+}
+
+#ifdef CONFIG_PM
+static void imx_intmux_save_regs(struct intmux_data *intmux_data)
+{
+	int i;
+
+	for (i = 0; i < intmux_data->channum; i++)
+		intmux_data->saved_reg[i] = readl_relaxed(intmux_data->regs
+							  + CHANIER(i));
+}
+
+static void imx_intmux_restore_regs(struct intmux_data *intmux_data)
+{
+	int i;
+
+	for (i = 0; i < intmux_data->channum; i++)
+		writel_relaxed(intmux_data->saved_reg[i], intmux_data->regs
+			       + CHANIER(i));
+}
+
+static int imx_intmux_runtime_suspend(struct device *dev)
+{
+	struct intmux_data *intmux_data = dev_get_drvdata(dev);
+
+	imx_intmux_save_regs(intmux_data);
 	clk_disable_unprepare(intmux_data->ipg_clk);
 
 	return 0;
 }
+
+static int imx_intmux_runtime_resume(struct device *dev)
+{
+	struct intmux_data *intmux_data = dev_get_drvdata(dev);
+	int ret;
+
+	ret = clk_prepare_enable(intmux_data->ipg_clk);
+	if (ret) {
+		dev_err(dev, "failed to enable ipg clk: %d\n", ret);
+		return ret;
+	}
+	imx_intmux_restore_regs(intmux_data);
+
+	return 0;
+}
+#endif
+
+static const struct dev_pm_ops imx_intmux_pm_ops = {
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
+				      pm_runtime_force_resume)
+	SET_RUNTIME_PM_OPS(imx_intmux_runtime_suspend,
+			   imx_intmux_runtime_resume, NULL)
+};
 
 static const struct of_device_id imx_intmux_id[] = {
 	{ .compatible = "nxp,imx-intmux", },
@@ -221,6 +300,7 @@ static struct platform_driver imx_intmux_driver = {
 	.driver = {
 		.name = "imx-intmux",
 		.of_match_table = imx_intmux_id,
+		.pm = &imx_intmux_pm_ops,
 	},
 	.probe = imx_intmux_probe,
 	.remove = imx_intmux_remove,

@@ -1543,7 +1543,7 @@ static uint32_t pxp_store_ctrl_config(struct pxp_pixmap *out, uint8_t mode,
 		ctrl.store_memory_en = 1;
 	}
 
-	if (out->rotate || out->flip)
+	if (out && (out->rotate || out->flip))
 		ctrl.block_en = 1;
 
 	ctrl.ch_en = 1;
@@ -3354,7 +3354,7 @@ reparse:
 		filter_possible_inputs(input_s0, &possible_inputs_s0);
 		filter_possible_inputs(input_s1, &possible_inputs_s1);
 
-		if (!possible_inputs_s0 || !possible_inputs_s0)
+		if (!possible_inputs_s0 || !possible_inputs_s1)
 			return -EINVAL;
 
 		filter_possible_outputs(output, &possible_outputs);

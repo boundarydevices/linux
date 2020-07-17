@@ -2,7 +2,7 @@
  * Freescale DSP driver
  *
  * Copyright (c) 2012-2013 by Tensilica Inc. ALL RIGHTS RESERVED.
- * Copyright 2018 NXP
+ * Copyright 2018-2020 NXP
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -404,6 +404,25 @@ static int fsl_dsp_open(struct inode *inode, struct file *file)
 	return ret;
 }
 
+static int fsl_dsp_wait_idle(struct fsl_dsp *dsp_priv)
+{
+	int timeout = 200;
+
+	if (dsp_priv->dsp_is_lpa) {
+		/* FW code is on OCRAM_A, Need wait DSP idle before gate */
+		/* OCRAM_A clock. Or DSP will hang */
+		while (!imx_audiomix_dsp_pwaitmode(dsp_priv->audiomix)) {
+			if (!timeout--) {
+				dev_err(dsp_priv->dev, "DSP failed to idle\n");
+				return -ETIME;
+			}
+			udelay(5);
+		}
+	}
+
+	return 0;
+}
+
 int fsl_dsp_close_func(struct xf_client *client)
 {
 	struct fsl_dsp *dsp_priv;
@@ -418,6 +437,10 @@ int fsl_dsp_close_func(struct xf_client *client)
 		xf_msg_free_all(proxy, &client->queue);
 
 	dsp_priv = (struct fsl_dsp *)client->global;
+
+	/* wait until DSP idle */
+	fsl_dsp_wait_idle(dsp_priv);
+
 	dev = dsp_priv->dev;
 	pm_runtime_put_sync(dev);
 
@@ -780,6 +803,15 @@ int dsp_mu_init(struct fsl_dsp *dsp_priv)
 		return -EINVAL;
 	}
 
+	if (dsp_priv->dsp_is_lpa) {
+		ret = irq_set_irq_wake(irq, 1);
+		if (ret) {
+			dev_err(dev, "Failed to set IRQ %d as wake source: %d\n",
+					irq, ret);
+			return ret;
+		}
+	}
+
 	return ret;
 }
 
@@ -793,6 +825,13 @@ static const struct file_operations dsp_fops = {
 	.poll		= fsl_dsp_poll,
 	.mmap		= fsl_dsp_mmap,
 	.release	= fsl_dsp_close,
+};
+
+extern struct snd_compr_ops dsp_platform_compr_lpa_ops;
+
+static const struct snd_soc_component_driver dsp_soc_platform_lpa_drv  = {
+	.name		= FSL_DSP_COMP_NAME,
+	.compr_ops      = &dsp_platform_compr_lpa_ops,
 };
 
 extern struct snd_compr_ops dsp_platform_compr_ops;
@@ -960,6 +999,126 @@ static int fsl_dsp_detach_pm_domains(struct device *dev,
 	return 0;
 }
 
+static int fsl_dsp_mem_setup_lpa(struct fsl_dsp *dsp_priv)
+{
+	struct device_node *np = dsp_priv->dev->of_node;
+	struct device_node *reserved_node;
+	struct resource reserved_res;
+	int offset;
+
+	reserved_node = of_parse_phandle(np, "ocram", 0);
+	if (!reserved_node) {
+		dev_err(dsp_priv->dev, "failed to get reserved region node\n");
+		return -ENODEV;
+	}
+
+	if (of_address_to_resource(reserved_node, 0, &reserved_res)) {
+		dev_err(dsp_priv->dev, "failed to get reserved region address\n");
+		return -EINVAL;
+	}
+
+	dsp_priv->ocram_phys_addr = reserved_res.start;
+	dsp_priv->ocram_reserved_size = (reserved_res.end - reserved_res.start)
+		+ 1;
+	if (dsp_priv->ocram_reserved_size <= 0) {
+		dev_err(dsp_priv->dev, "invalid value of reserved region size\n");
+		return -EINVAL;
+	}
+
+	dsp_priv->ocram_vir_addr = ioremap_wc(dsp_priv->ocram_phys_addr,
+			dsp_priv->ocram_reserved_size);
+	if (!dsp_priv->ocram_vir_addr) {
+		dev_err(dsp_priv->dev, "failed to remap ocram space for dsp firmware\n");
+		return -ENXIO;
+	}
+	memset_io(dsp_priv->ocram_vir_addr, 0, dsp_priv->ocram_reserved_size);
+
+	reserved_node = of_parse_phandle(np, "ocram-e", 0);
+	if (!reserved_node) {
+		dev_err(dsp_priv->dev, "failed to get reserved region node\n");
+		return -ENODEV;
+	}
+
+	if (of_address_to_resource(reserved_node, 0, &reserved_res)) {
+		dev_err(dsp_priv->dev, "failed to get reserved region address\n");
+		return -EINVAL;
+	}
+
+	dsp_priv->ocram_e_phys_addr = reserved_res.start;
+	dsp_priv->ocram_e_reserved_size = (reserved_res.end - reserved_res.start)
+		+ 1;
+	if (dsp_priv->ocram_e_reserved_size <= 0) {
+		dev_err(dsp_priv->dev, "invalid value of reserved region size\n");
+		return -EINVAL;
+	}
+
+	dsp_priv->ocram_e_vir_addr = ioremap_wc(dsp_priv->ocram_e_phys_addr,
+			dsp_priv->ocram_e_reserved_size);
+	if (!dsp_priv->ocram_e_vir_addr) {
+		dev_err(dsp_priv->dev, "failed to remap ocram_e space for dsp firmware\n");
+		return -ENXIO;
+	}
+	memset_io(dsp_priv->ocram_e_vir_addr, 0, dsp_priv->ocram_e_reserved_size);
+
+	/* msg ring buffer memory */
+	dsp_priv->msg_buf_virt = dsp_priv->ocram_e_vir_addr;
+	dsp_priv->msg_buf_phys = dsp_priv->ocram_e_phys_addr;
+	dsp_priv->msg_buf_size = MSG_BUF_SIZE;
+	offset = MSG_BUF_SIZE;
+
+	/* keep dsp framework's global data when suspend/resume */
+	dsp_priv->dsp_config_virt = dsp_priv->ocram_e_vir_addr + offset;
+	dsp_priv->dsp_config_phys = dsp_priv->ocram_e_phys_addr + offset;
+	dsp_priv->dsp_config_size = DSP_CONFIG_SIZE;
+
+	dsp_priv->scratch_buf_virt = dsp_priv->ocram_vir_addr;
+	dsp_priv->scratch_buf_phys = dsp_priv->ocram_phys_addr;
+	dsp_priv->scratch_buf_size = dsp_priv->ocram_reserved_size;
+	dsp_priv->sdram_vir_addr = dsp_priv->regs + SYSRAM_OFFSET;
+	dsp_priv->sdram_phys_addr = dsp_priv->paddr + SYSRAM_OFFSET;
+	dsp_priv->sdram_reserved_size = SYSRAM_SIZE;
+
+	return 0;
+}
+
+static int fsl_dsp_mem_setup(struct fsl_dsp *dsp_priv)
+{
+	void *buf_virt;
+	dma_addr_t buf_phys;
+	int size, offset;
+
+	size = MSG_BUF_SIZE + DSP_CONFIG_SIZE;
+	buf_virt = dma_alloc_coherent(dsp_priv->dev, size, &buf_phys, GFP_KERNEL);
+	if (!buf_virt) {
+		dev_err(dsp_priv->dev, "failed alloc memory.\n");
+		return -ENOMEM;
+	}
+
+	/* msg ring buffer memory */
+	dsp_priv->msg_buf_virt = buf_virt;
+	dsp_priv->msg_buf_phys = buf_phys;
+	dsp_priv->msg_buf_size = MSG_BUF_SIZE;
+	offset = MSG_BUF_SIZE;
+
+	/* keep dsp framework's global data when suspend/resume */
+	dsp_priv->dsp_config_virt = buf_virt + offset;
+	dsp_priv->dsp_config_phys = buf_phys + offset;
+	dsp_priv->dsp_config_size = DSP_CONFIG_SIZE;
+
+	/* scratch memory for dsp framework. The sdram reserved memory
+	 * is split into two equal parts currently. The front part is
+	 * used to keep the dsp firmware, the other part is considered
+	 * as scratch memory for dsp framework.
+	 */
+	dsp_priv->scratch_buf_virt = dsp_priv->sdram_vir_addr +
+		dsp_priv->sdram_reserved_size / 2;
+	dsp_priv->scratch_buf_phys = dsp_priv->sdram_phys_addr +
+		dsp_priv->sdram_reserved_size / 2;
+	dsp_priv->scratch_buf_size = dsp_priv->sdram_reserved_size / 2;
+
+	return 0;
+}
+
 static int fsl_dsp_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -970,9 +1129,7 @@ static int fsl_dsp_probe(struct platform_device *pdev)
 	const char *audio_iface;
 	struct resource *res;
 	void __iomem *regs;
-	void *buf_virt;
-	dma_addr_t buf_phys;
-	int size, offset, i;
+	int size, i;
 	int ret;
 	char tmp[16];
 
@@ -986,6 +1143,11 @@ static int fsl_dsp_probe(struct platform_device *pdev)
 		dsp_priv->dsp_board_type = DSP_IMX8QM_TYPE;
 	else
 		dsp_priv->dsp_board_type = DSP_IMX8MP_TYPE;
+
+	if (of_device_is_compatible(np, "fsl,imx8mp-dsp-lpa")) {
+		dsp_priv->dsp_board_type = DSP_IMX8MP_TYPE;
+		dsp_priv->dsp_is_lpa = 1;
+	}
 
 	dsp_priv->dev = &pdev->dev;
 
@@ -1080,34 +1242,19 @@ static int fsl_dsp_probe(struct platform_device *pdev)
 
 	size = MSG_BUF_SIZE + DSP_CONFIG_SIZE;
 
-	buf_virt = dma_alloc_coherent(&pdev->dev, size, &buf_phys, GFP_KERNEL);
-	if (!buf_virt) {
-		dev_err(&pdev->dev, "failed alloc memory.\n");
-		ret = -ENOMEM;
-		goto alloc_coherent_fail;
+	if (dsp_priv->dsp_is_lpa) {
+		ret = fsl_dsp_mem_setup_lpa(dsp_priv);
+		if (ret) {
+			dev_err(&pdev->dev, "lpa mem setup fail.\n");
+			goto reserved_node_fail;
+		}
+	} else {
+		if (fsl_dsp_mem_setup(dsp_priv)) {
+			dev_err(&pdev->dev, "failed alloc memory.\n");
+			ret = -ENOMEM;
+			goto alloc_coherent_fail;
+		}
 	}
-
-	/* msg ring buffer memory */
-	dsp_priv->msg_buf_virt = buf_virt;
-	dsp_priv->msg_buf_phys = buf_phys;
-	dsp_priv->msg_buf_size = MSG_BUF_SIZE;
-	offset = MSG_BUF_SIZE;
-
-	/* keep dsp framework's global data when suspend/resume */
-	dsp_priv->dsp_config_virt = buf_virt + offset;
-	dsp_priv->dsp_config_phys = buf_phys + offset;
-	dsp_priv->dsp_config_size = DSP_CONFIG_SIZE;
-
-	/* scratch memory for dsp framework. The sdram reserved memory
-	 * is split into two equal parts currently. The front part is
-	 * used to keep the dsp firmware, the other part is considered
-	 * as scratch memory for dsp framework.
-	 */
-	dsp_priv->scratch_buf_virt = dsp_priv->sdram_vir_addr +
-					dsp_priv->sdram_reserved_size / 2;
-	dsp_priv->scratch_buf_phys = dsp_priv->sdram_phys_addr +
-					dsp_priv->sdram_reserved_size / 2;
-	dsp_priv->scratch_buf_size = dsp_priv->sdram_reserved_size / 2;
 
 	/* initialize the reference counter for dsp_priv
 	 * structure
@@ -1126,10 +1273,18 @@ static int fsl_dsp_probe(struct platform_device *pdev)
 	/* ...initialize mutex */
 	mutex_init(&dsp_priv->dsp_mutex);
 
-	ret = devm_snd_soc_register_component(&pdev->dev, &dsp_soc_platform_drv, NULL, 0);
-	if (ret) {
-		dev_err(&pdev->dev, "registering soc platform failed\n");
-		goto register_component_fail;
+	if (dsp_priv->dsp_is_lpa) {
+		ret = devm_snd_soc_register_component(&pdev->dev, &dsp_soc_platform_lpa_drv, NULL, 0);
+		if (ret) {
+			dev_err(&pdev->dev, "registering soc platform failed\n");
+			goto register_component_fail;
+		}
+	} else {
+		ret = devm_snd_soc_register_component(&pdev->dev, &dsp_soc_platform_drv, NULL, 0);
+		if (ret) {
+			dev_err(&pdev->dev, "registering soc platform failed\n");
+			goto register_component_fail;
+		}
 	}
 
 	dsp_priv->esai_ipg_clk = devm_clk_get(&pdev->dev, "esai_ipg");
@@ -1158,6 +1313,14 @@ static int fsl_dsp_probe(struct platform_device *pdev)
 	dsp_priv->dsp_ocrama_clk = devm_clk_get(&pdev->dev, "ocram");
 	if (IS_ERR(dsp_priv->dsp_ocrama_clk))
 		dsp_priv->dsp_ocrama_clk = NULL;
+
+	dsp_priv->audio_root_clk = devm_clk_get(&pdev->dev, "audio_root");
+	if (IS_ERR(dsp_priv->audio_root_clk))
+		dsp_priv->audio_root_clk = NULL;
+
+	dsp_priv->audio_axi_clk = devm_clk_get(&pdev->dev, "audio_axi");
+	if (IS_ERR(dsp_priv->audio_axi_clk))
+		dsp_priv->audio_axi_clk = NULL;
 
 	dsp_priv->dsp_root_clk = devm_clk_get(&pdev->dev, "core");
 	if (IS_ERR(dsp_priv->dsp_root_clk))
@@ -1201,6 +1364,11 @@ register_component_fail:
 alloc_coherent_fail:
 	if (dsp_priv->sdram_vir_addr)
 		iounmap(dsp_priv->sdram_vir_addr);
+	if (dsp_priv->ocram_vir_addr)
+		iounmap(dsp_priv->ocram_vir_addr);
+	if (dsp_priv->ocram_e_vir_addr)
+		iounmap(dsp_priv->ocram_e_vir_addr);
+
 reserved_node_fail:
 	misc_deregister(&dsp_miscdev);
 misc_register_fail:
@@ -1223,6 +1391,10 @@ static int fsl_dsp_remove(struct platform_device *pdev)
 				dsp_priv->msg_buf_phys);
 	if (dsp_priv->sdram_vir_addr)
 		iounmap(dsp_priv->sdram_vir_addr);
+	if (dsp_priv->ocram_vir_addr)
+		iounmap(dsp_priv->ocram_vir_addr);
+	if (dsp_priv->ocram_e_vir_addr)
+		iounmap(dsp_priv->ocram_e_vir_addr);
 
 	pm_runtime_disable(&pdev->dev);
 	fsl_dsp_detach_pm_domains(&pdev->dev, dsp_priv);
@@ -1280,6 +1452,18 @@ static int fsl_dsp_runtime_resume(struct device *dev)
 	if (ret < 0) {
 		dev_err(dev, "Failed to enable dsp_root_clk ret = %d\n", ret);
 		goto dsp_root_clk;
+	}
+
+	ret = clk_prepare_enable(dsp_priv->audio_root_clk);
+	if (ret < 0) {
+		dev_err(dev, "Failed to enable audio_root_clk ret = %d\n", ret);
+		goto audio_root_clk;
+	}
+
+	ret = clk_prepare_enable(dsp_priv->audio_axi_clk);
+	if (ret < 0) {
+		dev_err(dev, "Failed to enable audio_axi_clk ret = %d\n", ret);
+		goto audio_axi_clk;
 	}
 
 	ret = clk_prepare_enable(dsp_priv->debug_clk);
@@ -1373,6 +1557,10 @@ static int fsl_dsp_runtime_resume(struct device *dev)
 mu2_clk:
 	clk_disable_unprepare(dsp_priv->debug_clk);
 debug_clk:
+	clk_disable_unprepare(dsp_priv->audio_axi_clk);
+audio_axi_clk:
+	clk_disable_unprepare(dsp_priv->audio_root_clk);
+audio_root_clk:
 	clk_disable_unprepare(dsp_priv->dsp_root_clk);
 dsp_root_clk:
 	clk_disable_unprepare(dsp_priv->dsp_ocrama_clk);
@@ -1411,6 +1599,8 @@ static int fsl_dsp_runtime_suspend(struct device *dev)
 
 	clk_disable_unprepare(dsp_priv->dsp_ocrama_clk);
 	clk_disable_unprepare(dsp_priv->dsp_root_clk);
+	clk_disable_unprepare(dsp_priv->audio_root_clk);
+	clk_disable_unprepare(dsp_priv->audio_axi_clk);
 	clk_disable_unprepare(dsp_priv->debug_clk);
 	clk_disable_unprepare(dsp_priv->mu2_clk);
 	clk_disable_unprepare(dsp_priv->sdma_root_clk);
@@ -1433,6 +1623,9 @@ static int fsl_dsp_suspend(struct device *dev)
 	struct xf_proxy *proxy = &dsp_priv->proxy;
 	int ret = 0;
 
+	if (dsp_priv->dsp_is_lpa)
+		return ret;
+
 	if (proxy->is_ready & pm_runtime_active(dev)) {
 		ret = xf_cmd_send_suspend(proxy);
 		if (ret) {
@@ -1451,6 +1644,9 @@ static int fsl_dsp_resume(struct device *dev)
 	struct fsl_dsp *dsp_priv = dev_get_drvdata(dev);
 	struct xf_proxy *proxy = &dsp_priv->proxy;
 	int ret = 0;
+
+	if (dsp_priv->dsp_is_lpa)
+		return ret;
 
 	ret = pm_runtime_force_resume(dev);
 	if (ret)
@@ -1478,6 +1674,7 @@ static const struct of_device_id fsl_dsp_ids[] = {
 	{ .compatible = "fsl,imx8qxp-dsp-v1", },
 	{ .compatible = "fsl,imx8qm-dsp-v1", },
 	{ .compatible = "fsl,imx8mp-dsp-v1", },
+	{ .compatible = "fsl,imx8mp-dsp-lpa", },
 	{}
 };
 MODULE_DEVICE_TABLE(of, fsl_dsp_ids);

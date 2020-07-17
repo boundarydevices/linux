@@ -6,17 +6,32 @@
 #define pr_fmt(fmt) "%s: " fmt, __func__
 
 #include <linux/cdev.h>
+#include <linux/cred.h>
 #include <linux/fs.h>
 #include <linux/idr.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/tee_drv.h>
 #include <linux/uaccess.h>
+#include <crypto/hash.h>
+#include <crypto/sha.h>
 #include "tee_private.h"
 
 #define TEE_NUM_DEVICES	32
 
 #define TEE_IOCTL_PARAM_SIZE(x) (sizeof(struct tee_param) * (x))
+
+#define TEE_UUID_NS_NAME_SIZE	128
+
+/*
+ * TEE Client UUID name space identifier (UUIDv4)
+ *
+ * Value here is random UUID that is allocated as name space identifier for
+ * forming Client UUID's for TEE environment using UUIDv5 scheme.
+ */
+static const uuid_t tee_client_uuid_ns = UUID_INIT(0x58ac9ca0, 0x2086, 0x4683,
+						   0xa1, 0xb8, 0xec, 0x4b,
+						   0xc0, 0x8e, 0x01, 0xb6);
 
 /*
  * Unprivileged devices in the lower half range and privileged devices in
@@ -110,6 +125,134 @@ static int tee_release(struct inode *inode, struct file *filp)
 	teedev_close_context(filp->private_data);
 	return 0;
 }
+
+/**
+ * uuid_v5() - Calculate UUIDv5
+ * @uuid: Resulting UUID
+ * @ns: Name space ID for UUIDv5 function
+ * @name: Name for UUIDv5 function
+ * @size: Size of name
+ *
+ * UUIDv5 is specific in RFC 4122.
+ *
+ * This implements section (for SHA-1):
+ * 4.3.  Algorithm for Creating a Name-Based UUID
+ */
+static int uuid_v5(uuid_t *uuid, const uuid_t *ns, const void *name,
+		   size_t size)
+{
+	unsigned char hash[SHA1_DIGEST_SIZE];
+	struct crypto_shash *shash = NULL;
+	struct shash_desc *desc = NULL;
+	int rc;
+
+	shash = crypto_alloc_shash("sha1", 0, 0);
+	if (IS_ERR(shash)) {
+		rc = PTR_ERR(shash);
+		pr_err("shash(sha1) allocation failed\n");
+		return rc;
+	}
+
+	desc = kzalloc(sizeof(*desc) + crypto_shash_descsize(shash),
+		       GFP_KERNEL);
+	if (IS_ERR(desc)) {
+		rc = PTR_ERR(desc);
+		goto out;
+	}
+
+	desc->tfm = shash;
+
+	rc = crypto_shash_init(desc);
+	if (rc < 0)
+		goto out2;
+
+	rc = crypto_shash_update(desc, (const u8 *)ns, sizeof(*ns));
+	if (rc < 0)
+		goto out2;
+
+	rc = crypto_shash_update(desc, (const u8 *)name, size);
+	if (rc < 0)
+		goto out2;
+
+	rc = crypto_shash_final(desc, hash);
+	if (rc < 0)
+		goto out2;
+
+	memcpy(uuid->b, hash, UUID_SIZE);
+
+	/* Tag for version 5 */
+	uuid->b[6] = (hash[6] & 0x0F) | 0x50;
+	uuid->b[8] = (hash[8] & 0x3F) | 0x80;
+
+out2:
+	kfree(desc);
+
+out:
+	crypto_free_shash(shash);
+	return rc;
+}
+
+int tee_session_calc_client_uuid(uuid_t *uuid, u32 connection_method,
+				 const u8 connection_data[TEE_IOCTL_UUID_LEN])
+{
+	const char *application_id = NULL;
+	gid_t ns_grp = (gid_t)-1;
+	kgid_t grp = INVALID_GID;
+	char *name = NULL;
+	int rc;
+
+	if (connection_method == TEE_IOCTL_LOGIN_PUBLIC) {
+		/* Nil UUID to be passed to TEE environment */
+		uuid_copy(uuid, &uuid_null);
+		return 0;
+	}
+
+	/*
+	 * In Linux environment client UUID is based on UUIDv5.
+	 *
+	 * Determine client UUID with following semantics for 'name':
+	 *
+	 * For TEEC_LOGIN_USER:
+	 * uid=<uid>
+	 *
+	 * For TEEC_LOGIN_GROUP:
+	 * gid=<gid>
+	 *
+	 */
+
+	name = kzalloc(TEE_UUID_NS_NAME_SIZE, GFP_KERNEL);
+	if (!name)
+		return -ENOMEM;
+
+	switch (connection_method) {
+	case TEE_IOCTL_LOGIN_USER:
+		scnprintf(name, TEE_UUID_NS_NAME_SIZE, "uid=%x",
+			  current_euid().val);
+		break;
+
+	case TEE_IOCTL_LOGIN_GROUP:
+		memcpy(&ns_grp, connection_data, sizeof(gid_t));
+		grp = make_kgid(current_user_ns(), ns_grp);
+		if (!gid_valid(grp) || !in_egroup_p(grp)) {
+			rc = -EPERM;
+			goto out;
+		}
+
+		scnprintf(name, TEE_UUID_NS_NAME_SIZE, "gid=%x", grp.val);
+		break;
+
+	default:
+		rc = -EINVAL;
+		goto out;
+	}
+
+	rc = uuid_v5(uuid, &tee_client_uuid_ns, name, strlen(name));
+out:
+	kfree(name);
+
+	return rc;
+}
+EXPORT_SYMBOL_GPL(tee_session_calc_client_uuid);
 
 static int tee_ioctl_version(struct tee_context *ctx,
 			     struct tee_ioctl_version_data __user *uvers)
@@ -232,25 +375,38 @@ static int params_from_user(struct tee_context *ctx, struct tee_param *params,
 		case TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_OUTPUT:
 		case TEE_IOCTL_PARAM_ATTR_TYPE_MEMREF_INOUT:
 			/*
-			 * If we fail to get a pointer to a shared memory
-			 * object (and increase the ref count) from an
-			 * identifier we return an error. All pointers that
-			 * has been added in params have an increased ref
-			 * count. It's the callers responibility to do
-			 * tee_shm_put() on all resolved pointers.
+			 * If a NULL pointer is passed to a TA in the TEE,
+			 * the ip.c IOCTL parameters is set to TEE_MEMREF_NULL
+			 * indicating a NULL memory reference.
 			 */
-			shm = tee_shm_get_from_id(ctx, ip.c);
-			if (IS_ERR(shm))
-				return PTR_ERR(shm);
+			if (ip.c != TEE_MEMREF_NULL) {
+				/*
+				 * If we fail to get a pointer to a shared
+				 * memory object (and increase the ref count)
+				 * from an identifier we return an error. All
+				 * pointers that has been added in params have
+				 * an increased ref count. It's the callers
+				 * responibility to do tee_shm_put() on all
+				 * resolved pointers.
+				 */
+				shm = tee_shm_get_from_id(ctx, ip.c);
+				if (IS_ERR(shm))
+					return PTR_ERR(shm);
 
-			/*
-			 * Ensure offset + size does not overflow offset
-			 * and does not overflow the size of the referred
-			 * shared memory object.
-			 */
-			if ((ip.a + ip.b) < ip.a ||
-			    (ip.a + ip.b) > shm->size) {
-				tee_shm_put(shm);
+				/*
+				 * Ensure offset + size does not overflow
+				 * offset and does not overflow the size of
+				 * the referred shared memory object.
+				 */
+				if ((ip.a + ip.b) < ip.a ||
+				    (ip.a + ip.b) > shm->size) {
+					tee_shm_put(shm);
+					return -EINVAL;
+				}
+			} else if (ctx->cap_memref_null) {
+				/* Pass NULL pointer to OP-TEE */
+				shm = NULL;
+			} else {
 				return -EINVAL;
 			}
 

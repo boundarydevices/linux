@@ -177,7 +177,16 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
-		
+
+		ocram: ocram@900000 {
+			no-map;
+			reg = <0 0x900000 0 0x60000>;
+		};
+		ocram_e: ocram_e@980000 {
+			no-map;
+			reg = <0 0x980000 0 0x10000>;
+		};
+
 /*
  *		Memory reserved for optee usage. Please do not use.
  *		This will be automaticky added to dtb if OP-TEE is installed.
@@ -1939,7 +1948,7 @@
 				<0 0 0 2 &gic GIC_SPI 125 IRQ_TYPE_LEVEL_HIGH>,
 				<0 0 0 3 &gic GIC_SPI 124 IRQ_TYPE_LEVEL_HIGH>,
 				<0 0 0 4 &gic GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>;
-		fsl,max-link-speed = <3>;
+		fsl,max-link-speed = <2>;
 		power-domains = <&pcie_pd>;
 		resets = <&src IMX8MQ_RESET_PCIEPHY>,
 			 <&src IMX8MQ_RESET_PCIEPHY_PERST>,

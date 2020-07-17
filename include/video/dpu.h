@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2019 NXP
+ * Copyright 2017-2020 NXP
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -108,6 +108,13 @@ typedef enum {
 	ID_LAYERBLEND2	= 0x23,	/* 35 */
 	ID_LAYERBLEND3	= 0x24,	/* 36 */
 } dpu_block_id_t;
+
+typedef enum {
+	DEC_SIG_SEL_FRAMEGEN = 0,
+	DEC_SIG_SEL_GAMMACOR,
+	DEC_SIG_SEL_MATRIX,
+	DEC_SIG_SEL_DITHER,
+} dec_sig_sel_t;
 
 typedef enum {
 	ED_SRC_DISABLE		= ID_NONE,
@@ -325,6 +332,12 @@ enum {
 	FU_T_FW,
 };
 
+enum dpu_crc_source {
+	DPU_CRC_SRC_NONE,
+	DPU_CRC_SRC_FRAMEGEN,
+	DPU_CRC_SRC_FRAMEGEN_ROI,
+};
+
 struct dpu_fetchunit;
 
 struct dpu_fetchunit_ops {
@@ -404,6 +417,7 @@ struct dpu_constframe *dpu_aux_cf_peek(struct dpu_constframe *cf);
 
 /* Display Engine Configuration Unit */
 struct dpu_disengcfg;
+void disengcfg_sig_select(struct dpu_disengcfg *dec, dec_sig_sel_t sig_sel);
 struct dpu_disengcfg *dpu_dec_get(struct dpu_soc *dpu, int id);
 void dpu_dec_put(struct dpu_disengcfg *dec);
 struct dpu_disengcfg *dpu_aux_dec_peek(struct dpu_disengcfg *dec);
@@ -553,6 +567,36 @@ void layerblend_blendcontrol(struct dpu_layerblend *lb, unsigned int zpos,
 void layerblend_position(struct dpu_layerblend *lb, int x, int y);
 struct dpu_layerblend *dpu_lb_get(struct dpu_soc *dpu, int id);
 void dpu_lb_put(struct dpu_layerblend *lb);
+
+/* Signature Unit */
+#define MAX_DPU_SIGNATURE_WIN_NUM	8
+struct dpu_signature;
+void signature_shden(struct dpu_signature *sig, bool enable);
+void signature_shdldsel_local(struct dpu_signature *sig);
+void signature_shdldsel_global(struct dpu_signature *sig);
+void
+signature_global_panic(struct dpu_signature *sig, unsigned int win, bool enable);
+void
+signature_local_panic(struct dpu_signature *sig, unsigned int win, bool enable);
+void
+signature_alpha_mask(struct dpu_signature *sig, unsigned int win, bool enable);
+void signature_crc(struct dpu_signature *sig, unsigned int win, bool enable);
+void
+signature_eval_win(struct dpu_signature *sig, unsigned int win, bool enable);
+void signature_win(struct dpu_signature *sig, unsigned int win,
+		   int xul, int yul, int xlr, int ylr);
+void signature_crc_value(struct dpu_signature *sig, unsigned int win,
+			 u32 *red, u32 *green, u32 *blue);
+void signature_shdldreq(struct dpu_signature *sig, u8 win_mask);
+void signature_continuous_mode(struct dpu_signature *sig, bool enable);
+void signature_kick(struct dpu_signature *sig);
+bool signature_is_idle(struct dpu_signature *sig);
+void signature_wait_for_idle(struct dpu_signature *sig);
+bool signature_is_valid(struct dpu_signature *sig);
+bool signature_is_error(struct dpu_signature *sig, u8 *err_win_mask);
+struct dpu_signature *dpu_sig_get(struct dpu_soc *dpu, int id);
+void dpu_sig_put(struct dpu_signature *sig);
+struct dpu_signature *dpu_aux_sig_peek(struct dpu_signature *sig);
 
 /* Store Unit */
 struct dpu_store;

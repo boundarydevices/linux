@@ -1020,8 +1020,12 @@ static int mipi_csis_subdev_host(struct csi_state *state)
 		break;
 	}
 
-	v4l2_async_notifier_add_subdev(&state->subdev_notifier,
+	ret = v4l2_async_notifier_add_subdev(&state->subdev_notifier,
 					&state->asd);
+	if (ret) {
+		dev_err(state->dev, "failed to add subdev to a notifier\n");
+		return ret;
+	}
 	state->subdev_notifier.v4l2_dev = &state->v4l2_dev;
 	state->subdev_notifier.ops = &mxc_mipi_csi_subdev_ops;
 
@@ -1273,7 +1277,6 @@ static int mipi_csis_remove(struct platform_device *pdev)
 
 	pm_runtime_disable(&pdev->dev);
 	mipi_csis_pm_suspend(&pdev->dev, true);
-	mipi_csis_clk_disable(state);
 	pm_runtime_set_suspended(&pdev->dev);
 
 	return 0;
