@@ -19,6 +19,10 @@
 #define MTK_KPD_DEBOUNCE_MAX_US	256000
 #define MTK_KPD_SEL		0x0020
 #define MTK_KPD_SEL_DOUBLE_KP_MODE	BIT(0)
+#define MTK_KPD_SEL_COL	GENMASK(15, 10)
+#define MTK_KPD_SEL_ROW	GENMASK(9, 4)
+#define MTK_KPD_SEL_ROWMASK(X)  GENMASK(4 - 1 + X, 4)
+#define MTK_KPD_SEL_COLMASK(X)  GENMASK(10 - 1 + X, 10)
 #define MTK_KPD_NUM_MEMS	5
 #define MTK_KPD_NUM_BITS	136	/* 4*32+8 MEM5 only use 8 BITS */
 
@@ -159,6 +163,12 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 		regmap_update_bits(keypad->regmap, MTK_KPD_SEL,
 				   MTK_KPD_SEL_DOUBLE_KP_MODE,
 				   MTK_KPD_SEL_DOUBLE_KP_MODE);
+
+	regmap_update_bits(keypad->regmap, MTK_KPD_SEL, MTK_KPD_SEL_ROW,
+			   MTK_KPD_SEL_ROWMASK(keypad->n_rows));
+
+	regmap_update_bits(keypad->regmap, MTK_KPD_SEL, MTK_KPD_SEL_COL,
+			   MTK_KPD_SEL_COLMASK(keypad->n_cols));
 
 	keypad->clk = devm_clk_get(&pdev->dev, "kpd");
 	if (IS_ERR(keypad->clk))
