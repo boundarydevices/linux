@@ -1,0 +1,165 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2019 Boundary Devices
+ */
+
+#define MIPI_I2C_BUS	i2c4
+#define GP_MIPI_ENABLE(a)	<&gpio5 0 a>
+#define PD_MIPI_ENABLE(a)	MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, a)	/* Pin 11 */
+
+#include "imx8mm-nitrogen8mm_rev2.dts"
+
+&iomuxc {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+
+	/delete-node/ ecspi2-mcp2515tgrp;
+	/delete-node/ hoggrp;
+
+	/delete-node/ i2c3a-rv4162grp;
+	/delete-node/ i2c3b-ov5640-mipigrp;
+
+	pinctrl_i2c2_rv4162: i2c2-rv4162grp {
+		fsl,pins = <
+#undef  GPIRQ_RV4162
+#define GPIRQ_RV4162		<&gpio1 3 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, 0x1c0)
+		>;
+	};
+
+	pinctrl_i2c3_ov5640_mipi: i2c3-ov5640-mipigrp {
+		fsl,pins = <
+#undef GP_OV5640_MIPI_POWER_DOWN
+#define GP_OV5640_MIPI_POWER_DOWN	<&gpio1 11 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO11_GPIO1_IO11, 0x141)
+#undef  GP_OV5640_MIPI_RESET
+#define GP_OV5640_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x101)
+		>;
+	};
+
+	pinctrl_pwm4: pwm4grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_GPIO1_IO15_PWM4_OUT, 0x16)
+		>;
+	};
+
+	pinctrl_usbotg2: usbotg2grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_GPIO1_IO14_USB2_OTG_PWR, 0x16)
+			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x140)
+		>;
+	};
+
+	pinctrl_wdog_gpio: wdog-gpiogrp {
+		fsl,pins = <
+#define GP_WDOG_RESET	<&gpio1 2 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO02_GPIO1_IO2, 0x140)
+		>;
+	};
+};
+
+/ {
+	model = "Boundary Devices i.MX8MMini Nitrogen8MM Som";
+	compatible = "boundary,imx8mm-nitrogen8mm_som", "fsl,imx8mm";
+
+	aliases {
+		reg_sw4 = &reg_buck4;
+#ifndef SKIP_MIPI_PANELS
+		ts_goodix3 = &ts_mipi_goodix3;
+#endif
+	};
+
+	mipi_xclk: mipi-xclk {
+		assigned-clocks = <&clk IMX8MMN(CLK_PWM4)>;
+		assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_40M)>;
+		compatible = "pwm-clock";
+		#clock-cells = <0>;
+		clock-frequency = <20000000>;
+		clock-output-names = "mipi_pwm4";
+		pwms = <&pwm4 0 50 0>; /* 20 MHz */
+	};
+};
+
+&ecspi2 {
+	/delete-node/ can@0;
+
+	spidev@0 {
+		compatible = "spidev";
+		spi-max-frequency = <2000000>;
+		reg = <0>;
+	};
+};
+
+&i2c2 {
+#ifndef SKIP_MIPI_PANELS
+	/* This is for a slightly different carrier */
+	ts_mipi_goodix3: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		display = <&display_subsystem>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GP_MIPI_TS_IRQ(IRQ_TYPE_LEVEL_HIGH);
+		irq-gpios = GP_MIPI_TS_IRQ(GPIO_ACTIVE_HIGH);
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_mipi_gt911>;
+		reg = <0x5d>;
+		reset-gpios = GP_MIPI_TS_RESET(GPIO_ACTIVE_HIGH);
+		status = "disabled";
+	};
+#endif
+
+	rtc@68 {
+		compatible = "microcrystal,rv4162";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_rv4162>;
+		reg = <0x68>;
+		interrupts-extended = GPIRQ_RV4162;
+		wakeup-source;
+	};
+};
+
+&i2c3 {
+	/delete-node/ i2cmux@70;
+
+	ov5640-mipi1@3c {
+		AVDD-supply = <&reg_vref_2v5>;
+		DOVDD-supply = <&reg_vref_1v8>;
+		DVDD-supply = <&reg_vref_3v3>;
+		clocks = <&mipi_xclk>;
+		clock-names = "xclk";
+		compatible = "ovti,ov5640_mipisubdev";
+		csi_id = <0>;
+		mclk = <20000000>;
+		mipi_csi;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_ov5640_mipi>;
+		powerdown-gpios = GP_OV5640_MIPI_POWER_DOWN;
+		reg = <0x3c>;
+		reset-gpios = GP_OV5640_MIPI_RESET;
+		status = "okay";
+
+		port {
+			ov5640_mipi1_ep: endpoint {
+				remote-endpoint = <&mipi1_ov5640_ep>;
+			};
+		};
+	};
+};
+
+&reg_buck4 {
+	alias = <&reg_buck4>;
+};
+
+&usbotg2 {
+	disable-over-current;
+};
+
+&wdog1 {
+	/*
+	 * a very few boards need gpio mode, done by cmd_board
+	 * fdt get value gp gpio0 phandle;
+	 * fdt set wdog0 reset-gpios <${gp} 2 1>
+	 */
+	pinctrl-names = "default", "gpio";
+	pinctrl-1 = <&pinctrl_wdog_gpio>;
+};
