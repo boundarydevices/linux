@@ -229,27 +229,27 @@
 		>;
 	};
 
-	pinctrl_i2c4_ft5x06: i2c4-ft5x06grp {
+	pinctrl_ts_ft5x06: ts-ft5x06grp {
 		fsl,pins = <
-#define GPIRQ_I2C4_FT5X06	<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
-#define GP_I2C4_FT5X06_WAKE	<&gpio3 12 GPIO_ACTIVE_LOW>
+#define GPIRQ_TS_FT5X06	<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_FT5X06_WAKE	<&gpio3 12 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0x49
-#define GP_I2C4_FT5X06_RESET	<&gpio3 13 GPIO_ACTIVE_LOW>
+#define GP_TS_FT5X06_RESET	<&gpio3 13 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	0x49
 		>;
 	};
 
-	pinctrl_i2c4_ft7250: i2c4-ft7250grp {
+	pinctrl_ts_ft7250: ts-ft7250grp {
 		fsl,pins = <
-#define GPIRQ_I2C4_FT7250	<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
-#define GP_I2C4_FT7250_WAKE	<&gpio3 12 GPIO_ACTIVE_LOW>
+#define GPIRQ_TS_FT7250	<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_FT7250_WAKE	<&gpio3 12 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0x49
-#define GP_I2C4_FT7250_RESET	<&gpio3 13 GPIO_ACTIVE_LOW>
+#define GP_TS_FT7250_RESET	<&gpio3 13 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	0x49
 		>;
 	};
 
-	pinctrl_i2c4_gt911: i2c4-gt911grp {
+	pinctrl_ts_gt911: ts-gt911grp {
 		fsl,pins = <
 #define GPIRQ_GT911 		<&gpio3 12 IRQ_TYPE_LEVEL_HIGH>
 #define GP_GT911_IRQ 		<&gpio3 12 GPIO_ACTIVE_HIGH>
@@ -260,7 +260,7 @@
 		>;
 	};
 
-	pinctrl_i2c4_sn65dsi83: i2c4-sn65dsi83grp {
+	pinctrl_sn65dsi83: sn65dsi83grp {
 		fsl,pins = <
 #define GPIRQ_I2C4_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
 			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x04
@@ -269,7 +269,7 @@
 		>;
 	};
 
-	pinctrl_i2c4_st1633: i2c4-st1633grp {
+	pinctrl_ts_st1633: ts-st1633grp {
 		fsl,pins = <
 #define GPIRQ_ST1633 		<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
 #define GP_ST1633_IRQ 		<&gpio3 12 GPIO_ACTIVE_LOW>
@@ -1089,7 +1089,7 @@
 		enable-gpios = GP_I2C4_SN65DSI83_EN;
 		interrupts-extended = GPIRQ_I2C4_SN65DSI83;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_sn65dsi83>;
+		pinctrl-0 = <&pinctrl_sn65dsi83>;
 		reg = <0x2c>;
 		status = "disabled";
 	};
@@ -1115,23 +1115,23 @@
 
 	ts_ft5x06: touchscreen@38 {
 		compatible = "edt,ft5x06-ts";
-		interrupts-extended = GPIRQ_I2C4_FT5X06;
+		interrupts-extended = GPIRQ_TS_FT5X06;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_ft5x06>;
+		pinctrl-0 = <&pinctrl_ts_ft5x06>;
 		reg = <0x38>;
-		reset-gpios = GP_I2C4_FT5X06_RESET;
+		reset-gpios = GP_TS_FT5X06_RESET;
 		status = "disabled";
-		wakeup-gpios = GP_I2C4_FT5X06_WAKE;
+		wakeup-gpios = GP_TS_FT5X06_WAKE;
 	};
 
 	ts_ft7250: touchscreen_ft7250@38 {
 		compatible = "edt,ft7250";
-		interrupts-extended = GPIRQ_I2C4_FT7250;
+		interrupts-extended = GPIRQ_TS_FT7250;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_ft7250>;
+		pinctrl-0 = <&pinctrl_ts_ft7250>;
 		reg = <0x38>;
-		reset-gpios = GP_I2C4_FT7250_RESET;
-		wakeup-gpios = GP_I2C4_FT7250_WAKE;
+		reset-gpios = GP_TS_FT7250_RESET;
+		wakeup-gpios = GP_TS_FT7250_WAKE;
 		status = "disabled";
 	};
 
@@ -1141,7 +1141,7 @@
 		interrupts-extended = GPIRQ_GT911;
 		irq-gpios = GP_GT911_IRQ;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_gt911>;
+		pinctrl-0 = <&pinctrl_ts_gt911>;
 		reg = <0x5d>;
 		reset-gpios = GP_GT911_RESET;
 		status = "disabled";
@@ -1152,7 +1152,7 @@
 		interrupts-extended = GPIRQ_ST1633;
 		/* pins used by touchscreen */
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_st1633>;
+		pinctrl-0 = <&pinctrl_ts_st1633>;
 		reg = <0x55>;
 		reset-gpios = GP_ST1633_RESET;
 		status = "disabled";
@@ -1190,13 +1190,13 @@
 			#size-cells = <0>;
 
 			lt8912: lt8912@48 {
+				compatible = "lontium,lt8912" ;
+				display-dsi = <&fb_mipi>;
+				interrupts-extended = GPIRQ_LT8912;
 				pinctrl-names = "default";
 				pinctrl-0 = <&pinctrl_lt8912>;
-				compatible = "lontium,lt8912" ;
-				interrupts-extended = GPIRQ_LT8912;
 				reg = <0x48> ;
 				reset-gpios = GP_LT8912_RESET;
-				display-dsi = <&fb_mipi>;
 			};
 		};
 	};
@@ -1217,9 +1217,9 @@
 			lt8912@48 {
 				compatible = "lontium,lt8912" ;
 				ddc-i2c-bus = <&ddc_i2c_bus>;
+				display-dsi = <&fb_mipi>;
 				reg = <0x48> ;
 				reset-gpios = <&max7323 0 GPIO_ACTIVE_LOW>;
-				display-dsi = <&fb_mipi>;
 			};
 		};
 
@@ -1238,6 +1238,15 @@
 			#size-cells = <0>;
 
 			/* Touch screens */
+			ts_ft5x06_2: touchscreen@38 {
+				compatible = "edt,ft5x06-ts";
+				interrupts-extended = GPIRQ_TS_FT5X06;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_ts_ft5x06>;
+				reg = <0x38>;
+				reset-gpios = GP_TS_FT5X06_RESET;
+				wakeup-gpios = GP_TS_FT5X06_WAKE;
+			};
 		};
 
 		i2c4@3 {
