@@ -1,0 +1,170 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2019 Boundary Devices
+ */
+
+#define TOUCHSCREEN_I2C_BUS	i2c4
+#include "imx8mm-nitrogen8mm_rev2.dts"
+
+/ {
+	model = "Boundary Devices i.MX8MMini Nitrogen8MM Som";
+	compatible = "ezurio,imx8mm-nitrogen8mm_som", "fsl,imx8mm";
+
+	aliases {
+		reg_sw4 = &reg_buck4;
+		ts_goodix2 = &ts_goodix2;
+	};
+
+	mipi_xclk: mipi-xclk {
+		assigned-clocks = <&clk IMX8MM_CLK_PWM4>;
+		assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_40M>;
+		compatible = "pwm-clock";
+		#clock-cells = <0>;
+		clock-frequency = <20000000>;
+		clock-output-names = "mipi_pwm4";
+		pwms = <&pwm4 0 50 0>; /* 20 MHz */
+	};
+};
+
+&ecspi2 {
+	/delete-node/ can@0;
+
+	spidev@0 {
+		reg = <0>;
+		compatible = "lwn,bk4";
+		spi-max-frequency = <1000000>;
+	};
+};
+
+&i2c2 {
+	ts_goodix2: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		display = <&display_subsystem>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = <&gpio1 6 IRQ_TYPE_LEVEL_HIGH>;
+		irq-gpios = <&gpio1 6 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_gt911>;
+		reg = <0x5d>;
+		reset-gpios = <&gpio1 7 GPIO_ACTIVE_HIGH>;
+		status = "disabled";
+	};
+
+	rtc@68 {
+		compatible = "microcrystal,rv4162";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_rv4162>;
+		reg = <0x68>;
+		interrupts-extended = <&gpio1 3 IRQ_TYPE_LEVEL_LOW>;
+		wakeup-source;
+	};
+};
+
+&i2c3 {
+	/delete-node/ i2cmux@70;
+
+	ov5640-mipi1@3c {
+		clocks = <&mipi_xclk>;
+		clock-names = "csi_mclk";
+		compatible = "ovti,ov5640_mipi";
+		csi_id = <0>;
+		mclk = <20000000>;
+		mclk_source = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_ov5640_mipi>;
+		pwn-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+		rst-gpios = <&gpio1 9 GPIO_ACTIVE_LOW>;
+		reg = <0x3c>;
+		status = "okay";
+
+		port {
+			ov5640_mipi1_ep: endpoint {
+				remote-endpoint = <&mipi1_ov5640_ep>;
+			};
+		};
+	};
+};
+
+&iomuxc {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+
+	/delete-node/ ecspi2-mcp2515tgrp;
+	/delete-node/ hoggrp;
+	/delete-node/ i2c3a-rv4162grp;
+	/delete-node/ i2c3b-ov5640-mipigrp;
+	/delete-node/ usbotg2grp;
+
+	pinctrl_sn65dsi83: sn65dsi83grp {
+		fsl,pins = <
+			MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x04
+			MX8MM_IOMUXC_SAI3_TXC_GPIO5_IO0	0x106
+		>;
+	};
+
+	pinctrl_i2c2_rv4162: i2c2-rv4162grp {
+		fsl,pins = <
+			MX8MM_IOMUXC_GPIO1_IO03_GPIO1_IO3	0x1c0
+		>;
+	};
+
+	pinctrl_i2c3_ov5640_mipi: i2c3-ov5640-mipigrp {
+		fsl,pins = <
+			MX8MM_IOMUXC_GPIO1_IO11_GPIO1_IO11	0x141
+			MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9	0x101
+		>;
+	};
+
+	pinctrl_lt8912_2: lt8912_2grp {
+		fsl,pins = <
+			MX8MM_IOMUXC_SAI3_TXC_GPIO5_IO0		0x16
+			MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x1c0
+		>;
+	};
+
+	pinctrl_pwm4: pwm4grp {
+		fsl,pins = <
+			MX8MM_IOMUXC_GPIO1_IO15_PWM4_OUT	0x16
+		>;
+	};
+
+	pinctrl_usbotg2: usbotg2grp {
+		fsl,pins = <
+			MX8MM_IOMUXC_GPIO1_IO14_USB2_OTG_PWR	0x16
+			MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8	0x140
+		>;
+	};
+
+	pinctrl_wdog_gpio: wdog-gpiogrp {
+		fsl,pins = <
+			MX8MM_IOMUXC_GPIO1_IO02_GPIO1_IO2	0x140
+		>;
+	};
+};
+
+&lt8912_2 {
+	reset-gpios = <&gpio5 0 GPIO_ACTIVE_LOW>;
+};
+
+&mipi_to_lvds {
+	enable-gpios = <&gpio5 0 GPIO_ACTIVE_HIGH>;
+};
+
+&reg_buck4 {
+	alias = <&reg_buck4>;
+};
+
+&usbotg2 {
+	/delete-property/ over-current-active-low;
+	disable-over-current;
+};
+
+&wdog1 {
+	/*
+	 * a very few boards need gpio mode, done by cmd_board
+	 * fdt get value gp gpio0 phandle;
+	 * fdt set wdog0 reset-gpios <${gp} 2 1>
+	 */
+	pinctrl-names = "default", "gpio";
+	pinctrl-1 = <&pinctrl_wdog_gpio>;
+};
