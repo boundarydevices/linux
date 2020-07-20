@@ -71,6 +71,7 @@ static int brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy *wiphy,
 		} else {
 			ifp->vif->wdev.iftype = NL80211_IFTYPE_STATION;
 		}
+		brcmf_cfg80211_update_proto_addr_mode(&vif->wdev);
 	}
 
 	if (cmdhdr->set)
