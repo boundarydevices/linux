@@ -496,7 +496,7 @@ send_key_to_dongle(struct brcmf_if *ifp, struct brcmf_wsec_key *key)
 	return err;
 }
 
-static void
+void
 brcmf_cfg80211_update_proto_addr_mode(struct wireless_dev *wdev)
 {
 	struct brcmf_cfg80211_vif *vif;
