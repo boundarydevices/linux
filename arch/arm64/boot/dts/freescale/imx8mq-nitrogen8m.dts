@@ -1121,6 +1121,7 @@
 		reg = <0x38>;
 		reset-gpios = GP_TS_FT5X06_RESET;
 		wakeup-gpios = GP_TS_FT5X06_WAKE;
+		status = "disabled";
 	};
 
 	ts_ft7250: touchscreen_ft7250@38 {
