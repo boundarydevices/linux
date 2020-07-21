@@ -44,6 +44,32 @@ static const struct regmap_config keypad_regmap_cfg = {
 	.max_register = 36,
 };
 
+/*
+ * - For single key detection
+ * | hardware key code | col0 | col1 | col2|
+ * | ----------------- | -----| ---- | --- |
+ * | row0              | 0    | 1    | 2   |
+ * | row1              | 9    | 10   | 11  |
+ * | row2              | 18   | 19   | 20  |
+ *
+ * - For double key detection
+ * | hardware key code | col0 | col1 |
+ * | ----------------- | -----| ---- |
+ * | row0              | 0/1  | 2/3  |
+ * | row1              | 13/14| 15/16|
+ */
+static void bitnr_to_col_row(bool is_double_keys, int bit_nr, int *col,
+			     int *row)
+{
+	if (!is_double_keys) {
+		*row = bit_nr / 9;
+		*col = bit_nr % 3;
+	} else {
+		*row = bit_nr / 10;
+		*col = bit_nr / (2 + (*row * 13));
+	}
+}
+
 static irqreturn_t kpd_irq_handler(int irq, void *dev_id)
 {
 	struct mtk_keypad *keypad = dev_id;
@@ -51,6 +77,7 @@ static irqreturn_t kpd_irq_handler(int irq, void *dev_id)
 	DECLARE_BITMAP(new_state, MTK_KPD_NUM_BITS);
 	DECLARE_BITMAP(change, MTK_KPD_NUM_BITS);
 	int bit_nr;
+	int col, row;
 	int pressed;
 	unsigned short code;
 
@@ -65,8 +92,10 @@ static irqreturn_t kpd_irq_handler(int irq, void *dev_id)
 		dev_dbg(&keypad->input_dev->dev, "%s",
 			pressed ? "pressed" : "released");
 
+		bitnr_to_col_row(keypad->double_keys, bit_nr, &col, &row);
+
 		/* 32bit register only use low 16bit as keypad mem register */
-		code = keycode[bit_nr - 16 * (BITS_TO_U32(bit_nr) - 1)];
+		code = keycode[MATRIX_SCAN_CODE(row, col, 0)];
 
 		input_report_key(keypad->input_dev, code, pressed);
 		input_sync(keypad->input_dev);
