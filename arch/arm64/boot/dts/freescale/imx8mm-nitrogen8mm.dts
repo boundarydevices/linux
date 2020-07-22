@@ -47,7 +47,7 @@
 	pinctrl_usbotg2: usbotg2grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_GPIO1_IO14_USB2_OTG_PWR, 0x16)
-			MX8MMN(IOMUXC_GPIO1_IO15_USB2_OTG_OC, 0x16)
+			MX8MMN(IOMUXC_GPIO1_IO15_USB2_OTG_OC, 0x156)
 		>;
 	};
 };
