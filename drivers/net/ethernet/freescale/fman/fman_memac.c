@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0-or-later
 /*
  * Copyright 2008 - 2015 Freescale Semiconductor Inc.
+ * Copyright 2020 Puresoftware Ltd.
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -9,6 +10,7 @@
 #include "fman.h"
 #include "mac.h"
 
+#include <linux/acpi.h>
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/phy.h>
@@ -1152,13 +1154,16 @@ static struct fman_mac *memac_config(struct mac_device *mac_dev,
 }
 
 int memac_initialization(struct mac_device *mac_dev,
-			 struct device_node *mac_node,
 			 struct fman_mac_params *params)
 {
 	int			 err;
 	struct device_node	*phy_node;
+	struct fwnode_handle	*phy_fwnode;
 	struct fixed_phy_status *fixed_link;
 	struct fman_mac		*memac;
+	struct device		*pcs_dev, *dev = mac_dev->dev;
+	struct device_node	*mac_node = dev->of_node;
+	struct fwnode_handle	*mac_fwnode = dev->fwnode;
 
 	mac_dev->set_promisc		= memac_set_promiscuous;
 	mac_dev->change_addr		= memac_modify_mac_address;
@@ -1188,18 +1193,32 @@ int memac_initialization(struct mac_device *mac_dev,
 	memac->memac_drv_param->reset_on_init = true;
 	if (memac->phy_if == PHY_INTERFACE_MODE_SGMII ||
 	    memac->phy_if == PHY_INTERFACE_MODE_QSGMII) {
-		phy_node = of_parse_phandle(mac_node, "pcsphy-handle", 0);
-		if (!phy_node) {
-			pr_err("PCS PHY node is not available\n");
-			err = -EINVAL;
-			goto _return_fm_mac_free;
-		}
+		if (is_of_node(mac_fwnode)) {
+			phy_node = of_parse_phandle(mac_node, "pcsphy-handle", 0);
+			if (!phy_node) {
+				pr_err("PCS PHY node is not available\n");
+				err = -EINVAL;
+				goto _return_fm_mac_free;
+			}
 
-		memac->pcsphy = of_phy_find_device(phy_node);
-		if (!memac->pcsphy) {
-			pr_err("of_phy_find_device (PCS PHY) failed\n");
-			err = -EINVAL;
-			goto _return_fm_mac_free;
+			memac->pcsphy = of_phy_find_device(phy_node);
+			if (!memac->pcsphy) {
+				pr_err("of_phy_find_device (PCS PHY) failed\n");
+				err = -EINVAL;
+				goto _return_fm_mac_free;
+			}
+		} else {
+			phy_fwnode = fwnode_find_reference(mac_fwnode,
+							   "pcsphy-handle", 0);
+			pcs_dev = bus_find_device_by_fwnode(&mdio_bus_type,
+							    phy_fwnode);
+			if (pcs_dev) {
+				memac->pcsphy = to_phy_device(pcs_dev);
+			} else {
+				pr_err("bus_find_device_by_fwnode (PCS PHY) failed\n");
+				err = -EINVAL;
+				goto _return_fm_mac_free;
+			}
 		}
 	}
 
