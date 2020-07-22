@@ -1063,6 +1063,7 @@
 };
 
 &usbotg2 {
+	disable-over-current;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg2>;
 	power-polarity-active-high;
