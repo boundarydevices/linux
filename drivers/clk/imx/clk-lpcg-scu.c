@@ -140,7 +140,7 @@ struct clk_hw *__imx_clk_lpcg_scu(struct device *dev, const char *name,
 	ret = clk_hw_register(dev, hw);
 	if (ret) {
 		kfree(clk);
-		hw = ERR_PTR(ret);
+		return ERR_PTR(ret);
 	}
 
 	if (dev)
