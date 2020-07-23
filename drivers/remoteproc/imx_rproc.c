@@ -91,6 +91,8 @@ struct imx_rproc {
 	const struct imx_rproc_dcfg	*dcfg;
 	struct imx_rproc_mem		mem[IMX7D_RPROC_MEM_MAX];
 	struct clk			*clk;
+	bool				early_boot;
+	void				*rsc_va;
 	struct mbox_client		cl;
 	struct mbox_chan		*tx_ch;
 	struct mbox_chan		*rx_ch;
@@ -229,6 +231,8 @@ static int imx_rproc_stop(struct rproc *rproc)
 				 dcfg->src_mask, dcfg->src_stop);
 	if (ret)
 		dev_err(dev, "Failed to stop M4!\n");
+	else
+		priv->early_boot = false;
 
 	return ret;
 }
@@ -349,6 +353,20 @@ static int imx_rproc_parse_memory_regions(struct rproc *rproc)
 		/* No need to translate pa to da, i.MX use same map */
 		da = rmem->base;
 
+		if (!strcmp(it.node->name, "rsc_table") && priv->early_boot) {
+			if (priv->rsc_va) {
+				dev_err(priv->dev, "Found duplicated rsc_table\n");
+				return -EINVAL;
+			}
+			priv->rsc_va = rproc_da_to_va(rproc, (u64)da, SZ_1K);
+			if (!priv->rsc_va) {
+				dev_err(priv->dev, "no map for rsc_table: %x\n", da);
+				return -EINVAL;
+			}
+
+			continue;
+		}
+
 		/* Register memory region */
 		mem = rproc_mem_entry_init(priv->dev, NULL, (dma_addr_t)rmem->base, rmem->size, da,
 					   imx_rproc_mem_alloc, imx_rproc_mem_release,
@@ -380,6 +398,21 @@ static int imx_rproc_parse_fw(struct rproc *rproc, const struct firmware *fw)
 	return 0;
 }
 
+static int imx_rproc_get_loaded_rsc_table(struct device *dev,
+					  struct rproc *rproc)
+{
+	struct imx_rproc *priv = rproc->priv;
+
+	if (!priv->rsc_va)
+		return 0;
+
+	rproc->table_ptr = (struct resource_table *)priv->rsc_va;
+	rproc->table_sz = SZ_1K;
+	rproc->cached_table = NULL;
+
+	return 0;
+}
+
 static void imx_rproc_kick(struct rproc *rproc, int vqid)
 {
 	struct imx_rproc *priv = rproc->priv;
@@ -400,9 +433,15 @@ static void imx_rproc_kick(struct rproc *rproc, int vqid)
 			__func__, vqid, err);
 }
 
+static int imx_rproc_attach(struct rproc *rproc)
+{
+	return 0;
+}
+
 static const struct rproc_ops imx_rproc_ops = {
 	.start		= imx_rproc_start,
 	.stop		= imx_rproc_stop,
+	.attach		= imx_rproc_attach,
 	.kick		= imx_rproc_kick,
 	.da_to_va       = imx_rproc_da_to_va,
 	.load		= rproc_elf_load_segments,
@@ -550,6 +589,36 @@ err_out:
 	return ret;
 }
 
+static int imx_rproc_detect_mode(struct imx_rproc *priv)
+{
+	const struct imx_rproc_dcfg *dcfg = priv->dcfg;
+	struct device *dev = priv->dev;
+	int ret;
+	u32 val;
+
+	ret = regmap_read(priv->regmap, dcfg->src_reg, &val);
+	if (ret) {
+		dev_err(dev, "Failed to read src\n");
+		return ret;
+	}
+
+	priv->early_boot = !(val & dcfg->src_stop);
+
+	if (priv->early_boot) {
+		priv->rproc->state = RPROC_DETACHED;
+
+		ret = imx_rproc_parse_memory_regions(priv->rproc);
+		if (ret)
+			return ret;
+
+		ret = imx_rproc_get_loaded_rsc_table(dev, priv->rproc);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
 static int imx_rproc_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -606,6 +675,10 @@ static int imx_rproc_probe(struct platform_device *pdev)
 		goto err_put_mbox;
 	}
 
+	ret = imx_rproc_detect_mode(priv);
+	if (ret)
+		goto err_put_mbox;
+
 	priv->clk = devm_clk_get(dev, NULL);
 	if (IS_ERR(priv->clk)) {
 		dev_err(dev, "Failed to get clock\n");
@@ -634,7 +707,8 @@ static int imx_rproc_probe(struct platform_device *pdev)
 	return 0;
 
 err_put_clk:
-	clk_disable_unprepare(priv->clk);
+	if (!priv->early_boot)
+		clk_disable_unprepare(priv->clk);
 err_put_mbox:
 	if (!IS_ERR(priv->tx_ch))
 		mbox_free_channel(priv->tx_ch);
@@ -651,7 +725,8 @@ static int imx_rproc_remove(struct platform_device *pdev)
 	struct rproc *rproc = platform_get_drvdata(pdev);
 	struct imx_rproc *priv = rproc->priv;
 
-	clk_disable_unprepare(priv->clk);
+	if (!priv->early_boot)
+		clk_disable_unprepare(priv->clk);
 	rproc_del(rproc);
 	rproc_free(rproc);
 
