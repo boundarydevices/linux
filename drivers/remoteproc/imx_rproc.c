@@ -108,6 +108,8 @@ struct imx_rproc {
 	const struct imx_rproc_dcfg	*dcfg;
 	struct imx_rproc_mem		mem[IMX_RPROC_MEM_MAX];
 	struct clk			*clk;
+	bool				early_boot;
+	void				*rsc_va;
 	struct mbox_client		cl;
 	struct mbox_chan		*tx_ch;
 	struct mbox_chan		*rx_ch;
@@ -338,6 +340,8 @@ static int imx_rproc_stop(struct rproc *rproc)
 
 	if (ret)
 		dev_err(dev, "Failed to stop remote core\n");
+	else
+		priv->early_boot = false;
 
 	return ret;
 }
@@ -454,6 +458,20 @@ static int imx_rproc_prepare(struct rproc *rproc)
 
 		/* No need to translate pa to da, i.MX use same map */
 		da = rmem->base;
+
+		if (!strcmp(it.node->name, "rsc_table") && priv->early_boot) {
+			if (priv->rsc_va) {
+				dev_err(priv->dev, "Found duplicated rsc_table\n");
+				return -EINVAL;
+			}
+			priv->rsc_va = rproc_da_to_va(rproc, (u64)da, SZ_1K, NULL);
+			if (!priv->rsc_va) {
+				dev_err(priv->dev, "no map for rsc_table: %x\n", da);
+				return -EINVAL;
+			}
+
+			continue;
+		}
 
 		/* Register memory region */
 		mem = rproc_mem_entry_init(priv->dev, NULL, (dma_addr_t)rmem->base, rmem->size, da,
@@ -806,7 +824,8 @@ static int imx_rproc_probe(struct platform_device *pdev)
 	return 0;
 
 err_put_clk:
-	clk_disable_unprepare(priv->clk);
+	if (!priv->early_boot)
+		clk_disable_unprepare(priv->clk);
 err_put_mbox:
 	imx_rproc_free_mbox(rproc);
 err_put_wkq:
@@ -822,7 +841,8 @@ static int imx_rproc_remove(struct platform_device *pdev)
 	struct rproc *rproc = platform_get_drvdata(pdev);
 	struct imx_rproc *priv = rproc->priv;
 
-	clk_disable_unprepare(priv->clk);
+	if (!priv->early_boot)
+		clk_disable_unprepare(priv->clk);
 	rproc_del(rproc);
 	imx_rproc_free_mbox(rproc);
 	rproc_free(rproc);
