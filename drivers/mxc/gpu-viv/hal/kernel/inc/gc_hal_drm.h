@@ -2,7 +2,7 @@
 *
 *    The MIT License (MIT)
 *
-*    Copyright (c) 2014 - 2019 Vivante Corporation
+*    Copyright (c) 2014 - 2020 Vivante Corporation
 *
 *    Permission is hereby granted, free of charge, to any person obtaining a
 *    copy of this software and associated documentation files (the "Software"),
@@ -26,7 +26,7 @@
 *
 *    The GPL License (GPL)
 *
-*    Copyright (C) 2014 - 2019 Vivante Corporation
+*    Copyright (C) 2014 - 2020 Vivante Corporation
 *
 *    This program is free software; you can redistribute it and/or
 *    modify it under the terms of the GNU General Public License
@@ -55,6 +55,8 @@
 
 #ifndef __VIVNATE_DRM_H__
 #define __VIVNATE_DRM_H__
+
+#include <uapi/drm/drm.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -188,9 +190,11 @@ struct drm_viv_gem_ref_node {
 #define DRM_IOCTL_VIV_GEM_ATTACH_AUX    DRM_IOWR(DRM_COMMAND_BASE + DRM_VIV_GEM_ATTACH_AUX, struct drm_viv_gem_attach_aux)
 #define DRM_IOCTL_VIV_GEM_REF_NODE      DRM_IOWR(DRM_COMMAND_BASE + DRM_VIV_GEM_REF_NODE,   struct drm_viv_gem_ref_node)
 
+#ifdef __KERNEL__
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
 #define drm_gem_object_unreference_unlocked drm_gem_object_put_unlocked
 #define drm_dev_unref drm_dev_put
+#endif
 #endif
 
 #if defined(__cplusplus)
