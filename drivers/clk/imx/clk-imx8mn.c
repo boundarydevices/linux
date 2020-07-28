@@ -304,8 +304,8 @@ static int __init imx_clk_init_on(struct device_node *np,
 	if (elems < 0)
 		return elems;
 	array = kcalloc(elems, sizeof(elems), GFP_KERNEL);
-	if (IS_ERR_OR_NULL(array))
-		return PTR_ERR(array);
+	if (!array)
+		return -ENOMEM;
 
 	ret = of_property_read_u32_array(np, "init-on-array", array, elems);
 	if (ret)
@@ -316,6 +316,8 @@ static int __init imx_clk_init_on(struct device_node *np,
 		if (ret)
 			pr_err("clk_prepare_enable failed %d\n", array[i]);
 	}
+
+	kfree(array);
 
 	return 0;
 }
