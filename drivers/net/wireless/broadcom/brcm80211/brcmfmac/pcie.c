@@ -62,8 +62,7 @@ BRCMF_FW_DEF(4365C, "brcmfmac4365c-pcie");
 BRCMF_FW_DEF(4366B, "brcmfmac4366b-pcie");
 BRCMF_FW_DEF(4366C, "brcmfmac4366c-pcie");
 BRCMF_FW_DEF(4371, "brcmfmac4371-pcie");
-CY_FW_DEF(4355, "cyfmac89459-pcie");
-CY_FW_DEF(54591, "cyfmac54591-pcie");
+CY_FW_DEF(4355, "cyfmac54591-pcie");
 
 /* firmware config files */
 MODULE_FIRMWARE(BRCMF_FW_DEFAULT_PATH "brcmfmac*-pcie.txt");
@@ -93,7 +92,6 @@ static const struct brcmf_firmware_mapping brcmf_pcie_fwnames[] = {
 	BRCMF_FW_ENTRY(BRCM_CC_43666_CHIP_ID, 0xFFFFFFF0, 4366C),
 	BRCMF_FW_ENTRY(BRCM_CC_4371_CHIP_ID, 0xFFFFFFFF, 4371),
 	BRCMF_FW_ENTRY(CY_CC_89459_CHIP_ID, 0xFFFFFFFF, 4355),
-	BRCMF_FW_ENTRY(CY_CC_54591_CHIP_ID, 0xFFFFFFFF, 54591),
 };
 
 #define BRCMF_PCIE_FW_UP_TIMEOUT		5000 /* msec */
@@ -1677,20 +1675,13 @@ static
 int brcmf_pcie_get_fwname(struct device *dev, const char *ext, u8 *fw_name)
 {
 	struct brcmf_bus *bus_if = dev_get_drvdata(dev);
-	struct brcmf_pciedev *buspub = bus_if->bus_priv.pcie;
-	struct brcmf_pciedev_info *devinfo = buspub->devinfo;
 	struct brcmf_fw_request *fwreq;
 	struct brcmf_fw_name fwnames[] = {
 		{ ext, fw_name },
 	};
 	u32 chip;
 
-	if (devinfo->ci->chip == CY_CC_89459_CHIP_ID &&
-	    devinfo->pdev->device == CY_PCIE_54591_DEVICE_ID)
-		chip = CY_CC_54591_CHIP_ID;
-	else
-		chip = bus_if->chip;
-
+	chip = bus_if->chip;
 	fwreq = brcmf_fw_alloc_request(chip, bus_if->chiprev,
 				       brcmf_pcie_fwnames,
 				       ARRAY_SIZE(brcmf_pcie_fwnames),
@@ -2142,11 +2133,7 @@ brcmf_pcie_prepare_fw_request(struct brcmf_pciedev_info *devinfo)
 	};
 	u32 chip;
 
-	if (devinfo->ci->chip == CY_CC_89459_CHIP_ID &&
-	    devinfo->pdev->device == CY_PCIE_54591_DEVICE_ID)
-		chip = CY_CC_54591_CHIP_ID;
-	else
-		chip = devinfo->ci->chip;
+	chip = devinfo->ci->chip;
 	fwreq = brcmf_fw_alloc_request(chip, devinfo->ci->chiprev,
 				       brcmf_pcie_fwnames,
 				       ARRAY_SIZE(brcmf_pcie_fwnames),
