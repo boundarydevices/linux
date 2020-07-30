@@ -74,6 +74,7 @@
 #define PCI_DEVICE_ID_LS1028A			0x82c0
 #define PCI_DEVICE_ID_LS1088A			0x80c0
 #define PCI_DEVICE_ID_LX2160A			0x8d80
+#define PCI_DEVICE_ID_LX2162A			0x8d88
 #define PCI_DEVICE_ID_IMX8			0x0808
 #define PCI_DEVICE_ID_IMX6			0x0606
 
@@ -975,6 +976,9 @@ static const struct pci_device_id pci_endpoint_test_tbl[] = {
 	  .driver_data = (kernel_ulong_t)&default_data,
 	},
 	{ PCI_DEVICE(PCI_VENDOR_ID_FREESCALE, PCI_DEVICE_ID_LX2160A),
+	  .driver_data = (kernel_ulong_t)&default_data,
+	},
+	{ PCI_DEVICE(PCI_VENDOR_ID_FREESCALE, PCI_DEVICE_ID_LX2162A),
 	  .driver_data = (kernel_ulong_t)&default_data,
 	},
 	{ PCI_DEVICE(PCI_VENDOR_ID_FREESCALE, PCI_DEVICE_ID_IMX8) },
