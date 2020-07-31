@@ -313,7 +313,8 @@ int dcss_dev_suspend(struct device *dev)
 	if (!dcss)
 		return 0;
 
-	drm_bridge_connector_disable_hpd(kms->connector);
+	if (!dcss_drv_is_componentized(dev))
+		drm_bridge_connector_disable_hpd(kms->connector);
 
 	drm_mode_config_helper_suspend(ddev);
 
@@ -351,7 +352,8 @@ int dcss_dev_resume(struct device *dev)
 
 	drm_mode_config_helper_resume(ddev);
 
-	drm_bridge_connector_enable_hpd(kms->connector);
+	if (!dcss_drv_is_componentized(dev))
+		drm_bridge_connector_enable_hpd(kms->connector);
 
 	return 0;
 }

@@ -94,6 +94,7 @@ struct dcss_dev {
 
 struct dcss_dev *dcss_drv_dev_to_dcss(struct device *dev);
 struct drm_device *dcss_drv_dev_to_drm(struct device *dev);
+bool dcss_drv_is_componentized(struct device *dev);
 struct dcss_dev *dcss_dev_create(struct device *dev, bool hdmi_output);
 void dcss_dev_destroy(struct dcss_dev *dcss);
 int dcss_dev_runtime_suspend(struct device *dev);
