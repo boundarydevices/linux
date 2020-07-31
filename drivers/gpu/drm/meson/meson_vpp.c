@@ -91,7 +91,8 @@ static void meson_vpp_write_vd_scaling_filter_coefs(struct meson_drm *priv,
 void meson_vpp_init(struct meson_drm *priv)
 {
 	/* set dummy data default YUV black */
-	if (meson_vpu_is_compatible(priv, VPU_COMPATIBLE_GXL))
+	if (meson_vpu_is_compatible(priv, VPU_COMPATIBLE_GXL) ||
+	    meson_vpu_is_compatible(priv, VPU_COMPATIBLE_AXG))
 		writel_relaxed(0x108080, priv->io_base + _REG(VPP_DUMMY_DATA1));
 	else if (meson_vpu_is_compatible(priv, VPU_COMPATIBLE_GXM)) {
 		writel_bits_relaxed(0xff << 16, 0xff << 16,
@@ -107,6 +108,9 @@ void meson_vpp_init(struct meson_drm *priv)
 	if (meson_vpu_is_compatible(priv, VPU_COMPATIBLE_G12A))
 		writel_relaxed(VPP_OFIFO_SIZE_DEFAULT,
 			       priv->io_base + _REG(VPP_OFIFO_SIZE));
+	else if (meson_vpu_is_compatible(priv, VPU_COMPATIBLE_AXG))
+		writel_bits_relaxed(VPP_OFIFO_SIZE_MASK, 0x400,
+				    priv->io_base + _REG(VPP_OFIFO_SIZE));
 	else
 		writel_bits_relaxed(VPP_OFIFO_SIZE_MASK, 0x77f,
 				    priv->io_base + _REG(VPP_OFIFO_SIZE));
