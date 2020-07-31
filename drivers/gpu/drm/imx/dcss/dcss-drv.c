@@ -6,6 +6,7 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
+#include <linux/component.h>
 #include <drm/drm_of.h>
 
 #include "dcss-dev.h"
@@ -14,6 +15,8 @@
 struct dcss_drv {
 	struct dcss_dev *dcss;
 	struct dcss_kms_dev *kms;
+
+	bool is_componentized;
 };
 
 struct dcss_dev *dcss_drv_dev_to_dcss(struct device *dev)
@@ -30,30 +33,25 @@ struct drm_device *dcss_drv_dev_to_drm(struct device *dev)
 	return mdrv ? &mdrv->kms->base : NULL;
 }
 
-static int dcss_drv_platform_probe(struct platform_device *pdev)
+bool dcss_drv_is_componentized(struct device *dev)
 {
-	struct device *dev = &pdev->dev;
-	struct device_node *remote;
+	struct dcss_drv *mdrv = dev_get_drvdata(dev);
+
+	return mdrv->is_componentized;
+}
+
+static int dcss_drv_init(struct device *dev, bool componentized)
+{
 	struct dcss_drv *mdrv;
 	int err = 0;
-	bool hdmi_output = true;
-
-	if (!dev->of_node)
-		return -ENODEV;
-
-	remote = of_graph_get_remote_node(dev->of_node, 0, 0);
-	if (!remote)
-		return -ENODEV;
-
-	hdmi_output = !of_device_is_compatible(remote, "fsl,imx8mq-nwl-dsi");
-
-	of_node_put(remote);
 
 	mdrv = kzalloc(sizeof(*mdrv), GFP_KERNEL);
 	if (!mdrv)
 		return -ENOMEM;
 
-	mdrv->dcss = dcss_dev_create(dev, hdmi_output);
+	mdrv->is_componentized = componentized;
+
+	mdrv->dcss = dcss_dev_create(dev, componentized);
 	if (IS_ERR(mdrv->dcss)) {
 		err = PTR_ERR(mdrv->dcss);
 		goto err;
@@ -61,7 +59,7 @@ static int dcss_drv_platform_probe(struct platform_device *pdev)
 
 	dev_set_drvdata(dev, mdrv);
 
-	mdrv->kms = dcss_kms_attach(mdrv->dcss);
+	mdrv->kms = dcss_kms_attach(mdrv->dcss, componentized);
 	if (IS_ERR(mdrv->kms)) {
 		err = PTR_ERR(mdrv->kms);
 		goto dcss_shutoff;
@@ -79,19 +77,73 @@ err:
 	return err;
 }
 
+static void dcss_drv_deinit(struct device *dev, bool componentized)
+{
+	struct dcss_drv *mdrv = dev_get_drvdata(dev);
+
+	if (!mdrv)
+		return;
+
+	dcss_kms_detach(mdrv->kms, componentized);
+	dcss_dev_destroy(mdrv->dcss);
+
+	dev_set_drvdata(dev, NULL);
+
+	kfree(mdrv);
+}
+
+static int dcss_drv_bind(struct device *dev)
+{
+	return dcss_drv_init(dev, true);
+}
+
+static void dcss_drv_unbind(struct device *dev)
+{
+	return dcss_drv_deinit(dev, true);
+}
+
+static const struct component_master_ops dcss_master_ops = {
+	.bind	= dcss_drv_bind,
+	.unbind	= dcss_drv_unbind,
+};
+
+static int compare_of(struct device *dev, void *data)
+{
+	return dev->of_node == data;
+}
+
+static int dcss_drv_platform_probe(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct component_match *match = NULL;
+	struct device_node *remote;
+
+	if (!dev->of_node)
+		return -ENODEV;
+
+	remote = of_graph_get_remote_node(dev->of_node, 0, 0);
+	if (!remote)
+		return -ENODEV;
+
+	if (of_device_is_compatible(remote, "fsl,imx8mq-nwl-dsi")) {
+		of_node_put(remote);
+		return dcss_drv_init(dev, false);
+	}
+
+	drm_of_component_match_add(dev, &match, compare_of, remote);
+	of_node_put(remote);
+
+	return component_master_add_with_match(dev, &dcss_master_ops, match);
+}
+
 static int dcss_drv_platform_remove(struct platform_device *pdev)
 {
 	struct dcss_drv *mdrv = dev_get_drvdata(&pdev->dev);
 
-	if (!mdrv)
-		return 0;
-
-	dcss_kms_detach(mdrv->kms);
-	dcss_dev_destroy(mdrv->dcss);
-
-	dev_set_drvdata(&pdev->dev, NULL);
-
-	kfree(mdrv);
+	if (mdrv->is_componentized)
+		component_master_del(&pdev->dev, &dcss_master_ops);
+	else
+		dcss_drv_deinit(&pdev->dev, false);
 
 	return 0;
 }
