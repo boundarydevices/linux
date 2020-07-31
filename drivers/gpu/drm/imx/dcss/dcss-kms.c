@@ -13,6 +13,7 @@
 #include <drm/drm_of.h>
 #include <drm/drm_probe_helper.h>
 #include <drm/drm_vblank.h>
+#include <linux/component.h>
 
 #include "dcss-dev.h"
 #include "dcss-kms.h"
@@ -204,7 +205,7 @@ static int dcss_kms_bridge_connector_init(struct dcss_kms_dev *kms)
 	return 0;
 }
 
-struct dcss_kms_dev *dcss_kms_attach(struct dcss_dev *dcss)
+struct dcss_kms_dev *dcss_kms_attach(struct dcss_dev *dcss, bool componentized)
 {
 	struct dcss_kms_dev *kms;
 	struct drm_device *drm;
@@ -229,13 +230,21 @@ struct dcss_kms_dev *dcss_kms_attach(struct dcss_dev *dcss)
 
 	drm->irq_enabled = true;
 
-	ret = dcss_kms_bridge_connector_init(kms);
-	if (ret)
-		goto cleanup_mode_config;
+	if (!componentized) {
+		ret = dcss_kms_bridge_connector_init(kms);
+		if (ret)
+			goto cleanup_mode_config;
+	}
 
 	ret = dcss_crtc_init(crtc, drm);
 	if (ret)
 		goto cleanup_mode_config;
+
+	if (componentized) {
+		ret = component_bind_all(dcss->dev, kms);
+		if (ret)
+			goto cleanup_crtc;
+	}
 
 	drm_mode_config_reset(drm);
 
@@ -243,7 +252,8 @@ struct dcss_kms_dev *dcss_kms_attach(struct dcss_dev *dcss)
 
 	drm_kms_helper_poll_init(drm);
 
-	drm_bridge_connector_enable_hpd(kms->connector);
+	if (!componentized)
+		drm_bridge_connector_enable_hpd(kms->connector);
 
 	ret = drm_dev_register(drm, 0);
 	if (ret)
@@ -254,7 +264,8 @@ struct dcss_kms_dev *dcss_kms_attach(struct dcss_dev *dcss)
 	return kms;
 
 cleanup_crtc:
-	drm_bridge_connector_disable_hpd(kms->connector);
+	if (!componentized)
+		drm_bridge_connector_disable_hpd(kms->connector);
 	drm_kms_helper_poll_fini(drm);
 	dcss_crtc_deinit(crtc, drm);
 
@@ -265,17 +276,21 @@ cleanup_mode_config:
 	return ERR_PTR(ret);
 }
 
-void dcss_kms_detach(struct dcss_kms_dev *kms)
+void dcss_kms_detach(struct dcss_kms_dev *kms, bool componentized)
 {
 	struct drm_device *drm = &kms->base;
+	struct dcss_dev *dcss = drm->dev_private;
 
 	drm_dev_unregister(drm);
-	drm_bridge_connector_disable_hpd(kms->connector);
+	if (!componentized)
+		drm_bridge_connector_disable_hpd(kms->connector);
 	drm_kms_helper_poll_fini(drm);
 	drm_atomic_helper_shutdown(drm);
 	drm_crtc_vblank_off(&kms->crtc.base);
 	drm->irq_enabled = false;
 	drm_mode_config_cleanup(drm);
 	dcss_crtc_deinit(&kms->crtc, drm);
+	if (componentized)
+		component_unbind_all(dcss->dev, drm);
 	drm->dev_private = NULL;
 }
