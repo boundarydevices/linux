@@ -31,8 +31,10 @@ description: |
 
   The Video Input Unit is in charge of the pixel scanout from the DDR memory.
   It fetches the frames addresses, stride and parameters from the "Canvas" memory.
+  On the AXG family, the Video Input Unit direclty reads from DDR memory.
   This part is also in charge of the CSC (Colorspace Conversion).
   It can handle 2 OSD Planes and 2 Video Planes.
+  On the AXG family, only a single OSD plane without scalins is supported.
 
   VPP: Video Post Processing
   --------------------------
@@ -49,11 +51,13 @@ description: |
   The VENC is composed of the multiple pixel encoders
    - ENCI : Interlace Video encoder for CVBS and Interlace HDMI
    - ENCP : Progressive Video Encoder for HDMI
-   - ENCL : LCD LVDS Encoder
+   - ENCL : LCD DPI Encoder
   The VENC Unit gets a Pixel Clocks (VCLK) from a dedicated HDMI PLL and clock
   tree and provides the scanout clock to the VPP and VIU.
   The ENCI is connected to a single VDAC for Composite Output.
   The ENCI and ENCP are connected to an on-chip HDMI Transceiver.
+  On the AXG and G12A family, the ENCL is connected to a DPI-to-DSI
+  transceiver.
 
 properties:
   compatible:
@@ -65,6 +69,7 @@ properties:
               - amlogic,meson-gxm-vpu # GXM (S912)
           - const: amlogic,meson-gx-vpu
       - enum:
+          - amlogic,meson-axg-vpu # AXG (A113D, A113X)
           - amlogic,meson-g12a-vpu # G12A (S905X2, S905Y2, S905D2)
 
   reg:
@@ -92,6 +97,11 @@ properties:
     description:
       A port node pointing to the HDMI-TX port node.
 
+  port@2:
+    type: object
+    description:
+      A port node pointing to the DPI port node.
+
   "#address-cells":
     const: 1
 
@@ -102,10 +112,30 @@ required:
   - compatible
   - reg
   - interrupts
-  - port@0
-  - port@1
   - "#address-cells"
   - "#size-cells"
+
+allOf:
+  - if:
+      properties:
+        compatible:
+          enum:
+            - amlogic,meson-gx-vpu
+            - amlogic,meson-g12a-vpu
+
+    then:
+      required:
+        - port@0
+        - port@1
+  - if:
+      properties:
+        compatible:
+          enum:
+            - amlogic,meson-axg-vpu
+
+    then:
+      required:
+        - port@2
 
 additionalProperties: false
 
