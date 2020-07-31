@@ -121,6 +121,7 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 	u32 debounce;
 	bool wakeup;
 	int ret;
+	int i;
 
 	keypad = devm_kzalloc(&pdev->dev, sizeof(*keypad), GFP_KERNEL);
 	if (!keypad)
@@ -140,6 +141,13 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 	}
 
 	bitmap_fill(keypad->keymap_state, MTK_KPD_NUM_BITS);
+	for (i = 0; i < MTK_KPD_NUM_MEMS; i++) {
+		/* initialize bitmap to match the hardware
+		 * ff,0000ffff,0000ffff,0000ffff,0000ffff
+		 */
+		bitmap_clear(keypad->keymap_state,
+			     keypad_regmap_cfg.val_bits * i + 16, 16);
+	}
 
 	keypad->input_dev = devm_input_allocate_device(&pdev->dev);
 	if (!keypad->input_dev) {
