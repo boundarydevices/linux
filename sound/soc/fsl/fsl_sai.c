@@ -997,10 +997,10 @@ static int fsl_sai_dai_probe(struct snd_soc_dai *cpu_dai)
 	unsigned char offset = sai->soc->reg_offset;
 
 	regmap_update_bits(sai->regmap, FSL_SAI_TCR1(offset),
-				sai->soc->fifo_depth - 1,
+				FSL_SAI_CR1_RFW_MASK(sai->soc->fifo_depth),
 				sai->soc->fifo_depth - FSL_SAI_MAXBURST_TX);
 	regmap_update_bits(sai->regmap, FSL_SAI_RCR1(offset),
-				sai->soc->fifo_depth - 1,
+				FSL_SAI_CR1_RFW_MASK(sai->soc->fifo_depth),
 				FSL_SAI_MAXBURST_RX - 1);
 
 	snd_soc_dai_init_dma_data(cpu_dai, &sai->dma_params_tx,
