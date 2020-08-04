@@ -25,6 +25,10 @@ struct imx_pdm_data {
 	struct snd_soc_dai_link dai;
 	struct snd_soc_card card;
 	unsigned int decimation;
+	unsigned long mclk_11k;
+	unsigned long mclk_8k;
+	bool fixed_mclk;
+	int osr_id;
 };
 
 static const struct imx_pdm_mic_fs_mul {
@@ -36,10 +40,103 @@ static const struct imx_pdm_mic_fs_mul {
 	{ .min = 16000, .max = 64000, .mul = 16 }, /* performance */
 };
 
+/* Ratio based on default Audio PLLs
+ * Audio PLL1 = 393216000 Hz
+ * Audio PLL2 = 361267200 Hz
+ */
+static const struct imx_pdm_mic_mclk_fixed {
+	unsigned long mclk_11k;
+	unsigned long mclk_8k;
+	unsigned int ratio;
+} mclk_fixed[] = {
+	{ .mclk_11k = 11289600, .mclk_8k = 12288000, .ratio = 32 },
+	{ .mclk_11k = 15052800, .mclk_8k = 16384000, .ratio = 24 },
+	{ .mclk_11k = 22579200, .mclk_8k = 24576000, .ratio = 16 },
+	{ .mclk_11k = 45158400, .mclk_8k = 49152000, .ratio =  8 },
+};
+
 static const unsigned int imx_pdm_mic_rates[] = {
 	8000,  11025, 16000, 22050,
 	32000, 44100, 48000, 64000,
 };
+
+static const struct imx_pdm_mic_osr_map {
+	int id;
+	unsigned int osr;
+} osr_map[] = {
+	{ .id = 0, .osr =  48 }, /* 4x12 */
+	{ .id = 1, .osr =  64 }, /* 4x16 */
+	{ .id = 2, .osr =  96 }, /* 4x24 */
+	{ .id = 3, .osr = 128 }, /* 4x32 */
+	{ .id = 4, .osr = 192 }, /* 4x48 */
+};
+
+static int imx_pdm_mic_get_osr_id(int decimation)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(osr_map); i++) {
+		if (osr_map[i].osr == decimation)
+			return osr_map[i].id;
+	}
+
+	return -EINVAL;
+}
+
+static unsigned int imx_pdm_mic_get_osr_rate(int osr_id)
+{
+	int i;
+
+	for (i = 0; ARRAY_SIZE(osr_map); i++) {
+		if (osr_map[i].id == osr_id)
+			return osr_map[i].osr;
+	}
+
+	return -EINVAL;
+}
+
+static const char *const osr_rate_text[] = {
+	"OSR_4x12",
+	"OSR_4x16",
+	"OSR_4x24",
+	"OSR_4x32",
+	"OSR_4x48"
+};
+
+static int osr_rate_get(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct imx_pdm_data *data = snd_soc_card_get_drvdata(card);
+
+	ucontrol->value.enumerated.item[0] = data->osr_id;
+
+	return 0;
+}
+
+static int osr_rate_set(struct snd_kcontrol *kcontrol,
+		struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct imx_pdm_data *data = snd_soc_card_get_drvdata(card);
+	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
+	unsigned int *item = ucontrol->value.enumerated.item;
+	int osr = snd_soc_enum_item_to_val(e, item[0]);
+
+	data->decimation = imx_pdm_mic_get_osr_rate(osr);
+	data->osr_id = osr;
+
+	return 0;
+}
+
+static const struct soc_enum osr_rate_enum =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(osr_rate_text), osr_rate_text);
+
+const struct snd_kcontrol_new imx_pdm_mic_snd_ctrls[] = {
+	SOC_ENUM_EXT("over sampling ratio", osr_rate_enum,
+		     osr_rate_get, osr_rate_set),
+};
+
 static struct snd_pcm_hw_constraint_list imx_pdm_mic_rate_constrains = {
 	.count = ARRAY_SIZE(imx_pdm_mic_rates),
 	.list = imx_pdm_mic_rates,
@@ -62,6 +159,22 @@ static unsigned long imx_pdm_mic_mclk_freq(unsigned int decimation,
 	}
 
 	return 0;
+}
+
+static int imx_pdm_mic_get_mclk_fixed(struct imx_pdm_data *data,
+		unsigned int ratio)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(mclk_fixed); i++) {
+		if (mclk_fixed[i].ratio == ratio) {
+			data->mclk_11k = mclk_fixed[i].mclk_11k;
+			data->mclk_8k = mclk_fixed[i].mclk_8k;
+			return 0;
+		}
+	}
+
+	return -EINVAL;
 }
 
 static int imx_pdm_mic_startup(struct snd_pcm_substream *substream)
@@ -123,8 +236,15 @@ static int imx_pdm_mic_hw_params(struct snd_pcm_substream *substream,
 		dev_err(card->dev, "fail to set cpu sysclk: %d\n", ret);
 		return ret;
 	}
+
+	if (data->fixed_mclk) {
+		mclk_freq = (do_div(sample_rate, 8000) ?
+			data->mclk_11k : data->mclk_8k);
+	} else {
+		mclk_freq = imx_pdm_mic_mclk_freq(data->decimation,
+			sample_rate);
+	}
 	/* set mclk freq */
-	mclk_freq = imx_pdm_mic_mclk_freq(data->decimation, sample_rate);
 	ret = snd_soc_dai_set_sysclk(cpu_dai, FSL_SAI_CLK_MAST1,
 			mclk_freq, SND_SOC_CLOCK_OUT);
 	if (ret) {
@@ -132,6 +252,9 @@ static int imx_pdm_mic_hw_params(struct snd_pcm_substream *substream,
 			mclk_freq);
 		return ret;
 	}
+
+	dev_dbg(card->dev, "mclk: %lu, bclk ratio: %u\n",
+			mclk_freq, data->decimation);
 
 	return 0;
 }
@@ -148,6 +271,9 @@ static int imx_pdm_mic_probe(struct platform_device *pdev)
 	struct platform_device *cpu_pdev;
 	struct imx_pdm_data *data;
 	struct snd_soc_dai_link_component *dlc;
+	unsigned long sai_mclk, sai_pll8k;
+	struct fsl_sai *sai;
+	unsigned int ratio;
 	int ret;
 
 	dlc = devm_kzalloc(&pdev->dev, 3 * sizeof(*dlc), GFP_KERNEL);
@@ -180,6 +306,32 @@ static int imx_pdm_mic_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	data->osr_id = imx_pdm_mic_get_osr_id(data->decimation);
+	if (data->osr_id < 0) {
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	if (of_find_property(np, "fixed-mclk", NULL))
+		data->fixed_mclk = true;
+
+	if (data->fixed_mclk) {
+		sai = dev_get_drvdata(&cpu_pdev->dev);
+		/* Get SAI clock settings */
+		sai_mclk = clk_get_rate(sai->mclk_clk[FSL_SAI_CLK_MAST1]);
+		sai_pll8k = clk_get_rate(sai->pll8k_clk);
+		ratio = sai_pll8k / sai_mclk;
+
+		ret = imx_pdm_mic_get_mclk_fixed(data, ratio);
+		if (ret) {
+			dev_err(&pdev->dev, "fail to set fixed mclk: %d\n", ret);
+			return ret;
+		}
+
+		dev_dbg(&pdev->dev, "sai_pll8k: %lu, sai_mclk: %lu, ratio: %u\n",
+			sai_pll8k, sai_mclk, ratio);
+	}
+
 	data->dai.cpus = &dlc[0];
 	data->dai.num_cpus = 1;
 	data->dai.platforms = &dlc[1];
@@ -207,6 +359,8 @@ static int imx_pdm_mic_probe(struct platform_device *pdev)
 
 	data->card.num_links = 1;
 	data->card.dai_link = &data->dai;
+	data->card.controls = imx_pdm_mic_snd_ctrls;
+	data->card.num_controls = ARRAY_SIZE(imx_pdm_mic_snd_ctrls);
 
 	platform_set_drvdata(pdev, &data->card);
 	snd_soc_card_set_drvdata(&data->card, data);

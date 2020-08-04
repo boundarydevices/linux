@@ -430,11 +430,7 @@ void mxc_isi_channel_init(struct mxc_isi_dev *mxc_isi);
 void mxc_isi_channel_deinit(struct mxc_isi_dev *mxc_isi);
 void mxc_isi_channel_enable(struct mxc_isi_dev *mxc_isi, bool m2m_enabled);
 void mxc_isi_channel_disable(struct mxc_isi_dev *mxc_isi);
-#if defined(CONFIG_IMX8_ISI_CAPTURE)
 void mxc_isi_cap_frame_write_done(struct mxc_isi_dev *mxc_isi);
-#else
-static inline void mxc_isi_cap_frame_write_done(struct mxc_isi_dev *mxc_isi) {}
-#endif
 void mxc_isi_channel_set_deinterlace(struct mxc_isi_dev *mxc_isi);
 void mxc_isi_channel_sw_reset(struct mxc_isi_dev *mxc_isi);
 void mxc_isi_channel_hw_reset(struct mxc_isi_dev *mxc_isi);
@@ -473,11 +469,7 @@ void mxc_isi_m2m_config_dst(struct mxc_isi_dev *mxc_isi,
 			    struct mxc_isi_frame *dst_f);
 
 void mxc_isi_m2m_start_read(struct mxc_isi_dev *mxc_isi);
-#if defined(CONFIG_IMX8_ISI_M2M)
 void mxc_isi_m2m_frame_write_done(struct mxc_isi_dev *mxc_isi);
-#else
-static inline void mxc_isi_m2m_frame_write_done(struct mxc_isi_dev *mxc_isi) {}
-#endif
 void mxc_isi_clean_irq_status(struct mxc_isi_dev *mxc_isi, u32 val);
 void mxc_isi_clean_registers(struct mxc_isi_dev *mxc_isi);
 void mxc_isi_enable_irq(struct mxc_isi_dev *mxc_isi);
@@ -487,4 +479,6 @@ void dump_isi_regs(struct mxc_isi_dev *mxc_isi);
 u32 mxc_isi_get_irq_status(struct mxc_isi_dev *mxc_isi);
 bool is_buf_active(struct mxc_isi_dev *mxc_isi, int buf_id);
 
+struct device *mxc_isi_dev_get_parent(struct platform_device *pdev);
+struct mxc_isi_dev *mxc_isi_get_hostdata(struct platform_device *pdev);
 #endif /* __MXC_ISI_HW_H__ */

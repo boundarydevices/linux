@@ -9,13 +9,13 @@
 #include <linux/platform_device.h>
 #include <linux/component.h>
 #include <drm/drm_of.h>
-#include <drm/drmP.h>
+#include <drm/drm_vblank.h>
 #include <drm/drm_crtc_helper.h>
 #include <drm/drm_encoder_slave.h>
 
 #include "cdns-mhdp-imx.h"
-#include "cdn-mhdp-phy.h"
-#include "imx-drm.h"
+#include "cdns-mhdp-phy.h"
+#include "../imx-drm.h"
 
 static void cdns_mhdp_imx_encoder_disable(struct drm_encoder *encoder)
 {

@@ -319,6 +319,7 @@ void mxc_isi_cap_frame_write_done(struct mxc_isi_dev *mxc_isi)
 	list_move_tail(isi_cap->out_pending.next, &isi_cap->out_active);
 	spin_unlock_irqrestore(&isi_cap->slock, flags);
 }
+EXPORT_SYMBOL_GPL(mxc_isi_cap_frame_write_done);
 
 static int cap_vb2_queue_setup(struct vb2_queue *q,
 			       unsigned int *num_buffers,
