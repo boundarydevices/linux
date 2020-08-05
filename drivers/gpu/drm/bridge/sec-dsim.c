@@ -574,6 +574,15 @@ static int sec_mipi_choose_ref_clk(struct sec_mipi_dsim *dsim, unsigned long pix
 		return -EINVAL;
 
 	bit_clk = DIV_ROUND_UP_ULL((u64)pix_clk * bpp, dsim->lanes);
+	if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_MBC) {
+		unsigned n = (bpp + (dsim->lanes * 8) - 1) / (dsim->lanes * 8);
+		unsigned bit_clkm = pix_clk * n * 8;
+
+		if (bit_clk < bit_clkm) {
+			bit_clk = bit_clkm;
+			pr_info("%s: %ld = %ld * 8 * %d(MBC)\n", __func__, bit_clk, pix_clk, n);
+		}
+	}
 	if (dsim->mipi_dsi_multiple) {
 		bit_clk += dsim->mipi_dsi_multiple - 1;
 		bit_clk /= dsim->mipi_dsi_multiple;
@@ -1568,6 +1577,15 @@ static int _sec_mipi_dsim_check_pll_out(struct sec_mipi_dsim *dsim)
 		if (bit_clk < bit_clkm) {
 			bit_clk = bit_clkm;
 			pr_info("%s: %d = %ld * %d (min)\n", __func__, bit_clk, pix_clk, dsim->hsmult);
+		}
+	}
+	if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_MBC) {
+		unsigned n = (bpp + (dsim->lanes * 8) - 1) / (dsim->lanes * 8);
+		unsigned bit_clkm = pix_clk * n * 8;
+
+		if (bit_clk < bit_clkm) {
+			bit_clk = bit_clkm;
+			pr_info("%s: %d = %ld * 8 * %d(MBC)\n", __func__, bit_clk, pix_clk, n);
 		}
 	}
 	if (dsim->mipi_dsi_multiple) {
