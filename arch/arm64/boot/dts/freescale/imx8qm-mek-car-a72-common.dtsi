@@ -57,6 +57,8 @@
 			next-level-cache = <&A72_L2>;
 			operating-points-v2 = <&a72_opp_table>;
 			#cooling-cells = <2>;
+			dynamic-power-coefficient = <550>;
+			capacity-dmips-mhz = <1024>;
 		};
 
 		A72_1: cpu@1 {
@@ -68,6 +70,8 @@
 			next-level-cache = <&A72_L2>;
 			operating-points-v2 = <&a72_opp_table>;
 			#cooling-cells = <2>;
+			dynamic-power-coefficient = <550>;
+			capacity-dmips-mhz = <1024>;
 		};
 
 		A53_0: cpu@2 {
@@ -79,6 +83,8 @@
 			next-level-cache = <&A53_L2>;
 			operating-points-v2 = <&a53_opp_table>;
 			#cooling-cells = <2>;
+			dynamic-power-coefficient = <110>;
+			capacity-dmips-mhz = <483>;
 		};
 
 		A53_1: cpu@3 {
@@ -90,6 +96,8 @@
 			next-level-cache = <&A53_L2>;
 			operating-points-v2 = <&a53_opp_table>;
 			#cooling-cells = <2>;
+			dynamic-power-coefficient = <110>;
+			capacity-dmips-mhz = <483>;
 		};
 
 		A53_2: cpu@4 {
@@ -101,6 +109,8 @@
 			next-level-cache = <&A53_L2>;
 			operating-points-v2 = <&a53_opp_table>;
 			#cooling-cells = <2>;
+			dynamic-power-coefficient = <110>;
+			capacity-dmips-mhz = <483>;
 		};
 
 		A53_3: cpu@5 {
@@ -112,6 +122,8 @@
 			next-level-cache = <&A53_L2>;
 			operating-points-v2 = <&a53_opp_table>;
 			#cooling-cells = <2>;
+			dynamic-power-coefficient = <110>;
+			capacity-dmips-mhz = <483>;
 		};
 
 		A72_L2: l2-cache1 {
