@@ -85,5 +85,8 @@
 		>;
 		min-hs-clock-multiple = <16>;
 #endif
+		mode-video-hbp-disable;
+		mode-video-hfp-disable;
+		mode-video-hsa-disable;
 	};
 };
