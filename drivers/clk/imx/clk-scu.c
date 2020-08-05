@@ -910,7 +910,9 @@ struct clk_hw *__imx_clk_gpr_scu(const char *name, const char * const *parent_na
 
 static void cpufreq_governor_daemon_handler(struct work_struct *work)
 {
-	int fd, i;
+	struct file *fd;
+	int i;
+
 	unsigned char cluster_governor[MAX_CLUSTER_NUM][54] = {
 		"/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
 		"",
@@ -922,11 +924,11 @@ static void cpufreq_governor_daemon_handler(struct work_struct *work)
 		"/cpufreq/scaling_governor");
 
 	for (i = 0; i < MAX_CLUSTER_NUM; i++) {
-		fd = ksys_open((const char __user __force *)cluster_governor[i],
+		fd = filp_open((const char __user __force *)cluster_governor[i],
 				O_RDWR, 0700);
-		if (fd >= 0) {
-			ksys_write(fd, "schedutil", strlen("schedutil"));
-			ksys_close(fd);
+		if (!IS_ERR(fd)) {
+			kernel_write(fd, "schedutil", strlen("schedutil"), &fd->f_pos);
+			fput(fd);
 			pr_info("switch cluster %d cpu-freq governor to schedutil\n",
 				i);
 		} else {
