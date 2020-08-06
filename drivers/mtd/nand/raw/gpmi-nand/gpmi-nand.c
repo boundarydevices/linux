@@ -973,6 +973,9 @@ static int gpmi_nfc_apply_timings(struct gpmi_nand_data *this)
 	if (GPMI_IS_MX6Q(this) || GPMI_IS_MX6SX(this))
 		clk_disable_unprepare(r->clock[0]);
 
+	if (GPMI_IS_MX6SX(this) && hw->clk_rate > 88000000)
+		hw->clk_rate = 88000000;
+
 	ret = clk_set_rate(r->clock[0], hw->clk_rate);
 	if (ret) {
 		dev_err(this->dev, "cannot set clock rate to %lu Hz: %d\n", hw->clk_rate, ret);
