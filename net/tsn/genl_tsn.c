@@ -3589,7 +3589,7 @@ static int tsn_multicast_to_user(unsigned long event,
 {
 	struct sk_buff *skb;
 	struct genlmsghdr *nlh = NULL;
-	int res;
+	int res = 0;
 	struct tsn_qbv_conf *qbvdata;
 
 	/* If new attributes are added, please revisit this allocation */
