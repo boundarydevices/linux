@@ -2370,3 +2370,4 @@ static int __init imx6_pcie_init(void)
 	return platform_driver_register(&imx6_pcie_driver);
 }
 device_initcall(imx6_pcie_init);
+MODULE_LICENSE("GPL v2");
