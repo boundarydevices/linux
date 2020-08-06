@@ -1053,7 +1053,8 @@ static int mtk_i2c_do_transfer(struct mtk_i2c *i2c, struct i2c_msg *msgs,
 		return -ETIMEDOUT;
 	}
 
-	if (i2c->irq_stat & (I2C_HS_NACKERR | I2C_ACKERR)) {
+	if (i2c->irq_stat & (I2C_HS_NACKERR | I2C_ACKERR) &&
+	    !(msgs->flags & I2C_M_IGNORE_NAK)) {
 		dev_dbg(i2c->dev, "addr: %x, transfer ACK error\n", msgs->addr);
 		mtk_i2c_init_hw(i2c);
 		return -ENXIO;
