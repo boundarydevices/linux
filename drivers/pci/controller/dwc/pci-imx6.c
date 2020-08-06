@@ -2187,7 +2187,7 @@ static const struct dw_pcie_ep_ops pcie_ep_ops = {
 	.get_features = imx_pcie_ep_get_features,
 };
 
-static int __init imx_add_pcie_ep(struct imx6_pcie *imx6_pcie,
+static int imx_add_pcie_ep(struct imx6_pcie *imx6_pcie,
 					struct platform_device *pdev)
 {
 	int ret;
@@ -3075,3 +3075,4 @@ static int __init imx6_pcie_init(void)
 	return platform_driver_register(&imx6_pcie_driver);
 }
 device_initcall(imx6_pcie_init);
+MODULE_LICENSE("GPL v2");
