@@ -46,6 +46,7 @@
 #include <trace/hooks/topology.h>
 #include <trace/hooks/rwsem.h>
 #include <trace/hooks/bl_hib.h>
+#include <trace/hooks/futex.h>
 
 /*
  * Export tracepoints that act as a bare tracehook (ie: have no trace event
@@ -164,3 +165,4 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mutex_unlock_slowpath);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_check_hibernation_swap);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_save_cpu_resume);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_save_hib_resume_bdev);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_alter_futex_plist_add);
