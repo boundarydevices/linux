@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2019 NXP
+ */
+
+#include "imx8mp-nitrogen8mp.dts"
+#include "imx8mp-a0.dtsi"
+/ {
+	model = "Boundary i.MX8MPlus-a0 nitrogen8mp board";
+};
