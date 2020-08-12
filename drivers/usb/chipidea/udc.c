@@ -1717,12 +1717,13 @@ static int ci_udc_pullup(struct usb_gadget *_gadget, int is_on)
 	if (ci_otg_is_fsm_mode(ci) || ci->role == CI_ROLE_HOST)
 		return 0;
 
-	pm_runtime_get_sync(ci->dev);
+	if (ci->in_lpm)
+		return 0;
+
 	if (is_on)
 		hw_write(ci, OP_USBCMD, USBCMD_RS, USBCMD_RS);
 	else
 		hw_write(ci, OP_USBCMD, USBCMD_RS, 0);
-	pm_runtime_put_sync(ci->dev);
 
 	return 0;
 }
@@ -1880,6 +1881,8 @@ static int ci_udc_start(struct usb_gadget *gadget,
 
 	if (ci->vbus_active)
 		ci_hdrc_gadget_connect(&ci->gadget, 1);
+	else
+		usb_udc_vbus_handler(&ci->gadget, false);
 
 	return retval;
 }
