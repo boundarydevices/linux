@@ -90,6 +90,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk.dtb imx8mp-evk-rm67191.dtb imx8mp-evk-it626
 			  imx8mp-evk-usdhc1-m2.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk.dtb imx8mq-evk-rpmsg.dtb imx8mp-ab2.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-ddr4-evk.dtb
+
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk.dtb imx8mq-evk-rpmsg.dtb imx8mq-evk-pcie1-m2.dtb imx8mq-evk-usd-wifi.dtb \
 			  imx8mq-evk-usdhc2-m2.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk-ak4497.dtb imx8mq-evk-audio-tdm.dtb imx8mq-evk-pdm.dtb
@@ -220,3 +221,5 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mm-c2.dtb \
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-nitrogen8mn.dtb \
 			  imx8mn-nitrogen8mn_som.dtb imx8mn-nitrogen8mn_som-m4.dtb \
 			  imx8mn-nitrogen8_nano.dtb imx8mn-nitrogen8_nano-m4.dtb \
+
+dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen8mp.dtb imx8mp-nitrogen8mp-m4.dtb \
