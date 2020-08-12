@@ -46,8 +46,10 @@
 
 /* watermark expressed in number of words */
 #define DEFAULT_F2_WATERMARK    0x8
-#define CY_4373_F2_WATERMARK    0x40
-#define CY_4373_F1_MESBUSYCTRL  (CY_4373_F2_WATERMARK | SBSDIO_MESBUSYCTRL_ENAB)
+#define CY_4373_F2_WATERMARK	0x4C
+#define CY_4373_MES_WATERMARK	0x44
+#define CY_4373_MESBUSYCTRL	(CY_4373_MES_WATERMARK | \
+				 SBSDIO_MESBUSYCTRL_ENAB)
 #define CY_43012_F2_WATERMARK    0x60
 #define CY_43012_MES_WATERMARK  0x50
 #define CY_43012_MESBUSYCTRL    (CY_43012_MES_WATERMARK | \
@@ -4485,7 +4487,7 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 			brcmf_sdiod_writeb(sdiod, SBSDIO_DEVICE_CTL, devctl,
 					   &err);
 			brcmf_sdiod_writeb(sdiod, SBSDIO_FUNC1_MESBUSYCTRL,
-					   CY_4373_F1_MESBUSYCTRL, &err);
+					   CY_4373_MESBUSYCTRL, &err);
 			break;
 		case SDIO_DEVICE_ID_BROADCOM_CYPRESS_43012:
 			brcmf_dbg(INFO, "set F2 watermark to 0x%x*4 bytes\n",
