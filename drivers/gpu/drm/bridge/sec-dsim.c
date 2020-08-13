@@ -2358,6 +2358,7 @@ static struct clk *sec_mipi_dsim_clk_register_clk(struct sec_mipi_dsim *dsim)
 
 	/* optional override of the clockname */
 	of_property_read_string(dsim->dev->of_node, "clock-output-names", &init.name);
+	of_property_read_string(dsim->dev->of_node, "clock-pllref-name", &parents[0]);
 
 	/* register the clock */
 	clk = clk_register(dsim->dev, &dsim->dsi_clk_hw);
