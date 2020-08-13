@@ -131,7 +131,6 @@ static struct imx_blk_ctrl_hw imx8mp_media_blk_ctrl_hws[] = {
 	IMX_BLK_CTRL_CLK_GATE("lcdif_apb_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_LCDIF_APB, 0x4, 5, "media_apb_root_clk"),
 	IMX_BLK_CTRL_CLK_GATE("isi_proc_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_ISI_PROC, 0x4, 6, "media_axi_root_clk"),
 	IMX_BLK_CTRL_CLK_GATE("isi_apb_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_ISI_APB, 0x4, 7, "media_apb_root_clk"),
-	IMX_BLK_CTRL_CLK_GATE("bus_blk_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_BUS_BLK, 0x4, 8, "media_axi_root_clk"),
 	IMX_BLK_CTRL_CLK_GATE("mipi_csi2_pclk", IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_CSI2_PCLK, 0x4, 9, "media_apb_root_clk"),
 	IMX_BLK_CTRL_CLK_GATE("mipi_csi2_aclk", IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_CSI2_ACLK, 0x4, 10, "media_cam2_pix_root_clk"),
 	IMX_BLK_CTRL_CLK_GATE("lcdif2_pixel_clk", IMX8MP_CLK_MEDIA_BLK_CTRL_LCDIF2_PIXEL, 0x4, 11, "media_disp2_pix_root_clk"),
