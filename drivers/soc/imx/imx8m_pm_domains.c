@@ -236,7 +236,18 @@ static struct platform_driver imx8m_pm_domain_driver = {
 	},
 	.probe = imx8m_pm_domain_probe,
 };
-module_platform_driver(imx8m_pm_domain_driver);
+
+static int __init imx8m_pm_domain_driver_init(void)
+{
+	return platform_driver_register(&imx8m_pm_domain_driver);
+}
+subsys_initcall(imx8m_pm_domain_driver_init);
+
+static void __exit imx8m_pm_domain_driver_exit(void)
+{
+	platform_driver_unregister(&imx8m_pm_domain_driver);
+}
+module_exit(imx8m_pm_domain_driver_exit);
 
 MODULE_AUTHOR("NXP");
 MODULE_DESCRIPTION("NXP i.MX8M power domain driver");
