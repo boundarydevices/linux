@@ -1034,7 +1034,7 @@
 &i2c2d {
 	mipi_to_lvds: mipi-to-lvds@2c {
 		clocks = <&mipi_dsi 0>,
-			<&clk IMX8MP_CLK_HDMIMIX_LCDIF_PIX_CLK>;
+			<&clk IMX8MP_CLK_MEDIA_DISP1_PIX_ROOT>;
 		clock-names = "mipi_clk", "pixel_clock";
 		compatible = "ti,sn65dsi83";
 		display = <&display_subsystem>;
@@ -1157,17 +1157,16 @@
 	status = "okay";
 };
 
-#if 0
 &lcdif2 {
 	status = "okay";
 };
 
+#if 0
 &lcdif3 {
 	status = "okay";
 };
 #endif
 
-#if 0
 &ldb {
 	status = "okay";
 
@@ -1175,28 +1174,19 @@
 		fsl,data-mapping = "jeida";
 		fsl,data-width = <24>;
 		status = "okay";
-
-		port@1 {
-			reg = <1>;
-
-			lvds_out: endpoint {
-				remote-endpoint = <&it6263_in>;
-			};
-		};
 	};
 };
 
 &ldb_phy {
 	status = "okay";
 };
-#endif
 
 &mipi_dsi {
 	clocks = <&clk IMX8MP_CLK_MEDIA_APB_ROOT>,
 		 <&clk IMX8MP_CLK_MEDIA_MIPI_PHY1_REF>,
 		 <&clk IMX8MP_CLK_MEDIA_DISP1_PIX_ROOT>;
 	clock-names = "cfg", "pll-ref", "pixel_clock";
-	status = "okay";
+	status = "disabled";
 
 	fb_mipi: panel@0 {
 		bits-per-color = <8>;
@@ -1274,6 +1264,17 @@
 
 &pcie_phy{
 	status = "okay";
+};
+
+&resmem {
+	/* global autoconfigured region for contiguous allocations */
+	linux,cma {
+		compatible = "shared-dma-pool";
+		reusable;
+		size = <0 0x10000000>;
+		alloc-ranges = <0 0x40000000 0 0x60000000>;
+		linux,cma-default;
+	};
 };
 
 &sai3 {
