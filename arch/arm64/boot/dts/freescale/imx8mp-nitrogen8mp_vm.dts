@@ -258,7 +258,7 @@
 
 	pinctrl_usb3_0: usb3-0grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO13__USB1_OC	0x1c0
+			MX8MP_IOMUXC_GPIO1_IO13__USB1_OTG_OC	0x1c0
 		>;
 	};
 
@@ -266,7 +266,7 @@
 		fsl,pins = <
 #define GP_USB3_1_HUB_RESET	<&gpio1 6 GPIO_ACTIVE_LOW>
 			MX8MP_IOMUXC_GPIO1_IO06__GPIO1_IO06	0x100
-			MX8MP_IOMUXC_GPIO1_IO15__USB2_OC	0x1c0
+			MX8MP_IOMUXC_GPIO1_IO15__USB2_OTG_OC	0x1c0
 		>;
 	};
 
