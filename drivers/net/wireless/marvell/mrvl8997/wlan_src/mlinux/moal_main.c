@@ -5226,7 +5226,7 @@ done:
  *
  *  @return        0 --success
  */
-int
+netdev_tx_t
 woal_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	moal_private *priv = (moal_private *)netdev_priv(dev);

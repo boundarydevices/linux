@@ -2807,7 +2807,7 @@ void woal_reassoc_timer_func(void *context);
 t_void woal_main_work_queue(struct work_struct *work);
 t_void woal_rx_work_queue(struct work_struct *work);
 
-int woal_hard_start_xmit(struct sk_buff *skb, struct net_device *dev);
+netdev_tx_t woal_hard_start_xmit(struct sk_buff *skb, struct net_device *dev);
 #ifdef STA_SUPPORT
 mlan_status woal_init_sta_dev(struct net_device *dev, moal_private *priv);
 #endif
