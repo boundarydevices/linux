@@ -541,8 +541,10 @@
 
 	aliases {
 		backlight_mipi = &backlight_mipi;
+		fb_lvds = &lcdif2;
 		fb_mipi = &fb_mipi;
 		lcdif = &lcdif1;
+		ldb = &ldb;
 		mipi = &fb_mipi;
 		mipi_cmds_com50h5n03ulc = &mipi_cmds_com50h5n03ulc;
 		mipi_cmds_lcd133_070 = &mipi_cmds_lcd133_070;
@@ -558,6 +560,7 @@
 		pinctrl_ltk0680ytmdb = &pinctrl_mipi_ltk0680ytmdb;
 		pinctrl_ltk080a60a004t = &pinctrl_mipi_ltk080a60a004t;
 		pwm_mipi = &pwm1;
+		t_lvds = &t_lvds;
 		t_mipi = &t_mipi;
 		ts_ft5x06 = &ts_ft5x06;
 	};
@@ -1158,7 +1161,7 @@
 };
 
 &lcdif2 {
-	status = "okay";
+	status = "disabled";
 };
 
 #if 0
@@ -1167,13 +1170,50 @@
 };
 #endif
 
+/ {
+	lvds0_panel {
+		bits-per-color = <8>;
+		bus-format = "rgb888";
+		compatible = "dtb,simple";
+
+		display-timings {
+			t_lvds: t_lvds_default {
+				/* m101nwwb by default */
+				clock-frequency = <66000000>;
+				hactive = <1280>;
+				vactive = <800>;
+				hback-porch = <5>;
+				hfront-porch = <123>;
+				vback-porch = <3>;
+				vfront-porch = <24>;
+				hsync-len = <1>;
+				vsync-len = <1>;
+			};
+		};
+
+		port {
+			panel_lvds_in: endpoint {
+				remote-endpoint = <&lvds_out>;
+			};
+		};
+	};
+};
+
 &ldb {
 	status = "okay";
 
 	lvds-channel@0 {
-		fsl,data-mapping = "jeida";
+		fsl,data-mapping = "spwg";
 		fsl,data-width = <24>;
 		status = "okay";
+
+		port@1 {
+			reg = <1>;
+
+			lvds_out: endpoint {
+				remote-endpoint = <&panel_lvds_in>;
+			};
+		};
 	};
 };
 
