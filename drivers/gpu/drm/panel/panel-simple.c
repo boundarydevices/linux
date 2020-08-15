@@ -4213,6 +4213,9 @@ static const struct of_device_id platform_of_match[] = {
 		.compatible = "winstar,wf35ltiacd",
 		.data = &winstar_wf35ltiacd,
 	}, {
+		.compatible = "dtb,simple",
+		.data = NULL,
+	}, {
 		/* sentinel */
 	}
 };
