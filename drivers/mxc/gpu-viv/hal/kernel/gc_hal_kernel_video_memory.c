@@ -1783,7 +1783,7 @@ gckVIDMEM_AllocateVirtualChunk(
     gcmkVERIFY_OBJECT(os, gcvOBJ_OS);
 
     /* Acquire the vidMem block mutex */
-    gcmkONERROR(gckOS_AcquireMutex(Kernel->os, Kernel->vidMemBlockMutex, gcvINFINITE));
+    gcmkONERROR(gckOS_AcquireMutex(os, Kernel->vidMemBlockMutex, gcvINFINITE));
     acquired = gcvTRUE;
 
     /* Find the free vidmem block. */
@@ -1815,7 +1815,7 @@ gckVIDMEM_AllocateVirtualChunk(
     *Node = node;
 
     /* Release the vidMem block mutex. */
-    gcmkVERIFY_OK(gckOS_ReleaseMutex(Kernel->os, Kernel->vidMemBlockMutex));
+    gcmkVERIFY_OK(gckOS_ReleaseMutex(os, Kernel->vidMemBlockMutex));
 
     gcmkTRACE_ZONE(gcvLEVEL_INFO, gcvZONE_VIDMEM,
                    "Created virtual node 0x%x for %u bytes @ 0x%x",
@@ -1829,7 +1829,7 @@ OnError:
     if (acquired)
     {
         /* Release the vidMem block mutex. */
-        gcmkVERIFY_OK(gckOS_ReleaseMutex(Kernel->os, Kernel->vidMemBlockMutex));
+        gcmkVERIFY_OK(gckOS_ReleaseMutex(os, Kernel->vidMemBlockMutex));
     }
 
     /* Return the status. */
@@ -2219,12 +2219,7 @@ gckVIDMEM_Lock(
     OUT gctUINT32 * Address
     )
 {
-    gckOS os;
-
     gcmkHEADER_ARG("Kernel=%p Node=%p", Kernel, Node);
-
-    /* Extract the gckOS object pointer. */
-    os = Kernel->os;
 
     /* Increment the lock count. */
     if (Node->VidMem.locked++ == 0)

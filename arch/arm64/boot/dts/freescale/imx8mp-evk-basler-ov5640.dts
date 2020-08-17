@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /*
- * Copyright (C) 2020 Basler AG
  * Copyright 2020 NXP
  *
  * This program is free software; you can redistribute it and/or
@@ -48,12 +47,24 @@
 	};
 };
 
-&cameradev {
+&mipi_csi_1 {
+	status = "okay";
+};
+
+&ov5640_1 {
+	powerdown-gpios = <&gpio2 11 GPIO_ACTIVE_HIGH>;
+	reset-gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;
+	csi_id = <1>;
+
 	status = "okay";
 };
 
 &isi_0 {
 	status = "disabled";
+};
+
+&isi_1 {
+	status = "okay";
 };
 
 &isp_0 {

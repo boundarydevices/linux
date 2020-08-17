@@ -55,7 +55,6 @@
 
 ARCH_TYPE                         ?= arm
 SDK_DIR                           ?= $(AQROOT)/build/sdk
-LIBDRM_DIR                        ?= $(ANDROID_BUILD_TOP)/vendor/nxp-opensource/libdrm-imx
 VIVANTE_ENABLE_3D                 ?= 1
 VIVANTE_ENABLE_2D                 ?= 1
 VIVANTE_ENABLE_VG                 ?= 1

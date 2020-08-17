@@ -72,7 +72,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk.dtb imx8mp-evk-root.dtb imx8mp-evk-inmate.d
 			  imx8mp-evk-it6263-lvds-dual-channel.dtb \
 			  imx8mp-evk-jdi-wuxga-lvds-panel.dtb imx8mp-ab2.dtb imx8mp-evk-sof-wm8960.dtb \
 			  imx8mp-evk-dsp.dtb imx8mp-evk-ov2775.dtb imx8mp-evk-basler.dtb imx8mp-evk-pcie-ep.dtb \
-			  imx8mp-evk-spdif-lb.dtb imx8mp-evk-dsp-lpa.dtb
+			  imx8mp-evk-spdif-lb.dtb imx8mp-evk-dsp-lpa.dtb imx8mp-evk-ov2775-ov5640.dtb \
+			  imx8mp-evk-basler-ov5640.dtb imx8mp-evk-dual-ov2775.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk.dtb imx8mq-evk-rpmsg.dtb imx8mq-evk-pcie1-m2.dtb imx8mq-evk-usd-wifi.dtb \
 			  imx8mq-evk-usdhc2-m2.dtb imx8mq-evk-pcie-ep.dtb \
 			  imx8mq-evk-no-product.dtb imx8mq-evk-no-dynamic_partition.dtb \
@@ -165,7 +166,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek.dtb imx8qxp-mek-dsp.dtb imx8qxp-mek-ov5640
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek-dom0.dtb imx8qxp-mek-root.dtb \
 			  imx8qxp-mek-inmate.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8dxl-evk.dtb imx8dxl-evk-rpmsg.dtb \
-			  imx8dxl-evk-enet0.dtb imx8dxl-evk-enet0-tja1100.dtb imx8dxl-evk-pcie.dtb \
+			  imx8dxl-evk-enet0.dtb imx8dxl-evk-enet0-tja1100.dtb \
 			  imx8dxl-evk-lpspi-slave.dtb \
 			  imx8dxl-evk-pcie-ep.dtb \
 			  imx8dxl-ddr3-val.dtb imx8dxl-evk-root.dtb imx8dxl-evk-inmate.dtb

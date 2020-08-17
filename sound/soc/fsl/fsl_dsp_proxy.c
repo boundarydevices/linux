@@ -5,6 +5,7 @@
 // Copyright 2018 NXP
 // Copyright (C) 2017 Cadence Design Systems, Inc.
 
+#include <linux/suspend.h>
 #include "fsl_dsp_proxy.h"
 #include "fsl_dsp.h"
 
@@ -233,6 +234,9 @@ irqreturn_t fsl_dsp_mu_isr(int irq, void *dev_id)
 	MU_ReceiveMsg(dsp_priv->mu_base_virtaddr, 0, &reg);
 	msghdr = (union icm_header_t)reg;
 
+	if (dsp_priv->dsp_is_lpa)
+		pm_system_wakeup();
+
 	if (msghdr.intr == 1) {
 		dev_dbg(dev, "INTR: Received ICM intr, msg 0x%08x\n",
 						msghdr.allbits);
@@ -284,6 +288,9 @@ u32 xf_proxy_b2a(struct xf_proxy *proxy, void *b)
 	else if ((u32)(b - dsp_priv->scratch_buf_virt) <
 					dsp_priv->scratch_buf_size)
 		return (u32)(b - dsp_priv->scratch_buf_virt);
+	else if (dsp_priv->dsp_is_lpa && ((u32)(b - dsp_priv->dram_reserved_vir_addr) <
+					dsp_priv->dram_reserved_size))
+		return (u32)(b - dsp_priv->dram_reserved_vir_addr + dsp_priv->scratch_buf_size);
 	else
 		return XF_PROXY_BADADDR;
 }
@@ -296,6 +303,8 @@ void *xf_proxy_a2b(struct xf_proxy *proxy, u32 address)
 
 	if (address < dsp_priv->scratch_buf_size)
 		return dsp_priv->scratch_buf_virt + address;
+	else if (dsp_priv->dsp_is_lpa && (address < dsp_priv->scratch_buf_size + dsp_priv->dram_reserved_size))
+		return dsp_priv->dram_reserved_vir_addr + address - dsp_priv->scratch_buf_size;
 	else if (address == XF_PROXY_NULL)
 		return NULL;
 	else

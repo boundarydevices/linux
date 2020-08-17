@@ -1012,7 +1012,9 @@ gckKERNEL_AllocateVideoMemory(
     gctBOOL cacheable = gcvFALSE;
     gctBOOL secure = gcvFALSE;
     gctBOOL fastPools = gcvFALSE;
+#if gcdENABLE_GPU_1M_PAGE
     gctBOOL virtualPool4K = gcvFALSE;
+#endif
     gctBOOL hasFastPools = gcvFALSE;
     gctSIZE_T bytes = *Bytes;
 
@@ -1034,7 +1036,9 @@ gckKERNEL_AllocateVideoMemory(
 
     if (Flag & gcvALLOC_FLAG_4K_PAGES)
     {
+#if gcdENABLE_GPU_1M_PAGE
         virtualPool4K = gcvTRUE;
+#endif
         Flag &= ~gcvALLOC_FLAG_4K_PAGES;
     }
 

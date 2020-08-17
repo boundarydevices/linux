@@ -461,7 +461,7 @@ gctaHARDWARE_Construct(
     gctaOS_WriteRegister(
         hardware->ta->os, hardware->ta->core,
         0x00000,
-        0x00000900
+        0x00010900
         );
 
     gcmkONERROR(_IdentifyHardwareByDatabase(hardware));
