@@ -249,6 +249,7 @@ static int snvs_secvio_probe(struct platform_device *pdev)
 	if (!svpriv)
 		return -ENOMEM;
 
+	spin_lock_init(&svpriv->svlock);
 	svdev = &pdev->dev;
 	dev_set_drvdata(svdev, svpriv);
 	svpriv->pdev = pdev;
