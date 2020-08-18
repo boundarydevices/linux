@@ -1486,7 +1486,7 @@
 				power-domains = <&pgc_mediamix>;
 				status = "disabled";
 
-				lvds-channel@0 {
+				ldb_chan: lvds-channel@0 {
 					#address-cells = <1>;
 					#size-cells = <0>;
 					reg = <0>;
@@ -1503,7 +1503,7 @@
 					};
 				};
 
-				lvds-channel@1 {
+				ldb_chan2: lvds-channel@1 {
 					#address-cells = <1>;
 					#size-cells = <0>;
 					reg = <1>;
