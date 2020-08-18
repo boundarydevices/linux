@@ -5,6 +5,7 @@
 
 #include <linux/clk.h>
 #include <linux/component.h>
+#include <linux/i2c.h>
 #include <linux/media-bus-format.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
@@ -12,9 +13,11 @@
 
 #include <drm/bridge/fsl_imx_ldb.h>
 #include <drm/drm_atomic_helper.h>
+#include <drm/drm_edid.h>
 #include <drm/drm_probe_helper.h>
 #include <drm/drm_simple_kms_helper.h>
 
+#include <video/of_display_timing.h>
 #include "imx-drm.h"
 
 #define DRIVER_NAME "imx8mp-ldb"
@@ -42,6 +45,11 @@ struct imx8mp_ldb_channel {
 	struct phy *phy;
 	bool phy_is_on;
 
+	struct i2c_adapter *ddc;
+	void *edid;
+	int edid_len;
+	struct drm_display_mode mode;
+	int mode_valid;
 	u32 bus_flags;
 };
 
@@ -62,6 +70,36 @@ struct imx8mp_ldb {
 	struct imx8mp_ldb_channel channel[LDB_CH_NUM];
 	struct clk *clk_root;
 };
+
+static int imx8mp_ldb_connector_get_modes(struct drm_connector *connector)
+{
+	struct imx8mp_ldb_channel *imx8mp_ldb_ch =
+						con_to_imx8mp_ldb_ch(connector);
+	int num_modes = 0;
+
+	if (!imx8mp_ldb_ch->edid && imx8mp_ldb_ch->ddc)
+		imx8mp_ldb_ch->edid = drm_get_edid(connector, imx8mp_ldb_ch->ddc);
+
+	if (imx8mp_ldb_ch->edid) {
+		drm_connector_update_edid_property(connector,
+							imx8mp_ldb_ch->edid);
+		num_modes = drm_add_edid_modes(connector, imx8mp_ldb_ch->edid);
+	}
+
+	if (imx8mp_ldb_ch->mode_valid) {
+		struct drm_display_mode *mode;
+
+		mode = drm_mode_create(connector->dev);
+		if (!mode)
+			return -EINVAL;
+		drm_mode_copy(mode, &imx8mp_ldb_ch->mode);
+		mode->type |= DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
+		drm_mode_probed_add(connector, mode);
+		num_modes++;
+	}
+
+	return num_modes;
+}
 
 static struct drm_encoder *imx8mp_ldb_connector_best_encoder(
 		struct drm_connector *connector)
@@ -244,6 +282,7 @@ static const struct drm_connector_funcs imx8mp_ldb_connector_funcs = {
 
 static const struct drm_connector_helper_funcs
 imx8mp_ldb_connector_helper_funcs = {
+	.get_modes = imx8mp_ldb_connector_get_modes,
 	.best_encoder = imx8mp_ldb_connector_best_encoder,
 };
 
@@ -260,6 +299,83 @@ static const struct of_device_id imx8mp_ldb_dt_ids[] = {
 	{ }
 };
 MODULE_DEVICE_TABLE(of, imx8mp_ldb_dt_ids);
+
+static int imx_ldb_panel_ddc(struct device *dev,
+		struct imx8mp_ldb_channel *imx8mp_ldb_ch, struct device_node *child)
+{
+	struct ldb_channel *ldb_ch = &imx8mp_ldb_ch->base;
+	struct device_node *ddc_node;
+	const u8 *edidp;
+	int ret;
+
+	ddc_node = of_parse_phandle(child, "ddc-i2c-bus", 0);
+	if (ddc_node) {
+		imx8mp_ldb_ch->ddc = of_find_i2c_adapter_by_node(ddc_node);
+		of_node_put(ddc_node);
+		if (!imx8mp_ldb_ch->ddc) {
+			dev_warn(dev, "failed to get ddc i2c adapter\n");
+			return -EPROBE_DEFER;
+		}
+	}
+
+	if (!imx8mp_ldb_ch->ddc) {
+		/* if no DDC available, fallback to hardcoded EDID */
+		dev_dbg(dev, "no ddc available\n");
+
+		edidp = of_get_property(child, "edid",
+					&imx8mp_ldb_ch->edid_len);
+		if (edidp) {
+			imx8mp_ldb_ch->edid = kmemdup(edidp,
+						imx8mp_ldb_ch->edid_len,
+						GFP_KERNEL);
+		} else if (!ldb_ch->panel) {
+			/* fallback to display-timings node */
+			ret = of_get_drm_display_mode(child,
+						      &imx8mp_ldb_ch->mode,
+						      &imx8mp_ldb_ch->bus_flags,
+						      OF_USE_NATIVE_MODE);
+			if (!ret)
+				imx8mp_ldb_ch->mode_valid = 1;
+		}
+	}
+	return 0;
+}
+
+static int imx8mp_ldb_register(struct drm_device *drm,
+	struct imx8mp_ldb_channel *imx8mp_ldb_ch)
+{
+	struct imx8mp_ldb *imx8mp_ldb = imx8mp_ldb_ch->imx8mp_ldb;
+	struct ldb *ldb = &imx8mp_ldb->base;
+	struct ldb_channel *ldb_ch = &imx8mp_ldb_ch->base;
+	struct drm_encoder *encoder = &imx8mp_ldb_ch->encoder;
+	int ret;
+
+	ret = imx_drm_encoder_parse_of(drm, encoder, ldb_ch->child);
+	if (ret)
+		return ret;
+
+	if (!ldb_ch->next_bridge) {
+		/* panel ddc only if there is no bridge */
+		ret = imx_ldb_panel_ddc(ldb->dev, imx8mp_ldb_ch, ldb_ch->child);
+		if (ret)
+			return ret;
+
+		/*
+		 * We want to add the connector whenever there is no bridge
+		 * that brings its own, not only when there is a panel. For
+		 * historical reasons, the ldb driver can also work without
+		 * a panel.
+		 */
+		drm_connector_helper_add(&imx8mp_ldb_ch->connector,
+				&imx8mp_ldb_connector_helper_funcs);
+		drm_connector_init(drm, &imx8mp_ldb_ch->connector,
+				&imx8mp_ldb_connector_funcs,
+				DRM_MODE_CONNECTOR_LVDS);
+		drm_connector_attach_encoder(&imx8mp_ldb_ch->connector, encoder);
+	}
+
+	return 0;
+}
 
 static int
 imx8mp_ldb_bind(struct device *dev, struct device *master, void *data)
@@ -356,7 +472,7 @@ get_phy:
 		if (!ldb_ch->is_valid)
 			continue;
 
-		ret = imx_drm_encoder_parse_of(drm, encoder[i], ldb_ch->child);
+		ret = imx8mp_ldb_register(drm, &imx8mp_ldb->channel[i]);
 		if (ret)
 			goto disable_pm_runtime;
 	}
