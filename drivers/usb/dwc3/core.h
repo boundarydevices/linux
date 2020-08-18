@@ -267,6 +267,8 @@
 
 /* Global User Control Register */
 #define DWC3_GUCTL_HSTINAUTORETRY	BIT(14)
+#define DWC3_GUCTL_REFCLKPER_MASK	GENMASK(31, 22)
+#define DWC3_GUCTL_REFCLKPER_SHIFT	22
 
 /* Global User Control 1 Register */
 #define DWC3_GUCTL1_PARKMODE_DISABLE_SS	BIT(17)
@@ -394,6 +396,8 @@
 /* Global Frame Length Adjustment Register */
 #define DWC3_GFLADJ_30MHZ_SDBND_SEL		BIT(7)
 #define DWC3_GFLADJ_30MHZ_MASK			0x3f
+#define GFLADJ_REFCLK_FLADJ_MASK		GENMASK(21, 8)
+#define GFLADJ_REFCLK_FLADJ_SHIFT		8
 
 /* Global User Control Register 2 */
 #define DWC3_GUCTL2_RST_ACTBITLATER		BIT(14)
@@ -947,6 +951,8 @@ struct dwc3_scratchpad_array {
 
 struct dwc3_platform_data {
 	struct xhci_plat_priv *xhci_priv;
+	unsigned long long quirks;
+#define DWC3_SOFT_ITP_SYNC		BIT(0)
 };
 
 /**
