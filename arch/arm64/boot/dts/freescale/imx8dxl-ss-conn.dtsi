@@ -5,6 +5,11 @@
 
 /delete-node/ &enet1_lpcg;
 /delete-node/ &fec2;
+/delete-node/ &mlb;
+/delete-node/ &mlb_lpcg;
+/delete-node/ &usbotg3;
+/delete-node/ &usb3_lpcg;
+/delete-node/ &usb3_phy;
 
 &conn_subsys {
 	conn_enet0_root_clk: clock-conn-enet0-root {
@@ -21,15 +26,16 @@
 		interrupts = <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "eth_wake_irq", "macirq";
-		clocks = <&eqos_lpcg IMX_LPCG_CLK_4>,
-			 <&eqos_lpcg IMX_LPCG_CLK_6>,
-			 <&eqos_lpcg IMX_LPCG_CLK_0>,
-			 <&eqos_lpcg IMX_LPCG_CLK_5>,
-			 <&eqos_lpcg IMX_LPCG_CLK_2>;
+		clocks = <&eqos_lpcg 2>,
+			 <&eqos_lpcg 4>,
+			 <&eqos_lpcg 0>,
+			 <&eqos_lpcg 3>,
+			 <&eqos_lpcg 1>;
 		clock-names = "stmmaceth", "pclk", "ptp_ref", "tx", "mem";
 		assigned-clocks = <&clk IMX_SC_R_ENET_1 IMX_SC_PM_CLK_PER>;
 		assigned-clock-rates = <125000000>;
 		power-domains = <&pd IMX_SC_R_ENET_1>;
+		clk_csr = <0>;
 		status = "disabled";
 	};
 
@@ -63,14 +69,14 @@
 
 	usbmisc2: usbmisc@5b0e0200 {
 		#index-cells = <1>;
-		compatible = "fsl,imx7ulp-usbmisc";
+		compatible = "fsl,imx8dxl-usbmisc", "fsl,imx7ulp-usbmisc";
 		reg = <0x5b0e0200 0x200>;
 	};
 
 	usbphy2: usbphy@0x5b110000 {
 		compatible = "fsl,imx8dxl-usbphy", "fsl,imx7ulp-usbphy";
 		reg = <0x5b110000 0x1000>;
-		clocks = <&usb2_2_lpcg IMX_LPCG_CLK_7>;
+		clocks = <&usb2_2_lpcg 0>;
 		power-domains = <&pd IMX_SC_R_USB_1_PHY>;
 		status = "disabled";
 	};
@@ -84,9 +90,7 @@
 			 <&conn_axi_clk>,
 			 <&clk IMX_SC_R_ENET_1 IMX_SC_PM_CLK_PER>,
 			 <&conn_ipg_clk>;
-		clock-indices = <IMX_LPCG_CLK_0>, <IMX_LPCG_CLK_2>,
-				<IMX_LPCG_CLK_4>, <IMX_LPCG_CLK_5>,
-				<IMX_LPCG_CLK_6>;
+		bit-offset = <0 8 16 20 24>;
 		clock-output-names = "eqos_ptp",
 				     "eqos_mem_clk",
 				     "eqos_aclk",
@@ -99,12 +103,20 @@
 		compatible = "fsl,imx8qxp-lpcg";
 		reg = <0x5b280000 0x10000>;
 		#clock-cells = <1>;
-		clock-indices = <IMX_LPCG_CLK_7>;
+		bit-offset = <28>;
 		clocks = <&conn_ipg_clk>;
 		clock-output-names = "usboh3_2_phy_ipg_clk";
 		power-domains = <&pd IMX_SC_R_USB_1_PHY>;
 	};
 
+};
+
+&dma_apbh {
+	compatible = "fsl,imx8dxl-dma-apbh", "fsl,imx28-dma-apbh";
+	interrupts = <GIC_SPI 176 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 176 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 176 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 176 IRQ_TYPE_LEVEL_HIGH>;
 };
 
 &enet0_lpcg {
@@ -117,13 +129,18 @@
 };
 
 &fec1 {
-	compatible = "fsl,imx8qm-fec";
+	compatible = "fsl,imx8dxl-fec", "fsl,imx8qm-fec";
 	interrupts = <GIC_SPI 160 IRQ_TYPE_LEVEL_HIGH>,
 		     <GIC_SPI 158 IRQ_TYPE_LEVEL_HIGH>,
 		     <GIC_SPI 159 IRQ_TYPE_LEVEL_HIGH>,
 		     <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>;
 	assigned-clocks = <&clk IMX_SC_R_ENET_0 IMX_SC_C_CLKDIV>;
 	assigned-clock-rates = <125000000>;
+};
+
+&gpmi {
+	compatible = "fsl,imx8dxl-gpmi-nand", "fsl,imx8qxp-gpmi-nand";
+	interrupts = <GIC_SPI 174 IRQ_TYPE_LEVEL_HIGH>;
 };
 
 &usdhc1 {
@@ -140,3 +157,14 @@
 	compatible = "fsl,imx8dxl-usdhc", "fsl,imx8qxp-usdhc";
 	interrupts = <GIC_SPI 140 IRQ_TYPE_LEVEL_HIGH>;
 };
+
+&usbotg1 {
+	interrupts = <GIC_SPI 169 IRQ_TYPE_LEVEL_HIGH>;
+	/*
+	 * usbotg1 and usbotg2 share one clcok
+	 * scfw disable clock access and keep it always on
+	 * in case other core (M4) use one of these.
+	 */
+	clocks = <&clk_dummy>;
+};
+
