@@ -119,26 +119,18 @@ static void imx8mp_ldb_encoder_enable(struct drm_encoder *encoder)
 
 	clk_prepare_enable(imx8mp_ldb->clk_root);
 
-	if (imx8mp_ldb_ch == &imx8mp_ldb->channel[0] || ldb->dual) {
+	if (imx8mp_ldb->channel[0].base.is_valid || ldb->dual) {
 		ldb->ldb_ctrl &= ~LDB_CH0_MODE_EN_MASK;
 		ldb->ldb_ctrl |= LDB_CH0_MODE_EN_TO_DI0;
+		phy_power_on(imx8mp_ldb->channel[0].phy);
+		imx8mp_ldb->channel[0].phy_is_on = true;
 	}
-	if (imx8mp_ldb_ch == &imx8mp_ldb->channel[1] || ldb->dual) {
+	if (imx8mp_ldb->channel[1].base.is_valid || ldb->dual) {
 		ldb->ldb_ctrl &= ~LDB_CH1_MODE_EN_MASK;
 		ldb->ldb_ctrl |= ldb->dual ?
 				LDB_CH1_MODE_EN_TO_DI0 : LDB_CH1_MODE_EN_TO_DI1;
-	}
-
-	if (ldb->dual) {
-		phy_power_on(imx8mp_ldb->channel[0].phy);
 		phy_power_on(imx8mp_ldb->channel[1].phy);
-
-		imx8mp_ldb->channel[0].phy_is_on = true;
 		imx8mp_ldb->channel[1].phy_is_on = true;
-	} else {
-		phy_power_on(imx8mp_ldb_ch->phy);
-
-		imx8mp_ldb_ch->phy_is_on = true;
 	}
 }
 
@@ -183,16 +175,15 @@ static void imx8mp_ldb_encoder_disable(struct drm_encoder *encoder)
 	struct imx8mp_ldb *imx8mp_ldb = imx8mp_ldb_ch->imx8mp_ldb;
 	struct ldb *ldb = &imx8mp_ldb->base;
 
-	if (ldb->dual) {
-		phy_power_off(imx8mp_ldb->channel[0].phy);
-		phy_power_off(imx8mp_ldb->channel[1].phy);
-
+	if (imx8mp_ldb->channel[0].phy_is_on) {
 		imx8mp_ldb->channel[0].phy_is_on = false;
+		ldb->ldb_ctrl &= ~LDB_CH0_MODE_EN_MASK;
+		phy_power_off(imx8mp_ldb->channel[0].phy);
+	}
+	if (imx8mp_ldb->channel[1].phy_is_on) {
 		imx8mp_ldb->channel[1].phy_is_on = false;
-	} else {
-		phy_power_off(imx8mp_ldb_ch->phy);
-
-		imx8mp_ldb_ch->phy_is_on = false;
+		ldb->ldb_ctrl &= ~LDB_CH1_MODE_EN_MASK;
+		phy_power_off(imx8mp_ldb->channel[1].phy);
 	}
 
 	clk_disable_unprepare(imx8mp_ldb->clk_root);
