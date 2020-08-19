@@ -1404,12 +1404,24 @@
 					clocks = <&clk IMX8MP_CLK_MEDIA_AXI>,
 						 <&clk IMX8MP_CLK_MEDIA_APB>,
 						 <&clk IMX8MP_CLK_MEDIA_AXI_ROOT>,
-						 <&clk IMX8MP_CLK_MEDIA_APB_ROOT>;
-					clock-names = "disp_axi", "disp_apb", "disp_axi_root", "disp_apb_root";
+						 <&clk IMX8MP_CLK_MEDIA_APB_ROOT>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_BUS_BLK>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISI_PROC>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISI_APB>;
+					clock-names = "disp_axi",
+						      "disp_apb",
+						      "disp_axi_root",
+						      "disp_apb_root",
+						      "media_blk_bus",
+						      "media_blk_isi_proc",
+						      "media_blk_isi_apb";
 					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_AXI_ROOT>,
 							  <&clk IMX8MP_CLK_MEDIA_APB_ROOT>;
 					assigned-clock-rates = <500000000>, <200000000>;
-					no-reset-control;
+					resets = <&media_blk_ctrl IMX8MP_MEDIA_BLK_CTRL_RESET_ISI_PROC>,
+						 <&media_blk_ctrl IMX8MP_MEDIA_BLK_CTRL_RESET_ISI_APB>,
+						 <&media_blk_ctrl IMX8MP_MEDIA_BLK_CTRL_RESET_BUS_BLK>;
+					reset-names = "isi_rst_proc", "isi_rst_apb", "isi_rst_bus";
 					power-domains = <&mediamix_pd>;
 					status = "disabled";
 
@@ -1432,12 +1444,24 @@
 					clocks = <&clk IMX8MP_CLK_MEDIA_AXI>,
 						 <&clk IMX8MP_CLK_MEDIA_APB>,
 						 <&clk IMX8MP_CLK_MEDIA_AXI_ROOT>,
-						 <&clk IMX8MP_CLK_MEDIA_APB_ROOT>;
-					clock-names = "disp_axi", "disp_apb", "disp_axi_root", "disp_apb_root";
+						 <&clk IMX8MP_CLK_MEDIA_APB_ROOT>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_BUS_BLK>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISI_PROC>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISI_APB>;
+					clock-names = "disp_axi",
+						      "disp_apb",
+						      "disp_axi_root",
+						      "disp_apb_root",
+						      "media_blk_bus",
+						      "media_blk_isi_proc",
+						      "media_blk_isi_apb";
 					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_AXI_ROOT>,
 							  <&clk IMX8MP_CLK_MEDIA_APB_ROOT>;
 					assigned-clock-rates = <500000000>, <200000000>;
-					no-reset-control;
+					resets = <&media_blk_ctrl IMX8MP_MEDIA_BLK_CTRL_RESET_ISI_PROC>,
+						 <&media_blk_ctrl IMX8MP_MEDIA_BLK_CTRL_RESET_ISI_APB>,
+						 <&media_blk_ctrl IMX8MP_MEDIA_BLK_CTRL_RESET_BUS_BLK>;
+					reset-names = "isi_rst_proc", "isi_rst_apb", "isi_rst_bus";
 					power-domains = <&mediamix_pd>;
 					status = "disabled";
 
@@ -1454,16 +1478,23 @@
 					clock-frequency = <500000000>;
 					clocks = <&clk IMX8MP_CLK_MEDIA_CAM1_PIX>,
 						 <&clk IMX8MP_CLK_MEDIA_AXI>,
-						 <&clk IMX8MP_CLK_MEDIA_APB>;
-					clock-names = "mipi_clk", "disp_axi", "disp_apb";
+						 <&clk IMX8MP_CLK_MEDIA_APB>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_CSI_PCLK>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_CSI_ACLK>;
+					clock-names = "mipi_clk",
+						      "disp_axi",
+						      "disp_apb",
+						      "media_blk_csi_pclk",
+						      "media_blk_csi_aclk";
 					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_CAM1_PIX>;
 					assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_1000M>;
 					assigned-clock-rates = <500000000>;
 					bus-width = <4>;
 					csi-gpr = <&mediamix_gasket0>;
-					csi-gpr2 = <&mediamix_gpr>;
 					gpr = <&media_blk_ctrl>;
-					no-reset-control;
+					resets = <&media_blk_ctrl IMX8MP_MEDIA_BLK_CTRL_RESET_MIPI_CSI_PCLK>,
+						 <&media_blk_ctrl IMX8MP_MEDIA_BLK_CTRL_RESET_MIPI_CSI_ACLK>;
+					reset-names = "csi_rst_pclk", "csi_rst_aclk";
 					power-domains = <&mipi_phy1_pd>;
 					status = "disabled";
 				};
@@ -1475,16 +1506,23 @@
 					clock-frequency = <266000000>;
 					clocks = <&clk IMX8MP_CLK_MEDIA_CAM2_PIX>,
 						 <&clk IMX8MP_CLK_MEDIA_AXI>,
-						 <&clk IMX8MP_CLK_MEDIA_APB>;
-					clock-names = "mipi_clk", "disp_axi", "disp_apb";
+						 <&clk IMX8MP_CLK_MEDIA_APB>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_CSI2_PCLK>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_CSI2_ACLK>;
+					clock-names = "mipi_clk",
+						      "disp_axi",
+						      "disp_apb",
+						      "media_blk_csi_pclk",
+						      "media_blk_csi_aclk";
 					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_CAM2_PIX>;
 					assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_1000M>;
 					assigned-clock-rates = <266000000>;
 					bus-width = <4>;
 					csi-gpr = <&mediamix_gasket1>;
-					csi-gpr2 = <&mediamix_gpr>;
 					gpr = <&media_blk_ctrl>;
-					no-reset-control;
+					resets = <&media_blk_ctrl IMX8MP_MEDIA_BLK_CTRL_RESET_MIPI_CSI2_PCLK>,
+						 <&media_blk_ctrl IMX8MP_MEDIA_BLK_CTRL_RESET_MIPI_CSI2_ACLK>;
+					reset-names = "csi_rst_pclk", "csi_rst_aclk";
 					power-domains = <&mipi_phy2_pd>;
 					status = "disabled";
 				};
