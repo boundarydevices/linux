@@ -27,6 +27,7 @@
 #include <linux/irq.h>
 #include <linux/io.h>
 #include <linux/fb.h>
+#include <linux/fbcon.h>
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/delay.h>
@@ -1763,6 +1764,8 @@ static void hdmi_disable_overflow_interrupts(void)
 
 static void mxc_hdmi_notify_fb(struct mxc_hdmi *hdmi)
 {
+	int ret;
+
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
 	/* Don't notify if we aren't registered yet */
@@ -1779,9 +1782,9 @@ static void mxc_hdmi_notify_fb(struct mxc_hdmi *hdmi)
 	 */
 	hdmi->fbi->var.activate |= FB_ACTIVATE_FORCE;
 	console_lock();
-	hdmi->fbi->flags |= FBINFO_MISC_USEREVENT;
-	fb_set_var(hdmi->fbi, &hdmi->fbi->var);
-	hdmi->fbi->flags &= ~FBINFO_MISC_USEREVENT;
+	ret = fb_set_var(hdmi->fbi, &hdmi->fbi->var);
+	if (!ret)
+		fbcon_update_vcs(hdmi->fbi, hdmi->fbi->var.activate & FB_ACTIVATE_ALL);
 	console_unlock();
 
 	dev_dbg(&hdmi->pdev->dev, "%s exit\n", __func__);
