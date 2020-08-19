@@ -1308,7 +1308,7 @@ static int tc358840_get_detected_timings(struct v4l2_subdev *sd,
 	bt->height = height;
 	bt->vsync = frame_height - height;
 	bt->hsync = frame_width - width;
-	bt->pixelclock = DIV_ROUND_CLOSEST((frame_width * frame_height * fps)
+	bt->pixelclock = DIV_ROUND_CLOSEST(((u64)frame_width * frame_height * fps)
 					   / 100, 1000) * 1000;
 
 	if (pol & MASK_S_V_HPOL)
