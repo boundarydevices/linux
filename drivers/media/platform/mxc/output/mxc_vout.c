@@ -1868,9 +1868,7 @@ static int config_disp_output(struct mxc_vout_output *vout)
 	 * This procedure applies to non-overlay fbs as well.
 	 */
 	console_lock();
-	fbi->flags |= FBINFO_MISC_USEREVENT;
 	fb_blank(fbi, FB_BLANK_POWERDOWN);
-	fbi->flags &= ~FBINFO_MISC_USEREVENT;
 	console_unlock();
 
 	pos.x = 0;
@@ -1886,9 +1884,7 @@ static int config_disp_output(struct mxc_vout_output *vout)
 	var.yoffset = 0;
 	var.activate |= FB_ACTIVATE_FORCE;
 	console_lock();
-	fbi->flags |= FBINFO_MISC_USEREVENT;
 	ret = fb_set_var(fbi, &var);
-	fbi->flags &= ~FBINFO_MISC_USEREVENT;
 	console_unlock();
 	if (ret < 0) {
 		v4l2_err(vout->vfd->v4l2_dev,
@@ -1950,9 +1946,7 @@ static int config_disp_output(struct mxc_vout_output *vout)
 			*pixel++ = color;
 	}
 	console_lock();
-	fbi->flags |= FBINFO_MISC_USEREVENT;
 	ret = fb_blank(fbi, FB_BLANK_UNBLANK);
-	fbi->flags &= ~FBINFO_MISC_USEREVENT;
 	console_unlock();
 	vout->release = false;
 
@@ -1990,9 +1984,7 @@ static void release_disp_output(struct mxc_vout_output *vout)
 	if (vout->release)
 		return;
 	console_lock();
-	fbi->flags |= FBINFO_MISC_USEREVENT;
 	fb_blank(fbi, FB_BLANK_POWERDOWN);
-	fbi->flags &= ~FBINFO_MISC_USEREVENT;
 	console_unlock();
 
 	/* restore pos to 0,0 avoid fb pan display hang? */
@@ -2003,9 +1995,7 @@ static void release_disp_output(struct mxc_vout_output *vout)
 	if (get_ipu_channel(fbi) == MEM_BG_SYNC) {
 		console_lock();
 		fbi->fix.smem_start = vout->disp_bufs[0];
-		fbi->flags |= FBINFO_MISC_USEREVENT;
 		fb_blank(fbi, FB_BLANK_UNBLANK);
-		fbi->flags &= ~FBINFO_MISC_USEREVENT;
 		console_unlock();
 
 	}
