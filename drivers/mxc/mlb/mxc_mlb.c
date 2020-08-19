@@ -1721,7 +1721,7 @@ static void mlb_tx_isr(s32 ctype, u32 ahb_ch, struct mlb_dev_info *pdevinfo)
 	/* check the current tx buffer is available or not */
 	if (CIRC_CNT(head, tail, TRANS_RING_NODES) >= 1) {
 		/* read index before reading contents at that index */
-		smp_read_barrier_depends();
+		smp_mb();
 
 		tx_buf_ptr = tx_rbuf->phy_addrs[tail];
 
@@ -2346,7 +2346,7 @@ static ssize_t mxc_mlb150_read(struct file *filp, char __user *buf,
 	}
 
 	/* read index before reading contents at that index */
-	smp_read_barrier_depends();
+	smp_mb();
 
 	size = pdevinfo->adt_buf_dep;
 	if (size > count) {
@@ -2457,7 +2457,7 @@ static ssize_t mxc_mlb150_write(struct file *filp, const char __user *buf,
 		u32 ctype = pdevinfo->channel_type;
 
 		/* read index before reading contents at that index */
-		smp_read_barrier_depends();
+		smp_mb();
 
 		tx_buf_ptr = tx_rbuf->phy_addrs[tail];
 
