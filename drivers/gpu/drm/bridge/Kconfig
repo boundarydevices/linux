@@ -323,4 +323,6 @@ source "drivers/gpu/drm/bridge/cadence/Kconfig"
 
 source "drivers/gpu/drm/bridge/synopsys/Kconfig"
 
+source "drivers/gpu/drm/bridge/sn65dsi83/Kconfig"
+
 endmenu
