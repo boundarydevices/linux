@@ -50,8 +50,37 @@ create_package() {
 	EOF
 
 	cat >> $pdir/DEBIAN/postinst <<-EOF
+	#!/bin/bash
 	cd /boot
 	ln -sfT dtb-$version dtb 2> /dev/null || mv dtb-$version dtb
+	if [ -f /etc/fenix-release ]; then
+		source /etc/fenix-release
+		case \$BOARD in
+			VIM1)
+				DTB=meson-gxl-s905x-khadas-vim.dtb
+				;;
+			VIM2)
+				DTB=meson-gxm-khadas-vim2.dtb
+				;;
+			VIM3)
+				DTB=meson-g12b-a311d-khadas-vim3.dtb
+				;;
+			VIM3L)
+				DTB=meson-sm1-khadas-vim3l.dtb
+				;;
+			Edge)
+				DTB=rk3399-khadas-edge.dtb
+				;;
+			Edge-V)
+				DTB=rk3399-khadas-edge-v.dtb
+				;;
+			Captain)
+				DTB=rk3399-khadas-edge-captain.dtb
+				;;
+		esac
+		cp /boot/dtb/\${VENDOR,,}/\$DTB /boot/dtb.img
+		cd - > /dev/null
+	fi
 	exit 0
 	EOF
 
