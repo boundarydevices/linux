@@ -74,6 +74,7 @@
 		regulator-max-microvolt = <3300000>;
 		gpio = <&gpio4 29 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
+		regulator-always-on;
 	};
 
 	sound-hdmi {
