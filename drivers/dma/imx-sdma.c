@@ -261,7 +261,7 @@ struct sdma_script_start_addrs {
  * Mode/Count of data node descriptors - IPCv2
  */
 struct sdma_mode_count {
-#define SDMA_BD_MAX_CNT	0xffff
+#define SDMA_BD_MAX_CNT	0xfffc /* align with 4 bytes */
 	u32 count   : 16; /* size of the buffer pointed by this BD */
 	u32 status  :  8; /* E,R,I,C,W,D status bits stored here */
 	u32 command :  8; /* command mostly used for channel 0 */
