@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2020 Boundary Devices
+ */
+
+#include "imx8mn-nitrogen8mn_som.dts"
+
+/ {
+	model = "Boundary Devices i.MX 8M Nano Nitrogen8MN SoM M4";
+	compatible = "boundary,imx8mn-nitrogen8_nano-m4", "fsl,imx8mn";
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		m4_reserved: m4@0x70000000 {
+			no-map;
+			reg = <0 0x70000000 0 0x1000000>;
+		};
+	};
+};
+
+&rpmsg{
+	/*
+	 * 64K for one rpmsg instance:
+	 * --0x78000000~0x7800ffff: pingpong
+	 */
+	vdev-nums = <1>;
+	reg = <0x0 0x78000000 0x0 0x10000>;
+	status = "okay";
+};
+
+&uart4 {
+	status = "disabled";
+};
