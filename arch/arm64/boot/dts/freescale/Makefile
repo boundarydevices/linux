@@ -79,6 +79,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mn-ab2.dtb imx8mn-ddr4-ab2.dtb \
 			  imx8mn-nitrogen8_nano-m4.dtb \
 			  imx8mn-nitrogen8mn.dtb \
 			  imx8mn-nitrogen8mn_som.dtb \
+			  imx8mn-nitrogen8mn_som-m4.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk.dtb imx8mp-evk-root.dtb imx8mp-evk-inmate.dtb imx8mp-evk-rpmsg.dtb \
 			  imx8mp-evk-rm67191.dtb imx8mp-evk-flexcan2.dtb imx8mp-evk-it6263-lvds-dual-channel.dtb \
