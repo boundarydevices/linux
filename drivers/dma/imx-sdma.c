@@ -204,7 +204,7 @@
  * Mode/Count of data node descriptors - IPCv2
  */
 struct sdma_mode_count {
-#define SDMA_BD_MAX_CNT	0xffff
+#define SDMA_BD_MAX_CNT	0xfffc /* align with 4 bytes */
 	u32 count   : 16; /* size of the buffer pointed by this BD */
 	u32 status  :  8; /* E,R,I,C,W,D status bits stored here */
 	u32 command :  8; /* command mostly used for channel 0 */
@@ -1595,7 +1595,7 @@ static int check_bd_buswidth(struct sdma_buffer_descriptor *bd,
 			ret = -EINVAL;
 		break;
 	case DMA_SLAVE_BUSWIDTH_1_BYTE:
-		 bd->mode.command = 1;
+		bd->mode.command = 1;
 		break;
 	default:
 		return -EINVAL;
@@ -1933,7 +1933,7 @@ static void sdma_start_desc(struct sdma_channel *sdmac)
 	sdmac->desc = desc = to_sdma_desc(&vd->tx);
 	/*
 	 * Do not delete the node in desc_issued list in cyclic mode, otherwise
-	 * the desc alloced will never be freed in vchan_dma_desc_free_list
+	 * the desc allocated will never be freed in vchan_dma_desc_free_list
 	 */
 	if (!(sdmac->flags & IMX_DMA_SG_LOOP)) {
 		list_add_tail(&sdmac->desc->node, &sdmac->pending);
