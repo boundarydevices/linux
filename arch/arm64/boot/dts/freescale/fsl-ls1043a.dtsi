@@ -915,6 +915,7 @@
 					<0000 0 0 2 &gic 0 111 0x4>,
 					<0000 0 0 3 &gic 0 112 0x4>,
 					<0000 0 0 4 &gic 0 113 0x4>;
+			fsl,pcie-scfg = <&scfg 0>;
 			big-endian;
 			status = "disabled";
 		};
@@ -942,6 +943,7 @@
 					<0000 0 0 2 &gic 0 121 0x4>,
 					<0000 0 0 3 &gic 0 122 0x4>,
 					<0000 0 0 4 &gic 0 123 0x4>;
+			fsl,pcie-scfg = <&scfg 1>;
 			big-endian;
 			status = "disabled";
 		};
@@ -969,6 +971,7 @@
 					<0000 0 0 2 &gic 0 155 0x4>,
 					<0000 0 0 3 &gic 0 156 0x4>,
 					<0000 0 0 4 &gic 0 157 0x4>;
+			fsl,pcie-scfg = <&scfg 2>;
 			big-endian;
 			status = "disabled";
 		};
