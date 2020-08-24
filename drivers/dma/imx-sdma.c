@@ -475,7 +475,6 @@ struct sdma_engine {
 	/* channel0 bd */
 	dma_addr_t			bd0_phys;
 	struct sdma_buffer_descriptor	*bd0;
-	int				idx;
 	/* clock ratio for AHB:SDMA core. 1:1 is 1, 2:1 is 0*/
 	bool				clk_ratio;
 	struct gen_pool			*iram_pool;
@@ -689,8 +688,6 @@ static const struct of_device_id sdma_dt_ids[] = {
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, sdma_dt_ids);
-
-static int sdma_dev_idx;
 
 #define SDMA_H_CONFIG_DSPDMA	BIT(12) /* indicates if the DSPDMA is used */
 #define SDMA_H_CONFIG_RTD_PINS	BIT(11) /* indicates if Real-Time Debug pins are enabled */
@@ -2309,7 +2306,6 @@ static struct dma_chan *sdma_xlate(struct of_phandle_args *dma_spec,
 	if (dma_spec->args[2] & BIT(31))
 		data.done_sel = dma_spec->args[2];
 	data.priority = dma_spec->args[2] & 0xff;
-	data.idx = sdma->idx;
 
 	return __dma_request_channel(&mask, sdma_filter_fn, &data,
 				     ofdma->of_node);
@@ -2488,8 +2484,6 @@ static int sdma_probe(struct platform_device *pdev)
 		if (sdma->iram_pool)
 			dev_info(&pdev->dev, "alloc bd from iram. \n");
 	}
-	/* There maybe multi sdma devices such as i.mx8mscale */
-	sdma->idx = sdma_dev_idx++;
 
 	/*
 	 * Kick off firmware loading as the very last step:
