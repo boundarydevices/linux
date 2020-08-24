@@ -86,19 +86,12 @@
 
 #include "gc_hal_kernel_allocator.h"
 
-#define gcmkBUG_ON(x, func, line) \
+#define gcmkBUG_ON(x) \
     do { \
-        if (unlikely(x)) \
+        if (unlikely(!!(x))) \
         { \
-            int i = 0; \
-            while (1) \
-            { \
-                static int delay = 10 * 1000; \
-                gcmkPRINT("[galcore]: BUG ON @ %s(%d) (%d)", func, line, i++); \
-                dump_stack(); \
-                gckOS_Delay(gcvNULL, delay); \
-                delay *= 2; \
-            } \
+            printk("[galcore]: BUG ON @ %s(%d)\n", __func__, __LINE__); \
+            dump_stack(); \
         } \
     } while (0)
 
@@ -637,7 +630,6 @@ gckOS_Construct(
 {
     gckOS os;
     gceSTATUS status;
-    gctINT i;
 
     gcmkHEADER_ARG("Context=0x%X", Context);
 
@@ -678,8 +670,8 @@ gckOS_Construct(
      * Initialize the signal manager.
      */
 
-    /* Initialize mutex. */
-    mutex_init(&os->signalMutex);
+    /* Initialize spinlock. */
+    spin_lock_init(&os->signalLock);
 
     /* Initialize signal id database lock. */
     spin_lock_init(&os->signalDB.lock);
@@ -707,10 +699,7 @@ gckOS_Construct(
         SetPageReserved(os->paddingPage);
     }
 
-    for (i = 0; i < gcdMAX_GPU_COUNT; i++)
-    {
-        mutex_init(&os->registerAccessLocks[i]);
-    }
+    spin_lock_init(&os->registerAccessLock);
 
     gckOS_ImportAllocators(os);
 
@@ -1269,6 +1258,8 @@ gckOS_UnmapMemoryEx(
 
     if (Logical)
     {
+        gckALLOCATOR allocator = mdl->allocator;
+
         mutex_lock(&mdl->mapsMutex);
 
         mdlMap = FindMdlMap(mdl, PID);
@@ -1281,7 +1272,9 @@ gckOS_UnmapMemoryEx(
             return gcvSTATUS_INVALID_ARGUMENT;
         }
 
-        _UnmapUserLogical(mdlMap->vmaAddr, mdl->numPages * PAGE_SIZE);
+        BUG_ON(!allocator || !allocator->ops->UnmapUser);
+
+        allocator->ops->UnmapUser(allocator, mdl, mdl->bytes);
 
         gcmkVERIFY_OK(_DestroyMdlMap(mdl, mdlMap));
 
@@ -1462,14 +1455,20 @@ gckOS_AllocateNonPagedMemory(
     /* Check status. */
     gcmkONERROR(status);
 
+    mdl->cacheable = flag & gcvALLOC_FLAG_CACHEABLE;
+
+    mdl->bytes    = bytes;
     mdl->numPages = numPages;
 
     mdl->contiguous = gcvTRUE;
 
     gcmkONERROR(allocator->ops->MapKernel(allocator, mdl, &addr));
 
-    /* Trigger a page fault. */
-    memset(addr, 0, numPages * PAGE_SIZE);
+    if (!strcmp(allocator->name, "gfp"))
+    {
+        /* Trigger a page fault. */
+        memset(addr, 0, numPages * PAGE_SIZE);
+    }
 
     mdl->addr = addr;
 
@@ -1633,35 +1632,74 @@ gckOS_ReadRegisterEx(
     OUT gctUINT32 * Data
     )
 {
-    gcmkHEADER_ARG("Os=0x%X Core=%d Address=0x%X", Os, Core, Address);
-
-    /* Verify the arguments. */
-    gcmkVERIFY_OBJECT(Os, gcvOBJ_OS);
-
-    gcmkVERIFY_ARGUMENT(Address < Os->device->requestedRegisterMemSizes[Core]);
-
-    gcmkVERIFY_ARGUMENT(Data != gcvNULL);
-
-    if (!in_irq())
+    if (in_irq())
     {
-        mutex_lock(&Os->registerAccessLocks[Core]);
+        uint32_t data;
+
+        spin_lock(&Os->registerAccessLock);
+
+        if (unlikely(Os->clockStates[Core] == gcvFALSE))
+        {
+            spin_unlock(&Os->registerAccessLock);
+
+            /*
+             * Read register when external clock off:
+             * 1. In shared IRQ, read register may be called and that's not our irq.
+             */
+            return gcvSTATUS_GENERIC_IO;
+        }
+
+        data = readl(Os->device->registerBases[Core]);
+
+        if (unlikely((data & 0x3) == 0x3))
+        {
+            spin_unlock(&Os->registerAccessLock);
+
+            /*
+             * Read register when internal clock off:
+             * a. In shared IRQ, read register may be called and that's not our irq.
+             * b. In some condition, when ISR handled normal FE/PE, PM thread could
+             *    trun off internal clock before ISR read register of async FE. And
+             *    then IRQ handler will call read register with internal clock off.
+             *    So here we just skip for such case.
+             */
+            return gcvSTATUS_GENERIC_IO;
+        }
+
+        *Data = readl((gctUINT8 *)Os->device->registerBases[Core] + Address);
+        spin_unlock(&Os->registerAccessLock);
     }
-
-    gcmkBUG_ON(!_AllowAccess(Os, Core, Address), __FUNCTION__, __LINE__);
-
-    *Data = readl((gctUINT8 *)Os->device->registerBases[Core] + Address);
-
-    if (!in_irq())
+    else
     {
-        mutex_unlock(&Os->registerAccessLocks[Core]);
-    }
+        unsigned long flags;
+
+        spin_lock_irqsave(&Os->registerAccessLock, flags);
+
+        if (unlikely(Os->clockStates[Core] == gcvFALSE))
+        {
+            spin_unlock_irqrestore(&Os->registerAccessLock, flags);
+
+            /*
+             * Read register when external clock off:
+             * 2. In non-irq context, register access should not be called,
+             *    otherwise it's driver bug.
+             */
+            printk(KERN_ERR "[galcore]: %s(%d) GPU[%d] external clock off",
+                   __func__, __LINE__, Core);
+            gcmkBUG_ON(1);
+            return gcvSTATUS_GENERIC_IO;
+        }
+
+        *Data = readl((gctUINT8 *)Os->device->registerBases[Core] + Address);
+        spin_unlock_irqrestore(&Os->registerAccessLock, flags);
 
 #if gcdDUMP_AHB_ACCESS
-    gcmkPRINT("@[RD %d] %08x %08x", Core, Address, *Data);
+        /* Dangerous to print in interrupt context, skip. */
+        gcmkPRINT("@[RD %d] %08x %08x", Core, Address, *Data);
 #endif
+    }
 
     /* Success. */
-    gcmkFOOTER_ARG("*Data=0x%08x", *Data);
     return gcvSTATUS_OK;
 }
 
@@ -1704,30 +1742,53 @@ gckOS_WriteRegisterEx(
     IN gctUINT32 Data
     )
 {
-    gcmkHEADER_ARG("Os=0x%X Core=%d Address=0x%X Data=0x%08x", Os, Core, Address, Data);
-
-    gcmkVERIFY_ARGUMENT(Address < Os->device->requestedRegisterMemSizes[Core]);
-
-    if (!in_interrupt())
+    if (in_irq())
     {
-        mutex_lock(&Os->registerAccessLocks[Core]);
+        spin_lock(&Os->registerAccessLock);
+
+        if (unlikely(Os->clockStates[Core] == gcvFALSE))
+        {
+            spin_unlock(&Os->registerAccessLock);
+
+            printk(KERN_ERR "[galcore]: %s(%d) GPU[%d] external clock off",
+                   __func__, __LINE__, Core);
+
+            /* Driver bug: register write when clock off. */
+            gcmkBUG_ON(1);
+            return gcvSTATUS_GENERIC_IO;
+        }
+
+        writel(Data, (gctUINT8 *)Os->device->registerBases[Core] + Address);
+        spin_unlock(&Os->registerAccessLock);
     }
-
-    gcmkBUG_ON(!_AllowAccess(Os, Core, Address), __FUNCTION__, __LINE__);
-
-    writel(Data, (gctUINT8 *)Os->device->registerBases[Core] + Address);
-
-    if (!in_interrupt())
+    else
     {
-        mutex_unlock(&Os->registerAccessLocks[Core]);
-    }
+        unsigned long flags;
+
+        spin_lock_irqsave(&Os->registerAccessLock, flags);
+
+        if (unlikely(Os->clockStates[Core] == gcvFALSE))
+        {
+            spin_unlock_irqrestore(&Os->registerAccessLock, flags);
+
+            printk(KERN_ERR "[galcore]: %s(%d) GPU[%d] external clock off",
+                      __func__, __LINE__, Core);
+
+            /* Driver bug: register write when clock off. */
+            gcmkBUG_ON(1);
+            return gcvSTATUS_GENERIC_IO;
+        }
+
+        writel(Data, (gctUINT8 *)Os->device->registerBases[Core] + Address);
+        spin_unlock_irqrestore(&Os->registerAccessLock, flags);
 
 #if gcdDUMP_AHB_ACCESS
-    gcmkPRINT("@[WR %d] %08x %08x", Core, Address, Data);
+        /* Dangerous to print in interrupt context, skip. */
+        gcmkPRINT("@[WR %d] %08x %08x", Core, Address, Data);
 #endif
+    }
 
     /* Success. */
-    gcmkFOOTER_NO();
     return gcvSTATUS_OK;
 }
 
@@ -3496,7 +3557,7 @@ gckOS_MapPagesEx(
     {
         platform->ops->getPolicyID(platform, Type, &policyID, &axiConfig);
 
-        gcmkBUG_ON(policyID > 0x1F, __FUNCTION__, __LINE__);
+        gcmkBUG_ON(policyID > 0x1F);
 
         /* ID[3:0] is used in STLB. */
         policyID &= 0xF;
@@ -3519,7 +3580,7 @@ gckOS_MapPagesEx(
         if (policyID)
         {
             /* AxUSER must not used for address currently. */
-            gcmkBUG_ON((phys >> 32) & 0xF, __FUNCTION__, __LINE__);
+            gcmkBUG_ON((phys >> 32) & 0xF);
 
             /* Merge policyID to AxUSER[7:4].*/
             phys |= ((gctPHYS_ADDR_T)policyID << 36);
@@ -5355,16 +5416,32 @@ gckOS_SetGPUPower(
 
     if (clockChange)
     {
-        mutex_lock(&Os->registerAccessLocks[Core]);
+        unsigned long flags;
+
+        if (!Clock)
+        {
+            spin_lock_irqsave(&Os->registerAccessLock, flags);
+
+            /* Record clock off, ahead. */
+            Os->clockStates[Core] = gcvFALSE;
+
+            spin_unlock_irqrestore(&Os->registerAccessLock, flags);
+        }
 
         if (platform && platform->ops->setClock)
         {
             gcmkVERIFY_OK(platform->ops->setClock(platform, Core, Clock));
         }
 
-        Os->clockStates[Core] = Clock;
+        if (Clock)
+        {
+            spin_lock_irqsave(&Os->registerAccessLock, flags);
 
-        mutex_unlock(&Os->registerAccessLocks[Core]);
+            /* Record clock on, behind. */
+            Os->clockStates[Core] = gcvTRUE;
+
+            spin_unlock_irqrestore(&Os->registerAccessLock, flags);
+        }
     }
 
     if (powerChange && (Power == gcvFALSE))
@@ -5686,8 +5763,10 @@ gckOS_CreateSignal(
 
     /* Save the process ID. */
     signal->process = (gctHANDLE)(gctUINTPTR_T) _GetProcessID();
+    signal->done = 0;
+    init_waitqueue_head(&signal->wait);
+    spin_lock_init(&signal->lock);
     signal->manualReset = ManualReset;
-    init_completion(&signal->obj);
     atomic_set(&signal->ref, 1);
 
 #if gcdANDROID_NATIVE_FENCE_SYNC
@@ -5742,6 +5821,7 @@ gckOS_DestroySignal(
     gceSTATUS status;
     gcsSIGNAL_PTR signal;
     gctBOOL acquired = gcvFALSE;
+    unsigned long flags = 0;
 
     gcmkHEADER_ARG("Os=0x%X Signal=0x%X", Os, Signal);
 
@@ -5749,7 +5829,11 @@ gckOS_DestroySignal(
     gcmkVERIFY_OBJECT(Os, gcvOBJ_OS);
     gcmkVERIFY_ARGUMENT(Signal != gcvNULL);
 
-    mutex_lock(&Os->signalMutex);
+    if(in_irq()){
+        spin_lock(&Os->signalLock);
+    }else{
+        spin_lock_irqsave(&Os->signalLock, flags);
+    }
     acquired = gcvTRUE;
 
     gcmkONERROR(_QueryIntegerId(&Os->signalDB, (gctUINT32)(gctUINTPTR_T)Signal, (gctPOINTER)&signal));
@@ -5764,7 +5848,12 @@ gckOS_DestroySignal(
         kfree(signal);
     }
 
-    mutex_unlock(&Os->signalMutex);
+    if(in_irq()){
+        spin_unlock(&Os->signalLock);
+    }else{
+        spin_unlock_irqrestore(&Os->signalLock, flags);
+    }
+
     acquired = gcvFALSE;
 
     /* Success. */
@@ -5775,7 +5864,12 @@ OnError:
     if (acquired)
     {
         /* Release the mutex. */
-        mutex_unlock(&Os->signalMutex);
+        if(in_irq()){
+            spin_unlock(&Os->signalLock);
+        }else{
+            spin_unlock_irqrestore(&Os->signalLock, flags);
+        }
+
     }
 
     gcmkFOOTER();
@@ -5813,14 +5907,14 @@ gckOS_Signal(
 {
     gceSTATUS status;
     gcsSIGNAL_PTR signal;
-    gctBOOL acquired = gcvFALSE;
 #if gcdANDROID_NATIVE_FENCE_SYNC
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
     struct sync_timeline * timeline = gcvNULL;
 #  else
-    struct fence * fence = gcvNULL;
+    struct dma_fence * fence = gcvNULL;
 #  endif
 #endif
+    unsigned long flags = 0;
 
     gcmkHEADER_ARG("Os=0x%X Signal=0x%X State=%d", Os, Signal, State);
 
@@ -5828,17 +5922,38 @@ gckOS_Signal(
     gcmkVERIFY_OBJECT(Os, gcvOBJ_OS);
     gcmkVERIFY_ARGUMENT(Signal != gcvNULL);
 
-    mutex_lock(&Os->signalMutex);
-    acquired = gcvTRUE;
+    spin_lock_irqsave(&Os->signalLock, flags);
 
-    gcmkONERROR(_QueryIntegerId(&Os->signalDB, (gctUINT32)(gctUINTPTR_T)Signal, (gctPOINTER)&signal));
+    status = _QueryIntegerId(&Os->signalDB,
+                             (gctUINT32)(gctUINTPTR_T)Signal,
+                             (gctPOINTER)&signal);
+
+    if (gcmIS_ERROR(status))
+    {
+        spin_unlock_irqrestore(&Os->signalLock, flags);
+        gcmkONERROR(status);
+    }
+
+    /*
+     * Signal saved in event is not referenced. Inc reference here to avoid
+     * concurrent issue: signaling the signal while another thread is destroying
+     * it.
+     */
+    atomic_inc(&signal->ref);
+
+    spin_unlock_irqrestore(&Os->signalLock, flags);
+
+    gcmkONERROR(status);
 
     gcmkASSERT(signal->id == (gctUINT32)(gctUINTPTR_T)Signal);
 
+    spin_lock(&signal->lock);
+
     if (State)
     {
-        /* Set the event to a signaled state. */
-        complete(&signal->obj);
+        signal->done = 1;
+
+        wake_up(&signal->wait);
 
 #if gcdANDROID_NATIVE_FENCE_SYNC
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
@@ -5851,16 +5966,10 @@ gckOS_Signal(
     }
     else
     {
-        /* Set the event to an unsignaled state. */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0)
-        reinit_completion(&signal->obj);
-#else
-        INIT_COMPLETION(signal->obj);
-#endif
+        signal->done = 0;
     }
 
-    mutex_unlock(&Os->signalMutex);
-    acquired = gcvFALSE;
+    spin_unlock(&signal->lock);
 
 #if gcdANDROID_NATIVE_FENCE_SYNC
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
@@ -5872,23 +5981,29 @@ gckOS_Signal(
 #  else
     if (fence)
     {
-        fence_signal(fence);
-        fence_put(fence);
+        dma_fence_signal(fence);
+        dma_fence_put(fence);
     }
 #  endif
 #endif
+
+    spin_lock_irqsave(&Os->signalLock, flags);
+
+    if (atomic_dec_and_test(&signal->ref))
+    {
+        gcmkVERIFY_OK(_DestroyIntegerId(&Os->signalDB, signal->id));
+
+        /* Free the sgianl. */
+        kfree(signal);
+    }
+
+    spin_unlock_irqrestore(&Os->signalLock, flags);
 
     /* Success. */
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
 
 OnError:
-    if (acquired)
-    {
-        /* Release the mutex. */
-        mutex_unlock(&Os->signalMutex);
-    }
-
     gcmkFOOTER();
     return status;
 }
@@ -6024,7 +6139,8 @@ gckOS_WaitSignal(
     )
 {
     gceSTATUS status = gcvSTATUS_OK;
-    gcsSIGNAL_PTR signal;
+    gcsSIGNAL_PTR signal = gcvNULL;
+    int done;
 
     gcmkHEADER_ARG("Os=0x%X Signal=0x%X Wait=0x%08X", Os, Signal, Wait);
 
@@ -6036,21 +6152,28 @@ gckOS_WaitSignal(
 
     gcmkASSERT(signal->id == (gctUINT32)(gctUINTPTR_T)Signal);
 
-    might_sleep();
+    spin_lock(&signal->lock);
+    done = signal->done;
+    spin_unlock(&signal->lock);
 
-#ifdef gcdRT_KERNEL
-    raw_spin_lock_irq(&signal->obj.wait.lock);
-#else
-    spin_lock_irq(&signal->obj.wait.lock);
-#endif
-    if (signal->obj.done)
+    /*
+     * Do not need to lock below:
+     * 1. If signal already done, return immediately.
+     * 2. If signal not done, wait_event_xxx will handle correctly even read of
+     *    signal->done is not atomic.
+     *
+     * Rest signal->done do not require lock either:
+     * No other thread can query/wait auto-reseted signal, because that is
+     * logic error.
+     */
+    if (done)
     {
+        status = gcvSTATUS_OK;
+
         if (!signal->manualReset)
         {
-            signal->obj.done = 0;
+            signal->done = 0;
         }
-
-        status = gcvSTATUS_OK;
     }
     else if (Wait == 0)
     {
@@ -6060,84 +6183,40 @@ gckOS_WaitSignal(
     {
         /* Convert wait to milliseconds. */
         long timeout = (Wait == gcvINFINITE)
-            ? MAX_SCHEDULE_TIMEOUT
-            : msecs_to_jiffies(Wait);
+                     ? MAX_SCHEDULE_TIMEOUT
+                     : msecs_to_jiffies(Wait);
 
-#ifdef gcdRT_KERNEL
-        DEFINE_SWAITER(wait);
-#else
-        DECLARE_WAITQUEUE(wait, current);
-        wait.flags |= WQ_FLAG_EXCLUSIVE;
-#endif
+        long ret;
 
-#ifdef gcdRT_KERNEL
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
-        __prepare_to_swait(&signal->obj.wait, &wait);
-#else
-        swait_prepare_locked(&signal->obj.wait, &wait);
-#endif
-#else
-        __add_wait_queue_tail(&signal->obj.wait, &wait);
-#endif
-        while (gcvTRUE)
+        if (Interruptable)
         {
-            if (Interruptable && signal_pending(current))
-            {
-                /* Interrupt received. */
-                status = gcvSTATUS_INTERRUPTED;
-                break;
-            }
-
-            __set_current_state(TASK_INTERRUPTIBLE);
-#ifdef gcdRT_KERNEL
-            raw_spin_unlock_irq(&signal->obj.wait.lock);
-#else
-            spin_unlock_irq(&signal->obj.wait.lock);
-#endif
-            timeout = schedule_timeout(timeout);
-#ifdef gcdRT_KERNEL
-            raw_spin_lock_irq(&signal->obj.wait.lock);
-#else
-            spin_lock_irq(&signal->obj.wait.lock);
-#endif
-            if (signal->obj.done)
-            {
-                if (!signal->manualReset)
-                {
-                    signal->obj.done = 0;
-                }
-
-                status = gcvSTATUS_OK;
-                break;
-            }
-
-            if (timeout == 0)
-            {
-
-                status = gcvSTATUS_TIMEOUT;
-                break;
-            }
+            ret = wait_event_interruptible_timeout(signal->wait, signal->done, timeout);
+        }
+        else
+        {
+            ret = wait_event_timeout(signal->wait, signal->done, timeout);
         }
 
-#ifdef gcdRT_KERNEL
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,4,0)
-        __finish_swait(&signal->obj.wait, &wait);
-#else
-        swait_finish_locked(&signal->obj.wait, &wait);
-#endif
-#else
-        __remove_wait_queue(&signal->obj.wait, &wait);
-#endif
+        if (likely(ret > 0))
+        {
+            status = gcvSTATUS_OK;
+
+            if (!signal->manualReset)
+            {
+                /* Auto reset. */
+                signal->done = 0;
+            }
+        }
+        else
+        {
+            status = (ret == -ERESTARTSYS) ? gcvSTATUS_INTERRUPTED
+                   : gcvSTATUS_TIMEOUT;
+        }
     }
 
-#ifdef gcdRT_KERNEL
-    raw_spin_unlock_irq(&signal->obj.wait.lock);
-#else
-    spin_unlock_irq(&signal->obj.wait.lock);
-#endif
 OnError:
     /* Return status. */
-    gcmkFOOTER_ARG("Signal=0x%X status=%d", Signal, status);
+    gcmkFOOTER_ARG("Signal=0x%lX status=%d", Signal, status);
     return status;
 }
 
@@ -6155,7 +6234,7 @@ _QuerySignal(
      * spinlock for 'Os->signalDB.lock' and 'signal->obj.wait.lock'.
      */
     gceSTATUS status;
-    gcsSIGNAL_PTR signal;
+    gcsSIGNAL_PTR signal = gcvNULL;
 
     status = _QueryIntegerId(&Os->signalDB,
                              (gctUINT32)(gctUINTPTR_T)Signal,
@@ -6163,14 +6242,9 @@ _QuerySignal(
 
     if (gcmIS_SUCCESS(status))
     {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,13,0)
-        status = completion_done(&signal->obj)
-               ? gcvSTATUS_TRUE : gcvSTATUS_FALSE;
-#else
-        spin_lock(&signal->obj.wait.lock);
-        status = signal->obj.done ? gcvSTATUS_TRUE : gcvSTATUS_FALSE;
-        spin_unlock(&signal->obj.wait.lock);
-#endif
+        spin_lock(&signal->lock);
+        status = signal->done ? gcvSTATUS_TRUE : gcvSTATUS_FALSE;
+        spin_unlock(&signal->lock);
     }
 
     return status;
@@ -6207,13 +6281,14 @@ gckOS_MapSignal(
     )
 {
     gceSTATUS status;
-    gcsSIGNAL_PTR signal;
+    gcsSIGNAL_PTR signal = gcvNULL;
+    unsigned long flags = 0;
     gcmkHEADER_ARG("Os=0x%X Signal=0x%X Process=0x%X", Os, Signal, Process);
 
     gcmkVERIFY_ARGUMENT(Signal != gcvNULL);
     gcmkVERIFY_ARGUMENT(MappedSignal != gcvNULL);
 
-    mutex_lock(&Os->signalMutex);
+    spin_lock_irqsave(&Os->signalLock, flags);
 
     gcmkONERROR(_QueryIntegerId(&Os->signalDB, (gctUINT32)(gctUINTPTR_T)Signal, (gctPOINTER)&signal));
 
@@ -6225,14 +6300,14 @@ gckOS_MapSignal(
 
     *MappedSignal = (gctSIGNAL) Signal;
 
-    mutex_unlock(&Os->signalMutex);
+    spin_unlock_irqrestore(&Os->signalLock, flags);
 
     /* Success. */
     gcmkFOOTER_ARG("*MappedSignal=0x%X", *MappedSignal);
     return gcvSTATUS_OK;
 
 OnError:
-    mutex_unlock(&Os->signalMutex);
+    spin_unlock_irqrestore(&Os->signalLock, flags);
 
     gcmkFOOTER_NO();
     return status;
@@ -7271,11 +7346,11 @@ gckOS_CreateNativeFence(
     OUT gctINT * FenceFD
     )
 {
-    struct fence *fence = NULL;
+    struct dma_fence *fence = NULL;
     struct sync_file *sync = NULL;
-    int fd;
+    int fd = -1;
     struct viv_sync_timeline *timeline;
-    gcsSIGNAL_PTR signal;
+    gcsSIGNAL_PTR signal = gcvNULL;
     gceSTATUS status = gcvSTATUS_OK;
 
     /* Create fence. */
@@ -7322,7 +7397,7 @@ OnError:
 
     if (fence)
     {
-        fence_put(fence);
+        dma_fence_put(fence);
     }
 
     if (fd > 0)
@@ -7342,13 +7417,13 @@ gckOS_WaitNativeFence(
     IN gctUINT32 Timeout
     )
 {
-    struct fence *fence;
     struct viv_sync_timeline *timeline;
     gceSTATUS status = gcvSTATUS_OK;
     unsigned int i;
-    unsigned int numFences;
-    struct fence **fences;
     unsigned long timeout;
+    unsigned int numFences;
+    struct dma_fence *fence;
+    struct dma_fence **fences;
 
     timeline = (struct viv_sync_timeline *) Timeline;
 
@@ -7359,9 +7434,9 @@ gckOS_WaitNativeFence(
         gcmONERROR(gcvSTATUS_GENERIC_IO);
     }
 
-    if (fence_is_array(fence))
+    if (dma_fence_is_array(fence))
     {
-        struct fence_array *array = to_fence_array(fence);
+        struct dma_fence_array *array = to_dma_fence_array(fence);
         fences = array->fences;
         numFences = array->num_fences;
     }
@@ -7375,13 +7450,13 @@ gckOS_WaitNativeFence(
 
     for (i = 0; i < numFences; i++)
     {
-        struct fence *f = fences[i];
+        struct dma_fence *f = fences[i];
 
         if (f->context != timeline->context &&
-            !fence_is_signaled(f))
+            !dma_fence_is_signaled(f))
         {
             signed long ret;
-            ret = fence_wait_timeout(fence, 1, timeout);
+            ret = dma_fence_wait_timeout(f, 1, timeout);
 
             if (ret == -ERESTARTSYS)
             {
@@ -7401,7 +7476,7 @@ gckOS_WaitNativeFence(
         }
     }
 
-    fence_put(fence);
+    dma_fence_put(fence);
 
     return gcvSTATUS_OK;
 

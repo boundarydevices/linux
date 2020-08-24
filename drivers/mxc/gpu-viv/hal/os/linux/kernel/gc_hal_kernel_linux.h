@@ -154,6 +154,27 @@
 #   endif
 #endif
 
+/* gcdLINUX_SYNC_FILE and CONFIG_SYNC_FILE. */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,10,0)
+#  define dma_fence                         fence
+#  define dma_fence_array                   fence_array
+#  define dma_fence_ops                     fence_ops
+
+#  define dma_fence_default_wait            fence_default_wait
+
+#  define dma_fence_signal(f)               fence_signal(f)
+#  define dma_fence_signal_locked(f)        fence_signal_locked(f)
+#  define dma_fence_get(f)                  fence_get(f)
+#  define dma_fence_put(f)                  fence_put(f)
+#  define dma_fence_is_array(f)             fence_is_array(f)
+#  define dma_fence_is_signaled(f)          fence_is_signaled(f)
+#  define to_dma_fence_array(f)             to_fence_array(f)
+#  define dma_fence_wait_timeout(f, n, t)   fence_wait_timeout((f), (n), (t))
+#  define dma_fence_init(f, o, l, t, s)     fence_init((f), (o), (l), (t), (s))
+#  define dma_fence_context_alloc(s)        fence_context_alloc(s)
+
+#endif
+
 /******************************************************************************\
 ********************************** Structures **********************************
 \******************************************************************************/
@@ -209,7 +230,7 @@ struct _gckOS
     /* Signal management. */
 
     /* Lock. */
-    struct mutex                signalMutex;
+    spinlock_t                  signalLock;
 
     /* signal id database. */
     gcsINTEGER_DB               signalDB;
@@ -232,7 +253,7 @@ struct _gckOS
     gctBOOL                     allocatorLimitMarker;
 
     /* Lock for register access check. */
-    struct mutex                registerAccessLocks[gcdMAX_GPU_COUNT];
+    spinlock_t                  registerAccessLock;
 
     /* External power states. */
     gctBOOL                     powerStates[gcdMAX_GPU_COUNT];
@@ -248,7 +269,10 @@ typedef struct _gcsSIGNAL * gcsSIGNAL_PTR;
 typedef struct _gcsSIGNAL
 {
     /* Kernel sync primitive. */
-    struct completion obj;
+    volatile unsigned int done;
+    spinlock_t lock;
+
+    wait_queue_head_t wait;
 
     /* Manual reset flag. */
     gctBOOL manualReset;
@@ -267,7 +291,7 @@ typedef struct _gcsSIGNAL
     /* Parent timeline. */
     struct sync_timeline * timeline;
 #  else
-    struct fence *fence;
+    struct dma_fence *fence;
 #  endif
 #endif
 }
