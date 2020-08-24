@@ -313,6 +313,14 @@ static int sbsa_gwdt_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static void sbsa_gwdt_shutdown(struct platform_device *pdev)
+{
+	struct sbsa_gwdt *gwdt;
+
+	gwdt = platform_get_drvdata(pdev);
+	sbsa_gwdt_stop(&gwdt->wdd);
+}
+
 /* Disable watchdog if it is active during suspend */
 static int __maybe_unused sbsa_gwdt_suspend(struct device *dev)
 {
@@ -357,6 +365,7 @@ static struct platform_driver sbsa_gwdt_driver = {
 		.pm = &sbsa_gwdt_pm_ops,
 		.of_match_table = sbsa_gwdt_of_match,
 	},
+	.shutdown = sbsa_gwdt_shutdown,
 	.probe = sbsa_gwdt_probe,
 	.id_table = sbsa_gwdt_pdev_match,
 };
