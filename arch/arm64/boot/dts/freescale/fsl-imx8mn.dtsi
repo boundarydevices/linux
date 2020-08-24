@@ -506,7 +506,7 @@
 	};
 
 	sdma2: sdma@302c0000 {
-		compatible = "fsl,imx8mm-sdma", "fsl,imx8mq-sdma", "fsl,imx7d-sdma";
+		compatible = "fsl,imx8mn-sdma", "fsl,imx8mq-sdma", "fsl,imx7d-sdma";
 		reg = <0x0 0x302c0000 0x0 0x10000>;
 		interrupts = <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clk IMX8MN_CLK_SDMA2_ROOT>,
@@ -519,7 +519,7 @@
 	};
 
 	sdma3: sdma@302b0000 {
-		compatible = "fsl,imx8mm-sdma", "fsl,imx8mq-sdma", "fsl,imx7d-sdma";
+		compatible = "fsl,imx8mn-sdma", "fsl,imx8mq-sdma", "fsl,imx7d-sdma";
 		reg = <0x0 0x302b0000 0x0 0x10000>;
 		interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clk IMX8MN_CLK_SDMA3_ROOT>,
@@ -656,7 +656,7 @@
 	ecspi1: ecspi@30820000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		compatible = "fsl,imx8mm-ecspi", "fsl,imx51-ecspi";
+		compatible = "fsl,imx8mn-ecspi", "fsl,imx51-ecspi";
 		reg = <0x0 0x30820000 0x0 0x10000>;
 		interrupts = <GIC_SPI 31 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clk IMX8MN_CLK_ECSPI1_ROOT>,
@@ -670,7 +670,7 @@
 	ecspi2: ecspi@30830000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		compatible = "fsl,imx8mm-ecspi", "fsl,imx51-ecspi";
+		compatible = "fsl,imx8mn-ecspi", "fsl,imx51-ecspi";
 		reg = <0x0 0x30830000 0x0 0x10000>;
 		interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clk IMX8MN_CLK_ECSPI2_ROOT>,
@@ -684,7 +684,7 @@
 	ecspi3: ecspi@30840000 {
 		#address-cells = <1>;
 		#size-cells = <0>;
-		compatible = "fsl,imx8mm-ecspi", "fsl,imx51-ecspi";
+		compatible = "fsl,imx8mn-ecspi", "fsl,imx51-ecspi";
 		reg = <0x0 0x30840000 0x0 0x10000>;
 		interrupts = <GIC_SPI 33 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clk IMX8MN_CLK_ECSPI3_ROOT>,
@@ -914,7 +914,7 @@
 	};
 
 	sdma1: sdma@30bd0000 {
-		compatible = "fsl,imx8mm-sdma", "fsl,imx8mq-sdma", "fsl,imx7d-sdma";
+		compatible = "fsl,imx8mn-sdma", "fsl,imx8mq-sdma", "fsl,imx7d-sdma";
 		reg = <0x0 0x30bd0000 0x0 0x10000>;
 		interrupts = <GIC_SPI 2 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clk IMX8MN_CLK_SDMA1_ROOT>,
