@@ -693,6 +693,14 @@ static struct sdma_driver_data sdma_imx7d = {
 	.script_addrs = &sdma_script_imx7d,
 };
 
+static struct sdma_driver_data sdma_imx8mn = {
+	.chnenbl0 = SDMA_CHNENBL0_IMX35,
+	.num_events = 48,
+	.script_addrs = &sdma_script_imx7d,
+	.check_ratio = 1,
+	.ecspi_fixed = false,
+};
+
 static struct sdma_driver_data sdma_imx8mq = {
 	.chnenbl0 = SDMA_CHNENBL0_IMX35,
 	.num_events = 48,
@@ -720,6 +728,7 @@ static const struct of_device_id sdma_dt_ids[] = {
 	{ .compatible = "fsl,imx7d-sdma", .data = &sdma_imx7d, },
 	{ .compatible = "fsl,imx6sx-sdma", .data = &sdma_imx6sx, },
 	{ .compatible = "fsl,imx6ul-sdma", .data = &sdma_imx6ul, },
+	{ .compatible = "fsl,imx8mn-sdma", .data = &sdma_imx8mn, },
 	{ .compatible = "fsl,imx8mq-sdma", .data = &sdma_imx8mq, },
 	{ .compatible = "fsl,imx8mp-sdma", .data = &sdma_imx8mp, },
 	{ /* sentinel */ }
