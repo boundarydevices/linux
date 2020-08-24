@@ -544,7 +544,7 @@ static int mx51_ecspi_prepare_message(struct spi_imx_data *spi_imx,
 	 * To workaround ERR009165, SDMA script needs to use XCH instead of SMC
 	 * just like PIO mode and it is fixed on i.mx6ul
 	 */
-	if (spi_imx->usedma && (spi_imx->devtype_data->devtype == IMX6UL_ECSPI))
+	if (spi_imx->usedma && !cspi_quirk(spi_imx, QUIRK_ERR009165))
 		ctrl |= MX51_ECSPI_CTRL_SMC;
 
 	/*
