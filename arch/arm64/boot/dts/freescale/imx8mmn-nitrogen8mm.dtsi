@@ -176,6 +176,15 @@
 		>;
 	};
 
+	pinctrl_ts_ili251x: ts-ili251xgrp {
+		fsl,pins = <
+#define GPIRQ_TS_ILI251X	<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
+			MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, 0x149)
+#define GP_TS_ILI251X_RESET	<&gpio1 7 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, 0x109)
+		>;
+	};
+
 	pinctrl_ts_st1633: ts-st1633grp {
 		fsl,pins = <
 #define GPIRQ_ST1633 		<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
@@ -556,6 +565,7 @@
 		ts_ft7250 = &ts_ft7250;
 		ts_goodix = &ts_goodix;
 		ts_gsl1680 = &ts_gsl1680;
+		ts_ili251x = &ts_ili251x;
 		ts_st1633i = &ts_st1633i;
 	};
 
@@ -899,6 +909,16 @@
 		touchscreen-size-x = <480>;	/* swapped below */
 		touchscreen-size-y = <800>;
 		touchscreen-swapped-x-y;
+	};
+
+	ts_ili251x: touchscreen@41 {
+		compatible = "ili251x";
+		interrupts-extended = GPIRQ_TS_ILI251X;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_ili251x>;
+		reset-gpios = GP_TS_ILI251X_RESET;
+		reg = <0x41>;
+		max-fingers = <6>;
 	};
 
 	ts_st1633i: touchscreen@55 {
