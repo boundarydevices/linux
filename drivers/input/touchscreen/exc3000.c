@@ -75,6 +75,8 @@ struct exc3000_data {
 	struct touchscreen_properties prop;
 	struct gpio_desc *reset;
 	struct timer_list timer;
+	u32 frame_size;
+	u32 slots_per_frame;
 	u32 query_resolution;
 	u8 buf[EXC3000_LEN_FRAME];
 	struct completion wait_event;
@@ -131,16 +133,19 @@ static void exc3000_shutdown_timer(void *timer)
 	del_timer_sync(timer);
 }
 
+static unsigned char versio_10bytes[] = "D0.002";
+
 static int exc3000_read_frame(struct exc3000_data *data, u8 *buf)
 {
 	struct i2c_client *client = data->client;
 	unsigned char startch[] = { '\'', 0 };
 	struct i2c_msg readpkt[2] = {
 		{client->addr, 0, 2, startch},
-		{client->addr, I2C_M_RD, EXC3000_LEN_FRAME, buf}
+		{client->addr, I2C_M_RD, data->frame_size, buf}
 	};
 	struct eeti_dev_info *info;
 	int ret;
+	u32 frame_size;
 
 	ret = i2c_transfer(client->adapter, readpkt,
 			   ARRAY_SIZE(readpkt));
@@ -151,8 +156,20 @@ static int exc3000_read_frame(struct exc3000_data *data, u8 *buf)
 		return (ret < 0) ? ret : -EIO;
 	}
 
-	if (get_unaligned_le16(buf) != EXC3000_LEN_FRAME)
+	frame_size = get_unaligned_le16(buf);
+	if ((frame_size == 0x42) && (buf[2] == 0x03)) {
+		if (strcmp(&buf[4], versio_10bytes) < 0) {
+			data->frame_size = EXC3000_LEN_FRAME;
+			data->slots_per_frame = EXC3000_SLOTS_PER_FRAME;
+		} else {
+			data->frame_size = 10;
+			data->slots_per_frame = 1;
+		}
+		buf[10] = 0;
+		pr_info("%s: frame_size=%d version=%s\n", __func__,
+				data->frame_size, &buf[4]);
 		return -EINVAL;
+	}
 
 	if (buf[2] == EXC3000_MT1_EVENT) {
 		info = &exc3000_info[EETI_EXC3000];
@@ -160,6 +177,20 @@ static int exc3000_read_frame(struct exc3000_data *data, u8 *buf)
 		info = &exc3000_info[EETI_EXC80H60];
 	} else {
 		return -EINVAL;
+	}
+	if (data->frame_size != frame_size) {
+		if (frame_size == 10) {
+			data->frame_size = frame_size;
+			data->slots_per_frame = 1;
+			pr_info("%s: frame_size=%d\n", __func__, data->frame_size);
+		} else if (frame_size == EXC3000_LEN_FRAME) {
+			data->frame_size = frame_size;
+			data->slots_per_frame = EXC3000_SLOTS_PER_FRAME;
+			pr_info("%s: frame_size=%d\n", __func__, data->frame_size);
+			return -EINVAL;
+		} else {
+			return -EINVAL;
+		}
 	}
 	if (data->info->max_xy != info->max_xy)
 		data->info = info;
@@ -169,10 +200,11 @@ static int exc3000_read_frame(struct exc3000_data *data, u8 *buf)
 static int exc3000_handle_mt_event(struct exc3000_data *data)
 {
 	struct input_dev *input = data->input;
-	int ret, slots, total_slots;
+	int ret;
+	u32 n, slots, total_slots;
 	u8 *buf = data->buf;
 
-	total_slots = buf[3];
+	n = total_slots = buf[3];
 	if (total_slots > EXC3000_NUM_SLOTS) {
 		ret = -EINVAL;
 		goto out_fail;
@@ -182,8 +214,8 @@ static int exc3000_handle_mt_event(struct exc3000_data *data)
 	 * If the total slots is larger than 5, which means there
 	 * is a second frame need to read in the next interrupt.
 	 */
-	if (total_slots > EXC3000_SLOTS_PER_FRAME)
-		data->slots_in_second_frame = total_slots - EXC3000_SLOTS_PER_FRAME;
+	if (total_slots > data->slots_per_frame)
+		data->slots_in_second_frame = total_slots - data->slots_per_frame;
 
 	/*
 	 * We read full state successfully, no contacts will be "stuck".
@@ -197,7 +229,7 @@ static int exc3000_handle_mt_event(struct exc3000_data *data)
 	if (total_slots == 0)
 		slots = data->slots_in_second_frame;
 	else
-		slots = min(total_slots, EXC3000_SLOTS_PER_FRAME);
+		slots = min(total_slots, data->slots_per_frame);
 
 	exc3000_report_slots(data, input, buf + 4, slots);
 
@@ -366,6 +398,7 @@ static int exc3000_probe(struct i2c_client *client)
 	struct exc3000_data *data;
 	struct input_dev *input;
 	int error, max_xy, retry;
+	unsigned char buf[0x67];
 
 	data = devm_kzalloc(&client->dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
@@ -381,6 +414,9 @@ static int exc3000_probe(struct i2c_client *client)
 	max_xy = data->info->max_xy;
 
 	data->query_resolution = max_xy;
+	data->slots_per_frame = EXC3000_SLOTS_PER_FRAME;
+	data->frame_size = EXC3000_LEN_FRAME;
+
 	timer_setup(&data->timer, exc3000_timer, 0);
 	init_completion(&data->wait_event);
 	mutex_init(&data->query_lock);
@@ -470,7 +506,23 @@ static int exc3000_probe(struct i2c_client *client)
 		return error;
 
 	data->input = input;
+
+	memset(buf, 0, sizeof(buf));
+	buf[0] = 0x67;
+	buf[2] = 0x42;
+	buf[4] = 0x03;
+	buf[5] = 0x01;
+	buf[6] = 'D';
+	i2c_master_send(client, buf, sizeof(buf));
 	return 0;
+}
+
+static void exc3000_remove(struct i2c_client *client)
+{
+	struct exc3000_data *data = i2c_get_clientdata(client);
+
+	if (data && data->reset)
+		gpiod_set_value(data->reset, 1);
 }
 
 static const struct i2c_device_id exc3000_id[] = {
@@ -498,6 +550,7 @@ static struct i2c_driver exc3000_driver = {
 	},
 	.id_table	= exc3000_id,
 	.probe_new	= exc3000_probe,
+	.remove		= exc3000_remove,
 };
 
 module_i2c_driver(exc3000_driver);
