@@ -36,6 +36,8 @@ struct exc3000_data {
 	struct touchscreen_properties prop;
 	struct timer_list timer;
 	struct gpio_desc	*reset_gpio;
+	u32 frame_size;
+	u32 slots_per_frame;
 	u32 resolution;
 	u32 query_resolution;
 	u8 buf[2 * EXC3000_LEN_FRAME];
@@ -80,16 +82,19 @@ static void exc3000_timer(struct timer_list *t)
 	input_sync(data->input);
 }
 
+static unsigned char versio_10bytes[] = "D0.002";
+
 static int exc3000_read_frame(struct exc3000_data *data, u8 *buf)
 {
 	struct i2c_client *client = data->client;
 	unsigned char startch[] = { '\'', 0 };
 	struct i2c_msg readpkt[2] = {
 		{client->addr, 0, 2, startch},
-		{client->addr, I2C_M_RD, EXC3000_LEN_FRAME, buf}
+		{client->addr, I2C_M_RD, data->frame_size, buf}
 	};
 	int ret;
 	u32 resolution;
+	u32 frame_size;
 
 	ret = i2c_transfer(client->adapter, readpkt,
 			   ARRAY_SIZE(readpkt));
@@ -100,8 +105,20 @@ static int exc3000_read_frame(struct exc3000_data *data, u8 *buf)
 		return (ret < 0) ? ret : -EIO;
 	}
 
-	if (get_unaligned_le16(buf) != EXC3000_LEN_FRAME)
+	frame_size = get_unaligned_le16(buf);
+	if ((frame_size == 0x42) && (buf[2] == 0x03)) {
+		if (strcmp(&buf[4], versio_10bytes) < 0) {
+			data->frame_size = EXC3000_LEN_FRAME;
+			data->slots_per_frame = EXC3000_SLOTS_PER_FRAME;
+		} else {
+			data->frame_size = 10;
+			data->slots_per_frame = 1;
+		}
+		buf[10] = 0;
+		pr_info("%s: frame_size=%d version=%s\n", __func__,
+				data->frame_size, &buf[4]);
 		return -EINVAL;
+	}
 	if (buf[2] == EXC3000_MT_EVENT) {
 		resolution = 4095;
 	} else if (buf[2] == EXC3000_MT_EVENT2) {
@@ -109,32 +126,50 @@ static int exc3000_read_frame(struct exc3000_data *data, u8 *buf)
 	} else {
 		return -EINVAL;
 	}
+	ret = data->frame_size;
+	if (data->frame_size != frame_size) {
+		if (frame_size == 10) {
+			ret = data->frame_size = frame_size;
+			data->slots_per_frame = 1;
+			pr_info("%s: frame_size=%d\n", __func__, data->frame_size);
+		} else if (frame_size == EXC3000_LEN_FRAME) {
+			data->frame_size = frame_size;
+			data->slots_per_frame = EXC3000_SLOTS_PER_FRAME;
+			pr_info("%s: frame_size=%d\n", __func__, data->frame_size);
+			return -EINVAL;
+		} else {
+			return -EINVAL;
+		}
+	}
 	if (data->resolution != resolution)
 		data->resolution = resolution;
-	return 0;
+	return ret;
 }
 
 static int exc3000_read_data(struct exc3000_data *data,
 			     u8 *buf, int *n_slots)
 {
-	int error;
+	int read_cnt;
+	int n;
 
-	error = exc3000_read_frame(data, buf);
-	if (error)
-		return error;
+	read_cnt = exc3000_read_frame(data, buf);
+	if (read_cnt < 0)
+		return read_cnt;
 
-	*n_slots = buf[3];
-	if (!*n_slots || *n_slots > EXC3000_NUM_SLOTS)
+	*n_slots = n = buf[3];
+	if (!n || n > EXC3000_NUM_SLOTS)
 		return -EINVAL;
 
-	if (*n_slots > EXC3000_SLOTS_PER_FRAME) {
+	while (n > data->slots_per_frame) {
+		buf += read_cnt;
+		n -= data->slots_per_frame;
 		/* Read 2nd frame to get the rest of the contacts. */
-		error = exc3000_read_frame(data, buf + EXC3000_LEN_FRAME);
-		if (error)
-			return error;
+		read_cnt = exc3000_read_frame(data, buf);
+		if (read_cnt)
+			return read_cnt;
 
 		/* 2nd chunk must have number of contacts set to 0. */
-		if (buf[EXC3000_LEN_FRAME + 3] != 0)
+		if (buf[3] != 0)
 			return -EINVAL;
 	}
 
@@ -168,10 +203,10 @@ static irqreturn_t exc3000_interrupt(int irq, void *dev_id)
 	del_timer_sync(&data->timer);
 
 	while (total_slots > 0) {
-		slots = min(total_slots, EXC3000_SLOTS_PER_FRAME);
+		slots = min(total_slots, (int)data->slots_per_frame);
 		exc3000_report_slots(data, input, buf + 4, slots);
 		total_slots -= slots;
-		buf += EXC3000_LEN_FRAME;
+		buf += data->frame_size;
 	}
 
 	input_mt_sync_frame(input);
@@ -190,6 +225,7 @@ static int exc3000_probe(struct i2c_client *client,
 	int error;
 	int retry = 0;
 	u32 resolution = 4095;
+	unsigned char buf[0x67];
 
 	data = devm_kzalloc(&client->dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
@@ -205,6 +241,9 @@ static int exc3000_probe(struct i2c_client *client,
 	data->client = client;
 	data->resolution = resolution;
 	data->query_resolution = resolution;
+	data->slots_per_frame = EXC3000_SLOTS_PER_FRAME;
+	data->frame_size = EXC3000_LEN_FRAME;
+
 	timer_setup(&data->timer, exc3000_timer, 0);
 
 	gp = devm_gpiod_get_optional(&client->dev, "reset", GPIOD_OUT_HIGH);
@@ -261,6 +300,14 @@ static int exc3000_probe(struct i2c_client *client,
 	data->input = input;
 	input_set_abs_params(input, ABS_MT_POSITION_X, 0, resolution, 0, 0);
 	input_set_abs_params(input, ABS_MT_POSITION_Y, 0, resolution, 0, 0);
+
+	memset(buf, 0, sizeof(buf));
+	buf[0] = 0x67;
+	buf[2] = 0x42;
+	buf[4] = 0x03;
+	buf[5] = 0x01;
+	buf[6] = 'D';
+	i2c_master_send(client, buf, sizeof(buf));
 	return 0;
 }
 
