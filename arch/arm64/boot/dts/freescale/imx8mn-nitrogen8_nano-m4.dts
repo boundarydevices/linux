@@ -18,16 +18,22 @@
 			no-map;
 			reg = <0 0x70000000 0 0x1000000>;
 		};
+
+		/delete-node/ rpmsg@0xb8000000;
+		rpmsg_reserved: rpmsg@0x71000000 {
+			no-map;
+			reg = <0 0x71000000 0 0x400000>;
+		};
 	};
 };
 
-&rpmsg{
+&rpmsg {
 	/*
 	 * 64K for one rpmsg instance:
-	 * --0x78000000~0x7800ffff: pingpong
+	 * --0x71000000~0x7100ffff: pingpong
 	 */
 	vdev-nums = <1>;
-	reg = <0x0 0x78000000 0x0 0x10000>;
+	reg = <0x0 0x71000000 0x0 0x10000>;
 	status = "okay";
 };
 
