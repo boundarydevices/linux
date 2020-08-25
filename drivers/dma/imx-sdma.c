@@ -1619,7 +1619,7 @@ static int sdma_alloc_chan_resources(struct dma_chan *chan)
 {
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
 	struct imx_dma_data *data = chan->private;
-	struct imx_dma_data default_data;
+	struct imx_dma_data mem_data;
 	int prio, ret;
 
 	/*
@@ -1628,11 +1628,11 @@ static int sdma_alloc_chan_resources(struct dma_chan *chan)
 	 */
 	if (!data) {
 		sdmac->word_size  =  sdmac->sdma->dma_device.copy_align;
-		default_data.priority = 2;
-		default_data.peripheral_type = IMX_DMATYPE_MEMORY;
-		default_data.dma_request = 0;
-		default_data.dma_request2 = 0;
-		data = &default_data;
+		mem_data.priority = 2;
+		mem_data.peripheral_type = IMX_DMATYPE_MEMORY;
+		mem_data.dma_request = 0;
+		mem_data.dma_request2 = 0;
+		data = &mem_data;
 
 		sdma_config_ownership(sdmac, false, true, false);
 		sdma_get_pc(sdmac, IMX_DMATYPE_MEMORY);
