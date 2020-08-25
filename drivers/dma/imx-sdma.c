@@ -725,8 +725,6 @@ MODULE_DEVICE_TABLE(of, sdma_dt_ids);
 #define SDMA_H_CONFIG_ACR	BIT(4)  /* indicates if AHB freq /core freq = 2 or 1 */
 #define SDMA_H_CONFIG_CSM	(3)       /* indicates which context switch mode is selected*/
 
-static void sdma_start_desc(struct sdma_channel *sdmac);
-
 static inline u32 chnenbl_ofs(struct sdma_engine *sdma, unsigned int event)
 {
 	u32 chnenbl0 = sdma->drvdata->chnenbl0;
@@ -875,6 +873,36 @@ static void sdma_event_disable(struct sdma_channel *sdmac, unsigned int event)
 	val = readl_relaxed(sdma->regs + chnenbl);
 	__clear_bit(channel, &val);
 	writel_relaxed(val, sdma->regs + chnenbl);
+}
+
+static struct sdma_desc *to_sdma_desc(struct dma_async_tx_descriptor *t)
+{
+	return container_of(t, struct sdma_desc, vd.tx);
+}
+
+static void sdma_start_desc(struct sdma_channel *sdmac)
+{
+	struct virt_dma_desc *vd = vchan_next_desc(&sdmac->vc);
+	struct sdma_desc *desc;
+	struct sdma_engine *sdma = sdmac->sdma;
+	int channel = sdmac->channel;
+
+	if (!vd) {
+		sdmac->desc = NULL;
+		return;
+	}
+	sdmac->desc = desc = to_sdma_desc(&vd->tx);
+	/*
+	 * Do not delete the node in desc_issued list in cyclic mode, otherwise
+	 * the desc allocated will never be freed in vchan_dma_desc_free_list
+	 */
+	if (!(sdmac->flags & IMX_DMA_SG_LOOP)) {
+		list_add_tail(&sdmac->desc->node, &sdmac->pending);
+		list_del(&vd->node);
+	}
+	sdma->channel_control[channel].base_bd_ptr = desc->bd_phys;
+	sdma->channel_control[channel].current_bd_ptr = desc->bd_phys;
+	sdma_enable_channel(sdma, sdmac->channel);
 }
 
 static void sdma_update_channel_loop(struct sdma_channel *sdmac)
@@ -1209,6 +1237,53 @@ static int sdma_disable_channel(struct dma_chan *chan)
 	return 0;
 }
 
+static void sdma_channel_terminate_work(struct work_struct *work)
+{
+	struct sdma_channel *sdmac = container_of(work, struct sdma_channel,
+						  terminate_worker);
+	unsigned long flags;
+	LIST_HEAD(head);
+
+	spin_lock_irqsave(&sdmac->vc.lock, flags);
+	vchan_get_all_descriptors(&sdmac->vc, &head);
+	while (!list_empty(&sdmac->pending)) {
+		struct sdma_desc *desc = list_first_entry(&sdmac->pending,
+			struct sdma_desc, node);
+
+		list_del(&desc->node);
+		spin_unlock_irqrestore(&sdmac->vc.lock, flags);
+		sdmac->vc.desc_free(&desc->vd);
+		spin_lock_irqsave(&sdmac->vc.lock, flags);
+		sdmac->vc.cyclic = NULL;
+	}
+	if (sdmac->desc)
+		sdmac->desc = NULL;
+	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
+	vchan_dma_desc_free_list(&sdmac->vc, &head);
+
+}
+
+static int sdma_disable_channel_async(struct dma_chan *chan)
+{
+	struct sdma_channel *sdmac = to_sdma_chan(chan);
+
+	sdma_disable_channel(chan);
+
+	if (sdmac->desc)
+		schedule_work(&sdmac->terminate_worker);
+
+	return 0;
+}
+
+static void sdma_channel_synchronize(struct dma_chan *chan)
+{
+	struct sdma_channel *sdmac = to_sdma_chan(chan);
+
+	tasklet_kill(&sdmac->vc.task);
+
+	flush_work(&sdmac->terminate_worker);
+}
+
 static void sdma_set_watermarklevel_for_p2p(struct sdma_channel *sdmac)
 {
 	struct sdma_engine *sdma = sdmac->sdma;
@@ -1348,6 +1423,31 @@ static int sdma_set_channel_priority(struct sdma_channel *sdmac,
 	return 0;
 }
 
+static int sdma_request_channel0(struct sdma_engine *sdma)
+{
+	int ret = -EBUSY;
+
+	if (sdma->iram_pool)
+		sdma->bd0 = gen_pool_dma_alloc(sdma->iram_pool, PAGE_SIZE,
+						&sdma->bd0_phys);
+	else
+		sdma->bd0 = dma_alloc_coherent(sdma->dev, PAGE_SIZE,
+						&sdma->bd0_phys, GFP_NOWAIT);
+	if (!sdma->bd0) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	sdma->channel_control[0].base_bd_ptr = sdma->bd0_phys;
+	sdma->channel_control[0].current_bd_ptr = sdma->bd0_phys;
+
+	sdma_set_channel_priority(&sdma->channel[0], MXC_SDMA_DEFAULT_PRIORITY);
+	return 0;
+out:
+
+	return ret;
+}
+
 static int sdma_alloc_bd(struct sdma_desc *desc)
 {
 	u32 bd_size = desc->num_bd * sizeof(struct sdma_buffer_descriptor);
@@ -1387,36 +1487,6 @@ static void sdma_free_bd(struct sdma_desc *desc)
 		desc->sdmac->bd_size_sum -= bd_size;
 		spin_unlock_irqrestore(&desc->sdmac->vc.lock, flags);
 	}
-}
-
-static int sdma_request_channel0(struct sdma_engine *sdma)
-{
-	int ret = -EBUSY;
-
-	if (sdma->iram_pool)
-		sdma->bd0 = gen_pool_dma_alloc(sdma->iram_pool, PAGE_SIZE,
-						&sdma->bd0_phys);
-	else
-		sdma->bd0 = dma_alloc_coherent(sdma->dev, PAGE_SIZE,
-						&sdma->bd0_phys, GFP_NOWAIT);
-	if (!sdma->bd0) {
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	sdma->channel_control[0].base_bd_ptr = sdma->bd0_phys;
-	sdma->channel_control[0].current_bd_ptr = sdma->bd0_phys;
-
-	sdma_set_channel_priority(&sdma->channel[0], MXC_SDMA_DEFAULT_PRIORITY);
-	return 0;
-out:
-
-	return ret;
-}
-
-static struct sdma_desc *to_sdma_desc(struct dma_async_tx_descriptor *t)
-{
-	return container_of(t, struct sdma_desc, vd.tx);
 }
 
 static void sdma_desc_free(struct virt_dma_desc *vd)
@@ -1459,53 +1529,6 @@ static int sdma_channel_resume(struct dma_chan *chan)
 	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
 
 	return 0;
-}
-
-static void sdma_channel_terminate_work(struct work_struct *work)
-{
-	struct sdma_channel *sdmac = container_of(work, struct sdma_channel,
-						  terminate_worker);
-	unsigned long flags;
-	LIST_HEAD(head);
-
-	spin_lock_irqsave(&sdmac->vc.lock, flags);
-	vchan_get_all_descriptors(&sdmac->vc, &head);
-	while (!list_empty(&sdmac->pending)) {
-		struct sdma_desc *desc = list_first_entry(&sdmac->pending,
-			struct sdma_desc, node);
-
-		list_del(&desc->node);
-		spin_unlock_irqrestore(&sdmac->vc.lock, flags);
-		sdmac->vc.desc_free(&desc->vd);
-		spin_lock_irqsave(&sdmac->vc.lock, flags);
-		sdmac->vc.cyclic = NULL;
-	}
-	if (sdmac->desc)
-		sdmac->desc = NULL;
-	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
-	vchan_dma_desc_free_list(&sdmac->vc, &head);
-
-}
-
-static int sdma_terminate_all(struct dma_chan *chan)
-{
-	struct sdma_channel *sdmac = to_sdma_chan(chan);
-
-	sdma_disable_channel(chan);
-
-	if (sdmac->desc)
-		schedule_work(&sdmac->terminate_worker);
-
-	return 0;
-}
-
-static void sdma_wait_tasklet(struct dma_chan *chan)
-{
-	struct sdma_channel *sdmac = to_sdma_chan(chan);
-
-	tasklet_kill(&sdmac->vc.task);
-
-	flush_work(&sdmac->terminate_worker);
 }
 
 static int sdma_runtime_suspend(struct device *dev)
@@ -1656,9 +1679,9 @@ static void sdma_free_chan_resources(struct dma_chan *chan)
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
 	struct sdma_engine *sdma = sdmac->sdma;
 
-	sdma_terminate_all(chan);
+	sdma_disable_channel_async(chan);
 
-	sdma_wait_tasklet(chan);
+	sdma_channel_synchronize(chan);
 
 	if (sdmac->event_id0 >= 0)
 		sdma_event_disable(sdmac, sdmac->event_id0);
@@ -1809,12 +1832,12 @@ err_out:
  * dst_sg node no smaller than src_sg. To simply things, please use the same
  * size of dst_sg as src_sg.
  */
-static struct dma_async_tx_descriptor *sdma_prep_sg(
-		struct dma_chan *chan,
-		struct scatterlist *dst_sg, unsigned int dst_nents,
-		struct scatterlist *src_sg, unsigned int src_nents,
-		enum dma_transfer_direction direction, unsigned long flags)
+static struct dma_async_tx_descriptor *sdma_prep_slave_sg(
+		struct dma_chan *chan, struct scatterlist *src_sg,
+		unsigned int src_nents, enum dma_transfer_direction direction,
+		unsigned long flags, void *context)
 {
+	struct scatterlist *dst_sg = NULL;
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
 	struct sdma_engine *sdma = sdmac->sdma;
 	int ret, i, count;
@@ -1893,14 +1916,6 @@ err_bd_out:
 err_out:
 	dev_dbg(sdma->dev, "Can't get desc.\n");
 	return NULL;
-}
-
-static struct dma_async_tx_descriptor *sdma_prep_slave_sg(
-		struct dma_chan *chan, struct scatterlist *sgl,
-		unsigned int sg_len, enum dma_transfer_direction direction,
-		unsigned long flags, void *context)
-{
-	return sdma_prep_sg(chan, NULL, 0, sgl, sg_len, direction, flags);
 }
 
 static struct dma_async_tx_descriptor *sdma_prep_dma_cyclic(
@@ -2085,31 +2100,6 @@ static enum dma_status sdma_tx_status(struct dma_chan *chan,
 	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
 
 	return ret;
-}
-
-static void sdma_start_desc(struct sdma_channel *sdmac)
-{
-	struct virt_dma_desc *vd = vchan_next_desc(&sdmac->vc);
-	struct sdma_desc *desc;
-	struct sdma_engine *sdma = sdmac->sdma;
-	int channel = sdmac->channel;
-
-	if (!vd) {
-		sdmac->desc = NULL;
-		return;
-	}
-	sdmac->desc = desc = to_sdma_desc(&vd->tx);
-	/*
-	 * Do not delete the node in desc_issued list in cyclic mode, otherwise
-	 * the desc allocated will never be freed in vchan_dma_desc_free_list
-	 */
-	if (!(sdmac->flags & IMX_DMA_SG_LOOP)) {
-		list_add_tail(&sdmac->desc->node, &sdmac->pending);
-		list_del(&vd->node);
-	}
-	sdma->channel_control[channel].base_bd_ptr = desc->bd_phys;
-	sdma->channel_control[channel].current_bd_ptr = desc->bd_phys;
-	sdma_enable_channel(sdma, sdmac->channel);
 }
 
 static void sdma_issue_pending(struct dma_chan *chan)
@@ -2515,11 +2505,11 @@ static int sdma_probe(struct platform_device *pdev)
 	sdma->dma_device.device_alloc_chan_resources = sdma_alloc_chan_resources;
 	sdma->dma_device.device_free_chan_resources = sdma_free_chan_resources;
 	sdma->dma_device.device_tx_status = sdma_tx_status;
-	sdma->dma_device.device_synchronize = sdma_wait_tasklet;
 	sdma->dma_device.device_prep_slave_sg = sdma_prep_slave_sg;
 	sdma->dma_device.device_prep_dma_cyclic = sdma_prep_dma_cyclic;
 	sdma->dma_device.device_config = sdma_config;
-	sdma->dma_device.device_terminate_all = sdma_terminate_all;
+	sdma->dma_device.device_terminate_all = sdma_disable_channel_async;
+	sdma->dma_device.device_synchronize = sdma_channel_synchronize;
 	sdma->dma_device.device_pause = sdma_channel_pause;
 	sdma->dma_device.device_resume = sdma_channel_resume;
 	sdma->dma_device.src_addr_widths = SDMA_DMA_BUSWIDTHS;
