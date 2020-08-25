@@ -1,22 +1,15 @@
-/*
- * drivers/dma/imx-sdma.c
- *
- * This file contains a driver for the Freescale Smart DMA engine
- *
- * Copyright 2010 Sascha Hauer, Pengutronix <s.hauer@pengutronix.de>
- *
- * Based on code from Freescale:
- *
- * Copyright 2004-2016 Freescale Semiconductor, Inc. All Rights Reserved.
- * Copyright 2018 NXP.
- *
- * The code contained herein is licensed under the GNU General Public
- * License. You may obtain a copy of the GNU General Public License
- * Version 2 or later at the following locations:
- *
- * http://www.opensource.org/licenses/gpl-license.html
- * http://www.gnu.org/copyleft/gpl.html
- */
+// SPDX-License-Identifier: GPL-2.0+
+//
+// drivers/dma/imx-sdma.c
+//
+// This file contains a driver for the Freescale Smart DMA engine
+//
+// Copyright 2010 Sascha Hauer, Pengutronix <s.hauer@pengutronix.de>
+//
+// Based on code from Freescale:
+//
+// Copyright 2004-2016 Freescale Semiconductor, Inc. All Rights Reserved.
+// Copyright 2018 NXP.
 
 #include <linux/init.h>
 #include <linux/iopoll.h>
@@ -320,6 +313,19 @@ struct sdma_context_data {
 
 struct sdma_engine;
 
+/**
+ * struct sdma_desc - descriptor structor for one transfer
+ * @vd:			descriptor for virt dma
+ * @num_bd:		number of descriptors currently handling
+ * @bd_phys:		physical address of bd
+ * @buf_tail:		ID of the buffer that was processed
+ * @buf_ptail:		ID of the previous buffer that was processed
+ * @period_len:		period length, used in cyclic.
+ * @chn_real_count:	the real count updated from bd->mode.count
+ * @chn_count:		the transfer count set
+ * @sdmac:		sdma_channel pointer
+ * @bd:			pointer of allocate bd
+ */
 struct sdma_desc {
 	struct virt_dma_desc	vd;
 	struct list_head	node;
@@ -478,7 +484,6 @@ struct sdma_engine {
 	u32				spba_start_addr;
 	u32				spba_end_addr;
 	unsigned int			irq;
-	/* channel0 bd */
 	dma_addr_t			bd0_phys;
 	struct sdma_buffer_descriptor	*bd0;
 	/* clock ratio for AHB:SDMA core. 1:1 is 1, 2:1 is 0*/
@@ -910,11 +915,11 @@ static void sdma_update_channel_loop(struct sdma_channel *sdmac)
 		if (error)
 			sdmac->status = old_status;
 		/*
-		* The callback is called from the interrupt context in order
-		* to reduce latency and to avoid the risk of altering the
-		* SDMA transaction status by the time the client tasklet is
-		* executed.
-		*/
+		 * The callback is called from the interrupt context in order
+		 * to reduce latency and to avoid the risk of altering the
+		 * SDMA transaction status by the time the client tasklet is
+		 * executed.
+		 */
 		spin_unlock(&sdmac->vc.lock);
 		dmaengine_desc_get_callback_invoke(&desc->vd.tx, NULL);
 		spin_lock(&sdmac->vc.lock);
@@ -1669,7 +1674,7 @@ static void sdma_free_chan_resources(struct dma_chan *chan)
 }
 
 static struct sdma_desc *sdma_transfer_init(struct sdma_channel *sdmac,
-			      enum dma_transfer_direction direction, u32 bds)
+				enum dma_transfer_direction direction, u32 bds)
 {
 	struct sdma_desc *desc;
 
@@ -1678,7 +1683,6 @@ static struct sdma_desc *sdma_transfer_init(struct sdma_channel *sdmac,
 		goto err_out;
 	}
 
-	/* Now allocate and setup the descriptor. */
 	desc = kzalloc((sizeof(*desc)), GFP_ATOMIC);
 	if (!desc)
 		goto err_out;
