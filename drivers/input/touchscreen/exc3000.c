@@ -128,7 +128,8 @@ static inline void exc3000_schedule_timer(struct exc3000_data *data)
 	mod_timer(&data->timer, jiffies + msecs_to_jiffies(EXC3000_TIMEOUT_MS));
 }
 
-static unsigned char versio_10bytes[] = "D0.002";
+static unsigned char version_66bytes[] = "D00_M1";
+static unsigned char version_10bytes[] = "D0.002";
 
 static int exc3000_read_frame(struct exc3000_data *data, u8 *buf)
 {
@@ -153,7 +154,8 @@ static int exc3000_read_frame(struct exc3000_data *data, u8 *buf)
 
 	frame_size = get_unaligned_le16(buf);
 	if ((frame_size == 0x42) && (buf[2] == 0x03)) {
-		if (strcmp(&buf[4], versio_10bytes) < 0) {
+		if ((strcmp(&buf[4], version_66bytes) == 0) ||
+				(strcmp(&buf[4], version_10bytes) < 0)) {
 			data->frame_size = EXC3000_LEN_FRAME;
 			data->slots_per_frame = EXC3000_SLOTS_PER_FRAME;
 		} else {
