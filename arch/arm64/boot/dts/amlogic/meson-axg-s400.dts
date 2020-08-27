@@ -7,6 +7,7 @@
 
 #include "meson-axg.dtsi"
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/pwm/pwm.h>
 
 / {
 	compatible = "amlogic,s400", "amlogic,a113d", "amlogic,meson-axg";
@@ -114,6 +115,16 @@
 	memory@0 {
 		device_type = "memory";
 		reg = <0x0 0x0 0x0 0x40000000>;
+	};
+
+	panel_backlight: backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm_ab 1 78125 PWM_POLARITY_INVERTED>;
+		enable-gpios = <&gpio GPIOZ_5 GPIO_ACTIVE_HIGH>;
+		power-supply = <&vcc_5v>;
+		brightness-levels = <0 255>;
+		num-interpolated-steps = <255>;
+		default-brightness-level = <250>;
 	};
 
 	main_12v: regulator-main_12v {
@@ -434,6 +445,42 @@
 	};
 };
 
+
+&mipi_dsi {
+	status = "okay";
+
+	assigned-clocks = <&clkc CLKID_GP0_PLL>;
+	assigned-clock-rates = <283500000>;
+
+	panel@0 {
+		compatible = "tdo,tl070wsh30";
+		reset-gpios = <&gpio GPIOZ_6 GPIO_ACTIVE_LOW>;
+		power-supply = <&vcc_3v3>;
+		backlight = <&panel_backlight>;
+		reg = <0>;
+
+		port {
+			mipi_in_panel: endpoint {
+				remote-endpoint = <&mipi_out_panel>;
+			};
+		};
+	};
+};
+
+&mipi_pcie_analog_dphy {
+	status = "okay";
+};
+
+&mipi_dphy {
+	status = "okay";
+};
+
+&mipi_dsi_panel_port {
+	mipi_out_panel: endpoint {
+		remote-endpoint = <&mipi_in_panel>;
+	};
+};
+
 &pdm {
 	pinctrl-0 = <&pdm_dclk_a14_pins>, <&pdm_din0_pins>,
 		    <&pdm_din1_pins>, <&pdm_din2_pins>, <&pdm_din3_pins>;
@@ -453,7 +500,7 @@
 
 &pwm_ab {
 	status = "okay";
-	pinctrl-0 = <&pwm_a_x20_pins>;
+	pinctrl-0 = <&pwm_a_x20_pins>, <&pwm_b_z_pins>;
 	pinctrl-names = "default";
 };
 
