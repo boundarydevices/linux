@@ -909,7 +909,7 @@
 &pcie {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
-	reset-gpios = GP_PCIE_RESET;
+	reset-gpios = GP_PCIE_DISABLE, GP_PCIE_RESET;
 	status = "okay";
 };
 
