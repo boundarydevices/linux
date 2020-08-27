@@ -69,21 +69,20 @@
 		/* undocumented properties */
 		ddc5v_delay = <1>; /* 50ms */
 		csi_port = <1>; /* Single-link */
-		/* PLL = 1.5Gbps to get up to 4k@30fps */
-		pll_prd = /bits/ 16 <15>;
+		/* PLL = 600Mbps to get up to 1080p@60fps */
+		pll_prd = /bits/ 16 <7>;
 		pll_frs = /bits/ 16 <0>;
-		pll_fbd = /bits/ 16 <499>;
-		/* starting point values from tc358840.h */
-		lineinitcnt = <0x00000FA0>;
-		lptxtimecnt = <0x00000004>;
-		tclk_headercnt = <0x00180203>;
-		tclk_trailcnt = <0x00040005>;
-		ths_headercnt = <0x000D0004>;
-		twakeup = <0x00003E80>;
-		tclk_postcnt = <0x0000000A>;
-		ths_trailcnt = <0x00080006>;
+		pll_fbd = /bits/ 16 <99>;
+		/* Values from Toshiba spreadsheet */
+		lineinitcnt = <0x00001388>;
+		lptxtimecnt = <0x00000005>;
+		tclk_headercnt = <0x00230205>;
+		tclk_trailcnt = <0x000C0007>;
+		ths_headercnt = <0x00120006>;
+		twakeup = <0x00005A00>;
+		tclk_postcnt = <0x0000000E>;
+		ths_trailcnt = <0x00080008>;
 		hstxvregcnt = <0x00000020>;
-		btacnt	 = <0x00040003>;
 
 		port@0 {
 			tc358840_mipi1_ep: endpoint {
