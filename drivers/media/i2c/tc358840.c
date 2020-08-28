@@ -2883,7 +2883,6 @@ static bool tc358840_parse_dt(struct tc358840_platform_data *pdata,
 	    of_property_read_u32(node, "tclk_postcnt", &pdata->tclk_postcnt) ||
 	    of_property_read_u32(node, "ths_trailcnt", &pdata->ths_trailcnt) ||
 	    of_property_read_u32(node, "hstxvregcnt", &pdata->hstxvregcnt) ||
-	    of_property_read_u32(node, "btacnt", &pdata->btacnt) ||
 	    of_property_read_u16(node, "pll_prd", &pdata->pll_prd) ||
 	    of_property_read_u16(node, "pll_frs", &pdata->pll_frs) ||
 	    of_property_read_u16(node, "pll_fbd", &pdata->pll_fbd))
@@ -2912,7 +2911,6 @@ static bool tc358840_parse_dt(struct tc358840_platform_data *pdata,
 	v4l_dbg(1, debug, client, "tclk_postcnt = %u\n", pdata->tclk_postcnt);
 	v4l_dbg(1, debug, client, "ths_trailcnt = %u\n", pdata->ths_trailcnt);
 	v4l_dbg(1, debug, client, "hstxvregcnt = %u\n", pdata->hstxvregcnt);
-	v4l_dbg(1, debug, client, "btacnt = %u\n", pdata->btacnt);
 	v4l_dbg(1, debug, client, "pll_prd = %u\n", pdata->pll_prd);
 	v4l_dbg(1, debug, client, "pll_frs = %u\n", pdata->pll_frs);
 	v4l_dbg(1, debug, client, "pll_fbd = %u\n", pdata->pll_fbd);
