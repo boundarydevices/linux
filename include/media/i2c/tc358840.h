@@ -55,7 +55,6 @@ struct tc358840_platform_data {
 	u32 tclk_postcnt;	/* (0x0000000A) */
 	u32 ths_trailcnt;	/* (0x00080006) */
 	u32 hstxvregcnt;	/* (0x00000020) */
-	u32 btacnt;		/* (0x00040003) */
 
 	/* PLL */
 	/* Bps per lane is (refclk_hz / (prd + 1) * (fbd + 1)) / 2^frs */
