@@ -1451,7 +1451,7 @@ static int sdma_alloc_bd(struct sdma_desc *desc)
 	int ret = 0;
 
 	if (sdma->iram_pool)
-		desc->bd = gen_pool_dma_alloc(sdma->iram_pool, PAGE_SIZE,
+		desc->bd = gen_pool_dma_alloc(sdma->iram_pool, bd_size,
 					      &desc->bd_phys);
 	else
 		desc->bd = dma_alloc_coherent(sdma->dev, bd_size,
@@ -1469,12 +1469,14 @@ static void sdma_free_bd(struct sdma_desc *desc)
 	u32 bd_size = desc->num_bd * sizeof(struct sdma_buffer_descriptor);
 	struct sdma_engine *sdma = desc->sdmac->sdma;
 
-	if (sdma->iram_pool)
-		gen_pool_free(sdma->iram_pool, (unsigned long)desc->bd,
-			      PAGE_SIZE);
-	else
-		dma_free_coherent(desc->sdmac->sdma->dev, bd_size, desc->bd,
-				  desc->bd_phys);
+	if (desc->bd) {
+		if (sdma->iram_pool)
+			gen_pool_free(sdma->iram_pool, (unsigned long)desc->bd,
+				      bd_size);
+		else
+			dma_free_coherent(sdma->dev, bd_size, desc->bd,
+					  desc->bd_phys);
+	}
 }
 
 static void sdma_desc_free(struct virt_dma_desc *vd)
