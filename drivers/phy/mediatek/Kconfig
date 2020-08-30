@@ -71,3 +71,11 @@ config PHY_MTK_DPHY
     help
 	  Enable this to support the MIPI CSI D-PHY receiver.
 	  The driver supports multiple CSI dphy ports simultaneously.
+
+config PHY_MTK_PCIE
+	tristate "MediaTek PCIe-PHY Driver"
+	depends on ARCH_MEDIATEK && OF
+	select GENERIC_PHY
+	help
+	  Say 'Y' here to add support for MediaTeck PCIe PHY driver,
+	  This driver support for PCIe GEN3 port.
