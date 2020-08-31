@@ -28,3 +28,11 @@ config NET_DSA_MSCC_SEVILLE
 	help
 	  This driver supports the VSC9953 (Seville) switch, which is embedded
 	  as a platform device on the NXP T1040 SoC.
+
+config MSCC_FELIX_SWITCH_TSN
+	bool "TSN support on Felix switch"
+	depends on NET_DSA_MSCC_FELIX
+	depends on TSN
+	help
+	  This driver supports TSN which is using tsntool netlink
+	  infrastructure on felix switch.
