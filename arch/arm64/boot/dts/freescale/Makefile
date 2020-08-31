@@ -293,6 +293,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mm-c2.dtb \
 			  imx8mm-nitrogen8mm_som-tg.dtb \
 			  imx8mm-nitrogen8mm_svt.dtb \
 			  imx8mm-nitrogen8mm_tab.dtb \
+			  imx8mm-nitrogen8_lite.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-bio.dtb \
 			  imx8mq-ds.dtb \

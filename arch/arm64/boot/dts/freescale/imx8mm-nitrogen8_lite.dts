@@ -1,0 +1,105 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2018 Boundary Devices
+ */
+
+/dts-v1/;
+#define MX8MMN(a, b)	MX8MM_##a b
+#define IMX8MMN(a)	IMX8MM_##a
+#define IMX8MN_CLK_LCDIF_PIXEL IMX8MN_CLK_DISP_PIXEL_ROOT
+#include "imx8mm.dtsi"
+#include "imx8mmn-nitrogen8_lite.dtsi"
+
+&iomuxc {
+	pinctrl_pcie0: pcie0grp {
+		fsl,pins = <
+#define GP_PCIE0_RESET		<&gpio4 27 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI2_MCLK_GPIO4_IO27, 0x100)
+#define GP_PCIE0_DISABLE	<&gpio4 24 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI2_TXFS_GPIO4_IO24, 0x100)
+		>;
+	};
+
+	pinctrl_usbotg2: usbotg2grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_GPIO1_IO14_USB2_OTG_PWR, 0x16)
+			MX8MMN(IOMUXC_GPIO1_IO15_USB2_OTG_OC, 0x156)
+		>;
+	};
+};
+
+/ {
+	model = "Boundary Devices i.MX8MM Nitrogen8_lite";
+	compatible = "boundary,imx8mm-nitrogen8_lite", "fsl,imx8mm";
+
+	clocks {
+		pcie0_refclk: pcie0-refclk {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <100000000>;
+		};
+	};
+};
+
+&csi1_bridge {
+	fsl,mipi-mode;
+	status = "okay";
+
+	port {
+		csi1_ep: endpoint {
+			remote-endpoint = <&csi1_mipi_ep>;
+		};
+	};
+};
+
+&pcie0 {
+	assigned-clocks = <&clk IMX8MM_CLK_PCIE1_AUX>,
+			  <&clk IMX8MM_CLK_PCIE1_PHY>,
+			  <&clk IMX8MM_CLK_PCIE1_CTRL>;
+	assigned-clock-rates = <10000000>, <100000000>, <250000000>;
+	assigned-clock-parents = <&clk IMX8MM_SYS_PLL2_50M>,
+				 <&clk IMX8MM_SYS_PLL2_100M>,
+				 <&clk IMX8MM_SYS_PLL2_250M>;
+	clocks = <&clk IMX8MM_CLK_PCIE1_ROOT>,
+		 <&clk IMX8MM_CLK_PCIE1_AUX>,
+		 <&clk IMX8MM_CLK_PCIE1_PHY>,
+		 <&pcie0_refclk>;
+	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
+	disable-gpio = GP_PCIE0_DISABLE;
+	ext_osc = <0>;
+	l1ss-disabled;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie0>;
+	reset-gpio = GP_PCIE0_RESET;
+	status = "okay";
+};
+
+&pgc_vpumix {
+	dvfs-supply = <&reg_buck5>;
+	idle-microvolt = <850000 805000 900000>;
+};
+
+&usbotg2 {
+	dr_mode = "host";
+	over-current-active-low;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbotg2>;
+	power-active-high;
+	status = "okay";
+};
+
+&vpu_g1 {
+	status = "okay";
+};
+
+&vpu_g2 {
+	status = "okay";
+};
+
+&vpu_h1 {
+	status = "okay";
+};
+
+&vpu_v4l2 {
+	status = "okay";
+};
