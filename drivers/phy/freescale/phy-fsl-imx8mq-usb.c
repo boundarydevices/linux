@@ -640,7 +640,7 @@ static int imx8mq_phy_charger_detect(struct imx8mq_usb_phy *imx_phy)
 		return 0;
 
 	imx_phy->vbus_power_supply = power_supply_get_by_phandle(np,
-						"vbus-power-supply");
+						"vbus-power-source");
 	if (IS_ERR_OR_NULL(imx_phy->vbus_power_supply))
 		return 0;
 
@@ -704,7 +704,7 @@ static int imx8mq_phy_usb_vbus_notify(struct notifier_block *nb,
 		return NOTIFY_DONE;
 
 	imx_phy->vbus_power_supply = power_supply_get_by_phandle(np,
-						"vbus-power-supply");
+						"vbus-power-source");
 	if (IS_ERR_OR_NULL(imx_phy->vbus_power_supply)) {
 		dev_err(dev, "failed to get power supply\n");
 		return NOTIFY_DONE;
@@ -800,7 +800,7 @@ static int imx8mq_usb_phy_probe(struct platform_device *pdev)
 	phy_set_drvdata(imx_phy->phy, imx_phy);
 	platform_set_drvdata(pdev, imx_phy);
 
-	if (device_property_present(dev, "vbus-power-supply")) {
+	if (device_property_present(dev, "vbus-power-source")) {
 		imx_phy->chg_det_nb.notifier_call = imx8mq_phy_usb_vbus_notify;
 		power_supply_reg_notifier(&imx_phy->chg_det_nb);
 	}
@@ -818,7 +818,7 @@ static int imx8mq_usb_phy_remove(struct platform_device *pdev)
 {
 	struct imx8mq_usb_phy *imx_phy = platform_get_drvdata(pdev);
 
-	if (device_property_present(&pdev->dev, "vbus-power-supply"))
+	if (device_property_present(&pdev->dev, "vbus-power-source"))
 		power_supply_unreg_notifier(&imx_phy->chg_det_nb);
 
 	debug_remove_files(imx_phy);
