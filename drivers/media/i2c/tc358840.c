@@ -2310,7 +2310,8 @@ static int tc358840_s_dv_timings(struct v4l2_subdev *sd,
 		return -EINVAL;
 
 	if (debug)
-		v4l2_print_dv_timings(sd->name, "%s: ", timings, false);
+		v4l2_print_dv_timings(sd->name, "tc358840_s_dv_timings: ",
+				      timings, false);
 
 	if (state->test_pattern &&
 	    tc358840_set_test_pattern_timing(sd, timings)) {
@@ -2388,7 +2389,8 @@ static int tc358840_query_dv_timings(struct v4l2_subdev *sd,
 		return -ENOLCK;
 
 	if (debug)
-		v4l2_print_dv_timings(sd->name, "%s: ", timings, false);
+		v4l2_print_dv_timings(sd->name, "tc358840_query_dv_timings: ",
+				      timings, false);
 	if (!v4l2_valid_dv_timings(timings, tc358840_g_timings_cap(state),
 				   NULL, NULL)) {
 		v4l2_dbg(1, debug, sd, "%s: timings out of range\n", __func__);
