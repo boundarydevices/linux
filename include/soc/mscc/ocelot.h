@@ -53,13 +53,15 @@
 /* Reserve some destination PGIDs at the end of the range:
  * PGID_CPU: used for whitelisting certain MAC addresses, such as the addresses
  *           of the switch port net devices, towards the CPU port module.
+ * PGID_FRER: Destinations for multicast traffic in 802.1CB redundant network.
  * PGID_UC: the flooding destinations for unknown unicast traffic.
  * PGID_MC: the flooding destinations for broadcast and non-IP multicast
  *          traffic.
  * PGID_MCIPV4: the flooding destinations for IPv4 multicast traffic.
  * PGID_MCIPV6: the flooding destinations for IPv6 multicast traffic.
  */
-#define PGID_CPU			59
+#define PGID_CPU			58
+#define PGID_FRER			59
 #define PGID_UC				60
 #define PGID_MC				61
 #define PGID_MCIPV4			62
@@ -426,6 +428,9 @@ enum ocelot_reg {
 	DEV_MAC_FC_MAC_LOW_CFG,
 	DEV_MAC_FC_MAC_HIGH_CFG,
 	DEV_MAC_STICKY,
+	DEV_MM_ENABLE_CONFIG,
+	DEV_MM_VERIF_CONFIG,
+	DEV_MM_STATUS,
 	PCS1G_CFG,
 	PCS1G_MODE_CFG,
 	PCS1G_SD_CFG,
@@ -711,6 +716,14 @@ u32 __ocelot_target_read_ix(struct ocelot *ocelot, enum ocelot_target target,
 			    u32 reg, u32 offset);
 void __ocelot_target_write_ix(struct ocelot *ocelot, enum ocelot_target target,
 			      u32 val, u32 reg, u32 offset);
+
+static inline void ocelot_port_rmwl(struct ocelot_port *port, u32 val,
+				    u32 mask, u32 reg)
+{
+	u32 cur = ocelot_port_readl(port, reg);
+
+	ocelot_port_writel(port, (cur & (~mask)) | val, reg);
+};
 
 /* Hardware initialization */
 int ocelot_regfields_init(struct ocelot *ocelot,
