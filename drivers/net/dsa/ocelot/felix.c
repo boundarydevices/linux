@@ -1246,6 +1246,10 @@ static int felix_init_structs(struct felix *felix, int num_phys_ports)
 		ocelot_port->phy_mode = port_phy_modes[port];
 		ocelot_port->ocelot = ocelot;
 		ocelot_port->target = target;
+		/* Enable cut-through forwarding on all traffic classes by
+		 * default, to be compatible with the upstream kernel.
+		 */
+		ocelot_port->cut_thru = GENMASK(7, 0);
 		ocelot->ports[port] = ocelot_port;
 	}
 

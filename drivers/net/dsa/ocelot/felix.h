@@ -49,7 +49,7 @@ struct felix_info {
 	int	(*port_setup_tc)(struct dsa_switch *ds, int port,
 				 enum tc_setup_type type, void *type_data);
 	void	(*port_sched_speed_set)(struct ocelot *ocelot, int port,
-					u32 speed);
+					int speed);
 	struct regmap *(*init_regmap)(struct ocelot *ocelot,
 				      struct resource *res);
 };
