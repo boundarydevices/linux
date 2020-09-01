@@ -969,17 +969,18 @@ static struct {
 	enum dpdmux_counter_type id;
 	char name[ETH_GSTRING_LEN];
 } evb_ethtool_counters[] =  {
-	{DPDMUX_CNT_ING_FRAME,		"rx frames"},
-	{DPDMUX_CNT_ING_BYTE,		"rx bytes"},
-	{DPDMUX_CNT_ING_FLTR_FRAME,	"rx filtered frames"},
-	{DPDMUX_CNT_ING_FRAME_DISCARD,	"rx discarded frames"},
-	{DPDMUX_CNT_ING_BCAST_FRAME,	"rx b-cast frames"},
-	{DPDMUX_CNT_ING_BCAST_BYTES,	"rx b-cast bytes"},
-	{DPDMUX_CNT_ING_MCAST_FRAME,	"rx m-cast frames"},
-	{DPDMUX_CNT_ING_MCAST_BYTE,	"rx m-cast bytes"},
-	{DPDMUX_CNT_EGR_FRAME,		"tx frames"},
-	{DPDMUX_CNT_EGR_BYTE,		"tx bytes"},
-	{DPDMUX_CNT_EGR_FRAME_DISCARD,	"tx discarded frames"},
+	{DPDMUX_CNT_ING_FRAME,			"rx frames"},
+	{DPDMUX_CNT_ING_BYTE,			"rx bytes"},
+	{DPDMUX_CNT_ING_FLTR_FRAME,		"rx filtered frames"},
+	{DPDMUX_CNT_ING_FRAME_DISCARD,		"rx discarded frames"},
+	{DPDMUX_CNT_ING_BCAST_FRAME,		"rx b-cast frames"},
+	{DPDMUX_CNT_ING_BCAST_BYTES,		"rx b-cast bytes"},
+	{DPDMUX_CNT_ING_MCAST_FRAME,		"rx m-cast frames"},
+	{DPDMUX_CNT_ING_MCAST_BYTE,		"rx m-cast bytes"},
+	{DPDMUX_CNT_EGR_FRAME,			"tx frames"},
+	{DPDMUX_CNT_EGR_BYTE,			"tx bytes"},
+	{DPDMUX_CNT_EGR_FRAME_DISCARD,		"tx discarded frames"},
+	{DPDMUX_CNT_ING_NO_BUFFER_DISCARD,	"rx discarded no buffer frames"},
 };
 
 static int evb_ethtool_get_sset_count(struct net_device *dev, int sset)

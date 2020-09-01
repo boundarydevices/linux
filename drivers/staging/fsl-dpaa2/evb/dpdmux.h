@@ -232,6 +232,7 @@ int dpdmux_set_max_frame_length(struct fsl_mc_io *mc_io,
  * @DPDMUX_CNT_EGR_FRAME: Counts egress frames
  * @DPDMUX_CNT_EGR_BYTE: Counts egress bytes
  * @DPDMUX_CNT_EGR_FRAME_DISCARD: Counts discarded egress frames
+ * @DPDMUX_CNT_ING_NO_BUFFER_DISCARD: Counts discarded ingress no buffer frames
  */
 enum dpdmux_counter_type {
 	DPDMUX_CNT_ING_FRAME = 0x0,
@@ -244,7 +245,8 @@ enum dpdmux_counter_type {
 	DPDMUX_CNT_ING_BCAST_BYTES = 0x7,
 	DPDMUX_CNT_EGR_FRAME = 0x8,
 	DPDMUX_CNT_EGR_BYTE = 0x9,
-	DPDMUX_CNT_EGR_FRAME_DISCARD = 0xa
+	DPDMUX_CNT_EGR_FRAME_DISCARD = 0xa,
+	DPDMUX_CNT_ING_NO_BUFFER_DISCARD = 0xb,
 };
 
 /**
