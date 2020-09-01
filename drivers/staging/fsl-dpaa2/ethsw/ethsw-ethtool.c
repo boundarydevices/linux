@@ -24,6 +24,7 @@ static struct {
 	{DPSW_CNT_EGR_FRAME,		"tx frames"},
 	{DPSW_CNT_EGR_BYTE,		"tx bytes"},
 	{DPSW_CNT_EGR_FRAME_DISCARD,	"tx discarded frames"},
+	{DPSW_CNT_ING_NO_BUFFER_DISCARD,"rx discarded no buffer frames"},
 
 };
 
