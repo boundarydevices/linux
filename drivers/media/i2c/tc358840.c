@@ -50,19 +50,6 @@ MODULE_PARM_DESC(debug, "debug level (0-3)");
 #define POLLS_PER_SEC 5
 #define POLL_PERIOD (HZ / POLLS_PER_SEC)
 
-static const struct v4l2_dv_timings_cap tc358840_timings_cap_1080p60 = {
-	.type = V4L2_DV_BT_656_1120,
-	/* keep this initialization for compatibility with GCC < 4.4.6 */
-	.reserved = { 0 },
-	/* Pixel clock from REF_01 p. 20. */
-	V4L2_INIT_BT_TIMINGS(160, 1920, 120, 1200, 25000000, 165000000,
-			     V4L2_DV_BT_STD_CEA861 | V4L2_DV_BT_STD_DMT |
-			     V4L2_DV_BT_STD_GTF | V4L2_DV_BT_STD_CVT,
-			     V4L2_DV_BT_CAP_PROGRESSIVE |
-			     V4L2_DV_BT_CAP_REDUCED_BLANKING |
-			     V4L2_DV_BT_CAP_CUSTOM)
-};
-
 static const struct v4l2_dv_timings_cap tc358840_timings_cap_4kp30 = {
 	.type = V4L2_DV_BT_656_1120,
 	/* keep this initialization for compatibility with GCC < 4.4.6 */
@@ -2275,11 +2262,7 @@ static int tc358840_subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
 static const struct v4l2_dv_timings_cap *
 tc358840_g_timings_cap(struct tc358840_state *state)
 {
-	struct tc358840_platform_data *pdata = &state->pdata;
-
-	if (pdata->csi_port == CSI_TX_BOTH)
-		return &tc358840_timings_cap_4kp30;
-	return &tc358840_timings_cap_1080p60;
+	return &tc358840_timings_cap_4kp30;
 }
 
 static int tc358840_g_input_status(struct v4l2_subdev *sd, u32 *status)
