@@ -680,10 +680,11 @@ out:
 static void tc358840_set_splitter(struct v4l2_subdev *sd)
 {
 	struct tc358840_state *state = to_state(sd);
+	struct tc358840_platform_data *pdata = &state->pdata;
 
 	v4l2_dbg(3, debug, sd, "%s():\n", __func__);
 
-	if (state->timings.bt.width <= 1920) {
+	if (pdata->csi_port != CSI_TX_BOTH) {
 		i2c_wr16_and_or(sd, SPLITTX0_CTRL,
 				~(u16)(MASK_IFEN | MASK_LCD_CSEL), MASK_SPBP);
 		i2c_wr16_and_or(sd, SPLITTX1_CTRL,
