@@ -93,16 +93,6 @@
 				link-frequencies = /bits/ 64 <297000000>;
 			};
 		};
-
-		port@1 {
-			tc358840_mipi2_ep: endpoint {
-				remote-endpoint = <&mipi2_tc358840_ep>;
-				data-lanes = <1 2 3 4>;
-				clock-lanes = <0>;
-				clock-noncontinuous;
-				link-frequencies = /bits/ 64 <297000000>;
-			};
-		};
 	};
 };
 
@@ -123,13 +113,5 @@
 &mipi_csi_2 {
 	port {
 		/delete-node/ endpoint1;
-
-		mipi2_tc358840_ep: endpoint1 {
-			remote-endpoint = <&tc358840_mipi2_ep>;
-			data-lanes = <1 2 3 4>;
-			csis-hs-settle = <13>;
-			csis-clk-settle = <2>;
-			csis-wclk;
-		};
 	};
 };
