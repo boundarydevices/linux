@@ -101,7 +101,7 @@
 			MX8MP_IOMUXC_SAI1_RXD7__ENET1_RGMII_RD3		0x91
 #define GP_FEC2_RESET	<&gpio5 8 GPIO_ACTIVE_LOW>
 			MX8MP_IOMUXC_ECSPI1_MISO__GPIO5_IO08		0x100
-#define GPIRQ_FEC2_PHY	<&gpio3 2 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_FEC2_PHY	<&gpio1 7 IRQ_TYPE_LEVEL_LOW>
 			MX8MP_IOMUXC_GPIO1_IO07__GPIO1_IO07		0x10
 		>;
 	};
@@ -864,9 +864,7 @@
 		ethphy1: ethernet-phy@4 {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			eee-broken-1000t;
-#if 0
 			interrupts-extended = GPIRQ_FEC2_PHY;
-#endif
 			reg = <4>;
 		};
 	};
