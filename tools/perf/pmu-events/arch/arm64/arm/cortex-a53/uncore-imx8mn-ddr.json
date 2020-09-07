@@ -4,6 +4,7 @@
 	"MetricName": "imx8mn_bandwidth_usage.lpddr4",
 	"MetricExpr": "(( imx8_ddr0@read\\-cycles@ + imx8_ddr0@write\\-cycles@ ) * 4 * 2 / duration_time) / (800 * 1000000 * 4 * 2)",
 	"ScaleUnit": "1e2%",
+	"SocName": "i.MX8MN",
 	"Unit": "imx8_ddr"
     },
     {
@@ -11,6 +12,7 @@
 	"MetricName": "imx8mn_bandwidth_usage.ddr4",
 	"MetricExpr": "(( imx8_ddr0@read\\-cycles@ + imx8_ddr0@write\\-cycles@ ) * 4 * 2 / duration_time) / (600 * 1000000 * 4 * 2)",
 	"ScaleUnit": "1e2%",
+	"SocName": "i.MX8MN",
 	"Unit": "imx8_ddr"
     },
     {
@@ -18,6 +20,7 @@
 	"MetricName": "imx8mn_ddr_read.all",
 	"MetricExpr": "imx8_ddr0@read\\-cycles@ * 4 * 2",
 	"ScaleUnit": "9.765625e-4KB",
+	"SocName": "i.MX8MN",
 	"Unit": "imx8_ddr"
     },
     {
@@ -25,6 +28,7 @@
 	"MetricName": "imx8mn_ddr_write.all",
 	"MetricExpr": "imx8_ddr0@write\\-cycles@ * 4 * 2",
 	"ScaleUnit": "9.765625e-4KB",
+	"SocName": "i.MX8MN",
 	"Unit": "imx8_ddr"
     }
 ]
