@@ -674,8 +674,10 @@ static int lt8912_video_on(struct lt *lt, bool on, u32 flags)
 
 
 	yres = lt8912_video_setup(lt);
-	if (yres < 0)
-		return yres;
+	if (yres < 0) {
+		ret = yres;
+		goto end;
+	}
 
 	lt8912_write_array(lt, lt8912_ddsconfig,
 				sizeof(lt8912_ddsconfig));
@@ -686,9 +688,10 @@ static int lt8912_video_on(struct lt *lt, bool on, u32 flags)
 	lt8912_write_array(lt,lt8912_lvds_bypass_cfg,
 	 			sizeof(lt8912_lvds_bypass_cfg));
 
-	mutex_unlock(&lt->ops_mutex);
-
 	ret = 0;
+
+end:
+	mutex_unlock(&lt->ops_mutex);
 	return ret;
 }
 
@@ -1144,8 +1147,10 @@ static int lt8912_get_raw_edid(struct lt *lt,
 	size = min_t(u32, size, sizeof(lt->edid_buf));
 
 	memcpy(buf, lt->edid_buf, size);
-end:
+
 	mutex_unlock(&lt->ops_mutex);
+
+end:
 	return 0;
 }
 #endif
