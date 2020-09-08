@@ -1532,6 +1532,7 @@ static int mx6s_vidioc_streamoff(struct file *file, void *priv,
 {
 	struct mx6s_csi_dev *csi_dev = video_drvdata(file);
 	struct v4l2_subdev *sd = csi_dev->sd;
+	int ret;
 
 	WARN_ON(priv != file->private_data);
 
@@ -1542,11 +1543,11 @@ static int mx6s_vidioc_streamoff(struct file *file, void *priv,
 	 * This calls buf_release from host driver's videobuf_queue_ops for all
 	 * remaining buffers. When the last buffer is freed, stop capture
 	 */
-	vb2_streamoff(&csi_dev->vb2_vidq, i);
+	ret = vb2_streamoff(&csi_dev->vb2_vidq, i);
+	if (!ret)
+		v4l2_subdev_call(sd, video, s_stream, 0);
 
-	v4l2_subdev_call(sd, video, s_stream, 0);
-
-	return 0;
+	return ret;
 }
 
 static int mx6s_vidioc_g_pixelaspect(struct file *file, void *fh,
