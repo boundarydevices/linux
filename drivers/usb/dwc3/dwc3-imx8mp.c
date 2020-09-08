@@ -41,6 +41,7 @@ struct dwc3_imx8mp {
 	struct platform_device		*dwc3;
 	void __iomem			*glue_base;
 	struct clk			*hsio_clk;
+	struct clk			*suspend_clk;
 	int				irq;
 	bool				pm_suspended;
 	bool				wakeup_pending;
@@ -177,6 +178,19 @@ static int dwc3_imx8mp_probe(struct platform_device *pdev)
 		goto disable_clk;
 	}
 
+	dwc3_imx->suspend_clk = devm_clk_get(dev, "suspend");
+	if (IS_ERR(dwc3_imx->suspend_clk)) {
+		err = PTR_ERR(dwc3_imx->suspend_clk);
+		dev_err(dev, "Failed to get suspend clk, err=%d\n", err);
+		goto disable_hsio_clk;
+	}
+
+	err = clk_prepare_enable(dwc3_imx->suspend_clk);
+	if (err) {
+		dev_err(dev, "Failed to enable suspend clk, err=%d\n", err);
+		goto disable_hsio_clk;
+	}
+
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
 		err = irq;
@@ -230,6 +244,8 @@ disable_rpm:
 	pm_runtime_disable(dev);
 	pm_runtime_put_noidle(dev);
 disable_clk:
+	clk_disable_unprepare(dwc3_imx->suspend_clk);
+disable_hsio_clk:
 	clk_disable_unprepare(dwc3_imx->hsio_clk);
 
 	return err;
@@ -305,6 +321,8 @@ static int __maybe_unused dwc3_imx8mp_pm_suspend(struct device *dev)
 
 	if (device_may_wakeup(dwc3_imx->dev))
 		enable_irq_wake(dwc3_imx->irq);
+	else
+		clk_disable_unprepare(dwc3_imx->suspend_clk);
 
 	clk_disable_unprepare(dwc3_imx->hsio_clk);
 
@@ -318,8 +336,13 @@ static int __maybe_unused dwc3_imx8mp_pm_resume(struct device *dev)
 	struct dwc3_imx8mp *dwc3_imx = dev_get_drvdata(dev);
 	int ret;
 
-	if (device_may_wakeup(dwc3_imx->dev))
+	if (device_may_wakeup(dwc3_imx->dev)) {
 		disable_irq_wake(dwc3_imx->irq);
+	} else {
+		ret = clk_prepare_enable(dwc3_imx->suspend_clk);
+		if (ret)
+			return ret;
+	}
 
 	ret = clk_prepare_enable(dwc3_imx->hsio_clk);
 	if (ret)
