@@ -544,6 +544,7 @@
 		fb_lvds = &lcdif2;
 		fb_lvds2 = &lcdif2;
 		fb_mipi = &fb_mipi;
+		fb_hdmi = &lcdif3;
 		lcdif = &lcdif1;
 		ldb = &ldb;
 		ldb_chan = &ldb_chan;
@@ -1159,18 +1160,16 @@
 };
 
 &lcdif1 {
-	status = "okay";
+	status = "disabled";
 };
 
 &lcdif2 {
 	status = "disabled";
 };
 
-#if 0
 &lcdif3 {
-	status = "okay";
+	status = "disabled";
 };
-#endif
 
 
 &ldb {
