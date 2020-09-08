@@ -134,7 +134,9 @@ RTC bindings based on SCU Message Protocol
 ------------------------------------------------------------
 
 Required properties:
-- compatible: should be "fsl,imx8qxp-sc-rtc";
+- compatible:		should be one of:
+			 "fsl,imx8dxl-sc-rtc";
+			 "fsl,imx8qxp-sc-rtc";
 
 OCOTP bindings based on SCU Message Protocol
 ------------------------------------------------------------
