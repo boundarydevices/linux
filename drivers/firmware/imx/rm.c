@@ -79,7 +79,7 @@ int imx_sc_rm_get_partition(struct imx_sc_ipc *ipc, u8 *pt)
 }
 EXPORT_SYMBOL(imx_sc_rm_get_partition);
 
-struct imx_sc_msg_misc_find_memreg {
+struct imx_sc_msg_rm_find_memreg {
 	struct imx_sc_rpc_msg hdr;
 	union {
 		struct {
@@ -97,7 +97,7 @@ struct imx_sc_msg_misc_find_memreg {
 int imx_sc_rm_find_memreg(struct imx_sc_ipc *ipc, u8 *mr, u64 addr_start,
 			  u64 addr_end)
 {
-	struct imx_sc_msg_misc_find_memreg msg;
+	struct imx_sc_msg_rm_find_memreg msg;
 	struct imx_sc_rpc_msg *hdr = &msg.hdr;
 	int ret;
 
@@ -122,7 +122,7 @@ int imx_sc_rm_find_memreg(struct imx_sc_ipc *ipc, u8 *mr, u64 addr_start,
 }
 EXPORT_SYMBOL(imx_sc_rm_find_memreg);
 
-struct imx_sc_msg_misc_get_resource_owner {
+struct imx_sc_msg_rm_get_resource_owner {
 	struct imx_sc_rpc_msg hdr;
 	union {
 		struct {
@@ -136,7 +136,7 @@ struct imx_sc_msg_misc_get_resource_owner {
 
 int imx_sc_rm_get_resource_owner(struct imx_sc_ipc *ipc, u16 resource, u8 *pt)
 {
-	struct imx_sc_msg_misc_get_resource_owner msg;
+	struct imx_sc_msg_rm_get_resource_owner msg;
 	struct imx_sc_rpc_msg *hdr = &msg.hdr;
 	int ret;
 
