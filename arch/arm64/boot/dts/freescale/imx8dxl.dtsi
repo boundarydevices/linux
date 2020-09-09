@@ -235,6 +235,11 @@
 		clock-output-names = "xtal_24MHz";
 	};
 
+	imx_ion {
+		compatible = "fsl,mxc-ion";
+		fsl,heap-id = <0>;
+	};
+
 	sc_pwrkey: sc-powerkey {
 		compatible = "fsl,imx8-pwrkey";
 		linux,keycode = <KEY_POWER>;
