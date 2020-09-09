@@ -1303,17 +1303,6 @@
 	status = "okay";
 };
 
-&resmem {
-	/* global autoconfigured region for contiguous allocations */
-	linux,cma {
-		compatible = "shared-dma-pool";
-		reusable;
-		size = <0 0x10000000>;
-		alloc-ranges = <0 0x40000000 0 0x60000000>;
-		linux,cma-default;
-	};
-};
-
 &sai3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai3>;
@@ -1361,7 +1350,7 @@
 	status = "okay";
 };
 
-&uart4{
+&uart4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4>;
 	assigned-clocks = <&clk IMX8MP_CLK_UART4>;
@@ -1455,7 +1444,6 @@
 	status = "okay";
 };
 
-#if 0
 &vpu_g1 {
 	status = "okay";
 };
@@ -1475,7 +1463,6 @@
 &gpu_2d {
 	status = "okay";
 };
-#endif
 
 &ml_vipsi {
 	status = "okay";
@@ -1525,7 +1512,6 @@
 	status = "okay";
 };
 
-#if 0
 &isi_0 {
 	status = "okay";
 
@@ -1545,7 +1531,6 @@
 		status = "okay";
 	};
 };
-#endif
 
 &dsp {
 	status = "okay";
