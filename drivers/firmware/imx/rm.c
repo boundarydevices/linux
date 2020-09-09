@@ -137,7 +137,7 @@ struct imx_sc_msg_misc_find_memreg {
 			u8 val;
 		} resp;
 	} data;
-};
+}  __packed __aligned(4);
 
 int imx_sc_rm_find_memreg(struct imx_sc_ipc *ipc, u8 *mr, u64 addr_start,
 			  u64 addr_end)
