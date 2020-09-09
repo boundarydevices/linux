@@ -1368,11 +1368,7 @@
 };
 
 &usb_dwc3_0 {
-#if 0
-	dr_mode = "otg";
-#else
-	dr_mode = "host";
-#endif
+	dr_mode = "peripheral";
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usb3_0>;
 	status = "okay";
