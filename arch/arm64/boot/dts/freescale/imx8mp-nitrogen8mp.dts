@@ -108,8 +108,9 @@
 
 	pinctrl_flexcan1: flexcan1grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_SAI5_RXD2__CAN1_RX          0x154
-			MX8MP_IOMUXC_SAI5_RXD1__CAN1_TX          0x154
+			MX8MP_IOMUXC_SAI5_RXD2__CAN1_RX		0x154
+			MX8MP_IOMUXC_SAI5_RXD1__CAN1_TX		0x154
+			MX8MP_IOMUXC_GPIO1_IO12__GPIO1_IO12	0x80
 		>;
 	};
 
@@ -124,6 +125,7 @@
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI5_MCLK__CAN2_RX		0x154
 			MX8MP_IOMUXC_SAI5_RXD3__CAN2_TX		0x154
+			MX8MP_IOMUXC_SAI2_RXD0__GPIO4_IO23	0x80
 		>;
 	};
 
@@ -1155,7 +1157,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan2>;
 	xceiver-supply = <&reg_can2_stby>;
-	status = "disabled";/* can2 pin conflict with pdm: gpio low select pdm, gpio high select can2 */
+	status = "okay";
 };
 
 &hdmimix_clk {
