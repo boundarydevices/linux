@@ -38,6 +38,18 @@ if VIDEO_CAMERA_SENSOR
 config VIDEO_APTINA_PLL
 	tristate
 
+config VIDEO_AP1302
+	tristate "ON Semiconductor AP1302 support"
+	depends on I2C && VIDEO_DEV
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  This is a Video4Linux2 sensor-level driver for the ON Semiconductor
+	  AP1302 ISP.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called ap1302.
+
 config VIDEO_CCS_PLL
 	tristate
 
