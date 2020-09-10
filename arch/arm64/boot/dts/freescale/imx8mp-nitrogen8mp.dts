@@ -339,7 +339,7 @@
 
 	pinctrl_sound_wm8960: sound-wm8960grp {
 		fsl,pins = <
-#define GP_WM8960_MIC_DET	<&gpio4 28 GPIO_ACTIVE_HIGH>
+#define GP_WM8960_MIC_DET	<&gpio4 18 GPIO_ACTIVE_LOW>
 			MX8MP_IOMUXC_SAI1_TXD6__GPIO4_IO18	0x80
 		>;
 	};
@@ -755,7 +755,9 @@
 			"Ext Spk", "SPK_RP",
 			"Ext Spk", "SPK_RN",
 			"LINPUT1", "Main MIC",
-			"Main MIC", "MICB";
+			"Main MIC", "MICB",
+			"RINPUT1", "Mic Jack",
+			"Mic Jack", "MICB";
 #if 0
 			"CPU-Playback", "ASRC-Playback",
 			"Playback", "CPU-Playback",
