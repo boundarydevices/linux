@@ -1264,6 +1264,7 @@ wlan_pcie_process_cmd_resp(mlan_adapter *pmadapter)
 	mlan_status ret = MLAN_STATUS_SUCCESS;
 	pmlan_callbacks pcb = &pmadapter->callbacks;
 	pmlan_buffer pmbuf = pmadapter->cmdrsp_buf;
+	pmlan_buffer cmd_buf = MNULL;
 	t_u16 resp_len = 0;
 
 	ENTER();
@@ -1314,6 +1315,15 @@ wlan_pcie_process_cmd_resp(mlan_adapter *pmadapter)
 			mlan_delay_for_sleep_cookie(pmadapter,
 						    MAX_DELAY_LOOP_COUNT);
 
+			cmd_buf = pmadapter->cmd_buf;
+			/*unmap the cmd pmbuf, so the cpu can access the memory in the command node */
+			if (cmd_buf) {
+				pcb->moal_unmap_memory(pmadapter->pmoal_handle,
+					cmd_buf->pbuf + cmd_buf->data_offset,
+					cmd_buf->buf_pa,
+					WLAN_UPLD_SIZE, PCI_DMA_TODEVICE);
+				pmadapter->cmd_buf = MNULL;
+			}
 		}
 		memcpy(pmadapter, pmadapter->upld_buf, pmbuf->pbuf +
 		       pmbuf->data_offset + INTF_HEADER_LEN,
