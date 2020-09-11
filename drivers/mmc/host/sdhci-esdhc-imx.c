@@ -5,6 +5,7 @@
  * derived from the OF-version.
  *
  * Copyright (c) 2010 Pengutronix e.K.
+ * Copyright 2020 NXP
  *   Author: Wolfram Sang <kernel@pengutronix.de>
  */
 
@@ -1528,7 +1529,7 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	if (of_property_read_u32(np, "fsl,delay-line", &boarddata->delay_line))
 		boarddata->delay_line = 0;
 
-	mmc_of_parse_voltage(np, &host->ocr_mask);
+	mmc_parse_voltage(&pdev->dev, &host->ocr_mask);
 
 	if (!is_s32v234_usdhc(imx_data) && esdhc_is_usdhc(imx_data) &&
 	    !IS_ERR(imx_data->pinctrl)) {
