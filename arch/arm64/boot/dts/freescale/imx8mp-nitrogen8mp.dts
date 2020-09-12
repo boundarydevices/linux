@@ -110,7 +110,6 @@
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI5_RXD2__CAN1_RX		0x154
 			MX8MP_IOMUXC_SAI5_RXD1__CAN1_TX		0x154
-			MX8MP_IOMUXC_GPIO1_IO12__GPIO1_IO12	0x80
 		>;
 	};
 
@@ -125,7 +124,6 @@
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI5_MCLK__CAN2_RX		0x154
 			MX8MP_IOMUXC_SAI5_RXD3__CAN2_TX		0x154
-			MX8MP_IOMUXC_SAI2_RXD0__GPIO4_IO23	0x80
 		>;
 	};
 
@@ -133,6 +131,15 @@
 		fsl,pins = <
 #define GP_CAN2_STANDBY	<&gpio2 9 GPIO_ACTIVE_HIGH>
 			MX8MP_IOMUXC_SD1_DATA7__GPIO2_IO09	0x154	/* CAN2_STBY */
+		>;
+	};
+
+	pinctrl_gpio_keys: gpio-keysgrp {
+		fsl,pins = <
+#define GP_CAN1_DETECT		<&gpio1 12 GPIO_ACTIVE_HIGH>
+			MX8MP_IOMUXC_GPIO1_IO12__GPIO1_IO12	0x180
+#define GP_CAN2_DETECT		<&gpio4 23 GPIO_ACTIVE_HIGH>
+			MX8MP_IOMUXC_SAI2_RXD0__GPIO4_IO23	0x180
 		>;
 	};
 
@@ -626,6 +633,24 @@
 
 	chosen {
 		stdout-path = &uart2;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+
+		can1 {
+			label = "can1 detect";
+			gpios = GP_CAN1_DETECT;
+			linux,code = <KEY_1>;
+		};
+
+		can2 {
+			label = "can2 detect";
+			gpios = GP_CAN2_DETECT;
+			linux,code = <KEY_2>;
+		};
 	};
 
 	reg_can1_stby: regulator-can1-stby {
