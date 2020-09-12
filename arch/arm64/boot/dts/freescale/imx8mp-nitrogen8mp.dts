@@ -783,7 +783,15 @@
 	};
 };
 
+&A53_0 {
+	cpu-supply = <&buck2_reg>;
+};
+
 &aud2htx {
+	status = "okay";
+};
+
+&cameradev {
 	status = "okay";
 };
 
@@ -791,25 +799,12 @@
 	init-on-array = <IMX8MP_CLK_HSIO_ROOT>;
 };
 
-&A53_0 {
-	cpu-supply = <&buck2_reg>;
-};
-
-&pwm1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm1>;
+&dsp {
 	status = "okay";
 };
 
-&pwm2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm2>;
-	status = "okay";
-};
-
-&pwm4 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm4>;
+&easrc {
+	fsl,asrc-rate  = <48000>;
 	status = "okay";
 };
 
@@ -881,6 +876,48 @@
 			reg = <4>;
 		};
 	};
+};
+
+&flexcan1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan1>;
+	xceiver-supply = <&reg_can1_stby>;
+	status = "okay";
+};
+
+&flexcan2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan2>;
+	xceiver-supply = <&reg_can2_stby>;
+	status = "okay";
+};
+
+&gpu_2d {
+	status = "okay";
+};
+
+&gpu_3d {
+	status = "okay";
+};
+
+&hdmi {
+	status = "okay";
+};
+
+&hdmimix_clk {
+	status = "okay";
+};
+
+&hdmimix_reset {
+	status = "okay";
+};
+
+&hdmiphy {
+	status = "okay";
+};
+
+&hdmi_pavi {
+	status = "okay";
 };
 
 &i2c1 {
@@ -1146,38 +1183,24 @@
 	status = "okay";
 };
 
-&flexcan1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_flexcan1>;
-	xceiver-supply = <&reg_can1_stby>;
+&isi_0 {
 	status = "okay";
+
+	cap_device {
+		status = "okay";
+	};
+
+	m2m_device {
+		status = "okay";
+	};
 };
 
-&flexcan2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_flexcan2>;
-	xceiver-supply = <&reg_can2_stby>;
-	status = "okay";
-};
+&isi_1 {
+	status = "disabled";
 
-&hdmimix_clk {
-	status = "okay";
-};
-
-&hdmimix_reset {
-	status = "okay";
-};
-
-&hdmi_pavi {
-	status = "okay";
-};
-
-&hdmi {
-	status = "okay";
-};
-
-&hdmiphy {
-	status = "okay";
+	cap_device {
+		status = "okay";
+	};
 };
 
 &lcdif1 {
@@ -1239,6 +1262,51 @@
 	status = "okay";
 };
 
+&micfil {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pdm>;
+	assigned-clocks = <&clk IMX8MP_CLK_PDM>;
+	assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL1_OUT>;
+	assigned-clock-rates = <196608000>;
+	status = "okay";
+};
+
+#if 0
+&mipi_csi_0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	port@0 {
+		reg = <0>;
+		mipi_csi0_ep: endpoint {
+			csis-clk-settle = <2>;
+			csis-hs-settle = <13>;
+			csis-wclk;
+			data-lanes = <2>;
+			remote-endpoint = <&ov5640_mipi_0_ep>;
+		};
+	};
+};
+
+&mipi_csi_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "disabled";
+
+	port@1 {
+		reg = <1>;
+		mipi_csi1_ep: endpoint {
+			csis-clk-settle = <2>;
+			csis-hs-settle = <13>;
+			csis-wclk;
+			data-lanes = <2>;
+			remote-endpoint = <&ov5640_mipi_1_ep>;
+		};
+	};
+};
+#endif
+
 &mipi_dsi {
 	clocks = <&clk IMX8MP_CLK_MEDIA_APB_ROOT>,
 		 <&clk IMX8MP_CLK_MEDIA_MIPI_PHY1_REF>,
@@ -1287,40 +1355,52 @@
 	};
 };
 
-&easrc {
-	fsl,asrc-rate  = <48000>;
+&mix_gpu_ml {
 	status = "okay";
 };
 
-&micfil {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pdm>;
-	assigned-clocks = <&clk IMX8MP_CLK_PDM>;
-	assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL1_OUT>;
-	assigned-clock-rates = <196608000>;
+&ml_vipsi {
 	status = "okay";
 };
 
-&pcie{
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pcie>;
-	disable-gpio = GP_PCIE_DISABLE;
-	reset-gpio = GP_PCIE_RESET;
-	ext_osc = <0>;
+&pcie {
+	assigned-clocks = <&clk IMX8MP_CLK_HSIO_AXI_SRC>,
+			  <&clk IMX8MP_CLK_PCIE_AUX>;
+	assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>,
+				 <&clk IMX8MP_SYS_PLL2_50M>;
 	clocks = <&clk IMX8MP_CLK_HSIO_AXI_DIV>,
 		 <&clk IMX8MP_CLK_PCIE_AUX>,
 		 <&clk IMX8MP_CLK_PCIE_PHY>,
 		 <&clk IMX8MP_CLK_PCIE_ROOT>;
 	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
-	assigned-clocks = <&clk IMX8MP_CLK_HSIO_AXI_SRC>,
-			  <&clk IMX8MP_CLK_PCIE_AUX>;
-	assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>,
-				 <&clk IMX8MP_SYS_PLL2_50M>;
+	disable-gpio = GP_PCIE_DISABLE;
+	ext_osc = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie>;
 	reserved-region = <&rpmsg_reserved>;
+	reset-gpio = GP_PCIE_RESET;
 	status = "okay";
 };
 
-&pcie_phy{
+&pcie_phy {
+	status = "okay";
+};
+
+&pwm1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm1>;
+	status = "okay";
+};
+
+&pwm2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm2>;
+	status = "okay";
+};
+
+&pwm4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm4>;
 	status = "okay";
 };
 
@@ -1335,11 +1415,6 @@
 		 <&clk IMX8MP_CLK_DUMMY>;
 	clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 	fsl,sai-mclk-direction-output;
-	status = "okay";
-};
-
-&xcvr {
-	#sound-dai-cells = <0>;
 	status = "okay";
 };
 
@@ -1379,12 +1454,11 @@
 	status = "okay";
 };
 
-&usb3_phy0 {
-	fsl,phy-tx-preemp-amp-tune = <2>;
+&usb3_0 {
 	status = "okay";
 };
 
-&usb3_0 {
+&usb3_1 {
 	status = "okay";
 };
 
@@ -1396,15 +1470,6 @@
 	vbus-supply = <&reg_usb_otg_vbus>;
 };
 
-&usb3_phy1 {
-	fsl,phy-tx-preemp-amp-tune = <2>;
-	status = "okay";
-};
-
-&usb3_1 {
-	status = "okay";
-};
-
 &usb_dwc3_1 {
 	dr_mode = "host";
 	pinctrl-names = "default";
@@ -1412,6 +1477,16 @@
 	reset-gpios = GP_USB3_1_HUB_RESET;
 	status = "okay";
 	vbus-supply = <&reg_vref_5v0>;
+};
+
+&usb3_phy0 {
+	fsl,phy-tx-preemp-amp-tune = <2>;
+	status = "okay";
+};
+
+&usb3_phy1 {
+	fsl,phy-tx-preemp-amp-tune = <2>;
+	status = "okay";
 };
 
 &usdhc1 {
@@ -1454,13 +1529,6 @@
 	vqmmc-supply = <&reg_vref_1v8>;
 };
 
-&wdog1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_wdog>;
-	fsl,ext-reset-output;
-	status = "okay";
-};
-
 &vpu_g1 {
 	status = "okay";
 };
@@ -1473,82 +1541,14 @@
 	status = "okay";
 };
 
-&gpu_3d {
+&wdog1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_wdog>;
+	fsl,ext-reset-output;
 	status = "okay";
 };
 
-&gpu_2d {
-	status = "okay";
-};
-
-&ml_vipsi {
-	status = "okay";
-};
-
-&mix_gpu_ml {
-	status = "okay";
-};
-
-#if 0
-&mipi_csi_0 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	status = "okay";
-
-	port@0 {
-		reg = <0>;
-		mipi_csi0_ep: endpoint {
-			remote-endpoint = <&ov5640_mipi_0_ep>;
-			data-lanes = <2>;
-			csis-hs-settle = <13>;
-			csis-clk-settle = <2>;
-			csis-wclk;
-		};
-	};
-};
-
-&mipi_csi_1 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	status = "disabled";
-
-	port@1 {
-		reg = <1>;
-		mipi_csi1_ep: endpoint {
-			remote-endpoint = <&ov5640_mipi_1_ep>;
-			data-lanes = <2>;
-			csis-hs-settle = <13>;
-			csis-clk-settle = <2>;
-			csis-wclk;
-		};
-	};
-};
-#endif
-
-&cameradev {
-	status = "okay";
-};
-
-&isi_0 {
-	status = "okay";
-
-	cap_device {
-		status = "okay";
-	};
-
-	m2m_device {
-		status = "okay";
-	};
-};
-
-&isi_1 {
-	status = "disabled";
-
-	cap_device {
-		status = "okay";
-	};
-};
-
-&dsp {
+&xcvr {
+	#sound-dai-cells = <0>;
 	status = "okay";
 };
