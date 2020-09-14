@@ -1023,7 +1023,7 @@ extern void imx_gpcv2_raise_softirq(const struct cpumask *mask,
 
 static void smp_cross_call(const struct cpumask *target, unsigned int ipinr)
 {
-	if ((unsigned)ipinr < NR_IPI)
+	if (ipinr < NR_IPI)
 		trace_ipi_raise(target, ipi_types[ipinr]);
 	__ipi_send_mask(ipi_desc[ipinr], target);
 
