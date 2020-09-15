@@ -48,6 +48,40 @@
 		isp1 = &isp_1;
 	};
 
+	firmware {
+		android {
+			compatible = "android,firmware";
+			fstab {
+				compatible = "android,fstab";
+				system {
+					compatible = "android,system";
+					dev = "/dev/block/platform/soc@0/30800000.bus/30b40000.mmc/by-name/system";
+					type = "ext4";
+					mnt_flags = "noatime,errors=panic,ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,avb";
+				};
+				vendor {
+					compatible = "android,vendor";
+					dev = "/dev/block/platform/soc@0/30800000.bus/30b40000.mmc/by-name/vendor";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,avb";
+				};
+				metadata {
+					compatible = "android,metadata";
+					dev = "/dev/block/by-name/metadata";
+					type = "ext4";
+					mnt_flags = "noatime,nosuid,nodev,discard,sync";
+					fsmgr_flags = "wait,formattable,first_stage_mount,check";
+				};
+			};
+			vbmeta {
+				compatible = "android,vbmeta";
+				parts = "vbmeta,dtbo,boot,system,vendor";
+			};
+		};
+	};
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
