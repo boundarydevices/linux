@@ -191,6 +191,13 @@
 		>;
 	};
 
+	pinctrl_i2c2_pca9546: i2c2-pca9546grp {
+		fsl,pins = <
+#define GP_PCA9546_RESET	<&gpio1 5 GPIO_ACTIVE_LOW>
+			MX8MP_IOMUXC_GPIO1_IO05__GPIO1_IO05        	0x100
+		>;
+	};
+
 	pinctrl_i2c3: i2c3grp {
 		fsl,pins = <
 			MX8MP_IOMUXC_I2C3_SCL__I2C3_SCL			0x400001c3
@@ -1072,8 +1079,11 @@
 	status = "okay";
 
 	pca9546: i2cmux9546@70 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_pca9546>;
 		compatible = "pca9546";
 		reg = <0x70>;
+		reset-gpios = GP_PCA9546_RESET;
 		#address-cells = <1>;
 		#size-cells = <0>;
 
