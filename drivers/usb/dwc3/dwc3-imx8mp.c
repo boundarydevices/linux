@@ -95,6 +95,27 @@ static irqreturn_t dwc3_imx8mp_interrupt(int irq, void *_dwc3_imx)
 	return IRQ_HANDLED;
 }
 
+static void dwc3_imx8mp_set_role_post(struct dwc3 *dwc, u32 role)
+{
+	switch (role) {
+	case DWC3_GCTL_PRTCAP_HOST:
+		/*
+		 * For xhci host, we need disable dwc core auto
+		 * suspend, because during this auto suspend delay(5s),
+		 * xhci host RUN_STOP is cleared and wakeup is not
+		 * enabled, if device is inserted, xhci host can't
+		 * response the connection.
+		 */
+		pm_runtime_dont_use_autosuspend(dwc->dev);
+		break;
+	case DWC3_GCTL_PRTCAP_DEVICE:
+		pm_runtime_use_autosuspend(dwc->dev);
+		break;
+	default:
+		break;
+	}
+}
+
 static struct xhci_plat_priv dwc3_imx8mp_xhci_priv = {
 	.quirks = XHCI_MISSING_CAS |
 		  XHCI_SKIP_PHY_INIT,
@@ -102,6 +123,7 @@ static struct xhci_plat_priv dwc3_imx8mp_xhci_priv = {
 
 static struct dwc3_platform_data dwc3_imx8mp_pdata = {
 	.xhci_priv = &dwc3_imx8mp_xhci_priv,
+	.set_role_post = dwc3_imx8mp_set_role_post,
 	.quirks = DWC3_SOFT_ITP_SYNC,
 };
 
