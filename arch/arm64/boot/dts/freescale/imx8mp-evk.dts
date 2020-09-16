@@ -665,6 +665,7 @@
 };
 
 &pcie_phy{
+	clk_mode = <3>;
 	status = "okay";
 };
 
