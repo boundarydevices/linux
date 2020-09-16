@@ -225,22 +225,24 @@ static void ts_close(struct input_dev *idev)
 static inline int ts_register(struct ft5x06_ts *ts)
 {
 	struct input_dev *idev;
-	idev = input_allocate_device();
-	if (idev == NULL)
-		return -ENOMEM;
 
-	ts->max_x = 0x7ff;
-	ts->max_y = 0x7ff;
 	if (screenres[0])
 		ts->max_x = screenres[0] - 1;
 	else if (num_registered_fb > 0)
 		ts->max_x = registered_fb[0]->var.xres - 1;
+	else
+		return -EPROBE_DEFER;
 	if (screenres[1])
 		ts->max_y = screenres[1] - 1;
 	else if (num_registered_fb > 0)
 		ts->max_y = registered_fb[0]->var.yres - 1;
 
 	pr_info("%s resolution is %dx%d\n", ts->client_name, ts->max_x + 1, ts->max_y + 1);
+
+	idev = input_allocate_device();
+	if (idev == NULL)
+		return -ENOMEM;
+
 	ts->idev = idev;
 	idev->name      = ts->client_name;
 	idev->id.bustype = BUS_I2C;
