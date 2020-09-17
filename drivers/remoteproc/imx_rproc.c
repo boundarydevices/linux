@@ -6,6 +6,7 @@
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/interrupt.h>
+#include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/mfd/syscon.h>
 #include <linux/module.h>
@@ -76,6 +77,7 @@ struct imx_rproc_dcfg {
 	u32				src_stop;
 	const struct imx_rproc_att	*att;
 	size_t				att_size;
+	bool				elf_mem_hook;
 };
 
 struct imx_rproc {
@@ -310,6 +312,16 @@ static int imx_rproc_addr_init(struct imx_rproc *priv,
 	return 0;
 }
 
+static void imx_rproc_memcpy(struct rproc *rproc, void *dest, const void *src, size_t count)
+{
+	memcpy_toio((void * __iomem)dest, src, count);
+}
+
+static void imx_rproc_memset(struct rproc *rproc, void *s, int c, size_t count)
+{
+	memset_io((void * __iomem)s, c, count);
+}
+
 static int imx_rproc_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -338,6 +350,11 @@ static int imx_rproc_probe(struct platform_device *pdev)
 	if (!dcfg) {
 		ret = -EINVAL;
 		goto err_put_rproc;
+	}
+
+	if (dcfg->elf_mem_hook) {
+		rproc->ops->elf_memcpy = imx_rproc_memcpy;
+		rproc->ops->elf_memset = imx_rproc_memset;
 	}
 
 	priv = rproc->priv;
