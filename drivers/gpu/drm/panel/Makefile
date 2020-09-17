@@ -69,3 +69,4 @@ obj-$(CONFIG_DRM_PANEL_VISIONOX_RM69299) += panel-visionox-rm69299.o
 obj-$(CONFIG_DRM_PANEL_WIDECHIPS_WS2401) += panel-widechips-ws2401.o
 obj-$(CONFIG_DRM_PANEL_XINPENG_XPP055C272) += panel-xinpeng-xpp055c272.o
 obj-$(CONFIG_DRM_PANEL_URT_UMO_9465MD_T) += panel-urt-umo-9465md-t.o
+obj-$(CONFIG_DRM_PANEL_AVD_TT70WS_CN_134_A) += panel-avd-tt70ws-cn-134-a.o

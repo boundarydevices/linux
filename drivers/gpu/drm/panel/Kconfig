@@ -661,4 +661,14 @@ config DRM_PANEL_URT_UMO_9465MD_T
 	help
 	  Say Y here if you want to enable support for U.R.T. UMO-9465MD-T DSI panel
 	  based on HX8260-A controller
+
+config DRM_PANEL_AVD_TT70WS_CN_134_A
+	tristate "AVD TT70WS-CN-134-A panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for AVD TT70WS-CN-134-A DSI panel
+	  based on COGIC-EK731217BGCA controller
+
 endmenu
