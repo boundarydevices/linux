@@ -1105,7 +1105,6 @@
 	reset-gpio = <&gpio7 12 GPIO_ACTIVE_LOW>;
 	vpcie-supply = <&reg_pcie>;
 	epdev_on-supply = <&vgen3_reg>;
-	status = "okay";
 };
 
 &pwm1 {
