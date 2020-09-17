@@ -22,6 +22,7 @@ struct mxsfb_devdata {
 	unsigned int	hs_wdth_mask;
 	unsigned int	hs_wdth_shift;
 	bool		has_overlay;
+	unsigned int	ipversion;
 };
 
 struct mxsfb_drm_private {
