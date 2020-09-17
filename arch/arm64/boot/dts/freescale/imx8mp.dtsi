@@ -2052,6 +2052,12 @@
 			reg = <0x3d800000 0x400000>;
 			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
 		};
+
+		edacmc: memory-controller@3d400000 {
+			compatible = "fsl,imx8mp-ddrc";
+			reg = <0x3d400000 0x400000>;
+			interrupts = <GIC_SPI 147 IRQ_TYPE_LEVEL_HIGH>;
+		};
 	};
 
 	rpmsg: rpmsg{
