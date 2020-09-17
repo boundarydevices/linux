@@ -28,9 +28,11 @@
 			 IMX8MP_CLK_UART4_ROOT>;
 };
 
+/*
 &{/busfreq} {
 	status = "disabled";
 };
+*/
 
 &{/reserved-memory} {
 	jh_reserved: jh@fdc00000 {
