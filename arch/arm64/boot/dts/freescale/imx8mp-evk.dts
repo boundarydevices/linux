@@ -1179,6 +1179,10 @@
 	cap_device {
 		status = "okay";
 	};
+
+	m2m_device {
+		status = "okay";
+	};
 };
 
 &isi_1 {
