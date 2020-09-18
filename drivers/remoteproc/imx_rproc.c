@@ -3,6 +3,7 @@
  * Copyright (c) 2017 Pengutronix, Oleksij Rempel <kernel@pengutronix.de>
  */
 
+#include <linux/arm-smccc.h>
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/interrupt.h>
@@ -17,6 +18,7 @@
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/remoteproc.h>
+#include <soc/imx/imx_sip.h>
 
 #include "remoteproc_internal.h"
 
@@ -76,6 +78,7 @@ struct imx_rproc_att {
 
 enum imx_rproc_method {
 	IMX_DIRECT_MMIO,
+	IMX_ARM_SMCCC,
 };
 
 struct imx_rproc_dcfg {
@@ -102,6 +105,36 @@ struct imx_rproc {
 	struct mbox_chan		*tx_ch;
 	struct mbox_chan		*rx_ch;
 	struct delayed_work		rproc_work;
+};
+
+static const struct imx_rproc_att imx_rproc_att_imx8mn[] = {
+	/* dev addr , sys addr  , size	    , flags */
+	/* ITCM   */
+	{ 0x00000000, 0x007E0000, 0x00020000, ATT_OWN },
+	/* OCRAM_S */
+	{ 0x00180000, 0x00180000, 0x00009000, 0 },
+	/* OCRAM */
+	{ 0x00900000, 0x00900000, 0x00020000, 0 },
+	/* OCRAM */
+	{ 0x00920000, 0x00920000, 0x00020000, 0 },
+	/* OCRAM */
+	{ 0x00940000, 0x00940000, 0x00050000, 0 },
+	/* QSPI Code - alias */
+	{ 0x08000000, 0x08000000, 0x08000000, 0 },
+	/* DDR (Code) - alias */
+	{ 0x10000000, 0x80000000, 0x0FFE0000, 0 },
+	/* DTCM */
+	{ 0x20000000, 0x00800000, 0x00020000, ATT_OWN },
+	/* OCRAM_S - alias */
+	{ 0x20180000, 0x00180000, 0x00008000, ATT_OWN },
+	/* OCRAM */
+	{ 0x20200000, 0x00900000, 0x00020000, ATT_OWN },
+	/* OCRAM */
+	{ 0x20220000, 0x00920000, 0x00020000, ATT_OWN },
+	/* OCRAM */
+	{ 0x20240000, 0x00940000, 0x00040000, ATT_OWN },
+	/* DDR (Data) */
+	{ 0x40000000, 0x40000000, 0x80000000, 0 },
 };
 
 static const struct imx_rproc_att imx_rproc_att_imx8mq[] = {
@@ -182,6 +215,13 @@ static const struct imx_rproc_att imx_rproc_att_imx6sx[] = {
 	{ 0x80000000, 0x80000000, 0x60000000, 0 },
 };
 
+static const struct imx_rproc_dcfg imx_rproc_cfg_imx8mn = {
+	.att		= imx_rproc_att_imx8mn,
+	.att_size	= ARRAY_SIZE(imx_rproc_att_imx8mn),
+	.elf_mem_hook	= true,
+	.method		= IMX_ARM_SMCCC,
+};
+
 static const struct imx_rproc_dcfg imx_rproc_cfg_imx8mq = {
 	.src_reg	= IMX7D_SRC_SCR,
 	.src_mask	= IMX7D_M4_RST_MASK,
@@ -218,6 +258,7 @@ static int imx_rproc_start(struct rproc *rproc)
 	struct imx_rproc *priv = rproc->priv;
 	const struct imx_rproc_dcfg *dcfg = priv->dcfg;
 	struct device *dev = priv->dev;
+	struct arm_smccc_res res;
 	int ret;
 
 	switch (dcfg->method) {
@@ -227,6 +268,10 @@ static int imx_rproc_start(struct rproc *rproc)
 		if (ret)
 			dev_err(dev, "Failed to enable M4!\n");
 
+		break;
+	case IMX_ARM_SMCCC:
+		arm_smccc_smc(IMX_SIP_SRC, IMX_SIP_SRC_M4_START, 0, 0, 0, 0, 0, 0, &res);
+		ret = res.a0;
 		break;
 	default:
 		return -ENOENT;
@@ -240,22 +285,30 @@ static int imx_rproc_stop(struct rproc *rproc)
 	struct imx_rproc *priv = rproc->priv;
 	const struct imx_rproc_dcfg *dcfg = priv->dcfg;
 	struct device *dev = priv->dev;
-	int ret;
+	struct arm_smccc_res res;
+	int ret = 0;
 
 	switch (dcfg->method) {
 	case IMX_DIRECT_MMIO:
 		ret = regmap_update_bits(priv->regmap, dcfg->src_reg,
 					 dcfg->src_mask, dcfg->src_stop);
-		if (ret)
-			dev_err(dev, "Failed to stop M4!\n");
-		else
-			priv->early_boot = false;
+		break;
+	case IMX_ARM_SMCCC:
+		arm_smccc_smc(IMX_SIP_SRC, IMX_SIP_SRC_M4_STOP, 0, 0, 0, 0, 0, 0, &res);
+		ret = res.a0;
+		if (res.a1)
+			dev_info(dev, "remotecore not run into wfi, force stop: %ld %ld %ld\n", res.a0, res.a1, res.a2);
 		break;
 	default:
 		return -ENOENT;
 	}
 
-	return 0;
+	if (ret)
+		dev_err(dev, "Failed to stop M4!\n");
+	else
+		priv->early_boot = false;
+
+	return ret;
 }
 
 static int imx_rproc_da_to_sys(struct imx_rproc *priv, u64 da,
@@ -614,6 +667,7 @@ static int imx_rproc_detect_mode(struct imx_rproc *priv)
 {
 	const struct imx_rproc_dcfg *dcfg = priv->dcfg;
 	struct device *dev = priv->dev;
+	struct arm_smccc_res res;
 	int ret;
 	u32 val;
 
@@ -625,6 +679,10 @@ static int imx_rproc_detect_mode(struct imx_rproc *priv)
 			return ret;
 		}
 		priv->early_boot = !(val & dcfg->src_stop);
+		break;
+	case IMX_ARM_SMCCC:
+		arm_smccc_smc(IMX_SIP_SRC, IMX_SIP_SRC_M4_STARTED, 0, 0, 0, 0, 0, 0, &res);
+		priv->early_boot = !!res.a0;
 		break;
 	default:
 		return -ENOENT;
@@ -678,8 +736,7 @@ static int imx_rproc_probe(struct platform_device *pdev)
 	priv->dcfg = dcfg;
 	priv->dev = dev;
 
-	switch (dcfg->method) {
-	case IMX_DIRECT_MMIO:
+	if (dcfg->method == IMX_DIRECT_MMIO) {
 		regmap = syscon_regmap_lookup_by_phandle(np, "syscon");
 		if (IS_ERR(regmap)) {
 			dev_err(dev, "failed to find syscon\n");
@@ -688,10 +745,6 @@ static int imx_rproc_probe(struct platform_device *pdev)
 		}
 		regmap_attach_dev(dev, regmap, &config);
 		priv->regmap = regmap;
-		break;
-	default:
-		ret = -EINVAL;
-		goto err_put_rproc;
 	}
 
 	dev_set_drvdata(dev, rproc);
@@ -772,6 +825,8 @@ static const struct of_device_id imx_rproc_of_match[] = {
 	{ .compatible = "fsl,imx6sx-cm4", .data = &imx_rproc_cfg_imx6sx },
 	{ .compatible = "fsl,imx8mq-cm4", .data = &imx_rproc_cfg_imx8mq },
 	{ .compatible = "fsl,imx8mm-cm4", .data = &imx_rproc_cfg_imx8mq },
+	{ .compatible = "fsl,imx8mn-cm7", .data = &imx_rproc_cfg_imx8mn },
+	{ .compatible = "fsl,imx8mp-cm7", .data = &imx_rproc_cfg_imx8mn },
 	{},
 };
 MODULE_DEVICE_TABLE(of, imx_rproc_of_match);
