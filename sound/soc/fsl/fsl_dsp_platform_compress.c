@@ -213,6 +213,16 @@ static int dsp_platform_compr_set_params(struct snd_soc_component *component,
 		goto err_comp1_create;
 	}
 
+	ret = xaf_connect(drv->client,
+			&drv->component[0],
+			&drv->component[1],
+			1,
+			OUTBUF_SIZE);
+	if (ret) {
+		dev_err(component->dev, "Failed to connect component, err = %d\n", ret);
+		goto err_comp1_create;
+	}
+
 	drv->client->input_bytes = 0;
 	drv->client->consume_bytes = 0;
 	drv->client->offset = 0;
@@ -290,16 +300,6 @@ static int dsp_platform_compr_trigger_start(struct snd_compr_stream *cstream)
 				drv->client->input_bytes,
 				XF_EMPTY_THIS_BUFFER);
 
-		ret = xaf_connect(drv->client,
-				&drv->component[0],
-				&drv->component[1],
-				1,
-				OUTBUF_SIZE);
-		if (ret) {
-			dev_err(component->dev, "Failed to connect component, err = %d\n", ret);
-			return ret;
-		}
-
 		schedule_work(&drv->client->work);
 	}
 
@@ -329,20 +329,6 @@ static int dsp_platform_compr_trigger_stop(struct snd_compr_stream *cstream)
 	drv->client->consume_bytes = 0;
 	drv->client->offset = 0;
 	drv->client->ping_pong_offset = 0;
-
-	if (!dsp_priv->dsp_is_lpa) {
-		ret = xaf_comp_delete(drv->client, &drv->component[0]);
-		if (ret) {
-			dev_err(component->dev, "Fail to delete component, err = %d\n", ret);
-			return ret;
-		}
-
-		ret = xaf_comp_delete(drv->client, &drv->component[1]);
-		if (ret) {
-			dev_err(component->dev, "Fail to delete component, err = %d\n", ret);
-			return ret;
-		}
-	}
 
 	return 0;
 }
@@ -487,7 +473,7 @@ static int dsp_platform_compr_copy(struct snd_soc_component *component,
 		}
 		drv->client->input_bytes += copied;
 
-		if (cstream->runtime->state == SNDRV_PCM_STATE_RUNNING) {
+		if (cstream->runtime->state == SNDRV_PCM_STATE_RUNNING && copied) {
 		        ret = xaf_comp_process(drv->client, p_comp,
 					       p_comp->inptr, copied,
 					       XF_EMPTY_THIS_BUFFER);
@@ -528,17 +514,6 @@ static int dsp_platform_compr_lpa_pcm_copy(struct snd_soc_component *component,
 				ret = xaf_comp_process(drv->client, p_comp,
 						p_comp->inptr+drv->client->ping_pong_offset, drv->client->offset+copied,
 						XF_EMPTY_THIS_BUFFER);
-				if (!drv->client->input_bytes) {
-					ret = xaf_connect(drv->client,
-							&drv->component[0],
-							&drv->component[1],
-							1,
-							OUTBUF_SIZE);
-					if (ret) {
-						dev_err(component->dev, "Failed to connect component, err = %d\n", ret);
-						return ret;
-					}
-				}
 
 				schedule_work(&drv->client->work);
 				drv->client->input_bytes += drv->client->offset+copied;
@@ -598,17 +573,6 @@ static int dsp_platform_compr_lpa_copy(struct snd_soc_component *component,
 				ret = xaf_comp_process(drv->client, p_comp,
 						p_comp->inptr, drv->client->offset+copied,
 						XF_EMPTY_THIS_BUFFER);
-				if (!drv->client->input_bytes) {
-					ret = xaf_connect(drv->client,
-							&drv->component[0],
-							&drv->component[1],
-							1,
-							OUTBUF_SIZE);
-					if (ret) {
-						dev_err(component->dev, "Failed to connect component, err = %d\n", ret);
-						return ret;
-					}
-				}
 
 				schedule_work(&drv->client->work);
 				drv->client->input_bytes += drv->client->offset+copied;
