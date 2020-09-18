@@ -279,6 +279,7 @@ struct fsl_sai {
 	unsigned int slot_width;
 	unsigned int bitclk_ratio;
 
+	struct snd_soc_dai_driver cpu_dai_drv;
 	struct snd_dmaengine_dai_dma_data dma_params_rx;
 	struct snd_dmaengine_dai_dma_data dma_params_tx;
 	const struct fsl_sai_soc_data *soc;
@@ -288,7 +289,6 @@ struct fsl_sai {
 
 	struct fsl_sai_verid verid;
 	struct fsl_sai_param param;
-	struct snd_soc_dai_driver cpu_dai_drv;
 };
 
 const struct attribute_group *fsl_sai_get_dev_attribute_group(bool monitor_spdif);
