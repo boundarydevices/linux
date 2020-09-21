@@ -397,6 +397,42 @@
 			retain-state-suspended;
 			default-state = "off";
 		};
+
+		red0 {
+			gpios = <&i2c1_pcal6416 0 GPIO_ACTIVE_HIGH>;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		red1 {
+			gpios = <&i2c1_pcal6416 1 GPIO_ACTIVE_HIGH>;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		red2 {
+			gpios = <&i2c1_pcal6416 2 GPIO_ACTIVE_HIGH>;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		red3 {
+			gpios = <&i2c1_pcal6416 3 GPIO_ACTIVE_HIGH>;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		red4 {
+			gpios = <&i2c1_pcal6416 4 GPIO_ACTIVE_HIGH>;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		red5 {
+			gpios = <&i2c1_pcal6416 5 GPIO_ACTIVE_HIGH>;
+			retain-state-suspended;
+			default-state = "off";
+		};
 	};
 
 	memory {
