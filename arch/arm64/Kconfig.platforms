@@ -203,7 +203,6 @@ config ARCH_MXC
 	select PM
 	select PM_GENERIC_DOMAINS
 	select SOC_BUS
-	select TIMER_IMX_SYS_CTR
 	select CLKSRC_IMX_TPM
 	help
 	  This enables support for the ARMv8 based SoCs in the
