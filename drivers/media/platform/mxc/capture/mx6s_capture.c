@@ -961,7 +961,8 @@ static void mx6s_stop_streaming(struct vb2_queue *vq)
 	list_for_each_entry_safe(buf, tmp,
 				&csi_dev->active_bufs, internal.queue) {
 		list_del_init(&buf->internal.queue);
-		if (buf->vb.vb2_buf.state == VB2_BUF_STATE_ACTIVE)
+		if (buf->internal.discard == false &&
+		    buf->vb.vb2_buf.state == VB2_BUF_STATE_ACTIVE)
 			vb2_buffer_done(&buf->vb.vb2_buf, VB2_BUF_STATE_ERROR);
 	}
 
