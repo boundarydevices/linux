@@ -331,11 +331,6 @@
 	model = "Freescale i.MX6 ULL rta Board";
 	compatible = "fsl,imx6ull-rta", "fsl,imx6ull";
 
-	aliases {
-		mmc0 = &usdhc2;
-		mmc1 = &usdhc1;
-	};
-
 	bt-rfkill {
 		compatible = "net,rfkill-gpio";
 		name = "bt-rfkill";
