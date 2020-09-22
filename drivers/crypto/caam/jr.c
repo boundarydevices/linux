@@ -41,6 +41,7 @@ static void register_algs(struct caam_drv_private_jr *jrpriv,
 	caam_pkc_init(dev);
 	jrpriv->hwrng = !caam_rng_init(dev);
 	caam_qi_algapi_init(dev);
+	caam_keygen_init();
 
 algs_unlock:
 	mutex_unlock(&algs_lock);
@@ -53,6 +54,7 @@ static void unregister_algs(struct device *dev)
 	if (--active_devs != 0)
 		goto algs_unlock;
 
+	caam_keygen_exit();
 	caam_qi_algapi_exit();
 
 	caam_pkc_exit();
