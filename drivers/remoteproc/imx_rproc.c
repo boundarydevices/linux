@@ -3,9 +3,11 @@
  * Copyright (c) 2017 Pengutronix, Oleksij Rempel <kernel@pengutronix.de>
  */
 
+#include <dt-bindings/firmware/imx/rsrc.h>
 #include <linux/arm-smccc.h>
 #include <linux/clk.h>
 #include <linux/err.h>
+#include <linux/firmware/imx/sci.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
@@ -16,6 +18,7 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <linux/pm_domain.h>
 #include <linux/regmap.h>
 #include <linux/remoteproc.h>
 #include <soc/imx/imx_sip.h>
@@ -50,7 +53,7 @@
 					 | IMX6SX_SW_M4C_NON_SCLR_RST \
 					 | IMX6SX_SW_M4C_RST)
 
-#define IMX7D_RPROC_MEM_MAX		8
+#define IMX7D_RPROC_MEM_MAX		16
 
 #define REMOTE_IS_READY			BIT(0)
 #define REMOTE_READY_WAIT_MAX_RETRIES	500
@@ -69,7 +72,10 @@ struct imx_rproc_mem {
 
 /* att flags */
 /* M4 own area. Can be mapped at probe */
-#define ATT_OWN		BIT(1)
+#define ATT_OWN		BIT(31)
+/* I = [0:7] */
+#define ATT_CORE_MASK	0xffff
+#define ATT_CORE(I)	BIT((I))
 
 /* address translation table */
 struct imx_rproc_att {
@@ -82,6 +88,8 @@ struct imx_rproc_att {
 enum imx_rproc_method {
 	IMX_DIRECT_MMIO,
 	IMX_ARM_SMCCC,
+	IMX_IPC_ONLY,
+	IMX_SCU_API,
 };
 
 struct imx_rproc_dcfg {
@@ -103,6 +111,7 @@ struct imx_rproc {
 	struct imx_rproc_mem		mem[IMX7D_RPROC_MEM_MAX];
 	struct clk			*clk;
 	bool				early_boot;
+	bool				ipc_only;
 	void				*rsc_va;
 	struct mbox_client		cl;
 	struct mbox_client		cl_rxdb;
@@ -111,9 +120,46 @@ struct imx_rproc {
 	struct mbox_chan		*rx_ch;
 	struct mbox_chan		*rxdb_ch;
 	struct mbox_chan		*txdb_ch;
+	u32				mub_partition;
+	struct notifier_block		proc_nb;
 	u32				flags;
 	spinlock_t			mu_lock;
 	struct delayed_work		rproc_work;
+	u32				rsrc;
+	u32				id;
+	int				num_domains;
+	struct device			**pm_devices;
+	struct device_link		**pm_devices_link;
+};
+
+static struct imx_sc_ipc *ipc_handle;
+
+static const struct imx_rproc_att imx_rproc_att_imx8qm[] = {
+	/* dev addr , sys addr  , size	    , flags */
+	{ 0x08000000, 0x08000000, 0x10000000, 0},
+	/* TCML */
+	{ 0x1FFE0000, 0x34FE0000, 0x00020000, ATT_OWN | ATT_CORE(0)},
+	{ 0x1FFE0000, 0x38FE0000, 0x00020000, ATT_OWN | ATT_CORE(1)},
+	/* TCMU */
+	{ 0x20000000, 0x35000000, 0x00020000, ATT_OWN | ATT_CORE(0)},
+	{ 0x20000000, 0x39000000, 0x00020000, ATT_OWN | ATT_CORE(1)},
+	/* DDR (Data) */
+	{ 0x80000000, 0x80000000, 0x60000000, 0 },
+};
+
+static const struct imx_rproc_att imx_rproc_att_imx8qxp[] = {
+	/* dev addr , sys addr  , size	    , flags */
+	{ 0x08000000, 0x08000000, 0x10000000, 0},
+	/* TCML */
+	{ 0x1FFE0000, 0x34FE0000, 0x00020000, ATT_OWN },
+	/* TCMU */
+	{ 0x20000000, 0x35000000, 0x00020000, ATT_OWN },
+	/* OCRAM(Low 96KB) */
+	{ 0x21000000, 0x00100000, 0x00018000, 0},
+	/* OCRAM */
+	{ 0x21100000, 0x00100000, 0x00040000, 0},
+	/* DDR (Data) */
+	{ 0x80000000, 0x80000000, 0x60000000, 0 },
 };
 
 static const struct imx_rproc_att imx_rproc_att_imx8mn[] = {
@@ -276,6 +322,19 @@ static const struct imx_rproc_dcfg imx_rproc_cfg_imx6sx = {
 	.method		= IMX_DIRECT_MMIO,
 };
 
+static const struct imx_rproc_dcfg imx_rproc_cfg_imx8qxp = {
+	.att		= imx_rproc_att_imx8qxp,
+	.att_size	= ARRAY_SIZE(imx_rproc_att_imx8qxp),
+	.method		= IMX_SCU_API,
+};
+
+static const struct imx_rproc_dcfg imx_rproc_cfg_imx8qm = {
+	.att		= imx_rproc_att_imx8qm,
+	.att_size	= ARRAY_SIZE(imx_rproc_att_imx8qm),
+	.method		= IMX_SCU_API,
+};
+
+
 static int imx_rproc_ready(struct rproc *rproc)
 {
 	struct imx_rproc *priv = rproc->priv;
@@ -290,9 +349,8 @@ static int imx_rproc_ready(struct rproc *rproc)
 		udelay(100);
 	}
 
-	dev_err(priv->dev, "wait rproc timeout\n");
-
-	return -ETIMEDOUT;
+	/* Not return -ETIMEOUT, remote processor might not implement doorbell */
+	return 0;
 }
 
 static int imx_rproc_start(struct rproc *rproc)
@@ -311,6 +369,16 @@ static int imx_rproc_start(struct rproc *rproc)
 	case IMX_ARM_SMCCC:
 		arm_smccc_smc(IMX_SIP_SRC, IMX_SIP_SRC_M4_START, 0, 0, 0, 0, 0, 0, &res);
 		ret = res.a0;
+		break;
+	case IMX_SCU_API:
+		if (priv->ipc_only)
+			return imx_rproc_ready(rproc);
+		if (priv->id == 1)
+			ret = imx_sc_pm_cpu_start(ipc_handle, priv->rsrc, true, 0x38fe0000);
+		else if (!priv->id)
+			ret = imx_sc_pm_cpu_start(ipc_handle, priv->rsrc, true, 0x34fe0000);
+		else
+			ret = -EINVAL;
 		break;
 	case IMX_IPC_ONLY:
 		return -ENOTSUPP;
@@ -335,8 +403,14 @@ static int imx_rproc_stop(struct rproc *rproc)
 	int ret = 0;
 	__u32 mmsg;
 
+	if (rproc->state == RPROC_CRASHED && priv->ipc_only) {
+		priv->flags &= ~REMOTE_IS_READY;
+		return 0;
+	}
+
 	if (dcfg->method == IMX_IPC_ONLY)
 		return -ENOTSUPP;
+
 
 	if (priv->txdb_ch) {
 		ret = mbox_send_message(priv->txdb_ch, (void *)&mmsg);
@@ -356,6 +430,14 @@ static int imx_rproc_stop(struct rproc *rproc)
 		ret = res.a0;
 		if (res.a1)
 			dev_info(dev, "remotecore not run into wfi, force stop: %ld %ld %ld\n", res.a0, res.a1, res.a2);
+		break;
+	case IMX_SCU_API:
+		if (priv->id == 1)
+			ret = imx_sc_pm_cpu_start(ipc_handle, priv->rsrc, false, 0x38fe0000);
+		else if (!priv->id)
+			ret = imx_sc_pm_cpu_start(ipc_handle, priv->rsrc, false, 0x34fe0000);
+		else
+			ret = -EINVAL;
 		break;
 	default:
 		return -ENOENT;
@@ -487,7 +569,7 @@ static int imx_rproc_parse_memory_regions(struct rproc *rproc)
 		/* No need to translate pa to da, i.MX use same map */
 		da = rmem->base;
 
-		if (!strcmp(it.node->name, "rsc_table") && priv->early_boot) {
+		if (!strncmp(it.node->name, "rsc_table", strlen("rsc_table")) && priv->early_boot) {
 			if (priv->rsc_va) {
 				dev_err(priv->dev, "Found duplicated rsc_table\n");
 				return -EINVAL;
@@ -583,15 +665,40 @@ static int imx_rproc_attach(struct rproc *rproc)
 	return 0;
 }
 
+static int imx_rproc_elf_load_segments(struct rproc *rproc,
+				       const struct firmware *fw)
+{
+	struct imx_rproc *priv = rproc->priv;
+
+	if (!priv->ipc_only) {
+		if (!fw)
+			return -EINVAL;
+		return rproc_elf_load_segments(rproc, fw);
+	}
+
+	return imx_rproc_get_loaded_rsc_table(priv->dev, rproc);
+}
+
+static struct resource_table *
+imx_rproc_elf_find_loaded_rsc_table(struct rproc *rproc, const struct firmware *fw)
+{
+	struct imx_rproc *priv = rproc->priv;
+
+	if (!priv->ipc_only)
+		return rproc_elf_find_loaded_rsc_table(rproc, fw);
+
+	return NULL;
+}
+
 static const struct rproc_ops imx_rproc_ops = {
 	.start		= imx_rproc_start,
 	.stop		= imx_rproc_stop,
 	.attach		= imx_rproc_attach,
 	.kick		= imx_rproc_kick,
 	.da_to_va       = imx_rproc_da_to_va,
-	.load		= rproc_elf_load_segments,
+	.load		= imx_rproc_elf_load_segments,
 	.parse_fw	= imx_rproc_parse_fw,
-	.find_loaded_rsc_table = rproc_elf_find_loaded_rsc_table,
+	.find_loaded_rsc_table = imx_rproc_elf_find_loaded_rsc_table,
 	.sanity_check	= rproc_elf_sanity_check,
 	.get_boot_addr	= rproc_elf_get_boot_addr,
 };
@@ -768,6 +875,22 @@ err_out:
 	return ret;
 }
 
+static int imx_rproc_partition_notify(struct notifier_block *nb,
+				      unsigned long event, void *group)
+{
+	struct imx_rproc *priv = container_of(nb, struct imx_rproc, proc_nb);
+
+	/* Ignore other irqs */
+	if (!((event & BIT(priv->mub_partition)) && (*(u8 *)group == 5)))
+		return 0;
+
+	rproc_report_crash(priv->rproc, RPROC_WATCHDOG);
+
+	pr_info("Patition%d reset!\n", priv->mub_partition);
+
+	return 0;
+}
+
 static int imx_rproc_detect_mode(struct imx_rproc *priv)
 {
 	const struct imx_rproc_dcfg *dcfg = priv->dcfg;
@@ -775,6 +898,7 @@ static int imx_rproc_detect_mode(struct imx_rproc *priv)
 	struct arm_smccc_res res;
 	int ret;
 	u32 val;
+	int i;
 
 	switch (dcfg->method) {
 	case IMX_DIRECT_MMIO:
@@ -791,6 +915,78 @@ static int imx_rproc_detect_mode(struct imx_rproc *priv)
 		break;
 	case IMX_IPC_ONLY:
 		priv->early_boot = true;
+		break;
+	case IMX_SCU_API:
+		ret = imx_scu_get_handle(&ipc_handle);
+		if (ret)
+			return ret;
+		ret = of_property_read_u32(dev->of_node, "core-id", &priv->rsrc);
+		if (ret) {
+			dev_err(dev, "No reg <core resource id>\n");
+			return ret;
+		}
+		ret = of_property_read_u32(dev->of_node, "core-index", &priv->id);
+		if (ret) {
+			dev_err(dev, "No reg <core index id>\n");
+			return ret;
+		}
+
+		priv->proc_nb.notifier_call = imx_rproc_partition_notify;
+
+
+		priv->num_domains = of_count_phandle_with_args(dev->of_node, "power-domains",
+							       "#power-domain-cells");
+		if (priv->num_domains < 0)
+			priv->num_domains = 0;
+
+		if (priv->num_domains) {
+			priv->pm_devices = devm_kcalloc(dev, priv->num_domains,
+							sizeof(struct device), GFP_KERNEL);
+			if (!priv->pm_devices)
+				return -ENOMEM;
+			priv->pm_devices_link = devm_kcalloc(dev, priv->num_domains,
+							     sizeof(struct device_link),
+							     GFP_KERNEL);
+			if (!priv->pm_devices)
+				return -ENOMEM;
+
+			for (i = 0; i < priv->num_domains; i++) {
+				priv->pm_devices[i] = genpd_dev_pm_attach_by_id(dev, i);
+				if (IS_ERR(priv->pm_devices[i]))
+					goto err_put_pd;
+				priv->pm_devices_link[i] = device_link_add(dev, priv->pm_devices[i],
+									   DL_FLAG_RPM_ACTIVE |
+									   DL_FLAG_PM_RUNTIME |
+									   DL_FLAG_STATELESS);
+				if (IS_ERR(priv->pm_devices_link[i]))
+					goto err_put_pd;
+			}
+		}
+		if (!imx_sc_rm_is_resource_owned(ipc_handle, priv->rsrc)) {
+			priv->ipc_only = true;
+			priv->early_boot = true;
+			priv->rproc->skip_fw_recovery = true;
+			/*
+			 * Get muB partition id and enable irq in SCFW
+			 * default partition 3
+			 */
+			if (of_property_read_u32(dev->of_node, "mub-partition",
+						 &priv->mub_partition))
+				priv->mub_partition = 3;
+
+			ret = imx_scu_irq_group_enable(5, BIT(priv->mub_partition), true);
+			if (ret) {
+				dev_warn(dev, "Enable irq failed.\n");
+				goto err_put_pd;
+			}
+
+			ret = imx_scu_irq_register_notifier(&priv->proc_nb);
+			if (ret) {
+				imx_scu_irq_group_enable(5, BIT(priv->mub_partition), false);
+				dev_warn(dev, "reqister scu notifier failed.\n");
+				goto err_put_pd;
+			}
+		}
 		break;
 	default:
 		return -ENOENT;
@@ -809,6 +1005,15 @@ static int imx_rproc_detect_mode(struct imx_rproc *priv)
 	}
 
 	return 0;
+
+err_put_pd:
+	for (i = 0; i < priv->num_domains; i++) {
+		if (priv->pm_devices_link[i])
+			device_link_del(priv->pm_devices_link[i]);
+		if (priv->pm_devices[i])
+			dev_pm_domain_detach(priv->pm_devices[i], true);
+	}
+	return ret;
 }
 
 static int imx_rproc_probe(struct platform_device *pdev)
@@ -936,6 +1141,8 @@ static const struct of_device_id imx_rproc_of_match[] = {
 	{ .compatible = "fsl,imx8mm-cm4", .data = &imx_rproc_cfg_imx8mq },
 	{ .compatible = "fsl,imx8mn-cm7", .data = &imx_rproc_cfg_imx8mn },
 	{ .compatible = "fsl,imx8mp-cm7", .data = &imx_rproc_cfg_imx8mn },
+	{ .compatible = "fsl,imx8qxp-cm4", .data = &imx_rproc_cfg_imx8qxp },
+	{ .compatible = "fsl,imx8qm-cm4", .data = &imx_rproc_cfg_imx8qm },
 	{},
 };
 MODULE_DEVICE_TABLE(of, imx_rproc_of_match);
