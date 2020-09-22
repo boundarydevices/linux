@@ -97,6 +97,25 @@
 		enable-active-high;
 	};
 
+	m2_uart1_sel: fixedregulator@101 {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-name = "m2_uart1_sel";
+		gpio = <&pca6416_1 6 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	mux3_en: fixedregulator@102 {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-name = "mux3_en";
+		gpio = <&pca6416_2 8 GPIO_ACTIVE_LOW>;
+		regulator-always-on;
+	};
+
 	pcie_clk_sel_ext: fixedregulator@103 {
 		compatible = "regulator-fixed";
 		regulator-min-microvolt = <3300000>;
