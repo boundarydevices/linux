@@ -1685,7 +1685,7 @@ static int rproc_stop(struct rproc *rproc, bool crashed)
  */
 int rproc_trigger_recovery(struct rproc *rproc)
 {
-	const struct firmware *firmware_p;
+	const struct firmware *firmware_p = NULL;
 	struct device *dev = &rproc->dev;
 	int ret;
 
@@ -1707,16 +1707,19 @@ int rproc_trigger_recovery(struct rproc *rproc)
 	rproc_coredump(rproc);
 
 	/* load firmware */
-	ret = request_firmware(&firmware_p, rproc->firmware, dev);
-	if (ret < 0) {
-		dev_err(dev, "request_firmware failed: %d\n", ret);
-		goto unlock_mutex;
+	if (!rproc->skip_fw_recovery) {
+		ret = request_firmware(&firmware_p, rproc->firmware, dev);
+		if (ret < 0) {
+			dev_err(dev, "request_firmware failed: %d\n", ret);
+			goto unlock_mutex;
+		}
 	}
 
 	/* boot the remote processor up again */
 	ret = rproc_start(rproc, firmware_p);
 
-	release_firmware(firmware_p);
+	if (!rproc->skip_fw_recovery)
+		release_firmware(firmware_p);
 
 unlock_mutex:
 	mutex_unlock(&rproc->lock);
