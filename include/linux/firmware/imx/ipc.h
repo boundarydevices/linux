@@ -59,16 +59,15 @@ int imx_scu_call_rpc(struct imx_sc_ipc *ipc, void *msg, bool have_resp);
  */
 int imx_scu_get_handle(struct imx_sc_ipc **ipc);
 #else
-static inline int
-imx_scu_call_rpc(struct imx_sc_ipc *ipc, void *msg, bool have_resp)
+static inline int imx_scu_call_rpc(struct imx_sc_ipc *ipc, void *msg,
+				   bool have_resp)
 {
-	return -EIO;
-
+	return -ENOTSUPP;
 }
 
 static inline int imx_scu_get_handle(struct imx_sc_ipc **ipc)
 {
-	return -EIO;
+	return -ENOTSUPP;
 }
 #endif
 #endif /* _SC_IPC_H */
