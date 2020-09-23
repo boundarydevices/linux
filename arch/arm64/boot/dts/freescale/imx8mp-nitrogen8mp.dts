@@ -149,6 +149,7 @@
 			MX8MP_IOMUXC_HDMI_DDC_SDA__HDMIMIX_HDMI_SDA	0x400001c3
 			MX8MP_IOMUXC_HDMI_HPD__HDMIMIX_HDMI_HPD		0x40000019
 			MX8MP_IOMUXC_HDMI_CEC__HDMIMIX_HDMI_CEC		0x40000019
+			MX8MP_IOMUXC_NAND_DATA01__GPIO3_IO07		0x119
 		>;
 	};
 
@@ -747,6 +748,10 @@
 		#size-cells = <2>;
 		ranges;
 
+		linux,cma {
+			size = <0 0x20000000>;
+		};
+
 		rpmsg_reserved: rpmsg@0x55800000 {
 			no-map;
 			reg = <0 0x55800000 0 0x800000>;
@@ -828,6 +833,10 @@
 
 &clk {
 	init-on-array = <IMX8MP_CLK_HSIO_ROOT>;
+};
+
+&dewarp {
+	status = "okay";
 };
 
 &dsp {
@@ -1128,7 +1137,7 @@
 		status = "okay";
 
 		port {
-			camera_csi0_ep: endpoint {
+			basler_ep_0: endpoint {
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
 				link-frequencies = /bits/ 64 <248000000>;
@@ -1143,10 +1152,10 @@
 		compatible = "basler,basler-camera-vvcam", "basler-camera-vvcam";
 		reg = <0x36>;
 		csi_id = <0x01>;
-		status = "okay";
+		status = "disabled";
 
 		port {
-			camera_csi1_ep: endpoint {
+			basler_ep_1: endpoint {
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
 				link-frequencies = /bits/ 64 <248000000>;
@@ -1254,7 +1263,7 @@
 };
 
 &isi_0 {
-	status = "okay";
+	status = "disabled";
 
 	cap_device {
 		status = "okay";
@@ -1266,7 +1275,7 @@
 };
 
 &isi_1 {
-	status = "okay";
+	status = "disabled";
 
 	cap_device {
 		status = "okay";
@@ -1352,17 +1361,6 @@
 &mipi_csi_0 {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	assigned-clocks = <&clk IMX8MP_CLK_MEDIA_CAM1_PIX>,
-			  <&clk IMX8MP_CLK_MEDIA_AXI>,
-			  <&clk IMX8MP_CLK_MEDIA_APB>;
-	assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_1000M>,
-				 <&clk IMX8MP_SYS_PLL2_500M>,
-				 <&clk IMX8MP_SYS_PLL1_800M>;
-	assigned-clock-rates = <500000000>, <500000000>, <200000000>;
-	clocks = <&clk IMX8MP_CLK_MEDIA_CAM1_PIX>,
-			 <&clk IMX8MP_CLK_MEDIA_AXI>,
-			 <&clk IMX8MP_CLK_MEDIA_APB>;
-	clock-names = "mipi_clk", "axi_root", "apb_root";
 	status = "okay";
 
 	port@0 {
@@ -1370,10 +1368,10 @@
 
 		mipi_csi0_ep: endpoint {
 			csis-clk-settle = <2>;
-			csis-hs-settle = <13>;
+			csis-hs-settle = <16>;
 			csis-wclk;
-			data-lanes = <2>;
-			remote-endpoint = <&camera_csi0_ep>;
+			data-lanes = <4>;
+			remote-endpoint = <&basler_ep_0>;
 		};
 	};
 };
@@ -1381,28 +1379,17 @@
 &mipi_csi_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	assigned-clocks = <&clk IMX8MP_CLK_MEDIA_CAM2_PIX>,
-			  <&clk IMX8MP_CLK_MEDIA_AXI>,
-			  <&clk IMX8MP_CLK_MEDIA_APB>;
-	assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_1000M>,
-				 <&clk IMX8MP_SYS_PLL2_500M>,
-				 <&clk IMX8MP_SYS_PLL1_800M>;
-	assigned-clock-rates = <500000000>, <500000000>, <200000000>;
-	clocks = <&clk IMX8MP_CLK_MEDIA_CAM2_PIX>,
-			 <&clk IMX8MP_CLK_MEDIA_AXI>,
-			 <&clk IMX8MP_CLK_MEDIA_APB>;
-	clock-names = "mipi_clk", "axi_root", "apb_root";
-	status = "okay";
+	status = "disabled";
 
 	port@1 {
 		reg = <1>;
 
 		mipi_csi1_ep: endpoint {
 			csis-clk-settle = <2>;
-			csis-hs-settle = <13>;
+			csis-hs-settle = <16>;
 			csis-wclk;
-			data-lanes = <2>;
-			remote-endpoint = <&camera_csi1_ep>;
+			data-lanes = <4>;
+			remote-endpoint = <&basler_ep_1>;
 		};
 	};
 };
