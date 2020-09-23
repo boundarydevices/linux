@@ -592,24 +592,16 @@ static struct media_pad
 	struct media_pad *sink_pad, *source_pad;
 	int i;
 
-	while (1) {
-		source_pad = NULL;
-		for (i = 0; i < subdev->entity.num_pads; i++) {
-			sink_pad = &subdev->entity.pads[i];
+	for (i = 0; i < subdev->entity.num_pads; i++) {
+		sink_pad = &subdev->entity.pads[i];
 
-			if (sink_pad->flags & MEDIA_PAD_FL_SINK) {
-				source_pad = media_pad_remote_pad_first(sink_pad);
-				if (source_pad)
-					break;
-			}
+		if (sink_pad->flags & MEDIA_PAD_FL_SINK) {
+			source_pad = media_pad_remote_pad_first(sink_pad);
+			if (source_pad)
+				return source_pad;
 		}
-		/* return first pad point in the loop  */
-		return source_pad;
 	}
-
-	if (i == subdev->entity.num_pads)
-		v4l2_err(subdev, "(%d): No remote pad found!\n", __LINE__);
-
+	v4l2_err(subdev, "(%d): No remote pad found!(%d)\n", __LINE__, i);
 	return NULL;
 }
 
