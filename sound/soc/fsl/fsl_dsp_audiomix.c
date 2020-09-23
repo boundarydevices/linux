@@ -11,6 +11,7 @@
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
+#include <linux/pm_runtime.h>
 
 #include "fsl_dsp_audiomix.h"
 
@@ -55,6 +56,7 @@ static int imx_audiomix_dsp_probe(struct platform_device *pdev)
 		dev_warn(&pdev->dev, "cannot find iomuxc registers\n");
 
 	platform_set_drvdata(pdev, drvdata);
+	pm_runtime_enable(&pdev->dev);
 
 	return 0;
 }
