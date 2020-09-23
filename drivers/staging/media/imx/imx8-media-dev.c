@@ -54,6 +54,7 @@
 enum mxc_subdev_index {
 	IDX_SENSOR,
 	IDX_ISI,
+	IDX_ISP,
 	IDX_MIPI_CSI2,
 	IDX_HDMI_RX,
 	IDX_MJPEG_ENC,
@@ -817,6 +818,8 @@ static int register_mipi_csi2_entity(struct mxc_md *mxc_md,
 
 	sd->grp_id = GRP_ID_MXC_MIPI_CSI2;
 
+	if (sd->v4l2_dev)
+		return -EBUSY;	/* Already registered */
 	ret = v4l2_device_register_subdev(&mxc_md->v4l2_dev, sd);
 	if (!ret)
 		mipi_csi2->sd = sd;
@@ -871,11 +874,37 @@ static int register_hdmi_rx_entity(struct mxc_md *mxc_md,
 	return true;
 }
 
+static int check_csi_entity(struct device_node *node)
+{
+	struct v4l2_subdev *sd;
+
+	sd = get_subdev_by_node(node);
+	if (!sd) {
+		pr_info("deferring %s device registration\n", node->name);
+		return -EPROBE_DEFER;
+	}
+	return 0;
+}
+
+static int check_isi_entity(struct device_node *node)
+{
+	struct device_node *child;
+	int ret;
+
+	child = of_get_child_by_name(node, "cap_device");
+	if (!child) {
+		pr_err("Can not get child node for cap_device\n");
+		return -EINVAL;
+	}
+	ret = check_csi_entity(child);
+	of_node_put(child);
+	return ret;
+}
+
 static int mxc_md_register_platform_entity(struct mxc_md *mxc_md,
 					   struct device_node *node,
 					   int plat_entity)
 {
-	struct device *dev = &mxc_md->pdev->dev;
 	struct mxc_isi_info *isi;
 	struct mxc_mipi_csi2_info *mipi_csi2;
 	struct mxc_parallel_csi_info *pcsidev;
@@ -884,18 +913,29 @@ static int mxc_md_register_platform_entity(struct mxc_md *mxc_md,
 
 	switch (plat_entity) {
 	case IDX_ISI:
+		if (!mxc_md)
+			return check_isi_entity(node);
 		isi = mxc_md_parse_isi_entity(mxc_md, node);
 		if (!isi)
 			return -ENODEV;
 		ret = register_isi_entity(mxc_md, isi);
 		break;
+	case IDX_ISP:
+		if (!mxc_md)
+			return check_csi_entity(node);
+		ret = 0;
+		break;
 	case IDX_MIPI_CSI2:
+		if (!mxc_md)
+			return check_csi_entity(node);
 		mipi_csi2 = mxc_md_parse_csi_entity(mxc_md, node);
 		if (!mipi_csi2)
 			return -ENODEV;
 		ret = register_mipi_csi2_entity(mxc_md, mipi_csi2);
 		break;
 	case IDX_PARALLEL_CSI:
+		if (!mxc_md)
+			return check_csi_entity(node);
 		pcsidev = mxc_md_parse_pcsi_entity(mxc_md, node);
 		if (!pcsidev)
 			return -ENODEV;
@@ -908,7 +948,9 @@ static int mxc_md_register_platform_entity(struct mxc_md *mxc_md,
 		ret = register_hdmi_rx_entity(mxc_md, hdmi_rx);
 		break;
 	default:
-		dev_err(dev, "Invalid platform entity (%d)", plat_entity);
+		if (mxc_md)
+			dev_err(&mxc_md->pdev->dev,
+				"Invalid platform entity (%d)", plat_entity);
 		return ret;
 	}
 
@@ -930,6 +972,8 @@ static int mxc_md_register_platform_entities(struct mxc_md *mxc_md,
 		/* If driver of any entity isn't ready try all again later. */
 		if (!strcmp(node->name, ISI_OF_NODE_NAME))
 			plat_entity = IDX_ISI;
+		else if (!strcmp(node->name, "isp"))
+			plat_entity = IDX_ISP;
 		else if (!strcmp(node->name, MIPI_CSI2_OF_NODE_NAME))
 			plat_entity = IDX_MIPI_CSI2;
 		else if (!strcmp(node->name, PARALLEL_OF_NODE_NAME))
@@ -1043,6 +1087,11 @@ static int mxc_md_probe(struct platform_device *pdev)
 	struct v4l2_device *v4l2_dev;
 	struct mxc_md *mxc_md;
 	int ret;
+
+	/* queries only */
+	ret = mxc_md_register_platform_entities(NULL, dev->of_node);
+	if (ret)
+		return ret;
 
 	mxc_md = devm_kzalloc(dev, sizeof(*mxc_md), GFP_KERNEL);
 	if (!mxc_md)
