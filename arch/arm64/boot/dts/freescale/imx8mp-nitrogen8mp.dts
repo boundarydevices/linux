@@ -752,7 +752,6 @@
 		};
 	};
 
-#if 0
 	sound-hdmi {
 		compatible = "fsl,imx-audio-cdnhdmi";
 		model = "audio-hdmi";
@@ -767,7 +766,6 @@
 				<192000>;
 		status = "okay";
 	};
-#endif
 
 	sound-wm8960 {
 		compatible = "fsl,imx-audio-wm8960";
