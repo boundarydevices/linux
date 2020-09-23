@@ -9,34 +9,32 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/platform_device.h>
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
 
 #include "fsl_dsp_audiomix.h"
 
 struct imx_audiomix_dsp_data {
-	void __iomem *base;
+	struct regmap *regmap;
 };
 
 void imx_audiomix_dsp_start(struct imx_audiomix_dsp_data *data)
 {
-	u32 val;
-
-	val = readl(data->base + AudioDSP_REG2);
-	val &= ~(1 << 5);
-	writel(val, data->base + AudioDSP_REG2);
+	regmap_update_bits(data->regmap, AudioDSP_REG2, 1 << 5,  0);
 }
 EXPORT_SYMBOL(imx_audiomix_dsp_start);
 
 void imx_audiomix_dsp_pid_set(struct imx_audiomix_dsp_data *data, u32 val)
 {
-	writel(val, data->base + AudioDSP_REG3);
+	regmap_write(data->regmap, AudioDSP_REG3, val);
 }
 EXPORT_SYMBOL(imx_audiomix_dsp_pid_set);
 
 bool imx_audiomix_dsp_reset(struct imx_audiomix_dsp_data *data)
 {
-	u32 val;
+	u32 val = 0;
 
-	val = readl(data->base + AudioDSP_REG3);
+	regmap_read(data->regmap, AudioDSP_REG3, &val);
 	if (val == 0)
 		return true;
 	else
@@ -47,13 +45,14 @@ EXPORT_SYMBOL(imx_audiomix_dsp_reset);
 static int imx_audiomix_dsp_probe(struct platform_device *pdev)
 {
 	struct imx_audiomix_dsp_data *drvdata;
-	struct device *dev = &pdev->dev;
 
 	drvdata = devm_kzalloc(&pdev->dev, sizeof(*drvdata), GFP_KERNEL);
 	if (drvdata == NULL)
 		return -ENOMEM;
 
-	drvdata->base = dev_get_drvdata(dev->parent);
+	drvdata->regmap = syscon_regmap_lookup_by_compatible("fsl,imx8mp-audio-blk-ctrl");
+	if (IS_ERR(drvdata->regmap))
+		dev_warn(&pdev->dev, "cannot find iomuxc registers\n");
 
 	platform_set_drvdata(pdev, drvdata);
 
