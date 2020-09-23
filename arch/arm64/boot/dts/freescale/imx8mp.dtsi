@@ -1830,6 +1830,11 @@
 				assigned-clock-parents = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI_PLL>;
 			};
 
+			audiomix_dsp: audiomix_dsp {
+				compatible = "fsl,audiomix-dsp";
+				power-domains = <&audiomix_pd>;
+			};
+
 			mu2: mu2@30e60000 {
 				compatible = "fsl,imx8-mu-dsp", "fsl,imx6sx-mu";
 				reg = <0x30E60000 0x10000>;
