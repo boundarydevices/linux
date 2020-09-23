@@ -191,6 +191,9 @@
 	cpu-supply = <&buck2>;
 };
 
+&dsp {
+	status = "okay";
+};
 
 &pwm1 {
 	pinctrl-names = "default";
