@@ -43,13 +43,23 @@ static u32 share_count_audio;
 
 static int shared_count_pdm;
 
+/* descending order */
 static const struct imx_pll14xx_rate_table imx_blk_ctrl_sai_pll_tbl[] = {
-	PLL_1443X_RATE(650000000U, 325, 3, 2, 0),
+	PLL_1443X_RATE(245760000U, 328, 4, 3, 0xae15),
+	PLL_1443X_RATE(225792000U, 226, 3, 3, 0xcac1),
+	PLL_1443X_RATE(122880000U, 328, 4, 4, 0xae15),
+	PLL_1443X_RATE(112896000U, 226,	3, 4, 0xcac1),
+	PLL_1443X_RATE(61440000U, 328, 4, 5, 0xae15),
+	PLL_1443X_RATE(56448000U, 226, 3, 5, 0xcac1),
+	PLL_1443X_RATE(49152000U, 393, 3, 6, 0x374c),
+	PLL_1443X_RATE(45158400U, 241, 2, 6, 0xd845),
+	PLL_1443X_RATE(40960000U, 109, 1, 6, 0x3a07),
 };
 
 static const struct imx_pll14xx_clk imx_blk_ctrl_sai_pll = {
 	.type = PLL_1443X,
 	.rate_table = imx_blk_ctrl_sai_pll_tbl,
+	.rate_count = ARRAY_SIZE(imx_blk_ctrl_sai_pll_tbl),
 };
 
 static const char *imx_sai_mclk2_sels[] = {"sai1_root", "sai2_root", "sai3_root", "dummy",
