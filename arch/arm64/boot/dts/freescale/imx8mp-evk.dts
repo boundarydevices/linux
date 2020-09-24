@@ -147,6 +147,17 @@
 		};
 	};
 
+	sound-xcvr {
+		compatible = "fsl,imx-audio-card";
+		model = "imx-audio-xcvr";
+		pri-dai-link {
+			link-name = "XCVR PCM";
+			cpu {
+				sound-dai = <&xcvr>;
+			};
+		};
+	};
+
 	lvds_backlight: lvds_backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm2 0 100000>;
@@ -678,6 +689,11 @@
 		 <&clk IMX8MP_CLK_DUMMY>;
 	clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 	fsl,sai-mclk-direction-output;
+	status = "okay";
+};
+
+&xcvr {
+	#sound-dai-cells = <0>;
 	status = "okay";
 };
 
