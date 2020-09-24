@@ -269,6 +269,7 @@
 
 	pinctrl_pdm: pdmgrp {
 		fsl,pins = <
+			MX8MP_IOMUXC_SAI1_RXC__AUDIOMIX_CLK		0xd6
 			MX8MP_IOMUXC_SAI3_RXFS__AUDIOMIX_BIT_STREAM00	0xd6
 		>;
 	};
