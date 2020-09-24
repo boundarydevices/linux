@@ -95,10 +95,10 @@ static int tmu_get_temp(void *data, int *temp)
 			if (val & SIGN_BIT) /* negative */
 				val = (~(val & TEMP_VAL_MASK) + 1);
 
-			if (ready && val >= -40 && val <= 125)
+			if (ready && ((s32)val >= -40) && ((s32)val <= 125))
 				break;
 		}
-		if (loop_cnt >= 1)
+		if (loop_cnt > 1)
 			return -EAGAIN;
 		loop_cnt++;
 	}
