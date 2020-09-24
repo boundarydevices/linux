@@ -2219,12 +2219,12 @@
 		reg = <0x0 0x38000000 0x0 0x8000>;
 		interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&clk IMX8MP_CLK_GPU3D_ROOT>,
-			 <&clk IMX8MP_CLK_GPU3D_SHADER_DIV>,
+			 <&clk IMX8MP_CLK_GPU3D_SHADER_CORE>,
 			 <&clk IMX8MP_CLK_GPU_AXI>,
 			 <&clk IMX8MP_CLK_GPU_AHB>;
 		clock-names = "core", "shader", "axi", "ahb";
-		assigned-clocks = <&clk IMX8MP_CLK_GPU3D_CORE_SRC>,
-				  <&clk IMX8MP_CLK_GPU3D_SHADER_SRC>,
+		assigned-clocks = <&clk IMX8MP_CLK_GPU3D_CORE>,
+				  <&clk IMX8MP_CLK_GPU3D_SHADER_CORE>,
 				  <&clk IMX8MP_CLK_GPU_AXI>,
 				  <&clk IMX8MP_CLK_GPU_AHB>;
 		assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_1000M>,
@@ -2245,7 +2245,7 @@
 			 <&clk IMX8MP_CLK_GPU_AXI>,
 			 <&clk IMX8MP_CLK_GPU_AHB>;
 		clock-names = "core", "axi", "ahb";
-		assigned-clocks = <&clk IMX8MP_CLK_GPU2D_SRC>,
+		assigned-clocks = <&clk IMX8MP_CLK_GPU2D_CORE>,
 				  <&clk IMX8MP_CLK_GPU_AXI>,
 				  <&clk IMX8MP_CLK_GPU_AHB>;
 		assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_1000M>,
@@ -2265,7 +2265,7 @@
 				<&clk IMX8MP_CLK_ML_AXI>,
 				<&clk IMX8MP_CLK_ML_AHB>;
 		clock-names = "core", "shader", "axi", "ahb";
-		assigned-clocks = <&clk IMX8MP_CLK_ML_SRC>,
+		assigned-clocks = <&clk IMX8MP_CLK_ML_CORE>,
 				  <&clk IMX8MP_CLK_ML_AXI>,
 				  <&clk IMX8MP_CLK_ML_AHB>;
 		assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_1000M>,
