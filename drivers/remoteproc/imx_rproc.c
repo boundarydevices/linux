@@ -555,7 +555,7 @@ static int imx_rproc_parse_memory_regions(struct rproc *rproc)
 		 * Ignore the first memory region which will be used vdev buffer.
 		 * No need to do extra handlings, rproc_add_virtio_dev will handle it.
 		 */
-		if (!index) {
+		if (!index && !strcmp(it.node->name, "vdevbuffer")) {
 			index ++;
 			continue;
 		}
