@@ -478,6 +478,11 @@ static int imx_rproc_da_to_sys(struct imx_rproc *priv, u64 da,
 	for (i = 0; i < dcfg->att_size; i++) {
 		const struct imx_rproc_att *att = &dcfg->att[i];
 
+		if (att->flags & ATT_CORE_MASK) {
+			if (!((1 << priv->id) & (att->flags & ATT_CORE_MASK)))
+				continue;
+		}
+
 		if (da >= att->da && da + len < att->da + att->size) {
 			unsigned int offset = da - att->da;
 
@@ -748,6 +753,11 @@ static int imx_rproc_addr_init(struct imx_rproc *priv,
 		if (!(att->flags & ATT_OWN))
 			continue;
 
+		if (att->flags & ATT_CORE_MASK) {
+			if (!((1 << priv->id) & (att->flags & ATT_CORE_MASK)))
+				continue;
+		}
+
 		if (b >= IMX_RPROC_MEM_MAX)
 			break;
 
@@ -810,6 +820,8 @@ static void imx_rproc_vq_work(struct work_struct *work)
 
 	rproc_vq_interrupt(priv->rproc, 0);
 	rproc_vq_interrupt(priv->rproc, 1);
+	rproc_vq_interrupt(priv->rproc, 2);
+	rproc_vq_interrupt(priv->rproc, 3);
 }
 
 static void imx_rproc_rx_callback(struct mbox_client *cl, void *msg)
