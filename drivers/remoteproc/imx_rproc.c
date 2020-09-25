@@ -569,8 +569,8 @@ static int imx_rproc_parse_memory_regions(struct rproc *rproc)
 		/* No need to translate pa to da, i.MX use same map */
 		da = rmem->base;
 
-		if (!strncmp(it.node->name, "rsc_table", strlen("rsc_table")) && priv->early_boot) {
-			if (priv->rsc_va) {
+		if (!strncmp(it.node->name, "rsc_table", strlen("rsc_table"))) {
+			if (priv->rsc_va && priv->early_boot) {
 				dev_err(priv->dev, "Found duplicated rsc_table\n");
 				return -EINVAL;
 			}
@@ -622,7 +622,19 @@ static int imx_rproc_get_loaded_rsc_table(struct device *dev,
 	if (!priv->rsc_va)
 		return 0;
 
+#if 0
 	rproc->table_ptr = (struct resource_table *)priv->rsc_va;
+#else
+	/*
+	 * This is a hack workaround, this will not let M4 detect vdev status,
+	 * because vring is conflict with resource table,
+	 * because NXP M4 SDK not detect vdev status update, so we just use a copied
+	 * table here, for future, m4 need use a new address for publishing resource table
+	 * Then we could change to
+	 * rproc->table_ptr = (struct resource_table *)priv->rsc_va;
+	 */
+	rproc->table_ptr = kmemdup(priv->rsc_va, SZ_1K, GFP_KERNEL);
+#endif
 	rproc->table_sz = SZ_1K;
 	rproc->cached_table = NULL;
 
@@ -670,13 +682,10 @@ static int imx_rproc_elf_load_segments(struct rproc *rproc,
 {
 	struct imx_rproc *priv = rproc->priv;
 
-	if (!priv->ipc_only) {
-		if (!fw)
-			return -EINVAL;
-		return rproc_elf_load_segments(rproc, fw);
-	}
+	if (priv->ipc_only || !fw)
+		return -EINVAL;
 
-	return imx_rproc_get_loaded_rsc_table(priv->dev, rproc);
+	return rproc_elf_load_segments(rproc, fw);
 }
 
 static struct resource_table *
@@ -684,10 +693,20 @@ imx_rproc_elf_find_loaded_rsc_table(struct rproc *rproc, const struct firmware *
 {
 	struct imx_rproc *priv = rproc->priv;
 
-	if (!priv->ipc_only)
-		return rproc_elf_find_loaded_rsc_table(rproc, fw);
 
-	return NULL;
+	if (priv->ipc_only)
+		return NULL;
+
+#if 0
+	/*
+	 * We not return this currently, because vring conflicts with resource table on NXP
+	 * i.MX M4 SDK
+	 */
+	if (priv->rsc_va)
+		return priv->rsc_va;
+#endif
+
+	return rproc_elf_find_loaded_rsc_table(rproc, fw);
 }
 
 static const struct rproc_ops imx_rproc_ops = {
