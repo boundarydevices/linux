@@ -59,6 +59,7 @@
 		enable-active-high;
 		startup-delay-us = <300000>;
 		gpio = <&pca6416 1 GPIO_ACTIVE_HIGH>;
+		regulator-always-on;
 	};
 
 	reg_usdhc2_vmmc: regulator-usdhc2 {
