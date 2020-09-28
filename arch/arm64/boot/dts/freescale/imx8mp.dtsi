@@ -1282,6 +1282,7 @@
 				assigned-clock-rates = <0>, <500000000>, <200000000>;
 				interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
 				blk-ctl = <&media_blk_ctrl>;
+				resets = <&media_blk_ctrl IMX8MP_MEDIA_BLK_CTRL_RESET_LCDIF_APB>;
 				power-domains = <&mediamix_pd>;
 				status = "disabled";
 
