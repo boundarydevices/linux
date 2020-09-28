@@ -1037,7 +1037,7 @@
 		pinctrl-0 = <&pinctrl_i2c4a_exc3000>;
 		reg = <0x2a>;
 		reset-gpios = GP_EXC3000_RESET;
-		status = "disabled";
+		status = "okay";
 	};
 
 	ts_ft5x06: touchscreen@38 {
