@@ -6,11 +6,14 @@
 //
 // Hardware interface for audio DSP on i.MX8M
 
+#include <linux/bits.h>
 #include <linux/clk.h>
 #include <linux/firmware.h>
+#include <linux/mfd/syscon.h>
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
+#include <linux/regmap.h>
 
 #include <linux/module.h>
 #include <sound/sof.h>
@@ -22,6 +25,14 @@
 
 #define MBOX_OFFSET	0x800000
 #define MBOX_SIZE	0x1000
+
+/* DSP audio mix registers */
+#define AudioDSP_REG0	0x100
+#define AudioDSP_REG1	0x104
+#define AudioDSP_REG2	0x108
+#define AudioDSP_REG3	0x10c
+
+#define AudioDSP_REG2_RUNSTALL	BIT(5)
 
 #define IMX8M_DSP_CLK_NUM	3
 static const char *imx8m_dsp_clks_names[IMX8M_DSP_CLK_NUM] =
@@ -49,6 +60,8 @@ struct imx8m_priv {
 
 	struct clk *dsp_clks[IMX8M_DSP_CLK_NUM];
 	struct clk *dai_clks[IMX8M_DAI_CLK_NUM];
+
+	struct regmap *regmap;
 };
 
 static int imx8m_init_clocks(struct snd_sof_dev *sdev)
@@ -208,7 +221,10 @@ static int imx8m_send_msg(struct snd_sof_dev *sdev, struct snd_sof_ipc_msg *msg)
  */
 static int imx8m_run(struct snd_sof_dev *sdev)
 {
-	/* TODO: start DSP using Audio MIX bits */
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
+
+	regmap_update_bits(priv->regmap, AudioDSP_REG2, AudioDSP_REG2_RUNSTALL, 0);
+
 	return 0;
 }
 
@@ -294,6 +310,13 @@ static int imx8m_probe(struct snd_sof_dev *sdev)
 
 	/* set default mailbox offset for FW ready message */
 	sdev->dsp_box.offset = MBOX_OFFSET;
+
+	priv->regmap = syscon_regmap_lookup_by_compatible("fsl,imx8mp-audio-blk-ctrl");
+	if (IS_ERR(priv->regmap)) {
+		dev_err(sdev->dev, "cannot find audio-blk-ctrl registers");
+		ret = PTR_ERR(priv->regmap);
+		goto exit_pdev_unregister;
+	}
 
 	imx8m_init_clocks(sdev);
 	imx8m_prepare_clocks(sdev);
