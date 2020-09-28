@@ -258,7 +258,8 @@ static int imx_get_temp(struct thermal_zone_device *tz, int *temp)
 	bool wait, run_measurement;
 	u32 val;
 
-	run_measurement = !data->irq_enabled;
+	regmap_read(map, soc_data->sensor_ctrl, &val);
+	run_measurement = val & soc_data->power_down_mask;
 	if (!run_measurement) {
 		/* Check if a measurement is currently in progress */
 		regmap_read(map, soc_data->temp_data, &val);
