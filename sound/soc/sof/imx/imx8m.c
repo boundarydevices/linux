@@ -456,7 +456,7 @@ static int imx8m_dsp_resume(struct snd_sof_dev *sdev)
 	return 0;
 }
 
-static int imx8m_dsp_suspend(struct snd_sof_dev *sdev)
+static int imx8m_dsp_suspend(struct snd_sof_dev *sdev, unsigned int target_state)
 {
 	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
 
