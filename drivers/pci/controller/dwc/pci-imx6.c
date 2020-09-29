@@ -1165,7 +1165,6 @@ static int imx6_add_pcie_port(struct imx6_pcie *imx6_pcie,
 		pp->msi_irq = platform_get_irq_byname(pdev, "msi");
 		if (pp->msi_irq < 0)
 			return pp->msi_irq;
-	pr_info("rz_dbg %s %d msi_irq 0x%x.\n", __func__, __LINE__, pp->msi_irq);
 	}
 
 	pp->ops = &imx6_pcie_host_ops;
@@ -1194,6 +1193,20 @@ static const struct dw_pcie_ops dw_pcie_ops = {
 	/* No special ops needed, but pcie-designware still expects this struct */
 	.cpu_addr_fixup = imx6_pcie_cpu_addr_fixup,
 };
+
+static void pci_imx_set_msi_en(struct pcie_port *pp)
+{
+	u16 val;
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+
+	if (pci_msi_enabled()) {
+		val = dw_pcie_readw_dbi(pci, PCIE_RC_IMX6_MSI_CAP +
+					PCI_MSI_FLAGS);
+		val |= PCI_MSI_FLAGS_ENABLE;
+		dw_pcie_writew_dbi(pci, PCIE_RC_IMX6_MSI_CAP + PCI_MSI_FLAGS,
+				   val);
+	}
+}
 
 #ifdef CONFIG_PM_SLEEP
 static void imx6_pcie_ltssm_disable(struct device *dev)
@@ -1348,6 +1361,7 @@ static int imx6_pcie_resume_noirq(struct device *dev)
 	imx6_pcie_init_phy(imx6_pcie);
 	imx6_pcie_deassert_core_reset(imx6_pcie);
 	dw_pcie_setup_rc(pp);
+	pci_imx_set_msi_en(pp);
 
 	ret = imx6_pcie_establish_link(imx6_pcie);
 	if (ret < 0)
@@ -1371,7 +1385,6 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 	struct resource *dbi_base;
 	struct device_node *node = dev->of_node;
 	int ret;
-	u16 val;
 
 	imx6_pcie = devm_kzalloc(dev, sizeof(*imx6_pcie), GFP_KERNEL);
 	if (!imx6_pcie)
@@ -1587,12 +1600,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
-	if (pci_msi_enabled()) {
-		u8 offset = dw_pcie_find_capability(pci, PCI_CAP_ID_MSI);
-		val = dw_pcie_readw_dbi(pci, offset + PCI_MSI_FLAGS);
-		val |= PCI_MSI_FLAGS_ENABLE;
-		dw_pcie_writew_dbi(pci, offset + PCI_MSI_FLAGS, val);
-	}
+	pci_imx_set_msi_en(&pci->pp);
 
 	return 0;
 }
