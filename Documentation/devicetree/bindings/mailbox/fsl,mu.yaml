@@ -29,8 +29,8 @@ properties:
       - const: fsl,imx8ulp-mu
       - const: fsl,imx8-mu-scu
       - const: fsl,imx8-mu-seco
-      - const: fsl,imx93-mu-s4
       - const: fsl,imx8ulp-mu-s4
+      - const: fsl,imx93-mu-s4
       - items:
           - const: fsl,imx93-mu
           - const: fsl,imx8ulp-mu
@@ -51,7 +51,9 @@ properties:
               - fsl,imx8qm-mu
               - fsl,imx8qxp-mu
           - const: fsl,imx6sx-mu
-
+      - description: To communicate with i.MX8 SECO with fast IPC
+        items:
+          - const: fsl,imx8-mu-seco
   reg:
     maxItems: 1
 
