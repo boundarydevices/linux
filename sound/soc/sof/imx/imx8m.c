@@ -413,8 +413,7 @@ int imx8m_resume(struct snd_sof_dev *sdev)
 	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
 	int i;
 
-	for (i = 0; i < IMX8M_DSP_CLK_NUM; i++)
-		clk_prepare_enable(priv->clks[i]);
+	imx8m_prepare_clocks(priv->sdev);
 
 	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
 		imx_dsp_request_channel(priv->dsp_ipc, i);
@@ -430,8 +429,7 @@ int imx8m_suspend(struct snd_sof_dev *sdev)
 	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
 		imx_dsp_free_channel(priv->dsp_ipc, i);
 
-	for (i = 0; i < IMX8M_DSP_CLK_NUM; i++)
-		clk_disable_unprepare(priv->clks[i]);
+	imx8m_disable_clocks(priv->sdev);
 
 	return 0;
 }
