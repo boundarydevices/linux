@@ -31,7 +31,8 @@ config IMX_SCU_PD
 
 config IMX_SECO_MU
 	tristate "i.MX Security Controller (SECO) support"
-	depends on IMX_SCU && IMX_MBOX
+	depends on IMX_MBOX
+	default y if IMX_SCU
 
 	help
 	  It is possible to use APIs exposed by the SECO like HSM and SHE using the
