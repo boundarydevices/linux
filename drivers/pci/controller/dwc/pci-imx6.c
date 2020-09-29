@@ -1461,6 +1461,14 @@ err_reset_phy:
 		dw_pcie_readl_dbi(pci, PCIE_PORT_DEBUG0),
 		dw_pcie_readl_dbi(pci, PCIE_PORT_DEBUG1));
 	imx6_pcie_reset_phy(imx6_pcie);
+	if (!IS_ENABLED(CONFIG_PCI_IMX6_COMPLIANCE_TEST)) {
+		imx6_pcie_clk_disable(imx6_pcie);
+		if (imx6_pcie->vpcie != NULL)
+			regulator_disable(imx6_pcie->vpcie);
+		if (imx6_pcie->epdev_on != NULL)
+			regulator_disable(imx6_pcie->epdev_on);
+	}
+
 	return ret;
 }
 
@@ -1495,7 +1503,8 @@ static int imx6_pcie_host_init(struct pcie_port *pp)
 	imx6_setup_phy_mpll(imx6_pcie);
 	if (!IS_ENABLED(CONFIG_EP_MODE_IN_EP_RC_SYS)) {
 		dw_pcie_setup_rc(pp);
-		imx6_pcie_establish_link(imx6_pcie);
+		if (imx6_pcie_establish_link(imx6_pcie))
+			return -ENODEV;
 		dw_pcie_msi_init(pp);
 	}
 
