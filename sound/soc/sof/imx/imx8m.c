@@ -246,7 +246,7 @@ static int imx8m_reset(struct snd_sof_dev *sdev) {
 	/* keep reset asserted for 10 cycles */
 	usleep_range(1, 2);
 
-	regmap_update_bits(priv->regmap_audiomix, AudioDSP_REG2,
+	regmap_update_bits(priv->regmap, AudioDSP_REG2,
 			   AudioDSP_REG2_RUNSTALL, AudioDSP_REG2_RUNSTALL);
 
 	/* take the DSP out of reset and keep stalled for FW loading */
@@ -346,10 +346,10 @@ static int imx8m_probe(struct snd_sof_dev *sdev)
 	/* set default mailbox offset for FW ready message */
 	sdev->dsp_box.offset = MBOX_OFFSET;
 
-	sdev->regmap = syscon_regmap_lookup_by_compatible("fsl,imx8mp-audio-blk-ctrl");
-	if (IS_ERR(sdev->regmap)) {
+	priv->regmap = syscon_regmap_lookup_by_compatible("fsl,imx8mp-audio-blk-ctrl");
+	if (IS_ERR(priv->regmap)) {
 		dev_err(sdev->dev, "cannot find audio-blk-ctrl registers");
-		ret = PTR_ERR(sdev->regmap);
+		ret = PTR_ERR(priv->regmap);
 		goto exit_pdev_unregister;
 	}
 
