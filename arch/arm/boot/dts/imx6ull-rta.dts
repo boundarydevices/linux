@@ -70,10 +70,14 @@
 			MX6UL_PAD_CSI_DATA03__ECSPI2_MISO		0x100b1
 			MX6UL_PAD_CSI_DATA02__ECSPI2_MOSI		0x100b1
 			MX6UL_PAD_CSI_DATA00__ECSPI2_SCLK		0x100b1
-#define GP_ECSPI2_CS			<&gpio4 22 GPIO_ACTIVE_LOW>
+#define GP_ECSPI2_CS0			<&gpio4 22 GPIO_ACTIVE_LOW>
 			MX6UL_PAD_CSI_DATA01__GPIO4_IO22		0x0b0b1
-#define GPIRQ_ECSPI2			<&gpio3 23 IRQ_TYPE_LEVEL_LOW>
+#define GP_ECSPI2_CS1			<&gpio1 18 GPIO_ACTIVE_LOW>
+			MX6UL_PAD_UART1_CTS_B__GPIO1_IO18		0x0b0b1
+#define GPIRQ0_ECSPI2			<&gpio3 23 IRQ_TYPE_LEVEL_LOW>
 			MX6UL_PAD_LCD_DATA18__GPIO3_IO23		0x030b0
+#define GPIRQ_ESP32			<&gpio3 26 IRQ_TYPE_EDGE_RISING>
+			MX6UL_PAD_LCD_DATA21__GPIO3_IO26		0x0b0b0
 		>;
 	};
 
@@ -121,8 +125,6 @@
 				/* Test points */
 #define GP_TP28				<&gpio3 15 GPIO_ACTIVE_HIGH>
 			MX6UL_PAD_LCD_DATA10__GPIO3_IO15	0x030b1
-#define GP_SPARE1			<&gpio3 16 GPIO_ACTIVE_HIGH>
-			MX6UL_PAD_LCD_DATA11__GPIO3_IO16	0x030b1
 #define GP_SPARE2			<&gpio4 20 GPIO_ACTIVE_LOW>
 			MX6UL_PAD_CSI_HSYNC__GPIO4_IO20	0x0b0b1
 		>;
@@ -350,13 +352,6 @@
 	model = "Freescale i.MX6 ULL rta Board";
 	compatible = "fsl,imx6ull-rta", "fsl,imx6ull";
 
-	bt-rfkill {
-		compatible = "net,rfkill-gpio";
-		name = "bt-rfkill";
-		type = <2>;	/* bluetooth */
-		reset-gpios = <&i2c2_pcal6416 11 GPIO_ACTIVE_LOW>;
-	};
-
 	gpio-keys {
 		compatible = "gpio-keys";
 
@@ -511,8 +506,8 @@
 };
 
 &ecspi2 {
-	fsl,spi-num-chipselects = <1>;
-	cs-gpios = GP_ECSPI2_CS;
+	fsl,spi-num-chipselects = <2>;
+	cs-gpios = GP_ECSPI2_CS0, GP_ECSPI2_CS1;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi2>;
 	status = "okay";
@@ -521,6 +516,14 @@
 		compatible = "spidev";
 		spi-max-frequency = <2000000>;
 		reg = <0>;
+	};
+
+	wifi@1 {
+		compatible = "espressif,esp32";
+		spi-max-frequency = <2000000>;
+		reg = <1>;
+		interrupts-extended = GPIRQ_ESP32;
+		reset-gpio = <&i2c2_pcal6416 10 GPIO_ACTIVE_HIGH>;
 	};
 };
 
