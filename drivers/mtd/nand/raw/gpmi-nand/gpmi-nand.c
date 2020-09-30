@@ -444,16 +444,18 @@ static int set_geometry_for_large_oob(struct gpmi_nand_data *this)
 	struct bch_geometry *geo = &this->bch_geometry;
 	struct nand_chip *chip = &this->nand;
 	struct mtd_info *mtd = nand_to_mtd(chip);
+	const struct nand_ecc_props *requirements =
+		nanddev_get_ecc_requirements(&chip->base);
 	unsigned int block_mark_bit_offset;
 	unsigned int max_ecc;
 	unsigned int bbm_chunk;
 	unsigned int i;
 
 	/* sanity check for the minimum ecc nand required */
-	if (!(chip->base.eccreq.strength > 0 &&
-	      chip->base.eccreq.step_size > 0))
+	if (!(requirements->strength > 0 &&
+	      requirements->step_size > 0))
 		return -EINVAL;
-	geo->ecc_strength = chip->base.eccreq.strength;
+	geo->ecc_strength = requirements->strength;
 
 	/* check if platform can support this nand */
 	if (!gpmi_check_ecc(this)) {
@@ -475,7 +477,7 @@ static int set_geometry_for_large_oob(struct gpmi_nand_data *this)
 
 	/* search a supported ecc strength that makes bbm */
 	/* located in data chunk  */
-	geo->ecc_strength = chip->base.eccreq.strength;
+	geo->ecc_strength = requirements->strength;
 	while (!(geo->ecc_strength > max_ecc)) {
 		if (bbm_in_data_chunk(this, &bbm_chunk))
 			goto geo_setting;
@@ -484,7 +486,7 @@ static int set_geometry_for_large_oob(struct gpmi_nand_data *this)
 
 	/* if none of them works, keep using the minimum ecc */
 	/* nand required but changing ecc page layout  */
-	geo->ecc_strength = chip->base.eccreq.strength;
+	geo->ecc_strength = requirements->strength;
 	/* add extra ecc for meta data */
 	geo->ecc_chunk0_size = 0;
 	geo->ecc_chunk_count = (mtd->writesize / geo->ecc_chunkn_size) + 1;
@@ -686,14 +688,14 @@ static int common_nfc_set_geometry(struct gpmi_nand_data *this)
 	const struct nand_ecc_props *requirements =
 		nanddev_get_ecc_requirements(&chip->base);
 
-	if (chip->base.eccreq.strength > 0 && chip->base.eccreq.step_size > 0) {
+	if (requirements->strength > 0 && requirements->step_size > 0) {
 		if (mtd->oobsize > 1024
-		    || chip->base.eccreq.step_size < mtd->oobsize)
+		    || requirements->step_size < mtd->oobsize)
 			return set_geometry_for_large_oob(this);
 		else
 			return set_geometry_by_ecc_info(this,
-						chip->base.eccreq.strength,
-						chip->base.eccreq.step_size);
+						requirements->strength,
+						requirements->step_size);
 	}
 
 	if ((of_property_read_bool(this->dev->of_node, "fsl,use-minimum-ecc"))
