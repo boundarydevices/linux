@@ -1561,14 +1561,19 @@ static int nanohub_request_gpios(struct nanohub_data *data)
 		}
 		if (gpio_has_irq(cfg)) {
 			int irq = gpio_to_irq(gpio);
-			if (irq > 0) {
-				nanohub_set_irq_data(data, cfg, irq);
-			} else if (!optional) {
-				ret = -EINVAL;
-				pr_err("nanohub: no irq; gpio %d[%s];err=%d\n",
-				       gpio, label, irq);
-				break;
+                        if (irq <= 0) {
+				if (!optional)
+					irq = irq_of_parse_and_map(data->iio_dev->dev.parent->of_node, 0);
+				else
+					continue;
+				if (irq <= 0) {
+					ret = -EINVAL;
+					pr_err("nanohub: no irq; gpio %d[%s];err=%d\n",
+					       gpio, label, irq);
+					break;
+				}
 			}
+			nanohub_set_irq_data(data, cfg, irq);
 		}
 	}
 	if (i < ARRAY_SIZE(gconf)) {
