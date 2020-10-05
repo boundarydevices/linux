@@ -203,7 +203,7 @@ static int imx_mu_generic_rx(struct imx_mu_priv *priv,
 static int imx_mu_generic_rxdb(struct imx_mu_priv *priv,
 			       struct imx_mu_con_priv *cp)
 {
-	imx_mu_write(priv, priv->dcfg->xSR, IMX_MU_xSR_GIPn(cp->idx));
+	imx_mu_write(priv, IMX_MU_xSR_GIPn(cp->idx), priv->dcfg->xSR);
 	mbox_chan_received_data(cp->chan, NULL);
 
 	return 0;
