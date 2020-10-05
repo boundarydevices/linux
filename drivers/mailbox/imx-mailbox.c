@@ -791,7 +791,7 @@ static const struct imx_mu_dcfg imx_mu_cfg_imx7ulp = {
 static const struct imx_mu_dcfg imx_mu_cfg_imx8_scu = {
 	.tx	= imx_mu_scu_tx,
 	.rx	= imx_mu_scu_rx,
-	.rxdb	= NULL,
+	.rxdb	= imx_mu_generic_rxdb,
 	.init	= imx_mu_init_scu,
 	.xTR	= {0x0, 0x4, 0x8, 0xc},
 	.xRR	= {0x10, 0x14, 0x18, 0x1c},
@@ -801,7 +801,7 @@ static const struct imx_mu_dcfg imx_mu_cfg_imx8_scu = {
 
 static const struct imx_mu_dcfg imx_mu_cfg_imx8_seco = {
 	.tx	= imx_mu_seco_tx,
-	.rx	= NULL,
+	.rx	= imx_mu_generic_rx,
 	.rxdb	= imx_mu_seco_rxdb,
 	.init	= imx_mu_init_seco,
 	.xTR	= {0x0, 0x4, 0x8, 0xc},
