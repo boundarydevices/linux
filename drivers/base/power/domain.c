@@ -3177,6 +3177,9 @@ unsigned int pm_genpd_opp_to_performance_state(struct device *genpd_dev,
 	if (unlikely(!genpd->opp_to_performance_state))
 		return 0;
 
+	if (unlikely(!genpd->lock_ops))
+		return 0;
+
 	genpd_lock(genpd);
 	state = genpd->opp_to_performance_state(genpd, opp);
 	genpd_unlock(genpd);
