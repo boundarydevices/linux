@@ -180,7 +180,7 @@ static int avd_tt_panel_unprepare(struct drm_panel *panel)
 		return ret;
 	}
 
-	gpiod_set_value(avd_tt->reset_gpio, 0);
+	gpiod_set_value_cansleep(avd_tt->reset_gpio, 0);
 
 	avd_tt->prepared = false;
 
@@ -195,11 +195,11 @@ static int avd_tt_panel_prepare(struct drm_panel *panel)
 	if (avd_tt->prepared)
 		return 0;
 
-	gpiod_set_value(avd_tt->reset_gpio, 1);
+	gpiod_set_value_cansleep(avd_tt->reset_gpio, 1);
 	msleep(20);
-	gpiod_set_value(avd_tt->reset_gpio, 0);
+	gpiod_set_value_cansleep(avd_tt->reset_gpio, 0);
 	msleep(30);
-	gpiod_set_value(avd_tt->reset_gpio, 1);
+	gpiod_set_value_cansleep(avd_tt->reset_gpio, 1);
 
 	ret = avd_tt_panel_on(avd_tt);
 	if (ret < 0) {
@@ -212,7 +212,7 @@ static int avd_tt_panel_prepare(struct drm_panel *panel)
 	return 0;
 
 poweroff:
-	gpiod_set_value(avd_tt->reset_gpio, 0);
+	gpiod_set_value_cansleep(avd_tt->reset_gpio, 0);
 	return ret;
 }
 
