@@ -322,7 +322,7 @@ static int mtk_pmic_keys_probe(struct platform_device *pdev)
 
 		/* optional: release irq might be separate */
 		keys->keys[index].irq_r =
-			platform_get_irq_byname(pdev, irqnames_r[index]);
+			platform_get_irq_byname_optional(pdev, irqnames_r[index]);
 
 		error = of_property_read_u32(child,
 			"linux,keycodes", &keys->keys[index].keycode);
