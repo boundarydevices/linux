@@ -166,6 +166,9 @@ static void mxsfb_enable_controller(struct mxsfb_drm_private *mxsfb)
 		writel(CTRL2_OUTSTANDING_REQS(REQ_16),
 		       mxsfb->base + LCDC_V4_CTRL2 + REG_SET);
 
+	/* De-assert LCD Reset bit */
+	writel(CTRL_LCD_RESET, mxsfb->base + LCDC_CTRL1 + REG_SET);
+
 	/* If it was disabled, re-enable the mode again */
 	writel(CTRL_DOTCLK_MODE, mxsfb->base + LCDC_CTRL + REG_SET);
 
@@ -182,9 +185,14 @@ static void mxsfb_disable_controller(struct mxsfb_drm_private *mxsfb)
 {
 	u32 reg;
 
+	writel(CTRL_RUN, mxsfb->base + LCDC_CTRL + REG_CLR);
+
 	if (mxsfb->devdata->ipversion >= 4)
 		writel(CTRL2_OUTSTANDING_REQS(0x7),
 		       mxsfb->base + LCDC_V4_CTRL2 + REG_CLR);
+
+	/* Assert LCD Reset bit */
+	writel(CTRL_LCD_RESET, mxsfb->base + LCDC_CTRL1 + REG_CLR);
 
 	writel(CTRL_RUN, mxsfb->base + LCDC_CTRL + REG_CLR);
 
