@@ -259,8 +259,8 @@ static int avd_tt_panel_get_modes(struct drm_panel *panel,
 
 	drm_mode_probed_add(connector, mode);
 
-	connector->display_info.width_mm = 224;
-	connector->display_info.height_mm = 106;
+	connector->display_info.width_mm = 154;
+	connector->display_info.height_mm = 86;
 
 	return 1;
 }
