@@ -37,6 +37,8 @@
 &mipi_dsi {
 	status = "okay";
 	fsl,clock-drop-level = <2>;
+	#address-cells = <1>;
+	#size-cells = <0>;
 
 	panel@0 {
 		compatible = "raydium,rm67191";
