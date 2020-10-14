@@ -10,6 +10,7 @@
 
 #include <dt-bindings/soc/imx8_hsio.h>
 #include <linux/bitfield.h>
+#include <linux/busfreq-imx.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
@@ -2288,6 +2289,36 @@ static void imx6_pcie_ltssm_disable(struct device *dev)
 	}
 }
 
+static ssize_t bus_freq_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int ret;
+	u32 bus_freq;
+
+	ret = sscanf(buf, "%x\n", &bus_freq);
+	if (ret != 1)
+		return -EINVAL;
+	if (bus_freq) {
+		dev_info(dev, "pcie request bus freq high.\n");
+		request_bus_freq(BUS_FREQ_HIGH);
+	} else {
+		dev_info(dev, "pcie release bus freq high.\n");
+		release_bus_freq(BUS_FREQ_HIGH);
+	}
+
+	return count;
+}
+static DEVICE_ATTR_WO(bus_freq);
+
+static struct attribute *imx_pcie_rc_attrs[] = {
+	&dev_attr_bus_freq.attr,
+	NULL
+};
+
+static struct attribute_group imx_pcie_attrgroup = {
+	.attrs	= imx_pcie_rc_attrs,
+};
+
 #ifdef CONFIG_PM_SLEEP
 static void imx6_pcie_pm_turnoff(struct imx6_pcie *imx6_pcie)
 {
@@ -2793,6 +2824,11 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 
 	switch (imx6_pcie->drvdata->mode) {
 	case DW_PCIE_RC_TYPE:
+		/* add attributes for bus freq */
+		ret = sysfs_create_group(&pdev->dev.kobj, &imx_pcie_attrgroup);
+		if (ret)
+			goto err_ret;
+
 		ret = imx6_add_pcie_port(imx6_pcie, pdev);
 		if (ret < 0) {
 			if (IS_ENABLED(CONFIG_PCI_IMX6_COMPLIANCE_TEST)) {
