@@ -652,6 +652,36 @@
 	};
 };
 
+&usbphy1 {
+	status = "okay";
+};
+
+&usbotg1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbotg1>;
+	srp-disable;
+	hnp-disable;
+	adp-disable;
+	power-active-high;
+	disable-over-current;
+	status = "okay";
+};
+
+&usbphy2 {
+	status = "okay";
+};
+
+&usbotg2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbotg2>;
+	srp-disable;
+	hnp-disable;
+	adp-disable;
+	power-active-high;
+	disable-over-current;
+	status = "okay";
+};
+
 &usdhc1 {
 		pinctrl-names = "default", "state_100mhz", "state_200mhz";
 		pinctrl-0 = <&pinctrl_usdhc1>;
@@ -687,6 +717,18 @@
 			IMX8DXL_COMP_CTL_GPIO_1V8_3V3_GPIORHK_PAD	0x000014a0
 			IMX8DXL_SPI3_CS0_ADMA_ACM_MCLK_OUT1		0x0600004c
 			IMX8DXL_SNVS_TAMPER_OUT1_LSIO_GPIO2_IO05_IN	0x0600004c
+		>;
+	};
+
+	pinctrl_usbotg1: otg1 {
+		fsl,pins = <
+			IMX8DXL_USB_SS3_TC0_CONN_USB_OTG1_PWR		0x00000021
+		>;
+	};
+
+	pinctrl_usbotg2: otg2 {
+		fsl,pins = <
+			IMX8DXL_USB_SS3_TC1_CONN_USB_OTG2_PWR		0x00000021
 		>;
 	};
 
