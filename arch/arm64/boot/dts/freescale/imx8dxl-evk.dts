@@ -184,6 +184,13 @@
 		off-on-delay-us = <3480>;
 	};
 
+	reg_vref_1v8: regulator-adc-vref {
+		compatible = "regulator-fixed";
+		regulator-name = "vref_1v8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
+
 	sound-wm8960 {
 		compatible = "fsl,imx7d-evk-wm8960",
 			   "fsl,imx-audio-wm8960";
@@ -240,6 +247,11 @@
 			"LINPUT1", "Mic Jack",
 			"Mic Jack", "MICB";
 	};
+};
+
+&adc0 {
+	vref-supply = <&reg_vref_1v8>;
+	status = "okay";
 };
 
 &asrc0 {
