@@ -34,13 +34,13 @@
 &i2c3b {
 	/delete-node/ ov5640-mipi1@3c;
 
-	tc358743_mipi@0f {
+	tc358743_mipi@f {
 		AVDD-supply = <&reg_vref_2v5>;
 		DOVDD-supply = <&reg_vref_1v8>;
 		DVDD-supply = <&reg_vref_1v8>;
 		clocks = <&clk27m>;
 		clock-names = "refclk";
-		compatible = "tc358743";
+		compatible = "toshiba,tc358743";
 		csi_id = <0>;
 		interrupts-extended = GPIRQ_TC3587;
 		ipu_id = <0>;
