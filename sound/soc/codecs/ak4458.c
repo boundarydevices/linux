@@ -629,48 +629,6 @@ static void ak4458_reset(struct ak4458_priv *ak4458, bool active)
 	}
 }
 
-static int ak4458_init(struct snd_soc_component *component)
-{
-	struct ak4458_priv *ak4458 = snd_soc_component_get_drvdata(component);
-	int ret;
-
-	/* External Mute ON */
-	if (ak4458->mute_gpiod)
-		gpiod_set_value_cansleep(ak4458->mute_gpiod, 1);
-
-	ak4458_reset(ak4458, false);
-
-	ret = snd_soc_component_update_bits(component, AK4458_00_CONTROL1,
-			    0x80, 0x80);   /* ACKS bit = 1; 10000000 */
-	if (ret < 0)
-		return ret;
-
-	if (ak4458->drvdata->type == AK4497) {
-		ret = snd_soc_component_update_bits(component, AK4458_09_DSD2,
-						    0x4, (ak4458->dsd_path << 2));
-		if (ret < 0)
-			return ret;
-	}
-
-	return ak4458_rstn_control(component, 1);
-}
-
-static int ak4458_probe(struct snd_soc_component *component)
-{
-	struct ak4458_priv *ak4458 = snd_soc_component_get_drvdata(component);
-
-	ak4458->fs = 48000;
-
-	return ak4458_init(component);
-}
-
-static void ak4458_remove(struct snd_soc_component *component)
-{
-	struct ak4458_priv *ak4458 = snd_soc_component_get_drvdata(component);
-
-	ak4458_reset(ak4458, true);
-}
-
 #ifdef CONFIG_PM
 static int __maybe_unused ak4458_runtime_suspend(struct device *dev)
 {
@@ -714,8 +672,6 @@ static int __maybe_unused ak4458_runtime_resume(struct device *dev)
 #endif /* CONFIG_PM */
 
 static const struct snd_soc_component_driver soc_codec_dev_ak4458 = {
-	.probe			= ak4458_probe,
-	.remove			= ak4458_remove,
 	.controls		= ak4458_snd_controls,
 	.num_controls		= ARRAY_SIZE(ak4458_snd_controls),
 	.dapm_widgets		= ak4458_dapm_widgets,
@@ -729,8 +685,6 @@ static const struct snd_soc_component_driver soc_codec_dev_ak4458 = {
 };
 
 static const struct snd_soc_component_driver soc_codec_dev_ak4497 = {
-	.probe			= ak4458_probe,
-	.remove			= ak4458_remove,
 	.controls		= ak4497_snd_controls,
 	.num_controls		= ARRAY_SIZE(ak4497_snd_controls),
 	.dapm_widgets		= ak4497_dapm_widgets,
@@ -812,18 +766,60 @@ static int ak4458_i2c_probe(struct i2c_client *i2c)
 		return ret;
 	}
 
+	ret = regulator_bulk_enable(ARRAY_SIZE(ak4458->supplies),
+				    ak4458->supplies);
+	if (ret != 0) {
+		dev_err(ak4458->dev, "Failed to enable supplies: %d\n", ret);
+		return ret;
+	}
+
+	ak4458->fs = 48000;
+
+	/* External Mute ON */
+	if (ak4458->mute_gpiod)
+		gpiod_set_value_cansleep(ak4458->mute_gpiod, 1);
+
+	ak4458_reset(ak4458, false);
+
+	ret = regmap_update_bits(ak4458->regmap, AK4458_00_CONTROL1,
+				 0x80, 0x80);   /* ACKS bit = 1; 10000000 */
+	if (ret < 0) {
+		dev_err(ak4458->dev, "Failed to set acks: %d\n", ret);
+		goto err_init;
+	}
+
+	if (ak4458->drvdata->type == AK4497) {
+		ret = regmap_update_bits(ak4458->regmap, AK4458_09_DSD2,
+					 0x4, (ak4458->dsd_path << 2));
+		if (ret < 0) {
+			dev_err(ak4458->dev, "Failed to set dsd path: %d\n", ret);
+			goto err_init;
+		}
+	}
+
+	ret = regmap_update_bits(ak4458->regmap, AK4458_00_CONTROL1,
+				 AK4458_RSTN_MASK, 0x1);
+	if (ret < 0) {
+		dev_err(ak4458->dev, "Failed to set rstn: %d\n", ret);
+		goto err_init;
+	}
+
 	ret = devm_snd_soc_register_component(ak4458->dev,
 					      ak4458->drvdata->comp_drv,
 					      ak4458->drvdata->dai_drv, 1);
 	if (ret < 0) {
 		dev_err(ak4458->dev, "Failed to register CODEC: %d\n", ret);
-		return ret;
+		goto err_init;
 	}
 
 	pm_runtime_enable(&i2c->dev);
 	regcache_cache_only(ak4458->regmap, true);
 
-	return 0;
+err_init:
+	ak4458_reset(ak4458, true);
+	regulator_bulk_disable(ARRAY_SIZE(ak4458->supplies), ak4458->supplies);
+
+	return ret;
 }
 
 static int ak4458_i2c_remove(struct i2c_client *i2c)
