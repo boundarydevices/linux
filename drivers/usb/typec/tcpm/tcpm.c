@@ -4958,7 +4958,7 @@ static int tcpm_psy_set_prop(struct power_supply *psy,
 			     const union power_supply_propval *val)
 {
 	struct tcpm_port *port = power_supply_get_drvdata(psy);
-	int ret;
+	int ret = 0;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
