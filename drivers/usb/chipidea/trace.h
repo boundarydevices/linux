@@ -59,9 +59,9 @@ DECLARE_EVENT_CLASS(ci_log_trb,
 		__entry->token = td->ptr->token;
 		__entry->type = usb_endpoint_type(hwep->ep.desc);
 	),
-	TP_printk("%s: req: %p, td %p, td_dma_address: 0x%llx, remaining_size: %d,"
+	TP_printk("%s: req: %p, td %p, td_dma_address: %pad, remaining_size: %d,"
 	       "next: 0x%x, total bytes: %d, status: 0x%lx",
-		__get_str(name), __entry->req, __entry->td, __entry->dma,
+		__get_str(name), __entry->req, __entry->td, &__entry->dma,
 		__entry->td_remaining_size, __entry->next,
 		(int)((__entry->token & TD_TOTAL_BYTES) >> __ffs(TD_TOTAL_BYTES)),
 		__entry->token & TD_STATUS
