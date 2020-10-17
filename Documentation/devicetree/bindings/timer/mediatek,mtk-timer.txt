@@ -30,6 +30,11 @@ Required properties:
 - reg: Should contain location and length for timer register.
 - clocks: Should contain system clock.
 
+Optional properties:
+- clock-names: May contain:
+	* "clk13m": 13MHz clock system clock
+	* "bus": Bus clock
+
 Examples:
 
 	timer@10008000 {
