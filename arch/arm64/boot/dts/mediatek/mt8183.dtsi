@@ -1946,7 +1946,7 @@
 					<&topckgen CLK_TOP_MUX_SENINF>;
 			clock-names = "cam_seninf", "top_mux_seninf";
 			power-domains = <&scpsys MT8183_POWER_DOMAIN_CAM>;
-			phys = <&mipi_rx 0>;
+			phys = <&mipi_rx 3>;
 			phy-names = "mipi_dphy_rx";
 			status = "disabled";
 
