@@ -63,6 +63,15 @@ config DRM_LVDS_ENCODER
 	  Support for transparent parallel to LVDS encoders that don't require
 	  any configuration.
 
+config DRM_LT8912
+	tristate "Lontium LT8912 mipi_dsi to HDMI out bridge"
+	depends on OF
+	select DRM_KMS_HELPER
+	select REGMAP_I2C
+	select DRM_PANEL
+	---help---
+	  Lontium LT8912 mipi_dsi to HDMI out bridge driver.
+
 config DRM_MEGACHIPS_STDPXXXX_GE_B850V3_FW
 	tristate "MegaChips stdp4028-ge-b850v3-fw and stdp2690-ge-b850v3-fw"
 	depends on OF
