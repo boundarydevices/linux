@@ -16,15 +16,27 @@
 	};
 };
 
-&pcie0 {
-	status = "disabled";
+&iomuxc {
+	/delete-node/ pcie0grp;
+
+	pinctrl_pcie1: pcie1grp {
+		fsl,pins = <
+#define GP_PCIE1_RESET		<&gpio1 10 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_GPIO1_IO10_GPIO1_IO10		0x19	/* Pin 105 */
+		>;
+	};
 };
+
+/delete-node/ &pcie0;
 
 &pcie1 {
 	/delete-property/ hard-wired;
+#if 0
+	/* Leave in hog group for now */
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pcie0>;
-	reset-gpio = GP_PCIE0_RESET;
+	pinctrl-0 = <&pinctrl_pcie1>;
+#endif
+	reset-gpio = GP_PCIE1_RESET;
 	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
 		<&clk IMX8MQ_CLK_PCIE2_AUX>,
 		<&clk IMX8MQ_CLK_PCIE2_PHY>,

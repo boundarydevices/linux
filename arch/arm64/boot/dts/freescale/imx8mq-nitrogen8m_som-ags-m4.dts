@@ -9,6 +9,19 @@
 	model = "Boundary Devices i.MX8MQ Nitrogen8M SOM AGS M4";
 	compatible = "boundary,imx8mq-nitrogen8m_som-ags-m4", "fsl,imx8mq";
 
+	aliases {
+		/delete-property/ mipi_cmds_com50h5n03ulc;
+		/delete-property/ mipi_cmds_lcm_jm430;
+		/delete-property/ mipi_cmds_ltk0680ytmdb;
+		/delete-property/ mipi_to_lvds;
+		/delete-property/ pinctrl_com50h5n03ulc;
+		/delete-property/ pinctrl_lcm_jm430;
+		/delete-property/ pinctrl_ltk0680ytmdb;
+		/delete-property/ ts_ft5x06;
+		/delete-property/ ts_goodix;
+		/delete-property/ ts_st1633i;
+	};
+
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -20,6 +33,75 @@
 		};
 
 	};
+
+	/delete-node/ bt-rfkill;
+	/delete-node/ sound-wm8960;
+};
+
+/delete-node/ &mipi_cmds_com50h5n03ulc;
+/delete-node/ &mipi_cmds_lcm_jm430;
+/delete-node/ &mipi_cmds_ltk0680ytmdb;
+
+/delete-node/ &pinctrl_bt_rfkill;
+/delete-node/ &pinctrl_i2c1d_gt911;
+/delete-node/ &pinctrl_i2c1d_ft5x06;
+/delete-node/ &pinctrl_i2c1d_sn65dsi83;
+/delete-node/ &pinctrl_i2c1d_st1633;
+/delete-node/ &pinctrl_i2c2_csi1;
+/delete-node/ &pinctrl_i2c3_csi2;
+/delete-node/ &pinctrl_i2c4_pca9546;
+/delete-node/ &pinctrl_i2c4b_wm8960;
+/delete-node/ &pinctrl_mipi_com50h5n03ulc;
+/delete-node/ &pinctrl_mipi_lcm_jm430;
+/delete-node/ &pinctrl_mipi_ltk0680ytmdb;
+/delete-node/ &pinctrl_reg_wlan_vmmc;
+
+/delete-node/ &ts_goodix;
+/delete-node/ &ts_ft5x06;
+/delete-node/ &mipi_to_lvds;
+/delete-node/ &ts_st1633i;
+/delete-node/ &csi1_bridge;
+/delete-node/ &csi2_bridge;
+/delete-node/ &reg_wlan_vmmc;
+
+&ecspi2 {
+	status = "disabled";
+};
+
+&i2c2 {
+	/delete-node/ ov5640-mipi1@3c;
+};
+
+&i2c3 {
+	/delete-node/ ov5640-mipi2@3c;
+};
+
+&i2c4 {
+	/delete-node/ i2cmux@70;
+};
+
+&gpio3 {
+	status = "disabled";
+};
+
+&gpio4 {
+	status = "disabled";
+};
+
+&gpio5 {
+	status = "disabled";
+};
+
+&mipi_csi_1 {
+	/delete-node/ port;
+};
+
+&mipi_csi_2 {
+	/delete-node/ port;
+};
+
+&reg_arm_dram {
+	/delete-property/ vsel-gpios;
 };
 
 &rpmsg {
@@ -33,6 +115,11 @@
 };
 
 &uart2 {
+	status = "disabled";
+};
+
+&usdhc2 {
+	/delete-property/ vmmc-supply;
 	status = "disabled";
 };
 
