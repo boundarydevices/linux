@@ -1539,8 +1539,9 @@
 			power-domains = <&pgc_pcie>;
 			resets = <&src IMX8MQ_RESET_PCIEPHY>,
 			         <&src IMX8MQ_RESET_PCIE_CTRL_APPS_EN>,
-			         <&src IMX8MQ_RESET_PCIE_CTRL_APPS_TURNOFF>;
-			reset-names = "pciephy", "apps", "turnoff";
+				 <&src IMX8MQ_RESET_PCIE_CTRL_APPS_CLK_REQ>,
+				 <&src IMX8MQ_RESET_PCIE_CTRL_APPS_TURNOFF>;
+			reset-names = "pciephy", "apps", "clkreq", "turnoff";
 			assigned-clocks = <&clk IMX8MQ_CLK_PCIE1_CTRL>,
 			                  <&clk IMX8MQ_CLK_PCIE1_PHY>,
 			                  <&clk IMX8MQ_CLK_PCIE1_AUX>;
@@ -1578,8 +1579,9 @@
 			power-domains = <&pgc_pcie>;
 			resets = <&src IMX8MQ_RESET_PCIEPHY2>,
 			         <&src IMX8MQ_RESET_PCIE2_CTRL_APPS_EN>,
-			         <&src IMX8MQ_RESET_PCIE2_CTRL_APPS_TURNOFF>;
-			reset-names = "pciephy", "apps", "turnoff";
+				 <&src IMX8MQ_RESET_PCIE2_CTRL_APPS_CLK_REQ>,
+				 <&src IMX8MQ_RESET_PCIE2_CTRL_APPS_TURNOFF>;
+			reset-names = "pciephy", "apps", "clkreq", "turnoff";
 			assigned-clocks = <&clk IMX8MQ_CLK_PCIE2_CTRL>,
 			                  <&clk IMX8MQ_CLK_PCIE2_PHY>,
 			                  <&clk IMX8MQ_CLK_PCIE2_AUX>;
