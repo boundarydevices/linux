@@ -83,14 +83,14 @@
 	};
 
 	bt_sco_codec: bt_sco_codec {
-		#sound-dai-cells = <0>;
+		#sound-dai-cells = <1>;
 		compatible = "linux,bt-sco";
 	};
 
 	sound-bt-sco {
 		compatible = "simple-audio-card";
 		simple-audio-card,name = "bt-sco-audio";
-		simple-audio-card,format = "i2s";
+		simple-audio-card,format = "dsp_a";
 		simple-audio-card,bitclock-inversion;
 		simple-audio-card,frame-master = <&btcpu>;
 		simple-audio-card,bitclock-master = <&btcpu>;
@@ -102,7 +102,7 @@
 		};
 
 		simple-audio-card,codec {
-			sound-dai = <&bt_sco_codec>;
+			sound-dai = <&bt_sco_codec 1>;
 		};
 	};
 
