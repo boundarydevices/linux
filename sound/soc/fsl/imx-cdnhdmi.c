@@ -379,7 +379,7 @@ static int imx_cdnhdmi_init(struct snd_soc_pcm_runtime *rtd)
 		return ret;
 	}
 
-	return hdmi_codec_set_jack_detect(component, &data->hdmi_jack);
+	return snd_soc_component_set_jack(component, &data->hdmi_jack, NULL);
 };
 
 static struct snd_kcontrol_new imx_cdnhdmi_ctrls[] = {
