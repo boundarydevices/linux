@@ -933,10 +933,12 @@ static int v4l2_ioctl_g_fmt(struct file *file,
 	} else
 		return -EINVAL;
 
+	down(&ctx->q_data[V4L2_DST].drv_q_lock);
 	pix_mp->colorspace = ctx->colorspace;
 	pix_mp->xfer_func = ctx->xfer_func;
 	pix_mp->ycbcr_enc = ctx->ycbcr_enc;
 	pix_mp->quantization = ctx->quantization;
+	up(&ctx->q_data[V4L2_DST].drv_q_lock);
 
 	vpu_dbg(LVL_BIT_FLOW, "%s g_fmt : %c%c%c%c %d x %d\n",
 		V4L2_TYPE_IS_OUTPUT(f->type) ? "OUTPUT" : "CAPTURE",
@@ -980,6 +982,47 @@ static void set_output_default_sizeimage(struct queue_data *q_data)
 	}
 }
 
+static int try_colorspace(struct vpu_ctx *ctx, struct v4l2_format *f)
+{
+	struct v4l2_pix_format_mplane *pix_mp = &f->fmt.pix_mp;
+
+	down(&ctx->q_data[V4L2_DST].drv_q_lock);
+	if (ctx->b_firstseq) {
+		pix_mp->colorspace = V4L2_COLORSPACE_DEFAULT;
+		pix_mp->xfer_func = V4L2_XFER_FUNC_DEFAULT;
+		pix_mp->ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT;
+		pix_mp->quantization = V4L2_QUANTIZATION_DEFAULT;
+	} else {
+		pix_mp->colorspace = ctx->colorspace;
+		pix_mp->xfer_func = ctx->xfer_func;
+		pix_mp->ycbcr_enc = ctx->ycbcr_enc;
+		pix_mp->quantization = ctx->quantization;
+	}
+	up(&ctx->q_data[V4L2_DST].drv_q_lock);
+
+	return 0;
+}
+
+static int set_colorspace(struct vpu_ctx *ctx, struct v4l2_format *f)
+{
+	struct v4l2_pix_format_mplane *pix_mp = &f->fmt.pix_mp;
+
+	down(&ctx->q_data[V4L2_DST].drv_q_lock);
+	if (ctx->b_firstseq) {
+		ctx->colorspace = pix_mp->colorspace;
+		ctx->xfer_func = pix_mp->xfer_func;
+		ctx->ycbcr_enc = pix_mp->ycbcr_enc;
+		ctx->quantization = pix_mp->quantization;
+	}
+	pix_mp->colorspace = ctx->colorspace;
+	pix_mp->xfer_func = ctx->xfer_func;
+	pix_mp->ycbcr_enc = ctx->ycbcr_enc;
+	pix_mp->quantization = ctx->quantization;
+	up(&ctx->q_data[V4L2_DST].drv_q_lock);
+
+	return 0;
+}
+
 static int v4l2_ioctl_s_fmt(struct file *file,
 		void *fh,
 		struct v4l2_format *f
@@ -1011,10 +1054,7 @@ static int v4l2_ioctl_s_fmt(struct file *file,
 	} else
 		return -EINVAL;
 
-	pix_mp->colorspace = ctx->colorspace;
-	pix_mp->xfer_func = ctx->xfer_func;
-	pix_mp->ycbcr_enc = ctx->ycbcr_enc;
-	pix_mp->quantization = ctx->quantization;
+	set_colorspace(ctx, f);
 	pix_mp->num_planes = q_data->num_planes;
 
 	down(&q_data->drv_q_lock);
@@ -1759,10 +1799,7 @@ static int v4l2_ioctl_try_fmt(struct file *file,
 	} else
 		return -EINVAL;
 
-	f->fmt.pix_mp.colorspace = ctx->colorspace;
-	f->fmt.pix_mp.xfer_func = ctx->xfer_func;
-	f->fmt.pix_mp.ycbcr_enc = ctx->ycbcr_enc;
-	f->fmt.pix_mp.quantization = ctx->quantization;
+	try_colorspace(ctx, f);
 
 	return 0;
 }
@@ -4446,13 +4483,13 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 			ctx->seqinfo.uMatrixCoeffs,
 			ctx->seqinfo.uVideoFullRangeFlag,
 			ctx->seqinfo.uVUIPresent);
+
+		down(&ctx->q_data[V4L2_DST].drv_q_lock);
 		vpu_dec_convert_color_iso_aspect_to_v4l2_aspect(ctx,
 				ctx->seqinfo.uColorDesc,
 				ctx->seqinfo.uTransferChars,
 				ctx->seqinfo.uMatrixCoeffs,
 				ctx->seqinfo.uVideoFullRangeFlag);
-
-		down(&ctx->q_data[V4L2_DST].drv_q_lock);
 		calculate_frame_size(ctx);
 		ctx->dcp_size = get_dcp_size(ctx);
 		if (ctx->b_firstseq) {
