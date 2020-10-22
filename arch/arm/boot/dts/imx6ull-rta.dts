@@ -76,8 +76,8 @@
 			MX6UL_PAD_UART1_CTS_B__GPIO1_IO18		0x0b0b1
 #define GPIRQ0_ECSPI2			<&gpio3 23 IRQ_TYPE_LEVEL_LOW>
 			MX6UL_PAD_LCD_DATA18__GPIO3_IO23		0x030b0
-#define GPIRQ1_ECSPI2			<&gpio3 16 IRQ_TYPE_LEVEL_HIGH>
-			MX6UL_PAD_LCD_DATA11__GPIO3_IO16		0x0b0b0
+#define GPIRQ_ESP32			<&gpio3 26 IRQ_TYPE_EDGE_RISING>
+			MX6UL_PAD_LCD_DATA21__GPIO3_IO26		0x0b0b0
 		>;
 	};
 
@@ -509,7 +509,7 @@
 		compatible = "espressif,esp32";
 		spi-max-frequency = <2000000>;
 		reg = <1>;
-		interrupts-extended = GPIRQ1_ECSPI2;
+		interrupts-extended = GPIRQ_ESP32;
 		reset-gpio = <&i2c2_pcal6416 10 GPIO_ACTIVE_HIGH>;
 	};
 };
