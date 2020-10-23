@@ -12,7 +12,7 @@
 #include "imx8mp-pinfunc.h"
 
 / {
-	interrupt-parent = <&gpc>;
+	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;
 
@@ -443,15 +443,6 @@
 				reg = <0x30390000 0x10000>;
 				interrupts = <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
 				#reset-cells = <1>;
-			};
-
-			gpc: gpc@303a0000 {
-				compatible = "fsl,imx8mp-gpc";
-				reg = <0x303a0000 0x10000>;
-				interrupt-parent = <&gic>;
-				interrupt-controller;
-				broken-wake-request-signals;
-				#interrupt-cells = <3>;
 			};
 		};
 
