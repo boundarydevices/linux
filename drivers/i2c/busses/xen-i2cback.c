@@ -231,7 +231,7 @@ static int i2cback_map(struct i2cback_info *info, grant_ref_t *i2c_ring_ref,
 
 	BACK_RING_INIT(&info->i2c_ring, i2c_sring, PAGE_SIZE);
 
-	err = bind_interdomain_evtchn_to_irq(info->domid, evtchn);
+	err = bind_interdomain_evtchn_to_irq_lateeoi(info->domid, evtchn);
 	if (err < 0)
 		goto fail_evtchn;
 	info->irq = err;
