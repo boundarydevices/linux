@@ -1786,6 +1786,7 @@ static int imx6_pcie_establish_link(struct imx6_pcie *imx6_pcie)
 	u32 tmp;
 	int ret;
 
+	dw_pcie_dbi_ro_wr_en(pci);
 	/*
 	 * Force Gen1 operation when starting the link.  In case the link is
 	 * started in Gen2 mode, there is a possibility the devices on the
@@ -1856,12 +1857,14 @@ static int imx6_pcie_establish_link(struct imx6_pcie *imx6_pcie)
 	} else {
 		dev_info(dev, "Link: Gen2 disabled\n");
 	}
+	dw_pcie_dbi_ro_wr_dis(pci);
 
 	tmp = dw_pcie_readw_dbi(pci, offset + PCI_EXP_LNKSTA);
 	dev_info(dev, "Link up, Gen%i\n", tmp & PCI_EXP_LNKSTA_CLS);
 	return 0;
 
 err_reset_phy:
+	dw_pcie_dbi_ro_wr_dis(pci);
 	dev_dbg(dev, "PHY DEBUG_R0=0x%08x DEBUG_R1=0x%08x\n",
 		dw_pcie_readl_dbi(pci, PCIE_PORT_DEBUG0),
 		dw_pcie_readl_dbi(pci, PCIE_PORT_DEBUG1));
