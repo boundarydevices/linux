@@ -3,6 +3,5 @@ config DRM_I2C_SN65DSI83
 	depends on OF
 	select DRM_MIPI_DSI
 	select DRM_KMS_HELPER
-	default y
 	help
 	  Support for the sn65dsi83 MIPI DSI to LVDS bridge
