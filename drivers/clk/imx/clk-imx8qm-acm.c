@@ -30,7 +30,7 @@ struct imx8qm_acm_priv {
 static const char *aud_clk_sels[] = {
 	"aud_rec_clk0_lpcg_clk",
 	"aud_rec_clk1_lpcg_clk",
-	"mlb_clk",
+	"dummy",
 	"hdmi_rx_mclk",
 	"ext_aud_mclk0",
 	"ext_aud_mclk1",
@@ -56,7 +56,7 @@ static const char *aud_clk_sels[] = {
 static const char *mclk_out_sels[] = {
 	"aud_rec_clk0_lpcg_clk",
 	"aud_rec_clk1_lpcg_clk",
-	"mlb_clk",
+	"dummy",
 	"hdmi_rx_mclk",
 	"spdif0_rx",
 	"spdif1_rx",
@@ -75,7 +75,7 @@ static const char *asrc_mux_clk_sels[] = {
 	"sai4_rx_bclk",
 	"sai5_tx_bclk",
 	"dummy",
-	"mlb_clk",
+	"dummy",
 };
 
 static const char *esai_mclk_sels[] = {
@@ -166,7 +166,6 @@ static int imx8qm_acm_clk_probe(struct platform_device *pdev)
 	clks[IMX_ADMA_SAI5_TX_BCLK]      = imx_clk_fixed("sai5_tx_bclk", 0);
 	clks[IMX_ADMA_SAI6_RX_BCLK]      = imx_clk_fixed("sai6_rx_bclk", 0);
 	clks[IMX_ADMA_HDMI_RX_MCLK]      = imx_clk_fixed("hdmi_rx_mclk", 0);
-	clks[IMX_ADMA_MLB_CLK]           = imx_clk_fixed("mlb_clk", 0);
 
 
 	clks[IMX_ADMA_ACM_AUD_CLK0_SEL] = imx_dev_clk_mux(dev, "acm_aud_clk0_sel", base+0x000000, 0, 5, aud_clk_sels, ARRAY_SIZE(aud_clk_sels));
