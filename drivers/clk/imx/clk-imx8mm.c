@@ -737,7 +737,7 @@ static int __init pll_debug_init(void)
 {
 	struct dentry *root, *audio_pll1, *audio_pll2;
 
-	if (of_machine_is_compatible("fsl,imx8mm")) {
+	if (of_machine_is_compatible("fsl,imx8mm") && hws) {
 		/* create a root dir for audio pll monitor */
 		root = debugfs_create_dir("audio_pll_monitor", NULL);
 		audio_pll1 = debugfs_create_dir("audio_pll1", root);
