@@ -22,7 +22,7 @@ struct imx_blk_ctrl_hw {
 	void *parents;
 	u32 parents_count;
 	int *shared_count;
-	struct imx_pll14xx_clk *pll_tbl;
+	const struct imx_pll14xx_clk *pll_tbl;
 };
 
 struct imx_blk_ctrl_dev_data {
