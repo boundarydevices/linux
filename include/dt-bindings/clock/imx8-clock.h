@@ -48,7 +48,6 @@
 #define IMX_ADMA_SAI5_TX_BCLK				37
 #define IMX_ADMA_SAI6_RX_BCLK				38
 #define IMX_ADMA_HDMI_RX_MCLK				39
-#define IMX_ADMA_MLB_CLK				40
 #define IMX_ADMA_SPDIF1_RX				41
 #define IMX_ADMA_ESAI1_RX_CLK				42
 #define IMX_ADMA_ESAI1_RX_HF_CLK			43
