@@ -334,14 +334,6 @@
 			>;
 		};
 
-		pinctrl_mlb: mlbgrp {
-			fsl,pins = <
-				IMX8QM_MLB_SIG_CONN_MLB_SIG               0x21
-				IMX8QM_MLB_CLK_CONN_MLB_CLK               0x21
-				IMX8QM_MLB_DATA_CONN_MLB_DATA             0x21
-			>;
-		};
-
 		pinctrl_isl29023: isl29023grp {
 			fsl,pins = <
 				IMX8QM_ADC_IN2_LSIO_GPIO3_IO20		0x00000021
