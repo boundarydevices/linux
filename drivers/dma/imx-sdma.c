@@ -634,7 +634,7 @@ static struct sdma_driver_data sdma_imx8mn = {
 	.chnenbl0 = SDMA_CHNENBL0_IMX35,
 	.num_events = 48,
 	.script_addrs = &sdma_script_imx7d,
-	.check_ratio = 0,
+	.check_ratio = 1,
 	.ecspi_fixed = false,
 };
 
