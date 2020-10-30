@@ -63,6 +63,7 @@
 
 &mipi_dsi {
 	status = "okay";
+	/delete-node/ panel@0;
 
 	ports {
 		#address-cells = <1>;
