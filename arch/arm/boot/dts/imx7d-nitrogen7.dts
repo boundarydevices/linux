@@ -1037,6 +1037,7 @@
 	pinctrl-0 = <&pinctrl_usbotg2>;
 	dr_mode = "host";
 	status = "okay";
+	over-current-active-low;
 };
 
 &usdhc1 {
