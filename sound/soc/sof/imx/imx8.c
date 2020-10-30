@@ -80,7 +80,7 @@ struct imx8_priv {
 static int imx8_init_clocks(struct snd_sof_dev *sdev)
 {
 	int i;
-	struct imx8_priv *priv = (struct imx8_priv *)sdev->private;
+	struct imx8_priv *priv = (struct imx8_priv *)sdev->pdata->hw_pdata;
 
 	for (i = 0; i < IMX8_DSP_CLK_NUM; i++) {
 		priv->dsp_clks[i] = devm_clk_get(priv->dev, imx8_dsp_clks_names[i]);
@@ -97,7 +97,7 @@ static int imx8_init_clocks(struct snd_sof_dev *sdev)
 static int imx8_prepare_clocks(struct snd_sof_dev *sdev)
 {
 	int i, j, ret;
-	struct imx8_priv *priv = (struct imx8_priv *)sdev->private;
+	struct imx8_priv *priv = (struct imx8_priv *)sdev->pdata->hw_pdata;
 
 	for (i = 0; i < IMX8_DSP_CLK_NUM; i++) {
 		ret = clk_prepare_enable(priv->dsp_clks[i]);
@@ -133,7 +133,7 @@ err_dsp_clks:
 static void imx8_disable_clocks(struct snd_sof_dev *sdev)
 {
 	int i;
-	struct imx8_priv *priv = (struct imx8_priv *)sdev->private;
+	struct imx8_priv *priv = (struct imx8_priv *)sdev->pdata->hw_pdata;
 
 	for (i = 0; i < IMX8_DSP_CLK_NUM; i++)
 		clk_disable_unprepare(priv->dsp_clks[i]);
@@ -474,7 +474,7 @@ int imx8_dsp_runtime_resume(struct snd_sof_dev *sdev)
 		.state = SOF_DSP_PM_D0,
 		.substate = 0,
 	};
-	struct imx8_priv *priv = (struct imx8_priv *)sdev->private;
+	struct imx8_priv *priv = (struct imx8_priv *)sdev->pdata->hw_pdata;
 	int i;
 
 	imx8_prepare_clocks(sdev);
@@ -487,7 +487,7 @@ int imx8_dsp_runtime_resume(struct snd_sof_dev *sdev)
 
 int imx8_dsp_runtime_suspend(struct snd_sof_dev *sdev)
 {
-	struct imx8_priv *priv = (struct imx8_priv *)sdev->private;
+	struct imx8_priv *priv = (struct imx8_priv *)sdev->pdata->hw_pdata;
 	const struct sof_dsp_power_state target_dsp_state = {
 		.state = SOF_DSP_PM_D3,
 		.substate = 0,

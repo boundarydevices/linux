@@ -75,7 +75,7 @@ struct imx8m_priv {
 static int imx8m_init_clocks(struct snd_sof_dev *sdev)
 {
 	int i;
-	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
 
 	for (i = 0; i < IMX8M_DSP_CLK_NUM; i++) {
 		priv->dsp_clks[i] = devm_clk_get(priv->dev, imx8m_dsp_clks_names[i]);
@@ -92,7 +92,7 @@ static int imx8m_init_clocks(struct snd_sof_dev *sdev)
 static int imx8m_prepare_clocks(struct snd_sof_dev *sdev)
 {
 	int i, j, ret;
-	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
 
 	for (i = 0; i < IMX8M_DSP_CLK_NUM; i++) {
 		ret = clk_prepare_enable(priv->dsp_clks[i]);
@@ -128,7 +128,7 @@ err_dsp_clks:
 static void imx8m_disable_clocks(struct snd_sof_dev *sdev)
 {
 	int i;
-	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
 
 	for (i = 0; i < IMX8M_DSP_CLK_NUM; i++)
 		clk_disable_unprepare(priv->dsp_clks[i]);
@@ -229,7 +229,7 @@ static int imx8m_send_msg(struct snd_sof_dev *sdev, struct snd_sof_ipc_msg *msg)
  */
 static int imx8m_run(struct snd_sof_dev *sdev)
 {
-	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
 
 	regmap_update_bits(priv->regmap, AudioDSP_REG2, AudioDSP_REG2_RUNSTALL, 0);
 
@@ -237,7 +237,7 @@ static int imx8m_run(struct snd_sof_dev *sdev)
 }
 
 static int imx8m_reset(struct snd_sof_dev *sdev) {
-	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
 	u32 pwrctl;
 
 	/* put DSP into reset and stall */
@@ -410,7 +410,7 @@ static struct snd_soc_dai_driver imx8m_dai[] = {
 
 int imx8m_resume(struct snd_sof_dev *sdev)
 {
-	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
 	int i;
 
 	imx8m_prepare_clocks(priv->sdev);
@@ -423,7 +423,7 @@ int imx8m_resume(struct snd_sof_dev *sdev)
 
 int imx8m_suspend(struct snd_sof_dev *sdev)
 {
-	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
 	int i;
 
 	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
@@ -446,7 +446,7 @@ static int imx8m_dsp_runtime_suspend(struct snd_sof_dev *sdev)
 
 static int imx8m_dsp_resume(struct snd_sof_dev *sdev)
 {
-	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
 
 	if (priv->suspended) {
 		imx8m_resume(sdev);
@@ -458,7 +458,7 @@ static int imx8m_dsp_resume(struct snd_sof_dev *sdev)
 
 static int imx8m_dsp_suspend(struct snd_sof_dev *sdev, unsigned int target_state)
 {
-	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->private;
+	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
 
 	if (!priv->suspended) {
 		imx8m_suspend(sdev);
