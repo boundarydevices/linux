@@ -591,6 +591,9 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 	mtk->fix_rx_depth =
 		of_property_read_bool(node, "mediatek,u3-rx-fifo-depth");
 
+	/* keep ref_ck on when suspend on some platform */
+	mtk->keep_clk_on = of_property_read_bool(node, "mediatek,keep-clock-on");
+
 	ret = usb_wakeup_of_property_parse(mtk, node);
 	if (ret) {
 		dev_err(dev, "failed to parse uwk property\n");
@@ -793,7 +796,8 @@ static int __maybe_unused xhci_mtk_suspend(struct device *dev)
 	if (ret)
 		goto restart_poll_rh;
 
-	clk_bulk_disable_unprepare(BULK_CLKS_NUM, mtk->clks);
+	if (!mtk->keep_clk_on)
+		clk_bulk_disable_unprepare(BULK_CLKS_NUM, mtk->clks);
 	usb_wakeup_set(mtk, true);
 	return 0;
 
@@ -817,9 +821,11 @@ static int __maybe_unused xhci_mtk_resume(struct device *dev)
 	int ret;
 
 	usb_wakeup_set(mtk, false);
-	ret = clk_bulk_prepare_enable(BULK_CLKS_NUM, mtk->clks);
-	if (ret)
-		goto enable_wakeup;
+	if (!mtk->keep_clk_on) {
+		ret = clk_bulk_prepare_enable(BULK_CLKS_NUM, mtk->clks);
+		if (ret)
+			goto enable_wakeup;
+	}
 
 	ret = xhci_mtk_host_enable(mtk);
 	if (ret)
