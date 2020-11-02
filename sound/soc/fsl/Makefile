@@ -25,7 +25,7 @@ snd-soc-fsl-utils-objs := fsl_utils.o
 snd-soc-fsl-dma-objs := fsl_dma.o
 snd-soc-fsl-mqs-objs := fsl_mqs.o
 snd-soc-fsl-easrc-objs := fsl_easrc.o
-snd-soc-fsl-xcvr-objs := fsl_xcvr.o
+snd-soc-fsl-xcvr-objs := fsl_xcvr.o fsl_xcvr_sysfs.o
 snd-soc-fsl-aud2htx-objs := fsl_aud2htx.o
 snd-soc-fsl-rpmsg-objs := fsl_rpmsg.o
 

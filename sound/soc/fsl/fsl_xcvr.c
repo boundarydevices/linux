@@ -8,40 +8,10 @@
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
-#include <linux/regmap.h>
-#include <linux/reset.h>
-#include <sound/dmaengine_pcm.h>
-#include <sound/pcm_iec958.h>
 #include <sound/pcm_params.h>
 
 #include "fsl_xcvr.h"
 #include "imx-pcm.h"
-
-#define FSL_XCVR_CAPDS_SIZE	256
-
-struct fsl_xcvr_soc_data {
-	const char *fw_name;
-};
-
-struct fsl_xcvr {
-	const struct fsl_xcvr_soc_data *soc_data;
-	struct platform_device *pdev;
-	struct regmap *regmap;
-	struct clk *ipg_clk;
-	struct clk *pll_ipg_clk;
-	struct clk *phy_clk;
-	struct clk *spba_clk;
-	struct reset_control *reset;
-	u8 streams;
-	u32 mode;
-	u32 arc_mode;
-	void __iomem *ram_addr;
-	struct snd_dmaengine_dai_dma_data dma_prms_rx;
-	struct snd_dmaengine_dai_dma_data dma_prms_tx;
-	struct snd_aes_iec958 rx_iec958;
-	struct snd_aes_iec958 tx_iec958;
-	u8 cap_ds[FSL_XCVR_CAPDS_SIZE];
-};
 
 static const struct fsl_xcvr_pll_conf {
 	u8 mfi;   /* min=0x18, max=0x38 */
@@ -934,6 +904,14 @@ static const struct reg_default fsl_xcvr_reg_defaults[] = {
 	{ FSL_XCVR_RX_DPTH_CTRL_SET,	0x00002C89 },
 	{ FSL_XCVR_RX_DPTH_CTRL_CLR,	0x00002C89 },
 	{ FSL_XCVR_RX_DPTH_CTRL_TOG,	0x00002C89 },
+	{ FSL_XCVR_RX_DPTH_CNTR_CTRL,	0x00000000 },
+	{ FSL_XCVR_RX_DPTH_CNTR_CTRL_SET, 0x00000000 },
+	{ FSL_XCVR_RX_DPTH_CNTR_CTRL_CLR, 0x00000000 },
+	{ FSL_XCVR_RX_DPTH_CNTR_CTRL_TOG, 0x00000000 },
+	{ FSL_XCVR_RX_DPTH_TSCR, 0x00000000 },
+	{ FSL_XCVR_RX_DPTH_BCR,  0x00000000 },
+	{ FSL_XCVR_RX_DPTH_BCTR, 0x00000000 },
+	{ FSL_XCVR_RX_DPTH_BCRR, 0x00000000 },
 	{ FSL_XCVR_TX_DPTH_CTRL,	0x00000000 },
 	{ FSL_XCVR_TX_DPTH_CTRL_SET,	0x00000000 },
 	{ FSL_XCVR_TX_DPTH_CTRL_CLR,	0x00000000 },
@@ -944,6 +922,14 @@ static const struct reg_default fsl_xcvr_reg_defaults[] = {
 	{ FSL_XCVR_TX_CS_DATA_3,	0x00000000 },
 	{ FSL_XCVR_TX_CS_DATA_4,	0x00000000 },
 	{ FSL_XCVR_TX_CS_DATA_5,	0x00000000 },
+	{ FSL_XCVR_TX_DPTH_CNTR_CTRL,	0x00000000 },
+	{ FSL_XCVR_TX_DPTH_CNTR_CTRL_SET, 0x00000000 },
+	{ FSL_XCVR_TX_DPTH_CNTR_CTRL_CLR, 0x00000000 },
+	{ FSL_XCVR_TX_DPTH_CNTR_CTRL_TOG, 0x00000000 },
+	{ FSL_XCVR_TX_DPTH_TSCR, 0x00000000 },
+	{ FSL_XCVR_TX_DPTH_BCR,	 0x00000000 },
+	{ FSL_XCVR_TX_DPTH_BCTR, 0x00000000 },
+	{ FSL_XCVR_TX_DPTH_BCRR, 0x00000000 },
 	{ FSL_XCVR_DEBUG_REG_0,		0x00000000 },
 	{ FSL_XCVR_DEBUG_REG_1,		0x00000000 },
 };
@@ -975,6 +961,14 @@ static bool fsl_xcvr_readable_reg(struct device *dev, unsigned int reg)
 	case FSL_XCVR_RX_DPTH_CTRL_SET:
 	case FSL_XCVR_RX_DPTH_CTRL_CLR:
 	case FSL_XCVR_RX_DPTH_CTRL_TOG:
+	case FSL_XCVR_RX_DPTH_CNTR_CTRL:
+	case FSL_XCVR_RX_DPTH_CNTR_CTRL_SET:
+	case FSL_XCVR_RX_DPTH_CNTR_CTRL_CLR:
+	case FSL_XCVR_RX_DPTH_CNTR_CTRL_TOG:
+	case FSL_XCVR_RX_DPTH_TSCR:
+	case FSL_XCVR_RX_DPTH_BCR:
+	case FSL_XCVR_RX_DPTH_BCTR:
+	case FSL_XCVR_RX_DPTH_BCRR:
 	case FSL_XCVR_TX_DPTH_CTRL:
 	case FSL_XCVR_TX_DPTH_CTRL_SET:
 	case FSL_XCVR_TX_DPTH_CTRL_CLR:
@@ -985,6 +979,14 @@ static bool fsl_xcvr_readable_reg(struct device *dev, unsigned int reg)
 	case FSL_XCVR_TX_CS_DATA_3:
 	case FSL_XCVR_TX_CS_DATA_4:
 	case FSL_XCVR_TX_CS_DATA_5:
+	case FSL_XCVR_TX_DPTH_CNTR_CTRL:
+	case FSL_XCVR_TX_DPTH_CNTR_CTRL_SET:
+	case FSL_XCVR_TX_DPTH_CNTR_CTRL_CLR:
+	case FSL_XCVR_TX_DPTH_CNTR_CTRL_TOG:
+	case FSL_XCVR_TX_DPTH_TSCR:
+	case FSL_XCVR_TX_DPTH_BCR:
+	case FSL_XCVR_TX_DPTH_BCTR:
+	case FSL_XCVR_TX_DPTH_BCRR:
 	case FSL_XCVR_DEBUG_REG_0:
 	case FSL_XCVR_DEBUG_REG_1:
 		return true;
@@ -1017,6 +1019,10 @@ static bool fsl_xcvr_writeable_reg(struct device *dev, unsigned int reg)
 	case FSL_XCVR_RX_DPTH_CTRL_SET:
 	case FSL_XCVR_RX_DPTH_CTRL_CLR:
 	case FSL_XCVR_RX_DPTH_CTRL_TOG:
+	case FSL_XCVR_RX_DPTH_CNTR_CTRL:
+	case FSL_XCVR_RX_DPTH_CNTR_CTRL_SET:
+	case FSL_XCVR_RX_DPTH_CNTR_CTRL_CLR:
+	case FSL_XCVR_RX_DPTH_CNTR_CTRL_TOG:
 	case FSL_XCVR_TX_DPTH_CTRL_SET:
 	case FSL_XCVR_TX_DPTH_CTRL_CLR:
 	case FSL_XCVR_TX_DPTH_CTRL_TOG:
@@ -1026,6 +1032,10 @@ static bool fsl_xcvr_writeable_reg(struct device *dev, unsigned int reg)
 	case FSL_XCVR_TX_CS_DATA_3:
 	case FSL_XCVR_TX_CS_DATA_4:
 	case FSL_XCVR_TX_CS_DATA_5:
+	case FSL_XCVR_TX_DPTH_CNTR_CTRL:
+	case FSL_XCVR_TX_DPTH_CNTR_CTRL_SET:
+	case FSL_XCVR_TX_DPTH_CNTR_CTRL_CLR:
+	case FSL_XCVR_TX_DPTH_CNTR_CTRL_TOG:
 		return true;
 	default:
 		return false;
@@ -1240,14 +1250,21 @@ static int fsl_xcvr_probe(struct platform_device *pdev)
 		pm_runtime_disable(dev);
 		dev_err(dev, "failed to register component %s\n",
 			fsl_xcvr_comp.name);
+		return ret;
 	}
+
+	ret = sysfs_create_group(&pdev->dev.kobj, fsl_xcvr_get_attr_grp());
+	if (ret)
+		dev_err(&pdev->dev, "fail to create sys group\n");
 
 	return ret;
 }
 
 static int fsl_xcvr_remove(struct platform_device *pdev)
 {
+	sysfs_remove_group(&pdev->dev.kobj, fsl_xcvr_get_attr_grp());
 	pm_runtime_disable(&pdev->dev);
+
 	return 0;
 }
 
@@ -1374,6 +1391,7 @@ static const struct dev_pm_ops fsl_xcvr_pm_ops = {
 
 static struct platform_driver fsl_xcvr_driver = {
 	.probe = fsl_xcvr_probe,
+	.remove = fsl_xcvr_remove,
 	.driver = {
 		.name = "fsl,imx8mp-audio-xcvr",
 		.pm = &fsl_xcvr_pm_ops,
