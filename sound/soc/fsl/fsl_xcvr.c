@@ -8,42 +8,10 @@
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
-#include <linux/regmap.h>
-#include <linux/reset.h>
-#include <sound/dmaengine_pcm.h>
-#include <sound/pcm_iec958.h>
 #include <sound/pcm_params.h>
 
 #include "fsl_xcvr.h"
 #include "imx-pcm.h"
-
-#define FSL_XCVR_CAPDS_SIZE	256
-
-struct fsl_xcvr_soc_data {
-	const char *fw_name;
-	bool spdif_only;
-	bool use_edma;
-};
-
-struct fsl_xcvr {
-	const struct fsl_xcvr_soc_data *soc_data;
-	struct platform_device *pdev;
-	struct regmap *regmap;
-	struct clk *ipg_clk;
-	struct clk *pll_ipg_clk;
-	struct clk *phy_clk;
-	struct clk *spba_clk;
-	struct reset_control *reset;
-	u8 streams;
-	u32 mode;
-	u32 arc_mode;
-	void __iomem *ram_addr;
-	struct snd_dmaengine_dai_dma_data dma_prms_rx;
-	struct snd_dmaengine_dai_dma_data dma_prms_tx;
-	struct snd_aes_iec958 rx_iec958;
-	struct snd_aes_iec958 tx_iec958;
-	u8 cap_ds[FSL_XCVR_CAPDS_SIZE];
-};
 
 static const struct fsl_xcvr_pll_conf {
 	u8 mfi;   /* min=0x18, max=0x38 */
@@ -1334,13 +1302,19 @@ static int fsl_xcvr_probe(struct platform_device *pdev)
 		pm_runtime_disable(dev);
 		dev_err(dev, "failed to register component %s\n",
 			fsl_xcvr_comp.name);
+		return ret;
 	}
+
+	ret = sysfs_create_group(&pdev->dev.kobj, fsl_xcvr_get_attr_grp());
+	if (ret)
+		dev_err(&pdev->dev, "fail to create sys group\n");
 
 	return ret;
 }
 
 static void fsl_xcvr_remove(struct platform_device *pdev)
 {
+	sysfs_remove_group(&pdev->dev.kobj, fsl_xcvr_get_attr_grp());
 	pm_runtime_disable(&pdev->dev);
 }
 
