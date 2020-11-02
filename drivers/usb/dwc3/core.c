@@ -319,6 +319,8 @@ static void dwc3_frame_length_adjustment(struct dwc3 *dwc)
 	if (dwc3_pdata && dwc3_pdata->quirks & DWC3_SOFT_ITP_SYNC) {
 		u32 ref_clk_hz, ref_clk_period_integer;
 		unsigned long long temp;
+		struct device_node *node = dwc->dev->of_node;
+		struct clk *ref_clk;
 
 		reg = dwc3_readl(dwc->regs, DWC3_GCTL);
 		reg |= DWC3_GCTL_SOFITPSYNC;
@@ -337,8 +339,14 @@ static void dwc3_frame_length_adjustment(struct dwc3 *dwc)
 		 * - the ref_clk_period is the ref_clk period including
 		 *   the fractional value.
 		 */
+		ref_clk = of_clk_get_by_name(node, "ref");
+		if (IS_ERR(ref_clk)) {
+			dev_err(dwc->dev, "Can't get ref clock for fladj\n");
+			return;
+		}
 		reg = dwc3_readl(dwc->regs, DWC3_GFLADJ);
-		ref_clk_hz = clk_get_rate(dwc->clks[0].clk);
+		ref_clk_hz = clk_get_rate(ref_clk);
+		clk_put(ref_clk);
 		if (ref_clk_hz == 0) {
 			dev_err(dwc->dev, "ref clk is 0, can't set fladj\n");
 			return;
