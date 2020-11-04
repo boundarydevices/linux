@@ -1603,7 +1603,7 @@ static struct clk_regmap g12b_cpub_clk_trace = {
 };
 
 static const struct pll_mult_range g12a_gp0_pll_mult_range = {
-	.min = 125,
+	.min = 120,
 	.max = 255,
 };
 
@@ -1616,7 +1616,7 @@ static const struct reg_sequence g12a_gp0_init_regs[] = {
 	{ .reg = HHI_GP0_PLL_CNTL3,	.def = 0x48681c00 },
 	{ .reg = HHI_GP0_PLL_CNTL4,	.def = 0x33771290 },
 	{ .reg = HHI_GP0_PLL_CNTL5,	.def = 0x39272000 },
-	{ .reg = HHI_GP0_PLL_CNTL6,	.def = 0x56540000 },
+	{ .reg = HHI_GP0_PLL_CNTL6,	.def = 0x56540000, .delay_us = 10 },
 };
 
 static struct clk_regmap g12a_gp0_pll_dco = {
