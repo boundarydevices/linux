@@ -1508,6 +1508,10 @@
 
 				dewarp: dwe@32e30000 {
 					compatible = "fsl,imx8mp-dwe";
+					clocks = <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_DWE_COR>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_DWE_AXI>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_DWE_AHB>;
+					clock-names = "core", "axi", "ahb";
 					reg = <0x32e30000 0x10000>;
 					interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
 					status = "disabled";
@@ -1517,8 +1521,10 @@
 					compatible = "fsl,imx8mp-isp";
 					reg = <0x32e10000 0x10000>;
 					interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&clk IMX8MP_CLK_MEDIA_ISP>;
-					clock-names = "isp_root";
+					clocks = <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP0_COR>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP0_AXI>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP0_AHB>;
+					clock-names = "core", "axi", "ahb";
 					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_ISP>;
 					assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>;
 					assigned-clock-rates = <500000000>;
@@ -1530,8 +1536,10 @@
 					compatible = "fsl,imx8mp-isp";
 					reg = <0x32e20000 0x10000>;
 					interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&clk IMX8MP_CLK_MEDIA_ISP>;
-					clock-names = "isp_root";
+					clocks = <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP1_COR>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP1_AXI>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP1_AHB>;
+					clock-names = "core", "axi", "ahb";
 					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_ISP>;
 					assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>;
 					assigned-clock-rates = <500000000>;
