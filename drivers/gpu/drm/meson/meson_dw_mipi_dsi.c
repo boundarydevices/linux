@@ -107,8 +107,15 @@ struct meson_dw_mipi_dsi {
 #define encoder_to_meson_dw_mipi_dsi(x) \
 	container_of(x, struct meson_dw_mipi_dsi, encoder)
 
+static inline int dw_mipi_dsi_is_compatible(struct meson_dw_mipi_dsi *mipi_dsi,
+					    const char *compat)
+{
+	return of_device_is_compatible(mipi_dsi->dev->of_node, compat);
+}
+
 static void dw_mipi_dsi_set_vclk(struct meson_dw_mipi_dsi *mipi_dsi,
-				 struct drm_display_mode *mode)
+				 struct drm_display_mode *mode,
+				 unsigned int vclk_parent)
 {
 	struct meson_drm *priv = mipi_dsi->priv;
 	unsigned int vclk2_div;
@@ -135,7 +142,7 @@ static void dw_mipi_dsi_set_vclk(struct meson_dw_mipi_dsi *mipi_dsi,
 
 	/* select gp0 for vclk2 */
 	regmap_update_bits(priv->hhi, HHI_VIID_CLK_CNTL,
-				VCLK2_SEL_MASK, (0 << VCLK2_SEL_SHIFT));
+				VCLK2_SEL_MASK, (vclk_parent << VCLK2_SEL_SHIFT));
 
 	/* enable vclk2 gate */
 	regmap_update_bits(priv->hhi, HHI_VIID_CLK_CNTL, VCLK2_EN, VCLK2_EN);
@@ -262,6 +269,23 @@ static int meson_mipi_dsi_encoder_atomic_check(struct drm_encoder *encoder,
 	return 0;
 }
 
+static int meson_mipi_dsi_g12a_encoder_atomic_check(struct drm_encoder *encoder,
+					struct drm_crtc_state *crtc_state,
+					struct drm_connector_state *conn_state)
+{
+	struct meson_dw_mipi_dsi *mipi_dsi =
+			encoder_to_meson_dw_mipi_dsi(encoder);
+
+	if (mipi_dsi->dsi_device->format != MIPI_DSI_FMT_RGB888) {
+		DRM_DEV_ERROR(mipi_dsi->dev,
+				"invalid pixel format %d\n",
+				mipi_dsi->dsi_device->format);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static void meson_mipi_dsi_encoder_disable(struct drm_encoder *encoder)
 {
 	struct meson_dw_mipi_dsi *mipi_dsi =
@@ -271,11 +295,36 @@ static void meson_mipi_dsi_encoder_disable(struct drm_encoder *encoder)
 	writel_relaxed(0, priv->io_base + _REG(ENCL_VIDEO_EN));
 }
 
+static void meson_mipi_dsi_g12a_encoder_disable(struct drm_encoder *encoder)
+{
+	struct meson_dw_mipi_dsi *mipi_dsi =
+			encoder_to_meson_dw_mipi_dsi(encoder);
+	struct meson_drm *priv = mipi_dsi->priv;
+
+	writel_relaxed(0, priv->io_base + _REG(ENCL_VIDEO_EN));
+
+	writel_bits_relaxed(BIT(0), BIT(0), priv->io_base + _REG(VPP_WRAP_OSD1_MATRIX_EN_CTRL));
+}
+
 static void meson_mipi_dsi_encoder_enable(struct drm_encoder *encoder)
 {
 	struct meson_dw_mipi_dsi *mipi_dsi =
 			encoder_to_meson_dw_mipi_dsi(encoder);
 	struct meson_drm *priv = mipi_dsi->priv;
+
+	writel_bits_relaxed(BIT(3), BIT(3),
+			priv->io_base + _REG(ENCL_VIDEO_MODE_ADV));
+	writel_relaxed(0, priv->io_base + _REG(ENCL_TST_EN));
+}
+
+static void meson_mipi_dsi_g12a_encoder_enable(struct drm_encoder *encoder)
+{
+	struct meson_dw_mipi_dsi *mipi_dsi =
+			encoder_to_meson_dw_mipi_dsi(encoder);
+	struct meson_drm *priv = mipi_dsi->priv;
+
+	/* VD1 csc should probably also changed */
+	writel_bits_relaxed(BIT(0), 0, priv->io_base + _REG(VPP_WRAP_OSD1_MATRIX_EN_CTRL));
 
 	writel_bits_relaxed(BIT(3), BIT(3),
 			priv->io_base + _REG(ENCL_VIDEO_MODE_ADV));
@@ -298,12 +347,12 @@ static void meson_dw_mipi_dsi_init(struct meson_dw_mipi_dsi *mipi_dsi)
 	writel_relaxed(0, mipi_dsi->base + MIPI_DSI_TOP_MEM_PD);
 }
 
-static void meson_mipi_dsi_encoder_mode_set(struct drm_encoder *encoder,
-				   struct drm_display_mode *mode,
-				   struct drm_display_mode *adjusted_mode)
+static void meson_mipi_dsi_setup(struct meson_dw_mipi_dsi *mipi_dsi,
+				 struct drm_display_mode *mode,
+				 unsigned int dpi_data_format,
+				 unsigned int venc_data_width,
+				 unsigned vclk_parent)
 {
-	struct meson_dw_mipi_dsi *mipi_dsi = encoder_to_meson_dw_mipi_dsi(encoder);
-	unsigned int dpi_data_format, venc_data_width;
 	struct meson_drm *priv = mipi_dsi->priv;
 	int bpp;
 	u32 reg;
@@ -318,22 +367,7 @@ static void meson_mipi_dsi_encoder_mode_set(struct drm_encoder *encoder,
 
 	phy_configure(mipi_dsi->phy, &mipi_dsi->phy_opts);
 
-	switch (mipi_dsi->dsi_device->format) {
-	case MIPI_DSI_FMT_RGB888:
-		dpi_data_format = COLOR_24BIT;
-		venc_data_width = MIPI_DSI_VENC_COLOR_24B;
-		break;
-	case MIPI_DSI_FMT_RGB666:
-		dpi_data_format = COLOR_18BIT_CFG_2;
-		venc_data_width = MIPI_DSI_VENC_COLOR_18B;
-		break;
-	case MIPI_DSI_FMT_RGB666_PACKED:
-	case MIPI_DSI_FMT_RGB565:
-		/* invalid */
-		break;
-	};
-
-	dw_mipi_dsi_set_vclk(mipi_dsi, mode);
+	dw_mipi_dsi_set_vclk(mipi_dsi, mode, vclk_parent);
 	meson_venc_mipi_dsi_mode_set(priv, mode);
 
 	meson_encl_load_gamma(priv);
@@ -359,12 +393,70 @@ static void meson_mipi_dsi_encoder_mode_set(struct drm_encoder *encoder,
 		mipi_dsi->base + MIPI_DSI_TOP_CNTL);
 }
 
+static void meson_mipi_dsi_encoder_mode_set(struct drm_encoder *encoder,
+						 struct drm_display_mode *mode,
+						 struct drm_display_mode *adjusted_mode)
+{
+	struct meson_dw_mipi_dsi *mipi_dsi = encoder_to_meson_dw_mipi_dsi(encoder);
+	unsigned int dpi_data_format, venc_data_width;
+
+	switch (mipi_dsi->dsi_device->format) {
+	case MIPI_DSI_FMT_RGB888:
+		dpi_data_format = COLOR_24BIT;
+		venc_data_width = MIPI_DSI_VENC_COLOR_24B;
+		break;
+	case MIPI_DSI_FMT_RGB666:
+		dpi_data_format = COLOR_18BIT_CFG_2;
+		venc_data_width = MIPI_DSI_VENC_COLOR_18B;
+		break;
+	case MIPI_DSI_FMT_RGB666_PACKED:
+	case MIPI_DSI_FMT_RGB565:
+		/* invalid */
+		break;
+	};
+
+	meson_mipi_dsi_setup(mipi_dsi, mode, dpi_data_format, venc_data_width, 0);
+}
+
+/* TOFIX refactor */
+static void meson_mipi_dsi_g12a_encoder_mode_set(struct drm_encoder *encoder,
+						 struct drm_display_mode *mode,
+						 struct drm_display_mode *adjusted_mode)
+{	struct meson_dw_mipi_dsi *mipi_dsi = encoder_to_meson_dw_mipi_dsi(encoder);
+	unsigned int dpi_data_format, venc_data_width;
+
+	switch (mipi_dsi->dsi_device->format) {
+	case MIPI_DSI_FMT_RGB888:
+		dpi_data_format = COLOR_24BIT;
+		venc_data_width = MIPI_DSI_VENC_COLOR_24B;
+		break;
+	case MIPI_DSI_FMT_RGB666:
+		dpi_data_format = COLOR_18BIT_CFG_2;
+		venc_data_width = MIPI_DSI_VENC_COLOR_18B;
+		break;
+	case MIPI_DSI_FMT_RGB666_PACKED:
+	case MIPI_DSI_FMT_RGB565:
+		/* invalid */
+		break;
+	};
+
+	meson_mipi_dsi_setup(mipi_dsi, mode, dpi_data_format, venc_data_width, 1);
+}
+
 static const struct drm_encoder_helper_funcs
 				meson_mipi_dsi_encoder_helper_funcs = {
 	.atomic_check	= meson_mipi_dsi_encoder_atomic_check,
 	.disable	= meson_mipi_dsi_encoder_disable,
 	.enable		= meson_mipi_dsi_encoder_enable,
 	.mode_set	= meson_mipi_dsi_encoder_mode_set,
+};
+
+static const struct drm_encoder_helper_funcs
+				meson_mipi_dsi_g12a_encoder_helper_funcs = {
+	.atomic_check	= meson_mipi_dsi_g12a_encoder_atomic_check,
+	.disable	= meson_mipi_dsi_g12a_encoder_disable,
+	.enable		= meson_mipi_dsi_g12a_encoder_enable,
+	.mode_set	= meson_mipi_dsi_g12a_encoder_mode_set,
 };
 
 static int meson_dw_mipi_dsi_bind(struct device *dev, struct device *master,
@@ -391,7 +483,10 @@ static int meson_dw_mipi_dsi_bind(struct device *dev, struct device *master,
 		return ret;
 	}
 
-	drm_encoder_helper_add(encoder, &meson_mipi_dsi_encoder_helper_funcs);
+	if (dw_mipi_dsi_is_compatible(mipi_dsi, "amlogic,meson-g12a-dw-mipi-dsi"))
+		drm_encoder_helper_add(encoder, &meson_mipi_dsi_g12a_encoder_helper_funcs);
+	else
+		drm_encoder_helper_add(encoder, &meson_mipi_dsi_encoder_helper_funcs);
 
 	encoder->possible_crtcs = BIT(0);
 
@@ -543,6 +638,7 @@ static int meson_dw_mipi_dsi_remove(struct platform_device *pdev)
 
 static const struct of_device_id meson_dw_mipi_dsi_of_table[] = {
 	{ .compatible = "amlogic,meson-axg-dw-mipi-dsi", },
+	{ .compatible = "amlogic,meson-g12a-dw-mipi-dsi", },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, meson_dw_mipi_dsi_of_table);
