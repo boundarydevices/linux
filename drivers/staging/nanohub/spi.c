@@ -170,7 +170,7 @@ static int spi_bl_open(const void *data)
 
 	spi_bus_lock(spi_data->device->master);
 	spi_data->device->max_speed_hz = spi_data->data.pdata->bl_max_speed_hz;
-	spi_data->device->mode = SPI_MODE_0;
+	spi_data->device->mode = spi_data->data.pdata->spi_mode;
 	spi_data->device->bits_per_word = 8;
 	ret = spi_setup(spi_data->device);
 	if (!ret)
@@ -376,7 +376,7 @@ static int nanohub_spi_open(void *data)
 	down(&spi_data->spi_sem);
 	spi_bus_lock(spi_data->device->master);
 	spi_data->device->max_speed_hz = spi_data->data.max_speed_hz;
-	spi_data->device->mode = SPI_MODE_0;
+	spi_data->device->mode = spi_data->data.pdata->spi_mode;
 	spi_data->device->bits_per_word = 8;
 	ret = spi_setup(spi_data->device);
 	if (!ret) {

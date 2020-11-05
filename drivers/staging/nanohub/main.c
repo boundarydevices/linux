@@ -1373,6 +1373,11 @@ static struct nanohub_platform_data *nanohub_parse_dt(struct device *dev)
 	if (!pdata)
 		return ERR_PTR(-ENOMEM);
 
+	if (of_property_read_bool(dt, "spi-cpha"))
+		pdata->spi_mode |= SPI_CPHA;
+	if (of_property_read_bool(dt, "spi-cpol"))
+		pdata->spi_mode |= SPI_CPOL;
+
 	ret = pdata->irq1_gpio =
 	    of_get_named_gpio(dt, "sensorhub,irq1-gpio", 0);
 	if (ret < 0) {

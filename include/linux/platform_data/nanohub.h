@@ -22,6 +22,7 @@ struct nanohub_platform_data {
 	struct nanohub_flash_bank *flash_banks;
 	u32 num_shared_flash_banks;
 	struct nanohub_flash_bank *shared_flash_banks;
+	u16 spi_mode;
 };
 
 #endif /* __LINUX_PLATFORM_DATA_NANOHUB_H */
