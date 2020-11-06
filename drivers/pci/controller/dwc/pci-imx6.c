@@ -1971,18 +1971,20 @@ static u64 imx6_pcie_cpu_addr_fixup(struct dw_pcie *pcie, u64 cpu_addr)
 	struct dw_pcie_ep *ep = &pcie->ep;
 	struct pcie_port *pp = &pcie->pp;
 	struct imx6_pcie *imx6_pcie = to_imx6_pcie(pcie);
-	struct resource_entry *entry =
-		resource_list_first_type(&pp->bridge->windows, IORESOURCE_MEM);
+	struct resource_entry *entry;
 
-	if (imx6_pcie->drvdata->mode == DW_PCIE_RC_TYPE)
-		offset = entry->res->start;
-	else
-		offset = ep->phys_base;
-
-	if (imx6_pcie->drvdata->flags & IMX6_PCIE_FLAG_IMX6_CPU_ADDR_FIXUP)
-		return (cpu_addr + imx6_pcie->local_addr - offset);
-	else
+	if (!(imx6_pcie->drvdata->flags & IMX6_PCIE_FLAG_IMX6_CPU_ADDR_FIXUP))
 		return cpu_addr;
+
+	if (imx6_pcie->drvdata->mode == DW_PCIE_RC_TYPE) {
+		entry = resource_list_first_type(&pp->bridge->windows,
+						 IORESOURCE_MEM);
+		offset = entry->res->start;
+	} else {
+		offset = ep->phys_base;
+	}
+
+	return (cpu_addr + imx6_pcie->local_addr - offset);
 }
 
 static const struct dw_pcie_ops dw_pcie_ops = {
