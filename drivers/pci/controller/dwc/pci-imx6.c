@@ -2315,6 +2315,7 @@ static int imx6_pcie_resume_noirq(struct device *dev)
 		imx6_pcie_deassert_core_reset(imx6_pcie);
 		dw_pcie_setup_rc(pp);
 		pci_imx_set_msi_en(pp);
+		dw_pcie_msi_init(pp);
 
 		ret = imx6_pcie_establish_link(imx6_pcie);
 		if (ret < 0)
