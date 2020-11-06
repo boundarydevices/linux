@@ -76,9 +76,14 @@ static int imx_sc_thermal_get_temp(void *data, int *temp)
 
 	ret = imx_scu_call_rpc(thermal_ipc_handle, &msg, true);
 	if (ret) {
-		dev_err(&sensor->tzd->device, "read temp sensor %d failed, ret %d\n",
-			sensor->resource_id, ret);
-		return ret;
+		/*
+		 * if the SS power domain is down, read temp will fail, so
+		 * we can print error once and return 0 directly.
+		 */
+		pr_err_once("read temp sensor %d failed, could be SS powered off, ret %d\n",
+			     sensor->resource_id, ret);
+		*temp = 0;
+		return 0;
 	}
 
 	*temp = msg.data.resp.celsius * 1000 + msg.data.resp.tenths * 100;
