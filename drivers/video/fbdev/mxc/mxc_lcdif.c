@@ -1,3 +1,4 @@
+/* Copyright 2020 NXP */
 /*
  * Copyright (C) 2011-2015 Freescale Semiconductor, Inc. All Rights Reserved.
  */
@@ -367,6 +368,7 @@ static int lcdif_init(struct mxc_dispdrv_handle *disp,
 		fb_videomode_to_var(&setting->fbi->var, &modedb[0]);
 		setting->if_fmt = plat_data->default_ifmt;
 	}
+
 	if (setting->if_fmt != IPU_PIX_FMT_RGB666) {
 		struct pinctrl_state *pins;
 
@@ -377,8 +379,13 @@ static int lcdif_init(struct mxc_dispdrv_handle *disp,
 
 	INIT_LIST_HEAD(&setting->fbi->modelist);
 	for (i = 0; i < modedb_sz; i++) {
-		fb_add_videomode(&modedb[i],
-				&setting->fbi->modelist);
+		struct fb_videomode m;
+		fb_var_to_videomode(&m, &setting->fbi->var);
+		if (fb_mode_is_equal(&m, &modedb[i])) {
+			fb_add_videomode(&modedb[i],
+					&setting->fbi->modelist);
+			break;
+		}
 	}
 
 	return ret;
