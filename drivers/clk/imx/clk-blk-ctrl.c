@@ -38,7 +38,7 @@ struct imx_blk_ctrl_drvdata {
 	struct reset_hw *rst_hws;
 	struct pm_safekeep_info pm_info;
 
-	spinlock_t lock;
+	spinlock_t *lock;
 };
 
 static int imx_blk_ctrl_reset_set(struct reset_controller_dev *rcdev,
@@ -55,15 +55,15 @@ static int imx_blk_ctrl_reset_set(struct reset_controller_dev *rcdev,
 
 	if (assert) {
 		pm_runtime_get_sync(rcdev->dev);
-		spin_lock_irqsave(&drvdata->lock, flags);
+		spin_lock_irqsave(drvdata->lock, flags);
 		reg = readl(reg_addr);
 		writel(reg & ~(mask << shift), reg_addr);
-		spin_unlock_irqrestore(&drvdata->lock, flags);
+		spin_unlock_irqrestore(drvdata->lock, flags);
 	} else {
-		spin_lock_irqsave(&drvdata->lock, flags);
+		spin_lock_irqsave(drvdata->lock, flags);
 		reg = readl(reg_addr);
 		writel(reg | (mask << shift), reg_addr);
-		spin_unlock_irqrestore(&drvdata->lock, flags);
+		spin_unlock_irqrestore(drvdata->lock, flags);
 		pm_runtime_put(rcdev->dev);
 	}
 
@@ -103,7 +103,7 @@ static int imx_blk_ctrl_register_reset_controller(struct device *dev)
 	int max = dev_data->resets_max;
 	int i;
 
-	spin_lock_init(&drvdata->lock);
+	drvdata->lock = &imx_ccm_lock;
 
 	drvdata->rcdev.owner     = THIS_MODULE;
 	drvdata->rcdev.nr_resets = max;
@@ -265,10 +265,13 @@ static void imx_blk_ctrl_read_write(struct device *dev, bool write)
 	struct imx_blk_ctrl_drvdata *drvdata = dev_get_drvdata(dev);
 	struct pm_safekeep_info *pm_info = &drvdata->pm_info;
 	void __iomem *base = drvdata->base;
+	unsigned long flags;
 	int i;
 
 	if (!pm_info->regs_num)
 		return;
+
+	spin_lock_irqsave(drvdata->lock, flags);
 
 	for (i = 0; i < pm_info->regs_num; i++) {
 		u32 offset = pm_info->regs_offsets[i];
@@ -278,6 +281,8 @@ static void imx_blk_ctrl_read_write(struct device *dev, bool write)
 		else
 			pm_info->regs_values[i] = readl(base + offset);
 	}
+
+	spin_unlock_irqrestore(drvdata->lock, flags);
 
 }
 
