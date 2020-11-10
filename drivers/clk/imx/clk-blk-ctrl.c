@@ -24,6 +24,7 @@ struct reset_hw {
 	u32 offset;
 	u32 shift;
 	u32 mask;
+	unsigned long asserted;
 };
 
 struct pm_safekeep_info {
@@ -53,19 +54,24 @@ static int imx_blk_ctrl_reset_set(struct reset_controller_dev *rcdev,
 	unsigned long flags;
 	u32 reg;
 
-	if (assert) {
+	if (!assert && !test_bit(1, &drvdata->rst_hws[id].asserted))
+		return -ENODEV;
+
+	if (assert && !test_and_set_bit(1, &drvdata->rst_hws[id].asserted))
 		pm_runtime_get_sync(rcdev->dev);
-		spin_lock_irqsave(drvdata->lock, flags);
-		reg = readl(reg_addr);
+
+	spin_lock_irqsave(drvdata->lock, flags);
+
+	reg = readl(reg_addr);
+	if (assert)
 		writel(reg & ~(mask << shift), reg_addr);
-		spin_unlock_irqrestore(drvdata->lock, flags);
-	} else {
-		spin_lock_irqsave(drvdata->lock, flags);
-		reg = readl(reg_addr);
+	else
 		writel(reg | (mask << shift), reg_addr);
-		spin_unlock_irqrestore(drvdata->lock, flags);
+
+	spin_unlock_irqrestore(drvdata->lock, flags);
+
+	if (!assert && test_and_clear_bit(1, &drvdata->rst_hws[id].asserted))
 		pm_runtime_put(rcdev->dev);
-	}
 
 	return 0;
 }
