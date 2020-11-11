@@ -16,7 +16,7 @@
 
 / {
 	sound-wm8524 {
-		asrc-controller = <0>;
+		audio-asrc = <0>;
 	};
 
 	sound-ak5558 {
