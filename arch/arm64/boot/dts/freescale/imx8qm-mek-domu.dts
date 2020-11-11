@@ -351,7 +351,7 @@
 		model = "imx-cs42888";
 		esai-controller = <&esai0>;
 		audio-codec = <&cs42888>;
-		asrc-controller = <&asrc0>;
+		audio-asrc = <&asrc0>;
 		status = "okay";
 		xen,passthrough;
 	};
