@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * Copyright 2004-2014 Freescale Semiconductor, Inc. All Rights Reserved.
- * Copyright 2020 NXP
  */
 
 /*!
@@ -128,11 +127,7 @@ static int prpvf_start(void *private)
 	fbvar.yoffset = 0;
 	fbvar.accel_flags = FB_ACCEL_DOUBLE_FLAG;
 	fbvar.activate |= FB_ACTIVATE_FORCE;
-	err = fb_set_var(fbi, &fbvar);
-	if (err) {
-		printk(KERN_ERR "call fb_set_var() fail\n");
-		return err;
-	}
+	fb_set_var(fbi, &fbvar);
 
 	ipu_disp_set_window_pos(disp_ipu, MEM_FG_SYNC, cam->win.w.left,
 			cam->win.w.top);
@@ -439,11 +434,7 @@ static int prpvf_stop(void *private)
 	fbvar.accel_flags = FB_ACCEL_TRIPLE_FLAG;
 	fbvar.nonstd = cam->fb_origin_std;
 	fbvar.activate |= FB_ACTIVATE_FORCE;
-	err = fb_set_var(fbi, &fbvar);
-	if (err) {
-		printk(KERN_ERR "call fb_set_var() fail\n");
-		return err;
-	}
+	fb_set_var(fbi, &fbvar);
 
 #ifdef CONFIG_MXC_MIPI_CSI2
 	mipi_csi2_info = mipi_csi2_get_info();
