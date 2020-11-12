@@ -3201,10 +3201,6 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	if (error)
 		return error;
 
-	if (reset_gpio) {
-		data->in_bootloader = true;
-		reinit_completion(&data->bl_completion);
-	}
 	error = devm_request_threaded_irq(&client->dev, client->irq,
 					  NULL, mxt_interrupt, IRQF_ONESHOT,
 					  client->name, data);
@@ -3214,14 +3210,6 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 
 	disable_irq(client->irq);
-
-	if (reset_gpio) {
-		error = mxt_wait_for_completion(data, &data->bl_completion,
-						MXT_RESET_TIMEOUT);
-		if (error)
-			return error;
-		data->in_bootloader = false;
-	}
 
 	error = mxt_initialize(data);
 	if (error)
