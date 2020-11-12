@@ -3268,12 +3268,6 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		return error;
 	}
 
-
-	if (reset_gpio) {
-		data->in_bootloader = true;
-		reinit_completion(&data->bl_completion);
-	}
-
 	error = devm_request_threaded_irq(&client->dev, client->irq,
 					  NULL, mxt_interrupt,
 					  IRQF_ONESHOT | IRQF_NO_AUTOEN,
@@ -3295,14 +3289,6 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	 * to the mXT224 datasheet, page 13.
 	 */
 	msleep(MXT_BACKUP_TIME);
-
-	if (reset_gpio) {
-		error = mxt_wait_for_completion(data, &data->bl_completion,
-						MXT_RESET_TIMEOUT);
-		if (error)
-			return error;
-		data->in_bootloader = false;
-	}
 
 	/*
 	 * Controllers like mXT1386 have a dedicated WAKE line that could be
