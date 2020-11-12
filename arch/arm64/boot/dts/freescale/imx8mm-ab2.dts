@@ -179,7 +179,7 @@
 		model = "ak4458-audio";
 		audio-cpu = <&sai1>;
 		audio-codec = <&ak4458_1>, <&ak4458_2>;
-		ak4458,pdn-gpio = <&pca6416 4 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&pca6416 4 GPIO_ACTIVE_HIGH>;
 	};
 
 	sound-ak5552 {
