@@ -16,6 +16,8 @@
 #include <linux/skbuff.h>
 #include <linux/hw_random.h>
 #include <crypto/aes.h>
+#include <crypto/sha1.h>
+#include <crypto/sha2.h>
 
 #define SA_ENGINE_ENABLE_CONTROL	0x1000
 

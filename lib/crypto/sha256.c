@@ -15,7 +15,7 @@
 #include <linux/export.h>
 #include <linux/module.h>
 #include <linux/string.h>
-#include <crypto/sha.h>
+#include <crypto/sha2.h>
 #include <asm/unaligned.h>
 #include <trace/hooks/fips140.h>
 
