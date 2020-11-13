@@ -744,8 +744,8 @@ static int ak4458_i2c_probe(struct i2c_client *i2c)
 
 	ak4458->drvdata = of_device_get_match_data(&i2c->dev);
 
-	ak4458->reset_gpiod = devm_gpiod_get_optional(ak4458->dev, "reset", GPIOD_OUT_LOW |
-						      GPIOD_FLAGS_BIT_NONEXCLUSIVE);
+	ak4458->reset_gpiod = devm_gpiod_get_optional(ak4458->dev, "reset",
+						      GPIOD_OUT_LOW);
 	if (IS_ERR(ak4458->reset_gpiod))
 		return PTR_ERR(ak4458->reset_gpiod);
 
