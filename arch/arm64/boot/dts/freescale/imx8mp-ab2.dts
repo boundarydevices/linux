@@ -85,6 +85,7 @@
 		model = "ak4458-audio";
 		audio-cpu = <&sai1>;
 		audio-codec = <&ak4458_1>, <&ak4458_2>;
+		ak4458,pdn-gpio = <&pca6416 4 GPIO_ACTIVE_HIGH>;
 	};
 
 	sound-ak5552 {
@@ -324,7 +325,6 @@
 	ak4458_1: ak4458@10 {
 		compatible = "asahi-kasei,ak4458";
 		reg = <0x10>;
-		reset-gpios = <&pca6416 4 GPIO_ACTIVE_HIGH>;
 		AVDD-supply = <&reg_ab2_ana_pwr>;
 		DVDD-supply = <&reg_ab2_ana_pwr>;
 	};
@@ -332,7 +332,6 @@
 	ak4458_2: ak4458@11 {
 		compatible = "asahi-kasei,ak4458";
 		reg = <0x11>;
-		reset-gpios = <&pca6416 4 GPIO_ACTIVE_HIGH>;
 		AVDD-supply = <&reg_ab2_ana_pwr>;
 		DVDD-supply = <&reg_ab2_ana_pwr>;
 	};
@@ -340,7 +339,6 @@
 	ak4458_3: ak4458@12 {
 		compatible = "asahi-kasei,ak4458";
 		reg = <0x12>;
-		reset-gpios = <&pca6416 4 GPIO_ACTIVE_HIGH>;
 		AVDD-supply = <&reg_ab2_ana_pwr>;
 		DVDD-supply = <&reg_ab2_ana_pwr>;
 	};
