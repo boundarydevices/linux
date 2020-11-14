@@ -24,10 +24,8 @@
 
 #include "stmmac_platform.h"
 
-#ifdef CONFIG_IMX_SCU_SOC
 #include <dt-bindings/firmware/imx/rsrc.h>
 #include <linux/firmware/imx/sci.h>
-#endif
 
 #define GPR_ENET_QOS_INTF_MODE_MASK	GENMASK(21, 16)
 #define GPR_ENET_QOS_INTF_SEL_MII	(0x0 << 16)
@@ -93,7 +91,6 @@ imx8dxl_set_intf_mode(struct plat_stmmacenet_data *plat_dat)
 	int ret = 0;
 
 	/* TBD: depends on imx8dxl scu interfaces to be upstreamed */
-#ifdef CONFIG_IMX_SCU_SOC
 	struct imx_sc_ipc *ipc_handle;
 	int val;
 
@@ -124,7 +121,6 @@ imx8dxl_set_intf_mode(struct plat_stmmacenet_data *plat_dat)
 				      IMX_SC_C_INTF_SEL, val >> 16);
 	ret |= imx_sc_misc_set_control(ipc_handle, IMX_SC_R_ENET_1,
 				       IMX_SC_C_CLK_GEN_EN, 0x1);
-#endif
 
 	return ret;
 }
