@@ -1184,7 +1184,6 @@ fec_restart(struct net_device *ndev)
 
 }
 
-#ifdef CONFIG_IMX_SCU_SOC
 static int fec_enet_ipc_handle_init(struct fec_enet_private *fep)
 {
 	if (!(of_machine_is_compatible("fsl,imx8qm") ||
@@ -1212,14 +1211,6 @@ static void fec_enet_ipg_stop_set(struct fec_enet_private *fep, bool enabled)
 	val = enabled ? 1 : 0;
 	imx_sc_misc_set_control(fep->ipc_handle, rsrc_id, IMX_SC_C_IPG_STOP, val);
 }
-#else
-static int fec_enet_ipc_handle_init(struct fec_enet_private *fep)
-{
-	return 0;
-}
-
-static void fec_enet_ipg_stop_set(struct fec_enet_private *fep, bool enabled) {}
-#endif
 
 static void fec_enet_stop_mode(struct fec_enet_private *fep, bool enabled)
 {

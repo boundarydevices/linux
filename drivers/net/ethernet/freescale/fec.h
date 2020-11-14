@@ -19,11 +19,8 @@
 #include <linux/pm_qos.h>
 #include <linux/ptp_clock_kernel.h>
 #include <linux/timecounter.h>
-
-#ifdef CONFIG_IMX_SCU_SOC
 #include <dt-bindings/firmware/imx/rsrc.h>
 #include <linux/firmware/imx/sci.h>
-#endif
 
 #if defined(CONFIG_M523x) || defined(CONFIG_M527x) || defined(CONFIG_M528x) || \
     defined(CONFIG_M520x) || defined(CONFIG_M532x) || defined(CONFIG_ARM) || \
@@ -627,9 +624,7 @@ struct fec_enet_private {
 	int pps_enable;
 	unsigned int next_counter;
 
-#ifdef CONFIG_IMX_SCU_SOC
 	struct imx_sc_ipc *ipc_handle;
-#endif
 
 	u64 ethtool_stats[];
 };
