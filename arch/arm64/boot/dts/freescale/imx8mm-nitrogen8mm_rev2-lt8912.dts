@@ -1,0 +1,68 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2018 Boundary Devices
+ */
+
+#include "imx8mm-nitrogen8mm_rev2.dts"
+
+/ {
+	model = "Boundary Devices i.MX8MMini Nitrogen8MM Rev2 with lt8912 mipi_dsi to hdmi converter";
+	compatible = "boundary,imx8mm-nitrogen8mm_rev2-lt8912" ,"boundary,imx8mm-nitrogen8mm_rev2", "fsl,imx8mm";
+
+	/delete-node/ alias_create_phandles;
+
+	aliases {
+		/delete-property/ fb_mipi;
+		/delete-property/ mipi;
+		/delete-property/ mipi_to_lvds;
+		/delete-property/ t_mipi;
+	};
+
+	soc@0 {
+		bus@30800000 {
+			i2c@30a30000 {
+				/delete-node/ mipi-to-lvds@2c;
+			};
+		};
+
+		bus@32c00000 {
+			mipi_dsi@32e10000 {
+				/delete-node/ panel@0;
+				port@1 {
+					mipi_dsi_hdmi_out: endpoint {
+						remote-endpoint = <&lt8912_1_in>;
+						attach-bridge;
+					};
+				};
+			};
+		};
+	};
+
+};
+
+&TOUCHSCREEN_I2C_BUS {
+	i2cmux9540@70 {
+		TOUCHSCREEN_I2C_BUS@1 {
+			lt8912@48 {
+				/delete-property/ display-dsi;
+			};
+		};
+	};
+};
+
+&TOUCHSCREEN_I2C_BUS {
+	i2cmux9546@70 {
+		TOUCHSCREEN_I2C_BUS@0 {
+			lt8912@48 {
+				compatible = "lontium,lt8912_drm";
+				dsi-lanes = <4>;
+				/delete-property/ display-dsi;
+				port@0 {
+					lt8912_1_in: endpoint {
+						remote-endpoint = <&mipi_dsi_hdmi_out>;
+					};
+				};
+			};
+		};
+	};
+};
