@@ -54,7 +54,6 @@ Optional properties:
   per second interrupt associated with 1588 precision time protocol(PTP).
 
 - fsl,wakeup_irq : The property defines the wakeup irq index in enet irq source.
-- stop-mode : If present, indicates soc need to set gpr bit to request stop mode.
 - mii-exclusive: If present, each MAC has their exclusive MDIO bus in current board
   design, otherwise multiple MACs share one MDIO bus to reduce Pins utilize.
 
