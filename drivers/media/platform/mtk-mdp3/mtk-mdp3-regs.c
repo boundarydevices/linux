@@ -251,7 +251,7 @@ static const struct mdp_limit mdp_def_limit = {
 	.v_scale_down_max = 128,
 };
 
-static const struct mdp_format *mdp_find_fmt(u32 pixelformat, u32 type)
+const struct mdp_format *mdp_find_fmt(u32 pixelformat, u32 type)
 {
 	u32 i, flag;
 

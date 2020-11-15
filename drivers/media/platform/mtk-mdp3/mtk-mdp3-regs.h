@@ -370,4 +370,6 @@ void mdp_set_dst_config(struct img_output *out,
 
 int mdp_frameparam_init(struct mdp_frameparam *param);
 
+const struct mdp_format *mdp_find_fmt(u32 pixelformat, u32 type);
+
 #endif  /* __MTK_MDP3_REGS_H__ */
