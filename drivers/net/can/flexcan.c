@@ -558,7 +558,7 @@ static void flexcan_enable_wakeup_irq(struct flexcan_priv *priv, bool enable)
 	priv->write(reg_mcr, &regs->mcr);
 }
 
-static void flexcan_stop_mode_enable_scfw(struct flexcan_priv *priv, bool enabled)
+static int flexcan_stop_mode_enable_scfw(struct flexcan_priv *priv, bool enabled)
 {
 	struct device_node *np = priv->dev->of_node;
 	u32 rsrc_id, val;
@@ -574,24 +574,28 @@ static void flexcan_stop_mode_enable_scfw(struct flexcan_priv *priv, bool enable
 
 	val = enabled ? 1 : 0;
 	/* stop mode request */
-	imx_sc_misc_set_control(priv->sc_ipc_handle, rsrc_id, IMX_SC_C_IPG_STOP, val);
+	return imx_sc_misc_set_control(priv->sc_ipc_handle, rsrc_id, IMX_SC_C_IPG_STOP, val);
 }
 
 static inline int flexcan_enter_stop_mode(struct flexcan_priv *priv)
 {
 	struct flexcan_regs __iomem *regs = priv->regs;
 	u32 reg_mcr;
+	int ret;
 
 	reg_mcr = priv->read(&regs->mcr);
 	reg_mcr |= FLEXCAN_MCR_SLF_WAK;
 	priv->write(reg_mcr, &regs->mcr);
 
 	 /* enable stop request */
-	if (priv->devtype_data->quirks & FLEXCAN_QUIRK_USE_SCFW)
-		flexcan_stop_mode_enable_scfw(priv, true);
-	else
+	if (priv->devtype_data->quirks & FLEXCAN_QUIRK_USE_SCFW) {
+		ret = flexcan_stop_mode_enable_scfw(priv, true);
+		if (ret < 0)
+			return ret;
+	} else {
 		regmap_update_bits(priv->stm.gpr, priv->stm.req_gpr,
 				   1 << priv->stm.req_bit, 1 << priv->stm.req_bit);
+	}
 
 	return flexcan_low_power_enter_ack(priv);
 }
@@ -600,13 +604,17 @@ static inline int flexcan_exit_stop_mode(struct flexcan_priv *priv)
 {
 	struct flexcan_regs __iomem *regs = priv->regs;
 	u32 reg_mcr;
+	int ret;
 
 	/* remove stop request */
-	if (priv->devtype_data->quirks & FLEXCAN_QUIRK_USE_SCFW)
-		flexcan_stop_mode_enable_scfw(priv, false);
-	else
+	if (priv->devtype_data->quirks & FLEXCAN_QUIRK_USE_SCFW) {
+		ret = flexcan_stop_mode_enable_scfw(priv, false);
+		if (ret < 0)
+			return ret;
+	} else {
 		regmap_update_bits(priv->stm.gpr, priv->stm.req_gpr,
 				   1 << priv->stm.req_bit, 0);
+	}
 
 	reg_mcr = priv->read(&regs->mcr);
 	reg_mcr &= ~FLEXCAN_MCR_SLF_WAK;
