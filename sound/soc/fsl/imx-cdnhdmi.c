@@ -434,7 +434,7 @@ static struct snd_kcontrol_new imx_cdnhdmi_rx_ctrls[] = {
 
 static int imx_cdnhdmi_probe(struct platform_device *pdev)
 {
-	struct device_node *cpu_np, *cdnhdmi_np = NULL;
+	struct device_node *cpu_np;
 	struct platform_device *cpu_pdev;
 	struct imx_cdnhdmi_data *data;
 	struct snd_soc_dai_link_component *dlc;
@@ -563,8 +563,6 @@ static int imx_cdnhdmi_probe(struct platform_device *pdev)
 fail:
 	if (cpu_np)
 		of_node_put(cpu_np);
-	if (cdnhdmi_np)
-		of_node_put(cdnhdmi_np);
 	return ret;
 }
 
