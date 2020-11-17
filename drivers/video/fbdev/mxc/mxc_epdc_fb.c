@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * Copyright 2017-2019 NXP
+ * Copyright 2017-2020 NXP
  */
 /*
  * Based on STMP378X LCDIF
@@ -3360,6 +3360,7 @@ static int mxc_epdc_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	return ret;
 }
 
+#ifdef CONFIG_FB_MXC_EINK_AUTO_UPDATE_MODE
 static void mxc_epdc_fb_update_pages(struct mxc_epdc_fb_data *fb_data,
 				     u16 y1, u16 y2)
 {
@@ -3408,6 +3409,7 @@ static void mxc_epdc_fb_deferred_io(struct fb_info *info,
 
 	mxc_epdc_fb_update_pages(fb_data, miny, maxy);
 }
+#endif
 
 void mxc_epdc_fb_flush_updates(struct mxc_epdc_fb_data *fb_data)
 {
@@ -3568,10 +3570,12 @@ static struct fb_ops mxc_epdc_fb_ops = {
 	.fb_imageblit = cfb_imageblit,
 };
 
+#ifdef CONFIG_FB_MXC_EINK_AUTO_UPDATE_MODE
 static struct fb_deferred_io mxc_epdc_fb_defio = {
 	.delay = HZ,
 	.deferred_io = mxc_epdc_fb_deferred_io,
 };
+#endif
 
 static void epdc_done_work_func(struct work_struct *work)
 {
@@ -4888,8 +4892,8 @@ int mxc_epdc_fb_probe(struct platform_device *pdev)
 		goto out_dma_work_buf;
 	}
 
-	info->fbdefio = &mxc_epdc_fb_defio;
 #ifdef CONFIG_FB_MXC_EINK_AUTO_UPDATE_MODE
+	info->fbdefio = &mxc_epdc_fb_defio;
 	fb_deferred_io_init(info);
 #endif
 
