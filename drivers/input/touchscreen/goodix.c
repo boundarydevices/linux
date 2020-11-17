@@ -1634,7 +1634,7 @@ reset:
 			goto reset;
 		}
 		dev_err(&client->dev, "I2C communication failure: %d\n", error);
-		return error;
+		return -EPROBE_DEFER;
 	}
 
 	error = goodix_read_version(ts);
