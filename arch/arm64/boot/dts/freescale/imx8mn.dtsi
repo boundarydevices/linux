@@ -765,6 +765,10 @@
 				cpu_speed_grade: speed-grade@10 {
 					reg = <0x10 4>;
 				};
+
+				fec_mac_address: mac-address@640 {
+					reg = <0x90 6>;
+				};
 			};
 
 			anatop: anatop@30360000 {
@@ -1179,6 +1183,9 @@
 				assigned-clock-rates = <0>, <100000000>, <125000000>, <0>;
 				fsl,num-tx-queues = <3>;
 				fsl,num-rx-queues = <3>;
+				nvmem-cells = <&fec_mac_address>;
+				nvmem-cell-names = "mac-address";
+				nvmem_macaddr_swap;
 				fsl,stop-mode = <&gpr 0x10 3>;
 				fsl,wakeup_irq = <2>;
 				status = "disabled";
