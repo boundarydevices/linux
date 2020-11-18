@@ -623,6 +623,7 @@
 		t_mipi = &t_mipi;
 		ts_egalax = &ts_egalax_lvds;
 		ts_ft5x06 = &ts_ft5x06;
+		ts_ft5x06_2 = &ts_ft5x06_lvds;
 		ts_goodix = &ts_goodix;
 		ts_ili251x = &ts_ili251x_lvds;
 		usb_mux = &usb_mux;
