@@ -605,6 +605,7 @@
 		t_lvds2 = &t_lvds2;
 		t_mipi = &t_mipi;
 		ts_ft5x06 = &ts_ft5x06;
+		ts_ft5x06_2 = &ts_ft5x06_lvds;
 		ts_goodix = &ts_goodix;
 	};
 
