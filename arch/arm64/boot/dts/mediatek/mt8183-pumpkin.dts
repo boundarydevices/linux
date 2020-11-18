@@ -79,6 +79,14 @@
 		};
 	};
 
+	reg_1p8v_ext: regulator-1p8v-ext {
+		compatible = "regulator-fixed";
+		regulator-name = "1.8V_EXT";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+	};
+
 	sound {
 		compatible = "mediatek,mt8183-mt6358-sound";
 		mediatek,platform = <&afe>;
