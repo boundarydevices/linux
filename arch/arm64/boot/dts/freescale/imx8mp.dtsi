@@ -5,7 +5,6 @@
 
 #include <dt-bindings/clock/imx8mp-clock.h>
 #include <dt-bindings/reset/imx8mp-reset.h>
-#include <dt-bindings/reset/imx8mq-reset.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
@@ -1606,7 +1605,7 @@
 
 			pcie_phy: pcie-phy@32f00000 {
 				compatible = "fsl,imx8mp-pcie-phy";
-				reg = <0x0 0x32f00000 0x0 0x10000>;
+				reg = <0x32f00000 0x10000>;
 				clocks = <&clk IMX8MP_CLK_PCIE_PHY>;
 				clock-names = "phy";
 				assigned-clocks = <&clk IMX8MP_CLK_PCIE_PHY>;
@@ -1617,7 +1616,7 @@
 
 			hsio_mix: hsio-mix@32f10000 {
 				  compatible = "fsl,imx8mp-hsio-mix";
-				  reg = <0x0 0x32f10000 0x0 0x8>;
+				  reg = <0x32f10000 0x8>;
 			};
 		};
 
@@ -2013,8 +2012,7 @@
 
 		pcie: pcie@33800000 {
 			compatible = "fsl,imx8mp-pcie", "snps,dw-pcie";
-			reg = <0x0 0x33800000 0x0 0x400000>,
-				<0x0 0x1ff00000 0x0 0x80000>;
+			reg = <0x33800000 0x400000>, <0x1ff00000 0x80000>;
 			reg-names = "dbi", "config";
 			#address-cells = <3>;
 			#size-cells = <2>;
@@ -2036,7 +2034,7 @@
 			resets = <&src IMX8MP_RESET_PCIEPHY>,
 				 <&src IMX8MP_RESET_PCIEPHY_PERST>,
 				 <&src IMX8MP_RESET_PCIE_CTRL_APPS_EN>,
-				 <&src IMX8MQ_RESET_PCIE_CTRL_APPS_CLK_REQ>,
+				 <&src IMX8MP_RESET_PCIE_CTRL_APPS_CLK_REQ>,
 				 <&src IMX8MP_RESET_PCIE_CTRL_APPS_TURNOFF>;
 			reset-names = "pciephy", "pciephy_perst", "apps", "clkreq", "turnoff";
 			phys = <&pcie_phy>;
@@ -2047,19 +2045,18 @@
 
 		pcie_ep: pcie_ep@33800000 {
 			compatible = "fsl,imx8mp-pcie-ep";
-			reg = <0x0 0x33800000 0x0 0x000400000>,
-			      <0x0 0x18000000 0x0 0x08000000>;
+			reg = <0x33800000 0x000400000>, <0x18000000 0x08000000>;
 			reg-names = "regs", "addr_space";
 			num-lanes = <1>;
 			interrupts = <GIC_SPI 127 IRQ_TYPE_LEVEL_HIGH>; /* eDMA */
 			interrupt-names = "dma";
 			fsl,max-link-speed = <3>;
 			power-domains = <&pcie_pd>;
-			resets = <&src IMX8MQ_RESET_PCIEPHY>,
-				 <&src IMX8MQ_RESET_PCIEPHY_PERST>,
-				 <&src IMX8MQ_RESET_PCIE_CTRL_APPS_EN>,
-				 <&src IMX8MQ_RESET_PCIE_CTRL_APPS_CLK_REQ>,
-				 <&src IMX8MQ_RESET_PCIE_CTRL_APPS_TURNOFF>;
+			resets = <&src IMX8MP_RESET_PCIEPHY>,
+				 <&src IMX8MP_RESET_PCIEPHY_PERST>,
+				 <&src IMX8MP_RESET_PCIE_CTRL_APPS_EN>,
+				 <&src IMX8MP_RESET_PCIE_CTRL_APPS_CLK_REQ>,
+				 <&src IMX8MP_RESET_PCIE_CTRL_APPS_TURNOFF>;
 			reset-names = "pciephy", "pciephy_perst", "apps", "clkreq", "turnoff";
 			phys = <&pcie_phy>;
 			phy-names = "pcie-phy";
