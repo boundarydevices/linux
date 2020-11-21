@@ -1656,7 +1656,7 @@ static int sim_open(struct inode *inode, struct file *file)
 	return 0;
 
 out_runtime_put:
-	pm_runtime_put(sim_dev.parent);
+	pm_runtime_put_sync(sim_dev.parent);
 	return errval;
 };
 
@@ -1673,7 +1673,7 @@ static int sim_release(struct inode *inode, struct file *file)
 	if (sim->present != SIM_PRESENT_REMOVED)
 		sim_deactivate(sim);
 
-	pm_runtime_put(sim_dev.parent);
+	pm_runtime_put_sync(sim_dev.parent);
 	sim->open_cnt = 0;
 
 	return 0;
@@ -1802,10 +1802,10 @@ static int sim_probe(struct platform_device *pdev)
 	ret = clk_prepare_enable(sim->clk);
 	if (ret)
 		return ret;
-	/* Let pm_runtime_put() disable the clock.
+	/* Let pm_runtime_put_snyc() disable the clock.
 	 * If CONFIG_PM is not enabled, the clock will stay powered.
 	 */
-	pm_runtime_put(&pdev->dev);
+	pm_runtime_put_sync(&pdev->dev);
 	sim->open_cnt = 0;
 
 	misc_register(&sim_dev);

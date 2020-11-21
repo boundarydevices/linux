@@ -1514,7 +1514,7 @@ static int emvsim_release(struct inode *inode, struct file *file)
 	if (emvsim->present != SIM_PRESENT_REMOVED)
 		emvsim_deactivate(emvsim);
 
-	pm_runtime_put(emvsim_dev.parent);
+	pm_runtime_put_sync(emvsim_dev.parent);
 	emvsim->open_cnt = 0;
 
 	return 0;
@@ -1654,10 +1654,10 @@ static int emvsim_probe(struct platform_device *pdev)
 		clk_disable_unprepare(emvsim->ipg);
 		return ret;
 	}
-	/* Let pm_runtime_put() disable the clocks.
+	/* Let pm_runtime_put_sync() disable the clocks.
 	 * If CONFIG_PM is not enabled, the clocks will stay powered.
 	 */
-	pm_runtime_put(&pdev->dev);
+	pm_runtime_put_sync(&pdev->dev);
 	emvsim->open_cnt = 0;
 
 	ret = misc_register(&emvsim_dev);
