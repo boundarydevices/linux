@@ -352,6 +352,11 @@ int mmc_parse_voltage(struct device *dev, u32 *mask)
 
 	num_ranges = device_property_read_u32_array(dev, "voltage-ranges",
 						    NULL, 0);
+	if (num_ranges < 0) {
+		dev_err(dev, "voltage-ranges unspecified\n");
+		return -EINVAL;
+	}
+
 	if (num_ranges / 2 == 0) {
 		dev_err(dev, "voltage-ranges empty\n");
 		return -EINVAL;
