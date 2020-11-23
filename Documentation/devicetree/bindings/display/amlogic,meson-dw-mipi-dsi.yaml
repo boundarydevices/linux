@@ -22,6 +22,7 @@ properties:
   compatible:
     enum:
       - amlogic,meson-axg-dw-mipi-dsi
+      - amlogic,meson-g12a-dw-mipi-dsi
 
   reg:
     maxItems: 1
