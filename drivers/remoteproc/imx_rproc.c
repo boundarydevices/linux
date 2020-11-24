@@ -1150,7 +1150,9 @@ static int imx_rproc_probe(struct platform_device *pdev)
 	if (rproc->state != RPROC_DETACHED)
 		rproc->auto_boot = of_property_read_bool(np, "fsl,auto-boot");
 
-	rproc->auto_boot = of_property_read_bool(np, "fsl,rproc-auto-boot");
+	rproc->auto_boot = false;
+	if (priv->early_boot)
+		rproc->auto_boot = true;
 
 	ret = rproc_add(rproc);
 	if (ret) {
