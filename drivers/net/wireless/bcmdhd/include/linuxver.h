@@ -599,11 +599,7 @@ static inline bool binary_sema_up(tsk_ctl_t *tsk)
 	return sem_up;
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0))
-#define SMP_RD_BARRIER_DEPENDS(x) smp_read_barrier_depends(x)
-#else
 #define SMP_RD_BARRIER_DEPENDS(x) smp_rmb(x)
-#endif
 
 #define PROC_START(thread_func, owner, tsk_ctl, flags, name) \
 { \
