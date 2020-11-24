@@ -92,9 +92,9 @@ static irqreturn_t kbase_gpu_irq_custom_handler(int irq, void *data)
 
 	val = kbase_reg_read(kbdev, GPU_CONTROL_REG(GPU_IRQ_STATUS));
 	if (val & TEST_IRQ) {
-		struct timespec tval;
+		struct timespec64 tval;
 
-		getnstimeofday(&tval);
+		ktime_get_raw_ts64(&tval);
 		irq_time = SEC_TO_NANO(tval.tv_sec) + (tval.tv_nsec);
 
 		kbase_reg_write(kbdev, GPU_CONTROL_REG(GPU_IRQ_CLEAR), val);
@@ -183,12 +183,12 @@ static void mali_kutf_irq_latency(struct kutf_context *context)
 			GPU_IRQ_HANDLER);
 
 	for (i = 0; i < NR_TEST_IRQS; i++) {
-		struct timespec tval;
+		struct timespec64 tval;
 		u64 start_time;
 		int ret;
 
 		triggered = false;
-		getnstimeofday(&tval);
+		ktime_get_raw_ts64(&tval);
 		start_time = SEC_TO_NANO(tval.tv_sec) + (tval.tv_nsec);
 
 		/* Trigger fake IRQ */

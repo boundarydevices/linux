@@ -73,10 +73,10 @@ struct kbase_hwcnt_backend_gpu {
 static u64 kbasep_hwcnt_backend_gpu_timestamp_ns(
 	struct kbase_hwcnt_backend *backend)
 {
-	struct timespec ts;
+	struct timespec64 ts;
 
 	(void)backend;
-	getrawmonotonic(&ts);
+	ktime_get_raw_ts64(&ts);
 	return (u64)ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec;
 }
 

@@ -996,7 +996,7 @@ enum kbase_trace_code {
  *                      in the trace message, used during dumping of the message.
  */
 struct kbase_trace {
-	struct timespec timestamp;
+	struct timespec64 timestamp;
 	u32 thread_id;
 	u32 cpu;
 	void *ctx;

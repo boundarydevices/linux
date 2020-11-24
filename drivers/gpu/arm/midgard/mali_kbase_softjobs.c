@@ -135,7 +135,7 @@ static int kbase_dump_cpu_gpu_time(struct kbase_jd_atom *katom)
 {
 	struct kbase_vmap_struct map;
 	void *user_result;
-	struct timespec ts;
+	struct timespec64 ts;
 	struct base_dump_cpu_gpu_counters data;
 	u64 system_time;
 	u64 cycle_counter;
