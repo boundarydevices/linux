@@ -430,7 +430,7 @@ static int nanohub_spi_probe(struct spi_device *spi)
 	struct iio_dev *iio_dev;
 	int error;
 
-	iio_dev = iio_device_alloc(sizeof(struct nanohub_spi_data));
+	iio_dev = iio_device_alloc(&spi->dev, sizeof(struct nanohub_spi_data));
 
 	iio_dev = nanohub_probe(&spi->dev, iio_dev);
 

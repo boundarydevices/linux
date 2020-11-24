@@ -1624,7 +1624,7 @@ struct iio_dev *nanohub_probe(struct device *dev, struct iio_dev *iio_dev)
 	}
 
 	if (own_iio_dev) {
-		iio_dev = iio_device_alloc(sizeof(struct nanohub_data));
+		iio_dev = iio_device_alloc(dev, sizeof(struct nanohub_data));
 		if (!iio_dev)
 			return ERR_PTR(-ENOMEM);
 	}
