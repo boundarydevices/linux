@@ -21,6 +21,7 @@ i.MX6/i.MX7/i.MX8 based boards:
 * [Nitrogen8M Mini SOM][nitrogen8mm-som]
 * [Nitrogen8M Nano][nitrogen8mn]
 * [Nitrogen8M Nano SOM][nitrogen8mn-som]
+* [Nitrogen8M Plus SOM][nitrogen8mp-som]
 
 It is based largely on NXP's kernel tree at [codeaurora.org/external/imx][nxp].
 
@@ -79,6 +80,7 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [nitrogen8mm-som]:https://boundarydevices.com/wiki/Nitrogen8M_Mini-SOM "Nitrogen8M_Mini SOM product page"
 [nitrogen8mn]:https://boundarydevices.com/wiki/nitrogen8m-nano-sbc "Nitrogen8M Nano product page"
 [nitrogen8mn-som]:https://boundarydevices.com/wiki/nitrogen8m-nano-som "Nitrogen8M Nano SOM product page"
+[nitrogen8mp-som]:https://boundarydevices.com/wiki/nitrogen8m-plus-som "Nitrogen8M Plus SOM product page"
 [latest-jellybean]:http://github.com/boundarydevices/linux-imx6/tree/boundary-jb4.3_1.0.0-ga "Boundary Jellybean kernel tree"
 [latest-kitkat]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-kk4.4.3_2.0.1-ga "Boundary KitKat kernel tree"
 [latest-lollipop]:http://github.com/boundarydevices/linux-imx6/tree/boundary-imx-l5.1.1_2.1.0-ga "Boundary Lollipop kernel tree"
