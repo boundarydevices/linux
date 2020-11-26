@@ -584,7 +584,6 @@ static int cdns3_probe(struct platform_device *pdev)
 
 	return 0;
 err4:
-	cdns3_drd_exit(cdns);
 	if (cdns->role_sw)
 		usb_role_switch_unregister(cdns->role_sw);
 err3:
