@@ -42,16 +42,14 @@ void caam_debugfs_qi_init(struct caam_drv_private *ctrlpriv)
 }
 #endif
 
-void caam_debugfs_init(struct caam_drv_private *ctrlpriv, struct dentry *root)
+void caam_debugfs_init(struct caam_drv_private *ctrlpriv,
+		       struct caam_perfmon *perfmon, struct dentry *root)
 {
-	struct caam_perfmon *perfmon;
-
 	/*
 	 * FIXME: needs better naming distinction, as some amalgamation of
 	 * "caam" and nprop->full_name. The OF name isn't distinctive,
 	 * but does separate instances
 	 */
-	perfmon = (struct caam_perfmon __force *)&ctrlpriv->ctrl->perfmon;
 
 	ctrlpriv->ctl = debugfs_create_dir("ctl", root);
 

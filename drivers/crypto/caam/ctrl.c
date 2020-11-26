@@ -1084,7 +1084,7 @@ set_dma_mask:
 			return ret;
 	}
 
-	caam_debugfs_init(ctrlpriv, dfs_root);
+	caam_debugfs_init(ctrlpriv, perfmon, dfs_root);
 
 	/* Check to see if (DPAA 1.x) QI present. If so, enable */
 	if (ctrlpriv->qi_present && !caam_dpaa2) {
