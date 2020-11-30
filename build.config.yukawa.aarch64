@@ -1,0 +1,45 @@
+. ${ROOT_DIR}/hikey-linaro/build.config.common
+. ${ROOT_DIR}/hikey-linaro/build.config.aarch64
+
+BRANCH=android-amlogic-bmeson-5.15
+DEFCONFIG=meson_defconfig
+KERNEL_DIR=hikey-linaro
+POST_DEFCONFIG_CMDS="check_defconfig"
+STOP_SHIP_TRACEPRINTK=1
+SKIP_CP_KERNEL_HDR=1
+# this is needed to generate __symbols__ for u-boot
+DTC_FLAGS="-@"
+
+MAKE_GOALS="${MAKE_GOALS}
+dtbs
+"
+
+FILES="
+arch/arm64/boot/dts/amlogic/meson-g12a-sei510.dtb
+arch/arm64/boot/dts/amlogic/meson-g12a-sei510-android.dtb
+arch/arm64/boot/dts/amlogic/meson-sm1-sei610.dtb
+arch/arm64/boot/dts/amlogic/meson-sm1-sei610-android.dtb
+arch/arm64/boot/dts/amlogic/meson-g12b-a311d-khadas-vim3.dtb
+arch/arm64/boot/dts/amlogic/meson-g12b-a311d-khadas-vim3-android.dtb
+arch/arm64/boot/dts/amlogic/meson-sm1-khadas-vim3l.dtb
+arch/arm64/boot/dts/amlogic/meson-sm1-khadas-vim3l-android.dtb
+arch/arm64/boot/Image.lz4
+"
+
+EXTRA_CMDS="lz4_compress"
+DIST_CMDS="rename_file"
+
+function lz4_compress() {
+        lz4 -f -12 --favor-decSpeed ${OUT_DIR}/arch/arm64/boot/Image ${OUT_DIR}/arch/arm64/boot/Image.lz4
+}
+
+function rename_file(){
+        KERN_VER=$(echo "$BRANCH" | cut -f 4 -d "-")
+        for FILE in ${FILES}; do
+            if [ -f ${DIST_DIR}/${FILE##*/} ]; then
+                  cp -p ${DIST_DIR}/${FILE##*/} ${DIST_DIR}/${FILE##*/}-${KERN_VER}
+            else
+                  echo "  $FILE is not a file, skipping"
+            fi
+        done
+}
