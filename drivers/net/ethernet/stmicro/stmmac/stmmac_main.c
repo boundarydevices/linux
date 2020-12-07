@@ -1463,6 +1463,10 @@ static void dma_free_tx_skbufs(struct stmmac_priv *priv, u32 queue)
 		stmmac_free_tx_buffer(priv, queue, i);
 }
 
+/**
+ * stmmac_free_tx_skbufs - free TX skb buffers
+ * @priv: private structure
+ */
 static void stmmac_free_tx_skbufs(struct stmmac_priv *priv)
 {
 	u32 tx_queue_cnt = priv->plat->tx_queues_to_use;
