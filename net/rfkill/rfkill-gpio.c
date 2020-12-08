@@ -170,9 +170,13 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 	rfkill->vdd = devm_regulator_get_optional(dev, "vdd");
 	if (IS_ERR(rfkill->vdd)) {
 		ret = PTR_ERR(rfkill->vdd);
-		if (ret != -EPROBE_DEFER)
-			dev_err(dev, "Failed to get vdd regulator: %d\n", ret);
-		return ret;
+		if (ret == -ENODEV) {
+			rfkill->vdd = NULL;
+		} else {
+			if (ret != -EPROBE_DEFER)
+				dev_err(dev, "Failed to get vdd regulator: %d\n", ret);
+			return ret;
+		}
 	}
 
 	rfkill->clk = devm_clk_get(dev, NULL);
