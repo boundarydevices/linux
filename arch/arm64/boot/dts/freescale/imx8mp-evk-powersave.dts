@@ -43,3 +43,33 @@
 &uart3 {
 	imx8mp-disable-uart-request-high;
 };
+
+/ {
+  sound-hdmi {
+	status = "disabled";
+  };
+};
+
+&irqsteer_hdmi {
+	status = "disabled";
+};
+
+&hdmi_blk_ctrl {
+	status = "disabled";
+};
+
+&hdmi_pavi {
+	status = "disabled";
+};
+
+&hdmi {
+	status = "disabled";
+};
+
+&hdmiphy {
+	status = "disabled";
+};
+
+&lcdif3 {
+	status = "disabled";
+};
