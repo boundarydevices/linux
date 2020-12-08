@@ -1766,9 +1766,6 @@ static int mxc_vidioc_s_input_crop(struct mxc_vout_output *vout,
 	if (crop->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
 		return -EINVAL;
 
-	if (crop->c.width < 0 || crop->c.height < 0)
-		return -EINVAL;
-
 	vout->task.input.crop.pos.x = crop->c.left;
 	vout->task.input.crop.pos.y = crop->c.top;
 	vout->task.input.crop.w = crop->c.width;
