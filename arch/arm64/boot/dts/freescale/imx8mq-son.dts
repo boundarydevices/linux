@@ -937,6 +937,11 @@
 	status = "okay";
 };
 
+&gpu3d {
+	power-domains = <&pgc_gpu>;
+	status = "okay";
+};
+
 &hdmi {
 	compatible = "cdn,imx8mq-hdmi";
 	lane-mapping = <0xe4>;
