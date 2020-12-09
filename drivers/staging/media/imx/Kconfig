@@ -32,3 +32,10 @@ config VIDEO_IMX7_CSI
 	  i.MX6UL/L or i.MX7.
 endmenu
 endif
+
+if VIDEO_IMX_CAPTURE
+menu "i.MX8QXP/QM Camera ISI/MIPI Features support"
+
+source "drivers/staging/media/imx/hdmirx/Kconfig"
+endmenu
+endif  #VIDEO_IMX_CAPTURE
