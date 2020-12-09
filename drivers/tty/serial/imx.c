@@ -481,6 +481,13 @@ static void imx_uart_stop_tx(struct uart_port *port)
 	struct imx_port *sport = (struct imx_port *)port;
 	u32 ucr1, ucr2, ucr4;
 
+	/*
+	 * We are maybe in the SMP context, so if the DMA TX thread is running
+	 * on other cpu, we have to wait for it to finish.
+	 */
+	if (sport->dma_is_txing)
+		return;
+
 	ucr1 = imx_uart_readl(sport, UCR1);
 	ucr4 = imx_uart_readl(sport, UCR4);
 	ucr1 &= ~(UCR1_TXMPTYEN | UCR1_TXDMAEN);
