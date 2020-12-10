@@ -264,6 +264,9 @@ static int imx_pcm512x_hw_params(struct snd_pcm_substream *substream,
 				mclk_freq, ret);
 	}
 
+	dev_dbg(card->dev, "mclk_freq: %lu; bclk_ratio: %d\n", mclk_freq,
+		data->slots * data->slot_width);
+
 	return ret;
 }
 
@@ -407,6 +410,7 @@ static int imx_pcm512x_probe(struct platform_device *pdev)
 	data->dac_auto_mute = of_property_read_bool(np, "dac,auto_mute_amp");
 	data->dac_gpio_unmute = of_property_read_bool(np, "dac,unmute_amp");
 	data->dac_led_status = of_property_read_bool(np, "dac,led_status");
+	data->one2one_ratio = true;
 
 	if (data->dac_auto_mute || data->dac_gpio_unmute) {
 		data->mute_gpio = devm_gpiod_get_optional(&pdev->dev,
