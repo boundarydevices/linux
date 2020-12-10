@@ -11,52 +11,28 @@
 		#size-cells = <2>;
 		ranges;
 
-		m_core_reserved: m_core@0x80000000 {
+		m_core_reserved: m_core@0x77000000 {
 			no-map;
-			reg = <0 0x80000000 0 0x1000000>;
+			reg = <0 0x77000000 0 0x1000000>;
 		};
 
-		vdev0vring0: vdev0vring0@b8000000 {
-			compatible = "shared-dma-pool";
-			reg = <0 0xb8000000 0 0x8000>;
-			no-map;
-		};
-
-		vdev0vring1: vdev0vring1@b8008000 {
-			compatible = "shared-dma-pool";
-			reg = <0 0xb8008000 0 0x8000>;
-			no-map;
-		};
-		vdevbuffer: vdevbuffer@b8400000 {
-			compatible = "shared-dma-pool";
-			reg = <0 0xb8400000 0 0x100000>;
-			no-map;
-		};
-
-		/*
-		 * The following three is just a workaround
-		 * to avoid Linux use the memory.
-		 * This board only has 1GB memory, the 0xb8000000
-		 * exceeds the DRAM, and round back to 0x78000000,
-		 * since we not modify Mcore image, so we need to avoid
-		 * Linux touch 0x78000000 and mark Mcore ddr demo broken.
-		 */
-		vdev0vring0@78000000 {
+		vdev0vring0: vdev0vring0@78000000 {
 			reg = <0 0x78000000 0 0x8000>;
 			no-map;
 		};
 
-		vdev0vring1@78008000 {
+		vdev0vring1: vdev0vring1@78008000 {
 			reg = <0 0x78008000 0 0x8000>;
 			no-map;
 		};
 
-		rsc-table {
+		rsc_table: rsc_table@0x780ff000 {
 			reg = <0 0x780ff000 0 0x1000>;
 			no-map;
 		};
 
-		vdevbuffer@78400000 {
+		vdevbuffer: vdevbuffer@78400000 {
+			compatible = "shared-dma-pool";
 			reg = <0 0x78400000 0 0x100000>;
 			no-map;
 		};
@@ -91,7 +67,7 @@
 		mboxes = <&mu 0 1
 			  &mu 1 1
 			  &mu 3 1>;
-		memory-region = <&vdev0vring0>, <&vdev0vring1>, <&vdevbuffer>;
+		memory-region = <&vdev0vring0>, <&vdev0vring1>, <&vdevbuffer>, <&rsc_table>;
 		status = "okay";
 	};
 };
