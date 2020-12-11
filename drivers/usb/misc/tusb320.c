@@ -671,6 +671,9 @@ int tusb320_init_gpio(struct tusb320_chip *chip)
 					chip->pdata->enb_gpio);
 			goto err;
 		}
+	} else {
+		tusb320_reset_device(chip, TUBS320_I2C_RESET);
+		dev_info(cdev, "soft reset\n");
 	}
 
 	if (gpio_is_valid(chip->pdata->int_gpio)) {
