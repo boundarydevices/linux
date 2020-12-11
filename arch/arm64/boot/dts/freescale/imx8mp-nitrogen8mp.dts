@@ -30,17 +30,20 @@
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
 			/* J31 */
-			MX8MP_IOMUXC_ECSPI2_SCLK__ECSPI2_SCLK		0x82
-			MX8MP_IOMUXC_ECSPI2_MOSI__ECSPI2_MOSI		0x82
-			MX8MP_IOMUXC_ECSPI2_MISO__ECSPI2_MISO		0x82
+			MX8MP_IOMUXC_ECSPI2_SCLK__ECSPI2_SCLK		0x82	/* Pin 20 */
+			MX8MP_IOMUXC_ECSPI2_MOSI__ECSPI2_MOSI		0x82	/* Pin 10 */
+			MX8MP_IOMUXC_ECSPI2_MISO__ECSPI2_MISO		0x82	/* Pin 8 */
 #define GP_ECSPI2_CS	<&gpio5 13 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_ECSPI2_SS0__GPIO5_IO13		0x143
-			MX8MP_IOMUXC_GPIO1_IO08__GPIO1_IO08		0x16
-			MX8MP_IOMUXC_SD1_DATA4__GPIO2_IO06		0x41
-			MX8MP_IOMUXC_SD1_DATA5__GPIO2_IO07		0x41
-			MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19		0x1c4
-			MX8MP_IOMUXC_SAI1_MCLK__GPIO4_IO20		0x16
-			MX8MP_IOMUXC_GPIO1_IO14__GPIO1_IO14		0x19
+			MX8MP_IOMUXC_ECSPI2_SS0__GPIO5_IO13		0x143	/* Pin 6 */
+			MX8MP_IOMUXC_SPDIF_RX__GPIO5_IO04		0x41	/* Pin 17 */
+			MX8MP_IOMUXC_SPDIF_EXT_CLK__GPIO5_IO05		0x41	/* Pin 19 */
+			MX8MP_IOMUXC_SPDIF_TX__GPIO5_IO03		0x41	/* Pin 21 */
+			MX8MP_IOMUXC_SD1_RESET_B__GPIO2_IO10		0x41	/* Pin 23 */
+			MX8MP_IOMUXC_SD1_DATA6__GPIO2_IO08		0x41	/* Pin 25 */
+			MX8MP_IOMUXC_SD1_DATA5__GPIO2_IO07		0x41	/* Pin 29 */
+			MX8MP_IOMUXC_SD1_DATA4__GPIO2_IO06		0x41	/* Pin 31 */
+			MX8MP_IOMUXC_SAI1_MCLK__GPIO4_IO20		0x16	/* Pin 2 */
+			MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19		0x1c4	/* Pin 4 */
 		>;
 	};
 
@@ -136,8 +139,6 @@
 
 	pinctrl_gpio_keys: gpio-keysgrp {
 		fsl,pins = <
-#define GP_CAN1_DETECT		<&gpio1 12 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_GPIO1_IO12__GPIO1_IO12	0x180
 #define GP_CAN2_DETECT		<&gpio4 23 GPIO_ACTIVE_HIGH>
 			MX8MP_IOMUXC_SAI2_RXD0__GPIO4_IO23	0x180
 		>;
@@ -228,6 +229,14 @@
 			MX8MP_IOMUXC_I2C4_SCL__GPIO5_IO20        	0x1c3
 #define GP_I2C4_SDA	<&gpio5 21 GPIO_OPEN_DRAIN>
 			MX8MP_IOMUXC_I2C4_SDA__GPIO5_IO21        	0x1c3
+		>;
+	};
+
+	pinctrl_i2c4_tusb320: i2c4-tusb320grp {
+		fsl,pins = <
+#define GP_TUSB320_INT	<&gpio1 8 GPIO_ACTIVE_LOW>
+			MX8MP_IOMUXC_GPIO1_IO08__GPIO1_IO08		0x16
+			MX8MP_IOMUXC_SAI1_RXD0__GPIO4_IO02		0x03
 		>;
 	};
 
@@ -359,6 +368,8 @@
 		fsl,pins = <
 #define GP_WM8960_MIC_DET	<&gpio4 18 GPIO_ACTIVE_LOW>
 			MX8MP_IOMUXC_SAI1_TXD6__GPIO4_IO18	0x80
+#define GP_WM8960_HP_DET	<&gpio1 14 GPIO_ACTIVE_HIGH>
+			MX8MP_IOMUXC_GPIO1_IO14__GPIO1_IO14	0x80
 		>;
 	};
 
@@ -429,11 +440,8 @@
 
 	pinctrl_usb3_0: usb3-0grp {
 		fsl,pins = <
-#if 1
+			MX8MP_IOMUXC_GPIO1_IO12__USB1_OTG_PWR	0x16
 			MX8MP_IOMUXC_GPIO1_IO13__USB1_OTG_OC	0x116
-#else
-			MX8MP_IOMUXC_GPIO1_IO13__GPIO1_IO13	0x116
-#endif
 		>;
 	};
 
@@ -663,12 +671,6 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_gpio_keys>;
 
-		can1 {
-			label = "can1 detect";
-			gpios = GP_CAN1_DETECT;
-			linux,code = <KEY_1>;
-		};
-
 		can2 {
 			label = "can2 detect";
 			gpios = GP_CAN2_DETECT;
@@ -799,6 +801,7 @@
 		codec-master;
 		/* JD2: hp detect high for headphone*/
 		hp-det = <2 0>;
+		hp-det-gpios = GP_WM8960_HP_DET;
 		audio-routing =
 			"Headphone Jack", "HP_L",
 			"Headphone Jack", "HP_R",
@@ -1283,6 +1286,16 @@
 		reg = <0x38>;
 		wakeup-gpios = GP_TS_FT5X06_LVDS_WAKE;
 	};
+
+	tusb320@60 {
+		compatible = "ti,tusb320";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c4_tusb320>;
+		reg = <0x60>;
+		tusb320,int-gpio = GP_TUSB320_INT;
+		tusb320,select-mode = <0>;
+		tusb320,dfp-power = <0>;
+	};
 };
 
 &irqsteer_hdmi {
@@ -1578,7 +1591,7 @@
 };
 
 &usb_dwc3_0 {
-	dr_mode = "peripheral";
+	dr_mode = "otg";
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usb3_0>;
 	status = "okay";
