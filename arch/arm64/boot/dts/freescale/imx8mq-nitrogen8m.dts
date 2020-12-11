@@ -1064,40 +1064,6 @@
 	status = "disabled";
 };
 
-/delete-node/ &pgc_gpu;
-/delete-node/ &pgc_vpu;
-&pgc {
-	pgc_gpuvpu: pgc-gpuvpu {
-		dvfs-supply = <&reg_soc_gpu_vpu>;
-		domain-name = "VPUGPU_PD";
-		idle-microvolt = <900000 837000 990000>;
-		#address-cells = <1>;
-		#power-domain-cells = <0>;
-		#size-cells = <0>;
-
-		pgc_gpu: power-domain@5 {
-			clocks = <&clk IMX8MQ_CLK_GPU_AXI>,
-				 <&clk IMX8MQ_CLK_GPU_SHADER_DIV>,
-				 <&clk IMX8MQ_CLK_GPU_ROOT>,
-				 <&clk IMX8MQ_CLK_GPU_AHB>;
-			reg = <IMX8M_POWER_DOMAIN_GPU>;
-			operating-points-v2 = <&gpu_opp_table>;
-			#power-domain-cells = <0>;
-		};
-
-		pgc_vpu: power-domain@6 {
-			clocks = <&clk IMX8MQ_CLK_VPU_G1_ROOT>,
-				 <&clk IMX8MQ_CLK_VPU_G2_ROOT>,
-				 <&clk IMX8MQ_CLK_VPU_DEC_ROOT>;
-			reg = <IMX8M_POWER_DOMAIN_VPU>;
-			operating-points-v2 = <&vpu_opp_table_g1>,
-					<&vpu_opp_table_g2>,
-					<&vpu_opp_table_dec>;
-			#power-domain-cells = <0>;
-		};
-	};
-};
-
 &pwm1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm1>;
