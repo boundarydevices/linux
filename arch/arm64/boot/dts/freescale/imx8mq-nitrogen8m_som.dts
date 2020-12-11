@@ -766,7 +766,7 @@
 	status = "okay";
 };
 
-&gpu_3d {
+&gpu3d {
 	power-domains = <&pgc_gpu>;
 	status = "okay";
 };
