@@ -139,6 +139,8 @@
 
 	pinctrl_gpio_keys: gpio-keysgrp {
 		fsl,pins = <
+#define GP_CAN1_DETECT		<&gpio1 11 GPIO_ACTIVE_HIGH>
+			MX8MP_IOMUXC_GPIO1_IO11__GPIO1_IO11	0x16
 #define GP_CAN2_DETECT		<&gpio4 23 GPIO_ACTIVE_HIGH>
 			MX8MP_IOMUXC_SAI2_RXD0__GPIO4_IO23	0x180
 		>;
@@ -325,8 +327,8 @@
 
 	pinctrl_reg_usbotg_vbus: reg-usbotg-vbusgrp {
 		fsl,pins = <
-#define GP_REG_USB_OTG_VBUS	<&gpio1 11 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_GPIO1_IO11__GPIO1_IO11	0x16
+#define GP_REG_USB_OTG_VBUS	<&gpio1 12 GPIO_ACTIVE_HIGH>
+			MX8MP_IOMUXC_GPIO1_IO12__GPIO1_IO12	0x16
 		>;
 	};
 
@@ -440,7 +442,6 @@
 
 	pinctrl_usb3_0: usb3-0grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO12__USB1_OTG_PWR	0x16
 			MX8MP_IOMUXC_GPIO1_IO13__USB1_OTG_OC	0x116
 		>;
 	};
@@ -670,6 +671,12 @@
 		compatible = "gpio-keys";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_gpio_keys>;
+
+		can1 {
+			label = "can1 detect";
+			gpios = GP_CAN1_DETECT;
+			linux,code = <KEY_1>;
+		};
 
 		can2 {
 			label = "can2 detect";
