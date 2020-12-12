@@ -149,7 +149,7 @@ static int tusb320_write_masked_byte(struct i2c_client *client,
 	}
 
 	rc = i2c_smbus_read_byte_data(client, addr);
-	if (!IS_ERR_VALUE(rc)) {
+	if (rc >= 0) {
 		rc = i2c_smbus_write_byte_data(client,
 		addr, BITS_SET((u8)rc, mask, val));
 	}
@@ -167,7 +167,7 @@ static int tusb320_read_device_id(struct tusb320_chip *chip)
 	for (i = 0; i < TUBS320_CSR_REG_ID_MAX; i += 2) {
 		rc = i2c_smbus_read_word_data(chip->client,
 				TUBS320_CSR_REG_ID(i));
-		if (IS_ERR_VALUE(rc)) {
+		if (rc < 0) {
 			dev_err(cdev, "%s: failed to read REG_ID\n",
 							__func__);
 			return rc;
@@ -206,7 +206,7 @@ static int tusb320_select_mode(struct tusb320_chip *chip, u8 sel_mode)
 						TUBS320_CSR_REG_0A,
 						TUBS320_MODE_SELECT,
 						sel_mode);
-		if (IS_ERR_VALUE(rc)) {
+		if (rc < 0) {
 			dev_err(cdev, "failed to write MODE_SELECT\n");
 			return rc;
 		}
@@ -228,7 +228,7 @@ static int tusb320_i2c_reset_device(struct tusb320_chip *chip)
 					TUBS320_CSR_REG_0A,
 					TUBS320_SOFT_RESET,
 					TUBS320_RESET_VALUE);
-	if(IS_ERR_VALUE(rc)) {
+	if (rc < 0) {
 		dev_err(cdev, "%s: failed to write REG_0A\n",
 						__func__);
 		return rc;
@@ -278,12 +278,13 @@ static int tusb320_reset_device(struct tusb320_chip *chip, int mode)
 	switch (mode) {
 	case TUBS320_I2C_RESET:
 		rc = tusb320_i2c_reset_device(chip);
-		if (!IS_ERR_VALUE(rc))
+		if (rc >= 0)
 			break;
+		/* fall through */
 	case TUBS320_GPIO_I2C_RESET:
 		tusb320_gpio_reset_device(chip);
 		rc = tusb320_i2c_reset_device(chip);
-		if (IS_ERR_VALUE(rc))
+		if (rc < 0)
 			dev_err(cdev, "%s: TUBS320_GPIO_I2C_RESET fails\n",
 								__func__);
 		break;
@@ -334,7 +335,7 @@ static ssize_t tusb320_store_mode(struct device *dev,
 
 	if (sscanf(buff, "%d", &mode) == 1) {
 		rc = tusb320_select_mode(chip, (u8)mode);
-		if (IS_ERR_VALUE(rc))
+		if (rc < 0)
 			return rc;
 
 		return size;
@@ -355,7 +356,7 @@ static ssize_t tusb320_store_reset(struct device *dev,
 
 	if (sscanf(buff, "%u", &state) == 1) {
 		rc = tusb320_reset_device(chip, state);
-		if (IS_ERR_VALUE(rc))
+		if (rc < 0)
 			return rc;
 
 		return size;
@@ -594,7 +595,7 @@ static void tusb320_work_handler(struct work_struct *work)
 
 	/* Get status (reg8/reg9) */
 	ret = i2c_smbus_read_word_data(chip->client, TUBS320_CSR_REG_08);
-	if (IS_ERR_VALUE(ret)) {
+	if (ret < 0) {
 		dev_err(cdev, "%s: failed to read REG_09\n", __func__);
 		goto work_unlock;
 	}
@@ -608,7 +609,7 @@ static void tusb320_work_handler(struct work_struct *work)
 					TUBS320_CSR_REG_09,
 					TUBS320_INT_STATE,
 					TUBS320_INT_CLEAR);
-	if (IS_ERR_VALUE(ret)) {
+	if (ret < 0) {
 		dev_err(cdev, "%s: failed to write REG_09\n", __func__);
 		goto work_unlock;
 	}
@@ -808,7 +809,7 @@ static int tusb320_probe(struct i2c_client *client,
 	wake_lock_init(&chip->wlock, WAKE_LOCK_SUSPEND, "tusb320_wake");
 
 	ret = tusb320_create_devices(cdev);
-	if (IS_ERR_VALUE(ret)) {
+	if (ret < 0) {
 		dev_err(cdev, "could not create devices\n");
 		goto err3;
 	}
@@ -834,7 +835,7 @@ static int tusb320_probe(struct i2c_client *client,
 	enable_irq_wake(chip->irq_gpio);
 
 	ret = tusb320_read_device_id(chip);
-	if (IS_ERR_VALUE(ret)) {
+	if (ret < 0) {
 		dev_err(cdev, "failed to read device id\n");
 	}
 
@@ -843,7 +844,7 @@ static int tusb320_probe(struct i2c_client *client,
 		schedule_work(&chip->dwork);
 	} else {
 		ret = tusb320_select_mode(chip, chip->pdata->select_mode);
-		if (IS_ERR_VALUE(ret))
+		if (ret < 0)
 			dev_err(cdev, "failed to select mode and work as default\n");
 	}
 
