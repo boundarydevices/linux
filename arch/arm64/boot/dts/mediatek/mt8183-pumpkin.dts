@@ -255,8 +255,7 @@
 		pins_i2c{
 			pinmux = <PINMUX_GPIO82__FUNC_SDA0>,
 				 <PINMUX_GPIO83__FUNC_SCL0>;
-			mediatek,pull-up-adv = <3>;
-			mediatek,drive-strength-adv = <00>;
+			bias-pull-up;
 		};
 	};
 
@@ -264,8 +263,7 @@
 		pins_i2c{
 			pinmux = <PINMUX_GPIO81__FUNC_SDA1>,
 				 <PINMUX_GPIO84__FUNC_SCL1>;
-			mediatek,pull-up-adv = <3>;
-			mediatek,drive-strength-adv = <00>;
+			bias-pull-up;
 		};
 	};
 
@@ -273,8 +271,7 @@
 		pins_i2c{
 			pinmux = <PINMUX_GPIO103__FUNC_SCL2>,
 				 <PINMUX_GPIO104__FUNC_SDA2>;
-			mediatek,pull-up-adv = <3>;
-			mediatek,drive-strength-adv = <00>;
+			bias-pull-up;
 		};
 	};
 
@@ -282,8 +279,7 @@
 		pins_i2c{
 			pinmux = <PINMUX_GPIO50__FUNC_SCL3>,
 				 <PINMUX_GPIO51__FUNC_SDA3>;
-			mediatek,pull-up-adv = <3>;
-			mediatek,drive-strength-adv = <00>;
+			bias-pull-up;
 		};
 	};
 
@@ -291,8 +287,7 @@
 		pins_i2c{
 			pinmux = <PINMUX_GPIO105__FUNC_SCL4>,
 				 <PINMUX_GPIO106__FUNC_SDA4>;
-			mediatek,pull-up-adv = <3>;
-			mediatek,drive-strength-adv = <00>;
+			bias-pull-up;
 		};
 	};
 
@@ -300,8 +295,7 @@
 		pins_i2c{
 			pinmux = <PINMUX_GPIO48__FUNC_SCL5>,
 				 <PINMUX_GPIO49__FUNC_SDA5>;
-			mediatek,pull-up-adv = <3>;
-			mediatek,drive-strength-adv = <00>;
+			bias-pull-up;
 		};
 	};
 
