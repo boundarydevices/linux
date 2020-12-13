@@ -1111,7 +1111,9 @@ static int mt8183_afe_pcm_dev_probe(struct platform_device *pdev)
 	struct mtk_base_afe *afe;
 	struct mt8183_afe_private *afe_priv;
 	struct device *dev;
+#if 0
 	struct reset_control *rstc;
+#endif
 	int i, irq_id, ret;
 
 	afe = devm_kzalloc(&pdev->dev, sizeof(*afe), GFP_KERNEL);
@@ -1150,6 +1152,7 @@ static int mt8183_afe_pcm_dev_probe(struct platform_device *pdev)
 		goto err_pm_disable;
 	}
 
+#if 0
 	rstc = devm_reset_control_get(dev, "audiosys");
 	if (IS_ERR(rstc)) {
 		ret = PTR_ERR(rstc);
@@ -1162,6 +1165,7 @@ static int mt8183_afe_pcm_dev_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to trigger audio reset:%d\n", ret);
 		goto err_pm_disable;
 	}
+#endif
 
 	/* enable clock for regcache get default value from hw */
 	afe_priv->pm_runtime_bypass_reg_ctl = true;
