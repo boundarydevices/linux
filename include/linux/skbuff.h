@@ -1067,6 +1067,7 @@ static inline void consume_skb(struct sk_buff *skb)
 #endif
 
 void __consume_stateless_skb(struct sk_buff *skb);
+void skb_recycle(struct sk_buff *skb);
 void  __kfree_skb(struct sk_buff *skb);
 extern struct kmem_cache *skbuff_head_cache;
 
