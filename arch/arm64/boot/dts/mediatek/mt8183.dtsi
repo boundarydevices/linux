@@ -35,6 +35,8 @@
 		i2c9 = &i2c9;
 		i2c10 = &i2c10;
 		i2c11 = &i2c11;
+		mmc0 = &mmc0;
+		mmc1 = &mmc1;
 		ovl0 = &ovl0;
 		ovl-2l0 = &ovl_2l0;
 		ovl-2l1 = &ovl_2l1;
