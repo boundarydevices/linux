@@ -250,6 +250,9 @@ static void __dwc3_set_mode(struct work_struct *work)
 		dwc3_otg_init(dwc);
 		dwc3_otg_update(dwc, 0);
 		break;
+	case DWC3_GCTL_PRTCAP_NONE:
+		dwc3_set_vbus(dwc, false);
+		break;
 	default:
 		break;
 	}
