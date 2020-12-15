@@ -27,6 +27,7 @@
 #define HD3SS3220_REG_CN_STAT_CTRL_INT_STATUS		BIT(4)
 
 /* Register HD3SS3220_REG_GEN_CTRL*/
+#define HD3SS3220_REG_GEN_CTRL_SOFT_RESET		BIT(3)
 #define HD3SS3220_REG_GEN_CTRL_SRC_PREF_MASK		(BIT(2) | BIT(1))
 #define HD3SS3220_REG_GEN_CTRL_SRC_PREF_DRP_DEFAULT	0x00
 #define HD3SS3220_REG_GEN_CTRL_SRC_PREF_DRP_TRY_SNK	BIT(1)
@@ -148,6 +149,29 @@ static const struct regmap_config config = {
 	.max_register = 0x0A,
 };
 
+static ssize_t store_reset(struct device *dev,
+				struct device_attribute *attr,
+				const char *buff, size_t size)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct hd3ss3220 *hd3ss3220 = i2c_get_clientdata(client);
+	unsigned state = 0;
+	int rc = 0;
+
+	if (sscanf(buff, "%u", &state) == 1) {
+		rc = regmap_update_bits(hd3ss3220->regmap, HD3SS3220_REG_GEN_CTRL,
+					  HD3SS3220_REG_GEN_CTRL_SOFT_RESET,
+					  HD3SS3220_REG_GEN_CTRL_SOFT_RESET);
+		if (rc < 0)
+			return rc;
+
+		return size;
+	}
+
+	return -EINVAL;
+}
+DEVICE_ATTR(reset, S_IWUSR, NULL, store_reset);
+
 static int hd3ss3220_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
@@ -233,6 +257,9 @@ static int hd3ss3220_probe(struct i2c_client *client,
 	fwnode_handle_put(connector);
 
 	dev_info(&client->dev, "probed revision=0x%x\n", ret);
+	ret = device_create_file(&client->dev, &dev_attr_reset);
+	if (ret < 0)
+		dev_err(&client->dev, "failed to create dev_attr_reset\n");
 
 	return 0;
 err_unreg_port:
