@@ -234,9 +234,9 @@
 		>;
 	};
 
-	pinctrl_i2c4_tusb320: i2c4-tusb320grp {
+	pinctrl_i2c4_hd3ss3220: i2c4-hd3ss3220grp {
 		fsl,pins = <
-#define GP_TUSB320_INT	<&gpio1 8 GPIO_ACTIVE_LOW>
+#define GPIRQ_HD3SS3220	<&gpio1 8 IRQ_TYPE_LEVEL_LOW>
 			MX8MP_IOMUXC_GPIO1_IO08__GPIO1_IO08		0x16
 			MX8MP_IOMUXC_SAI1_RXD0__GPIO4_IO02		0x03
 		>;
@@ -665,6 +665,31 @@
 
 	chosen {
 		stdout-path = &uart2;
+	};
+
+	connector {
+		compatible = "usb-c-connector";
+		label = "USB-C";
+		data-role = "dual";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				hs_ep: endpoint {
+					remote-endpoint = <&usb3_hs_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				ss_ep: endpoint {
+					remote-endpoint = <&hd3ss3220_in_ep>;
+				};
+			};
+		};
 	};
 
 	gpio-keys {
@@ -1294,14 +1319,32 @@
 		wakeup-gpios = GP_TS_FT5X06_LVDS_WAKE;
 	};
 
-	tusb320@60 {
-		compatible = "ti,tusb320";
+	hd3ss3220@60 {
+		/* tusb320 is compatible with hd3ss3220 */
+		compatible = "ti,hd3ss3220";
+		interrupts-extended = GPIRQ_HD3SS3220;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c4_tusb320>;
+		pinctrl-0 = <&pinctrl_i2c4_hd3ss3220>;
 		reg = <0x60>;
-		tusb320,int-gpio = GP_TUSB320_INT;
-		tusb320,select-mode = <0>;
-		tusb320,dfp-power = <0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				hd3ss3220_in_ep: endpoint {
+					remote-endpoint = <&ss_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				hd3ss3220_out_ep: endpoint {
+					remote-endpoint = <&usb3_role_switch>;
+				};
+			};
+		};
 	};
 };
 
@@ -1602,7 +1645,27 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usb3_0>;
 	status = "okay";
+	usb-role-switch;
 	vbus-supply = <&reg_usb_otg_vbus>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			usb3_hs_ep: endpoint {
+				remote-endpoint = <&hs_ep>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			usb3_role_switch: endpoint {
+				remote-endpoint = <&hd3ss3220_out_ep>;
+			};
+		};
+	};
 };
 
 &usb_dwc3_1 {
