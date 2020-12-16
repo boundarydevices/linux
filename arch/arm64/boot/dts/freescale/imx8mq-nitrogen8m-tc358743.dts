@@ -46,22 +46,13 @@
 	/delete-node/ ov5640-mipi1@3c;
 
 	tc358743_mipi@f {
-		AVDD-supply = <&reg_vref_2v5>;
-		DOVDD-supply = <&reg_vref_1v8>;
-		DVDD-supply = <&reg_vref_1v8>;
 		clocks = <&clk27m>;
 		clock-names = "refclk";
-		compatible = "tc358743";
-		csi_id = <0>;
+		compatible = "toshiba,tc358743";
 		interrupts-extended = GPIRQ_CSI1_TC3587;
-		ipu_id = <0>;
-		irq-gpios = GP_CSI1_TC3587_IRQ;
-		mclk = <27000000>;
-		mclk_source = <0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_tc358743_mipi>;
 		reg = <0x0f>;
-		rst-gpios = GP_CSI1_TC3587_RESET;
 		reset-gpios = GP_CSI1_TC3587_RESET;
 		status = "okay";
 
@@ -81,22 +72,13 @@
 	/delete-node/ ov5640-mipi2@3c;
 
 	tc358743_mipi@f {
-		AVDD-supply = <&reg_vref_2v5>;
-		DOVDD-supply = <&reg_vref_1v8>;
-		DVDD-supply = <&reg_vref_1v8>;
 		clocks = <&clk27m>;
 		clock-names = "refclk";
-		compatible = "tc358743";
-		csi_id = <0>;
+		compatible = "toshiba,tc358743";
 		interrupts-extended = GPIRQ_CSI2_TC3587;
-		ipu_id = <0>;
-		irq-gpios = GP_CSI2_TC3587_IRQ;
-		mclk = <27000000>;
-		mclk_source = <0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_tc358743_mipi>;
 		reg = <0x0f>;
-		rst-gpios = GP_CSI2_TC3587_RESET;
 		reset-gpios = GP_CSI2_TC3587_RESET;
 		status = "okay";
 
