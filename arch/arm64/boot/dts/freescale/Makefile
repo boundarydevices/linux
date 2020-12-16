@@ -270,3 +270,4 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-crs.dtb \
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-bio.dtb \
 			  imx8mq-ds.dtb \
 			  imx8mq-nitrogen8m.dtb imx8mq-nitrogen8m-m4.dtb \
+			  imx8mq-nitrogen8m-avt.dtb \
