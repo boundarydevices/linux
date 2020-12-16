@@ -59,7 +59,6 @@ static const char *imx8m_dai_clks_names[IMX8M_DAI_CLK_NUM] =
 struct imx8m_priv {
 	struct device *dev;
 	struct snd_sof_dev *sdev;
-	bool suspended;
 
 	/* DSP IPC handler */
 	struct imx_dsp_ipc *dsp_ipc;
@@ -467,15 +466,19 @@ static int imx8m_dsp_runtime_suspend(struct snd_sof_dev *sdev)
 
 static int imx8m_dsp_resume(struct snd_sof_dev *sdev)
 {
-	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
 	const struct sof_dsp_power_state target_dsp_state = {
 		.state = SOF_DSP_PM_D0,
 		.substate = 0,
 	};
 
-	if (priv->suspended) {
-		imx8m_resume(sdev);
-		priv->suspended = false;
+	imx8m_resume(sdev);
+
+	if (pm_runtime_suspended(sdev->dev)) {
+		pm_runtime_disable(sdev->dev);
+		pm_runtime_set_active(sdev->dev);
+		pm_runtime_mark_last_busy(sdev->dev);
+		pm_runtime_enable(sdev->dev);
+		pm_runtime_idle(sdev->dev);
 	}
 
 	return snd_sof_dsp_set_power_state(sdev, &target_dsp_state);
@@ -483,16 +486,13 @@ static int imx8m_dsp_resume(struct snd_sof_dev *sdev)
 
 static int imx8m_dsp_suspend(struct snd_sof_dev *sdev, unsigned int target_state)
 {
-	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
 	const struct sof_dsp_power_state target_dsp_state = {
 		.state = target_state,
 		.substate = 0,
 	};
 
-	if (!priv->suspended) {
+	if (!pm_runtime_suspended(sdev->dev))
 		imx8m_suspend(sdev);
-		priv->suspended = true;
-	}
 
 	return snd_sof_dsp_set_power_state(sdev, &target_dsp_state);
 }
