@@ -119,6 +119,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mq-ddr3l-val.dtb imx8mq-ddr4-val.dtb imx8mq-ddr4-v
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-bio.dtb \
 			  imx8mq-ds.dtb \
 			  imx8mq-nitrogen8m.dtb \
+			  imx8mq-nitrogen8m-avt.dtb \
 			  imx8mq-nitrogen8m-edp.dtb \
 			  imx8mq-nitrogen8m-m4.dtb \
 			  imx8mq-nitrogen8m-sch.dtb \
