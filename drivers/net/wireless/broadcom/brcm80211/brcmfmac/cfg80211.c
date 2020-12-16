@@ -92,7 +92,7 @@
 #define BRCMF_PS_MAX_TIMEOUT_MS		2000
 
 /* Dump obss definitions */
-#define ACS_MSRMNT_DELAY		100
+#define ACS_MSRMNT_DELAY		80
 #define CHAN_NOISE_DUMMY		(-80)
 #define OBSS_TOKEN_IDX			15
 #define IBSS_TOKEN_IDX			15
@@ -8203,7 +8203,7 @@ brcmf_cfg80211_dump_survey(struct wiphy *wiphy, struct net_device *ndev,
 		SURVEY_INFO_TIME_BUSY | SURVEY_INFO_TIME_RX |
 		SURVEY_INFO_TIME_TX;
 
-	brcmf_dbg(INFO, "OBSS dump: channel %d: survey duraion %d\n",
+	brcmf_dbg(INFO, "OBSS dump: channel %d: survey duration %d\n",
 		  ieee80211_frequency_to_channel(chan->center_freq),
 		  ACS_MSRMNT_DELAY);
 	brcmf_dbg(INFO, "noise(%d) busy(%llu) rx(%llu) tx(%llu)\n",
