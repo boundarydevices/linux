@@ -442,7 +442,10 @@ static int stage2_map_set_prot_attr(enum kvm_pgtable_prot prot,
 	bool device = prot & KVM_PGTABLE_PROT_DEVICE;
 	kvm_pte_t attr = device ? PAGE_S2_MEMATTR(DEVICE_nGnRE) :
 			    PAGE_S2_MEMATTR(NORMAL);
-	u32 sh = KVM_PTE_LEAF_ATTR_LO_S2_SH_IS;
+	u32 sh = 0;
+
+	if (!(prot & KVM_PGTABLE_PROT_DEVICE_NS))
+		sh = KVM_PTE_LEAF_ATTR_LO_S2_SH_IS;
 
 	if (!(prot & KVM_PGTABLE_PROT_X))
 		attr |= KVM_PTE_LEAF_ATTR_HI_S2_XN;

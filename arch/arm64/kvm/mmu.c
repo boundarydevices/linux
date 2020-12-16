@@ -750,7 +750,7 @@ static enum kvm_pgtable_prot stage1_to_stage2_pgprot(pgprot_t prot)
 	case PTE_ATTRINDX(MT_NORMAL):
 		return (pgprot_val(prot) & PTE_SHARED)
 			? 0
-			: KVM_PGTABLE_PROT_DEVICE;
+			: KVM_PGTABLE_PROT_DEVICE_NS;
 	}
 
 	return KVM_PGTABLE_PROT_DEVICE;
