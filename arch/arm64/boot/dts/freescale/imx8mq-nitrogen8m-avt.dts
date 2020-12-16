@@ -1,0 +1,102 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2020 Boundary Devices
+ */
+
+#include "imx8mq-nitrogen8m.dts"
+
+/ {
+	model = "Boundary Devices i.MX8MQ Nitrogen8M-AVT";
+	compatible = "boundary,imx8mq-nitrogen8m-avt", "fsl,imx8mq";
+};
+
+&iomuxc {
+	/delete-node/ i2c2-ov5640-mipigrp;
+	/delete-node/ i2c3-ov5640-mipigrp;
+
+	pinctrl_i2c2_avt_mipi: i2c2-avt-mipigrp {
+		fsl,pins = <
+#define GP_CSI1_AVT_GPIO2	<&gpio3 3 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_NAND_CE2_B_GPIO3_IO3		0x05
+#define GP_CSI1_AVT_GPIO3	<&gpio3 17 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_NAND_WE_B_GPIO3_IO17		0x05
+		>;
+	};
+
+	pinctrl_i2c3_avt_mipi: i2c3-avt-mipigrp {
+		fsl,pins = <
+#define GP_CSI2_AVT_GPIO2	<&gpio3 2 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_NAND_CE1_B_GPIO3_IO2		0x05
+#define GP_CSI2_AVT_GPIO3	<&gpio2 19 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_SD2_RESET_B_GPIO2_IO19		0x05
+		>;
+	};
+};
+
+&i2c2 {
+	/delete-node/ ov5640-mipi1@3c;
+
+	avt-mipi@3c {
+		compatible = "alliedvision,avt_csi2";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_avt_mipi>;
+		status = "okay";
+
+		port {
+			avt_mipi1_ep: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&mipi1_avt_ep>;
+			};
+		};
+	};
+};
+
+&i2c3 {
+	/delete-node/ ov5640-mipi2@3c;
+
+	avt-mipi@3c {
+		compatible = "alliedvision,avt_csi2";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_avt_mipi>;
+		status = "okay";
+
+		port {
+			avt_mipi2_ep: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				remote-endpoint = <&mipi2_avt_ep>;
+			};
+		};
+	};
+};
+
+&mipi_csi_1 {
+	rxhs-settle = <0x07>;
+
+	port {
+		/delete-node/ endpoint@1;
+
+		mipi1_avt_ep: endpoint@1 {
+			clock-lanes = <0>;
+			data-lanes = <1 2 3 4>;
+			remote-endpoint = <&avt_mipi1_ep>;
+		};
+	};
+};
+
+&mipi_csi_2 {
+	rxhs-settle = <0x07>;
+
+	port {
+		/delete-node/ endpoint@1;
+
+		mipi2_avt_ep: endpoint@1 {
+			clock-lanes = <0>;
+			data-lanes = <1 2 3 4>;
+			remote-endpoint = <&avt_mipi2_ep>;
+		};
+	};
+};
