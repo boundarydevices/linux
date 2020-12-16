@@ -1351,6 +1351,7 @@ static int max310x_probe(struct device *dev, const struct max310x_devtype *devty
 
 	for (i = 0; i < devtype->nr; i++) {
 		unsigned int line;
+		struct uart_port *port = &s->p[i].port;
 
 		line = find_first_zero_bit(max310x_lines, MAX310X_UART_NRMAX);
 		if (line == MAX310X_UART_NRMAX) {
@@ -1359,25 +1360,26 @@ static int max310x_probe(struct device *dev, const struct max310x_devtype *devty
 		}
 
 		/* Initialize port data */
-		s->p[i].port.line	= line;
-		s->p[i].port.dev	= dev;
-		s->p[i].port.irq	= irq;
-		s->p[i].port.type	= PORT_MAX310X;
-		s->p[i].port.fifosize	= MAX310X_FIFO_SIZE;
-		s->p[i].port.flags	= UPF_FIXED_TYPE | UPF_LOW_LATENCY;
-		s->p[i].port.iotype	= UPIO_PORT;
-		s->p[i].port.iobase	= i;
-		s->p[i].port.membase	= (void __iomem *)~0;
-		s->p[i].port.uartclk	= uartclk;
-		s->p[i].port.rs485_config = max310x_rs485_config;
-		s->p[i].port.rs485_supported = max310x_rs485_supported;
-		s->p[i].port.ops	= &max310x_ops;
+		port->line	= line;
+		port->dev	= dev;
+		port->irq	= irq;
+		port->type	= PORT_MAX310X;
+		port->fifosize	= MAX310X_FIFO_SIZE;
+		port->flags	= UPF_FIXED_TYPE | UPF_LOW_LATENCY;
+		port->iotype	= UPIO_PORT;
+		port->iobase	= i;
+		port->membase	= (void __iomem *)~0;
+		port->uartclk	= uartclk;
+		port->rs485_config = max310x_rs485_config;
+		port->rs485_supported = max310x_rs485_supported;
+		port->ops	= &max310x_ops;
 		s->p[i].regmap		= regmaps[i];
+		uart_get_rs485_mode(port);
 
 		/* Disable all interrupts */
-		max310x_port_write(&s->p[i].port, MAX310X_IRQEN_REG, 0);
+		max310x_port_write(port, MAX310X_IRQEN_REG, 0);
 		/* Clear IRQ status register */
-		max310x_port_read(&s->p[i].port, MAX310X_IRQSTS_REG);
+		max310x_port_read(port, MAX310X_IRQSTS_REG);
 		/* Initialize queue for start TX */
 		INIT_WORK(&s->p[i].tx_work, max310x_tx_proc);
 		/* Initialize queue for changing LOOPBACK mode */
@@ -1386,15 +1388,15 @@ static int max310x_probe(struct device *dev, const struct max310x_devtype *devty
 		INIT_WORK(&s->p[i].rs_work, max310x_rs_proc);
 
 		/* Register port */
-		ret = uart_add_one_port(&max310x_uart, &s->p[i].port);
+		ret = uart_add_one_port(&max310x_uart, port);
 		if (ret) {
-			s->p[i].port.dev = NULL;
+			port->dev = NULL;
 			goto out_uart;
 		}
 		set_bit(line, max310x_lines);
 
 		/* Go to suspend mode */
-		devtype->power(&s->p[i].port, 0);
+		devtype->power(port, 0);
 	}
 
 #ifdef CONFIG_GPIOLIB
