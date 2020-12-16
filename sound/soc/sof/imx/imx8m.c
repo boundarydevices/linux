@@ -408,6 +408,14 @@ static struct snd_soc_dai_driver imx8m_dai[] = {
 },
 };
 
+int imx8m_dsp_set_power_state(struct snd_sof_dev *sdev,
+			  const struct sof_dsp_power_state *target_state)
+{
+	sdev->dsp_power_state = *target_state;
+
+	return 0;
+}
+
 int imx8m_resume(struct snd_sof_dev *sdev)
 {
 	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
@@ -436,36 +444,57 @@ int imx8m_suspend(struct snd_sof_dev *sdev)
 
 static int imx8m_dsp_runtime_resume(struct snd_sof_dev *sdev)
 {
-	return imx8m_resume(sdev);
+	const struct sof_dsp_power_state target_dsp_state = {
+		.state = SOF_DSP_PM_D0,
+		.substate = 0,
+	};
+
+	imx8m_resume(sdev);
+	return snd_sof_dsp_set_power_state(sdev, &target_dsp_state);
 }
 
 static int imx8m_dsp_runtime_suspend(struct snd_sof_dev *sdev)
 {
-	return imx8m_suspend(sdev);
+	const struct sof_dsp_power_state target_dsp_state = {
+		.state = SOF_DSP_PM_D3,
+		.substate = 0,
+	};
+
+	imx8m_suspend(sdev);
+
+	return snd_sof_dsp_set_power_state(sdev, &target_dsp_state);
 }
 
 static int imx8m_dsp_resume(struct snd_sof_dev *sdev)
 {
 	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
+	const struct sof_dsp_power_state target_dsp_state = {
+		.state = SOF_DSP_PM_D0,
+		.substate = 0,
+	};
 
 	if (priv->suspended) {
 		imx8m_resume(sdev);
 		priv->suspended = false;
 	}
 
-	return 0;
+	return snd_sof_dsp_set_power_state(sdev, &target_dsp_state);
 }
 
 static int imx8m_dsp_suspend(struct snd_sof_dev *sdev, unsigned int target_state)
 {
 	struct imx8m_priv *priv = (struct imx8m_priv *)sdev->pdata->hw_pdata;
+	const struct sof_dsp_power_state target_dsp_state = {
+		.state = target_state,
+		.substate = 0,
+	};
 
 	if (!priv->suspended) {
 		imx8m_suspend(sdev);
 		priv->suspended = true;
 	}
 
-	return 0;
+	return snd_sof_dsp_set_power_state(sdev, &target_dsp_state);
 }
 
 /* i.MX8 ops */
@@ -514,6 +543,8 @@ struct snd_sof_dsp_ops sof_imx8m_ops = {
 
 	.runtime_suspend = imx8m_dsp_runtime_suspend,
 	.runtime_resume = imx8m_dsp_runtime_resume,
+
+	.set_power_state = imx8m_dsp_set_power_state,
 
 	.hw_info = SNDRV_PCM_INFO_MMAP |
 		SNDRV_PCM_INFO_MMAP_VALID |
