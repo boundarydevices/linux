@@ -74,6 +74,12 @@ config MXC_CAMERA_OV5647_MIPI
 	help
 	  If you plan to use the ov5647 Camera with mipi interface in your MXC system, say Y here.
 
+config MXC_CAMERA_AVT_MIPI
+	tristate "Allied Vision camera support using mipi"
+	depends on MXC_MIPI_CSI && I2C
+	help
+	  If you plan to use the Allied Vision Camera with mipi interface in your MXC system, say Y here.
+
 config MXC_VIDEO_GS2971
 	tristate "Gennum GS2971 SDI receiver"
 	depends on VIDEO_V4L2 && SPI
