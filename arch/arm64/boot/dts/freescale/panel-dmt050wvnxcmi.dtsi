@@ -23,7 +23,7 @@
 
 #define LANES 4
 	mipi_cmds_dmt050wvnxcmi: mipi-cmds-dmt050wvnxcmi {
-		a1 = <&mipi_cmds_dmt050wvnxcmi>;
+		alias = <&mipi_cmds_dmt050wvnxcmi>;
 		delay-prepare = <130>;
 #if 0
 #if LANES==1
