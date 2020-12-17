@@ -440,15 +440,10 @@
 		fb_hdmi = &hdmi;
 		lcdif = &lcdif;
 		mipi = &fb_mipi;
-		mipi_cmds_com50h5n03ulc = &mipi_cmds_com50h5n03ulc;
-		mipi_cmds_ltk0680ytmdb = &mipi_cmds_ltk0680ytmdb;
-		mipi_cmds_m101nwwb = &mipi_cmds_m101nwwb;		/* Same commands work for both */
 		mipi_dsi = &mipi_dsi;
 		mipi_dsi_bridge = &mipi_dsi;
 		mipi_dsi_phy = &dphy;
 		mipi_to_lvds = &mipi_to_lvds;
-		pinctrl_com50h5n03ulc = &pinctrl_mipi_com50h5n03ulc;
-		pinctrl_ltk0680ytmdb = &pinctrl_mipi_ltk0680ytmdb;
 		pwm_mipi = &pwm1;
 		sound_hdmi = &sound_hdmi;
 		t_mipi = &t_mipi;
@@ -456,15 +451,6 @@
 		ts_ft5x06 = &ts_ft5x06;
 		ts_goodix = &ts_goodix;
 		ts_st1633i = &ts_st1633i;
-	};
-
-	alias_create_phandles {
-		p1 = <&mipi_cmds_com50h5n03ulc>;
-		p2 = <&mipi_cmds_ltk0680ytmdb>;
-		p3 = <&mipi_cmds_m101nwwb>;
-		p4 = <&mipi_to_lvds>;
-		p5 = <&pinctrl_mipi_com50h5n03ulc>;
-		p6 = <&pinctrl_mipi_ltk0680ytmdb>;
 	};
 
 	backlight_mipi: backlight-mipi {
@@ -920,6 +906,7 @@
 	status = "okay";
 
 	mipi_to_lvds: mipi-to-lvds@2c {
+		alias = <&mipi_to_lvds>;
 		clocks = <&dphy 0>;
 		clock-names = "mipi_clk";
 		compatible = "ti,sn65dsi83";
