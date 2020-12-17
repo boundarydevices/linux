@@ -1,7 +1,14 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
 / {
+	aliases {
+		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
+		pinctrl_ltk080a60a004t = &pinctrl_mipi_ltk080a60a004t;
+	};
+
 	mipi_cmds_ltk080a60a004t: mipi-cmds-ltk080a60a004t {
+		alias = <&mipi_cmds_ltk080a60a004t>;
+		aliasp = <&pinctrl_mipi_ltk080a60a004t>;
 		delay-prepare = <100>;
 		delay-unprepare = <2>;
 		mipi-cmds-enable = /bits/ 8 <
