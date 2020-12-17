@@ -501,10 +501,6 @@
 		t_mipi = &t_mipi;
 	};
 
-	alias_create_phandles {
-		p5 = <&mipi_to_lvds>;
-	};
-
 	backlight_mipi: backlight-mipi {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
@@ -1064,6 +1060,7 @@
 
 &i2c2a {
 	mipi_to_lvds: mipi-to-lvds@2c {
+		alias = <&mipi_to_lvds>;
 		clocks = <&dphy 0>;
 		clock-names = "mipi_clk";
 		compatible = "ti,sn65dsi83";
