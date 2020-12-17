@@ -1,7 +1,14 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
 / {
+	aliases {
+		mipi_cmds_ltk0680ytmdb = &mipi_cmds_ltk0680ytmdb;
+		pinctrl_ltk0680ytmdb = &pinctrl_mipi_ltk0680ytmdb;
+	};
+
 	mipi_cmds_ltk0680ytmdb: mipi-cmds-ltk0680ytmdb {
+		alias = <&mipi_cmds_ltk0680ytmdb>;
+		aliasp = <&pinctrl_mipi_ltk0680ytmdb>;
 		mipi-cmds-enable = /bits/ 8 <
 			DELAY(50)
 			GEN_S1P(0xCD,0xAA)
