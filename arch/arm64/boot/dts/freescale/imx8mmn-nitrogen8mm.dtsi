@@ -544,21 +544,10 @@
 		fb_mipi = &fb_mipi;
 		lcdif = &lcdif;
 		mipi = &fb_mipi;
-		mipi_cmds_com50h5n03ulc = &mipi_cmds_com50h5n03ulc;
-		mipi_cmds_lcd133_070 = &mipi_cmds_lcd133_070;
-		mipi_cmds_lcm_jm430 = &mipi_cmds_lcm_jm430;
-		mipi_cmds_ltk0680ytmdb = &mipi_cmds_ltk0680ytmdb;
-		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
-		mipi_cmds_m101nwwb = &mipi_cmds_m101nwwb;
 		mipi_dsi = &mipi_dsi;
 		mipi_to_lvds = &mipi_to_lvds;
 		pca9540 = &pca9540;
 		pca9546 = &pca9546;
-		pinctrl_com50h5n03ulc = &pinctrl_mipi_com50h5n03ulc;
-		pinctrl_lcd133_070 = &pinctrl_mipi_lcd133_070;
-		pinctrl_lcm_jm430 = &pinctrl_mipi_lcm_jm430;
-		pinctrl_ltk0680ytmdb = &pinctrl_mipi_ltk0680ytmdb;
-		pinctrl_ltk080a60a004t = &pinctrl_mipi_ltk080a60a004t;
 		pwm_mipi = &pwm3;
 		reg_sw4 = &reg_sw4;
 		spi_lcd = &spi_lcd;
@@ -568,22 +557,6 @@
 		ts_goodix = &ts_goodix;
 		ts_gsl1680 = &ts_gsl1680;
 		ts_st1633i = &ts_st1633i;
-	};
-
-	alias_create_phandles {
-		p1 = <&mipi_cmds_com50h5n03ulc>;
-		p2 = <&mipi_cmds_lcd133_070>;
-		p3 = <&mipi_cmds_lcm_jm430>;
-		p4 = <&mipi_cmds_ltk0680ytmdb>;
-		p5 = <&mipi_cmds_ltk080a60a004t>;
-		p6 = <&mipi_cmds_m101nwwb>;
-		p7 = <&mipi_to_lvds>;
-		p8 = <&pinctrl_mipi_com50h5n03ulc>;
-		p9 = <&pinctrl_mipi_lcd133_070>;
-		p10 = <&pinctrl_mipi_lcm_jm430>;
-		p11 = <&pinctrl_mipi_ltk0680ytmdb>;
-		p12 = <&pinctrl_mipi_ltk080a60a004t>;
-		p13 = <&reg_sw4>;
 	};
 
 	backlight_mipi: backlight-mipi {
@@ -791,6 +764,7 @@
 			};
 
 			reg_sw4: sw4 {
+				alias = <&reg_sw4>;
 				regulator-always-on;
 				regulator-boot-on;
 				regulator-max-microvolt = <1800000>;
@@ -843,6 +817,7 @@
 
 &TOUCHSCREEN_I2C_BUS {
 	mipi_to_lvds: mipi-to-lvds@2c {
+		alias = <&mipi_to_lvds>;
 		clocks = <&mipi_dsi 0>,
 			<&clk IMX8MMN(CLK_LCDIF_PIXEL)>;
 		clock-names = "mipi_clk", "pixel_clock";
