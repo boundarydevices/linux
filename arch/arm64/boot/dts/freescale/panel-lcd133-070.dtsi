@@ -1,7 +1,14 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
 / {
+	aliases {
+		mipi_cmds_lcd133_070 = &mipi_cmds_lcd133_070;
+		pinctrl_lcd133_070 = &pinctrl_mipi_lcd133_070;
+	};
+
 	mipi_cmds_lcd133_070: mipi-cmds-lcd133-070 {
+		alias = <&mipi_cmds_lcd133_070>;
+		aliasp = <&pinctrl_mipi_lcd133_070>;
 #if 0
 		delay-power-up = <100>;
 		delay-prepare = <1000>;
