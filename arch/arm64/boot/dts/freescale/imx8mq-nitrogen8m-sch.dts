@@ -1,0 +1,193 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2020 Boundary Devices
+ */
+
+#include "imx8mq-nitrogen8m.dts"
+&iomuxc {
+	pinctrl_ecspi2: ecspi2grp {
+		fsl,pins = <
+			/* J17 */
+#define GP_ECSPI2_CS0	<&gpio5 13 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_ECSPI2_SS0_GPIO5_IO13		0x19	/* J1, Pin 1 */
+#define GP_ECSPI2_CS1	<&gpio3 2 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_CE1_B_GPIO3_IO2		0x19	/* J6 Pin 37 */
+			MX8MQ_IOMUXC_ECSPI2_MISO_ECSPI2_MISO		0x19	/* J1, Pin 3 */
+			MX8MQ_IOMUXC_ECSPI2_SCLK_ECSPI2_SCLK		0x19	/* J1, Pin 5 */
+			MX8MQ_IOMUXC_ECSPI2_MOSI_ECSPI2_MOSI		0x19	/* J1, Pin 7 */
+		>;
+	};
+
+	pinctrl_ecspi2_max14830_0: ecspi2-max14830-0grp {
+		fsl,pins = <
+#define GP_MAX14830_RESET_0	<&gpio3 11 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_DATA05_GPIO3_IO11		0x59	/* J6, Pin 47 */
+#define GPIRQ_MAX14830_0	<&gpio3 16 IRQ_TYPE_LEVEL_LOW>
+			MX8MQ_IOMUXC_NAND_READY_B_GPIO3_IO16		0x59	/* J6, Pin 45 */
+		>;
+	};
+
+	pinctrl_ecspi2_max14830_1: ecspi2-max14830-1grp {
+		fsl,pins = <
+#define GP_MAX14830_RESET_1	<&gpio3 3 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_CE2_B_GPIO3_IO3		0x59	/* J6, Pin 39 */
+#define GPIRQ_MAX14830_1	<&gpio3 5 IRQ_TYPE_LEVEL_LOW>
+			MX8MQ_IOMUXC_NAND_CLE_GPIO3_IO5			0x59	/* J6, Pin 43 */
+		>;
+	};
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			/* J17 connector, odd */
+			MX8MQ_IOMUXC_SAI1_RXFS_GPIO4_IO0		0x19	/* Pin 19 */
+			MX8MQ_IOMUXC_SAI1_RXC_GPIO4_IO1			0x19	/* Pin 21 */
+			MX8MQ_IOMUXC_SAI1_RXD1_GPIO4_IO3		0x19	/* Pin 23 */
+			MX8MQ_IOMUXC_SAI1_RXD2_GPIO4_IO4		0x19	/* Pin 25 */
+			MX8MQ_IOMUXC_SAI1_RXD3_GPIO4_IO5		0x19	/* Pin 27 */
+			MX8MQ_IOMUXC_SAI1_RXD4_GPIO4_IO6		0x19	/* Pin 29 */
+			MX8MQ_IOMUXC_SAI1_RXD5_GPIO4_IO7		0x19	/* Pin 31 */
+			MX8MQ_IOMUXC_SAI1_RXD6_GPIO4_IO8		0x19	/* Pin 33 */
+			MX8MQ_IOMUXC_SAI1_RXD7_GPIO4_IO9		0x19	/* Pin 35 */
+			MX8MQ_IOMUXC_SAI1_TXD1_GPIO4_IO13		0x19	/* Pin 39 */
+			MX8MQ_IOMUXC_SAI1_TXD2_GPIO4_IO14		0x19	/* Pin 41 */
+			MX8MQ_IOMUXC_SAI1_TXD3_GPIO4_IO15		0x19	/* Pin 43 */
+			MX8MQ_IOMUXC_SAI1_TXD4_GPIO4_IO16		0x19	/* Pin 45 */
+			MX8MQ_IOMUXC_SAI1_TXD5_GPIO4_IO17		0x19	/* Pin 47 */
+			MX8MQ_IOMUXC_SAI1_TXD6_GPIO4_IO18		0x19	/* Pin 49 */
+			MX8MQ_IOMUXC_SAI1_TXD7_GPIO4_IO19		0x19	/* Pin 51 */
+
+			/* J17 connector, even */
+			MX8MQ_IOMUXC_SAI3_RXFS_GPIO4_IO28		0x19	/* Pin 44 */
+			MX8MQ_IOMUXC_SAI3_RXC_GPIO4_IO29		0x19	/* Pin 48 */
+			MX8MQ_IOMUXC_GPIO1_IO10_GPIO1_IO10		0x19	/* Pin 50 */
+			MX8MQ_IOMUXC_GPIO1_IO03_GPIO1_IO3		0x19	/* Pin 54 */
+			MX8MQ_IOMUXC_GPIO1_IO05_GPIO1_IO5		0x19	/* Pin 56 */
+
+			/* J18 connector, odd */
+			MX8MQ_IOMUXC_NAND_CE3_B_GPIO3_IO4		0x19	/* Pin 41 */
+			MX8MQ_IOMUXC_NAND_WP_B_GPIO3_IO18		0x19	/* Pin 49 */
+			MX8MQ_IOMUXC_NAND_DQS_GPIO3_IO14		0x19	/* Pin 53 */
+
+			/* J18 connector, even */
+			MX8MQ_IOMUXC_NAND_ALE_GPIO3_IO0			0x19	/* Pin 32 */
+			MX8MQ_IOMUXC_NAND_CE0_B_GPIO3_IO1		0x19	/* Pin 36 */
+			MX8MQ_IOMUXC_NAND_DATA00_GPIO3_IO6		0x19	/* Pin 38 */
+			MX8MQ_IOMUXC_NAND_DATA01_GPIO3_IO7		0x19	/* Pin 40 */
+			MX8MQ_IOMUXC_NAND_DATA02_GPIO3_IO8		0x19	/* Pin 42 */
+			MX8MQ_IOMUXC_NAND_DATA03_GPIO3_IO9		0x19	/* Pin 44 */
+			MX8MQ_IOMUXC_NAND_DATA04_GPIO3_IO10		0x19	/* Pin 46 */
+
+			/* J13 Pin 2, WL_WAKE */
+			MX8MQ_IOMUXC_SAI5_RXD2_GPIO3_IO23		0xd6
+			/* J13 Pin 4, WL_IRQ, not needed for Silex */
+			MX8MQ_IOMUXC_SAI5_RXD0_GPIO3_IO21		0xd6
+			/* J13 pin 9, unused */
+			MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12		0x19
+			/* J13 Pin 41, BT_CLK_REQ */
+			MX8MQ_IOMUXC_SAI5_RXD1_GPIO3_IO22		0xd6
+			/* J13 Pin 42, BT_HOST_WAKE */
+			MX8MQ_IOMUXC_SAI5_MCLK_GPIO3_IO25		0xd6
+
+			/* Clock for both CSI1 and CSI2 */
+			MX8MQ_IOMUXC_GPIO1_IO15_CCMSRCGPCMIX_CLKO2	0x07
+		>;
+	};
+
+	pinctrl_pcie1: pcie1grp {
+		fsl,pins = <
+#define GP_PCIE1_RESET		<&gpio4 27 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_SAI2_MCLK_GPIO4_IO27	0x16
+#define GP_LAN7430_RESET	<&gpio4 23 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_SAI2_RXD0_GPIO4_IO23	0x56
+		>;
+	};
+
+};
+
+/ {
+	model = "Boundary Devices i.MX8MQ Nitrogen8M-sch";
+	compatible = "boundary,imx8mq-nitrogen8m-sch", "fsl,imx8mq";
+
+	clocks {
+		spi_uart_clk: osc_max14830 {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <3686400>;
+		};
+
+		pcie1_refclk: pcie1-refclk {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <100000000>;
+		};
+	};
+};
+
+/delete-node/ &csi1_bridge;
+/delete-node/ &csi2_bridge;
+
+&ecspi2 {
+	fsl,spi-num-chipselects = <2>;
+	cs-gpios = GP_ECSPI2_CS0, GP_ECSPI2_CS1;
+	/delete-node/ spidev@0;
+
+	max14830_0: max14830@0 {
+		clocks = <&spi_uart_clk>;
+		clock-names = "osc";
+		compatible = "maxim,max14830";
+		interrupts-extended = GPIRQ_MAX14830_0;
+		linux,rs485-enabled-at-boot-time;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ecspi2_max14830_0>;
+		reg = <0>;
+		rs485-rts-delay = <1 1>;
+		spi-max-frequency = <26000000>;
+	};
+
+	max14830_1: max14830@1 {
+		clocks = <&spi_uart_clk>;
+		clock-names = "osc";
+		compatible = "maxim,max14830";
+		interrupts-extended = GPIRQ_MAX14830_1;
+		linux,rs485-enabled-at-boot-time;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ecspi2_max14830_1>;
+		reg = <1>;
+		rs485-rts-delay = <1 1>;
+		spi-max-frequency = <26000000>;
+	};
+};
+
+&i2c2 {
+	/delete-node/ ov5640-mipi1@3c;
+};
+
+&i2c3 {
+	/delete-node/ ov5640-mipi2@3c;
+};
+
+&mipi_csi_1 {
+	/delete-node/ port;
+};
+
+&mipi_csi_2 {
+	/delete-node/ port;
+};
+
+&pcie1 {
+	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
+		<&clk IMX8MQ_CLK_PCIE2_AUX>,
+		<&clk IMX8MQ_CLK_PCIE2_PHY>,
+		<&pcie1_refclk>;
+	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
+	ext_osc = <1>;
+	hard-wired;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie1>;
+	reset-gpio = GP_PCIE1_RESET, GP_LAN7430_RESET;
+	status = "okay";
+};
+
+&sai2 {
+	status = "disabled";
+};
