@@ -1213,6 +1213,7 @@ static int adv7180_probe(struct i2c_client *client,
 	u32 cvbs = true;
 	struct pinctrl *pinctrl;
 	struct device *dev = &client->dev;
+	int retries = 5;
 
 	printk(KERN_ERR"DBG sensor data is at %p\n", &adv7180_data);
 
@@ -1228,9 +1229,20 @@ static int adv7180_probe(struct i2c_client *client,
 		dev_err(dev, "no sensor pwdn pin available\n");
 		return -ENODEV;
 	}
-	ret = devm_gpio_request_one(dev, pwn_gpio, GPIOF_OUT_INIT_HIGH,
-					"adv7180_pwdn");
-	if (ret < 0) {
+
+	while (retries) {
+		ret = devm_gpio_request_one(dev, pwn_gpio, GPIOF_OUT_INIT_HIGH,
+						"adv7180_pwdn");
+		if (!ret) {
+			break;
+		} else {
+			dev_warn(dev, "no power pin available! re-try...\n");
+			retries--;
+			msleep(1);
+		}
+	}
+
+	if (retries == 0) {
 		dev_err(dev, "no power pin available!\n");
 		return ret;
 	}
