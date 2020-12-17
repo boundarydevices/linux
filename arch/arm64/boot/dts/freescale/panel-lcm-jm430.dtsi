@@ -2,7 +2,14 @@
 
 /* TC358762: mipi to rgb bridge */
 / {
+	aliases {
+		mipi_cmds_lcm_jm430 = &mipi_cmds_lcm_jm430;
+		pinctrl_lcm_jm430 = &pinctrl_mipi_lcm_jm430;
+	};
+
 	mipi_cmds_lcm_jm430: mipi-cmds-lcm-jm430 {
+		alias = <&mipi_cmds_lcm_jm430>;
+		aliasp = <&pinctrl_mipi_lcm_jm430>;
 		mipi-cmds-enable = /bits/ 8 <
 			DELAY(1)
 
