@@ -589,20 +589,9 @@
 		ldb_chan = &ldb_chan;
 		ldb_chan2 = &ldb_chan2;
 		mipi = &fb_mipi;
-		mipi_cmds_com50h5n03ulc = &mipi_cmds_com50h5n03ulc;
-		mipi_cmds_lcd133_070 = &mipi_cmds_lcd133_070;
-		mipi_cmds_lcm_jm430 = &mipi_cmds_lcm_jm430;
-		mipi_cmds_ltk0680ytmdb = &mipi_cmds_ltk0680ytmdb;
-		mipi_cmds_ltk080a60a004t = &mipi_cmds_ltk080a60a004t;
-		mipi_cmds_m101nwwb = &mipi_cmds_m101nwwb;
 		mipi_dsi = &mipi_dsi;
 		mipi_dsi_bridge = &mipi_dsi;
 		mipi_to_lvds = &mipi_to_lvds;
-		pinctrl_com50h5n03ulc = &pinctrl_mipi_com50h5n03ulc;
-		pinctrl_lcd133_070 = &pinctrl_mipi_lcd133_070;
-		pinctrl_lcm_jm430 = &pinctrl_mipi_lcm_jm430;
-		pinctrl_ltk0680ytmdb = &pinctrl_mipi_ltk0680ytmdb;
-		pinctrl_ltk080a60a004t = &pinctrl_mipi_ltk080a60a004t;
 		pwm_mipi = &pwm1;
 		pwm_lvds = &pwm2;
 		t_lvds = &t_lvds;
@@ -611,21 +600,6 @@
 		ts_ft5x06 = &ts_ft5x06;
 		ts_ft5x06_2 = &ts_ft5x06_lvds;
 		ts_goodix = &ts_goodix;
-	};
-
-	alias_create_phandles {
-		p1 = <&mipi_cmds_com50h5n03ulc>;
-		p2 = <&mipi_cmds_lcd133_070>;
-		p3 = <&mipi_cmds_lcm_jm430>;
-		p4 = <&mipi_cmds_ltk0680ytmdb>;
-		p5 = <&mipi_cmds_ltk080a60a004t>;
-		p6 = <&mipi_cmds_m101nwwb>;
-		p7 = <&mipi_to_lvds>;
-		p8 = <&pinctrl_mipi_com50h5n03ulc>;
-		p9 = <&pinctrl_mipi_lcd133_070>;
-		p10 = <&pinctrl_mipi_lcm_jm430>;
-		p11 = <&pinctrl_mipi_ltk0680ytmdb>;
-		p12 = <&pinctrl_mipi_ltk080a60a004t>;
 	};
 
 	backlight_lvds: backlight-lvds {
@@ -1195,6 +1169,7 @@
 
 &i2c2d {
 	mipi_to_lvds: mipi-to-lvds@2c {
+		alias = <&mipi_to_lvds>;
 		clocks = <&mipi_dsi 0>,
 			<&clk IMX8MP_CLK_MEDIA_DISP1_PIX_ROOT>;
 		clock-names = "mipi_clk", "pixel_clock";
