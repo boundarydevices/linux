@@ -5,6 +5,15 @@
 
 #include "imx8mm-ddr4-evk.dts"
 
+&iomuxc {
+	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
+		fsl,pins = <
+#define GP_LTK08_MIPI_EN	<&gpio1 8 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8	0x116
+		>;
+	};
+};
+
 &adv_bridge {
 	status = "disabled";
 };
