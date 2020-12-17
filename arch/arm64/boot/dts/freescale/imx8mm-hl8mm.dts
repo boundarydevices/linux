@@ -412,10 +412,6 @@
 		ts_ft5x06 = &ts_ft5x06;
 	};
 
-	alias_create_phandles {
-		p1 = <&reg_sw4>;
-	};
-
 	backlight_mipi: backlight-mipi {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
@@ -616,6 +612,7 @@
 			};
 
 			reg_sw4: sw4 {
+				alias = <&reg_sw4>;
 				regulator-always-on;
 				regulator-boot-on;
 				regulator-max-microvolt = <1800000>;
