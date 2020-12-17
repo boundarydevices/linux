@@ -136,11 +136,16 @@
 	model = "Boundary Devices i.MX8MMini Span";
 	compatible = "boundary,imx8mm-span", "fsl,imx8mm";
 
-	/delete-node/ alias_create_phandles;
 	/delete-node/ backlight-mipi;
 	/delete-node/ csi-mclk;
 	/delete-node/ mipi-xclk;
+	/delete-node/ mipi-cmds-com50h5n03ulc;
 	/delete-node/ mipi-cmds-dmt050wvnxcmi;
+	/delete-node/ mipi-cmds-lcd133-070;
+	/delete-node/ mipi-cmds-lcm-jm430;
+	/delete-node/ mipi-cmds-ltk0680ytmdb;
+	/delete-node/ mipi-cmds-ltk080a60a004t;
+	/delete-node/ mipi-cmds-m101nwwb;
 	/delete-node/ sound-wm8960;
 
 	aliases {
@@ -151,6 +156,7 @@
 		/delete-property/ mipi;
 		/delete-property/ mipi_cmds_com50h5n03ulc;
 		/delete-property/ mipi_cmds_dmt050wvnxcmi;
+		/delete-property/ mipi_cmds_lcd133_070;
 		/delete-property/ mipi_cmds_lcm_jm430;
 		/delete-property/ mipi_cmds_ltk0680ytmdb;
 		/delete-property/ mipi_cmds_ltk080a60a004t;
