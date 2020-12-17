@@ -1102,7 +1102,7 @@ static int fsl_spdif_bypass_put(struct snd_kcontrol *kcontrol,
 	struct snd_soc_pcm_runtime *rtd;
 	struct regmap *regmap = priv->regmap;
 	bool set = (ucontrol->value.integer.value[0] != 0);
-	int ret, stream;
+	int stream;
 	u32 scr, mask;
 
 	rtd = snd_soc_get_pcm_runtime(card, card->dai_link);
@@ -1142,7 +1142,7 @@ static int fsl_spdif_bypass_put(struct snd_kcontrol *kcontrol,
 	priv->bypass = set;
 	pm_runtime_put_sync(dai->dev);
 
-	return ret;
+	return 0;
 }
 
 /* DPLL lock information */
