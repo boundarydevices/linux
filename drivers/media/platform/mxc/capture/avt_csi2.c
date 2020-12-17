@@ -3732,11 +3732,50 @@ int avt_csi2_s_power(struct v4l2_subdev *sd, int on)
 	return 0;
 }
 
+#ifdef CONFIG_VIDEO_ADV_DEBUG
+static int avt_csi2_get_register(struct v4l2_subdev *sd,
+				 struct v4l2_dbg_register *reg)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct avt_csi2_priv *priv = to_avt_csi2(client);
+	int ret;
+	u8 val;
+
+	if (reg->reg & ~0xffff)
+		return -EINVAL;
+
+	ret = avt_reg_read(client, priv->cci_reg.bcrm_addr + reg->reg,
+			   AV_CAM_REG_SIZE, AV_CAM_DATA_SIZE_8, &val);
+	if (ret < 0)
+		return ret;
+
+	reg->size = 1;
+	reg->val = (__u64) val;
+
+	return 0;
+}
+
+static int avt_csi2_set_register(struct v4l2_subdev *sd,
+				 const struct v4l2_dbg_register *reg)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	if (reg->reg & ~0xffff || reg->val & ~0xff)
+		return -EINVAL;
+
+	return avt_reg_write(client, reg->reg, reg->val);
+}
+#endif
+
 static const struct v4l2_subdev_core_ops avt_csi2_core_ops = {
 	.subscribe_event = avt_csi2_subscribe_event,
 	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
 	.s_power = avt_csi2_s_power,
 	.ioctl = avt_csi2_ioctl,
+#ifdef CONFIG_VIDEO_ADV_DEBUG
+	.g_register = avt_csi2_get_register,
+	.s_register = avt_csi2_set_register,
+#endif
 };
 
 static const struct v4l2_subdev_internal_ops avt_csi2_int_ops = {
