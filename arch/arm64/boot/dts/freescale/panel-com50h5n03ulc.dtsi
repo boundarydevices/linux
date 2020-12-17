@@ -1,7 +1,14 @@
 #include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
 / {
+	aliases {
+		mipi_cmds_com50h5n03ulc = &mipi_cmds_com50h5n03ulc;
+		pinctrl_com50h5n03ulc = &pinctrl_mipi_com50h5n03ulc;
+	};
+
 	mipi_cmds_com50h5n03ulc: mipi-cmds-com50h5n03ulc {
+		alias = <&mipi_cmds_com50h5n03ulc>;
+		aliasp = <&pinctrl_mipi_com50h5n03ulc>;
 		min-hs-clock-multiple = <8>;
 		mipi-cmds-enable = /bits/ 8 <
 			DELAY(122)
