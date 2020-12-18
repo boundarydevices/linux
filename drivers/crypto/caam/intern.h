@@ -39,6 +39,18 @@ struct caam_jrentry_info {
 	u32 desc_size;	/* Stored size for postprocessing, header derived */
 };
 
+#ifdef CONFIG_PM_SLEEP
+struct caam_jr_state {
+	dma_addr_t inpbusaddr;
+	dma_addr_t outbusaddr;
+};
+#endif
+
+struct caam_jr_dequeue_params {
+	struct device *dev;
+	int enable_itr;
+};
+
 /* Private sub-storage for a single JobR */
 struct caam_drv_private_jr {
 	struct list_head	list_node;	/* Job Ring device list */
@@ -46,6 +58,7 @@ struct caam_drv_private_jr {
 	int ridx;
 	struct caam_job_ring __iomem *rregs;	/* JobR's register space */
 	struct tasklet_struct irqtask;
+	struct caam_jr_dequeue_params tasklet_params;
 	int irq;			/* One per queue */
 	bool hwrng;
 
@@ -63,18 +76,35 @@ struct caam_drv_private_jr {
 	int tail;			/* entinfo (s/w ring) tail index */
 	void *outring;			/* Base of output ring, DMA-safe */
 	struct crypto_engine *engine;
+
+#ifdef CONFIG_PM_SLEEP
+	struct caam_jr_state state;	/* State of the JR during PM */
+#endif
 };
+
+#ifdef CONFIG_PM_SLEEP
+struct caam_ctl_state {
+	struct masterid deco_mid[16];
+	struct masterid jr_mid[4];
+	u32 mcr;
+	u32 scfgr;
+};
+#endif
 
 /*
  * Driver-private storage for a single CAAM block instance
  */
 struct caam_drv_private {
+	struct device *smdev;
+
 	/* Physical-presence section */
 	struct caam_ctrl __iomem *ctrl; /* controller region */
 	struct caam_deco __iomem *deco; /* DECO/CCB views */
 	struct caam_assurance __iomem *assure;
 	struct caam_queue_if __iomem *qi; /* QI control region */
 	struct caam_job_ring __iomem *jr[4];	/* JobR's register space */
+	dma_addr_t __iomem *sm_base;	/* Secure memory storage base */
+	phys_addr_t sm_phy;		/* Secure memory storage physical */
 
 	struct iommu_domain *domain;
 
@@ -84,8 +114,11 @@ struct caam_drv_private {
 	 */
 	u8 total_jobrs;		/* Total Job Rings in device */
 	u8 qi_present;		/* Nonzero if QI present in device */
+	u8 sm_present;		/* Nonzero if Secure Memory is supported */
 	u8 mc_en;		/* Nonzero if MC f/w is active */
-	int secvio_irq;		/* Security violation interrupt number */
+	u8 scu_en;		/* Nonzero if SCU f/w is active */
+	u8 optee_en;		/* Nonzero if OP-TEE f/w is active */
+	bool pr_support;	/* RNG prediction resistance available */
 	int virt_en;		/* Virtualization enabled in CAAM */
 	int era;		/* CAAM Era (internal HW revision) */
 
@@ -104,6 +137,11 @@ struct caam_drv_private {
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *ctl; /* controller dir */
 	struct debugfs_blob_wrapper ctl_kek_wrap, ctl_tkek_wrap, ctl_tdsk_wrap;
+#endif
+
+#ifdef CONFIG_PM_SLEEP
+	int caam_off_during_pm;		/* If the CAAM is reset after suspend */
+	struct caam_ctl_state state;	/* State of the CTL during PM */
 #endif
 };
 
@@ -194,6 +232,42 @@ static inline void caam_qi_algapi_exit(void)
 }
 
 #endif /* CONFIG_CAAM_QI */
+
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_SM
+
+int caam_sm_startup(struct device *dev);
+void caam_sm_shutdown(struct device *dev);
+
+#else
+
+static inline int caam_sm_startup(struct device *dev)
+{
+	return 0;
+}
+
+static inline void caam_sm_shutdown(struct device *dev)
+{
+}
+
+#endif /* CONFIG_CRYPTO_DEV_FSL_CAAM_SM */
+
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API
+
+int caam_keygen_init(void);
+void caam_keygen_exit(void);
+
+#else
+
+static inline int caam_keygen_init(void)
+{
+	return 0;
+}
+
+static inline void caam_keygen_exit(void)
+{
+}
+
+#endif /* CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API */
 
 static inline u64 caam_get_dma_mask(struct device *dev)
 {
