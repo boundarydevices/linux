@@ -508,6 +508,10 @@ config REGULATOR_MAX1586
 	  regulator via I2C bus. The provided regulator is suitable
 	  for PXA27x chips to control VCC_CORE and VCC_USIM voltages.
 
+config REGULATOR_MAX17135
+	tristate "Maxim MAX17135 Regulator Support"
+	depends on MFD_MAX17135
+
 config REGULATOR_MAX77620
 	tristate "Maxim 77620/MAX20024 voltage regulator"
 	depends on MFD_MAX77620 || COMPILE_TEST
@@ -790,6 +794,14 @@ config REGULATOR_PCF50633
 	help
 	 Say Y here to support the voltage regulators and converters
 	 on PCF50633
+
+config REGULATOR_PF1550_RPMSG
+	tristate "Freescale PF1550 rpmsg regulator driver"
+	depends on RPMSG
+	help
+	  This driver controls a PF1550 regulator which connected in M4
+	  side via RPMSG.The regulators include three switch and three
+	  ldo.
 
 config REGULATOR_PFUZE100
 	tristate "Freescale PFUZE100/200/3000/3001 regulator driver"
