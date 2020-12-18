@@ -1530,7 +1530,7 @@
 					assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>;
 					assigned-clock-rates = <500000000>;
 					power-domains = <&ispdwp_pd>;
-					id = <1>;
+					id = <0>;
 					status = "disabled";
 				};
 
@@ -1546,7 +1546,7 @@
 					assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>;
 					assigned-clock-rates = <500000000>;
 					power-domains = <&ispdwp_pd>;
-					id = <0>;
+					id = <1>;
 					status = "disabled";
 				};
 
