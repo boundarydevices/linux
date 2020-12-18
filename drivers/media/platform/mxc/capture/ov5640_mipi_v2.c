@@ -320,13 +320,13 @@ static int ov5640_get_register(struct v4l2_subdev *sd,
 	if (reg->reg & ~0xffff)
 		return -EINVAL;
 
-	reg->size = 1;
-
 	ret = ov5640_read_reg(sensor, reg->reg, &val);
-	if (!ret)
-		reg->val = (__u64)val;
+	if (ret < 0)
+		return ret;
 
-	return ret;
+	reg->val = (__u64)val;
+
+	return 0;
 }
 
 static int ov5640_set_register(struct v4l2_subdev *sd,
