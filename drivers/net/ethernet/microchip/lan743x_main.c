@@ -134,14 +134,19 @@ void lan743x_csr_write(struct lan743x_adapter *adapter, int offset,
 
 static int lan743x_csr_light_reset(struct lan743x_adapter *adapter)
 {
+	int ret;
 	u32 data;
 
 	data = lan743x_csr_read(adapter, HW_CFG);
-	data |= HW_CFG_LRST_;
+	data |= HW_CFG_LRST_ | HW_CFG_LED1_EN | HW_CFG_LED0_EN;
 	lan743x_csr_write(adapter, HW_CFG, data);
 
-	return readx_poll_timeout(LAN743X_CSR_READ_OP, HW_CFG, data,
+	ret = readx_poll_timeout(LAN743X_CSR_READ_OP, HW_CFG, data,
 				  !(data & HW_CFG_LRST_), 100000, 10000000);
+	data = lan743x_csr_read(adapter, HW_CFG);
+	data |= HW_CFG_LED1_EN | HW_CFG_LED0_EN;
+	lan743x_csr_write(adapter, HW_CFG, data);
+	return ret;
 }
 
 static int lan743x_csr_wait_for_bit(struct lan743x_adapter *adapter,
