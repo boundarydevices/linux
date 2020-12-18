@@ -4,6 +4,7 @@
 // Copyright (c) 2017 Sysam, Angelo Dureghello  <angelo@sysam.it>
 
 #include <linux/dmapool.h>
+#include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/dma-mapping.h>
@@ -160,11 +161,24 @@ EXPORT_SYMBOL_GPL(fsl_edma_free_desc);
 int fsl_edma_terminate_all(struct dma_chan *chan)
 {
 	struct fsl_edma_chan *fsl_chan = to_fsl_edma_chan(chan);
+	struct edma_regs *regs = &fsl_chan->edma->regs;
+	u32 ch = fsl_chan->vchan.chan.chan_id;
 	unsigned long flags;
+	int count = 0;
 	LIST_HEAD(head);
 
-	spin_lock_irqsave(&fsl_chan->vchan.lock, flags);
 	fsl_edma_disable_request(fsl_chan);
+
+	/*
+	 * Checking ACTIVE to ensure minor loop stop indeed to prevent the
+	 * potential illegal memory write if channel not stopped with buffer
+	 * freed.
+	 */
+	while (count++ < EDMA_MINOR_LOOP_TIMEOUT && (EDMA_TCD_CSR_ACTIVE &
+		edma_readw(fsl_chan->edma, &regs->tcd[ch].csr)))
+		udelay(1);
+
+	spin_lock_irqsave(&fsl_chan->vchan.lock, flags);
 	fsl_chan->edesc = NULL;
 	fsl_chan->idle = true;
 	vchan_get_all_descriptors(&fsl_chan->vchan, &head);
@@ -310,6 +324,11 @@ static size_t fsl_edma_desc_residue(struct fsl_edma_chan *fsl_chan,
 	return len;
 }
 
+void fsl_edma_get_realcnt(struct fsl_edma_chan *fsl_chan)
+{
+	fsl_chan->chn_real_count = fsl_edma_desc_residue(fsl_chan, NULL, true);
+}
+
 enum dma_status fsl_edma_tx_status(struct dma_chan *chan,
 		dma_cookie_t cookie, struct dma_tx_state *txstate)
 {
@@ -319,8 +338,12 @@ enum dma_status fsl_edma_tx_status(struct dma_chan *chan,
 	unsigned long flags;
 
 	status = dma_cookie_status(chan, cookie, txstate);
-	if (status == DMA_COMPLETE)
+	if (status == DMA_COMPLETE) {
+		spin_lock_irqsave(&fsl_chan->vchan.lock, flags);
+		txstate->residue = fsl_chan->chn_real_count;
+		spin_unlock_irqrestore(&fsl_chan->vchan.lock, flags);
 		return status;
+	}
 
 	if (!txstate)
 		return fsl_chan->status;
