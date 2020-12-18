@@ -326,6 +326,9 @@ static void imx_pcm512x_shutdown(struct snd_pcm_substream *substream)
 
 	if (data->dac_led_status)
 		snd_soc_component_update_bits(comp, PCM512x_GPIO_CONTROL_1, 0x08, 0x00);
+
+	if (data->dac_sclk && data->dac_pluspro)
+		imx_pcm512x_select_ext_clk(comp, DAC_CLK_INT);
 }
 
 static struct snd_soc_ops imx_pcm512x_ops = {
