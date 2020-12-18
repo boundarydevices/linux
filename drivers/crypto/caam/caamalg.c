@@ -3,7 +3,7 @@
  * caam - Freescale FSL CAAM support for crypto API
  *
  * Copyright 2008-2011 Freescale Semiconductor, Inc.
- * Copyright 2016-2019 NXP
+ * Copyright 2016-2020 NXP
  *
  * Based on talitos crypto API driver.
  *
@@ -60,6 +60,10 @@
 #include <crypto/xts.h>
 #include <asm/unaligned.h>
 
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API
+#include "tag_object.h"
+#endif /* CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API */
+
 /*
  * crypto alg
  */
@@ -86,6 +90,7 @@ struct caam_alg_entry {
 	bool rfc3686;
 	bool geniv;
 	bool nodkp;
+	bool support_tagged_key;
 };
 
 struct caam_aead_alg {
@@ -738,12 +743,19 @@ static int skcipher_setkey(struct crypto_skcipher *skcipher, const u8 *key,
 	u32 *desc;
 	const bool is_rfc3686 = alg->caam.rfc3686;
 
-	print_hex_dump_debug("key in @"__stringify(__LINE__)": ",
-			     DUMP_PREFIX_ADDRESS, 16, 4, key, keylen, 1);
+	/*
+	 * If the algorithm has support for tagged key,
+	 * this is already set in tk_skcipher_setkey().
+	 * Otherwise, set here the algorithm details.
+	 */
+	if (!alg->caam.support_tagged_key) {
+		ctx->cdata.keylen = keylen;
+		ctx->cdata.key_virt = key;
+		ctx->cdata.key_inline = true;
+	}
 
-	ctx->cdata.keylen = keylen;
-	ctx->cdata.key_virt = key;
-	ctx->cdata.key_inline = true;
+	print_hex_dump_debug("key in @" __stringify(__LINE__) ": ",
+			     DUMP_PREFIX_ADDRESS, 16, 4, key, keylen, 1);
 
 	/* skcipher_encrypt shared descriptor */
 	desc = ctx->sh_desc_enc;
@@ -814,6 +826,63 @@ static int ctr_skcipher_setkey(struct crypto_skcipher *skcipher,
 
 	return skcipher_setkey(skcipher, key, keylen, ctx1_iv_off);
 }
+
+
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API
+static int tk_skcipher_setkey(struct crypto_skcipher *skcipher,
+			      const u8 *key, unsigned int keylen)
+{
+	struct caam_ctx *ctx = crypto_skcipher_ctx(skcipher);
+	struct device *jrdev = ctx->jrdev;
+	struct header_conf *header;
+	struct tagged_object *tag_obj;
+	int ret;
+
+	ctx->cdata.key_inline = true;
+
+	/* Check if one can retrieve the tag object header configuration */
+	if (keylen <= TAG_OVERHEAD_SIZE)
+		return -EINVAL;
+
+	/* Retrieve the tag object */
+	tag_obj = (struct tagged_object *)key;
+
+	/*
+	 * Check tag object header configuration
+	 * and retrieve the tag object header configuration
+	 */
+	if (is_valid_header_conf(&tag_obj->header)) {
+		header = &tag_obj->header;
+	} else {
+		dev_err(jrdev,
+			"unable to get tag object header configuration\n");
+		return -EINVAL;
+	}
+
+	/* Check if the tag object header is a black key */
+	if (!is_black_key(header)) {
+		dev_err(jrdev,
+			"tagged key provided is not a black key\n");
+		return -EINVAL;
+	}
+
+	/* Retrieve the black key configuration */
+	get_key_conf(header,
+		     &ctx->cdata.key_real_len,
+		     &ctx->cdata.keylen,
+		     &ctx->cdata.key_cmd_opt);
+
+	/* Retrieve the address of the data of the tagged object */
+	ctx->cdata.key_virt = &tag_obj->object;
+
+	/* Validate key length for AES algorithms */
+	ret = aes_check_keylen(ctx->cdata.key_real_len);
+	if (ret)
+		return ret;
+
+	return skcipher_setkey(skcipher, NULL, 0, 0);
+}
+#endif /* CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API */
 
 static int des_skcipher_setkey(struct crypto_skcipher *skcipher,
 			       const u8 *key, unsigned int keylen)
@@ -1874,6 +1943,25 @@ static struct caam_skcipher_alg driver_algs[] = {
 		},
 		.caam.class1_alg_type = OP_ALG_ALGSEL_AES | OP_ALG_AAI_CBC,
 	},
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API
+	{
+		.skcipher = {
+			.base = {
+				.cra_name = "tk(cbc(aes))",
+				.cra_driver_name = "tk-cbc-aes-caam",
+				.cra_blocksize = AES_BLOCK_SIZE,
+			},
+			.setkey = tk_skcipher_setkey,
+			.encrypt = skcipher_encrypt,
+			.decrypt = skcipher_decrypt,
+			.min_keysize = TAG_MIN_SIZE,
+			.max_keysize = CAAM_MAX_KEY_SIZE,
+			.ivsize = AES_BLOCK_SIZE,
+		},
+		.caam.class1_alg_type = OP_ALG_ALGSEL_AES | OP_ALG_AAI_CBC,
+		.caam.support_tagged_key = true,
+	},
+#endif /* CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API */
 	{
 		.skcipher = {
 			.base = {
@@ -1994,6 +2082,24 @@ static struct caam_skcipher_alg driver_algs[] = {
 		},
 		.caam.class1_alg_type = OP_ALG_ALGSEL_AES | OP_ALG_AAI_ECB,
 	},
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API
+	{
+		.skcipher = {
+			.base = {
+				.cra_name = "tk(ecb(aes))",
+				.cra_driver_name = "tk-ecb-aes-caam",
+				.cra_blocksize = AES_BLOCK_SIZE,
+			},
+			.setkey = tk_skcipher_setkey,
+			.encrypt = skcipher_encrypt,
+			.decrypt = skcipher_decrypt,
+			.min_keysize = TAG_MIN_SIZE,
+			.max_keysize = CAAM_MAX_KEY_SIZE,
+		},
+		.caam.class1_alg_type = OP_ALG_ALGSEL_AES | OP_ALG_AAI_ECB,
+		.caam.support_tagged_key = true,
+	},
+#endif /* CONFIG_CRYPTO_DEV_FSL_CAAM_TK_API */
 	{
 		.skcipher = {
 			.base = {
@@ -3404,8 +3510,8 @@ static int caam_cra_init(struct crypto_skcipher *tfm)
 		fallback = crypto_alloc_skcipher(tfm_name, 0,
 						 CRYPTO_ALG_NEED_FALLBACK);
 		if (IS_ERR(fallback)) {
-			dev_err(ctx->jrdev, "Failed to allocate %s fallback: %ld\n",
-				tfm_name, PTR_ERR(fallback));
+			pr_err("Failed to allocate %s fallback: %ld\n",
+			       tfm_name, PTR_ERR(fallback));
 			return PTR_ERR(fallback);
 		}
 
@@ -3520,13 +3626,14 @@ int caam_algapi_init(struct device *ctrldev)
 	 * First, detect presence and attributes of DES, AES, and MD blocks.
 	 */
 	if (priv->era < 10) {
+		struct caam_perfmon __iomem *perfmon = &priv->jr[0]->perfmon;
 		u32 cha_vid, cha_inst, aes_rn;
 
-		cha_vid = rd_reg32(&priv->ctrl->perfmon.cha_id_ls);
+		cha_vid = rd_reg32(&perfmon->cha_id_ls);
 		aes_vid = cha_vid & CHA_ID_LS_AES_MASK;
 		md_vid = (cha_vid & CHA_ID_LS_MD_MASK) >> CHA_ID_LS_MD_SHIFT;
 
-		cha_inst = rd_reg32(&priv->ctrl->perfmon.cha_num_ls);
+		cha_inst = rd_reg32(&perfmon->cha_num_ls);
 		des_inst = (cha_inst & CHA_ID_LS_DES_MASK) >>
 			   CHA_ID_LS_DES_SHIFT;
 		aes_inst = cha_inst & CHA_ID_LS_AES_MASK;
@@ -3534,23 +3641,23 @@ int caam_algapi_init(struct device *ctrldev)
 		ccha_inst = 0;
 		ptha_inst = 0;
 
-		aes_rn = rd_reg32(&priv->ctrl->perfmon.cha_rev_ls) &
-			 CHA_ID_LS_AES_MASK;
+		aes_rn = rd_reg32(&perfmon->cha_rev_ls) & CHA_ID_LS_AES_MASK;
 		gcm_support = !(aes_vid == CHA_VER_VID_AES_LP && aes_rn < 8);
 	} else {
+		struct version_regs __iomem *vreg = &priv->jr[0]->vreg;
 		u32 aesa, mdha;
 
-		aesa = rd_reg32(&priv->ctrl->vreg.aesa);
-		mdha = rd_reg32(&priv->ctrl->vreg.mdha);
+		aesa = rd_reg32(&vreg->aesa);
+		mdha = rd_reg32(&vreg->mdha);
 
 		aes_vid = (aesa & CHA_VER_VID_MASK) >> CHA_VER_VID_SHIFT;
 		md_vid = (mdha & CHA_VER_VID_MASK) >> CHA_VER_VID_SHIFT;
 
-		des_inst = rd_reg32(&priv->ctrl->vreg.desa) & CHA_VER_NUM_MASK;
+		des_inst = rd_reg32(&vreg->desa) & CHA_VER_NUM_MASK;
 		aes_inst = aesa & CHA_VER_NUM_MASK;
 		md_inst = mdha & CHA_VER_NUM_MASK;
-		ccha_inst = rd_reg32(&priv->ctrl->vreg.ccha) & CHA_VER_NUM_MASK;
-		ptha_inst = rd_reg32(&priv->ctrl->vreg.ptha) & CHA_VER_NUM_MASK;
+		ccha_inst = rd_reg32(&vreg->ccha) & CHA_VER_NUM_MASK;
+		ptha_inst = rd_reg32(&vreg->ptha) & CHA_VER_NUM_MASK;
 
 		gcm_support = aesa & CHA_VER_MISC_AES_GCM;
 	}
