@@ -497,13 +497,14 @@ void kvm_free_stage2_pgd(struct kvm_s2_mmu *mmu)
  * @writable:   Whether or not to create a writable mapping
  */
 int kvm_phys_addr_ioremap(struct kvm *kvm, phys_addr_t guest_ipa,
-			  phys_addr_t pa, unsigned long size, bool writable)
+			  phys_addr_t pa, unsigned long size, bool writable,
+			  enum kvm_pgtable_prot prot_device)
 {
 	phys_addr_t addr;
 	int ret = 0;
 	struct kvm_mmu_memory_cache cache = { 0, __GFP_ZERO, NULL, };
 	struct kvm_pgtable *pgt = kvm->arch.mmu.pgt;
-	enum kvm_pgtable_prot prot = KVM_PGTABLE_PROT_DEVICE |
+	enum kvm_pgtable_prot prot = prot_device |
 				     KVM_PGTABLE_PROT_R |
 				     (writable ? KVM_PGTABLE_PROT_W : 0);
 
@@ -738,6 +739,23 @@ transparent_hugepage_adjust(struct kvm_memory_slot *memslot,
 	return PAGE_SIZE;
 }
 
+static enum kvm_pgtable_prot stage1_to_stage2_pgprot(pgprot_t prot)
+{
+	switch (pgprot_val(prot) & PTE_ATTRINDX_MASK) {
+	case PTE_ATTRINDX(MT_DEVICE_nGnRE):
+	case PTE_ATTRINDX(MT_DEVICE_nGnRnE):
+	case PTE_ATTRINDX(MT_DEVICE_GRE):
+		return KVM_PGTABLE_PROT_DEVICE;
+	case PTE_ATTRINDX(MT_NORMAL_NC):
+	case PTE_ATTRINDX(MT_NORMAL):
+		return (pgprot_val(prot) & PTE_SHARED)
+			? 0
+			: KVM_PGTABLE_PROT_DEVICE_NS;
+	}
+
+	return KVM_PGTABLE_PROT_DEVICE;
+}
+
 static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 			  struct kvm_memory_slot *memslot, unsigned long hva,
 			  unsigned long fault_status)
@@ -893,10 +911,18 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 		invalidate_icache_guest_page(pfn, vma_pagesize);
 	}
 
-	if (device)
-		prot |= KVM_PGTABLE_PROT_DEVICE;
-	else if (cpus_have_const_cap(ARM64_HAS_CACHE_DIC))
+	if (device) {
+		pte_t *pte;
+		spinlock_t *ptl;
+		enum kvm_pgtable_prot prot_us;
+
+		pte = get_locked_pte(current->mm, memslot->userspace_addr, &ptl);
+		prot_us = stage1_to_stage2_pgprot(__pgprot(pte_val(*pte)));
+		pte_unmap_unlock(pte, ptl);
+		prot |= prot_us;
+	} else if (cpus_have_const_cap(ARM64_HAS_CACHE_DIC)) {
 		prot |= KVM_PGTABLE_PROT_X;
+	}
 
 	/*
 	 * Under the premise of getting a FSC_PERM fault, we just need to relax
@@ -1343,6 +1369,9 @@ int kvm_arch_prepare_memory_region(struct kvm *kvm,
 			gpa_t gpa = mem->guest_phys_addr +
 				    (vm_start - mem->userspace_addr);
 			phys_addr_t pa;
+			enum kvm_pgtable_prot prot;
+			pte_t *pte;
+			spinlock_t *ptl;
 
 			pa = (phys_addr_t)vma->vm_pgoff << PAGE_SHIFT;
 			pa += vm_start - vma->vm_start;
@@ -1353,9 +1382,13 @@ int kvm_arch_prepare_memory_region(struct kvm *kvm,
 				goto out;
 			}
 
+			pte = get_locked_pte(current->mm, mem->userspace_addr, &ptl);
+			prot = stage1_to_stage2_pgprot(__pgprot(pte_val(*pte)));
+			pte_unmap_unlock(pte, ptl);
+
 			ret = kvm_phys_addr_ioremap(kvm, gpa, pa,
 						    vm_end - vm_start,
-						    writable);
+						    writable, prot);
 			if (ret)
 				break;
 		}
