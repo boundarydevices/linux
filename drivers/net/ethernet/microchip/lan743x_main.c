@@ -146,6 +146,34 @@ static int lan743x_csr_light_reset(struct lan743x_adapter *adapter)
 	data = lan743x_csr_read(adapter, HW_CFG);
 	data |= HW_CFG_LED1_EN | HW_CFG_LED0_EN;
 	lan743x_csr_write(adapter, HW_CFG, data);
+
+	data = lan743x_csr_read(adapter, PHY_LED_MODE);
+	data &= ~(PHY_LED_MODE_CFG_MASK(0) | PHY_LED_MODE_CFG_MASK(1));
+	data |= PHY_LED_MODE_CFG(0, 1) | PHY_LED_MODE_CFG(1, 0xa);
+
+/*
+ * 0 - gigabit/100 link/activity
+ * 1 - gigabit link/activity
+ * 2 - 100tx link/activity
+ * 3 - always off
+ * 4 - gigabit/100 link/activity
+ * 5 - gigabit link/activity
+ * 6 - 100 activity
+ * 7 - always off
+ * 8 - giga/100 link
+ * 9 - always off
+ * a - giga/100 activity
+ * b - always off
+ * c - always off
+ * d - always off
+ * e - always off
+ * f - always on
+ */
+	lan743x_csr_write(adapter, PHY_LED_MODE, data);
+
+	data = lan743x_csr_read(adapter, PHY_LED_BEHAVIOR);
+	data |= PHY_LED_BEHAVIOR_SEPARATE_LINK_LED1 | PHY_LED_BEHAVIOR_SEPARATE_LINK_LED0;
+	lan743x_csr_write(adapter, PHY_LED_BEHAVIOR, data);
 	return ret;
 }
 
