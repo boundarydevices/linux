@@ -54,6 +54,11 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/spi-mem.h>
 
+#include <linux/pm_runtime.h>
+
+/* runtime pm timeout */
+#define FSPI_RPM_TIMEOUT 50 /* 50ms */
+
 /*
  * The driver only uses one single LUT entry, that is updated on
  * each call of exec_op(). Index 0 is preset at boot with a basic
@@ -311,6 +316,9 @@
 #define NXP_FSPI_MAX_CHIPSELECT		4
 #define NXP_FSPI_MIN_IOMAP	SZ_4M
 
+/* access memory via IPS only due to this errata */
+#define NXP_FSPI_QUIRK_ERR050601	BIT(0)
+
 struct nxp_fspi_devtype_data {
 	unsigned int rxfifo;
 	unsigned int txfifo;
@@ -343,6 +351,14 @@ static const struct nxp_fspi_devtype_data imx8qxp_data = {
 	.little_endian = true,  /* little-endian    */
 };
 
+static const struct nxp_fspi_devtype_data imx8dxl_data = {
+	.rxfifo = SZ_512,       /* (64  * 64 bits)  */
+	.txfifo = SZ_1K,        /* (128 * 64 bits)  */
+	.ahb_buf_size = SZ_2K,  /* (256 * 64 bits)  */
+	.quirks = NXP_FSPI_QUIRK_ERR050601,
+	.little_endian = true,  /* little-endian    */
+};
+
 struct nxp_fspi {
 	void __iomem *iobase;
 	void __iomem *ahb_addr;
@@ -357,7 +373,14 @@ struct nxp_fspi {
 	struct mutex lock;
 	struct pm_qos_request pm_qos_req;
 	int selected;
+#define FSPI_INITILIZED	(1 << 0)
+	int flags;
 };
+
+static inline int nxp_fspi_ips_access_only(struct nxp_fspi *f)
+{
+	return f->devtype_data->quirks & NXP_FSPI_QUIRK_ERR050601;
+}
 
 /*
  * R/W functions for big- or little-endian registers:
@@ -843,6 +866,12 @@ static int nxp_fspi_exec_op(struct spi_mem *mem, const struct spi_mem_op *op)
 
 	mutex_lock(&f->lock);
 
+	err = pm_runtime_get_sync(f->dev);
+	if (err < 0) {
+		dev_err(f->dev, "Failed to enable clock %d\n", __LINE__);
+		goto err_mutex;
+	}
+
 	/* Wait for controller being ready. */
 	err = fspi_readl_poll_tout(f, f->iobase + FSPI_STS0,
 				   FSPI_STS0_ARB_IDLE, 1, POLL_TOUT, true);
@@ -854,9 +883,11 @@ static int nxp_fspi_exec_op(struct spi_mem *mem, const struct spi_mem_op *op)
 	/*
 	 * If we have large chunks of data, we read them through the AHB bus
 	 * by accessing the mapped memory. In all other cases we use
-	 * IP commands to access the flash.
+	 * IP commands to access the flash, but ahb read won't be used for dxl
+	 * since IC errta.
 	 */
-	if (op->data.nbytes > (f->devtype_data->rxfifo - 4) &&
+	if (!nxp_fspi_ips_access_only(f) &&
+	    op->data.nbytes > (f->devtype_data->rxfifo - 4) &&
 	    op->data.dir == SPI_MEM_DATA_IN) {
 		err = nxp_fspi_read_ahb(f, op);
 	} else {
@@ -869,8 +900,13 @@ static int nxp_fspi_exec_op(struct spi_mem *mem, const struct spi_mem_op *op)
 	/* Invalidate the data in the AHB buffer. */
 	nxp_fspi_invalid(f);
 
+	pm_runtime_mark_last_busy(f->dev);
+	pm_runtime_put_autosuspend(f->dev);
+
 	mutex_unlock(&f->lock);
 
+err_mutex:
+	mutex_unlock(&f->lock);
 	return err;
 }
 
@@ -886,6 +922,10 @@ static int nxp_fspi_adjust_op_size(struct spi_mem *mem, struct spi_mem_op *op)
 			op->data.nbytes = f->devtype_data->ahb_buf_size;
 		else if (op->data.nbytes > (f->devtype_data->rxfifo - 4))
 			op->data.nbytes = ALIGN_DOWN(op->data.nbytes, 8);
+		/* dxl won't use ahb to access data, limit to rxfifo size */
+		if (nxp_fspi_ips_access_only(f) &&
+		    op->data.nbytes > f->devtype_data->rxfifo)
+			op->data.nbytes = f->devtype_data->rxfifo;
 	}
 
 	return 0;
@@ -1068,12 +1108,17 @@ static int nxp_fspi_probe(struct platform_device *pdev)
 			ret = PTR_ERR(f->clk);
 			goto err_put_ctrl;
 		}
+	}
 
-		ret = nxp_fspi_clk_prep_enable(f);
-		if (ret) {
-			dev_err(dev, "can not enable the clock\n");
-			goto err_put_ctrl;
-		}
+	pm_runtime_enable(dev);
+	pm_runtime_set_autosuspend_delay(dev, FSPI_RPM_TIMEOUT);
+	pm_runtime_use_autosuspend(dev);
+
+	/* enable clock */
+	ret = pm_runtime_get_sync(f->dev);
+	if (ret < 0) {
+		dev_err(f->dev, "Failed to enable clock %d\n", __LINE__);
+		goto err_put_ctrl;
 	}
 
 	/* find the irq */
@@ -1102,13 +1147,19 @@ static int nxp_fspi_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_destroy_mutex;
 
+	pm_runtime_mark_last_busy(f->dev);
+	pm_runtime_put_autosuspend(f->dev);
+
+	/* indicate the controller has been initialized */
+	f->flags |= FSPI_INITILIZED;
+
 	return 0;
 
 err_destroy_mutex:
 	mutex_destroy(&f->lock);
 
 err_disable_clk:
-	nxp_fspi_clk_disable_unprep(f);
+	pm_runtime_disable(dev);
 
 err_put_ctrl:
 	spi_controller_put(ctlr);
@@ -1134,24 +1185,55 @@ static int nxp_fspi_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int nxp_fspi_suspend(struct device *dev)
+#ifdef CONFIG_PM
+static int nxp_fspi_initialized(struct nxp_fspi *f)
 {
-	return 0;
+	return f->flags & FSPI_INITILIZED;
 }
 
-static int nxp_fspi_resume(struct device *dev)
+static int nxp_fspi_need_reinit(struct nxp_fspi *f)
+{
+	/* we always use the controller in combination mode, so we check this */
+	/* register bit to determine if the controller once lost power, such as */
+	/* suspend/resume, and need to be re-init */
+
+	return !(readl(f->iobase + FSPI_MCR0) & FSPI_MCR0_OCTCOMB_EN);
+}
+
+
+int nxp_fspi_runtime_suspend(struct device *dev)
 {
 	struct nxp_fspi *f = dev_get_drvdata(dev);
 
-	nxp_fspi_default_setup(f);
+	nxp_fspi_clk_disable_unprep(f);
 
 	return 0;
 }
+
+int nxp_fspi_runtime_resume(struct device *dev)
+{
+	struct nxp_fspi *f = dev_get_drvdata(dev);
+
+	nxp_fspi_clk_prep_enable(f);
+
+	if (nxp_fspi_initialized(f) && nxp_fspi_need_reinit(f))
+		nxp_fspi_default_setup(f);
+
+	return 0;
+}
+
+static const struct dev_pm_ops nxp_fspi_pm_ops = {
+	SET_RUNTIME_PM_OPS(nxp_fspi_runtime_suspend, nxp_fspi_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
+};
+
+#endif /* CONFIG_PM */
 
 static const struct of_device_id nxp_fspi_dt_ids[] = {
 	{ .compatible = "nxp,lx2160a-fspi", .data = (void *)&lx2160a_data, },
 	{ .compatible = "nxp,imx8mm-fspi", .data = (void *)&imx8mm_data, },
 	{ .compatible = "nxp,imx8qxp-fspi", .data = (void *)&imx8qxp_data, },
+	{ .compatible = "nxp,imx8dxl-fspi", .data = (void *)&imx8dxl_data, },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, nxp_fspi_dt_ids);
@@ -1163,11 +1245,6 @@ static const struct acpi_device_id nxp_fspi_acpi_ids[] = {
 };
 MODULE_DEVICE_TABLE(acpi, nxp_fspi_acpi_ids);
 #endif
-
-static const struct dev_pm_ops nxp_fspi_pm_ops = {
-	.suspend	= nxp_fspi_suspend,
-	.resume		= nxp_fspi_resume,
-};
 
 static struct platform_driver nxp_fspi_driver = {
 	.driver = {
