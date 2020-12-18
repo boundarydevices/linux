@@ -201,6 +201,31 @@ static int imx_pcm512x_hw_params(struct snd_pcm_substream *substream,
 	data->slots = 2;
 	data->slot_width = params_physical_width(params);
 
+	/* set MCLK freq */
+	if (data->dac_pluspro && data->dac_sclk) {
+		if (do_div(sample_rate, 8000)) {
+			mclk_freq = DAC_CLK_EXT_44K;
+			imx_pcm512x_select_ext_clk(comp, DAC_CLK_EXT_44EN);
+			ret = snd_soc_dai_set_sysclk(codec_dai,
+				PCM512x_SYSCLK_MCLK1, mclk_freq, SND_SOC_CLOCK_IN);
+		} else {
+			mclk_freq = DAC_CLK_EXT_48K;
+			imx_pcm512x_select_ext_clk(comp, DAC_CLK_EXT_48EN);
+			ret = snd_soc_dai_set_sysclk(codec_dai,
+				PCM512x_SYSCLK_MCLK2, mclk_freq, SND_SOC_CLOCK_IN);
+		}
+		if (ret < 0)
+			dev_err(card->dev, "failed to set cpu dai mclk rate (%lu): %d\n",
+				mclk_freq, ret);
+	} else {
+		mclk_freq = pcm512x_get_mclk_rate(substream, params);
+		ret = snd_soc_dai_set_sysclk(cpu_dai, FSL_SAI_CLK_MAST1,
+					     mclk_freq, SND_SOC_CLOCK_OUT);
+		if (ret < 0)
+			dev_err(card->dev, "failed to set cpu dai mclk1 rate (%lu): %d\n",
+				mclk_freq, ret);
+	}
+
 	ret = snd_soc_dai_set_fmt(cpu_dai, data->daifmt);
 	if (ret) {
 		dev_err(card->dev, "failed to set cpu dai fmt: %d\n", ret);
@@ -237,31 +262,6 @@ static int imx_pcm512x_hw_params(struct snd_pcm_substream *substream,
 			dev_err(card->dev, "failed to set cpu dai bclk ratio\n");
 			return ret;
 		}
-	}
-
-	/* set MCLK freq */
-	if (data->dac_pluspro && data->dac_sclk) {
-		if (do_div(sample_rate, 8000)) {
-			mclk_freq = DAC_CLK_EXT_44K;
-			imx_pcm512x_select_ext_clk(comp, DAC_CLK_EXT_44EN);
-			ret = snd_soc_dai_set_sysclk(codec_dai,
-				PCM512x_SYSCLK_MCLK1, mclk_freq, SND_SOC_CLOCK_IN);
-		} else {
-			mclk_freq = DAC_CLK_EXT_48K;
-			imx_pcm512x_select_ext_clk(comp, DAC_CLK_EXT_48EN);
-			ret = snd_soc_dai_set_sysclk(codec_dai,
-				PCM512x_SYSCLK_MCLK2, mclk_freq, SND_SOC_CLOCK_IN);
-		}
-		if (ret < 0)
-			dev_err(card->dev, "failed to set cpu dai mclk rate (%lu): %d\n",
-				mclk_freq, ret);
-	} else {
-		mclk_freq = pcm512x_get_mclk_rate(substream, params);
-		ret = snd_soc_dai_set_sysclk(cpu_dai, FSL_SAI_CLK_MAST1,
-					     mclk_freq, SND_SOC_CLOCK_OUT);
-		if (ret < 0)
-			dev_err(card->dev, "failed to set cpu dai mclk1 rate (%lu): %d\n",
-				mclk_freq, ret);
 	}
 
 	dev_dbg(card->dev, "mclk_freq: %lu; bclk_ratio: %d\n", mclk_freq,
