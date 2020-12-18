@@ -151,6 +151,7 @@ static int cdns_imx_platform_suspend(struct device *dev,
 	bool suspend, bool wakeup);
 static struct cdns3_platform_data cdns_imx_pdata = {
 	.platform_suspend = cdns_imx_platform_suspend,
+	.quirks		  = CDNS3_DEFAULT_PM_RUNTIME_ALLOW,
 };
 
 static const struct of_dev_auxdata cdns_imx_auxdata[] = {
@@ -206,7 +207,6 @@ static int cdns_imx_probe(struct platform_device *pdev)
 	device_set_wakeup_capable(dev, true);
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
-	pm_runtime_forbid(dev);
 
 	return ret;
 err:
@@ -361,6 +361,37 @@ static int cdns_imx_suspend(struct device *dev)
 
 	return 0;
 }
+
+/* Indicate if the controller was power lost before */
+static inline bool cdns_imx_is_power_lost(struct cdns_imx *data)
+{
+	u32 value;
+
+	value = cdns_imx_readl(data, USB3_CORE_CTRL1);
+	if ((value & SW_RESET_MASK) == ALL_SW_RESET)
+		return true;
+	else
+		return false;
+}
+
+static int cdns_imx_system_resume(struct device *dev)
+{
+	struct cdns_imx *data = dev_get_drvdata(dev);
+	int ret;
+
+	ret = cdns_imx_resume(dev);
+	if (ret)
+		return ret;
+
+	if (cdns_imx_is_power_lost(data)) {
+		dev_dbg(dev, "resume from power lost\n");
+		ret = cdns_imx_noncore_init(data);
+		if (ret)
+			cdns_imx_suspend(dev);
+	}
+
+	return ret;
+}
 #else
 static int cdns_imx_platform_suspend(struct device *dev,
 	bool suspend, bool wakeup)
@@ -372,6 +403,7 @@ static int cdns_imx_platform_suspend(struct device *dev,
 
 static const struct dev_pm_ops cdns_imx_pm_ops = {
 	SET_RUNTIME_PM_OPS(cdns_imx_suspend, cdns_imx_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(cdns_imx_suspend, cdns_imx_system_resume)
 };
 
 static const struct of_device_id cdns_imx_of_match[] = {

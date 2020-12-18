@@ -23,6 +23,7 @@
 
 static struct hc_driver __read_mostly ci_ehci_hc_driver;
 static int (*orig_bus_suspend)(struct usb_hcd *hcd);
+static int (*orig_bus_resume)(struct usb_hcd *hcd);
 
 struct ehci_ci_priv {
 	struct regulator *reg_vbus;
@@ -234,7 +235,7 @@ static int ci_ehci_hub_control(
 {
 	struct ehci_hcd	*ehci = hcd_to_ehci(hcd);
 	u32 __iomem	*status_reg;
-	u32		temp;
+	u32		temp, suspend_line_state;
 	unsigned long	flags;
 	int		retval = 0;
 	struct device *dev = hcd->self.controller;
@@ -263,6 +264,17 @@ static int ci_ehci_hub_control(
 			PORT_SUSPEND, 5000))
 			ehci_err(ehci, "timeout waiting for SUSPEND\n");
 
+		if (ci->platdata->flags & CI_HDRC_HOST_SUSP_PHY_LPM) {
+			if (PORT_SPEED_LOW(temp))
+				suspend_line_state = PORTSC_LS_K;
+			else
+				suspend_line_state = PORTSC_LS_J;
+			if (!ehci_handshake(ehci, status_reg, PORTSC_LS,
+					   suspend_line_state, 5000))
+				ci_hdrc_enter_lpm(ci, true);
+		}
+
+
 		if (ci->platdata->flags & CI_HDRC_IMX_IS_HSIC) {
 			if (ci->platdata->notify_event)
 				ci->platdata->notify_event(ci,
@@ -272,6 +284,14 @@ static int ci_ehci_hub_control(
 			temp &= ~(PORT_WKDISC_E | PORT_WKCONN_E);
 			ehci_writel(ehci, temp, status_reg);
 		}
+
+		spin_unlock_irqrestore(&ehci->lock, flags);
+		if (ehci_port_speed(ehci, temp) ==
+				USB_PORT_STAT_HIGH_SPEED && hcd->usb_phy) {
+			/* notify the USB PHY */
+			usb_phy_notify_suspend(hcd->usb_phy, USB_SPEED_HIGH);
+		}
+		spin_lock_irqsave(&ehci->lock, flags);
 
 		set_bit((wIndex & 0xff) - 1, &ehci->suspended_ports);
 		goto done;
@@ -286,6 +306,14 @@ static int ci_ehci_hub_control(
 		/* Make sure the resume has finished, it should be finished */
 		if (ehci_handshake(ehci, status_reg, PORT_RESUME, 0, 25000))
 			ehci_err(ehci, "timeout waiting for resume\n");
+
+		temp = ehci_readl(ehci, status_reg);
+
+		if (ehci_port_speed(ehci, temp) ==
+				USB_PORT_STAT_HIGH_SPEED && hcd->usb_phy) {
+			/* notify the USB PHY */
+			usb_phy_notify_resume(hcd->usb_phy, USB_SPEED_HIGH);
+		}
 	}
 
 	spin_unlock_irqrestore(&ehci->lock, flags);
@@ -333,6 +361,15 @@ static int ci_ehci_bus_suspend(struct usb_hcd *hcd)
 			 */
 			usleep_range(150, 200);
 			/*
+			 * If a transaction is in progress, there may be
+			 * a delay in suspending the port. Poll until the
+			 * port is suspended.
+			 */
+			if (test_bit(port, &ehci->bus_suspended) &&
+					ehci_handshake(ehci, reg, PORT_SUSPEND,
+							PORT_SUSPEND, 5000))
+				ehci_err(ehci, "timeout waiting for SUSPEND\n");
+			/*
 			 * Need to clear WKCN and WKOC for imx HSIC,
 			 * otherwise, there will be wakeup event.
 			 */
@@ -342,8 +379,130 @@ static int ci_ehci_bus_suspend(struct usb_hcd *hcd)
 				ehci_writel(ehci, tmp, reg);
 			}
 
+			if (hcd->usb_phy && test_bit(port, &ehci->bus_suspended)
+				&& (ehci_port_speed(ehci, portsc) ==
+					USB_PORT_STAT_HIGH_SPEED))
+				/*
+				 * notify the USB PHY, it is for global
+				 * suspend case.
+				 */
+				usb_phy_notify_suspend(hcd->usb_phy,
+					USB_SPEED_HIGH);
 			break;
 		}
+	}
+
+	return 0;
+}
+
+static void ci_hdrc_host_save_for_power_lost(struct ci_hdrc *ci)
+{
+	struct ehci_hcd *ehci;
+
+	if (!ci->hcd)
+		return;
+
+	ehci = hcd_to_ehci(ci->hcd);
+	/* save EHCI registers */
+	ci->pm_usbmode = ehci_readl(ehci, &ehci->regs->usbmode);
+	ci->pm_command = ehci_readl(ehci, &ehci->regs->command);
+	ci->pm_command &= ~CMD_RUN;
+	ci->pm_status  = ehci_readl(ehci, &ehci->regs->status);
+	ci->pm_intr_enable  = ehci_readl(ehci, &ehci->regs->intr_enable);
+	ci->pm_frame_index  = ehci_readl(ehci, &ehci->regs->frame_index);
+	ci->pm_segment  = ehci_readl(ehci, &ehci->regs->segment);
+	ci->pm_frame_list  = ehci_readl(ehci, &ehci->regs->frame_list);
+	ci->pm_async_next  = ehci_readl(ehci, &ehci->regs->async_next);
+	ci->pm_configured_flag  =
+			ehci_readl(ehci, &ehci->regs->configured_flag);
+	ci->pm_portsc = ehci_readl(ehci, &ehci->regs->port_status[0]);
+}
+
+static void ci_hdrc_host_restore_from_power_lost(struct ci_hdrc *ci)
+{
+	struct ehci_hcd *ehci;
+	unsigned long   flags;
+	u32 tmp;
+	int step_ms;
+	/*
+	 * If the vbus is off during system suspend, most of devices will pull
+	 * DP up within 200ms when they see vbus, set 1000ms for safety.
+	 */
+	int timeout_ms = 1000;
+
+	if (!ci->hcd)
+		return;
+
+	hw_controller_reset(ci);
+
+	ehci = hcd_to_ehci(ci->hcd);
+	spin_lock_irqsave(&ehci->lock, flags);
+	/* Restore EHCI registers */
+	ehci_writel(ehci, ci->pm_usbmode, &ehci->regs->usbmode);
+	ehci_writel(ehci, ci->pm_portsc, &ehci->regs->port_status[0]);
+	ehci_writel(ehci, ci->pm_command, &ehci->regs->command);
+	ehci_writel(ehci, ci->pm_intr_enable, &ehci->regs->intr_enable);
+	ehci_writel(ehci, ci->pm_frame_index, &ehci->regs->frame_index);
+	ehci_writel(ehci, ci->pm_segment, &ehci->regs->segment);
+	ehci_writel(ehci, ci->pm_frame_list, &ehci->regs->frame_list);
+	ehci_writel(ehci, ci->pm_async_next, &ehci->regs->async_next);
+	ehci_writel(ehci, ci->pm_configured_flag,
+					&ehci->regs->configured_flag);
+	/* Restore the PHY's connect notifier setting */
+	if (ci->pm_portsc & PORTSC_HSP)
+		usb_phy_notify_connect(ci->usb_phy, USB_SPEED_HIGH);
+
+	tmp = ehci_readl(ehci, &ehci->regs->command);
+	tmp |= CMD_RUN;
+	ehci_writel(ehci, tmp, &ehci->regs->command);
+	spin_unlock_irqrestore(&ehci->lock, flags);
+
+	if (!(ci->pm_portsc & PORTSC_CCS))
+		return;
+
+	for (step_ms = 0; step_ms < timeout_ms; step_ms += 25) {
+		if (ehci_readl(ehci, &ehci->regs->port_status[0]) & PORTSC_CCS)
+			break;
+		msleep(25);
+	}
+}
+
+static void ci_hdrc_host_suspend(struct ci_hdrc *ci)
+{
+	ci_hdrc_host_save_for_power_lost(ci);
+}
+
+static void ci_hdrc_host_resume(struct ci_hdrc *ci, bool power_lost)
+{
+	if (power_lost)
+		ci_hdrc_host_restore_from_power_lost(ci);
+}
+
+static int ci_ehci_bus_resume(struct usb_hcd *hcd)
+{
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	int port;
+
+	int ret = orig_bus_resume(hcd);
+
+	if (ret)
+		return ret;
+
+	port = HCS_N_PORTS(ehci->hcs_params);
+	while (port--) {
+		u32 __iomem *reg = &ehci->regs->port_status[port];
+		u32 portsc = ehci_readl(ehci, reg);
+		/*
+		 * Notify PHY after resume signal has finished, it is
+		 * for global suspend case.
+		 */
+		if (hcd->usb_phy
+			&& test_bit(port, &ehci->bus_suspended)
+			&& (portsc & PORT_CONNECT)
+			&& (ehci_port_speed(ehci, portsc) ==
+				USB_PORT_STAT_HIGH_SPEED))
+			/* notify the USB PHY */
+			usb_phy_notify_resume(hcd->usb_phy, USB_SPEED_HIGH);
 	}
 
 	return 0;
@@ -362,6 +521,8 @@ int ci_hdrc_host_init(struct ci_hdrc *ci)
 
 	rdrv->start	= host_start;
 	rdrv->stop	= host_stop;
+	rdrv->suspend	= ci_hdrc_host_suspend;
+	rdrv->resume	= ci_hdrc_host_resume;
 	rdrv->irq	= host_irq;
 	rdrv->name	= "host";
 	ci->roles[CI_ROLE_HOST] = rdrv;
@@ -373,6 +534,8 @@ void ci_hdrc_host_driver_init(void)
 {
 	ehci_init_driver(&ci_ehci_hc_driver, &ehci_ci_overrides);
 	orig_bus_suspend = ci_ehci_hc_driver.bus_suspend;
+	orig_bus_resume = ci_ehci_hc_driver.bus_resume;
+	ci_ehci_hc_driver.bus_resume = ci_ehci_bus_resume;
 	ci_ehci_hc_driver.bus_suspend = ci_ehci_bus_suspend;
 	ci_ehci_hc_driver.hub_control = ci_ehci_hub_control;
 }

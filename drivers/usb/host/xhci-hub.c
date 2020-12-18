@@ -1425,6 +1425,16 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			/* 4.19.6 Port Test Modes (USB2 Test Mode) */
 			if (hcd->speed != HCD_USB2)
 				goto error;
+
+#ifdef CONFIG_USB_HCD_TEST_MODE
+			if (test_mode == EHSET_TEST_SINGLE_STEP_SET_FEATURE) {
+				spin_unlock_irqrestore(&xhci->lock, flags);
+				retval = ehset_single_step_set_feature(hcd,
+								wIndex + 1);
+				spin_lock_irqsave(&xhci->lock, flags);
+				break;
+			}
+#endif
 			if (test_mode > USB_TEST_FORCE_ENABLE ||
 			    test_mode < USB_TEST_J)
 				goto error;
@@ -1598,6 +1608,7 @@ int xhci_bus_suspend(struct usb_hcd *hcd)
 	struct xhci_hub *rhub;
 	struct xhci_port **ports;
 	u32 portsc_buf[USB_MAXCHILDREN];
+	bool wait_port_enter_u3 = false;
 	bool wake_enabled;
 
 	rhub = xhci_get_rhub(hcd);
@@ -1706,12 +1717,17 @@ retry:
 				xhci_stop_device(xhci, slot_id, 1);
 				spin_lock_irqsave(&xhci->lock, flags);
 			}
+			wait_port_enter_u3 = true;
 		}
 		writel(portsc_buf[port_index], ports[port_index]->addr);
 	}
 	hcd->state = HC_STATE_SUSPENDED;
 	bus_state->next_statechange = jiffies + msecs_to_jiffies(10);
 	spin_unlock_irqrestore(&xhci->lock, flags);
+
+	if (wait_port_enter_u3)
+		usleep_range(5000, 10000);
+
 	return 0;
 }
 
@@ -1731,7 +1747,8 @@ static bool xhci_port_missing_cas_quirk(struct xhci_port *port)
 		return false;
 
 	if (((portsc & PORT_PLS_MASK) != XDEV_POLLING) &&
-	    ((portsc & PORT_PLS_MASK) != XDEV_COMP_MODE))
+	    ((portsc & PORT_PLS_MASK) != XDEV_COMP_MODE) &&
+	    ((portsc & PORT_PLS_MASK) != XDEV_RXDETECT))
 		return false;
 
 	/* clear wakeup/change bits, and do a warm port reset */
