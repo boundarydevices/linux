@@ -2,7 +2,7 @@
 /*
  * Device Tree file for NXP LS1088A RDB Board.
  *
- * Copyright 2017 NXP
+ * Copyright 2017-2020 NXP
  *
  * Harninder Rai <harninder.rai@nxp.com>
  *
@@ -51,8 +51,8 @@
 			rtc@51 {
 				compatible = "nxp,pcf2129";
 				reg = <0x51>;
-				/* IRQ10_B */
-				interrupts = <0 150 IRQ_TYPE_LEVEL_HIGH>;
+				/* IRQ_RTC_B -> IRQ0_B(CPLD) -> IRQ00(CPU), active low */
+				interrupts-extended = <&extirq 0 IRQ_TYPE_LEVEL_LOW>;
 			};
 		};
 	};
@@ -72,6 +72,31 @@
 		compatible = "fsl,ls1088ardb-fpga", "fsl,fpga-qixis";
 		reg = <0x2 0x0 0x0000100>;
 	};
+};
+
+&qspi {
+	status = "okay";
+
+	s25fs512s0: flash@0 {
+		compatible = "jedec,spi-nor";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		spi-max-frequency = <20000000>;
+		reg = <0>;
+		spi-rx-bus-width = <1>;
+		spi-tx-bus-width = <1>;
+	};
+
+	s25fs512s1: flash@1 {
+		compatible = "jedec,spi-nor";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		spi-max-frequency = <20000000>;
+		reg = <1>;
+		spi-rx-bus-width = <1>;
+		spi-tx-bus-width = <1>;
+	};
+
 };
 
 &duart0 {
@@ -122,4 +147,83 @@
 &usb1 {
 	dr_mode = "otg";
 	status = "okay";
+};
+
+&emdio1 {
+	/* Freescale F104 PHY1 */
+	mdio1_phy1: emdio1_phy@1 {
+		reg = <0x1c>;
+		phy-connection-type = "qsgmii";
+	};
+	mdio1_phy2: emdio1_phy@2 {
+		reg = <0x1d>;
+		phy-connection-type = "qsgmii";
+	};
+	mdio1_phy3: emdio1_phy@3 {
+		reg = <0x1e>;
+		phy-connection-type = "qsgmii";
+	};
+	mdio1_phy4: emdio1_phy@4 {
+		reg = <0x1f>;
+		phy-connection-type = "qsgmii";
+	};
+	/* F104 PHY2 */
+	mdio1_phy5: emdio1_phy@5 {
+		reg = <0x0c>;
+		phy-connection-type = "qsgmii";
+	};
+	mdio1_phy6: emdio1_phy@6 {
+		reg = <0x0d>;
+		phy-connection-type = "qsgmii";
+	};
+	mdio1_phy7: emdio1_phy@7 {
+		reg = <0x0e>;
+		phy-connection-type = "qsgmii";
+	};
+	mdio1_phy8: emdio1_phy@8 {
+		reg = <0x0f>;
+		phy-connection-type = "qsgmii";
+	};
+};
+
+&emdio2 {
+	/* Aquantia AQR105 10G PHY */
+	mdio2_phy1: emdio2_phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c45";
+		interrupts = <0 2 0x4>;
+		reg = <0x0>;
+		phy-connection-type = "xfi";
+	};
+};
+
+/* DPMAC connections to external PHYs
+ * based on LS1088A RM RevC - $24.1.2 SerDes Options
+ */
+/* DPMAC1 is 10G SFP+, fixed link */
+&dpmac2 {
+	phy-handle = <&mdio2_phy1>;
+};
+&dpmac3 {
+	phy-handle = <&mdio1_phy5>;
+};
+&dpmac4 {
+	phy-handle = <&mdio1_phy6>;
+};
+&dpmac5 {
+	phy-handle = <&mdio1_phy7>;
+};
+&dpmac6 {
+	phy-handle = <&mdio1_phy8>;
+};
+&dpmac7 {
+	phy-handle = <&mdio1_phy1>;
+};
+&dpmac8 {
+	phy-handle = <&mdio1_phy2>;
+};
+&dpmac9 {
+	phy-handle = <&mdio1_phy3>;
+};
+&dpmac10 {
+	phy-handle = <&mdio1_phy4>;
 };

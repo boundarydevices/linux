@@ -76,13 +76,8 @@
 				regulator-boot-on;
 				regulator-always-on;
 				regulator-ramp-delay = <1250>;
-			};
-
-			buck3_reg: BUCK3 {
-				// BUCK5 in datasheet
-				regulator-name = "buck3";
-				regulator-min-microvolt = <700000>;
-				regulator-max-microvolt = <1350000>;
+				rohm,dvs-run-voltage = <1000000>;
+				rohm,dvs-idle-voltage = <900000>;
 			};
 
 			buck4_reg: BUCK4 {
@@ -136,14 +131,6 @@
 				regulator-always-on;
 			};
 
-			ldo4_reg: LDO4 {
-				regulator-name = "ldo4";
-				regulator-min-microvolt = <900000>;
-				regulator-max-microvolt = <1800000>;
-				regulator-boot-on;
-				regulator-always-on;
-			};
-
 			ldo6_reg: LDO6 {
 				regulator-name = "ldo6";
 				regulator-min-microvolt = <900000>;
@@ -153,4 +140,21 @@
 			};
 		};
 	};
+};
+
+&gpu {
+	assigned-clocks = <&clk IMX8MN_CLK_GPU_CORE_SRC>,
+			<&clk IMX8MN_CLK_GPU_SHADER_SRC>,
+			<&clk IMX8MN_CLK_GPU_AXI>,
+			<&clk IMX8MN_CLK_GPU_AHB>,
+			<&clk IMX8MN_GPU_PLL>,
+			<&clk IMX8MN_CLK_GPU_CORE_DIV>,
+			<&clk IMX8MN_CLK_GPU_SHADER_DIV>;
+	assigned-clock-parents = <&clk IMX8MN_GPU_PLL_OUT>,
+			<&clk IMX8MN_GPU_PLL_OUT>,
+			<&clk IMX8MN_SYS_PLL1_800M>,
+			<&clk IMX8MN_SYS_PLL1_800M>;
+	assigned-clock-rates = <0>, <0>, <800000000>, <400000000>, <1200000000>,
+			<400000000>, <400000000>;
+	status= "okay";
 };
