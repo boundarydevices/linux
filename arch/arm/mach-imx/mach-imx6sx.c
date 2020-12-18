@@ -23,6 +23,14 @@ static int ar8031_phy_fixup(struct phy_device *dev)
 	phy_write(dev, 0x1d, 0x1f);
 	phy_write(dev, 0x1e, 0x8);
 
+	/* disable phy AR8031 SmartEEE function. */
+	phy_write(dev, 0xd, 0x3);
+	phy_write(dev, 0xe, 0x805d);
+	phy_write(dev, 0xd, 0x4003);
+	val = phy_read(dev, 0xe);
+	val &= ~(0x1 << 8);
+	phy_write(dev, 0xe, val);
+
 	/* introduce tx clock delay */
 	phy_write(dev, 0x1d, 0x5);
 	val = phy_read(dev, 0x1e);
@@ -57,6 +65,7 @@ static void __init imx6sx_enet_clk_sel(void)
 
 static inline void imx6sx_enet_init(void)
 {
+	imx6_enet_mac_init("fsl,imx6sx-fec", "fsl,imx6sx-ocotp");
 	imx6sx_enet_phy_init();
 	imx6sx_enet_clk_sel();
 }
@@ -80,6 +89,13 @@ static void __init imx6sx_init_irq(void)
 	imx6_pm_ccm_init("fsl,imx6sx-ccm");
 }
 
+static void __init imx6sx_map_io(void)
+{
+	debug_ll_io_init();
+	imx6_pm_map_io();
+	imx_busfreq_map_io();
+}
+
 static void __init imx6sx_init_late(void)
 {
 	imx6sx_cpuidle_init();
@@ -96,6 +112,7 @@ static const char * const imx6sx_dt_compat[] __initconst = {
 DT_MACHINE_START(IMX6SX, "Freescale i.MX6 SoloX (Device Tree)")
 	.l2c_aux_val 	= 0,
 	.l2c_aux_mask	= ~0,
+	.map_io		= imx6sx_map_io,
 	.init_irq	= imx6sx_init_irq,
 	.init_machine	= imx6sx_init_machine,
 	.dt_compat	= imx6sx_dt_compat,
