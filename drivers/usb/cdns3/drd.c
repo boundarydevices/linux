@@ -410,3 +410,23 @@ int cdns3_drd_exit(struct cdns3 *cdns)
 	cdns3_otg_disable_irq(cdns);
 	return 0;
 }
+
+/* Indicate the cdns3 core was power lost before */
+bool cdns3_power_is_lost(struct cdns3 *cdns)
+{
+	int ret = false;
+
+	if (cdns->version == CDNS3_CONTROLLER_V1) {
+		if (!(readl(&cdns->otg_v1_regs->simulate) & BIT(0))) {
+			writel(BIT(0), &cdns->otg_v1_regs->simulate);
+			ret = true;
+		}
+	} else {
+		if (!(readl(&cdns->otg_v0_regs->simulate) & BIT(0))) {
+			writel(BIT(0), &cdns->otg_v0_regs->simulate);
+			ret = true;
+		}
+	}
+
+	return ret;
+}
