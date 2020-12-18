@@ -10,6 +10,19 @@ Required properties:
 	- "fsl,imx6qp-pcie"
 	- "fsl,imx7d-pcie"
 	- "fsl,imx8mq-pcie"
+	- "fsl,imx8mm-pcie"
+	- "fsl,imx8qm-pcie"
+	- "fsl,imx8qxp-pcie"
+	- "fsl,imx8mp-pcie"
+	- "fsl,imx6q-pcie-ep"
+	- "fsl,imx6sx-pcie-ep",
+	- "fsl,imx6qp-pcie-ep"
+	- "fsl,imx7d-pcie-ep"
+	- "fsl,imx8mq-pcie-ep"
+	- "fsl,imx8mm-pcie-ep"
+	- "fsl,imx8qm-pcie-ep"
+	- "fsl,imx8qxp-pcie-ep"
+	- "fsl,imx8mp-pcie-ep"
 - reg: base address and length of the PCIe controller
 - interrupts: A list of interrupt outputs of the controller. Must contain an
   entry for each entry in the interrupt-names property.
@@ -64,10 +77,22 @@ Additional required properties for imx7d-pcie and imx8mq-pcie:
 	       - "apps"
 	       - "turnoff"
 - fsl,imx7d-pcie-phy: A phandle to an fsl,imx7d-pcie-phy node.
+- fsl,imx8mp-hsio-mix: A phandle to an fsl,imx8mp-hsio-mix node.
 
 Additional required properties for imx8mq-pcie:
 - clock-names: Must include the following additional entries:
 	- "pcie_aux"
+
+Additional required properties for imx8 pcie:
+- hsio-cfg: hsio configuration mode when the pcie node is supported.
+  mode 1: pciea 2 lanes and one sata ahci port.
+  mode 2: pciea 1 lane, pcieb 1 lane and one sata ahci port.
+  mode 3: pciea 2 lanes, pcieb 1 lane.
+- local-addr: the local address used in hsio module.
+	Example:
+		hsio-cfg = <PCIEAX2PCIEBX1>;
+		hsio = <&hsio>;
+		local-addr = <0x80000000>;
 
 Example:
 
