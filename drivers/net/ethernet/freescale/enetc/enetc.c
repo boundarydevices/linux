@@ -144,7 +144,8 @@ static int enetc_map_tx_buffs(struct enetc_bdr *tx_ring, struct sk_buff *skb,
 	do_tstamp = (active_offloads & ENETC_F_TX_TSTAMP) &&
 		    (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP);
 	tx_swbd->do_tstamp = do_tstamp;
-	tx_swbd->check_wb = tx_swbd->do_tstamp;
+	tx_swbd->qbv_en = !!(active_offloads & ENETC_F_QBV);
+	tx_swbd->check_wb = tx_swbd->do_tstamp || tx_swbd->qbv_en;
 
 	if (do_vlan || do_tstamp)
 		flags |= ENETC_TXBD_FLAGS_EX;
@@ -389,7 +390,7 @@ static void enetc_tstamp_tx(struct sk_buff *skb, u64 tstamp)
 static bool enetc_clean_tx_ring(struct enetc_bdr *tx_ring, int napi_budget)
 {
 	struct net_device *ndev = tx_ring->ndev;
-	int tx_frm_cnt = 0, tx_byte_cnt = 0;
+	int tx_frm_cnt = 0, tx_byte_cnt = 0, tx_win_drop = 0;
 	struct enetc_tx_swbd *tx_swbd;
 	int i, bds_to_clean;
 	bool do_tstamp;
@@ -419,6 +420,10 @@ static bool enetc_clean_tx_ring(struct enetc_bdr *tx_ring, int napi_budget)
 						    &tstamp);
 				do_tstamp = true;
 			}
+
+			if (tx_swbd->qbv_en &&
+			    txbd->wb.status & ENETC_TXBD_STATS_WIN)
+				tx_win_drop++;
 		}
 
 		if (likely(tx_swbd->dma))
@@ -462,6 +467,7 @@ static bool enetc_clean_tx_ring(struct enetc_bdr *tx_ring, int napi_budget)
 	tx_ring->next_to_clean = i;
 	tx_ring->stats.packets += tx_frm_cnt;
 	tx_ring->stats.bytes += tx_byte_cnt;
+	tx_ring->stats.win_drop += tx_win_drop;
 
 	if (unlikely(tx_frm_cnt && netif_carrier_ok(ndev) &&
 		     __netif_subqueue_stopped(ndev, tx_ring->index) &&
@@ -818,6 +824,9 @@ void enetc_get_si_caps(struct enetc_si *si)
 
 	if (val & ENETC_SIPCAPR0_QBV)
 		si->hw_features |= ENETC_SI_F_QBV;
+
+	if (val & ENETC_SIPCAPR0_QBU)
+		si->hw_features |= ENETC_SI_F_QBU;
 
 	if (val & ENETC_SIPCAPR0_PSFP)
 		si->hw_features |= ENETC_SI_F_PSFP;

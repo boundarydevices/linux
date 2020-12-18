@@ -501,11 +501,21 @@ static void enetc_mac_config(struct enetc_hw *hw, phy_interface_t phy_mode)
 {
 	/* set auto-speed for RGMII */
 	if (enetc_port_rd(hw, ENETC_PM0_IF_MODE) & ENETC_PMO_IFM_RG ||
-	    phy_interface_mode_is_rgmii(phy_mode))
+	    phy_interface_mode_is_rgmii(phy_mode)) {
 		enetc_port_wr(hw, ENETC_PM0_IF_MODE, ENETC_PM0_IFM_RGAUTO);
+		enetc_port_wr(hw, ENETC_PM1_IF_MODE, ENETC_PM0_IFM_RGAUTO);
+	}
 
-	if (phy_mode == PHY_INTERFACE_MODE_USXGMII)
+	if (phy_mode == PHY_INTERFACE_MODE_USXGMII) {
 		enetc_port_wr(hw, ENETC_PM0_IF_MODE, ENETC_PM0_IFM_XGMII);
+		enetc_port_wr(hw, ENETC_PM1_IF_MODE, ENETC_PM0_IFM_XGMII);
+	}
+
+	/* on LS1028A the MAC Rx FIFO defaults to value 2, which is too high and
+	 * may lead to Rx lock-up under traffic.  Set it to 1 instead, as
+	 * recommended by the hardware team.
+	 */
+	enetc_port_wr(hw, ENETC_PM0_RX_FIFO, ENETC_PM0_RX_FIFO_VAL);
 }
 
 static void enetc_mac_enable(struct enetc_hw *hw, bool en)
@@ -740,6 +750,9 @@ static void enetc_pf_netdev_setup(struct enetc_si *si, struct net_device *ndev,
 		ndev->features |= NETIF_F_HW_TC;
 		ndev->hw_features |= NETIF_F_HW_TC;
 	}
+
+	if (enetc_tsn_is_enabled() && (si->hw_features & ENETC_SI_F_QBU))
+		priv->active_offloads |= ENETC_F_QBU;
 
 	/* pick up primary MAC address from SI */
 	enetc_get_primary_mac_addr(&si->hw, ndev->dev_addr);
@@ -1078,6 +1091,8 @@ static int enetc_pf_probe(struct pci_dev *pdev,
 	if (err)
 		goto err_reg_netdev;
 
+	enetc_tsn_pf_init(ndev, pdev);
+
 	return 0;
 
 err_reg_netdev:
@@ -1110,6 +1125,8 @@ static void enetc_pf_remove(struct pci_dev *pdev)
 
 	if (pf->num_vfs)
 		enetc_sriov_configure(pdev, 0);
+
+	enetc_tsn_pf_deinit(si->ndev);
 
 	unregister_netdev(si->ndev);
 
