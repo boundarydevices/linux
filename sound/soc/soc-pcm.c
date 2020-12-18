@@ -2681,6 +2681,24 @@ open_end:
 	return ret;
 }
 
+static int soc_rtdcom_ack(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_component *component;
+	int i;
+
+	for_each_rtd_components(rtd, i, component) {
+		if (!component->driver ||
+			!component->driver->ack)
+			continue;
+
+		/* FIXME. it returns 1st ask now */
+		return component->driver->ack(component, substream);
+	}
+
+	return -EINVAL;
+}
+
 /* create a new pcm */
 int soc_new_pcm(struct snd_soc_pcm_runtime *rtd, int num)
 {
@@ -2844,6 +2862,8 @@ int soc_new_pcm(struct snd_soc_pcm_runtime *rtd, int num)
 	for_each_rtd_components(rtd, i, component) {
 		const struct snd_soc_component_driver *drv = component->driver;
 
+		if (drv->ack)
+			rtd->ops.ack            = soc_rtdcom_ack;
 		if (drv->ioctl)
 			rtd->ops.ioctl		= snd_soc_pcm_component_ioctl;
 		if (drv->sync_stop)
