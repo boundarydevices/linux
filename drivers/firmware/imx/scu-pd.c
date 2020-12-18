@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2017-2018,2020 NXP
  *	Dong Aisheng <aisheng.dong@nxp.com>
  *
  * Implementation of the SCU based Power Domains
@@ -99,6 +99,7 @@ static const struct imx_sc_pd_range imx8qxp_scu_pd_ranges[] = {
 	/* CONN SS */
 	{ "usb", IMX_SC_R_USB_0, 2, true, 0 },
 	{ "usb0phy", IMX_SC_R_USB_0_PHY, 1, false, 0 },
+	{ "usb1phy", IMX_SC_R_USB_1_PHY, 1, false, 0},
 	{ "usb2", IMX_SC_R_USB_2, 1, false, 0 },
 	{ "usb2phy", IMX_SC_R_USB_2_PHY, 1, false, 0 },
 	{ "sdhc", IMX_SC_R_SDHC_0, 3, true, 0 },
@@ -138,7 +139,7 @@ static const struct imx_sc_pd_range imx8qxp_scu_pd_ranges[] = {
 	{ "lcd", IMX_SC_R_LCD_0, 1, true, 0 },
 	{ "lcd-pll", IMX_SC_R_ELCDIF_PLL, 1, true, 0 },
 	{ "lcd0-pwm", IMX_SC_R_LCD_0_PWM_0, 1, true, 0 },
-	{ "lpuart", IMX_SC_R_UART_0, 4, true, 0 },
+	{ "lpuart", IMX_SC_R_UART_0, 5, true, 0 },
 	{ "lpspi", IMX_SC_R_SPI_0, 4, true, 0 },
 	{ "irqstr_dsp", IMX_SC_R_IRQSTR_DSP, 1, false, 0 },
 
@@ -181,6 +182,14 @@ static const struct imx_sc_pd_range imx8qxp_scu_pd_ranges[] = {
 	{ "cm41-pid", IMX_SC_R_M4_1_PID0, 5, true, 0},
 	{ "cm41-mu-a1", IMX_SC_R_M4_1_MU_1A, 1, false, 0},
 	{ "cm41-lpuart", IMX_SC_R_M4_1_UART, 1, false, 0},
+
+	/* SECO SS */
+	{ "seco_mu", IMX_SC_R_SECO_MU_2, 3, true, 2},
+
+	/* V2X SS */
+	{ "v2x_mu", IMX_SC_R_V2X_MU_0, 2, true, 0},
+	{ "v2x_mu", IMX_SC_R_V2X_MU_2, 1, true, 2},
+	{ "v2x_mu", IMX_SC_R_V2X_MU_3, 2, true, 3},
 };
 
 static const struct imx_sc_pd_soc imx8qxp_scu_pd = {
