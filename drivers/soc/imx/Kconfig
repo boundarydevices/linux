@@ -34,4 +34,10 @@ config SECVIO_SC
 	   possibility to register user callbacks when a security violation
 	   occurs.
 
+config IMX8M_PM_DOMAINS
+	bool "i.MX8M PM domains"
+	depends on ARCH_MXC || (COMPILE_TEST && OF)
+	depends on PM
+	select PM_GENERIC_DOMAINS
+
 endmenu
