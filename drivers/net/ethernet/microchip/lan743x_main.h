@@ -27,6 +27,10 @@
 #define FPGA_REV_GET_MAJOR_(fpga_rev)	((fpga_rev) & 0x000000FF)
 
 #define HW_CFG					(0x010)
+#define HW_CFG_LED3_EN				BIT(23)
+#define HW_CFG_LED2_EN				BIT(22)
+#define HW_CFG_LED1_EN				BIT(21)
+#define HW_CFG_LED0_EN				BIT(20)
 #define HW_CFG_RELOAD_TYPE_ALL_			(0x00000FC0)
 #define HW_CFG_EE_OTP_RELOAD_			BIT(4)
 #define HW_CFG_LRST_				BIT(1)
