@@ -200,6 +200,19 @@
 		clock-output-names = "sysclk";
 	};
 
+	rstcr: syscon@1e60000 {
+		compatible = "fsl,ls1088a-rstcr", "syscon";
+		reg = <0x0 0x1e60000 0x0 0x4>;
+	};
+
+	reboot {
+		compatible = "syscon-reboot";
+		regmap = <&rstcr>;
+		offset = <0x0>;
+		mask = <0x02>;
+	};
+
+
 	soc {
 		compatible = "simple-bus";
 		#address-cells = <2>;
@@ -218,6 +231,37 @@
 			compatible = "fsl,ls1088a-dcfg", "syscon";
 			reg = <0x0 0x1e00000 0x0 0x10000>;
 			little-endian;
+		};
+
+		isc: syscon@1f70000 {
+			compatible = "fsl,ls1088a-isc", "syscon";
+			reg = <0x0 0x1f70000 0x0 0x10000>;
+			little-endian;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0x0 0x0 0x1f70000 0x10000>;
+
+			extirq: interrupt-controller@14 {
+				compatible = "fsl,ls1088a-extirq";
+				#interrupt-cells = <2>;
+				#address-cells = <0>;
+				interrupt-controller;
+				reg = <0x14 4>;
+				interrupt-map =
+					<0 0 &gic GIC_SPI 0 IRQ_TYPE_LEVEL_HIGH>,
+					<1 0 &gic GIC_SPI 1 IRQ_TYPE_LEVEL_HIGH>,
+					<2 0 &gic GIC_SPI 2 IRQ_TYPE_LEVEL_HIGH>,
+					<3 0 &gic GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
+					<4 0 &gic GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>,
+					<5 0 &gic GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>,
+					<6 0 &gic GIC_SPI 6 IRQ_TYPE_LEVEL_HIGH>,
+					<7 0 &gic GIC_SPI 7 IRQ_TYPE_LEVEL_HIGH>,
+					<8 0 &gic GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>,
+					<9 0 &gic GIC_SPI 9 IRQ_TYPE_LEVEL_HIGH>,
+					<10 0 &gic GIC_SPI 10 IRQ_TYPE_LEVEL_HIGH>,
+					<11 0 &gic GIC_SPI 11 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-map-mask = <0xffffffff 0x0>;
+			};
 		};
 
 		tmu: tmu@1f80000 {
@@ -344,6 +388,32 @@
 			#interrupt-cells = <2>;
 		};
 
+		/* TODO: WRIOP (CCSR?) */
+		emdio1: mdio@8B96000 { /* WRIOP0: 0x8B8_0000,
+					  * E-MDIO1: 0x1_6000
+					  */
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8B96000 0x0 0x1000>;
+			device_type = "mdio";
+			little-endian;	/* force the driver in LE mode */
+
+			/* Not necessary on the QDS, but needed on the RDB */
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		emdio2: mdio@8B97000 { /* WRIOP0: 0x8B8_0000,
+					  * E-MDIO2: 0x1_7000
+					  */
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8B97000 0x0 0x1000>;
+			device_type = "mdio";
+			little-endian;	/* force the driver in LE mode */
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
 		ifc: ifc@2240000 {
 			compatible = "fsl,ifc", "simple-bus";
 			reg = <0x0 0x2240000 0x0 0x20000>;
@@ -354,13 +424,20 @@
 			status = "disabled";
 		};
 
+		ftm0: ftm0@2800000 {
+			compatible = "fsl,ftm-alarm";
+			reg = <0x0 0x2800000 0x0 0x10000>;
+			interrupts = <0 44 4>;
+		};
+
 		i2c0: i2c@2000000 {
-			compatible = "fsl,vf610-i2c";
+			compatible = "fsl,vf610-i2c", "fsl,ls1088a-vf610-i2c";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x0 0x2000000 0x0 0x10000>;
 			interrupts = <0 34 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clockgen 4 7>;
+			scl-gpios = <&gpio3 30 0>;
 			status = "disabled";
 		};
 
@@ -421,23 +498,28 @@
 		};
 
 		usb0: usb3@3100000 {
-			compatible = "snps,dwc3";
+			compatible = "fsl,ls1088a-dwc3", "snps,dwc3";
 			reg = <0x0 0x3100000 0x0 0x10000>;
 			interrupts = <0 80 IRQ_TYPE_LEVEL_HIGH>;
 			dr_mode = "host";
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,dis_rxdet_inp3_quirk;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			snps,host-vbus-glitches;
+			dma-coherent;
 			status = "disabled";
 		};
 
 		usb1: usb3@3110000 {
-			compatible = "snps,dwc3";
+			compatible = "fsl,ls1088a-dwc3", "snps,dwc3";
 			reg = <0x0 0x3110000 0x0 0x10000>;
 			interrupts = <0 81 IRQ_TYPE_LEVEL_HIGH>;
 			dr_mode = "host";
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,dis_rxdet_inp3_quirk;
+			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			snps,host-vbus-glitches;
+			dma-coherent;
 			status = "disabled";
 		};
 
@@ -517,6 +599,20 @@
 			status = "disabled";
 		};
 
+		pcie_ep1: pcie_ep@3400000 {
+			compatible = "fsl,ls1088a-pcie-ep","fsl,ls-pcie-ep";
+			reg = <0x00 0x03400000 0x0 0x00100000
+			       0x20 0x00000000 0x8 0x00000000>;
+			reg-names = "regs", "addr_space";
+			interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>; /* PME interrupt */
+			interrupt-names = "pme";
+			num-ib-windows = <24>;
+			num-ob-windows = <128>;
+			max-functions = /bits/ 8 <2>;
+			big-endian;
+			status = "disabled";
+		};
+
 		pcie2: pcie@3500000 {
 			compatible = "fsl,ls1088a-pcie";
 			reg = <0x00 0x03500000 0x0 0x00100000   /* controller registers */
@@ -543,6 +639,19 @@
 			status = "disabled";
 		};
 
+		pcie_ep2: pcie_ep@3500000 {
+			compatible = "fsl,ls1088a-pcie-ep","fsl,ls-pcie-ep";
+			reg = <0x00 0x03500000 0x0 0x00100000
+			       0x28 0x00000000 0x8 0x00000000>;
+			reg-names = "regs", "addr_space";
+			interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>; /* PME interrupt */
+			interrupt-names = "pme";
+			num-ib-windows = <6>;
+			num-ob-windows = <8>;
+			big-endian;
+			status = "disabled";
+		};
+
 		pcie3: pcie@3600000 {
 			compatible = "fsl,ls1088a-pcie";
 			reg = <0x00 0x03600000 0x0 0x00100000   /* controller registers */
@@ -566,6 +675,18 @@
 					<0000 0 0 3 &gic 0 0 0 121 IRQ_TYPE_LEVEL_HIGH>,
 					<0000 0 0 4 &gic 0 0 0 122 IRQ_TYPE_LEVEL_HIGH>;
 			iommu-map = <0 &smmu 0 1>; /* Fixed-up by bootloader */
+			status = "disabled";
+		};
+
+		pcie_ep3: pcie_ep@3600000 {
+			compatible = "fsl,ls1088a-pcie-ep","fsl,ls-pcie-ep";
+			reg = <0x00 0x03600000 0x0 0x00100000
+			       0x30 0x00000000 0x8 0x00000000>;
+			reg-names = "regs", "addr_space";
+			interrupts = <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>; /* PME interrupt */
+			interrupt-names = "pme";
+			num-ib-windows = <6>;
+			num-ob-windows = <8>;
 			status = "disabled";
 		};
 

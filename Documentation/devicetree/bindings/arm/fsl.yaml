@@ -521,6 +521,7 @@ properties:
               - ebs-systart,oxalis
               - fsl,ls1012a-rdb
               - fsl,ls1012a-frdm
+              - fsl,ls1012a-frwy
               - fsl,ls1012a-qds
           - const: fsl,ls1012a
 
@@ -619,6 +620,7 @@ properties:
           - enum:
               - fsl,lx2160a-qds
               - fsl,lx2160a-rdb
+              - fsl,lx2162a-qds
           - const: fsl,lx2160a
 
       - description: S32V234 based Boards

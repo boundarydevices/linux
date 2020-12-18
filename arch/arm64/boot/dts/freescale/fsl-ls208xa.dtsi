@@ -3,7 +3,7 @@
  * Device Tree Include file for Freescale Layerscape-2080A family SoC.
  *
  * Copyright 2016 Freescale Semiconductor, Inc.
- * Copyright 2017 NXP
+ * Copyright 2017-2020 NXP
  *
  * Abhimanyu Saini <abhimanyu.saini@nxp.com>
  *
@@ -238,13 +238,12 @@
 		};
 	};
 
-	timer {
+	timer: timer {
 		compatible = "arm,armv8-timer";
 		interrupts = <1 13 4>, /* Physical Secure PPI, active-low */
 			     <1 14 4>, /* Physical Non-Secure PPI, active-low */
 			     <1 11 4>, /* Virtual PPI, active-low */
 			     <1 10 4>; /* Hypervisor PPI, active-low */
-		fsl,erratum-a008585;
 	};
 
 	pmu {
@@ -275,6 +274,37 @@
 			compatible = "fsl,ls2080a-dcfg", "syscon";
 			reg = <0x0 0x1e00000 0x0 0x10000>;
 			little-endian;
+		};
+
+		isc: syscon@1f70000 {
+			compatible = "fsl,ls2080a-isc", "syscon";
+			reg = <0x0 0x1f70000 0x0 0x10000>;
+			little-endian;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0x0 0x0 0x1f70000 0x10000>;
+
+			extirq: interrupt-controller@14 {
+				compatible = "fsl,ls2080a-extirq", "fsl,ls1088a-extirq";
+				#interrupt-cells = <2>;
+				#address-cells = <0>;
+				interrupt-controller;
+				reg = <0x14 4>;
+				interrupt-map =
+					<0 0 &gic GIC_SPI 0 IRQ_TYPE_LEVEL_HIGH>,
+					<1 0 &gic GIC_SPI 1 IRQ_TYPE_LEVEL_HIGH>,
+					<2 0 &gic GIC_SPI 2 IRQ_TYPE_LEVEL_HIGH>,
+					<3 0 &gic GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
+					<4 0 &gic GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>,
+					<5 0 &gic GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>,
+					<6 0 &gic GIC_SPI 6 IRQ_TYPE_LEVEL_HIGH>,
+					<7 0 &gic GIC_SPI 7 IRQ_TYPE_LEVEL_HIGH>,
+					<8 0 &gic GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>,
+					<9 0 &gic GIC_SPI 9 IRQ_TYPE_LEVEL_HIGH>,
+					<10 0 &gic GIC_SPI 10 IRQ_TYPE_LEVEL_HIGH>,
+					<11 0 &gic GIC_SPI 11 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-map-mask = <0xffffffff 0x0>;
+			};
 		};
 
 		tmu: tmu@1f80000 {
@@ -353,56 +383,56 @@
 		cluster1_core0_watchdog: wdt@c000000 {
 			compatible = "arm,sp805-wdt", "arm,primecell";
 			reg = <0x0 0xc000000 0x0 0x1000>;
-			clocks = <&clockgen 4 3>, <&clockgen 4 3>;
+			clocks = <&clockgen 4 31>, <&clockgen 4 31>;
 			clock-names = "wdog_clk", "apb_pclk";
 		};
 
 		cluster1_core1_watchdog: wdt@c010000 {
 			compatible = "arm,sp805-wdt", "arm,primecell";
 			reg = <0x0 0xc010000 0x0 0x1000>;
-			clocks = <&clockgen 4 3>, <&clockgen 4 3>;
+			clocks = <&clockgen 4 31>, <&clockgen 4 31>;
 			clock-names = "wdog_clk", "apb_pclk";
 		};
 
 		cluster2_core0_watchdog: wdt@c100000 {
 			compatible = "arm,sp805-wdt", "arm,primecell";
 			reg = <0x0 0xc100000 0x0 0x1000>;
-			clocks = <&clockgen 4 3>, <&clockgen 4 3>;
+			clocks = <&clockgen 4 31>, <&clockgen 4 31>;
 			clock-names = "wdog_clk", "apb_pclk";
 		};
 
 		cluster2_core1_watchdog: wdt@c110000 {
 			compatible = "arm,sp805-wdt", "arm,primecell";
 			reg = <0x0 0xc110000 0x0 0x1000>;
-			clocks = <&clockgen 4 3>, <&clockgen 4 3>;
+			clocks = <&clockgen 4 31>, <&clockgen 4 31>;
 			clock-names = "wdog_clk", "apb_pclk";
 		};
 
 		cluster3_core0_watchdog: wdt@c200000 {
 			compatible = "arm,sp805-wdt", "arm,primecell";
 			reg = <0x0 0xc200000 0x0 0x1000>;
-			clocks = <&clockgen 4 3>, <&clockgen 4 3>;
+			clocks = <&clockgen 4 31>, <&clockgen 4 31>;
 			clock-names = "wdog_clk", "apb_pclk";
 		};
 
 		cluster3_core1_watchdog: wdt@c210000 {
 			compatible = "arm,sp805-wdt", "arm,primecell";
 			reg = <0x0 0xc210000 0x0 0x1000>;
-			clocks = <&clockgen 4 3>, <&clockgen 4 3>;
+			clocks = <&clockgen 4 31>, <&clockgen 4 31>;
 			clock-names = "wdog_clk", "apb_pclk";
 		};
 
 		cluster4_core0_watchdog: wdt@c300000 {
 			compatible = "arm,sp805-wdt", "arm,primecell";
 			reg = <0x0 0xc300000 0x0 0x1000>;
-			clocks = <&clockgen 4 3>, <&clockgen 4 3>;
+			clocks = <&clockgen 4 31>, <&clockgen 4 31>;
 			clock-names = "wdog_clk", "apb_pclk";
 		};
 
 		cluster4_core1_watchdog: wdt@c310000 {
 			compatible = "arm,sp805-wdt", "arm,primecell";
 			reg = <0x0 0xc310000 0x0 0x1000>;
-			clocks = <&clockgen 4 3>, <&clockgen 4 3>;
+			clocks = <&clockgen 4 31>, <&clockgen 4 31>;
 			clock-names = "wdog_clk", "apb_pclk";
 		};
 
@@ -684,15 +714,42 @@
 			#interrupt-cells = <2>;
 		};
 
+		/* TODO: WRIOP (CCSR?) */
+		emdio1: mdio@8B96000 { /* WRIOP0: 0x8B8_0000,
+					  * E-MDIO1: 0x1_6000
+					  */
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8B96000 0x0 0x1000>;
+			device_type = "mdio";	/* TODO: is this necessary? */
+			little-endian;	/* force the driver in LE mode */
+
+			/* Not necessary on the QDS, but needed on the RDB */
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		emdio2: mdio@8B97000 { /* WRIOP0: 0x8B8_0000,
+					  * E-MDIO2: 0x1_7000
+					  */
+			compatible = "fsl,fman-memac-mdio";
+			reg = <0x0 0x8B97000 0x0 0x1000>;
+			device_type = "mdio";	/* TODO: is this necessary? */
+			little-endian;	/* force the driver in LE mode */
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
 		i2c0: i2c@2000000 {
 			status = "disabled";
-			compatible = "fsl,vf610-i2c";
+			compatible = "fsl,vf610-i2c", "fsl,ls208xa-vf610-i2c";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x0 0x2000000 0x0 0x10000>;
 			interrupts = <0 34 0x4>; /* Level high type */
 			clock-names = "i2c";
-			clocks = <&clockgen 4 3>;
+			clocks = <&clockgen 4 1>;
+			scl-gpios = <&gpio3 10 0>;
 		};
 
 		i2c1: i2c@2010000 {
@@ -703,7 +760,7 @@
 			reg = <0x0 0x2010000 0x0 0x10000>;
 			interrupts = <0 34 0x4>; /* Level high type */
 			clock-names = "i2c";
-			clocks = <&clockgen 4 3>;
+			clocks = <&clockgen 4 1>;
 		};
 
 		i2c2: i2c@2020000 {
@@ -714,7 +771,7 @@
 			reg = <0x0 0x2020000 0x0 0x10000>;
 			interrupts = <0 35 0x4>; /* Level high type */
 			clock-names = "i2c";
-			clocks = <&clockgen 4 3>;
+			clocks = <&clockgen 4 1>;
 		};
 
 		i2c3: i2c@2030000 {
@@ -725,7 +782,7 @@
 			reg = <0x0 0x2030000 0x0 0x10000>;
 			interrupts = <0 35 0x4>; /* Level high type */
 			clock-names = "i2c";
-			clocks = <&clockgen 4 3>;
+			clocks = <&clockgen 4 1>;
 		};
 
 		ifc: ifc@2240000 {
@@ -757,8 +814,8 @@
 		pcie1: pcie@3400000 {
 			compatible = "fsl,ls2080a-pcie", "fsl,ls2085a-pcie";
 			reg-names = "regs", "config";
-			interrupts = <0 108 0x4>; /* Level high type */
-			interrupt-names = "intr";
+			interrupts = <0 108 0x4>; /* aer interrupt */
+			interrupt-names = "aer";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			device_type = "pci";
@@ -779,8 +836,8 @@
 		pcie2: pcie@3500000 {
 			compatible = "fsl,ls2080a-pcie", "fsl,ls2085a-pcie";
 			reg-names = "regs", "config";
-			interrupts = <0 113 0x4>; /* Level high type */
-			interrupt-names = "intr";
+			interrupts = <0 113 0x4>; /* aer interrupt */
+			interrupt-names = "aer";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			device_type = "pci";
@@ -801,8 +858,8 @@
 		pcie3: pcie@3600000 {
 			compatible = "fsl,ls2080a-pcie", "fsl,ls2085a-pcie";
 			reg-names = "regs", "config";
-			interrupts = <0 118 0x4>; /* Level high type */
-			interrupt-names = "intr";
+			interrupts = <0 118 0x4>; /* aer interrupt */
+			interrupt-names = "aer";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			device_type = "pci";
@@ -823,8 +880,8 @@
 		pcie4: pcie@3700000 {
 			compatible = "fsl,ls2080a-pcie", "fsl,ls2085a-pcie";
 			reg-names = "regs", "config";
-			interrupts = <0 123 0x4>; /* Level high type */
-			interrupt-names = "intr";
+			interrupts = <0 123 0x4>; /* aer interrupt */
+			interrupt-names = "aer";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			device_type = "pci";
@@ -862,24 +919,26 @@
 
 		usb0: usb3@3100000 {
 			status = "disabled";
-			compatible = "snps,dwc3";
+			compatible = "fsl,ls2088a-dwc3", "snps,dwc3";
 			reg = <0x0 0x3100000 0x0 0x10000>;
 			interrupts = <0 80 0x4>; /* Level high type */
 			dr_mode = "host";
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,dis_rxdet_inp3_quirk;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			snps,host-vbus-glitches;
 		};
 
 		usb1: usb3@3110000 {
 			status = "disabled";
-			compatible = "snps,dwc3";
+			compatible = "fsl,ls2088a-dwc3", "snps,dwc3";
 			reg = <0x0 0x3110000 0x0 0x10000>;
 			interrupts = <0 81 0x4>; /* Level high type */
 			dr_mode = "host";
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,dis_rxdet_inp3_quirk;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			snps,host-vbus-glitches;
 		};
 
 		ccn@4000000 {

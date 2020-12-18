@@ -50,6 +50,10 @@
 		compatible = "pericom,pt7c4338";
 		reg = <0x68>;
 	};
+	rtc@51 {
+		compatible = "nxp,pcf85263";
+		reg = <0x51>;
+	};
 };
 
 &ifc {
