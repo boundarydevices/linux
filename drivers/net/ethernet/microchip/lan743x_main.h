@@ -43,6 +43,10 @@
 #define STRAP_READ_ADV_PM_DISABLE_	BIT(0)
 
 #define HW_CFG					(0x010)
+#define HW_CFG_LED3_EN				BIT(23)
+#define HW_CFG_LED2_EN				BIT(22)
+#define HW_CFG_LED1_EN				BIT(21)
+#define HW_CFG_LED0_EN				BIT(20)
 #define HW_CFG_RST_PROTECT_PCIE_		BIT(19)
 #define HW_CFG_HOT_RESET_DIS_			BIT(15)
 #define HW_CFG_D3_VAUX_OVR_			BIT(14)
