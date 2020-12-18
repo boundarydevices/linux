@@ -475,6 +475,9 @@ static int _genpd_power_off(struct generic_pm_domain *genpd, bool timed)
 	if (!genpd->power_off)
 		goto out;
 
+	if (atomic_read(&genpd->sd_count) > 0)
+		return -EBUSY;
+
 	if (!timed) {
 		ret = genpd->power_off(genpd);
 		if (ret)
@@ -583,9 +586,9 @@ static int genpd_power_off(struct generic_pm_domain *genpd, bool one_dev_on,
 	if (!genpd->gov)
 		genpd->state_idx = 0;
 
-	/* Don't power off, if a child domain is waiting to power on. */
-	if (atomic_read(&genpd->sd_count) > 0)
-		return -EBUSY;
+	/* Choose the deepest state if no devices using this domain */
+	if (!genpd->device_count)
+		genpd->state_idx = genpd->state_count - 1;
 
 	ret = _genpd_power_off(genpd, true);
 	if (ret) {
@@ -980,16 +983,28 @@ static void genpd_sync_power_off(struct generic_pm_domain *genpd, bool use_lock,
 {
 	struct gpd_link *link;
 
-	if (!genpd_status_on(genpd) || genpd_is_always_on(genpd))
+	/*
+	 * Give the power domain a chance to switch to the deepest state in
+	 * case it's already off but in an intermediate low power state.
+	 */
+	genpd->state_idx_saved = genpd->state_idx;
+
+	if (genpd_is_always_on(genpd))
 		return;
 
-	if (genpd->suspended_count != genpd->device_count
-	    || atomic_read(&genpd->sd_count) > 0)
+	if (!genpd_status_on(genpd) &&
+	    genpd->state_idx == (genpd->state_count - 1))
+		return;
+
+	if (genpd->suspended_count != genpd->device_count)
 		return;
 
 	/* Choose the deepest state when suspending */
 	genpd->state_idx = genpd->state_count - 1;
 	if (_genpd_power_off(genpd, false))
+		return;
+
+	if (genpd->status == GENPD_STATE_OFF)
 		return;
 
 	genpd->status = GENPD_STATE_OFF;
@@ -1038,6 +1053,9 @@ static void genpd_sync_power_on(struct generic_pm_domain *genpd, bool use_lock,
 	}
 
 	_genpd_power_on(genpd, false);
+	/* restore save power domain state after resume */
+	genpd->state_idx = genpd->state_idx_saved;
+
 	genpd->status = GENPD_STATE_ON;
 }
 
@@ -1946,7 +1964,7 @@ int pm_genpd_init(struct generic_pm_domain *genpd,
 			return ret;
 		}
 	} else if (!gov && genpd->state_count > 1) {
-		pr_warn("%s: no governor for states\n", genpd->name);
+		pr_debug("%s: no governor for states\n", genpd->name);
 	}
 
 	device_initialize(&genpd->dev);
