@@ -16,10 +16,17 @@
 #include <linux/bpf_trace.h>
 #include <linux/fsl/ptp_qoriq.h>
 #include <linux/ptp_classify.h>
+#include <linux/device/driver.h>
 #include <net/pkt_cls.h>
 #include <net/sock.h>
 
+/* Hack: only here in order to use device_driver_detach.
+ * To be replaced with the use of MC _ENDPOINT_CHANGED interrupts on all
+ * connectable objects
+ */
+#include "../../../../base/base.h"
 #include "dpaa2-eth.h"
+#include "dpaa2-eth-ceetm.h"
 
 /* CREATE_TRACE_POINTS only needs to be defined once. Other dpa files
  * using trace events only need to #include <trace/events/sched.h>
@@ -412,6 +419,16 @@ out:
 	return xdp_act;
 }
 
+static bool frame_is_tcp(const struct dpaa2_fd *fd, struct dpaa2_fas *fas)
+{
+	struct dpaa2_fapr *fapr = dpaa2_get_fapr(fas, false);
+
+	if (!(dpaa2_fd_get_frc(fd) & DPAA2_FD_FRC_FAPRV))
+		return false;
+
+	return !!(fapr->faf_hi & DPAA2_FAF_HI_TCP_PRESENT);
+}
+
 /* Main Rx frame processing routine */
 static void dpaa2_eth_rx(struct dpaa2_eth_priv *priv,
 			 struct dpaa2_eth_channel *ch,
@@ -499,7 +516,10 @@ static void dpaa2_eth_rx(struct dpaa2_eth_priv *priv,
 	percpu_stats->rx_packets++;
 	percpu_stats->rx_bytes += dpaa2_fd_get_len(fd);
 
-	list_add_tail(&skb->list, ch->rx_list);
+	if (frame_is_tcp(fd, fas))
+		napi_gro_receive(&ch->napi, skb);
+	else
+		list_add_tail(&skb->list, ch->rx_list);
 
 	return;
 
@@ -1075,7 +1095,7 @@ static netdev_tx_t __dpaa2_eth_tx(struct sk_buff *skb,
 	unsigned int needed_headroom;
 	u32 fd_len;
 	u8 prio = 0;
-	int err, i;
+	int err, i, ch_id = 0;
 	void *swa;
 
 	percpu_stats = this_cpu_ptr(priv->percpu_stats);
@@ -1139,6 +1159,15 @@ static netdev_tx_t __dpaa2_eth_tx(struct sk_buff *skb,
 		queue_mapping %= dpaa2_eth_queue_count(priv);
 	}
 	fq = &priv->fq[queue_mapping];
+
+	if (dpaa2_eth_ceetm_is_enabled(priv)) {
+		err = dpaa2_ceetm_classify(skb, net_dev->qdisc, &ch_id, &prio);
+		if (err) {
+			dpaa2_eth_free_tx_fd(priv, fq, &fd, false);
+			percpu_stats->tx_dropped++;
+			return NETDEV_TX_OK;
+		}
+	}
 
 	fd_len = dpaa2_fd_get_len(&fd);
 	nq = netdev_get_tx_queue(net_dev, queue_mapping);
@@ -1808,7 +1837,7 @@ static void dpaa2_eth_wait_for_egress_fq_empty(struct dpaa2_eth_priv *priv)
 		goto out;
 
 	do {
-		err = dpni_get_statistics(priv->mc_io, 0, priv->mc_token, 6,
+		err = dpni_get_statistics(priv->mc_io, 0, priv->mc_token, 6, 0,
 					  &stats);
 		if (err)
 			goto out;
@@ -2489,6 +2518,8 @@ static int dpaa2_eth_setup_tc(struct net_device *net_dev,
 		return dpaa2_eth_setup_mqprio(net_dev, type_data);
 	case TC_SETUP_QDISC_TBF:
 		return dpaa2_eth_setup_tbf(net_dev, type_data);
+	case TC_SETUP_BLOCK:
+		return 0;
 	default:
 		return -EOPNOTSUPP;
 	}
@@ -4034,6 +4065,40 @@ static int dpaa2_eth_poll_link_state(void *arg)
 	return 0;
 }
 
+static struct device_driver *dpaa2_eth_find_dpmac_driver(void)
+{
+	struct device_driver *drv = NULL;
+	struct klist_iter i;
+
+	klist_iter_init_node(&fsl_mc_bus_type.p->klist_drivers, &i, NULL);
+	while ((drv = next_driver(&i))) {
+		if (strcmp(drv->name, "fsl_dpaa2_mac") == 0)
+			goto exit;
+	}
+
+exit:
+	klist_iter_exit(&i);
+	return drv;
+}
+
+static void dpaa2_eth_dpmac_driver_attach(struct fsl_mc_device *dpmac_dev)
+{
+	struct device_driver *drv = dpaa2_eth_find_dpmac_driver();
+	struct device *dev = &dpmac_dev->dev;
+
+	if (dev && dev->driver == NULL && driver_match_device(drv, dev))
+		device_driver_attach(drv, dev);
+}
+
+static void dpaa2_eth_dpmac_driver_detach(struct fsl_mc_device *dpmac_dev)
+{
+	struct device_driver *drv = dpaa2_eth_find_dpmac_driver();
+	struct device *dev = &dpmac_dev->dev;
+
+	if (dev && dev->driver == drv)
+		device_driver_detach(dev);
+}
+
 static int dpaa2_eth_connect_mac(struct dpaa2_eth_priv *priv)
 {
 	struct fsl_mc_device *dpni_dev, *dpmac_dev;
@@ -4047,6 +4112,8 @@ static int dpaa2_eth_connect_mac(struct dpaa2_eth_priv *priv)
 
 	if (dpaa2_mac_is_type_fixed(dpmac_dev, priv->mc_io))
 		return 0;
+
+	dpaa2_eth_dpmac_driver_detach(dpmac_dev);
 
 	mac = kzalloc(sizeof(struct dpaa2_mac), GFP_KERNEL);
 	if (!mac)
@@ -4073,6 +4140,7 @@ static void dpaa2_eth_disconnect_mac(struct dpaa2_eth_priv *priv)
 		return;
 
 	dpaa2_mac_disconnect(priv->mac);
+	dpaa2_eth_dpmac_driver_attach(priv->mac->mc_dev);
 	kfree(priv->mac);
 	priv->mac = NULL;
 }
@@ -4100,12 +4168,10 @@ static irqreturn_t dpni_irq0_handler_thread(int irq_num, void *arg)
 		dpaa2_eth_set_mac_addr(netdev_priv(net_dev));
 		dpaa2_eth_update_tx_fqids(priv);
 
-		rtnl_lock();
 		if (priv->mac)
 			dpaa2_eth_disconnect_mac(priv);
 		else
 			dpaa2_eth_connect_mac(priv);
-		rtnl_unlock();
 	}
 
 	return IRQ_HANDLED;
@@ -4395,9 +4461,7 @@ static int dpaa2_eth_remove(struct fsl_mc_device *ls_dev)
 #ifdef CONFIG_DEBUG_FS
 	dpaa2_dbg_remove(priv);
 #endif
-	rtnl_lock();
 	dpaa2_eth_disconnect_mac(priv);
-	rtnl_unlock();
 
 	unregister_netdev(net_dev);
 
@@ -4454,18 +4518,27 @@ static int __init dpaa2_eth_driver_init(void)
 
 	dpaa2_eth_dbg_init();
 	err = fsl_mc_driver_register(&dpaa2_eth_driver);
-	if (err) {
-		dpaa2_eth_dbg_exit();
-		return err;
-	}
+	if (err)
+		goto out_debugfs_err;
+
+	err = dpaa2_ceetm_register();
+	if (err)
+		goto out_ceetm_err;
 
 	return 0;
+
+out_ceetm_err:
+	fsl_mc_driver_unregister(&dpaa2_eth_driver);
+out_debugfs_err:
+	dpaa2_eth_dbg_exit();
+	return err;
 }
 
 static void __exit dpaa2_eth_driver_exit(void)
 {
-	dpaa2_eth_dbg_exit();
+	dpaa2_ceetm_unregister();
 	fsl_mc_driver_unregister(&dpaa2_eth_driver);
+	dpaa2_eth_dbg_exit();
 }
 
 module_init(dpaa2_eth_driver_init);
