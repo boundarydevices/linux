@@ -14,6 +14,7 @@
 #include <linux/iopoll.h>
 #include <linux/mdio.h>
 #include <linux/pci.h>
+#include "felix_tsn.h"
 #include "felix.h"
 
 #define VSC9959_TAS_GCL_ENTRY_MAX	63
@@ -292,7 +293,7 @@ static const u32 vsc9959_sys_regmap[] = {
 	REG_RESERVED(SYS_MMGT_FAST),
 	REG_RESERVED(SYS_EVENTS_DIF),
 	REG_RESERVED(SYS_EVENTS_CORE),
-	REG_RESERVED(SYS_CNT),
+	REG(SYS_CNT,				0x000000),
 	REG(SYS_PTP_STATUS,			0x000f14),
 	REG(SYS_PTP_TXSTAMP,			0x000f18),
 	REG(SYS_PTP_NXT,			0x000f1c),
@@ -340,6 +341,9 @@ static const u32 vsc9959_dev_gmii_regmap[] = {
 	REG(DEV_MAC_FC_MAC_LOW_CFG,		0x3c),
 	REG(DEV_MAC_FC_MAC_HIGH_CFG,		0x40),
 	REG(DEV_MAC_STICKY,			0x44),
+	REG(DEV_MM_ENABLE_CONFIG,		0x48),
+	REG(DEV_MM_VERIF_CONFIG,		0x4C),
+	REG(DEV_MM_STATUS,			0x50),
 	REG_RESERVED(PCS1G_CFG),
 	REG_RESERVED(PCS1G_MODE_CFG),
 	REG_RESERVED(PCS1G_SD_CFG),
@@ -1122,7 +1126,7 @@ static void vsc9959_mdio_bus_free(struct ocelot *ocelot)
 }
 
 static void vsc9959_sched_speed_set(struct ocelot *ocelot, int port,
-				    u32 speed)
+				    int speed)
 {
 	u8 tas_speed;
 
@@ -1148,6 +1152,10 @@ static void vsc9959_sched_speed_set(struct ocelot *ocelot, int port,
 		       QSYS_TAG_CONFIG_LINK_SPEED(tas_speed),
 		       QSYS_TAG_CONFIG_LINK_SPEED_M,
 		       QSYS_TAG_CONFIG, port);
+
+#ifdef CONFIG_MSCC_FELIX_SWITCH_TSN
+	felix_cbs_reset(ocelot, port, speed);
+#endif
 }
 
 static void vsc9959_new_base_time(struct ocelot *ocelot, ktime_t base_time,
@@ -1380,10 +1388,13 @@ static irqreturn_t felix_irq_handler(int irq, void *data)
 	 * and preemption status change interrupt on each port.
 	 *
 	 * - Get txtstamp if have
-	 * - TODO: handle preemption. Without handling it, driver may get
-	 *   interrupt storm.
+	 * - Handle preemption if it's preemption IRQ. Without handling it,
+	 *   driver may get interrupt storm.
 	 */
 
+#ifdef CONFIG_MSCC_FELIX_SWITCH_TSN
+	felix_preempt_irq_clean(ocelot);
+#endif
 	ocelot_get_txtstamp(ocelot);
 
 	return IRQ_HANDLED;
@@ -1467,6 +1478,10 @@ static int felix_pci_probe(struct pci_dev *pdev,
 		dev_err(&pdev->dev, "Failed to register DSA switch: %d\n", err);
 		goto err_register_ds;
 	}
+
+#ifdef CONFIG_MSCC_FELIX_SWITCH_TSN
+	felix_tsn_enable(ds);
+#endif
 
 	return 0;
 

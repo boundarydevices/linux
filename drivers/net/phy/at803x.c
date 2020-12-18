@@ -74,8 +74,13 @@
 #define AT803X_LOC_MAC_ADDR_0_15_OFFSET		0x804C
 #define AT803X_LOC_MAC_ADDR_16_31_OFFSET	0x804B
 #define AT803X_LOC_MAC_ADDR_32_47_OFFSET	0x804A
+#define AT803X_SMARTEEE_CTL3_OFFSET		0x805D
+#define AT803X_MMD_ACCESS_CONTROL		0x0D
+#define AT803X_MMD_ACCESS_CONTROL_DATA		0x0E
+#define AT803X_FUNC_DATA			0x4003
 #define AT803X_REG_CHIP_CONFIG			0x1f
 #define AT803X_BT_BX_REG_SEL			0x8000
+#define AT803X_SMARTEEE_DISABLED_VAL		0x1000
 
 #define AT803X_DEBUG_ADDR			0x1D
 #define AT803X_DEBUG_DATA			0x1E
@@ -133,11 +138,20 @@
 #define AT803X_MAX_DOWNSHIFT 9
 
 #define ATH9331_PHY_ID 0x004dd041
+
+#define AT803X_LPI_EN				BIT(8)
+
+#define AT803X_DEBUG_REG_31			0x1f
+#define AT803X_VDDIO_1P8V_EN			0x8
+
 #define ATH8030_PHY_ID 0x004dd076
 #define ATH8031_PHY_ID 0x004dd074
 #define ATH8032_PHY_ID 0x004dd023
 #define ATH8035_PHY_ID 0x004dd072
 #define AT8030_PHY_ID_MASK			0xffffffef
+
+#define AT803X_EEE_FEATURE_DISABLE		(1 << 1)
+#define AT803X_VDDIO_1P8V			(1 << 2)
 
 MODULE_DESCRIPTION("Qualcomm Atheros AR803x PHY driver");
 MODULE_AUTHOR("Matus Ujhelyi");
@@ -151,6 +165,7 @@ struct at803x_priv {
 	struct regulator_dev *vddio_rdev;
 	struct regulator_dev *vddh_rdev;
 	struct regulator *vddio;
+	u32 quirks;
 };
 
 struct at803x_context {
@@ -212,6 +227,39 @@ static int at803x_disable_tx_delay(struct phy_device *phydev)
 {
 	return at803x_debug_reg_mask(phydev, AT803X_DEBUG_REG_5,
 				     AT803X_DEBUG_TX_CLK_DLY_EN, 0);
+}
+
+static inline int at803x_set_vddio_1p8v(struct phy_device *phydev)
+{
+	return at803x_debug_reg_mask(phydev, AT803X_DEBUG_REG_31, 0,
+					AT803X_VDDIO_1P8V_EN);
+}
+
+static int at803x_disable_eee(struct phy_device *phydev)
+{
+	int ret;
+
+	ret = phy_write(phydev, AT803X_MMD_ACCESS_CONTROL,
+				  AT803X_DEVICE_ADDR);
+	if (ret < 0)
+		return ret;
+
+	ret = phy_write(phydev, AT803X_MMD_ACCESS_CONTROL_DATA,
+				  AT803X_SMARTEEE_CTL3_OFFSET);
+	if (ret < 0)
+		return ret;
+
+	ret = phy_write(phydev, AT803X_MMD_ACCESS_CONTROL,
+				  AT803X_FUNC_DATA);
+	if (ret < 0)
+		return ret;
+
+	ret = phy_write(phydev, AT803X_MMD_ACCESS_CONTROL_DATA,
+				  AT803X_SMARTEEE_DISABLED_VAL);
+	if (ret < 0)
+		return ret;
+
+	return 0;
 }
 
 /* save relevant PHY registers to private copy */
@@ -513,6 +561,12 @@ static int at803x_probe(struct phy_device *phydev)
 	if (!priv)
 		return -ENOMEM;
 
+	if (of_property_read_bool(dev->of_node, "at803x,eee-disabled"))
+		priv->quirks |= AT803X_EEE_FEATURE_DISABLE;
+
+	if (of_property_read_bool(dev->of_node, "at803x,vddio-1p8v"))
+		priv->quirks |= AT803X_VDDIO_1P8V;
+
 	phydev->priv = priv;
 
 	return at803x_parse_dt(phydev);
@@ -559,9 +613,30 @@ static int at8031_pll_config(struct phy_device *phydev)
 					     AT803X_DEBUG_PLL_ON, 0);
 }
 
+static void at803x_enable_smart_eee(struct phy_device *phydev, int on)
+{
+	int value;
+
+	/* 5.1.11 Smart_eee control3 */
+	value = phy_read_mmd(phydev, MDIO_MMD_PCS, 0x805D);
+	if (on)
+		value |= AT803X_LPI_EN;
+	else
+		value &= ~AT803X_LPI_EN;
+	phy_write_mmd(phydev, MDIO_MMD_PCS, 0x805D, value);
+}
+
 static int at803x_config_init(struct phy_device *phydev)
 {
 	int ret;
+	struct at803x_priv *priv = phydev->priv;
+
+
+#ifdef CONFIG_AT803X_PHY_SMART_EEE
+	at803x_enable_smart_eee(phydev, 1);
+#else
+	at803x_enable_smart_eee(phydev, 0);
+#endif
 
 	/* The RX and TX delay default is:
 	 *   after HW reset: RX delay enabled and TX delay disabled
@@ -590,6 +665,18 @@ static int at803x_config_init(struct phy_device *phydev)
 
 	if (at803x_match_phy_id(phydev, ATH8031_PHY_ID)) {
 		ret = at8031_pll_config(phydev);
+		if (ret < 0)
+			return ret;
+	}
+
+	if (priv->quirks & AT803X_VDDIO_1P8V) {
+		ret = at803x_set_vddio_1p8v(phydev);
+		if (ret < 0)
+			return ret;
+	}
+
+	if (priv->quirks & AT803X_EEE_FEATURE_DISABLE) {
+		ret = at803x_disable_eee(phydev);
 		if (ret < 0)
 			return ret;
 	}
