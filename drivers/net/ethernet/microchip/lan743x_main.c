@@ -3695,6 +3695,7 @@ static const struct pci_device_id lan743x_pcidev_tbl[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_SMSC, PCI_DEVICE_ID_SMSC_A041) },
 	{ 0, }
 };
+MODULE_DEVICE_TABLE(pci, lan743x_pcidev_tbl);
 
 MODULE_DEVICE_TABLE(pci, lan743x_pcidev_tbl);
 
