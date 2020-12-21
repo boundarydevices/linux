@@ -252,6 +252,7 @@ struct device *dma_heap_get_dev(struct dma_heap *heap)
 {
 	return heap->heap_dev;
 }
+EXPORT_SYMBOL_GPL(dma_heap_get_dev);
 
 /**
  * dma_heap_get_name() - get heap name
