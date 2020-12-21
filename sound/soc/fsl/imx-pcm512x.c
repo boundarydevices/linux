@@ -193,7 +193,6 @@ static int imx_pcm512x_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_component *comp = codec_dai->component;
 	struct snd_soc_card *card = rtd->card;
 	struct imx_pcm512x_data *data = snd_soc_card_get_drvdata(card);
-	unsigned int channels = params_channels(params);
 	unsigned int sample_rate = params_rate(params);
 	unsigned long mclk_freq;
 	int ret, i;
@@ -229,14 +228,6 @@ static int imx_pcm512x_hw_params(struct snd_pcm_substream *substream,
 	ret = snd_soc_dai_set_fmt(cpu_dai, data->daifmt);
 	if (ret) {
 		dev_err(card->dev, "failed to set cpu dai fmt: %d\n", ret);
-		return ret;
-	}
-
-	ret = snd_soc_dai_set_tdm_slot(cpu_dai,
-				       BIT(channels) - 1, BIT(channels) - 1,
-				       data->slots, data->slot_width);
-	if (ret) {
-		dev_err(card->dev, "failed to set cpu dai tdm slot: %d\n", ret);
 		return ret;
 	}
 
