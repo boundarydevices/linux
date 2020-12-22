@@ -1475,7 +1475,7 @@ static void avt_init_avail_formats(struct v4l2_subdev *sd)
 	avail_fmts[fmt_iter] = -EINVAL;
 
 	priv->available_fmts = avail_fmts;
-	priv->available_fmts_cnt = fmt_iter+1;;
+	priv->available_fmts_cnt = fmt_iter;
 }
 
 static int avt_csi2_enum_mbus_code(struct v4l2_subdev *sd,
