@@ -255,6 +255,12 @@ static struct mx6s_fmt formats[] = {
 		.mbus_code	= MEDIA_BUS_FMT_UYVY8_2X8,
 		.bpp		= 2,
 	}, {
+		.name		= "UYVY-16",
+		.fourcc		= V4L2_PIX_FMT_UYVY,
+		.pixelformat	= V4L2_PIX_FMT_UYVY,
+		.mbus_code	= MEDIA_BUS_FMT_VYUY8_2X8,
+		.bpp		= 2,
+	}, {
 		.name		= "UYVY-16b",
 		.fourcc		= V4L2_PIX_FMT_UYVY,
 		.pixelformat	= V4L2_PIX_FMT_UYVY,
