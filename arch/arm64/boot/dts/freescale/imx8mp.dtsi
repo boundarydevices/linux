@@ -1425,6 +1425,11 @@
 				reg = <0x32ec0090 0x28>;
 			};
 
+			isi_chain_buf: isi_chain@32e02000{
+				compatible = "fsl,imx8mp-iomuxc-gpr", "syscon";
+				reg = <0x32e02000 0x4>;
+			};
+
 			cameradev: camera {
 				compatible = "fsl,mxc-md", "simple-bus";
 				#address-cells = <1>;
@@ -1459,6 +1464,7 @@
 						 <&media_blk_ctrl IMX8MP_MEDIA_BLK_CTRL_RESET_BUS_BLK>;
 					reset-names = "isi_rst_proc", "isi_rst_apb", "isi_rst_bus";
 					power-domains = <&mediamix_pd>;
+					isi_chain = <&isi_chain_buf>;
 					status = "disabled";
 
 					cap_device {
