@@ -19,6 +19,8 @@
 #define AIU_958_MISC_U_FROM_STREAM	BIT(12)
 #define AIU_958_MISC_FORCE_LR		BIT(13)
 #define AIU_958_CTRL_HOLD_EN		BIT(0)
+#define AIU_958_CTRL_MUTE_RIGHT_SPEAKER	BIT(3)
+#define AIU_958_CTRL_MUTE_LEFT_SPEAKER	BIT(4)
 #define AIU_CLK_CTRL_958_DIV_EN		BIT(1)
 #define AIU_CLK_CTRL_958_DIV		GENMASK(5, 4)
 #define AIU_CLK_CTRL_958_DIV_MORE	BIT(12)
@@ -200,10 +202,29 @@ static void aiu_encoder_spdif_shutdown(struct snd_pcm_substream *substream,
 	clk_bulk_disable_unprepare(aiu->spdif.clk_num, aiu->spdif.clks);
 }
 
+static int aiu_encoder_spdif_mute_stream(struct snd_soc_dai *dai, int mute,
+					 int stream)
+{
+	struct snd_soc_component *component = dai->component;
+	u32 value = 0;
+
+	if (mute)
+		value = AIU_958_CTRL_MUTE_RIGHT_SPEAKER |
+			AIU_958_CTRL_MUTE_LEFT_SPEAKER;
+
+	snd_soc_component_update_bits(component, AIU_958_CTRL,
+				      AIU_958_CTRL_MUTE_RIGHT_SPEAKER |
+				      AIU_958_CTRL_MUTE_LEFT_SPEAKER,
+				      value);
+
+	return 0;
+}
+
 const struct snd_soc_dai_ops aiu_encoder_spdif_dai_ops = {
 	.trigger	= aiu_encoder_spdif_trigger,
 	.hw_params	= aiu_encoder_spdif_hw_params,
 	.hw_free	= aiu_encoder_spdif_hw_free,
 	.startup	= aiu_encoder_spdif_startup,
 	.shutdown	= aiu_encoder_spdif_shutdown,
+	.mute_stream	= aiu_encoder_spdif_mute_stream,
 };
