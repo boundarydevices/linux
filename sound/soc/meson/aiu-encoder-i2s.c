@@ -28,6 +28,8 @@
 #define AIU_CLK_CTRL_MORE_I2S_DIV	GENMASK(5, 0)
 #define AIU_CODEC_DAC_LRCLK_CTRL_DIV	GENMASK(11, 0)
 
+#define AIU_I2S_MUTE_SWAP_MUTE		GENMASK(15, 8)
+
 static void aiu_encoder_i2s_divider_enable(struct snd_soc_component *component,
 					   bool enable)
 {
@@ -352,6 +354,18 @@ static void aiu_encoder_i2s_shutdown(struct snd_pcm_substream *substream,
 	clk_bulk_disable_unprepare(aiu->i2s.clk_num, aiu->i2s.clks);
 }
 
+static int aiu_encoder_i2s_mute_stream(struct snd_soc_dai *dai, int mute,
+				       int stream)
+{
+	struct snd_soc_component *component = dai->component;
+
+	snd_soc_component_update_bits(component, AIU_I2S_MUTE_SWAP,
+				      AIU_I2S_MUTE_SWAP_MUTE,
+				      mute ? AIU_I2S_MUTE_SWAP_MUTE : 0);
+
+	return 0;
+}
+
 const struct snd_soc_dai_ops aiu_encoder_i2s_dai_ops = {
 	.trigger	= aiu_encoder_i2s_trigger,
 	.hw_params	= aiu_encoder_i2s_hw_params,
@@ -360,5 +374,6 @@ const struct snd_soc_dai_ops aiu_encoder_i2s_dai_ops = {
 	.set_sysclk	= aiu_encoder_i2s_set_sysclk,
 	.startup	= aiu_encoder_i2s_startup,
 	.shutdown	= aiu_encoder_i2s_shutdown,
+	.mute_stream	= aiu_encoder_i2s_mute_stream,
 };
 
