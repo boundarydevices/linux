@@ -310,7 +310,7 @@ static int imx_mu_seco_tx(struct imx_mu_priv *priv, struct imx_mu_con_priv *cp,
 			 * struct imx_sc_rpc_msg_max size
 			 */
 			dev_err(priv->dev,
-				"Exceed max msg size (%u) on TX, got: %i\n",
+				"Exceed max msg size (%zu) on TX, got: %i\n",
 				sizeof(*msg), byte_size);
 			return -EINVAL;
 		}
@@ -371,7 +371,7 @@ static int imx_mu_seco_rxdb(struct imx_mu_priv *priv, struct imx_mu_con_priv *cp
 	*data++ = imx_mu_read(priv, priv->dcfg->xRR[0]);
 	byte_size = msg.hdr.size * sizeof(u32);
 	if (byte_size > sizeof(msg)) {
-		dev_err(priv->dev, "Exceed max msg size (%u) on RX, got: %i\n",
+		dev_err(priv->dev, "Exceed max msg size (%zu) on RX, got: %i\n",
 			sizeof(msg), byte_size);
 		err = -EINVAL;
 		goto error;
