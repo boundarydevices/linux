@@ -1527,6 +1527,7 @@
 					clock-names = "core", "axi", "ahb";
 					reg = <0x32e30000 0x10000>;
 					interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
+					power-domains = <&ispdwp_pd>;
 					status = "disabled";
 				};
 
