@@ -158,6 +158,7 @@
 /* IRDA register bits */
 #define MAX310X_IRDA_IRDAEN_BIT		(1 << 0) /* IRDA mode enable */
 #define MAX310X_IRDA_SIR_BIT		(1 << 1) /* SIR mode enable */
+#define MAX310X_IRDA_RTSINVERT		BIT(2)	/* high to invert RTS output */
 
 /* Flow control trigger level register masks */
 #define MAX310X_FLOWLVL_HALT_MASK	(0x000f) /* Flow control halt level */
@@ -271,8 +272,9 @@ struct max310x_one {
 	struct work_struct	md_work;
 	struct work_struct	rs_work;
 	struct regmap		*regmap;
+	u8 have_rtscts;
 
-	u8 rx_buf[MAX310X_FIFO_SIZE];
+	u8 rx_buf[MAX310X_FIFO_SIZE] __aligned(4);
 };
 #define to_max310x_port(_port) \
 	container_of(_port, struct max310x_one, port)
@@ -908,6 +910,7 @@ static void max310x_set_termios(struct uart_port *port,
 				struct ktermios *termios,
 				const struct ktermios *old)
 {
+	struct max310x_one *one = to_max310x_port(port);
 	unsigned int lcr = 0, flow = 0;
 	int baud;
 
@@ -976,6 +979,9 @@ static void max310x_set_termios(struct uart_port *port,
 	}
 
 	port->status &= ~(UPSTAT_AUTOCTS | UPSTAT_AUTORTS | UPSTAT_AUTOXOFF);
+
+	if (!one->have_rtscts)
+		termios->c_cflag &= ~CRTSCTS;
 
 	if (termios->c_cflag & CRTSCTS) {
 		/* Enable AUTORTS and AUTOCTS */
@@ -1267,6 +1273,7 @@ static int max310x_probe(struct device *dev, const struct max310x_devtype *devty
 			 const struct max310x_if_cfg *if_cfg,
 			 struct regmap *regmaps[], int irq)
 {
+	struct device_node *np = dev->of_node;
 	int i, ret, fmin, fmax, freq;
 	struct max310x_port *s;
 	u32 uartclk = 0;
@@ -1352,6 +1359,7 @@ static int max310x_probe(struct device *dev, const struct max310x_devtype *devty
 	for (i = 0; i < devtype->nr; i++) {
 		unsigned int line;
 		struct uart_port *port = &s->p[i].port;
+		struct max310x_one *one = to_max310x_port(port);
 
 		line = find_first_zero_bit(max310x_lines, MAX310X_UART_NRMAX);
 		if (line == MAX310X_UART_NRMAX) {
@@ -1374,6 +1382,10 @@ static int max310x_probe(struct device *dev, const struct max310x_devtype *devty
 		port->rs485_supported = max310x_rs485_supported;
 		port->ops	= &max310x_ops;
 		s->p[i].regmap		= regmaps[i];
+
+		if (of_get_property(np, "uart-has-rtscts", NULL))
+			one->have_rtscts = 1;
+
 		uart_get_rs485_mode(port);
 
 		/* Disable all interrupts */
