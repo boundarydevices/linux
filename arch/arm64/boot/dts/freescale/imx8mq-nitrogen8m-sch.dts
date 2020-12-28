@@ -133,7 +133,7 @@
 
 	max14830_0: max14830@0 {
 		clocks = <&spi_uart_clk>;
-		clock-names = "osc";
+		clock-names = "xtal";
 		compatible = "maxim,max14830";
 		interrupts-extended = GPIRQ_MAX14830_0;
 		linux,rs485-enabled-at-boot-time;
@@ -146,7 +146,7 @@
 
 	max14830_1: max14830@1 {
 		clocks = <&spi_uart_clk>;
-		clock-names = "osc";
+		clock-names = "xtal";
 		compatible = "maxim,max14830";
 		interrupts-extended = GPIRQ_MAX14830_1;
 		linux,rs485-enabled-at-boot-time;
