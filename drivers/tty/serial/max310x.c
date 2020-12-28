@@ -1058,16 +1058,13 @@ static int max310x_rs485_config(struct uart_port *port, struct ktermios *termios
 	return 0;
 }
 
-static int max310x_startup(struct uart_port *port)
+static int max310x_init_port(struct uart_port *port)
 {
 	struct max310x_port *s = dev_get_drvdata(port->dev);
 	unsigned int val;
+	int mode1 = 0;
 
 	s->devtype->power(port, 1);
-
-	/* Configure MODE1 register */
-	max310x_port_update(port, MAX310X_MODE1_REG,
-			    MAX310X_MODE1_TRNSCVCTRL_BIT, 0);
 
 	/* Configure MODE2 register & Reset FIFOs*/
 	val = MAX310X_MODE2_RXEMPTINV_BIT | MAX310X_MODE2_FIFORST_BIT;
@@ -1081,15 +1078,14 @@ static int max310x_startup(struct uart_port *port)
 	max310x_port_write(port, MAX310X_HDPIXDELAY_REG, val);
 
 	if (port->rs485.flags & SER_RS485_ENABLED) {
-		max310x_port_update(port, MAX310X_MODE1_REG,
-				    MAX310X_MODE1_TRNSCVCTRL_BIT,
-				    MAX310X_MODE1_TRNSCVCTRL_BIT);
-
+		mode1 = MAX310X_MODE1_TRNSCVCTRL_BIT;
 		if (!(port->rs485.flags & SER_RS485_RX_DURING_TX))
 			max310x_port_update(port, MAX310X_MODE2_REG,
 					    MAX310X_MODE2_ECHOSUPR_BIT,
 					    MAX310X_MODE2_ECHOSUPR_BIT);
 	}
+	max310x_port_update(port, MAX310X_MODE1_REG,
+			    MAX310X_MODE1_TRNSCVCTRL_BIT, mode1);
 
 	/* Configure flow control levels */
 	/* Flow control halt level 96, resume level 48 */
@@ -1098,12 +1094,18 @@ static int max310x_startup(struct uart_port *port)
 
 	/* Clear IRQ status register */
 	max310x_port_read(port, MAX310X_IRQSTS_REG);
+	return 0;
+}
+
+static int max310x_startup(struct uart_port *port)
+{
+	unsigned int val;
+	int ret = max310x_init_port(port);
 
 	/* Enable RX, TX, CTS change interrupts */
 	val = MAX310X_IRQ_RXEMPTY_BIT | MAX310X_IRQ_TXEMPTY_BIT;
 	max310x_port_write(port, MAX310X_IRQEN_REG, val | MAX310X_IRQ_CTS_BIT);
-
-	return 0;
+	return ret;
 }
 
 static void max310x_shutdown(struct uart_port *port)
@@ -1388,6 +1390,7 @@ static int max310x_probe(struct device *dev, const struct max310x_devtype *devty
 
 		uart_get_rs485_mode(port);
 
+		max310x_init_port(port);
 		/* Disable all interrupts */
 		max310x_port_write(port, MAX310X_IRQEN_REG, 0);
 		/* Clear IRQ status register */
