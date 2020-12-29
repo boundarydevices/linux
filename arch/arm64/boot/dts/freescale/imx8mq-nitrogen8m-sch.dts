@@ -36,6 +36,13 @@
 		>;
 	};
 
+	pinctrl_eeprom: eepromgrp {
+		fsl,pins = <
+#define GP_EEROM_WP	<&gpio3 4 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_NAND_CE3_B_GPIO3_IO4		0x19	/* J18, Pin 41 */
+		>;
+	};
+
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 			/* J17 connector, odd */
@@ -64,7 +71,6 @@
 			MX8MQ_IOMUXC_GPIO1_IO05_GPIO1_IO5		0x19	/* Pin 56 */
 
 			/* J18 connector, odd */
-			MX8MQ_IOMUXC_NAND_CE3_B_GPIO3_IO4		0x19	/* Pin 41 */
 			MX8MQ_IOMUXC_NAND_WP_B_GPIO3_IO18		0x19	/* Pin 49 */
 			MX8MQ_IOMUXC_NAND_DQS_GPIO3_IO14		0x19	/* Pin 53 */
 
@@ -101,7 +107,6 @@
 			MX8MQ_IOMUXC_SAI2_RXD0_GPIO4_IO23	0x56
 		>;
 	};
-
 };
 
 / {
@@ -160,6 +165,15 @@
 
 &i2c2 {
 	/delete-node/ ov5640-mipi1@3c;
+
+	eeprom@50 {
+		compatible = "atmel,24c04";
+		pagesize = <16>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_eeprom>;
+		reg = <0x50>;
+		wp-gpio = GP_EEROM_WP;
+	};
 };
 
 &i2c3 {
