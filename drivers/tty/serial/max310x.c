@@ -263,8 +263,13 @@ struct max310x_one {
 	u8 wr_header;
 	u8 rd_header;
 	u8 have_rtscts;
+	u8 spare;
+	u8 xfer_header_rhr[2];
+	u8 xfer_header_lsr[2];
 
 	u8 rx_buf[MAX310X_FIFO_SIZE];
+	u8 xfer_buf[MAX310X_FIFO_SIZE * 4];
+	struct spi_transfer xfer[MAX310X_FIFO_SIZE * 2];
 };
 #define to_max310x_port(_port) \
 	container_of(_port, struct max310x_one, port)
@@ -661,10 +666,44 @@ static void max310x_batch_read(struct uart_port *port, u8 *rxbuf, unsigned int l
 	spi_sync_transfer(to_spi_device(port->dev), xfer, ARRAY_SIZE(xfer));
 }
 
+static void max310_init_batch2(struct uart_port *port)
+{
+	struct max310x_one *one = to_max310x_port(port);
+	int i = 0;
+
+	one->xfer_header_rhr[0] = port->iobase + MAX310X_RHR_REG;
+	one->xfer_header_rhr[1] = 0xff;
+	one->xfer_header_lsr[0] = port->iobase + MAX310X_LSR_IRQSTS_REG;
+	one->xfer_header_lsr[1] = 0xff;
+	while (i < MAX310X_FIFO_SIZE * 2) {
+		one->xfer[i].tx_buf = &one->xfer_header_rhr;
+		one->xfer[i].rx_buf = &one->xfer_buf[i * 2];
+		one->xfer[i].len = 2;
+		one->xfer[i].cs_change_delay.unit = SPI_DELAY_UNIT_NSECS;
+		one->xfer[i].cs_change = 1;
+		i++;
+		one->xfer[i].tx_buf = &one->xfer_header_lsr;
+		one->xfer[i].rx_buf = &one->xfer_buf[i * 2];
+		one->xfer[i].len = 2;
+		one->xfer[i].cs_change_delay.unit = SPI_DELAY_UNIT_NSECS;
+		one->xfer[i].cs_change = 1;
+		i++;
+	}
+}
+
+static void max310x_batch_read2(struct max310x_one *one, unsigned int len)
+{
+	if (len > MAX310X_FIFO_SIZE)
+		len = MAX310X_FIFO_SIZE;
+	one->xfer[len * 2 - 1].cs_change = 0;
+	spi_sync_transfer(to_spi_device(one->port.dev), one->xfer, len * 2);
+	one->xfer[len * 2 - 1].cs_change = 1;
+}
+
 static void max310x_handle_rx(struct uart_port *port, unsigned int rxlen)
 {
 	struct max310x_one *one = to_max310x_port(port);
-	unsigned int sts, ch, flag, i;
+	unsigned int sts, ch, flag, i, j;
 
 	if (port->read_status_mask == MAX310X_LSR_RXOVR_BIT) {
 		/* We are just reading, happily ignoring any error conditions.
@@ -708,10 +747,13 @@ static void max310x_handle_rx(struct uart_port *port, unsigned int rxlen)
 			/* Ensure sanity of RX level */
 			rxlen = port->fifosize;
 		}
+		max310x_batch_read2(one, rxlen);
 
+		j = 1;
 		while (rxlen--) {
-			ch = max310x_port_read(port, MAX310X_RHR_REG);
-			sts = max310x_port_read(port, MAX310X_LSR_IRQSTS_REG);
+			ch = one->xfer_buf[j];
+			sts = one->xfer_buf[j + 2];
+			j += 4;
 
 			sts &= MAX310X_LSR_RXPAR_BIT | MAX310X_LSR_FRERR_BIT |
 			       MAX310X_LSR_RXOVR_BIT | MAX310X_LSR_RXBRK_BIT;
@@ -1391,6 +1433,7 @@ static int max310x_probe(struct device *dev, const struct max310x_devtype *devty
 		s->p[i].wr_header = (port->iobase + MAX310X_THR_REG) |
 				    MAX310X_WRITE_BIT;
 		s->p[i].rd_header = (port->iobase + MAX310X_RHR_REG);
+		max310_init_batch2(port);
 
 		/* Register port */
 		ret = uart_add_one_port(&max310x_uart, port);
