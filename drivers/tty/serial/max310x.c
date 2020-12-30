@@ -1009,6 +1009,15 @@ static void max310x_set_termios(struct uart_port *port,
 	max310x_port_write(port, MAX310X_XON1_REG, termios->c_cc[VSTART]);
 	max310x_port_write(port, MAX310X_XOFF1_REG, termios->c_cc[VSTOP]);
 
+	if (!one->have_rtscts)
+		termios->c_cflag &= ~CRTSCTS;
+	if ((one->port.rs485.flags &
+			(SER_RS485_ENABLED | SER_RS485_RX_DURING_TX)) ==
+			SER_RS485_ENABLED) {
+		/* no auto flow control if half-duplex */
+		termios->c_iflag &= ~(IXON | IXOFF);
+	}
+
 	/* Disable transmitter before enabling AutoCTS or auto transmitter
 	 * flow control
 	 */
@@ -1019,9 +1028,6 @@ static void max310x_set_termios(struct uart_port *port,
 	}
 
 	port->status &= ~(UPSTAT_AUTOCTS | UPSTAT_AUTORTS | UPSTAT_AUTOXOFF);
-
-	if (!one->have_rtscts)
-		termios->c_cflag &= ~CRTSCTS;
 
 	if (termios->c_cflag & CRTSCTS) {
 		/* Enable AUTORTS and AUTOCTS */
@@ -1103,17 +1109,9 @@ static int max310x_rs485_config(struct uart_port *port,
 
 static int max310x_init_port(struct uart_port *port)
 {
-	struct max310x_port *s = dev_get_drvdata(port->dev);
 	unsigned int val;
 	int mode1 = 0;
-
-	s->devtype->power(port, 1);
-
-	/* Reset FIFOs */
-	max310x_port_write(port, MAX310X_MODE2_REG,
-			   MAX310X_MODE2_FIFORST_BIT);
-	max310x_port_update(port, MAX310X_MODE2_REG,
-			    MAX310X_MODE2_FIFORST_BIT, 0);
+	int mode2 = 0;
 
 	/* Configure mode1/mode2 to have rs485/rs232 enabled at startup */
 	val = (clamp(port->rs485.delay_rts_before_send, 0U, 15U) << 4) |
@@ -1123,12 +1121,20 @@ static int max310x_init_port(struct uart_port *port)
 	if (port->rs485.flags & SER_RS485_ENABLED) {
 		mode1 = MAX310X_MODE1_TRNSCVCTRL_BIT;
 		if (!(port->rs485.flags & SER_RS485_RX_DURING_TX))
-			max310x_port_update(port, MAX310X_MODE2_REG,
-					    MAX310X_MODE2_ECHOSUPR_BIT,
-					    MAX310X_MODE2_ECHOSUPR_BIT);
+			mode2 |= MAX310X_MODE2_ECHOSUPR_BIT;
+		max310x_port_update(port, MAX310X_LCR_REG,
+				    MAX310X_LCR_RTS_BIT,
+				    0);
 	}
 	max310x_port_update(port, MAX310X_MODE1_REG,
-			    MAX310X_MODE1_TRNSCVCTRL_BIT, mode1);
+			    MAX310X_MODE1_TRNSCVCTRL_BIT |
+			    MAX310X_MODE1_RXDIS_BIT,
+			    mode1 | MAX310X_MODE1_RXDIS_BIT);
+	/* Reset FIFOs */
+	max310x_port_write(port, MAX310X_MODE2_REG, mode2 |
+			MAX310X_MODE2_FIFORST_BIT);
+	max310x_port_write(port, MAX310X_MODE2_REG, mode2);
+
 
 	/* Configure flow control levels */
 	/* Flow control halt level 96, resume level 48 */
@@ -1162,9 +1168,15 @@ static int max310x_init_port(struct uart_port *port)
 
 static int max310x_startup(struct uart_port *port)
 {
+	struct max310x_port *s = dev_get_drvdata(port->dev);
 	unsigned int val;
-	int ret = max310x_init_port(port);
+	int ret;
 
+	s->devtype->power(port, 1);
+	ret = max310x_init_port(port);
+
+	max310x_port_update(port, MAX310X_MODE1_REG,
+			    MAX310X_MODE1_RXDIS_BIT, 0);
 	/* Enable LSR, RX FIFO trigger, CTS change interrupts */
 	val = MAX310X_IRQ_LSR_BIT  | MAX310X_IRQ_RXFIFO_BIT | MAX310X_IRQ_TXEMPTY_BIT;
 	max310x_port_write(port, MAX310X_IRQEN_REG, val | MAX310X_IRQ_CTS_BIT);
@@ -1175,6 +1187,15 @@ static void max310x_shutdown(struct uart_port *port)
 {
 	struct max310x_port *s = dev_get_drvdata(port->dev);
 
+	max310x_port_update(port, MAX310X_LCR_REG,
+			    MAX310X_LCR_RTS_BIT,
+			    0);
+	max310x_port_update(port, MAX310X_MODE1_REG,
+			    MAX310X_MODE1_TRNSCVCTRL_BIT,
+			    0);
+	max310x_port_update(port, MAX310X_MODE1_REG,
+			    MAX310X_MODE1_RXDIS_BIT | MAX310X_MODE1_TXDIS_BIT,
+			    MAX310X_MODE1_RXDIS_BIT | MAX310X_MODE1_TXDIS_BIT);
 	/* Disable all interrupts */
 	max310x_port_write(port, MAX310X_IRQEN_REG, 0);
 
@@ -1328,6 +1349,16 @@ static int max310x_gpio_set_config(struct gpio_chip *chip, unsigned int offset,
 }
 #endif
 
+void max310x_write_all(struct regmap *regmap, int nr, u8 reg, u8 val)
+{
+	int i;
+
+	for (i = 0; i < nr; i++) {
+		regmap_write(regmap, reg, val);
+		reg += 0x20;
+	}
+}
+
 static int max310x_probe(struct device *dev, const struct max310x_devtype *devtype,
 			 struct regmap *regmap, int irq)
 {
@@ -1386,24 +1417,22 @@ static int max310x_probe(struct device *dev, const struct max310x_devtype *devty
 	if (ret)
 		goto out_clk;
 
+	/* Reset port */
+	max310x_write_all(s->regmap, devtype->nr, MAX310X_MODE2_REG,
+			  MAX310X_MODE2_RST_BIT);
+	/* Clear port reset */
+	max310x_write_all(s->regmap, devtype->nr, MAX310X_MODE2_REG, 0);
+
 	for (i = 0; i < devtype->nr; i++) {
 		unsigned int offs = i << 5;
-
-		/* Reset port */
-		regmap_write(s->regmap, MAX310X_MODE2_REG + offs,
-			     MAX310X_MODE2_RST_BIT);
-		/* Clear port reset */
-		regmap_write(s->regmap, MAX310X_MODE2_REG + offs, 0);
 
 		/* Wait for port startup */
 		do {
 			regmap_read(s->regmap,
 				    MAX310X_BRGDIVLSB_REG + offs, &ret);
 		} while (ret != 0x01);
-
-		regmap_write(s->regmap, MAX310X_MODE1_REG + offs,
-			     devtype->mode1);
 	}
+	max310x_write_all(s->regmap, devtype->nr, MAX310X_MODE1_REG, devtype->mode1);
 
 	uartclk = max310x_set_ref_clk(dev, s, freq, xtal);
 	dev_dbg(dev, "Reference clock set to %i Hz\n", uartclk);
@@ -1437,10 +1466,7 @@ static int max310x_probe(struct device *dev, const struct max310x_devtype *devty
 			one->have_rtscts = 1;
 
 		uart_get_rs485_mode(dev, &port->rs485);
-
 		max310x_init_port(port);
-		/* Disable all interrupts */
-		max310x_port_write(port, MAX310X_IRQEN_REG, 0);
 		/* Clear IRQ status register */
 		max310x_port_read(port, MAX310X_IRQSTS_REG);
 		/* Initialize queue for start TX */
@@ -1463,8 +1489,7 @@ static int max310x_probe(struct device *dev, const struct max310x_devtype *devty
 		}
 		set_bit(line, max310x_lines);
 
-		/* Go to suspend mode */
-		devtype->power(port, 0);
+		max310x_shutdown(port);
 	}
 
 #ifdef CONFIG_GPIOLIB
