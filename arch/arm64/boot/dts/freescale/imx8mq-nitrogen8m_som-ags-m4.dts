@@ -37,7 +37,6 @@
 	};
 
 	/delete-node/ bt-rfkill;
-	/delete-node/ sound-wm8960;
 };
 
 /delete-node/ &csi1_bridge;
@@ -56,8 +55,6 @@
 /delete-node/ &pinctrl_i2c1d_st1633;
 /delete-node/ &pinctrl_i2c2_csi1;
 /delete-node/ &pinctrl_i2c3_csi2;
-/delete-node/ &pinctrl_i2c4_pca9546;
-/delete-node/ &pinctrl_i2c4b_wm8960;
 /delete-node/ &pinctrl_mipi_com50h5n03ulc;
 /delete-node/ &pinctrl_mipi_lcm_jm430;
 /delete-node/ &pinctrl_mipi_ltk0680ytmdb;
@@ -78,10 +75,6 @@
 
 &i2c3 {
 	/delete-node/ ov5640-mipi2@3c;
-};
-
-&i2c4 {
-	/delete-node/ i2cmux@70;
 };
 
 &gpio3 {
@@ -111,11 +104,6 @@
 };
 
 &uart2 {
-	status = "disabled";
-};
-
-&usdhc2 {
-	/delete-property/ vmmc-supply;
 	status = "disabled";
 };
 
