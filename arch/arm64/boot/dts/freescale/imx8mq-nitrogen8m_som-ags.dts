@@ -14,6 +14,7 @@
 		#clock-cells = <0>;
 		clock-frequency = <100000000>;
 	};
+	/delete-node/ sound-wm8960;
 };
 
 &iomuxc {
@@ -24,6 +25,34 @@
 #define GP_PCIE1_RESET		<&gpio1 10 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_GPIO1_IO10_GPIO1_IO10		0x19	/* Pin 105 */
 		>;
+	};
+
+	pinctrl_usdhc2: usdhc2grp {
+		fsl,pins = <
+			MX8MQ_IOMUXC_SD2_CLK_USDHC2_CLK			0x03
+			MX8MQ_IOMUXC_SD2_CMD_USDHC2_CMD			0xc3
+			MX8MQ_IOMUXC_SD2_DATA0_USDHC2_DATA0		0xc3
+			MX8MQ_IOMUXC_SD2_DATA1_USDHC2_DATA1		0xc3
+			MX8MQ_IOMUXC_SD2_DATA2_USDHC2_DATA2		0xc3
+			MX8MQ_IOMUXC_SD2_DATA3_USDHC2_DATA3		0xc3
+#define GP_USDHC2_CD	<&gpio2 12 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12		0x19
+		>;
+	};
+};
+
+/delete-node/ &pinctrl_i2c4_pca9546;
+/delete-node/ &pinctrl_i2c4b_wm8960;
+&i2c4 {
+	/delete-node/ i2cmux@70;
+
+	rtc@68 {
+		compatible = "microcrystal,rv4162";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c4d_rv4162>;
+		reg = <0x68>;
+		interrupts-extended = GPIRQ_RV4162;
+		wakeup-source;
 	};
 };
 
@@ -43,5 +72,15 @@
 		<&pcie1_refclk>;
 	clock-names = "pcie", "pcie_bus", "pcie_phy", "pcie_ext_src";
 	ext_osc = <0>;
+	status = "okay";
+};
+
+&usdhc2 {
+	/delete-property/ non-removable;
+	/delete-property/ vmmc-supply;
+	/delete-property/ vqmmc-1-8-v;
+	bus-width = <4>;
+	cd-gpios = GP_USDHC2_CD;
+	pinctrl-names = "default";
 	status = "okay";
 };
