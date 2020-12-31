@@ -122,7 +122,7 @@ struct imx_pgc_domain {
 	} bits;
 
 	const int voltage;
-	struct device *dev;
+	struct device_node *np;
 
 	struct imx_pgc_domain *parent;
 	struct regulator *dvfs_reg;
@@ -174,16 +174,16 @@ static void get_max_uv(struct imx_pgc_domain *pd, struct uv_freq *uvf)
 		};
 
 		uv.freq = clk_get_rate(clks[i]);
-		opp = dev_pm_opp_find_freq_ceil_np(pd->dev, pd->opp_np[i],
+		opp = dev_pm_opp_find_freq_ceil_np(&pd->genpd.dev, pd->opp_np[i],
 				&uv.freq);
 		if (!IS_ERR(opp) && opp) {
 			opp_return_volts(opp, &uv.uv, &uv.uv_min, &uv.uv_max);
-			dev_dbg(pd->dev, "%s: voltage=%ld freq=%ld, clk=%s\n", __func__,
+			dev_dbg(&pd->genpd.dev, "%s: voltage=%ld freq=%ld, clk=%s\n", __func__,
 					uv.uv, uv.freq, __clk_get_name(clks[i]));
 			if (uvf->uv < uv.uv)
 				*uvf = uv;
 		} else {
-			dev_err(pd->dev, "%s: ceil failed, i=%d, freq=%ld, clk=%s\n", __func__,
+			dev_err(&pd->genpd.dev, "%s: ceil failed, i=%d, freq=%ld, clk=%s\n", __func__,
 				i, uv.freq, __clk_get_name(clks[i]));
 		}
 		i++;
@@ -222,8 +222,8 @@ static void rescan_voltage(struct imx_pgc_domain *parent, struct generic_pm_doma
 				u_volt.uv_min,
 				u_volt.uv,
 				u_volt.uv_max);
-		dev_dbg(parent->dev, "%s: voltage=%ld freq=%ld %s\n", __func__,
-				u_volt.uv, u_volt.freq, genpd->name);
+		dev_dbg(&genpd->dev, "%s: voltage=%ld freq=%ld\n", __func__,
+				u_volt.uv, u_volt.freq);
 	}
 }
 
@@ -251,9 +251,8 @@ static void check_voltage(struct imx_pgc_domain *pd)
 				u_volt.uv_min,
 				u_volt.uv,
 				u_volt.uv_max);
-		dev_dbg(parent->dev, "%s: voltage=%ld %ld %ld freq=%ld %s\n", __func__,
-			u_volt.uv_min, u_volt.uv, u_volt.uv_max, u_volt.freq,
-			parent->genpd.name);
+		dev_dbg(&parent->genpd.dev, "%s: voltage=%ld %ld %ld freq=%ld\n", __func__,
+			u_volt.uv_min, u_volt.uv, u_volt.uv_max, u_volt.freq);
 	}
 }
 
@@ -266,7 +265,6 @@ static int imx_gpc_pu_pgc_sw_pxx_req(struct generic_pm_domain *genpd,
 	unsigned int offset = on ?
 		GPC_PU_PGC_SW_PUP_REQ : GPC_PU_PGC_SW_PDN_REQ;
 	const bool enable_power_control = !on;
-	const bool has_regulator = !IS_ERR(domain->regulator);
 	int i, ret = 0;
 	u32 pxx_req;
 
@@ -274,10 +272,10 @@ static int imx_gpc_pu_pgc_sw_pxx_req(struct generic_pm_domain *genpd,
 		regmap_update_bits(domain->regmap, GPC_PGC_CPU_MAPPING,
 				   domain->bits.map, domain->bits.map);
 
-	if (has_regulator && on) {
+	if (domain->regulator && on) {
 		ret = regulator_enable(domain->regulator);
 		if (ret) {
-			dev_err(domain->dev, "failed to enable regulator\n");
+			dev_err(&genpd->dev, "failed to enable regulator\n");
 			goto unmap;
 		}
 	}
@@ -288,7 +286,7 @@ static int imx_gpc_pu_pgc_sw_pxx_req(struct generic_pm_domain *genpd,
 		if (domain->dvfs_reg) {
 			ret = regulator_enable(domain->dvfs_reg);
 			if (ret) {
-				dev_warn(domain->dev, "failed to power up the dvfs-reg(%d)\n", ret);
+				dev_warn(&genpd->dev, "failed to power up the dvfs-reg(%d)\n", ret);
 				return ret;
 			}
 		}
@@ -320,7 +318,7 @@ static int imx_gpc_pu_pgc_sw_pxx_req(struct generic_pm_domain *genpd,
 					       !(pxx_req & domain->bits.pxx),
 					       0, USEC_PER_MSEC);
 		if (ret) {
-			dev_err(domain->dev, "failed to command PGC\n");
+			dev_err(&genpd->dev, "failed to command PGC\n");
 			/*
 			 * If we were in a process of enabling a
 			 * domain and failed we might as well disable
@@ -344,7 +342,7 @@ static int imx_gpc_pu_pgc_sw_pxx_req(struct generic_pm_domain *genpd,
 		if (domain->dvfs_reg) {
 			ret = regulator_disable(domain->dvfs_reg);
 			if (ret)
-				dev_warn(domain->dev, "failed to power off the dvfs-reg(%d)\n", ret);
+				dev_warn(&genpd->dev, "failed to power off the dvfs-reg(%d)\n", ret);
 		}
 		if (domain->opp_np[0] && domain->parent)
 			rescan_voltage(domain->parent, genpd);
@@ -355,18 +353,17 @@ static int imx_gpc_pu_pgc_sw_pxx_req(struct generic_pm_domain *genpd,
 					domain->idle_uv_min,
 					domain->idle_uv,
 					domain->idle_uv_max);
-			dev_dbg(domain->dev, "%s: voltage=%ld %s\n", __func__, domain->idle_uv,
-					genpd->name);
+			dev_dbg(&genpd->dev, "%s: voltage=%ld\n", __func__, domain->idle_uv);
 
 		}
 	}
 
-	if (has_regulator && !on) {
+	if (domain->regulator && !on) {
 		int err;
 
 		err = regulator_disable(domain->regulator);
 		if (err)
-			dev_err(domain->dev,
+			dev_err(&genpd->dev,
 				"failed to disable regulator: %d\n", err);
 		/* Preserve earlier error code */
 		ret = ret ?: err;
@@ -612,39 +609,36 @@ static const struct imx_pgc_domain_data imx8m_pgc_domain_data = {
 	.reg_access_table = &imx8m_access_table,
 };
 
-static int imx_pgc_get_clocks(struct imx_pgc_domain *domain)
+static int imx_pgc_get_clocks(struct clk **clks,
+		struct device_node *np, struct device *dev)
 {
 	int i, ret;
 
 	for (i = 0; ; i++) {
-		struct clk *clk = of_clk_get(domain->dev->of_node, i);
+		struct clk *clk = of_clk_get(np, i);
 		if (IS_ERR(clk))
 			break;
 		if (i >= GPC_CLK_MAX) {
-			dev_err(domain->dev, "more than %d clocks\n",
+			dev_err(dev, "more than %d clocks\n",
 				GPC_CLK_MAX);
 			ret = -EINVAL;
 			goto clk_err;
 		}
-		domain->clk[i] = clk;
+		clks[i] = clk;
 	}
-	domain->num_clks = i;
-
-	return 0;
+	return i;
 
 clk_err:
-	while (i--)
-		clk_put(domain->clk[i]);
+	while (i)
+		clk_put(clks[--i]);
 
 	return ret;
 }
 
-static void imx_pgc_put_clocks(struct imx_pgc_domain *domain)
+static void imx_pgc_put_clocks(struct clk **clks, int num_clks)
 {
-	int i;
-
-	for (i = domain->num_clks - 1; i >= 0; i--)
-		clk_put(domain->clk[i]);
+	while (num_clks)
+		clk_put(clks[--num_clks]);
 }
 
 static int imx_gpcv2_scan_nodes(struct device *dev,
@@ -660,10 +654,41 @@ static int imx_pgc_domain_probe(struct platform_device *pdev)
 	struct device *parent = dev->parent;
 	struct device_node *np = dev->of_node;
 	struct gpcv2 *gpc = NULL;
+	struct regulator *regulator, *dvfs_reg;
+	int num_clks = 0, i;
+	struct clk *clks[GPC_CLK_MAX];
 	u32 domain_index;
 	int vcount;
 	u32 microvolt[3];
 	int ret;
+
+	/* check things that can defer before allocating domain */
+	regulator = devm_regulator_get_optional(dev, "power");
+	if (IS_ERR(regulator)) {
+		if (PTR_ERR(regulator) != -ENODEV) {
+			if (PTR_ERR(regulator) != -EPROBE_DEFER)
+				dev_err(dev, "Failed to get domain's regulator\n");
+			return PTR_ERR(regulator);
+		}
+		regulator = NULL;
+	}
+
+	dvfs_reg = devm_regulator_get_optional(dev, "dvfs");
+	if (IS_ERR(dvfs_reg)) {
+		if (PTR_ERR(dvfs_reg) != -ENODEV) {
+			if (PTR_ERR(dvfs_reg) != -EPROBE_DEFER)
+				dev_err(dev, "Failed to get dvfs regulator\n");
+			return PTR_ERR(dvfs_reg);
+		}
+		dvfs_reg = NULL;
+	}
+
+	num_clks = imx_pgc_get_clocks(clks, np, dev);
+	if (num_clks < 0) {
+		if (num_clks != -EPROBE_DEFER)
+			dev_err(dev, "Failed to get domain's clocks\n");
+		return num_clks;
+	}
 
 	while (parent) {
 		struct gpcv2 *gpc1 = dev_get_drvdata(parent);
@@ -677,12 +702,15 @@ static int imx_pgc_domain_probe(struct platform_device *pdev)
 
 	if (!domain) {
 		domain = kzalloc(sizeof(*domain), GFP_KERNEL);
-		if (!domain)
-			return -ENOMEM;
+		if (!domain) {
+			ret = -ENOMEM;
+			goto free_clks;
+		}
 		ret = of_property_read_string(np, "domain-name", &domain->genpd.name);
 		if (ret) {
 			dev_err(dev, "get domain name failed\n");
-			return -EINVAL;
+			ret = -EINVAL;
+			goto free_clks;
 		}
 		pdev->dev.platform_data = domain;
 	}
@@ -696,27 +724,25 @@ static int imx_pgc_domain_probe(struct platform_device *pdev)
 	if (parent)
 		domain->parent = parent->platform_data;
 
+	domain->regulator = regulator;
+	domain->dvfs_reg = dvfs_reg;
+	domain->num_clks = num_clks;
+	for (i = 0; i < num_clks; i++)
+		domain->clk[i] = clks[i];
+
 	domain->genpd.power_on  = imx_gpc_pu_pgc_sw_pup_req;
 	domain->genpd.power_off = imx_gpc_pu_pgc_sw_pdn_req;
-	domain->dev = dev;
+	domain->np = of_node_get(np);
 
-	domain->regulator = devm_regulator_get_optional(domain->dev, "power");
-	if (IS_ERR(domain->regulator)) {
-		if (PTR_ERR(domain->regulator) != -ENODEV) {
-			if (PTR_ERR(domain->regulator) != -EPROBE_DEFER)
-				dev_err(domain->dev, "Failed to get domain's regulator\n");
-			return PTR_ERR(domain->regulator);
-		}
-	} else if (domain->voltage) {
-		regulator_set_voltage(domain->regulator,
-				      domain->voltage, domain->voltage);
+	ret = pm_genpd_init(&domain->genpd, NULL, true);
+	if (ret) {
+		dev_err(dev, "Failed to init power domain\n");
+		goto free_clks;
 	}
 
-	domain->dvfs_reg = devm_regulator_get_optional(dev, "dvfs");
-	if (IS_ERR(domain->dvfs_reg)) {
-		if (PTR_ERR(domain->dvfs_reg) == -EPROBE_DEFER)
-			return -EPROBE_DEFER;
-		domain->dvfs_reg = NULL;
+	if (regulator && domain->voltage) {
+		regulator_set_voltage(regulator,
+				      domain->voltage, domain->voltage);
 	}
 
 	vcount = of_property_count_u32_elems(np, idle_uv);
@@ -724,7 +750,8 @@ static int imx_pgc_domain_probe(struct platform_device *pdev)
 		ret = of_property_read_u32_array(np, idle_uv, microvolt, vcount);
 		if (ret) {
 			dev_err(dev, "%s: error parsing %s: %d\n", __func__, idle_uv, ret);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto free_clks;
 		}
 		if (vcount == 1) {
 			domain->idle_uv = microvolt[0];
@@ -737,25 +764,11 @@ static int imx_pgc_domain_probe(struct platform_device *pdev)
 		}
 	}
 
-	ret = imx_pgc_get_clocks(domain);
-	if (ret) {
-		if (ret != -EPROBE_DEFER)
-			dev_err(domain->dev, "Failed to get domain's clocks\n");
-		return ret;
-	}
-
 	if (domain->num_clks && of_find_property(np, "operating-points-v2", NULL)) {
-		ret = dev_pm_opp_of_add_table_np(dev, np,
+		ret = dev_pm_opp_of_add_table_np(&domain->genpd.dev, np,
 				domain->opp_np, domain->num_clks);
 		if (ret && (ret != -ENODEV))
-			return ret;
-	}
-
-	ret = pm_genpd_init(&domain->genpd, NULL, true);
-	if (ret) {
-		dev_err(domain->dev, "Failed to init power domain\n");
-		imx_pgc_put_clocks(domain);
-		return ret;
+			goto free_clks;
 	}
 
 	if (domain->parent) {
@@ -765,14 +778,16 @@ static int imx_pgc_domain_probe(struct platform_device *pdev)
 
 	ret = of_genpd_add_provider_simple(np, &domain->genpd);
 	if (ret) {
-		dev_err(domain->dev, "Failed to add genpd provider\n");
+		dev_err(dev, "Failed to add genpd provider\n");
 		pm_genpd_remove(&domain->genpd);
-		imx_pgc_put_clocks(domain);
+		goto free_clks;
 	}
 
 	ret = imx_gpcv2_scan_nodes(dev, gpc, np);
+
+free_clks:
 	if (ret)
-		return ret;
+		imx_pgc_put_clocks(clks, num_clks);
 	return ret;
 }
 
@@ -780,9 +795,10 @@ static int imx_pgc_domain_remove(struct platform_device *pdev)
 {
 	struct imx_pgc_domain *domain = pdev->dev.platform_data;
 
-	of_genpd_del_provider(domain->dev->of_node);
+	of_genpd_del_provider(domain->np);
 	pm_genpd_remove(&domain->genpd);
-	imx_pgc_put_clocks(domain);
+	imx_pgc_put_clocks(domain->clk, domain->num_clks);
+	of_node_put(domain->np);
 
 	return 0;
 }
