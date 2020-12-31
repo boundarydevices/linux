@@ -110,8 +110,36 @@
 	status = "okay";
 };
 
+&sai1 {
+	status = "disabled";
+};
+
+&sai2 {
+	status = "disabled";
+};
+
+&sai3 {
+	status = "disabled";
+};
+
+&sai4 {
+	status = "disabled";
+};
+
+&sai5 {
+	status = "disabled";
+};
+
 &uart2 {
 	status = "disabled";
+};
+
+&uart4 {
+	status = "disabled";
+};
+
+&usb_dwc3_0 {
+	dr_mode = "host";
 };
 
 &wdog3 {
