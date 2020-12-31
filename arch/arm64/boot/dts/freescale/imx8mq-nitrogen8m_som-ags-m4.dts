@@ -74,6 +74,7 @@
 };
 
 &i2c3 {
+	status = "disabled";
 	/delete-node/ ov5640-mipi2@3c;
 };
 
