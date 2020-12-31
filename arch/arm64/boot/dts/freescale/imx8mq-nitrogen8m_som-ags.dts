@@ -78,7 +78,8 @@
 &usdhc2 {
 	/delete-property/ non-removable;
 	/delete-property/ vmmc-supply;
-	/delete-property/ vqmmc-1-8-v;
+	/* carrier has 1.8 to 3.3 level translator */
+	vqmmc-1-8-v;
 	bus-width = <4>;
 	cd-gpios = GP_USDHC2_CD;
 	pinctrl-names = "default";
