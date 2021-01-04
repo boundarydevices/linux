@@ -120,7 +120,7 @@ static unsigned int insert_scd_pic_vc1(struct vpu_ctx *ctx, unsigned int buffer_
 	struct queue_data *q_data = &ctx->q_data[V4L2_SRC];
 	unsigned int length = 0;
 
-	if (q_data->fourcc == V4L2_PIX_FMT_VC1_ANNEX_G) {
+	if (q_data->fourcc == V4L2_PIX_FMT_VC1_ANNEX_L) {
 		unsigned int rcv_pichdr_size = IMX_VC1_RCV_PIC_HEADER_LEN;
 		unsigned char rcv_pichdr[IMX_VC1_RCV_PIC_HEADER_LEN] = { 0 };
 		unsigned char scd_pichdr[16] = { 0 };
@@ -149,7 +149,7 @@ static unsigned int insert_scd_seq_vc1(struct vpu_ctx *ctx, unsigned int buffer_
 	unsigned char rcv_seqhdr[IMX_VC1_RCV_SEQ_HEADER_LEN] = { 0 };
 	unsigned char scd_seqhdr[16] = { 0 };
 
-	if (q_data->fourcc == V4L2_PIX_FMT_VC1_ANNEX_G) {
+	if (q_data->fourcc == V4L2_PIX_FMT_VC1_ANNEX_L) {
 		set_payload_hdr(scd_seqhdr, SCODE_NEW_SEQUENCE, IMX_CODEC_ID_VC1_SIMPLE,
 					rvc_seqhdr_size, q_data->width, q_data->height);
 		length += copy_buffer_to_stream(ctx, scd_seqhdr, 16);
