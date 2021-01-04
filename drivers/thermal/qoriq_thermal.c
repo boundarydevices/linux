@@ -13,6 +13,7 @@
 #include <linux/sizes.h>
 #include <linux/thermal.h>
 #include <linux/units.h>
+#include <linux/slab.h>
 
 #include "thermal_core.h"
 #include "thermal_hwmon.h"
@@ -65,15 +66,31 @@
 						   */
 #define REGS_V2_TEUMR(n)	(0xf00 + 4 * (n))
 
+enum tmu_throttle_id {
+	THROTTLE_DEVFREQ = 0,
+	THROTTLE_NUM,
+};
+static const char *const throt_names[] = {
+	[THROTTLE_DEVFREQ] = "devfreq",
+};
+
+struct tmu_throttle_params {
+	const char *name;
+	struct thermal_cooling_device *cdev;
+	int max_state;
+	bool inited;
+};
+
 /*
  * Thermal zone data
  */
 struct qoriq_sensor {
 	int				id;
 	struct thermal_zone_device	*tzd;
-	int				temp_passive;
-	int				temp_critical;
-	struct thermal_cooling_device	*cdev;
+	int                             *trip_temp;
+	int                             ntrip_temp;
+	int                             temp_delta;
+	struct tmu_throttle_params      throt_cfgs[THROTTLE_NUM];
 };
 
 struct qoriq_tmu_data {
@@ -81,12 +98,6 @@ struct qoriq_tmu_data {
 	struct regmap *regmap;
 	struct clk *clk;
 	struct qoriq_sensor	sensor[SITES_MAX];
-};
-
-enum tmu_trip {
-	TMU_TRIP_PASSIVE,
-	TMU_TRIP_CRITICAL,
-	TMU_TRIP_NUM,
 };
 
 static struct qoriq_tmu_data *qoriq_sensor_to_data(struct qoriq_sensor *s)
@@ -142,11 +153,10 @@ static int tmu_get_trend(void *p, int trip, enum thermal_trend *trend)
 	if (!qsensor->tzd)
 		return 0;
 
-	trip_temp = (trip == TMU_TRIP_PASSIVE) ? qsensor->temp_passive :
-					     qsensor->temp_critical;
+	trip_temp = trip < qsensor->ntrip_temp ? qsensor->trip_temp[trip] :
+					     qsensor->trip_temp[0];
 
-	if (qsensor->tzd->temperature >=
-		(trip_temp - TMU_TEMP_PASSIVE_COOL_DELTA))
+	if (qsensor->tzd->temperature >= (trip_temp - qsensor->temp_delta))
 		*trend = THERMAL_TREND_RAISE_FULL;
 	else
 		*trend = THERMAL_TREND_DROP_FULL;
@@ -159,11 +169,8 @@ static int tmu_set_trip_temp(void *p, int trip,
 {
 	struct qoriq_sensor *qsensor = p;
 
-	if (trip == TMU_TRIP_CRITICAL)
-		qsensor->temp_critical = temp;
-
-	if (trip == TMU_TRIP_PASSIVE)
-		qsensor->temp_passive = temp;
+	if (trip < qsensor->ntrip_temp)
+		qsensor->trip_temp[trip] = temp;
 
 	return 0;
 }
@@ -174,11 +181,106 @@ static const struct thermal_zone_of_device_ops tmu_tz_ops = {
 	.set_trip_temp = tmu_set_trip_temp,
 };
 
+static struct tmu_throttle_params *
+find_throttle_cfg_by_name(struct qoriq_sensor *sens, const char *name)
+{
+	unsigned int i;
+
+	for (i = 0; sens->throt_cfgs[i].name && i<THROTTLE_NUM; i++)
+		if (!strcmp(sens->throt_cfgs[i].name, name))
+			return &sens->throt_cfgs[i];
+
+	return NULL;
+}
+
+/**
+ * tmu_init_throttle_cdev() - Parse the throttle configurations
+ * and register them as cooling devices.
+ */
+static int tmu_init_throttle_cdev(struct device *dev,
+				  struct qoriq_tmu_data *qdata, int index)
+{
+	struct qoriq_tmu_data *qt = qdata;
+	struct qoriq_sensor *sensor = &qt->sensor[index];
+	struct device_node *np_tc, *np_tcc;
+	struct thermal_cooling_device *tcd;
+	const char *name;
+	u32 val;
+	int i, ret = 0;
+
+	for (i = 0; i < THROTTLE_NUM; i++) {
+		sensor->throt_cfgs[i].name = throt_names[i];
+		sensor->throt_cfgs[i].inited = false;
+	}
+
+	np_tc = of_get_child_by_name(dev->of_node, "throttle-cfgs");
+	if (!np_tc) {
+		dev_info(dev,
+			 "throttle-cfg: no throttle-cfgs"
+			 " - use default devfreq cooling device\n");
+		tcd = devfreq_cooling_register(NULL, 1);
+		if (IS_ERR(tcd)) {
+			ret = PTR_ERR(tcd);
+			if (ret != -EPROBE_DEFER)
+				dev_err(dev, "failed to register"
+					"devfreq cooling device: %d\n",
+					ret);
+			return ret;
+		}
+		return 0;
+	}
+
+	ret = of_property_read_u32(np_tc, "throttle,temp_delta", &val);
+	if (ret) {
+		dev_info(dev,
+			 "throttle-cfg: missing temp_delta parameter,"
+			 "use default 3000 (3C)\n");
+		sensor->temp_delta = 3000;
+	} else {
+		sensor->temp_delta = val;
+	}
+
+	for_each_child_of_node(np_tc, np_tcc) {
+		struct tmu_throttle_params *ttp;
+		name = np_tcc->name;
+		ttp = find_throttle_cfg_by_name(sensor, name);
+		if (!ttp) {
+			dev_err(dev,
+				"throttle-cfg: could not find %s\n", name);
+			continue;
+		}
+
+		ret = of_property_read_u32(np_tcc, "throttle,max_state", &val);
+		if (ret) {
+			dev_info(dev,
+				 "throttle-cfg: %s: missing throttle max state\n", name);
+			continue;
+		}
+		ttp->max_state = val;
+
+		tcd = devfreq_cooling_register(np_tcc, ttp->max_state);
+		of_node_put(np_tcc);
+		if (IS_ERR(tcd)) {
+			ret = PTR_ERR(tcd);
+			dev_err(dev,
+				"throttle-cfg: %s: failed to register cooling device\n",
+				name);
+			continue;
+		}
+		ttp->cdev = tcd;
+		ttp->inited = true;
+	}
+
+	of_node_put(np_tc);
+	return ret;
+}
+
 static int qoriq_tmu_register_tmu_zone(struct device *dev,
 				       struct qoriq_tmu_data *qdata)
 {
 	int id;
 	const struct thermal_trip *trip;
+	int i, ntrips;
 
 	if (qdata->ver == TMU_VER1) {
 		regmap_write(qdata->regmap, REGS_TMR,
@@ -214,32 +316,24 @@ static int qoriq_tmu_register_tmu_zone(struct device *dev,
 				 "Failed to add hwmon sysfs attributes\n");
 		/* first thermal zone takes care of system-wide device cooling */
 		if (id == 0) {
-			sensor->cdev = devfreq_cooling_register();
-			if (IS_ERR(sensor->cdev)) {
-				ret = PTR_ERR(sensor->cdev);
-				pr_err("failed to register devfreq cooling device: %d\n",
-					ret);
+			trip = of_thermal_get_trip_points(tzd);
+			ntrips = of_thermal_get_ntrips(tzd);
+			sensor->trip_temp = kzalloc(ntrips
+					* sizeof(*sensor->trip_temp), GFP_KERNEL);
+			if (!sensor->trip_temp) {
+				ret = -ENOMEM;
 				return ret;
 			}
+			for (i=0; i<ntrips; i++) {
+				sensor->trip_temp[i] = trip[i].temperature;
+			}
+			sensor->ntrip_temp = ntrips;
 
-			ret = thermal_zone_bind_cooling_device(sensor->tzd,
-				TMU_TRIP_PASSIVE,
-				sensor->cdev,
-				THERMAL_NO_LIMIT,
-				THERMAL_NO_LIMIT,
-				THERMAL_WEIGHT_DEFAULT);
+			ret = tmu_init_throttle_cdev(dev, qdata, id);
 			if (ret) {
-				pr_err("binding zone %s with cdev %s failed:%d\n",
-					sensor->tzd->type,
-					sensor->cdev->type,
-					ret);
-				devfreq_cooling_unregister(sensor->cdev);
+				kfree(sensor->trip_temp);
 				return ret;
 			}
-
-			trip = of_thermal_get_trip_points(sensor->tzd);
-			sensor->temp_passive = trip[0].temperature;
-			sensor->temp_critical = trip[1].temperature;
 		}
 	}
 
@@ -415,6 +509,34 @@ static int qoriq_tmu_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static int qoriq_tmu_remove(struct platform_device *pdev)
+{
+	int i, j;
+	struct qoriq_tmu_data *data = platform_get_drvdata(pdev);
+
+	for (i=0; i<SITES_MAX; i++) {
+		struct qoriq_sensor *sens = &data->sensor[i];
+
+		if (i == 0) {
+			for (j=0; j<THROTTLE_NUM; j++)
+				if (sens->throt_cfgs[j].inited)
+					devfreq_cooling_unregister(sens->throt_cfgs[j].cdev);
+			if (sens->trip_temp)
+				kfree(sens->trip_temp);
+		}
+		thermal_zone_of_sensor_unregister(&pdev->dev, sens->tzd);
+	}
+
+	/* Disable monitoring */
+	regmap_write(data->regmap, REGS_TMR, TMR_DISABLE);
+
+	clk_disable_unprepare(data->clk);
+
+	platform_set_drvdata(pdev, NULL);
+
+	return 0;
+}
+
 static int __maybe_unused qoriq_tmu_suspend(struct device *dev)
 {
 	struct qoriq_tmu_data *data = dev_get_drvdata(dev);
@@ -459,6 +581,7 @@ static struct platform_driver qoriq_tmu = {
 		.of_match_table	= qoriq_tmu_match,
 	},
 	.probe	= qoriq_tmu_probe,
+	.remove	= qoriq_tmu_remove,
 };
 module_platform_driver(qoriq_tmu);
 

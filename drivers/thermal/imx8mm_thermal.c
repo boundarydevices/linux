@@ -224,7 +224,7 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 		}
 		tmu->sensors[i].hw_id = i;
 
-		tmu->sensors[i].cdev = devfreq_cooling_register();
+		tmu->sensors[i].cdev = devfreq_cooling_register(NULL, 1);
 		if (IS_ERR(tmu->sensors[i].cdev)) {
 			ret = PTR_ERR(tmu->sensors[i].cdev);
 			if (ret != -EPROBE_DEFER)
