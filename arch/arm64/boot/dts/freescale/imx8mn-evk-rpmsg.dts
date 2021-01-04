@@ -123,10 +123,6 @@
 	status = "disabled";
 };
 
-&sdma1{
-	status = "disabled";
-};
-
 &sdma3 {
 	status = "disabled";
 };
