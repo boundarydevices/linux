@@ -80,9 +80,6 @@ extern unsigned int vpu_dbg_level_decoder;
 #define VPU_DEC_FMT_DIVX_MASK		(1 << 20)
 #define VPU_DEC_FMT_RV_MASK		(1 << 21)
 
-#define V4L2_EVENT_DECODE_ERROR		(V4L2_EVENT_PRIVATE_START + 1)
-#define V4L2_EVENT_SKIP			(V4L2_EVENT_PRIVATE_START + 2)
-
 struct vpu_v4l2_control {
 	uint32_t id;
 	enum v4l2_ctrl_type type;
@@ -141,30 +138,10 @@ typedef enum{
 #define VPU_PIX_FMT_SPK         v4l2_fourcc('S', 'P', 'K', '0')
 #define VPU_PIX_FMT_DIV3        v4l2_fourcc('D', 'I', 'V', '3')
 #define VPU_PIX_FMT_DIVX        v4l2_fourcc('D', 'I', 'V', 'X')
-#define VPU_PIX_FMT_HEVC        v4l2_fourcc('H', 'E', 'V', 'C')
 #define VPU_PIX_FMT_LOGO        v4l2_fourcc('L', 'O', 'G', 'O')
 
 #define VPU_PIX_FMT_TILED_8     v4l2_fourcc('Z', 'T', '0', '8')
 #define VPU_PIX_FMT_TILED_10    v4l2_fourcc('Z', 'T', '1', '0')
-
-#define V4L2_CID_USER_RAW_BASE  (V4L2_CID_USER_BASE + 0x1100)
-#define V4L2_CID_USER_FRAME_DEPTH (V4L2_CID_USER_BASE + 0x1200)
-#define V4L2_CID_USER_FRAME_DIS_REORDER (V4L2_CID_USER_BASE + 0x1300)
-#define V4L2_CID_USER_TS_THRESHOLD	(V4L2_CID_USER_BASE + 0x1101)
-#define V4L2_CID_USER_BS_L_THRESHOLD	(V4L2_CID_USER_BASE + 0x1102)
-#define V4L2_CID_USER_BS_H_THRESHOLD	(V4L2_CID_USER_BASE + 0x1103)
-
-#define V4L2_CID_USER_FRAME_COLORDESC		(V4L2_CID_USER_BASE + 0x1104)
-#define V4L2_CID_USER_FRAME_TRANSFERCHARS	(V4L2_CID_USER_BASE + 0x1105)
-#define V4L2_CID_USER_FRAME_MATRIXCOEFFS	(V4L2_CID_USER_BASE + 0x1106)
-#define V4L2_CID_USER_FRAME_FULLRANGE		(V4L2_CID_USER_BASE + 0x1107)
-#define V4L2_CID_USER_FRAME_VUIPRESENT		(V4L2_CID_USER_BASE + 0x1108)
-
-#define V4L2_CID_USER_STREAM_INPUT_MODE		(V4L2_CID_USER_BASE + 0x1109)
-#define V4L2_CID_USER_FRAME_THRESHOLD		(V4L2_CID_USER_BASE + 0x110A)
-
-#define IMX_V4L2_DEC_CMD_START		(0x09000000)
-#define IMX_V4L2_DEC_CMD_RESET		(IMX_V4L2_DEC_CMD_START + 1)
 
 enum vpu_pixel_format {
 	VPU_HAS_COLOCATED = 0x00000001,
@@ -468,9 +445,6 @@ struct vpu_ctx {
 	u32 extra_size;
 	s64 output_ts;
 	s64 capture_ts;
-	s64 ts_threshold;
-	u32 bs_l_threshold;
-	u32 bs_h_threshold;
 
 	struct v4l2_fract fixed_frame_interval;
 	struct v4l2_fract frame_interval;
