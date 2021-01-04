@@ -1586,6 +1586,7 @@ spi_imx_prepare_message(struct spi_master *master, struct spi_message *msg)
 
 	ret = pm_runtime_get_sync(spi_imx->dev);
 	if (ret < 0) {
+		pm_runtime_put_noidle(spi_imx->dev);
 		dev_err(spi_imx->dev, "failed to enable clock\n");
 		return ret;
 	}
@@ -1796,6 +1797,7 @@ static int spi_imx_remove(struct platform_device *pdev)
 
 	ret = pm_runtime_get_sync(spi_imx->dev);
 	if (ret < 0) {
+		pm_runtime_put_noidle(spi_imx->dev);
 		dev_err(spi_imx->dev, "failed to enable clock\n");
 		return ret;
 	}

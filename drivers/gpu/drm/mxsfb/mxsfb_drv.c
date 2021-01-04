@@ -137,11 +137,8 @@ static int mxsfb_attach_bridge(struct mxsfb_drm_private *mxsfb)
 		return -ENODEV;
 
 	ret = drm_bridge_attach(&mxsfb->encoder, bridge, NULL, 0);
-	if (ret) {
-		DRM_DEV_ERROR(drm->dev,
-			      "failed to attach bridge: %d\n", ret);
-		return ret;
-	}
+	if (ret)
+		return dev_err_probe(drm->dev, ret, "Failed to attach bridge\n");
 
 	mxsfb->bridge = bridge;
 

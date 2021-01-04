@@ -518,7 +518,7 @@ static void dcss_plane_atomic_update(struct drm_plane *plane,
 	u32 src_w, src_h, dst_w, dst_h;
 	struct drm_rect src, dst;
 	bool enable = true;
-	bool rotation_is_90_or_270;
+	bool is_rotation_90_or_270;
 
 	if (!fb || !state->crtc || !state->visible)
 		return;
@@ -566,13 +566,13 @@ static void dcss_plane_atomic_update(struct drm_plane *plane,
 
 	dcss_plane_atomic_set_base(dcss_plane);
 
-	rotation_is_90_or_270 = state->rotation & (DRM_MODE_ROTATE_90 |
+	is_rotation_90_or_270 = state->rotation & (DRM_MODE_ROTATE_90 |
 						   DRM_MODE_ROTATE_270);
 
 	dcss_scaler_setup(dcss->scaler, dcss_plane->ch_num,
 			  state->fb->format,
-			  rotation_is_90_or_270 ? src_h : src_w,
-			  rotation_is_90_or_270 ? src_w : src_h,
+			  is_rotation_90_or_270 ? src_h : src_w,
+			  is_rotation_90_or_270 ? src_w : src_h,
 			  dst_w, dst_h,
 			  drm_mode_vrefresh(&crtc_state->mode));
 
