@@ -244,7 +244,7 @@ int vpu_sc_check_fuse(struct vpu_dev *dev, struct vpu_v4l2_fmt *pformat_table,
 	val = (fuse >> VPU_IMX_DECODER_FUSE_OFFSET) & 0x3UL;
 	if (val == 0x1UL) {
 		for (i = 0; i < table_size; i++)
-			if (pformat_table[i].fourcc == VPU_PIX_FMT_HEVC)
+			if (pformat_table[i].fourcc == V4L2_PIX_FMT_HEVC)
 				pformat_table[i].disable = 1;
 		vpu_dbg(LVL_WARN, "H265 is disabled\n");
 	} else if (val == 0x2UL) {
