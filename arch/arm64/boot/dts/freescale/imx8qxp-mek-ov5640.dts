@@ -2,5 +2,5 @@
 // Copyright NXP 2019
 
 /dts-v1/;
-#include "imx8qxp-mek.dts"
+#include "imx8qxp-mek-rpmsg.dts"
 #include "imx8qxp-mek-ov5640.dtsi"
