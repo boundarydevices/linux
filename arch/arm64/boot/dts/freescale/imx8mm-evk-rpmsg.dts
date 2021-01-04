@@ -119,10 +119,6 @@
 	status = "disabled";
 };
 
-&sdma1{
-	status = "disabled";
-};
-
 &uart4 {
 	status = "disabled";
 };
