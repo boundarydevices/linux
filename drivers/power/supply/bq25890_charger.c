@@ -698,7 +698,7 @@ static int bq25890_hw_init(struct bq25890_device *bq)
 	return 0;
 }
 
-static const enum power_supply_property bq25890_power_supply_props[] = {
+static enum power_supply_property bq25890_power_supply_props[] = {
 	POWER_SUPPLY_PROP_MANUFACTURER,
 	POWER_SUPPLY_PROP_MODEL_NAME,
 	POWER_SUPPLY_PROP_STATUS,
