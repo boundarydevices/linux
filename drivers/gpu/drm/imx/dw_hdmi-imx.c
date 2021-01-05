@@ -433,8 +433,6 @@ static int dw_hdmi_imx_bind(struct device *dev, struct device *master,
 	drm_encoder_init(drm, encoder, &dw_hdmi_imx_encoder_funcs,
 			 DRM_MODE_ENCODER_TMDS, NULL);
 
-	platform_set_drvdata(pdev, hdmi);
-
 	if (of_device_is_compatible(pdev->dev.of_node, "fsl,imx8mp-hdmi")) {
 		ret = imx8mp_hdmimix_setup(hdmi);
 		if (ret < 0)
