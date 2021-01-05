@@ -62,16 +62,6 @@
 		>;
 	};
 
-	pinctrl_ts_ili251x: ts-ili251xgrp {
-		fsl,pins = <
-#define GPIRQ_TS_ILI251X       <&gpio1 6 IRQ_TYPE_EDGE_FALLING>
-			MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, 0x149)
-#define GP_TS_ILI251X_RESET    <&gpio1 7 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, 0x109)
-		>;
-	};
-
-
 	pinctrl_usbotg2: usbotg2grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_GPIO1_IO14_USB2_OTG_PWR, 0x16)
@@ -91,7 +81,6 @@
 		/delete-property/ ts_gsl1680;
 		/delete-property/ ts_st1633i;
 		mipi_cmds_x090dtlnc01 = &mipi_cmds_m101nwwb;
-		ts_ili251x = &ts_ili251x;
 	};
 
 	clocks {
@@ -188,16 +177,7 @@
 	/delete-node/ touchscreen@5d;
 
 	ts_ili251x: touchscreen@41 {
-		compatible = "ilitek,ili251x";
-		interrupts-extended = GPIRQ_TS_ILI251X;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_ili251x>;
-		reset-gpios = GP_TS_ILI251X_RESET;
-		reg = <0x41>;
 		status = "okay";
-		touchscreen-inverted-x;
-		touchscreen-size-x = <0x3fff>;
-		touchscreen-size-y = <0x3fff>;
 	};
 
 	pca9546: i2cmux9546@70 {
