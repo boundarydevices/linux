@@ -352,7 +352,7 @@ xen_swiotlb_free_coherent(struct device *hwdev, size_t size, void *vaddr,
 	else
 		page = virt_to_page(vaddr);
 
-	if (WARN_ON((dev_addr + size - 1 > dma_mask) ||
+	if (!WARN_ON((dev_addr + size - 1 > dma_mask) ||
 		     range_straddles_page_boundary(phys, size)) &&
 	    TestClearPageXenRemapped(page))
 		xen_destroy_contiguous_region(phys, order);
