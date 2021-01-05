@@ -912,13 +912,16 @@
 	};
 
 	ts_ili251x: touchscreen@41 {
-		compatible = "ili251x";
+		compatible = "ilitek,ili251x";
 		interrupts-extended = GPIRQ_TS_ILI251X;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ts_ili251x>;
-		reset-gpios = GP_TS_ILI251X_RESET;
 		reg = <0x41>;
-		max-fingers = <6>;
+		reset-gpios = GP_TS_ILI251X_RESET;
+		status = "disabled";
+		touchscreen-inverted-x;
+		touchscreen-size-x = <0x3fff>;
+		touchscreen-size-y = <0x3fff>;
 	};
 
 	ts_st1633i: touchscreen@55 {
