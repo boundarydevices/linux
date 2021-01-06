@@ -453,8 +453,6 @@ static int ipu_drm_bind(struct device *dev, struct device *master, void *data)
 	drm->mode_config.helper_private = &ipuv3_drm_mode_config_helpers;
 	drm->mode_config.allow_fb_modifiers = true;
 
-	dev_set_drvdata(dev, ipu_crtc);
-
 	return 0;
 }
 
