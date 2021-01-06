@@ -501,7 +501,7 @@ static int cdns3_req_ep0_set_isoch_delay(struct cdns3_device *priv_dev,
 	if (ctrl_req->wIndex || ctrl_req->wLength)
 		return -EINVAL;
 
-	priv_dev->isoch_delay = ctrl_req->wValue;
+	priv_dev->isoch_delay = le16_to_cpu(ctrl_req->wValue);
 
 	return 0;
 }
