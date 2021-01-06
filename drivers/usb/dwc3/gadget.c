@@ -1525,9 +1525,6 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req)
 	list_add_tail(&req->list, &dep->pending_list);
 	req->status = DWC3_REQUEST_STATUS_QUEUED;
 
-	if (dep->flags & DWC3_EP_WAIT_TRANSFER_COMPLETE)
-		return 0;
-
 	/*
 	 * Start the transfer only after the END_TRANSFER is completed
 	 * and endpoint STALL is cleared.
