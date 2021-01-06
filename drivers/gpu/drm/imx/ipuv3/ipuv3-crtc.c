@@ -439,6 +439,7 @@ static int ipu_drm_bind(struct device *dev, struct device *master, void *data)
 	struct ipu_client_platformdata *pdata = dev->platform_data;
 	struct drm_device *drm = data;
 	struct ipu_crtc *ipu_crtc;
+	int ret;
 
 	ipu_crtc = dev_get_drvdata(dev);
 	memset(ipu_crtc, 0, sizeof(*ipu_crtc));
