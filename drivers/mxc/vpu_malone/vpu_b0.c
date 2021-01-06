@@ -3299,7 +3299,8 @@ static void report_buffer_done(struct vpu_ctx *ctx, void *frame_info)
 static void send_skip_event(struct vpu_ctx *ctx)
 {
 	const struct v4l2_event ev = {
-		.type = V4L2_EVENT_SKIP
+		.type = V4L2_EVENT_SKIP,
+		.u.data[0] = 0xff,
 	};
 
 	if (!ctx)
