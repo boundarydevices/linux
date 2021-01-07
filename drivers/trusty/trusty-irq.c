@@ -129,7 +129,7 @@ static int trusty_irq_call_notify(struct notifier_block *nb,
 {
 	struct trusty_irq_state *is;
 
-	if (WARN_ON(!irqs_disabled()))
+	if (!(is->gicv3_workaround) && WARN_ON(!irqs_disabled()))
 		return NOTIFY_DONE;
 
 	if (action != TRUSTY_CALL_PREPARE)
@@ -144,8 +144,6 @@ static int trusty_irq_call_notify(struct notifier_block *nb,
 	if (is->gicv3_workaround) {
 	    return NOTIFY_OK;
 	}
-
-	BUG_ON(!irqs_disabled());
 
 	spin_lock(&is->normal_irqs_lock);
 	trusty_irq_enable_pending_irqs(is, &is->normal_irqs, false);
