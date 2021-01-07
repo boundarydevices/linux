@@ -581,6 +581,8 @@ struct rng4tst {
 #define RTSDCTL_ENT_DLY_MASK (0xffff << RTSDCTL_ENT_DLY_SHIFT)
 #define RTSDCTL_ENT_DLY_MIN 3200
 #define RTSDCTL_ENT_DLY_MAX 12800
+#define RTSDCTL_SAMP_SIZE_MASK 0xffff
+#define RTSDCTL_SAMP_SIZE_VAL 512
 	u32 rtsdctl;		/* seed control register */
 	union {
 		u32 rtsblim;	/* PRGM=1: sparse bit limit register */
