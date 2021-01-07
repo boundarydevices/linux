@@ -7,7 +7,7 @@
 
 .arch_extension sec
 
-ENTRY(trusty_smc8)
+SYM_FUNC_START(trusty_smc8)
     /* Save stack location where r3-r7 smc arguments are stored */
     mov     r12, sp
 
@@ -38,4 +38,4 @@ ENTRY(trusty_smc8)
 
     /* Return */
     bx      lr
-ENDPROC(trusty_smc8)
+SYM_FUNC_END(trusty_smc8)
