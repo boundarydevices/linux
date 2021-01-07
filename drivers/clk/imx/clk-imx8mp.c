@@ -1046,6 +1046,9 @@ static int imx8mp_clocks_probe(struct platform_device *pdev)
 
 	imx_clk_init_on(np, hws);
 
+	clk_prepare_enable(hws[IMX8MP_CLK_QOS_ENET_ROOT]->clk);
+	clk_prepare_enable(hws[IMX8MP_CLK_ENET_QOS_ROOT]->clk);
+
 	imx_register_uart_clocks();
 
 	return 0;
