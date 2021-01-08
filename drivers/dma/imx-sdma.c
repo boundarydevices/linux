@@ -242,6 +242,8 @@ struct sdma_script_start_addrs {
 	s32 sai_2_mcu_addr;
 	s32 uart_2_mcu_addr;
 	s32 uartsh_2_mcu_addr;
+	s32 i2c_2_mcu_addr;
+	s32 mcu_2_i2c_addr;
 	/* End of v3 array */
 	s32 mcu_2_zqspi_addr;
 	/* End of v4 array */
@@ -1106,6 +1108,11 @@ static void sdma_get_pc(struct sdma_channel *sdmac,
 	case IMX_DMATYPE_MULTI_SAI:
 		per_2_emi = sdma->script_addrs->sai_2_mcu_addr;
 		emi_2_per = sdma->script_addrs->mcu_2_sai_addr;
+		sdmac->is_ram_script = true;
+		break;
+	case IMX_DMATYPE_I2C:
+		per_2_emi = sdma->script_addrs->i2c_2_mcu_addr;
+		emi_2_per = sdma->script_addrs->mcu_2_i2c_addr;
 		sdmac->is_ram_script = true;
 	default:
 		break;
@@ -2016,8 +2023,8 @@ static void sdma_issue_pending(struct dma_chan *chan)
 
 #define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V1	34
 #define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V2	38
-#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V3	45
-#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V4	46
+#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V3	47
+#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V4	48
 
 static void sdma_add_scripts(struct sdma_engine *sdma,
 		const struct sdma_script_start_addrs *addr)
