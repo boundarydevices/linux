@@ -70,6 +70,7 @@ SYM_FUNC_START(__disable_dcache)
 	isb	sy
 	ret
 SYM_FUNC_END(__disable_dcache)
+EXPORT_SYMBOL(__disable_dcache)
 
 SYM_FUNC_START(__enable_cache)
 	mrs	x0, SCTLR_EL1
@@ -207,14 +208,17 @@ dcsw_loop_table:
 SYM_FUNC_START(__inner_flush_dcache_all)
 	__inner_dcache_all #DCCISW
 SYM_FUNC_END(__inner_flush_dcache_all)
+EXPORT_SYMBOL(__inner_flush_dcache_all)
 
 SYM_FUNC_START(__inner_flush_dcache_L1)
 	__inner_dcache_L1 #DCCISW
 SYM_FUNC_END(__inner_flush_dcache_L1)
+EXPORT_SYMBOL(__inner_flush_dcache_L1)
 
 SYM_FUNC_START(__inner_flush_dcache_L2)
 	__inner_dcache_L2 #DCCISW
 SYM_FUNC_END(__inner_flush_dcache_L2)
+EXPORT_SYMBOL(__inner_flush_dcache_L2)
 
 SYM_FUNC_START(__inner_clean_dcache_all)
 	__inner_dcache_all #DCCSW
