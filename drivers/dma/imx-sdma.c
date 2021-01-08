@@ -250,6 +250,8 @@ struct sdma_script_start_addrs {
 	s32 sai_2_mcu_addr;
 	s32 uart_2_mcu_rom_addr;
 	s32 uartsh_2_mcu_rom_addr;
+	s32 i2c_2_mcu_addr;
+	s32 mcu_2_i2c_addr;
 	/* End of v3 array */
 	s32 mcu_2_zqspi_addr;
 	/* End of v4 array */
@@ -1244,6 +1246,11 @@ static int sdma_get_pc(struct sdma_channel *sdmac,
 		emi_2_per = sdma->script_addrs->mcu_2_sai_addr;
 		sdmac->is_ram_script = true;
 		break;
+	case IMX_DMATYPE_I2C:
+		per_2_emi = sdma->script_addrs->i2c_2_mcu_addr;
+		emi_2_per = sdma->script_addrs->mcu_2_i2c_addr;
+		sdmac->is_ram_script = true;
+		break;
 	case IMX_DMATYPE_HDMI:
 		emi_2_per = sdma->script_addrs->hdmi_dma_addr;
 		sdmac->is_ram_script = true;
@@ -1726,6 +1733,7 @@ static int sdma_runtime_resume(struct device *dev)
 		dev_dbg(sdma->dev, "firmware not ready.\n");
 	else if (sdma_load_script(sdma))
 		dev_warn(sdma->dev, "failed to load script.\n");
+
 	sdma->is_on = true;
 
 	return 0;
@@ -1818,6 +1826,7 @@ static void sdma_free_chan_resources(struct dma_chan *chan)
 	sdmac->event_id1 = 0;
 
 	sdma_set_channel_priority(sdmac, 0);
+
 	kfree(sdmac->audio_config);
 	sdmac->audio_config = NULL;
 	sdma_pm_clk_enable(sdmac->sdma, false, false);
