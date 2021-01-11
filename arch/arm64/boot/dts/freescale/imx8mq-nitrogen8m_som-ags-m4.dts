@@ -10,8 +10,6 @@
 	compatible = "boundary,imx8mq-nitrogen8m_som-ags-m4", "fsl,imx8mq";
 
 	aliases {
-		/delete-property/ csi0;
-		/delete-property/ csi1;
 		/delete-property/ mipi_cmds_com50h5n03ulc;
 		/delete-property/ mipi_cmds_lcm_jm430;
 		/delete-property/ mipi_cmds_ltk0680ytmdb;
@@ -39,13 +37,9 @@
 	/delete-node/ bt-rfkill;
 };
 
-/delete-node/ &csi1_bridge;
-/delete-node/ &csi2_bridge;
 /delete-node/ &mipi_cmds_com50h5n03ulc;
 /delete-node/ &mipi_cmds_lcm_jm430;
 /delete-node/ &mipi_cmds_ltk0680ytmdb;
-/delete-node/ &mipi_csi_1;
-/delete-node/ &mipi_csi_2;
 /delete-node/ &mipi_to_lvds;
 
 /delete-node/ &pinctrl_bt_rfkill;
@@ -53,8 +47,6 @@
 /delete-node/ &pinctrl_i2c1d_ft5x06;
 /delete-node/ &pinctrl_i2c1d_sn65dsi83;
 /delete-node/ &pinctrl_i2c1d_st1633;
-/delete-node/ &pinctrl_i2c2_csi1;
-/delete-node/ &pinctrl_i2c3_csi2;
 /delete-node/ &pinctrl_mipi_com50h5n03ulc;
 /delete-node/ &pinctrl_mipi_lcm_jm430;
 /delete-node/ &pinctrl_mipi_ltk0680ytmdb;
@@ -69,13 +61,8 @@
 	status = "disabled";
 };
 
-&i2c2 {
-	/delete-node/ ov5640-mipi1@3c;
-};
-
 &i2c3 {
 	status = "disabled";
-	/delete-node/ ov5640-mipi2@3c;
 };
 
 &gpio3 {
@@ -87,6 +74,18 @@
 };
 
 &gpio5 {
+	status = "disabled";
+};
+
+&pwm2 {
+	status = "disabled";
+};
+
+&pwm3 {
+	status = "disabled";
+};
+
+&pwm4 {
 	status = "disabled";
 };
 
@@ -125,6 +124,10 @@
 };
 
 &uart2 {
+	status = "disabled";
+};
+
+&uart3 {
 	status = "disabled";
 };
 
