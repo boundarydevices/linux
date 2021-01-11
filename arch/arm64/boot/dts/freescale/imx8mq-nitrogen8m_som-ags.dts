@@ -9,6 +9,11 @@
 	model = "Boundary Devices i.MX8MQ Nitrogen8M SOM AGS";
 	compatible = "boundary,imx8mq-nitrogen8m_som-ags", "fsl,imx8mq";
 
+	aliases {
+		/delete-property/ csi0;
+		/delete-property/ csi1;
+	};
+
 	pcie1_refclk: pcie1-refclk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -18,6 +23,10 @@
 };
 
 &iomuxc {
+	/delete-node/ i2c2-csi1grp;
+	/delete-node/ i2c3-csi2grp;
+	/delete-node/ i2c4-pca9546grp;
+	/delete-node/ i2c4b-wm8960grp;
 	/delete-node/ pcie0grp;
 
 	pinctrl_pcie1: pcie1grp {
@@ -33,6 +42,7 @@
 			MX8MQ_IOMUXC_GPIO1_IO10_GPIO1_IO10		0x19	/* Pin 105 */
 			MX8MQ_IOMUXC_GPIO1_IO05_GPIO1_IO5		0x19	/* Pin 143 */
 			MX8MQ_IOMUXC_GPIO1_IO03_GPIO1_IO3		0x19	/* Pin 145 */
+			MX8MQ_IOMUXC_NAND_CE1_B_GPIO3_IO2		0x19	/* Pin 147 */
 			MX8MQ_IOMUXC_NAND_CE3_B_GPIO3_IO4		0x19	/* Pin 149 */
 			MX8MQ_IOMUXC_NAND_READY_B_GPIO3_IO16		0x19	/* Pin 153 */
 			MX8MQ_IOMUXC_NAND_DATA05_GPIO3_IO11		0x19	/* Pin 155 */
@@ -95,8 +105,19 @@
 	};
 };
 
-/delete-node/ &pinctrl_i2c4_pca9546;
-/delete-node/ &pinctrl_i2c4b_wm8960;
+/delete-node/ &csi1_bridge;
+/delete-node/ &csi2_bridge;
+/delete-node/ &mipi_csi_1;
+/delete-node/ &mipi_csi_2;
+
+&i2c2 {
+	/delete-node/ ov5640-mipi1@3c;
+};
+
+&i2c3 {
+	/delete-node/ ov5640-mipi2@3c;
+};
+
 &i2c4 {
 	/delete-node/ i2cmux@70;
 
