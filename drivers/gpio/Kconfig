@@ -439,6 +439,12 @@ config GPIO_MXC
 	select GPIO_GENERIC
 	select GENERIC_IRQ_CHIP
 
+config GPIO_SCU
+	def_bool y
+	depends on IMX_SCU
+	help
+	  Say Y here to enable the imx8 gpio over SCFW MISC API
+
 config GPIO_MXS
 	bool "Freescale MXS GPIO support" if COMPILE_TEST
 	depends on ARCH_MXS || COMPILE_TEST
