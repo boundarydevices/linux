@@ -23,24 +23,21 @@
 #define FSL_SIP_CONFIG_GPC_SET_AFF      0x04
 #define FSL_SIP_CONFIG_GPC_CORE_WAKE    0x05
 
-#define IMR_NUM			4
-#define GPC_MAX_IRQS            (IMR_NUM * 32)
-#define IMX8MP_MAX_IRQS         160
-
 #define GPC_IMR1_CORE0		0x30
+/* Not used for 8mq or 8mp */
 #define GPC_IMR1_CORE1		0x40
 #define GPC_IMR1_CORE2		0x1c0
 #define GPC_IMR1_CORE3		0x1d0
 
 static unsigned int err11171;
-static unsigned int gpc_max_irqs;
 
 struct gpcv2_irqchip_data {
 	struct raw_spinlock	rlock;
 	void __iomem		*gpc_base;
-	u32			wakeup_sources[IMR_NUM];
-	u32			saved_irq_mask[IMR_NUM];
 	u32			cpu2wakeup;
+	u32			imr_num;
+	u32			wakeup_sources[5];
+	u32			saved_irq_mask[5];
 };
 
 static struct gpcv2_irqchip_data *imx_gpcv2_instance;
@@ -60,7 +57,7 @@ static int gpcv2_wakeup_source_save(void)
 	if (!cd)
 		return 0;
 
-	for (i = 0; i < IMR_NUM; i++) {
+	for (i = 0; i < cd->imr_num; i++) {
 		reg = gpcv2_idx_to_reg(cd, i);
 		cd->saved_irq_mask[i] = readl_relaxed(reg);
 		writel_relaxed(cd->wakeup_sources[i], reg);
@@ -78,7 +75,7 @@ static void gpcv2_wakeup_source_restore(void)
 	if (!cd)
 		return;
 
-	for (i = 0; i < IMR_NUM; i++)
+	for (i = 0; i < cd->imr_num; i++)
 		writel_relaxed(cd->saved_irq_mask[i], gpcv2_idx_to_reg(cd, i));
 }
 
@@ -302,6 +299,7 @@ static int imx_gpcv2_domain_alloc(struct irq_domain *domain,
 	struct irq_fwspec *fwspec = data;
 	struct irq_fwspec parent_fwspec;
 	irq_hw_number_t hwirq;
+	struct gpcv2_irqchip_data *cd = domain->host_data;
 	unsigned int type;
 	int err;
 	int i;
@@ -310,7 +308,7 @@ static int imx_gpcv2_domain_alloc(struct irq_domain *domain,
 	if (err)
 		return err;
 
-	if (hwirq >= gpc_max_irqs)
+	if (hwirq >= cd->imr_num * 32)
 		return -EINVAL;
 
 	for (i = 0; i < nr_irqs; i++) {
@@ -373,6 +371,10 @@ static int __init imx_gpcv2_irqchip_init(struct device_node *node,
 	}
 
 	raw_spin_lock_init(&cd->rlock);
+	cd->imr_num = of_machine_is_compatible("fsl,imx8mp") ? 5 : 4;
+	/* Let CORE0 as the default CPU to wake up by GPC */
+	cd->cpu2wakeup = GPC_IMR1_CORE0;
+
 
 	cd->gpc_base = of_iomap(node, 0);
 	if (!cd->gpc_base) {
@@ -381,12 +383,7 @@ static int __init imx_gpcv2_irqchip_init(struct device_node *node,
 		return -ENOMEM;
 	}
 
-	if (of_machine_is_compatible("fsl,imx8mp"))
-		gpc_max_irqs = IMX8MP_MAX_IRQS;
-	else
-		gpc_max_irqs = GPC_MAX_IRQS;
-
-	domain = irq_domain_add_hierarchy(parent_domain, 0, gpc_max_irqs,
+	domain = irq_domain_add_hierarchy(parent_domain, 0, cd->imr_num * 32,
 				node, &gpcv2_irqchip_data_domain_ops, cd);
 	if (!domain) {
 		iounmap(cd->gpc_base);
@@ -403,7 +400,7 @@ static int __init imx_gpcv2_irqchip_init(struct device_node *node,
 		imx_gpcv2_wake_request_fixup();
 	} else {
 		/* Initially mask all interrupts */
-		for (i = 0; i < IMR_NUM; i++) {
+		for (i = 0; i < cd->imr_num; i++) {
 			void __iomem *reg = cd->gpc_base + i * 4;
 
 			switch (core_num) {
@@ -417,9 +414,6 @@ static int __init imx_gpcv2_irqchip_init(struct device_node *node,
 			}
 			cd->wakeup_sources[i] = ~0;
 		}
-
-		/* Let CORE0 as the default CPU to wake up by GPC */
-		cd->cpu2wakeup = GPC_IMR1_CORE0;
 
 		/*
 		 * Due to hardware design failure, need to make sure GPR

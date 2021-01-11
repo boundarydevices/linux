@@ -1,0 +1,22 @@
+/ {
+	interrupt-parent = <&gpc>;
+
+	soc@0 {
+		aips1: bus@30000000 {
+			gpc: gpc@303a0000 {
+				#interrupt-cells = <3>;
+				compatible = "fsl,imx8mp-gpc", "fsl,imx8mq-gpc";
+				reg = <0x303a0000 0x10000>;
+				interrupt-parent = <&gic>;
+				interrupt-controller;
+				broken-wake-request-signals;
+			};
+		};
+
+		aips4: bus@32c00000 {
+			irqsteer_hdmi: irqsteer@32fc2000 {
+				/delete-property/ interrupt-parent;
+			};
+		};
+	};
+};
