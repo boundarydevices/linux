@@ -53,12 +53,12 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 		gpiod_set_value_cansleep(rfkill->reset_gpio, 1);
 		if (!IS_ERR(rfkill->clk) && rfkill->clk_enabled)
 			clk_disable_unprepare(rfkill->clk);
-		if (!IS_ERR(rfkill->vdd))
+		if (rfkill->vdd)
 			regulator_disable(rfkill->vdd);
 	} else {
 		if (rfkill->power_key_gpio)
 			gpiod_set_value_cansleep(rfkill->power_key_gpio, 0);
-		if (!IS_ERR(rfkill->vdd)) {
+		if (rfkill->vdd) {
 			ret = regulator_enable(rfkill->vdd);
 			if (ret) {
 				dev_err(rfkill->dev,
@@ -168,7 +168,7 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 	}
 
 	rfkill->vdd = devm_regulator_get_optional(dev, "vdd");
-	if ((PTR_ERR(rfkill->vdd) != -ENODEV) && IS_ERR(rfkill->vdd)) {
+	if (IS_ERR(rfkill->vdd)) {
 		ret = PTR_ERR(rfkill->vdd);
 		if (ret == -ENODEV) {
 			rfkill->vdd = NULL;
