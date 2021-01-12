@@ -19,12 +19,12 @@
 		simple-audio-card,frame-master = <&sndcodec>;
 		simple-audio-card,hp-det-gpio = <&gpio4 28 0>;
 		simple-audio-card,widgets =
-			"Headphone", "Headphone Jack",
+			"Headphone", "Headphones",
 			"Speaker", "Ext Spk",
 			"Microphone", "Mic Jack";
 		simple-audio-card,routing =
-			"Headphone Jack", "HP_L",
-			"Headphone Jack", "HP_R",
+			"Headphones", "HP_L",
+			"Headphones", "HP_R",
 			"Ext Spk", "SPK_LP",
 			"Ext Spk", "SPK_LN",
 			"Ext Spk", "SPK_RP",
