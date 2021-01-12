@@ -96,8 +96,8 @@ static int hp_jack_status_check(void *data)
 #endif
 		snd_soc_dapm_disable_pin(dapm, "Ext Spk");
 		if (imx_data->is_headset_jack) {
-			snd_soc_dapm_enable_pin(dapm, "Mic Jack");
 			snd_soc_dapm_disable_pin(dapm, "Main MIC");
+			snd_soc_dapm_enable_pin(dapm, "Mic Jack");
 		}
 		ret = imx_data->imx_hp_jack_gpio.report;
 	} else {
@@ -126,8 +126,10 @@ static int mic_jack_status_check(void *data)
 
 	if (mic_status != imx_data->mic_active_low) {
 		snd_soc_dapm_disable_pin(dapm, "Main MIC");
+		snd_soc_dapm_enable_pin(dapm, "Mic Jack");
 		ret = imx_data->imx_mic_jack_gpio.report;
 	} else {
+		snd_soc_dapm_disable_pin(dapm, "Mic Jack");
 		snd_soc_dapm_enable_pin(dapm, "Main MIC");
 		ret = 0;
 	}
