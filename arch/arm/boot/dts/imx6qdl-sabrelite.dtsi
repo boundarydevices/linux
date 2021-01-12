@@ -687,10 +687,6 @@
 	vync-active = <1>;
 };
 
-&ipu1_csi0_mux_from_parallel_sensor {
-	remote-endpoint = <&ov5642_to_ipu1_csi0_mux>;
-};
-
 &ipu1_csi0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2_ov5642>;
@@ -818,29 +814,22 @@
 		reg = <0x50>;
 	};
 
-	ov5642: camera@42 {
-		compatible = "ovti,ov5642";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c2_ov5642>;
-		clocks = <&clks IMX6QDL_CLK_CKO2>;
-		clock-names = "xclk";
-		DOVDD-supply = <&reg_1p8v>;
-		AVDD-supply = <&reg_2p5v>;
-		DVDD-supply = <&reg_1p8v>;
-		reg = <0x42>;
-		reset-gpios = GP_OV5642_RESET;
-		powerdown-gpios = GP_OV5642_POWER_DOWN;
-		gp-gpios = <&gpio1 16 GPIO_ACTIVE_HIGH>;
-		status = "disabled";
-
-		port {
-			ov5642_to_ipu1_csi0_mux: endpoint {
-				remote-endpoint = <&ipu1_csi0_mux_from_parallel_sensor>;
-				bus-width = <8>;
-				hsync-active = <1>;
-				vsync-active = <1>;
-			};
-		};
+        ov5642: ov5642@3d {
+                compatible = "ovti,ov5642";
+                reg = <0x3d>;
+                pinctrl-names = "default";
+                pinctrl-0 = <&pinctrl_i2c2_ov5642>;
+                clocks = <&clks IMX6QDL_CLK_CKO2>;
+                clock-names = "csi_mclk";
+                DOVDD-supply = <&reg_1p8v>;
+                AVDD-supply = <&reg_2p5v>;
+                DVDD-supply = <&reg_1p8v>;
+                pwn-gpios = GP_OV5642_POWER_DOWN;
+                rst-gpios = GP_OV5642_RESET;
+                ipu_id = <0>;
+                csi_id = <0>;
+                mclk = <24000000>;
+                mclk_source = <0>;
 	};
 
 	ov5640_mipi: ov5640-mipi@3e {
