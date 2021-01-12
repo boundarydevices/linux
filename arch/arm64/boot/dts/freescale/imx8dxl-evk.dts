@@ -135,7 +135,7 @@
 		regulator-name = "fec1_supply";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&pca6416_1 11 GPIO_ACTIVE_LOW>;
+		gpio = <&pca6416_1 11 GPIO_ACTIVE_HIGH>;
 		regulator-always-on;
 		status = "disabled";
 	};
@@ -239,6 +239,25 @@
 			"LINPUT1", "Mic Jack",
 			"Mic Jack", "MICB";
 	};
+
+	scu_gpio0: scu-gpio0 {
+		compatible = "fsl,imx-scu-gpio";
+		gpio-controller;
+		#gpio-cells = <2>;
+		#interrupt-cells = <2>;
+	};
+
+	mii_select: mii_select {
+		compatible = "regulator-fixed";
+		regulator-name = "mii-select";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&scu_gpio0 6 GPIO_ACTIVE_HIGH>;
+
+		enable-active-high;
+		regulator-always-on;
+	};
+
 };
 
 &adc0 {
