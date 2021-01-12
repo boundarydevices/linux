@@ -130,15 +130,6 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
-
-		/* global autoconfigured region for contiguous allocations */
-		linux,cma {
-			compatible = "shared-dma-pool";
-			reusable;
-			size = <0 0x38000000>;
-			alloc-ranges = <0 0x80000000 0 0x38000000>;
-			linux,cma-default;
-		};
 	};
 
 	pcie0_refclk: pcie0-refclk {
