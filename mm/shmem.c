@@ -155,7 +155,6 @@ int shmem_getpage(struct inode *inode, pgoff_t index,
 	return shmem_getpage_gfp(inode, index, pagep, sgp,
 		mapping_gfp_mask(inode->i_mapping), NULL, NULL, NULL);
 }
-EXPORT_SYMBOL_GPL(shmem_getpage);
 
 static inline struct shmem_sb_info *SHMEM_SB(struct super_block *sb)
 {
@@ -2357,7 +2356,6 @@ bool shmem_mapping(struct address_space *mapping)
 {
 	return mapping->a_ops == &shmem_aops;
 }
-EXPORT_SYMBOL_GPL(shmem_mapping);
 
 static int shmem_mfill_atomic_pte(struct mm_struct *dst_mm,
 				  pmd_t *dst_pmd,
