@@ -195,6 +195,16 @@
 			no-map;
 			reg = <0 0x92400000 0 0x2000000>;
 		};
+
+		isp0_reserved: isp0@B0000000 {
+			no-map;
+			reg = <0 0xB0000000 0 0x10000000>;
+		};
+
+		isp1_reserved: isp1@B0000000 {
+			no-map;
+			reg = <0 0xB0000000 0 0x10000000>;
+		};
 	};
 
 	osc_32k: clock-osc-32k {
@@ -1507,6 +1517,7 @@
 					power-domains = <&ispdwp_pd>;
 					id = <0>;
 					gpr = <&media_blk_ctrl>;
+					memory-region = <&isp0_reserved>;
 					status = "disabled";
 				};
 
@@ -1524,6 +1535,7 @@
 					power-domains = <&ispdwp_pd>;
 					id = <1>;
 					gpr = <&media_blk_ctrl>;
+					memory-region = <&isp1_reserved>;
 					status = "disabled";
 				};
 
