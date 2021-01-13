@@ -775,18 +775,10 @@
 	};
 
 	sound-wm8960 {
-		compatible = "fsl,imx-audio-wm8960";
-		model = "wm8960-audio";
-		cpu-dai = <&sai3>;
-		audio-codec = <&wm8960>;
 #if 0
 		asrc-controller = <&easrc>;
 #endif
-		mic-det-gpios = GP_WM8960_MIC_DET;
-		codec-master;
-		/* JD2: hp detect high for headphone*/
-		hp-det = <2 0>;
-		hp-det-gpios = GP_WM8960_HP_DET;
+		audio-codec = <&wm8960>;
 		audio-routing =
 			"Headphone Jack", "HP_L",
 			"Headphone Jack", "HP_R",
@@ -804,6 +796,15 @@
 			"ASRC-Capture", "CPU-Capture",
 			"CPU-Capture", "Capture";
 #endif
+		codec-master;
+		compatible = "fsl,imx-audio-wm8960";
+		cpu-dai = <&sai3>;
+		/* JD2: hp detect high for headphone*/
+		hp-det = <2 0>;
+		hp-det-gpios = GP_WM8960_HP_DET;
+		/* Jack is not stuffed */
+		mic-det-gpios = GP_WM8960_MIC_DET;
+		model = "wm8960-audio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
