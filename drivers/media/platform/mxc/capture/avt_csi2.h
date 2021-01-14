@@ -127,6 +127,14 @@ struct avt_ctrl {
 #define GCPRM_MAJOR_VERSION	0x0001
 #define GCPRM_MINOR_VERSION	0x0000
 
+/* D-PHY 1.2 clock frequency range (up to 2.5 Gbps per lane, DDR) */
+#define CSI_HOST_CLK_MIN_FREQ		40000000
+#define CSI_HOST_CLK_MAX_FREQ		750000000
+#define CSI_HOST_CLK_MAX_FREQ_4L	681250000
+#define CSI_HOST_CLK_MAX_FREQ_4L_RGB24	425000000
+#define CSI_HOST_CLK_MAX_FREQ_4L_BA10	425000000
+#define CSI_HOST_CLK_MAX_FREQ_4L_RAW8	225000000
+
 /* MIPI CSI-2 data types */
 #define MIPI_DT_YUV420		0x18 /* YYY.../UYVY.... */
 #define MIPI_DT_YUV420_LEGACY	0x1a /* UYY.../VYY...   */
