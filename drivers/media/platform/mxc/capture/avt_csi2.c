@@ -1341,6 +1341,88 @@ static int avt_frm_supported(int wmin, int wmax, int ws,
 	return 0;
 }
 
+static int avt_set_csi_clk(struct v4l2_subdev *sd, uint32_t host_max_clk)
+{
+	struct avt_csi2_priv *priv = avt_get_priv(sd);
+	uint32_t common_min_clk = 0;
+	uint32_t common_max_clk = 0;
+	uint32_t common_inc_clk = 0;
+	uint32_t avt_min_clk = 0;
+	uint32_t avt_max_clk = 0;
+	int ret = 0;
+
+	uint32_t i2c_reg;
+	uint32_t i2c_reg_size;
+	uint32_t i2c_reg_count;
+	uint32_t clk;
+
+	char *i2c_reg_buf;
+
+	ret = avt_reg_read(priv->client,
+			   priv->cci_reg.bcrm_addr + CSI2_CLOCK_MIN_32R,
+			   AV_CAM_REG_SIZE, AV_CAM_DATA_SIZE_32,
+			   (char *) &avt_min_clk);
+
+	if (ret < 0) {
+		avt_err(sd, "i2c read failed (%d)\n", ret);
+		return ret;
+	}
+
+	ret = avt_reg_read(priv->client,
+			   priv->cci_reg.bcrm_addr + CSI2_CLOCK_MAX_32R,
+			   AV_CAM_REG_SIZE, AV_CAM_DATA_SIZE_32,
+			   (char *) &avt_max_clk);
+
+	if (ret < 0) {
+		avt_err(sd, "i2c read failed (%d)\n", ret);
+		return ret;
+	}
+
+	avt_dbg(2, sd, "csi clock camera range: %d:%d Hz, host range: %d:%d Hz\n",
+		avt_min_clk, avt_max_clk, CSI_HOST_CLK_MIN_FREQ, host_max_clk);
+
+	if (!common_range(avt_min_clk, avt_max_clk, 1,
+			 CSI_HOST_CLK_MIN_FREQ, host_max_clk, 1,
+			 &common_min_clk, &common_max_clk, &common_inc_clk)) {
+		avt_err(sd, "no common clock range for camera and host possible!\n");
+		return -EINVAL;
+	}
+
+	avt_dbg(2, sd, "camera/host common csi clock range: %d:%d Hz\n",
+		common_min_clk, common_max_clk);
+
+	if (common_max_clk == 0) {
+		avt_dbg(2, sd, "using csi clock from dts: %u Hz\n", priv->csi_clk_freq);
+	} else {
+		avt_dbg(2, sd, "using csi clock common max (%d Hz)\n", common_max_clk);
+		priv->csi_clk_freq = common_max_clk;
+	}
+
+	CLEAR(i2c_reg);
+	clk = priv->csi_clk_freq;
+	swapbytes(&clk, AV_CAM_DATA_SIZE_32);
+	i2c_reg = priv->cci_reg.bcrm_addr + CSI2_CLOCK_32RW;
+	i2c_reg_size = AV_CAM_REG_SIZE;
+	i2c_reg_count = AV_CAM_DATA_SIZE_32;
+	i2c_reg_buf = (char *) &clk;
+	ret = ioctl_gencam_i2cwrite_reg(priv->client, i2c_reg, i2c_reg_size,
+					i2c_reg_count, i2c_reg_buf);
+
+	ret = avt_reg_read(priv->client,
+			   priv->cci_reg.bcrm_addr + CSI2_CLOCK_32RW,
+			   AV_CAM_REG_SIZE, AV_CAM_DATA_SIZE_32,
+			   (char *) &avt_max_clk);
+
+	if (ret < 0) {
+		avt_err(sd, "i2c read failed (%d)\n", ret);
+		return ret;
+	}
+
+	avt_dbg(2, sd, "csi clock read from camera: %d Hz\n", avt_max_clk);
+
+	return 0;
+}
+
 static int avt_csi2_try_fmt(struct v4l2_subdev *sd,
 		struct v4l2_subdev_state *state,
 		struct v4l2_subdev_format *format)
@@ -1368,8 +1450,8 @@ static int avt_csi2_set_fmt(struct v4l2_subdev *sd,
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct avt_csi2_priv *priv = avt_get_priv(sd);
 	struct v4l2_subdev_selection sel;
+	uint32_t host_max_clk;
 	int ret;
-
 
 	// changing the resolution is not allowed with VIDIOC_S_FMT
 	if (priv->mode == AVT_BCRM_MODE &&
@@ -1400,6 +1482,39 @@ static int avt_csi2_set_fmt(struct v4l2_subdev *sd,
 	 * set_param succeded
 	 */
 	priv->mbus_fmt_code = format->format.code;
+
+	/* Change the CSI clock frequency */
+	if (priv->numlanes == 4) {
+		switch (priv->mbus_fmt_code) {
+		case MEDIA_BUS_FMT_Y10_1X10:
+		case MEDIA_BUS_FMT_SRGGB10_1X10:
+		case MEDIA_BUS_FMT_SGRBG10_1X10:
+		case MEDIA_BUS_FMT_SGBRG10_1X10:
+		case MEDIA_BUS_FMT_SBGGR10_1X10:
+			host_max_clk = CSI_HOST_CLK_MAX_FREQ_4L_BA10;
+			break;
+		case MEDIA_BUS_FMT_Y8_1X8:
+		case MEDIA_BUS_FMT_SBGGR8_1X8:
+		case MEDIA_BUS_FMT_SGBRG8_1X8:
+		case MEDIA_BUS_FMT_SGRBG8_1X8:
+		case MEDIA_BUS_FMT_SRGGB8_1X8:
+			host_max_clk = CSI_HOST_CLK_MAX_FREQ_4L_RAW8;
+			break;
+		case MEDIA_BUS_FMT_RGB888_1X24:
+		case MEDIA_BUS_FMT_BGR888_1X24:
+			host_max_clk = CSI_HOST_CLK_MAX_FREQ_4L_RGB24;
+			break;
+		default:
+			host_max_clk = CSI_HOST_CLK_MAX_FREQ_4L;
+			break;
+		}
+	} else {
+		host_max_clk = CSI_HOST_CLK_MAX_FREQ;
+	}
+
+	if (priv->csi_clk_freq != host_max_clk) {
+		return avt_set_csi_clk(sd, host_max_clk);
+	}
 
 	return 0;
 }
