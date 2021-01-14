@@ -54,11 +54,6 @@ struct v4l2_range
     __u32 nMax;                 // Maximum allowed value
 };
 
-/* D-PHY 1.2 clock frequency range (up to 2.5 Gbps per lane, DDR) */
-#define CSI_HOST_CLK_MIN_FREQ	40000000
-#define CSI_HOST_CLK_MAX_FREQ		750000000
-#define CSI_HOST_CLK_MAX_FREQ_4L	735000000
-
 struct v4l2_csi_host_clock_freq_ranges
 {
     struct v4l2_range lane_range_1;    // Min and max value for 1 lane
