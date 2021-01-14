@@ -42,6 +42,13 @@
 		>;
 	};
 
+	pinctrl_i2c3_pca9546: i2c3-pca9546grp {
+		fsl,pins = <
+#define GP_I2C3_PCA9546_RESET		<&gpio4 30 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI3_RXD_GPIO4_IO30, 0x100)
+		>;
+	};
+
 	pinctrl_pcie0: pcie0grp {
 		fsl,pins = <
 #define GP_PCIE0_RESET		<&gpio4 31 GPIO_ACTIVE_LOW>
@@ -183,6 +190,27 @@
 	pca9546: i2cmux9546@70 {
 		i2c2@2 {
 			/delete-node/ touchscreen@38;
+		};
+	};
+};
+
+&i2c3 {
+	i2cmux@70 {
+		compatible = "nxp,pca9546";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_pca9546>;
+		reset-gpios = GP_I2C3_PCA9546_RESET;
+
+		i2c3c: i2c3@2 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c3d: i2c3@3 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 		};
 	};
 };
