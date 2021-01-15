@@ -617,6 +617,7 @@
 		ts_ft5x06 = &ts_ft5x06;
 		ts_ft5x06_2 = &ts_ft5x06_lvds;
 		ts_goodix = &ts_goodix;
+		usb_mux = &usb_mux;
 	};
 
 	backlight_lvds: backlight-lvds {
@@ -1313,13 +1314,13 @@
 		wakeup-gpios = GP_TS_FT5X06_LVDS_WAKE;
 	};
 
-	hd3ss3220@60 {
+	usb_mux: hd3ss3220@47 {
 		/* tusb320 is compatible with hd3ss3220 */
 		compatible = "ti,hd3ss3220";
 		interrupts-extended = GPIRQ_HD3SS3220;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c4_hd3ss3220>;
-		reg = <0x60>;
+		reg = <0x47>;
 
 		ports {
 			#address-cells = <1>;
