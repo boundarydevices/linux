@@ -54,7 +54,7 @@ MODULE_PARM_DESC(debug, "Debug level (0-2)");
 #define MX6S_CAM_VERSION "0.0.1"
 #define MX6S_CAM_DRIVER_DESCRIPTION "i.MX6S_CSI"
 
-#define MAX_VIDEO_MEM 64
+#define MAX_VIDEO_MEM 128
 
 /* reset values */
 #define CSICR1_RESET_VAL	0x40000800
@@ -103,6 +103,14 @@ MODULE_PARM_DESC(debug, "Debug level (0-2)");
 #define BIT_STATFF_LEVEL	(0x7 << 8)
 #define BIT_HRESP_ERR_EN	(0x1 << 7)
 #define BIT_RXFF_LEVEL		(0x7 << 4)
+#define BIT_RXFF_LEVEL_4	(0x0 << 4)
+#define BIT_RXFF_LEVEL_8	(0x1 << 4)
+#define BIT_RXFF_LEVEL_16	(0x2 << 4)
+#define BIT_RXFF_LEVEL_24	(0x3 << 4)
+#define BIT_RXFF_LEVEL_32	(0x4 << 4)
+#define BIT_RXFF_LEVEL_48	(0x5 << 4)
+#define BIT_RXFF_LEVEL_64	(0x6 << 4)
+#define BIT_RXFF_LEVEL_96	(0x7 << 4)
 #define BIT_TWO_8BIT_SENSOR	(0x1 << 3)
 #define BIT_ZERO_PACK_EN	(0x1 << 2)
 #define BIT_ECC_INT_EN		(0x1 << 1)
@@ -637,7 +645,7 @@ static void csi_dmareq_rff_enable(struct mx6s_csi_dev *csi_dev)
 	cr3 |= BIT_DMA_REQ_EN_RFF;
 	cr3 |= BIT_HRESP_ERR_EN;
 	cr3 &= ~BIT_RXFF_LEVEL;
-	cr3 |= 0x2 << 4;
+	cr3 |= BIT_RXFF_LEVEL_64;
 
 	__raw_writel(cr3, csi_dev->regbase + CSI_CSICR3);
 	__raw_writel(cr2, csi_dev->regbase + CSI_CSICR2);
