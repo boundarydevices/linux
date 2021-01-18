@@ -9,7 +9,7 @@
 //
 
 #include <sound/soc.h>
-#include "compress.h"
+#include "probe_compress.h"
 #include "ops.h"
 #include "probe.h"
 
