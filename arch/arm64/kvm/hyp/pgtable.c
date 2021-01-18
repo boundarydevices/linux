@@ -442,7 +442,10 @@ static int stage2_map_set_prot_attr(enum kvm_pgtable_prot prot,
 	bool device = prot & KVM_PGTABLE_PROT_DEVICE;
 	kvm_pte_t attr = device ? PAGE_S2_MEMATTR(DEVICE_nGnRE) :
 			    PAGE_S2_MEMATTR(NORMAL);
-	u32 sh = KVM_PTE_LEAF_ATTR_LO_S2_SH_IS;
+	u32 sh = 0;
+
+	if (!(prot & KVM_PGTABLE_PROT_DEVICE_NS))
+		sh = KVM_PTE_LEAF_ATTR_LO_S2_SH_IS;
 
 	if (!(prot & KVM_PGTABLE_PROT_X))
 		attr |= KVM_PTE_LEAF_ATTR_HI_S2_XN;
@@ -835,7 +838,15 @@ static int stage2_flush_walker(u64 addr, u64 end, u32 level, kvm_pte_t *ptep,
 	if (!kvm_pte_valid(pte) || !stage2_pte_cacheable(pte))
 		return 0;
 
-	stage2_flush_dcache(kvm_pte_follow(pte), kvm_granule_size(level));
+	if (pfn_valid(__phys_to_pfn(kvm_pte_to_phys(pte)))) {
+		stage2_flush_dcache(kvm_pte_follow(pte), kvm_granule_size(level));
+	} else {
+		void __iomem *va = ioremap_cache_ns(kvm_pte_to_phys(pte), PAGE_SIZE);
+
+		stage2_flush_dcache(va, kvm_granule_size(level));
+		iounmap(va);
+	}
+
 	return 0;
 }
 

@@ -26,6 +26,13 @@ static inline void flush_cache_vmap(unsigned long start, unsigned long end)
 #define ARCH_IMPLEMENTS_FLUSH_DCACHE_PAGE 1
 extern void flush_dcache_page(struct page *page);
 
+extern void __flush_disable_L1(void);
+#ifdef CONFIG_FSL_SOC_BOOKE
+extern void flush_dcache_L1(void);
+#else
+#define flush_dcache_L1()			do { } while (0)
+#endif
+
 void flush_icache_range(unsigned long start, unsigned long stop);
 #define flush_icache_range flush_icache_range
 

@@ -11,6 +11,11 @@ config PCIE_MOBIVEIL_HOST
 	depends on PCI_MSI_IRQ_DOMAIN
 	select PCIE_MOBIVEIL
 
+config PCIE_MOBIVEIL_EP
+	bool
+	depends on PCI_ENDPOINT
+	select PCIE_MOBIVEIL
+
 config PCIE_MOBIVEIL_PLAT
 	bool "Mobiveil AXI PCIe controller"
 	depends on ARCH_ZYNQMP || COMPILE_TEST
@@ -23,12 +28,22 @@ config PCIE_MOBIVEIL_PLAT
 	  for address translation and it is a PCIe Gen4 IP.
 
 config PCIE_LAYERSCAPE_GEN4
-	bool "Freescale Layerscape PCIe Gen4 controller"
+	bool "Freescale Layerscape PCIe Gen4 controller in RC mode"
 	depends on PCI
 	depends on OF && (ARM64 || ARCH_LAYERSCAPE)
 	depends on PCI_MSI_IRQ_DOMAIN
 	select PCIE_MOBIVEIL_HOST
 	help
-	  Say Y here if you want PCIe Gen4 controller support on
+	  Say Y here if you want PCIe Gen4 controller as host support on
+	  Layerscape SoCs.
+
+config PCIE_LAYERSCAPE_GEN4_EP
+	bool "Freescale Layerscape PCIe Gen4 controller in EP mode"
+	depends on PCI
+	depends on OF && (ARM64 || ARCH_LAYERSCAPE)
+	depends on PCI_ENDPOINT
+	select PCIE_MOBIVEIL_EP
+	help
+	  Say Y here if you want PCIe Gen4 controller as endpoint support on
 	  Layerscape SoCs.
 endmenu

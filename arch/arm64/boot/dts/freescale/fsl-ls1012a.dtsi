@@ -18,6 +18,8 @@
 
 	aliases {
 		crypto = &crypto;
+		mmc0 = &esdhc0;
+		mmc1 = &esdhc1;
 		rtc1 = &ftm_alarm0;
 		rtic-a = &rtic_a;
 		rtic-b = &rtic_b;
@@ -192,6 +194,7 @@
 			ranges = <0x0 0x00 0x1700000 0x100000>;
 			reg = <0x00 0x1700000 0x0 0x100000>;
 			interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
+			dma-coherent;
 
 			sec_jr0: jr@10000 {
 				compatible = "fsl,sec-v5.4-job-ring",
@@ -275,7 +278,7 @@
 		dcfg: dcfg@1ee0000 {
 			compatible = "fsl,ls1012a-dcfg",
 				     "syscon";
-			reg = <0x0 0x1ee0000 0x0 0x10000>;
+			reg = <0x0 0x1ee0000 0x0 0x1000>;
 			big-endian;
 		};
 
@@ -333,12 +336,13 @@
 		};
 
 		i2c0: i2c@2180000 {
-			compatible = "fsl,vf610-i2c";
+			compatible = "fsl,vf610-i2c", "fsl,ls1012a-vf610-i2c";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x0 0x2180000 0x0 0x10000>;
 			interrupts = <0 56 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clockgen 4 3>;
+			scl-gpios = <&gpio0 13 0>;
 			status = "disabled";
 		};
 
@@ -455,13 +459,15 @@
 		};
 
 		usb0: usb3@2f00000 {
-			compatible = "snps,dwc3";
+			compatible = "fsl,ls1012a-dwc3", "snps,dwc3";
 			reg = <0x0 0x2f00000 0x0 0x10000>;
 			interrupts = <0 60 0x4>;
 			dr_mode = "host";
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,dis_rxdet_inp3_quirk;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			snps,host-vbus-glitches;
+			dma-coherent;
 		};
 
 		sata: sata@3200000 {
@@ -512,6 +518,7 @@
 					<0000 0 0 2 &gic 0 111 IRQ_TYPE_LEVEL_HIGH>,
 					<0000 0 0 3 &gic 0 112 IRQ_TYPE_LEVEL_HIGH>,
 					<0000 0 0 4 &gic 0 113 IRQ_TYPE_LEVEL_HIGH>;
+			big-endian;
 			status = "disabled";
 		};
 
@@ -528,6 +535,35 @@
 			interrupts = <GIC_SPI 86 IRQ_TYPE_LEVEL_HIGH>;
 			big-endian;
 		};
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		pfe_reserved: packetbuffer@83400000 {
+			reg = <0 0x83400000 0 0xc00000>;
+		};
+	};
+
+	pfe: pfe@4000000 {
+		compatible = "fsl,pfe";
+		reg =   <0x0 0x04000000 0x0 0xc00000>,	/* AXI 16M */
+			<0x0 0x83400000 0x0 0xc00000>;  /* PFE DDR 12M */
+		reg-names = "pfe", "pfe-ddr";
+		fsl,pfe-num-interfaces = <0x2>;
+		interrupts = <0 172 0x4>,    /* HIF interrupt */
+			     <0 173 0x4>,    /*HIF_NOCPY interrupt */
+			     <0 174 0x4>;    /* WoL interrupt */
+		interrupt-names = "pfe_hif", "pfe_hif_nocpy", "pfe_wol";
+		memory-region = <&pfe_reserved>;
+		fsl,pfe-scfg = <&scfg 0>;
+		fsl,rcpm-wakeup = <&rcpm 0xf0000020>;
+		clocks = <&clockgen 4 0>;
+		clock-names = "pfe";
+
+		status = "okay";
 	};
 
 	firmware {

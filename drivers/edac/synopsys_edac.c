@@ -101,6 +101,7 @@
 /* DDR ECC Quirks */
 #define DDR_ECC_INTR_SUPPORT		BIT(0)
 #define DDR_ECC_DATA_POISON_SUPPORT	BIT(1)
+#define DDR_ECC_IMX8MP			BIT(2)
 
 /* ZynqMP Enhanced DDR memory controller registers that are relevant to ECC */
 /* ECC Configuration Registers */
@@ -266,6 +267,11 @@
 
 #define RANK_B0_BASE			6
 
+/* ECCCTL UE/CE Interrupt enable/disable for IMX8MP*/
+#define DDR_CE_INTR_EN_MASK			0x100
+#define DDR_UE_INTR_EN_MASK			0x200
+#define ECC_INTR_MASK				0x10100
+
 /**
  * struct ecc_error_info - ECC error log information.
  * @row:	Row number.
@@ -281,9 +287,11 @@ struct ecc_error_info {
 	u32 col;
 	u32 bank;
 	u32 bitpos;
-	u32 data;
+	u32 data_low;
+	u32 data_high;
 	u32 bankgrpnr;
 	u32 blknr;
+	u32 syndrome;
 };
 
 /**
@@ -349,237 +357,6 @@ struct synps_platform_data {
 };
 
 /**
- * zynq_get_error_info - Get the current ECC error info.
- * @priv:	DDR memory controller private instance data.
- *
- * Return: one if there is no error, otherwise zero.
- */
-static int zynq_get_error_info(struct synps_edac_priv *priv)
-{
-	struct synps_ecc_status *p;
-	u32 regval, clearval = 0;
-	void __iomem *base;
-
-	base = priv->baseaddr;
-	p = &priv->stat;
-
-	regval = readl(base + STAT_OFST);
-	if (!regval)
-		return 1;
-
-	p->ce_cnt = (regval & STAT_CECNT_MASK) >> STAT_CECNT_SHIFT;
-	p->ue_cnt = regval & STAT_UECNT_MASK;
-
-	regval = readl(base + CE_LOG_OFST);
-	if (!(p->ce_cnt && (regval & LOG_VALID)))
-		goto ue_err;
-
-	p->ceinfo.bitpos = (regval & CE_LOG_BITPOS_MASK) >> CE_LOG_BITPOS_SHIFT;
-	regval = readl(base + CE_ADDR_OFST);
-	p->ceinfo.row = (regval & ADDR_ROW_MASK) >> ADDR_ROW_SHIFT;
-	p->ceinfo.col = regval & ADDR_COL_MASK;
-	p->ceinfo.bank = (regval & ADDR_BANK_MASK) >> ADDR_BANK_SHIFT;
-	p->ceinfo.data = readl(base + CE_DATA_31_0_OFST);
-	edac_dbg(3, "CE bit position: %d data: %d\n", p->ceinfo.bitpos,
-		 p->ceinfo.data);
-	clearval = ECC_CTRL_CLR_CE_ERR;
-
-ue_err:
-	regval = readl(base + UE_LOG_OFST);
-	if (!(p->ue_cnt && (regval & LOG_VALID)))
-		goto out;
-
-	regval = readl(base + UE_ADDR_OFST);
-	p->ueinfo.row = (regval & ADDR_ROW_MASK) >> ADDR_ROW_SHIFT;
-	p->ueinfo.col = regval & ADDR_COL_MASK;
-	p->ueinfo.bank = (regval & ADDR_BANK_MASK) >> ADDR_BANK_SHIFT;
-	p->ueinfo.data = readl(base + UE_DATA_31_0_OFST);
-	clearval |= ECC_CTRL_CLR_UE_ERR;
-
-out:
-	writel(clearval, base + ECC_CTRL_OFST);
-	writel(0x0, base + ECC_CTRL_OFST);
-
-	return 0;
-}
-
-/**
- * zynqmp_get_error_info - Get the current ECC error info.
- * @priv:	DDR memory controller private instance data.
- *
- * Return: one if there is no error otherwise returns zero.
- */
-static int zynqmp_get_error_info(struct synps_edac_priv *priv)
-{
-	struct synps_ecc_status *p;
-	u32 regval, clearval = 0;
-	void __iomem *base;
-
-	base = priv->baseaddr;
-	p = &priv->stat;
-
-	regval = readl(base + ECC_STAT_OFST);
-	if (!regval)
-		return 1;
-
-	p->ce_cnt = (regval & ECC_STAT_CECNT_MASK) >> ECC_STAT_CECNT_SHIFT;
-	p->ue_cnt = (regval & ECC_STAT_UECNT_MASK) >> ECC_STAT_UECNT_SHIFT;
-	if (!p->ce_cnt)
-		goto ue_err;
-
-	p->ceinfo.bitpos = (regval & ECC_STAT_BITNUM_MASK);
-
-	regval = readl(base + ECC_CEADDR0_OFST);
-	p->ceinfo.row = (regval & ECC_CEADDR0_RW_MASK);
-	regval = readl(base + ECC_CEADDR1_OFST);
-	p->ceinfo.bank = (regval & ECC_CEADDR1_BNKNR_MASK) >>
-					ECC_CEADDR1_BNKNR_SHIFT;
-	p->ceinfo.bankgrpnr = (regval &	ECC_CEADDR1_BNKGRP_MASK) >>
-					ECC_CEADDR1_BNKGRP_SHIFT;
-	p->ceinfo.blknr = (regval & ECC_CEADDR1_BLKNR_MASK);
-	p->ceinfo.data = readl(base + ECC_CSYND0_OFST);
-	edac_dbg(2, "ECCCSYN0: 0x%08X ECCCSYN1: 0x%08X ECCCSYN2: 0x%08X\n",
-		 readl(base + ECC_CSYND0_OFST), readl(base + ECC_CSYND1_OFST),
-		 readl(base + ECC_CSYND2_OFST));
-ue_err:
-	if (!p->ue_cnt)
-		goto out;
-
-	regval = readl(base + ECC_UEADDR0_OFST);
-	p->ueinfo.row = (regval & ECC_CEADDR0_RW_MASK);
-	regval = readl(base + ECC_UEADDR1_OFST);
-	p->ueinfo.bankgrpnr = (regval & ECC_CEADDR1_BNKGRP_MASK) >>
-					ECC_CEADDR1_BNKGRP_SHIFT;
-	p->ueinfo.bank = (regval & ECC_CEADDR1_BNKNR_MASK) >>
-					ECC_CEADDR1_BNKNR_SHIFT;
-	p->ueinfo.blknr = (regval & ECC_CEADDR1_BLKNR_MASK);
-	p->ueinfo.data = readl(base + ECC_UESYND0_OFST);
-out:
-	clearval = ECC_CTRL_CLR_CE_ERR | ECC_CTRL_CLR_CE_ERRCNT;
-	clearval |= ECC_CTRL_CLR_UE_ERR | ECC_CTRL_CLR_UE_ERRCNT;
-	writel(clearval, base + ECC_CLR_OFST);
-	writel(0x0, base + ECC_CLR_OFST);
-
-	return 0;
-}
-
-/**
- * handle_error - Handle Correctable and Uncorrectable errors.
- * @mci:	EDAC memory controller instance.
- * @p:		Synopsys ECC status structure.
- *
- * Handles ECC correctable and uncorrectable errors.
- */
-static void handle_error(struct mem_ctl_info *mci, struct synps_ecc_status *p)
-{
-	struct synps_edac_priv *priv = mci->pvt_info;
-	struct ecc_error_info *pinf;
-
-	if (p->ce_cnt) {
-		pinf = &p->ceinfo;
-		if (priv->p_data->quirks & DDR_ECC_INTR_SUPPORT) {
-			snprintf(priv->message, SYNPS_EDAC_MSG_SIZE,
-				 "DDR ECC error type:%s Row %d Bank %d BankGroup Number %d Block Number %d Bit Position: %d Data: 0x%08x",
-				 "CE", pinf->row, pinf->bank,
-				 pinf->bankgrpnr, pinf->blknr,
-				 pinf->bitpos, pinf->data);
-		} else {
-			snprintf(priv->message, SYNPS_EDAC_MSG_SIZE,
-				 "DDR ECC error type:%s Row %d Bank %d Col %d Bit Position: %d Data: 0x%08x",
-				 "CE", pinf->row, pinf->bank, pinf->col,
-				 pinf->bitpos, pinf->data);
-		}
-
-		edac_mc_handle_error(HW_EVENT_ERR_CORRECTED, mci,
-				     p->ce_cnt, 0, 0, 0, 0, 0, -1,
-				     priv->message, "");
-	}
-
-	if (p->ue_cnt) {
-		pinf = &p->ueinfo;
-		if (priv->p_data->quirks & DDR_ECC_INTR_SUPPORT) {
-			snprintf(priv->message, SYNPS_EDAC_MSG_SIZE,
-				 "DDR ECC error type :%s Row %d Bank %d BankGroup Number %d Block Number %d",
-				 "UE", pinf->row, pinf->bank,
-				 pinf->bankgrpnr, pinf->blknr);
-		} else {
-			snprintf(priv->message, SYNPS_EDAC_MSG_SIZE,
-				 "DDR ECC error type :%s Row %d Bank %d Col %d ",
-				 "UE", pinf->row, pinf->bank, pinf->col);
-		}
-
-		edac_mc_handle_error(HW_EVENT_ERR_UNCORRECTED, mci,
-				     p->ue_cnt, 0, 0, 0, 0, 0, -1,
-				     priv->message, "");
-	}
-
-	memset(p, 0, sizeof(*p));
-}
-
-/**
- * intr_handler - Interrupt Handler for ECC interrupts.
- * @irq:        IRQ number.
- * @dev_id:     Device ID.
- *
- * Return: IRQ_NONE, if interrupt not set or IRQ_HANDLED otherwise.
- */
-static irqreturn_t intr_handler(int irq, void *dev_id)
-{
-	const struct synps_platform_data *p_data;
-	struct mem_ctl_info *mci = dev_id;
-	struct synps_edac_priv *priv;
-	int status, regval;
-
-	priv = mci->pvt_info;
-	p_data = priv->p_data;
-
-	regval = readl(priv->baseaddr + DDR_QOS_IRQ_STAT_OFST);
-	regval &= (DDR_QOSCE_MASK | DDR_QOSUE_MASK);
-	if (!(regval & ECC_CE_UE_INTR_MASK))
-		return IRQ_NONE;
-
-	status = p_data->get_error_info(priv);
-	if (status)
-		return IRQ_NONE;
-
-	priv->ce_cnt += priv->stat.ce_cnt;
-	priv->ue_cnt += priv->stat.ue_cnt;
-	handle_error(mci, &priv->stat);
-
-	edac_dbg(3, "Total error count CE %d UE %d\n",
-		 priv->ce_cnt, priv->ue_cnt);
-	writel(regval, priv->baseaddr + DDR_QOS_IRQ_STAT_OFST);
-	return IRQ_HANDLED;
-}
-
-/**
- * check_errors - Check controller for ECC errors.
- * @mci:	EDAC memory controller instance.
- *
- * Check and post ECC errors. Called by the polling thread.
- */
-static void check_errors(struct mem_ctl_info *mci)
-{
-	const struct synps_platform_data *p_data;
-	struct synps_edac_priv *priv;
-	int status;
-
-	priv = mci->pvt_info;
-	p_data = priv->p_data;
-
-	status = p_data->get_error_info(priv);
-	if (status)
-		return;
-
-	priv->ce_cnt += priv->stat.ce_cnt;
-	priv->ue_cnt += priv->stat.ue_cnt;
-	handle_error(mci, &priv->stat);
-
-	edac_dbg(3, "Total error count CE %d UE %d\n",
-		 priv->ce_cnt, priv->ue_cnt);
-}
-
-/**
  * zynq_get_dtype - Return the controller memory width.
  * @base:	DDR memory controller base address.
  *
@@ -641,6 +418,288 @@ static enum dev_type zynqmp_get_dtype(const void __iomem *base)
 	}
 
 	return dt;
+}
+
+/**
+ * zynq_get_error_info - Get the current ECC error info.
+ * @priv:	DDR memory controller private instance data.
+ *
+ * Return: one if there is no error, otherwise zero.
+ */
+static int zynq_get_error_info(struct synps_edac_priv *priv)
+{
+	struct synps_ecc_status *p;
+	u32 regval, clearval = 0;
+	void __iomem *base;
+
+	base = priv->baseaddr;
+	p = &priv->stat;
+
+	regval = readl(base + STAT_OFST);
+	if (!regval)
+		return 1;
+
+	p->ce_cnt = (regval & STAT_CECNT_MASK) >> STAT_CECNT_SHIFT;
+	p->ue_cnt = regval & STAT_UECNT_MASK;
+
+	regval = readl(base + CE_LOG_OFST);
+	if (!(p->ce_cnt && (regval & LOG_VALID)))
+		goto ue_err;
+
+	p->ceinfo.bitpos = (regval & CE_LOG_BITPOS_MASK) >> CE_LOG_BITPOS_SHIFT;
+	regval = readl(base + CE_ADDR_OFST);
+	p->ceinfo.row = (regval & ADDR_ROW_MASK) >> ADDR_ROW_SHIFT;
+	p->ceinfo.col = regval & ADDR_COL_MASK;
+	p->ceinfo.bank = (regval & ADDR_BANK_MASK) >> ADDR_BANK_SHIFT;
+	p->ceinfo.data_low = readl(base + CE_DATA_31_0_OFST);
+	edac_dbg(3, "CE bit position: %d data: %d\n", p->ceinfo.bitpos,
+		 p->ceinfo.data_low);
+	clearval = ECC_CTRL_CLR_CE_ERR;
+
+ue_err:
+	regval = readl(base + UE_LOG_OFST);
+	if (!(p->ue_cnt && (regval & LOG_VALID)))
+		goto out;
+
+	regval = readl(base + UE_ADDR_OFST);
+	p->ueinfo.row = (regval & ADDR_ROW_MASK) >> ADDR_ROW_SHIFT;
+	p->ueinfo.col = regval & ADDR_COL_MASK;
+	p->ueinfo.bank = (regval & ADDR_BANK_MASK) >> ADDR_BANK_SHIFT;
+	p->ueinfo.data_low = readl(base + UE_DATA_31_0_OFST);
+	clearval |= ECC_CTRL_CLR_UE_ERR;
+
+out:
+	writel(clearval, base + ECC_CTRL_OFST);
+	writel(0x0, base + ECC_CTRL_OFST);
+
+	return 0;
+}
+
+/**
+ * zynqmp_get_error_info - Get the current ECC error info.
+ * @priv:	DDR memory controller private instance data.
+ *
+ * Return: one if there is no error otherwise returns zero.
+ */
+static int zynqmp_get_error_info(struct synps_edac_priv *priv)
+{
+	struct synps_ecc_status *p;
+	u32 regval, clearval = 0;
+	void __iomem *base;
+
+	base = priv->baseaddr;
+	p = &priv->stat;
+
+	regval = readl(base + ECC_STAT_OFST);
+	if (!regval)
+		return 1;
+
+	p->ce_cnt = (regval & ECC_STAT_CECNT_MASK) >> ECC_STAT_CECNT_SHIFT;
+	p->ue_cnt = (regval & ECC_STAT_UECNT_MASK) >> ECC_STAT_UECNT_SHIFT;
+	if (!p->ce_cnt)
+		goto ue_err;
+
+	p->ceinfo.bitpos = (regval & ECC_STAT_BITNUM_MASK);
+
+	regval = readl(base + ECC_CEADDR0_OFST);
+	p->ceinfo.row = (regval & ECC_CEADDR0_RW_MASK);
+	regval = readl(base + ECC_CEADDR1_OFST);
+	p->ceinfo.bank = (regval & ECC_CEADDR1_BNKNR_MASK) >>
+					ECC_CEADDR1_BNKNR_SHIFT;
+	p->ceinfo.bankgrpnr = (regval &	ECC_CEADDR1_BNKGRP_MASK) >>
+					ECC_CEADDR1_BNKGRP_SHIFT;
+	p->ceinfo.blknr = (regval & ECC_CEADDR1_BLKNR_MASK);
+	p->ceinfo.data_low = readl(base + ECC_CSYND0_OFST);
+	if (zynqmp_get_dtype(base) == DEV_X8) {
+		p->ceinfo.data_high = readl(base + ECC_CSYND1_OFST);
+		p->ceinfo.syndrome = readl(base + ECC_CSYND2_OFST);
+		edac_dbg(2, "ECCCSYN0: 0x%08X ECCCSYN1: 0x%08X ECCCSYN2: 0x%08X\n",
+			 p->ceinfo.data_low, p->ceinfo.data_high, p->ceinfo.syndrome);
+	}
+ue_err:
+	if (!p->ue_cnt)
+		goto out;
+
+	regval = readl(base + ECC_UEADDR0_OFST);
+	p->ueinfo.row = (regval & ECC_CEADDR0_RW_MASK);
+	regval = readl(base + ECC_UEADDR1_OFST);
+	p->ueinfo.bankgrpnr = (regval & ECC_CEADDR1_BNKGRP_MASK) >>
+					ECC_CEADDR1_BNKGRP_SHIFT;
+	p->ueinfo.bank = (regval & ECC_CEADDR1_BNKNR_MASK) >>
+					ECC_CEADDR1_BNKNR_SHIFT;
+	p->ueinfo.blknr = (regval & ECC_CEADDR1_BLKNR_MASK);
+	p->ueinfo.data_low = readl(base + ECC_UESYND0_OFST);
+	if (zynqmp_get_dtype(base) == DEV_X8) {
+		p->ueinfo.data_high = readl(base + ECC_UESYND1_OFST);
+		p->ueinfo.syndrome = readl(base + ECC_UESYND2_OFST);
+	}
+out:
+	clearval = ECC_CTRL_CLR_CE_ERR | ECC_CTRL_CLR_CE_ERRCNT;
+	clearval |= ECC_CTRL_CLR_UE_ERR | ECC_CTRL_CLR_UE_ERRCNT;
+	writel(clearval, base + ECC_CLR_OFST);
+	writel(0x0, base + ECC_CLR_OFST);
+
+	return 0;
+}
+
+/**
+ * handle_error - Handle Correctable and Uncorrectable errors.
+ * @mci:	EDAC memory controller instance.
+ * @p:		Synopsys ECC status structure.
+ *
+ * Handles ECC correctable and uncorrectable errors.
+ */
+static void handle_error(struct mem_ctl_info *mci, struct synps_ecc_status *p)
+{
+	struct synps_edac_priv *priv = mci->pvt_info;
+	struct ecc_error_info *pinf;
+
+	if (p->ce_cnt) {
+		pinf = &p->ceinfo;
+		if (priv->p_data->quirks & DDR_ECC_INTR_SUPPORT) {
+			snprintf(priv->message, SYNPS_EDAC_MSG_SIZE,
+				 "DDR ECC error type:%s Row %d Bank %d BankGroup Number %d Block Number %d Bit Position: %d Data: 0x%08x Data_high: 0x%08x Syndrome: 0x%08x",
+				 "CE", pinf->row, pinf->bank,
+				 pinf->bankgrpnr, pinf->blknr,
+				 pinf->bitpos, pinf->data_low,
+				 zynqmp_get_dtype(priv->baseaddr) == DEV_X8 ? pinf->data_high : 0,
+				 zynqmp_get_dtype(priv->baseaddr) == DEV_X8 ? pinf->syndrome : 0 );
+		} else {
+			snprintf(priv->message, SYNPS_EDAC_MSG_SIZE,
+				 "DDR ECC error type:%s Row %d Bank %d Col %d Bit Position: %d Data: 0x%08x",
+				 "CE", pinf->row, pinf->bank, pinf->col,
+				 pinf->bitpos, pinf->data_low);
+		}
+
+		edac_mc_handle_error(HW_EVENT_ERR_CORRECTED, mci,
+				     p->ce_cnt, 0, 0, 0, 0, 0, -1,
+				     priv->message, "");
+	}
+
+	if (p->ue_cnt) {
+		pinf = &p->ueinfo;
+		if (priv->p_data->quirks & DDR_ECC_INTR_SUPPORT) {
+			snprintf(priv->message, SYNPS_EDAC_MSG_SIZE,
+				 "DDR ECC error type :%s Row %d Bank %d BankGroup Number %d Block Number %d",
+				 "UE", pinf->row, pinf->bank,
+				 pinf->bankgrpnr, pinf->blknr);
+		} else {
+			snprintf(priv->message, SYNPS_EDAC_MSG_SIZE,
+				 "DDR ECC error type :%s Row %d Bank %d Col %d ",
+				 "UE", pinf->row, pinf->bank, pinf->col);
+		}
+
+		edac_mc_handle_error(HW_EVENT_ERR_UNCORRECTED, mci,
+				     p->ue_cnt, 0, 0, 0, 0, 0, -1,
+				     priv->message, "");
+	}
+
+	memset(p, 0, sizeof(*p));
+}
+
+static void enable_intr_imx8mp(struct synps_edac_priv *priv)
+{
+	int regval;
+
+	regval = readl(priv->baseaddr + ECC_CLR_OFST);
+	regval |= (DDR_CE_INTR_EN_MASK | DDR_UE_INTR_EN_MASK);
+	writel(regval, priv->baseaddr + ECC_CLR_OFST);
+}
+
+/* Interrupt Handler for ECC interrupts on imx8mp platform. */
+static irqreturn_t intr_handler_imx8mp(int irq, void *dev_id)
+{
+	const struct synps_platform_data *p_data;
+	struct mem_ctl_info *mci = dev_id;
+	struct synps_edac_priv *priv;
+	int status, regval;
+
+	priv = mci->pvt_info;
+	p_data = priv->p_data;
+
+	regval = readl(priv->baseaddr + ECC_STAT_OFST);
+	if (!(regval & ECC_INTR_MASK))
+		return IRQ_NONE;
+
+	status = p_data->get_error_info(priv);
+	if (status)
+		return IRQ_NONE;
+
+	priv->ce_cnt += priv->stat.ce_cnt;
+	priv->ue_cnt += priv->stat.ue_cnt;
+	handle_error(mci, &priv->stat);
+
+	edac_dbg(3, "Total error count CE %d UE %d\n",
+		 priv->ce_cnt, priv->ue_cnt);
+	enable_intr_imx8mp(priv);
+
+	return IRQ_HANDLED;
+}
+
+/**
+ * intr_handler - Interrupt Handler for ECC interrupts.
+ * @irq:        IRQ number.
+ * @dev_id:     Device ID.
+ *
+ * Return: IRQ_NONE, if interrupt not set or IRQ_HANDLED otherwise.
+ */
+static irqreturn_t intr_handler(int irq, void *dev_id)
+{
+	const struct synps_platform_data *p_data;
+	struct mem_ctl_info *mci = dev_id;
+	struct synps_edac_priv *priv;
+	int status, regval;
+
+	priv = mci->pvt_info;
+	p_data = priv->p_data;
+
+	if (p_data->quirks & DDR_ECC_IMX8MP)
+		return intr_handler_imx8mp(irq, dev_id);
+
+	regval = readl(priv->baseaddr + DDR_QOS_IRQ_STAT_OFST);
+	regval &= (DDR_QOSCE_MASK | DDR_QOSUE_MASK);
+	if (!(regval & ECC_CE_UE_INTR_MASK))
+		return IRQ_NONE;
+
+	status = p_data->get_error_info(priv);
+	if (status)
+		return IRQ_NONE;
+
+	priv->ce_cnt += priv->stat.ce_cnt;
+	priv->ue_cnt += priv->stat.ue_cnt;
+	handle_error(mci, &priv->stat);
+
+	edac_dbg(3, "Total error count CE %d UE %d\n",
+		 priv->ce_cnt, priv->ue_cnt);
+	writel(regval, priv->baseaddr + DDR_QOS_IRQ_STAT_OFST);
+	return IRQ_HANDLED;
+}
+
+/**
+ * check_errors - Check controller for ECC errors.
+ * @mci:	EDAC memory controller instance.
+ *
+ * Check and post ECC errors. Called by the polling thread.
+ */
+static void check_errors(struct mem_ctl_info *mci)
+{
+	const struct synps_platform_data *p_data;
+	struct synps_edac_priv *priv;
+	int status;
+
+	priv = mci->pvt_info;
+	p_data = priv->p_data;
+
+	status = p_data->get_error_info(priv);
+	if (status)
+		return;
+
+	priv->ce_cnt += priv->stat.ce_cnt;
+	priv->ue_cnt += priv->stat.ue_cnt;
+	handle_error(mci, &priv->stat);
+
+	edac_dbg(3, "Total error count CE %d UE %d\n",
+		 priv->ce_cnt, priv->ue_cnt);
 }
 
 /**
@@ -809,7 +868,7 @@ static void mc_init(struct mem_ctl_info *mci, struct platform_device *pdev)
 	platform_set_drvdata(pdev, mci);
 
 	/* Initialize controller capabilities and configuration */
-	mci->mtype_cap = MEM_FLAG_DDR3 | MEM_FLAG_DDR2;
+	mci->mtype_cap = MEM_FLAG_LRDDR4 | MEM_FLAG_DDR4 | MEM_FLAG_DDR3 | MEM_FLAG_DDR2;
 	mci->edac_ctl_cap = EDAC_FLAG_NONE | EDAC_FLAG_SECDED;
 	mci->scrub_cap = SCRUB_HW_SRC;
 	mci->scrub_mode = SCRUB_NONE;
@@ -831,9 +890,21 @@ static void mc_init(struct mem_ctl_info *mci, struct platform_device *pdev)
 	init_csrows(mci);
 }
 
+static void disable_intr_imx8mp(struct synps_edac_priv *priv)
+{
+	int regval;
+
+	regval = readl(priv->baseaddr + ECC_CLR_OFST);
+	regval &= ~(DDR_CE_INTR_EN_MASK | DDR_UE_INTR_EN_MASK);
+	writel(regval, priv->baseaddr + ECC_CLR_OFST);
+}
+
 static void enable_intr(struct synps_edac_priv *priv)
 {
 	/* Enable UE/CE Interrupts */
+	if (priv->p_data->quirks & DDR_ECC_IMX8MP)
+		return enable_intr_imx8mp(priv);
+
 	writel(DDR_QOSUE_MASK | DDR_QOSCE_MASK,
 			priv->baseaddr + DDR_QOS_IRQ_EN_OFST);
 }
@@ -841,6 +912,9 @@ static void enable_intr(struct synps_edac_priv *priv)
 static void disable_intr(struct synps_edac_priv *priv)
 {
 	/* Disable UE/CE Interrupts */
+	if (priv->p_data->quirks & DDR_ECC_IMX8MP)
+		return disable_intr_imx8mp(priv);
+
 	writel(DDR_QOSUE_MASK | DDR_QOSCE_MASK,
 			priv->baseaddr + DDR_QOS_IRQ_DB_OFST);
 }
@@ -890,6 +964,14 @@ static const struct synps_platform_data zynqmp_edac_def = {
 			  ),
 };
 
+static const struct synps_platform_data imx8mp_edac_def = {
+	.get_error_info	= zynqmp_get_error_info,
+	.get_mtype	= zynqmp_get_mtype,
+	.get_dtype	= zynqmp_get_dtype,
+	.get_ecc_state	= zynqmp_get_ecc_state,
+	.quirks         = (DDR_ECC_INTR_SUPPORT | DDR_ECC_IMX8MP),
+};
+
 static const struct of_device_id synps_edac_match[] = {
 	{
 		.compatible = "xlnx,zynq-ddrc-a05",
@@ -898,6 +980,10 @@ static const struct of_device_id synps_edac_match[] = {
 	{
 		.compatible = "xlnx,zynqmp-ddrc-2.40a",
 		.data = (void *)&zynqmp_edac_def
+	},
+	{
+		.compatible = "fsl,imx8mp-ddrc",
+		.data = (void *)&imx8mp_edac_def
 	},
 	{
 		/* end of table */

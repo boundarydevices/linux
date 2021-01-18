@@ -279,6 +279,9 @@ config SND_SOC_ALL_CODECS
 	imply SND_SOC_WM9713
 	imply SND_SOC_WSA881X
 	imply SND_SOC_ZL38060
+	imply SND_SOC_RPMSG_WM8960
+	imply SND_SOC_RPMSG_CS42XX8
+	imply SND_SOC_RPMSG_AK4497
 	help
 	  Normally ASoC codec drivers are only built if a machine driver which
 	  uses them is also built since they are only usable with a machine
@@ -1710,6 +1713,14 @@ config SND_SOC_ZX_AUD96P22
 	depends on I2C
 	select REGMAP_I2C
 
+config SND_SOC_RPMSG_WM8960
+	tristate
+
+config SND_SOC_RPMSG_CS42XX8
+	tristate
+
+config SND_SOC_RPMSG_AK4497
+	tristate
 # Amp
 config SND_SOC_LM4857
 	tristate

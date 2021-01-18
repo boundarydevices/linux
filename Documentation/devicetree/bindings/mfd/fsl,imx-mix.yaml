@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: GPL-2.0
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/mfd/fsl,imx-mix.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Freescale i.MX mix
+
+description: |
+  i.MX mix is a conglomerate of different GPRs that are
+  usually dedicated to one subsystem. These GPRs can be
+  further split between different types of drivers, once
+  the MFD populates all the devices based on its devicetree
+  subnodes.
+
+maintainers:
+  - Abel Vesa <abel.vesa@nxp.com>
+
+properties:
+  reg:
+    maxItems: 1
+  compatible:
+    const: fsl,imx8mp-mix
+
+required:
+  - compatible
+  - reg
+
+examples:
+  - |
+    audiomix: mix@30e20000 {
+       compatible = "fsl,imx8mp-mix";
+       reg = <0x30e20000 0x10000>;
+    };

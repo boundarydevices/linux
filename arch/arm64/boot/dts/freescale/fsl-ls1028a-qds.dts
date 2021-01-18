@@ -2,7 +2,7 @@
 /*
  * Device Tree file for NXP LS1028A QDS Board.
  *
- * Copyright 2018 NXP
+ * Copyright 2018-2019 NXP
  *
  * Harninder Rai <harninder.rai@nxp.com>
  *
@@ -104,7 +104,35 @@
 				reg = <5>;
 			};
 		};
+
+		mdio_slot1: mdio@4 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <4>;
+		};
+
+		mdio_slot2: mdio@5 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <5>;
+		};
+
+		mdio_slot3: mdio@6 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <6>;
+		};
+
+		mdio_slot4: mdio@7 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <7>;
+		};
 	};
+};
+
+&ftm_alarm1 {
+	status = "okay";
 };
 
 &dspi0 {
@@ -192,6 +220,14 @@
 	};
 };
 
+&can0 {
+	status = "okay";
+};
+
+&can1 {
+	status = "okay";
+};
+
 &duart0 {
 	status = "okay";
 };
@@ -220,6 +256,91 @@
 		spi-rx-bus-width = <8>; /* 8 SPI Rx lines */
 		spi-tx-bus-width = <1>; /* 1 SPI Tx line */
 		reg = <0>;
+	};
+};
+
+&dspi0 {
+	bus-num = <0>;
+	status = "okay";
+
+	flash@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "sst25wf040b", "jedec,spi-nor";
+		spi-cpol;
+		spi-cpha;
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+	};
+
+	flash@1 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "en25s64", "jedec,spi-nor";
+		spi-cpol;
+		spi-cpha;
+		reg = <1>;
+		spi-max-frequency = <10000000>;
+	};
+
+	flash@2 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "m25q512a", "jedec,spi-nor";
+		spi-cpol;
+		spi-cpha;
+		reg = <2>;
+		spi-max-frequency = <10000000>;
+	};
+};
+
+&dspi1 {
+	bus-num = <1>;
+	status = "okay";
+
+	flash@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "sst25wf040b", "jedec,spi-nor";
+		spi-cpol;
+		spi-cpha;
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+	};
+
+	flash@1 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "en25s64", "jedec,spi-nor";
+		spi-cpol;
+		spi-cpha;
+		reg = <1>;
+		spi-max-frequency = <10000000>;
+	};
+
+	flash@2 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "m25q512a", "jedec,spi-nor";
+		spi-cpol;
+		spi-cpha;
+		reg = <2>;
+		spi-max-frequency = <10000000>;
+	};
+};
+
+&dspi2 {
+	bus-num = <2>;
+	status = "okay";
+
+	flash@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "en25s64", "jedec,spi-nor";
+		spi-cpol;
+		spi-cpha;
+		reg = <0>;
+		spi-max-frequency = <10000000>;
 	};
 };
 
@@ -259,11 +380,6 @@
 				compatible = "nxp,sa56004";
 				reg = <0x4c>;
 				vcc-supply = <&sb_3v3>;
-			};
-
-			rtc@51 {
-				compatible = "nxp,pcf2129";
-				reg = <0x51>;
 			};
 
 			eeprom@56 {
@@ -307,9 +423,21 @@
 
 };
 
+&i2c1 {
+	status = "okay";
+	rtc@51 {
+		compatible = "nxp,pcf2129";
+		reg = <0x51>;
+	};
+};
+
 &enetc_port1 {
 	phy-handle = <&qds_phy1>;
 	phy-connection-type = "rgmii-id";
+	status = "okay";
+};
+
+&lpuart0 {
 	status = "okay";
 };
 
@@ -324,3 +452,11 @@
 &sata {
 	status = "okay";
 };
+
+&hdptx0 {
+	lane-mapping = <0x4e>;
+	status = "okay";
+};
+
+#include "fsl-ls1028a-qds-8xxx.dtsi"
+#include "fsl-ls1028a-qds-x5xx.dtsi"

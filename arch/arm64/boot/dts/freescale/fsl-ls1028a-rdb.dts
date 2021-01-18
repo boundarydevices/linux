@@ -2,7 +2,7 @@
 /*
  * Device Tree file for NXP LS1028A RDB Board.
  *
- * Copyright 2018 NXP
+ * Copyright 2018-2019 NXP
  *
  * Harninder Rai <harninder.rai@nxp.com>
  *
@@ -113,6 +113,10 @@
 	};
 };
 
+&ftm_alarm1 {
+	status = "okay";
+};
+
 &i2c0 {
 	status = "okay";
 
@@ -166,6 +170,22 @@
 				reg = <0x51>;
 			};
 		};
+	};
+};
+
+&can0 {
+	status = "okay";
+
+	can-transceiver {
+		max-bitrate = <5000000>;
+	};
+};
+
+&can1 {
+	status = "okay";
+
+	can-transceiver {
+		max-bitrate = <5000000>;
 	};
 };
 
@@ -253,6 +273,15 @@
 
 &mscc_felix_port4 {
 	ethernet = <&enetc_port2>;
+	status = "okay";
+};
+
+&hdptx0 {
+	lane-mapping = <0x4e>;
+	status = "okay";
+};
+
+&pwm0 {
 	status = "okay";
 };
 

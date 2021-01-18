@@ -13,6 +13,7 @@
 #include <linux/of_gpio.h>
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
+#include <linux/reset.h>
 #include <linux/slab.h>
 #include <sound/initval.h>
 #include <sound/pcm_params.h>
@@ -46,6 +47,7 @@ struct ak4458_priv {
 	struct device *dev;
 	struct regmap *regmap;
 	struct gpio_desc *reset_gpiod;
+	struct reset_control *reset;
 	struct gpio_desc *mute_gpiod;
 	int digfil;	/* SSLOW, SD, SLOW bits */
 	int fs;		/* sampling rate */
@@ -306,6 +308,20 @@ static const struct snd_soc_dapm_route ak4497_intercon[] = {
 
 };
 
+static int ak4458_get_tdm_mode(struct ak4458_priv *ak4458)
+{
+	switch (ak4458->slots * ak4458->slot_width) {
+	case 128:
+		return 1;
+	case 256:
+		return 2;
+	case 512:
+		return 3;
+	default:
+		return 0;
+	}
+}
+
 static int ak4458_rstn_control(struct snd_soc_component *component, int bit)
 {
 	int ret;
@@ -333,13 +349,16 @@ static int ak4458_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_component *component = dai->component;
 	struct ak4458_priv *ak4458 = snd_soc_component_get_drvdata(component);
 	int pcm_width = max(params_physical_width(params), ak4458->slot_width);
-	u8 format, dsdsel0, dsdsel1;
-	int nfs1, dsd_bclk;
+	u8 format, dsdsel0, dsdsel1, dchn;
+	int nfs1, dsd_bclk, ret, channels, channels_max;
 
 	nfs1 = params_rate(params);
 	ak4458->fs = nfs1;
 
 	/* calculate bit clock */
+	channels = params_channels(params);
+	channels_max = dai->driver->playback.channels_max;
+
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_DSD_U8:
 	case SNDRV_PCM_FORMAT_DSD_U16_LE:
@@ -419,8 +438,24 @@ static int ak4458_hw_params(struct snd_pcm_substream *substream,
 	snd_soc_component_update_bits(component, AK4458_00_CONTROL1,
 			    AK4458_DIF_MASK, format);
 
-	ak4458_rstn_control(component, 0);
-	ak4458_rstn_control(component, 1);
+	/*
+	 * Enable/disable Daisy Chain if in TDM mode and the number of played
+	 * channels is bigger than the maximum supported number of channels
+	 */
+	dchn = ak4458_get_tdm_mode(ak4458) &&
+		(ak4458->fmt == SND_SOC_DAIFMT_DSP_B) &&
+		(channels > channels_max) ? AK4458_DCHAIN_MASK : 0;
+
+	snd_soc_component_update_bits(component, AK4458_0B_CONTROL7,
+				AK4458_DCHAIN_MASK, dchn);
+
+	ret = ak4458_rstn_control(component, 0);
+	if (ret)
+		return ret;
+
+	ret = ak4458_rstn_control(component, 1);
+	if (ret)
+		return ret;
 
 	return 0;
 }
@@ -508,25 +543,11 @@ static int ak4458_set_tdm_slot(struct snd_soc_dai *dai, unsigned int tx_mask,
 	ak4458->slots = slots;
 	ak4458->slot_width = slot_width;
 
-	switch (slots * slot_width) {
-	case 128:
-		mode = AK4458_MODE_TDM128;
-		break;
-	case 256:
-		mode = AK4458_MODE_TDM256;
-		break;
-	case 512:
-		mode = AK4458_MODE_TDM512;
-		break;
-	default:
-		mode = AK4458_MODE_NORMAL;
-		break;
-	}
+	mode = ak4458_get_tdm_mode(ak4458) << AK4458_MODE_SHIFT;
 
 	snd_soc_component_update_bits(component, AK4458_0A_CONTROL6,
 			    AK4458_MODE_MASK,
 			    mode);
-
 	return 0;
 }
 
@@ -600,6 +621,9 @@ static void ak4458_power_off(struct ak4458_priv *ak4458)
 	if (ak4458->reset_gpiod) {
 		gpiod_set_value_cansleep(ak4458->reset_gpiod, 0);
 		usleep_range(1000, 2000);
+	} else if (!IS_ERR_OR_NULL(ak4458->reset)) {
+		reset_control_assert(ak4458->reset);
+		msleep(5);
 	}
 }
 
@@ -608,49 +632,10 @@ static void ak4458_power_on(struct ak4458_priv *ak4458)
 	if (ak4458->reset_gpiod) {
 		gpiod_set_value_cansleep(ak4458->reset_gpiod, 1);
 		usleep_range(1000, 2000);
+	} else if (!IS_ERR_OR_NULL(ak4458->reset)) {
+		reset_control_deassert(ak4458->reset);
+		msleep(5);
 	}
-}
-
-static int ak4458_init(struct snd_soc_component *component)
-{
-	struct ak4458_priv *ak4458 = snd_soc_component_get_drvdata(component);
-	int ret;
-
-	/* External Mute ON */
-	if (ak4458->mute_gpiod)
-		gpiod_set_value_cansleep(ak4458->mute_gpiod, 1);
-
-	ak4458_power_on(ak4458);
-
-	ret = snd_soc_component_update_bits(component, AK4458_00_CONTROL1,
-			    0x80, 0x80);   /* ACKS bit = 1; 10000000 */
-	if (ret < 0)
-		return ret;
-
-	if (ak4458->drvdata->type == AK4497) {
-		ret = snd_soc_component_update_bits(component, AK4458_09_DSD2,
-						    0x4, (ak4458->dsd_path << 2));
-		if (ret < 0)
-			return ret;
-	}
-
-	return ak4458_rstn_control(component, 1);
-}
-
-static int ak4458_probe(struct snd_soc_component *component)
-{
-	struct ak4458_priv *ak4458 = snd_soc_component_get_drvdata(component);
-
-	ak4458->fs = 48000;
-
-	return ak4458_init(component);
-}
-
-static void ak4458_remove(struct snd_soc_component *component)
-{
-	struct ak4458_priv *ak4458 = snd_soc_component_get_drvdata(component);
-
-	ak4458_power_off(ak4458);
 }
 
 #ifdef CONFIG_PM
@@ -685,7 +670,6 @@ static int __maybe_unused ak4458_runtime_resume(struct device *dev)
 	if (ak4458->mute_gpiod)
 		gpiod_set_value_cansleep(ak4458->mute_gpiod, 1);
 
-	ak4458_power_off(ak4458);
 	ak4458_power_on(ak4458);
 
 	regcache_cache_only(ak4458->regmap, false);
@@ -696,8 +680,6 @@ static int __maybe_unused ak4458_runtime_resume(struct device *dev)
 #endif /* CONFIG_PM */
 
 static const struct snd_soc_component_driver soc_codec_dev_ak4458 = {
-	.probe			= ak4458_probe,
-	.remove			= ak4458_remove,
 	.controls		= ak4458_snd_controls,
 	.num_controls		= ARRAY_SIZE(ak4458_snd_controls),
 	.dapm_widgets		= ak4458_dapm_widgets,
@@ -711,8 +693,6 @@ static const struct snd_soc_component_driver soc_codec_dev_ak4458 = {
 };
 
 static const struct snd_soc_component_driver soc_codec_dev_ak4497 = {
-	.probe			= ak4458_probe,
-	.remove			= ak4458_remove,
 	.controls		= ak4497_snd_controls,
 	.num_controls		= ARRAY_SIZE(ak4497_snd_controls),
 	.dapm_widgets		= ak4497_dapm_widgets,
@@ -771,6 +751,10 @@ static int ak4458_i2c_probe(struct i2c_client *i2c)
 
 	ak4458->drvdata = of_device_get_match_data(&i2c->dev);
 
+	ak4458->reset = devm_reset_control_get_optional_shared(ak4458->dev, NULL);
+	if (IS_ERR(ak4458->reset))
+		return PTR_ERR(ak4458->reset);
+
 	ak4458->reset_gpiod = devm_gpiod_get_optional(ak4458->dev, "reset",
 						      GPIOD_OUT_LOW);
 	if (IS_ERR(ak4458->reset_gpiod))
@@ -794,18 +778,60 @@ static int ak4458_i2c_probe(struct i2c_client *i2c)
 		return ret;
 	}
 
+	ret = regulator_bulk_enable(ARRAY_SIZE(ak4458->supplies),
+				    ak4458->supplies);
+	if (ret != 0) {
+		dev_err(ak4458->dev, "Failed to enable supplies: %d\n", ret);
+		return ret;
+	}
+
+	ak4458->fs = 48000;
+
+	/* External Mute ON */
+	if (ak4458->mute_gpiod)
+		gpiod_set_value_cansleep(ak4458->mute_gpiod, 1);
+
+	ak4458_power_on(ak4458);
+
+	ret = regmap_update_bits(ak4458->regmap, AK4458_00_CONTROL1,
+				 0x80, 0x80);   /* ACKS bit = 1; 10000000 */
+	if (ret < 0) {
+		dev_err(ak4458->dev, "Failed to set acks: %d\n", ret);
+		goto err_init;
+	}
+
+	if (ak4458->drvdata->type == AK4497) {
+		ret = regmap_update_bits(ak4458->regmap, AK4458_09_DSD2,
+					 0x4, (ak4458->dsd_path << 2));
+		if (ret < 0) {
+			dev_err(ak4458->dev, "Failed to set dsd path: %d\n", ret);
+			goto err_init;
+		}
+	}
+
+	ret = regmap_update_bits(ak4458->regmap, AK4458_00_CONTROL1,
+				 AK4458_RSTN_MASK, 0x1);
+	if (ret < 0) {
+		dev_err(ak4458->dev, "Failed to set rstn: %d\n", ret);
+		goto err_init;
+	}
+
 	ret = devm_snd_soc_register_component(ak4458->dev,
 					      ak4458->drvdata->comp_drv,
 					      ak4458->drvdata->dai_drv, 1);
 	if (ret < 0) {
 		dev_err(ak4458->dev, "Failed to register CODEC: %d\n", ret);
-		return ret;
+		goto err_init;
 	}
 
 	pm_runtime_enable(&i2c->dev);
 	regcache_cache_only(ak4458->regmap, true);
 
-	return 0;
+err_init:
+	ak4458_power_off(ak4458);
+	regulator_bulk_disable(ARRAY_SIZE(ak4458->supplies), ak4458->supplies);
+
+	return ret;
 }
 
 static int ak4458_i2c_remove(struct i2c_client *i2c)

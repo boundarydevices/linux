@@ -569,7 +569,8 @@ static int cdns3_probe(struct platform_device *pdev)
 	device_set_wakeup_capable(dev, true);
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
-	pm_runtime_forbid(dev);
+	if (!(cdns->pdata && (cdns->pdata->quirks & CDNS3_DEFAULT_PM_RUNTIME_ALLOW)))
+		pm_runtime_forbid(dev);
 
 	/*
 	 * The controller needs less time between bus and controller suspend,
@@ -583,7 +584,6 @@ static int cdns3_probe(struct platform_device *pdev)
 
 	return 0;
 err4:
-	cdns3_drd_exit(cdns);
 	if (cdns->role_sw)
 		usb_role_switch_unregister(cdns->role_sw);
 err3:
@@ -700,6 +700,7 @@ static int cdns3_suspend(struct device *dev)
 {
 	struct cdns3 *cdns = dev_get_drvdata(dev);
 	unsigned long flags;
+	int ret;
 
 	if (pm_runtime_status_suspended(dev))
 		pm_runtime_resume(dev);
@@ -710,16 +711,97 @@ static int cdns3_suspend(struct device *dev)
 		spin_unlock_irqrestore(&cdns->lock, flags);
 	}
 
-	return cdns3_controller_suspend(dev, PMSG_SUSPEND);
+	ret = cdns3_controller_suspend(dev, PMSG_SUSPEND);
+	if (ret)
+		return ret;
+
+	if (device_may_wakeup(dev) && cdns->wakeup_irq)
+		enable_irq_wake(cdns->wakeup_irq);
+
+	return ret;
+}
+
+static int cdns3_resume_from_power_lost(struct cdns3 *cdns)
+{
+	enum usb_role real_role;
+	bool role_changed = false;
+	int ret;
+
+	dev_dbg(cdns->dev, "resume from power lost\n");
+
+	phy_exit(cdns->usb3_phy);
+	phy_exit(cdns->usb2_phy);
+	ret = phy_init(cdns->usb2_phy);
+	if (ret)
+		return ret;
+
+	ret = phy_init(cdns->usb3_phy);
+	if (ret)
+		goto err1;
+
+	ret = set_phy_power_on(cdns);
+	if (ret)
+		goto err2;
+
+	cdns->in_lpm = false;
+
+	if (cdns->role_sw) {
+		cdns->role = cdns3_role_get(cdns->role_sw);
+	} else {
+		real_role = cdns3_hw_role_state_machine(cdns);
+		if (real_role != cdns->role) {
+			ret = cdns3_hw_role_switch(cdns);
+			if (ret)
+				goto err3;
+			role_changed = true;
+		}
+	}
+
+	if (!role_changed) {
+		if (cdns->role == USB_ROLE_HOST)
+			ret = cdns3_drd_host_on(cdns);
+		else if (cdns->role == USB_ROLE_DEVICE)
+			ret = cdns3_drd_gadget_on(cdns);
+
+		if (ret)
+			goto err3;
+	}
+
+	if (cdns->roles[cdns->role]->resume)
+		cdns->roles[cdns->role]->resume(cdns, true);
+
+	return ret;
+err3:
+	set_phy_power_off(cdns);
+err2:
+	phy_exit(cdns->usb3_phy);
+err1:
+	phy_exit(cdns->usb2_phy);
+
+	return ret;
 }
 
 static int cdns3_resume(struct device *dev)
 {
 	int ret;
+	struct cdns3 *cdns = dev_get_drvdata(dev);
 
-	ret = cdns3_controller_resume(dev, PMSG_RESUME);
-	if (ret)
-		return ret;
+	if (cdns3_power_is_lost(cdns)) {
+		ret = cdns3_drd_update_mode(cdns);
+		if (ret)
+			return ret;
+
+		ret = cdns3_resume_from_power_lost(cdns);
+		if (ret)
+			return ret;
+	} else {
+		if (device_may_wakeup(dev))
+			disable_irq_wake(cdns->wakeup_irq);
+
+		ret = cdns3_controller_resume(dev, PMSG_RESUME);
+		if (ret)
+			return ret;
+	}
 
 	pm_runtime_disable(dev);
 	pm_runtime_set_active(dev);

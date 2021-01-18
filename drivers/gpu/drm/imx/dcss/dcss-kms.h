@@ -11,7 +11,13 @@
 struct dcss_plane {
 	struct drm_plane base;
 
+	uint64_t dtrc_table_ofs_val;
+	struct drm_property *dtrc_table_ofs_prop;
+
 	int ch_num;
+
+	enum drm_plane_type type;
+	bool use_dtrc;
 };
 
 struct dcss_crtc {
@@ -23,6 +29,11 @@ struct dcss_crtc {
 	int			irq;
 
 	bool disable_ctxld_kick_irq;
+
+	enum dcss_pixel_pipe_output output_encoding;
+	enum dcss_hdr10_nonlinearity opipe_nl;
+	enum dcss_hdr10_gamut opipe_g;
+	enum dcss_hdr10_pixel_range opipe_pr;
 };
 
 struct dcss_kms_dev {
@@ -32,13 +43,15 @@ struct dcss_kms_dev {
 	struct drm_connector *connector;
 };
 
-struct dcss_kms_dev *dcss_kms_attach(struct dcss_dev *dcss);
-void dcss_kms_detach(struct dcss_kms_dev *kms);
+struct dcss_kms_dev *dcss_kms_attach(struct dcss_dev *dcss, bool componetized);
+void dcss_kms_setup_opipe(struct drm_connector_state *conn_state);
+void dcss_kms_detach(struct dcss_kms_dev *kms, bool componetized);
 int dcss_crtc_init(struct dcss_crtc *crtc, struct drm_device *drm);
 void dcss_crtc_deinit(struct dcss_crtc *crtc, struct drm_device *drm);
 struct dcss_plane *dcss_plane_init(struct drm_device *drm,
 				   unsigned int possible_crtcs,
 				   enum drm_plane_type type,
 				   unsigned int zpos);
+void dcss_crtc_attach_color_mgmt_properties(struct dcss_crtc *crtc);
 
 #endif

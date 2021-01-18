@@ -30,12 +30,15 @@ properties:
       - description: OTG/DRD controller interrupt
       - description: XHCI host controller interrupt
       - description: Device controller interrupt
+      - description: interrupt used to wake up core, eg: when usbcmd.rs is
+      cleared by xhci core, this interrupt is optional.
 
   interrupt-names:
     items:
       - const: host
       - const: peripheral
       - const: otg
+      - const: wakeup
 
   dr_mode:
     enum: [host, otg, peripheral]

@@ -392,6 +392,8 @@ struct rproc_ops {
 	int (*load)(struct rproc *rproc, const struct firmware *fw);
 	int (*sanity_check)(struct rproc *rproc, const struct firmware *fw);
 	u64 (*get_boot_addr)(struct rproc *rproc, const struct firmware *fw);
+	void (*elf_memcpy)(struct rproc *rproc, void *dest, const void *src, size_t count);
+	void (*elf_memset)(struct rproc *rproc, void *s, int c, size_t count);
 	unsigned long (*panic)(struct rproc *rproc);
 };
 
@@ -551,6 +553,7 @@ struct rproc {
 	u16 elf_machine;
 	struct cdev cdev;
 	bool cdev_put_on_release;
+	bool skip_fw_recovery;
 };
 
 /**

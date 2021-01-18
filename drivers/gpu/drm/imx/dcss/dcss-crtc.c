@@ -36,7 +36,8 @@ static void dcss_disable_vblank(struct drm_crtc *crtc)
 
 	dcss_dtg_vblank_irq_enable(dcss->dtg, false);
 
-	if (dcss_crtc->disable_ctxld_kick_irq)
+	if (!dcss_dtrc_is_running(dcss->dtrc) &&
+	    dcss_crtc->disable_ctxld_kick_irq)
 		dcss_dtg_ctxld_kick_irq_enable(dcss->dtg, false);
 }
 
@@ -81,10 +82,16 @@ static void dcss_crtc_atomic_enable(struct drm_crtc *crtc,
 {
 	struct dcss_crtc *dcss_crtc = container_of(crtc, struct dcss_crtc,
 						   base);
+	struct dcss_kms_dev *dcss_kms = container_of(dcss_crtc,
+						     struct dcss_kms_dev,
+						     crtc);
 	struct dcss_dev *dcss = dcss_crtc->base.dev->dev_private;
 	struct drm_display_mode *mode = &crtc->state->adjusted_mode;
 	struct drm_display_mode *old_mode = &old_crtc_state->adjusted_mode;
+	struct drm_connector *connector;
+	struct drm_connector_state *conn_state;
 	struct videomode vm;
+	int i;
 
 	drm_display_mode_to_videomode(mode, &vm);
 
@@ -92,8 +99,23 @@ static void dcss_crtc_atomic_enable(struct drm_crtc *crtc,
 
 	vm.pixelclock = mode->crtc_clock * 1000;
 
-	dcss_ss_subsam_set(dcss->ss);
-	dcss_dtg_css_set(dcss->dtg);
+	if (!dcss_drv_is_componentized(dcss->dev)) {
+		dcss_kms_setup_opipe(dcss_kms->connector->state);
+	} else {
+		for_each_new_connector_in_state(old_crtc_state->state, connector,
+						conn_state, i) {
+			if (!conn_state->best_encoder)
+				continue;
+
+			if (!crtc->state->active)
+				continue;
+
+			dcss_kms_setup_opipe(conn_state);
+		}
+	}
+
+	dcss_ss_subsam_set(dcss->ss, dcss_crtc->output_encoding);
+	dcss_dtg_css_set(dcss->dtg, dcss_crtc->output_encoding);
 
 	if (!drm_mode_equal(mode, old_mode) || !old_crtc_state->active) {
 		dcss_dtg_sync_set(dcss->dtg, &vm);
@@ -153,11 +175,25 @@ static void dcss_crtc_atomic_disable(struct drm_crtc *crtc,
 	pm_runtime_put_autosuspend(dcss->dev);
 }
 
+static enum drm_mode_status dcss_crtc_mode_valid(struct drm_crtc *crtc,
+						 const struct drm_display_mode *mode)
+{
+	/*
+	 * From DCSS perspective, dissallow any mode higher than
+	 * 3840x2160 or 2160x3840.
+	 */
+	if (mode->hdisplay * mode->vdisplay > 3840 * 2160)
+		return MODE_BAD;
+
+	return MODE_OK;
+}
+
 static const struct drm_crtc_helper_funcs dcss_helper_funcs = {
 	.atomic_begin = dcss_crtc_atomic_begin,
 	.atomic_flush = dcss_crtc_atomic_flush,
 	.atomic_enable = dcss_crtc_atomic_enable,
 	.atomic_disable = dcss_crtc_atomic_disable,
+	.mode_valid = dcss_crtc_mode_valid,
 };
 
 static irqreturn_t dcss_crtc_irq_handler(int irq, void *dev_id)
@@ -183,7 +219,7 @@ int dcss_crtc_init(struct dcss_crtc *crtc, struct drm_device *drm)
 	int ret;
 
 	crtc->plane[0] = dcss_plane_init(drm, drm_crtc_mask(&crtc->base),
-					 DRM_PLANE_TYPE_PRIMARY, 0);
+					 DRM_PLANE_TYPE_PRIMARY, 2);
 	if (IS_ERR(crtc->plane[0]))
 		return PTR_ERR(crtc->plane[0]);
 
@@ -196,6 +232,18 @@ int dcss_crtc_init(struct dcss_crtc *crtc, struct drm_device *drm)
 		dev_err(dcss->dev, "failed to init crtc\n");
 		return ret;
 	}
+
+	crtc->plane[1] = dcss_plane_init(drm, drm_crtc_mask(&crtc->base),
+					 DRM_PLANE_TYPE_OVERLAY, 1);
+	if (IS_ERR(crtc->plane[1]))
+		crtc->plane[1] = NULL;
+
+	crtc->plane[2] = dcss_plane_init(drm, drm_crtc_mask(&crtc->base),
+					 DRM_PLANE_TYPE_OVERLAY, 0);
+	if (IS_ERR(crtc->plane[2]))
+		crtc->plane[2] = NULL;
+
+	drm_plane_create_alpha_property(&crtc->plane[0]->base);
 
 	crtc->irq = platform_get_irq_byname(pdev, "vblank");
 	if (crtc->irq < 0)
@@ -211,6 +259,26 @@ int dcss_crtc_init(struct dcss_crtc *crtc, struct drm_device *drm)
 	disable_irq(crtc->irq);
 
 	return 0;
+}
+
+void dcss_crtc_attach_color_mgmt_properties(struct dcss_crtc *crtc)
+{
+	int i;
+
+	/* create color management properties only for video planes */
+	for (i = 1; i < 3; i++) {
+		if (crtc->plane[i]->type == DRM_PLANE_TYPE_PRIMARY)
+			return;
+
+		drm_plane_create_color_properties(&crtc->plane[i]->base,
+					BIT(DRM_COLOR_YCBCR_BT601) |
+					BIT(DRM_COLOR_YCBCR_BT709) |
+					BIT(DRM_COLOR_YCBCR_BT2020),
+					BIT(DRM_COLOR_YCBCR_FULL_RANGE) |
+					BIT(DRM_COLOR_YCBCR_LIMITED_RANGE),
+					DRM_COLOR_YCBCR_BT709,
+					DRM_COLOR_YCBCR_FULL_RANGE);
+	}
 }
 
 void dcss_crtc_deinit(struct dcss_crtc *crtc, struct drm_device *drm)

@@ -171,5 +171,6 @@ void cdns3_drd_gadget_off(struct cdns3 *cdns);
 int cdns3_drd_host_on(struct cdns3 *cdns);
 void cdns3_drd_host_off(struct cdns3 *cdns);
 int cdns3_set_mode(struct cdns3 *cdns, enum usb_dr_mode mode);
+bool cdns3_power_is_lost(struct cdns3 *cdns);
 
 #endif /* __LINUX_CDNS3_DRD */

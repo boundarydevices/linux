@@ -1318,6 +1318,55 @@ int dpni_clear_mac_filters(struct fsl_mc_io *mc_io,
 }
 
 /**
+ * dpni_set_tx_priorities() - Set transmission TC priority configuration
+ * @mc_io:	Pointer to MC portal's I/O object
+ * @cmd_flags:	Command flags; one or more of 'MC_CMD_FLAG_'
+ * @token:	Token of DPNI object
+ * @cfg:	Transmission selection configuration
+ *
+ * warning:	Allowed only when DPNI is disabled
+ *
+ * Return:	'0' on Success; Error code otherwise.
+ */
+int dpni_set_tx_priorities(struct fsl_mc_io *mc_io,
+			   u32 cmd_flags,
+			   u16 token,
+			   const struct dpni_tx_priorities_cfg *cfg)
+{
+	struct dpni_cmd_set_tx_priorities *cmd_params;
+	struct fsl_mc_command cmd = { 0 };
+	int i;
+
+	/* prepare command */
+	cmd.header = mc_encode_cmd_header(DPNI_CMDID_SET_TX_PRIORITIES,
+					  cmd_flags,
+					  token);
+	cmd_params = (struct dpni_cmd_set_tx_priorities *)cmd.params;
+	dpni_set_field(cmd_params->flags,
+		       SEPARATE_GRP,
+		       cfg->separate_groups);
+	cmd_params->prio_group_A = cfg->prio_group_A;
+	cmd_params->prio_group_B = cfg->prio_group_B;
+
+	for (i = 0; i + 1 < DPNI_MAX_TC; i += 2) {
+		dpni_set_field(cmd_params->modes[i / 2],
+			       MODE_1,
+			       cfg->tc_sched[i].mode);
+		dpni_set_field(cmd_params->modes[i / 2],
+			       MODE_2,
+			       cfg->tc_sched[i + 1].mode);
+	}
+
+	for (i = 0; i < DPNI_MAX_TC; i++) {
+		cmd_params->delta_bandwidth[i] =
+				cpu_to_le16(cfg->tc_sched[i].delta_bandwidth);
+	}
+
+	/* send command to mc*/
+	return mc_send_command(mc_io, &cmd);
+}
+
+/**
  * dpni_set_rx_tc_dist() - Set Rx traffic class distribution configuration
  * @mc_io:	Pointer to MC portal's I/O object
  * @cmd_flags:	Command flags; one or more of 'MC_CMD_FLAG_'
@@ -1362,7 +1411,10 @@ int dpni_set_rx_tc_dist(struct fsl_mc_io *mc_io,
  * @cmd_flags:	Command flags; one or more of 'MC_CMD_FLAG_'
  * @token:	Token of DPNI object
  * @qtype:	Type of queue - Rx, Tx and Tx confirm types are supported
- * @tc_id:	Traffic class selection (0-7)
+ * @tc_id:	bits 7-4 contain ceetm channel index (valid only for TX);
+ *		bits 3-0 contain traffic class.
+ *		Use macro DPNI_BUILD_CH_TC() to build correct value for
+ *		tc_id parameter
  * @cfg:	Congestion notification configuration
  *
  * Return:	'0' on Success; error code otherwise.
@@ -1518,6 +1570,8 @@ int dpni_get_queue(struct fsl_mc_io *mc_io,
  * @token:	Token of DPNI object
  * @page:	Selects the statistics page to retrieve, see
  *		DPNI_GET_STATISTICS output. Pages are numbered 0 to 6.
+ * @param:	Custom parameter for some pages used to select a certain
+ *		statistic source, for example the TC.
  * @stat:	Structure containing the statistics
  *
  * Return:	'0' on Success; Error code otherwise.
@@ -1526,6 +1580,7 @@ int dpni_get_statistics(struct fsl_mc_io *mc_io,
 			u32 cmd_flags,
 			u16 token,
 			u8 page,
+			u8 param,
 			union dpni_statistics *stat)
 {
 	struct fsl_mc_command cmd = { 0 };
@@ -1539,6 +1594,7 @@ int dpni_get_statistics(struct fsl_mc_io *mc_io,
 					  token);
 	cmd_params = (struct dpni_cmd_get_statistics *)cmd.params;
 	cmd_params->page_number = page;
+	cmd_params->param = param;
 
 	/* send command to mc */
 	err = mc_send_command(mc_io, &cmd);
@@ -1554,6 +1610,29 @@ int dpni_get_statistics(struct fsl_mc_io *mc_io,
 }
 
 /**
+ * dpni_reset_statistics() - Clears DPNI statistics
+ * @mc_io:		Pointer to MC portal's I/O object
+ * @cmd_flags:		Command flags; one or more of 'MC_CMD_FLAG_'
+ * @token:		Token of DPNI object
+ *
+ * Return:  '0' on Success; Error code otherwise.
+ */
+int dpni_reset_statistics(struct fsl_mc_io *mc_io,
+			  u32 cmd_flags,
+			  u16 token)
+{
+	struct fsl_mc_command cmd = { 0 };
+
+	/* prepare command */
+	cmd.header = mc_encode_cmd_header(DPNI_CMDID_RESET_STATISTICS,
+					  cmd_flags,
+					  token);
+
+	/* send command to mc*/
+	return mc_send_command(mc_io, &cmd);
+}
+
+/**
  * dpni_set_taildrop() - Set taildrop per queue or TC
  * @mc_io:	Pointer to MC portal's I/O object
  * @cmd_flags:	Command flags; one or more of 'MC_CMD_FLAG_'
@@ -1561,7 +1640,10 @@ int dpni_get_statistics(struct fsl_mc_io *mc_io,
  * @cg_point:	Congestion point
  * @qtype:	Queue type on which the taildrop is configured.
  *		Only Rx queues are supported for now
- * @tc:		Traffic class to apply this taildrop to
+ * @tc:		bits 7-4 contain ceetm channel index (valid only for TX);
+ *		bits 3-0 contain traffic class.
+ *		Use macro DPNI_BUILD_CH_TC() to build correct value for
+ *		tc parameter.
  * @index:	Index of the queue if the DPNI supports multiple queues for
  *		traffic distribution. Ignored if CONGESTION_POINT is not 0.
  * @taildrop:	Taildrop structure
@@ -1605,7 +1687,10 @@ int dpni_set_taildrop(struct fsl_mc_io *mc_io,
  * @cg_point:	Congestion point
  * @qtype:	Queue type on which the taildrop is configured.
  *		Only Rx queues are supported for now
- * @tc:		Traffic class to apply this taildrop to
+ * @tc:		bits 7-4 contain ceetm channel index (valid only for TX);
+ *		bits 3-0 contain traffic class.
+ *		Use macro DPNI_BUILD_CH_TC() to build correct value for
+ *		tc parameter.
  * @index:	Index of the queue if the DPNI supports multiple queues for
  *		traffic distribution. Ignored if CONGESTION_POINT is not 0.
  * @taildrop:	Taildrop structure

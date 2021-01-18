@@ -20,6 +20,7 @@ struct dpaa2_mac {
 
 	struct phylink_config phylink_config;
 	struct phylink *phylink;
+	struct ethtool_link_ksettings kset;
 	phy_interface_t if_mode;
 	enum dpmac_link_type if_link_type;
 	struct lynx_pcs *pcs;

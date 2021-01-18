@@ -1,17 +1,20 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright 2012-2013 Freescale Semiconductor, Inc.
+ * Copyright 2012-2016 Freescale Semiconductor, Inc.
  */
 
 #ifndef __FSL_SAI_H
 #define __FSL_SAI_H
 
+#include <linux/pm_qos.h>
 #include <sound/dmaengine_pcm.h>
 
 #define FSL_SAI_FORMATS (SNDRV_PCM_FMTBIT_S16_LE |\
-			 SNDRV_PCM_FMTBIT_S20_3LE |\
 			 SNDRV_PCM_FMTBIT_S24_LE |\
-			 SNDRV_PCM_FMTBIT_S32_LE)
+			 SNDRV_PCM_FMTBIT_S32_LE |\
+			 SNDRV_PCM_FMTBIT_DSD_U8 |\
+			 SNDRV_PCM_FMTBIT_DSD_U16_LE |\
+			 SNDRV_PCM_FMTBIT_DSD_U32_LE)
 
 /* SAI Register Map Register */
 #define FSL_SAI_VERID	0x00 /* SAI Version ID Register */
@@ -211,16 +214,22 @@
 #define FSL_SAI_CLK_MAST3	3
 
 #define FSL_SAI_MCLK_MAX	4
+#define FSL_SAI_CLK_BIT		5
 
 /* SAI data transfer numbers per DMA request */
 #define FSL_SAI_MAXBURST_TX 6
 #define FSL_SAI_MAXBURST_RX 6
+
+#define SAI_FLAG_PMQOS   BIT(0)
 
 struct fsl_sai_soc_data {
 	bool use_imx_pcm;
 	bool use_edma;
 	unsigned int fifo_depth;
 	unsigned int reg_offset;
+	unsigned int fifos;
+	unsigned int dataline;
+	unsigned int flags;
 };
 
 /**
@@ -249,16 +258,37 @@ struct fsl_sai_param {
 	u32 dataline;
 };
 
+struct fsl_sai_dl_cfg {
+	unsigned int pins;
+	unsigned int mask[2];
+	unsigned int offset[2];
+};
+
 struct fsl_sai {
 	struct platform_device *pdev;
 	struct regmap *regmap;
+	struct regmap *regmap_gpr;
 	struct clk *bus_clk;
 	struct clk *mclk_clk[FSL_SAI_MCLK_MAX];
+	struct clk *pll8k_clk;
+	struct clk *pll11k_clk;
 
-	bool is_slave_mode;
+	bool slave_mode[2];
 	bool is_lsb_first;
 	bool is_dsp_mode;
+	bool is_multi_lane;
 	bool synchronous[2];
+	bool is_dsd;
+	bool monitor_spdif;
+	bool monitor_spdif_start;
+
+	int gpr_idx;
+	int pcm_dl_cfg_cnt;
+	int dsd_dl_cfg_cnt;
+	struct fsl_sai_dl_cfg *pcm_dl_cfg;
+	struct fsl_sai_dl_cfg *dsd_dl_cfg;
+
+	unsigned int masterflag[2];
 
 	unsigned int mclk_id[2];
 	unsigned int mclk_streams;
@@ -272,7 +302,12 @@ struct fsl_sai {
 	struct snd_dmaengine_dai_dma_data dma_params_tx;
 	struct fsl_sai_verid verid;
 	struct fsl_sai_param param;
+	struct pm_qos_request pm_qos_req;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pins_state;
 };
+
+const struct attribute_group *fsl_sai_get_dev_attribute_group(bool monitor_spdif);
 
 #define TX 1
 #define RX 0

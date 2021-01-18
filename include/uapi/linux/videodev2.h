@@ -247,6 +247,12 @@ enum v4l2_colorspace {
 
 	/* DCI-P3 colorspace, used by cinema projectors */
 	V4L2_COLORSPACE_DCI_P3        = 12,
+
+	/* Generic film (colour filters using Illuminant C) */
+	V4L2_COLORSPACE_GENERIC_FILM  = 13,
+
+	/* SMPTE ST 428-1 */
+	V4L2_COLORSPACE_ST428         = 14,
 };
 
 /*
@@ -276,6 +282,20 @@ enum v4l2_xfer_func {
 	 * V4L2_COLORSPACE_RAW: V4L2_XFER_FUNC_NONE
 	 *
 	 * V4L2_COLORSPACE_DCI_P3: V4L2_XFER_FUNC_DCI_P3
+	 *
+	 * V4L2_XFER_FUNC_LINEAR: Linear transfer characteristics
+	 *
+	 * V4L2_XFER_FUNC_GAMMA22: Assumed display gamma 2.2
+	 *
+	 * V4L2_XFER_FUNC_GAMMA28: Assumed display gamma 2.8
+	 *
+	 * V4L2_XFER_FUNC_HLG: STD-B67, Rec. ITU-R BT.2100-2 hybrid-log-gamma
+	 *
+	 * V4L2_XFER_FUNC_XVYCC: IEC 61966-2-4
+	 *
+	 * V4L2_XFER_FUNC_BT1361: Rec. ITU-R BT.1361-0 extended colour gamut
+	 *
+	 * V4L2_XFER_FUNC_ST428: SMPTE ST 428-1
 	 */
 	V4L2_XFER_FUNC_DEFAULT     = 0,
 	V4L2_XFER_FUNC_709         = 1,
@@ -285,6 +305,13 @@ enum v4l2_xfer_func {
 	V4L2_XFER_FUNC_NONE        = 5,
 	V4L2_XFER_FUNC_DCI_P3      = 6,
 	V4L2_XFER_FUNC_SMPTE2084   = 7,
+	V4L2_XFER_FUNC_LINEAR      = 8,
+	V4L2_XFER_FUNC_GAMMA22     = 9,
+	V4L2_XFER_FUNC_GAMMA28     = 10,
+	V4L2_XFER_FUNC_HLG         = 11,
+	V4L2_XFER_FUNC_XVYCC       = 12,
+	V4L2_XFER_FUNC_BT1361      = 13,
+	V4L2_XFER_FUNC_ST428       = 14,
 };
 
 /*
@@ -345,6 +372,9 @@ enum v4l2_ycbcr_encoding {
 
 	/* SMPTE 240M -- Obsolete HDTV */
 	V4L2_YCBCR_ENC_SMPTE240M      = 8,
+
+	/* KR=0.30, KB=0.11 or equivalent */
+	V4L2_YCBCR_ENC_BT470_6M       = 9,
 };
 
 /*
@@ -562,6 +592,8 @@ struct v4l2_pix_format {
 #define V4L2_PIX_FMT_ARGB32  v4l2_fourcc('B', 'A', '2', '4') /* 32  ARGB-8-8-8-8  */
 #define V4L2_PIX_FMT_XRGB32  v4l2_fourcc('B', 'X', '2', '4') /* 32  XRGB-8-8-8-8  */
 
+#define V4L2_PIX_FMT_RGBA    v4l2_fourcc('R', 'G', 'B', 'A') /* 32  RGBA-8-8-8-8  */
+
 /* Grey formats */
 #define V4L2_PIX_FMT_GREY    v4l2_fourcc('G', 'R', 'E', 'Y') /*  8  Greyscale     */
 #define V4L2_PIX_FMT_Y4      v4l2_fourcc('Y', '0', '4', ' ') /*  4  Greyscale     */
@@ -592,6 +624,7 @@ struct v4l2_pix_format {
 #define V4L2_PIX_FMT_YUV444  v4l2_fourcc('Y', '4', '4', '4') /* 16  xxxxyyyy uuuuvvvv */
 #define V4L2_PIX_FMT_YUV555  v4l2_fourcc('Y', 'U', 'V', 'O') /* 16  YUV-5-5-5     */
 #define V4L2_PIX_FMT_YUV565  v4l2_fourcc('Y', 'U', 'V', 'P') /* 16  YUV-5-6-5     */
+#define V4L2_PIX_FMT_YUV24   v4l2_fourcc('Y', 'U', 'V', '3') /* 24  YUV-8-8-8     */
 #define V4L2_PIX_FMT_YUV32   v4l2_fourcc('Y', 'U', 'V', '4') /* 32  YUV-8-8-8-8   */
 #define V4L2_PIX_FMT_AYUV32  v4l2_fourcc('A', 'Y', 'U', 'V') /* 32  AYUV-8-8-8-8  */
 #define V4L2_PIX_FMT_XYUV32  v4l2_fourcc('X', 'Y', 'U', 'V') /* 32  XYUV-8-8-8-8  */
@@ -2417,13 +2450,11 @@ struct v4l2_event_subscription {
 /* VIDIOC_DBG_G_REGISTER and VIDIOC_DBG_S_REGISTER */
 
 #define V4L2_CHIP_MATCH_BRIDGE      0  /* Match against chip ID on the bridge (0 for the bridge) */
-#define V4L2_CHIP_MATCH_SUBDEV      4  /* Match against subdev index */
-
-/* The following four defines are no longer in use */
 #define V4L2_CHIP_MATCH_HOST V4L2_CHIP_MATCH_BRIDGE
 #define V4L2_CHIP_MATCH_I2C_DRIVER  1  /* Match against I2C driver name */
 #define V4L2_CHIP_MATCH_I2C_ADDR    2  /* Match against I2C 7-bit address */
 #define V4L2_CHIP_MATCH_AC97        3  /* Match against ancillary AC97 chip */
+#define V4L2_CHIP_MATCH_SUBDEV      4  /* Match against subdev index */
 
 struct v4l2_dbg_match {
 	__u32 type; /* Match type */
@@ -2438,6 +2469,13 @@ struct v4l2_dbg_register {
 	__u32 size;	/* register size in bytes */
 	__u64 reg;
 	__u64 val;
+} __attribute__ ((packed));
+
+/* VIDIOC_DBG_G_CHIP_IDENT */
+struct v4l2_dbg_chip_ident {
+	struct v4l2_dbg_match match;
+	__u32 ident;       /* chip identifier as specified in <media/v4l2-chip-ident.h> */
+	__u32 revision;    /* chip revision, chip specific */
 } __attribute__ ((packed));
 
 #define V4L2_CHIP_FL_READABLE (1 << 0)
@@ -2544,6 +2582,12 @@ struct v4l2_create_buffers {
  */
 #define	VIDIOC_DBG_S_REGISTER	 _IOW('V', 79, struct v4l2_dbg_register)
 #define	VIDIOC_DBG_G_REGISTER	_IOWR('V', 80, struct v4l2_dbg_register)
+
+/* Experimental, meant for debugging, testing and internal use.
+   Never use this ioctl in applications!
+   Note: this ioctl is deprecated in favor of VIDIOC_DBG_G_CHIP_INFO and
+   will go away in the future. */
+#define VIDIOC_DBG_G_CHIP_IDENT _IOWR('V', 81, struct v4l2_dbg_chip_ident)
 
 #define VIDIOC_S_HW_FREQ_SEEK	 _IOW('V', 82, struct v4l2_hw_freq_seek)
 #define	VIDIOC_S_DV_TIMINGS	_IOWR('V', 87, struct v4l2_dv_timings)

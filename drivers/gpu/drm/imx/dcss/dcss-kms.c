@@ -3,6 +3,7 @@
  * Copyright 2019 NXP.
  */
 
+#include <drm/bridge/cdns-mhdp.h>
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_bridge_connector.h>
@@ -13,11 +14,109 @@
 #include <drm/drm_of.h>
 #include <drm/drm_probe_helper.h>
 #include <drm/drm_vblank.h>
+#include <linux/component.h>
 
 #include "dcss-dev.h"
 #include "dcss-kms.h"
 
 DEFINE_DRM_GEM_CMA_FOPS(dcss_cma_fops);
+
+static void dcss_kms_setup_opipe_gamut(u32 colorspace,
+				       const struct drm_display_mode *mode,
+				       enum dcss_hdr10_gamut *g,
+				       enum dcss_hdr10_nonlinearity *nl)
+{
+	u8 vic;
+
+	switch (colorspace) {
+	case DRM_MODE_COLORIMETRY_BT709_YCC:
+	case DRM_MODE_COLORIMETRY_XVYCC_709:
+		*g = G_REC709;
+		*nl = NL_REC709;
+		return;
+	case DRM_MODE_COLORIMETRY_SMPTE_170M_YCC:
+	case DRM_MODE_COLORIMETRY_XVYCC_601:
+	case DRM_MODE_COLORIMETRY_SYCC_601:
+	case DRM_MODE_COLORIMETRY_OPYCC_601:
+		*g = G_REC601_NTSC;
+		*nl = NL_REC709;
+		return;
+	case DRM_MODE_COLORIMETRY_BT2020_CYCC:
+	case DRM_MODE_COLORIMETRY_BT2020_RGB:
+	case DRM_MODE_COLORIMETRY_BT2020_YCC:
+		*g = G_REC2020;
+		*nl = NL_REC2084;
+		return;
+	case DRM_MODE_COLORIMETRY_OPRGB:
+		*g = G_REC709;
+		*nl = NL_SRGB;
+		return;
+	default:
+		break;
+	}
+
+	/*
+	 * If we reached this point, it means the default colorimetry is used.
+	 */
+
+	/* non-CEA mode, sRGB is used */
+	vic = drm_match_cea_mode(mode);
+	if (vic == 0) {
+		*g = G_REC709;
+		*nl = NL_SRGB;
+		return;
+	}
+
+	if (mode->vdisplay == 480 || mode->vdisplay == 576 ||
+	    mode->vdisplay == 240 || mode->vdisplay == 288) {
+		*g = G_REC601_NTSC;
+		*nl = NL_REC709;
+		return;
+	}
+
+	/* 2160p, 1080p, 720p */
+	*g = G_REC709;
+	*nl = NL_REC709;
+}
+
+void dcss_kms_setup_opipe(struct drm_connector_state *conn_state)
+{
+	struct drm_crtc *crtc = conn_state->crtc;
+	struct dcss_crtc *dcss_crtc = container_of(crtc, struct dcss_crtc,
+						   base);
+	struct dcss_dev *dcss = dcss_crtc->base.dev->dev_private;
+	enum hdmi_quantization_range qr;
+
+	qr = drm_default_rgb_quant_range(&crtc->state->adjusted_mode);
+
+	dcss_kms_setup_opipe_gamut(conn_state->colorspace,
+				   &crtc->state->adjusted_mode,
+				   &dcss_crtc->opipe_g,
+				   &dcss_crtc->opipe_nl);
+
+	dcss_crtc->opipe_pr = qr == HDMI_QUANTIZATION_RANGE_FULL ? PR_FULL :
+								   PR_LIMITED;
+
+	dcss_crtc->output_encoding = DCSS_PIPE_OUTPUT_RGB;
+
+	if (dcss->hdmi_output) {
+		struct cdns_mhdp_device *mhdp_dev;
+		int mhdp_color_format;
+
+		mhdp_dev = container_of(conn_state->connector,
+					struct cdns_mhdp_device,
+					connector.base);
+
+		mhdp_color_format = mhdp_dev->video_info.color_fmt;
+
+		if (mhdp_color_format == YCBCR_4_2_2)
+			dcss_crtc->output_encoding = DCSS_PIPE_OUTPUT_YUV422;
+		else if (mhdp_color_format == YCBCR_4_2_0)
+			dcss_crtc->output_encoding = DCSS_PIPE_OUTPUT_YUV420;
+		else if (mhdp_color_format == YCBCR_4_4_4)
+			dcss_crtc->output_encoding = DCSS_PIPE_OUTPUT_YUV444;
+	}
+}
 
 static const struct drm_mode_config_funcs dcss_drm_mode_config_funcs = {
 	.fb_create = drm_gem_fb_create,
@@ -123,7 +222,7 @@ static int dcss_kms_bridge_connector_init(struct dcss_kms_dev *kms)
 	return 0;
 }
 
-struct dcss_kms_dev *dcss_kms_attach(struct dcss_dev *dcss)
+struct dcss_kms_dev *dcss_kms_attach(struct dcss_dev *dcss, bool componentized)
 {
 	struct dcss_kms_dev *kms;
 	struct drm_device *drm;
@@ -148,19 +247,30 @@ struct dcss_kms_dev *dcss_kms_attach(struct dcss_dev *dcss)
 
 	drm->irq_enabled = true;
 
-	ret = dcss_kms_bridge_connector_init(kms);
-	if (ret)
-		goto cleanup_mode_config;
+	if (!componentized) {
+		ret = dcss_kms_bridge_connector_init(kms);
+		if (ret)
+			goto cleanup_mode_config;
+	}
 
 	ret = dcss_crtc_init(crtc, drm);
 	if (ret)
 		goto cleanup_mode_config;
 
+	if (componentized) {
+		ret = component_bind_all(dcss->dev, kms);
+		if (ret)
+			goto cleanup_crtc;
+	}
+
 	drm_mode_config_reset(drm);
+
+	dcss_crtc_attach_color_mgmt_properties(crtc);
 
 	drm_kms_helper_poll_init(drm);
 
-	drm_bridge_connector_enable_hpd(kms->connector);
+	if (!componentized)
+		drm_bridge_connector_enable_hpd(kms->connector);
 
 	ret = drm_dev_register(drm, 0);
 	if (ret)
@@ -171,7 +281,8 @@ struct dcss_kms_dev *dcss_kms_attach(struct dcss_dev *dcss)
 	return kms;
 
 cleanup_crtc:
-	drm_bridge_connector_disable_hpd(kms->connector);
+	if (!componentized)
+		drm_bridge_connector_disable_hpd(kms->connector);
 	drm_kms_helper_poll_fini(drm);
 	dcss_crtc_deinit(crtc, drm);
 
@@ -182,17 +293,21 @@ cleanup_mode_config:
 	return ERR_PTR(ret);
 }
 
-void dcss_kms_detach(struct dcss_kms_dev *kms)
+void dcss_kms_detach(struct dcss_kms_dev *kms, bool componentized)
 {
 	struct drm_device *drm = &kms->base;
+	struct dcss_dev *dcss = drm->dev_private;
 
 	drm_dev_unregister(drm);
-	drm_bridge_connector_disable_hpd(kms->connector);
+	if (!componentized)
+		drm_bridge_connector_disable_hpd(kms->connector);
 	drm_kms_helper_poll_fini(drm);
 	drm_atomic_helper_shutdown(drm);
 	drm_crtc_vblank_off(&kms->crtc.base);
 	drm->irq_enabled = false;
 	drm_mode_config_cleanup(drm);
 	dcss_crtc_deinit(&kms->crtc, drm);
+	if (componentized)
+		component_unbind_all(dcss->dev, drm);
 	drm->dev_private = NULL;
 }

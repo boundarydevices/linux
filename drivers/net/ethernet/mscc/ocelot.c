@@ -1102,6 +1102,8 @@ EXPORT_SYMBOL(ocelot_port_mdb_del);
 int ocelot_port_bridge_join(struct ocelot *ocelot, int port,
 			    struct net_device *bridge)
 {
+	struct ocelot_port *ocelot_port = ocelot->ports[port];
+
 	if (!ocelot->bridge_mask) {
 		ocelot->hw_bridge_dev = bridge;
 	} else {
@@ -1112,6 +1114,12 @@ int ocelot_port_bridge_join(struct ocelot *ocelot, int port,
 	}
 
 	ocelot->bridge_mask |= BIT(port);
+
+	/* Direct CPU traffic to PCU port, this should override any existing
+	 * entries
+	 */
+	ocelot_mact_learn(ocelot, PGID_CPU, bridge->dev_addr, ocelot_port->pvid,
+			  ENTRYTYPE_LOCKED);
 
 	return 0;
 }

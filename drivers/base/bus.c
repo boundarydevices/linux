@@ -384,7 +384,7 @@ struct device *subsys_find_device_by_id(struct bus_type *subsys, unsigned int id
 }
 EXPORT_SYMBOL_GPL(subsys_find_device_by_id);
 
-static struct device_driver *next_driver(struct klist_iter *i)
+struct device_driver *next_driver(struct klist_iter *i)
 {
 	struct klist_node *n = klist_next(i);
 	struct driver_private *drv_priv;
@@ -395,6 +395,7 @@ static struct device_driver *next_driver(struct klist_iter *i)
 	}
 	return NULL;
 }
+EXPORT_SYMBOL_GPL(next_driver);
 
 /**
  * bus_for_each_drv - driver iterator

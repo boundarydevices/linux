@@ -1,0 +1,581 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+//
+// Device Tree file for LX2162AQDS
+//
+// Copyright 2020 NXP
+
+/dts-v1/;
+
+#include "fsl-lx2160a.dtsi"
+
+/ {
+	model = "NXP Layerscape LX2162AQDS";
+	compatible = "fsl,lx2162a-qds", "fsl,lx2160a";
+
+	aliases {
+		crypto = &crypto;
+		serial0 = &uart0;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	sb_3v3: regulator-sb3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "MC34717-3.3VSB";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	mdio-mux-1 {
+		compatible = "mdio-mux-multiplexer";
+		mux-controls = <&mux 0>;
+		mdio-parent-bus = <&emdio1>;
+		#address-cells=<1>;
+		#size-cells = <0>;
+
+		mdio@0 { /* On-board RTL8211F PHY #1 RGMII1*/
+			reg = <0x00>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			rgmii_phy1: ethernet-phy@1 {
+				compatible = "ethernet-phy-id001c.c916";
+				reg = <0x1>;
+				eee-broken-1000t;
+			};
+		};
+
+		mdio@8 { /* On-board RTL8211F PHY #2 RGMII2*/
+			reg = <0x8>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			rgmii_phy2: ethernet-phy@2 {
+				compatible = "ethernet-phy-id001c.c916";
+				reg = <0x2>;
+				eee-broken-1000t;
+			};
+		};
+
+		mdio@18 { /* Slot #1 */
+			reg = <0x18>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@19 { /* Slot #2 */
+			reg = <0x19>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@1a { /* Slot #3 */
+			reg = <0x1a>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@1b { /* Slot #4 */
+			reg = <0x1b>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@1c { /* Slot #5 */
+			reg = <0x1c>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@1d { /* Slot #6 */
+			reg = <0x1d>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@1e { /* Slot #7 */
+			reg = <0x1e>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@1f { /* Slot #8 */
+			reg = <0x1f>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+
+	mdio-mux-2 {
+		compatible = "mdio-mux-multiplexer";
+		mux-controls = <&mux 1>;
+		mdio-parent-bus = <&emdio2>;
+		#address-cells=<1>;
+		#size-cells = <0>;
+
+		mdio@0 { /* Slot #1 (secondary EMI) */
+			reg = <0x00>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@1 { /* Slot #2 (secondary EMI) */
+			reg = <0x01>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@2 { /* Slot #3 (secondary EMI) */
+			reg = <0x02>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@3 { /* Slot #4 (secondary EMI) */
+			reg = <0x03>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@4 { /* Slot #5 (secondary EMI) */
+			reg = <0x04>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@5 { /* Slot #6 (secondary EMI) */
+			reg = <0x05>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@6 { /* Slot #7 (secondary EMI) */
+			reg = <0x06>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		mdio@7 { /* Slot #8 (secondary EMI) */
+			reg = <0x07>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};
+
+&can0 {
+	status = "okay";
+};
+
+&can1 {
+	status = "okay";
+};
+
+&crypto {
+	status = "okay";
+};
+
+&dpmac17 {
+	phy-handle = <&rgmii_phy1>;
+	phy-connection-type = "rgmii-id";
+};
+
+&dpmac18 {
+	phy-handle = <&rgmii_phy2>;
+	phy-connection-type = "rgmii-id";
+};
+
+&dspi0 {
+	status = "okay";
+
+	dflash0: flash@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <1000000>;
+	};
+};
+
+&dspi1 {
+	status = "okay";
+
+	dflash1: flash@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <1000000>;
+	};
+};
+
+&dspi2 {
+	status = "okay";
+
+	dflash2: flash@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <1000000>;
+	};
+};
+
+&emdio1 {
+	status = "okay";
+};
+
+&emdio2 {
+	status = "okay";
+};
+
+&esdhc0 {
+	sd-uhs-sdr104;
+	sd-uhs-sdr50;
+	sd-uhs-sdr25;
+	sd-uhs-sdr12;
+	status = "okay";
+};
+
+&esdhc1 {
+	mmc-hs200-1_8v;
+	mmc-hs400-1_8v;
+	bus-width = <8>;
+	status = "okay";
+};
+
+&fspi {
+	status = "okay";
+
+	mt35xu512aba0: flash@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "jedec,spi-nor";
+		m25p,fast-read;
+		spi-max-frequency = <50000000>;
+		reg = <0>;
+		spi-rx-bus-width = <8>;
+		spi-tx-bus-width = <8>;
+	};
+};
+
+&i2c0 {
+	status = "okay";
+
+	fpga@66 {
+		compatible = "fsl,lx2160aqds-fpga", "fsl,fpga-qixis-i2c",
+			     "simple-mfd";
+		reg = <0x66>;
+
+		mux: mux-controller {
+			compatible = "reg-mux";
+			#mux-control-cells = <1>;
+			mux-reg-masks = <0x54 0xf8>, /* 0: reg 0x54, bits 7:3 */
+					<0x54 0x07>; /* 1: reg 0x54, bit 2:0 */
+		};
+	};
+
+	i2c-mux@77 {
+		compatible = "nxp,pca9547";
+		reg = <0x77>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c@2 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x2>;
+
+			power-monitor@40 {
+				compatible = "ti,ina220";
+				reg = <0x40>;
+				shunt-resistor = <500>;
+			};
+
+			power-monitor@41 {
+				compatible = "ti,ina220";
+				reg = <0x41>;
+				shunt-resistor = <1000>;
+			};
+		};
+
+		i2c@3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0x3>;
+
+			temperature-sensor@4c {
+				compatible = "nxp,sa56004";
+				reg = <0x4c>;
+				vcc-supply = <&sb_3v3>;
+			};
+
+			rtc@51 {
+				compatible = "nxp,pcf2129";
+				reg = <0x51>;
+				/* IRQ_RTC_B -> IRQ11_B(CPLD) -> IRQ11(CPU), active low */
+				interrupts-extended = <&extirq 11 IRQ_TYPE_LEVEL_LOW>;
+			};
+		};
+	};
+};
+
+&sata0 {
+	status = "okay";
+};
+
+&sata1 {
+	status = "okay";
+};
+
+&sata2 {
+	status = "okay";
+};
+
+&sata3 {
+	status = "okay";
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&uart1 {
+	status = "okay";
+};
+
+&usb0 {
+	status = "okay";
+};
+
+&pcie1 {
+	compatible = "fsl,ls2088a-pcie";
+	reg = <0x00 0x03400000 0x0 0x00100000   /* controller registers */
+	       0x80 0x00000000 0x0 0x00002000>; /* configuration space */
+	reg-names = "regs", "config";
+	interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>, /* AER interrupt */
+		     <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>, /* PME interrupt */
+		     <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>; /* controller interrupt */
+	interrupt-names = "aer", "pme", "intr";
+	#address-cells = <3>;
+	#size-cells = <2>;
+	device_type = "pci";
+	dma-coherent;
+	num-viewport = <8>;
+	bus-range = <0x0 0xff>;
+	ranges = <0x81000000 0x0 0x00000000 0x80 0x00010000 0x0 0x00010000
+		  0x82000000 0x0 0x40000000 0x80 0x40000000 0x0 0x40000000>; /* non-prefetchable memory */
+	msi-parent = <&its>;
+	iommu-map = <0 &smmu 0 1>; /* This is fixed-up by u-boot */
+	#interrupt-cells = <1>;
+	interrupt-map-mask = <0 0 0 7>;
+	interrupt-map = <0000 0 0 1 &gic 0 0 GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 2 &gic 0 0 GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 3 &gic 0 0 GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 4 &gic 0 0 GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
+	status = "disabled";
+};
+
+&pcie_ep1 {
+	compatible = "fsl,lx2160ar2-pcie-ep", "fsl,ls-pcie-ep";
+	reg = <0x00 0x03400000 0x0 0x00100000
+	       0x80 0x00000000 0x8 0x00000000>;
+	reg-names = "regs", "addr_space";
+	num-ob-windows = <8>;
+	num-ib-windows = <8>;
+	status = "disabled";
+};
+
+&pcie2 {
+	compatible = "fsl,ls2088a-pcie";
+	reg = <0x00 0x03500000 0x0 0x00100000   /* controller registers */
+	       0x88 0x00000000 0x0 0x00002000>; /* configuration space */
+	reg-names = "regs", "config";
+	interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>, /* AER interrupt */
+		     <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>, /* PME interrupt */
+		     <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>; /* controller interrupt */
+	interrupt-names = "aer", "pme", "intr";
+	#address-cells = <3>;
+	#size-cells = <2>;
+	device_type = "pci";
+	dma-coherent;
+	num-viewport = <8>;
+	bus-range = <0x0 0xff>;
+	ranges = <0x81000000 0x0 0x00000000 0x88 0x00010000 0x0 0x00010000
+		  0x82000000 0x0 0x40000000 0x88 0x40000000 0x0 0x40000000>; /* non-prefetchable memory */
+	msi-parent = <&its>;
+	iommu-map = <0 &smmu 0 1>; /* This is fixed-up by u-boot */
+	#interrupt-cells = <1>;
+	interrupt-map-mask = <0 0 0 7>;
+	interrupt-map = <0000 0 0 1 &gic 0 0 GIC_SPI 114 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 2 &gic 0 0 GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 3 &gic 0 0 GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 4 &gic 0 0 GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>;
+	status = "disabled";
+};
+
+&pcie_ep2 {
+	compatible = "fsl,lx2160ar2-pcie-ep", "fsl,ls-pcie-ep";
+	reg = <0x00 0x03500000 0x0 0x00100000
+	       0x88 0x00000000 0x8 0x00000000>;
+	reg-names = "regs", "addr_space";
+	num-ob-windows = <8>;
+	num-ib-windows = <8>;
+	status = "disabled";
+};
+
+&pcie3 {
+	compatible = "fsl,ls2088a-pcie";
+	reg = <0x00 0x03600000 0x0 0x00100000   /* controller registers */
+	       0x90 0x00000000 0x0 0x00002000>; /* configuration space */
+	reg-names = "regs", "config";
+	interrupts = <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>, /* AER interrupt */
+		     <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>, /* PME interrupt */
+		     <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>; /* controller interrupt */
+	interrupt-names = "aer", "pme", "intr";
+	#address-cells = <3>;
+	#size-cells = <2>;
+	device_type = "pci";
+	dma-coherent;
+	num-viewport = <256>;
+	bus-range = <0x0 0xff>;
+	ranges = <0x81000000 0x0 0x00000000 0x90 0x00010000 0x0 0x00010000
+		  0x82000000 0x0 0x40000000 0x90 0x40000000 0x0 0x40000000>; /* non-prefetchable memory */
+	msi-parent = <&its>;
+	iommu-map = <0 &smmu 0 1>; /* This is fixed-up by u-boot */
+	#interrupt-cells = <1>;
+	interrupt-map-mask = <0 0 0 7>;
+	interrupt-map = <0000 0 0 1 &gic 0 0 GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 2 &gic 0 0 GIC_SPI 120 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 3 &gic 0 0 GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 4 &gic 0 0 GIC_SPI 122 IRQ_TYPE_LEVEL_HIGH>;
+	status = "disabled";
+};
+
+&pcie_ep3 {
+	compatible = "fsl,lx2160ar2-pcie-ep", "fsl,ls-pcie-ep";
+	reg = <0x00 0x03600000 0x0 0x00100000
+	       0x90 0x00000000 0x8 0x00000000>;
+	reg-names = "regs", "addr_space";
+	num-ob-windows = <256>;
+	num-ib-windows = <24>;
+	status = "disabled";
+};
+
+&pcie4 {
+	compatible = "fsl,ls2088a-pcie";
+	reg = <0x00 0x03700000 0x0 0x00100000   /* controller registers */
+	       0x98 0x00000000 0x0 0x00002000>; /* configuration space */
+	reg-names = "regs", "config";
+	interrupts = <GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>, /* AER interrupt */
+		     <GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>, /* PME interrupt */
+		     <GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>; /* controller interrupt */
+	interrupt-names = "aer", "pme", "intr";
+	#address-cells = <3>;
+	#size-cells = <2>;
+	device_type = "pci";
+	dma-coherent;
+	num-viewport = <8>;
+	bus-range = <0x0 0xff>;
+	ranges = <0x81000000 0x0 0x00000000 0x98 0x00010000 0x0 0x00010000
+		  0x82000000 0x0 0x40000000 0x98 0x40000000 0x0 0x40000000>; /* non-prefetchable memory */
+	msi-parent = <&its>;
+	iommu-map = <0 &smmu 0 1>; /* This is fixed-up by u-boot */
+	#interrupt-cells = <1>;
+	interrupt-map-mask = <0 0 0 7>;
+	interrupt-map = <0000 0 0 1 &gic 0 0 GIC_SPI 124 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 2 &gic 0 0 GIC_SPI 125 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 3 &gic 0 0 GIC_SPI 126 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 4 &gic 0 0 GIC_SPI 127 IRQ_TYPE_LEVEL_HIGH>;
+	status = "disabled";
+};
+
+&pcie_ep4 {
+	compatible = "fsl,lx2160ar2-pcie-ep", "fsl,ls-pcie-ep";
+	reg = <0x00 0x03700000 0x0 0x00100000
+	       0x98 0x00000000 0x8 0x00000000>;
+	reg-names = "regs", "addr_space";
+	num-ob-windows = <8>;
+	num-ib-windows = <8>;
+	status = "disabled";
+};
+
+&pcie5 {
+	compatible = "fsl,ls2088a-pcie";
+	reg = <0x00 0x03800000 0x0 0x00100000   /* controller registers */
+	       0xa0 0x00000000 0x0 0x00002000>; /* configuration space */
+	reg-names = "regs", "config";
+	interrupts = <GIC_SPI 128 IRQ_TYPE_LEVEL_HIGH>, /* AER interrupt */
+		     <GIC_SPI 128 IRQ_TYPE_LEVEL_HIGH>, /* PME interrupt */
+		     <GIC_SPI 128 IRQ_TYPE_LEVEL_HIGH>; /* controller interrupt */
+	interrupt-names = "aer", "pme", "intr";
+	#address-cells = <3>;
+	#size-cells = <2>;
+	device_type = "pci";
+	dma-coherent;
+	num-viewport = <256>;
+	bus-range = <0x0 0xff>;
+	ranges = <0x81000000 0x0 0x00000000 0xa0 0x00010000 0x0 0x00010000
+		  0x82000000 0x0 0x40000000 0xa0 0x40000000 0x0 0x40000000>; /* non-prefetchable memory */
+	msi-parent = <&its>;
+	iommu-map = <0 &smmu 0 1>; /* This is fixed-up by u-boot */
+	#interrupt-cells = <1>;
+	interrupt-map-mask = <0 0 0 7>;
+	interrupt-map = <0000 0 0 1 &gic 0 0 GIC_SPI 129 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 2 &gic 0 0 GIC_SPI 130 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 3 &gic 0 0 GIC_SPI 131 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 4 &gic 0 0 GIC_SPI 132 IRQ_TYPE_LEVEL_HIGH>;
+	status = "disabled";
+};
+
+&pcie_ep5 {
+	compatible = "fsl,lx2160ar2-pcie-ep", "fsl,ls-pcie-ep";
+	reg = <0x00 0x03800000 0x0 0x00100000
+	       0xa0 0x00000000 0x8 0x00000000>;
+	reg-names = "regs", "addr_space";
+	num-ob-windows = <256>;
+	num-ib-windows = <24>;
+	status = "disabled";
+};
+
+&pcie6 {
+	compatible = "fsl,ls2088a-pcie";
+	reg = <0x00 0x03900000 0x0 0x00100000   /* controller registers */
+	       0xa8 0x00000000 0x0 0x00002000>; /* configuration space */
+	reg-names = "regs", "config";
+	interrupts = <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>, /* AER interrupt */
+		     <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>, /* PME interrupt */
+		     <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>; /* controller interrupt */
+	interrupt-names = "aer", "pme", "intr";
+	#address-cells = <3>;
+	#size-cells = <2>;
+	device_type = "pci";
+	dma-coherent;
+	num-viewport = <8>;
+	bus-range = <0x0 0xff>;
+	ranges = <0x81000000 0x0 0x00000000 0xa8 0x00010000 0x0 0x00010000
+		  0x82000000 0x0 0x40000000 0xa8 0x40000000 0x0 0x40000000>; /* non-prefetchable memory */
+	msi-parent = <&its>;
+	iommu-map = <0 &smmu 0 1>; /* This is fixed-up by u-boot */
+	#interrupt-cells = <1>;
+	interrupt-map-mask = <0 0 0 7>;
+	interrupt-map = <0000 0 0 1 &gic 0 0 GIC_SPI 104 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 2 &gic 0 0 GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 3 &gic 0 0 GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>,
+			<0000 0 0 4 &gic 0 0 GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>;
+	status = "disabled";
+};
+
+&pcie_ep6 {
+	compatible = "fsl,lx2160ar2-pcie-ep", "fsl,ls-pcie-ep";
+	reg = <0x00 0x03900000 0x0 0x00100000
+	       0xa8 0x00000000 0x8 0x00000000>;
+	reg-names = "regs", "addr_space";
+	num-ob-windows = <8>;
+	num-ib-windows = <8>;
+	status = "disabled";
+};

@@ -1749,6 +1749,8 @@ static const struct regmap_config fsl_easrc_regmap_config = {
 	.cache_type = REGCACHE_RBTREE,
 };
 
+#include "fsl_easrc_m2m.c"
+
 #ifdef DEBUG
 static void fsl_easrc_dump_firmware(struct fsl_asrc *easrc)
 {
@@ -1874,6 +1876,7 @@ static int fsl_easrc_probe(struct platform_device *pdev)
 	struct device_node *np;
 	void __iomem *regs;
 	int ret, irq;
+	int width;
 
 	easrc = devm_kzalloc(dev, sizeof(*easrc), GFP_KERNEL);
 	if (!easrc)
@@ -1896,7 +1899,7 @@ static int fsl_easrc_probe(struct platform_device *pdev)
 
 	easrc->paddr = res->start;
 
-	easrc->regmap = devm_regmap_init_mmio_clk(dev, "mem", regs,
+	easrc->regmap = devm_regmap_init_mmio_clk(dev, NULL, regs,
 						  &fsl_easrc_regmap_config);
 	if (IS_ERR(easrc->regmap)) {
 		dev_err(dev, "failed to init regmap");
@@ -1941,8 +1944,25 @@ static int fsl_easrc_probe(struct platform_device *pdev)
 
 	ret = of_property_read_u32(np, "fsl,asrc-format", &easrc->asrc_format);
 	if (ret) {
-		dev_err(dev, "failed to asrc format\n");
-		return ret;
+		ret = of_property_read_u32(np, "fsl,asrc-width", &width);
+		if (ret) {
+			dev_err(&pdev->dev, "failed to decide output format\n");
+			return ret;
+		}
+
+		switch (width) {
+		case 16:
+			easrc->asrc_format = SNDRV_PCM_FORMAT_S16_LE;
+			break;
+		case 24:
+			easrc->asrc_format = SNDRV_PCM_FORMAT_S24_LE;
+			break;
+		default:
+			dev_warn(&pdev->dev,
+				 "unsupported width, use default S24_LE\n");
+			easrc->asrc_format = SNDRV_PCM_FORMAT_S24_LE;
+			break;
+		}
 	}
 
 	if (!(FSL_EASRC_FORMATS & (1ULL << easrc->asrc_format))) {
@@ -1950,7 +1970,7 @@ static int fsl_easrc_probe(struct platform_device *pdev)
 		easrc->asrc_format = SNDRV_PCM_FORMAT_S24_LE;
 	}
 
-	ret = of_property_read_string(np, "firmware-name",
+	ret = of_property_read_string(np, "fsl,easrc-ram-script-name",
 				      &easrc_priv->fw_name);
 	if (ret) {
 		dev_err(dev, "failed to get firmware name\n");
@@ -1975,6 +1995,12 @@ static int fsl_easrc_probe(struct platform_device *pdev)
 					      NULL, 0);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to register ASoC platform\n");
+		return ret;
+	}
+
+	ret = fsl_easrc_m2m_init(easrc);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to init m2m device %d\n", ret);
 		return ret;
 	}
 
@@ -2085,12 +2111,38 @@ disable_mem_clk:
 	return ret;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int fsl_easrc_suspend(struct device *dev)
+{
+	struct fsl_asrc *easrc = dev_get_drvdata(dev);
+	int ret;
+
+	fsl_easrc_m2m_suspend(easrc);
+
+	ret = pm_runtime_force_suspend(dev);
+
+	return ret;
+}
+
+static int fsl_easrc_resume(struct device *dev)
+{
+	struct fsl_asrc *easrc = dev_get_drvdata(dev);
+	int ret;
+
+	ret = pm_runtime_force_resume(dev);
+
+	fsl_easrc_m2m_resume(easrc);
+
+	return ret;
+}
+#endif /*CONFIG_PM_SLEEP*/
+
 static const struct dev_pm_ops fsl_easrc_pm_ops = {
 	SET_RUNTIME_PM_OPS(fsl_easrc_runtime_suspend,
 			   fsl_easrc_runtime_resume,
 			   NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				pm_runtime_force_resume)
+	SET_SYSTEM_SLEEP_PM_OPS(fsl_easrc_suspend,
+				fsl_easrc_resume)
 };
 
 static struct platform_driver fsl_easrc_driver = {

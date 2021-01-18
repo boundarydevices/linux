@@ -32,7 +32,8 @@
 #define CLK_OPS_PARENT_ENABLE	BIT(12)
 /* duty cycle call may be forwarded to the parent clock */
 #define CLK_DUTY_CYCLE_PARENT	BIT(13)
-#define CLK_DONT_HOLD_STATE	BIT(14) /* Don't hold state */
+#define CLK_SET_PARENT_NOCACHE	BIT(14) /* do not use the cached clk parent */
+#define CLK_DONT_HOLD_STATE	BIT(15) /* Don't hold state */
 
 struct clk;
 struct clk_hw;

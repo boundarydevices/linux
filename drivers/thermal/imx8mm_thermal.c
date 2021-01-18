@@ -7,6 +7,7 @@
 
 #include <linux/bitfield.h>
 #include <linux/clk.h>
+#include <linux/device_cooling.h>
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/module.h>
@@ -34,9 +35,12 @@
 #define VER1_TEMP_LOW_LIMIT	10000
 #define VER2_TEMP_LOW_LIMIT	-40000
 #define VER2_TEMP_HIGH_LIMIT	125000
+#define IMX_TEMP_PASSIVE_COOL_DELTA 10000
 
 #define TMU_VER1		0x1
 #define TMU_VER2		0x2
+
+#define MAX_SENSOR_NUMBER	2
 
 struct thermal_soc_data {
 	u32 num_sensors;
@@ -48,6 +52,9 @@ struct tmu_sensor {
 	struct imx8mm_tmu *priv;
 	u32 hw_id;
 	struct thermal_zone_device *tzd;
+	struct thermal_cooling_device *cdev;
+	int temp_passive;
+	int temp_critical;
 };
 
 struct imx8mm_tmu {
@@ -55,6 +62,13 @@ struct imx8mm_tmu {
 	struct clk *clk;
 	const struct thermal_soc_data *socdata;
 	struct tmu_sensor sensors[];
+};
+
+/* The driver support 1 passive trip point and 1 critical trip point */
+enum imx_thermal_trip {
+	IMX_TRIP_PASSIVE,
+	IMX_TRIP_CRITICAL,
+	IMX_TRIP_NUM,
 };
 
 static int imx8mm_tmu_get_temp(void *data, int *temp)
@@ -77,6 +91,9 @@ static int imx8mp_tmu_get_temp(void *data, int *temp)
 	struct imx8mm_tmu *tmu = sensor->priv;
 	unsigned long val;
 	bool ready;
+
+	if (sensor->hw_id > (MAX_SENSOR_NUMBER - 1))
+		return -EINVAL;
 
 	val = readl_relaxed(tmu->base + TRITSR);
 	ready = test_bit(probe_status_offset(sensor->hw_id), &val);
@@ -103,8 +120,41 @@ static int tmu_get_temp(void *data, int *temp)
 	return tmu->socdata->get_temp(data, temp);
 }
 
+static int tmu_get_trend(void *p, int trip, enum thermal_trend *trend)
+{
+	int trip_temp;
+	struct tmu_sensor *sensor = p;
+
+	if (!sensor->tzd)
+		return 0;
+
+	trip_temp = (trip == IMX_TRIP_PASSIVE) ? sensor->temp_passive : sensor->temp_critical;
+
+	if (sensor->tzd->temperature >= (trip_temp - IMX_TEMP_PASSIVE_COOL_DELTA))
+		*trend = THERMAL_TREND_RAISE_FULL;
+	else
+		*trend = THERMAL_TREND_DROP_FULL;
+
+	return 0;
+}
+
+static int tmu_set_trip_temp(void *p, int trip, int temp)
+{
+	struct tmu_sensor *sensor = p;
+
+	if (trip == IMX_TRIP_CRITICAL)
+		sensor->temp_critical = temp;
+
+	if (trip == IMX_TRIP_PASSIVE)
+		sensor->temp_passive = temp;
+
+	return 0;
+}
+
 static struct thermal_zone_of_device_ops tmu_tz_ops = {
 	.get_temp = tmu_get_temp,
+	.get_trend = tmu_get_trend,
+	.set_trip_temp = tmu_set_trip_temp,
 };
 
 static void imx8mm_tmu_enable(struct imx8mm_tmu *tmu, bool enable)
@@ -128,6 +178,7 @@ static void imx8mm_tmu_probe_sel_all(struct imx8mm_tmu *tmu)
 static int imx8mm_tmu_probe(struct platform_device *pdev)
 {
 	const struct thermal_soc_data *data;
+	const struct thermal_trip *trips;
 	struct imx8mm_tmu *tmu;
 	int ret;
 	int i;
@@ -172,6 +223,35 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 			return PTR_ERR(tmu->sensors[i].tzd);
 		}
 		tmu->sensors[i].hw_id = i;
+
+		tmu->sensors[i].cdev = devfreq_cooling_register();
+		if (IS_ERR(tmu->sensors[i].cdev)) {
+			ret = PTR_ERR(tmu->sensors[i].cdev);
+			if (ret != -EPROBE_DEFER)
+				dev_err(&pdev->dev,
+					"failed to register devfreq cooling device %d\n", ret);
+			return ret;
+		}
+
+		ret = thermal_zone_bind_cooling_device(tmu->sensors[i].tzd,
+			IMX_TRIP_PASSIVE,
+			tmu->sensors[i].cdev,
+			THERMAL_NO_LIMIT,
+			THERMAL_NO_LIMIT,
+			THERMAL_WEIGHT_DEFAULT);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"binding zone %s with cdev %s failed:%d\n",
+				tmu->sensors[i].tzd->type, tmu->sensors[i].cdev->type, ret);
+			devfreq_cooling_unregister(tmu->sensors[i].cdev);
+			return ret;
+		}
+
+		trips = of_thermal_get_trip_points(tmu->sensors[i].tzd);
+
+		/* get the thermal trip temp */
+		tmu->sensors[i].temp_passive = trips[0].temperature;
+		tmu->sensors[i].temp_critical = trips[1].temperature;
 	}
 
 	platform_set_drvdata(pdev, tmu);

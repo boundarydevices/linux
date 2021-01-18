@@ -13,6 +13,8 @@
 #include <linux/of_platform.h>
 #include <linux/platform_data/dma-imx.h>
 #include <linux/pm_runtime.h>
+#include <linux/miscdevice.h>
+#include <linux/sched/signal.h>
 #include <sound/dmaengine_pcm.h>
 #include <sound/pcm_params.h>
 
@@ -464,8 +466,11 @@ static int fsl_asrc_config_pair(struct fsl_asrc_pair *pair, bool use_ideal_rate)
 	/* Default setting: Automatic selection for processing mode */
 	regmap_update_bits(asrc->regmap, REG_ASRCTR,
 			   ASRCTR_ATSi_MASK(index), ASRCTR_ATS(index));
+
+	/* Default setting: use internal measured ratio */
 	regmap_update_bits(asrc->regmap, REG_ASRCTR,
-			   ASRCTR_USRi_MASK(index), 0);
+			   ASRCTR_USRi_MASK(index) | ASRCTR_IDRi_MASK(index),
+			   ASRCTR_USR(index));
 
 	/* Set the input and output clock sources */
 	regmap_update_bits(asrc->regmap, REG_ASRCSR,
@@ -531,7 +536,7 @@ static void fsl_asrc_start_pair(struct fsl_asrc_pair *pair)
 {
 	struct fsl_asrc *asrc = pair->asrc;
 	enum asrc_pair_index index = pair->index;
-	int reg, retry = 10, i;
+	int reg, retry = 50, i;
 
 	/* Enable the current pair */
 	regmap_update_bits(asrc->regmap, REG_ASRCTR,
@@ -543,6 +548,9 @@ static void fsl_asrc_start_pair(struct fsl_asrc_pair *pair)
 		regmap_read(asrc->regmap, REG_ASRCFG, &reg);
 		reg &= ASRCFG_INIRQi_MASK(index);
 	} while (!reg && --retry);
+
+	if (retry == 0)
+		dev_warn(&asrc->pdev->dev, "initialization is not finished\n");
 
 	/* Make the input fifo to ASRC STALL level */
 	regmap_read(asrc->regmap, REG_ASRCNCR, &reg);
@@ -712,6 +720,8 @@ static int fsl_asrc_dai_trigger(struct snd_pcm_substream *substream, int cmd,
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		fsl_asrc_start_pair(pair);
+		/* Output enough data to content the DMA burstsize of BE */
+		mdelay(1);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
@@ -913,6 +923,8 @@ static const struct regmap_config fsl_asrc_regmap_config = {
 	.cache_type = REGCACHE_FLAT,
 };
 
+#include "fsl_asrc_m2m.c"
+
 /**
  * fsl_asrc_init - Initialize ASRC registers with a default configuration
  * @asrc: ASRC context
@@ -1039,7 +1051,7 @@ static int fsl_asrc_probe(struct platform_device *pdev)
 
 	asrc->paddr = res->start;
 
-	asrc->regmap = devm_regmap_init_mmio_clk(&pdev->dev, "mem", regs,
+	asrc->regmap = devm_regmap_init_mmio_clk(&pdev->dev, NULL, regs,
 						 &fsl_asrc_regmap_config);
 	if (IS_ERR(asrc->regmap)) {
 		dev_err(&pdev->dev, "failed to init regmap\n");
@@ -1098,9 +1110,13 @@ static int fsl_asrc_probe(struct platform_device *pdev)
 	if (of_device_is_compatible(np, "fsl,imx35-asrc")) {
 		asrc_priv->clk_map[IN] = input_clk_map_imx35;
 		asrc_priv->clk_map[OUT] = output_clk_map_imx35;
+		strncpy(asrc_priv->name, "mxc_asrc",
+				sizeof(asrc_priv->name) - 1);
 	} else if (of_device_is_compatible(np, "fsl,imx53-asrc")) {
 		asrc_priv->clk_map[IN] = input_clk_map_imx53;
 		asrc_priv->clk_map[OUT] = output_clk_map_imx53;
+		strncpy(asrc_priv->name, "mxc_asrc",
+				sizeof(asrc_priv->name) - 1);
 	} else if (of_device_is_compatible(np, "fsl,imx8qm-asrc") ||
 		   of_device_is_compatible(np, "fsl,imx8qxp-asrc")) {
 		ret = of_property_read_u32(np, "fsl,asrc-clk-map", &map_idx);
@@ -1120,13 +1136,27 @@ static int fsl_asrc_probe(struct platform_device *pdev)
 			asrc_priv->clk_map[IN] = clk_map_imx8qxp[map_idx];
 			asrc_priv->clk_map[OUT] = clk_map_imx8qxp[map_idx];
 		}
+
+		if (map_idx == 0) {
+			strncpy(asrc_priv->name, "mxc_asrc",
+				sizeof(asrc_priv->name) - 1);
+		} else {
+			strncpy(asrc_priv->name, "mxc_asrc1",
+				sizeof(asrc_priv->name) - 1);
+		}
 	}
+
+	ret = clk_prepare_enable(asrc->mem_clk);
+	if (ret)
+		return ret;
 
 	ret = fsl_asrc_init(asrc);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to init asrc %d\n", ret);
 		return ret;
 	}
+
+	clk_disable_unprepare(asrc->mem_clk);
 
 	asrc->channel_avail = 10;
 
@@ -1177,6 +1207,12 @@ static int fsl_asrc_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	ret = fsl_asrc_m2m_init(asrc);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to init m2m device %d\n", ret);
+		return ret;
+	}
+
 	return 0;
 }
 
@@ -1187,6 +1223,8 @@ static int fsl_asrc_runtime_resume(struct device *dev)
 	struct fsl_asrc_priv *asrc_priv = asrc->private;
 	int i, ret;
 	u32 asrctr;
+	u32 reg;
+	int retry = 50;
 
 	ret = clk_prepare_enable(asrc->mem_clk);
 	if (ret)
@@ -1222,6 +1260,16 @@ static int fsl_asrc_runtime_resume(struct device *dev)
 	/* Restart enabled pairs */
 	regmap_update_bits(asrc->regmap, REG_ASRCTR,
 			   ASRCTR_ASRCEi_ALL_MASK, asrctr);
+
+	/* Wait for status of initialization */
+	do {
+		udelay(5);
+		regmap_read(asrc->regmap, REG_ASRCFG, &reg);
+		reg = (reg >> ASRCFG_INIRQi_SHIFT(0)) & 0x7;
+	} while (!(reg == ((asrctr & 0xE) >> 1)) && --retry);
+
+	if (retry == 0)
+		dev_warn(dev, "initialization is not finished\n");
 
 	return 0;
 
@@ -1259,10 +1307,36 @@ static int fsl_asrc_runtime_suspend(struct device *dev)
 }
 #endif /* CONFIG_PM */
 
+#ifdef CONFIG_PM_SLEEP
+static int fsl_asrc_suspend(struct device *dev)
+{
+	struct fsl_asrc *asrc = dev_get_drvdata(dev);
+	int ret;
+
+	fsl_asrc_m2m_suspend(asrc);
+
+	ret = pm_runtime_force_suspend(dev);
+
+	return ret;
+}
+
+static int fsl_asrc_resume(struct device *dev)
+{
+	struct fsl_asrc *asrc = dev_get_drvdata(dev);
+	int ret;
+
+	ret = pm_runtime_force_resume(dev);
+
+	fsl_asrc_m2m_resume(asrc);
+
+	return ret;
+}
+#endif /* CONFIG_PM_SLEEP */
+
 static const struct dev_pm_ops fsl_asrc_pm = {
 	SET_RUNTIME_PM_OPS(fsl_asrc_runtime_suspend, fsl_asrc_runtime_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				pm_runtime_force_resume)
+	SET_SYSTEM_SLEEP_PM_OPS(fsl_asrc_suspend,
+				fsl_asrc_resume)
 };
 
 static const struct fsl_asrc_soc_data fsl_asrc_imx35_data = {
@@ -1296,6 +1370,7 @@ MODULE_DEVICE_TABLE(of, fsl_asrc_ids);
 
 static struct platform_driver fsl_asrc_driver = {
 	.probe = fsl_asrc_probe,
+	.remove = fsl_asrc_m2m_remove,
 	.driver = {
 		.name = "fsl-asrc",
 		.of_match_table = fsl_asrc_ids,

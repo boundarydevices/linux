@@ -664,6 +664,15 @@ static char *perf_pmu__getcpuid(struct perf_pmu *pmu)
 		cpuid = strdup(cpuid);
 	if (!cpuid)
 		cpuid = get_cpuid_str(pmu);
+	if (!cpuid && !pmu) {
+		cpuid = malloc(1024);
+		if (!cpuid)
+			return NULL;
+		if (get_cpuid(cpuid, 1024)) {
+			free(cpuid);
+			return NULL;
+		}
+	}
 	if (!cpuid)
 		return NULL;
 

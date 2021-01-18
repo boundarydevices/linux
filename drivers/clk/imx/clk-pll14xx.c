@@ -137,9 +137,12 @@ static unsigned long clk_pll1443x_recalc_rate(struct clk_hw *hw,
 						  unsigned long parent_rate)
 {
 	struct clk_pll14xx *pll = to_clk_pll14xx(hw);
+	const struct imx_pll14xx_rate_table *rate_table = pll->rate_table;
 	u32 mdiv, pdiv, sdiv, pll_div_ctl0, pll_div_ctl1;
 	short int kdiv;
 	u64 fvco = parent_rate;
+	long rate = 0;
+	int i;
 
 	pll_div_ctl0 = readl_relaxed(pll->base + 4);
 	pll_div_ctl1 = readl_relaxed(pll->base + 8);
@@ -148,13 +151,25 @@ static unsigned long clk_pll1443x_recalc_rate(struct clk_hw *hw,
 	sdiv = (pll_div_ctl0 & SDIV_MASK) >> SDIV_SHIFT;
 	kdiv = pll_div_ctl1 & KDIV_MASK;
 
+	/*
+	 * Sometimes, the recalculated rate has deviation due to
+	 * the frac part. So find the accurate pll rate from the table
+	 * first, if no match rate in the table, use the rate calculated
+	 * from the equation below.
+	 */
+	for (i = 0; i < pll->rate_count; i++) {
+		if (rate_table[i].pdiv == pdiv && rate_table[i].mdiv == mdiv &&
+		    rate_table[i].sdiv == sdiv && rate_table[i].kdiv == kdiv)
+			rate = rate_table[i].rate;
+	}
+
 	/* fvco = (m * 65536 + k) * Fin / (p * 65536) */
 	fvco *= (mdiv * 65536 + kdiv);
 	pdiv *= 65536;
 
 	do_div(fvco, pdiv << sdiv);
 
-	return fvco;
+	return rate ? (unsigned long) rate : (unsigned long)fvco;
 }
 
 static inline bool clk_pll14xx_mp_change(const struct imx_pll14xx_rate_table *rate,
@@ -358,6 +373,26 @@ static void clk_pll14xx_unprepare(struct clk_hw *hw)
 	val = readl_relaxed(pll->base + GNRL_CTL);
 	val &= ~RST_MASK;
 	writel_relaxed(val, pll->base + GNRL_CTL);
+}
+
+void clk_set_delta_k(struct clk_hw *hw, short int delta_k)
+{
+	struct clk_pll14xx *pll = to_clk_pll14xx(hw);
+	short int k;
+	u32 val;
+
+	val = readl_relaxed(pll->base + 8);
+	k = (val & KDIV_MASK) + delta_k;
+	writel_relaxed(k << KDIV_SHIFT, pll->base + 8);
+}
+
+void clk_get_pll_setting(struct clk_hw *hw, u32 *pll_div_ctrl0,
+	u32 *pll_div_ctrl1)
+{
+	struct clk_pll14xx *pll = to_clk_pll14xx(hw);
+
+	*pll_div_ctrl0 = readl_relaxed(pll->base + 4);
+	*pll_div_ctrl1 = readl_relaxed(pll->base + 8);
 }
 
 static const struct clk_ops clk_pll1416x_ops = {
