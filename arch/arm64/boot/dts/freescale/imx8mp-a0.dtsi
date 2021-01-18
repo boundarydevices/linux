@@ -5,7 +5,7 @@
 		aips1: bus@30000000 {
 			gpc: gpc@303a0000 {
 				#interrupt-cells = <3>;
-				compatible = "fsl,imx8mp-gpc", "fsl,imx8mq-gpc";
+				compatible = "fsl,imx8mp-gpc";
 				reg = <0x303a0000 0x10000>;
 				interrupt-parent = <&gic>;
 				interrupt-controller;
