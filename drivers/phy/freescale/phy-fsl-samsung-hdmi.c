@@ -1045,14 +1045,18 @@ static int samsung_hdmi_phy_probe(struct platform_device *pdev)
 	samsung->apbclk = devm_clk_get_optional(samsung->dev, "apb");
 	if (IS_ERR(samsung->apbclk)) {
 		ret = PTR_ERR(samsung->apbclk);
-		dev_err(samsung->dev, "failed to get phy apb clk: %d\n", ret);
+		if (ret != -EPROBE_DEFER)
+			dev_err(samsung->dev,
+				"failed to get phy apb clk: %d\n", ret);
 		return ret;
 	}
 
 	samsung->refclk = devm_clk_get_optional(samsung->dev, "ref");
 	if (IS_ERR(samsung->refclk)) {
 		ret =  PTR_ERR(samsung->refclk);
-		dev_err(samsung->dev, "failed to get phy refclk: %d\n", ret);
+		if (ret != -EPROBE_DEFER)
+			dev_err(samsung->dev,
+				"failed to get phy refclk: %d\n", ret);
 		return ret;
 	}
 
