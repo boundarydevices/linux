@@ -467,7 +467,10 @@ static void imx8_ipc_msg_data(struct snd_sof_dev *sdev,
 			      struct snd_sof_pcm_stream *sps,
 			      void *p, size_t sz)
 {
-	sof_mailbox_read(sdev, sdev->dsp_box.offset, p, sz);
+	if (!sps || !sdev->stream_box.size)
+		sof_mailbox_read(sdev, sdev->dsp_box.offset, p, sz);
+	else
+		sof_mailbox_read(sdev, sdev->stream_box.offset, p, sz);
 }
 
 static int imx8_ipc_pcm_params(struct snd_sof_dev *sdev,
