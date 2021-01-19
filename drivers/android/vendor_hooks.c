@@ -38,6 +38,7 @@
 #include <trace/hooks/dtask.h>
 #include <trace/hooks/ftrace_dump.h>
 #include <trace/hooks/mm.h>
+#include <trace/hooks/traps.h>
 
 /*
  * Export tracepoints that act as a bare tracehook (ie: have no trace event
@@ -112,3 +113,4 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_check_folio_look_around_ref);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_look_around);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_look_around_migrate_folio);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_test_clear_look_around_ref);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_arm64_serror_panic);
