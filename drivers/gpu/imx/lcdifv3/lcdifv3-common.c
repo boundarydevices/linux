@@ -708,16 +708,20 @@ static int imx_lcdifv3_probe(struct platform_device *pdev)
 	if (!res)
 		return -ENODEV;
 
-	lcdifv3->irq = platform_get_irq(pdev, 0);
-	if (lcdifv3->irq < 0) {
-		dev_err(dev, "No irq get\n");
-		return -EPROBE_DEFER;
+	ret = platform_get_irq(pdev, 0);
+	if (ret < 0) {
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "irq failed %d\n", ret);
+		return ret;
 	}
+	lcdifv3->irq = ret;
 
 	lcdifv3->clk_pix = devm_clk_get(dev, "pix");
 	if (IS_ERR(lcdifv3->clk_pix)) {
-		dev_err(dev, "No pix clock get\n");
-		return -EPROBE_DEFER;
+		ret = PTR_ERR(lcdifv3->clk_pix);
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "pix clock failed %d\n", ret);
+		return ret;
 	}
 
 	lcdifv3->clk_disp_axi = devm_clk_get(dev, "disp-axi");
