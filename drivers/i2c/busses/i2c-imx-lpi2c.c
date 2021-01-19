@@ -8,6 +8,8 @@
 #include <linux/clk.h>
 #include <linux/completion.h>
 #include <linux/delay.h>
+#include <linux/dmaengine.h>
+#include <linux/dma-mapping.h>
 #include <linux/err.h>
 #include <linux/errno.h>
 #include <linux/i2c.h>
@@ -31,6 +33,7 @@
 #define LPI2C_MCR	0x10	/* i2c contrl register */
 #define LPI2C_MSR	0x14	/* i2c status register */
 #define LPI2C_MIER	0x18	/* i2c interrupt enable */
+#define LPI2C_MDER	0x1C	/* i2c DMA enable */
 #define LPI2C_MCFGR0	0x20	/* i2c master configuration */
 #define LPI2C_MCFGR1	0x24	/* i2c master configuration */
 #define LPI2C_MCFGR2	0x28	/* i2c master configuration */
@@ -72,11 +75,15 @@
 #define MCFGR1_AUTOSTOP	BIT(8)
 #define MCFGR1_IGNACK	BIT(9)
 #define MRDR_RXEMPTY	BIT(14)
+#define MDER_TDDE	BIT(0)
+#define MDER_RDDE	BIT(1)
 
 #define I2C_CLK_RATIO	24 / 59
 #define CHUNK_DATA	256
 
 #define I2C_PM_TIMEOUT		1000 /* ms */
+#define I2C_DMA_THRESHOLD	16 /* bytes */
+#define I2C_USE_PIO		(-150)
 
 enum lpi2c_imx_mode {
 	STANDARD,	/* <=100Kbps */
@@ -95,6 +102,7 @@ enum lpi2c_imx_pincfg {
 
 struct lpi2c_imx_struct {
 	struct i2c_adapter	adapter;
+	resource_size_t		phy_addr;
 	int			irq;
 	struct clk		*clk_per;
 	struct clk		*clk_ipg;
@@ -114,6 +122,17 @@ struct lpi2c_imx_struct {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pinctrl_pins_default;
 	struct pinctrl_state *pinctrl_pins_gpio;
+
+	bool			can_use_dma;
+	bool			using_dma;
+	bool			xferred;
+	struct i2c_msg		*msg;
+	dma_addr_t		dma_addr;
+	struct dma_chan		*dma_tx;
+	struct dma_chan		*dma_rx;
+	enum dma_data_direction dma_direction;
+	u8			*dma_buf;
+	unsigned int		dma_len;
 };
 
 static void lpi2c_imx_intctrl(struct lpi2c_imx_struct *lpi2c_imx,
@@ -289,6 +308,9 @@ static int lpi2c_imx_master_enable(struct lpi2c_imx_struct *lpi2c_imx)
 	if (ret)
 		goto rpm_put;
 
+	if (lpi2c_imx->can_use_dma)
+		writel(MDER_TDDE | MDER_RDDE, lpi2c_imx->base + LPI2C_MDER);
+
 	temp = readl(lpi2c_imx->base + LPI2C_MCR);
 	temp |= MCR_MEN;
 	writel(temp, lpi2c_imx->base + LPI2C_MCR);
@@ -462,6 +484,154 @@ static void lpi2c_imx_read(struct lpi2c_imx_struct *lpi2c_imx,
 	lpi2c_imx_intctrl(lpi2c_imx, MIER_RDIE | MIER_NDIE);
 }
 
+static void lpi2c_dma_unmap(struct lpi2c_imx_struct *lpi2c_imx)
+{
+	struct dma_chan *chan = lpi2c_imx->dma_direction == DMA_FROM_DEVICE
+				? lpi2c_imx->dma_rx : lpi2c_imx->dma_tx;
+
+	dma_unmap_single(chan->device->dev, lpi2c_imx->dma_addr,
+			 lpi2c_imx->dma_len, lpi2c_imx->dma_direction);
+
+	lpi2c_imx->dma_direction = DMA_NONE;
+}
+
+static void lpi2c_cleanup_dma(struct lpi2c_imx_struct *lpi2c_imx)
+{
+	if (lpi2c_imx->dma_direction == DMA_NONE)
+		return;
+	else if (lpi2c_imx->dma_direction == DMA_FROM_DEVICE)
+		dmaengine_terminate_all(lpi2c_imx->dma_rx);
+	else if (lpi2c_imx->dma_direction == DMA_TO_DEVICE)
+		dmaengine_terminate_all(lpi2c_imx->dma_tx);
+
+	lpi2c_dma_unmap(lpi2c_imx);
+}
+
+static void lpi2c_dma_callback(void *data)
+{
+	struct lpi2c_imx_struct *lpi2c_imx = (struct lpi2c_imx_struct *)data;
+
+	lpi2c_dma_unmap(lpi2c_imx);
+	writel(GEN_STOP << 8, lpi2c_imx->base + LPI2C_MTDR);
+	lpi2c_imx->xferred = true;
+
+	complete(&lpi2c_imx->complete);
+}
+
+static int lpi2c_dma_submit(struct lpi2c_imx_struct *lpi2c_imx,
+			   struct i2c_msg *msg)
+{
+	bool read = msg->flags & I2C_M_RD;
+	enum dma_data_direction dir = read ? DMA_FROM_DEVICE : DMA_TO_DEVICE;
+	struct dma_chan *chan = read ? lpi2c_imx->dma_rx : lpi2c_imx->dma_tx;
+	struct dma_async_tx_descriptor *txdesc;
+	dma_cookie_t cookie;
+
+	lpi2c_imx->dma_len = read ? msg->len - 1 : msg->len;
+	lpi2c_imx->msg = msg;
+	lpi2c_imx->dma_direction = dir;
+
+	if (IS_ERR(chan))
+		return PTR_ERR(chan);
+
+	lpi2c_imx->dma_addr = dma_map_single(chan->device->dev,
+					     lpi2c_imx->dma_buf,
+					     lpi2c_imx->dma_len, dir);
+	if (dma_mapping_error(chan->device->dev, lpi2c_imx->dma_addr)) {
+		dev_err(&lpi2c_imx->adapter.dev, "dma map failed, use pio\n");
+		return -EINVAL;
+	}
+
+	txdesc = dmaengine_prep_slave_single(chan, lpi2c_imx->dma_addr,
+					lpi2c_imx->dma_len, read ?
+					DMA_DEV_TO_MEM : DMA_MEM_TO_DEV,
+					DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+	if (!txdesc) {
+		dev_err(&lpi2c_imx->adapter.dev, "dma prep slave sg failed, use pio\n");
+		lpi2c_cleanup_dma(lpi2c_imx);
+		return -EINVAL;
+	}
+
+	reinit_completion(&lpi2c_imx->complete);
+	txdesc->callback = lpi2c_dma_callback;
+	txdesc->callback_param = (void *)lpi2c_imx;
+
+	cookie = dmaengine_submit(txdesc);
+	if (dma_submit_error(cookie)) {
+		dev_err(&lpi2c_imx->adapter.dev, "submitting dma failed, use pio\n");
+		lpi2c_cleanup_dma(lpi2c_imx);
+		return -EINVAL;
+	}
+
+	lpi2c_imx_intctrl(lpi2c_imx, MIER_NDIE);
+
+	dma_async_issue_pending(chan);
+
+	return 0;
+}
+
+static bool is_use_dma(struct lpi2c_imx_struct *lpi2c_imx, struct i2c_msg *msg)
+{
+	if (!lpi2c_imx->can_use_dma)
+		return false;
+
+	if (msg->len < I2C_DMA_THRESHOLD)
+		return false;
+
+	return true;
+}
+
+static int lpi2c_imx_push_rx_cmd(struct lpi2c_imx_struct *lpi2c_imx,
+				 struct i2c_msg *msg)
+{
+	unsigned int temp, rx_remain;
+	unsigned long orig_jiffies = jiffies;
+
+	if ((msg->flags & I2C_M_RD)) {
+		rx_remain = msg->len;
+		do {
+			temp = rx_remain > CHUNK_DATA ?
+				CHUNK_DATA - 1 : rx_remain - 1;
+			temp |= (RECV_DATA << 8);
+			while ((readl(lpi2c_imx->base + LPI2C_MFSR) & 0xff) > 2) {
+				if (time_after(jiffies, orig_jiffies + msecs_to_jiffies(1000))) {
+					dev_dbg(&lpi2c_imx->adapter.dev, "txfifo empty timeout\n");
+					if (lpi2c_imx->adapter.bus_recovery_info)
+						i2c_recover_bus(&lpi2c_imx->adapter);
+					return -ETIMEDOUT;
+				}
+				schedule();
+			}
+			writel(temp, lpi2c_imx->base + LPI2C_MTDR);
+			rx_remain = rx_remain - (temp & 0xff) - 1;
+		} while (rx_remain > 0);
+	}
+
+	return 0;
+}
+
+static int lpi2c_dma_xfer(struct lpi2c_imx_struct *lpi2c_imx,
+			   struct i2c_msg *msg)
+{
+	int result;
+
+	result = lpi2c_dma_submit(lpi2c_imx, msg);
+	if (!result) {
+		result = lpi2c_imx_push_rx_cmd(lpi2c_imx, msg);
+		if (result)
+			return result;
+		result = lpi2c_imx_msg_complete(lpi2c_imx);
+		return result;
+	}
+
+	/* DMA xfer failed, try to use PIO, clean up dma things */
+	i2c_put_dma_safe_msg_buf(lpi2c_imx->dma_buf, lpi2c_imx->msg,
+				 lpi2c_imx->xferred);
+	lpi2c_cleanup_dma(lpi2c_imx);
+
+	return I2C_USE_PIO;
+}
+
 static int lpi2c_imx_xfer(struct i2c_adapter *adapter,
 			  struct i2c_msg *msgs, int num)
 {
@@ -474,6 +644,9 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adapter,
 		return result;
 
 	for (i = 0; i < num; i++) {
+		lpi2c_imx->xferred = false;
+		lpi2c_imx->using_dma = false;
+
 		result = lpi2c_imx_start(lpi2c_imx, &msgs[i]);
 		if (result)
 			goto disable;
@@ -482,9 +655,24 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adapter,
 		if (num == 1 && msgs[0].len == 0)
 			goto stop;
 
+		if (is_use_dma(lpi2c_imx, &msgs[i])) {
+			lpi2c_imx->using_dma = true;
+
+			writel(0x1, lpi2c_imx->base + LPI2C_MFCR);
+
+			lpi2c_imx->dma_buf = i2c_get_dma_safe_msg_buf(&msgs[i],
+							    I2C_DMA_THRESHOLD);
+			if (lpi2c_imx->dma_buf) {
+				result = lpi2c_dma_xfer(lpi2c_imx, &msgs[i]);
+				if (result != I2C_USE_PIO)
+					goto stop;
+			}
+		}
+
+		lpi2c_imx->using_dma = false;
 		lpi2c_imx->delivered = 0;
 		lpi2c_imx->msglen = msgs[i].len;
-		init_completion(&lpi2c_imx->complete);
+		reinit_completion(&lpi2c_imx->complete);
 
 		if (msgs[i].flags & I2C_M_RD)
 			lpi2c_imx_read(lpi2c_imx, &msgs[i]);
@@ -503,7 +691,16 @@ static int lpi2c_imx_xfer(struct i2c_adapter *adapter,
 	}
 
 stop:
-	lpi2c_imx_stop(lpi2c_imx);
+	if (!lpi2c_imx->using_dma)
+		lpi2c_imx_stop(lpi2c_imx);
+	else {
+		i2c_put_dma_safe_msg_buf(lpi2c_imx->dma_buf, lpi2c_imx->msg,
+					 lpi2c_imx->xferred);
+		if (result) {
+			lpi2c_cleanup_dma(lpi2c_imx);
+			writel(GEN_STOP << 8, lpi2c_imx->base + LPI2C_MTDR);
+		}
+	}
 
 	temp = readl(lpi2c_imx->base + LPI2C_MSR);
 	if ((temp & MSR_NDF) && !result)
@@ -528,6 +725,10 @@ static irqreturn_t lpi2c_imx_isr(int irq, void *dev_id)
 	temp = readl(lpi2c_imx->base + LPI2C_MSR);
 
 	if (temp & MSR_NDF) {
+		if (lpi2c_imx->using_dma) {
+			lpi2c_cleanup_dma(lpi2c_imx);
+			writel(GEN_STOP << 8, lpi2c_imx->base + LPI2C_MTDR);
+		}
 		complete(&lpi2c_imx->complete);
 		goto ret;
 	}
@@ -623,20 +824,94 @@ static const struct of_device_id lpi2c_imx_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, lpi2c_imx_of_match);
 
+static void lpi2c_dma_exit(struct lpi2c_imx_struct *lpi2c_imx)
+{
+	if (lpi2c_imx->dma_rx) {
+		dma_release_channel(lpi2c_imx->dma_rx);
+		lpi2c_imx->dma_rx = NULL;
+	}
+
+	if (lpi2c_imx->dma_tx) {
+		dma_release_channel(lpi2c_imx->dma_tx);
+		lpi2c_imx->dma_tx = NULL;
+	}
+}
+
+static int lpi2c_dma_init(struct device *dev,
+			  struct lpi2c_imx_struct *lpi2c_imx)
+{
+	int ret;
+	struct dma_slave_config dma_sconfig;
+
+	/* Prepare for TX DMA: */
+	lpi2c_imx->dma_tx = dma_request_chan(dev, "tx");
+	if (IS_ERR(lpi2c_imx->dma_tx)) {
+		ret = PTR_ERR(lpi2c_imx->dma_tx);
+		dev_err(dev, "can't get the TX DMA channel, error %d!\n", ret);
+		lpi2c_imx->dma_tx = NULL;
+		goto err;
+	}
+
+	dma_sconfig.dst_addr = lpi2c_imx->phy_addr + LPI2C_MTDR;
+	dma_sconfig.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+	dma_sconfig.dst_maxburst = 1;
+	dma_sconfig.direction = DMA_MEM_TO_DEV;
+	ret = dmaengine_slave_config(lpi2c_imx->dma_tx, &dma_sconfig);
+	if (ret < 0) {
+		dev_err(dev, "can't configure tx channel (%d)\n", ret);
+		goto fail_tx;
+	}
+
+	/* Prepare for RX DMA: */
+	lpi2c_imx->dma_rx = dma_request_chan(dev, "rx");
+	if (IS_ERR(lpi2c_imx->dma_rx)) {
+		ret = PTR_ERR(lpi2c_imx->dma_rx);
+		dev_err(dev, "can't get the RX DMA channel, error %d\n", ret);
+		lpi2c_imx->dma_rx = NULL;
+		goto fail_tx;
+	}
+
+	dma_sconfig.src_addr = lpi2c_imx->phy_addr + LPI2C_MRDR;
+	dma_sconfig.src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
+	dma_sconfig.src_maxburst = 1;
+	dma_sconfig.direction = DMA_DEV_TO_MEM;
+	ret = dmaengine_slave_config(lpi2c_imx->dma_rx, &dma_sconfig);
+	if (ret < 0) {
+		dev_err(dev, "can't configure rx channel (%d)\n", ret);
+		goto fail_rx;
+	}
+
+	lpi2c_imx->can_use_dma = true;
+	lpi2c_imx->using_dma = false;
+
+	return 0;
+fail_rx:
+	dma_release_channel(lpi2c_imx->dma_rx);
+fail_tx:
+	dma_release_channel(lpi2c_imx->dma_tx);
+err:
+	lpi2c_dma_exit(lpi2c_imx);
+	lpi2c_imx->can_use_dma = false;
+	return ret;
+}
+
 static int lpi2c_imx_probe(struct platform_device *pdev)
 {
 	struct lpi2c_imx_struct *lpi2c_imx;
 	unsigned int temp;
 	int ret;
+	struct resource *res;
 
 	lpi2c_imx = devm_kzalloc(&pdev->dev, sizeof(*lpi2c_imx), GFP_KERNEL);
 	if (!lpi2c_imx)
 		return -ENOMEM;
 
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	lpi2c_imx->base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(lpi2c_imx->base))
 		return PTR_ERR(lpi2c_imx->base);
 
+	lpi2c_imx->phy_addr = (dma_addr_t)res->start;
 	lpi2c_imx->irq = platform_get_irq(pdev, 0);
 	if (lpi2c_imx->irq < 0)
 		return lpi2c_imx->irq;
@@ -684,6 +959,18 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 	/* Give it another chance if pinctrl used is not ready yet */
 	if (ret == -EPROBE_DEFER)
 		goto rpm_disable;
+
+	/* Init DMA */
+	lpi2c_imx->dma_direction = DMA_NONE;
+	lpi2c_imx->dma_rx = lpi2c_imx->dma_tx = NULL;
+	ret = lpi2c_dma_init(&pdev->dev, lpi2c_imx);
+	if (ret) {
+		dev_err_probe(&pdev->dev, ret, "dma setup error %d, use pio\n", ret);
+		if (ret == -EPROBE_DEFER)
+			goto rpm_disable;
+	}
+
+	init_completion(&lpi2c_imx->complete);
 
 	ret = i2c_add_adapter(&lpi2c_imx->adapter);
 	if (ret)
