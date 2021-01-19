@@ -52,6 +52,7 @@
 #include <trace/hooks/bug.h>
 #include <trace/hooks/logbuf.h>
 #include <trace/hooks/regmap.h>
+#include <trace/hooks/softlockup.h>
 
 /*
  * Export tracepoints that act as a bare tracehook (ie: have no trace event
@@ -193,3 +194,4 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_shmem_get_folio);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_slab_folio_alloced);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_kmalloc_large_alloced);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_rvh_ctl_dirty_rate);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_watchdog_timer_softlockup);
