@@ -112,6 +112,7 @@ static int imx8mp_hdmi_pavi_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct imx8mp_hdmi_pavi *pavi;
 	struct resource *res;
+	int ret;
 
 	dev_dbg(dev, "%s: probe begin\n", __func__);
 
@@ -131,7 +132,9 @@ static int imx8mp_hdmi_pavi_probe(struct platform_device *pdev)
 
 	pavi->clk_apb = devm_clk_get(dev, NULL);
 	if (IS_ERR(pavi->clk_apb)) {
-		dev_err(dev, "No pai clock get\n");
+		ret = PTR_ERR(pavi->clk_apb);
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "apb clock failed %d\n", ret);
 		return -EPROBE_DEFER;
 	}
 
