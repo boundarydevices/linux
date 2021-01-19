@@ -57,6 +57,7 @@ struct tmu_sensor {
 	struct thermal_cooling_device *cdev;
 	int temp_passive;
 	int temp_critical;
+	int temp_active;
 };
 
 struct imx8mm_tmu {
@@ -70,6 +71,7 @@ struct imx8mm_tmu {
 enum imx_thermal_trip {
 	IMX_TRIP_PASSIVE,
 	IMX_TRIP_CRITICAL,
+	IMX_TRIP_ACTIVE,
 	IMX_TRIP_NUM,
 };
 
@@ -140,7 +142,9 @@ static int tmu_get_trend(void *p, int trip, enum thermal_trend *trend)
 	if (!sensor->tzd)
 		return 0;
 
-	trip_temp = (trip == IMX_TRIP_PASSIVE) ? sensor->temp_passive : sensor->temp_critical;
+	trip_temp = (trip == IMX_TRIP_PASSIVE) ? sensor->temp_passive :
+			(trip == IMX_TRIP_CRITICAL) ? sensor->temp_critical :
+			(trip == IMX_TRIP_ACTIVE) ? sensor->temp_active : 0;
 
 	if (sensor->tzd->temperature >= (trip_temp - IMX_TEMP_PASSIVE_COOL_DELTA))
 		*trend = THERMAL_TREND_RAISE_FULL;
@@ -159,6 +163,9 @@ static int tmu_set_trip_temp(void *p, int trip, int temp)
 
 	if (trip == IMX_TRIP_PASSIVE)
 		sensor->temp_passive = temp;
+
+	if (trip == IMX_TRIP_ACTIVE)
+		sensor->temp_active = temp;
 
 	return 0;
 }
@@ -192,6 +199,7 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 	const struct thermal_soc_data *data;
 	const struct thermal_trip *trips;
 	struct imx8mm_tmu *tmu;
+	int ntrips;
 	int ret;
 	int i;
 
@@ -260,10 +268,12 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 		}
 
 		trips = of_thermal_get_trip_points(tmu->sensors[i].tzd);
+		ntrips = of_thermal_get_ntrips(tmu->sensors[i].tzd);
 
 		/* get the thermal trip temp */
 		tmu->sensors[i].temp_passive = trips[0].temperature;
 		tmu->sensors[i].temp_critical = trips[1].temperature;
+		tmu->sensors[i].temp_active = (ntrips > 2) ? trips[2].temperature : -1;
 	}
 
 	platform_set_drvdata(pdev, tmu);
