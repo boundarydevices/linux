@@ -552,7 +552,7 @@ static int vadc_enum_frameintervals(struct v4l2_subdev *sd,
 {
 	struct vadc_state *state = to_state(sd);
 
-	if (fie->index < 0 || fie->index >= 1)
+	if (fie->index >= 1)
 		return -EINVAL;
 
 	fie->interval.numerator = 1;
