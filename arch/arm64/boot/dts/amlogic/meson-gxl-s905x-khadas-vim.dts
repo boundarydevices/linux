@@ -29,6 +29,8 @@
 	aliases {
 		serial2 = &uart_AO_B;
 		ethernet0 = &ethmac;
+		rtc0 = &rtc;
+		rtc1 = &vrtc;
 	};
 
 	gpio-keys-polled {
