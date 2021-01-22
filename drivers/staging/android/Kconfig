@@ -16,6 +16,4 @@ config ASHMEM
 
 endif # if ANDROID
 
-source "drivers/staging/android/ion/Kconfig"
-
 endmenu
