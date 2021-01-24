@@ -1048,9 +1048,7 @@ static struct file_operations driver_fops =
     .open       = drv_open,
     .release    = drv_release,
     .unlocked_ioctl = drv_ioctl,
-#ifdef HAVE_COMPAT_IOCTL
     .compat_ioctl = drv_ioctl,
-#endif
 };
 
 static struct miscdevice gal_device = {
