@@ -14,6 +14,7 @@
 #ifndef _UAPI__LINUX_IMX_VPU_H
 #define _UAPI__LINUX_IMX_VPU_H
 
+#include <linux/videodev2.h>
 #include <linux/v4l2-controls.h>
 
 /*imx v4l2 controls*/
@@ -58,6 +59,21 @@ struct v4l2_enc_ipcm_params {
 
 /*imx v4l2 event*/
 #define V4L2_EVENT_CODEC_ERROR		(V4L2_EVENT_PRIVATE_START + 1)
-#define V4L2_EVENT_SKIP			(V4L2_EVENT_PRIVATE_START + 2)
+#define V4L2_EVENT_SKIP					(V4L2_EVENT_PRIVATE_START + 2)
+#define V4L2_EVENT_CROPCHANGE			(V4L2_EVENT_PRIVATE_START + 3)
+#define V4L2_EVENT_INVALID_OPTION		(V4L2_EVENT_PRIVATE_START + 4)
 
-#endif
+/* imx v4l2 formats */
+/*raw formats*/
+#define V4L2_PIX_FMT_BGR565		v4l2_fourcc('B', 'G', 'R', 'P') /* 16  BGR-5-6-5     */
+#define V4L2_PIX_FMT_NV12X			v4l2_fourcc('N', 'V', 'X', '2') /* Y/CbCr 4:2:0 for 10bit  */
+#define V4L2_PIX_FMT_DTRC			v4l2_fourcc('D', 'T', 'R', 'C') /* 8bit tile output  */
+#define V4L2_PIX_FMT_P010			v4l2_fourcc('P', '0', '1', '0')	/*ms p010, data stored in upper 10 bits of 16 */
+
+/*codec format*/
+#define V4L2_PIX_FMT_AV1			v4l2_fourcc('A', 'V', '1', '0')	/* av1 */
+#define V4L2_PIX_FMT_RV				v4l2_fourcc('R', 'V', '0', '0')	/* rv */
+#define V4L2_PIX_FMT_AVS			v4l2_fourcc('A', 'V', 'S', '0')	/* avs */
+/*codec formats*/
+#endif	//#ifndef _UAPI__LINUX_IMX_VPU_H
+
