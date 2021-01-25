@@ -1082,6 +1082,7 @@ static int sec_mipi_dsim_config_pll(struct sec_mipi_dsim *dsim)
 	/* TODO: config dp/dn swap if requires */
 
 	pllctrl |= PLLCTRL_SET_PMS(dsim->c_pms) | PLLCTRL_PLLEN;
+	pr_debug("%s: pllctrl=%x\n", __func__, pllctrl);
 	dsim_write(dsim, pllctrl, DSIM_PLLCTRL);
 
 	ret = wait_for_completion_timeout(&dsim->pll_stable, HZ / 10);
@@ -1162,11 +1163,13 @@ static void sec_mipi_dsim_set_main_mode(struct sec_mipi_dsim *dsim)
 			dsim->byte_clock, dsim->pixelclock);
 	mdresol |= MDRESOL_SET_MAINVRESOL(vmode->vactive) |
 		   MDRESOL_SET_MAINHRESOL(vmode->hactive);
+	pr_debug("%s: mdresol=%x\n", __func__, mdresol);
 	dsim_write(dsim, mdresol, DSIM_MDRESOL);
 
 	mvporch |= MVPORCH_SET_MAINVBP(vmode->vback_porch)    |
 		   MVPORCH_SET_STABLEVFP(vmode->vfront_porch) |
 		   MVPORCH_SET_CMDALLOW(0xf);
+	pr_debug("%s: mvporch=%x\n", __func__, mvporch);
 	dsim_write(dsim, mvporch, DSIM_MVPORCH);
 
 	bpp = mipi_dsi_pixel_format_to_bpp(dsim->format);
@@ -1186,11 +1189,15 @@ static void sec_mipi_dsim_set_main_mode(struct sec_mipi_dsim *dsim)
 	mhporch |= MHPORCH_SET_MAINHFP(hfp_wc) |
 		   MHPORCH_SET_MAINHBP(hbp_wc);
 
+	pr_debug("%s: mhporch=%x\n", __func__, mhporch);
 	dsim_write(dsim, mhporch, DSIM_MHPORCH);
 
 	msync |= MSYNC_SET_MAINVSA(vmode->vsync_len) |
 		 MSYNC_SET_MAINHSA(hsa_wc);
 
+	pr_debug("%s: hfp_wc %u hbp_wc %u hsa_wc %u\n", __func__, hfp_wc, hbp_wc, hsa_wc);
+
+	pr_debug("%s: msync=%x\n", __func__, msync);
 	dsim_write(dsim, msync, DSIM_MSYNC);
 }
 
@@ -1271,6 +1278,8 @@ static void sec_mipi_dsim_config_dpi(struct sec_mipi_dsim *dsim)
 	config |= CONFIG_SET_NUMOFDATLANE(dsim->lanes - 1);
 	config |= CONFIG_SET_LANEEN(0x1 | data_lanes_en << 1);
 
+	pr_debug("%s: DSIM config 0x%x\n", __func__, config);
+
 	dsim_write(dsim, config, DSIM_CONFIG);
 }
 
@@ -1317,21 +1326,25 @@ static void sec_mipi_dsim_config_dphy(struct sec_mipi_dsim *dsim)
 		match->lpx, match->hs_exit);
 	phytiming  |= PHYTIMING_SET_M_TLPXCTL(match->lpx)	|
 		      PHYTIMING_SET_M_THSEXITCTL(match->hs_exit);
+	pr_debug("%s: phytiming=%x\n", __func__, phytiming);
 	dsim_write(dsim, phytiming, DSIM_PHYTIMING);
 
 	phytiming1 |= PHYTIMING1_SET_M_TCLKPRPRCTL(match->clk_prepare)	|
 		      PHYTIMING1_SET_M_TCLKZEROCTL(match->clk_zero)	|
 		      PHYTIMING1_SET_M_TCLKPOSTCTL(match->clk_post)	|
 		      PHYTIMING1_SET_M_TCLKTRAILCTL(match->clk_trail);
+	pr_debug("%s: phytiming1=%x\n", __func__, phytiming1);
 	dsim_write(dsim, phytiming1, DSIM_PHYTIMING1);
 
 	phytiming2 |= PHYTIMING2_SET_M_THSPRPRCTL(match->hs_prepare)	|
 		      PHYTIMING2_SET_M_THSZEROCTL(match->hs_zero)	|
 		      PHYTIMING2_SET_M_THSTRAILCTL(match->hs_trail);
+	pr_debug("%s: phytiming2=%x\n", __func__, phytiming2);
 	dsim_write(dsim, phytiming2, DSIM_PHYTIMING2);
 
 	timeout |= TIMEOUT_SET_BTAOUT(0xff)	|
 		   TIMEOUT_SET_LPDRTOUT(0xff);
+	pr_debug("%s: timeout=%x\n", __func__, timeout);
 	dsim_write(dsim, timeout, DSIM_TIMEOUT);
 }
 
@@ -1382,9 +1395,9 @@ static void sec_mipi_dsim_config_clkctrl(struct sec_mipi_dsim *dsim)
 	 * EscClk = ByteClk / EscPrescaler;
 	 */
 	byte_clk = dsim->bit_clk >> 3;
-	pr_info("%s: bit_clk=%d, clkctrl=%x\n", __func__, dsim->bit_clk, clkctrl);
 	esc_prescaler = DIV_ROUND_UP(byte_clk, MAX_ESC_CLK_FREQ);
 	clkctrl |= CLKCTRL_SET_ESCPRESCALER(esc_prescaler);
+	pr_info("%s: bit_clk=%d, clkctrl=%x\n", __func__, dsim->bit_clk, clkctrl);
 
 	dsim_write(dsim, clkctrl, DSIM_CLKCTRL);
 }
