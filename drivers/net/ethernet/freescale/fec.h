@@ -471,19 +471,25 @@ struct bufdesc_ex {
  */
 #define FEC_QUIRK_CLEAR_SETUP_MII	(1 << 17)
 
+/* Some link partners do not tolerate the momentary reset of the REF_CLK
+ * frequency when the RNCTL register is cleared by hardware reset.
+ */
+#define FEC_QUIRK_NO_HARD_RESET		(1 << 18)
+
 /* i.MX8MQ ENET IP version add new feature to support IEEE 802.3az EEE
  * standard. For the transmission, MAC supply two user registers to set
  * Sleep (TS) and Wake (TW) time.
  */
-#define FEC_QUIRK_HAS_EEE		(1 << 18)
+#define FEC_QUIRK_HAS_EEE		(1 << 20)
+
 /* i.MX8QM ENET IP version add new feture to generate delayed TXC/RXC
  * as an alternative option to make sure it works well with various PHYs.
  * For the implementation of delayed clock, ENET takes synchronized 250MHz
  * clocks to generate 2ns delay.
  */
-#define FEC_QUIRK_DELAYED_CLKS_SUPPORT	(1 << 19)
+#define FEC_QUIRK_DELAYED_CLKS_SUPPORT	(1 << 21)
 /* request pmqos during low power */
-#define FEC_QUIRK_HAS_PMQOS		(1 << 20)
+#define FEC_QUIRK_HAS_PMQOS		(1 << 23)
 
 struct bufdesc_prop {
 	int qid;
