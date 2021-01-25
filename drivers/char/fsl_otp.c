@@ -25,6 +25,7 @@
 
 #define HW_OCOTP_CTRL			0x00000000
 #define HW_OCOTP_CTRL_SET		0x00000004
+#define HW_OCOTP_CTRL_CLR		0x00000008
 #define BP_OCOTP_CTRL_WR_UNLOCK		16
 #define BM_OCOTP_CTRL_WR_UNLOCK		0xFFFF0000
 #define BM_OCOTP_CTRL_RELOAD_SHADOWS	0x00000400
@@ -415,6 +416,10 @@ static int otp_wait_busy(u32 flags)
 		c = __raw_readl(otp_base + HW_OCOTP_CTRL);
 		if (!(c & (BM_OCOTP_CTRL_BUSY | BM_OCOTP_CTRL_ERROR | flags)))
 			break;
+		/* Clear error before attempting further OTP accesses */
+		if (c & (BM_OCOTP_CTRL_ERROR | flags))
+			__raw_writel(BM_OCOTP_CTRL_ERROR,
+				     otp_base + HW_OCOTP_CTRL_CLR);
 		cpu_relax();
 	}
 
