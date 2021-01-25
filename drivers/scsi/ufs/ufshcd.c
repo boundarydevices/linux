@@ -3661,7 +3661,7 @@ static int ufshcd_dme_enable(struct ufs_hba *hba)
 	ret = ufshcd_send_uic_cmd(hba, &uic_cmd);
 	if (ret)
 		dev_err(hba->dev,
-			"dme-reset: error code %d\n", ret);
+			"dme-enable: error code %d\n", ret);
 
 	return ret;
 }
@@ -7717,13 +7717,12 @@ static int ufshcd_clear_ua_wlun(struct ufs_hba *hba, u8 wlun)
 	int ret = 0;
 
 	spin_lock_irqsave(hba->host->host_lock, flags);
-	if (wlun  == UFS_UPIU_UFS_DEVICE_WLUN)
+	if (wlun == UFS_UPIU_UFS_DEVICE_WLUN)
 		sdp = hba->sdev_ufs_device;
-	else if (wlun  == UFS_UPIU_RPMB_WLUN)
+	else if (wlun == UFS_UPIU_RPMB_WLUN)
 		sdp = hba->sdev_rpmb;
 	else
-		return -EINVAL;
-
+		BUG();
 	if (sdp) {
 		ret = scsi_device_get(sdp);
 		if (!ret && !scsi_device_online(sdp)) {
@@ -8887,7 +8886,8 @@ int ufshcd_system_suspend(struct ufs_hba *hba)
 	if ((ufs_get_pm_lvl_to_dev_pwr_mode(hba->spm_lvl) ==
 	     hba->curr_dev_pwr_mode) &&
 	    (ufs_get_pm_lvl_to_link_pwr_state(hba->spm_lvl) ==
-	     hba->uic_link_state))
+	     hba->uic_link_state) &&
+	     !hba->dev_info.b_rpm_dev_flush_capable)
 		goto out;
 
 	if (pm_runtime_suspended(hba->dev)) {

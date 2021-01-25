@@ -38,17 +38,15 @@ static struct device_attribute HDCPTX_do_reauth = __ATTR_WO(HDCPTX_do_reauth);
 static ssize_t HDCPTX_do_reauth_store(struct device *dev,
 			struct device_attribute *attr, const char *buf, size_t count)
 {
-    int value, ret;
+    int ret;
 	struct cdns_mhdp_device *mhdp = dev_get_drvdata(dev);
 
 	ret = cdns_mhdp_hdcp_tx_reauth(mhdp, 1);
-
-	sscanf(buf, "%d", &value);
-
     if (ret < 0) {
 		dev_err(dev, "%s cdns_mhdp_hdcp_tx_reauth failed\n", __func__);
 		return -1;
 	}
+
 	return count;
 }
 
@@ -62,9 +60,12 @@ static ssize_t HDCPTX_Version_store(struct device *dev,
 			struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct cdns_mhdp_device *mhdp = dev_get_drvdata(dev);
-	int value;
+	int value, ret;
 
-	sscanf(buf, "%d", &value);
+	ret = sscanf(buf, "%d", &value);
+	if (ret != 1)
+		return -EINVAL;
+
 	if (value == 2)
 		mhdp->hdcp.config = 2;
 	else if (value == 1)
@@ -119,10 +120,13 @@ ssize_t HDCPTX_Status_store(struct device *dev,
 			struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct cdns_mhdp_device *mhdp = dev_get_drvdata(dev);
-	int value;
+	int value, ret;
 
 	if (count == 2) {
-		sscanf(buf, "%d", &value);
+		ret = sscanf(buf, "%d", &value);
+		if (ret != 1)
+			return -EINVAL;
+
 		if ((value >= HDCP_STATE_NO_AKSV) && (value <= HDCP_STATE_AUTH_FAILED)) {
 			mhdp->hdcp.state = value;
 			return count;
@@ -151,7 +155,6 @@ ssize_t HDCPTX_Status_store(struct device *dev,
     else
 		dev_err(dev, "%s &hdp->state invalid\n", __func__);
 		return -1;
-    return count;
 }
 
 #ifdef CONFIG_EXTCON
