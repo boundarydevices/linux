@@ -232,3 +232,4 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mq-bio.dtb \
 			  imx8mq-nitrogen8m-avt.dtb \
 			  imx8mq-nitrogen8m-edp.dtb \
 			  imx8mq-nitrogen8m-gbr.dtb \
+			  imx8mq-nitrogen8m-mcp2518fd.dtb \
