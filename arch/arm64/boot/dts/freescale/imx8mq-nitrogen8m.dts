@@ -1526,6 +1526,8 @@
 	pinctrl-0 = <&pinctrl_usdhc2>;
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
+	pm-ignore-notify;
+	keep-power-in-suspend;
 	non-removable;
 	status = "okay";
 	vmmc-supply = <&reg_wlan_vmmc>;
