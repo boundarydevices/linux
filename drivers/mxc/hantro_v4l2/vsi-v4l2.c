@@ -44,11 +44,34 @@
 #define DRIVER_NAME	"vsiv4l2"
 
 struct platform_device *gvsidev;
-static s32 self;
 struct idr inst_array;
 static struct device *vsidaemondev;
 static struct mutex vsi_ctx_array_lock;		//it only protect ctx between release from app and msg from daemon
 static ulong ctx_seqid;
+
+static ssize_t BandWidth_show(struct device *kdev,
+				     struct device_attribute *attr, char *buf)
+{
+	/*
+	 * sys/bus/platform/drivers/vsiv4l2/xxxxx.vpu/BandWidth
+	 * used to show bandwidth info to user space
+	 */
+	u64 bandwidth;
+
+	bandwidth = vsi_v4l2_getbandwidth();
+	return snprintf(buf, PAGE_SIZE, "%lld\n", bandwidth);
+}
+
+static DEVICE_ATTR_RO(BandWidth);
+
+static struct attribute *vsi_v4l2_attrs[] = {
+	&dev_attr_BandWidth.attr,
+	NULL,
+};
+
+static const struct attribute_group vsi_v4l2_attr_group = {
+	.attrs = vsi_v4l2_attrs,
+};
 
 static void release_ctx(struct vsi_v4l2_ctx *ctx, int notifydaemon)
 {
@@ -948,6 +971,13 @@ static int v4l2_probe(struct platform_device *pdev)
 	idr_init(&inst_array);
 
 	gvsidev = pdev;
+
+	mutex_init(&vsi_ctx_array_lock);
+	ctx_seqid = 0;
+	if (devm_device_add_group(&gvsidev->dev, &vsi_v4l2_attr_group))
+		pr_err("fail to create sysfs API");
+
+	pr_info("vpu v4l2: module inserted. Major = %d\n", VSI_DAEMON_DEVMAJOR);
 	return 0;
 
 err:
@@ -967,6 +997,8 @@ err:
 
 static int v4l2_remove(struct platform_device *pdev)
 {
+	void *obj;
+	int id;
 	struct vsi_v4l2_device *vpu = platform_get_drvdata(pdev);
 
 	v4l2_release_dec(vpu->vdec);
@@ -974,6 +1006,19 @@ static int v4l2_remove(struct platform_device *pdev)
 	v4l2_device_unregister(&vpu->v4l2_dev);
 	platform_set_drvdata(pdev, NULL);
 	kfree(vpu);
+
+	idr_for_each_entry(&inst_array, obj, id) {
+		if (obj) {
+			release_ctx(obj, 0);
+			vsi_v4l2_quitinstance();
+		}
+	}
+
+	device_unregister(vsidaemondev);
+	class_destroy(vsidaemondev->class);
+	kfree(vsidaemondev);
+	vsiv4l2_cleanupdaemon();
+	gvsidev = NULL;
 
 	return 0;
 }
@@ -986,7 +1031,7 @@ static const struct platform_device_id v4l2_platform_ids[] = {
 };
 
 static const struct of_device_id v4l2_of_match[] = {
-	{ .compatible = "platform-vsiv4l2", },
+	{ .compatible = "nxp,imx8m-vsiv4l2", },
 	{/* sentinel */}
 };
 
@@ -1007,88 +1052,7 @@ static const struct platform_device_info v4l2_platform_info = {
 	.dma_mask	= DMA_BIT_MASK(64),
 };
 
-static ssize_t BandWidth_show(struct device *kdev,
-				     struct device_attribute *attr, char *buf)
-{
-	/*
-	 * sys/bus/platform/drivers/vsiv4l2/xxxxx.vpu/BandWidth
-	 * used to show bandwidth info to user space
-	 */
-	u64 bandwidth;
-
-	bandwidth = vsi_v4l2_getbandwidth();
-	return snprintf(buf, PAGE_SIZE, "%lld\n", bandwidth);
-}
-
-static DEVICE_ATTR_RO(BandWidth);
-
-static struct attribute *vsi_v4l2_attrs[] = {
-	&dev_attr_BandWidth.attr,
-	NULL,
-};
-
-static const struct attribute_group vsi_v4l2_attr_group = {
-	.attrs = vsi_v4l2_attrs,
-};
-
-void __exit vsi_v4l2_cleanup(void)
-{
-	void *obj;
-	int id;
-
-	gvsidev = NULL;
-	idr_for_each_entry(&inst_array, obj, id) {
-		if (obj) {
-			release_ctx(obj, 0);
-			vsi_v4l2_quitinstance();
-		}
-	}
-
-	device_unregister(vsidaemondev);
-	class_destroy(vsidaemondev->class);
-	kfree(vsidaemondev);
-	vsiv4l2_cleanupdaemon();
-	if (self)
-		platform_device_unregister(gvsidev);
-	platform_driver_unregister(&v4l2_drm_platform_driver);
-	gvsidev = NULL;
-	self = 0;
-	pr_debug("%s", __func__);
-}
-
-int __init vsi_v4l2_init(void)
-{
-	int result;
-
-	self = 0;
-	vsidaemondev = NULL;
-	mutex_init(&vsi_ctx_array_lock);
-	ctx_seqid = 0;
-	result = platform_driver_register(&v4l2_drm_platform_driver);
-	if (result < 0) {
-		platform_device_unregister(gvsidev);
-		gvsidev = NULL;
-	}
-
-	if (gvsidev == NULL) {
-		gvsidev = platform_device_register_full(&v4l2_platform_info);
-		if (gvsidev == NULL) {
-			pr_err("v4l2 create platform device fail");
-			platform_driver_unregister(&v4l2_drm_platform_driver);
-			return -1;
-		}
-		self = 1;
-	}
-	if (devm_device_add_group(&gvsidev->dev, &vsi_v4l2_attr_group))
-		pr_err("fail to create sysfs API");
-
-	pr_debug("v4l2 device created");
-
-	return result;
-}
-
-module_init(vsi_v4l2_init);
-module_exit(vsi_v4l2_cleanup);
+module_platform_driver(v4l2_drm_platform_driver);
 
 /* module description */
 MODULE_LICENSE("GPL v2");

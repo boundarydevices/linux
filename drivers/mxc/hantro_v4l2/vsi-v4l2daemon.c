@@ -46,10 +46,10 @@
 #define PIPE_DEVICE_NAME      "vsiv4l2daemon"
 
 static s32 invoke_vsidaemon = 1;
-module_param(invoke_vsidaemon, int, 0444);
+module_param(invoke_vsidaemon, int, 0644);
 
 static s32 loglevel;
-module_param(loglevel, int, 0444);
+module_param(loglevel, int, 0644);
 
 static ulong g_seqid;
 static struct idr *cmdarray, *retarray;
