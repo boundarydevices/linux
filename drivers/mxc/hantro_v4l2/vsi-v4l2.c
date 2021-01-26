@@ -933,6 +933,8 @@ static int v4l2_probe(struct platform_device *pdev)
 		goto err;
 
 	vsidaemondev = kzalloc(sizeof(struct device), GFP_KERNEL);
+	vsidaemondev->class = class_create(THIS_MODULE, "vsi_class");
+	vsidaemondev->parent = NULL;
 	vsidaemondev->devt = MKDEV(VSI_DAEMON_DEVMAJOR, 0);
 	dev_set_name(vsidaemondev, "%s", VSI_DAEMON_FNAME);
 	vsidaemondev->release = vsi_daemonsdevice_release;
@@ -1043,6 +1045,7 @@ void __exit vsi_v4l2_cleanup(void)
 	}
 
 	device_unregister(vsidaemondev);
+	class_destroy(vsidaemondev->class);
 	kfree(vsidaemondev);
 	vsiv4l2_cleanupdaemon();
 	if (self)
