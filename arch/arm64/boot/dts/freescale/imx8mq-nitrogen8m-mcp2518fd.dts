@@ -1,0 +1,111 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2021 Boundary Devices
+ */
+
+#include "imx8mq-nitrogen8m.dts"
+
+&iomuxc {
+	/delete-node/ pwm1grp;
+	/delete-node/ pwm2grp;
+
+	pinctrl_ecspi2_mcp2518fd: ecspi2-mcp2518fdgrp {
+		fsl,pins = <
+			/* MCP2518FD - can controller */
+#define GPIRQ_MCP2518FD	<&gpio5 4 IRQ_TYPE_LEVEL_LOW>
+			MX8MQ_IOMUXC_SPDIF_RX_GPIO5_IO4		0x1c0
+#define GP_CAN_EN	<&gpio1 10 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_GPIO1_IO10_GPIO1_IO10	0x16
+		>;
+	};
+
+	/delete-node/ hoggrp;
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			/* J17 connector, odd */
+			MX8MQ_IOMUXC_SAI1_RXFS_GPIO4_IO0		0x19	/* Pin 19 */
+			MX8MQ_IOMUXC_SAI1_RXC_GPIO4_IO1			0x19	/* Pin 21 */
+			MX8MQ_IOMUXC_SAI1_RXD1_GPIO4_IO3		0x19	/* Pin 23 */
+			MX8MQ_IOMUXC_SAI1_RXD2_GPIO4_IO4		0x19	/* Pin 25 */
+			MX8MQ_IOMUXC_SAI1_RXD3_GPIO4_IO5		0x19	/* Pin 27 */
+			MX8MQ_IOMUXC_SAI1_RXD4_GPIO4_IO6		0x19	/* Pin 29 */
+			MX8MQ_IOMUXC_SAI1_RXD5_GPIO4_IO7		0x19	/* Pin 31 */
+			MX8MQ_IOMUXC_SAI1_RXD6_GPIO4_IO8		0x19	/* Pin 33 */
+			MX8MQ_IOMUXC_SAI1_RXD7_GPIO4_IO9		0x19	/* Pin 35 */
+			MX8MQ_IOMUXC_SAI1_TXD1_GPIO4_IO13		0x19	/* Pin 39 */
+			MX8MQ_IOMUXC_SAI1_TXD2_GPIO4_IO14		0x19	/* Pin 41 */
+			MX8MQ_IOMUXC_SAI1_TXD3_GPIO4_IO15		0x19	/* Pin 43 */
+			MX8MQ_IOMUXC_SAI1_TXD4_GPIO4_IO16		0x19	/* Pin 45 */
+			MX8MQ_IOMUXC_SAI1_TXD5_GPIO4_IO17		0x19	/* Pin 47 */
+			MX8MQ_IOMUXC_SAI1_TXD6_GPIO4_IO18		0x19	/* Pin 49 */
+			MX8MQ_IOMUXC_SAI1_TXD7_GPIO4_IO19		0x19	/* Pin 51 */
+
+			/* J17 connector, even */
+			MX8MQ_IOMUXC_SAI3_RXFS_GPIO4_IO28		0x19	/* Pin 44 */
+			MX8MQ_IOMUXC_SAI3_RXC_GPIO4_IO29		0x19	/* Pin 48 */
+			MX8MQ_IOMUXC_GPIO1_IO03_GPIO1_IO3		0x19	/* Pin 54 */
+			MX8MQ_IOMUXC_GPIO1_IO05_GPIO1_IO5		0x19	/* Pin 56 */
+
+			/* J18 connector, odd */
+			MX8MQ_IOMUXC_NAND_CE3_B_GPIO3_IO4		0x19	/* Pin 41 */
+			MX8MQ_IOMUXC_NAND_READY_B_GPIO3_IO16		0x19	/* Pin 45 */
+			MX8MQ_IOMUXC_NAND_DATA05_GPIO3_IO11		0x19	/* Pin 47 */
+			MX8MQ_IOMUXC_NAND_WP_B_GPIO3_IO18		0x19	/* Pin 49 */
+			MX8MQ_IOMUXC_NAND_DQS_GPIO3_IO14		0x19	/* Pin 53 */
+
+			/* J18 connector, even */
+			MX8MQ_IOMUXC_NAND_ALE_GPIO3_IO0			0x19	/* Pin 32 */
+			MX8MQ_IOMUXC_NAND_CE0_B_GPIO3_IO1		0x19	/* Pin 36 */
+			MX8MQ_IOMUXC_NAND_DATA00_GPIO3_IO6		0x19	/* Pin 38 */
+			MX8MQ_IOMUXC_NAND_DATA01_GPIO3_IO7		0x19	/* Pin 40 */
+			MX8MQ_IOMUXC_NAND_DATA02_GPIO3_IO8		0x19	/* Pin 42 */
+			MX8MQ_IOMUXC_NAND_DATA03_GPIO3_IO9		0x19	/* Pin 44 */
+			MX8MQ_IOMUXC_NAND_DATA04_GPIO3_IO10		0x19	/* Pin 46 */
+
+			/* J13 Pin 2, WL_WAKE */
+			MX8MQ_IOMUXC_SAI5_RXD2_GPIO3_IO23		0xd6
+			/* J13 Pin 4, WL_IRQ, not needed for Silex */
+			MX8MQ_IOMUXC_SAI5_RXD0_GPIO3_IO21		0xd6
+			/* J13 pin 9, unused */
+			MX8MQ_IOMUXC_SD2_CD_B_GPIO2_IO12		0x19
+			/* J13 Pin 41, BT_CLK_REQ */
+			MX8MQ_IOMUXC_SAI5_RXD1_GPIO3_IO22		0xd6
+			/* J13 Pin 42, BT_HOST_WAKE */
+			MX8MQ_IOMUXC_SAI5_MCLK_GPIO3_IO25		0xd6
+
+			/* Clock for both CSI1 and CSI2 */
+			MX8MQ_IOMUXC_GPIO1_IO15_CCMSRCGPCMIX_CLKO2	0x07
+		>;
+	};
+};
+
+/ {
+	model = "Boundary Devices i.MX8MQ Nitrogen8M mcp2518fd";
+	/delete-node/ backlight-edp;
+	/delete-node/ mipi-mclk;
+
+	clocks {
+		clk40m: clk40m {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <40000000>;
+		};
+	};
+};
+
+/delete-node/ &pwm1;
+/delete-node/ &pwm2;
+
+&ecspi2 {
+	/delete-node/ spidev@0;
+	can0: can@0 {
+		clocks = <&clk40m>;
+		compatible = "microchip,mcp2518fd";
+		interrupts-extended = GPIRQ_MCP2518FD;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ecspi2_mcp2518fd>;
+		reg = <0>;
+		spi-max-frequency = <20000000>;
+		xceiver-gpios = GP_CAN_EN;
+	};
+};
