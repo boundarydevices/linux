@@ -11,6 +11,8 @@
 };
 
 &usdhc2 {
+	/delete-property/ pm-ignore-notify;
+	/delete-property/ keep-power-in-suspend;
 	/delete-property/ non-removable;
 	/delete-property/ no-sd-uhs-sdr104;
 	/delete-property/ tuning-delay;
