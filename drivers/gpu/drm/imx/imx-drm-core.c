@@ -88,7 +88,7 @@ static int imx_drm_ipu_dumb_create(struct drm_file *file_priv,
 	return ret;
 }
 
-static const struct drm_driver imx_drm_driver = {
+static struct drm_driver imx_drm_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_ATOMIC,
 	DRM_GEM_CMA_DRIVER_OPS,
 	.ioctls			= imx_drm_ioctls,
