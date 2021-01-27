@@ -1118,9 +1118,11 @@ struct mxc_jpeg_stream {
 	u32 loc;
 	u32 end;
 };
-static u8 get_byte(struct mxc_jpeg_stream *stream)
+
+/* returns a value that fits into u8, or negative error */
+static int get_byte(struct mxc_jpeg_stream *stream)
 {
-	u8 ret;
+	int ret;
 
 	if (stream->loc >= stream->end)
 		return -1;
@@ -1275,9 +1277,10 @@ static int mxc_jpeg_parse(struct mxc_jpeg_ctx *ctx,
 	bool app14 = false;
 	bool src_chg = false;
 	u8 app14_transform = 0;
-	struct mxc_jpeg_sof sof, *psof = 0;
-	struct mxc_jpeg_sos *psos = 0;
-	u8 byte, *next = 0;
+	struct mxc_jpeg_sof sof, *psof = NULL;
+	struct mxc_jpeg_sos *psos = NULL;
+	int byte;
+	u8 *next = NULL;
 	enum mxc_jpeg_image_format img_fmt;
 	u32 fourcc;
 
@@ -1295,6 +1298,8 @@ static int mxc_jpeg_parse(struct mxc_jpeg_ctx *ctx,
 		do {
 			byte = get_byte(&stream);
 		} while (byte == 0xff);
+		if (byte == -1)
+			return -EINVAL;
 		if (byte == 0)
 			continue;
 		switch (byte) {
