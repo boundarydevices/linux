@@ -46,6 +46,15 @@
 			no-map;
 		};
 
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0 0x04000000>;
+			alignment = <0 0x1000>;
+			linux,cma-default;
+		};
+
 		vpu_ram: vpu_ram@0x60000000 {
 			compatible = "shared-dma-pool";
 			reg = <0 0x60000000 0 0x04000000>;
