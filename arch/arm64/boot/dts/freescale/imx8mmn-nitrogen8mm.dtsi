@@ -919,7 +919,6 @@
 		reg = <0x41>;
 		reset-gpios = GP_TS_ILI251X_RESET;
 		status = "disabled";
-		touchscreen-inverted-x;
 		touchscreen-size-x = <0x3fff>;
 		touchscreen-size-y = <0x3fff>;
 	};
