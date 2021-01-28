@@ -2281,6 +2281,9 @@ static const struct dev_pm_ops imx6_pcie_pm_ops = {
 				      imx6_pcie_resume_noirq)
 };
 
+static const struct dw_pcie_host_ops imx6_pcie_host_ops = {
+};
+
 static int imx6_pcie_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -2303,6 +2306,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 
 	pci->dev = dev;
 	pci->ops = &dw_pcie_ops;
+	pci->pp.ops = &imx6_pcie_host_ops;
 
 	imx6_pcie->pci = pci;
 	imx6_pcie->drvdata = of_device_get_match_data(dev);
@@ -2432,6 +2436,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 			dev_err(dev, "Failed to get PCIEPHY perst control\n");
 			return PTR_ERR(imx6_pcie->pciephy_perst);
 		}
+		fallthrough;
 	case IMX8MQ:
 	case IMX8MM:
 	case IMX8MQ_EP:
