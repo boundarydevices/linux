@@ -587,12 +587,12 @@
 		<&clk IMX8MQ_CLK_PCIE1_AUX>,
 		<&clk IMX8MQ_CLK_PCIE1_PHY>,
 		<&pcie0_refclk>;
-	clock-names = "pcie", "pcie_bus", "pcie_phy", "pcie_ext_src";
+	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
+	ext_osc = <1>;
+	hard-wired;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie0>;
-	ext_osc = <0>;
 	reset-gpio = GP_PCIE0_RESET;
-	hard-wired = <1>;
 	status = "okay";
 };
 
@@ -601,10 +601,11 @@
 		<&clk IMX8MQ_CLK_PCIE2_AUX>,
 		<&clk IMX8MQ_CLK_PCIE2_PHY>,
 		<&pcie1_refclk>;
-	clock-names = "pcie", "pcie_bus", "pcie_phy", "pcie_ext_src";
+	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
+	ext_osc = <1>;
+	hard-wired;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie1>;
-	ext_osc = <0>;
 	reset-gpio = GP_PCIE1_RESET;
 	status = "okay";
 };
