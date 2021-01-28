@@ -211,6 +211,7 @@ struct mxc_jpeg_src_buf {
 
 	/* mxc-jpeg specific */
 	bool			dht_needed;
+	bool			jpeg_parse_error;
 };
 
 static inline struct mxc_jpeg_src_buf *vb2_to_mxc_buf(struct vb2_buffer *vb)
@@ -889,6 +890,7 @@ static void mxc_jpeg_device_run(void *priv)
 	struct device *dev = jpeg->dev;
 	struct vb2_v4l2_buffer *src_buf, *dst_buf;
 	unsigned long flags;
+	struct mxc_jpeg_src_buf *jpeg_src_buf;
 
 	spin_lock_irqsave(&ctx->mxc_jpeg->hw_lock, flags);
 	src_buf = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
@@ -896,6 +898,19 @@ static void mxc_jpeg_device_run(void *priv)
 	if (!src_buf || !dst_buf) {
 		dev_err(dev, "Null src or dst buf\n");
 		goto end;
+	}
+
+	jpeg_src_buf = vb2_to_mxc_buf(&src_buf->vb2_buf);
+	if (jpeg_src_buf->jpeg_parse_error) {
+		jpeg->slot_data[ctx->slot].used = false;
+		v4l2_m2m_src_buf_remove(ctx->fh.m2m_ctx);
+		v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
+		v4l2_m2m_buf_done(src_buf, VB2_BUF_STATE_ERROR);
+		v4l2_m2m_buf_done(dst_buf, VB2_BUF_STATE_ERROR);
+		spin_unlock_irqrestore(&ctx->mxc_jpeg->hw_lock, flags);
+		v4l2_m2m_job_finish(jpeg->m2m_dev, ctx->fh.m2m_ctx);
+
+		return;
 	}
 
 	/*
@@ -1458,15 +1473,15 @@ static void mxc_jpeg_buf_queue(struct vb2_buffer *vb)
 	if (ctx->mode != MXC_JPEG_DECODE)
 		goto end;
 	jpeg_src_buf = vb2_to_mxc_buf(vb);
+	jpeg_src_buf->jpeg_parse_error = false;
 	ret = mxc_jpeg_parse(ctx,
 			(u8 *)vb2_plane_vaddr(vb, 0),
 			vb2_get_plane_payload(vb, 0),
 			&jpeg_src_buf->dht_needed);
-	if (ret) {
+	if (ret != 0) {
 		v4l2_err(&ctx->mxc_jpeg->v4l2_dev,
-			 "driver does not support this resolution/format\n");
-		vb2_buffer_done(vb, VB2_BUF_STATE_ERROR);
-		return;
+			 "error parsing jpeg headers\n");
+		jpeg_src_buf->jpeg_parse_error = true;
 	}
 end:
 	v4l2_m2m_buf_queue(ctx->fh.m2m_ctx, vbuf);
