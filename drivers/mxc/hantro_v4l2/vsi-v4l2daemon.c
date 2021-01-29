@@ -45,10 +45,10 @@
 
 #define PIPE_DEVICE_NAME      "vsiv4l2daemon"
 
-static s32 invoke_vsidaemon = 1;
-module_param(invoke_vsidaemon, int, 0644);
+static bool invoke_vsidaemon = 1;
+module_param(invoke_vsidaemon, bool, 0644);
 
-static s32 loglevel;
+static int loglevel;
 module_param(loglevel, int, 0644);
 
 static ulong g_seqid;
@@ -185,8 +185,10 @@ static int getRet(unsigned long seqid, int *error, s32 *retflag)
 	int match = 0, id;
 	struct vsi_v4l2_msg	*obj;
 
-	if (atomic_read(&daemon_fn) <= 0)
+	if (atomic_read(&daemon_fn) <= 0) {
+		*error = DAEMON_ERR_DAEMON_MISSING;
 		return 1;
+	}
 	if (mutex_lock_interruptible(&ret_lock))
 		return -EBUSY;
 	idr_for_each_entry(retarray, obj, id) {
@@ -310,7 +312,7 @@ static int getbusaddr(struct vsi_v4l2_ctx *ctx, dma_addr_t  *busaddr, struct vb2
 	return planeno;
 }
 
-static u32 format_bufinfo_enc(struct vsi_v4l2_ctx *ctx, struct vsi_v4l2_msg *pmsg, struct vb2_buffer *buf, u32 update)
+static u32 format_bufinfo_enc(struct vsi_v4l2_ctx *ctx, struct vsi_v4l2_msg *pmsg, struct vb2_buffer *buf, u32 *update)
 {
 	u32 planeno, size;
 	struct v4l2_daemon_enc_buffers *encbufinfo;
@@ -318,7 +320,9 @@ static u32 format_bufinfo_enc(struct vsi_v4l2_ctx *ctx, struct vsi_v4l2_msg *pms
 
 	convertROI(ctx);
 	convertIPCM(ctx);
-	if (update) {
+	if (binputqueue(buf->type) && ctx->srcvbufflag[buf->index] & FORCE_IDR)
+		*update |= UPDATE_INFO;
+	if (*update & UPDATE_INFO) {
 		size = sizeof(struct v4l2_daemon_enc_params);
 		memcpy((void *)&pmsg->params.enc_params, (void *)&ctx->mediacfg.encparams, sizeof(ctx->mediacfg.encparams));
 	} else {
@@ -415,8 +419,10 @@ int vsiv4l2_execcmd(struct vsi_v4l2_ctx *ctx, enum v4l2_daemon_cmd_id id, void *
 	s32 retflag;
 	struct vsi_v4l2_msg msg;
 
-	if (atomic_read(&daemon_fn) <= 0)
-		return -ENODEV;
+	if (atomic_read(&daemon_fn) <= 0) {
+		ret = -ENODEV;
+		goto tail;
+	}
 	memset((void *)&msg, 0, sizeof(msg));
 	switch (id) {
 	case V4L2_DAEMON_VIDIOC_EXIT:
@@ -469,7 +475,7 @@ int vsiv4l2_execcmd(struct vsi_v4l2_ctx *ctx, enum v4l2_daemon_cmd_id id, void *
 				update = UPDATE_INFO;
 			else
 				update = 0;
-			size = format_bufinfo_enc(ctx, &msg, args, update);
+			size = format_bufinfo_enc(ctx, &msg, args, &update);
 			ret = vsi_v4l2_sendcmd(id, ctx->ctxid, ctx->mediacfg.encparams.general.codecFormat,
 					&msg.params, &retflag, size, update);
 		} else {
@@ -481,8 +487,18 @@ int vsiv4l2_execcmd(struct vsi_v4l2_ctx *ctx, enum v4l2_daemon_cmd_id id, void *
 	default:
 		return -1;
 	}
-	if (ctx)
+tail:
+	if (ctx) {
 		set_bit(CTX_FLAG_DAEMONLIVE_BIT, &ctx->flag);
+		if (ret < 0) {
+			struct v4l2_event event = {
+				.type = V4L2_EVENT_CODEC_ERROR,
+			};
+			ctx->error = ret;
+			v4l2_event_queue_fh(&ctx->fh, &event);
+			pr_err("fail to communicate with daemon");
+		}
+	}
 	return ret;
 }
 
@@ -669,7 +685,7 @@ static int v4l2_daemon_release(struct inode *inode, struct file *filp)
 		struct vsi_v4l2_ctx *ctx;
 		int id;
 
-		idr_for_each_entry(&inst_array, ctx, id) {
+		idr_for_each_entry(&vsi_inst_array, ctx, id) {
 			if (ctx) {
 				ctx->error = -2;
 				wake_up_interruptible_all(&ctx->input_que.done_wq);

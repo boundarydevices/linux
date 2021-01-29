@@ -47,8 +47,22 @@
 #endif
 
 /* declarations */
-extern struct platform_device *gvsidev;
-extern struct idr inst_array;
+extern struct idr vsi_inst_array;
+extern int vsi_kloglvl;
+
+enum {
+	LOGLVL_ERROR = 0,
+	LOGLVL_WARNING,
+	LOGLVL_BRIEF,
+	LOGLVL_VERBOSE,
+};
+
+#define v4l2_pr(lvl, fmt, ...) {\
+	if (lvl == LOGLVL_ERROR)	\
+		pr_err(fmt, ...);	\
+	else if (lvl >= vsi_kloglvl)		\
+		pr_info(fmt, ...);	\
+}
 
 /*this table should be consistent with that in hevcencapi.h*/
 enum VCEncPictureType {
@@ -144,7 +158,6 @@ enum CTX_STATUS {
 	DEC_STATUS_SEEK,
 	DEC_STATUS_CAPSETUP,
 	DEC_STATUS_ENDSTREAM,
-	DEC_STATUS_RESCHANGE,
 };
 
 struct vsi_v4l2_mem_info_internal {
@@ -239,13 +252,20 @@ struct vsi_queued_buf {
 #define CTX_FLAG_DEC				(1 << 0)
 
 enum {
-	CTX_FLAG_PRE_DRAINING_BIT = 1,
-	CTX_FLAG_ENDOFSTRM_BIT,
-	CTX_FLAG_CROPCHANGE_BIT,
-	CTX_FLAG_DAEMONLIVE_BIT,
-	CTX_FLAG_CONFIGUPDATE_BIT,
-	CTX_FLAG_FORCEIDR_BIT,
-	CTX_FLAG_SRCCHANGED_BIT,
+	CTX_FLAG_PRE_DRAINING_BIT = 1,	//decoder_cmd stop has comes
+	CTX_FLAG_ENDOFSTRM_BIT,			// got last flag received from daemon
+	CTX_FLAG_CROPCHANGE_BIT,			// got crop change msg from daemon
+	CTX_FLAG_DAEMONLIVE_BIT,			// has send msg to daemon (so daemon has live instance for this ctx
+	CTX_FLAG_CONFIGUPDATE_BIT,		// need update info to daemon (for enc)
+	CTX_FLAG_FORCEIDR_BIT,			// force idr invoked
+	CTX_FLAG_SRCCHANGED_BIT,			// src change has come from daemon
+	CTX_FLAG_DELAY_SRCCHANGED_BIT,	// src change has come from daemon	 but not sent to app
+};
+
+/* flag for decoder buffer*/
+enum {
+	BUF_FLAG_QUEUED = 0,		/*buf queued from app*/
+	BUF_FLAG_DONE,			/*buf returned from daemon*/
 };
 
 struct vsi_v4l2_ctx {
@@ -262,8 +282,8 @@ struct vsi_v4l2_ctx {
 	struct list_head input_list;
 	struct vb2_queue output_que;
 	struct list_head output_list;
-	u32 vbufflag[VIDEO_MAX_FRAME];
-	u32 srcvbufflag[VIDEO_MAX_FRAME];
+	ulong vbufflag[VIDEO_MAX_FRAME];
+	ulong srcvbufflag[VIDEO_MAX_FRAME];
 
 	u32 inbufbytes[VIDEO_MAX_FRAME];
 	u32 inbuflen[VIDEO_MAX_FRAME];
@@ -290,6 +310,7 @@ int v4l2_release(struct file *filp);
 void vsi_remove_ctx(struct vsi_v4l2_ctx *ctx);
 struct vsi_v4l2_ctx *vsi_create_ctx(void);
 int vsi_v4l2_reset_ctx(struct vsi_v4l2_ctx *ctx);
+int vsi_v4l2_send_reschange(struct vsi_v4l2_ctx *ctx);
 int vsi_v4l2_notify_reschange(struct vsi_v4l2_msg *pmsg);
 int vsi_v4l2_handle_warningmsg(struct vsi_v4l2_msg *pmsg);
 int vsi_v4l2_handle_cropchange(struct vsi_v4l2_msg *pmsg);

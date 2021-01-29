@@ -38,9 +38,6 @@
 #include <media/videobuf2-vmalloc.h>
 #include "vsi-v4l2-priv.h"
 
-static s32 rpt_10bit = 1;
-module_param(rpt_10bit, int, 0444);
-
 static struct vsi_v4l2_dev_info vsi_v4l2_hwconfig = {0};
 static void calcPlanesize(struct vsi_v4l2_ctx *ctx, int pixelformat, int width, int height, int size[], int type, int planeno);
 static int vsiv4l2_verifyfmt(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt);
@@ -174,7 +171,7 @@ static int enc_isRGBformat(u32 fourcc)
 	case V4L2_PIX_FMT_ABGR32:
 	case V4L2_PIX_FMT_RGB565:
 	case V4L2_PIX_FMT_RGB555:
-	case V4L2_PIX_FMT_BGRX555:
+	case V4L2_PIX_FMT_BGR565:
 	case V4L2_PIX_FMT_RGBX32:
 		return 1;
 	default:
@@ -398,6 +395,13 @@ static struct vsi_video_fmt vsi_raw_fmt[] = {
 		.dec_fmt = VSI_V4L2_DECOUT_NV12_10BIT,
 		.flag = 0,
 	},
+	{
+		.name = "DTRC 10Bit",
+		.fourcc = V4L2_PIX_FMT_TILEX,
+		.enc_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE,
+		.dec_fmt = VSI_V4L2_DECOUT_DTRC_10BIT,
+		.flag = 0,
+	},
 };
 
 static struct vsi_video_fmt vsi_coded_fmt[] = {
@@ -523,8 +527,10 @@ void vsi_enum_encfsize(struct v4l2_frmsizeenum *f, u32 pixel_format)
 	default:
 		f->stepwise.min_width = 132;
 		f->stepwise.max_width = 1920;
+		f->stepwise.step_width = 2;
 		f->stepwise.min_height = 96;
 		f->stepwise.max_height = 1088;
+		f->stepwise.step_height = 2;
 		break;
 	}
 	f->type = V4L2_FRMSIZE_TYPE_STEPWISE;
@@ -946,7 +952,7 @@ static int vsiv4l2_enc_getalign(u32 srcfmt, u32 dstfmt, int width)
 static int is_doublesizefmt(int fmt)
 {
 	if (fmt == V4L2_PIX_FMT_RGB565 || fmt == V4L2_PIX_FMT_RGB555 ||
-		fmt == V4L2_PIX_FMT_BGRX555 || fmt == V4L2_PIX_FMT_YUYV)
+		fmt == V4L2_PIX_FMT_BGR565 || fmt == V4L2_PIX_FMT_YUYV)
 		return 1;
 	return 0;
 }
@@ -1397,11 +1403,7 @@ static int vsiv4l2_getfmt_dec(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt)
 	} else {
 		fmt->fmt.pix.width = pcfg->decparams.dec_info.io_buffer.output_width;
 		fmt->fmt.pix.height = pcfg->decparams.dec_info.io_buffer.output_height;
-		if (rpt_10bit && test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag) &&
-			pcfg->decparams.dec_info.dec_info.bit_depth == 10)
-			fmt->fmt.pix.pixelformat = V4L2_PIX_FMT_NV12X;
-		else
-			fmt->fmt.pix.pixelformat = find_local_dec_format(pcfg->decparams.dec_info.io_buffer.outBufFormat, braw);
+		fmt->fmt.pix.pixelformat = find_local_dec_format(pcfg->decparams.dec_info.io_buffer.outBufFormat, braw);
 	}
 	fmt->fmt.pix.field = pcfg->field;
 	fmt->fmt.pix.bytesperline = pcfg->bytesperline;

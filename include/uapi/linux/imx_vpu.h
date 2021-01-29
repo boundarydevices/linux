@@ -69,6 +69,7 @@ struct v4l2_enc_ipcm_params {
 #define V4L2_PIX_FMT_NV12X			v4l2_fourcc('N', 'V', 'X', '2') /* Y/CbCr 4:2:0 for 10bit  */
 #define V4L2_PIX_FMT_DTRC			v4l2_fourcc('D', 'T', 'R', 'C') /* 8bit tile output  */
 #define V4L2_PIX_FMT_P010			v4l2_fourcc('P', '0', '1', '0')	/*ms p010, data stored in upper 10 bits of 16 */
+#define V4L2_PIX_FMT_TILEX			v4l2_fourcc('D', 'T', 'R', 'X') /* 10 bit tile output  */
 
 /*codec format*/
 #define V4L2_PIX_FMT_AV1			v4l2_fourcc('A', 'V', '1', '0')	/* av1 */
