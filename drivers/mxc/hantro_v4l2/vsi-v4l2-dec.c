@@ -318,6 +318,8 @@ static int vsi_dec_streamoff(
 			clear_bit(CTX_FLAG_ENDOFSTRM_BIT, &ctx->flag);
 			clear_bit(CTX_FLAG_PRE_DRAINING_BIT, &ctx->flag);
 		}
+		if (test_and_clear_bit(CTX_FLAG_DELAY_SRCCHANGED_BIT, &ctx->flag))
+			vsi_v4l2_send_reschange(ctx);
 	} else {
 		ctx->buffed_capnum = 0;
 		ctx->buffed_cropcapnum = 0;
@@ -358,9 +360,11 @@ static int vsi_dec_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 			return -EBUSY;
 		list_del(&vsibuf->list);
 		if (!binputqueue(p->type)) {
+			clear_bit(BUF_FLAG_DONE, &ctx->vbufflag[p->index]);
 			ctx->buffed_capnum--;
 			ctx->buffed_cropcapnum--;
-		}
+		} else
+			clear_bit(BUF_FLAG_DONE, &ctx->srcvbufflag[p->index]);
 		mutex_unlock(&ctx->ctxlock);
 		if (ctx->status != DEC_STATUS_ENDSTREAM &&
 			!(test_bit(CTX_FLAG_ENDOFSTRM_BIT, &ctx->flag)) &&
@@ -374,17 +378,14 @@ static int vsi_dec_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 			p->flags |= V4L2_BUF_FLAG_LAST;
 			ctx->status = DEC_STATUS_STOPPED;
 			clear_bit(CTX_FLAG_ENDOFSTRM_BIT, &ctx->flag);
-		} else if (ctx->status == DEC_STATUS_RESCHANGE && ctx->buffed_capnum == 0) {
-			struct v4l2_event event = {
-				.type = V4L2_EVENT_SOURCE_CHANGE,
-				.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION,
-			};
+		} else if (test_bit(CTX_FLAG_DELAY_SRCCHANGED_BIT, &ctx->flag) && ctx->buffed_capnum == 0) {
+			clear_bit(CTX_FLAG_DELAY_SRCCHANGED_BIT, &ctx->flag);
 			pcfg->decparams.dec_info.dec_info = pcfg->decparams_bkup.dec_info.dec_info;
 			pcfg->decparams.dec_info.io_buffer.srcwidth = pcfg->decparams_bkup.io_buffer.srcwidth;
 			pcfg->decparams.dec_info.io_buffer.srcheight = pcfg->decparams_bkup.io_buffer.srcheight;
 			pcfg->decparams.dec_info.io_buffer.output_width = pcfg->decparams_bkup.io_buffer.output_width;
 			pcfg->decparams.dec_info.io_buffer.output_height = pcfg->decparams_bkup.io_buffer.output_height;
-			v4l2_event_queue_fh(&ctx->fh, &event);
+			vsi_v4l2_send_reschange(ctx);
 		} else if (test_bit(CTX_FLAG_CROPCHANGE_BIT, &ctx->flag) && ctx->buffed_cropcapnum == 0) {
 			struct v4l2_event event = {
 				.type = V4L2_EVENT_CROPCHANGE,
@@ -645,9 +646,11 @@ static void vsi_dec_buf_queue(struct vb2_buffer *vb)
 	if (mutex_lock_interruptible(&ctx->ctxlock))
 		return;
 	vsibuf = vb_to_vsibuf(vb);
-	if (!binputqueue(vq->type))
+	if (!binputqueue(vq->type)) {
+		set_bit(BUF_FLAG_QUEUED, &ctx->vbufflag[vb->index]);
 		list_add_tail(&vsibuf->list, &ctx->output_list);
-	else {
+	} else {
+		set_bit(BUF_FLAG_QUEUED, &ctx->srcvbufflag[vb->index]);
 		list_add_tail(&vsibuf->list, &ctx->input_list);
 		ctx->queued_srcnum++;
 	}

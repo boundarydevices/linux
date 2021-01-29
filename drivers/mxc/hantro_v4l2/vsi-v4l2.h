@@ -160,6 +160,7 @@ enum vsi_v4l2dec_outputfmt {
 	VSI_V4L2_DECOUT_DTRC,
 	VSI_V4L2_DECOUT_P010,
 	VSI_V4L2_DECOUT_NV12_10BIT,
+	VSI_V4L2_DECOUT_DTRC_10BIT,
 };
 
 enum vsi_v4l2dec_pixfmt {
@@ -168,6 +169,25 @@ enum vsi_v4l2dec_pixfmt {
 	VSI_V4L2_DEC_PIX_FMT_411SP,
 	VSI_V4L2_DEC_PIX_FMT_422SP,
 	VSI_V4L2_DEC_PIX_FMT_444SP,
+};
+
+enum {
+	DAEMON_OK = 0,                   // no error.
+	DAEMON_ENC_FRAME_READY = 1,      // frame encoded
+	DAEMON_ENC_FRAME_ENQUEUE = 2,    // frame enqueued
+
+	DAEMON_ERR_INST_CREATE = -1,       // inst_init() failed.
+	DAEMON_ERR_SIGNAL_CONFIG = -2,     // sigsetjmp() failed.
+	DAEMON_ERR_DAEMON_MISSING = -3,     // daemon is not alive.
+
+	DAEMON_ERR_ENC_PARA = -100,        // Parameters Error.
+	DAEMON_ERR_ENC_NOT_SUPPORT = -101, // Not Support Error.
+	DAEMON_ERR_ENC_INTERNAL = -102,    // Ctrlsw reported Error.
+	DAEMON_ERR_ENC_BUF_MISSED = -103,  // No desired input buffer.
+	DAEMON_ERR_ENC_FATAL_ERROR = -104,  // Fatal error.
+
+	DAEMON_ERR_DEC_FATAL_ERROR = -200, // Fatal error.
+	DAEMON_ERR_DEC_METADATA_ONLY = -201,  // CMD_STOP after metadata-only.
 };
 
 struct v4l2_daemon_enc_buffers {

@@ -620,9 +620,16 @@ static int vsi_enc_encoder_enum_framesizes(struct file *file, void *priv,
 
 	fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
 	fmt.fmt.pix_mp.pixelformat = fsize->pixel_format;
-	if (vsi_find_format(ctx,  &fmt) == NULL)
-		return -EINVAL;
-	vsi_enum_encfsize(fsize, ctx->mediacfg.outfmt_fourcc);
+	if (vsi_find_format(ctx,  &fmt) != NULL)
+		vsi_enum_encfsize(fsize, ctx->mediacfg.outfmt_fourcc);
+	else {
+		fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+		fmt.fmt.pix_mp.pixelformat = fsize->pixel_format;
+		if (vsi_find_format(ctx,  &fmt) == NULL)
+			return -EINVAL;
+		vsi_enum_encfsize(fsize, fsize->pixel_format);
+	}
+
 	return 0;
 }
 
