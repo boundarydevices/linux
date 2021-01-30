@@ -1,0 +1,1370 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2018 Boundary Devices
+ */
+#include "panel-ltk080a60a004t.dtsi"
+
+&iomuxc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hog>;
+
+	pinctrl_backlight_mipi: backlight-mipigrp {
+		fsl,pins = <
+#define GP_BACKLIGHT_MIPI_EN  <&gpio1 4 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO04_GPIO1_IO4, 0x119)
+		>;
+	};
+
+	pinctrl_bt_rfkill: bt-rfkillgrp {
+		fsl,pins = <
+#define GP_BT_RFKILL_RESET	<&gpio3 14 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_NAND_DQS_GPIO3_IO14, 0x119)
+		>;
+	};
+
+	pinctrl_gpio_keys: gpio-keysgrp {
+		fsl,pins = <
+#define GP_GPIOKEY_VOL_DN	<&gpio4 29 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI3_RXC_GPIO4_IO29, 0x1c3)
+#define GP_GPIOKEY_VOL_UP	<&gpio4 28 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI3_RXFS_GPIO4_IO28, 0x1c3)
+		>;
+	};
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			/* QCA9377 */
+			MX8MMN(IOMUXC_SAI2_RXFS_GPIO4_IO21, 0x09)	/* pin 8, SDIO_INT_L */
+			MX8MMN(IOMUXC_SAI5_MCLK_GPIO3_IO25, 0x09)	/* pin 38, CLK_REQ_OUT */
+			MX8MMN(IOMUXC_SAI2_MCLK_GPIO4_IO27, 0x09)	/* pin 42, BT_UART_WH */
+
+			MX8MMN(IOMUXC_SD1_STROBE_GPIO2_IO11, 0x09)	/* R160 */
+			MX8MMN(IOMUXC_SD2_RESET_B_GPIO2_IO19, 0x09)	/* TP8 */
+			MX8MMN(IOMUXC_SD2_WP_GPIO2_IO20, 0x09)		/* TP9 */
+			MX8MMN(IOMUXC_SAI2_RXC_GPIO4_IO22, 0x09)	/* TP13 */
+			MX8MMN(IOMUXC_GPIO1_IO11_GPIO1_IO11, 0x09)	/* TP18 */
+			MX8MMN(IOMUXC_SAI5_RXD0_GPIO3_IO21, 0x09)	/* TP19 */
+			MX8MMN(IOMUXC_SAI5_RXD1_GPIO3_IO22, 0x09)	/* TP31 */
+		>;
+	};
+
+	pinctrl_i2c1: i2c1grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_I2C1_SCL_I2C1_SCL, 0x400001c3)
+			MX8MMN(IOMUXC_I2C1_SDA_I2C1_SDA, 0x400001c3)
+		>;
+	};
+
+	pinctrl_i2c1_1: i2c1_1grp {
+		fsl,pins = <
+#define GP_I2C1_SCL	<&gpio5 14 GPIO_OPEN_DRAIN>
+			MX8MMN(IOMUXC_I2C1_SCL_GPIO5_IO14, 0x400001c3)
+#define GP_I2C1_SDA	<&gpio5 15 GPIO_OPEN_DRAIN>
+			MX8MMN(IOMUXC_I2C1_SDA_GPIO5_IO15, 0x400001c3)
+		>;
+	};
+
+	pinctrl_i2c1_max77975: i2c1-max77975grp {
+		fsl,pins = <
+#define GPIRQ_MAX77975	<&gpio3 19 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_SAI5_RXFS_GPIO3_IO19, 0x1c9)
+#define GP_DISABLE_BATT	<&gpio3 24 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI5_RXD3_GPIO3_IO24, 0x06)
+#define GP_SUSPEND	<&gpio5 12 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_ECSPI2_MISO_GPIO5_IO12, 0x06)
+		>;
+	};
+
+	pinctrl_i2c1_pf8100: i2c1-pf8100grp {
+		fsl,pins = <
+#define GP_I2C1_PF8100_EWARN	<&gpio3 3 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_NAND_CE2_B_GPIO3_IO3, 0x149)
+#define GP_I2C1_PF8100_FAULT	<&gpio3 4 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_NAND_CE3_B_GPIO3_IO4, 0x149)
+		>;
+	};
+
+	pinctrl_i2c2: i2c2grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_I2C2_SCL_I2C2_SCL, 0x400001c3)
+			MX8MMN(IOMUXC_I2C2_SDA_I2C2_SDA, 0x400001c3)
+		>;
+	};
+
+	pinctrl_i2c2_1: i2c2_1grp {
+		fsl,pins = <
+#define GP_I2C2_SCL	<&gpio5 16 GPIO_OPEN_DRAIN>
+			MX8MMN(IOMUXC_I2C2_SCL_GPIO5_IO16, 0x400001c3)
+#define GP_I2C2_SDA	<&gpio5 17 GPIO_OPEN_DRAIN>
+			MX8MMN(IOMUXC_I2C2_SDA_GPIO5_IO17, 0x400001c3)
+		>;
+	};
+
+	pinctrl_i2c2_tca9546: i2c2-tca9546grp {
+		fsl,pins = <
+#define GP_I2C2_MUX_RESET	<&gpio5 11 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_ECSPI2_MOSI_GPIO5_IO11, 0x1c3)
+		>;
+	};
+
+	pinctrl_i2c2a_pn7150: i2c2a-pn7150grp {
+		fsl,pins = <
+#define GP_EN_PN7150	<&gpio1 7 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, 0x1c2)
+#define GPIRQ_PN7150	<&gpio1 8 IRQ_TYPE_LEVEL_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x182)
+		>;
+	};
+
+	pinctrl_i2c2b_icm_20948: i2c2b-icm-20948grp {
+		fsl,pins = <
+#define GPIRQ_ACCEL	<&gpio3 8 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_NAND_DATA02_GPIO3_IO8, 0x82)
+		>;
+	};
+
+	pinctrl_i2c2c_max1726x: i2c2c-max1726xgrp {
+		fsl,pins = <
+#define GPIRQ_MAX1726X	<&gpio5 10 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_ECSPI2_SCLK_GPIO5_IO10, 0x1c3)
+		>;
+	};
+
+	pinctrl_i2c2d_max77958: i2c2d-max77958grp {
+		fsl,pins = <
+#define GPIRQ_MAX77958	<&gpio3 5 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_NAND_CLE_GPIO3_IO5, 0x1c3)
+		>;
+	};
+
+	pinctrl_i2c3: i2c3grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_I2C3_SCL_I2C3_SCL, 0x400001c3)
+			MX8MMN(IOMUXC_I2C3_SDA_I2C3_SDA, 0x400001c3)
+		>;
+	};
+
+	pinctrl_i2c3_1: i2c3_1grp {
+		fsl,pins = <
+#define GP_I2C3_SCL	<&gpio5 18 GPIO_OPEN_DRAIN>
+			MX8MMN(IOMUXC_I2C3_SCL_GPIO5_IO18, 0x400001c3)
+#define GP_I2C3_SDA	<&gpio5 19 GPIO_OPEN_DRAIN>
+			MX8MMN(IOMUXC_I2C3_SDA_GPIO5_IO19, 0x400001c3)
+		>;
+	};
+
+	pinctrl_i2c3_tca9546: i2c3-tca9546grp {
+		fsl,pins = <
+#define GP_I2C3_MUX_RESET	<&gpio5 13 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_ECSPI2_SS0_GPIO5_IO13, 0x1c3)
+		>;
+	};
+
+	pinctrl_i2c3b_ov5640_mipi: i2c3b-ov5640-mipigrp {
+		fsl,pins = <
+#define GP_OV5640_1MIPI_POWER_DOWN	<&gpio3 9 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_NAND_DATA03_GPIO3_IO9, 0x141)
+#define GP_OV5640_1MIPI_RESET		<&gpio3 1 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_NAND_CE0_B_GPIO3_IO1, 0x101)
+		>;
+	};
+
+	pinctrl_i2c3c_ov5640_mipi: i2c3c-ov5640-mipigrp {
+		fsl,pins = <
+#define GP_OV5640_2MIPI_POWER_DOWN	<&gpio3 16 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_NAND_READY_B_GPIO3_IO16, 0x141)
+#define GP_OV5640_2MIPI_RESET		<&gpio3 0 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_NAND_ALE_GPIO3_IO0, 0x101)
+		>;
+	};
+
+	pinctrl_i2c3d_adp1650: i2c3d-adp1650grp {
+		fsl,pins = <
+#define GP_FLASH_EN		<&gpio1 10 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO10_GPIO1_IO10, 0x1c3)
+#define GP_TORCH_EN		<&gpio1 5 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO05_GPIO1_IO5, 0x109)
+		>;
+	};
+
+	pinctrl_i2c4: i2c4grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_I2C4_SCL_I2C4_SCL, 0x400001c3)
+			MX8MMN(IOMUXC_I2C4_SDA_I2C4_SDA, 0x400001c3)
+		>;
+	};
+
+	pinctrl_i2c4_1: i2c4_1grp {
+		fsl,pins = <
+#define GP_I2C4_SCL	<&gpio5 20 GPIO_OPEN_DRAIN>
+			MX8MMN(IOMUXC_I2C4_SCL_GPIO5_IO20, 0x400001c3)
+#define GP_I2C4_SDA	<&gpio5 21 GPIO_OPEN_DRAIN>
+			MX8MMN(IOMUXC_I2C4_SDA_GPIO5_IO21, 0x400001c3)
+		>;
+	};
+
+	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
+		fsl,pins = <
+#define GP_LTK08_MIPI_EN	<&gpio1 3 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, 0x116)
+		>;
+	};
+
+	pinctrl_pwm1: pwm1grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_SPDIF_EXT_CLK_PWM1_OUT, 0x16)
+		>;
+	};
+
+	pinctrl_pwm2: pwm2grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_SPDIF_RX_PWM2_OUT, 0x16)
+		>;
+	};
+
+	pinctrl_pwm3: pwm3grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_SPDIF_TX_PWM3_OUT, 0x16)
+		>;
+	};
+
+	/* For EC21-ALCC modem */
+	pinctrl_reg_3p7v: reg-3p7vgrp {
+		fsl,pins = <
+#define GP_REG_3P7V	<&gpio4 20 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI1_MCLK_GPIO4_IO20, 0x116)
+		>;
+	};
+
+	pinctrl_reg_5v: reg_5vgrp {
+		fsl,pins = <
+#define GP_REG_5V_EN	<&gpio3 15 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_NAND_RE_B_GPIO3_IO15, 0x16)
+		>;
+	};
+
+	pinctrl_reg_usdhc2_vqmmc: reg_usdhc2_vqmmcgrp {
+		fsl,pins = <
+#define GP_USDHC2_VSEL	<&gpio3 2 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_NAND_CE1_B_GPIO3_IO2, 0x16)
+		>;
+	};
+
+	pinctrl_reg_wlan_vmmc: reg-wlan-vmmcgrp {
+		fsl,pins = <
+#define GP_REG_WLAN_VMMC	<&gpio3 20 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI5_RXC_GPIO3_IO20, 0x16)
+		>;
+	};
+
+	pinctrl_sai2: sai2grp {
+		fsl,pins = <
+			/* Bluetooth PCM */
+			MX8MMN(IOMUXC_SAI2_TXFS_SAI2_TX_SYNC, 0xd6)
+			MX8MMN(IOMUXC_SAI2_TXC_SAI2_TX_BCLK, 0xd6)
+			MX8MMN(IOMUXC_SAI2_TXD0_SAI2_TX_DATA0, 0xd6)
+			MX8MMN(IOMUXC_SAI2_RXD0_SAI2_RX_DATA0, 0xd6)
+		>;
+	};
+
+	pinctrl_sai3: sai3grp {
+		fsl,pins = <
+			/* WM8960 */
+			MX8MMN(IOMUXC_SAI3_MCLK_SAI3_MCLK, 0xd6)
+			MX8MMN(IOMUXC_SAI3_TXFS_SAI3_TX_SYNC, 0xd6)
+			MX8MMN(IOMUXC_SAI3_TXC_SAI3_TX_BCLK, 0xd6)
+			MX8MMN(IOMUXC_SAI3_TXD_SAI3_TX_DATA0, 0xd6)
+			MX8MMN(IOMUXC_SAI3_RXD_SAI3_RX_DATA0, 0xd6)
+		>;
+	};
+
+	pinctrl_sound_wm8960: sound-wm8960grp {
+		fsl,pins = <
+#define GP_WM8960_HP_DET		<&gpio1 1 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x80)
+		>;
+	};
+
+	pinctrl_stusb4500: stusb4500grp {
+		fsl,pins = <
+#define GP_STUSB_ATTACH	<&gpio3 23 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI5_RXD2_GPIO3_IO23, 0x04)
+#define GP_STUSB_ALERT	<&gpio1 15 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO15_GPIO1_IO15, 0x04)
+#define GP_STUSB_RESET	<&gpio1 14 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO14_GPIO1_IO14, 0x04)
+		>;
+	};
+
+	pinctrl_ts_gt911: ts-gt911grp {
+		fsl,pins = <
+#define GPIRQ_GT911		<&gpio3 6 IRQ_TYPE_LEVEL_HIGH>
+#define GP_GT911_IRQ 		<&gpio3 6 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_NAND_DATA00_GPIO3_IO6, 0x1d6)
+			/* driver writes levels, instead of active/inactive */
+#define GP_GT911_RESET		<&gpio3 7 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_NAND_DATA01_GPIO3_IO7, 0x149)
+		>;
+	};
+
+	pinctrl_uart2: uart2grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_UART2_RXD_UART2_DCE_RX, 0x140)
+			MX8MMN(IOMUXC_UART2_TXD_UART2_DCE_TX, 0x140)
+		>;
+	};
+
+	pinctrl_uart3: uart3grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_ECSPI1_SCLK_UART3_DCE_RX, 0x140)
+			MX8MMN(IOMUXC_ECSPI1_MOSI_UART3_DCE_TX, 0x140)
+			MX8MMN(IOMUXC_ECSPI1_SS0_UART3_DCE_RTS_B, 0x140)
+			MX8MMN(IOMUXC_ECSPI1_MISO_UART3_DCE_CTS_B, 0x140)
+		>;
+	};
+
+	pinctrl_uart4: uart4grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_UART4_RXD_UART4_DCE_RX, 0x140)
+			MX8MMN(IOMUXC_UART4_TXD_UART4_DCE_TX, 0x140)
+		>;
+	};
+
+	pinctrl_usbotg1: usbotg1grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_GPIO1_IO12_USB1_OTG_PWR, 0x16)
+			MX8MMN(IOMUXC_GPIO1_IO13_USB1_OTG_OC, 0x156)
+		>;
+	};
+
+	pinctrl_usdhc1: usdhc1grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_SD1_CLK_USDHC1_CLK, 0x190)
+			MX8MMN(IOMUXC_SD1_CMD_USDHC1_CMD, 0x1d0)
+			MX8MMN(IOMUXC_SD1_DATA0_USDHC1_DATA0, 0x1d0)
+			MX8MMN(IOMUXC_SD1_DATA1_USDHC1_DATA1, 0x1d0)
+			MX8MMN(IOMUXC_SD1_DATA2_USDHC1_DATA2, 0x1d0)
+			MX8MMN(IOMUXC_SD1_DATA3_USDHC1_DATA3, 0x1d0)
+			MX8MMN(IOMUXC_SD1_DATA4_USDHC1_DATA4, 0x1d0)
+			MX8MMN(IOMUXC_SD1_DATA5_USDHC1_DATA5, 0x1d0)
+			MX8MMN(IOMUXC_SD1_DATA6_USDHC1_DATA6, 0x1d0)
+			MX8MMN(IOMUXC_SD1_DATA7_USDHC1_DATA7, 0x1d0)
+#define GP_EMMC_RESET		<&gpio2 10 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SD1_RESET_B_GPIO2_IO10, 0x141)
+		>;
+	};
+
+	pinctrl_usdhc1_100mhz: usdhc1grp100mhz {
+		fsl,pins = <
+			MX8MMN(IOMUXC_SD1_CLK_USDHC1_CLK, 0x194)
+			MX8MMN(IOMUXC_SD1_CMD_USDHC1_CMD, 0x1d4)
+			MX8MMN(IOMUXC_SD1_DATA0_USDHC1_DATA0, 0x1d4)
+			MX8MMN(IOMUXC_SD1_DATA1_USDHC1_DATA1, 0x1d4)
+			MX8MMN(IOMUXC_SD1_DATA2_USDHC1_DATA2, 0x1d4)
+			MX8MMN(IOMUXC_SD1_DATA3_USDHC1_DATA3, 0x1d4)
+			MX8MMN(IOMUXC_SD1_DATA4_USDHC1_DATA4, 0x1d4)
+			MX8MMN(IOMUXC_SD1_DATA5_USDHC1_DATA5, 0x1d4)
+			MX8MMN(IOMUXC_SD1_DATA6_USDHC1_DATA6, 0x1d4)
+			MX8MMN(IOMUXC_SD1_DATA7_USDHC1_DATA7, 0x1d4)
+		>;
+	};
+
+	pinctrl_usdhc1_200mhz: usdhc1grp200mhz {
+		fsl,pins = <
+			MX8MMN(IOMUXC_SD1_CLK_USDHC1_CLK, 0x196)
+			MX8MMN(IOMUXC_SD1_CMD_USDHC1_CMD, 0x1d6)
+			MX8MMN(IOMUXC_SD1_DATA0_USDHC1_DATA0, 0x1d6)
+			MX8MMN(IOMUXC_SD1_DATA1_USDHC1_DATA1, 0x1d6)
+			MX8MMN(IOMUXC_SD1_DATA2_USDHC1_DATA2, 0x1d6)
+			MX8MMN(IOMUXC_SD1_DATA3_USDHC1_DATA3, 0x1d6)
+			MX8MMN(IOMUXC_SD1_DATA4_USDHC1_DATA4, 0x1d6)
+			MX8MMN(IOMUXC_SD1_DATA5_USDHC1_DATA5, 0x1d6)
+			MX8MMN(IOMUXC_SD1_DATA6_USDHC1_DATA6, 0x1d6)
+			MX8MMN(IOMUXC_SD1_DATA7_USDHC1_DATA7, 0x1d6)
+		>;
+	};
+
+	pinctrl_usdhc2: usdhc2grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_SD2_CLK_USDHC2_CLK, 0x190)
+			MX8MMN(IOMUXC_SD2_CMD_USDHC2_CMD, 0x1d0)
+			MX8MMN(IOMUXC_SD2_DATA0_USDHC2_DATA0, 0x1d0)
+			MX8MMN(IOMUXC_SD2_DATA1_USDHC2_DATA1, 0x1d0)
+			MX8MMN(IOMUXC_SD2_DATA2_USDHC2_DATA2, 0x1d0)
+			MX8MMN(IOMUXC_SD2_DATA3_USDHC2_DATA3, 0x1d0)
+#define GP_USDHC2_CD	<&gpio2 12 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SD2_CD_B_GPIO2_IO12, 0x1c4)
+		>;
+	};
+
+	pinctrl_usdhc2_100mhz: usdhc2grp100mhz {
+		fsl,pins = <
+			MX8MMN(IOMUXC_SD2_CLK_USDHC2_CLK, 0x194)
+			MX8MMN(IOMUXC_SD2_CMD_USDHC2_CMD, 0x1d4)
+			MX8MMN(IOMUXC_SD2_DATA0_USDHC2_DATA0, 0x1d4)
+			MX8MMN(IOMUXC_SD2_DATA1_USDHC2_DATA1, 0x1d4)
+			MX8MMN(IOMUXC_SD2_DATA2_USDHC2_DATA2, 0x1d4)
+			MX8MMN(IOMUXC_SD2_DATA3_USDHC2_DATA3, 0x1d4)
+		>;
+	};
+
+	pinctrl_usdhc2_200mhz: usdhc2grp200mhz {
+		fsl,pins = <
+			MX8MMN(IOMUXC_SD2_CLK_USDHC2_CLK, 0x196)
+			MX8MMN(IOMUXC_SD2_CMD_USDHC2_CMD, 0x1d6)
+			MX8MMN(IOMUXC_SD2_DATA0_USDHC2_DATA0, 0x1d6)
+			MX8MMN(IOMUXC_SD2_DATA1_USDHC2_DATA1, 0x1d6)
+			MX8MMN(IOMUXC_SD2_DATA2_USDHC2_DATA2, 0x1d6)
+			MX8MMN(IOMUXC_SD2_DATA3_USDHC2_DATA3, 0x1d6)
+		>;
+	};
+
+	pinctrl_usdhc3: usdhc3grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_NAND_WE_B_USDHC3_CLK, 0x190)
+			MX8MMN(IOMUXC_NAND_WP_B_USDHC3_CMD, 0x1d0)
+			MX8MMN(IOMUXC_NAND_DATA04_USDHC3_DATA0, 0x1d0)
+			MX8MMN(IOMUXC_NAND_DATA05_USDHC3_DATA1, 0x1d0)
+			MX8MMN(IOMUXC_NAND_DATA06_USDHC3_DATA2, 0x1d0)
+			MX8MMN(IOMUXC_NAND_DATA07_USDHC3_DATA3, 0x1d0)
+			/* Bluetooth slow clock */
+			MX8MMN(IOMUXC_GPIO1_IO00_ANAMIX_REF_CLK_32K, 0x03)
+		>;
+	};
+
+	pinctrl_usdhc3_100mhz: usdhc3grp100mhz {
+		fsl,pins = <
+			MX8MMN(IOMUXC_NAND_WE_B_USDHC3_CLK, 0x194)
+			MX8MMN(IOMUXC_NAND_WP_B_USDHC3_CMD, 0x1d4)
+			MX8MMN(IOMUXC_NAND_DATA04_USDHC3_DATA0, 0x1d4)
+			MX8MMN(IOMUXC_NAND_DATA05_USDHC3_DATA1, 0x1d4)
+			MX8MMN(IOMUXC_NAND_DATA06_USDHC3_DATA2, 0x1d4)
+			MX8MMN(IOMUXC_NAND_DATA07_USDHC3_DATA3, 0x1d4)
+		>;
+	};
+
+	pinctrl_usdhc3_200mhz: usdhc3grp200mhz {
+		fsl,pins = <
+			MX8MMN(IOMUXC_NAND_WE_B_USDHC3_CLK, 0x196)
+			MX8MMN(IOMUXC_NAND_WP_B_USDHC3_CMD, 0x1d6)
+			MX8MMN(IOMUXC_NAND_DATA04_USDHC3_DATA0, 0x1d6)
+			MX8MMN(IOMUXC_NAND_DATA05_USDHC3_DATA1, 0x1d6)
+			MX8MMN(IOMUXC_NAND_DATA06_USDHC3_DATA2, 0x1d6)
+			MX8MMN(IOMUXC_NAND_DATA07_USDHC3_DATA3, 0x1d6)
+		>;
+	};
+
+	pinctrl_wwan_rfkill: wwan-rfkillgrp {
+		fsl,pins = <
+			/* EC21 - Modem pins */
+#define GP_EC21_RESET		<&gpio4 10 (GPIO_OPEN_DRAIN | GPIO_ACTIVE_LOW)>
+			MX8MMN(IOMUXC_SAI1_TXFS_GPIO4_IO10, 0x140)
+#define GP_EC21_USB_BOOT	<&gpio4 11 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI1_TXC_GPIO4_IO11 , 0x100)
+#define GP_EC21_POWER_KEY	<&gpio4 18 GPIO_OPEN_DRAIN>
+			MX8MMN(IOMUXC_SAI1_TXD6_GPIO4_IO18, 0x140)
+#define GP_EC21_USIM_DETECT	<&gpio4 17 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_TXD5_GPIO4_IO17, 0x100)
+#define GP_EC21_WAKE_UP		<&gpio4 15 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_TXD3_GPIO4_IO15, 0x100)
+#define GP_EC21_AP_READY	<&gpio4 14 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_TXD2_GPIO4_IO14, 0x100)
+#define GP_EC21_ACTIVE_STATUS	<&gpio4 19 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_TXD7_GPIO4_IO19, 0x1c0)
+#define GP_EC21_NET_STAT	<&gpio4 12 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI1_TXD0_GPIO4_IO12, 0x80)
+#define GP_EC21_NET_MODE	<&gpio4 13 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI1_TXD1_GPIO4_IO13, 0x80)
+#define GP_EC21_RI		<&gpio4 16 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI1_TXD4_GPIO4_IO16, 0x80)
+		>;
+	};
+
+	pinctrl_wdog: wdoggrp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_GPIO1_IO02_WDOG1_WDOG_B, 0x140)
+		>;
+	};
+};
+
+/ {
+	model = "Boundary Devices i.MX8MMini Nitrogen8MM";
+	compatible = "boundary,imx8mm-nitrogen8mm", "fsl,imx8mm";
+
+	aliases {
+		a53 = &A53_0;
+		backlight_mipi = &backlight_mipi;
+		fb_mipi = &fb_mipi;
+		lcdif = &lcdif;
+		mipi = &fb_mipi;
+		mipi_dsi = &mipi_dsi;
+		pwm_mipi = &pwm2;
+		pwm_mipi2 = &pwm1;
+		t_mipi = &t_mipi;
+		ts_goodix = &ts_goodix;
+	};
+
+	backlight_mipi: backlight-mipi {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <8>;
+		display = <&display_subsystem>;
+		enable-gpios = GP_BACKLIGHT_MIPI_EN;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight_mipi>;
+		pwms = <&pwm2 0 30000 0>;		/* 33.3 Khz */
+		status = "okay";
+	};
+
+	bt-rfkill {
+		compatible = "net,rfkill-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_bt_rfkill>;
+		name = "bt-rfkill";
+		type = <2>; /* Bluetooth */
+		reset-gpios = GP_BT_RFKILL_RESET;
+		status = "okay";
+	};
+
+	connector {
+		compatible = "usb-c-connector";
+		label = "USB-C";
+		data-role = "dual";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				hs_ep: endpoint {
+					remote-endpoint = <&usb_hs_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				ss_ep: endpoint {
+					remote-endpoint = <&max77958_in_ep>;
+				};
+			};
+		};
+	};
+
+	csi_mclk: csi-mclk {
+		compatible = "pwm-clock";
+		#clock-cells = <0>;
+		clock-frequency = <20000000>;
+		clock-output-names = "csi_mclk";
+		pwms = <&pwm3 0 50 0>; /* 1 / 50 ns = 20 MHz */
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+
+		volume-down {
+			label = "Volume Down";
+			gpios = GP_GPIOKEY_VOL_DN;
+			linux,code = <KEY_VOLUMEDOWN>;
+		};
+
+		volume-up {
+			label = "Volume Up";
+			gpios = GP_GPIOKEY_VOL_UP;
+			linux,code = <KEY_VOLUMEUP>;
+		};
+	};
+
+	reg_usdhc2_vqmmc: regulator-usdhc2-vqmmc {
+		compatible = "regulator-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usdhc2_vqmmc>;
+		regulator-name = "reg_sd2_vsel";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-type = "voltage";
+		regulator-boot-on;
+		regulator-always-on;
+		gpios = GP_USDHC2_VSEL;
+		states = <1800000 0x1
+			  3300000 0x0>;
+	};
+
+	reg_vref_1v8: regulator-vref-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "vref-1v8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
+
+	reg_vref_2v5: regulator-vref-2v5 {
+		compatible = "regulator-fixed";
+		regulator-name = "vref-2v5";
+		regulator-min-microvolt = <2500000>;
+		regulator-max-microvolt = <2500000>;
+	};
+
+	reg_vref_3v3: regulator-vref-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vref-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+	};
+
+	reg_vref_3v7: regulator-vref-3v7 {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_3p7v>;
+		regulator-name = "ec21_3v7";
+		regulator-min-microvolt = <3700000>;
+		regulator-max-microvolt = <3700000>;
+		startup-delay-us = <60000>;
+		gpio = GP_REG_3P7V;
+		enable-active-high;
+	};
+
+	reg_vref_5v: regulator-vref-5v {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_5v>;
+		regulator-name = "vref-5v";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = GP_REG_5V_EN;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	reg_wlan_vmmc: regulator-wlan-vmmc {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_wlan_vmmc>;
+		regulator-name = "reg_wlan_vmmc";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = GP_REG_WLAN_VMMC;
+		startup-delay-us = <70000>;
+		enable-active-high;
+	};
+
+	sound-wm8960 {
+		compatible = "fsl,imx-audio-wm8960";
+		model = "wm8960-audio";
+		cpu-dai = <&sai3>;
+		codec-master;
+		audio-codec = <&wm8960>;
+		audio-routing =
+			"Headphone Jack", "HP_L",
+			"Headphone Jack", "HP_R",
+			"Ext Spk", "SPK_LP",
+			"Ext Spk", "SPK_LN",
+			"Ext Spk", "SPK_RP",
+			"Ext Spk", "SPK_RN",
+			"LINPUT1", "Mic Jack",
+			"Mic Jack", "MICB",
+			"RINPUT1", "Main MIC",
+			"Main MIC", "MICB";
+		/* JD2: hp detect high for headphone*/
+		hp-det = <2 0>;
+		hp-det-gpios = GP_WM8960_HP_DET;
+		mic-det-gpios = GP_WM8960_HP_DET;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_sound_wm8960>;
+	};
+
+	wwan_rfkill: wwan-rfkill {
+		active-status-gpios = GP_EC21_ACTIVE_STATUS;
+		compatible = "net,rfkill-gpio";
+#if 1
+		low-gpios = GP_EC21_USB_BOOT;
+		high-gpios = GP_EC21_USIM_DETECT,GP_EC21_WAKE_UP,GP_EC21_AP_READY;
+#else
+		high-gpios = GP_EC21_USB_BOOT,GP_EC21_USIM_DETECT,GP_EC21_WAKE_UP,GP_EC21_AP_READY;
+#endif
+		name = "wwan-rfkill";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wwan_rfkill>;
+		power-key-low-off = <700>;
+		power-key-low-on = <550>;
+		power-key-gpios = GP_EC21_POWER_KEY;
+		reset-gpios = GP_EC21_RESET;
+		status = "okay";
+		type = <5>;     /* WWAN */
+		vdd-supply = <&reg_vref_3v7>;
+	};
+};
+
+&A53_0 {
+	cpu-supply = <&reg_buck3>;
+};
+
+&gpu {
+	status = "okay";
+};
+
+&i2c1 {
+	clock-frequency = <400000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = <&pinctrl_i2c1>;
+	pinctrl-1 = <&pinctrl_i2c1_1>;
+	scl-gpios = GP_I2C1_SCL;
+	sda-gpios = GP_I2C1_SDA;
+	status = "okay";
+
+	pf8100@8 {
+		compatible = "nxp,pf8100";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c1_pf8100>;
+		reg = <0x08>;
+
+		regulators {
+			reg_ldo1: ldo1 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <5000000>;
+				regulator-min-microvolt = <1500000>;
+			};
+
+			reg_ldo2: ldo2 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <5000000>;
+				regulator-min-microvolt = <1500000>;
+				/* vselect low is 3.3V, high is 1.8V */
+				vselect-en;
+			};
+
+			reg_ldo3: ldo3 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <5000000>;
+				regulator-min-microvolt = <1500000>;
+			};
+
+			reg_ldo4: ldo4 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <5000000>;
+				regulator-min-microvolt = <1500000>;
+			};
+
+			reg_buck1: buck1 {
+				nxp,phase-shift = <0>;
+				regulator-max-microamp = <4500000>;
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+			};
+
+			reg_buck2: buck2 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+			};
+
+			reg_buck3: buck3 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+				fast-slew = <1>;
+			};
+
+			reg_buck4: buck4 {
+				alias = <&reg_buck4>;
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+				fast-slew = <1>;
+			};
+
+			reg_buck5: buck5 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+			};
+
+			reg_buck6: buck6 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <1800000>;
+				regulator-min-microvolt =  <400000>;
+			};
+
+			reg_buck7: buck7 {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <4100000>;
+				regulator-min-microvolt = <1000000>;
+			};
+
+			reg_vsnvs: vsnvs {
+				regulator-always-on;
+				regulator-boot-on;
+				regulator-max-microvolt = <3300000>;
+				regulator-min-microvolt = <1800000>;
+			};
+		};
+	};
+
+	max77975: max77975@6b {
+		compatible = "maxim,max77975";
+		reg = <0x6b>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c1_max77975>;
+		interrupts-extended = GPIRQ_MAX77975;
+		input-voltage-min-microvolt = <4500000>;
+		input-current-limit-microamp = <3200000>;
+		suspend-gpios = GP_SUSPEND;
+		disbatt-gpios = GP_DISABLE_BATT;
+
+		regulators {
+			reg_usbotg_vbus: otg {
+				regulator-min-microvolt = <5000000>;
+				regulator-max-microvolt = <5000000>;
+			};
+		};
+	};
+};
+
+&i2c2 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = <&pinctrl_i2c2>;
+	pinctrl-1 = <&pinctrl_i2c2_1>;
+	scl-gpios = GP_I2C2_SCL;
+	sda-gpios = GP_I2C2_SDA;
+	status = "okay";
+
+	tca9546: i2cmux9546@70 {
+		compatible = "nxp,pca9546";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_tca9546>;
+		reg = <0x70>;
+		reset-gpios = GP_I2C2_MUX_RESET;
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c2a: i2c2@0 {
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c2b: i2c2@1 {
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c2c: i2c2@2 {
+			clock-frequency = <100000>;
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c2d: i2c2@3 {
+			clock-frequency = <100000>;
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};
+
+&i2c2a {
+	pn7150@28 {
+		compatible = "nxp,pn547";
+		reg = <0x28>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2a_pn7150>;
+		interrupt-gpios = GPIRQ_PN7150;
+		enable-gpios = GP_EN_PN7150;
+	};
+};
+
+&i2c2b {
+	/* Invensense */
+	icm20948@68 {
+		compatible = "invensense,icm20648";
+		reg = <0x68>;
+		interrupts-extended = GPIRQ_ACCEL;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2b_icm_20948>;
+		inven,vdd_ana-supply = <&reg_vref_1v8>;
+		inven,vcc_i2c-supply = <&reg_vref_1v8>;
+		fs_range = <0x00>;
+		axis_map_x = <0>;
+		axis_map_y = <1>;
+		axis_map_z = <2>;
+		negate_x = <0>;
+		negate_y = <0>;
+		negate_z = <0>;
+		poll_interval = <200>;
+		min_interval = <5>;
+		inven,secondary_reg = <0x0c>;
+		inven,secondary_type = "compass";
+		inven,secondary_name = "ak09916";
+		inven,secondary_axis_map_x = <0>;
+		inven,secondary_axis_map_y = <1>;
+		inven,secondary_axis_map_z = <2>;
+		inven,secondary_negate_x = <0>;
+		inven,secondary_negate_y = <1>;
+		inven,secondary_negate_z = <1>;
+		inven,aux_type = "none";
+		inven,read_only_slave_type = "none";
+	};
+};
+
+&i2c2c {
+	max1726x@36 {
+		compatible  = "maxim,max1726x";
+		reg = <0x36>;
+		interrupts-extended = GPIRQ_MAX1726X;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2c_max1726x>;
+		rsense = <10>;         /* milliOhm */
+		model-option = <1>;    /* EZ model */
+		talrt-min = <0>;       /* DegreeC */
+		talrt-max = <65>;      /* DegreeC */
+		valrt-min = <3200>;    /* mV */
+		valrt-max = <4500>;    /* mV */
+		salrt-min = <1>;       /* Percent */
+		salrt-max = <99>;      /* Percent */
+		ialrt-min = <(-5000)>; /* mA */
+		ialrt-max = <5000>;    /* mA */
+		/* EZ model parameters */
+		designcap = /bits/ 16 <0x2260>; /* 8800 mAh */
+		ichgterm = /bits/ 16 <0x0640>;
+		vempty = /bits/ 16 <0x9652>; /* VE: 3000mV VR: 3300mV */
+		vcharge = <4300>; /* mV */
+	};
+};
+
+&i2c2d {
+	max77958@25 {
+		compatible = "max77958";
+		reg = <0x25>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2d_max77958>;
+		interrupts-extended = GPIRQ_MAX77958;
+		charger-power-supply = <&max77975>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max77958_in_ep: endpoint {
+					remote-endpoint = <&ss_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max77958_out_ep: endpoint {
+					remote-endpoint = <&usb_role_switch>;
+				};
+			};
+		};
+	};
+};
+
+&i2c3 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = <&pinctrl_i2c3>;
+	pinctrl-1 = <&pinctrl_i2c3_1>;
+	scl-gpios = GP_I2C3_SCL;
+	sda-gpios = GP_I2C3_SDA;
+	status = "okay";
+
+	i2cmux@70 {
+		compatible = "nxp,pca9546";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_tca9546>;
+		reg = <0x70>;
+		reset-gpios = GP_I2C3_MUX_RESET;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c3a: i2c3@0 {
+			/* touch */
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c3b: i2c3@1 {
+			/* CSI */
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c3c: i2c3@2 {
+			/* CSI */
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c3d: i2c3@3 {
+			/* Flash */
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};
+
+&i2c3a {
+	ts_goodix: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		display = <&display_subsystem>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_gt911>;
+		reg = <0x5d>;
+		reset-gpios = GP_GT911_RESET;
+		status = "disabled";
+	};
+};
+
+&i2c3b {
+	ov5640-mipi1@3c {
+		AVDD-supply = <&reg_ldo3>;
+		DOVDD-supply = <&reg_vref_1v8>;
+		DVDD-supply = <&reg_vref_3v3>;
+		clocks = <&csi_mclk>;
+		clock-names = "xclk";
+		compatible = "ovti,ov5640_mipisubdev";
+		csi_id = <0>;
+		mclk = <20000000>;
+		mipi_csi;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3b_ov5640_mipi>;
+		powerdown-gpios = GP_OV5640_1MIPI_POWER_DOWN;
+		reg = <0x3c>;
+		reset-gpios = GP_OV5640_1MIPI_RESET;
+		status = "okay";
+
+		port {
+			ov5640_mipi1_ep: endpoint {
+				remote-endpoint = <&mipi1_ov5640_ep>;
+			};
+		};
+	};
+};
+
+&i2c3c {
+	ov5640-mipi2@3c {
+		AVDD-supply = <&reg_ldo3>;
+		DOVDD-supply = <&reg_vref_1v8>;
+		DVDD-supply = <&reg_vref_3v3>;
+		clocks = <&csi_mclk>;
+		clock-names = "xclk";
+		compatible = "ovti,ov5640_mipisubdev";
+		csi_id = <0>;
+		mclk = <20000000>;
+		mipi_csi;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3c_ov5640_mipi>;
+		powerdown-gpios = GP_OV5640_2MIPI_POWER_DOWN;
+		reg = <0x3c>;
+		reset-gpios = GP_OV5640_2MIPI_RESET;
+		status = "disabled";
+
+		port {
+			ov5640_mipi2_ep: endpoint {
+				remote-endpoint = <&mipi2_ov5640_ep>;
+			};
+		};
+	};
+};
+
+&i2c3d {
+	adp1650@30 {
+		compatible = "adi,adp1650";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3d_adp1650>;
+		reg = <0x30>;
+		enable-gpios = GP_FLASH_EN;
+		torch-gpios = GP_TORCH_EN;
+	};
+};
+
+&i2c4 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = <&pinctrl_i2c4>;
+	pinctrl-1 = <&pinctrl_i2c4_1>;
+	scl-gpios = GP_I2C4_SCL;
+	sda-gpios = GP_I2C4_SDA;
+	status = "okay";
+
+	wm8960: codec@1a {
+		compatible = "wlf,wm8960";
+		reg = <0x1a>;
+		clocks = <&clk IMX8MMN(CLK_SAI3_ROOT)>;
+		clock-names = "mclk";
+		wlf,shared-lrclk;
+	};
+};
+
+
+&lcdif {
+	status = "okay";
+};
+
+&mipi_csi_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	port {
+		mipi1_ov5640_ep: endpoint@1 {
+			remote-endpoint = <&ov5640_mipi1_ep>;
+			data-lanes = <2>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+
+		csi1_mipi_ep: endpoint@2 {
+			remote-endpoint = <&csi1_ep>;
+		};
+
+		mipi2_ov5640_ep: endpoint@3 {
+			remote-endpoint = <&ov5640_mipi2_ep>;
+			data-lanes = <2>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+	};
+};
+
+&mipi_dsi {
+	assigned-clocks = <&clk IMX8MMN(CLK_DSI_CORE)>,
+			  <&clk IMX8MMN(CLK_DSI_PHY_REF)>,
+			  <&clk IMX8MMN(VIDEO_PLL1_REF_SEL)>,
+			  <&clk IMX8MMN(CLK_LCDIF_PIXEL)>;
+	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_266M)>,
+				 <&clk IMX8MMN(VIDEO_PLL1_OUT)>,
+				 <&clk IMX8MMN(CLK_24M)>;
+	assigned-clock-rates = <266000000>, <0>, <0>, <66000000>;
+
+	clocks = <&clk IMX8MMN(CLK_DSI_CORE)>,
+		 <&clk IMX8MMN(CLK_DSI_PHY_REF)>,
+		 <&clk IMX8MMN(CLK_LCDIF_PIXEL)>;
+	clock-names = "cfg", "pll-ref", "pixel_clock";
+	status = "okay";
+
+	fb_mipi: panel@0 {
+		backlight = <&backlight_mipi>;
+		bits-per-color = <8>;
+		bridge-de-active = <0>;
+		bus-format = "rgb888";
+		clocks = <&mipi_dsi 0>,
+			<&clk IMX8MMN(CLK_LCDIF_PIXEL)>;
+		clock-names = "mipi_clk", "pixel_clock";
+		compatible = "panel,common";
+		dsi-format = "rgb888";
+		dsi-lanes = <4>;
+		/* u-boot will set this where appropriate */
+		enable-gpios = GP_LTK08_MIPI_EN;
+		mipi-cmds = <&mipi_cmds_ltk080a60a004t>;
+		mode-skip-eot;
+		mode-video;
+#if 1
+		mode-video-burst;
+#else
+		mode-video-sync-pulse;
+#endif
+		panel-height-mm = <136>;
+		panel-width-mm = <217>;
+		power-supply = <&reg_vref_5v>;
+		reg = <0>;
+		spwg;
+
+		display-timings {
+			t_mipi: t-dsi-default {
+				/* m101nwwb by default */
+				clock-frequency = <66000000>;
+				hactive = <1280>;
+				vactive = <800>;
+				hback-porch = <5>;
+				hfront-porch = <123>;
+				vback-porch = <3>;
+				vfront-porch = <24>;
+				hsync-len = <1>;
+				vsync-len = <1>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <1>;
+			};
+		};
+	};
+};
+
+&mu {
+	status = "okay";
+};
+
+&pwm1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm1>;
+	status = "okay";
+};
+
+&pwm2 {
+	assigned-clocks = <&clk IMX8MMN(CLK_PWM2)>;
+	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_40M)>;
+	assigned-clock-rates = <40000000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm2>;
+	status = "okay";
+};
+
+&pwm3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm3>;
+	status = "okay";
+};
+
+&sai2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai2>;
+	status = "okay";
+};
+
+&sai3 {
+	assigned-clocks = <&clk IMX8MMN(CLK_SAI3)>;
+	assigned-clock-parents = <&clk IMX8MMN(AUDIO_PLL1_OUT)>;
+	assigned-clock-rates = <12288000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai3>;
+	status = "okay";
+};
+
+&snvs_pwrkey {
+	status = "okay";
+};
+
+&uart2 { /* console */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart2>;
+	assigned-clocks = <&clk IMX8MMN(CLK_UART2)>;
+	assigned-clock-parents = <&clk IMX8MMN(CLK_24M)>;
+	status = "okay";
+};
+
+&uart3 { /* J15 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3>;
+	assigned-clocks = <&clk IMX8MMN(CLK_UART3)>;
+	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_80M)>;
+	uart-has-rtscts;
+	status = "okay";
+};
+
+&uart4 { /* scanner */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart4>;
+	assigned-clocks = <&clk IMX8MMN(CLK_UART4)>;
+	assigned-clock-parents = <&clk IMX8MMN(CLK_24M)>;
+	status = "okay";
+};
+
+&usbotg1 {
+	dr_mode = "otg";
+	over-current-active-low;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbotg1>;
+	power-active-high;
+	status = "okay";
+	usb-role-switch;
+	vbus-supply = <&reg_usbotg_vbus>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			usb_hs_ep: endpoint {
+				remote-endpoint = <&hs_ep>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			usb_role_switch: endpoint {
+				remote-endpoint = <&max77958_out_ep>;
+			};
+		};
+	};
+};
+
+&usdhc1 {
+	bus-width = <8>;
+	no-mmc-hs400;
+	non-removable;
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-0 = <&pinctrl_usdhc1>;
+	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
+	reset-gpios = GP_EMMC_RESET;
+	status = "okay";
+	vmmc-supply = <&reg_vref_3v3>;
+	vqmmc-1-8-v;
+	vqmmc-supply = <&reg_vref_1v8>;
+};
+
+&usdhc2 {
+	bus-width = <4>;
+	cd-gpios = GP_USDHC2_CD;
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-0 = <&pinctrl_usdhc2>;
+	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
+	status = "okay";
+	vqmmc-supply = <&reg_ldo2>;
+};
+
+&usdhc3 {
+	bus-width = <4>;
+	fsl,sdio-async-interrupt-enabled;
+	keep-power-in-suspend;
+	no-sd-uhs-sdr104;
+	non-removable;
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-0 = <&pinctrl_usdhc3>;
+	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
+	pm-ignore-notify;
+	status = "okay";
+	vmmc-supply = <&reg_wlan_vmmc>;
+	vqmmc-1-8-v;
+	vqmmc-supply = <&reg_vref_1v8>;
+};
+
+&wdog1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_wdog>;
+	fsl,ext-reset-output;
+	status = "okay";
+};
