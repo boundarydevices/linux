@@ -31,9 +31,7 @@
 			"Ext Spk", "SPK_RN",
 			"LINPUT1", "Mic Jack",
 			"LINPUT3", "Mic Jack",
-			"Mic Jack", "MICB",
-			"Playback", "SAI3.OUT",
-			"SAI3.IN", "Capture";
+			"Mic Jack", "MICB";
 		simple-audio-card,dai-link {
 			format = "i2s";
 			cpu {
