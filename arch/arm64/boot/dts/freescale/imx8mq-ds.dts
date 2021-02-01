@@ -41,12 +41,17 @@
 		>;
 	};
 
+        pinctrl_gpio_keys: gpio_keysgrp {
+                fsl,pins = <
+#define GP_KEY_SW_SYNC   <&gpio3 22 GPIO_ACTIVE_HIGH>
+                        MX8MQ_IOMUXC_SAI5_RXD1_GPIO3_IO22               0x41
+#define GP_KEY_SW_PRIV   <&gpio3 23 GPIO_ACTIVE_HIGH>
+                        MX8MQ_IOMUXC_SAI5_RXD2_GPIO3_IO23               0x41
+                >;
+        };
+
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
-			/* SW_SYNC */
-			MX8MQ_IOMUXC_SAI5_RXD1_GPIO3_IO22		0x19
-			/* SW_PRIV */
-			MX8MQ_IOMUXC_SAI5_RXD2_GPIO3_IO23		0x19
 			/* FAN_ROTOLOCK */
 			MX8MQ_IOMUXC_ECSPI1_SS0_GPIO5_IO9		0x19
 			/* FAN_VOUT */
@@ -144,11 +149,11 @@
 
 	pinctrl_leds: ledsgrp {
 		fsl,pins = <
-#define GP_LED_RED	<&gpio1 1 GPIO_ACTIVE_HIGH>
+#define GP_LED_GREEN	<&gpio1 1 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1		0x19
-#define GP_LED_GREEN	<&gpio1 0 GPIO_ACTIVE_HIGH>
+#define GP_LED_RED	<&gpio1 0 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_GPIO1_IO00_GPIO1_IO0		0x19
-#define GP_LED_BLUE	<&gpio1 3 GPIO_ACTIVE_HIGH>
+#define GP_LED_BLUE	<&gpio1 3 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_GPIO1_IO03_GPIO1_IO3		0x19
 		>;
 	};
@@ -303,19 +308,37 @@
 		status = "okay";
 	};
 
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+
+		sw_sync {
+			label = "Sw sync";
+			gpios = GP_KEY_SW_SYNC;
+			linux,code = <KEY_1>;
+		};
+
+                sw_priv {
+                        label = "Sw priv";
+                        gpios = GP_KEY_SW_PRIV;
+                        linux,code = <KEY_2>;
+                };
+	};
+
 	leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_leds>;
 
-		red {
-			gpios = GP_LED_RED;
+		green {
+			gpios = GP_LED_GREEN;
 			retain-state-suspended;
 			default-state = "off";
 		};
 
-		green {
-			gpios = GP_LED_GREEN;
+		red {
+			gpios = GP_LED_RED;
 			retain-state-suspended;
 			default-state = "off";
 		};
@@ -593,7 +616,7 @@
 	clock-names = "pcie", "pcie_bus", "pcie_phy", "pcie_ext_src";
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie0>;
-	ext_osc = <0>;
+	ext_osc = <1>;
 	reset-gpio = GP_PCIE0_RESET;
 	hard-wired = <1>;
 	status = "okay";
@@ -607,7 +630,7 @@
 	clock-names = "pcie", "pcie_bus", "pcie_phy", "pcie_ext_src";
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie1>;
-	ext_osc = <0>;
+	ext_osc = <1>;
 	reset-gpio = GP_PCIE1_RESET;
 	status = "okay";
 };
