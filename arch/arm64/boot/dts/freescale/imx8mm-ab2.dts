@@ -561,16 +561,16 @@
 		DVDD-supply = <&reg_dac_dvdd_3v3>;
 	};
 
-	ak4458_2: ak4458@11 {
+	ak4458_2: ak4458@12 {
 		compatible = "asahi-kasei,ak4458";
-		reg = <0x11>;
+		reg = <0x12>;
 		AVDD-supply = <&reg_dac_avdd_5v0>;
 		DVDD-supply = <&reg_dac_dvdd_3v3>;
 	};
 
-	ak4458_3: ak4458@12 {
+	ak4458_3: ak4458@11 {
 		compatible = "asahi-kasei,ak4458";
-		reg = <0x12>;
+		reg = <0x11>;
 		AVDD-supply = <&reg_dac_avdd_5v0>;
 		DVDD-supply = <&reg_dac_dvdd_3v3>;
 		status = "disabled";

@@ -144,7 +144,7 @@ static t_Error CheckFmParameters(t_Fm *p_Fm)
         RETURN_ERROR(MAJOR, E_INVALID_VALUE, ("fmClkFreq must be set."));
     if (USEC_TO_CLK(p_Fm->p_FmDriverParam->dma_watchdog, p_Fm->p_FmStateStruct->fmClkFreq) > DMA_MAX_WATCHDOG)
         RETURN_ERROR(MAJOR, E_INVALID_VALUE,
-                     ("dma_watchdog depends on FM clock. dma_watchdog(in microseconds) * clk (in Mhz), may not exceed 0x08x", DMA_MAX_WATCHDOG));
+                     ("dma_watchdog depends on FM clock. dma_watchdog(in microseconds) * clk (in Mhz), may not exceed %lu", DMA_MAX_WATCHDOG));
 
 #if (DPAA_VERSION >= 11)
     if ((p_Fm->partVSPBase + p_Fm->partNumOfVSPs) > FM_VSP_MAX_NUM_OF_ENTRIES)
@@ -156,7 +156,7 @@ static t_Error CheckFmParameters(t_Fm *p_Fm)
     if (!p_Fm->p_FmStateStruct->totalFifoSize ||
         (p_Fm->p_FmStateStruct->totalFifoSize > BMI_MAX_FIFO_SIZE))
         RETURN_ERROR(MAJOR, E_INVALID_VALUE,
-                     ("totalFifoSize (currently defined as %d) has to be in the range of 256 to %d",
+                     ("totalFifoSize (currently defined as %d) has to be in the range of 256 to %lu",
                       p_Fm->p_FmStateStruct->totalFifoSize,
                       BMI_MAX_FIFO_SIZE));
     if (!p_Fm->p_FmStateStruct->totalNumOfTasks ||
@@ -4508,7 +4508,7 @@ t_Error FM_SetPortsBandwidth(t_Handle h_Fm, t_FmPortsBandwidthParams *p_PortsBan
     for (i=0; i < p_PortsBandwidth->numOfPorts; i++)
         sum +=p_PortsBandwidth->portsBandwidths[i].bandwidth;
     if (sum != 100)
-        RETURN_ERROR(MAJOR, E_INVALID_VALUE, ("Sum of ports bandwidth differ from 100%"));
+        RETURN_ERROR(MAJOR, E_INVALID_VALUE, ("Sum of ports bandwidth differ from 100%%"));
 
     /* find highest percent */
     for (i=0; i < p_PortsBandwidth->numOfPorts; i++)

@@ -468,12 +468,21 @@ static int imx8_ipc_pcm_params(struct snd_sof_dev *sdev,
 	return 0;
 }
 
-int imx8_dsp_runtime_resume(struct snd_sof_dev *sdev)
+int imx8_suspend(struct snd_sof_dev *sdev)
 {
-	const struct sof_dsp_power_state target_dsp_state = {
-		.state = SOF_DSP_PM_D0,
-		.substate = 0,
-	};
+	int i;
+	struct imx8_priv *priv = (struct imx8_priv *)sdev->pdata->hw_pdata;
+
+	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
+		imx_dsp_free_channel(priv->dsp_ipc, i);
+
+	imx8_disable_clocks(priv->sdev);
+
+	return 0;
+}
+
+int imx8_resume(struct snd_sof_dev *sdev)
+{
 	struct imx8_priv *priv = (struct imx8_priv *)sdev->pdata->hw_pdata;
 	int i;
 
@@ -482,25 +491,33 @@ int imx8_dsp_runtime_resume(struct snd_sof_dev *sdev)
 	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
 		imx_dsp_request_channel(priv->dsp_ipc, i);
 
+	return 0;
+}
+
+int imx8_dsp_runtime_resume(struct snd_sof_dev *sdev)
+{
+	const struct sof_dsp_power_state target_dsp_state = {
+		.state = SOF_DSP_PM_D0,
+		.substate = 0,
+	};
+
+	imx8_resume(sdev);
+
 	return snd_sof_dsp_set_power_state(sdev, &target_dsp_state);
 }
 
 int imx8_dsp_runtime_suspend(struct snd_sof_dev *sdev)
 {
-	struct imx8_priv *priv = (struct imx8_priv *)sdev->pdata->hw_pdata;
 	const struct sof_dsp_power_state target_dsp_state = {
 		.state = SOF_DSP_PM_D3,
 		.substate = 0,
 	};
-	int i;
 
-	for (i = 0; i < DSP_MU_CHAN_NUM; i++)
-		imx_dsp_free_channel(priv->dsp_ipc, i);
-
-	imx8_disable_clocks(priv->sdev);
+	imx8_suspend(sdev);
 
 	return snd_sof_dsp_set_power_state(sdev, &target_dsp_state);
 }
+
 
 int imx8_dsp_suspend(struct snd_sof_dev *sdev, unsigned int target_state)
 {
@@ -508,6 +525,9 @@ int imx8_dsp_suspend(struct snd_sof_dev *sdev, unsigned int target_state)
 		.state = target_state,
 		.substate = 0,
 	};
+
+	if (!pm_runtime_suspended(sdev->dev))
+		imx8_suspend(sdev);
 
 	return snd_sof_dsp_set_power_state(sdev, &target_dsp_state);
 }
@@ -518,6 +538,16 @@ int imx8_dsp_resume(struct snd_sof_dev *sdev)
 		.state = SOF_DSP_PM_D0,
 		.substate = 0,
 	};
+
+	imx8_resume(sdev);
+
+	if (pm_runtime_suspended(sdev->dev)) {
+		pm_runtime_disable(sdev->dev);
+		pm_runtime_set_active(sdev->dev);
+		pm_runtime_mark_last_busy(sdev->dev);
+		pm_runtime_enable(sdev->dev);
+		pm_runtime_idle(sdev->dev);
+	}
 
 	return snd_sof_dsp_set_power_state(sdev, &target_dsp_state);
 }
