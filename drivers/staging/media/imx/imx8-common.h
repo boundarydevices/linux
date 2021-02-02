@@ -58,6 +58,8 @@
 #define MXC_PARALLEL_CSI_PADS_NUM		2
 
 #define ISI_2K		2048
+#define ISI_4K		4096
+#define ISI_8K		8192
 
 enum {
 	IN_PORT,
