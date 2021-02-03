@@ -507,6 +507,13 @@ int vsi_v4l2_addinstance(pid_t *ppid)
 	int ret = 0;
 	char loglvl[20] = {0};
 #if defined(CONFIG_ANDROID)
+	struct file *filp  = NULL;
+	filp = filp_open("/vendor/bin/vsidaemon", O_RDONLY, 0);
+	if (IS_ERR(filp)) {
+		return -ENODEV;
+	} else
+		filp_close(filp, NULL);
+
 	char *argv[] = {"/system/bin/sh", "-c", "/vendor/bin/vsidaemon", NULL};
 	char *env[] = {"LD_LIBRARY_PATH=/vendor/lib64",
 		"DAEMON_LOGPATH=/data/vendor/vsi/daemon.log",
