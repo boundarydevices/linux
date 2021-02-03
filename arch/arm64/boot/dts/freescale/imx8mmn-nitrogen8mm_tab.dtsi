@@ -602,7 +602,7 @@
 			"RINPUT1", "Mic Jack",
 			"Mic Jack", "MICB";
 		/* JD2: hp detect high for headphone*/
-		hp-det = <2 0>;
+		hp-det = <2 1>;
 		hp-det-gpios = GP_WM8960_HP_DET;
 		/* Jack is not stuffed */
 		mic-det-gpios = GP_WM8960_MIC_DET;
