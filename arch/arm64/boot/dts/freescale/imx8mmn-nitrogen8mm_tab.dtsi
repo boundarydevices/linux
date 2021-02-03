@@ -762,6 +762,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_tca9546>;
 		reg = <0x70>;
+		reset-gpios = GP_I2C2_MUX_RESET;
 		status = "okay";
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -810,10 +811,11 @@
 	status = "okay";
 
 	i2cmux@70 {
-		compatible = "nxp,pca9540";
+		compatible = "nxp,pca9546";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_tca9546>;
 		reg = <0x70>;
+		reset-gpios = GP_I2C3_MUX_RESET;
 		#address-cells = <1>;
 		#size-cells = <0>;
 
