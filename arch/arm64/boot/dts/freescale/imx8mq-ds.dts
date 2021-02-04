@@ -548,6 +548,7 @@
 		interrupts-extended = GPIRQ_BQ25898;
 	        ti,battery-regulation-voltage = <4200000>;
 	        ti,charge-current = <2000000>;
+		ti,iilim-current = <1500000>;
 	        ti,termination-current = <50000>;
 	        ti,precharge-current = <128000>;
 	        ti,minimum-sys-voltage = <3600000>;
