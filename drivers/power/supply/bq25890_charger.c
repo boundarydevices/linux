@@ -92,6 +92,7 @@ struct bq25890_init_data {
 	u8 boostv;	/* boost regulation voltage	*/
 	u8 boosti;	/* boost current limit		*/
 	u8 boostf;	/* boost frequency		*/
+	u8 iilim;	/* Input current limit		*/
 	u8 ilim_en;	/* enable ILIM pin		*/
 	u8 treg;	/* thermal regulation threshold */
 	u8 rbatcomp;	/* IBAT sense resistor value    */
