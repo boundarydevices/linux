@@ -141,11 +141,23 @@ static struct sn65dsi83 *bridge_to_sn65dsi83(struct drm_bridge *bridge)
 	return container_of(bridge, struct sn65dsi83, bridge);
 }
 
+static void sn65dsi83_bridge_pre_enable(struct drm_bridge *bridge)
+{
+	struct sn65dsi83 *sn65dsi83 = bridge_to_sn65dsi83(bridge);
+
+	dev_info(DRM_DEVICE(bridge), "%s\n", __func__);
+	sn65dsi83->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+	sn65dsi83->brg->funcs->setup(sn65dsi83->brg);
+	sn65dsi83->dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
+}
+
 static void sn65dsi83_bridge_enable(struct drm_bridge *bridge)
 {
 	struct sn65dsi83 *sn65dsi83 = bridge_to_sn65dsi83(bridge);
+
 	dev_info(DRM_DEVICE(bridge), "%s\n", __func__);
-	sn65dsi83->brg->funcs->setup(sn65dsi83->brg);
+
+	sn65dsi83->brg->funcs->power_on(sn65dsi83->brg);
 	sn65dsi83->brg->funcs->start_stream(sn65dsi83->brg);
 }
 
@@ -198,6 +210,7 @@ static int sn65dsi83_bridge_attach(struct drm_bridge *bridge,
 }
 
 static struct drm_bridge_funcs sn65dsi83_bridge_funcs = {
+	.pre_enable = sn65dsi83_bridge_pre_enable,
 	.enable = sn65dsi83_bridge_enable,
 	.disable = sn65dsi83_bridge_disable,
 	.mode_set = sn65dsi83_bridge_mode_set,
@@ -300,7 +313,6 @@ static int sn65dsi83_probe(struct i2c_client *i2c,
 		dev_err(dev, "Failed to reset the device");
 		return -ENODEV;
 	}
-	sn65dsi83->brg->funcs->power_off(sn65dsi83->brg);
 
 	sn65dsi83->bridge.funcs = &sn65dsi83_bridge_funcs;
 	sn65dsi83->bridge.of_node = dev->of_node;
@@ -339,7 +351,8 @@ static int sn65dsi83_attach_dsi(struct sn65dsi83 *sn65dsi83)
 
 	dsi->lanes = sn65dsi83->brg->num_dsi_lanes;
 	dsi->format = MIPI_DSI_FMT_RGB888;
-	dsi->mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST;
+	dsi->mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST |
+			  MIPI_DSI_MODE_VIDEO_HSE;
 
 	ret = mipi_dsi_attach(dsi);
 	if (ret < 0) {
