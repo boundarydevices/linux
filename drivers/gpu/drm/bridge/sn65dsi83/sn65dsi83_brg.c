@@ -209,6 +209,7 @@ static int sn65dsi83_brg_configure(struct sn65dsi83_brg *brg)
 	int regval = 0;
 	struct i2c_client *client = I2C_CLIENT(brg);
 	struct videomode *vm = VM(brg);
+	unsigned int lvds_clk = PIXCLK;
 
 	u32 dsi_clk = (((PIXCLK * BPP(brg)) / DSI_LANES(brg)) >> 1);
 
@@ -216,12 +217,15 @@ static int sn65dsi83_brg_configure(struct sn65dsi83_brg *brg)
 	dev_info(&client->dev, "GeoMetry [ %d x %d ] Hz\n", HACTIVE, VACTIVE);
 
 	/* LVDS clock setup */
-	if ((25000000 <= PIXCLK) && (PIXCLK < 37500000))
+	if (CHNUM(brg) == 2)
+		lvds_clk = lvds_clk / 2;
+
+	if ((lvds_clk >= 25000000) && (lvds_clk < 37500000))
 		regval = 0;
 	else
 		regval =
 		    sn65dsi83_calk_clk_range(0x01, 0x05, 37500000, 25000000,
-					     PIXCLK);
+					     lvds_clk);
 
 	if (regval < 0) {
 		dev_err(&client->dev, "failed to configure LVDS clock");
@@ -242,7 +246,7 @@ static int sn65dsi83_brg_configure(struct sn65dsi83_brg *brg)
 	SN65DSI83_WRITE(SN65DSI83_CHA_DSI_CLK_RNG, regval);
 
 	/* DSI clock divider */
-	regval = sn65dsi83_calk_div(0x0, 0x18, 1, 1, dsi_clk, PIXCLK);
+	regval = sn65dsi83_calk_div(0x0, 0x18, 1, 1, dsi_clk, lvds_clk);
 	if (regval < 0) {
 		dev_err(&client->dev, "failed to calculate DSI clock divider");
 		return -EINVAL;
