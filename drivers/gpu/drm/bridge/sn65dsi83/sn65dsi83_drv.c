@@ -55,7 +55,7 @@ static int sn65dsi83_connector_get_modes(struct drm_connector *connector)
 	u32 *bus_flags = &connector->display_info.bus_flags;
 	int ret;
 
-	dev_info(dev, "%s\n", __func__);
+	dev_dbg(dev, "%s\n", __func__);
 	mode = drm_mode_create(connector->dev);
 	if (!mode) {
 		DRM_DEV_ERROR(dev, "Failed to create display mode!\n");
@@ -96,10 +96,11 @@ sn65dsi83_connector_mode_valid(struct drm_connector *connector,
 {
 	struct sn65dsi83 *sn65dsi83 = connector_to_sn65dsi83(connector);
 	struct device *dev = connector->dev->dev;
+
 	if (mode->clock > (sn65dsi83->brg->vm.pixelclock / 1000))
 		return MODE_CLOCK_HIGH;
 
-	dev_info(dev, "%s: mode: %d*%d@%d is valid\n", __func__,
+	dev_dbg(dev, "%s: mode: %d*%d@%d is valid\n", __func__,
 		 mode->hdisplay, mode->vdisplay, mode->clock);
 	return MODE_OK;
 }
@@ -115,7 +116,8 @@ sn65dsi83_connector_detect(struct drm_connector *connector, bool force)
 	struct sn65dsi83 *sn65dsi83 = connector_to_sn65dsi83(connector);
 	struct device *dev = connector->dev->dev;
 	enum drm_connector_status status;
-	dev_info(dev, "%s\n", __func__);
+
+	dev_dbg(dev, "%s\n", __func__);
 
 	status = connector_status_connected;
 	sn65dsi83->status = status;
@@ -145,7 +147,7 @@ static void sn65dsi83_bridge_pre_enable(struct drm_bridge *bridge)
 {
 	struct sn65dsi83 *sn65dsi83 = bridge_to_sn65dsi83(bridge);
 
-	dev_info(DRM_DEVICE(bridge), "%s\n", __func__);
+	dev_dbg(DRM_DEVICE(bridge), "%s\n", __func__);
 	sn65dsi83->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 	sn65dsi83->brg->funcs->setup(sn65dsi83->brg);
 	sn65dsi83->dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
@@ -155,7 +157,7 @@ static void sn65dsi83_bridge_enable(struct drm_bridge *bridge)
 {
 	struct sn65dsi83 *sn65dsi83 = bridge_to_sn65dsi83(bridge);
 
-	dev_info(DRM_DEVICE(bridge), "%s\n", __func__);
+	dev_dbg(DRM_DEVICE(bridge), "%s\n", __func__);
 
 	sn65dsi83->brg->funcs->power_on(sn65dsi83->brg);
 	sn65dsi83->brg->funcs->start_stream(sn65dsi83->brg);
@@ -164,7 +166,8 @@ static void sn65dsi83_bridge_enable(struct drm_bridge *bridge)
 static void sn65dsi83_bridge_disable(struct drm_bridge *bridge)
 {
 	struct sn65dsi83 *sn65dsi83 = bridge_to_sn65dsi83(bridge);
-	dev_info(DRM_DEVICE(bridge), "%s\n", __func__);
+
+	dev_dbg(DRM_DEVICE(bridge), "%s\n", __func__);
 	sn65dsi83->brg->funcs->stop_stream(sn65dsi83->brg);
 	sn65dsi83->brg->funcs->power_off(sn65dsi83->brg);
 }
@@ -174,7 +177,8 @@ static void sn65dsi83_bridge_mode_set(struct drm_bridge *bridge,
 				      const struct drm_display_mode *adj_mode)
 {
 	struct sn65dsi83 *sn65dsi83 = bridge_to_sn65dsi83(bridge);
-	dev_info(DRM_DEVICE(bridge), "%s: mode: %d*%d@%d\n", __func__,
+
+	dev_dbg(DRM_DEVICE(bridge), "%s: mode: %d*%d@%d\n", __func__,
 		 mode->hdisplay, mode->vdisplay, mode->clock);
 	drm_mode_copy(&sn65dsi83->curr_mode, adj_mode);
 }
@@ -185,7 +189,7 @@ static int sn65dsi83_bridge_attach(struct drm_bridge *bridge,
 	struct sn65dsi83 *sn65dsi83 = bridge_to_sn65dsi83(bridge);
 	int ret;
 
-	dev_info(DRM_DEVICE(bridge), "%s\n", __func__);
+	dev_dbg(DRM_DEVICE(bridge), "%s\n", __func__);
 	if (!bridge->encoder) {
 		DRM_ERROR("Parent encoder object not found");
 		return -ENODEV;
@@ -285,7 +289,7 @@ static int sn65dsi83_probe(struct i2c_client *i2c,
 	struct device *dev = &i2c->dev;
 	int ret;
 
-	dev_info(dev, "%s\n", __func__);
+	dev_dbg(dev, "%s\n", __func__);
 	if (!dev->of_node)
 		return -EINVAL;
 
@@ -333,7 +337,7 @@ static int sn65dsi83_attach_dsi(struct sn65dsi83 *sn65dsi83)
 		.node = NULL,
 	};
 
-	dev_info(dev, "%s\n", __func__);
+	dev_dbg(dev, "%s\n", __func__);
 	host = of_find_mipi_dsi_host_by_node(sn65dsi83->host_node);
 	if (!host) {
 		dev_err(dev, "failed to find dsi host\n");
@@ -366,7 +370,8 @@ static int sn65dsi83_attach_dsi(struct sn65dsi83 *sn65dsi83)
 static void sn65dsi83_detach_dsi(struct sn65dsi83 *sn65dsi83)
 {
 	struct device *dev = &sn65dsi83->brg->client->dev;
-	dev_info(dev, "%s\n", __func__);
+
+	dev_dbg(dev, "%s\n", __func__);
 	mipi_dsi_detach(sn65dsi83->dsi);
 	mipi_dsi_device_unregister(sn65dsi83->dsi);
 }
@@ -375,7 +380,8 @@ static int sn65dsi83_remove(struct i2c_client *i2c)
 {
 	struct sn65dsi83 *sn65dsi83 = i2c_get_clientdata(i2c);
 	struct device *dev = &sn65dsi83->brg->client->dev;
-	dev_info(dev, "%s\n", __func__);
+
+	dev_dbg(dev, "%s\n", __func__);
 
 	sn65dsi83_detach_dsi(sn65dsi83);
 	drm_bridge_remove(&sn65dsi83->bridge);

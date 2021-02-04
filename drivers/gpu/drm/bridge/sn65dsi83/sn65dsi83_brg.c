@@ -123,7 +123,6 @@ static int sn65dsi83_read(struct i2c_client *client, u8 reg)
 {
 	int ret;
 
-	dev_info(&client->dev, "client 0x%p", client);
 	ret = i2c_smbus_read_byte_data(client, reg);
 
 	if (ret < 0) {
@@ -341,6 +340,7 @@ static int sn65dsi83_brg_reset(struct sn65dsi83_brg *brg)
 	/* Soft Reset reg value at power on should be 0x00 */
 	struct i2c_client *client = I2C_CLIENT(brg);
 	int ret = SN65DSI83_READ(SN65DSI83_SOFT_RESET);
+
 	dev_info(&client->dev, "%s\n", __func__);
 	if (ret != 0x00) {
 		dev_err(&client->dev, "Failed to reset the device");
