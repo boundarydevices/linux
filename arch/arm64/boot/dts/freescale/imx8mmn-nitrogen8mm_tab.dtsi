@@ -47,6 +47,7 @@
 			MX8MMN(IOMUXC_SAI2_RXC_GPIO4_IO22, 0x09)	/* TP13 */
 			MX8MMN(IOMUXC_GPIO1_IO11_GPIO1_IO11, 0x09)	/* TP18 */
 			MX8MMN(IOMUXC_SAI5_RXD0_GPIO3_IO21, 0x09)	/* TP19 */
+			MX8MMN(IOMUXC_SAI5_RXD1_GPIO3_IO22, 0x09)	/* TP31 */
 		>;
 	};
 
@@ -250,8 +251,6 @@
 
 	pinctrl_sound_wm8960: sound-wm8960grp {
 		fsl,pins = <
-#define GP_WM8960_MIC_DET		<&gpio3 22 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_SAI5_RXD1_GPIO3_IO22, 0x09)	/* TP31 */
 #define GP_WM8960_HP_DET		<&gpio1 1 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x80)
 		>;
@@ -597,15 +596,15 @@
 			"Ext Spk", "SPK_LN",
 			"Ext Spk", "SPK_RP",
 			"Ext Spk", "SPK_RN",
-			"LINPUT1", "Main MIC",
-			"Main MIC", "MICB",
-			"RINPUT1", "Mic Jack",
-			"Mic Jack", "MICB";
+			"LINPUT1", "Mic Jack",
+			"Mic Jack", "MICB",
+			"RINPUT1", "Main MIC",
+			"Main MIC", "MICB";
 		/* JD2: hp detect high for headphone*/
 		hp-det = <2 1>;
 		hp-det-gpios = GP_WM8960_HP_DET;
 		/* Jack is not stuffed */
-		mic-det-gpios = GP_WM8960_MIC_DET;
+		mic-det-gpios = GP_WM8960_HP_DET;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
