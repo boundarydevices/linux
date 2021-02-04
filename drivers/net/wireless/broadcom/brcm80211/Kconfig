@@ -38,7 +38,7 @@ config BRCM_TRACING
 config BRCMDBG
 	bool "Broadcom driver debug functions"
 	depends on BRCMSMAC || BRCMFMAC
-	select WANT_DEV_COREDUMP if BRCMFMAC
+	select WANT_DEV_COREDUMP
 	help
 	  Selecting this enables additional code for debug purposes.
 
