@@ -87,6 +87,7 @@ struct bq25890_init_data {
 	u8 boostv;	/* boost regulation voltage	*/
 	u8 boosti;	/* boost current limit		*/
 	u8 boostf;	/* boost frequency		*/
+	u8 iinlim;	/* Input current limit		*/
 	u8 ilim_en;	/* enable ILIM pin		*/
 	u8 treg;	/* thermal regulation threshold */
 	u8 rbatcomp;	/* IBAT sense resistor value    */
@@ -799,6 +800,7 @@ static int bq25890_rw_init_data(struct bq25890_device *bq)
 		{F_BOOSTI,	 &bq->init_data.boosti},
 		{F_BOOSTF,	 &bq->init_data.boostf},
 		{F_EN_ILIM,	 &bq->init_data.ilim_en},
+		{F_IINLIM,	 &bq->init_data.iinlim},
 		{F_TREG,	 &bq->init_data.treg},
 		{F_BATCMP,	 &bq->init_data.rbatcomp},
 		{F_VCLAMP,	 &bq->init_data.vclamp},
@@ -1128,6 +1130,7 @@ static int bq25890_fw_read_u32_props(struct bq25890_device *bq)
 		/* required properties */
 		{"ti,charge-current", false, TBL_ICHG, &init->ichg},
 		{"ti,battery-regulation-voltage", false, TBL_VREG, &init->vreg},
+		{"ti,iilim-current", false, TBL_IINLIM, &init->iinlim},
 		{"ti,termination-current", false, TBL_ITERM, &init->iterm},
 		{"ti,precharge-current", false, TBL_ITERM, &init->iprechg},
 		{"ti,minimum-sys-voltage", false, TBL_SYSVMIN, &init->sysvmin},
