@@ -24,6 +24,7 @@
 #define BQ25890_ID			3
 #define BQ25895_ID			7
 #define BQ25896_ID			0
+#define BQ25898_ID			1
 
 enum bq25890_chip_version {
 	BQ25890,
@@ -802,6 +803,7 @@ static int bq25890_get_chip_version(struct bq25890_device *bq)
 
 	switch (id) {
 	case BQ25890_ID:
+	case BQ25898_ID:
 		bq->chip_version = BQ25890;
 		break;
 
