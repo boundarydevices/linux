@@ -1,0 +1,48 @@
+#include <dt-bindings/display/simple_panel_mipi_cmds.h>
+
+/ {
+	aliases {
+		mipi_cmds_ls050t1sx12 = &mipi_cmds_ls050t1sx12;
+		pinctrl_ls050t1sx12 = &pinctrl_mipi_ls050t1sx12;
+	};
+
+	mipi_cmds_ls050t1sx12: mipi-cmds-ls050t1sx12 {
+		alias = <&mipi_cmds_ls050t1sx12>;
+		aliasp = <&pinctrl_mipi_ls050t1sx12>;
+		mipi-cmds-enable = /bits/ 8 <
+			DELAY(50)
+			DCS_S1P(0xff,0x10)	/* Page select */
+			DCS_S1P(0xbb,0x03)	/* Video mode, GRAM acess disabled */
+			DCS_S1P(0xb0,0x03)	/* crc/ecc off */
+			DCS_L5P(0x3b,0x03,0x06,0x04,0x3c,0x66) /* margins */
+			DCS_S1P(0x35,0x00)	/* TE ON */
+
+			DCS_S0P(0x11)		/* Exit sleep */
+		>;
+		mipi-cmds-enable2 = /bits/ 8 <
+			DELAY(120)		/* 100ms is what datasheet says */
+
+			DCS_S1P(0x51,0xff)	/* Set LED PWM full duty */
+			DCS_S1P(0x53,0x24)	/* PWM Backlight control on */
+			DCS_S1P(0x55,0x81)	/* CABC on (UI mode) */
+#if 0
+			DCS_READ1(0x54, 0x24)
+			DCS_READ1(0x56, 0x81)
+#endif
+			DCS_S1P(0xff,0xf0)	/* NVT command */
+			DCS_S1P(0x92,0x01)	/* fix esd issue */
+			DCS_S1P(0x13,0x01)	/* fix abnormal dot issue */
+
+			DCS_S1P(0xff,0x10)	/* command page */
+			DCS_S0P(0x29)		/* MIPI_DCS_SET_DISPLAY_ON */
+			DELAY(40)
+		>;
+		mipi-cmds-disable = /bits/ 8 <
+			DCS_S0P(0x28)		/* MIPI_DCS_SET_DISPLAY_OFF */
+			DELAY(20)
+			DCS_S0P(0x10)		/* Enter sleep */
+		>;
+		mode-video-hfp-disable;
+		mode-video-hsa-disable;
+	};
+};
