@@ -17,9 +17,20 @@
 #include <linux/videodev2.h>
 #include <linux/v4l2-controls.h>
 
-/*imx v4l2 controls*/
+/*imx v4l2 controls & extension controls*/
+//compound type for extension ctrls
+#define VSI_V4L2_CMPTYPE_ROI				(V4L2_CTRL_COMPOUND_TYPES + 100)
+#define VSI_V4L2_CMPTYPE_IPCM				(V4L2_CTRL_COMPOUND_TYPES + 101)
+#define VSI_V4L2_CMPTYPE_HDR10META		(V4L2_CTRL_COMPOUND_TYPES + 102)
+
+//ctrls & extension ctrls definitions
 #define V4L2_CID_NON_FRAME		(V4L2_CID_USER_IMX_BASE)
 #define V4L2_CID_DIS_REORDER		(V4L2_CID_USER_IMX_BASE + 1)
+#define V4L2_CID_ROI_COUNT			(V4L2_CID_USER_IMX_BASE + 2)
+#define V4L2_CID_ROI				(V4L2_CID_USER_IMX_BASE + 3)
+#define V4L2_CID_IPCM_COUNT		(V4L2_CID_USER_IMX_BASE + 4)
+#define V4L2_CID_IPCM				(V4L2_CID_USER_IMX_BASE + 5)
+#define V4L2_CID_HDR10META			(V4L2_CID_USER_IMX_BASE + 6)
 
 #define V4L2_MAX_ROI_REGIONS		8
 struct v4l2_enc_roi_param {
@@ -35,8 +46,6 @@ struct v4l2_enc_roi_params {
 	__u32 config_store;
 	__u32 reserved[2];
 };
-#define V4L2_CID_ROI_COUNT		(V4L2_CID_USER_IMX_BASE + 2)
-#define V4L2_CID_ROI			(V4L2_CID_USER_IMX_BASE + 3)
 
 #define V4L2_MAX_IPCM_REGIONS		2
 struct v4l2_enc_ipcm_param {
@@ -50,18 +59,39 @@ struct v4l2_enc_ipcm_params {
 	__u32 config_store;
 	__u32 reserved[2];
 };
-#define V4L2_CID_IPCM_COUNT		(V4L2_CID_USER_IMX_BASE + 4)
-#define V4L2_CID_IPCM			(V4L2_CID_USER_IMX_BASE + 5)
+
+struct v4l2_hdr10_meta {
+	__u32 redPrimary[2];
+	__u32 greenPrimary[2];
+	__u32 bluePrimary[2];
+	__u32 whitePoint[2];
+	__u32 maxMasteringLuminance;
+	__u32 minMasteringLuminance;
+	__u32 maxContentLightLevel;
+	__u32 maxFrameAverageLightLevel;
+};
 
 /*imx v4l2 command*/
 #define V4L2_DEC_CMD_IMX_BASE		(0x08000000)
 #define V4L2_DEC_CMD_RESET		(V4L2_DEC_CMD_IMX_BASE + 1)
 
 /*imx v4l2 event*/
+//error happened in dec/enc
 #define V4L2_EVENT_CODEC_ERROR		(V4L2_EVENT_PRIVATE_START + 1)
+//frame loss in dec/enc
 #define V4L2_EVENT_SKIP					(V4L2_EVENT_PRIVATE_START + 2)
+//crop area change in dec, not reso change
 #define V4L2_EVENT_CROPCHANGE			(V4L2_EVENT_PRIVATE_START + 3)
+//some options can't be handled by codec, so might be ignored or updated. But codec could go on.
 #define V4L2_EVENT_INVALID_OPTION		(V4L2_EVENT_PRIVATE_START + 4)
+
+/*imx v4l2 warning msg, attached with event V4L2_EVENT_INVALID_OPTION*/
+enum {
+	UNKONW_WARNING = -1,		//not known warning type
+	RIOREGION_NOTALLOW,		//(part of)roi region can not work with media setting and be ignored by enc
+	IPCMREGION_NOTALLOW,		//(part of)ipcm region can not work with media setting and be ignored by enc
+	LEVEL_UPDATED,				//current level cant't work with media setting and be updated by enc
+};
 
 /* imx v4l2 formats */
 /*raw formats*/

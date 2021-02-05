@@ -179,6 +179,7 @@ enum {
 	DAEMON_ERR_INST_CREATE = -1,       // inst_init() failed.
 	DAEMON_ERR_SIGNAL_CONFIG = -2,     // sigsetjmp() failed.
 	DAEMON_ERR_DAEMON_MISSING = -3,     // daemon is not alive.
+	DAEMON_ERR_NO_MEM = -4,     		// no mem, used also by driver.
 
 	DAEMON_ERR_ENC_PARA = -100,        // Parameters Error.
 	DAEMON_ERR_ENC_NOT_SUPPORT = -101, // Not Support Error.
@@ -188,6 +189,14 @@ enum {
 
 	DAEMON_ERR_DEC_FATAL_ERROR = -200, // Fatal error.
 	DAEMON_ERR_DEC_METADATA_ONLY = -201,  // CMD_STOP after metadata-only.
+};
+
+//warn type attached in V4L2_DAEMON_VIDIOC_WARNONOPTION message. Stored in msg.error member
+enum {
+	UNKONW_WARNTYPE = -1,		//not known warning type
+	WARN_ROIREGION,			//(part of)roi region can not work with media setting and be ignored by enc
+	WARN_IPCMREGION,			//(part of)ipcm region can not work with media setting and be ignored by enc
+	WARN_LEVEL,				//current level cant't work with media setting and be updated by enc
 };
 
 struct v4l2_daemon_enc_buffers {
