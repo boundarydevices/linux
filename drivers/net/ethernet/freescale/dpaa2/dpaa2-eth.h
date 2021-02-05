@@ -705,7 +705,9 @@ static inline int dpaa2_eth_ch_count(struct dpaa2_eth_priv *priv)
 
 static inline bool dpaa2_eth_is_type_phy(struct dpaa2_eth_priv *priv)
 {
-	if (priv->mac && priv->mac->attr.link_type == DPMAC_LINK_TYPE_PHY)
+	if (priv->mac &&
+	    (priv->mac->attr.link_type == DPMAC_LINK_TYPE_PHY ||
+	     priv->mac->attr.link_type == DPMAC_LINK_TYPE_BACKPLANE))
 		return true;
 
 	return false;
