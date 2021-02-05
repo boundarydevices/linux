@@ -58,6 +58,7 @@ static atomic_t daemon_fn = ATOMIC_INIT(0);
 static DECLARE_WAIT_QUEUE_HEAD(cmd_queue);
 static struct mutex cmd_lock;
 static DECLARE_WAIT_QUEUE_HEAD(ret_queue);
+static DECLARE_WAIT_QUEUE_HEAD(instance_queue);
 static struct mutex  ret_lock;
 static s32 v4l2_fn;
 static struct mutex instance_lock;
@@ -132,7 +133,7 @@ int vsi_clear_daemonmsg(int instid)
 		if (obj) {
 			msg = (struct vsi_v4l2_msg *)obj;
 			if (msg->inst_id == instid) {
-				pr_debug("remove unused %d:%ld:%d from cmdarray", instid, msg->seq_id, msg->cmd_id);
+				v4l2_klog(LOGLVL_WARNING, "clear unused cmd %x:%ld:%d", instid, msg->seq_id, msg->cmd_id);
 				idr_remove(cmdarray, id);
 				kfree(obj);
 			}
@@ -145,7 +146,7 @@ int vsi_clear_daemonmsg(int instid)
 		if (obj) {
 			msg = (struct vsi_v4l2_msg *)obj;
 			if (msg->inst_id == instid) {
-				pr_debug("remove unused %d:%ld:%d from retarray", instid, msg->seq_id, msg->cmd_id);
+				v4l2_klog(LOGLVL_WARNING, "clear unused msg %x:%ld:%d", instid, msg->seq_id, msg->cmd_id);
 				idr_remove(retarray, id);
 				kfree(obj);
 			}
@@ -168,7 +169,7 @@ static int getMsg(struct file *fh, char __user *buf, size_t size)
 		if (obj) {
 			if (copy_to_user((void __user *)buf + offset, (void *)obj, sizeof(struct vsi_v4l2_msg_hdr) + obj->size) != 0)
 				break;
-			pr_debug("send msg  id = %d, size = %d", obj->cmd_id, obj->size);
+			v4l2_klog(LOGLVL_VERBOSE, "%lx send msg  id = %d", obj->inst_id, obj->cmd_id);
 			offset += sizeof(struct vsi_v4l2_msg_hdr) + obj->size;
 			accubytes += sizeof(struct vsi_v4l2_msg_hdr) + obj->size;
 			idr_remove(cmdarray, id);
@@ -194,6 +195,7 @@ static int getRet(unsigned long seqid, int *error, s32 *retflag)
 	idr_for_each_entry(retarray, obj, id) {
 		if (obj) {
 			if (obj->seq_id == seqid) {
+				v4l2_klog(LOGLVL_VERBOSE, "%lx get ack %d", obj->inst_id, obj->cmd_id);
 				*error = obj->error;
 				*retflag = obj->param_type;
 				idr_remove(retarray, id);
@@ -229,6 +231,7 @@ static int vsi_v4l2_sendcmd(
 	if (mutex_lock_interruptible(&cmd_lock))
 		return -EBUSY;
 
+	v4l2_klog(LOGLVL_VERBOSE, "%s:%lx:%d:%x", __func__, instid, cmdid, param_type);
 	if (msgsize == 0) {
 		msghdr = kzalloc(sizeof(struct vsi_v4l2_msg_hdr), GFP_KERNEL);
 		msghdr->inst_id = instid;
@@ -254,6 +257,7 @@ static int vsi_v4l2_sendcmd(
 	mutex_unlock(&cmd_lock);
 	wake_up_interruptible_all(&cmd_queue);
 
+	v4l2_klog(LOGLVL_VERBOSE, "%lx:%s:%d", instid, __func__, cmdid);
 	if (cmdid != V4L2_DAEMON_VIDIOC_EXIT) {
 		if (wait_event_interruptible(ret_queue, getRet(mid, &error, retflag) != 0))
 			return -ERESTARTSYS;
@@ -274,11 +278,10 @@ static long vsi_v4l2_daemon_ioctl(
 	switch (cmd) {
 	case VSI_IOCTL_CMD_INITDEV:
 		if (copy_from_user((void *)&hwinfo, (void __user *)arg, sizeof(hwinfo)) != 0) {
-			pr_err("%s fail to get data", __func__);
+			v4l2_klog(LOGLVL_ERROR, "%s fail to get data", __func__);
 			return -EINVAL;
 		}
 		vsiv4l2_set_hwinfo(&hwinfo);
-		//vsi_v4l2_initdevinfo((struct vsi_v4l2_dev_info *)arg);
 		break;
 	default:
 		return -EINVAL;
@@ -307,7 +310,7 @@ static int getbusaddr(struct vsi_v4l2_ctx *ctx, dma_addr_t  *busaddr, struct vb2
 		else
 			busaddr[i] = virt_to_phys(baseaddr[i]);
 	}
-	pr_debug("%s:%d:%d:%lx:%lx:%lx", __func__, buf->type, planeno,
+	v4l2_klog(LOGLVL_VERBOSE, "%s:%d:%d:%lx:%lx:%lx", __func__, buf->type, planeno,
 		(unsigned long)busaddr[0], (unsigned long)busaddr[1], (unsigned long)busaddr[2]);
 	return planeno;
 }
@@ -318,8 +321,8 @@ static u32 format_bufinfo_enc(struct vsi_v4l2_ctx *ctx, struct vsi_v4l2_msg *pms
 	struct v4l2_daemon_enc_buffers *encbufinfo;
 	dma_addr_t  busaddr[4];
 
-	convertROI(ctx);
-	convertIPCM(ctx);
+	vsi_convertROI(ctx);
+	vsi_convertIPCM(ctx);
 	if (binputqueue(buf->type) && ctx->srcvbufflag[buf->index] & FORCE_IDR)
 		*update |= UPDATE_INFO;
 	if (*update & UPDATE_INFO) {
@@ -365,8 +368,6 @@ static u32 format_bufinfo_enc(struct vsi_v4l2_ctx *ctx, struct vsi_v4l2_msg *pms
 			ctx->srcvbufflag[buf->index] &= ~FORCE_IDR;
 		} else
 			pmsg->params.enc_params.specific.enc_h26x_cmd.force_idr = 0;
-		pr_debug("enc input: %llx:%d, %llx:%d", encbufinfo->busLuma, encbufinfo->busLumaSize,
-			encbufinfo->busChromaU, encbufinfo->busChromaUSize);
 	} else {
 		encbufinfo->busLumaOrig = encbufinfo->busLuma = 0;
 		encbufinfo->busChromaUOrig = encbufinfo->busChromaU = 0;
@@ -375,7 +376,6 @@ static u32 format_bufinfo_enc(struct vsi_v4l2_ctx *ctx, struct vsi_v4l2_msg *pms
 		encbufinfo->outBufSize = ctx->mediacfg.sizeimagedst[0];
 		encbufinfo->outbufidx = buf->index;
 		encbufinfo->inbufidx = -1;
-		pr_debug("enc output: %llx:%d", encbufinfo->busOutBuf, encbufinfo->outBufSize);
 	}
 	encbufinfo->bytesused = buf->planes[0].bytesused;
 	return size;
@@ -399,8 +399,9 @@ static void format_bufinfo_dec(struct vsi_v4l2_ctx *ctx, struct vsi_v4l2_msg *pm
 		decbufinfo->busOutBuf = busaddr[0] + buf->planes[0].data_offset;
 		decbufinfo->OutBufSize = ctx->outbuflen[buf->index];//ctx->mediacfg.sizeimagedst[0];
 		decbufinfo->bytesused = buf->planes[0].bytesused;
-		pr_debug("dec output: %llx:%d, %llx:%d", decbufinfo->busOutBuf, decbufinfo->OutBufSize,
-			decbufinfo->busOutBufUV, decbufinfo->OutUVBufSize);
+		if ((ctx->mediacfg.src_pixeldepth == ctx->mediacfg.decparams.dec_info.io_buffer.outputPixelDepth)
+			|| !test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag))
+			pmsg->params.dec_params.io_buffer.outputPixelDepth = DEFAULT_PIXELDEPTH;
 	} else {
 		decbufinfo->inbufidx = buf->index;
 		decbufinfo->outbufidx = -1;
@@ -409,7 +410,6 @@ static void format_bufinfo_dec(struct vsi_v4l2_ctx *ctx, struct vsi_v4l2_msg *pm
 		decbufinfo->bytesused = ctx->inbufbytes[buf->index];
 		decbufinfo->busOutBuf = 0;
 		decbufinfo->OutBufSize = 0;
-		pr_debug("dec input: %llx:%d", decbufinfo->busInBuf, decbufinfo->inBufSize);
 	}
 }
 
@@ -446,8 +446,6 @@ int vsiv4l2_execcmd(struct vsi_v4l2_ctx *ctx, enum v4l2_daemon_cmd_id id, void *
 		}
 		break;
 	case V4L2_DAEMON_VIDIOC_STREAMON:
-		//memcpy((void *)&msg.params.enc_params,
-		//	(void *)&ctx->mediacfg.encparams, sizeof(ctx->mediacfg.encparams));
 		ret = vsi_v4l2_sendcmd(id, ctx->ctxid,
 			ctx->mediacfg.encparams.general.codecFormat, NULL, &retflag, 0, 0);
 		break;
@@ -502,9 +500,9 @@ tail:
 	return ret;
 }
 
-int vsi_v4l2_addinstance(pid_t *ppid)
+static int invoke_daemonapp(void)
 {
-	int ret = 0;
+	int ret;
 	char loglvl[20] = {0};
 #if defined(CONFIG_ANDROID)
 	char *argv[] = {"/system/bin/sh", "-c", "/vendor/bin/vsidaemon", NULL};
@@ -520,7 +518,19 @@ int vsi_v4l2_addinstance(pid_t *ppid)
 		NULL};
 #endif
 
-	pr_debug("%s", __func__);
+	memcpy(loglvl, "HANTRO_LOG_LEVEL=00", 20);
+	loglvl[17] = loglevel/10 + 0x30;
+	loglvl[18] = loglevel%10 + 0x30;
+	ret = call_usermodehelper(argv[0], argv, env, UMH_WAIT_EXEC);
+
+	return ret;
+}
+
+int vsi_v4l2_addinstance(pid_t *ppid)
+{
+	int ret = 0;
+
+	v4l2_klog(LOGLVL_BRIEF, "%s from inst num %d", __func__, v4l2_fn);
 	if (!invoke_vsidaemon && atomic_read(&daemon_fn) <= 0)
 		return -ENODEV;
 	if (mutex_lock_interruptible(&instance_lock))
@@ -531,24 +541,27 @@ int vsi_v4l2_addinstance(pid_t *ppid)
 	else {
 		v4l2_fn++;
 		if (v4l2_fn == 1 && invoke_vsidaemon) {
-			memcpy(loglvl, "HANTRO_LOG_LEVEL=00", 20);
-			loglvl[17] = loglevel/10 + 0x30;
-			loglvl[18] = loglevel%10 + 0x30;
-			ret = call_usermodehelper(argv[0], argv, env, UMH_WAIT_EXEC);
+			ret = invoke_daemonapp();
 			if (ret < 0)
 				v4l2_fn--;
 			else {
-				while (atomic_read(&daemon_fn) <= 0)
-					ndelay(10);
+				ret = wait_event_interruptible_timeout(instance_queue,
+						atomic_read(&daemon_fn) > 0, msecs_to_jiffies(1000));
+				if (ret == -ERESTARTSYS || ret == 0) {
+					ret = -ERESTARTSYS;
+					v4l2_fn--;
+					goto tail;
+				}
 			}
+			v4l2_klog(LOGLVL_BRIEF, "invoke daemon=%d:%d", ret, v4l2_fn);
 		}
 		if (v4l2_fn == 1) {
 			/*reset bandwidth info*/
 			ktime_get_real_ts64(&lasttime);
 			accubytes = 0;
 		}
-		pr_debug("%s:%d", __func__, v4l2_fn);
 	}
+tail:
 	mutex_unlock(&instance_lock);
 
 	return ret;
@@ -558,7 +571,7 @@ int vsi_v4l2_quitinstance(void)
 {
 	int ret = 0;
 
-	pr_debug("%s", __func__);
+	v4l2_klog(LOGLVL_BRIEF, "%s from instnum %d", __func__, v4l2_fn);
 	if (mutex_lock_interruptible(&instance_lock))
 		return -EBUSY;
 	v4l2_fn--;
@@ -572,10 +585,9 @@ int vsi_v4l2_quitinstance(void)
 			gap = 1;
 		last_bandwidth = accubytes / gap;
 		ret = vsiv4l2_execcmd(NULL, V4L2_DAEMON_VIDIOC_EXIT, NULL);
-		while (atomic_read(&daemon_fn) > 0)
-			ndelay(10);
+		if (wait_event_interruptible(instance_queue, atomic_read(&daemon_fn) <= 0))
+			ret = -ERESTARTSYS;
 	}
-	pr_debug("%s:%d", __func__, v4l2_fn);
 	mutex_unlock(&instance_lock);
 	return 0;
 }
@@ -603,7 +615,7 @@ static int vsi_handle_daemonmsg(struct vsi_v4l2_msg *pmsg)
 	case V4L2_DAEMON_VIDIOC_CHANGE_RES:
 		return vsi_v4l2_notify_reschange(pmsg);
 	case V4L2_DAEMON_VIDIOC_PICCONSUMED:
-		return vsi_v4l2_handle_picconsumed(pmsg->inst_id);
+		return vsi_v4l2_handle_picconsumed(pmsg);
 	case V4L2_DAEMON_VIDIOC_CROPCHANGE:
 		return vsi_v4l2_handle_cropchange(pmsg);
 	case V4L2_DAEMON_VIDIOC_WARNONOPTION:
@@ -623,7 +635,7 @@ static ssize_t v4l2_msg_write(struct file *fh, const char __user *buf, size_t si
 	if (size < sizeof(struct vsi_v4l2_msg_hdr))
 		return size;
 	if (!access_ok((void *) buf, size)) {
-		pr_err("input data unaccessable");
+		v4l2_klog(LOGLVL_ERROR, "input data unaccessable");
 		return size;
 	}
 	if (mutex_lock_interruptible(&ret_lock))
@@ -647,7 +659,7 @@ static ssize_t v4l2_msg_write(struct file *fh, const char __user *buf, size_t si
 			goto error;
 		}
 	}
-	pr_debug("get msg  id = %d, flag = %x, seqid = %lx, err = %d",
+	v4l2_klog(LOGLVL_VERBOSE, "get msg  id = %d, flag = %x, seqid = %lx, err = %d",
 		pmsg->cmd_id, pmsg->param_type, pmsg->seq_id, pmsg->error);
 	accubytes += sizeof(struct vsi_v4l2_msg_hdr) + msgsize;
 	if (pmsg->seq_id == NO_RESPONSE_SEQID) {
@@ -670,31 +682,22 @@ error:
 static int v4l2_daemon_open(struct inode *inode,	struct file *filp)
 {
 	/*we need single daemon. Each deamon uses 2 handles for ioctl and mmap*/
-	pr_debug("%s:%d", __func__, atomic_read(&daemon_fn));
+	v4l2_klog(LOGLVL_BRIEF, "%s:%d", __func__, atomic_read(&daemon_fn));
 	if (atomic_read(&daemon_fn) >= 1)
 		return -EBUSY;
 	atomic_inc(&daemon_fn);
+	wake_up_interruptible_all(&instance_queue);
 	return 0;
 }
 
 static int v4l2_daemon_release(struct inode *inode, struct file *filp)
 {
 	atomic_dec(&daemon_fn);
-	pr_debug("%s:%d", __func__, atomic_read(&daemon_fn));
+	v4l2_klog(LOGLVL_BRIEF, "%s:%d", __func__, atomic_read(&daemon_fn));
 	if (atomic_read(&daemon_fn) <= 0) {
-		struct vsi_v4l2_ctx *ctx;
-		int id;
-
-		idr_for_each_entry(&vsi_inst_array, ctx, id) {
-			if (ctx) {
-				ctx->error = -2;
-				wake_up_interruptible_all(&ctx->input_que.done_wq);
-				wake_up_interruptible_all(&ctx->output_que.done_wq);
-				wake_up_interruptible_all(&ctx->retbuf_queue);
-				wake_up_interruptible_all(&ctx->fh.wait);
-			}
-		}
+		wakeup_ctxqueues();
 		wake_up_interruptible_all(&ret_queue);
+		wake_up_interruptible_all(&instance_queue);
 	}
 	return 0;
 }

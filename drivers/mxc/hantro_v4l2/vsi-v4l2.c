@@ -43,11 +43,11 @@
 
 #define DRIVER_NAME	"vsiv4l2"
 
-int vsi_kloglvl;
+int vsi_kloglvl = LOGLVL_ERROR;
 module_param(vsi_kloglvl, int, 0644);
 
 static struct platform_device *gvsidev;
-struct idr vsi_inst_array;
+static struct idr vsi_inst_array;
 static struct device *vsidaemondev;
 static struct mutex vsi_ctx_array_lock;		//it only protect ctx between release from app and msg from daemon
 static ulong ctx_seqid;
@@ -89,6 +89,7 @@ static void release_ctx(struct vsi_v4l2_ctx *ctx, int notifydaemon)
 	/*vsi_vpu_buf obj is freed here, together with all buffer memory */
 	return_all_buffers(&ctx->input_que, VB2_BUF_STATE_DONE, 0);
 	return_all_buffers(&ctx->output_que, VB2_BUF_STATE_DONE, 0);
+	removeallcropinfo(ctx);
 	if (mutex_lock_interruptible(&vsi_ctx_array_lock))
 		return;
 	idr_remove(&vsi_inst_array, CTX_ARRAY_ID(ctx->ctxid));
@@ -128,13 +129,29 @@ struct vsi_v4l2_ctx *vsi_create_ctx(void)
 		ctx_seqid++;
 		if (ctx_seqid >= CTX_SEQID_UPLIMT)
 			ctx_seqid = 1;
-		pr_debug("create ctx with %lx:%lx", ctx->ctxid, ctx_seqid);
 		ctx->ctxid |= (ctx_seqid << 32);
+		v4l2_klog(LOGLVL_BRIEF, "create ctx with %lx", ctx->ctxid);
 	}
 	mutex_unlock(&vsi_ctx_array_lock);
 	init_waitqueue_head(&ctx->retbuf_queue);
 
 	return ctx;
+}
+
+void wakeup_ctxqueues(void)
+{
+	struct vsi_v4l2_ctx *ctx;
+	int id;
+
+	idr_for_each_entry(&vsi_inst_array, ctx, id) {
+		if (ctx) {
+			ctx->error = -2;
+			wake_up_interruptible_all(&ctx->input_que.done_wq);
+			wake_up_interruptible_all(&ctx->output_que.done_wq);
+			wake_up_interruptible_all(&ctx->retbuf_queue);
+			wake_up_interruptible_all(&ctx->fh.wait);
+		}
+	}
 }
 
 static struct vsi_v4l2_ctx *find_ctx(unsigned long ctxid)
@@ -147,7 +164,6 @@ static struct vsi_v4l2_ctx *find_ctx(unsigned long ctxid)
 		return NULL;
 	ctx  = (struct vsi_v4l2_ctx *)idr_find(&vsi_inst_array, id);
 	mutex_unlock(&vsi_ctx_array_lock);
-	pr_debug("search for ctx %lx", ctxid);
 	if (ctx && (CTX_SEQ_ID(ctx->ctxid)  == seq))
 		return ctx;
 	else
@@ -159,6 +175,7 @@ int vsi_v4l2_reset_ctx(struct vsi_v4l2_ctx *ctx)
 	int ret = 0;
 
 	if (ctx->status != VSI_STATUS_INIT) {
+		v4l2_klog(LOGLVL_BRIEF, "reset ctx %lx", ctx->ctxid);
 		if (isdecoder(ctx)) {
 			ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_DESTROY_DEC, NULL);
 			ctx->queued_srcnum = ctx->buffed_capnum = ctx->buffed_cropcapnum = 0;
@@ -171,17 +188,19 @@ int vsi_v4l2_reset_ctx(struct vsi_v4l2_ctx *ctx)
 		set_bit(CTX_FLAG_CONFIGUPDATE_BIT, &ctx->flag);
 		return_all_buffers(&ctx->input_que, VB2_BUF_STATE_DONE, 0);
 		return_all_buffers(&ctx->output_que, VB2_BUF_STATE_DONE, 0);
+		removeallcropinfo(ctx);
 		ctx->status = VSI_STATUS_INIT;
 		ctx->error = 0;
 	}
 	return ret;
 }
 
-int v4l2_release(struct file *filp)
+int vsi_v4l2_release(struct file *filp)
 {
 	struct vsi_v4l2_ctx *ctx = fh_to_ctx(filp->private_data);
 
 	/*normal streaming end should fall here*/
+	v4l2_klog(LOGLVL_BRIEF, "%s ctx %lx", __func__, ctx->ctxid);
 	vsi_clear_daemonmsg(CTX_ARRAY_ID(ctx->ctxid));
 	release_ctx(ctx, 1);
 	vsi_v4l2_quitinstance();
@@ -197,7 +216,7 @@ static int vsi_v4l2_s_ctrl(struct v4l2_ctrl *ctrl)
 	int ret;
 	struct vsi_v4l2_ctx *ctx = ctrl_to_ctx(ctrl);
 
-	pr_debug("%s:%d=%d", __func__, ctrl->id, ctrl->val);
+	v4l2_klog(LOGLVL_CONFIG, "%s:%x=%d", __func__, ctrl->id, ctrl->val);
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 	switch (ctrl->id) {
@@ -214,14 +233,14 @@ static int vsi_v4l2_s_ctrl(struct v4l2_ctrl *ctrl)
 		ctx->mediacfg.encparams.general.bitPerSecond = ctrl->val;
 		break;
 	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
-		ret = get_Level(ctx, 0, 1, ctrl->val);
+		ret = vsi_get_Level(ctx, 0, 1, ctrl->val);
 		if (ret >= 0)
 			ctx->mediacfg.encparams.specific.enc_h26x_cmd.avclevel = ret;
 		else
 			return ret;
 		break;
 	case V4L2_CID_MPEG_VIDEO_HEVC_LEVEL:
-		ret = get_Level(ctx, 1, 1, ctrl->val);
+		ret = vsi_get_Level(ctx, 1, 1, ctrl->val);
 		if (ret >= 0)
 			ctx->mediacfg.encparams.specific.enc_h26x_cmd.hevclevel = ret;
 		else
@@ -313,6 +332,7 @@ static int vsi_v4l2_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct vsi_v4l2_ctx *ctx = ctrl_to_ctx(ctrl);
 
+	v4l2_klog(LOGLVL_CONFIG, "%s:%x", __func__, ctrl->id);
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 	switch (ctrl->id) {
@@ -327,6 +347,17 @@ static int vsi_v4l2_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_IPCM_COUNT:
 		ctrl->val = vsiv4l2_getIPCMcount();
+		break;
+	case V4L2_CID_HDR10META:
+		if (ctrl->p_new.p) {
+			if (!test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag) ||
+				ctx->mediacfg.infmt_fourcc != V4L2_PIX_FMT_HEVC)
+				memset(ctrl->p_new.p, 0, sizeof(struct v4l2_hdr10_meta));
+			else
+				memcpy(ctrl->p_new.p,
+					&ctx->mediacfg.decparams.dec_info.dec_info.vpu_hdr10_meta,
+					sizeof(struct v4l2_hdr10_meta));
+		}
 		break;
 	default:
 		return -EINVAL;
@@ -347,7 +378,6 @@ static void vsi_ctrl_init(const struct v4l2_ctrl *ctrl, u32 idx,
 {
 	void *p = ptr.p + idx * ctrl->elem_size;
 
-	pr_debug("%s:%d", __func__, idx);
 	memset(p, 0, ctrl->elem_size);
 }
 
@@ -433,6 +463,19 @@ static struct v4l2_ctrl_config vsi_v4l2_ctrl_defs[] = {
 		.def = 0,
 		.elem_size = sizeof(struct v4l2_enc_ipcm_params),
 	},
+	{
+		.ops = &vsi_ctrl_ops,
+		.type_ops = &vsi_type_ops,
+		.id = V4L2_CID_HDR10META,
+		.name = "vsi get 10bit meta",
+		.type = VSI_V4L2_CMPTYPE_HDR10META,
+		.flags = V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY,
+		.min = 0,
+		.max = 1,
+		.step = 1,
+		.def = 0,
+		.elem_size = sizeof(struct v4l2_hdr10_meta),
+	},
 	/* kernel defined controls */
 	{
 		.id = V4L2_CID_MPEG_VIDEO_GOP_SIZE,
@@ -456,20 +499,6 @@ static struct v4l2_ctrl_config vsi_v4l2_ctrl_defs[] = {
 		.min = V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE,
 		.max = V4L2_MPEG_VIDEO_H264_PROFILE_MULTIVIEW_HIGH,
 		.def = V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_VP8_PROFILE,
-		.type = V4L2_CTRL_TYPE_MENU,
-		.min = V4L2_MPEG_VIDEO_VP8_PROFILE_0,
-		.max = V4L2_MPEG_VIDEO_VP8_PROFILE_3,
-		.def = V4L2_MPEG_VIDEO_VP8_PROFILE_0,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_VP9_PROFILE,
-		.type = V4L2_CTRL_TYPE_MENU,
-		.min = V4L2_MPEG_VIDEO_VP9_PROFILE_0,
-		.max = V4L2_MPEG_VIDEO_VP9_PROFILE_3,
-		.def = V4L2_MPEG_VIDEO_VP9_PROFILE_0,
 	},
 	{
 		.id = V4L2_CID_MPEG_VIDEO_HEVC_PROFILE,
@@ -691,7 +720,7 @@ int vsi_setup_ctrls(struct v4l2_ctrl_handler *handler)
 			ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
 
 		if (handler->error) {
-			pr_err("fail to set ctrl %d:%d", i, handler->error);
+			v4l2_klog(LOGLVL_ERROR, "fail to set ctrl %d:%d", i, handler->error);
 			break;
 		}
 	}
@@ -702,17 +731,21 @@ int vsi_setup_ctrls(struct v4l2_ctrl_handler *handler)
 
 /*orphan error msg from daemon write, should not call daemon back*/
 
-int vsi_v4l2_handle_picconsumed(unsigned long ctxid)
+int vsi_v4l2_handle_picconsumed(struct vsi_v4l2_msg *pmsg)
 {
+	unsigned long ctxid = pmsg->inst_id;
 	struct vsi_v4l2_ctx *ctx;
 	struct v4l2_event event = {
 		.type = V4L2_EVENT_SKIP,
 	};
 
-	pr_debug("%s:%lx got picconsumed event", __func__, ctxid);
+	v4l2_klog(LOGLVL_WARNING, "%lx got picconsumed event", ctxid);
 	ctx = find_ctx(ctxid);
 	if (ctx == NULL)
 		return -1;
+
+	if (isdecoder(ctx))
+		event.u.data[0] = pmsg->params.dec_params.io_buffer.inbufidx;
 
 	v4l2_event_queue_fh(&ctx->fh, &event);
 	return 0;
@@ -723,17 +756,16 @@ int vsi_v4l2_handleerror(unsigned long ctxid, int error)
 	struct vsi_v4l2_ctx *ctx;
 	struct v4l2_event event;
 
+	v4l2_klog(LOGLVL_ERROR, "%lx got error %d", ctxid, error);
 	ctx = find_ctx(ctxid);
 	if (ctx == NULL)
 		return -1;
 
-	if (error == DAEMON_ERR_DEC_METADATA_ONLY) {
+	if (error == DAEMON_ERR_DEC_METADATA_ONLY)
 		event.type = V4L2_EVENT_EOS;
-		pr_notice("%s:%lx got endof metadata", __func__, ctxid);
-	} else {
+	else {
 		ctx->error = (error > 0 ? -error:error);
 		event.type = V4L2_EVENT_CODEC_ERROR;
-		pr_err("%s:%lx got error %d", __func__, ctxid, error);
 		wake_up_interruptible_all(&ctx->retbuf_queue);
 		wake_up_interruptible_all(&ctx->input_que.done_wq);
 		wake_up_interruptible_all(&ctx->output_que.done_wq);
@@ -776,8 +808,12 @@ int vsi_v4l2_notify_reschange(struct vsi_v4l2_msg *pmsg)
 
 	if (isdecoder(ctx)) {
 		struct vsi_v4l2_mediacfg *pcfg = &ctx->mediacfg;
+		struct v4l2_daemon_dec_info *decinfo = &pmsg->params.dec_params.dec_info.dec_info;
 
-		pr_debug("ctx %lx sending event res change:%d:%d", ctx->ctxid, ctx->status, list_empty(&ctx->output_que.done_list));
+		v4l2_klog(LOGLVL_BRIEF, "%lx sending event res change:%d, delay=%d", ctx->ctxid, ctx->status, !list_empty(&ctx->output_que.done_list));
+		v4l2_klog(LOGLVL_BRIEF, "reso=%d:%d,bitdepth=%d,dpb=%d:%d,orig yuvfmt=%d",
+			decinfo->frame_width, decinfo->frame_height, decinfo->bit_depth, decinfo->needed_dpb_nums,
+			decinfo->dpb_buffer_size, decinfo->src_pix_fmt);
 		pcfg->minbuf_4output =
 			pcfg->minbuf_4capture = pmsg->params.dec_params.dec_info.dec_info.needed_dpb_nums;
 		pcfg->sizeimagedst[0] =
@@ -795,13 +831,28 @@ int vsi_v4l2_notify_reschange(struct vsi_v4l2_msg *pmsg)
 			pcfg->decparams.dec_info.io_buffer.srcheight = pmsg->params.dec_params.dec_info.io_buffer.srcheight;
 			pcfg->decparams.dec_info.io_buffer.output_width = pmsg->params.dec_params.dec_info.io_buffer.output_width;
 			pcfg->decparams.dec_info.io_buffer.output_height = pmsg->params.dec_params.dec_info.io_buffer.output_height;
+			pcfg->src_pixeldepth = decinfo->bit_depth;
 			vsi_v4l2_send_reschange(ctx);
 		}
 		if (pmsg->params.dec_params.dec_info.dec_info.colour_description_present_flag)
-			dec_updatevui(&pmsg->params.dec_params.dec_info.dec_info, &pcfg->decparams.dec_info.dec_info);
+			vsi_dec_updatevui(&pmsg->params.dec_params.dec_info.dec_info, &pcfg->decparams.dec_info.dec_info);
 		set_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag);
 	}
 	return 0;
+}
+
+static int convert_daemonwarning_to_appwarning(int daemon_warnmsg)
+{
+	switch (daemon_warnmsg) {
+	case WARN_ROIREGION:
+		return RIOREGION_NOTALLOW;
+	case WARN_IPCMREGION:
+		return IPCMREGION_NOTALLOW;
+	case WARN_LEVEL:
+		return LEVEL_UPDATED;
+	default:
+		return UNKONW_WARNING;
+	}
 }
 
 int vsi_v4l2_handle_warningmsg(struct vsi_v4l2_msg *pmsg)
@@ -815,6 +866,8 @@ int vsi_v4l2_handle_warningmsg(struct vsi_v4l2_msg *pmsg)
 	ctx = find_ctx(ctxid);
 	if (ctx == NULL)
 		return -ESRCH;
+	event.id = convert_daemonwarning_to_appwarning(pmsg->error);
+	v4l2_klog(LOGLVL_WARNING, "%lx got warning msg", ctxid);
 	v4l2_event_queue_fh(&ctx->fh, &event);
 	return 0;
 }
@@ -834,15 +887,13 @@ int vsi_v4l2_handle_cropchange(struct vsi_v4l2_msg *pmsg)
 			.type = V4L2_EVENT_CROPCHANGE,
 		};
 
-		pr_debug("ctx %lx sending crop res change:%d:%d", ctx->ctxid, ctx->status, ctx->buffed_cropcapnum);
+		v4l2_klog(LOGLVL_BRIEF, "%lx sending crop change:%d:%d:%d", ctx->ctxid, ctx->status, ctx->buffed_cropcapnum, ctx->lastcapbuffer_idx);
 		if (ctx->status == DEC_STATUS_DECODING && ctx->buffed_cropcapnum > 0) {
-			pcfg->decparams_bkup.dec_info.dec_info.frame_width = pmsg->params.dec_params.pic_info.pic_info.width;
-			pcfg->decparams_bkup.dec_info.dec_info.frame_height = pmsg->params.dec_params.pic_info.pic_info.height;
-			pcfg->decparams_bkup.dec_info.dec_info.visible_rect.left = pmsg->params.dec_params.pic_info.pic_info.crop_left;
-			pcfg->decparams_bkup.dec_info.dec_info.visible_rect.top = pmsg->params.dec_params.pic_info.pic_info.crop_top;
-			pcfg->decparams_bkup.dec_info.dec_info.visible_rect.width = pmsg->params.dec_params.pic_info.pic_info.crop_width;
-			pcfg->decparams_bkup.dec_info.dec_info.visible_rect.height = pmsg->params.dec_params.pic_info.pic_info.crop_height;
-			set_bit(CTX_FLAG_CROPCHANGE_BIT, &ctx->flag);
+			if (addcropmsg(ctx, pmsg) != 0) {
+				ctx->error = DAEMON_ERR_NO_MEM;
+				v4l2_klog(LOGLVL_ERROR, "driver out of mem");
+			} else
+				set_bit(BUF_FLAG_CROPCHANGE, &ctx->vbufflag[ctx->lastcapbuffer_idx]);
 		} else {
 			pcfg->decparams.dec_info.dec_info.frame_width = pmsg->params.dec_params.pic_info.pic_info.width;
 			pcfg->decparams.dec_info.dec_info.frame_height = pmsg->params.dec_params.pic_info.pic_info.height;
@@ -877,8 +928,8 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 		outbufidx = pmsg->params.dec_params.io_buffer.outbufidx;
 		bytesused[0] = pmsg->params.dec_params.io_buffer.bytesused;
 	}
-	pr_debug("ctx %lx:%s:%ld:%lx:%d:%d", ctx->ctxid, __func__,
-		pmsg->inst_id, ctx->flag, inbufidx, outbufidx);
+	v4l2_klog(LOGLVL_VERBOSE, "%lx:%s:%lx:%d:%d",
+		ctx->ctxid, __func__, ctx->flag, inbufidx, outbufidx);
 	//write comes over once, so avoid this problem.
 	if (inbufidx >= 0 && inbufidx < ctx->input_que.num_buffers) {
 		vq = &ctx->input_que;
@@ -891,9 +942,9 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 		ctx->queued_srcnum--;
 		mutex_unlock(&ctx->ctxlock);
 		if (isdecoder(ctx)) {
-			if (!test_bit(BUF_FLAG_QUEUED, &ctx->srcvbufflag[inbufidx]))
-				pr_err("got unqueued srcbuf %d", inbufidx);
-			else {
+			if (!test_bit(BUF_FLAG_QUEUED, &ctx->srcvbufflag[inbufidx])) {
+				v4l2_klog(LOGLVL_WARNING, "got unqueued srcbuf %d", inbufidx);
+			} else {
 				clear_bit(BUF_FLAG_QUEUED, &ctx->srcvbufflag[inbufidx]);
 				set_bit(BUF_FLAG_DONE, &ctx->srcvbufflag[inbufidx]);
 			}
@@ -919,11 +970,13 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 				ctx->vbufflag[outbufidx] = pmsg->param_type;
 				if (vb->planes[0].bytesused == 0 || (pmsg->param_type & LAST_BUFFER_FLAG))
 					ctx->vbufflag[outbufidx] |= LAST_BUFFER_FLAG;
-				pr_debug("enc output framed %d:%d size = %d,flag=%lx, timestamp=%lld", outbufidx, (int)ctx->frameidx, vb->planes[0].bytesused, ctx->vbufflag[outbufidx], vb->timestamp);
+				v4l2_klog(LOGLVL_VERBOSE,  "enc output framed %d size = %d,flag=%lx, timestamp=%lld",
+						outbufidx, vb->planes[0].bytesused, ctx->vbufflag[outbufidx], vb->timestamp);
 			} else {
-				if (!test_bit(BUF_FLAG_QUEUED, &ctx->vbufflag[outbufidx]))
-					pr_err("got unqueued dstbuf %d", outbufidx);
-				else {
+				ctx->lastcapbuffer_idx = outbufidx;
+				if (!test_bit(BUF_FLAG_QUEUED, &ctx->vbufflag[outbufidx])) {
+					v4l2_klog(LOGLVL_WARNING, "got unqueued dstbuf %d", outbufidx);
+				} else {
 					clear_bit(BUF_FLAG_QUEUED, &ctx->vbufflag[outbufidx]);
 					set_bit(BUF_FLAG_DONE, &ctx->vbufflag[outbufidx]);
 				}
@@ -937,7 +990,7 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 					vb->timestamp = pmsg->params.dec_params.io_buffer.timestamp;
 				ctx->buffed_capnum++;
 				ctx->buffed_cropcapnum++;
-				pr_debug("dec output framed %d:%d size = %d", outbufidx, (int)ctx->frameidx, vb->planes[0].bytesused);
+				v4l2_klog(LOGLVL_VERBOSE, "dec output framed %dsize = %d", outbufidx, vb->planes[0].bytesused);
 			}
 			if (vb->state == VB2_BUF_STATE_ACTIVE)
 				vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
@@ -957,7 +1010,7 @@ static int v4l2_probe(struct platform_device *pdev)
 	struct video_device *venc, *vdec;
 	int ret = 0;
 
-	pr_debug("%s", __func__);
+	v4l2_klog(LOGLVL_VERBOSE, "%s", __func__);
 	if (gvsidev != NULL)
 		return 0;
 	vpu = kzalloc(sizeof(*vpu), GFP_KERNEL);
@@ -971,7 +1024,7 @@ static int v4l2_probe(struct platform_device *pdev)
 
 	ret = v4l2_device_register(&pdev->dev, &vpu->v4l2_dev);
 	if (ret) {
-		dev_err(&pdev->dev, "Failed to register v4l2 device\n");
+		v4l2_klog(LOGLVL_ERROR, "Failed to register v4l2 device\n");
 		kfree(vpu);
 		return ret;
 	}
@@ -979,12 +1032,12 @@ static int v4l2_probe(struct platform_device *pdev)
 
 	vpu->venc = NULL;
 	vpu->vdec = NULL;
-	venc = v4l2_probe_enc(pdev, vpu);
+	venc = vsi_v4l2_probe_enc(pdev, vpu);
 	if (venc == NULL)
 		goto err;
 	vpu->venc = venc;
 
-	vdec = v4l2_probe_dec(pdev, vpu);
+	vdec = vsi_v4l2_probe_dec(pdev, vpu);
 	if (vdec == NULL)
 		goto err;
 	vpu->vdec = vdec;
@@ -1012,18 +1065,19 @@ static int v4l2_probe(struct platform_device *pdev)
 	mutex_init(&vsi_ctx_array_lock);
 	ctx_seqid = 0;
 	if (devm_device_add_group(&gvsidev->dev, &vsi_v4l2_attr_group))
-		pr_err("fail to create sysfs API");
+		v4l2_klog(LOGLVL_ERROR, "fail to create sysfs API");
 
-	pr_info("vpu v4l2: module inserted. Major = %d\n", VSI_DAEMON_DEVMAJOR);
+	v4l2_klog(LOGLVL_BRIEF, "vpu v4l2: module inserted. Major = %d\n", VSI_DAEMON_DEVMAJOR);
 	return 0;
 
 err:
+	v4l2_klog(LOGLVL_ERROR, "vsi v4l2 dev probe fail with errno %d", ret);
 	if (vpu->venc) {
-		v4l2_release_enc(vpu->venc);
+		vsi_v4l2_release_enc(vpu->venc);
 		video_device_release(vpu->venc);
 	}
 	if (vpu->vdec) {
-		v4l2_release_dec(vpu->vdec);
+		vsi_v4l2_release_dec(vpu->vdec);
 		video_device_release(vpu->vdec);
 	}
 	v4l2_device_unregister(&vpu->v4l2_dev);
@@ -1038,8 +1092,8 @@ static int v4l2_remove(struct platform_device *pdev)
 	int id;
 	struct vsi_v4l2_device *vpu = platform_get_drvdata(pdev);
 
-	v4l2_release_dec(vpu->vdec);
-	v4l2_release_enc(vpu->venc);
+	vsi_v4l2_release_dec(vpu->vdec);
+	vsi_v4l2_release_enc(vpu->venc);
 	v4l2_device_unregister(&vpu->v4l2_dev);
 	platform_set_drvdata(pdev, NULL);
 	kfree(vpu);
@@ -1056,7 +1110,6 @@ static int v4l2_remove(struct platform_device *pdev)
 	kfree(vsidaemondev);
 	vsiv4l2_cleanupdaemon();
 	gvsidev = NULL;
-	pr_info("%s", __func__);
 	return 0;
 }
 
