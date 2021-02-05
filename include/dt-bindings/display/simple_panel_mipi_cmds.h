@@ -66,6 +66,8 @@
 #define DCS_S1P(cmd, p1)		S_DCS_S1P cmd p1		/* DCS_Short_Write_1P */
 #define DCS_L2P(cmd, p1, p2)		S_DCS_L2P cmd p1 p2		/* DCS Long_Write_2P */
 #define DCS_L3P(cmd, p1, p2, p3)	S_DCS_L3P cmd p1 p2 p3		/* DCS_Long_Write_3P */
+#define DCS_L4P(cmd, p1, p2, p3, p4)	S_DCS_L4P cmd p1 p2 p3 p4	/* DCS_Long_Write_4P */
+#define DCS_L5P(cmd, p1, p2, p3, p4, p5) S_DCS_L5P cmd p1 p2 p3	p4 p5	/* DCS_Long_Write_5P */
 #define GEN_S0P(cmd)			S_GEN_S0P cmd			/* Generic_Short_Write_NP */
 #define GEN_S1P(cmd, p1)		S_GEN_S1P cmd p1		/* Generic_Short_Write_1P */
 #define GEN_L2P(cmd, p1, p2)		S_GEN_L2P cmd p1 p2		/* Generic_Long_Write_2P */
