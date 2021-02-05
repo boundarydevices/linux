@@ -9,6 +9,7 @@
 #define TC358867_I2C_BUS	<&TOUCHSCREEN_I2C_BUS>
 #endif
 #include "panel-dmt050wvnxcmi.dtsi"
+#include "panel-ls050t1sx12.dtsi"
 #include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
 &mipi_cmds_ltk0680ytmdb {
@@ -271,6 +272,13 @@
 	pinctrl_mipi_lcm_jm430: mipi-lcm-jm430grp {
 		fsl,pins = <
 #define GP_TC358762_EN	<&gpio1 9 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
+		>;
+	};
+
+	pinctrl_mipi_ls050t1sx12: mipi-ls050t1sx12grp {
+		fsl,pins = <
+#define GP_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
 		>;
 	};
