@@ -159,6 +159,9 @@ properties:
   local-addr:
     description: the local address used in hsio module.
 
+  reset-names:
+    description: Must contain the following entries: "clkreq"
+
 required:
   - compatible
   - reg
