@@ -141,6 +141,7 @@ struct imx6_pcie {
 	u32			hsio_cfg;
 	u32			ext_osc;
 	u32			local_addr;
+	u32			l1ss_clkreq;
 	struct regulator	*vpcie;
 	void __iomem		*phy_base;
 	void __iomem		*hsmix_base;
@@ -1875,6 +1876,8 @@ err_reset_phy:
 			regulator_disable(imx6_pcie->vpcie);
 		if (imx6_pcie->epdev_on != NULL)
 			regulator_disable(imx6_pcie->epdev_on);
+		if (gpio_is_valid(imx6_pcie->dis_gpio))
+			gpio_set_value_cansleep(imx6_pcie->dis_gpio, 0);
 	}
 
 	return ret;
@@ -1902,8 +1905,6 @@ static int imx6_pcie_host_init(struct pcie_port *pp)
 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
 	struct imx6_pcie *imx6_pcie = to_imx6_pcie(pci);
 
-	if (gpio_is_valid(imx6_pcie->dis_gpio))
-		gpio_set_value_cansleep(imx6_pcie->dis_gpio, 1);
 	dw_pcie_setup_rc(pp);
 	pci_imx_set_msi_en(pp);
 	if (imx6_pcie_establish_link(imx6_pcie))
@@ -2191,6 +2192,26 @@ static struct attribute_group imx_pcie_attrgroup = {
 	.attrs	= imx_pcie_rc_attrs,
 };
 
+static void imx6_pcie_clkreq_enable(struct imx6_pcie *imx6_pcie)
+{
+	/*
+	 * If the L1SS is supported, disable the over ride after link up.
+	 * Let the the CLK_REQ# controlled by HW L1SS automatically.
+	 */
+	switch (imx6_pcie->drvdata->variant) {
+	case IMX8MQ:
+	case IMX8MM:
+	case IMX8MP:
+		regmap_update_bits(imx6_pcie->iomuxc_gpr,
+			imx6_pcie_grp_offset(imx6_pcie),
+			IMX8MQ_GPR_PCIE_CLK_REQ_OVERRIDE_EN,
+			0);
+		break;
+	default:
+		break;
+	};
+}
+
 #ifdef CONFIG_PM_SLEEP
 static void imx6_pcie_pm_turnoff(struct imx6_pcie *imx6_pcie)
 {
@@ -2322,6 +2343,8 @@ static int imx6_pcie_resume_noirq(struct device *dev)
 		ret = imx6_pcie_establish_link(imx6_pcie);
 		if (ret < 0)
 			dev_info(dev, "pcie link is down after resume.\n");
+		if (imx6_pcie->l1ss_clkreq)
+			imx6_pcie_clkreq_enable(imx6_pcie);
 	}
 
 	return 0;
@@ -2651,6 +2674,8 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to enable the epdev_on regulator\n");
 		goto err_ret;
 	}
+	if (gpio_is_valid(imx6_pcie->dis_gpio))
+		gpio_set_value_cansleep(imx6_pcie->dis_gpio, 1);
 
 	imx6_pcie_assert_core_reset(imx6_pcie);
 	imx6_pcie_init_phy(imx6_pcie);
@@ -2676,46 +2701,6 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 			goto err_ret;
 		}
 		pci_imx_set_msi_en(&imx6_pcie->pci->pp);
-
-		/*
-		 * If the L1SS is enabled, disable the over ride after link up.
-		 * Let the CLK_REQ# controlled by HW L1SS automatically.
-		 */
-		ret = imx6_pcie->drvdata->flags & IMX6_PCIE_FLAG_SUPPORTS_L1SS;
-		if (IS_ENABLED(CONFIG_PCIEASPM_POWER_SUPERSAVE) && (ret > 0)) {
-			switch (imx6_pcie->drvdata->variant) {
-			case IMX8MQ:
-			case IMX8MM:
-			case IMX8MP:
-			case IMX8MQ_EP:
-			case IMX8MM_EP:
-			case IMX8MP_EP:
-				regmap_update_bits(imx6_pcie->iomuxc_gpr,
-					imx6_pcie_grp_offset(imx6_pcie),
-					IMX8MQ_GPR_PCIE_CLK_REQ_OVERRIDE_EN,
-					0);
-				break;
-			case IMX8QXP:
-			case IMX8QXP_EP:
-				regmap_update_bits(imx6_pcie->iomuxc_gpr,
-					IMX8QM_CSR_MISC_OFFSET,
-					IMX8QM_MISC_CLKREQ_OVERRIDE_EN_1,
-					0);
-				break;
-			case IMX8QM:
-			case IMX8QM_EP:
-				if (imx6_pcie->controller_id)
-					reg = IMX8QM_MISC_CLKREQ_OVERRIDE_EN_1;
-				else
-					reg = IMX8QM_MISC_CLKREQ_OVERRIDE_EN_0;
-				regmap_update_bits(imx6_pcie->iomuxc_gpr,
-					IMX8QM_CSR_MISC_OFFSET,
-					reg, 0);
-				break;
-			default:
-				break;
-			};
-		}
 		break;
 	case DW_PCIE_EP_TYPE:
 		if (!IS_ENABLED(CONFIG_PCI_IMX_EP))
@@ -2910,6 +2895,54 @@ static void imx6_pcie_quirk(struct pci_dev *dev)
 }
 DECLARE_PCI_FIXUP_CLASS_HEADER(PCI_VENDOR_ID_SYNOPSYS, 0xabcd,
 			PCI_CLASS_BRIDGE_PCI, 8, imx6_pcie_quirk);
+
+static void imx6_pcie_l1ss_quirk(struct pci_dev *dev)
+{
+	u32 reg, rc_l1sub, ep_l1sub, header;
+	int ttl, ret;
+	int pos = PCI_CFG_SPACE_SIZE;
+	struct pci_bus *bus = dev->bus;
+	struct pcie_port *pp = bus->sysdata;
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+	struct imx6_pcie *imx6_pcie = to_imx6_pcie(pci);
+
+	/* Return directly, if the L1SS is not supported by RC */
+	if (!(imx6_pcie->drvdata->flags & IMX6_PCIE_FLAG_SUPPORTS_L1SS))
+		return;
+
+	reg = dw_pcie_find_ext_capability(pci, PCI_EXT_CAP_ID_L1SS);
+	rc_l1sub = dw_pcie_readl_dbi(pci, reg + PCI_L1SS_CAP);
+
+	/* minimum 8 bytes per capability */
+	ttl = (PCI_CFG_SPACE_EXP_SIZE - PCI_CFG_SPACE_SIZE) / 8;
+	ret = dw_pcie_read(pp->va_cfg0_base + pos, 4, &header);
+	/*
+	 * If we have no capabilities, this is indicated by cap ID,
+	 * cap version and next pointer all being 0.
+	 */
+	if (header == 0)
+		return;
+
+	while (ttl-- > 0) {
+		if (PCI_EXT_CAP_ID(header) == PCI_EXT_CAP_ID_L1SS && pos != 0)
+			break;
+
+		pos = PCI_EXT_CAP_NEXT(header);
+		if (pos < PCI_CFG_SPACE_SIZE)
+			break;
+
+		ret = dw_pcie_read(pp->va_cfg0_base + pos, 4, &header);
+	}
+	ret = dw_pcie_read(pp->va_cfg0_base + pos + PCI_L1SS_CAP, 4, &ep_l1sub);
+
+	if ((rc_l1sub && ep_l1sub) && PCI_L1SS_CAP_L1_PM_SS) {
+		imx6_pcie->l1ss_clkreq = 1;
+		imx6_pcie_clkreq_enable(imx6_pcie);
+	} else {
+		imx6_pcie->l1ss_clkreq = 0;
+	}
+}
+DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_SYNOPSYS, 0xabcd, imx6_pcie_l1ss_quirk);
 
 static int __init imx6_pcie_init(void)
 {
