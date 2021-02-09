@@ -473,7 +473,7 @@
 		compatible = "btwilink";
 	};
 
-	bt_kim: bt_kim {
+	bt_kim: kim {
 		compatible = "kim";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
