@@ -868,9 +868,11 @@ static int it6263_probe(struct i2c_client *client,
 {
 	struct device *dev = &client->dev;
 	struct device_node *np = dev->of_node;
+#if IS_ENABLED(CONFIG_OF_DYNAMIC)
 	struct device_node *remote_node = NULL, *endpoint = NULL;
 	struct of_changeset ocs;
 	struct property *prop;
+#endif
 	struct it6263 *it6263;
 	int ret;
 
@@ -957,6 +959,7 @@ unregister_lvds_i2c:
 		return ret;
 
 of_reconfig:
+#if IS_ENABLED(CONFIG_OF_DYNAMIC)
 	endpoint = of_graph_get_next_endpoint(dev->of_node, NULL);
 	if (endpoint)
 		remote_node = of_graph_get_remote_port_parent(endpoint);
@@ -993,6 +996,7 @@ of_reconfig:
 
 		of_node_put(remote_node);
 	};
+#endif
 
 	return ret;
 }
