@@ -194,6 +194,13 @@
 		>;
 	};
 
+	pinctrl_i2c3_rv4162: i2c3-rv4162grp {
+		fsl,pins = <
+#define GPIRQ_RTC_RV4162	<&gpio2 26 IRQ_TYPE_LEVEL_LOW>
+			MX6QDL_PAD_EIM_RW__GPIO2_IO26		0x1b0b0
+		>;
+	};
+
 	pinctrl_ipu1_di0: ipu1_di0grp {
 		fsl,pins = <
 			MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK 0x10
@@ -782,6 +789,14 @@
 		pinctrl-0 = <&pinctrl_rtc>;
 		reg = <0x6f>;
 		interrupts-extended = GPIRQ_RTC_ISL1208;
+	};
+
+	rtc@68 {
+		compatible = "microcrystal,rv4162";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_rv4162>;
+		reg = <0x68>;
+		interrupts-extended = GPIRQ_RTC_RV4162;
 	};
 };
 
