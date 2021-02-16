@@ -2480,10 +2480,6 @@ static int imx_uart_probe_dt(struct imx_port *sport,
 	i = 0;
 	of_property_read_u32(np, "uart-has-rs485-half-duplex", &i);
 	sport->rs485_half_duplex = i ? 1 : 0;
-	i = 0;
-	of_property_read_u32(np, "rs485-mode", &i);
-	if (i)
-		sport->port.rs485.flags |= SER_RS485_ENABLED;
 	return 0;
 }
 #else
@@ -2640,8 +2636,8 @@ static int imx_uart_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	if (sport->port.rs485.flags & SER_RS485_ENABLED &&
-	    (!sport->have_rtscts && !sport->have_rtsgpio))
+	if ((sport->port.rs485.flags & SER_RS485_ENABLED) &&
+	    (!sport->have_rtscts && !sport->have_rtsgpio & !sport->rs485_txen_mask))
 		dev_err(&pdev->dev, "no RTS control, disabling rs485\n");
 
 	/*
