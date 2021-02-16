@@ -2499,8 +2499,7 @@ static int imx_uart_probe_dt(struct imx_port *sport,
 	i = 0;
 	of_property_read_u32(np, "rs485_txen_levels", &i);
 	sport->rs485_txen_levels = i & act_gpios_mask;
-	i = 0;
-	of_property_read_u32(np, "uart-has-rs485-half-duplex", &i);
+	i = of_property_read_bool(np, "uart-has-rs485-half-duplex");
 	sport->rs485_half_duplex = i ? 1 : 0;
 	return 0;
 }
