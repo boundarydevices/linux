@@ -209,7 +209,6 @@ struct imx_port {
 	unsigned int		dte_mode:1;
 	unsigned int		inverted_tx:1;
 	unsigned int		inverted_rx:1;
-	unsigned int		half_duplex:1;
 	unsigned int		rs485_half_duplex:1;
 	struct clk		*clk_ipg;
 	struct clk		*clk_per;
@@ -264,6 +263,7 @@ struct imx_port {
 	struct hrtimer		trigger_start_tx;
 	struct hrtimer		trigger_stop_tx;
 
+	unsigned 		not_handled_cnt;
 	struct pm_qos_request   pm_qos_req;
 };
 
@@ -460,6 +460,27 @@ static void imx_uart_start_rx(struct uart_port *port)
 	imx_uart_writel(sport, ucr1, UCR1);
 }
 
+static void flush_rx(struct imx_port *sport)
+{
+	u32 ucr2 = 0;
+	u32 rx, usr2;
+
+	while (1) {
+		usr2 = imx_uart_readl(sport, USR2);
+
+		if (!(usr2 & USR2_RDR))
+			break;
+		if (!(ucr2 & UCR2_RXEN)) {
+			/* prevent abort when reading URXD0 */
+			ucr2 = imx_uart_readl(sport, UCR2);
+			ucr2 |= UCR2_RXEN;
+			imx_uart_writel(sport, ucr2, UCR2);
+		}
+		rx = imx_uart_readl(sport, URXD0);
+		barrier();
+	}
+}
+
 /* called with port.lock taken and irqs off */
 static void imx_uart_stop_tx(struct uart_port *port)
 {
@@ -476,34 +497,25 @@ static void imx_uart_stop_tx(struct uart_port *port)
 	if (sport->dma_is_txing)
 		return;
 
-	ucr1 = imx_uart_readl(sport, UCR1);
-	ucr4 = imx_uart_readl(sport, UCR4);
-	ucr1 &= ~(UCR1_TRDYEN | UCR1_TXMPTYEN | UCR1_TXDMAEN);
-
 	usr2 = imx_uart_readl(sport, USR2);
 	if (!(usr2 & USR2_TXDC)) {
 		/* The shifter is still busy, so retry once TC triggers */
+		ucr1 = imx_uart_readl(sport, UCR1);
+		ucr1 &= ~(UCR1_TRDYEN | UCR1_TXMPTYEN | UCR1_TXDMAEN);
 		imx_uart_writel(sport, ucr1, UCR1);
+		ucr4 = imx_uart_readl(sport, UCR4);
 		imx_uart_writel(sport, ucr4 | UCR4_TCEN, UCR4);
 		return;
 	}
 
-	ucr4 &= ~UCR4_TCEN;
-	imx_uart_writel(sport, ucr4, UCR4);
-
 	/* in rs485 mode disable transmitter */
 	if (port->rs485.flags & SER_RS485_ENABLED) {
-		if (sport->half_duplex) {
+		if (!(port->rs485.flags & SER_RS485_RX_DURING_TX)) {
 			/*
 			 * half duplex - reactivate receive mode,
 			 * flush receive pipe echo crap
 			 */
-			while (imx_uart_readl(sport, URXD0) &
-			       URXD_CHARRDY)
-				barrier();
-
-			ucr1 |= UCR1_RRDYEN;
-			ucr4 |= UCR4_DREN;
+			flush_rx(sport);
 		}
 		if (sport->tx_state == SEND) {
 			sport->tx_state = WAIT_AFTER_SEND;
@@ -538,8 +550,11 @@ static void imx_uart_stop_tx(struct uart_port *port)
 	} else {
 		sport->tx_state = OFF;
 	}
-	ucr4 &= ~UCR4_TCEN;
+	ucr1 = imx_uart_readl(sport, UCR1);
+	ucr1 &= ~(UCR1_TRDYEN | UCR1_TXMPTYEN | UCR1_TXDMAEN);
 	imx_uart_writel(sport, ucr1, UCR1);
+	ucr4 = imx_uart_readl(sport, UCR4);
+	ucr4 &= ~UCR4_TCEN;
 	imx_uart_writel(sport, ucr4, UCR4);
 
 	if (sport->txing) {
@@ -585,7 +600,7 @@ static void imx_uart_enable_ms(struct uart_port *port)
 static void imx_uart_dma_tx(struct imx_port *sport);
 
 /* called with port.lock taken and irqs off */
-static inline int imx_uart_transmit_buffer(struct imx_port *sport)
+static int imx_uart_transmit_buffer(struct imx_port *sport)
 {
 	struct circ_buf *xmit = &sport->port.state->xmit;
 
@@ -717,10 +732,6 @@ static void imx_uart_dma_tx(struct imx_port *sport)
 		return;
 
 	sport->dma_is_txing = 1;
-	ucr4 = imx_uart_readl(sport, UCR4);
-	ucr4 &= ~UCR4_TCEN;
-	imx_uart_writel(sport, ucr4, UCR4);
-
 	sport->tx_bytes = uart_circ_chars_pending(xmit);
 
 	if (!sport->tx_bytes || uart_tx_stopped(&sport->port)) {
@@ -732,6 +743,10 @@ static void imx_uart_dma_tx(struct imx_port *sport)
 		}
 		return;
 	}
+	ucr4 = imx_uart_readl(sport, UCR4);
+	ucr4 &= ~UCR4_TCEN;
+	imx_uart_writel(sport, ucr4, UCR4);
+
 	if (!sport->txing && sport->txen_mask) {
 		imx_set_gpios(sport, sport->txen_mask, sport->txen_levels, 1);
 		sport->txing = 1;
@@ -783,21 +798,10 @@ static void imx_uart_dma_tx(struct imx_port *sport)
 static void imx_uart_start_tx(struct uart_port *port)
 {
 	struct imx_port *sport = (struct imx_port *)port;
-	u32 ucr1, ucr4;
+	u32 ucr1;
 
 	if (!sport->port.x_char && uart_circ_empty(&port->state->xmit))
 		return;
-
-	if (sport->half_duplex) {
-		/* half duplex in IrDA mode; have to disable receive mode */
-		ucr4 = imx_uart_readl(sport, UCR4);
-		ucr4 &= ~(UCR4_DREN);
-		imx_uart_writel(sport, ucr4, UCR4);
-
-		ucr1 = imx_uart_readl(sport, UCR1);
-		ucr1 &= ~(UCR1_RRDYEN);
-		imx_uart_writel(sport, ucr1, UCR1);
-	}
 
 	/*
 	 * We cannot simply do nothing here if sport->tx_state == SEND already
@@ -920,7 +924,7 @@ static irqreturn_t __imx_uart_rxint(int irq, void *dev_id)
 		sport->port.icount.rx++;
 
 		rx = imx_uart_readl(sport, URXD0);
-		if (sport->txing && sport->half_duplex)
+		if (sport->txing && !(sport->port.rs485.flags & SER_RS485_RX_DURING_TX))
 			continue;
 
 		usr2 = imx_uart_readl(sport, USR2);
@@ -1071,8 +1075,10 @@ static irqreturn_t imx_uart_int(int irq, void *dev_id)
 	 * receiver is currently off and so reading from URXD0 results in an
 	 * exception. So just mask the (raw) status bits for disabled irqs.
 	 */
-	if ((ucr1 & UCR1_RRDYEN) == 0)
+	if ((ucr1 & UCR1_RRDYEN) == 0) {
 		usr1 &= ~USR1_RRDY;
+		usr2 &= ~USR2_RDR;
+	}
 	if ((ucr2 & UCR2_ATEN) == 0)
 		usr1 &= ~USR1_AGTIM;
 	if ((ucr1 & UCR1_TRDYEN) == 0)
@@ -1088,7 +1094,7 @@ static irqreturn_t imx_uart_int(int irq, void *dev_id)
 	if ((ucr4 & UCR4_OREN) == 0)
 		usr2 &= ~USR2_ORE;
 
-	if (usr1 & (USR1_RRDY | USR1_AGTIM)) {
+	if (usr1 & (USR1_RRDY | USR1_AGTIM) || (usr2 & USR2_RDR)) {
 		imx_uart_writel(sport, USR1_AGTIM, USR1);
 
 		__imx_uart_rxint(irq, dev_id);
@@ -1127,6 +1133,19 @@ static irqreturn_t imx_uart_int(int irq, void *dev_id)
 
 	spin_unlock(&sport->port.lock);
 
+	if (ret != IRQ_HANDLED) {
+		sport->not_handled_cnt++;
+		if (!(sport->not_handled_cnt & 0xff)) {
+			/* Something is wrong, let's note it, and flush the rx fifo */
+			pr_err("%s: usr=%x(%x) %x(%x), ucr=%x %x %x %x\n", __func__,
+				imx_uart_readl(sport, USR1), usr1,
+				imx_uart_readl(sport, USR2), usr2,
+				ucr1, ucr2, ucr3, ucr4);
+			flush_rx(sport);
+		}
+	} else {
+		sport->not_handled_cnt= 0;
+	}
 	return ret;
 }
 
@@ -1522,12 +1541,15 @@ void imx_startup_gpios(struct imx_port *sport)
 		levels = sport->rs485_levels;
 		sport->txen_mask = sport->rs485_txen_mask;
 		sport->txen_levels = sport->rs485_txen_levels;
-		sport->half_duplex = sport->rs485_half_duplex;
+		if (sport->rs485_half_duplex)
+			sport->port.rs485.flags &= ~SER_RS485_RX_DURING_TX;
+		else
+			sport->port.rs485.flags |= SER_RS485_RX_DURING_TX;
 	} else {
 		levels = sport->rs232_levels;
 		sport->txen_mask = sport->rs232_txen_mask;
 		sport->txen_levels = sport->rs232_txen_levels;
-		sport->half_duplex = 0;
+		sport->port.rs485.flags |= SER_RS485_RX_DURING_TX;
 	}
 	if (sport->txing) {
 		levels &= ~sport->txen_mask;
