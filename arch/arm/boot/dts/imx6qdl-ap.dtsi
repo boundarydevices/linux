@@ -889,7 +889,7 @@
 	rs485_levels = <0>;
 	rs485_txen_mask = <0x1>;
 	rs485_txen_levels = <1>;
-	rs485-mode = <1>;
+	linux,rs485-enabled-at-boot-time;
 	rxact_mask = <0>;
 	rxact_levels = <0>;
 	status = "okay";
@@ -911,7 +911,7 @@
 	rs485_levels = <0xd>;
 	rs485_txen_mask = <0x3>;
 	rs485_txen_levels = <M_TX_EN>;
-	rs485-mode = <1>;	/* 1 to enable */
+	linux,rs485-enabled-at-boot-time;
 	rxact_mask = <0>;
 	rxact_levels = <0>;
 	status = "okay";
