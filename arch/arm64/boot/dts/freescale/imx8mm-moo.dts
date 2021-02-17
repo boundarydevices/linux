@@ -1042,7 +1042,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4>;
         rs485_levels = <0x0>;
-        rs485-mode = <1>;
+        linux,rs485-enabled-at-boot-time;
         rs485_txen_levels = <M_TX_EN>;
         rs485_txen_mask = <M_TX_EN>;
 	status = "okay";
