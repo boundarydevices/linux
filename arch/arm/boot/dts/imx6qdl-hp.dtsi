@@ -923,7 +923,7 @@
 	rs485_levels = <0>;
 	rs485_txen_mask = <M_TX_EN>;
 	rs485_txen_levels = <M_TX_EN>;
-	rs485-mode = <1>;
+	linux,rs485-enabled-at-boot-time;
 	status = "okay";
 };
 
@@ -947,7 +947,7 @@
 	rs485_levels = <0>;
 	rs485_txen_mask = <M_TX_EN>;
 	rs485_txen_levels = <M_TX_EN>;
-	rs485-mode = <1>;
+	linux,rs485-enabled-at-boot-time;
 	status = "okay";
 };
 
@@ -964,7 +964,7 @@
 	rs485_levels = <0>;
 	rs485_txen_mask = <M_TX_EN>;
 	rs485_txen_levels = <M_TX_EN>;
-	rs485-mode = <1>;
+	linux,rs485-enabled-at-boot-time;
 	status = "okay";
 };
 
@@ -981,7 +981,7 @@
 	rs485_levels = <0>;
 	rs485_txen_mask = <M_TX_EN>;
 	rs485_txen_levels = <M_TX_EN>;
-	rs485-mode = <1>;
+	linux,rs485-enabled-at-boot-time;
 	status = "okay";
 };
 
