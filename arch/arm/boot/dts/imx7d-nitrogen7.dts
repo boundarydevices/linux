@@ -1011,7 +1011,7 @@
 	rs485_txen_mask = <0x1>;
 	rs485_txen_levels = <0x1>;
 	uart-has-rs485-half-duplex;
-	rs485-mode = <1>;
+	linux,rs485-enabled-at-boot-time;
 	status = "okay";
 };
 
