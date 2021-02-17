@@ -633,7 +633,7 @@
 	pinctrl-0 = <&pinctrl_uart4>;
 	pinctrl-names = "default";
 #define M_TX_EN		1
-	rs485-mode = <1>;	/* 1 to enable */
+	linux,rs485-enabled-at-boot-time;
 	rs485_txen_levels = <M_TX_EN>;
 	rs485_txen_mask = <0x1>;
 	status = "okay";
@@ -644,7 +644,7 @@
 	control-gpios = GP_UART5_RS485_TXEN;
 	pinctrl-0 = <&pinctrl_uart5>;
 	pinctrl-names = "default";
-	rs485-mode = <1>;	/* 1 to enable */
+	linux,rs485-enabled-at-boot-time;
 	rs485_txen_levels = <M_TX_EN>;
 	rs485_txen_mask = <0x1>;
 	status = "okay";
