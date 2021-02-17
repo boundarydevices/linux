@@ -2595,7 +2595,7 @@ static int imx_uart_probe(struct platform_device *pdev)
 	sport->ufcr = readl(sport->port.membase + UFCR);
 
 	if (sport->port.rs485.flags & SER_RS485_ENABLED &&
-	    (!sport->have_rtscts && !sport->have_rtsgpio))
+	    (!sport->have_rtscts && !sport->have_rtsgpio & !sport->rs485_txen_mask))
 		dev_err(&pdev->dev, "no RTS control, disabling rs485\n");
 
 	/*
