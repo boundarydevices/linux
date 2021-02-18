@@ -28,14 +28,17 @@
 					  <&clk IMX8MQ_VIDEO_PLL1_BYPASS>,
 					  <&clk IMX8MQ_VIDEO_PLL1_REF_SEL>,
 					  <&clk IMX8MQ_CLK_DISP_AXI>,
+					  <&clk IMX8MQ_CLK_DISP_APB>,
 					  <&clk IMX8MQ_CLK_DISP_RTRM>;
 	assigned-clock-parents = <&clk IMX8MQ_VIDEO_PLL1_OUT>,
 							 <&clk IMX8MQ_VIDEO_PLL1>,
 							 <&clk IMX8MQ_CLK_27M>,
 							 <&clk IMX8MQ_SYS1_PLL_800M>,
+							 <&clk IMX8MQ_SYS1_PLL_800M>,
 							 <&clk IMX8MQ_SYS1_PLL_800M>;
 	assigned-clock-rates = <600000000>, <0>, <0>,
 						   <800000000>,
+						   <25000000>,
 						   <400000000>;
 
 	port@0 {
