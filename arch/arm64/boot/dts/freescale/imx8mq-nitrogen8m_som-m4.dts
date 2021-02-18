@@ -19,6 +19,23 @@
 			reg = <0 0x80000000 0 0x1000000>;
 		};
 
+		vdev0vring0: vdev0vring0@b8000000 {
+			compatible = "shared-dma-pool";
+			reg = <0 0xb8000000 0 0x8000>;
+			no-map;
+		};
+
+		vdev0vring1: vdev0vring1@b8008000 {
+			compatible = "shared-dma-pool";
+			reg = <0 0xb8008000 0 0x8000>;
+			no-map;
+		};
+
+		vdevbuffer: vdevbuffer@b8400000 {
+			compatible = "shared-dma-pool";
+			reg = <0 0xb8400000 0 0x100000>;
+			no-map;
+		};
 	};
 };
 
@@ -29,6 +46,7 @@
 	 */
 	vdev-nums = <1>;
 	reg = <0x0 0xb8000000 0x0 0x10000>;
+	memory-region = <&vdevbuffer>;
 	status = "okay";
 };
 
