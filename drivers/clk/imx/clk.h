@@ -411,7 +411,7 @@ static inline struct clk_hw *imx_dev_clk_hw_gate_shared(struct device *dev,
 				void __iomem *reg, u8 shift,
 				unsigned int *share_count)
 {
-	return clk_hw_register_gate2(NULL, name, parent, CLK_SET_RATE_PARENT |
+	return clk_hw_register_gate2(dev, name, parent, CLK_SET_RATE_PARENT |
 					CLK_OPS_PARENT_ENABLE, reg, shift, 0x1,
 					0x1, 0, &imx_ccm_lock, share_count);
 }
