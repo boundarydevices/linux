@@ -952,7 +952,7 @@
 	};
 
 	pca9540: i2cmux9540@70 {
-		compatible = "pca9540";
+		compatible = "nxp,pca9540";
 		reg = <0x70>;
 		status = "disabled";
 		#address-cells = <1>;
@@ -986,7 +986,7 @@
 	};
 
 	pca9546: i2cmux9546@70 {
-		compatible = "pca9546";
+		compatible = "nxp,pca9546";
 		reg = <0x70>;
 		status = "disabled";
 		#address-cells = <1>;
