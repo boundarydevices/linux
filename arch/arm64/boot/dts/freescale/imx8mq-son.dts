@@ -1154,13 +1154,20 @@
 &mipi_dsi {
 	/delete-property/ no_clk_reset;
 	status = "disabled";
-	assigned-clocks = <&clk IMX8MQ_CLK_DSI_CORE>,
-			  <&clk IMX8MQ_CLK_DSI_PHY_REF>,
-			  <&clk IMX8MQ_VIDEO_PLL1_REF_SEL>;
-	assigned-clock-parents = <&clk IMX8MQ_SYS1_PLL_266M>,
-				 <&clk IMX8MQ_VIDEO_PLL1_OUT>,
+	assigned-clocks = <&clk IMX8MQ_CLK_DSI_PHY_REF>,
+			  <&clk IMX8MQ_CLK_DSI_CORE>,
+			  <&clk IMX8MQ_CLK_DSI_AHB>,
+			  <&clk IMX8MQ_VIDEO_PLL1_REF_SEL>,
+			  <&clk IMX8MQ_CLK_DSI_IPG_DIV>;
+	assigned-clock-parents = <&clk IMX8MQ_VIDEO_PLL1_OUT>,
+				 <&clk IMX8MQ_SYS1_PLL_266M>,
+				 <&clk IMX8MQ_SYS1_PLL_80M>,
 				 <&clk IMX8MQ_CLK_25M>;
-	assigned-clock-rates = <266000000>;
+	assigned-clock-rates = <27000000>,
+			       <266000000>,
+			       <80000000>,
+			       <0>,
+			       <20000000>;
 
 	fb_mipi: panel@0 {
 		bits-per-color = <8>;
