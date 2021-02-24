@@ -757,7 +757,7 @@
 	status = "okay";
 
 	tca9546: i2cmux9546@70 {
-		compatible = "pca9546";
+		compatible = "nxp,pca9546";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_tca9546>;
 		reg = <0x70>;
