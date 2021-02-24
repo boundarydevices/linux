@@ -1092,7 +1092,7 @@
 	pca9546: i2cmux9546@70 {
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_pca9546>;
-		compatible = "pca9546";
+		compatible = "nxp,pca9546";
 		reg = <0x70>;
 		reset-gpios = GP_PCA9546_RESET;
 		#address-cells = <1>;
