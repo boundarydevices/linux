@@ -797,7 +797,7 @@
 
 	port@0 {
 		dcss_out: endpoint {
-			  remote-endpoint = <&hdmi_in>;
+			remote-endpoint = <&hdmi_in>;
 		};
 	};
 };
@@ -873,7 +873,7 @@
 	status = "okay";
 
 	i2cmux@70 {
-		compatible = "pca9546";
+		compatible = "nxp,pca9546";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_pca9546>;
 		reg = <0x70>;
@@ -1136,7 +1136,7 @@
 	};
 
 	pca9540: i2cmux9540@70 {
-		compatible = "pca9540";
+		compatible = "nxp,pca9540";
 		reg = <0x70>;
 		status = "disabled";
 		#address-cells = <1>;
@@ -1170,7 +1170,7 @@
 	};
 
 	pca9546: i2cmux9546@70 {
-		compatible = "pca9546";
+		compatible = "nxp,pca9546";
 		reg = <0x70>;
 		status = "disabled";
 		#address-cells = <1>;
