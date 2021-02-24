@@ -759,7 +759,7 @@
 
 	port@0 {
 		dcss_out: endpoint {
-			  remote-endpoint = <&hdmi_in>;
+			remote-endpoint = <&hdmi_in>;
 		};
 	};
 };
@@ -950,7 +950,7 @@
 	status = "okay";
 
 	i2cmux@70 {
-		compatible = "pca9540";
+		compatible = "nxp,pca9540";
 		reg = <0x70>;
 		#address-cells = <1>;
 		#size-cells = <0>;
