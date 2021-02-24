@@ -671,7 +671,7 @@ brcmf_sdiod_ramrw(struct brcmf_sdio_dev *sdiodev, bool write, u32 address,
 	uint dsize;
 
 	dsize = min_t(uint, SBSDIO_SB_OFT_ADDR_LIMIT, size);
-	pkt = dev_alloc_skb(dsize);
+	pkt = __dev_alloc_skb(dsize, GFP_KERNEL);
 	if (!pkt) {
 		brcmf_err("dev_alloc_skb failed: len %d\n", dsize);
 		return -EIO;
