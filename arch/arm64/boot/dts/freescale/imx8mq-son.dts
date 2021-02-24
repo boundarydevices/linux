@@ -980,7 +980,6 @@
 				regulator-boot-on;
 				regulator-max-microvolt = <1800000>;
 				regulator-min-microvolt =  <400000>;
-				dual-phase;
 			};
 
 			reg_sw5: sw5 {
