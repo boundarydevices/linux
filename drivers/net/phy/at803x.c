@@ -67,6 +67,9 @@
 #define AT803X_DEBUG_REG_5			0x05
 #define AT803X_DEBUG_TX_CLK_DLY_EN		BIT(8)
 
+#define AT803X_DEBUG_REG_B			0x0B
+#define AT803X_DEBUG_PS_HIB_EN			BIT(15)
+
 #define AT803X_LPI_EN				BIT(8)
 
 #define AT803X_DEBUG_REG_31			0x1f
@@ -79,6 +82,7 @@
 
 #define AT803X_EEE_FEATURE_DISABLE		(1 << 1)
 #define AT803X_VDDIO_1P8V			(1 << 2)
+#define AT803X_HIBERNATION_DISABLE		(1 << 3)
 
 MODULE_DESCRIPTION("Atheros 803x PHY driver");
 MODULE_AUTHOR("Matus Ujhelyi");
@@ -334,6 +338,9 @@ static int at803x_probe(struct phy_device *phydev)
 	if (of_property_read_bool(dev->of_node, "at803x,vddio-1p8v"))
 		priv->quirks |= AT803X_VDDIO_1P8V;
 
+	if (of_property_read_bool(dev->of_node, "at803x,hib-disabled"))
+		priv->quirks |= AT803X_HIBERNATION_DISABLE;
+
 	if (of_property_read_u32(dev->of_node, "at803x,phy-clock-out", &priv->phy_clock_out))
 		priv->phy_clock_out = 0xffffffff;
 	else
@@ -401,6 +408,14 @@ static int at803x_config_init(struct phy_device *phydev)
 		if (ret < 0)
 			return ret;
 	}
+
+	if (priv->quirks & AT803X_HIBERNATION_DISABLE) {
+		ret = at803x_debug_reg_mask(phydev, AT803X_DEBUG_REG_B,
+					    AT803X_DEBUG_PS_HIB_EN, 0);
+		if (ret < 0)
+			return ret;
+	}
+
 	if (priv->phy_clock_out != 0xffffffff) {
 		ret = at803x_select_phy_clock_out(phydev, priv->phy_clock_out);
 		if (ret < 0)
