@@ -19,6 +19,10 @@ unsigned long long phy_mipi_dphy_get_hs_clk(unsigned long pixel_clock,
 {
 	unsigned long long hs_clk_rate = pixel_clock;
 
+	pr_debug("%s: pixel_clock=%ld, bpp=%d, lanes=%d, dsi_mode_flags=0x%lx,"
+		"min_hs_clock_multiple=%d, mipi_dsi_multiple=%d\n", __func__,
+		pixel_clock, bpp, lanes, dsi_mode_flags,
+		min_hs_clock_multiple, mipi_dsi_multiple);
 	if (dsi_mode_flags & MIPI_DSI_MODE_VIDEO_MBC) {
 		unsigned n = (bpp + (lanes * 8) - 1) / (lanes * 8);
 
