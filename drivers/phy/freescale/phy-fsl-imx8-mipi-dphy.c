@@ -384,12 +384,14 @@ static int mixel_dphy_config_from_opts(struct phy *phy,
 		return -EINVAL;
 	}
 	/* 00: lp_t, 01: 1.5 * lp_t, 10: 2 * lp_t, 11: 2.5 * lp_t */
-	if (dphy_opts->hs_prepare < lp_t) {
-		n = 0;
+	tmp = 2 * (dphy_opts->hs_prepare) + lp_t - 1;
+	do_div(tmp, lp_t);
+	if (tmp > 2) {
+		n = tmp - 2;
+		if (n > 3)
+			n = 3;
 	} else {
-		tmp = 2 * (dphy_opts->hs_prepare - lp_t);
-		do_div(tmp, lp_t);
-		n = tmp;
+		n = 0;
 	}
 	cfg->m_prg_hs_prepare = n;
 
