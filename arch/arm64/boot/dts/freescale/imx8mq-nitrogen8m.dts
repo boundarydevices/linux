@@ -9,9 +9,10 @@
 #define TC358867_I2C_BUS	<&i2c4>
 #include "panel-dmt050wvnxcmi.dtsi"
 #include "panel-lcd133-070.dtsi"
+#include "panel-lcm-jm430.dtsi"
 #include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
-#include "panel-lcm-jm430.dtsi"
+#include "panel-m101nwwb.dtsi"
 #include "panel-com50h5n03ulc.dtsi"
 
 &iomuxc {
