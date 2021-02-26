@@ -1715,9 +1715,9 @@ static bool invalid_migration_vma(struct vm_area_struct *vma, void *arg)
 	return vma_is_temporary_stack(vma);
 }
 
-static int page_mapcount_is_zero(struct page *page)
+static int page_not_mapped(struct page *page)
 {
-	return !total_mapcount(page);
+	return !page_mapped(page);
 }
 
 /**
@@ -1735,7 +1735,7 @@ bool try_to_unmap(struct page *page, enum ttu_flags flags)
 	struct rmap_walk_control rwc = {
 		.rmap_one = try_to_unmap_one,
 		.arg = (void *)flags,
-		.done = page_mapcount_is_zero,
+		.done = page_not_mapped,
 		.anon_lock = page_lock_anon_vma_read,
 	};
 
@@ -1757,11 +1757,6 @@ bool try_to_unmap(struct page *page, enum ttu_flags flags)
 		rmap_walk(page, &rwc);
 
 	return !page_mapcount(page) ? true : false;
-}
-
-static int page_not_mapped(struct page *page)
-{
-	return !page_mapped(page);
 }
 
 /**
