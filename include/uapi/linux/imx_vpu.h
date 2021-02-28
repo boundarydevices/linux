@@ -18,10 +18,6 @@
 #include <linux/v4l2-controls.h>
 
 /*imx v4l2 controls & extension controls*/
-//compound type for extension ctrls
-#define VSI_V4L2_CMPTYPE_ROI				(V4L2_CTRL_COMPOUND_TYPES + 100)
-#define VSI_V4L2_CMPTYPE_IPCM				(V4L2_CTRL_COMPOUND_TYPES + 101)
-#define VSI_V4L2_CMPTYPE_HDR10META		(V4L2_CTRL_COMPOUND_TYPES + 102)
 
 //ctrls & extension ctrls definitions
 #define V4L2_CID_NON_FRAME		(V4L2_CID_USER_IMX_BASE)
@@ -61,6 +57,7 @@ struct v4l2_enc_ipcm_params {
 };
 
 struct v4l2_hdr10_meta {
+	__u32 hasHdr10Meta;
 	__u32 redPrimary[2];
 	__u32 greenPrimary[2];
 	__u32 bluePrimary[2];

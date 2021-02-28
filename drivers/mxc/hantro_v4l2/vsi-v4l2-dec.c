@@ -381,6 +381,11 @@ static int vsi_dec_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 	if (!binputqueue(p->type)) {
 		struct vsi_v4l2_mediacfg *pcfg = &ctx->mediacfg;
 
+		if (test_and_clear_bit(CTX_FLAG_RFCOFFSET_BIT, &ctx->flag)) {
+			p->reserved = pcfg->decparams.io_buffer.rfc_luma_offset;
+			p->reserved2 = pcfg->decparams.io_buffer.rfc_chroma_offset;
+			v4l2_klog(LOGLVL_CONFIG, "rfc offest update=%x:%x", p->reserved, p->reserved2);
+		}
 		if (p->bytesused == 0 && (ctx->status == DEC_STATUS_ENDSTREAM || test_bit(CTX_FLAG_ENDOFSTRM_BIT, &ctx->flag))) {
 			p->flags |= V4L2_BUF_FLAG_LAST;
 			ctx->status = DEC_STATUS_STOPPED;
@@ -397,11 +402,13 @@ static int vsi_dec_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 			vsi_v4l2_send_reschange(ctx);
 			v4l2_klog(LOGLVL_BRIEF, "send delayed src change");
 		} else if (test_and_clear_bit(BUF_FLAG_CROPCHANGE, &ctx->vbufflag[p->index])) {
-			struct v4l2_event event = {
-				.type = V4L2_EVENT_CROPCHANGE,
-			};
-			if (update_and_removecropinfo(ctx))
+			struct v4l2_event event;
+
+			if (update_and_removecropinfo(ctx)) {
+				memset((void *)&event, 0, sizeof(struct v4l2_event));
+				event.type = V4L2_EVENT_CROPCHANGE;
 				v4l2_event_queue_fh(&ctx->fh, &event);
+			}
 			v4l2_klog(LOGLVL_BRIEF, "send delayed crop change at buf %d", p->index);
 		}
 		p->field = V4L2_FIELD_NONE;
@@ -558,10 +565,11 @@ int vsi_dec_decoder_cmd(struct file *file, void *fh, struct v4l2_decoder_cmd *cm
 			ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_CMD_STOP, NULL);
 		} else if ((ctx->status == VSI_STATUS_INIT && !test_bit(CTX_FLAG_DAEMONLIVE_BIT, &ctx->flag)) ||
 				ctx->status == DEC_STATUS_STOPPED) {
-			struct v4l2_event event = {
-				.type = V4L2_EVENT_EOS,
-			};
+			struct v4l2_event event;
+
 			clear_bit(CTX_FLAG_PRE_DRAINING_BIT, &ctx->flag);
+			memset((void *)&event, 0, sizeof(struct v4l2_event));
+			event.type = V4L2_EVENT_EOS;
 			v4l2_event_queue_fh(&ctx->fh, &event);
 			ret = 0;
 		}
@@ -688,7 +696,6 @@ static int vsi_dec_start_streaming(struct vb2_queue *q, unsigned int count)
 }
 static void vsi_dec_stop_streaming(struct vb2_queue *vq)
 {
-	return;
 }
 
 static void vsi_dec_buf_finish(struct vb2_buffer *vb)

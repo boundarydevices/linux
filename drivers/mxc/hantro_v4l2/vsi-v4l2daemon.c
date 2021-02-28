@@ -489,10 +489,11 @@ tail:
 	if (ctx) {
 		set_bit(CTX_FLAG_DAEMONLIVE_BIT, &ctx->flag);
 		if (ret < 0) {
-			struct v4l2_event event = {
-				.type = V4L2_EVENT_CODEC_ERROR,
-			};
+			struct v4l2_event event;
+
 			ctx->error = ret;
+			memset((void *)&event, 0, sizeof(struct v4l2_event));
+			event.type = V4L2_EVENT_CODEC_ERROR,
 			v4l2_event_queue_fh(&ctx->fh, &event);
 			pr_err("fail to communicate with daemon");
 		}
