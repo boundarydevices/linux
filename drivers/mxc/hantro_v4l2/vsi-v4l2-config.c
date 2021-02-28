@@ -495,11 +495,6 @@ static struct vsi_video_fmt vsi_coded_fmt[] = {
 	},
 };
 
-static int is850board(void)
-{
-	return (vsi_coded_fmt[DEC_HAS_VC1_G].dec_fmt != V4L2_DAEMON_CODEC_UNKNOW_TYPE);
-}
-
 void vsi_enum_encfsize(struct v4l2_frmsizeenum *f, u32 pixel_format)
 {
 	switch (pixel_format) {
@@ -698,9 +693,14 @@ struct vsi_video_fmt *vsi_enum_dec_format(int idx, int braw, struct vsi_v4l2_ctx
 				continue;
 			if (test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag)) {
 				if ((outfmt == VSI_V4L2_DECOUT_NV12_10BIT ||
-					outfmt == VSI_V4L2_DECOUT_P010 ||
-					outfmt == VSI_V4L2_DECOUT_DTRC_10BIT) &&
+					outfmt == VSI_V4L2_DECOUT_P010) &&
 					ctx->mediacfg.decparams.dec_info.dec_info.bit_depth < 10)
+					continue;
+				if ((outfmt == VSI_V4L2_DECOUT_DTRC_10BIT) &&
+					ctx->mediacfg.decparams.dec_info.dec_info.bit_depth != 10)
+					continue;
+				if ((outfmt == VSI_V4L2_DECOUT_DTRC) &&
+					ctx->mediacfg.decparams.dec_info.dec_info.bit_depth != 8)
 					continue;
 			}
 			k++;
@@ -908,6 +908,10 @@ static void verifyPlanesize(unsigned int psize[], int braw, int pixelformat, int
 			case V4L2_PIX_FMT_NV12:
 			case V4L2_PIX_FMT_NV21:
 			case V4L2_PIX_FMT_YUV420:
+			case V4L2_PIX_FMT_NV12X:
+			case V4L2_PIX_FMT_DTRC:
+			case V4L2_PIX_FMT_P010:
+			case V4L2_PIX_FMT_TILEX:
 				extsize = basesize / 2;
 				quadsize = basesize / 4;
 				break;
@@ -1203,6 +1207,9 @@ static int vsiv4l2_decidepixeldepth(int pixelformat, int origdepth)
 	case VSI_V4L2_DECOUT_NV12:
 	case VSI_V4L2_DECOUT_DTRC:
 		return 8;
+	case VSI_V4L2_DECOUT_NV12_10BIT:
+	case VSI_V4L2_DECOUT_DTRC_10BIT:
+		return 10;
 	default:
 		return origdepth;
 	}
@@ -1233,7 +1240,7 @@ static int vsiv4l2_setfmt_dec(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt)
 		pcfg->decparams.dec_info.io_buffer.inputFormat = targetfmt->dec_fmt;
 	} else {
 		//dtrc is only for HEVC and VP9
-		if ((targetfmt->dec_fmt == VSI_V4L2_DECOUT_DTRC) &&
+		if ((targetfmt->dec_fmt == VSI_V4L2_DECOUT_DTRC || targetfmt->dec_fmt == VSI_V4L2_DECOUT_DTRC_10BIT) &&
 			pcfg->decparams.dec_info.io_buffer.inputFormat != V4L2_DAEMON_CODEC_DEC_VP9 &&
 			pcfg->decparams.dec_info.io_buffer.inputFormat != V4L2_DAEMON_CODEC_DEC_HEVC)
 			return -EINVAL;
@@ -1557,7 +1564,8 @@ void vsiv4l2_set_hwinfo(struct vsi_v4l2_dev_info *hwinfo)
 	int i;
 
 	vsi_v4l2_hwconfig = *hwinfo;
-	v4l2_klog(LOGLVL_BRIEF, "%s:%lx:%lx", __func__, hwinfo->encformat, hwinfo->decformat);
+	v4l2_klog(LOGLVL_BRIEF, "%s::%d:%d:%lx:%lx", __func__,
+		hwinfo->enc_isH1, hwinfo->max_dec_resolution, hwinfo->encformat, hwinfo->decformat);
 	for (i = 0; i < ARRAY_SIZE(vsi_coded_fmt); i++) {
 		if (((1 << i) & hwinfo->encformat) == 0)
 			vsi_coded_fmt[i].enc_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE;
@@ -1575,14 +1583,13 @@ void vsi_v4l2_update_ctrlcfg(struct v4l2_ctrl_config *cfg)
 {
 	switch (cfg->id) {
 	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
-		/*identiry 850 and 865 board, temp method*/
-		if (is850board())
+		if (vsi_v4l2_hwconfig.max_dec_resolution > 1920)
 			cfg->max = V4L2_MPEG_VIDEO_H264_LEVEL_5_2;
 		else
 			cfg->max = V4L2_MPEG_VIDEO_H264_LEVEL_5_1;
 		break;
 	case V4L2_CID_MPEG_VIDEO_HEVC_LEVEL:
-		if (is850board())
+		if (vsi_v4l2_hwconfig.max_dec_resolution > 1920)
 			cfg->max = V4L2_MPEG_VIDEO_HEVC_LEVEL_5_2;
 		else
 			cfg->max = V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1;

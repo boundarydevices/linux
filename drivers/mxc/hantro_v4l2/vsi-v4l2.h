@@ -51,6 +51,7 @@ struct vsi_v4l2_dev_info {
 	s32 dec_corenum;
 	s32 enc_corenum;
 	s32 enc_isH1;
+	u32 max_dec_resolution;
 	ulong decformat;		//hw_dec_formats
 	ulong encformat;		//hw_enc_formats
 };
@@ -172,23 +173,23 @@ enum vsi_v4l2dec_pixfmt {
 };
 
 enum {
-	DAEMON_OK = 0,                   // no error.
-	DAEMON_ENC_FRAME_READY = 1,      // frame encoded
-	DAEMON_ENC_FRAME_ENQUEUE = 2,    // frame enqueued
+	DAEMON_OK = 0,						// no error.
+	DAEMON_ENC_FRAME_READY = 1,			// frame encoded
+	DAEMON_ENC_FRAME_ENQUEUE = 2,		// frame enqueued
 
-	DAEMON_ERR_INST_CREATE = -1,       // inst_init() failed.
-	DAEMON_ERR_SIGNAL_CONFIG = -2,     // sigsetjmp() failed.
+	DAEMON_ERR_INST_CREATE = -1,		// inst_init() failed.
+	DAEMON_ERR_SIGNAL_CONFIG = -2,		// sigsetjmp() failed.
 	DAEMON_ERR_DAEMON_MISSING = -3,     // daemon is not alive.
-	DAEMON_ERR_NO_MEM = -4,     		// no mem, used also by driver.
+	DAEMON_ERR_NO_MEM = -4,				// no mem, used also by driver.
 
-	DAEMON_ERR_ENC_PARA = -100,        // Parameters Error.
-	DAEMON_ERR_ENC_NOT_SUPPORT = -101, // Not Support Error.
-	DAEMON_ERR_ENC_INTERNAL = -102,    // Ctrlsw reported Error.
-	DAEMON_ERR_ENC_BUF_MISSED = -103,  // No desired input buffer.
-	DAEMON_ERR_ENC_FATAL_ERROR = -104,  // Fatal error.
+	DAEMON_ERR_ENC_PARA = -100,			// Parameters Error.
+	DAEMON_ERR_ENC_NOT_SUPPORT = -101,	// Not Support Error.
+	DAEMON_ERR_ENC_INTERNAL = -102,		// Ctrlsw reported Error.
+	DAEMON_ERR_ENC_BUF_MISSED = -103,	// No desired input buffer.
+	DAEMON_ERR_ENC_FATAL_ERROR = -104,	// Fatal error.
 
-	DAEMON_ERR_DEC_FATAL_ERROR = -200, // Fatal error.
-	DAEMON_ERR_DEC_METADATA_ONLY = -201,  // CMD_STOP after metadata-only.
+	DAEMON_ERR_DEC_FATAL_ERROR = -200,	// Fatal error.
+	DAEMON_ERR_DEC_METADATA_ONLY = -201,	// CMD_STOP after metadata-only.
 };
 
 //warn type attached in V4L2_DAEMON_VIDIOC_WARNONOPTION message. Stored in msg.error member
@@ -508,6 +509,9 @@ struct v4l2_daemon_dec_buffers {
 	s32 output_hstride;
 	s32 outputPixelDepth;
 
+	dma_addr_t rfc_luma_offset;
+	dma_addr_t rfc_chroma_offset;
+
 	u32 bytesused;	//valid bytes in buffer from user app.
 	s64 timestamp;
 
@@ -523,6 +527,7 @@ struct v4l2_daemon_dec_pp_cfg {
 };
 
 struct v4l2_vpu_hdr10_meta {
+	u32 hasHdr10Meta;
 	u32 redPrimary[2];
 	u32 greenPrimary[2];
 	u32 bluePrimary[2];

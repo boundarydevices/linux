@@ -220,8 +220,13 @@ static int vsi_enc_trystartenc(struct vsi_v4l2_ctx *ctx)
 			ctx->input_que.queued_count >= ctx->input_que.min_buffers_needed &&
 			ctx->output_que.queued_count >= ctx->output_que.min_buffers_needed) {
 			ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_STREAMON, NULL);
-			if (ret == 0)
+			if (ret == 0) {
 				ctx->status = ENC_STATUS_ENCODING;
+				if (test_and_clear_bit(CTX_FLAG_PRE_DRAINING_BIT, &ctx->flag)) {
+					ret |= vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_CMD_STOP, NULL);
+					ctx->status = ENC_STATUS_DRAINING;
+				}
+			}
 		}
 	}
 	return ret;
@@ -366,7 +371,7 @@ static int vsi_enc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 	struct vb2_queue *q;
 	struct vb2_buffer *vb;
 	struct vsi_vpu_buf *vsibuf;
-	struct v4l2_event event = {.type = V4L2_EVENT_EOS};
+	struct v4l2_event event;
 
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
@@ -405,6 +410,8 @@ static int vsi_enc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 		if (ret == 0) {
 			if (ctx->vbufflag[p->index] & LAST_BUFFER_FLAG) {
 				p->flags |= V4L2_BUF_FLAG_LAST;
+				memset((void *)&event, 0, sizeof(struct v4l2_event));
+				event.type = V4L2_EVENT_EOS;
 				v4l2_event_queue_fh(&ctx->fh, &event);
 				if (ctx->status == ENC_STATUS_DRAINING)
 					ctx->status = ENC_STATUS_STOPPED;
@@ -582,10 +589,13 @@ static int vsi_enc_encoder_cmd(struct file *file, void *fh, struct v4l2_encoder_
 		return -ENODEV;
 	switch (cmd->cmd) {
 	case V4L2_ENC_CMD_STOP:
+		set_bit(CTX_FLAG_PRE_DRAINING_BIT, &ctx->flag);
 		if (ctx->status == ENC_STATUS_ENCODING) {
 			ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_CMD_STOP, cmd);
-			if (ret == 0)
+			if (ret == 0) {
 				ctx->status = ENC_STATUS_DRAINING;
+				clear_bit(CTX_FLAG_PRE_DRAINING_BIT, &ctx->flag);
+			}
 		} else if (ctx->status != ENC_STATUS_DRAINING)
 			ret = 0;
 		break;

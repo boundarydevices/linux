@@ -51,6 +51,11 @@
 /* declarations */
 extern int vsi_kloglvl;
 
+//compound type for extension ctrls
+#define VSI_V4L2_CMPTYPE_ROI				(V4L2_CTRL_COMPOUND_TYPES + 100)
+#define VSI_V4L2_CMPTYPE_IPCM				(V4L2_CTRL_COMPOUND_TYPES + 101)
+#define VSI_V4L2_CMPTYPE_HDR10META		(V4L2_CTRL_COMPOUND_TYPES + 102)
+
 enum {
 	LOGLVL_VERBOSE = 0,	//log all
 	LOGLVL_CONFIG,			// log ctrl/config info, mostly at beginning
@@ -267,6 +272,7 @@ enum {
 	CTX_FLAG_FORCEIDR_BIT,			// force idr invoked
 	CTX_FLAG_SRCCHANGED_BIT,			// src change has come from daemon
 	CTX_FLAG_DELAY_SRCCHANGED_BIT,	// src change has come from daemon	 but not sent to app
+	CTX_FLAG_RFCOFFSET_BIT,			// need send rfc offset to app
 };
 
 /* flag for decoder buffer*/

@@ -350,8 +350,7 @@ static int vsi_v4l2_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_HDR10META:
 		if (ctrl->p_new.p) {
-			if (!test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag) ||
-				ctx->mediacfg.infmt_fourcc != V4L2_PIX_FMT_HEVC)
+			if (!test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag))
 				memset(ctrl->p_new.p, 0, sizeof(struct v4l2_hdr10_meta));
 			else
 				memcpy(ctrl->p_new.p,
@@ -499,6 +498,20 @@ static struct v4l2_ctrl_config vsi_v4l2_ctrl_defs[] = {
 		.min = V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE,
 		.max = V4L2_MPEG_VIDEO_H264_PROFILE_MULTIVIEW_HIGH,
 		.def = V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_VP8_PROFILE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_VP8_PROFILE_0,
+		.max = V4L2_MPEG_VIDEO_VP8_PROFILE_3,
+		.def = V4L2_MPEG_VIDEO_VP8_PROFILE_0,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_VP9_PROFILE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_VP9_PROFILE_0,
+		.max = V4L2_MPEG_VIDEO_VP9_PROFILE_3,
+		.def = V4L2_MPEG_VIDEO_VP9_PROFILE_0,
 	},
 	{
 		.id = V4L2_CID_MPEG_VIDEO_HEVC_PROFILE,
@@ -735,15 +748,15 @@ int vsi_v4l2_handle_picconsumed(struct vsi_v4l2_msg *pmsg)
 {
 	unsigned long ctxid = pmsg->inst_id;
 	struct vsi_v4l2_ctx *ctx;
-	struct v4l2_event event = {
-		.type = V4L2_EVENT_SKIP,
-	};
+	struct v4l2_event event;
 
 	v4l2_klog(LOGLVL_WARNING, "%lx got picconsumed event", ctxid);
 	ctx = find_ctx(ctxid);
 	if (ctx == NULL)
 		return -1;
 
+	memset((void *)&event, 0, sizeof(struct v4l2_event));
+	event.type = V4L2_EVENT_SKIP;
 	if (isdecoder(ctx))
 		event.u.data[0] = pmsg->params.dec_params.io_buffer.inbufidx;
 
@@ -761,6 +774,7 @@ int vsi_v4l2_handleerror(unsigned long ctxid, int error)
 	if (ctx == NULL)
 		return -1;
 
+	memset((void *)&event, 0, sizeof(struct v4l2_event));
 	if (error == DAEMON_ERR_DEC_METADATA_ONLY)
 		event.type = V4L2_EVENT_EOS;
 	else {
@@ -777,10 +791,7 @@ int vsi_v4l2_handleerror(unsigned long ctxid, int error)
 
 int vsi_v4l2_send_reschange(struct vsi_v4l2_ctx *ctx)
 {
-	struct v4l2_event event = {
-		.type = V4L2_EVENT_SOURCE_CHANGE,
-		.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION,
-	};
+	struct v4l2_event event;
 	struct v4l2_format fmt;
 
 	if (ctx->mediacfg.decparams.dec_info.dec_info.bit_depth == 10) {
@@ -793,6 +804,10 @@ int vsi_v4l2_send_reschange(struct vsi_v4l2_ctx *ctx)
 			vsiv4l2_setfmt(ctx, &fmt);
 		}
 	}
+	set_bit(CTX_FLAG_RFCOFFSET_BIT, &ctx->flag);
+	memset((void *)&event, 0, sizeof(struct v4l2_event));
+	event.type = V4L2_EVENT_SOURCE_CHANGE,
+	event.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION,
 	v4l2_event_queue_fh(&ctx->fh, &event);
 	return 0;
 }
@@ -859,13 +874,13 @@ int vsi_v4l2_handle_warningmsg(struct vsi_v4l2_msg *pmsg)
 {
 	unsigned long ctxid = pmsg->inst_id;
 	struct vsi_v4l2_ctx *ctx;
-	struct v4l2_event event = {
-		.type = V4L2_EVENT_INVALID_OPTION,
-	};
+	struct v4l2_event event;
 
 	ctx = find_ctx(ctxid);
 	if (ctx == NULL)
 		return -ESRCH;
+	memset((void *)&event, 0, sizeof(struct v4l2_event));
+	event.type = V4L2_EVENT_INVALID_OPTION,
 	event.id = convert_daemonwarning_to_appwarning(pmsg->error);
 	v4l2_klog(LOGLVL_WARNING, "%lx got warning msg", ctxid);
 	v4l2_event_queue_fh(&ctx->fh, &event);
@@ -883,9 +898,7 @@ int vsi_v4l2_handle_cropchange(struct vsi_v4l2_msg *pmsg)
 
 	if (isdecoder(ctx)) {
 		struct vsi_v4l2_mediacfg *pcfg = &ctx->mediacfg;
-		struct v4l2_event event = {
-			.type = V4L2_EVENT_CROPCHANGE,
-		};
+		struct v4l2_event event;
 
 		v4l2_klog(LOGLVL_BRIEF, "%lx sending crop change:%d:%d:%d", ctx->ctxid, ctx->status, ctx->buffed_cropcapnum, ctx->lastcapbuffer_idx);
 		if (ctx->status == DEC_STATUS_DECODING && ctx->buffed_cropcapnum > 0) {
@@ -901,6 +914,8 @@ int vsi_v4l2_handle_cropchange(struct vsi_v4l2_msg *pmsg)
 			pcfg->decparams.dec_info.dec_info.visible_rect.top = pmsg->params.dec_params.pic_info.pic_info.crop_top;
 			pcfg->decparams.dec_info.dec_info.visible_rect.width = pmsg->params.dec_params.pic_info.pic_info.crop_width;
 			pcfg->decparams.dec_info.dec_info.visible_rect.height = pmsg->params.dec_params.pic_info.pic_info.crop_height;
+			memset((void *)&event, 0, sizeof(struct v4l2_event));
+			event.type = V4L2_EVENT_CROPCHANGE,
 			v4l2_event_queue_fh(&ctx->fh, &event);
 		}
 	}
@@ -980,6 +995,8 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 					clear_bit(BUF_FLAG_QUEUED, &ctx->vbufflag[outbufidx]);
 					set_bit(BUF_FLAG_DONE, &ctx->vbufflag[outbufidx]);
 				}
+				ctx->mediacfg.decparams.io_buffer.rfc_luma_offset = pmsg->params.dec_params.io_buffer.rfc_luma_offset;
+				ctx->mediacfg.decparams.io_buffer.rfc_chroma_offset = pmsg->params.dec_params.io_buffer.rfc_chroma_offset;
 				if (bytesused[0] == 0) {
 					if ((ctx->status == DEC_STATUS_DRAINING) || test_bit(CTX_FLAG_PRE_DRAINING_BIT, &ctx->flag)) {
 						ctx->status = DEC_STATUS_ENDSTREAM;
