@@ -253,3 +253,5 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk-pcie1-m2-gki.dtb imx8mq-evk-lcdif-adv7535-g
                           imx8mq-evk-dcss-rm67199-gki.dtb  imx8mq-evk-dcss-rm67191-gki.dtb imx8mq-evk-dual-display-gki.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx8ulp-watch.dtb
+
+dtb-$(CONFIG_ARCH_MXC) += imx8mm-c2.dtb \
