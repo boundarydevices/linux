@@ -2005,6 +2005,87 @@
 			};
 		};
 
+		camsv1: camsv@1a051000 {
+			compatible = "mediatek,mt8183-camsv";
+			reg = <0 0x1a051000 0 0x1000>;
+			interrupts = <GIC_SPI 259 IRQ_TYPE_LEVEL_LOW>;
+			clocks = <&camsys CLK_CAM_CAM>,
+				 <&camsys CLK_CAM_CAMTG>,
+				 <&camsys CLK_CAM_CAMSV0>;
+			clock-names = "camsys_cam_cgpdn", "camsys_camtg_cgpdn",
+						"camsys_camsv";
+			iommus = <&iommu M4U_PORT_CAM_IMGO>;
+			mediatek,larb = <&larb3>, <&larb6>;
+			power-domains = <&scpsys MT8183_POWER_DOMAIN_CAM>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					camsv1_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf_camsv1_endpoint>;
+					};
+				};
+			};
+		};
+
+		camsv2: camsv@1a052000 {
+			compatible = "mediatek,mt8183-camsv";
+			reg = <0 0x1a052000 0 0x1000>;
+			interrupts = <GIC_SPI 260 IRQ_TYPE_LEVEL_LOW>;
+			clocks = <&camsys CLK_CAM_CAM>,
+				 <&camsys CLK_CAM_CAMTG>,
+				 <&camsys CLK_CAM_CAMSV1>;
+			clock-names = "camsys_cam_cgpdn", "camsys_camtg_cgpdn",
+						"camsys_camsv";
+			iommus = <&iommu M4U_PORT_CAM_IMGO>;
+			mediatek,larb = <&larb3>, <&larb6>;
+			power-domains = <&scpsys MT8183_POWER_DOMAIN_CAM>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					camsv2_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf_camsv2_endpoint>;
+					};
+				};
+			};
+		};
+
+		camsv3: camsv@1a053000 {
+			compatible = "mediatek,mt8183-camsv";
+			reg = <0 0x1a053000 0 0x1000>;
+			interrupts = <GIC_SPI 261 IRQ_TYPE_LEVEL_LOW>;
+			clocks = <&camsys CLK_CAM_CAM>,
+				 <&camsys CLK_CAM_CAMTG>,
+				 <&camsys CLK_CAM_CAMSV1>;
+			clock-names = "camsys_cam_cgpdn", "camsys_camtg_cgpdn",
+						"camsys_camsv";
+			iommus = <&iommu M4U_PORT_CAM_IMGO>;
+			mediatek,larb = <&larb3>, <&larb6>;
+			power-domains = <&scpsys MT8183_POWER_DOMAIN_CAM>;
+			status = "disabled";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					camsv3_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf_camsv3_endpoint>;
+					};
+				};
+			};
+		};
+
 		seninf: seninf@1a040000 {
 			compatible = "mediatek,mt8183-seninf";
 			reg = <0 0x1a040000 0 0x8000>;
@@ -2045,6 +2126,30 @@
 					seninf_camsv0_endpoint: endpoint {
 						remote-endpoint =
 							<&camsv0_endpoint>;
+					};
+				};
+
+				port@5 {
+					reg = <5>;
+					seninf_camsv1_endpoint: endpoint {
+						remote-endpoint =
+							<&camsv1_endpoint>;
+					};
+				};
+
+				port@6 {
+					reg = <6>;
+					seninf_camsv2_endpoint: endpoint {
+						remote-endpoint =
+							<&camsv2_endpoint>;
+					};
+				};
+
+				port@7 {
+					reg = <7>;
+					seninf_camsv3_endpoint: endpoint {
+						remote-endpoint =
+							<&camsv3_endpoint>;
 					};
 				};
 			};
