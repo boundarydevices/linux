@@ -1978,7 +1978,7 @@
 			#clock-cells = <1>;
 		};
 
-		camsv0: camsv0@1a050000 {
+		camsv0: camsv@1a050000 {
 			compatible = "mediatek,mt8183-camsv";
 			reg = <0 0x1a050000 0 0x1000>;
 			interrupts = <GIC_SPI 258 IRQ_TYPE_LEVEL_LOW>;
@@ -1986,16 +1986,21 @@
 				 <&camsys CLK_CAM_CAMTG>,
 				 <&camsys CLK_CAM_CAMSV0>;
 			clock-names = "camsys_cam_cgpdn", "camsys_camtg_cgpdn",
-						"camsys_camsv0";
+						"camsys_camsv";
 			iommus = <&iommu M4U_PORT_CAM_IMGO>;
 			mediatek,larb = <&larb3>, <&larb6>;
 			power-domains = <&scpsys MT8183_POWER_DOMAIN_CAM>;
 			status = "disabled";
 
-			port {
-				camsv_endpoint: endpoint {
-					remote-endpoint =
-						<&seninf_camsv_endpoint>;
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					camsv0_endpoint: endpoint {
+						remote-endpoint =
+							<&seninf_camsv0_endpoint>;
+					};
 				};
 			};
 		};
@@ -2037,9 +2042,9 @@
 
 				port@4 {
 					reg = <4>;
-					seninf_camsv_endpoint: endpoint {
+					seninf_camsv0_endpoint: endpoint {
 						remote-endpoint =
-							<&camsv_endpoint>;
+							<&camsv0_endpoint>;
 					};
 				};
 			};
