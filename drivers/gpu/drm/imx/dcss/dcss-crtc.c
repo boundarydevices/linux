@@ -113,11 +113,6 @@ static void dcss_crtc_atomic_begin(struct drm_crtc *crtc,
 				   struct drm_crtc_state *old_crtc_state)
 {
 	drm_crtc_vblank_on(crtc);
-
-	if (crtc->state->fence) {
-		drm_crtc_arm_fence_event(crtc, crtc->state->fence);
-		crtc->state->fence = NULL;
-	}
 }
 
 static void dcss_crtc_atomic_flush(struct drm_crtc *crtc,
@@ -244,10 +239,8 @@ static irqreturn_t dcss_crtc_irq_handler(int irq, void *dev_id)
 	if (!dcss_dtg_vblank_irq_valid(dcss->dtg))
 		return IRQ_NONE;
 
-	if (dcss_ctxld_is_flushed(dcss->ctxld)) {
+	if (dcss_ctxld_is_flushed(dcss->ctxld))
 		drm_crtc_handle_vblank(&dcss_crtc->base);
-		drm_crtc_handle_fence(&dcss_crtc->base);
-	}
 
 	dcss_dtg_vblank_irq_clear(dcss->dtg);
 
