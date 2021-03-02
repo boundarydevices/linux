@@ -27,6 +27,7 @@ struct sn65dsi83_brg {
 
 	u8 num_lvds_ch;
 	u8 num_dsi_lanes;
+	bool even_odd_swap;
 	struct sn65dsi83_brg_funcs *funcs;
 };
 struct sn65dsi83_brg *sn65dsi83_brg_get(void);

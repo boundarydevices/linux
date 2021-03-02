@@ -246,6 +246,8 @@ static int sn65dsi83_parse_dt(struct device_node *np,
 	of_property_read_u32(np, "ti,height-mm", &height);
 	of_property_read_u32(np, "ti,lvds-channels", &num_ch);
 
+	sn65dsi83->brg->even_odd_swap = of_property_read_bool(np, "even_odd_swap");
+
 	if (num_lanes < 1 || num_lanes > 4) {
 		dev_err(dev, "Invalid dsi-lanes: %u\n", num_lanes);
 		return -EINVAL;

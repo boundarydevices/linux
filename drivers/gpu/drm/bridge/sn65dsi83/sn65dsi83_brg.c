@@ -61,6 +61,12 @@
 
 #define SN65DSI83_LVDS_SIGN           0x19
 #define SN65DSI83_LVDS_TERM           0x1A
+#define CHB_LVDS_TERM		0
+#define CHA_LVDS_TERM		1
+#define CHB_REVERSE_LVDS	4
+#define CHB_REVERSE_LVDS	5
+#define EVEN_ODD_SWAP		6
+
 #define SN65DSI83_LVDS_CM_ADJ         0x1B
 #define SN65DSI83_CHA_LINE_LEN_LO     0x20
 #define SN65DSI83_CHA_LINE_LEN_HI     0x21
@@ -293,7 +299,15 @@ static int sn65dsi83_brg_configure(struct sn65dsi83_brg *brg)
 
 	/* Voltage and pins */
 	SN65DSI83_WRITE(SN65DSI83_LVDS_SIGN, 0x00);
-	SN65DSI83_WRITE(SN65DSI83_LVDS_TERM, 0x03);
+
+	regval = 0;
+	regval |= (1 << CHA_LVDS_TERM);
+	if (CHNUM(brg) == 2)
+		regval |= (1 << CHB_LVDS_TERM);
+	if (brg->even_odd_swap)
+		regval |= (1 << EVEN_ODD_SWAP);
+
+	SN65DSI83_WRITE(SN65DSI83_LVDS_TERM, regval);
 	SN65DSI83_WRITE(SN65DSI83_LVDS_CM_ADJ, 0x00);
 
 	/* Configure sync delay to minimal allowed value */
