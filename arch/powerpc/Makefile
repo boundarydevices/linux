@@ -342,27 +342,27 @@ corenet64_smp_defconfig:
 
 PHONY += corenet32_smp_sdk_defconfig
 corenet32_smp_sdk_defconfig:
-	$(call merge_into_defconfig,corenet_basic_defconfig,\
+	$(call merge_into_defconfig,corenet_base.config,\
 		85xx-32bit 85xx-smp 85xx-hw fsl-emb-nonhw sdk_dpaa)
 
 PHONY += corenet32_fmanv3l_smp_sdk_defconfig
 corenet32_fmanv3l_smp_sdk_defconfig:
-	$(call merge_into_defconfig,corenet_basic_defconfig,\
+	$(call merge_into_defconfig,corenet_base.config,\
 		85xx-32bit 85xx-smp 85xx-hw fsl-emb-nonhw sdk_dpaa fmanv3l)
 
 PHONY += corenet64_smp_sdk_defconfig
 corenet64_smp_sdk_defconfig:
-	$(call merge_into_defconfig,corenet_basic_defconfig,\
+	$(call merge_into_defconfig,corenet_base.config,\
 		85xx-64bit 85xx-smp altivec 85xx-hw fsl-emb-nonhw sdk_dpaa)
 
 PHONY += corenet64_fmanv3l_smp_sdk_defconfig
 corenet64_fmanv3l_smp_sdk_defconfig:
-	$(call merge_into_defconfig,corenet_basic_defconfig,\
+	$(call merge_into_defconfig,corenet_base.config,\
 		85xx-64bit 85xx-smp altivec 85xx-hw fsl-emb-nonhw sdk_dpaa fmanv3l)
 
 PHONY += corenet64_fmanv3h_smp_sdk_defconfig
 corenet64_fmanv3h_smp_sdk_defconfig:
-	$(call merge_into_defconfig,corenet_basic_defconfig,\
+	$(call merge_into_defconfig,corenet_base.config,\
 		85xx-64bit 85xx-smp altivec 85xx-hw fsl-emb-nonhw sdk_dpaa fmanv3h)
 
 PHONY += mpc86xx_defconfig
