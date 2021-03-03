@@ -59,6 +59,13 @@ config LEDS_88PM860X
 	  This option enables support for on-chip LED drivers found on Marvell
 	  Semiconductor 88PM8606 PMIC.
 
+config LEDS_ADP1650
+	tristate "LED support for ADI ADP1650"
+	depends on LEDS_CLASS && I2C
+	select REGMAP_I2C
+	help
+	  This option enables support for the LED on the ADP1650.
+
 config LEDS_AN30259A
 	tristate "LED support for Panasonic AN30259A"
 	depends on LEDS_CLASS && I2C && OF
