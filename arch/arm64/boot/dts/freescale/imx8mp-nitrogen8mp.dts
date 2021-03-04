@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /*
- * Copyright 2019 NXP
+ * Copyright 2020 Boundary Devices
  */
 
 /dts-v1/;
@@ -49,15 +49,8 @@
 
 	pinctrl_eqos: eqosgrp {
 		fsl,pins = <
-#if 1
-			MX8MP_IOMUXC_ENET_MDC__ENET_QOS_MDC	0x3
-			MX8MP_IOMUXC_ENET_MDIO__ENET_QOS_MDIO	0x3
-#else
-#define GP_FEC1_MII_MDC	<&gpio1 16 GPIO_PULSE_HIGH>
-			MX8MP_IOMUXC_ENET_MDC__GPIO1_IO16	0x3
-#define GP_FEC1_MII_MDIO	<&gpio1 17 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_ENET_MDIO__GPIO1_IO17	0x3
-#endif
+			MX8MP_IOMUXC_ENET_MDC__ENET_QOS_MDC		0x20
+			MX8MP_IOMUXC_ENET_MDIO__ENET_QOS_MDIO		0xa0
 			MX8MP_IOMUXC_ENET_TX_CTL__ENET_QOS_RGMII_TX_CTL	0x1f
 			MX8MP_IOMUXC_ENET_TXC__CCM_ENET_QOS_CLOCK_GENERATE_TX_CLK	0x1f
 			MX8MP_IOMUXC_ENET_TD0__ENET_QOS_RGMII_TD0		0x1f
@@ -71,24 +64,17 @@
 			MX8MP_IOMUXC_ENET_RD1__ENET_QOS_RGMII_RD1	0x91
 			MX8MP_IOMUXC_ENET_RD2__ENET_QOS_RGMII_RD2	0x91
 			MX8MP_IOMUXC_ENET_RD3__ENET_QOS_RGMII_RD3	0x91
-#define GP_FEC1_RESET	<&gpio3 16 GPIO_ACTIVE_LOW>
+#define GP_EQOS_RESET	<&gpio3 16 GPIO_ACTIVE_LOW>
 			MX8MP_IOMUXC_NAND_READY_B__GPIO3_IO16		0x100
-#define GPIRQ_FEC1_PHY	<&gpio3 2 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_EQOS_PHY	<&gpio3 2 IRQ_TYPE_LEVEL_LOW>
 			MX8MP_IOMUXC_NAND_CE1_B__GPIO3_IO02		0x10
 		>;
 	};
 
 	pinctrl_fec: fecgrp {
 		fsl,pins = <
-#if 0
-			MX8MP_IOMUXC_SAI1_RXD2__ENET1_MDC		0x3
-			MX8MP_IOMUXC_SAI1_RXD3__ENET1_MDIO		0x3
-#else
-#define GP_FEC2_MII_MDC		<&gpio4 4 GPIO_PULSE_HIGH>
-			MX8MP_IOMUXC_SAI1_RXD2__GPIO4_IO04		0x3
-#define GP_FEC2_MII_MDIO	<&gpio4 5 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_SAI1_RXD3__GPIO4_IO05		0x3
-#endif
+			MX8MP_IOMUXC_SAI1_RXD2__ENET1_MDC		0x0
+			MX8MP_IOMUXC_SAI1_RXD3__ENET1_MDIO		0xa0
 			MX8MP_IOMUXC_SAI1_TXD4__ENET1_RGMII_TX_CTL	0x1f
 			MX8MP_IOMUXC_SAI1_TXD5__ENET1_RGMII_TXC		0x1f
 			MX8MP_IOMUXC_SAI1_TXD0__ENET1_RGMII_TD0		0x1f
@@ -102,9 +88,9 @@
 			MX8MP_IOMUXC_SAI1_RXD5__ENET1_RGMII_RD1		0x91
 			MX8MP_IOMUXC_SAI1_RXD6__ENET1_RGMII_RD2		0x91
 			MX8MP_IOMUXC_SAI1_RXD7__ENET1_RGMII_RD3		0x91
-#define GP_FEC2_RESET	<&gpio5 8 GPIO_ACTIVE_LOW>
+#define GP_FEC_RESET	<&gpio5 8 GPIO_ACTIVE_LOW>
 			MX8MP_IOMUXC_ECSPI1_MISO__GPIO5_IO08		0x100
-#define GPIRQ_FEC2_PHY	<&gpio1 7 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_FEC_PHY	<&gpio1 7 IRQ_TYPE_LEVEL_LOW>
 			MX8MP_IOMUXC_GPIO1_IO07__GPIO1_IO07		0x10
 		>;
 	};
@@ -869,10 +855,6 @@
 };
 
 &eqos {
-#ifdef GP_FEC1_MII_MDC
-	mdc-gpios = GP_FEC1_MII_MDC;
-	mdio-gpios = GP_FEC1_MII_MDIO;
-#endif
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_eqos>;
 	phy-mode = "rgmii-id";
@@ -888,9 +870,9 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			at803x,hib-disabled;
 			eee-broken-1000t;
-			interrupts-extended = GPIRQ_FEC1_PHY;
+			interrupts-extended = GPIRQ_EQOS_PHY;
 #if 0
-			reset-gpios = GP_FEC1_RESET;
+			reset-gpios = GP_EQOS_RESET;
 #endif
 			reg = <4>;
 		};
@@ -898,12 +880,10 @@
 };
 
 &fec {
-	mdc-gpios = GP_FEC2_MII_MDC;
-	mdio-gpios = GP_FEC2_MII_MDIO;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_fec>;
 #if 0
-	phy-reset-gpios = GP_FEC2_RESET;
+	phy-reset-gpios = GP_FEC_RESET;
 #endif
 	phy-mode = "rgmii-id";
 	phy-handle = <&ethphy1>;
@@ -917,7 +897,7 @@
 		ethphy1: ethernet-phy@4 {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			eee-broken-1000t;
-			interrupts-extended = GPIRQ_FEC2_PHY;
+			interrupts-extended = GPIRQ_FEC_PHY;
 			reg = <4>;
 		};
 	};
