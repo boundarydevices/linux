@@ -491,6 +491,7 @@ static int sn_fb_event(struct notifier_block *nb, unsigned long event, void *dat
 	}
 	case FB_EVENT_RESUME : {
 		dev_info(dev, "%s: resume\n", __func__ );
+		sn_powerup_begin(sn);
 		break;
 	}
 	case FB_EVENT_FB_REGISTERED : {
