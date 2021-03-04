@@ -102,6 +102,15 @@
 		>;
 	};
 
+	pinctrl_i2c4_sc16is7xx: i2c4-sc16is7xxgrp {
+		fsl,pins = <
+#define GPIRQ3_SC16IS7XX        <&gpio4 30 IRQ_TYPE_EDGE_FALLING>
+			MX8MM_IOMUXC_SAI3_RXD_GPIO4_IO30                0x1c0
+#define GP_SC16IS7XX_RESET3     <&gpio4 9 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_SAI1_RXD7_GPIO4_IO9                0x100
+		>;
+	};
+
 	pinctrl_pcie0: pcie0grp {
 		fsl,pins = <
 #define GP_PCIE0_RESET		<&gpio4 31 GPIO_ACTIVE_LOW>
@@ -118,8 +127,6 @@
 		fsl,pins = <
 			MX8MM_IOMUXC_GPIO1_IO12_USB1_OTG_PWR		0x16
 			MX8MM_IOMUXC_GPIO1_IO13_USB1_OTG_OC		0x156
-#define GP_USB_UART_nXRES		<&gpio4 9 GPIO_ACTIVE_LOW>
-			MX8MM_IOMUXC_SAI1_RXD7_GPIO4_IO9		0x140
 		>;
 	};
 
@@ -261,6 +268,16 @@
 	/delete-node/ i2cmux9540@70;
 	/delete-node/ i2cmux9546@70;
 	/delete-node/ codec@1a;
+
+	sc16is7xx-uart@4c {
+		clocks = <&clk1m8432>;
+		compatible = "nxp,sc16is752";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c4_sc16is7xx>;
+		reg = <0x4c>;
+		reset-gpios = GP_SC16IS7XX_RESET3;
+		interrupts-extended = GPIRQ3_SC16IS7XX;
+	};
 };
 
 &usbotg2 {
