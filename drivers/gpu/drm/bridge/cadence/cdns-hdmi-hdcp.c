@@ -988,6 +988,8 @@ int cdns_hdmi_hdcp_disable(struct cdns_mhdp_device *mhdp)
 {
 	int ret = 0;
 
+	cancel_delayed_work_sync(&mhdp->hdcp.check_work);
+
 	mutex_lock(&mhdp->hdcp.mutex);
 	if (mhdp->hdcp.value != DRM_MODE_CONTENT_PROTECTION_UNDESIRED) {
 		mhdp->hdcp.value = DRM_MODE_CONTENT_PROTECTION_UNDESIRED;
@@ -998,7 +1000,8 @@ int cdns_hdmi_hdcp_disable(struct cdns_mhdp_device *mhdp)
 
 	mutex_unlock(&mhdp->hdcp.mutex);
 
-	cancel_delayed_work_sync(&mhdp->hdcp.check_work);
+	/* Make sure HDCP_STATE_DISABLING state is handled */
+	hdmi_hdcp_check_link(mhdp);
 
 	return ret;
 }
@@ -1045,6 +1048,15 @@ static int hdmi_hdcp_check_link(struct cdns_mhdp_device *mhdp)
 	mhdp->hdcp.reauth_in_progress = 0;
 	mutex_lock(&mhdp->lock);
 
+	if (mhdp->hdcp.state == HDCP_STATE_INACTIVE)
+		goto out;
+
+	if (mhdp->hdcp.state == HDCP_STATE_DISABLING) {
+		_hdmi_hdcp_disable(mhdp);
+		mhdp->hdcp.state = HDCP_STATE_INACTIVE;
+		goto out;
+	}
+
 	if ((mhdp->hdcp.state == HDCP_STATE_AUTHENTICATED)  ||
 		(mhdp->hdcp.state == HDCP_STATE_AUTHENTICATING) ||
 		(mhdp->hdcp.state == HDCP_STATE_REAUTHENTICATING) ||
@@ -1053,18 +1065,11 @@ static int hdmi_hdcp_check_link(struct cdns_mhdp_device *mhdp)
 		/* In active states, check the HPD signal. Because of the IRQ
 		 * debounce delay, the state might not reflect the disconnection.
 		 * The FW could already have detected the HDP down and reported error */
-	   hpd_sts = cdns_mhdp_read_hpd(mhdp);
-		if (1 != hpd_sts)
+		hpd_sts = cdns_mhdp_read_hpd(mhdp);
+		if (1 != hpd_sts) {
 			mhdp->hdcp.state = HDCP_STATE_DISABLING;
-	}
-
-	if (mhdp->hdcp.state == HDCP_STATE_INACTIVE)
-		goto out;
-
-	if (mhdp->hdcp.state == HDCP_STATE_DISABLING) {
-		_hdmi_hdcp_disable(mhdp);
-		mhdp->hdcp.state = HDCP_STATE_INACTIVE;
-		goto out;
+			goto out;
+		}
 	}
 
 /* TODO items:

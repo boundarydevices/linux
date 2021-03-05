@@ -2948,6 +2948,7 @@ static int stmmac_open(struct net_device *dev)
 	phylink_start(priv->phylink);
 	/* We may have called phylink_speed_down before */
 	phylink_speed_up(priv->phylink);
+	priv->is_phy_started = true;
 
 	/* Request the IRQ lines */
 	ret = request_irq(dev->irq, stmmac_interrupt,
@@ -3024,6 +3025,7 @@ static int stmmac_release(struct net_device *dev)
 	/* Stop and disconnect the PHY */
 	phylink_stop(priv->phylink);
 	phylink_disconnect_phy(priv->phylink);
+	priv->is_phy_started = false;
 
 	stmmac_disable_all_queues(priv);
 
@@ -4735,7 +4737,15 @@ static int stmmac_vlan_rx_kill_vid(struct net_device *ndev, __be16 proto, u16 vi
 	clear_bit(vid, priv->active_vlans);
 
 	if (priv->hw->num_vlan) {
-		ret = stmmac_del_hw_vlan_rx_fltr(priv, ndev, priv->hw, proto, vid);
+		if (priv->is_phy_started == false) {
+			stmmac_init_phy(ndev);
+			phylink_start(priv->phylink);
+			ret = stmmac_del_hw_vlan_rx_fltr(priv, ndev, priv->hw, proto, vid);
+			phylink_stop(priv->phylink);
+			phylink_disconnect_phy(priv->phylink);
+		} else {
+			ret = stmmac_del_hw_vlan_rx_fltr(priv, ndev, priv->hw, proto, vid);
+		}
 		if (ret)
 			return ret;
 	}

@@ -2170,7 +2170,7 @@ static long usdpaa_ioctl_compat(struct file *fp, unsigned int cmd,
 	{
 		int ret;
 		struct usdpaa_ioctl_dma_map_compat input;
-		struct usdpaa_ioctl_dma_map converted;
+		struct usdpaa_ioctl_dma_map converted = {0};
 
 		if (copy_from_user(&input, a, sizeof(input)))
 			return -EFAULT;
@@ -2199,7 +2199,7 @@ static long usdpaa_ioctl_compat(struct file *fp, unsigned int cmd,
 	{
 		int ret;
 		struct compat_usdpaa_ioctl_portal_map input;
-		struct usdpaa_ioctl_portal_map converted;
+		struct usdpaa_ioctl_portal_map converted = {0};
 		if (copy_from_user(&input, a, sizeof(input)))
 			return -EFAULT;
 		converted.type = input.type;
@@ -2217,7 +2217,7 @@ static long usdpaa_ioctl_compat(struct file *fp, unsigned int cmd,
 	case USDPAA_IOCTL_PORTAL_UNMAP_COMPAT:
 	{
 		struct usdpaa_portal_map_compat input;
-		struct usdpaa_portal_map converted;
+		struct usdpaa_portal_map converted = {0};
 
 		if (copy_from_user(&input, a, sizeof(input)))
 			return -EFAULT;
@@ -2228,7 +2228,7 @@ static long usdpaa_ioctl_compat(struct file *fp, unsigned int cmd,
 	case USDPAA_IOCTL_ALLOC_RAW_PORTAL_COMPAT:
 	{
 		int ret;
-		struct usdpaa_ioctl_raw_portal converted;
+		struct usdpaa_ioctl_raw_portal converted = {0};
 		struct compat_ioctl_raw_portal input;
 		if (copy_from_user(&input, a, sizeof(input)))
 			return -EFAULT;
@@ -2251,7 +2251,7 @@ static long usdpaa_ioctl_compat(struct file *fp, unsigned int cmd,
 	}
 	case USDPAA_IOCTL_FREE_RAW_PORTAL_COMPAT:
 	{
-		struct usdpaa_ioctl_raw_portal converted;
+		struct usdpaa_ioctl_raw_portal converted = {0};
 		struct compat_ioctl_raw_portal input;
 		if (copy_from_user(&input, a, sizeof(input)))
 			return -EFAULT;
