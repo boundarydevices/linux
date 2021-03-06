@@ -477,10 +477,15 @@ static int dw_hdmi_i2c_xfer(struct i2c_adapter *adap,
 	for (i = 0; i < num; i++) {
 		dev_dbg(hdmi->dev, "xfer: num: %d/%d, len: %d, flags: %#x\n",
 			i + 1, num, msgs[i].len, msgs[i].flags);
-		if (msgs[i].addr == DDC_SEGMENT_ADDR && msgs[i].len == 1) {
+		if (msgs[i].addr == DDC_SEGMENT_ADDR && msgs[i].len == 1 &&
+				!(msgs[i].flags & I2C_M_RD)) {
 			i2c->is_segment = true;
 			hdmi_writeb(hdmi, DDC_SEGMENT_ADDR, HDMI_I2CM_SEGADDR);
 			hdmi_writeb(hdmi, *msgs[i].buf, HDMI_I2CM_SEGPTR);
+		} if (msgs[i].addr == 0x59 && msgs[i].len == 1 &&
+					(msgs[i].flags & I2C_M_RD)) {
+			/* Sceptre monitor locks up edid if this is read */
+			ret = -EIO;
 		} else {
 			if (msgs[i].flags & I2C_M_RD)
 				ret = dw_hdmi_i2c_read(hdmi, msgs[i].buf,
