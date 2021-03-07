@@ -409,6 +409,20 @@ static struct vsi_video_fmt vsi_raw_fmt[] = {
 		.dec_fmt = VSI_V4L2_DECOUT_DTRC_10BIT,
 		.flag = 0,
 	},
+	{
+		.name = "VSI DTRC compressed",
+		.fourcc = V4L2_PIX_FMT_RFC,
+		.enc_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE,
+		.dec_fmt = VSI_V4L2_DECOUT_RFC,
+		.flag = 0,
+	},
+	{
+		.name = "VSI DTRC 10 bit compressed",
+		.fourcc = V4L2_PIX_FMT_RFCX,
+		.enc_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE,
+		.dec_fmt = VSI_V4L2_DECOUT_RFC_10BIT,
+		.flag = 0,
+	},
 };
 
 static struct vsi_video_fmt vsi_coded_fmt[] = {
@@ -494,6 +508,19 @@ static struct vsi_video_fmt vsi_coded_fmt[] = {
 		.flag = (V4L2_FMT_FLAG_DYN_RESOLUTION | V4L2_FMT_FLAG_COMPRESSED),
 	},
 };
+
+static int istiledfmt(int pixelformat)
+{
+	switch (pixelformat) {
+	case VSI_V4L2_DECOUT_DTRC:
+	case VSI_V4L2_DECOUT_DTRC_10BIT:
+	case VSI_V4L2_DECOUT_RFC:
+	case VSI_V4L2_DECOUT_RFC_10BIT:
+		return 1;
+	default:
+		return 0;
+	}
+}
 
 void vsi_enum_encfsize(struct v4l2_frmsizeenum *f, u32 pixel_format)
 {
@@ -687,19 +714,30 @@ struct vsi_video_fmt *vsi_enum_dec_format(int idx, int braw, struct vsi_v4l2_ctx
 			outfmt = vsi_raw_fmt[i].dec_fmt;
 			if (outfmt == V4L2_DAEMON_CODEC_UNKNOW_TYPE)
 				continue;
-			if ((outfmt == VSI_V4L2_DECOUT_DTRC || outfmt == VSI_V4L2_DECOUT_DTRC_10BIT) &&
-				inputformat != V4L2_DAEMON_CODEC_DEC_HEVC &&
-				inputformat != V4L2_DAEMON_CODEC_DEC_VP9)
-				continue;
+			if (istiledfmt(outfmt)) {
+				if (inputformat != V4L2_DAEMON_CODEC_DEC_HEVC &&
+					inputformat != V4L2_DAEMON_CODEC_DEC_VP9)
+					continue;
+				if ((outfmt == VSI_V4L2_DECOUT_DTRC ||
+					outfmt == VSI_V4L2_DECOUT_DTRC_10BIT) &&
+					vsi_v4l2_hwconfig.max_dec_resolution > 1920)
+					continue;
+				if ((outfmt == VSI_V4L2_DECOUT_RFC ||
+					outfmt == VSI_V4L2_DECOUT_RFC_10BIT) &&
+					vsi_v4l2_hwconfig.max_dec_resolution <= 1920)
+					continue;
+			}
 			if (test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag)) {
 				if ((outfmt == VSI_V4L2_DECOUT_NV12_10BIT ||
 					outfmt == VSI_V4L2_DECOUT_P010) &&
 					ctx->mediacfg.decparams.dec_info.dec_info.bit_depth < 10)
 					continue;
-				if ((outfmt == VSI_V4L2_DECOUT_DTRC_10BIT) &&
+				if ((outfmt == VSI_V4L2_DECOUT_DTRC_10BIT ||
+					outfmt == VSI_V4L2_DECOUT_RFC_10BIT) &&
 					ctx->mediacfg.decparams.dec_info.dec_info.bit_depth != 10)
 					continue;
-				if ((outfmt == VSI_V4L2_DECOUT_DTRC) &&
+				if ((outfmt == VSI_V4L2_DECOUT_DTRC ||
+					outfmt == VSI_V4L2_DECOUT_RFC) &&
 					ctx->mediacfg.decparams.dec_info.dec_info.bit_depth != 8)
 					continue;
 			}
@@ -912,6 +950,8 @@ static void verifyPlanesize(unsigned int psize[], int braw, int pixelformat, int
 			case V4L2_PIX_FMT_DTRC:
 			case V4L2_PIX_FMT_P010:
 			case V4L2_PIX_FMT_TILEX:
+			case V4L2_PIX_FMT_RFC:
+			case V4L2_PIX_FMT_RFCX:
 				extsize = basesize / 2;
 				quadsize = basesize / 4;
 				break;
@@ -1206,9 +1246,11 @@ static int vsiv4l2_decidepixeldepth(int pixelformat, int origdepth)
 		return 16;
 	case VSI_V4L2_DECOUT_NV12:
 	case VSI_V4L2_DECOUT_DTRC:
+	case VSI_V4L2_DECOUT_RFC:
 		return 8;
 	case VSI_V4L2_DECOUT_NV12_10BIT:
 	case VSI_V4L2_DECOUT_DTRC_10BIT:
+	case VSI_V4L2_DECOUT_RFC_10BIT:
 		return 10;
 	default:
 		return origdepth;
@@ -1240,9 +1282,9 @@ static int vsiv4l2_setfmt_dec(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt)
 		pcfg->decparams.dec_info.io_buffer.inputFormat = targetfmt->dec_fmt;
 	} else {
 		//dtrc is only for HEVC and VP9
-		if ((targetfmt->dec_fmt == VSI_V4L2_DECOUT_DTRC || targetfmt->dec_fmt == VSI_V4L2_DECOUT_DTRC_10BIT) &&
-			pcfg->decparams.dec_info.io_buffer.inputFormat != V4L2_DAEMON_CODEC_DEC_VP9 &&
-			pcfg->decparams.dec_info.io_buffer.inputFormat != V4L2_DAEMON_CODEC_DEC_HEVC)
+		if (istiledfmt(targetfmt->dec_fmt)
+			&& pcfg->decparams.dec_info.io_buffer.inputFormat != V4L2_DAEMON_CODEC_DEC_VP9
+			&& pcfg->decparams.dec_info.io_buffer.inputFormat != V4L2_DAEMON_CODEC_DEC_HEVC)
 			return -EINVAL;
 		fmt->fmt.pix.width = pcfg->decparams.dec_info.io_buffer.output_width;
 		fmt->fmt.pix.height = pcfg->decparams.dec_info.io_buffer.output_height;
@@ -1445,13 +1487,14 @@ static int vsiv4l2_getfmt_dec(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt)
 		fmt->fmt.pix.width = pcfg->decparams.dec_info.io_buffer.srcwidth;
 		fmt->fmt.pix.height = pcfg->decparams.dec_info.io_buffer.srcheight;
 		fmt->fmt.pix.pixelformat = find_local_dec_format(pcfg->decparams.dec_info.io_buffer.inputFormat, braw);
+		fmt->fmt.pix.bytesperline = pcfg->bytesperline;
 	} else {
 		fmt->fmt.pix.width = pcfg->decparams.dec_info.io_buffer.output_width;
 		fmt->fmt.pix.height = pcfg->decparams.dec_info.io_buffer.output_height;
+		fmt->fmt.pix.bytesperline = pcfg->decparams.dec_info.io_buffer.output_wstride;
 		fmt->fmt.pix.pixelformat = find_local_dec_format(pcfg->decparams.dec_info.io_buffer.outBufFormat, braw);
 	}
 	fmt->fmt.pix.field = pcfg->field;
-	fmt->fmt.pix.bytesperline = pcfg->bytesperline;
 	fmt->fmt.pix.sizeimage = psize[0];
 	fmt->fmt.pix.colorspace = pcfg->colorspace;
 	fmt->fmt.pix.flags = pcfg->flags;

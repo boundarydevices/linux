@@ -48,7 +48,7 @@ static int vsi_enc_querycap(
 {
 	struct vsi_v4l2_dev_info *hwinfo;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%s", __func__);
+	v4l2_klog(LOGLVL_FLOW, "%s", __func__);
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 	hwinfo = vsiv4l2_get_hwinfo();
@@ -95,7 +95,7 @@ static int vsi_enc_s_input(struct file *file, void *priv, unsigned int index)
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%s", __func__);
+	v4l2_klog(LOGLVL_FLOW, "%s", __func__);
 	return 0;
 }
 
@@ -183,7 +183,7 @@ static int vsi_enc_querybuf(
 		q = &ctx->input_que;
 	else
 		q = &ctx->output_que;
-	v4l2_klog(LOGLVL_VERBOSE, "%s:%lx:%d:%d", __func__, ctx->flag, buf->type, buf->index);
+	v4l2_klog(LOGLVL_FLOW, "%s:%lx:%d:%d", __func__, ctx->flag, buf->type, buf->index);
 	ret = vb2_querybuf(q, buf);
 	if (buf->memory == V4L2_MEMORY_MMAP) {
 		if (ret == 0 && q == &ctx->output_que)
@@ -288,7 +288,7 @@ static int vsi_enc_qbuf(struct file *filp, void *priv, struct v4l2_buffer *buf)
 
 		ret = vb2_qbuf(&ctx->input_que, vdev->v4l2_dev->mdev, buf);
 	}
-	v4l2_klog(LOGLVL_VERBOSE, "%lx:%s:%d:%d:%d, %d:%d, %d:%d",
+	v4l2_klog(LOGLVL_FLOW, "%lx:%s:%d:%d:%d, %d:%d, %d:%d",
 		ctx->ctxid, __func__, buf->type, buf->index, buf->bytesused,
 		buf->m.planes[0].bytesused, buf->m.planes[0].length,
 		buf->m.planes[1].bytesused, buf->m.planes[1].length);
@@ -419,7 +419,7 @@ static int vsi_enc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 			}
 		}
 	}
-	v4l2_klog(LOGLVL_VERBOSE, "%s:%d:%d:%d:%x:%d", __func__, p->type, p->index, ret, p->flags, ctx->status);
+	v4l2_klog(LOGLVL_FLOW, "%s:%d:%d:%d:%x:%d", __func__, p->type, p->index, ret, p->flags, ctx->status);
 	return ret;
 }
 
@@ -432,7 +432,7 @@ static int vsi_enc_prepare_buf(
 	struct vb2_queue *q;
 	struct video_device *vdev = ctx->dev->venc;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%s:%d", __func__, p->type);
+	v4l2_klog(LOGLVL_FLOW, "%s:%d", __func__, p->type);
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 	if (!isvalidtype(p->type, ctx->flag))
@@ -452,7 +452,7 @@ static int vsi_enc_expbuf(
 	struct vsi_v4l2_ctx *ctx = fh_to_ctx(file->private_data);
 	struct vb2_queue *q;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%s:%d", __func__, p->type);
+	v4l2_klog(LOGLVL_FLOW, "%s:%d", __func__, p->type);
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 	if (!isvalidtype(p->type, ctx->flag))
@@ -717,7 +717,7 @@ static void vsi_enc_buf_queue(struct vb2_buffer *vb)
 	struct vsi_vpu_buf *vsibuf;
 	int ret;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%s:%d", __func__, vb->index);
+	v4l2_klog(LOGLVL_FLOW, "%s:%d", __func__, vb->index);
 	if (mutex_lock_interruptible(&ctx->ctxlock))
 		return;
 	vsibuf = vb_to_vsibuf(vb);
@@ -727,8 +727,6 @@ static void vsi_enc_buf_queue(struct vb2_buffer *vb)
 		list_add_tail(&vsibuf->list, &ctx->input_list);
 	mutex_unlock(&ctx->ctxlock);
 	ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_BUF_RDY, vb);
-	if (ret != 0)
-		ctx->error = ret;
 }
 
 static int vsi_enc_buf_init(struct vb2_buffer *vb)
@@ -785,6 +783,498 @@ static struct vb2_ops vsi_enc_qops = {
 	//int (*buf_out_validate)(struct vb2_buffer *vb);
 	//void (*buf_request_complete)(struct vb2_buffer *vb);
 };
+
+static int vsi_v4l2_enc_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+	int ret;
+	struct vsi_v4l2_ctx *ctx = ctrl_to_ctx(ctrl);
+
+	v4l2_klog(LOGLVL_CONFIG, "%s:%x=%d", __func__, ctrl->id, ctrl->val);
+	if (!vsi_v4l2_daemonalive())
+		return -ENODEV;
+	switch (ctrl->id) {
+	case V4L2_CID_MPEG_VIDEO_GOP_SIZE:
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.intraPicRate = ctrl->val;
+		break;
+	case V4L2_CID_MPEG_VIDEO_VP8_PROFILE:
+	case V4L2_CID_MPEG_VIDEO_VP9_PROFILE:
+	case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
+	case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
+		ret = vsi_set_profile(ctx, ctrl->id, ctrl->val);
+		return ret;
+	case V4L2_CID_MPEG_VIDEO_BITRATE:
+		ctx->mediacfg.encparams.general.bitPerSecond = ctrl->val;
+		break;
+	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
+		ret = vsi_get_Level(ctx, 0, 1, ctrl->val);
+		if (ret >= 0)
+			ctx->mediacfg.encparams.specific.enc_h26x_cmd.avclevel = ret;
+		else
+			return ret;
+		break;
+	case V4L2_CID_MPEG_VIDEO_HEVC_LEVEL:
+		ret = vsi_get_Level(ctx, 1, 1, ctrl->val);
+		if (ret >= 0)
+			ctx->mediacfg.encparams.specific.enc_h26x_cmd.hevclevel = ret;
+		else
+			return ret;
+		break;
+	case V4L2_CID_MPEG_VIDEO_H264_MAX_QP:
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpMax = ctrl->val;
+		break;
+	case V4L2_CID_MPEG_VIDEO_H264_MIN_QP:
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpMin = ctrl->val;
+		break;
+	case V4L2_CID_MPEG_VIDEO_B_FRAMES:
+		if (ctrl->val != 0)
+			return -EINVAL;
+		/*in fact nothing to do*/
+		break;
+	case V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP:
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.bFrameQpDelta = ctrl->val;
+		break;
+	case V4L2_CID_MPEG_VIDEO_BITRATE_MODE:
+		if (ctrl->val == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR)
+			ctx->mediacfg.encparams.specific.enc_h26x_cmd.hrdConformance = 0;
+		else
+			ctx->mediacfg.encparams.specific.enc_h26x_cmd.hrdConformance = 1;
+		break;
+	case V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME:
+		set_bit(CTX_FLAG_FORCEIDR_BIT, &ctx->flag);
+		break;
+	case V4L2_CID_MPEG_VIDEO_HEADER_MODE:
+		break;
+	case V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MODE:
+		ctx->mediacfg.multislice_mode = ctrl->val;
+		break;
+	case V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_MB:
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.sliceSize = ctrl->val;
+		break;
+	case V4L2_CID_MPEG_VIDEO_FRAME_RC_ENABLE:
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.picRc = ctrl->val;
+		break;
+	case V4L2_CID_MPEG_VIDEO_MB_RC_ENABLE:
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.ctbRc = ctrl->val;
+		break;
+	case V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_HEVC_I_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_VPX_I_FRAME_QP:
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpHdrI = ctrl->val;
+		break;
+	case V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_HEVC_P_FRAME_QP:
+	case V4L2_CID_MPEG_VIDEO_VPX_P_FRAME_QP:
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpHdrP = ctrl->val;
+		break;
+	case V4L2_CID_ROTATE:
+		switch (ctrl->val) {
+		case 90:
+			ctx->mediacfg.encparams.general.rotation = VCENC_ROTATE_90L;
+			break;
+		case 180:
+			ctx->mediacfg.encparams.general.rotation = VCENC_ROTATE_180R;
+			break;
+		case 270:
+			ctx->mediacfg.encparams.general.rotation = VCENC_ROTATE_90R;
+			break;
+		case 0:
+		default:
+			ctx->mediacfg.encparams.general.rotation = VCENC_ROTATE_0;
+			break;
+		}
+		break;
+	case V4L2_CID_ROI:
+		if (ctrl->p_new.p)
+			vsiv4l2_setROI(ctx, ctrl->p_new.p);
+		break;
+	case V4L2_CID_IPCM:
+		if (ctrl->p_new.p)
+			vsiv4l2_setIPCM(ctx, ctrl->p_new.p);
+		break;
+	default:
+		return 0;
+	}
+	set_bit(CTX_FLAG_CONFIGUPDATE_BIT, &ctx->flag);
+	return 0;
+}
+
+static int vsi_v4l2_enc_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct vsi_v4l2_ctx *ctx = ctrl_to_ctx(ctrl);
+
+	v4l2_klog(LOGLVL_CONFIG, "%s:%x", __func__, ctrl->id);
+	if (!vsi_v4l2_daemonalive())
+		return -ENODEV;
+	switch (ctrl->id) {
+	case V4L2_CID_MIN_BUFFERS_FOR_CAPTURE:
+		ctrl->val = ctx->mediacfg.minbuf_4capture;	//these two may come from resoultion change
+		break;
+	case V4L2_CID_MIN_BUFFERS_FOR_OUTPUT:
+		ctrl->val = ctx->mediacfg.minbuf_4output;
+		break;
+	case V4L2_CID_ROI_COUNT:
+		ctrl->val = vsiv4l2_getROIcount();
+		break;
+	case V4L2_CID_IPCM_COUNT:
+		ctrl->val = vsiv4l2_getIPCMcount();
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+/********* for ext ctrl *************/
+static bool vsi_enc_ctrl_equal(const struct v4l2_ctrl *ctrl, u32 idx,
+		      union v4l2_ctrl_ptr ptr1,
+		      union v4l2_ctrl_ptr ptr2)
+{
+	//always update now, fix it later
+	return 0;
+}
+
+static void vsi_enc_ctrl_init(const struct v4l2_ctrl *ctrl, u32 idx,
+		     union v4l2_ctrl_ptr ptr)
+{
+	void *p = ptr.p + idx * ctrl->elem_size;
+
+	memset(p, 0, ctrl->elem_size);
+}
+
+static void vsi_enc_ctrl_log(const struct v4l2_ctrl *ctrl)
+{
+	//do nothing now
+}
+
+static int vsi_enc_ctrl_validate(const struct v4l2_ctrl *ctrl, u32 idx,
+			union v4l2_ctrl_ptr ptr)
+{
+	//always true
+	return 0;
+}
+
+static const struct v4l2_ctrl_type_ops vsi_enc_type_ops = {
+	.equal = vsi_enc_ctrl_equal,
+	.init = vsi_enc_ctrl_init,
+	.log = vsi_enc_ctrl_log,
+	.validate = vsi_enc_ctrl_validate,
+};
+/********* for ext ctrl *************/
+
+static const struct v4l2_ctrl_ops vsi_encctrl_ops = {
+	.s_ctrl = vsi_v4l2_enc_s_ctrl,
+	.g_volatile_ctrl = vsi_v4l2_enc_g_volatile_ctrl,
+};
+
+static struct v4l2_ctrl_config vsi_v4l2_encctrl_defs[] = {
+	{
+		.ops = &vsi_encctrl_ops,
+		.id = V4L2_CID_ROI_COUNT,
+		.name = "get max ROI region number",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY,
+		.min = 0,
+		.max = V4L2_MAX_ROI_REGIONS,
+		.step = 1,
+		.def = 0,
+	},
+	{
+		.ops = &vsi_encctrl_ops,
+		.type_ops = &vsi_enc_type_ops,
+		.id = V4L2_CID_ROI,
+		.name = "vsi priv v4l2 roi params set",
+		.type = VSI_V4L2_CMPTYPE_ROI,
+		.min = 0,
+		.max = V4L2_MAX_ROI_REGIONS,
+		.step = 1,
+		.def = 0,
+		.elem_size = sizeof(struct v4l2_enc_roi_params),
+	},
+	{
+		.ops = &vsi_encctrl_ops,
+		.id = V4L2_CID_IPCM_COUNT,
+		.name = "get max IPCM region number",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY,
+		.min = 0,
+		.max = V4L2_MAX_IPCM_REGIONS,
+		.step = 1,
+		.def = 0,
+	},
+	{
+		.ops = &vsi_encctrl_ops,
+		.type_ops = &vsi_enc_type_ops,
+		.id = V4L2_CID_IPCM,
+		.name = "vsi priv v4l2 ipcm params set",
+		.type = VSI_V4L2_CMPTYPE_IPCM,
+		.min = 0,
+		.max = V4L2_MAX_IPCM_REGIONS,
+		.step = 1,
+		.def = 0,
+		.elem_size = sizeof(struct v4l2_enc_ipcm_params),
+	},
+	/* kernel defined controls */
+	{
+		.id = V4L2_CID_MPEG_VIDEO_GOP_SIZE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 1,
+		.max = MAX_INTRA_PIC_RATE,
+		.step = 1,
+		.def = DEFAULT_INTRA_PIC_RATE,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_BITRATE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 10000,
+		.max = 288000000,
+		.step = 1,
+		.def = 2097152,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_H264_PROFILE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE,
+		.max = V4L2_MPEG_VIDEO_H264_PROFILE_MULTIVIEW_HIGH,
+		.def = V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_VP8_PROFILE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_VP8_PROFILE_0,
+		.max = V4L2_MPEG_VIDEO_VP8_PROFILE_3,
+		.def = V4L2_MPEG_VIDEO_VP8_PROFILE_0,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_VP9_PROFILE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_VP9_PROFILE_0,
+		.max = V4L2_MPEG_VIDEO_VP9_PROFILE_3,
+		.def = V4L2_MPEG_VIDEO_VP9_PROFILE_0,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_HEVC_PROFILE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min =  V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN,
+		.max = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10,
+		.def = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_H264_LEVEL,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
+		.max = V4L2_MPEG_VIDEO_H264_LEVEL_5_2,
+		.def = V4L2_MPEG_VIDEO_H264_LEVEL_5_0,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_HEVC_LEVEL,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
+		.max = V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1,
+		.def = V4L2_MPEG_VIDEO_HEVC_LEVEL_5,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_H264_MAX_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 0,
+		.max = 51,
+		.step = 1,
+		.def = 51,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_H264_MIN_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 0,
+		.max = 51,
+		.step = 1,
+		.def = 0,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_HEADER_MODE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE,
+		.max = V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME,
+		.def = V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_B_FRAMES,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 0,
+		.max = 0,
+		.step = 1,
+		.def = 0,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 0,
+		.max = 51,
+		.step = 1,
+		.def = DEFAULT_QP,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR,
+		.max = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR,
+		.def = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR,
+	},
+	{
+		.id = V4L2_CID_MIN_BUFFERS_FOR_CAPTURE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_VOLATILE,	//volatile contains read
+		.min = 1,
+		.max = MAX_MIN_BUFFERS_FOR_CAPTURE,
+		.step = 1,
+		.def = 1,
+	},
+	{
+		.id = V4L2_CID_MIN_BUFFERS_FOR_OUTPUT,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_VOLATILE,
+		.min = 1,
+		.max = MAX_MIN_BUFFERS_FOR_OUTPUT,
+		.step = 1,
+		.def = 1,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME,
+		.type = V4L2_CTRL_TYPE_BUTTON,
+		.min = 0,
+		.max = 0,
+		.step = 0,
+		.def = 0,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 0,
+		.max = 51,
+		.step = 1,
+		.def = DEFAULT_QP,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 0,
+		.max = 51,
+		.step = 1,
+		.def = DEFAULT_QP,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_HEVC_I_FRAME_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 0,
+		.max = 51,
+		.step = 1,
+		.def = DEFAULT_QP,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_HEVC_P_FRAME_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 0,
+		.max = 51,
+		.step = 1,
+		.def = DEFAULT_QP,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MODE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE,
+		.max = V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_MAX_MB,
+		.def = V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_MB,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 1,
+		.max = 120,		//1920 div 16
+		.step = 1,
+		.def = 1,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_FRAME_RC_ENABLE,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.min = 0,
+		.max = 1,
+		.step = 1,
+		.def = 0,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_MB_RC_ENABLE,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.min = 0,
+		.max = 1,
+		.step = 1,
+		.def = 0,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_VPX_I_FRAME_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 0,
+		.max = 51,
+		.step = 1,
+		.def = DEFAULT_QP,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_VPX_P_FRAME_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 0,
+		.max = 51,
+		.step = 1,
+		.def = DEFAULT_QP,
+	},
+	{
+		.id = V4L2_CID_ROTATE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 0,
+		.max = 270,
+		.step = 90,
+		.def = 0,
+	},
+};
+
+static int vsi_setup_enc_ctrls(struct v4l2_ctrl_handler *handler)
+{
+	int i, ctrl_num = ARRAY_SIZE(vsi_v4l2_encctrl_defs);
+	struct v4l2_ctrl *ctrl = NULL;
+
+	v4l2_ctrl_handler_init(handler, ctrl_num);
+
+	if (handler->error)
+		return handler->error;
+
+	for (i = 0; i < ctrl_num; i++) {
+		vsi_v4l2_update_ctrlcfg(&vsi_v4l2_encctrl_defs[i]);
+		if (is_vsi_ctrl(vsi_v4l2_encctrl_defs[i].id))
+			ctrl = v4l2_ctrl_new_custom(handler, &vsi_v4l2_encctrl_defs[i], NULL);
+		else {
+			if (vsi_v4l2_encctrl_defs[i].type == V4L2_CTRL_TYPE_MENU) {
+				ctrl = v4l2_ctrl_new_std_menu(handler, &vsi_encctrl_ops,
+					vsi_v4l2_encctrl_defs[i].id,
+					vsi_v4l2_encctrl_defs[i].max,
+					0,
+					vsi_v4l2_encctrl_defs[i].def);
+			} else {
+				ctrl = v4l2_ctrl_new_std(handler,
+					&vsi_encctrl_ops,
+					vsi_v4l2_encctrl_defs[i].id,
+					vsi_v4l2_encctrl_defs[i].min,
+					vsi_v4l2_encctrl_defs[i].max,
+					vsi_v4l2_encctrl_defs[i].step,
+					vsi_v4l2_encctrl_defs[i].def);
+			}
+		}
+		if (ctrl && (vsi_v4l2_encctrl_defs[i].flags & V4L2_CTRL_FLAG_VOLATILE))
+			ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
+
+		if (handler->error) {
+			v4l2_klog(LOGLVL_ERROR, "fail to set ctrl %d:%d", i, handler->error);
+			break;
+		}
+	}
+
+	v4l2_ctrl_handler_setup(handler);
+	return handler->error;
+}
 
 static int v4l2_enc_open(struct file *filp)
 {
@@ -852,7 +1342,7 @@ static int v4l2_enc_open(struct file *filp)
 	}
 	INIT_LIST_HEAD(&ctx->queued_list);
 	vsiv4l2_initcfg(ctx);
-	vsi_setup_ctrls(&ctx->ctrlhdl);
+	vsi_setup_enc_ctrls(&ctx->ctrlhdl);
 	vfh = (struct v4l2_fh *)filp->private_data;
 	vfh->ctrl_handler = &ctx->ctrlhdl;
 	atomic_set(&ctx->srcframen, 0);
@@ -876,7 +1366,7 @@ static int v4l2_enc_mmap(struct file *filp, struct vm_area_struct *vma)
 	unsigned long offset = vma->vm_pgoff << PAGE_SHIFT;
 	int ret;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%s", __func__);
+	v4l2_klog(LOGLVL_FLOW, "%s", __func__);
 	if (offset < OUTF_BASE) {
 		ret = vb2_mmap(&ctx->input_que, vma);
 	} else {
@@ -896,7 +1386,7 @@ static __poll_t vsi_enc_poll(struct file *file, poll_table *wait)
 	int srcn = atomic_read(&ctx->srcframen);
 
 	if (!vsi_v4l2_daemonalive())
-		return POLLERR;
+		ret |= POLLERR;
 
 	if (v4l2_event_pending(&ctx->fh)) {
 		v4l2_klog(LOGLVL_WARNING, "%s event", __func__);

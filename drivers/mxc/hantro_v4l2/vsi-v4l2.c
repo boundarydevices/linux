@@ -138,6 +138,17 @@ struct vsi_v4l2_ctx *vsi_create_ctx(void)
 	return ctx;
 }
 
+void vsi_set_ctx_error(struct vsi_v4l2_ctx *ctx, s32 error)
+{
+	ctx->error = error;
+	if (error < 0) {
+		struct v4l2_event event;
+
+		memset(&event, 0, sizeof(struct v4l2_event));
+		event.type = V4L2_EVENT_CODEC_ERROR,
+		v4l2_event_queue_fh(&ctx->fh, &event);
+	}
+}
 void wakeup_ctxqueues(void)
 {
 	struct vsi_v4l2_ctx *ctx;
@@ -145,7 +156,7 @@ void wakeup_ctxqueues(void)
 
 	idr_for_each_entry(&vsi_inst_array, ctx, id) {
 		if (ctx) {
-			ctx->error = -2;
+			vsi_set_ctx_error(ctx, DAEMON_ERR_DAEMON_MISSING);
 			wake_up_interruptible_all(&ctx->input_que.done_wq);
 			wake_up_interruptible_all(&ctx->output_que.done_wq);
 			wake_up_interruptible_all(&ctx->retbuf_queue);
@@ -190,7 +201,7 @@ int vsi_v4l2_reset_ctx(struct vsi_v4l2_ctx *ctx)
 		return_all_buffers(&ctx->output_que, VB2_BUF_STATE_DONE, 0);
 		removeallcropinfo(ctx);
 		ctx->status = VSI_STATUS_INIT;
-		ctx->error = 0;
+		vsi_set_ctx_error(ctx, 0);
 	}
 	return ret;
 }
@@ -207,543 +218,7 @@ int vsi_v4l2_release(struct file *filp)
 	return 0;
 }
 
-//default ctrls are in v4l2-controls.h
-//VIDIOC_QUERYCTRL, VIDIOC_G_EXT_CTRLS/VIDIOC_S_EXT_CTRLS
-//for get and set print_control in v4l2-utils could be an example internal
-// ctrl usage is through v4l2_ctrl_find()/v4l2_ctrl_g_ctrl()/v4l2_ctrl_s_ctrl
-static int vsi_v4l2_s_ctrl(struct v4l2_ctrl *ctrl)
-{
-	int ret;
-	struct vsi_v4l2_ctx *ctx = ctrl_to_ctx(ctrl);
-
-	v4l2_klog(LOGLVL_CONFIG, "%s:%x=%d", __func__, ctrl->id, ctrl->val);
-	if (!vsi_v4l2_daemonalive())
-		return -ENODEV;
-	switch (ctrl->id) {
-	case V4L2_CID_MPEG_VIDEO_GOP_SIZE:
-		ctx->mediacfg.encparams.specific.enc_h26x_cmd.intraPicRate = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_VP8_PROFILE:
-	case V4L2_CID_MPEG_VIDEO_VP9_PROFILE:
-	case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
-	case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
-		ret = vsi_set_profile(ctx, ctrl->id, ctrl->val);
-		return ret;
-	case V4L2_CID_MPEG_VIDEO_BITRATE:
-		ctx->mediacfg.encparams.general.bitPerSecond = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_H264_LEVEL:
-		ret = vsi_get_Level(ctx, 0, 1, ctrl->val);
-		if (ret >= 0)
-			ctx->mediacfg.encparams.specific.enc_h26x_cmd.avclevel = ret;
-		else
-			return ret;
-		break;
-	case V4L2_CID_MPEG_VIDEO_HEVC_LEVEL:
-		ret = vsi_get_Level(ctx, 1, 1, ctrl->val);
-		if (ret >= 0)
-			ctx->mediacfg.encparams.specific.enc_h26x_cmd.hevclevel = ret;
-		else
-			return ret;
-		break;
-	case V4L2_CID_MPEG_VIDEO_H264_MAX_QP:
-		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpMax = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_H264_MIN_QP:
-		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpMin = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_B_FRAMES:
-		if (ctrl->val != 0)
-			return -EINVAL;
-		/*in fact nothing to do*/
-		break;
-	case V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP:
-		ctx->mediacfg.encparams.specific.enc_h26x_cmd.bFrameQpDelta = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_BITRATE_MODE:
-		if (ctrl->val == V4L2_MPEG_VIDEO_BITRATE_MODE_VBR)
-			ctx->mediacfg.encparams.specific.enc_h26x_cmd.hrdConformance = 0;
-		else
-			ctx->mediacfg.encparams.specific.enc_h26x_cmd.hrdConformance = 1;
-		break;
-	case V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME:
-		set_bit(CTX_FLAG_FORCEIDR_BIT, &ctx->flag);
-		break;
-	case V4L2_CID_MPEG_VIDEO_HEADER_MODE:
-		break;
-	case V4L2_CID_DIS_REORDER:
-		ctx->mediacfg.decparams.io_buffer.no_reordering_decoding = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MODE:
-		ctx->mediacfg.multislice_mode = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_MB:
-		ctx->mediacfg.encparams.specific.enc_h26x_cmd.sliceSize = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_FRAME_RC_ENABLE:
-		ctx->mediacfg.encparams.specific.enc_h26x_cmd.picRc = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_MB_RC_ENABLE:
-		ctx->mediacfg.encparams.specific.enc_h26x_cmd.ctbRc = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP:
-	case V4L2_CID_MPEG_VIDEO_HEVC_I_FRAME_QP:
-	case V4L2_CID_MPEG_VIDEO_VPX_I_FRAME_QP:
-		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpHdrI = ctrl->val;
-		break;
-	case V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP:
-	case V4L2_CID_MPEG_VIDEO_HEVC_P_FRAME_QP:
-	case V4L2_CID_MPEG_VIDEO_VPX_P_FRAME_QP:
-		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpHdrP = ctrl->val;
-		break;
-	case V4L2_CID_ROTATE:
-		switch (ctrl->val) {
-		case 90:
-			ctx->mediacfg.encparams.general.rotation = VCENC_ROTATE_90L;
-			break;
-		case 180:
-			ctx->mediacfg.encparams.general.rotation = VCENC_ROTATE_180R;
-			break;
-		case 270:
-			ctx->mediacfg.encparams.general.rotation = VCENC_ROTATE_90R;
-			break;
-		case 0:
-		default:
-			ctx->mediacfg.encparams.general.rotation = VCENC_ROTATE_0;
-			break;
-		}
-		break;
-	case V4L2_CID_ROI:
-		if (ctrl->p_new.p)
-			vsiv4l2_setROI(ctx, ctrl->p_new.p);
-		break;
-	case V4L2_CID_IPCM:
-		if (ctrl->p_new.p)
-			vsiv4l2_setIPCM(ctx, ctrl->p_new.p);
-		break;
-	default:
-		return 0;
-	}
-	set_bit(CTX_FLAG_CONFIGUPDATE_BIT, &ctx->flag);
-	return 0;
-}
-
-static int vsi_v4l2_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
-{
-	struct vsi_v4l2_ctx *ctx = ctrl_to_ctx(ctrl);
-
-	v4l2_klog(LOGLVL_CONFIG, "%s:%x", __func__, ctrl->id);
-	if (!vsi_v4l2_daemonalive())
-		return -ENODEV;
-	switch (ctrl->id) {
-	case V4L2_CID_MIN_BUFFERS_FOR_CAPTURE:
-		ctrl->val = ctx->mediacfg.minbuf_4capture;	//these two may come from resoultion change
-		break;
-	case V4L2_CID_MIN_BUFFERS_FOR_OUTPUT:
-		ctrl->val = ctx->mediacfg.minbuf_4output;
-		break;
-	case V4L2_CID_ROI_COUNT:
-		ctrl->val = vsiv4l2_getROIcount();
-		break;
-	case V4L2_CID_IPCM_COUNT:
-		ctrl->val = vsiv4l2_getIPCMcount();
-		break;
-	case V4L2_CID_HDR10META:
-		if (ctrl->p_new.p) {
-			if (!test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag))
-				memset(ctrl->p_new.p, 0, sizeof(struct v4l2_hdr10_meta));
-			else
-				memcpy(ctrl->p_new.p,
-					&ctx->mediacfg.decparams.dec_info.dec_info.vpu_hdr10_meta,
-					sizeof(struct v4l2_hdr10_meta));
-		}
-		break;
-	default:
-		return -EINVAL;
-	}
-	return 0;
-}
-/********* for ext ctrl *************/
-static bool vsi_ctrl_equal(const struct v4l2_ctrl *ctrl, u32 idx,
-		      union v4l2_ctrl_ptr ptr1,
-		      union v4l2_ctrl_ptr ptr2)
-{
-	//always update now, fix it later
-	return 0;
-}
-
-static void vsi_ctrl_init(const struct v4l2_ctrl *ctrl, u32 idx,
-		     union v4l2_ctrl_ptr ptr)
-{
-	void *p = ptr.p + idx * ctrl->elem_size;
-
-	memset(p, 0, ctrl->elem_size);
-}
-
-static void vsi_ctrl_log(const struct v4l2_ctrl *ctrl)
-{
-	//do nothing now
-}
-
-static int vsi_ctrl_validate(const struct v4l2_ctrl *ctrl, u32 idx,
-			union v4l2_ctrl_ptr ptr)
-{
-	//always true
-	return 0;
-}
-
-static const struct v4l2_ctrl_type_ops vsi_type_ops = {
-	.equal = vsi_ctrl_equal,
-	.init = vsi_ctrl_init,
-	.log = vsi_ctrl_log,
-	.validate = vsi_ctrl_validate,
-};
-/********* for ext ctrl *************/
-
-static const struct v4l2_ctrl_ops vsi_ctrl_ops = {
-	.s_ctrl = vsi_v4l2_s_ctrl,
-	.g_volatile_ctrl = vsi_v4l2_g_volatile_ctrl,
-};
-
-static struct v4l2_ctrl_config vsi_v4l2_ctrl_defs[] = {
-	{
-		.ops = &vsi_ctrl_ops,
-		.id = V4L2_CID_DIS_REORDER,
-		.name = "frame disable reoder ctrl",
-		.type = V4L2_CTRL_TYPE_BOOLEAN,
-		.min = 0,
-		.max = 1,
-		.step = 1,
-		.def = 0,
-	},
-	{
-		.ops = &vsi_ctrl_ops,
-		.id = V4L2_CID_ROI_COUNT,
-		.name = "get max ROI region number",
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.flags = V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY,
-		.min = 0,
-		.max = V4L2_MAX_ROI_REGIONS,
-		.step = 1,
-		.def = 0,
-	},
-	{
-		.ops = &vsi_ctrl_ops,
-		.type_ops = &vsi_type_ops,
-		.id = V4L2_CID_ROI,
-		.name = "vsi priv v4l2 roi params set",
-		.type = VSI_V4L2_CMPTYPE_ROI,
-		.min = 0,
-		.max = V4L2_MAX_ROI_REGIONS,
-		.step = 1,
-		.def = 0,
-		.elem_size = sizeof(struct v4l2_enc_roi_params),
-	},
-	{
-		.ops = &vsi_ctrl_ops,
-		.id = V4L2_CID_IPCM_COUNT,
-		.name = "get max IPCM region number",
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.flags = V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY,
-		.min = 0,
-		.max = V4L2_MAX_IPCM_REGIONS,
-		.step = 1,
-		.def = 0,
-	},
-	{
-		.ops = &vsi_ctrl_ops,
-		.type_ops = &vsi_type_ops,
-		.id = V4L2_CID_IPCM,
-		.name = "vsi priv v4l2 ipcm params set",
-		.type = VSI_V4L2_CMPTYPE_IPCM,
-		.min = 0,
-		.max = V4L2_MAX_IPCM_REGIONS,
-		.step = 1,
-		.def = 0,
-		.elem_size = sizeof(struct v4l2_enc_ipcm_params),
-	},
-	{
-		.ops = &vsi_ctrl_ops,
-		.type_ops = &vsi_type_ops,
-		.id = V4L2_CID_HDR10META,
-		.name = "vsi get 10bit meta",
-		.type = VSI_V4L2_CMPTYPE_HDR10META,
-		.flags = V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY,
-		.min = 0,
-		.max = 1,
-		.step = 1,
-		.def = 0,
-		.elem_size = sizeof(struct v4l2_hdr10_meta),
-	},
-	/* kernel defined controls */
-	{
-		.id = V4L2_CID_MPEG_VIDEO_GOP_SIZE,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 1,
-		.max = MAX_INTRA_PIC_RATE,
-		.step = 1,
-		.def = DEFAULT_INTRA_PIC_RATE,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_BITRATE,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 10000,
-		.max = 288000000,
-		.step = 1,
-		.def = 2097152,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_H264_PROFILE,
-		.type = V4L2_CTRL_TYPE_MENU,
-		.min = V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE,
-		.max = V4L2_MPEG_VIDEO_H264_PROFILE_MULTIVIEW_HIGH,
-		.def = V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_VP8_PROFILE,
-		.type = V4L2_CTRL_TYPE_MENU,
-		.min = V4L2_MPEG_VIDEO_VP8_PROFILE_0,
-		.max = V4L2_MPEG_VIDEO_VP8_PROFILE_3,
-		.def = V4L2_MPEG_VIDEO_VP8_PROFILE_0,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_VP9_PROFILE,
-		.type = V4L2_CTRL_TYPE_MENU,
-		.min = V4L2_MPEG_VIDEO_VP9_PROFILE_0,
-		.max = V4L2_MPEG_VIDEO_VP9_PROFILE_3,
-		.def = V4L2_MPEG_VIDEO_VP9_PROFILE_0,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_HEVC_PROFILE,
-		.type = V4L2_CTRL_TYPE_MENU,
-		.min =  V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN,
-		.max = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10,
-		.def = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_H264_LEVEL,
-		.type = V4L2_CTRL_TYPE_MENU,
-		.min = V4L2_MPEG_VIDEO_H264_LEVEL_1_0,
-		.max = V4L2_MPEG_VIDEO_H264_LEVEL_5_2,
-		.def = V4L2_MPEG_VIDEO_H264_LEVEL_5_0,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_HEVC_LEVEL,
-		.type = V4L2_CTRL_TYPE_MENU,
-		.min = V4L2_MPEG_VIDEO_HEVC_LEVEL_1,
-		.max = V4L2_MPEG_VIDEO_HEVC_LEVEL_5_1,
-		.def = V4L2_MPEG_VIDEO_HEVC_LEVEL_5,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_H264_MAX_QP,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
-		.max = 51,
-		.step = 1,
-		.def = 51,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_H264_MIN_QP,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
-		.max = 51,
-		.step = 1,
-		.def = 0,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_HEADER_MODE,
-		.type = V4L2_CTRL_TYPE_MENU,
-		.min = V4L2_MPEG_VIDEO_HEADER_MODE_SEPARATE,
-		.max = V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME,
-		.def = V4L2_MPEG_VIDEO_HEADER_MODE_JOINED_WITH_1ST_FRAME,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_B_FRAMES,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
-		.max = 0,
-		.step = 1,
-		.def = 0,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
-		.max = 51,
-		.step = 1,
-		.def = DEFAULT_QP,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_BITRATE_MODE,
-		.type = V4L2_CTRL_TYPE_MENU,
-		.min = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR,
-		.max = V4L2_MPEG_VIDEO_BITRATE_MODE_CBR,
-		.def = V4L2_MPEG_VIDEO_BITRATE_MODE_VBR,
-	},
-	{
-		.id = V4L2_CID_MIN_BUFFERS_FOR_CAPTURE,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.flags = V4L2_CTRL_FLAG_VOLATILE,	//volatile contains read
-		.min = 1,
-		.max = MAX_MIN_BUFFERS_FOR_CAPTURE,
-		.step = 1,
-		.def = 1,
-	},
-	{
-		.id = V4L2_CID_MIN_BUFFERS_FOR_OUTPUT,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.flags = V4L2_CTRL_FLAG_VOLATILE,
-		.min = 1,
-		.max = MAX_MIN_BUFFERS_FOR_OUTPUT,
-		.step = 1,
-		.def = 1,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_FORCE_KEY_FRAME,
-		.type = V4L2_CTRL_TYPE_BUTTON,
-		.min = 0,
-		.max = 0,
-		.step = 0,
-		.def = 0,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
-		.max = 51,
-		.step = 1,
-		.def = DEFAULT_QP,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
-		.max = 51,
-		.step = 1,
-		.def = DEFAULT_QP,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_HEVC_I_FRAME_QP,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
-		.max = 51,
-		.step = 1,
-		.def = DEFAULT_QP,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_HEVC_P_FRAME_QP,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
-		.max = 51,
-		.step = 1,
-		.def = DEFAULT_QP,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MODE,
-		.type = V4L2_CTRL_TYPE_MENU,
-		.min = V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE,
-		.max = V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_MAX_MB,
-		.def = V4L2_MPEG_VIDEO_MULTI_SLICE_MODE_SINGLE,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_MB,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 1,
-		.max = 120,		//1920 div 16
-		.step = 1,
-		.def = 1,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_FRAME_RC_ENABLE,
-		.type = V4L2_CTRL_TYPE_BOOLEAN,
-		.min = 0,
-		.max = 1,
-		.step = 1,
-		.def = 0,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_MB_RC_ENABLE,
-		.type = V4L2_CTRL_TYPE_BOOLEAN,
-		.min = 0,
-		.max = 1,
-		.step = 1,
-		.def = 0,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_VPX_I_FRAME_QP,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
-		.max = 51,
-		.step = 1,
-		.def = DEFAULT_QP,
-	},
-	{
-		.id = V4L2_CID_MPEG_VIDEO_VPX_P_FRAME_QP,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
-		.max = 51,
-		.step = 1,
-		.def = DEFAULT_QP,
-	},
-	{
-		.id = V4L2_CID_ROTATE,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
-		.max = 270,
-		.step = 90,
-		.def = 0,
-	},
-};
-
-#define is_vsi_ctrl(x) ((V4L2_CTRL_ID2WHICH(x) == V4L2_CTRL_CLASS_USER) && \
-			  V4L2_CTRL_DRIVER_PRIV(x))
-
-int vsi_setup_ctrls(struct v4l2_ctrl_handler *handler)
-{
-	int i, ctrl_num = ARRAY_SIZE(vsi_v4l2_ctrl_defs);
-	struct v4l2_ctrl *ctrl = NULL;
-
-	v4l2_ctrl_handler_init(handler, ctrl_num);
-
-	if (handler->error)
-		return handler->error;
-
-	for (i = 0; i < ctrl_num; i++) {
-		vsi_v4l2_update_ctrlcfg(&vsi_v4l2_ctrl_defs[i]);
-		if (is_vsi_ctrl(vsi_v4l2_ctrl_defs[i].id))
-			ctrl = v4l2_ctrl_new_custom(handler, &vsi_v4l2_ctrl_defs[i], NULL);
-		else {
-			if (vsi_v4l2_ctrl_defs[i].type == V4L2_CTRL_TYPE_MENU) {
-				ctrl = v4l2_ctrl_new_std_menu(handler, &vsi_ctrl_ops,
-					vsi_v4l2_ctrl_defs[i].id,
-					vsi_v4l2_ctrl_defs[i].max,
-					0,
-					vsi_v4l2_ctrl_defs[i].def);
-			} else {
-				ctrl = v4l2_ctrl_new_std(handler,
-					&vsi_ctrl_ops,
-					vsi_v4l2_ctrl_defs[i].id,
-					vsi_v4l2_ctrl_defs[i].min,
-					vsi_v4l2_ctrl_defs[i].max,
-					vsi_v4l2_ctrl_defs[i].step,
-					vsi_v4l2_ctrl_defs[i].def);
-			}
-		}
-		if (ctrl && (vsi_v4l2_ctrl_defs[i].flags & V4L2_CTRL_FLAG_VOLATILE))
-			ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
-
-		if (handler->error) {
-			v4l2_klog(LOGLVL_ERROR, "fail to set ctrl %d:%d", i, handler->error);
-			break;
-		}
-	}
-
-	v4l2_ctrl_handler_setup(handler);
-	return handler->error;
-}
-
 /*orphan error msg from daemon write, should not call daemon back*/
-
 int vsi_v4l2_handle_picconsumed(struct vsi_v4l2_msg *pmsg)
 {
 	unsigned long ctxid = pmsg->inst_id;
@@ -774,18 +249,17 @@ int vsi_v4l2_handleerror(unsigned long ctxid, int error)
 	if (ctx == NULL)
 		return -1;
 
-	memset((void *)&event, 0, sizeof(struct v4l2_event));
-	if (error == DAEMON_ERR_DEC_METADATA_ONLY)
+	if (error == DAEMON_ERR_DEC_METADATA_ONLY) {
+		memset((void *)&event, 0, sizeof(struct v4l2_event));
 		event.type = V4L2_EVENT_EOS;
-	else {
-		ctx->error = (error > 0 ? -error:error);
-		event.type = V4L2_EVENT_CODEC_ERROR;
+		v4l2_event_queue_fh(&ctx->fh, &event);
+	} else {
+		vsi_set_ctx_error(ctx, error > 0 ? -error:error);
 		wake_up_interruptible_all(&ctx->retbuf_queue);
 		wake_up_interruptible_all(&ctx->input_que.done_wq);
 		wake_up_interruptible_all(&ctx->output_que.done_wq);
 		wake_up_interruptible_all(&ctx->fh.wait);
 	}
-	v4l2_event_queue_fh(&ctx->fh, &event);
 	return 0;
 }
 
@@ -799,12 +273,12 @@ int vsi_v4l2_send_reschange(struct vsi_v4l2_ctx *ctx)
 		vsiv4l2_getfmt(ctx, &fmt);
 		if (fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_NV12X &&
 			fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_P010 &&
-			fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_TILEX) {
+			fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_TILEX &&
+			fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_RFCX) {
 			fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_NV12X;
 			vsiv4l2_setfmt(ctx, &fmt);
 		}
 	}
-	set_bit(CTX_FLAG_RFCOFFSET_BIT, &ctx->flag);
 	memset((void *)&event, 0, sizeof(struct v4l2_event));
 	event.type = V4L2_EVENT_SOURCE_CHANGE,
 	event.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION,
@@ -833,12 +307,14 @@ int vsi_v4l2_notify_reschange(struct vsi_v4l2_msg *pmsg)
 			pcfg->minbuf_4capture = pmsg->params.dec_params.dec_info.dec_info.needed_dpb_nums;
 		pcfg->sizeimagedst[0] =
 			pmsg->params.dec_params.io_buffer.OutBufSize;
-		if (ctx->status == DEC_STATUS_DECODING && !list_empty(&ctx->output_que.done_list)) {
+		if ((ctx->status == DEC_STATUS_DECODING || ctx->status == DEC_STATUS_DRAINING)
+			&& !list_empty(&ctx->output_que.done_list)) {
 			pcfg->decparams_bkup.dec_info = pmsg->params.dec_params.dec_info;
 			pcfg->decparams_bkup.io_buffer.srcwidth = pmsg->params.dec_params.io_buffer.srcwidth;
 			pcfg->decparams_bkup.io_buffer.srcheight = pmsg->params.dec_params.io_buffer.srcheight;
 			pcfg->decparams_bkup.io_buffer.output_width = pmsg->params.dec_params.io_buffer.output_width;
 			pcfg->decparams_bkup.io_buffer.output_height = pmsg->params.dec_params.io_buffer.output_height;
+			pcfg->decparams_bkup.io_buffer.output_wstride = pmsg->params.dec_params.io_buffer.output_wstride;
 			set_bit(CTX_FLAG_DELAY_SRCCHANGED_BIT, &ctx->flag);
 		} else {
 			pcfg->decparams.dec_info.dec_info = pmsg->params.dec_params.dec_info.dec_info;
@@ -846,6 +322,7 @@ int vsi_v4l2_notify_reschange(struct vsi_v4l2_msg *pmsg)
 			pcfg->decparams.dec_info.io_buffer.srcheight = pmsg->params.dec_params.dec_info.io_buffer.srcheight;
 			pcfg->decparams.dec_info.io_buffer.output_width = pmsg->params.dec_params.dec_info.io_buffer.output_width;
 			pcfg->decparams.dec_info.io_buffer.output_height = pmsg->params.dec_params.dec_info.io_buffer.output_height;
+			pcfg->decparams.dec_info.io_buffer.output_wstride = pmsg->params.dec_params.dec_info.io_buffer.output_wstride;
 			pcfg->src_pixeldepth = decinfo->bit_depth;
 			vsi_v4l2_send_reschange(ctx);
 		}
@@ -901,13 +378,25 @@ int vsi_v4l2_handle_cropchange(struct vsi_v4l2_msg *pmsg)
 		struct v4l2_event event;
 
 		v4l2_klog(LOGLVL_BRIEF, "%lx sending crop change:%d:%d:%d", ctx->ctxid, ctx->status, ctx->buffed_cropcapnum, ctx->lastcapbuffer_idx);
-		if (ctx->status == DEC_STATUS_DECODING && ctx->buffed_cropcapnum > 0) {
+		v4l2_klog(LOGLVL_BRIEF, "crop info:%d:%d:%d:%d:%d:%d:%d",
+			pmsg->params.dec_params.pic_info.pic_info.width,
+			pmsg->params.dec_params.pic_info.pic_info.height,
+			pmsg->params.dec_params.pic_info.pic_info.pic_wstride,
+			pmsg->params.dec_params.pic_info.pic_info.crop_left,
+			pmsg->params.dec_params.pic_info.pic_info.crop_top,
+			pmsg->params.dec_params.pic_info.pic_info.crop_width,
+			pmsg->params.dec_params.pic_info.pic_info.crop_height);
+		if ((ctx->status == DEC_STATUS_DECODING || ctx->status == DEC_STATUS_DRAINING)
+			&& ctx->buffed_cropcapnum > 0) {
 			if (addcropmsg(ctx, pmsg) != 0) {
-				ctx->error = DAEMON_ERR_NO_MEM;
+				vsi_set_ctx_error(ctx, DAEMON_ERR_NO_MEM);
 				v4l2_klog(LOGLVL_ERROR, "driver out of mem");
 			} else
 				set_bit(BUF_FLAG_CROPCHANGE, &ctx->vbufflag[ctx->lastcapbuffer_idx]);
 		} else {
+			pcfg->decparams.dec_info.io_buffer.output_width = pmsg->params.dec_params.pic_info.pic_info.width;
+			pcfg->decparams.dec_info.io_buffer.output_height = pmsg->params.dec_params.pic_info.pic_info.height;
+			pcfg->decparams.dec_info.io_buffer.output_wstride = pmsg->params.dec_params.pic_info.pic_info.pic_wstride;
 			pcfg->decparams.dec_info.dec_info.frame_width = pmsg->params.dec_params.pic_info.pic_info.width;
 			pcfg->decparams.dec_info.dec_info.frame_height = pmsg->params.dec_params.pic_info.pic_info.height;
 			pcfg->decparams.dec_info.dec_info.visible_rect.left = pmsg->params.dec_params.pic_info.pic_info.crop_left;
@@ -943,7 +432,7 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 		outbufidx = pmsg->params.dec_params.io_buffer.outbufidx;
 		bytesused[0] = pmsg->params.dec_params.io_buffer.bytesused;
 	}
-	v4l2_klog(LOGLVL_VERBOSE, "%lx:%s:%lx:%d:%d",
+	v4l2_klog(LOGLVL_FLOW, "%lx:%s:%lx:%d:%d",
 		ctx->ctxid, __func__, ctx->flag, inbufidx, outbufidx);
 	//write comes over once, so avoid this problem.
 	if (inbufidx >= 0 && inbufidx < ctx->input_que.num_buffers) {
@@ -983,10 +472,12 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 			if (isencoder(ctx)) {
 				vb->timestamp = pmsg->params.enc_params.io_buffer.timestamp;
 				ctx->vbufflag[outbufidx] = pmsg->param_type;
-				if (vb->planes[0].bytesused == 0 || (pmsg->param_type & LAST_BUFFER_FLAG))
-					ctx->vbufflag[outbufidx] |= LAST_BUFFER_FLAG;
-				v4l2_klog(LOGLVL_VERBOSE,  "enc output framed %d size = %d,flag=%lx, timestamp=%lld",
+				v4l2_klog(LOGLVL_FLOW,  "enc output framed %d size = %d,flag=%lx, timestamp=%lld",
 						outbufidx, vb->planes[0].bytesused, ctx->vbufflag[outbufidx], vb->timestamp);
+				if (vb->planes[0].bytesused == 0 || (pmsg->param_type & LAST_BUFFER_FLAG)) {
+					ctx->vbufflag[outbufidx] |= LAST_BUFFER_FLAG;
+					v4l2_klog(LOGLVL_BRIEF, "%lx encoder got eos buffer", ctx->ctxid);
+				}
 			} else {
 				ctx->lastcapbuffer_idx = outbufidx;
 				if (!test_bit(BUF_FLAG_QUEUED, &ctx->vbufflag[outbufidx])) {
@@ -995,9 +486,10 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 					clear_bit(BUF_FLAG_QUEUED, &ctx->vbufflag[outbufidx]);
 					set_bit(BUF_FLAG_DONE, &ctx->vbufflag[outbufidx]);
 				}
-				ctx->mediacfg.decparams.io_buffer.rfc_luma_offset = pmsg->params.dec_params.io_buffer.rfc_luma_offset;
-				ctx->mediacfg.decparams.io_buffer.rfc_chroma_offset = pmsg->params.dec_params.io_buffer.rfc_chroma_offset;
+				ctx->rfc_luma_offset[outbufidx] = pmsg->params.dec_params.io_buffer.rfc_luma_offset;
+				ctx->rfc_chroma_offset[outbufidx] = pmsg->params.dec_params.io_buffer.rfc_chroma_offset;
 				if (bytesused[0] == 0) {
+					v4l2_klog(LOGLVL_BRIEF, "%lx decoder got zero buffer in state %d", ctx->ctxid, ctx->status);
 					if ((ctx->status == DEC_STATUS_DRAINING) || test_bit(CTX_FLAG_PRE_DRAINING_BIT, &ctx->flag)) {
 						ctx->status = DEC_STATUS_ENDSTREAM;
 						set_bit(CTX_FLAG_ENDOFSTRM_BIT, &ctx->flag);
@@ -1007,7 +499,7 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 					vb->timestamp = pmsg->params.dec_params.io_buffer.timestamp;
 				ctx->buffed_capnum++;
 				ctx->buffed_cropcapnum++;
-				v4l2_klog(LOGLVL_VERBOSE, "dec output framed %dsize = %d", outbufidx, vb->planes[0].bytesused);
+				v4l2_klog(LOGLVL_FLOW, "dec output framed %d size = %d", outbufidx, vb->planes[0].bytesused);
 			}
 			if (vb->state == VB2_BUF_STATE_ACTIVE)
 				vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
@@ -1027,7 +519,7 @@ static int v4l2_probe(struct platform_device *pdev)
 	struct video_device *venc, *vdec;
 	int ret = 0;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%s", __func__);
+	v4l2_klog(LOGLVL_BRIEF, "%s", __func__);
 	if (gvsidev != NULL)
 		return 0;
 	vpu = kzalloc(sizeof(*vpu), GFP_KERNEL);

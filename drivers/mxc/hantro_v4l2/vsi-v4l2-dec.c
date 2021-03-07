@@ -48,7 +48,7 @@ static int vsi_dec_querycap(
 {
 	struct vsi_v4l2_dev_info *hwinfo;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%s", __func__);
+	v4l2_klog(LOGLVL_FLOW, "%s", __func__);
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 	hwinfo = vsiv4l2_get_hwinfo();
@@ -98,7 +98,7 @@ static int vsi_dec_reqbufs(
 /*choose input source of index*/
 static int vsi_dec_s_input(struct file *file, void *priv, unsigned int index)
 {
-	v4l2_klog(LOGLVL_VERBOSE, "%s", __func__);
+	v4l2_klog(LOGLVL_FLOW, "%s", __func__);
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 	return 0;
@@ -183,7 +183,7 @@ static int vsi_dec_querybuf(
 		q = &ctx->input_que;
 	else
 		q = &ctx->output_que;
-	v4l2_klog(LOGLVL_VERBOSE, "%s::%lx:%d:%d", __func__, ctx->flag, buf->type, buf->index);
+	v4l2_klog(LOGLVL_FLOW, "%s::%lx:%d:%d", __func__, ctx->flag, buf->type, buf->index);
 	ret = vb2_querybuf(q, buf);
 	if (buf->memory == V4L2_MEMORY_MMAP) {
 		if (ret == 0 && q == &ctx->output_que)
@@ -198,7 +198,7 @@ static int vsi_dec_qbuf(struct file *filp, void *priv, struct v4l2_buffer *buf)
 	struct vsi_v4l2_ctx *ctx = fh_to_ctx(filp->private_data);
 	struct video_device *vdev = ctx->dev->vdec;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%lx:%s:%d:%d:%d", ctx->ctxid, __func__, buf->type, buf->index, buf->bytesused);
+	v4l2_klog(LOGLVL_FLOW, "%lx:%s:%d:%d:%d", ctx->ctxid, __func__, buf->type, buf->index, buf->bytesused);
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 	if (!isvalidtype(buf->type, ctx->flag))
@@ -223,7 +223,7 @@ static int vsi_dec_qbuf(struct file *filp, void *priv, struct v4l2_buffer *buf)
 	if (ret == 0 && ctx->status == VSI_STATUS_INIT &&
 		ctx->input_que.queued_count >= ctx->input_que.min_buffers_needed
 		&& ctx->input_que.streaming) {
-		v4l2_klog(LOGLVL_VERBOSE, "%lx:%s start streaming", ctx->ctxid, __func__);
+		v4l2_klog(LOGLVL_FLOW, "%lx:%s start streaming", ctx->ctxid, __func__);
 		ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_STREAMON_OUTPUT, NULL);
 		if (ret == 0)
 			ctx->status = DEC_STATUS_DECODING;
@@ -381,11 +381,10 @@ static int vsi_dec_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 	if (!binputqueue(p->type)) {
 		struct vsi_v4l2_mediacfg *pcfg = &ctx->mediacfg;
 
-		if (test_and_clear_bit(CTX_FLAG_RFCOFFSET_BIT, &ctx->flag)) {
-			p->reserved = pcfg->decparams.io_buffer.rfc_luma_offset;
-			p->reserved2 = pcfg->decparams.io_buffer.rfc_chroma_offset;
-			v4l2_klog(LOGLVL_CONFIG, "rfc offest update=%x:%x", p->reserved, p->reserved2);
-		}
+		p->reserved = ctx->rfc_luma_offset[p->index];
+		p->reserved2 = ctx->rfc_chroma_offset[p->index];
+		v4l2_klog(LOGLVL_FLOW, "rfc offest update=%x:%x", p->reserved, p->reserved2);
+
 		if (p->bytesused == 0 && (ctx->status == DEC_STATUS_ENDSTREAM || test_bit(CTX_FLAG_ENDOFSTRM_BIT, &ctx->flag))) {
 			p->flags |= V4L2_BUF_FLAG_LAST;
 			ctx->status = DEC_STATUS_STOPPED;
@@ -413,7 +412,7 @@ static int vsi_dec_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 		}
 		p->field = V4L2_FIELD_NONE;
 	}
-	v4l2_klog(LOGLVL_VERBOSE, "%lx:%s:%d:%d:%x:%d", ctx->ctxid, __func__, p->type, p->index, p->flags, p->bytesused);
+	v4l2_klog(LOGLVL_FLOW, "%lx:%s:%d:%d:%x:%d", ctx->ctxid, __func__, p->type, p->index, p->flags, p->bytesused);
 	return ret;
 }
 
@@ -426,7 +425,7 @@ static int vsi_dec_prepare_buf(
 	struct vb2_queue *q;
 	struct video_device *vdev = ctx->dev->vdec;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%s", __func__);
+	v4l2_klog(LOGLVL_FLOW, "%s", __func__);
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 	if (!isvalidtype(p->type, ctx->flag))
@@ -447,7 +446,7 @@ static int vsi_dec_expbuf(
 	struct vsi_v4l2_ctx *ctx = fh_to_ctx(file->private_data);
 	struct vb2_queue *q;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%s", __func__);
+	v4l2_klog(LOGLVL_FLOW, "%s", __func__);
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 	if (!isvalidtype(p->type, ctx->flag))
@@ -554,13 +553,14 @@ int vsi_dec_decoder_cmd(struct file *file, void *fh, struct v4l2_decoder_cmd *cm
 	//u32 flag = cmd->flags;
 	int ret = -EBUSY;
 
-	v4l2_klog(LOGLVL_BRIEF, "%lx:%s:%d", ctx->ctxid, __func__, cmd->cmd);
+	v4l2_klog(LOGLVL_BRIEF, "%lx:%s:%d in state %d:%d", ctx->ctxid, __func__,
+		cmd->cmd, ctx->status, ctx->output_que.streaming);
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 	switch (cmd->cmd) {
 	case V4L2_DEC_CMD_STOP:
 		set_bit(CTX_FLAG_PRE_DRAINING_BIT, &ctx->flag);
-		if (ctx->status == DEC_STATUS_DECODING && ctx->output_que.streaming) {
+		if (ctx->status == DEC_STATUS_DECODING) {
 			ctx->status = DEC_STATUS_DRAINING;
 			ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_CMD_STOP, NULL);
 		} else if ((ctx->status == VSI_STATUS_INIT && !test_bit(CTX_FLAG_DAEMONLIVE_BIT, &ctx->flag)) ||
@@ -662,7 +662,7 @@ static void vsi_dec_buf_queue(struct vb2_buffer *vb)
 	struct vsi_vpu_buf *vsibuf;
 	int ret;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%s:%d", __func__, vb->index);
+	v4l2_klog(LOGLVL_FLOW, "%s:%d", __func__, vb->index);
 	if (mutex_lock_interruptible(&ctx->ctxlock))
 		return;
 	vsibuf = vb_to_vsibuf(vb);
@@ -676,8 +676,6 @@ static void vsi_dec_buf_queue(struct vb2_buffer *vb)
 	}
 	mutex_unlock(&ctx->ctxlock);
 	ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_BUF_RDY, vb);
-	if (ret != 0)
-		ctx->error = ret;
 }
 
 static int vsi_dec_buf_init(struct vb2_buffer *vb)
@@ -728,6 +726,218 @@ static struct vb2_ops vsi_dec_qops = {
 	.stop_streaming = vsi_dec_stop_streaming,
 	.buf_queue = vsi_dec_buf_queue,
 };
+
+static int vsi_v4l2_dec_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+	int ret;
+	struct vsi_v4l2_ctx *ctx = ctrl_to_ctx(ctrl);
+
+	v4l2_klog(LOGLVL_CONFIG, "%s:%x=%d", __func__, ctrl->id, ctrl->val);
+	if (!vsi_v4l2_daemonalive())
+		return -ENODEV;
+	switch (ctrl->id) {
+	case V4L2_CID_MPEG_VIDEO_VP8_PROFILE:
+	case V4L2_CID_MPEG_VIDEO_VP9_PROFILE:
+	case V4L2_CID_MPEG_VIDEO_H264_PROFILE:
+	case V4L2_CID_MPEG_VIDEO_HEVC_PROFILE:
+		ret = vsi_set_profile(ctx, ctrl->id, ctrl->val);
+		return ret;
+	case V4L2_CID_DIS_REORDER:
+		ctx->mediacfg.decparams.io_buffer.no_reordering_decoding = ctrl->val;
+		break;
+	default:
+		return 0;
+	}
+	return 0;
+}
+
+static int vsi_v4l2_dec_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct vsi_v4l2_ctx *ctx = ctrl_to_ctx(ctrl);
+
+	v4l2_klog(LOGLVL_CONFIG, "%s:%x", __func__, ctrl->id);
+	if (!vsi_v4l2_daemonalive())
+		return -ENODEV;
+	switch (ctrl->id) {
+	case V4L2_CID_MIN_BUFFERS_FOR_CAPTURE:
+		ctrl->val = ctx->mediacfg.minbuf_4capture;	//these two may come from resoultion change
+		break;
+	case V4L2_CID_MIN_BUFFERS_FOR_OUTPUT:
+		ctrl->val = ctx->mediacfg.minbuf_4output;
+		break;
+	case V4L2_CID_HDR10META:
+		if (ctrl->p_new.p) {
+			if (!test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag))
+				memset(ctrl->p_new.p, 0, sizeof(struct v4l2_hdr10_meta));
+			else
+				memcpy(ctrl->p_new.p,
+					&ctx->mediacfg.decparams.dec_info.dec_info.vpu_hdr10_meta,
+					sizeof(struct v4l2_hdr10_meta));
+		}
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+/********* for ext ctrl *************/
+static bool vsi_dec_ctrl_equal(const struct v4l2_ctrl *ctrl, u32 idx,
+		      union v4l2_ctrl_ptr ptr1,
+		      union v4l2_ctrl_ptr ptr2)
+{
+	//always update now, fix it later
+	return 0;
+}
+
+static void vsi_dec_ctrl_init(const struct v4l2_ctrl *ctrl, u32 idx,
+		     union v4l2_ctrl_ptr ptr)
+{
+	void *p = ptr.p + idx * ctrl->elem_size;
+
+	memset(p, 0, ctrl->elem_size);
+}
+
+static void vsi_dec_ctrl_log(const struct v4l2_ctrl *ctrl)
+{
+	//do nothing now
+}
+
+static int vsi_dec_ctrl_validate(const struct v4l2_ctrl *ctrl, u32 idx,
+			union v4l2_ctrl_ptr ptr)
+{
+	//always true
+	return 0;
+}
+
+static const struct v4l2_ctrl_type_ops vsi_dec_type_ops = {
+	.equal = vsi_dec_ctrl_equal,
+	.init = vsi_dec_ctrl_init,
+	.log = vsi_dec_ctrl_log,
+	.validate = vsi_dec_ctrl_validate,
+};
+/********* for ext ctrl *************/
+
+static const struct v4l2_ctrl_ops vsi_dec_ctrl_ops = {
+	.s_ctrl = vsi_v4l2_dec_s_ctrl,
+	.g_volatile_ctrl = vsi_v4l2_dec_g_volatile_ctrl,
+};
+
+static struct v4l2_ctrl_config vsi_v4l2_dec_ctrl_defs[] = {
+	{
+		.ops = &vsi_dec_ctrl_ops,
+		.id = V4L2_CID_DIS_REORDER,
+		.name = "frame disable reoder ctrl",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.min = 0,
+		.max = 1,
+		.step = 1,
+		.def = 0,
+	},
+	{
+		.ops = &vsi_dec_ctrl_ops,
+		.type_ops = &vsi_dec_type_ops,
+		.id = V4L2_CID_HDR10META,
+		.name = "vsi get 10bit meta",
+		.type = VSI_V4L2_CMPTYPE_HDR10META,
+		.flags = V4L2_CTRL_FLAG_VOLATILE | V4L2_CTRL_FLAG_READ_ONLY,
+		.min = 0,
+		.max = 1,
+		.step = 1,
+		.def = 0,
+		.elem_size = sizeof(struct v4l2_hdr10_meta),
+	},
+	/* kernel defined controls */
+	{
+		.id = V4L2_CID_MPEG_VIDEO_H264_PROFILE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE,
+		.max = V4L2_MPEG_VIDEO_H264_PROFILE_MULTIVIEW_HIGH,
+		.def = V4L2_MPEG_VIDEO_H264_PROFILE_BASELINE,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_VP8_PROFILE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_VP8_PROFILE_0,
+		.max = V4L2_MPEG_VIDEO_VP8_PROFILE_3,
+		.def = V4L2_MPEG_VIDEO_VP8_PROFILE_0,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_VP9_PROFILE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min = V4L2_MPEG_VIDEO_VP9_PROFILE_0,
+		.max = V4L2_MPEG_VIDEO_VP9_PROFILE_3,
+		.def = V4L2_MPEG_VIDEO_VP9_PROFILE_0,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDEO_HEVC_PROFILE,
+		.type = V4L2_CTRL_TYPE_MENU,
+		.min =  V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN,
+		.max = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN_10,
+		.def = V4L2_MPEG_VIDEO_HEVC_PROFILE_MAIN,
+	},
+	{
+		.id = V4L2_CID_MIN_BUFFERS_FOR_CAPTURE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_VOLATILE,	//volatile contains read
+		.min = 1,
+		.max = MAX_MIN_BUFFERS_FOR_CAPTURE,
+		.step = 1,
+		.def = 1,
+	},
+	{
+		.id = V4L2_CID_MIN_BUFFERS_FOR_OUTPUT,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_VOLATILE,
+		.min = 1,
+		.max = MAX_MIN_BUFFERS_FOR_OUTPUT,
+		.step = 1,
+		.def = 1,
+	},
+};
+
+static int vsi_dec_setup_ctrls(struct v4l2_ctrl_handler *handler)
+{
+	int i, ctrl_num = ARRAY_SIZE(vsi_v4l2_dec_ctrl_defs);
+	struct v4l2_ctrl *ctrl = NULL;
+
+	v4l2_ctrl_handler_init(handler, ctrl_num);
+
+	if (handler->error)
+		return handler->error;
+
+	for (i = 0; i < ctrl_num; i++) {
+		vsi_v4l2_update_ctrlcfg(&vsi_v4l2_dec_ctrl_defs[i]);
+		if (is_vsi_ctrl(vsi_v4l2_dec_ctrl_defs[i].id))
+			ctrl = v4l2_ctrl_new_custom(handler, &vsi_v4l2_dec_ctrl_defs[i], NULL);
+		else {
+			if (vsi_v4l2_dec_ctrl_defs[i].type == V4L2_CTRL_TYPE_MENU) {
+				ctrl = v4l2_ctrl_new_std_menu(handler, &vsi_dec_ctrl_ops,
+					vsi_v4l2_dec_ctrl_defs[i].id,
+					vsi_v4l2_dec_ctrl_defs[i].max,
+					0,
+					vsi_v4l2_dec_ctrl_defs[i].def);
+			} else {
+				ctrl = v4l2_ctrl_new_std(handler,
+					&vsi_dec_ctrl_ops,
+					vsi_v4l2_dec_ctrl_defs[i].id,
+					vsi_v4l2_dec_ctrl_defs[i].min,
+					vsi_v4l2_dec_ctrl_defs[i].max,
+					vsi_v4l2_dec_ctrl_defs[i].step,
+					vsi_v4l2_dec_ctrl_defs[i].def);
+			}
+		}
+		if (ctrl && (vsi_v4l2_dec_ctrl_defs[i].flags & V4L2_CTRL_FLAG_VOLATILE))
+			ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
+
+		if (handler->error) {
+			v4l2_klog(LOGLVL_ERROR, "%s fail to set ctrl %d:%d", __func__, i, handler->error);
+			break;
+		}
+	}
+
+	v4l2_ctrl_handler_setup(handler);
+	return handler->error;
+}
 
 static int v4l2_dec_open(struct file *filp)
 {
@@ -794,7 +1004,7 @@ static int v4l2_dec_open(struct file *filp)
 		goto err_enc_dec_exit;
 	}
 	vsiv4l2_initcfg(ctx);
-	vsi_setup_ctrls(&ctx->ctrlhdl);
+	vsi_dec_setup_ctrls(&ctx->ctrlhdl);
 	vfh = (struct v4l2_fh *)filp->private_data;
 	vfh->ctrl_handler = &ctx->ctrlhdl;
 	atomic_set(&ctx->srcframen, 0);
@@ -822,7 +1032,7 @@ static int v4l2_dec_mmap(struct file *filp, struct vm_area_struct *vma)
 	unsigned long offset = vma->vm_pgoff << PAGE_SHIFT;
 	int ret;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%s", __func__);
+	v4l2_klog(LOGLVL_FLOW, "%s", __func__);
 	if (offset < OUTF_BASE) {
 		ret = vb2_mmap(&ctx->input_que, vma);
 	} else {
@@ -842,14 +1052,13 @@ static __poll_t vsi_dec_poll(struct file *file, poll_table *wait)
 	int srcn = atomic_read(&ctx->srcframen);
 
 	if (!vsi_v4l2_daemonalive())
-		return POLLERR;
+		ret |= POLLERR;
 	if (ctx->status == DEC_STATUS_SEEK) {
 		ret = (POLLIN | POLLRDNORM);
 		if (ctx->error < 0) {
 			ret |= POLLERR;
 			v4l2_klog(LOGLVL_WARNING, "poll ctx err");
 		}
-		return ret;
 	}
 	if (vb2_is_streaming(&ctx->output_que))
 		res = vb2_poll(&ctx->output_que, file, wait);

@@ -162,6 +162,8 @@ enum vsi_v4l2dec_outputfmt {
 	VSI_V4L2_DECOUT_P010,
 	VSI_V4L2_DECOUT_NV12_10BIT,
 	VSI_V4L2_DECOUT_DTRC_10BIT,
+	VSI_V4L2_DECOUT_RFC,
+	VSI_V4L2_DECOUT_RFC_10BIT,
 };
 
 enum vsi_v4l2dec_pixfmt {
@@ -550,6 +552,7 @@ struct v4l2_daemon_dec_info {
 	} visible_rect;
 	u32 needed_dpb_nums;
 	u32 dpb_buffer_size;
+	uint32_t pic_wstride;
 	struct v4l2_daemon_dec_pp_cfg pp_params;
 	u32 colour_description_present_flag;
 	u32 matrix_coefficients;
@@ -567,6 +570,7 @@ struct v4l2_daemon_pic_info {
 	u32 crop_top;
 	u32 crop_width;
 	u32 crop_height;
+	uint32_t pic_wstride;
 };
 
 struct v4l2_daemon_dec_resochange_params {
