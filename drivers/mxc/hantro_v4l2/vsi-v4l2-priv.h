@@ -58,6 +58,7 @@ extern int vsi_kloglvl;
 
 enum {
 	LOGLVL_VERBOSE = 0,	//log all
+	LOGLVL_FLOW,			//log all except cmd exchange with daemon
 	LOGLVL_CONFIG,			// log ctrl/config info, mostly at beginning
 	LOGLVL_BRIEF,			// log critical point (streamon/off, etc)
 	LOGLVL_WARNING,		// log warning msg
@@ -70,6 +71,9 @@ enum {
 	else if (lvl >= vsi_kloglvl)		\
 		pr_info(fmt, ##__VA_ARGS__);	\
 }
+
+#define is_vsi_ctrl(x) ((V4L2_CTRL_ID2WHICH(x) == V4L2_CTRL_CLASS_USER) && \
+			  V4L2_CTRL_DRIVER_PRIV(x))
 
 /*this table should be consistent with that in hevcencapi.h*/
 enum VCEncPictureType {
@@ -257,6 +261,7 @@ struct cropinfo {
 	u32 top;
 	u32 width;
 	u32 height;
+	u32 pic_wstride;
 	struct cropinfo *next;
 };
 
@@ -272,7 +277,6 @@ enum {
 	CTX_FLAG_FORCEIDR_BIT,			// force idr invoked
 	CTX_FLAG_SRCCHANGED_BIT,			// src change has come from daemon
 	CTX_FLAG_DELAY_SRCCHANGED_BIT,	// src change has come from daemon	 but not sent to app
-	CTX_FLAG_RFCOFFSET_BIT,			// need send rfc offset to app
 };
 
 /* flag for decoder buffer*/
@@ -302,6 +306,9 @@ struct vsi_v4l2_ctx {
 	u32 inbufbytes[VIDEO_MAX_FRAME];
 	u32 inbuflen[VIDEO_MAX_FRAME];
 	u32 outbuflen[VIDEO_MAX_FRAME];
+
+	u32 rfc_luma_offset[VIDEO_MAX_FRAME];
+	u32 rfc_chroma_offset[VIDEO_MAX_FRAME];
 	u32 queued_srcnum;
 	u32 buffed_capnum;
 	u32 buffed_cropcapnum;
@@ -322,10 +329,10 @@ struct vsi_v4l2_ctx {
 	struct cropinfo *croptail;
 };
 
-int vsi_setup_ctrls(struct v4l2_ctrl_handler *handler);
 int vsi_v4l2_release(struct file *filp);
 void vsi_remove_ctx(struct vsi_v4l2_ctx *ctx);
 struct vsi_v4l2_ctx *vsi_create_ctx(void);
+void vsi_set_ctx_error(struct vsi_v4l2_ctx *ctx, s32 error);
 void wakeup_ctxqueues(void);
 int vsi_v4l2_reset_ctx(struct vsi_v4l2_ctx *ctx);
 int vsi_v4l2_send_reschange(struct vsi_v4l2_ctx *ctx);
@@ -448,6 +455,7 @@ static inline int addcropmsg(struct vsi_v4l2_ctx *ctx, struct vsi_v4l2_msg *pmsg
 	crop->top = pmsg->params.dec_params.pic_info.pic_info.crop_top;
 	crop->width = pmsg->params.dec_params.pic_info.pic_info.crop_width;
 	crop->height = pmsg->params.dec_params.pic_info.pic_info.crop_height;
+	crop->pic_wstride = pmsg->params.dec_params.pic_info.pic_info.pic_wstride;
 	crop->next = NULL;
 	if (ctx->croptail == NULL)
 		ctx->crophead = ctx->croptail = crop;
@@ -464,6 +472,9 @@ static inline int update_and_removecropinfo(struct vsi_v4l2_ctx *ctx)
 	struct cropinfo *crop = ctx->crophead;
 
 	if (crop) {
+		pcfg->decparams.dec_info.io_buffer.output_width = crop->frame_width;
+		pcfg->decparams.dec_info.io_buffer.output_height = crop->frame_height;
+		pcfg->decparams.dec_info.io_buffer.output_wstride = crop->pic_wstride;
 		pcfg->decparams.dec_info.dec_info.frame_width = crop->frame_width;
 		pcfg->decparams.dec_info.dec_info.frame_height = crop->frame_height;
 		pcfg->decparams.dec_info.dec_info.visible_rect.left = crop->left;
@@ -521,7 +532,7 @@ static inline void return_all_buffers(struct vb2_queue *vq, int status, int bRel
 	struct vsi_v4l2_ctx *ctx = fh_to_ctx(vq->drv_priv);
 	struct list_head *plist;
 
-	v4l2_klog(LOGLVL_VERBOSE, "%s", __func__);
+	v4l2_klog(LOGLVL_FLOW, "%s", __func__);
 	if (mutex_lock_interruptible(&ctx->ctxlock))
 		return;
 	if (binputqueue(vq->type))
@@ -531,7 +542,7 @@ static inline void return_all_buffers(struct vb2_queue *vq, int status, int bRel
 
 	for (i = 0; i < vq->num_buffers; ++i) {
 		if (vq->bufs[i]->state == VB2_BUF_STATE_ACTIVE) {
-			v4l2_klog(LOGLVL_VERBOSE, "return buffer %d", i);
+			v4l2_klog(LOGLVL_FLOW, "return buffer %d", i);
 			vb2_buffer_done(vq->bufs[i], status);
 		}
 	}
@@ -540,7 +551,7 @@ static inline void return_all_buffers(struct vb2_queue *vq, int status, int bRel
 			for (i = 0; i < buf->vb.vb2_buf.num_planes; i++)
 				vb2_set_plane_payload(&buf->vb.vb2_buf, i, 0);
 			list_del(&buf->list);
-			v4l2_klog(LOGLVL_VERBOSE, "clear buffer %d", buf->vb.vb2_buf.index);
+			v4l2_klog(LOGLVL_FLOW, "clear buffer %d", buf->vb.vb2_buf.index);
 		}
 	}
 	mutex_unlock(&ctx->ctxlock);

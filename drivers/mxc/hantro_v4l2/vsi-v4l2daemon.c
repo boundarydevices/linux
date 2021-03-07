@@ -226,7 +226,7 @@ static int vsi_v4l2_sendcmd(
 	struct vsi_v4l2_msg_hdr *msghdr;
 
 	if (atomic_read(&daemon_fn) <= 0)
-		return -ENODEV;
+		return DAEMON_ERR_DAEMON_MISSING;
 
 	if (mutex_lock_interruptible(&cmd_lock))
 		return -EBUSY;
@@ -420,7 +420,7 @@ int vsiv4l2_execcmd(struct vsi_v4l2_ctx *ctx, enum v4l2_daemon_cmd_id id, void *
 	struct vsi_v4l2_msg msg;
 
 	if (atomic_read(&daemon_fn) <= 0) {
-		ret = -ENODEV;
+		ret = -DAEMON_ERR_DAEMON_MISSING;
 		goto tail;
 	}
 	memset((void *)&msg, 0, sizeof(msg));
@@ -483,20 +483,16 @@ int vsiv4l2_execcmd(struct vsi_v4l2_ctx *ctx, enum v4l2_daemon_cmd_id id, void *
 		}
 		break;
 	default:
+		v4l2_klog(LOGLVL_WARNING, "unexpected cmd id %d", id);
 		return -1;
 	}
 tail:
 	if (ctx) {
-		set_bit(CTX_FLAG_DAEMONLIVE_BIT, &ctx->flag);
 		if (ret < 0) {
-			struct v4l2_event event;
-
-			ctx->error = ret;
-			memset((void *)&event, 0, sizeof(struct v4l2_event));
-			event.type = V4L2_EVENT_CODEC_ERROR,
-			v4l2_event_queue_fh(&ctx->fh, &event);
-			pr_err("fail to communicate with daemon");
-		}
+			vsi_set_ctx_error(ctx, ret);
+			v4l2_klog(LOGLVL_ERROR, "fail to communicate with daemon, error=%d", ret);
+		} else
+			set_bit(CTX_FLAG_DAEMONLIVE_BIT, &ctx->flag);
 	}
 	return ret;
 }
