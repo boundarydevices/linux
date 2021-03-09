@@ -788,7 +788,7 @@
 			#size-cells = <0>;
 		};
 
-		i2c2@1 {
+		i2c2b: i2c2@1 {
 			/* accelerometer */
 			clock-frequency = <100000>;
 			reg = <1>;
@@ -811,6 +811,38 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
+	};
+};
+
+&i2c2b {
+	/* Invensense */
+	icm20948@68 {
+		compatible = "invensense,icm20648";
+		reg = <0x68>;
+		interrupts-extended = GPIRQ_ACCEL;
+		pinctrl-0 = <&pinctrl_i2c2b_icm_20948>;
+		inven,vdd_ana-supply = <&reg_vref_1v8>;
+		inven,vcc_i2c-supply = <&reg_vref_1v8>;
+		fs_range = <0x00>;
+		axis_map_x = <0>;
+		axis_map_y = <1>;
+		axis_map_z = <2>;
+		negate_x = <0>;
+		negate_y = <0>;
+		negate_z = <0>;
+		poll_interval = <200>;
+		min_interval = <5>;
+		inven,secondary_reg = <0x0c>;
+		inven,secondary_type = "compass";
+		inven,secondary_name = "ak09916";
+		inven,secondary_axis_map_x = <0>;
+		inven,secondary_axis_map_y = <1>;
+		inven,secondary_axis_map_z = <2>;
+		inven,secondary_negate_x = <0>;
+		inven,secondary_negate_y = <1>;
+		inven,secondary_negate_z = <1>;
+		inven,aux_type = "none";
+		inven,read_only_slave_type = "none";
 	};
 };
 
