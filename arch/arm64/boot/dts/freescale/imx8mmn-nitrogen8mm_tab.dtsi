@@ -106,6 +106,13 @@
 		>;
 	};
 
+	pinctrl_i2c2c_rv3028: i2c2c-rv3028grp {
+		fsl,pins = <
+#define GPIRQ_RV3028	<&gpio3 5 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_NAND_CLE_GPIO3_IO5, 0x82)
+		>;
+	};
+
 	pinctrl_i2c3: i2c3grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_I2C3_SCL_I2C3_SCL, 0x400001c3)
@@ -782,8 +789,8 @@
 			#size-cells = <0>;
 		};
 
-		i2c2@2 {
-			/* spare */
+		i2c2c: i2c2@2 {
+			/* RTC */
 			clock-frequency = <100000>;
 			reg = <2>;
 			#address-cells = <1>;
@@ -797,6 +804,18 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
+	};
+};
+
+&i2c2c {
+	rtc@52 {
+		backup-switchover-dsm;
+		compatible = "microcrystal,rv3028";
+		interrupts-extended = GPIRQ_RV3028;
+		pinctrl-0 = <&pinctrl_i2c2c_rv3028>;
+		pinctrl-names = "default";
+		reg = <0x52>;
+		wakeup-source;
 	};
 };
 
