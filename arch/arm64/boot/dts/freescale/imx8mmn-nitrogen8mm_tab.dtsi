@@ -38,8 +38,6 @@
 			MX8MMN(IOMUXC_SAI5_MCLK_GPIO3_IO25, 0x09)	/* pin 38, CLK_REQ_OUT */
 			MX8MMN(IOMUXC_SAI2_MCLK_GPIO4_IO27, 0x09)	/* pin 42, BT_UART_WH */
 		
-			MX8MMN(IOMUXC_GPIO1_IO10_GPIO1_IO10, 0x1c3)	/* Flash enable */
-			MX8MMN(IOMUXC_GPIO1_IO05_GPIO1_IO5, 0x1c3)	/* Flash torch mode */
 			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x1c3)	/* NFC GPO */
 			MX8MMN(IOMUXC_SD1_STROBE_GPIO2_IO11, 0x09)	/* R160 */
 			MX8MMN(IOMUXC_SD2_RESET_B_GPIO2_IO19, 0x09)	/* TP8 */
@@ -151,6 +149,15 @@
 			MX8MMN(IOMUXC_NAND_READY_B_GPIO3_IO16, 0x141)
 #define GP_OV5640_2MIPI_RESET		<&gpio3 0 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_NAND_ALE_GPIO3_IO0, 0x101)
+		>;
+	};
+
+	pinctrl_i2c3d_adp1650: i2c3d-adp1650grp {
+		fsl,pins = <
+#define GP_FLASH_EN		<&gpio1 10 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO10_GPIO1_IO10, 0x1c3)
+#define GP_TORCH_EN		<&gpio1 5 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO05_GPIO1_IO5, 0x109)
 		>;
 	};
 
@@ -860,7 +867,7 @@
 
 		i2c3d: i2c3@3 {
 			/* Flash */
-			reg = <1>;
+			reg = <3>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
@@ -905,6 +912,17 @@
 				remote-endpoint = <&mipi1_ov5640_ep>;
 			};
 		};
+	};
+};
+
+&i2c3d {
+	adp1650@30 {
+		compatible = "adi,adp1650";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3d_adp1650>;
+		reg = <0x30>;
+		enable-gpios = GP_FLASH_EN;
+		torch-gpios = GP_TORCH_EN;
 	};
 };
 
