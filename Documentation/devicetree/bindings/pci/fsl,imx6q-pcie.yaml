@@ -162,6 +162,11 @@ properties:
   reset-names:
     description: Must contain the following entries: "clkreq"
 
+  l1ss-disabled:
+    description: Force to disable L1SS or not. If present then the L1
+      substate would be force disabled although it might be supported by the
+      chip.
+
 required:
   - compatible
   - reg
