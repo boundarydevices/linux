@@ -245,22 +245,20 @@ static struct adp1650_platform_data *adp1650_parse_dt(struct i2c_client *client)
 	pdata->enable_gpio = devm_gpiod_get_index(&client->dev, "enable", 0,
 						GPIOD_OUT_HIGH);
 	if (IS_ERR(pdata->enable_gpio)) {
-		dev_err(&client->dev, "Couldn't find hwen gpio\n");
+		dev_err(&client->dev, "Couldn't find enable gpio\n");
 		return ERR_PTR(-ENODATA);
 	}
 
 	pdata->strobe_gpio = devm_gpiod_get_index(&client->dev, "strobe", 0,
 						  GPIOD_OUT_LOW);
 	if (IS_ERR(pdata->strobe_gpio)) {
-		dev_err(&client->dev, "Couldn't find strobe gpio\n");
-		return ERR_PTR(-ENODATA);
+		dev_info(&client->dev, "No strobe gpio provided\n");
 	}
 
 	pdata->torch_gpio = devm_gpiod_get_index(&client->dev, "torch", 0,
 						 GPIOD_OUT_LOW);
 	if (IS_ERR(pdata->torch_gpio)) {
-		dev_err(&client->dev, "Couldn't find torch gpio\n");
-		return ERR_PTR(-ENODATA);
+		dev_info(&client->dev, "No torch gpio provided\n");
 	}
 
 	return pdata;
