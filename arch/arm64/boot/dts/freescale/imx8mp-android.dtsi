@@ -72,3 +72,8 @@
 		pmsg-size       = <0x00020000>;
         };
 };
+
+&lcdif1 {
+	trusty;
+	status = "okay";
+};
