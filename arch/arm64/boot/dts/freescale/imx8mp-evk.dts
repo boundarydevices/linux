@@ -658,6 +658,7 @@
 };
 
 &lcdif1 {
+	trusty;
 	status = "okay";
 };
 
