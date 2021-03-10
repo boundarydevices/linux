@@ -662,6 +662,13 @@
 				 <&clk IMX8MQ_SYS2_PLL_250M>;
 	vph-supply = <&vgen5_reg>;
 	status = "okay";
+
+	wifi_wake_host {
+		compatible = "nxp,wifi-wake-host";
+		interrupt-parent = <&gpio5>;
+		interrupts = <11 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-names = "host-wake";
+	};
 };
 
 &pcie1_ep {
@@ -984,6 +991,7 @@
 			MX8MQ_IOMUXC_I2C4_SDA_PCIE2_CLKREQ_B		0x76 /* open drain, pull up */
 			MX8MQ_IOMUXC_ECSPI2_SCLK_GPIO5_IO10		0x16
 			MX8MQ_IOMUXC_ECSPI2_MISO_GPIO5_IO12		0x16
+			MX8MQ_IOMUXC_ECSPI2_MOSI_GPIO5_IO11		0x41
 		>;
 	};
 
