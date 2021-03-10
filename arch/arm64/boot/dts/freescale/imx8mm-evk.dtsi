@@ -525,6 +525,7 @@
 };
 
 &lcdif {
+       trusty;
        status = "okay";
 };
 
