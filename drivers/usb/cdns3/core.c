@@ -725,7 +725,7 @@ static int cdns3_resume_from_power_lost(struct cdns3 *cdns)
 {
 	enum usb_role real_role;
 	bool role_changed = false;
-	int ret;
+	int ret = 0;
 
 	dev_dbg(cdns->dev, "resume from power lost\n");
 
