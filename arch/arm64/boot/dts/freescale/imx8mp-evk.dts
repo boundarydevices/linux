@@ -777,6 +777,13 @@
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_50M>;
 	vpcie-supply = <&reg_pcie0>;
 	status = "okay";
+
+	wifi_wake_host {
+		compatible = "nxp,wifi-wake-host";
+		interrupt-parent = <&gpio5>;
+		interrupts = <21 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-names = "host-wake";
+	};
 };
 
 &pcie_ep{
