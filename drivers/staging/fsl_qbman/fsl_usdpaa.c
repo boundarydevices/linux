@@ -1040,7 +1040,8 @@ static long ioctl_dma_map(struct file *fp, struct ctx *ctx,
 				if (i->len != frag->map_len && i->len) {
 					pr_err("ioctl_dma_map() Size requested does not match %s and is none zero\n",
 					frag->name);
-					return -EINVAL;
+					ret = -EINVAL;
+					goto out;
 				}
 
 				/* Check if this has already been mapped
@@ -2179,7 +2180,8 @@ static long usdpaa_ioctl_compat(struct file *fp, unsigned int cmd,
 		converted.phys_addr = input.phys_addr;
 		converted.len = input.len;
 		converted.flags = input.flags;
-		strncpy(converted.name, input.name, USDPAA_DMA_NAME_MAX);
+		memset(converted.name, '\0', USDPAA_DMA_NAME_MAX);
+		strncpy(converted.name, input.name, USDPAA_DMA_NAME_MAX - 1);
 		converted.has_locking = input.has_locking;
 		converted.did_create = input.did_create;
 
@@ -2188,7 +2190,8 @@ static long usdpaa_ioctl_compat(struct file *fp, unsigned int cmd,
 		input.phys_addr = converted.phys_addr;
 		input.len = converted.len;
 		input.flags = converted.flags;
-		strncpy(input.name, converted.name, USDPAA_DMA_NAME_MAX);
+		memset(input.name, '\0', USDPAA_DMA_NAME_MAX);
+		strncpy(input.name, converted.name, USDPAA_DMA_NAME_MAX - 1);
 		input.has_locking = converted.has_locking;
 		input.did_create = converted.did_create;
 		if (copy_to_user(a, &input, sizeof(input)))
