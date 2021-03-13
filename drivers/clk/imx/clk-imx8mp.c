@@ -1031,7 +1031,7 @@ static int imx8mp_clocks_probe(struct platform_device *pdev)
 
 	imx_clk_init_on(np, hws);
 
-	imx_register_uart_clocks();
+	imx_register_uart_clocks(4);
 
 	return 0;
 }
