@@ -12,6 +12,8 @@
  */
 struct binder_transaction;
 struct task_struct;
+struct binder_thread;
+struct binder_proc;
 DECLARE_HOOK(android_vh_binder_transaction_init,
 	TP_PROTO(struct binder_transaction *t),
 	TP_ARGS(t));
@@ -21,6 +23,12 @@ DECLARE_HOOK(android_vh_binder_set_priority,
 DECLARE_HOOK(android_vh_binder_restore_priority,
 	TP_PROTO(struct binder_transaction *t, struct task_struct *task),
 	TP_ARGS(t, task));
+DECLARE_HOOK(android_vh_binder_wait_for_work,
+	TP_PROTO(bool do_proc_work, struct binder_thread *tsk, struct binder_proc *proc),
+	TP_ARGS(do_proc_work, tsk, proc));
+DECLARE_HOOK(android_vh_sync_txn_recvd,
+	TP_PROTO(struct task_struct *tsk, struct task_struct *from),
+	TP_ARGS(tsk, from));
 #endif /* _TRACE_HOOK_BINDER_H */
 /* This part must be outside protection */
 #include <trace/define_trace.h>
