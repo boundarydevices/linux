@@ -79,8 +79,6 @@
 
 	pinctrl_enet2: enet2grp {
 		fsl,pins = <
-			MX6UL_PAD_GPIO1_IO07__ENET2_MDC			0x0028
-			MX6UL_PAD_GPIO1_IO06__ENET2_MDIO		0xb028
 			MX6UL_PAD_ENET2_TX_DATA0__ENET2_TDATA00		0x0028
 			MX6UL_PAD_ENET2_TX_DATA1__ENET2_TDATA01		0x0028
 			MX6UL_PAD_ENET2_TX_CLK__ENET2_REF_CLK2		0x40000028
@@ -90,10 +88,31 @@
 			MX6UL_PAD_ENET2_RX_DATA1__ENET2_RDATA01		0x0028
 			MX6UL_PAD_ENET2_RX_EN__ENET2_RX_EN		0x0028
 			MX6UL_PAD_ENET2_RX_ER__ENET2_RX_ER		0x0028
-#define GP_FEC2_PHY_RESET		<&gpio1 9 GPIO_ACTIVE_LOW>
-			MX6UL_PAD_GPIO1_IO09__GPIO1_IO09		0x30b0
+		>;
+	};
+
+	pinctrl_enet2_fec: enet2-fecgrp {
+		fsl,pins = <
+			MX6UL_PAD_GPIO1_IO07__ENET2_MDC			0x0010
+			MX6UL_PAD_GPIO1_IO06__ENET2_MDIO		0xb810
+		>;
+	};
+
+	pinctrl_enet2_gpio: enet2-gpiogrp {
+		fsl,pins = <
+#define GP_KSZ8863_MDC	<&gpio1 7 GPIO_ACTIVE_HIGH>
+			MX6UL_PAD_GPIO1_IO07__GPIO1_IO07		0xb010
+#define GP_KSZ8863_MDIO	<&gpio1 6 GPIO_ACTIVE_HIGH>
+			MX6UL_PAD_GPIO1_IO06__GPIO1_IO06		0xb810
+		>;
+	};
+
+	pinctrl_enet2_ksz8863: enet2-ksz8863grp {
+		fsl,pins = <
 #define GPIRQ_FEC2_PHY			<&gpio1 8 IRQ_TYPE_LEVEL_LOW>
 			MX6UL_PAD_GPIO1_IO08__GPIO1_IO08		0x1b0b0
+#define GP_FEC2_PHY_RESET		<&gpio1 9 GPIO_ACTIVE_LOW>
+			MX6UL_PAD_GPIO1_IO09__GPIO1_IO09		0x30b0
 		>;
 	};
 
@@ -487,36 +506,67 @@
 };
 
 &fec2 {
-	pinctrl-names = "default";
+	mdc-gpios = GP_KSZ8863_MDC;
+	mdio-gpios = GP_KSZ8863_MDIO;
+	pinctrl-names = "default", "fec", "gpio";
 	pinctrl-0 = <&pinctrl_enet2>;
+	pinctrl-1 = <&pinctrl_enet2_fec>;
+	pinctrl-2 = <&pinctrl_enet2_gpio>;
 	phy-mode = "rmii";
-#if 0
-	phy-reset-gpios = GP_FEC2_PHY_RESET;
-#endif
 	phy-supply = <&reg_3p3v>;
 	status = "okay";
 #if 0
-	phy-handle = <&ethphy1>;
+	phy-handle = <&fec2_phy>;
 #else
+
 	fixed-link {
 		speed = <100>;
-#if 0
-		pause;
-#endif
 		full-duplex;
 	};
 #endif
+
 	mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		ethphy1: ethernet-phy@1 {
-			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <1>;
-#if 0
-			/* ksz8863 is not supporting irq correctly, poll*/
+		enet2_ksz8863@0 {
+			compatible = "microchip,ksz8863";
 			interrupts-extended = GPIRQ_FEC2_PHY;
+			pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_enet2_ksz8863>;
+			phy-mode = "rmii";
+			reg = <0>;
+#if 0
+			/* let's let u-boot handle this */
+			reset-gpios = GP_FEC2_PHY_RESET;
 #endif
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					label = "lan1";
+				};
+
+				port@1 {
+					reg = <1>;
+					label = "lan2";
+				};
+
+				fec2_phy: port@2 {
+					reg = <2>;
+					label = "cpu";
+					ethernet = <&fec2>;
+					phy-mode = "rmii";
+
+					fixed-link {
+						speed = <100>;
+						full-duplex;
+					};
+				};
+			};
 		};
 	};
 };
