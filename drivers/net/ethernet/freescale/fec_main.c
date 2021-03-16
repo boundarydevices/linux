@@ -1928,15 +1928,24 @@ static int phy_preamble(struct fec_enet_private *fep)
 	return 0;
 }
 
+#define SMI	BIT(5)
+
 static int fec_enet_mdio_read_bb(struct mii_bus *bus, int mii_id, int regnum)
 {
 	struct fec_enet_private *fep = bus->priv;
 	int val, ret;
 	int i;
 
-	val = FEC_MMFR_ST | FEC_MMFR_OP_READ |
-			FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
+	if (fep->pins_gpio && fep->pins_fec_selected) {
+		fep->pins_fec_selected = 0;
+		ret = pinctrl_select_state(fep->pinctrl, fep->pins_gpio);
+		if (ret)
+			netdev_err(fep->netdev, "cannot select mii gpio\n");
+	}
+	val = FEC_MMFR_ST | FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
 			FEC_MMFR_TA;
+	if (!(mii_id & SMI))
+		val |= FEC_MMFR_OP_READ;
 
 	ret = phy_preamble(fep);
 	if (ret)
@@ -1954,8 +1963,6 @@ static int fec_enet_mdio_read_bb(struct mii_bus *bus, int mii_id, int regnum)
 		gpiod_set_value(fep->gd_mdc, 1);
 	}
 
-	dev_dbg(&fep->pdev->dev, "%s: phy: %02x reg:%02x val:%#x\n", __func__, mii_id,
-		regnum, val);
 	if (val & BIT(16)) {
 		if ((regnum != 2) && (regnum != 3)) {
 			dev_err(&fep->pdev->dev,
@@ -1964,6 +1971,9 @@ static int fec_enet_mdio_read_bb(struct mii_bus *bus, int mii_id, int regnum)
 			msleep(1);
 		}
 		val = 0xffff; /* could return -EIO, but mii-tool looks for 0xffff */
+	} else {
+		dev_dbg(&fep->pdev->dev, "%s: adr=0x%02x reg:0x%02x val:0x%x\n",
+			__func__, mii_id, regnum, val);
 	}
 	return val;
 }
@@ -1975,9 +1985,16 @@ static int fec_enet_mdio_write_bb(struct mii_bus *bus, int mii_id, int regnum,
 	int val;
 	int ret;
 
-	val = FEC_MMFR_ST | FEC_MMFR_OP_WRITE |
-			FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
+	if (fep->pins_gpio && fep->pins_fec_selected) {
+		fep->pins_fec_selected = 0;
+		ret = pinctrl_select_state(fep->pinctrl, fep->pins_gpio);
+		if (ret)
+			netdev_err(fep->netdev, "cannot select mii gpio\n");
+	}
+	val = FEC_MMFR_ST | FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(regnum) |
 			FEC_MMFR_TA | FEC_MMFR_DATA(value);
+	if (!(mii_id & SMI))
+		val |= FEC_MMFR_OP_WRITE;
 
 	ret = phy_preamble(fep);
 	if (ret)
@@ -1985,6 +2002,8 @@ static int fec_enet_mdio_write_bb(struct mii_bus *bus, int mii_id, int regnum,
 	bangout(fep, val, 32);
 
 	gpiod_direction_input(fep->gd_mdio);
+	dev_dbg(&fep->pdev->dev, "%s: adr=0x%02x reg:0x%02x val:0x%x\n",
+		__func__, mii_id, regnum, value);
 	return 0;
 }
 
@@ -2009,6 +2028,18 @@ static int fec_enet_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
 	int ret = 0, frame_start, frame_addr, frame_op;
 	bool is_c45 = !!(regnum & MII_ADDR_C45);
 
+	if (mii_id & SMI) {
+		/* we must bit-bang SMI reads */
+		if (fep->pins_gpio)
+			return fec_enet_mdio_read_bb(bus, mii_id, regnum);
+		return -EINVAL;
+	}
+	if (fep->pins_fec && !fep->pins_fec_selected) {
+		fep->pins_fec_selected = 1;
+		ret = pinctrl_select_state(fep->pinctrl, fep->pins_fec);
+		if (ret)
+			netdev_err(fep->netdev, "cannot select mii fec\n");
+	}
 	ret = pm_runtime_resume_and_get(dev);
 	if (ret < 0)
 		return ret;
@@ -2056,6 +2087,7 @@ static int fec_enet_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
 out:
 	pm_runtime_mark_last_busy(dev);
 	pm_runtime_put_autosuspend(dev);
+	pr_debug("%s: adr=0x%x regnum=0x%x, ret=0x%x\n", __func__, mii_id, regnum, ret);
 
 	return ret;
 }
@@ -2067,7 +2099,14 @@ static int fec_enet_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
 	struct device *dev = &fep->pdev->dev;
 	int ret, frame_start, frame_addr;
 	bool is_c45 = !!(regnum & MII_ADDR_C45);
+	int frame_op = FEC_MMFR_OP_WRITE;
 
+	if (fep->pins_fec && !fep->pins_fec_selected) {
+		fep->pins_fec_selected = 1;
+		ret = pinctrl_select_state(fep->pinctrl, fep->pins_fec);
+		if (ret)
+			netdev_err(fep->netdev, "cannot select mii fec\n");
+	}
 	ret = pm_runtime_resume_and_get(dev);
 	if (ret < 0)
 		return ret;
@@ -2094,8 +2133,11 @@ static int fec_enet_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
 		frame_addr = regnum;
 	}
 
+	if (mii_id & SMI)
+		frame_op = 0;
+
 	/* start a write op */
-	writel(frame_start | FEC_MMFR_OP_WRITE |
+	writel(frame_start | frame_op |
 		FEC_MMFR_PA(mii_id) | FEC_MMFR_RA(frame_addr) |
 		FEC_MMFR_TA | FEC_MMFR_DATA(value),
 		fep->hwp + FEC_MII_DATA);
@@ -2417,8 +2459,9 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 		goto err_out;
 	}
 
+
 	fep->mii_bus->name = "fec_enet_mii_bus";
-	if (fep->gd_mdc && fep->gd_mdio) {
+	if (!fep->pins_fec_selected) {
 		fep->mii_bus->read = fec_enet_mdio_read_bb;
 		fep->mii_bus->write = fec_enet_mdio_write_bb;
 	} else {
@@ -3946,6 +3989,7 @@ fec_probe(struct platform_device *pdev)
 	int irq_cnt;
 	struct fec_devinfo *dev_info;
 	struct gpio_desc *gd;
+	struct pinctrl_state *pins;
 
 	fec_enet_get_queue_num(pdev, &num_tx_qs, &num_rx_qs);
 
@@ -4019,6 +4063,33 @@ fec_probe(struct platform_device *pdev)
 		goto failed_ipc_init;
 	}
 	fep->gd_mdio = gd;
+	fep->pinctrl = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(fep->pinctrl)) {
+		ret = PTR_ERR(fep->pinctrl);
+		goto failed_phy;
+	}
+
+	pins = pinctrl_lookup_state(fep->pinctrl, "fec");
+	if (IS_ERR(pins)) {
+		pins = NULL;
+	}
+	fep->pins_fec = pins;
+
+	pins = pinctrl_lookup_state(fep->pinctrl, "gpio");
+	if (IS_ERR(pins)) {
+		pins = NULL;
+	}
+	fep->pins_gpio = pins;
+	fep->pins_fec_selected = 1;
+	if (fep->pins_fec) {
+		ret = pinctrl_select_state(fep->pinctrl, fep->pins_fec);
+		if (ret)
+			dev_err(&pdev->dev, "cannot select mii fec\n");
+	}
+	if (fep->gd_mdc && fep->gd_mdio) {
+		if (!fep->pins_fec || !fep->pins_gpio)
+			fep->pins_fec_selected = 0;
+	}
 
 	if (of_get_property(np, "fsl,magic-packet", NULL))
 		fep->wol_flag |= FEC_WOL_HAS_MAGIC_PACKET;
