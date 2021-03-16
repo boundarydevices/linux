@@ -634,6 +634,10 @@ struct fec_enet_private {
 	struct fec_enet_stop_mode gpr;
 	struct gpio_desc *gd_mdc;
 	struct gpio_desc *gd_mdio;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pins_fec;
+	struct pinctrl_state *pins_gpio;
+	int pins_fec_selected;
 
 	u64 ethtool_stats[0];
 };
