@@ -1268,14 +1268,14 @@ static int vsiv4l2_setfmt_dec(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt)
 	targetfmt = vsi_find_format(ctx, fmt);
 	if (targetfmt == NULL)
 		return -EINVAL;
-	v4l2_klog(LOGLVL_CONFIG, "%s:%d:%x:%d:%d", __func__,
-		fmt->type, fmt->fmt.pix.pixelformat, fmt->fmt.pix.width, fmt->fmt.pix.height);
 	if (binputqueue(fmt->type))
 		psize = pcfg->sizeimagesrc;
 	else {
 		psize = pcfg->sizeimagedst;
 		oldsize = psize[0];
 	}
+	v4l2_klog(LOGLVL_BRIEF, "%s:%d:%x:%d:%d:%d", __func__,
+		fmt->type, fmt->fmt.pix.pixelformat, fmt->fmt.pix.width, fmt->fmt.pix.height, oldsize);
 	if (binputqueue(fmt->type)) {
 		pcfg->decparams.dec_info.io_buffer.srcwidth = fmt->fmt.pix.width;
 		pcfg->decparams.dec_info.io_buffer.srcheight = fmt->fmt.pix.height;
@@ -1597,7 +1597,7 @@ void vsiv4l2_buffer_config(
 		sizes[0] <= 0) {
 		sizes[0] = PAGE_SIZE;
 	}
-	v4l2_klog(LOGLVL_BRIEF, "%s:%d:%d:%d:%d:%d", __func__,
+	v4l2_klog(LOGLVL_BRIEF, "%lx:%d::%s:%d:%d:%d:%d:%d", ctx->ctxid, type, __func__,
 		*nbuffers, *nplanes, sizes[0], sizes[1], sizes[2]);
 }
 

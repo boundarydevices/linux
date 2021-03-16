@@ -299,14 +299,11 @@ int vsi_v4l2_notify_reschange(struct vsi_v4l2_msg *pmsg)
 		struct vsi_v4l2_mediacfg *pcfg = &ctx->mediacfg;
 		struct v4l2_daemon_dec_info *decinfo = &pmsg->params.dec_params.dec_info.dec_info;
 
-		v4l2_klog(LOGLVL_BRIEF, "%lx sending event res change:%d, delay=%d", ctx->ctxid, ctx->status, !list_empty(&ctx->output_que.done_list));
+		v4l2_klog(LOGLVL_BRIEF, "%lx sending event res change:%d, delay=%d", ctx->ctxid, ctx->status,
+			(ctx->status == DEC_STATUS_DECODING || ctx->status == DEC_STATUS_DRAINING) && !list_empty(&ctx->output_que.done_list));
 		v4l2_klog(LOGLVL_BRIEF, "reso=%d:%d,bitdepth=%d,dpb=%d:%d,orig yuvfmt=%d",
 			decinfo->frame_width, decinfo->frame_height, decinfo->bit_depth, decinfo->needed_dpb_nums,
 			decinfo->dpb_buffer_size, decinfo->src_pix_fmt);
-		pcfg->minbuf_4output =
-			pcfg->minbuf_4capture = pmsg->params.dec_params.dec_info.dec_info.needed_dpb_nums;
-		pcfg->sizeimagedst[0] =
-			pmsg->params.dec_params.io_buffer.OutBufSize;
 		if ((ctx->status == DEC_STATUS_DECODING || ctx->status == DEC_STATUS_DRAINING)
 			&& !list_empty(&ctx->output_que.done_list)) {
 			pcfg->decparams_bkup.dec_info = pmsg->params.dec_params.dec_info;
@@ -315,6 +312,8 @@ int vsi_v4l2_notify_reschange(struct vsi_v4l2_msg *pmsg)
 			pcfg->decparams_bkup.io_buffer.output_width = pmsg->params.dec_params.io_buffer.output_width;
 			pcfg->decparams_bkup.io_buffer.output_height = pmsg->params.dec_params.io_buffer.output_height;
 			pcfg->decparams_bkup.io_buffer.output_wstride = pmsg->params.dec_params.io_buffer.output_wstride;
+			pcfg->minbuf_4output_bkup = pmsg->params.dec_params.dec_info.dec_info.needed_dpb_nums;
+			pcfg->sizeimagedst_bkup = pmsg->params.dec_params.io_buffer.OutBufSize;
 			set_bit(CTX_FLAG_DELAY_SRCCHANGED_BIT, &ctx->flag);
 		} else {
 			pcfg->decparams.dec_info.dec_info = pmsg->params.dec_params.dec_info.dec_info;
@@ -324,6 +323,10 @@ int vsi_v4l2_notify_reschange(struct vsi_v4l2_msg *pmsg)
 			pcfg->decparams.dec_info.io_buffer.output_height = pmsg->params.dec_params.dec_info.io_buffer.output_height;
 			pcfg->decparams.dec_info.io_buffer.output_wstride = pmsg->params.dec_params.dec_info.io_buffer.output_wstride;
 			pcfg->src_pixeldepth = decinfo->bit_depth;
+			pcfg->minbuf_4output =
+				pcfg->minbuf_4capture = pmsg->params.dec_params.dec_info.dec_info.needed_dpb_nums;
+			pcfg->sizeimagedst[0] =
+				pmsg->params.dec_params.io_buffer.OutBufSize;
 			vsi_v4l2_send_reschange(ctx);
 		}
 		if (pmsg->params.dec_params.dec_info.dec_info.colour_description_present_flag)

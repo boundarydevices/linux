@@ -490,7 +490,7 @@ tail:
 	if (ctx) {
 		if (ret < 0) {
 			vsi_set_ctx_error(ctx, ret);
-			v4l2_klog(LOGLVL_ERROR, "fail to communicate with daemon, error=%d", ret);
+			v4l2_klog(LOGLVL_ERROR, "%lx fail to communicate with daemon, error=%d", ctx->ctxid, ret);
 		} else
 			set_bit(CTX_FLAG_DAEMONLIVE_BIT, &ctx->flag);
 	}

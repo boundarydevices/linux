@@ -231,6 +231,8 @@ struct vsi_v4l2_mediacfg {
 	struct v4l2_daemon_enc_params encparams;
 	struct v4l2_daemon_dec_params decparams;
 	struct v4l2_daemon_dec_params decparams_bkup;
+	s32 minbuf_4output_bkup;
+	s32 sizeimagedst_bkup;
 };
 
 struct vsi_v4l2_device {
