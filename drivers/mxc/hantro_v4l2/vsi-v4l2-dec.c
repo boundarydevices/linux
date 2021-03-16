@@ -236,7 +236,7 @@ static int vsi_dec_streamon(struct file *filp, void *priv, enum v4l2_buf_type ty
 	int ret = 0;
 	struct vsi_v4l2_ctx *ctx = fh_to_ctx(filp->private_data);
 
-	v4l2_klog(LOGLVL_BRIEF, "%s:%d", __func__, type);
+	v4l2_klog(LOGLVL_BRIEF, "%lx %s:%d", ctx->ctxid, __func__, type);
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 	if (!isvalidtype(type, ctx->flag))
@@ -281,6 +281,21 @@ static int vsi_checkctx_srcbuf(struct vsi_v4l2_ctx *ctx)
 	return ret;
 }
 
+static void vsi_dec_update_reso(struct vsi_v4l2_ctx *ctx)
+{
+	struct vsi_v4l2_mediacfg *pcfg = &ctx->mediacfg;
+
+	pcfg->decparams.dec_info.dec_info = pcfg->decparams_bkup.dec_info.dec_info;
+	pcfg->decparams.dec_info.io_buffer.srcwidth = pcfg->decparams_bkup.io_buffer.srcwidth;
+	pcfg->decparams.dec_info.io_buffer.srcheight = pcfg->decparams_bkup.io_buffer.srcheight;
+	pcfg->decparams.dec_info.io_buffer.output_width = pcfg->decparams_bkup.io_buffer.output_width;
+	pcfg->decparams.dec_info.io_buffer.output_height = pcfg->decparams_bkup.io_buffer.output_height;
+	pcfg->decparams.dec_info.io_buffer.output_wstride = pcfg->decparams_bkup.io_buffer.output_wstride;
+	pcfg->src_pixeldepth = pcfg->decparams_bkup.dec_info.dec_info.bit_depth;
+	pcfg->minbuf_4output = pcfg->minbuf_4capture = pcfg->minbuf_4output_bkup;
+	pcfg->sizeimagedst[0] = pcfg->sizeimagedst_bkup;
+}
+
 static int vsi_dec_streamoff(
 	struct file *file,
 	void *priv,
@@ -291,7 +306,7 @@ static int vsi_dec_streamoff(
 	struct vb2_queue *q;
 	enum v4l2_buf_type otype;
 
-	v4l2_klog(LOGLVL_BRIEF, "%s:%d", __func__, type);
+	v4l2_klog(LOGLVL_BRIEF, "%lx %s:%d", ctx->ctxid, __func__, type);
 	if (!vsi_v4l2_daemonalive())
 		return -ENODEV;
 	if (ctx->error < 0)
@@ -326,8 +341,11 @@ static int vsi_dec_streamoff(
 			clear_bit(CTX_FLAG_ENDOFSTRM_BIT, &ctx->flag);
 			clear_bit(CTX_FLAG_PRE_DRAINING_BIT, &ctx->flag);
 		}
-		if (test_and_clear_bit(CTX_FLAG_DELAY_SRCCHANGED_BIT, &ctx->flag))
+		if (test_and_clear_bit(CTX_FLAG_DELAY_SRCCHANGED_BIT, &ctx->flag)) {
+			vsi_dec_update_reso(ctx);
 			vsi_v4l2_send_reschange(ctx);
+			v4l2_klog(LOGLVL_BRIEF, "%lx send delayed src change in streamoff", ctx->ctxid);
+		}
 	} else {
 		ctx->buffed_capnum = 0;
 		ctx->buffed_cropcapnum = 0;
@@ -379,8 +397,6 @@ static int vsi_dec_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 			return -EAGAIN;
 	}
 	if (!binputqueue(p->type)) {
-		struct vsi_v4l2_mediacfg *pcfg = &ctx->mediacfg;
-
 		p->reserved = ctx->rfc_luma_offset[p->index];
 		p->reserved2 = ctx->rfc_chroma_offset[p->index];
 		v4l2_klog(LOGLVL_FLOW, "rfc offest update=%x:%x", p->reserved, p->reserved2);
@@ -391,15 +407,10 @@ static int vsi_dec_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 			clear_bit(CTX_FLAG_ENDOFSTRM_BIT, &ctx->flag);
 			v4l2_klog(LOGLVL_BRIEF, "send eos flag");
 		} else if (test_bit(CTX_FLAG_DELAY_SRCCHANGED_BIT, &ctx->flag) && ctx->buffed_capnum == 0) {
-			clear_bit(CTX_FLAG_DELAY_SRCCHANGED_BIT, &ctx->flag);
-			pcfg->decparams.dec_info.dec_info = pcfg->decparams_bkup.dec_info.dec_info;
-			pcfg->decparams.dec_info.io_buffer.srcwidth = pcfg->decparams_bkup.io_buffer.srcwidth;
-			pcfg->decparams.dec_info.io_buffer.srcheight = pcfg->decparams_bkup.io_buffer.srcheight;
-			pcfg->decparams.dec_info.io_buffer.output_width = pcfg->decparams_bkup.io_buffer.output_width;
-			pcfg->decparams.dec_info.io_buffer.output_height = pcfg->decparams_bkup.io_buffer.output_height;
-			pcfg->src_pixeldepth = pcfg->decparams_bkup.dec_info.dec_info.bit_depth;
+			vsi_dec_update_reso(ctx);
 			vsi_v4l2_send_reschange(ctx);
-			v4l2_klog(LOGLVL_BRIEF, "send delayed src change");
+			clear_bit(CTX_FLAG_DELAY_SRCCHANGED_BIT, &ctx->flag);
+			v4l2_klog(LOGLVL_BRIEF, "%lx send delayed src change", ctx->ctxid);
 		} else if (test_and_clear_bit(BUF_FLAG_CROPCHANGE, &ctx->vbufflag[p->index])) {
 			struct v4l2_event event;
 
