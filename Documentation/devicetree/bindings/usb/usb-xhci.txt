@@ -30,6 +30,7 @@ Optional properties:
   - phys : see usb-hcd.yaml in the current directory
   - usb3-resume-missing-cas: set if the CAS(Cold Attach Status) may lose in case
     device plugged in while system sleep.
+  - offload: supporting USB offload feature, 0: disabled, 1: audio
 
 additionally the properties from usb-hcd.yaml (in the current directory) are
 supported.

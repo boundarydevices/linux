@@ -77,6 +77,7 @@
 #define MX6Q_ANATOP_CORE	0x140
 
 	.align 3
+	.arm
 
 	/* Check if the cpu is cortex-a7 */
 	.macro is_cortex_a7
