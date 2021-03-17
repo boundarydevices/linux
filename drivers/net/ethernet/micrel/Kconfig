@@ -61,4 +61,78 @@ config KSZ884X_PCI
 	  To compile this driver as a module, choose M here. The module
 	  will be called ksz884x.
 
+
+config KSZ_STP
+	bool "STP support"
+	depends on KSZ_SWITCH
+	default n
+	help
+	  Enable STP support.
+
+menuconfig KSZ_SWITCHES
+	tristate "Drivers for Microchip KSZ switches"
+	---help---
+	  Supports Microchip KSZ switches.
+
+if KSZ_SWITCHES
+
+comment "Microchip KSZ switch device drivers"
+
+config KSZ_SWITCH
+	bool
+	default n
+
+config KSZ_DSA
+	bool
+	default n
+
+config KSZ_SWITCH_EMBEDDED
+	bool
+	default n
+	select KSZ_SWITCH
+
+config HAVE_KSZ8863
+	bool
+	default n
+
+config HAVE_SPI_KSZ8863
+	bool
+	default n
+	select HAVE_KSZ8863
+
+config I2C_KSZ8863
+	tristate "I2C driver for Microchip KSZ8863 switch"
+	select KSZ_SWITCH if !NET_DSA_TAG_TAIL
+	select KSZ_DSA if NET_DSA_TAG_TAIL
+	select HAVE_KSZ8863
+	---help---
+	  Supports the Microchip KSZ8863 switch.
+
+config SPI_KSZ8863
+	tristate "SPI driver for Microchip KSZ8863 switch"
+	select KSZ_SWITCH if !NET_DSA_TAG_TAIL
+	select KSZ_DSA if NET_DSA_TAG_TAIL
+	select HAVE_SPI_KSZ8863
+	---help---
+	  Supports the Microchip KSZ8863 switch.
+
+config KSZ8863_EMBEDDED
+	bool "Microchip KSZ8863 switch support in network controller"
+	depends on I2C_KSZ8863 = n && SPI_KSZ8863 = n && !NET_DSA_TAG_TAIL
+	select KSZ_SWITCH_EMBEDDED
+	select HAVE_SPI_KSZ8863
+	---help---
+	  Supports the Microchip KSZ8863 switch used within a network controller.
+
+config SMI_KSZ8863
+	bool "Microchip KSZ8863 switch support in network controller, SMI mode"
+	depends on I2C_KSZ8863 = n && SPI_KSZ8863 = n && !NET_DSA_TAG_TAIL
+	select KSZ_SWITCH_EMBEDDED
+	select KSZ_SMI
+	select HAVE_KSZ8863
+	---help---
+	  Supports the Microchip KSZ8863 switch used within a network controller in SMI mode.
+
+endif
+
 endif # NET_VENDOR_MICREL
