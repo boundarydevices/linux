@@ -186,6 +186,11 @@
 			no-map;
 			reg = <0 0x92400000 0 0x2000000>;
 		};
+
+		unmapped_region: unmapped {
+			 compatible = "imx-secure-ion-pool";
+			 reg = <0x0 0xE0000000 0 0x10000000>;
+		};
 	};
 
 	osc_32k: clock-osc-32k {
