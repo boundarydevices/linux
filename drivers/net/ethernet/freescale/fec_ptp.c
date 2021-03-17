@@ -250,15 +250,13 @@ static u64 fec_ptp_read(const struct cyclecounter *cc)
 
 /**
  * fec_ptp_start_cyclecounter - create the cycle counter from hw
- * @ndev: network device
  *
  * this function initializes the timecounter and cyclecounter
  * structures for use in generated a ns counter from the arbitrary
  * fixed point cycles registers in the hardware.
  */
-void fec_ptp_start_cyclecounter(struct net_device *ndev)
+void fec_ptp_start_cyclecounter(struct fec_enet_private *fep)
 {
-	struct fec_enet_private *fep = netdev_priv(ndev);
 	unsigned long flags;
 	int inc;
 
@@ -468,14 +466,11 @@ static int fec_ptp_enable(struct ptp_clock_info *ptp,
 
 /**
  * fec_ptp_hwtstamp_ioctl - control hardware time stamping
- * @ndev: pointer to net_device
  * @ifreq: ioctl data
  * @cmd: particular ioctl requested
  */
-int fec_ptp_set(struct net_device *ndev, struct ifreq *ifr)
+int fec_ptp_set(struct fec_enet_private *fep, struct ifreq *ifr)
 {
-	struct fec_enet_private *fep = netdev_priv(ndev);
-
 	struct hwtstamp_config config;
 
 	if (copy_from_user(&config, ifr->ifr_data, sizeof(config)))
@@ -513,9 +508,8 @@ int fec_ptp_set(struct net_device *ndev, struct ifreq *ifr)
 	    -EFAULT : 0;
 }
 
-int fec_ptp_get(struct net_device *ndev, struct ifreq *ifr)
+int fec_ptp_get(struct fec_enet_private *fep, struct ifreq *ifr)
 {
-	struct fec_enet_private *fep = netdev_priv(ndev);
 	struct hwtstamp_config config;
 
 	config.flags = 0;
@@ -558,11 +552,8 @@ static void fec_time_keep(struct work_struct *work)
  * cyclecounter init routine and exits.
  */
 
-void fec_ptp_init(struct platform_device *pdev)
+void fec_ptp_init(struct platform_device *pdev, struct net_device *ndev, struct fec_enet_private *fep)
 {
-	struct net_device *ndev = platform_get_drvdata(pdev);
-	struct fec_enet_private *fep = netdev_priv(ndev);
-
 	fep->ptp_caps.owner = THIS_MODULE;
 	snprintf(fep->ptp_caps.name, 16, "fec ptp");
 
@@ -587,7 +578,7 @@ void fec_ptp_init(struct platform_device *pdev)
 
 	spin_lock_init(&fep->tmreg_lock);
 
-	fec_ptp_start_cyclecounter(ndev);
+	fec_ptp_start_cyclecounter(fep);
 
 	INIT_DELAYED_WORK(&fep->time_keep, fec_time_keep);
 
@@ -600,11 +591,8 @@ void fec_ptp_init(struct platform_device *pdev)
 	schedule_delayed_work(&fep->time_keep, HZ);
 }
 
-void fec_ptp_stop(struct platform_device *pdev)
+void fec_ptp_stop(struct fec_enet_private *fep)
 {
-	struct net_device *ndev = platform_get_drvdata(pdev);
-	struct fec_enet_private *fep = netdev_priv(ndev);
-
 	cancel_delayed_work_sync(&fep->time_keep);
 	if (fep->ptp_clock)
 		ptp_clock_unregister(fep->ptp_clock);

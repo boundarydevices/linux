@@ -85,15 +85,14 @@ static int ar8031_phy_fixup(struct phy_device *dev)
 	return 0;
 }
 
-void fec_enet_register_fixup(struct net_device *ndev)
+void fec_enet_register_fixup(struct net_device *ndev, u32 fixups)
 {
-	struct fec_enet_private *fep = netdev_priv(ndev);
 	int err;
 
 	if (!IS_BUILTIN(CONFIG_PHYLIB))
 		return;
 
-	if (fep->fixups & FEC_QUIRK_AR8031_FIXUP) {
+	if (fixups & FEC_QUIRK_AR8031_FIXUP) {
 		static int ar8031_registered = 0;
 
 		if (ar8031_registered)
