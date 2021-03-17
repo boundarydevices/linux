@@ -16,10 +16,12 @@
 
 static const struct snd_soc_dapm_widget mt8183_mt6358_dapm_widgets[] = {
 	SND_SOC_DAPM_INPUT("4ch Mic"),
+	SND_SOC_DAPM_OUTPUT("2ch Speaker"),
 };
 
 static const struct snd_soc_dapm_route mt8183_mt6358_routes[] = {
 	{"I2S2", NULL, "4ch Mic"},
+	{ "2ch Speaker", NULL, "I2S1" },
 };
 
 static int mt8183_mt6358_i2s_hw_params(struct snd_pcm_substream *substream,
@@ -91,6 +93,11 @@ SND_SOC_DAILINK_DEFS(capture_mono,
 SND_SOC_DAILINK_DEFS(primary_codec,
 	DAILINK_COMP_ARRAY(COMP_CPU("ADDA")),
 	DAILINK_COMP_ARRAY(COMP_CODEC("mt6358-sound", "mt6358-snd-codec-aif1")),
+	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+
+SND_SOC_DAILINK_DEFS(i2s1,
+	DAILINK_COMP_ARRAY(COMP_CPU("I2S1")),
+	DAILINK_COMP_ARRAY(COMP_DUMMY()),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
 SND_SOC_DAILINK_DEFS(i2s2,
@@ -171,6 +178,16 @@ static struct snd_soc_dai_link mt8183_mt6358_dai_links[] = {
 		.dpcm_capture = 1,
 		.ignore_suspend = 1,
 		SND_SOC_DAILINK_REG(primary_codec),
+	},
+	{
+		.name = "I2S1",
+		.no_pcm = 1,
+		.dpcm_playback = 1,
+		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
+				SND_SOC_DAIFMT_CBS_CFS,
+		.be_hw_params_fixup = mt8183_i2s_hw_params_fixup,
+		.ops = &mt8183_mt6358_i2s_ops,
+		SND_SOC_DAILINK_REG(i2s1),
 	},
 	{
 		.name = "I2S2",
