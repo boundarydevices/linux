@@ -1170,6 +1170,8 @@
 					 <&clks IMX6QDL_CLK_ENET_REF>,
 					 <&clks IMX6QDL_CLK_ENET_REF>;
 				clock-names = "ipg", "ahb", "ptp", "enet_out";
+				assigned-clocks = <&clks IMX6QDL_CLK_ENET_REF>;
+				assigned-clock-rates = <125000000>;
 				fsl,stop-mode = <&gpr 0x34 27>;
 				fsl,wakeup_irq = <0>;
 				status = "disabled";
