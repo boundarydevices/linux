@@ -251,7 +251,7 @@ static struct imx_blk_ctrl_hw imx8mp_audio_blk_ctrl_hws[] = {
 	IMX_BLK_CTRL_RESET(IMX8MP_AUDIO_BLK_CTRL_EARC_PHY_RESET, 0x200, 1),
 };
 
-const struct imx_blk_ctrl_dev_data imx8mp_hdmi_blk_ctrl_dev_data __initconst = {
+static struct imx_blk_ctrl_dev_data imx8mp_hdmi_blk_ctrl_dev_data = {
 	.hws = imx8mp_hdmi_blk_ctrl_hws,
 	.hws_num = ARRAY_SIZE(imx8mp_hdmi_blk_ctrl_hws),
 	.clocks_max = IMX8MP_CLK_HDMI_BLK_CTRL_END,
@@ -259,7 +259,7 @@ const struct imx_blk_ctrl_dev_data imx8mp_hdmi_blk_ctrl_dev_data __initconst = {
 	.pm_runtime_saved_regs_num = 0
 };
 
-const struct imx_blk_ctrl_dev_data imx8mp_media_blk_ctrl_dev_data __initconst = {
+static struct imx_blk_ctrl_dev_data imx8mp_media_blk_ctrl_dev_data = {
 	.hws = imx8mp_media_blk_ctrl_hws,
 	.hws_num = ARRAY_SIZE(imx8mp_media_blk_ctrl_hws),
 	.clocks_max = IMX8MP_CLK_MEDIA_BLK_CTRL_END,
@@ -271,7 +271,7 @@ const struct imx_blk_ctrl_dev_data imx8mp_media_blk_ctrl_dev_data __initconst = 
 	},
 };
 
-const struct imx_blk_ctrl_dev_data imx8mp_audio_blk_ctrl_dev_data __initconst = {
+static struct imx_blk_ctrl_dev_data imx8mp_audio_blk_ctrl_dev_data = {
 	.hws = imx8mp_audio_blk_ctrl_hws,
 	.hws_num = ARRAY_SIZE(imx8mp_audio_blk_ctrl_hws),
 	.clocks_max = IMX8MP_CLK_AUDIO_BLK_CTRL_END,
