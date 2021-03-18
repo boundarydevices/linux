@@ -848,7 +848,6 @@ static irqreturn_t i2c_imx_slave_isr(struct imx_i2c_struct *i2c_imx,
 		ctl &= ~I2CR_MTX;
 		imx_i2c_write_reg(ctl, i2c_imx, IMX_I2C_I2CR);
 		imx_i2c_read_reg(i2c_imx, IMX_I2C_I2DR);
-		i2c_slave_event(i2c_imx->slave, I2C_SLAVE_STOP, &value);
 	}
 
 	return IRQ_HANDLED;
@@ -1416,7 +1415,7 @@ static int i2c_imx_xfer(struct i2c_adapter *adapter,
 	}
 
 	result = pm_runtime_resume_and_get(i2c_imx->adapter.dev.parent);
-	if (result < 0)
+	if (result < 0) {
 		if (enable_runtime_pm)
 			pm_runtime_disable(i2c_imx->adapter.dev.parent);
 		return result;
