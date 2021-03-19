@@ -221,10 +221,10 @@ static int vsi_enc_trystartenc(struct vsi_v4l2_ctx *ctx)
 			ctx->output_que.queued_count >= ctx->output_que.min_buffers_needed) {
 			ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_STREAMON, NULL);
 			if (ret == 0) {
-				ctx->status = ENC_STATUS_ENCODING;
+				ctx_switchstate(ctx, ENC_STATUS_ENCODING);
 				if (test_and_clear_bit(CTX_FLAG_PRE_DRAINING_BIT, &ctx->flag)) {
 					ret |= vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_CMD_STOP, NULL);
-					ctx->status = ENC_STATUS_DRAINING;
+					ctx_switchstate(ctx, ENC_STATUS_DRAINING);
 				}
 			}
 		}
@@ -322,7 +322,7 @@ static int vsi_enc_streamon(struct file *filp, void *priv, enum v4l2_buf_type ty
 
 	if (ret == 0) {
 		if (ctx->status == ENC_STATUS_STOPPED_BYUSR)
-			ctx->status = ENC_STATUS_STOPPED;
+			ctx_switchstate(ctx, ENC_STATUS_STOPPED);
 		ret = vsi_enc_trystartenc(ctx);
 	}
 
@@ -353,13 +353,13 @@ static int vsi_enc_streamoff(
 	ret = vb2_streamoff(q, type);
 	if (ret == 0) {
 		if (binputqueue(type)) {
-			ctx->status = ENC_STATUS_STOPPED_BYUSR;
+			ctx_switchstate(ctx, ENC_STATUS_STOPPED_BYUSR);
 			clear_quelist(ctx);
 			clear_bit(CTX_FLAG_FORCEIDR_BIT, &ctx->flag);
 			for (i = 0; i < VIDEO_MAX_FRAME; i++)
 				ctx->srcvbufflag[i] = 0;
 		} else
-			ctx->status = ENC_STATUS_RESET;
+			ctx_switchstate(ctx, ENC_STATUS_RESET);
 	}
 	return ret;
 }
@@ -414,7 +414,7 @@ static int vsi_enc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 				event.type = V4L2_EVENT_EOS;
 				v4l2_event_queue_fh(&ctx->fh, &event);
 				if (ctx->status == ENC_STATUS_DRAINING)
-					ctx->status = ENC_STATUS_STOPPED;
+					ctx_switchstate(ctx, ENC_STATUS_STOPPED);
 				v4l2_klog(LOGLVL_BRIEF, "dqbuf get eos flag");
 			}
 		}
@@ -593,7 +593,7 @@ static int vsi_enc_encoder_cmd(struct file *file, void *fh, struct v4l2_encoder_
 		if (ctx->status == ENC_STATUS_ENCODING) {
 			ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_CMD_STOP, cmd);
 			if (ret == 0) {
-				ctx->status = ENC_STATUS_DRAINING;
+				ctx_switchstate(ctx, ENC_STATUS_DRAINING);
 				clear_bit(CTX_FLAG_PRE_DRAINING_BIT, &ctx->flag);
 			}
 		} else if (ctx->status != ENC_STATUS_DRAINING)
@@ -1347,7 +1347,7 @@ static int v4l2_enc_open(struct file *filp)
 	vfh->ctrl_handler = &ctx->ctrlhdl;
 	atomic_set(&ctx->srcframen, 0);
 	atomic_set(&ctx->dstframen, 0);
-	ctx->status = VSI_STATUS_INIT;
+	ctx_switchstate(ctx, VSI_STATUS_INIT);
 
 	return 0;
 

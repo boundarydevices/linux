@@ -527,6 +527,25 @@ static inline void printbufinfo(struct vb2_queue *vq)
 	v4l2_klog(LOGLVL_VERBOSE, "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
 }
 
+static inline int inst_isactive(struct vsi_v4l2_ctx *ctx)
+{
+	if (ctx->status == DEC_STATUS_DECODING ||
+		ctx->status == DEC_STATUS_DRAINING ||
+		ctx->status == ENC_STATUS_ENCODING ||
+		ctx->status == ENC_STATUS_DRAINING)
+		return 1;
+	return 0;
+}
+
+static inline int ctx_switchstate(struct vsi_v4l2_ctx *ctx, int state)
+{
+	if (mutex_lock_interruptible(&ctx->ctxlock))
+		return -EBUSY;
+	ctx->status = state;
+	mutex_unlock(&ctx->ctxlock);
+	return 0;
+}
+
 static inline void return_all_buffers(struct vb2_queue *vq, int status, int bRelbuf)
 {
 	int i;
