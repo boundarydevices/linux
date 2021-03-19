@@ -302,7 +302,7 @@ int vsi_get_Level(struct vsi_v4l2_ctx *ctx, int mediatype, int dir, int level)
 			return table[i][1];
 		}
 		if (dir == 1 && level == table[i][1]) {
-			ctx->mediacfg.encparams.specific.enc_h26x_cmd.cpbSize = table[i][2];
+			//ctx->mediacfg.encparams.specific.enc_h26x_cmd.cpbSize = table[i][2];
 			v4l2_klog(LOGLVL_CONFIG, "%s:%d:%d:%d", __func__, dir, level, table[i][0]);
 			return table[i][0];
 		}
@@ -317,7 +317,35 @@ static struct vsi_video_fmt vsi_raw_fmt[] = {
 	{
 		.fourcc = V4L2_PIX_FMT_NV12,
 		.enc_fmt = VCENC_YUV420_SEMIPLANAR,
-		.dec_fmt = VSI_V4L2_DECOUT_NV12,
+		.dec_fmt = VSI_V4L2_DEC_PIX_FMT_NV12,
+		.flag = 0,
+	},
+	{
+		.name = "YV 400",
+		.fourcc = V4L2_PIX_FMT_400,
+		.enc_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE,
+		.dec_fmt = VSI_V4L2_DEC_PIX_FMT_400,
+		.flag = 0,
+	},
+	{
+		.name = "411 semi planar",
+		.fourcc = V4L2_PIX_FMT_411SP,
+		.enc_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE,
+		.dec_fmt = VSI_V4L2_DEC_PIX_FMT_411SP,
+		.flag = 0,
+	},
+	{
+		.name = "422 semi planar",
+		.fourcc = V4L2_PIX_FMT_422SP,
+		.enc_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE,
+		.dec_fmt = VSI_V4L2_DEC_PIX_FMT_422SP,
+		.flag = 0,
+	},
+	{
+		.name = "444 semi planar",
+		.fourcc = V4L2_PIX_FMT_444SP,
+		.enc_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE,
+		.dec_fmt = VSI_V4L2_DEC_PIX_FMT_444SP,
 		.flag = 0,
 	},
 	{
@@ -516,6 +544,19 @@ static int istiledfmt(int pixelformat)
 	case VSI_V4L2_DECOUT_DTRC_10BIT:
 	case VSI_V4L2_DECOUT_RFC:
 	case VSI_V4L2_DECOUT_RFC_10BIT:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+static int isJpegOnlyFmt(int outfmt)
+{
+	switch (outfmt) {
+	case VSI_V4L2_DEC_PIX_FMT_400:
+	case VSI_V4L2_DEC_PIX_FMT_411SP:
+	case VSI_V4L2_DEC_PIX_FMT_422SP:
+	case VSI_V4L2_DEC_PIX_FMT_444SP:
 		return 1;
 	default:
 		return 0;
@@ -727,6 +768,9 @@ struct vsi_video_fmt *vsi_enum_dec_format(int idx, int braw, struct vsi_v4l2_ctx
 					vsi_v4l2_hwconfig.max_dec_resolution <= 1920)
 					continue;
 			}
+			if (inputformat != V4L2_DAEMON_CODEC_DEC_JPEG &&
+				isJpegOnlyFmt(outfmt))
+				continue;
 			if (test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag)) {
 				if ((outfmt == VSI_V4L2_DECOUT_NV12_10BIT ||
 					outfmt == VSI_V4L2_DECOUT_P010) &&
@@ -816,7 +860,7 @@ static void vsi_set_default_parameter_enc(
 	enc_params->specific.enc_h26x_cmd.pcm_loop_filter_disabled_flag = 1;
 	/* Rate control parameters */
 	enc_params->specific.enc_h26x_cmd.hrdConformance = -1;
-	enc_params->specific.enc_h26x_cmd.cpbSize = 1000000;
+	enc_params->specific.enc_h26x_cmd.cpbSize = -1;	//let daemon decides
 	enc_params->specific.enc_h26x_cmd.intraPicRate = DEFAULT_INTRA_PIC_RATE;
 	enc_params->specific.enc_h26x_cmd.qpHdr = DEFAULT_QP;
 	enc_params->specific.enc_h26x_cmd.qpHdrI = -1;
@@ -870,7 +914,7 @@ void vsiv4l2_initcfg(struct vsi_v4l2_ctx *ctxp)
 	struct vsi_v4l2_mediacfg *ctx = &ctxp->mediacfg;
 
 	ctx->decparams.dec_info.io_buffer.inputFormat = V4L2_DAEMON_CODEC_DEC_HEVC;
-	ctx->decparams.dec_info.io_buffer.outBufFormat = VSI_V4L2_DECOUT_NV12;
+	ctx->decparams.dec_info.io_buffer.outBufFormat = VSI_V4L2_DEC_PIX_FMT_NV12;
 	ctx->decparams.dec_info.io_buffer.outputPixelDepth = DEFAULT_PIXELDEPTH;
 	ctx->src_pixeldepth = DEFAULT_PIXELDEPTH;
 	ctx->decparams.dec_info.dec_info.bit_depth = DEFAULT_PIXELDEPTH;
@@ -952,9 +996,19 @@ static void verifyPlanesize(unsigned int psize[], int braw, int pixelformat, int
 			case V4L2_PIX_FMT_TILEX:
 			case V4L2_PIX_FMT_RFC:
 			case V4L2_PIX_FMT_RFCX:
+			case V4L2_PIX_FMT_411SP:
 				extsize = basesize / 2;
 				quadsize = basesize / 4;
 				break;
+			case V4L2_PIX_FMT_422SP:
+				extsize = basesize;
+				quadsize = 0;
+				break;
+			case V4L2_PIX_FMT_444SP:
+				extsize = basesize * 2;
+				quadsize = 0;
+				break;
+			case V4L2_PIX_FMT_400:
 			case V4L2_PIX_FMT_YUYV:
 				extsize = 0;
 				quadsize = 0;
@@ -1244,7 +1298,11 @@ static int vsiv4l2_decidepixeldepth(int pixelformat, int origdepth)
 	switch (pixelformat) {
 	case VSI_V4L2_DECOUT_P010:
 		return 16;
-	case VSI_V4L2_DECOUT_NV12:
+	case VSI_V4L2_DEC_PIX_FMT_NV12:
+	case VSI_V4L2_DEC_PIX_FMT_400:
+	case VSI_V4L2_DEC_PIX_FMT_411SP:
+	case VSI_V4L2_DEC_PIX_FMT_422SP:
+	case VSI_V4L2_DEC_PIX_FMT_444SP:
 	case VSI_V4L2_DECOUT_DTRC:
 	case VSI_V4L2_DECOUT_RFC:
 		return 8;
@@ -1604,7 +1662,7 @@ void vsiv4l2_buffer_config(
 
 void vsiv4l2_set_hwinfo(struct vsi_v4l2_dev_info *hwinfo)
 {
-	int i;
+	int i, j;
 
 	vsi_v4l2_hwconfig = *hwinfo;
 	v4l2_klog(LOGLVL_BRIEF, "%s::%d:%d:%lx:%lx", __func__,
@@ -1612,8 +1670,16 @@ void vsiv4l2_set_hwinfo(struct vsi_v4l2_dev_info *hwinfo)
 	for (i = 0; i < ARRAY_SIZE(vsi_coded_fmt); i++) {
 		if (((1 << i) & hwinfo->encformat) == 0)
 			vsi_coded_fmt[i].enc_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE;
-		if (((1 << i) & hwinfo->decformat) == 0)
+		if (((1 << i) & hwinfo->decformat) == 0) {
 			vsi_coded_fmt[i].dec_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE;
+			//disable all jpg only output fmt
+			if (vsi_coded_fmt[i].dec_fmt == V4L2_DAEMON_CODEC_DEC_JPEG) {
+				for (j = 0; j < ARRAY_SIZE(vsi_raw_fmt); j++) {
+					if (isJpegOnlyFmt(vsi_raw_fmt[j].dec_fmt))
+						vsi_raw_fmt[j].dec_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE;
+				}
+			}
+		}
 	}
 }
 

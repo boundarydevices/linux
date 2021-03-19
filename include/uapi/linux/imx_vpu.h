@@ -99,6 +99,10 @@ enum {
 #define V4L2_PIX_FMT_TILEX			v4l2_fourcc('D', 'T', 'R', 'X') /* 10 bit tile output, uncompressed */
 #define V4L2_PIX_FMT_RFC			v4l2_fourcc('R', 'F', 'C', '0') /* 8bit tile output, with rfc*/
 #define V4L2_PIX_FMT_RFCX			v4l2_fourcc('R', 'F', 'C', 'X') /* 10 bit tile output, with rfc */
+#define V4L2_PIX_FMT_400			v4l2_fourcc('4', '0', 'S', 'P') /* YUV 400*/
+#define V4L2_PIX_FMT_411SP			v4l2_fourcc('4', '1', 'S', 'P') /* YUV 411 Semi planar */
+#define V4L2_PIX_FMT_422SP			v4l2_fourcc('4', '2', 'S', 'P') /* YUV 422 Semi planar */
+#define V4L2_PIX_FMT_444SP			v4l2_fourcc('4', '4', 'S', 'P') /* YUV 444 Semi planar */
 
 /*codec format*/
 #define V4L2_PIX_FMT_AV1			v4l2_fourcc('A', 'V', '1', '0')	/* av1 */

@@ -200,7 +200,7 @@ int vsi_v4l2_reset_ctx(struct vsi_v4l2_ctx *ctx)
 		return_all_buffers(&ctx->input_que, VB2_BUF_STATE_DONE, 0);
 		return_all_buffers(&ctx->output_que, VB2_BUF_STATE_DONE, 0);
 		removeallcropinfo(ctx);
-		ctx->status = VSI_STATUS_INIT;
+		ctx_switchstate(ctx, VSI_STATUS_INIT);
 		vsi_set_ctx_error(ctx, 0);
 	}
 	return ret;
@@ -362,7 +362,7 @@ int vsi_v4l2_handle_warningmsg(struct vsi_v4l2_msg *pmsg)
 	memset((void *)&event, 0, sizeof(struct v4l2_event));
 	event.type = V4L2_EVENT_INVALID_OPTION,
 	event.id = convert_daemonwarning_to_appwarning(pmsg->error);
-	v4l2_klog(LOGLVL_WARNING, "%lx got warning msg", ctxid);
+	v4l2_klog(LOGLVL_WARNING, "%lx got warning msg %d", ctxid, pmsg->error);
 	v4l2_event_queue_fh(&ctx->fh, &event);
 	return 0;
 }
@@ -462,6 +462,10 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 	if (outbufidx >= 0 && outbufidx < ctx->output_que.num_buffers) {
 		if (mutex_lock_interruptible(&ctx->ctxlock))
 			return -EBUSY;
+		if (!inst_isactive(ctx)) {
+			mutex_unlock(&ctx->ctxlock);
+			return 0;
+		}
 		if (bytesused[0] > 0)
 			ctx->frameidx++;
 		mutex_unlock(&ctx->ctxlock);
