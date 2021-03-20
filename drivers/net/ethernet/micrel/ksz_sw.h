@@ -19,6 +19,55 @@
 #ifndef KSZ_SW_H
 #define KSZ_SW_H
 
+#if defined(CONFIG_LAN937X_SWITCH)
+#define CONFIG_KSZ_SWITCH
+
+#if defined(CONFIG_LAN937X_SWITCH_EMBEDDED)
+#define CONFIG_KSZ_SWITCH_EMBEDDED
+#endif
+
+#if defined(CONFIG_SMI_LAN937X)
+#define CONFIG_KSZ_SMI
+#endif
+#if defined(CONFIG_LAN937X_MRP)
+#define CONFIG_KSZ_MRP
+#endif
+#if defined(CONFIG_LAN937X_NO_MDIO_BUS)
+#define CONFIG_KSZ_NO_MDIO_BUS
+#endif
+#endif
+
+#if defined(CONFIG_IBA_KSZ9897) || defined(CONFIG_IBA_LAN937X)
+#define CONFIG_KSZ_IBA_ONLY
+#endif
+
+#include <linux/of_irq.h>
+#include <linux/spi/spi.h>
+#include <linux/crc32.h>
+#include <linux/ip.h>
+#include <net/ip.h>
+#include <net/ipv6.h>
+
+#if defined(CONFIG_HAVE_KSZ9897)
+#include "ksz_cfg_9897.h"
+#elif defined(CONFIG_HAVE_KSZ8795)
+#include "ksz_cfg_8795.h"
+#elif defined(CONFIG_HAVE_KSZ8895)
+#include "ksz_cfg_8895.h"
+#elif defined(CONFIG_HAVE_KSZ8863)
+#include "ksz_cfg_8863.h"
+#elif defined(CONFIG_HAVE_KSZ8463)
+#include "ksz_cfg_8463.h"
+#elif defined(CONFIG_HAVE_LAN937X)
+#include "../microchip/lan937x_cfg.h"
+#endif
+
+#ifdef CONFIG_KSZ_SWITCH
+#if !defined(CONFIG_KSZ_SWITCH_EMBEDDED)
+#define USE_SPEED_LINK
+#define USE_MIB
+#endif
+#endif
 
 /* These definitions should be defined before this header file. */
 #ifndef PRIO_QUEUES
@@ -835,5 +884,12 @@ struct vlan_attributes {
 	int fid;
 	int vid;
 };
+#if defined(CONFIG_KSZ_SWITCH) && !defined(CONFIG_KSZ_SWITCH_EMBEDDED)
+#ifdef CONFIG_HAVE_LAN937X
+#include "../microchip/lan937x_dev.h"
+#else
+#include "ksz_spi_net.h"
+#endif
+#endif
 
 #endif

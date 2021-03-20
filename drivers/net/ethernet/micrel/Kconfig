@@ -86,6 +86,10 @@ config KSZ_DSA
 	bool
 	default n
 
+config KSZ_SMI
+	bool
+	default n
+
 config KSZ_SWITCH_EMBEDDED
 	bool
 	default n
@@ -132,6 +136,15 @@ config SMI_KSZ8863
 	select HAVE_KSZ8863
 	---help---
 	  Supports the Microchip KSZ8863 switch used within a network controller in SMI mode.
+
+config SMID_KSZ8863
+	tristate "SMI mode driver for Microchip KSZ8863 switch"
+	depends on I2C_KSZ8863 = n && SPI_KSZ8863 = n && SMI_KSZ8863 = n
+	select KSZ_SWITCH if !NET_DSA_TAG_TAIL
+	select KSZ_DSA if NET_DSA_TAG_TAIL
+	select HAVE_KSZ8863
+	---help---
+	  Supports the Microchip KSZ8863 switch as a separate driver in SMI mode.
 
 endif
 

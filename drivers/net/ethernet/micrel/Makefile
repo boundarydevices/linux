@@ -10,3 +10,4 @@ obj-$(CONFIG_KS8851_MLL) += ks8851_mll.o
 obj-$(CONFIG_KSZ884X_PCI) += ksz884x.o
 obj-$(CONFIG_I2C_KSZ8863) += i2c-ksz8863.o
 obj-$(CONFIG_SPI_KSZ8863) += spi-ksz8863.o
+obj-$(CONFIG_SMID_KSZ8863) += smid-ksz8863.o

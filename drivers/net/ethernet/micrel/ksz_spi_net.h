@@ -62,6 +62,7 @@ struct spi_hw_priv {
 #endif
 
 struct smi_hw_priv {
+	struct mdio_device *mdio;
 	struct mii_bus *bus;
 	int phyid;
 	int (*read)(struct mii_bus *bus, int phy_id, int regnum);

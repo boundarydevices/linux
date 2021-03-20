@@ -15,7 +15,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-
+#include <linux/gpio/consumer.h>
 
 /* -------------------------------------------------------------------------- */
 
@@ -7453,6 +7453,7 @@ static void sw_close_port(struct ksz_sw *sw, struct net_device *dev,
 
 static void sw_open(struct ksz_sw *sw)
 {
+	struct sw_priv *hw_priv = container_of(sw, struct sw_priv, sw);
 #ifdef CONFIG_KSZ_DLR
 	prep_dlr(&sw->info->dlr, sw->main_dev, sw->main_dev->dev_addr);
 #endif
@@ -7466,6 +7467,7 @@ static void sw_open(struct ksz_sw *sw)
 				media_connected);
 	}
 #endif
+	ksz_start_timer(&hw_priv->mib_timer_info, hw_priv->mib_timer_info.period);
 	/* Timer may already be started by the SPI device. */
 	if (!sw->monitor_timer_info->max)
 		ksz_start_timer(sw->monitor_timer_info,
@@ -7474,6 +7476,9 @@ static void sw_open(struct ksz_sw *sw)
 
 static void sw_close(struct ksz_sw *sw)
 {
+	struct sw_priv *hw_priv = container_of(sw, struct sw_priv, sw);
+
+	ksz_stop_timer(&hw_priv->mib_timer_info);
 	ksz_stop_timer(sw->monitor_timer_info);
 	cancel_delayed_work_sync(sw->link_read);
 }  /* sw_close */
@@ -9636,7 +9641,6 @@ static void ksz_probe_last(struct sw_priv *ks)
 	ksz_init_timer(&ks->monitor_timer_info, 100 * HZ / 1000,
 		ksz_dev_monitor, ks);
 
-	ksz_start_timer(&ks->mib_timer_info, ks->mib_timer_info.period);
 	if (!(sw->multi_dev & 1) && !sw->stp)
 		ksz_start_timer(&ks->monitor_timer_info,
 			ks->monitor_timer_info.period * 10);
@@ -9671,6 +9675,7 @@ static void ksz_probe_last(struct sw_priv *ks)
 
 static int ksz_probe(struct sw_priv *ks)
 {
+	struct gpio_desc *reset_gpio;
 	struct ksz_sw *sw;
 	struct ksz_port_info *info;
 	u16 id;
@@ -9683,8 +9688,8 @@ static int ksz_probe(struct sw_priv *ks)
 	if (sw_device_present >= MAX_SW_DEVICES)
 		return -ENODEV;
 
-	ks->intr_mode = intr_mode ? IRQF_TRIGGER_FALLING :
-		IRQF_TRIGGER_LOW;
+	ks->intr_mode = intr_mode ? IRQF_TRIGGER_FALLING | IRQF_ONESHOT :
+		IRQF_TRIGGER_LOW | IRQF_ONESHOT;
 
 	mutex_init(&ks->hwlock);
 	mutex_init(&ks->lock);
@@ -9698,6 +9703,16 @@ static int ksz_probe(struct sw_priv *ks)
 	sw->net_ops = &sw_net_ops;
 	sw->ops = &sw_ops;
 
+	reset_gpio = devm_gpiod_get_optional(ks->dev, "reset",
+			GPIOD_OUT_HIGH);	/* assert reset */
+	if (IS_ERR(reset_gpio))
+		return PTR_ERR(reset_gpio);
+	if (reset_gpio) {
+		msleep(1);
+		gpiod_set_value(reset_gpio, 0);	/* release reset */
+		msleep(1);
+	}
+
 	/* simple check for a valid chip being connected to the bus */
 	mutex_lock(&ks->lock);
 	ret = sw_chk_id(sw, &id);
@@ -9706,7 +9721,7 @@ static int ksz_probe(struct sw_priv *ks)
 		dev_err(ks->dev, "failed to read device ID(0x%x)\n", id);
 		goto err_sw;
 	}
-	dev_info(ks->dev, "chip id 0x%04x\n", id);
+	dev_info(ks->dev, "chip id 0x%04x, multi_dev=%d\n", id, multi_dev);
 
 	if (ret > 1) {
 		sw->info = kzalloc(sizeof(struct ksz_sw_info), GFP_KERNEL);
@@ -9799,6 +9814,7 @@ dbg_msg("mask: %x %x\n", sw->HOST_MASK, sw->PORT_MASK);
 	}
 
 	sw->multi_dev |= multi_dev;
+	dev_info(ks->dev, "multi_dev=%d\n", multi_dev);
 	sw->stp |= stp;
 	sw->fast_aging |= fast_aging;
 	if (sw->stp)
