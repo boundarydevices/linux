@@ -2458,7 +2458,8 @@ static int imx_uart_probe_dt(struct imx_port *sport,
 		sprintf(buf, "uart%d_gpio%d", id, i);
 		ret = devm_gpio_request_one(&pdev->dev, gpio,
 				(off_levels >> i) & 1 ?
-				GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW, buf);
+				GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW,
+				devm_kstrdup(&pdev->dev, buf, GFP_KERNEL));
 		if (ret) {
 			dev_err(&pdev->dev, "can't request gpio %d(%d)", gpio, ret);
 			break;
