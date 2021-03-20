@@ -33,8 +33,10 @@ static unsigned int sad_max_channels(const u8 *sad)
 	case HDMI_AUDIO_CODING_TYPE_DTS_HD:
 	case HDMI_AUDIO_CODING_TYPE_MLP:
 		return 8;
-	default:
+	case HDMI_AUDIO_CODING_TYPE_PCM:
 		return 1 + (sad[0] & 7);
+	default:
+		return 2; // ignore, map to basic audio
 	}
 }
 
@@ -49,8 +51,10 @@ static unsigned int sad_rate_mask(const u8 *sad)
 	case HDMI_AUDIO_CODING_TYPE_DTS_HD:
 	case HDMI_AUDIO_CODING_TYPE_MLP:
 		return 0x60; // 176.4, 192kHz
-	default:
+	case HDMI_AUDIO_CODING_TYPE_PCM:
 		return sad[1] & 0x7f;
+	default:
+		return 0x07; // ignore, map to basic audio
 	}
 }
 
