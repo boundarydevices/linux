@@ -42,6 +42,7 @@ static void get_private_data_(struct device *d, struct semaphore **proc_sem,
 #if defined(_LINUX_I2C_H)
 	    d->bus == &i2c_bus_type ||
 #endif
+	    d->bus == &mdio_bus_type ||
 	    d->bus == &platform_bus_type
 	    )) {
 		struct sw_priv *hw_priv;
@@ -61,7 +62,8 @@ static void get_private_data_(struct device *d, struct semaphore **proc_sem,
 
 		dev = to_net_dev(d);
 		get_sysfs_data(dev, proc_sem, &p);
-		*sw = p->sw;
+		if (p)
+			*sw = p->sw;
 		if (port)
 			*port = p;
 	}
