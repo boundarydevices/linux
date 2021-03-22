@@ -442,6 +442,9 @@ static long dma_buf_ioctl(struct file *file,
 		device_initialize(&dev);
 		dev.coherent_dma_mask = DMA_BIT_MASK(64);
 		dev.dma_mask = &dev.coherent_dma_mask;
+		dev.parent = NULL;
+		dev_set_name(&dev, "dma_phy");
+		device_add(&dev);
 		arch_setup_dma_ops(&dev, 0, 0, NULL, false);
 		attachment = dma_buf_attach(dmabuf, &dev);
 		if (!attachment || IS_ERR(attachment)) {
@@ -455,6 +458,7 @@ static long dma_buf_ioctl(struct file *file,
 					DMA_BIDIRECTIONAL);
 		}
 		dma_buf_detach(dmabuf, attachment);
+		device_del(&dev);
 		if (copy_to_user((void __user *) arg, &phys, sizeof(phys)))
 			return -EFAULT;
 		return 0;
