@@ -590,7 +590,6 @@ dma_subsys: bus@5a000000 {
 		assigned-clock-rates = <24000000>;
 		#pwm-cells = <2>;
 		power-domains = <&pd IMX_SC_R_LCD_0_PWM_0>;
-		status = "disabled";
 	};
 
 	adma_pwm_lpcg: clock-controller@5a590000 {
@@ -603,6 +602,5 @@ dma_subsys: bus@5a000000 {
 		clock-output-names = "adma_pwm_lpcg_clk",
 				     "adma_pwm_lpcg_ipg_clk";
 		power-domains = <&pd IMX_SC_R_LCD_0_PWM_0>;
-		status = "disabled";
 	};
 };
