@@ -58,6 +58,7 @@ static const u32 imx8qxp_clk_scu_rsrc_table[] = {
 	IMX_SC_R_NAND,
 	IMX_SC_R_LVDS_0,
 	IMX_SC_R_LVDS_1,
+	IMX_SC_R_M4_0_UART,
 	IMX_SC_R_M4_0_I2C,
 	IMX_SC_R_ELCDIF_PLL,
 	IMX_SC_R_AUDIO_PLL_0,
