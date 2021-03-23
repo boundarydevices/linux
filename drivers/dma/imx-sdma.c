@@ -191,8 +191,10 @@
 				 BIT(DMA_DEV_TO_DEV))
 
 #define SDMA_WATERMARK_LEVEL_FIFOS_OFF	12
+#define SDMA_WATERMARK_LEVEL_FIFO_OFF_OFF 16
 #define SDMA_WATERMARK_LEVEL_SW_DONE	BIT(23)
 #define SDMA_WATERMARK_LEVEL_SW_DONE_SEL_OFF 24
+#define SDMA_WATERMARK_LEVEL_WORDS_PER_FIFO_OFF 28
 
 /*
  * Mode/Count of data node descriptors - IPCv2
@@ -1313,10 +1315,15 @@ static void sdma_set_watermarklevel_for_sais(struct sdma_channel *sdmac)
 {
 	u8 fifo_num = sdmac->audio_config->src_fifo_num |
 		      sdmac->audio_config->dst_fifo_num;
+	u8 fifo_offset = sdmac->audio_config->src_fifo_off |
+			 sdmac->audio_config->dst_fifo_off;
+	u8 words_per_fifo = sdmac->audio_config->words_per_fifo;
 
 	sdmac->watermark_level &= ~(0xFF << SDMA_WATERMARK_LEVEL_FIFOS_OFF |
 				    SDMA_WATERMARK_LEVEL_SW_DONE |
-				    0xf << SDMA_WATERMARK_LEVEL_SW_DONE_SEL_OFF);
+				    0xf << SDMA_WATERMARK_LEVEL_SW_DONE_SEL_OFF |
+				    0xf << SDMA_WATERMARK_LEVEL_FIFO_OFF_OFF |
+				    0xf << SDMA_WATERMARK_LEVEL_WORDS_PER_FIFO_OFF);
 
 	if (sdmac->audio_config->sw_done_sel & BIT(31))
 		sdmac->watermark_level |= SDMA_WATERMARK_LEVEL_SW_DONE |
@@ -1332,6 +1339,14 @@ static void sdma_set_watermarklevel_for_sais(struct sdma_channel *sdmac)
 	if (fifo_num)
 		sdmac->watermark_level |= fifo_num <<
 					SDMA_WATERMARK_LEVEL_FIFOS_OFF;
+
+	if (fifo_offset)
+		sdmac->watermark_level |= fifo_offset <<
+					SDMA_WATERMARK_LEVEL_FIFO_OFF_OFF;
+
+	if (words_per_fifo)
+		sdmac->watermark_level |= (words_per_fifo - 1) <<
+					SDMA_WATERMARK_LEVEL_WORDS_PER_FIFO_OFF;
 }
 
 static int sdma_config_channel(struct dma_chan *chan)
