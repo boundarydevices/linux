@@ -240,6 +240,7 @@ static enum drm_mode_status
 imx8mp_ldb_encoder_mode_valid(struct drm_encoder *encoder,
 			      const struct drm_display_mode *mode)
 {
+#if 0
 	struct imx8mp_ldb_channel *imx8mp_ldb_ch =
 						enc_to_imx8mp_ldb_ch(encoder);
 	struct ldb_channel *ldb_ch = &imx8mp_ldb_ch->base;
@@ -259,6 +260,7 @@ imx8mp_ldb_encoder_mode_valid(struct drm_encoder *encoder,
 
 	if (!ldb->dual && mode->clock != 74250)
 		return MODE_NOCLOCK;
+#endif
 
 	return MODE_OK;
 }
