@@ -20,6 +20,20 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
+	pinctrl_backlight_lvds: backlight-lvdsgrp {
+		fsl,pins = <
+#define GP_BACKLIGHT_LVDS  <&gpio4 22 GPIO_ACTIVE_HIGH>
+			MX8MP_IOMUXC_SAI2_RXC__GPIO4_IO22	0x106
+		>;
+	};
+
+	pinctrl_backlight_lvds2: backlight-lvds2grp {
+		fsl,pins = <
+#define GP_BACKLIGHT_LVDS2  <&gpio4 21 GPIO_ACTIVE_HIGH>
+			MX8MP_IOMUXC_SAI2_RXFS__GPIO4_IO21	0x106
+		>;
+	};
+
 	pinctrl_bt_rfkill: bt-rfkillgrp {
 		fsl,pins = <
 #define GP_BT_RFKILL_RESET	<&gpio3 9 GPIO_ACTIVE_LOW>
@@ -572,6 +586,8 @@
 
 	aliases {
 		backlight_mipi = &backlight_mipi;
+		backlight_lvds = &backlight_lvds;
+		backlight_lvds2 = &backlight_lvds2;
 		fb_lvds = &lcdif2;
 		fb_lvds2 = &lcdif2;
 		fb_mipi = &fb_mipi;
@@ -600,6 +616,22 @@
 		compatible = "pwm-backlight";
 		display = <&lcdif2>;
 		default-brightness-level = <8>;
+		enable-gpios = GP_BACKLIGHT_LVDS;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight_lvds>;
+		pwms = <&pwm2 0 100000>;
+		status = "okay";
+
+	};
+
+	backlight_lvds2: backlight-lvds2 {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		display = <&lcdif2>;
+		default-brightness-level = <8>;
+		enable-gpios = GP_BACKLIGHT_LVDS2;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight_lvds2>;
 		pwms = <&pwm2 0 100000>;
 		status = "okay";
 
