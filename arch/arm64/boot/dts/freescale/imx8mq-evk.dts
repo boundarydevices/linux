@@ -639,6 +639,7 @@
 				 <&clk IMX8MQ_SYS2_PLL_100M>,
 				 <&clk IMX8MQ_SYS2_PLL_250M>;
 	hard-wired = <1>;
+	vph-supply = <&vgen5_reg>;
 	status = "okay";
 };
 
@@ -659,6 +660,7 @@
 	assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_50M>,
 				 <&clk IMX8MQ_SYS2_PLL_100M>,
 				 <&clk IMX8MQ_SYS2_PLL_250M>;
+	vph-supply = <&vgen5_reg>;
 	status = "okay";
 };
 
