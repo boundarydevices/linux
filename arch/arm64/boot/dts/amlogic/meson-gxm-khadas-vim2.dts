@@ -234,7 +234,10 @@
 
 		reset-assert-us = <10000>;
 		reset-deassert-us = <80000>;
-		reset-gpios = <&gpio GPIOZ_14 GPIO_ACTIVE_LOW>;
+// no need it
+// broken ifconfig eth0 down && ifconfig eth0 up # never up again with next line
+//     reset-gpios = <&gpio GPIOZ_14 GPIO_ACTIVE_LOW>;
+       max-speed = <1000>;
 
 		interrupt-parent = <&gpio_intc>;
 		/* MAC_INTR on GPIOZ_15 */
