@@ -159,7 +159,7 @@ struct ion_dma_buf_attachment {
 	bool mapped:1;
 };
 
-#ifdef CONFIG_ION
+#if IS_ENABLED(CONFIG_ION)
 
 /**
  * __ion_device_add_heap - adds a heap to the ion device
