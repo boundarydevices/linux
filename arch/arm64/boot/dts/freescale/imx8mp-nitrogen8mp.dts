@@ -371,6 +371,14 @@
 		>;
 	};
 
+	pinctrl_ts_egalax_lvds: ts-egalax-lvdsgrp {
+		fsl,pins = <
+#define GPIRQ_TS_EGALAX_LVDS	<&gpio1 10 IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_EGALAX_LVDS_WAKE	<&gpio1 10 GPIO_ACTIVE_LOW>
+			MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10	0x149
+		>;
+	};
+
 	pinctrl_ts_ft5x06_lvds: ts-ft5x06-lvdsgrp {
 		fsl,pins = <
 #define GPIRQ_TS_FT5X06_LVDS	<&gpio1 10 IRQ_TYPE_EDGE_FALLING>
@@ -583,6 +591,7 @@
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
 		t_mipi = &t_mipi;
+		ts_egalax = &ts_egalax_lvds;
 		ts_ft5x06 = &ts_ft5x06;
 		ts_ft5x06_2 = &ts_ft5x06_lvds;
 		ts_goodix = &ts_goodix;
@@ -1242,6 +1251,16 @@
 	scl-gpios = GP_I2C4_SCL;
 	sda-gpios = GP_I2C4_SDA;
 	status = "okay";
+
+	ts_egalax_lvds: touchscreen@4 {
+		compatible = "eeti,egalax_ts";
+		interrupts-extended = GPIRQ_TS_EGALAX_LVDS;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_egalax_lvds>;
+		reg = <0x04>;
+		status = "disabled";
+		wakeup-gpios = GP_TS_EGALAX_LVDS_WAKE;
+	};
 
 	ts_ft5x06_lvds: touchscreen@38 {
 		compatible = "edt,ft5x06-ts";
