@@ -74,6 +74,13 @@ static void ldb_ch_set_bus_format(struct ldb_channel *ldb_ch, u32 bus_format)
 
 	switch (bus_format) {
 	case MEDIA_BUS_FMT_RGB666_1X7X3_SPWG:
+		/* i.MX8MP needs Jeida bit set, imx6 needs it clear */
+		if (of_device_is_compatible(ldb_ch->ldb->dev->of_node, "fsl,imx8mp-ldb")) {
+			if (ldb_ch->chno == 0 || ldb->dual)
+				ldb->ldb_ctrl |= LDB_BIT_MAP_CH0_JEIDA;
+			if (ldb_ch->chno == 1 || ldb->dual)
+				ldb->ldb_ctrl |= LDB_BIT_MAP_CH1_JEIDA;
+		}
 		break;
 	case MEDIA_BUS_FMT_RGB888_1X7X4_SPWG:
 		if (ldb_ch->chno == 0 || ldb->dual)
