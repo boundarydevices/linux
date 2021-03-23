@@ -943,10 +943,22 @@ struct fsl_mc_device *fsl_mc_get_endpoint(struct fsl_mc_device *mc_dev)
 	 * We know that the device has an endpoint because we verified by
 	 * interrogating the firmware. This is the case when the device was not
 	 * yet discovered by the fsl-mc bus, thus the lookup returned NULL.
-	 * Differentiate this case by returning EPROBE_DEFER.
+	 * Force a rescan of the devices in this container and retry the lookup.
+	 */
+	if (!endpoint) {
+		err = dprc_scan_container(mc_bus_dev, true);
+		if (err < 0)
+			return ERR_PTR(err);
+	}
+
+	endpoint = fsl_mc_device_lookup(&endpoint_desc, mc_bus_dev);
+	/*
+	 * This means that the endpoint might reside in a different isolation
+	 * context (DPRC/container). Not much to do, so return a permssion
+	 * error.
 	 */
 	if (!endpoint)
-		return ERR_PTR(-EPROBE_DEFER);
+		return ERR_PTR(-EPERM);
 
 	return endpoint;
 }
