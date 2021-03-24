@@ -424,8 +424,7 @@ static inline void delay_milli(uint millisec)
 }
 
 /* -------------------------------------------------------------------------- */
-
-#ifndef DO_NOT_USE_COPY_SKB
+#ifndef CONFIG_KSZ_SWITCH_EMBEDDED
 static inline void copy_old_skb(struct sk_buff *old, struct sk_buff *skb)
 {
 	if (old->ip_summed) {
