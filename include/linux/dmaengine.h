@@ -449,8 +449,6 @@ struct dma_slave_config {
 	u32 dst_maxburst;
 	u32 src_port_window_size;
 	u32 dst_port_window_size;
-	u32 src_fifo_num;
-	u32 dst_fifo_num;
 	bool device_fc;
 	unsigned int slave_id;
 	void *peripheral_config;

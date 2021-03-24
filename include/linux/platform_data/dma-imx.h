@@ -50,14 +50,44 @@ enum imx_dma_prio {
 	DMA_PRIO_LOW = 2
 };
 
+/**
+ * struct sdma_audio_config - special sdma config for audio case
+ * @src_fifo_num: source fifo number for mcu_2_sai/sai_2_mcu script
+ *                For example, if there are 4 fifos, sdma will fetch
+ *                fifos one by one and roll back to the first fifo after
+ *                the 4th fifo fetch.
+ * @dst_fifo_num: similar as src_fifo_num, but dest fifo instead.
+ * @src_fifo_off: source fifo offset, 0 means all fifos are continuous, 1
+ *                means 1 word offset between fifos. All offset between
+ *                fifos should be same.
+ * @dst_fifo_off: dst fifo offset, similar as @src_fifo_off.
+ * @words_per_fifo: numbers of words per fifo fetch/fill, 0 means
+ *                  one channel per fifo, 1 means 2 channels per fifo..
+ *                  If 'src_fifo_num =  4' and 'chans_per_fifo = 1', it
+ *                  means the first two words(channels) fetch from fifo1
+ *                  and then jump to fifo2 for next two words, and so on
+ *                  after the last fifo4 fetched, roll back to fifo1.
+ * @sw_done_sel: software done selector, PDM need enable software done feature
+ *               in mcu_2_sai/sai_2_mcu script.
+ *               Bit31: sw_done eanbled or not
+ *               Bit16~Bit0: selector
+ *               For example: 0x80000000 means sw_done enabled for done0
+ *                            sector which is for PDM on i.mx8mm.
+ */
+struct sdma_audio_config {
+	u8 src_fifo_num;
+	u8 dst_fifo_num;
+	u8 src_fifo_off;
+	u8 dst_fifo_off;
+	u8 words_per_fifo;
+	u32 sw_done_sel;
+};
+
 struct imx_dma_data {
 	int dma_request; /* DMA request line */
 	int dma_request2; /* secondary DMA request line */
 	enum sdma_peripheral_type peripheral_type;
 	int priority;
-	bool src_dualfifo;
-	bool dst_dualfifo;
-	int done_sel;
 };
 
 static inline int imx_dma_is_ipu(struct dma_chan *chan)
