@@ -139,6 +139,7 @@ static int fsl_asrc_dma_hw_params(struct snd_soc_component *component,
 	struct snd_soc_component *component_be = NULL;
 	struct fsl_asrc *asrc = pair->asrc;
 	struct dma_slave_config config_fe, config_be;
+	struct sdma_audio_config audio_config;
 	enum asrc_pair_index index = pair->index;
 	struct device *dev = component->dev;
 	struct device_node *of_dma_node;
@@ -226,13 +227,6 @@ static int fsl_asrc_dma_hw_params(struct snd_soc_component *component,
 		if (!be_chan)
 			dma_release_channel(tmp_chan);
 
-		if (tx && (be_peripheral_type == IMX_DMATYPE_SSI_DUAL ||
-			   be_peripheral_type == IMX_DMATYPE_SPDIF))
-			pair->dma_data.dst_dualfifo = true;
-		if (!tx && (be_peripheral_type == IMX_DMATYPE_SSI_DUAL ||
-			    be_peripheral_type == IMX_DMATYPE_SPDIF))
-			pair->dma_data.src_dualfifo = true;
-
 		/* Get DMA request of Front-End */
 		tmp_chan = asrc->get_dma_channel(pair, dir);
 		tmp_data = tmp_chan->private;
@@ -271,11 +265,23 @@ static int fsl_asrc_dma_hw_params(struct snd_soc_component *component,
 	else
 		buswidth = DMA_SLAVE_BUSWIDTH_8_BYTES;
 
+	memset(&config_be, 0, sizeof(config_be));
 	config_be.direction = DMA_DEV_TO_DEV;
 	config_be.src_addr_width = buswidth;
 	config_be.src_maxburst = dma_params_be->maxburst;
 	config_be.dst_addr_width = buswidth;
 	config_be.dst_maxburst = dma_params_be->maxburst;
+
+	memset(&audio_config, 0, sizeof(audio_config));
+	config_be.peripheral_config = &audio_config;
+	config_be.peripheral_size  = sizeof(audio_config);
+
+	if (tx && (be_peripheral_type == IMX_DMATYPE_SSI_DUAL ||
+		   be_peripheral_type == IMX_DMATYPE_SPDIF))
+		audio_config.dst_fifo_num = 2;
+	if (!tx && (be_peripheral_type == IMX_DMATYPE_SSI_DUAL ||
+		    be_peripheral_type == IMX_DMATYPE_SPDIF))
+		audio_config.src_fifo_num = 2;
 
 	if (tx) {
 		config_be.src_addr = asrc->paddr + asrc->get_fifo_addr(OUT, index);
