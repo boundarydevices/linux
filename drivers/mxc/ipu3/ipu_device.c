@@ -1,6 +1,6 @@
 /*
  * Copyright 2005-2015 Freescale Semiconductor, Inc. All Rights Reserved.
- * Copyright 2019,2020 NXP
+ * Copyright 2019-2021 NXP
  */
 
 /*
@@ -3242,7 +3242,7 @@ static int ipu_task_thread(void *argv)
 	struct ipu_split_task sp_task[4];
 	/* priority lower than irq_thread */
 	const struct sched_param param = {
-		.sched_priority = MAX_USER_RT_PRIO/2 - 1,
+		.sched_priority = MAX_RT_PRIO/2 - 1,
 	};
 	int ret;
 	int curr_thread_id;
