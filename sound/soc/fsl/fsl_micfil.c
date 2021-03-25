@@ -37,6 +37,7 @@ struct fsl_micfil {
 	struct clk *clk_src[MICFIL_CLK_SRC_NUM];
 	struct snd_dmaengine_dai_dma_data dma_params_rx;
 	struct kobject *hwvad_kobject;
+	struct sdma_audio_config audio_config;
 	unsigned int vad_channel;
 	unsigned int dataline;
 	char name[32];
@@ -1602,7 +1603,10 @@ static int fsl_micfil_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	micfil->dma_params_rx.fifo_num = channels;
+	micfil->audio_config.src_fifo_num = channels;
+	micfil->audio_config.sw_done_sel = BIT(31);
+	micfil->dma_params_rx.peripheral_config  = &micfil->audio_config;
+	micfil->dma_params_rx.peripheral_size    = sizeof(micfil->audio_config);
 	micfil->dma_params_rx.maxburst = channels * MICFIL_DMA_MAXBURST_RX;
 
 	return 0;
