@@ -4434,10 +4434,6 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 		goto fail;
 	bus->alp_only = false;
 
-	/* Start the watchdog timer */
-	bus->sdcnt.tickcnt = 0;
-	brcmf_sdio_wd_timer(bus, true);
-
 	sdio_claim_host(sdiod->func1);
 
 	/* Make sure backplane clock is on, needed to generate F2 interrupt */
@@ -4585,6 +4581,10 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 	}
 
 	sdio_release_host(sdiod->func1);
+
+	/* Start the watchdog timer */
+	bus->sdcnt.tickcnt = 0;
+	brcmf_sdio_wd_timer(bus, true);
 
 	err = brcmf_alloc(sdiod->dev, sdiod->settings);
 	if (err) {
