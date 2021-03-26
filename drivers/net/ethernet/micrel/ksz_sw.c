@@ -204,22 +204,33 @@ enum {
 };
 
 /* -------------------------------------------------------------------------- */
+#ifdef DEBUG
+#define check_index(a, limit, on_err) if ((a) >= (limit)) { pr_err("%s: invalid" __stringify(a) " %d\n", __func__, a); on_err;}
+#else
+#define check_index(a, limit, on_err)
+#endif
 
 static uint get_phy_port(struct ksz_sw *sw, uint n)
 {
-if (n > sw->mib_port_cnt + 1)
-dbg_msg("  !!! %s %d\n", __func__, n);
+	uint port;
+
+	if (n > sw->mib_port_cnt + 1)
+		dbg_msg("  !!! %s %d\n", __func__, n);
 	if (n >= sw->mib_port_cnt + 1)
 		n = 0;
-	return sw->port_info[n].phy_p;
+	check_index(n, TOTAL_PORT_NUM, return 0);
+	port = sw->port_info[n].phy_p;
+	check_index(port, TOTAL_PORT_NUM, return 0);
+	return port;
 }
 
 static uint get_log_port(struct ksz_sw *sw, uint p)
 {
-if (p >= sw->port_cnt)
-dbg_msg("  !!! %s %d\n", __func__, p);
-if (!sw->port_info[p].log_m)
-dbg_msg("  ??? %s %d\n", __func__, p);
+	if (p >= sw->port_cnt)
+		dbg_msg("  !!! %s %d\n", __func__, p);
+	check_index(p, TOTAL_PORT_NUM, return 0);
+	if (!sw->port_info[p].log_m)
+		dbg_msg("  ??? %s %d\n", __func__, p);
 	return sw->port_info[p].log_p;
 }
 
@@ -278,16 +289,19 @@ static uint get_sysfs_port(struct ksz_sw *sw, uint n)
 
 static inline struct ksz_port_cfg *get_port_cfg(struct ksz_sw *sw, uint p)
 {
+	check_index(p, TOTAL_PORT_NUM, return NULL);
 	return &sw->info->port_cfg[p];
 }
 
 static inline struct ksz_port_info *get_port_info(struct ksz_sw *sw, uint p)
 {
+	check_index(p, TOTAL_PORT_NUM, return NULL);
 	return &sw->port_info[p];
 }
 
 static inline struct ksz_port_mib *get_port_mib(struct ksz_sw *sw, uint p)
 {
+	check_index(p, TOTAL_PORT_NUM, return NULL);
 	return &sw->port_mib[p];
 }
 
@@ -837,7 +851,7 @@ static void sw_w_vlan_table(struct ksz_sw *sw, u16 addr, u16 vid, u8 fid,
 	u8 member, int valid)
 {
 	u32 data;
-	int entry;
+	u32 entry;
 	struct ksz_sw_info *info = sw->info;
 	int locked = mutex_is_locked(&sw->lock);
 
@@ -1520,12 +1534,14 @@ static inline int get_rate_ctrl_offset(int port, int prio)
  *
  * This routine configures the priority rate control of the port.
  */
-static void hw_cfg_rate_ctrl(struct ksz_sw *sw, uint port, int prio, int ctrl)
+static void hw_cfg_rate_ctrl(struct ksz_sw *sw, uint port, uint prio, int ctrl)
 {
 	int offset;
 	u8 data;
 	u8 saved;
 
+	check_index(port, TOTAL_PORT_NUM, return);
+	check_index(prio, PRIO_QUEUES, return);
 	offset = get_rate_ctrl_offset(port, prio);
 
 	data = sw->reg->r8(sw, offset);
@@ -1548,12 +1564,14 @@ static void hw_cfg_rate_ctrl(struct ksz_sw *sw, uint port, int prio, int ctrl)
  *
  * This routine configures the priority rate ratio of the port.
  */
-static void hw_cfg_rate_ratio(struct ksz_sw *sw, uint port, int prio, u8 ratio)
+static void hw_cfg_rate_ratio(struct ksz_sw *sw, uint port, uint prio, u8 ratio)
 {
 	int offset;
 	u8 data;
 	u8 saved;
 
+	check_index(port, TOTAL_PORT_NUM, return);
+	check_index(prio, PRIO_QUEUES, return);
 	if (ratio >= RATE_CTRL_ENABLE)
 		return;
 
@@ -1577,11 +1595,13 @@ static void hw_cfg_rate_ratio(struct ksz_sw *sw, uint port, int prio, u8 ratio)
  *
  * This routine retrieves the priority rate control of the port.
  */
-static void hw_get_rate_ctrl(struct ksz_sw *sw, uint port, int prio)
+static void hw_get_rate_ctrl(struct ksz_sw *sw, uint port, uint prio)
 {
 	int offset;
 	u8 data;
 
+	check_index(port, TOTAL_PORT_NUM, return);
+	check_index(prio, PRIO_QUEUES, return);
 	offset = get_rate_ctrl_offset(port, prio);
 
 	data = sw->reg->r8(sw, offset);
@@ -1608,6 +1628,7 @@ static void hw_cfg_rate_limit(struct ksz_sw *sw, uint port, u8 mask, u8 shift,
 	u8 data;
 	u8 saved;
 
+	check_index(port, TOTAL_PORT_NUM, return);
 	port_r8(sw, port, P_RATE_LIMIT_CTRL, &data);
 	saved = data;
 	data &= ~(mask << shift);
@@ -1670,6 +1691,7 @@ static void hw_get_rate_limit(struct ksz_sw *sw, uint port)
 {
 	u8 data;
 
+	check_index(port, TOTAL_PORT_NUM, return);
 	port_r8(sw, port, P_RATE_LIMIT_CTRL, &data);
 	sw->info->port_cfg[port].rate_limit = data;
 }
@@ -1818,9 +1840,11 @@ static void hw_cfg_prio_rate(struct ksz_sw *sw, uint port, int prio, uint rate,
  * This routine configures the receive priority rate of the port.
  * It is called by user functions.  The hardware should be acquired first.
  */
-static void hw_cfg_rx_prio_rate(struct ksz_sw *sw, uint port, int prio,
+static void hw_cfg_rx_prio_rate(struct ksz_sw *sw, uint port, uint prio,
 	uint rate)
 {
+	check_index(port, TOTAL_PORT_NUM, return);
+	check_index(prio, PRIO_QUEUES, return);
 	hw_cfg_prio_rate(sw, port, prio, rate,
 #ifdef PORT_OUT_RATE_ADDR
 		REG_PORT_1_IN_RATE_0,
@@ -1840,9 +1864,11 @@ static void hw_cfg_rx_prio_rate(struct ksz_sw *sw, uint port, int prio,
  * This routine configures the transmit priority rate of the port.
  * It is called by user functions.  The hardware should be acquired first.
  */
-static void hw_cfg_tx_prio_rate(struct ksz_sw *sw, uint port, int prio,
+static void hw_cfg_tx_prio_rate(struct ksz_sw *sw, uint port, uint prio,
 	uint rate)
 {
+	check_index(port, TOTAL_PORT_NUM, return);
+	check_index(prio, PRIO_QUEUES, return);
 	hw_cfg_prio_rate(sw, port, prio, rate,
 #ifdef PORT_OUT_RATE_ADDR
 		REG_PORT_1_OUT_RATE_0,
@@ -1949,8 +1975,9 @@ static void sw_dis_tx_prio_rate(struct ksz_sw *sw, uint port)
  */
 static void sw_ena_rx_prio_rate(struct ksz_sw *sw, uint port)
 {
-	int prio;
+	uint prio;
 
+	check_index(port, TOTAL_PORT_NUM, return);
 	for (prio = 0; prio < PRIO_QUEUES; prio++)
 		hw_cfg_rx_prio_rate(sw, port, prio,
 			sw->info->port_cfg[port].rx_rate[prio]);
@@ -1967,6 +1994,7 @@ static void sw_ena_tx_prio_rate(struct ksz_sw *sw, uint port)
 {
 	int prio;
 
+	check_index(port, TOTAL_PORT_NUM, return);
 	for (prio = 0; prio < PRIO_QUEUES; prio++)
 		hw_cfg_tx_prio_rate(sw, port, prio,
 			sw->info->port_cfg[port].tx_rate[prio]);
@@ -1991,7 +2019,7 @@ static void sw_init_prio_rate(struct ksz_sw *sw)
 {
 	int offset;
 	uint port;
-	int prio;
+	uint prio;
 
 	for (port = 0; port < TOTAL_PORT_NUM; port++) {
 		hw_get_rate_limit(sw, port);
@@ -2103,7 +2131,7 @@ static void sw_flush_dyn_mac_table(struct ksz_sw *sw, uint port)
 	uint index;
 	int learn_disable[TOTAL_PORT_NUM];
 
-	if ((uint) port < TOTAL_PORT_NUM) {
+	if (port < TOTAL_PORT_NUM) {
 		first = port;
 		cnt = first + 1;
 	} else {
@@ -2112,6 +2140,7 @@ static void sw_flush_dyn_mac_table(struct ksz_sw *sw, uint port)
 	}
 	for (index = first; index < cnt; index++) {
 		port = get_phy_port(sw, index);
+		check_index(port, TOTAL_PORT_NUM, return);
 		learn_disable[port] = port_chk_dis_learn(sw, port);
 		if (!learn_disable[port])
 			port_cfg_dis_learn(sw, port, 1);
@@ -2119,6 +2148,7 @@ static void sw_flush_dyn_mac_table(struct ksz_sw *sw, uint port)
 	sw_cfg(sw, S_FLUSH_TABLE_CTRL, SWITCH_FLUSH_DYN_MAC_TABLE, 1);
 	for (index = first; index < cnt; index++) {
 		port = get_phy_port(sw, index);
+		check_index(port, TOTAL_PORT_NUM, return);
 		if (!learn_disable[port])
 			port_cfg_dis_learn(sw, port, 0);
 	}
@@ -2426,6 +2456,7 @@ static inline void port_get_addr(struct ksz_sw *sw, uint port, u8 *mac_addr)
 	u16 *addr = (u16 *) mac_addr;
 #endif
 
+	check_index(port, TOTAL_PORT_NUM, return);
 	if (0 == port)
 		reg = REG_PORT_0_MAC_ADDR_0;
 	else
@@ -2459,6 +2490,7 @@ static void port_set_addr(struct ksz_sw *sw, uint port, u8 *mac_addr)
 	u16 *addr = (u16 *) mac_addr;
 #endif
 
+	check_index(port, TOTAL_PORT_NUM, return);
 	if (0 == port)
 		reg = REG_PORT_0_MAC_ADDR_0;
 	else
@@ -2572,6 +2604,7 @@ static void hw_cfg_tos_prio(struct ksz_sw *sw, u8 tos, SW_D prio)
 	mask <<= shift;
 	tos /= KS_PRIO_IN_REG;
 
+	check_index(tos, (DIFFSERV_ENTRIES / KS_PRIO_IN_REG), return);
 	sw->info->diffserv[tos] &= ~mask;
 	sw->info->diffserv[tos] |= prio;
 
@@ -2651,6 +2684,7 @@ static void hw_cfg_802_1p_prio(struct ksz_sw *sw, u8 tag, SW_D prio)
 	mask <<= shift;
 	tag /= KS_PRIO_IN_REG;
 
+	check_index(tag, (PRIO_802_1P_ENTRIES / KS_PRIO_IN_REG), return);
 	sw->info->p_802_1p[tag] &= ~mask;
 	sw->info->p_802_1p[tag] |= prio;
 
@@ -2701,6 +2735,8 @@ static void sw_cfg_port_based(struct ksz_sw *sw, uint port, u8 prio)
 	if (prio > PORT_BASED_PRIORITY_BASE)
 		prio = PORT_BASED_PRIORITY_BASE;
 
+	check_index(port, TOTAL_PORT_NUM, return);
+	check_index(prio, PRIO_QUEUES, return);
 	port_r(sw, port, P_PRIO_CTRL, &data);
 	data &= ~PORT_BASED_PRIORITY_MASK;
 	data |= prio << PORT_BASED_PRIORITY_SHIFT;
@@ -2849,6 +2885,7 @@ static void port_get_def_vid(struct ksz_sw *sw, uint port, u16 *vid)
  */
 static void sw_cfg_def_vid(struct ksz_sw *sw, uint port, u16 vid)
 {
+	check_index(port, TOTAL_PORT_NUM, return);
 	sw->info->port_cfg[port].vid = vid;
 	port_cfg_def_vid(sw, port, vid);
 }
@@ -2865,6 +2902,7 @@ static void sw_cfg_port_base_vlan(struct ksz_sw *sw, uint port, u8 member)
 {
 	SW_D data;
 
+	check_index(port, TOTAL_PORT_NUM, return);
 	port_r(sw, port, P_MIRROR_CTRL, &data);
 	data &= ~PORT_VLAN_MEMBERSHIP;
 	data |= (member & sw->PORT_MASK);
@@ -3181,6 +3219,8 @@ static void sw_set_global_ctrl(struct ksz_sw *sw)
 		int n;
 
 		for (n = 0; n < sw->eth_cnt; n++) {
+			check_index(n, SWITCH_PORT_NUM, break);
+			check_index(n, TOTAL_PORT_NUM, break);
 			if (sw->eth_maps[n].proto & HSR_HW) {
 				if (sw->netdev[n]) {
 					sw->ops->release(sw);
@@ -3624,6 +3664,7 @@ static int port_get_link_speed(struct ksz_port *port)
 
 	for (i = 0, n = port->first_port; i < port->port_cnt; i++, n++) {
 		p = get_phy_port(sw, n);
+		check_index(p, TOTAL_PORT_NUM, continue);
 		info = get_port_info(sw, p);
 		state = &sw->port_state[p];
 		port_r(sw, p, P_PHY_CTRL, &data);
@@ -3730,6 +3771,7 @@ static void port_set_link_speed(struct ksz_port *port)
 
 	for (i = 0, n = port->first_port; i < port->port_cnt; i++, n++) {
 		p = get_phy_port(sw, n);
+		check_index(p, TOTAL_PORT_NUM, continue);
 		info = get_port_info(sw, p);
 		if (info->fiber)
 			continue;
@@ -3834,12 +3876,14 @@ static void sw_enable(struct ksz_sw *sw)
 
 		for (n = 1; n <= SWITCH_PORT_NUM; n++) {
 			port = get_phy_port(sw, n);
+			check_index(port, TOTAL_PORT_NUM, continue);
 			member = (1 << port);
 			if (sw->features & SW_VLAN_DEV) {
 				struct ksz_dev_map *map;
 				int q;
 
 				for (q = 0; q < sw->eth_cnt; q++) {
+					check_index(q, SWITCH_PORT_NUM, break);
 					map = &sw->eth_maps[q];
 					if (map->first <= n &&
 					    n <= map->first + map->cnt - 1) {
@@ -3855,6 +3899,7 @@ static void sw_enable(struct ksz_sw *sw)
 
 		for (n = 1; n <= sw->mib_port_cnt; n++) {
 			port = get_phy_port(sw, n);
+			check_index(port, TOTAL_PORT_NUM, continue);
 			member = 0;
 			if (sw->eth_maps[0].mask & (1 << port))
 				member = sw->eth_maps[0].mask;
@@ -4193,6 +4238,7 @@ static void sw_get_link_md(struct ksz_sw *sw, uint port)
 	int timeout;
 	struct ksz_port_info *port_info = &sw->port_info[port];
 
+	check_index(port, TOTAL_PORT_NUM, return);
 	if (port_info->fiber)
 		return;
 	port_r(sw, port, P_SPEED_STATUS, &data);
@@ -4337,8 +4383,10 @@ static void get_sw_mib_counters(struct ksz_sw *sw, int first, int cnt,
 	for (i = 0, n = first; i < cnt; i++, n++) {
 		p = get_phy_port(sw, n);
 		port_mib = get_port_mib(sw, p);
-		for (mib = port_mib->mib_start; mib < sw->mib_cnt; mib++)
+		for (mib = port_mib->mib_start; mib < sw->mib_cnt; mib++) {
+			check_index(mib, TOTAL_SWITCH_COUNTER_NUM, break);
 			counter[mib] += port_mib->counter[mib];
+		}
 	}
 }
 
@@ -6056,6 +6104,7 @@ static int sysfs_vlan_write(struct ksz_sw *sw, int proc_num, int index,
 	struct ksz_vlan_table *entry;
 	int processed = true;
 
+	check_index(index, VLAN_TABLE_ENTRIES, return processed);
 	entry = &sw->info->vlan_table[index];
 	switch (proc_num) {
 	case PROC_SET_VLAN_VALID:
@@ -6416,6 +6465,7 @@ static void sw_set_multi(struct ksz_sw *sw, struct net_device *dev,
 
 	/* Remove old multicast entries. */
 	for (i = SWITCH_MAC_TABLE_ENTRIES; i < info->multi_net; i++) {
+		check_index(i, MULTI_MAC_TABLE_ENTRIES, break);
 		entry = &info->mac_table[i];
 		alu = &info->alu_table[i];
 		if (alu->valid && (alu->owner & owner)) {
@@ -6458,6 +6508,7 @@ static void sw_set_multi(struct ksz_sw *sw, struct net_device *dev,
 		found--;
 		if (found >= SWITCH_MAC_TABLE_ENTRIES &&
 		    found < info->multi_net) {
+			check_index(found, MULTI_MAC_TABLE_ENTRIES, return);
 			entry = &info->mac_table[found];
 			alu = &info->alu_table[found];
 			if (port)
@@ -6561,10 +6612,12 @@ static struct net_device *sw_rx_dev(struct ksz_sw *sw, u8 *data, u32 *len,
 			int p;
 
 			for (p = 0; p < sw->eth_cnt; p++) {
+				check_index(p, SWITCH_PORT_NUM, break);
 				map = &sw->eth_maps[p];
 				if (vid == map->vlan) {
 					*port = map->first;
 					p = get_phy_port(sw, *port);
+					check_index(p, SWITCH_PORT_NUM, break);
 					*port = p;
 					index = sw->info->port_cfg[p].index;
 					break;
@@ -6576,6 +6629,7 @@ static struct net_device *sw_rx_dev(struct ksz_sw *sw, u8 *data, u32 *len,
 		printk(KERN_INFO "  [%s] netdev not correct\n", __func__);
 		BUG();
 	}
+	check_index(index, TOTAL_PORT_NUM, return NULL);
 	dev = sw->netdev[index];
 #ifdef CONFIG_KSZ_DLR
 	if (proto == DLR_TAG_TYPE)
@@ -6736,6 +6790,7 @@ static int sw_drv_rx(struct ksz_sw *sw, struct sk_buff *skb, uint port)
 
 			vid = vlan_tci & VLAN_VID_MASK;
 			for (p = 0; p < sw->eth_cnt; p++) {
+				check_index(p, SWITCH_PORT_NUM, break);
 				if (vid == sw->eth_maps[p].vlan) {
 					eth = (struct ethhdr *)
 						skb_pull(skb, VLAN_HLEN);
@@ -6794,7 +6849,9 @@ static int sw_get_tx_len(struct ksz_sw *sw, struct sk_buff *skb, uint port,
 	do {
 		int i;
 
+		check_index(port, TOTAL_PORT_NUM, break);
 		i = sw->info->port_cfg[port].index;
+		check_index(i, SWITCH_PORT_NUM, break);
 		if (sw->eth_cnt && (sw->eth_maps[i].proto & HSR_HW))
 			hlen = HSR_HLEN;
 	} while (0);
@@ -6846,6 +6903,7 @@ static void sw_kill_vid(struct ksz_sw *sw, u16 vid)
 static int add_frag(void *from, char *to, int offset, int len, int odd,
 	struct sk_buff *skb)
 {
+	check_index(len, 61, return 0);	/* from tx_pad */
 	memcpy(to + offset, from, len);
 	return 0;
 }
@@ -6857,8 +6915,11 @@ static struct sk_buff *sw_ins_vlan(struct ksz_sw *sw, uint port,
 
 #ifdef CONFIG_KSZ_HSR
 	do {
-		int i = sw->info->port_cfg[port].index;
+		int i;
+		check_index(port, TOTAL_PORT_NUM, break);
+		i = sw->info->port_cfg[port].index;
 
+		check_index(i, SWITCH_PORT_NUM, break);
 		if (sw->eth_cnt && (sw->eth_maps[i].proto & HSR_HW))
 			return skb;
 	} while (0);
@@ -6870,6 +6931,7 @@ static struct sk_buff *sw_ins_vlan(struct ksz_sw *sw, uint port,
 		struct vlan_ethhdr *vlan;
 		struct ethhdr *eth = (struct ethhdr *) skb->data;
 
+		check_index(port, TOTAL_PORT_NUM, return skb);
 		vid = sw->info->port_cfg[port].vid;
 		vlan = (struct vlan_ethhdr *) skb_push(skb, VLAN_HLEN);
 		memmove(vlan, eth, 12);
@@ -6887,7 +6949,9 @@ static struct sk_buff *sw_ins_hsr(struct ksz_sw *sw, uint port,
 	uint p;
 
 	p = get_phy_port(sw, n);
+	check_index(port, TOTAL_PORT_NUM, return skb);
 	i = sw->info->port_cfg[port].index;
+	check_index(i, SWITCH_PORT_NUM, return skb);
 	if (sw->eth_cnt && (sw->eth_maps[i].proto & HSR_HW)) {
 		struct ksz_hsr_info *info = &sw->info->hsr;
 		struct hsr_port *from =
@@ -6945,6 +7009,7 @@ static struct sk_buff *sw_check_skb(struct ksz_sw *sw, struct sk_buff *skb,
 		u32 features = sw->features;
 
 		p = get_phy_port(sw, priv->first_port);
+		check_index(p, TOTAL_PORT_NUM, return skb);
 		i = sw->info->port_cfg[p].index;
 		if (sw->features & SW_VLAN_DEV)
 			features = sw->eth_maps[i].proto;
@@ -6973,9 +7038,11 @@ static struct sk_buff *sw_check_skb(struct ksz_sw *sw, struct sk_buff *skb,
 			u8 *data;
 
 			len = VLAN_ETH_HLEN - 2;
-			data = &skb->data[len];
-			memmove(data - VLAN_HLEN, data, skb->len - len);
-			skb->len -= VLAN_HLEN;
+			if (skb->len > len) {
+				data = &skb->data[len];
+				memmove(data - VLAN_HLEN, data, skb->len - len);
+				skb->len -= VLAN_HLEN;
+			}
 		}
 	} while (0);
 #ifdef CONFIG_1588_PTP
@@ -7764,6 +7831,7 @@ static int sw_get_info(struct ksz_sw *sw, int subcmd, int size,
 				speed->duplex = info->duplex;
 				speed->flow_ctrl = info->flow_ctrl;
 			} else {
+				check_index(i, TOTAL_PORT_NUM, break);
 				memset(speed, 0, sizeof(struct ksz_info_speed));
 			}
 			++speed;

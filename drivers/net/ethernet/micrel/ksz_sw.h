@@ -642,7 +642,7 @@ struct ksz_sw {
 	u16 dev_ports;
 	u16 rx_ports;
 	u16 tx_ports;
-	u8 tx_pad[60];
+	u8 tx_pad[64];
 	int tx_start;
 	struct ksz_sw_cached_regs cached;
 
