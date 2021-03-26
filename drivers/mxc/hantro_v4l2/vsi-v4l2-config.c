@@ -321,8 +321,7 @@ static struct vsi_video_fmt vsi_raw_fmt[] = {
 		.flag = 0,
 	},
 	{
-		.name = "YV 400",
-		.fourcc = V4L2_PIX_FMT_400,
+		.fourcc = V4L2_PIX_FMT_GREY,
 		.enc_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE,
 		.dec_fmt = VSI_V4L2_DEC_PIX_FMT_400,
 		.flag = 0,
@@ -335,15 +334,13 @@ static struct vsi_video_fmt vsi_raw_fmt[] = {
 		.flag = 0,
 	},
 	{
-		.name = "422 semi planar",
-		.fourcc = V4L2_PIX_FMT_422SP,
+		.fourcc = V4L2_PIX_FMT_NV16,
 		.enc_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE,
 		.dec_fmt = VSI_V4L2_DEC_PIX_FMT_422SP,
 		.flag = 0,
 	},
 	{
-		.name = "444 semi planar",
-		.fourcc = V4L2_PIX_FMT_444SP,
+		.fourcc = V4L2_PIX_FMT_NV24,
 		.enc_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE,
 		.dec_fmt = VSI_V4L2_DEC_PIX_FMT_444SP,
 		.flag = 0,
@@ -768,10 +765,10 @@ struct vsi_video_fmt *vsi_enum_dec_format(int idx, int braw, struct vsi_v4l2_ctx
 					vsi_v4l2_hwconfig.max_dec_resolution <= 1920)
 					continue;
 			}
-			if (inputformat != V4L2_DAEMON_CODEC_DEC_JPEG &&
-				isJpegOnlyFmt(outfmt))
-				continue;
 			if (test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag)) {
+				if (inputformat == V4L2_DAEMON_CODEC_DEC_JPEG &&
+					outfmt != ctx->mediacfg.decparams.dec_info.dec_info.src_pix_fmt)
+					continue;
 				if ((outfmt == VSI_V4L2_DECOUT_NV12_10BIT ||
 					outfmt == VSI_V4L2_DECOUT_P010) &&
 					ctx->mediacfg.decparams.dec_info.dec_info.bit_depth < 10)
@@ -1000,15 +997,15 @@ static void verifyPlanesize(unsigned int psize[], int braw, int pixelformat, int
 				extsize = basesize / 2;
 				quadsize = basesize / 4;
 				break;
-			case V4L2_PIX_FMT_422SP:
+			case V4L2_PIX_FMT_NV16:
 				extsize = basesize;
 				quadsize = 0;
 				break;
-			case V4L2_PIX_FMT_444SP:
+			case V4L2_PIX_FMT_NV24:
 				extsize = basesize * 2;
 				quadsize = 0;
 				break;
-			case V4L2_PIX_FMT_400:
+			case V4L2_PIX_FMT_GREY:
 			case V4L2_PIX_FMT_YUYV:
 				extsize = 0;
 				quadsize = 0;
@@ -1671,7 +1668,6 @@ void vsiv4l2_set_hwinfo(struct vsi_v4l2_dev_info *hwinfo)
 		if (((1 << i) & hwinfo->encformat) == 0)
 			vsi_coded_fmt[i].enc_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE;
 		if (((1 << i) & hwinfo->decformat) == 0) {
-			vsi_coded_fmt[i].dec_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE;
 			//disable all jpg only output fmt
 			if (vsi_coded_fmt[i].dec_fmt == V4L2_DAEMON_CODEC_DEC_JPEG) {
 				for (j = 0; j < ARRAY_SIZE(vsi_raw_fmt); j++) {
@@ -1679,6 +1675,7 @@ void vsiv4l2_set_hwinfo(struct vsi_v4l2_dev_info *hwinfo)
 						vsi_raw_fmt[j].dec_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE;
 				}
 			}
+			vsi_coded_fmt[i].dec_fmt = V4L2_DAEMON_CODEC_UNKNOW_TYPE;
 		}
 	}
 }
