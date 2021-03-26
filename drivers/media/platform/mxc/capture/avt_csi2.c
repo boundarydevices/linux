@@ -3581,6 +3581,7 @@ static int avt_set_selection(struct v4l2_subdev *sd,
 			// write width
 			sel->r.width = clamp(roundup(sel->r.width, priv->frmp.sw), priv->frmp.minw, priv->frmp.maxw);
 			avt_set_param(client, V4L2_AV_CSI2_WIDTH_W, sel->r.width);
+			avt_set_param(client, V4L2_AV_CSI2_WIDTH_W, sel->r.width); // BUG: write twice in a row to ensure it works
 
 			// update width, height, offset x/y restrictions from camera
 			avt_init_frame_param(priv);
@@ -3600,6 +3601,7 @@ static int avt_set_selection(struct v4l2_subdev *sd,
 			// write width
 			sel->r.width = clamp(roundup(sel->r.width, priv->frmp.sw), priv->frmp.minw, priv->frmp.maxw);
 			avt_set_param(client, V4L2_AV_CSI2_WIDTH_W, sel->r.width);
+			avt_set_param(client, V4L2_AV_CSI2_WIDTH_W, sel->r.width); // BUG: write twice in a row to ensure it works
 		}
 
 		if (sel->r.height <= priv->frmp.r.height) { /* case iii) New height is lesser or equal than current */
