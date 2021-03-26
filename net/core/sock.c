@@ -2184,13 +2184,18 @@ static void sk_leave_memory_pressure(struct sock *sk)
 bool skb_page_frag_refill(unsigned int sz, struct page_frag *pfrag, gfp_t gfp)
 {
 	if (pfrag->page) {
-		if (page_ref_count(pfrag->page) == 1) {
+		int ref_cnt = page_ref_count(pfrag->page);
+
+		if (ref_cnt == 1) {
 			pfrag->offset = 0;
 			return true;
 		}
-		if (pfrag->offset + sz <= pfrag->size)
-			return true;
-		put_page(pfrag->page);
+		if (ref_cnt) {
+			if (pfrag->offset + sz <= pfrag->size)
+				return true;
+			put_page(pfrag->page);
+		}
+		pfrag->page = NULL;
 	}
 
 	pfrag->offset = 0;
