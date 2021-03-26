@@ -155,8 +155,6 @@ enum CTX_STATUS {
 	ENC_STATUS_ENCODING,
 	ENC_STATUS_DRAINING,
 	ENC_STATUS_STOPPED,
-	ENC_STATUS_STOPPED_BYUSR,
-	ENC_STATUS_RESET,
 
 	DEC_STATUS_DECODING,
 	DEC_STATUS_DRAINING,
@@ -279,6 +277,9 @@ enum {
 	CTX_FLAG_FORCEIDR_BIT,			// force idr invoked
 	CTX_FLAG_SRCCHANGED_BIT,			// src change has come from daemon
 	CTX_FLAG_DELAY_SRCCHANGED_BIT,	// src change has come from daemon	 but not sent to app
+	CTX_FLAG_SRCBUF_BIT,				// if any src buf comes from last OUTPUT off or INIT
+	CTX_FLAG_ENC_FLUSHBUF,				// if any src buf comes from last OUTPUT off or INIT
+	CTX_FLAG_STREAMOFFDONE,				// dec daemon finish handling capoff
 };
 
 /* flag for decoder buffer*/
@@ -316,12 +317,11 @@ struct vsi_v4l2_ctx {
 	u32 buffed_cropcapnum;
 	u32 lastcapbuffer_idx;	//latest received capture buffer index
 
-	struct list_head queued_list;
-
 	struct vsi_v4l2_mediacfg mediacfg;
 
 	struct v4l2_ctrl_handler ctrlhdl;
 	wait_queue_head_t retbuf_queue;
+	wait_queue_head_t capoffdone_queue;
 
 	uint64_t frameidx;
 
@@ -340,8 +340,10 @@ int vsi_v4l2_reset_ctx(struct vsi_v4l2_ctx *ctx);
 int vsi_v4l2_send_reschange(struct vsi_v4l2_ctx *ctx);
 int vsi_v4l2_notify_reschange(struct vsi_v4l2_msg *pmsg);
 int vsi_v4l2_handle_warningmsg(struct vsi_v4l2_msg *pmsg);
+int vsi_v4l2_handle_streamoffdone(struct vsi_v4l2_msg *pmsg);
 int vsi_v4l2_handle_cropchange(struct vsi_v4l2_msg *pmsg);
 int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg);
+void vsi_v4l2_sendeos(struct vsi_v4l2_ctx *ctx);
 int vsi_v4l2_handleerror(unsigned long ctxtid, int error);
 int vsi_v4l2_handle_picconsumed(struct vsi_v4l2_msg *pmsg);
 struct video_device *vsi_v4l2_probe_enc(
@@ -537,15 +539,6 @@ static inline int inst_isactive(struct vsi_v4l2_ctx *ctx)
 	return 0;
 }
 
-static inline int ctx_switchstate(struct vsi_v4l2_ctx *ctx, int state)
-{
-	if (mutex_lock_interruptible(&ctx->ctxlock))
-		return -EBUSY;
-	ctx->status = state;
-	mutex_unlock(&ctx->ctxlock);
-	return 0;
-}
-
 static inline void return_all_buffers(struct vb2_queue *vq, int status, int bRelbuf)
 {
 	int i;
@@ -554,8 +547,7 @@ static inline void return_all_buffers(struct vb2_queue *vq, int status, int bRel
 	struct list_head *plist;
 
 	v4l2_klog(LOGLVL_FLOW, "%s", __func__);
-	if (mutex_lock_interruptible(&ctx->ctxlock))
-		return;
+
 	if (binputqueue(vq->type))
 		plist = &ctx->input_list;
 	else
@@ -575,7 +567,6 @@ static inline void return_all_buffers(struct vb2_queue *vq, int status, int bRel
 			v4l2_klog(LOGLVL_FLOW, "clear buffer %d", buf->vb.vb2_buf.index);
 		}
 	}
-	mutex_unlock(&ctx->ctxlock);
 }
 
 static inline void print_queinfo(struct vb2_queue *q)

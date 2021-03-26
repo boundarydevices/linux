@@ -126,6 +126,7 @@ enum v4l2_daemon_cmd_id {
 	V4L2_DAEMON_VIDIOC_PICCONSUMED,
 	V4L2_DAEMON_VIDIOC_CROPCHANGE,
 	V4L2_DAEMON_VIDIOC_WARNONOPTION,
+	V4L2_DAEMON_VIDIOC_STREAMOFF_CAPTURE_DONE,
 	V4L2_DAEMON_VIDIOC_TOTAL_AMOUNT,
 };
 
@@ -515,6 +516,7 @@ struct v4l2_daemon_dec_buffers {
 	s64 timestamp;
 
 	s32 no_reordering_decoding;
+	s32 securemode_on;
 };
 
 //stub struct
