@@ -880,4 +880,11 @@ config DRM_PANEL_WKS_101WX001
 	  Say Y here if you want to enable support for the WKS
 	  101WX001 controller for 1280x800 LCD panel
 
+config DRM_PANEL_LTSLCD133
+	tristate "LTS LCD133 panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	select VIDEOMODE_HELPERS
+
 endmenu
