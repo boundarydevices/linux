@@ -88,21 +88,21 @@
 };
 
 &flexcan1 {
-	fsl,clk-source = <1>;
+	fsl,clk-source = /bits/ 8 <1>;
 };
 
 &flexcan2 {
 	clocks = <&can1_lpcg 1>,
 		 <&can1_lpcg 0>;
 	assigned-clocks = <&clk IMX_SC_R_CAN_1 IMX_SC_PM_CLK_PER>;
-	fsl,clk-source = <1>;
+	fsl,clk-source = /bits/ 8 <1>;
 };
 
 &flexcan3 {
 	clocks = <&can2_lpcg 1>,
 		 <&can2_lpcg 0>;
 	assigned-clocks = <&clk IMX_SC_R_CAN_2 IMX_SC_PM_CLK_PER>;
-	fsl,clk-source = <1>;
+	fsl,clk-source = /bits/ 8 <1>;
 };
 
 &lpspi2 {

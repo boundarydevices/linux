@@ -411,7 +411,8 @@ dma_subsys: bus@5a000000 {
 		assigned-clock-rates = <40000000>;
 		power-domains = <&pd IMX_SC_R_CAN_0>;
 		/* SLSlice[4] */
-		fsl,clk-source= <0>;
+		fsl,clk-source = /bits/ 8 <0>;
+		fsl,scu-index = /bits/ 8 <0>;
 		status = "disabled";
 	};
 
@@ -431,7 +432,8 @@ dma_subsys: bus@5a000000 {
 		assigned-clock-rates = <40000000>;
 		power-domains = <&pd IMX_SC_R_CAN_1>;
 		/* SLSlice[4] */
-		fsl,clk-source = <0>;
+		fsl,clk-source = /bits/ 8 <0>;
+		fsl,scu-index = /bits/ 8 <1>;
 		status = "disabled";
 	};
 
@@ -451,7 +453,8 @@ dma_subsys: bus@5a000000 {
 		assigned-clock-rates = <40000000>;
 		power-domains = <&pd IMX_SC_R_CAN_2>;
 		/* SLSlice[4] */
-		fsl,clk-source = <0>;
+		fsl,clk-source = /bits/ 8 <0>;
+		fsl,scu-index = /bits/ 8 <2>;
 		status = "disabled";
 	};
 
