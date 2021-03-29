@@ -98,6 +98,7 @@ static int fsl_easrc_dmaconfig(struct fsl_easrc_m2m *m2m,
 		buswidth = DMA_SLAVE_BUSWIDTH_4_BYTES;
 	}
 
+	memset(&slave_config, 0, sizeof(slave_config));
 	if (dir == IN) {
 		slave_config.direction = DMA_MEM_TO_DEV;
 		slave_config.dst_addr = dma_addr;
