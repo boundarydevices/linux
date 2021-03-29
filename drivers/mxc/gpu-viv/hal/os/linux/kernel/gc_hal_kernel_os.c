@@ -492,12 +492,6 @@ _QueryProcessPageTable(
             return gcvSTATUS_NOT_FOUND;
 
         pte = pte_offset_map_lock(current->mm, pmd, logical, &ptl);
-        if (!pte)
-        {
-            spin_unlock(ptl);
-            return gcvSTATUS_NOT_FOUND;
-        }
-
         if (!pte_present(*pte))
         {
             pte_unmap_unlock(pte, ptl);
@@ -3452,7 +3446,7 @@ gckOS_MapPagesEx(
     while (PageCount-- > 0)
     {
         gctUINT i;
-        gctPHYS_ADDR_T phys = ~0U;
+        gctPHYS_ADDR_T phys = ~0ULL;
 
         gcmALLOCATOR_Physical(allocator, mdl, offset, &phys);
 
@@ -3610,7 +3604,6 @@ gckOS_Map1MPages(
     PLINUX_MDL mdl;
     gctUINT32* table;
     gctUINT32  offset = 0;
-
     gctSIZE_T bytes = PageCount * 4;
     gckALLOCATOR allocator;
 
@@ -3657,7 +3650,7 @@ gckOS_Map1MPages(
 
     while (PageCount-- > 0)
     {
-        gctPHYS_ADDR_T phys = ~0U;
+        gctPHYS_ADDR_T phys = ~0ULL;
 
         gcmALLOCATOR_Physical(allocator, mdl, offset, &phys);
 
@@ -3673,14 +3666,15 @@ gckOS_Map1MPages(
         }
 
         /* Get the start physical of 1M page. */
-        phys &= ~((1 << 20) - 1);
+        phys &= ~(gcd1M_PAGE_SIZE - 1);
 
-        gcmkONERROR(
-            gckMMU_SetPage(Os->device->kernels[Core]->mmu,
+        gcmkONERROR(gckMMU_SetPage(
+            Os->device->kernels[Core]->mmu,
             phys,
             gcvPAGE_TYPE_1M,
             Writable,
-            table++));
+            table++
+            ));
 
         offset += gcd1M_PAGE_SIZE;
     }
@@ -7247,10 +7241,6 @@ gckOS_QueryOption(
     else if (!strcmp(Option, "TA"))
     {
         *Value = 0;
-    }
-    else if (!strcmp(Option, "gpuProfiler"))
-    {
-        *Value = device->args.gpuProfiler;
     }
     else if (!strcmp(Option, "userClusterMask"))
     {
