@@ -481,7 +481,7 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 	struct mxc_mipi_csi2_dev *csi2dev = notifier_to_mipi_dev(notifier);
 
 	/* Find platform data for this sensor subdev */
-	if (csi2dev->asd.match.fwnode == of_fwnode_handle(subdev->dev->of_node))
+	if (csi2dev->fwnode == of_fwnode_handle(subdev->dev->of_node))
 		csi2dev->sensor_sd = subdev;
 
 	if (subdev == NULL)
@@ -502,6 +502,7 @@ static int mipi_csis_subdev_host(struct mxc_mipi_csi2_dev *csi2dev)
 	struct device *dev = &csi2dev->pdev->dev;
 	struct device_node *parent = dev->of_node;
 	struct device_node *node, *port, *rem;
+	struct v4l2_async_subdev *asd;
 	int ret;
 
 	v4l2_async_notifier_init(&csi2dev->subdev_notifier);
@@ -527,20 +528,19 @@ static int mipi_csis_subdev_host(struct mxc_mipi_csi2_dev *csi2dev)
 				  "Remote device at %s XXX found\n",
 				  port->full_name);
 
-		INIT_LIST_HEAD(&csi2dev->asd.list);
-		csi2dev->asd.match_type = V4L2_ASYNC_MATCH_FWNODE;
-		csi2dev->asd.match.fwnode = of_fwnode_handle(rem);
-		csi2dev->async_subdevs[0] = &csi2dev->asd;
-
+		csi2dev->fwnode = of_fwnode_handle(rem);
+		asd = v4l2_async_notifier_add_fwnode_subdev(
+						&csi2dev->subdev_notifier,
+						csi2dev->fwnode,
+						struct v4l2_async_subdev);
+		if (IS_ERR(asd)) {
+			dev_err(dev, "failed to add subdev to a notifier\n");
+			of_node_put(rem);
+			return PTR_ERR(asd);
+		}
 		of_node_put(rem);
-		break;
-	}
 
-	ret = v4l2_async_notifier_add_subdev(&csi2dev->subdev_notifier,
-					&csi2dev->asd);
-	if (ret) {
-		dev_err(dev, "failed to add subdev to a notifier\n");
-		return ret;
+		break;
 	}
 
 	csi2dev->subdev_notifier.v4l2_dev = &csi2dev->v4l2_dev;
@@ -643,6 +643,7 @@ static int mipi_csi2_remove(struct platform_device *pdev)
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct mxc_mipi_csi2_dev *csi2dev = sd_to_mxc_mipi_csi2_dev(sd);
 
+	v4l2_async_notifier_cleanup(&csi2dev->subdev_notifier);
 	mipi_csi2_clk_disable(csi2dev);
 	pm_runtime_disable(&pdev->dev);
 
