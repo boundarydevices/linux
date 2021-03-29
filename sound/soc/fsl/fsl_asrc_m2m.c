@@ -188,6 +188,7 @@ static int fsl_asrc_dmaconfig(struct fsl_asrc_pair *pair, struct dma_chan *chan,
 		return -EINVAL;
 	}
 
+	memset(&slave_config, 0, sizeof(slave_config));
 	if (dir == IN) {
 		slave_config.direction = DMA_MEM_TO_DEV;
 		slave_config.dst_addr = dma_addr;
