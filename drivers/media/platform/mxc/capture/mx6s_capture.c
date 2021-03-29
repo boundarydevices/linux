@@ -335,7 +335,7 @@ struct mx6s_csi_dev {
 	size_t						discard_size;
 	struct mx6s_buf_internal	buf_discard[2];
 
-	struct v4l2_async_subdev	asd;
+	struct fwnode_handle *fwnode;
 	struct v4l2_async_notifier	subdev_notifier;
 
 	bool csi_mipi_mode;
@@ -1708,7 +1708,7 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 	struct mx6s_csi_dev *csi_dev = notifier_to_mx6s_dev(notifier);
 
 	/* Find platform data for this sensor subdev */
-	if (csi_dev->asd.match.fwnode == dev_fwnode(subdev->dev))
+	if (csi_dev->fwnode == dev_fwnode(subdev->dev))
 		csi_dev->sd = subdev;
 
 	if (subdev == NULL)
@@ -1785,6 +1785,7 @@ static int mx6sx_register_subdevs(struct mx6s_csi_dev *csi_dev)
 {
 	struct device_node *parent = csi_dev->dev->of_node;
 	struct device_node *node, *port, *rem;
+	struct v4l2_async_subdev *asd;
 	int ret;
 
 	v4l2_async_notifier_init(&csi_dev->subdev_notifier);
@@ -1807,15 +1808,11 @@ static int mx6sx_register_subdevs(struct mx6s_csi_dev *csi_dev)
 			return -1;
 		}
 
-		csi_dev->asd.match_type = V4L2_ASYNC_MATCH_FWNODE;
-		csi_dev->asd.match.fwnode = of_fwnode_handle(rem);
-
-		ret = v4l2_async_notifier_add_subdev(&csi_dev->subdev_notifier,
-						&csi_dev->asd);
-		if (ret) {
-			of_node_put(rem);
-		}
-
+		csi_dev->fwnode = of_fwnode_handle(rem);
+		asd = v4l2_async_notifier_add_fwnode_subdev(
+					&csi_dev->subdev_notifier,
+					csi_dev->fwnode,
+					struct v4l2_async_subdev);
 		of_node_put(rem);
 		break;
 	}
@@ -1969,6 +1966,7 @@ static int mx6s_csi_remove(struct platform_device *pdev)
 	struct mx6s_csi_dev *csi_dev =
 				container_of(v4l2_dev, struct mx6s_csi_dev, v4l2_dev);
 
+	v4l2_async_notifier_cleanup(&csi_dev->subdev_notifier);
 	v4l2_async_notifier_unregister(&csi_dev->subdev_notifier);
 
 	video_unregister_device(csi_dev->vdev);
