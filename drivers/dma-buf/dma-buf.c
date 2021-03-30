@@ -41,6 +41,9 @@ struct dma_buf_list {
 };
 
 static struct dma_buf_list db_list;
+#ifdef CONFIG_ION
+static DEFINE_MUTEX(dev_lock);
+#endif
 
 /*
  * This function helps in traversing the db_list and calls the
@@ -439,6 +442,7 @@ static long dma_buf_ioctl(struct file *file,
 			return -EFAULT;
 		}
 		memset(&dev, 0, sizeof(dev));
+		mutex_lock(&dev_lock);
 		device_initialize(&dev);
 		dev.coherent_dma_mask = DMA_BIT_MASK(64);
 		dev.dma_mask = &dev.coherent_dma_mask;
@@ -448,6 +452,7 @@ static long dma_buf_ioctl(struct file *file,
 		arch_setup_dma_ops(&dev, 0, 0, NULL, false);
 		attachment = dma_buf_attach(dmabuf, &dev);
 		if (!attachment || IS_ERR(attachment)) {
+			mutex_unlock(&dev_lock);
 			return -EFAULT;
 		}
 
@@ -459,6 +464,7 @@ static long dma_buf_ioctl(struct file *file,
 		}
 		dma_buf_detach(dmabuf, attachment);
 		device_del(&dev);
+		mutex_unlock(&dev_lock);
 		if (copy_to_user((void __user *) arg, &phys, sizeof(phys)))
 			return -EFAULT;
 		return 0;
