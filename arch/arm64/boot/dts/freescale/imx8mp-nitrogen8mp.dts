@@ -128,10 +128,15 @@
 		>;
 	};
 
-	pinctrl_gpio_keys: gpio-keysgrp {
+	pinctrl_key_can1: key-can1grp {
 		fsl,pins = <
 #define GP_CAN1_DETECT		<&gpio1 11 GPIO_ACTIVE_HIGH>
 			MX8MP_IOMUXC_GPIO1_IO11__GPIO1_IO11	0x16
+		>;
+	};
+
+	pinctrl_key_can2: key-can2grp {
+		fsl,pins = <
 #define GP_CAN2_DETECT		<&gpio4 23 GPIO_ACTIVE_HIGH>
 			MX8MP_IOMUXC_SAI2_RXD0__GPIO4_IO23	0x180
 		>;
@@ -688,10 +693,10 @@
 		};
 	};
 
-	gpio-keys {
+	gpio_keys: gpio-keys {
 		compatible = "gpio-keys";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_gpio_keys>;
+		pinctrl-0 = <&pinctrl_key_can1>, <&pinctrl_key_can2>;
 
 		can1 {
 			label = "can1 detect";
