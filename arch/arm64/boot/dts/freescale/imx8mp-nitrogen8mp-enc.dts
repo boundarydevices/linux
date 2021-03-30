@@ -1,0 +1,177 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2021 Boundary Devices
+ */
+
+#include "imx8mp-nitrogen8mp.dts"
+
+/ {
+	model = "Boundary i.MX 8M Plus Nitrogen8MP ENC board";
+	compatible = "boundary,imx8mp-nitrogen8mp-enc", "fsl,imx8mp";
+
+	/delete-node/ regulator-can2-stby;
+
+	csi_mclk: csi-mclk {
+		compatible = "pwm-clock";
+		#clock-cells = <0>;
+		clock-frequency = <20000000>;
+		clock-output-names = "csi_mclk";
+		pwms = <&pwm4 0 50 0>; /* 1 / 50 ns = 20 MHz */
+	};
+
+	reg_vref_2v5: regulator-vref-2v5 {
+		compatible = "regulator-fixed";
+		regulator-name = "vref-2v5";
+		regulator-min-microvolt = <2500000>;
+		regulator-max-microvolt = <2500000>;
+	};
+};
+
+&iomuxc {
+	/delete-node/ fecgrp;
+	/delete-node/ flexcan2grp;
+	/delete-node/ flexcan2reggrp;
+	/delete-node/ hoggrp;
+	/delete-node/ key-can2grp;
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_HDMI_CEC__HDMIMIX_HDMI_CEC		0x40000019
+			MX8MP_IOMUXC_HDMI_DDC_SCL__HDMIMIX_HDMI_SCL	0x400001c3
+			MX8MP_IOMUXC_HDMI_DDC_SDA__HDMIMIX_HDMI_SDA	0x400001c3
+			MX8MP_IOMUXC_HDMI_HPD__HDMIMIX_HDMI_HPD		0x40000019
+			/* J23 */
+			MX8MP_IOMUXC_ECSPI1_MISO__GPIO5_IO08		0x41
+			MX8MP_IOMUXC_GPIO1_IO07__GPIO1_IO07		0x41
+			MX8MP_IOMUXC_NAND_DATA01__GPIO3_IO07		0x41
+			MX8MP_IOMUXC_SAI1_MCLK__GPIO4_IO20		0x41
+			MX8MP_IOMUXC_SAI1_RXD2__GPIO4_IO04		0x41
+			MX8MP_IOMUXC_SAI1_RXD3__GPIO4_IO05		0x41
+			MX8MP_IOMUXC_SAI1_RXD4__GPIO4_IO06		0x41
+			MX8MP_IOMUXC_SAI1_RXD5__GPIO4_IO07		0x41
+			MX8MP_IOMUXC_SAI1_RXD6__GPIO4_IO08		0x41
+			MX8MP_IOMUXC_SAI1_RXD7__GPIO4_IO09		0x41
+			MX8MP_IOMUXC_SAI1_TXC__GPIO4_IO11		0x41
+			MX8MP_IOMUXC_SAI1_TXD0__GPIO4_IO12		0x41
+			MX8MP_IOMUXC_SAI1_TXD1__GPIO4_IO13		0x41
+			MX8MP_IOMUXC_SAI1_TXD2__GPIO4_IO14		0x41
+			MX8MP_IOMUXC_SAI1_TXD3__GPIO4_IO15		0x41
+			MX8MP_IOMUXC_SAI1_TXD4__GPIO4_IO16		0x41
+			MX8MP_IOMUXC_SAI1_TXD5__GPIO4_IO17		0x41
+			MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19		0x41
+			MX8MP_IOMUXC_SAI1_TXFS__GPIO4_IO10		0x41
+			MX8MP_IOMUXC_SAI2_RXD0__GPIO4_IO23		0x41
+			MX8MP_IOMUXC_SAI5_MCLK__GPIO3_IO25		0x41
+			MX8MP_IOMUXC_SAI5_RXD3__GPIO3_IO24		0x41
+			MX8MP_IOMUXC_SD1_DATA4__GPIO2_IO06		0x41
+			MX8MP_IOMUXC_SD1_DATA5__GPIO2_IO07		0x41
+			MX8MP_IOMUXC_SD1_DATA6__GPIO2_IO08		0x41
+			MX8MP_IOMUXC_SD1_DATA7__GPIO2_IO09		0x41
+			MX8MP_IOMUXC_SD1_RESET_B__GPIO2_IO10		0x41
+			MX8MP_IOMUXC_SPDIF_TX__GPIO5_IO03		0x41
+		>;
+	};
+
+	pinctrl_i2c2c_ov5640_mipi: i2c2c-ov5640-mipigrp {
+		fsl,pins = <
+			/* J10 CSI2 capture */
+#define GP_OV5640_MIPI_POWER_DOWN	<&gpio5 4 GPIO_ACTIVE_HIGH>
+			MX8MP_IOMUXC_SPDIF_RX__GPIO5_IO04		0x141
+#define GP_OV5640_MIPI_RESET		<&gpio5 5 GPIO_ACTIVE_LOW>
+			MX8MP_IOMUXC_SPDIF_EXT_CLK__GPIO5_IO05		0x101
+		>;
+	};
+};
+
+&dewarp {
+	status = "okay";
+};
+
+&fec {
+	/delete-property/ pinctrl-0;
+	status = "disabled";
+};
+
+&flexcan2 {
+	/delete-property/ pinctrl-0;
+	/delete-property/ xceiver-supply;
+	status = "disabled";
+};
+
+&gpio_keys {
+	pinctrl-0 = <&pinctrl_key_can1>;
+	/delete-node/ can2;
+};
+
+&i2c2c {
+	/delete-node/ basler_camera@36;
+
+	ov5640-mipi1@3c {
+		AVDD-supply = <&reg_vref_2v5>;
+		DOVDD-supply = <&reg_vref_1v8>;
+		DVDD-supply = <&reg_vref_3v3>;
+		clocks = <&csi_mclk>;
+		clock-names = "xclk";
+		compatible = "ovti,ov5640";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2c_ov5640_mipi>;
+		powerdown-gpios = GP_OV5640_MIPI_POWER_DOWN;
+		reg = <0x3c>;
+		reset-gpios = GP_OV5640_MIPI_RESET;
+		status = "okay";
+
+		port {
+			ov5640_mipi1_ep: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				remote-endpoint = <&mipi1_ov5640_ep>;
+			};
+		};
+	};
+};
+
+&isi_0 {
+	status = "disabled";
+};
+
+&isi_1 {
+	status = "okay";
+};
+
+&isp_0 {
+	status = "okay";
+};
+
+&isp_1 {
+	status = "disabled";
+};
+
+&mipi_csi_0 {
+	status = "okay";
+};
+
+&mipi_csi_1 {
+	status = "okay";
+
+	port@1 {
+		reg = <1>;
+
+		mipi1_ov5640_ep: endpoint {
+			remote-endpoint = <&ov5640_mipi1_ep>;
+			data-lanes = <2>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+	};
+};
+
+&pwm4 {
+	assigned-clocks = <&clk IMX8MP_CLK_PWM4>;
+	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_40M>;
+	assigned-clock-rates = <40000000>;
+};
+
+&reg_can1_stby {
+	/delete-property/ enable-active-high;
+};
