@@ -104,6 +104,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk.dtb imx8mp-evk-root.dtb imx8mp-evk-inmate.d
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-ddr4-evk.dtb \
 			  imx8mp-a0-nitrogen8mp.dtb \
 			  imx8mp-nitrogen8mp.dtb \
+			  imx8mp-nitrogen8mp-enc.dtb \
 			  imx8mp-nitrogen8mp-m4.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk.dtb imx8mq-evk-rpmsg.dtb imx8mq-evk-pcie1-m2.dtb imx8mq-evk-usd-wifi.dtb \
