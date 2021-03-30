@@ -103,7 +103,7 @@ struct mmdc_pmu {
 	struct device *dev;
 	struct perf_event *mmdc_events[MMDC_NUM_COUNTERS];
 	struct hlist_node node;
-	struct fsl_mmdc_devtype_data *devtype_data;
+	const struct fsl_mmdc_devtype_data *devtype_data;
 	struct clk *mmdc_ipg_clk;
 };
 
@@ -506,7 +506,9 @@ static int imx_mmdc_perf_init(struct platform_device *pdev, void __iomem *mmdc_b
 		name = devm_kasprintf(&pdev->dev,
 				GFP_KERNEL, "mmdc%d", mmdc_num);
 
-	pmu_mmdc->devtype_data = (struct fsl_mmdc_devtype_data *)of_id->data;
+	pmu_mmdc->devtype_data = &imx6q_data;
+	if (of_id)
+		pmu_mmdc->devtype_data = of_id->data;
 
 	hrtimer_init(&pmu_mmdc->hrtimer, CLOCK_MONOTONIC,
 			HRTIMER_MODE_REL);
