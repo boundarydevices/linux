@@ -294,7 +294,7 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		}
 	}
 
-	return 0;
+	return genphy_soft_reset(phydev);
 }
 
 static int rtl821x_resume(struct phy_device *phydev)
