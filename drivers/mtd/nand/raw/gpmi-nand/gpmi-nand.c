@@ -2598,11 +2598,11 @@ static int gpmi_nfc_exec_op(struct nand_chip *chip,
 						   &direct);
 			break;
 		}
+	}
 
-		if (!desc) {
-			ret = -ENXIO;
-			goto unmap;
-		}
+	if (!desc) {
+		ret = -ENXIO;
+		goto unmap;
 	}
 
 	dev_dbg(this->dev, "%s setup done\n", __func__);
