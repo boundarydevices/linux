@@ -81,6 +81,8 @@
 			MX8MMN(IOMUXC_SAI5_RXD1_GPIO3_IO22, 0x140)
 #define GP_GPIOLEDS_GREEN	<&gpio3 21 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_SAI5_RXD0_GPIO3_IO21, 0x140)
+#define GP_GPIOLEDS_YELLOW     <&gpio4 23 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI2_RXD0_GPIO4_IO23, 0x140)
 		>;
 	};
 
@@ -600,6 +602,12 @@
 		green {
 			default-state = "off";
 			gpios = GP_GPIOLEDS_GREEN;
+			retain-state-suspended;
+		};
+
+		yellow {
+			default-state = "off";
+			gpios = GP_GPIOLEDS_YELLOW;
 			retain-state-suspended;
 		};
 	};
