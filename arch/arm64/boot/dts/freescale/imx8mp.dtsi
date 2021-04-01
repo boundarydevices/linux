@@ -197,14 +197,10 @@
 			reg = <0 0x92400000 0 0x2000000>;
 		};
 
-		isp0_reserved: isp0@B0000000 {
+		/* used only by tuning tool, can be removed for normal case */
+		isp0_reserved: isp0@94400000 {
 			no-map;
-			reg = <0 0xB0000000 0 0x10000000>;
-		};
-
-		isp1_reserved: isp1@B0000000 {
-			no-map;
-			reg = <0 0xB0000000 0 0x10000000>;
+			reg = <0 0x94400000 0 0x10000000>;
 		};
 	};
 
@@ -1573,7 +1569,6 @@
 					power-domains = <&ispdwp_pd>;
 					id = <1>;
 					gpr = <&media_blk_ctrl>;
-					memory-region = <&isp1_reserved>;
 					status = "disabled";
 				};
 
