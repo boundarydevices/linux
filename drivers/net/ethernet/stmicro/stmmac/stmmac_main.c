@@ -113,7 +113,7 @@ static void stmmac_exit_fs(struct net_device *dev);
 
 #define STMMAC_COAL_TIMER(x) (jiffies + usecs_to_jiffies(x))
 
-static int stmmac_bus_clks_enable(struct stmmac_priv *priv, bool enabled)
+int stmmac_bus_clks_enable(struct stmmac_priv *priv, bool enabled)
 {
 	int ret = 0;
 
@@ -133,6 +133,7 @@ static int stmmac_bus_clks_enable(struct stmmac_priv *priv, bool enabled)
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(stmmac_bus_clks_enable);
 
 /**
  * stmmac_verify_args - verify the driver parameters.
@@ -5376,7 +5377,6 @@ int stmmac_suspend(struct device *dev)
 		pinctrl_pm_select_sleep_state(priv->device);
 		/* Disable clock in case of PWM is off */
 		clk_disable_unprepare(priv->plat->clk_ptp_ref);
-		stmmac_bus_clks_enable(priv, false);
 	}
 	mutex_unlock(&priv->lock);
 
@@ -5441,10 +5441,6 @@ int stmmac_resume(struct device *dev)
 		priv->irq_wake = 0;
 	} else {
 		pinctrl_pm_select_default_state(priv->device);
-		/* enable the clk previously disabled */
-		ret = stmmac_bus_clks_enable(priv, true);
-		if (ret)
-			return ret;
 		if (priv->plat->clk_ptp_ref)
 			clk_prepare_enable(priv->plat->clk_ptp_ref);
 		/* reset the phy so that it's ready */
