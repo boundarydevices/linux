@@ -279,19 +279,9 @@ int vsi_v4l2_handleerror(unsigned long ctxid, int error)
 int vsi_v4l2_send_reschange(struct vsi_v4l2_ctx *ctx)
 {
 	struct v4l2_event event;
-	struct v4l2_format fmt;
 
-	if (ctx->mediacfg.decparams.dec_info.dec_info.bit_depth == 10) {
-		fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		vsiv4l2_getfmt(ctx, &fmt);
-		if (fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_NV12X &&
-			fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_P010 &&
-			fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_TILEX &&
-			fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_RFCX) {
-			fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_NV12X;
-			vsiv4l2_setfmt(ctx, &fmt);
-		}
-	}
+	vsi_v4l2_update_decfmt(ctx);
+
 	memset((void *)&event, 0, sizeof(struct v4l2_event));
 	event.type = V4L2_EVENT_SOURCE_CHANGE,
 	event.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION,
