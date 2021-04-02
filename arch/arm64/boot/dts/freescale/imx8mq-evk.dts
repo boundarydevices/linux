@@ -542,13 +542,13 @@
 	ak5558: ak5558@13 {
 		compatible = "asahi-kasei,ak5558";
 		reg = <0x13>;
-		reset-gpios = <&gpio3 17 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio3 17 GPIO_ACTIVE_LOW>;
 	};
 
 	ak4497: ak4497@11 {
 		compatible = "asahi-kasei,ak4497";
 		reg = <0x11>;
-		reset-gpios = <&gpio3 16 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio3 16 GPIO_ACTIVE_LOW>;
 		dsd-path = <1>;
 	};
 
