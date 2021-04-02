@@ -576,6 +576,7 @@ struct dpaa2_eth_priv {
 	struct devlink_port devlink_port;
 
 	bool ceetm_en;
+	u32 rx_copybreak;
 };
 
 struct dpaa2_eth_devlink_priv {
