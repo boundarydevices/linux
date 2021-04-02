@@ -899,7 +899,7 @@ static struct v4l2_ctrl_config vsi_v4l2_dec_ctrl_defs[] = {
 	{
 		.ops = &vsi_dec_ctrl_ops,
 		.id = V4L2_CID_DIS_REORDER,
-		.name = "frame disable reoder ctrl",
+		.name = "frame disable reorder ctrl",
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
 		.min = 0,
 		.max = 1,
@@ -1128,7 +1128,6 @@ static int v4l2_dec_mmap(struct file *filp, struct vm_area_struct *vma)
 
 static __poll_t vsi_dec_poll(struct file *file, poll_table *wait)
 {
-	__poll_t res = 0;
 	__poll_t ret = 0;
 	struct vsi_v4l2_ctx *ctx = fh_to_ctx(file->private_data);
 	int dstn = atomic_read(&ctx->dstframen);
@@ -1136,39 +1135,22 @@ static __poll_t vsi_dec_poll(struct file *file, poll_table *wait)
 
 	if (!vsi_v4l2_daemonalive())
 		ret |= POLLERR;
-	if (ctx->status == DEC_STATUS_SEEK) {
-		ret = (POLLIN | POLLRDNORM);
-		if (ctx->error < 0) {
-			ret |= POLLERR;
-			v4l2_klog(LOGLVL_WARNING, "poll ctx err");
-		}
+
+	if (v4l2_event_pending(&ctx->fh)) {
+		v4l2_klog(LOGLVL_BRIEF, "%s event", __func__);
+		ret |= POLLPRI;
 	}
 	if (vb2_is_streaming(&ctx->output_que))
-		res = vb2_poll(&ctx->output_que, file, wait);
-	res |= vb2_poll(&ctx->input_que, file, wait);
+		ret |= vb2_poll(&ctx->output_que, file, wait);
+	if (vb2_is_streaming(&ctx->input_que))
+		ret |= vb2_poll(&ctx->input_que, file, wait);
 
-	if (res & EPOLLERR)
-		ret |= POLLERR;
-	if (res & EPOLLPRI)
-		ret |= POLLPRI;
-	if (res & EPOLLIN)
-		ret |= POLLIN | POLLRDNORM;
-	if (res & EPOLLOUT)
-		ret |= POLLOUT | POLLWRNORM;
 	/*recheck for poll hang*/
 	if (ret == 0) {
 		if (dstn != atomic_read(&ctx->dstframen))
-			res = vb2_poll(&ctx->output_que, file, wait);
+			ret |= vb2_poll(&ctx->output_que, file, wait);
 		if (srcn != atomic_read(&ctx->srcframen))
-			res |= vb2_poll(&ctx->input_que, file, wait);
-		if (res & EPOLLERR)
-			ret |= POLLERR;
-		if (res & EPOLLPRI)
-			ret |= POLLPRI;
-		if (res & EPOLLIN)
-			ret |= POLLIN | POLLRDNORM;
-		if (res & EPOLLOUT)
-			ret |= POLLOUT | POLLWRNORM;
+			ret |= vb2_poll(&ctx->input_que, file, wait);
 	}
 	if (ctx->error < 0)
 		ret |= POLLERR;

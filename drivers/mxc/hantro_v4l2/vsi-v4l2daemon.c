@@ -442,7 +442,7 @@ int vsiv4l2_execcmd(struct vsi_v4l2_ctx *ctx, enum v4l2_daemon_cmd_id id, void *
 		if (ret == 0) {
 			if ((retflag & LAST_BUFFER_FLAG) &&
 				ctx->status == ENC_STATUS_DRAINING)
-				ctx->status = ENC_STATUS_STOPPED;
+				ctx->status = ENC_STATUS_EOS;
 		}
 		break;
 	case V4L2_DAEMON_VIDIOC_STREAMON:

@@ -1571,6 +1571,31 @@ int vsiv4l2_getfmt(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt)
 		return vsiv4l2_getfmt_dec(ctx, fmt);
 }
 
+void vsi_v4l2_update_decfmt(struct vsi_v4l2_ctx *ctx)
+{
+	struct v4l2_format fmt;
+
+	memset(&fmt, 0, sizeof(fmt));
+	if (ctx->mediacfg.decparams.dec_info.dec_info.bit_depth == 10) {
+		if (fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_NV12X &&
+			fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_P010 &&
+			fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_TILEX &&
+			fmt.fmt.pix.pixelformat != V4L2_PIX_FMT_RFCX) {
+			fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+			vsiv4l2_getfmt(ctx, &fmt);
+			fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_NV12X;
+			vsiv4l2_setfmt(ctx, &fmt);
+		}
+		return;
+	}
+	if (isJpegOnlyFmt(ctx->mediacfg.decparams.dec_info.dec_info.src_pix_fmt)) {
+		fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		vsiv4l2_getfmt(ctx, &fmt);
+		fmt.fmt.pix.pixelformat = find_local_dec_format(ctx->mediacfg.decparams.dec_info.dec_info.src_pix_fmt, 1);
+		vsiv4l2_setfmt(ctx, &fmt);
+	}
+}
+
 static void calcPlanesize(struct vsi_v4l2_ctx *ctx, int pixelformat, int width, int height, int size[], int type, int planeno)
 {
 	int i, basesize, extsize = 0, quadsize = 0;

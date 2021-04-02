@@ -155,6 +155,7 @@ enum CTX_STATUS {
 	ENC_STATUS_ENCODING,
 	ENC_STATUS_DRAINING,
 	ENC_STATUS_STOPPED,
+	ENC_STATUS_EOS,
 
 	DEC_STATUS_DECODING,
 	DEC_STATUS_DRAINING,
@@ -372,6 +373,7 @@ void vsiv4l2_initcfg(struct vsi_v4l2_ctx *ctx);
 int vsi_get_Level(struct vsi_v4l2_ctx *ctx, int mediatype, int dir, int level);
 int vsiv4l2_setfmt(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt);
 int vsiv4l2_getfmt(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt);
+void vsi_v4l2_update_decfmt(struct vsi_v4l2_ctx *ctx);
 void vsiv4l2_buffer_config(
 	struct vsi_v4l2_ctx *ctx,
 	int type,
