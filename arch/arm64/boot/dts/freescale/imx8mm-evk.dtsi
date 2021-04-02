@@ -473,7 +473,7 @@
 		#sound-dai-cells = <0>;
 		compatible = "asahi-kasei,ak5558";
 		reg = <0x13>;
-		reset-gpios = <&pca6416 3 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&pca6416 3 GPIO_ACTIVE_LOW>;
 		AVDD-supply = <&reg_audio_board>;
 		DVDD-supply = <&reg_audio_board>;
 	};
@@ -482,7 +482,7 @@
 		#sound-dai-cells = <0>;
 		compatible = "asahi-kasei,ak4497";
 		reg = <0x11>;
-		reset-gpios = <&pca6416 5 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&pca6416 5 GPIO_ACTIVE_LOW>;
 		AVDD-supply = <&reg_audio_board>;
 		DVDD-supply = <&reg_audio_board>;
 		dsd-path = <1>;
