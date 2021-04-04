@@ -954,9 +954,16 @@ void brcmf_set_mpc(struct brcmf_if *ifp, int mpc)
 {
 	struct brcmf_pub *drvr = ifp->drvr;
 	s32 err = 0;
+	struct brcmf_cfg80211_info *cfg = ifp->drvr->config;
 
+	ifp->drvr->req_mpc = mpc;
 	if (check_vif_up(ifp->vif)) {
-		err = brcmf_fil_iovar_int_set(ifp, "mpc", mpc);
+		if (cfg->pwr_save)
+			err = brcmf_fil_iovar_int_set(ifp, "mpc",
+						      ifp->drvr->req_mpc);
+		else
+			err = brcmf_fil_iovar_int_set(ifp, "mpc", 0);
+
 		if (err) {
 			bphy_err(drvr, "fail to set mpc\n");
 			return;
@@ -3194,6 +3201,12 @@ brcmf_cfg80211_set_power_mgmt(struct wiphy *wiphy, struct net_device *ndev,
 		brcmf_dbg(INFO, "Do not enable power save for P2P clients\n");
 		pm = PM_OFF;
 	}
+
+	if (cfg->pwr_save)
+		brcmf_set_mpc(ifp, ifp->drvr->req_mpc);
+	else
+		brcmf_set_mpc(ifp, 0);
+
 	brcmf_dbg(INFO, "power save %s\n", (pm ? "enabled" : "disabled"));
 
 	err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PM, pm);
@@ -4050,6 +4063,9 @@ static s32 brcmf_cfg80211_resume(struct wiphy *wiphy)
 	struct brcmf_bus *bus_if = drvr->bus_if;
 	struct brcmf_cfg80211_info *config = drvr->config;
 	int retry = BRCMF_PM_WAIT_MAXRETRY;
+	s32 power_mode;
+
+	power_mode = cfg->pwr_save ? ifp->drvr->settings->default_pm : PM_OFF;
 
 	brcmf_dbg(TRACE, "Enter\n");
 
@@ -4070,7 +4086,7 @@ static s32 brcmf_cfg80211_resume(struct wiphy *wiphy)
 		if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_WOWL_ARP_ND))
 			brcmf_configure_arp_nd_offload(ifp, true);
 		brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PM,
-				      cfg->wowl.pre_pmmode);
+				      power_mode);
 		cfg->wowl.active = false;
 		if (cfg->wowl.nd_enabled) {
 			brcmf_cfg80211_sched_scan_stop(cfg->wiphy, ifp->ndev, 0);
@@ -4099,7 +4115,6 @@ static void brcmf_configure_wowl(struct brcmf_cfg80211_info *cfg,
 
 	if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_WOWL_ARP_ND))
 		brcmf_configure_arp_nd_offload(ifp, false);
-	brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_PM, &cfg->wowl.pre_pmmode);
 	brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_PM, PM_MAX);
 
 	wowl_config = 0;
