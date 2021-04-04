@@ -124,6 +124,7 @@ struct brcmf_pub {
 
 	u32 feat_flags;
 	u32 chip_quirks;
+	int req_mpc;
 
 	struct brcmf_rev_info revinfo;
 #ifdef DEBUG
