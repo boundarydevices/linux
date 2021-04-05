@@ -3209,10 +3209,7 @@ brcmf_cfg80211_set_power_mgmt(struct wiphy *wiphy, struct net_device *ndev,
 		pm = PM_OFF;
 	}
 
-	if (cfg->pwr_save)
-		brcmf_set_mpc(ifp, ifp->drvr->req_mpc);
-	else
-		brcmf_set_mpc(ifp, 0);
+	brcmf_set_mpc(ifp, ifp->drvr->req_mpc);
 
 	brcmf_dbg(INFO, "power save %s\n", (pm ? "enabled" : "disabled"));
 
