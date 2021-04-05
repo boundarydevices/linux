@@ -319,6 +319,8 @@ patternProperties:
     description: Dragino Technology Co., Limited
   "^ds,.*":
     description: DaSheng, Inc.
+  "^dream,.*":
+    description: Dream Property GmbH
   "^dserve,.*":
     description: dServe Technology B.V.
   "^dynaimage,.*":
