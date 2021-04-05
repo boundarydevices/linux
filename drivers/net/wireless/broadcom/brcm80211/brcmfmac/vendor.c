@@ -114,6 +114,60 @@ exit:
 	return ret;
 }
 
+static int brcmf_cfg80211_vndr_cmds_int_get(struct brcmf_if *ifp,
+					    u32 cmd, struct wiphy *wiphy)
+{
+	struct sk_buff *reply;
+	int get_value = 0;
+	int ret;
+
+	ret = brcmf_fil_cmd_int_get(ifp, cmd, &get_value);
+	if (ret)
+		brcmf_err("Command %u get failure. Error :  %d\n", cmd, ret);
+
+	reply = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, sizeof(int));
+	nla_put_nohdr(reply, sizeof(int), &get_value);
+	ret = cfg80211_vendor_cmd_reply(reply);
+	if (ret)
+		brcmf_err("Command %u failure. Error : %d\n", cmd, ret);
+	return ret;
+}
+
+static int brcmf_cfg80211_vndr_cmds_int_set(struct brcmf_if *ifp, int val, u32 cmd)
+{
+	int ret;
+
+	ret = brcmf_fil_cmd_int_set(ifp, cmd, val);
+	if (ret < 0)
+		brcmf_err("Command %u set failure. Error : %d\n", cmd, ret);
+	return ret;
+}
+
+static int brcmf_cfg80211_vndr_cmds_frameburst(struct wiphy *wiphy,
+					       struct wireless_dev *wdev,
+					       const void *data, int len)
+{
+	int ret;
+	int val = *(int *)data;
+	struct brcmf_cfg80211_vif *vif;
+	struct brcmf_if *ifp;
+
+	vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+	ifp = vif->ifp;
+
+	if (val == 0x0 || val == 0x1)
+		ret = brcmf_cfg80211_vndr_cmds_int_set(ifp, val,
+						       BRCMF_C_SET_FAKEFRAG);
+	else if (val == 0xff)
+		ret = brcmf_cfg80211_vndr_cmds_int_get(ifp,
+						       BRCMF_C_GET_FAKEFRAG,
+						       wiphy);
+	else
+		brcmf_err("Invalid Input\n");
+
+	return ret;
+}
+
 s32
 brcmf_wiphy_phy_temp_evt_handler(struct brcmf_if *ifp,
 				 const struct brcmf_event_msg *e, void *data)
@@ -174,6 +228,16 @@ const struct wiphy_vendor_command brcmf_vendor_cmds[] = {
 			 WIPHY_VENDOR_CMD_NEED_NETDEV,
 		.policy = VENDOR_CMD_RAW_DATA,
 		.doit = brcmf_cfg80211_vndr_cmds_dcmd_handler
+	},
+	{
+		{
+			.vendor_id = BROADCOM_OUI,
+			.subcmd = BRCMF_VNDR_CMDS_FRAMEBURST
+		},
+		.flags = WIPHY_VENDOR_CMD_NEED_WDEV |
+			 WIPHY_VENDOR_CMD_NEED_NETDEV,
+		.policy = VENDOR_CMD_RAW_DATA,
+		.doit = brcmf_cfg80211_vndr_cmds_frameburst
 	},
 };
 
