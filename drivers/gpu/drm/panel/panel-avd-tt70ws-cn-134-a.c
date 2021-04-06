@@ -43,9 +43,15 @@ struct avd_tt_panel {
 	struct drm_panel base;
 	struct mipi_dsi_device *dsi;
 
+	struct gpio_desc *vdden_gpio;
+	struct gpio_desc *iovccen_gpio;
 	struct gpio_desc *reset_gpio;
+	struct gpio_desc *stb_gpio;
+	struct gpio_desc *bl_gpio;
 
 	struct backlight_device *backlight;
+	struct regulator *iovcc_supply;
+	struct regulator *vdd_supply;
 
 	bool prepared;
 	bool enabled;
@@ -60,7 +66,7 @@ static inline struct avd_tt_panel *to_avd_tt_panel(struct drm_panel *panel)
 
 
 static ssize_t avd_tt_write_buffer(struct mipi_dsi_device *dsi, u8 cmd,
-			       const void *data, size_t len)
+				   const void *data, size_t len)
 {
 	ssize_t err;
 	size_t size;
@@ -181,7 +187,23 @@ static int avd_tt_panel_unprepare(struct drm_panel *panel)
 	}
 
 	gpiod_set_value_cansleep(avd_tt->reset_gpio, 0);
+	gpiod_set_value_cansleep(avd_tt->stb_gpio, 0);
+	gpiod_set_value_cansleep(avd_tt->iovccen_gpio, 0);
+	gpiod_set_value_cansleep(avd_tt->vdden_gpio, 0);
+	gpiod_set_value_cansleep(avd_tt->bl_gpio, 0);
 
+	ret = regulator_disable(avd_tt->iovcc_supply);
+	if (ret < 0) {
+		dev_err(panel->dev, "failed to disable iovcc_supply: %d\n",
+			ret);
+		return ret;
+	}
+	ret = regulator_disable(avd_tt->vdd_supply);
+	if (ret < 0) {
+		dev_err(panel->dev, "failed to disable vdd_supply: %d\n",
+			ret);
+		return ret;
+	}
 	avd_tt->prepared = false;
 
 	return 0;
@@ -195,11 +217,31 @@ static int avd_tt_panel_prepare(struct drm_panel *panel)
 	if (avd_tt->prepared)
 		return 0;
 
+	ret = regulator_enable(avd_tt->iovcc_supply);
+	if (ret < 0) {
+		dev_err(panel->dev, "failed to enable iovcc_supply: %d\n",
+			ret);
+		return ret;
+	}
+
+	ret = regulator_enable(avd_tt->vdd_supply);
+	if (ret < 0) {
+		dev_err(panel->dev, "failed to enable vdd_supply: %d\n",
+			ret);
+		return ret;
+	}
+
+	gpiod_set_value_cansleep(avd_tt->bl_gpio, 1);
+	gpiod_set_value_cansleep(avd_tt->iovccen_gpio, 1);
+	gpiod_set_value_cansleep(avd_tt->vdden_gpio, 1);
+	gpiod_set_value_cansleep(avd_tt->stb_gpio, 1);
+	msleep(20);
 	gpiod_set_value_cansleep(avd_tt->reset_gpio, 1);
 	msleep(20);
 	gpiod_set_value_cansleep(avd_tt->reset_gpio, 0);
 	msleep(30);
 	gpiod_set_value_cansleep(avd_tt->reset_gpio, 1);
+	msleep(60);
 
 	ret = avd_tt_panel_on(avd_tt);
 	if (ret < 0) {
@@ -276,15 +318,73 @@ static const struct drm_panel_funcs avd_tt_panel_funcs = {
 static int avd_tt_panel_add(struct avd_tt_panel *avd_tt)
 {
 	struct device *dev = &avd_tt->dsi->dev;
+	int ret;
 
 	avd_tt->mode = &default_mode;
 
 	avd_tt->reset_gpio = devm_gpiod_get(dev, "reset",
-					     GPIOD_OUT_HIGH);
+						 GPIOD_OUT_HIGH);
 	if (IS_ERR(avd_tt->reset_gpio)) {
 		dev_err(dev, "cannot get reset-gpios %ld\n",
 			PTR_ERR(avd_tt->reset_gpio));
 		return PTR_ERR(avd_tt->reset_gpio);
+	}
+
+
+	avd_tt->iovccen_gpio = devm_gpiod_get(dev, "iovccen",
+						 GPIOD_OUT_HIGH);
+	if (IS_ERR(avd_tt->iovccen_gpio)) {
+		dev_err(dev, "cannot get iovccen-gpios %ld\n",
+			PTR_ERR(avd_tt->iovccen_gpio));
+		return PTR_ERR(avd_tt->iovccen_gpio);
+	}
+
+	avd_tt->vdden_gpio = devm_gpiod_get(dev, "vdden",
+						 GPIOD_OUT_HIGH);
+	if (IS_ERR(avd_tt->vdden_gpio)) {
+		dev_err(dev, "cannot get vdden-gpios %ld\n",
+			PTR_ERR(avd_tt->vdden_gpio));
+		return PTR_ERR(avd_tt->vdden_gpio);
+	}
+
+	avd_tt->stb_gpio = devm_gpiod_get(dev, "stb",
+						 GPIOD_OUT_HIGH);
+	if (IS_ERR(avd_tt->stb_gpio)) {
+		dev_err(dev, "cannot get stb-gpios %ld\n",
+			PTR_ERR(avd_tt->stb_gpio));
+		return PTR_ERR(avd_tt->stb_gpio);
+	}
+
+	avd_tt->bl_gpio = devm_gpiod_get(dev, "bl",
+						 GPIOD_OUT_HIGH);
+	if (IS_ERR(avd_tt->bl_gpio)) {
+		dev_err(dev, "cannot get bl-gpios %ld\n",
+			PTR_ERR(avd_tt->bl_gpio));
+		return PTR_ERR(avd_tt->bl_gpio);
+	}
+
+	avd_tt->iovcc_supply = devm_regulator_get(dev, "iovcc");
+	if (IS_ERR(avd_tt->iovcc_supply)) {
+		dev_err(dev, "failed to request iovcc regulator: %ld\n",
+					PTR_ERR(avd_tt->iovcc_supply));
+		return PTR_ERR(avd_tt->iovcc_supply);
+	}
+	avd_tt->vdd_supply = devm_regulator_get(dev, "vdd");
+	if (IS_ERR(avd_tt->vdd_supply)) {
+		dev_err(dev, "failed to request vdd regulator: %ld\n",
+					PTR_ERR(avd_tt->vdd_supply));
+		return PTR_ERR(avd_tt->vdd_supply);
+	}
+
+	ret = regulator_set_voltage(avd_tt->iovcc_supply, 1800000, 1800000);
+	if (ret) {
+		dev_err(dev, "failed set voltage to regulator 'iovcc_supply'\n");
+		return ret;
+	}
+	ret = regulator_set_voltage(avd_tt->vdd_supply, 3300000, 3300000);
+	if (ret) {
+		dev_err(dev, "failed set voltage to regulator 'dsi3vdd_supply3_supply'\n");
+		return ret;
 	}
 
 	avd_tt->backlight = devm_of_find_backlight(dev);
