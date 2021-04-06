@@ -281,23 +281,6 @@ static int mxc_md_clean_unlink_channels(struct mxc_md *mxc_md)
 	return 0;
 }
 
-static void mxc_md_unregister_all(struct mxc_md *mxc_md)
-{
-	struct mxc_isi_info *mxc_isi;
-	int i;
-
-	for (i = 0; i < MXC_ISI_MAX_DEVS; i++) {
-		mxc_isi = &mxc_md->mxc_isi[i];
-		if (!mxc_isi->sd)
-			continue;
-
-		v4l2_device_unregister_subdev(mxc_isi->sd);
-		media_entity_cleanup(&mxc_isi->sd->entity);
-
-		pr_info("unregister ISI channel: %s\n", mxc_isi->sd->name);
-	}
-}
-
 static int mxc_md_create_links(struct mxc_md *mxc_md)
 {
 	struct media_entity *source, *sink;
@@ -1167,10 +1150,6 @@ static int mxc_md_probe(struct platform_device *pdev)
 					goto clean_ents;
 
 				mxc_md_clean_unlink_channels(mxc_md);
-			} else {
-				/* no sensors connected */
-				mxc_md_unregister_all(mxc_md);
-				v4l2_async_nf_unregister(&mxc_md->subdev_notifier);
 			}
 		}
 	}
