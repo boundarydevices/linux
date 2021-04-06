@@ -51,6 +51,9 @@ static const struct ov5640_datafmt ov5640_colour_fmts[] = {
 };
 
 struct ov5640 {
+#ifdef CONFIG_MEDIA_CONTROLLER
+	struct media_pad pad;
+#endif
 	struct v4l2_subdev subdev;
 	struct v4l2_ctrl_handler hdl;
 	struct clk *sensor_clk;
@@ -169,6 +172,19 @@ static const struct std_menu_ctrl s_menu_ctrl[]  = {
 
 static struct v4l2_subdev_ops ov5640_subdev_ops;
 
+#ifdef CONFIG_MEDIA_CONTROLLER
+static int ov5640_link_setup(struct media_entity *entity,
+			   const struct media_pad *local,
+			   const struct media_pad *remote, u32 flags)
+{
+	return 0;
+}
+
+static const struct media_entity_operations ov5640_subdev_media_ops = {
+	.link_setup = ov5640_link_setup,
+};
+#endif
+
 static int ov5640_probe_v(struct ov5640 *sensor, struct clk *sensor_clk, u32 csi)
 {
 	struct device *dev = &sensor->i2c_client->dev;
@@ -217,11 +233,26 @@ static int ov5640_probe_v(struct ov5640 *sensor, struct clk *sensor_clk, u32 csi
 	sensor->subdev.ctrl_handler = hdl;
 	v4l2_ctrl_handler_setup(hdl);
 
-	sensor->subdev.grp_id = 678;
 	sensor->subdev.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
+#ifdef CONFIG_MEDIA_CONTROLLER
+	sensor->subdev.entity.function = MEDIA_ENT_F_CAM_SENSOR;
+	sensor->subdev.entity.ops = &ov5640_subdev_media_ops;
+	sensor->pad.flags = MEDIA_PAD_FL_SOURCE;
+	ret = media_entity_pads_init(&sensor->subdev.entity, 1, &sensor->pad);
+	if (ret < 0) {
+		dev_err(dev, "entity pad init failed, ret=%d\n", ret);
+		return -EINVAL;
+	}
+#endif
+
 	ret = v4l2_async_register_subdev(&sensor->subdev);
-	if (ret < 0)
+	if (ret < 0) {
 		dev_err(dev, "Async register failed, ret=%d\n", ret);
+#ifdef CONFIG_MEDIA_CONTROLLER
+		media_entity_cleanup(&sensor->subdev.entity);
+		return -EINVAL;
+#endif
+	}
 	OV5640_stream_off(sensor);
 	return 0;
 }
