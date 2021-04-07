@@ -1101,7 +1101,9 @@ static int stmmac_init_phy(struct net_device *dev)
 	}
 
 	phylink_ethtool_get_wol(priv->phylink, &wol);
-	device_set_wakeup_capable(priv->device, !!wol.supported);
+
+	if (!priv->plat->pmt)
+		device_set_wakeup_capable(priv->device, !!wol.supported);
 
 	return ret;
 }
