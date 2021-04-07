@@ -718,14 +718,6 @@ u32 __ocelot_target_read_ix(struct ocelot *ocelot, enum ocelot_target target,
 void __ocelot_target_write_ix(struct ocelot *ocelot, enum ocelot_target target,
 			      u32 val, u32 reg, u32 offset);
 
-static inline void ocelot_port_rmwl(struct ocelot_port *port, u32 val,
-				    u32 mask, u32 reg)
-{
-	u32 cur = ocelot_port_readl(port, reg);
-
-	ocelot_port_writel(port, (cur & (~mask)) | val, reg);
-};
-
 /* Hardware initialization */
 int ocelot_regfields_init(struct ocelot *ocelot,
 			  const struct reg_field *const regfields);
