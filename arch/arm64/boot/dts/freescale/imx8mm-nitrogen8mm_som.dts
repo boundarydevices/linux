@@ -45,12 +45,12 @@
 		>;
 	};
 
-	pinctrl_lt8912: lt8912grp {
+	pinctrl_lt8912_2: lt8912_2grp {
 		fsl,pins = <
-#undef GP_LT8912_RESET
-#define GP_LT8912_RESET	<&gpio5 0 GPIO_ACTIVE_LOW>
+#undef GP_LT8912_2_RESET
+#define GP_LT8912_2_RESET	<&gpio5 0 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x16)
-#define GPIRQ_LT8912	<&gpio1 1 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_LT8912_2	<&gpio1 1 IRQ_TYPE_LEVEL_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x1c0)
 		>;
 	};
@@ -186,8 +186,8 @@
 	};
 };
 
-&lt8912 {
-	reset-gpios = GP_LT8912_RESET;
+&lt8912_2 {
+	reset-gpios = GP_LT8912_2_RESET;
 };
 
 &mipi_to_lvds {
