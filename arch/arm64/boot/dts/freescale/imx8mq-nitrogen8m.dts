@@ -279,11 +279,11 @@
 		>;
 	};
 
-	pinctrl_lt8912: lt8912grp {
+	pinctrl_lt8912_2: lt8912-2grp {
 		fsl,pins = <
-#define GP_LT8912_RESET	<&gpio3 15 GPIO_ACTIVE_LOW>
+#define GP_LT8912_2_RESET	<&gpio3 15 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x16
-#define GPIRQ_LT8912	<&gpio1 1 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_LT8912_2	<&gpio1 1 IRQ_TYPE_LEVEL_LOW>
 			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x04
 		>;
 	};
@@ -1050,8 +1050,9 @@
 
 	mipi_to_lvds: mipi-to-lvds@2c {
 		alias = <&mipi_to_lvds>;
-		clocks = <&dphy 0>;
-		clock-names = "mipi_clk";
+		clocks = <&dphy 0>,
+			<&clk IMX8MQ_CLK_LCDIF_PIXEL>;
+		clock-names = "mipi_clk", "pixel_clock";
 		compatible = "ti,sn65dsi83";
 		display = <&lcdif>;
 		display-dsi = <&fb_mipi>;
@@ -1158,14 +1159,14 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			lt8912: lt8912@48 {
-				compatible = "lontium,lt8912" ;
+			lt8912_2: lt8912_2@48 {
+				compatible = "lontium,lt8912";
 				display-dsi = <&fb_mipi>;
-				interrupts-extended = GPIRQ_LT8912;
+				interrupts-extended = GPIRQ_LT8912_2;
 				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_lt8912>;
-				reg = <0x48> ;
-				reset-gpios = GP_LT8912_RESET;
+				pinctrl-0 = <&pinctrl_lt8912_2>;
+				reg = <0x48>;
+				reset-gpios = GP_LT8912_2_RESET;
 			};
 		};
 	};
@@ -1184,10 +1185,10 @@
 			#size-cells = <0>;
 
 			lt8912@48 {
-				compatible = "lontium,lt8912" ;
+				compatible = "lontium,lt8912";
 				ddc-i2c-bus = <&ddc_i2c_bus>;
 				display-dsi = <&fb_mipi>;
-				reg = <0x48> ;
+				reg = <0x48>;
 				reset-gpios = <&max7323 0 GPIO_ACTIVE_LOW>;
 			};
 		};
