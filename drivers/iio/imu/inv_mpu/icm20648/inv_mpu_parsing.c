@@ -49,7 +49,7 @@ static int inv_apply_soft_iron(struct inv_mpu_state *st, s16 *out_1, s32 *out_2)
 
 static int inv_process_gyro(struct inv_mpu_state *st, u8 *d, u64 t)
 {
-	s16 raw[3];
+	s32 raw[3];
 	s16 bias[3];
 	s32 calib[3];
 	int i;
@@ -708,9 +708,9 @@ end_read_fifo:
 
 	if (st->wake_sensor_received)
 #ifdef CONFIG_HAS_WAKELOCK
-		wake_lock_timeout(&st->wake_lock, msecs_to_jiffies(200));
+		wake_lock_timeout(st->wake_lock, msecs_to_jiffies(200));
 #else
-		__pm_wakeup_event(&st->wake_lock, 200); /* 200 msecs */
+		__pm_wakeup_event(st->wake_lock, 200); /* 200 msecs */
 #endif
 	goto exit_handled;
 
@@ -749,9 +749,9 @@ int inv_flush_batch_data(struct iio_dev *indio_dev, int data)
 			pr_err("error on batch.. need reset fifo\n");
 		if (st->wake_sensor_received)
 #ifdef CONFIG_HAS_WAKELOCK
-			wake_lock_timeout(&st->wake_lock, msecs_to_jiffies(200));
+			wake_lock_timeout(st->wake_lock, msecs_to_jiffies(200));
 #else
-			__pm_wakeup_event(&st->wake_lock, 200); /* 200 msecs */
+			__pm_wakeup_event(st->wake_lock, 200); /* 200 msecs */
 #endif
 		inv_switch_power_in_lp(st, false);
 	}
