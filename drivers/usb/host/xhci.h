@@ -1943,7 +1943,6 @@ struct xhci_driver_overrides {
 	size_t extra_priv_size;
 	int (*reset)(struct usb_hcd *hcd);
 	int (*start)(struct usb_hcd *hcd);
-	int (*bus_suspend)(struct usb_hcd *hcd);
 	int (*add_endpoint)(struct usb_hcd *hcd, struct usb_device *udev,
 			    struct usb_host_endpoint *ep);
 	int (*drop_endpoint)(struct usb_hcd *hcd, struct usb_device *udev,
