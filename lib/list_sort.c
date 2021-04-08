@@ -16,7 +16,7 @@ typedef int __attribute__((nonnull(2,3))) (*cmp_func)(void *,
  * sentinel head node, "prev" links not maintained.
  */
 __attribute__((nonnull(2,3,4)))
-static struct list_head *merge(void *priv, cmp_func cmp,
+static struct list_head *merge(void *priv, list_cmp_func_t cmp,
 				struct list_head *a, struct list_head *b)
 {
 	struct list_head *head, **tail = &head;
@@ -52,7 +52,7 @@ static struct list_head *merge(void *priv, cmp_func cmp,
  * throughout.
  */
 __attribute__((nonnull(2,3,4,5)))
-static void merge_final(void *priv, cmp_func cmp, struct list_head *head,
+static void merge_final(void *priv, list_cmp_func_t cmp, struct list_head *head,
 			struct list_head *a, struct list_head *b)
 {
 	struct list_head *tail = head;
@@ -185,9 +185,7 @@ static void merge_final(void *priv, cmp_func cmp, struct list_head *head,
  * 2^(k+1) - 1 (second merge of case 5 when x == 2^(k-1) - 1).
  */
 __attribute__((nonnull(2,3)))
-void list_sort(void *priv, struct list_head *head,
-		int (*cmp)(void *priv, struct list_head *a,
-			struct list_head *b))
+void list_sort(void *priv, struct list_head *head, list_cmp_func_t cmp)
 {
 	struct list_head *list = head->next, *pending = NULL;
 	size_t count = 0;	/* Count of pending */
