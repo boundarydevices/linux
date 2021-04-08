@@ -9,6 +9,8 @@
 #define TC358867_I2C_BUS	<&TOUCHSCREEN_I2C_BUS>
 #endif
 #include "panel-dmt050wvnxcmi.dtsi"
+#include "panel-lcd133-070.dtsi"
+#include "panel-lcm-jm430.dtsi"
 #include "panel-ls050t1sx12.dtsi"
 #include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
@@ -16,8 +18,6 @@
 	min-hs-clock-multiple = <8>;
 };
 
-#include "panel-lcd133-070.dtsi"
-#include "panel-lcm-jm430.dtsi"
 #include "panel-m101nwwb.dtsi"
 #include "panel-com50h5n03ulc.dtsi"
 
@@ -244,11 +244,11 @@
 		>;
 	};
 
-	pinctrl_lt8912: lt8912grp {
+	pinctrl_lt8912_2: lt8912_2grp {
 		fsl,pins = <
-#define GP_LT8912_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
+#define GP_LT8912_2_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
-#define GPIRQ_LT8912	<&gpio1 1 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_LT8912_2	<&gpio1 1 IRQ_TYPE_LEVEL_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x1c0)
 		>;
 	};
@@ -965,14 +965,14 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			lt8912: lt8912@48 {
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_lt8912>;
-				compatible = "lontium,lt8912" ;
-				interrupts-extended = GPIRQ_LT8912;
-				reg = <0x48> ;
-				reset-gpios = GP_LT8912_RESET;
+			lt8912_2: lt8912_2@48 {
+				compatible = "lontium,lt8912";
 				display-dsi = <&fb_mipi>;
+				interrupts-extended = GPIRQ_LT8912_2;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_lt8912_2>;
+				reg = <0x48> ;
+				reset-gpios = GP_LT8912_2_RESET;
 			};
 		};
 	};
@@ -991,11 +991,11 @@
 			#size-cells = <0>;
 
 			lt8912@48 {
-				compatible = "lontium,lt8912" ;
+				compatible = "lontium,lt8912";
 				ddc-i2c-bus = <&ddc_i2c_bus>;
-				reg = <0x48> ;
-				reset-gpios = <&max7323 0 GPIO_ACTIVE_LOW>;
 				display-dsi = <&fb_mipi>;
+				reg = <0x48>;
+				reset-gpios = <&max7323 0 GPIO_ACTIVE_LOW>;
 			};
 		};
 
