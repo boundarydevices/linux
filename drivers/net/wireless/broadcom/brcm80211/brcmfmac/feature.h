@@ -30,6 +30,7 @@
  * SAE: simultaneous authentication of equals
  * FWAUTH: Firmware authenticator
  * DUMP_OBSS: Firmware has capable to dump obss info to support ACS
+ * SAE_EXT: SAE be handled by userspace supplicant
  */
 #define BRCMF_FEAT_LIST \
 	BRCMF_FEAT_DEF(MBSS) \
@@ -53,7 +54,8 @@
 	BRCMF_FEAT_DEF(DOT11H) \
 	BRCMF_FEAT_DEF(SAE) \
 	BRCMF_FEAT_DEF(FWAUTH) \
-	BRCMF_FEAT_DEF(DUMP_OBSS)
+	BRCMF_FEAT_DEF(DUMP_OBSS) \
+	BRCMF_FEAT_DEF(SAE_EXT)
 
 /*
  * Quirks:
