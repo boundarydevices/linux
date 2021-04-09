@@ -671,8 +671,6 @@ static int sec_mipi_dsim_set_pref_rate(struct sec_mipi_dsim *dsim, unsigned long
 	return -EINVAL;
 }
 
-static void sec_mipi_dsim_irq_init(struct sec_mipi_dsim *dsim);
-
 /* For now, dsim only support one device attached */
 static int sec_mipi_dsim_host_attach(struct mipi_dsi_host *host,
 				     struct mipi_dsi_device *dsi)
@@ -2038,6 +2036,8 @@ void sec_mipi_dsim_suspend(struct device *dev)
 }
 EXPORT_SYMBOL(sec_mipi_dsim_suspend);
 
+static void sec_mipi_dsim_irq_init(struct sec_mipi_dsim *dsim);
+
 void sec_mipi_dsim_resume(struct device *dev)
 {
 	struct sec_mipi_dsim *dsim = dev_get_drvdata(dev);
@@ -2145,51 +2145,6 @@ static void sec_mipi_dsim_irq_unmask(struct sec_mipi_dsim *dsim,
 	dsim_write(dsim, intmsk, DSIM_INTMSK);
 }
 
-/* write 1 clear irq */
-static void sec_mipi_dsim_irq_clear(struct sec_mipi_dsim *dsim,
-				    int irq_idx)
-{
-	uint32_t intsrc = 0;
-
-	switch (irq_idx) {
-	case PLLSTABLE:
-		intsrc |= INTSRC_PLLSTABLE;
-		break;
-	case SWRSTRELEASE:
-		intsrc |= INTSRC_SWRSTRELEASE;
-		break;
-	case SFRPLFIFOEMPTY:
-		intsrc |= INTSRC_SFRPLFIFOEMPTY;
-		break;
-	case SFRPHFIFOEMPTY:
-		intsrc |= INTSRC_SFRPHFIFOEMPTY;
-		break;
-	case FRAMEDONE:
-		intsrc |= INTSRC_FRAMEDONE;
-		break;
-	case LPDRTOUT:
-		intsrc |= INTSRC_LPDRTOUT;
-		break;
-	case TATOUT:
-		intsrc |= INTSRC_TATOUT;
-		break;
-	case RXDATDONE:
-		intsrc |= INTSRC_RXDATDONE;
-		break;
-	case RXTE:
-		intsrc |= INTSRC_RXTE;
-		break;
-	case RXACK:
-		intsrc |= INTSRC_RXACK;
-		break;
-	default:
-		/* unsupported irq */
-		return;
-	}
-
-	dsim_write(dsim, intsrc, DSIM_INTSRC);
-}
-
 static void sec_mipi_dsim_irq_init(struct sec_mipi_dsim *dsim)
 {
 	sec_mipi_dsim_irq_unmask(dsim, PLLSTABLE);
@@ -2220,56 +2175,38 @@ static irqreturn_t sec_mipi_dsim_irq_handler(int irq, void *data)
 		return IRQ_NONE;
 	}
 
+	/* write 1 to clear irqs */
+	dsim_write(dsim, intsrc, DSIM_INTSRC);
 	if (WARN_ON(!(intsrc & INTSRC_MASK))) {
 		dev_warn(dsim->dev, "unenable irq happens: %#x\n", intsrc);
-		/* just clear irqs */
-		dsim_write(dsim, intsrc, DSIM_INTSRC);
 		return IRQ_NONE;
 	}
 
 	if (intsrc & INTSRC_PLLSTABLE) {
 		WARN_ON(!(status & STATUS_PLLSTABLE));
-		sec_mipi_dsim_irq_clear(dsim, PLLSTABLE);
 		complete(&dsim->pll_stable);
 	}
 
-	if (intsrc & INTSRC_SWRSTRELEASE)
-		sec_mipi_dsim_irq_clear(dsim, SWRSTRELEASE);
-
-	if (intsrc & INTSRC_SFRPLFIFOEMPTY) {
-		sec_mipi_dsim_irq_clear(dsim, SFRPLFIFOEMPTY);
+	if (intsrc & INTSRC_SFRPLFIFOEMPTY)
 		complete(&dsim->pl_tx_done);
-	}
 
-	if (intsrc & INTSRC_SFRPHFIFOEMPTY) {
-		sec_mipi_dsim_irq_clear(dsim, SFRPHFIFOEMPTY);
+	if (intsrc & INTSRC_SFRPHFIFOEMPTY)
 		complete(&dsim->ph_tx_done);
-	}
 
-	if (WARN_ON(intsrc & INTSRC_LPDRTOUT)) {
-		sec_mipi_dsim_irq_clear(dsim, LPDRTOUT);
+	if (WARN_ON(intsrc & INTSRC_LPDRTOUT))
 		dev_warn(dsim->dev, "LP RX timeout\n");
-	}
 
-	if (WARN_ON(intsrc & INTSRC_TATOUT)) {
-		sec_mipi_dsim_irq_clear(dsim, TATOUT);
+	if (WARN_ON(intsrc & INTSRC_TATOUT))
 		dev_warn(dsim->dev, "Turns around Acknowledge timeout\n");
-	}
 
-	if (intsrc & INTSRC_RXDATDONE) {
-		sec_mipi_dsim_irq_clear(dsim, RXDATDONE);
+	if (intsrc & INTSRC_RXDATDONE)
 		complete(&dsim->rx_done);
-	}
 
-	if (intsrc & INTSRC_RXTE) {
-		sec_mipi_dsim_irq_clear(dsim, RXTE);
+	if (intsrc & INTSRC_RXTE)
 		dev_dbg(dsim->dev, "TE Rx trigger received\n");
-	}
 
-	if (intsrc & INTSRC_RXACK) {
-		sec_mipi_dsim_irq_clear(dsim, RXACK);
+	if (intsrc & INTSRC_RXACK)
 		dev_dbg(dsim->dev, "ACK Rx trigger received\n");
-	}
 
 	return IRQ_HANDLED;
 }
