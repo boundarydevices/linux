@@ -122,7 +122,7 @@ struct vsi_v4l2_ctx *vsi_create_ctx(void)
 		return NULL;
 	}
 	ctx->ctxid = idr_alloc(&vsi_inst_array, (void *)ctx, 1, 0, GFP_KERNEL);
-	if (ctx->ctxid < 0) {
+	if ((int)ctx->ctxid < 0) {
 		kfree(ctx);
 		ctx = NULL;
 	} else {
@@ -189,9 +189,9 @@ int vsi_v4l2_reset_ctx(struct vsi_v4l2_ctx *ctx)
 
 	if (ctx->status != VSI_STATUS_INIT) {
 		v4l2_klog(LOGLVL_BRIEF, "reset ctx %lx", ctx->ctxid);
+		ctx->queued_srcnum = ctx->buffed_capnum = ctx->buffed_cropcapnum = 0;
 		if (isdecoder(ctx)) {
 			ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_DESTROY_DEC, NULL);
-			ctx->queued_srcnum = ctx->buffed_capnum = ctx->buffed_cropcapnum = 0;
 			ctx->flag = CTX_FLAG_DEC;
 		} else {
 			ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_STREAMOFF, NULL);
@@ -469,8 +469,8 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 		atomic_inc(&ctx->srcframen);
 		if (ctx->input_que.streaming && vb->state == VB2_BUF_STATE_ACTIVE)
 			vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
-		ctx->queued_srcnum--;
 		if (isdecoder(ctx)) {
+			ctx->queued_srcnum--;
 			if (!test_bit(BUF_FLAG_QUEUED, &ctx->srcvbufflag[inbufidx])) {
 				v4l2_klog(LOGLVL_WARNING, "got unqueued srcbuf %d", inbufidx);
 			} else {
@@ -479,12 +479,15 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 			}
 		}
 		mutex_unlock(&ctx->ctxlock);
-		if (ctx->queued_srcnum == 0)
-			wake_up_interruptible_all(&ctx->retbuf_queue);
 	}
 	if (outbufidx >= 0 && outbufidx < ctx->output_que.num_buffers) {
 		if (mutex_lock_interruptible(&ctx->ctxlock))
 			return -EBUSY;
+		if (isencoder(ctx)) {
+			ctx->queued_srcnum--;
+			if (ctx->queued_srcnum < 0)
+				ctx->queued_srcnum = 0;
+		}
 		if (!inst_isactive(ctx)) {
 			if (!vb2_is_streaming(&ctx->output_que))
 				v4l2_klog(LOGLVL_ERROR, "%lx ignore dst buffer %d in state %d", ctx->ctxid, outbufidx, ctx->status);
@@ -537,6 +540,8 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 		}
 		mutex_unlock(&ctx->ctxlock);
 	}
+	if (ctx->queued_srcnum == 0)
+		wake_up_interruptible_all(&ctx->retbuf_queue);
 	return 0;
 }
 

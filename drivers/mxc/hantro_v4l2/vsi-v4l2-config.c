@@ -730,11 +730,10 @@ struct vsi_video_fmt *vsi_find_format(struct vsi_v4l2_ctx *ctx, struct v4l2_form
 	} else {
 		for (i = 0; i < ARRAY_SIZE(vsi_coded_fmt); i++) {
 			if (vsi_coded_fmt[i].fourcc == fourcc) {
-				retfmt = &vsi_coded_fmt[i];
-				if (isencoder(ctx) && retfmt->enc_fmt == V4L2_DAEMON_CODEC_UNKNOW_TYPE)
-					retfmt = NULL;
-				if (isdecoder(ctx) && retfmt->dec_fmt == V4L2_DAEMON_CODEC_UNKNOW_TYPE)
-					retfmt = NULL;
+				if (isencoder(ctx) && vsi_coded_fmt[i].enc_fmt != V4L2_DAEMON_CODEC_UNKNOW_TYPE)
+					retfmt = &vsi_coded_fmt[i];
+				if (isdecoder(ctx) && vsi_coded_fmt[i].dec_fmt != V4L2_DAEMON_CODEC_UNKNOW_TYPE)
+					retfmt = &vsi_coded_fmt[i];
 				break;
 			}
 		}
@@ -860,9 +859,12 @@ static void vsi_set_default_parameter_enc(
 	enc_params->specific.enc_h26x_cmd.cpbSize = -1;	//let daemon decides
 	enc_params->specific.enc_h26x_cmd.intraPicRate = DEFAULT_INTRA_PIC_RATE;
 	enc_params->specific.enc_h26x_cmd.qpHdr = DEFAULT_QP;
-	enc_params->specific.enc_h26x_cmd.qpHdrI = -1;
-	enc_params->specific.enc_h26x_cmd.qpHdrP = -1;
-	enc_params->specific.enc_h26x_cmd.qpMax = 51;
+	enc_params->specific.enc_h26x_cmd.qpHdrI_h26x = -1;
+	enc_params->specific.enc_h26x_cmd.qpHdrP_h26x = -1;
+	enc_params->specific.enc_h26x_cmd.qpHdrI_vpx = -1;
+	enc_params->specific.enc_h26x_cmd.qpHdrP_vpx = -1;
+	enc_params->specific.enc_h26x_cmd.qpMax_h26x = 51;
+	enc_params->specific.enc_h26x_cmd.qpMax_vpx = 127;
 	enc_params->specific.enc_h26x_cmd.qpMaxI = 51;
 	enc_params->specific.enc_h26x_cmd.bitVarRangeI = 10000;
 	enc_params->specific.enc_h26x_cmd.bitVarRangeP = 10000;
@@ -976,7 +978,7 @@ static int get_fmtprofile(struct vsi_v4l2_mediacfg *pcfg)
 static void verifyPlanesize(unsigned int psize[], int braw, int pixelformat, int width, int height, int planeno, int pixelWidth)
 {
 	int totalsize = 0;
-	int basesize = width * height * pixelWidth / 8, extsize = 0, quadsize = 0;
+	int basesize = width * height, extsize = 0, quadsize = 0;
 
 	if (braw) {
 		if (enc_isRGBformat(pixelformat)) {
@@ -1329,8 +1331,8 @@ static int vsiv4l2_setfmt_dec(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt)
 		psize = pcfg->sizeimagedst;
 		oldsize = psize[0];
 	}
-	v4l2_klog(LOGLVL_BRIEF, "%s:%d:%x:%d:%d:%d", __func__,
-		fmt->type, fmt->fmt.pix.pixelformat, fmt->fmt.pix.width, fmt->fmt.pix.height, oldsize);
+	v4l2_klog(LOGLVL_BRIEF, "%s:%d:%x:%d:%d:%d:%d", __func__,
+		fmt->type, fmt->fmt.pix.pixelformat, fmt->fmt.pix.width, fmt->fmt.pix.height, fmt->fmt.pix.bytesperline, oldsize);
 	if (binputqueue(fmt->type)) {
 		pcfg->decparams.dec_info.io_buffer.srcwidth = fmt->fmt.pix.width;
 		pcfg->decparams.dec_info.io_buffer.srcheight = fmt->fmt.pix.height;
