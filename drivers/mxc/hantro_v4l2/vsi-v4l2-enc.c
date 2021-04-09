@@ -695,8 +695,10 @@ static void vsi_enc_buf_queue(struct vb2_buffer *vb)
 	vsibuf = vb_to_vsibuf(vb);
 	if (!binputqueue(vq->type))
 		list_add_tail(&vsibuf->list, &ctx->output_list);
-	else
+	else {
 		list_add_tail(&vsibuf->list, &ctx->input_list);
+		ctx->queued_srcnum++;
+	}
 	ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_BUF_RDY, vb);
 }
 
@@ -791,12 +793,16 @@ static int vsi_v4l2_enc_s_ctrl(struct v4l2_ctrl *ctrl)
 			return ret;
 		break;
 	case V4L2_CID_MPEG_VIDEO_VPX_MAX_QP:
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpMax_vpx = ctrl->val;
+		break;
 	case V4L2_CID_MPEG_VIDEO_H264_MAX_QP:
-		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpMax = ctrl->val;
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpMax_h26x = ctrl->val;
 		break;
 	case V4L2_CID_MPEG_VIDEO_VPX_MIN_QP:
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpMin_vpx = ctrl->val;
+		break;
 	case V4L2_CID_MPEG_VIDEO_H264_MIN_QP:
-		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpMin = ctrl->val;
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpMin_h26x = ctrl->val;
 		break;
 	case V4L2_CID_MPEG_VIDEO_B_FRAMES:
 		if (ctrl->val != 0)
@@ -831,13 +837,17 @@ static int vsi_v4l2_enc_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP:
 	case V4L2_CID_MPEG_VIDEO_HEVC_I_FRAME_QP:
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpHdrI_h26x = ctrl->val;
+		break;
 	case V4L2_CID_MPEG_VIDEO_VPX_I_FRAME_QP:
-		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpHdrI = ctrl->val;
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpHdrI_vpx = ctrl->val;
 		break;
 	case V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP:
 	case V4L2_CID_MPEG_VIDEO_HEVC_P_FRAME_QP:
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpHdrP_h26x = ctrl->val;
+		break;
 	case V4L2_CID_MPEG_VIDEO_VPX_P_FRAME_QP:
-		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpHdrP = ctrl->val;
+		ctx->mediacfg.encparams.specific.enc_h26x_cmd.qpHdrP_vpx = ctrl->val;
 		break;
 	case V4L2_CID_ROTATE:
 		switch (ctrl->val) {
@@ -1078,7 +1088,7 @@ static struct v4l2_ctrl_config vsi_v4l2_encctrl_defs[] = {
 	{
 		.id = V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP,
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
+		.min = -1,
 		.max = 51,
 		.step = 1,
 		.def = DEFAULT_QP,
@@ -1119,7 +1129,7 @@ static struct v4l2_ctrl_config vsi_v4l2_encctrl_defs[] = {
 	{
 		.id = V4L2_CID_MPEG_VIDEO_H264_I_FRAME_QP,
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
+		.min = -1,
 		.max = 51,
 		.step = 1,
 		.def = DEFAULT_QP,
@@ -1127,7 +1137,7 @@ static struct v4l2_ctrl_config vsi_v4l2_encctrl_defs[] = {
 	{
 		.id = V4L2_CID_MPEG_VIDEO_H264_P_FRAME_QP,
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
+		.min = -1,
 		.max = 51,
 		.step = 1,
 		.def = DEFAULT_QP,
@@ -1135,7 +1145,7 @@ static struct v4l2_ctrl_config vsi_v4l2_encctrl_defs[] = {
 	{
 		.id = V4L2_CID_MPEG_VIDEO_HEVC_I_FRAME_QP,
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
+		.min = -1,
 		.max = 51,
 		.step = 1,
 		.def = DEFAULT_QP,
@@ -1143,7 +1153,7 @@ static struct v4l2_ctrl_config vsi_v4l2_encctrl_defs[] = {
 	{
 		.id = V4L2_CID_MPEG_VIDEO_HEVC_P_FRAME_QP,
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = 0,
+		.min = -1,
 		.max = 51,
 		.step = 1,
 		.def = DEFAULT_QP,
@@ -1198,7 +1208,7 @@ static struct v4l2_ctrl_config vsi_v4l2_encctrl_defs[] = {
 	{
 		.id = V4L2_CID_MPEG_VIDEO_VPX_MIN_QP,
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = -1,
+		.min = 0,
 		.max = 127,
 		.step = 1,
 		.def = 0,
@@ -1206,7 +1216,7 @@ static struct v4l2_ctrl_config vsi_v4l2_encctrl_defs[] = {
 	{
 		.id = V4L2_CID_MPEG_VIDEO_VPX_MAX_QP,
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.min = -1,
+		.min = 0,
 		.max = 127,
 		.step = 1,
 		.def = 127,

@@ -314,10 +314,14 @@ struct v4l2_daemon_enc_h26x_cmd {
 	s32 intraPicRate;   /* IDR interval */
 	s32 vbr; /* Variable Bit Rate Control by qpMin */
 	s32 qpHdr;
-	s32 qpHdrI;	//for I frame QP
-	s32 qpHdrP;	//for P frame PQ
-	s32 qpMin;
-	s32 qpMax;
+	s32 qpHdrI_h26x;  // for 264/5 I frame QP
+	s32 qpHdrP_h26x;  // for 264/5 P frame PQ
+	s32 qpMin_h26x;
+	s32 qpMax_h26x;
+	s32 qpHdrI_vpx;  // for vpx I frame QP
+	s32 qpHdrP_vpx;  // for vpx P frame PQ
+	s32 qpMin_vpx;
+	s32 qpMax_vpx;
 	s32 qpMinI;
 	s32 qpMaxI;
 	s32 bitVarRangeI;

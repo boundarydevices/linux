@@ -666,8 +666,10 @@ static ssize_t v4l2_msg_write(struct file *fh, const char __user *buf, size_t si
 		kfree(pmsg);
 		return size;
 	} else {
-		if (mutex_lock_interruptible(&ret_lock))
+		if (mutex_lock_interruptible(&ret_lock)) {
+			kfree(pmsg);
 			return size;
+		}
 		ret = idr_alloc(retarray, (void *)pmsg, 1, 0, GFP_KERNEL);
 		mutex_unlock(&ret_lock);
 		if (ret < 0)

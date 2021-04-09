@@ -313,7 +313,7 @@ struct vsi_v4l2_ctx {
 
 	u32 rfc_luma_offset[VIDEO_MAX_FRAME];
 	u32 rfc_chroma_offset[VIDEO_MAX_FRAME];
-	u32 queued_srcnum;
+	s32 queued_srcnum;
 	u32 buffed_capnum;
 	u32 buffed_cropcapnum;
 	u32 lastcapbuffer_idx;	//latest received capture buffer index

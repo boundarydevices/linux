@@ -299,7 +299,7 @@ static int vsi_dec_streamon(struct file *filp, void *priv, enum v4l2_buf_type ty
 	return ret;
 }
 
-static int vsi_checkctx_srcbuf(struct vsi_v4l2_ctx *ctx)
+static int vsi_dec_checkctx_srcbuf(struct vsi_v4l2_ctx *ctx)
 {
 	int ret = 0;
 
@@ -370,20 +370,24 @@ static int vsi_dec_streamoff(
 		if (ctx->status != DEC_STATUS_SEEK && ctx->status != DEC_STATUS_ENDSTREAM)
 			ctx->status = DEC_STATUS_STOPPED;
 	}
+	if (ret < 0) {
+		mutex_unlock(&ctx->ctxlock);
+		return -EFAULT;
+	}
 	if (binputqueue(type)) {
 		if (!(test_bit(CTX_FLAG_ENDOFSTRM_BIT, &ctx->flag))) {
 			//here we need to wait all OUTPUT buffer returned
 			mutex_unlock(&ctx->ctxlock);
 			if (wait_event_interruptible(ctx->retbuf_queue,
-				vsi_checkctx_srcbuf(ctx) != 0))
-				ret = -ERESTARTSYS;
+				vsi_dec_checkctx_srcbuf(ctx) != 0))
+				v4l2_klog(LOGLVL_WARNING, "%lx wait output buffer return timeout\n", ctx->ctxid);
 			if (mutex_lock_interruptible(&ctx->ctxlock))
-				ret = -EBUSY;
+				return -EBUSY;
 		}
 		clear_bit(CTX_FLAG_ENDOFSTRM_BIT, &ctx->flag);
 		clear_bit(CTX_FLAG_PRE_DRAINING_BIT, &ctx->flag);
 		clear_bit(CTX_FLAG_SRCBUF_BIT, &ctx->flag);
-		if (ret == 0 && test_and_clear_bit(CTX_FLAG_DELAY_SRCCHANGED_BIT, &ctx->flag)) {
+		if (test_and_clear_bit(CTX_FLAG_DELAY_SRCCHANGED_BIT, &ctx->flag)) {
 			vsi_dec_update_reso(ctx);
 			vsi_v4l2_send_reschange(ctx);
 			v4l2_klog(LOGLVL_BRIEF, "%lx send delayed src change in streamoff", ctx->ctxid);
@@ -392,9 +396,9 @@ static int vsi_dec_streamoff(
 		mutex_unlock(&ctx->ctxlock);
 		if (wait_event_interruptible(ctx->capoffdone_queue,
 			vsi_checkctx_capoffdone(ctx) != 0))
-			ret = -ERESTARTSYS;
+			v4l2_klog(LOGLVL_WARNING, "%lx wait capture streamoff done timeout\n", ctx->ctxid);
 		if (mutex_lock_interruptible(&ctx->ctxlock))
-			ret = -EBUSY;
+			return -EBUSY;
 		ctx->buffed_capnum = 0;
 		ctx->buffed_cropcapnum = 0;
 	}
