@@ -687,7 +687,7 @@ static const char * const imx8mp_dram_core_sels[] = {"dram_pll_out", "dram_alt_r
 static struct clk_hw **hws;
 static struct clk_hw_onecell_data *clk_hw_data;
 
-static int __init imx_clk_init_on(struct device_node *np,
+static int imx_clk_init_on(struct device_node *np,
 				  struct clk_hw * const clks[])
 {
 	u32 *array;
