@@ -577,6 +577,7 @@ void lcdif_enable_controller(struct lcdif_soc *lcdif, bool use_i80)
 	/* run lcdif */
 	writel(CTRL_MASTER, lcdif->base + LCDIF_CTRL + REG_SET);
 	writel(CTRL_RUN, lcdif->base + LCDIF_CTRL + REG_SET);
+	pr_debug("%s: running\n", __func__);
 }
 EXPORT_SYMBOL(lcdif_enable_controller);
 
