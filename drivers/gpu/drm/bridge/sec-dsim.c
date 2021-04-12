@@ -526,6 +526,7 @@ static int _sec_mipi_dsim_pll_enable(struct sec_mipi_dsim *dsim, int enable)
 	else
 		clk_disable_unprepare(dsim->clk_pllref);
 	dsim->clk_pllref_enable = enable;
+	pr_debug("%s: enable=%d\n", __func__, enable);
 	return 1;
 }
 
@@ -836,6 +837,11 @@ static int sec_mipi_dsim_read_pl_from_sfr_fifo(struct sec_mipi_dsim *dsim,
 	case MIPI_DSI_RX_ACKNOWLEDGE_AND_ERROR_REPORT:
 		dev_err(dsim->dev, "peripheral report error: (0-7)%x, (8-15)%x 0x%08x\n",
 			PKTHDR_GET_DATA0(ph), PKTHDR_GET_DATA1(ph), ph);
+		fifoctrl = dsim_read(dsim, DSIM_FIFOCTRL);
+		if (!(fifoctrl & FIFOCTRL_EMPTYRX)) {
+			ph = dsim_read(dsim, DSIM_RXFIFO);
+			dev_err(dsim->dev, "0x%08x\n", ph);
+		}
 		return -EPROTO;
 	case MIPI_DSI_RX_DCS_SHORT_READ_RESPONSE_2BYTE:
 	case MIPI_DSI_RX_GENERIC_SHORT_READ_RESPONSE_2BYTE:
@@ -1413,6 +1419,7 @@ static void sec_mipi_dsim_set_standby(struct sec_mipi_dsim *dsim,
 		mdresol &= ~MDRESOL_MAINSTANDBY;
 
 	dsim_write(dsim, mdresol, DSIM_MDRESOL);
+	pr_debug("%s: mdresol=%x\n", __func__, mdresol);
 }
 
 static int sec_mipi_dsim_get_pms(struct sec_mipi_dsim *dsim, unsigned long bit_clk, unsigned long ref_clk)
@@ -1616,8 +1623,11 @@ static int _sec_mipi_dsim_check_pll_out(struct sec_mipi_dsim *dsim)
 	ret = sec_mipi_dsim_get_pms(dsim, bit_clk, dsim->ref_clk);
 	if (ret < 0)
 		return ret;
-	if (dsim->dsi_clk_hw.clk)
+	if (dsim->dsi_clk_hw.clk) {
+		pr_debug("%s: %d = %ld * %d / %d, freq=%ld\n", __func__, bit_clk, pix_clk,
+				bpp, dsim->lanes, dsim->frequency);
 		clk_set_rate(dsim->dsi_clk_hw.clk, dsim->frequency);
+	}
 
 	return 0;
 }
