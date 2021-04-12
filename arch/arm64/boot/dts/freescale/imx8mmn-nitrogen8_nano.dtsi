@@ -175,7 +175,7 @@
 	pinctrl_ts_ft5x06: ts-ft5x06grp {
 		fsl,pins = <
 #define GPIRQ_TS_FT5X06	<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
-#define GP_TS_FT5X06_WAKE		<&gpio1 6 GPIO_ACTIVE_LOW>
+#define GP_TS_FT5X06_WAKE	<&gpio1 6 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, 0x149)
 #define GP_TS_FT5X06_RESET	<&gpio1 7 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, 0x109)
@@ -258,11 +258,11 @@
 		>;
 	};
 
-	pinctrl_lt8912: lt8912grp {
+	pinctrl_lt8912_2: lt8912_2grp {
 		fsl,pins = <
-#define GP_LT8912_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
+#define GP_LT8912_2_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
-#define GPIRQ_LT8912	<&gpio1 1 IRQ_TYPE_LEVEL_LOW>
+#define GPIRQ_LT8912_2	<&gpio1 1 IRQ_TYPE_LEVEL_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x1c0)
 		>;
 	};
@@ -941,14 +941,14 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			lt8912: lt8912@48 {
+			lt8912_2: lt8912_2@48 {
 				compatible = "lontium,lt8912" ;
 				display-dsi = <&fb_mipi>;
-				interrupts-extended = GPIRQ_LT8912;
+				interrupts-extended = GPIRQ_LT8912_2;
 				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_lt8912>;
+				pinctrl-0 = <&pinctrl_lt8912_2>;
 				reg = <0x48> ;
-				reset-gpios = GP_LT8912_RESET;
+				reset-gpios = GP_LT8912_2_RESET;
 			};
 		};
 	};
