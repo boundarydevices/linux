@@ -705,6 +705,8 @@ static int tusb320_parse_dt(struct device *cdev, struct tusb320_data *data)
 {
 	struct device_node *dev_node = cdev->of_node;
 	int rc = 0;
+	u32 select_mode = TUBS320_MODE_DEFAULT;
+	u32 dfp_power = TUBS320_DFP_POWER_DEFAULT;
 
 	data->enb_gpio = of_get_named_gpio(dev_node,
 				"tusb320,enb-gpio", 0);
@@ -719,21 +721,23 @@ static int tusb320_parse_dt(struct device *cdev, struct tusb320_data *data)
 		goto out;
 	}
 
-	rc = of_property_read_u8(dev_node,
-				"tusb320,select-mode", &data->select_mode);
+	rc = of_property_read_u32(dev_node,
+				"tusb320,select-mode", &select_mode);
 	if(rc || (data->select_mode > TUBS320_MODE_DRP)) {
 		dev_err(cdev, "select_mode is not available and set default\n");
-		data->select_mode = TUBS320_MODE_DEFAULT;
+		select_mode = TUBS320_MODE_DEFAULT;
 		rc = 0;
 	}
+	data->select_mode = select_mode;
 
-	rc = of_property_read_u8(dev_node,
-				"tusb320,dfp-power", &data->dfp_power);
+	rc = of_property_read_u32(dev_node,
+				"tusb320,dfp-power", &dfp_power);
 	if(rc || (data->dfp_power > TUBS320_DFP_POWER_HIGH)) {
 		dev_err(cdev, "dfp-power is not available and set default\n");
-		data->dfp_power = TUBS320_DFP_POWER_DEFAULT;
+		dfp_power = TUBS320_DFP_POWER_DEFAULT;
 		rc = 0;
 	}
+	data->dfp_power = dfp_power;
 
 	dev_info(cdev, "select_mode: %d dfp_power %d\n",
 			data->select_mode, data->dfp_power);
