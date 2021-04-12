@@ -59,6 +59,7 @@ unsigned int imx8_get_soc_revision(void)
 {
 	return imx8_soc_rev;
 }
+EXPORT_SYMBOL_GPL(imx8_get_soc_revision);
 
 static u64 soc_uid;
 static u64 soc_uid_h;
