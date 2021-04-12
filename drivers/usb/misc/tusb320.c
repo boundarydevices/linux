@@ -343,7 +343,7 @@ static ssize_t tusb320_store_mode(struct device *dev,
 
 	return -EINVAL;
 }
-DEVICE_ATTR(mode, S_IRUGO | S_IWUSR, tusb320_show_mode, tusb320_store_mode);
+static DEVICE_ATTR(mode, S_IRUGO | S_IWUSR, tusb320_show_mode, tusb320_store_mode);
 
 static ssize_t tusb320_store_reset(struct device *dev,
 				struct device_attribute *attr,
@@ -364,7 +364,7 @@ static ssize_t tusb320_store_reset(struct device *dev,
 
 	return -EINVAL;
 }
-DEVICE_ATTR(reset, S_IWUSR, NULL, tusb320_store_reset);
+static DEVICE_ATTR(reset, S_IWUSR, NULL, tusb320_store_reset);
 
 static int tusb320_create_devices(struct device *cdev)
 {
