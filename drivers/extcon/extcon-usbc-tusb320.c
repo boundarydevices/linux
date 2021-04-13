@@ -24,10 +24,14 @@
 #define TUSB320_ATTACHED_STATE_UFP		0x2
 #define TUSB320_ATTACHED_STATE_ACC		0x3
 
+#define TUSB320_REG0A				0x0a
+#define TUSB320_0A_SOFT_RESET			BIT(3)
 struct tusb320_priv {
 	struct device *dev;
 	struct regmap *regmap;
 	struct extcon_dev *edev;
+	u32 reg0a;
+	u32 update0a;
 };
 
 static const char * const tusb_attached_states[] = {
@@ -72,12 +76,17 @@ static irqreturn_t tusb320_irq_handler(int irq, void *dev_id)
 		dev_err(priv->dev, "error during i2c read!\n");
 		return IRQ_NONE;
 	}
-
-	if (!(reg & TUSB320_REG9_INTERRUPT_STATUS))
-		return IRQ_NONE;
+	dev_dbg(priv->dev, "reg9: %x\n", reg);
 
 	state = (reg >> TUSB320_REG9_ATTACHED_STATE_SHIFT) &
 		TUSB320_REG9_ATTACHED_STATE_MASK;
+	if ((state == TUSB320_ATTACHED_STATE_NONE) && priv->update0a) {
+		priv->update0a = 0;
+		regmap_write(priv->regmap, TUSB320_REG0A, priv->reg0a);
+	}
+	if (!(reg & TUSB320_REG9_INTERRUPT_STATUS))
+		return IRQ_NONE;
+
 	polarity = !!(reg & TUSB320_REG9_CABLE_DIRECTION);
 
 	dev_dbg(priv->dev, "attached state: %s, polarity: %d\n",
@@ -109,7 +118,10 @@ static const struct regmap_config tusb320_regmap_config = {
 static int tusb320_extcon_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
+	struct device_node *np = client->dev.of_node;
 	struct tusb320_priv *priv;
+	u32 mode_select = 0;
+	u32 reg0a = 0;
 	int ret;
 
 	priv = devm_kzalloc(&client->dev, sizeof(*priv), GFP_KERNEL);
@@ -136,6 +148,17 @@ static int tusb320_extcon_probe(struct i2c_client *client,
 		dev_err(priv->dev, "failed to register extcon device\n");
 		return ret;
 	}
+	regmap_write(priv->regmap, TUSB320_REG0A, TUSB320_0A_SOFT_RESET);
+	msleep(110);
+	ret = of_property_read_u32(np, "mode-select", &mode_select);
+	regmap_read(priv->regmap, TUSB320_REG0A, &reg0a);
+	reg0a &= ~0x08;
+	if (!ret) {
+		reg0a &= ~0x38;
+		reg0a |= ((mode_select & 0x3) << 4);
+	}
+	priv->reg0a = reg0a;
+	priv->update0a = 1;
 
 	extcon_set_property_capability(priv->edev, EXTCON_USB,
 				       EXTCON_PROP_USB_TYPEC_POLARITY);
