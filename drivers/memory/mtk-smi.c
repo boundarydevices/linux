@@ -8,11 +8,14 @@
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/io.h>
+#include <linux/iopoll.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/regmap.h>
+#include <linux/mfd/syscon.h>
 #include <soc/mediatek/smi.h>
 #include <dt-bindings/memory/mt2701-larb-port.h>
 #include <dt-bindings/memory/mtk-memory-port.h>
@@ -49,6 +52,16 @@
 	(_id << 8 | _id << 10 | _id << 12 | _id << 14);	\
 })
 
+#define SMI_LARB_SLP_CON		0x00c
+#define SLP_PROT_EN			BIT(0)
+#define SLP_PROT_RDY			BIT(16)
+
+/* mt8168 */
+#define MMSYS_HW_DCM_1ST_DIS_SET0	0x124
+#define MMSYS_HW_DCM_1ST_DIS_CLR0	0x128
+#define DCM_1ST_DIS0_SMI_COMM0		BIT(24)
+#define DCM_1ST_DIS0_SMI_COMM1		BIT(25)
+
 /* SMI COMMON */
 #define SMI_BUS_SEL			0x220
 #define SMI_BUS_LARB_SHIFT(larbid)	((larbid) << 1)
@@ -64,11 +77,14 @@ struct mtk_smi_common_plat {
 	enum mtk_smi_gen gen;
 	bool             has_gals;
 	u32              bus_sel; /* Balance some larbs to enter mmu0 or mmu1 */
+	bool support_dcm;
+	void (*smi_comm_dcm_ctrl)(struct regmap *mmcfg_regmap, bool dis);
 };
 
 struct mtk_smi_larb_gen {
 	int port_in_larb[MTK_LARB_NR_MAX + 1];
 	void (*config_port)(struct device *dev);
+	void (*larb_sleep_ctrl)(struct device *dev, bool toslp);
 	unsigned int			larb_direct_to_common_mask;
 	bool				has_gals;
 };
@@ -83,6 +99,7 @@ struct mtk_smi {
 		void __iomem		*base;	      /* only for gen2 */
 	};
 	const struct mtk_smi_common_plat *plat;
+	struct regmap			*mmsyscfg_regmap;
 };
 
 struct mtk_smi_larb { /* larb: local arbiter */
@@ -228,6 +245,25 @@ static void mtk_smi_larb_config_port_gen1(struct device *dev)
 	}
 }
 
+static void mtk_smi_larb_sleep_ctrl_mt8168(struct device *dev, bool toslp)
+{
+	struct mtk_smi_larb *larb = dev_get_drvdata(dev);
+	void __iomem *base = larb->base;
+	u32 tmp;
+
+	/* larb4 should be use a general way. */
+	if (larb->larbid == 4)
+		return;
+
+	if (toslp) {
+		writel_relaxed(SLP_PROT_EN, base + SMI_LARB_SLP_CON);
+		if (readl_poll_timeout_atomic(base + SMI_LARB_SLP_CON,
+				tmp, !!(tmp & SLP_PROT_RDY), 10, 10000))
+			dev_warn(dev, "larb sleep con not ready(%d)\n", tmp);
+	} else
+		writel_relaxed(0, base + SMI_LARB_SLP_CON);
+}
+
 static void
 mtk_smi_larb_unbind(struct device *dev, struct device *master, void *data)
 {
@@ -280,6 +316,11 @@ static const struct mtk_smi_larb_gen mtk_smi_larb_mt8192 = {
 	.config_port                = mtk_smi_larb_config_port_gen2_general,
 };
 
+static const struct mtk_smi_larb_gen mtk_smi_larb_mt8365 = {
+	.config_port = mtk_smi_larb_config_port_gen2_general,
+	.larb_sleep_ctrl = mtk_smi_larb_sleep_ctrl_mt8168,
+};
+
 static const struct of_device_id mtk_smi_larb_of_ids[] = {
 	{
 		.compatible = "mediatek,mt8167-smi-larb",
@@ -308,6 +349,10 @@ static const struct of_device_id mtk_smi_larb_of_ids[] = {
 	{
 		.compatible = "mediatek,mt8192-smi-larb",
 		.data = &mtk_smi_larb_mt8192
+	},
+	{
+		.compatible = "mediatek,mt8365-smi-larb",
+		.data = &mtk_smi_larb_mt8365
 	},
 	{}
 };
@@ -397,6 +442,9 @@ static int __maybe_unused mtk_smi_larb_resume(struct device *dev)
 		return ret;
 	}
 
+	if (larb_gen->larb_sleep_ctrl)
+		larb_gen->larb_sleep_ctrl(dev, false);
+
 	/* Configure the basic setting for this larb */
 	larb_gen->config_port(dev);
 
@@ -406,6 +454,10 @@ static int __maybe_unused mtk_smi_larb_resume(struct device *dev)
 static int __maybe_unused mtk_smi_larb_suspend(struct device *dev)
 {
 	struct mtk_smi_larb *larb = dev_get_drvdata(dev);
+	const struct mtk_smi_larb_gen *larb_gen = larb->larb_gen;
+
+	if (larb_gen->larb_sleep_ctrl)
+		larb_gen->larb_sleep_ctrl(dev, true);
 
 	mtk_smi_clk_disable(&larb->smi);
 	return 0;
@@ -426,6 +478,20 @@ static struct platform_driver mtk_smi_larb_driver = {
 		.pm             = &smi_larb_pm_ops,
 	}
 };
+
+static void mtk_smi_comm_dcm_ctrl_mt8168(struct regmap *mmcfg_regmap,
+					bool disable)
+{
+	if (disable) {
+		/* disable dcm for smi comm 0 & smi comm 1 */
+		regmap_write(mmcfg_regmap, MMSYS_HW_DCM_1ST_DIS_SET0,
+			(DCM_1ST_DIS0_SMI_COMM0 | DCM_1ST_DIS0_SMI_COMM1));
+	} else {
+		/* enable dcm for smi comm 0 & smi comm 1 */
+		regmap_write(mmcfg_regmap, MMSYS_HW_DCM_1ST_DIS_CLR0,
+			(DCM_1ST_DIS0_SMI_COMM0 | DCM_1ST_DIS0_SMI_COMM1));
+	}
+}
 
 static const struct mtk_smi_common_plat mtk_smi_common_gen1 = {
 	.gen = MTK_SMI_GEN1,
@@ -456,6 +522,13 @@ static const struct mtk_smi_common_plat mtk_smi_common_mt8192 = {
 		    F_MMU1_LARB(6),
 };
 
+static const struct mtk_smi_common_plat mtk_smi_common_mt8365 = {
+	.gen = MTK_SMI_GEN2,
+	.support_dcm = true,
+	.has_gals = true,
+	.smi_comm_dcm_ctrl = mtk_smi_comm_dcm_ctrl_mt8168,
+};
+
 static const struct of_device_id mtk_smi_common_of_ids[] = {
 	{
 		.compatible = "mediatek,mt8173-smi-common",
@@ -484,6 +557,10 @@ static const struct of_device_id mtk_smi_common_of_ids[] = {
 	{
 		.compatible = "mediatek,mt8192-smi-common",
 		.data = &mtk_smi_common_mt8192,
+	},
+	{
+		.compatible = "mediatek,mt8365-smi-common",
+		.data = &mtk_smi_common_mt8365,
 	},
 	{}
 };
@@ -545,6 +622,20 @@ static int mtk_smi_common_probe(struct platform_device *pdev)
 			return PTR_ERR(common->base);
 	}
 	pm_runtime_enable(dev);
+
+	if (common->plat->support_dcm) {
+		struct device_node *mmsyscfg_node = NULL;
+
+		mmsyscfg_node = of_parse_phandle(dev->of_node,
+						"mediatek,mmsys", 0);
+		if (!mmsyscfg_node)
+			return -ENODEV;
+		common->mmsyscfg_regmap = syscon_node_to_regmap(mmsyscfg_node);
+		if (IS_ERR(common->mmsyscfg_regmap))
+			return PTR_ERR(common->mmsyscfg_regmap);
+		of_node_put(mmsyscfg_node);
+	}
+
 	platform_set_drvdata(pdev, common);
 	return 0;
 }
@@ -569,6 +660,10 @@ static int __maybe_unused mtk_smi_common_resume(struct device *dev)
 
 	if (common->plat->gen == MTK_SMI_GEN2 && bus_sel)
 		writel(bus_sel, common->base + SMI_BUS_SEL);
+
+	if (common->plat->support_dcm)
+		common->plat->smi_comm_dcm_ctrl(common->mmsyscfg_regmap, true);
+
 	return 0;
 }
 
