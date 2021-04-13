@@ -368,6 +368,7 @@ static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 
 	rproc->recovery_disabled = true;
 	rproc->has_iommu = false;
+	rproc->auto_boot = false;
 
 	vpu_rproc = rproc->priv;
 	vpu_rproc->rproc = rproc;
