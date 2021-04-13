@@ -17,6 +17,9 @@
 #define MT8183_MUTEX0_MOD0			0x30
 #define MT8183_MUTEX0_SOF0			0x2c
 
+#define MT8365_MUTEX0_MOD0			0x30
+#define MT8365_MUTEX0_SOF0			0x2c
+
 #define DISP_REG_MUTEX_EN(n)			(0x20 + 0x20 * (n))
 #define DISP_REG_MUTEX(n)			(0x24 + 0x20 * (n))
 #define DISP_REG_MUTEX_RST(n)			(0x28 + 0x20 * (n))
@@ -67,6 +70,21 @@
 #define MT8173_MUTEX_MOD_DISP_PWM1		24
 #define MT8173_MUTEX_MOD_DISP_OD		25
 
+#define MT8365_MUTEX_MOD_DISP_OVL0		7
+#define MT8365_MUTEX_MOD_DISP_OVL0_2L		8
+#define MT8365_MUTEX_MOD_DISP_RDMA0		9
+#define MT8365_MUTEX_MOD_DISP_RDMA1		10
+#define MT8365_MUTEX_MOD_DISP_WDMA0		11
+#define MT8365_MUTEX_MOD_DISP_COLOR0		12
+#define MT8365_MUTEX_MOD_DISP_CCORR		13
+#define MT8365_MUTEX_MOD_DISP_AAL		14
+#define MT8365_MUTEX_MOD_DISP_GAMMA		15
+#define MT8365_MUTEX_MOD_DISP_DITHER		16
+#define MT8365_MUTEX_MOD_DISP_DSI0		17
+#define MT8365_MUTEX_MOD_DISP_RSZ0		19
+#define MT8365_MUTEX_MOD_DISP_PWM0		20
+#define MT8365_MUTEX_MOD_DISP_DPI0		22
+
 #define MT2712_MUTEX_MOD_DISP_PWM2		10
 #define MT2712_MUTEX_MOD_DISP_OVL0		11
 #define MT2712_MUTEX_MOD_DISP_OVL1		12
@@ -106,6 +124,13 @@
 
 #define MT8183_MUTEX_EOF_DSI0			(MT8183_MUTEX_SOF_DSI0 << 6)
 #define MT8183_MUTEX_EOF_DPI0			(MT8183_MUTEX_SOF_DPI0 << 6)
+
+#define MUTEX_EOF_DSI0				BIT(6) /*1<<6*/
+#define MUTEX_EOF_DPI0				BIT(7) /*2<<6*/
+
+#define MT8168_DISP_MUTEX_CFG			0x8
+#define MUTEX_DISABLE_CLK_GATING		0x0
+#define MUTEX_ENABLE_CLK_GATING			0x1
 
 struct mtk_mutex {
 	int id;
@@ -214,6 +239,21 @@ static const unsigned int mt8183_mutex_mod[DDP_COMPONENT_ID_MAX] = {
 	[DDP_COMPONENT_WDMA0] = MT8183_MUTEX_MOD_DISP_WDMA0,
 };
 
+static const unsigned int mt8365_mutex_mod[DDP_COMPONENT_ID_MAX] = {
+	[DDP_COMPONENT_AAL0] = MT8365_MUTEX_MOD_DISP_AAL,
+	[DDP_COMPONENT_COLOR0] = MT8365_MUTEX_MOD_DISP_COLOR0,
+	[DDP_COMPONENT_CCORR] = MT8365_MUTEX_MOD_DISP_CCORR,
+	[DDP_COMPONENT_GAMMA] = MT8365_MUTEX_MOD_DISP_GAMMA,
+	[DDP_COMPONENT_DITHER] = MT8365_MUTEX_MOD_DISP_DITHER,
+	[DDP_COMPONENT_OVL0] = MT8365_MUTEX_MOD_DISP_OVL0,
+	[DDP_COMPONENT_OVL_2L0] = MT8365_MUTEX_MOD_DISP_OVL0_2L,
+	[DDP_COMPONENT_PWM0] = MT8365_MUTEX_MOD_DISP_PWM0,
+	[DDP_COMPONENT_RDMA0] = MT8365_MUTEX_MOD_DISP_RDMA0,
+	[DDP_COMPONENT_RDMA1] = MT8365_MUTEX_MOD_DISP_RDMA1,
+	[DDP_COMPONENT_WDMA0] = MT8365_MUTEX_MOD_DISP_WDMA0,
+	[DDP_COMPONENT_DPI0] = MT8365_MUTEX_MOD_DISP_DPI0,
+};
+
 static const unsigned int mt2712_mutex_sof[MUTEX_SOF_DSI3 + 1] = {
 	[MUTEX_SOF_SINGLE_MODE] = MUTEX_SOF_SINGLE_MODE,
 	[MUTEX_SOF_DSI0] = MUTEX_SOF_DSI0,
@@ -235,6 +275,12 @@ static const unsigned int mt8167_mutex_sof[MUTEX_SOF_DSI3 + 1] = {
 static const unsigned int mt8183_mutex_sof[MUTEX_SOF_DSI3 + 1] = {
 	[MUTEX_SOF_SINGLE_MODE] = MUTEX_SOF_SINGLE_MODE,
 	[MUTEX_SOF_DSI0] = MUTEX_SOF_DSI0 | MT8183_MUTEX_EOF_DSI0,
+	[MUTEX_SOF_DPI0] = MT8183_MUTEX_SOF_DPI0 | MT8183_MUTEX_EOF_DPI0,
+};
+
+static const unsigned int mt8365_mutex_sof[MUTEX_SOF_DSI3 + 1] = {
+	[MUTEX_SOF_SINGLE_MODE] = MUTEX_SOF_SINGLE_MODE,
+	[MUTEX_SOF_DSI0] = MUTEX_SOF_DSI0 | MUTEX_EOF_DSI0,
 	[MUTEX_SOF_DPI0] = MT8183_MUTEX_SOF_DPI0 | MT8183_MUTEX_EOF_DPI0,
 };
 
@@ -275,6 +321,14 @@ static const struct mtk_mutex_data mt8183_mutex_driver_data = {
 	.no_clk = true,
 };
 
+static const struct mtk_mutex_data mt8365_mutex_driver_data = {
+	.mutex_mod = mt8365_mutex_mod,
+	.mutex_sof = mt8365_mutex_sof,
+	.mutex_mod_reg = MT8365_MUTEX0_MOD0,
+	.mutex_sof_reg = MT8365_MUTEX0_SOF0,
+	.no_clk = true,
+};
+
 struct mtk_mutex *mtk_mutex_get(struct device *dev)
 {
 	struct mtk_mutex_ctx *mtx = dev_get_drvdata(dev);
@@ -305,6 +359,8 @@ int mtk_mutex_prepare(struct mtk_mutex *mutex)
 {
 	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
 						 mutex[mutex->id]);
+	writel_relaxed(MUTEX_DISABLE_CLK_GATING,
+		       mtx->regs + MT8168_DISP_MUTEX_CFG);
 	return clk_prepare_enable(mtx->clk);
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_prepare);
@@ -314,6 +370,8 @@ void mtk_mutex_unprepare(struct mtk_mutex *mutex)
 	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
 						 mutex[mutex->id]);
 	clk_disable_unprepare(mtx->clk);
+	writel_relaxed(MUTEX_ENABLE_CLK_GATING,
+		       mtx->regs + MT8168_DISP_MUTEX_CFG);
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_unprepare);
 
@@ -507,6 +565,8 @@ static const struct of_device_id mutex_driver_dt_match[] = {
 	  .data = &mt8173_mutex_driver_data},
 	{ .compatible = "mediatek,mt8183-disp-mutex",
 	  .data = &mt8183_mutex_driver_data},
+	{ .compatible = "mediatek,mt8365-disp-mutex",
+	  .data = &mt8365_mutex_driver_data},
 	{},
 };
 MODULE_DEVICE_TABLE(of, mutex_driver_dt_match);
