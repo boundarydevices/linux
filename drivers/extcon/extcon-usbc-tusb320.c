@@ -68,6 +68,8 @@ struct tusb320_ops {
 	int (*get_revision)(struct tusb320_priv *priv, unsigned int *revision);
 };
 
+#define TUSB320_REG0A				0x0a
+#define TUSB320_0A_SOFT_RESET			BIT(3)
 struct tusb320_priv {
 	struct device *dev;
 	struct regmap *regmap;
@@ -78,6 +80,8 @@ struct tusb320_priv {
 	struct typec_capability	cap;
 	enum typec_port_type port_type;
 	enum typec_pwr_opmode pwr_opmode;
+	u32 reg0a;
+	u32 update0a;
 };
 
 static const char * const tusb_attached_states[] = {
@@ -249,8 +253,15 @@ static void tusb320_extcon_irq_handler(struct tusb320_priv *priv, u8 reg)
 {
 	int state, polarity;
 
+	dev_dbg(priv->dev, "reg9: %x\n", reg);
+
 	state = (reg >> TUSB320_REG9_ATTACHED_STATE_SHIFT) &
 		TUSB320_REG9_ATTACHED_STATE_MASK;
+	if ((state == TUSB320_ATTACHED_STATE_NONE) && priv->update0a) {
+		priv->update0a = 0;
+		regmap_write(priv->regmap, TUSB320_REG0A, priv->reg0a);
+	}
+
 	polarity = !!(reg & TUSB320_REG9_CABLE_DIRECTION);
 
 	dev_dbg(priv->dev, "attached state: %s, polarity: %d\n",
@@ -347,6 +358,9 @@ static const struct regmap_config tusb320_regmap_config = {
 
 static int tusb320_extcon_probe(struct tusb320_priv *priv)
 {
+	struct device_node *np = priv->dev->of_node;
+	u32 mode_select = 0;
+	u32 reg0a = 0;
 	int ret;
 
 	priv->edev = devm_extcon_dev_allocate(priv->dev, tusb320_extcon_cable);
@@ -360,6 +374,17 @@ static int tusb320_extcon_probe(struct tusb320_priv *priv)
 		dev_err(priv->dev, "failed to register extcon device\n");
 		return ret;
 	}
+	regmap_write(priv->regmap, TUSB320_REG0A, TUSB320_0A_SOFT_RESET);
+	msleep(110);
+	ret = of_property_read_u32(np, "mode-select", &mode_select);
+	regmap_read(priv->regmap, TUSB320_REG0A, &reg0a);
+	reg0a &= ~0x08;
+	if (!ret) {
+		reg0a &= ~0x38;
+		reg0a |= ((mode_select & 0x3) << 4);
+	}
+	priv->reg0a = reg0a;
+	priv->update0a = 1;
 
 	extcon_set_property_capability(priv->edev, EXTCON_USB,
 				       EXTCON_PROP_USB_TYPEC_POLARITY);
