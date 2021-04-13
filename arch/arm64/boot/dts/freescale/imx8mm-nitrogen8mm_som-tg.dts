@@ -1,0 +1,167 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2020 Boundary Devices
+ */
+
+#include "imx8mm-nitrogen8mm_som.dts"
+
+/ {
+	model = "Boundary Devices i.MX8MMini Nitrogen8MM SOM TG";
+	compatible = "boundary,imx8mm-nitrogen8mm_som-tg", "fsl,imx8mm";
+
+	/delete-node/ sound-wm8960;
+
+	clk27m: clk27m {
+		compatible = "fixed-clock";
+		clock-output-names = "clk27m";
+		clock-frequency = <27000000>;
+		#clock-cells = <0>;
+	};
+};
+
+&iomuxc {
+	/delete-node/ i2c3-ov5640-mipigrp;
+
+	pinctrl_i2c3_tc358743_mipi: i2c3-tc358743-mipigrp {
+		fsl,pins = <
+#define GP_TC3587_RESET	<&gpio4 22 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI2_RXC_GPIO4_IO22, 0x101)
+#define GP_TC3587_IRQ	<&gpio1 9 GPIO_ACTIVE_HIGH>
+#define GPIRQ_TC3587	<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x1c1)
+		>;
+	};
+
+	pinctrl_i2c4_usb320: i2c4-usb320grp {
+		fsl,pins = <
+#define GPIRQ_TUSB320	<&gpio4 19 IRQ_TYPE_LEVEL_LOW>
+#define GP_TUSB320_IRQ	<&gpio4 19 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_TXD7_GPIO4_IO19, 0x16)
+			MX8MMN(IOMUXC_SAI1_TXD6_GPIO4_IO18, 0x00)
+		>;
+	};
+
+	pinctrl_mipi_ls050t1sx12: mipi-ls050t1sx12grp {
+		fsl,pins = <
+		/* reset actually, but code calls it enable */
+#define GP_MIPI_LS050_ENABLE	<&gpio1 1 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x100)
+#define GP_MIPI_AVDD_ENABLE	<&gpio1 11 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO11_GPIO1_IO11, 0x100)
+		>;
+	};
+
+	pinctrl_uart3: uart3grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_ECSPI1_SCLK_UART3_DCE_RX, 0x140)
+			MX8MMN(IOMUXC_ECSPI1_MOSI_UART3_DCE_TX, 0x140)
+#define GP_UART3_RS485_RX_EN	<&gpio5 9 GPIO_ACTIVE_HIGH>	/* really active low */
+			MX8MMN(IOMUXC_ECSPI1_SS0_GPIO5_IO9, 0x140)
+#define GP_UART3_RS485_TX_EN	<&gpio5 8 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_ECSPI1_MISO_GPIO5_IO8, 0x100)
+		>;
+	};
+
+	pinctrl_usbotg1: usbotg1grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_GPIO1_IO12_USB1_OTG_PWR, 0x16)
+			MX8MMN(IOMUXC_GPIO1_IO13_USB1_OTG_OC, 0x156)
+		>;
+	};
+};
+
+&backlight_mipi {
+	brightness-levels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20>;
+	default-brightness-level = <16>;
+};
+
+&i2c2 {
+	/delete-node/ rtc@68;
+};
+
+&i2c3 {
+	/delete-node/ ov5640-mipi1@3c;
+
+	tc358743_mipi@f {
+		compatible = "toshiba,tc358743";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_tc358743_mipi>;
+		reg = <0x0f>;
+		clocks = <&clk27m>;
+		clock-names = "refclk";
+		interrupts-extended = GPIRQ_TC3587;
+		reset-gpios = GP_TC3587_RESET;
+		status = "okay";
+
+		port@0 {
+			tc358743_mipi1_ep: endpoint {
+				remote-endpoint = <&mipi1_tc358743_ep>;
+				data-lanes = <1 2 3 4>;
+				clock-lanes = <0>;
+				clock-noncontinuous;
+				link-frequencies = /bits/ 64 <297000000>;
+			};
+		};
+	};
+};
+
+&i2c4 {
+	/delete-node/ codec@1a;
+
+	extcon_tusb320: tusb320@60 {
+		compatible = "ti,tusb320";
+		interrupts-extended = GPIRQ_TUSB320;
+		mode-select = <3>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c4_usb320>;
+		reg = <0x60>;
+	};
+};
+
+&mipi_csi_1 {
+	port {
+		/delete-node/ endpoint@1;
+
+		mipi1_tc358743_ep: endpoint@1 {
+			remote-endpoint = <&tc358743_mipi1_ep>;
+			data-lanes = <1 2 3 4>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+	};
+};
+
+&pcie0 {
+	status = "disabled";
+};
+
+&uart3 {
+	assigned-clocks = <&clk IMX8MMN(CLK_UART3)>;
+	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_80M)>;
+	control-gpios = GP_UART3_RS485_TX_EN, GP_UART3_RS485_RX_EN;
+	linux,rs485-enabled-at-boot-time;
+	off_levels = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3>;
+	rs232_levels = <1>;
+	rs232_txen_mask = <1>;
+	rs232_txen_levels = <1>;
+	rs485_levels = <0>;	/* enable rx */
+	rs485_txen_mask = <1>;
+	rs485_txen_levels = <1>;
+	rxact_mask = <0>;	/* this is for rx activity led */
+	rxact_levels = <0>;
+	status = "okay";
+};
+
+&usbotg1 {
+	dr_mode = "otg";
+	extcon = <&extcon_tusb320>;
+	over-current-active-low;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usbotg1>;
+	power-active-high;
+	status = "okay";
+	usb-role-switch;
+};
