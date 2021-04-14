@@ -98,7 +98,8 @@
 #define OV5640_REG_AVG_READOUT		0x56a1
 
 enum ov5640_mode_id {
-	OV5640_MODE_QCIF_176_144 = 0,
+	OV5640_MODE_QQVGA_160_120 = 0,
+	OV5640_MODE_QCIF_176_144,
 	OV5640_MODE_QVGA_320_240,
 	OV5640_MODE_VGA_640_480,
 	OV5640_MODE_NTSC_720_480,
@@ -943,6 +944,7 @@ static int ov5640_check_valid_mode(struct ov5640_dev *sensor,
 	int ret = 0;
 
 	switch (mode->id) {
+	case OV5640_MODE_QQVGA_160_120:
 	case OV5640_MODE_QCIF_176_144:
 	case OV5640_MODE_QVGA_320_240:
 	case OV5640_MODE_NTSC_720_480:

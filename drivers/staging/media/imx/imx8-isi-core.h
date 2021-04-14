@@ -218,6 +218,11 @@ struct mxc_isi_m2m_dev {
 	unsigned int aborting;
 	unsigned int frame_count;
 
+	enum v4l2_colorspace	colorspace;
+	enum v4l2_ycbcr_encoding ycbcr_enc;
+	enum v4l2_quantization	quant;
+	enum v4l2_xfer_func	xfer_func;
+
 	u32 req_cap_buf_num;
 	u32 req_out_buf_num;
 
@@ -375,6 +380,7 @@ struct mxc_isi_dev {
 	u8 chain_buf;
 	u8 alpha;
 	bool m2m_enabled;
+	bool cap_enabled;
 	bool buf_active_reverse;
 	bool no_dispmix;
 

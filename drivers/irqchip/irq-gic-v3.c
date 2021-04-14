@@ -130,6 +130,10 @@ enum gic_intid_range {
 	__INVALID_RANGE__
 };
 
+#ifdef CONFIG_GIC_GENTLE_CONFIG
+static u64 gic_mpidr_to_affinity(unsigned long mpidr);
+#endif
+
 static enum gic_intid_range __get_intid_range(irq_hw_number_t hwirq)
 {
 	switch (hwirq) {
@@ -558,6 +562,9 @@ static int gic_set_type(struct irq_data *d, unsigned int type)
 	void __iomem *base;
 	u32 offset, index;
 	int ret;
+#ifdef CONFIG_GIC_GENTLE_CONFIG
+	u64 affinity;
+#endif
 
 	range = get_intid_range(d);
 
@@ -577,6 +584,16 @@ static int gic_set_type(struct irq_data *d, unsigned int type)
 		base = gic_data.dist_base;
 		rwp_wait = gic_dist_wait_for_rwp;
 	}
+
+#ifdef CONFIG_GIC_GENTLE_CONFIG
+	/* In a SoC running multiple OSes on ARM clusters sharing the same GIC,
+	 * set the affinity of the SPI here.
+	 * This allows to set the affinity to only the interrupts
+	 * registered by the cluster.
+	 */
+	affinity = gic_mpidr_to_affinity(cpu_logical_map(smp_processor_id()));
+	gic_write_irouter(affinity, base + GICD_IROUTER + irq * 8);
+#endif
 
 	offset = convert_offset_index(d, GICD_ICFGR, &index);
 
@@ -722,9 +739,25 @@ static bool gic_has_group0(void)
 static void __init gic_dist_init(void)
 {
 	unsigned int i;
+#ifndef CONFIG_GIC_GENTLE_CONFIG
 	u64 affinity;
+#endif
 	void __iomem *base = gic_data.dist_base;
 	u32 val;
+
+#ifdef CONFIG_GIC_GENTLE_CONFIG
+       /* In a SoC running multiple OSes on ARM clusters sharing the same GIC,
+        * we take care of not re-configuring the distributor
+        * when another OS already did it, else this could interfere
+        * with the on-going interrupts directed to the other OS.
+        */
+       u32 gicd_ctlr = readl_relaxed(base + GICD_CTLR);
+
+       if (gicd_ctlr & (GICD_CTLR_ENABLE_G1A | GICD_CTLR_ENABLE_G1)) {
+               printk(KERN_INFO "GIC Distributor already configured: skip gic_dist_init\n");
+               return;
+       }
+#endif
 
 	/* Disable the distributor */
 	writel_relaxed(0, base + GICD_CTLR);
@@ -766,6 +799,14 @@ static void __init gic_dist_init(void)
 	/* Enable distributor with ARE, Group1 */
 	writel_relaxed(val, base + GICD_CTLR);
 
+#ifndef CONFIG_GIC_GENTLE_CONFIG
+	/* In a SoC running multiple OSes on ARM clusters sharing the same GIC,
+	 * do not set the affinity to all interrupts as this
+	 * would conflict with the other cluster's GIC configuration.
+	 * This is now done in function gic_set_type() (called by request_irq)
+	 * which allows to limit this to the interrupts registered by the
+	 * cluster.
+	 */
 	/*
 	 * Set all global interrupts to the boot CPU only. ARE must be
 	 * enabled.
@@ -780,6 +821,7 @@ static void __init gic_dist_init(void)
 		trace_android_vh_gic_v3_affinity_init(i, GICD_IROUTERnE, &affinity);
 		gic_write_irouter(affinity, base + GICD_IROUTERnE + i * 8);
 	}
+#endif
 }
 
 static int gic_iterate_rdists(int (*fn)(struct redist_region *, void __iomem *))

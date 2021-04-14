@@ -1023,7 +1023,7 @@ static void stmmac_mac_link_up(struct phylink_config *config,
 
 	stmmac_mac_set(priv, priv->ioaddr, true);
 	if (phy && priv->dma_cap.eee) {
-		priv->eee_active = phy_init_eee(phy, 1) >= 0;
+		priv->eee_active = phy_init_eee(phy, 0) >= 0;
 		priv->eee_enabled = stmmac_eee_init(priv);
 		priv->tx_lpi_enabled = priv->eee_enabled;
 		stmmac_set_eee_pls(priv, priv->hw, true);
@@ -1101,7 +1101,9 @@ static int stmmac_init_phy(struct net_device *dev)
 	}
 
 	phylink_ethtool_get_wol(priv->phylink, &wol);
-	device_set_wakeup_capable(priv->device, !!wol.supported);
+
+	if (!priv->plat->pmt)
+		device_set_wakeup_capable(priv->device, !!wol.supported);
 
 	return ret;
 }

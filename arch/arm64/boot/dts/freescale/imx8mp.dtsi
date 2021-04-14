@@ -548,10 +548,12 @@
 	};
 
 	soc@0 {
-		compatible = "simple-bus";
+		compatible = "fsl,imx8mp-soc", "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0x0 0x0 0x0 0x3e000000>;
+		nvmem-cells = <&imx8mp_uid>;
+		nvmem-cell-names = "soc_unique_id";
 
 		caam_sm: caam-sm@100000 {
 			compatible = "fsl,imx6q-caam-sm";
@@ -663,6 +665,10 @@
 				/* For nvmem subnodes */
 				#address-cells = <1>;
 				#size-cells = <1>;
+
+				imx8mp_uid: unique-id@420 {
+					reg = <0x8 0x8>;
+				};
 
 				cpu_speed_grade: speed-grade@10 {
 					reg = <0x10 4>;
@@ -1573,10 +1579,8 @@
 			pcie_phy: pcie-phy@32f00000 {
 				compatible = "fsl,imx8mp-pcie-phy";
 				reg = <0x32f00000 0x10000>;
-				clocks = <&clk IMX8MP_CLK_PCIE_PHY>;
+				clocks = <&clk IMX8MP_CLK_DUMMY>;
 				clock-names = "phy";
-				assigned-clocks = <&clk IMX8MP_CLK_PCIE_PHY>;
-				assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
 				#phy-cells = <0>;
 				status = "disabled";
 			};
@@ -2072,6 +2076,7 @@
 			ranges =  <0x81000000 0 0x00000000 0x1ff80000 0 0x00010000 /* downstream I/O 64KB */
 				   0x82000000 0 0x18000000 0x18000000 0 0x07f00000>; /* non-prefetchable memory */
 			num-lanes = <1>;
+			num-viewport = <4>;
 			interrupts = <GIC_SPI 140 IRQ_TYPE_LEVEL_HIGH>,
 					<GIC_SPI 127 IRQ_TYPE_LEVEL_HIGH>; /* eDMA */
 			interrupt-names = "msi";
