@@ -791,11 +791,6 @@
 		alloc-ranges = <0 0x40000000 0 0x60000000>;
 		linux,cma-default;
 	};
-
-	limit3g@0x100000000 {
-		no-map;
-		reg = <1 0x00000000 0 0x40000000>;
-	};
 };
 
 &sai2 {
