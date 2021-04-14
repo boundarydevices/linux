@@ -2380,7 +2380,6 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 	void __iomem *iomem;
 	struct regmap_config regconfig = imx6_pcie_regconfig;
 	int ret;
-	u32 reg;
 
 	imx6_pcie = devm_kzalloc(dev, sizeof(*imx6_pcie), GFP_KERNEL);
 	if (!imx6_pcie)
