@@ -173,6 +173,7 @@ static void __bpf_tramp_image_put_deferred(struct work_struct *work)
 
 	im = container_of(work, struct bpf_tramp_image, work);
 	bpf_image_ksym_del(&im->ksym);
+	trace_android_vh_set_memory_nx((unsigned long)im->image, 1);
 	bpf_jit_free_exec(im->image);
 	bpf_jit_uncharge_modmem(1);
 	percpu_ref_exit(&im->pcref);
