@@ -844,7 +844,7 @@ static int imx7d_charger_detection(struct imx_usbmisc_data *data)
 
 	/* Check if vbus is valid */
 	val = readl(usbmisc->base + MX7D_USB_OTG_PHY_STATUS);
-	if (!(val & MX7D_USB_OTG_PHY_STATUS_VBUS_VLD)) {
+	if (!data->ext_vbus && !(val & MX7D_USB_OTG_PHY_STATUS_VBUS_VLD)) {
 		dev_err(data->dev, "vbus is error\n");
 		return -EINVAL;
 	}
