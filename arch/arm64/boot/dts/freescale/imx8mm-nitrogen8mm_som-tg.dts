@@ -142,10 +142,11 @@
 
 &usbotg1 {
 	dr_mode = "otg";
+	extcon = <&extcon_tusb320>;
 	over-current-active-low;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg1>;
 	power-active-high;
 	status = "okay";
-	extcon = <&extcon_tusb320>;
+	usb-role-switch;
 };
