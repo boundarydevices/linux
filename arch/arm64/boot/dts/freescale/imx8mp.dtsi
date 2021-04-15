@@ -1541,9 +1541,9 @@
 					compatible = "fsl,imx8mp-isp";
 					reg = <0x32e10000 0x10000>;
 					interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP0_COR>,
-						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP0_AXI>,
-						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP0_AHB>;
+					clocks = <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP_COR>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP_AXI>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP_AHB>;
 					clock-names = "core", "axi", "ahb";
 					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_ISP>;
 					assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>;
@@ -1559,9 +1559,9 @@
 					compatible = "fsl,imx8mp-isp";
 					reg = <0x32e20000 0x10000>;
 					interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP1_COR>,
-						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP1_AXI>,
-						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP1_AHB>;
+					clocks = <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP_COR>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP_AXI>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP_AHB>;
 					clock-names = "core", "axi", "ahb";
 					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_ISP>;
 					assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>;
