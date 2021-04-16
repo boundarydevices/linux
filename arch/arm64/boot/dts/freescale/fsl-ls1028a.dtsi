@@ -1074,6 +1074,12 @@
 			};
 		};
 
+		/* Integrated Endpoint Register Block */
+		ierb@1f0800000 {
+			compatible = "fsl,ls1028a-enetc-ierb";
+			reg = <0x01 0xf0800000 0x0 0x10000>;
+		};
+
 		pwm0: pwm@2800000 {
 			compatible = "fsl,vf610-ftm-pwm";
 			#pwm-cells = <3>;
