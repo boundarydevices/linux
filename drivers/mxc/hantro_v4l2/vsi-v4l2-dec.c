@@ -279,6 +279,7 @@ static int vsi_dec_streamon(struct file *filp, void *priv, enum v4l2_buf_type ty
 				vsi_dec_dec2drain(ctx);
 			if (test_bit(CTX_FLAG_ENDOFSTRM_BIT, &ctx->flag)) {
 				struct vb2_buffer	*vb = ctx->output_que.bufs[0];
+
 				vb->planes[0].bytesused = 0;
 				ctx->lastcapbuffer_idx = 0;
 				vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
@@ -310,7 +311,8 @@ static int vsi_dec_checkctx_srcbuf(struct vsi_v4l2_ctx *ctx)
 
 static int vsi_checkctx_capoffdone(struct vsi_v4l2_ctx *ctx)
 {
-	if (test_and_clear_bit(CTX_FLAG_STREAMOFFDONE, &ctx->flag))
+	if (test_and_clear_bit(CTX_FLAG_STREAMOFFDONE, &ctx->flag)
+		||  ctx->error < 0)
 		return 1;
 	return 0;
 }
@@ -325,6 +327,8 @@ static void vsi_dec_update_reso(struct vsi_v4l2_ctx *ctx)
 	pcfg->decparams.dec_info.io_buffer.output_width = pcfg->decparams_bkup.io_buffer.output_width;
 	pcfg->decparams.dec_info.io_buffer.output_height = pcfg->decparams_bkup.io_buffer.output_height;
 	pcfg->decparams.dec_info.io_buffer.output_wstride = pcfg->decparams_bkup.io_buffer.output_wstride;
+	pcfg->bytesperline = pcfg->decparams_bkup.io_buffer.output_wstride;
+	pcfg->orig_dpbsize = pcfg->sizeimagedst_bkup;
 	pcfg->src_pixeldepth = pcfg->decparams_bkup.dec_info.dec_info.bit_depth;
 	pcfg->minbuf_4output = pcfg->minbuf_4capture = pcfg->minbuf_4output_bkup;
 	pcfg->sizeimagedst[0] = pcfg->sizeimagedst_bkup;
@@ -617,13 +621,13 @@ static int vsi_dec_subscribe_event(
 static int vsi_dec_handlestop_unspec(struct vsi_v4l2_ctx *ctx)
 {
 	//some unexpected condition fro CTS, not quite conformant to spec
-	 if ((ctx->status == VSI_STATUS_INIT && !test_bit(CTX_FLAG_DAEMONLIVE_BIT, &ctx->flag)) ||
+	if ((ctx->status == VSI_STATUS_INIT && !test_bit(CTX_FLAG_DAEMONLIVE_BIT, &ctx->flag)) ||
 		ctx->status == DEC_STATUS_STOPPED) {
 		clear_bit(CTX_FLAG_PRE_DRAINING_BIT, &ctx->flag);
 		vsi_v4l2_sendeos(ctx);
 		return 0;
 	}
-	 if (ctx->status == DEC_STATUS_SEEK && !test_bit(CTX_FLAG_SRCBUF_BIT, &ctx->flag)) {
+	if (ctx->status == DEC_STATUS_SEEK && !test_bit(CTX_FLAG_SRCBUF_BIT, &ctx->flag)) {
 		vsi_v4l2_sendeos(ctx);
 		return 0;
 	}
@@ -1146,8 +1150,7 @@ static __poll_t vsi_dec_poll(struct file *file, poll_table *wait)
 	}
 	if (vb2_is_streaming(&ctx->output_que))
 		ret |= vb2_poll(&ctx->output_que, file, wait);
-	if (vb2_is_streaming(&ctx->input_que))
-		ret |= vb2_poll(&ctx->input_que, file, wait);
+	ret |= vb2_poll(&ctx->input_que, file, wait);
 
 	/*recheck for poll hang*/
 	if (ret == 0) {
