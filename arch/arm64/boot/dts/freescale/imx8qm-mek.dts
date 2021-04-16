@@ -202,6 +202,14 @@
 			no-map;
 			reg = <0 0x90200000 0 0x200000>;
 		};
+		ramoops@0x91f00000 {
+			compatible = "ramoops";
+			reg = <0 0x91f00000 0 0x00100000>;
+			record-size     = <0x00020000>;
+			console-size    = <0x00020000>;
+			ftrace-size     = <0x00020000>;
+			pmsg-size       = <0x00020000>;
+		};
 		decoder_rpc: decoder_rpc@0x92000000 {
 			no-map;
 			reg = <0 0x92000000 0 0x200000>;

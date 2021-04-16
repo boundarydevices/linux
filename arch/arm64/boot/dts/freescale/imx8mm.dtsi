@@ -155,6 +155,15 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
+
+		ramoops@0xbdf00000 {
+			compatible = "ramoops";
+			reg = <0 0xbdf00000 0 0x00100000>;
+			record-size     = <0x00020000>;
+			console-size    = <0x00020000>;
+			ftrace-size     = <0x00020000>;
+			rpmsg-size      = <0x00020000>;
+		};
 	};
 
 	osc_32k: clock-osc-32k {

@@ -187,6 +187,15 @@
 			reg = <0 0x92400000 0 0x2000000>;
 		};
 
+		ramoops@94400000 {
+			compatible = "ramoops";
+			reg = <0 0x94400000 0 0x00100000>;
+			record-size     = <0x00020000>;
+			console-size    = <0x00020000>;
+			ftrace-size     = <0x00020000>;
+			pmsg-size       = <0x00020000>;
+		};
+
 		unmapped_region: unmapped {
 			 compatible = "imx-secure-ion-pool";
 			 reg = <0x0 0xE0000000 0 0x10000000>;
