@@ -306,9 +306,9 @@ int vsi_v4l2_notify_reschange(struct vsi_v4l2_msg *pmsg)
 			return -EBUSY;
 		v4l2_klog(LOGLVL_BRIEF, "%lx sending event res change:%d, delay=%d", ctx->ctxid, ctx->status,
 			(ctx->status == DEC_STATUS_DECODING || ctx->status == DEC_STATUS_DRAINING) && !list_empty(&ctx->output_que.done_list));
-		v4l2_klog(LOGLVL_BRIEF, "reso=%d:%d,bitdepth=%d,dpb=%d:%d,orig yuvfmt=%d",
-			decinfo->frame_width, decinfo->frame_height, decinfo->bit_depth, decinfo->needed_dpb_nums,
-			decinfo->dpb_buffer_size, decinfo->src_pix_fmt);
+		v4l2_klog(LOGLVL_BRIEF, "reso=%d:%d,bitdepth=%d,stride=%d,dpb=%d:%d,orig yuvfmt=%d",
+			decinfo->frame_width, decinfo->frame_height, decinfo->bit_depth, pmsg->params.dec_params.io_buffer.output_wstride,
+			decinfo->needed_dpb_nums, decinfo->dpb_buffer_size, decinfo->src_pix_fmt);
 		if ((ctx->status == DEC_STATUS_DECODING || ctx->status == DEC_STATUS_DRAINING)
 			&& !list_empty(&ctx->output_que.done_list)) {
 			pcfg->decparams_bkup.dec_info = pmsg->params.dec_params.dec_info;
@@ -327,6 +327,8 @@ int vsi_v4l2_notify_reschange(struct vsi_v4l2_msg *pmsg)
 			pcfg->decparams.dec_info.io_buffer.output_width = pmsg->params.dec_params.dec_info.io_buffer.output_width;
 			pcfg->decparams.dec_info.io_buffer.output_height = pmsg->params.dec_params.dec_info.io_buffer.output_height;
 			pcfg->decparams.dec_info.io_buffer.output_wstride = pmsg->params.dec_params.dec_info.io_buffer.output_wstride;
+			pcfg->bytesperline = pmsg->params.dec_params.dec_info.io_buffer.output_wstride;
+			pcfg->orig_dpbsize = decinfo->dpb_buffer_size;
 			pcfg->src_pixeldepth = decinfo->bit_depth;
 			pcfg->minbuf_4output =
 				pcfg->minbuf_4capture = pmsg->params.dec_params.dec_info.dec_info.needed_dpb_nums;
@@ -423,6 +425,7 @@ int vsi_v4l2_handle_cropchange(struct vsi_v4l2_msg *pmsg)
 			pcfg->decparams.dec_info.io_buffer.output_height = pmsg->params.dec_params.pic_info.pic_info.height;
 			pcfg->decparams.dec_info.io_buffer.output_wstride = pmsg->params.dec_params.pic_info.pic_info.pic_wstride;
 			pcfg->decparams.dec_info.dec_info.frame_width = pmsg->params.dec_params.pic_info.pic_info.width;
+			pcfg->bytesperline = pmsg->params.dec_params.pic_info.pic_info.pic_wstride;
 			pcfg->decparams.dec_info.dec_info.frame_height = pmsg->params.dec_params.pic_info.pic_info.height;
 			pcfg->decparams.dec_info.dec_info.visible_rect.left = pmsg->params.dec_params.pic_info.pic_info.crop_left;
 			pcfg->decparams.dec_info.dec_info.visible_rect.top = pmsg->params.dec_params.pic_info.pic_info.crop_top;
@@ -483,11 +486,6 @@ int vsi_v4l2_bufferdone(struct vsi_v4l2_msg *pmsg)
 	if (outbufidx >= 0 && outbufidx < ctx->output_que.num_buffers) {
 		if (mutex_lock_interruptible(&ctx->ctxlock))
 			return -EBUSY;
-		if (isencoder(ctx)) {
-			ctx->queued_srcnum--;
-			if (ctx->queued_srcnum < 0)
-				ctx->queued_srcnum = 0;
-		}
 		if (!inst_isactive(ctx)) {
 			if (!vb2_is_streaming(&ctx->output_que))
 				v4l2_klog(LOGLVL_ERROR, "%lx ignore dst buffer %d in state %d", ctx->ctxid, outbufidx, ctx->status);

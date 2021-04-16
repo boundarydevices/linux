@@ -695,10 +695,8 @@ static void vsi_enc_buf_queue(struct vb2_buffer *vb)
 	vsibuf = vb_to_vsibuf(vb);
 	if (!binputqueue(vq->type))
 		list_add_tail(&vsibuf->list, &ctx->output_list);
-	else {
+	else
 		list_add_tail(&vsibuf->list, &ctx->input_list);
-		ctx->queued_srcnum++;
-	}
 	ret = vsiv4l2_execcmd(ctx, V4L2_DAEMON_VIDIOC_BUF_RDY, vb);
 }
 
@@ -1390,10 +1388,8 @@ static __poll_t vsi_enc_poll(struct file *file, poll_table *wait)
 		v4l2_klog(LOGLVL_BRIEF, "%s event", __func__);
 		ret |= POLLPRI;
 	}
-	if (vb2_is_streaming(&ctx->output_que))
-		ret |= vb2_poll(&ctx->output_que, file, wait);
-	if (vb2_is_streaming(&ctx->input_que))
-		ret |= vb2_poll(&ctx->input_que, file, wait);
+	ret |= vb2_poll(&ctx->output_que, file, wait);
+	ret |= vb2_poll(&ctx->input_que, file, wait);
 
 	/*recheck for poll hang*/
 	if (ret == 0) {

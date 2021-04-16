@@ -212,6 +212,7 @@ struct vsi_v4l2_mediacfg {
 	u32 infmt_fourcc;
 	u32 outfmt_fourcc;
 	u32 src_pixeldepth;	//dec only
+	u32 orig_dpbsize;	//dec only
 	/*profiles for each format is put here instead of encparams to save some transfer data*/
 	s32 profile_h264;
 	s32 profile_hevc;
@@ -314,8 +315,8 @@ struct vsi_v4l2_ctx {
 	u32 rfc_luma_offset[VIDEO_MAX_FRAME];
 	u32 rfc_chroma_offset[VIDEO_MAX_FRAME];
 	s32 queued_srcnum;
-	u32 buffed_capnum;
-	u32 buffed_cropcapnum;
+	s32 buffed_capnum;
+	s32 buffed_cropcapnum;
 	u32 lastcapbuffer_idx;	//latest received capture buffer index
 
 	struct vsi_v4l2_mediacfg mediacfg;
@@ -481,6 +482,7 @@ static inline int update_and_removecropinfo(struct vsi_v4l2_ctx *ctx)
 		pcfg->decparams.dec_info.io_buffer.output_width = crop->frame_width;
 		pcfg->decparams.dec_info.io_buffer.output_height = crop->frame_height;
 		pcfg->decparams.dec_info.io_buffer.output_wstride = crop->pic_wstride;
+		pcfg->bytesperline = crop->pic_wstride;
 		pcfg->decparams.dec_info.dec_info.frame_width = crop->frame_width;
 		pcfg->decparams.dec_info.dec_info.frame_height = crop->frame_height;
 		pcfg->decparams.dec_info.dec_info.visible_rect.left = crop->left;

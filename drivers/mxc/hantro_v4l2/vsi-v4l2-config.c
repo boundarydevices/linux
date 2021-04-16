@@ -975,10 +975,11 @@ static int get_fmtprofile(struct vsi_v4l2_mediacfg *pcfg)
 	}
 }
 
-static void verifyPlanesize(unsigned int psize[], int braw, int pixelformat, int width, int height, int planeno, int pixelWidth)
+static void verifyPlanesize(unsigned int psize[], int braw, int pixelformat, int width, int height, int planeno, int bdecoder)
 {
 	int totalsize = 0;
 	int basesize = width * height, extsize = 0, quadsize = 0;
+	int padsize = 0;
 
 	if (braw) {
 		if (enc_isRGBformat(pixelformat)) {
@@ -998,6 +999,8 @@ static void verifyPlanesize(unsigned int psize[], int braw, int pixelformat, int
 			case V4L2_PIX_FMT_411SP:
 				extsize = basesize / 2;
 				quadsize = basesize / 4;
+				if (bdecoder)
+					padsize = quadsize + 32;
 				break;
 			case V4L2_PIX_FMT_NV16:
 				extsize = basesize;
@@ -1019,7 +1022,7 @@ static void verifyPlanesize(unsigned int psize[], int braw, int pixelformat, int
 			}
 		}
 		if (planeno == 1) {
-			totalsize = basesize + extsize;
+			totalsize = basesize + extsize + padsize;
 			psize[0] = max_t(int, PAGE_ALIGN(totalsize), psize[0]);
 		} else if (planeno == 2) {
 			psize[0] = basesize;
@@ -1148,7 +1151,7 @@ static int vsiv4l2_setfmt_enc(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt)
 	if (fmt->fmt.pix_mp.num_planes == userset_planeno) {
 		for (i = 0; i < fmt->fmt.pix_mp.num_planes; i++)
 			psize[i] = fmt->fmt.pix_mp.plane_fmt[i].sizeimage;
-		verifyPlanesize(psize, braw, fmt->fmt.pix_mp.pixelformat, pcfg->bytesperline, fmt->fmt.pix_mp.height, userset_planeno, 8);
+		verifyPlanesize(psize, braw, fmt->fmt.pix_mp.pixelformat, pcfg->bytesperline, fmt->fmt.pix_mp.height, userset_planeno, 0);
 	} else
 		calcPlanesize(ctx, fmt->fmt.pix_mp.pixelformat, pcfg->bytesperline, fmt->fmt.pix_mp.height, psize, fmt->type, fmt->fmt.pix_mp.num_planes);
 	for (i = 0; i < fmt->fmt.pix_mp.num_planes; i++)
@@ -1302,13 +1305,13 @@ static int vsiv4l2_decidepixeldepth(int pixelformat, int origdepth)
 	case VSI_V4L2_DEC_PIX_FMT_411SP:
 	case VSI_V4L2_DEC_PIX_FMT_422SP:
 	case VSI_V4L2_DEC_PIX_FMT_444SP:
-	case VSI_V4L2_DECOUT_DTRC:
-	case VSI_V4L2_DECOUT_RFC:
 		return 8;
 	case VSI_V4L2_DECOUT_NV12_10BIT:
+		return 10;
 	case VSI_V4L2_DECOUT_DTRC_10BIT:
 	case VSI_V4L2_DECOUT_RFC_10BIT:
-		return 10;
+	case VSI_V4L2_DECOUT_DTRC:
+	case VSI_V4L2_DECOUT_RFC:
 	default:
 		return origdepth;
 	}
@@ -1320,19 +1323,17 @@ static int vsiv4l2_setfmt_dec(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt)
 	struct vsi_video_fmt *targetfmt;
 	unsigned int *psize;
 	int braw = brawfmt(ctx->flag, fmt->type);
-	int oldsize = 0;
 
 	targetfmt = vsi_find_format(ctx, fmt);
 	if (targetfmt == NULL)
 		return -EINVAL;
 	if (binputqueue(fmt->type))
 		psize = pcfg->sizeimagesrc;
-	else {
+	else
 		psize = pcfg->sizeimagedst;
-		oldsize = psize[0];
-	}
+
 	v4l2_klog(LOGLVL_BRIEF, "%s:%d:%x:%d:%d:%d:%d", __func__,
-		fmt->type, fmt->fmt.pix.pixelformat, fmt->fmt.pix.width, fmt->fmt.pix.height, fmt->fmt.pix.bytesperline, oldsize);
+		fmt->type, fmt->fmt.pix.pixelformat, fmt->fmt.pix.width, fmt->fmt.pix.height, fmt->fmt.pix.bytesperline, psize[0]);
 	if (binputqueue(fmt->type)) {
 		pcfg->decparams.dec_info.io_buffer.srcwidth = fmt->fmt.pix.width;
 		pcfg->decparams.dec_info.io_buffer.srcheight = fmt->fmt.pix.height;
@@ -1347,19 +1348,22 @@ static int vsiv4l2_setfmt_dec(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt)
 		fmt->fmt.pix.height = pcfg->decparams.dec_info.io_buffer.output_height;
 		pcfg->decparams.dec_info.io_buffer.outBufFormat = targetfmt->dec_fmt;
 		pcfg->decparams.dec_info.io_buffer.outputPixelDepth =
-			vsiv4l2_decidepixeldepth(targetfmt->dec_fmt, pcfg->decparams.dec_info.io_buffer.outputPixelDepth);
+			vsiv4l2_decidepixeldepth(targetfmt->dec_fmt, pcfg->src_pixeldepth);
 	}
-	pcfg->bytesperline = fmt->fmt.pix.bytesperline;	/* for padding, zero if unused */
-	pcfg->bytesperline = ALIGN(pcfg->bytesperline, 16);
-	if (pcfg->bytesperline == 0)
-		pcfg->bytesperline = ALIGN(fmt->fmt.pix.width, 16);
-	fmt->fmt.pix.bytesperline = pcfg->bytesperline;
 	psize[0] = fmt->fmt.pix.sizeimage;
-	verifyPlanesize(psize, braw, fmt->fmt.pix.pixelformat, pcfg->bytesperline, fmt->fmt.pix.height, 1,
-		!binputqueue(fmt->type) ? pcfg->decparams.dec_info.io_buffer.outputPixelDepth:8);
-	if (!binputqueue(fmt->type) && oldsize > psize[0])
-		psize[0] = oldsize;
-	fmt->fmt.pix.sizeimage = psize[0];
+	if (!binputqueue(fmt->type)) {
+		if (pcfg->decparams.dec_info.io_buffer.outputPixelDepth < pcfg->src_pixeldepth) {
+			pcfg->bytesperline = fmt->fmt.pix.width * pcfg->decparams.dec_info.io_buffer.outputPixelDepth / 8;
+			pcfg->bytesperline = ALIGN(pcfg->bytesperline, 16);
+			if (fmt->fmt.pix.sizeimage * pcfg->src_pixeldepth <
+				pcfg->decparams.dec_info.io_buffer.outputPixelDepth * pcfg->orig_dpbsize) {
+				verifyPlanesize(psize, braw, fmt->fmt.pix.pixelformat, pcfg->bytesperline, fmt->fmt.pix.height, 1, 1);
+				fmt->fmt.pix.sizeimage = psize[0];
+			}
+		} else if (fmt->fmt.pix.sizeimage < pcfg->orig_dpbsize)
+			fmt->fmt.pix.sizeimage = psize[0] = pcfg->orig_dpbsize;
+		fmt->fmt.pix.bytesperline = pcfg->bytesperline;
+	}
 	if (binputqueue(fmt->type))
 		pcfg->srcplanes = 1;
 	else
@@ -1544,11 +1548,10 @@ static int vsiv4l2_getfmt_dec(struct vsi_v4l2_ctx *ctx, struct v4l2_format *fmt)
 		fmt->fmt.pix.width = pcfg->decparams.dec_info.io_buffer.srcwidth;
 		fmt->fmt.pix.height = pcfg->decparams.dec_info.io_buffer.srcheight;
 		fmt->fmt.pix.pixelformat = find_local_dec_format(pcfg->decparams.dec_info.io_buffer.inputFormat, braw);
-		fmt->fmt.pix.bytesperline = pcfg->bytesperline;
 	} else {
 		fmt->fmt.pix.width = pcfg->decparams.dec_info.io_buffer.output_width;
 		fmt->fmt.pix.height = pcfg->decparams.dec_info.io_buffer.output_height;
-		fmt->fmt.pix.bytesperline = pcfg->decparams.dec_info.io_buffer.output_wstride;
+		fmt->fmt.pix.bytesperline = pcfg->bytesperline;    //return latest value
 		fmt->fmt.pix.pixelformat = find_local_dec_format(pcfg->decparams.dec_info.io_buffer.outBufFormat, braw);
 	}
 	fmt->fmt.pix.field = pcfg->field;

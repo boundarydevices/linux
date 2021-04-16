@@ -102,7 +102,9 @@ enum v4l2_daemon_cmd_id {
 	V4L2_DAEMON_VIDIOC_STREAMON = 0,//for streamon and start
 	V4L2_DAEMON_VIDIOC_BUF_RDY,
 	V4L2_DAEMON_VIDIOC_CMD_STOP, //this is for flush.
-	V4L2_DAEMON_VIDIOC_STREAMOFF,//for encoder, 4 cmd is enough.
+	V4L2_DAEMON_VIDIOC_STREAMOFF,	//enc destroy
+	V4L2_DAEMON_VIDIOC_ENC_RESET,	//enc reset, as in spec
+	//above are enc cmds
 
 	V4L2_DAEMON_VIDIOC_FAKE,//fake command.
 

@@ -398,7 +398,8 @@ static void format_bufinfo_dec(struct vsi_v4l2_ctx *ctx, struct vsi_v4l2_msg *pm
 		decbufinfo->busOutBuf = busaddr[0] + buf->planes[0].data_offset;
 		decbufinfo->OutBufSize = ctx->outbuflen[buf->index];//ctx->mediacfg.sizeimagedst[0];
 		decbufinfo->bytesused = buf->planes[0].bytesused;
-		if ((ctx->mediacfg.src_pixeldepth == ctx->mediacfg.decparams.dec_info.io_buffer.outputPixelDepth)
+		if (((ctx->mediacfg.src_pixeldepth == ctx->mediacfg.decparams.dec_info.io_buffer.outputPixelDepth)
+			&& ctx->mediacfg.src_pixeldepth != 16)	//p010 can only set by user, not from ctrl sw
 			|| !test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag))
 			pmsg->params.dec_params.io_buffer.outputPixelDepth = DEFAULT_PIXELDEPTH;
 	} else {
@@ -492,7 +493,7 @@ tail:
 	if (ctx) {
 		if (ret < 0) {
 			vsi_set_ctx_error(ctx, ret);
-			v4l2_klog(LOGLVL_ERROR, "%lx fail to communicate with daemon, error=%d", ctx->ctxid, ret);
+			v4l2_klog(LOGLVL_ERROR, "%lx fail to communicate with daemon, error=%d, cmd=%d", ctx->ctxid, ret, id);
 		} else
 			set_bit(CTX_FLAG_DAEMONLIVE_BIT, &ctx->flag);
 	}
@@ -665,16 +666,16 @@ static ssize_t v4l2_msg_write(struct file *fh, const char __user *buf, size_t si
 		vsi_handle_daemonmsg(pmsg);
 		kfree(pmsg);
 		return size;
-	} else {
-		if (mutex_lock_interruptible(&ret_lock)) {
-			kfree(pmsg);
-			return size;
-		}
-		ret = idr_alloc(retarray, (void *)pmsg, 1, 0, GFP_KERNEL);
-		mutex_unlock(&ret_lock);
-		if (ret < 0)
-			kfree(pmsg);
 	}
+	if (mutex_lock_interruptible(&ret_lock)) {
+		kfree(pmsg);
+		return size;
+	}
+	ret = idr_alloc(retarray, (void *)pmsg, 1, 0, GFP_KERNEL);
+	mutex_unlock(&ret_lock);
+	if (ret < 0)
+		kfree(pmsg);
+
 error:
 	if (ret >= 0)
 		wake_up_interruptible_all(&ret_queue);
