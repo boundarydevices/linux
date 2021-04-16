@@ -1,0 +1,75 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2021 Boundary Devices
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx6q.dtsi"
+#include "imx6qdl-nitrogen6_som2.dtsi"
+
+/ {
+	model = "Freescale i.MX6 Quad Nitrogen6 som2 ttx Board";
+	compatible = "fsl,imx6q-nitrogen6_som2-ttx", "fsl,imx6q";
+};
+
+&audmux {
+	status = "disabled";
+};
+
+&can1 {
+	status = "disabled";
+};
+
+&hdmi_audio {
+	status = "disabled";
+};
+
+&hdmi_core {
+	status = "disabled";
+};
+
+&hdmi_video {
+	status = "disabled";
+};
+
+&iomuxc_imx6q_nitrogen6_som2 {
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+#define GP_HOG_TP71	<&gpio2 7 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x1b0b0
+		>;
+	};
+};
+
+&i2c1 {
+	status = "disabled";
+};
+
+&i2c3 {
+	rtc@68 {
+		compatible = "dallas,ds1337";
+		reg = <0x68>;
+	};
+};
+
+&lcd {
+	status = "disabled";
+};
+
+&ldb {
+	status = "disabled";
+};
+
+&mipi_csi {
+	status = "disabled";
+};
+
+&ssi1 {
+	status = "disabled";
+};
+
+&usbotg {
+	status = "disabled";
+};
