@@ -755,7 +755,6 @@
 						  <&clk IMX8MP_CLK_GIC>,
 						  <&clk IMX8MP_CLK_AUDIO_AHB>,
 						  <&clk IMX8MP_CLK_AUDIO_AXI_SRC>,
-						  <&clk IMX8MP_CLK_IPG_AUDIO_ROOT>,
 						  <&clk IMX8MP_AUDIO_PLL1>,
 						  <&clk IMX8MP_AUDIO_PLL2>,
 						  <&clk IMX8MP_VIDEO_PLL1>;
@@ -772,7 +771,6 @@
 						       <500000000>,
 						       <400000000>,
 						       <800000000>,
-						       <400000000>,
 						       <393216000>,
 						       <361267200>,
 						       <1039500000>;
@@ -1806,8 +1804,8 @@
 				compatible = "fsl,imx8mp-sdma", "fsl,imx7d-sdma";
 				reg = <0x30e10000 0x10000>;
 				interrupts = <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clk IMX8MP_CLK_IPG_AUDIO_ROOT>,
-					 <&clk IMX8MP_CLK_AUDIO_AHB>;
+				clocks = <&clk IMX8MP_CLK_AUDIO_AHB_ROOT>,
+					 <&clk IMX8MP_CLK_AUDIO_AHB_ROOT>;
 				clock-names = "ipg", "ahb";
 				#dma-cells = <3>;
 				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx7d.bin";
