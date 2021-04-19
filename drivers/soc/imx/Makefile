@@ -16,3 +16,4 @@ obj-$(CONFIG_SOC_IMX9) += imx93-blk-ctrl.o
 obj-$(CONFIG_SOC_IMX9) += imx93_lpm.o
 obj-${CONFIG_SECVIO_SC} += secvio/
 obj-$(CONFIG_RPMSG_LIFE_CYCLE) += rpmsg_life_cycle.o
+obj-${CONFIG_IMX_LPA_CTRL} += lpa_ctrl.o
