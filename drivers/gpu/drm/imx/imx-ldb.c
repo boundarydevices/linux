@@ -146,6 +146,11 @@ static void imx_ldb_encoder_enable(struct drm_encoder *encoder)
 	struct ldb *ldb = &imx_ldb->base;
 	int mux = drm_of_encoder_active_port_id(ldb_ch->child, encoder);
 
+	if (mux < 0 || mux >= ARRAY_SIZE(imx_ldb->clk_sel)) {
+		dev_warn(ldb->dev, "%s: invalid mux %d\n", __func__, mux);
+		return;
+	}
+
 	if (ldb->dual) {
 		clk_set_parent(imx_ldb->clk_sel[mux], imx_ldb->clk[0]);
 		clk_set_parent(imx_ldb->clk_sel[mux], imx_ldb->clk[1]);
@@ -198,6 +203,11 @@ imx_ldb_encoder_atomic_mode_set(struct drm_encoder *encoder,
 	unsigned long serial_clk;
 	unsigned long di_clk = mode->clock * 1000;
 	int mux = drm_of_encoder_active_port_id(ldb_ch->child, encoder);
+
+	if (mux < 0 || mux >= ARRAY_SIZE(imx_ldb->clk_sel)) {
+		dev_warn(ldb->dev, "%s: invalid mux %d\n", __func__, mux);
+		return;
+	}
 
 	if (mode->clock > 170000) {
 		dev_warn(ldb->dev,
