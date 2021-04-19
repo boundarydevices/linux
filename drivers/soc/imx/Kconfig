@@ -54,4 +54,10 @@ config RPMSG_LIFE_CYCLE
 	  i.MX8ULP for low power mode state coordination between A core & M core to
 	  make sure A core can be put into Low power mode without risk by sending
 	  notify to M core.
+
+config IMX_LPA_CTRL
+	tristate "i.MX8MP lpa power mode control support"
+	depends on ARCH_MXC
+	default n
+
 endmenu
