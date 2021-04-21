@@ -1514,31 +1514,10 @@ static int vpu_enc_v4l2_ioctl_try_fmt(struct file *file,
 		return -EINVAL;
 	vpu_dbg(LVL_FUNC, "%s(), %s\n", __func__, q_data->desc);
 
-	if (f->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		pix_mp->field = V4L2_FIELD_NONE;
-		pix_mp->colorspace = V4L2_COLORSPACE_REC709;
-		if (!vpu_enc_check_colorspace(pix_mp->colorspace)) {
-			pix_mp->colorspace = ctx->colorspace;
-			pix_mp->xfer_func = ctx->xfer_func;
-			pix_mp->ycbcr_enc = ctx->ycbcr_enc;
-			pix_mp->quantization = ctx->quantization;
-		} else {
-			if (!vpu_enc_check_xfer_func(pix_mp->xfer_func))
-				pix_mp->xfer_func = ctx->xfer_func;
-			if (!vpu_enc_check_ycbcr_enc(pix_mp->ycbcr_enc))
-				pix_mp->ycbcr_enc = ctx->ycbcr_enc;
-			if (!vpu_enc_check_quantization(pix_mp->quantization))
-				pix_mp->quantization = ctx->quantization;
-		}
-	} else {
-		pix_mp->colorspace = ctx->colorspace;
-		pix_mp->xfer_func = ctx->xfer_func;
-		pix_mp->ycbcr_enc = ctx->ycbcr_enc;
-		pix_mp->quantization = ctx->quantization;
-	}
-
 	if (!format_is_support(q_data->supported_fmts, q_data->fmt_count, f))
 		return -EINVAL;
+
+	pix_mp->field = V4L2_FIELD_NONE;
 
 	return 0;
 }
