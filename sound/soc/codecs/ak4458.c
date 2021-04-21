@@ -365,7 +365,7 @@ static int ak4458_hw_params(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_FORMAT_DSD_U16_BE:
 	case SNDRV_PCM_FORMAT_DSD_U32_LE:
 	case SNDRV_PCM_FORMAT_DSD_U32_BE:
-		dsd_bclk = nfs1 * params_physical_width(params);
+		dsd_bclk = nfs1 * params_physical_width(params) * ak4458->slots;
 		switch (dsd_bclk) {
 		case 2822400:
 			dsdsel0 = 0;
