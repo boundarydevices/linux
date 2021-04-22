@@ -12,16 +12,6 @@ config FSL_DPAA2_ETH
 	  The driver manages network objects discovered on the Freescale
 	  MC bus.
 
-config FSL_DPAA2_MAC
-	tristate "Freescale DPAA2 MAC driver"
-	depends on FSL_MC_BUS
-	select PHYLINK
-	select PCS_LYNX
-	help
-	  This is the DPAA2 MAC independent driver which aims to support dpmac
-	  fsl_mc devices which are not connected to other objects found in the
-	  root dprc.
-
 if FSL_DPAA2_ETH
 config FSL_DPAA2_ETH_DCB
 	bool "Data Center Bridging (DCB) Support"

@@ -16,15 +16,9 @@
 #include <linux/bpf_trace.h>
 #include <linux/fsl/ptp_qoriq.h>
 #include <linux/ptp_classify.h>
-#include <linux/device/driver.h>
 #include <net/pkt_cls.h>
 #include <net/sock.h>
 
-/* Hack: only here in order to use device_driver_detach.
- * To be replaced with the use of MC _ENDPOINT_CHANGED interrupts on all
- * connectable objects
- */
-#include "../../../../base/base.h"
 #include "dpaa2-eth.h"
 #include "dpaa2-eth-ceetm.h"
 
@@ -4075,40 +4069,6 @@ static int dpaa2_eth_poll_link_state(void *arg)
 	return 0;
 }
 
-static struct device_driver *dpaa2_eth_find_dpmac_driver(void)
-{
-	struct device_driver *drv = NULL;
-	struct klist_iter i;
-
-	klist_iter_init_node(&fsl_mc_bus_type.p->klist_drivers, &i, NULL);
-	while ((drv = next_driver(&i))) {
-		if (strcmp(drv->name, "fsl_dpaa2_mac") == 0)
-			goto exit;
-	}
-
-exit:
-	klist_iter_exit(&i);
-	return drv;
-}
-
-static void dpaa2_eth_dpmac_driver_attach(struct fsl_mc_device *dpmac_dev)
-{
-	struct device_driver *drv = dpaa2_eth_find_dpmac_driver();
-	struct device *dev = &dpmac_dev->dev;
-
-	if (dev && dev->driver == NULL && driver_match_device(drv, dev))
-		device_driver_attach(drv, dev);
-}
-
-static void dpaa2_eth_dpmac_driver_detach(struct fsl_mc_device *dpmac_dev)
-{
-	struct device_driver *drv = dpaa2_eth_find_dpmac_driver();
-	struct device *dev = &dpmac_dev->dev;
-
-	if (dev && dev->driver == drv)
-		device_driver_detach(dev);
-}
-
 static int dpaa2_eth_connect_mac(struct dpaa2_eth_priv *priv)
 {
 	struct fsl_mc_device *dpni_dev, *dpmac_dev;
@@ -4122,8 +4082,6 @@ static int dpaa2_eth_connect_mac(struct dpaa2_eth_priv *priv)
 
 	if (dpaa2_mac_is_type_fixed(dpmac_dev, priv->mc_io))
 		return 0;
-
-	dpaa2_eth_dpmac_driver_detach(dpmac_dev);
 
 	mac = kzalloc(sizeof(struct dpaa2_mac), GFP_KERNEL);
 	if (!mac)
@@ -4150,7 +4108,6 @@ static void dpaa2_eth_disconnect_mac(struct dpaa2_eth_priv *priv)
 		return;
 
 	dpaa2_mac_disconnect(priv->mac);
-	dpaa2_eth_dpmac_driver_attach(priv->mac->mc_dev);
 	kfree(priv->mac);
 	priv->mac = NULL;
 }
