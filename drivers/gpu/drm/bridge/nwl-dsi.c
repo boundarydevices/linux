@@ -1372,6 +1372,7 @@ nwl_dsi_bridge_atomic_enable(struct drm_bridge *bridge,
 	ret = dsi->pdata->dpi_reset(dsi, false);
 	if (ret < 0)
 		DRM_DEV_ERROR(dsi->dev, "Failed to deassert DPI: %d\n", ret);
+	drm_bridge_chain_enable2(dsi->panel_bridge);
 }
 
 static int nwl_dsi_bridge_attach(struct drm_bridge *bridge,
