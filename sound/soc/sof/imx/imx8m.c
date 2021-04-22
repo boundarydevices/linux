@@ -48,9 +48,11 @@ static const char *imx8m_dsp_clks_names[IMX8M_DSP_CLK_NUM] =
 	"ipg", "ocram", "core",
 };
 
-#define IMX8M_DAI_CLK_NUM	6
+#define IMX8M_DAI_CLK_NUM	11
 static const char *imx8m_dai_clks_names[IMX8M_DAI_CLK_NUM] =
 {
+	/* SAI1 clocks */
+	"sai1_bus", "sai1_mclk0", "sai1_mclk1", "sai1_mclk2", "sai1_mclk3",
 	/* SAI3 clocks */
 	"sai3_bus", "sai3_mclk0", "sai3_mclk1", "sai3_mclk2", "sai3_mclk3",
 	/* DMA3 clocks */
