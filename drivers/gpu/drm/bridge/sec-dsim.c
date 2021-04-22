@@ -1747,6 +1747,14 @@ sec_mipi_dsim_bridge_atomic_enable(struct drm_bridge *bridge,
 	/* enable data transfer of dsim */
 	sec_mipi_dsim_set_standby(dsim, true);
 
+	if (dsim->panel) {
+		ret = drm_panel_enable2(dsim->panel);
+		if (ret && (ret != -ENOSYS)) {
+			dev_err(dsim->dev, "panel enable2 failed: %d\n", ret);
+			goto panel_unprepare;
+		}
+	}
+
 	dsim->enabled = true;
 	pr_debug("%s: b status=%x\n", __func__, dsim_read(dsim, DSIM_STATUS));
 
