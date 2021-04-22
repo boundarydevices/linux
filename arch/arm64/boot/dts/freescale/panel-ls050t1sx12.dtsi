@@ -18,6 +18,8 @@
 			DCS_S1P(0x35,0x00)	/* TE ON */
 
 			DCS_S0P(0x11)		/* Exit sleep */
+		>;
+		mipi-cmds-enable2 = /bits/ 8 <
 			DELAY(120)		/* 100ms is what datasheet says */
 
 			DCS_S1P(0x51,0xff)	/* Set LED PWM full duty */
