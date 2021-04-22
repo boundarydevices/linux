@@ -86,6 +86,7 @@ struct drm_panel_funcs {
 	 * This function is optional.
 	 */
 	int (*enable)(struct drm_panel *panel);
+	int (*enable2)(struct drm_panel *panel);
 
 	/**
 	 * @disable:
@@ -201,6 +202,7 @@ int drm_panel_prepare(struct drm_panel *panel);
 int drm_panel_unprepare(struct drm_panel *panel);
 
 int drm_panel_enable(struct drm_panel *panel);
+int drm_panel_enable2(struct drm_panel *panel);
 int drm_panel_disable(struct drm_panel *panel);
 
 int drm_panel_get_modes(struct drm_panel *panel, struct drm_connector *connector);
