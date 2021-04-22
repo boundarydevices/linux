@@ -53,6 +53,7 @@ struct nwl_dsi {
 	struct drm_bridge bridge;
 	struct mipi_dsi_host dsi_host;
 	struct drm_bridge *panel_bridge;
+	struct drm_panel *panel;
 	struct device *dev;
 	struct phy *phy;
 	union phy_configure_opts phy_cfg;
