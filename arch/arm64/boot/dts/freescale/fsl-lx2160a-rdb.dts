@@ -93,12 +93,14 @@
 	aquantia_phy1: ethernet-phy@4 {
 		/* AQR107 PHY */
 		compatible = "ethernet-phy-ieee802.3-c45";
+		interrupts = <GIC_SPI 2 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x4>;
 	};
 
 	aquantia_phy2: ethernet-phy@5 {
 		/* AQR107 PHY */
 		compatible = "ethernet-phy-ieee802.3-c45";
+		interrupts = <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>;
 		reg = <0x5>;
 	};
 };
