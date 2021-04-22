@@ -4135,10 +4135,12 @@ static irqreturn_t dpni_irq0_handler_thread(int irq_num, void *arg)
 		dpaa2_eth_set_mac_addr(netdev_priv(net_dev));
 		dpaa2_eth_update_tx_fqids(priv);
 
+		rtnl_lock();
 		if (priv->mac)
 			dpaa2_eth_disconnect_mac(priv);
 		else
 			dpaa2_eth_connect_mac(priv);
+		rtnl_unlock();
 	}
 
 	return IRQ_HANDLED;
@@ -4428,7 +4430,9 @@ static int dpaa2_eth_remove(struct fsl_mc_device *ls_dev)
 #ifdef CONFIG_DEBUG_FS
 	dpaa2_dbg_remove(priv);
 #endif
+	rtnl_lock();
 	dpaa2_eth_disconnect_mac(priv);
+	rtnl_unlock();
 
 	unregister_netdev(net_dev);
 
