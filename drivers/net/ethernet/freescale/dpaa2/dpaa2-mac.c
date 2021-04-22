@@ -684,13 +684,7 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
 	 * taken care of in the MC firmware. Thus, probe the DPMAC but do
 	 * nothing with it.
 	 */
-	err = dpmac_get_attributes(mc_dev->mc_io, 0, mc_dev->mc_handle, &priv->attr);
-	if (err) {
-		dev_err(dev, "dpmac_get_attributes() = %d\n", err);
-		goto free_portal;
-	}
-
-	if (priv->attr.link_type == DPMAC_LINK_TYPE_FIXED) {
+	if (dpaa2_mac_is_type_fixed(mc_dev, mc_dev->mc_io)) {
 		fsl_mc_portal_free(mc_dev->mc_io);
 		return 0;
 	}
@@ -708,6 +702,7 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
 	}
 
 	return 0;
+
 free_portal:
 	fsl_mc_portal_free(mc_dev->mc_io);
 free_netdev:
@@ -722,12 +717,9 @@ static int dpaa2_mac_remove(struct fsl_mc_device *mc_dev)
 	struct net_device *net_dev = dev_get_drvdata(dev);
 	struct dpaa2_mac *priv = netdev_priv(net_dev);
 
-	if (priv->attr.link_type != DPMAC_LINK_TYPE_FIXED) {
-		dpaa2_mac_teardown_irqs(mc_dev);
-		dpaa2_mac_disconnect(priv);
-		fsl_mc_portal_free(mc_dev->mc_io);
-	}
-
+	dpaa2_mac_teardown_irqs(mc_dev);
+	dpaa2_mac_disconnect(priv);
+	fsl_mc_portal_free(mc_dev->mc_io);
 	dev_set_drvdata(dev, NULL);
 	free_netdev(net_dev);
 
