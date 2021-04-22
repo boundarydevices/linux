@@ -120,17 +120,38 @@ static int imx_aif_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	if (is_dsd)
+	if (is_dsd) {
 		ret = snd_soc_dai_set_tdm_slot(cpu_dai,
 				       0x1, 0x1,
 				       1, params_width(params));
-	else
+		if (ret) {
+			dev_err(dev, "failed to set cpu dai tdm slot: %d\n", ret);
+			return ret;
+		}
+
+		ret = snd_soc_dai_set_tdm_slot(codec_dai,
+				       0x1, 0x1,
+				       1, params_width(params));
+		if (ret) {
+			dev_err(dev, "failed to set codec dai tdm slot: %d\n", ret);
+			return ret;
+		}
+	} else {
 		ret = snd_soc_dai_set_tdm_slot(cpu_dai,
 				       BIT(channels) - 1, BIT(channels) - 1,
 				       2, params_physical_width(params));
-	if (ret) {
-		dev_err(dev, "failed to set cpu dai tdm slot: %d\n", ret);
-		return ret;
+		if (ret) {
+			dev_err(dev, "failed to set cpu dai tdm slot: %d\n", ret);
+			return ret;
+		}
+
+		ret = snd_soc_dai_set_tdm_slot(codec_dai,
+				       BIT(channels) - 1, BIT(channels) - 1,
+				       2, params_physical_width(params));
+		if (ret) {
+			dev_err(dev, "failed to set codec dai tdm slot: %d\n", ret);
+			return ret;
+		}
 	}
 
 	return ret;
