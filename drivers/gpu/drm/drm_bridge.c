@@ -650,6 +650,21 @@ void drm_bridge_chain_enable(struct drm_bridge *bridge)
 }
 EXPORT_SYMBOL(drm_bridge_chain_enable);
 
+void drm_bridge_chain_enable2(struct drm_bridge *bridge)
+{
+	struct drm_encoder *encoder;
+
+	if (!bridge)
+		return;
+
+	encoder = bridge->encoder;
+	list_for_each_entry_from(bridge, &encoder->bridge_chain, chain_node) {
+		if (bridge->funcs->enable2)
+			bridge->funcs->enable2(bridge);
+	}
+}
+EXPORT_SYMBOL(drm_bridge_chain_enable2);
+
 /**
  * drm_atomic_bridge_chain_disable - disables all bridges in the encoder chain
  * @bridge: bridge control structure

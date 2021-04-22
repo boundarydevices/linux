@@ -123,6 +123,13 @@ static void panel_bridge_enable(struct drm_bridge *bridge)
 	drm_panel_enable(panel_bridge->panel);
 }
 
+static void panel_bridge_enable2(struct drm_bridge *bridge)
+{
+	struct panel_bridge *panel_bridge = drm_bridge_to_panel_bridge(bridge);
+
+	drm_panel_enable2(panel_bridge->panel);
+}
+
 static void panel_bridge_disable(struct drm_bridge *bridge)
 {
 	struct panel_bridge *panel_bridge = drm_bridge_to_panel_bridge(bridge);
@@ -161,6 +168,7 @@ static const struct drm_bridge_funcs panel_bridge_bridge_funcs = {
 	.detach = panel_bridge_detach,
 	.pre_enable = panel_bridge_pre_enable,
 	.enable = panel_bridge_enable,
+	.enable2 = panel_bridge_enable2,
 	.disable = panel_bridge_disable,
 	.post_disable = panel_bridge_post_disable,
 	.get_modes = panel_bridge_get_modes,
