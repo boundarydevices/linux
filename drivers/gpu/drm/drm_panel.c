@@ -171,6 +171,24 @@ int drm_panel_enable(struct drm_panel *panel)
 EXPORT_SYMBOL(drm_panel_enable);
 
 /**
+ * drm_panel_enable2 - enable a panel
+ * @panel: DRM panel
+ *
+ * Calling this function will cause the panel display drivers to be turned on
+ * and the backlight to be enabled. Content will be visible on screen after
+ * this call completes.
+ *
+ * Return: 0 on success or a negative error code on failure.
+ */
+int drm_panel_enable2(struct drm_panel *panel)
+{
+	if (panel && panel->funcs && panel->funcs->enable2)
+		return panel->funcs->enable2(panel);
+
+	return panel ? -ENOSYS : -EINVAL;
+}
+EXPORT_SYMBOL(drm_panel_enable2);
+/**
  * drm_panel_disable - disable a panel
  * @panel: DRM panel
  *
