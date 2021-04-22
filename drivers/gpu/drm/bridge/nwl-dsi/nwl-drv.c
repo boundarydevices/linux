@@ -305,7 +305,8 @@ static void nwl_dsi_bridge_pre_enable(struct drm_bridge *bridge)
 	 * bridge_enable, where we will enable the DPI and start streaming
 	 * pixels on the data lanes.
 	 */
-	drm_bridge_enable(dsi->panel_bridge);
+	if (dsi->panel)
+		drm_panel_enable(dsi->panel);
 }
 
 static void nwl_dsi_bridge_enable(struct drm_bridge *bridge)
@@ -318,6 +319,8 @@ static void nwl_dsi_bridge_enable(struct drm_bridge *bridge)
 	if (ret < 0)
 		DRM_DEV_ERROR(dsi->dev, "Failed to deassert DPI: %d\n", ret);
 
+	if (dsi->panel)
+		drm_panel_enable2(dsi->panel);
 }
 
 static void nwl_dsi_bridge_disable(struct drm_bridge *bridge)
@@ -519,6 +522,7 @@ static int nwl_dsi_bridge_attach(struct drm_bridge *bridge)
 		return ret;
 
 	if (panel) {
+		dsi->panel = panel;
 		panel_bridge = drm_panel_bridge_add(panel,
 						    DRM_MODE_CONNECTOR_DSI);
 		if (IS_ERR(panel_bridge))
