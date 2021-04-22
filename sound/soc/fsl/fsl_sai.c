@@ -643,14 +643,14 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
 
 		if (sai->is_multi_lane) {
 			if (tx) {
-				sai->audio_config[tx].words_per_fifo = slots;
+				sai->audio_config[tx].words_per_fifo = min(slots, channels);
 				sai->audio_config[tx].dst_fifo_num = pins;
 				sai->audio_config[tx].dst_fifo_off = dl_cfg[dl_cfg_idx].offset[tx];
 				sai->dma_params_tx.maxburst = FSL_SAI_MAXBURST_TX * pins;
 				sai->dma_params_tx.peripheral_config = &sai->audio_config[tx];
 				sai->dma_params_tx.peripheral_size = sizeof(sai->audio_config[tx]);
 			} else {
-				sai->audio_config[tx].words_per_fifo = slots;
+				sai->audio_config[tx].words_per_fifo = min(slots, channels);
 				sai->audio_config[tx].src_fifo_num = pins;
 				sai->audio_config[tx].src_fifo_off = dl_cfg[dl_cfg_idx].offset[tx];
 				sai->dma_params_rx.maxburst = FSL_SAI_MAXBURST_RX * pins;
