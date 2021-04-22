@@ -281,6 +281,7 @@ struct drm_bridge_funcs {
 	 * New drivers shall use &drm_bridge_funcs.atomic_enable.
 	 */
 	void (*enable)(struct drm_bridge *bridge);
+	void (*enable2)(struct drm_bridge *bridge);
 
 	/**
 	 * @atomic_pre_enable:
@@ -883,6 +884,7 @@ void drm_bridge_chain_mode_set(struct drm_bridge *bridge,
 			       const struct drm_display_mode *adjusted_mode);
 void drm_bridge_chain_pre_enable(struct drm_bridge *bridge);
 void drm_bridge_chain_enable(struct drm_bridge *bridge);
+void drm_bridge_chain_enable2(struct drm_bridge *bridge);
 
 int drm_atomic_bridge_chain_check(struct drm_bridge *bridge,
 				  struct drm_crtc_state *crtc_state,
