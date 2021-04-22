@@ -114,18 +114,23 @@ struct panel_simple {
 	struct drm_panel base;
 	bool prepared;
 	bool enabled;
+	bool enabled2;
 	bool no_hpd;
 
 	const struct panel_desc *desc;
 	struct panel_desc dt_desc;
 	struct drm_display_mode dt_mode;
 
+	unsigned enable_high_duration_us;
+	unsigned enable_low_duration_us;
+	unsigned power_delay_ms;
 	struct backlight_device *backlight;
 	struct regulator *supply;
 	struct i2c_adapter *ddc;
 
 	struct drm_display_mode override_mode;
 	struct gpio_desc *gpd_prepare_enable;
+	struct gpio_desc *gpd_power;
 	struct gpio_desc *reset;
 	struct videomode vm;
 	struct spi_device *spi;
@@ -137,6 +142,7 @@ struct panel_simple {
 	unsigned spi_bits;
 	struct interface_cmds cmds_init;
 	struct interface_cmds cmds_enable;
+	struct interface_cmds cmds_enable2;
 	struct interface_cmds cmds_disable;
 	/* Keep a mulitple of 9 */
 	unsigned char tx_buf[63] __attribute__((aligned(64)));
@@ -381,7 +387,6 @@ static int send_cmd_list(struct panel_simple *panel, struct cmds *mc, int type, 
 
 	panel->spi_bits = 0;
 	dsi = container_of(panel->base.dev, struct mipi_dsi_device, dev);
-	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 	while (1) {
 		len = *cmd++;
 		length--;
@@ -752,6 +757,7 @@ static int panel_simple_get_non_edid_modes(struct panel_simple *panel)
 
 static int panel_simple_disable(struct drm_panel *panel)
 {
+	struct mipi_dsi_device *dsi;
 	struct panel_simple *p = to_panel_simple(panel);
 
 	if (!p->enabled)
@@ -765,6 +771,8 @@ static int panel_simple_disable(struct drm_panel *panel)
 
 	if (p->desc->delay.disable)
 		msleep(p->desc->delay.disable);
+	dsi = container_of(p->base.dev, struct mipi_dsi_device, dev);
+	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 	send_all_cmd_lists(p, &p->cmds_disable);
 
 	p->enabled = false;
@@ -795,6 +803,7 @@ static int panel_simple_unprepare(struct drm_panel *panel)
 static int panel_simple_prepare(struct drm_panel *panel)
 {
 	struct panel_simple *p = to_panel_simple(panel);
+	struct mipi_dsi_device *dsi;
 	unsigned int delay;
 	int err;
 
@@ -807,7 +816,21 @@ static int panel_simple_prepare(struct drm_panel *panel)
 		return err;
 	}
 
-	gpiod_set_value_cansleep(p->gpd_prepare_enable, 1);
+	if (p->gpd_power) {
+		gpiod_set_value_cansleep(p->gpd_power, 1);
+		mdelay(p->power_delay_ms);
+	}
+	if (p->gpd_prepare_enable) {
+		if (p->enable_high_duration_us) {
+			gpiod_set_value_cansleep(p->gpd_prepare_enable, 1);
+			udelay(p->enable_high_duration_us);
+		}
+		if (p->enable_low_duration_us) {
+			gpiod_set_value_cansleep(p->gpd_prepare_enable, 0);
+			udelay(p->enable_low_duration_us);
+		}
+		gpiod_set_value_cansleep(p->gpd_prepare_enable, 1);
+	}
 	gpiod_set_value_cansleep(p->reset, 0);
 
 
@@ -817,6 +840,8 @@ static int panel_simple_prepare(struct drm_panel *panel)
 	if (delay)
 		msleep(delay);
 
+	dsi = container_of(p->base.dev, struct mipi_dsi_device, dev);
+	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 	err = send_all_cmd_lists(p, &p->cmds_init);
 	if (err) {
 		regulator_disable(p->supply);
@@ -830,16 +855,44 @@ static int panel_simple_prepare(struct drm_panel *panel)
 static int panel_simple_enable(struct drm_panel *panel)
 {
 	struct panel_simple *p = to_panel_simple(panel);
+	struct mipi_dsi_device *dsi;
 	int ret;
 
 	if (p->enabled)
 		return 0;
 
+	dsi = container_of(p->base.dev, struct mipi_dsi_device, dev);
+	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 	ret = send_all_cmd_lists(p, &p->cmds_enable);
 	if (ret < 0)
 		goto fail;
 	if (p->desc->delay.enable)
 		msleep(p->desc->delay.enable);
+	p->enabled = true;
+
+	return 0;
+fail:
+	if (p->reset)
+		gpiod_set_value_cansleep(p->reset, 1);
+	if (p->gpd_prepare_enable)
+		gpiod_set_value_cansleep(p->gpd_prepare_enable, 0);
+	return ret;
+}
+
+static int panel_simple_enable2(struct drm_panel *panel)
+{
+	struct panel_simple *p = to_panel_simple(panel);
+	struct mipi_dsi_device *dsi;
+	int ret;
+
+	if (p->enabled2)
+		return 0;
+
+	dsi = container_of(p->base.dev, struct mipi_dsi_device, dev);
+	dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
+	ret = send_all_cmd_lists(p, &p->cmds_enable2);
+	if (ret < 0)
+		goto fail;
 
 	if (p->backlight) {
 		p->backlight->props.state &= ~BL_CORE_FBBLANK;
@@ -847,10 +900,11 @@ static int panel_simple_enable(struct drm_panel *panel)
 		backlight_update_status(p->backlight);
 	}
 
-	p->enabled = true;
+	p->enabled2 = true;
 
 	return 0;
 fail:
+	p->enabled = false;
 	if (p->reset)
 		gpiod_set_value_cansleep(p->reset, 1);
 	if (p->gpd_prepare_enable)
@@ -901,6 +955,7 @@ static const struct drm_panel_funcs panel_simple_funcs = {
 	.unprepare = panel_simple_unprepare,
 	.prepare = panel_simple_prepare,
 	.enable = panel_simple_enable,
+	.enable2 = panel_simple_enable2,
 	.get_modes = panel_simple_get_modes,
 	.get_timings = panel_simple_get_timings,
 };
@@ -977,7 +1032,7 @@ static void panel_simple_parse_panel_timing_node(struct device *dev,
 		dev_err(dev, "Reject override mode: No display_timing found\n");
 }
 
-static void init_common(struct device_node *np, struct panel_desc *ds,
+static void init_common(struct panel_simple *p, struct device_node *np, struct panel_desc *ds,
 		struct drm_display_mode *dm, struct mipi_dsi_device *dsi)
 {
 	of_property_read_u32(np, "delay-prepare", &ds->delay.prepare);
@@ -986,6 +1041,9 @@ static void init_common(struct device_node *np, struct panel_desc *ds,
 	of_property_read_u32(np, "delay-unprepare", &ds->delay.unprepare);
 	of_property_read_u32(np, "min-hs-clock-multiple", &dm->min_hs_clock_multiple);
 	of_property_read_u32(np, "mipi-dsi-multiple", &dm->mipi_dsi_multiple);
+	of_property_read_u32(np, "enable-high-duration-us", &p->enable_high_duration_us);
+	of_property_read_u32(np, "enable-low-duration-us", &p->enable_low_duration_us);
+	of_property_read_u32(np, "power-delay-ms", &p->power_delay_ms);
 	if (dsi) {
 		if (of_property_read_bool(np, "mode-video-hfp-disable"))
 			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_HFP;
@@ -1075,7 +1133,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc,
 			dev_err(dev, "unknown bus-format %s\n", bf);
 			return -EINVAL;
 		}
-		init_common(np, ds, dm, dsi);
+		init_common(panel, np, ds, dm, dsi);
 		of_property_read_u32(np, "bits-per-color", &ds->bpc);
 		ds->modes = dm;
 		ds->num_modes = 1;
@@ -1112,6 +1170,8 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc,
 				       &panel->cmds_init.i2c);
 				check_for_cmds(cmds_np, "i2c-cmds-enable",
 				       &panel->cmds_enable.i2c);
+				check_for_cmds(cmds_np, "i2c-cmds-enable2",
+					       &panel->cmds_enable2.i2c);
 				check_for_cmds(cmds_np, "i2c-cmds-disable",
 				       &panel->cmds_disable.i2c);
 				of_property_read_u32(cmds_np, "i2c-address", &panel->i2c_address);
@@ -1121,6 +1181,9 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc,
 				       &panel->cmds_init.mipi);
 			check_for_cmds(cmds_np, "mipi-cmds-enable",
 				       &panel->cmds_enable.mipi);
+			/* enable 2 is after frame data transfer has started */
+			check_for_cmds(cmds_np, "mipi-cmds-enable2",
+				       &panel->cmds_enable2.mipi);
 			check_for_cmds(cmds_np, "mipi-cmds-disable",
 				       &panel->cmds_disable.mipi);
 
@@ -1131,11 +1194,13 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc,
 				       &panel->cmds_init.spi);
 				check_for_cmds(cmds_np, "spi-cmds-enable",
 				       &panel->cmds_enable.spi);
+				check_for_cmds(cmds_np, "spi-cmds-enable2",
+				       &panel->cmds_enable2.spi);
 				check_for_cmds(cmds_np, "spi-cmds-disable",
 				       &panel->cmds_disable.spi);
 				of_property_read_u32(cmds_np, "spi-max-frequency", &panel->spi_max_frequency);
 			}
-			init_common(cmds_np, ds, dm, dsi);
+			init_common(panel, cmds_np, ds, dm, dsi);
 		}
 		pr_info("%s: delay %d %d, %d %d\n", __func__,
 			ds->delay.prepare, ds->delay.enable,
@@ -1154,6 +1219,13 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc,
 	if (IS_ERR(panel->reset)) {
 		err = PTR_ERR(panel->reset);
 		dev_err(dev, "failed to request reset: %d\n", err);
+		goto free_spi;
+	}
+
+	panel->gpd_power = devm_gpiod_get_optional(dev, "power", GPIOD_OUT_LOW);
+	if (IS_ERR(panel->gpd_power)) {
+		err = PTR_ERR(panel->gpd_power);
+		dev_err(dev, "failed to request power: %d\n", err);
 		goto free_spi;
 	}
 
