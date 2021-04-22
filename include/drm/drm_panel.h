@@ -74,6 +74,7 @@ struct drm_panel_funcs {
 	int (*power_up)(struct drm_panel *panel);
 	int (*prepare)(struct drm_panel *panel);
 	int (*enable)(struct drm_panel *panel);
+	int (*enable2)(struct drm_panel *panel);
 	int (*get_modes)(struct drm_panel *panel);
 	int (*get_timings)(struct drm_panel *panel, unsigned int num_timings,
 			   struct display_timing *timings);
@@ -185,6 +186,7 @@ static inline int drm_panel_enable(struct drm_panel *panel)
 
 	return panel ? -ENOSYS : -EINVAL;
 }
+int drm_panel_enable2(struct drm_panel *panel);
 
 /**
  * drm_panel_get_modes - probe the available display modes of a panel
