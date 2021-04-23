@@ -364,9 +364,9 @@ static int imx_ak4458_probe(struct platform_device *pdev)
 			goto fail;
 		}
 
-		gpio_set_value_cansleep(priv->pdn_gpio, 1);
-		usleep_range(1000, 2000);
 		gpio_set_value_cansleep(priv->pdn_gpio, 0);
+		usleep_range(1000, 2000);
+		gpio_set_value_cansleep(priv->pdn_gpio, 1);
 		usleep_range(1000, 2000);
 	}
 
