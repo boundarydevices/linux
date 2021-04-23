@@ -534,6 +534,7 @@ err_out:
 static int imx_rpmsg_probe(struct platform_device *pdev)
 {
 	int j, ret = 0;
+	unsigned long variant;
 	char *buf;
 	struct device *dev = &pdev->dev;
 	struct device_node *np = pdev->dev.of_node;
@@ -551,7 +552,8 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 #ifdef CONFIG_IMX_SCU
 	rpdev->proc_nb.notifier_call = imx_rpmsg_partition_notify;
 #endif
-	rpdev->variant = (enum imx_rpmsg_variants)of_device_get_match_data(dev);
+	variant = (uintptr_t)of_device_get_match_data(dev);
+	rpdev->variant = (enum imx_rpmsg_variants)variant;
 	rpdev->rx_buffer.buf = buf;
 	rpdev->rx_buffer.head = 0;
 	rpdev->rx_buffer.tail = 0;
