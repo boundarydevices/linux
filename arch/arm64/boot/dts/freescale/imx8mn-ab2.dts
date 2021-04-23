@@ -734,7 +734,7 @@
 	ak5552: ak5552@13 {
 		compatible = "asahi-kasei,ak5552";
 		reg = <0x13>;
-		reset-gpios = <&pca6416 2 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&pca6416 2 GPIO_ACTIVE_LOW>;
 		AVDD-supply = <&reg_adc_avdd_5v0>;
 		DVDD-supply = <&reg_adc_dvdd_3v3>;
 	};
