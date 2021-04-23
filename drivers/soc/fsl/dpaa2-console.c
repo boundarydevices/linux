@@ -3,7 +3,7 @@
  * Freescale DPAA2 Platforms Console Driver
  *
  * Copyright 2015-2016 Freescale Semiconductor Inc.
- * Copyright 2018 NXP
+ * Copyright 2021 NXP
  */
 
 #define pr_fmt(fmt) "dpaa2-console: " fmt
@@ -231,6 +231,7 @@ static ssize_t dpaa2_console_read(struct file *fp, char __user *buf,
 	cd->cur_ptr += bytes;
 	written += bytes;
 
+	kfree(kbuf);
 	return written;
 
 err_free_buf:
