@@ -61,3 +61,5 @@ obj-$(CONFIG_NVMEM_RMEM) 	+= nvmem-rmem.o
 nvmem-rmem-y			:= rmem.o
 obj-$(CONFIG_NVMEM_BRCM_NVRAM)	+= nvmem_brcm_nvram.o
 nvmem_brcm_nvram-y		:= brcm_nvram.o
+obj-$(CONFIG_NVMEM_IMX_OCOTP_FSB_S400) += nvmem-imx-ocotp-fsb-s400.o
+nvmem-imx-ocotp-fsb-s400-y		:= imx-ocotp-fsb-s400.o
