@@ -51,6 +51,10 @@
 	};
 };
 
+&mipi_csi_1 {
+	/delete-node/port@1;
+};
+
 &cameradev {
 	status = "okay";
 };
@@ -65,4 +69,8 @@
 
 &dewarp {
 	status = "okay";
+};
+
+&i2c3 {
+	/delete-node/ov5640_mipi@3c;
 };
