@@ -63,3 +63,11 @@ config PHY_MTK_CDPHY
     help
 	  Enable this to support the MIPI CSI CD-PHY receiver.
 	  The driver supports multiple CSI cdphy ports simultaneously.
+
+config PHY_MTK_DPHY
+    tristate "MediaTek D-PHY Driver"
+    depends on ARCH_MEDIATEK && OF
+    select GENERIC_PHY
+    help
+	  Enable this to support the MIPI CSI D-PHY receiver.
+	  The driver supports multiple CSI dphy ports simultaneously.
