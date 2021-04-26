@@ -3207,7 +3207,7 @@ int regulator_is_supported_voltage(struct regulator *regulator,
 }
 EXPORT_SYMBOL_GPL(regulator_is_supported_voltage);
 
-static int regulator_map_voltage(struct regulator_dev *rdev, int min_uV,
+int regulator_map_voltage(struct regulator_dev *rdev, int min_uV,
 				 int max_uV)
 {
 	const struct regulator_desc *desc = rdev->desc;
