@@ -365,7 +365,7 @@ static int ak4458_hw_params(struct snd_pcm_substream *substream,
 	case SNDRV_PCM_FORMAT_DSD_U16_BE:
 	case SNDRV_PCM_FORMAT_DSD_U32_LE:
 	case SNDRV_PCM_FORMAT_DSD_U32_BE:
-		dsd_bclk = nfs1 * params_physical_width(params);
+		dsd_bclk = nfs1 * params_physical_width(params) * ak4458->slots;
 		switch (dsd_bclk) {
 		case 2822400:
 			dsdsel0 = 0;
@@ -622,7 +622,10 @@ static void ak4458_reset(struct ak4458_priv *ak4458, bool active)
 		gpiod_set_value_cansleep(ak4458->reset_gpiod, active);
 		usleep_range(1000, 2000);
 	} else if (!IS_ERR_OR_NULL(ak4458->reset)) {
-		reset_control_assert(ak4458->reset);
+		if (active)
+			reset_control_assert(ak4458->reset);
+		else
+			reset_control_deassert(ak4458->reset);
 		msleep(5);
 	}
 }
@@ -659,7 +662,6 @@ static int __maybe_unused ak4458_runtime_resume(struct device *dev)
 	if (ak4458->mute_gpiod)
 		gpiod_set_value_cansleep(ak4458->mute_gpiod, 1);
 
-	ak4458_reset(ak4458, true);
 	ak4458_reset(ak4458, false);
 
 	regcache_cache_only(ak4458->regmap, false);

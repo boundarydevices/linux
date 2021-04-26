@@ -370,6 +370,10 @@ static inline void imx7ulp_iomuxc_save(void)
 		pm_info->select_input_val[i] =
 			readl_relaxed(iomuxc1_base +
 				SELECT_INPUT_START + i * 0x4);
+
+	/* Put all the PADs to OFF state */
+	for (i = 0; i < pm_info->iomux_num; i++)
+		writel_relaxed(0, (iomuxc1_base + IOMUX_START + i * 0x4));
 }
 
 static void imx7ulp_lpuart_save(void)

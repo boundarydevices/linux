@@ -26,6 +26,7 @@
 		MX8MQ_IOMUXC_SD2_DATA3_USDHC2_DATA3		0xc3
 		MX8MQ_IOMUXC_GPIO1_IO04_GPIO1_IO4               0x49
 		MX8MQ_IOMUXC_ECSPI2_SCLK_GPIO5_IO10             0x46
+		MX8MQ_IOMUXC_SD2_WP_GPIO2_IO20			0x41
 	>;
 };
 
@@ -38,6 +39,8 @@
 		MX8MQ_IOMUXC_SD2_DATA2_USDHC2_DATA2		0xc5
 		MX8MQ_IOMUXC_SD2_DATA3_USDHC2_DATA3		0xc5
 		MX8MQ_IOMUXC_GPIO1_IO04_GPIO1_IO4               0x49
+		MX8MQ_IOMUXC_ECSPI2_SCLK_GPIO5_IO10             0x46
+		MX8MQ_IOMUXC_SD2_WP_GPIO2_IO20			0x41
 	>;
 };
 
@@ -50,6 +53,8 @@
 		MX8MQ_IOMUXC_SD2_DATA2_USDHC2_DATA2		0xc7
 		MX8MQ_IOMUXC_SD2_DATA3_USDHC2_DATA3		0xc7
 		MX8MQ_IOMUXC_GPIO1_IO04_GPIO1_IO4               0x49
+		MX8MQ_IOMUXC_ECSPI2_SCLK_GPIO5_IO10             0x46
+		MX8MQ_IOMUXC_SD2_WP_GPIO2_IO20			0x41
 	>;
 };
 
@@ -59,6 +64,7 @@
 
 &pcie1{
 	status = "disabled";
+	/delete-node/ wifi_wake_host;
 };
 
 &usdhc2 {
@@ -69,4 +75,11 @@
 	non-removable;
 	cap-power-off-card;
 	mmc-pwrseq = <&usdhc2_pwrseq>;
+
+	wifi_wake_host {
+		compatible = "nxp,wifi-wake-host";
+		interrupt-parent = <&gpio2>;
+		interrupts = <20 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-names = "host-wake";
+	};
 };

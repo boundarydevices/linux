@@ -83,10 +83,11 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk.dtb imx8mp-evk-rm67191.dtb imx8mp-evk-it626
 			  imx8mp-evk-jdi-wuxga-lvds-panel.dtb imx8mp-evk-flexcan2.dtb \
 			  imx8mp-evk-root.dtb imx8mp-evk-inmate.dtb imx8mp-evk-ov2775.dtb \
 			  imx8mp-evk-ov2775-ov5640.dtb imx8mp-evk-basler-ov5640.dtb imx8mp-evk-basler.dtb \
+			  imx8mp-evk-basler-ov2775.dtb imx8mp-evk-dual-basler.dtb \
 			  imx8mp-evk-dual-ov2775.dtb imx8mp-evk-spdif-lb.dtb imx8mp-evk-dsp.dtb \
 			  imx8mp-evk-dsp-lpa.dtb imx8mp-evk-sof-wm8960.dtb \
-			  imx8mp-evk-iqaudio-dacplus.dtb imx8mp-evk-iqaudio-dacpro.dtb imx8mp-evk-hifiberry-dacplus.dtb
-dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-powersave.dtb imx8mp-evk-powersave-non-rpmsg.dtb
+			  imx8mp-evk-iqaudio-dacplus.dtb imx8mp-evk-iqaudio-dacpro.dtb imx8mp-evk-hifiberry-dacplus.dtb \
+			  imx8mp-evk-usdhc1-m2.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk.dtb imx8mq-evk-rpmsg.dtb imx8mp-ab2.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-ddr4-evk.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk.dtb imx8mq-evk-rpmsg.dtb imx8mq-evk-pcie1-m2.dtb imx8mq-evk-usd-wifi.dtb \
@@ -130,7 +131,6 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek.dtb imx8qm-mek-ov5640.dtb \
 			  imx8qm-mek-esai.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-dom0.dtb imx8qm-mek-domu.dtb \
 			  imx8qm-mek-root.dtb imx8qm-mek-inmate.dtb
-dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-md.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-ai_ml.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-colibri-eval-v3.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8dxl-evk.dtb \
@@ -192,7 +192,7 @@ dtb-$(CONFIG_ARCH_S32) += s32v234-evb.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk-no-product.dtb imx8mm-ddr4-evk-no-product.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-ddr4-evk-no-product.dtb
-dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-no-product.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-no-product.dtb imx8mp-evk-powersave.dtb imx8mp-evk-powersave-non-rpmsg.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk-no-product.dtb
-dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-ov5640-no-product.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-ov5640-no-product.dtb imx8qm-mek-md.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek-ov5640-rpmsg-no-product.dtb

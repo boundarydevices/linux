@@ -31,13 +31,11 @@
 			"Ext Spk", "SPK_RN",
 			"LINPUT1", "Mic Jack",
 			"LINPUT3", "Mic Jack",
-			"Mic Jack", "MICB",
-			"Playback", "SAI3.OUT",
-			"SAI3.IN", "Capture";
+			"Mic Jack", "MICB";
 		simple-audio-card,dai-link {
 			format = "i2s";
 			cpu {
-				sound-dai = <&dsp 0>;
+				sound-dai = <&dsp 1>;
 			};
 			sndcodec: codec {
 				sound-dai = <&codec>;
@@ -47,7 +45,7 @@
 };
 
 &dsp {
-	#sound-dai-cells = <0>;
+	#sound-dai-cells = <1>;
 	compatible = "fsl,imx8mp-dsp";
 	reg = <0x0 0x3B6E8000 0x0 0x88000>;
 

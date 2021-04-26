@@ -590,6 +590,26 @@ static struct dma_async_tx_descriptor *fsl_edma3_prep_dma_cyclic(
 
 	dma_buf_next = dma_addr;
 	nbytes = fsl_chan->fsc.addr_width * fsl_chan->fsc.burst;
+
+	/*
+	 * Choose the suitable burst length if period_len is not multiple of
+	 * burst length so that the whole transfer length is multiple of minor
+	 * loop(burst length).
+	 */
+	if (period_len % nbytes) {
+		u32 width = fsl_chan->fsc.addr_width;
+
+		for (i = fsl_chan->fsc.burst; i > 1; i--) {
+			if (!(period_len % (i * width))) {
+				nbytes = i * width;
+				break;
+			}
+		}
+		/* if no chance to get suitable burst size, use it as 1 */
+		if (i == 1)
+			nbytes = width;
+	}
+
 	iter = period_len / nbytes;
 
 	for (i = 0; i < sg_len; i++) {
@@ -674,6 +694,26 @@ static struct dma_async_tx_descriptor *fsl_edma3_prep_slave_sg(
 			dst_addr = fsl_chan->fsc.dev_addr;
 			soff = 0;
 			doff = 0;
+		}
+
+		/*
+		 * Choose the suitable burst length if sg_dma_len is not
+		 * multiple of burst length so that the whole transfer length is
+		 * multiple of minor loop(burst length).
+		 */
+		if (sg_dma_len(sg) % nbytes) {
+			u32 width = fsl_chan->fsc.addr_width;
+			int j;
+
+			for (j = fsl_chan->fsc.burst; j > 1; j--) {
+				if (!(sg_dma_len(sg) % (j * width))) {
+					nbytes = j * width;
+					break;
+				}
+			}
+			/* Set burst size as 1 if there's no suitable one */
+			if (j == 1)
+				nbytes = width;
 		}
 
 		iter = sg_dma_len(sg) / nbytes;

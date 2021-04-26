@@ -187,6 +187,7 @@
 			reg = <0 0x92400000 0 0x2000000>;
 		};
 
+
 		ramoops@94400000 {
 			compatible = "ramoops";
 			reg = <0 0x94400000 0 0x00100000>;
@@ -199,6 +200,12 @@
 		unmapped_region: unmapped {
 			 compatible = "imx-secure-ion-pool";
 			 reg = <0x0 0xE0000000 0 0x10000000>;
+		};
+
+		/* used only by tuning tool, can be removed for normal case */
+		isp0_reserved: isp0@94400000 {
+			no-map;
+			reg = <0 0x94400000 0 0x10000000>;
 		};
 	};
 
@@ -754,7 +761,6 @@
 						  <&clk IMX8MP_CLK_GIC>,
 						  <&clk IMX8MP_CLK_AUDIO_AHB>,
 						  <&clk IMX8MP_CLK_AUDIO_AXI_SRC>,
-						  <&clk IMX8MP_CLK_IPG_AUDIO_ROOT>,
 						  <&clk IMX8MP_AUDIO_PLL1>,
 						  <&clk IMX8MP_AUDIO_PLL2>,
 						  <&clk IMX8MP_VIDEO_PLL1>;
@@ -771,7 +777,6 @@
 						       <500000000>,
 						       <400000000>,
 						       <800000000>,
-						       <400000000>,
 						       <393216000>,
 						       <361267200>,
 						       <1039500000>;
@@ -1490,6 +1495,7 @@
 					clock-names = "core", "axi", "ahb";
 					reg = <0x32e30000 0x10000>;
 					interrupts = <GIC_SPI 100 IRQ_TYPE_LEVEL_HIGH>;
+					power-domains = <&ispdwp_pd>;
 					status = "disabled";
 				};
 
@@ -1497,9 +1503,9 @@
 					compatible = "fsl,imx8mp-isp";
 					reg = <0x32e10000 0x10000>;
 					interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP0_COR>,
-						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP0_AXI>,
-						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP0_AHB>;
+					clocks = <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP_COR>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP_AXI>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP_AHB>;
 					clock-names = "core", "axi", "ahb";
 					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_ISP>;
 					assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>;
@@ -1507,6 +1513,7 @@
 					power-domains = <&ispdwp_pd>;
 					id = <0>;
 					gpr = <&media_blk_ctrl>;
+					memory-region = <&isp0_reserved>;
 					status = "disabled";
 				};
 
@@ -1514,9 +1521,9 @@
 					compatible = "fsl,imx8mp-isp";
 					reg = <0x32e20000 0x10000>;
 					interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>;
-					clocks = <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP1_COR>,
-						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP1_AXI>,
-						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP1_AHB>;
+					clocks = <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP_COR>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP_AXI>,
+						 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_ISP_AHB>;
 					clock-names = "core", "axi", "ahb";
 					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_ISP>;
 					assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>;
@@ -1571,7 +1578,7 @@
 						      "media_blk_csi_pclk",
 						      "media_blk_csi_aclk";
 					assigned-clocks = <&clk IMX8MP_CLK_MEDIA_CAM2_PIX>;
-					assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_1000M>;
+					assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_266M>;
 					assigned-clock-rates = <266000000>;
 					bus-width = <4>;
 					csi-gpr = <&mediamix_gasket1>;
@@ -1807,8 +1814,8 @@
 				compatible = "fsl,imx8mp-sdma", "fsl,imx7d-sdma";
 				reg = <0x30e10000 0x10000>;
 				interrupts = <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clk IMX8MP_CLK_IPG_AUDIO_ROOT>,
-					 <&clk IMX8MP_CLK_AUDIO_AHB>;
+				clocks = <&clk IMX8MP_CLK_AUDIO_AHB_ROOT>,
+					 <&clk IMX8MP_CLK_AUDIO_AHB_ROOT>;
 				clock-names = "ipg", "ahb";
 				#dma-cells = <3>;
 				fsl,sdma-ram-script-name = "imx/sdma/sdma-imx7d.bin";
@@ -2072,6 +2079,35 @@
 				snps,dis-u2-freeclk-exists-quirk;
 				status = "disabled";
 			};
+		};
+
+		dma_apbh: dma-apbh@33000000 {
+			compatible = "fsl,imx7d-dma-apbh", "fsl,imx28-dma-apbh";
+			reg = <0x33000000 0x2000>;
+			interrupts = <GIC_SPI 12 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 12 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 12 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 12 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "gpmi0", "gpmi1", "gpmi2", "gpmi3";
+			#dma-cells = <1>;
+			dma-channels = <4>;
+			clocks = <&clk IMX8MP_CLK_NAND_USDHC_BUS_RAWNAND_CLK>;
+		};
+
+		gpmi: gpmi-nand@33002000{
+			compatible = "fsl,imx7d-gpmi-nand";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0x33002000 0x2000>, <0x33004000 0x4000>;
+			reg-names = "gpmi-nand", "bch";
+			interrupts = <GIC_SPI 14 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "bch";
+			clocks = <&clk IMX8MP_CLK_NAND_ROOT>,
+				<&clk IMX8MP_CLK_NAND_USDHC_BUS_RAWNAND_CLK>;
+			clock-names = "gpmi_io", "gpmi_bch_apb";
+			dmas = <&dma_apbh 0>;
+			dma-names = "rx-tx";
+			status = "disabled";
 		};
 
 		pcie: pcie@33800000 {

@@ -862,8 +862,6 @@ static int caam_probe(struct platform_device *pdev)
 	nprop = pdev->dev.of_node;
 
 	imx_soc_match = soc_device_match(caam_imx_soc_table);
-	if (!imx_soc_match)
-		return -EPROBE_DEFER;
 	caam_imx = (bool)imx_soc_match;
 
 #ifdef CONFIG_PM_SLEEP

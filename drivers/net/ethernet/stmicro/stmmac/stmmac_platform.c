@@ -754,6 +754,9 @@ static int stmmac_noirq_suspend(struct device *dev)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct stmmac_priv *priv = netdev_priv(ndev);
 
+	if (!netif_running(ndev))
+		return 0;
+
 	if (!device_may_wakeup(priv->device) || !priv->plat->pmt)
 		stmmac_bus_clks_enable(priv, false);
 
@@ -765,6 +768,9 @@ static int stmmac_noirq_resume(struct device *dev)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct stmmac_priv *priv = netdev_priv(ndev);
 	int ret = 0;
+
+	if (!netif_running(ndev))
+		return 0;
 
 	if (!device_may_wakeup(priv->device) || !priv->plat->pmt)
 		ret = stmmac_bus_clks_enable(priv, true);
