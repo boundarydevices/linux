@@ -530,6 +530,12 @@ static void of_pca9450_buck_dvs(struct platform_device *pdev,
 }
 #endif
 
+unsigned char limit_regs[] = {
+		PCA9450_BUCK1OUT_LIMIT,
+		PCA9450_BUCK2OUT_LIMIT,
+		PCA9450_BUCK3OUT_LIMIT,
+};
+
 static int pca9450_buck123_dvs_init(struct pca9450_pmic *pmic)
 {
 	struct pca9450 *pca9450 = pmic->mfd;
@@ -632,6 +638,10 @@ static irqreturn_t pca9450_pmic_interrupt(int irq, void *pwrsys)
 	return IRQ_HANDLED;
 }
 
+int regulator_map_voltage(struct regulator_dev *rdev, int min_uV,
+				 int max_uV);
+
+
 /*
  * @brief probe pca9450 regulator device
  * @param pdev pca9450 regulator platform device
@@ -673,6 +683,7 @@ static int pca9450_probe(struct platform_device *pdev)
 		struct regulator_init_data *init_data;
 		struct regulator_desc *desc;
 		struct regulator_dev *rdev;
+		u32 limit_uV = 0;
 
 		desc = &pmic->descs[i];
 		desc->name = pca9450_matches[i].name;
@@ -700,6 +711,23 @@ static int pca9450_probe(struct platform_device *pdev)
 			goto err;
 		}
 		pmic->rdev[i] = rdev;
+		if (config.of_node && (i < ARRAY_SIZE(limit_regs))) {
+			/* regulator has a hardware safety register to enforce limits */
+			if (!of_property_read_u32(config.of_node,
+				  "regulator-limit-microvolt", &limit_uV)) {
+				if (limit_uV) {
+					struct regulation_constraints *constraints = &init_data->constraints;
+					int sel;
+
+					sel = regulator_map_voltage(rdev, limit_uV, constraints->max_uV);
+					if (sel > 0) {
+						pca9450_reg_write(pca9450, limit_regs[i], sel);
+						pr_debug("%s:limit(0x%x) changed to 0x%x\n", __func__, limit_regs[i], sel);
+					}
+				}
+			}
+
+		}
 	}
 
 	/* Init sysfs registers */
