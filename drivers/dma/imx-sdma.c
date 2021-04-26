@@ -976,12 +976,8 @@ static irqreturn_t sdma_int_handler(int irq, void *dev_id)
 	struct sdma_engine *sdma = dev_id;
 	unsigned long stat;
 
-	if (sdma->drvdata->pm_runtime)
-		pm_runtime_get_sync(sdma->dev);
-	else {
-		clk_enable(sdma->clk_ipg);
-		clk_enable(sdma->clk_ahb);
-	}
+	clk_enable(sdma->clk_ipg);
+	clk_enable(sdma->clk_ahb);
 
 	stat = readl_relaxed(sdma->regs + SDMA_H_INTR);
 	writel_relaxed(stat, sdma->regs + SDMA_H_INTR);
@@ -1012,13 +1008,8 @@ static irqreturn_t sdma_int_handler(int irq, void *dev_id)
 		__clear_bit(channel, &stat);
 	}
 
-	if (sdma->drvdata->pm_runtime) {
-		pm_runtime_mark_last_busy(sdma->dev);
-		pm_runtime_put_autosuspend(sdma->dev);
-	} else {
-		clk_disable(sdma->clk_ipg);
-		clk_disable(sdma->clk_ahb);
-	}
+	clk_disable(sdma->clk_ipg);
+	clk_disable(sdma->clk_ahb);
 
 	return IRQ_HANDLED;
 }
@@ -1275,9 +1266,6 @@ static int sdma_terminate_all(struct dma_chan *chan)
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
 	unsigned long flags;
 
-	if (sdmac->sdma->drvdata->pm_runtime)
-		pm_runtime_get_sync(sdmac->sdma->dev);
-
 	spin_lock_irqsave(&sdmac->vc.lock, flags);
 
 	sdma_disable_channel(chan);
@@ -1297,10 +1285,8 @@ static int sdma_terminate_all(struct dma_chan *chan)
 
 	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
 
-	if (sdmac->sdma->drvdata->pm_runtime) {
-		pm_runtime_mark_last_busy(sdmac->sdma->dev);
-		pm_runtime_put_autosuspend(sdmac->sdma->dev);
-	}
+	if (sdmac->sdma->drvdata->pm_runtime)
+		pm_runtime_allow(sdmac->sdma->dev);
 
 	return 0;
 }
@@ -2092,17 +2078,12 @@ static void sdma_issue_pending(struct dma_chan *chan)
 	unsigned long flags;
 
 	if (sdmac->sdma->drvdata->pm_runtime)
-		pm_runtime_get_sync(sdmac->sdma->dev);
+		pm_runtime_forbid(sdmac->sdma->dev);
 
 	spin_lock_irqsave(&sdmac->vc.lock, flags);
 	if (vchan_issue_pending(&sdmac->vc) && !sdmac->desc)
 		sdma_start_desc(sdmac);
 	spin_unlock_irqrestore(&sdmac->vc.lock, flags);
-
-	if (sdmac->sdma->drvdata->pm_runtime) {
-		pm_runtime_mark_last_busy(sdmac->sdma->dev);
-		pm_runtime_put_autosuspend(sdmac->sdma->dev);
-	}
 }
 
 #define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V1	34
