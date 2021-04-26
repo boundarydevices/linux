@@ -1,2 +1,5 @@
 # include OWNERS from the authoritative android-mainline branch
 include kernel/common:android-mainline:/OWNERS
+dimitrysh@google.com
+aldend@google.com
+zhangmax@google.com
