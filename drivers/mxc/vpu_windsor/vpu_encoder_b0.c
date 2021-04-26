@@ -2663,7 +2663,7 @@ static int transfer_stream_output(struct vpu_ctx *ctx,
 static int append_empty_end_frame(struct vb2_data_req *p_data_req)
 {
 	struct vb2_buffer *vb = NULL;
-	const u8 pattern[] = VPU_STRM_END_PATTERN;
+	const u8 pattern[] = VPU_STRM_END_OF_SEQ;
 	void *pdst;
 
 	WARN_ON(!p_data_req);
