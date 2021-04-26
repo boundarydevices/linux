@@ -1031,6 +1031,7 @@
 				regulator-compatible = "buck2";
 				regulator-min-microvolt = <600000>;
 				regulator-max-microvolt = <2187500>;
+				regulator-limit-microvolt = <1025000>;
 				regulator-boot-on;
 				regulator-always-on;
 				regulator-ramp-delay = <3125>;
