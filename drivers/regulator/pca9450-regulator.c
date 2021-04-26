@@ -939,6 +939,15 @@ static irqreturn_t pca9450_irq_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+unsigned char limit_regs[] = {
+	PCA9450_REG_BUCK1OUT_LIMIT,
+	PCA9450_REG_BUCK2OUT_LIMIT,
+	PCA9450_REG_BUCK3OUT_LIMIT,
+};
+
+int regulator_map_voltage(struct regulator_dev *rdev, int min_uV,
+				 int max_uV);
+
 static int pca9450_i2c_probe(struct i2c_client *i2c,
 			     const struct i2c_device_id *id)
 {
@@ -1022,6 +1031,7 @@ static int pca9450_i2c_probe(struct i2c_client *i2c,
 		const struct regulator_desc *desc;
 		struct regulator_dev *rdev;
 		const struct pca9450_regulator_desc *r;
+		u32 limit_uV = 0;
 
 		if ((type == PCA9450_TYPE_PCA9451A || type == PCA9450_TYPE_PCA9452) &&
 		    !strcmp((&regulator_desc[i])->desc.name, "buck1") && pmic_trim) {
@@ -1049,6 +1059,22 @@ static int pca9450_i2c_probe(struct i2c_client *i2c,
 				"Failed to register regulator(%s): %d\n",
 				desc->name, ret);
 			return ret;
+		}
+		if (config.of_node && (i < ARRAY_SIZE(limit_regs))) {
+			/* regulator has a hardware safety register to enforce limits */
+			if (!of_property_read_u32(config.of_node,
+				  "regulator-limit-microvolt", &limit_uV)) {
+				if (limit_uV) {
+					int sel;
+
+					sel = regulator_map_voltage(rdev, limit_uV, limit_uV + 50000);
+					if (sel > 0) {
+						regmap_write(pca9450->regmap, limit_regs[i], sel);
+						pr_debug("%s:limit(0x%x) changed to 0x%x\n", __func__, limit_regs[i], sel);
+					}
+				}
+			}
+
 		}
 	}
 
