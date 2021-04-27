@@ -33,6 +33,7 @@ module_param(use_dma, bool, 0644);
 MODULE_PARM_DESC(use_dma, "Enable usage of DMA when available (default)");
 
 #define MXC_RPM_TIMEOUT		2000 /* 2000ms */
+#define MXC_SPI_DEFAULT_SPEED	500000 /* 500KHz */
 
 #define MXC_CSPIRXDATA		0x00
 #define MXC_CSPITXDATA		0x04
@@ -639,8 +640,11 @@ static int mx51_ecspi_prepare_transfer(struct spi_imx_data *spi_imx,
 	/* set clock speed */
 	ctrl &= ~(0xf << MX51_ECSPI_CTRL_POSTDIV_OFFSET |
 		  0xf << MX51_ECSPI_CTRL_PREDIV_OFFSET);
-	ctrl |= mx51_ecspi_clkdiv(spi_imx, spi_imx->spi_bus_clk, &clk);
-	spi_imx->spi_bus_clk = clk;
+
+	if (!spi_imx->slave_mode) {
+		ctrl |= mx51_ecspi_clkdiv(spi_imx, spi_imx->spi_bus_clk, &clk);
+		spi_imx->spi_bus_clk = clk;
+	}
 
 	/*
 	 * ERR009165: work in XHC mode instead of SMC as PIO on the chips
@@ -748,9 +752,11 @@ static int mx31_prepare_transfer(struct spi_imx_data *spi_imx,
 	unsigned int reg = MX31_CSPICTRL_ENABLE | MX31_CSPICTRL_MASTER;
 	unsigned int clk;
 
-	reg |= spi_imx_clkdiv_2(spi_imx->spi_clk, spi_imx->spi_bus_clk, &clk) <<
-		MX31_CSPICTRL_DR_SHIFT;
-	spi_imx->spi_bus_clk = clk;
+	if (!spi_imx->slave_mode) {
+		reg |= spi_imx_clkdiv_2(spi_imx->spi_clk, spi_imx->spi_bus_clk, &clk) <<
+			MX31_CSPICTRL_DR_SHIFT;
+		spi_imx->spi_bus_clk = clk;
+	}
 
 	if (is_imx35_cspi(spi_imx)) {
 		reg |= (spi_imx->bits_per_word - 1) << MX35_CSPICTRL_BL_SHIFT;
@@ -853,9 +859,11 @@ static int mx21_prepare_transfer(struct spi_imx_data *spi_imx,
 	unsigned int max = is_imx27_cspi(spi_imx) ? 16 : 18;
 	unsigned int clk;
 
-	reg |= spi_imx_clkdiv_1(spi_imx->spi_clk, spi_imx->spi_bus_clk, max, &clk)
-		<< MX21_CSPICTRL_DR_SHIFT;
-	spi_imx->spi_bus_clk = clk;
+	if (!spi_imx->slave_mode) {
+		reg |= spi_imx_clkdiv_1(spi_imx->spi_clk, spi_imx->spi_bus_clk, max, &clk)
+			<< MX21_CSPICTRL_DR_SHIFT;
+		spi_imx->spi_bus_clk = clk;
+	}
 
 	reg |= spi_imx->bits_per_word - 1;
 
@@ -927,9 +935,11 @@ static int mx1_prepare_transfer(struct spi_imx_data *spi_imx,
 	unsigned int reg = MX1_CSPICTRL_ENABLE | MX1_CSPICTRL_MASTER;
 	unsigned int clk;
 
-	reg |= spi_imx_clkdiv_2(spi_imx->spi_clk, spi_imx->spi_bus_clk, &clk) <<
-		MX1_CSPICTRL_DR_SHIFT;
-	spi_imx->spi_bus_clk = clk;
+	if (!spi_imx->slave_mode) {
+		reg |= spi_imx_clkdiv_2(spi_imx->spi_clk, spi_imx->spi_bus_clk, &clk) <<
+			MX1_CSPICTRL_DR_SHIFT;
+		spi_imx->spi_bus_clk = clk;
+	}
 
 	reg |= spi_imx->bits_per_word - 1;
 
@@ -1540,14 +1550,14 @@ static int spi_imx_transfer(struct spi_device *spi,
 {
 	struct spi_imx_data *spi_imx = spi_master_get_devdata(spi->master);
 
-	transfer->effective_speed_hz = spi_imx->spi_bus_clk;
-
 	/* flush rxfifo before transfer */
 	while (spi_imx->devtype_data->rx_available(spi_imx))
 		readl(spi_imx->base + MXC_CSPIRXDATA);
 
 	if (spi_imx->slave_mode)
 		return spi_imx_pio_transfer_slave(spi, transfer);
+
+	transfer->effective_speed_hz = spi_imx->spi_bus_clk;
 
 	if (spi_imx->usedma)
 		return spi_imx_dma_transfer(spi_imx, transfer);
@@ -1648,6 +1658,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 	spi_imx->bitbang.master = master;
 	spi_imx->dev = &pdev->dev;
 	spi_imx->slave_mode = slave_mode;
+	spi_imx->spi_bus_clk = MXC_SPI_DEFAULT_SPEED;
 
 	spi_imx->devtype_data = devtype_data;
 
