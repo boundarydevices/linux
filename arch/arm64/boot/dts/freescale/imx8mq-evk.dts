@@ -647,6 +647,7 @@
 				 <&clk IMX8MQ_SYS2_PLL_250M>;
 	vph-supply = <&vgen5_reg>;
 	hard-wired = <1>;
+	l1ss-disabled;
 	status = "okay";
 };
 
@@ -669,6 +670,7 @@
 				 <&clk IMX8MQ_SYS2_PLL_250M>;
 	vpcie-supply = <&reg_pcie1>;
 	vph-supply = <&vgen5_reg>;
+	l1ss-disabled;
 	status = "okay";
 
 	wifi_wake_host {
