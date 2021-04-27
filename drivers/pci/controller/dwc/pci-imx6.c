@@ -275,6 +275,7 @@ struct imx6_pcie {
 #define IMX8MM_GPR_PCIE_POWER_OFF		BIT(17)
 #define IMX8MM_GPR_PCIE_SSC_EN			BIT(16)
 
+static int imx6_pcie_cz_enabled;
 static void imx6_pcie_ltssm_disable(struct device *dev);
 
 static bool imx6_pcie_readable_reg(struct device *dev, unsigned int reg)
@@ -1802,7 +1803,7 @@ static int imx6_pcie_start_link(struct dw_pcie *pci)
 	 * started in Gen2 mode, there is a possibility the devices on the
 	 * bus will not be detected at all.  This happens with PCIe switches.
 	 */
-	if (!IS_ENABLED(CONFIG_PCI_IMX6_COMPLIANCE_TEST)) {
+	if (!imx6_pcie_cz_enabled) {
 		tmp = dw_pcie_readl_dbi(pci, offset + PCI_EXP_LNKCAP);
 		tmp &= ~PCI_EXP_LNKCAP_SLS;
 		tmp |= PCI_EXP_LNKCAP_SLS_2_5GB;
@@ -1880,7 +1881,7 @@ err_reset_phy:
 		dw_pcie_readl_dbi(pci, PCIE_PORT_DEBUG0),
 		dw_pcie_readl_dbi(pci, PCIE_PORT_DEBUG1));
 	imx6_pcie_reset_phy(imx6_pcie);
-	if (!IS_ENABLED(CONFIG_PCI_IMX6_COMPLIANCE_TEST)) {
+	if (!imx6_pcie_cz_enabled) {
 		imx6_pcie_clk_disable(imx6_pcie);
 		if (imx6_pcie->vpcie != NULL)
 			regulator_disable(imx6_pcie->vpcie);
@@ -2309,6 +2310,17 @@ static const struct dev_pm_ops imx6_pcie_pm_ops = {
 static const struct dw_pcie_host_ops imx6_pcie_host_ops = {
 };
 
+static int __init imx6_pcie_compliance_test_enable(char *str)
+{
+	if (!strcmp(str, "yes")) {
+		pr_info("Enable the i.MX PCIe compliance tests mode.\n");
+		imx6_pcie_cz_enabled = 1;
+	}
+	return 1;
+}
+
+__setup("pcie_cz_enabled=", imx6_pcie_compliance_test_enable);
+
 static int imx6_pcie_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -2653,8 +2665,8 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 
 		ret = dw_pcie_host_init(&pci->pp);
 		if (ret < 0) {
-			if (IS_ENABLED(CONFIG_PCI_IMX6_COMPLIANCE_TEST)) {
-				/* The PCIE PDs and clocks shouldn't be turned off. */
+			if (imx6_pcie_cz_enabled) {
+				/* The PCIE clocks wouldn't be turned off */
 				dev_info(dev, "To do the compliance tests.\n");
 				ret = 0;
 			} else {

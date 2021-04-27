@@ -106,14 +106,6 @@ config PCI_IMX6_HOST
 	  Enables support for the PCIe controller host mode in the
 	  iMX6/7/8 SoCs to work in endpoint mode.
 
-config PCI_IMX6_COMPLIANCE_TEST
-	bool "Enable pcie compliance tests on imx6"
-	depends on PCI_IMX6_HOST
-	default n
-	help
-	  Say Y here if you want do the compliance tests on imx6 pcie rc found
-	  on FSL iMX SoCs.
-
 config PCI_IMX6_EP
 	bool "Freescale i.MX6/7/8 PCIe controller endpoint mode"
 	depends on ARCH_MXC || COMPILE_TEST
