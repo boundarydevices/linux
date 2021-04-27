@@ -681,6 +681,8 @@ static int at803x_config_init(struct phy_device *phydev)
 			return ret;
 	}
 
+	at803x_debug_reg_mask(phydev, 0xB, BIT(15), 0);
+
 	return 0;
 }
 
