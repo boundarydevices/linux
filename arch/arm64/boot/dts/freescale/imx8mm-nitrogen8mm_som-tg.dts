@@ -41,6 +41,16 @@
 		>;
 	};
 
+	pinctrl_mipi_ls050t1sx12: mipi-ls050t1sx12grp {
+		fsl,pins = <
+		/* reset actually, but code calls it enable */
+#define GP_MIPI_LS050_ENABLE	<&gpio1 1 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x100)
+#define GP_MIPI_AVDD_ENABLE	<&gpio1 11 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO11_GPIO1_IO11, 0x100)
+		>;
+	};
+
 	pinctrl_uart3: uart3grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_ECSPI1_SCLK_UART3_DCE_RX, 0x140)
