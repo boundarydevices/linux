@@ -299,6 +299,12 @@ static struct mx6s_fmt formats[] = {
 		.mbus_code	= MEDIA_BUS_FMT_AYUV8_1X32,
 		.bpp		= 4,
 	}, {
+		.name		= "GRAY8",
+		.fourcc		= V4L2_PIX_FMT_GREY,
+		.pixelformat	= V4L2_PIX_FMT_GREY,
+		.mbus_code	= MEDIA_BUS_FMT_Y8_1X8,
+		.bpp		= 1,
+	}, {
 		.name		= "RAWRGB8 (SBGGR8)",
 		.fourcc		= V4L2_PIX_FMT_SBGGR8,
 		.pixelformat	= V4L2_PIX_FMT_SBGGR8,
@@ -914,6 +920,7 @@ static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 		cr18 = BIT_MIPI_DATA_FORMAT_RAW8;
 		width = pix->width * 3;
 		break;
+	case V4L2_PIX_FMT_GREY:
 	case V4L2_PIX_FMT_SRGGB8:
 	case V4L2_PIX_FMT_SGRBG8:
 	case V4L2_PIX_FMT_SBGGR8:
