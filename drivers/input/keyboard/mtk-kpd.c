@@ -33,6 +33,7 @@ struct mtk_keypad {
 	void __iomem *base;
 	u32 n_rows;
 	u32 n_cols;
+	u32 row_shift;
 	bool double_keys;
 	DECLARE_BITMAP(keymap_state, MTK_KPD_NUM_BITS);
 };
@@ -95,7 +96,7 @@ static irqreturn_t kpd_irq_handler(int irq, void *dev_id)
 		bitnr_to_col_row(keypad->double_keys, bit_nr, &col, &row);
 
 		/* 32bit register only use low 16bit as keypad mem register */
-		code = keycode[MATRIX_SCAN_CODE(row, col, 0)];
+		code = keycode[MATRIX_SCAN_CODE(row, col, keypad->row_shift)];
 
 		input_report_key(keypad->input_dev, code, pressed);
 		input_sync(keypad->input_dev);
@@ -179,6 +180,7 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 
 	keypad->double_keys =
 		device_property_read_bool(&pdev->dev, "mediatek,double-keys");
+	keypad->row_shift = get_count_order(keypad->n_cols);
 
 	dev_dbg(&pdev->dev, "n_row=%d n_col=%d debounce=%d\n",
 		keypad->n_rows, keypad->n_cols, debounce);
