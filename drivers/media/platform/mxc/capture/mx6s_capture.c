@@ -1435,6 +1435,10 @@ static int mx6s_vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 	pix->sizeimage = fmt->bpp * pix->height * pix->width;
 	pix->bytesperline = fmt->bpp * pix->width;
 
+	pix->colorspace = V4L2_COLORSPACE_SRGB;
+	pix->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(pix->colorspace);
+	pix->quantization = V4L2_QUANTIZATION_FULL_RANGE;
+
 	return ret;
 }
 
