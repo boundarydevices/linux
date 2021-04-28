@@ -1239,7 +1239,7 @@ static int fsl_xcvr_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = imx_pcm_platform_register(dev);
+	ret = devm_snd_dmaengine_pcm_register(dev, NULL, 0);
 	if (ret) {
 		dev_err(dev, "failed to pcm register\n");
 		return ret;
