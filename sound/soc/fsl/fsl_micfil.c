@@ -2354,11 +2354,7 @@ static int fsl_micfil_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	if (micfil->soc->imx)
-		ret = imx_pcm_platform_register(&pdev->dev);
-	else
-		ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL, 0);
-
+	ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL, 0);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to pcm register\n");
 		return ret;
