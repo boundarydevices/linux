@@ -21,14 +21,14 @@ static const struct mdp_format mdp_formats[] = {
 		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
 	}, {
 		.pixelformat	= V4L2_PIX_FMT_RGB565X,
-		.mdp_color	= MDP_COLOR_RGB565,
+		.mdp_color	= MDP_COLOR_BGR565,
 		.depth		= { 16 },
 		.row_depth	= { 16 },
 		.num_planes	= 1,
 		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
 	}, {
 		.pixelformat	= V4L2_PIX_FMT_RGB565,
-		.mdp_color	= MDP_COLOR_BGR565,
+		.mdp_color	= MDP_COLOR_RGB565,
 		.depth		= { 16 },
 		.row_depth	= { 16 },
 		.num_planes	= 1,
