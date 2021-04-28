@@ -846,8 +846,8 @@ free_portal:
 unregister_netdev:
 #ifdef CONFIG_FSL_DPAA2_MAC_NETDEVS
 	unregister_netdev(net_dev);
-#endif
 free_netdev:
+#endif
 	free_netdev(net_dev);
 
 	return err;
