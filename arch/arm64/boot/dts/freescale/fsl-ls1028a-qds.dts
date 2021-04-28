@@ -441,7 +441,7 @@
 	status = "okay";
 };
 
-&lpuart0 {
+&lpuart1 {
 	status = "okay";
 };
 
