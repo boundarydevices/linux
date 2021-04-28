@@ -25,6 +25,9 @@
 #define MT6323_RTC_BASE		0x8000
 #define MT6323_RTC_SIZE		0x40
 
+#define MT6357_RTC_BASE		0x0588
+#define MT6357_RTC_SIZE		0x3c
+
 #define MT6358_RTC_BASE		0x0588
 #define MT6358_RTC_SIZE		0x3c
 
@@ -37,6 +40,11 @@
 static const struct resource mt6323_rtc_resources[] = {
 	DEFINE_RES_MEM(MT6323_RTC_BASE, MT6323_RTC_SIZE),
 	DEFINE_RES_IRQ(MT6323_IRQ_STATUS_RTC),
+};
+
+static const struct resource mt6357_rtc_resources[] = {
+	DEFINE_RES_MEM(MT6357_RTC_BASE, MT6357_RTC_SIZE),
+	DEFINE_RES_IRQ(MT6357_IRQ_RTC),
 };
 
 static const struct resource mt6358_rtc_resources[] = {
@@ -105,6 +113,11 @@ static const struct mfd_cell mt6323_devs[] = {
 static const struct mfd_cell mt6357_devs[] = {
 	{
 		.name = "mt6357-regulator",
+	}, {
+		.name = "mt6357-rtc",
+		.num_resources = ARRAY_SIZE(mt6357_rtc_resources),
+		.resources = mt6357_rtc_resources,
+		.of_compatible = "mediatek,mt6357-rtc",
 	}, {
 		.name = "mtk-pmic-keys",
 		.num_resources = ARRAY_SIZE(mt6357_keys_resources),
