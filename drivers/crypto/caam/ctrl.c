@@ -81,6 +81,14 @@ static void build_deinstantiation_desc(u32 *desc, int handle)
 	append_jump(desc, JUMP_CLASS_CLASS1 | JUMP_TYPE_HALT);
 }
 
+static const struct of_device_id imx8m_machine_match[] = {
+	{ .compatible = "fsl,imx8mm", },
+	{ .compatible = "fsl,imx8mn", },
+	{ .compatible = "fsl,imx8mp", },
+	{ .compatible = "fsl,imx8mq", },
+	{ }
+};
+
 /*
  * run_descriptor_deco0 - runs a descriptor on DECO0, under direct control of
  *			  the software (no JR/QI used).
@@ -862,6 +870,9 @@ static int caam_probe(struct platform_device *pdev)
 	nprop = pdev->dev.of_node;
 
 	imx_soc_match = soc_device_match(caam_imx_soc_table);
+	if (!imx_soc_match && of_match_node(imx8m_machine_match, of_root))
+		return -EPROBE_DEFER;
+
 	caam_imx = (bool)imx_soc_match;
 
 #ifdef CONFIG_PM_SLEEP
