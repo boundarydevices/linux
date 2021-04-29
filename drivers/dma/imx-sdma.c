@@ -489,15 +489,13 @@ struct sdma_engine {
 	struct gen_pool			*iram_pool;
 	bool				fw_loaded;
 	u32				fw_fail;
+	u8				*fw_data;
 	unsigned short			ram_code_start;
 };
 
 static int sdma_config_write(struct dma_chan *chan,
 		       struct dma_slave_config *dmaengine_cfg,
 		       enum dma_transfer_direction direction);
-
-static int sdma_get_firmware(struct sdma_engine *sdma,
-		const char *fw_name);
 
 static struct sdma_driver_data sdma_imx31 = {
 	.chnenbl0 = SDMA_CHNENBL0_IMX31,
@@ -782,17 +780,54 @@ static int sdma_run_channel0(struct sdma_engine *sdma)
 	return ret;
 }
 
-static int sdma_load_script(struct sdma_engine *sdma, void *buf, int size,
-		u32 address)
+#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V1	34
+#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V2	38
+#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V3	47
+#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V4	48
+
+static void sdma_add_scripts(struct sdma_engine *sdma,
+		const struct sdma_script_start_addrs *addr)
+{
+	s32 *addr_arr = (u32 *)addr;
+	s32 *saddr_arr = (u32 *)sdma->script_addrs;
+	int i;
+
+	/* use the default firmware in ROM if missing external firmware */
+	if (!sdma->script_number)
+		sdma->script_number = SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V1;
+
+	if (sdma->script_number > sizeof(struct sdma_script_start_addrs)
+				  / sizeof(s32)) {
+		dev_err(sdma->dev,
+			"SDMA script number %d not match with firmware.\n",
+			sdma->script_number);
+		return;
+	}
+
+	for (i = 0; i < sdma->script_number; i++)
+		if (addr_arr[i] > 0)
+			saddr_arr[i] = addr_arr[i];
+}
+
+static int sdma_load_script(struct sdma_engine *sdma)
 {
 	struct sdma_buffer_descriptor *bd0 = sdma->bd0;
+	const struct sdma_script_start_addrs *addr;
+	struct sdma_firmware_header *header;
+	unsigned short *ram_code;
 	void *buf_virt;
 	dma_addr_t buf_phys;
 	int ret;
 	unsigned long flags;
 
-	buf_virt = dma_alloc_coherent(sdma->dev, size, &buf_phys,
-					      GFP_KERNEL);
+	header = (struct sdma_firmware_header *)sdma->fw_data;
+
+	addr = (void *)header + header->script_addrs_start;
+	ram_code = (void *)header + header->ram_code_start;
+	sdma->ram_code_start = header->ram_code_start;
+
+	buf_virt = dma_alloc_coherent(sdma->dev, header->ram_code_size,
+				      &buf_phys, GFP_KERNEL);
 	if (!buf_virt)
 		return -ENOMEM;
 
@@ -800,18 +835,25 @@ static int sdma_load_script(struct sdma_engine *sdma, void *buf, int size,
 
 	bd0->mode.command = C0_SETPM;
 	bd0->mode.status = BD_DONE | BD_WRAP | BD_EXTD;
-	bd0->mode.count = size / 2;
+	bd0->mode.count = header->ram_code_size / 2;
 	bd0->buffer_addr = buf_phys;
-	bd0->ext_buffer_addr = address;
+	bd0->ext_buffer_addr = addr->ram_code_start_addr;
 
-	memcpy(buf_virt, buf, size);
+	memcpy(buf_virt, ram_code, header->ram_code_size);
 
 	ret = sdma_run_channel0(sdma);
 
 	spin_unlock_irqrestore(&sdma->channel_0_lock, flags);
 
-	dma_free_coherent(sdma->dev, size, buf_virt, buf_phys);
+	dma_free_coherent(sdma->dev, header->ram_code_size, buf_virt, buf_phys);
 
+	sdma_add_scripts(sdma, addr);
+
+	sdma->fw_loaded = true;
+
+	dev_info_once(sdma->dev, "loaded firmware %d.%d\n",
+			header->version_major,
+			header->version_minor);
 	return ret;
 }
 
@@ -1586,9 +1628,8 @@ static int sdma_runtime_resume(struct device *dev)
 	/* Initializes channel's priorities */
 	sdma_set_channel_priority(&sdma->channel[0], 7);
 
-	ret = sdma_get_firmware(sdma, sdma->fw_name);
-	if (ret)
-		dev_warn(sdma->dev, "failed to get firmware.\n");
+	if (sdma_load_script(sdma))
+		dev_warn(sdma->dev, "failed to load script.\n");
 
 	sdma->is_on = true;
 
@@ -2101,41 +2142,10 @@ static void sdma_issue_pending(struct dma_chan *chan)
 	}
 }
 
-#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V1	34
-#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V2	38
-#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V3	47
-#define SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V4	48
-
-static void sdma_add_scripts(struct sdma_engine *sdma,
-		const struct sdma_script_start_addrs *addr)
-{
-	s32 *addr_arr = (u32 *)addr;
-	s32 *saddr_arr = (u32 *)sdma->script_addrs;
-	int i;
-
-	/* use the default firmware in ROM if missing external firmware */
-	if (!sdma->script_number)
-		sdma->script_number = SDMA_SCRIPT_ADDRS_ARRAY_SIZE_V1;
-
-	if (sdma->script_number > sizeof(struct sdma_script_start_addrs)
-				  / sizeof(s32)) {
-		dev_err(sdma->dev,
-			"SDMA script number %d not match with firmware.\n",
-			sdma->script_number);
-		return;
-	}
-
-	for (i = 0; i < sdma->script_number; i++)
-		if (addr_arr[i] > 0)
-			saddr_arr[i] = addr_arr[i];
-}
-
 static void sdma_load_firmware(const struct firmware *fw, void *context)
 {
 	struct sdma_engine *sdma = context;
 	const struct sdma_firmware_header *header;
-	const struct sdma_script_start_addrs *addr;
-	unsigned short *ram_code;
 
 	if (!fw) {
 		/* Load firmware once more time if timeout */
@@ -2179,22 +2189,18 @@ static void sdma_load_firmware(const struct firmware *fw, void *context)
 		goto err_firmware;
 	}
 
-	addr = (void *)header + header->script_addrs_start;
-	ram_code = (void *)header + header->ram_code_start;
-	sdma->ram_code_start = header->ram_code_start;
+	dev_info(sdma->dev, "firmware found.\n");
 
-	/* download the RAM image for SDMA */
-	sdma_load_script(sdma, ram_code,
-			header->ram_code_size,
-			addr->ram_code_start_addr);
+	if (!sdma->fw_data) {
+		sdma->fw_data = kmalloc(fw->size, GFP_KERNEL);
+		if (!sdma->fw_data)
+			goto err_firmware;
 
-	sdma_add_scripts(sdma, addr);
+		memcpy(sdma->fw_data, fw->data, fw->size);
 
-	sdma->fw_loaded = true;
-
-	dev_info_once(sdma->dev, "loaded firmware %d.%d\n",
-			header->version_major,
-			header->version_minor);
+		if (!sdma->drvdata->pm_runtime)
+			pm_runtime_get_sync(sdma->dev);
+	}
 
 err_firmware:
 	release_firmware(fw);
@@ -2534,6 +2540,10 @@ static int sdma_probe(struct platform_device *pdev)
 			dev_warn(&pdev->dev, "failed to get firmware name\n");
 		else
 			sdma->fw_name = fw_name;
+
+		ret = sdma_get_firmware(sdma, sdma->fw_name);
+		if (ret)
+			dev_warn(sdma->dev, "failed to get firmware.\n");
 	}
 
 	/* enable autosuspend for pm_runtime */
@@ -2545,8 +2555,6 @@ static int sdma_probe(struct platform_device *pdev)
 	}
 
 	pm_runtime_enable(&pdev->dev);
-	if (!sdma->drvdata->pm_runtime)
-		pm_runtime_get_sync(&pdev->dev);
 
 	return 0;
 
@@ -2569,6 +2577,7 @@ static int sdma_remove(struct platform_device *pdev)
 	devm_free_irq(&pdev->dev, sdma->irq, sdma);
 	dma_async_device_unregister(&sdma->dma_device);
 	kfree(sdma->script_addrs);
+	kfree(sdma->fw_data);
 	clk_unprepare(sdma->clk_ahb);
 	clk_unprepare(sdma->clk_ipg);
 	/* Kill the tasklet */
