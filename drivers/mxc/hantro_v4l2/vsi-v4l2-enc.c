@@ -448,7 +448,6 @@ static int vsi_enc_try_fmt(struct file *file, void *prv, struct v4l2_format *f)
 		return -EINVAL;
 	if (vsi_find_format(ctx, f) == NULL)
 		return -EINVAL;
-	f->fmt.pix_mp.colorspace = V4L2_COLORSPACE_REC709;
 
 	return 0;
 }
@@ -577,7 +576,7 @@ static int vsi_enc_encoder_cmd(struct file *file, void *fh, struct v4l2_encoder_
 		if (ctx->status == ENC_STATUS_STOPPED ||
 			ctx->status == ENC_STATUS_EOS) {
 			vb2_streamon(&ctx->input_que, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
-			vb2_streamon(&ctx->input_que, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
+			vb2_streamon(&ctx->output_que, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
 			ret = vsi_enc_trystartenc(ctx);
 		}
 		break;
