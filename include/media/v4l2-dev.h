@@ -33,6 +33,7 @@
  * @VFL_TYPE_MAX:	number of VFL types, must always be last in the enum
  */
 enum vfl_devnode_type {
+	VFL_TYPE_VIDEO		= 0,
 	VFL_TYPE_GRABBER	= 0,
 	VFL_TYPE_VBI,
 	VFL_TYPE_RADIO,
