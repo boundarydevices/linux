@@ -1633,7 +1633,9 @@ static int sdma_runtime_resume(struct device *dev)
 	/* Initializes channel's priorities */
 	sdma_set_channel_priority(&sdma->channel[0], 7);
 
-	if (sdma_load_script(sdma))
+	if (!sdma->fw_data)
+		dev_dbg(sdma->dev, "firmware not ready.\n");
+	else if (sdma_load_script(sdma))
 		dev_warn(sdma->dev, "failed to load script.\n");
 
 	sdma->is_on = true;
@@ -1698,6 +1700,20 @@ static int sdma_alloc_chan_resources(struct dma_chan *chan)
 static void sdma_free_chan_resources(struct dma_chan *chan)
 {
 	struct sdma_channel *sdmac = to_sdma_chan(chan);
+
+	/*
+	 * Per fw_data is null which means firmware not loaded and sdma
+	 * not initialized, directly return. This happens in below case:
+	 *
+	 * -- driver request dma chan in probe phase, after that driver
+	 *    fall into -EPROBE_DEFER and free channel again without
+	 *    anything else about dma, so just return directly, otherwise
+	 *    kernel could hang since dma hardware not ready if drvdata->
+	 *    pm_runtime is false.
+	 *
+	 */
+	if (unlikely(!sdmac->sdma->fw_data))
+		return;
 
 	if (sdmac->sdma->drvdata->pm_runtime)
 		pm_runtime_get_sync(sdmac->sdma->dev);
