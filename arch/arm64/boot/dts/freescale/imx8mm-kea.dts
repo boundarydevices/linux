@@ -1305,7 +1305,7 @@
 
 &usbotg2 {
 	dr_mode = "host";
-	over-current-active-low;
+	disable-over-current;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg2>;
 	power-active-high;
