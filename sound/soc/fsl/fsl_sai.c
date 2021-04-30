@@ -646,16 +646,24 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
 				sai->audio_config[tx].words_per_fifo = min(slots, channels);
 				sai->audio_config[tx].dst_fifo_num = pins;
 				sai->audio_config[tx].dst_fifo_off = dl_cfg[dl_cfg_idx].offset[tx];
-				sai->dma_params_tx.maxburst = FSL_SAI_MAXBURST_TX * pins;
+				sai->dma_params_tx.maxburst = sai->audio_config[tx].words_per_fifo * pins;
 				sai->dma_params_tx.peripheral_config = &sai->audio_config[tx];
 				sai->dma_params_tx.peripheral_size = sizeof(sai->audio_config[tx]);
+
+				regmap_update_bits(sai->regmap, FSL_SAI_TCR1(ofs),
+						   FSL_SAI_CR1_RFW_MASK(sai->soc_data->fifo_depth),
+						   sai->soc_data->fifo_depth - sai->dma_params_tx.maxburst);
 			} else {
 				sai->audio_config[tx].words_per_fifo = min(slots, channels);
 				sai->audio_config[tx].src_fifo_num = pins;
 				sai->audio_config[tx].src_fifo_off = dl_cfg[dl_cfg_idx].offset[tx];
-				sai->dma_params_rx.maxburst = FSL_SAI_MAXBURST_RX * pins;
+				sai->dma_params_rx.maxburst = sai->audio_config[tx].words_per_fifo * pins;
 				sai->dma_params_rx.peripheral_config = &sai->audio_config[tx];
 				sai->dma_params_rx.peripheral_size = sizeof(sai->audio_config[tx]);
+
+				regmap_update_bits(sai->regmap, FSL_SAI_RCR1(ofs),
+						   FSL_SAI_CR1_RFW_MASK(sai->soc_data->fifo_depth),
+						   sai->dma_params_rx.maxburst - 1);
 			}
 		}
 
