@@ -2535,7 +2535,7 @@ static int sdma_probe(struct platform_device *pdev)
 
 	/* enable autosuspend for pm_runtime */
 	if (sdma->drvdata->pm_runtime) {
-		pm_runtime_set_autosuspend_delay(&pdev->dev, 2000);
+		pm_runtime_set_autosuspend_delay(&pdev->dev, 8000);
 		pm_runtime_use_autosuspend(&pdev->dev);
 		pm_runtime_mark_last_busy(&pdev->dev);
 		pm_runtime_set_active(&pdev->dev);
