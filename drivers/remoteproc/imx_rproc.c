@@ -351,6 +351,76 @@ static int imx_rproc_ready(struct rproc *rproc)
 	return 0;
 }
 
+static int imx_rproc_rebuild_channels(struct rproc *rproc)
+{
+	struct imx_rproc *priv = rproc->priv;
+	struct mbox_client *cl = &priv->cl;
+	struct device *dev = priv->dev;
+	int ret = 0;
+
+	if (!priv->tx_ch) {
+		priv->tx_ch = mbox_request_channel_byname(cl, "tx");
+		if (IS_ERR(priv->tx_ch)) {
+			ret = PTR_ERR(priv->tx_ch);
+			dev_err(dev, "failed to restart tx chan %d\n", ret);
+			priv->tx_ch = NULL;
+
+			goto err_exit;
+		}
+	}
+
+	if (!priv->rx_ch) {
+		priv->rx_ch = mbox_request_channel_byname(cl, "rx");
+		if (IS_ERR(priv->rx_ch)) {
+			ret = PTR_ERR(priv->rx_ch);
+			dev_err(dev, "failed to restart rx chan %d\n", ret);
+			priv->rx_ch = NULL;
+
+			goto err_exit;
+		}
+	}
+
+	if (!priv->rxdb_ch) {
+		priv->rxdb_ch = mbox_request_channel_byname(cl, "rxdb");
+		if (IS_ERR(priv->rxdb_ch)) {
+			ret = PTR_ERR(priv->rxdb_ch);
+			dev_err(dev, "failed to restart rxdb chan %d\n", ret);
+			priv->rxdb_ch = NULL;
+
+			goto err_exit;
+		}
+	}
+
+	/* txdb is optional */
+	if (!priv->txdb_ch) {
+		priv->txdb_ch = mbox_request_channel_byname(cl, "txdb");
+		if (IS_ERR(priv->txdb_ch))
+			priv->txdb_ch = NULL;
+	}
+
+err_exit:
+	return ret;
+}
+
+static void imx_rproc_free_channels(struct rproc *rproc)
+{
+	struct imx_rproc *priv = rproc->priv;
+	__u32 mmsg;
+
+	if (priv->txdb_ch)
+		mbox_send_message(priv->txdb_ch, (void *)&mmsg);
+
+	mbox_free_channel(priv->tx_ch);
+	mbox_free_channel(priv->rx_ch);
+	mbox_free_channel(priv->rxdb_ch);
+	mbox_free_channel(priv->txdb_ch);
+
+	priv->tx_ch = NULL;
+	priv->rx_ch = NULL;
+	priv->rxdb_ch = NULL;
+	priv->txdb_ch = NULL;
+}
+
 static int imx_rproc_start(struct rproc *rproc)
 {
 	struct imx_rproc *priv = rproc->priv;
@@ -369,8 +439,15 @@ static int imx_rproc_start(struct rproc *rproc)
 		ret = res.a0;
 		break;
 	case IMX_SCU_API:
-		if (priv->ipc_only)
+		if (priv->ipc_only) {
+			if (rproc->table_ptr == NULL)
+				rproc->table_ptr = kmemdup(priv->rsc_va, SZ_1K, GFP_KERNEL);
+			ret = imx_rproc_rebuild_channels(rproc);
+			if (ret < 0)
+				return -EINVAL;
 			return imx_rproc_ready(rproc);
+		}
+
 		if (priv->id == 1)
 			ret = imx_sc_pm_cpu_start(ipc_handle, priv->rsrc, true, 0x38fe0000);
 		else if (!priv->id)
@@ -401,7 +478,10 @@ static int imx_rproc_stop(struct rproc *rproc)
 	int ret = 0;
 	__u32 mmsg;
 
+
 	if (rproc->state == RPROC_CRASHED && priv->ipc_only) {
+		imx_rproc_free_channels(rproc);
+
 		priv->flags &= ~REMOTE_IS_READY;
 		return 0;
 	}
@@ -685,7 +765,10 @@ static int imx_rproc_elf_load_segments(struct rproc *rproc,
 {
 	struct imx_rproc *priv = rproc->priv;
 
-	if (priv->ipc_only || !fw)
+	if (priv->ipc_only)
+		return 0;
+
+	if (!fw)
 		return -EINVAL;
 
 	return rproc_elf_load_segments(rproc, fw);
