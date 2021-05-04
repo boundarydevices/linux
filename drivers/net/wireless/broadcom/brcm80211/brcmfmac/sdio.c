@@ -2542,6 +2542,14 @@ static bool brcmf_chip_is_ulp(struct brcmf_chip *ci)
 		return false;
 }
 
+static bool brcmf_sdio_use_ht_avail(struct brcmf_chip *ci)
+{
+	if (ci->chip == CY_CC_4373_CHIP_ID)
+		return true;
+	else
+		return false;
+}
+
 static void brcmf_sdio_bus_stop(struct device *dev)
 {
 	struct brcmf_bus *bus_if = dev_get_drvdata(dev);
@@ -2578,7 +2586,8 @@ static void brcmf_sdio_bus_stop(struct device *dev)
 					    &err);
 		if (!err) {
 			bpreq = saveclk;
-			bpreq |= brcmf_chip_is_ulp(bus->ci) ?
+			bpreq |= (brcmf_sdio_use_ht_avail(bus->ci) ||
+				   brcmf_chip_is_ulp(bus->ci)) ?
 				SBSDIO_HT_AVAIL_REQ : SBSDIO_FORCE_HT;
 			brcmf_sdiod_writeb(sdiodev,
 					   SBSDIO_FUNC1_CHIPCLKCSR,
@@ -3710,7 +3719,8 @@ static void brcmf_sdio_sr_init(struct brcmf_sdio *bus)
 
 	brcmf_dbg(TRACE, "Enter\n");
 
-	if (brcmf_chip_is_ulp(bus->ci)) {
+	if (brcmf_sdio_use_ht_avail(bus->ci) ||
+	    brcmf_chip_is_ulp(bus->ci)) {
 		wakeupctrl = SBSDIO_FUNC1_WCTRL_ALPWAIT_SHIFT;
 		chipclkcsr = SBSDIO_HT_AVAIL_REQ;
 	} else {
@@ -4507,7 +4517,8 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 	saveclk = brcmf_sdiod_readb(sdiod, SBSDIO_FUNC1_CHIPCLKCSR, &err);
 	if (!err) {
 		bpreq = saveclk;
-		bpreq |= brcmf_chip_is_ulp(bus->ci) ?
+		bpreq |= (brcmf_sdio_use_ht_avail(bus->ci) ||
+			  brcmf_chip_is_ulp(bus->ci)) ?
 			SBSDIO_HT_AVAIL_REQ : SBSDIO_FORCE_HT;
 		brcmf_sdiod_writeb(sdiod, SBSDIO_FUNC1_CHIPCLKCSR,
 				   bpreq, &err);
