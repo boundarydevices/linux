@@ -198,6 +198,8 @@
 			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
 #define GP_I2C3_J7_RESET	<&gpio4 10 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x1b0b0
+#define GPIRQ_GT911		<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
+#define GP_GT911_IRQ		<&gpio1 9 GPIO_ACTIVE_HIGH>
 #define GPIRQ_I2C3_J7		<&gpio1 9 IRQ_TYPE_EDGE_FALLING>
 #define GP_I2C3_J7		<&gpio1 9 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0
@@ -312,6 +314,11 @@
 		mxcfb0 = &fb_hdmi;
 		mxcfb1 = &fb_lvds;
 		t_lvds = &t_lvds;
+		ts_egalax = &ts_egalax;
+		ts_ft5x06 = &ts_ft5x06;
+		ts_goodix = &ts_goodix;
+		ts_goodix2 = &ts_goodix2;
+		ts_ili210x = &ts_ili210x;
 	};
 
 	backlight_lvds0 {
@@ -626,14 +633,14 @@
 	sda-gpios = GP_I2C3_SDA;
 	status = "okay";
 
-	egalax_ts@04 {
+	ts_egalax: touchscreen@04 {
 		compatible = "eeti,egalax_ts";
 		reg = <0x04>;
 		interrupts-extended = GPIRQ_I2C3_J7;
 		wakeup-gpios = GP_I2C3_J7;
 	};
 
-	ft5x06_ts@38 {
+	ts_ft5x06: touchscreen@38 {
 		compatible = "ft5x06-ts";
 		reg = <0x38>;
 		interrupts-extended = GPIRQ_I2C3_J7;
@@ -641,7 +648,23 @@
 		reset-gpios = GP_I2C3_J7_RESET;
 	};
 
-	ili210x@41 {
+	ts_goodix: touchscreen@14 {
+		compatible = "goodix,gt911";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		reg = <0x14>;
+	};
+
+	ts_goodix2: touchscreen@5d {
+		compatible = "goodix,gt911";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		reg = <0x5d>;
+	};
+
+	ts_ili210x: touchscreen@41 {
 		compatible = "ili210x";
 		reg = <0x41>;
 		interrupts-extended = GPIRQ_I2C3_J7;
