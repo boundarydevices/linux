@@ -251,12 +251,15 @@ static inline void flush_tlb_mm(struct mm_struct *mm)
 
 	dsb(ishst);
 	if (TKT340553_SW_WORKAROUND) {
+		/* Flush the entire TLB */
 		__tlbi(vmalle1is);
+		dsb(ish);
+		isb();
 	} else {
 		__tlbi(aside1is, asid);
 		__tlbi_user(aside1is, asid);
+		dsb(ish);
 	}
-	dsb(ish);
 }
 
 static inline void flush_tlb_page_nosync(struct vm_area_struct *vma,
@@ -266,7 +269,10 @@ static inline void flush_tlb_page_nosync(struct vm_area_struct *vma,
 
 	dsb(ishst);
 	if (TKT340553_SW_WORKAROUND) {
+		/* Flush the entire TLB */
 		__tlbi(vmalle1is);
+		dsb(ish);
+		isb();
 	} else {
 		__tlbi(vale1is, addr);
 		__tlbi_user(vale1is, addr);
@@ -296,7 +302,6 @@ static inline void __flush_tlb_range(struct vm_area_struct *vma,
 	unsigned long asid = ASID(vma->vm_mm);
 	unsigned long addr;
 	unsigned long pages;
-	unsigned long mask = (1 << 20) - 1;
 
 	start = round_down(start, stride);
 	end = round_up(end, stride);
@@ -316,7 +321,14 @@ static inline void __flush_tlb_range(struct vm_area_struct *vma,
 	}
 
 	dsb(ishst);
-	mask <<= 24;
+
+	if (TKT340553_SW_WORKAROUND) {
+		/* Flush the entire TLB and exit */
+		__tlbi(vmalle1is);
+		dsb(ish);
+		isb();
+		return;
+	}
 
 	/*
 	 * When the CPU does not support TLB range operations, flush the TLB
@@ -340,9 +352,7 @@ static inline void __flush_tlb_range(struct vm_area_struct *vma,
 		if (!system_supports_tlb_range() ||
 		    pages % 2 == 1) {
 			addr = __TLBI_VADDR(start, asid);
-			if (TKT340553_SW_WORKAROUND) {
-				__tlbi(vmalle1is);
-			} else if (last_level) {
+			if (last_level) {
 				__tlbi_level(vale1is, addr, tlb_level);
 				__tlbi_user_level(vale1is, addr, tlb_level);
 			} else {
@@ -358,9 +368,7 @@ static inline void __flush_tlb_range(struct vm_area_struct *vma,
 		if (num >= 0) {
 			addr = __TLBI_VADDR_RANGE(start, asid, scale,
 						  num, tlb_level);
-			if (TKT340553_SW_WORKAROUND) {
-				__tlbi(vmalle1is);
-			} else if (last_level) {
+			if (last_level) {
 				__tlbi(rvale1is, addr);
 				__tlbi_user(rvale1is, addr);
 			} else {
@@ -391,7 +399,8 @@ static inline void flush_tlb_kernel_range(unsigned long start, unsigned long end
 {
 	unsigned long addr;
 
-	if ((end - start) > (MAX_TLBI_OPS * PAGE_SIZE)) {
+	if (((end - start) > (MAX_TLBI_OPS * PAGE_SIZE))
+	    || (TKT340553_SW_WORKAROUND)) {
 		flush_tlb_all();
 		return;
 	}
@@ -400,12 +409,8 @@ static inline void flush_tlb_kernel_range(unsigned long start, unsigned long end
 	end = __TLBI_VADDR(end, 0);
 
 	dsb(ishst);
-	for (addr = start; addr < end; addr += 1 << (PAGE_SHIFT - 12)) {
-		if (TKT340553_SW_WORKAROUND)
-			__tlbi(vmalle1is);
-		else
-			__tlbi(vaale1is, addr);
-	}
+	for (addr = start; addr < end; addr += 1 << (PAGE_SHIFT - 12))
+		__tlbi(vaale1is, addr);
 	dsb(ish);
 	isb();
 }
@@ -420,6 +425,7 @@ static inline void __flush_tlb_kernel_pgtable(unsigned long kaddr)
 
 	dsb(ishst);
 	if (TKT340553_SW_WORKAROUND)
+		/* Flush the entire TLB */
 		__tlbi(vmalle1is);
 	else
 		__tlbi(vaae1is, addr);
