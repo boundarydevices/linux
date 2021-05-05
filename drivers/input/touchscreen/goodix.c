@@ -650,7 +650,7 @@ static int goodix_get_gpio_config(struct goodix_ts_data *ts)
 	ts->gpiod_int = gpiod;
 
 	/* Get the reset line GPIO pin number */
-	gpiod = devm_gpiod_get_index(dev, GOODIX_GPIO_RST_NAME, 0);
+	gpiod = devm_gpiod_get_index_optional(dev, GOODIX_GPIO_RST_NAME, 0);
 	if (IS_ERR(gpiod)) {
 		error = PTR_ERR(gpiod);
 		if (error != -EPROBE_DEFER)
