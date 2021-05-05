@@ -1288,6 +1288,7 @@ struct v4l2_crop {
  *		defined in v4l2-common.h; V4L2_SEL_TGT_* .
  * @flags:	constraints flags, defined in v4l2-common.h; V4L2_SEL_FLAG_*.
  * @r:		coordinates of selection window
+ * @request_fd: fd of the request that trigger the set selection operation
  * @reserved:	for future use, rounds structure size to 64 bytes, set to zero
  *
  * Hardware may use multiple helper windows to process a video stream.
@@ -1299,7 +1300,8 @@ struct v4l2_selection {
 	__u32			target;
 	__u32                   flags;
 	struct v4l2_rect        r;
-	__u32                   reserved[9];
+	__s32			request_fd;
+	__u32                   reserved[8];
 };
 
 
@@ -2315,6 +2317,7 @@ struct v4l2_plane_pix_format {
  * @hsv_enc:		enum v4l2_hsv_encoding, HSV encoding
  * @quantization:	enum v4l2_quantization, colorspace quantization
  * @xfer_func:		enum v4l2_xfer_func, colorspace transfer function
+ * @request_fd:		fd of the request that trigger the set format operation
  * @reserved:		drivers and applications must zero this array
  */
 struct v4l2_pix_format_mplane {
@@ -2333,7 +2336,8 @@ struct v4l2_pix_format_mplane {
 	};
 	__u8				quantization;
 	__u8				xfer_func;
-	__u8				reserved[7];
+	__s32				request_fd;
+	__u8				reserved[3];
 } __attribute__ ((packed));
 
 /**

@@ -52,7 +52,8 @@ struct v4l2_subdev_format {
 	__u32 pad;
 	struct v4l2_mbus_framefmt format;
 	__u32 stream;
-	__u32 reserved[7];
+	__s32 request_fd;
+	__u32 reserved[6];
 };
 
 /**

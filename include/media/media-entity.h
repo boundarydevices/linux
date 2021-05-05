@@ -128,6 +128,8 @@ struct media_pipeline {
  *		link.
  * @flags:	Link flags, as defined in uapi/media.h (MEDIA_LNK_FL_*)
  * @is_backlink: Indicate if the link is a backlink.
+ * @request_fd: The media request triggered the media link change, it is only
+ *		meaningful in media_device_setup_link()
  */
 struct media_link {
 	struct media_gobj graph_obj;
@@ -145,6 +147,7 @@ struct media_link {
 	struct media_link *reverse;
 	unsigned long flags;
 	bool is_backlink;
+	int request_fd;
 };
 
 /**
