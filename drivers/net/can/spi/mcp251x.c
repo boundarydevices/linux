@@ -988,8 +988,6 @@ static int mcp251x_stop(struct net_device *net)
 
 	priv->force_quit = 1;
 	free_irq(spi->irq, priv);
-	destroy_workqueue(priv->wq);
-	priv->wq = NULL;
 
 	mutex_lock(&priv->mcp_lock);
 
@@ -1256,24 +1254,15 @@ static int mcp251x_open(struct net_device *net)
 		goto out_close;
 	}
 
-	priv->wq = alloc_workqueue("mcp251x_wq", WQ_FREEZABLE | WQ_MEM_RECLAIM,
-				   0);
-	if (!priv->wq) {
-		ret = -ENOMEM;
-		goto out_clean;
-	}
-	INIT_WORK(&priv->tx_work, mcp251x_tx_work_handler);
-	INIT_WORK(&priv->restart_work, mcp251x_restart_work_handler);
-
 	ret = (priv->sleeping) ? mcp251x_hw_wake(spi) : mcp251x_hw_reset(spi);
 	if (ret)
-		goto out_free_wq;
+		goto out_free_irq;
 	ret = mcp251x_setup(net, spi);
 	if (ret)
-		goto out_free_wq;
+		goto out_free_irq;
 	ret = mcp251x_set_normal_mode(spi);
 	if (ret)
-		goto out_free_wq;
+		goto out_free_irq;
 
 	can_led_event(net, CAN_LED_EVENT_OPEN);
 
@@ -1282,9 +1271,7 @@ static int mcp251x_open(struct net_device *net)
 
 	return 0;
 
-out_free_wq:
-	destroy_workqueue(priv->wq);
-out_clean:
+out_free_irq:
 	free_irq(spi->irq, priv);
 	mcp251x_hw_sleep(spi);
 out_close:
@@ -1415,6 +1402,15 @@ static int mcp251x_can_probe(struct spi_device *spi)
 	if (ret)
 		goto out_clk;
 
+	priv->wq = alloc_workqueue("mcp251x_wq", WQ_FREEZABLE | WQ_MEM_RECLAIM,
+				   0);
+	if (!priv->wq) {
+		ret = -ENOMEM;
+		goto out_clk;
+	}
+	INIT_WORK(&priv->tx_work, mcp251x_tx_work_handler);
+	INIT_WORK(&priv->restart_work, mcp251x_restart_work_handler);
+
 	priv->spi = spi;
 	mutex_init(&priv->mcp_lock);
 
@@ -1459,6 +1455,8 @@ static int mcp251x_can_probe(struct spi_device *spi)
 	return 0;
 
 error_probe:
+	destroy_workqueue(priv->wq);
+	priv->wq = NULL;
 	mcp251x_can_enable(priv, 0);
 
 out_clk:
@@ -1479,6 +1477,9 @@ static int mcp251x_can_remove(struct spi_device *spi)
 	unregister_candev(net);
 
 	mcp251x_can_enable(priv, 0);
+
+	destroy_workqueue(priv->wq);
+	priv->wq = NULL;
 
 	clk_disable_unprepare(priv->clk);
 
