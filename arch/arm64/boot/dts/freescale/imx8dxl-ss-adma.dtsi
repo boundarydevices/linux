@@ -183,6 +183,21 @@
 	interrupts = <GIC_SPI 225 IRQ_TYPE_LEVEL_HIGH>;
 };
 
+&lpspi0 {
+	compatible = "fsl,imx8dxl-spi", "fsl,imx8qxp-spi", "fsl,imx7ulp-spi";
+	interrupts = <GIC_SPI 218 IRQ_TYPE_LEVEL_HIGH>;
+};
+
+&lpspi1 {
+	compatible = "fsl,imx8dxl-spi", "fsl,imx8qxp-spi", "fsl,imx7ulp-spi";
+	interrupts = <GIC_SPI 219 IRQ_TYPE_LEVEL_HIGH>;
+};
+
+&lpspi2 {
+	compatible = "fsl,imx8dxl-spi", "fsl,imx8qxp-spi", "fsl,imx7ulp-spi";
+	interrupts = <GIC_SPI 220 IRQ_TYPE_LEVEL_HIGH>;
+};
+
 &lpspi3 {
 	compatible = "fsl,imx8dxl-spi", "fsl,imx8qxp-spi", "fsl,imx7ulp-spi";
 	interrupts = <GIC_SPI 221 IRQ_TYPE_LEVEL_HIGH>;

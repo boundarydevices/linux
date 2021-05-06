@@ -500,6 +500,24 @@ dma_subsys: bus@5a000000 {
 		status = "disabled";
 	};
 
+	lpspi1: spi@5a010000 {
+		compatible = "fsl,imx7ulp-spi";
+		reg = <0x5a010000 0x10000>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		interrupts = <GIC_SPI 337 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-parent = <&gic>;
+		clocks = <&spi1_lpcg 0>,
+			 <&spi1_lpcg 1>;
+		clock-names = "per", "ipg";
+		assigned-clocks = <&clk IMX_SC_R_SPI_1 IMX_SC_PM_CLK_PER>;
+		assigned-clock-rates = <60000000>;
+		power-domains = <&pd IMX_SC_R_SPI_1>;
+		dma-names = "tx","rx";
+		dmas = <&edma2 3 0 0>, <&edma2 2 0 1>;
+		status = "disabled";
+	};
+
 	lpspi2: spi@5a020000 {
 		compatible = "fsl,imx7ulp-spi";
 		reg = <0x5a020000 0x10000>;
