@@ -140,7 +140,6 @@
 			MX8MQ_IOMUXC_SD2_WP_GPIO2_IO20			0xc6
 
 			/* test points */
-			MX8MQ_IOMUXC_GPIO1_IO10_GPIO1_IO10		0xc6	/* TP145 */
 			MX8MQ_IOMUXC_SAI5_MCLK_GPIO3_IO25		0xc6	/* TP146 */
 			MX8MQ_IOMUXC_SAI5_RXD0_GPIO3_IO21		0xc6	/* TP147 */
 		>;
@@ -285,6 +284,8 @@
 		fsl,pins = <
 #define GP_PCIE0_RESET		<&gpio3 14 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_NAND_DQS_GPIO3_IO14	0x16
+#define GP_PCIE0_CLKREQ		<&gpio1 10 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_GPIO1_IO10_GPIO1_IO10	0xe6	/* TP145 on old rev */
 		>;
 	};
 
@@ -1235,6 +1236,7 @@
 };
 
 &pcie0 {
+	clkreq-gpio = GP_PCIE0_CLKREQ;
 #if 1
 	clocks = <&clk IMX8MQ_CLK_PCIE1_ROOT>,
 		<&clk IMX8MQ_CLK_PCIE1_AUX>,
