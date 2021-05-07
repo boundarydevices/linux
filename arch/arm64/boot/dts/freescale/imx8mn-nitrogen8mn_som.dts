@@ -107,6 +107,10 @@
 	cpu-supply = <&reg_sw3>;
 };
 
+&cameradev {
+	status = "okay";
+};
+
 &i2c2 {
 	rtc@68 {
 		compatible = "microcrystal,rv4162";
@@ -126,22 +130,49 @@
 		DOVDD-supply = <&reg_vref_1v8>;
 		DVDD-supply = <&reg_vref_3v3>;
 		clocks = <&mipi_xclk>;
-		clock-names = "csi_mclk";
-		compatible = "ovti,ov5640_mipisubdev";
-		csi_id = <0>;
-		mclk = <20000000>;
-		mipi_csi;
+		clock-names = "xclk";
+		compatible = "ovti,ov5640";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_ov5640_mipi>;
-		pwn-gpios = GP_OV5640_MIPI_POWER_DOWN;
+		powerdown-gpios = GP_OV5640_MIPI_POWER_DOWN;
 		reg = <0x3c>;
-		rst-gpios = GP_OV5640_MIPI_RESET;
+		reset-gpios = GP_OV5640_MIPI_RESET;
 		status = "okay";
 
 		port {
 			ov5640_mipi1_ep: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
 				remote-endpoint = <&mipi1_ov5640_ep>;
 			};
+		};
+	};
+};
+
+&isi_0 {
+	status = "okay";
+
+	cap_device {
+		status = "okay";
+	};
+};
+
+&mipi_csi_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	/delete-node/ port;
+	/delete-node/ port@0;
+
+	port@0 {
+		reg = <0>;
+
+		mipi1_ov5640_ep: endpoint {
+			remote-endpoint = <&ov5640_mipi1_ep>;
+			data-lanes = <2>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
 		};
 	};
 };
