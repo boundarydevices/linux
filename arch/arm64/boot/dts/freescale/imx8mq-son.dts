@@ -1247,6 +1247,12 @@
 #else
 	ext_osc = <1>;
 #endif
+	fsl,tx-deemph-gen1 = <27>;
+	fsl,tx-deemph-gen2-3p5db = <24>;
+	fsl,tx-deemph-gen2-6db = <35>;
+	fsl,tx-swing-full = <62>;
+	fsl,tx-swing-low = <62>;
+	fsl,max-link-speed = <1>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie0>;
 	/* TODO check clock */
