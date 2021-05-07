@@ -63,7 +63,7 @@ static int prp_enc_setup(cam_data *cam)
 {
 	ipu_channel_params_t enc;
 	int err = 0;
-	dma_addr_t dummy = cam->dummy_frame.buffer.m.offset;
+	dma_addr_t dummy;
 #ifdef CONFIG_MXC_MIPI_CSI2
 	void *mipi_csi2_info;
 	int ipu_id;
@@ -75,6 +75,8 @@ static int prp_enc_setup(cam_data *cam)
 		printk(KERN_ERR "cam private is NULL\n");
 		return -ENXIO;
 	}
+	dummy = cam->dummy_frame.buffer.m.offset;
+
 	memset(&enc, 0, sizeof(ipu_channel_params_t));
 
 	ipu_csi_get_window_size(cam->ipu, &enc.csi_prp_enc_mem.in_width,
