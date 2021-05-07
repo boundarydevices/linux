@@ -2999,19 +2999,23 @@ static struct platform_driver mxc_v4l2_driver = {
  */
 static int mxc_v4l2_master_attach(struct v4l2_int_device *slave)
 {
-	cam_data *cam = slave->u.slave->master->priv;
+	cam_data *cam;
 	struct v4l2_format cam_fmt;
 	int i;
-	struct sensor_data *sdata = slave->priv;
+	struct sensor_data *sdata;
 
 	pr_debug("In MVC: mxc_v4l2_master_attach\n");
-	pr_debug("   slave.name = %s\n", slave->name);
-	pr_debug("   master.name = %s\n", slave->u.slave->master->name);
 
 	if (slave == NULL) {
 		pr_err("ERROR: v4l2 capture: slave parameter not valid.\n");
 		return -1;
 	}
+
+	pr_debug("   slave.name = %s\n", slave->name);
+	pr_debug("   master.name = %s\n", slave->u.slave->master->name);
+
+	cam = slave->u.slave->master->priv;
+	sdata = slave->priv;
 
 	if (sdata->csi != cam->csi) {
 		pr_debug("%s: csi doesn't match\n", __func__);
