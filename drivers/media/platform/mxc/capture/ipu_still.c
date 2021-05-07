@@ -224,9 +224,9 @@ int prp_still_deselect(void *private)
 	cam_data *cam = (cam_data *) private;
 	int err = 0;
 
-	err = prp_still_stop(cam);
-
 	if (cam) {
+		err = prp_still_stop(cam);
+
 		cam->csi_start = NULL;
 		cam->csi_stop = NULL;
 	}
