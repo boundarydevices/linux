@@ -1064,20 +1064,19 @@
 		DOVDD-supply = <&reg_vref_1v8>;
 		DVDD-supply = <&reg_vref_3v3>;
 		clocks = <&csi_mclk>;
-		clock-names = "csi_mclk";
-		compatible = "ovti,ov5640_mipisubdev";
-		csi_id = <0>;
-		mclk = <20000000>;
-		mipi_csi;
+		clock-names = "xclk";
+		compatible = "ovti,ov5640";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3b_ov5640_mipi>;
-		pwn-gpios = GP_OV5640_MIPI_POWER_DOWN;
+		powerdown-gpios = GP_OV5640_MIPI_POWER_DOWN;
 		reg = <0x3c>;
-		rst-gpios = GP_OV5640_MIPI_RESET;
+		reset-gpios = GP_OV5640_MIPI_RESET;
 		status = "okay";
 
 		port {
 			ov5640_mipi1_ep: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
 				remote-endpoint = <&mipi1_ov5640_ep>;
 			};
 		};
@@ -1110,17 +1109,16 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	status = "okay";
-	port {
-		mipi1_ov5640_ep: endpoint@1 {
+
+	port@0 {
+		reg = <0>;
+
+		mipi1_ov5640_ep: endpoint {
 			remote-endpoint = <&ov5640_mipi1_ep>;
 			data-lanes = <2>;
 			csis-hs-settle = <13>;
 			csis-clk-settle = <2>;
 			csis-wclk;
-		};
-
-		csi1_mipi_ep: endpoint@2 {
-			remote-endpoint = <&csi1_ep>;
 		};
 	};
 };
