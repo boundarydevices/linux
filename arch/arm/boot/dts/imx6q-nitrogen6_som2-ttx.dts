@@ -53,6 +53,15 @@
 			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x1b0b0
 		>;
 	};
+
+	pinctrl_uart4: uart4grp {
+		fsl,pins = <
+			MX6QDL_PAD_CSI0_DAT12__UART4_TX_DATA		0x1b0b1
+			MX6QDL_PAD_CSI0_DAT13__UART4_RX_DATA		0x1b0b1
+			MX6QDL_PAD_CSI0_DAT16__UART4_RTS_B		0x1b0b1
+			MX6QDL_PAD_CSI0_DAT17__UART4_CTS_B		0x1b0b1
+		>;
+	};
 };
 
 &i2c1 {
@@ -78,8 +87,19 @@
 	status = "disabled";
 };
 
+&ov5642 {
+	status = "disabled";
+};
+
 &ssi1 {
 	status = "disabled";
+};
+
+&uart4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart4>;
+	uart-has-rtscts;
+	status = "okay";
 };
 
 &usbotg {
