@@ -162,7 +162,7 @@ static void sn_enable_gp(struct gpio_desc *gp_en)
 {
 	msleep(15);	/* disabled for at least 10 ms */
 	gpiod_set_value(gp_en, 1);
-	msleep(2);
+	msleep(12);	/* enabled for at least 10 ms before i2c writes */
 }
 
 static void sn_enable_irq(struct sn65dsi83_priv *sn)
@@ -351,8 +351,9 @@ static void sn_enable_pll(struct sn65dsi83_priv *sn)
 		sn_i2c_write_byte(sn, SN_DSI_CLK, sn->mipi_clk_index);
 	}
 	sn_i2c_write_byte(sn, SN_PLL_EN, 1);
-	msleep(5);
+	msleep(12);
 	sn_i2c_write_byte(sn, SN_SOFT_RESET, 1);
+	msleep(12);
 	sn_enable_irq(sn);
 	dev_dbg(dev, "%s:reg0a=%02x\n", __func__, sn_i2c_read_byte(sn, SN_CLK_SRC));
 }
