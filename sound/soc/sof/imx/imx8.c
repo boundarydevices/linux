@@ -463,23 +463,6 @@ static int imx8_get_bar_index(struct snd_sof_dev *sdev, u32 type)
 	}
 }
 
-static void imx8_ipc_msg_data(struct snd_sof_dev *sdev,
-			      struct snd_sof_pcm_stream *sps,
-			      void *p, size_t sz)
-{
-	if (!sps || !sdev->stream_box.size)
-		sof_mailbox_read(sdev, sdev->dsp_box.offset, p, sz);
-	else
-		sof_mailbox_read(sdev, sdev->stream_box.offset, p, sz);
-}
-
-static int imx8_ipc_pcm_params(struct snd_sof_dev *sdev,
-			       struct snd_pcm_substream *substream,
-			       const struct sof_ipc_pcm_params_reply *reply)
-{
-	return 0;
-}
-
 int imx8_suspend(struct snd_sof_dev *sdev)
 {
 	int i;
@@ -618,8 +601,8 @@ struct snd_sof_dsp_ops sof_imx8_ops = {
 	.get_mailbox_offset	= imx8_get_mailbox_offset,
 	.get_window_offset	= imx8_get_window_offset,
 
-	.ipc_msg_data	= imx8_ipc_msg_data,
-	.ipc_pcm_params	= imx8_ipc_pcm_params,
+	.ipc_msg_data	= sof_ipc_msg_data,
+	.ipc_pcm_params	= sof_ipc_pcm_params,
 
 	/* module loading */
 	.load_module	= snd_sof_parse_module_memcpy,
@@ -629,6 +612,10 @@ struct snd_sof_dsp_ops sof_imx8_ops = {
 
 	/* Debug information */
 	.dbg_dump = imx8_dump,
+
+	/* stream callbacks */
+	.pcm_open = sof_stream_pcm_open,
+	.pcm_close = sof_stream_pcm_close,
 
 	/* Firmware ops */
 	.arch_ops = &sof_xtensa_arch_ops,
@@ -676,8 +663,8 @@ struct snd_sof_dsp_ops sof_imx8x_ops = {
 	.get_mailbox_offset	= imx8_get_mailbox_offset,
 	.get_window_offset	= imx8_get_window_offset,
 
-	.ipc_msg_data	= imx8_ipc_msg_data,
-	.ipc_pcm_params	= imx8_ipc_pcm_params,
+	.ipc_msg_data	= sof_ipc_msg_data,
+	.ipc_pcm_params	= sof_ipc_pcm_params,
 
 	/* module loading */
 	.load_module	= snd_sof_parse_module_memcpy,
@@ -687,6 +674,10 @@ struct snd_sof_dsp_ops sof_imx8x_ops = {
 
 	/* Debug information */
 	.dbg_dump = imx8_dump,
+
+	/* stream callbacks */
+	.pcm_open = sof_stream_pcm_open,
+	.pcm_close = sof_stream_pcm_close,
 
 	/* Firmware ops */
 	.arch_ops = &sof_xtensa_arch_ops,
