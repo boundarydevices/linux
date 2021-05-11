@@ -776,6 +776,7 @@ static int panel_simple_disable(struct drm_panel *panel)
 	send_all_cmd_lists(p, &p->cmds_disable);
 
 	p->enabled = false;
+	p->enabled2 = false;
 
 	return 0;
 }
@@ -1070,6 +1071,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc,
 		return -ENOMEM;
 
 	panel->enabled = false;
+	panel->enabled2 = false;
 	panel->prepared = false;
 	panel->desc = desc;
 	if (!desc) {
