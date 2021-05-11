@@ -185,6 +185,14 @@
 		>;
 	};
 
+	pinctrl_i2c4_gt911: i2c4-gt911grp {
+		fsl,pins = <
+#define GPIRQ_GT911 		<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
+#define GP_GT911_IRQ 		<&gpio1 9 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9		0x1d6
+		>;
+	};
+
 	pinctrl_pwm1: pwm1grp {
 		fsl,pins = <
 			MX8MM_IOMUXC_SPDIF_EXT_CLK_PWM1_OUT		0x16	/* J8 Pin 3, NS */
@@ -775,6 +783,17 @@
 		pinctrl-0 = <&pinctrl_i2c4_ft5x06>;
 		reg = <0x38>;
 		wakeup-gpios = GP_I2C4_FT5X06_WAKE;
+	};
+
+	ts_goodix: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		display = <&display_subsystem>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c4_gt911>;
+		reg = <0x5d>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
 	};
 };
 
