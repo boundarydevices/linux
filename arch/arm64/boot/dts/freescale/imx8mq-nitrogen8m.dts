@@ -1048,22 +1048,6 @@
 	sda-gpios = GP_I2C4_SDA;
 	status = "okay";
 
-	mipi_to_lvds: mipi-to-lvds@2c {
-		alias = <&mipi_to_lvds>;
-		clocks = <&dphy 0>,
-			<&clk IMX8MQ_CLK_LCDIF_PIXEL>;
-		clock-names = "mipi_clk", "pixel_clock";
-		compatible = "ti,sn65dsi83";
-		display = <&lcdif>;
-		display-dsi = <&fb_mipi>;
-		enable-gpios = GP_I2C4_SN65DSI83_EN;
-		interrupts-extended = GPIRQ_I2C4_SN65DSI83;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_sn65dsi83>;
-		reg = <0x2c>;
-		status = "disabled";
-	};
-
 	spi_lcd: spi@2f {
 		compatible = "nxp,sc18is602b";
 		pinctrl-names = "default";
@@ -1310,7 +1294,10 @@
 		bridge-sync-active = <1>;
 #endif
 		bus-format = "rgb888";
-		compatible = "panel,simple";
+		clocks = <&dphy 0>,
+			<&clk IMX8MQ_CLK_LCDIF_PIXEL>;
+		clock-names = "mipi_clk", "pixel_clock";
+		compatible = "panel,common";
 		delay-power-up = <2>;
 		dsi-format = "rgb888";
 		dsi-lanes = <4>;
@@ -1319,8 +1306,11 @@
 		mode-video-burst;
 		panel-height-mm = <136>;
 		panel-width-mm = <217>;
+		pinctrl-names = "sn65dsi83";
+		pinctrl-0 = <&pinctrl_sn65dsi83>;
 		power-supply = <&reg_vref_5v>;
 		reg = <0>;
+		sn65dsi83 = <&mipi_to_lvds>;
 		spwg;
 
 		display-timings {
@@ -1345,6 +1335,15 @@
 			panel1_in: endpoint {
 				remote-endpoint = <&mipi_dsi_out>;
 			};
+		};
+
+		mipi_to_lvds: mipi-to-lvds {
+			alias = <&mipi_to_lvds>;
+			enable-gpios = GP_I2C4_SN65DSI83_EN;
+			i2c-address = <0x2c>;
+			i2c-bus = <&i2c4>;
+			interrupts-extended = GPIRQ_I2C4_SN65DSI83;
+			status = "disabled";
 		};
 	};
 
