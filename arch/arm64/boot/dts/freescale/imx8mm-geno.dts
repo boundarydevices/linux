@@ -13,7 +13,6 @@
 
 	/delete-node/ ecspi2grp;
 	/delete-node/ ts-gt911grp;
-	/delete-node/ ts-ft5x06grp;
 	/delete-node/ ts-ft7250grp;
 	/delete-node/ ts-gslx680grp;
 	/delete-node/ ts-st1633grp;
@@ -82,7 +81,6 @@
 	compatible = "boundary,imx8mm-geno", "fsl,imx8mm";
 
 	aliases {
-		/delete-property/ ts_ft5x06;
 		/delete-property/ ts_ft7250;
 		/delete-property/ ts_goodix;
 		/delete-property/ ts_gsl1680;
@@ -177,7 +175,6 @@
 };
 
 &i2c2 {
-	/delete-node/ touchscreen@38;
 	/delete-node/ touchscreen_ft7250@38;
 	/delete-node/ touchscreen@40;
 	/delete-node/ touchscreen@55;
