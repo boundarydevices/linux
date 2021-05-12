@@ -785,7 +785,18 @@
 		wakeup-gpios = GP_I2C4_FT5X06_WAKE;
 	};
 
-	ts_goodix: touchscreen@5d {
+	ts_goodix: touchscreen@14 {
+		compatible = "goodix,gt9271";
+		display = <&display_subsystem>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c4_gt911>;
+		reg = <0x14>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+	};
+
+	ts_goodix2: touchscreen@5d {
 		compatible = "goodix,gt9271";
 		display = <&display_subsystem>;
 		pinctrl-names = "default";
