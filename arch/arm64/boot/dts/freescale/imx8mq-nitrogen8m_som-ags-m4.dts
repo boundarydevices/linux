@@ -78,6 +78,12 @@
 	status = "disabled";
 };
 
+&fb_mipi {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ sn65dsi83;
+};
+
 &i2c3 {
 	status = "disabled";
 };
