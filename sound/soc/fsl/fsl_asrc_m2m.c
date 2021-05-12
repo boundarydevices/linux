@@ -151,7 +151,7 @@ static int fsl_allocate_dma_buf(struct fsl_asrc_pair *pair)
 
 exit:
 	kfree(input->dma_vaddr);
-
+	input->dma_vaddr = NULL;
 	return -ENOMEM;
 }
 
