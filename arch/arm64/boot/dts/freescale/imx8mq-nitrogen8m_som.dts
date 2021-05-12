@@ -6,9 +6,10 @@
 /dts-v1/;
 
 #include "imx8mq.dtsi"
+#include "panel-lcm-jm430.dtsi"
 #include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
-#include "panel-lcm-jm430.dtsi"
+#include "panel-m101nwwb.dtsi"
 #include "panel-com50h5n03ulc.dtsi"
 
 &iomuxc {
