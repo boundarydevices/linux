@@ -834,22 +834,6 @@
 
 
 &TOUCHSCREEN_I2C_BUS {
-	mipi_to_lvds: mipi-to-lvds@2c {
-		alias = <&mipi_to_lvds>;
-		clocks = <&mipi_dsi 0>,
-			<&clk IMX8MMN(CLK_LCDIF_PIXEL)>;
-		clock-names = "mipi_clk", "pixel_clock";
-		compatible = "ti,sn65dsi83";
-		display = <&display_subsystem>;
-		display-dsi = <&fb_mipi>;
-		enable-gpios = GP_SN65DSI83_EN;
-		interrupts-extended = GPIRQ_SN65DSI83;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_sn65dsi83>;
-		reg = <0x2c>;
-		status = "disabled";
-	};
-
 	spi_lcd: spi@2f {
 		assigned-clocks = <&clk IMX8MMN(VIDEO_PLL1)>;
 		assigned-clock-rates = <384000000>;
@@ -1160,7 +1144,10 @@
 		bits-per-color = <8>;
 		bridge-de-active = <0>;
 		bus-format = "rgb888";
-		compatible = "panel,simple";
+		clocks = <&mipi_dsi 0>,
+			<&clk IMX8MMN(CLK_LCDIF_PIXEL)>;
+		clock-names = "mipi_clk", "pixel_clock";
+		compatible = "panel,common";
 		dsi-format = "rgb888";
 		dsi-lanes = <4>;
 #if 0
@@ -1177,8 +1164,11 @@
 #endif
 		panel-height-mm = <136>;
 		panel-width-mm = <217>;
+		pinctrl-names = "sn65dsi83";
+		pinctrl-0 = <&pinctrl_sn65dsi83>;
 		power-supply = <&reg_vref_5v>;
 		reg = <0>;
+		sn65dsi83 = <&mipi_to_lvds>;
 		spwg;
 
 		display-timings {
@@ -1197,6 +1187,15 @@
 				vsync-active = <0>;
 				de-active = <1>;
 			};
+		};
+
+		mipi_to_lvds: mipi-to-lvds {
+			alias = <&mipi_to_lvds>;
+			enable-gpios = GP_SN65DSI83_EN;
+			i2c-address = <0x2c>;
+			i2c-bus = <&TOUCHSCREEN_I2C_BUS>;
+			interrupts-extended = GPIRQ_SN65DSI83;
+			status = "disabled";
 		};
 	};
 };
