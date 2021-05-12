@@ -2216,7 +2216,7 @@ static int mx23_boot_init(struct gpmi_nand_data  *this)
 		 */
 		chipnr = block >> (chip->chip_shift - chip->phys_erase_shift);
 		page = block << (chip->phys_erase_shift - chip->page_shift);
-		byte = block <<  chip->phys_erase_shift;
+		byte = (loff_t)block <<  chip->phys_erase_shift;
 
 		/* Send the command to read the conventional block mark. */
 		nand_select_target(chip, chipnr);
@@ -2598,11 +2598,11 @@ static int gpmi_nfc_exec_op(struct nand_chip *chip,
 						   &direct);
 			break;
 		}
+	}
 
-		if (!desc) {
-			ret = -ENXIO;
-			goto unmap;
-		}
+	if (!desc) {
+		ret = -ENXIO;
+		goto unmap;
 	}
 
 	dev_dbg(this->dev, "%s setup done\n", __func__);

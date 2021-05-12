@@ -463,7 +463,7 @@ static int vpu_enc_v4l2_ioctl_g_fmt(struct file *file,
 	pix_mp->num_planes = q_data->current_fmt->num_planes;
 	pix_mp->width = q_data->width;
 	pix_mp->height = q_data->height;
-	pix_mp->field = V4L2_FIELD_ANY;
+	pix_mp->field = V4L2_FIELD_NONE;
 	for (i = 0; i < pix_mp->num_planes; i++)
 		pix_mp->plane_fmt[i].sizeimage = q_data->sizeimage[i];
 
@@ -1508,31 +1508,10 @@ static int vpu_enc_v4l2_ioctl_try_fmt(struct file *file,
 		return -EINVAL;
 	vpu_dbg(LVL_FUNC, "%s(), %s\n", __func__, q_data->desc);
 
-	if (f->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		pix_mp->field = V4L2_FIELD_ANY;
-		pix_mp->colorspace = V4L2_COLORSPACE_REC709;
-		if (!vpu_enc_check_colorspace(pix_mp->colorspace)) {
-			pix_mp->colorspace = ctx->colorspace;
-			pix_mp->xfer_func = ctx->xfer_func;
-			pix_mp->ycbcr_enc = ctx->ycbcr_enc;
-			pix_mp->quantization = ctx->quantization;
-		} else {
-			if (!vpu_enc_check_xfer_func(pix_mp->xfer_func))
-				pix_mp->xfer_func = ctx->xfer_func;
-			if (!vpu_enc_check_ycbcr_enc(pix_mp->ycbcr_enc))
-				pix_mp->ycbcr_enc = ctx->ycbcr_enc;
-			if (!vpu_enc_check_quantization(pix_mp->quantization))
-				pix_mp->quantization = ctx->quantization;
-		}
-	} else {
-		pix_mp->colorspace = ctx->colorspace;
-		pix_mp->xfer_func = ctx->xfer_func;
-		pix_mp->ycbcr_enc = ctx->ycbcr_enc;
-		pix_mp->quantization = ctx->quantization;
-	}
-
 	if (!format_is_support(q_data->supported_fmts, q_data->fmt_count, f))
 		return -EINVAL;
+
+	pix_mp->field = V4L2_FIELD_NONE;
 
 	return 0;
 }
@@ -2680,7 +2659,7 @@ static int transfer_stream_output(struct vpu_ctx *ctx,
 static int append_empty_end_frame(struct vb2_data_req *p_data_req)
 {
 	struct vb2_buffer *vb = NULL;
-	const u8 pattern[] = VPU_STRM_END_PATTERN;
+	const u8 pattern[] = VPU_STRM_END_OF_SEQ;
 	void *pdst;
 
 	WARN_ON(!p_data_req);

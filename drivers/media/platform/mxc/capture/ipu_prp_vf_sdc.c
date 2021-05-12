@@ -127,7 +127,9 @@ static int prpvf_start(void *private)
 	fbvar.yoffset = 0;
 	fbvar.accel_flags = FB_ACCEL_DOUBLE_FLAG;
 	fbvar.activate |= FB_ACTIVATE_FORCE;
-	fb_set_var(fbi, &fbvar);
+	err = fb_set_var(fbi, &fbvar);
+	if (err)
+		printk(KERN_WARNING "fb_set_var err code %d\n", err);
 
 	ipu_disp_set_window_pos(disp_ipu, MEM_FG_SYNC, cam->win.w.left,
 			cam->win.w.top);
@@ -434,7 +436,9 @@ static int prpvf_stop(void *private)
 	fbvar.accel_flags = FB_ACCEL_TRIPLE_FLAG;
 	fbvar.nonstd = cam->fb_origin_std;
 	fbvar.activate |= FB_ACTIVATE_FORCE;
-	fb_set_var(fbi, &fbvar);
+	err = fb_set_var(fbi, &fbvar);
+	if (err)
+		printk(KERN_WARNING "fb_set_var err code %d\n", err);
 
 #ifdef CONFIG_MXC_MIPI_CSI2
 	mipi_csi2_info = mipi_csi2_get_info();

@@ -3700,7 +3700,8 @@ static int mxc_epdc_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			if (put_user(pwrdown_delay,
 				(int __user *)argp))
 				ret = -EFAULT;
-			ret = 0;
+			else
+				ret = 0;
 			break;
 		}
 
@@ -5402,7 +5403,7 @@ static int mxc_epdc_fb_probe(struct platform_device *pdev)
 
 	/* Initialize all LUTs to inactive */
 	fb_data->lut_update_order =
-		kzalloc(fb_data->num_luts * sizeof(u32 *), GFP_KERNEL);
+		kzalloc(fb_data->num_luts * sizeof(u32), GFP_KERNEL);
 	for (i = 0; i < fb_data->num_luts; i++)
 		fb_data->lut_update_order[i] = 0;
 

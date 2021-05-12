@@ -498,11 +498,13 @@ static int fsl_esai_startup(struct snd_pcm_substream *substream,
 				   ESAI_SAICR_SYNC, esai_priv->synchronous ?
 				   ESAI_SAICR_SYNC : 0);
 
-		/* Set a default slot number -- 2 */
+		/* Set slots count */
 		regmap_update_bits(esai_priv->regmap, REG_ESAI_TCCR,
-				   ESAI_xCCR_xDC_MASK, ESAI_xCCR_xDC(2));
+				   ESAI_xCCR_xDC_MASK,
+				   ESAI_xCCR_xDC(esai_priv->slots));
 		regmap_update_bits(esai_priv->regmap, REG_ESAI_RCCR,
-				   ESAI_xCCR_xDC_MASK, ESAI_xCCR_xDC(2));
+				   ESAI_xCCR_xDC_MASK,
+				   ESAI_xCCR_xDC(esai_priv->slots));
 	}
 
 	if (esai_priv->soc->use_edma)
@@ -1044,8 +1046,6 @@ static int fsl_esai_probe(struct platform_device *pdev)
 
 	esai_priv->dma_params_tx.maxburst = 16;
 	esai_priv->dma_params_rx.maxburst = 16;
-	esai_priv->dma_params_rx.chan_name = "rx";
-	esai_priv->dma_params_tx.chan_name = "tx";
 	esai_priv->dma_params_tx.addr = res->start + REG_ESAI_ETDR;
 	esai_priv->dma_params_rx.addr = res->start + REG_ESAI_ERDR;
 
@@ -1115,7 +1115,7 @@ static int fsl_esai_probe(struct platform_device *pdev)
 		if (ret)
 			dev_err(&pdev->dev, "failed to init imx pcm dma: %d\n", ret);
 	} else {
-		ret = imx_pcm_platform_register(&pdev->dev);
+		ret = imx_pcm_dma_init(pdev, IMX_ESAI_DMABUF_SIZE);
 		if (ret)
 			dev_err(&pdev->dev, "failed to init imx pcm dma: %d\n", ret);
 	}

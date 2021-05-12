@@ -23,6 +23,16 @@ config FSL_DPAA2_MAC
 	  fsl_mc devices which are not connected to other objects found in the
 	  root dprc.
 
+config FSL_DPAA2_MAC_NETDEVS
+	bool "Expose net interfaces for MAC devices"
+	default n
+	depends on FSL_DPAA2_MAC
+	help
+	  Exposes macX net interfaces for MAC devices which are not connected to
+	  a host managed DPNI. This allows direct control over those MACs and
+	  their corresponding PHYs.
+	  Leave disabled if unsure.
+
 if FSL_DPAA2_ETH
 config FSL_DPAA2_ETH_DCB
 	bool "Data Center Bridging (DCB) Support"

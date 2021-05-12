@@ -23,82 +23,122 @@
 	};
 };
 
+&dpmac1 {
+	phy-handle = <&mdio1_phy1>;
+	phy-connection-type = "10gbase-r";
+};
+
+&dpmac2 {
+	phy-handle = <&mdio1_phy2>;
+	phy-connection-type = "10gbase-r";
+};
+
+&dpmac3 {
+	phy-handle = <&mdio1_phy3>;
+	phy-connection-type = "10gbase-r";
+};
+
+&dpmac4 {
+	phy-handle = <&mdio1_phy4>;
+	phy-connection-type = "10gbase-r";
+};
+
+&dpmac5 {
+	phy-handle = <&mdio2_phy1>;
+	phy-connection-type = "10gbase-r";
+};
+
+&dpmac6 {
+	phy-handle = <&mdio2_phy2>;
+	phy-connection-type = "10gbase-r";
+};
+
+&dpmac7 {
+	phy-handle = <&mdio2_phy3>;
+	phy-connection-type = "10gbase-r";
+};
+
+&dpmac8 {
+	phy-handle = <&mdio2_phy4>;
+	phy-connection-type = "10gbase-r";
+};
+
 &emdio1 {
-	status = "disabled";
-	/* CS4340 PHYs */
-	mdio1_phy1: emdio1_phy@1 {
+	status = "okay";
+
+	mdio1_phy1: ethernet-phy@10 {
+		compatible = "ethernet-phy-id13e5.1002";
 		reg = <0x10>;
-		phy-connection-type = "xfi";
 	};
-	mdio1_phy2: emdio1_phy@2 {
+
+	mdio1_phy2: ethernet-phy@11 {
+		compatible = "ethernet-phy-id13e5.1002";
 		reg = <0x11>;
-		phy-connection-type = "xfi";
 	};
-	mdio1_phy3: emdio1_phy@3 {
+
+	mdio1_phy3: ethernet-phy@12 {
+		compatible = "ethernet-phy-id13e5.1002";
 		reg = <0x12>;
-		phy-connection-type = "xfi";
 	};
-	mdio1_phy4: emdio1_phy@4 {
+
+	mdio1_phy4: ethernet-phy@13 {
+		compatible = "ethernet-phy-id13e5.1002";
 		reg = <0x13>;
-		phy-connection-type = "xfi";
 	};
 };
 
 &emdio2 {
-	/* AQR405 PHYs */
-	mdio2_phy1: emdio2_phy@1 {
-		compatible = "ethernet-phy-ieee802.3-c45";
-		interrupts = <0 1 0x4>; /* Level high type */
+	status = "okay";
+
+	mdio2_phy1: ethernet-phy@0 {
+		compatible = "ethernet-phy-id03a1.b4b0", "ethernet-phy-ieee802.3-c45";
 		reg = <0x0>;
-		phy-connection-type = "xfi";
 	};
-	mdio2_phy2: emdio2_phy@2 {
-		compatible = "ethernet-phy-ieee802.3-c45";
-		interrupts = <0 2 0x4>; /* Level high type */
+
+	mdio2_phy2: ethernet-phy@1 {
+		compatible = "ethernet-phy-id03a1.b4b0", "ethernet-phy-ieee802.3-c45";
 		reg = <0x1>;
-		phy-connection-type = "xfi";
 	};
-	mdio2_phy3: emdio2_phy@3 {
-		compatible = "ethernet-phy-ieee802.3-c45";
-		interrupts = <0 4 0x4>; /* Level high type */
+
+	mdio2_phy3: ethernet-phy@2 {
+		compatible = "ethernet-phy-id03a1.b4b0", "ethernet-phy-ieee802.3-c45";
 		reg = <0x2>;
-		phy-connection-type = "xfi";
 	};
-	mdio2_phy4: emdio2_phy@4 {
-		compatible = "ethernet-phy-ieee802.3-c45";
-		interrupts = <0 5 0x4>; /* Level high type */
+
+	mdio2_phy4: ethernet-phy@3 {
+		compatible = "ethernet-phy-id03a1.b4b0", "ethernet-phy-ieee802.3-c45";
 		reg = <0x3>;
-		phy-connection-type = "xfi";
 	};
 };
 
-/* Update DPMAC connections to external PHYs, under the assumption of
- * SerDes 0x2a_0x41. This is currently the only SerDes supported on the board.
- */
-/* Leave Cortina PHYs commented out until proper driver is integrated
- *&dpmac1 {
- *	phy-handle = <&mdio1_phy1>;
- *};
- *&dpmac2 {
- *	phy-handle = <&mdio1_phy2>;
- *};
- *&dpmac3 {
- *	phy-handle = <&mdio1_phy3>;
- *};
- *&dpmac4 {
- *	phy-handle = <&mdio1_phy4>;
- *};
- */
+&pcs_mdio1 {
+	status = "okay";
+};
 
-&dpmac5 {
-	phy-handle = <&mdio2_phy1>;
+&pcs_mdio2 {
+	status = "okay";
 };
-&dpmac6 {
-	phy-handle = <&mdio2_phy2>;
+
+&pcs_mdio3 {
+	status = "okay";
 };
-&dpmac7 {
-	phy-handle = <&mdio2_phy3>;
+
+&pcs_mdio4 {
+	status = "okay";
 };
-&dpmac8 {
-	phy-handle = <&mdio2_phy4>;
+
+&pcs_mdio5 {
+	status = "okay";
+};
+
+&pcs_mdio6 {
+	status = "okay";
+};
+
+&pcs_mdio7 {
+	status = "okay";
+};
+
+&pcs_mdio8 {
+	status = "okay";
 };

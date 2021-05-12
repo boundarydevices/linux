@@ -116,11 +116,6 @@
 
 #define EDMA_MINOR_LOOP_TIMEOUT		500 /* us */
 
-enum fsl_edma3_pm_state {
-	RUNNING = 0,
-	SUSPENDED,
-};
-
 struct fsl_edma3_hw_tcd {
 	__le32	saddr;
 	__le16	soff;
@@ -152,9 +147,7 @@ struct fsl_edma3_slave_config {
 struct fsl_edma3_chan {
 	struct virt_dma_chan		vchan;
 	enum dma_status			status;
-	enum fsl_edma3_pm_state		pm_state;
 	bool				idle;
-	bool				used;
 	struct fsl_edma3_engine		*edma3;
 	struct fsl_edma3_desc		*edesc;
 	struct fsl_edma3_slave_config	fsc;
@@ -170,6 +163,7 @@ struct fsl_edma3_chan {
 	char                            txirq_name[32];
 	struct platform_device		*pdev;
 	struct device			*dev;
+	struct work_struct		issue_worker;
 };
 
 struct fsl_edma3_desc {
@@ -235,8 +229,6 @@ static void fsl_edma3_enable_request(struct fsl_edma3_chan *fsl_chan)
 
 	val |= EDMA_CH_CSR_ERQ;
 	writel(val, addr + EDMA_CH_CSR);
-
-	fsl_chan->used = true;
 }
 
 static void fsl_edma3_disable_request(struct fsl_edma3_chan *fsl_chan)
@@ -304,11 +296,13 @@ static int fsl_edma3_terminate_all(struct dma_chan *chan)
 	spin_lock_irqsave(&fsl_chan->vchan.lock, flags);
 	fsl_chan->edesc = NULL;
 	fsl_chan->idle = true;
-	fsl_chan->used = false;
 	fsl_chan->vchan.cyclic = NULL;
 	vchan_get_all_descriptors(&fsl_chan->vchan, &head);
 	spin_unlock_irqrestore(&fsl_chan->vchan.lock, flags);
 	vchan_dma_desc_free_list(&fsl_chan->vchan, &head);
+
+	pm_runtime_allow(fsl_chan->dev);
+
 	return 0;
 }
 
@@ -324,6 +318,7 @@ static int fsl_edma3_pause(struct dma_chan *chan)
 		fsl_chan->idle = true;
 	}
 	spin_unlock_irqrestore(&fsl_chan->vchan.lock, flags);
+
 	return 0;
 }
 
@@ -339,6 +334,7 @@ static int fsl_edma3_resume(struct dma_chan *chan)
 		fsl_chan->idle = false;
 	}
 	spin_unlock_irqrestore(&fsl_chan->vchan.lock, flags);
+
 	return 0;
 }
 
@@ -743,6 +739,7 @@ static void fsl_edma3_xfer_desc(struct fsl_edma3_chan *fsl_chan)
 	if (!vdesc)
 		return;
 	fsl_chan->edesc = to_fsl_edma3_desc(vdesc);
+
 	fsl_edma3_set_tcd_regs(fsl_chan, fsl_chan->edesc->tcd[0].vtcd);
 	fsl_edma3_enable_request(fsl_chan);
 	fsl_chan->status = DMA_IN_PROGRESS;
@@ -803,20 +800,8 @@ irq_handled:
 static void fsl_edma3_issue_pending(struct dma_chan *chan)
 {
 	struct fsl_edma3_chan *fsl_chan = to_fsl_edma3_chan(chan);
-	unsigned long flags;
 
-	spin_lock_irqsave(&fsl_chan->vchan.lock, flags);
-
-	if (unlikely(fsl_chan->pm_state != RUNNING)) {
-		spin_unlock_irqrestore(&fsl_chan->vchan.lock, flags);
-		/* cannot submit due to suspend */
-		return;
-	}
-
-	if (vchan_issue_pending(&fsl_chan->vchan) && !fsl_chan->edesc)
-		fsl_edma3_xfer_desc(fsl_chan);
-
-	spin_unlock_irqrestore(&fsl_chan->vchan.lock, flags);
+	schedule_work(&fsl_chan->issue_worker);
 }
 
 static struct dma_chan *fsl_edma3_xlate(struct of_phandle_args *dma_spec,
@@ -860,7 +845,9 @@ static int fsl_edma3_alloc_chan_resources(struct dma_chan *chan)
 	fsl_chan->tcd_pool = dma_pool_create("tcd_pool", chan->device->dev,
 				sizeof(struct fsl_edma3_hw_tcd),
 				32, 0);
+
 	pm_runtime_get_sync(fsl_chan->dev);
+
 	/* clear meaningless pending irq anyway */
 	if (readl(fsl_chan->membase + EDMA_CH_INT))
 		writel(1, fsl_chan->membase + EDMA_CH_INT);
@@ -871,8 +858,12 @@ static int fsl_edma3_alloc_chan_resources(struct dma_chan *chan)
 	if (ret) {
 		dev_err(&pdev->dev, "Can't register %s IRQ.\n",
 			fsl_chan->txirq_name);
+		pm_runtime_put_sync_suspend(fsl_chan->dev);
 		return ret;
 	}
+
+	pm_runtime_mark_last_busy(fsl_chan->dev);
+	pm_runtime_put_autosuspend(fsl_chan->dev);
 
 	return 0;
 }
@@ -882,6 +873,8 @@ static void fsl_edma3_free_chan_resources(struct dma_chan *chan)
 	struct fsl_edma3_chan *fsl_chan = to_fsl_edma3_chan(chan);
 	unsigned long flags;
 	LIST_HEAD(head);
+
+	pm_runtime_get_sync(fsl_chan->dev);
 
 	devm_free_irq(&fsl_chan->pdev->dev, fsl_chan->txirq, fsl_chan);
 
@@ -896,13 +889,12 @@ static void fsl_edma3_free_chan_resources(struct dma_chan *chan)
 
 	spin_lock_irqsave(&fsl_chan->vchan.lock, flags);
 	fsl_chan->tcd_pool = NULL;
-	fsl_chan->used = false;
 	/* Clear interrupt before power off */
 	if (readl(fsl_chan->membase + EDMA_CH_INT))
 		writel(1, fsl_chan->membase + EDMA_CH_INT);
 	spin_unlock_irqrestore(&fsl_chan->vchan.lock, flags);
 
-	pm_runtime_put_sync(fsl_chan->dev);
+	pm_runtime_put_sync_suspend(fsl_chan->dev);
 }
 
 static void fsl_edma3_synchronize(struct dma_chan *chan)
@@ -943,6 +935,23 @@ static struct device *fsl_edma3_attach_pd(struct device *dev,
 	return pd_chan;
 }
 
+static void fsl_edma3_issue_work(struct work_struct *work)
+{
+	struct fsl_edma3_chan *fsl_chan = container_of(work,
+						       struct fsl_edma3_chan,
+						       issue_worker);
+	unsigned long flags;
+
+	pm_runtime_forbid(fsl_chan->dev);
+
+	spin_lock_irqsave(&fsl_chan->vchan.lock, flags);
+
+	if (vchan_issue_pending(&fsl_chan->vchan) && !fsl_chan->edesc)
+		fsl_edma3_xfer_desc(fsl_chan);
+
+	spin_unlock_irqrestore(&fsl_chan->vchan.lock, flags);
+}
+
 static int fsl_edma3_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -980,7 +989,6 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 
 		fsl_chan->edma3 = fsl_edma3;
 		fsl_chan->pdev = pdev;
-		fsl_chan->pm_state = RUNNING;
 		fsl_chan->idle = true;
 		/* Get per channel membase */
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
@@ -1029,7 +1037,9 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 
 		fsl_chan->vchan.desc_free = fsl_edma3_free_desc;
 		vchan_init(&fsl_chan->vchan, &fsl_edma3->dma_dev);
-		fsl_chan->used = false;
+
+		INIT_WORK(&fsl_chan->issue_worker,
+				fsl_edma3_issue_work);
 	}
 
 	mutex_init(&fsl_edma3->fsl_edma3_mutex);
@@ -1080,7 +1090,11 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 		fsl_chan->dev = dev;
 		/* clear meaningless pending irq anyway */
 		writel(1, fsl_chan->membase + EDMA_CH_INT);
-		pm_runtime_put_sync(dev);
+
+		pm_runtime_use_autosuspend(fsl_chan->dev);
+		pm_runtime_set_autosuspend_delay(fsl_chan->dev, 200);
+		pm_runtime_set_active(fsl_chan->dev);
+		pm_runtime_put_sync_suspend(fsl_chan->dev);
 	}
 
 	ret = of_dma_controller_register(np, fsl_edma3_xlate, fsl_edma3);
@@ -1089,9 +1103,6 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 		dma_async_device_unregister(&fsl_edma3->dma_dev);
 		return ret;
 	}
-
-	pm_runtime_dont_use_autosuspend(&pdev->dev);
-	pm_runtime_enable(&pdev->dev);
 
 	return 0;
 }
@@ -1120,8 +1131,11 @@ static int fsl_edma3_suspend_late(struct device *dev)
 		fsl_chan = &fsl_edma->chans[i];
 		addr = fsl_chan->membase;
 
-		if (!fsl_chan->used)
+		if (pm_runtime_status_suspended(fsl_chan->dev))
 			continue;
+
+		pm_runtime_get_sync(fsl_chan->dev);
+
 		spin_lock_irqsave(&fsl_chan->vchan.lock, flags);
 		fsl_edma->edma_regs[i].csr = readl(addr + EDMA_CH_CSR);
 		fsl_edma->edma_regs[i].sbr = readl(addr + EDMA_CH_SBR);
@@ -1130,8 +1144,9 @@ static int fsl_edma3_suspend_late(struct device *dev)
 			dev_warn(dev, "WARN: There is non-idle channel.");
 			fsl_edma3_disable_request(fsl_chan);
 		}
-		fsl_chan->pm_state = SUSPENDED;
 		spin_unlock_irqrestore(&fsl_chan->vchan.lock, flags);
+
+		pm_runtime_put_sync_suspend(fsl_chan->dev);
 	}
 
 	return 0;
@@ -1149,7 +1164,7 @@ static int fsl_edma3_resume_early(struct device *dev)
 		fsl_chan = &fsl_edma->chans[i];
 		addr = fsl_chan->membase;
 
-		if (!fsl_chan->used)
+		if (pm_runtime_status_suspended(fsl_chan->dev))
 			continue;
 
 		spin_lock_irqsave(&fsl_chan->vchan.lock, flags);
@@ -1159,7 +1174,6 @@ static int fsl_edma3_resume_early(struct device *dev)
 		if (fsl_chan->edesc)
 			fsl_edma3_set_tcd_regs(fsl_chan,
 						fsl_chan->edesc->tcd[0].vtcd);
-		fsl_chan->pm_state = RUNNING;
 		spin_unlock_irqrestore(&fsl_chan->vchan.lock, flags);
 	}
 

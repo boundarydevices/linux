@@ -453,15 +453,17 @@ static void ipc_period_elapsed(struct snd_sof_dev *sdev, u32 msg_id)
 	}
 
 	stream = &spcm->stream[direction];
-	snd_sof_ipc_msg_data(sdev, stream->substream, &posn, sizeof(posn));
+	snd_sof_ipc_msg_data(sdev, stream, &posn, sizeof(posn));
 
 	dev_vdbg(sdev->dev, "posn : host 0x%llx dai 0x%llx wall 0x%llx\n",
 		 posn.host_posn, posn.dai_posn, posn.wallclock);
 
 	memcpy(&stream->posn, &posn, sizeof(posn));
 
-	/* only inform ALSA for period_wakeup mode */
-	if (!stream->substream->runtime->no_period_wakeup)
+	if (spcm->pcm.compress)
+		snd_sof_compr_fragment_elapsed(stream->cstream);
+	else if (!stream->substream->runtime->no_period_wakeup)
+		/* only inform ALSA for period_wakeup mode */
 		snd_sof_pcm_period_elapsed(stream->substream);
 }
 
@@ -482,7 +484,7 @@ static void ipc_xrun(struct snd_sof_dev *sdev, u32 msg_id)
 	}
 
 	stream = &spcm->stream[direction];
-	snd_sof_ipc_msg_data(sdev, stream->substream, &posn, sizeof(posn));
+	snd_sof_ipc_msg_data(sdev, stream, &posn, sizeof(posn));
 
 	dev_dbg(sdev->dev,  "posn XRUN: host %llx comp %d size %d\n",
 		posn.host_posn, posn.xrun_comp_id, posn.xrun_size);

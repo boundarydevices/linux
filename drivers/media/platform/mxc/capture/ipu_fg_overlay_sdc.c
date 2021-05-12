@@ -133,7 +133,7 @@ static int csi_enc_setup(cam_data *cam)
 {
 	ipu_channel_params_t params;
 	int err = 0, sensor_protocol = 0;
-	ipu_channel_t chan = (cam->csi == 0) ? CSI_MEM0 : CSI_MEM1;
+	ipu_channel_t chan;
 #ifdef CONFIG_MXC_MIPI_CSI2
 	void *mipi_csi2_info;
 	int ipu_id;
@@ -145,6 +145,7 @@ static int csi_enc_setup(cam_data *cam)
 		printk(KERN_ERR "cam private is NULL\n");
 		return -ENXIO;
 	}
+	chan = (cam->csi == 0) ? CSI_MEM0 : CSI_MEM1;
 
 	memset(&params, 0, sizeof(ipu_channel_params_t));
 	params.csi_mem.csi = cam->csi;
@@ -396,7 +397,9 @@ static int foreground_start(void *private)
 	fbvar.vmode &= ~FB_VMODE_YWRAP;
 	fbvar.accel_flags = FB_ACCEL_DOUBLE_FLAG;
 	fbvar.activate |= FB_ACTIVATE_FORCE;
-	fb_set_var(fbi, &fbvar);
+	err = fb_set_var(fbi, &fbvar);
+	if (err)
+		printk(KERN_WARNING "fb_set_var err code %d\n", err);
 
 	ipu_disp_set_window_pos(disp_ipu, MEM_FG_SYNC, cam->win.w.left,
 			cam->win.w.top);
@@ -489,7 +492,9 @@ static int foreground_stop(void *private)
 	fbvar.accel_flags = FB_ACCEL_TRIPLE_FLAG;
 	fbvar.nonstd = cam->fb_origin_std;
 	fbvar.activate |= FB_ACTIVATE_FORCE;
-	fb_set_var(fbi, &fbvar);
+	err = fb_set_var(fbi, &fbvar);
+	if (err)
+		printk(KERN_WARNING "fb_set_var err code %d\n", err);
 
 #ifdef CONFIG_MXC_MIPI_CSI2
 	mipi_csi2_info = mipi_csi2_get_info();

@@ -1435,6 +1435,10 @@ static int mx6s_vidioc_try_fmt_vid_cap(struct file *file, void *priv,
 	pix->sizeimage = fmt->bpp * pix->height * pix->width;
 	pix->bytesperline = fmt->bpp * pix->width;
 
+	pix->colorspace = V4L2_COLORSPACE_SRGB;
+	pix->ycbcr_enc = V4L2_MAP_YCBCR_ENC_DEFAULT(pix->colorspace);
+	pix->quantization = V4L2_QUANTIZATION_FULL_RANGE;
+
 	return ret;
 }
 
@@ -1707,12 +1711,12 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 {
 	struct mx6s_csi_dev *csi_dev = notifier_to_mx6s_dev(notifier);
 
+	if (subdev == NULL)
+		return -EINVAL;
+
 	/* Find platform data for this sensor subdev */
 	if (csi_dev->asd.match.fwnode == dev_fwnode(subdev->dev))
 		csi_dev->sd = subdev;
-
-	if (subdev == NULL)
-		return -EINVAL;
 
 	v4l2_info(&csi_dev->v4l2_dev, "Registered sensor subdevice: %s\n",
 		  subdev->name);
