@@ -67,7 +67,7 @@ static int fsl_allocate_dma_buf(struct fsl_easrc_m2m *m2m)
 
 alloc_fail:
 	kfree(input->dma_vaddr);
-
+	input->dma_vaddr = NULL;
 	return -ENOMEM;
 }
 
