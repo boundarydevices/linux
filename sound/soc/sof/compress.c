@@ -10,11 +10,6 @@
 #include "sof-audio.h"
 #include "sof-priv.h"
 
-struct sof_compr_stream {
-	unsigned int copied_total;
-	unsigned int sample_rate;
-};
-
 static void sof_set_transferred_bytes(struct sof_compr_stream *sstream,
 				      u64 host_pos, u64 buffer_size)
 {
@@ -185,6 +180,7 @@ int sof_compr_set_params(struct snd_soc_component *component,
 		return ret;
 	}
 
+	sstream->posn_offset = sdev->stream_box.offset + ipc_params_reply.posn_offset;
 	sstream->sample_rate = params->codec.sample_rate;
 	spcm->prepared[cstream->direction] = true;
 
