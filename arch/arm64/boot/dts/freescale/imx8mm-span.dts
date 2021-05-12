@@ -258,7 +258,6 @@
 };
 
 &i2c4 {
-	/delete-node/ mipi-to-lvds@2c;
 	/delete-node/ spi@2f;
 	/delete-node/ touchscreen@38;
 	/delete-node/ touchscreen_ft7250@38;
