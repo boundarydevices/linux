@@ -85,6 +85,12 @@ enum sof_system_suspend_state {
 	SOF_SUSPEND_S3,
 };
 
+struct sof_compr_stream {
+	unsigned int copied_total;
+	unsigned int sample_rate;
+	size_t posn_offset;
+};
+
 struct snd_sof_dev;
 struct snd_sof_ipc_msg;
 struct snd_sof_ipc;

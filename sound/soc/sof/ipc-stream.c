@@ -34,11 +34,21 @@ void sof_ipc_msg_data(struct snd_sof_dev *sdev,
 		sof_mailbox_read(sdev, sdev->dsp_box.offset, p, sz);
 	} else {
 		struct snd_pcm_substream *substream = sps->substream;
-		struct sof_pcm_stream *stream = substream->runtime->private_data;
+		struct snd_compr_stream *cstream = sps->cstream;
+		struct sof_pcm_stream *pstream;
+		struct sof_compr_stream *sstream;
+		size_t posn_offset;
 
+		if (substream) {
+			pstream = substream->runtime->private_data;
+			posn_offset = pstream->posn_offset;
+		} else {
+			sstream = cstream->runtime->private_data;
+			posn_offset = sstream->posn_offset;
+		}
 		/* The stream might already be closed */
-		if (stream)
-			sof_mailbox_read(sdev, stream->posn_offset, p, sz);
+		if (pstream || sstream)
+			sof_mailbox_read(sdev, posn_offset, p, sz);
 	}
 }
 EXPORT_SYMBOL(sof_ipc_msg_data);
