@@ -1242,6 +1242,10 @@
 	status = "okay";
 };
 
+&vpu_v4l2 {
+	status = "okay";
+};
+
 &gpu3d {
 	status = "okay";
 };
