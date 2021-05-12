@@ -47,7 +47,6 @@ static inline void tick_resume_broadcast_oneshot(struct clock_event_device *bc) 
 static inline void tick_broadcast_oneshot_offline(unsigned int cpu) { }
 # endif
 #endif
-static void tick_handle_oneshot_broadcast(struct clock_event_device *dev);
 
 /*
  * Debugging: see timer_list.c
@@ -108,6 +107,19 @@ void tick_install_broadcast_device(struct clock_event_device *dev)
 	tick_broadcast_device.evtdev = dev;
 	if (!cpumask_empty(tick_broadcast_mask))
 		tick_broadcast_start_periodic(dev);
+
+	if (!(dev->features & CLOCK_EVT_FEAT_ONESHOT))
+		return;
+
+	/*
+	 * If the system already runs in oneshot mode, switch the newly
+	 * registered broadcast device to oneshot mode explicitly.
+	 */
+	if (tick_broadcast_oneshot_active()) {
+		tick_broadcast_switch_to_oneshot();
+		return;
+	}
+
 	/*
 	 * Inform all cpus about this. We might be in a situation
 	 * where we did not switch to oneshot mode because the per cpu
@@ -116,20 +128,7 @@ void tick_install_broadcast_device(struct clock_event_device *dev)
 	 * notification the systems stays stuck in periodic mode
 	 * forever.
 	 */
-	if (dev->features & CLOCK_EVT_FEAT_ONESHOT) {
-		tick_clock_notify();
-
-		/*
-		 * If new broadcast device is installed after high resolution
-		 * timers enabled, it can not switch to oneshot mode anymore.
-		 * Here give it a chance.
-		 */
-		if (tick_broadcast_oneshot_active() &&
-		    dev->event_handler != tick_handle_oneshot_broadcast) {
-			tick_broadcast_switch_to_oneshot();
-		}
-	}
-
+	tick_clock_notify();
 }
 
 /*
