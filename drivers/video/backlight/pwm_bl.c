@@ -22,6 +22,7 @@
 struct pwm_bl_data {
 	struct pwm_device	*pwm;
 	struct device		*dev;
+	int			initial_state;
 	unsigned int		lth_brightness;
 	unsigned int		*levels;
 	bool			enabled;
@@ -296,6 +297,10 @@ static int pwm_backlight_parse_dt(struct device *dev,
 			     &data->post_pwm_on_delay);
 	of_property_read_u32(node, "pwm-off-delay-ms", &data->pwm_off_delay);
 
+	pb->initial_state = FB_BLANK_POWERDOWN;
+	if (of_property_read_bool(node, "boot-on"))
+		pb->initial_state = FB_BLANK_UNBLANK;
+
 	/*
 	 * Determine the number of brightness levels, if this property is not
 	 * set a default table of brightness levels will be used.
@@ -496,12 +501,12 @@ static int pwm_backlight_initial_power_state(const struct pwm_bl_data *pb)
 	/* The regulator is disabled, do not enable the backlight */
 	if (pb->power_supply && (!regulator_is_enabled(pb->power_supply)))
 		return FB_BLANK_POWERDOWN;
-#if 0
-	/* The PWM is disabled, keep it like this */
-	if (!pwm_is_enabled(pb->pwm))
-		return FB_BLANK_POWERDOWN;
-#endif
-	return FB_BLANK_UNBLANK;
+
+	/* The PWM is enabled, keep it like this */
+	if (pwm_is_enabled(pb->pwm))
+		return FB_BLANK_UNBLANK;
+
+	return pb->initial_state;
 }
 
 static int pwm_backlight_probe(struct platform_device *pdev)
