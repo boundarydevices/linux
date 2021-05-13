@@ -1026,7 +1026,7 @@
 		bridge-de-active = <0>;
 		bus-format = "rgb888";
 		bus-width = <24>;
-		compatible = "panel,simple";
+		compatible = "panel,common";
 		dsi-format = "rgb888";
 		dsi-lanes = <4>;
 		/* u-boot will set this where appropriate */
