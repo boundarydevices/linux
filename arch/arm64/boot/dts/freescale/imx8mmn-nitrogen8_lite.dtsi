@@ -1171,6 +1171,7 @@
 	status = "okay";
 
 	fb_mipi: panel@0 {
+		backlight = <&backlight_mipi>;
 		bits-per-color = <8>;
 		bridge-de-active = <0>;
 		bus-format = "rgb888";
