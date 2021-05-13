@@ -3,6 +3,7 @@
  * Copyright 2020,2022 NXP
  */
 
+#include <linux/backlight.h>
 #include <linux/clk.h>
 #include <linux/component.h>
 #include <linux/i2c.h>
@@ -38,6 +39,7 @@ struct imx8mp_ldb;
 struct imx8mp_ldb_channel {
 	struct ldb_channel base;
 	struct imx8mp_ldb *imx8mp_ldb;
+	struct backlight_device *backlight;
 
 	struct drm_connector connector;
 	struct drm_encoder encoder;
@@ -116,6 +118,7 @@ static void imx8mp_ldb_encoder_enable(struct drm_encoder *encoder)
 						enc_to_imx8mp_ldb_ch(encoder);
 	struct imx8mp_ldb *imx8mp_ldb = imx8mp_ldb_ch->imx8mp_ldb;
 	struct ldb *ldb = &imx8mp_ldb->base;
+	struct backlight_device *backlight;
 
 	clk_prepare_enable(imx8mp_ldb->clk_root);
 
@@ -124,6 +127,12 @@ static void imx8mp_ldb_encoder_enable(struct drm_encoder *encoder)
 		ldb->ldb_ctrl |= LDB_CH0_MODE_EN_TO_DI0;
 		phy_power_on(imx8mp_ldb->channel[0].phy);
 		imx8mp_ldb->channel[0].phy_is_on = true;
+
+		backlight = imx8mp_ldb->channel[0].backlight;
+		backlight->props.state &= ~BL_CORE_FBBLANK;
+		backlight->props.power = FB_BLANK_UNBLANK;
+		backlight_update_status(backlight);
+
 	}
 	if (imx8mp_ldb->channel[1].base.is_valid || ldb->dual) {
 		ldb->ldb_ctrl &= ~LDB_CH1_MODE_EN_MASK;
@@ -131,6 +140,11 @@ static void imx8mp_ldb_encoder_enable(struct drm_encoder *encoder)
 				LDB_CH1_MODE_EN_TO_DI0 : LDB_CH1_MODE_EN_TO_DI1;
 		phy_power_on(imx8mp_ldb->channel[1].phy);
 		imx8mp_ldb->channel[1].phy_is_on = true;
+
+		backlight = imx8mp_ldb->channel[1].backlight;
+		backlight->props.state &= ~BL_CORE_FBBLANK;
+		backlight->props.power = FB_BLANK_UNBLANK;
+		backlight_update_status(backlight);
 	}
 }
 
@@ -174,16 +188,27 @@ static void imx8mp_ldb_encoder_disable(struct drm_encoder *encoder)
 						enc_to_imx8mp_ldb_ch(encoder);
 	struct imx8mp_ldb *imx8mp_ldb = imx8mp_ldb_ch->imx8mp_ldb;
 	struct ldb *ldb = &imx8mp_ldb->base;
+	struct backlight_device *backlight;
 
 	if (imx8mp_ldb->channel[0].phy_is_on) {
 		imx8mp_ldb->channel[0].phy_is_on = false;
 		ldb->ldb_ctrl &= ~LDB_CH0_MODE_EN_MASK;
 		phy_power_off(imx8mp_ldb->channel[0].phy);
+
+		backlight = imx8mp_ldb->channel[0].backlight;
+		backlight->props.power = FB_BLANK_POWERDOWN;
+		backlight->props.state |= BL_CORE_FBBLANK;
+		backlight_update_status(backlight);
 	}
 	if (imx8mp_ldb->channel[1].phy_is_on) {
 		imx8mp_ldb->channel[1].phy_is_on = false;
 		ldb->ldb_ctrl &= ~LDB_CH1_MODE_EN_MASK;
 		phy_power_off(imx8mp_ldb->channel[1].phy);
+
+		backlight = imx8mp_ldb->channel[1].backlight;
+		backlight->props.power = FB_BLANK_POWERDOWN;
+		backlight->props.state |= BL_CORE_FBBLANK;
+		backlight_update_status(backlight);
 	}
 
 	clk_disable_unprepare(imx8mp_ldb->clk_root);
@@ -375,6 +400,7 @@ imx8mp_ldb_bind(struct device *dev, struct device *master, void *data)
 {
 	struct drm_device *drm = data;
 	struct device_node *np = dev->of_node;
+	struct device_node *backlight;
 	struct device_node *child;
 	struct imx8mp_ldb *imx8mp_ldb = dev_get_drvdata(dev);
 	struct ldb *ldb;
@@ -455,6 +481,17 @@ get_phy:
 			goto free_child;
 		}
 
+		backlight = of_parse_phandle(child, "backlight", 0);
+		if (backlight) {
+			imx8mp_ldb_ch->backlight = of_find_backlight_by_node(backlight);
+			of_node_put(backlight);
+
+			if (!imx8mp_ldb_ch->backlight) {
+				ret = -EPROBE_DEFER;
+				goto free_child;
+			}
+		}
+
 		if (auxiliary_ch)
 			continue;
 	}
@@ -476,6 +513,13 @@ free_child:
 	of_node_put(child);
 disable_pm_runtime:
 	pm_runtime_disable(dev);
+	for (i = 0; i < LDB_CH_NUM; i++) {
+		struct imx8mp_ldb_channel *imx8mp_ldb_ch;
+
+		imx8mp_ldb_ch = &imx8mp_ldb->channel[i];
+		if (imx8mp_ldb_ch->backlight)
+			put_device(&imx8mp_ldb_ch->backlight->dev);
+	}
 
 	return ret;
 }
@@ -494,6 +538,8 @@ static void imx8mp_ldb_unbind(struct device *dev, struct device *master,
 			phy_power_off(imx8mp_ldb_ch->phy);
 
 		phy_exit(imx8mp_ldb_ch->phy);
+		if (imx8mp_ldb_ch->backlight)
+			put_device(&imx8mp_ldb_ch->backlight->dev);
 	}
 
 	pm_runtime_disable(dev);
