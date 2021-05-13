@@ -620,7 +620,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_lvds>;
 		pwms = <&pwm2 0 100000>;
-		status = "okay";
+		status = "disabled";
 
 	};
 
@@ -633,7 +633,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_lvds2>;
 		pwms = <&pwm2 0 100000>;
-		status = "okay";
+		status = "disabled";
 
 	};
 
@@ -643,7 +643,7 @@
 		default-brightness-level = <8>;
 		display = <&lcdif1>;
 		pwms = <&pwm1 0 30000>;		/* 33.3 Khz */
-		status = "okay";
+		status = "disabled";
 	};
 
 	bt-rfkill {
@@ -1355,6 +1355,7 @@
 
 &ldb {
 	lvds-channel@0 {
+		backlight = <&backlight_lvds>;
 		fsl,data-mapping = "spwg";
 		fsl,data-width = <24>;
 
@@ -1375,6 +1376,7 @@
 	};
 
 	lvds-channel@1 {
+		backlight = <&backlight_lvds2>;
 		fsl,data-mapping = "spwg";
 		fsl,data-width = <24>;
 
@@ -1452,6 +1454,7 @@
 	status = "disabled";
 
 	fb_mipi: panel@0 {
+		backlight = <&backlight_mipi>;
 		bits-per-color = <8>;
 		bridge-de-active = <0>;
 		bus-format = "rgb888";
