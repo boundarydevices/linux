@@ -730,6 +730,7 @@ static int pll_setting_show(struct seq_file *s, void *data)
 }
 DEFINE_SHOW_ATTRIBUTE(pll_setting);
 
+#ifndef MODULE
 static int __init pll_debug_init(void)
 {
 	struct dentry *root, *audio_pll1, *audio_pll2;
@@ -753,6 +754,7 @@ static int __init pll_debug_init(void)
 	return 0;
 }
 late_initcall(pll_debug_init);
+#endif /* MODULE */
 #endif /* CONFIG_DEBUG_FS */
 
 MODULE_AUTHOR("Bai Ping <ping.bai@nxp.com>");
