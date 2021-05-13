@@ -22,6 +22,7 @@
 struct pwm_bl_data {
 	struct pwm_device	*pwm;
 	struct device		*dev;
+	int			initial_state;
 	unsigned int		lth_brightness;
 	unsigned int		*levels;
 	bool			enabled;
@@ -307,6 +308,10 @@ static int pwm_backlight_parse_dt(struct device *dev,
 			     &data->post_pwm_on_delay);
 	of_property_read_u32(node, "pwm-off-delay-ms", &data->pwm_off_delay);
 
+	pb->initial_state = FB_BLANK_POWERDOWN;
+	if (of_property_read_bool(node, "boot-on"))
+		pb->initial_state = FB_BLANK_UNBLANK;
+
 	/*
 	 * Determine the number of brightness levels, if this property is not
 	 * set a default table of brightness levels will be used.
@@ -491,6 +496,8 @@ static int pwm_backlight_initial_power_state(const struct pwm_bl_data *pb)
 	if (!pwm_is_enabled(pb->pwm))
 		active = false;
 
+	if (pb->initial_state == FB_BLANK_UNBLANK)
+		active = true;
 	/*
 	 * Synchronize the enable_gpios with the observed state of the
 	 * hardware.
