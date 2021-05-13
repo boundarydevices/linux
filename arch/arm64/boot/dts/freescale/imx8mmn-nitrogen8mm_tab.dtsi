@@ -1018,9 +1018,7 @@
 	status = "okay";
 
 	fb_mipi: panel@0 {
-#if 0
-		backlight= <&backlight_mipi>;
-#endif
+		backlight = <&backlight_mipi>;
 		bits-per-color = <8>;
 		bits-per-pixel = <24>;
 		bridge-de-active = <0>;
