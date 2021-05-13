@@ -813,7 +813,7 @@
 		bits-per-color = <8>;
 		bridge-de-active = <0>;
 		bus-format = "rgb888";
-		compatible = "panel,simple";
+		compatible = "panel,common";
 		dsi-format = "rgb888";
 		dsi-lanes = <4>;
 		mode-skip-eot;
