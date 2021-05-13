@@ -899,13 +899,13 @@ static int panel_common_enable2(struct drm_panel *panel)
 	if (ret < 0)
 		goto fail;
 
+	sn65_enable2(&p->sn65);
 	if (p->backlight) {
 		p->backlight->props.state &= ~BL_CORE_FBBLANK;
 		p->backlight->props.power = FB_BLANK_UNBLANK;
 		backlight_update_status(p->backlight);
 	}
 
-	sn65_enable2(&p->sn65);
 	p->enabled2 = true;
 
 	return 0;
