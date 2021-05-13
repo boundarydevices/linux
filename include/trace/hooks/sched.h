@@ -313,6 +313,10 @@ DECLARE_RESTRICTED_HOOK(android_rvh_find_new_ilb,
 	TP_PROTO(struct cpumask *nohz_idle_cpus_mask, int *new_ilb),
 	TP_ARGS(nohz_idle_cpus_mask, new_ilb), 1);
 
+DECLARE_HOOK(android_vh_dup_task_struct,
+	TP_PROTO(struct task_struct *tsk, struct task_struct *orig),
+	TP_ARGS(tsk, orig));
+
 /* macro versions of hooks are no longer required */
 
 #endif /* _TRACE_HOOK_SCHED_H */
