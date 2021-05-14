@@ -3460,11 +3460,9 @@ u16 fec_enet_select_queue(struct net_device *ndev, struct sk_buff *skb,
 			  struct net_device *sb_dev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
-	const struct platform_device_id *id_entry =
-			platform_get_device_id(fep->pdev);
 	u16 vlan_tag;
 
-	if (!(id_entry->driver_data & FEC_QUIRK_HAS_AVB))
+	if (!(fep->quirks & FEC_QUIRK_HAS_AVB))
 		return netdev_pick_tx(ndev, skb, NULL);
 
 	vlan_tag = fec_enet_get_raw_vlan_tci(skb);
