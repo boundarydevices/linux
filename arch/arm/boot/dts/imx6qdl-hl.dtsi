@@ -301,6 +301,28 @@
 		>;
 	};
 
+	pinctrl_usdhc2_100mhz: usdhc2grp-100mhz {
+		fsl,pins = <
+			MX6QDL_PAD_SD2_CMD__SD2_CMD		0x170B9
+			MX6QDL_PAD_SD2_CLK__SD2_CLK		0x100B9
+			MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x170B9
+			MX6QDL_PAD_SD2_DAT1__SD2_DATA1 		0x170B9
+			MX6QDL_PAD_SD2_DAT2__SD2_DATA2 		0x170B9
+			MX6QDL_PAD_SD2_DAT3__SD2_DATA3 		0x170B9
+		>;
+	};
+
+	pinctrl_usdhc2_200mhz: usdhc2grp-200mhz {
+		fsl,pins = <
+			MX6QDL_PAD_SD2_CMD__SD2_CMD		0x170F9
+			MX6QDL_PAD_SD2_CLK__SD2_CLK 		0x100F9
+			MX6QDL_PAD_SD2_DAT0__SD2_DATA0		0x170F9
+			MX6QDL_PAD_SD2_DAT1__SD2_DATA1 		0x170F9
+			MX6QDL_PAD_SD2_DAT2__SD2_DATA2 		0x170F9
+			MX6QDL_PAD_SD2_DAT3__SD2_DATA3 		0x170F9
+		>;
+	};
+
 	/* USDHC3 - micro sd */
 	pinctrl_usdhc3_50mhz: usdhc3_50mhzgrp {
 		fsl,pins = <
@@ -356,18 +378,13 @@
 		pwms = <&pwm4 0 5000000>;
 	};
 
-	btwilink {
-		compatible = "btwilink";
-	};
-
-	kim {
-		compatible = "kim";
+	bt_rfkill: bt_rfkill {
+		compatible = "net,rfkill-gpio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		nshutdown_gpio = GP_BT_RFKILL_RESET;
-		dev_name = "/dev/ttymxc2";
-		flow_cntrl = <1>;
-		baud_rate = <3000000>;
+		name = "bt_rfkill";
+		gpios = GP_BT_RFKILL_RESET;
+		type = <2>;     /* bluetooth */
 	};
 
 	fb_lvds: fb@0 {
@@ -498,19 +515,6 @@
 	v4l2_out {
 		compatible = "fsl,mxc_v4l2_output";
 		status = "okay";
-	};
-
-	wlan {
-		compatible = "ti,wilink6";
-		interrupts-extended = GPIRQ_WL1271;
-		clocks = <&refclock>;
-		clock-names = "refclock";
-
-		refclock: refclock {
-			compatible = "ti,wilink-clock";
-			#clock-cells = <0>;
-			clock-frequency = <38400000>;
-		};
 	};
 };
 
@@ -717,8 +721,10 @@
 };
 
 &usdhc2 {	/* uSDHC2, TiWi wl1271 */
-	pinctrl-names = "default";
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc2_50mhz>;
+	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
 	pinctrl-names = "default";
 	bus-width = <4>;
 	non-removable;
