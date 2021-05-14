@@ -37,7 +37,8 @@
 
 #define IMX7D_M4_START			(IMX7D_ENABLE_M4 | IMX7D_SW_M4P_RST \
 					 | IMX7D_SW_M4C_RST)
-#define IMX7D_M4_STOP			(IMX7D_ENABLE_M4 | IMX7D_SW_M4C_NON_SCLR_RST)
+#define IMX7D_M4_STOP			(IMX7D_ENABLE_M4 | IMX7D_SW_M4C_RST | \
+					 IMX7D_SW_M4C_NON_SCLR_RST)
 
 /* Address: 0x020D8000 */
 #define IMX6SX_SRC_SCR			0x00
@@ -1019,7 +1020,7 @@ static int imx_rproc_detect_mode(struct imx_rproc *priv)
 			dev_err(dev, "Failed to read src\n");
 			return ret;
 		}
-		priv->early_boot = !(val & dcfg->src_stop);
+		priv->early_boot = ((val & dcfg->src_mask) != dcfg->src_stop);
 		break;
 	case IMX_ARM_SMCCC:
 		arm_smccc_smc(IMX_SIP_SRC, IMX_SIP_SRC_M4_STARTED, 0, 0, 0, 0, 0, 0, &res);
