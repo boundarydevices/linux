@@ -52,6 +52,9 @@
 #include <asm/xen/hypervisor.h>
 #include <asm/mmu_context.h>
 
+const char *machine_model;
+EXPORT_SYMBOL(machine_model);
+
 static int num_standard_resources;
 static struct resource *standard_resources;
 
@@ -204,6 +207,14 @@ static void __init setup_machine_fdt(phys_addr_t dt_phys)
 	name = of_flat_dt_get_machine_name();
 	if (!name)
 		return;
+
+	pr_info("Machine model: %s\n", name);
+	//	dump_stack_set_arch_desc("%s (DT)", name);
+	name = of_flat_dt_get_machine_name();
+	if (!name)
+		return;
+
+	machine_model = name;
 
 	pr_info("Machine model: %s\n", name);
 	dump_stack_set_arch_desc("%s (DT)", name);
