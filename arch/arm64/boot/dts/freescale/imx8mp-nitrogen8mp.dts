@@ -409,6 +409,13 @@
 		>;
 	};
 
+	pinctrl_ts_ili251x_lvds: ts-ili251x-lvdsgrp {
+		fsl,pins = <
+#define GPIRQ_TS_ILI251X_LVDS	<&gpio1 10 IRQ_TYPE_EDGE_FALLING>
+			MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10	0x149
+		>;
+	};
+
 	pinctrl_uart1: uart1grp {
 		fsl,pins = <
 			MX8MP_IOMUXC_UART1_RXD__UART1_DCE_RX	0x140
@@ -602,12 +609,14 @@
 		mipi_to_lvds = &mipi_to_lvds;
 		pwm_mipi = &pwm1;
 		pwm_lvds = &pwm2;
+		pwm_lvds2 = &pwm2;
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
 		t_mipi = &t_mipi;
 		ts_ft5x06 = &ts_ft5x06;
 		ts_ft5x06_2 = &ts_ft5x06_lvds;
 		ts_goodix = &ts_goodix;
+		ts_ili251x = &ts_ili251x_lvds;
 		usb_mux = &usb_mux;
 	};
 
@@ -1277,6 +1286,17 @@
 		pinctrl-0 = <&pinctrl_ts_ft5x06_lvds>;
 		reg = <0x38>;
 		wakeup-gpios = GP_TS_FT5X06_LVDS_WAKE;
+	};
+
+	ts_ili251x_lvds: touchscreen@41 {
+		compatible = "ilitek,ili251x";
+		interrupts-extended = GPIRQ_TS_ILI251X_LVDS;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_ili251x_lvds>;
+		reg = <0x41>;
+		status = "disabled";
+		touchscreen-size-x = <0x3fff>;
+		touchscreen-size-y = <0x3fff>;
 	};
 
 	usb_mux: hd3ss3220@47 {
