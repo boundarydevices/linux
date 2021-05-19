@@ -224,3 +224,4 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mn-nitrogen8mn.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-nitrogen8mp.dtb imx8mp-nitrogen8mp-m4.dtb \
 			  imx8mp-nitrogen8mp-enc.dtb \
+			  imx8mp-nitrogen8mp-enc-tc358743.dtb \
