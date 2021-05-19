@@ -14,7 +14,6 @@
 
 struct wm8960_data {
 	bool capless;  /* Headphone outputs configured in capless mode */
-
 	bool shared_lrclk;  /* DAC and ADC LRCLKs are wired together */
 
 	/*
@@ -33,6 +32,7 @@ struct wm8960_data {
 	 * gpio_cfg[1]: {GPIOPOL:GPIOSEL[2:0]} of R48 (Additional Control 4).
 	 */
 	u32 gpio_cfg[2];
+	bool mbsel_0p65; /* MIC Bias of 0.65 * AVDD instead of 0.9 * AVDD */
 };
 
 #endif
