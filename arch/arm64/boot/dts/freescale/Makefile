@@ -424,11 +424,13 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-bm.dtb \
 			  imx8mp-nitrogen8mp-enc.dtb imx8mp-nitrogen8mp-enc-m4.dtb \
 			  imx8mp-nitrogen8mp-enc-ar.dtb \
 			  imx8mp-nitrogen8mp-enc-basler4200-ov5640.dtb \
+			  imx8mp-nitrogen8mp-enc-tc358743.dtb \
 			  imx8mp-nitrogen8mp_r20.dtb imx8mp-nitrogen8mp_r20-m4.dtb \
 			  imx8mp-nitrogen8mp_r20-basler3840-4200.dtb \
 			  imx8mp-nitrogen8mp_r20-enc.dtb imx8mp-nitrogen8mp_r20-enc-m4.dtb \
 			  imx8mp-nitrogen8mp_r20-enc-ar.dtb \
 			  imx8mp-nitrogen8mp_r20-enc-basler4200-ov5640.dtb \
+			  imx8mp-nitrogen8mp_r20-enc-tc358743.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-bio.dtb \
 			  imx8mq-ds.dtb \
