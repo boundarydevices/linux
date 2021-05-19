@@ -546,6 +546,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_bq25898>;
 		interrupts-extended = GPIRQ_BQ25898;
+		skip-reset;
 	        ti,battery-regulation-voltage = <4200000>;
 	        ti,charge-current = <2000000>;
 		ti,iilim-current = <3150000>;
