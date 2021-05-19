@@ -1,0 +1,74 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2021 Boundary Devices
+ */
+
+#include "imx8mp-nitrogen8mp-enc.dts"
+
+/ {
+	model = "Boundary i.MX 8M Plus Nitrogen8MP ENC + TC358743 board";
+	compatible = "boundary,imx8mp-nitrogen8mp-enc-tc358743", "fsl,imx8mp";
+
+	clk27m: clk27m {
+		compatible = "fixed-clock";
+		clock-output-names = "clk27m";
+		clock-frequency = <27000000>;
+		#clock-cells = <0>;
+	};
+};
+
+&iomuxc {
+	/delete-node/ i2c2c-ov5640-mipigrp;
+
+	pinctrl_i2c2c_tc358743_mipi: i2c2c-tc358743-mipigrp {
+		fsl,pins = <
+#define GP_TC3587_RESET	<&gpio5 5 GPIO_ACTIVE_LOW>
+			MX8MP_IOMUXC_SPDIF_EXT_CLK__GPIO5_IO05		0x101
+#define GP_TC3587_IRQ	<&gpio5 4 GPIO_ACTIVE_HIGH>
+#define GPIRQ_TC3587	<&gpio5 4 IRQ_TYPE_LEVEL_HIGH>
+			MX8MP_IOMUXC_SPDIF_RX__GPIO5_IO04		0x1c1
+		>;
+	};
+};
+
+&i2c2c {
+	/delete-node/ ov5640-mipi1@3c;
+
+	tc358743_mipi@f {
+		compatible = "toshiba,tc358743";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2c_tc358743_mipi>;
+		reg = <0x0f>;
+		clocks = <&clk27m>;
+		clock-names = "refclk";
+		interrupts-extended = GPIRQ_TC3587;
+		reset-gpios = GP_TC3587_RESET;
+		status = "okay";
+
+		port@0 {
+			tc358743_mipi1_ep: endpoint {
+				remote-endpoint = <&mipi1_tc358743_ep>;
+				data-lanes = <1 2 3 4>;
+				clock-lanes = <0>;
+				clock-noncontinuous;
+				link-frequencies = /bits/ 64 <297000000>;
+			};
+		};
+	};
+};
+
+&mipi_csi_1 {
+	status = "okay";
+
+	port@1 {
+		reg = <1>;
+
+		mipi1_tc358743_ep: endpoint {
+			remote-endpoint = <&tc358743_mipi1_ep>;
+			data-lanes = <4>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+	};
+};
