@@ -84,6 +84,10 @@ struct bq25890_init_data {
 	u8 boostf;	/* boost frequency		*/
 	u8 iilim;	/* Input current limit		*/
 	u8 ilim_en;	/* enable ILIM pin		*/
+	u8 skip_reset;	/*
+			 * u-boot already reset chip,
+			 * skip reset to avoid power dip
+			 */
 	u8 treg;	/* thermal regulation threshold */
 	u8 rbatcomp;	/* IBAT sense resistor value    */
 	u8 vclamp;	/* IBAT compensation voltage limit */
@@ -640,6 +644,7 @@ static int bq25890_chip_reset(struct bq25890_device *bq)
 
 static int bq25890_hw_init(struct bq25890_device *bq)
 {
+	struct bq25890_init_data *init = &bq->init_data;
 	int ret;
 	int i;
 
@@ -662,10 +667,13 @@ static int bq25890_hw_init(struct bq25890_device *bq)
 		{F_VCLAMP,	 bq->init_data.vclamp},
 	};
 
-	ret = bq25890_chip_reset(bq);
-	if (ret < 0) {
-		dev_dbg(bq->dev, "Reset failed %d\n", ret);
-		return ret;
+	/* reset will 0 fast charge(reg4) which can cause a power dip */
+	if (!init->skip_reset) {
+		ret = bq25890_chip_reset(bq);
+		if (ret < 0) {
+			dev_dbg(bq->dev, "Reset failed %d\n", ret);
+			return ret;
+		}
 	}
 
 	/* disable watchdog */
@@ -910,6 +918,7 @@ static int bq25890_fw_probe(struct bq25890_device *bq)
 	if (ret < 0)
 		return ret;
 
+	init->skip_reset = device_property_read_bool(bq->dev, "skip-reset");
 	init->ilim_en = device_property_read_bool(bq->dev, "ti,use-ilim-pin");
 	init->boostf = device_property_read_bool(bq->dev, "ti,boost-low-freq");
 
