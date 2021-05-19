@@ -1398,6 +1398,9 @@ static void wm8960_set_pdata_from_of(struct i2c_client *i2c,
 
 	if (of_property_read_bool(np, "wlf,shared-lrclk"))
 		pdata->shared_lrclk = true;
+
+	if (of_property_read_bool(np, "wlf,mbsel-0p65"))
+		pdata->mbsel_0p65 = true;
 }
 
 static int wm8960_i2c_probe(struct i2c_client *i2c,
@@ -1444,6 +1447,15 @@ static int wm8960_i2c_probe(struct i2c_client *i2c,
 		if (ret != 0) {
 			dev_err(&i2c->dev, "Failed to enable LRCM: %d\n",
 				ret);
+			return ret;
+		}
+	}
+
+	if (wm8960->pdata.mbsel_0p65) {
+		ret = regmap_update_bits(wm8960->regmap, WM8960_ADDCTL4,
+					 0x1, 0x1);
+		if (ret != 0) {
+			dev_err(&i2c->dev, "Failed to switch MBSEL: %d\n", ret);
 			return ret;
 		}
 	}

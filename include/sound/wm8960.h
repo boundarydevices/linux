@@ -14,8 +14,8 @@
 
 struct wm8960_data {
 	bool capless;  /* Headphone outputs configured in capless mode */
-
 	bool shared_lrclk;  /* DAC and ADC LRCLKs are wired together */
+	bool mbsel_0p65; /* MIC Bias of 0.65 * AVDD instead of 0.9 * AVDD */
 };
 
 #endif
