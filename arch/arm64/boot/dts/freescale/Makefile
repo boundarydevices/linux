@@ -265,4 +265,5 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-crs.dtb \
 			  imx8mp-nitrogen8mp-enc.dtb \
 			  imx8mp-nitrogen8mp-enc-m4.dtb \
 			  imx8mp-nitrogen8mp-enc-basler4200-ov5640.dtb \
+			  imx8mp-nitrogen8mp-enc-tc358743.dtb \
 
