@@ -1179,6 +1179,8 @@ static int bq25890_fw_probe(struct bq25890_device *bq)
 				 &bq->pump_express_vbus_max);
 
 	bq->skip_reset = device_property_read_bool(bq->dev, "linux,skip-reset");
+	if (!bq->skip_reset)
+		bq->skip_reset = device_property_read_bool(bq->dev, "skip-reset");
 	bq->read_back_init_data = device_property_read_bool(bq->dev,
 						"linux,read-back-settings");
 	if (bq->read_back_init_data)
