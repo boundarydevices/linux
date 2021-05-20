@@ -1852,9 +1852,15 @@ static int tc358743_s_edid(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int tc358743_s_power(struct v4l2_subdev *sd, int on)
+{
+	return 0;
+}
+
 /* -------------------------------------------------------------------------- */
 
 static const struct v4l2_subdev_core_ops tc358743_core_ops = {
+	.s_power = tc358743_s_power,
 	.log_status = tc358743_log_status,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	.g_register = tc358743_g_register,
@@ -1888,6 +1894,17 @@ static const struct v4l2_subdev_ops tc358743_ops = {
 	.core = &tc358743_core_ops,
 	.video = &tc358743_video_ops,
 	.pad = &tc358743_pad_ops,
+};
+
+static int tc358743_link_setup(struct media_entity *entity,
+			       const struct media_pad *local,
+			       const struct media_pad *remote, u32 flags)
+{
+	return 0;
+}
+
+static const struct media_entity_operations tc358743_sd_media_ops = {
+	.link_setup = tc358743_link_setup,
 };
 
 /* --------------- CUSTOM CTRLS --------------- */
@@ -2179,6 +2196,7 @@ static int tc358743_probe(struct i2c_client *client)
 	}
 
 	state->pad.flags = MEDIA_PAD_FL_SOURCE;
+	sd->entity.ops = &tc358743_sd_media_ops;
 	sd->entity.function = MEDIA_ENT_F_VID_IF_BRIDGE;
 	err = media_entity_pads_init(&sd->entity, 1, &state->pad);
 	if (err < 0)
