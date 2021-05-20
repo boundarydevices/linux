@@ -963,3 +963,4 @@ static struct platform_driver mxs_dma_driver = {
 	.probe = mxs_dma_probe,
 };
 module_platform_driver(mxs_dma_driver);
+MODULE_LICENSE("GPL v2");
