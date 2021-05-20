@@ -766,7 +766,7 @@ config SND_SOC_DMIC
 	  Select this if your sound card has DMICs.
 
 config SND_SOC_HDMI_CODEC
-	tristate
+	tristate "HDMI Audio Codec Driver"
 	select SND_PCM_ELD
 	select SND_PCM_IEC958
 	select HDMI
