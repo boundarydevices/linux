@@ -1593,7 +1593,7 @@ static int sdma_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct sdma_engine *sdma = platform_get_drvdata(pdev);
-	int i, ret;
+	int i, ret = 0;
 
 	ret = clk_enable(sdma->clk_ipg);
 	if (ret)
@@ -1601,6 +1601,27 @@ static int sdma_runtime_resume(struct device *dev)
 	ret = clk_enable(sdma->clk_ahb);
 	if (ret)
 		goto disable_clk_ipg;
+
+	/* Do nothing at HW level if audiomix which shared with audio driver
+	 * not off indeed.
+	 */
+	if (readl_relaxed(sdma->regs + SDMA_H_C0PTR)) {
+		if (sdma->iram_pool)
+			sdma->bd0 = gen_pool_dma_alloc(sdma->iram_pool,
+					sizeof(struct sdma_buffer_descriptor),
+					&sdma->bd0_phys);
+		else
+			sdma->bd0 = dma_alloc_coherent(sdma->dev,
+					sizeof(struct sdma_buffer_descriptor),
+					&sdma->bd0_phys, GFP_NOWAIT);
+		if (!sdma->bd0)
+			ret = -ENOMEM;
+
+		sdma->is_on = true;
+		sdma->fw_loaded = true;
+
+		return ret;
+	}
 
 	/* Be sure SDMA has not started yet */
 	writel_relaxed(0, sdma->regs + SDMA_H_C0PTR);
