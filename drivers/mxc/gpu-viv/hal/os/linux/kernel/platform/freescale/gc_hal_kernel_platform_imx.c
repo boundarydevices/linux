@@ -574,6 +574,14 @@ static ssize_t gpu_govern_store(struct device_driver *dev, const char *buf, size
     struct imx_priv *priv = &imxPriv;
     int core = gcvCORE_MAJOR;
     int i;
+    gckGALDEVICE device = platform_get_drvdata(pdevice);
+    gctBOOL mutex_acquired = gcvFALSE;
+    gceSTATUS status;
+
+    if (!device)
+    {
+        return count;
+    }
 
     for (i = 0; i < GOVERN_COUNT; i++)
     {
@@ -587,6 +595,14 @@ static ssize_t gpu_govern_store(struct device_driver *dev, const char *buf, size
     {
         return count;
     }
+
+    /* Get the device commit mutex. */
+    gcmkONERROR(gckOS_AcquireMutex(device->os, device->device->commitMutex,
+            gcvINFINITE));
+    mutex_acquired = gcvTRUE;
+
+    /* Suspend the GPU. */
+    gcmkONERROR(gckGALDEVICE_Suspend(device, gcvPOWER_SUSPEND));
 
     core_freq   = priv->imx_gpu_govern.core_clk_freq[i];
     shader_freq = priv->imx_gpu_govern.shader_clk_freq[i];
@@ -609,6 +625,17 @@ static ssize_t gpu_govern_store(struct device_driver *dev, const char *buf, size
             pm_runtime_put_sync(priv->pmdev[core]);
 #endif
         }
+    }
+
+    /* Resume GPU to previous state. */
+    gcmVERIFY_OK(gckGALDEVICE_Resume(device));
+
+OnError:
+    /* Release the commit mutex. */
+    if (mutex_acquired)
+    {
+        gcmkVERIFY_OK(gckOS_ReleaseMutex(device->os,
+                device->device->commitMutex));
     }
 
     return count;

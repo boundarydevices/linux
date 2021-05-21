@@ -1402,72 +1402,18 @@ static int gpu_remove(struct platform_device *pdev)
 static int gpu_suspend(struct platform_device *dev, pm_message_t state)
 {
     gceSTATUS status;
-    gckGALDEVICE device;
-    gctINT i;
-
-    device = platform_get_drvdata(dev);
+    gckGALDEVICE device = platform_get_drvdata(dev);
 
     if (!device)
     {
         return -1;
     }
 
-    for (i = 0; i < gcdMAX_GPU_COUNT; i++)
-    {
-        if (device->kernels[i] != gcvNULL)
-        {
-            /* Store states. */
-#if gcdENABLE_VG
-            if (i == gcvCORE_VG)
-            {
-                status = gckVGHARDWARE_QueryPowerManagementState(device->kernels[i]->vg->hardware, &device->statesStored[i]);
-            }
-            else
-#endif
-            {
-                status = gckHARDWARE_QueryPowerState(device->kernels[i]->hardware, &device->statesStored[i]);
-            }
+    /* Power off the GPU. */
+    status = gckGALDEVICE_Suspend(device, gcvPOWER_OFF);
 
-            if (gcmIS_ERROR(status))
-            {
-                return -1;
-            }
-
-            /* need pull up power to flush gpu command buffer before suspend */
-#if gcdENABLE_VG
-            if (i == gcvCORE_VG)
-            {
-                status = gckVGHARDWARE_SetPowerState(device->kernels[i]->vg->hardware, gcvPOWER_ON);
-            }
-            else
-#endif
-            {
-                status = gckHARDWARE_SetPowerState(device->kernels[i]->hardware, gcvPOWER_ON);
-            }
-
-            if (gcmIS_ERROR(status))
-            {
-                return -1;
-            }
-
-#if gcdENABLE_VG
-            if (i == gcvCORE_VG)
-            {
-                status = gckVGHARDWARE_SetPowerState(device->kernels[i]->vg->hardware, gcvPOWER_OFF);
-            }
-            else
-#endif
-            {
-                status = gckHARDWARE_SetPowerState(device->kernels[i]->hardware, gcvPOWER_OFF);
-            }
-
-            if (gcmIS_ERROR(status))
-            {
-                return -1;
-            }
-
-        }
-    }
+    if (gcmIS_ERROR(status))
+        return -1;
 
     return 0;
 }
@@ -1475,89 +1421,18 @@ static int gpu_suspend(struct platform_device *dev, pm_message_t state)
 static int gpu_resume(struct platform_device *dev)
 {
     gceSTATUS status;
-    gckGALDEVICE device;
-    gctINT i;
-    gceCHIPPOWERSTATE   statesStored;
-
-    device = platform_get_drvdata(dev);
+    gckGALDEVICE device = platform_get_drvdata(dev);
 
     if (!device)
     {
         return -1;
     }
 
-    for (i = 0; i < gcdMAX_GPU_COUNT; i++)
-    {
-        if (device->kernels[i] != gcvNULL)
-        {
-#if gcdENABLE_VG
-            if (i == gcvCORE_VG)
-            {
-                status = gckVGHARDWARE_SetPowerState(device->kernels[i]->vg->hardware, gcvPOWER_ON);
-            }
-            else
-#endif
-            {
-                status = gckHARDWARE_SetPowerState(device->kernels[i]->hardware, gcvPOWER_ON);
-            }
+    /* Resume GPU to previous state. */
+    status = gckGALDEVICE_Resume(device);
 
-            if (gcmIS_ERROR(status))
-            {
-                return -1;
-            }
-
-            /* Convert global state to crossponding internal state. */
-            switch(device->statesStored[i])
-            {
-            case gcvPOWER_ON:
-                statesStored = gcvPOWER_ON_AUTO;
-                break;
-            case gcvPOWER_IDLE:
-                statesStored = gcvPOWER_IDLE_BROADCAST;
-                break;
-            case gcvPOWER_SUSPEND:
-                statesStored = gcvPOWER_SUSPEND_BROADCAST;
-                break;
-            case gcvPOWER_OFF:
-                statesStored = gcvPOWER_OFF_BROADCAST;
-                break;
-            default:
-                statesStored = device->statesStored[i];
-                break;
-            }
-
-            /* Restore states. */
-#if gcdENABLE_VG
-            if (i == gcvCORE_VG)
-            {
-                status = gckVGHARDWARE_SetPowerState(device->kernels[i]->vg->hardware, statesStored);
-            }
-            else
-#endif
-            {
-                gctINT j = 0;
-
-                for (; j < 100; j++)
-                {
-                    status = gckHARDWARE_SetPowerState(device->kernels[i]->hardware, statesStored);
-
-                    if (( statesStored != gcvPOWER_OFF_BROADCAST
-                       && statesStored != gcvPOWER_SUSPEND_BROADCAST)
-                       || status != gcvSTATUS_CHIP_NOT_READY)
-                    {
-                        break;
-                    }
-
-                    gcmkVERIFY_OK(gckOS_Delay(device->kernels[i]->os, 10));
-                };
-            }
-
-            if (gcmIS_ERROR(status))
-            {
-                return -1;
-            }
-        }
-    }
+    if (gcmIS_ERROR(status))
+        return -1;
 
     return 0;
 }
