@@ -64,7 +64,7 @@
 
 		mipi1_tc358743_ep: endpoint {
 			remote-endpoint = <&tc358743_mipi1_ep>;
-			data-lanes = <1 2 3 4>;
+			data-lanes = <4>;
 			csis-hs-settle = <13>;
 			csis-clk-settle = <2>;
 			csis-wclk;
