@@ -301,6 +301,10 @@ static int fsl_lpspi_set_bitrate(struct fsl_lpspi_data *fsl_lpspi)
 	u8 prescale;
 
 	perclk_rate = clk_get_rate(fsl_lpspi->clk_per);
+	if (!perclk_rate) {
+		dev_err(fsl_lpspi->dev, "per-clk rate was not set\n");
+		return -EINVAL;
+	}
 
 	if (config.speed_hz > perclk_rate / 2) {
 		dev_err(fsl_lpspi->dev,
