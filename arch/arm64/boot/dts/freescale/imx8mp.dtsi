@@ -182,6 +182,12 @@
  *			no-map;
  *		};
  */
+		/* used only by tuning tool, can be removed for normal case */
+		isp0_reserved: isp0@82400000 {
+			no-map;
+			reg = <0 0x82400000 0 0x10000000>;
+		};
+
 		dsp_reserved: dsp@92400000 {
 			no-map;
 			reg = <0 0x92400000 0 0x2000000>;
@@ -202,11 +208,6 @@
 			 reg = <0x0 0xE0000000 0 0x10000000>;
 		};
 
-		/* used only by tuning tool, can be removed for normal case */
-		isp0_reserved: isp0@94400000 {
-			no-map;
-			reg = <0 0x94400000 0 0x10000000>;
-		};
 	};
 
 	osc_32k: clock-osc-32k {
