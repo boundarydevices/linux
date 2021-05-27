@@ -88,6 +88,11 @@
 	status = "okay";
 };
 
+&isp0_reserved {
+	no-map;
+	reg = <0 0x82400000 0 0x10000000>;
+};
+
 &resmem {
 	secure_region: secure {
 		 compatible = "imx-secure-ion-pool";
