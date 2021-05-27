@@ -93,7 +93,7 @@ static int rtl821x_probe(struct phy_device *phydev)
 	if (!priv)
 		return -ENOMEM;
 
-	if (of_property_read_bool(dev->of_node, "rtl821x,clkout_en"))
+	if (!of_property_read_bool(dev->of_node, "rtl821x,clkout-disable"))
 		priv->quirks |= RTL821X_CLKOUT_EN_FEATURE;
 
 	if (of_property_read_bool(dev->of_node, "rtl821x,aldps-disable"))
