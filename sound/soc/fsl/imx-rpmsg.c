@@ -69,8 +69,16 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	/* Optional codec node */
 	ret = of_parse_phandle_with_fixed_args(np, "audio-codec", 0, 0, &args);
 	if (ret) {
-		data->dai.codecs->dai_name = "snd-soc-dummy-dai";
-		data->dai.codecs->name = "snd-soc-dummy";
+		if (of_device_is_compatible(np, "fsl,imx7ulp-rpmsg-audio")) {
+			data->dai.codecs->dai_name = "rpmsg-wm8960-hifi";
+			data->dai.codecs->name = RPMSG_CODEC_DRV_NAME_WM8960;
+		} else if (of_device_is_compatible(np, "fsl,imx8mm-rpmsg-audio")) {
+			data->dai.codecs->dai_name = "rpmsg-ak4497-aif";
+			data->dai.codecs->name = RPMSG_CODEC_DRV_NAME_AK4497;
+		} else {
+			data->dai.codecs->dai_name = "snd-soc-dummy-dai";
+			data->dai.codecs->name = "snd-soc-dummy";
+		}
 	} else {
 		data->dai.codecs->of_node = args.np;
 		ret = snd_soc_get_dai_name(&args, &data->dai.codecs->dai_name);
