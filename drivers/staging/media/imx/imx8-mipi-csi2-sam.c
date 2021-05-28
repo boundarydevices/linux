@@ -1020,13 +1020,35 @@ static const struct media_entity_operations mipi_csi2_sd_media_ops = {
 	.link_setup = mipi_csi2_link_setup,
 };
 
+static int mipi_csis_s_mbus_config(struct v4l2_subdev *mipi_sd,
+				const struct v4l2_mbus_config *cfg)
+{
+	struct csi_state *state = mipi_sd_to_csi_state(mipi_sd);
+
+	if (cfg->flags & V4L2_MBUS_CSI2_4_LANE)
+		state->num_lanes = 4;
+	else if (cfg->flags & V4L2_MBUS_CSI2_3_LANE)
+		state->num_lanes = 3;
+	else if (cfg->flags & V4L2_MBUS_CSI2_2_LANE)
+		state->num_lanes = 2;
+	else if (cfg->flags & V4L2_MBUS_CSI2_1_LANE)
+		state->num_lanes = 1;
+	else
+		return -EINVAL;
+	v4l2_dbg(1, debug, mipi_sd, "%s: lanes=%d\n",
+		__func__, state->num_lanes);
+	return 0;
+}
+
 /*
  * V4L2 subdev operations
  */
 static int mipi_csis_s_power(struct v4l2_subdev *mipi_sd, int on)
 {
+	struct v4l2_mbus_config cfg;
 	struct csi_state *state = mipi_sd_to_csi_state(mipi_sd);
 	struct v4l2_subdev *sen_sd;
+	int ret;
 
 	/* Get remote source pad subdev */
 	sen_sd = csis_get_remote_subdev(state, __func__);
@@ -1035,7 +1057,14 @@ static int mipi_csis_s_power(struct v4l2_subdev *mipi_sd, int on)
 		return -EINVAL;
 	}
 
-	return v4l2_subdev_call(sen_sd, core, s_power, on);
+	ret = v4l2_subdev_call(sen_sd, core, s_power, on);
+	if (on) {
+		cfg.flags = 0;
+		v4l2_subdev_call(sen_sd, video, g_mbus_config, &cfg);
+		if (cfg.flags)
+			mipi_csis_s_mbus_config(mipi_sd, &cfg);
+	}
+	return ret;
 }
 
 static int mipi_csis_s_stream(struct v4l2_subdev *mipi_sd, int enable)
@@ -1369,6 +1398,7 @@ static struct v4l2_subdev_core_ops mipi_csis_core_ops = {
 static struct v4l2_subdev_video_ops mipi_csis_video_ops = {
 	.s_rx_buffer = mipi_csis_s_rx_buffer,
 	.s_stream = mipi_csis_s_stream,
+	.s_mbus_config = mipi_csis_s_mbus_config,
 
 	.g_frame_interval = mipi_csis_g_frame_interval,
 	.s_frame_interval = mipi_csis_s_frame_interval,
