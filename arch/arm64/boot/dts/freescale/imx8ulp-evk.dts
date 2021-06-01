@@ -118,6 +118,23 @@
 	pinctrl-1 = <&pinctrl_lpuart7>;
 };
 
+&lpi2c7 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpi2c7>;
+	pinctrl-1 = <&pinctrl_lpi2c7>;
+	status = "okay";
+
+	pcal6408: gpio@21 {
+		compatible = "nxp,pcal9554b";
+		reg = <0x21>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+};
+
 &mu {
 	status = "okay";
 };
@@ -210,6 +227,13 @@
 		fsl,pins = <
 			MX8ULP_PAD_PTF22__LPUART7_TX	0x3
 			MX8ULP_PAD_PTF23__LPUART7_RX	0x3
+		>;
+	};
+
+	pinctrl_lpi2c7: lpi2c7grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE12__LPI2C7_SCL	0x20
+			MX8ULP_PAD_PTE13__LPI2C7_SDA	0x20
 		>;
 	};
 
