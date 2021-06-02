@@ -13,6 +13,41 @@
 
 / {
 	compatible = "khadas,vim3", "amlogic,a311d", "amlogic,g12b";
+
+	reserved-memory {
+		galcore_reserved:linux,galcore {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x1000000>;
+			alignment = <0x0 0x400000>;
+			linux,contiguous-region;
+		};
+	};
+
+	galcore {
+		compatible = "amlogic, galcore";
+		dev_name = "galcore";
+		status = "okay";
+		clocks = <&clkc CLKID_NNA_AXI_CLK>,
+				<&clkc CLKID_NNA_CORE_CLK>;
+		clock-names = "cts_vipnanoq_axi_clk_composite",
+						"cts_vipnanoq_core_clk_composite";
+		interrupts = <0 147 4>;
+		interrupt-names = "galcore";
+		reg = <0x0 0xff100000 0x0 0x800
+				0x0 0xff000000 0x0 0x400000
+				0x0 0xff63c10c 0x0 0x4
+				0x0 0xff63c110 0x0 0x4
+				0x0 0xffd01088 0x0 0x4
+				0X0 0xff63c1c8 0X0 0x4
+		>;
+		reg-names = "NN_REG","NN_SRAM","NN_MEM0",
+					"NN_MEM1","NN_RESET","NN_CLK";
+		nn_power_version = <2>;
+		nn_efuse = <0xff63003c 0x20>;
+
+		memory-region = <&galcore_reserved>;
+	};
 };
 
 /*
