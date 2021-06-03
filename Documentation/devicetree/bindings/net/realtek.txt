@@ -3,5 +3,5 @@ Realtek PHY properties.
 These properties cover the base properties Realtek PHYs.
 
 Optional properties:
- - rtl821x,clkout_en : enable clkout to supply clocks for MAC.
+ - rtl821x,clkout-disable: disable CLKOUT clock.
  - rtl821x,aldps-disable : disable ALDPS mode.

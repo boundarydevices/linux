@@ -4429,12 +4429,18 @@ static int stmmac_set_mac_address(struct net_device *ndev, void *addr)
 	struct stmmac_priv *priv = netdev_priv(ndev);
 	int ret = 0;
 
-	ret = eth_mac_addr(ndev, addr);
+	ret = stmmac_bus_clks_enable(priv, true);
 	if (ret)
 		return ret;
 
+	ret = eth_mac_addr(ndev, addr);
+	if (ret)
+		goto error_set_mac;
+
 	stmmac_set_umac_addr(priv, priv->hw, ndev->dev_addr, 0);
 
+error_set_mac:
+	stmmac_bus_clks_enable(priv, false);
 	return ret;
 }
 

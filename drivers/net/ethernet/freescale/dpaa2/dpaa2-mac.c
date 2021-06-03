@@ -518,6 +518,12 @@ static void dpaa2_mac_ksettings_change(struct dpaa2_mac *priv)
 		return;
 	}
 
+	/* There are some circumstances (MC bugs) when the advertising is all
+	 * zeroes. Just skip any configuration if this happens.
+	 */
+	if (!link_cfg.advertising)
+		return;
+
 	phylink_ethtool_ksettings_get(priv->phylink, &priv->kset);
 
 	priv->kset.base.speed = link_cfg.rate;

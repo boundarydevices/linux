@@ -946,7 +946,12 @@ struct fsl_mc_device *fsl_mc_get_endpoint(struct fsl_mc_device *mc_dev)
 	 * Force a rescan of the devices in this container and retry the lookup.
 	 */
 	if (!endpoint) {
-		err = dprc_scan_container(mc_bus_dev, true);
+		struct fsl_mc_bus *mc_bus = to_fsl_mc_bus(mc_bus_dev);
+
+		mutex_lock(&mc_bus->scan_mutex);
+		err = dprc_scan_objects(mc_bus_dev, true);
+		mutex_unlock(&mc_bus->scan_mutex);
+
 		if (err < 0)
 			return ERR_PTR(err);
 	}
