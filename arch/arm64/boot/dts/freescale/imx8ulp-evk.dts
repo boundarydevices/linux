@@ -230,6 +230,10 @@
 	};
 };
 
+&tpm_rpchip_0 {
+	status = "okay";
+};
+
 &usbotg1 {
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_otgid1>;
