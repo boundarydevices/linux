@@ -566,12 +566,10 @@
 	};
 
 	soc@0 {
-		compatible = "fsl,imx8mp-soc", "simple-bus";
+		compatible = "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0x0 0x0 0x0 0x3e000000>;
-		nvmem-cells = <&imx8mp_uid>;
-		nvmem-cell-names = "soc_unique_id";
 
 		caam_sm: caam-sm@100000 {
 			compatible = "fsl,imx6q-caam-sm";
@@ -693,7 +691,7 @@
 			};
 
 			ocotp: efuse@30350000 {
-				compatible = "fsl,imx8mp-ocotp", "fsl,imx8mm-ocotp", "syscon";
+				compatible = "fsl,imx8mp-ocotp", "fsl,imx8mm-ocotp", "syscon", "simple-mfd";
 				reg = <0x30350000 0x10000>;
 				clocks = <&clk IMX8MP_CLK_OCOTP_ROOT>;
 				/* For nvmem subnodes */
@@ -714,6 +712,12 @@
 
 				eth_mac2: mac-address@650 {
 					reg = <0x96 6>;
+				};
+
+				imx8mp_soc: imx8mp-soc {
+					compatible = "fsl,imx8mp-soc";
+					nvmem-cells = <&imx8mp_uid>;
+					nvmem-cell-names = "soc_unique_id";
 				};
 			};
 
