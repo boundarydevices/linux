@@ -1634,7 +1634,7 @@ static int fsl_spdif_probe(struct platform_device *pdev)
 
 	ret = imx_pcm_dma_init(pdev, IMX_SPDIF_DMABUF_SIZE);
 	if (ret) {
-		dev_err_probe(&pdev->dev, ret, "imx_pcm_dma_init failed\n");
+		dev_err_probe(&pdev->dev, ret, "imx_pcm_dma_init failed: %d\n", ret);
 		goto err_pm_disable;
 	}
 
