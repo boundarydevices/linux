@@ -37,6 +37,7 @@
 		usbphy0 = &usbphy1;
 		usbphy1 = &usbphy2;
 		isi0 = &isi_0;
+		csi0 = &mipi_csi0;
 	};
 
 	cpus {
@@ -939,6 +940,37 @@
 						compatible = "imx-isi-capture";
 						status = "disabled";
 					};
+				};
+
+				mipi_csi0: csi@2dad0000 {
+					compatible = "fsl,imx8ulp-mipi-csi2", "fsl,mxc-mipi-csi2";
+					reg = <0x2daf0000 0x10000>,
+					      <0x2dad0000 0x10000>;
+					clocks = <&pcc5 IMX8ULP_CLK_CSI>,
+						 <&pcc5 IMX8ULP_CLK_CSI_CLK_UI>,
+						 <&pcc5 IMX8ULP_CLK_CSI_CLK_ESC>,
+						 <&pcc5 IMX8ULP_CLK_CSI_REGS>;
+					clock-names = "clk_core", "clk_ui", "clk_esc", "clk_regs";
+					power-domains = <&scmi_devpd IMX8ULP_PD_MIPI_CSI>;
+					assigned-clocks = <&cgc2 IMX8ULP_CLK_PLL4_PFD1>,
+							  <&cgc2 IMX8ULP_CLK_PLL4_PFD1_DIV1>,
+							  <&cgc2 IMX8ULP_CLK_PLL4_PFD1_DIV2>,
+							  <&cgc2 IMX8ULP_CLK_PLL4_PFD3>,
+							  <&pcc5 IMX8ULP_CLK_CSI>,
+							  <&pcc5 IMX8ULP_CLK_CSI_CLK_UI>,
+							  <&pcc5 IMX8ULP_CLK_CSI_CLK_ESC>;
+					assigned-clock-parents = <0>, <0>, <0>, <0>,
+								 <&cgc2 IMX8ULP_CLK_PLL4_PFD1_DIV1>,
+								 <&cgc2 IMX8ULP_CLK_PLL4_PFD1_DIV2>,
+								 <&cgc2 IMX8ULP_CLK_PLL4_PFD3_DIV2>;
+					assigned-clock-rates =  <528000000>,
+								<176000000>,
+								<132000000>,
+								<396000000>,
+								<176000000>,
+								<132000000>,
+								<79200000>;
+					status = "disabled";
 				};
 			};
 		};
