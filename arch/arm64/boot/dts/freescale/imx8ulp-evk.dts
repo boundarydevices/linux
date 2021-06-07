@@ -457,3 +457,7 @@
 	};
 
 };
+
+&cameradev {
+	status = "okay";
+};
