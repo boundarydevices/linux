@@ -8,6 +8,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/power/imx8ulp-power.h>
 #include <dt-bindings/reset/imx8ulp-pcc-reset.h>
+#include <dt-bindings/power/imx8ulp-power.h>
 
 #include "imx8ulp-pinfunc.h"
 
@@ -462,6 +463,7 @@
 				reg = <0x29900000 0x200>;
 				interrupts = <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&pcc4 IMX8ULP_CLK_USB0>;
+				power-domains = <&scmi_devpd IMX8ULP_PD_USB0>;
 				phys = <&usbphy1>;
 				fsl,usbmisc = <&usbmisc1 0>;
 				ahb-burst-config = <0x0>;
@@ -491,6 +493,7 @@
 				reg = <0x29920000 0x200>;
 				interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&pcc4 IMX8ULP_CLK_USB1>;
+				power-domains = <&scmi_devpd IMX8ULP_PD_USDHC2_USB1>;
 				phys = <&usbphy2>;
 				fsl,usbmisc = <&usbmisc2 0>;
 				ahb-burst-config = <0x0>;
