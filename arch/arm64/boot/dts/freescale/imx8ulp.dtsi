@@ -879,6 +879,14 @@
 				#clock-cells = <1>;
 				#reset-cells = <1>;
 			};
+
+			cameradev: camera {
+				compatible = "fsl,mxc-md", "simple-bus";
+				#address-cells = <1>;
+				#size-cells = <1>;
+				ranges;
+				status = "disabled";
+			};
 		};
 
 		gpu3d: gpu3d@2e000000 {
