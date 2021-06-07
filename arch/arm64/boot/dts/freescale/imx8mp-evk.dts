@@ -285,6 +285,9 @@
 	pinctrl-0 = <&pinctrl_eqos>;
 	phy-mode = "rgmii-id";
 	phy-handle = <&ethphy0>;
+	snps,force_thresh_dma_mode;
+	snps,mtl-rx-config = <&mtl_rx_setup>;
+	snps,mtl-tx-config = <&mtl_tx_setup>;
 	status = "okay";
 
 	mdio {
@@ -298,6 +301,34 @@
 			eee-broken-1000t;
 			rtl821x,aldps-disable;
 			rtl821x,clkout-disable;
+		};
+	};
+
+	mtl_rx_setup: rx-queues-config {
+		snps,rx-queues-to-use = <5>;
+		queue0 {
+		};
+		queue1 {
+		};
+		queue2 {
+		};
+		queue3 {
+		};
+		queue4 {
+		};
+	};
+
+	mtl_tx_setup: tx-queues-config {
+		snps,tx-queues-to-use = <5>;
+		queue0 {
+		};
+		queue1 {
+		};
+		queue2 {
+		};
+		queue3 {
+		};
+		queue4 {
 		};
 	};
 };
