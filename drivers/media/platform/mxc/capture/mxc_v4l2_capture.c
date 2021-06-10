@@ -3144,4 +3144,3 @@ module_param(video_nr, int, 0444);
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("V4L2 capture driver for Mxc based cameras");
 MODULE_LICENSE("GPL");
-MODULE_SUPPORTED_DEVICE("video");
