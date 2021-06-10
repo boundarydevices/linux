@@ -434,7 +434,7 @@
 				reg = <0x29950000 0x10000>;
 				interrupts = <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "int0";
-				clocks = <&pcc4 IMX8ULP_CLK_ENET>,
+				clocks = <&cgc1 IMX8ULP_CLK_XBAR_DIVBUS>,
 					 <&pcc4 IMX8ULP_CLK_ENET>,
 					 <&cgc1 IMX8ULP_CLK_ENET_TS_SEL>;
 				clock-names = "ipg", "ahb", "ptp";
