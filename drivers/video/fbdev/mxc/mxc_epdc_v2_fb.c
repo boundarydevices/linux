@@ -6864,4 +6864,3 @@ module_exit(mxc_epdc_fb_exit);
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("MXC EPDC V2 framebuffer driver");
 MODULE_LICENSE("GPL");
-MODULE_SUPPORTED_DEVICE("fb");

@@ -3675,4 +3675,3 @@ module_exit(mxcfb_exit);
 MODULE_AUTHOR("Freescale Semiconductor, Inc.");
 MODULE_DESCRIPTION("MXC framebuffer driver");
 MODULE_LICENSE("GPL");
-MODULE_SUPPORTED_DEVICE("fb");
