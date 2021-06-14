@@ -215,8 +215,7 @@ static void max77823_irq_sync_unlock(struct irq_data *data)
 			continue;
 		max77823->irq_masks_cache[i] = max77823->irq_masks_cur[i];
 
-		max77823_write_reg(i2c, max77823_mask_reg[i],
-				max77823->irq_masks_cur[i]);
+		max77823_write_reg(i2c, mask_reg, max77823->irq_masks_cur[i]);
 	}
 
 	mutex_unlock(&max77823->irqlock);
@@ -293,17 +292,6 @@ static irqreturn_t max77823_irq_thread(int irq, void *data)
 			irq_reg[CHG_IRQ] = ret;
 			pr_info("%s: charger interrupt(0x%02x)\n",
 				__func__, ret);
-
-			/*
-			 * mask chgin to prevent chgin infinite interrupt
-			 * chgin is unmasked chgin isr
-			 */
-			if (ret & max77823_irqs[
-					MAX77823_CHG_IRQ_CHGIN_I].mask) {
-				max77823_update_reg(max77823->charger,
-						MAX77823_CHG_INT_MASK,
-						1 << 6, 1 << 6);
-			}
 		}
 	}
 
@@ -361,6 +349,12 @@ static int max77823_irq_init(struct max77823_dev *max77823)
 	}
 	gpio_direction_input(max77823->irq_gpio);
 	gpio_free(max77823->irq_gpio);
+	ret = max77823_write_reg(max77823->i2c, MAX77823_PMIC_INT_MASK, 0xff);
+	if (ret < 0) {
+		dev_err(max77823->dev,
+			"%s: failed to write MAX77823_PMIC_INT_MASK (%d)\n",
+			__func__, ret);
+	}
 
 	/* Mask individual interrupt sources */
 	for (i = 0; i < MAX77823_IRQ_GROUP_NR; i++) {
@@ -371,9 +365,10 @@ static int max77823_irq_init(struct max77823_dev *max77823)
 		if (max77823_mask_reg[i] == MAX77823_REG_INVALID)
 			continue;
 		if (i == CHG_IRQ) {
-			max77823->irq_masks_cur[i] = 0x9a;
-			max77823->irq_masks_cache[i] = 0x9a;
-			max77823_write_reg(max77823->charger, max77823_mask_reg[i], 0x9a);
+			max77823->irq_masks_cur[i] = 0xff;
+			max77823->irq_masks_cache[i] = 0xff;
+			/* mask all interrupts */
+			max77823_write_reg(max77823->charger, max77823_mask_reg[i], 0xff);
 		}
 	}
 
@@ -390,6 +385,16 @@ static int max77823_irq_init(struct max77823_dev *max77823)
 		irq_set_noprobe(cur_irq);
 	}
 
+	ret = request_threaded_irq(max77823->irq, NULL, max77823_irq_thread,
+				   IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+				   "max77823-irq", max77823);
+
+	if (ret) {
+		dev_err(max77823->dev, "Failed to request IRQ %d: %d\n",
+			max77823->irq, ret);
+		return ret;
+	}
+
 	/* Unmask charger and fuelgauge interrupt */
 	ret = max77823_update_reg(max77823->i2c, MAX77823_PMIC_INT_MASK,
 			0, MAX77823_IRQSRC_CHG | MAX77823_IRQSRC_FG);
@@ -400,16 +405,6 @@ static int max77823_irq_init(struct max77823_dev *max77823)
 
 	pr_info("%s MAX77823_PMIC_INT_MASK=0x%02x\n",
 		__func__, ret);
-
-	ret = request_threaded_irq(max77823->irq, NULL, max77823_irq_thread,
-				   IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
-				   "max77823-irq", max77823);
-
-	if (ret) {
-		dev_err(max77823->dev, "Failed to request IRQ %d: %d\n",
-			max77823->irq, ret);
-		return ret;
-	}
 
 	return 0;
 }
