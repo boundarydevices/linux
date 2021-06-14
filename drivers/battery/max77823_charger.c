@@ -790,14 +790,32 @@ static void max77823_charger_function_control(
 
 }
 
+static void max77823_disable_irq(struct max77823_charger_data *charger, int irq_offset)
+{
+	if (charger->irq_on[irq_offset] == 1) {
+		charger->irq_on[irq_offset]++;
+		disable_irq(charger->irq_base + irq_offset);
+	}
+}
+
+static void max77823_enable_irq(struct max77823_charger_data *charger, int irq_offset)
+{
+	while (charger->irq_on[irq_offset] >= 2) {
+		charger->irq_on[irq_offset]--;
+		enable_irq(charger->irq_base + irq_offset);
+	}
+}
+
 static void max77823_charger_initialize(struct max77823_charger_data *charger)
 {
 	int ret;
 	int i;
 	pr_info("%s\n", __func__);
 
-	/* unmasked: CHGIN_I, WCIN_I, BATP_I, BYP_I	*/
-	max77823_write_reg(charger->i2c, MAX77823_CHG_INT_MASK, 0x9a);
+	/* enable all CHGIN_I, WCIN_I, BATP_I, BYP_I	*/
+	for (i = 0; i < MAX77823_IRQ_NR; i++) {
+		max77823_enable_irq(charger, i);
+	}
 
 	/* unlock charger setting protect */
 	max77823_write_reg(charger->i2c, MAX77823_CHG_CNFG_06, 0x03 << 2);
@@ -1217,8 +1235,7 @@ static void wpc_detect_work(struct work_struct *work)
 	pr_info("%s\n", __func__);
 
 	/* unmask WCIN Interrupt*/
-	max77823_update_reg(charger->i2c,
-		MAX77823_CHG_INT_MASK, 0, 1 << 5);
+	max77823_enable_irq(charger, MAX77823_CHG_IRQ_WCIN_I);
 
 	/* check and unlock */
 	check_charger_unlock_state(charger);
@@ -1286,8 +1303,7 @@ static irqreturn_t wpc_charger_irq(int irq, void *data)
 	struct max77823_charger_data *charger = data;
 	unsigned long delay;
 
-	max77823_update_reg(charger->i2c,
-		MAX77823_CHG_INT_MASK, 1 << 5, 1 << 5);
+	disable_irq_nosync(irq);
 
 	wake_lock(&charger->wpc_wake_lock);
 #ifdef CONFIG_SAMSUNG_BATTERY_FACTORY
@@ -1351,9 +1367,6 @@ static void max77823_chgin_isr_work(struct work_struct *work)
 	int stable_count = 0;
 
 	wake_lock(&charger->chgin_wake_lock);
-	/* mask chrgin interrupt */
-	max77823_update_reg(charger->i2c, MAX77823_CHG_INT_MASK,
-		1 << 6, 1 << 6);
 
 	while (1) {
 		psy_get_prop(charger, PS_BATT, POWER_SUPPLY_PROP_HEALTH, &value);
@@ -1383,9 +1396,9 @@ static void max77823_chgin_isr_work(struct work_struct *work)
 			break;
 		msleep(100);
 	}
-	pr_info("%s: irq(%d), chgin(0x%x), chg_dtls(0x%x) is_charging %d"
+	pr_info("%s: irq(%d), chg_dtls(0x%x) is_charging %d"
 			", bat_health=0x%x\n",
-			__func__, charger->irq_chgin, chgin_dtls, chg_dtls,
+			__func__, chgin_dtls, chg_dtls,
 			charger->is_charging, bat_health);
 	if (charger->is_charging) {
 		if ((chgin_dtls == 0x02) && \
@@ -1417,17 +1430,36 @@ static void max77823_chgin_isr_work(struct work_struct *work)
 	/* Have the battery reevaluate charging */
 	psy_get_prop(charger, PS_BATT, POWER_SUPPLY_PROP_HEALTH, &value);
 	/* unmask chrgin interrupt */
-	max77823_update_reg(charger->i2c,
-		MAX77823_CHG_INT_MASK, 0, 1 << 6);
+	if (charger->isr_disabled[MAX77823_CHG_IRQ_CHGIN_I]) {
+		charger->isr_disabled[MAX77823_CHG_IRQ_CHGIN_I] = 0;
+		enable_irq(charger->irq_base + MAX77823_CHG_IRQ_CHGIN_I);
+	}
 	wake_unlock(&charger->chgin_wake_lock);
 }
 
 static irqreturn_t max77823_chgin_irq(int irq, void *data)
 {
 	struct max77823_charger_data *charger = data;
+
+	/* mask chrgin interrupt */
+	disable_irq_nosync(irq);
+	charger->isr_disabled[MAX77823_CHG_IRQ_CHGIN_I] = 1;
 	queue_work(charger->wqueue, &charger->chgin_work);
 
 	return IRQ_HANDLED;
+}
+
+static int max77823_request_threaded_irq(int irq_offset, irq_handler_t handler,
+		irq_handler_t thread_fn, unsigned long flags, const char *name,
+		struct max77823_charger_data *charger)
+{
+	int ret;
+
+	ret = request_threaded_irq(charger->irq_base + irq_offset, handler,
+			thread_fn, flags, name, charger);
+	if (ret >= 0)
+		charger->irq_on[irq_offset] = 1; /* 1 enabled, 2+ disabled, 0 not requested */
+	return ret;
 }
 
 /* register chgin isr after sec_battery_probe */
@@ -1441,13 +1473,11 @@ static void max77823_chgin_init_work(struct work_struct *work)
 
 	pr_info("%s \n", __func__);
 	queue_work(charger->wqueue, &charger->chgin_work);
-	charger->irq_chgin = charger->irq_base + MAX77823_CHG_IRQ_CHGIN_I;
-	ret = request_threaded_irq(charger->irq_chgin, NULL,
+	ret = max77823_request_threaded_irq(MAX77823_CHG_IRQ_CHGIN_I, NULL,
 			max77823_chgin_irq, 0, "chgin-irq", charger);
 	if (ret < 0) {
-		pr_err("%s: fail to request chgin IRQ: %d: %d\n",
-				__func__, charger->irq_chgin, ret);
-		charger->irq_chgin = 0;
+		pr_err("%s: fail to request chgin IRQ: %d\n",
+				__func__, ret);
 	}
 	update_cable_type(charger);
 	/* Have the battery reevaluate charging */
@@ -1465,13 +1495,11 @@ static int max77823_otg_enable(struct max77823_charger_data *charger)
 	max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_12,
 			0, 0x20);
 
-	/* disable charger interrupt: CHG_I, CHGIN_I */
-	/* enable charger interrupt: BYP_I */
-	max77823_update_reg(charger->i2c, MAX77823_CHG_INT_MASK,
-		MAX77823_CHG_IM | MAX77823_CHGIN_IM,
-		MAX77823_CHG_IM | MAX77823_CHGIN_IM | MAX77823_BYP_IM);
-			/* disable charger detection */
-#ifdef CONFIG_EXTCON_MAX77828
+	max77823_disable_irq(charger, MAX77823_CHG_IRQ_CHG_I);
+	max77823_disable_irq(charger, MAX77823_CHG_IRQ_CHGIN_I);
+	max77823_enable_irq(charger, MAX77823_CHG_IRQ_BYP_I);
+
+	#ifdef CONFIG_EXTCON_MAX77828
 	max77828_muic_set_chgdeten(DISABLE);
 #endif
 	max77823_set_vbypass(charger, charger->pdata->bypass_mv);
@@ -1505,8 +1533,9 @@ static int max77823_otg_disable(struct max77823_charger_data *charger)
 	max77828_muic_set_chgdeten(ENABLE);
 #endif
 	/* enable charger interrupt */
-	max77823_update_reg(charger->i2c, MAX77823_CHG_INT_MASK,
-		0, MAX77823_CHG_IM | MAX77823_CHGIN_IM | MAX77823_BYP_IM);
+	max77823_enable_irq(charger, MAX77823_CHG_IRQ_CHG_I);
+	max77823_enable_irq(charger, MAX77823_CHG_IRQ_CHGIN_I);
+	max77823_enable_irq(charger, MAX77823_CHG_IRQ_BYP_I);
 
 	/* Allow charging from CHRG_IN when we are not supplying power */
 	max77823_update_reg(charger->i2c, MAX77823_CHG_CNFG_12,
@@ -1835,8 +1864,7 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	if (charger->pdata->chg_irq) {
 		INIT_DELAYED_WORK(&charger->isr_work, max77823_chg_isr_work);
 
-		charger->chg_irq = charger->pdata->chg_irq;
-		ret = request_threaded_irq(charger->chg_irq,
+		ret = max77823_request_threaded_irq(MAX77823_CHG_IRQ_CHG_I,
 				NULL, max77823_chg_irq_thread,
 				charger->pdata->chg_irq_attr,
 				"charger-irq", charger);
@@ -1851,8 +1879,7 @@ static int max77823_charger_probe(struct platform_device *pdev)
 				__func__, ret);
 	}
 
-	charger->wc_w_irq = pdata->irq_base + MAX77823_CHG_IRQ_WCIN_I;
-	ret = request_threaded_irq(charger->wc_w_irq,
+	ret = max77823_request_threaded_irq(MAX77823_CHG_IRQ_WCIN_I,
 				   NULL, wpc_charger_irq,
 				   IRQF_TRIGGER_FALLING,
 				   "wpc-int", charger);
@@ -1879,13 +1906,11 @@ static int max77823_charger_probe(struct platform_device *pdev)
 	queue_delayed_work(charger->wqueue, &charger->chgin_init_work,
 			msecs_to_jiffies(3000));
 
-	charger->irq_bypass = pdata->irq_base + MAX77823_CHG_IRQ_BYP_I;
-	ret = request_threaded_irq(charger->irq_bypass, NULL,
+	ret = max77823_request_threaded_irq(MAX77823_CHG_IRQ_BYP_I, NULL,
 			max77823_bypass_irq, 0, "bypass-irq", charger);
 	if (ret < 0) {
-		pr_err("%s: fail to request bypass IRQ: %d: %d\n",
-				__func__, charger->irq_bypass, ret);
-		charger->irq_bypass = 0;
+		pr_err("%s: fail to request bypass IRQ: %d\n",
+				__func__, ret);
 	}
 
 	ret = psy_get_prop(charger, PS_USB_CHARGER, POWER_SUPPLY_PROP_CURRENT_MAX, &value);
@@ -1913,17 +1938,13 @@ static int max77823_charger_remove(struct platform_device *pdev)
 {
 	struct max77823_charger_data *charger =
 		platform_get_drvdata(pdev);
-//	int i;
+	int i;
 
 	destroy_workqueue(charger->wqueue);
-	if (charger->wc_w_irq)
-		free_irq(charger->wc_w_irq, charger);
-	if (charger->chg_irq)
-		free_irq(charger->chg_irq, charger);
-	if (charger->irq_chgin)
-		free_irq(charger->irq_chgin, charger);
-	if (charger->irq_bypass)
-		free_irq(charger->irq_bypass, charger);
+	for (i = 0; i < MAX77823_IRQ_NR; i++) {
+		if (charger->irq_on[i])
+			free_irq(charger->irq_base + i, charger);
+	}
 	power_supply_unregister(charger->psy_chg);
 //	for (i = 0; i < ARRAY_SIZE(charger->psy_ref); i++)
 //		power_supply_put(charger->psy_ref[i]);
