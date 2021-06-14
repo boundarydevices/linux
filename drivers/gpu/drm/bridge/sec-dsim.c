@@ -994,7 +994,6 @@ static ssize_t sec_mipi_dsim_host_transfer(struct mipi_dsi_host *host,
 		if (ret < 0)
 			return ret;
 	}
-	msleep(1);
 
 	return 0;
 }
