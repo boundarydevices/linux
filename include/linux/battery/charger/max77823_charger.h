@@ -159,6 +159,8 @@ struct max77823_charger_data {
 	struct delayed_work	wpc_work;	/*  wpc detect work */
 	struct delayed_work	chgin_init_work;	/*  chgin init work */
 	struct delayed_work  chg_cable_work;
+	unsigned char	irq_on[MAX77823_IRQ_NR];
+	unsigned char	isr_disabled[MAX77823_IRQ_NR];
 
 /* mutex */
 	struct mutex irq_lock;
@@ -194,13 +196,6 @@ struct max77823_charger_data {
 
 	int		chg_irq;
 	int		irq_base;
-	int		irq_bypass;
-	int		irq_batp;
-
-	int		irq_battery;
-	int		irq_chg;
-	int		irq_wcin;
-	int		irq_chgin;
 
 	/* software regulation */
 	bool		soft_reg_state;
