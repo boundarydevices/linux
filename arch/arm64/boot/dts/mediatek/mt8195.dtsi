@@ -1181,6 +1181,7 @@
 			#address-cells = <1>;
 			#size-cells = <1>;
 			ranges = <0 0 0x11e30000 0xe00>;
+			power-domains = <&spm MT8195_POWER_DOMAIN_SSUSB_PCIE_PHY>;
 			status = "disabled";
 
 			u2port1: usb-phy@0 {
@@ -1222,6 +1223,28 @@
 				clock-names = "ref", "da_ref";
 				#phy-cells = <1>;
 			};
+		};
+
+		pciephy: phy@11e80000 {
+			compatible = "mediatek,mt8195-pcie-phy";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			#phy-cells = <0>;
+			reg = <0 0x11e80000 0 0x10000>,
+			      <0 0x11e90000 0 0x10000>;
+			reg-names = "phy-sif", "phy-ckm";
+
+			power-domains = <&spm MT8195_POWER_DOMAIN_PCIE_PHY>;
+			status = "disabled";
+		};
+
+		ufsphy: phy@11fa0000 {
+			compatible = "mediatek,mt8195-ufsphy", "mediatek,mt8183-ufsphy";
+			reg = <0 0x11fa0000 0 0xc000>;
+			clocks = <&clk26m>, <&clk26m>;
+			clock-names = "unipro", "mp";
+			#phy-cells = <0>;
+			status = "disabled";
 		};
 
 		mfgcfg: syscon@13fbf000 {
