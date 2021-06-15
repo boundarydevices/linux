@@ -731,9 +731,27 @@
 			clocks = <&infracfg_ao CLK_INFRA_AO_GCE2>;
 		};
 
+		nnasys: syscon@10211000 {
+			compatible = "mediatek,mt8195-nnasys", "syscon";
+			reg = <0 0x10211000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
 		scp_adsp: syscon@10720000 {
 			compatible = "mediatek,mt8195-scp_adsp", "syscon";
 			reg = <0 0x10720000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		audsys: syscon@10890000 {
+			compatible = "mediatek,mt8195-audsys", "syscon";
+			reg = <0 0x10890000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		audsys_src: syscon@108a0000 {
+			compatible = "mediatek,mt8195-audsys_src", "syscon";
+			reg = <0 0x108a0000 0 0x2000>;
 			#clock-cells = <1>;
 		};
 
@@ -1492,6 +1510,18 @@
 		vencsys_core1: syscon@1b000000 {
 			compatible = "mediatek,mt8195-vencsys_core1", "syscon";
 			reg = <0 0x1b000000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		vdosys0: syscon@1c01a000 {
+			compatible = "mediatek,mt8195-vdosys0", "syscon";
+			reg = <0 0x1c01a000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		vdosys1: syscon@1c100000 {
+			compatible = "mediatek,mt8195-vdosys1", "syscon";
+			reg = <0 0x1c100000 0 0x1000>;
 			#clock-cells = <1>;
 		};
 	};
