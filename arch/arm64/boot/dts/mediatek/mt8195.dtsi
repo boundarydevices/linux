@@ -26,6 +26,7 @@
 	aliases {
 		gce0 = &gce0;
 		gce1 = &gce1;
+		dpi1 = &disp_dpi1;
 	};
 
 	clocks {
@@ -390,6 +391,11 @@
 			polling-delay-passive = <0>; /* milliseconds */
 			thermal-sensors = <&lvts 17>;
 		};
+        };
+	hdmiddc0: ddc-i2c {
+		compatible = "mediatek,mt8195-hdmi-ddc";
+		clocks = <&clk26m>;
+		clock-names = "ddc-i2c";
 	};
 
 	dsu-pmu {
@@ -520,6 +526,27 @@
 					 <PINMUX_GPIO43__FUNC_PWRAP_SPI0_MI>,
 					 <PINMUX_GPIO44__FUNC_SPMI_M_SCL>,
 					 <PINMUX_GPIO45__FUNC_SPMI_M_SDA>;
+                        };
+			hdmi_pins: hdmi-pins {
+				pins-hotplug {
+					pinmux = <PINMUX_GPIO32__FUNC_HDMITX20_HTPLG>;
+					bias-pull-down;
+				};
+				pins-ddc {
+					pinmux = <PINMUX_GPIO34__FUNC_HDMITX20_SCL>,
+						<PINMUX_GPIO35__FUNC_HDMITX20_SDA>;
+					mediatek,drive-strength-adv = <0>;
+					drive-strength = <MTK_DRIVE_10mA>;
+				};
+				pins-cec {
+					pinmux = <PINMUX_GPIO33__FUNC_HDMITX20_CEC>;
+					bias-disable;
+				};
+				pins-5vctrl {
+					pinmux = <PINMUX_GPIO31__FUNC_GPIO31>;
+					slew-rate = <1>;
+					output-high;
+				};
 			};
 		};
 
@@ -859,6 +886,12 @@
 			compatible = "mediatek,mt8195-apmixedsys", "syscon";
 			reg = <0 0x1000c000 0 0x1000>;
 			#clock-cells = <1>;
+		};
+
+		cec: cec@10014000 {
+			compatible = "mediatek,mt8195-cec";
+			reg = <0 0x10014000 0 0x100>;
+			interrupts = <GIC_SPI 680 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
 
 		systimer: timer@10017000 {
@@ -1640,6 +1673,20 @@
 			compatible = "mediatek,mt8195-imp_iic_wrap_s", "syscon";
 			reg = <0 0x11d03000 0 0x1000>;
 			#clock-cells = <1>;
+		};
+
+		hdmi_phy: hdmi-phy@11d5f000 {
+			compatible = "mediatek,mt8195-hdmi-phy";
+			reg = <0 0x11d5f000 0 0x100>;
+			clocks = <&topckgen CLK_TOP_HDMI_XTAL>,
+				 <&infracfg_ao CLK_INFRA_AO_HDMI_26M>,
+				 <&apmixedsys CLK_APMIXED_HDMIPLL1>,
+				 <&apmixedsys CLK_APMIXED_HDMIPLL2>;
+			clock-names = "hdmi_xtal_sel", "hdmi_26m",
+				      "hdmi_pll1", "hdmi_pll2";
+			clock-output-names = "hdmi_txpll";
+			#clock-cells = <0>;
+			#phy-cells = <0>;
 		};
 
 		i2c0: i2c@11e00000 {
@@ -3595,6 +3642,42 @@
 			         <&vppsys0 CLK_VPP0_GALS_VDO0_VDO1_VENCSYS_CORE1>;
 			clock-names = "apb", "smi", "gals";
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
+		};
+
+		disp_dpi1: disp-dpi1@1c112000 {
+			compatible = "mediatek,mt8195-dpi";
+			reg = <0 0x1c112000 0 0x1000>;
+			interrupts = <GIC_SPI 512 IRQ_TYPE_LEVEL_HIGH 0>;
+			clock-names = "pixel", "engine";
+			status = "disabled";
+		};
+
+		hdmi0: hdmi@1c300000 {
+			compatible = "mediatek,mt8195-hdmi";
+			reg = <0 0x1c300000 0 0x1000>;
+			power-domains = <&spm MT8195_POWER_DOMAIN_HDMI_TX>;
+			clocks = <&topckgen CLK_TOP_UNIVPLL_D6_D4>,
+				 <&topckgen CLK_TOP_MSDCPLL_D2>,
+				 <&topckgen CLK_TOP_HDMI_APB>,
+				 <&topckgen CLK_TOP_UNIVPLL_D4_D8>,
+				 <&topckgen CLK_TOP_HDCP>,
+				 <&topckgen CLK_TOP_HDCP_24M>,
+				 <&vppsys1 CLK_VPP1_VPP_SPLIT_HDMI>;
+			clock-names = "univpll_d6_d4",
+				      "msdcpll_d2",
+				      "hdmi_apb_sel",
+				      "univpll_d4_d8",
+				      "hdcp_sel",
+				      "hdcp24_sel",
+				      "split_hdmi";
+			interrupts = <GIC_SPI 677 IRQ_TYPE_LEVEL_HIGH 0>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&hdmi_pins>;
+			phys = <&hdmi_phy>;
+			phy-names = "hdmi";
+			cec = <&cec>;
+			ddc-i2c-bus = <&hdmiddc0>;
+			status = "disabled";
 		};
 	};
 
