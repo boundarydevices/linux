@@ -977,9 +977,15 @@ static void sdma_update_channel_loop(struct sdma_channel *sdmac)
 	       /*
 		* We use bd->mode.count to calculate the residue, since contains
 		* the number of bytes present in the current buffer descriptor.
+		* Note: in IMX_DMATYPE_MULTI_SAI case, bd->mode.count used as
+		* remaining bytes instead so that one register could be saved.
+		* so chn_real_count = desc->period_len - bd->mode.count.
 		*/
+		if (sdmac->peripheral_type == IMX_DMATYPE_MULTI_SAI)
+			desc->chn_real_count = desc->period_len - bd->mode.count;
+		else
+			desc->chn_real_count = bd->mode.count;
 
-		desc->chn_real_count = bd->mode.count;
 		bd->mode.status |= BD_DONE;
 		bd->mode.count = desc->period_len;
 		desc->buf_ptail = desc->buf_tail;
