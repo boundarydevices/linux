@@ -808,22 +808,26 @@ static int ddr_perf_probe(struct platform_device *pdev)
 		pmu->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
 		if (IS_ERR(pmu->clk_ipg)) {
 			dev_err(&pdev->dev, "no ipg clock defined\n");
-			return PTR_ERR(pmu->clk_ipg);
+			ret = PTR_ERR(pmu->clk_ipg);
+			goto cpuhp_state_err;
 		}
 
 		pmu->clk_cnt = devm_clk_get(&pdev->dev, "cnt");
 		if (IS_ERR(pmu->clk_cnt)) {
 			dev_err(&pdev->dev, "no cnt clock defined\n");
-			return PTR_ERR(pmu->clk_cnt);
+			ret = PTR_ERR(pmu->clk_cnt);
+			goto cpuhp_state_err;
 		}
 
 		ret = ddr_perf_clks_enable(pmu);
 		if (ret)
-			return ret;
+			goto cpuhp_state_err;
 	} else
 		return -EINVAL;
-	if (!name)
-		return -ENOMEM;
+	if (!name) {
+		ret = -ENOMEM;
+		goto cpuhp_state_err;
+	}
 
 	pmu->cpu = raw_smp_processor_id();
 	ret = cpuhp_setup_state_multi(CPUHP_AP_ONLINE_DYN,
