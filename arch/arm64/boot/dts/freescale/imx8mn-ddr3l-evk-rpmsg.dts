@@ -47,6 +47,14 @@
 		};
 	};
 
+	bt_sco_codec: bt_sco_codec {
+		status = "disabled";
+	};
+
+	sound-bt-sco {
+		status = "disabled";
+	};
+
 	sound-wm8524 {
 		status = "disabled";
 	};
@@ -116,6 +124,10 @@
 	vdev-nums = <1>;
 	reg = <0x0 0xb8000000 0x0 0x10000>;
 	memory-region = <&vdevbuffer>;
+	status = "disabled";
+};
+
+&sai2 {
 	status = "disabled";
 };
 
