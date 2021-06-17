@@ -139,6 +139,10 @@
 	status = "disabled";
 };
 
+&sai6 {
+	status = "disabled";
+};
+
 &flexspi {
 	status = "disabled";
 };
