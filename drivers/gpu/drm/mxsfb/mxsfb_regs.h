@@ -101,6 +101,13 @@
 #define REQ_8	3
 #define REQ_16	4
 
+#define CTRL2_SET_OUTSTANDING_REQS_1	0
+#define CTRL2_SET_OUTSTANDING_REQS_2	(0x1 << 21)
+#define CTRL2_SET_OUTSTANDING_REQS_4	(0x2 << 21)
+#define CTRL2_SET_OUTSTANDING_REQS_8	(0x3 << 21)
+#define CTRL2_SET_OUTSTANDING_REQS_16	(0x4 << 21)
+#define CTRL2_SET_OUTSTANDING_REQS_MASK	(0x7 << 21)
+
 #define SWIZZLE_LE		0 /* Little-Endian or No swap */
 #define SWIZZLE_BE		1 /* Big-Endian or swap all */
 #define SWIZZLE_HWD		2 /* Swap half-words */

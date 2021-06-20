@@ -170,16 +170,12 @@ static void mxsfb_enable_controller(struct mxsfb_drm_private *mxsfb)
 		clk_prepare_enable(mxsfb->clk_disp_axi);
 	clk_prepare_enable(mxsfb->clk);
 
-	if (mxsfb->devdata->ipversion >= 4) {
-		/*
-		 * On some platforms, bit 21 is defaulted to 1, which may alter
-		 * the below setting. So, to make sure we have the right setting
-		 * clear all the bits for CTRL2_OUTSTANDING_REQS.
-		 */
-		writel(CTRL2_OUTSTANDING_REQS(0x7),
-		       mxsfb->base + LCDC_V4_CTRL2 + REG_CLR);
-		writel(CTRL2_OUTSTANDING_REQS(REQ_16),
-		       mxsfb->base + LCDC_V4_CTRL2 + REG_SET);
+	/* Increase number of outstanding requests on all supported IPs */
+	if (mxsfb->devdata->has_ctrl2) {
+		reg = readl(mxsfb->base + LCDC_V4_CTRL2);
+		reg &= ~CTRL2_SET_OUTSTANDING_REQS_MASK;
+		reg |= CTRL2_SET_OUTSTANDING_REQS_16;
+		writel(reg, mxsfb->base + LCDC_V4_CTRL2);
 	}
 
 	/* De-assert LCD Reset bit */
