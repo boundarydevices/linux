@@ -476,6 +476,11 @@ struct bufdesc_ex {
  */
 #define FEC_QUIRK_NO_HARD_RESET		(1 << 18)
 
+/* i.MX6SX ENET IP supports multiple queues (3 queues), use this quirk to
+ * represents this ENET IP.
+ */
+#define FEC_QUIRK_HAS_MULTI_QUEUES	(1 << 19)
+
 /* i.MX8MQ ENET IP version add new feature to support IEEE 802.3az EEE
  * standard. For the transmission, MAC supply two user registers to set
  * Sleep (TS) and Wake (TW) time.
