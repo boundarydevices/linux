@@ -86,7 +86,7 @@ static int mmio_guard_ioremap_hook(phys_addr_t phys, size_t size,
 	end = phys + PAGE_ALIGN(size);
 
 	while (phys < end) {
-		const int func_id = ARM_SMCCC_VENDOR_HYP_KVM_MMIO_GUARD_FUNC_ID;
+		const int func_id = ARM_SMCCC_VENDOR_HYP_KVM_MMIO_GUARD_MAP_FUNC_ID;
 		int err;
 
 		err = arm_smccc_do_one_page(func_id, phys);
@@ -122,6 +122,6 @@ void pkvm_init_hyp_services(void)
 	pkvm_granule = res.a0;
 	arm64_mem_crypt_ops_register(&pkvm_crypt_ops);
 
-	if (kvm_arm_hyp_service_available(ARM_SMCCC_KVM_FUNC_MMIO_GUARD))
+	if (kvm_arm_hyp_service_available(ARM_SMCCC_KVM_FUNC_MMIO_GUARD_MAP))
 		arm64_ioremap_prot_hook_register(&mmio_guard_ioremap_hook);
 }
