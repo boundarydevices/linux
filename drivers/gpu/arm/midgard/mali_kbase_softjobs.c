@@ -790,7 +790,11 @@ int kbase_mem_copy_from_extres(struct kbase_context *kctx,
 #ifdef CONFIG_DMA_SHARED_BUFFER
 	case KBASE_MEM_TYPE_IMPORTED_UMM: {
 		struct dma_buf *dma_buf = gpu_alloc->imported.umm.dma_buf;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
 		void *dma_kernel;
+#else
+		struct dma_buf_map map;
+#endif
 
 		KBASE_DEBUG_ASSERT(dma_buf != NULL);
 		if (dma_buf->size > buf_data->nr_extres_pages * PAGE_SIZE)
@@ -805,11 +809,19 @@ int kbase_mem_copy_from_extres(struct kbase_context *kctx,
 				DMA_FROM_DEVICE);
 		if (ret)
 			goto out_unlock;
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
 		dma_kernel = dma_buf_vmap(dma_buf);
+#else
+		ret = dma_buf_vmap(dma_buf, &map);
+		if (ret)
+			goto out_unlock;
+#endif
 		for (i = 0; i < dma_to_copy/PAGE_SIZE; i++) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
 			void *extres_page = dma_kernel + i * PAGE_SIZE;
-
+#else
+			void *extres_page = map.vaddr + i * PAGE_SIZE;
+#endif
 			if (extres_page)
 				kbase_mem_copy_from_extres_page(kctx,
 						extres_page, pages,
@@ -820,7 +832,11 @@ int kbase_mem_copy_from_extres(struct kbase_context *kctx,
 			if (target_page_nr >= buf_data->nr_pages)
 				break;
 		}
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
 		dma_buf_vunmap(dma_buf, dma_kernel);
+#else
+		dma_buf_vunmap(dma_buf, map.vaddr);
+#endif
 		dma_buf_end_cpu_access(dma_buf,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0) && !defined(CONFIG_CHROMEOS)
 				0, dma_to_copy,
