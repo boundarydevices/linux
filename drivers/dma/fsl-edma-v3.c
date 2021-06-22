@@ -1248,8 +1248,9 @@ static int fsl_edma3_suspend_late(struct device *dev)
 		fsl_chan = &fsl_edma->chans[i];
 		addr = fsl_chan->membase;
 
-		if (fsl_chan->edma3->drvdata->has_pd &&
-		    pm_runtime_status_suspended(fsl_chan->dev))
+		if ((fsl_chan->edma3->drvdata->has_pd &&
+		    pm_runtime_status_suspended(fsl_chan->dev)) ||
+		    (!fsl_chan->edma3->drvdata->has_pd && !fsl_chan->srcid))
 			continue;
 
 		if (fsl_chan->edma3->drvdata->has_pd)
@@ -1284,8 +1285,9 @@ static int fsl_edma3_resume_early(struct device *dev)
 		fsl_chan = &fsl_edma->chans[i];
 		addr = fsl_chan->membase;
 
-		if (fsl_chan->edma3->drvdata->has_pd &&
-		    pm_runtime_status_suspended(fsl_chan->dev))
+		if ((fsl_chan->edma3->drvdata->has_pd &&
+		    pm_runtime_status_suspended(fsl_chan->dev)) ||
+		    (!fsl_chan->edma3->drvdata->has_pd && !fsl_chan->srcid))
 			continue;
 
 		spin_lock_irqsave(&fsl_chan->vchan.lock, flags);
