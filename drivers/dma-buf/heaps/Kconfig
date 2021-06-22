@@ -22,3 +22,11 @@ config DMABUF_HEAPS_CMA
 	  Choose this option to enable dma-buf CMA heap. This heap is backed
 	  by the Contiguous Memory Allocator (CMA). If your system has these
 	  regions, you should say Y here.
+
+config DMABUF_HEAPS_SECURE
+	tristate "DMA-BUF Secure Heap"
+	depends on DMABUF_HEAPS && DMABUF_HEAPS_DEFERRED_FREE
+	help
+	  Choose this option to enable the secure dmabuf heap. The secure heap
+	  is allocated by gen allocater. it's allocated according the dts.
+	  If in doubt, say Y.
