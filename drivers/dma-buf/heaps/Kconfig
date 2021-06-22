@@ -30,3 +30,11 @@ config DMABUF_HEAPS_DSP
           Choose this option to enable the dsp dmabuf heap. The dsp heap
           is allocated by gen allocater. it's allocated according the dts.
           If in doubt, say Y.
+
+config DMABUF_HEAPS_SECURE
+	tristate "DMA-BUF Secure Heap"
+	depends on DMABUF_HEAPS && DMABUF_HEAPS_DEFERRED_FREE
+	help
+	  Choose this option to enable the secure dmabuf heap. The secure heap
+	  is allocated by gen allocater. it's allocated according the dts.
+	  If in doubt, say Y.
