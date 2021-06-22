@@ -1439,7 +1439,7 @@ static int stmmac_reinit_rx_buffers(struct stmmac_priv *priv)
 			}
 
 			stmmac_set_desc_addr(priv, p, buf->addr);
-			stmmac_set_desc_sec_addr(priv, p, buf->sec_addr, true);
+			stmmac_set_desc_sec_addr(priv, p, buf->sec_addr, priv->sph ? true : false);
 			if (priv->dma_buf_sz == BUF_SIZE_16KiB)
 				stmmac_init_desc3(priv, p);
 		}
