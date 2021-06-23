@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0
 menuconfig ION
-	tristate "Ion Memory Manager"
+	bool "Ion Memory Manager"
 	depends on HAS_DMA && MMU
 	select GENERIC_ALLOCATOR
 	select DMA_SHARED_BUFFER

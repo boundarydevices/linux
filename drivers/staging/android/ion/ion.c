@@ -20,7 +20,6 @@
 #include <linux/list.h>
 #include <linux/mm.h>
 #include <linux/mm_types.h>
-#include <linux/module.h>
 #include <linux/rbtree.h>
 #include <linux/sched/task.h>
 #include <linux/slab.h>
@@ -521,12 +520,4 @@ err_reg:
 	kfree(idev);
 	return ret;
 }
-
-#ifdef CONFIG_ION_MODULE
-module_init(ion_device_create);
-#else
 subsys_initcall(ion_device_create);
-#endif
-
-MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("Ion memory allocator");
