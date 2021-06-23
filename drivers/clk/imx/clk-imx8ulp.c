@@ -168,6 +168,9 @@ static int imx8ulp_clk_cgc1_init(struct platform_device *pdev)
 	clks[IMX8ULP_CLK_ROSC] = imx_obtain_fixed_clk_hw(np, "rosc");
 	clks[IMX8ULP_CLK_SOSC] = imx_obtain_fixed_clk_hw(np, "sosc");
 
+	clks[IMX8ULP_CLK_EXT_RMII_CLK] = imx_obtain_fixed_clk_hw(np, "ext_rmii_clk");
+	clks[IMX8ULP_CLK_EXT_TS_CLK] = imx_obtain_fixed_clk_hw(np, "ext_ts_clk");
+
 	/* CGC1 */
 	base = of_iomap(np, 0);
 	WARN_ON(!base);
