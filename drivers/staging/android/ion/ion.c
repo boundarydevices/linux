@@ -272,10 +272,6 @@ static int ion_assign_heap_id(struct ion_heap *heap, struct ion_device *dev)
 		start_bit = __ffs(ION_HEAP_DMA_START);
 		end_bit = __ffs(ION_HEAP_DMA_END);
 		break;
-	case ION_HEAP_TYPE_UNMAPPED:
-		start_bit = __ffs(ION_HEAP_UNMAPPED_START);
-		end_bit = __ffs(ION_HEAP_UNMAPPED_END);
-		break;
 	case ION_HEAP_TYPE_CUSTOM ... ION_HEAP_TYPE_MAX:
 		start_bit = __ffs(ION_HEAP_CUSTOM_START);
 		end_bit = __ffs(ION_HEAP_CUSTOM_END);

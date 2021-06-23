@@ -13,11 +13,3 @@ config ION_CMA_HEAP
 	  Choose this option to enable CMA heaps with Ion. This heap is backed
 	  by the Contiguous Memory Allocator (CMA). If your system has these
 	  regions, you should say Y here.
-
-config ION_UNMAPPED_HEAP
-	tristate "ION unmapped heap support"
-	depends on ION && (ARM || ARM64)
-	help
-	   Choose this option to enable UNMAPPED heaps with Ion. This heap is
-	   backed in specific memory pools, carveout from the Linux memory.
-	   Unless you know your system has these regions, you should say N here.

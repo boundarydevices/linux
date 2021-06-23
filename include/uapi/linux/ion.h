@@ -17,16 +17,14 @@
  * @ION_HEAP_TYPE_SYSTEM:        Reserved heap id for ion heap that allocates
  *				 memory using alloc_page(). Also, supports
  *				 deferred free and allocation pools.
- * @ION_HEAP_TYPE_DMA:		 Reserved heap id for ion heap that manages
+* @ION_HEAP_TYPE_DMA:		 Reserved heap id for ion heap that manages
  * 				 single CMA (contiguous memory allocator)
  * 				 region. Uses standard DMA APIs for
  *				 managing memory within the CMA region.
- * @ION_HEAP_TYPE_UNMAPPED: Reserved the memory for secure video playback.
  */
 enum ion_heap_type {
 	ION_HEAP_TYPE_SYSTEM = 0,
 	ION_HEAP_TYPE_DMA = 2,
-	ION_HEAP_TYPE_UNMAPPED = 5,
 	/* reserved range for future standard heap types */
 	ION_HEAP_TYPE_CUSTOM = 16,
 	ION_HEAP_TYPE_MAX = 31,
@@ -40,10 +38,6 @@ enum ion_heap_type {
  *				ION_HEAP_TYPE_DMA
  * @ION_HEAP_DMA_END		End of reserved id range for heaps of type
  *				ION_HEAP_TYPE_DMA
- * @ION_HEAP_UNMAPPED_START Start of reserved id range for heaps of type
- *              ION_HEAP_TYPE_UNMAPPED
- * @ION_HEAP_UNMAPPED_END   End of reserved if range for heaps of type
- *              ION_HEAP_TYPE_UNMAPPED
  * @ION_HEAP_CUSTOM_START	Start of reserved id range for heaps of custom
  *				type
  * @ION_HEAP_CUSTOM_END		End of reserved id range for heaps of custom
@@ -53,10 +47,8 @@ enum ion_heap_id {
 	ION_HEAP_SYSTEM = (1 << ION_HEAP_TYPE_SYSTEM),
 	ION_HEAP_DMA_START = (ION_HEAP_SYSTEM << 1),
 	ION_HEAP_DMA_END = (ION_HEAP_DMA_START << 7),
-	ION_HEAP_UNMAPPED_START = (ION_HEAP_DMA_END << 1),
-	ION_HEAP_UNMAPPED_END = (ION_HEAP_UNMAPPED_START << 1),
-	ION_HEAP_CUSTOM_START = (ION_HEAP_UNMAPPED_END << 1),
-	ION_HEAP_CUSTOM_END = (ION_HEAP_CUSTOM_START << 20),
+	ION_HEAP_CUSTOM_START = (ION_HEAP_DMA_END << 1),
+	ION_HEAP_CUSTOM_END = (ION_HEAP_CUSTOM_START << 22),
 };
 
 #define ION_NUM_MAX_HEAPS	(32)
