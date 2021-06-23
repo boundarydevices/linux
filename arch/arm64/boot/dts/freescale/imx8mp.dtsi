@@ -203,7 +203,7 @@
 			pmsg-size       = <0x00020000>;
 		};
 
-		unmapped_region: unmapped {
+		secure_region: secure {
 			 compatible = "imx-secure-ion-pool";
 			 reg = <0x0 0xE0000000 0 0x10000000>;
 		};
