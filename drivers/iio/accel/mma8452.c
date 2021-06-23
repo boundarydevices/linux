@@ -1481,6 +1481,7 @@ static void mma8452_trigger_cleanup(struct iio_dev *indio_dev)
 		iio_trigger_unregister(indio_dev->trig);
 }
 
+#if 0
 static int mma8452_reset(struct i2c_client *client)
 {
 	int i;
@@ -1504,6 +1505,7 @@ static int mma8452_reset(struct i2c_client *client)
 
 	return -ETIMEDOUT;
 }
+#endif
 
 static const struct of_device_id mma8452_dt_ids[] = {
 	{ .compatible = "fsl,mma8451", .data = &mma_chip_info_table[mma8451] },
@@ -1591,9 +1593,18 @@ static int mma8452_probe(struct i2c_client *client,
 	indio_dev->num_channels = data->chip_info->num_channels;
 	indio_dev->available_scan_masks = mma8452_scan_masks;
 
+	/*
+	 * Remove this reset operation, we find for fxls8471/mma8452,
+	 * once config this reset bit through I2C, sensor can’t give
+	 * back an I2C ack. Though sensor datasheet define this reset
+	 * bit, but seems it do not behavior as the doc expect. So here
+	 * remove this reset oparation as a workaround.
+	 */
+#if 0
 	ret = mma8452_reset(client);
 	if (ret < 0)
 		goto disable_regulators;
+#endif
 
 	data->data_cfg = MMA8452_DATA_CFG_FS_2G;
 	ret = i2c_smbus_write_byte_data(client, MMA8452_DATA_CFG,
