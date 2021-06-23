@@ -175,8 +175,13 @@ struct device *imx_soc_device_register(void)
 	if (!attr)
 		return NULL;
 
+	err = of_property_read_string(of_root, "model", &attr->machine);
+	if (err) {
+		kfree(attr);
+		return NULL;
+	}
 	attr->family = kasprintf(GFP_KERNEL, "Freescale i.MX");
-	attr->revision = kasprintf(GFP_KERNEL, "unknown");
+	attr->revision = kasprintf(GFP_KERNEL, "1.0");
 	attr->serial_number = kasprintf(GFP_KERNEL, "%016llX", (u64)v[3] << 32 | v[0]);
 	attr->soc_id = kasprintf(GFP_KERNEL, "i.MX8ULP");
 
@@ -186,6 +191,7 @@ struct device *imx_soc_device_register(void)
 		kfree(attr->serial_number);
 		kfree(attr->revision);
 		kfree(attr->family);
+		kfree(attr->machine);
 		kfree(attr);
 		return ERR_CAST(dev);
 	}
