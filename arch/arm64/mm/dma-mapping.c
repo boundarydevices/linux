@@ -30,7 +30,6 @@ void arch_dma_prep_coherent(struct page *page, size_t size)
 {
 	__dma_flush_area(page_address(page), size);
 }
-EXPORT_SYMBOL_GPL(arch_dma_prep_coherent);
 
 #ifdef CONFIG_IOMMU_DMA
 void arch_teardown_dma_ops(struct device *dev)
