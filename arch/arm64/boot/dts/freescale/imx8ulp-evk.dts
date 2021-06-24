@@ -21,9 +21,16 @@
 	};
 };
 
+&clock_ext_ts {
+	/* External ts clock is 50MHZ from PHY on EVK board. */
+	clock-frequency = <50000000>;
+};
+
 &fec {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet>;
+	assigned-clocks = <&cgc1 IMX8ULP_CLK_ENET_TS_SEL>;
+	assigned-clock-parents = <&clock_ext_ts>;
 	phy-mode = "rmii";
 	phy-handle = <&ethphy>;
 	status = "okay";
