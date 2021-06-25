@@ -952,11 +952,13 @@ static int imx_rproc_detect_mode(struct imx_rproc *priv)
 	switch (dcfg->method) {
 	case IMX_RPROC_NONE:
 		priv->rproc->state = RPROC_DETACHED;
+		priv->early_boot = true;
 		return 0;
 	case IMX_RPROC_SMC:
 		arm_smccc_smc(IMX_SIP_RPROC, IMX_SIP_RPROC_STARTED, 0, 0, 0, 0, 0, 0, &res);
 		if (res.a0)
 			priv->rproc->state = RPROC_DETACHED;
+		priv->early_boot = !!res.a0;
 		return 0;
 	case IMX_SCU_API:
 		ret = imx_scu_get_handle(&ipc_handle);
@@ -1049,8 +1051,10 @@ static int imx_rproc_detect_mode(struct imx_rproc *priv)
 		return ret;
 	}
 
-	if ((val & dcfg->src_mask) != dcfg->src_stop)
+	if ((val & dcfg->src_mask) != dcfg->src_stop) {
 		priv->rproc->state = RPROC_DETACHED;
+		priv->early_boot = true;
+	}
 
 	return 0;
 
@@ -1074,7 +1078,7 @@ static int imx_rproc_clk_enable(struct imx_rproc *priv)
 	if (dcfg->method == IMX_RPROC_NONE || dcfg->method == IMX_SCU_API)
 		return 0;
 
-	priv->clk = devm_clk_get(dev, NULL);
+	priv->clk = devm_clk_get_optional(dev, NULL);
 	if (IS_ERR(priv->clk)) {
 		dev_err(dev, "Failed to get clock\n");
 		return PTR_ERR(priv->clk);
