@@ -864,12 +864,12 @@ struct clk_hw *__imx_clk_gpr_scu(const char *name, const char * const *parent_na
 	if (rsrc_id >= IMX_SC_R_LAST || gpr_id >= IMX_SC_C_LAST)
 		return ERR_PTR(-EINVAL);
 
+	if (!imx_scu_clk_is_valid(rsrc_id))
+		return ERR_PTR(-EINVAL);
+
 	clk_node = kzalloc(sizeof(*clk_node), GFP_KERNEL);
 	if (!clk_node)
 		return ERR_PTR(-ENOMEM);
-
-	if (!imx_scu_clk_is_valid(rsrc_id))
-		return ERR_PTR(-EINVAL);
 
 	clk = kzalloc(sizeof(*clk), GFP_KERNEL);
 	if (!clk) {
