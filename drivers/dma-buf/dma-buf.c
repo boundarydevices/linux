@@ -26,7 +26,6 @@
 #include <linux/mm.h>
 #include <linux/mount.h>
 #include <linux/pseudo_fs.h>
-#include <linux/device.h>
 
 #include <uapi/linux/dma-buf.h>
 #include <uapi/linux/magic.h>
@@ -39,7 +38,6 @@ struct dma_buf_list {
 };
 
 static struct dma_buf_list db_list;
-static DEFINE_MUTEX(dev_lock);
 
 /*
  * This function helps in traversing the db_list and calls the
@@ -449,43 +447,6 @@ static long dma_buf_ioctl(struct file *file,
 	dmabuf = file->private_data;
 
 	switch (cmd) {
-	case DMA_BUF_IOCTL_PHYS: {
-		struct dma_buf_attachment *attachment = NULL;
-		struct sg_table *sgt = NULL;
-		unsigned long phys = 0;
-		struct device dev;
-
-		if (!dmabuf || IS_ERR(dmabuf)) {
-			return -EFAULT;
-		}
-		memset(&dev, 0, sizeof(dev));
-		mutex_lock(&dev_lock);
-		device_initialize(&dev);
-		dev.coherent_dma_mask = DMA_BIT_MASK(64);
-		dev.dma_mask = &dev.coherent_dma_mask;
-		dev.parent = NULL;
-		dev_set_name(&dev, "dma_phy");
-		device_add(&dev);
-		arch_setup_dma_ops(&dev, 0, 0, NULL, false);
-		attachment = dma_buf_attach(dmabuf, &dev);
-		if (!attachment || IS_ERR(attachment)) {
-			mutex_unlock(&dev_lock);
-			return -EFAULT;
-		}
-
-		sgt = dma_buf_map_attachment(attachment, DMA_BIDIRECTIONAL);
-		if (sgt && !IS_ERR(sgt)) {
-			phys = sg_dma_address(sgt->sgl);
-			dma_buf_unmap_attachment(attachment, sgt,
-					DMA_BIDIRECTIONAL);
-		}
-		dma_buf_detach(dmabuf, attachment);
-		device_del(&dev);
-		mutex_unlock(&dev_lock);
-		if (copy_to_user((void __user *) arg, &phys, sizeof(phys)))
-			return -EFAULT;
-		return 0;
-	}
 	case DMA_BUF_IOCTL_SYNC:
 		if (copy_from_user(&sync, (void __user *) arg, sizeof(sync)))
 			return -EFAULT;
