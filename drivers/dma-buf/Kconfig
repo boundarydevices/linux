@@ -75,6 +75,13 @@ menuconfig DMABUF_SYSFS_STATS
 	   statistics for the DMA-BUF with the unique inode number
 	   <inode_number>.
 
+config DMABUF_IMX
+	tristate "Ion for imx platform"
+	depends on ARCH_MXC && DMABUF_HEAPS
+	help
+		Choose this option if you wish to implement feature in imx,
+		like get phy address accroding dma_buf
+
 source "drivers/dma-buf/heaps/Kconfig"
 
 endmenu
