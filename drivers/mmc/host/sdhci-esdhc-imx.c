@@ -96,6 +96,8 @@
 #define ESDHC_STROBE_DLL_STS_SLV_LOCK	0x1
 
 #define ESDHC_VEND_SPEC2		0xc8
+#define ESDHC_VEND_SPEC2_TUNING_EN_MASK	0x00000070
+#define ESDHC_VEND_SPEC2_TUNING_EN_SHIFT	4
 #define ESDHC_VEND_SPEC2_EN_BUSY_IRQ	(1 << 8)
 
 #define ESDHC_TUNING_CTRL		0xcc
@@ -1443,6 +1445,14 @@ static void sdhci_esdhc_imx_hwinit(struct sdhci_host *host)
 			writel(tmp, host->ioaddr + ESDHC_TUNING_CTRL);
 		}
 
+		/* uSDHC auto tuning mechanism should use DAT[0] and CMD lines
+		 * if SDIO card is enabling SDIO Interrupts on DAT[1].
+		 */
+		if (imx_data->boarddata.sdio_interrupt_enabled)
+			esdhc_clrset_le(host, ESDHC_VEND_SPEC2_TUNING_EN_MASK,
+					0x6 << ESDHC_VEND_SPEC2_TUNING_EN_SHIFT,
+			                ESDHC_VEND_SPEC2);
+
 		/*
 		 * On i.MX8MM, we are running Dual Linux OS, with 1st Linux using SD Card
 		 * as rootfs storage, 2nd Linux using eMMC as rootfs storage. We let the
@@ -1584,6 +1594,9 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 
 	if (of_find_property(np, "vqmmc-1-8-v", NULL))
 		boarddata->vqmmc_18v = true;
+
+	if (of_property_read_bool(np, "fsl,sdio-interrupt-enabled"))
+		boarddata->sdio_interrupt_enabled = true;
 
 	if (of_property_read_u32(np, "fsl,delay-line", &boarddata->delay_line))
 		boarddata->delay_line = 0;
