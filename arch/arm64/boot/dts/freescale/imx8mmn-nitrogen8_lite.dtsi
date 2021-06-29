@@ -608,6 +608,12 @@
 
 		yellow {
 			default-state = "off";
+			gpios = GP_GPIOLEDS_YELLOW;
+			retain-state-suspended;
+		};
+
+		dry {
+			default-state = "off";
 			gpios = GP_GPIOLEDS_DRY;
 			retain-state-suspended;
 		};
