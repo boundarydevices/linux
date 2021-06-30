@@ -1040,7 +1040,7 @@
 		keypad: kp@10010000 {
 			compatible = "mediatek,mt6779-keypad";
 			reg = <0 0x10010000 0 0x1000>;
-			wakup-source;
+			wakeup-source;
 			interrupts = <GIC_SPI 124 IRQ_TYPE_EDGE_FALLING>;
 			clocks = <&clk26m>;
 			clock-names = "kpd";
