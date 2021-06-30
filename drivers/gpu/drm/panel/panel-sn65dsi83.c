@@ -100,6 +100,20 @@ static int sn_i2c_write_byte(struct panel_sn65dsi83 *sn, u8 reg, u8 val)
 	return ret < 0 ? ret : 0;
 }
 
+static void sn_disable_gp(struct panel_sn65dsi83 *sn)
+{
+	struct gpio_desc *gp_en;
+	int i;
+
+	sn->chip_enabled = 0;
+	for (i = 0; i < ARRAY_SIZE(sn->gp_en); i++) {
+		gp_en = sn->gp_en[i];
+		if (!gp_en)
+			break;
+		gpiod_set_value(gp_en, 0);
+	}
+}
+
 static void sn_disable(struct panel_sn65dsi83 *sn, int skip_irq)
 {
 	if (sn->irq_enabled && !skip_irq) {
@@ -107,14 +121,20 @@ static void sn_disable(struct panel_sn65dsi83 *sn, int skip_irq)
 		disable_irq(sn->irq);
 		sn->int_cnt = 0;
 	}
-	sn->chip_enabled = 0;
-	gpiod_set_value(sn->gp_en, 0);
+	sn_disable_gp(sn);
 }
 
-static void sn_enable_gp(struct gpio_desc *gp_en)
+static void sn_enable_gp(struct panel_sn65dsi83 *sn)
 {
+	int i;
+
 	msleep(15);	/* disabled for at least 10 ms */
-	gpiod_set_value(gp_en, 1);
+
+	for (i = 0; i < ARRAY_SIZE(sn->gp_en); i++) {
+		if (!sn->gp_en[i])
+			break;
+		gpiod_set_value(sn->gp_en[i], 1);
+	}
 	msleep(12);	/* enabled for at least 10 ms before i2c writes */
 }
 
@@ -328,7 +348,7 @@ static void sn_init(struct panel_sn65dsi83 *sn)
 static void sn_standby(struct panel_sn65dsi83 *sn)
 {
 	if (sn->state < SN_STATE_STANDBY) {
-		sn_enable_gp(sn->gp_en);
+		sn_enable_gp(sn);
 		sn_init(sn);
 		if (!sn->irq_enabled) {
 			sn->irq_enabled = 1;
@@ -568,11 +588,13 @@ int sn65_init(struct device *dev, struct panel_sn65dsi83 *sn,
 	struct pinctrl_state *pins;
 	struct pinctrl *pinctrl;
 	struct gpio_desc *gp_en;
+	struct gpio_desc *gp_irq;
 	struct clk *pixel_clk;
 	u32 sync_delay, hbp;
 	const char *df;
 	u32 dsi_lanes;
-	int ret;
+	int irq;
+	int ret, i;
 
 	dev_info(dev, "%s: start\n", __func__);
 	i2c_node = of_parse_phandle(np, "i2c-bus", 0);
@@ -623,49 +645,64 @@ int sn65_init(struct device *dev, struct panel_sn65dsi83 *sn,
 		pixel_clk = NULL;
 	}
 
-	gp_en = devm_fwnode_get_gpiod_from_child(dev, "enable", child, GPIOD_OUT_LOW, "sn65_en");
-	if (IS_ERR(gp_en)) {
-		ret = PTR_ERR(gp_en);
-		dev_dbg(sn->dev, "%s:devm_fwnode_get_gpiod_from_child enable  %d\n", __func__, ret);
-		if (PTR_ERR(gp_en) != -EPROBE_DEFER)
-			dev_err(dev, "Failed to get enable gpio: %d\n", ret);
-		return ret;
+	for (i = 0; i < ARRAY_SIZE(sn->gp_en); i++) {
+		gp_en = devm_fwnode_get_index_gpiod_from_child(dev, "enable", i,
+				child, GPIOD_OUT_LOW, "sn65_en");
+		if (IS_ERR(gp_en)) {
+			ret = PTR_ERR(gp_en);
+			if (i)
+				break;
+			dev_dbg(sn->dev,
+				"%s:devm_fwnode_get_gpiod_from_child enable %d\n",
+				__func__, ret);
+			if (PTR_ERR(gp_en) != -EPROBE_DEFER)
+				dev_err(dev,
+					"Failed to get enable gpio: %d\n", ret);
+			goto exit1;
+		}
+		if (!gp_en) {
+			if (!i)
+				dev_warn(dev, "no enable pin available");
+			break;
+		}
+		sn->gp_en[i] = gp_en;
 	}
-	if (gp_en) {
-		sn_enable_gp(gp_en);
-	} else {
-		dev_warn(dev, "no enable pin available");
-	}
+	sn_enable_gp(sn);
 	ret = sn_i2c_read_byte(sn, SN_CLK_SRC);
 	if (ret < 0) {
-		/* enable might be used for something else, change to input */
-		gpiod_direction_input(gp_en);
 		dev_info(dev, "i2c read failed\n");
-		return -ENODEV;
+		ret = -ENODEV;
+		goto exit1;
 	}
-	gpiod_set_value(gp_en, 0);
 
 	sn->dev = dev;
-	sn->gp_en = gp_en;
 	sn->pixel_clk = pixel_clk;
 	mutex_init(&sn->power_mutex);
 
 	sn->disp_dsi = disp_dsi;
 	sn->sync_delay = 0x120;
 	if (!of_property_read_u32(np, "sync-delay", &sync_delay)) {
-		if (sync_delay > 0xfff)
-			return -EINVAL;
+		if (sync_delay > 0xfff) {
+			ret = -EINVAL;
+			goto exit1;
+		}
 		sn->sync_delay = sync_delay;
 	}
 	if (!of_property_read_u32(np, "hbp", &hbp)) {
-		if (hbp > 0xff)
-			return -EINVAL;
+		if (hbp > 0xff) {
+			ret = -EINVAL;
+			goto exit1;
+		}
 		sn->hbp = hbp;
 	}
-	if (of_property_read_u32(disp_dsi, "dsi-lanes", &dsi_lanes) < 0)
-		return -EINVAL;
-	if (dsi_lanes < 1 || dsi_lanes > 4)
-		return -EINVAL;
+	if (of_property_read_u32(disp_dsi, "dsi-lanes", &dsi_lanes) < 0) {
+		ret = -EINVAL;
+		goto exit1;
+	}
+	if (dsi_lanes < 1 || dsi_lanes > 4) {
+		ret = -EINVAL;
+		goto exit1;
+	}
 	sn->dsi_lanes = dsi_lanes;
 	sn->spwg = of_property_read_bool(np, "spwg");
 	sn->jeida = of_property_read_bool(np, "jeida");
@@ -677,16 +714,30 @@ int sn65_init(struct device *dev, struct panel_sn65dsi83 *sn,
 	ret = of_property_read_string(disp_dsi, "dsi-format", &df);
 	if (ret) {
 		dev_err(dev, "dsi-format missing in display node%d\n", ret);
-		return ret;
+		goto exit1;
 	}
 	sn->dsi_bpp = !strcmp(df, "rgb666") ? 18 : 24;
 
-	sn->irq = of_irq_get(np, 0);
-	if (sn->irq > 0) {
+	for (i = 0; i < 2; i++) {
+		irq = of_irq_get(np, i);
+		if (irq > 0) {
+			gp_irq = devm_fwnode_get_index_gpiod_from_child(dev,
+				"interrupts", i, child, GPIOD_IN, "sn65_irq");
+			if (!IS_ERR(gp_en)) {
+				if (gpiod_get_value(gp_irq))
+					continue; /* active, wrong one */
+			}
+			sn->irq = irq;
+			break;
+		}
+	}
+	sn_disable_gp(sn);
+
+	if (sn->irq) {
 		irq_set_status_flags(sn->irq, IRQ_NOAUTOEN);
 		ret = devm_request_threaded_irq(dev, sn->irq,
-			NULL, sn_irq_handler,
-			IRQF_ONESHOT, client_name, sn);
+				NULL, sn_irq_handler,
+				IRQF_ONESHOT, client_name, sn);
 		if (ret)
 			pr_info("%s: request_irq failed, irq:%i\n", client_name, sn->irq);
 	}
@@ -697,6 +748,15 @@ int sn65_init(struct device *dev, struct panel_sn65dsi83 *sn,
 		pr_warn("failed to add sn65dsi83 sysfs files\n");
 	dev_info(dev, "succeeded\n");
 	return 0;
+exit1:
+	for (i = 0; i < ARRAY_SIZE(sn->gp_en); i++) {
+		gp_en = sn->gp_en[i];
+		if (!gp_en)
+			break;
+		/* enable might be used for something else, change to input */
+		gpiod_direction_input(gp_en);
+	}
+	return ret;
 }
 
 int sn65_remove(struct panel_sn65dsi83 *sn)
