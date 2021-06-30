@@ -41,7 +41,7 @@ struct panel_sn65dsi83
 	unsigned		i2c_max_frequency;
 	unsigned		i2c_address;
 	struct device_node	*disp_dsi;
-	struct gpio_desc	*gp_en;
+	struct gpio_desc	*gp_en[2];
 	struct clk		*mipi_clk;
 	struct clk		*pixel_clk;
 	struct mutex		power_mutex;
