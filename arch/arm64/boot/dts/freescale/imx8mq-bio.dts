@@ -6,8 +6,6 @@
 /dts-v1/;
 
 #include "imx8mq.dtsi"
-#include "panel-com50h5n03ulc.dtsi"
-#include "panel-ltk0680ytmdb.dtsi"
 #include "panel-m101nwwb.dtsi"
 
 &iomuxc {
@@ -89,8 +87,6 @@
 			MX8MQ_IOMUXC_SAI5_RXD2_GPIO3_IO23		0xd6
 			/* J19 Pin 4, WL_IRQ, not needed for Silex */
 			MX8MQ_IOMUXC_SAI5_RXD0_GPIO3_IO21		0xd6
-			/* J19 Pin 41, BT_CLK_REQ */
-			MX8MQ_IOMUXC_SAI5_RXD1_GPIO3_IO22		0xd6
 			/* J19 Pin 42, BT_HOST_WAKE */
 			MX8MQ_IOMUXC_SAI5_MCLK_GPIO3_IO25		0xd6
 
@@ -108,7 +104,6 @@
 			MX8MQ_IOMUXC_I2C1_SDA_I2C1_SDA			0x4000007f
 		>;
 	};
-
 
 	pinctrl_i2c1_1: i2c1-1grp {
 		fsl,pins = <
@@ -148,10 +143,17 @@
 
 	pinctrl_i2c2_sn65dsi83: i2c2-sn65dsi83 {
 		fsl,pins = <
-#define GPIRQ_I2C2_SN65DSI83	<&gpio4 28 IRQ_TYPE_LEVEL_HIGH>
-			MX8MQ_IOMUXC_SAI3_RXFS_GPIO4_IO28	0x04
-#define GP_I2C2_SN65DSI83_EN	<&gpio3 14 GPIO_ACTIVE_HIGH>
+#define GP_I2C2_SN65DSI83_IRQ_REV0	<&gpio4 28 GPIO_ACTIVE_HIGH>
+#define GPIRQ_I2C2_SN65DSI83_REV0	<&gpio4 28 IRQ_TYPE_LEVEL_HIGH>
+			MX8MQ_IOMUXC_SAI3_RXFS_GPIO4_IO28	0x44
+#define GP_I2C2_SN65DSI83_EN_REV0	<&gpio3 14 GPIO_ACTIVE_HIGH>
 			MX8MQ_IOMUXC_NAND_DQS_GPIO3_IO14	0x06
+
+#define GP_I2C2_SN65DSI83_IRQ	<&gpio3 24 GPIO_ACTIVE_HIGH>
+#define GPIRQ_I2C2_SN65DSI83	<&gpio3 24 IRQ_TYPE_LEVEL_HIGH>
+			MX8MQ_IOMUXC_SAI5_RXD3_GPIO3_IO24	0x44
+#define GP_I2C2_SN65DSI83_EN	<&gpio3 22 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_SAI5_RXD1_GPIO3_IO22	0x06
 		>;
 	};
 
@@ -232,20 +234,6 @@
 			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0xd6
 #define GP_ST1633_RESET		<&gpio3 13 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	0x49
-		>;
-	};
-
-	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
-		fsl,pins = <
-#define GP_MIPI_RESET	<&gpio3 14 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_NAND_DQS_GPIO3_IO14	0x16
-		>;
-	};
-
-	pinctrl_mipi_ltk0680ytmdb: mipi-ltk0680ytmdbgrp {
-		fsl,pins = <
-#define GP_MIPI_RESET	<&gpio3 14 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_NAND_DQS_GPIO3_IO14	0x16
 		>;
 	};
 
@@ -447,7 +435,7 @@
 		mipi_dsi_bridge = &mipi_dsi;
 		mipi_dsi_phy = &dphy;
 		mipi_to_lvds = &mipi_to_lvds;
-		pwm_mipi = &pwm1;
+		pwm_mipi = &pwm2;
 		sound_hdmi = &sound_hdmi;
 		t_mipi = &t_mipi;
 		ts_exc3000 = &ts_exc3000;
@@ -618,14 +606,6 @@
 			gpios = GP_GPIOKEY_J21_P10;
 			linux,code = <KEY_J>;
 		};
-	};
-
-	mipi_mclk: mipi-mclk {
-		compatible = "pwm-clock";
-		#clock-cells = <0>;
-		clock-frequency = <22000000>;
-		clock-output-names = "mipi_mclk";
-		pwms = <&pwm1 0 45>; /* 1 / 45 ns = 22 MHz */
 	};
 
 	reg_usb_otg_vbus: regulator-usb-otg-vbus {
@@ -1083,11 +1063,11 @@
 };
 
 &lcdif {
-	status = "disabled";
 	assigned-clocks = <&clk IMX8MQ_CLK_LCDIF_PIXEL>,
 			  <&clk IMX8MQ_VIDEO_PLL1_REF_SEL>;
 	assigned-clock-parents = <&clk IMX8MQ_VIDEO_PLL1_OUT>,
 				 <&clk IMX8MQ_CLK_25M>;
+	status = "disabled";
 
 	port@0 {
 		lcdif_mipi_dsi_out: endpoint {
@@ -1183,10 +1163,11 @@
 
 		mipi_to_lvds: mipi-to-lvds {
 			alias = <&mipi_to_lvds>;
-			enable-gpios = GP_I2C2_SN65DSI83_EN;
+			enable-gpios = GP_I2C2_SN65DSI83_EN_REV0, GP_I2C2_SN65DSI83_EN;
 			i2c-address = <0x2c>;
 			i2c-bus = <&i2c2>;
-			interrupts-extended = GPIRQ_I2C2_SN65DSI83;
+			interrupts-extended = GPIRQ_I2C2_SN65DSI83_REV0, GPIRQ_I2C2_SN65DSI83;
+			interrupts-gpios = GP_I2C2_SN65DSI83_IRQ_REV0, GP_I2C2_SN65DSI83_IRQ;
 			status = "disabled";
 		};
 	};
