@@ -387,6 +387,11 @@ print_tainted()
 }
 #endif	/* LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 15) */
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
+#define get_fs()	((mm_segment_t){ })
+#define set_fs(x)
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) */
+
 /* Linux wireless extension support */
 #if defined(WL_WIRELESS_EXT)
 #include <wl_iw.h>
