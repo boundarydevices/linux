@@ -66,8 +66,9 @@ imx_sc_misc_set_control(struct imx_sc_ipc *ipc, u32 resource,
 	return -EIO;
 }
 
-int imx_sc_misc_set_dma_group(struct imx_sc_ipc *ipc, u32 resource,
-			    u32 val)
+static inline int
+imx_sc_misc_set_dma_group(struct imx_sc_ipc *ipc, u32 resource,
+			  u32 val)
 {
 	return -EIO;
 }
