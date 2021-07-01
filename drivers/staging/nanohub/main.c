@@ -1242,7 +1242,7 @@ static int nanohub_kthread(void *arg)
 	uint32_t clear_interrupts[8] = { 0x00000006 };
 	struct device *sensor_dev = data->io[ID_NANOHUB_SENSOR].dev;
 	static const struct sched_param param = {
-		.sched_priority = (MAX_USER_RT_PRIO/2)-1,
+		.sched_priority = (MAX_RT_PRIO/2)-1,
 	};
 
 	data->kthread_err_cnt = 0;
