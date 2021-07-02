@@ -417,9 +417,6 @@
 	};
 };
 
-/delete-node/ &pgc_gpu;
-/delete-node/ &pgc_vpu;
-
 / {
 	model = "Boundary Devices i.MX8MQ BIO";
 	compatible = "boundary,imx8mq-bio", "fsl,imx8mq";
@@ -710,47 +707,6 @@
 		protocol = <1>;
 		hdmi-out;
 		status = "okay";
-	};
-
-	power-domains {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		pgc_gpuvpu: power-domain@ffffffff {
-			compatible = "fsl,imx8mq-pm-domain";
-			reg = <0xffffffff>;
-			domain-name = "VPUGPU_PD";
-			dvfs-supply = <&reg_sw5>;
-			idle-microvolt = <900000 810000 1050000>;
-			#address-cells = <1>;
-			#power-domain-cells = <0>;
-			#size-cells = <0>;
-
-			pgc_gpu: power-domain@4 {
-				clocks = <&clk IMX8MQ_CLK_GPU_AXI>,
-					 <&clk IMX8MQ_CLK_GPU_SHADER_DIV>,
-					 <&clk IMX8MQ_CLK_GPU_ROOT>,
-					 <&clk IMX8MQ_CLK_GPU_AHB>;
-				compatible = "fsl,imx8mq-pm-domain";
-				reg = <4>;
-				domain-name = "GPU_PD";
-				operating-points-v2 = <&gpu_opp_table>;
-				#power-domain-cells = <0>;
-			};
-
-			pgc_vpu: power-domain@5 {
-				clocks = <&clk IMX8MQ_CLK_VPU_G1_ROOT>,
-					 <&clk IMX8MQ_CLK_VPU_G2_ROOT>,
-					 <&clk IMX8MQ_CLK_VPU_DEC_ROOT>;
-				compatible = "fsl,imx8mq-pm-domain";
-				reg = <5>;
-				domain-name = "VPU_PD";
-				operating-points-v2 = <&vpu_opp_table_g1>,
-						<&vpu_opp_table_g2>,
-						<&vpu_opp_table_dec>;
-				#power-domain-cells = <0>;
-			};
-		};
 	};
 };
 
@@ -1196,6 +1152,40 @@
 
 &mu {
 	status = "okay";
+};
+
+/delete-node/ &pgc_gpu;
+/delete-node/ &pgc_vpu;
+&pgc {
+	pgc_gpuvpu: pgc-gpuvpu {
+		#address-cells = <1>;
+		#power-domain-cells = <0>;
+		#size-cells = <0>;
+		domain-name = "VPUGPU_PD";
+		dvfs-supply = <&reg_sw5>;
+		idle-microvolt = <900000 837000 990000>;
+
+		pgc_gpu: power-domain@5 {
+			clocks = <&clk IMX8MQ_CLK_GPU_AXI>,
+				 <&clk IMX8MQ_CLK_GPU_SHADER_DIV>,
+				 <&clk IMX8MQ_CLK_GPU_ROOT>,
+				 <&clk IMX8MQ_CLK_GPU_AHB>;
+			reg = <IMX8M_POWER_DOMAIN_GPU>;
+			operating-points-v2 = <&gpu_opp_table>;
+			#power-domain-cells = <0>;
+		};
+
+		pgc_vpu: power-domain@6 {
+			clocks = <&clk IMX8MQ_CLK_VPU_G1_ROOT>,
+				 <&clk IMX8MQ_CLK_VPU_G2_ROOT>,
+				 <&clk IMX8MQ_CLK_VPU_DEC_ROOT>;
+			reg = <IMX8M_POWER_DOMAIN_VPU>;
+			operating-points-v2 = <&vpu_opp_table_g1>,
+					<&vpu_opp_table_g2>,
+					<&vpu_opp_table_dec>;
+			#power-domain-cells = <0>;
+		};
+	};
 };
 
 &pwm2 {
