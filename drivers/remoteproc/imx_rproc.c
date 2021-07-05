@@ -99,7 +99,6 @@ enum imx_rproc_method {
 	/* Through ARM SMCCC */
 	IMX_RPROC_SMC,
 	IMX_SCU_API,
-	IMX_IPC_ONLY,
 };
 
 struct imx_rproc_dcfg {
@@ -121,7 +120,6 @@ struct imx_rproc {
 	struct clk			*clk;
 	bool				early_boot;
 	bool				ipc_only;
-	void				*rsc_va;
 	struct mbox_client		cl;
 	struct mbox_client		cl_rxdb;
 	struct mbox_client		cl_txdb;
@@ -587,16 +585,6 @@ static int imx_rproc_prepare(struct rproc *rproc)
 		da = rmem->base;
 
 		if (!strncmp(it.node->name, "rsc_table", strlen("rsc_table"))) {
-			if (priv->rsc_va && priv->early_boot) {
-				dev_err(priv->dev, "Found duplicated rsc_table\n");
-				return -EINVAL;
-			}
-			priv->rsc_va = rproc_da_to_va(rproc, (u64)da, SZ_1K, NULL);
-			if (!priv->rsc_va) {
-				dev_err(priv->dev, "no map for rsc_table: %x\n", da);
-				return -EINVAL;
-			}
-
 			continue;
 		}
 
@@ -674,7 +662,7 @@ static struct resource_table *imx_rproc_get_loaded_rsc_table(struct rproc *rproc
 	if (!priv->rsc_table)
 		return NULL;
 #if 0
-	rproc->table_ptr = (struct resource_table *)priv->rsc_va;
+	rproc->table_ptr = (struct resource_table *)priv->rsc_table;
 #else
 	/*
 	 * This is a hack workaround, this will not let M4 detect vdev status,
@@ -682,13 +670,12 @@ static struct resource_table *imx_rproc_get_loaded_rsc_table(struct rproc *rproc
 	 * because NXP M4 SDK not detect vdev status update, so we just use a copied
 	 * table here, for future, m4 need use a new address for publishing resource table
 	 * Then we could change to
-	 * rproc->table_ptr = (struct resource_table *)priv->rsc_va;
+	 * rproc->table_ptr = (struct resource_table *)priv->rsc_table;
 	 */
-	rproc->table_ptr = kmemdup(priv->rsc_va, SZ_1K, GFP_KERNEL);
+	*table_sz = SZ_1K;
+	return kmemdup(priv->rsc_table, SZ_1K, GFP_KERNEL);
 #endif
 
-	*table_sz = SZ_1K;
-	return (struct resource_table *)priv->rsc_table;
 }
 
 static int imx_rproc_elf_load_segments(struct rproc *rproc,
@@ -716,8 +703,8 @@ imx_rproc_elf_find_loaded_rsc_table(struct rproc *rproc, const struct firmware *
 	 * We not return this currently, because vring conflicts with resource table on NXP
 	 * i.MX M4 SDK
 	 */
-	if (priv->rsc_va)
-		return priv->rsc_va;
+	if (priv->rsc_table)
+		return priv->rsc_table;
 #endif
 
 	return rproc_elf_find_loaded_rsc_table(rproc, fw);
@@ -805,7 +792,7 @@ static int imx_rproc_addr_init(struct imx_rproc *priv,
 		}
 		priv->mem[b].sys_addr = res.start;
 		priv->mem[b].size = resource_size(&res);
-		if (!strcmp(node->name, "rsc_table"))
+		if (!strncmp(node->name, "rsc_table", strlen("rsc_table")))
 			priv->rsc_table = priv->mem[b].cpu_addr;
 		b++;
 	}
@@ -1010,6 +997,7 @@ static int imx_rproc_detect_mode(struct imx_rproc *priv)
 			priv->ipc_only = true;
 			priv->early_boot = true;
 			priv->rproc->skip_fw_recovery = true;
+			priv->rproc->state = RPROC_DETACHED;
 			/*
 			 * Get muB partition id and enable irq in SCFW
 			 * default partition 3
@@ -1100,7 +1088,6 @@ static int imx_rproc_clk_enable(struct imx_rproc *priv)
 static int imx_rproc_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct device_node *np = dev->of_node;
 	struct imx_rproc *priv;
 	struct rproc *rproc;
 	const struct imx_rproc_dcfg *dcfg;
@@ -1150,9 +1137,6 @@ static int imx_rproc_probe(struct platform_device *pdev)
 		goto err_put_mbox;
 
 	INIT_WORK(&priv->rproc_work, imx_rproc_vq_work);
-
-	if (rproc->state != RPROC_DETACHED)
-		rproc->auto_boot = of_property_read_bool(np, "fsl,auto-boot");
 
 	rproc->auto_boot = false;
 	if (priv->early_boot)
