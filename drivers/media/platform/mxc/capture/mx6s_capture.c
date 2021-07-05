@@ -1098,6 +1098,7 @@ static irqreturn_t mx6s_csi_irq_handler(int irq, void *data)
 	unsigned long status;
 	u32 cr3, cr18;
 
+	pr_debug("%s:\n", __func__);
 	spin_lock(&csi_dev->slock);
 
 	status = csi_read(csi_dev, CSI_CSISR);
@@ -1173,6 +1174,7 @@ static irqreturn_t mx6s_csi_irq_handler(int irq, void *data)
 	}
 
 	spin_unlock(&csi_dev->slock);
+	pr_debug("%s: exit\n", __func__);
 
 	return IRQ_HANDLED;
 }
@@ -1556,6 +1558,7 @@ static int mx6s_vidioc_streamon(struct file *file, void *priv,
 	if (!ret)
 		v4l2_subdev_call(sd, video, s_stream, 1);
 
+	pr_debug("%s: exit\n", __func__);
 	return ret;
 }
 
