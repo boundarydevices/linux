@@ -97,6 +97,11 @@ struct ov5640 {
 	struct regulator *core_regulator;
 	struct regulator *analog_regulator;
 	struct regulator *gpo_regulator;
+
+	struct semaphore power_lock;
+	int power_open_count;
+	struct delayed_work power_down_work;
+	int power_on;
 };
 
 void ov5640_disable_mipi_v(void)
@@ -185,6 +190,10 @@ static const struct media_entity_operations ov5640_subdev_media_ops = {
 };
 #endif
 
+static void power_down_callback(struct work_struct *work);
+static const struct v4l2_subdev_internal_ops ov5640_sd_internal_ops;
+static void power_off_camera(struct ov5640 *sensor);
+
 static int ov5640_probe_v(struct ov5640 *sensor, struct clk *sensor_clk, u32 csi)
 {
 	struct device *dev = &sensor->i2c_client->dev;
@@ -192,6 +201,8 @@ static int ov5640_probe_v(struct ov5640 *sensor, struct clk *sensor_clk, u32 csi
 	int i;
 	int ret;
 
+	sema_init(&sensor->power_lock, 1);
+	INIT_DELAYED_WORK(&sensor->power_down_work, power_down_callback);
 	sensor->virtual_channel = csi;
 	ret = ov5640_dev_init(sensor);
 	if (ret < 0) {
@@ -205,6 +216,7 @@ static int ov5640_probe_v(struct ov5640 *sensor, struct clk *sensor_clk, u32 csi
 	ret = v4l2_ctrl_handler_init(hdl, ARRAY_SIZE(sctrl));
 	if (ret)
 		return ret;
+	sensor->subdev.internal_ops = &ov5640_sd_internal_ops;
 
 	for (i = 0; i < ARRAY_SIZE(sctrl); i++) {
 		const struct std_ctrl *s = &sctrl[i];
@@ -254,6 +266,7 @@ static int ov5640_probe_v(struct ov5640 *sensor, struct clk *sensor_clk, u32 csi
 #endif
 	}
 	OV5640_stream_off(sensor);
+	power_off_camera(sensor);
 	return 0;
 }
 
@@ -415,17 +428,24 @@ static int _ov5640_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 	return ov5640_s_parm(sensor, a);
 }
 
+static int _ov5640_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh);
+static int _ov5640_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh);
+
 static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *sensor = to_ov5640(client);
 	struct device *dev = &sensor->i2c_client->dev;
 
-	dev_info(dev, "s_stream: %d\n", enable);
-	if (enable)
+	dev_dbg(dev, "s_stream: %d\n", enable);
+	if (enable) {
+		_ov5640_open(sd, NULL);
 		OV5640_stream_on(sensor);
-	else
+	} else {
 		OV5640_stream_off(sensor);
+		_ov5640_close(sd, NULL);
+	}
+	dev_dbg(dev, "s_stream: exit %d\n", enable);
 	return 0;
 }
 
@@ -619,4 +639,78 @@ static struct v4l2_subdev_ops ov5640_subdev_ops = {
 	.core	= &ov5640_subdev_core_ops,
 	.video	= &ov5640_subdev_video_ops,
 	.pad	= &ov5640_subdev_pad_ops,
+};
+
+static void power_down_callback(struct work_struct *work)
+{
+	struct ov5640 *sensor = container_of(work, struct ov5640, power_down_work.work);
+
+	down(&sensor->power_lock);
+	pr_debug("%s: csi%d %d\n", __func__, sensor->virtual_channel, sensor->power_open_count);
+	if (!sensor->power_open_count) {
+		ov5640_s_power(sensor, 0);
+		sensor->power_on = 0;
+	}
+	up(&sensor->power_lock);
+}
+
+/* power_lock is held */
+static void power_off_camera(struct ov5640 *sensor)
+{
+	if (!sensor->power_open_count) {
+		schedule_delayed_work(&sensor->power_down_work, (HZ * 5));
+		pr_debug("%s: csi%d\n", __func__, sensor->virtual_channel);
+	}
+}
+
+/* power_lock is held */
+static void power_up_camera(struct ov5640 *sensor)
+{
+	struct device *dev = &sensor->i2c_client->dev;
+	int ret;
+
+	pr_debug("%s: a csi%d %d %d\n", __func__, sensor->virtual_channel, sensor->power_open_count, sensor->power_on);
+	if (sensor->power_on)
+		return;
+	sensor->power_on = 1;
+	ret = ov5640_s_power(sensor, 1);
+	if (!ret)
+		ret = ov5640_dev_init(sensor);
+	if (ret < 0)
+		dev_warn(dev, "Camera init failed %d\n", ret);
+	pr_debug("%s: b csi%d %d\n", __func__, sensor->virtual_channel, sensor->power_open_count);
+}
+
+static int _ov5640_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct ov5640 *sensor = to_ov5640(client);
+
+	cancel_delayed_work_sync(&sensor->power_down_work);
+	down(&sensor->power_lock);
+	pr_debug("%s: csi%d %d\n", __func__, sensor->virtual_channel, sensor->power_open_count);
+	if (sensor->power_open_count++ == 0) {
+		power_up_camera(sensor);
+	}
+	up(&sensor->power_lock);
+	return 0;
+}
+
+static int _ov5640_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct ov5640 *sensor = to_ov5640(client);
+
+	down(&sensor->power_lock);
+	pr_debug("%s: csi%d %d\n", __func__, sensor->virtual_channel, sensor->power_open_count);
+	if (--sensor->power_open_count == 0) {
+		power_off_camera(sensor);
+	}
+	up(&sensor->power_lock);
+	return 0;
+}
+
+static const struct v4l2_subdev_internal_ops ov5640_sd_internal_ops = {
+	.open = _ov5640_open,
+	.close = _ov5640_close,
 };
