@@ -965,7 +965,7 @@ static void ov5640_power_down(struct ov5640 *sensor, int enable)
 	gpiod_set_value_cansleep(sensor->gpiod_pwdn, enable ? 1 : 0);
 
 	msleep(2);
-	pr_debug("ov5640_mipi_camera_powerdown: powerdown=%x\n", enable);
+	pr_info("%s: powerdown=%x\n", __func__, enable);
 }
 
 static int ov5640_update_slave_id(struct ov5640 *sensor)
@@ -1094,7 +1094,7 @@ static int ov5640_power_off(struct ov5640 *sensor)
 	return 0;
 }
 
-static int ov5640_regulator_enable(struct ov5640 *sensor)
+static void ov5640_regulator_setup(struct ov5640 *sensor)
 {
 	struct device *dev = &sensor->i2c_client->dev;
 
@@ -1127,7 +1127,6 @@ static int ov5640_regulator_enable(struct ov5640 *sensor)
 		sensor->core_regulator = NULL;
 		dev_err(dev, "%s: cannot get core voltage error\n", __func__);
 	}
-	return ov5640_power_on(sensor);
 }
 
 static s32 ov5640_write_array(struct ov5640 *sensor, u16 len, u8 *data)
@@ -2170,6 +2169,24 @@ out:
 	return ret;
 }
 
+static int ov5640_power_on_reset(struct ov5640 *sensor)
+{
+	struct device *dev = &sensor->i2c_client->dev;
+	int ret;
+
+	if (sensor->on)
+		return 0;
+	ret = ov5640_power_on(sensor);
+
+	ov5640_reset(sensor);
+
+	ret = ov5640_af_init(sensor);
+	if (ret < 0) {
+		dev_err(dev, "error downloading autofocus firmware\n");
+	}
+	return ret;
+}
+
 static int ov5640_af_get_status(struct ov5640 *sensor, int *status)
 {
 	int err;
@@ -2436,7 +2453,8 @@ err:
  */
 static int ov5640_s_power(struct ov5640 *sensor, int on)
 {
-	return on ? ov5640_power_on(sensor) : ov5640_power_off(sensor);
+	pr_debug("%s:  %d %d\n", __func__, on, sensor->on);
+	return on ? ov5640_power_on_reset(sensor) : ov5640_power_off(sensor);
 }
 
 static int ov5640_g_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
@@ -2484,7 +2502,7 @@ static int ov5640_s_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 	enum ov5640_mode orig_mode;
 	int ret = 0;
 
-	ov5640_power_on(sensor);	/* Make sure power is on */
+	ov5640_power_on_reset(sensor);	/* Make sure power is on */
 
 	switch (a->type) {
 	/* This is the only case currently handled. */
@@ -2865,7 +2883,8 @@ static int ov5640_probe(struct i2c_client *client,
 	sensor->streamcap.timeperframe.denominator = DEFAULT_FPS;
 	sensor->streamcap.timeperframe.numerator = 1;
 
-	ov5640_regulator_enable(sensor);
+	ov5640_regulator_setup(sensor);
+	ov5640_power_on(sensor);
 
 	ov5640_reset(sensor);
 
