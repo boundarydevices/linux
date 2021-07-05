@@ -36,6 +36,8 @@ struct mtk_keypad {
 	u32 row_shift;
 	bool double_keys;
 	DECLARE_BITMAP(keymap_state, MTK_KPD_NUM_BITS);
+	bool wakeup;
+	unsigned int irq;
 };
 
 static const struct regmap_config keypad_regmap_cfg = {
@@ -118,15 +120,15 @@ static void kpd_clk_disable(void *data)
 static int kpd_pdrv_probe(struct platform_device *pdev)
 {
 	struct mtk_keypad *keypad;
-	unsigned int irq;
 	u32 debounce;
-	bool wakeup;
 	int ret;
 	int i;
 
 	keypad = devm_kzalloc(&pdev->dev, sizeof(*keypad), GFP_KERNEL);
 	if (!keypad)
 		return -ENOMEM;
+
+	dev_set_drvdata(&pdev->dev, keypad);
 
 	keypad->base = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(keypad->base))
@@ -176,7 +178,7 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	wakeup = device_property_read_bool(&pdev->dev, "wakeup-source");
+	keypad->wakeup = device_property_read_bool(&pdev->dev, "wakeup-source");
 
 	keypad->double_keys =
 		device_property_read_bool(&pdev->dev, "mediatek,double-keys");
@@ -223,16 +225,17 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0)
-		return irq;
+	ret = platform_get_irq(pdev, 0);
+	if (ret < 0)
+		return ret;
+	keypad->irq = ret;
 
-	ret = devm_request_threaded_irq(&pdev->dev, irq,
+	ret = devm_request_threaded_irq(&pdev->dev, keypad->irq,
 					NULL, kpd_irq_handler, IRQF_ONESHOT,
 					MTK_KPD_NAME, keypad);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to request IRQ#%d:%d\n",
-			irq, ret);
+			keypad->irq, ret);
 		return ret;
 	}
 
@@ -242,9 +245,29 @@ static int kpd_pdrv_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret =  device_init_wakeup(&pdev->dev, wakeup);
-	if (ret)
-		dev_warn(&pdev->dev, "device_init_wakeup fail\n");
+	if (keypad->wakeup) {
+		ret =  device_init_wakeup(&pdev->dev, keypad->wakeup);
+		if (ret)
+			dev_warn(&pdev->dev, "device_init_wakeup fail\n");
+
+		ret = enable_irq_wake(keypad->irq);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Failed to setup irq %d for wakeup: %d\n",
+				keypad->irq, ret);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+static int kpd_pdrv_remove(struct platform_device *pdev)
+{
+	const struct mtk_keypad *keypad = dev_get_drvdata(&pdev->dev);
+
+	if (keypad->wakeup)
+		disable_irq_wake(keypad->irq);
 
 	return 0;
 }
@@ -257,6 +280,7 @@ static const struct of_device_id kpd_of_match[] = {
 
 static struct platform_driver kpd_pdrv = {
 	.probe = kpd_pdrv_probe,
+	.remove = kpd_pdrv_remove,
 	.driver = {
 		   .name = MTK_KPD_NAME,
 		   .of_match_table = kpd_of_match,
