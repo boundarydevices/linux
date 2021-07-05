@@ -145,7 +145,7 @@ static int mxc_mipi_csi2_phy_reset(struct mxc_mipi_csi2_dev *csi2dev)
 	return ret;
 }
 
-static int mxc_mipi_csi2_phy_gpr(struct mxc_mipi_csi2_dev *csi2dev)
+static int mxc_mipi_csi2_phy_gpr_setup(struct mxc_mipi_csi2_dev *csi2dev)
 {
 	struct device *dev = &csi2dev->pdev->dev;
 	struct device_node *np = dev->of_node;
@@ -169,25 +169,30 @@ static int mxc_mipi_csi2_phy_gpr(struct mxc_mipi_csi2_dev *csi2dev)
 		if (IS_ERR(csi2dev->phy_gpr.gpr)) {
 			dev_err(dev, "failed to get gpr regmap\n");
 			ret = PTR_ERR(csi2dev->phy_gpr.gpr);
+			csi2dev->phy_gpr.gpr = NULL;
 		}
 		of_node_put(node);
 		if (ret < 0)
 			return ret;
 
 		csi2dev->phy_gpr.req_src = out_val[1];
-
-		regmap_update_bits(csi2dev->phy_gpr.gpr,
-				   csi2dev->phy_gpr.req_src,
-				   0x3FFF,
-				   GPR_CSI2_1_RX_ENABLE |
-				   GPR_CSI2_1_VID_INTFC_ENB |
-				   GPR_CSI2_1_HSEL |
-				   GPR_CSI2_1_CONT_CLK_MODE |
-				   GPR_CSI2_1_S_PRG_RXHS_SETTLE(csi2dev->
-								hs_settle));
 	}
-
 	return ret;
+}
+
+static int mxc_mipi_csi2_phy_gpr(struct mxc_mipi_csi2_dev *csi2dev)
+{
+	if (!csi2dev->phy_gpr.gpr)
+		return -ENODEV;
+	regmap_update_bits(csi2dev->phy_gpr.gpr,
+			   csi2dev->phy_gpr.req_src,
+			   0x3FFF,
+			   GPR_CSI2_1_RX_ENABLE |
+			   GPR_CSI2_1_VID_INTFC_ENB |
+			   GPR_CSI2_1_HSEL |
+			   GPR_CSI2_1_CONT_CLK_MODE |
+			   GPR_CSI2_1_S_PRG_RXHS_SETTLE(csi2dev->hs_settle));
+	return 0;
 }
 
 static void mxc_mipi_csi2_enable(struct mxc_mipi_csi2_dev *csi2dev)
@@ -199,6 +204,12 @@ static void mxc_mipi_csi2_disable(struct mxc_mipi_csi2_dev *csi2dev)
 {
 	/* Disable Data lanes */
 	writel(0xf, csi2dev->base_regs + CSI2RX_CFG_DISABLE_DATA_LANES);
+	if (csi2dev->phy_gpr.gpr)
+		regmap_update_bits(csi2dev->phy_gpr.gpr,
+			   csi2dev->phy_gpr.req_src,
+			   0x3FFF,
+			   GPR_CSI2_1_HSEL |
+			   GPR_CSI2_1_S_PRG_RXHS_SETTLE(csi2dev->hs_settle));
 }
 
 static void mxc_mipi_csi2_hc_config(struct mxc_mipi_csi2_dev *csi2dev)
@@ -608,6 +619,10 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 	ret = mipi_csi2_clk_init(csi2dev);
 	if (ret < 0)
 		return -EINVAL;
+
+	ret = mxc_mipi_csi2_phy_gpr_setup(csi2dev);
+	if (ret < 0)
+		return ret;
 
 	v4l2_subdev_init(&csi2dev->sd, &mipi_csi2_subdev_ops);
 
