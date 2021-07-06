@@ -310,6 +310,7 @@ static int exc3000_probe(struct i2c_client *client,
 	buf[5] = 0x01;
 	buf[6] = 'D';
 	i2c_master_send(client, buf, sizeof(buf));
+	i2c_set_clientdata(client, data);
 	return 0;
 }
 
@@ -317,7 +318,7 @@ static int exc3000_remove(struct i2c_client *client)
 {
 	struct exc3000_data *data = i2c_get_clientdata(client);
 
-	if (data->reset_gpio)
+	if (data && data->reset_gpio)
 		gpiod_set_value(data->reset_gpio, 1);
 	return 0;
 }
