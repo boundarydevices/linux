@@ -84,6 +84,8 @@ struct tsn_ops {
 	int (*dscp_set)(struct net_device *ndev, bool enable,
 			const u8 dscp_ix,
 			struct tsn_qos_switch_dscp_conf *c);
+	int (*pcpmap_set)(struct net_device *ndev,
+			  struct tsn_qos_switch_pcp_conf *c);
 };
 
 enum ethdev_type {

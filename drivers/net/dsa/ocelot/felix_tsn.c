@@ -1526,6 +1526,31 @@ static int felix_dscp_set(struct net_device *ndev, bool enable, const u8 dscp_ix
 	return 0;
 }
 
+static int felix_pcpmap_set(struct net_device *ndev,
+			    struct tsn_qos_switch_pcp_conf *c)
+{
+	struct ocelot *ocelot;
+	struct dsa_port *dp;
+	int index;
+	int port;
+
+	dp = dsa_port_from_netdev(ndev);
+	ocelot = dp->ds->priv;
+	port = dp->index;
+
+	index = (c->pcp & GENMASK(2, 0)) * ((c->dei & BIT(0)) + 1);
+
+	ocelot_rmw_ix(ocelot,
+		     (ANA_PORT_PCP_DEI_MAP_DP_PCP_DEI_VAL & (c->dpl << 3)) |
+		     ANA_PORT_PCP_DEI_MAP_QOS_PCP_DEI_VAL(c->cos),
+		     ANA_PORT_PCP_DEI_MAP_DP_PCP_DEI_VAL |
+		     ANA_PORT_PCP_DEI_MAP_QOS_PCP_DEI_VAL_M,
+		     ANA_PORT_PCP_DEI_MAP,
+		     port, index);
+
+	return 0;
+}
+
 void felix_preempt_irq_clean(struct ocelot *ocelot)
 {
 	struct ocelot_port *ocelot_port;
@@ -1565,6 +1590,7 @@ static const struct tsn_ops felix_tsn_ops = {
 	.cbrec_set			= felix_seq_rec_set,
 	.cb_get				= felix_cb_get,
 	.dscp_set			= felix_dscp_set,
+	.pcpmap_set			= felix_pcpmap_set,
 };
 
 int felix_tsn_enable(struct dsa_switch *ds)
