@@ -755,11 +755,12 @@
 };
 
 &hdmi {
-	compatible = "cdn,imx8mq-hdmi";
 	assigned-clocks = <&clk IMX8MQ_CLK_CLK2>;
 	assigned-clock-parents = <&clk IMX8MQ_CLK_27M>;
 	clocks = <&clk IMX8MQ_CLK_CLK2_CG>;
 	clock-names = "refclk";
+	compatible = "cdn,imx8mq-hdmi";
+	lane-mapping = <0xe4>;
 	status = "okay";
 
 	port@1 {
