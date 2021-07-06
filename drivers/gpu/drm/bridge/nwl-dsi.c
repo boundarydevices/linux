@@ -8,6 +8,7 @@
 
 #include <linux/bitfield.h>
 #include <linux/bits.h>
+#include <linux/busfreq-imx.h>
 #include <linux/clk.h>
 #include <linux/component.h>
 #include <linux/irq.h>
@@ -2122,12 +2123,47 @@ static int nwl_dsi_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int nwl_dsim_runtime_suspend(struct device *dev)
+{
+	release_bus_freq(BUS_FREQ_HIGH);
+	return 0;
+}
+
+static int nwl_dsim_runtime_resume(struct device *dev)
+{
+	request_bus_freq(BUS_FREQ_HIGH);
+	return 0;
+}
+#endif
+
+#ifdef CONFIG_PM_SLEEP
+static int nwl_dsim_suspend(struct device *dev)
+{
+	return nwl_dsim_runtime_suspend(dev);
+}
+
+static int nwl_dsim_resume(struct device *dev)
+{
+	return nwl_dsim_runtime_resume(dev);
+}
+#endif
+
+static const struct dev_pm_ops nwl_dsim_pm_ops = {
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(nwl_dsim_suspend,
+			nwl_dsim_resume)
+	SET_RUNTIME_PM_OPS(nwl_dsim_runtime_suspend,
+			nwl_dsim_runtime_resume,
+			   NULL)
+};
+
 static struct platform_driver nwl_dsi_driver = {
 	.probe		= nwl_dsi_probe,
 	.remove		= nwl_dsi_remove,
 	.driver		= {
 		.of_match_table = nwl_dsi_dt_ids,
 		.name	= DRV_NAME,
+		.pm = &nwl_dsim_pm_ops,
 	},
 };
 
