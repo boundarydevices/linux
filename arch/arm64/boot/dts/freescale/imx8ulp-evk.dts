@@ -41,6 +41,16 @@
 		};
 	};
 
+	rpmsg_keys: rpmsg-keys {
+		compatible = "fsl,rpmsg-keys";
+
+		power-on {
+			label = "PowerOn";
+			linux,code = <KEY_POWER>;
+			rpmsg-key,wakeup;
+		};
+	};
+
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
