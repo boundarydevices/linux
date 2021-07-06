@@ -1052,6 +1052,9 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 	int len, chans;
 	int ret, i;
 
+	if (!of_id)
+		return -EINVAL;
+
 	ret = of_property_read_u32(np, "dma-channels", &chans);
 	if (ret) {
 		dev_err(&pdev->dev, "Can't get dma-channels.\n");
