@@ -1190,8 +1190,8 @@ gceSTATUS
 gckOS_UserSignal(
     IN gckOS Os,
     IN gctSIGNAL Signal,
-    IN gctINT Recvid,
-    IN gctINT Coid
+    IN gctINT Rcvid,
+    IN const struct sigevent *Event
     );
 #else
 gceSTATUS
@@ -1903,6 +1903,12 @@ gceSTATUS
 gckHARDWARE_EnablePowerManagement(
     IN gckHARDWARE Hardware,
     IN gctBOOL Enable
+    );
+
+gceSTATUS
+gckHARDWARE_QueryPowerManagement(
+    IN gckHARDWARE Hardware,
+    OUT gctBOOL *Enable
     );
 
 gceSTATUS

@@ -1826,24 +1826,11 @@ _BottomHalfUnlockVideoMemory(
     /* Deref handle. */
     gckVIDMEM_HANDLE_Dereference(Kernel, ProcessID, Node);
 
-#if gcdENABLE_VG
-    if (Kernel->vg != gcvNULL)
-    {
-        /* Unlock video memory, synced. */
-        gcmkONERROR(gckVIDMEM_NODE_Unlock(Kernel, nodeObject, ProcessID, gcvNULL));
+    /* Unlock video memory, synced. */
+    gcmkONERROR(gckVIDMEM_NODE_Unlock(Kernel, nodeObject, ProcessID, gcvNULL));
 
-        /* Deref node. */
-        gcmkONERROR(gckVIDMEM_NODE_Dereference(Kernel, nodeObject));
-    }
-    else
-#endif
-    {
-        /* Perform asynchronous unlock */
-        gcmkONERROR(gckEVENT_Unlock(Kernel->eventObj, gcvKERNEL_PIXEL, nodeObject));
-
-        /* Submit the event queue. */
-        gcmkONERROR(gckEVENT_Submit(Kernel->eventObj, gcvTRUE, gcvFALSE));
-    }
+    /* Deref node. */
+    gcmkONERROR(gckVIDMEM_NODE_Dereference(Kernel, nodeObject));
 
     return gcvSTATUS_OK;
 
@@ -2215,6 +2202,8 @@ gckKERNEL_ConfigPowerManagement(
     gctBOOL enable = Interface->u.ConfigPowerManagement.enable;
 
     gcmkHEADER();
+
+    gcmkONERROR(gckHARDWARE_QueryPowerManagement(Kernel->hardware, &Interface->u.ConfigPowerManagement.oldValue));
 
     gcmkONERROR(gckHARDWARE_EnablePowerManagement(Kernel->hardware, enable));
 
@@ -4048,7 +4037,7 @@ gckKERNEL_Recovery(
     if (mask)
     {
         /* Handle all outstanding events now. */
-        gcmkONERROR(gckOS_AtomSet(Kernel->os, eventObj->pending, mask));
+        gcmkONERROR(gckOS_AtomSetMask(eventObj->pending, mask));
     }
 
     for (i = 0; i < 32; i++)
