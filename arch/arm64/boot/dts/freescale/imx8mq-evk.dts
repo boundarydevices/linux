@@ -330,6 +330,10 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <0>;
 			qca,disable-smarteee;
+			vddio-supply = <&vddh>;
+
+			vddh: vddh-regulator {
+			};
 		};
 	};
 };
