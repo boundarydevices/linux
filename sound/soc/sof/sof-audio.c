@@ -501,7 +501,7 @@ int sof_machine_check(struct snd_sof_dev *sdev)
 
 		/* find machine */
 		snd_sof_machine_select(sdev);
-		if (sof_pdata->machine) {
+		if (sof_pdata->machine || sof_pdata->machine_drv_name) {
 			snd_sof_set_mach_params(sof_pdata->machine, sdev);
 			return 0;
 		}
