@@ -333,12 +333,21 @@ static const struct v4l2_ctrl_ops afs_ctrl_ops = {
 	.g_volatile_ctrl = _ov5640_g_ctrl,
 };
 
+static int _ov5640_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh);
+static int _ov5640_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh);
+
 static int _ov5640_s_power(struct v4l2_subdev *sd, int on)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *sensor = to_ov5640(client);
 
-	return ov5640_s_power(sensor, on);
+	pr_debug("%s:  %d %d\n", __func__, on, sensor->on);
+	if (on) {
+		_ov5640_open(sd, NULL);
+	} else {
+		_ov5640_close(sd, NULL);
+	}
+	return 0;
 }
 
 static int ov5640_subscribe_event(struct v4l2_subdev *sd, struct v4l2_fh *fh,
@@ -428,9 +437,6 @@ static int _ov5640_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 	return ov5640_s_parm(sensor, a);
 }
 
-static int _ov5640_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh);
-static int _ov5640_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh);
-
 static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -440,6 +446,7 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 	dev_dbg(dev, "s_stream: %d\n", enable);
 	if (enable) {
 		_ov5640_open(sd, NULL);
+		msleep(1);
 		OV5640_stream_on(sensor);
 	} else {
 		OV5640_stream_off(sensor);
