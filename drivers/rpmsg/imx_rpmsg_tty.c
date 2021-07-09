@@ -114,7 +114,7 @@ static int rpmsgtty_write(struct tty_struct *tty, const unsigned char *buf,
 	return total;
 }
 
-static int rpmsgtty_write_room(struct tty_struct *tty)
+static unsigned int rpmsgtty_write_room(struct tty_struct *tty)
 {
 	/* report the space in the rpmsg buffer */
 	return RPMSG_MAX_SIZE;
