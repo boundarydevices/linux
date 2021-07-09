@@ -130,11 +130,11 @@
 		>;
 	};
 
-	pinctrl_i2c2_csi1: i2c2-csi1grp {
+	pinctrl_i2c2_ov5640_mipi: i2c2-ov5640-mipigrp {
 		fsl,pins = <
-#define GP_CSI1_MIPI_PWDN	<&gpio4 25 GPIO_ACTIVE_HIGH>
+#define GP_OV5640_MIPI_POWER_DOWN	<&gpio4 25 GPIO_ACTIVE_HIGH>
 			MX8MQ_IOMUXC_SAI2_TXC_GPIO4_IO25		0x61
-#define GP_CSI1_MIPI_RESET	<&gpio4 24 GPIO_ACTIVE_LOW>
+#define GP_OV5640_MIPI_RESET	<&gpio4 24 GPIO_ACTIVE_LOW>
 			MX8MQ_IOMUXC_SAI2_TXFS_GPIO4_IO24		0x61
 			/* Clock for CSI1 */
 			MX8MQ_IOMUXC_GPIO1_IO15_CCMSRCGPCMIX_CLKO2	0x59
@@ -992,27 +992,30 @@
 
 &i2c4b {
 	ov5640-mipi1@3c {
-		compatible = "ovti,ov5640_mipisubdev";
-		reg = <0x3c>;
-		status = "okay";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c2_csi1>;
-		clocks = <&clk IMX8MQ_CLK_CLKO2>;
-		clock-names = "csi_mclk";
+		AVDD-supply = <&reg_ldo3>;
+		DOVDD-supply = <&reg_vref_1v8>;
+		DVDD-supply = <&reg_vref_3v3>;
 		assigned-clocks = <&clk IMX8MQ_CLK_CLKO2>;
 		assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_200M>;
-		assigned-clock-rates = <25000000>;
-		csi_id = <0>;
-		AVDD-supply = <&reg_ldo3>;
-		DVDD-supply = <&reg_vref_3v3>;
-		DOVDD-supply = <&reg_vref_1v8>;
-		pwn-gpios = GP_CSI1_MIPI_PWDN;
-		rst-gpios = GP_CSI1_MIPI_RESET;
-		mclk = <25000000>;
-		mipi_csi;
+		assigned-clock-rates = <20000000>;
+		clocks = <&clk IMX8MQ_CLK_CLKO2>;
+		clock-names = "xclk";
+#if 0
+		compatible = "ovti,ov5640";
+#else
+		compatible = "ovti,ov5640_mipisubdev";
+#endif
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_ov5640_mipi>;
+		powerdown-gpios = GP_OV5640_MIPI_POWER_DOWN;
+		reg = <0x3c>;
+		reset-gpios = GP_OV5640_MIPI_RESET;
+		status = "okay";
 
 		port {
 			ov5640_mipi1_ep: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
 				remote-endpoint = <&mipi1_sensor_ep>;
 			};
 		};
@@ -1039,8 +1042,9 @@
 	status = "okay";
 	port {
 		mipi1_sensor_ep: endpoint@1 {
-			remote-endpoint = <&ov5640_mipi1_ep>;
+			bus-type = <4>;
 			data-lanes = <1 2>;
+			remote-endpoint = <&ov5640_mipi1_ep>;
 		};
 
 		csi1_mipi_ep: endpoint@2 {
