@@ -254,7 +254,6 @@ EXPORT_SYMBOL(lcdif_get_bus_fmt_from_pix_fmt);
 
 int lcdif_set_pix_fmt(struct lcdif_soc *lcdif, u32 format)
 {
-	struct drm_format_name_buf format_name;
 	u32 ctrl = 0, ctrl1 = 0;
 
 	/* TODO: lcdif should be disabled to set pixel format */
@@ -325,8 +324,8 @@ int lcdif_set_pix_fmt(struct lcdif_soc *lcdif, u32 format)
 			       lcdif->base + LCDIF_CTRL2 + REG_SET);
 		break;
 	default:
-		dev_err(lcdif->dev, "unsupported pixel format: %s\n",
-			drm_get_format_name(format, &format_name));
+		dev_err(lcdif->dev, "unsupported pixel format: %p4cc\n",
+			&format);
 		return -EINVAL;
 	}
 
