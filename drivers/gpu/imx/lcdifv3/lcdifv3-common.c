@@ -265,7 +265,6 @@ EXPORT_SYMBOL(lcdifv3_get_bus_fmt_from_pix_fmt);
 
 int lcdifv3_set_pix_fmt(struct lcdifv3_soc *lcdifv3, u32 format)
 {
-	struct drm_format_name_buf format_name;
 	uint32_t ctrldescl0_5 = 0;
 
 	ctrldescl0_5 = readl(lcdifv3->base + LCDIFV3_CTRLDESCL0_5);
@@ -289,8 +288,8 @@ int lcdifv3_set_pix_fmt(struct lcdifv3_soc *lcdifv3, u32 format)
 		ctrldescl0_5 |= CTRLDESCL0_5_BPP(BPP32_ABGR8888);
 		break;
 	default:
-		dev_err(lcdifv3->dev, "unsupported pixel format: %s\n",
-			drm_get_format_name(format, &format_name));
+		dev_err(lcdifv3->dev, "unsupported pixel format: %p4cc\n",
+			&format);
 		return -EINVAL;
 	}
 
