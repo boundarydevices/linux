@@ -9,7 +9,7 @@
 #define MAX_I2C_SIZE	255
 
 #define OV5640_XCLK_MIN 6000000
-#define OV5640_XCLK_MAX 24000000
+#define OV5640_XCLK_MAX 54000000
 #define OV5640_XCLK_20MHZ 20000000
 
 #define OV5640_CHIP_ID_HIGH_BYTE	0x300A
@@ -110,7 +110,7 @@ struct ov5640_datafmt {
 	u32	code;
 };
 
-struct ov5640 *sensor;
+struct ov5640;
 static void OV5640_stream_on(struct ov5640 *sensor);
 static void OV5640_stream_off(struct ov5640 *sensor);
 static int ov5640_power_off(struct ov5640 *sensor);
