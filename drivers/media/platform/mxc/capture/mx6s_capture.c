@@ -1190,7 +1190,7 @@ static void mx6s_csi_frame_done(struct mx6s_csi_dev *csi_dev,
 static irqreturn_t mx6s_csi_irq_handler(int irq, void *data)
 {
 	struct mx6s_csi_dev *csi_dev =  data;
-	unsigned long status;
+	unsigned status;
 	u32 cr3, cr18;
 
 	pr_debug("%s:\n", __func__);
@@ -1209,7 +1209,7 @@ static irqreturn_t mx6s_csi_irq_handler(int irq, void *data)
 	}
 
 	if (status & BIT_RFF_OR_INT) {
-		dev_warn(csi_dev->dev, "%s Rx fifo overflow, %lx\n", __func__,
+		dev_warn(csi_dev->dev, "%s Rx fifo overflow, %x\n", __func__,
 			status);
 		if (csi_dev->soc->rx_fifo_rst) {
 			csi_error_recovery(csi_dev);
@@ -1218,7 +1218,7 @@ static irqreturn_t mx6s_csi_irq_handler(int irq, void *data)
 	}
 
 	if (status & BIT_HRESP_ERR_INT) {
-		dev_warn(csi_dev->dev, "%s Hresponse error detected, %lx\n",
+		dev_warn(csi_dev->dev, "%s Hresponse error detected, %x\n",
 			__func__, status);
 		csi_error_recovery(csi_dev);
 	}
