@@ -2820,41 +2820,55 @@ static int ov5640_probe(struct i2c_client *client,
 	sensor->AE_Target = 52;
 
 	/* request power down pin */
-	gd = devm_gpiod_get_index_optional(dev, "pwn", 0, GPIOD_OUT_HIGH);
+	gd = devm_gpiod_get_index_optional(dev, "powerdown", 0, GPIOD_OUT_HIGH);
 	if (IS_ERR(gd))
 		return PTR_ERR(gd);
-	if (!gd)
-		dev_warn(dev, "no sensor pwdn pin available");
+	if (!gd) {
+		gd = devm_gpiod_get_index_optional(dev, "pwn", 0, GPIOD_OUT_HIGH);
+		if (IS_ERR(gd))
+			return PTR_ERR(gd);
+		if (!gd)
+			dev_warn(dev, "no sensor pwdn pin available");
+	}
 	sensor->gpiod_pwdn = gd;
 
 	/* request reset pin */
-	gd = devm_gpiod_get_index_optional(dev, "rst", 0, GPIOD_OUT_HIGH);
+	gd = devm_gpiod_get_index_optional(dev, "reset", 0, GPIOD_OUT_HIGH);
 	if (IS_ERR(gd))
 		return PTR_ERR(gd);
-	if (!gd)
-		dev_warn(dev, "no sensor reset pin available");
+	if (!gd) {
+		gd = devm_gpiod_get_index_optional(dev, "rst", 0, GPIOD_OUT_HIGH);
+		if (IS_ERR(gd))
+			return PTR_ERR(gd);
+		if (!gd)
+			dev_warn(dev, "no sensor reset pin available");
+	}
 	sensor->gpiod_rst = gd;
 
-	sensor_clk = devm_clk_get(dev, "csi_mclk");
+	sensor_clk = devm_clk_get(dev, "xclk");
+	if (sensor_clk ==  ERR_PTR(-ENOENT))
+		sensor_clk = devm_clk_get(dev, "csi_mclk");
 	if (IS_ERR(sensor_clk)) {
-		/* assuming clock enabled by default */
 		retval = PTR_ERR(sensor_clk);
-		if (retval != EPROBE_DEFER)
-			dev_err(dev, "clock-frequency missing or invalid %d\n", retval);
+		if (retval != -EPROBE_DEFER)
+			dev_err(dev, "xclk/csi_mclk missing or invalid %d\n", retval);
 		return retval;
 	}
 
 	retval = of_property_read_u32(dev->of_node, "mclk",
 					&(sensor->mclk));
-	if (retval) {
+	if (retval)
+		sensor->mclk = clk_get_rate(sensor_clk);
+	if (sensor->mclk < OV5640_XCLK_MIN ||
+	    sensor->mclk > OV5640_XCLK_MAX) {
 		dev_err(dev, "mclk missing or invalid\n");
-		return retval;
+		return -EINVAL;
 	}
 
 	retval = of_property_read_u32(dev->of_node, "csi_id", &csi);
 	if (retval) {
-		dev_err(dev, "csi id missing or invalid\n");
-		return retval;
+		dev_info(dev, "csi_id defaulting to 0\n");
+		csi = 0;
 	}
 
 	/* Get optional mirror/vflip values */
