@@ -137,6 +137,11 @@ static int mxc_mipi_csi2_phy_reset(struct mxc_mipi_csi2_dev *csi2dev)
 		regmap_update_bits(csi2dev->hw_reset.src,
 				   csi2dev->hw_reset.req_src,
 				   csi2dev->hw_reset.rst_val,
+				   0);
+		msleep(1);
+		regmap_update_bits(csi2dev->hw_reset.src,
+				   csi2dev->hw_reset.req_src,
+				   csi2dev->hw_reset.rst_val,
 				   csi2dev->hw_reset.rst_val);
 		msleep(20);
 	}
