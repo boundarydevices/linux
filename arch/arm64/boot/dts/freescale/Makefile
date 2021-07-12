@@ -67,7 +67,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mn-evk.dtb imx8mn-evk-rm67191.dtb imx8mn-evk-rpmsg
 			  imx8mn-evk-rm67199.dtb \
 			  imx8mn-ddr3l-evk-ak5558.dtb imx8mn-ddr3l-evk-rpmsg.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-ddr4-evk.dtb imx8mn-ddr4-evk-ak5558.dtb imx8mn-ddr4-evk-rm67191.dtb \
-			  imx8mn-ddr4-evk-rpmsg.dtb imx8mn-ddr4-evk-usd-wifi.dtb
+			  imx8mn-ddr4-evk-rpmsg.dtb imx8mn-ddr4-evk-usd-wifi.dtb imx8mn-ddr4-evk-rm67199.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-ddr4-evk-root.dtb imx8mn-ddr4-evk-inmate.dtb imx8mn-evk-root.dtb imx8mn-evk-inmate.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-ab2.dtb imx8mn-ddr4-ab2.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-var-som-symphony.dtb
