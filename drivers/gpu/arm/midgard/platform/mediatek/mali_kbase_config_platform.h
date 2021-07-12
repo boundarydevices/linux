@@ -11,6 +11,12 @@
  * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
  */
 
+struct mfg_timestamp_register_info {
+	unsigned int reg;
+	unsigned int mask;
+	unsigned int value;
+};
+
 struct mfg_base {
 	struct clk *clk_mux;
 	struct clk *clk_main_parent;
@@ -20,6 +26,8 @@ struct mfg_base {
 	struct platform_device *gpu_core2_dev;
 	bool is_powered;
 	bool reg_is_powered;
+	struct regmap *mfgcfg;
+	struct mfg_timestamp_register_info *timestamp_register_info;
 };
 
 /* Definition for PMIC regulators */

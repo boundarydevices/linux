@@ -15,6 +15,8 @@
 #include <linux/of_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
+#include <linux/mfd/syscon.h>
+#include <linux/regmap.h>
 #include <mali_kbase.h>
 #include "mali_kbase_config_platform.h"
 #include <mali_kbase_defs.h>
@@ -26,6 +28,18 @@ static const struct of_device_id mtk_gpu_corex_of_ids[] = {
 	{ .compatible = "mediatek,gpu_core1", .data = "1" },
 	{ .compatible = "mediatek,gpu_core2", .data = "2" },
 	{}
+};
+
+static const struct  mfg_timestamp_register_info mt8183_mfg_timestamp_register_info = {
+	.reg = 0x130, .mask = 0b00000011, .value = 0xFF };
+static const struct  mfg_timestamp_register_info mt8365_mfg_timestamp_register_info = {
+	.reg = 0x130, .mask = 0b00000011, .value = 0xFF };
+
+static const struct of_device_id mtk_mfgcfg_comp_dt_ids[] = {
+	{ .compatible = "mediatek,mt8183-mfgcfg",
+	  .data = &mt8183_mfg_timestamp_register_info },
+	{ .compatible = "mediatek,mt8365-mfgcfg",
+	  .data = &mt8365_mfg_timestamp_register_info }
 };
 
 static int mtk_gpu_corex_probe(struct platform_device *pdev)
@@ -117,6 +131,11 @@ static int pm_callback_power_on(struct kbase_device *kbdev)
 			"subsys_mfg_cg clock enable failed (err: %d)\n", error);
 		return error;
 	}
+
+	/* Write 1 into 0x13000130 bit 0 & bit 1 to enable timestamp register.*/
+	regmap_update_bits(mfg->mfgcfg, mfg->timestamp_register_info->reg,
+			   mfg->timestamp_register_info->mask,
+			   mfg->timestamp_register_info->value);
 
 	mfg->is_powered = true;
 
@@ -278,6 +297,29 @@ struct kbase_pm_callback_conf pm_callbacks = {
 #endif				/* KBASE_PM_RUNTIME */
 };
 
+int find_match_mfgcfg(struct mfg_base *mfg)
+{
+	int i;
+	struct device_node *node;
+
+	for (i = 0 ; i < ARRAY_SIZE(mtk_mfgcfg_comp_dt_ids); i++) {
+		node = of_find_compatible_node(NULL, NULL, mtk_mfgcfg_comp_dt_ids[i].compatible);
+		if (node) {
+			mfg->timestamp_register_info =
+				(struct mfg_timestamp_register_info*)mtk_mfgcfg_comp_dt_ids[i].data;
+			break;
+		}
+	}
+
+	if (IS_ERR(node))
+		return PTR_ERR(node);
+
+	mfg->mfgcfg = syscon_node_to_regmap(node);
+	if (IS_ERR(mfg->mfgcfg))
+		return PTR_ERR(mfg->mfgcfg);
+
+	return 0;
+}
 
 int mali_mfgsys_init(struct kbase_device *kbdev, struct mfg_base *mfg)
 {
@@ -333,6 +375,12 @@ int mali_mfgsys_init(struct kbase_device *kbdev, struct mfg_base *mfg)
 			return err;
 		}
 		kbdev->current_voltages[i] = volt;
+	}
+
+	err = find_match_mfgcfg(mfg);
+	if (err) {
+		dev_err(kbdev->dev, "Failed to lookup matched mfgcfg\n");
+		return err;
 	}
 
 	mfg->is_powered = false;
