@@ -159,17 +159,6 @@
 	status = "disabled";
 };
 
-&rpmsg{
-	/*
-	 * 64K for one rpmsg instance:
-	 * --0x55000000~0x5500ffff: pingpong
-	 */
-	vdev-nums = <1>;
-	reg = <0x0 0x55000000 0x0 0x10000>;
-	memory-region = <&vdevbuffer>;
-	status = "disabled";
-};
-
 &sai3 {
 	status = "disabled";
 };
