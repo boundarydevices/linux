@@ -1067,6 +1067,17 @@ int mt7915_tx_prepare_skb(struct mt76_dev *mdev, void *txwi_ptr,
 	if (!wcid)
 		wcid = &dev->mt76.global_wcid;
 
+	if (sta) {
+		struct mt7915_sta *msta;
+
+		msta = (struct mt7915_sta *)sta->drv_priv;
+
+		if (time_after(jiffies, msta->jiffies + HZ / 4)) {
+			info->flags |= IEEE80211_TX_CTL_REQ_TX_STATUS;
+			msta->jiffies = jiffies;
+		}
+	}
+
 	pid = mt76_tx_status_skb_add(mdev, wcid, tx_info->skb);
 
 	mt7915_mac_write_txwi(dev, txwi_ptr, tx_info->skb, wcid, pid, key,
@@ -1821,8 +1832,8 @@ void mt7915_mac_sta_rc_work(struct work_struct *work)
 	while (!list_empty(&list)) {
 		msta = list_first_entry(&list, struct mt7915_sta, rc_list);
 		list_del_init(&msta->rc_list);
-		changed = msta->stats.changed;
-		msta->stats.changed = 0;
+		changed = msta->changed;
+		msta->changed = 0;
 		spin_unlock_bh(&dev->sta_poll_lock);
 
 		sta = container_of((void *)msta, struct ieee80211_sta, drv_priv);
