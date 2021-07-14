@@ -7,8 +7,9 @@
 
 #include "imx6q-nitrogen6x.dts"
 
-/delete-node/ &sgtl5000;
 /delete-node/ &ov5642;
+/delete-node/ &rtc_rv4162;
+/delete-node/ &sgtl5000;
 
 / {
 	model = "Boundary Devices i.MX6 Quad Nitrogen6x AG Board";
@@ -20,6 +21,7 @@
 &iomuxc {
 	/delete-node/ i2c1-sgtl5000grp;
 	/delete-node/ i2c2-ov5642grp;
+	/delete-node/ i2c1-rv4162grp;
 
 	pinctrl_can2: can2grp {
 		fsl,pins = <
@@ -35,6 +37,13 @@
 		fsl,pins = <
 			MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1b0b0		/* Spare */
 			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x1b0b0		/* Spare */
+		>;
+	};
+
+	pinctrl_i2c3_rv4162: i2c3-rv4162grp {
+		fsl,pins = <
+#define GPIRQ_RTC_RV4162	<&gpio6 7 IRQ_TYPE_LEVEL_LOW>
+			MX6QDL_PAD_NANDF_CLE__GPIO6_IO07	0x1b0b0
 		>;
 	};
 
@@ -131,6 +140,17 @@
 			retain-state-suspended;
 			default-state = "off";
 		};
+	};
+};
+
+&i2c3 {
+	rtc_rv4162: rtc@68 {
+		compatible = "microcrystal,rv4162";
+		interrupts-extended = GPIRQ_RTC_RV4162;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_rv4162>;
+		reg = <0x68>;
+		status = "okay";
 	};
 };
 
