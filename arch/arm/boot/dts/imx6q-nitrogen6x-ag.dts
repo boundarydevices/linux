@@ -1,0 +1,164 @@
+// SPDX-License-Identifier: GPL-2.0 OR X11
+/*
+ * Copyright 2013-2016 Boundary Devices, Inc.
+ * Copyright 2012 Freescale Semiconductor, Inc.
+ * Copyright 2011 Linaro Ltd.
+ */
+
+#include "imx6q-nitrogen6x.dts"
+
+/delete-node/ &ipu1_csi0_mux_from_parallel_sensor;
+/delete-node/ &ov5642;
+/delete-node/ &rtc_rv4162;
+/delete-node/ &sgtl5000;
+
+/ {
+	model = "Boundary Devices i.MX6 Quad Nitrogen6x AG Board";
+	compatible = "boundary,imx6q-nitrogen6x-ag", "fsl,imx6q";
+
+	/delete-node/ sound;
+};
+
+&iomuxc {
+	/delete-node/ i2c1-sgtl5000grp;
+	/delete-node/ i2c2-ov5642grp;
+	/delete-node/ i2c1-rv4162grp;
+
+	pinctrl_can2: can2grp {
+		fsl,pins = <
+			MX6QDL_PAD_KEY_COL4__FLEXCAN2_TX	0x1b0b0
+			MX6QDL_PAD_KEY_ROW4__FLEXCAN2_RX	0x1b0b0
+#define GP_CAN2_STANDBY		<&gpio1 4 GPIO_ACTIVE_HIGH>
+			/* Flexcan XCVR enable */
+			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x0b0b0
+		>;
+	};
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1b0b0		/* Spare */
+			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x1b0b0		/* Spare */
+		>;
+	};
+
+	pinctrl_i2c3_rv4162: i2c3-rv4162grp {
+		fsl,pins = <
+#define GPIRQ_RTC_RV4162	<&gpio6 7 IRQ_TYPE_LEVEL_LOW>
+			MX6QDL_PAD_NANDF_CLE__GPIO6_IO07	0x1b0b0
+		>;
+	};
+
+	pinctrl_leds: ledsgrp {
+		fsl,pins = <
+#define GP_LED_BLUE1	<&gpio4 6 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x0b0b0
+#define GP_LED_GREEN1	<&gpio4 7 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x0b0b0
+#define GP_LED_RED1	<&gpio4 8 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_COL1__GPIO4_IO08		0x0b0b0
+
+#define GP_LED_BLUE2	<&gpio4 9 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_ROW1__GPIO4_IO09		0x0b0b0
+#define GP_LED_GREEN2	<&gpio1 0 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_0__GPIO1_IO00		0x0b0b0
+#define GP_LED_RED2	<&gpio1 3 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x0b0b0
+
+#define GP_LED_BLUE3	<&gpio1 7 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x0b0b0
+#define GP_LED_GREEN3	<&gpio1 8 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_GPIO_8__GPIO1_IO08		0x0b0b0
+#define GP_LED_RED3	<&gpio6 11 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x0b0b0
+			>;
+	};
+
+	pinctrl_usbotg: usbotggrp {
+		fsl,pins = <
+			MX6QDL_PAD_GPIO_1__USB_OTG_ID		0x17059
+			MX6QDL_PAD_EIM_D21__USB_OTG_OC		0x1b0b0
+		>;
+	};
+};
+
+/ {
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_leds>;
+
+		blue1 {
+			gpios = GP_LED_BLUE1;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		green1 {
+			gpios = GP_LED_GREEN1;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		red1 {
+			gpios = GP_LED_RED1;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		blue2 {
+			gpios = GP_LED_BLUE2;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		green2 {
+			gpios = GP_LED_GREEN2;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		red2 {
+			gpios = GP_LED_RED2;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		blue3 {
+			gpios = GP_LED_BLUE3;
+			linux,code = <KEY_6>;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		green3 {
+			gpios = GP_LED_GREEN3;
+			retain-state-suspended;
+			default-state = "off";
+		};
+
+		red3 {
+			gpios = GP_LED_RED3;
+			retain-state-suspended;
+			default-state = "off";
+		};
+	};
+};
+
+&i2c3 {
+	rtc_rv4162: rtc@68 {
+		compatible = "microcrystal,rv4162";
+		interrupts-extended = GPIRQ_RTC_RV4162;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_rv4162>;
+		reg = <0x68>;
+		status = "okay";
+	};
+};
+
+&can2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_can2>;
+	trx-stby-gpio = GP_CAN2_STANDBY;
+	status = "okay";
+};
+
