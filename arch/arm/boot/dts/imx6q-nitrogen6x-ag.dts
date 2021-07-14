@@ -21,7 +21,7 @@
 	/delete-node/ i2c1-sgtl5000grp;
 	/delete-node/ i2c2-ov5642grp;
 
-	pinctrl_gpio_keys2: gpio-keys2grp {
+	pinctrl_leds: ledsgrp {
 		fsl,pins = <
 #define GP_GPIOKEY_BLUE_LED1	<&gpio4 6 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x0b0b0
@@ -65,61 +65,64 @@
 };
 
 / {
-	gpio-keys {
-		pinctrl-0 = <&pinctrl_gpio_keys>, <&pinctrl_gpio_keys2>;
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_leds>;
 
 		blue1 {
-			label = "Blue1";
 			gpios = GP_GPIOKEY_BLUE_LED1;
-			linux,code = <KEY_0>;
+			retain-state-suspended;
+			default-state = "off";
 		};
 
 		green1 {
-			label = "Green1";
 			gpios = GP_GPIOKEY_GREEN_LED1;
-			linux,code = <KEY_1>;
+			retain-state-suspended;
+			default-state = "off";
 		};
 
 		red1 {
-			label = "Red1";
 			gpios = GP_GPIOKEY_RED_LED1;
-			linux,code = <KEY_2>;
+			retain-state-suspended;
+			default-state = "off";
 		};
 
 		blue2 {
-			label = "Blue2";
 			gpios = GP_GPIOKEY_BLUE_LED2;
-			linux,code = <KEY_3>;
+			retain-state-suspended;
+			default-state = "off";
 		};
 
 		green2 {
-			label = "Green2";
 			gpios = GP_GPIOKEY_GREEN_LED2;
-			linux,code = <KEY_4>;
+			retain-state-suspended;
+			default-state = "off";
 		};
 
 		red2 {
-			label = "Red2";
 			gpios = GP_GPIOKEY_RED_LED2;
-			linux,code = <KEY_5>;
+			retain-state-suspended;
+			default-state = "off";
 		};
 
 		blue3 {
-			label = "Blue3";
 			gpios = GP_GPIOKEY_BLUE_LED3;
 			linux,code = <KEY_6>;
+			retain-state-suspended;
+			default-state = "off";
 		};
 
 		green3 {
-			label = "Green3";
 			gpios = GP_GPIOKEY_GREEN_LED3;
-			linux,code = <KEY_7>;
+			retain-state-suspended;
+			default-state = "off";
 		};
 
 		red3 {
-			label = "Red3";
 			gpios = GP_GPIOKEY_RED_LED3;
-			linux,code = <KEY_8>;
+			retain-state-suspended;
+			default-state = "off";
 		};
 	};
 };
