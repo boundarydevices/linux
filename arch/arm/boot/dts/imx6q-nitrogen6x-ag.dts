@@ -21,6 +21,23 @@
 	/delete-node/ i2c1-sgtl5000grp;
 	/delete-node/ i2c2-ov5642grp;
 
+	pinctrl_can2: can2grp {
+		fsl,pins = <
+			MX6QDL_PAD_KEY_COL4__FLEXCAN2_TX	0x1b0b0
+			MX6QDL_PAD_KEY_ROW4__FLEXCAN2_RX	0x1b0b0
+#define GP_CAN2_STANDBY		<&gpio1 4 GPIO_ACTIVE_HIGH>
+			/* Flexcan XCVR enable */
+			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x0b0b0
+		>;
+	};
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1b0b0		/* Spare */
+			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x1b0b0		/* Spare */
+		>;
+	};
+
 	pinctrl_leds: ledsgrp {
 		fsl,pins = <
 #define GP_GPIOKEY_BLUE_LED1	<&gpio4 6 GPIO_ACTIVE_LOW>
@@ -44,16 +61,6 @@
 #define GP_GPIOKEY_RED_LED3	<&gpio6 11 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x0b0b0
 			>;
-	};
-
-	pinctrl_can2: can2grp {
-		fsl,pins = <
-			MX6QDL_PAD_KEY_COL4__FLEXCAN2_TX	0x1b0b0
-			MX6QDL_PAD_KEY_ROW4__FLEXCAN2_RX	0x1b0b0
-#define GP_CAN2_STANDBY		<&gpio1 2 GPIO_ACTIVE_HIGH>
-			/* Flexcan XCVR enable */
-			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x0b0b0
-		>;
 	};
 
 	pinctrl_usbotg: usbotggrp {
