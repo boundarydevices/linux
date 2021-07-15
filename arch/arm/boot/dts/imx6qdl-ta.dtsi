@@ -15,6 +15,8 @@
 / {
 	aliases {
 		mxcfb0 = &mxcfb1;
+		ts_goodix = &ts_goodix;
+		ts_goodix2 = &ts_goodix2;
 	};
 
 	backlight_lvds0 {
@@ -227,7 +229,11 @@
 			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
 #define GP_I2C3_TOUCH_IRQ_LOW		<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
 #define GP_I2C3_TOUCH_IRQ_FALLING	<&gpio1 9 IRQ_TYPE_EDGE_FALLING>
+#define GPIRQ_GT911		<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
+#define GP_GT911_IRQ		<&gpio1 9 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0
+#define GP_GT911_RESET		<&gpio2 7 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x030b0
 		>;
 	};
 
@@ -425,6 +431,24 @@
 		reg = <0x38>;
 		interrupts-extended = GP_I2C3_TOUCH_IRQ_FALLING;
 		wakeup-gpios = GP_I2C3_TOUCH_IRQ_FALLING;
+	};
+
+	ts_goodix: touchscreen@14 {
+		compatible = "goodix,gt911";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		reg = <0x14>;
+		reset-gpios = GP_GT911_RESET;
+	};
+
+	ts_goodix2: touchscreen@5d {
+		compatible = "goodix,gt911";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		reg = <0x5d>;
+		reset-gpios = GP_GT911_RESET;
 	};
 
         ili210x@41 {
