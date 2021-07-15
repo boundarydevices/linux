@@ -49,25 +49,25 @@
 
 	pinctrl_leds: ledsgrp {
 		fsl,pins = <
-#define GP_GPIOKEY_BLUE_LED1	<&gpio4 6 GPIO_ACTIVE_LOW>
+#define GP_LED_BLUE1	<&gpio4 6 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_KEY_COL0__GPIO4_IO06		0x0b0b0
-#define GP_GPIOKEY_GREEN_LED1	<&gpio4 7 GPIO_ACTIVE_LOW>
+#define GP_LED_GREEN1	<&gpio4 7 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x0b0b0
-#define GP_GPIOKEY_RED_LED1	<&gpio4 8 GPIO_ACTIVE_LOW>
+#define GP_LED_RED1	<&gpio4 8 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_KEY_COL1__GPIO4_IO08		0x0b0b0
 
-#define GP_GPIOKEY_BLUE_LED2	<&gpio4 9 GPIO_ACTIVE_LOW>
+#define GP_LED_BLUE2	<&gpio4 9 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_KEY_ROW1__GPIO4_IO09		0x0b0b0
-#define GP_GPIOKEY_GREEN_LED2	<&gpio1 0 GPIO_ACTIVE_LOW>
+#define GP_LED_GREEN2	<&gpio1 0 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_0__GPIO1_IO00		0x0b0b0
-#define GP_GPIOKEY_RED_LED2	<&gpio1 3 GPIO_ACTIVE_LOW>
+#define GP_LED_RED2	<&gpio1 3 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x0b0b0
 
-#define GP_GPIOKEY_BLUE_LED3	<&gpio1 7 GPIO_ACTIVE_LOW>
+#define GP_LED_BLUE3	<&gpio1 7 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_7__GPIO1_IO07		0x0b0b0
-#define GP_GPIOKEY_GREEN_LED3	<&gpio1 8 GPIO_ACTIVE_LOW>
+#define GP_LED_GREEN3	<&gpio1 8 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_8__GPIO1_IO08		0x0b0b0
-#define GP_GPIOKEY_RED_LED3	<&gpio6 11 GPIO_ACTIVE_LOW>
+#define GP_LED_RED3	<&gpio6 11 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_NANDF_CS0__GPIO6_IO11	0x0b0b0
 			>;
 	};
@@ -87,56 +87,56 @@
 		pinctrl-0 = <&pinctrl_leds>;
 
 		blue1 {
-			gpios = GP_GPIOKEY_BLUE_LED1;
+			gpios = GP_LED_BLUE1;
 			retain-state-suspended;
 			default-state = "off";
 		};
 
 		green1 {
-			gpios = GP_GPIOKEY_GREEN_LED1;
+			gpios = GP_LED_GREEN1;
 			retain-state-suspended;
 			default-state = "off";
 		};
 
 		red1 {
-			gpios = GP_GPIOKEY_RED_LED1;
+			gpios = GP_LED_RED1;
 			retain-state-suspended;
 			default-state = "off";
 		};
 
 		blue2 {
-			gpios = GP_GPIOKEY_BLUE_LED2;
+			gpios = GP_LED_BLUE2;
 			retain-state-suspended;
 			default-state = "off";
 		};
 
 		green2 {
-			gpios = GP_GPIOKEY_GREEN_LED2;
+			gpios = GP_LED_GREEN2;
 			retain-state-suspended;
 			default-state = "off";
 		};
 
 		red2 {
-			gpios = GP_GPIOKEY_RED_LED2;
+			gpios = GP_LED_RED2;
 			retain-state-suspended;
 			default-state = "off";
 		};
 
 		blue3 {
-			gpios = GP_GPIOKEY_BLUE_LED3;
+			gpios = GP_LED_BLUE3;
 			linux,code = <KEY_6>;
 			retain-state-suspended;
 			default-state = "off";
 		};
 
 		green3 {
-			gpios = GP_GPIOKEY_GREEN_LED3;
+			gpios = GP_LED_GREEN3;
 			retain-state-suspended;
 			default-state = "off";
 		};
 
 		red3 {
-			gpios = GP_GPIOKEY_RED_LED3;
+			gpios = GP_LED_RED3;
 			retain-state-suspended;
 			default-state = "off";
 		};
