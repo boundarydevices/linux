@@ -319,6 +319,7 @@ esparser_queue(struct amvdec_session *sess, struct vb2_v4l2_buffer *vbuf)
 		if (esparser_vififo_get_free_space(sess) < payload_size ||
 		    atomic_read(&sess->esparser_queued_bufs) >= num_dst_bufs)
 			return -EAGAIN;
+
 	} else if (esparser_vififo_get_free_space(sess) < payload_size) {
 		return -EAGAIN;
 	}
