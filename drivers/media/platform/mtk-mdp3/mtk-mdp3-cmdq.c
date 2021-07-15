@@ -10,6 +10,13 @@
 #include "mtk-mdp3-core.h"
 #include "mtk-mdp3-m2m.h"
 
+#include "mdp-platform.h"
+#include "mmsys_mutex.h"
+#include "mtk-mdp3-debug.h"
+
+#define DISP_MUTEX_MDP_FIRST	(5)
+#define DISP_MUTEX_MDP_COUNT	(5)
+
 #define MDP_PATH_MAX_COMPS	IMG_MAX_COMPONENTS
 
 struct mdp_path {
@@ -363,6 +370,15 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 
 	if (cb_param->mdp_ctx)
 		mdp_m2m_job_finish(cb_param->mdp_ctx);
+
+#ifdef MDP_DEBUG
+	if (data.sta == CMDQ_CB_ERROR) {
+		struct mdp_func_struct *p_func = mdp_get_func();
+
+		p_func->mdp_dump_mmsys_config();
+		mdp_dump_info(~0, 1);
+	}
+#endif
 
 	if (cb_param->user_cmdq_cb) {
 		struct cmdq_cb_data user_cb_data;
