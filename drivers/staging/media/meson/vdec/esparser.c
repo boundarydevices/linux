@@ -309,7 +309,7 @@ esparser_queue(struct amvdec_session *sess, struct vb2_v4l2_buffer *vbuf)
 	 * they could pause when there is no capture buffer available and
 	 * resume on this notification.
 	 */
-	if (sess->fmt_out->pixfmt == V4L2_PIX_FMT_VP9) {
+	if (sess->fmt_out->pixfmt == V4L2_PIX_FMT_VP9 || sess->fmt_out->pixfmt ==V4L2_PIX_FMT_HEVC) {
 		if (codec_ops->num_pending_bufs)
 			num_dst_bufs = codec_ops->num_pending_bufs(sess);
 
