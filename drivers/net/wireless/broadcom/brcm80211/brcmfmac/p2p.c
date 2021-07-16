@@ -940,6 +940,8 @@ int brcmf_p2p_scan_prep(struct wiphy *wiphy,
 		if (err)
 			return err;
 
+		vif = p2p->bss_idx[P2PAPI_BSSCFG_DEVICE].vif;
+
 		/* override .run_escan() callback. */
 		cfg->escan_info.run = brcmf_p2p_run_escan;
 	}
