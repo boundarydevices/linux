@@ -421,7 +421,7 @@
 					 <&pcc3 IMX8ULP_CLK_LPI2C4>;
 				clock-names = "per", "ipg";
 				assigned-clocks = <&pcc3 IMX8ULP_CLK_LPI2C4>;
-				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_XBAR_DIVBUS>;
+				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_FROSC_DIV2>;
 				assigned-clock-rates = <48000000>;
 				dmas = <&edma1 46 0 0>, <&edma1 45 0 1>;
 				dma-names = "tx","rx";
@@ -436,7 +436,7 @@
 					 <&pcc3 IMX8ULP_CLK_LPI2C5>;
 				clock-names = "per", "ipg";
 				assigned-clocks = <&pcc3 IMX8ULP_CLK_LPI2C5>;
-				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_XBAR_DIVBUS>;
+				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_FROSC_DIV2>;
 				assigned-clock-rates = <48000000>;
 				dmas = <&edma1 48 0 0>, <&edma1 47 0 1>;
 				dma-names = "tx","rx";
@@ -479,7 +479,7 @@
 					 <&pcc3 IMX8ULP_CLK_LPSPI4>;
 				clock-names = "per", "ipg";
 				assigned-clocks = <&pcc3 IMX8ULP_CLK_LPSPI4>;
-				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_XBAR_DIVBUS>;
+				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_FROSC_DIV2>;
 				assigned-clock-rates = <48000000>;
 				dmas = <&edma1 64 0 0>, <&edma1 63 0 1>;
 				dma-names = "tx","rx";
@@ -496,7 +496,7 @@
 					 <&pcc3 IMX8ULP_CLK_LPSPI5>;
 				clock-names = "per", "ipg";
 				assigned-clocks = <&pcc3 IMX8ULP_CLK_LPSPI5>;
-				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_XBAR_DIVBUS>;
+				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_FROSC_DIV2>;
 				assigned-clock-rates = <48000000>;
 				dmas = <&edma1 66 0 0>, <&edma1 65 0 1>;
 				dma-names = "tx","rx";
@@ -539,7 +539,7 @@
 					 <&pcc4 IMX8ULP_CLK_LPI2C6>;
 				clock-names = "per", "ipg";
 				assigned-clocks = <&pcc4 IMX8ULP_CLK_LPI2C6>;
-				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_XBAR_DIVBUS>;
+				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_FROSC_DIV2>;
 				assigned-clock-rates = <48000000>;
 				dmas = <&edma1 50 0 0>, <&edma1 49 0 1>;
 				dma-names = "tx","rx";
@@ -554,7 +554,7 @@
 					 <&pcc4 IMX8ULP_CLK_LPI2C7>;
 				clock-names = "per", "ipg";
 				assigned-clocks = <&pcc4 IMX8ULP_CLK_LPI2C7>;
-				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_XBAR_DIVBUS>;
+				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_FROSC_DIV2>;
 				assigned-clock-rates = <48000000>;
 				dmas = <&edma1 52 0 0>, <&edma1 51 0 1>;
 				dma-names = "tx","rx";
