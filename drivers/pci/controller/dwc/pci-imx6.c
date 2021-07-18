@@ -1258,9 +1258,6 @@ static void imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
 	}
 
 	activate_reset(imx6_pcie);
-	if (imx6_pcie->reset_gpios[0])
-		mdelay(20);
-	deactivate_reset(imx6_pcie);
 
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX8QM:
@@ -1418,6 +1415,9 @@ static void imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
 		break;
 	}
 
+	if (imx6_pcie->reset_gpios[0])
+		mdelay(20);
+	deactivate_reset(imx6_pcie);
 	return;
 }
 
