@@ -31,6 +31,7 @@
   amba_bustype
   amba_driver_register
   amba_driver_unregister
+  android_debug_for_each_module
   android_debug_per_cpu_symbol
   android_debug_symbol
   android_rvh_probe_register
@@ -1052,6 +1053,20 @@
   i2c_register_driver
   i2c_transfer
   i2c_transfer_buffer_flags
+  i3c_generic_ibi_alloc_pool
+  i3c_generic_ibi_free_pool
+  i3c_generic_ibi_get_free_slot
+  i3c_generic_ibi_recycle_slot
+  i3c_master_add_i3c_dev_locked
+  i3c_master_disec_locked
+  i3c_master_do_daa
+  i3c_master_enec_locked
+  i3c_master_entdaa_locked
+  i3c_master_get_free_addr
+  i3c_master_queue_ibi
+  i3c_master_register
+  i3c_master_set_info
+  i3c_master_unregister
   icc_disable
   icc_enable
   icc_get
@@ -1069,6 +1084,7 @@
   ida_free
   idr_alloc
   idr_alloc_cyclic
+  idr_alloc_u32
   idr_destroy
   idr_find
   idr_for_each
@@ -1420,6 +1436,7 @@
   mmc_send_tuning
   mmput
   mod_delayed_work_on
+  __mod_node_page_state
   mod_node_page_state
   mod_timer
   __module_get
@@ -1900,6 +1917,7 @@
   rcuwait_wake_up
   rdev_get_drvdata
   reboot_mode
+  reclaim_shmem_address_space
   refcount_dec_and_lock
   refcount_dec_not_one
   refcount_warn_saturate
@@ -2634,6 +2652,7 @@
   __tracepoint_android_vh_psi_group
   __tracepoint_android_vh_rproc_recovery
   __tracepoint_android_vh_scheduler_tick
+  __tracepoint_android_vh_shmem_alloc_page
   __tracepoint_android_vh_show_max_freq
   __tracepoint_android_vh_show_resume_epoch_val
   __tracepoint_android_vh_show_suspend_epoch_val
@@ -2920,6 +2939,7 @@
   vmalloc_to_pfn
   vmap
   vmemdup_user
+  vm_event_states
   vmf_insert_mixed
   vmf_insert_pfn
   vm_get_page_prot
