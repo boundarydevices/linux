@@ -273,7 +273,6 @@ struct it6161 {
 
 	u32 it6161_addr_hdmi_tx;
 	u32 it6161_addr_cec;
-	struct completion wait_edid_complete;
 
 	u32 hdmi_tx_rclk; /* kHz */
 	u32 hdmi_tx_pclk;
@@ -285,7 +284,6 @@ struct it6161 {
 	struct drm_display_mode display_mode;
 	struct hdmi_avi_infoframe source_avi_infoframe;
 
-	struct edid *edid;
 	u8 mipi_rx_lane_count;
 	bool enable_drv_hold;
 	u8 hdmi_tx_output_color_space;
@@ -989,13 +987,16 @@ static int it6161_get_edid_block(void *data, u8 *buf, u32 block_num, size_t len)
 	return 0;
 }
 
-static void hdmi_tx_set_capability_from_edid_parse(struct it6161 *it6161)
+static void hdmi_tx_set_capability_from_edid_parse(struct it6161 *it6161, struct edid *edid)
 {
 	struct device *dev = &it6161->i2c_hdmi_tx->dev;
 	struct drm_display_info *info = &it6161->connector.display_info;
 
-	it6161->hdmi_mode = drm_detect_hdmi_monitor(it6161->edid);
-	it6161->support_audio = drm_detect_monitor_audio(it6161->edid);
+	it6161->hdmi_mode = drm_detect_hdmi_monitor(edid);
+	it6161->support_audio = drm_detect_monitor_audio(edid);
+
+	it6161->hdmi_tx_output_color_space = OUTPUT_COLOR_MODE;
+	it6161->hdmi_tx_input_color_space = INPUT_COLOR_MODE;
 	if (it6161->hdmi_tx_output_color_space == F_MODE_YUV444) {
 		if ((info->color_formats & DRM_COLOR_FORMAT_YCRCB444) != DRM_COLOR_FORMAT_YCRCB444) {
 			it6161->hdmi_tx_output_color_space &= ~F_MODE_CLRMOD_MASK;
@@ -1016,9 +1017,6 @@ static void hdmi_tx_set_capability_from_edid_parse(struct it6161 *it6161)
 		 info->color_formats,
 	     info->bpc);
 
-	it6161->support_audio = 1;
-	it6161->hdmi_mode = 1;
-
 	if ((info->color_formats & DRM_COLOR_FORMAT_RGB444) == DRM_COLOR_FORMAT_RGB444)
 		DRM_DEV_INFO(dev, "nsupport RGB444 output");
 	if ((info->color_formats & DRM_COLOR_FORMAT_YCRCB444) == DRM_COLOR_FORMAT_YCRCB444)
@@ -1033,37 +1031,40 @@ static void it6161_variable_config(struct it6161 *it6161)
 	it6161->mipi_rx_lane_count = MIPI_RX_LANE_COUNT;
 }
 
+static struct edid *it6161_get_edid(struct it6161 *it6161)
+{
+	struct edid *edid;
+
+	edid = drm_do_get_edid(&it6161->connector, it6161_get_edid_block, it6161);
+
+	hdmi_tx_set_capability_from_edid_parse(it6161, edid);
+
+	return edid;
+}
+
 static int it6161_get_modes(struct drm_connector *connector)
 {
 	struct it6161 *it6161 = connector_to_it6161(connector);
-	int err, num_modes = 0, i, retry = 3;
+	int err, num_modes = 0;
+	struct edid *edid;
 	struct device *dev = &it6161->i2c_mipi_rx->dev;
 
 	DRM_DEV_DEBUG_DRIVER(dev, "n%s start", __func__);
 
 	mutex_lock(&it6161->mode_lock);
-	reinit_completion(&it6161->wait_edid_complete);
 
-	for (i = 0; i < retry; i++) {
-		it6161->edid = drm_do_get_edid(&it6161->connector, it6161_get_edid_block, it6161);
-		if (it6161->edid)
-			break;
-	}
-	if (!it6161->edid) {
-		DRM_DEV_ERROR(dev, "Failed to read EDID");
-		goto unlock;
-	}
+	edid = it6161_get_edid(it6161);
 
-	err = drm_connector_update_edid_property(connector, it6161->edid);
+	err = drm_connector_update_edid_property(connector, edid);
 	if (err) {
 		DRM_DEV_ERROR(dev, "Failed to update EDID property: %d", err);
 		goto unlock;
 	}
 
-	num_modes = drm_add_edid_modes(connector, it6161->edid);
+	num_modes = drm_add_edid_modes(connector, edid);
 
+	kfree(edid);
 unlock:
-	complete(&it6161->wait_edid_complete);
 	DRM_DEV_DEBUG_DRIVER(dev, "nedid mode number:%d", num_modes);
 	mutex_unlock(&it6161->mode_lock);
 
@@ -1265,8 +1266,6 @@ static void it6161_bridge_disable(struct drm_bridge *bridge)
 	it6161_set_interrupts_active_level(HIGH);
 	it6161_mipi_rx_int_mask_enable(it6161);
 	it6161_hdmi_tx_int_mask_enable(it6161);
-	kfree(it6161->edid);
-	it6161->edid = NULL;
 }
 
 static enum drm_connector_status it6161_bridge_detect(struct drm_bridge *bridge)
@@ -1295,9 +1294,7 @@ static struct edid *it6161_bridge_get_edid(struct drm_bridge *bridge,
 {
 	struct it6161 *it6161 = bridge_to_it6161(bridge);
 
-	it6161->edid = drm_do_get_edid(&it6161->connector, it6161_get_edid_block, it6161);
-	hdmi_tx_set_capability_from_edid_parse(it6161);
-	return it6161->edid;
+	return it6161_get_edid(it6161);
 }
 
 static const struct drm_bridge_funcs it6161_bridge_funcs = {
@@ -2566,29 +2563,15 @@ static void it6161_hdmi_tx_interrupt_clear(struct it6161 *it6161, u8 reg06, u8 r
 static void it6161_hdmi_tx_interrupt_reg06_process(struct it6161 *it6161, u8 reg06)
 {
 	struct device *dev = &it6161->i2c_hdmi_tx->dev;
-	u8 ret;
 
 	if (reg06 & B_TX_INT_HPD_PLUG) {
 		drm_helper_hpd_irq_event(it6161->bridge.dev);
 		if (hdmi_tx_get_sink_hpd(it6161)) {
 			DRM_INFO("hpd on");
-			ret = wait_for_completion_timeout(&it6161->wait_edid_complete,
-							msecs_to_jiffies(2000));
-			if (ret == 0)
-				DRM_DEV_ERROR(dev, "nwait edid timeout");
-
-			it6161->hdmi_tx_output_color_space = OUTPUT_COLOR_MODE;
-			it6161->hdmi_tx_input_color_space = INPUT_COLOR_MODE;
-			hdmi_tx_set_capability_from_edid_parse(it6161);
 			hdmi_tx_video_reset(it6161);
-
-			/* 1. not only HDMI but DVI need the set the upstream HPD
-			 * 2. Before set upstream HPD , the EDID must be ready. */
 		} else {
 			DRM_DEV_INFO(dev, "hpd off");
 			hdmi_tx_disable_video_output(it6161);
-			kfree(it6161->edid);
-			it6161->edid = NULL;
 		}
 	}
 }
@@ -2784,7 +2767,6 @@ static int it6161_i2c_probe(struct i2c_client *i2c_mipi_rx,
 
 	it6161->i2c_mipi_rx = i2c_mipi_rx;
 	mutex_init(&it6161->mode_lock);
-	init_completion(&it6161->wait_edid_complete);
 
 	it6161->bridge.of_node = i2c_mipi_rx->dev.of_node;
 
