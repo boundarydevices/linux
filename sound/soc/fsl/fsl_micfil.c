@@ -1374,15 +1374,6 @@ static int fsl_micfil_set_mclk_rate(struct fsl_micfil *micfil, int clk_id,
 	if (atomic_read(&micfil->hwvad_state) == MICFIL_HWVAD_ON)
 		return 0;
 
-	/* check if all clock sources are valid */
-	for (i = 0; i < MICFIL_CLK_SRC_NUM; i++) {
-		if (micfil->clk_src[i])
-			continue;
-
-		dev_err(dev, "Clock Source %d is not valid.\n", i);
-		return -EINVAL;
-	}
-
 	while (p) {
 		struct clk *pp = clk_get_parent(p);
 
@@ -1406,8 +1397,10 @@ static int fsl_micfil_set_mclk_rate(struct fsl_micfil *micfil, int clk_id,
 			 * to any known frequency ???
 			 */
 			clk_rate = round_up(clk_rate, 10);
-			if (do_div(clk_rate, ratio) == 0)
+			if (do_div(clk_rate, ratio) == 0) {
 				npll = micfil->clk_src[i];
+				break;
+			}
 		}
 	} else {
 		/* clock id is offseted by 1 since ID=0 means
