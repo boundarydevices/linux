@@ -1007,7 +1007,7 @@ static void hdmi_tx_set_capability_from_edid_parse(struct it6161 *it6161, struct
 			it6161->hdmi_tx_output_color_space |= F_MODE_RGB444;
 		}
 	}
-	DRM_DEV_INFO(dev, "%s mode, monitor %ssupport audio, outputcolormode:%d color_formats:0x%08x color_depth:%d",
+	DRM_DEV_DEBUG_DRIVER(dev, "%s mode, monitor %ssupport audio, outputcolormode:%d color_formats:0x%08x color_depth:%d",
 	     it6161->hdmi_mode ? "HDMI" : "DVI",
 	     it6161->support_audio ? "" : "not ",
 	     it6161->hdmi_tx_output_color_space,
@@ -2451,15 +2451,15 @@ static void it6161_mipi_rx_interrupt_reg06_process(struct it6161 *it6161, u8 reg
 	} else if (reg06 & 0x02)
 		DRM_DEV_DEBUG_DRIVER(dev, "PPS MHSync error interrupt");
 	else if (reg06 & 0x04)
-		DRM_DEV_ERROR(dev, "PPS MHDE Error Interrupt");
+		DRM_DEV_DEBUG_DRIVER(dev, "PPS MHDE Error Interrupt");
 	else if (reg06 & 0x08)
-		DRM_DEV_ERROR(dev, "PPS MVSync Error Interrupt");
+		DRM_DEV_DEBUG_DRIVER(dev, "PPS MVSync Error Interrupt");
 	else if (reg06 & 0x20)
-		DRM_DEV_ERROR(dev, "PPS PHSync Error Interrupt");
+		DRM_DEV_DEBUG_DRIVER(dev, "PPS PHSync Error Interrupt");
 	else if (reg06 & 0x40)
-		DRM_DEV_ERROR(dev, "PPS PHDE Error Interrupt");
+		DRM_DEV_DEBUG_DRIVER(dev, "PPS PHDE Error Interrupt");
 	else if (reg06 & 0x80)
-		DRM_DEV_ERROR(dev, "PPS MVDE Error Interrupt");
+		DRM_DEV_DEBUG_DRIVER(dev, "PPS MVDE Error Interrupt");
 }
 
 static void it6161_mipi_rx_interrupt_reg07_process(struct it6161 *it6161, u8 reg07)
@@ -2467,17 +2467,17 @@ static void it6161_mipi_rx_interrupt_reg07_process(struct it6161 *it6161, u8 reg
 	struct device *dev = &it6161->i2c_mipi_rx->dev;
 
 	if (reg07 & 0x01)
-		DRM_DEV_ERROR(dev, "PatGen PPGVidStb change interrupt !!!\n");
+		DRM_DEV_DEBUG_DRIVER(dev, "PatGen PPGVidStb change interrupt !!!\n");
 	else if (reg07 & 0x02)
-		DRM_DEV_ERROR(dev, "PPS Data Byte Error Interrupt !!!\n");
+		DRM_DEV_DEBUG_DRIVER(dev, "PPS Data Byte Error Interrupt !!!\n");
 	else if (reg07 & 0x04)
-		DRM_DEV_ERROR(dev, "PPS CMOff Interrupt !!!\n");
+		DRM_DEV_DEBUG_DRIVER(dev, "PPS CMOff Interrupt !!!\n");
 	else if (reg07 & 0x08)
-		DRM_DEV_ERROR(dev, "PPS CMOn Interrupt !!!\n");
+		DRM_DEV_DEBUG_DRIVER(dev, "PPS CMOn Interrupt !!!\n");
 	else if (reg07 & 0x10)
-		DRM_DEV_ERROR(dev, "PPS ShutDone cmd Interrupt !!!\n");
+		DRM_DEV_DEBUG_DRIVER(dev, "PPS ShutDone cmd Interrupt !!!\n");
 	else if (reg07 & 0x20)
-		DRM_DEV_ERROR(dev, "PPS TurnOn Interrupt !!!\n");
+		DRM_DEV_DEBUG_DRIVER(dev, "PPS TurnOn Interrupt !!!\n");
 	else if (reg07 & 0x40) {
 		DRM_DEV_DEBUG_DRIVER(dev, "PPS FIFO over read Interrupt !!! tx video statle:%d",
 						hdmi_tx_get_video_state(it6161));
@@ -2494,34 +2494,34 @@ static void it6161_mipi_rx_interrupt_reg08_process(struct it6161 *it6161, u8 reg
 	int crc;
 
 	if (reg08 & 0x01)
-		DRM_DEV_ERROR(dev, "ECC 1-bit Error Interrupt !!!\n");
+		DRM_DEV_DEBUG_DRIVER(dev, "ECC 1-bit Error Interrupt !!!\n");
 	else if (reg08 & 0x02)
-		DRM_DEV_ERROR(dev, "ECC 2-bit Error Interrupt !!!\n");
+		DRM_DEV_DEBUG_DRIVER(dev, "ECC 2-bit Error Interrupt !!!\n");
 	else if (reg08 & 0x04)
-		DRM_DEV_ERROR(dev, "LM FIFO Error Interrupt !!!\n");
+		DRM_DEV_DEBUG_DRIVER(dev, "LM FIFO Error Interrupt !!!\n");
 	else if (reg08 & 0x08)
-		DRM_DEV_ERROR(dev, "CRC Error Interrupt !!!\n");
+		DRM_DEV_DEBUG_DRIVER(dev, "CRC Error Interrupt !!!\n");
 	else if (reg08 & 0x10)
-		DRM_DEV_ERROR(dev, "MCLK Off Interrupt !!!\n");
+		DRM_DEV_DEBUG_DRIVER(dev, "MCLK Off Interrupt !!!\n");
 	else if (reg08 & 0x20)
-		DRM_DEV_ERROR(dev, "PPI FIFO OverWrite Interrupt !!!\n");
+		DRM_DEV_DEBUG_DRIVER(dev, "PPI FIFO OverWrite Interrupt !!!\n");
 	else if (reg08 & 0x40) {
 		it6161_mipi_rx_set_bits(it6161, 0x0b, 0x40, 0x00);
 
 		if ((it6161_mipi_rx_read(it6161, 0xC1) & 0x03) == 0x03)
-			DRM_DEV_ERROR(dev, "CRC Fail !!!\n");
+			DRM_DEV_DEBUG_DRIVER(dev, "CRC Fail !!!\n");
 
 		if ((it6161_mipi_rx_read(it6161, 0xC1) & 0x05) == 0x05) {
-			DRM_DEV_ERROR(dev, "CRC Pass !!!\n");
+			DRM_DEV_DEBUG_DRIVER(dev, "CRC Pass !!!\n");
 			crc = it6161_mipi_rx_read(it6161, 0xC2) +
 			    (it6161_mipi_rx_read(it6161, 0xC3) << 8);
-			DRM_DEV_ERROR(dev, "CRCR = 0x%x !!!\n", crc);
+			DRM_DEV_DEBUG_DRIVER(dev, "CRCR = 0x%x !!!\n", crc);
 			crc = it6161_mipi_rx_read(it6161, 0xC4) +
 			    (it6161_mipi_rx_read(it6161, 0xC5) << 8);
-			DRM_DEV_ERROR(dev, "CRCG = 0x%x !!!\n", crc);
+			DRM_DEV_DEBUG_DRIVER(dev, "CRCG = 0x%x !!!\n", crc);
 			crc = it6161_mipi_rx_read(it6161, 0xC6) +
 			    (it6161_mipi_rx_read(it6161, 0xC7) << 8);
-			DRM_DEV_ERROR(dev, "CRCB = 0x%x !!!\n", crc);
+			DRM_DEV_DEBUG_DRIVER(dev, "CRCB = 0x%x !!!\n", crc);
 		}
 	}
 }
@@ -2562,10 +2562,10 @@ static void it6161_hdmi_tx_interrupt_reg06_process(struct it6161 *it6161, u8 reg
 	if (reg06 & B_TX_INT_HPD_PLUG) {
 		drm_helper_hpd_irq_event(it6161->bridge.dev);
 		if (hdmi_tx_get_sink_hpd(it6161)) {
-			DRM_INFO("hpd on");
+			DRM_DEV_INFO(dev, "HDMI Cable Plug In\n");
 			hdmi_tx_video_reset(it6161);
 		} else {
-			DRM_DEV_INFO(dev, "hpd off");
+			DRM_DEV_INFO(dev, "HDMI Cable Plug Out");
 			hdmi_tx_disable_video_output(it6161);
 		}
 	}
@@ -2589,7 +2589,7 @@ static void it6161_hdmi_tx_interrupt_regee_process(struct it6161 *it6161, u8 reg
 	struct device *dev = &it6161->i2c_hdmi_tx->dev;
 
 	if (regee != 0x00) {
-		DRM_DEV_ERROR(dev, "%s%s%s%s%s%s%s",
+		DRM_DEV_DEBUG_DRIVER(dev, "%s%s%s%s%s%s%s",
 			 (regee & 0x40) ? "video parameter change " : "",
 			 (regee & 0x20) ? "HDCP Pj check done " : "",
 			 (regee & 0x10) ? "HDCP Ri check done " : "",
