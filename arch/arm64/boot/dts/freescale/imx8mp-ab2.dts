@@ -76,29 +76,58 @@
 	};
 
 	sound-micfil {
-		compatible = "fsl,imx-audio-micfil";
+		compatible = "fsl,imx-audio-card";
 		model = "imx-audio-micfil";
-		cpu-dai = <&micfil>;
+		pri-dai-link {
+			link-name = "micfil hifi";
+			format = "i2s";
+			cpu {
+				sound-dai = <&micfil>;
+			};
+		};
 	};
 
 	sound-xcvr {
-		compatible = "fsl,imx-audio-xcvr";
+		compatible = "fsl,imx-audio-card";
 		model = "imx-audio-xcvr";
-		cpu-dai = <&xcvr>;
+		pri-dai-link {
+			link-name = "XCVR PCM";
+			cpu {
+				sound-dai = <&xcvr>;
+			};
+		};
 	};
 
 	sound-ak4458 {
-		compatible = "fsl,imx-audio-ak4458";
+		compatible = "fsl,imx-audio-card";
 		model = "ak4458-audio";
-		audio-cpu = <&sai1>;
-		audio-codec = <&ak4458_1>, <&ak4458_2>;
+		pri-dai-link {
+			link-name = "akcodec";
+			format = "i2s";
+			fsl,mclk-equal-bclk;
+			cpu {
+				sound-dai = <&sai1>;
+			};
+			codec {
+				sound-dai = <&ak4458_1>, <&ak4458_2>;
+			};
+		};
 	};
 
 	sound-ak5552 {
-		compatible = "fsl,imx-audio-ak5552";
+		compatible = "fsl,imx-audio-card";
 		model = "ak5552-audio";
-		audio-cpu = <&sai3>;
-		audio-codec = <&ak5552>;
+		pri-dai-link {
+			link-name = "akcodec";
+			format = "i2s";
+			fsl,mclk-equal-bclk;
+			cpu {
+				sound-dai = <&sai3>;
+			};
+			codec {
+				sound-dai = <&ak5552>;
+			};
+		};
 	};
 };
 
@@ -329,6 +358,8 @@
 	};
 
 	ak4458_1: ak4458@10 {
+		#sound-dai-cells = <0>;
+		sound-name-prefix = "1";
 		compatible = "asahi-kasei,ak4458";
 		reg = <0x10>;
 		resets = <&ak4458_reset>;
@@ -337,6 +368,8 @@
 	};
 
 	ak4458_2: ak4458@11 {
+		#sound-dai-cells = <0>;
+		sound-name-prefix = "2";
 		compatible = "asahi-kasei,ak4458";
 		reg = <0x11>;
 		resets = <&ak4458_reset>;
@@ -345,6 +378,7 @@
 	};
 
 	ak4458_3: ak4458@12 {
+		#sound-dai-cells = <0>;
 		compatible = "asahi-kasei,ak4458";
 		reg = <0x12>;
 		resets = <&ak4458_reset>;
@@ -353,6 +387,7 @@
 	};
 
 	ak5552: ak5552@13 {
+		#sound-dai-cells = <0>;
 		compatible = "asahi-kasei,ak5552";
 		reg = <0x13>;
 		reset-gpios = <&pca6416 2 GPIO_ACTIVE_LOW>;
@@ -386,11 +421,13 @@
 };
 
 &easrc {
+	#sound-dai-cells = <0>;
 	fsl,asrc-rate  = <48000>;
 	status = "okay";
 };
 
 &micfil {
+	#sound-dai-cells = <0>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pdm>;
 	assigned-clocks = <&clk IMX8MP_CLK_PDM>;
@@ -400,6 +437,7 @@
 };
 
 &sai1 {
+	#sound-dai-cells = <0>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai1>;
 	assigned-clocks = <&clk IMX8MP_CLK_SAI1>;
@@ -417,6 +455,7 @@
 };
 
 &sai3 {
+	#sound-dai-cells = <0>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai3>;
 	assigned-clocks = <&clk IMX8MP_CLK_SAI3>;
