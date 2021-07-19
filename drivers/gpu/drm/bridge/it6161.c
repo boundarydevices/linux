@@ -281,13 +281,11 @@ struct it6161 {
 	u32 mipi_rx_rclk;
 	u32 mipi_rx_pclk;
 
-	struct drm_display_mode mipi_rx_p_display_mode;
-	struct drm_display_mode hdmi_tx_display_mode;
-	struct drm_display_mode source_display_mode;
+	/* video mode output to hdmi tx */
+	struct drm_display_mode display_mode;
 	struct hdmi_avi_infoframe source_avi_infoframe;
 
 	struct edid *edid;
-	u32 vic;
 	u8 mipi_rx_lane_count;
 	bool enable_drv_hold;
 	u8 hdmi_tx_output_color_space;
@@ -618,17 +616,6 @@ static bool mipi_rx_get_p_video_stable(struct it6161 *it6161)
 	return it6161_mipi_rx_read(it6161, 0x0D) & 0x20;
 }
 
-static void mipi_rx_setup_polarity(struct it6161 *it6161)
-{
-	struct drm_display_mode *display_mode = &it6161->source_display_mode;
-	u8 polarity;
-
-	polarity = ((display_mode->flags & DRM_MODE_FLAG_PHSYNC) == DRM_MODE_FLAG_PHSYNC) ? 0x01 : 0x00;
-	polarity |= ((display_mode->flags & DRM_MODE_FLAG_PVSYNC) == DRM_MODE_FLAG_PVSYNC) ? 0x02 : 0x00;
-
-	it6161_mipi_rx_set_bits(it6161, 0x4E, 0x03, polarity);
-}
-
 static void mipi_rx_afe_configuration(struct it6161 *it6161, u8 data_id)
 {
 	struct device *dev = &it6161->i2c_hdmi_tx->dev;
@@ -785,7 +772,7 @@ static void it6161_hdmi_tx_clear_ddc_fifo(struct it6161 *it6161)
 
 static void hdmi_tx_generate_blank_timing(struct it6161 *it6161)
 {
-	struct drm_display_mode *display_mode = &it6161->hdmi_tx_display_mode;
+	struct drm_display_mode *display_mode = &it6161->display_mode;
 	bool force_hdmi_tx_clock_stable = true;
 	bool force_hdmi_tx_video_stable = true;
 	bool hdmi_tx_by_pass_mode = false;
@@ -1240,12 +1227,17 @@ static void it6161_bridge_mode_set(struct drm_bridge *bridge,
 {
 	struct it6161 *it6161 = bridge_to_it6161(bridge);
 	struct device *dev = &it6161->i2c_hdmi_tx->dev;
+	u8 polarity;
 
 	DRM_DEV_DEBUG_DRIVER(dev, "n    mode " DRM_MODE_FMT "\n", DRM_MODE_ARG(mode));
 	DRM_DEV_DEBUG_DRIVER(dev, "nadj mode " DRM_MODE_FMT "\n", DRM_MODE_ARG(adjusted_mode));
 
-	memcpy(&it6161->source_display_mode, adjusted_mode, sizeof(struct drm_display_mode));
-	memcpy(&it6161->hdmi_tx_display_mode, mode, sizeof(struct drm_display_mode));
+	memcpy(&it6161->display_mode, mode, sizeof(struct drm_display_mode));
+
+	polarity = ((adjusted_mode->flags & DRM_MODE_FLAG_PHSYNC) == DRM_MODE_FLAG_PHSYNC) ? 0x01 : 0x00;
+	polarity |= ((adjusted_mode->flags & DRM_MODE_FLAG_PVSYNC) == DRM_MODE_FLAG_PVSYNC) ? 0x02 : 0x00;
+
+	it6161_mipi_rx_set_bits(it6161, 0x4E, 0x03, polarity);
 }
 
 static void it6161_bridge_enable(struct drm_bridge *bridge)
@@ -1440,7 +1432,7 @@ u32 hdmi_tx_calc_pclk(struct it6161 *it6161)
 
 static void hdmi_tx_get_display_mode(struct it6161 *it6161)
 {
-	struct drm_display_mode *display_mode = &it6161->hdmi_tx_display_mode;
+	struct drm_display_mode display_mode;
 	struct device *dev = &it6161->i2c_hdmi_tx->dev;
 	u32 hsyncpol, vsyncpol, interlaced;
 	u32 htotal, hdes, hdee, hsyncw, hactive, hfront_porch, H2ndVRRise;
@@ -1448,7 +1440,6 @@ static void hdmi_tx_get_display_mode(struct it6161 *it6161)
 	u32 vsyncw2nd, VRS2nd, vdew2nd, vfph2nd, vbph2nd;
 	u8 rega9;
 
-	DRM_DEV_DEBUG_DRIVER(dev, "n%s\n", __func__);
 	hdmi_tx_calc_rclk(it6161);
 	hdmi_tx_calc_pclk(it6161);
 
@@ -1474,16 +1465,16 @@ static void hdmi_tx_get_display_mode(struct it6161 *it6161)
 	vactive = vdee - vdes;
 	vfront_porch = (interlaced == 0x01) ? (vtotal / 2 - vdee) : (vtotal - vdee);
 
-	display_mode->clock = it6161->hdmi_tx_pclk;
-	display_mode->hdisplay = hactive;
-	display_mode->hsync_start = hactive + hfront_porch;
-	display_mode->hsync_end = hactive + hfront_porch + hsyncw;
-	display_mode->htotal = htotal;
-	display_mode->vdisplay = vactive;
-	display_mode->vsync_start = vactive + vfront_porch;
-	display_mode->vsync_end = vactive + vfront_porch + vsyncw;
-	display_mode->vtotal = vtotal;
-	display_mode->flags =
+	display_mode.clock = it6161->hdmi_tx_pclk;
+	display_mode.hdisplay = hactive;
+	display_mode.hsync_start = hactive + hfront_porch;
+	display_mode.hsync_end = hactive + hfront_porch + hsyncw;
+	display_mode.htotal = htotal;
+	display_mode.vdisplay = vactive;
+	display_mode.vsync_start = vactive + vfront_porch;
+	display_mode.vsync_end = vactive + vfront_porch + vsyncw;
+	display_mode.vtotal = vtotal;
+	display_mode.flags =
 	    ((hsyncpol == 0x01) ? DRM_MODE_FLAG_PHSYNC : DRM_MODE_FLAG_NHSYNC) |
 		((vsyncpol == 0x01) ? DRM_MODE_FLAG_PVSYNC : DRM_MODE_FLAG_NVSYNC)
 	    | ((interlaced == 0x01) ? DRM_MODE_FLAG_INTERLACE : 0x00);
@@ -1506,6 +1497,8 @@ static void hdmi_tx_get_display_mode(struct it6161 *it6161)
 
 	/* disable video timing read back */
 	it6161_hdmi_tx_set_bits(it6161, 0xA8, 0x08, 0x00);
+
+	DRM_DEV_DEBUG_DRIVER(dev, "hdmi tx mode " DRM_MODE_FMT "\n", DRM_MODE_ARG(&it6161->display_mode));
 }
 
 static void it6161_hdmi_tx_set_av_mute(struct it6161 *it6161, u8 bEnable)
@@ -2178,7 +2171,7 @@ static int hdmi_tx_avi_infoframe_set(struct it6161 *it6161)
 {
 	struct device *dev = &it6161->i2c_hdmi_tx->dev;
 	struct hdmi_avi_infoframe *frame = &it6161->source_avi_infoframe;
-	struct drm_display_mode *display_mode = &it6161->hdmi_tx_display_mode;
+	struct drm_display_mode *display_mode = &it6161->display_mode;
 	u8 buf[32], i, *ptr;
 	int ret;
 
@@ -2367,7 +2360,8 @@ static void mipi_rx_show_mrec(struct it6161 *it6161)
 
 static void mipi_rx_prec_get_display_mode(struct it6161 *it6161)
 {
-	struct drm_display_mode *display_mode = &it6161->mipi_rx_p_display_mode;
+	struct device *dev = &it6161->i2c_mipi_rx->dev;
+	struct drm_display_mode display_mode;
 
 	int p_hfront_porch, p_hsyncw, p_hback_porch, p_hactive, p_htotal;
 	int p_vfront_porch, p_vsyncw, p_vback_porch, p_vactive, p_vtotal;
@@ -2384,15 +2378,17 @@ static void mipi_rx_prec_get_display_mode(struct it6161 *it6161)
 	p_vactive = mipi_rx_read_word(it6161, 0x40) & 0x3FFF;
 	p_vtotal = mipi_rx_read_word(it6161, 0x42) & 0x3FFF;
 
-	display_mode->clock = it6161->mipi_rx_pclk;
-	display_mode->hdisplay = p_hactive;
-	display_mode->hsync_start = p_hactive + p_hfront_porch;
-	display_mode->hsync_end = p_hactive + p_hfront_porch + p_hsyncw;
-	display_mode->htotal = p_htotal;
-	display_mode->vdisplay = p_vactive;
-	display_mode->vsync_start = p_vactive + p_vfront_porch;
-	display_mode->vsync_end = p_vactive + p_vfront_porch + p_vsyncw;
-	display_mode->vtotal = p_vtotal;
+	display_mode.clock = it6161->mipi_rx_pclk;
+	display_mode.hdisplay = p_hactive;
+	display_mode.hsync_start = p_hactive + p_hfront_porch;
+	display_mode.hsync_end = p_hactive + p_hfront_porch + p_hsyncw;
+	display_mode.htotal = p_htotal;
+	display_mode.vdisplay = p_vactive;
+	display_mode.vsync_start = p_vactive + p_vfront_porch;
+	display_mode.vsync_end = p_vactive + p_vfront_porch + p_vsyncw;
+	display_mode.vtotal = p_vtotal;
+
+	DRM_DEV_DEBUG_DRIVER(dev, "mipi rx pmode " DRM_MODE_FMT "\n", DRM_MODE_ARG(&display_mode));
 }
 
 static void mipi_rx_reset_p_domain(struct it6161 *it6161)
@@ -2439,14 +2435,7 @@ static void it6161_mipi_rx_interrupt_reg06_process(struct it6161 *it6161, u8 reg
 			mipi_rx_calc_rclk(it6161);
 			mipi_rx_calc_pclk(it6161);
 			mipi_rx_prec_get_display_mode(it6161);
-			it6161->vic = drm_match_cea_mode(&it6161->mipi_rx_p_display_mode);
 
-			DRM_DEV_DEBUG_DRIVER(dev, "nsource output vic: %d, %s cea timing",
-				 it6161->vic, it6161->vic ? " standard" : " not");
-			DRM_DEV_DEBUG_DRIVER(dev, "nsource mode " DRM_MODE_FMT "\n", DRM_MODE_ARG(&it6161->source_display_mode));
-			DRM_DEV_DEBUG_DRIVER(dev, "nmipi rx pmode " DRM_MODE_FMT "\n", DRM_MODE_ARG(&it6161->mipi_rx_p_display_mode));
-
-			mipi_rx_setup_polarity(it6161);
 			it6161_mipi_rx_write(it6161, 0xC0, (EnTxCRC << 7) + TxCRCnum);
 			/* setup 1 sec timer interrupt */
 			it6161_mipi_rx_set_bits(it6161, 0x0b, 0x40, 0x40);
@@ -2606,15 +2595,10 @@ static void it6161_hdmi_tx_interrupt_reg06_process(struct it6161 *it6161, u8 reg
 
 static void it6161_hdmi_tx_interrupt_reg08_process(struct it6161 *it6161, u8 reg08)
 {
-	struct device *dev = &it6161->i2c_hdmi_tx->dev;
-
 	if (reg08 & B_TX_INT_VIDSTABLE) {
 		it6161_hdmi_tx_write(it6161, REG_TX_INT_STAT3, reg08);
 		if (hdmi_tx_get_video_state(it6161)) {
 			hdmi_tx_get_display_mode(it6161);
-
-			DRM_DEV_DEBUG_DRIVER(dev, "nsource mode " DRM_MODE_FMT "\n", DRM_MODE_ARG(&it6161->source_display_mode));
-			DRM_DEV_DEBUG_DRIVER(dev, "nhdmi tx mode " DRM_MODE_FMT "\n", DRM_MODE_ARG(&it6161->hdmi_tx_display_mode));
 
 			hdmi_tx_set_output_process(it6161);
 			it6161_hdmi_tx_set_av_mute(it6161, FALSE);
