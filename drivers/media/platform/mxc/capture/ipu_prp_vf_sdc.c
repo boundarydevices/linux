@@ -400,8 +400,10 @@ static int prpvf_stop(void *private)
 	fbvar.nonstd = cam->fb_origin_std;
 	fbvar.activate |= FB_ACTIVATE_FORCE;
 	err = fb_set_var(fbi, &fbvar);
-	if (err)
+	if (err) {
 		printk(KERN_WARNING "fb_set_var err code %d\n", err);
+		err = 0;
+	}
 
 	err2 = cam_mipi_csi2_disable(cam);
 
