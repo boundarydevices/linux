@@ -212,7 +212,7 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 			&rfkill->power_key_low_off);
 
 	/* Make sure at-least one GPIO is defined for this instance */
-	if (!rfkill->reset_gpio && !rfkill->shutdown_gpio) {
+	if (!rfkill->reset_gpio && !rfkill->shutdown_gpio && !rfkill->vdd) {
 		dev_err(dev, "invalid platform data\n");
 		return -EINVAL;
 	}
