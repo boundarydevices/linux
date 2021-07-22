@@ -1,0 +1,171 @@
+/*
+ * Copyright (C) 2021 Boundary Devices, Inc.
+ */
+#include "imx6sx-ys.dts"
+
+/delete-node/ &pinctrl_reg_usbotg2_vbus;
+/delete-node/ &reg_usb_otg2_vbus;
+
+&iomuxc {
+	pinctrl_reg_wlan_en: reg-wlan-engrp {
+		fsl,pins = <
+#define GP_REG_WLAN_EN	<&gpio4 12 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_NAND_RE_B__GPIO4_IO_12	0x030b0
+			MX6SX_PAD_GPIO1_IO11__CCM_CLKO1		0x000b0		/* slow clock */
+		>;
+	};
+
+	pinctrl_rfkill_bt: rfkill-btgrp {
+		fsl,pins = <
+#define GP_RFKILL_BT_RESET	<&gpio4 14 GPIO_ACTIVE_LOW>
+			MX6SX_PAD_NAND_WE_B__GPIO4_IO_14	0x030b0
+		>;
+	};
+
+	pinctrl_rfkill_wlan_off: rfkill-wlan-offgrp {
+		fsl,pins = <
+#define GP_RFKILL_WLAN_CD	<&gpio4 16 GPIO_ACTIVE_LOW>
+			MX6SX_PAD_QSPI1A_DATA0__GPIO4_IO_16	0x0b0b0		/* pull-up off */
+		>;
+	};
+
+	pinctrl_rfkill_wlan_on: rfkill-wlan-ongrp {
+		fsl,pins = <
+			MX6SX_PAD_QSPI1A_DATA0__GPIO4_IO_16	0x030b0		/* pull-down on */
+		>;
+	};
+
+	pinctrl_uart4: uart4grp {
+		fsl,pins = <
+			MX6SX_PAD_CSI_PIXCLK__UART4_TX		0x1b0b1
+			MX6SX_PAD_CSI_MCLK__UART4_RX		0x1b0b1
+			MX6SX_PAD_CSI_VSYNC__UART4_CTS_B	0x1b0b1
+			MX6SX_PAD_CSI_HSYNC__UART4_RTS_B	0x1b0b1
+		>;
+	};
+
+	pinctrl_usdhc1_50mhz: usdhc1-50mhzgrp {
+		fsl,pins = <
+			MX6SX_PAD_SD1_CLK__USDHC1_CLK		0x10071
+			MX6SX_PAD_SD1_CMD__USDHC1_CMD		0x17071
+			MX6SX_PAD_SD1_DATA0__USDHC1_DATA0	0x17071
+			MX6SX_PAD_SD1_DATA1__USDHC1_DATA1	0x17071
+			MX6SX_PAD_SD1_DATA2__USDHC1_DATA2	0x17071
+			MX6SX_PAD_SD1_DATA3__USDHC1_DATA3	0x17071
+			MX6SX_PAD_NAND_CLE__GPIO4_IO_3		0x1b0b0		/* bt device wake */
+			MX6SX_PAD_NAND_WP_B__GPIO4_IO_15	0x1b0b0		/* bt host wake */
+#define GPIRQ_WL_HOST_WAKE	<&gpio4 0 IRQ_TYPE_LEVEL_LOW>
+			MX6SX_PAD_NAND_ALE__GPIO4_IO_0		0x1f0b0		/* wlan host wake */
+		>;
+	};
+
+	pinctrl_usdhc1_100mhz: usdhc1-100mhzgrp {
+		fsl,pins = <
+			MX6SX_PAD_SD1_CLK__USDHC1_CLK		0x100b9
+			MX6SX_PAD_SD1_CMD__USDHC1_CMD		0x170b9
+			MX6SX_PAD_SD1_DATA0__USDHC1_DATA0	0x170b9
+			MX6SX_PAD_SD1_DATA1__USDHC1_DATA1	0x170b9
+			MX6SX_PAD_SD1_DATA2__USDHC1_DATA2	0x170b9
+			MX6SX_PAD_SD1_DATA3__USDHC1_DATA3	0x170b9
+		>;
+	};
+
+	pinctrl_usdhc1_200mhz: usdhc1-200mhzgrp {
+		fsl,pins = <
+			MX6SX_PAD_SD1_CLK__USDHC1_CLK		0x100f9
+			MX6SX_PAD_SD1_CMD__USDHC1_CMD		0x170f9
+			MX6SX_PAD_SD1_DATA0__USDHC1_DATA0	0x170f9
+			MX6SX_PAD_SD1_DATA1__USDHC1_DATA1	0x170f9
+			MX6SX_PAD_SD1_DATA2__USDHC1_DATA2	0x170f9
+			MX6SX_PAD_SD1_DATA3__USDHC1_DATA3	0x170f9
+		>;
+	};
+};
+
+/ {
+	model = "Freescale i.MX6 SoloX YS Rev2 Board";
+	compatible = "fsl,imx6sx-ys-rev2", "fsl,imx6sx";
+
+	aliases {
+		mmc2 = &usdhc1;
+	};
+
+	reg_wlan_en: regulator-wlan {
+		clock-names = "slow";
+		clocks = <&clks IMX6SX_CLK_CKO>;
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_REG_WLAN_EN;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_wlan_en>;
+		regulator-name = "wlan-en";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		startup-delay-us = <250000>;
+	};
+
+	rfkill-bt {
+		compatible = "net,rfkill-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_rfkill_bt>;
+		name = "rfkill-bt";
+		type = <2>; 	/* "bluetooth"; */
+		reset-gpios = GP_RFKILL_BT_RESET;
+	};
+
+	rfkill-wlan {
+		compatible = "net,rfkill-gpio";
+		name = "rfkill-wlan";
+		pinctrl-names = "off", "on";
+		pinctrl-0 = <&pinctrl_rfkill_wlan_off>;
+		pinctrl-1 = <&pinctrl_rfkill_wlan_on>;
+		type = <1>;	/* "wlan"; */
+		vdd-supply = <&reg_wlan_en>;
+	};
+
+};
+
+&uart4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart4>;
+	uart-has-rtscts;
+	status = "okay";
+};
+
+&usdhc1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	assigned-clocks = <&clks IMX6SX_CLK_CKO>,
+			  <&clks IMX6SX_CLK_CKO1_SEL>;
+	assigned-clock-parents = <&clks IMX6SX_CLK_CKO1>,
+				 <&clks IMX6SX_CLK_CKIL>;
+	bus-width = <4>;
+	cd-gpios = GP_RFKILL_WLAN_CD;
+	keep-power-in-suspend;
+	no-sd-uhs-sdr104;
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-0 = <&pinctrl_usdhc1_50mhz>;
+	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
+	pm-ignore-notify;
+	vmmc-supply = <&reg_3p3v>;
+	vqmmc-1-8-v;
+	vqmmc-supply = <&reg_1p8v>;
+	status = "okay";
+
+	wifi@1 {
+		compatible = "brcm,bcm4329-fmac";
+		laird,regdomain = "US";
+#if 0
+		interrupt-names = "host-wake";
+		interrupts-extended = GPIRQ_WL_HOST_WAKE;
+		interrupt-parent = <&gpio4>;
+		interrupts = <0 IRQ_TYPE_LEVEL_LOW>;
+#endif
+		reg = <1>;
+	};
+};
+
+&usbotg2 {
+	/delete-property/ vbus-supply;
+};
