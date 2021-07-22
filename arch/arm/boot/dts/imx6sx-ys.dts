@@ -16,12 +16,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
-	iomuxc_ys: iomuxc-ysgrp {
-		status = "okay";
-	};
-};
-
-&iomuxc_ys {
 	pinctrl_ecspi1: ecspi1grp {
 		fsl,pins = <
 			MX6SX_PAD_KEY_COL1__ECSPI1_MISO		0x100b1
@@ -194,6 +188,20 @@
 		>;
 	};
 
+	pinctrl_reg_usbotg1_vbus: reg-usbotg1-vbusgrp {
+		fsl,pins = <
+#define GP_USB_OTG1_PWR		<&gpio1 9 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_GPIO1_IO09__GPIO1_IO_9	0x1b0b0
+		>;
+	};
+
+	pinctrl_reg_usbotg2_vbus: reg-usbotg2-vbusgrp {
+		fsl,pins = <
+#define GP_USB_HOST_PWR_EN	<&gpio1 11 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_GPIO1_IO11__GPIO1_IO_11	0xb0b0
+		>;
+	};
+
 	pinctrl_uart1: uart1grp {
 		fsl,pins = <
 			MX6SX_PAD_GPIO1_IO04__UART1_TX		0x1b0b1
@@ -231,24 +239,10 @@
 		>;
 	};
 
-	pinctrl_usbotg1_vbus: usbotg1-vbusgrp {
-		fsl,pins = <
-#define GP_USB_OTG1_PWR		<&gpio1 9 GPIO_ACTIVE_HIGH>
-			MX6SX_PAD_GPIO1_IO09__GPIO1_IO_9	0x1b0b0
-		>;
-	};
-
 	pinctrl_usbotg2: usbotg2grp {
 		fsl,pins = <
 #define GP_USB_HUB_RESET	<&gpio4 26 GPIO_ACTIVE_LOW>
 			MX6SX_PAD_QSPI1B_DATA2__GPIO4_IO_26	0xb0b0
-		>;
-	};
-
-	pinctrl_usbotg2_vbus: usbotg2-vbusgrp {
-		fsl,pins = <
-#define GP_USB_HOST_PWR_EN	<&gpio1 11 GPIO_ACTIVE_HIGH>
-			MX6SX_PAD_GPIO1_IO11__GPIO1_IO_11	0xb0b0
 		>;
 	};
 
@@ -334,61 +328,50 @@
 		reg = <0x80000000 0x40000000>;
 	};
 
-	regulators {
-		compatible = "simple-bus";
-		#address-cells = <1>;
-		#size-cells = <0>;
+	reg_1p8v: regulator-1p8v {
+		compatible = "regulator-fixed";
+		regulator-name = "1P8V";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+	};
 
-		reg_1p8v: regulator@0 {
-			compatible = "regulator-fixed";
-			reg = <0>;
-			regulator-name = "1P8V";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			regulator-always-on;
-		};
+	reg_2p5v: regulator-2p5v {
+		compatible = "regulator-fixed";
+		regulator-name = "2P5V";
+		regulator-min-microvolt = <2500000>;
+		regulator-max-microvolt = <2500000>;
+		regulator-always-on;
+	};
 
-		reg_2p5v: regulator@1 {
-			compatible = "regulator-fixed";
-			reg = <1>;
-			regulator-name = "2P5V";
-			regulator-min-microvolt = <2500000>;
-			regulator-max-microvolt = <2500000>;
-			regulator-always-on;
-		};
+	reg_3p3v: regulator-3p3v {
+		compatible = "regulator-fixed";
+		regulator-name = "3P3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
 
-		reg_3p3v: regulator@2 {
-			compatible = "regulator-fixed";
-			reg = <2>;
-			regulator-name = "3P3V";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-		};
+	reg_usb_otg1_vbus: regulator-usb-otg1-vbus {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usbotg1_vbus>;
+		compatible = "regulator-fixed";
+		regulator-name = "usb_otg1_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = GP_USB_OTG1_PWR;
+		enable-active-high;
+	};
 
-		reg_usb_otg1_vbus: regulator@3 {
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_usbotg1_vbus>;
-			compatible = "regulator-fixed";
-			reg = <3>;
-			regulator-name = "usb_otg1_vbus";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-			gpio = GP_USB_OTG1_PWR;
-			enable-active-high;
-		};
-
-		reg_usb_otg2_vbus: regulator@4 {
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_usbotg2_vbus>;
-			compatible = "regulator-fixed";
-			reg = <4>;
-			regulator-name = "usb_otg2_vbus";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
-			gpio = GP_USB_HOST_PWR_EN;
-			enable-active-high;
-		};
+	reg_usb_otg2_vbus: regulator-usb-otg2-vbus {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usbotg2_vbus>;
+		compatible = "regulator-fixed";
+		regulator-name = "usb_otg2_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = GP_USB_HOST_PWR_EN;
+		enable-active-high;
 	};
 
 	reserved-memory {
@@ -621,14 +604,19 @@
 };
 
 &usdhc3 {
+	bus-width = <8>;
+	no-mmc-hs400;
+	non-removable;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+#if 1
+	pinctrl-names = "default";
+#endif
 	pinctrl-0 = <&pinctrl_usdhc3_50mhz>;
 	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
-	bus-width = <8>;
-	non-removable;
+	vmmc-supply = <&reg_3p3v>;
 	vqmmc-1-8-v;
-	vmmc-supply = <&reg_1p8v>;
+	vqmmc-supply = <&reg_1p8v>;
 	keep-power-in-suspend;
 	status = "okay";
 };
