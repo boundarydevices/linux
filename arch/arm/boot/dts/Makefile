@@ -827,6 +827,7 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 	imx6sx-nitrogen6_scm.dtb \
 	imx6sx-ys.dtb \
 	imx6sx-ys-m4.dtb \
+	imx6sx-ys-rev2.dtb \
 
 dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-14x14-evk.dtb \
