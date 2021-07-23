@@ -33,6 +33,9 @@ struct rfkill_gpio_data {
 
 	struct rfkill		*rfkill_dev;
 	struct clk		*clk;
+	struct pinctrl		*pinctrl;
+	struct pinctrl_state	*pins_off;
+	struct pinctrl_state	*pins_on;
 
 	bool			clk_enabled;
 };
@@ -43,6 +46,8 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 	int ret;
 
 	if (blocked) {
+		if (rfkill->pinctrl)
+			pinctrl_select_state(rfkill->pinctrl, rfkill->pins_off);
 		if (rfkill->power_key_gpio) {
 			gpiod_set_value_cansleep(rfkill->power_key_gpio, 0);
 			msleep(rfkill->power_key_low_off);
@@ -83,6 +88,8 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 			pr_info("%s:msleep %d\n", __func__, rfkill->pulse_duration);
 			gpiod_set_value_cansleep(rfkill->pulse_on_gpio, 0);
 		}
+		if (rfkill->pinctrl)
+			pinctrl_select_state(rfkill->pinctrl, rfkill->pins_on);
 	}
 
 	rfkill->clk_enabled = !blocked;
@@ -223,6 +230,25 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 	descs = devm_gpiod_get_array_optional(dev, "high", GPIOD_OUT_HIGH);
 	if (IS_ERR(descs))
 		return PTR_ERR(descs);
+
+	rfkill->pinctrl = devm_pinctrl_get(dev);
+	if (IS_ERR(rfkill->pinctrl))
+		rfkill->pinctrl = NULL;
+
+	if (rfkill->pinctrl) {
+		struct pinctrl_state *pins;
+
+		pins = pinctrl_lookup_state(rfkill->pinctrl, "off");
+		if (!IS_ERR(pins))
+			rfkill->pins_off = pins;
+		pins = pinctrl_lookup_state(rfkill->pinctrl, "on");
+		if (!IS_ERR(pins))
+			rfkill->pins_on = pins;
+		if (rfkill->pins_off && rfkill->pins_on)
+			pinctrl_select_state(rfkill->pinctrl, rfkill->pins_off);
+		else
+			rfkill->pinctrl = NULL;
+	}
 
 	rfkill->rfkill_dev = rfkill_alloc(rfkill->name, dev,
 					  rfkill->type, &rfkill_gpio_ops,
