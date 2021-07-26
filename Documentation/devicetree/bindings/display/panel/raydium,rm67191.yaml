@@ -39,7 +39,8 @@ properties:
       0 - burst-mode
       1 - non-burst with sync event
       2 - non-burst with sync pulse
-    enum: [0, 1, 2]
+      3 - command mode
+    enum: [0, 1, 2, 3]
 
 required:
   - compatible
