@@ -957,6 +957,17 @@
 			mediatek,larb = <&larb0>;
 		};
 
+		ovl0_2l: ovl@1400c000 {
+			compatible = "mediatek,mt8365-disp-ovl-2l",
+				     "mediatek,mt8183-disp-ovl-2l";
+			reg = <0 0x1400c000 0 0x1000>;
+			interrupts = <GIC_SPI 173 IRQ_TYPE_LEVEL_LOW>;
+			power-domains = <&spm MT8365_POWER_DOMAIN_MM>;
+			clocks = <&mmsys CLK_MM_MM_DISP_OVL0_2L>;
+			iommus = <&iommu M4U_PORT_DISP_OVL0_2L>;
+			mediatek,larb = <&larb0>;
+		};
+
 		rdma0: rdma@1400d000 {
 			compatible = "mediatek,mt8365-disp-rdma",
 				     "mediatek,mt8183-disp-rdma";
