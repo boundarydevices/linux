@@ -69,7 +69,20 @@
 		};
 
 		dsp_reserved: dsp@8e000000 {
-			reg = <0 0x8e000000 0 0x2000000>;
+			reg = <0 0x8e000000 0 0x1ef0000>;
+			no-map;
+		};
+		dsp_vdev0vring0: vdev0vring0@8fef0000 {
+			reg = <0 0x8fef0000 0 0x8000>;
+			no-map;
+		};
+		dsp_vdev0vring1: vdev0vring1@8fef8000 {
+			reg = <0 0x8fef8000 0 0x8000>;
+			no-map;
+		};
+		dsp_vdev0buffer: vdev0buffer@8ff00000 {
+			compatible = "shared-dma-pool";
+			reg = <0 0x8ff00000 0 0x100000>;
 			no-map;
 		};
 
@@ -187,8 +200,8 @@
 &dsp {
 	assigned-clocks = <&cgc2 IMX8ULP_CLK_HIFI_SEL>;
 	assigned-clock-parents = <&cgc2 IMX8ULP_CLK_PLL4>;
-	memory-region = <&dsp_reserved>;
-	fixup-offset = <0 0x74000000>;
+	memory-region = <&dsp_vdev0buffer>, <&dsp_vdev0vring0>,
+			<&dsp_vdev0vring1>, <&dsp_reserved>;
 	status = "okay";
 };
 
