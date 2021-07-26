@@ -20,6 +20,7 @@
 	aliases {
 		ovl0 = &ovl0;
 		rdma0 = &rdma0;
+		rdma1 = &rdma1;
 		color0 = &color0;
 		ccorr0 = &ccorr0;
 		aal0 = &aal0;
@@ -964,6 +965,18 @@
 			power-domains = <&spm MT8365_POWER_DOMAIN_MM>;
 			clocks = <&mmsys CLK_MM_MM_DISP_RDMA0>;
 			iommus = <&iommu M4U_PORT_DISP_RDMA0>;
+			mediatek,larb = <&larb0>;
+		};
+
+		rdma1: rdma@14016000 {
+			compatible = "mediatek,mt8365-disp-rdma",
+				     "mediatek,mt8183-disp-rdma";
+			reg = <0 0x14016000 0 0x1000>;
+			interrupts = <GIC_SPI 195 IRQ_TYPE_LEVEL_LOW>;
+			power-domains = <&spm MT8365_POWER_DOMAIN_MM>;
+			clocks = <&mmsys CLK_MM_MM_DISP_RDMA1>;
+			iommus = <&iommu M4U_PORT_DISP_RDMA1>;
+			mediatek,rdma-fifo-size = <2048>;
 			mediatek,larb = <&larb0>;
 		};
 
