@@ -962,7 +962,8 @@
 		};
 
 		rdma0: rdma@1400d000 {
-			compatible = "mediatek,mt8365-disp-rdma";
+			compatible = "mediatek,mt8365-disp-rdma",
+				     "mediatek,mt8183-disp-rdma";
 			reg = <0 0x1400d000 0 0x1000>;
 			interrupts = <GIC_SPI 162 IRQ_TYPE_LEVEL_LOW>;
 			power-domains = <&spm MT8365_POWER_DOMAIN_MM>;
