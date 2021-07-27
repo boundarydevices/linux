@@ -374,6 +374,7 @@ struct nxp_fspi {
 	struct pm_qos_request pm_qos_req;
 	int selected;
 #define FSPI_INITILIZED	(1 << 0)
+#define FSPI_RXCLKSRC_3	(1 << 1)
 	int flags;
 };
 
@@ -875,6 +876,7 @@ static int nxp_fspi_do_op(struct nxp_fspi *f, const struct spi_mem_op *op)
 static int nxp_fspi_exec_op(struct spi_mem *mem, const struct spi_mem_op *op)
 {
 	struct nxp_fspi *f = spi_controller_get_devdata(mem->spi->master);
+	u32 reg;
 	int err = 0;
 
 	mutex_lock(&f->lock);
@@ -891,6 +893,21 @@ static int nxp_fspi_exec_op(struct spi_mem *mem, const struct spi_mem_op *op)
 	WARN_ON(err);
 
 	nxp_fspi_select_mem(f, mem->spi);
+
+
+	/*
+	 * For 8 bit DTR mode, need to use mode 3 (Flash provided Read strobe
+	 * and input from DQS pad), otherwise read operaton may meet issue
+	 * when clock rate higher than 50MHz. This mode require flash device
+	 * connect the DQS pad on board.
+	 */
+	if (!(f->flags & FSPI_RXCLKSRC_3) &&
+	    op->cmd.dtr && op->addr.dtr && op->dummy.dtr && op->data.dtr) {
+		reg = fspi_readl(f, f->iobase + FSPI_MCR0);
+		reg |= FSPI_MCR0_RXCLKSRC(3);
+		fspi_writel(f, reg, f->iobase + FSPI_MCR0);
+		f->flags |= FSPI_RXCLKSRC_3;
+	}
 
 	nxp_fspi_prepare_lut(f, op);
 	/*
