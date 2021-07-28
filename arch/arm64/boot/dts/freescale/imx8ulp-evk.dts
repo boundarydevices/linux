@@ -151,19 +151,18 @@
 		spdif-out;
 	};
 
-	sound-rpmsg {
-		compatible = "fsl,imx-audio-rpmsg";
+	rpmsg_audio: rpmsg-audio {
+		compatible = "fsl,imx8ulp-rpmsg-audio";
 		model = "wm8960-audio";
-		cpu-dai = <&rpmsg_i2s>;
+		fsl,rpmsg-out;
+		fsl,rpmsg-in;
 		audio-codec = <&wm8960>;
 		memory-region = <&audio_reserved>;
-		rpmsg-out;
-		rpmsg-in;
 		audio-routing =
 			"LINPUT1", "MICB",
 			"LINPUT3", "MICB";
+		status = "okay";
 	};
-
 };
 
 &dcnano {
@@ -229,9 +228,9 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "jedec,spi-nor";
-		spi-max-frequency = <90000000>;
-		spi-tx-bus-width = <1>;
-		spi-rx-bus-width = <1>;
+		spi-max-frequency = <200000000>;
+		spi-tx-bus-width = <8>;
+		spi-rx-bus-width = <8>;
 	};
 };
 
@@ -589,10 +588,6 @@
 		>;
 	};
 
-};
-
-&rpmsg_i2s {
-	status = "okay";
 };
 
 &sai5 {
