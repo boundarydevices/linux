@@ -777,7 +777,7 @@ static void hdmi_tx_generate_blank_timing(struct it6161 *it6161)
 	bool enable_de_only = true;
 	u8 polarity;
 	u16 hsync_start, hsync_end, vsync_start, vsync_end, htotal, hde_start, vtotal;
-	u16 vsync_start_2nd, vsync_end_2nd, vsync_rising_at_h_2nd;
+	u16 vsync_start_2nd = 0, vsync_end_2nd = 0, vsync_rising_at_h_2nd;
 
 	polarity =
 	    ((display_mode->flags & DRM_MODE_FLAG_PHSYNC) == DRM_MODE_FLAG_PHSYNC) ? 0x02 : 0x00;
@@ -1545,7 +1545,7 @@ static void hdmi_tx_setup_pclk_div2(struct it6161 *it6161)
 static void hdmi_tx_setup_csc(struct it6161 *it6161)
 {
 	struct device *dev = &it6161->i2c_hdmi_tx->dev;
-	u8 ucData, csc, i;
+	u8 ucData, csc = 0, i;
 	u8 filter = 0;	/* filter is for Video CTRL DN_FREE_GO,EN_DITHER,and ENUDFILT */
 	u8 input_mode = it6161->hdmi_tx_input_color_space;
 	u8 output_mode = it6161->hdmi_tx_output_color_space;
@@ -1754,7 +1754,7 @@ static void setHDMITX_ChStat(struct it6161 *it6161, u8 ucIEC60958ChStat[])
 
 static void setHDMITX_LPCMAudio(u8 AudioSrcNum, u8 AudSWL, u8 bAudInterface)
 {
-	u8 AudioEnable, AudioFormat, bTDMSetting;
+	u8 AudioEnable = 0, AudioFormat = 0, bTDMSetting;
 
 	switch (AudSWL) {
 	case 16:
@@ -2369,6 +2369,8 @@ static void mipi_rx_prec_get_display_mode(struct it6161 *it6161)
 
 	int p_hfront_porch, p_hsyncw, p_hback_porch, p_hactive, p_htotal;
 	int p_vfront_porch, p_vsyncw, p_vback_porch, p_vactive, p_vtotal;
+
+	memset(&display_mode, 0, sizeof(display_mode));
 
 	p_hfront_porch = mipi_rx_read_word(it6161, 0x30) & 0x3FFF;
 	p_hsyncw = mipi_rx_read_word(it6161, 0x32) & 0x3FFF;
