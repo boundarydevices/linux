@@ -189,6 +189,16 @@
 		>;
 	};
 
+	pinctrl_i2c3_gt911: i2c3-gt911grp {
+		fsl,pins = <
+#define GPIRQ_GT911			<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
+#define GP_GT911_IRQ			<&gpio1 9 GPIO_ACTIVE_HIGH>
+/*			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		*/
+#define GP_GT911_RESET		<&gpio4 10 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x030b0
+		>;
+	};
+
 	pinctrl_i2c3_rv4162: i2c3-rv4162grp {
 		fsl,pins = <
 #define GPIRQ_RTC_RV4162	<&gpio2 26 IRQ_TYPE_LEVEL_LOW>
@@ -774,6 +784,17 @@
 		touchscreen-size-x = <480>;	/* swapped below */
 		touchscreen-size-y = <800>;
 		touchscreen-swapped-x-y;
+	};
+
+	gt911@14 {
+		compatible = "goodix,gt911";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_gt911>;
+		reg = <0x14>;
+		reset-gpios = GP_GT911_RESET;
 	};
 
 	ili210x@41 {
