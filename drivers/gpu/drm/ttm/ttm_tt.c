@@ -122,17 +122,6 @@ static int ttm_sg_tt_alloc_page_directory(struct ttm_tt *ttm)
 	return 0;
 }
 
-void ttm_tt_destroy_common(struct ttm_device *bdev, struct ttm_tt *ttm)
-{
-	ttm_tt_unpopulate(bdev, ttm);
-
-	if (ttm->swap_storage)
-		fput(ttm->swap_storage);
-
-	ttm->swap_storage = NULL;
-}
-EXPORT_SYMBOL(ttm_tt_destroy_common);
-
 void ttm_tt_destroy(struct ttm_device *bdev, struct ttm_tt *ttm)
 {
 	bdev->funcs->ttm_tt_destroy(bdev, ttm);
@@ -347,14 +336,8 @@ int ttm_tt_populate(struct ttm_device *bdev,
 	if (ret)
 		goto error;
 
-<<<<<<< HEAD
-	ttm_tt_add_mapping(bdev, ttm);
-	ttm->page_flags |= TTM_PAGE_FLAG_PRIV_POPULATED;
-	if (unlikely(ttm->page_flags & TTM_PAGE_FLAG_SWAPPED)) {
-=======
 	ttm->page_flags |= TTM_TT_FLAG_PRIV_POPULATED;
 	if (unlikely(ttm->page_flags & TTM_TT_FLAG_SWAPPED)) {
->>>>>>> 43d46f0b78bb... drm/ttm: s/FLAG_SG/FLAG_EXTERNAL/
 		ret = ttm_tt_swapin(ttm);
 		if (unlikely(ret != 0)) {
 			ttm_tt_unpopulate(bdev, ttm);
