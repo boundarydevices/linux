@@ -20,6 +20,7 @@
 
 #include "panel-m101nwwb.dtsi"
 #include "panel-com50h5n03ulc.dtsi"
+#include "panel-zwt055azh.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -294,6 +295,13 @@
 		fsl,pins = <
 #define GP_LTK08_MIPI_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
 			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x116)
+		>;
+	};
+
+	pinctrl_mipi_zwt055azh: mipi-zwt055azhgrp {
+		fsl,pins = <
+#define GP_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
 		>;
 	};
 
