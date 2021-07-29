@@ -14,6 +14,7 @@
 #include "panel-ltk080a60a004t.dtsi"
 #include "panel-m101nwwb.dtsi"
 #include "panel-com50h5n03ulc.dtsi"
+#include "panel-tcxd070iblmat77.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -260,6 +261,15 @@
 		>;
 	};
 
+	pinctrl_ts_ili251x: ts-ili251xgrp {
+		fsl,pins = <
+#define GPIRQ_TS_ILI251X 	<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
+			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	0xd6
+#define GP_TS_ILI251X_RESET	<&gpio3 13 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	0x49
+		>;
+	};
+
 	pinctrl_sn65dsi83: sn65dsi83grp {
 		fsl,pins = <
 #define GPIRQ_I2C4_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
@@ -322,6 +332,13 @@
 		fsl,pins = <
 #define GP_LTK08_MIPI_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
 			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1	0x16
+		>;
+	};
+
+	pinctrl_mipi_tcxd070iblmat77: mipi-tcxd070iblmat77grp {
+		fsl,pins = <
+#define GP_MIPI_RESET	<&gpio3 15 GPIO_ACTIVE_LOW>
+			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	0x16
 		>;
 	};
 
@@ -594,6 +611,7 @@
 		ts_ft5x06 = &ts_ft5x06;
 		ts_ft7250 = &ts_ft7250;
 		ts_goodix = &ts_goodix;
+		ts_ili251x = &ts_ili251x;
 		ts_st1633i = &ts_st1633i;
 	};
 
@@ -1106,6 +1124,18 @@
 		reg = <0x5d>;
 		reset-gpios = GP_GT911_RESET;
 		status = "disabled";
+	};
+
+	ts_ili251x: touchscreen@41 {
+		compatible = "ilitek,ili251x";
+		interrupts-extended = GPIRQ_TS_ILI251X;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_ili251x>;
+		reg = <0x41>;
+		reset-gpios = GP_TS_ILI251X_RESET;
+		status = "disabled";
+		touchscreen-size-x = <0x3fff>;
+		touchscreen-size-y = <0x3fff>;
 	};
 
 	ts_st1633i: touchscreen@55 {
