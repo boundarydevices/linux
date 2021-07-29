@@ -973,6 +973,7 @@ static int nxp_fspi_exec_op(struct spi_mem *mem, const struct spi_mem_op *op)
 	pm_runtime_put_autosuspend(f->dev);
 
 	mutex_unlock(&f->lock);
+	return err;
 
 err_mutex:
 	mutex_unlock(&f->lock);
