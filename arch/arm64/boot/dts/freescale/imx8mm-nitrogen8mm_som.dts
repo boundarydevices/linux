@@ -96,6 +96,13 @@
 		>;
 	};
 
+	pinctrl_mipi_zwt055azh: mipi-zwt055azhgrp {
+		fsl,pins = <
+#define GP_MIPI_RESET	<&gpio5 0 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x16)
+		>;
+	};
+
 	pinctrl_pwm4: pwm4grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_GPIO1_IO15_PWM4_OUT, 0x16)
