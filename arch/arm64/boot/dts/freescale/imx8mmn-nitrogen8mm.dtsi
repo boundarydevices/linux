@@ -295,6 +295,13 @@
 			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x116)
 		>;
 	};
+
+	pinctrl_mipi_zwt055azh: mipi-zwt055azhgrp {
+		fsl,pins = <
+#define GP_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
+		>;
+	};
 #endif
 
 	pinctrl_pwm1: pwm1grp {
@@ -565,6 +572,7 @@
 
 #include "panel-ltk080a60a004t.dtsi"
 #include "panel-m101nwwb.dtsi"
+#include "panel-zwt055azh.dtsi"
 #endif
 
 / {
