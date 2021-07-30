@@ -274,6 +274,8 @@ struct it6161 {
 	u32 it6161_addr_hdmi_tx;
 	u32 it6161_addr_cec;
 
+	struct gpio_desc *enable_gpio;
+
 	u32 hdmi_tx_rclk; /* kHz */
 	u32 hdmi_tx_pclk;
 	u32 mipi_rx_mclk;
@@ -2791,6 +2793,13 @@ static int it6161_i2c_probe(struct i2c_client *i2c_mipi_rx,
 
 	if (!it6161_check_device_ready(it6161))
 		return -ENODEV;
+
+	/* The enable GPIO is optional. */
+	it6161->enable_gpio = devm_gpiod_get_optional(dev, "enable", GPIOD_OUT_LOW);
+	if (IS_ERR(it6161->enable_gpio))
+		DRM_DEV_INFO(dev, "No enable GPIO");
+	else
+		gpiod_set_value_cansleep(it6161->enable_gpio, 1);
 
 	it6161->enable_drv_hold = DEFAULT_DRV_HOLD;
 	it6161_set_interrupts_active_level(HIGH);
