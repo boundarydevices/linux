@@ -422,6 +422,17 @@ config BATTERY_MAX1721X
 	  Say Y here to enable support for the MAX17211/MAX17215 standalone
 	  battery gas-gauge.
 
+config BATTERY_MAX1726X
+	tristate "MAX1726x standalone gas-gauge"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  MAX1726x is an ultra-low power fuel-gauge for single-cell batteries
+	  supports both high-side and low-side current sensing.
+
+	  Say Y here to enable support for the MAX1726x standalone
+	  battery gas-gauge.
+
 config BATTERY_Z2
 	tristate "Z2 battery driver"
 	depends on I2C && MACH_ZIPIT2
