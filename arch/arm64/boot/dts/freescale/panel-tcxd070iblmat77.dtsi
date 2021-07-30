@@ -228,20 +228,14 @@
 
 			/* CMD_Page 0 */
 			DCS_L3P(0xFF,0x98,0x81,0x00)
-			DCS_S1P(0x35,0x00)
-
 		 	/* --- TE---- */
 			DCS_S1P(0x35,0x00)
-			DCS_L2P(0xb7,0x50,0x02)
-			DCS_L2P(0xBD,0x00,0x00)
-			DCS_L2P(0xBC,0x00,0x00)
 			DCS_S0P(0x11)		/* Exit sleep */
 		>;
 		mipi-cmds-enable2 = /bits/ 8 <
 			DELAY(120)
-			DCS_L2P(0xBC,0x00,0x00)
 			DCS_S0P(0x29)		/* MIPI_DCS_SET_DISPLAY_ON */
-			DELAY(200)
+			DELAY(120)
 		>;
 		mipi-cmds-disable = /bits/ 8 <
 			DELAY(50)
