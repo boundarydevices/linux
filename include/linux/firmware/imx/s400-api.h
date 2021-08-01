@@ -17,11 +17,21 @@
 #define MAX_MESSAGE_SIZE 31
 #define MAX_MESSAGE_SIZE_BYTES (MAX_MESSAGE_SIZE * sizeof(u32))
 
+#define S400_OEM_CNTN_AUTH_REQ		0x87
+#define S400_VERIFY_IMAGE_REQ		0x88
+#define S400_RELEASE_CONTAINER_REQ	0x89
 #define S400_READ_FUSE_REQ		0x97
 #define OTP_UNIQ_ID			0x01
+
+#define S400_VERSION			0x6
 #define S400_SUCCESS_IND		0xD6
+#define S400_FAILURE_IND		0x29
 
 #define S400_MSG_DATA_NUM		10
+
+#define S400_OEM_CNTN_AUTH_REQ_SIZE	3
+#define S400_VERIFY_IMAGE_REQ_SIZE	2
+#define S400_RELEASE_CONTAINER_REQ_SIZE	1
 
 struct s400_api_msg {
 	u32 header; /* u8 Tag; u8 Command; u8 Size; u8 Ver; */
