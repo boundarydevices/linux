@@ -1549,7 +1549,7 @@ static void hdmi_tx_setup_csc(struct it6161 *it6161)
 	u8 filter = 0;	/* filter is for Video CTRL DN_FREE_GO,EN_DITHER,and ENUDFILT */
 	u8 input_mode = it6161->hdmi_tx_input_color_space;
 	u8 output_mode = it6161->hdmi_tx_output_color_space;
-	u8 *ptable;
+	u8 *ptable = NULL;
 
 	/* (1) YUV422 in,RGB/YUV444 output (Output is 8-bit,input is 12-bit)
 	 * (2) YUV444/422  in,RGB output (CSC enable,and output is not YUV422)
