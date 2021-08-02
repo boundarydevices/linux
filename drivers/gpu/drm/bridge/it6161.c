@@ -936,7 +936,7 @@ static int it6161_ddc_get_edid_operation(struct it6161 *it6161, u8 *buffer,
 					 u8 segment, u8 offset, u8 size)
 {
 	struct device *dev = &it6161->i2c_hdmi_tx->dev;
-	u8 status, i;
+	int status, i;
 
 	if (!buffer)
 		return -ENOMEM;
