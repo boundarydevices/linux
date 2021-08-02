@@ -1,0 +1,16 @@
+The MAX77958
+is a complete solution for USB Type-C CC detection and PD protocol implementation
+
+Required properties :
+ - compatible : "max77958"
+
+Example:
+
+&i2c_6 {
+	status = "okay";
+	max77958: max77958usbc@25 {
+		compatible = "max77958";
+		reg = <0x25>;
+		max77958,irq-gpio = <&tlmm 92 0x00>;
+	};
+};
