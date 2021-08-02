@@ -973,7 +973,8 @@ error:
 static int it6161_get_edid_block(void *data, u8 *buf, u32 block_num, size_t len)
 {
 	struct it6161 *it6161 = data;
-	u8 offset, ret, step = 8;
+	u8 offset, step = 8;
+	int ret;
 
 	step = min_t(u8, step, DDC_FIFO_MAXREQ);
 
