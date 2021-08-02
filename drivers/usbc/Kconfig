@@ -1,0 +1,13 @@
+#
+# Kconfig for MAX77958 usbc devices
+#
+config USBC_MAX77958
+	bool "Maxim Integrated MAX77958 Support"
+	depends on MFD_MAX77958
+	help
+	  Say yes here to add support for Maxim Integrated MAX77958.
+	  This is a complete solution for USB Type-C CC detection and
+	  PD protocol implementation.
+	  This driver provides common support for accessing the device,
+	  additional drivers must be enabled in order to use the functionality
+	  of the device.
