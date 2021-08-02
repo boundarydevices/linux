@@ -2780,7 +2780,7 @@ static int it6161_i2c_probe(struct i2c_client *i2c_mipi_rx,
 	it6161->regmap_hdmi_tx = devm_regmap_init_i2c(it6161->i2c_hdmi_tx, &it6161_hdmi_tx_bridge_regmap_config);
 	if (IS_ERR(it6161->regmap_hdmi_tx)) {
 		DRM_DEV_ERROR(dev, "regmap_hdmi_tx i2c init failed");
-		return PTR_ERR(it6161->regmap_mipi_rx);
+		return PTR_ERR(it6161->regmap_hdmi_tx);
 	}
 
 	if (device_property_read_u32(dev, "it6161-addr-cec", &it6161->it6161_addr_cec) < 0)
