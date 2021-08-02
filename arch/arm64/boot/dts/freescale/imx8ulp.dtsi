@@ -553,7 +553,7 @@
 				clocks = <&pcc3 IMX8ULP_CLK_LPUART5>;
 				clock-names = "ipg";
 				assigned-clocks = <&pcc3 IMX8ULP_CLK_LPUART5>;
-				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_CGC2_SOSC_DIV2>;
+				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_SOSC_DIV2>;
 				assigned-clock-rates = <24000000>;
 				status = "disabled";
 			};
