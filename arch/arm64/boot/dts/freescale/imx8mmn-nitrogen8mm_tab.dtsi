@@ -37,8 +37,7 @@
 			MX8MMN(IOMUXC_SAI2_RXFS_GPIO4_IO21, 0x09)	/* pin 8, SDIO_INT_L */
 			MX8MMN(IOMUXC_SAI5_MCLK_GPIO3_IO25, 0x09)	/* pin 38, CLK_REQ_OUT */
 			MX8MMN(IOMUXC_SAI2_MCLK_GPIO4_IO27, 0x09)	/* pin 42, BT_UART_WH */
-		
-			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x1c3)	/* NFC GPO */
+
 			MX8MMN(IOMUXC_SD1_STROBE_GPIO2_IO11, 0x09)	/* R160 */
 			MX8MMN(IOMUXC_SD2_RESET_B_GPIO2_IO19, 0x09)	/* TP8 */
 			MX8MMN(IOMUXC_SD2_WP_GPIO2_IO20, 0x09)		/* TP9 */
@@ -97,6 +96,15 @@
 		>;
 	};
 
+	pinctrl_i2c2a_pn7150: i2c2a-pn7150grp {
+		fsl,pins = <
+#define GP_EN_PN7150	<&gpio1 7 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, 0x1c2)
+#define GPIRQ_PN7150	<&gpio1 8 IRQ_TYPE_LEVEL_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x182)
+		>;
+	};
+
 	pinctrl_i2c2b_icm_20948: i2c2b-icm-20948grp {
 		fsl,pins = <
 #define GPIRQ_ACCEL	<&gpio3 8 IRQ_TYPE_LEVEL_LOW>
@@ -104,10 +112,17 @@
 		>;
 	};
 
-	pinctrl_i2c2c_rv3028: i2c2c-rv3028grp {
+	pinctrl_i2c2c_max1726x: i2c2c-max1726xgrp {
 		fsl,pins = <
-#define GPIRQ_RV3028	<&gpio3 5 IRQ_TYPE_LEVEL_LOW>
-			MX8MMN(IOMUXC_NAND_CLE_GPIO3_IO5, 0x82)
+#define GPIRQ_MAX1726X	<&gpio5 10 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_ECSPI2_SCLK_GPIO5_IO10, 0x1c3)
+		>;
+	};
+
+	pinctrl_i2c2d_max77958: i2c2d-max77958grp {
+		fsl,pins = <
+#define GPIRQ_MAX77958	<&gpio3 5 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_NAND_CLE_GPIO3_IO5, 0x1c3)
 		>;
 	};
 
@@ -265,7 +280,7 @@
 
 	pinctrl_sound_wm8960: sound-wm8960grp {
 		fsl,pins = <
-#define GP_WM8960_HP_DET		<&gpio1 1 GPIO_ACTIVE_LOW>
+#define GP_WM8960_HP_DET		<&gpio1 1 GPIO_ACTIVE_HIGH>
 			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x80)
 		>;
 	};
@@ -305,6 +320,13 @@
 			MX8MMN(IOMUXC_ECSPI1_MOSI_UART3_DCE_TX, 0x140)
 			MX8MMN(IOMUXC_ECSPI1_SS0_UART3_DCE_RTS_B, 0x140)
 			MX8MMN(IOMUXC_ECSPI1_MISO_UART3_DCE_CTS_B, 0x140)
+		>;
+	};
+
+	pinctrl_uart4: uart4grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_UART4_RXD_UART4_DCE_RX, 0x140)
+			MX8MMN(IOMUXC_UART4_TXD_UART4_DCE_TX, 0x140)
 		>;
 	};
 
@@ -780,8 +802,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		i2c2@0 {
-			/* NFC */
+		i2c2a: i2c2@0 {
 			clock-frequency = <100000>;
 			reg = <0>;
 			#address-cells = <1>;
@@ -789,7 +810,6 @@
 		};
 
 		i2c2b: i2c2@1 {
-			/* accelerometer */
 			clock-frequency = <100000>;
 			reg = <1>;
 			#address-cells = <1>;
@@ -797,20 +817,29 @@
 		};
 
 		i2c2c: i2c2@2 {
-			/* RTC */
 			clock-frequency = <100000>;
 			reg = <2>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
 
-		i2c2@3 {
-			/* STUSB4500 */
+		i2c2d: i2c2@3 {
 			clock-frequency = <100000>;
 			reg = <3>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
+	};
+};
+
+&i2c2a {
+	pn7150@28 {
+		compatible = "nxp,pn547";
+		reg = <0x28>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2a_pn7150>;
+		interrupt-gpios = GPIRQ_PN7150;
+		enable-gpios = GP_EN_PN7150;
 	};
 };
 
@@ -820,6 +849,7 @@
 		compatible = "invensense,icm20648";
 		reg = <0x68>;
 		interrupts-extended = GPIRQ_ACCEL;
+		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2b_icm_20948>;
 		inven,vdd_ana-supply = <&reg_vref_1v8>;
 		inven,vcc_i2c-supply = <&reg_vref_1v8>;
@@ -847,14 +877,38 @@
 };
 
 &i2c2c {
-	rtc@52 {
-		backup-switchover-dsm;
-		compatible = "microcrystal,rv3028";
-		interrupts-extended = GPIRQ_RV3028;
-		pinctrl-0 = <&pinctrl_i2c2c_rv3028>;
+	max1726x@36 {
+		compatible  = "maxim,max1726x";
+		reg = <0x36>;
+		interrupts-extended = GPIRQ_MAX1726X;
 		pinctrl-names = "default";
-		reg = <0x52>;
-		wakeup-source;
+		pinctrl-0 = <&pinctrl_i2c2c_max1726x>;
+		rsense = <10>;         /* milliOhm */
+		model-option = <1>;    /* EZ model */
+		talrt-min = <0>;       /* DegreeC */
+		talrt-max = <65>;      /* DegreeC */
+		valrt-min = <3200>;    /* mV */
+		valrt-max = <4500>;    /* mV */
+		salrt-min = <1>;       /* Percent */
+		salrt-max = <99>;      /* Percent */
+		ialrt-min = <(-5000)>; /* mA */
+		ialrt-max = <5000>;    /* mA */
+		/* EZ model parameters */
+		designcap = /bits/ 16 <0x2260>; /* 8800 mAh */
+		ichgterm = /bits/ 16 <0x0640>;
+		vempty = /bits/ 16 <0x9652>; /* VE: 3000mV VR: 3300mV */
+		vcharge = <4300>; /* mV */
+	};
+};
+
+&i2c2d {
+	max77958@25 {
+		compatible = "max77958";
+		reg = <0x25>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2d_max77958>;
+		interrupts-extended = GPIRQ_MAX77958;
+		max77958,irq-gpio = GPIRQ_MAX77958;
 	};
 };
 
@@ -889,7 +943,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 		};
-		
+
 		i2c3c: i2c3@2 {
 			/* CSI */
 			reg = <2>;
@@ -921,8 +975,34 @@
 	};
 };
 
-&i2c3c {
+&i2c3b {
 	ov5640-mipi1@3c {
+		AVDD-supply = <&reg_vref_2v5>;
+		DOVDD-supply = <&reg_vref_1v8>;
+		DVDD-supply = <&reg_vref_3v3>;
+		clocks = <&csi_mclk>;
+		clock-names = "csi_mclk";
+		compatible = "ovti,ov5640_mipisubdev";
+		csi_id = <0>;
+		mclk = <20000000>;
+		mipi_csi;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3b_ov5640_mipi>;
+		pwn-gpios = GP_OV5640_1MIPI_POWER_DOWN;
+		reg = <0x3c>;
+		rst-gpios = GP_OV5640_1MIPI_RESET;
+		status = "okay";
+
+		port {
+			ov5640_mipi1_ep: endpoint {
+				remote-endpoint = <&mipi1_ov5640_ep>;
+			};
+		};
+	};
+};
+
+&i2c3c {
+	ov5640-mipi2@3c {
 		AVDD-supply = <&reg_vref_2v5>;
 		DOVDD-supply = <&reg_vref_1v8>;
 		DVDD-supply = <&reg_vref_3v3>;
@@ -937,10 +1017,10 @@
 		pwn-gpios = GP_OV5640_2MIPI_POWER_DOWN;
 		reg = <0x3c>;
 		rst-gpios = GP_OV5640_2MIPI_RESET;
-		status = "okay";
+		status = "disabled";
 
 		port {
-			ov5640_mipi1_ep: endpoint {
+			ov5640_mipi2_ep: endpoint {
 				remote-endpoint = <&mipi1_ov5640_ep>;
 			};
 		};
@@ -1121,6 +1201,14 @@
 	assigned-clocks = <&clk IMX8MMN(CLK_UART3)>;
 	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_80M)>;
 	fsl,uart-has-rtscts;
+	status = "okay";
+};
+
+&uart4 { /* scanner */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart4>;
+	assigned-clocks = <&clk IMX8MMN(CLK_UART4)>;
+	assigned-clock-parents = <&clk IMX8MMN(CLK_24M)>;
 	status = "okay";
 };
 
