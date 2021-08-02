@@ -1033,9 +1033,14 @@ static void it6161_variable_config(struct it6161 *it6161)
 
 static struct edid *it6161_get_edid(struct it6161 *it6161)
 {
+	struct device *dev = &it6161->i2c_hdmi_tx->dev;
 	struct edid *edid;
 
 	edid = drm_do_get_edid(&it6161->connector, it6161_get_edid_block, it6161);
+	if (!edid) {
+		DRM_DEV_ERROR(dev, "Failed to read EDID\n");
+		return 0;
+	}
 
 	hdmi_tx_set_capability_from_edid_parse(it6161, edid);
 
@@ -1052,6 +1057,10 @@ static int it6161_get_modes(struct drm_connector *connector)
 	mutex_lock(&it6161->mode_lock);
 
 	edid = it6161_get_edid(it6161);
+	if (!edid) {
+		DRM_DEV_ERROR(dev, "Failed to read EDID\n");
+		return 0;
+	}
 
 	err = drm_connector_update_edid_property(connector, edid);
 	if (err) {
