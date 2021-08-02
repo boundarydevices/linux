@@ -921,6 +921,17 @@ config MFD_MAX77843
 	  additional drivers must be enabled in order to use the functionality
 	  of the device.
 
+config MFD_MAX77958
+	bool "Maxim Integrated MAX77958 USBC/PD Support"
+	depends on I2C=y
+	help
+	  Say yes here to add support for Maxim Integrated MAX77958.
+	  This is a complete solution for USB Type-C CC detection and
+	  PD protocol implementation.
+	  This driver provides common support for accessing the device,
+	  additional drivers must be enabled in order to use the functionality
+	  of the device.
+
 config MFD_MAX8907
 	tristate "Maxim Semiconductor MAX8907 PMIC Support"
 	select MFD_CORE
