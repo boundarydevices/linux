@@ -661,21 +661,12 @@ static struct resource_table *imx_rproc_get_loaded_rsc_table(struct rproc *rproc
 	/* The resource table has already been mapped in imx_rproc_addr_init */
 	if (!priv->rsc_table)
 		return NULL;
-#if 0
-	rproc->table_ptr = (struct resource_table *)priv->rsc_table;
-#else
-	/*
-	 * This is a hack workaround, this will not let M4 detect vdev status,
-	 * because vring is conflict with resource table,
-	 * because NXP M4 SDK not detect vdev status update, so we just use a copied
-	 * table here, for future, m4 need use a new address for publishing resource table
-	 * Then we could change to
-	 * rproc->table_ptr = (struct resource_table *)priv->rsc_table;
-	 */
-	*table_sz = SZ_1K;
-	return kmemdup(priv->rsc_table, SZ_1K, GFP_KERNEL);
-#endif
 
+	rproc->table_ptr = (struct resource_table *)priv->rsc_table;
+	rproc->table_sz = SZ_1K;
+	rproc->cached_table = NULL;
+
+	return 0;
 }
 
 static int imx_rproc_elf_load_segments(struct rproc *rproc,
@@ -697,15 +688,6 @@ imx_rproc_elf_find_loaded_rsc_table(struct rproc *rproc, const struct firmware *
 
 	if (priv->ipc_only)
 		return NULL;
-
-#if 0
-	/*
-	 * We not return this currently, because vring conflicts with resource table on NXP
-	 * i.MX M4 SDK
-	 */
-	if (priv->rsc_table)
-		return priv->rsc_table;
-#endif
 
 	return rproc_elf_find_loaded_rsc_table(rproc, fw);
 }
