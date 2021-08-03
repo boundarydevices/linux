@@ -114,6 +114,7 @@ struct bq25890_device {
 	struct notifier_block usb_nb;
 	struct work_struct usb_work;
 	struct delayed_work pump_express_work;
+	struct delayed_work reenable_work;
 	unsigned long usb_event;
 
 	struct regmap *rmap;
@@ -443,7 +444,7 @@ static bool bq25890_is_adc_property(enum power_supply_property psp)
 	}
 }
 
-static irqreturn_t __bq25890_handle_irq(struct bq25890_device *bq);
+static irqreturn_t __bq25890_handle_irq(struct bq25890_device *bq, int in_interrupt);
 
 static int bq25890_get_vbus_voltage(struct bq25890_device *bq)
 {
@@ -466,8 +467,9 @@ static int bq25890_power_supply_get_property(struct power_supply *psy,
 	int ret;
 
 	mutex_lock(&bq->lock);
+	dev_dbg(bq->dev, "%s: calling __bq25890_handle_irq\n", __func__);
 	/* update state in case we lost an interrupt */
-	__bq25890_handle_irq(bq);
+	__bq25890_handle_irq(bq, 0);
 	state = bq->state;
 	do_adc_conv = !state.online && bq25890_is_adc_property(psp);
 	if (do_adc_conv)
@@ -713,7 +715,7 @@ static int bq25890_get_chip_state(struct bq25890_device *bq,
 	return 0;
 }
 
-static irqreturn_t __bq25890_handle_irq(struct bq25890_device *bq)
+static irqreturn_t __bq25890_handle_irq(struct bq25890_device *bq, int in_interrupt)
 {
 	struct bq25890_state new_state;
 	int ret;
@@ -736,6 +738,16 @@ static irqreturn_t __bq25890_handle_irq(struct bq25890_device *bq)
 		if (ret < 0)
 			goto error;
 	}
+	if (in_interrupt && (new_state.chrg_status == STATUS_TERMINATION_DONE)) {
+		/*
+		 * disable interrupts for 30 seconds, so that we don't get
+		 * flooded with fast_charging/charging_terminated messages
+		 * when there is no battery.
+		 */
+		disable_irq_nosync(bq->client->irq);
+		dev_dbg(bq->dev, "%s: disabled %d\n", __func__, bq->client->irq);
+		schedule_delayed_work(&bq->reenable_work, msecs_to_jiffies(30000));
+	}
 
 	bq->state = new_state;
 	power_supply_changed(bq->charger);
@@ -753,7 +765,7 @@ static irqreturn_t bq25890_irq_handler_thread(int irq, void *private)
 	irqreturn_t ret;
 
 	mutex_lock(&bq->lock);
-	ret = __bq25890_handle_irq(bq);
+	ret = __bq25890_handle_irq(bq, 1);
 	mutex_unlock(&bq->lock);
 
 	return ret;
@@ -980,6 +992,15 @@ static void bq25890_pump_express_work(struct work_struct *data)
 error_print:
 	bq25890_field_write(bq, F_PUMPX_EN, 0);
 	dev_err(bq->dev, "Failed to request hi-voltage charging\n");
+}
+
+static void bq25890_reenable_work(struct work_struct *data)
+{
+	struct bq25890_device *bq = container_of(data, struct bq25890_device,
+			reenable_work.work);
+
+	dev_dbg(bq->dev, "%s: enabled %d\n", __func__, bq->client->irq);
+	enable_irq(bq->client->irq);
 }
 
 static void bq25890_usb_work(struct work_struct *data)
@@ -1212,6 +1233,7 @@ static int bq25890_probe(struct i2c_client *client,
 
 	mutex_init(&bq->lock);
 	INIT_DELAYED_WORK(&bq->pump_express_work, bq25890_pump_express_work);
+	INIT_DELAYED_WORK(&bq->reenable_work, bq25890_reenable_work);
 
 	bq->rmap = devm_regmap_init_i2c(client, &bq25890_regmap_config);
 	if (IS_ERR(bq->rmap))
@@ -1298,6 +1320,8 @@ err_unregister_usb_notifier:
 static void bq25890_remove(struct i2c_client *client)
 {
 	struct bq25890_device *bq = i2c_get_clientdata(client);
+
+	cancel_delayed_work_sync(&bq->reenable_work);
 
 	if (!IS_ERR_OR_NULL(bq->usb_phy))
 		usb_unregister_notifier(bq->usb_phy, &bq->usb_nb);
