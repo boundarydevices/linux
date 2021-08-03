@@ -402,7 +402,7 @@ static bool bq25890_is_adc_property(enum power_supply_property psp)
 	}
 }
 
-static irqreturn_t __bq25890_handle_irq(struct bq25890_device *bq);
+static irqreturn_t __bq25890_handle_irq(struct bq25890_device *bq, int in_interrupt);
 
 static int bq25890_power_supply_get_property(struct power_supply *psy,
 					     enum power_supply_property psp,
@@ -414,8 +414,9 @@ static int bq25890_power_supply_get_property(struct power_supply *psy,
 	int ret;
 
 	mutex_lock(&bq->lock);
+	dev_dbg(bq->dev, "%s: calling __bq25890_handle_irq\n", __func__);
 	/* update state in case we lost an interrupt */
-	__bq25890_handle_irq(bq);
+	__bq25890_handle_irq(bq, 0);
 	state = bq->state;
 	do_adc_conv = !state.online && bq25890_is_adc_property(psp);
 	if (do_adc_conv)
@@ -574,7 +575,7 @@ static int bq25890_get_chip_state(struct bq25890_device *bq,
 	return 0;
 }
 
-static irqreturn_t __bq25890_handle_irq(struct bq25890_device *bq)
+static irqreturn_t __bq25890_handle_irq(struct bq25890_device *bq, int in_interrupt)
 {
 	struct bq25890_state new_state;
 	int ret;
@@ -597,13 +598,14 @@ static irqreturn_t __bq25890_handle_irq(struct bq25890_device *bq)
 		if (ret < 0)
 			goto error;
 	}
-	if (new_state.chrg_status == STATUS_TERMINATION_DONE) {
+	if (in_interrupt && (new_state.chrg_status == STATUS_TERMINATION_DONE)) {
 		/*
 		 * disable interrupts for 30 seconds, so that we don't get
 		 * flooded with fast_charging/charging_terminated messages
 		 * when there is no battery.
 		 */
 		disable_irq_nosync(bq->client->irq);
+		dev_dbg(bq->dev, "%s: disabled %d\n", __func__, bq->client->irq);
 		schedule_delayed_work(&bq->reenable_work, msecs_to_jiffies(30000));
 	}
 
@@ -623,7 +625,7 @@ static irqreturn_t bq25890_irq_handler_thread(int irq, void *private)
 	irqreturn_t ret;
 
 	mutex_lock(&bq->lock);
-	ret = __bq25890_handle_irq(bq);
+	ret = __bq25890_handle_irq(bq, 1);
 	mutex_unlock(&bq->lock);
 
 	return ret;
@@ -766,6 +768,7 @@ static void bq25890_reenable_work(struct work_struct *data)
 	struct bq25890_device *bq = container_of(data, struct bq25890_device,
 			reenable_work.work);
 
+	dev_dbg(bq->dev, "%s: enabled %d\n", __func__, bq->client->irq);
 	enable_irq(bq->client->irq);
 }
 
