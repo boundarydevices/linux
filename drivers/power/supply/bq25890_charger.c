@@ -110,6 +110,7 @@ struct bq25890_device {
 	struct usb_phy *usb_phy;
 	struct notifier_block usb_nb;
 	struct work_struct usb_work;
+	struct delayed_work reenable_work;
 	unsigned long usb_event;
 
 	struct regmap *rmap;
@@ -596,6 +597,15 @@ static irqreturn_t __bq25890_handle_irq(struct bq25890_device *bq)
 		if (ret < 0)
 			goto error;
 	}
+	if (new_state.chrg_status == STATUS_TERMINATION_DONE) {
+		/*
+		 * disable interrupts for 30 seconds, so that we don't get
+		 * flooded with fast_charging/charging_terminated messages
+		 * when there is no battery.
+		 */
+		disable_irq_nosync(bq->client->irq);
+		schedule_delayed_work(&bq->reenable_work, msecs_to_jiffies(30000));
+	}
 
 	bq->state = new_state;
 	power_supply_changed(bq->charger);
@@ -749,6 +759,14 @@ static int bq25890_power_supply_init(struct bq25890_device *bq)
 					    &psy_cfg);
 
 	return PTR_ERR_OR_ZERO(bq->charger);
+}
+
+static void bq25890_reenable_work(struct work_struct *data)
+{
+	struct bq25890_device *bq = container_of(data, struct bq25890_device,
+			reenable_work.work);
+
+	enable_irq(bq->client->irq);
 }
 
 static void bq25890_usb_work(struct work_struct *data)
@@ -998,6 +1016,7 @@ static int bq25890_probe(struct i2c_client *client,
 		bq->usb_nb.notifier_call = bq25890_usb_notifier;
 		usb_register_notifier(bq->usb_phy, &bq->usb_nb);
 	}
+	INIT_DELAYED_WORK(&bq->reenable_work, bq25890_reenable_work);
 
 	ret = devm_request_threaded_irq(dev, client->irq, NULL,
 					bq25890_irq_handler_thread,
@@ -1025,6 +1044,7 @@ static int bq25890_remove(struct i2c_client *client)
 {
 	struct bq25890_device *bq = i2c_get_clientdata(client);
 
+	cancel_delayed_work_sync(&bq->reenable_work);
 	power_supply_unregister(bq->charger);
 
 	if (!IS_ERR_OR_NULL(bq->usb_phy))
