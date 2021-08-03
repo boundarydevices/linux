@@ -449,7 +449,11 @@ static int s4_muap_ioctl_img_auth_cmd_handler(struct s4_mu_device_ctx *dev_ctx,
 		s = img->dst & ~(CACHELINE_SIZE - 1);
 		e = ALIGN(img->dst + img->size, CACHELINE_SIZE) - 1;
 
+#ifdef CONFIG_ARM64
 		__flush_dcache_area((void *) s, e);
+#else
+		__cpuc_flush_dcache_area((void *) s, e);
+#endif
 		s400_muap_priv->tx_msg.header = (s400_muap_priv->cmd_tag << 24) |
 						(S400_VERIFY_IMAGE_REQ << 16) |
 						(S400_VERIFY_IMAGE_REQ_SIZE << 8) |
