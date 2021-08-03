@@ -1155,10 +1155,10 @@ fec_restart(struct net_device *ndev)
 		ecntl |= (1 << 4);
 
 	if (fep->quirks & FEC_QUIRK_DELAYED_CLKS_SUPPORT &&
-		fep->rgmii_txc_dly)
+	    fep->rgmii_txc_dly)
 		ecntl |= FEC_ENET_TXC_DLY;
 	if (fep->quirks & FEC_QUIRK_DELAYED_CLKS_SUPPORT &&
-		fep->rgmii_rxc_dly)
+	    fep->rgmii_rxc_dly)
 		ecntl |= FEC_ENET_RXC_DLY;
 
 #ifndef CONFIG_M5272
@@ -2281,6 +2281,34 @@ failed_clk_ptp:
 	clk_disable_unprepare(fep->clk_enet_out);
 
 	return ret;
+}
+
+static int fec_enet_parse_rgmii_delay(struct fec_enet_private *fep,
+				      struct device_node *np)
+{
+	u32 rgmii_tx_delay, rgmii_rx_delay;
+
+	/* For rgmii tx internal delay, valid values are 0ps and 2000ps */
+	if (!of_property_read_u32(np, "tx-internal-delay-ps", &rgmii_tx_delay)) {
+		if (rgmii_tx_delay != 0 && rgmii_tx_delay != 2000) {
+			dev_err(&fep->pdev->dev, "The only allowed RGMII TX delay values are: 0ps, 2000ps");
+			return -EINVAL;
+		} else if (rgmii_tx_delay == 2000) {
+			fep->rgmii_txc_dly = true;
+		}
+	}
+
+	/* For rgmii rx internal delay, valid values are 0ps and 2000ps */
+	if (!of_property_read_u32(np, "rx-internal-delay-ps", &rgmii_rx_delay)) {
+		if (rgmii_rx_delay != 0 && rgmii_rx_delay != 2000) {
+			dev_err(&fep->pdev->dev, "The only allowed RGMII RX delay values are: 0ps, 2000ps");
+			return -EINVAL;
+		} else if (rgmii_rx_delay == 2000) {
+			fep->rgmii_rxc_dly = true;
+		}
+	}
+
+	return 0;
 }
 
 static int fec_restore_mii_bus(struct net_device *ndev)
@@ -4134,12 +4162,6 @@ fec_probe(struct platform_device *pdev)
 	if (ret)
 		goto failed_stop_mode;
 
-	if (of_get_property(np, "fsl,rgmii_txc_dly", NULL))
-		fep->rgmii_txc_dly = true;
-
-	if (of_get_property(np, "fsl,rgmii_rxc_dly", NULL))
-		fep->rgmii_rxc_dly = true;
-
 	phy_node = of_parse_phandle(np, "phy-handle", 0);
 	if (!phy_node && of_phy_is_fixed_link(np)) {
 		ret = of_phy_register_fixed_link(np);
@@ -4162,6 +4184,10 @@ fec_probe(struct platform_device *pdev)
 	} else {
 		fep->phy_interface = interface;
 	}
+
+	ret = fec_enet_parse_rgmii_delay(fep, np);
+	if (ret)
+		goto failed_rgmii_delay;
 
 	request_bus_freq(BUS_FREQ_HIGH);
 
@@ -4194,9 +4220,11 @@ fec_probe(struct platform_device *pdev)
 	fep->clk_ref_rate = clk_get_rate(fep->clk_ref);
 
 	/* clk_2x_txclk is optional, depends on board */
-	fep->clk_2x_txclk = devm_clk_get(&pdev->dev, "enet_2x_txclk");
-	if (IS_ERR(fep->clk_2x_txclk))
-		fep->clk_2x_txclk = NULL;
+	if (fep->rgmii_txc_dly || fep->rgmii_rxc_dly) {
+		fep->clk_2x_txclk = devm_clk_get(&pdev->dev, "enet_2x_txclk");
+		if (IS_ERR(fep->clk_2x_txclk))
+			fep->clk_2x_txclk = NULL;
+	}
 
 	fep->bufdesc_ex = fep->quirks & FEC_QUIRK_HAS_BUFDESC_EX;
 	fep->clk_ptp = devm_clk_get(&pdev->dev, "ptp");
@@ -4329,6 +4357,7 @@ failed_clk_ipg:
 	fec_enet_clk_enable(ndev, false);
 failed_clk:
 	release_bus_freq(BUS_FREQ_HIGH);
+failed_rgmii_delay:
 	if (of_phy_is_fixed_link(np))
 		of_phy_deregister_fixed_link(np);
 	of_node_put(phy_node);
