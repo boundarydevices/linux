@@ -9042,8 +9042,6 @@ gckHARDWARE_SetFscaleValue(
     {
         gctUINT32 data;
 
-        gcmkONERROR(gckCOMMAND_Stall(Hardware->kernel->command, gcvTRUE));
-
         gcmkONERROR(
             gckOS_ReadRegisterEx(Hardware->os,
                                  Hardware->core,
