@@ -20,6 +20,31 @@
 
 #define MDP_DEBUG
 
+extern int mtk_mdp_debug;
+
+#if defined(MDP_DEBUG)
+
+#define mdp_dbg(level, fmt, ...)\
+	do {\
+		if (mtk_mdp_debug >= (level))\
+			pr_info("[MTK-MDP3] %d %s:%d: " fmt,\
+				level, __func__, __LINE__, ##__VA_ARGS__);\
+	} while (0)
+
+#define mdp_err(fmt, ...)\
+	pr_err("[MTK-MDP3][ERR] %s:%d: " fmt, __func__, __LINE__,\
+		##__VA_ARGS__)
+
+#else
+
+#define mdp_dbg(level, fmt, ...)	do {} while (0)
+#define mdp_err(fmt, ...)		do {} while (0)
+
+#endif
+
+#define mdp_dbg_enter() mdp_dbg(3, "+")
+#define mdp_dbg_leave() mdp_dbg(3, "-")
+
 struct mdp_func_struct {
 	void (*mdp_dump_mmsys_config)(void);
 	void (*mdp_dump_rsz)(void __iomem *base, const char *label);
@@ -36,4 +61,3 @@ int32_t mdp_dump_info(uint64_t comp_flag, int log_level);
 
 
 #endif  /* __MTK_MDP3_DEBUG_H__ */
-

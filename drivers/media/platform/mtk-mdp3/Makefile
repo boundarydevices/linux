@@ -6,4 +6,3 @@ mtk-mdp3-y += mtk-mdp3-comp.o mtk-mdp3-cmdq.o
 mtk-mdp3-y += mtk-mdp3-debug.o
 
 obj-$(CONFIG_VIDEO_MEDIATEK_MDP3) += mtk-mdp3.o
-

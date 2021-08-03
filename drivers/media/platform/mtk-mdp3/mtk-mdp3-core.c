@@ -17,6 +17,9 @@
 #include "mtk-mdp3-debug.h"
 
 /* MDP debug log level (0-3). 3 shows all the logs. */
+int mtk_mdp_debug;
+EXPORT_SYMBOL(mtk_mdp_debug);
+module_param_named(debug, mtk_mdp_debug, int, 0644);
 
 static const struct mdp_platform_config mt8183_plat_cfg = {
 	.rdma_support_10bit		= true,
@@ -181,7 +184,7 @@ static int mdp_probe(struct platform_device *pdev)
 			return -ENODEV;
 		}
 		mdp->event[i] = (event_id < 0) ? -i : event_id;
-		dev_info(dev, "Get event id:%d\n", mdp->event[i]);
+		dev_dbg(dev, "Get event id:%d\n", mdp->event[i]);
 	}
 
 	mm_pdev = of_find_device_by_node(mdp_node);
@@ -228,7 +231,7 @@ static int mdp_probe(struct platform_device *pdev)
 	}
 
 	mdp->rproc_handle = scp_get_rproc(mdp->scp);
-	dev_info(&pdev->dev, "MDP rproc_handle: %pK", mdp->rproc_handle);
+	dev_dbg(&pdev->dev, "MDP rproc_handle: %pK", mdp->rproc_handle);
 
 	mutex_init(&mdp->vpu_lock);
 	mutex_init(&mdp->m2m_lock);

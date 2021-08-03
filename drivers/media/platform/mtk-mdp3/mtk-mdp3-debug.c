@@ -17,7 +17,6 @@
 #include <linux/io.h>
 #include <linux/of_address.h>
 
-#include "mmsys_reg_base.h"
 #include "mtk-mdp3-core.h"
 #include "mtk-mdp3-debug.h"
 #include "mtk-mdp3-regs.h"
@@ -970,4 +969,3 @@ void mdp_debug_deinit(void)
 	mdp_deinit_module_base_VA();
 	mdp_unmap_mmsys_VA();
 }
-

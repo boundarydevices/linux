@@ -113,7 +113,6 @@ static void mdp_m2m_worker(struct work_struct *work)
 	dst_vb = v4l2_m2m_next_dst_buf(ctx->m2m_ctx);
 	mdp_set_dst_config(&param.outputs[0], frame, &dst_vb->vb2_buf);
 
-	dst_vb->vb2_buf.timestamp = src_vb->vb2_buf.timestamp;
 	param.timestamp.tv_sec= (int32_t)(src_vb->vb2_buf.timestamp >> 32);
 	param.timestamp.tv_usec = ((int32_t)(src_vb->vb2_buf.timestamp & 0xFFFFFFFF)) | BIT(1);
 
@@ -210,8 +209,8 @@ static int mdp_m2m_queue_setup(struct vb2_queue *q,
 	}
 
 	dev_info(dev, "[%d] type:%d, planes:%u, buffers:%u, size:%u,%u,%u",
-		ctx->id, q->type, *num_planes, *num_buffers,
-		sizes[0], sizes[1], sizes[2]);
+		 ctx->id, q->type, *num_planes, *num_buffers,
+		 sizes[0], sizes[1], sizes[2]);
 	return 0;
 }
 
@@ -443,8 +442,8 @@ static int mdp_m2m_g_selection(struct file *file, void *fh,
 		valid = mdp_target_is_compose(s->target);
 
 	if (!valid) {
-		dev_info(dev, "[%s:%d] invalid type:%u target:%u", __func__, ctx->id,
-			 s->type, s->target);
+		dev_err(dev, "[%s:%d] invalid type:%u target:%u", __func__, ctx->id,
+			s->type, s->target);
 		return -EINVAL;
 	}
 
@@ -511,7 +510,7 @@ static int mdp_m2m_s_selection(struct file *file, void *fh,
 		return -EINVAL;
 	}
 
-	ret = mdp_try_crop(&r, s, frame, ctx->id);
+	ret = mdp_try_crop(ctx, &r, s, frame);
 	if (ret)
 		return ret;
 	capture = ctx_get_frame(ctx, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
@@ -739,7 +738,7 @@ static int mdp_m2m_release(struct file *file)
 	ida_free(&mdp->mdp_ida, ctx->id);
 	mutex_unlock(&mdp->m2m_lock);
 
-	dev_info(dev, "%s:[%d]", __func__, ctx->id);
+	dev_dbg(dev, "%s:[%d]", __func__, ctx->id);
 	kfree(ctx);
 
 	return 0;

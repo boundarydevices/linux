@@ -23,20 +23,20 @@
 	 ((PLANE) << 21) | ((HF) << 19) | ((VF) << 18) | ((BITS) << 8) |\
 	 ((GROUP) << 6) | ((SWAP) << 5) | ((ID) << 0))
 
-#define MDP_COLOR_IS_10BIT_PACKED(c)    ((0x08000000 & (c)) >> 27)
-#define MDP_COLOR_IS_10BIT_LOOSE(c)    (((0x0c000000 & (c)) >> 26) == 1)
-#define MDP_COLOR_IS_10BIT_TILE(c)     (((0x0c000000 & (c)) >> 26) == 3)
-#define MDP_COLOR_IS_UFP(c)             ((0x02000000 & (c)) >> 25)
-#define MDP_COLOR_IS_INTERLACED(c)      ((0x01000000 & (c)) >> 24)
-#define MDP_COLOR_IS_BLOCK_MODE(c)      ((0x00800000 & (c)) >> 23)
-#define MDP_COLOR_GET_PLANE_COUNT(c)    ((0x00600000 & (c)) >> 21)
-#define MDP_COLOR_GET_H_SUBSAMPLE(c)    ((0x00180000 & (c)) >> 19)
-#define MDP_COLOR_GET_V_SUBSAMPLE(c)    ((0x00040000 & (c)) >> 18)
-#define MDP_COLOR_BITS_PER_PIXEL(c)     ((0x0003ff00 & (c)) >>  8)
-#define MDP_COLOR_GET_GROUP(c)          ((0x000000c0 & (c)) >>  6)
-#define MDP_COLOR_IS_SWAPPED(c)         ((0x00000020 & (c)) >>  5)
-#define MDP_COLOR_GET_UNIQUE_ID(c)      ((0x0000001f & (c)) >>  0)
-#define MDP_COLOR_GET_HW_FORMAT(c)      ((0x0000001f & (c)) >>  0)
+#define MDP_COLOR_IS_10BIT_PACKED(c)	((0x08000000 & (c)) >> 27)
+#define MDP_COLOR_IS_10BIT_LOOSE(c)	(((0x0c000000 & (c)) >> 26) == 1)
+#define MDP_COLOR_IS_10BIT_TILE(c)	(((0x0c000000 & (c)) >> 26) == 3)
+#define MDP_COLOR_IS_UFP(c)		((0x02000000 & (c)) >> 25)
+#define MDP_COLOR_IS_INTERLACED(c)	((0x01000000 & (c)) >> 24)
+#define MDP_COLOR_IS_BLOCK_MODE(c)	((0x00800000 & (c)) >> 23)
+#define MDP_COLOR_GET_PLANE_COUNT(c)	((0x00600000 & (c)) >> 21)
+#define MDP_COLOR_GET_H_SUBSAMPLE(c)	((0x00180000 & (c)) >> 19)
+#define MDP_COLOR_GET_V_SUBSAMPLE(c)	((0x00040000 & (c)) >> 18)
+#define MDP_COLOR_BITS_PER_PIXEL(c)	((0x0003ff00 & (c)) >>  8)
+#define MDP_COLOR_GET_GROUP(c)		((0x000000c0 & (c)) >>  6)
+#define MDP_COLOR_IS_SWAPPED(c)		((0x00000020 & (c)) >>  5)
+#define MDP_COLOR_GET_UNIQUE_ID(c)	((0x0000001f & (c)) >>  0)
+#define MDP_COLOR_GET_HW_FORMAT(c)	((0x0000001f & (c)) >>  0)
 
 #define MDP_COLOR_IS_RGB(c)		(MDP_COLOR_GET_GROUP(c) == 0)
 #define MDP_COLOR_IS_YUV(c)		(MDP_COLOR_GET_GROUP(c) == 1)
@@ -358,8 +358,8 @@ const struct mdp_format *mdp_try_fmt_mplane(struct v4l2_format *f,
 					    u32 ctx_id);
 enum mdp_ycbcr_profile mdp_map_ycbcr_prof_mplane(struct v4l2_format *f,
 						 u32 mdp_color);
-int mdp_try_crop(struct v4l2_rect *r, const struct v4l2_selection *s,
-		 struct mdp_frame *frame, u32 ctx_id);
+int mdp_try_crop(struct mdp_m2m_ctx *ctx, struct v4l2_rect *r,
+		 const struct v4l2_selection *s, struct mdp_frame *frame);
 int mdp_check_scaling_ratio(const struct v4l2_rect *crop,
 			    const struct v4l2_rect *compose, s32 rotation,
 	const struct mdp_limit *limit);
@@ -367,7 +367,6 @@ void mdp_set_src_config(struct img_input *in,
 			struct mdp_frame *frame, struct vb2_buffer *vb);
 void mdp_set_dst_config(struct img_output *out,
 			struct mdp_frame *frame, struct vb2_buffer *vb);
-
 int mdp_frameparam_init(struct mdp_frameparam *param);
 
 const struct mdp_format *mdp_find_fmt(u32 pixelformat, u32 type);

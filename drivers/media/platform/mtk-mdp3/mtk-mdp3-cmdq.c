@@ -10,12 +10,7 @@
 #include "mtk-mdp3-core.h"
 #include "mtk-mdp3-m2m.h"
 
-#include "mdp-platform.h"
-#include "mmsys_mutex.h"
 #include "mtk-mdp3-debug.h"
-
-#define DISP_MUTEX_MDP_FIRST	(5)
-#define DISP_MUTEX_MDP_COUNT	(5)
 
 #define MDP_PATH_MAX_COMPS	IMG_MAX_COMPONENTS
 
@@ -372,12 +367,12 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 		mdp_m2m_job_finish(cb_param->mdp_ctx);
 
 #ifdef MDP_DEBUG
-	if (data.sta < 0) {
-		struct mdp_func_struct *p_func = mdp_get_func();
+		if (data.sta < 0) {
+				struct mdp_func_struct *p_func = mdp_get_func();
 
-		p_func->mdp_dump_mmsys_config();
-		mdp_dump_info(~0, 1);
-	}
+				p_func->mdp_dump_mmsys_config();
+				mdp_dump_info(~0, 1);
+		}
 #endif
 
 	if (cb_param->user_cmdq_cb) {
@@ -448,7 +443,7 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 
 	ret = mdp_path_ctx_init(mdp, path);
 	if (ret) {
-		pr_info("%s mdp_path_ctx_init error\n", __func__);
+		dev_err(dev, "mdp_path_ctx_init error\n");
 		goto err_destroy_pkt;
 	}
 
@@ -458,7 +453,7 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 
 	ret = mdp_path_config(mdp, &cmd, path);
 	if (ret) {
-		pr_info("%s mdp_path_config error\n", __func__);
+		dev_err(dev, "mdp_path_config error\n");
 		goto err_destroy_pkt;
 	}
 

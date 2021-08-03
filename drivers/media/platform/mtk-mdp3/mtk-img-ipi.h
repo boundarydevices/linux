@@ -26,7 +26,7 @@
 struct img_timeval {
 	int32_t tv_sec;
 	int32_t tv_usec;
-} __attribute__ ((__packed__));
+} __packed;
 
 struct img_addr {
 	u64 va; /* Used for Linux OS access */
@@ -38,7 +38,7 @@ struct tuning_addr {
 	u64	present;
 	u32	pa;	/* Used for CM4 access */
 	u32	iova;	/* Used for IOMMU HW access */
-} __attribute__ ((__packed__));
+} __packed;
 
 struct img_sw_addr {
 	u64 va; /* Used for APMCU access */

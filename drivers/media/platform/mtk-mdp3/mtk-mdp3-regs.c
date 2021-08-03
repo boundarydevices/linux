@@ -377,15 +377,16 @@ const struct mdp_format *mdp_try_fmt_mplane(struct v4l2_format *f,
 	unsigned int i;
 
 	fmt = mdp_find_fmt(pix_mp->pixelformat, f->type);
-	if (!fmt)
-		fmt = mdp_find_fmt_by_index(0, f->type);
 	if (!fmt) {
-		dev_info(dev, "%d: pixelformat %c%c%c%c invalid", ctx_id,
-			 (pix_mp->pixelformat & 0xff),
-			 (pix_mp->pixelformat >>  8) & 0xff,
-			 (pix_mp->pixelformat >> 16) & 0xff,
-			 (pix_mp->pixelformat >> 24) & 0xff);
-		return NULL;
+		fmt = mdp_find_fmt_by_index(0, f->type);
+		if (!fmt) {
+			dev_dbg(dev, "%d: pixelformat %c%c%c%c invalid", ctx_id,
+				(pix_mp->pixelformat & 0xff),
+				(pix_mp->pixelformat >>  8) & 0xff,
+				(pix_mp->pixelformat >> 16) & 0xff,
+				(pix_mp->pixelformat >> 24) & 0xff);
+			return NULL;
+		}
 	}
 
 	pix_mp->field = V4L2_FIELD_NONE;
@@ -411,12 +412,12 @@ const struct mdp_format *mdp_try_fmt_mplane(struct v4l2_format *f,
 			      &pix_mp->height, hmin, hmax, fmt->halign,
 			      fmt->salign);
 	if (org_w != pix_mp->width || org_h != pix_mp->height)
-		dev_info(dev, "%d: size change: %ux%u to %ux%u", ctx_id,
-			 org_w, org_h, pix_mp->width, pix_mp->height);
+		dev_dbg(dev, "%d: size change: %ux%u to %ux%u", ctx_id,
+			org_w, org_h, pix_mp->width, pix_mp->height);
 
 	if (pix_mp->num_planes && pix_mp->num_planes != fmt->num_planes)
-		dev_info(dev, "%d num of planes change: %u to %u", ctx_id,
-			 pix_mp->num_planes, fmt->num_planes);
+		dev_dbg(dev, "%d num of planes change: %u to %u", ctx_id,
+			pix_mp->num_planes, fmt->num_planes);
 	pix_mp->num_planes = fmt->num_planes;
 
 	for (i = 0; i < pix_mp->num_planes; ++i) {
@@ -431,8 +432,8 @@ const struct mdp_format *mdp_try_fmt_mplane(struct v4l2_format *f,
 		pix_mp->plane_fmt[i].bytesperline = bpl;
 		if (pix_mp->plane_fmt[i].sizeimage < si)
 			pix_mp->plane_fmt[i].sizeimage = si;
-		dev_info(dev, "%d: p%u, bpl:%u (%u), sizeimage:%u (%u)", ctx_id,
-			 i, bpl, min_bpl, pix_mp->plane_fmt[i].sizeimage, si);
+		dev_dbg(dev, "%d: p%u, bpl:%u (%u), sizeimage:%u (%u)", ctx_id,
+			i, bpl, min_bpl, pix_mp->plane_fmt[i].sizeimage, si);
 	}
 
 	return fmt;
@@ -458,14 +459,15 @@ static int mdp_clamp_end(s32 *x, int min, int max, unsigned int align,
 	return mdp_clamp_align(x, min, max, align);
 }
 
-int mdp_try_crop(struct v4l2_rect *r, const struct v4l2_selection *s,
-		 struct mdp_frame *frame, u32 ctx_id)
+int mdp_try_crop(struct mdp_m2m_ctx *ctx, struct v4l2_rect *r,
+		 const struct v4l2_selection *s, struct mdp_frame *frame)
 {
+	struct device *dev = &ctx->mdp_dev->pdev->dev;
 	s32 left, top, right, bottom;
 	u32 framew, frameh, walign, halign;
 	int ret;
 
-	pr_info("[%s:%d] target:%d, set:(%d,%d) %ux%u", __func__, ctx_id,
+	dev_dbg(dev, "%d target:%d, set:(%d,%d) %ux%u", ctx->id,
 		s->target, s->r.left, s->r.top, s->r.width, s->r.height);
 
 	left = s->r.left;
@@ -483,7 +485,7 @@ int mdp_try_crop(struct v4l2_rect *r, const struct v4l2_selection *s,
 		halign = frame->mdp_fmt->halign;
 	}
 
-	pr_info("[%s:%d] align:%u,%u, bound:%ux%u", __func__, ctx_id,
+	dev_dbg(dev, "%d align:%u,%u, bound:%ux%u", ctx->id,
 		walign, halign, framew, frameh);
 
 	ret = mdp_clamp_start(&left, 0, right, walign, s->flags);
@@ -504,7 +506,7 @@ int mdp_try_crop(struct v4l2_rect *r, const struct v4l2_selection *s,
 	r->width = right - left;
 	r->height = bottom - top;
 
-	pr_info("[%s:%d] crop:(%d,%d) %ux%u", __func__, ctx_id,
+	dev_dbg(dev, "%d crop:(%d,%d) %ux%u", ctx->id,
 		r->left, r->top, r->width, r->height);
 	return 0;
 }
@@ -696,8 +698,6 @@ void mdp_set_dst_config(struct img_output *out,
 	mdp_prepare_buffer(&out->buffer, frame, vb);
 	mdp_set_src_crop(&out->crop, &frame->crop);
 	mdp_set_orientation(out, frame->rotation, frame->hflip, frame->vflip);
-
-	/* out->flags |= ; */	/* sharpness, dither */
 }
 
 int mdp_frameparam_init(struct mdp_frameparam *param)

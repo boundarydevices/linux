@@ -75,7 +75,7 @@ static void mdp_vpu_ipi_handle_frame_ack(void *data, unsigned int len,
 	if (param->state) {
 		struct mdp_dev *mdp = vpu_to_mdp(ctx->vpu_dev);
 
-		dev_info(&mdp->pdev->dev, "VPU MDP failure:%d\n", param->state);
+		dev_err(&mdp->pdev->dev, "VPU MDP failure:%d\n", param->state);
 	}
 	complete(&ctx->vpu_dev->ipi_acked);
 }
@@ -177,8 +177,8 @@ int mdp_vpu_dev_init(struct mdp_vpu_dev *vpu, struct mtk_scp *scp,
 		goto err_mem_alloc;
 	}
 
-	pool = ALIGN((phys_addr_t)vpu->work + vpu->work_size, 8);
-	if (pool + pool_size - (phys_addr_t)vpu->work > mem_size) {
+	pool = ALIGN((uintptr_t)vpu->work + vpu->work_size, 8);
+	if (pool + pool_size - (uintptr_t)vpu->work > mem_size) {
 		dev_err(&mdp->pdev->dev,
 			"VPU memory insufficient: %zx + %zx > %zx",
 			vpu->work_size, pool_size, mem_size);
@@ -190,7 +190,7 @@ int mdp_vpu_dev_init(struct mdp_vpu_dev *vpu, struct mtk_scp *scp,
 		"VPU work:%pK pa:%pad sz:%zx pool:%pa sz:%zx (mem sz:%zx)",
 		vpu->work, &vpu->work_addr, vpu->work_size,
 		&pool, pool_size, mem_size);
-	vpu->pool = (struct mdp_config_pool *)pool;
+	vpu->pool = (struct mdp_config_pool *)(uintptr_t)pool;
 	msg.work_addr = vpu->work_addr;
 	msg.work_size = vpu->work_size;
 	err = mdp_vpu_sendmsg(vpu, SCP_IPI_MDP_INIT, &msg, sizeof(msg));
@@ -236,8 +236,7 @@ static struct img_config *mdp_config_get(struct mdp_vpu_dev *vpu,
 	mutex_lock(vpu->lock);
 	vpu->pool->cfg_count[id]++;
 	config = &vpu->pool->configs[id];
-	*addr = vpu->work_addr +
-		((unsigned long)config - (phys_addr_t)vpu->work);
+	*addr = vpu->work_addr + ((uintptr_t)config - (uintptr_t)vpu->work);
 	mutex_unlock(vpu->lock);
 
 	return config;
@@ -307,7 +306,7 @@ int mdp_vpu_process(struct mdp_vpu_ctx *ctx, struct img_ipi_frameparam *param)
 
 	memcpy((void *)ctx->vpu_dev->work, param, sizeof(*param));
 	addr.pa = ctx->vpu_dev->work_addr;
-	addr.va = (phys_addr_t)ctx->vpu_dev->work;
+	addr.va = (uintptr_t)ctx->vpu_dev->work;
 	return mdp_vpu_sendmsg(ctx->vpu_dev, SCP_IPI_MDP_FRAME,
 		&addr, sizeof(addr));
 }

@@ -33,9 +33,9 @@ static s64 get_comp_flag(const struct mdp_comp_ctx *ctx)
 
 	if (mdp_cfg && mdp_cfg->rdma_rsz1_sram_sharing)
 		if (ctx->comp->id == MDP_COMP_RDMA0)
-			return (1 << MDP_COMP_RDMA0) | (1 << MDP_COMP_RSZ1);
+			return BIT(MDP_COMP_RDMA0) | BIT(MDP_COMP_RSZ1);
 
-	return 1 << ctx->comp->id;
+	return BIT(ctx->comp->id);
 }
 
 static int init_rdma(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
@@ -50,16 +50,13 @@ static int init_rdma(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 		/* Disable RSZ1 */
 		if (ctx->comp->id == MDP_COMP_RDMA0 && prz1)
 			MM_REG_WRITE(cmd, subsys_id, prz1->reg_base, PRZ_ENABLE,
-				     0x00000000, 0x00000001);
+				     0x0, BIT(0));
 	}
 
 	/* Reset RDMA */
-	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_RESET, 0x00000001,
-		     0x00000001);
-	MM_REG_POLL(cmd, subsys_id, base, MDP_RDMA_MON_STA_1, 0x00000100,
-		    0x00000100);
-	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_RESET, 0x00000000,
-		     0x00000001);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_RESET, BIT(0), BIT(0));
+	MM_REG_POLL(cmd, subsys_id, base, MDP_RDMA_MON_STA_1, BIT(8), BIT(8));
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_RESET, 0x0, BIT(0));
 	return 0;
 }
 
@@ -78,17 +75,14 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 	if (mdp_cfg && mdp_cfg->rdma_support_10bit) {
 		if (block10bit)
 			MM_REG_WRITE(cmd, subsys_id, base,
-				     MDP_RDMA_RESV_DUMMY_0,
-				     0x00000007, 0x00000007);
+				     MDP_RDMA_RESV_DUMMY_0, 0x7, 0x7);
 		else
 			MM_REG_WRITE(cmd, subsys_id, base,
-				     MDP_RDMA_RESV_DUMMY_0,
-				     0x00000000, 0x00000007);
+				     MDP_RDMA_RESV_DUMMY_0, 0x0, 0x7);
 	}
 
 	/* Setup smi control */
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_GMCIF_CON,
-		     (1 <<  0) +
 		     (7 <<  4) + //burst type to 8
 		     (1 << 16),  //enable pre-ultra
 		     0x00030071);
@@ -114,7 +108,7 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 		}
 
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_CON, rdma->control,
-		     0x00001110);
+		     0x1110);
 	/* Setup source buffer base */
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_BASE_0, rdma->iova[0],
 		     0xFFFFFFFF);
@@ -154,8 +148,7 @@ static int config_rdma_subfrm(struct mdp_comp_ctx *ctx,
 	u8 subsys_id = ctx->comp->subsys_id;
 
 	/* Enable RDMA */
-	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_EN, 0x00000001,
-		     0x00000001);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_EN, BIT(0), BIT(0));
 
 	/* Set Y pixel offset */
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_OFFSET_0,
@@ -187,25 +180,24 @@ static int config_rdma_subfrm(struct mdp_comp_ctx *ctx,
 	if (mdp_cfg && mdp_cfg->rdma_upsample_repeat_only)
 		if ((csf->in.right - csf->in.left + 1) > 320)
 			MM_REG_WRITE(cmd, subsys_id, base,
-				     MDP_RDMA_RESV_DUMMY_0,
-				     0x00000004, 0x00000004);
+				     MDP_RDMA_RESV_DUMMY_0, BIT(2), BIT(2));
 
 	return 0;
 }
 
 static int wait_rdma_event(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 {
+	struct device *dev = &ctx->comp->mdp_dev->pdev->dev;
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
 
 	if (ctx->comp->alias_id == 0)
 		MM_REG_WAIT(cmd, RDMA0_DONE);
 	else
-		pr_err("Do not support RDMA1_DONE event\n");
+		dev_err(dev, "Do not support RDMA1_DONE event\n");
 
 	/* Disable RDMA */
-	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_EN, 0x00000000,
-		     0x00000001);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_EN, 0x0, BIT(0));
 	return 0;
 }
 
@@ -214,8 +206,6 @@ static const struct mdp_comp_ops rdma_ops = {
 	.init_comp = init_rdma,
 	.config_frame = config_rdma_frame,
 	.config_subfrm = config_rdma_subfrm,
-	/* .reconfig_frame = reconfig_rdma_frame, */
-	/* .reconfig_subfrms = reconfig_rdma_subfrms, */
 	.wait_comp_event = wait_rdma_event,
 	.advance_subfrm = NULL,
 	.post_process = NULL,
@@ -227,13 +217,10 @@ static int init_rsz(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 	u8 subsys_id = ctx->comp->subsys_id;
 
 	/* Reset RSZ */
-	MM_REG_WRITE(cmd, subsys_id, base, PRZ_ENABLE, 0x00010000,
-		     0x00010000);
-	MM_REG_WRITE(cmd, subsys_id, base, PRZ_ENABLE, 0x00000000,
-		     0x00010000);
+	MM_REG_WRITE(cmd, subsys_id, base, PRZ_ENABLE, 0x10000, BIT(16));
+	MM_REG_WRITE(cmd, subsys_id, base, PRZ_ENABLE, 0x0, BIT(16));
 	/* Enable RSZ */
-	MM_REG_WRITE(cmd, subsys_id, base, PRZ_ENABLE, 0x00000001,
-		     0x00000001);
+	MM_REG_WRITE(cmd, subsys_id, base, PRZ_ENABLE, BIT(0), BIT(0));
 	return 0;
 }
 
@@ -247,9 +234,7 @@ static int config_rsz_frame(struct mdp_comp_ctx *ctx,
 
 	if (ctx->param->frame.bypass) {
 		/* Disable RSZ */
-		MM_REG_WRITE(cmd, subsys_id, base, PRZ_ENABLE, 0x00000000,
-			     0x00000001);
-
+		MM_REG_WRITE(cmd, subsys_id, base, PRZ_ENABLE, 0x0, BIT(0));
 		return 0;
 	}
 
@@ -281,23 +266,23 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 	if (mdp_cfg && mdp_cfg->rsz_disable_dcm_small_sample)
 		if ((csf->in.right - csf->in.left + 1) <= 16)
 			MM_REG_WRITE(cmd, subsys_id, base, PRZ_CONTROL_1,
-				     1 << 27, 1 << 27);
+				     BIT(27), BIT(27));
 
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_LUMA_HORIZONTAL_INTEGER_OFFSET,
-		     csf->luma.left, 0x0000FFFF);
+		     csf->luma.left, 0xFFFF);
 	MM_REG_WRITE(cmd, subsys_id,
 		     base, PRZ_LUMA_HORIZONTAL_SUBPIXEL_OFFSET,
-		     csf->luma.left_subpix, 0x001FFFFF);
+		     csf->luma.left_subpix, 0x1FFFFF);
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_LUMA_VERTICAL_INTEGER_OFFSET,
-		     csf->luma.top, 0x0000FFFF);
+		     csf->luma.top, 0xFFFF);
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_LUMA_VERTICAL_SUBPIXEL_OFFSET,
-		     csf->luma.top_subpix, 0x001FFFFF);
+		     csf->luma.top_subpix, 0x1FFFFF);
 	MM_REG_WRITE(cmd, subsys_id,
 		     base, PRZ_CHROMA_HORIZONTAL_INTEGER_OFFSET,
-		     csf->chroma.left, 0x0000FFFF);
+		     csf->chroma.left, 0xFFFF);
 	MM_REG_WRITE(cmd, subsys_id,
 		     base, PRZ_CHROMA_HORIZONTAL_SUBPIXEL_OFFSET,
-		     csf->chroma.left_subpix, 0x001FFFFF);
+		     csf->chroma.left_subpix, 0x1FFFFF);
 
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_OUTPUT_IMAGE, subfrm->clip,
 		     0xFFFFFFFF);
@@ -316,8 +301,8 @@ static int advance_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		u8 subsys_id = ctx->comp->subsys_id;
 
 		if ((csf->in.right - csf->in.left + 1) <= 16)
-			MM_REG_WRITE(cmd, subsys_id, base, PRZ_CONTROL_1, 0,
-				     1 << 27);
+			MM_REG_WRITE(cmd, subsys_id, base, PRZ_CONTROL_1, 0x0,
+				     BIT(27));
 	}
 
 	return 0;
@@ -328,8 +313,6 @@ static const struct mdp_comp_ops rsz_ops = {
 	.init_comp = init_rsz,
 	.config_frame = config_rsz_frame,
 	.config_subfrm = config_rsz_subfrm,
-	/* .reconfig_frame = NULL, */
-	/* .reconfig_subfrms = NULL, */
 	.wait_comp_event = NULL,
 	.advance_subfrm = advance_rsz_subfrm,
 	.post_process = NULL,
@@ -341,12 +324,10 @@ static int init_wrot(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 	u8 subsys_id = ctx->comp->subsys_id;
 
 	/* Reset WROT */
-	MM_REG_WRITE(cmd, subsys_id, base, VIDO_SOFT_RST, 0x01, 0x00000001);
-	MM_REG_POLL(cmd, subsys_id, base, VIDO_SOFT_RST_STAT, 0x01,
-		    0x00000001);
-	MM_REG_WRITE(cmd, subsys_id, base, VIDO_SOFT_RST, 0x00, 0x00000001);
-	MM_REG_POLL(cmd, subsys_id, base, VIDO_SOFT_RST_STAT, 0x00,
-		    0x00000001);
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_SOFT_RST, BIT(0), BIT(0));
+	MM_REG_POLL(cmd, subsys_id, base, VIDO_SOFT_RST_STAT, BIT(0), BIT(0));
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_SOFT_RST, 0x0, BIT(0));
+	MM_REG_POLL(cmd, subsys_id, base, VIDO_SOFT_RST_STAT, 0x0, BIT(0));
 	return 0;
 }
 
@@ -374,27 +355,25 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 		     0x0000FFFF);
 	/* Write frame UV pitch */
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_STRIDE_C, wrot->stride[1],
-		     0x0000FFFF);
+		     0xFFFF);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_STRIDE_V, wrot->stride[2],
-		     0x0000FFFF);
+		     0xFFFF);
 	/* Write matrix control */
-	MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAT_CTRL, wrot->mat_ctrl,
-		     0x000000F3);
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAT_CTRL, wrot->mat_ctrl, 0xF3);
 
 	/* Set the fixed ALPHA as 0xFF */
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_DITHER, 0xFF000000,
 		     0xFF000000);
 	/* Set VIDO_EOL_SEL */
-	MM_REG_WRITE(cmd, subsys_id, base, VIDO_RSV_1, 0x80000000,
-		     0x80000000);
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_RSV_1, BIT(31), BIT(31));
 	/* Set VIDO_FIFO_TEST */
 	if (wrot->fifo_test != 0)
 		MM_REG_WRITE(cmd, subsys_id, base, VIDO_FIFO_TEST,
-			     wrot->fifo_test, 0x00000FFF);
+			     wrot->fifo_test, 0xFFF);
 	/* Filter enable */
 	if (mdp_cfg && mdp_cfg->wrot_filter_constraint)
 		MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAIN_BUF_SIZE,
-			     wrot->filter, 0x00000077);
+			     wrot->filter, 0x77);
 
 	return 0;
 }
@@ -428,7 +407,7 @@ static int config_wrot_subfrm(struct mdp_comp_ctx *ctx,
 		     subfrm->main_buf, 0x1FFF7F00);
 
 	/* Enable WROT */
-	MM_REG_WRITE(cmd, subsys_id, base, VIDO_ROT_EN, 0x01, 0x00000001);
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_ROT_EN, BIT(0), BIT(0));
 
 	return 0;
 }
@@ -436,20 +415,21 @@ static int config_wrot_subfrm(struct mdp_comp_ctx *ctx,
 static int wait_wrot_event(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 {
 	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
+	struct device *dev = &ctx->comp->mdp_dev->pdev->dev;
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
 
 	if (ctx->comp->alias_id == 0)
 		MM_REG_WAIT(cmd, WROT0_DONE);
 	else
-		pr_err("Do not support WROT1_DONE event\n");
+		dev_err(dev, "Do not support WROT1_DONE event\n");
 
 	if (mdp_cfg && mdp_cfg->wrot_filter_constraint)
-		MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAIN_BUF_SIZE, 0,
-			     0x00000077);
+		MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAIN_BUF_SIZE, 0x0,
+			     0x77);
 
 	/* Disable WROT */
-	MM_REG_WRITE(cmd, subsys_id, base, VIDO_ROT_EN, 0x00, 0x00000001);
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_ROT_EN, 0x0, BIT(0));
 
 	return 0;
 }
@@ -459,8 +439,6 @@ static const struct mdp_comp_ops wrot_ops = {
 	.init_comp = init_wrot,
 	.config_frame = config_wrot_frame,
 	.config_subfrm = config_wrot_subfrm,
-	/* .reconfig_frame = reconfig_wrot_frame, */
-	/* .reconfig_subfrms = reconfig_wrot_subfrms, */
 	.wait_comp_event = wait_wrot_event,
 	.advance_subfrm = NULL,
 	.post_process = NULL,
@@ -472,10 +450,9 @@ static int init_wdma(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 	u8 subsys_id = ctx->comp->subsys_id;
 
 	/* Reset WDMA */
-	MM_REG_WRITE(cmd, subsys_id, base, WDMA_RST, 0x1, 0x00000001);
-	MM_REG_POLL(cmd, subsys_id, base, WDMA_FLOW_CTRL_DBG, 0x01,
-		    0x00000001);
-	MM_REG_WRITE(cmd, subsys_id, base, WDMA_RST, 0x0, 0x00000001);
+	MM_REG_WRITE(cmd, subsys_id, base, WDMA_RST, BIT(0), BIT(0));
+	MM_REG_POLL(cmd, subsys_id, base, WDMA_FLOW_CTRL_DBG, BIT(0), BIT(0));
+	MM_REG_WRITE(cmd, subsys_id, base, WDMA_RST, 0x0, BIT(0));
 	return 0;
 }
 
@@ -540,7 +517,7 @@ static int config_wdma_subfrm(struct mdp_comp_ctx *ctx,
 		     0x3FFF3FFF);
 
 	/* Enable WDMA */
-	MM_REG_WRITE(cmd, subsys_id, base, WDMA_EN, 0x01, 0x00000001);
+	MM_REG_WRITE(cmd, subsys_id, base, WDMA_EN, BIT(0), BIT(0));
 
 	return 0;
 }
@@ -552,7 +529,7 @@ static int wait_wdma_event(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 
 	MM_REG_WAIT(cmd, WDMA0_DONE);
 	/* Disable WDMA */
-	MM_REG_WRITE(cmd, subsys_id, base, WDMA_EN, 0x00, 0x00000001);
+	MM_REG_WRITE(cmd, subsys_id, base, WDMA_EN, 0x0, BIT(0));
 	return 0;
 }
 
@@ -572,9 +549,9 @@ static int init_ccorr(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 	u8 subsys_id = ctx->comp->subsys_id;
 
 	/* CCORR enable */
-	MM_REG_WRITE(cmd, subsys_id, base, MDP_CCORR_EN, 0x1, 0x1);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_CCORR_EN, BIT(0), BIT(0));
 	/* Relay mode */
-	MM_REG_WRITE(cmd, subsys_id, base, MDP_CCORR_CFG, 0x1, 0x1);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_CCORR_CFG, BIT(0), BIT(0));
 	return 0;
 }
 
@@ -606,8 +583,6 @@ static const struct mdp_comp_ops ccorr_ops = {
 	.init_comp = init_ccorr,
 	.config_frame = config_ccorr_frame,
 	.config_subfrm = config_ccorr_subfrm,
-	/* .reconfig_frame = NULL, */
-	/* .reconfig_subfrms = NULL, */
 	.wait_comp_event = NULL,
 	.advance_subfrm = NULL,
 	.post_process = NULL,
@@ -619,13 +594,13 @@ static int init_isp(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 	const struct isp_data *isp = &ctx->param->isp;
 
 	/* Direct link */
-	if (isp->dl_flags & (1 << MDP_COMP_CAMIN)) {
-		dev_info(dev, "SW_RST ASYNC");
+	if (isp->dl_flags & BIT(MDP_COMP_CAMIN)) {
+		dev_dbg(dev, "SW_RST ASYNC");
 		mtk_mmsys_mdp_isp_ctrl(dev, cmd, MDP_COMP_CAMIN);
 	}
 
-	if (isp->dl_flags & (1 << MDP_COMP_CAMIN2)) {
-		dev_info(dev, "SW_RST ASYNC2");
+	if (isp->dl_flags & BIT(MDP_COMP_CAMIN2)) {
+		dev_dbg(dev, "SW_RST ASYNC2");
 		mtk_mmsys_mdp_isp_ctrl(dev, cmd, MDP_COMP_CAMIN2);
 	}
 
@@ -738,73 +713,60 @@ static int wait_isp_event(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 	u8 subsys_id = ctx->comp->subsys_id;
 
 	/* MDP_DL_SEL: select MDP_CROP */
-	if (isp->dl_flags & (1 << MDP_COMP_CAMIN))
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x0030, 0x00000000,
-				  0x00000200);
+	if (isp->dl_flags & BIT(MDP_COMP_CAMIN))
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x30, 0x0, BIT(9));
 	/* MDP2_DL_SEL: select MDP_CROP2 */
-	if (isp->dl_flags & (1 << MDP_COMP_CAMIN2))
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x0030, 0x00000000,
-				  0x00000C00);
+	if (isp->dl_flags & BIT(MDP_COMP_CAMIN2))
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x30, 0x0,
+				  BIT(10) | BIT(11));
 
 	switch (isp->cq_idx) {
 	case ISP_DRV_DIP_CQ_THRE0:
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, 0x0001,
-				  0x00000001);
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(0), BIT(0));
 		MM_REG_WAIT(cmd, ISP_P2_0_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE1:
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, 0x0002,
-				  0x00000002);
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(1), BIT(1));
 		MM_REG_WAIT(cmd, ISP_P2_1_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE2:
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, 0x0004,
-				  0x00000004);
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(2), BIT(2));
 		MM_REG_WAIT(cmd, ISP_P2_2_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE3:
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, 0x0008,
-				  0x00000008);
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(3), BIT(3));
 		MM_REG_WAIT(cmd, ISP_P2_3_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE4:
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, 0x0010,
-				  0x00000010);
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(4), BIT(4));
 		MM_REG_WAIT(cmd, ISP_P2_4_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE5:
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, 0x0020,
-				  0x00000020);
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(5), BIT(5));
 		MM_REG_WAIT(cmd, ISP_P2_5_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE6:
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, 0x0040,
-				  0x00000040);
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(6), BIT(6));
 		MM_REG_WAIT(cmd, ISP_P2_6_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE7:
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, 0x0080,
-				  0x00000080);
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(7), BIT(7));
 		MM_REG_WAIT(cmd, ISP_P2_7_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE8:
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, 0x0100,
-				  0x00000100);
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(8), BIT(8));
 		MM_REG_WAIT(cmd, ISP_P2_8_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE9:
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, 0x0200,
-				  0x00000200);
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(9), BIT(9));
 		MM_REG_WAIT(cmd, ISP_P2_9_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE10:
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, 0x0400,
-				  0x00000400);
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(10), BIT(10));
 		MM_REG_WAIT(cmd, ISP_P2_10_DONE);
 		break;
 	case ISP_DRV_DIP_CQ_THRE11:
-		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, 0x0800,
-				  0x00000800);
+		MM_REG_WRITE_MASK(cmd, subsys_id, base, 0x2000, BIT(11), BIT(11));
 		MM_REG_WAIT(cmd, ISP_P2_11_DONE);
 		break;
 	default:
@@ -820,8 +782,6 @@ static const struct mdp_comp_ops imgi_ops = {
 	.init_comp = init_isp,
 	.config_frame = config_isp_frame,
 	.config_subfrm = config_isp_subfrm,
-	/* .reconfig_frame = reconfig_isp_frame, */
-	/* .reconfig_subfrms = reconfig_isp_subfrms, */
 	.wait_comp_event = wait_isp_event,
 	.advance_subfrm = NULL,
 	.post_process = NULL,
@@ -853,8 +813,6 @@ static const struct mdp_comp_ops camin_ops = {
 	.init_comp = NULL,
 	.config_frame = NULL,
 	.config_subfrm = config_camin_subfrm,
-	/* .reconfig_frame = NULL, */
-	/* .reconfig_subfrms = NULL, */
 	.wait_comp_event = NULL,
 	.advance_subfrm = NULL,
 	.post_process = NULL,
@@ -1055,7 +1013,7 @@ static int mdp_get_subsys_id(struct device *dev, struct device_node *node,
 	}
 
 	comp->subsys_id = cmdq_reg.subsys;
-	dev_info(&comp_pdev->dev, "subsys id=%d\n", cmdq_reg.subsys);
+	dev_dbg(&comp_pdev->dev, "subsys id=%d\n", cmdq_reg.subsys);
 
 	return 0;
 }
@@ -1146,7 +1104,7 @@ static int mdp_sub_comps_create(struct mdp_dev *mdp, struct device_node *node)
 	const char *name;
 	int index = 0;
 
-	of_property_for_each_string(node, "mdp3-comps", prop, name) {
+	of_property_for_each_string(node, "mediatek,mdp3-comps", prop, name) {
 		const struct of_device_id *matches = mdp_sub_comp_dt_ids;
 		enum mdp_comp_type type = MDP_COMP_TYPE_INVALID;
 		u32 alias_id;
@@ -1161,7 +1119,7 @@ static int mdp_sub_comps_create(struct mdp_dev *mdp, struct device_node *node)
 			}
 		}
 
-		ret = of_property_read_u32_index(node, "mdp3-comp-ids",
+		ret = of_property_read_u32_index(node, "mediatek,mdp3-comp-ids",
 						 index, &alias_id);
 		if (ret) {
 			dev_warn(dev, "Skipping unknown component %s\n", name);
@@ -1193,30 +1151,6 @@ static void mdp_comp_deinit(struct mdp_comp *comp)
 		iounmap(comp->regs);
 }
 
-static int mdp_mm_init(struct mdp_dev *mdp, struct mdp_comp *comp,
-		       const char *ref_name)
-{
-	struct device_node *node;
-	struct device *dev = &mdp->pdev->dev;
-
-	node = of_parse_phandle(dev->of_node, ref_name, 0);
-	if (!node) {
-		dev_err(dev, "Failed to parse dt %s\n", ref_name);
-		return -EINVAL;
-	}
-
-	__mdp_comp_init(mdp, node, comp);
-	mdp_get_subsys_id(dev, node, comp);
-	of_node_put(node);
-	if (!comp->reg_base) {
-		dev_err(dev, "Failed to init %s base\n", ref_name);
-		of_node_put(node);
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
 void mdp_component_deinit(struct mdp_dev *mdp)
 {
 	int i;
@@ -1226,6 +1160,7 @@ void mdp_component_deinit(struct mdp_dev *mdp)
 
 	for (i = 0; i < ARRAY_SIZE(mdp->comp); i++) {
 		if (mdp->comp[i]) {
+			pm_runtime_disable(mdp->comp[i]->comp_dev);
 			mdp_comp_deinit(mdp->comp[i]);
 			kfree(mdp->comp[i]);
 		}
@@ -1253,16 +1188,14 @@ int mdp_component_init(struct mdp_dev *mdp)
 			continue;
 
 		if (!of_device_is_available(node)) {
-			dev_info(dev, "Skipping disabled component %pOF\n",
-				 node);
+			dev_info(dev, "Skipping disabled component %pOF\n", node);
 			continue;
 		}
 
 		type = (enum mdp_comp_type)of_id->data;
 		ret = of_property_read_u32(node, "mediatek,mdp3-id", &alias_id);
 		if (ret) {
-			dev_warn(dev, "Skipping unknown component %pOF\n",
-				 node);
+			dev_warn(dev, "Skipping unknown component %pOF\n", node);
 			continue;
 		}
 		id = mdp_comp_get_id(type, alias_id);
@@ -1285,7 +1218,7 @@ int mdp_component_init(struct mdp_dev *mdp)
 		comp->comp_dev = NULL;
 		if (comp->type != MDP_COMP_TYPE_RDMA &&
 		    comp->type != MDP_COMP_TYPE_WROT &&
-			comp->type != MDP_COMP_TYPE_WDMA)
+		    comp->type != MDP_COMP_TYPE_WDMA)
 			continue;
 
 		pdev = of_find_device_by_node(node);
