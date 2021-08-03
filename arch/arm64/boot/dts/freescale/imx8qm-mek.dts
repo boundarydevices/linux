@@ -367,11 +367,6 @@
 			no-map;
 		};
 
-		rsc_table0: rsc_table0@90000000 {
-			reg = <0 0x90000000 0 0x8000>;
-			no-map;
-		};
-
 		vdev0vring1: vdev0vring1@90008000 {
 			reg = <0 0x90008000 0 0x8000>;
 			no-map;
@@ -387,7 +382,7 @@
 			no-map;
 		};
 
-		rsc-table@0 {
+		rsc_table0: rsc_table0@900ff000 {
 			reg = <0 0x900ff000 0 0x1000>;
 			no-map;
 		};
@@ -399,11 +394,6 @@
 		};
 
 		vdev2vring0: vdev0vring0@90100000 {
-			reg = <0 0x90100000 0 0x8000>;
-			no-map;
-		};
-
-		rsc_table1: rsc_table1@90100000 {
 			reg = <0 0x90100000 0 0x8000>;
 			no-map;
 		};
@@ -423,7 +413,7 @@
 			no-map;
 		};
 
-		rsc-table@1 {
+		rsc_table1: rsc_table1@901ff000 {
 			reg = <0 0x901ff000 0 0x1000>;
 			no-map;
 		};
