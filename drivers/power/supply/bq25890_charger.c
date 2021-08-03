@@ -126,6 +126,7 @@ struct bq25890_device {
 	enum bq25890_chip_version chip_version;
 	struct bq25890_init_data init_data;
 	struct bq25890_state state;
+	unsigned long last_check;
 
 	struct mutex lock; /* protect state data */
 };
@@ -469,7 +470,10 @@ static int bq25890_power_supply_get_property(struct power_supply *psy,
 	mutex_lock(&bq->lock);
 	dev_dbg(bq->dev, "%s: calling __bq25890_handle_irq\n", __func__);
 	/* update state in case we lost an interrupt */
-	__bq25890_handle_irq(bq, 0);
+	if (time_after(jiffies, bq->last_check + msecs_to_jiffies(30000))) {
+		__bq25890_handle_irq(bq, 0);
+		bq->last_check = jiffies;
+	}
 	state = bq->state;
 	do_adc_conv = !state.online && bq25890_is_adc_property(psp);
 	if (do_adc_conv)
@@ -1230,6 +1234,7 @@ static int bq25890_probe(struct i2c_client *client,
 
 	bq->client = client;
 	bq->dev = dev;
+	bq->last_check = jiffies;
 
 	mutex_init(&bq->lock);
 	INIT_DELAYED_WORK(&bq->pump_express_work, bq25890_pump_express_work);
