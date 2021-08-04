@@ -21,6 +21,7 @@
 		mmc0 = &mmc0;
 		mmc1 = &mmc1;
 		mmc2 = &mmc2;
+		ethernet0 = &bluetooth;
 	};
 
 	memory@40000000 {
@@ -276,6 +277,11 @@
 	assigned-clock-parents = <&topckgen CLK_TOP_MSDCPLL>;
 	non-removable;
 	status = "okay";
+
+	bluetooth: mt7663-bt {
+		mac-address = [00 00 00 00 00 00];
+		reg = <2>;
+	};
 };
 
 &i2c0 {
