@@ -977,7 +977,7 @@
 
 &i2c3b {
 	ov5640-mipi1@3c {
-		AVDD-supply = <&reg_vref_2v5>;
+		AVDD-supply = <&reg_ldo3>;
 		DOVDD-supply = <&reg_vref_1v8>;
 		DVDD-supply = <&reg_vref_3v3>;
 		clocks = <&csi_mclk>;
@@ -1003,7 +1003,7 @@
 
 &i2c3c {
 	ov5640-mipi2@3c {
-		AVDD-supply = <&reg_vref_2v5>;
+		AVDD-supply = <&reg_ldo3>;
 		DOVDD-supply = <&reg_vref_1v8>;
 		DVDD-supply = <&reg_vref_3v3>;
 		clocks = <&csi_mclk>;
