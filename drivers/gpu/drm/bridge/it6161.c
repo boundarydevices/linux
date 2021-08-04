@@ -9,6 +9,7 @@
 #include <drm/drm_probe_helper.h>
 #include <linux/err.h>
 #include <linux/extcon-provider.h>
+#include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/interrupt.h>
 #include <sound/hdmi-codec.h>
