@@ -1252,7 +1252,7 @@
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
 	status = "okay";
-	vqmmc-supply = <&reg_usdhc2_vqmmc>;
+	vqmmc-supply = <&reg_ldo2>;
 };
 
 &usdhc3 {
