@@ -1,5 +1,7 @@
 /*
+ * Copyright (C) 2021, Boundary Devices.  All rights reserved.
  * Copyright (C) 2013, NVIDIA Corporation.  All rights reserved.
+ * Based on panel-simple
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -24,6 +26,7 @@
 #include <linux/backlight.h>
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
+#include <linux/iopoll.h>
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
@@ -98,6 +101,7 @@ struct panel_desc {
 
 	u32 bus_format;
 	u32 bus_flags;
+	int connector_type;
 };
 
 struct cmds {
@@ -125,12 +129,16 @@ struct panel_common {
 	unsigned enable_high_duration_us;
 	unsigned enable_low_duration_us;
 	unsigned power_delay_ms;
-	struct backlight_device *backlight;
 	struct regulator *supply;
 	struct i2c_adapter *ddc;
 
-	struct drm_display_mode override_mode;
 	struct gpio_desc *gpd_prepare_enable;
+	struct gpio_desc *hpd_gpio;
+
+	struct drm_display_mode override_mode;
+
+	enum drm_panel_orientation orientation;
+
 	struct gpio_desc *gpd_power;
 	struct gpio_desc *reset;
 	struct videomode vm;
@@ -647,10 +655,9 @@ static int send_all_cmd_lists(struct panel_common *panel, struct interface_cmds 
 	return ret;
 }
 
-static unsigned int panel_common_get_timings_modes(struct panel_common *panel)
+static unsigned int panel_common_get_timings_modes(struct panel_common *panel,
+						   struct drm_connector *connector)
 {
-	struct drm_connector *connector = panel->base.connector;
-	struct drm_device *drm = panel->base.drm;
 	struct drm_display_mode *mode;
 	unsigned int i, num = 0;
 
@@ -659,9 +666,9 @@ static unsigned int panel_common_get_timings_modes(struct panel_common *panel)
 		struct videomode vm;
 
 		videomode_from_timing(dt, &vm);
-		mode = drm_mode_create(drm);
+		mode = drm_mode_create(connector->dev);
 		if (!mode) {
-			dev_err(drm->dev, "failed to add mode %ux%u\n",
+			dev_err(panel->base.dev, "failed to add mode %ux%u\n",
 				dt->hactive.typ, dt->vactive.typ);
 			continue;
 		}
@@ -680,20 +687,20 @@ static unsigned int panel_common_get_timings_modes(struct panel_common *panel)
 	return num;
 }
 
-static unsigned int panel_common_get_display_modes(struct panel_common *panel)
+static unsigned int panel_common_get_display_modes(struct panel_common *panel,
+						   struct drm_connector *connector)
 {
-	struct drm_connector *connector = panel->base.connector;
-	struct drm_device *drm = panel->base.drm;
 	struct drm_display_mode *mode;
 	unsigned int i, num = 0;
 
 	for (i = 0; i < panel->desc->num_modes; i++) {
 		const struct drm_display_mode *m = &panel->desc->modes[i];
 
-		mode = drm_mode_duplicate(drm, m);
+		mode = drm_mode_duplicate(connector->dev, m);
 		if (!mode) {
-			dev_err(drm->dev, "failed to add mode %ux%u@%u\n",
-				m->hdisplay, m->vdisplay, m->vrefresh);
+			dev_err(panel->base.dev, "failed to add mode %ux%u@%u\n",
+				m->hdisplay, m->vdisplay,
+				drm_mode_vrefresh(m));
 			continue;
 		}
 
@@ -711,10 +718,9 @@ static unsigned int panel_common_get_display_modes(struct panel_common *panel)
 	return num;
 }
 
-static int panel_common_get_non_edid_modes(struct panel_common *panel)
+static int panel_common_get_non_edid_modes(struct panel_common *panel,
+					   struct drm_connector *connector)
 {
-	struct drm_connector *connector = panel->base.connector;
-	struct drm_device *drm = panel->base.drm;
 	struct drm_display_mode *mode;
 	bool has_override = panel->override_mode.type;
 	unsigned int num = 0;
@@ -723,18 +729,19 @@ static int panel_common_get_non_edid_modes(struct panel_common *panel)
 		return 0;
 
 	if (has_override) {
-		mode = drm_mode_duplicate(drm, &panel->override_mode);
+		mode = drm_mode_duplicate(connector->dev,
+					  &panel->override_mode);
 		if (mode) {
 			drm_mode_probed_add(connector, mode);
 			num = 1;
 		} else {
-			dev_err(drm->dev, "failed to add override mode\n");
+			dev_err(panel->base.dev, "failed to add override mode\n");
 		}
 	}
 
 	/* Only add timings if override was not there or failed to validate */
 	if (num == 0 && panel->desc->num_timings)
-		num = panel_common_get_timings_modes(panel);
+		num = panel_common_get_timings_modes(panel, connector);
 
 	/*
 	 * Only add fixed modes if timings/override added no mode.
@@ -744,7 +751,7 @@ static int panel_common_get_non_edid_modes(struct panel_common *panel)
 	 */
 	WARN_ON(panel->desc->num_timings && panel->desc->num_modes);
 	if (num == 0)
-		num = panel_common_get_display_modes(panel);
+		num = panel_common_get_display_modes(panel, connector);
 
 	connector->display_info.bpc = panel->desc->bpc;
 	connector->display_info.width_mm = panel->desc->size.width;
@@ -764,12 +771,6 @@ static int panel_common_disable(struct drm_panel *panel)
 
 	if (!p->enabled)
 		return 0;
-
-	if (p->backlight) {
-		p->backlight->props.power = FB_BLANK_POWERDOWN;
-		p->backlight->props.state |= BL_CORE_FBBLANK;
-		backlight_update_status(p->backlight);
-	}
 
 	if (p->desc->delay.disable)
 		msleep(p->desc->delay.disable);
@@ -804,12 +805,38 @@ static int panel_common_unprepare(struct drm_panel *panel)
 	return 0;
 }
 
+static int panel_common_get_hpd_gpio(struct device *dev,
+				     struct panel_common *p, bool from_probe)
+{
+	int err;
+
+	p->hpd_gpio = devm_gpiod_get_optional(dev, "hpd", GPIOD_IN);
+	if (IS_ERR(p->hpd_gpio)) {
+		err = PTR_ERR(p->hpd_gpio);
+
+		/*
+		 * If we're called from probe we won't consider '-EPROBE_DEFER'
+		 * to be an error--we'll leave the error code in "hpd_gpio".
+		 * When we try to use it we'll try again.  This allows for
+		 * circular dependencies where the component providing the
+		 * hpd gpio needs the panel to init before probing.
+		 */
+		if (err != -EPROBE_DEFER || !from_probe) {
+			dev_err(dev, "failed to get 'hpd' GPIO: %d\n", err);
+			return err;
+		}
+	}
+
+	return 0;
+}
+
 static int panel_common_prepare(struct drm_panel *panel)
 {
 	struct panel_common *p = to_panel_common(panel);
 	struct mipi_dsi_device *dsi;
 	unsigned int delay;
 	int err;
+	int hpd_asserted;
 
 	if (p->prepared)
 		return 0;
@@ -843,6 +870,26 @@ static int panel_common_prepare(struct drm_panel *panel)
 		delay += p->desc->delay.hpd_absent_delay;
 	if (delay)
 		msleep(delay);
+
+	if (p->hpd_gpio) {
+		if (IS_ERR(p->hpd_gpio)) {
+			err = panel_common_get_hpd_gpio(panel->dev, p, false);
+			if (err)
+				return err;
+		}
+
+		err = readx_poll_timeout(gpiod_get_value_cansleep, p->hpd_gpio,
+					 hpd_asserted, hpd_asserted,
+					 1000, 2000000);
+		if (hpd_asserted < 0)
+			err = hpd_asserted;
+
+		if (err) {
+			dev_err(panel->dev,
+				"error waiting for hpd GPIO: %d\n", err);
+			return err;
+		}
+	}
 
 	dsi = container_of(p->base.dev, struct mipi_dsi_device, dev);
 	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
@@ -899,12 +946,6 @@ static int panel_common_enable2(struct drm_panel *panel)
 	if (ret < 0)
 		goto fail;
 
-	if (p->backlight) {
-		p->backlight->props.state &= ~BL_CORE_FBBLANK;
-		p->backlight->props.power = FB_BLANK_UNBLANK;
-		backlight_update_status(p->backlight);
-	}
-
 	sn65_enable2(&p->sn65);
 	p->enabled2 = true;
 
@@ -918,23 +959,28 @@ fail:
 	return ret;
 }
 
-static int panel_common_get_modes(struct drm_panel *panel)
+static int panel_common_get_modes(struct drm_panel *panel,
+				  struct drm_connector *connector)
 {
 	struct panel_common *p = to_panel_common(panel);
 	int num = 0;
 
 	/* probe EDID if a DDC bus is available */
 	if (p->ddc) {
-		struct edid *edid = drm_get_edid(panel->connector, p->ddc);
-		drm_connector_update_edid_property(panel->connector, edid);
+		struct edid *edid = drm_get_edid(connector, p->ddc);
+
+		drm_connector_update_edid_property(connector, edid);
 		if (edid) {
-			num += drm_add_edid_modes(panel->connector, edid);
+			num += drm_add_edid_modes(connector, edid);
 			kfree(edid);
 		}
 	}
 
 	/* add hard-coded panel modes */
-	num += panel_common_get_non_edid_modes(p);
+	num += panel_common_get_non_edid_modes(p, connector);
+
+	/* set up connector's "panel orientation" property */
+	drm_connector_set_panel_orientation(connector, p->orientation);
 
 	return num;
 }
@@ -1063,7 +1109,7 @@ static void init_common(struct panel_common *p, struct device_node *np, struct p
 static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 		struct mipi_dsi_device *dsi)
 {
-	struct device_node *backlight, *ddc, *spi_node;
+	struct device_node *spi_node;
 	struct device_node *np = dev->of_node;
 	struct device_node *i2c_node;
 	struct device_node *sn65_np;
@@ -1071,6 +1117,9 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 	struct i2c_adapter *i2c = NULL;
 	struct panel_common *panel;
 	struct display_timing dt;
+	struct device_node *ddc;
+	int connector_type;
+	u32 bus_flags;
 	int err;
 
 	panel = devm_kzalloc(dev, sizeof(*panel), GFP_KERNEL);
@@ -1089,6 +1138,9 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 		struct device_node *cmds_np;
 		u32 bridge_de_active;
 		u32 bridge_sync_active;
+
+		desc = ds;
+		ds->connector_type = DRM_MODE_CONNECTOR_DSI;
 
 		of_property_read_u32(np, "panel-width-mm", &ds->size.width);
 		of_property_read_u32(np, "panel-height-mm", &ds->size.height);
@@ -1123,9 +1175,9 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 				DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC;
 		}
 		if (vm.flags & DISPLAY_FLAGS_PIXDATA_NEGEDGE)
-			ds->bus_flags |= DRM_BUS_FLAG_PIXDATA_NEGEDGE;
+			ds->bus_flags |= DRM_BUS_FLAG_PIXDATA_SAMPLE_NEGEDGE;
 		if (vm.flags & DISPLAY_FLAGS_PIXDATA_POSEDGE)
-			ds->bus_flags |= DRM_BUS_FLAG_PIXDATA_POSEDGE;
+			ds->bus_flags |= DRM_BUS_FLAG_PIXDATA_SAMPLE_POSEDGE;
 		dev_info(dev, "vm.flags=%x bus_flags=%x flags=%x\n", vm.flags, ds->bus_flags, dm->flags);
 
 		err = of_property_read_string(np, "bus-format", &bf);
@@ -1216,6 +1268,11 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 	}
 
 	panel->no_hpd = of_property_read_bool(np, "no-hpd");
+	if (!panel->no_hpd) {
+		err = panel_common_get_hpd_gpio(dev, panel, true);
+		if (err)
+			return err;
+	}
 
 	panel->supply = devm_regulator_get(dev, "power");
 	if (IS_ERR(panel->supply)) {
@@ -1246,15 +1303,10 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 		goto free_spi;
 	}
 
-	backlight = of_parse_phandle(np, "backlight", 0);
-	if (backlight) {
-		panel->backlight = of_find_backlight_by_node(backlight);
-		of_node_put(backlight);
-
-		if (!panel->backlight) {
-			err = -EPROBE_DEFER;
-			goto free_spi;
-		}
+	err = of_drm_get_panel_orientation(np, &panel->orientation);
+	if (err) {
+		dev_err(dev, "%pOF: failed to get orientation %d\n", np, err);
+		return err;
 	}
 
 	ddc = of_parse_phandle(np, "ddc-i2c-bus", 0);
@@ -1262,10 +1314,8 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 		panel->ddc = of_find_i2c_adapter_by_node(ddc);
 		of_node_put(ddc);
 
-		if (!panel->ddc) {
-			err = -EPROBE_DEFER;
-			goto free_backlight;
-		}
+		if (!panel->ddc)
+			return -EPROBE_DEFER;
 	}
 
 	if (!of_get_display_timing(np, "panel-timing", &dt))
@@ -1280,13 +1330,69 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 		}
 	}
 
-	drm_panel_init(&panel->base);
-	panel->base.dev = dev;
-	panel->base.funcs = &panel_common_funcs;
+	connector_type = desc->connector_type;
+	/* Catch common mistakes for panels. */
+	switch (connector_type) {
+	case 0:
+		dev_warn(dev, "Specify missing connector_type\n");
+		connector_type = DRM_MODE_CONNECTOR_DPI;
+		break;
+	case DRM_MODE_CONNECTOR_LVDS:
+		WARN_ON(desc->bus_flags &
+			~(DRM_BUS_FLAG_DE_LOW |
+			  DRM_BUS_FLAG_DE_HIGH |
+			  DRM_BUS_FLAG_DATA_MSB_TO_LSB |
+			  DRM_BUS_FLAG_DATA_LSB_TO_MSB));
+		WARN_ON(desc->bus_format != MEDIA_BUS_FMT_RGB666_1X7X3_SPWG &&
+			desc->bus_format != MEDIA_BUS_FMT_RGB888_1X7X4_SPWG &&
+			desc->bus_format != MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA);
+		WARN_ON(desc->bus_format == MEDIA_BUS_FMT_RGB666_1X7X3_SPWG &&
+			desc->bpc != 6);
+		WARN_ON((desc->bus_format == MEDIA_BUS_FMT_RGB888_1X7X4_SPWG ||
+			 desc->bus_format == MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA) &&
+			desc->bpc != 8);
+		break;
+	case DRM_MODE_CONNECTOR_eDP:
+		if (desc->bus_format == 0)
+			dev_warn(dev, "Specify missing bus_format\n");
+		if (desc->bpc != 6 && desc->bpc != 8)
+			dev_warn(dev, "Expected bpc in {6,8} but got: %u\n", desc->bpc);
+		break;
+	case DRM_MODE_CONNECTOR_DSI:
+		if (desc->bpc != 6 && desc->bpc != 8)
+			dev_warn(dev, "Expected bpc in {6,8} but got: %u\n", desc->bpc);
+		break;
+	case DRM_MODE_CONNECTOR_DPI:
+		bus_flags = DRM_BUS_FLAG_DE_LOW |
+			    DRM_BUS_FLAG_DE_HIGH |
+			    DRM_BUS_FLAG_PIXDATA_SAMPLE_POSEDGE |
+			    DRM_BUS_FLAG_PIXDATA_SAMPLE_NEGEDGE |
+			    DRM_BUS_FLAG_DATA_MSB_TO_LSB |
+			    DRM_BUS_FLAG_DATA_LSB_TO_MSB |
+			    DRM_BUS_FLAG_SYNC_SAMPLE_POSEDGE |
+			    DRM_BUS_FLAG_SYNC_SAMPLE_NEGEDGE;
+		if (desc->bus_flags & ~bus_flags)
+			dev_warn(dev, "Unexpected bus_flags(%d)\n", desc->bus_flags & ~bus_flags);
+		if (!(desc->bus_flags & bus_flags))
+			dev_warn(dev, "Specify missing bus_flags\n");
+		if (desc->bus_format == 0)
+			dev_warn(dev, "Specify missing bus_format\n");
+		if (desc->bpc != 6 && desc->bpc != 8)
+			dev_warn(dev, "Expected bpc in {6,8} but got: %u\n", desc->bpc);
+		break;
+	default:
+		dev_warn(dev, "Specify a valid connector_type: %d\n", desc->connector_type);
+		connector_type = DRM_MODE_CONNECTOR_DPI;
+		break;
+	}
 
-	err = drm_panel_add(&panel->base);
-	if (err < 0)
+	drm_panel_init(&panel->base, dev, &panel_common_funcs, connector_type);
+
+	err = drm_panel_of_backlight(&panel->base);
+	if (err)
 		goto free_ddc;
+
+	drm_panel_add(&panel->base);
 
 	dev_set_drvdata(dev, panel);
 
@@ -1295,9 +1401,6 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 free_ddc:
 	if (panel->ddc)
 		put_device(&panel->ddc->dev);
-free_backlight:
-	if (panel->backlight)
-		put_device(&panel->backlight->dev);
 free_spi:
 	if (spi)
 		put_device(&spi->dev);
@@ -1313,15 +1416,11 @@ static int panel_common_remove(struct device *dev)
 	struct panel_common *panel = dev_get_drvdata(dev);
 
 	drm_panel_remove(&panel->base);
-
-	panel_common_disable(&panel->base);
-	panel_common_unprepare(&panel->base);
+	drm_panel_disable(&panel->base);
+	drm_panel_unprepare(&panel->base);
 
 	if (panel->ddc)
 		put_device(&panel->ddc->dev);
-
-	if (panel->backlight)
-		put_device(&panel->backlight->dev);
 	if (panel->spi)
 		put_device(&panel->spi->dev);
 	if (panel->i2c)
@@ -1335,8 +1434,8 @@ static void panel_common_shutdown(struct device *dev)
 {
 	struct panel_common *panel = dev_get_drvdata(dev);
 
-	panel_common_disable(&panel->base);
-	panel_common_unprepare(&panel->base);
+	drm_panel_disable(&panel->base);
+	drm_panel_unprepare(&panel->base);
 }
 
 struct panel_desc_dsi {
