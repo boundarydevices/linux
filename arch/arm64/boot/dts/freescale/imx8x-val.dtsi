@@ -472,7 +472,7 @@
 	phy-mode = "rgmii-txid";
 	phy-handle = <&ethphy0>;
 	fsl,magic-packet;
-	fsl,rgmii_rxc_dly;
+	rx-internal-delay-ps = <2000>;
 	status = "okay";
 
 	mdio {
@@ -513,7 +513,7 @@
 	phy-handle = <&ethphy1>;
 	phy-supply = <&reg_fec2_supply>;
 	fsl,magic-packet;
-	fsl,rgmii_rxc_dly;
+	rx-internal-delay-ps = <2000>;
 	status = "disabled";
 };
 

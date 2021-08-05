@@ -298,7 +298,7 @@
 	phy-mode = "rgmii-txid";
 	phy-handle = <&ethphy1>;
 	fsl,magic-packet;
-	fsl,rgmii_rxc_dly;
+	rx-internal-delay-ps = <2000>;
 	nvmem-cells = <&fec_mac0>;
 	nvmem-cell-names = "mac-address";
 	phy-reset-gpios = <&pca6416_1 0 GPIO_ACTIVE_LOW>;
