@@ -184,6 +184,11 @@
 	regulator-always-on;
 };
 
+/* Needed by MSDC1 */
+&mt6357_vmc_reg {
+	regulator-always-on;
+};
+
 &uart0 {
 	status = "okay";
 };
