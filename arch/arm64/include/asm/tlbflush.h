@@ -16,8 +16,6 @@
 #include <asm/cputype.h>
 #include <asm/mmu.h>
 
-extern bool TKT340553_SW_WORKAROUND;
-
 /*
  * Raw TLBI operations.
  *
@@ -247,36 +245,24 @@ static inline void flush_tlb_all(void)
 
 static inline void flush_tlb_mm(struct mm_struct *mm)
 {
-	unsigned long asid = __TLBI_VADDR(0, ASID(mm));
+	unsigned long asid;
 
 	dsb(ishst);
-	if (TKT340553_SW_WORKAROUND) {
-		/* Flush the entire TLB */
-		__tlbi(vmalle1is);
-		dsb(ish);
-		isb();
-	} else {
-		__tlbi(aside1is, asid);
-		__tlbi_user(aside1is, asid);
-		dsb(ish);
-	}
+	asid = __TLBI_VADDR(0, ASID(mm));
+	__tlbi(aside1is, asid);
+	__tlbi_user(aside1is, asid);
+	dsb(ish);
 }
 
 static inline void flush_tlb_page_nosync(struct vm_area_struct *vma,
 					 unsigned long uaddr)
 {
-	unsigned long addr = __TLBI_VADDR(uaddr, ASID(vma->vm_mm));
+	unsigned long addr;
 
 	dsb(ishst);
-	if (TKT340553_SW_WORKAROUND) {
-		/* Flush the entire TLB */
-		__tlbi(vmalle1is);
-		dsb(ish);
-		isb();
-	} else {
-		__tlbi(vale1is, addr);
-		__tlbi_user(vale1is, addr);
-	}
+	addr = __TLBI_VADDR(uaddr, ASID(vma->vm_mm));
+	__tlbi(vale1is, addr);
+	__tlbi_user(vale1is, addr);
 }
 
 static inline void flush_tlb_page(struct vm_area_struct *vma,
@@ -299,9 +285,7 @@ static inline void __flush_tlb_range(struct vm_area_struct *vma,
 {
 	int num = 0;
 	int scale = 0;
-	unsigned long asid = ASID(vma->vm_mm);
-	unsigned long addr;
-	unsigned long pages;
+	unsigned long asid, addr, pages;
 
 	start = round_down(start, stride);
 	end = round_up(end, stride);
@@ -321,14 +305,7 @@ static inline void __flush_tlb_range(struct vm_area_struct *vma,
 	}
 
 	dsb(ishst);
-
-	if (TKT340553_SW_WORKAROUND) {
-		/* Flush the entire TLB and exit */
-		__tlbi(vmalle1is);
-		dsb(ish);
-		isb();
-		return;
-	}
+	asid = ASID(vma->vm_mm);
 
 	/*
 	 * When the CPU does not support TLB range operations, flush the TLB
@@ -380,7 +357,6 @@ static inline void __flush_tlb_range(struct vm_area_struct *vma,
 		}
 		scale++;
 	}
-
 	dsb(ish);
 }
 
@@ -399,8 +375,7 @@ static inline void flush_tlb_kernel_range(unsigned long start, unsigned long end
 {
 	unsigned long addr;
 
-	if (((end - start) > (MAX_TLBI_OPS * PAGE_SIZE))
-	    || (TKT340553_SW_WORKAROUND)) {
+	if ((end - start) > (MAX_TLBI_OPS * PAGE_SIZE)) {
 		flush_tlb_all();
 		return;
 	}
@@ -424,11 +399,7 @@ static inline void __flush_tlb_kernel_pgtable(unsigned long kaddr)
 	unsigned long addr = __TLBI_VADDR(kaddr, 0);
 
 	dsb(ishst);
-	if (TKT340553_SW_WORKAROUND)
-		/* Flush the entire TLB */
-		__tlbi(vmalle1is);
-	else
-		__tlbi(vaae1is, addr);
+	__tlbi(vaae1is, addr);
 	dsb(ish);
 	isb();
 }
