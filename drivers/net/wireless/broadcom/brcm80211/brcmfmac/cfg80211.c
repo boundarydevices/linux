@@ -5535,6 +5535,7 @@ brcmf_cfg80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 	struct brcmf_mf_params_le *mf_params;
 	u32 mf_params_len;
 	s32 timeout;
+	u32 hw_channel;
 
 	brcmf_dbg(TRACE, "Enter\n");
 
@@ -5595,13 +5596,16 @@ brcmf_cfg80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 		/* Add the channel. Use the one specified as parameter if any or
 		 * the current one (got from the firmware) otherwise
 		 */
-		if (chan)
+		if (chan) {
 			freq = chan->center_freq;
-		else
+			chan_nr = ieee80211_frequency_to_channel(freq);
+			af_params->channel = cpu_to_le32(chan_nr);
+		} else {
 			brcmf_fil_cmd_int_get(vif->ifp, BRCMF_C_GET_CHANNEL,
-					      &freq);
-		chan_nr = ieee80211_frequency_to_channel(freq);
-		af_params->channel = cpu_to_le32(chan_nr);
+					      &hw_channel);
+			af_params->channel = hw_channel;
+		}
+
 		af_params->dwell_time = cpu_to_le32(params->wait);
 		memcpy(action_frame->data, &buf[DOT11_MGMT_HDR_LEN],
 		       le16_to_cpu(action_frame->len));
@@ -5634,13 +5638,16 @@ brcmf_cfg80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 		mf_params->len = cpu_to_le16(len - DOT11_MGMT_HDR_LEN);
 		mf_params->frame_control = mgmt->frame_control;
 
-		if (chan)
+		if (chan) {
 			freq = chan->center_freq;
-		else
+			chan_nr = ieee80211_frequency_to_channel(freq);
+			mf_params->channel = cpu_to_le32(chan_nr);
+		} else {
 			brcmf_fil_cmd_int_get(vif->ifp, BRCMF_C_GET_CHANNEL,
-					      &freq);
-		chan_nr = ieee80211_frequency_to_channel(freq);
-		mf_params->channel = cpu_to_le32(chan_nr);
+					      &hw_channel);
+			mf_params->channel = hw_channel;
+		}
+
 		memcpy(&mf_params->da[0], &mgmt->da[0], ETH_ALEN);
 		memcpy(&mf_params->bssid[0], &mgmt->bssid[0], ETH_ALEN);
 		mf_params->packet_id = cpu_to_le32(*cookie);
