@@ -56,6 +56,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mm-evk.dtb imx8mm-evk-rpmsg.dtb imx8mm-evk-rm67191
 			  imx8mm-evk-usd-wifi.dtb \
 			  imx8mm-evk-qca-wifi.dtb \
 			  imx8mm-c2.dtb \
+			  imx8mm-c2-mid.dtb \
 			  imx8mm-dwe.dtb \
 			  imx8mm-geno.dtb \
 			  imx8mm-hl8mm.dtb \
