@@ -6408,6 +6408,9 @@ static void pxp_lut_cleanup_multiple(struct pxps *pxp, u64 lut, bool set)
 	struct pxp_config_data *pxp_conf = &pxp->pxp_conf_state;
 	struct pxp_proc_data *proc_data = &pxp_conf->proc_data;
 
+	if (of_machine_is_compatible("fsl,imx8ulp"))
+		return;
+
 	if (proc_data->lut_cleanup == 1) {
 		if (set) {
 			__raw_writel((u32)lut, pxp->base + HW_PXP_WFE_A_STG1_8X1_OUT1_0 + 0x4);
