@@ -16,27 +16,31 @@
 #define CMDQ_REG_TYPE		1
 #define CMDQ_JUMP_RELATIVE	1
 
+#define CMDQ_GET_ARG_B(arg)		(((arg) & GENMASK(31, 16)) >> 16)
+#define CMDQ_GET_ARG_C(arg)		((arg) & GENMASK(15, 0))
+
 struct cmdq_instruction {
 	union {
 		u32 value;
 		u32 mask;
 		struct {
 			u16 arg_c;
-			u16 src_reg;
+			u16 arg_b;
 		};
 	};
 	union {
 		u16 offset;
 		u16 event;
 		u16 reg_dst;
+		u16 arg_a;
 	};
 	union {
 		u8 subsys;
 		struct {
-			u8 sop:5;
-			u8 arg_c_t:1;
-			u8 src_t:1;
-			u8 dst_t:1;
+			u8 s_op:5;
+			u8 arg_c_type:1;
+			u8 arg_b_type:1;
+			u8 arg_a_type:1;
 		};
 	};
 	u8 op;
@@ -217,14 +221,45 @@ int cmdq_pkt_read_s(struct cmdq_pkt *pkt, u16 high_addr_reg_idx, u16 addr_low,
 	struct cmdq_instruction inst = {};
 
 	inst.op = CMDQ_CODE_READ_S;
-	inst.dst_t = CMDQ_REG_TYPE;
-	inst.sop = high_addr_reg_idx;
+	inst.arg_a_type = CMDQ_REG_TYPE;
+	inst.s_op = high_addr_reg_idx;
 	inst.reg_dst = reg_idx;
-	inst.src_reg = addr_low;
+	inst.arg_b = addr_low;
 
 	return cmdq_pkt_append_command(pkt, inst);
 }
 EXPORT_SYMBOL(cmdq_pkt_read_s);
+
+int cmdq_pkt_read_reg(struct cmdq_pkt *pkt, u8 subsys, u16 offset,
+	u16 dst_reg_idx)
+{
+	struct cmdq_instruction inst = {};
+
+	inst.arg_c = 0;
+	inst.arg_b = offset;
+	inst.arg_a = dst_reg_idx;
+	inst.s_op = subsys;
+	inst.arg_c_type = 0;
+	inst.arg_b_type = 0;
+	inst.arg_a_type = CMDQ_REG_TYPE;
+	inst.op = CMDQ_CODE_READ_S;
+	return cmdq_pkt_append_command(pkt, inst);
+}
+EXPORT_SYMBOL(cmdq_pkt_read_reg);
+
+int cmdq_pkt_read_addr(struct cmdq_pkt *pkt, dma_addr_t addr, u16 dst_reg_idx)
+{
+	s32 err;
+	const u16 src_reg_idx = CMDQ_SPR_FOR_TEMP;
+
+	err = cmdq_pkt_assign(pkt, src_reg_idx, CMDQ_ADDR_HIGH(addr));
+	if (err < 0)
+		return err;
+
+	return cmdq_pkt_read_s(pkt, src_reg_idx, CMDQ_ADDR_LOW(addr),
+			       dst_reg_idx);
+}
+EXPORT_SYMBOL(cmdq_pkt_read_addr);
 
 int cmdq_pkt_write_s(struct cmdq_pkt *pkt, u16 high_addr_reg_idx,
 		     u16 addr_low, u16 src_reg_idx)
@@ -232,10 +267,10 @@ int cmdq_pkt_write_s(struct cmdq_pkt *pkt, u16 high_addr_reg_idx,
 	struct cmdq_instruction inst = {};
 
 	inst.op = CMDQ_CODE_WRITE_S;
-	inst.src_t = CMDQ_REG_TYPE;
-	inst.sop = high_addr_reg_idx;
+	inst.arg_b_type = CMDQ_REG_TYPE;
+	inst.s_op = high_addr_reg_idx;
 	inst.offset = addr_low;
-	inst.src_reg = src_reg_idx;
+	inst.arg_b = src_reg_idx;
 
 	return cmdq_pkt_append_command(pkt, inst);
 }
@@ -255,10 +290,10 @@ int cmdq_pkt_write_s_mask(struct cmdq_pkt *pkt, u16 high_addr_reg_idx,
 
 	inst.mask = 0;
 	inst.op = CMDQ_CODE_WRITE_S_MASK;
-	inst.src_t = CMDQ_REG_TYPE;
-	inst.sop = high_addr_reg_idx;
+	inst.arg_b_type = CMDQ_REG_TYPE;
+	inst.s_op = high_addr_reg_idx;
 	inst.offset = addr_low;
-	inst.src_reg = src_reg_idx;
+	inst.arg_b = src_reg_idx;
 
 	return cmdq_pkt_append_command(pkt, inst);
 }
@@ -270,7 +305,7 @@ int cmdq_pkt_write_s_value(struct cmdq_pkt *pkt, u8 high_addr_reg_idx,
 	struct cmdq_instruction inst = {};
 
 	inst.op = CMDQ_CODE_WRITE_S;
-	inst.sop = high_addr_reg_idx;
+	inst.s_op = high_addr_reg_idx;
 	inst.offset = addr_low;
 	inst.value = value;
 
@@ -291,13 +326,68 @@ int cmdq_pkt_write_s_mask_value(struct cmdq_pkt *pkt, u8 high_addr_reg_idx,
 		return err;
 
 	inst.op = CMDQ_CODE_WRITE_S_MASK;
-	inst.sop = high_addr_reg_idx;
+	inst.s_op = high_addr_reg_idx;
 	inst.offset = addr_low;
 	inst.value = value;
 
 	return cmdq_pkt_append_command(pkt, inst);
 }
 EXPORT_SYMBOL(cmdq_pkt_write_s_mask_value);
+
+int cmdq_pkt_write_reg_addr(struct cmdq_pkt *pkt, dma_addr_t addr,
+			    u16 src_reg_idx, u32 mask)
+{
+	s32 err;
+	const u16 dst_reg_idx = CMDQ_SPR_FOR_TEMP;
+
+	err = cmdq_pkt_assign(pkt, dst_reg_idx,
+			      CMDQ_ADDR_HIGH(addr));
+	if (err < 0)
+		return err;
+
+	if (mask != CMDQ_NO_MASK)
+		return cmdq_pkt_write_s(pkt, dst_reg_idx,
+						   CMDQ_ADDR_LOW(addr), src_reg_idx);
+
+	return cmdq_pkt_write_s_mask(pkt, dst_reg_idx,
+				     CMDQ_ADDR_LOW(addr), src_reg_idx, mask);
+}
+EXPORT_SYMBOL(cmdq_pkt_write_reg_addr);
+
+int cmdq_pkt_write_value_addr(struct cmdq_pkt *pkt, dma_addr_t addr,
+			      u32 value, u32 mask)
+{
+	s32 err;
+	const u16 dst_reg_idx = CMDQ_SPR_FOR_TEMP;
+
+	/* assign high bit to spr temp */
+	err = cmdq_pkt_assign(pkt, dst_reg_idx,
+		CMDQ_ADDR_HIGH(addr));
+	if (err < 0)
+		return err;
+
+	if (mask != CMDQ_NO_MASK)
+		return cmdq_pkt_write_s_mask_value(pkt, dst_reg_idx,
+						   CMDQ_ADDR_LOW(addr), value, mask);
+
+	return cmdq_pkt_write_s_value(pkt, dst_reg_idx,
+				      CMDQ_ADDR_LOW(addr), value);
+}
+EXPORT_SYMBOL(cmdq_pkt_write_value_addr);
+
+s32 cmdq_pkt_mem_move(struct cmdq_pkt *pkt, dma_addr_t src_addr,
+		      dma_addr_t dst_addr, u16 swap_reg_idx)
+{
+	s32 err;
+
+	err = cmdq_pkt_read_addr(pkt, src_addr, swap_reg_idx);
+	if (err != 0)
+		return err;
+
+	return cmdq_pkt_write_reg_addr(pkt, dst_addr,
+				       swap_reg_idx, CMDQ_NO_MASK);
+}
+EXPORT_SYMBOL(cmdq_pkt_mem_move);
 
 int cmdq_pkt_wfe(struct cmdq_pkt *pkt, u16 event, bool clear)
 {
@@ -345,6 +435,21 @@ int cmdq_pkt_set_event(struct cmdq_pkt *pkt, u16 event)
 }
 EXPORT_SYMBOL(cmdq_pkt_set_event);
 
+int cmdq_pkt_acquire_event(struct cmdq_pkt *pkt, u16 event)
+{
+	struct cmdq_instruction inst = {};
+
+	if (event >= CMDQ_MAX_EVENT)
+		return -EINVAL;
+
+	inst.op = CMDQ_CODE_WFE;
+	inst.value = CMDQ_WFE_UPDATE | CMDQ_WFE_UPDATE_VALUE | CMDQ_WFE_WAIT;
+	inst.event = event;
+
+	return cmdq_pkt_append_command(pkt, inst);
+}
+EXPORT_SYMBOL(cmdq_pkt_acquire_event);
+
 int cmdq_pkt_poll(struct cmdq_pkt *pkt, u8 subsys,
 		  u16 offset, u32 value)
 {
@@ -380,12 +485,60 @@ int cmdq_pkt_poll_mask(struct cmdq_pkt *pkt, u8 subsys,
 }
 EXPORT_SYMBOL(cmdq_pkt_poll_mask);
 
+int cmdq_pkt_poll_addr(struct cmdq_pkt *pkt, u32 value, u32 addr,
+		       u32 mask, u8 reg_gpr)
+{
+	struct cmdq_instruction inst = { {0} };
+	int err;
+	u8 use_mask = 0;
+
+	if (mask != CMDQ_NO_MASK) {
+		inst.arg_c = CMDQ_GET_ARG_C(~mask);
+		inst.arg_b = CMDQ_GET_ARG_B(~mask);
+		inst.arg_a = 0;
+		inst.s_op = 0;
+		inst.arg_c = 0;
+		inst.arg_b = 0;
+		inst.arg_a = 1;
+		inst.op = CMDQ_CODE_MASK;
+		err = cmdq_pkt_append_command(pkt, inst);
+		if (err != 0)
+			return err;
+
+		use_mask = 1;
+	}
+
+	/* Move extra handle APB address to GPR */
+	inst.arg_c = CMDQ_GET_ARG_C(addr);
+	inst.arg_b = CMDQ_GET_ARG_B(addr);
+	inst.arg_a = 0;
+	inst.s_op = reg_gpr;
+	inst.arg_c = 0;
+	inst.arg_b = 0;
+	inst.arg_a = 1;
+	inst.op = CMDQ_CODE_MOVE;
+	err = cmdq_pkt_append_command(pkt, inst);
+	if (err < 0)
+		return err;
+
+	inst.arg_c = CMDQ_GET_ARG_C(value);
+	inst.arg_b = CMDQ_GET_ARG_B(value);
+	inst.arg_a = use_mask;
+	inst.s_op = reg_gpr;
+	inst.arg_c = 0;
+	inst.arg_b = 0;
+	inst.arg_a = 1;
+	inst.op = CMDQ_CODE_POLL;
+	return cmdq_pkt_append_command(pkt, inst);
+}
+EXPORT_SYMBOL(cmdq_pkt_poll_addr);
+
 int cmdq_pkt_assign(struct cmdq_pkt *pkt, u16 reg_idx, u32 value)
 {
 	struct cmdq_instruction inst = {};
 
 	inst.op = CMDQ_CODE_LOGIC;
-	inst.dst_t = CMDQ_REG_TYPE;
+	inst.arg_a_type = CMDQ_REG_TYPE;
 	inst.reg_dst = reg_idx;
 	inst.value = value;
 	return cmdq_pkt_append_command(pkt, inst);

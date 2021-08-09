@@ -22,6 +22,8 @@
 #define CMDQ_GCE_NUM_MAX		(2)
 
 #define CMDQ_CURR_IRQ_STATUS		0x10
+#define CMDQ_SYNC_TOKEN_ID		0x60
+#define CMDQ_SYNC_TOKEN_VALUE		0x64
 #define CMDQ_SYNC_TOKEN_UPDATE		0x68
 #define CMDQ_THR_SLOT_CYCLES		0x30
 #define CMDQ_THR_BASE			0x100
@@ -80,6 +82,8 @@ struct cmdq {
 	struct cmdq_thread	*thread;
 	struct clk_bulk_data	clocks[CMDQ_GCE_NUM_MAX];
 	bool			suspended;
+	spinlock_t		event_lock;
+	struct cmdq_backup_event_list	*cmdq_backup_event_list;
 };
 
 struct gce_plat {
@@ -109,6 +113,38 @@ u8 cmdq_get_shift_pa(struct mbox_chan *chan)
 	return cmdq->pdata->shift;
 }
 EXPORT_SYMBOL(cmdq_get_shift_pa);
+
+void cmdq_set_event(void *chan, u16 event_id)
+{
+	struct cmdq *cmdq = container_of(((struct mbox_chan *)chan)->mbox,
+		typeof(*cmdq), mbox);
+	unsigned long flags;
+
+	spin_lock_irqsave(&cmdq->event_lock, flags);
+
+	writel((1L << 16) | event_id, cmdq->base + CMDQ_SYNC_TOKEN_UPDATE);
+
+	spin_unlock_irqrestore(&cmdq->event_lock, flags);
+}
+EXPORT_SYMBOL(cmdq_set_event);
+
+u32 cmdq_get_event(void *chan, u16 event_id)
+{
+	struct cmdq *cmdq = container_of(((struct mbox_chan *)chan)->mbox,
+		typeof(*cmdq), mbox);
+	unsigned long flags;
+	u32 val = 0;
+
+	spin_lock_irqsave(&cmdq->event_lock, flags);
+
+	writel(0x3FF & event_id, cmdq->base + CMDQ_SYNC_TOKEN_ID);
+	val = readl(cmdq->base + CMDQ_SYNC_TOKEN_VALUE);
+
+	spin_unlock_irqrestore(&cmdq->event_lock, flags);
+
+	return val;
+}
+EXPORT_SYMBOL(cmdq_get_event);
 
 static int cmdq_thread_suspend(struct cmdq *cmdq, struct cmdq_thread *thread)
 {
@@ -624,6 +660,7 @@ static int cmdq_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, cmdq);
 
 	WARN_ON(clk_bulk_prepare_enable(cmdq->pdata->gce_num, cmdq->clocks));
+	spin_lock_init(&cmdq->event_lock);
 
 	cmdq_init(cmdq);
 

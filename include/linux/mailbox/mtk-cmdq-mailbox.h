@@ -54,6 +54,7 @@
  */
 enum cmdq_code {
 	CMDQ_CODE_MASK = 0x02,
+	CMDQ_CODE_MOVE = 0x02,
 	CMDQ_CODE_WRITE = 0x04,
 	CMDQ_CODE_POLL = 0x08,
 	CMDQ_CODE_JUMP = 0x10,
@@ -79,5 +80,7 @@ struct cmdq_pkt {
 };
 
 u8 cmdq_get_shift_pa(struct mbox_chan *chan);
+void cmdq_set_event(void *chan, u16 event_id);
+u32 cmdq_get_event(void *chan, u16 event_id);
 
 #endif /* __MTK_CMDQ_MAILBOX_H__ */
