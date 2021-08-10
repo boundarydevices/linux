@@ -814,63 +814,63 @@
 
 		led@0 {
 			chan-name = "d1";
-			led-cur = /bits/ 8 <0x0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x0>;
 		};
 
 		led@1 {
 			chan-name = "d2";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x1>;
 		};
 
 		led@2 {
 			chan-name = "d3";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x2>;
 		};
 
 		led@3 {
 			chan-name = "d4";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x3>;
 		};
 
 		led@4 {
 			chan-name = "d5";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x4>;
 		};
 
 		led@5 {
 			chan-name = "d6";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x5>;
 		};
 
 		led@6 {
 			chan-name = "d7";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x6>;
 		};
 
 		led@7 {
 			chan-name = "d8";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x7>;
 		};
 
 		led@8 {
 			chan-name = "d9";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x8>;
 		};
@@ -889,63 +889,63 @@
 
 		led@0 {
 			chan-name = "d1";
-			led-cur = /bits/ 8 <0x0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x0>;
 		};
 
 		led@1 {
 			chan-name = "d2";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x1>;
 		};
 
 		led@2 {
 			chan-name = "d3";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x2>;
 		};
 
 		led@3 {
 			chan-name = "d4";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x3>;
 		};
 
 		led@4 {
 			chan-name = "d5";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x4>;
 		};
 
 		led@5 {
 			chan-name = "d6";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x5>;
 		};
 
 		led@6 {
 			chan-name = "d7";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x6>;
 		};
 
 		led@7 {
 			chan-name = "d8";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x7>;
 		};
 
 		led@8 {
 			chan-name = "d9";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x8>;
 		};
@@ -964,63 +964,63 @@
 
 		led@0 {
 			chan-name = "d1";
-			led-cur = /bits/ 8 <0x0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x0>;
 		};
 
 		led@1 {
 			chan-name = "d2";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x1>;
 		};
 
 		led@2 {
 			chan-name = "d3";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x2>;
 		};
 
 		led@3 {
 			chan-name = "d4";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x3>;
 		};
 
 		led@4 {
 			chan-name = "d5";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x4>;
 		};
 
 		led@5 {
 			chan-name = "d6";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x5>;
 		};
 
 		led@6 {
 			chan-name = "d7";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x6>;
 		};
 
 		led@7 {
 			chan-name = "d8";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x7>;
 		};
 
 		led@8 {
 			chan-name = "d9";
-			led-cur = /bits/ 8 <0>;
+			led-cur = /bits/ 8 <0x2f>;
 			max-cur = /bits/ 8 <0xff>;
 			reg = <0x8>;
 		};
