@@ -2082,10 +2082,10 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 
 		imx6_pcie->pciephy_reset = devm_reset_control_get_exclusive(dev,
 									    "pciephy");
-		if (IS_ERR(imx6_pcie->pciephy_reset)) {
-			dev_err(dev, "Failed to get PCIEPHY reset control\n");
-			return PTR_ERR(imx6_pcie->pciephy_reset);
-		}
+		if (IS_ERR(imx6_pcie->pciephy_reset))
+			return dev_err_probe(dev,
+				PTR_ERR(imx6_pcie->pciephy_reset),
+				"Failed to get PCIEPHY reset control\n");
 
 		imx6_pcie->apps_reset = devm_reset_control_get_exclusive(dev,
 									 "apps");
