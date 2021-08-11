@@ -33,6 +33,29 @@
 		regulator-always-on;
 	};
 
+	galcore {
+		compatible = "amlogic, galcore";
+		dev_name = "galcore";
+		status = "okay";
+		clocks = <&clkc CLKID_NNA_AXI_CLK>,
+		   	   <&clkc CLKID_NNA_CORE_CLK>;
+		clock-names = "cts_vipnanoq_axi_clk_composite",
+			"cts_vipnanoq_core_clk_composite";
+		interrupts = <0 186 4>;
+		interrupt-names = "galcore";
+		reg = <0x0 0xff100000 0x0 0x800
+			0x0 0xff000000 0x0 0x400000
+			0x0 0xff63c118 0x0 0x0
+			0x0 0xff63c11c 0x0 0x0
+			0x0 0xffd01088 0x0 0x0
+			0x0 0xff63c1c8 0x0 0x0
+			>;
+		reg-names = "NN_REG","NN_SRAM","NN_MEM0",
+			"NN_MEM1","NN_RESET","NN_CLK";
+		nn_power_version = <3>;
+		nn_efuse = <0xff63003c 0x20>;
+	};
+
 	sound {
 		model = "G12B-KHADAS-VIM3L";
 		audio-routing = "TDMOUT_A IN 0", "FRDDR_A OUT 0",
