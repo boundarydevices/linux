@@ -44,6 +44,20 @@
 		};
 	};
 
+	gpiomem {
+		compatible = "amlogic, gpiomem";
+		reg = <0x0 0xda834000 0x0 0x1000>;
+		dev_name = "gpiomem";
+		status = "okay";
+	};
+
+	gpiomem_ao {
+		compatible = "amlogic, gpiomem";
+		reg = <0x0 0xc8100000 0x0 0x1000>;
+		dev_name = "gpiomem-ao";
+		status = "okay";
+	};
+
 	led-controller {
 		compatible = "pwm-leds";
 
