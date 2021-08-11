@@ -70,6 +70,7 @@ obj-$(CONFIG_I2C_IMG)		+= i2c-img-scb.o
 obj-$(CONFIG_I2C_IMX)		+= i2c-imx.o
 obj-$(CONFIG_I2C_IMX_HS)	+= i2c-imx-hs.o
 obj-$(CONFIG_I2C_IMX_LPI2C)	+= i2c-imx-lpi2c.o
+obj-$(CONFIG_I2C_IMX_FLEXIO)	+= i2c-flexio.o
 obj-$(CONFIG_I2C_IOP3XX)	+= i2c-iop3xx.o
 obj-$(CONFIG_I2C_JZ4780)	+= i2c-jz4780.o
 obj-$(CONFIG_I2C_KEMPLD)	+= i2c-kempld.o
