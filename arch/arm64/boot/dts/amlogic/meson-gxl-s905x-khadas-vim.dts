@@ -147,7 +147,7 @@
 };
 
 &i2c_A {
-	status = "okay";
+	status = "disabled";
 	pinctrl-0 = <&i2c_a_pins>;
 	pinctrl-names = "default";
 };
@@ -265,7 +265,7 @@
 
 /* This is brought out on the UART_RX_AO_B (15) and UART_TX_AO_B (16) pins: */
 &uart_AO_B {
-	status = "okay";
+	status = "diabled";
 	pinctrl-0 = <&uart_ao_b_pins>;
 	pinctrl-names = "default";
 };

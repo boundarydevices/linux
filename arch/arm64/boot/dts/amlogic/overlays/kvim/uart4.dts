@@ -1,0 +1,15 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+   fragment@0 {
+       target = <&uart_AO_B>;
+
+       __overlay__ {
+           status = "okay";
+           pinctrl-0 = <&uart_ao_b_pins>;
+           pinctrl-names = "default";
+       };
+   };
+};
+

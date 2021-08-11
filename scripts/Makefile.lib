@@ -92,6 +92,9 @@ always-y += $(patsubst %.dtb,%.dt.yaml, $(real-dtb-y))
 always-y += $(patsubst %.dtbo,%.dt.yaml, $(real-dtb-y))
 endif
 
+# Overlay targets
+extra-y		+= $(dtbo-y) $(scr-y) $(dtbotxt-y)
+
 # Add subdir path
 
 extra-y		:= $(addprefix $(obj)/,$(extra-y))
