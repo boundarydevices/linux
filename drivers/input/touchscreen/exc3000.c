@@ -262,7 +262,7 @@ static int exc3000_probe(struct i2c_client *client,
 
 	/* probe for device */
 	while (1) {
-		msleep(5);
+		msleep(15);
 		error = i2c_master_send(client, NULL, 0);
 		if (error >= 0)
 			break;
