@@ -1,0 +1,10 @@
+
+menu "Amlogic NPU Support"
+
+config AMLOGIC_NPU
+	tristate "amlogic NPU module"
+	default m
+	help
+	  Driver for NPU.
+
+endmenu
