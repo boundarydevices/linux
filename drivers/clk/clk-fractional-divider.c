@@ -76,7 +76,6 @@ void clk_fractional_divider_general_approximation(struct clk_hw *hw,
 						  unsigned long *m, unsigned long *n)
 {
 	struct clk_fractional_divider *fd = to_clk_fd(hw);
-	unsigned long scale;
 	int min = (fd->flags & CLK_FRAC_DIVIDER_ZERO_BASED) ? 1 : 0;
 
 	/*
@@ -84,9 +83,12 @@ void clk_fractional_divider_general_approximation(struct clk_hw *hw,
 	 * for m and n. In the result it will be the nearest rate left shifted
 	 * by (scale - fd->nwidth) bits.
 	 */
-	scale = fls_long(*parent_rate / rate - 1);
-	if (scale > fd->nwidth)
-		rate <<= scale - fd->nwidth;
+	if (fd->flags & CLK_FRAC_DIVIDER_POWER_OF_TWO_PS) {
+		unsigned long scale = fls_long(*parent_rate / rate - 1);
+
+		if (scale > fd->nwidth)
+			rate <<= scale - fd->nwidth;
+	}
 
 	rational_best_approximation(rate, *parent_rate,
 			GENMASK(fd->mwidth - 1, 0) + min, GENMASK(fd->nwidth - 1, 0) + min,
