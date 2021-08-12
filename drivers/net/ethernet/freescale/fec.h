@@ -496,6 +496,9 @@ struct bufdesc_ex {
 /* request pmqos during low power */
 #define FEC_QUIRK_HAS_PMQOS		(1 << 23)
 
+/* i.MX8MQ SoC integration mix wakeup interrupt signal into "int2" interrupt line. */
+#define FEC_QUIRK_WAKEUP_FROM_INT2	(1 << 22)
+
 struct bufdesc_prop {
 	int qid;
 	/* Address of Rx and Tx buffers */
