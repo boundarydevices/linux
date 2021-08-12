@@ -187,7 +187,7 @@ static int rpmsg_tty_probe(struct rpmsg_device *rpdev)
 error:
 	tty_unregister_driver(cport->rpmsgtty_driver);
 error1:
-	put_tty_driver(cport->rpmsgtty_driver);
+	tty_driver_kref_put(cport->rpmsgtty_driver);
 	tty_port_destroy(&cport->port);
 	cport->rpmsgtty_driver = NULL;
 	kfree(cport);
@@ -203,7 +203,7 @@ static void rpmsg_tty_remove(struct rpmsg_device *rpdev)
 
 	tty_unregister_driver(cport->rpmsgtty_driver);
 	kfree(cport->rpmsgtty_driver->name);
-	put_tty_driver(cport->rpmsgtty_driver);
+	tty_driver_kref_put(cport->rpmsgtty_driver);
 	tty_port_destroy(&cport->port);
 	cport->rpmsgtty_driver = NULL;
 }
