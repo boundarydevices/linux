@@ -2644,7 +2644,6 @@ static int sdma_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct sdma_engine *sdma = platform_get_drvdata(pdev);
-	unsigned long timeout = jiffies + msecs_to_jiffies(2);
 	int i, ret;
 
 	/* Do nothing if not i.MX6SX/6UL or i.MX7D, i.MX8MP */
@@ -2689,19 +2688,8 @@ static int sdma_resume(struct device *dev)
 	/* prepare priority for channel0 to start */
 	sdma_set_channel_priority(&sdma->channel[0], MXC_SDMA_MAX_PRIORITY);
 
-	ret = sdma_get_firmware(sdma, sdma->fw_name);
-	if (ret) {
-		dev_warn(&pdev->dev, "failed to get firmware\n");
-		return ret;
-	}
-	/* wait firmware loaded */
-	do {
-		if (time_after(jiffies, timeout)) {
-			dev_warn(&pdev->dev, "failed to load firmware\n");
-			break;
-		}
-		usleep_range(50, 500);
-	} while (!sdma->fw_loaded);
+	if (sdma_load_script(sdma))
+		dev_warn(sdma->dev, "failed to load firmware.\n");
 
 	ret = sdma_save_restore_context(sdma, false);
 	if (ret)
