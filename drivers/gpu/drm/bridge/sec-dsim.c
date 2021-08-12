@@ -942,7 +942,7 @@ static void sec_mipi_dsim_config_dpi(struct sec_mipi_dsim *dsim)
 		config |= CONFIG_MFLUSH_VS;
 
 	/* disable EoT packets in HS mode */
-	if (dsim->mode_flags & MIPI_DSI_MODE_EOT_PACKET)
+	if (dsim->mode_flags & MIPI_DSI_MODE_NO_EOT_PACKET)
 		config |= CONFIG_EOT_R03;
 
 	if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO) {
@@ -960,13 +960,13 @@ static void sec_mipi_dsim_config_dpi(struct sec_mipi_dsim *dsim)
 		if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_HSE)
 			config |= CONFIG_HSEDISABLEMODE;
 
-		if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_HFP)
+		if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_NO_HFP)
 			config |= CONFIG_HFPDISABLEMODE;
 
-		if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_HBP)
+		if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_NO_HBP)
 			config |= CONFIG_HBPDISABLEMODE;
 
-		if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_HSA)
+		if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_NO_HSA)
 			config |= CONFIG_HSADISABLEMODE;
 	}
 
