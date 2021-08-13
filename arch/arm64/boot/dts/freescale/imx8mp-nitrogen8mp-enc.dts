@@ -10,17 +10,12 @@
 
 	/delete-node/ regulator-can2-stby;
 
-	aliases {
-		/delete-property/ backlight_mipi;
-		/delete-property/ pwm_mipi;
-	};
-
 	csi_mclk: csi-mclk {
 		compatible = "pwm-clock";
 		#clock-cells = <0>;
 		clock-frequency = <20000000>;
 		clock-output-names = "csi_mclk";
-		pwms = <&pwm1 0 50>; /* 1 / 50 ns = 20 MHz */
+		pwms = <&pwm4 0 50>; /* 1 / 50 ns = 20 MHz */
 	};
 
 	reg_vref_2v5: regulator-vref-2v5 {
@@ -37,8 +32,6 @@
 	/delete-node/ flexcan2reggrp;
 	/delete-node/ hoggrp;
 	/delete-node/ key-can2grp;
-	/delete-node/ pwm1grp;
-	/delete-node/ pwm4grp;
 
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
@@ -80,25 +73,13 @@
 
 	pinctrl_i2c2c_ov5640_mipi: i2c2c-ov5640-mipigrp {
 		fsl,pins = <
+			/* J10 CSI2 capture */
 #define GP_OV5640_MIPI_POWER_DOWN	<&gpio5 4 GPIO_ACTIVE_HIGH>
 			MX8MP_IOMUXC_SPDIF_RX__GPIO5_IO04		0x141
-#define GP_OV5640_MIPI_RESET		<&gpio3 19 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_SAI5_RXFS__GPIO3_IO19		0x101
+#define GP_OV5640_MIPI_RESET		<&gpio5 5 GPIO_ACTIVE_LOW>
+			MX8MP_IOMUXC_SPDIF_EXT_CLK__GPIO5_IO05		0x101
 		>;
 	};
-
-	pinctrl_pwm1: pwm1grp {
-		fsl,pins = <
-			/* J11 mipi display */
-			MX8MP_IOMUXC_GPIO1_IO01__PWM1_OUT	0x116
-			/* J10 CSI2 capture */
-			MX8MP_IOMUXC_SPDIF_EXT_CLK__PWM1_OUT	0x116
-		>;
-	};
-};
-
-&backlight_mipi {
-	status = "disabled";
 };
 
 &dewarp {
@@ -184,13 +165,8 @@
 	};
 };
 
-&pwm1 {
-	assigned-clocks = <&clk IMX8MP_CLK_PWM1>;
+&pwm4 {
+	assigned-clocks = <&clk IMX8MP_CLK_PWM4>;
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_40M>;
 	assigned-clock-rates = <40000000>;
-};
-
-&pwm4 {
-	/delete-property/ pinctrl-0;
-	status = "disabled";
 };
