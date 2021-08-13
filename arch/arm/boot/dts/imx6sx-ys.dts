@@ -608,9 +608,6 @@
 	no-mmc-hs400;
 	non-removable;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
-#if 1
-	pinctrl-names = "default";
-#endif
 	pinctrl-0 = <&pinctrl_usdhc3_50mhz>;
 	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
