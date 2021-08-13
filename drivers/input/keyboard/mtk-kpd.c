@@ -24,7 +24,7 @@
 #define MTK_KPD_SEL_ROWMASK(X)  GENMASK(4 - 1 + X, 4)
 #define MTK_KPD_SEL_COLMASK(X)  GENMASK(10 - 1 + X, 10)
 #define MTK_KPD_NUM_MEMS	5
-#define MTK_KPD_NUM_BITS	136	/* 4*32+8 MEM5 only use 8 BITS */
+#define MTK_KPD_NUM_BITS	72	/* 4*16+8 MEM5 only use 8 BITS */
 
 struct mtk_keypad {
 	struct regmap *regmap;
@@ -42,7 +42,7 @@ struct mtk_keypad {
 
 static const struct regmap_config keypad_regmap_cfg = {
 	.reg_bits = 32,
-	.val_bits = 32,
+	.val_bits = 16,
 	.reg_stride = sizeof(u32),
 	.max_register = 36,
 };
