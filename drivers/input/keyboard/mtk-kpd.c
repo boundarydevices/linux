@@ -68,8 +68,8 @@ static void bitnr_to_col_row(bool is_double_keys, int bit_nr, int *col,
 		*row = bit_nr / 9;
 		*col = bit_nr % 3;
 	} else {
-		*row = bit_nr / 10;
-		*col = bit_nr / (2 + (*row * 13));
+		*row = bit_nr / 13;
+		*col = (bit_nr % 13) / 2;
 	}
 }
 
