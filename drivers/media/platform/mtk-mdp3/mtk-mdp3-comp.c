@@ -1193,6 +1193,30 @@ static void mdp_comp_deinit(struct mdp_comp *comp)
 		iounmap(comp->regs);
 }
 
+static int mdp_mm_init(struct mdp_dev *mdp, struct mdp_comp *comp,
+		       const char *ref_name)
+{
+	struct device_node *node;
+	struct device *dev = &mdp->pdev->dev;
+
+	node = of_parse_phandle(dev->of_node, ref_name, 0);
+	if (!node) {
+		dev_err(dev, "Failed to parse dt %s\n", ref_name);
+		return -EINVAL;
+	}
+
+	__mdp_comp_init(mdp, node, comp);
+	mdp_get_subsys_id(dev, node, comp);
+	of_node_put(node);
+	if (!comp->reg_base) {
+		dev_err(dev, "Failed to init %s base\n", ref_name);
+		of_node_put(node);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 void mdp_component_deinit(struct mdp_dev *mdp)
 {
 	int i;
