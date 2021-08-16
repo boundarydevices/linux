@@ -229,6 +229,7 @@ struct esdhc_platform_data {
 	unsigned int tuning_step;       /* The delay cell steps in tuning procedure */
 	unsigned int tuning_start_tap;	/* The start delay cell point in tuning procedure */
 	unsigned int strobe_dll_delay_target;	/* The delay cell for strobe pad (read clock) */
+	bool sdio_async_interrupt_enabled;
 };
 
 struct esdhc_soc_data {
@@ -435,6 +436,8 @@ static inline void esdhc_wait_for_card_clock_gate_off(struct sdhci_host *host)
 /* Enable the auto tuning circuit to check the CMD line and BUS line */
 static inline void usdhc_auto_tuning_mode_sel(struct sdhci_host *host)
 {
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct pltfm_imx_data *imx_data = sdhci_pltfm_priv(pltfm_host);
 	u32 buswidth, auto_tune_buswidth;
 
 	buswidth = USDHC_GET_BUSWIDTH(readl(host->ioaddr + SDHCI_HOST_CONTROL));
@@ -450,6 +453,18 @@ static inline void usdhc_auto_tuning_mode_sel(struct sdhci_host *host)
 		auto_tune_buswidth = ESDHC_VEND_SPEC2_AUTO_TUNE_1BIT_EN;
 		break;
 	}
+
+	/*
+	 * If sdio device use async interrupt, it will use DAT[1] to signal
+	 * the device's interrupt asynchronous when use 4 data lines.
+	 * Then hardware auto tuning circuit MUST NOT check the DAT[1] line,
+	 * otherwise auto tuning will be impacted by this async interrupt,
+	 * and change the delay cell incorrectly, which then cause data/cmd
+	 * errors.
+	 * This is the hardware auto tuning circuit limitation.
+	 */
+	if (imx_data->boarddata.sdio_async_interrupt_enabled)
+		auto_tune_buswidth = ESDHC_VEND_SPEC2_AUTO_TUNE_1BIT_EN;
 
 	esdhc_clrset_le(host, ESDHC_VEND_SPEC2_AUTO_TUNE_MODE_MASK,
 			auto_tune_buswidth | ESDHC_VEND_SPEC2_AUTO_TUNE_CMD_EN,
@@ -1572,6 +1587,9 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 
 	if (of_property_read_u32(np, "fsl,delay-line", &boarddata->delay_line))
 		boarddata->delay_line = 0;
+
+	if (of_property_read_bool(np, "fsl,sdio-async-interrupt-enabled"))
+		boarddata->sdio_async_interrupt_enabled = true;
 
 	mmc_of_parse_voltage(host->mmc, &host->ocr_mask);
 
