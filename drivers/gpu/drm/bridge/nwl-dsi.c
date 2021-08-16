@@ -183,6 +183,7 @@ struct nwl_dsi {
 	u32 bitclk;
 	u32 pixclock;
 	bool use_dcss;
+	bool modeset_done;
 };
 
 static const struct regmap_config nwl_dsi_regmap_config = {
@@ -1021,6 +1022,8 @@ nwl_dsi_bridge_atomic_post_disable(struct drm_bridge *bridge,
 		clk_disable_unprepare(dsi->lcdif_clk);
 
 	pm_runtime_put(dsi->dev);
+
+	dsi->modeset_done = false;
 }
 
 static unsigned long nwl_dsi_get_bit_clock(struct nwl_dsi *dsi,
@@ -1283,6 +1286,9 @@ nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 	struct mode_config *config;
 	int ret;
 
+	if (dsi->modeset_done)
+		return;
+
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "Setting mode:\n");
 	drm_mode_debug_printmodeline(adjusted_mode);
 
@@ -1362,6 +1368,8 @@ nwl_dsi_bridge_mode_set(struct drm_bridge *bridge,
 		DRM_DEV_ERROR(dev, "Failed to deassert DSI: %d\n", ret);
 		return;
 	}
+
+	dsi->modeset_done = true;
 }
 
 static void
