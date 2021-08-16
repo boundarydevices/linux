@@ -506,7 +506,7 @@ static int mxc_pcsi_get_sensor_fmt(struct mxc_parallel_csi_dev *pcsidev)
 }
 
 static int mxc_pcsi_enum_framesizes(struct v4l2_subdev *sd,
-				    struct v4l2_subdev_pad_config *cfg,
+				    struct v4l2_subdev_state *sd_state,
 				    struct v4l2_subdev_frame_size_enum *fse)
 {
 	struct mxc_parallel_csi_dev *pcsidev = sd_to_mxc_pcsi_dev(sd);
@@ -520,7 +520,7 @@ static int mxc_pcsi_enum_framesizes(struct v4l2_subdev *sd,
 }
 
 static int mxc_pcsi_enum_frame_interval(struct v4l2_subdev *sd,
-					struct v4l2_subdev_pad_config *cfg,
+					struct v4l2_subdev_state *sd_state,
 					struct v4l2_subdev_frame_interval_enum *fie)
 {
 	struct mxc_parallel_csi_dev *pcsidev = sd_to_mxc_pcsi_dev(sd);
@@ -534,7 +534,7 @@ static int mxc_pcsi_enum_frame_interval(struct v4l2_subdev *sd,
 }
 
 static int mxc_pcsi_get_fmt(struct v4l2_subdev *sd,
-			    struct v4l2_subdev_pad_config *cfg,
+			    struct v4l2_subdev_state *sd_state,
 			    struct v4l2_subdev_format *fmt)
 {
 	struct mxc_parallel_csi_dev *pcsidev = sd_to_mxc_pcsi_dev(sd);
@@ -549,7 +549,7 @@ static int mxc_pcsi_get_fmt(struct v4l2_subdev *sd,
 }
 
 static int mxc_pcsi_set_fmt(struct v4l2_subdev *sd,
-			    struct v4l2_subdev_pad_config *cfg,
+			    struct v4l2_subdev_state *sd_state,
 			    struct v4l2_subdev_format *fmt)
 {
 	struct mxc_parallel_csi_dev *pcsidev = sd_to_mxc_pcsi_dev(sd);
