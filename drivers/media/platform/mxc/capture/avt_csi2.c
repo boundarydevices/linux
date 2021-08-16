@@ -93,7 +93,7 @@ static uint32_t i2c_read(struct i2c_client *client, uint32_t reg,
 			uint32_t size, uint32_t count, char *buf)
 {
 	struct i2c_msg msg[2];
-	u8 msgbuf[size];
+	u8 msgbuf[8];
 	int ret = 0, i = 0, j = 0, reg_size_bkp;
 
 	reg_size_bkp = size;
@@ -1223,7 +1223,7 @@ long avt_csi2_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 
 /* --------------- VIDEO OPS --------------- */
 
-static int avt_csi2_g_mbus_config(struct v4l2_subdev *sd,
+static int avt_csi2_get_mbus_config(struct v4l2_subdev *sd, unsigned pad,
 		struct v4l2_mbus_config *cfg)
 {
 	cfg->type = V4L2_MBUS_CSI2_DPHY;
@@ -3902,7 +3902,6 @@ static const struct v4l2_subdev_internal_ops avt_csi2_int_ops = {
 };
 
 static const struct v4l2_subdev_video_ops avt_csi2_video_ops = {
-	.g_mbus_config = avt_csi2_g_mbus_config,
 	.s_stream = avt_csi2_s_stream,
 	.s_parm = avt_s_parm,
 	.g_parm = avt_g_parm,
@@ -3916,6 +3915,7 @@ static const struct v4l2_subdev_pad_ops avt_csi2_pad_ops = {
 	.enum_frame_interval = avt_csi2_enum_frameintervals,
 	.get_selection = avt_get_selection,
 	.set_selection = avt_set_selection,
+	.get_mbus_config = avt_csi2_get_mbus_config,
 };
 
 static const struct v4l2_subdev_ops avt_csi2_subdev_ops = {
