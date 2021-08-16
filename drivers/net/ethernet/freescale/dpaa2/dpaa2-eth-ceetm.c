@@ -1147,7 +1147,7 @@ int dpaa2_ceetm_classify(struct sk_buff *skb, struct Qdisc *sch,
 	int result;
 
 	tcf = rcu_dereference_bh(priv->filter_list);
-	while (tcf && (result = tcf_classify(skb, tcf, &res, false)) >= 0) {
+	while (tcf && (result = tcf_classify(skb, priv->block, tcf, &res, false)) >= 0) {
 #ifdef CONFIG_NET_CLS_ACT
 		switch (result) {
 		case TC_ACT_QUEUED:
