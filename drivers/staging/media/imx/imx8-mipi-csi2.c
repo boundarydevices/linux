@@ -886,7 +886,7 @@ static int mipi_csi2_s_stream(struct v4l2_subdev *sd, int enable)
 }
 
 static int mipi_csi2_enum_framesizes(struct v4l2_subdev *sd,
-				     struct v4l2_subdev_pad_config *cfg,
+				     struct v4l2_subdev_state *sd_state,
 				     struct v4l2_subdev_frame_size_enum *fse)
 {
 	struct mxc_mipi_csi2_dev *csi2dev = sd_to_mxc_mipi_csi2_dev(sd);
@@ -900,7 +900,7 @@ static int mipi_csi2_enum_framesizes(struct v4l2_subdev *sd,
 }
 
 static int mipi_csi2_enum_frame_interval(struct v4l2_subdev *sd,
-					 struct v4l2_subdev_pad_config *cfg,
+					 struct v4l2_subdev_state *sd_state,
 					 struct v4l2_subdev_frame_interval_enum *fie)
 {
 	struct mxc_mipi_csi2_dev *csi2dev = sd_to_mxc_mipi_csi2_dev(sd);
@@ -914,7 +914,7 @@ static int mipi_csi2_enum_frame_interval(struct v4l2_subdev *sd,
 }
 
 static int mipi_csi2_get_fmt(struct v4l2_subdev *sd,
-			     struct v4l2_subdev_pad_config *cfg,
+			     struct v4l2_subdev_state *sd_state,
 			     struct v4l2_subdev_format *fmt)
 {
 	struct mxc_mipi_csi2_dev *csi2dev = sd_to_mxc_mipi_csi2_dev(sd);
@@ -929,7 +929,7 @@ static int mipi_csi2_get_fmt(struct v4l2_subdev *sd,
 }
 
 static int mipi_csi2_set_fmt(struct v4l2_subdev *sd,
-			     struct v4l2_subdev_pad_config *cfg,
+			     struct v4l2_subdev_state *sd_state,
 			     struct v4l2_subdev_format *fmt)
 {
 	struct mxc_mipi_csi2_dev *csi2dev = sd_to_mxc_mipi_csi2_dev(sd);
