@@ -304,8 +304,8 @@ static int mipi_csi2_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	return 0;
 }
 
-static int mipi_csis_s_mbus_config(struct v4l2_subdev *sd,
-				const struct v4l2_mbus_config *cfg)
+static int mipi_csis_set_mbus_config(struct v4l2_subdev *sd, unsigned pad,
+				struct v4l2_mbus_config *cfg)
 {
 	struct mxc_mipi_csi2_dev *csi2dev = sd_to_mxc_mipi_csi2_dev(sd);
 
@@ -354,9 +354,9 @@ static int mipi_csi2_s_stream(struct v4l2_subdev *sd, int enable)
 			mxc_mipi_csi2_phy_reset(csi2dev);
 
 			cfg.flags = 0;
-			v4l2_subdev_call(sensor_sd, video, g_mbus_config, &cfg);
+			v4l2_subdev_call(sensor_sd, pad, get_mbus_config, 0, &cfg);
 			if (cfg.flags)
-				mipi_csis_s_mbus_config(sd, &cfg);
+				mipi_csis_set_mbus_config(sd, 0, &cfg);
 
 			mxc_mipi_csi2_hc_config(csi2dev);
 			mxc_mipi_csi2_enable(csi2dev);
@@ -461,6 +461,7 @@ static struct v4l2_subdev_pad_ops mipi_csi2_pad_ops = {
 	.enum_mbus_code = mipi_csis_enum_mbus_code,
 	.get_fmt = mipi_csi2_get_fmt,
 	.set_fmt = mipi_csi2_set_fmt,
+	.set_mbus_config = mipi_csis_set_mbus_config,
 };
 
 static struct v4l2_subdev_core_ops mipi_csi2_core_ops = {
@@ -469,7 +470,6 @@ static struct v4l2_subdev_core_ops mipi_csi2_core_ops = {
 
 static struct v4l2_subdev_video_ops mipi_csi2_video_ops = {
 	.s_stream = mipi_csi2_s_stream,
-	.s_mbus_config = mipi_csis_s_mbus_config,
 	.s_parm = mipi_csis_s_parm,
 	.g_parm = mipi_csis_g_parm,
 };
