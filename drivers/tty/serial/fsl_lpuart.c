@@ -2884,7 +2884,6 @@ static struct uart_driver lpuart_reg = {
 static int lpuart_attach_pd(struct device *dev)
 {
 	struct device *pd_uart;
-	struct device *pd_txdma, *pd_rxdma;
 	struct device_link *link;
 
 	if (dev->pm_domain)
@@ -2894,30 +2893,6 @@ static int lpuart_attach_pd(struct device *dev)
 	if (IS_ERR(pd_uart))
 		return PTR_ERR(pd_uart);
 	link = device_link_add(dev, pd_uart, DL_FLAG_STATELESS |
-					     DL_FLAG_PM_RUNTIME |
-					     DL_FLAG_RPM_ACTIVE);
-	if (IS_ERR(link)) {
-		dev_err(dev, "Failed to add device_link to uart pd: %ld\n",
-			PTR_ERR(link));
-		return PTR_ERR(link);
-	}
-
-	pd_txdma = dev_pm_domain_attach_by_name(dev, "txdma");
-	if (IS_ERR(pd_txdma))
-		return PTR_ERR(pd_txdma);
-	link = device_link_add(dev, pd_txdma, DL_FLAG_STATELESS |
-					     DL_FLAG_PM_RUNTIME |
-					     DL_FLAG_RPM_ACTIVE);
-	if (IS_ERR(link)) {
-		dev_err(dev, "Failed to add device_link to uart pd: %ld\n",
-			PTR_ERR(link));
-		return PTR_ERR(link);
-	}
-
-	pd_rxdma = dev_pm_domain_attach_by_name(dev, "rxdma");
-	if (IS_ERR(pd_rxdma))
-		return PTR_ERR(pd_rxdma);
-	link = device_link_add(dev, pd_rxdma, DL_FLAG_STATELESS |
 					     DL_FLAG_PM_RUNTIME |
 					     DL_FLAG_RPM_ACTIVE);
 	if (IS_ERR(link)) {
