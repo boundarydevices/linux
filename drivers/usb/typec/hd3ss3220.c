@@ -172,6 +172,29 @@ static ssize_t store_reset(struct device *dev,
 }
 DEVICE_ATTR(reset, S_IWUSR, NULL, store_reset);
 
+static ssize_t cable_direction_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct hd3ss3220 *hd3ss3220 = i2c_get_clientdata(client);
+	unsigned int data;
+	const char *p;
+	int ret;
+
+	ret = regmap_read(hd3ss3220->regmap, HD3SS3220_REG_CN_STAT_CTRL, &data);
+	if (ret < 0)
+		return -EINVAL;
+	if (!(data & 0xc0))
+		p = "none";
+	else if (data & 0x20)
+		p = "cc1";
+	else
+		p = "cc2";
+	return sprintf(buf, "%s\n", p);
+}
+DEVICE_ATTR_RO(cable_direction);
+
 static int hd3ss3220_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
 {
@@ -260,7 +283,9 @@ static int hd3ss3220_probe(struct i2c_client *client,
 	ret = device_create_file(&client->dev, &dev_attr_reset);
 	if (ret < 0)
 		dev_err(&client->dev, "failed to create dev_attr_reset\n");
-
+	ret = device_create_file(&client->dev, &dev_attr_cable_direction);
+	if (ret < 0)
+		dev_err(&client->dev, "failed to create dev_attr_cable_direction\n");
 	return 0;
 err_unreg_port:
 	typec_unregister_port(hd3ss3220->port);
