@@ -682,6 +682,11 @@
 	vmmc-supply = <&reg_vref_3v3>;
 };
 
+&vpu {
+	regulator-supply = <&reg_soc_gpu_vpu>;
+	status = "okay";
+};
+
 &wdog1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_wdog>;
