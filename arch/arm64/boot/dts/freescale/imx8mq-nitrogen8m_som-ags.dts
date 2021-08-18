@@ -14,11 +14,6 @@
 		/delete-property/ csi1;
 	};
 
-	pcie1_refclk: pcie1-refclk {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <100000000>;
-	};
 	/delete-node/ sound-wm8960;
 };
 
@@ -135,18 +130,24 @@
 
 &pcie1 {
 	/delete-property/ hard-wired;
-#if 0
-	/* Leave in hog group for now */
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pcie1>;
-#endif
-	reset-gpio = GP_PCIE1_RESET;
+	assigned-clocks = <&clk IMX8MQ_CLK_PCIE2_AUX>,
+			  <&clk IMX8MQ_CLK_PCIE2_PHY>,
+			  <&clk IMX8MQ_CLK_PCIE2_CTRL>;
+	assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_50M>,
+				 <&clk IMX8MQ_SYS2_PLL_100M>,
+				 <&clk IMX8MQ_SYS2_PLL_250M>;
 	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
 		<&clk IMX8MQ_CLK_PCIE2_AUX>,
 		<&clk IMX8MQ_CLK_PCIE2_PHY>,
 		<&pcie1_refclk>;
 	clock-names = "pcie", "pcie_bus", "pcie_phy", "pcie_ext_src";
 	ext_osc = <0>;
+#if 0
+	/* Leave in hog group for now */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie1>;
+#endif
+	reset-gpio = GP_PCIE1_RESET;
 	status = "okay";
 };
 
