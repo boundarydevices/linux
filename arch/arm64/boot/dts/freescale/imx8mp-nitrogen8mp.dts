@@ -1662,7 +1662,6 @@
 	pinctrl-0 = <&pinctrl_usb3_0>;
 	status = "okay";
 	usb-role-switch;
-	vbus-supply = <&reg_usb_otg_vbus>;
 
 	ports {
 		#address-cells = <1>;
@@ -1690,17 +1689,18 @@
 	pinctrl-0 = <&pinctrl_usb3_1>;
 	reset-gpios = GP_USB3_1_HUB_RESET;
 	status = "okay";
-	vbus-supply = <&reg_vref_5v0>;
 };
 
 &usb3_phy0 {
 	fsl,phy-tx-preemp-amp-tune = <2>;
 	status = "okay";
+	vbus-supply = <&reg_usb_otg_vbus>;
 };
 
 &usb3_phy1 {
 	fsl,phy-tx-preemp-amp-tune = <2>;
 	status = "okay";
+	vbus-supply = <&reg_vref_5v0>;
 };
 
 &usdhc1 {
