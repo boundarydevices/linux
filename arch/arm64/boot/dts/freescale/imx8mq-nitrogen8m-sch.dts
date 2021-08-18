@@ -113,18 +113,10 @@
 	model = "Boundary Devices i.MX8MQ Nitrogen8M-sch";
 	compatible = "boundary,imx8mq-nitrogen8m-sch", "fsl,imx8mq";
 
-	clocks {
-		spi_uart_clk: osc_max14830 {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <3686400>;
-		};
-
-		pcie1_refclk: pcie1-refclk {
-			compatible = "fixed-clock";
-			#clock-cells = <0>;
-			clock-frequency = <100000000>;
-		};
+	spi_uart_clk: osc_max14830 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <3686400>;
 	};
 };
 
@@ -189,6 +181,13 @@
 };
 
 &pcie1 {
+	assigned-clocks = <&clk IMX8MQ_CLK_PCIE2_AUX>,
+			  <&clk IMX8MQ_CLK_PCIE2_PHY>,
+			  <&clk IMX8MQ_CLK_PCIE2_CTRL>;
+	assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_50M>,
+				 <&clk IMX8MQ_SYS2_PLL_100M>,
+				 <&clk IMX8MQ_SYS2_PLL_250M>;
+	assigned-clock-rates = <10000000>, <100000000>, <250000000>;
 	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
 		<&clk IMX8MQ_CLK_PCIE2_AUX>,
 		<&clk IMX8MQ_CLK_PCIE2_PHY>,
