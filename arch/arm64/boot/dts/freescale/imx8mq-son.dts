@@ -802,14 +802,18 @@
 
 &A53_0 {
 	cpu-supply = <&reg_sw3>;
+};
 
-	operating-points = <
-		/* kHz    uV */
-		1500000 1000000
-		1300000 1000000
-		1000000 900000
-		800000  900000
-	>;
+&A53_1 {
+	cpu-supply = <&reg_sw3>;
+};
+
+&A53_2 {
+	cpu-supply = <&reg_sw3>;
+};
+
+&A53_3 {
+	cpu-supply = <&reg_sw3>;
 };
 
 &dcss {
