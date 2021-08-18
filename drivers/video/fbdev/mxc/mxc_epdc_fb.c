@@ -4287,7 +4287,7 @@ static void mxc_epdc_fb_fw_handler(const struct firmware *fw,
 		dev_dbg(fb_data->dev,
 			"Can't find firmware. Trying fallback fw\n");
 		fb_data->fw_default_load = true;
-		ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
+		ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_UEVENT,
 			"imx/epdc/epdc.fw", fb_data->dev, GFP_KERNEL, fb_data,
 			mxc_epdc_fb_fw_handler);
 		if (ret)
@@ -4420,7 +4420,7 @@ static int mxc_epdc_fb_init_hw(struct fb_info *info)
 
 	fb_data->fw_default_load = false;
 
-	ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
+	ret = request_firmware_nowait(THIS_MODULE, FW_ACTION_UEVENT,
 				fb_data->fw_str, fb_data->dev, GFP_KERNEL,
 				fb_data, mxc_epdc_fb_fw_handler);
 	if (ret)
