@@ -697,6 +697,12 @@
 		clock-frequency = <100000000>;
 	};
 
+	pcie1_refclk: pcie1-refclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <100000000>;
+	};
+
 	reg_usb_otg_vbus: regulator-usb-otg-vbus {
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";
@@ -1228,6 +1234,13 @@
 };
 
 &pcie0 {
+	assigned-clocks = <&clk IMX8MQ_CLK_PCIE1_AUX>,
+			  <&clk IMX8MQ_CLK_PCIE1_PHY>,
+			  <&clk IMX8MQ_CLK_PCIE1_CTRL>;
+	assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_50M>,
+				 <&clk IMX8MQ_SYS2_PLL_100M>,
+				 <&clk IMX8MQ_SYS2_PLL_250M>;
+	assigned-clock-rates = <10000000>, <100000000>, <250000000>;
 	clkreq-gpio = GP_PCIE0_CLKREQ;
 #if 1
 	clocks = <&clk IMX8MQ_CLK_PCIE1_ROOT>,
@@ -1254,9 +1267,20 @@
 };
 
 &pcie1 {
-	/* TODO check clock */
+	assigned-clocks = <&clk IMX8MQ_CLK_PCIE2_AUX>,
+			  <&clk IMX8MQ_CLK_PCIE2_PHY>,
+			  <&clk IMX8MQ_CLK_PCIE2_CTRL>;
+	assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_50M>,
+				 <&clk IMX8MQ_SYS2_PLL_100M>,
+				 <&clk IMX8MQ_SYS2_PLL_250M>;
+	assigned-clock-rates = <10000000>, <100000000>, <250000000>;
+	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
+		<&clk IMX8MQ_CLK_PCIE2_AUX>,
+		<&clk IMX8MQ_CLK_PCIE2_PHY>,
+		<&pcie1_refclk>;
+	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
 	ext_osc = <1>;
-	hard-wired = <1>;
+	hard-wired;
 	status = "disabled";
 };
 
