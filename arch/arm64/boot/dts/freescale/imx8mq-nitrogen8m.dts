@@ -1555,6 +1555,7 @@
 
 &usb3_phy0 {
 	status = "okay";
+	vbus-supply = <&reg_usb_otg_vbus>;
 };
 
 &usb_dwc3_0 {
@@ -1562,7 +1563,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usb3_0>;
 	status = "okay";
-	vbus-supply = <&reg_usb_otg_vbus>;
 };
 
 &usb3_phy1 {
