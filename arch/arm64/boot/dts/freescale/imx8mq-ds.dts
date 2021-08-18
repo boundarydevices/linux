@@ -591,6 +591,13 @@
 };
 
 &pcie0 { /* SX-PCEAC2 */
+	assigned-clocks = <&clk IMX8MQ_CLK_PCIE1_AUX>,
+			  <&clk IMX8MQ_CLK_PCIE1_PHY>,
+			  <&clk IMX8MQ_CLK_PCIE1_CTRL>;
+	assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_50M>,
+				 <&clk IMX8MQ_SYS2_PLL_100M>,
+				 <&clk IMX8MQ_SYS2_PLL_250M>;
+	assigned-clock-rates = <10000000>, <100000000>, <250000000>;
 	clocks = <&clk IMX8MQ_CLK_PCIE1_ROOT>,
 		<&clk IMX8MQ_CLK_PCIE1_AUX>,
 		<&clk IMX8MQ_CLK_PCIE1_PHY>,
@@ -605,6 +612,13 @@
 };
 
 &pcie1 { /* Edge TPU */
+	assigned-clocks = <&clk IMX8MQ_CLK_PCIE2_AUX>,
+			  <&clk IMX8MQ_CLK_PCIE2_PHY>,
+			  <&clk IMX8MQ_CLK_PCIE2_CTRL>;
+	assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_50M>,
+				 <&clk IMX8MQ_SYS2_PLL_100M>,
+				 <&clk IMX8MQ_SYS2_PLL_250M>;
+	assigned-clock-rates = <10000000>, <100000000>, <250000000>;
 	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
 		<&clk IMX8MQ_CLK_PCIE2_AUX>,
 		<&clk IMX8MQ_CLK_PCIE2_PHY>,
