@@ -98,6 +98,8 @@
 #define CY_PCIE_89459_DEVICE_ID         0x4415
 #define CY_PCIE_89459_RAW_DEVICE_ID     0x4355
 #define CY_PCIE_54591_DEVICE_ID         0x4417
+#define CY_PCIE_54590_DEVICE_ID		0x4416
+#define CY_PCIE_54594_DEVICE_ID		0x441a
 
 /* brcmsmac IDs */
 #define BCM4313_D11N2G_ID	0x4727	/* 4313 802.11n 2.4G device */
