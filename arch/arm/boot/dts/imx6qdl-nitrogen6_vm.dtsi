@@ -23,6 +23,8 @@
 		hannstar = &hannstar ;
 		lg1280x800 = &lg1280x800;
 		okaya1024x600 = &okaya1024x600;
+		ts_goodix = &ts_goodix;
+		ts_goodix2 = &ts_goodix2;
 	};
 
 	memory {
@@ -259,6 +261,11 @@
 			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		/* J40 pin 4 - I2C3 and J57 pin 4 */
 #define PCAP_RESETN	<&gpio1 21 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_SD1_DAT3__GPIO1_IO21		0x1b0b0		/* J40 pin 3 */
+#define GPIRQ_GT911		<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
+#define GP_GT911_IRQ		<&gpio1 9 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0
+#define GP_GT911_RESET		<&gpio2 7 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x030b0
 		>;
 	};
 
@@ -607,6 +614,24 @@
 		reg = <0x38>;
 		interrupts-extended = PCAP_TOUCH_IRQ;
 		wakeup-gpios = PCAP_TOUCH_IRQ;
+	};
+
+	ts_goodix: touchscreen@14 {
+		compatible = "goodix,gt911";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		reg = <0x14>;
+		reset-gpios = GP_GT911_RESET;
+	};
+
+	ts_goodix2: touchscreen@5d {
+		compatible = "goodix,gt911";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		reg = <0x5d>;
+		reset-gpios = GP_GT911_RESET;
 	};
 };
 
