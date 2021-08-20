@@ -1043,6 +1043,7 @@
 };
 
 &i2c3b {
+#if 0
 	ov5640-mipi1@3c {
 		AVDD-supply = <&reg_vref_2v5>;
 		DOVDD-supply = <&reg_vref_1v8>;
@@ -1065,6 +1066,7 @@
 			};
 		};
 	};
+#endif
 };
 
 &i2c4 {
@@ -1090,6 +1092,7 @@
 };
 
 &mipi_csi_1 {
+#if 0
 	#address-cells = <1>;
 	#size-cells = <0>;
 	status = "okay";
@@ -1105,6 +1108,7 @@
 			csis-wclk;
 		};
 	};
+#endif
 };
 
 &mipi_dsi {
