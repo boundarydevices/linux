@@ -33,5 +33,5 @@ obj-$(CONFIG_PCIE_UNIPHIER_EP) += pcie-uniphier-ep.o
 
 ifdef CONFIG_PCI
 obj-$(CONFIG_PCI_DW_AMAZON) += pcie-al.o
-obj-$(CONFIG_ARM64) += pcie-hisi.o
+obj-$(CONFIG_PCI_HISI) += pcie-hisi.o
 endif
