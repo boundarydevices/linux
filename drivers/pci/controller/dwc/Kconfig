@@ -146,6 +146,15 @@ config PCI_KEYSTONE_EP
 	  on DesignWare hardware and therefore the driver re-uses the
 	  DesignWare core functions to implement the driver.
 
+config PCI_DW_AMAZON
+	bool "Amazon Annapurna Labs PCIe host controller"
+	depends on CONFIG_ARM64
+	help
+	  Say Y here if you want to enable PCI controller support on Amazon
+	  Annapurna. The PCI controller is based on DesignWare hardware and
+	  herefore the driver re-uses the DesignWare core functions to
+	  implement the driver.
+
 config PCI_LAYERSCAPE
 	bool "Freescale Layerscape PCIe controller - Host mode"
 	depends on OF && (ARM || ARCH_LAYERSCAPE || COMPILE_TEST)
