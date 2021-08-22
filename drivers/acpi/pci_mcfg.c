@@ -67,6 +67,7 @@ static struct mcfg_fixup mcfg_quirks[] = {
 	QCOM_ECAM32(6),
 	QCOM_ECAM32(7),
 
+#ifdef CONFIG_PCI_HISI
 #define HISI_QUAD_DOM(table_id, seg, ops) \
 	{ "HISI  ", table_id, 0, (seg) + 0, MCFG_BUS_ANY, ops }, \
 	{ "HISI  ", table_id, 0, (seg) + 1, MCFG_BUS_ANY, ops }, \
@@ -79,6 +80,7 @@ static struct mcfg_fixup mcfg_quirks[] = {
 	HISI_QUAD_DOM("HIP07   ",  4, &hisi_pcie_ops),
 	HISI_QUAD_DOM("HIP07   ",  8, &hisi_pcie_ops),
 	HISI_QUAD_DOM("HIP07   ", 12, &hisi_pcie_ops),
+#endif
 
 #define THUNDER_PEM_RES(addr, node) \
 	DEFINE_RES_MEM((addr) + ((u64) (node) << 44), 0x39 * SZ_16M)
