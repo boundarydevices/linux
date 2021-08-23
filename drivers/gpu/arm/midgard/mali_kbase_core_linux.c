@@ -3549,6 +3549,12 @@ static void kbase_device_coherency_init(struct kbase_device *kbdev,
 				override_coherency);
 	}
 
+	if (kbdev->dev->dma_coherent) {
+		kbdev->dev->dma_coherent = 0;
+		kbdev->system_coherency = COHERENCY_ACE_LITE;
+		dev_warn(kbdev->dev,
+			"Disable DMA coherency and set system coherency to ACE_LITE");
+	}
 #endif /* CONFIG_OF */
 
 	kbdev->gpu_props.props.raw_props.coherency_mode =
