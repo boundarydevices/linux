@@ -593,10 +593,13 @@ static int dw_pcie_valid_device(struct pcie_port *pp, struct pci_bus *bus,
 				int dev)
 {
 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+	u32 val;
 
 	/* If there is no link, then there is no device */
 	if (bus->number != pp->root_bus_nr) {
-		if (!dw_pcie_link_up(pci))
+		/* still training seems ok here */
+		val = readl(pci->dbi_base + PCIE_PORT_DEBUG1);
+		if (!(val & PCIE_PORT_DEBUG1_LINK_UP))
 			return 0;
 	}
 
