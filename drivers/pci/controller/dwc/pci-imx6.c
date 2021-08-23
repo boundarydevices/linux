@@ -1234,6 +1234,8 @@ static void imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
 	int ret, i;
 	u32 val, tmp;
 
+	activate_reset(imx6_pcie);
+
 	if (imx6_pcie->vpcie && !regulator_is_enabled(imx6_pcie->vpcie)) {
 		ret = regulator_enable(imx6_pcie->vpcie);
 		if (ret) {
@@ -1256,8 +1258,6 @@ static void imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
 		imx6_pcie_clk_enable(imx6_pcie);
 		break;
 	}
-
-	activate_reset(imx6_pcie);
 
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX8QM:
