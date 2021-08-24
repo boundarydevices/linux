@@ -1,5 +1,4 @@
-# CONFIG_LTO_CLANG_FULL is not set
-# CONFIG_CFI_CLANG is not set
+CONFIG_LTO_CLANG_THIN=y
 # CONFIG_MXC_HANTRO_845 is not set
 # CONFIG_ARM64_BTI_KERNEL is not set
 
