@@ -112,6 +112,7 @@ typedef va_list gctARGUMENTS;
 #define gcmkOUTPUT_STRING(String) \
     printk("%s", String); \
 
+#if !defined(gcdANDROID) || gcdDEBUG
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,14,0)
 #define gcmkDUMP_STRING(Os, String) \
     do \
@@ -148,6 +149,7 @@ typedef va_list gctARGUMENTS;
         mutex_unlock(&Os->dumpFilpMutex); \
     } \
     while (0)
+#endif
 #endif
 
 #define gcmkSPRINTF(Destination, Size, ...) \
