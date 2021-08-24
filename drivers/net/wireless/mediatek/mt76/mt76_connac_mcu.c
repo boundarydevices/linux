@@ -2047,12 +2047,6 @@ mt76_connac_mcu_rate_txpower_band(struct mt76_phy *phy,
 		if (err < 0)
 			return err;
 	}
-	if (phy->cap.has_6ghz) {
-		err = mt76_connac_mcu_rate_txpower_band(phy,
-							NL80211_BAND_6GHZ);
-		if (err < 0)
-			return err;
-	}
 
 	return 0;
 }
@@ -2070,6 +2064,12 @@ int mt76_connac_mcu_set_rate_txpower(struct mt76_phy *phy)
 	if (phy->cap.has_5ghz) {
 		err = mt76_connac_mcu_rate_txpower_band(phy,
 							NL80211_BAND_5GHZ);
+		if (err < 0)
+			return err;
+	}
+	if (phy->cap.has_6ghz) {
+		err = mt76_connac_mcu_rate_txpower_band(phy,
+							NL80211_BAND_6GHZ);
 		if (err < 0)
 			return err;
 	}
