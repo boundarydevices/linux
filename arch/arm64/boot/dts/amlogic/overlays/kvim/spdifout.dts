@@ -1,0 +1,13 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    fragment@0 {
+	target = <&aiu>;
+
+	__overlay__ {
+		pinctrl-0 = <&spdif_out_h_pins>;
+		status = "okay";
+	};
+    };
+};
