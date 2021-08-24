@@ -602,9 +602,14 @@
 
 	reg_vref_5v: regulator-vref-5v {
 		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_5v>;
 		regulator-name = "vref-5v";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
+		gpio = GP_REG_5V_EN;
+		enable-active-high;
+		regulator-always-on;
 	};
 
 	reg_wlan_vmmc: regulator-wlan-vmmc {
