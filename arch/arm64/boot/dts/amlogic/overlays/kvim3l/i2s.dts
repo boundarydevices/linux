@@ -1,0 +1,19 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    fragment@0 {
+	target = <&tdmif_b>;
+
+	__overlay__ {
+//		assigned-clocks = <&clkc_audio AUD_CLKID_TDM_SCLK_PAD1>,
+//				  <&clkc_audio AUD_CLKID_TDM_LRCLK_PAD1>;
+//		assigned-clock-parents = <&clkc_audio AUD_CLKID_MST_B_SCLK>,
+//					 <&clkc_audio AUD_CLKID_MST_B_LRCLK>;
+//		assigned-clock-rates = <0>, <0>;
+		pinctrl-0 = <&tdm_b_fs_pins>, <&tdm_b_dout0_pins>,
+			    <&tdm_b_sclk_pins>, <&mclk0_a_pins>;
+		status = "okay";
+	};
+    };
+};
