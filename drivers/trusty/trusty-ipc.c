@@ -27,6 +27,7 @@
 #include <linux/trusty/trusty_ipc.h>
 
 #include <uapi/linux/trusty/ipc.h>
+#include <asm/pgtable-prot.h>
 
 #define MAX_DEVICES			4
 
@@ -1142,6 +1143,92 @@ static int dn_connect_ioctl(struct tipc_dn_chan *dn, char __user *usr_name)
 	return dn_wait_for_reply(dn, REPLY_TIMEOUT);
 }
 
+#if defined(CONFIG_ARM64)
+typedef uintptr_t vaddr_t;
+static void arm64_write_ATS1ExW(uint64_t vaddr)
+{
+        uint64_t _current_el;
+
+        __asm__ volatile("mrs %0, CurrentEL" : "=r" (_current_el));
+
+        _current_el = (_current_el >> 2) & 0x3;
+        switch (_current_el) {
+        case 0x1:
+            __asm__ volatile("at S1E1W, %0" :: "r" (vaddr));
+            break;
+        case 0x2:
+            __asm__ volatile("at S1E2W, %0" :: "r" (vaddr));
+            break;
+        case 0x3:
+        default:
+            printk("Unsupported execution state: EL%lu\n", _current_el );
+            break;
+        }
+
+        __asm__ volatile("isb" ::: "memory");
+}
+static uint64_t arm64_read_par64(void)
+{
+        uint64_t _val;
+        __asm__ volatile("mrs %0, par_el1" : "=r" (_val));
+        return _val;
+}
+static uint64_t va2par(vaddr_t va)
+{
+        uint64_t par;
+        local_irq_disable();
+        arm64_write_ATS1ExW(va);
+        par = arm64_read_par64();
+        local_irq_enable();
+        return par;
+}
+static void get_pgprot_from_memory(pgprot_t* prot, struct dma_buf *dmabuf) {
+        uint64_t vaddr = (uint64_t)dma_buf_vmap(dmabuf);
+        if (vaddr) {
+            uint64_t par_el1 = va2par((vaddr_t)vaddr);
+            uint8_t attr = (par_el1 & 0xff00000000000000) >> 56;
+            u64 mair;
+            asm ("mrs %0, mair_el1\n" : "=&r" (mair));
+            size_t index = 0;
+            for(; index < sizeof(mair); index++) {
+                uint8_t attr_temp = (mair >> index*8) & 0x00000000000000ff;
+                if (attr == attr_temp)
+                    break;
+            }
+            switch (index) {
+                case 0:
+                    *prot = __pgprot(PROT_NORMAL);
+                    break;
+                case 1:
+                    *prot = __pgprot(PROT_NORMAL_TAGGED);
+                    break;
+                case 2:
+                    *prot = __pgprot(PROT_NORMAL_NC);
+                    break;
+                case 3:
+                    *prot = __pgprot(PROT_NORMAL_WT);
+                    break;
+                case 4:
+                    *prot = __pgprot(PROT_DEVICE_nGnRnE);
+                    break;
+                case 5:
+                    *prot = __pgprot(PROT_DEVICE_nGnRE);
+                    break;
+                case 6:
+                    goto vunmap;
+                case 7:
+                    goto vunmap;
+                default:
+                    printk("attr is not in the mair register \n");
+                    goto vunmap;
+            }
+        }
+vunmap:
+        dma_buf_vunmap(dmabuf, (uint8_t*)vaddr);
+
+}
+#endif
+
 static int dn_share_fd(struct tipc_dn_chan *dn, int fd,
 		       enum transfer_kind transfer_kind,
 		       struct tipc_shared_handle **out)
@@ -1233,6 +1320,9 @@ static int dn_share_fd(struct tipc_dn_chan *dn, int fd,
 		goto cleanup_handle;
 	}
 
+#if defined(CONFIG_ARM64)
+        get_pgprot_from_memory(&prot, shared_handle->dma_buf);
+#endif
 	ret = trusty_transfer_memory(tipc_shared_handle_dev(shared_handle),
 				     &mem_id, shared_handle->sgt->sgl,
 				     shared_handle->sgt->orig_nents, prot, tag,
