@@ -646,6 +646,12 @@ static struct sdma_driver_data sdma_imx6q = {
 	.script_addrs = &sdma_script_imx6q,
 };
 
+static struct sdma_driver_data sdma_imx6sx = {
+	.chnenbl0 = SDMA_CHNENBL0_IMX35,
+	.num_events = 48,
+	.script_addrs = &sdma_script_imx6q,
+};
+
 static struct sdma_driver_data sdma_imx6ul = {
 	.chnenbl0 = SDMA_CHNENBL0_IMX35,
 	.num_events = 48,
@@ -696,6 +702,7 @@ static const struct of_device_id sdma_dt_ids[] = {
 	{ .compatible = "fsl,imx31-sdma", .data = &sdma_imx31, },
 	{ .compatible = "fsl,imx25-sdma", .data = &sdma_imx25, },
 	{ .compatible = "fsl,imx7d-sdma", .data = &sdma_imx7d, },
+	{ .compatible = "fsl,imx6sx-sdma", .data = &sdma_imx6sx, },
 	{ .compatible = "fsl,imx6ul-sdma", .data = &sdma_imx6ul, },
 	{ .compatible = "fsl,imx8mq-sdma", .data = &sdma_imx8mq, },
 	{ .compatible = "fsl,imx8mp-sdma", .data = &sdma_imx8mp, },
@@ -2644,8 +2651,8 @@ static int sdma_suspend(struct device *dev)
 	int i, ret = 0;
 
 	/* Do nothing if not i.MX6SX/6UL or i.MX7D, i.MX8MP */
-	if (sdma->drvdata != &sdma_imx7d && sdma->drvdata != &sdma_imx6ul
-	    && sdma->drvdata != &sdma_imx8mp)
+	if (sdma->drvdata != &sdma_imx6sx && sdma->drvdata != &sdma_imx7d
+	    && sdma->drvdata != &sdma_imx6ul && sdma->drvdata != &sdma_imx8mp)
 		return 0;
 
 	if (!sdma->is_on)
@@ -2687,8 +2694,8 @@ static int sdma_resume(struct device *dev)
 	int i, ret;
 
 	/* Do nothing if not i.MX6SX/6UL or i.MX7D, i.MX8MP */
-	if (sdma->drvdata != &sdma_imx7d && sdma->drvdata != &sdma_imx6ul
-	    && sdma->drvdata != &sdma_imx8mp)
+	if (sdma->drvdata != &sdma_imx6sx && sdma->drvdata != &sdma_imx7d
+	    && sdma->drvdata != &sdma_imx6ul && sdma->drvdata != &sdma_imx8mp)
 		return 0;
 
 	if (!sdma->is_on)
