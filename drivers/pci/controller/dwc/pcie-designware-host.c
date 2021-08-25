@@ -534,6 +534,7 @@ static void __iomem *dw_pcie_other_conf_map_bus(struct pci_bus *bus,
 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
 	int type, ret;
 	u32 busdev;
+	u32 val;
 
 	/*
 	 * Checking whether the link is up here is a last line of defense
@@ -543,7 +544,9 @@ static void __iomem *dw_pcie_other_conf_map_bus(struct pci_bus *bus,
 	 * the system from triggering an SError if the link goes down
 	 * after this check is performed.
 	 */
-	if (!dw_pcie_link_up(pci))
+	/* still training seems ok here */
+	val = readl(pci->dbi_base + PCIE_PORT_DEBUG1);
+	if (!(val & PCIE_PORT_DEBUG1_LINK_UP))
 		return NULL;
 
 	busdev = PCIE_ATU_BUS(bus->number) | PCIE_ATU_DEV(PCI_SLOT(devfn)) |
