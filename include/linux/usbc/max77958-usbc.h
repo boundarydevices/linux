@@ -210,9 +210,6 @@ struct max77958_usbc_platform_data {
 	struct max77958_bc12_data *bc12_data;
 	struct max77958_pd_data *pd_data;
 	struct max77958_cc_data *cc_data;
-#ifdef CONFIG_MAX77960_CHARGER
-	struct max77960_charger_data *chg_data;
-#endif
 	struct max77958_platform_data *max77958_data;
 	struct wake_lock max77958_usbc_wake_lock;
 	int vbus_enable;
@@ -221,6 +218,7 @@ struct max77958_usbc_platform_data {
 	int fw_update;
 	struct delayed_work vbus_hard_reset_work;
 	uint8_t ReadMSG[32];
+	struct power_supply *psy_charger;
 };
 
 enum {
@@ -274,11 +272,6 @@ extern void max77958_notify_dr_status(struct max77958_usbc_platform_data
 extern int max77958_cc_init(struct max77958_usbc_platform_data *usbc_data);
 extern int max77958_bc12_init(struct max77958_usbc_platform_data *usbc_data);
 extern int max77958_pd_init(struct max77958_usbc_platform_data *usbc_data);
-#ifdef CONFIG_MAX77960_CHARGER
-extern int max77960_chg_init(struct max77958_usbc_platform_data *usbc_data);
-extern void max77960_chg_irq_apcmd_handler(struct max77958_usbc_platform_data
-	*usbpd_data, char *apcmd_data, int irq_routine);
-#endif
 extern void max77958_current_pdo(struct max77958_usbc_platform_data *usbc_data,
 	unsigned char *data);
 extern void max77958_reset_ic(struct max77958_dev *max77958);
