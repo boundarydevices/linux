@@ -279,10 +279,8 @@ static void max77958_ccstat_irq_handler(void *data, int irq)
 {
 	struct max77958_usbc_platform_data *usbc_data = data;
 	struct max77958_cc_data *cc_data = usbc_data->cc_data;
-#ifdef CONFIG_MAX77960_CHARGER
-	struct power_supply *psy_charger;
+	struct power_supply *psy_charger = usbc_data->psy_charger;
 	union power_supply_propval val;
-#endif
 	u8 ccstat = 0;
 	int prev_power_role = usbc_data->power_role;
 
@@ -305,9 +303,6 @@ static void max77958_ccstat_irq_handler(void *data, int irq)
 		max77958_notify_dr_status(usbc_data, 0);
 		usbc_data->connected_device = 0;
 		usbc_data->pd_data->previous_dr = UNKNOWN_STATE;
-#ifdef CONFIG_MAX77960_CHARGER
-		psy_charger =
-			power_supply_get_by_name("max77960-charger");
 		if (psy_charger) {
 			val.intval = 0;
 			psy_charger->desc->set_property(psy_charger,
@@ -317,7 +312,6 @@ static void max77958_ccstat_irq_handler(void *data, int irq)
 			pr_err("%s: Fail to get psy charger\n",
 				__func__);
 		}
-#endif
 		break;
 	case CC_SNK:
 		pr_info("CCSTAT : CC_SINK");
@@ -330,9 +324,6 @@ static void max77958_ccstat_irq_handler(void *data, int irq)
 				max77958_vbus_turn_on_ctrl(usbc_data,
 					OFF);
 		}
-#ifdef CONFIG_MAX77960_CHARGER
-		psy_charger =
-			power_supply_get_by_name("max77960-charger");
 		if (psy_charger) {
 			val.intval = 1;
 			psy_charger->desc->set_property(psy_charger,
@@ -342,7 +333,6 @@ static void max77958_ccstat_irq_handler(void *data, int irq)
 			pr_err("%s: Fail to get psy charger\n",
 				__func__);
 		}
-#endif
 		usbc_data->connected_device = 1;
 		break;
 	case CC_SRC:
