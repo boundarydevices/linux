@@ -257,6 +257,7 @@ enum lpuart_type {
 	LS1021A_LPUART,
 	LS1028A_LPUART,
 	IMX7ULP_LPUART,
+	IMX8ULP_LPUART,
 	IMX8QXP_LPUART,
 	IMXRT1050_LPUART,
 };
@@ -289,6 +290,7 @@ struct lpuart_port {
 	struct scatterlist	rx_sgl, tx_sgl[2];
 	struct circ_buf		rx_ring;
 	int			rx_dma_rng_buf_len;
+	int			rx_dma_periods;
 	unsigned int		dma_tx_nents;
 	wait_queue_head_t	dma_wait;
 	bool			is_cs7; /* Set to true when character size is 7 */
@@ -332,12 +334,20 @@ static struct lpuart_soc_data imx7ulp_data = {
 	.rx_dma_cyclic = true,
 };
 
+static struct lpuart_soc_data imx8ulp_data = {
+	.devtype = IMX8ULP_LPUART,
+	.iotype = UPIO_MEM32,
+	.reg_off = IMX_REG_OFF,
+	.rx_watermark = 3,
+	.rx_dma_cyclic = true,
+};
+
 static struct lpuart_soc_data imx8qxp_data = {
 	.devtype = IMX8QXP_LPUART,
 	.iotype = UPIO_MEM32,
 	.reg_off = IMX_REG_OFF,
 	.rx_watermark = 31,
-	.rx_dma_cyclic = false,
+	.rx_dma_cyclic = true,
 };
 static struct lpuart_soc_data imxrt1050_data = {
 	.devtype = IMXRT1050_LPUART,
@@ -350,6 +360,7 @@ static const struct of_device_id lpuart_dt_ids[] = {
 	{ .compatible = "fsl,ls1021a-lpuart",	.data = &ls1021a_data, },
 	{ .compatible = "fsl,ls1028a-lpuart",	.data = &ls1028a_data, },
 	{ .compatible = "fsl,imx7ulp-lpuart",	.data = &imx7ulp_data, },
+	{ .compatible = "fsl,imx8ulp-lpuart",	.data = &imx8ulp_data, },
 	{ .compatible = "fsl,imx8qxp-lpuart",	.data = &imx8qxp_data, },
 	{ .compatible = "fsl,imxrt1050-lpuart",	.data = &imxrt1050_data},
 	{ /* sentinel */ }
@@ -370,6 +381,11 @@ static inline bool is_layerscape_lpuart(struct lpuart_port *sport)
 static inline bool is_imx7ulp_lpuart(struct lpuart_port *sport)
 {
 	return sport->devtype == IMX7ULP_LPUART;
+}
+
+static inline bool is_imx8ulp_lpuart(struct lpuart_port *sport)
+{
+	return sport->devtype == IMX8ULP_LPUART;
 }
 
 static inline bool is_imx8qxp_lpuart(struct lpuart_port *sport)
@@ -1208,7 +1224,7 @@ static void lpuart_copy_rx_to_tty(struct lpuart_port *sport)
 	unsigned long flags;
 	int count = 0, copied;
 
-	if (!is_imx8qxp_lpuart(sport)) {
+	if (!is_imx8qxp_lpuart(sport) && !is_imx8ulp_lpuart(sport)) {
 		lpuart_rx_error_stat(sport);
 		async_tx_ack(sport->dma_rx_desc);
 	}
@@ -1236,6 +1252,13 @@ static void lpuart_copy_rx_to_tty(struct lpuart_port *sport)
 	ring->head = sport->rx_sgl.length - state.residue;
 	BUG_ON(ring->head > sport->rx_sgl.length);
 
+	if (sport->rx_dma_cyclic && sport->dma_eeop) {
+		unsigned int tcd_size;
+
+		/* Calculate the tail. */
+		tcd_size = sg_dma_len(&sport->rx_sgl) / sport->rx_dma_periods;
+		ring->tail = ((ring->head - 1) / tcd_size) * tcd_size;
+	}
 	/*
 	 * Silent handling of keys pressed in the sysrq timeframe
 	 */
@@ -1302,7 +1325,7 @@ static void lpuart_dma_rx_post_handler(struct lpuart_port *sport)
 	spin_lock_irqsave(&sport->port.lock, flags);
 
 	/* For end of packet, clear the idle flag to avoid to trigger
-	 * the next transfer. Only i.MX8x lpuart support EEOP.
+	 * the next transfer. Only i.MX8x and i.MX8ulp lpuart support EEOP now.
 	 */
 	if (sport->dma_eeop && lpuart_is_32(sport)) {
 		rxcount = lpuart32_read(&sport->port, UARTWATER);
@@ -1339,10 +1362,11 @@ static void lpuart_timer_func(struct timer_list *t)
 
 static int lpuart_sched_rxdma_cyclic(struct lpuart_port *sport)
 {
+	sport->rx_dma_periods = 2;
 	sport->dma_rx_desc = dmaengine_prep_dma_cyclic(sport->dma_rx_chan,
 				 sg_dma_address(&sport->rx_sgl),
 				 sport->rx_sgl.length,
-				 sport->rx_sgl.length / 2,
+				 sport->rx_sgl.length / sport->rx_dma_periods,
 				 DMA_DEV_TO_MEM,
 				 DMA_PREP_INTERRUPT);
 	if (!sport->dma_rx_desc) {
@@ -2841,7 +2865,7 @@ static int lpuart_global_reset(struct lpuart_port *sport)
 		return ret;
 	}
 
-	if (is_imx7ulp_lpuart(sport) || is_imx8qxp_lpuart(sport)) {
+	if (is_imx7ulp_lpuart(sport) || is_imx8ulp_lpuart(sport) || is_imx8qxp_lpuart(sport)) {
 		/*
 		 * If the transmitter is used by earlycon, wait for transmit engine to
 		 * complete and then reset.
@@ -2923,7 +2947,7 @@ static int lpuart_probe(struct platform_device *pdev)
 	sport->devtype = sdata->devtype;
 	sport->rx_dma_cyclic = sdata->rx_dma_cyclic;
 	sport->rx_watermark = sdata->rx_watermark;
-	sport->dma_eeop = is_imx8qxp_lpuart(sport);
+	sport->dma_eeop = is_imx8qxp_lpuart(sport) || is_imx8ulp_lpuart(sport);
 
 	ret = platform_get_irq(pdev, 0);
 	if (ret < 0)
