@@ -516,12 +516,6 @@ static void mx51_ecspi_trigger(struct spi_imx_data *spi_imx)
 	reg = readl(spi_imx->base + MX51_ECSPI_CTRL);
 	reg |= MX51_ECSPI_CTRL_XCH;
 	writel(reg, spi_imx->base + MX51_ECSPI_CTRL);
-
-	if (spi_imx->usedma) {
-		reg = readl(spi_imx->base + MX51_ECSPI_DMA);
-		reg |= MX51_ECSPI_DMA_TEDEN | MX51_ECSPI_DMA_RXDEN;
-		writel(reg, spi_imx->base + MX51_ECSPI_DMA);
-	}
 }
 
 static void mx51_disable_dma(struct spi_imx_data *spi_imx)
@@ -1446,6 +1440,7 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	unsigned nents;
 	int rem;
 	u32 bpw;
+	u32 reg;
 
 	if (bits_per_word <= 8) {
 		width = DMA_SLAVE_BUSWIDTH_1_BYTE;
@@ -1550,6 +1545,10 @@ static int spi_imx_dma_transfer(struct spi_imx_data *spi_imx,
 	dma_async_issue_pending(master->dma_tx);
 
 	transfer_timeout = spi_imx_calculate_timeout(spi_imx, transfer->len);
+
+	reg = readl(spi_imx->base + MX51_ECSPI_DMA);
+	reg |= MX51_ECSPI_DMA_TEDEN | MX51_ECSPI_DMA_RXDEN;
+	writel(reg, spi_imx->base + MX51_ECSPI_DMA);
 
 	/* Wait SDMA to finish the data transfer.*/
 	ret = wait_for_completion_timeout(&spi_imx->dma_tx_completion,
