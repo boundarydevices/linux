@@ -139,21 +139,19 @@ void max77958_bc12_get_vadc(u8 vbadc)
 
 int max77958_bc12_set_charger(struct max77958_usbc_platform_data *usbc_data)
 {
-#ifdef CONFIG_MAX77960_CHARGER
 	struct max77958_bc12_data *bc12_data = usbc_data->bc12_data;
+	struct power_supply *psy_charger = usbc_data->psy_charger;
 	int rc = 0;
-	struct power_supply *psy_charger;
-	union power_supply_propval value;
-
-	psy_charger = power_supply_get_by_name("max77960-charger");
 
 	pr_info(" BIT_ChgTyp = %02Xh, BIT_PrChgTyp = %02Xh",
 			bc12_data->chg_type, bc12_data->pr_chg_type);
 
 	if (psy_charger != NULL) {
+		union power_supply_propval value;
 		switch (bc12_data->chg_type) {
 		case CHGTYP_NOTHING:
 			value.intval = POWER_SUPPLY_TYPE_BATTERY;
+			break;
 		case CHGTYP_USB_SDP:
 		case CHGTYP_CDP:
 			value.intval = POWER_SUPPLY_TYPE_USB;
@@ -168,10 +166,8 @@ int max77958_bc12_set_charger(struct max77958_usbc_platform_data *usbc_data)
 		psy_charger->desc->set_property(psy_charger,
 				POWER_SUPPLY_PROP_ONLINE, &value);
 	}
+
 	return rc;
-#else
-	return 0;
-#endif
 }
 
 static irqreturn_t max77958_vbadc_irq(int irq, void *data)
