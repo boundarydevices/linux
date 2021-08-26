@@ -74,10 +74,6 @@ static int brcmf_eap_restrict;
 module_param_named(eap_restrict, brcmf_eap_restrict, int, 0400);
 MODULE_PARM_DESC(eap_restrict, "Block non-802.1X frames until auth finished");
 
-static int brcmf_sdio_wq_highpri;
-module_param_named(sdio_wq_highpri, brcmf_sdio_wq_highpri, int, 0);
-MODULE_PARM_DESC(sdio_wq_highpri, "SDIO workqueue is set to high priority");
-
 static int brcmf_max_pm;
 module_param_named(max_pm, brcmf_max_pm, int, 0);
 MODULE_PARM_DESC(max_pm, "Use max power management mode by default");
@@ -485,7 +481,6 @@ struct brcmf_mp_device *brcmf_get_module_param(struct device *dev,
 	settings->roamoff = !!brcmf_roamoff;
 	settings->iapp = !!brcmf_iapp_enable;
 	settings->eap_restrict = !!brcmf_eap_restrict;
-	settings->sdio_wq_highpri = !!brcmf_sdio_wq_highpri;
 	settings->default_pm = !!brcmf_max_pm ? PM_MAX : PM_FAST;
 #ifdef DEBUG
 	settings->ignore_probe_fail = !!brcmf_ignore_probe_fail;
