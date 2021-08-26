@@ -461,6 +461,12 @@
 			#clock-cells = <0>;
 			clock-frequency = <24000000>;
 		};
+
+		clk28_6363m: clk28_6363m {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <28636300>;
+		};
 	};
 
 	fb_lvds: fb@0 {
@@ -937,6 +943,8 @@
 	status = "okay";
 
 	adv7180: adv7180@20 {
+		clocks = <&clk28_6363m 0>;
+		clock-names = "csi_mclk";
 		compatible = "adv,adv7180";
 		reg = <0x20>;
 		pinctrl-names = "default", "no_cea861", "cea861";
