@@ -52,7 +52,6 @@ struct brcmf_mp_device {
 	bool		roamoff;
 	bool		iapp;
 	bool		eap_restrict;
-	bool		sdio_wq_highpri;
 	int		default_pm;
 	bool		ignore_probe_fail;
 	bool		trivial_ccode_map;
