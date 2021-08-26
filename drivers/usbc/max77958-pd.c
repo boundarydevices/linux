@@ -133,38 +133,14 @@ const struct VMD_DISCOVER_IDENTITY DISCOVER_IDENTITY = {
 void max77958_vbus_turn_on_ctrl(struct max77958_usbc_platform_data
 	*usbc_data, bool enable)
 {
-#ifdef CONFIG_MAX77960_CHARGER
-	struct power_supply *psy_otg;
-	union power_supply_propval val;
-	int on = !!enable;
-	int ret = 0;
-
-	pr_info("%s : enable=%d\n", __func__, enable);
-	psy_otg = power_supply_get_by_name("otg");
-	if (psy_otg) {
-		val.intval = enable;
-		ret = psy_otg->desc->set_property(psy_otg,
-			POWER_SUPPLY_PROP_ONLINE, &val);
-	} else {
-		pr_err("%s: Fail to get psy battery\n", __func__);
-	}
-	if (ret) {
-		pr_err("%s: fail to set power_suppy ONLINE property(%d)\n",
-				__func__, ret);
-	} else {
-		pr_info("otg accessory power = %d\n", on);
-	}
-#endif
 }
 
 void max77958_notify_cci_vbus_current(struct max77958_usbc_platform_data
 	*usbc_data)
 {
 	unsigned int rp_currentlvl;
-#ifdef CONFIG_MAX77960_CHARGER
-	struct power_supply *psy_charger;
+	struct power_supply *psy_charger = usbc_data->psy_charger;
 	union power_supply_propval val;
-#endif
 
 	switch (usbc_data->cc_data->ccistat) {
 	case 1:
@@ -183,8 +159,6 @@ void max77958_notify_cci_vbus_current(struct max77958_usbc_platform_data
 
 	if (!usbc_data->pd_data->psrdy_received &&
 			usbc_data->cc_data->current_pr == SNK) {
-#ifdef CONFIG_MAX77960_CHARGER
-		psy_charger = power_supply_get_by_name("max77960-charger");
 		if (psy_charger) {
 			val.intval = rp_currentlvl;
 			psy_charger->desc->set_property(psy_charger,
@@ -193,7 +167,6 @@ void max77958_notify_cci_vbus_current(struct max77958_usbc_platform_data
 		} else {
 			pr_err("%s: Fail to get psy charger\n", __func__);
 		}
-#endif
 	}
 }
 
