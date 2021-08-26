@@ -471,10 +471,6 @@ static void max77958_check_apcmd(struct max77958_usbc_platform_data *usbc_data,
 
 	case OPCODE_MASTER_I2C_READ:
 	case OPCODE_MASTER_I2C_WRITE:
-#ifdef CONFIG_MAX77960_CHARGER
-		max77960_chg_irq_apcmd_handler(usbc_data,
-			data, cmd_data->is_chg_int);
-#endif
 		break;
 
 	default:
@@ -839,6 +835,8 @@ static void max77705_usbc_umask_irq(struct max77958_usbc_platform_data
 #endif
 static int max77958_usbc_probe(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
+	struct device_node *of_node = dev->parent->of_node;
 	struct max77958_dev *max77958 = dev_get_drvdata(pdev->dev.parent);
 	struct max77958_platform_data *pdata = dev_get_platdata(max77958->dev);
 	struct max77958_usbc_platform_data *usbc_data = NULL;
@@ -848,6 +846,19 @@ static int max77958_usbc_probe(struct platform_device *pdev)
 		GFP_KERNEL);
 	if (!usbc_data)
 		return -ENOMEM;
+
+	if (of_find_property(of_node, "charger-power-supply", NULL)) {
+		usbc_data->psy_charger = devm_power_supply_get_by_phandle(
+							dev->parent,
+							"charger-power-supply");
+		if (IS_ERR(usbc_data->psy_charger)) {
+			dev_err(dev, "Couldn't get the charger power supply\n");
+			return PTR_ERR(usbc_data->psy_charger);
+		}
+
+		if (!usbc_data->psy_charger)
+			return -EPROBE_DEFER;
+	}
 
 	g_usbc_data = usbc_data;
 	usbc_data->dev = &pdev->dev;
@@ -870,13 +881,6 @@ static int max77958_usbc_probe(struct platform_device *pdev)
 		GFP_KERNEL);
 	if (!usbc_data->bc12_data)
 		return -ENOMEM;
-#ifdef CONFIG_MAX77960_CHARGER
-	usbc_data->chg_data = kzalloc(sizeof(struct max77960_charger_data),
-		GFP_KERNEL);
-	if (!usbc_data->chg_data)
-		return -ENOMEM;
-#endif
-
 
 	platform_set_drvdata(pdev, usbc_data);
 
@@ -907,9 +911,6 @@ static int max77958_usbc_probe(struct platform_device *pdev)
 #ifndef CONFIG_MAX77958_ENABLE
 	max77705_usbc_umask_irq(usbc_data);
 #endif
-#ifdef CONFIG_MAX77960_CHARGER
-	max77960_chg_init(usbc_data);
-#endif
 	max77958->boot_complete = 1;
 	enable_irq(max77958->irq);
 	return 0;
@@ -927,9 +928,6 @@ static int max77958_usbc_remove(struct platform_device *pdev)
 	wake_lock_destroy(&usbc_data->pd_data->max77958_pd_wake_lock);
 	wake_lock_destroy(&usbc_data->cc_data->max77958_cc_wake_lock);
 	wake_lock_destroy(&usbc_data->bc12_data->max77958_bc12_wake_lock);
-#ifdef CONFIG_MAX77960_CHARGER
-	wake_lock_destroy(&usbc_data->chg_data->max77958_chg_wake_lock);
-#endif
 	free_irq(usbc_data->irq_apcmd, usbc_data);
 	free_irq(usbc_data->irq_sysmsg, usbc_data);
 	free_irq(usbc_data->irq_vdm0, usbc_data);
@@ -956,10 +954,6 @@ static int max77958_usbc_remove(struct platform_device *pdev)
 	free_irq(usbc_data->bc12_data->irq_dcdtmo, usbc_data);
 	free_irq(usbc_data->bc12_data->irq_chgtype, usbc_data);
 	free_irq(usbc_data->bc12_data->irq_vbadc, usbc_data);
-#ifdef CONFIG_MAX77960_CHARGER
-	free_irq(usbc_data->chg_data->irq_chg, usbc_data);
-	kfree(usbc_data->chg_data);
-#endif
 	kfree(usbc_data->bc12_data);
 	kfree(usbc_data->cc_data);
 	kfree(usbc_data->pd_data);
