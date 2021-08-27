@@ -6,8 +6,6 @@
  */
 
 /dts-v1/;
-
-#include <dt-bindings/interrupt-controller/irq.h>
 #include "imx6q.dtsi"
 #include "imx6qdl-nitrogen6x.dtsi"
 
@@ -23,6 +21,11 @@
 
 &hdmi_core {
 	ipu_id = <1>;
+};
+
+&ipu1_csi1_from_mipi_vc1 {
+	clock-lanes = <0>;
+	data-lanes = <1 2>;
 };
 
 &ov5640 {

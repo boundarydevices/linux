@@ -7,6 +7,7 @@
 
 #include "imx6q-nitrogen6x.dts"
 
+/delete-node/ &ipu1_csi0_mux_from_parallel_sensor;
 /delete-node/ &ov5642;
 /delete-node/ &rtc_rv4162;
 /delete-node/ &sgtl5000;
