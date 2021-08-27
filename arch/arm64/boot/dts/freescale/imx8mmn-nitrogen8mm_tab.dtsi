@@ -73,6 +73,17 @@
 		>;
 	};
 
+	pinctrl_i2c1_max77975: i2c1-max77975grp {
+		fsl,pins = <
+#define GPIRQ_MAX77975	<&gpio3 19 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_SAI5_RXFS_GPIO3_IO19, 0x1c9)
+#define GP_DISABLE_BATT	<&gpio3 24 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI5_RXD3_GPIO3_IO24, 0x06)
+#define GP_SUSPEND	<&gpio5 12 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_ECSPI2_MISO_GPIO5_IO12, 0x06)
+		>;
+	};
+
 	pinctrl_i2c2: i2c2grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_I2C2_SCL_I2C2_SCL, 0x400001c3)
@@ -189,17 +200,6 @@
 			MX8MMN(IOMUXC_I2C4_SCL_GPIO5_IO20, 0x400001c3)
 #define GP_I2C4_SDA	<&gpio5 21 GPIO_ACTIVE_HIGH>
 			MX8MMN(IOMUXC_I2C4_SDA_GPIO5_IO21, 0x400001c3)
-		>;
-	};
-
-	pinctrl_max77976: max77976grp {
-		fsl,pins = <
-#define GPIRQ_MAX77	<&gpio3 19 IRQ_TYPE_LEVEL_LOW>
-			MX8MMN(IOMUXC_SAI5_RXFS_GPIO3_IO19, 0x09)
-#define GP_DISABLE_BATT	<&gpio3 24 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_SAI5_RXD3_GPIO3_IO24, 0x06)
-#define GP_SUSPEND	<&gpio5 12 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_ECSPI2_MISO_GPIO5_IO12, 0x06)
 		>;
 	};
 
@@ -786,6 +786,18 @@
 			};
 		};
 	};
+
+	max77975: max77975@6b {
+		compatible = "maxim,max77975";
+		reg = <0x6b>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c1_max77975>;
+		interrupts-extended = GPIRQ_MAX77975;
+		input-voltage-min-microvolt = <4500000>;
+		input-current-limit-microamp = <3200000>;
+		suspend-gpios = GP_SUSPEND;
+		disbatt-gpios = GP_DISABLE_BATT;
+	};
 };
 
 &i2c2 {
@@ -914,6 +926,7 @@
 		pinctrl-0 = <&pinctrl_i2c2d_max77958>;
 		interrupts-extended = GPIRQ_MAX77958;
 		max77958,irq-gpio = GPIRQ_MAX77958;
+		charger-power-supply = <&max77975>;
 	};
 };
 
