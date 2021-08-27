@@ -170,3 +170,7 @@
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_40M>;
 	assigned-clock-rates = <40000000>;
 };
+
+&reg_can1_stby {
+	/delete-property/ enable-active-high;
+};
