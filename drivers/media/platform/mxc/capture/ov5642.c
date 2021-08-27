@@ -6514,6 +6514,9 @@ static int ov5642_probe(struct i2c_client *client,
 	struct sensor_data *sensor = &ov5642_data;
 	struct gpio_desc *gd;
 
+	/* Set initial values for the sensor struct. */
+	memset(sensor, 0, sizeof(*sensor));
+
 	/* ov5642 pinctrl */
 	pinctrl = devm_pinctrl_get_select_default(dev);
 	if (IS_ERR(pinctrl)) {
@@ -6522,33 +6525,51 @@ static int ov5642_probe(struct i2c_client *client,
 	}
 
 	/* request power down pin */
-	gd = devm_gpiod_get_index_optional(dev, "pwn", 0, GPIOD_OUT_HIGH);
+	gd = devm_gpiod_get_index_optional(dev, "powerdown", 0, GPIOD_OUT_HIGH);
 	if (IS_ERR(gd))
 		return PTR_ERR(gd);
-	if (!gd)
-		dev_warn(dev, "no sensor pwdn pin available");
+	if (!gd) {
+		gd = devm_gpiod_get_index_optional(dev, "pwn", 0, GPIOD_OUT_HIGH);
+		if (IS_ERR(gd))
+			return PTR_ERR(gd);
+		if (!gd)
+			dev_warn(dev, "no sensor pwdn pin available");
+	}
 	gpiod_pwdn = gd;
 
 	/* request reset pin */
-	gd = devm_gpiod_get_index_optional(dev, "rst", 0, GPIOD_OUT_HIGH);
+	gd = devm_gpiod_get_index_optional(dev, "reset", 0, GPIOD_OUT_HIGH);
 	if (IS_ERR(gd))
 		return PTR_ERR(gd);
-	if (!gd)
-		dev_warn(dev, "no sensor reset pin available");
+	if (!gd) {
+		gd = devm_gpiod_get_index_optional(dev, "rst", 0, GPIOD_OUT_HIGH);
+		if (IS_ERR(gd))
+			return PTR_ERR(gd);
+		if (!gd)
+			dev_warn(dev, "no sensor reset pin available");
+	}
 	gpiod_rst = gd;
-	gd = devm_gpiod_get_index_optional(dev, "rst", 1, GPIOD_OUT_HIGH);
+
+	gd = devm_gpiod_get_index_optional(dev, "reset", 1, GPIOD_OUT_HIGH);
 	if (IS_ERR(gd))
 		return PTR_ERR(gd);
+	if (!gd) {
+		gd = devm_gpiod_get_index_optional(dev, "rst", 1, GPIOD_OUT_HIGH);
+		if (IS_ERR(gd))
+			return PTR_ERR(gd);
+		if (!gd)
+			dev_warn(dev, "no sensor reset pin available");
+	}
 	gpiod_rst2 = gd;
 
-	/* Set initial values for the sensor struct. */
-	memset(&ov5642_data, 0, sizeof(ov5642_data));
-	ov5642_data.sensor_clk = devm_clk_get(dev, "csi_mclk");
-	if (IS_ERR(ov5642_data.sensor_clk)) {
-		/* assuming clock enabled by default */
-		ov5642_data.sensor_clk = NULL;
-		dev_err(dev, "clock-frequency missing or invalid\n");
-		return PTR_ERR(ov5642_data.sensor_clk);
+	sensor->sensor_clk = devm_clk_get(dev, "xclk");
+	if (sensor->sensor_clk ==  ERR_PTR(-ENOENT))
+		sensor->sensor_clk = devm_clk_get(dev, "csi_mclk");
+	if (IS_ERR(sensor->sensor_clk)) {
+		retval = PTR_ERR(sensor->sensor_clk);
+		if (retval != -EPROBE_DEFER)
+			dev_err(dev, "xclk/csi_mclk missing or invalid %d\n", retval);
+		return retval;
 	}
 
 	retval = of_property_read_u32(dev->of_node, "mclk",
