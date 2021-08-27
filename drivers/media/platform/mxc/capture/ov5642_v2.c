@@ -146,6 +146,8 @@ struct ov5642 {
 	struct v4l2_pix_format pix;
 	const struct ov5642_datafmt	*fmt;
 	struct v4l2_captureparm streamcap;
+	struct gpio_desc *gpiod_pwdn;
+	struct gpio_desc *gpiod_rst;
 	bool on;
 
 	/* control settings */
@@ -170,7 +172,6 @@ struct ov5642 {
  * Maintains the information on the current state of the sesor.
  */
 static struct ov5642 ov5642_data;
-static int pwn_gpio, rst_gpio;
 
 static struct reg_value ov5642_initial_setting[] = {
 	{0x3103, 0x93, 0, 0}, {0x3008, 0x82, 0, 0}, {0x3017, 0x7f, 0, 0},
@@ -3124,7 +3125,11 @@ static const struct ov5642_datafmt *ov5642_find_datafmt(int code)
 
 static void ov5642_standby(s32 standby)
 {
-	gpio_set_value(pwn_gpio, standby);
+	struct ov5642 *sensor = &ov5642_data;
+
+	if (!sensor->gpiod_pwdn)
+		return;
+	gpiod_set_value_cansleep(sensor->gpiod_pwdn, standby ? 1 : 0);
 	if (!standby)
 		msleep(10);
 }
@@ -3155,29 +3160,41 @@ static s32 update_device_addr(struct ov5642 *sensor)
 	return ret;
 }
 
-static void ov5642_reset(void)
+static void ov5640_lock(void)
 {
 	mxc_camera_common_lock();
+}
 
-	/* camera reset */
-	gpio_set_value(rst_gpio, 1);
-
-	/* camera power down */
-	gpio_set_value(pwn_gpio, 1);
-	msleep(5);
-
-	gpio_set_value(pwn_gpio, 0);
-	msleep(5);
-
-	gpio_set_value(rst_gpio, 0);
-	msleep(1);
-
-	gpio_set_value(rst_gpio, 1);
-	msleep(20);
-	update_device_addr(&ov5642_data);
+static void ov5640_unlock(void)
+{
 	mxc_camera_common_unlock();
+}
 
-	gpio_set_value(pwn_gpio, 1);
+static void ov5642_reset(void)
+{
+	struct ov5642 *sensor = &ov5642_data;
+
+	if (!sensor->gpiod_rst && !sensor->gpiod_pwdn)
+		return;
+
+	gpiod_set_value_cansleep(sensor->gpiod_rst, 1);	/* camera reset */
+	gpiod_set_value_cansleep(sensor->gpiod_pwdn, 1);	/* camera power down */
+
+	/* >= 5 ms, Let power supply stabilize */
+	msleep(5);
+	ov5640_lock();
+
+	gpiod_set_value_cansleep(sensor->gpiod_pwdn, 0);
+
+	/* >= 1ms from powerup, to reset release*/
+	msleep(1);
+	gpiod_set_value_cansleep(sensor->gpiod_rst, 0);
+
+	/* >= 20 ms from reset high to SCCB initialized */
+	msleep(20);
+	pr_debug("%s(mipi): reset released\n", __func__);
+	update_device_addr(sensor);
+	ov5640_unlock();
 }
 
 static int ov5642_power_on(struct device *dev)
@@ -4029,6 +4046,10 @@ static int ov5642_probe(struct i2c_client *client,
 	int retval;
 	u8 chip_id_high, chip_id_low;
 	struct ov5642 *sensor = &ov5642_data;
+	struct gpio_desc *gd;
+
+	/* Set initial values for the sensor struct. */
+	memset(sensor, 0, sizeof(*sensor));
 
 	/* ov5642 pinctrl */
 	pinctrl = devm_pinctrl_get_select_default(dev);
@@ -4038,35 +4059,39 @@ static int ov5642_probe(struct i2c_client *client,
 	}
 
 	/* request power down pin */
-	pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
-	if (!gpio_is_valid(pwn_gpio)) {
-		dev_warn(dev, "no sensor pwdn pin available");
-		return -EINVAL;
+	gd = devm_gpiod_get_index_optional(dev, "powerdown", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd))
+		return PTR_ERR(gd);
+	if (!gd) {
+		gd = devm_gpiod_get_index_optional(dev, "pwn", 0, GPIOD_OUT_HIGH);
+		if (IS_ERR(gd))
+			return PTR_ERR(gd);
+		if (!gd)
+			dev_warn(dev, "no sensor pwdn pin available");
 	}
-	retval = devm_gpio_request_one(dev, pwn_gpio, GPIOF_OUT_INIT_HIGH,
-					"ov5642_pwdn");
-	if (retval < 0)
-		return retval;
+	sensor->gpiod_pwdn = gd;
 
 	/* request reset pin */
-	rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
-	if (!gpio_is_valid(rst_gpio)) {
-		dev_warn(dev, "no sensor reset pin available");
-		return -EINVAL;
+	gd = devm_gpiod_get_index_optional(dev, "reset", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd))
+		return PTR_ERR(gd);
+	if (!gd) {
+		gd = devm_gpiod_get_index_optional(dev, "rst", 0, GPIOD_OUT_HIGH);
+		if (IS_ERR(gd))
+			return PTR_ERR(gd);
+		if (!gd)
+			dev_warn(dev, "no sensor reset pin available");
 	}
-	retval = devm_gpio_request_one(dev, rst_gpio, GPIOF_OUT_INIT_HIGH,
-					"ov5642_reset");
-	if (retval < 0)
-		return retval;
+	sensor->gpiod_rst = gd;
 
-	/* Set initial values for the sensor struct. */
-	memset(&ov5642_data, 0, sizeof(ov5642_data));
-	sensor->sensor_clk = devm_clk_get(dev, "csi_mclk");
+	sensor->sensor_clk = devm_clk_get(dev, "xclk");
+	if (sensor->sensor_clk ==  ERR_PTR(-ENOENT))
+		sensor->sensor_clk = devm_clk_get(dev, "csi_mclk");
 	if (IS_ERR(sensor->sensor_clk)) {
-		/* assuming clock enabled by default */
-		sensor->sensor_clk = NULL;
-		dev_err(dev, "clock-frequency missing or invalid\n");
-		return PTR_ERR(sensor->sensor_clk);
+		retval = PTR_ERR(sensor->sensor_clk);
+		if (retval != -EPROBE_DEFER)
+			dev_err(dev, "xclk/csi_mclk missing or invalid %d\n", retval);
+		return retval;
 	}
 
 	retval = of_property_read_u32(dev->of_node, "mclk",
