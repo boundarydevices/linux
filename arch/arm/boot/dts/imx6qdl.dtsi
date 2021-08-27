@@ -322,6 +322,8 @@
 		};
 
 		pcie: pcie@1ffc000 {
+			assigned-clocks = <&clks IMX6QDL_CLK_ENET_REF>;
+			assigned-clock-rates = <125000000>;
 			compatible = "fsl,imx6q-pcie";
 			reg = <0x01ffc000 0x04000>,
 			      <0x01f00000 0x80000>;
