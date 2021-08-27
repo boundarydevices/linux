@@ -97,6 +97,8 @@ struct ov5640 {
 	struct v4l2_pix_format pix;
 	const struct ov5640_datafmt	*fmt;
 	struct v4l2_captureparm streamcap;
+	struct gpio_desc *gpiod_pwdn;
+	struct gpio_desc *gpiod_rst;
 	bool on;
 
 	/* control settings */
@@ -121,7 +123,6 @@ struct ov5640 {
  * Maintains the information on the current state of the sesor.
  */
 static struct ov5640 ov5640_data;
-static int pwn_gpio, rst_gpio;
 static int prev_sysclk;
 static int AE_Target = 52, night_mode;
 static int prev_HTS;
@@ -651,26 +652,37 @@ static const struct ov5640_datafmt
 
 static inline void ov5640_power_down(int enable)
 {
-	gpio_set_value_cansleep(pwn_gpio, enable);
+	struct ov5640 *sensor = &ov5640_data;
+
+	if (!sensor->gpiod_pwdn)
+		return;
+	gpiod_set_value_cansleep(sensor->gpiod_pwdn, enable ? 1 : 0);
 
 	msleep(2);
 }
 
 static inline void ov5640_reset(void)
 {
-	/* camera reset */
-	gpio_set_value_cansleep(rst_gpio, 1);
+	struct ov5640 *sensor = &ov5640_data;
 
-	/* camera power down */
-	gpio_set_value_cansleep(pwn_gpio, 1);
+	if (!sensor->gpiod_rst && !sensor->gpiod_pwdn)
+		return;
+
+	gpiod_set_value_cansleep(sensor->gpiod_rst, 1);	/* camera reset */
+	gpiod_set_value_cansleep(sensor->gpiod_pwdn, 1);	/* camera power down */
+
+	/* >= 5 ms, Let power supply stabilize */
 	msleep(5);
-	gpio_set_value_cansleep(pwn_gpio, 0);
-	msleep(5);
-	gpio_set_value_cansleep(rst_gpio, 0);
-	msleep(1);
-	gpio_set_value_cansleep(rst_gpio, 1);
-	msleep(5);
-	gpio_set_value_cansleep(pwn_gpio, 1);
+
+	gpiod_set_value_cansleep(sensor->gpiod_pwdn, 0);
+
+	/* >= 1ms from powerup, to reset release*/
+	msleep(1 );
+	gpiod_set_value_cansleep(sensor->gpiod_rst, 0);
+
+	/* >= 20 ms from reset high to SCCB initialized */
+	msleep(20);
+	pr_debug("%s(mipi): reset released\n", __func__);
 }
 
 static int ov5640_regulator_enable(struct device *dev)
@@ -1769,6 +1781,8 @@ static int ov5640_probe(struct i2c_client *client,
 	struct device *dev = &client->dev;
 	int retval;
 	u8 chip_id_high, chip_id_low;
+	struct ov5640 *sensor;
+	struct gpio_desc *gd;
 
 	/* ov5640 pinctrl */
 	pinctrl = devm_pinctrl_get_select_default(dev);
@@ -1777,34 +1791,44 @@ static int ov5640_probe(struct i2c_client *client,
 		return PTR_ERR(pinctrl);
 	}
 
+	sensor = &ov5640_data;
+	/* Set initial values for the sensor struct. */
+	memset(sensor, 0, sizeof(*sensor));
+
 	/* request power down pin */
-	pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
-	if (!gpio_is_valid(pwn_gpio)) {
-		dev_err(dev, "no sensor pwdn pin available\n");
-		return -ENODEV;
+	gd = devm_gpiod_get_index_optional(dev, "powerdown", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd))
+		return PTR_ERR(gd);
+	if (!gd) {
+		gd = devm_gpiod_get_index_optional(dev, "pwn", 0, GPIOD_OUT_HIGH);
+		if (IS_ERR(gd))
+			return PTR_ERR(gd);
+		if (!gd)
+			dev_warn(dev, "no sensor pwdn pin available");
 	}
-	retval = devm_gpio_request_one(dev, pwn_gpio, GPIOF_OUT_INIT_HIGH,
-					"ov5640_pwdn");
-	if (retval < 0)
-		return retval;
+	sensor->gpiod_pwdn = gd;
 
 	/* request reset pin */
-	rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
-	if (!gpio_is_valid(rst_gpio)) {
-		dev_err(dev, "no sensor reset pin available\n");
-		return -EINVAL;
+	gd = devm_gpiod_get_index_optional(dev, "reset", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd))
+		return PTR_ERR(gd);
+	if (!gd) {
+		gd = devm_gpiod_get_index_optional(dev, "rst", 0, GPIOD_OUT_HIGH);
+		if (IS_ERR(gd))
+			return PTR_ERR(gd);
+		if (!gd)
+			dev_warn(dev, "no sensor reset pin available");
 	}
-	retval = devm_gpio_request_one(dev, rst_gpio, GPIOF_OUT_INIT_HIGH,
-					"ov5640_reset");
-	if (retval < 0)
-		return retval;
+	sensor->gpiod_rst = gd;
 
-	/* Set initial values for the sensor struct. */
-	memset(&ov5640_data, 0, sizeof(ov5640_data));
-	ov5640_data.sensor_clk = devm_clk_get(dev, "csi_mclk");
-	if (IS_ERR(ov5640_data.sensor_clk)) {
-		dev_err(dev, "get mclk failed\n");
-		return PTR_ERR(ov5640_data.sensor_clk);
+	sensor->sensor_clk = devm_clk_get(dev, "xclk");
+	if (sensor->sensor_clk ==  ERR_PTR(-ENOENT))
+		sensor->sensor_clk = devm_clk_get(dev, "csi_mclk");
+	if (IS_ERR(sensor->sensor_clk)) {
+		retval = PTR_ERR(sensor->sensor_clk);
+		if (retval != -EPROBE_DEFER)
+			dev_err(dev, "xclk/csi_mclk missing or invalid %d\n", retval);
+		return retval;
 	}
 
 	retval = of_property_read_u32(dev->of_node, "mclk",
