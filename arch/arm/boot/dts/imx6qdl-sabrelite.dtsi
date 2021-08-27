@@ -1,47 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0 OR X11
 /*
  * Copyright 2013-2016 Boundary Devices, Inc.
  * Copyright 2011-2015 Freescale Semiconductor, Inc.
  * Copyright 2011 Linaro Ltd.
- *
- * This file is dual-licensed: you can use it either under the terms
- * of the GPL or the X11 license, at your option. Note that this dual
- * licensing only applies to this file, and not this project as a
- * whole.
- *
- *  a) This file is free software; you can redistribute it and/or
- *     modify it under the terms of the GNU General Public License
- *     version 2 as published by the Free Software Foundation.
- *
- *     This file is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
- *
- * Or, alternatively,
- *
- *  b) Permission is hereby granted, free of charge, to any person
- *     obtaining a copy of this software and associated documentation
- *     files (the "Software"), to deal in the Software without
- *     restriction, including without limitation the rights to use,
- *     copy, modify, merge, publish, distribute, sublicense, and/or
- *     sell copies of the Software, and to permit persons to whom the
- *     Software is furnished to do so, subject to the following
- *     conditions:
- *
- *     The above copyright notice and this permission notice shall be
- *     included in all copies or substantial portions of the Software.
- *
- *     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- *     EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- *     OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- *     NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- *     HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- *     WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- *     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- *     OTHER DEALINGS IN THE SOFTWARE.
  */
-
-#include <dt-bindings/clock/imx6qdl-clock.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 
@@ -68,11 +30,11 @@
 
 	pinctrl_can1: can1grp {
 		fsl,pins = <
-			MX6QDL_PAD_KEY_ROW2__FLEXCAN1_RX	0x1b0b0
 			MX6QDL_PAD_KEY_COL2__FLEXCAN1_TX	0x1b0b0
+			MX6QDL_PAD_KEY_ROW2__FLEXCAN1_RX	0x1b0b0
 #define GP_CAN1_STANDBY		<&gpio1 2 GPIO_ACTIVE_HIGH>
+			/* Flexcan XCVR enable */
 			MX6QDL_PAD_GPIO_2__GPIO1_IO02		0x0b0b0
-			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x0b0b0		/* CAN enable */
 		>;
 	};
 
@@ -130,6 +92,7 @@
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x1b0b0		/* Spare */
+			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x1b0b0		/* Spare */
 		>;
 	};
 
@@ -198,7 +161,7 @@
 #define GP_OV5642_POWER_DOWN	<&gpio1 6 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_6__GPIO1_IO06			0x000b0
 #define GP_OV5642_RESET		<&gpio1 8 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_GPIO_8__GPIO1_IO08			0x000b0
+			MX6QDL_PAD_GPIO_8__GPIO1_IO08			0x030b0
 		>;
 	};
 
@@ -290,12 +253,12 @@
 		>;
 	};
 
-	pinctrl_lcd0: lcd0grp {
+	pinctrl_lcd0_rgb: lcd0-rgbgrp {
 		fsl,pins = <
 			MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK	0x10
-			MX6QDL_PAD_DI0_PIN15__IPU1_DI0_PIN15		0x10
-			MX6QDL_PAD_DI0_PIN2__IPU1_DI0_PIN02		0x10
-			MX6QDL_PAD_DI0_PIN3__IPU1_DI0_PIN03		0x10
+			MX6QDL_PAD_DI0_PIN15__IPU1_DI0_PIN15		0x10	/* DRDY */
+			MX6QDL_PAD_DI0_PIN2__IPU1_DI0_PIN02		0x10	/* HSYNC */
+			MX6QDL_PAD_DI0_PIN3__IPU1_DI0_PIN03		0x10	/* VSYNC */
 			MX6QDL_PAD_DISP0_DAT0__IPU1_DISP0_DATA00	0x10
 			MX6QDL_PAD_DISP0_DAT1__IPU1_DISP0_DATA01	0x10
 			MX6QDL_PAD_DISP0_DAT2__IPU1_DISP0_DATA02	0x10
@@ -314,6 +277,11 @@
 			MX6QDL_PAD_DISP0_DAT15__IPU1_DISP0_DATA15	0x10
 			MX6QDL_PAD_DISP0_DAT16__IPU1_DISP0_DATA16	0x10
 			MX6QDL_PAD_DISP0_DAT17__IPU1_DISP0_DATA17	0x10
+		>;
+	};
+
+	pinctrl_lcd0_rgb24: lcd0-rgb24grp {
+		fsl,pins = <
 			MX6QDL_PAD_DISP0_DAT18__IPU1_DISP0_DATA18	0x10
 			MX6QDL_PAD_DISP0_DAT19__IPU1_DISP0_DATA19	0x10
 			MX6QDL_PAD_DISP0_DAT20__IPU1_DISP0_DATA20	0x10
@@ -548,8 +516,9 @@
 		ipu_id = <0>;
 		disp_id = <0>;
 		default_ifmt = "RGB666";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_lcd0>;
+		pinctrl-names = "default", "rgb24";
+		pinctrl-0 = <&pinctrl_lcd0_rgb>;
+		pinctrl-1 = <&pinctrl_lcd0_rgb &pinctrl_lcd0_rgb24>;
 		status = "okay";
 	};
 
@@ -564,14 +533,6 @@
 		clock-frequency = <22000000>;
 		clock-output-names = "mipi_pwm3";
 		pwms = <&pwm3 0 45 0>; /* 1 / 45 ns = 22 MHz */
-	};
-
-	reg_1p5v: regulator-1v5 {
-		compatible = "regulator-fixed";
-		regulator-name = "1P5V";
-		regulator-min-microvolt = <1500000>;
-		regulator-max-microvolt = <1500000>;
-		regulator-always-on;
 	};
 
 	reg_1p8v: regulator-1v8 {
@@ -590,14 +551,6 @@
 		regulator-always-on;
 	};
 
-	reg_2p8v: regulator-2v8 {
-		compatible = "regulator-fixed";
-		regulator-name = "2P8V";
-		regulator-min-microvolt = <2800000>;
-		regulator-max-microvolt = <2800000>;
-		regulator-always-on;
-	};
-
 	reg_3p3v: regulator-3v3 {
 		compatible = "regulator-fixed";
 		regulator-name = "3P3V";
@@ -608,10 +561,12 @@
 
 	reg_usb_otg_vbus: regulator-usb-otg-vbus {
 		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usbotg_vbus>;
 		regulator-name = "usb_otg_vbus";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		gpio = <&gpio3 22 0>;
+		gpio = GP_REG_USBOTG;
 		enable-active-high;
 	};
 
@@ -676,6 +631,7 @@
 	panel-lcd {
 		compatible = "okaya,rs800480t-7x0gp";
 		backlight = <&backlight_lcd>;
+
 		port {
 			lcd_panel_in: endpoint {
 				remote-endpoint = <&lcd_display_out>;
@@ -691,6 +647,16 @@
 				remote-endpoint = <&lvds0_out>;
 			};
 		};
+	};
+
+	mxcfb1: fb@0 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "hdmi";
+		interface_pix_fmt = "RGB24";
+		mode_str ="1920x1080M@60";
+		default_bpp = <24>;
+		int_clk = <0>;
+		late_init = <0>;
 	};
 #endif
 
@@ -745,11 +711,6 @@
 	remote-endpoint = <&ov5642_to_ipu1_csi0_mux>;
 };
 
-&ipu1_csi0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_i2c2_ov5642>;
-};
-
 &audmux {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_audmux>;
@@ -775,17 +736,20 @@
 		reg = <0>;
 		#address-cells = <1>;
 		#size-cells = <1>;
-		mtd@00000000 {
-			label = "U-Boot";
-			reg = <0x0 0xC0000>;
+
+		partition@0 {
+			label = "bootloader";
+			reg = <0x0 0xc0000>;
 		};
-		mtd@000C0000 {
+
+		partition@c0000 {
 			label = "env";
-			reg = <0xC0000 0x2000>;
+			reg = <0xc0000 0x2000>;
 		};
-		mtd@000C2000 {
+
+		partition@c2000 {
 			label = "splash";
-			reg = <0xC2000 0x13e000>;
+			reg = <0xc2000 0x13e000>;
 		};
 	};
 };
@@ -848,7 +812,7 @@
 	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
-	sgtl5000: sgtl5000@a {
+	sgtl5000: codec@a {
 		compatible = "fsl,sgtl5000";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1_sgtl5000>;
@@ -873,20 +837,22 @@
 		reg = <0x50>;
 	};
 
-	ov5642: camera@42 {
+	ov5642: camera@3d {
+		AVDD-supply = <&reg_2p5v>;
+		DOVDD-supply = <&reg_1p8v>;
+		DVDD-supply = <&reg_1p8v>;
+		clocks = <&clks IMX6QDL_CLK_CKO2>;
+		clock-names = "xclk";
 		compatible = "ovti,ov5642";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_ov5642>;
-		clocks = <&clks IMX6QDL_CLK_CKO2>;
-		clock-names = "xclk";
-		DOVDD-supply = <&reg_1p8v>;
-		AVDD-supply = <&reg_2p5v>;
-		DVDD-supply = <&reg_1p8v>;
-		reg = <0x42>;
-		reset-gpios = GP_OV5642_RESET;
 		powerdown-gpios = GP_OV5642_POWER_DOWN;
-		gp-gpios = <&gpio1 16 GPIO_ACTIVE_HIGH>;
-		status = "disabled";
+		reg = <0x3d>;
+		reset-gpios = GP_OV5642_RESET;
+		ipu_id = <0>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
 
 		port {
 			ov5642_to_ipu1_csi0_mux: endpoint {
@@ -967,17 +933,20 @@
 	};
 
 	ov5640: camera@3c {
-		compatible = "ovti,ov5640";
+		AVDD-supply = <&reg_2p5v>;
+		DOVDD-supply = <&reg_1p8v>;
+		DVDD-supply = <&reg_1p8v>;
+		compatible = "ov5640_int";	/* "ovti,ov5640" */
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_ov5640 &pinctrl_i2c3_ov5640_gpios>;
 		reg = <0x3c>;
 		clocks = <&clk24m 0>;
-		clock-names = "csi_mclk";
-		DOVDD-supply = <&reg_1p8v>;
-		AVDD-supply = <&reg_2p5v>;
-		DVDD-supply = <&reg_1p8v>;
-		reset-gpios = GP_OV5640_RESET;
+		clock-names = "xclk";
 		powerdown-gpios = GP_OV5640_POWER_DOWN;
+		reset-gpios = GP_OV5640_RESET;
+		csi_id = <1>;
+		mclk = <24000000>;
+		mclk_source = <0>;
 
 		port {
 			#address-cells = <1>;
@@ -990,7 +959,6 @@
 			};
 		};
 	};
-
 
 	ts_egalax: touchscreen@4 {
 		compatible = "eeti,egalax_ts";
@@ -1082,6 +1050,16 @@
 &mipi_csi {
 	lanes = <2>;
 	status = "okay";
+
+	port@0 {
+		reg = <0>;
+
+		mipi_csi2_in: endpoint {
+			remote-endpoint = <&ov5640_to_mipi_csi2>;
+			clock-lanes = <0>;
+			data-lanes = <1 2>;
+		};
+	};
 };
 
 &pcie {
@@ -1089,21 +1067,18 @@
 };
 
 &pwm1 {
-	#pwm-cells = <2>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm1>;
 	status = "okay";
 };
 
 &pwm3 {
-	#pwm-cells = <2>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm3>;
 	status = "okay";
 };
 
 &pwm4 {
-	#pwm-cells = <2>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm4>;
 	status = "okay";
@@ -1143,7 +1118,6 @@
 	vbus-supply = <&reg_usb_otg_vbus>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg>;
-	disable-over-current;
 	status = "okay";
 };
 
@@ -1162,18 +1136,4 @@
 	cd-gpios = GP_USDHC4_CD;
 	vmmc-supply = <&reg_3p3v>;
 	status = "okay";
-};
-
-&mipi_csi {
-	status = "okay";
-
-	port@0 {
-		reg = <0>;
-
-		mipi_csi2_in: endpoint {
-			remote-endpoint = <&ov5640_to_mipi_csi2>;
-			clock-lanes = <0>;
-			data-lanes = <1 2>;
-		};
-	};
 };
