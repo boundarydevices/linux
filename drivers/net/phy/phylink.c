@@ -1043,6 +1043,39 @@ static int phylink_attach_phy(struct phylink *pl, struct phy_device *phy,
 	return phy_attach_direct(pl->netdev, phy, 0, interface);
 }
 
+static unsigned int phylink_fixup_inband_aneg(struct phylink *pl,
+					      struct phy_device *phy,
+					      unsigned int mode)
+{
+	int ret;
+
+	ret = phy_validate_inband_aneg(phy, pl->link_interface);
+	if (ret == PHY_INBAND_ANEG_UNKNOWN) {
+		phylink_dbg(pl,
+			    "PHY driver does not report in-band autoneg capability, assuming %s\n",
+			    phylink_autoneg_inband(mode) ? "true" : "false");
+
+		return mode;
+	}
+
+	if (phylink_autoneg_inband(mode) && !(ret & PHY_INBAND_ANEG_ON)) {
+		phylink_err(pl,
+			    "Requested in-band autoneg but driver does not support this, disabling it.\n");
+
+		return MLO_AN_PHY;
+	}
+
+	if (!phylink_autoneg_inband(mode) && !(ret & PHY_INBAND_ANEG_OFF)) {
+		phylink_dbg(pl,
+			    "PHY driver requests in-band autoneg, force-enabling it.\n");
+
+		mode = MLO_AN_INBAND;
+	}
+
+	/* Peaceful agreement, isn't it great? */
+	return mode;
+}
+
 /**
  * phylink_connect_phy() - connect a PHY to the phylink instance
  * @pl: a pointer to a &struct phylink returned from phylink_create()
@@ -1061,6 +1094,9 @@ static int phylink_attach_phy(struct phylink *pl, struct phy_device *phy,
 int phylink_connect_phy(struct phylink *pl, struct phy_device *phy)
 {
 	int ret;
+
+	pl->cur_link_an_mode = phylink_fixup_inband_aneg(pl, phy,
+							 pl->cfg_link_an_mode);
 
 	/* Use PHY device/driver interface */
 	if (pl->link_interface == PHY_INTERFACE_MODE_NA) {
@@ -1136,6 +1172,9 @@ int phylink_fwnode_phy_connect(struct phylink *pl,
 	fwnode_handle_put(phy_fwnode);
 	if (!phy_dev)
 		return -ENODEV;
+
+	pl->cur_link_an_mode = phylink_fixup_inband_aneg(pl, phy_dev,
+							 pl->cfg_link_an_mode);
 
 	ret = phy_attach_direct(pl->netdev, phy_dev, flags,
 				pl->link_interface);
@@ -2204,10 +2243,28 @@ static int phylink_sfp_config(struct phylink *pl, struct phy_device *phy,
 		return -EINVAL;
 	}
 
-	if (phy && phylink_phy_no_inband(phy))
-		mode = MLO_AN_PHY;
-	else
+	/* Select whether to operate in in-band mode or not, based on the
+	 * presence and capability of the PHY in the current link mode.
+	 */
+	if (phy) {
+		ret = phy_validate_inband_aneg(phy, iface);
+		if (ret == PHY_INBAND_ANEG_UNKNOWN) {
+			if (phylink_phy_no_inband(phy))
+				mode = MLO_AN_PHY;
+			else
+				mode = MLO_AN_INBAND;
+
+			phylink_dbg(pl,
+				    "PHY driver does not report in-band autoneg capability, assuming %s\n",
+				    phylink_autoneg_inband(mode) ? "true" : "false");
+		} else if (ret & PHY_INBAND_ANEG_ON) {
+			mode = MLO_AN_INBAND;
+		} else {
+			mode = MLO_AN_PHY;
+		}
+	} else {
 		mode = MLO_AN_INBAND;
+	}
 
 	config.interface = iface;
 	linkmode_copy(support1, support);

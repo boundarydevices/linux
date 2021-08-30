@@ -699,6 +699,19 @@ static int phy_check_link_status(struct phy_device *phydev)
 	return 0;
 }
 
+int phy_validate_inband_aneg(struct phy_device *phydev,
+			     phy_interface_t interface)
+{
+	if (!phydev->drv)
+		return -EIO;
+
+	if (!phydev->drv->validate_inband_aneg)
+		return PHY_INBAND_ANEG_UNKNOWN;
+
+	return phydev->drv->validate_inband_aneg(phydev, interface);
+}
+EXPORT_SYMBOL_GPL(phy_validate_inband_aneg);
+
 /**
  * _phy_start_aneg - start auto-negotiation for this PHY device
  * @phydev: the phy_device struct
