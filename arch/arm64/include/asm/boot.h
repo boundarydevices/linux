@@ -6,8 +6,8 @@
 #include <linux/sizes.h>
 
 /*
- * arm64 requires the DTB to be 8 byte aligned and
- * not exceed 2MB in size.
+ * arm64 requires the kernel image to placed
+ * TEXT_OFFSET bytes beyond a 2 MB aligned base
  */
 #define MIN_FDT_ALIGN		8
 #define MAX_FDT_SIZE		SZ_2M
