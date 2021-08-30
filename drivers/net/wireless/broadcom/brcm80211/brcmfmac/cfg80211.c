@@ -5210,17 +5210,17 @@ brcmf_cfg80211_start_ap(struct wiphy *wiphy, struct net_device *ndev,
 				 err);
 			goto exit;
 		}
-		if (!mbss) {
-			/* Firmware 10.x requires setting channel after enabling
-			 * AP and before bringing interface up.
-			 */
-			err = brcmf_fil_iovar_int_set(ifp, "chanspec", chanspec);
-			if (err < 0) {
-				bphy_err(drvr, "Set Channel failed: chspec=%d, %d\n",
-					 chanspec, err);
-				goto exit;
-			}
+
+		/* Firmware 10.x requires setting channel after enabling
+		 * AP and before bringing interface up.
+		 */
+		err = brcmf_fil_iovar_int_set(ifp, "chanspec", chanspec);
+		if (err < 0) {
+			bphy_err(drvr, "Set Channel failed: chspec=%d, %d\n",
+				 chanspec, err);
+			goto exit;
 		}
+
 		err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1);
 		if (err < 0) {
 			bphy_err(drvr, "BRCMF_C_UP error (%d)\n", err);
