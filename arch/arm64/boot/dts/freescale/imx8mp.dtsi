@@ -20,6 +20,7 @@
 	aliases {
 		ethernet0 = &fec;
 		ethernet1 = &eqos;
+		gpc = &gpc;
 		gpio0 = &gpio1;
 		gpio1 = &gpio2;
 		gpio2 = &gpio3;
@@ -788,6 +789,17 @@
 				reg = <0x30390000 0x10000>;
 				interrupts = <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
 				#reset-cells = <1>;
+			};
+
+			gpc: gpc@303a0000 {
+				#interrupt-cells = <3>;
+				alias = <&gpc>;
+				compatible = "fsl,imx8mp-gpc";
+				reg = <0x303a0000 0x10000>;
+				interrupt-parent = <&gic>;
+				interrupt-controller;
+				broken-wake-request-signals;
+				status = "disabled";
 			};
 		};
 
