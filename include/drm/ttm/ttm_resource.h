@@ -108,11 +108,11 @@ struct ttm_resource_manager_func {
  * @gpu_offset: If used, the GPU offset of the first managed page of
  * fixed memory or the first managed location in an aperture.
  * @size: Size of the managed region.
+ * @bdev: ttm device this manager belongs to
  * @func: structure pointer implementing the range manager. See above
  * @move_lock: lock for move fence
- * static information. bdev::driver::io_mem_free is never used.
- * @lru: The lru list for this memory type.
  * @move: The fence of the last pipelined move operation.
+ * @lru: The lru list for this memory type.
  *
  * This structure is used to identify and manage memory types for a device.
  */
@@ -122,20 +122,21 @@ struct ttm_resource_manager {
 	 */
 	bool use_type;
 	bool use_tt;
+	struct ttm_device *bdev;
 	uint64_t size;
 	const struct ttm_resource_manager_func *func;
 	spinlock_t move_lock;
+
+	/*
+	 * Protected by @move_lock.
+	 */
+	struct dma_fence *move;
 
 	/*
 	 * Protected by the global->lru_lock.
 	 */
 
 	struct list_head lru[TTM_MAX_BO_PRIORITY];
-
-	/*
-	 * Protected by @move_lock.
-	 */
-	struct dma_fence *move;
 };
 
 /**
@@ -274,6 +275,7 @@ bool ttm_resource_compat(struct ttm_resource *res,
 			 struct ttm_placement *placement);
 
 void ttm_resource_manager_init(struct ttm_resource_manager *man,
+			       struct ttm_device *bdev,
 			       unsigned long p_size);
 
 int ttm_resource_manager_evict_all(struct ttm_device *bdev,
