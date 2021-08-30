@@ -2143,6 +2143,15 @@ int phylink_speed_up(struct phylink *pl)
 }
 EXPORT_SYMBOL_GPL(phylink_speed_up);
 
+/* The Broadcom BCM84881 in the Methode DM7052 is unable to provide a SGMII
+ * or 802.3z control word, so inband will not work.
+ */
+static bool phylink_phy_no_inband(struct phy_device *phy)
+{
+	return phy->is_c45 &&
+		(phy->c45_ids.device_ids[1] & 0xfffffff0) == 0xae025150;
+}
+
 static void phylink_sfp_attach(void *upstream, struct sfp_bus *bus)
 {
 	struct phylink *pl = upstream;
@@ -2157,7 +2166,7 @@ static void phylink_sfp_detach(void *upstream, struct sfp_bus *bus)
 	pl->netdev->sfp_bus = NULL;
 }
 
-static int phylink_sfp_config(struct phylink *pl, u8 mode,
+static int phylink_sfp_config(struct phylink *pl, struct phy_device *phy,
 			      const unsigned long *supported,
 			      const unsigned long *advertising)
 {
@@ -2165,6 +2174,7 @@ static int phylink_sfp_config(struct phylink *pl, u8 mode,
 	__ETHTOOL_DECLARE_LINK_MODE_MASK(support);
 	struct phylink_link_state config;
 	phy_interface_t iface;
+	unsigned int mode;
 	bool changed;
 	int ret;
 
@@ -2193,6 +2203,11 @@ static int phylink_sfp_config(struct phylink *pl, u8 mode,
 			    __ETHTOOL_LINK_MODE_MASK_NBITS, config.advertising);
 		return -EINVAL;
 	}
+
+	if (phy && phylink_phy_no_inband(phy))
+		mode = MLO_AN_PHY;
+	else
+		mode = MLO_AN_INBAND;
 
 	config.interface = iface;
 	linkmode_copy(support1, support);
@@ -2258,7 +2273,7 @@ static int phylink_sfp_module_insert(void *upstream,
 	if (pl->sfp_may_have_phy)
 		return 0;
 
-	return phylink_sfp_config(pl, MLO_AN_INBAND, support, support);
+	return phylink_sfp_config(pl, NULL, support, support);
 }
 
 static int phylink_sfp_module_start(void *upstream)
@@ -2277,8 +2292,7 @@ static int phylink_sfp_module_start(void *upstream)
 	if (!pl->sfp_may_have_phy)
 		return 0;
 
-	return phylink_sfp_config(pl, MLO_AN_INBAND,
-				  pl->sfp_support, pl->sfp_support);
+	return phylink_sfp_config(pl, NULL, pl->sfp_support, pl->sfp_support);
 }
 
 static void phylink_sfp_module_stop(void *upstream)
@@ -2309,20 +2323,10 @@ static void phylink_sfp_link_up(void *upstream)
 	phylink_run_resolve(pl);
 }
 
-/* The Broadcom BCM84881 in the Methode DM7052 is unable to provide a SGMII
- * or 802.3z control word, so inband will not work.
- */
-static bool phylink_phy_no_inband(struct phy_device *phy)
-{
-	return phy->is_c45 &&
-		(phy->c45_ids.device_ids[1] & 0xfffffff0) == 0xae025150;
-}
-
 static int phylink_sfp_connect_phy(void *upstream, struct phy_device *phy)
 {
 	struct phylink *pl = upstream;
 	phy_interface_t interface;
-	u8 mode;
 	int ret;
 
 	/*
@@ -2334,13 +2338,8 @@ static int phylink_sfp_connect_phy(void *upstream, struct phy_device *phy)
 	 */
 	phy_support_asym_pause(phy);
 
-	if (phylink_phy_no_inband(phy))
-		mode = MLO_AN_PHY;
-	else
-		mode = MLO_AN_INBAND;
-
 	/* Do the initial configuration */
-	ret = phylink_sfp_config(pl, mode, phy->supported, phy->advertising);
+	ret = phylink_sfp_config(pl, phy, phy->supported, phy->advertising);
 	if (ret < 0)
 		return ret;
 
