@@ -397,7 +397,7 @@ static int ioctl_enum_frameintervals(struct v4l2_int_device *s,
 static int ov5640_enum_fmt_cap(struct ov5640 *sensor,
 			      struct v4l2_fmtdesc *fmt)
 {
-	if (fmt->index > ARRAY_SIZE(ov5640_colour_fmts))
+	if (fmt->index >= ARRAY_SIZE(ov5640_colour_fmts))
 		return -EINVAL;
 
 	fmt->pixelformat = ov5640_colour_fmts[fmt->index].pixelformat;
