@@ -463,6 +463,37 @@ err_phy:
 	return 0;
 }
 
+static void meson_mrrs_limit_quirk(struct pci_dev *dev)
+{
+ 	struct pci_bus *bus = dev->bus;
+ 	int mrrs, mrrs_limit = 256;
+ 	static const struct pci_device_id bridge_devids[] = {
+ 		{ PCI_DEVICE(PCI_VENDOR_ID_SYNOPSYS, PCI_DEVICE_ID_SYNOPSYS_HAPSUSB3) },
+ 		{ 0, },
+ 	};
+
+ 	/* look for the matching bridge */
+ 	while (!pci_is_root_bus(bus)) {
+ 		/*
+ 		 * 256 bytes maximum read request size. They can't handle
+ 		 * anything larger than this. So force this limit on
+ 		 * any devices attached under these ports.
+ 		 */
+ 		if (!pci_match_id(bridge_devids, bus->self)) {
+ 			bus = bus->parent;
+ 			continue;
+ 		}
+
+ 		mrrs = pcie_get_readrq(dev);
+ 		if (mrrs > mrrs_limit) {
+ 			pci_info(dev, "limiting MRRS %d to %d\n", mrrs, mrrs_limit);
+ 			pcie_set_readrq(dev, mrrs_limit);
+ 		}
+ 		break;
+ 	}
+}
+DECLARE_PCI_FIXUP_ENABLE(PCI_ANY_ID, PCI_ANY_ID, meson_mrrs_limit_quirk);
+
 static const struct of_device_id meson_pcie_of_match[] = {
 	{
 		.compatible = "amlogic,axg-pcie",
