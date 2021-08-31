@@ -1036,7 +1036,7 @@
 		assigned-clocks = <&clks IMX6QDL_CLK_CKO2_SEL>;
 		assigned-clock-parents = <&clks IMX6QDL_CLK_OSC>;
 		AVDD-supply = <&reg_2p8v>;
-		clock-names = "csi_mclk";
+		clock-names = "xclk";
 		clocks = <&clks IMX6QDL_CLK_CKO2>;
 		csi_id = <1>;
 		DOVDD-supply = <&reg_1p8v>;
@@ -1046,9 +1046,9 @@
 		mclk_source = <0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1d_ov5640_mipi>;
-		pwn-gpios = GP_OV5640_MIPI_POWER_DOWN;
+		powerdown-gpios = GP_OV5640_MIPI_POWER_DOWN;
 		reg = <0x3c>;
-		rst-gpios = GP_OV5640_MIPI_RESET;
+		reset-gpios = GP_OV5640_MIPI_RESET;
 		mirror = <0>;
 		vflip = <1>;
 	};
@@ -1087,7 +1087,7 @@
 		compatible = "ov5640_int";
 		AVDD-supply = <&reg_2p8v>;
 		csi_id = <1>;
-		clock-names = "csi_mclk";
+		clock-names = "xclk";
 		clocks = <&clks IMX6QDL_CLK_CKO2>;
 		DOVDD-supply = <&reg_1p8v>;
 		DVDD-supply = <&reg_1p8v>;
@@ -1095,9 +1095,9 @@
 		mclk_source = <0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_ov5640>;
-		pwn-gpios = GP_OV5640_POWER_DOWN;
+		powerdown-gpios = GP_OV5640_POWER_DOWN;
 		reg = <0x3c>;
-		rst-gpios = GP_OV5640_RESET;
+		reset-gpios = GP_OV5640_RESET;
 		mirror = <0>;
 		vflip = <1>;
 	};
