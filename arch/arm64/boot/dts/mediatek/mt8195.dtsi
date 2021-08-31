@@ -7,6 +7,7 @@
 /dts-v1/;
 
 #include <dt-bindings/clock/mt8195-clk.h>
+#include <dt-bindings/gce/mt8195-gce.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/phy/phy.h>
@@ -18,6 +19,11 @@
 	interrupt-parent = <&gic>;
 	#address-cells = <2>;
 	#size-cells = <2>;
+
+	aliases {
+		gce0 = &gce0;
+		gce1 = &gce1;
+	};
 
 	clocks {
 		clk26m: oscillator0 {
@@ -368,6 +374,22 @@
 			assigned-clock-parents = <&topckgen CLK_TOP_ULPOSC1_D10>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pmif_pin>;
+		};
+
+		gce0: mdp_mailbox@10320000 {
+			compatible = "mediatek,mt8195-gce";
+			reg = <0 0x10320000 0 0x4000>;
+			interrupts = <GIC_SPI 226 IRQ_TYPE_LEVEL_HIGH 0>;
+			#mbox-cells = <2>;
+			clocks = <&infracfg_ao CLK_INFRA_AO_GCE>;
+		};
+
+		gce1: disp_mailbox@10330000 {
+			compatible = "mediatek,mt8195-gce";
+			reg = <0 0x10330000 0 0x4000>;
+			interrupts = <GIC_SPI 228 IRQ_TYPE_LEVEL_HIGH 0>;
+			#mbox-cells = <2>;
+			clocks = <&infracfg_ao CLK_INFRA_AO_GCE2>;
 		};
 
 		scp_adsp: syscon@10720000 {
