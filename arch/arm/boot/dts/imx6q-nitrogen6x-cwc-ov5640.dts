@@ -44,12 +44,12 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_ov5642>;
 		clocks = <&clks IMX6QDL_CLK_CKO2>;
-		clock-names = "csi_mclk";
+		clock-names = "xclk";
 		DOVDD-supply = <&reg_1p8v>;
 		AVDD-supply = <&reg_2p5v>;
 		DVDD-supply = <&reg_1p8v>;
-		pwn-gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;
-		rst-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
+		powerdown-gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
 		ipu_id = <0>;
 		csi_id = <0>;
 		mclk = <24000000>;
