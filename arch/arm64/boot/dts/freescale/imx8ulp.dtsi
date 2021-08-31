@@ -570,6 +570,7 @@
 					 <&cgc1 IMX8ULP_CLK_XBAR_AD_DIVPLAT>,
 					 <&pcc4 IMX8ULP_CLK_USDHC0>;
 				clock-names = "ipg", "ahb", "per";
+				power-domains = <&scmi_devpd IMX8ULP_PD_USDHC0>;
 				assigned-clocks = <&cgc1 IMX8ULP_CLK_SPLL3_PFD2>, <&pcc4 IMX8ULP_CLK_USDHC0>;
 				assigned-clock-parents = <0>, <&cgc1 IMX8ULP_CLK_SPLL3_PFD2_DIV1>;
 				assigned-clock-rates = <396000000>, <396000000>;
