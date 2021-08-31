@@ -1262,7 +1262,7 @@
 &uart1 { /* BT */
 	assigned-clocks = <&clk IMX8MMN(CLK_UART1)>;
 	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_80M)>;
-	fsl,uart-has-rtscts;
+	uart-has-rtscts;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
 	status = "okay";
@@ -1279,7 +1279,7 @@
 &uart3 { /* J28 */
 	assigned-clocks = <&clk IMX8MMN(CLK_UART3)>;
 	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_80M)>;
-	fsl,uart-has-rtscts;
+	uart-has-rtscts;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
 	status = "okay";
