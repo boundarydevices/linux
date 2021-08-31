@@ -73,6 +73,7 @@
 	keep-power-in-suspend;
 	non-removable;
 	wakeup-source;
+	fsl,broken-auto-tuning;
 	mmc-pwrseq = <&usdhc2_pwrseq>;
 
 	wifi_wake_host {
