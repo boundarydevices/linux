@@ -1179,6 +1179,7 @@
 				 <&cgc2 IMX8ULP_CLK_LPAV_AHB_DIV>,
 				 <&pcc5 IMX8ULP_CLK_DC_NANO>;
 			clock-names = "axi", "ahb", "pixel";
+			resets = <&pcc5 PCC5_DC_NANO_SWRST>;
 			power-domains = <&scmi_devpd IMX8ULP_PD_DCNANO>;
 			assigned-clocks = <&pcc5 IMX8ULP_CLK_DC_NANO>;
 			assigned-clock-parents = <&cgc2 IMX8ULP_CLK_PLL4_PFD0_DIV1>;
