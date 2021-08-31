@@ -837,12 +837,12 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_mipi_csi>;
 		clocks = <&mipi_mclk>;
-		clock-names = "csi_mclk";
+		clock-names = "xclk";
 		DOVDD-supply = <&reg_vref_1v8>;
 		AVDD-supply = <&reg_vref_2v5>;
 		DVDD-supply = <&reg_vref_3v3>;
-		pwn-gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
-		rst-gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;
+		powerdown-gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;
 		csi_id = <0>;
 		mclk = <22000000>;
 		mclk_source = <0>;
