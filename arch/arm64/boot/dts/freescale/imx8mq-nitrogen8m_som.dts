@@ -916,7 +916,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2_csi1>;
 		clocks = <&clk IMX8MQ_CLK_CLKO2>;
-		clock-names = "csi_mclk";
+		clock-names = "xclk";
 		assigned-clocks = <&clk IMX8MQ_CLK_CLKO2>;
 		assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_200M>;
 		assigned-clock-rates = <25000000>;
@@ -924,8 +924,8 @@
 		AVDD-supply = <&reg_vref_2v5>;
 		DVDD-supply = <&reg_vref_3v3>;
 		DOVDD-supply = <&reg_vref_1v8>;
-		pwn-gpios = GP_CSI1_MIPI_PWDN;
-		rst-gpios = GP_CSI1_MIPI_RESET;
+		powerdown-gpios = GP_CSI1_MIPI_PWDN;
+		reset-gpios = GP_CSI1_MIPI_RESET;
 		mclk = <25000000>;
 		mipi_csi;
 
@@ -956,7 +956,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c3_csi2>;
 		clocks = <&clk IMX8MQ_CLK_CLKO2>;
-		clock-names = "csi_mclk";
+		clock-names = "xclk";
 		assigned-clocks = <&clk IMX8MQ_CLK_CLKO2>;
 		assigned-clock-parents = <&clk IMX8MQ_SYS2_PLL_200M>;
 		assigned-clock-rates = <25000000>;
@@ -964,8 +964,8 @@
 		AVDD-supply = <&reg_vref_2v5>;
 		DVDD-supply = <&reg_vref_3v3>;
 		DOVDD-supply = <&reg_vref_1v8>;
-		pwn-gpios = GP_CSI2_MIPI_PWDN;
-		rst-gpios = GP_CSI2_MIPI_RESET;
+		powerdown-gpios = GP_CSI2_MIPI_PWDN;
+		reset-gpios = GP_CSI2_MIPI_RESET;
 		mclk = <25000000>;
 		mipi_csi;
 
