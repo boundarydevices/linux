@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2020 Boundary Devices
+ */
+
+#include "imx8mm-nitrogen8mm_som.dts"
+
+&iomuxc {
+	/delete-node/ i2c3-ov5640-mipigrp;
+
+	pinctrl_ecspi2_mcp25625: ecspi2-mcp25625grp {
+		fsl,pins = <
+#define GP_MCP25625_RESET	<&gpio1 11 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO11_GPIO1_IO11, 0x19)
+#define GPIRQ_MCP25625		<&gpio1 5 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO05_GPIO1_IO5, 0x19)
+		>;
+	};
+};
+
+/ {
+	model = "Boundary Devices i.MX8MMini Nitrogen8MM Som mcp25625";
+	compatible = "boundary,imx8mm-nitrogen8mm_som-mcp25625", "fsl,imx8mm";
+
+	clocks {
+		/delete-node/ clk16m;
+		clk20m: clk20m {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <20000000>;
+		};
+	};
+};
+
+&ecspi2 {
+	/delete-node/ spidev@0;
+
+	can0: can@0 {
+		clocks = <&clk20m>;
+		compatible = "microchip,mcp25625";
+		interrupts-extended = GPIRQ_MCP25625;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ecspi2_mcp25625>;
+		reg = <0>;
+		reset-gpios = GP_MCP25625_RESET;
+		spi-max-frequency = <10000000>;
+	};
+};
+
+/delete-node/ &csi1_bridge;
+
+&i2c3 {
+	/delete-node/ ov5640-mipi1@3c;
+};
+
+/delete-node/ &mipi_csi_1;
