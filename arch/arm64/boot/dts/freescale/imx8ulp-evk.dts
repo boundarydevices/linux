@@ -307,6 +307,7 @@
 	bus-width = <4>;
 	keep-power-in-suspend;
 	non-removable;
+	wakeup-source;
 	fsl,broken-auto-tuning;
 	status = "okay";
 
