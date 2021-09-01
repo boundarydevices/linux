@@ -235,6 +235,7 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_lpuart7>;
 	pinctrl-1 = <&pinctrl_lpuart7>;
+	status = "okay";
 };
 
 &lpi2c7 {
