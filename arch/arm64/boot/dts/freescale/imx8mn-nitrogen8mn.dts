@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2018 Boundary Devices
+ */
+
+/dts-v1/;
+#define MX8MMN(a, b)	MX8MN_##a b
+#define IMX8MMN(a)	IMX8MN_##a
+#define IMX8MN_CLK_LCDIF_PIXEL IMX8MN_CLK_DISP_PIXEL_ROOT
+#include "imx8mn.dtsi"
+#include "imx8mmn-nitrogen8mm_rev2.dtsi"
+
+/ {
+	model = "Boundary Devices i.MX8M Nano Nitrogen8MN";
+	compatible = "boundary,imx8mn-nitrogen8mn", "fsl,imx8mn";
+};
+
+&ecspi2 {
+	spidev@0 {
+		compatible = "spidev";
+		spi-max-frequency = <2000000>;
+		reg = <0>;
+	};
+};
+
+&mipi_csi_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	/delete-node/ port;
+	/delete-node/ port@0;
+
+	port@0 {
+		reg = <0>;
+
+		mipi1_ov5640_ep: endpoint {
+			remote-endpoint = <&ov5640_mipi1_ep>;
+			data-lanes = <2>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+	};
+};
+
+&isi_0 {
+	status = "okay";
+};
