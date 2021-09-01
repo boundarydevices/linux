@@ -1007,11 +1007,9 @@ static int mxs_phy_probe(struct platform_device *pdev)
 		return PTR_ERR(base);
 
 	clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(clk)) {
-		dev_err(&pdev->dev,
-			"can't get the clock, err=%ld", PTR_ERR(clk));
-		return PTR_ERR(clk);
-	}
+	if (IS_ERR(clk))
+		return dev_err_probe(&pdev->dev, PTR_ERR(clk),
+				     "failed to get clock\n");
 
 	mxs_phy = devm_kzalloc(&pdev->dev, sizeof(*mxs_phy), GFP_KERNEL);
 	if (!mxs_phy)
@@ -1101,16 +1099,13 @@ static int mxs_phy_probe(struct platform_device *pdev)
 	}
 
 	mxs_phy->phy_3p0 = devm_regulator_get(&pdev->dev, "phy-3p0");
-	if (PTR_ERR(mxs_phy->phy_3p0) == -EPROBE_DEFER) {
-		return -EPROBE_DEFER;
-	} else if (PTR_ERR(mxs_phy->phy_3p0) == -ENODEV) {
+	if (PTR_ERR(mxs_phy->phy_3p0) == -ENODEV)
 		/* not exist */
 		mxs_phy->phy_3p0 = NULL;
-	} else if (IS_ERR(mxs_phy->phy_3p0)) {
-		dev_err(&pdev->dev, "Getting regulator error: %ld\n",
-			PTR_ERR(mxs_phy->phy_3p0));
-		return PTR_ERR(mxs_phy->phy_3p0);
-	}
+	else if (IS_ERR(mxs_phy->phy_3p0))
+		return dev_err_probe(&pdev->dev, PTR_ERR(mxs_phy->phy_3p0),
+				     "Getting regulator error\n");
+
 	if (mxs_phy->phy_3p0)
 		regulator_set_voltage(mxs_phy->phy_3p0, 3200000, 3200000);
 
