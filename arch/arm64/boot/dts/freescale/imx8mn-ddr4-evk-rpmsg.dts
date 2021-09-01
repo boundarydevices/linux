@@ -64,7 +64,7 @@
 			 <&clk IMX8MN_CLK_SDMA3_ROOT>,
 			 <&clk IMX8MN_AUDIO_PLL1_OUT>,
 			 <&clk IMX8MN_AUDIO_PLL2_OUT>;
-		clock-names = "bus", "mclk", "dma", "pll8k", "pll11k";
+		clock-names = "ipg", "mclk", "dma", "pll8k", "pll11k";
 		status = "okay";
 	};
 
