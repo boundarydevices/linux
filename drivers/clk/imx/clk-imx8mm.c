@@ -294,7 +294,7 @@ static const char *imx8mm_clko2_sels[] = {"osc_24m", "sys_pll2_200m", "sys_pll1_
 static struct clk_hw_onecell_data *clk_hw_data;
 static struct clk_hw **hws;
 
-static int __init imx_clk_init_on(struct device_node *np,
+static int imx_clk_init_on(struct device_node *np,
 				  struct clk_hw * const clks[])
 {
 	u32 *array;
