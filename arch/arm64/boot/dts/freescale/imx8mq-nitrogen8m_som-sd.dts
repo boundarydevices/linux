@@ -1,0 +1,25 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2020 Boundary Devices
+ */
+
+#include "imx8mq-nitrogen8m_som.dts"
+
+/ {
+	model = "Boundary Devices i.MX8MQ Nitrogen8M SOM SD2";
+	compatible = "boundary,imx8mq-nitrogen8m_som_sd", "fsl,imx8mq";
+};
+
+&usdhc2 {
+	/delete-property/ pm-ignore-notify;
+	/delete-property/ keep-power-in-suspend;
+	/delete-property/ non-removable;
+	/delete-property/ no-sd-uhs-sdr104;
+	/delete-property/ tuning-delay;
+	/delete-property/ tuning-mode;
+	/delete-property/ vqmmc-1-8-v;
+	pinctrl-names = "default"; /* 50MHz support only */
+	cd-gpios = <&gpio2 12 GPIO_ACTIVE_LOW>;
+	fsl,tuning-start-tap = <20>;
+	fsl,tuning-step = <2>;
+};
