@@ -107,18 +107,33 @@
 		fsl,pins = <
 			MX6SX_PAD_GPIO1_IO13__GPIO1_IO_13	0x30b0
 			MX6SX_PAD_LCD1_DATA00__GPIO3_IO_1	0x30b0
-			MX6SX_PAD_LCD1_DATA02__GPIO3_IO_3	0xb0b0
+			MX6SX_PAD_LCD1_DATA02__GPIO3_IO_3	0x30b0
+			/* gpio 68 goes high to force shutdown, ~1000ms warning */
+#define DSP_POWER_OK_PIN   <&gpio3 4 IRQ_TYPE_LEVEL_HIGH>
 			MX6SX_PAD_LCD1_DATA03__GPIO3_IO_4	0x30b0
 			MX6SX_PAD_LCD1_DATA05__GPIO3_IO_6	0x30b0
-			MX6SX_PAD_LCD1_DATA06__GPIO3_IO_7	0x30b0
-			MX6SX_PAD_LCD1_DATA08__GPIO3_IO_9	0x30b0
+			MX6SX_PAD_LCD1_DATA07__GPIO3_IO_8	0x30b0
+			/* gpio 74 goes high to force shutdown, ~2ms warning */
+#define ANALOG_POWER_OK_PIN   <&gpio3 10 IRQ_TYPE_LEVEL_HIGH>
 			MX6SX_PAD_LCD1_DATA09__GPIO3_IO_10	0x30b0
-			MX6SX_PAD_LCD1_DATA10__GPIO3_IO_11	0x30b0
 			MX6SX_PAD_LCD1_DATA11__GPIO3_IO_12	0x30b0
 			/* Test points */
 			MX6SX_PAD_QSPI1A_SS0_B__GPIO4_IO_22	0x30b0
 			MX6SX_PAD_QSPI1B_SCLK__GPIO4_IO_29	0x30b0
 			MX6SX_PAD_QSPI1B_DATA0__GPIO4_IO_24	0x30b0
+		>;
+	};
+
+	pinctrl_leds: ledsgrp {
+		fsl,pins = <
+#define LED_SERVICE			<&gpio3 7 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_LCD1_DATA06__GPIO3_IO_7	0x30b0  /* SERVICE LED, gpio 71 */
+
+#define LED_NETWORK			<&gpio3 9 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_LCD1_DATA08__GPIO3_IO_9	0x30b0	/* NETWORK LED, gpio 73 */
+
+#define LED_SYSTEM			<&gpio3 11 GPIO_ACTIVE_HIGH>
+			MX6SX_PAD_LCD1_DATA10__GPIO3_IO_11	0x30b0	/* SYSTEM LED, gpio 75 */
 		>;
 	};
 
@@ -227,7 +242,7 @@
 		fsl,pins = <
 			MX6SX_PAD_KEY_COL3__UART5_TX		0x1b0b1
 			MX6SX_PAD_KEY_ROW3__UART5_RX		0x1b0b1
-#define GP_UART5_TX_EN		<&gpio1 12 GPIO_ACTIVE_HIGH>
+#define GP_UART5_TX_EN		<&gpio1 12 GPIO_ACTIVE_LOW>
 			MX6SX_PAD_GPIO1_IO12__GPIO1_IO_12	0x0b0b0
 		>;
 	};
@@ -324,6 +339,29 @@
 		};
 	};
 
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_leds>;
+		system {
+			gpios = LED_SYSTEM;
+			retain-state-suspended;
+			linux,default-trigger = "timer";
+		};
+
+		service {
+			gpios = LED_SERVICE;
+			retain-state-suspended;
+			linux,default-trigger = "timer";
+		};
+
+		network {
+			gpios = LED_NETWORK;
+			retain-state-suspended;
+			default-state = "on";  /* on at gpio, off at LED assembly */
+		};
+	};
+
 	memory {
 		reg = <0x80000000 0x40000000>;
 	};
@@ -375,9 +413,19 @@
 	};
 
 	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
 		linux,cma {
 			size = <0x2000000>;
 		};
+	};
+
+	solectria-poweroff {
+		compatible = "solectria-poweroff";
+		analog-shutdown-gpio = ANALOG_POWER_OK_PIN;
+		dsp-shutdown-gpio = DSP_POWER_OK_PIN;
 	};
 };
 
@@ -388,8 +436,8 @@
 	pinctrl-0 = <&pinctrl_ecspi1>;
 	status = "okay";
 
-	flash: m25p80@0 {
-		compatible = "sst,sst25vf016b";
+	flash: w25q128@0 {
+		compatible = "winbond,w25q128";
 		spi-max-frequency = <20000000>;
 		reg = <0>;
 		#address-cells = <1>;
@@ -397,20 +445,20 @@
 		partition@0 {
 			label = "U-Boot";
 			reg = <0x0 0xC0000>;
-			read-only;
+/*			read-only; */
 		};
 		partition@C0000 {
 			label = "U-Boot Env";
 			reg = <0xC0000 0x2000>;
-			read-only;
+/*			read-only; */
 		};
 		partition@C2000 {
-			label = "Logo";
-			reg = <0xC2000 0x11e000>;
+			label = "etc_solectria";
+			reg = <0xC2000 0x200000>;
 		};
-		partition@1e0000 {
-			label = "M4 FW";
-			reg = <0x1e0000 0x8000>;
+		partition@2C2000 {
+			label = "data_solectria";
+			reg = <0x2C2000 0xD3E000>;
 		};
 	};
 };
@@ -423,9 +471,9 @@
 	status = "okay";
 
 	spidev@0 {
-		compatible = "spidev";
+		compatible = "spidev", "rohm,dh2228fv";
 		reg = <0>;
-		spi-max-frequency = <2000000>;
+		spi-max-frequency = <3000000>;
 	};
 };
 
@@ -437,9 +485,9 @@
 	status = "okay";
 
 	spidev@0 {
-		compatible = "spidev";
+		compatible = "spidev", "rohm,dh2228fv";
 		reg = <0>;
-		spi-max-frequency = <2000000>;
+		spi-max-frequency = <3000000>;
 	};
 };
 
@@ -451,9 +499,9 @@
 	status = "okay";
 
 	spidev@0 {
-		compatible = "spidev";
+		compatible = "spidev", "rohm,dh2228fv";
 		reg = <0>;
-		spi-max-frequency = <2000000>;
+		spi-max-frequency = <3000000>;
 	};
 };
 
@@ -566,19 +614,19 @@
 &uart5 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart5>;
-	control-gpios = GP_UART5_TX_EN;
-#define M_TX_EN		1
-	rs485_txen_mask = <M_TX_EN>;
-	rs485_txen_levels = <M_TX_EN>;
-	uart-has-rs485-half-duplex;
-	rs485-mode = <1>;
-	status = "okay";
+        rs485-txen-gpio = GP_UART5_TX_EN;
+/*	fsl,uart-has-rtscts; */
+/*	rs485-rts-active-high; */
+        rs485-rx-during-tx;
+        rs485-rts-delay = <1 1>;
+        linux,rs485-enabled-at-boot-time;
+        status = "okay";
 };
 
 &usbotg1 {
-	vbus-supply = <&reg_usb_otg1_vbus>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg1>;
+	vbus-supply = <&reg_usb_otg1_vbus>;
 	status = "okay";
 };
 
@@ -588,8 +636,8 @@
 	dr_mode = "host";
 	disable-over-current;
 	reset-gpios = GP_USB_HUB_RESET;
-	status = "okay";
 	vbus-supply = <&reg_usb_otg2_vbus>;
+	status = "okay";
 };
 
 &usdhc2 {
