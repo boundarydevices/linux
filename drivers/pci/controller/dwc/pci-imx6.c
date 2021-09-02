@@ -1236,6 +1236,7 @@ static void imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
 		break;
 	case IMX8MP:
 	case IMX8MP_EP:
+		msleep(20);
 		reset_control_deassert(imx6_pcie->pciephy_reset);
 		reset_control_deassert(imx6_pcie->pciephy_perst);
 
@@ -1873,6 +1874,7 @@ static int imx6_pcie_start_link(struct dw_pcie *pci)
 	dw_pcie_dbi_ro_wr_dis(pci);
 	tmp = dw_pcie_readw_dbi(pci, offset + PCI_EXP_LNKSTA);
 	dev_info(dev, "Link up, Gen%i\n", tmp & PCI_EXP_LNKSTA_CLS);
+	msleep(100);
 	return 0;
 
 err_reset_phy:
