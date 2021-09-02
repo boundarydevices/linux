@@ -1205,6 +1205,8 @@
 };
 
 &pwm1 {
+	assigned-clocks = <&clk IMX8MMN(CLK_PWM1)>;
+	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_40M)>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm1>;
 	status = "okay";
