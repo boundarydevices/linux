@@ -689,8 +689,16 @@ static unsigned tc358743_num_csi_lanes_needed(struct v4l2_subdev *sd)
 	u32 bits_pr_pixel =
 		(state->mbus_fmt_code == MEDIA_BUS_FMT_UYVY8_1X16) ? 16 :
 		(state->mbus_fmt_code == MEDIA_BUS_FMT_UYVY8_2X8)  ? 16 : 24;
-	u32 bps = bt->width * bt->height * fps(bt) * bits_pr_pixel;
-	u32 bps_pr_lane = (pdata->refclk_hz / pdata->pll_prd) * pdata->pll_fbd;
+
+	/* Hsync and vsync need to be included here. If omitted the
+	 * resulting lane number may be too low since this data has to
+	 * transmitted together with the active image data.
+	 *
+	 * The data types for bps and bps_pr_lane must be 64 bit wide.
+	 * With 32bit and high bps this will overflow.
+	 */
+	u64 bps = (bt->width + bt->hsync) * (bt->height + bt->vsync) * fps(bt) * bits_pr_pixel;
+	u64 bps_pr_lane = (pdata->refclk_hz / pdata->pll_prd) * pdata->pll_fbd;
 	lanes = DIV_ROUND_UP(bps, bps_pr_lane);
 	if (lanes > 4)
 		lanes = 4;
