@@ -28,10 +28,13 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
+#include <linux/spi/spi.h>
 
 #include <video/display_timing.h>
 #include <video/of_display_timing.h>
+#include <video/of_videomode.h>
 #include <video/videomode.h>
+#include <dt-bindings/display/simple_panel_mipi_cmds.h>
 
 #include <drm/drm_crtc.h>
 #include <drm/drm_device.h>
@@ -97,28 +100,554 @@ struct panel_desc {
 	int connector_type;
 };
 
+struct cmds {
+	const u8* cmds;
+	unsigned length;
+};
+
+struct interface_cmds {
+	struct cmds i2c;
+	struct cmds mipi;
+	struct cmds spi;
+};
+
 struct panel_simple {
 	struct drm_panel base;
 	bool prepared;
 	bool enabled;
+	bool enabled2;
 	bool no_hpd;
 
 	const struct panel_desc *desc;
+	struct panel_desc dt_desc;
+	struct drm_display_mode dt_mode;
 
+	unsigned enable_high_duration_us;
+	unsigned enable_low_duration_us;
+	unsigned power_delay_ms;
 	struct regulator *supply;
 	struct i2c_adapter *ddc;
 
-	struct gpio_desc *enable_gpio;
+	struct gpio_desc *gpd_prepare_enable;
 	struct gpio_desc *hpd_gpio;
 
 	struct drm_display_mode override_mode;
 
 	enum drm_panel_orientation orientation;
+
+	struct gpio_desc *gpd_power;
+	struct gpio_desc *reset;
+	struct videomode vm;
+	struct spi_device *spi;
+	unsigned spi_max_frequency;
+	struct i2c_adapter *i2c;
+	unsigned i2c_max_frequency;
+	unsigned i2c_address;
+	unsigned char spi_9bit;
+	unsigned spi_bits;
+	struct interface_cmds cmds_init;
+	struct interface_cmds cmds_enable;
+	struct interface_cmds cmds_enable2;
+	struct interface_cmds cmds_disable;
+	/* Keep a mulitple of 9 */
+	unsigned char tx_buf[63] __attribute__((aligned(64)));
+	unsigned char rx_buf[63] __attribute__((aligned(64)));
 };
 
 static inline struct panel_simple *to_panel_simple(struct drm_panel *panel)
 {
 	return container_of(panel, struct panel_simple, base);
+}
+
+static int spi_send(struct panel_simple *panel, int rx)
+{
+	struct mipi_dsi_device *dsi;
+	u8 *p = panel->tx_buf;
+	struct spi_transfer t;
+	struct spi_message m;
+	int ret;
+
+	if (!panel->spi || !panel->spi_bits)
+		return 0;
+	memset(&t, 0, sizeof(t));
+	t.speed_hz = panel->spi_max_frequency;
+	t.tx_buf = panel->tx_buf;
+	t.rx_buf = (rx) ? panel->rx_buf : NULL;
+	t.len = (panel->spi_bits + 7) >> 3;
+
+	panel->spi_bits = 0;
+	spi_message_init_with_transfers(&m, &t, 1);
+	ret = spi_sync(panel->spi, &m);
+	dsi = container_of(panel->base.dev, struct mipi_dsi_device, dev);
+	if (ret) {
+		dev_err(&dsi->dev,
+			"spi(%d), (%d)%02x %02x %02x %02x %02x %02x\n",
+			ret, t.len, p[0], p[1], p[2], p[3], p[4], p[5]);
+	} else {
+		pr_debug("spi(%d), (%d)%02x %02x %02x %02x %02x %02x  "
+			"%02x %02x %02x %02x %02x %02x\n",
+			ret, t.len, p[0], p[1], p[2], p[3], p[4], p[5],
+			p[6], p[7], p[8], p[9], p[10], p[11]);
+	}
+	return ret;
+}
+
+static int store_9bit(struct panel_simple *panel, const u8 *p, unsigned l)
+{
+	int i = 0;
+	u8 * buf = panel->tx_buf;
+	unsigned val = 0;
+	int bits = l * 9;
+	int v_bits;
+	int ret = 0;
+
+	i = panel->spi_bits;
+	if ((i + bits) > sizeof(panel->tx_buf) * 8) {
+		ret = spi_send(panel, 0);
+		i = 0;
+		if (bits > sizeof(panel->tx_buf) * 8) {
+			struct mipi_dsi_device *dsi;
+
+			dsi = container_of(panel->base.dev, struct mipi_dsi_device, dev);
+			dev_err(&dsi->dev, "too many bytes (%d)\n", l);
+			return -EINVAL;
+		}
+	}
+
+	panel->spi_bits = i + bits;
+	buf += i >> 3;
+	v_bits = (i & 7);
+	if (v_bits) {
+		bits += v_bits;
+		val = *buf;
+		val >>= (8 - v_bits);
+	}
+	val = (val << 9);
+	v_bits += 9;
+	if (l) {
+		val |= *p++;
+		l--;
+	}
+	while (bits > 0) {
+		*buf++ = val >> (v_bits - 8);
+		bits -= 8;
+		v_bits -= 8;
+		if (v_bits < 8) {
+			val = (val << 9);
+			v_bits += 9;
+			if (l) {
+				val |= 0x100;
+				val |= *p++;
+				l--;
+			}
+		}
+	}
+	return ret;
+}
+
+static int store_high(struct panel_simple *panel, int bits)
+{
+	int i;
+	u8 * buf = panel->tx_buf;
+	unsigned val = 0;
+	int v_bits;
+
+	i = panel->spi_bits;
+	if ((i + bits) > sizeof(panel->tx_buf) * 8) {
+		struct mipi_dsi_device *dsi;
+
+		dsi = container_of(panel->base.dev, struct mipi_dsi_device, dev);
+		dev_err(&dsi->dev, "too many bits (%d)\n", bits);
+		return -EINVAL;
+	}
+
+	panel->spi_bits = i + bits;
+
+	buf += i >> 3;
+	v_bits = (i & 7);
+	if (v_bits) {
+		bits += v_bits;
+		val = *buf;
+		val >>= (8 - v_bits);
+	}
+
+	while (bits > 0) {
+		if (v_bits < 8) {
+			val = (val << 24) | 0xffffff;
+			v_bits += 24;
+		}
+		*buf++ = val >> (v_bits - 8);
+		bits -= 8;
+		v_bits -= 8;
+	}
+	return 0;
+}
+
+static void extract_data(u8 *dst, unsigned bytes, u8 * buf, unsigned start_bit)
+{
+	unsigned val = 0;
+	int v_bits;
+
+	buf += start_bit >> 3;
+	v_bits = (start_bit & 7);
+	if (v_bits) {
+		val = *buf++;
+		v_bits = 8 - v_bits;
+	}
+	while (bytes > 0) {
+		if (v_bits < 8) {
+			val = (val << 8) | *buf++;
+			v_bits += 8;
+		}
+		*dst++ = val >> (v_bits - 8);
+		v_bits -= 8;
+		bytes--;
+	}
+}
+int simple_i2c_write(struct panel_simple *panel, const u8 *tx, unsigned tx_len)
+{
+	u8 *buf = panel->tx_buf;
+	u8 tmp;
+	struct i2c_msg msg;
+	int ret;
+
+	if (tx_len > sizeof(panel->tx_buf))
+		return -EINVAL;
+	memcpy(buf, tx, tx_len);
+	if (tx_len >= 2) {
+		tmp = buf[0];
+		buf[0] = buf[1];
+		buf[1] = tmp;
+	}
+
+	msg.addr = panel->i2c_address;
+	msg.flags = 0;
+	msg.len = tx_len;
+	msg.buf = buf;
+	ret = i2c_transfer(panel->i2c, &msg, 1);
+	if (ret < 0) {
+		msleep(10);
+		ret = i2c_transfer(panel->i2c, &msg, 1);
+	}
+	return ret < 0 ? ret : 0;
+}
+
+int simple_i2c_read(struct panel_simple *panel, const u8 *tx, int tx_len, u8 *rx, unsigned rx_len)
+{
+	u8 *buf = panel->tx_buf;
+	u8 tmp;
+	struct i2c_msg msgs[2];
+	int ret;
+
+	if (tx_len > sizeof(panel->tx_buf))
+		return -EINVAL;
+	if (rx_len > sizeof(panel->rx_buf))
+		return -EINVAL;
+	memcpy(buf, tx, tx_len);
+	if (tx_len >= 2) {
+		tmp = buf[0];
+		buf[0] = buf[1];
+		buf[1] = tmp;
+	}
+	msgs[0].addr = panel->i2c_address;
+	msgs[0].flags = 0;
+	msgs[0].len = tx_len;
+	msgs[0].buf = buf;
+
+	msgs[1].addr = panel->i2c_address;
+	msgs[1].flags = I2C_M_RD;
+	msgs[1].len = rx_len;
+	msgs[1].buf = rx;
+	ret = i2c_transfer(panel->i2c, msgs, 2);
+	return ret < 0 ? ret : 0;
+}
+
+#define TYPE_MIPI	0
+#define TYPE_I2C	1
+#define TYPE_SPI	2
+
+static int send_cmd_list(struct panel_simple *panel, struct cmds *mc, int type, const unsigned char *id)
+{
+	struct drm_display_mode *dm = &panel->dt_mode;
+	struct mipi_dsi_device *dsi;
+	const u8 *cmd = mc->cmds;
+	unsigned length = mc->length;
+	u8 data[8];
+	u8 cmd_buf[32];
+	const u8 *p;
+	unsigned l;
+	unsigned len;
+	unsigned mask;
+	int ret;
+	int generic;
+	int match = 0;
+	u64 readval, matchval;
+	int skip = 0;
+	int match_index;
+	int i;
+
+	pr_debug("%s:%d %d\n", __func__, length, type);
+	if (!cmd || !length)
+		return 0;
+
+	panel->spi_bits = 0;
+	dsi = container_of(panel->base.dev, struct mipi_dsi_device, dev);
+	while (1) {
+		len = *cmd++;
+		length--;
+		if (!length)
+			break;
+		if ((len >= S_IF_1_LANE) && (len <= S_IF_4_LANES)) {
+			int lane_match = 1 + len - S_IF_1_LANE;
+
+			if (lane_match != dsi->lanes)
+				skip = 1;
+			continue;
+		}
+		generic = len & 0x80;
+		len &= 0x7f;
+
+		p = cmd;
+		l = len;
+		ret = 0;
+		if ((len < S_DELAY) || (len == S_DCS_LENGTH)
+				|| (len == S_DCS_BUF)) {
+			if (len == S_DCS_LENGTH) {
+				len = *cmd++;
+				length--;
+				p = cmd;
+				l = len;
+			} else if (len == S_DCS_BUF) {
+				l = *cmd++;
+				length--;
+				if (l > 32)
+					l = 32;
+				p = cmd_buf;
+				len = 0;
+			} else {
+				p = cmd;
+				l = len;
+			}
+			if (length < len) {
+				dev_err(&dsi->dev, "Unexpected end of data\n");
+				break;
+			}
+			if (!skip) {
+				if (type == TYPE_I2C) {
+					ret = simple_i2c_write(panel, p, l);
+				} else if (type == TYPE_SPI) {
+					if (panel->spi_9bit) {
+						ret = store_9bit(panel, p, l);
+					} else {
+						if (l < sizeof(panel->tx_buf)) {
+							memcpy(panel->tx_buf, p, l);
+							panel->spi_bits = l * 8;
+							ret = spi_send(panel, 0);
+						} else {
+							ret = -EINVAL;
+						}
+					}
+				} else if (generic) {
+					ret = mipi_dsi_generic_write(dsi, p, l);
+				} else {
+					ret = mipi_dsi_dcs_write_buffer(dsi, p, l);
+				}
+			}
+		} else if (len == S_MRPS) {
+			if (type == TYPE_MIPI) {
+				ret = mipi_dsi_set_maximum_return_packet_size(
+					dsi, cmd[0]);
+			}
+			l = len = 1;
+		} else if ((len >= S_DCS_READ1) && (len <= S_DCS_READ8)) {
+			data[0] = data[1] = data[2] = data[3] = 0;
+			data[4] = data[5] = data[6] = data[7] = 0;
+			len = len - S_DCS_READ1 + 1;
+			match_index = generic ? 2 : 1;
+			if (!skip) {
+				if (type == TYPE_I2C) {
+					ret = simple_i2c_read(panel, cmd, match_index, data, len);
+				} else if (type == TYPE_SPI) {
+					if (panel->spi_9bit) {
+						spi_send(panel, 0);
+						store_9bit(panel, cmd, match_index);
+					} else {
+						memcpy(panel->tx_buf, cmd, match_index);
+						panel->spi_bits = match_index * 8;
+					}
+					l = panel->spi_bits;
+					store_high(panel, len * 8);
+					ret = spi_send(panel, 1);
+					extract_data(data, len, panel->rx_buf, l);
+				} else if (generic) {
+					ret =  mipi_dsi_generic_read(dsi, cmd, 2, data, len);
+					/* if an error is pending before BTA, an error report can happen */
+					if (ret == -EPROTO)
+						ret =  mipi_dsi_generic_read(dsi, cmd, 2, data, len);
+					ret = 0;
+				} else {
+					ret =  mipi_dsi_dcs_read(dsi, cmd[0], data, len);
+					if (ret == -EPROTO)
+						ret =  mipi_dsi_dcs_read(dsi, cmd[0], data, len);
+				}
+				readval = 0;
+				matchval = 0;
+				for (i = 0; i < len; i++) {
+					readval |= ((u64)data[i]) << (i << 3);
+					matchval |= ((u64)cmd[match_index + i]) << (i << 3);
+				}
+				if (generic) {
+					pr_debug("Read (%d)%s GEN: (%04x) 0x%llx cmp 0x%llx\n",
+						ret, id, cmd[0] + (cmd[1] << 8), readval, matchval);
+				} else {
+					pr_debug("Read (%d)%s DCS: (%02x) 0x%llx cmp 0x%llx\n",
+						ret, id, cmd[0], readval, matchval);
+				}
+				if (readval != matchval)
+					match = -EINVAL;
+			}
+			l = len = len + match_index;
+		} else if (len == S_DELAY) {
+			if (!skip) {
+				if (type == TYPE_SPI)
+					spi_send(panel, 0);
+				msleep(cmd[0]);
+			}
+			len = 1;
+			if (length <= len)
+				break;
+			cmd += len;
+			length -= len;
+			l = len = 0;
+		} else if ((len >= S_CONST) && (len <= S_VFP)) {
+			int scmd, dest_start, dest_len, src_start;
+			unsigned val;
+
+			scmd = len;
+			dest_start = cmd[0];
+			dest_len = cmd[1];
+			if (scmd == S_CONST) {
+				val = cmd[2] | (cmd[3] << 8) | (cmd[4] << 16) | (cmd[5] << 24);
+				len = 6;
+				src_start = 0;
+			} else {
+				src_start = cmd[2];
+				len = 3;
+				switch (scmd) {
+				case S_HSYNC:
+					val = dm->hsync_end - dm->hsync_start;
+					break;
+				case S_HBP:
+					val = dm->htotal - dm->hsync_end;
+					break;
+				case S_HACTIVE:
+					val = dm->hdisplay;
+					break;
+				case S_HFP:
+					val = dm->hsync_start - dm->hdisplay;
+					break;
+				case S_VSYNC:
+					val = dm->vsync_end - dm->vsync_start;
+					break;
+				case S_VBP:
+					val = dm->vtotal - dm->vsync_end;
+					break;
+				case S_VACTIVE:
+					val = dm->vdisplay;
+					break;
+				case S_VFP:
+					val = dm->vsync_start - dm->vdisplay;
+					break;
+				default:
+					dev_err(&dsi->dev, "Unknown scmd 0x%x0x\n", scmd);
+					val = 0;
+					break;
+				}
+			}
+			val >>= src_start;
+			while (dest_len && dest_start < 256) {
+				l = dest_start & 7;
+				mask = (dest_len < 8) ? ((1 << dest_len) - 1) : 0xff;
+				cmd_buf[dest_start >> 3] &= ~(mask << l);
+				cmd_buf[dest_start >> 3] |= (val << l);
+				l = 8 - l;
+				dest_start += l;
+				val >>= l;
+				if (dest_len >= l)
+					dest_len -= l;
+				else
+					dest_len = 0;
+			}
+			l = 0;
+		} else {
+			dev_err(&dsi->dev, "Unknown DCS command 0x%x 0x%x\n", cmd[-1], cmd[0]);
+			match = -EINVAL;
+			break;
+		}
+		if (ret < 0) {
+			if (l >= 6) {
+				dev_err(&dsi->dev,
+					"Failed to send %s (%d), (%d)%02x %02x: %02x %02x %02x %02x\n",
+					id, ret, l, p[0], p[1], p[2], p[3], p[4], p[5]);
+			} else if (l >= 2) {
+				dev_err(&dsi->dev,
+					"Failed to send %s (%d), (%d)%02x %02x\n",
+					id, ret, l, p[0], p[1]);
+			} else {
+				dev_err(&dsi->dev,
+					"Failed to send %s (%d), (%d)%02x\n",
+					id, ret, l, p[0]);
+			}
+			return ret;
+		} else {
+			if (!skip) {
+				if (l >= 18) {
+					pr_debug("Sent %s (%d), (%d)%02x %02x: %02x %02x %02x %02x"
+							"  %02x %02x %02x %02x"
+							"  %02x %02x %02x %02x"
+							"  %02x %02x %02x %02x\n",
+						id, ret, l, p[0], p[1], p[2], p[3], p[4], p[5],
+						p[6], p[7], p[8], p[9],
+						p[10], p[11], p[12], p[13],
+						p[14], p[15], p[16], p[17]);
+				} else if (l >= 6) {
+					pr_debug("Sent %s (%d), (%d)%02x %02x: %02x %02x %02x %02x\n",
+						id, ret, l, p[0], p[1], p[2], p[3], p[4], p[5]);
+				} else if (l >= 2) {
+					pr_debug("Sent %s (%d), (%d)%02x %02x\n",
+						id, ret, l, p[0], p[1]);
+				} else if (l) {
+					pr_debug("Sent %s (%d), (%d)%02x\n",
+						id, ret, l, p[0]);
+				}
+			}
+		}
+		if (length < len) {
+			dev_err(&dsi->dev, "Unexpected end of data\n");
+			break;
+		}
+		cmd += len;
+		length -= len;
+		if (!length)
+			break;
+		skip = 0;
+	}
+	if (!match && type == TYPE_SPI)
+		match = spi_send(panel, 0);
+	return match;
+};
+
+static int send_all_cmd_lists(struct panel_simple *panel, struct interface_cmds *msc)
+{
+	int ret = 0;
+
+	if (panel->i2c)
+		ret = send_cmd_list(panel,  &msc->i2c, TYPE_I2C, "i2c");
+	if (!ret)
+		ret = send_cmd_list(panel,  &msc->mipi, TYPE_MIPI, "mipi");
+	if (!ret && panel->spi)
+		ret = send_cmd_list(panel,  &msc->spi, TYPE_SPI, "spi");
+	return ret;
 }
 
 static unsigned int panel_simple_get_timings_modes(struct panel_simple *panel,
@@ -232,6 +761,7 @@ static int panel_simple_get_non_edid_modes(struct panel_simple *panel,
 
 static int panel_simple_disable(struct drm_panel *panel)
 {
+	struct mipi_dsi_device *dsi;
 	struct panel_simple *p = to_panel_simple(panel);
 
 	if (!p->enabled)
@@ -239,8 +769,12 @@ static int panel_simple_disable(struct drm_panel *panel)
 
 	if (p->desc->delay.disable)
 		msleep(p->desc->delay.disable);
+	dsi = container_of(p->base.dev, struct mipi_dsi_device, dev);
+	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+	send_all_cmd_lists(p, &p->cmds_disable);
 
 	p->enabled = false;
+	p->enabled2 = false;
 
 	return 0;
 }
@@ -252,12 +786,13 @@ static int panel_simple_unprepare(struct drm_panel *panel)
 	if (!p->prepared)
 		return 0;
 
-	gpiod_set_value_cansleep(p->enable_gpio, 0);
+	if (p->desc->delay.unprepare)
+		msleep(p->desc->delay.unprepare);
+	gpiod_set_value_cansleep(p->reset, 1);
+	gpiod_set_value_cansleep(p->gpd_prepare_enable, 0);
 
 	regulator_disable(p->supply);
 
-	if (p->desc->delay.unprepare)
-		msleep(p->desc->delay.unprepare);
 
 	p->prepared = false;
 
@@ -292,6 +827,7 @@ static int panel_simple_get_hpd_gpio(struct device *dev,
 static int panel_simple_prepare(struct drm_panel *panel)
 {
 	struct panel_simple *p = to_panel_simple(panel);
+	struct mipi_dsi_device *dsi;
 	unsigned int delay;
 	int err;
 	int hpd_asserted;
@@ -305,7 +841,23 @@ static int panel_simple_prepare(struct drm_panel *panel)
 		return err;
 	}
 
-	gpiod_set_value_cansleep(p->enable_gpio, 1);
+	if (p->gpd_power) {
+		gpiod_set_value_cansleep(p->gpd_power, 1);
+		mdelay(p->power_delay_ms);
+	}
+	if (p->gpd_prepare_enable) {
+		if (p->enable_high_duration_us) {
+			gpiod_set_value_cansleep(p->gpd_prepare_enable, 1);
+			udelay(p->enable_high_duration_us);
+		}
+		if (p->enable_low_duration_us) {
+			gpiod_set_value_cansleep(p->gpd_prepare_enable, 0);
+			udelay(p->enable_low_duration_us);
+		}
+		gpiod_set_value_cansleep(p->gpd_prepare_enable, 1);
+	}
+	gpiod_set_value_cansleep(p->reset, 0);
+
 
 	delay = p->desc->delay.prepare;
 	if (p->no_hpd)
@@ -333,6 +885,13 @@ static int panel_simple_prepare(struct drm_panel *panel)
 		}
 	}
 
+	dsi = container_of(p->base.dev, struct mipi_dsi_device, dev);
+	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+	err = send_all_cmd_lists(p, &p->cmds_init);
+	if (err) {
+		regulator_disable(p->supply);
+		return err;
+	}
 	p->prepared = true;
 
 	return 0;
@@ -341,16 +900,55 @@ static int panel_simple_prepare(struct drm_panel *panel)
 static int panel_simple_enable(struct drm_panel *panel)
 {
 	struct panel_simple *p = to_panel_simple(panel);
+	struct mipi_dsi_device *dsi;
+	int ret;
 
 	if (p->enabled)
 		return 0;
 
+	dsi = container_of(p->base.dev, struct mipi_dsi_device, dev);
+	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+	ret = send_all_cmd_lists(p, &p->cmds_enable);
+	if (ret < 0)
+		goto fail;
 	if (p->desc->delay.enable)
 		msleep(p->desc->delay.enable);
-
 	p->enabled = true;
 
 	return 0;
+fail:
+	if (p->reset)
+		gpiod_set_value_cansleep(p->reset, 1);
+	if (p->gpd_prepare_enable)
+		gpiod_set_value_cansleep(p->gpd_prepare_enable, 0);
+	return ret;
+}
+
+static int panel_simple_enable2(struct drm_panel *panel)
+{
+	struct panel_simple *p = to_panel_simple(panel);
+	struct mipi_dsi_device *dsi;
+	int ret;
+
+	if (p->enabled2)
+		return 0;
+
+	dsi = container_of(p->base.dev, struct mipi_dsi_device, dev);
+	dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
+	ret = send_all_cmd_lists(p, &p->cmds_enable2);
+	if (ret < 0)
+		goto fail;
+
+	p->enabled2 = true;
+
+	return 0;
+fail:
+	p->enabled = false;
+	if (p->reset)
+		gpiod_set_value_cansleep(p->reset, 1);
+	if (p->gpd_prepare_enable)
+		gpiod_set_value_cansleep(p->gpd_prepare_enable, 0);
+	return ret;
 }
 
 static int panel_simple_get_modes(struct drm_panel *panel,
@@ -401,9 +999,35 @@ static const struct drm_panel_funcs panel_simple_funcs = {
 	.unprepare = panel_simple_unprepare,
 	.prepare = panel_simple_prepare,
 	.enable = panel_simple_enable,
+	.enable2 = panel_simple_enable2,
 	.get_modes = panel_simple_get_modes,
 	.get_timings = panel_simple_get_timings,
 };
+
+void check_for_cmds(struct device_node *np, const char *dt_name, struct cmds *mc)
+{
+	void *data;
+	int data_len;
+	int ret;
+
+	/* Check for mipi command arrays */
+	if (!of_get_property(np, dt_name, &data_len) || !data_len)
+		return;
+
+	data = kmalloc(data_len, GFP_KERNEL);
+	if (!data)
+		return;
+
+	ret = of_property_read_u8_array(np, dt_name, data, data_len);
+	if (ret) {
+		pr_info("failed to read %s from DT: %d\n",
+			dt_name, ret);
+		kfree(data);
+		return;
+	}
+	mc->cmds = data;
+	mc->length = data_len;
+}
 
 static struct panel_desc panel_dpi;
 
@@ -500,8 +1124,35 @@ static void panel_simple_parse_panel_timing_node(struct device *dev,
 		dev_err(dev, "Reject override mode: No display_timing found\n");
 }
 
-static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
+static void init_common(struct panel_simple *p, struct device_node *np, struct panel_desc *ds,
+		struct drm_display_mode *dm, struct mipi_dsi_device *dsi)
 {
+	of_property_read_u32(np, "delay-prepare", &ds->delay.prepare);
+	of_property_read_u32(np, "delay-enable", &ds->delay.enable);
+	of_property_read_u32(np, "delay-disable", &ds->delay.disable);
+	of_property_read_u32(np, "delay-unprepare", &ds->delay.unprepare);
+	of_property_read_u32(np, "min-hs-clock-multiple", &dm->min_hs_clock_multiple);
+	of_property_read_u32(np, "mipi-dsi-multiple", &dm->mipi_dsi_multiple);
+	of_property_read_u32(np, "enable-high-duration-us", &p->enable_high_duration_us);
+	of_property_read_u32(np, "enable-low-duration-us", &p->enable_low_duration_us);
+	of_property_read_u32(np, "power-delay-ms", &p->power_delay_ms);
+	if (dsi) {
+		if (of_property_read_bool(np, "mode-video-hfp-disable"))
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_HFP;
+		if (of_property_read_bool(np, "mode-video-hbp-disable"))
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_HBP;
+		if (of_property_read_bool(np, "mode-video-hsa-disable"))
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_HSA;
+	}
+}
+
+static int panel_simple_probe(struct device *dev, const struct panel_desc *desc,
+		struct mipi_dsi_device *dsi)
+{
+	struct device_node *spi_node;
+	struct device_node *i2c_node;
+	struct spi_device *spi = NULL;
+	struct i2c_adapter *i2c = NULL;
 	struct panel_simple *panel;
 	struct display_timing dt;
 	struct device_node *ddc;
@@ -514,8 +1165,143 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 		return -ENOMEM;
 
 	panel->enabled = false;
+	panel->enabled2 = false;
 	panel->prepared = false;
 	panel->desc = desc;
+	if (!desc) {
+		struct videomode vm;
+		struct drm_display_mode *dm = &panel->dt_mode;
+		const char *bf;
+		struct panel_desc *ds = &panel->dt_desc;
+		struct device_node *np = dev->of_node;
+		struct device_node *cmds_np;
+		u32 bridge_de_active;
+		u32 bridge_sync_active;
+
+		of_property_read_u32(np, "panel-width-mm", &ds->size.width);
+		of_property_read_u32(np, "panel-height-mm", &ds->size.height);
+		err = of_get_videomode(np, &vm, 0);
+		if (of_property_read_u32(np, "bridge-de-active", &bridge_de_active)) {
+			bridge_de_active = -1;
+		}
+		if (of_property_read_u32(np, "bridge-sync-active", &bridge_sync_active)) {
+			bridge_sync_active = -1;
+		}
+
+		if (err < 0)
+			return err;
+		drm_display_mode_from_videomode(&vm, dm);
+		if (vm.flags & DISPLAY_FLAGS_DE_HIGH)
+			ds->bus_flags |= DRM_BUS_FLAG_DE_HIGH;
+		if (vm.flags & DISPLAY_FLAGS_DE_LOW)
+			ds->bus_flags |= DRM_BUS_FLAG_DE_LOW;
+		if (bridge_de_active <= 1) {
+			ds->bus_flags &= ~(DRM_BUS_FLAG_DE_HIGH |
+					DRM_BUS_FLAG_DE_LOW);
+			ds->bus_flags |= bridge_de_active ? DRM_BUS_FLAG_DE_HIGH
+					: DRM_BUS_FLAG_DE_LOW;
+		}
+
+		if (bridge_sync_active <= 1) {
+			dm->flags &= ~(
+				DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC |
+				DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC);
+			dm->flags |= bridge_sync_active ?
+				DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC :
+				DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC;
+		}
+		if (vm.flags & DISPLAY_FLAGS_PIXDATA_NEGEDGE)
+			ds->bus_flags |= DRM_BUS_FLAG_PIXDATA_SAMPLE_NEGEDGE;
+		if (vm.flags & DISPLAY_FLAGS_PIXDATA_POSEDGE)
+			ds->bus_flags |= DRM_BUS_FLAG_PIXDATA_SAMPLE_POSEDGE;
+		dev_info(dev, "vm.flags=%x bus_flags=%x flags=%x\n", vm.flags, ds->bus_flags, dm->flags);
+
+		err = of_property_read_string(np, "bus-format", &bf);
+		if (err) {
+			dev_err(dev, "bus-format missing %d\n", err);
+			return err;
+		}
+		if (!strcmp(bf, "rgb888")) {
+			ds->bus_format = MEDIA_BUS_FMT_RGB888_1X24;
+		} else if (!strcmp(bf, "rgb666")) {
+			ds->bus_format = MEDIA_BUS_FMT_RGB666_1X18;
+		} else {
+			dev_err(dev, "unknown bus-format %s\n", bf);
+			return -EINVAL;
+		}
+		init_common(panel, np, ds, dm, dsi);
+		of_property_read_u32(np, "bits-per-color", &ds->bpc);
+		ds->modes = dm;
+		ds->num_modes = 1;
+		panel->desc = ds;
+		cmds_np = of_parse_phandle(np, "mipi-cmds", 0);
+		if (cmds_np) {
+			i2c_node = of_parse_phandle(cmds_np, "i2c-bus", 0);
+			if (i2c_node) {
+				i2c = of_find_i2c_adapter_by_node(i2c_node);
+				of_node_put(i2c_node);
+
+				if (!i2c) {
+					pr_debug("%s:i2c deferred\n", __func__);
+					return -EPROBE_DEFER;
+				}
+				panel->i2c = i2c;
+			}
+
+			spi_node = of_parse_phandle(cmds_np, "spi", 0);
+			if (spi_node) {
+				spi = of_find_spi_device_by_node(spi_node);
+				of_node_put(spi_node);
+
+				if (!spi) {
+					pr_debug("%s:spi deferred\n", __func__);
+					err = -EPROBE_DEFER;
+					goto free_i2c;
+				}
+				panel->spi = spi;
+			}
+
+			if (i2c) {
+				check_for_cmds(cmds_np, "i2c-cmds-init",
+				       &panel->cmds_init.i2c);
+				check_for_cmds(cmds_np, "i2c-cmds-enable",
+				       &panel->cmds_enable.i2c);
+				check_for_cmds(cmds_np, "i2c-cmds-enable2",
+					       &panel->cmds_enable2.i2c);
+				check_for_cmds(cmds_np, "i2c-cmds-disable",
+				       &panel->cmds_disable.i2c);
+				of_property_read_u32(cmds_np, "i2c-address", &panel->i2c_address);
+				of_property_read_u32(cmds_np, "i2c-max-frequency", &panel->i2c_max_frequency);
+			}
+			check_for_cmds(cmds_np, "mipi-cmds-init",
+				       &panel->cmds_init.mipi);
+			check_for_cmds(cmds_np, "mipi-cmds-enable",
+				       &panel->cmds_enable.mipi);
+			/* enable 2 is after frame data transfer has started */
+			check_for_cmds(cmds_np, "mipi-cmds-enable2",
+				       &panel->cmds_enable2.mipi);
+			check_for_cmds(cmds_np, "mipi-cmds-disable",
+				       &panel->cmds_disable.mipi);
+
+			if (spi) {
+				if (of_property_read_bool(cmds_np, "spi-9-bit"))
+					panel->spi_9bit = 1;
+				check_for_cmds(cmds_np, "spi-cmds-init",
+				       &panel->cmds_init.spi);
+				check_for_cmds(cmds_np, "spi-cmds-enable",
+				       &panel->cmds_enable.spi);
+				check_for_cmds(cmds_np, "spi-cmds-enable2",
+				       &panel->cmds_enable2.spi);
+				check_for_cmds(cmds_np, "spi-cmds-disable",
+				       &panel->cmds_disable.spi);
+				of_property_read_u32(cmds_np, "spi-max-frequency", &panel->spi_max_frequency);
+			}
+			init_common(panel, cmds_np, ds, dm, dsi);
+		}
+		pr_info("%s: delay %d %d, %d %d\n", __func__,
+			ds->delay.prepare, ds->delay.enable,
+			ds->delay.disable, ds->delay.unprepare);
+	}
 
 	panel->no_hpd = of_property_read_bool(dev->of_node, "no-hpd");
 	if (!panel->no_hpd) {
@@ -525,16 +1311,32 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 	}
 
 	panel->supply = devm_regulator_get(dev, "power");
-	if (IS_ERR(panel->supply))
-		return PTR_ERR(panel->supply);
+	if (IS_ERR(panel->supply)) {
+		err = PTR_ERR(panel->supply);
+		goto free_spi;
+	}
 
-	panel->enable_gpio = devm_gpiod_get_optional(dev, "enable",
+	panel->reset = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(panel->reset)) {
+		err = PTR_ERR(panel->reset);
+		dev_err(dev, "failed to request reset: %d\n", err);
+		goto free_spi;
+	}
+
+	panel->gpd_power = devm_gpiod_get_optional(dev, "power", GPIOD_OUT_LOW);
+	if (IS_ERR(panel->gpd_power)) {
+		err = PTR_ERR(panel->gpd_power);
+		dev_err(dev, "failed to request power: %d\n", err);
+		goto free_spi;
+	}
+
+	panel->gpd_prepare_enable = devm_gpiod_get_optional(dev, "enable",
 						     GPIOD_OUT_LOW);
-	if (IS_ERR(panel->enable_gpio)) {
-		err = PTR_ERR(panel->enable_gpio);
+	if (IS_ERR(panel->gpd_prepare_enable)) {
+		err = PTR_ERR(panel->gpd_prepare_enable);
 		if (err != -EPROBE_DEFER)
 			dev_err(dev, "failed to request GPIO: %d\n", err);
-		return err;
+		goto free_spi;
 	}
 
 	err = of_drm_get_panel_orientation(dev->of_node, &panel->orientation);
@@ -633,6 +1435,12 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 free_ddc:
 	if (panel->ddc)
 		put_device(&panel->ddc->dev);
+free_spi:
+	if (spi)
+		put_device(&spi->dev);
+free_i2c:
+	if (i2c)
+		put_device(&i2c->dev);
 
 	return err;
 }
@@ -647,7 +1455,10 @@ static int panel_simple_remove(struct device *dev)
 
 	if (panel->ddc)
 		put_device(&panel->ddc->dev);
-
+	if (panel->spi)
+		put_device(&panel->spi->dev);
+	if (panel->i2c)
+		put_device(&panel->i2c->dev);
 	return 0;
 }
 
@@ -4341,6 +5152,9 @@ static const struct of_device_id platform_of_match[] = {
 		.compatible = "winstar,wf35ltiacd",
 		.data = &winstar_wf35ltiacd,
 	}, {
+		.compatible = "dtb,simple",
+		.data = NULL,
+	}, {
 		/* Must be the last entry */
 		.compatible = "panel-dpi",
 		.data = &panel_dpi,
@@ -4358,7 +5172,7 @@ static int panel_simple_platform_probe(struct platform_device *pdev)
 	if (!id)
 		return -ENODEV;
 
-	return panel_simple_probe(&pdev->dev, id->data);
+	return panel_simple_probe(&pdev->dev, id->data, NULL);
 }
 
 static int panel_simple_platform_remove(struct platform_device *pdev)
@@ -4614,6 +5428,9 @@ static const struct of_device_id dsi_of_match[] = {
 		.compatible = "osddisplays,osd101t2045-53ts",
 		.data = &osd101t2045_53ts
 	}, {
+		.compatible = "panel,simple",
+		.data = NULL
+	}, {
 		/* sentinel */
 	}
 };
@@ -4623,6 +5440,7 @@ static int panel_simple_dsi_probe(struct mipi_dsi_device *dsi)
 {
 	const struct panel_desc_dsi *desc;
 	const struct of_device_id *id;
+	const struct panel_desc *pd = NULL;
 	int err;
 
 	id = of_match_node(dsi_of_match, dsi->dev.of_node);
@@ -4631,13 +5449,51 @@ static int panel_simple_dsi_probe(struct mipi_dsi_device *dsi)
 
 	desc = id->data;
 
-	err = panel_simple_probe(&dsi->dev, &desc->desc);
+	if (desc) {
+		dsi->mode_flags = desc->flags;
+		dsi->format = desc->format;
+		dsi->lanes = desc->lanes;
+		pd = &desc->desc;
+	} else {
+		struct device_node *np = dsi->dev.of_node;
+		const char *df;
+
+		err = of_property_read_u32(np, "dsi-lanes", &dsi->lanes);
+		if (err < 0) {
+			dev_err(&dsi->dev, "Failed to get dsi-lanes property (%d)\n", err);
+			return err;
+		}
+		err = of_property_read_string(np, "dsi-format", &df);
+		if (err) {
+			dev_err(&dsi->dev, "dsi-format missing. %d\n", err);
+			return err;
+		}
+		if (!strcmp(df, "rgb888")) {
+			dsi->format = MIPI_DSI_FMT_RGB888;
+		} else if (!strcmp(df, "rgb666")) {
+			dsi->format = MIPI_DSI_FMT_RGB666;
+		} else {
+			dev_err(&dsi->dev, "unknown dsi-format %s\n", df);
+			return -EINVAL;
+		}
+		if (of_property_read_bool(np, "mode-clock-non-contiguous"))
+			dsi->mode_flags |= MIPI_DSI_CLOCK_NON_CONTINUOUS;
+		if (of_property_read_bool(np, "mode-skip-eot"))
+			dsi->mode_flags |= MIPI_DSI_MODE_EOT_PACKET;
+		if (of_property_read_bool(np, "mode-video"))
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO;
+		if (of_property_read_bool(np, "mode-video-burst"))
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_BURST;
+		if (of_property_read_bool(np, "mode-video-hse"))
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_HSE;
+		if (of_property_read_bool(np, "mode-video-mbc"))
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_MBC;
+		if (of_property_read_bool(np, "mode-video-sync-pulse"))
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_SYNC_PULSE;
+	}
+	err = panel_simple_probe(&dsi->dev, pd, dsi);
 	if (err < 0)
 		return err;
-
-	dsi->mode_flags = desc->flags;
-	dsi->format = desc->format;
-	dsi->lanes = desc->lanes;
 
 	err = mipi_dsi_attach(dsi);
 	if (err) {
