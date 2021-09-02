@@ -334,6 +334,7 @@ struct sec_mipi_dsim {
 	unsigned long byte_clock;
 	unsigned long pixelclock;
 	uint32_t hsmult;
+	uint32_t mipi_dsi_multiple;
 
 	struct completion pll_stable;
 	struct completion ph_tx_done;
@@ -580,6 +581,11 @@ static int sec_mipi_choose_ref_clk(struct sec_mipi_dsim *dsim, unsigned long pix
 			bit_clk = bit_clkm;
 			pr_info("%s: %ld = %ld * 8 * %d(MBC)\n", __func__, bit_clk, pix_clk, n);
 		}
+	}
+	if (dsim->mipi_dsi_multiple) {
+		bit_clk += dsim->mipi_dsi_multiple - 1;
+		bit_clk /= dsim->mipi_dsi_multiple;
+		bit_clk *= dsim->mipi_dsi_multiple;
 	}
 	clk_ref_parent = clk_get_parent(dsim->clk_pllref);
 	ref_parent_clk = ref_clk = bit_clk;
@@ -1620,6 +1626,15 @@ static int _sec_mipi_dsim_check_pll_out(struct sec_mipi_dsim *dsim)
 			pr_info("%s: %d = %ld * 8 * %d(MBC)\n", __func__, bit_clk, pix_clk, n);
 		}
 	}
+	if (dsim->mipi_dsi_multiple) {
+		bit_clk += dsim->mipi_dsi_multiple - 1;
+		bit_clk /= dsim->mipi_dsi_multiple;
+		bit_clk *= dsim->mipi_dsi_multiple;
+	}
+	if (!(bit_clk % pix_clk))
+		dsim->hsmult = bit_clk / pix_clk;
+	else
+		dsim->hsmult = 0;
 	ret = sec_mipi_dsim_get_pms(dsim, bit_clk, dsim->ref_clk);
 	if (ret < 0)
 		return ret;
@@ -1640,6 +1655,7 @@ int sec_mipi_dsim_check_pll_out(struct drm_bridge *bridge,
 
 	dsim->def_pix_clk = mode->clock * 1000;
 	dsim->hsmult = mode->min_hs_clock_multiple;
+	dsim->mipi_dsi_multiple = mode->mipi_dsi_multiple;
 
 	if (dsim->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE) {
 		hpar = sec_mipi_dsim_get_hblank_par(mode->name,
