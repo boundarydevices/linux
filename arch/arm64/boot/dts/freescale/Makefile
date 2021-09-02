@@ -218,3 +218,4 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mm-c2.dtb \
 			  imx8mm-span.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mn-nitrogen8mn.dtb \
+			  imx8mn-nitrogen8mn_som.dtb imx8mn-nitrogen8mn_som-m4.dtb \
