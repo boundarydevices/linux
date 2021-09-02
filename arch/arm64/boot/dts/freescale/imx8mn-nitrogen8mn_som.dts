@@ -1,0 +1,131 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2019 Boundary Devices
+ */
+
+#define MIPI_I2C_BUS	i2c4
+#define GP_MIPI_ENABLE(a)	<&gpio5 0 a>
+#define PD_MIPI_ENABLE(a)	MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, a)	/* Pin 11 */
+
+#include "imx8mn-nitrogen8mn.dts"
+
+&iomuxc {
+	/delete-node/ i2c3a-rv4162grp;
+	/delete-node/ i2c3b-ov5640-mipigrp;
+
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x09)
+		>;
+	};
+
+	pinctrl_i2c2_rv4162: i2c2-rv4162grp {
+		fsl,pins = <
+#undef  GPIRQ_RV4162
+#define GPIRQ_RV4162		<&gpio1 3 IRQ_TYPE_LEVEL_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, 0x1c0)
+		>;
+	};
+
+	pinctrl_i2c3_ov5640_mipi: i2c3-ov5640-mipigrp {
+		fsl,pins = <
+#undef GP_OV5640_MIPI_POWER_DOWN
+#define GP_OV5640_MIPI_POWER_DOWN	<&gpio1 11 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO11_GPIO1_IO11, 0x141)
+#undef  GP_OV5640_MIPI_RESET
+#define GP_OV5640_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x101)
+		>;
+	};
+
+	pinctrl_pwm4: pwm4grp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_GPIO1_IO15_PWM4_OUT, 0x16)
+		>;
+	};
+};
+
+/ {
+	model = "Boundary Devices i.MX8MNano Nitrogen8MN Som";
+	compatible = "boundary,imx8mn-nitrogen8mn_som", "fsl,imx8mn";
+
+	mipi_xclk: mipi-xclk {
+		assigned-clocks = <&clk IMX8MMN(CLK_PWM4)>;
+		assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_40M)>;
+		compatible = "pwm-clock";
+		#clock-cells = <0>;
+		clock-frequency = <20000000>;
+		clock-output-names = "mipi_pwm4";
+		pwms = <&pwm4 0 50 0>; /* 20 MHz */
+	};
+};
+
+&cameradev {
+	status = "okay";
+};
+
+&i2c2 {
+	rtc@68 {
+		compatible = "microcrystal,rv4162";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_rv4162>;
+		reg = <0x68>;
+		interrupts-extended = GPIRQ_RV4162;
+		wakeup-source;
+	};
+};
+
+&i2c3 {
+	/delete-node/ i2cmux@70;
+
+	ov5640-mipi1@3c {
+		AVDD-supply = <&reg_vref_2v5>;
+		DOVDD-supply = <&reg_vref_1v8>;
+		DVDD-supply = <&reg_vref_3v3>;
+		clocks = <&mipi_xclk>;
+		clock-names = "xclk";
+		compatible = "ovti,ov5640";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_ov5640_mipi>;
+		powerdown-gpios = GP_OV5640_MIPI_POWER_DOWN;
+		reg = <0x3c>;
+		reset-gpios = GP_OV5640_MIPI_RESET;
+		status = "okay";
+
+		port {
+			ov5640_mipi1_ep: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				remote-endpoint = <&mipi1_ov5640_ep>;
+			};
+		};
+	};
+};
+
+&isi_0 {
+	status = "okay";
+
+	cap_device {
+		status = "okay";
+	};
+};
+
+&mipi_csi_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	/delete-node/ port;
+	/delete-node/ port@0;
+
+	port@0 {
+		reg = <0>;
+
+		mipi1_ov5640_ep: endpoint {
+			remote-endpoint = <&ov5640_mipi1_ep>;
+			data-lanes = <2>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+	};
+};
