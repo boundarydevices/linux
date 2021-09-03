@@ -326,6 +326,9 @@
 /* Access flash memory using IP bus only */
 #define FSPI_QUIRK_USE_IP_ONLY	BIT(0)
 
+/* Disable Octal DTR */
+#define NXP_FSPI_QUIRK_DISABLE_DTR	BIT(1)
+
 struct nxp_fspi_devtype_data {
 	unsigned int rxfifo;
 	unsigned int txfifo;
@@ -338,7 +341,7 @@ static struct nxp_fspi_devtype_data lx2160a_data = {
 	.rxfifo = SZ_512,       /* (64  * 64 bits)  */
 	.txfifo = SZ_1K,        /* (128 * 64 bits)  */
 	.ahb_buf_size = SZ_2K,  /* (256 * 64 bits)  */
-	.quirks = 0,
+	.quirks = NXP_FSPI_QUIRK_DISABLE_DTR,
 	.little_endian = true,  /* little-endian    */
 };
 
@@ -388,6 +391,11 @@ struct nxp_fspi {
 static inline int needs_ip_only(struct nxp_fspi *f)
 {
 	return f->devtype_data->quirks & FSPI_QUIRK_USE_IP_ONLY;
+}
+
+static inline int nxp_fspi_disable_dtr(struct nxp_fspi *f)
+{
+	return f->devtype_data->quirks & NXP_FSPI_QUIRK_DISABLE_DTR;
 }
 
 /*
@@ -491,7 +499,8 @@ static bool nxp_fspi_supports_op(struct spi_mem *mem,
 	    op->data.nbytes > f->devtype_data->txfifo)
 		return false;
 
-	if (op->cmd.dtr && op->addr.dtr && op->dummy.dtr && op->data.dtr)
+	if (!nxp_fspi_disable_dtr(f) &&
+		op->cmd.dtr && op->addr.dtr && op->dummy.dtr && op->data.dtr)
 		return spi_mem_dtr_supports_op(mem, op);
 
 	return spi_mem_default_supports_op(mem, op);
