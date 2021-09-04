@@ -494,7 +494,7 @@ static int vadc_querystd(struct v4l2_subdev *sd, v4l2_std_id *std)
 }
 
 static int vadc_enum_mbus_code(struct v4l2_subdev *sd,
-			       struct v4l2_subdev_pad_config *cfg,
+			       struct v4l2_subdev_state *sd_state,
 			       struct v4l2_subdev_mbus_code_enum *code)
 {
 	/* support only one format  */
@@ -506,7 +506,7 @@ static int vadc_enum_mbus_code(struct v4l2_subdev *sd,
 }
 
 static int vadc_get_fmt(struct v4l2_subdev *sd,
-			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_subdev_state *sd_state,
 			struct v4l2_subdev_format *format)
 {
 	struct vadc_state *state = to_state(sd);
@@ -525,14 +525,14 @@ static int vadc_get_fmt(struct v4l2_subdev *sd,
 }
 
 static int vadc_set_fmt(struct v4l2_subdev *sd,
-			struct v4l2_subdev_pad_config *cfg,
+			struct v4l2_subdev_state *sd_state,
 			struct v4l2_subdev_format *format)
 {
-	return vadc_get_fmt(sd, cfg, format);
+	return vadc_get_fmt(sd, sd_state, format);
 }
 
 static int vadc_enum_framesizes(struct v4l2_subdev *sd,
-			       struct v4l2_subdev_pad_config *cfg,
+			       struct v4l2_subdev_state *sd_state,
 			       struct v4l2_subdev_frame_size_enum *fse)
 {
 	struct vadc_state *state = to_state(sd);
@@ -547,7 +547,7 @@ static int vadc_enum_framesizes(struct v4l2_subdev *sd,
 	return 0;
 }
 static int vadc_enum_frameintervals(struct v4l2_subdev *sd,
-		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_state *sd_state,
 		struct v4l2_subdev_frame_interval_enum *fie)
 {
 	struct vadc_state *state = to_state(sd);
