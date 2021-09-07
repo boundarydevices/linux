@@ -209,26 +209,27 @@ static int sec_bat_set_charge(
 				bool enable)
 {
 	union power_supply_propval val;
-	ktime_t current_time;
-	struct timespec ts;
 
 	if (battery->cable_type == POWER_SUPPLY_TYPE_OTG)
 		return 0;
 	val.intval = battery->status;
 	psy_do_property(battery->pdata->charger_name, set,
 		POWER_SUPPLY_PROP_STATUS, val);
-#if defined(ANDROID_ALARM_ACTIVATED)
-	current_time = alarm_get_elapsed_realtime();
-	ts = ktime_to_timespec(current_time);
-#else
-	current_time = ktime_get_boottime();
-	ts = ktime_to_timespec(current_time);
-#endif
 
 	if (enable) {
 		val.intval = battery->cable_type;
 		/*Reset charging start time only in initial charging start */
 		if (battery->charging_start_time == 0) {
+			ktime_t current_time;
+			struct timespec64 ts;
+
+#if defined(ANDROID_ALARM_ACTIVATED)
+			current_time = alarm_get_elapsed_realtime();
+			ts = ktime_to_timespec64(current_time);
+#else
+			current_time = ktime_get_boottime();
+			ts = ktime_to_timespec64(current_time);
+#endif
 			if (ts.tv_sec < 1)
 				ts.tv_sec = 1;
 			battery->charging_start_time = ts.tv_sec;
