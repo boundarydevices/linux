@@ -1569,6 +1569,11 @@
 				ranges;
 				status = "disabled";
 
+				vvcam_video: vvcam-video {
+					compatible = "fsl,imx8mp-vvcam-video";
+					status = "okay";
+				};
+
 				isi_0: isi@32e00000 {
 					compatible = "fsl,imx8mp-isi", "fsl,imx8mn-isi";
 					reg = <0x32e00000 0x2000>;
