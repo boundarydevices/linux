@@ -1,6 +1,6 @@
 /*
  * Copyright 2005-2016 Freescale Semiconductor, Inc. All Rights Reserved.
- * Copyright 2020 NXP
+ * Copyright 2020,2021 NXP
  */
 /*
  * The code contained herein is licensed under the GNU General Public
@@ -2353,7 +2353,7 @@ int32_t ipu_enable_channel(struct ipu_soc *ipu, ipu_channel_t channel)
 	case MEM_ROT_VF_MEM:
 		if (ipu->rot_use_count > 0)
 			ipu_conf |= IPU_CONF_ROT_EN;
-		/* fall through */
+		fallthrough;
 	case MEM_PP_MEM:
 	case MEM_PRP_ENC_MEM:
 	case MEM_PRP_VF_MEM:
