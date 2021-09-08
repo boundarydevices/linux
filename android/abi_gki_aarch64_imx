@@ -338,7 +338,6 @@
   event_triggers_call
   extcon_set_state_sync
   filp_close
-  filp_open
   find_next_bit
   finish_wait
   flush_work
@@ -422,7 +421,6 @@
   jiffies_to_msecs
   kasan_flag_enabled
   kasprintf
-  kernel_write
   kfree
   kfree_sensitive
   kfree_skb
@@ -1471,21 +1469,6 @@
 # required by imx_dsp_rproc.ko
   rproc_of_parse_firmware
 
-# required by imx_rpmsg_tty.ko
-  print_hex_dump
-  put_tty_driver
-  __tty_alloc_driver
-  tty_port_close
-  tty_port_destroy
-  tty_port_init
-  tty_port_install
-  tty_port_open
-  tty_prepare_flip_string
-  tty_register_driver
-  tty_set_operations
-  tty_std_termios
-  tty_unregister_driver
-
 # required by imx_rproc.ko
   rproc_elf_find_loaded_rsc_table
   rproc_elf_load_segments
@@ -1586,7 +1569,6 @@
   bitmap_parse
   cpumask_next_and
   default_wake_function
-  done_path_create
   hex_dump_to_buffer
   in4_pton
   init_dummy_netdev
@@ -1597,7 +1579,6 @@
   iw_handler_get_thrspy
   iw_handler_set_spy
   iw_handler_set_thrspy
-  kern_path_create
   ktime_get_raw_ts64
   mmc_hw_reset
   mmc_set_data_timeout
@@ -1655,7 +1636,6 @@
   strim
   strncasecmp
   strsep
-  vfs_mkdir
   vprintk
   wakeup_source_add
   wakeup_source_remove
@@ -1965,12 +1945,6 @@
   snd_soc_register_component
   snd_soc_unregister_component
 
-# required by snd-soc-fsl-dsp.ko
-  kernel_read
-  snd_soc_rtdcom_lookup
-  sysfs_streq
-  vfs_llseek
-
 # required by snd-soc-fsl-easrc.ko
   snd_pcm_format_big_endian
   snd_pcm_format_linear
@@ -2141,7 +2115,6 @@
   virtqueue_enable_cb
 
 # required by vsiv4l2.ko
-  call_usermodehelper
   devm_device_add_group
   v4l2_event_dequeue
   vb2_prepare_buf
