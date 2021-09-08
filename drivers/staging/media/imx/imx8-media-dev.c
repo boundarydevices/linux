@@ -126,6 +126,8 @@ struct mxc_md {
 	struct platform_device *pdev;
 
 	struct v4l2_async_notifier subdev_notifier;
+
+	struct delayed_work complete_work;
 };
 
 static inline struct mxc_md *notifier_to_mxc_md(struct v4l2_async_notifier *n)
@@ -568,6 +570,11 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 
 	v4l2_info(&mxc_md->v4l2_dev, "Registered sensor subdevice: %s (%d)\n",
 		  sd->name, mxc_md->valid_num_sensors);
+
+	if (!mxc_md->link_status) {
+		schedule_delayed_work(&mxc_md->complete_work,
+				      msecs_to_jiffies(500));
+	}
 
 	return 0;
 }
@@ -1034,6 +1041,24 @@ static int register_sensor_entities(struct mxc_md *mxc_md)
 	return 0;
 }
 
+static void mxc_md_complete_work(struct work_struct *work)
+{
+	struct mxc_md *mxc_md = container_of(work, struct mxc_md,
+					     complete_work.work);
+
+	if (!mxc_md->link_status) {
+		if (mxc_md->valid_num_sensors > 0) {
+			int ret = subdev_notifier_complete(
+					&mxc_md->subdev_notifier);
+			if (ret < 0) {
+				mxc_md_unregister_entities(mxc_md);
+				return;
+			}
+			mxc_md_clean_unlink_channels(mxc_md);
+		}
+	}
+}
+
 static int mxc_md_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1047,6 +1072,7 @@ static int mxc_md_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	mxc_md->pdev = pdev;
+	INIT_DELAYED_WORK(&mxc_md->complete_work, mxc_md_complete_work);
 	platform_set_drvdata(pdev, mxc_md);
 
 	mxc_md->parallel_csi = of_property_read_bool(nd, "parallel_csi");
@@ -1090,23 +1116,10 @@ static int mxc_md_probe(struct platform_device *pdev)
 			dev_warn(&mxc_md->pdev->dev, "Sensor register failed\n");
 			goto clean_ents;
 		}
-
-		if (!mxc_md->link_status) {
-			if (mxc_md->valid_num_sensors > 0) {
-				ret = subdev_notifier_complete(&mxc_md->subdev_notifier);
-				if (ret < 0)
-					goto err_register_nf;
-
-				mxc_md_clean_unlink_channels(mxc_md);
-			}
-		}
 	}
 
 	return 0;
 
-err_register_nf:
-	v4l2_async_nf_unregister(&mxc_md->subdev_notifier);
-	v4l2_async_nf_cleanup(&mxc_md->subdev_notifier);
 clean_ents:
 	mxc_md_unregister_entities(mxc_md);
 clean_v4l2:
