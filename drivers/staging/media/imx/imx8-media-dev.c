@@ -925,6 +925,8 @@ static int mxc_md_register_platform_entity(struct mxc_md *mxc_md,
 		ret = register_parallel_csi_entity(mxc_md, pcsidev);
 		break;
 	case IDX_HDMI_RX:
+		if (!mxc_md)
+			return check_csi_entity(node);
 		hdmi_rx = mxc_md_parse_hdmi_rx_entity(mxc_md, node);
 		if (!hdmi_rx)
 			return -ENODEV;
