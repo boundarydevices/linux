@@ -207,6 +207,10 @@
 	regulator-always-on;
 };
 
+&mt6357_vaud28_reg {
+	regulator-always-on;
+};
+
 /* Needed by MSDC1 */
 &mt6357_vmc_reg {
 	regulator-always-on;
