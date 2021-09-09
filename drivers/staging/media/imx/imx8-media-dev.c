@@ -1056,6 +1056,8 @@ static int register_sensor_entities(struct mxc_md *mxc_md)
 		 */
 		client = of_find_i2c_device_by_node(rem);
 		if (!client) {
+			if (!of_device_is_available(rem))
+				continue;
 			v4l2_info(&mxc_md->v4l2_dev,
 				  "Can't find i2c client device for %s\n",
 				  of_node_full_name(rem));
