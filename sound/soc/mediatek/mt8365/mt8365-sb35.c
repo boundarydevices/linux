@@ -68,7 +68,9 @@ struct mt8365_dai_link_prop {
 enum {
 	/* FE */
 	DAI_LINK_DL1_PLAYBACK = 0,
+	DAI_LINK_DL2_PLAYBACK,
 	DAI_LINK_AWB_CAPTURE,
+	DAI_LINK_VUL_CAPTURE,
 	/* BE */
 	DAI_LINK_DMIC,
 	DAI_LINK_INT_ADDA,
@@ -203,8 +205,16 @@ SND_SOC_DAILINK_DEFS(playback1,
 	DAILINK_COMP_ARRAY(COMP_CPU("DL1")),
 	DAILINK_COMP_ARRAY(COMP_DUMMY()),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+SND_SOC_DAILINK_DEFS(playback2,
+	DAILINK_COMP_ARRAY(COMP_CPU("DL2")),
+	DAILINK_COMP_ARRAY(COMP_DUMMY()),
+	DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(awb_capture,
 	DAILINK_COMP_ARRAY(COMP_CPU("AWB")),
+	DAILINK_COMP_ARRAY(COMP_DUMMY()),
+	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+SND_SOC_DAILINK_DEFS(vul,
+	DAILINK_COMP_ARRAY(COMP_CPU("VUL")),
 	DAILINK_COMP_ARRAY(COMP_DUMMY()),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
@@ -232,6 +242,18 @@ static struct snd_soc_dai_link mt8365_sb35_dais[] = {
 		.dpcm_playback = 1,
 		SND_SOC_DAILINK_REG(playback1),
 	},
+	[DAI_LINK_DL2_PLAYBACK] = {
+		.name = "DL2_FE",
+		.stream_name = "MultiMedia2_PLayback",
+		.id = DAI_LINK_DL2_PLAYBACK,
+		.trigger = {
+			SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST
+		},
+		.dynamic = 1,
+		.dpcm_playback = 1,
+		SND_SOC_DAILINK_REG(playback2),
+	},
 	[DAI_LINK_AWB_CAPTURE] = {
 		.name = "AWB_FE",
 		.stream_name = "DL1_AWB_Record",
@@ -243,6 +265,18 @@ static struct snd_soc_dai_link mt8365_sb35_dais[] = {
 		.dynamic = 1,
 		.dpcm_capture = 1,
 		SND_SOC_DAILINK_REG(awb_capture),
+	},
+	[DAI_LINK_VUL_CAPTURE] = {
+		.name = "VUL_FE",
+		.stream_name = "MultiMedia1_Capture",
+		.id = DAI_LINK_VUL_CAPTURE,
+		.trigger = {
+			SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST
+		},
+		.dynamic = 1,
+		.dpcm_capture = 1,
+		SND_SOC_DAILINK_REG(vul),
 	},
 	/* Back End DAI links */
 	[DAI_LINK_DMIC] = {
