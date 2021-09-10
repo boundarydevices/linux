@@ -106,7 +106,7 @@ void __show_regs(struct pt_regs *regs)
 	unsigned long flags;
 	char buf[64];
 #ifndef CONFIG_CPU_V7M
-	unsigned int domain;
+	unsigned int domain, fs;
 #ifdef CONFIG_CPU_SW_DOMAIN_PAN
 	/*
 	 * Get the domain register for the parent context. In user
@@ -115,11 +115,14 @@ void __show_regs(struct pt_regs *regs)
 	 */
 	if (user_mode(regs)) {
 		domain = DACR_UACCESS_ENABLE;
+		fs = get_fs();
 	} else {
 		domain = to_svc_pt_regs(regs)->dacr;
+		fs = to_svc_pt_regs(regs)->addr_limit;
 	}
 #else
 	domain = get_domain();
+	fs = get_fs();
 #endif
 #endif
 
@@ -155,6 +158,8 @@ void __show_regs(struct pt_regs *regs)
 		if ((domain & domain_mask(DOMAIN_USER)) ==
 		    domain_val(DOMAIN_USER, DOMAIN_NOACCESS))
 			segment = "none";
+		else if (fs == KERNEL_DS)
+			segment = "kernel";
 		else
 			segment = "user";
 
