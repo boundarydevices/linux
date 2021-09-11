@@ -292,42 +292,42 @@
 		clock-output-names = "clk_ext4";
 	};
 
-	sai1_mclk: sai-mclk1 {
+	sai1_mclk: sai1-mclk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency= <0>;
 		clock-output-names = "sai1_mclk";
 	};
 
-	sai2_mclk: sai-mclk2 {
+	sai2_mclk: sai2-mclk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency= <0>;
 		clock-output-names = "sai2_mclk";
 	};
 
-	sai3_mclk: sai-mclk3 {
+	sai3_mclk: sai3-mclk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency= <0>;
 		clock-output-names = "sai3_mclk";
 	};
 
-	sai5_mclk: sai-mclk5 {
+	sai5_mclk: sai5-mclk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency= <0>;
 		clock-output-names = "sai5_mclk";
 	};
 
-	sai6_mclk: sai-mclk6 {
+	sai6_mclk: sai6-mclk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency= <0>;
 		clock-output-names = "sai6_mclk";
 	};
 
-	sai7_mclk: sai-mclk7 {
+	sai7_mclk: sai7-mclk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency= <0>;
@@ -668,9 +668,11 @@
 				reg = <0x30380000 0x10000>;
 				#clock-cells = <1>;
 				clocks = <&osc_32k>, <&osc_24m>, <&clk_ext1>, <&clk_ext2>,
-					 <&clk_ext3>, <&clk_ext4>;
+					 <&clk_ext3>, <&clk_ext4>, <&sai1_mclk>, <&sai2_mclk>,
+					 <&sai3_mclk>, <&sai5_mclk>, <&sai6_mclk>, <&sai7_mclk>;
 				clock-names = "osc_32k", "osc_24m", "clk_ext1", "clk_ext2",
-					      "clk_ext3", "clk_ext4";
+					      "clk_ext3", "clk_ext4", "sai1_mclk", "sai2_mclk",
+					      "sai3_mclk", "sai5_mclk", "sai6_mclk", "sai7_mclk";
 				assigned-clocks = <&clk IMX8MP_CLK_A53_SRC>,
 						  <&clk IMX8MP_CLK_A53_CORE>,
 						  <&clk IMX8MP_CLK_NOC>,
