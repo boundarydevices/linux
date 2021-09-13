@@ -36,7 +36,7 @@
 
 
 #if defined(NCSW_LINUX) && defined(__KERNEL__)
-#include <stdarg.h>
+#include <linux/stdarg.h>
 
 #else
 #include <stdarg.h>
