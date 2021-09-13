@@ -238,7 +238,7 @@ kbase_dma_fence_add_reservation_callback(struct kbase_jd_atom *katom,
 	unsigned int shared_count = 0;
 	int err, i;
 
-	err = dma_resv_get_fences_rcu(resv,
+	err = dma_resv_get_fences(resv,
 						&excl_fence,
 						&shared_count,
 						&shared_fences);
@@ -250,7 +250,7 @@ kbase_dma_fence_add_reservation_callback(struct kbase_jd_atom *katom,
 						excl_fence,
 						kbase_dma_fence_cb);
 
-		/* Release our reference, taken by dma_resv_get_fences_rcu(),
+		/* Release our reference, taken by dma_resv_get_fences(),
 		 * to the fence. We have set up our callback (if that was possible),
 		 * and it's the fence's owner is responsible for singling the fence
 		 * before allowing it to disappear.
@@ -272,7 +272,7 @@ kbase_dma_fence_add_reservation_callback(struct kbase_jd_atom *katom,
 	}
 
 	/* Release all our references to the shared fences, taken by
-	 * dma_resv_get_fences_rcu(). We have set up our callback (if
+	 * dma_resv_get_fences(). We have set up our callback (if
 	 * that was possible), and it's the fence's owner is responsible for
 	 * signaling the fence before allowing it to disappear.
 	 */
