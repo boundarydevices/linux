@@ -58,36 +58,20 @@
 	};
 
 	sound: sound {
-		compatible = "mediatek,mt8365-p1";
+		compatible = "mediatek,mt8365-sb35";
 		mediatek,platform = <&afe>;
 		pinctrl-names = "aud_mosi_on",
 			"aud_mosi_off",
 			"aud_miso_on",
 			"aud_miso_off",
 			"default",
-			"aud_dmic",
-			"aud_pcm",
-			"aud_i2s0",
-			"aud_i2s1",
-			"aud_i2s2",
-			"aud_i2s3",
-			"aud_tdm_out",
-			"aud_tdm_in";
+			"aud_dmic";
 		pinctrl-0 = <&aud_pins_mosi_on>;
 		pinctrl-1 = <&aud_pins_mosi_off>;
 		pinctrl-2 = <&aud_pins_miso_on>;
 		pinctrl-3 = <&aud_pins_miso_off>;
 		pinctrl-4 = <&aud_pins_default>;
 		pinctrl-5 = <&aud_pins_dmic>;
-		pinctrl-6 = <&aud_pins_pcm>;
-		pinctrl-7 = <&aud_pins_i2s0>;
-		pinctrl-8 = <&aud_pins_i2s1>;
-		pinctrl-9 = <&aud_pins_i2s2>;
-		pinctrl-10 = <&aud_pins_i2s3>;
-		pinctrl-11 = <&aud_pins_tdm_out>;
-		pinctrl-12 = <&aud_pins_tdm_in>;
-		ext-amp1-gpio = <&pio 68 0>;
-		/* ext-amp2-gpio = <&pio 69 0>; */
 		status = "okay";
 	};
 
@@ -729,27 +713,6 @@
 			 <MT8365_PIN_118_DMIC0_DAT0__FUNC_DMIC0_DAT0>,
 			 <MT8365_PIN_119_DMIC0_DAT1__FUNC_DMIC0_DAT1>;
 		};
-	};
-
-	aud_pins_pcm: audiopcm {
-	};
-
-	aud_pins_i2s0: audioi2s0 {
-	};
-
-	aud_pins_i2s1: audioi2s1 {
-	};
-
-	aud_pins_i2s2: audioi2s2 {
-	};
-
-	aud_pins_i2s3: audioi2s3 {
-	};
-
-	aud_pins_tdm_out: audiotdmout {
-	};
-
-	aud_pins_tdm_in: audiotdmin {
 	};
 };
 
