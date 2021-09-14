@@ -50,18 +50,16 @@
  *****************************************************************************/
 #include "mtk-auddrv-ana.h"
 #include "mt6357.h"
-
-#ifdef AUDIO_USING_WRAP_DRIVER
-/*#include <mach/mt_pmic_wrap.h>*/
-#include <mach/mtk_pmic_wrap.h>
-#endif
-
 #include <linux/printk.h>
 #include <linux/kernel.h>
+#include <linux/spinlock.h>
+#include <linux/regmap.h>
+#include <linux/mfd/mt6397/core.h>
 
-#ifdef AUDIO_USING_WRAP_DRIVER
 static DEFINE_SPINLOCK(ana_set_reg_lock);
-#endif
+
+static struct regmap *pmic_regmap;
+static spinlock_t   wrp_lock = __SPIN_LOCK_UNLOCKED(lock);
 
 /*****************************************************************************
  *                         D A T A   T Y P E S
@@ -70,37 +68,39 @@ unsigned int Ana_Get_Reg(unsigned int offset)
 {
 	/* get pmic register */
 	unsigned int Rdata = 0;
-#ifdef AUDIO_USING_WRAP_DRIVER
-	int ret = 0;
+	unsigned long flags = 0;
 
-	ret = pwrap_read(offset, &Rdata);
-	/* pr_debug("Ana_Get_Reg offset=0x%x,Rdata=0x%x,ret=%d\n",
-	 * offset, Rdata, ret);
-	 */
-#endif
+	if (pmic_regmap) {
+		spin_lock_irqsave(&wrp_lock, flags);
+		regmap_read(pmic_regmap, offset, &Rdata);
+		spin_unlock_irqrestore(&wrp_lock, flags);
+	} else
+		pr_notice("%s %d Error.\n", __func__, __LINE__);
 
 	return Rdata;
 }
 
 void Ana_Set_Reg(unsigned int offset, unsigned int value, unsigned int mask)
 {
-	/* set pmic register or analog CONTROL_IFACE_PATH */
-
-#ifdef AUDIO_USING_WRAP_DRIVER
-	int ret = 0;
 	unsigned int Reg_Value;
 	unsigned long flags = 0;
 
-	/* pr_debug("Ana_Set_Reg offset= 0x%x, value = 0x%x
-	 * mask = 0x%x\n", offset, value, mask);
-	 */
-	spin_lock_irqsave(&ana_set_reg_lock, flags);
-	Reg_Value = Ana_Get_Reg(offset);
-	Reg_Value &= (~mask);
-	Reg_Value |= (value & mask);
-	ret = pwrap_write(offset, Reg_Value);
-	spin_unlock_irqrestore(&ana_set_reg_lock, flags);
-#endif
+	if (pmic_regmap) {
+		spin_lock_irqsave(&ana_set_reg_lock, flags);
+		Reg_Value = Ana_Get_Reg(offset);
+		Reg_Value &= (~mask);
+		Reg_Value |= (value & mask);
+		regmap_write(pmic_regmap, offset, Reg_Value);
+		spin_unlock_irqrestore(&ana_set_reg_lock, flags);
+	}
+	else
+		pr_notice("%s %d Error.\n", __func__, __LINE__);
+}
+
+void mt_pwrap_init(struct device *dev)
+{
+	struct mt6397_chip *mt6397 = dev_get_drvdata(dev);
+	pmic_regmap = mt6397->regmap;
 }
 
 void Ana_Log_Print(void)

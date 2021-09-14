@@ -50,6 +50,7 @@
  *                E X T E R N A L   R E F E R E N C E S
  *****************************************************************************/
 #include "mtk-auddrv-def.h"
+#include <linux/device.h>
 
 /*****************************************************************************
  *                         D A T A   T Y P E S
@@ -272,6 +273,7 @@
 
 void Ana_Set_Reg(unsigned int offset, unsigned int value, unsigned int mask);
 unsigned int Ana_Get_Reg(unsigned int offset);
+void mt_pwrap_init(struct device *dev);
 
 /* for debug usage */
 void Ana_Log_Print(void);

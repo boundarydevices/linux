@@ -6136,6 +6136,9 @@ static struct snd_soc_component_driver soc_mtk_codec = {
 };
 static int mtk_mt6357_codec_dev_probe(struct platform_device *pdev)
 {
+	/* initialize regmap */
+	mt_pwrap_init(pdev->dev.parent);
+
 	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(64);
 	if (pdev->dev.dma_mask == NULL)
 		pdev->dev.dma_mask = &pdev->dev.coherent_dma_mask;
