@@ -232,16 +232,6 @@ config SND_SOC_MT8365
 	  Select Y if you have such device.
 	  Ex: MT8365
 
-config SND_SOC_MT8365_P1
-	tristate "ASoC Audio driver for MT8365 P1 Board"
-	depends on SND_SOC_MT8365
-	help
-	  This adds support for ASoC machine driver for Mediatek MT8365
-	  that used MT6357 codec.
-	  Select Y if you have such device.
-	  If unsure select "N".
-	  Ex: MT8365
-
 config SND_SOC_MT8365_SB35
 	tristate "ASoC Audio driver for MT8365 SB35 Board"
 	depends on SND_SOC_MT8365
