@@ -1315,8 +1315,13 @@ static void lpuart_timer_func(struct timer_list *t)
 	lpuart_copy_rx_to_tty(sport);
 }
 
-static int lpuart_sched_rxdma_cyclic(struct lpuart_port *sport)
+static int lpuart_sched_rx_dma(struct lpuart_port *sport)
 {
+	unsigned long temp;
+
+	if (!sport->dma_rx_chan_active)
+		return -EINVAL;
+
 	sport->rx_dma_periods = 2;
 	sport->dma_rx_desc = dmaengine_prep_dma_cyclic(sport->dma_rx_chan,
 				 sg_dma_address(&sport->rx_sgl),
@@ -1328,19 +1333,6 @@ static int lpuart_sched_rxdma_cyclic(struct lpuart_port *sport)
 		dev_err(sport->port.dev, "Cannot prepare cyclic DMA\n");
 		return -EFAULT;
 	}
-
-	return 0;
-}
-
-static int lpuart_sched_rx_dma(struct lpuart_port *sport)
-{
-	unsigned long temp;
-	int ret;
-
-	if (!sport->dma_rx_chan_active)
-		return -EINVAL;
-
-	ret = lpuart_sched_rxdma_cyclic(sport);
 
 	sport->dma_rx_desc->callback = lpuart_dma_rx_complete;
 	sport->dma_rx_desc->callback_param = sport;
@@ -1358,7 +1350,7 @@ static int lpuart_sched_rx_dma(struct lpuart_port *sport)
 		       sport->port.membase + UARTCR5);
 	}
 
-	return ret;
+	return 0;
 }
 
 static void lpuart_get_rx_dma_rng_len(struct lpuart_port *sport)
