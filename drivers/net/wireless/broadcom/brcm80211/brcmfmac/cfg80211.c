@@ -6076,6 +6076,9 @@ brcmf_cfg80211_external_auth(struct wiphy *wiphy, struct net_device *dev,
 	auth_status.ssid_len = cpu_to_le32(min_t(u8, params->ssid.ssid_len,
 						 IEEE80211_MAX_SSID_LEN));
 	memcpy(auth_status.ssid, params->ssid.ssid, auth_status.ssid_len);
+	memset(auth_status.pmkid, 0, WLAN_PMKID_LEN);
+	if (params->pmkid)
+		memcpy(auth_status.pmkid, params->pmkid, WLAN_PMKID_LEN);
 
 	ret = brcmf_fil_iovar_data_set(ifp, "auth_status", &auth_status,
 				       sizeof(auth_status));
@@ -8041,8 +8044,12 @@ static int brcmf_setup_wiphy(struct wiphy *wiphy, struct brcmf_if *ifp)
 			wiphy_ext_feature_set(wiphy,
 					      NL80211_EXT_FEATURE_SAE_OFFLOAD_AP);
 	}
-	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_SAE_EXT))
+	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_SAE_EXT)) {
 		wiphy->features |= NL80211_FEATURE_SAE;
+		wiphy_ext_feature_set(wiphy,
+				      NL80211_EXT_FEATURE_AP_PMKSA_CACHING);
+	}
+
 	wiphy->mgmt_stypes = brcmf_txrx_stypes;
 	wiphy->max_remain_on_channel_duration = 5000;
 	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_PNO)) {
