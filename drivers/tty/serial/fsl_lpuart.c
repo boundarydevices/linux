@@ -272,7 +272,6 @@ struct lpuart_port {
 
 	u8			rx_watermark;
 	bool			dma_eeop;
-	bool			rx_dma_cyclic;
 	bool			lpuart_dma_tx_use;
 	bool			lpuart_dma_rx_use;
 	bool			dma_rx_chan_active;
@@ -301,28 +300,24 @@ struct lpuart_soc_data {
 	char iotype;
 	u8 reg_off;
 	u8 rx_watermark;
-	bool rx_dma_cyclic;
 };
 
 static const struct lpuart_soc_data vf_data = {
 	.devtype = VF610_LPUART,
 	.iotype = UPIO_MEM,
 	.rx_watermark = 1,
-	.rx_dma_cyclic = true,
 };
 
 static const struct lpuart_soc_data ls1021a_data = {
 	.devtype = LS1021A_LPUART,
 	.iotype = UPIO_MEM32BE,
 	.rx_watermark = 0,
-	.rx_dma_cyclic = true,
 };
 
 static const struct lpuart_soc_data ls1028a_data = {
 	.devtype = LS1028A_LPUART,
 	.iotype = UPIO_MEM32,
 	.rx_watermark = 0,
-	.rx_dma_cyclic = true,
 };
 
 static struct lpuart_soc_data imx7ulp_data = {
@@ -330,7 +325,6 @@ static struct lpuart_soc_data imx7ulp_data = {
 	.iotype = UPIO_MEM32,
 	.reg_off = IMX_REG_OFF,
 	.rx_watermark = 0,
-	.rx_dma_cyclic = true,
 };
 
 static struct lpuart_soc_data imx8ulp_data = {
@@ -338,7 +332,6 @@ static struct lpuart_soc_data imx8ulp_data = {
 	.iotype = UPIO_MEM32,
 	.reg_off = IMX_REG_OFF,
 	.rx_watermark = 3,
-	.rx_dma_cyclic = true,
 };
 
 static struct lpuart_soc_data imx8qxp_data = {
@@ -346,7 +339,6 @@ static struct lpuart_soc_data imx8qxp_data = {
 	.iotype = UPIO_MEM32,
 	.reg_off = IMX_REG_OFF,
 	.rx_watermark = 31,
-	.rx_dma_cyclic = true,
 };
 
 static const struct of_device_id lpuart_dt_ids[] = {
@@ -362,7 +354,6 @@ MODULE_DEVICE_TABLE(of, lpuart_dt_ids);
 
 /* Forward declare this for the dma callbacks*/
 static void lpuart_dma_tx_complete(void *arg);
-static int lpuart_sched_rx_dma(struct lpuart_port *sport);
 static void lpuart_dma_rx_free(struct uart_port *port, bool dma_terminate);
 
 static inline bool is_layerscape_lpuart(struct lpuart_port *sport)
@@ -1251,7 +1242,7 @@ static void lpuart_copy_rx_to_tty(struct lpuart_port *sport)
 	ring->head = sport->rx_sgl.length - state.residue;
 	BUG_ON(ring->head > sport->rx_sgl.length);
 
-	if (sport->rx_dma_cyclic && sport->dma_eeop) {
+	if (sport->dma_eeop) {
 		unsigned int tcd_size;
 
 		/* Calculate the tail. */
@@ -1310,36 +1301,11 @@ exit:
 			  jiffies + sport->dma_rx_timeout);
 }
 
-static void lpuart_dma_rx_post_handler(struct lpuart_port *sport)
-{
-	unsigned long flags;
-	unsigned long rxcount;
-
-	spin_lock_irqsave(&sport->port.lock, flags);
-
-	/* For end of packet, clear the idle flag to avoid to trigger
-	 * the next transfer. Only i.MX8x and i.MX8ulp lpuart support EEOP now.
-	 */
-	if (sport->dma_eeop && lpuart_is_32(sport)) {
-		rxcount = lpuart32_read(&sport->port, UARTWATER);
-		rxcount = rxcount >> UARTWATER_RXCNT_OFF;
-		if (!rxcount)
-			lpuart32_write(&sport->port, UARTSTAT_IDLE, UARTSTAT);
-	}
-
-	lpuart_sched_rx_dma(sport);
-
-	spin_unlock_irqrestore(&sport->port.lock, flags);
-
-}
-
 static void lpuart_dma_rx_complete(void *arg)
 {
 	struct lpuart_port *sport = arg;
 
 	lpuart_copy_rx_to_tty(sport);
-	if (!sport->rx_dma_cyclic)
-		lpuart_dma_rx_post_handler(sport);
 }
 
 static void lpuart_timer_func(struct timer_list *t)
@@ -1347,10 +1313,6 @@ static void lpuart_timer_func(struct timer_list *t)
 	struct lpuart_port *sport = from_timer(sport, t, lpuart_timer);
 
 	lpuart_copy_rx_to_tty(sport);
-	if (!sport->rx_dma_cyclic) {
-		dmaengine_terminate_async(sport->dma_rx_chan);
-		lpuart_dma_rx_post_handler(sport);
-	}
 }
 
 static int lpuart_sched_rxdma_cyclic(struct lpuart_port *sport)
@@ -1370,25 +1332,6 @@ static int lpuart_sched_rxdma_cyclic(struct lpuart_port *sport)
 	return 0;
 }
 
-static int lpuart_sched_rxdma_slave_sg(struct lpuart_port *sport)
-{
-	dma_sync_sg_for_device(sport->port.dev, &sport->rx_sgl, 1,
-			       DMA_FROM_DEVICE);
-	sport->dma_rx_desc = dmaengine_prep_slave_sg(sport->dma_rx_chan,
-				&sport->rx_sgl,
-				1,
-				DMA_DEV_TO_MEM,
-				DMA_PREP_INTERRUPT);
-	if (!sport->dma_rx_desc) {
-		dev_err(sport->port.dev, "Cannot prepare slave_sg DMA\n");
-		return -EFAULT;
-	}
-	sport->rx_ring.tail = 0;
-	sport->rx_ring.head = 0;
-
-	return 0;
-}
-
 static int lpuart_sched_rx_dma(struct lpuart_port *sport)
 {
 	unsigned long temp;
@@ -1397,10 +1340,7 @@ static int lpuart_sched_rx_dma(struct lpuart_port *sport)
 	if (!sport->dma_rx_chan_active)
 		return -EINVAL;
 
-	if (sport->rx_dma_cyclic)
-		ret = lpuart_sched_rxdma_cyclic(sport);
-	else
-		ret = lpuart_sched_rxdma_slave_sg(sport);
+	ret = lpuart_sched_rxdma_cyclic(sport);
 
 	sport->dma_rx_desc->callback = lpuart_dma_rx_complete;
 	sport->dma_rx_desc->callback_param = sport;
@@ -2928,7 +2868,6 @@ static int lpuart_probe(struct platform_device *pdev)
 	sport->port.dev = &pdev->dev;
 	sport->port.type = PORT_LPUART;
 	sport->devtype = sdata->devtype;
-	sport->rx_dma_cyclic = sdata->rx_dma_cyclic;
 	sport->rx_watermark = sdata->rx_watermark;
 	sport->dma_eeop = is_imx8qxp_lpuart(sport) || is_imx8ulp_lpuart(sport);
 
