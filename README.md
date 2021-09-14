@@ -39,7 +39,7 @@ Latest Nougat sources are in branch [boundary-imx-n7.1.1\_1.0.0-ga][latest-nouga
 
 Latest Oreo sources are in branch [boundary-imx-o8.1.0\_1.3.0\_8m-ga][latest-oreo]
 
-Latest Pie sources are in branch [boundary-imx-p9.0.0\_1.0.0-gaa][latest-pie]
+Latest Pie sources are in branch [boundary-imx-p9.0.0\_1.0.0-ga][latest-pie]
 
 Latest Android 10 sources are in branch [boundary-android-10.0.0\_2.5.0][latest-10]
 
@@ -60,6 +60,8 @@ The latest 4.14.x kernel is in branch [boundary-imx\_4.14.x\_2.0.0\_ga][latest-4
 The latest 4.19.x kernel is in branch [boundary-imx\_4.19.x\_1.1.0][latest-4.19.x]
 
 The latest 5.4.x kernel is in branch [boundary-imx\_5.4.x\_2.3.0][latest-5.4.x]
+
+The latest 5.10.x kernel is in branch [boundary-imx\_5.10.x\_2.0.0][latest-5.10.x]
 
 These branches are based on Freescale releases of the same name (minus the 'boundary').
 
@@ -97,3 +99,4 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [latest-4.14.x]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx_4.14.x_2.0.0_ga "Boundary 4.14.x-2.0.0 GA kernel tree"
 [latest-4.19.x]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx_4.19.x_1.1.0 "Boundary 4.19.x-1.1.0 kernel tree"
 [latest-5.4.x]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx_5.4.x_2.3.0 "Boundary 5.4.x-2.3.0 kernel tree"
+[latest-5.10.x]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx_5.10.x_2.0.0 "Boundary 5.10.x-2.0.0 kernel tree"
