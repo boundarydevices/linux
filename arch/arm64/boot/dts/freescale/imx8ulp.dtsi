@@ -1047,6 +1047,7 @@
 						 <&pcc5 IMX8ULP_CLK_CSI_CLK_ESC>,
 						 <&pcc5 IMX8ULP_CLK_CSI_REGS>;
 					clock-names = "clk_core", "clk_ui", "clk_esc", "clk_regs";
+					power-domains = <&scmi_devpd IMX8ULP_PD_MIPI_CSI>;
 					assigned-clocks = <&cgc2 IMX8ULP_CLK_PLL4_PFD1>,
 							  <&cgc2 IMX8ULP_CLK_PLL4_PFD1_DIV1>,
 							  <&cgc2 IMX8ULP_CLK_PLL4_PFD1_DIV2>,
