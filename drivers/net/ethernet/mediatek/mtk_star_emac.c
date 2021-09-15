@@ -235,6 +235,7 @@ struct mtk_star_ring {
 
 struct mtk_star_compat {
 	unsigned char bit_clk_div;
+	unsigned int nic_cfg_con;
 };
 
 struct mtk_star_priv {
@@ -911,7 +912,7 @@ static void mtk_star_init_config(struct mtk_star_priv *priv)
 
 static void mtk_star_set_mode_rmii(struct mtk_star_priv *priv)
 {
-	regmap_update_bits(priv->pericfg, MTK_PERICFG_REG_NIC_CFG_CON,
+	regmap_update_bits(priv->pericfg, priv->compat_data->nic_cfg_con,
 			   MTK_PERICFG_MSK_NIC_CFG_CON_CFG_MII,
 			   MTK_PERICFG_BIT_NIC_CFG_CON_RMII);
 }
@@ -1566,6 +1567,8 @@ static int mtk_star_probe(struct platform_device *pdev)
 
 static struct mtk_star_compat mtk_star_mt8516_compat = {
 	.bit_clk_div = MTK_STAR_BIT_CLK_DIV_10,
+	.nic_cfg_con = MTK_PERICFG_REG_NIC_CFG_CON,
+	.irq_trigger = IRQF_TRIGGER_FALLING,
 };
 
 static const struct of_device_id mtk_star_of_match[] = {
