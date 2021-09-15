@@ -236,6 +236,7 @@ struct mtk_star_ring {
 struct mtk_star_compat {
 	unsigned char bit_clk_div;
 	unsigned int nic_cfg_con;
+	unsigned int irq_trigger;
 };
 
 struct mtk_star_priv {
@@ -960,7 +961,7 @@ static int mtk_star_enable(struct net_device *ndev)
 
 	/* Request the interrupt */
 	ret = request_irq(ndev->irq, mtk_star_handle_irq,
-			  IRQF_TRIGGER_FALLING, ndev->name, ndev);
+			  priv->compat_data->irq_trigger, ndev->name, ndev);
 	if (ret)
 		goto err_free_skbs;
 
