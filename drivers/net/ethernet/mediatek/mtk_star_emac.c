@@ -186,6 +186,7 @@ static const char *const mtk_star_clk_names[] = { "core", "reg", "trans" };
 #define MTK_PERICFG_REG_NIC_CFG_CON		0x03c4
 #define MTK_PERICFG_MSK_NIC_CFG_CON_CFG_MII	GENMASK(3, 0)
 #define MTK_PERICFG_BIT_NIC_CFG_CON_RMII	BIT(0)
+#define MTK_PERICFG_BIT_NIC_CFG_CON_USE_TX_CLK	BIT(8)
 
 /* Represents the actual structure of descriptors used by the MAC. We can
  * reuse the same structure for both TX and RX - the layout is the same, only
@@ -237,6 +238,7 @@ struct mtk_star_compat {
 	unsigned char bit_clk_div;
 	unsigned int nic_cfg_con;
 	unsigned int irq_trigger;
+	bool use_tx_clk;
 };
 
 struct mtk_star_priv {
@@ -916,6 +918,11 @@ static void mtk_star_set_mode_rmii(struct mtk_star_priv *priv)
 	regmap_update_bits(priv->pericfg, priv->compat_data->nic_cfg_con,
 			   MTK_PERICFG_MSK_NIC_CFG_CON_CFG_MII,
 			   MTK_PERICFG_BIT_NIC_CFG_CON_RMII);
+	if (priv->compat_data->use_tx_clk)
+		regmap_update_bits(priv->pericfg,
+				   priv->compat_data->nic_cfg_con,
+				   MTK_PERICFG_BIT_NIC_CFG_CON_USE_TX_CLK,
+				   MTK_PERICFG_BIT_NIC_CFG_CON_USE_TX_CLK);
 }
 
 static int mtk_star_enable(struct net_device *ndev)
