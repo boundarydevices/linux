@@ -1027,6 +1027,7 @@
 					interrupts = <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
 					clocks = <&pcc5 IMX8ULP_CLK_ISI>;
 					clock-names = "per";
+					power-domains = <&scmi_devpd IMX8ULP_PD_ISI>;
 					interface = <2 0 2>;
 					no-reset-control;
 					statu = "disabled";
