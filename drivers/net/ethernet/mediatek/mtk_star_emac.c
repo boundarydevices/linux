@@ -151,6 +151,7 @@ static const char *const mtk_star_clk_names[] = { "core", "reg", "trans" };
 #define MTK_STAR_REG_MAC_CLK_CONF		0x00ac
 #define MTK_STAR_MSK_MAC_CLK_CONF		GENMASK(7, 0)
 #define MTK_STAR_BIT_CLK_DIV_10			0x0a
+#define MTK_STAR_BIT_CLK_DIV_50			0x32
 
 /* Counter registers. */
 #define MTK_STAR_REG_C_RXOKPKT			0x0100
@@ -184,6 +185,7 @@ static const char *const mtk_star_clk_names[] = { "core", "reg", "trans" };
 
 /* Ethernet CFG Control */
 #define MTK_PERICFG_REG_NIC_CFG_CON		0x03c4
+#define MT8365_MTK_PERICFG_REG_NIC_CFG_CON	0x0c10
 #define MTK_PERICFG_MSK_NIC_CFG_CON_CFG_MII	GENMASK(3, 0)
 #define MTK_PERICFG_BIT_NIC_CFG_CON_RMII	BIT(0)
 #define MTK_PERICFG_BIT_NIC_CFG_CON_USE_TX_CLK	BIT(8)
@@ -1579,10 +1581,18 @@ static struct mtk_star_compat mtk_star_mt8516_compat = {
 	.irq_trigger = IRQF_TRIGGER_FALLING,
 };
 
+static struct mtk_star_compat mtk_star_mt8365_compat = {
+	.bit_clk_div = MTK_STAR_BIT_CLK_DIV_50,
+	.nic_cfg_con = MT8365_MTK_PERICFG_REG_NIC_CFG_CON,
+	.irq_trigger = IRQF_TRIGGER_RISING,
+	.use_tx_clk = true,
+};
+
 static const struct of_device_id mtk_star_of_match[] = {
 	{ .compatible = "mediatek,mt8516-eth", .data = &mtk_star_mt8516_compat },
 	{ .compatible = "mediatek,mt8518-eth", .data = &mtk_star_mt8516_compat },
 	{ .compatible = "mediatek,mt8175-eth", .data = &mtk_star_mt8516_compat },
+	{ .compatible = "mediatek,mt8365-eth", .data = &mtk_star_mt8365_compat },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, mtk_star_of_match);
