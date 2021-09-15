@@ -290,7 +290,7 @@ static int inv_mpu_probe(struct i2c_client *client,
 		goto out_no_free;
 	}
 
-	indio_dev = iio_device_alloc(sizeof(*st));
+	indio_dev = iio_device_alloc(&client->dev, sizeof(*st));
 	if (indio_dev == NULL) {
 		pr_err("memory allocation failed\n");
 		result = -ENOMEM;
