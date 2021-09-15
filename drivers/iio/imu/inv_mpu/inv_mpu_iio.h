@@ -136,6 +136,12 @@
 #define COVARIANCE_SIZE          14
 #define ACCEL_COVARIANCE_SIZE  (COVARIANCE_SIZE * sizeof(int))
 
+static inline struct iio_dev *iio_priv_to_dev(void *priv)
+{
+	return (struct iio_dev *)((char *)priv -
+				  ALIGN(sizeof(struct iio_dev), IIO_ALIGN));
+}
+
 enum inv_bus_type {
 	BUS_I2C = 0,
 	BUS_SPI,
