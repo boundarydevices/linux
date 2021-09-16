@@ -112,7 +112,6 @@ enum max77958_irq {
 struct max77958_platform_data {
 	/* IRQ */
 	int irq_base;
-	int irq_gpio;
 	bool wakeup;
 };
 
@@ -125,7 +124,6 @@ struct max77958_dev {
 
 	int irq;
 	int irq_base;
-	int irq_gpio;
 	bool wakeup;
 	struct mutex irqlock;
 	int irq_masks_cur[MAX77958_IRQ_GROUP_NR];
