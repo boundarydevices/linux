@@ -68,8 +68,8 @@ struct max77975_charger_data {
 	struct regmap *map;
 	struct device *dev;
 	struct power_supply *psy;
-	struct gpiod *gpio_suspend;
-	struct gpiod *gpio_disbatt;
+	struct gpio_desc *gpio_suspend;
+	struct gpio_desc *gpio_disbatt;
 	bool is_charging;
 };
 
