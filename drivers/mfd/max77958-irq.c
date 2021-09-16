@@ -194,15 +194,12 @@ static irqreturn_t max77958_irq_thread(int irq, void *data)
 	u8 dump_reg[10] = {0, };
 	int i, rc;
 
-	pr_info("%s: irq gpio pre-state(0x%02x)\n", __func__,
-			gpio_get_value(max77958->irq_gpio));
 	if (!max77958->boot_complete)
 		return IRQ_HANDLED;
 
-	pr_info("irq[%d] %d/%d/%d",
+	pr_info("irq[%d] %d/%d",
 			irq, max77958->irq,
-			max77958->irq_base,
-			max77958->irq_gpio);
+			max77958->irq_base);
 
 	rc = max77958_bulk_read(max77958->i2c,
 			REG_UIC_INT, 4, &irq_reg[USBC_INT]);
@@ -241,34 +238,12 @@ int max77958_irq_init(struct max77958_dev *max77958)
 	int i;
 	int ret;
 
-	if (!max77958->irq_gpio) {
-		dev_warn(max77958->dev, "No interrupt specified.\n");
-		max77958->irq_base = 0;
-		return 0;
-	}
-
 	if (!max77958->irq_base) {
 		dev_err(max77958->dev, "No interrupt base specified.\n");
 		return 0;
 	}
 
 	mutex_init(&max77958->irqlock);
-
-	max77958->irq = gpio_to_irq(max77958->irq_gpio);
-
-	ret = gpio_request(max77958->irq_gpio, "max77958_int");
-	if (ret) {
-		dev_err(max77958->dev, "%s - failed to request irq\n",
-			__func__);
-		return ret;
-	}
-
-	ret = gpio_direction_input(max77958->irq_gpio);
-	if (ret)
-		dev_err(max77958->dev, "%s - failed to set irq as input\n",
-			__func__);
-
-	gpio_free(max77958->irq_gpio);
 
 	/* Mask individual interrupt sources */
 	for (i = 0; i < MAX77958_IRQ_GROUP_NR; i++) {
