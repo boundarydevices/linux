@@ -924,7 +924,6 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c2d_max77958>;
 		interrupts-extended = GPIRQ_MAX77958;
-		max77958,irq-gpio = GPIRQ_MAX77958;
 		charger-power-supply = <&max77975>;
 	};
 };
