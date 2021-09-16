@@ -194,9 +194,6 @@ static irqreturn_t max77958_irq_thread(int irq, void *data)
 	u8 dump_reg[10] = {0, };
 	int i, rc;
 
-	if (!max77958->boot_complete)
-		return IRQ_HANDLED;
-
 	pr_info("irq[%d] %d/%d",
 			irq, max77958->irq,
 			max77958->irq_base);
@@ -220,6 +217,9 @@ static irqreturn_t max77958_irq_thread(int irq, void *data)
 	pr_info("[max77958] dump_reg, %x, %x, %x, %x, %x, %x, %x, %x\n",
 			dump_reg[0], dump_reg[1], dump_reg[2], dump_reg[3],
 			dump_reg[4], dump_reg[5], dump_reg[6], dump_reg[7]);
+
+	if (!max77958->boot_complete)
+		return IRQ_HANDLED;
 
 	/* Apply masking */
 	for (i = 0; i < MAX77958_IRQ_GROUP_NR; i++)
