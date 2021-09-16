@@ -157,12 +157,9 @@ static int of_max77958_dt(struct device *dev,
 	if (!np_max77958)
 		return -EINVAL;
 
-	pdata->irq_gpio = of_get_named_gpio(np_max77958,
-		"max77958,irq-gpio", 0);
 	pdata->wakeup = of_property_read_bool(np_max77958,
 		"max77958,wakeup");
 
-	pr_info("%s: irq-gpio: %u\n", __func__, pdata->irq_gpio);
 	return 0;
 }
 #endif /* CONFIG_OF */
@@ -778,7 +775,6 @@ static int max77958_i2c_probe(struct i2c_client *i2c,
 		} else
 			max77958->irq_base = pdata->irq_base;
 
-		max77958->irq_gpio = pdata->irq_gpio;
 		max77958->wakeup = pdata->wakeup;
 	} else {
 		ret = -EINVAL;
