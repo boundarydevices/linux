@@ -189,6 +189,7 @@ struct mt6357_codec_priv {
 	int mAudio_Ana_Volume[AUDIO_ANALOG_VOLUME_TYPE_MAX];
 	int mAudio_Ana_Mux[AUDIO_ANALOG_MAX_MUX_TYPE];
 	int mAudio_Ana_DevicePower[AUDIO_ANALOG_DEVICE_MAX];
+	int mAudio_Ana_DevicePower_MixParam[AUDIO_ANALOG_DEVICE_MAX];
 	int mAudio_BackUpAna_DevicePower[AUDIO_ANALOG_DEVICE_MAX];
 };
 

@@ -77,6 +77,16 @@
 /* HP IMPEDANCE Current Calibration from EFUSE */
 /* #define EFUSE_HP_IMPEDANCE */
 /* static function declaration */
+static int Voice_Amp_Activate(int enable);
+static int Speaker_Amp_Activate(int enable);
+static int Ext_Speaker_Amp_Activate(int enable);
+static int Headset_Speaker_Amp_Activate(int enable);
+static int Audio_AmpL_Activate(int enable);
+static int Audio_AmpR_Activate(int enable);
+static int Audio_ADC1_Activate(int enable);
+static int Audio_ADC2_Activate(int enable);
+static int Receiver_Speaker_Switch_Activate(int enable);
+
 static bool AudioPreAmp1_Sel(int Mul_Sel);
 static bool GetAdcStatus(void);
 static void TurnOffDacPower(void);
@@ -2489,8 +2499,101 @@ static int mt63xx_codec_prepare(struct snd_pcm_substream *substream,
 	}
 	return 0;
 }
+static int mt6357_codec_prepare(struct snd_pcm_substream *substream,
+				struct snd_soc_dai *Daiport)
+{
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		/* pr_debug("%s set up SNDRV_PCM_STREAM_CAPTURE rate = %d\n",
+		 * __func__, substream->runtime->rate);
+		 */
+		mBlockSampleRate[AUDIO_ANALOG_DEVICE_IN_ADC] =
+			substream->runtime->rate;
+		if (mCodec_data->mAudio_Ana_DevicePower_MixParam
+			[AUDIO_ANALOG_DEVICE_IN_ADC1] == true)
+			Audio_ADC1_Activate(1);
+		if (mCodec_data->mAudio_Ana_DevicePower_MixParam
+			[AUDIO_ANALOG_DEVICE_IN_ADC2] == true)
+			Audio_ADC2_Activate(1);
+		if (mCodec_data->mAudio_Ana_DevicePower_MixParam
+			[AUDIO_ANALOG_DEVICE_RECEIVER_SPEAKER_SWITCH] == true)
+			Receiver_Speaker_Switch_Activate(1);
+	} else if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		/* pr_debug("%s set up SNDRV_PCM_STREAM_PLAYBACK rate = %d\n",
+		 * __func__, substream->runtime->rate);
+		 */
+		mBlockSampleRate[AUDIO_ANALOG_DEVICE_OUT_DAC] =
+			substream->runtime->rate;
+		if (mCodec_data->mAudio_Ana_DevicePower_MixParam
+			[AUDIO_ANALOG_DEVICE_OUT_HEADSETL] == true)
+			Audio_AmpL_Activate(1);
+		if (mCodec_data->mAudio_Ana_DevicePower_MixParam
+			[AUDIO_ANALOG_DEVICE_OUT_HEADSETR] == true)
+			Audio_AmpR_Activate(1);
+		if (mCodec_data->mAudio_Ana_DevicePower_MixParam
+			[AUDIO_ANALOG_DEVICE_OUT_SPEAKER_HEADSET_R] == true)
+			Headset_Speaker_Amp_Activate(1);
+		if (mCodec_data->mAudio_Ana_DevicePower_MixParam
+			[AUDIO_ANALOG_DEVICE_OUT_EARPIECEL] == true)
+			Voice_Amp_Activate(1);
+		if (mCodec_data->mAudio_Ana_DevicePower_MixParam
+			[AUDIO_ANALOG_DEVICE_OUT_SPEAKERL] == true)
+			Speaker_Amp_Activate(1);
+		if (mCodec_data->mAudio_Ana_DevicePower_MixParam
+			[AUDIO_ANALOG_DEVICE_OUT_EXTSPKAMP] == true)
+			Ext_Speaker_Amp_Activate(1);
+	}
+	return 0;
+}
+static void mt6357_codec_shutdown(struct snd_pcm_substream *substream,
+				struct snd_soc_dai *Daiport)
+{
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		/* pr_debug("%s set up SNDRV_PCM_STREAM_CAPTURE rate = %d\n",
+		 * __func__, substream->runtime->rate);
+		 */
+		mBlockSampleRate[AUDIO_ANALOG_DEVICE_IN_ADC] =
+			substream->runtime->rate;
+		if (mCodec_data->mAudio_Ana_DevicePower
+			[AUDIO_ANALOG_DEVICE_IN_ADC1] == true)
+			Audio_ADC1_Activate(0);
+		if (mCodec_data->mAudio_Ana_DevicePower
+			[AUDIO_ANALOG_DEVICE_IN_ADC2] == true)
+			Audio_ADC2_Activate(0);
+		if (mCodec_data->mAudio_Ana_DevicePower
+			[AUDIO_ANALOG_DEVICE_RECEIVER_SPEAKER_SWITCH] == true)
+			Receiver_Speaker_Switch_Activate(0);
+	} else if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		/* pr_debug("%s set up SNDRV_PCM_STREAM_PLAYBACK rate = %d\n",
+		 * __func__, substream->runtime->rate);
+		 */
+		mBlockSampleRate[AUDIO_ANALOG_DEVICE_OUT_DAC] =
+			substream->runtime->rate;
+		if (mCodec_data->mAudio_Ana_DevicePower
+			[AUDIO_ANALOG_DEVICE_OUT_HEADSETL] == true)
+			Audio_AmpL_Activate(0);
+		if (mCodec_data->mAudio_Ana_DevicePower
+			[AUDIO_ANALOG_DEVICE_OUT_HEADSETR] == true)
+			Audio_AmpR_Activate(0);
+		if (mCodec_data->mAudio_Ana_DevicePower
+			[AUDIO_ANALOG_DEVICE_OUT_SPEAKER_HEADSET_R] == true)
+			Headset_Speaker_Amp_Activate(0);
+		if (mCodec_data->mAudio_Ana_DevicePower
+			[AUDIO_ANALOG_DEVICE_OUT_EARPIECEL] == true)
+			Voice_Amp_Activate(0);
+		if (mCodec_data->mAudio_Ana_DevicePower
+			[AUDIO_ANALOG_DEVICE_OUT_SPEAKERL] == true)
+			Speaker_Amp_Activate(0);
+		if (mCodec_data->mAudio_Ana_DevicePower
+			[AUDIO_ANALOG_DEVICE_OUT_EXTSPKAMP] == true)
+			Ext_Speaker_Amp_Activate(0);
+	}
+}
 static const struct snd_soc_dai_ops mt6323_aif1_dai_ops = {
 	.prepare = mt63xx_codec_prepare,
+};
+static const struct snd_soc_dai_ops mt6357_aif1_dai_ops = {
+	.prepare = mt6357_codec_prepare,
+	.shutdown = mt6357_codec_shutdown,
 };
 static struct snd_soc_dai_driver mtk_6357_dai_codecs[] = {
 	{
@@ -2819,7 +2922,7 @@ static struct snd_soc_dai_driver mtk_6357_dai_codecs[] = {
 #endif
 	{
 		.name = "mt6357-codec-dai",
-		.ops = &mt6323_aif1_dai_ops,
+		.ops = &mt6357_aif1_dai_ops,
 		.playback = {
 			.stream_name = "MT6357 Playback",
 			.channels_min = 1,
@@ -3145,38 +3248,35 @@ static void Audio_Amp_Change(int channels, bool enable)
 static int Audio_AmpL_Get(struct snd_kcontrol *kcontrol,
 			  struct snd_ctl_elem_value *ucontrol)
 {
-	/* pr_debug("Audio_AmpL_Get = %d\n",
-	 * mCodec_data->mAudio_Ana_DevicePower
-	 * [AUDIO_ANALOG_DEVICE_OUT_HEADSETL]);
-	 */
 	ucontrol->value.integer.value[0] =
-	    mCodec_data->mAudio_Ana_DevicePower
-		[AUDIO_ANALOG_DEVICE_OUT_HEADSETL];
+		mCodec_data->mAudio_Ana_DevicePower_MixParam
+			[AUDIO_ANALOG_DEVICE_OUT_HEADSETL];
 	return 0;
 }
 static int Audio_AmpL_Set(struct snd_kcontrol *kcontrol,
 			  struct snd_ctl_elem_value *ucontrol)
 {
+	mCodec_data->mAudio_Ana_DevicePower_MixParam
+		[AUDIO_ANALOG_DEVICE_OUT_HEADSETL] =
+			ucontrol->value.integer.value[0];
+	return 0;
+}
+static int Audio_AmpL_Activate(int enable)
+{
 	mutex_lock(&Ana_Ctrl_Mutex);
-	/* pr_debug("%s(): enable = %ld,
-	 * mAudio_Ana_DevicePower[AUDIO_ANALOG_DEVICE_OUT_HEADSETL] = %d\n",
-	 * __func__, ucontrol->value.integer.value[0],
-	 * mCodec_data->mAudio_Ana_DevicePower
-	 * [AUDIO_ANALOG_DEVICE_OUT_HEADSETL]);
-	 */
-	if ((ucontrol->value.integer.value[0] == true)
+	if ((enable == true)
 	    && (mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_OUT_HEADSETL] == false)) {
 		Audio_Amp_Change(AUDIO_ANALOG_CHANNELS_LEFT1, true);
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_OUT_HEADSETL] =
-			ucontrol->value.integer.value[0];
-	} else if ((ucontrol->value.integer.value[0] == false)
+			enable;
+	} else if ((enable == false)
 		   && (mCodec_data->mAudio_Ana_DevicePower
 				[AUDIO_ANALOG_DEVICE_OUT_HEADSETL] == true)) {
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_OUT_HEADSETL] =
-			ucontrol->value.integer.value[0];
+			enable;
 		Audio_Amp_Change(AUDIO_ANALOG_CHANNELS_LEFT1, false);
 	}
 	mutex_unlock(&Ana_Ctrl_Mutex);
@@ -3185,38 +3285,35 @@ static int Audio_AmpL_Set(struct snd_kcontrol *kcontrol,
 static int Audio_AmpR_Get(struct snd_kcontrol *kcontrol,
 			  struct snd_ctl_elem_value *ucontrol)
 {
-	/* pr_debug("Audio_AmpR_Get = %d\n",
-	 * mCodec_data->mAudio_Ana_DevicePower
-	 * [AUDIO_ANALOG_DEVICE_OUT_HEADSETR]);
-	 */
 	ucontrol->value.integer.value[0] =
-		mCodec_data->mAudio_Ana_DevicePower
+		mCodec_data->mAudio_Ana_DevicePower_MixParam
 			[AUDIO_ANALOG_DEVICE_OUT_HEADSETR];
 	return 0;
 }
 static int Audio_AmpR_Set(struct snd_kcontrol *kcontrol,
 			  struct snd_ctl_elem_value *ucontrol)
 {
+	mCodec_data->mAudio_Ana_DevicePower_MixParam
+		[AUDIO_ANALOG_DEVICE_OUT_HEADSETR] =
+			ucontrol->value.integer.value[0];
+	return 0;
+}
+static int Audio_AmpR_Activate(int enable)
+{
 	mutex_lock(&Ana_Ctrl_Mutex);
-	/* pr_debug("%s(): enable = %ld,
-	 * mAudio_Ana_DevicePower[HEADSETR] = %d\n", __func__,
-	 * ucontrol->value.integer.value[0],
-	 * mCodec_data->mAudio_Ana_DevicePower
-	 * [AUDIO_ANALOG_DEVICE_OUT_HEADSETR]);
-	 */
-	if ((ucontrol->value.integer.value[0] == true) &&
+	if ((enable == true) &&
 	    (mCodec_data->mAudio_Ana_DevicePower
 		     [AUDIO_ANALOG_DEVICE_OUT_HEADSETR] == false)) {
 		Audio_Amp_Change(AUDIO_ANALOG_CHANNELS_RIGHT1, true);
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_OUT_HEADSETR] =
-			ucontrol->value.integer.value[0];
-	} else if ((ucontrol->value.integer.value[0] == false) &&
+			enable;
+	} else if ((enable == false) &&
 		   (mCodec_data->mAudio_Ana_DevicePower
 			    [AUDIO_ANALOG_DEVICE_OUT_HEADSETR] == true)) {
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_OUT_HEADSETR] =
-			ucontrol->value.integer.value[0];
+			enable;
 		Audio_Amp_Change(AUDIO_ANALOG_CHANNELS_RIGHT1, false);
 	}
 	mutex_unlock(&Ana_Ctrl_Mutex);
@@ -3491,33 +3588,36 @@ static void Voice_Amp_Change(bool enable)
 static int Voice_Amp_Get(struct snd_kcontrol *kcontrol,
 			 struct snd_ctl_elem_value *ucontrol)
 {
-	/* pr_debug("Voice_Amp_Get = %d\n",
-	 * mCodec_data->mAudio_Ana_DevicePower
-	 * [AUDIO_ANALOG_DEVICE_OUT_EARPIECEL]);
-	 */
 	ucontrol->value.integer.value[0] =
-		mCodec_data->mAudio_Ana_DevicePower
+		mCodec_data->mAudio_Ana_DevicePower_MixParam
 			[AUDIO_ANALOG_DEVICE_OUT_EARPIECEL];
 	return 0;
 }
 static int Voice_Amp_Set(struct snd_kcontrol *kcontrol,
 			 struct snd_ctl_elem_value *ucontrol)
 {
+	mCodec_data->mAudio_Ana_DevicePower_MixParam
+		[AUDIO_ANALOG_DEVICE_OUT_EARPIECEL] =
+			ucontrol->value.integer.value[0];
+	return 0;
+}
+static int Voice_Amp_Activate(int enable)
+{
 	mutex_lock(&Ana_Ctrl_Mutex);
 	pr_debug("%s()\n", __func__);
-	if ((ucontrol->value.integer.value[0] == true) &&
+	if ((enable == true) &&
 	    (mCodec_data->mAudio_Ana_DevicePower
 		     [AUDIO_ANALOG_DEVICE_OUT_EARPIECEL] == false)) {
 		Voice_Amp_Change(true);
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_OUT_EARPIECEL] =
-		    ucontrol->value.integer.value[0];
-	} else if ((ucontrol->value.integer.value[0] == false) &&
+		    enable;
+	} else if ((enable == false) &&
 		   (mCodec_data->mAudio_Ana_DevicePower
 			    [AUDIO_ANALOG_DEVICE_OUT_EARPIECEL] == true)) {
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_OUT_EARPIECEL] =
-		    ucontrol->value.integer.value[0];
+		    enable;
 		Voice_Amp_Change(false);
 	}
 	mutex_unlock(&Ana_Ctrl_Mutex);
@@ -3626,30 +3726,34 @@ static void Speaker_Amp_Change(bool enable)
 static int Speaker_Amp_Get(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
-	/* pr_debug("%s()\n", __func__); */
 	ucontrol->value.integer.value[0] =
-		mCodec_data->mAudio_Ana_DevicePower
+		mCodec_data->mAudio_Ana_DevicePower_MixParam
 			[AUDIO_ANALOG_DEVICE_OUT_SPEAKERL];
 	return 0;
 }
 static int Speaker_Amp_Set(struct snd_kcontrol *kcontrol,
 			   struct snd_ctl_elem_value *ucontrol)
 {
-	pr_debug("%s() value = %ld\n ", __func__,
-		 ucontrol->value.integer.value[0]);
-	if ((ucontrol->value.integer.value[0] == true) &&
+	mCodec_data->mAudio_Ana_DevicePower_MixParam
+			[AUDIO_ANALOG_DEVICE_OUT_SPEAKERL] =
+		    ucontrol->value.integer.value[0];
+	return 0;
+}
+static int Speaker_Amp_Activate(int enable)
+{
+	if ((enable == true) &&
 	    (mCodec_data->mAudio_Ana_DevicePower
 		     [AUDIO_ANALOG_DEVICE_OUT_SPEAKERL] == false)) {
 		Speaker_Amp_Change(true);
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_OUT_SPEAKERL] =
-		    ucontrol->value.integer.value[0];
-	} else if ((ucontrol->value.integer.value[0] == false) &&
+		    enable;
+	} else if ((enable == false) &&
 		   (mCodec_data->mAudio_Ana_DevicePower
 			    [AUDIO_ANALOG_DEVICE_OUT_SPEAKERL] == true)) {
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_OUT_SPEAKERL] =
-		    ucontrol->value.integer.value[0];
+		    enable;
 		Speaker_Amp_Change(false);
 	}
 	return 0;
@@ -3674,26 +3778,30 @@ static void Ext_Speaker_Amp_Change(bool enable)
 static int Ext_Speaker_Amp_Get(struct snd_kcontrol *kcontrol,
 			       struct snd_ctl_elem_value *ucontrol)
 {
-	/* pr_debug("%s()\n", __func__); */
 	ucontrol->value.integer.value[0] =
-		mCodec_data->mAudio_Ana_DevicePower
+		mCodec_data->mAudio_Ana_DevicePower_MixParam
 			[AUDIO_ANALOG_DEVICE_OUT_EXTSPKAMP];
 	return 0;
 }
 static int Ext_Speaker_Amp_Set(struct snd_kcontrol *kcontrol,
 			       struct snd_ctl_elem_value *ucontrol)
 {
-	pr_debug("%s() gain = %ld\n ", __func__,
-		 ucontrol->value.integer.value[0]);
-	if (ucontrol->value.integer.value[0]) {
+	mCodec_data->mAudio_Ana_DevicePower_MixParam
+		[AUDIO_ANALOG_DEVICE_OUT_EXTSPKAMP] =
+			ucontrol->value.integer.value[0];
+	return 0;
+}
+static int Ext_Speaker_Amp_Activate(int enable)
+{
+	if (enable) {
 		Ext_Speaker_Amp_Change(true);
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_OUT_EXTSPKAMP] =
-		    ucontrol->value.integer.value[0];
+		    enable;
 	} else {
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_OUT_EXTSPKAMP] =
-		    ucontrol->value.integer.value[0];
+		    enable;
 		Ext_Speaker_Amp_Change(false);
 	}
 	return 0;
@@ -3715,32 +3823,35 @@ static void Receiver_Speaker_Switch_Change(bool enable)
 static int Receiver_Speaker_Switch_Get(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_value *ucontrol)
 {
-	pr_debug("%s() : %d\n", __func__,
-		 mCodec_data->mAudio_Ana_DevicePower
-			 [AUDIO_ANALOG_DEVICE_RECEIVER_SPEAKER_SWITCH]);
 	ucontrol->value.integer.value[0] =
-		mCodec_data->mAudio_Ana_DevicePower
+		mCodec_data->mAudio_Ana_DevicePower_MixParam
 			[AUDIO_ANALOG_DEVICE_RECEIVER_SPEAKER_SWITCH];
 	return 0;
 }
 static int Receiver_Speaker_Switch_Set(struct snd_kcontrol *kcontrol,
 				       struct snd_ctl_elem_value *ucontrol)
 {
-	pr_debug("%s()\n", __func__);
-	if ((ucontrol->value.integer.value[0] == true) &&
+	mCodec_data->mAudio_Ana_DevicePower_MixParam
+		[AUDIO_ANALOG_DEVICE_RECEIVER_SPEAKER_SWITCH] =
+			ucontrol->value.integer.value[0];
+	return 0;
+}
+static int Receiver_Speaker_Switch_Activate(int enable)
+{
+	if ((enable == true) &&
 	    (mCodec_data->mAudio_Ana_DevicePower
 		[AUDIO_ANALOG_DEVICE_RECEIVER_SPEAKER_SWITCH] == false)) {
 		Receiver_Speaker_Switch_Change(true);
 		mCodec_data->mAudio_Ana_DevicePower
 		    [AUDIO_ANALOG_DEVICE_RECEIVER_SPEAKER_SWITCH] =
-		    ucontrol->value.integer.value[0];
-	} else if ((ucontrol->value.integer.value[0] == false) &&
+		    enable;
+	} else if ((enable == false) &&
 		   (mCodec_data->mAudio_Ana_DevicePower
 			    [AUDIO_ANALOG_DEVICE_RECEIVER_SPEAKER_SWITCH] ==
 		    true)) {
 		mCodec_data->mAudio_Ana_DevicePower
 		    [AUDIO_ANALOG_DEVICE_RECEIVER_SPEAKER_SWITCH] =
-		    ucontrol->value.integer.value[0];
+		    enable;
 		Receiver_Speaker_Switch_Change(false);
 	}
 	return 0;
@@ -3931,30 +4042,34 @@ static int Headset_Speaker_Amp_Get(struct snd_kcontrol *kcontrol,
 {
 	pr_debug("%s()\n", __func__);
 	ucontrol->value.integer.value[0] =
-		mCodec_data->mAudio_Ana_DevicePower
+		mCodec_data->mAudio_Ana_DevicePower_MixParam
 			[AUDIO_ANALOG_DEVICE_OUT_SPEAKER_HEADSET_R];
 	return 0;
 }
 static int Headset_Speaker_Amp_Set(struct snd_kcontrol *kcontrol,
 				   struct snd_ctl_elem_value *ucontrol)
 {
-	/* struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol); */
-	pr_debug("%s() gain = %lu\n ", __func__,
-		 ucontrol->value.integer.value[0]);
-	if ((ucontrol->value.integer.value[0] == true) &&
+	mCodec_data->mAudio_Ana_DevicePower_MixParam
+		[AUDIO_ANALOG_DEVICE_OUT_SPEAKER_HEADSET_R] =
+			ucontrol->value.integer.value[0];
+	return 0;
+}
+static int Headset_Speaker_Amp_Activate(int enable)
+{
+	if ((enable == true) &&
 	    (mCodec_data->mAudio_Ana_DevicePower
 		[AUDIO_ANALOG_DEVICE_OUT_SPEAKER_HEADSET_R] == false)) {
 		Headset_Speaker_Amp_Change(true);
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_OUT_SPEAKER_HEADSET_R] =
-			ucontrol->value.integer.value[0];
-	} else if ((ucontrol->value.integer.value[0] == false) &&
+			enable;
+	} else if ((enable == false) &&
 		   (mCodec_data->mAudio_Ana_DevicePower
 			    [AUDIO_ANALOG_DEVICE_OUT_SPEAKER_HEADSET_R] ==
 		    true)) {
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_OUT_SPEAKER_HEADSET_R] =
-			ucontrol->value.integer.value[0];
+			enable;
 		Headset_Speaker_Amp_Change(false);
 	}
 	return 0;
@@ -4985,20 +5100,24 @@ static int Audio_UL_AMIC_DCC_Set(struct snd_kcontrol *kcontrol,
 static int Audio_ADC1_Get(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
-	/* pr_debug("Audio_ADC1_Get = %d\n",
-	 * mCodec_data->mAudio_Ana_DevicePower
-	 * [AUDIO_ANALOG_DEVICE_IN_ADC1]);
-	 */
 	ucontrol->value.integer.value[0] =
-	    mCodec_data->mAudio_Ana_DevicePower[AUDIO_ANALOG_DEVICE_IN_ADC1];
+		mCodec_data->mAudio_Ana_DevicePower_MixParam
+			[AUDIO_ANALOG_DEVICE_IN_ADC1];
 	return 0;
 }
 static int Audio_ADC1_Set(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
+	mCodec_data->mAudio_Ana_DevicePower_MixParam
+		[AUDIO_ANALOG_DEVICE_IN_ADC1] =
+			ucontrol->value.integer.value[0];
+	return 0;
+}
+static int Audio_ADC1_Activate(int enable)
+{
 	pr_debug("%s()\n", __func__);
 	mutex_lock(&Ana_Power_Mutex);
-	if (ucontrol->value.integer.value[0]) {
+	if (enable) {
 		if (mAudio_Analog_Mic1_mode == AUDIO_ANALOGUL_MODE_ACC)
 			TurnOnADcPowerACC(AUDIO_ANALOG_DEVICE_IN_ADC1, true);
 		else if (mAudio_Analog_Mic1_mode == AUDIO_ANALOGUL_MODE_DCC)
@@ -5016,11 +5135,11 @@ static int Audio_ADC1_Set(struct snd_kcontrol *kcontrol,
 					  2);
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_IN_ADC1] =
-		    ucontrol->value.integer.value[0];
+		    enable;
 	} else {
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_IN_ADC1] =
-		    ucontrol->value.integer.value[0];
+		    enable;
 		if (mAudio_Analog_Mic1_mode == AUDIO_ANALOGUL_MODE_ACC)
 			TurnOnADcPowerACC(AUDIO_ANALOG_DEVICE_IN_ADC1, false);
 		else if (mAudio_Analog_Mic1_mode == AUDIO_ANALOGUL_MODE_DCC)
@@ -5043,20 +5162,24 @@ static int Audio_ADC1_Set(struct snd_kcontrol *kcontrol,
 static int Audio_ADC2_Get(struct snd_kcontrol *kcontrol,
 			  struct snd_ctl_elem_value *ucontrol)
 {
-	/* pr_debug("Audio_ADC2_Get = %d\n",
-	 * mCodec_data->mAudio_Ana_DevicePower
-	 * [AUDIO_ANALOG_DEVICE_IN_ADC2]);
-	 */
 	ucontrol->value.integer.value[0] =
-	    mCodec_data->mAudio_Ana_DevicePower[AUDIO_ANALOG_DEVICE_IN_ADC2];
+		mCodec_data->mAudio_Ana_DevicePower_MixParam
+			[AUDIO_ANALOG_DEVICE_IN_ADC2];
 	return 0;
 }
 static int Audio_ADC2_Set(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_value *ucontrol)
 {
+	mCodec_data->mAudio_Ana_DevicePower_MixParam
+		[AUDIO_ANALOG_DEVICE_IN_ADC2] =
+			ucontrol->value.integer.value[0];
+	return 0;
+}
+static int Audio_ADC2_Activate(int enable)
+{
 	pr_debug("%s()\n", __func__);
 	mutex_lock(&Ana_Power_Mutex);
-	if (ucontrol->value.integer.value[0]) {
+	if (enable) {
 		if (mAudio_Analog_Mic2_mode == AUDIO_ANALOGUL_MODE_ACC)
 			TurnOnADcPowerACC(AUDIO_ANALOG_DEVICE_IN_ADC2, true);
 		else if (mAudio_Analog_Mic2_mode == AUDIO_ANALOGUL_MODE_DCC)
@@ -5074,11 +5197,11 @@ static int Audio_ADC2_Set(struct snd_kcontrol *kcontrol,
 					  2);
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_IN_ADC2] =
-		    ucontrol->value.integer.value[0];
+		    enable;
 	} else {
 		mCodec_data->mAudio_Ana_DevicePower
 			[AUDIO_ANALOG_DEVICE_IN_ADC2] =
-		    ucontrol->value.integer.value[0];
+		    enable;
 		if (mAudio_Analog_Mic2_mode == AUDIO_ANALOGUL_MODE_ACC)
 			TurnOnADcPowerACC(AUDIO_ANALOG_DEVICE_IN_ADC2, false);
 		else if (mAudio_Analog_Mic2_mode == AUDIO_ANALOGUL_MODE_DCC)
