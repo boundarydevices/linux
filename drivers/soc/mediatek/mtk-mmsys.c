@@ -104,6 +104,24 @@ static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
 	.num_routes = ARRAY_SIZE(mt8365_mmsys_routing_table),
 };
 
+static const struct mtk_mmsys_driver_data mt8195_vppsys0_driver_data = {
+	.clk_driver = "clk-mt8195-vpp0",
+	.mdp_routes = mmsys_mt8195_mdp_routing_table,
+	.mdp_num_routes = ARRAY_SIZE(mmsys_mt8195_mdp_routing_table),
+	.mdp_mmsys_configs = mmsys_mt8195_mdp_vppsys_config_table,
+	.mdp_num_mmsys_configs = ARRAY_SIZE(mmsys_mt8195_mdp_vppsys_config_table),
+	.vppsys = true,
+};
+
+static const struct mtk_mmsys_driver_data mt8195_vppsys1_driver_data = {
+	.clk_driver = "clk-mt8195-vpp1",
+	.mdp_routes = mmsys_mt8195_mdp_routing_table,
+	.mdp_num_routes = ARRAY_SIZE(mmsys_mt8195_mdp_routing_table),
+	.mdp_mmsys_configs = mmsys_mt8195_mdp_vppsys_config_table,
+	.mdp_num_mmsys_configs = ARRAY_SIZE(mmsys_mt8195_mdp_vppsys_config_table),
+	.vppsys = true,
+};
+
 struct mtk_mmsys {
 	void __iomem *regs;
 	const struct mtk_mmsys_driver_data *data;
@@ -393,6 +411,18 @@ void mtk_mmsys_ddp_config(struct device *dev, enum mtk_mmsys_config_type config,
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_ddp_config);
 
+void mtk_mmsys_write_reg(struct device *dev,
+			 struct mmsys_cmdq_cmd *cmd,
+			 u32 alias_id, u32 value, u32 mask)
+{
+	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
+	const u32 *configs = mmsys->data->mdp_mmsys_configs;
+
+	cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id,
+			    mmsys->addr + configs[alias_id], value, mask);
+}
+EXPORT_SYMBOL_GPL(mtk_mmsys_write_reg);
+
 static int mtk_mmsys_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -449,6 +479,9 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 	if (IS_ERR(clks))
 		return PTR_ERR(clks);
 
+	if (mmsys->data->vppsys)
+		goto EXIT;
+
 	drm = platform_device_register_data(&pdev->dev, "mediatek-drm",
 					    PLATFORM_DEVID_AUTO, NULL, 0);
 	if (IS_ERR(drm)) {
@@ -456,6 +489,7 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 		return PTR_ERR(drm);
 	}
 
+EXIT:
 	return 0;
 }
 
@@ -495,6 +529,14 @@ static const struct of_device_id of_match_mtk_mmsys[] = {
 	{
 		.compatible = "mediatek,mt8192-mmsys",
 		.data = &mt8192_mmsys_driver_data,
+	},
+	{
+		.compatible = "mediatek,mt8195-vppsys0",
+		.data = &mt8195_vppsys0_driver_data,
+	},
+	{
+		.compatible = "mediatek,mt8195-vppsys1",
+		.data = &mt8195_vppsys1_driver_data,
 	},
 	{
 		.compatible = "mediatek,mt8195-vdosys0",

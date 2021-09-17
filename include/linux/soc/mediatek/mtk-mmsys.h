@@ -213,7 +213,8 @@ void mtk_mmsys_mdp_camin_ctrl(struct device *dev, struct mmsys_cmdq_cmd *cmd,
 			      enum mtk_mdp_comp_id id,
 			      u32 camin_w, u32 camin_h);
 
-void mtk_mmsys_ddp_config(struct device *dev, enum mtk_mmsys_config_type config,
-			  u32 id, u32 val, struct cmdq_pkt *cmdq_pkt);
+void mtk_mmsys_write_reg(struct device *dev,
+			 struct mmsys_cmdq_cmd *cmd,
+			 u32 alias_id, u32 value, u32 mask);
 
 #endif /* __MTK_MMSYS_H */
