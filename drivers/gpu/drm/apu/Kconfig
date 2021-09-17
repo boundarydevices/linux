@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+
+config DRM_APU
+	tristate "APU (AI Processor Unit)"
+	select REMOTEPROC
+	select DRM_SCHED
+	help
+	  This provides a DRM driver that provides some facilities to
+	  communicate with an accelerated processing unit (APU).
