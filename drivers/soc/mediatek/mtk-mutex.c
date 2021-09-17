@@ -241,6 +241,23 @@
 #define MUTEX_DISABLE_CLK_GATING		0x0
 #define MUTEX_ENABLE_CLK_GATING			0x1
 
+#define MT8195_MUTEX_MDP_MOD_MASK		0xFFFFFFFF
+#define MT8195_MUTEX_MDP_MOD1_MASK		0x000000FF
+#define MT8195_MUTEX_MDP_SOF_MASK		0x00000007
+
+#define	MT8195_MDP_PIPE_WPEI			0
+#define	MT8195_MDP_PIPE_WPEI2			1
+#define	MT8195_MDP_PIPE_RDMA0			2
+#define	MT8195_MDP_PIPE_VPP1_SOUT		3
+
+#define	MT8195_MDP_PIPE_RDMA1			1
+#define	MT8195_MDP_PIPE_RDMA2			2
+#define	MT8195_MDP_PIPE_RDMA3			3
+
+#define	MT8195_MDP_PIPE_SPLIT			2
+#define	MT8195_MDP_PIPE_SPLIT2			3
+#define	MT8195_MDP_PIPE_VPP0_SOUT		4
+
 struct mtk_mutex {
 	int id;
 	bool claimed;
@@ -499,6 +516,22 @@ static const unsigned int mt8195_mutex_sof[DDP_MUTEX_SOF_MAX] = {
 		MT8195_MUTEX_SOF_DP_INTF1 | MT8195_MUTEX_EOF_DP_INTF1,
 };
 
+static const unsigned int mt8195_mutex_vpp0_offset[MDP_PIPE_MAX] = {
+	[MDP_PIPE_WPEI] = MT8195_MDP_PIPE_WPEI,
+	[MDP_PIPE_WPEI2] = MT8195_MDP_PIPE_WPEI2,
+	[MDP_PIPE_RDMA0] = MT8195_MDP_PIPE_RDMA0,
+	[MDP_PIPE_VPP1_SOUT] = MT8195_MDP_PIPE_VPP1_SOUT,
+};
+
+static const unsigned int mt8195_mutex_vpp1_offset[MDP_PIPE_MAX] = {
+	[MDP_PIPE_SPLIT] = MT8195_MDP_PIPE_SPLIT,
+	[MDP_PIPE_SPLIT2] = MT8195_MDP_PIPE_SPLIT2,
+	[MDP_PIPE_RDMA1] = MT8195_MDP_PIPE_RDMA1,
+	[MDP_PIPE_RDMA2] = MT8195_MDP_PIPE_RDMA2,
+	[MDP_PIPE_RDMA3] = MT8195_MDP_PIPE_RDMA3,
+	[MDP_PIPE_VPP0_SOUT] = MT8195_MDP_PIPE_SPLIT,
+};
+
 static const struct mtk_mutex_data mt2701_mutex_driver_data = {
 	.mutex_mod = mt2701_mutex_mod,
 	.mutex_sof = mt2712_mutex_sof,
@@ -566,6 +599,22 @@ static const struct mtk_mutex_data mt8195_mutex_driver_data = {
 	.mutex_sof = mt8195_mutex_sof,
 	.mutex_mod_reg = MT8195_DISP_MUTEX0_MOD0,
 	.mutex_sof_reg = MT8195_DISP_MUTEX0_SOF,
+};
+
+static const struct mtk_mutex_data mt8195_vpp0_mutex_driver_data = {
+	.mutex_mod_reg = MT8195_DISP_MUTEX0_MOD0,
+	.mutex_sof_reg = MT8195_DISP_MUTEX0_SOF,
+	.mutex_mdp_offset = mt8195_mutex_vpp0_offset,
+	.mutex_mdp_mod_mask = MT8195_MUTEX_MDP_MOD_MASK,
+	.mutex_mdp_sof_mask = MT8195_MUTEX_MDP_SOF_MASK,
+};
+
+static const struct mtk_mutex_data mt8195_vpp1_mutex_driver_data = {
+	.mutex_mod_reg = MT8195_DISP_MUTEX0_MOD0,
+	.mutex_sof_reg = MT8195_DISP_MUTEX0_SOF,
+	.mutex_mdp_offset = mt8195_mutex_vpp1_offset,
+	.mutex_mdp_mod_mask = MT8195_MUTEX_MDP_MOD_MASK,
+	.mutex_mdp_sof_mask = MT8195_MUTEX_MDP_SOF_MASK,
 };
 
 struct mtk_mutex *mtk_mutex_get(struct device *dev)
@@ -892,6 +941,10 @@ static const struct of_device_id mutex_driver_dt_match[] = {
 	  .data = &mt8195_mutex_driver_data},
 	{ .compatible = "mediatek,mt8365-disp-mutex",
 	  .data = &mt8365_mutex_driver_data},
+	{ .compatible = "mediatek,mt8195-vpp0-mutex",
+	  .data = &mt8195_vpp0_mutex_driver_data},
+	{ .compatible = "mediatek,mt8195-vpp1-mutex",
+	  .data = &mt8195_vpp1_mutex_driver_data},
 	{},
 };
 MODULE_DEVICE_TABLE(of, mutex_driver_dt_match);
