@@ -1424,6 +1424,7 @@
 			usb3-resume-missing-cas;
 			snps,power-down-scale = <2>;
 			snps,parkmode-disable-ss-quirk;
+			snps,dis_rxdet_inp3_quirk;
 			status = "disabled";
 		};
 
@@ -1458,6 +1459,7 @@
 			usb3-resume-missing-cas;
 			snps,power-down-scale = <2>;
 			snps,parkmode-disable-ss-quirk;
+			snps,dis_rxdet_inp3_quirk;
 			status = "disabled";
 		};
 
