@@ -425,6 +425,22 @@ static u32 mdp_fmt_get_plane_size(const struct mdp_format *fmt,
 	return 0;
 }
 
+void mdp_set_scenario(struct mdp_dev *mdp,
+		      struct img_ipi_frameparam *param,
+		      struct mdp_frame *frame)
+{
+	u32 width = frame->format.fmt.pix_mp.width;
+	u32 height = frame->format.fmt.pix_mp.height;
+
+	if (!mdp)
+		return;
+
+	if (mdp->mdp_data->mdp_cfg->support_dual_pipe) {
+		if ((width * height) >= (2560 * 1440))
+			param->type = MDP_STREAM_TYPE_DUAL_BITBLT;
+	}
+}
+
 static void mdp_prepare_buffer(struct img_image_buffer *b,
 			       struct mdp_frame *frame, struct vb2_buffer *vb)
 {

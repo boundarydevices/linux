@@ -45,6 +45,7 @@ static const struct mdp_platform_config mt8195_plat_cfg = {
 	.tdshp_dyn_contrast_version     = 2,
 	.mdp_version_8195               = true,
 	.mdp_version_6885               = true,
+	.support_dual_pipe              = true,
 	.gce_event_offset               = 0,
 };
 
@@ -1299,10 +1300,18 @@ static int mdp_probe(struct platform_device *pdev)
 	mutex_init(&mdp->vpu_lock);
 	mutex_init(&mdp->m2m_lock);
 
-	mdp->cmdq_clt = cmdq_mbox_create(dev, 0);
-	if (IS_ERR(mdp->cmdq_clt)) {
-		ret = PTR_ERR(mdp->cmdq_clt);
+	mdp->cmdq_clt[0] = cmdq_mbox_create(dev, 0);
+	if (IS_ERR(mdp->cmdq_clt[0])) {
+		ret = PTR_ERR(mdp->cmdq_clt[0]);
 		goto err_put_scp;
+	}
+
+	if (mdp->mdp_data->mdp_cfg->support_dual_pipe) {
+		mdp->cmdq_clt[1] = cmdq_mbox_create(dev, 1);
+		if (IS_ERR(mdp->cmdq_clt[1])) {
+			ret = PTR_ERR(mdp->cmdq_clt[1]);
+			goto err_mbox_destroy;
+		}
 	}
 
 	init_waitqueue_head(&mdp->callback_wq);
@@ -1318,7 +1327,7 @@ static int mdp_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(dev, "Failed to register v4l2 device\n");
 		ret = -EINVAL;
-		goto err_mbox_destroy;
+		goto err_dual_mbox_destroy;
 	}
 
 	ret = mdp_m2m_device_register(mdp);
@@ -1333,8 +1342,11 @@ success_return:
 
 err_unregister_device:
 	v4l2_device_unregister(&mdp->v4l2_dev);
+err_dual_mbox_destroy:
+	if (mdp->mdp_data->mdp_cfg->support_dual_pipe)
+		cmdq_mbox_destroy(mdp->cmdq_clt[1]);
 err_mbox_destroy:
-	cmdq_mbox_destroy(mdp->cmdq_clt);
+	cmdq_mbox_destroy(mdp->cmdq_clt[0]);
 err_put_scp:
 	scp_put(mdp->scp);
 err_destroy_clock_wq:

@@ -16,6 +16,7 @@
 
 #define MDP_MODULE_NAME	"mtk-mdp3"
 #define MDP_RDMA0_NODE      0
+#define MDP_DUAL_PIPE       2
 
 enum mdp_buffer_usage {
 	MDP_BUFFER_USAGE_HW_READ,
@@ -23,6 +24,12 @@ enum mdp_buffer_usage {
 	MDP_BUFFER_USAGE_MDP2,
 	MDP_BUFFER_USAGE_ISP,
 	MDP_BUFFER_USAGE_WPE,
+};
+
+enum mdp_cmdq_usage {
+	MDP_CMDQ_V4L2,
+	MDP_CMDQ_DL,
+	MDP_CMDQ_NUM
 };
 
 struct mdp_platform_config {
@@ -41,6 +48,7 @@ struct mdp_platform_config {
 	bool wrot_support_10bit;
 	bool mdp_version_6885;
 	bool mdp_version_8195;
+	bool support_dual_pipe;
 	u8 tdshp_dyn_contrast_version;
 	u32 gce_event_offset;
 };
@@ -81,7 +89,7 @@ struct mdp_dev {
 	s32					vpu_count;
 	u32					id_count;
 	struct ida				mdp_ida;
-	struct cmdq_client			*cmdq_clt;
+	struct cmdq_client			*cmdq_clt[MDP_DUAL_PIPE];
 	wait_queue_head_t			callback_wq;
 
 	struct v4l2_device			v4l2_dev;
@@ -91,6 +99,7 @@ struct mdp_dev {
 	struct mutex				m2m_lock;
 	atomic_t				suspended;
 	atomic_t				job_count;
+	atomic_t				cmdq_count[MDP_CMDQ_NUM];
 };
 
 struct mdp_pipe_info {

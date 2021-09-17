@@ -39,6 +39,7 @@ struct mdp_ipi_deinit_msg {
 
 enum mdp_config_id {
 	MDP_DEV_M2M = 0,
+	MDP_DEV_M2M_2ND = 1,
 	MDP_CONFIG_POOL_SIZE	/* ALWAYS keep at the end */
 };
 

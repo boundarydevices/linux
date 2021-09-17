@@ -26,6 +26,7 @@ struct mdp_cmdq_param {
 	void (*cmdq_cb)(struct cmdq_cb_data data);
 	void *cb_data;
 	void *mdp_ctx;
+	u32 cmdq_user;
 };
 
 struct mdp_cmdq_cb_param {
@@ -37,6 +38,9 @@ struct mdp_cmdq_cb_param {
 	struct mdp_comp *comps;
 	u8 num_comps;
 	void *mdp_ctx;
+	u32 cmdq_user;
+	bool finalize;
+	bool dualpipe;
 };
 
 struct mdp_dev;

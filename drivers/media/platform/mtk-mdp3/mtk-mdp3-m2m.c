@@ -108,6 +108,10 @@ static void mdp_m2m_worker(struct work_struct *work)
 	frame = ctx_get_frame(ctx, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
 	src_vb = v4l2_m2m_next_src_buf(ctx->m2m_ctx);
 	mdp_set_src_config(&param.inputs[0], frame, &src_vb->vb2_buf);
+	mdp_set_scenario(ctx->mdp_dev, &param, frame);
+	if (param.frame_change)
+		dev_info(&ctx->mdp_dev->pdev->dev,
+			 "MDP Scenario: %d\n", param.type);
 
 	frame = ctx_get_frame(ctx, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
 	dst_vb = v4l2_m2m_next_dst_buf(ctx->m2m_ctx);
@@ -129,6 +133,7 @@ static void mdp_m2m_worker(struct work_struct *work)
 	task.cmdq_cb = NULL;
 	task.cb_data = NULL;
 	task.mdp_ctx = ctx;
+	task.cmdq_user = MDP_CMDQ_V4L2;
 
 	ret = mdp_cmdq_send(ctx->mdp_dev, &task);
 	if (ret) {

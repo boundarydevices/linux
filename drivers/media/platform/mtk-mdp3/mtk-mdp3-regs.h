@@ -10,6 +10,7 @@
 #include <linux/videodev2.h>
 #include <media/videobuf2-core.h>
 #include "mtk-img-ipi.h"
+#include "mtk-mdp3-cmdq.h"
 
 /*
  * MDP native color code
@@ -407,6 +408,9 @@ int mdp_try_crop(struct mdp_m2m_ctx *ctx, struct v4l2_rect *r,
 int mdp_check_scaling_ratio(const struct v4l2_rect *crop,
 			    const struct v4l2_rect *compose, s32 rotation,
 	const struct mdp_limit *limit);
+void mdp_set_scenario(struct mdp_dev *mdp,
+		      struct img_ipi_frameparam *param,
+		      struct mdp_frame *frame);
 void mdp_set_src_config(struct img_input *in,
 			struct mdp_frame *frame, struct vb2_buffer *vb);
 void mdp_set_dst_config(struct img_output *out,

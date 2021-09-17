@@ -38,6 +38,9 @@ struct mdp_path {
 #define is_rdma(mdp, id) \
 	((mdp)->mdp_data->comp_data[(id)].match.type == MDP_COMP_TYPE_RDMA)
 
+#define get_pipe_num(scenario) \
+	((scenario) == MDP_STREAM_TYPE_DUAL_BITBLT ? 2 : 1)
+
 struct mdp_path_subfrm {
 	s32	mutex_id;
 	u32	mutex_mod;
@@ -716,25 +719,31 @@ static void mdp_auto_release_work(struct work_struct *work)
 	struct mdp_cmdq_cb_param *cb_param;
 	struct mdp_dev *mdp;
 	int i;
+	bool finalize;
 
 	cb_param = container_of(work, struct mdp_cmdq_cb_param,
 				auto_release_work);
 	mdp = cb_param->mdp;
+	finalize = cb_param->finalize;
 
-	i = mdp_get_mutex_idx(mdp->mdp_data, MDP_PIPE_RDMA0);
-	mtk_mutex_unprepare(mdp->mdp_mutex[mdp->mdp_data->pipe_info[i].mutex_id]);
+	if (finalize) {
+		i = mdp_get_mutex_idx(mdp->mdp_data, MDP_PIPE_RDMA0);
+		mtk_mutex_unprepare(mdp->mdp_mutex[mdp->mdp_data->pipe_info[i].mutex_id]);
 
-	i = mdp_get_mutex_idx(mdp->mdp_data, MDP_PIPE_RDMA1);
-	if (i >= 0)
-		mtk_mutex_unprepare(mdp->mdp_mutex2[mdp->mdp_data->pipe_info[i].mutex_id]);
+		i = mdp_get_mutex_idx(mdp->mdp_data, MDP_PIPE_RDMA1);
+		if (i >= 0)
+			mtk_mutex_unprepare(mdp->mdp_mutex2[mdp->mdp_data->pipe_info[i].mutex_id]);
+	}
 	mdp_comp_clocks_off(&mdp->pdev->dev, cb_param->comps,
 			    cb_param->num_comps);
 
 	kfree(cb_param->comps);
 	kfree(cb_param);
 
-	atomic_dec(&mdp->job_count);
-	wake_up(&mdp->callback_wq);
+	if (finalize) {
+		atomic_dec(&mdp->job_count);
+		wake_up(&mdp->callback_wq);
+	}
 }
 
 static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
@@ -753,7 +762,13 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 	mdp = cb_param->mdp;
 	dev = &mdp->pdev->dev;
 
-	if (cb_param->mdp_ctx)
+	if (cb_param->dualpipe)
+		cb_param->finalize =
+			(atomic_dec_and_test(&mdp->cmdq_count[cb_param->cmdq_user]));
+	else
+		cb_param->finalize = true;
+
+	if (cb_param->finalize && cb_param->mdp_ctx)
 		mdp_m2m_job_finish(cb_param->mdp_ctx);
 
 #ifdef MDP_DEBUG
@@ -797,52 +812,62 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 
 int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 {
-	struct mmsys_cmdq_cmd cmd;
-	struct mdp_path *path = NULL;
-	struct mdp_cmdq_cb_param *cb_param = NULL;
-	struct mdp_comp *comps = NULL;
+	struct mmsys_cmdq_cmd cmd[MDP_DUAL_PIPE];
+	struct mdp_path *paths[MDP_DUAL_PIPE] = {NULL};
+	struct mdp_cmdq_cb_param *cb_param[MDP_DUAL_PIPE] = {NULL};
+	struct mdp_comp *comps[MDP_DUAL_PIPE] = {NULL};
 	struct device *dev = &mdp->pdev->dev;
-	int i, ret;
+
+	enum mdp_stream_type scenario = param->param->type;
+	int i, j, ret;
 
 	if (atomic_read(&mdp->suspended))
 		return -ECANCELED;
 
 	atomic_inc(&mdp->job_count);
 
-	cmd.pkt = cmdq_pkt_create(mdp->cmdq_clt, SZ_16K);
-	if (IS_ERR(cmd.pkt)) {
-		atomic_dec(&mdp->job_count);
-		wake_up(&mdp->callback_wq);
-		return PTR_ERR(cmd.pkt);
-	}
-	cmd.event = &mdp->event[0];
-
-	path = kzalloc(sizeof(*path), GFP_KERNEL);
-	if (!path) {
-		ret = -ENOMEM;
-		goto err_destroy_pkt;
+	/* Prepare cmdq pkt */
+	for (i = 0; i < get_pipe_num(scenario); i++) {
+		cmd[i].pkt = cmdq_pkt_create(mdp->cmdq_clt[i], SZ_16K);
+		if (IS_ERR(cmd[i].pkt)) {
+			ret = PTR_ERR(cmd[i].pkt);
+			dev_err(dev, "%s path %d cmdq_pkt_create error\n", __func__, i);
+			goto err_destroy_pkt;
+		}
+		cmd[i].event = &mdp->event[0];
 	}
 
-	path->mdp_dev = mdp;
-	path->config = param->config;
-	path->param = param->param;
-	for (i = 0; i < param->param->num_outputs; i++) {
-		path->bounds[i].left = 0;
-		path->bounds[i].top = 0;
-		path->bounds[i].width =
-			param->param->outputs[i].buffer.format.width;
-		path->bounds[i].height =
-			param->param->outputs[i].buffer.format.height;
-		path->composes[i] = param->composes[i] ?
-			param->composes[i] : &path->bounds[i];
+	/* Prepare path info */
+	for (i = 0; i < get_pipe_num(scenario); i++) {
+		paths[i] = kzalloc(sizeof(struct mdp_path), GFP_KERNEL);
+		if (!paths[i]) {
+			ret = -ENOMEM;
+			dev_err(dev, "%s alloc paths error\n", __func__);
+			goto err_destroy_paths;
+		}
+
+		paths[i]->mdp_dev = mdp;
+		paths[i]->config = &param->config[i];
+		paths[i]->param = param->param;
+		for (j = 0; j < param->param->num_outputs; j++) {
+			paths[i]->bounds[j].left = 0;
+			paths[i]->bounds[j].top = 0;
+			paths[i]->bounds[j].width =
+				param->param->outputs[j].buffer.format.width;
+			paths[i]->bounds[j].height =
+				param->param->outputs[j].buffer.format.height;
+			paths[i]->composes[j] = param->composes[j] ?
+				param->composes[j] : &paths[i]->bounds[j];
+		}
+
+		ret = mdp_path_ctx_init(mdp, paths[i]);
+		if (ret) {
+			dev_err(dev, "%s mdp_path_ctx_init error at path %d\n", __func__, i);
+			goto err_destroy_paths;
+		}
 	}
 
-	ret = mdp_path_ctx_init(mdp, path);
-	if (ret) {
-		dev_err(dev, "mdp_path_ctx_init error\n");
-		goto err_destroy_pkt;
-	}
-
+	/* Setup clock and cmdq buffer */
 	i = mdp_get_mutex_idx(mdp->mdp_data, MDP_PIPE_RDMA0);
 	mtk_mutex_prepare(mdp->mdp_mutex[mdp->mdp_data->pipe_info[i].mutex_id]);
 
@@ -850,64 +875,94 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 	if (i >= 0)
 		mtk_mutex_prepare(mdp->mdp_mutex2[mdp->mdp_data->pipe_info[i].mutex_id]);
 
-	for (i = 0; i < param->config->num_components; i++) {
-		if (is_dummy_engine(mdp, path->config->components[i].type))
-			continue;
+	for (i = 0; i < get_pipe_num(scenario); i++) {
+		for (j = 0; j < param->config[i].num_components; j++) {
+			if (is_dummy_engine(mdp, paths[i]->config->components[j].type))
+				continue;
 
-		mdp_comp_clock_on(&mdp->pdev->dev, path->comps[i].comp);
+			mdp_comp_clock_on(&mdp->pdev->dev, paths[i]->comps[j].comp);
+		}
 	}
 
 	if (mdp->mdp_data->mdp_cfg->mdp_version_8195) {
-		ret = mdp_hyfbc_config(mdp, &cmd, path, param);
-		if (ret)
-			goto err_destroy_pkt;
+		ret = mdp_hyfbc_config(mdp, &cmd[0], paths[0], param);
+		if (ret) {
+			dev_err(dev, "%s mdp_hyfbc_config error\n", __func__);
+			goto err_clock_off;
+		}
 	}
 
-	ret = mdp_path_config(mdp, &cmd, path);
-	if (ret) {
-		dev_err(dev, "mdp_path_config error\n");
-		goto err_destroy_pkt;
+	for (i = 0; i < get_pipe_num(scenario); i++) {
+		ret = mdp_path_config(mdp, &cmd[i], paths[i]);
+		if (ret) {
+			dev_err(dev, "path %d mdp_path_config error\n", i);
+			goto err_clock_off;
+		}
 	}
 
-	cb_param = kzalloc(sizeof(*cb_param), GFP_KERNEL);
-	if (!cb_param) {
-		ret = -ENOMEM;
-		goto err_destroy_pkt;
+	/* Prepare cmdq callback info */
+	for (i = 0; i < get_pipe_num(scenario); i++) {
+		cb_param[i] = kzalloc(sizeof(struct mdp_cmdq_cb_param), GFP_KERNEL);
+		if (!cb_param[i]) {
+			ret = -ENOMEM;
+			dev_err(dev, "%s path %d alloc cb_param error \n", __func__, i);
+			goto err_destroy_cb_param;
+		}
+
+		comps[i] = kcalloc(param->config[i].num_components,
+				   sizeof(struct mdp_comp), GFP_KERNEL);
+		if (!comps[i]) {
+			ret = -ENOMEM;
+			dev_err(dev, "%s path %d alloc comps error \n", __func__, i);
+			goto err_destroy_cb_param;
+		}
+
+		for (j = 0; j < param->config[i].num_components; j++) {
+			if (is_dummy_engine(mdp, paths[i]->config->components[j].type))
+				continue;
+
+			memcpy(&comps[i][j], paths[i]->comps[j].comp,
+			       sizeof(struct mdp_comp));
+		}
+		cb_param[i]->mdp = mdp;
+		cb_param[i]->user_cmdq_cb = param->cmdq_cb;
+		cb_param[i]->user_cb_data = param->cb_data;
+		cb_param[i]->pkt = cmd[i].pkt;
+		cb_param[i]->comps = comps[i];
+		cb_param[i]->num_comps = param->config[i].num_components;
+		cb_param[i]->mdp_ctx = param->mdp_ctx;
+		cb_param[i]->cmdq_user = param->cmdq_user;
+		cb_param[i]->dualpipe = (get_pipe_num(scenario) > 1 ? true : false);
 	}
 
-	comps = kcalloc(param->config->num_components, sizeof(*comps),
-			GFP_KERNEL);
-	if (!comps) {
-		ret = -ENOMEM;
-		goto err_destroy_pkt;
+	/* Flush cmdq */
+	if (atomic_read(&mdp->cmdq_count[param->cmdq_user]))
+		dev_dbg(dev, "%s: Warning: cmdq_count:%d !\n", __func__,
+			atomic_read(&mdp->cmdq_count[param->cmdq_user]));
+
+	atomic_set(&mdp->cmdq_count[param->cmdq_user], get_pipe_num(scenario));
+	for (i = 0; i < get_pipe_num(scenario); i++) {
+		cmdq_pkt_finalize(cmd[i].pkt);
+
+		ret = cmdq_pkt_flush_async(cmd[i].pkt,
+					   mdp_handle_cmdq_callback,
+					   (void *)cb_param[i]);
+		if (ret) {
+			dev_err(dev, "pkt %d cmdq_pkt_flush_async fail!\n", i);
+			goto err_destroy_cmdq_request;
+		}
+		kfree(paths[i]);
 	}
 
-	for (i = 0; i < param->config->num_components; i++) {
-		if (is_dummy_engine(mdp, path->config->components[i].type))
-			continue;
-
-		memcpy(&comps[i], path->comps[i].comp,
-		       sizeof(struct mdp_comp));
-	}
-	cb_param->mdp = mdp;
-	cb_param->user_cmdq_cb = param->cmdq_cb;
-	cb_param->user_cb_data = param->cb_data;
-	cb_param->pkt = cmd.pkt;
-	cb_param->comps = comps;
-	cb_param->num_comps = param->config->num_components;
-	cb_param->mdp_ctx = param->mdp_ctx;
-
-	cmdq_pkt_finalize(cmd.pkt);
-	ret = cmdq_pkt_flush_async(cmd.pkt,
-				   mdp_handle_cmdq_callback,
-				   (void *)cb_param);
-	if (ret) {
-		dev_err(dev, "cmdq_pkt_flush_async fail!\n");
-		goto err_clock_off;
-	}
-	kfree(path);
 	return 0;
 
+err_destroy_cmdq_request:
+	atomic_set(&mdp->cmdq_count[param->cmdq_user], 0);
+err_destroy_cb_param:
+	for (i = 0; i < get_pipe_num(scenario); i++) {
+		kfree(comps[i]);
+		kfree(cb_param[i]);
+	}
 err_clock_off:
 	i = mdp_get_mutex_idx(mdp->mdp_data, MDP_PIPE_RDMA0);
 	mtk_mutex_unprepare(mdp->mdp_mutex[mdp->mdp_data->pipe_info[i].mutex_id]);
@@ -916,15 +971,22 @@ err_clock_off:
 	if (i >= 0)
 		mtk_mutex_unprepare(mdp->mdp_mutex2[mdp->mdp_data->pipe_info[i].mutex_id]);
 
-	mdp_comp_clocks_off(&mdp->pdev->dev, cb_param->comps,
-			    cb_param->num_comps);
+	for (i = 0; i < get_pipe_num(scenario); i++) {
+		for (j = 0; j < param->config[i].num_components; j++) {
+			if (is_dummy_engine(mdp, paths[i]->config->components[j].type) == false)
+				mdp_comp_clock_off(&mdp->pdev->dev, paths[i]->comps[j].comp);
+		}
+	}
+err_destroy_paths:
+	for (i = 0; i < get_pipe_num(scenario); i++)
+		kfree(paths[i]);
 err_destroy_pkt:
-	cmdq_pkt_destroy(cmd.pkt);
+	for (i = 0; i < get_pipe_num(scenario); i++)
+		if(!IS_ERR(cmd[i].pkt))
+			cmdq_pkt_destroy(cmd[i].pkt);
+
 	atomic_dec(&mdp->job_count);
 	wake_up(&mdp->callback_wq);
-	kfree(comps);
-	kfree(cb_param);
-	kfree(path);
 
 	return ret;
 }
@@ -941,6 +1003,7 @@ int mdp_cmdq_sendtask(struct platform_device *pdev, struct img_config *config,
 		.composes[0] = compose,
 		.cmdq_cb = cmdq_cb,
 		.cb_data = cb_data,
+		.cmdq_user = MDP_CMDQ_DL,
 	};
 
 	return mdp_cmdq_send(mdp, &task);
