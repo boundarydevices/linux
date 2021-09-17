@@ -22,16 +22,16 @@
 #include "mtk-mdp3-regs.h"
 
 struct mdp_module_base_va {
-	void __iomem *MDP_RDMA0;
-	void __iomem *MDP_RSZ0;
-	void __iomem *MDP_RSZ1;
-	void __iomem *MDP_TDSHP;
-	void __iomem *MDP_COLOR;
-	void __iomem *MDP_AAL;
-	void __iomem *MDP_CCORR;
-	void __iomem *MDP_WROT0;
-	void __iomem *MDP_WDMA;
-	void __iomem *SMI_LARB0;
+	void __iomem *MDP_RDMA0_VA;
+	void __iomem *MDP_RSZ0_VA;
+	void __iomem *MDP_RSZ1_VA;
+	void __iomem *MDP_TDSHP_VA;
+	void __iomem *MDP_COLOR_VA;
+	void __iomem *MDP_AAL_VA;
+	void __iomem *MDP_CCORR_VA;
+	void __iomem *MDP_WROT0_VA;
+	void __iomem *MDP_WDMA_VA;
+	void __iomem *SMI_LARB0_VA;
 };
 
 struct RegDef {
@@ -49,15 +49,15 @@ struct mdp_debug_context {
 static struct mdp_debug_context g_mdp_debug;
 
 #define MMSYS_CONFIG_BASE	g_mdp_debug.mdp_mmsys_base_va
-#define MDP_RDMA0_BASE		g_mdp_debug.mdp_mod_base_va.MDP_RDMA0
-#define MDP_RSZ0_BASE		g_mdp_debug.mdp_mod_base_va.MDP_RSZ0
-#define MDP_RSZ1_BASE		g_mdp_debug.mdp_mod_base_va.MDP_RSZ1
-#define MDP_TDSHP_BASE		g_mdp_debug.mdp_mod_base_va.MDP_TDSHP
-#define MDP_COLOR_BASE		g_mdp_debug.mdp_mod_base_va.MDP_COLOR
-#define MDP_AAL_BASE		g_mdp_debug.mdp_mod_base_va.MDP_AAL
-#define MDP_CCORR_BASE		g_mdp_debug.mdp_mod_base_va.MDP_CCORR
-#define MDP_WROT0_BASE		g_mdp_debug.mdp_mod_base_va.MDP_WROT0
-#define MDP_WDMA_BASE		g_mdp_debug.mdp_mod_base_va.MDP_WDMA
+#define MDP_RDMA0_BASE		g_mdp_debug.mdp_mod_base_va.MDP_RDMA0_VA
+#define MDP_RSZ0_BASE		g_mdp_debug.mdp_mod_base_va.MDP_RSZ0_VA
+#define MDP_RSZ1_BASE		g_mdp_debug.mdp_mod_base_va.MDP_RSZ1_VA
+#define MDP_TDSHP_BASE		g_mdp_debug.mdp_mod_base_va.MDP_TDSHP_VA
+#define MDP_COLOR_BASE		g_mdp_debug.mdp_mod_base_va.MDP_COLOR_VA
+#define MDP_AAL_BASE		g_mdp_debug.mdp_mod_base_va.MDP_AAL_VA
+#define MDP_CCORR_BASE		g_mdp_debug.mdp_mod_base_va.MDP_CCORR_VA
+#define MDP_WROT0_BASE		g_mdp_debug.mdp_mod_base_va.MDP_WROT0_VA
+#define MDP_WDMA_BASE		g_mdp_debug.mdp_mod_base_va.MDP_WDMA_VA
 
 #define MDP_REG_GET32(addr)	(readl((void *)addr) & 0xffffffff)
 #define MDP_REG_SET32(addr, val)	writel(val, addr)
@@ -102,20 +102,20 @@ static void mdp_init_module_base_VA(void)
 	if (rdma_node) {
 		va = of_iomap(rdma_node, 0);
 		of_node_put(rdma_node);
-		mod_base_va->MDP_RDMA0 = va;
+		mod_base_va->MDP_RDMA0_VA = va;
 		mdp_dbg(2, "MDP_RDMA va: 0x%p\n", va);
 	} else
 		mdp_err("%s:MDP_RDMA node missing!\n", __func__);
 
-	mod_base_va->MDP_RSZ0 = mdp_alloc_reference_VA_by_name("mdp3-rsz0");
-	mod_base_va->MDP_RSZ1 = mdp_alloc_reference_VA_by_name("mdp3-rsz1");
-	mod_base_va->MDP_WROT0 = mdp_alloc_reference_VA_by_name("mdp3-wrot0");
-	mod_base_va->MDP_WDMA = mdp_alloc_reference_VA_by_name("mdp3-wdma0");
-	mod_base_va->MDP_TDSHP = mdp_alloc_reference_VA_by_name("mdp3-tdshp0");
-	mod_base_va->MDP_COLOR = mdp_alloc_reference_VA_by_name("mdp3-color0");
-	mod_base_va->MDP_AAL = mdp_alloc_reference_VA_by_name("mdp3-aal0");
-	mod_base_va->MDP_CCORR = mdp_alloc_reference_VA_by_name("mdp3-ccorr0");
-	mod_base_va->SMI_LARB0 =
+	mod_base_va->MDP_RSZ0_VA = mdp_alloc_reference_VA_by_name("mdp3-rsz0");
+	mod_base_va->MDP_RSZ1_VA = mdp_alloc_reference_VA_by_name("mdp3-rsz1");
+	mod_base_va->MDP_WROT0_VA = mdp_alloc_reference_VA_by_name("mdp3-wrot0");
+	mod_base_va->MDP_WDMA_VA = mdp_alloc_reference_VA_by_name("mdp3-wdma0");
+	mod_base_va->MDP_TDSHP_VA = mdp_alloc_reference_VA_by_name("mdp3-tdshp0");
+	mod_base_va->MDP_COLOR_VA = mdp_alloc_reference_VA_by_name("mdp3-color0");
+	mod_base_va->MDP_AAL_VA = mdp_alloc_reference_VA_by_name("mdp3-aal0");
+	mod_base_va->MDP_CCORR_VA = mdp_alloc_reference_VA_by_name("mdp3-ccorr0");
+	mod_base_va->SMI_LARB0_VA =
 		mdp_alloc_reference_VA_by_name("mediatek,larb");
 }
 
@@ -123,16 +123,16 @@ static void mdp_deinit_module_base_VA(void)
 {
 	struct mdp_module_base_va *mod_base_va = &(g_mdp_debug.mdp_mod_base_va);
 
-	mdp_free_module_base_VA(mod_base_va->MDP_RDMA0);
-	mdp_free_module_base_VA(mod_base_va->MDP_RSZ0);
-	mdp_free_module_base_VA(mod_base_va->MDP_RSZ1);
-	mdp_free_module_base_VA(mod_base_va->MDP_WROT0);
-	mdp_free_module_base_VA(mod_base_va->MDP_WDMA);
-	mdp_free_module_base_VA(mod_base_va->MDP_TDSHP);
-	mdp_free_module_base_VA(mod_base_va->MDP_COLOR);
-	mdp_free_module_base_VA(mod_base_va->MDP_AAL);
-	mdp_free_module_base_VA(mod_base_va->MDP_CCORR);
-	mdp_free_module_base_VA(mod_base_va->SMI_LARB0);
+	mdp_free_module_base_VA(mod_base_va->MDP_RDMA0_VA);
+	mdp_free_module_base_VA(mod_base_va->MDP_RSZ0_VA);
+	mdp_free_module_base_VA(mod_base_va->MDP_RSZ1_VA);
+	mdp_free_module_base_VA(mod_base_va->MDP_WROT0_VA);
+	mdp_free_module_base_VA(mod_base_va->MDP_WDMA_VA);
+	mdp_free_module_base_VA(mod_base_va->MDP_TDSHP_VA);
+	mdp_free_module_base_VA(mod_base_va->MDP_COLOR_VA);
+	mdp_free_module_base_VA(mod_base_va->MDP_AAL_VA);
+	mdp_free_module_base_VA(mod_base_va->MDP_CCORR_VA);
+	mdp_free_module_base_VA(mod_base_va->SMI_LARB0_VA);
 	memset(mod_base_va, 0, sizeof(struct mdp_module_base_va));
 }
 
@@ -929,23 +929,23 @@ static void mdp_platform_function_setting(void)
 
 int32_t mdp_dump_info(uint64_t comp_flag, int log_level)
 {
-	if (comp_flag & (1LL << MDP_COMP_RDMA0))
+	if (comp_flag & (1LL << MDP_RDMA0))
 		mdp_dump_rdma_common(MDP_RDMA0_BASE, "RDMA0");
-	if (comp_flag & (1LL << MDP_COMP_AAL0))
+	if (comp_flag & (1LL << MDP_AAL0))
 		mdp_dump_aal(MDP_AAL_BASE, "AAL0");
-	if (comp_flag & (1LL << MDP_COMP_CCORR0))
+	if (comp_flag & (1LL << MDP_CCORR0))
 		mdp_dump_ccorr(MDP_CCORR_BASE, "CCORR0");
-	if (comp_flag & (1LL << MDP_COMP_RSZ0))
+	if (comp_flag & (1LL << MDP_RSZ0))
 		mdp_get_func()->mdp_dump_rsz(MDP_RSZ0_BASE, "RSZ0");
-	if (comp_flag & (1LL << MDP_COMP_RSZ1))
+	if (comp_flag & (1LL << MDP_RSZ1))
 		mdp_get_func()->mdp_dump_rsz(MDP_RSZ1_BASE, "RSZ1");
-	if (comp_flag & (1LL << MDP_COMP_TDSHP0))
+	if (comp_flag & (1LL << MDP_TDSHP0))
 		mdp_get_func()->mdp_dump_tdshp(MDP_TDSHP_BASE, "TDSHP");
-	if (comp_flag & (1LL << MDP_COMP_COLOR0))
+	if (comp_flag & (1LL << MDP_COLOR0))
 		mdp_dump_color_common(MDP_COLOR_BASE, "COLOR0");
-	if (comp_flag & (1LL << MDP_COMP_WROT0))
+	if (comp_flag & (1LL << MDP_WROT0))
 		mdp_dump_rot_common(MDP_WROT0_BASE, "WROT0");
-	if (comp_flag & (1LL << MDP_COMP_WDMA))
+	if (comp_flag & (1LL << MDP_WDMA))
 		mdp_dump_wdma_common(MDP_WDMA_BASE, "WDMA");
 
 	return 0;

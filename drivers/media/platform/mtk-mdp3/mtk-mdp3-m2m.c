@@ -648,6 +648,8 @@ static int mdp_m2m_open(struct file *file)
 	int ret;
 	struct v4l2_format default_format;
 
+	mdp_format_init(mdp->mdp_data->format, mdp->mdp_data->format_len);
+
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
 		return -ENOMEM;

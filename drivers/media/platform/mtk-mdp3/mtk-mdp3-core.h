@@ -35,6 +35,18 @@ struct mdp_platform_config {
 
 struct mtk_mdp_driver_data {
 	const struct mdp_platform_config *mdp_cfg;
+	const enum mdp_comp_event *event;
+	unsigned int event_len;
+	const struct mdp_comp_list *comp_list;
+	const struct mdp_comp_data *comp_data;
+	unsigned int comp_data_len;
+	const struct mdp_comp_info *comp_info;
+	unsigned int comp_info_len;
+	const struct mdp_pipe_info *pipe_info;
+	unsigned int pipe_info_len;
+	const struct mdp_format *format;
+	unsigned int format_len;
+	const enum mdp_mmsys_config_id *config_table;
 };
 
 struct mdp_dev {
@@ -65,6 +77,13 @@ struct mdp_dev {
 	struct mutex				m2m_lock;
 	atomic_t				suspended;
 	atomic_t				job_count;
+};
+
+struct mdp_pipe_info {
+	enum mtk_mdp_pipe_id pipe_id;
+	u32 mmsys_id;
+	u32 mutex_id;
+	u32 sof;
 };
 
 int mdp_vpu_get_locked(struct mdp_dev *mdp);

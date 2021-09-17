@@ -30,8 +30,375 @@ static const struct mdp_platform_config mt8183_plat_cfg = {
 	.gce_event_offset		= 2,
 };
 
+static const struct mdp_comp_list mt8183_comp_list = {
+	.wpei		= MT8183_MDP_COMP_WPEI,
+	.wpeo		= MT8183_MDP_COMP_WPEO,
+	.wpei2		= MT8183_MDP_COMP_WPEI2,
+	.wpeo2		= MT8183_MDP_COMP_WPEO2,
+	.camin		= MT8183_MDP_COMP_CAMIN,
+	.camin2		= MT8183_MDP_COMP_CAMIN2,
+	.split		= MDP_COMP_INVALID,
+	.split2		= MDP_COMP_INVALID,
+	.rdma0		= MT8183_MDP_COMP_RDMA0,
+	.rdma1		= MDP_COMP_INVALID,
+	.rdma2		= MDP_COMP_INVALID,
+	.rdma3		= MDP_COMP_INVALID,
+	.stitch		= MDP_COMP_INVALID,
+	.fg0		= MDP_COMP_INVALID,
+	.fg1		= MDP_COMP_INVALID,
+	.fg2		= MDP_COMP_INVALID,
+	.fg3		= MDP_COMP_INVALID,
+	.hdr0		= MDP_COMP_INVALID,
+	.hdr1		= MDP_COMP_INVALID,
+	.hdr2		= MDP_COMP_INVALID,
+	.hdr3		= MDP_COMP_INVALID,
+	.aal0		= MT8183_MDP_COMP_AAL0,
+	.aal1		= MDP_COMP_INVALID,
+	.aal2		= MDP_COMP_INVALID,
+	.aal3		= MDP_COMP_INVALID,
+	.rsz0		= MT8183_MDP_COMP_RSZ0,
+	.rsz1		= MT8183_MDP_COMP_RSZ1,
+	.rsz2		= MDP_COMP_INVALID,
+	.rsz3		= MDP_COMP_INVALID,
+	.tdshp0		= MT8183_MDP_COMP_TDSHP0,
+	.tdshp1		= MDP_COMP_INVALID,
+	.tdshp2		= MDP_COMP_INVALID,
+	.tdshp3		= MDP_COMP_INVALID,
+	.color0		= MT8183_MDP_COMP_COLOR0,
+	.color1		= MDP_COMP_INVALID,
+	.color2		= MDP_COMP_INVALID,
+	.color3		= MDP_COMP_INVALID,
+	.ccorr0		= MT8183_MDP_COMP_CCORR0,
+	.ovl0		= MDP_COMP_INVALID,
+	.ovl1		= MDP_COMP_INVALID,
+	.pad0		= MDP_COMP_INVALID,
+	.pad1		= MDP_COMP_INVALID,
+	.pad2		= MDP_COMP_INVALID,
+	.pad3		= MDP_COMP_INVALID,
+	.tcc0		= MDP_COMP_INVALID,
+	.tcc1		= MDP_COMP_INVALID,
+	.wrot0		= MT8183_MDP_COMP_WROT0,
+	.wrot1		= MDP_COMP_INVALID,
+	.wrot2		= MDP_COMP_INVALID,
+	.wrot3		= MDP_COMP_INVALID,
+	.merge2		= MDP_COMP_INVALID,
+	.merge3		= MDP_COMP_INVALID,
+	.wdma		= MT8183_MDP_COMP_WDMA,
+	.vdo0dl0	= MDP_COMP_INVALID,
+	.vdo1dl0	= MDP_COMP_INVALID,
+	.vdo0dl1	= MDP_COMP_INVALID,
+	.vdo1dl1	= MDP_COMP_INVALID,
+	.path0_sout	= MT8183_MDP_COMP_PATH0_SOUT,
+	.path1_sout	= MT8183_MDP_COMP_PATH1_SOUT,
+};
+
+static const struct mdp_comp_data mt8183_mdp_comp_data[MT8183_MDP_MAX_COMP_COUNT] = {
+	[MT8183_MDP_COMP_WPEI] = { {MDP_COMP_TYPE_WPEI, 0, MDP_COMP_WPEI}, {0, 0, 0} },
+	[MT8183_MDP_COMP_WPEO] = { {MDP_COMP_TYPE_EXTO, 2, MDP_COMP_WPEO}, {0, 0, 0} },
+	[MT8183_MDP_COMP_WPEI2] = { {MDP_COMP_TYPE_WPEI, 1, MDP_COMP_WPEI2}, {0, 0, 0} },
+	[MT8183_MDP_COMP_WPEO2] = { {MDP_COMP_TYPE_EXTO, 3, MDP_COMP_WPEO2}, {0, 0, 0} },
+	[MT8183_MDP_COMP_ISP_IMGI] = { {MDP_COMP_TYPE_IMGI, 0, MDP_COMP_ISP_IMGI}, {0, 0, 0} },
+	[MT8183_MDP_COMP_ISP_IMGO] = { {MDP_COMP_TYPE_EXTO, 0, MDP_COMP_ISP_IMGO}, {0, 0, 0} },
+	[MT8183_MDP_COMP_ISP_IMG2O] = { {MDP_COMP_TYPE_EXTO, 1, MDP_COMP_ISP_IMG2O}, {0, 0, 0} },
+
+	[MT8183_MDP_COMP_CAMIN] = { {MDP_COMP_TYPE_DL_PATH1, 0, MDP_COMP_CAMIN}, {0, 0, 0} },
+	[MT8183_MDP_COMP_CAMIN2] = { {MDP_COMP_TYPE_DL_PATH2, 1, MDP_COMP_CAMIN2}, {0, 0, 0} },
+	[MT8183_MDP_COMP_RDMA0] = { {MDP_COMP_TYPE_RDMA, 0, MDP_COMP_RDMA0}, {0, BIT(2), 0} },
+	[MT8183_MDP_COMP_AAL0] = { {MDP_COMP_TYPE_AAL, 0, MDP_COMP_AAL0}, {0, BIT(23), 0} },
+	[MT8183_MDP_COMP_CCORR0] = { {MDP_COMP_TYPE_CCORR, 0, MDP_COMP_CCORR0}, {0, BIT(24), 0} },
+	[MT8183_MDP_COMP_RSZ0] = { {MDP_COMP_TYPE_RSZ, 0, MDP_COMP_RSZ0}, {0, BIT(4), 0} },
+	[MT8183_MDP_COMP_RSZ1] = { {MDP_COMP_TYPE_RSZ, 1, MDP_COMP_RSZ1}, {0, BIT(5), 0} },
+	[MT8183_MDP_COMP_TDSHP0] = { {MDP_COMP_TYPE_TDSHP, 0, MDP_COMP_TDSHP0}, {0, BIT(6), 0} },
+	[MT8183_MDP_COMP_PATH0_SOUT] = { {MDP_COMP_TYPE_PATH1, 0, MDP_COMP_PATH0_SOUT}, {0, 0, 0} },
+	[MT8183_MDP_COMP_PATH1_SOUT] = { {MDP_COMP_TYPE_PATH2, 1, MDP_COMP_PATH1_SOUT}, {0, 0, 0} },
+	[MT8183_MDP_COMP_WROT0] = { {MDP_COMP_TYPE_WROT, 0, MDP_COMP_WROT0}, {0, BIT(7), 0} },
+	[MT8183_MDP_COMP_WDMA] = { {MDP_COMP_TYPE_WDMA, 0, MDP_COMP_WDMA}, {0, BIT(8), 0} },
+};
+
+static const enum mdp_comp_event mt8183_mdp_event[] = {
+	RDMA0_SOF,
+	RDMA0_DONE,
+	RSZ0_SOF,
+	RSZ1_SOF,
+	TDSHP0_SOF,
+	WROT0_SOF,
+	WROT0_DONE,
+	WDMA0_SOF,
+	WDMA0_DONE,
+	ISP_P2_0_DONE,
+	ISP_P2_1_DONE,
+	ISP_P2_2_DONE,
+	ISP_P2_3_DONE,
+	ISP_P2_4_DONE,
+	ISP_P2_5_DONE,
+	ISP_P2_6_DONE,
+	ISP_P2_7_DONE,
+	ISP_P2_8_DONE,
+	ISP_P2_9_DONE,
+	ISP_P2_10_DONE,
+	ISP_P2_11_DONE,
+	ISP_P2_12_DONE,
+	ISP_P2_13_DONE,
+	ISP_P2_14_DONE,
+	WPE_DONE,
+	WPE_B_DONE
+};
+
+static const struct mdp_comp_info mt8183_comp_dt_info[] = {
+	[MDP_COMP_TYPE_RDMA]		= {2, 0, 0},
+	[MDP_COMP_TYPE_RSZ]			= {1, 0, 0},
+	[MDP_COMP_TYPE_WROT]		= {1, 0, 0},
+	[MDP_COMP_TYPE_WDMA]		= {1, 0, 0},
+	[MDP_COMP_TYPE_PATH1]		= {0, 0, 2},
+	[MDP_COMP_TYPE_PATH2]		= {0, 0, 3},
+	[MDP_COMP_TYPE_CCORR]		= {1, 0, 0},
+	[MDP_COMP_TYPE_IMGI]		= {0, 0, 2},
+	[MDP_COMP_TYPE_EXTO]		= {0, 0, 2},
+	[MDP_COMP_TYPE_DL_PATH1]	= {2, 2, 1},
+	[MDP_COMP_TYPE_DL_PATH2]	= {2, 4, 1},
+};
+
+static const struct mdp_pipe_info mt8183_pipe_info[] = {
+	{MDP_PIPE_IMGI, 0, 0},
+	{MDP_PIPE_RDMA0, 0, 1},
+	{MDP_PIPE_WPEI, 0, 2},
+	{MDP_PIPE_WPEI2, 0, 3}
+};
+
+static const struct mdp_format mt8183_formats[] = {
+	{
+		.pixelformat	= V4L2_PIX_FMT_GREY,
+		.mdp_color	= MDP_COLOR_GREY,
+		.depth		= { 8 },
+		.row_depth	= { 8 },
+		.num_planes	= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_RGB565X,
+		.mdp_color	= MDP_COLOR_RGB565,
+		.depth		= { 16 },
+		.row_depth	= { 16 },
+		.num_planes	= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_RGB565,
+		.mdp_color	= MDP_COLOR_BGR565,
+		.depth		= { 16 },
+		.row_depth	= { 16 },
+		.num_planes	= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_RGB24,
+		.mdp_color	= MDP_COLOR_RGB888,
+		.depth		= { 24 },
+		.row_depth	= { 24 },
+		.num_planes	= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_BGR24,
+		.mdp_color	= MDP_COLOR_BGR888,
+		.depth		= { 24 },
+		.row_depth	= { 24 },
+		.num_planes	= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_ABGR32,
+		.mdp_color	= MDP_COLOR_BGRA8888,
+		.depth		= { 32 },
+		.row_depth	= { 32 },
+		.num_planes	= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_ARGB32,
+		.mdp_color	= MDP_COLOR_ARGB8888,
+		.depth		= { 32 },
+		.row_depth	= { 32 },
+		.num_planes	= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_UYVY,
+		.mdp_color	= MDP_COLOR_UYVY,
+		.depth		= { 16 },
+		.row_depth	= { 16 },
+		.num_planes	= 1,
+		.walign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_VYUY,
+		.mdp_color	= MDP_COLOR_VYUY,
+		.depth		= { 16 },
+		.row_depth	= { 16 },
+		.num_planes	= 1,
+		.walign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_YUYV,
+		.mdp_color	= MDP_COLOR_YUYV,
+		.depth		= { 16 },
+		.row_depth	= { 16 },
+		.num_planes	= 1,
+		.walign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_YVYU,
+		.mdp_color	= MDP_COLOR_YVYU,
+		.depth		= { 16 },
+		.row_depth	= { 16 },
+		.num_planes	= 1,
+		.walign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_YUV420,
+		.mdp_color	= MDP_COLOR_I420,
+		.depth		= { 12 },
+		.row_depth	= { 8 },
+		.num_planes	= 1,
+		.walign		= 1,
+		.halign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_YVU420,
+		.mdp_color	= MDP_COLOR_YV12,
+		.depth		= { 12 },
+		.row_depth	= { 8 },
+		.num_planes	= 1,
+		.walign		= 1,
+		.halign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_NV12,
+		.mdp_color	= MDP_COLOR_NV12,
+		.depth		= { 12 },
+		.row_depth	= { 8 },
+		.num_planes	= 1,
+		.walign		= 1,
+		.halign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_NV21,
+		.mdp_color	= MDP_COLOR_NV21,
+		.depth		= { 12 },
+		.row_depth	= { 8 },
+		.num_planes	= 1,
+		.walign		= 1,
+		.halign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_NV16,
+		.mdp_color	= MDP_COLOR_NV16,
+		.depth		= { 16 },
+		.row_depth	= { 8 },
+		.num_planes	= 1,
+		.walign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_NV61,
+		.mdp_color	= MDP_COLOR_NV61,
+		.depth		= { 16 },
+		.row_depth	= { 8 },
+		.num_planes	= 1,
+		.walign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_NV24,
+		.mdp_color	= MDP_COLOR_NV24,
+		.depth		= { 24 },
+		.row_depth	= { 8 },
+		.num_planes	= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_NV42,
+		.mdp_color	= MDP_COLOR_NV42,
+		.depth		= { 24 },
+		.row_depth	= { 8 },
+		.num_planes	= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_MT21C,
+		.mdp_color	= MDP_COLOR_420_BLKP_UFO,
+		.depth		= { 8, 4 },
+		.row_depth	= { 8, 8 },
+		.num_planes	= 2,
+		.walign		= 4,
+		.halign		= 5,
+		.flags		= MDP_FMT_FLAG_OUTPUT,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_MM21,
+		.mdp_color	= MDP_COLOR_420_BLKP,
+		.depth		= { 8, 4 },
+		.row_depth	= { 8, 8 },
+		.num_planes	= 2,
+		.walign		= 4,
+		.halign		= 5,
+		.flags		= MDP_FMT_FLAG_OUTPUT,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_NV12M,
+		.mdp_color	= MDP_COLOR_NV12,
+		.depth		= { 8, 4 },
+		.row_depth	= { 8, 8 },
+		.num_planes	= 2,
+		.walign		= 1,
+		.halign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_NV21M,
+		.mdp_color	= MDP_COLOR_NV21,
+		.depth		= { 8, 4 },
+		.row_depth	= { 8, 8 },
+		.num_planes	= 2,
+		.walign		= 1,
+		.halign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_NV16M,
+		.mdp_color	= MDP_COLOR_NV16,
+		.depth		= { 8, 8 },
+		.row_depth	= { 8, 8 },
+		.num_planes	= 2,
+		.walign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_NV61M,
+		.mdp_color	= MDP_COLOR_NV61,
+		.depth		= { 8, 8 },
+		.row_depth	= { 8, 8 },
+		.num_planes	= 2,
+		.walign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_YUV420M,
+		.mdp_color	= MDP_COLOR_I420,
+		.depth		= { 8, 2, 2 },
+		.row_depth	= { 8, 4, 4 },
+		.num_planes	= 3,
+		.walign		= 1,
+		.halign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}, {
+		.pixelformat	= V4L2_PIX_FMT_YVU420M,
+		.mdp_color	= MDP_COLOR_YV12,
+		.depth		= { 8, 2, 2 },
+		.row_depth	= { 8, 4, 4 },
+		.num_planes	= 3,
+		.walign		= 1,
+		.halign		= 1,
+		.flags		= MDP_FMT_FLAG_OUTPUT | MDP_FMT_FLAG_CAPTURE,
+	}
+};
+
 static const struct mtk_mdp_driver_data mt8183_mdp_driver_data = {
 	.mdp_cfg = &mt8183_plat_cfg,
+	.event = mt8183_mdp_event,
+	.event_len = ARRAY_SIZE(mt8183_mdp_event),
+	.comp_list = &mt8183_comp_list,
+	.comp_data = mt8183_mdp_comp_data,
+	.comp_data_len = ARRAY_SIZE(mt8183_mdp_comp_data),
+	.comp_info = mt8183_comp_dt_info,
+	.comp_info_len = ARRAY_SIZE(mt8183_comp_dt_info),
+	.pipe_info = mt8183_pipe_info,
+	.pipe_info_len = ARRAY_SIZE(mt8183_pipe_info),
+	.format = mt8183_formats,
+	.format_len = ARRAY_SIZE(mt8183_formats),
 };
 
 static const struct of_device_id mdp_of_ids[] = {
@@ -146,7 +513,7 @@ static int mdp_probe(struct platform_device *pdev)
 	struct device_node *mdp_node;
 	struct platform_device *mm_pdev;
 	u32 event_ofst;
-	int ret, i;
+	int ret, i, mutex_id;
 
 	mdp = kzalloc(sizeof(*mdp), GFP_KERNEL);
 	if (!mdp) {
@@ -170,7 +537,7 @@ static int mdp_probe(struct platform_device *pdev)
 	}
 
 	event_ofst = mdp->mdp_data->mdp_cfg->gce_event_offset;
-	for (i = RDMA0_SOF; i < MDP_MAX_EVENT_COUNT; i++) {
+	for (i = 0; i < mdp->mdp_data->event_len; i++) {
 		s32 event_id;
 
 		if (!dev)
@@ -194,9 +561,15 @@ static int mdp_probe(struct platform_device *pdev)
 		goto err_return;
 	}
 
-	for (i = 0; i < MDP_PIPE_MAX; i++) {
-		mdp->mdp_mutex[i] = mtk_mutex_mdp_get(&mm_pdev->dev, i);
-		if (!mdp->mdp_mutex[i]) {
+	for (i = 0; i < mdp->mdp_data->pipe_info_len; i++) {
+		mutex_id = mdp->mdp_data->pipe_info[i].mutex_id;
+		if (mdp->mdp_mutex[mutex_id])
+			continue;
+
+		mdp->mdp_mutex[mutex_id] =
+			mtk_mutex_mdp_get(&mm_pdev->dev, mdp->mdp_data->pipe_info[i].pipe_id);
+
+		if (!mdp->mdp_mutex[mutex_id]) {
 			ret = -ENODEV;
 			goto err_return;
 		}
