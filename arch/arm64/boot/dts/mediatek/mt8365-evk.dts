@@ -72,6 +72,24 @@
 		enable-active-high;
 	};
 
+	sound: sound {
+		compatible = "mediatek,mt8365-evk";
+		mediatek,platform = <&afe>;
+		pinctrl-names = "aud_mosi_on",
+			"aud_mosi_off",
+			"aud_miso_on",
+			"aud_miso_off",
+			"default",
+			"aud_dmic";
+		pinctrl-0 = <&aud_pins_mosi_on>;
+		pinctrl-1 = <&aud_pins_mosi_off>;
+		pinctrl-2 = <&aud_pins_miso_on>;
+		pinctrl-3 = <&aud_pins_miso_off>;
+		pinctrl-4 = <&aud_pins_default>;
+		pinctrl-5 = <&aud_pins_dmic>;
+		status = "okay";
+	};
+
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -102,6 +120,11 @@
 	};
 };
 
+&mt6357codec {
+	use_hp_depop_flow = <0>; /* select 1: use, 0: not use */
+	use_ul_260k = <0>; /* select 1: use, 0: not use */
+};
+
 &mt6357_pmic {
 	interrupt-parent = <&pio>;
 	interrupts = <145 IRQ_TYPE_LEVEL_HIGH>;
@@ -130,6 +153,10 @@
 };
 
 &mt6357_vrf12_reg {
+	regulator-always-on;
+};
+
+&mt6357_vaud28_reg {
 	regulator-always-on;
 };
 
@@ -741,4 +768,74 @@
 				 <MT8365_PIN_116_I2S_BCK__FUNC_PWM_C>;
 		};
 	};
+
+	aud_pins_mosi_on: mosion {
+		pins_cmd_dat {
+		pinmux = <MT8365_PIN_49_AUD_CLK_MOSI__FUNC_AUD_CLK_MOSI>,
+			 <MT8365_PIN_50_AUD_SYNC_MOSI__FUNC_AUD_SYNC_MOSI>,
+			 <MT8365_PIN_51_AUD_DAT_MOSI0__FUNC_AUD_DAT_MOSI0>,
+			 <MT8365_PIN_52_AUD_DAT_MOSI1__FUNC_AUD_DAT_MOSI1>;
+		drive-strength = <MTK_DRIVE_6mA>;
+		};
+	};
+
+	aud_pins_mosi_off: mosioff {
+		pins_cmd_dat {
+		pinmux = <MT8365_PIN_49_AUD_CLK_MOSI__FUNC_GPIO49>,
+			 <MT8365_PIN_50_AUD_SYNC_MOSI__FUNC_GPIO50>,
+			 <MT8365_PIN_51_AUD_DAT_MOSI0__FUNC_GPIO51>,
+			 <MT8365_PIN_52_AUD_DAT_MOSI1__FUNC_GPIO52>;
+		input-enable;
+		bias-pull-down;
+		drive-strength = <MTK_DRIVE_2mA>;
+		};
+	};
+
+	aud_pins_miso_on: misoon {
+		pins_cmd_dat {
+		pinmux = <MT8365_PIN_53_AUD_CLK_MISO__FUNC_AUD_CLK_MISO>,
+			 <MT8365_PIN_54_AUD_SYNC_MISO__FUNC_AUD_SYNC_MISO>,
+			 <MT8365_PIN_55_AUD_DAT_MISO0__FUNC_AUD_DAT_MISO0>,
+			 <MT8365_PIN_56_AUD_DAT_MISO1__FUNC_AUD_DAT_MISO1>;
+		drive-strength = <MTK_DRIVE_6mA>;
+		};
+	};
+
+	aud_pins_miso_off: misooff {
+		pins_cmd_dat {
+		pinmux = <MT8365_PIN_53_AUD_CLK_MISO__FUNC_GPIO53>,
+			 <MT8365_PIN_54_AUD_SYNC_MISO__FUNC_GPIO54>,
+			 <MT8365_PIN_55_AUD_DAT_MISO0__FUNC_GPIO55>,
+			 <MT8365_PIN_56_AUD_DAT_MISO1__FUNC_GPIO56>;
+		input-enable;
+		bias-pull-down;
+		drive-strength = <MTK_DRIVE_2mA>;
+		};
+	};
+
+	aud_pins_default: audiodefault {
+		pins_cmd_dat {
+		pinmux = <MT8365_PIN_129_TDM_TX_BCK__FUNC_I2S3_BCK>,
+			 <MT8365_PIN_130_TDM_TX_LRCK__FUNC_I2S3_LRCK>,
+			 <MT8365_PIN_131_TDM_TX_MCK__FUNC_I2S3_MCK>,
+			 <MT8365_PIN_132_TDM_TX_DATA0__FUNC_I2S3_DO>;
+		};
+	};
+
+	aud_pins_dmic: audiodmic {
+		pins_cmd_dat {
+		pinmux = <MT8365_PIN_117_DMIC0_CLK__FUNC_DMIC0_CLK>,
+			 <MT8365_PIN_118_DMIC0_DAT0__FUNC_DMIC0_DAT0>,
+			 <MT8365_PIN_119_DMIC0_DAT1__FUNC_DMIC0_DAT1>;
+		};
+	};
+};
+
+&afe {
+	mediatek,dl1-use-sram = <0x11221000 0x5000>;
+	mediatek,i2s-clock-modes = <0 1>;
+	mediatek,dmic-iir-on = <1>;
+	mediatek,dmic-irr-mode = <5>;
+	mediatek,dmic-two-wire-mode = <1>;
+	status = "okay";
 };
