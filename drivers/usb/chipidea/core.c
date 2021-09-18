@@ -704,8 +704,8 @@ static int ci_usb_role_switch_set(struct device *dev, enum usb_role role)
 	if (cable) {
 		cable->changed = true;
 		cable->connected = false;
-		ci_irq(ci->irq, ci);
 		spin_unlock_irqrestore(&ci->lock, flags);
+		ci_irq(ci->irq, ci);
 		if (ci->wq && role != USB_ROLE_NONE)
 			flush_workqueue(ci->wq);
 		spin_lock_irqsave(&ci->lock, flags);
@@ -719,12 +719,12 @@ static int ci_usb_role_switch_set(struct device *dev, enum usb_role role)
 	else if (role == USB_ROLE_HOST)
 		cable = &ci->platdata->id_extcon;
 
+	spin_unlock_irqrestore(&ci->lock, flags);
 	if (cable) {
 		cable->changed = true;
 		cable->connected = true;
 		ci_irq(ci->irq, ci);
 	}
-	spin_unlock_irqrestore(&ci->lock, flags);
 	pm_runtime_put_sync(ci->dev);
 
 	return 0;
