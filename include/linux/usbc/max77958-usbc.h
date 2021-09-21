@@ -38,13 +38,6 @@
 #include <linux/usbc/max77958-cc.h>
 #include <linux/usbc/max77958-bc12.h>
 
-struct max77958_opcode {
-	unsigned char opcode;
-	unsigned char data[OPCODE_DATA_LENGTH];
-	int read_length;
-	int write_length;
-};
-
 #define REG_NONE			0xff
 
 #define HWCUSTMINFOSIZE  12
@@ -122,13 +115,9 @@ union max77958_device_info {
 };
 
 struct max77958_apcmd_data {
-	u8	opcode;
-	u8  prev_opcode;
-	u8	response;
-	u8	read_data[OPCODE_DATA_LENGTH];
-	u8	write_data[OPCODE_DATA_LENGTH];
-	int read_length;
-	int write_length;
+	u8	cmd[OPCODE_DATA_LENGTH + 4];
+	int	rsp_length;
+	int	cmd_length;
 	u8	reg;
 	u8	val;
 	u8	mask;
@@ -205,11 +194,14 @@ struct max77958_usbc_platform_data {
 	enum max77958_wtrstat prev_wtrstat;
 	enum max77958_wtrstat current_wtrstat;
 
-	u8 power_role;
+	enum max77958_cc_pin_state power_role;
 
 	struct max77958_bc12_data *bc12_data;
 	struct max77958_pd_data *pd_data;
 	struct max77958_cc_data *cc_data;
+	struct usb_role_switch	*role_sw;
+	struct typec_port *port;
+
 	struct max77958_platform_data *max77958_data;
 	struct wake_lock max77958_usbc_wake_lock;
 	int vbus_enable;
@@ -256,11 +248,12 @@ union VDM_HEADER_Type {
 
 extern void max77958_clear_apcmd_queue(struct max77958_usbc_platform_data
 	*usbc_data);
-extern void max77958_request_apcmd(struct max77958_usbc_platform_data *data,
-		struct max77958_apcmd_data *input_data);
+extern void max77958_queue_apcmd(struct max77958_usbc_platform_data *data,
+		struct max77958_apcmd_node *node);
 extern void max77958_insert_apcmd(struct max77958_usbc_platform_data *data,
 		struct max77958_apcmd_data *input_data);
-extern void max77958_init_apcmd_data(struct max77958_apcmd_data *cmd_data);
+struct max77958_apcmd_node *max77958_alloc_apcmd_data(void);
+
 
 extern void max77958_notify_cci_vbus_current(struct max77958_usbc_platform_data
 	*usbc_data);
