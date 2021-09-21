@@ -158,7 +158,7 @@ void max77958_notify_cci_vbus_current(struct max77958_usbc_platform_data
 	}
 
 	if (!usbc_data->pd_data->psrdy_received &&
-			usbc_data->cc_data->current_pr == SNK) {
+			usbc_data->cc_data->current_pr == CC_SNK) {
 		if (psy_charger) {
 			val.intval = rp_currentlvl;
 			psy_charger->desc->set_property(psy_charger,
@@ -174,27 +174,33 @@ void max77958_notify_cci_vbus_current(struct max77958_usbc_platform_data
 void max77958_select_pdo(void *data, int num)
 {
 	struct max77958_usbc_platform_data *usbpd_data = data;
-	struct max77958_apcmd_data enqueue_data;
+	struct max77958_apcmd_node *node = max77958_alloc_apcmd_data();
+	unsigned char *cmd;
 
-	max77958_init_apcmd_data(&enqueue_data);
-	enqueue_data.opcode = OPCODE_SRCCAP_REQ;
-	enqueue_data.write_data[0] = num;
-	enqueue_data.write_length = 0x1;
-	enqueue_data.read_length = 0x1;
-	max77958_request_apcmd(usbpd_data, &enqueue_data);
+	if (node) {
+		cmd = node->cmd_data.cmd;
+		cmd[0] = OPCODE_SRCCAP_REQ;
+		cmd[1] = num;
+		node->cmd_data.cmd_length = 0x2;
+		node->cmd_data.rsp_length = 0x1;
+		max77958_queue_apcmd(usbpd_data, node);
+	}
 }
 
 static int max77958_get_current_src_cap(void *data)
 {
 	struct max77958_usbc_platform_data *usbpd_data = data;
-	struct max77958_apcmd_data enqueue_data;
+	struct max77958_apcmd_node *node = max77958_alloc_apcmd_data();
+	unsigned char *cmd;
 
-	max77958_init_apcmd_data(&enqueue_data);
-	enqueue_data.opcode = OPCODE_CURRENT_SRC_CAP;
-	enqueue_data.write_data[0] = 0x0;
-	enqueue_data.write_length = 0x1;
-	enqueue_data.read_length = 31;
-	max77958_request_apcmd(usbpd_data, &enqueue_data);
+	if (node) {
+		cmd = node->cmd_data.cmd;
+		cmd[0] = OPCODE_CURRENT_SRC_CAP;
+		cmd[1] = 0x0;
+		node->cmd_data.cmd_length = 0x2;
+		node->cmd_data.rsp_length = 8*4 + 1;
+		max77958_queue_apcmd(usbpd_data, node);
+	}
 	return 0;
 }
 
@@ -301,14 +307,14 @@ static void max77958_pd_check_pdmsg(struct max77958_usbc_platform_data
 		break;
 	case PDMSG_SRC_SENDERRESPONSETIMER_TIMEOUT:
 		pr_info("PDMSG_SRC_SENDERRESPONSETIMER_TIMEOUT received.");
-		max77958_vbus_turn_on_ctrl(usbc_data, OFF);
+		max77958_vbus_turn_on_ctrl(usbc_data, 0);
 		schedule_delayed_work(&usbc_data->vbus_hard_reset_work,
 			msecs_to_jiffies(800));
 		break;
 	case PDMSG_HARDRESET_RECEIVED:
 		/*turn off the vbus both Source and Sink*/
 		if (usbc_data->cc_data->current_pr == CC_SRC) {
-			max77958_vbus_turn_on_ctrl(usbc_data, OFF);
+			max77958_vbus_turn_on_ctrl(usbc_data, 1);
 			schedule_delayed_work(&usbc_data->vbus_hard_reset_work,
 				msecs_to_jiffies(760));
 		}
@@ -316,14 +322,14 @@ static void max77958_pd_check_pdmsg(struct max77958_usbc_platform_data
 	case PDMSG_HARDRESET_SENT:
 		/*turn off the vbus both Source and Sink*/
 		if (usbc_data->cc_data->current_pr == CC_SRC) {
-			max77958_vbus_turn_on_ctrl(usbc_data, OFF);
+			max77958_vbus_turn_on_ctrl(usbc_data, 0);
 			schedule_delayed_work(&usbc_data->vbus_hard_reset_work,
 				msecs_to_jiffies(760));
 		}
 		break;
 	case PDMSG_PRSWAP_SRCTOSWAP:
 	case PDMSG_PRSWAP_SWAPTOSNK:
-		max77958_vbus_turn_on_ctrl(usbc_data, OFF);
+		max77958_vbus_turn_on_ctrl(usbc_data, 0);
 		pr_info("PDMSG_PRSWAP_SRCTOSWAPSNK : [%x]", pd_msg);
 		break;
 	case PDMSG_PRSWAP_SNKTOSWAP:
@@ -331,7 +337,7 @@ static void max77958_pd_check_pdmsg(struct max77958_usbc_platform_data
 		/* CHGINSEL disable */
 		break;
 	case PDMSG_PRSWAP_SWAPTOSRC:
-		max77958_vbus_turn_on_ctrl(usbc_data, ON);
+		max77958_vbus_turn_on_ctrl(usbc_data, 1);
 		pr_info("PDMSG_PRSWAP_SWAPTOSRC received");
 		break;
 	default:
@@ -345,12 +351,12 @@ static irqreturn_t max77958_pdmsg_irq(int irq, void *data)
 	struct max77958_pd_data *pd_data = usbc_data->pd_data;
 	u8 pdmsg = 0;
 
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 	max77958_read_reg(usbc_data->i2c, REG_PD_STATUS0, &pd_data->pd_status0);
 	pdmsg = pd_data->pd_status0;
-	pr_info("IN");
 	max77958_pd_check_pdmsg(usbc_data, pdmsg);
 	pd_data->pdsmg = pdmsg;
-	pr_info("OUT");
+	pr_debug("%s: exit pd_status0=%02x\n", __func__, pd_data->pd_status0);
 	return IRQ_HANDLED;
 }
 
@@ -361,7 +367,7 @@ static irqreturn_t max77958_psrdy_irq(int irq, void *data)
 	u8 cc_status = pd_data->cc_status;
 	u8 psrdy = 0;
 
-	pr_info("IN");
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 
 	max77958_read_reg(usbc_data->i2c, REG_PD_STATUS1, &pd_data->pd_status1);
 	psrdy = (pd_data->pd_status1 & BIT_PSRDY)
@@ -383,167 +389,148 @@ static irqreturn_t max77958_psrdy_irq(int irq, void *data)
 			break;
 		}
 	}
-	pr_info("OUT");
+	pr_debug("%s: exit pd_status1=%02x\n", __func__, pd_data->pd_status1);
 	return IRQ_HANDLED;
 }
 
 void max77958_send_disocvery_identify(void *data)
 {
 	struct max77958_usbc_platform_data *usbpd_data = data;
-	struct max77958_apcmd_data enqueue_data;
 	int len = sizeof(DISCOVER_IDENTITY);
 	int vdm_header_num = sizeof(union und_data_msg_vdm_header_type);
 	int vdo0_num = 0;
+	struct max77958_apcmd_node *node = max77958_alloc_apcmd_data();
+	unsigned char *cmd;
 
-	max77958_init_apcmd_data(&enqueue_data);
-	enqueue_data.opcode = OPCODE_SEND_VDM;
-	memcpy(&enqueue_data.write_data[0], &DISCOVER_IDENTITY,
-		sizeof(DISCOVER_IDENTITY));
-	enqueue_data.write_length = len;
-	vdo0_num = DISCOVER_IDENTITY.byte_data.BITS.Num_Of_VDO * 4;
-	enqueue_data.read_length = OPCODE_SIZE + OPCODE_HEADER_SIZE
-		+ vdm_header_num + vdo0_num;
-	max77958_request_apcmd(usbpd_data, &enqueue_data);
-}
-
-static void max77958_datarole_irq_handler(void *data, int irq)
-{
-	struct max77958_usbc_platform_data *usbc_data = data;
-	struct max77958_pd_data *pd_data = usbc_data->pd_data;
-	u8 datarole = 0;
-
-	max77958_read_reg(usbc_data->i2c, REG_PD_STATUS1, &pd_data->pd_status1);
-	datarole = (pd_data->pd_status1 & BIT_DataRole)
-		>> FFS(BIT_DataRole);
-	/* abnormal data role without setting power role */
-	if (usbc_data->cc_data->current_pr == UNKNOWN_STATE) {
-		pr_info("INVALID IRQ IRQ(%d)_OUT", irq);
-		return;
-	}
-
-	switch (datarole) {
-	case UFP:
-		if (pd_data->current_dr != UFP) {
-			pd_data->previous_dr = pd_data->current_dr;
-			pd_data->current_dr = UFP;
-			if (pd_data->previous_dr != UNKNOWN_STATE) {
-				pr_info("%s detach DFP usb connection\n",
-					__func__);
-				pr_info("%s and then attach UFP\n",
-					__func__);
-				pr_info("%s usb connection (DR_SWAP)\n",
-					__func__);
-			}
-			max77958_notify_dr_status(usbc_data, 1);
-		}
-		pr_info("UFP");
-		break;
-
-	case DFP:
-		if (pd_data->current_dr != DFP) {
-			pd_data->previous_dr = pd_data->current_dr;
-			pd_data->current_dr = DFP;
-			if (pd_data->previous_dr != UNKNOWN_STATE) {
-				pr_info("%s detach UFP usb connection\n",
-					__func__);
-				pr_info("%s and then attach DFP\n",
-					__func__);
-				pr_info("%s usb connection (DR_SWAP)\n",
-					__func__);
-			if (usbc_data->cc_data->current_pr == SNK)
-				max77958_send_disocvery_identify(usbc_data);
-			}
-			max77958_notify_dr_status(usbc_data, 1);
-		}
-		pr_info("DFP");
-		break;
-
-	default:
-		pr_info(" DATAROLE(Never Call this routine)");
-		break;
+	if (node) {
+		cmd = node->cmd_data.cmd;
+		cmd[0] = OPCODE_SEND_VDM;
+		memcpy(&cmd[1], &DISCOVER_IDENTITY, len);
+		node->cmd_data.cmd_length = len + 1;
+		vdo0_num = DISCOVER_IDENTITY.byte_data.BITS.Num_Of_VDO * 4;
+		node->cmd_data.rsp_length = OPCODE_SIZE + OPCODE_HEADER_SIZE
+				+ vdm_header_num + vdo0_num;
+		max77958_queue_apcmd(usbpd_data, node);
 	}
 }
 
 static irqreturn_t max77958_datarole_irq(int irq, void *data)
 {
-	pr_info("IN");
-	max77958_datarole_irq_handler(data, irq);
-	pr_info("OUT");
+	struct max77958_usbc_platform_data *usbc_data = data;
+	struct max77958_pd_data *pd_data = usbc_data->pd_data;
+	u8 datarole = 0;
+
+	pr_debug("%s: enter irq%d\n", __func__, irq);
+
+	max77958_read_reg(usbc_data->i2c, REG_PD_STATUS1, &pd_data->pd_status1);
+	datarole = (pd_data->pd_status1 & BIT_DataRole) ? USB_ROLE_HOST : USB_ROLE_DEVICE;
+
+	/* abnormal data role without setting power role */
+	if (usbc_data->cc_data->current_pr == CC_UNKNOWN_STATE) {
+		pr_info("INVALID IRQ IRQ(%d)_OUT", irq);
+		goto exit1;
+	}
+	if (pd_data->current_dr != datarole) {
+		pd_data->previous_dr = pd_data->current_dr;
+		pd_data->current_dr = datarole;
+		if (pd_data->previous_dr != USB_ROLE_NONE) {
+			if (usbc_data->cc_data->current_pr == CC_SNK)
+				max77958_send_disocvery_identify(usbc_data);
+		}
+		max77958_notify_dr_status(usbc_data, 1);
+	}
+exit1:
+	pr_debug("%s: exit pd_status1=%02x\n", __func__, pd_data->pd_status1);
 	return IRQ_HANDLED;
 }
 
 static int max77958_process_vdm_identity(void *data)
 {
 	struct max77958_usbc_platform_data *usbpd_data = data;
-	struct max77958_apcmd_data enqueue_data;
+	struct max77958_apcmd_node *node = max77958_alloc_apcmd_data();
+	unsigned char *cmd;
 
-	max77958_init_apcmd_data(&enqueue_data);
-	enqueue_data.opcode = OPCODE_GET_VDM_RESP;
-	enqueue_data.write_data[0] = OPCODE_ID_VDM_DISCOVER_IDENTITY;
-	enqueue_data.write_length = 0x1;
-	enqueue_data.read_length = 31;
-	pr_info("max77958_process_vdm_identity");
-	max77958_request_apcmd(usbpd_data, &enqueue_data);
+	if (node) {
+		cmd = node->cmd_data.cmd;
+		cmd[0] = OPCODE_GET_VDM_RESP;
+		cmd[1] = OPCODE_ID_VDM_DISCOVER_IDENTITY;
+		node->cmd_data.cmd_length = 0x2;
+		node->cmd_data.rsp_length = 32 + 1;
+		pr_info("max77958_process_vdm_identity");
+		max77958_queue_apcmd(usbpd_data, node);
+	}
 	return 0;
 }
 
 static int max77958_process_vdm_svids(void *data)
 {
 	struct max77958_usbc_platform_data *usbpd_data = data;
-	struct max77958_apcmd_data enqueue_data;
+	struct max77958_apcmd_node *node = max77958_alloc_apcmd_data();
+	unsigned char *cmd;
 
-	max77958_init_apcmd_data(&enqueue_data);
-	enqueue_data.opcode = OPCODE_GET_VDM_RESP;
-	enqueue_data.write_data[0] = OPCODE_ID_VDM_DISCOVER_SVIDS;
-	enqueue_data.write_length = 0x1;
-	enqueue_data.read_length = 31;
-	pr_info("max77958_process_vdm_svids");
-	max77958_request_apcmd(usbpd_data, &enqueue_data);
+	if (node) {
+		cmd = node->cmd_data.cmd;
+		cmd[0] = OPCODE_GET_VDM_RESP;
+		cmd[1] = OPCODE_ID_VDM_DISCOVER_SVIDS;
+		node->cmd_data.cmd_length = 0x2;
+		node->cmd_data.rsp_length = 32 + 1;
+		pr_info("max77958_process_vdm_svids");
+		max77958_queue_apcmd(usbpd_data, node);
+	}
 	return 0;
 }
 
 static int max77958_process_vdm_modes(void *data)
 {
 	struct max77958_usbc_platform_data *usbpd_data = data;
-	struct max77958_apcmd_data enqueue_data;
+	struct max77958_apcmd_node *node = max77958_alloc_apcmd_data();
+	unsigned char *cmd;
 
-	max77958_init_apcmd_data(&enqueue_data);
-	enqueue_data.opcode = OPCODE_GET_VDM_RESP;
-	enqueue_data.write_data[0] = OPCODE_ID_VDM_DISCOVER_MODES;
-	enqueue_data.write_length = 0x1;
-	enqueue_data.read_length = 11;
-	pr_info("max77958_process_vdm_modes");
-	max77958_request_apcmd(usbpd_data, &enqueue_data);
+	if (node) {
+		cmd = node->cmd_data.cmd;
+		cmd[0] = OPCODE_GET_VDM_RESP;
+		cmd[1] = OPCODE_ID_VDM_DISCOVER_MODES;
+		node->cmd_data.cmd_length = 0x2;
+		node->cmd_data.rsp_length = 12 + 1;
+		pr_info("max77958_process_vdm_modes");
+		max77958_queue_apcmd(usbpd_data, node);
+	}
 	return 0;
 }
 
 static int max77958_process_vdm_enter_mode(void *data)
 {
 	struct max77958_usbc_platform_data *usbpd_data = data;
-	struct max77958_apcmd_data enqueue_data;
+	struct max77958_apcmd_node *node = max77958_alloc_apcmd_data();
+	unsigned char *cmd;
 
-	max77958_init_apcmd_data(&enqueue_data);
-	enqueue_data.opcode = OPCODE_GET_VDM_RESP;
-	enqueue_data.write_data[0] = OPCODE_ID_VDM_ENTER_MODE;
-	enqueue_data.write_length = 0x1;
-	enqueue_data.read_length = 7;
-	pr_info("max77958_process_vdm_enter_mode");
-	max77958_request_apcmd(usbpd_data, &enqueue_data);
+	if (node) {
+		cmd = node->cmd_data.cmd;
+		cmd[0] = OPCODE_GET_VDM_RESP;
+		cmd[1] = OPCODE_ID_VDM_ENTER_MODE;
+		node->cmd_data.cmd_length = 0x2;
+		node->cmd_data.rsp_length = 8 + 1;
+		pr_info("max77958_process_vdm_enter_mode");
+		max77958_queue_apcmd(usbpd_data, node);
+	}
 	return 0;
 }
 
 static int max77958_process_vdm_dp_status(void *data)
 {
 	struct max77958_usbc_platform_data *usbpd_data = data;
-	struct max77958_apcmd_data enqueue_data;
+	struct max77958_apcmd_node *node = max77958_alloc_apcmd_data();
+	unsigned char *cmd;
 
-	max77958_init_apcmd_data(&enqueue_data);
-	enqueue_data.opcode = OPCODE_GET_VDM_RESP;
-	enqueue_data.write_data[0] = OPCODE_ID_VDM_SVID_DP_STATUS;
-	enqueue_data.write_length = 0x1;
-	enqueue_data.read_length = 11;
-	pr_info("max77958_process_vdm_dp_status");
-	max77958_request_apcmd(usbpd_data, &enqueue_data);
+	if (node) {
+		cmd = node->cmd_data.cmd;
+		cmd[0] = OPCODE_GET_VDM_RESP;
+		cmd[1] = OPCODE_ID_VDM_SVID_DP_STATUS;
+		node->cmd_data.cmd_length = 0x2;
+		node->cmd_data.rsp_length = 12 + 1;
+		pr_info("max77958_process_vdm_dp_status");
+		max77958_queue_apcmd(usbpd_data, node);
+	}
 	return 0;
 }
 
@@ -551,45 +538,54 @@ static int max77958_process_vdm_dp_status(void *data)
 static int max77958_process_vdm_dp_configure(void *data)
 {
 	struct max77958_usbc_platform_data *usbpd_data = data;
-	struct max77958_apcmd_data enqueue_data;
+	struct max77958_apcmd_node *node = max77958_alloc_apcmd_data();
+	unsigned char *cmd;
 
-	max77958_init_apcmd_data(&enqueue_data);
-	enqueue_data.opcode = OPCODE_GET_VDM_RESP;
-	enqueue_data.write_data[0] = OPCODE_ID_VDM_SVID_DP_CONFIGURE;
-	enqueue_data.write_length = 0x1;
-	enqueue_data.read_length = 11;
-	pr_info("max77958_process_vdm_dp_configure");
-	max77958_request_apcmd(usbpd_data, &enqueue_data);
+	if (node) {
+		cmd = node->cmd_data.cmd;
+		cmd[0] = OPCODE_GET_VDM_RESP;
+		cmd[1] = OPCODE_ID_VDM_SVID_DP_CONFIGURE;
+		node->cmd_data.cmd_length = 0x2;
+		node->cmd_data.rsp_length = 12 + 1;
+		pr_info("max77958_process_vdm_dp_configure");
+		max77958_queue_apcmd(usbpd_data, node);
+	}
 	return 0;
 }
 
 static int max77958_process_vdm_attention(void *data)
 {
 	struct max77958_usbc_platform_data *usbpd_data = data;
-	struct max77958_apcmd_data enqueue_data;
+	struct max77958_apcmd_node *node = max77958_alloc_apcmd_data();
+	unsigned char *cmd;
 
-	max77958_init_apcmd_data(&enqueue_data);
-	enqueue_data.opcode = OPCODE_GET_VDM_RESP;
-	enqueue_data.write_data[0] = OPCODE_ID_VDM_ATTENTION;
-	enqueue_data.write_length = 0x1;
-	enqueue_data.read_length = 11;
-	pr_info("max77958_process_vdm_attention");
-	max77958_request_apcmd(usbpd_data, &enqueue_data);
+	if (node) {
+		cmd = node->cmd_data.cmd;
+		cmd[0] = OPCODE_GET_VDM_RESP;
+		cmd[1] = OPCODE_ID_VDM_ATTENTION;
+		node->cmd_data.cmd_length = 0x2;
+		node->cmd_data.rsp_length = 12 + 1;
+		pr_info("max77958_process_vdm_attention");
+		max77958_queue_apcmd(usbpd_data, node);
+	}
 	return 0;
 }
 
 static int max77958_process_vdm_exit_mode(void *data)
 {
 	struct max77958_usbc_platform_data *usbpd_data = data;
-	struct max77958_apcmd_data enqueue_data;
+	struct max77958_apcmd_node *node = max77958_alloc_apcmd_data();
+	unsigned char *cmd;
 
-	max77958_init_apcmd_data(&enqueue_data);
-	enqueue_data.opcode = OPCODE_GET_VDM_RESP;
-	enqueue_data.write_data[0] = OPCODE_ID_VDM_EXIT_MODE;
-	enqueue_data.write_length = 0x1;
-	enqueue_data.read_length = 7;
-	pr_info("max77958_process_vdm_exit_mode");
-	max77958_request_apcmd(usbpd_data, &enqueue_data);
+	if (node) {
+		cmd = node->cmd_data.cmd;
+		cmd[0] = OPCODE_GET_VDM_RESP;
+		cmd[1] = OPCODE_ID_VDM_EXIT_MODE;
+		node->cmd_data.cmd_length = 0x2;
+		node->cmd_data.rsp_length = 8 + 1;
+		pr_info("max77958_process_vdm_exit_mode");
+		max77958_queue_apcmd(usbpd_data, node);
+	}
 	return 0;
 }
 
@@ -599,7 +595,7 @@ static irqreturn_t max77958_vdm_irq(int irq, void *data)
 	struct max77958_pd_data *pd_data = usbc_data->pd_data;
 	u8 mode = 0;
 
-	pr_info("IN");
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 
 	max77958_read_reg(usbc_data->i2c, REG_DP_STATUS, &pd_data->dp_status);
 	mode = pd_data->dp_status;
@@ -620,7 +616,7 @@ static irqreturn_t max77958_vdm_irq(int irq, void *data)
 		max77958_process_vdm_attention(usbc_data);
 	if (mode & VDM_EXIT_MODE)
 		max77958_process_vdm_exit_mode(usbc_data);
-	pr_info("OUT");
+	pr_debug("%s: exit dp_status=%02x\n", __func__, pd_data->dp_status);
 	return IRQ_HANDLED;
 }
 int max77958_pd_init(struct max77958_usbc_platform_data *usbc_data)
@@ -628,7 +624,7 @@ int max77958_pd_init(struct max77958_usbc_platform_data *usbc_data)
 	struct max77958_pd_data *pd_data = NULL;
 	int ret;
 
-	pr_info(" IN");
+	pr_debug("%s: enter\n", __func__);
 	pd_data = usbc_data->pd_data;
 
 	wake_lock_init(&pd_data->max77958_pd_wake_lock, WAKE_LOCK_SUSPEND,
@@ -690,7 +686,7 @@ int max77958_pd_init(struct max77958_usbc_platform_data *usbc_data)
 		}
 	}
 
-	pr_info(" OUT");
+	pr_debug("%s: exit\n", __func__);
 	return 0;
 
 err_irq:
