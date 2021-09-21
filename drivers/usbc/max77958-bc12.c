@@ -47,93 +47,41 @@
 #include <linux/platform_device.h>
 #include <linux/usbc/max77958-usbc.h>
 
+const char *vadc_array[] = {
+	"VBUS < 3.5V",
+	"3.5V <= VBUS < 4.5V",
+	"4.5V <= VBUS < 5.5V ",
+	"5.5V <= VBUS < 6.5V",
+	"6.5V <= VBUS < 7.5V",
+	"7.5V <= VBUS < 8.5V",
+	"8.5V <= VBUS < 9.5V",
+	"9.5V <= VBUS < 10.5V",
+	"10.5V <= VBUS < 11.5V",
+	"11.5V <= VBUS < 12.5V",
+	"12.5V <= VBUS < 13.5V",
+	"13.5V <= VBUS < 14.5V",
+	"14.5V <= VBUS < 15.5V",
+	"15.5V <= VBUS < 16.5V",
+	"16.5V <= VBUS < 17.5V",
+	"17.5V <= VBUS < 18.5V",
+	"18.5V <= VBUS < 19.5V",
+	"19.5V <= VBUS < 20.5V",
+	"20.5V <= VBUS < 21.5V",
+	"21.5V <= VBUS < 22.5V",
+	"22.5V <= VBUS < 23.5V",
+	"23.5V <= VBUS < 24.5V",
+	"24.5V <= VBUS < 25.5V",
+	"25.5V <= VBUS < 26.5V",
+	"26.5V <= VBUS < 27.5V",
+	"27.5V <= VBUS",
+	"Reserved ",
+};
 
 void max77958_bc12_get_vadc(u8 vbadc)
 {
-	switch (vbadc) {
-	case 0:
-		pr_info(" VBUS < 3.5V");
-		break;
-	case 1:
-		pr_info(" 3.5V <=  VBUS < 4.5V");
-		break;
-	case 2:
-		pr_info(" 4.5V <=  VBUS < 5.5V ");
-		break;
-	case 3:
-		pr_info(" 5.5V <=  VBUS < 6.5V");
-		break;
-	case 4:
-		pr_info(" 6.5V <=  VBUS < 7.5V");
-		break;
-	case 5:
-		pr_info(" 7.5V <= VBUS < 8.5V");
-		break;
-	case 6:
-		pr_info(" 8.5V <= VBUS < 9.5V");
-		break;
-	case 7:
-		pr_info(" 9.5V <= VBUS < 10.5V");
-		break;
-	case 8:
-		pr_info(" 10.5V <= VBUS < 11.5V");
-		break;
-	case 9:
-		pr_info(" 11.5V <= VBUS < 12.5V");
-		break;
-	case 10:
-		pr_info(" 12.5V <= VBUS < 13.5V");
-		break;
-	case 11:
-		pr_info(" 13.5V <= VBUS < 14.5V");
-		break;
-	case 12:
-		pr_info(" 14.5V <= VBUS < 15.5V");
-		break;
-	case 13:
-		pr_info(" 15.5V <= VBUS < 16.5V");
-		break;
-	case 14:
-		pr_info(" 16.5V <= VBUS < 17.5V");
-		break;
-	case 15:
-		pr_info(" 17.5V <= VBUS < 18.5V");
-		break;
-	case 16:
-		pr_info(" 18.5V <= VBUS < 19.5V");
-		break;
-	case 17:
-		pr_info(" 19.5V <= VBUS < 20.5V");
-		break;
-	case 18:
-		pr_info(" 20.5V <= VBUS < 21.5V");
-		break;
-	case 19:
-		pr_info(" 21.5V <= VBUS < 22.5V");
-		break;
-	case 20:
-		pr_info(" 22.5V <= VBUS < 23.5V");
-		break;
-	case 21:
-		pr_info(" 23.5V <= VBUS < 24.5V");
-		break;
-	case 22:
-		pr_info(" 24.5V <= VBUS < 25.5V");
-		break;
-	case 23:
-		pr_info(" 25.5V <= VBUS < 26.5V");
-		break;
-	case 24:
-		pr_info(" 26.5V <= VBUS < 27.5V");
-		break;
-	case 25:
-		pr_info(" 27.5V <= VBUS");
-		break;
-	default:
-		pr_info(" Reserved ");
-		break;
-
-	};
+	if (vbadc >= ARRAY_SIZE(vadc_array))
+		vbadc = ARRAY_SIZE(vadc_array) - 1;
+	pr_info("%s: %s\n", __func__, vadc_array[vbadc]);
 }
 
 
@@ -179,7 +127,7 @@ static irqreturn_t max77958_vbadc_irq(int irq, void *data)
 	pr_debug("%s: enter irq%d\n", __func__, irq);
 	max77958_read_reg(usbc_data->i2c, REG_USBC_STATUS1,
 		&bc12_data->usbc_status1);
-	vbadc = (bc12_data->usbc_status1 & BIT_VBADC) ? 1 : 0;
+	vbadc = (bc12_data->usbc_status1 & MASK_VBADC) >> FFS(MASK_VBADC);
 	max77958_bc12_get_vadc(vbadc);
 	bc12_data->vbadc = vbadc;
 	pr_debug("%s: exit usbc_status1=%02x\n", __func__, bc12_data->usbc_status1);
