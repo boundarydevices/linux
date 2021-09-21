@@ -31,7 +31,6 @@
 *******************************************************************************
 */
 
-
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -45,7 +44,89 @@
 #include <linux/gpio.h>
 #include <linux/mfd/max77958-private.h>
 #include <linux/platform_device.h>
+#include <linux/usb/typec.h>
 #include <linux/usbc/max77958-usbc.h>
+
+static enum usb_role max77958_get_attached_state(struct max77958_usbc_platform_data *usbc)
+{
+	return usbc->pd_data->current_dr;
+}
+
+static void max77958_close_DN1_DP2(struct max77958_usbc_platform_data *usbc)
+{
+	struct max77958_apcmd_node *node = max77958_alloc_apcmd_data();
+	unsigned char *cmd;
+
+	/*
+	 * enable switches DP/DP2, DN/DN1
+	 * i2c mw 25 21.1 06;i2c mw 25 22.1 09;i2c mw 25 41.1 00;
+	 */
+	if (node) {
+		cmd = node->cmd_data.cmd;
+		cmd[0] = OPCODE_CONTROL1_W;
+		cmd[1] = 0x09;
+		node->cmd_data.cmd_length = 0x2;
+		max77958_queue_apcmd(usbc, node);
+	}
+}
+
+static int max77958_dr_set(struct typec_port *port, enum typec_data_role typec_role)
+{
+	struct max77958_usbc_platform_data *usbc = typec_get_drvdata(port);
+	enum usb_role role, cur_role;
+	int ret = 0;
+	u8 val;
+
+	ret = max77958_read_reg(usbc->i2c, REG_PD_STATUS1, &val);
+	if (ret < 0)
+		return ret;
+	cur_role = max77958_get_attached_state(usbc);
+	if (cur_role == USB_ROLE_NONE)
+		return 0;
+	role = (typec_role == TYPEC_HOST) ? USB_ROLE_HOST : USB_ROLE_DEVICE;
+
+	if (role != cur_role) {
+		struct max77958_apcmd_node *node = max77958_alloc_apcmd_data();
+		unsigned char *cmd;
+
+		if (node) {
+			cmd = node->cmd_data.cmd;
+			cmd[0] = OPCODE_SWAP_REQ;
+			cmd[1] = 0x01;
+			node->cmd_data.cmd_length = 0x2;
+			max77958_queue_apcmd(usbc, node);
+		}
+	}
+
+	usb_role_switch_set_role(usbc->role_sw, role);
+	typec_set_data_role(usbc->port, typec_role);
+	return ret;
+}
+
+static const struct typec_operations max77958_ops = {
+	.dr_set = max77958_dr_set
+};
+
+static void max77958_set_role(struct max77958_usbc_platform_data *usbc)
+{
+	enum usb_role role =  max77958_get_attached_state(usbc);
+
+	usb_role_switch_set_role(usbc->role_sw, role);
+
+	switch (role) {
+	case USB_ROLE_HOST:
+		pr_info("%s: HOST\n", __func__);
+		typec_set_data_role(usbc->port, TYPEC_HOST);
+		max77958_close_DN1_DP2(usbc);
+		break;
+	case USB_ROLE_DEVICE:
+		pr_info("%s: DEVICE\n", __func__);
+		typec_set_data_role(usbc->port, TYPEC_DEVICE);
+		break;
+	default:
+		break;
+	}
+}
 
 void max77958_notify_dr_status(struct max77958_usbc_platform_data
 	*usbpd_data, uint8_t attach)
@@ -62,24 +143,15 @@ void max77958_notify_dr_status(struct max77958_usbc_platform_data
 				usbpd_data->power_role);
 	}
 	pr_info("Data Role: %s",
-			pd_data->current_dr ? "DFP":"UFP");
+			(pd_data->current_dr == USB_ROLE_HOST) ? "HOST" :
+			(pd_data->current_dr == USB_ROLE_DEVICE) ? "DEVICE" :
+			"NONE");
 
-	if (attach) {
-		if (usbpd_data->current_wtrstat == WATER) {
-			pr_info("Blocking by WATER STATE");
-			return;
-		}
-		if (pd_data->current_dr == UFP) {
-			pr_info("Turn off the USB HOST");
-		} else if (pd_data->current_dr == DFP) {
-			pr_info("Turn on the USB HOST");
-		} else {
-			pr_info("Data Role Unknown (%d) no action",
-					pd_data->current_dr);
-		}
-	} else {
-		pr_info("Turn off the USB HOST");
+	if (attach && (usbpd_data->current_wtrstat == WTR_WATER)) {
+		pr_info("Blocking by WATER STATE");
+		return;
 	}
+	max77958_set_role(usbpd_data);
 }
 
 static irqreturn_t max77958_vconncop_irq(int irq, void *data)
@@ -87,11 +159,12 @@ static irqreturn_t max77958_vconncop_irq(int irq, void *data)
 	struct max77958_usbc_platform_data *usbc_data = data;
 	struct max77958_cc_data *cc_data = usbc_data->cc_data;
 
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 	max77958_read_reg(usbc_data->i2c, REG_CC_STATUS1, &cc_data->cc_status1);
 	cc_data->vconnocp = (cc_data->cc_status1 & BIT_VCONNOCPI)
 		>> FFS(BIT_VCONNOCPI);
-	pr_info("VCONNOCPI : [%d]", cc_data->vconnocp);
 
+	pr_debug("%s: exit %d\n", __func__, cc_data->vconnocp);
 	return IRQ_HANDLED;
 }
 
@@ -99,28 +172,17 @@ static irqreturn_t max77958_vsafe0v_irq(int irq, void *data)
 {
 	struct max77958_usbc_platform_data *usbc_data = data;
 	struct max77958_cc_data *cc_data = usbc_data->cc_data;
-	u8 ccpinstat = 0;
-	u8 connstat = 0;
 
-	pr_debug("%s: IRQ(%d)_IN\n", __func__, irq);
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 	max77958_read_reg(usbc_data->i2c, REG_BC_STATUS, &cc_data->bc_status);
 	max77958_read_reg(usbc_data->i2c, REG_CC_STATUS0, &cc_data->cc_status0);
 	max77958_read_reg(usbc_data->i2c, REG_CC_STATUS1, &cc_data->cc_status1);
-	ccpinstat = (cc_data->cc_status0 & BIT_CCPinStat)
-		>> FFS(BIT_CCPinStat);
 	cc_data->vsafe0v = (cc_data->cc_status1 & BIT_VSAFE0V)
 		>> FFS(BIT_VSAFE0V);
-	connstat = (cc_data->cc_status1 & BIT_WtrStat)
-		>> FFS(BIT_WtrStat);
 
-	pr_info("VSAFE0V : [%d], REG_BC_STATUS : %x,",
-			cc_data->vsafe0v,
-			cc_data->bc_status);
-	pr_info("REG_CC_STATUS0 : %x, REG_CC_STATUS1 : %x",
-			cc_data->cc_status0,
-			cc_data->cc_status1);
-	pr_debug("%s: IRQ(%d)_OUT\n", __func__, irq);
-
+	pr_debug("%s: exit %d, bc_status=%02x cc_status0=%02x cc_status1=%02x\n",
+		__func__, cc_data->vsafe0v,
+		cc_data->bc_status, cc_data->cc_status0, cc_data->cc_status1);
 	return IRQ_HANDLED;
 }
 
@@ -130,35 +192,20 @@ static irqreturn_t max77958_water_irq(int irq, void *data)
 	struct max77958_cc_data *cc_data = usbc_data->cc_data;
 	u8 waterstat = 0;
 
-	pr_debug("%s: IRQ(%d)_IN\n", __func__, irq);
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 	max77958_read_reg(usbc_data->i2c, REG_CC_STATUS1, &cc_data->cc_status1);
 	waterstat = (cc_data->cc_status1 & BIT_WtrStat)
 		>> FFS(BIT_WtrStat);
 
-	switch (waterstat) {
-	case DRY:
-		pr_info("== WATER RUN-DRY DETECT ==");
-		if (usbc_data->current_wtrstat != DRY) {
+	if (usbc_data->current_wtrstat != waterstat) {
+		if ((waterstat == WTR_DRY) || (waterstat == WTR_WATER)) {
 			usbc_data->prev_wtrstat = usbc_data->current_wtrstat;
-			usbc_data->current_wtrstat = DRY;
+			usbc_data->current_wtrstat = waterstat;
 		}
-		break;
-
-	case WATER:
-		pr_info("== WATER DETECT ==");
-
-		if (usbc_data->current_wtrstat != WATER) {
-			usbc_data->prev_wtrstat = usbc_data->current_wtrstat;
-			usbc_data->current_wtrstat = WATER;
-		}
-		break;
-	default:
-		break;
-
 	}
-
-	pr_debug("%s: IRQ(%d)_OUT\n", __func__, irq);
-
+	pr_debug("%s: exit %d %s\n", __func__, waterstat,
+		(waterstat == WTR_DRY) ? "dry" :
+		(waterstat == WTR_WATER) ? "water" : "unknown");
 	return IRQ_HANDLED;
 }
 
@@ -168,12 +215,12 @@ static irqreturn_t max77958_ccpinstat_irq(int irq, void *data)
 	struct max77958_cc_data *cc_data = usbc_data->cc_data;
 	u8 ccpinstat = 0;
 
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 	max77958_read_reg(usbc_data->i2c, REG_CC_STATUS0, &cc_data->cc_status0);
 
-	pr_debug("%s: IRQ(%d)_IN\n", __func__, irq);
 	ccpinstat = (cc_data->cc_status0 & BIT_CCPinStat)
 		>> FFS(BIT_CCPinStat);
-
+#ifdef DEBUG
 	switch (ccpinstat) {
 	case NO_DETERMINATION:
 		pr_info("CCPINSTAT : [NO_DETERMINATION]");
@@ -190,8 +237,10 @@ static irqreturn_t max77958_ccpinstat_irq(int irq, void *data)
 		break;
 
 	}
+#endif
 	cc_data->ccpinstat = ccpinstat;
-
+	pr_debug("%s: exit %d, cc_status0=%02x\n", __func__,
+		cc_data->ccpinstat, cc_data->cc_status0);
 	return IRQ_HANDLED;
 }
 
@@ -201,12 +250,13 @@ static irqreturn_t max77958_ccistat_irq(int irq, void *data)
 	struct max77958_cc_data *cc_data = usbc_data->cc_data;
 	u8 ccistat = 0;
 
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 	max77958_read_reg(usbc_data->i2c, REG_CC_STATUS0, &cc_data->cc_status0);
-	pr_debug("%s: IRQ(%d)_IN\n", __func__, irq);
 	ccistat = (cc_data->cc_status0 & BIT_CCIStat) >> FFS(BIT_CCIStat);
+#ifdef DEBUG
 	switch (ccistat) {
 	case CCISTAT_NONE:
-		pr_info("Not in UFP");
+		pr_info("Not in USB_ROLE_DEVICE");
 		break;
 
 	case CCISTAT_500MA:
@@ -226,11 +276,12 @@ static irqreturn_t max77958_ccistat_irq(int irq, void *data)
 		break;
 
 	}
+#endif
 	cc_data->ccistat = ccistat;
-	pr_debug("%s: IRQ(%d)_OUT\n", __func__, irq);
-
 	max77958_notify_cci_vbus_current(usbc_data);
 
+	pr_debug("%s: exit %d, cc_status0=%02x\n", __func__,
+		cc_data->ccistat, cc_data->cc_status0);
 	return IRQ_HANDLED;
 }
 
@@ -241,41 +292,26 @@ static irqreturn_t max77958_ccvnstat_irq(int irq, void *data)
 	struct max77958_cc_data *cc_data = usbc_data->cc_data;
 	u8 ccvcnstat = 0;
 
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 	max77958_read_reg(usbc_data->i2c, REG_CC_STATUS0, &cc_data->cc_status0);
 
-	pr_debug("%s: IRQ(%d)_IN\n", __func__, irq);
 	ccvcnstat = (cc_data->cc_status0 & BIT_CCVcnStat) >> FFS(BIT_CCVcnStat);
 
-	switch (ccvcnstat) {
-	case 0:
-		pr_info("Vconn Disabled");
-		if (cc_data->current_vcon != OFF) {
+	if (cc_data->current_vcon != ccvcnstat) {
+		if ((ccvcnstat == VCR_OFF) || (ccvcnstat == VCR_ON)) {
 			cc_data->previous_vcon = cc_data->current_vcon;
-			cc_data->current_vcon = OFF;
+			cc_data->current_vcon = ccvcnstat;
 		}
-		break;
-
-	case 1:
-		pr_info("Vconn Enabled");
-		if (cc_data->current_vcon != ON) {
-			cc_data->previous_vcon = cc_data->current_vcon;
-			cc_data->current_vcon = ON;
-		}
-		break;
-
-	default:
-		pr_info("ccvnstat(Never Call this routine) !");
-		break;
-
 	}
 	cc_data->ccvcnstat = ccvcnstat;
-	pr_debug("%s: IRQ(%d)_OUT\n", __func__, irq);
 
-
+	pr_debug("%s: exit %d %s\n", __func__, ccvcnstat,
+		(ccvcnstat == VCR_OFF) ? "off" :
+		(ccvcnstat == VCR_ON) ? "on" : "unknown");
 	return IRQ_HANDLED;
 }
 
-static void max77958_ccstat_irq_handler(void *data, int irq)
+static irqreturn_t max77958_ccstat_irq(int irq, void *data)
 {
 	struct max77958_usbc_platform_data *usbc_data = data;
 	struct max77958_cc_data *cc_data = usbc_data->cc_data;
@@ -284,6 +320,7 @@ static void max77958_ccstat_irq_handler(void *data, int irq)
 	u8 ccstat = 0;
 	int prev_power_role = usbc_data->power_role;
 
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 	max77958_read_reg(usbc_data->i2c, REG_CC_STATUS0, &cc_data->cc_status0);
 	ccstat =  (cc_data->cc_status0 & BIT_CCStat) >> FFS(BIT_CCStat);
 
@@ -295,14 +332,14 @@ static void max77958_ccstat_irq_handler(void *data, int irq)
 		usbc_data->power_role = CC_NO_CON;
 		usbc_data->cc_data->current_pr = CC_NO_CON;
 		usbc_data->pd_pr_swap = CC_NO_CON;
-		usbc_data->pd_data->current_dr = UFP;
-		usbc_data->cc_data->current_vcon = OFF;
+		usbc_data->pd_data->current_dr = USB_ROLE_NONE;
+		usbc_data->cc_data->current_vcon = VCR_OFF;
 		usbc_data->pd_data->psrdy_received = false;
 		usbc_data->pd_data->pdo_list = false;
-		max77958_vbus_turn_on_ctrl(usbc_data, OFF);
+		max77958_vbus_turn_on_ctrl(usbc_data, 0);
 		max77958_notify_dr_status(usbc_data, 0);
 		usbc_data->connected_device = 0;
-		usbc_data->pd_data->previous_dr = UNKNOWN_STATE;
+		usbc_data->pd_data->previous_dr = USB_ROLE_NONE;
 		if (psy_charger) {
 			val.intval = 0;
 			psy_charger->desc->set_property(psy_charger,
@@ -317,12 +354,11 @@ static void max77958_ccstat_irq_handler(void *data, int irq)
 		pr_info("CCSTAT : CC_SINK");
 		usbc_data->pd_data->cc_status = CC_SNK;
 		usbc_data->power_role = CC_SNK;
-		if (cc_data->current_pr != SNK) {
+		if (cc_data->current_pr != CC_SNK) {
 			cc_data->previous_pr = cc_data->current_pr;
-			cc_data->current_pr = SNK;
+			cc_data->current_pr = CC_SNK;
 			if (prev_power_role == CC_SRC)
-				max77958_vbus_turn_on_ctrl(usbc_data,
-					OFF);
+				max77958_vbus_turn_on_ctrl(usbc_data, 0);
 		}
 		if (psy_charger) {
 			val.intval = 1;
@@ -339,10 +375,10 @@ static void max77958_ccstat_irq_handler(void *data, int irq)
 		pr_info("CCSTAT : CC_SOURCE");
 		usbc_data->pd_data->cc_status = CC_SRC;
 		usbc_data->power_role = CC_SRC;
-		if (cc_data->current_pr != SRC) {
+		if (cc_data->current_pr != CC_SRC) {
 			cc_data->previous_pr = cc_data->current_pr;
-			cc_data->current_pr = SRC;
-			max77958_vbus_turn_on_ctrl(usbc_data, ON);
+			cc_data->current_pr = CC_SRC;
+			max77958_vbus_turn_on_ctrl(usbc_data, 1);
 		}
 		usbc_data->connected_device = 1;
 		break;
@@ -378,27 +414,58 @@ static void max77958_ccstat_irq_handler(void *data, int irq)
 		pr_info("CCSTAT : CC_RFU");
 		break;
 	}
-}
-
-static irqreturn_t max77958_ccstat_irq(int irq, void *data)
-{
-	pr_debug("%s: IRQ(%d)_IN\n", __func__, irq);
-	max77958_ccstat_irq_handler(data, irq);
-	pr_debug("%s: IRQ(%d)_OUT\n", __func__, irq);
+	pr_debug("%s: exit cc_status0=%02x\n", __func__, cc_data->cc_status0);
 	return IRQ_HANDLED;
 }
 
 int max77958_cc_init(struct max77958_usbc_platform_data *usbc_data)
 {
+	struct typec_capability typec_cap = { };
+	struct fwnode_handle *connector, *ep;
 	struct max77958_cc_data *cc_data = NULL;
+	struct device *i2c_dev = &usbc_data->i2c->dev;
 	int ret;
 
-	pr_info("IN");
+	pr_debug("%s: enter\n", __func__);
 
 	cc_data = usbc_data->cc_data;
 
 	wake_lock_init(&cc_data->max77958_cc_wake_lock, WAKE_LOCK_SUSPEND,
 			"max77958cc->wake_lock");
+
+	ep = fwnode_graph_get_next_endpoint(dev_fwnode(i2c_dev), NULL);
+	if (!ep) {
+		pr_err("%s: no graph\n", __func__);
+		return -ENODEV;
+	}
+	connector = fwnode_graph_get_remote_port_parent(ep);
+	fwnode_handle_put(ep);
+	if (!connector) {
+		pr_err("%s: no connector\n", __func__);
+		return -ENODEV;
+	}
+	usbc_data->role_sw = usb_role_switch_get(i2c_dev);
+	if (IS_ERR(usbc_data->role_sw)) {
+		ret = PTR_ERR(usbc_data->role_sw);
+		pr_err("%s: no role_sw %d\n", __func__, ret);
+		goto err_put_fwnode;
+	}
+
+	typec_cap.prefer_role = TYPEC_NO_PREFERRED_ROLE;
+	typec_cap.driver_data = usbc_data;
+	typec_cap.type = TYPEC_PORT_DRP;
+	typec_cap.data = TYPEC_PORT_DRD;
+	typec_cap.ops = &max77958_ops;
+	typec_cap.fwnode = connector;
+
+	usbc_data->port = typec_register_port(usbc_data->dev, &typec_cap);
+	if (IS_ERR(usbc_data->port)) {
+		ret = PTR_ERR(usbc_data->port);
+		pr_err("%s: no role_sw %d\n", __func__, ret);
+		goto err_put_role;
+	}
+
+	 max77958_set_role(usbc_data);
 
 	cc_data->irq_vconncop = usbc_data->irq_base
 		+ MAX77958_CC_IRQ_VCONNCOP_INT;
@@ -495,14 +562,18 @@ int max77958_cc_init(struct max77958_usbc_platform_data *usbc_data)
 	usbc_data->current_wtrstat = (cc_data->cc_status1 & BIT_WtrStat)
 		>> FFS(BIT_WtrStat);
 	pr_info("WATER STATE : [%s]\n",
-		usbc_data->current_wtrstat ? "WATER" : "DRY");
+		(usbc_data->current_wtrstat == WTR_WATER) ? "WATER" : "DRY");
 
 	pr_info("OUT");
 
 	return 0;
 
 err_irq:
-	kfree(cc_data);
+	typec_unregister_port(usbc_data->port);
+err_put_role:
+	usb_role_switch_put(usbc_data->role_sw);
+err_put_fwnode:
+	fwnode_handle_put(connector);
 	return ret;
 
 }

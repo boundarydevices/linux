@@ -74,40 +74,35 @@ struct max77958_usbc_platform_data *g_usbc_data;
 
 #define MAXIM_DEFAULT_FW		"/sdcard/Firmware/usbpd/secure_max77958.bin"
 
-int max77958_i2c_opcode_write(struct max77958_usbc_platform_data *usbc_data,
-		u8 opcode, u8 length, u8 *values)
+static int max77958_i2c_opcode_write(struct max77958_usbc_platform_data *usbc_data,
+		struct max77958_apcmd_data *cmd_data)
 {
-	u8 write_values[OPCODE_MAX_LENGTH] = { 0, };
 	int ret = 0;
 
-	if (length > OPCODE_DATA_LENGTH)
+	if (cmd_data->cmd_length > OPCODE_DATA_LENGTH + OPCODE_SIZE)
 		return -EMSGSIZE;
 
-	write_values[0] = opcode;
-	if (length)
-		memcpy(&write_values[1], values, length);
-
 	pr_info("opcode 0x%x, write_length %d",
-			opcode, length + OPCODE_SIZE);
+			cmd_data->cmd[0], cmd_data->cmd_length);
 	print_hex_dump(KERN_INFO, "max77958: opcode_write: ",
-			DUMP_PREFIX_OFFSET, 16, 1, write_values,
-			length + OPCODE_SIZE, false);
+			DUMP_PREFIX_OFFSET, 16, 1, cmd_data->cmd,
+			cmd_data->cmd_length, false);
 	/* Write opcode and data */
 	ret = max77958_bulk_write(usbc_data->i2c, OPCODE_WRITE,
-			length + OPCODE_SIZE, write_values);
+			cmd_data->cmd_length, cmd_data->cmd);
 	/* Write end of data by 0x00 */
-	if (length < OPCODE_DATA_LENGTH)
+	if (cmd_data->cmd_length < OPCODE_DATA_LENGTH + OPCODE_SIZE)
 		max77958_write_reg(usbc_data->i2c, OPCODE_WRITE_END, 0x00);
 
 	return ret;
 }
 
-int max77958_i2c_opcode_read(struct max77958_usbc_platform_data *usbc_data,
+static int max77958_i2c_opcode_read(struct max77958_usbc_platform_data *usbc_data,
 		u8 opcode, u8 length, u8 *values)
 {
 	int size = 0;
 
-	if (length > OPCODE_DATA_LENGTH)
+	if (length > (OPCODE_DATA_LENGTH + OPCODE_SIZE))
 		return -EMSGSIZE;
 
 	/*
@@ -116,13 +111,13 @@ int max77958_i2c_opcode_read(struct max77958_usbc_platform_data *usbc_data,
 
 	/* Read opcode data */
 	size = max77958_bulk_read(usbc_data->i2c, OPCODE_READ,
-			length + OPCODE_SIZE, values);
+			length, values);
 
 	pr_info("opcode 0x%x, read_length %d, ret_error %d",
-			opcode, length + OPCODE_SIZE, size);
+			opcode, length, size);
 	print_hex_dump(KERN_INFO, "max77958: opcode_read: ",
 			DUMP_PREFIX_OFFSET, 16, 1, values,
-			length + OPCODE_SIZE, false);
+			length, false);
 	return size;
 }
 
@@ -133,223 +128,106 @@ static void max77958_reset_ccpd(struct max77958_usbc_platform_data *usbc_data)
 	msleep(100); /* need 100ms delay */
 }
 
-
-void max77958_init_apcmd_data(struct max77958_apcmd_data *cmd_data)
-{
-	cmd_data->opcode = OPCODE_RSVD;
-	cmd_data->prev_opcode = OPCODE_RSVD;
-	cmd_data->response = OPCODE_RSVD;
-	cmd_data->val = REG_NONE;
-	cmd_data->mask = REG_NONE;
-	cmd_data->reg = REG_NONE;
-	cmd_data->write_length = 0;
-	cmd_data->read_length = 0;
-	cmd_data->seq = 0;
-	cmd_data->is_uvdm = 0;
-	memset(cmd_data->write_data, REG_NONE, OPCODE_DATA_LENGTH);
-	memset(cmd_data->read_data, REG_NONE, OPCODE_DATA_LENGTH);
-}
-
-static void max77958_init_apcmd_node(struct max77958_apcmd_node *cmd_node)
-{
-	struct max77958_apcmd_data *cmd_data = &(cmd_node->cmd_data);
-
-	max77958_init_apcmd_data(cmd_data);
-}
-
 static void max77958_copy_apcmd_data(struct max77958_apcmd_data *from,
 	struct max77958_apcmd_data *to)
 {
 	if (from == NULL || to == NULL)
 		return;
-
-	to->opcode = from->opcode;
-	to->response = from->response;
-	memcpy(to->read_data, from->read_data, OPCODE_DATA_LENGTH);
-	memcpy(to->write_data, from->write_data, OPCODE_DATA_LENGTH);
-	to->reg = from->reg;
-	to->mask = from->mask;
-	to->val = from->val;
-	to->seq = from->seq;
-	to->read_length = from->read_length;
-	to->write_length = from->write_length;
-	to->prev_opcode = from->prev_opcode;
-	to->is_uvdm = from->is_uvdm;
+	*to = *from;
 }
 
-void max77958_enqueue_apcmd_data(struct max77958_apcmd_queue *cmd_queue,
-	struct max77958_apcmd_data *cmd_data)
+struct max77958_apcmd_node *max77958_alloc_apcmd_data(void)
 {
-	struct max77958_apcmd_node  *temp_node =
+	struct max77958_apcmd_node *node =
 		kzalloc(sizeof(struct max77958_apcmd_node), GFP_KERNEL);
 
-	if (!temp_node) {
-		pr_info("failed to allocate usbc command queue");
-		return;
+	if (node) {
+		node->cmd_data.cmd[0] = OPCODE_RSVD;
+		node->cmd_data.val = REG_NONE;
+		node->cmd_data.mask = REG_NONE;
+		node->cmd_data.reg = REG_NONE;
 	}
-
-	max77958_init_apcmd_node(temp_node);
-	max77958_copy_apcmd_data(cmd_data, &(temp_node->cmd_data));
-	if (list_empty(&cmd_queue->node_head))
-		list_add(&temp_node->node, &cmd_queue->node_head);
-	else
-		list_add_tail(&temp_node->node, &cmd_queue->node_head);
+	return node;
 }
 
-void max77958_enqueue_head_apcmd_data(struct max77958_apcmd_queue *cmd_queue,
-	struct max77958_apcmd_data *cmd_data)
-{
-	struct max77958_apcmd_node  *temp_node =
-		kzalloc(sizeof(struct max77958_apcmd_node), GFP_KERNEL);
-
-	if (!temp_node) {
-		pr_info("failed to allocate usbc command queue");
-		return;
-	}
-
-	max77958_init_apcmd_node(temp_node);
-	max77958_copy_apcmd_data(cmd_data, &(temp_node->cmd_data));
-	list_add(&temp_node->node, &cmd_queue->node_head);
-}
-
-	static void max77958_dequeue_apcmd_data
-(struct max77958_apcmd_queue *cmd_queue, struct max77958_apcmd_data *cmd_data)
+static struct max77958_apcmd_node *max77958_head_apcmd_data(struct max77958_apcmd_queue *cmd_queue)
 {
 
-	struct max77958_apcmd_node *temp_node;
+	struct max77958_apcmd_node *node;
 
 	if (list_empty(&cmd_queue->node_head)) {
-		pr_info("Queue, Empty!");
-		return;
+		pr_info("%s: Queue, Empty!\n", __func__);
+		return NULL;
+	}
 
-	} else {
-		temp_node = list_entry(cmd_queue->node_head.next,
+	node = list_entry(cmd_queue->node_head.next,
 				struct max77958_apcmd_node,
 				node);
-
-		if (temp_node == NULL) {
-			pr_info("Temp_node is Null");
-			return;
-		}
-		max77958_copy_apcmd_data(&(temp_node->cmd_data), cmd_data);
-		list_del(&temp_node->node);
+	if (node == NULL) {
+		pr_info("%s: node is Null\n", __func__);
+		return NULL;
 	}
-	kfree(temp_node);
+	return node;
 }
 
+static void max77958_dequeue_apcmd_data(struct max77958_apcmd_queue *cmd_queue)
+{
+
+	struct max77958_apcmd_node *node = max77958_head_apcmd_data(cmd_queue);
+
+	if (node)
+		list_del(&node->node);
+	kfree(node);
+}
 
 void max77958_clear_apcmd_queue(struct max77958_usbc_platform_data *usbc_data)
 {
-	struct max77958_apcmd_data cmd_data;
 	struct max77958_apcmd_queue *cmd_queue = NULL;
 
+	pr_debug("%s: enter\n", __func__);
 	mutex_lock(&usbc_data->apcmd_lock);
-	pr_info("IN");
 	cmd_queue = &(usbc_data->apcmd_queue);
 
 	while (!list_empty(&cmd_queue->node_head)) {
-		max77958_init_apcmd_data(&cmd_data);
-		max77958_dequeue_apcmd_data(cmd_queue, &cmd_data);
+		max77958_dequeue_apcmd_data(cmd_queue);
 	}
 
-	pr_info("OUT");
 	mutex_unlock(&usbc_data->apcmd_lock);
+	pr_debug("%s: exit\n", __func__);
 }
 
-void max77958_send_apcmd(struct max77958_usbc_platform_data *data)
+static void max77958_send_apcmd(struct max77958_usbc_platform_data *data)
 {
-
+	struct max77958_apcmd_node *node;
 	struct max77958_apcmd_queue *cmd_queue = NULL;
-	struct max77958_apcmd_node  *run_node;
-	struct max77958_apcmd_data cmd_data;
+	struct max77958_apcmd_data *cmd_data;
 
 	cmd_queue = &(data->apcmd_queue);
 
-	run_node = kzalloc(sizeof(struct max77958_apcmd_node), GFP_KERNEL);
-	if (!run_node)
-		goto exit;
-
-	max77958_init_apcmd_node(run_node);
-	max77958_init_apcmd_data(&cmd_data);
-
-	if (list_empty(&cmd_queue->node_head))
-		goto error;
-
-	max77958_dequeue_apcmd_data(cmd_queue, &cmd_data);
-	max77958_copy_apcmd_data(&cmd_data, &(data->last_apcmd));
-	if (cmd_data.opcode != OPCODE_RSVD)
-		max77958_i2c_opcode_write(data, cmd_data.opcode,
-			cmd_data.write_length, cmd_data.write_data);
-	else
-		max77958_enqueue_head_apcmd_data(cmd_queue, &cmd_data);
-
-error:
-	pr_info("Queue, Empty");
-	kfree(run_node);
-exit:
-	pr_info("failed to allocate node");
-	return;
-
+	node = max77958_head_apcmd_data(cmd_queue);
+	if (node) {
+		cmd_data = &node->cmd_data;
+		max77958_copy_apcmd_data(cmd_data, &(data->last_apcmd));
+		if (cmd_data->cmd_length) {
+			max77958_i2c_opcode_write(data, cmd_data);
+			cmd_data->cmd_length = 0;
+		}
+	}
 }
 
-
-void max77958_request_apcmd(struct max77958_usbc_platform_data *data,
-		struct max77958_apcmd_data *input_data)
+void max77958_queue_apcmd(struct max77958_usbc_platform_data *data,
+		struct max77958_apcmd_node *node)
 {
 	struct max77958_apcmd_queue *cmd_queue = &(data->apcmd_queue);
-	struct max77958_apcmd_data current_data;
-	struct max77958_apcmd_data enqueue_data;
 
 	mutex_lock(&data->apcmd_lock);
-	max77958_init_apcmd_data(&enqueue_data);
-	max77958_init_apcmd_data(&current_data);
+	list_add_tail(&node->node, &cmd_queue->node_head);
 
-	enqueue_data.opcode = input_data->opcode;
-	enqueue_data.write_length = input_data->write_length;
-	enqueue_data.is_uvdm = input_data->is_uvdm;
-	memcpy(enqueue_data.write_data,
-		input_data->write_data, OPCODE_DATA_LENGTH);
-	enqueue_data.seq = OPCODE_CMD_REQUEST;
-	max77958_enqueue_apcmd_data(cmd_queue, &enqueue_data);
-
-	max77958_init_apcmd_data(&enqueue_data);
-	enqueue_data.response = input_data->opcode;
-	enqueue_data.read_length = input_data->read_length;
-	enqueue_data.is_uvdm = input_data->is_uvdm;
-	enqueue_data.is_chg_int = input_data->is_chg_int;
-	enqueue_data.seq = OPCODE_CMD_REQUEST;
-	max77958_enqueue_apcmd_data(cmd_queue, &enqueue_data);
-
-	max77958_send_apcmd(data);
+	/* Start sending if list was empty */
+	if (cmd_queue->node_head.next == &node->node)
+		max77958_send_apcmd(data);
 	mutex_unlock(&data->apcmd_lock);
 }
-
-
-void max77958_insert_apcmd(struct max77958_usbc_platform_data
-	*data, struct max77958_apcmd_data *input_data)
-{
-	struct max77958_apcmd_queue *cmd_queue = &(data->apcmd_queue);
-	struct max77958_apcmd_data enqueue_data;
-
-	max77958_init_apcmd_data(&enqueue_data);
-
-	enqueue_data.opcode = input_data->opcode;
-	enqueue_data.write_length = input_data->write_length;
-	enqueue_data.is_uvdm = input_data->is_uvdm;
-	memcpy(enqueue_data.write_data,
-		input_data->write_data, OPCODE_DATA_LENGTH);
-	enqueue_data.seq = OPCODE_CMD_REQUEST;
-	max77958_enqueue_apcmd_data(cmd_queue, &enqueue_data);
-
-	max77958_init_apcmd_data(&enqueue_data);
-	enqueue_data.response = input_data->opcode;
-	enqueue_data.read_length = input_data->read_length;
-	enqueue_data.is_uvdm = input_data->is_uvdm;
-	enqueue_data.is_chg_int = input_data->is_chg_int;
-	enqueue_data.seq = OPCODE_CMD_REQUEST;
-	max77958_enqueue_apcmd_data(cmd_queue, &enqueue_data);
-}
-
 
 void max77958_vendor_msg_response(struct max77958_usbc_platform_data
 	*usbpd_data, char *apcmd_data)
@@ -398,19 +276,21 @@ void max77958_vendor_msg_response(struct max77958_usbc_platform_data
 static void max77958_check_apcmd(struct max77958_usbc_platform_data *usbc_data,
 		const struct max77958_apcmd_data *cmd_data)
 {
-	int len = cmd_data->read_length;
-	unsigned char data[OPCODE_DATA_LENGTH] = {0,};
+	int len = cmd_data->rsp_length;
+	unsigned char data[OPCODE_DATA_LENGTH + 4] = {0,};
 	u8 response = 0xff;
 
-	max77958_i2c_opcode_read(usbc_data, cmd_data->opcode,
+	if (!len)
+		return;
+	max77958_i2c_opcode_read(usbc_data, cmd_data->cmd[0],
 			len, data);
 
 	/* opcode identifying the messsage type. (0x51)*/
 	response = data[0];
 
-	if (response != cmd_data->response) {
+	if (response != cmd_data->cmd[0]) {
 		pr_info("Response [0x%02x] != [0x%02x]",
-				response, cmd_data->response);
+				response, cmd_data->cmd[0]);
 	}
 
 	/* to do(read switch case) */
@@ -478,35 +358,25 @@ static void max77958_check_apcmd(struct max77958_usbc_platform_data *usbc_data,
 	}
 }
 
-void max77958_execute_apcmd(struct max77958_usbc_platform_data *data)
+static void max77958_execute_apcmd(struct max77958_usbc_platform_data *data)
 {
-
+	struct max77958_apcmd_node *node;
 	struct max77958_apcmd_queue *cmd_queue = NULL;
-	struct max77958_apcmd_node  *run_node;
-	struct max77958_apcmd_data cmd_data;
 
 	cmd_queue = &(data->apcmd_queue);
+	if (list_empty(&cmd_queue->node_head)) {
+		pr_info("Queue, Empty");
+		return;
+	}
 
-	run_node = kzalloc(sizeof(struct max77958_apcmd_node), GFP_KERNEL);
-	if (!run_node)
-		goto exit;
+	node = max77958_head_apcmd_data(cmd_queue);
+	if (node) {
+		if (node->cmd_data.rsp_length)
+			max77958_check_apcmd(data, &node->cmd_data);
+		max77958_dequeue_apcmd_data(cmd_queue);
 
-	max77958_init_apcmd_node(run_node);
-	max77958_init_apcmd_data(&cmd_data);
-
-	if (list_empty(&cmd_queue->node_head))
-		goto error;
-
-	max77958_dequeue_apcmd_data(cmd_queue, &cmd_data);
-	max77958_check_apcmd(data, &cmd_data);
-	max77958_send_apcmd(data);
-error:
-	pr_info("Queue, Empty");
-	kfree(run_node);
-exit:
-	pr_info("failed to allocate node");
-	return;
-
+		max77958_send_apcmd(data);
+	}
 }
 
 
@@ -515,8 +385,8 @@ static void max77958_control_vbus(struct work_struct *work)
 	struct max77958_usbc_platform_data *usbpd_data = g_usbc_data;
 
 	pr_info("current_pr=%d", usbpd_data->cc_data->current_pr);
-	if (usbpd_data->cc_data->current_pr == SRC)
-		max77958_vbus_turn_on_ctrl(usbpd_data, ON);
+	if (usbpd_data->cc_data->current_pr == CC_SRC)
+		max77958_vbus_turn_on_ctrl(usbpd_data, 1);
 }
 
 static int max77958_firmware_update(struct max77958_usbc_platform_data *data)
@@ -695,52 +565,42 @@ void max77958_execute_sysmsg(struct max77958_usbc_platform_data
 	}
 }
 
-
 static irqreturn_t max77958_apcmd_irq(int irq, void *data)
 {
 	struct max77958_usbc_platform_data *usbc_data = data;
-	u8 sysmsg = 0;
 
-	pr_info("IRQ(%d)_IN", irq);
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 	max77958_read_reg(usbc_data->i2c, REG_USBC_STATUS2,
 		&usbc_data->usbc_status2);
-	sysmsg = usbc_data->usbc_status2;
-	pr_info(" [DEBUG] sysmsg : %d", sysmsg);
 	mutex_lock(&usbc_data->apcmd_lock);
 	max77958_execute_apcmd(usbc_data);
 	mutex_unlock(&usbc_data->apcmd_lock);
-	pr_info("IRQ(%d)_OUT", irq);
 
+	pr_debug("%s: exit usbc_status2=%02x\n", __func__, usbc_data->usbc_status2);
 	return IRQ_HANDLED;
 }
 
 static irqreturn_t max77958_sysmsg_irq(int irq, void *data)
 {
 	struct max77958_usbc_platform_data *usbc_data = data;
-	u8 sysmsg = 0;
 	u8 i = 0;
 	u8 raw_data[3] = {0, };
 	u8 usbc_status2 = 0;
 
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 	for (i = 0; i < 3; i++) {
 		usbc_status2 = 0;
-		max77958_read_reg(usbc_data->i2c,
-			REG_USBC_STATUS2, &usbc_status2);
+		max77958_read_reg(usbc_data->i2c, REG_USBC_STATUS2,
+				&usbc_status2);
 		raw_data[i] = usbc_status2;
 	}
-	if ((raw_data[0] == raw_data[1]) &&
-			(raw_data[0] == raw_data[2])) {
-		sysmsg = raw_data[0];
-	} else {
-		pr_info("[W]sysmsg was changed suddenly, %x", raw_data[0]);
-		pr_info("[W]sysmsg was changed suddenly, %x", raw_data[1]);
-		pr_info("[W]sysmsg was changed suddenly, %x", raw_data[2]);
-		sysmsg = raw_data[2];
+	if ((raw_data[0] != raw_data[1]) || (raw_data[0] != raw_data[2])) {
+		pr_info("[W]sysmsg was changed suddenly, %02x %02x %02x",
+			raw_data[0], raw_data[1], raw_data[2]);
 	}
-	pr_info("%s: IRQ(%d)_IN\n", __func__, irq);
-	max77958_execute_sysmsg(usbc_data, sysmsg);
-	usbc_data->sysmsg = sysmsg;
-	pr_info("IRQ(%d)_OUT sysmsg: %x", irq, sysmsg);
+	max77958_execute_sysmsg(usbc_data, usbc_status2);
+	usbc_data->sysmsg = usbc_status2;
+	pr_debug("%s: exit usbc_status2=%02x\n", __func__, usbc_status2);
 	return IRQ_HANDLED;
 }
 
@@ -841,8 +701,8 @@ static int max77958_usbc_probe(struct platform_device *pdev)
 	struct max77958_platform_data *pdata = dev_get_platdata(max77958->dev);
 	struct max77958_usbc_platform_data *usbc_data = NULL;
 
-	pr_info("Probing : %d", max77958->irq);
-	usbc_data =  kzalloc(sizeof(struct max77958_usbc_platform_data),
+	pr_debug("%s:\n", __func__);
+	usbc_data =  devm_kzalloc(dev, sizeof(struct max77958_usbc_platform_data),
 		GFP_KERNEL);
 	if (!usbc_data)
 		return -ENOMEM;
@@ -867,17 +727,17 @@ static int max77958_usbc_probe(struct platform_device *pdev)
 	usbc_data->max77958_data = pdata;
 	usbc_data->irq_base = pdata->irq_base;
 
-	usbc_data->pd_data = kzalloc(sizeof(struct max77958_pd_data),
+	usbc_data->pd_data = devm_kzalloc(dev, sizeof(struct max77958_pd_data),
 		GFP_KERNEL);
 	if (!usbc_data->pd_data)
 		return -ENOMEM;
 
-	usbc_data->cc_data = kzalloc(sizeof(struct max77958_cc_data),
+	usbc_data->cc_data = devm_kzalloc(dev, sizeof(struct max77958_cc_data),
 		GFP_KERNEL);
 	if (!usbc_data->cc_data)
 		return -ENOMEM;
 
-	usbc_data->bc12_data = kzalloc(sizeof(struct max77958_bc12_data),
+	usbc_data->bc12_data = devm_kzalloc(dev, sizeof(struct max77958_bc12_data),
 		GFP_KERNEL);
 	if (!usbc_data->bc12_data)
 		return -ENOMEM;
@@ -892,12 +752,12 @@ static int max77958_usbc_probe(struct platform_device *pdev)
 	usbc_data->FW_Revision = 0x0;
 	usbc_data->FW_Revision = 0x0;
 	usbc_data->connected_device = 0x0;
-	usbc_data->cc_data->current_pr = UNKNOWN_STATE;
-	usbc_data->pd_data->current_dr = UNKNOWN_STATE;
-	usbc_data->cc_data->current_vcon = UNKNOWN_STATE;
+	usbc_data->cc_data->current_pr = CC_UNKNOWN_STATE;
+	usbc_data->pd_data->current_dr = USB_ROLE_NONE;
+	usbc_data->cc_data->current_vcon = VCR_UNKNOWN_STATE;
 	usbc_data->op_code_done = 0x0;
-	usbc_data->current_wtrstat = UNKNOWN_STATE;
-	usbc_data->prev_wtrstat = UNKNOWN_STATE;
+	usbc_data->current_wtrstat = WTR_UNKNOWN_STATE;
+	usbc_data->prev_wtrstat = WTR_UNKNOWN_STATE;
 	mutex_init(&usbc_data->apcmd_lock);
 	INIT_LIST_HEAD(&usbc_data->apcmd_queue.node_head);
 	max77958_get_version_info(usbc_data);
@@ -954,10 +814,6 @@ static int max77958_usbc_remove(struct platform_device *pdev)
 	free_irq(usbc_data->bc12_data->irq_dcdtmo, usbc_data);
 	free_irq(usbc_data->bc12_data->irq_chgtype, usbc_data);
 	free_irq(usbc_data->bc12_data->irq_vbadc, usbc_data);
-	kfree(usbc_data->bc12_data);
-	kfree(usbc_data->cc_data);
-	kfree(usbc_data->pd_data);
-	kfree(usbc_data);
 	return 0;
 }
 
@@ -993,7 +849,7 @@ static void max77958_usbc_shutdown(struct platform_device *pdev)
 	max77958_write_reg(usbc_data->i2c, REG_UIC_INT_M, 0xFF);
 	max77958_write_reg(usbc_data->i2c, REG_ACTION_INT_M, 0xFF);
 	/* send the reset command */
-	if (usbc_data->current_wtrstat == WATER)
+	if (usbc_data->current_wtrstat == WTR_WATER)
 		pr_info("Skip the max77958_reset_ccpd function");
 	else {
 		disable_irq(usbc_data->max77958->irq);
