@@ -714,7 +714,7 @@ retry:
 			}
 		}
 	} else {
-		pr_info("Don't need to update!");
+		pr_debug("%s: Don't need to update!", __func__);
 		goto out;
 	}
 
