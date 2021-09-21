@@ -10,12 +10,15 @@
 #include <linux/module.h>
 #include <linux/power_supply.h>
 #include <linux/regmap.h>
+#include <linux/regulator/driver.h>
+#include <linux/regulator/of_regulator.h>
 
 /* TOP_INT */
 #define	MAX77975_TOP_INT			0x03
 
 /* CHG_INT */
 #define	MAX77975_CHG_INT			0x10
+#define	MAX77975_CHG_INT_MASK			0x11
 
 /* CHG_INT_OK */
 #define	MAX77975_CHG_INT_OK			0x12
@@ -71,6 +74,12 @@ struct max77975_charger_data {
 	struct gpio_desc *gpio_suspend;
 	struct gpio_desc *gpio_disbatt;
 	bool is_charging;
+	bool want_charging;
+	bool want_otg_vbus_enabled;
+	unsigned char cur_mode;
+#define REG_OTG                0
+	struct	regulator_desc reg_descs[1];
+	struct	regulator_dev *regulators[1];
 };
 
 static enum power_supply_property max77975_charger_properties[] = {
@@ -131,42 +140,39 @@ static int max77975_charger_is_chgin_valid(struct max77975_charger_data *chg)
 	return (reg & MAX77975_CHG_INT_OK_CHGIN);
 }
 
-static int max77975_charger_enable(struct max77975_charger_data *chg)
+static int max77975_update_mode(struct max77975_charger_data *chg)
 {
 	int ret = 0;
+	int mode = chg->want_otg_vbus_enabled ? 0x0a :
+		   chg->want_charging ? MAX77975_CHARGER_ENABLED :
+		   MAX77975_CHARGER_DISABLED;
 
-	if (!chg->is_charging) {
+	if (mode != chg->cur_mode) {
+		chg->cur_mode = mode;
 		max77975_charger_unlock(chg);
 		ret = regmap_update_bits(chg->map,
-					 MAX77975_CHG_CNFG_00,
-					 MAX77975_CHARGER_CHG_EN_MASK,
-					 MAX77975_CHARGER_ENABLED);
+			 MAX77975_CHG_CNFG_00, MAX77975_CHARGER_CHG_EN_MASK,
+			 mode);
 		if (ret)
-			dev_err(chg->dev, "unable to enable: %d\n", ret);
-		chg->is_charging = true;
-		power_supply_changed(chg->psy);
+			dev_err(chg->dev, "unable to change mode: %d\n", ret);
+		if (chg->is_charging != (mode == MAX77975_CHARGER_ENABLED)) {
+			chg->is_charging = (mode == MAX77975_CHARGER_ENABLED);
+			power_supply_changed(chg->psy);
+		}
 	}
-
 	return ret;
+}
+
+static int max77975_charger_enable(struct max77975_charger_data *chg)
+{
+	chg->want_charging = true;
+	return max77975_update_mode(chg);
 }
 
 static int max77975_charger_disable(struct max77975_charger_data *chg)
 {
-	int ret = 0;
-
-	if (chg->is_charging) {
-		max77975_charger_unlock(chg);
-		ret = regmap_update_bits(chg->map,
-					 MAX77975_CHG_CNFG_00,
-					 MAX77975_CHARGER_CHG_EN_MASK,
-					 MAX77975_CHARGER_DISABLED);
-		if (ret)
-			dev_err(chg->dev, "unable to disable: %d\n", ret);
-		chg->is_charging = false;
-		power_supply_changed(chg->psy);
-	}
-
-	return ret;
+	chg->want_charging = false;
+	return max77975_update_mode(chg);
 }
 
 static int max77975_charger_get_charger_state(struct max77975_charger_data *chg)
@@ -363,6 +369,161 @@ static const struct regmap_config max77975_regmap_config = {
 	.max_register	= MAX77975_STAT_CNFG,
 };
 
+/********************************************************/
+
+static int max77975_read_reg(struct max77975_charger_data *chg, unsigned reg)
+{
+	int val = -1;
+
+	regmap_read(chg->map, reg, &val);
+	return val;
+}
+
+static int max77975_otg_enable(struct max77975_charger_data *chg)
+{
+	pr_info("%s:\n", __func__);
+
+	chg->want_otg_vbus_enabled = true;
+	max77975_charger_disable(chg);
+
+	pr_debug("%s: INT_MASK(0x%x), CHG_CNFG_00(0x%x)\n", __func__,
+		max77975_read_reg(chg, MAX77975_CHG_INT_MASK),
+		max77975_read_reg(chg, MAX77975_CHG_CNFG_00));
+	return 0;
+}
+
+static int max77975_otg_disable(struct max77975_charger_data *chg)
+{
+	pr_info("%s:\n", __func__);
+	chg->want_otg_vbus_enabled = false;
+	max77975_update_mode(chg);
+
+	pr_debug("%s: INT_MASK(0x%x), CHG_CNFG_00(0x%x)\n", __func__,
+		max77975_read_reg(chg, MAX77975_CHG_INT_MASK),
+		max77975_read_reg(chg, MAX77975_CHG_CNFG_00));
+	return 0;
+}
+
+int max77975_regulator_enable(struct regulator_dev *rdev)
+{
+	int ret = 0;
+
+	if (rdev_get_id(rdev) == REG_OTG) {
+		ret = max77975_otg_enable(rdev_get_drvdata(rdev));
+	}
+	return (ret < 0) ? ret : 0;
+}
+
+int max77975_regulator_disable(struct regulator_dev *rdev)
+{
+	int ret = 0;
+
+	if (rdev_get_id(rdev) == REG_OTG) {
+		ret = max77975_otg_disable(rdev_get_drvdata(rdev));
+	}
+	return (ret < 0) ? ret : 0;
+}
+
+int max77975_regulator_is_enabled(struct regulator_dev *rdev)
+{
+	struct max77975_charger_data *chg = rdev_get_drvdata(rdev);
+	int ret;
+
+	ret = max77975_read_reg(chg, rdev->desc->enable_reg);
+	if (ret < 0)
+		return ret;
+
+	ret &= rdev->desc->enable_mask;
+	return (ret == 0x0a);
+}
+
+int max77975_regulator_list_voltage_linear(struct regulator_dev *rdev,
+				  unsigned int selector)
+{
+	if (selector >= rdev->desc->n_voltages)
+		return -EINVAL;
+	if (selector < rdev->desc->linear_min_sel)
+		return 0;
+
+	selector -= rdev->desc->linear_min_sel;
+
+	return rdev->desc->min_uV + (rdev->desc->uV_step * selector);
+}
+
+static struct regulator_ops max77975_regulator_ops = {
+	.enable = max77975_regulator_enable,
+	.disable = max77975_regulator_disable,
+	.is_enabled = max77975_regulator_is_enabled,
+	.list_voltage = max77975_regulator_list_voltage_linear,
+};
+
+static struct regulator_desc regulators_ds[] = {
+	{
+		.name = "otg",
+		.n_voltages = 1,
+		.ops = &max77975_regulator_ops,
+		.type = REGULATOR_VOLTAGE,
+		.id = REG_OTG,
+		.owner = THIS_MODULE,
+		.min_uV = 5000000,
+		.enable_reg = MAX77975_CHG_CNFG_00,
+		.enable_mask = 0x0f,
+	},
+};
+
+static struct of_regulator_match reg_matches[] = {
+	{ .name = "otg",	},
+};
+
+static int parse_regulators_dt(struct device *dev, const struct device_node *np,
+		struct max77975_charger_data *chg)
+{
+	struct regulator_config config = { };
+	struct device_node *parent;
+	int ret;
+	int i;
+
+	parent = of_get_child_by_name(np, "regulators");
+	if (!parent) {
+		dev_warn(dev, "regulators node not found\n");
+		return 0;
+	}
+
+	ret = of_regulator_match(dev, parent, reg_matches,
+				 ARRAY_SIZE(reg_matches));
+
+	of_node_put(parent);
+	if (ret < 0) {
+		dev_err(dev, "Error parsing regulator init data: %d\n",
+			ret);
+		return ret;
+	}
+
+	memcpy(chg->reg_descs, regulators_ds,
+		sizeof(chg->reg_descs));
+
+	for (i = 0; i < ARRAY_SIZE(reg_matches); i++) {
+		struct regulator_desc *desc = &chg->reg_descs[i];
+
+		config.dev = dev;
+		config.init_data = reg_matches[i].init_data;
+		config.driver_data = chg;
+		config.of_node = reg_matches[i].of_node;
+		config.ena_gpiod = NULL;
+
+		chg->regulators[i] =
+			devm_regulator_register(dev, desc, &config);
+		if (IS_ERR(chg->regulators[i])) {
+			dev_err(dev, "register regulator%s failed\n",
+				desc->name);
+			return PTR_ERR(chg->regulators[i]);
+		}
+	}
+	return 0;
+}
+
+/********************************************************/
+
 static int max77975_charger_probe(struct i2c_client *client,
 				  const struct i2c_device_id *id)
 {
@@ -404,6 +565,11 @@ static int max77975_charger_probe(struct i2c_client *client,
 		return PTR_ERR(chg->gpio_disbatt);
 	}
 
+	ret = parse_regulators_dt(dev, dev->of_node, chg);
+	if (ret < 0) {
+		pr_err("%s:reg dt error! ret[%d]\n", __func__, ret);
+		return ret;
+	}
 	ret = devm_request_threaded_irq(dev, client->irq, NULL,
 					max77975_charger_irq,
 					IRQF_TRIGGER_LOW | IRQF_ONESHOT,
