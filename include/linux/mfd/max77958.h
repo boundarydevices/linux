@@ -191,8 +191,7 @@
 /*
  * REG_USBC_STATUS1
  */
-#define BIT_VBADC				BITS(7, 4)
-#define BIT_FakeVbus			BIT(3)
+#define MASK_VBADC			BITS(7, 3)
 
 /*
  * REG_USBC_STATUS2
@@ -261,26 +260,14 @@
 #define ROLE_REJECT				0x2
 #define ROLE_BUSY				0x3
 
-#define UNKNOWN_STATE			0xFF
-
 /*
  * MAX77958 role
  */
-enum max77958_data_role {
-	UFP = 0,
-	DFP,
-};
-
 enum max77958_vcon_role {
-	OFF = 0,
-	ON
+	VCR_OFF = 0,
+	VCR_ON,
+	VCR_UNKNOWN_STATE = 0xff,
 };
-
-enum max77958_power_role {
-	SNK = 0,
-	SRC
-};
-
 
 /*
  * F/W update
@@ -416,6 +403,7 @@ enum max77958_cc_pin_state {
 	CC_DISABLED,
 	CC_DBG_SNK,
 	CC_RFU,
+	CC_UNKNOWN_STATE = 0xff,
 };
 
 enum max77958_usbc_SYSMsg {
@@ -480,8 +468,9 @@ enum max77958_pdmsg {
 	PDMSG_VDM_DP_STATUS                   = 0x65,
 };
 enum max77958_wtrstat {
-	DRY = 0x00,
-	WATER = 0x01,
+	WTR_DRY = 0x00,
+	WTR_WATER = 0x01,
+	WTR_UNKNOWN_STATE = 0xff,
 };
 
 /*
