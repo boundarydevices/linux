@@ -707,15 +707,19 @@ int goodix_int_sync(struct goodix_ts_data *ts)
 
 	error = goodix_irq_direction_output(ts, 0);
 	if (error)
-		return error;
+		goto error;
 
 	msleep(50);				/* T5: 50ms */
 
 	error = goodix_irq_direction_input(ts);
 	if (error)
-		return error;
+		goto error;
 
 	return 0;
+
+error:
+	dev_err(&ts->client->dev, "Controller irq sync failed.\n");
+	return error;
 }
 
 static int goodix_request_irq(struct goodix_ts_data *ts)
@@ -745,6 +749,41 @@ static int goodix_release_irq(struct goodix_ts_data *ts)
 }
 
 /**
+ * goodix_reset_no_int_sync - Reset device, leaving interrupt line in output mode
+ *
+ * @ts: goodix_ts_data pointer
+ */
+int goodix_reset_no_int_sync(struct goodix_ts_data *ts)
+{
+	int error;
+
+	/* begin select I2C slave addr */
+	error = set_reset_output_val(ts, 0);
+	if (error)
+		goto error;
+
+	msleep(20);				/* T2: > 10ms */
+
+	/* HIGH: 0x28/0x29, LOW: 0xBA/0xBB */
+	error = goodix_irq_direction_output(ts, ts->client->addr == 0x14);
+	if (error)
+		goto error;
+
+	usleep_range(100, 2000);		/* T3: > 100us */
+
+	error = set_reset_output_val(ts, 1);
+	if (error)
+		goto error;
+
+	usleep_range(6000, 10000);		/* T4: > 5ms */
+	return 0;
+
+error:
+	dev_err(&ts->client->dev, "Controller reset failed.\n");
+	return error;
+}
+
+/**
  * goodix_reset - Reset device during power on
  *
  * @ts: goodix_ts_data pointer
@@ -754,25 +793,9 @@ static int goodix_reset(struct goodix_ts_data *ts)
 	unsigned char irq_was_requested = goodix_release_irq(ts);
 	int error;
 
-	/* begin select I2C slave addr */
-	error = set_reset_output_val(ts, 0);
+	error = goodix_reset_no_int_sync(ts);
 	if (error)
 		return error;
-
-	msleep(20);				/* T2: > 10ms */
-
-	/* HIGH: 0x28/0x29, LOW: 0xBA/0xBB */
-	error = goodix_irq_direction_output(ts, ts->client->addr == 0x14);
-	if (error)
-		return error;
-
-	usleep_range(100, 2000);		/* T3: > 100us */
-
-	error = set_reset_output_val(ts, 1);
-	if (error)
-		return error;
-
-	usleep_range(6000, 10000);		/* T4: > 5ms */
 
 	error = goodix_int_sync(ts);
 	if (error)
@@ -1556,10 +1579,8 @@ reset:
 	if (ts->reset_controller_at_probe) {
 		/* reset the controller */
 		error = goodix_reset(ts);
-		if (error) {
-			dev_err(&client->dev, "Controller reset failed.\n");
+		if (error)
 			return error;
-		}
 	}
 
 	error = goodix_i2c_test(client);
@@ -1760,10 +1781,8 @@ static int __maybe_unused goodix_wakeup(struct device *dev)
 
 	if (error != 0 || config_ver != ts->config[0]) {
 		error = goodix_reset(ts);
-		if (error) {
-			dev_err(dev, "Controller reset failed.\n");
+		if (error)
 			return error;
-		}
 
 		if (ts->load_cfg_from_disk) {
 			error = goodix_send_cfg(ts, ts->config, ts->chip->config_len);
