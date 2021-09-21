@@ -38,6 +38,7 @@ struct rfkill_gpio_data {
 	struct pinctrl_state	*pins_on;
 
 	bool			clk_enabled;
+	bool			vdd_on;
 };
 
 static int rfkill_gpio_set_power(void *data, bool blocked)
@@ -46,6 +47,7 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 	int ret;
 
 	if (blocked) {
+		pr_debug("%s: blocked %s %d\n", __func__, rfkill->name, rfkill->vdd_on);
 		if (rfkill->pinctrl)
 			pinctrl_select_state(rfkill->pinctrl, rfkill->pins_off);
 		if (rfkill->power_key_gpio) {
@@ -58,17 +60,24 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 		gpiod_set_value_cansleep(rfkill->reset_gpio, 1);
 		if (!IS_ERR(rfkill->clk) && rfkill->clk_enabled)
 			clk_disable_unprepare(rfkill->clk);
-		if (rfkill->vdd)
+		if (rfkill->vdd && rfkill->vdd_on) {
+			rfkill->vdd_on = false;
 			regulator_disable(rfkill->vdd);
+			pr_debug("%s: %s: vdd off\n", __func__, rfkill->name);
+		}
 	} else {
+		pr_debug("%s: unblocked %s %d\n", __func__, rfkill->name, rfkill->vdd_on);
 		if (rfkill->power_key_gpio)
 			gpiod_set_value_cansleep(rfkill->power_key_gpio, 0);
-		if (rfkill->vdd) {
+		if (rfkill->vdd && !rfkill->vdd_on) {
 			ret = regulator_enable(rfkill->vdd);
 			if (ret) {
 				dev_err(rfkill->dev,
 					"Failed to enable vdd regulator: %d\n",
 					ret);
+			} else {
+				rfkill->vdd_on = true;
+				pr_debug("%s: %s: vdd on\n", __func__, rfkill->name);
 			}
 		}
 		if (!IS_ERR(rfkill->clk) && !rfkill->clk_enabled)
