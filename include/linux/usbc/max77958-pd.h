@@ -35,6 +35,7 @@
 #ifndef __LINUX_MFD_MAX77958_PD_H
 #define __LINUX_MFD_MAX77958_PD_H
 #include <linux/mfd/max77958.h>
+#include <linux/usb/role.h>
 #include <linux/usbc/max77958-usbc.h>
 #include <linux/wakelock.h>
 
@@ -62,8 +63,8 @@ struct max77958_pd_data {
 	u8 pdsmg;
 
 	/* Data Role */
-	enum max77958_data_role current_dr;
-	enum max77958_data_role previous_dr;
+	enum usb_role current_dr;
+	enum usb_role previous_dr;
 	/* FCT cable */
 	u8 fct_id;
 	enum max77958_ccpd_device device;
