@@ -176,18 +176,15 @@ static irqreturn_t max77958_vbadc_irq(int irq, void *data)
 	struct max77958_bc12_data *bc12_data = usbc_data->bc12_data;
 	u8 vbadc = 0;
 
-	pr_debug("%s: IRQ(%d)_IN\n", __func__, irq);
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 	max77958_read_reg(usbc_data->i2c, REG_USBC_STATUS1,
 		&bc12_data->usbc_status1);
-	vbadc = (bc12_data->usbc_status1 & BIT_VBADC) >> FFS(BIT_VBADC);
+	vbadc = (bc12_data->usbc_status1 & BIT_VBADC) ? 1 : 0;
 	max77958_bc12_get_vadc(vbadc);
 	bc12_data->vbadc = vbadc;
-	pr_debug("%s: IRQ(%d)_OUT\n", __func__, irq);
-
+	pr_debug("%s: exit usbc_status1=%02x\n", __func__, bc12_data->usbc_status1);
 	return IRQ_HANDLED;
 }
-
-
 
 static irqreturn_t max77958_chgtype_irq(int irq, void *data)
 {
@@ -195,7 +192,7 @@ static irqreturn_t max77958_chgtype_irq(int irq, void *data)
 	struct max77958_usbc_platform_data *usbc_data = data;
 	struct max77958_bc12_data *bc12_data = usbc_data->bc12_data;
 
-	pr_debug("%s: IRQ(%d)_IN\n", __func__, irq);
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 
 	max77958_read_reg(usbc_data->i2c, REG_BC_STATUS, &bc12_data->bc_status);
 
@@ -207,8 +204,7 @@ static irqreturn_t max77958_chgtype_irq(int irq, void *data)
 
 	max77958_bc12_set_charger(usbc_data);
 
-	pr_debug("%s: IRQ(%d)_OUT\n", __func__, irq);
-
+	pr_debug("%s: exit bc_status=%02x\n", __func__, bc12_data->bc_status);
 	return IRQ_HANDLED;
 }
 
@@ -218,15 +214,14 @@ static irqreturn_t max77958_dcdtmo_irq(int irq, void *data)
 	struct max77958_usbc_platform_data *usbc_data = data;
 	struct max77958_bc12_data *bc12_data = usbc_data->bc12_data;
 
-	pr_debug("%s: IRQ(%d)_IN\n", __func__, irq);
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 	max77958_read_reg(usbc_data->i2c, REG_BC_STATUS, &bc12_data->bc_status);
 
 	pr_info(" BIT_DCDTmoI occured");
 	bc12_data->dcdtmo = (bc12_data->bc_status & BIT_DCDTmo)
 		>> FFS(BIT_DCDTmo);
 
-	pr_debug("%s: IRQ(%d)_OUT\n", __func__, irq);
-
+	pr_debug("%s: exit bc_status=%02x\n", __func__, bc12_data->bc_status);
 	return IRQ_HANDLED;
 }
 
@@ -236,18 +231,11 @@ static irqreturn_t max77958_vbusdet_irq(int irq, void *data)
 	struct max77958_usbc_platform_data *usbc_data = data;
 	struct max77958_bc12_data *bc12_data = usbc_data->bc12_data;
 
-	pr_debug("%s: IRQ(%d)_IN\n", __func__, irq);
+	pr_debug("%s: enter irq%d\n", __func__, irq);
 	max77958_read_reg(usbc_data->i2c, REG_BC_STATUS, &bc12_data->bc_status);
 
-	if ((bc12_data->bc_status & BIT_VBUSDet) == BIT_VBUSDet) {
-		pr_info(" VBUS > VVBDET");
-		bc12_data->vbusdet = 1;
-	} else {
-		pr_info(" VBUS < VVBDET");
-		bc12_data->vbusdet = 0;
-	}
-	pr_debug("%s: IRQ(%d)_OUT\n", __func__, irq);
-
+	bc12_data->vbusdet = (bc12_data->bc_status & BIT_VBUSDet) ? 1 : 0;
+	pr_debug("%s: exit vbusdet=%d bc_status=%02x\n", __func__, bc12_data->vbusdet, bc12_data->bc_status);
 	return IRQ_HANDLED;
 }
 
@@ -256,8 +244,7 @@ int max77958_bc12_init(struct max77958_usbc_platform_data *usbc_data)
 	struct max77958_bc12_data *bc12_data = NULL;
 	int ret;
 
-	pr_info(" IN");
-
+	pr_debug("%s: enter\n", __func__);
 	bc12_data = usbc_data->bc12_data;
 
 	wake_lock_init(&bc12_data->max77958_bc12_wake_lock, WAKE_LOCK_SUSPEND,
@@ -319,7 +306,7 @@ int max77958_bc12_init(struct max77958_usbc_platform_data *usbc_data)
 		}
 	}
 
-	pr_info(" OUT");
+	pr_debug("%s: exit\n", __func__);
 	return 0;
 
 err_irq:
