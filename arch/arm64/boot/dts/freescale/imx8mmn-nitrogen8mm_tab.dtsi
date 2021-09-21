@@ -527,6 +527,31 @@
 		status = "okay";
 	};
 
+	connector {
+		compatible = "usb-c-connector";
+		label = "USB-C";
+		data-role = "dual";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				hs_ep: endpoint {
+					remote-endpoint = <&usb_hs_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				ss_ep: endpoint {
+					remote-endpoint = <&max77958_in_ep>;
+				};
+			};
+		};
+	};
+
 	csi_mclk: csi-mclk {
 		compatible = "pwm-clock";
 		#clock-cells = <0>;
@@ -596,6 +621,7 @@
 		regulator-name = "ec21_3v7";
 		regulator-min-microvolt = <3700000>;
 		regulator-max-microvolt = <3700000>;
+		startup-delay-us = <30000>;
 		gpio = GP_REG_3P7V;
 		enable-active-high;
 	};
@@ -796,6 +822,13 @@
 		input-current-limit-microamp = <3200000>;
 		suspend-gpios = GP_SUSPEND;
 		disbatt-gpios = GP_DISABLE_BATT;
+
+		regulators {
+			reg_usbotg_vbus: otg {
+				regulator-min-microvolt = <5000000>;
+				regulator-max-microvolt = <5000000>;
+			};
+		};
 	};
 };
 
@@ -925,6 +958,25 @@
 		pinctrl-0 = <&pinctrl_i2c2d_max77958>;
 		interrupts-extended = GPIRQ_MAX77958;
 		charger-power-supply = <&max77975>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max77958_in_ep: endpoint {
+					remote-endpoint = <&ss_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max77958_out_ep: endpoint {
+					remote-endpoint = <&usb_role_switch>;
+				};
+			};
+		};
 	};
 };
 
@@ -1243,6 +1295,27 @@
 	pinctrl-0 = <&pinctrl_usbotg1>;
 	power-active-high;
 	status = "okay";
+	usb-role-switch;
+	vbus-supply = <&reg_usbotg_vbus>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			usb_hs_ep: endpoint {
+				remote-endpoint = <&hs_ep>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			usb_role_switch: endpoint {
+				remote-endpoint = <&max77958_out_ep>;
+			};
+		};
+	};
 };
 
 &usdhc1 {
