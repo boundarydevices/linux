@@ -331,7 +331,7 @@ static int avd_tt_panel_add(struct avd_tt_panel *avd_tt)
 	}
 
 
-	avd_tt->iovccen_gpio = devm_gpiod_get(dev, "iovccen",
+	avd_tt->iovccen_gpio = devm_gpiod_get_optional(dev, "iovccen",
 						 GPIOD_OUT_HIGH);
 	if (IS_ERR(avd_tt->iovccen_gpio)) {
 		dev_err(dev, "cannot get iovccen-gpios %ld\n",
@@ -339,7 +339,7 @@ static int avd_tt_panel_add(struct avd_tt_panel *avd_tt)
 		return PTR_ERR(avd_tt->iovccen_gpio);
 	}
 
-	avd_tt->vdden_gpio = devm_gpiod_get(dev, "vdden",
+	avd_tt->vdden_gpio = devm_gpiod_get_optional(dev, "vdden",
 						 GPIOD_OUT_HIGH);
 	if (IS_ERR(avd_tt->vdden_gpio)) {
 		dev_err(dev, "cannot get vdden-gpios %ld\n",
@@ -355,7 +355,7 @@ static int avd_tt_panel_add(struct avd_tt_panel *avd_tt)
 		return PTR_ERR(avd_tt->stb_gpio);
 	}
 
-	avd_tt->bl_gpio = devm_gpiod_get(dev, "bl",
+	avd_tt->bl_gpio = devm_gpiod_get_optional(dev, "bl",
 						 GPIOD_OUT_HIGH);
 	if (IS_ERR(avd_tt->bl_gpio)) {
 		dev_err(dev, "cannot get bl-gpios %ld\n",
