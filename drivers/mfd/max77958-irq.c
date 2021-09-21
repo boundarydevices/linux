@@ -194,7 +194,7 @@ static irqreturn_t max77958_irq_thread(int irq, void *data)
 	u8 dump_reg[10] = {0, };
 	int i, rc;
 
-	pr_info("irq[%d] %d/%d",
+	pr_debug("irq[%d] %d/%d",
 			irq, max77958->irq,
 			max77958->irq_base);
 
@@ -206,15 +206,15 @@ static irqreturn_t max77958_irq_thread(int irq, void *data)
 			REG_USBC_STATUS1,
 			8, dump_reg);
 
-	pr_info("[max77958] info [%x] [%x] [%x_%x]",
+	pr_debug("[max77958] info [%x] [%x] [%x_%x]",
 			max77958->HW_Revision, max77958->Device_Revision,
 			max77958->FW_Revision, max77958->FW_Minor_Revision);
 
-	pr_info("[max77958] irq_reg[USBC_INT] : [%x], irq_reg[CC_INT] : %x,\n",
+	pr_debug("[max77958] irq_reg[USBC_INT] : [%x], irq_reg[CC_INT] : %x,\n",
 			irq_reg[USBC_INT], irq_reg[CC_INT]);
-	pr_info("[max77958] irq_reg[PD_INT]: %x, irq_reg[VDM_INT] : %x\n",
+	pr_debug("[max77958] irq_reg[PD_INT]: %x, irq_reg[VDM_INT] : %x\n",
 			irq_reg[PD_INT], irq_reg[ACTION_INT]);
-	pr_info("[max77958] dump_reg, %x, %x, %x, %x, %x, %x, %x, %x\n",
+	pr_debug("[max77958] dump_reg, %x, %x, %x, %x, %x, %x, %x, %x\n",
 			dump_reg[0], dump_reg[1], dump_reg[2], dump_reg[3],
 			dump_reg[4], dump_reg[5], dump_reg[6], dump_reg[7]);
 
@@ -267,7 +267,6 @@ int max77958_irq_init(struct max77958_dev *max77958)
 
 		cur_irq = i + max77958->irq_base;
 
-		pr_info("cur_irq=%d", cur_irq);
 		irq_set_chip_data(cur_irq, max77958);
 		irq_set_chip_and_handler(cur_irq, &max77958_irq_chip,
 				handle_level_irq);
