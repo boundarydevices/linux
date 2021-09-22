@@ -10,6 +10,7 @@
 #include <linux/mod_devicetable.h>
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
+#include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/rfkill.h>
 #include <linux/platform_device.h>
@@ -21,6 +22,7 @@
 struct rfkill_gpio_data {
 	const char		*name;
 	struct device		*dev;
+	struct device		*wake_dev;
 	enum rfkill_type	type;
 	struct regulator	*vdd;
 	struct gpio_desc	*reset_gpio;
@@ -40,6 +42,14 @@ struct rfkill_gpio_data {
 	bool			clk_enabled;
 	bool			vdd_on;
 };
+
+static int wake_fn(struct device *dev, void *data)
+{
+	pm_runtime_get_sync(dev);
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
+	return 0;
+}
 
 static int rfkill_gpio_set_power(void *data, bool blocked)
 {
@@ -99,6 +109,8 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 		}
 		if (rfkill->pinctrl)
 			pinctrl_select_state(rfkill->pinctrl, rfkill->pins_on);
+		if (rfkill->wake_dev)
+			device_for_each_child(rfkill->wake_dev, NULL, wake_fn);
 	}
 
 	rfkill->clk_enabled = !blocked;
@@ -156,6 +168,7 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 	struct gpio_descs *descs;
 	const char *type_name;
 	struct device *dev = &pdev->dev;
+	struct device_node *wake_node;
 	int ret;
 
 	rfkill = devm_kzalloc(dev, sizeof(*rfkill), GFP_KERNEL);
@@ -193,6 +206,11 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 				dev_err(dev, "Failed to get vdd regulator: %d\n", ret);
 			return ret;
 		}
+	}
+	wake_node = of_parse_phandle(dev->of_node, "wakeup-dev", 0);
+	if (wake_node) {
+		rfkill->wake_dev = bus_find_device_by_of_node(&platform_bus_type, wake_node);
+		pr_debug("%s: wake %s\n", __func__, dev_name(rfkill->wake_dev));
 	}
 
 	rfkill->clk = devm_clk_get(dev, NULL);
