@@ -104,9 +104,14 @@ int sof_compr_open(struct snd_soc_component *component,
 
 	dir = cstream->direction;
 
+	if (spcm->stream[dir].cstream) {
+		kfree(sstream);
+		return -EBUSY;
+	}
+
+	spcm->stream[dir].cstream = cstream;
 	spcm->stream[dir].posn.host_posn = 0;
 	spcm->stream[dir].posn.dai_posn = 0;
-	spcm->stream[dir].cstream = cstream;
 	spcm->prepared[dir] = false;
 
 	runtime->private_data = sstream;
@@ -143,6 +148,7 @@ int sof_compr_free(struct snd_soc_component *component,
 	}
 
 	cancel_work_sync(&spcm->stream[cstream->direction].period_elapsed_work);
+	spcm->stream[cstream->direction].cstream = NULL;
 	kfree(sstream);
 
 	return ret;
