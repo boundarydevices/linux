@@ -172,6 +172,8 @@ int sof_compr_set_params(struct snd_soc_component *component,
 
 	create_page_table(component, cstream, rtd->dma_area, rtd->dma_bytes);
 
+	memset(&pcm, 0, sizeof(pcm));
+
 	pcm.params.buffer.pages = PFN_UP(rtd->dma_bytes);
 	pcm.hdr.size = sizeof(pcm);
 	pcm.hdr.cmd = SOF_IPC_GLB_STREAM_MSG | SOF_IPC_STREAM_PCM_PARAMS;
