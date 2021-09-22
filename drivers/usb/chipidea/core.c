@@ -781,6 +781,8 @@ static int ci_get_platdata(struct device *dev,
 	of_property_read_u32(dev->of_node, "phy-clkgate-delay-us",
 				     &platdata->phy_clkgate_delay_us);
 
+	platdata->autosuspend_delay_ms = 2000;
+	of_property_read_u32(dev->of_node, "autosuspend-delay-ms", &platdata->autosuspend_delay_ms);
 	platdata->itc_setting = 1;
 
 	of_property_read_u32(dev->of_node, "itc-setting",
@@ -1331,7 +1333,8 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	if (ci->supports_runtime_pm) {
 		pm_runtime_set_active(&pdev->dev);
 		pm_runtime_enable(&pdev->dev);
-		pm_runtime_set_autosuspend_delay(&pdev->dev, 2000);
+		pm_runtime_set_autosuspend_delay(&pdev->dev,
+			ci->platdata->autosuspend_delay_ms);
 		pm_runtime_mark_last_busy(ci->dev);
 		pm_runtime_use_autosuspend(&pdev->dev);
 	}
