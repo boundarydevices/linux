@@ -41,6 +41,7 @@
 	pinctrl-0 = <&pinctrl_usbotg2>;
 	power-active-high;
 	reset-gpios = GP_OTG2_HUB_RESET;
+	autosuspend-delay-ms = <15000>;
 	status = "okay";
 };
 
@@ -59,4 +60,8 @@
 &vpumix_pd {
 	dvfs-supply = <&reg_sw5>;
 	idle-microvolt = <850000 805000 900000>;
+};
+
+&wwan_rfkill {
+	wakeup-dev = <&usbotg2>;
 };
