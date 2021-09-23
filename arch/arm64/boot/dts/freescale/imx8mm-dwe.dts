@@ -566,6 +566,7 @@
 		regulator-name = "ec21_3v7";
 		regulator-min-microvolt = <3700000>;
 		regulator-max-microvolt = <3700000>;
+		startup-delay-us = <60000>;
 		gpio = GP_REG_3P7V;
 		enable-active-high;
 	};
