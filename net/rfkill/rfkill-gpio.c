@@ -32,6 +32,7 @@ struct rfkill_gpio_data {
 	struct gpio_desc	*power_key_gpio;
 	unsigned		power_key_low_off;
 	unsigned		power_key_low_on;
+	struct gpio_desc	*active_status_gpio;
 
 	struct rfkill		*rfkill_dev;
 	struct clk		*clk;
@@ -51,6 +52,27 @@ static int wake_fn(struct device *dev, void *data)
 	return 0;
 }
 
+void wait_for_active_state(struct rfkill_gpio_data *rfkill, int state, int wait_jiffies)
+{
+	unsigned long max_wait;
+
+	if (!rfkill->active_status_gpio)
+		return;
+	max_wait = jiffies + wait_jiffies;
+	while (1) {
+		int active = gpiod_get_value_cansleep(rfkill->active_status_gpio);
+
+		if (active == state)
+			break;
+		msleep(100);
+		if (time_after(jiffies, max_wait)) {
+			pr_info("%s: timeout waiting for %s\n", __func__,
+				state ? "active" : "inactive");
+			break;
+		}
+	}
+}
+
 static int rfkill_gpio_set_power(void *data, bool blocked)
 {
 	struct rfkill_gpio_data *rfkill = data;
@@ -66,6 +88,7 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 			gpiod_set_value_cansleep(rfkill->power_key_gpio, 1);
 			msleep(50);	/* allow graceful shutdown */
 		}
+		wait_for_active_state(rfkill, 0, 40 * HZ);
 		gpiod_set_value_cansleep(rfkill->shutdown_gpio, 1);
 		gpiod_set_value_cansleep(rfkill->reset_gpio, 1);
 		if (!IS_ERR(rfkill->clk) && rfkill->clk_enabled)
@@ -109,6 +132,8 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 		}
 		if (rfkill->pinctrl)
 			pinctrl_select_state(rfkill->pinctrl, rfkill->pins_on);
+
+		wait_for_active_state(rfkill, 1, 5 * HZ);
 		if (rfkill->wake_dev)
 			device_for_each_child(rfkill->wake_dev, NULL, wake_fn);
 	}
@@ -244,6 +269,11 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 			&rfkill->power_key_low_on);
 	ret = of_property_read_u32(dev->of_node, "power-key-low-off",
 			&rfkill->power_key_low_off);
+
+	gpio = devm_gpiod_get_optional(dev, "active-status", GPIOD_IN);
+	if (IS_ERR(gpio))
+		return PTR_ERR(gpio);
+	rfkill->active_status_gpio = gpio;
 
 	/* Make sure at-least one GPIO is defined for this instance */
 	if (!rfkill->reset_gpio && !rfkill->shutdown_gpio && !rfkill->vdd) {
