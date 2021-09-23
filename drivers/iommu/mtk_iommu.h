@@ -33,11 +33,19 @@ struct mtk_iommu_suspend_reg {
 	};
 	u32				dcm_dis;
 	u32				ctrl_reg;
-	u32				int_control0;
-	u32				int_main_control;
-	u32				ivrp_paddr;
 	u32				vld_pa_rng;
 	u32				wr_len_ctrl;
+	union {
+		struct { /* only for gen1 */
+			u32		int_control0;
+		};
+
+		struct { /* only for gen2 that support multi-banks */
+			u32		int_control[MTK_IOMMU_BANK_MAX];
+			u32		int_main_control[MTK_IOMMU_BANK_MAX];
+			u32		ivrp_paddr[MTK_IOMMU_BANK_MAX];
+		};
+	};
 };
 
 enum mtk_iommu_plat {
