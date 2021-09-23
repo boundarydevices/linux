@@ -24,6 +24,8 @@
 
 #define MTK_IOMMU_GROUP_MAX	8
 
+#define MTK_IOMMU_BANK_MAX	5
+
 struct mtk_iommu_suspend_reg {
 	union {
 		u32			standard_axi_mode;/* v1 */
@@ -66,17 +68,33 @@ struct mtk_iommu_plat_data {
 
 struct mtk_iommu_domain;
 
-struct mtk_iommu_data {
+struct mtk_iommu_bank_data {
 	void __iomem			*base;
 	int				irq;
+	unsigned int			id;
+	struct device			*pdev;
+	struct mtk_iommu_data		*pdata;   /* parent data */
+	spinlock_t			tlb_lock; /* lock for tlb range flush */
+	struct mtk_iommu_domain		*m4u_dom; /* Each bank has a domain */
+};
+
+struct mtk_iommu_data {
+	union {
+		struct { /* only for gen1 */
+			void __iomem		*base;
+			int			irq;
+			struct mtk_iommu_domain	*m4u_dom;
+		};
+
+		/* only for gen2 that support multi-banks */
+		struct mtk_iommu_bank_data	bank[MTK_IOMMU_BANK_MAX];
+	};
 	struct device			*dev;
 	struct clk			*bclk;
 	phys_addr_t			protect_base; /* protect memory base */
 	struct mtk_iommu_suspend_reg	reg;
-	struct mtk_iommu_domain		*m4u_dom;
 	struct iommu_group		*m4u_group[MTK_IOMMU_GROUP_MAX];
 	bool                            enable_4GB;
-	spinlock_t			tlb_lock; /* lock for tlb range flush */
 
 	struct iommu_device		iommu;
 	const struct mtk_iommu_plat_data *plat_data;
