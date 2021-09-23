@@ -987,6 +987,17 @@ static int __maybe_unused mtk_iommu_runtime_resume(struct device *dev)
 	}
 
 	/*
+	 * Users may allocate dma buffer before they call pm_runtime_get, then
+	 * it will lack the necessary tlb flush.
+	 *
+	 * We have no good reason to request the users always call dma_alloc_xx
+	 * after pm_runtime_get_sync.
+	 *
+	 * Thus, Make sure the tlb always is clean after each PM resume.
+	 */
+	mtk_iommu_tlb_do_flush_all(data);
+
+	/*
 	 * Uppon first resume, only enable the clk and return, since the values of the
 	 * registers are not yet set.
 	 */
