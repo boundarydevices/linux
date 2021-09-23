@@ -204,26 +204,20 @@ static struct mtk_iommu_domain *to_mtk_domain(struct iommu_domain *dom)
 	return container_of(dom, struct mtk_iommu_domain, domain);
 }
 
-static void mtk_iommu_tlb_do_flush_all(struct mtk_iommu_data *data)
+static void mtk_iommu_tlb_flush_all(struct mtk_iommu_data *data)
 {
 	unsigned long flags;
 
+	/*
+	 * No need get power status since the HW PM status nearly is active
+	 * when entering here.
+	 */
 	spin_lock_irqsave(&data->tlb_lock, flags);
 	writel_relaxed(F_INVLD_EN1 | F_INVLD_EN0,
 		       data->base + data->plat_data->inv_sel_reg);
 	writel_relaxed(F_ALL_INVLD, data->base + REG_MMU_INVALIDATE);
 	wmb(); /* Make sure the tlb flush all done */
 	spin_unlock_irqrestore(&data->tlb_lock, flags);
-}
-
-static void mtk_iommu_tlb_flush_all(struct mtk_iommu_data *data)
-{
-	if (pm_runtime_get_if_in_use(data->dev) <= 0)
-		return;
-
-	mtk_iommu_tlb_do_flush_all(data);
-
-	pm_runtime_put(data->dev);
 }
 
 static void mtk_iommu_tlb_flush_range_sync(unsigned long iova, size_t size,
@@ -263,7 +257,7 @@ static void mtk_iommu_tlb_flush_range_sync(unsigned long iova, size_t size,
 		if (ret) {
 			dev_warn(data->dev,
 				 "Partial TLB flush timed out, falling back to full flush\n");
-			mtk_iommu_tlb_do_flush_all(data);
+			mtk_iommu_tlb_flush_all(data);
 		}
 
 		if (has_pm)
@@ -995,7 +989,7 @@ static int __maybe_unused mtk_iommu_runtime_resume(struct device *dev)
 	 *
 	 * Thus, Make sure the tlb always is clean after each PM resume.
 	 */
-	mtk_iommu_tlb_do_flush_all(data);
+	mtk_iommu_tlb_flush_all(data);
 
 	/*
 	 * Uppon first resume, only enable the clk and return, since the values of the
