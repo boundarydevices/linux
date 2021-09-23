@@ -450,7 +450,7 @@
 
 	ak4458_1: ak4458@10 {
 		#sound-dai-cells = <0>;
-		sound-name-prefix = "1";
+		sound-name-prefix = "0";
 		compatible = "asahi-kasei,ak4458";
 		reg = <0x10>;
 		AVDD-supply = <&reg_audio_board>;
@@ -459,7 +459,7 @@
 
 	ak4458_2: ak4458@12 {
 		#sound-dai-cells = <0>;
-		sound-name-prefix = "2";
+		sound-name-prefix = "1";
 		compatible = "asahi-kasei,ak4458";
 		reg = <0x12>;
 		AVDD-supply = <&reg_audio_board>;
