@@ -659,9 +659,12 @@ static int brcmf_fw_request_firmware(const struct firmware **fw,
 		if (!alt_path)
 			goto fallback;
 
-		ret = firmware_request_nowarn(fw, alt_path, fwctx->dev);
+		ret = request_firmware_direct(fw, alt_path, fwctx->dev);
 		kfree(alt_path);
-		if (ret == 0)
+		if (ret)
+			brcmf_info("no board-specific nvram available (ret=%d), device will use %s\n",
+				   ret, cur->path);
+		else
 			return ret;
 	}
 
