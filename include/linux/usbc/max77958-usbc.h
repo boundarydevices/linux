@@ -65,7 +65,7 @@
 #define I2C_SID3 0x28
 
 union max77958_custm_info {
-	unsigned int CustmInfoArry[CUSTMINFOSIZE];
+	unsigned short CustmInfoArry[CUSTMINFOSIZE];
 
 	struct {
 		unsigned int debugSRC : 1;
@@ -92,7 +92,7 @@ union max77958_custm_info {
 		unsigned int i2cSID3: 8;
 		unsigned int i2cSID4: 8;
 		unsigned short spare: 8;
-	} custm_bits;
+	} __packed custm_bits;
 };
 
 union max77958_device_info {
