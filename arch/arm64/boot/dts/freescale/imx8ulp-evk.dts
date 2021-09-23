@@ -340,7 +340,7 @@
 
 	spidev0: spi@0 {
 		reg = <0>;
-		compatible = "ge,achc";
+		compatible = "lwn,bk4";
 		spi-max-frequency = <1000000>;
 	};
 };
