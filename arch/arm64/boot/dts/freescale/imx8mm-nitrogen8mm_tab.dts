@@ -35,13 +35,13 @@
 };
 
 &usbotg2 {
+	autosuspend-delay-ms = <15000>;
 	dr_mode = "host";
 	over-current-active-low;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg2>;
 	power-active-high;
 	reset-gpios = GP_OTG2_HUB_RESET;
-	autosuspend-delay-ms = <15000>;
 	status = "okay";
 };
 
