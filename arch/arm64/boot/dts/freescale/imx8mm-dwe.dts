@@ -609,6 +609,7 @@
 		status = "okay";
 		type = <5>;     /* WWAN */
 		vdd-supply = <&reg_vref_3v7>;
+		wakeup-dev = <&usbotg2>;
 	};
 };
 
@@ -902,6 +903,7 @@
 };
 
 &usbotg2 {
+	autosuspend-delay-ms = <15000>;
 	dr_mode = "host";
 	over-current-active-low;
 	pinctrl-names = "default";
