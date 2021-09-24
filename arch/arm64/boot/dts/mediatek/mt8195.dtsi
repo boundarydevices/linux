@@ -917,7 +917,7 @@
 
 		mmc0: mmc@11230000 {
 			compatible = "mediatek,mt8195-mmc",
-				     "mediatek,mt8192-mmc";
+				     "mediatek,mt8183-mmc";
 			reg = <0 0x11230000 0 0x10000>,
 			      <0 0x11f50000 0 0x1000>;
 			interrupts = <GIC_SPI 131 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -930,7 +930,7 @@
 
 		mmc1: mmc@11240000 {
 			compatible = "mediatek,mt8195-mmc",
-				     "mediatek,mt8192-mmc";
+				     "mediatek,mt8183-mmc";
 			reg = <0 0x11240000 0 0x1000>,
 			      <0 0x11c70000 0 0x1000>;
 			interrupts = <GIC_SPI 135 IRQ_TYPE_LEVEL_HIGH 0>;
