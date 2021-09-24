@@ -99,6 +99,7 @@ int max77958_bc12_set_charger(struct max77958_usbc_platform_data *usbc_data)
 		switch (bc12_data->chg_type) {
 		case CHGTYP_NOTHING:
 			value.intval = POWER_SUPPLY_TYPE_BATTERY;
+			break;
 		case CHGTYP_USB_SDP:
 		case CHGTYP_CDP:
 			value.intval = POWER_SUPPLY_TYPE_USB;
