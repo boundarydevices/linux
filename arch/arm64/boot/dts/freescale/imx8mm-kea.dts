@@ -122,16 +122,6 @@
 
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
-			MX8MMN(IOMUXC_GPIO1_IO00_GPIO1_IO0, 0x100)	/*   0, LTE_NET_STAT */
-			MX8MMN(IOMUXC_SAI5_RXC_GPIO3_IO20, 0x100)	/*  84, LTE_USIM_DETECT */
-			MX8MMN(IOMUXC_SAI1_RXFS_GPIO4_IO0, 0x100)	/*  96, LTE_RI */
-			MX8MMN(IOMUXC_SAI1_RXC_GPIO4_IO1, 0x140)	/*  97, LTE_STAT */
-			MX8MMN(IOMUXC_SAI1_TXFS_GPIO4_IO10, 0x1c0)	/* 106, LTE_ON_OFF */
-			MX8MMN(IOMUXC_SAI1_TXC_GPIO4_IO11 , 0x180)	/* 107, LTE_WAKE_UP */
-			MX8MMN(IOMUXC_SAI1_TXD0_GPIO4_IO12, 0x100)	/* 108, LTE_NET_MODE */
-			MX8MMN(IOMUXC_SAI1_TXD7_GPIO4_IO19, 0x100)	/* 115, LTE_AP_READY */
-			MX8MMN(IOMUXC_SAI2_MCLK_GPIO4_IO27, 0x100)	/* 123, LTE_USB_BOOT */
-
 			MX8MMN(IOMUXC_SAI3_TXFS_GPIO4_IO31, 0x100)	/* GPO1 */
 			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x100)	/* GPO2 */			
 			MX8MMN(IOMUXC_SAI3_TXD_GPIO5_IO1, 0x100)	/* GPO3 */
@@ -379,6 +369,14 @@
 		>;
 	};
 
+	/* For EC21-ALCC modem */
+	pinctrl_reg_3p7v: reg-3p7vgrp {
+		fsl,pins = <
+#define GP_REG_3P7V	<&gpio4 20 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI1_MCLK_GPIO4_IO20, 0x100)
+		>;
+	};
+
 	pinctrl_reg_usdhc2_vqmmc: reg_usdhc2_vqmmcgrp {
 		fsl,pins = <
 #define GP_USDHC2_VSEL	<&gpio3 2 GPIO_ACTIVE_HIGH>
@@ -442,11 +440,6 @@
 
 	pinctrl_usbotg2: usbotg2grp {
 		fsl,pins = <
-			/* Active low because used as reset */
-#define GP_3P7V_EN		<&gpio4 20 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_SAI1_MCLK_GPIO4_IO20, 0x100)	/* 116, 3P7V_EN */
-#define GP_LTE_RESET		<&gpio4 2 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_SAI1_RXD0_GPIO4_IO2, 0x100)	/*  98, LTE_RESET_N */
 #define GP_OTG2_HUB_RESET        <&gpio5 5 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5, 0x102)
 		>;
@@ -572,6 +565,32 @@
 			MX8MMN(IOMUXC_GPIO1_IO02_WDOG1_WDOG_B, 0x140)
 		>;
 	};
+
+	pinctrl_wwan_rfkill: wwan-rfkillgrp {
+		fsl,pins = <
+			/* EC21 - Modem pins */
+#define GP_EC21_RESET		<&gpio4 2 (GPIO_OPEN_DRAIN | GPIO_ACTIVE_LOW)>
+			MX8MMN(IOMUXC_SAI1_RXD0_GPIO4_IO2, 0x140)	/*  98, LTE_RESET_N */
+#define GP_EC21_USB_BOOT	<&gpio4 27 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI2_MCLK_GPIO4_IO27, 0x100)	/* 123, LTE_USB_BOOT */
+#define GP_EC21_POWER_KEY	<&gpio4 10 GPIO_OPEN_DRAIN>
+			MX8MMN(IOMUXC_SAI1_TXFS_GPIO4_IO10, 0x140)	/* 106, LTE_ON_OFF */
+#define GP_EC21_USIM_DETECT	<&gpio3 20 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI5_RXC_GPIO3_IO20, 0x100)	/*  84, LTE_USIM_DETECT */
+#define GP_EC21_WAKE_UP		<&gpio4 11 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_TXC_GPIO4_IO11 , 0x100)	/* 107, LTE_WAKE_UP */
+#define GP_EC21_AP_READY	<&gpio4 19 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_TXD7_GPIO4_IO19, 0x100)	/* 115, LTE_AP_READY */
+#define GP_EC21_ACTIVE_STATUS	<&gpio4 1 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_RXC_GPIO4_IO1, 0x1c0)	/*  97, LTE_STAT */
+#define GP_EC21_NET_STAT	<&gpio1 0 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO00_GPIO1_IO0, 0x80)	/*   0, LTE_NET_STAT */
+#define GP_EC21_NET_MODE	<&gpio4 12 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI1_TXD0_GPIO4_IO12, 0x80)	/* 108, LTE_NET_MODE */
+#define GP_EC21_RI		<&gpio4 0 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI1_RXFS_GPIO4_IO0, 0x80)	/*  96, LTE_RI */
+		>;
+	};
 };
 
 / {
@@ -680,6 +699,18 @@
 		regulator-max-microvolt = <3300000>;
 	};
 
+	reg_vref_3v7: regulator-vref-3v7 {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_3p7v>;
+		regulator-name = "ec21_3v7";
+		regulator-min-microvolt = <3700000>;
+		regulator-max-microvolt = <3700000>;
+		startup-delay-us = <60000>;
+		gpio = GP_REG_3P7V;
+		enable-active-high;
+	};
+
 	reg_vref_5v: regulator-vref-5v {
 		compatible = "regulator-fixed";
 		regulator-name = "vref-5v";
@@ -697,6 +728,30 @@
 		gpio = GP_REG_WLAN_VMMC;
 		startup-delay-us = <70000>;
 		enable-active-high;
+	};
+
+	wwan_rfkill: wwan-rfkill {
+#if 0
+		/* power-key is not connected, so don't use status */
+		active-status-gpios = GP_EC21_ACTIVE_STATUS;
+#endif
+		compatible = "net,rfkill-gpio";
+#if 1
+		low-gpios = GP_EC21_USB_BOOT;
+		high-gpios = GP_EC21_USIM_DETECT,GP_EC21_WAKE_UP,GP_EC21_AP_READY;
+#else
+		high-gpios = GP_EC21_USB_BOOT,GP_EC21_USIM_DETECT,GP_EC21_WAKE_UP,GP_EC21_AP_READY;
+#endif
+		name = "wwan-rfkill";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wwan_rfkill>;
+		power-key-low-off = <700>;
+		power-key-low-on = <550>;
+		power-key-gpios = GP_EC21_POWER_KEY;
+		reset-gpios = GP_EC21_RESET;
+		status = "okay";
+		type = <5>;     /* WWAN */
+		vdd-supply = <&reg_vref_3v7>;
 	};
 };
 
@@ -1311,7 +1366,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg2>;
 	power-active-high;
-	reset-gpios = GP_3P7V_EN, GP_LTE_RESET, GP_OTG2_HUB_RESET;
+	reset-gpios = GP_OTG2_HUB_RESET;
 	status = "okay";
 };
 
