@@ -196,6 +196,7 @@
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
 			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
+#define GP_TS_GT911_RESET	<&gpio4 10 GPIO_ACTIVE_HIGH>
 #define GP_I2C3_J7_RESET	<&gpio4 10 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x1b0b0
 #define GPIRQ_GT911		<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
@@ -654,6 +655,7 @@
 		interrupts-extended = GPIRQ_GT911;
 		irq-gpios = GP_GT911_IRQ;
 		reg = <0x14>;
+		reset-gpios = GP_TS_GT911_RESET;
 	};
 
 	ts_goodix2: touchscreen@5d {
@@ -662,6 +664,7 @@
 		interrupts-extended = GPIRQ_GT911;
 		irq-gpios = GP_GT911_IRQ;
 		reg = <0x5d>;
+		reset-gpios = GP_TS_GT911_RESET;
 	};
 
 	ts_ili210x: touchscreen@41 {
