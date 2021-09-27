@@ -82,17 +82,20 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 		pr_debug("%s: blocked %s %d\n", __func__, rfkill->name, rfkill->vdd_on);
 		if (rfkill->pinctrl)
 			pinctrl_select_state(rfkill->pinctrl, rfkill->pins_off);
-		if (rfkill->power_key_gpio) {
-			gpiod_set_value_cansleep(rfkill->power_key_gpio, 0);
-			msleep(rfkill->power_key_low_off);
-			gpiod_set_value_cansleep(rfkill->power_key_gpio, 1);
-			msleep(50);	/* allow graceful shutdown */
+		if (rfkill->clk_enabled) {
+			if (rfkill->power_key_gpio) {
+				gpiod_set_value_cansleep(rfkill->power_key_gpio, 0);
+				msleep(rfkill->power_key_low_off);
+				gpiod_set_value_cansleep(rfkill->power_key_gpio, 1);
+				msleep(50);	/* allow graceful shutdown */
+			}
+			wait_for_active_state(rfkill, 0, 40 * HZ);
+			gpiod_set_value_cansleep(rfkill->shutdown_gpio, 1);
+			gpiod_set_value_cansleep(rfkill->reset_gpio, 1);
+
+			if (!IS_ERR(rfkill->clk))
+				clk_disable_unprepare(rfkill->clk);
 		}
-		wait_for_active_state(rfkill, 0, 40 * HZ);
-		gpiod_set_value_cansleep(rfkill->shutdown_gpio, 1);
-		gpiod_set_value_cansleep(rfkill->reset_gpio, 1);
-		if (!IS_ERR(rfkill->clk) && rfkill->clk_enabled)
-			clk_disable_unprepare(rfkill->clk);
 		if (rfkill->vdd && rfkill->vdd_on) {
 			rfkill->vdd_on = false;
 			regulator_disable(rfkill->vdd);
@@ -100,8 +103,6 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 		}
 	} else {
 		pr_debug("%s: unblocked %s %d\n", __func__, rfkill->name, rfkill->vdd_on);
-		if (rfkill->power_key_gpio)
-			gpiod_set_value_cansleep(rfkill->power_key_gpio, 0);
 		if (rfkill->vdd && !rfkill->vdd_on) {
 			ret = regulator_enable(rfkill->vdd);
 			if (ret) {
@@ -113,27 +114,29 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 				pr_debug("%s: %s: vdd on\n", __func__, rfkill->name);
 			}
 		}
-		if (!IS_ERR(rfkill->clk) && !rfkill->clk_enabled)
-			clk_prepare_enable(rfkill->clk);
-		gpiod_set_value_cansleep(rfkill->reset_gpio, 0);
-		gpiod_set_value_cansleep(rfkill->shutdown_gpio, 0);
-		if (rfkill->power_key_gpio) {
-			gpiod_set_value_cansleep(rfkill->power_key_gpio, 1);
-			msleep(2);
-			gpiod_set_value_cansleep(rfkill->power_key_gpio, 0);
-			msleep(rfkill->power_key_low_on);
-			gpiod_set_value_cansleep(rfkill->power_key_gpio, 1);
-		}
-		if (rfkill->pulse_on_gpio) {
-			gpiod_set_value_cansleep(rfkill->pulse_on_gpio, 1);
-			msleep(rfkill->pulse_duration);
-			pr_info("%s:msleep %d\n", __func__, rfkill->pulse_duration);
-			gpiod_set_value_cansleep(rfkill->pulse_on_gpio, 0);
-		}
-		if (rfkill->pinctrl)
-			pinctrl_select_state(rfkill->pinctrl, rfkill->pins_on);
+		if (!rfkill->clk_enabled) {
+			if (!IS_ERR(rfkill->clk))
+				clk_prepare_enable(rfkill->clk);
 
-		wait_for_active_state(rfkill, 1, 5 * HZ);
+			gpiod_set_value_cansleep(rfkill->reset_gpio, 0);
+			gpiod_set_value_cansleep(rfkill->shutdown_gpio, 0);
+			if (rfkill->power_key_gpio) {
+				gpiod_set_value_cansleep(rfkill->power_key_gpio, 1);
+				msleep(2);
+				gpiod_set_value_cansleep(rfkill->power_key_gpio, 0);
+				msleep(rfkill->power_key_low_on);
+				gpiod_set_value_cansleep(rfkill->power_key_gpio, 1);
+			}
+			if (rfkill->pulse_on_gpio) {
+				gpiod_set_value_cansleep(rfkill->pulse_on_gpio, 1);
+				msleep(rfkill->pulse_duration);
+				pr_debug("%s:msleep %d\n", __func__, rfkill->pulse_duration);
+				gpiod_set_value_cansleep(rfkill->pulse_on_gpio, 0);
+			}
+			if (rfkill->pinctrl)
+				pinctrl_select_state(rfkill->pinctrl, rfkill->pins_on);
+			wait_for_active_state(rfkill, 1, 5 * HZ);
+		}
 		if (rfkill->wake_dev)
 			device_for_each_child(rfkill->wake_dev, NULL, wake_fn);
 	}
@@ -260,7 +263,7 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 	ret = of_property_read_u32(dev->of_node, "pulse-duration",
 			&rfkill->pulse_duration);
 
-	gpio = devm_gpiod_get_optional(dev, "power-key", GPIOD_OUT_LOW);
+	gpio = devm_gpiod_get_optional(dev, "power-key", GPIOD_OUT_HIGH);
 	if (IS_ERR(gpio))
 		return PTR_ERR(gpio);
 	rfkill->power_key_gpio = gpio;
