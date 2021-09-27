@@ -187,6 +187,10 @@
 	status = "okay";
 };
 
+&vpu_v4l2 {
+	status = "okay";
+};
+
 &vpumix_pd {
 	dvfs-supply = <&reg_sw5>;
 	idle-microvolt = <850000 805000 900000>;
