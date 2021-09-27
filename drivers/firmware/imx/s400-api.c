@@ -378,7 +378,7 @@ static int s4_muap_ioctl_img_auth_cmd_handler(struct s4_mu_device_ctx *dev_ctx,
 					      unsigned long arg)
 {
 	struct imx_s400_api *s400_muap_priv = dev_ctx->s400_muap_priv;
-	struct s4_muap_auth_image s4_muap_auth_image;
+	struct s4_muap_auth_image s4_muap_auth_image = {0};
 	struct container_hdr *phdr = &s4_muap_auth_image.chdr;
 	struct image_info *img = &s4_muap_auth_image.img_info[0];
 	unsigned long base_addr = (unsigned long) &s4_muap_auth_image;
