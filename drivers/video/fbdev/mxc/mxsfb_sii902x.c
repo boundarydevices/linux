@@ -278,7 +278,7 @@ static void sii902x_cable_connected(void)
 	}
 }
 
-static void det_worker(struct work_struct *work)
+static void handle_cable_status(void)
 {
 	int dat;
 	char event_string[16];
@@ -307,6 +307,11 @@ static void det_worker(struct work_struct *work)
 
 	dev_dbg(&sii902x.client->dev, "exit %s\n", __func__);
 
+}
+
+static void det_worker(struct work_struct *work)
+{
+	handle_cable_status();
 }
 
 static irqreturn_t sii902x_detect_handler(int irq, void *data)
@@ -340,10 +345,8 @@ static int sii902x_fb_event(struct notifier_block *nb, unsigned long val, void *
 
 	switch (val) {
 	case FB_EVENT_FB_REGISTERED:
-		/* Manually trigger a plugin/plugout interrupter */
-		schedule_delayed_work(&(sii902x.det_work), 0);
-		/* Dealy 20ms to wait cable states detected */
-		msleep(20);
+		/* check cable status */
+		handle_cable_status();
 		fb_show_logo(fbi, 0);
 
 		break;
