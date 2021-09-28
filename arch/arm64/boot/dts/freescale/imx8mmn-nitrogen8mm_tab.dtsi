@@ -64,15 +64,6 @@
 		>;
 	};
 
-	pinctrl_i2c1_pf8100: i2c1-pf8100grp {
-		fsl,pins = <
-#define GP_I2C1_PF8100_EWARN	<&gpio3 3 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_NAND_CE2_B_GPIO3_IO3, 0x149)
-#define GP_I2C1_PF8100_FAULT	<&gpio3 4 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_NAND_CE3_B_GPIO3_IO4, 0x149)
-		>;
-	};
-
 	pinctrl_i2c1_max77975: i2c1-max77975grp {
 		fsl,pins = <
 #define GPIRQ_MAX77975	<&gpio3 19 IRQ_TYPE_LEVEL_LOW>
@@ -81,6 +72,15 @@
 			MX8MMN(IOMUXC_SAI5_RXD3_GPIO3_IO24, 0x06)
 #define GP_SUSPEND	<&gpio5 12 GPIO_ACTIVE_HIGH>
 			MX8MMN(IOMUXC_ECSPI2_MISO_GPIO5_IO12, 0x06)
+		>;
+	};
+
+	pinctrl_i2c1_pf8100: i2c1-pf8100grp {
+		fsl,pins = <
+#define GP_I2C1_PF8100_EWARN	<&gpio3 3 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_NAND_CE2_B_GPIO3_IO3, 0x149)
+#define GP_I2C1_PF8100_FAULT	<&gpio3 4 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_NAND_CE3_B_GPIO3_IO4, 0x149)
 		>;
 	};
 
