@@ -23,6 +23,7 @@
 #include "../ops.h"
 #include "../sof-audio.h"
 #include "imx-common.h"
+#include "imx-ops.h"
 
 #define MBOX_OFFSET	0x800000
 #define MBOX_SIZE	0x1000

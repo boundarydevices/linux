@@ -24,6 +24,7 @@
 #include "../ops.h"
 #include "../sof-audio.h"
 #include "imx-common.h"
+#include "imx-ops.h"
 
 /* DSP memories */
 #define IRAM_OFFSET		0x10000
