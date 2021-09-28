@@ -69,9 +69,6 @@
 
 #define GPC_PU_PWRHSK			0x1fc
 
-#define IMX8M_GPU_HSK_PWRDNACKN			BIT(26)
-#define IMX8M_VPU_HSK_PWRDNACKN			BIT(25)
-#define IMX8M_DISP_HSK_PWRDNACKN		BIT(24)
 #define IMX8M_GPU_HSK_PWRDNREQN			BIT(6)
 #define IMX8M_VPU_HSK_PWRDNREQN			BIT(5)
 #define IMX8M_DISP_HSK_PWRDNREQN		BIT(4)
@@ -103,11 +100,13 @@
 
 #define GPC_PGC_CTRL_PCR		BIT(0)
 
+#define GPC_CLK_MAX		6
+
 struct imx_pgc_domain {
 	struct generic_pm_domain genpd;
 	struct regmap *regmap;
 	struct regulator *regulator;
-	struct clk_bulk_data *clks;
+	struct clk *clk[GPC_CLK_MAX];
 	int num_clks;
 
 	unsigned int pgc;
@@ -115,8 +114,7 @@ struct imx_pgc_domain {
 	const struct {
 		u32 pxx;
 		u32 map;
-		u32 hskreq;
-		u32 hskack;
+		u32 hsk;
 	} bits;
 
 	const int voltage;
@@ -129,149 +127,96 @@ struct imx_pgc_domain_data {
 	const struct regmap_access_table *reg_access_table;
 };
 
-static inline struct imx_pgc_domain *
-to_imx_pgc_domain(struct generic_pm_domain *genpd)
+static int imx_gpc_pu_pgc_sw_pxx_req(struct generic_pm_domain *genpd,
+				      bool on)
 {
-	return container_of(genpd, struct imx_pgc_domain, genpd);
-}
+	struct imx_pgc_domain *domain = container_of(genpd,
+						      struct imx_pgc_domain,
+						      genpd);
+	unsigned int offset = on ?
+		GPC_PU_PGC_SW_PUP_REQ : GPC_PU_PGC_SW_PDN_REQ;
+	const bool enable_power_control = !on;
+	const bool has_regulator = !IS_ERR(domain->regulator);
+	int i, ret = 0;
+	u32 pxx_req;
 
-static int imx_pgc_power_up(struct generic_pm_domain *genpd)
-{
-	struct imx_pgc_domain *domain = to_imx_pgc_domain(genpd);
-	u32 reg_val;
-	int ret;
+	regmap_update_bits(domain->regmap, GPC_PGC_CPU_MAPPING,
+			   domain->bits.map, domain->bits.map);
 
-	if (!IS_ERR(domain->regulator)) {
+	if (has_regulator && on) {
 		ret = regulator_enable(domain->regulator);
 		if (ret) {
 			dev_err(domain->dev, "failed to enable regulator\n");
-			return ret;
+			goto unmap;
 		}
 	}
 
 	/* Enable reset clocks for all devices in the domain */
-	ret = clk_bulk_prepare_enable(domain->num_clks, domain->clks);
-	if (ret) {
-		dev_err(domain->dev, "failed to enable reset clocks\n");
-		goto out_regulator_disable;
-	}
+	for (i = 0; i < domain->num_clks; i++)
+		clk_prepare_enable(domain->clk[i]);
 
-	/* request the domain to power up */
-	regmap_update_bits(domain->regmap, GPC_PU_PGC_SW_PUP_REQ,
+	if (enable_power_control)
+		regmap_update_bits(domain->regmap, GPC_PGC_CTRL(domain->pgc),
+				   GPC_PGC_CTRL_PCR, GPC_PGC_CTRL_PCR);
+
+	if (domain->bits.hsk)
+		regmap_update_bits(domain->regmap, GPC_PU_PWRHSK,
+				   domain->bits.hsk, on ? domain->bits.hsk : 0);
+
+	regmap_update_bits(domain->regmap, offset,
 			   domain->bits.pxx, domain->bits.pxx);
+
 	/*
 	 * As per "5.5.9.4 Example Code 4" in IMX7DRM.pdf wait
 	 * for PUP_REQ/PDN_REQ bit to be cleared
 	 */
-	ret = regmap_read_poll_timeout(domain->regmap, GPC_PU_PGC_SW_PUP_REQ,
-				       reg_val, !(reg_val & domain->bits.pxx),
+	ret = regmap_read_poll_timeout(domain->regmap, offset, pxx_req,
+				       !(pxx_req & domain->bits.pxx),
 				       0, USEC_PER_MSEC);
 	if (ret) {
 		dev_err(domain->dev, "failed to command PGC\n");
-		goto out_clk_disable;
-	}
-
-	/* disable power control */
-	regmap_clear_bits(domain->regmap, GPC_PGC_CTRL(domain->pgc),
-			  GPC_PGC_CTRL_PCR);
-
-	/* request the ADB400 to power up */
-	if (domain->bits.hskreq) {
-		regmap_update_bits(domain->regmap, GPC_PU_PWRHSK,
-				   domain->bits.hskreq, domain->bits.hskreq);
-
 		/*
-		 * ret = regmap_read_poll_timeout(domain->regmap, GPC_PU_PWRHSK, reg_val,
-		 *				  (reg_val & domain->bits.hskack), 0,
-		 *				  USEC_PER_MSEC);
-		 * Technically we need the commented code to wait handshake. But that needs
-		 * the BLK-CTL module BUS clk-en bit being set.
-		 *
-		 * There is a separate BLK-CTL module and we will have such a driver for it,
-		 * that driver will set the BUS clk-en bit and handshake will be triggered
-		 * automatically there. Just add a delay and suppose the handshake finish
-		 * after that.
+		 * If we were in a process of enabling a
+		 * domain and failed we might as well disable
+		 * the regulator we just enabled. And if it
+		 * was the opposite situation and we failed to
+		 * power down -- keep the regulator on
 		 */
+		on = !on;
 	}
+
+	if (enable_power_control)
+		regmap_update_bits(domain->regmap, GPC_PGC_CTRL(domain->pgc),
+				   GPC_PGC_CTRL_PCR, 0);
 
 	/* Disable reset clocks for all devices in the domain */
-	clk_bulk_disable_unprepare(domain->num_clks, domain->clks);
+	for (i = 0; i < domain->num_clks; i++)
+		clk_disable_unprepare(domain->clk[i]);
 
-	return 0;
+	if (has_regulator && !on) {
+		int err;
 
-out_clk_disable:
-	clk_bulk_disable_unprepare(domain->num_clks, domain->clks);
-out_regulator_disable:
-	if (!IS_ERR(domain->regulator))
-		regulator_disable(domain->regulator);
-
+		err = regulator_disable(domain->regulator);
+		if (err)
+			dev_err(domain->dev,
+				"failed to disable regulator: %d\n", err);
+		/* Preserve earlier error code */
+		ret = ret ?: err;
+	}
+unmap:
+	regmap_update_bits(domain->regmap, GPC_PGC_CPU_MAPPING,
+			   domain->bits.map, 0);
 	return ret;
 }
 
-static int imx_pgc_power_down(struct generic_pm_domain *genpd)
+static int imx_gpc_pu_pgc_sw_pup_req(struct generic_pm_domain *genpd)
 {
-	struct imx_pgc_domain *domain = to_imx_pgc_domain(genpd);
-	u32 reg_val;
-	int ret;
+	return imx_gpc_pu_pgc_sw_pxx_req(genpd, true);
+}
 
-	/* Enable reset clocks for all devices in the domain */
-	ret = clk_bulk_prepare_enable(domain->num_clks, domain->clks);
-	if (ret) {
-		dev_err(domain->dev, "failed to enable reset clocks\n");
-		return ret;
-	}
-
-	/* request the ADB400 to power down */
-	if (domain->bits.hskreq) {
-		regmap_clear_bits(domain->regmap, GPC_PU_PWRHSK,
-				  domain->bits.hskreq);
-
-		ret = regmap_read_poll_timeout(domain->regmap, GPC_PU_PWRHSK,
-					       reg_val,
-					       !(reg_val & domain->bits.hskack),
-					       0, USEC_PER_MSEC);
-		if (ret) {
-			dev_err(domain->dev, "failed to power down ADB400\n");
-			goto out_clk_disable;
-		}
-	}
-
-	/* enable power control */
-	regmap_update_bits(domain->regmap, GPC_PGC_CTRL(domain->pgc),
-			   GPC_PGC_CTRL_PCR, GPC_PGC_CTRL_PCR);
-
-	/* request the domain to power down */
-	regmap_update_bits(domain->regmap, GPC_PU_PGC_SW_PDN_REQ,
-			   domain->bits.pxx, domain->bits.pxx);
-	/*
-	 * As per "5.5.9.4 Example Code 4" in IMX7DRM.pdf wait
-	 * for PUP_REQ/PDN_REQ bit to be cleared
-	 */
-	ret = regmap_read_poll_timeout(domain->regmap, GPC_PU_PGC_SW_PDN_REQ,
-				       reg_val, !(reg_val & domain->bits.pxx),
-				       0, USEC_PER_MSEC);
-	if (ret) {
-		dev_err(domain->dev, "failed to command PGC\n");
-		goto out_clk_disable;
-	}
-
-	/* Disable reset clocks for all devices in the domain */
-	clk_bulk_disable_unprepare(domain->num_clks, domain->clks);
-
-	if (!IS_ERR(domain->regulator)) {
-		ret = regulator_disable(domain->regulator);
-		if (ret) {
-			dev_err(domain->dev, "failed to disable regulator\n");
-			return ret;
-		}
-	}
-
-	return 0;
-
-out_clk_disable:
-	clk_bulk_disable_unprepare(domain->num_clks, domain->clks);
-
-	return ret;
+static int imx_gpc_pu_pgc_sw_pdn_req(struct generic_pm_domain *genpd)
+{
+	return imx_gpc_pu_pgc_sw_pxx_req(genpd, false);
 }
 
 static const struct imx_pgc_domain imx7_pgc_domains[] = {
@@ -397,8 +342,7 @@ static const struct imx_pgc_domain imx8m_pgc_domains[] = {
 		.bits  = {
 			.pxx = IMX8M_GPU_SW_Pxx_REQ,
 			.map = IMX8M_GPU_A53_DOMAIN,
-			.hskreq = IMX8M_GPU_HSK_PWRDNREQN,
-			.hskack = IMX8M_GPU_HSK_PWRDNACKN,
+			.hsk = IMX8M_GPU_HSK_PWRDNREQN,
 		},
 		.pgc   = IMX8M_PGC_GPU,
 	},
@@ -410,8 +354,7 @@ static const struct imx_pgc_domain imx8m_pgc_domains[] = {
 		.bits  = {
 			.pxx = IMX8M_VPU_SW_Pxx_REQ,
 			.map = IMX8M_VPU_A53_DOMAIN,
-			.hskreq = IMX8M_VPU_HSK_PWRDNREQN,
-			.hskack = IMX8M_VPU_HSK_PWRDNACKN,
+			.hsk = IMX8M_VPU_HSK_PWRDNREQN,
 		},
 		.pgc   = IMX8M_PGC_VPU,
 	},
@@ -423,8 +366,7 @@ static const struct imx_pgc_domain imx8m_pgc_domains[] = {
 		.bits  = {
 			.pxx = IMX8M_DISP_SW_Pxx_REQ,
 			.map = IMX8M_DISP_A53_DOMAIN,
-			.hskreq = IMX8M_DISP_HSK_PWRDNREQN,
-			.hskack = IMX8M_DISP_HSK_PWRDNACKN,
+			.hsk = IMX8M_DISP_HSK_PWRDNREQN,
 		},
 		.pgc   = IMX8M_PGC_DISP,
 	},
@@ -501,6 +443,41 @@ static const struct imx_pgc_domain_data imx8m_pgc_domain_data = {
 	.reg_access_table = &imx8m_access_table,
 };
 
+static int imx_pgc_get_clocks(struct imx_pgc_domain *domain)
+{
+	int i, ret;
+
+	for (i = 0; ; i++) {
+		struct clk *clk = of_clk_get(domain->dev->of_node, i);
+		if (IS_ERR(clk))
+			break;
+		if (i >= GPC_CLK_MAX) {
+			dev_err(domain->dev, "more than %d clocks\n",
+				GPC_CLK_MAX);
+			ret = -EINVAL;
+			goto clk_err;
+		}
+		domain->clk[i] = clk;
+	}
+	domain->num_clks = i;
+
+	return 0;
+
+clk_err:
+	while (i--)
+		clk_put(domain->clk[i]);
+
+	return ret;
+}
+
+static void imx_pgc_put_clocks(struct imx_pgc_domain *domain)
+{
+	int i;
+
+	for (i = domain->num_clks - 1; i >= 0; i--)
+		clk_put(domain->clk[i]);
+}
+
 static int imx_pgc_domain_probe(struct platform_device *pdev)
 {
 	struct imx_pgc_domain *domain = pdev->dev.platform_data;
@@ -518,34 +495,24 @@ static int imx_pgc_domain_probe(struct platform_device *pdev)
 				      domain->voltage, domain->voltage);
 	}
 
-	domain->num_clks = devm_clk_bulk_get_all(domain->dev, &domain->clks);
-	if (domain->num_clks < 0)
-		return dev_err_probe(domain->dev, domain->num_clks,
-				     "Failed to get domain's clocks\n");
-
-	regmap_update_bits(domain->regmap, GPC_PGC_CPU_MAPPING,
-			   domain->bits.map, domain->bits.map);
+	ret = imx_pgc_get_clocks(domain);
+	if (ret)
+		return dev_err_probe(domain->dev, ret, "Failed to get domain's clocks\n");
 
 	ret = pm_genpd_init(&domain->genpd, NULL, true);
 	if (ret) {
 		dev_err(domain->dev, "Failed to init power domain\n");
-		goto out_domain_unmap;
+		imx_pgc_put_clocks(domain);
+		return ret;
 	}
 
 	ret = of_genpd_add_provider_simple(domain->dev->of_node,
 					   &domain->genpd);
 	if (ret) {
 		dev_err(domain->dev, "Failed to add genpd provider\n");
-		goto out_genpd_remove;
+		pm_genpd_remove(&domain->genpd);
+		imx_pgc_put_clocks(domain);
 	}
-
-	return 0;
-
-out_genpd_remove:
-	pm_genpd_remove(&domain->genpd);
-out_domain_unmap:
-	regmap_update_bits(domain->regmap, GPC_PGC_CPU_MAPPING,
-			   domain->bits.map, 0);
 
 	return ret;
 }
@@ -556,9 +523,7 @@ static int imx_pgc_domain_remove(struct platform_device *pdev)
 
 	of_genpd_del_provider(domain->dev->of_node);
 	pm_genpd_remove(&domain->genpd);
-
-	regmap_update_bits(domain->regmap, GPC_PGC_CPU_MAPPING,
-			   domain->bits.map, 0);
+	imx_pgc_put_clocks(domain);
 
 	return 0;
 }
@@ -652,8 +617,8 @@ static int imx_gpcv2_probe(struct platform_device *pdev)
 
 		domain = pd_pdev->dev.platform_data;
 		domain->regmap = regmap;
-		domain->genpd.power_on  = imx_pgc_power_up;
-		domain->genpd.power_off = imx_pgc_power_down;
+		domain->genpd.power_on  = imx_gpc_pu_pgc_sw_pup_req;
+		domain->genpd.power_off = imx_gpc_pu_pgc_sw_pdn_req;
 
 		pd_pdev->dev.parent = dev;
 		pd_pdev->dev.of_node = np;
