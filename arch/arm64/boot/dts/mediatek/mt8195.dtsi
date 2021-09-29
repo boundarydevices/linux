@@ -1473,7 +1473,7 @@
 			u2port1: usb-phy@0 {
 				reg = <0x0 0x700>;
 				clocks = <&topckgen CLK_TOP_SSUSB_PHY_P1_REF>,
-					 <&clk26m>;
+					 <&apmixedsys CLK_APMIXED_USB1PLL>;
 				clock-names = "ref", "da_ref";
 				#phy-cells = <1>;
 			};
@@ -1497,7 +1497,7 @@
 			u2port0: usb-phy@0 {
 				reg = <0x0 0x700>;
 				clocks = <&topckgen CLK_TOP_SSUSB_PHY_REF>,
-					 <&clk26m>;
+					 <&apmixedsys CLK_APMIXED_USB1PLL>;
 				clock-names = "ref", "da_ref";
 				#phy-cells = <1>;
 			};
