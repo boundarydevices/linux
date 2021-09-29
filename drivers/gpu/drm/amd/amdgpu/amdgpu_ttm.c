@@ -897,7 +897,7 @@ static int amdgpu_ttm_backend_bind(struct ttm_device *bdev,
 			DRM_ERROR("failed to pin userptr\n");
 			return r;
 		}
-	} else if (ttm->page_flags & TTM_PAGE_FLAG_SG) {
+	} else if (ttm->page_flags & TTM_TT_FLAG_EXTERNAL) {
 		if (!ttm->sg) {
 			struct dma_buf_attachment *attach;
 			struct sg_table *sgt;
@@ -1133,7 +1133,7 @@ static int amdgpu_ttm_tt_populate(struct ttm_device *bdev,
 		return 0;
 	}
 
-	if (ttm->page_flags & TTM_PAGE_FLAG_SG)
+	if (ttm->page_flags & TTM_TT_FLAG_EXTERNAL)
 		return 0;
 
 	return ttm_pool_alloc(&adev->mman.bdev.pool, ttm, ctx);
@@ -1158,7 +1158,7 @@ static void amdgpu_ttm_tt_unpopulate(struct ttm_device *bdev,
 		return;
 	}
 
-	if (ttm->page_flags & TTM_PAGE_FLAG_SG)
+	if (ttm->page_flags & TTM_TT_FLAG_EXTERNAL)
 		return;
 
 	adev = amdgpu_ttm_adev(bdev);
@@ -1188,8 +1188,8 @@ int amdgpu_ttm_tt_set_userptr(struct ttm_buffer_object *bo,
 			return -ENOMEM;
 	}
 
-	/* Set TTM_PAGE_FLAG_SG before populate but after create. */
-	bo->ttm->page_flags |= TTM_PAGE_FLAG_SG;
+	/* Set TTM_TT_FLAG_EXTERNAL before populate but after create. */
+	bo->ttm->page_flags |= TTM_TT_FLAG_EXTERNAL;
 
 	gtt = (void *)bo->ttm;
 	gtt->userptr = addr;
