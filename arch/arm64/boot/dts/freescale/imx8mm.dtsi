@@ -258,6 +258,20 @@
 		};
 
 		/* GPU SS */
+		gpu_opp_table: vpu-opp-table {
+			compatible = "operating-points-v2";
+			dentry-name = "gpu";
+
+			opp-800000000 {
+				opp-hz = /bits/ 64 <800000000>;
+				opp-microvolt = <850000 805000 900000>;
+			};
+			opp-1000000000 {
+				opp-hz = /bits/ 64 <1000000000>;
+				opp-microvolt = <900000 855000 1000000>;
+			};
+		};
+
 		gpumix_pd: gpumix-pd {
 			compatible = "fsl,imx8m-pm-domain";
 			#power-domain-cells = <0>;
@@ -267,6 +281,7 @@
 				 <&clk IMX8MM_CLK_GPU_AHB>,
 				 <&clk IMX8MM_CLK_GPU2D_ROOT>,
 				 <&clk IMX8MM_CLK_GPU3D_ROOT>;
+			operating-points-v2 = <0>,<0>,<&gpu_opp_table>,<&gpu_opp_table>;
 		};
 
 		vpu_opp_table_g1: vpu-opp-table-g1 {
