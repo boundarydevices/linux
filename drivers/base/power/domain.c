@@ -2632,6 +2632,16 @@ static struct generic_pm_domain *genpd_get_from_provider(
 	return genpd;
 }
 
+struct generic_pm_domain *of_genpd_get_from_provider(
+					struct of_phandle_args *genpdspec)
+{
+	struct generic_pm_domain *genpd;
+	mutex_lock(&gpd_list_lock);
+	genpd = genpd_get_from_provider(genpdspec);
+	mutex_unlock(&gpd_list_lock);
+	return genpd;
+}
+
 /**
  * of_genpd_add_device() - Add a device to an I/O PM domain
  * @genpdspec: OF phandle args to use for look-up PM domain
