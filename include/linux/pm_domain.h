@@ -333,6 +333,9 @@ struct genpd_onecell_data {
 };
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+struct generic_pm_domain *of_genpd_get_from_provider(
+		struct of_phandle_args *genpdspec);
+
 int of_genpd_add_provider_simple(struct device_node *np,
 				 struct generic_pm_domain *genpd);
 int of_genpd_add_provider_onecell(struct device_node *np,
