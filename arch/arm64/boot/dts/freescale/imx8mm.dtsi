@@ -726,6 +726,20 @@
 				#reset-cells = <1>;
 			};
 
+			gpu_opp_table: gpu-opp-table {
+				compatible = "operating-points-v2";
+				dentry-name = "gpu";
+
+				opp-800000000 {
+					opp-hz = /bits/ 64 <800000000>;
+					opp-microvolt = <850000 805000 900000>;
+				};
+				opp-1000000000 {
+					opp-hz = /bits/ 64 <1000000000>;
+					opp-microvolt = <900000 855000 1000000>;
+				};
+			};
+
 			vpu_opp_table_g1: vpu-opp-table-g1 {
 				compatible = "operating-points-v2";
 				dentry-name = "g1";
@@ -837,6 +851,7 @@
 							 <&clk IMX8MM_CLK_GPU2D_ROOT>,
 							 <&clk IMX8MM_CLK_GPU3D_ROOT>;
 						resets = <&src IMX8MQ_RESET_GPU_RESET>;
+						operating-points-v2 = <0>,<0>,<&gpu_opp_table>,<&gpu_opp_table>;
 						power-domains = <&pgc_gpumix>;
 					};
 
