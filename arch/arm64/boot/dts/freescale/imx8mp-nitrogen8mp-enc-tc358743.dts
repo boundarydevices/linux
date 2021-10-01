@@ -7,6 +7,7 @@
 
 / {
 	model = "Boundary i.MX 8M Plus Nitrogen8MP ENC + TC358743 board";
+	compatible = "boundary,imx8mp-nitrogen8mp-enc-tc358743", "fsl,imx8mp";
 
 	clk27m: clk27m {
 		compatible = "fixed-clock";
