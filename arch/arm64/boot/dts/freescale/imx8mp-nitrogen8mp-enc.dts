@@ -7,6 +7,7 @@
 
 / {
 	model = "Boundary i.MX 8M Plus Nitrogen8MP ENC board";
+	compatible = "boundary,imx8mp-nitrogen8mp-enc", "fsl,imx8mp";
 
 	/delete-node/ regulator-can2-stby;
 
