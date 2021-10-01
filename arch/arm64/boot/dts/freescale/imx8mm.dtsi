@@ -258,7 +258,7 @@
 		};
 
 		/* GPU SS */
-		gpu_opp_table: vpu-opp-table {
+		gpu_opp_table: gpu-opp-table {
 			compatible = "operating-points-v2";
 			dentry-name = "gpu";
 
