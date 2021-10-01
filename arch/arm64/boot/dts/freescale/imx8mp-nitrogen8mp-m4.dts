@@ -8,6 +8,9 @@
 #include "imx8mp-nitrogen8mp.dts"
 
 / {
+	model = "Boundary i.MX 8M Plus Nitrogen8MP board (M-core)";
+	compatible = "boundary,imx8mp-nitrogen8mp-m4", "fsl,imx8mp";
+
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;
