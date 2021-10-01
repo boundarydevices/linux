@@ -2095,7 +2095,7 @@ static int btusb_recv_bulk_intel(struct btusb_data *data, void *buffer,
 
 static int btusb_recv_event_intel(struct btusb_data *data, struct sk_buff *skb)
 {
-    struct hci_dev *hdev = data->hdev;
+	struct hci_dev *hdev = data->hdev;
 
 	if (btintel_test_flag(hdev, INTEL_BOOTLOADER)) {
 		struct hci_event_hdr *hdr = (void *)skb->data;
@@ -3173,7 +3173,7 @@ static int btusb_setup_qca_load_nvm(struct hci_dev *hdev,
 	char fwname[64];
 	int err;
 
-    btusb_generate_qca_nvm_name(fwname, sizeof(fwname), ver);
+	btusb_generate_qca_nvm_name(fwname, sizeof(fwname), ver);
 
 	err = request_firmware(&fw, fwname, &hdev->dev);
 	if (err) {
@@ -3417,11 +3417,20 @@ static void btusb_check_needs_reset_resume(struct usb_interface *intf)
 		interface_to_usbdev(intf)->quirks |= USB_QUIRK_RESET_RESUME;
 }
 
-static bool btusb_prevent_wake(struct hci_dev *hdev)
+static bool btusb_wakeup(struct hci_dev *hdev)
 {
 	struct btusb_data *data = hci_get_drvdata(hdev);
 
-	return !device_may_wakeup(&data->udev->dev);
+	return device_may_wakeup(&data->udev->dev);
+}
+
+static int btusb_recv_evt(struct btusb_data *data, struct sk_buff *skb)
+{
+	if (!enable_interval)
+		return hci_recv_frame(data->hdev, skb);
+
+	/* Don't delay event processing */
+	return btusb_rx_queue(data, skb, &data->evt_q, 0);
 }
 
 static int btusb_shutdown_qca(struct hci_dev *hdev)
@@ -3525,6 +3534,7 @@ static int btusb_probe(struct usb_interface *intf,
 
 	skb_queue_head_init(&data->acl_q);
 	skb_queue_head_init(&data->evt_q);
+
 	init_usb_anchor(&data->deferred);
 	init_usb_anchor(&data->tx_anchor);
 	spin_lock_init(&data->txlock);
@@ -3897,7 +3907,9 @@ static int btusb_suspend(struct usb_interface *intf, pm_message_t message)
 		    device_can_wakeup(&data->udev->dev))
 			data->udev->do_remote_wakeup = 1;
 		else if (!PMSG_IS_AUTO(message) &&
-			 !device_may_wakeup(&data->udev->dev)) {
+			 (!device_may_wakeup(&data->udev->dev) ||
+			  test_bit(HCI_QUIRK_DISABLE_REMOTE_WAKE,
+				   &data->hdev->quirks))) {
 			data->udev->do_remote_wakeup = 0;
 			data->udev->reset_resume = 1;
 		}
@@ -4026,6 +4038,7 @@ MODULE_PARM_DESC(enable_autosuspend, "Enable USB autosuspend by default");
 
 module_param(enable_interval, bool, 0644);
 MODULE_PARM_DESC(enable_interval, "Enable USB polling interval by default");
+
 module_param(reset, bool, 0644);
 MODULE_PARM_DESC(reset, "Send HCI reset command on initialization");
 
