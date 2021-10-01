@@ -878,7 +878,7 @@ static void mx6s_csi_disable(struct mx6s_csi_dev *csi_dev)
 static int mx6s_configure_csi(struct mx6s_csi_dev *csi_dev)
 {
 	struct v4l2_pix_format *pix = &csi_dev->pix;
-	u32 cr1, cr3, cr18;
+	u32 cr1, cr3, cr18 = 0;
 	u32 width;
 
 	cr1 = csi_read(csi_dev, CSI_CSICR1);
