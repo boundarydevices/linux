@@ -23,7 +23,6 @@
 #define AIU_CLK_CTRL_AOCLK_INVERT	BIT(6)
 #define AIU_CLK_CTRL_LRCLK_INVERT	BIT(7)
 #define AIU_CLK_CTRL_LRCLK_SKEW		GENMASK(9, 8)
-#define AIU_CLK_CTRL_MORE_HDMI_AMCLK	BIT(6)
 #define AIU_CLK_CTRL_MORE_I2S_DIV	GENMASK(5, 0)
 #define AIU_CODEC_DAC_LRCLK_CTRL_DIV	GENMASK(11, 0)
 
@@ -175,11 +174,6 @@ static int aiu_encoder_i2s_set_clocks(struct snd_soc_component *component,
 
 	if (ret)
 		return ret;
-
-	/* Make sure amclk is used for HDMI i2s as well */
-	snd_soc_component_update_bits(component, AIU_CLK_CTRL_MORE,
-				      AIU_CLK_CTRL_MORE_HDMI_AMCLK,
-				      AIU_CLK_CTRL_MORE_HDMI_AMCLK);
 
 	return 0;
 }
