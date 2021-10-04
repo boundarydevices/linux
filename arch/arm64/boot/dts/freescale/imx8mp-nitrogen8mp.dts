@@ -788,8 +788,16 @@
 	};
 
 	reserved-memory {
-		linux,cma {
-			size = <0 0x20000000>;
+		isp0@82400000 {
+			reg = <0 0 0 0>;
+		};
+
+		dsp@92400000 {
+			reg = <0 0 0 0>;
+		};
+
+		unmapped {
+			reg = <0 0 0 0>;
 		};
 	};
 
