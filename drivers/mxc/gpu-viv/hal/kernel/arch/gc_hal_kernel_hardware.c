@@ -13701,13 +13701,14 @@ gckHARDWARE_ExecuteFunctions(
 #if gcdGPU_TIMEOUT
             if (timer >= hardware->kernel->timeOut)
             {
+#if 0
                 gckHARDWARE_DumpGPUState(hardware);
 
                 if (hardware->kernel->command)
                 {
                     gckCOMMAND_DumpExecutingBuffer(hardware->kernel->command);
                 }
-
+#endif
                 /* Even if hardware is not reset correctly, let software
                 ** continue to avoid software stuck. Software will timeout again
                 ** and try to recover GPU in next timeout.
