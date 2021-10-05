@@ -939,7 +939,7 @@
 				 <&mmsys CLK_MM_MM_DPI0>,
 				 <&apmixedsys CLK_APMIXED_LVDSPLL>,
 				 <&topckgen CLK_TOP_DPI0_SEL>;
-			clock-names = "pixel", "engine", "pll", "dpi_sel";
+			clock-names = "dpi_sel", "engine", "pll", "pixel";
 			assigned-clocks = <&topckgen CLK_TOP_DPI0_SEL>;
 			assigned-clock-parents = <&topckgen CLK_TOP_LVDSPLL_D4>;
 			status = "disabled";
