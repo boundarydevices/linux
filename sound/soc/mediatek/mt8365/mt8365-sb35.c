@@ -47,17 +47,10 @@ struct mt8365_sb35_dmic_ctrl_data {
 	unsigned int fix_bit_width;
 };
 
-struct mt8365_sb35_tdm_ctrl_data {
-	unsigned int tdmin_fix_rate;
-	unsigned int tdmin_fix_bit_width;
-	unsigned int tdmin_fix_channels;
-};
-
 struct mt8365_sb35_priv {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pin_states[PIN_STATE_MAX];
 	struct mt8365_sb35_dmic_ctrl_data dmic_data;
-	struct mt8365_sb35_tdm_ctrl_data tdm_data;
 };
 
 struct mt8365_dai_link_prop {
@@ -92,7 +85,6 @@ static int mt8365_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 {
 	struct mt8365_sb35_priv *priv = snd_soc_card_get_drvdata(rtd->card);
 	int id = rtd->dai_link->id;
-	struct mt8365_sb35_tdm_ctrl_data *tdm;
 	struct mt8365_sb35_dmic_ctrl_data *dmic;
 	unsigned int fix_rate = 0;
 	unsigned int fix_bit_width = 0;
@@ -300,7 +292,6 @@ static struct snd_soc_dai_link mt8365_sb35_dais[] = {
 static int mt8365_sb35_gpio_probe(struct snd_soc_card *card)
 {
 	struct mt8365_sb35_priv *priv = snd_soc_card_get_drvdata(card);
-	struct device_node *np = card->dev->of_node;
 	int ret = 0;
 	int i;
 
@@ -388,7 +379,6 @@ static void mt8365_sb35_parse_of(struct snd_soc_card *card,
 		unsigned int link_id = of_dai_links_io[i].link_id;
 		struct snd_soc_dai_link *dai_link = &mt8365_sb35_dais[link_id];
 		struct mt8365_sb35_dmic_ctrl_data *dmic;
-		struct mt8365_sb35_tdm_ctrl_data *tdm;
 
 		/* parse fix rate */
 		snprintf(prop, sizeof(prop), PREFIX"%s-fix-rate",
