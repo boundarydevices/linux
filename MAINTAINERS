@@ -1410,6 +1410,15 @@ L:	alsa-devel@alsa-project.org (moderated for non-subscribers)
 S:	Maintained
 F:	sound/aoa/
 
+AP1302 ON SEMICONDUCTOR CAMERA ISP
+M:	Laurent Pinchart <laurent.pinchart@ideasonboard.com>
+M:	Julien STEPHAN <jstephan@baylibre.com>
+L:	linux-media@vger.kernel.org
+S:	Maintained
+T:	git git://linuxtv.org/media_tree.git
+F:	Documentation/devicetree/bindings/media/i2c/onnn,ap1302.yaml
+F:	drivers/media/i2c/ap1302.c
+
 APEX EMBEDDED SYSTEMS STX104 IIO DRIVER
 M:	William Breathitt Gray <william.gray@linaro.org>
 L:	linux-iio@vger.kernel.org
