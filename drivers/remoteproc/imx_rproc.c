@@ -1074,7 +1074,8 @@ static int imx_rproc_detect_mode(struct imx_rproc *priv)
 						 &priv->mub_partition))
 				priv->mub_partition = 3;
 
-			ret = imx_scu_irq_group_enable(5, BIT(priv->mub_partition), true);
+			ret = imx_scu_irq_group_enable(IMX_SC_IRQ_GROUP_REBOOTED,
+					BIT(priv->mub_partition), true);
 			if (ret) {
 				dev_warn(dev, "Enable irq failed.\n");
 				goto err_put_pd;
@@ -1082,7 +1083,8 @@ static int imx_rproc_detect_mode(struct imx_rproc *priv)
 
 			ret = imx_scu_irq_register_notifier(&priv->proc_nb);
 			if (ret) {
-				imx_scu_irq_group_enable(5, BIT(priv->mub_partition), false);
+				imx_scu_irq_group_enable(IMX_SC_IRQ_GROUP_REBOOTED,
+					BIT(priv->mub_partition), false);
 				dev_warn(dev, "reqister scu notifier failed.\n");
 				goto err_put_pd;
 			}
