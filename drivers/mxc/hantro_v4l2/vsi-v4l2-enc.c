@@ -1600,6 +1600,7 @@ struct video_device *vsi_v4l2_probe_enc(struct platform_device *pdev, struct vsi
 	venc->vfl_dir = VFL_DIR_M2M;
 	venc->vfl_type = VSI_DEVTYPE;
 	venc->queue = NULL;
+	sprintf(venc->name, "vsi-v4l2-enc");
 
 	video_set_drvdata(venc, vpu);
 
