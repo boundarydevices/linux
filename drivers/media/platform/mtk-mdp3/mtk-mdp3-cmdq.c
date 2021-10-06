@@ -132,7 +132,8 @@ static int mdp_path_subfrm_require(struct mdp_path_subfrm *subfrm,
 
 	/* Set mutex modules */
 	if (subfrm->mutex_mod)
-		mtk_mutex_add_mod_by_cmdq(mutex[mutex_id], subfrm->mutex_mod, cmd);
+		mtk_mutex_add_mod_by_cmdq(mutex[mutex_id], subfrm->mutex_mod,
+			       0, 0, cmd);
 
 	return 0;
 }

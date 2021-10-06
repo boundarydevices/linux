@@ -17,7 +17,7 @@ int mtk_mutex_prepare(struct mtk_mutex *mutex);
 void mtk_mutex_add_comp(struct mtk_mutex *mutex,
 			enum mtk_ddp_comp_id id);
 void mtk_mutex_add_mod_by_cmdq(struct mtk_mutex *mutex, u32 mod,
-			       struct mmsys_cmdq_cmd *cmd);
+			       u32 mod1, u32 sof, struct mmsys_cmdq_cmd *cmd);
 void mtk_mutex_enable(struct mtk_mutex *mutex);
 void mtk_mutex_enable_by_cmdq(struct mtk_mutex *mutex,
 			      struct mmsys_cmdq_cmd *cmd);

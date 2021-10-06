@@ -30,8 +30,9 @@
 #define DISP_REG_MUTEX_EN(n)			(0x20 + 0x20 * (n))
 #define DISP_REG_MUTEX(n)			(0x24 + 0x20 * (n))
 #define DISP_REG_MUTEX_RST(n)			(0x28 + 0x20 * (n))
-#define DISP_REG_MUTEX_MOD(mutex_mod_reg, n)	(mutex_mod_reg + 0x20 * (n))
-#define DISP_REG_MUTEX_SOF(mutex_sof_reg, n)	(mutex_sof_reg + 0x20 * (n))
+#define DISP_REG_MUTEX_MOD(mutex_mod_reg, n)	((mutex_mod_reg) + 0x20 * (n))
+#define DISP_REG_MUTEX_MOD1(mutex_mod_reg, n)	((mutex_mod_reg) + 0x20 * (n) + 0x4)
+#define DISP_REG_MUTEX_SOF(mutex_sof_reg, n)	((mutex_sof_reg) + 0x20 * (n))
 #define DISP_REG_MUTEX_MOD2(n)			(0x34 + 0x20 * (n))
 
 #define INT_MUTEX				BIT(1)
@@ -225,6 +226,15 @@
 
 #define MT8183_MUTEX_EOF_DSI0			(MT8183_MUTEX_SOF_DSI0 << 6)
 #define MT8183_MUTEX_EOF_DPI0			(MT8183_MUTEX_SOF_DPI0 << 6)
+#define MT8183_MUTEX_MDP_START			5
+#define MT8183_MUTEX_MDP_MOD_MASK		0x07FFFFFF
+#define MT8183_MUTEX_MDP_SOF_MASK		0x00000007
+
+#define MT8183_MDP_PIPE_IMGI			MT8183_MUTEX_MDP_START
+#define MT8183_MDP_PIPE_RDMA0			(MT8183_MUTEX_MDP_START + 1)
+#define MT8183_MDP_PIPE_WPEI			(MT8183_MUTEX_MDP_START + 2)
+#define MT8183_MDP_PIPE_WPEI2			(MT8183_MUTEX_MDP_START + 3)
+
 #define MT8195_MUTEX_EOF_DSI0			(MT8195_MUTEX_SOF_DSI0 << 7)
 #define MT8195_MUTEX_EOF_DSI1			(MT8195_MUTEX_SOF_DSI1 << 7)
 #define MT8195_MUTEX_EOF_DP_INTF0		(MT8195_MUTEX_SOF_DP_INTF0 << 7)
@@ -480,10 +490,10 @@ static const unsigned int mt8183_mutex_sof[DDP_MUTEX_SOF_MAX] = {
 
 /* indicate which mutex is used by each pipepline */
 static const unsigned int mt8183_mutex_mdp_offset[MDP_PIPE_MAX] = {
-	[MDP_PIPE_IMGI] = MT8183_MUTEX_MDP_START,
-	[MDP_PIPE_RDMA0] = MT8183_MUTEX_MDP_START + 1,
-	[MDP_PIPE_WPEI] = MT8183_MUTEX_MDP_START + 2,
-	[MDP_PIPE_WPEI2] = MT8183_MUTEX_MDP_START + 3
+	[MDP_PIPE_IMGI] = MT8183_MDP_PIPE_IMGI,
+	[MDP_PIPE_RDMA0] = MT8183_MDP_PIPE_RDMA0,
+	[MDP_PIPE_WPEI] = MT8183_MDP_PIPE_WPEI,
+	[MDP_PIPE_WPEI2] = MT8183_MDP_PIPE_WPEI2,
 };
 
 static const unsigned int mt8365_mutex_sof[MUTEX_SOF_DSI3 + 1] = {
@@ -781,7 +791,7 @@ void mtk_mutex_remove_comp(struct mtk_mutex *mutex,
 EXPORT_SYMBOL_GPL(mtk_mutex_remove_comp);
 
 void mtk_mutex_add_mod_by_cmdq(struct mtk_mutex *mutex, u32 mod,
-			       struct mmsys_cmdq_cmd *cmd)
+			       u32 mod1, u32 sof, struct mmsys_cmdq_cmd *cmd)
 {
 	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
 						 mutex[mutex->id]);
@@ -793,9 +803,13 @@ void mtk_mutex_add_mod_by_cmdq(struct mtk_mutex *mutex, u32 mod,
 	cmdq_pkt_write_mask(cmd->pkt, mtx->subsys_id, mtx->addr + offset,
 			    mod, mtx->data->mutex_mdp_mod_mask);
 
+	offset = DISP_REG_MUTEX_MOD1(mtx->data->mutex_mod_reg, mutex->id);
+	cmdq_pkt_write_mask(cmd->pkt, mtx->subsys_id, mtx->addr + offset,
+			    mod1, mtx->data->mutex_mdp_mod_mask);
+
 	offset = DISP_REG_MUTEX_SOF(mtx->data->mutex_sof_reg, mutex->id);
 	cmdq_pkt_write_mask(cmd->pkt, mtx->subsys_id, mtx->addr + offset,
-			    0, mtx->data->mutex_mdp_sof_mask);
+			    sof, mtx->data->mutex_mdp_sof_mask);
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_add_mod_by_cmdq);
 
