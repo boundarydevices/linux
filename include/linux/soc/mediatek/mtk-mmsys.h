@@ -85,23 +85,67 @@ enum mtk_mdp_comp_id {
 	/* MDP */
 	MDP_COMP_CAMIN,		/* 9 */
 	MDP_COMP_CAMIN2,	/* 10 */
-	MDP_COMP_RDMA0,		/* 11 */
-	MDP_COMP_AAL0,		/* 12 */
-	MDP_COMP_CCORR0,	/* 13 */
-	MDP_COMP_RSZ0,		/* 14 */
-	MDP_COMP_RSZ1,		/* 15 */
-	MDP_COMP_TDSHP0,	/* 16 */
-	MDP_COMP_COLOR0,	/* 17 */
-	MDP_COMP_PATH0_SOUT,	/* 18 */
-	MDP_COMP_PATH1_SOUT,	/* 19 */
-	MDP_COMP_WROT0,		/* 20 */
-	MDP_COMP_WDMA,		/* 21 */
-
-	/* Dummy Engine */
-	MDP_COMP_RDMA1,		/* 22 */
-	MDP_COMP_RSZ2,		/* 23 */
-	MDP_COMP_TDSHP1,	/* 24 */
-	MDP_COMP_WROT1,		/* 25 */
+	MDP_COMP_SPLIT,           /* 11 */
+	MDP_COMP_SPLIT2,          /* 12 */
+	MDP_COMP_RDMA0,           /* 13 */
+	MDP_COMP_RDMA1,           /* 14 */
+	MDP_COMP_RDMA2,           /* 15 */
+	MDP_COMP_RDMA3,           /* 16 */
+	MDP_COMP_STITCH,          /* 17 */
+	MDP_COMP_FG0,             /* 18 */
+	MDP_COMP_FG1,             /* 19 */
+	MDP_COMP_FG2,             /* 20 */
+	MDP_COMP_FG3,             /* 21 */
+	MDP_COMP_TO_SVPP2MOUT,    /* 22 */
+	MDP_COMP_TO_SVPP3MOUT,    /* 23 */
+	MDP_COMP_TO_WARP0MOUT,    /* 24 */
+	MDP_COMP_TO_WARP1MOUT,    /* 25 */
+	MDP_COMP_VPP0_SOUT,       /* 26 */
+	MDP_COMP_VPP1_SOUT,       /* 27 */
+	MDP_COMP_PQ0_SOUT,        /* 28 */
+	MDP_COMP_PQ1_SOUT,        /* 29 */
+	MDP_COMP_HDR0,            /* 30 */
+	MDP_COMP_HDR1,            /* 31 */
+	MDP_COMP_HDR2,            /* 32 */
+	MDP_COMP_HDR3,            /* 33 */
+	MDP_COMP_AAL0,            /* 34 */
+	MDP_COMP_AAL1,            /* 35 */
+	MDP_COMP_AAL2,            /* 36 */
+	MDP_COMP_AAL3,            /* 37 */
+	MDP_COMP_CCORR0,          /* 38 */
+	MDP_COMP_RSZ0,            /* 39 */
+	MDP_COMP_RSZ1,            /* 40 */
+	MDP_COMP_RSZ2,            /* 41 */
+	MDP_COMP_RSZ3,            /* 42 */
+	MDP_COMP_TDSHP0,          /* 43 */
+	MDP_COMP_TDSHP1,          /* 44 */
+	MDP_COMP_TDSHP2,          /* 45 */
+	MDP_COMP_TDSHP3,          /* 46 */
+	MDP_COMP_COLOR0,          /* 47 */
+	MDP_COMP_COLOR1,          /* 48 */
+	MDP_COMP_COLOR2,          /* 49 */
+	MDP_COMP_COLOR3,          /* 50 */
+	MDP_COMP_OVL0,            /* 51 */
+	MDP_COMP_OVL1,            /* 52 */
+	MDP_COMP_PAD0,            /* 53 */
+	MDP_COMP_PAD1,            /* 54 */
+	MDP_COMP_PAD2,            /* 55 */
+	MDP_COMP_PAD3,            /* 56 */
+	MDP_COMP_TCC0,            /* 56 */
+	MDP_COMP_TCC1,            /* 57 */
+	MDP_COMP_WROT0,           /* 58 */
+	MDP_COMP_WROT1,           /* 59 */
+	MDP_COMP_WROT2,           /* 60 */
+	MDP_COMP_WROT3,           /* 61 */
+	MDP_COMP_WDMA,            /* 62 */
+	MDP_COMP_MERGE2,          /* 63 */
+	MDP_COMP_MERGE3,          /* 64 */
+	MDP_COMP_PATH0_SOUT,      /* 65 */
+	MDP_COMP_PATH1_SOUT,      /* 66 */
+	MDP_COMP_VDO0DL0,         /* 67 */
+	MDP_COMP_VDO1DL0,         /* 68 */
+	MDP_COMP_VDO0DL1,         /* 69 */
+	MDP_COMP_VDO1DL1,         /* 70 */
 
 	MDP_MAX_COMP_COUNT	/* ALWAYS keep at the end */
 };
@@ -111,7 +155,14 @@ enum mtk_mdp_pipe_id {
 	MDP_PIPE_IMGI,
 	MDP_PIPE_WPEI,
 	MDP_PIPE_WPEI2,
-	MDP_PIPE_MAX
+	MDP_PIPE_RDMA1,
+	MDP_PIPE_RDMA2,
+	MDP_PIPE_RDMA3,
+	MDP_PIPE_SPLIT,
+	MDP_PIPE_SPLIT2,
+	MDP_PIPE_VPP0_SOUT,
+	MDP_PIPE_VPP1_SOUT,
+	MDP_PIPE_MAX,
 };
 
 enum mtk_isp_ctrl {

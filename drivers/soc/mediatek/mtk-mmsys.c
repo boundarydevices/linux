@@ -159,8 +159,11 @@ void mtk_mmsys_mdp_connect(struct device *dev, struct mmsys_cmdq_cmd *cmd,
 	const struct mtk_mmsys_routes *routes = mmsys->data->mdp_routes;
 	int i;
 
-	WARN_ON(!routes);
-	WARN_ON(mmsys->subsys_id == 0);
+	if (!routes) {
+		WARN_ON(!routes);
+		return;
+	}
+
 	for (i = 0; i < mmsys->data->mdp_num_routes; i++)
 		if (cur == routes[i].from_comp && next == routes[i].to_comp)
 			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id,
@@ -177,7 +180,6 @@ void mtk_mmsys_mdp_disconnect(struct device *dev, struct mmsys_cmdq_cmd *cmd,
 	const struct mtk_mmsys_routes *routes = mmsys->data->mdp_routes;
 	int i;
 
-	WARN_ON(mmsys->subsys_id == 0);
 	for (i = 0; i < mmsys->data->mdp_num_routes; i++)
 		if (cur == routes[i].from_comp && next == routes[i].to_comp)
 			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id,
