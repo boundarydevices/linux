@@ -1307,6 +1307,7 @@ struct video_device *vsi_v4l2_probe_dec(struct platform_device *pdev, struct vsi
 	vdec->vfl_type = VSI_DEVTYPE;
 	vpu->vdec = vdec;
 	vdec->queue = NULL;
+	sprintf(vdec->name, "vsi-v4l2-dec");
 
 	video_set_drvdata(vdec, vpu);
 
