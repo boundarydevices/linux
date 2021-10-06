@@ -191,13 +191,19 @@ static const struct thermal_zone_of_device_ops soc_temp_lvts_ops = {
 static void lvts_write_device(struct lvts_data *lvts_data, unsigned int data,
 			      int tc_id)
 {
+	struct device *dev = lvts_data->dev;
 	void __iomem *base;
+	int ret;
 
 	base = GET_BASE_ADDR(tc_id);
 
 	writel(data, LVTS_CONFIG_0 + base);
 
 	usleep_range(5, 15);
+	ret = readl_poll_timeout(LVTS_CONFIG_0 + base, data,
+				!(data & DEVICE_ACCESS_STARTUS), 2, 200);
+	if (ret)
+		dev_err(dev, "write device err: LVTS %d didn't ready, data 0x%x\n", tc_id, data);
 }
 
 static unsigned int lvts_read_device(struct lvts_data *lvts_data,
@@ -211,6 +217,7 @@ static unsigned int lvts_read_device(struct lvts_data *lvts_data,
 	base = GET_BASE_ADDR(tc_id);
 	writel(READ_DEVICE_REG(reg_idx), LVTS_CONFIG_0 + base);
 
+	usleep_range(5, 15);
 	ret = readl_poll_timeout(LVTS_CONFIG_0 + base, data,
 				 !(data & DEVICE_ACCESS_STARTUS),
 				 2, 200);
@@ -274,6 +281,7 @@ static void lvts_reset(struct lvts_data *lvts_data)
 		if (lvts_data->domain[i].reset)
 			reset_control_assert(lvts_data->domain[i].reset);
 
+		usleep_range(20, 30);
 		if (lvts_data->domain[i].reset)
 			reset_control_deassert(lvts_data->domain[i].reset);
 	}
@@ -1250,6 +1258,9 @@ static struct lvts_data mt6873_lvts_data = {
  */
 
 #define MT8195_NUM_LVTS (ARRAY_SIZE(mt8195_tc_settings))
+#define TSV2F_CHOP_CKSEL_AND_TSV2F_EN_8195 (DEVICE_WRITE | RG_TSV2F_CTRL_2 << 8 | 0x8C)
+#define TSBG_DEM_CKSEL_X_TSBG_CHOP_EN_8195 (DEVICE_WRITE | RG_TSV2F_CTRL_4 << 8 | 0xFC)
+#define SET_TS_CHOP_8195 (DEVICE_WRITE | RG_TSV2F_CTRL_0 << 8 | 0xF1)
 
 enum mt8195_lvts_domain {
 	MT8195_AP_DOMAIN,
@@ -1277,6 +1288,23 @@ enum mt8195_lvts_sensor_enum {
 	MT8195_TS7_1,
 	MT8195_NUM_TS
 };
+
+static void mt8195_device_enable_and_init(struct lvts_data *lvts_data)
+{
+	unsigned int i;
+
+	for (i = 0; i < lvts_data->num_tc; i++) {
+		lvts_write_device(lvts_data, STOP_COUNTING_V4, i);
+		lvts_write_device(lvts_data, SET_RG_TSFM_LPDLY_V4, i);
+		lvts_write_device(lvts_data, SET_COUNTING_WINDOW_20US1_V4, i);
+		lvts_write_device(lvts_data, SET_COUNTING_WINDOW_20US2_V4, i);
+		lvts_write_device(lvts_data, TSV2F_CHOP_CKSEL_AND_TSV2F_EN_8195, i);
+		lvts_write_device(lvts_data, TSBG_DEM_CKSEL_X_TSBG_CHOP_EN_8195, i);
+		lvts_write_device(lvts_data, SET_TS_RSV_V4, i);
+		lvts_write_device(lvts_data, SET_TS_CHOP_8195, i);
+	}
+	lvts_data->counting_window_us = 20;
+}
 
 static void mt8195_efuse_to_cal_data(struct lvts_data *lvts_data)
 {
@@ -1408,13 +1436,13 @@ static struct lvts_data mt8195_lvts_data = {
 	.num_sensor = MT8195_NUM_TS,
 	.ops = {
 		.efuse_to_cal_data = mt8195_efuse_to_cal_data,
-		.device_enable_and_init = device_enable_and_init_v4,
+		.device_enable_and_init = mt8195_device_enable_and_init,
 		.device_enable_auto_rck = device_enable_auto_rck_v4,
 		.device_read_count_rc_n = device_read_count_rc_n_v4,
 		.set_cal_data = set_calibration_data_v4,
 		.init_controller = init_controller_v4,
 	},
-	.feature_bitmap = FEATURE_DEVICE_AUTO_RCK,
+	.feature_bitmap = FEATURE_DEVICE_AUTO_RCK | FEATURE_CK26M_ACTIVE,
 	.num_efuse_addr = 22,
 	.num_efuse_block = 2,
 	.cal_data = {
