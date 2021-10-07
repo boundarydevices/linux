@@ -1659,6 +1659,7 @@
 	pinctrl-0 = <&pinctrl_usb3_0>;
 	status = "okay";
 	usb-role-switch;
+	vbus-supply = <&reg_usb_otg_vbus>;
 
 	ports {
 		#address-cells = <1>;
@@ -1691,7 +1692,7 @@
 &usb3_phy0 {
 	fsl,phy-tx-preemp-amp-tune = <2>;
 	status = "okay";
-	vbus-supply = <&reg_usb_otg_vbus>;
+	vbus-supply = <&reg_vref_5v0>;
 };
 
 &usb3_phy1 {
