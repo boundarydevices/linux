@@ -253,8 +253,11 @@ static int hd3ss3220_probe(struct i2c_client *client,
 
 	hd3ss3220_set_role(hd3ss3220);
 	ret = regmap_read(hd3ss3220->regmap, HD3SS3220_REG_CN_STAT_CTRL, &data);
-	if (ret < 0)
+	if (ret < 0) {
+		pr_err("%s: regmap_read of addr 0x%x reg 0x%x failed %d\n", __func__,
+			client->addr, HD3SS3220_REG_CN_STAT_CTRL, ret);
 		goto err_unreg_port;
+	}
 
 	if (data & HD3SS3220_REG_CN_STAT_CTRL_INT_STATUS) {
 		ret = regmap_write(hd3ss3220->regmap,
