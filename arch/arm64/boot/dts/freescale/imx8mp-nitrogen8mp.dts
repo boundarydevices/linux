@@ -1796,6 +1796,7 @@
 &usb3_phy0 {
 	fsl,phy-tx-preemp-amp-tune = <2>;
 	status = "okay";
+	vbus-supply = <&reg_vref_5v0>;
 };
 
 &usb3_phy1 {
