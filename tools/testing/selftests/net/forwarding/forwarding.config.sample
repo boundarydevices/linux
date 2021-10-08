@@ -43,3 +43,6 @@ NETIF_CREATE=yes
 PING_TIMEOUT=5
 # IPv6 traceroute utility name.
 TROUTE6=traceroute6
+# Flag for tc match, supposed to be skip_sw/skip_hw which means do not process
+# filter by software/hardware
+TC_FLAG=skip_hw
