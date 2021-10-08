@@ -2299,30 +2299,38 @@
 
 				port@4 {
 					reg = <4>;
+				};
+
+				port@5 {
+					reg = <5>;
+				};
+
+				port@6 {
+					reg = <6>;
 					seninf_camsv0_endpoint: endpoint {
 						remote-endpoint =
 							<&camsv0_endpoint>;
 					};
 				};
 
-				port@5 {
-					reg = <5>;
+				port@7 {
+					reg = <7>;
 					seninf_camsv1_endpoint: endpoint {
 						remote-endpoint =
 							<&camsv1_endpoint>;
 					};
 				};
 
-				port@6 {
-					reg = <6>;
+				port@8 {
+					reg = <8>;
 					seninf_camsv2_endpoint: endpoint {
 						remote-endpoint =
 							<&camsv2_endpoint>;
 					};
 				};
 
-				port@7 {
-					reg = <7>;
+				port@9 {
+					reg = <9>;
 					seninf_camsv3_endpoint: endpoint {
 						remote-endpoint =
 							<&camsv3_endpoint>;
