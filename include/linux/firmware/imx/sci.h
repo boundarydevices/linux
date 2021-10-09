@@ -17,8 +17,6 @@
 #include <linux/firmware/imx/svc/rm.h>
 #include <linux/firmware/imx/svc/seco.h>
 
-#if IS_ENABLED(CONFIG_IMX_SCU)
-
 #define IMX_SC_IRQ_NUM_GROUP            9
 
 #define IMX_SC_IRQ_GROUP_TEMP           0   /* Temp interrupts */
@@ -43,6 +41,7 @@
 #define IMX_SC_IRQ_SECVIO            BIT(6)    /* Security violation */
 #define IMX_SC_IRQ_V2X_RESET         BIT(7)    /* V2X reset */
 
+#if IS_ENABLED(CONFIG_IMX_SCU)
 int imx_scu_enable_general_irq_channel(struct device *dev);
 int imx_scu_irq_register_notifier(struct notifier_block *nb);
 int imx_scu_irq_unregister_notifier(struct notifier_block *nb);
