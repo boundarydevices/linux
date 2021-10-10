@@ -1509,18 +1509,20 @@ v4l2_state_get_stream_format(struct v4l2_subdev_state *state, unsigned int pad,
 
 /**
  * v4l2_state_find_opposite_end() - Find the opposite stream
- * @routing: routing used to find the opposite side
+ * @state: subdevice state
  * @pad: pad id
  * @stream: stream id
  * @other_pad: pointer used to return the opposite pad
- * @other_stream: pointer used to return the opposite stream
+ * @other_stream: pointer used to return the opposite stream (may be NULL)
  *
- * This function uses the routing table to find the pad + stream which is
- * opposite the given pad + stream.
+ * This function uses the routing table from the state to find the pad + stream
+ * which is opposite the given pad + stream.
+ *
+ * @other_stream may be NULL if the caller doesn't need the stream id.
  *
  * Returns 0 on success, or -EINVAL if no matching route is found.
  */
-int v4l2_state_find_opposite_end(struct v4l2_subdev_krouting *routing, u32 pad,
+int v4l2_state_find_opposite_end(const struct v4l2_subdev_state *state, u32 pad,
 				 u32 stream, u32 *other_pad, u32 *other_stream);
 
 /**
