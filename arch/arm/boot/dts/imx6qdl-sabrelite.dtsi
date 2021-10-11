@@ -388,6 +388,15 @@
                 wakeup-gpios = <&gpio1 9 0>;
         };
 
+	ts_goodix: touchscreen@14 {
+		compatible = "goodix,gt911";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = <&gpio1 9 IRQ_TYPE_LEVEL_HIGH>;
+		irq-gpios = <&gpio1 9 GPIO_ACTIVE_HIGH>;
+		reg = <0x14>;
+		reset-gpios = <&gpio2 0 GPIO_ACTIVE_HIGH>;
+	};
+
         ft5x06_ts@38 {
 		compatible = "ft5x06-ts,ft5x06-ts";
 		reg = <0x38>;
@@ -429,6 +438,15 @@
 		interrupt-parent = <&gpio4>;
 		interrupts = <20 2>;
 		wakeup-gpios = <&gpio4 20 0>;
+	};
+
+	ts_goodix2: touchscreen@5d {
+		compatible = "goodix,gt911";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = <&gpio1 9 IRQ_TYPE_LEVEL_HIGH>;
+		irq-gpios = <&gpio1 9 GPIO_ACTIVE_HIGH>;
+		reg = <0x5d>;
+		reset-gpios = <&gpio2 0 GPIO_ACTIVE_HIGH>;
 	};
 };
 
@@ -480,6 +498,7 @@
 				MX6QDL_PAD_ENET_TX_EN__GPIO1_IO28	0x1b0b0		/* ethernet phy interrupt */
 				MX6QDL_PAD_SD3_DAT5__GPIO7_IO00		0x80000000	/* USDHC3 CD */
 				MX6QDL_PAD_SD3_DAT4__GPIO7_IO01		0x1f0b0		/* USDHC3 WP */
+				MX6QDL_PAD_NANDF_D0__GPIO2_IO00		0x030b0
 				MX6QDL_PAD_NANDF_D6__GPIO2_IO06		0x80000000	/* uSDHC4 CD */
 				MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x80000000	/* Spare */
 				MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* SGTL5000 sys_mclk */
