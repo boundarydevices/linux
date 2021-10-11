@@ -811,6 +811,9 @@ struct v4l2_subdev_state {
  *
  * @set_routing: enable or disable data connection routes described in the
  *		 subdevice routing table.
+ *
+ * @s_stream: used to notify the driver that a video stream will start or has
+ *	stopped.
  */
 struct v4l2_subdev_pad_ops {
 	int (*init_cfg)(struct v4l2_subdev *sd,
@@ -859,6 +862,7 @@ struct v4l2_subdev_pad_ops {
 			   struct v4l2_subdev_state *state,
 			   enum v4l2_subdev_format_whence which,
 			   struct v4l2_subdev_krouting *route);
+	int (*s_stream)(struct v4l2_subdev *sd, unsigned int pad, int enable);
 };
 
 /**
