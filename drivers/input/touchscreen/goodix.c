@@ -442,10 +442,12 @@ static irqreturn_t goodix_ts_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+#if 0
 static void goodix_free_irq(struct goodix_ts_data *ts)
 {
 	devm_free_irq(&ts->client->dev, ts->client->irq, ts);
 }
+#endif
 
 static int goodix_request_irq(struct goodix_ts_data *ts)
 {
@@ -930,7 +932,7 @@ static void goodix_read_config(struct goodix_ts_data *ts)
 	int error;
 
 	error = goodix_i2c_read(ts->client, ts->chip->config_addr,
-				ts->config, ts->chip->config_len);
+				ts->config, 9);
 	if (error) {
 		dev_warn(&ts->client->dev, "Error reading config: %d\n",
 			 error);
@@ -1284,7 +1286,7 @@ static int __maybe_unused goodix_suspend(struct device *dev)
 	}
 
 	/* Free IRQ as IRQ pin is used as output in the suspend sequence */
-	goodix_free_irq(ts);
+	disable_irq(client->irq);
 
 	/* Output LOW on the INT pin for 5 ms */
 	error = goodix_irq_direction_output(ts, 0);
@@ -1362,9 +1364,7 @@ static int __maybe_unused goodix_resume(struct device *dev)
 		}
 	}
 
-	error = goodix_request_irq(ts);
-	if (error)
-		return error;
+	enable_irq(client->irq);
 
 	return 0;
 }
