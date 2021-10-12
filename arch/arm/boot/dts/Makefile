@@ -905,6 +905,7 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ull-jde.dtb \
 	imx6ull-rta.dtb \
+	imx6ull-tc.dtb \
 
 dtb-$(CONFIG_SOC_IMX7D) += \
 	imx7d-cl-som-imx7.dtb \
