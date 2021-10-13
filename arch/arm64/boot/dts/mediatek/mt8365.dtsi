@@ -415,6 +415,7 @@
 						      "mm-2", "mm-3";
 					#power-domain-cells = <0>;
 					mediatek,infracfg = <&infracfg>;
+					mediatek,infracfg_nao = <&infracfg_nao>;
 					#address-cells = <1>;
 					#size-cells = <0>;
 
@@ -890,6 +891,11 @@
 			interrupts = <GIC_SPI 102 IRQ_TYPE_LEVEL_LOW>;
 			mediatek,larbs = <&larb0 &larb1 &larb2 &larb3>;
 			#iommu-cells = <1>;
+		};
+
+		infracfg_nao: infracfg_nao@1020e000 {
+			compatible = "syscon";
+			reg = <0 0x1020e000 0 0x1000>;
 		};
 
 		larb0: larb@14003000 {
