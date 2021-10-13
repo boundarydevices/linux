@@ -165,6 +165,7 @@ struct fsl_edma3_chan {
 	int				is_rxchan;
 	int				is_remote;
 	int				is_dfifo;
+	bool                            is_sw;
 	struct dma_pool			*tcd_pool;
 	u32				chn_real_count;
 	char                            txirq_name[32];
@@ -589,6 +590,9 @@ void fsl_edma3_fill_tcd(struct fsl_edma3_chan *fsl_chan,
 	if (fsl_chan->is_rxchan)
 		csr |= EDMA_TCD_CSR_EEOP | EDMA_TCD_CSR_ESDA;
 
+	if (fsl_chan->is_sw)
+		csr |= EDMA_TCD_CSR_START;
+
 	tcd->csr = cpu_to_le16(csr);
 }
 
@@ -804,6 +808,28 @@ static void fsl_edma3_xfer_desc(struct fsl_edma3_chan *fsl_chan)
 	fsl_chan->idle = false;
 }
 
+static struct dma_async_tx_descriptor *fsl_edma3_prep_memcpy(
+		struct dma_chan *chan, dma_addr_t dma_dst,
+		dma_addr_t dma_src, size_t len, unsigned long flags)
+{
+	struct fsl_edma3_chan *fsl_chan = to_fsl_edma3_chan(chan);
+	struct fsl_edma3_desc *fsl_desc;
+
+	fsl_desc = fsl_edma3_alloc_desc(fsl_chan, 1);
+	if (!fsl_desc)
+		return NULL;
+	fsl_desc->iscyclic = false;
+
+	fsl_chan->is_sw = true;
+
+	/* To match with copy_align and max_seg_size so 1 tcd is enough */
+	fsl_edma3_fill_tcd(fsl_chan, &fsl_desc->tcd[0], dma_src, dma_dst,
+			EDMA_TCD_ATTR_SSIZE_64BYTE | EDMA_TCD_ATTR_DSIZE_64BYTE,
+			64, len, 0, 1, 1, 64, 0, true, true, false);
+
+	return vchan_tx_prep(&fsl_chan->vchan, &fsl_desc->vdesc, flags);
+}
+
 static size_t fsl_edma3_desc_residue(struct fsl_edma3_chan *fsl_chan,
 		struct virt_dma_desc *vdesc, bool in_progress);
 
@@ -976,6 +1002,7 @@ static void fsl_edma3_free_chan_resources(struct dma_chan *chan)
 		pm_runtime_put_sync_suspend(fsl_chan->dev);
 
 	clk_disable_unprepare(fsl_chan->clk);
+	fsl_chan->is_sw = false;
 }
 
 static void fsl_edma3_synchronize(struct dma_chan *chan)
@@ -1165,6 +1192,7 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 	dma_cap_set(DMA_PRIVATE, fsl_edma3->dma_dev.cap_mask);
 	dma_cap_set(DMA_SLAVE, fsl_edma3->dma_dev.cap_mask);
 	dma_cap_set(DMA_CYCLIC, fsl_edma3->dma_dev.cap_mask);
+	dma_cap_set(DMA_MEMCPY, fsl_edma3->dma_dev.cap_mask);
 
 	fsl_edma3->dma_dev.dev = &pdev->dev;
 	fsl_edma3->dma_dev.device_alloc_chan_resources
@@ -1173,6 +1201,7 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 		= fsl_edma3_free_chan_resources;
 	fsl_edma3->dma_dev.device_tx_status = fsl_edma3_tx_status;
 	fsl_edma3->dma_dev.device_prep_slave_sg = fsl_edma3_prep_slave_sg;
+	fsl_edma3->dma_dev.device_prep_dma_memcpy = fsl_edma3_prep_memcpy;
 	fsl_edma3->dma_dev.device_prep_dma_cyclic = fsl_edma3_prep_dma_cyclic;
 	fsl_edma3->dma_dev.device_config = fsl_edma3_slave_config;
 	fsl_edma3->dma_dev.device_pause = fsl_edma3_pause;
@@ -1186,6 +1215,10 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 	fsl_edma3->dma_dev.directions = BIT(DMA_DEV_TO_MEM) |
 					BIT(DMA_MEM_TO_DEV) |
 					BIT(DMA_DEV_TO_DEV);
+
+	fsl_edma3->dma_dev.copy_align = DMAENGINE_ALIGN_64_BYTES;
+	/* Per worst case 'nbytes = 1' take CITER as the max_seg_size */
+	dma_set_max_seg_size(fsl_edma3->dma_dev.dev, 0x3fff);
 
 	platform_set_drvdata(pdev, fsl_edma3);
 
