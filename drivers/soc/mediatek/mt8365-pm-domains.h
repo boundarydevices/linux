@@ -22,10 +22,10 @@ static const struct scpsys_domain_data scpsys_domain_data_mt8365[] = {
 		.bp_infracfg = {
 			BUS_PROT_WR(BIT(16) | BIT(17), 0x2a8, 0x2ac, 0x258),
 			BUS_PROT_WR(BIT(1) | BIT(2) | BIT(10) | BIT(11), 0x2a0, 0x2a4, 0x228),
-//			BUS_PROT_WR_IGN(BIT(6), 0x0, 0x200, 0x0), /* FIXME: ack_mask = BIT(24) */
-			BUS_PROT_WR_IGN(BIT(5), 0x0, 0x234, 0x28), /* FIXME: ack_mask = BIT(14) */
+			BUS_PROT_WAYEN(BIT(6), BIT(24), 0x200, 0x0),
+			BUS_PROT_WAYEN(BIT(5), BIT(14), 0x234, 0x28),
 			BUS_PROT_WR(BIT(6), 0x2a0, 0x2a4, 0x228),
-		},
+                },
 	},
 	[MT8365_POWER_DOMAIN_VENC] = {
 		.name = "venc",
