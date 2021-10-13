@@ -725,6 +725,7 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ull-phytec-segin-ff-rdk-nand.dtb \
 	imx6ull-phytec-segin-ff-rdk-emmc.dtb \
 	imx6ull-phytec-segin-lc-rdk-nand.dtb \
+	imx6ull-jde.dtb \
 	imx6ull-rta.dtb \
 	imx6ull-tc.dtb \
 	imx6ulz-14x14-evk.dtb \
