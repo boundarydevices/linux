@@ -830,6 +830,10 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ulz-14x14-evk-btwifi-sdio3_0.dtb \
 	imx6ulz-14x14-evk-gpmi-weim.dtb \
 	imx6ulz-14x14-evk-emmc.dtb
+
+dtb-$(CONFIG_SOC_IMX6UL) += \
+	imx6ull-jde.dtb \
+
 dtb-$(CONFIG_SOC_IMX7D) += \
 	imx7d-cl-som-imx7.dtb \
 	imx7d-colibri-aster.dtb \
