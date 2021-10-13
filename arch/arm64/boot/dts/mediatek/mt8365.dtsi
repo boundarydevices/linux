@@ -277,14 +277,6 @@
 			trips {};
 			cooling-maps {};
 		};
-
-		tzts4: tzts4 {
-			polling-delay-passive = <0>;
-			polling-delay = <0>;
-			thermal-sensors = <&thermal 4>;
-			trips {};
-			cooling-maps {};
-		};
 	};
 
 	psci {
