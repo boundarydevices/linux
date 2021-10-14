@@ -2680,7 +2680,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 		pci_imx_set_msi_en(&imx6_pcie->pci->pp);
 		break;
 	case DW_PCIE_EP_TYPE:
-		if (!IS_ENABLED(CONFIG_PCI_IMX_EP)) {
+		if (!IS_ENABLED(CONFIG_PCI_IMX6_EP)) {
 			ret = -ENODEV;
 			goto err_ret;
 		}
