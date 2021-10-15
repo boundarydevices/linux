@@ -2133,7 +2133,7 @@
 		};
 
 		vpu0: vpu0@0x19100000 {
-			compatible = "mediatek,mt8183-apu";
+			compatible = "mediatek,mt8183-rproc-apu";
 			reg = <0 0x19180000 0 0x14000>;
 			reg-names = "mmio";
 			interrupts = <GIC_SPI 292 IRQ_TYPE_LEVEL_LOW>;
@@ -2153,7 +2153,7 @@
 		};
 
 		vpu1: vpu1@0x19200000 {
-			compatible = "mediatek,mt8183-apu";
+			compatible = "mediatek,mt8183-rproc-apu";
 			reg = <0 0x19280000 0 0x14000>;
 			reg-names = "mmio";
 			interrupts = <GIC_SPI 293 IRQ_TYPE_LEVEL_LOW>;

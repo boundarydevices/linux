@@ -10,7 +10,7 @@ Required properties:
 The following are the mandatory properties:
 
 - compatible:		Should be one of the following,
-			    "mediatek,mt8183-apu" for DSPs on MT8183 SoCs
+			    "mediatek,mt8183-rproc-apu" for DSPs on MT8183 SoCs
 - reg:			Should contain an entry for each value in 'reg-names'.
 			Each entry should have the memory region's start address
 			and the size of the region, the representation matching
@@ -53,7 +53,7 @@ Example:
 	};
 
 	vpu0: vpu@0x19100000 {
-		compatible = "mediatek,mt8183-apu";
+		compatible = "mediatek,mt8183-rproc-apu";
 		reg = <0 0x19180000 0 0x14000>;
 		reg-names = "mmio";
 		interrupts = <GIC_SPI 292 IRQ_TYPE_LEVEL_LOW>;

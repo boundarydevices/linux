@@ -515,7 +515,7 @@ static int mtk_vpu_rproc_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id mtk_vpu_rproc_of_match[] __maybe_unused = {
-	{ .compatible = "mediatek,mt8183-apu", .data = &mt8183_conf },
+	{ .compatible = "mediatek,mt8183-rproc-apu", .data = &mt8183_conf },
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, mtk_vpu_rproc_of_match);
