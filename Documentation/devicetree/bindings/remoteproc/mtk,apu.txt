@@ -11,6 +11,7 @@ The following are the mandatory properties:
 
 - compatible:		Should be one of the following,
 			    "mediatek,mt8183-rproc-apu" for DSPs on MT8183 SoCs
+			    "mediatek,mt8365-rproc-apu" for DSPs on MT8365 SoCs
 - reg:			Should contain an entry for each value in 'reg-names'.
 			Each entry should have the memory region's start address
 			and the size of the region, the representation matching
@@ -21,10 +22,11 @@ The following are the mandatory properties:
 - interrupts:		The interrupt number used to receive the interrupts
 			from the DSP.
 - clocks:		Clocks for co-processor (See: ../clock/clock-bindings.txt)
-			Three clocks are expected for AXI, IPU and JTAG.
-			The JTAG clock seems to be required to run the DSP,
+			Note: the JTAG clock seems to be required to run the DSP,
 			even when JTAG is not in use.
-- clock-names:		The name of clocks, must be ipu, axi and jtag
+- clock-names:		Should be:
+			    ipu, axi and jtag for DSPs on MT8183 SoCs
+			    if_ck, edma, ahb, axi, ipu, jtag, smi_cam and ifr_apu_axi for DSPs on MT8365 SoCs
 - iommu:		IOMMU (See: ../iommu/iommu.txt)
 - memory-region:	Reserved memory (See: ../reserved-memory/reserved-memory.txt)
 - power-domains:	Power domain (see: ../power/power_domain.txt)

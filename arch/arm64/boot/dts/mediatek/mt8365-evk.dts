@@ -108,6 +108,13 @@
 			no-map;
 			reg = <0 0x43200000 0 0x00c00000>;
 		};
+
+		vpu_ram: vpu_ram@0x60000000 {
+			 compatible = "shared-dma-pool";
+			 reg = <0 0x60000000 0 0x04000000>;
+			 no-map;
+			 linux,cma-default;
+		 };
 	};
 
 	usb_otg_vbus: usb-otg-vbus-regulator {
@@ -839,3 +846,9 @@
 	mediatek,dmic-two-wire-mode = <1>;
 	status = "okay";
 };
+
+&vpu0 {
+        memory-region = <&vpu_ram>;
+        status = "okay";
+};
+

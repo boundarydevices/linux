@@ -53,10 +53,8 @@
 #define CORE_XTENSA_ALTRESETVEC			(0x000001F8)
 
 struct mtk_vpu_conf {
-	u32 core_default0_aruser_use_iommu;
-	u32 core_default0_awuser_use_iommu;
-	u32 core_default1_aruser_idma_use_iommu;
-	u32 core_default1_awuser_idma_use_iommu;
+	u32 core_default0;
+	u32 core_default1;
 	u32 num_clks;
 	const char * const *clk_names;
 };
@@ -68,12 +66,28 @@ static const char * const mt8183_clk_names[] = {
 };
 
 static const struct mtk_vpu_conf mt8183_conf = {
-	.core_default0_aruser_use_iommu = (0x10 << 23),
-	.core_default0_awuser_use_iommu = (0x10 << 18),
-	.core_default1_aruser_idma_use_iommu = (0x10 << 0),
-	.core_default1_awuser_idma_use_iommu = (0x10 << 5),
+	.core_default0 = (0x10 << 23) | (0x10 << 18),
+	.core_default1 = (0x10 << 0) | (0x10 << 5),
 	.num_clks = ARRAY_SIZE(mt8183_clk_names),
 	.clk_names = mt8183_clk_names
+};
+
+static const char * const mt8365_clk_names[] = {
+	"if_ck",
+	"edma",
+	"ahb",
+	"axi",
+	"ipu",
+	"jtag",
+	"smi_cam",
+	"ifr_apu_axi",
+};
+
+static const struct mtk_vpu_conf mt8365_conf = {
+	.core_default0 = BIT(26) | BIT(20),
+	.core_default1 = BIT(3) | BIT(7),
+	.num_clks = ARRAY_SIZE(mt8365_clk_names),
+	.clk_names = mt8365_clk_names
 };
 
 struct mtk_vpu_rproc {
@@ -143,12 +157,10 @@ static int mtk_vpu_rproc_start(struct rproc *rproc)
 
 
 	vpu_write32(vpu_rproc, CORE_DEFAULT0,
-		    vpu_rproc->conf->core_default0_awuser_use_iommu |
-		    vpu_rproc->conf->core_default0_aruser_use_iommu |
+		    vpu_rproc->conf->core_default0 |
 		    CORE_DEFAULT0_QOS_SWAP_1);
 	vpu_write32(vpu_rproc, CORE_DEFAULT1,
-		    vpu_rproc->conf->core_default1_awuser_idma_use_iommu |
-		    vpu_rproc->conf->core_default1_aruser_idma_use_iommu);
+		    vpu_rproc->conf->core_default1);
 
 	core_ctrl &= ~CORE_CTRL_RUN_STALL;
 	vpu_write32(vpu_rproc, CORE_CTRL, core_ctrl);
@@ -391,7 +403,6 @@ static int vpu_jtag_probe(struct mtk_vpu_rproc *vpu_rproc)
 
 static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 {
-
 	struct device *dev = &pdev->dev;
 	struct mtk_vpu_rproc *vpu_rproc;
 	struct rproc *rproc;
@@ -516,6 +527,7 @@ static int mtk_vpu_rproc_remove(struct platform_device *pdev)
 
 static const struct of_device_id mtk_vpu_rproc_of_match[] __maybe_unused = {
 	{ .compatible = "mediatek,mt8183-rproc-apu", .data = &mt8183_conf },
+	{ .compatible = "mediatek,mt8365-rproc-apu", .data = &mt8365_conf },
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, mtk_vpu_rproc_of_match);

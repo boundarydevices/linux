@@ -1465,5 +1465,37 @@
 			reg = <0 0x11C10000 0 0x4000>;
 			#phy-cells = <1>;
 		};
+
+		vpu0: vpu0@0x19100000 {
+			compatible = "mediatek,mt8365-rproc-apu";
+			reg = <0 0x19180000 0 0x94000>;
+			reg-names = "mmio";
+			interrupts = <GIC_SPI 199 IRQ_TYPE_LEVEL_LOW>;
+
+			iommus = <&iommu M4U_PORT_APU_READ>,
+				 <&iommu M4U_PORT_APU_WRITE>;
+
+			clocks = <&apu CLK_APU_IPU_CK>,
+				 <&apu CLK_APU_AXI>,
+				 <&apu CLK_APU_JTAG>,
+				 <&apu CLK_APU_IF_CK>,
+				 <&apu CLK_APU_EDMA>,
+				 <&apu CLK_APU_AHB>,
+				 <&infracfg CLK_IFR_APU_AXI>,
+				 <&mmsys CLK_MM_MM_SMI_CAM>;
+
+			clock-names = "ipu",
+				      "axi",
+				      "jtag",
+				      "if_ck",
+				      "edma",
+				      "ahb",
+				      "ifr_apu_axi",
+				      "smi_cam";
+
+			power-domains = <&spm MT8365_POWER_DOMAIN_APU>;
+
+			status = "disabled";
+		 };
 	};
 };
