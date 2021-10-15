@@ -193,6 +193,8 @@ static struct snd_soc_dai_link mt8183_mt6358_dai_links[] = {
 		.name = "I2S2",
 		.no_pcm = 1,
 		.dpcm_capture = 1,
+		.dai_fmt = SND_SOC_DAIFMT_I2S | SND_SOC_DAIFMT_NB_NF |
+				SND_SOC_DAIFMT_CBS_CFS,
 		.ignore_suspend = 1,
 		.be_hw_params_fixup = mt8183_i2s_hw_params_fixup,
 		.ops = &mt8183_mt6358_i2s_ops,
