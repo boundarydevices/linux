@@ -7,8 +7,10 @@
 #include <linux/device.h>
 #include <linux/io.h>
 #include <linux/of_device.h>
+#include <linux/of_address.h>
 #include <linux/platform_device.h>
 #include <linux/soc/mediatek/mtk-mmsys.h>
+#include <linux/soc/mediatek/mtk-cmdq.h>
 
 #include "mtk-mmsys.h"
 #include "mt8167-mmsys.h"
@@ -51,6 +53,8 @@ static const struct mtk_mmsys_driver_data mt8183_mmsys_driver_data = {
 	.clk_driver = "clk-mt8183-mm",
 	.routes = mmsys_mt8183_routing_table,
 	.num_routes = ARRAY_SIZE(mmsys_mt8183_routing_table),
+	.mdp_routes = mmsys_mt8183_mdp_routing_table,
+	.mdp_num_routes = ARRAY_SIZE(mmsys_mt8183_mdp_routing_table),
 };
 
 static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
@@ -62,6 +66,8 @@ static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
 struct mtk_mmsys {
 	void __iomem *regs;
 	const struct mtk_mmsys_driver_data *data;
+	phys_addr_t addr;
+	u8 subsys_id;
 };
 
 void mtk_mmsys_ddp_connect(struct device *dev,
@@ -101,12 +107,49 @@ void mtk_mmsys_ddp_disconnect(struct device *dev,
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_ddp_disconnect);
 
+void mtk_mmsys_mdp_connect(struct device *dev, struct mmsys_cmdq_cmd *cmd,
+			   enum mtk_mdp_comp_id cur,
+			   enum mtk_mdp_comp_id next)
+{
+	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
+	const struct mtk_mmsys_routes *routes = mmsys->data->mdp_routes;
+	int i;
+
+	WARN_ON(!routes);
+	WARN_ON(mmsys->subsys_id == 0);
+	for (i = 0; i < mmsys->data->mdp_num_routes; i++)
+		if (cur == routes[i].from_comp && next == routes[i].to_comp)
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id,
+					    mmsys->addr + routes[i].addr,
+					    routes[i].val, 0xFFFFFFFF);
+}
+EXPORT_SYMBOL_GPL(mtk_mmsys_mdp_connect);
+
+void mtk_mmsys_mdp_disconnect(struct device *dev, struct mmsys_cmdq_cmd *cmd,
+			      enum mtk_mdp_comp_id cur,
+			      enum mtk_mdp_comp_id next)
+{
+	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
+	const struct mtk_mmsys_routes *routes = mmsys->data->mdp_routes;
+	int i;
+
+	WARN_ON(mmsys->subsys_id == 0);
+	for (i = 0; i < mmsys->data->mdp_num_routes; i++)
+		if (cur == routes[i].from_comp && next == routes[i].to_comp)
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id,
+					    mmsys->addr + routes[i].addr,
+					    0, 0xFFFFFFFF);
+}
+EXPORT_SYMBOL_GPL(mtk_mmsys_mdp_disconnect);
+
 static int mtk_mmsys_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct platform_device *clks;
 	struct platform_device *drm;
 	struct mtk_mmsys *mmsys;
+	struct resource res;
+	struct cmdq_client_reg cmdq_reg;
 	int ret;
 
 	mmsys = devm_kzalloc(dev, sizeof(*mmsys), GFP_KERNEL);
@@ -119,6 +162,15 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to ioremap mmsys registers: %d\n", ret);
 		return ret;
 	}
+
+	if (of_address_to_resource(dev->of_node, 0, &res) < 0)
+		mmsys->addr = 0L;
+	else
+		mmsys->addr = res.start;
+
+	if (cmdq_dev_get_client_reg(dev, &cmdq_reg, 0) != 0)
+		dev_info(dev, "cmdq subsys id has not been set\n");
+	mmsys->subsys_id = cmdq_reg.subsys;
 
 	mmsys->data = of_device_get_match_data(&pdev->dev);
 	platform_set_drvdata(pdev, mmsys);
