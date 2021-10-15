@@ -55,6 +55,7 @@ static const struct mtk_mmsys_driver_data mt8183_mmsys_driver_data = {
 	.num_routes = ARRAY_SIZE(mmsys_mt8183_routing_table),
 	.mdp_routes = mmsys_mt8183_mdp_routing_table,
 	.mdp_num_routes = ARRAY_SIZE(mmsys_mt8183_mdp_routing_table),
+	.mdp_isp_ctrl = mmsys_mt8183_mdp_isp_ctrl_table,
 };
 
 static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
@@ -141,6 +142,113 @@ void mtk_mmsys_mdp_disconnect(struct device *dev, struct mmsys_cmdq_cmd *cmd,
 					    0, 0xFFFFFFFF);
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_mdp_disconnect);
+
+void mtk_mmsys_mdp_isp_ctrl(struct device *dev, struct mmsys_cmdq_cmd *cmd,
+			    enum mtk_mdp_comp_id id)
+{
+	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
+	const unsigned int *isp_ctrl = mmsys->data->mdp_isp_ctrl;
+	u32 reg;
+
+	WARN_ON(mmsys->subsys_id == 0);
+	/* Direct link */
+	if (id == MDP_COMP_CAMIN) {
+		/* Reset MDP_DL_ASYNC_TX */
+		/* Bit  3: MDP_DL_ASYNC_TX / MDP_RELAY */
+		if (isp_ctrl[ISP_CTRL_MMSYS_SW0_RST_B]) {
+			reg = mmsys->addr + isp_ctrl[ISP_CTRL_MMSYS_SW0_RST_B];
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+					    0x0, 0x00000008);
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+					    1 << 3, 0x00000008);
+		}
+
+		/* Reset MDP_DL_ASYNC_RX */
+		/* Bit  10: MDP_DL_ASYNC_RX */
+		if (isp_ctrl[ISP_CTRL_MMSYS_SW1_RST_B]) {
+			reg = mmsys->addr + isp_ctrl[ISP_CTRL_MMSYS_SW1_RST_B];
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+					    0x0, 0x00000400);
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+					    1 << 10, 0x00000400);
+		}
+
+		/* Enable sof mode */
+		if (isp_ctrl[ISP_CTRL_ISP_RELAY_CFG_WD]) {
+			reg = mmsys->addr + isp_ctrl[ISP_CTRL_ISP_RELAY_CFG_WD];
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+					    0 << 31, 0x80000000);
+		}
+	}
+
+	if (id == MDP_COMP_CAMIN2) {
+		/* Reset MDP_DL_ASYNC2_TX */
+		/* Bit  4: MDP_DL_ASYNC2_TX / MDP_RELAY2 */
+		if (isp_ctrl[ISP_CTRL_MMSYS_SW0_RST_B]) {
+			reg = mmsys->addr + isp_ctrl[ISP_CTRL_MMSYS_SW0_RST_B];
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+					    0x0, 0x00000010);
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+					    1 << 4, 0x00000010);
+		}
+
+		/* Reset MDP_DL_ASYNC2_RX */
+		/* Bit  11: MDP_DL_ASYNC2_RX */
+		if (isp_ctrl[ISP_CTRL_MMSYS_SW1_RST_B]) {
+			reg = mmsys->addr + isp_ctrl[ISP_CTRL_MMSYS_SW1_RST_B];
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+					    0x0, 0x00000800);
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+					    1 << 11, 0x00000800);
+		}
+
+		/* Enable sof mode */
+		if (isp_ctrl[ISP_CTRL_IPU_RELAY_CFG_WD]) {
+			reg = mmsys->addr + isp_ctrl[ISP_CTRL_IPU_RELAY_CFG_WD];
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+					    0 << 31, 0x80000000);
+		}
+	}
+}
+EXPORT_SYMBOL_GPL(mtk_mmsys_mdp_isp_ctrl);
+
+void mtk_mmsys_mdp_camin_ctrl(struct device *dev, struct mmsys_cmdq_cmd *cmd,
+			      enum mtk_mdp_comp_id id, u32 camin_w, u32 camin_h)
+{
+	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
+	const unsigned int *isp_ctrl = mmsys->data->mdp_isp_ctrl;
+	u32 reg;
+
+	WARN_ON(mmsys->subsys_id == 0);
+	/* Config for direct link */
+	if (id == MDP_COMP_CAMIN) {
+		if (isp_ctrl[ISP_CTRL_MDP_ASYNC_CFG_WD]) {
+			reg = mmsys->addr + isp_ctrl[ISP_CTRL_MDP_ASYNC_CFG_WD];
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+				     (camin_h << 16) + camin_w, 0x3FFF3FFF);
+		}
+
+		if (isp_ctrl[ISP_CTRL_ISP_RELAY_CFG_WD]) {
+			reg = mmsys->addr + isp_ctrl[ISP_CTRL_ISP_RELAY_CFG_WD];
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+				     (camin_h << 16) + camin_w, 0x3FFF3FFF);
+		}
+	}
+	if (id == MDP_COMP_CAMIN2) {
+		if (isp_ctrl[ISP_CTRL_MDP_ASYNC_IPU_CFG_WD]) {
+			reg = mmsys->addr +
+			      isp_ctrl[ISP_CTRL_MDP_ASYNC_IPU_CFG_WD];
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+				     (camin_h << 16) + camin_w, 0x3FFF3FFF);
+		}
+		if (isp_ctrl[ISP_CTRL_IPU_RELAY_CFG_WD]) {
+			reg = mmsys->addr + isp_ctrl[ISP_CTRL_IPU_RELAY_CFG_WD];
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
+				     (camin_h << 16) + camin_w, 0x3FFF3FFF);
+		}
+	}
+}
+EXPORT_SYMBOL_GPL(mtk_mmsys_mdp_camin_ctrl);
 
 static int mtk_mmsys_probe(struct platform_device *pdev)
 {

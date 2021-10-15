@@ -92,6 +92,7 @@ struct mtk_mmsys_driver_data {
 	const unsigned int num_routes;
 	const struct mtk_mmsys_routes *mdp_routes;
 	const unsigned int mdp_num_routes;
+	const unsigned int *mdp_isp_ctrl;
 };
 
 /*
