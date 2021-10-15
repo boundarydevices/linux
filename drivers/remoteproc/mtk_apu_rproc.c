@@ -62,9 +62,8 @@ struct mtk_vpu_rproc {
 
 	void __iomem *base;
 	int irq;
-	struct clk *axi;
-	struct clk *ipu;
-	struct clk *jtag;
+	unsigned int num_clks;
+	struct clk_bulk_data *clks;
 
 #ifdef CONFIG_MTK_APU_JTAG
 	struct pinctrl *pinctrl;
@@ -331,11 +330,18 @@ static int vpu_jtag_probe(struct mtk_vpu_rproc *vpu_rproc)
 
 static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 {
+	static const char * const clk_names[] = {
+		"ipu",
+		"axi",
+		"jtag"
+	};
+
 	struct device *dev = &pdev->dev;
 	struct mtk_vpu_rproc *vpu_rproc;
 	struct rproc *rproc;
 	struct resource *res;
 	int ret;
+	int i;
 
 	rproc = rproc_alloc(dev, "apu", &mtk_vpu_rproc_ops, NULL,
 			    sizeof(*vpu_rproc));
@@ -382,49 +388,33 @@ static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 		goto free_rproc;
 	}
 
-	vpu_rproc->ipu = devm_clk_get(dev, "ipu");
-	if (IS_ERR(vpu_rproc->ipu)) {
-		dev_err(dev, "Failed to get ipu clock\n");
-		ret = PTR_ERR(vpu_rproc->ipu);
+	vpu_rproc->num_clks = ARRAY_SIZE(clk_names);
+	vpu_rproc->clks = devm_kcalloc(dev, vpu_rproc->num_clks,
+				     sizeof(*vpu_rproc->clks), GFP_KERNEL);
+	if (!vpu_rproc->clks) {
+		ret = -ENOMEM;
 		goto free_rproc;
 	}
 
-	ret = clk_prepare_enable(vpu_rproc->ipu);
+	for (i = 0; i < vpu_rproc->num_clks; ++i)
+		vpu_rproc->clks[i].id = clk_names[i];
+
+	ret = devm_clk_bulk_get(dev, vpu_rproc->num_clks, vpu_rproc->clks);
 	if (ret) {
-		dev_err(dev, "Failed to enable ipu clock\n");
+		dev_err(dev, "failed to get clocks\n");
 		goto free_rproc;
 	}
 
-	vpu_rproc->axi = devm_clk_get(dev, "axi");
-	if (IS_ERR(vpu_rproc->axi)) {
-		dev_err(dev, "Failed to get axi clock\n");
-		ret = PTR_ERR(vpu_rproc->axi);
-		goto clk_disable_ipu;
-	}
-
-	ret = clk_prepare_enable(vpu_rproc->axi);
+	ret = clk_bulk_prepare_enable(vpu_rproc->num_clks, vpu_rproc->clks);
 	if (ret) {
-		dev_err(dev, "Failed to enable axi clock\n");
-		goto clk_disable_ipu;
-	}
-
-	vpu_rproc->jtag = devm_clk_get(vpu_rproc->dev, "jtag");
-	if (IS_ERR(vpu_rproc->jtag)) {
-		dev_err(vpu_rproc->dev, "Failed to get jtag clock\n");
-		ret = PTR_ERR(vpu_rproc->jtag);
-		goto clk_disable_axi;
-	}
-
-	ret = clk_prepare_enable(vpu_rproc->jtag);
-	if (ret) {
-		dev_err(vpu_rproc->dev, "Failed to enable jtag clock\n");
-		goto clk_disable_axi;
+		dev_err(vpu_rproc->dev, "failed to enable clocks: %d\n", ret);
+		goto free_rproc;
 	}
 
 	ret = of_reserved_mem_device_init(dev);
 	if (ret) {
 		dev_err(dev, "device does not have specific CMA pool\n");
-		goto clk_disable_jtag;
+		goto clk_disable;
 	}
 
 	ret = rproc_add(rproc);
@@ -443,12 +433,8 @@ static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 
 free_mem:
 	of_reserved_mem_device_release(dev);
-clk_disable_jtag:
-	clk_disable_unprepare(vpu_rproc->jtag);
-clk_disable_axi:
-	clk_disable_unprepare(vpu_rproc->axi);
-clk_disable_ipu:
-	clk_disable_unprepare(vpu_rproc->ipu);
+clk_disable:
+	clk_bulk_disable_unprepare(vpu_rproc->num_clks, vpu_rproc->clks);
 free_rproc:
 	rproc_free(rproc);
 
@@ -468,9 +454,7 @@ static int mtk_vpu_rproc_remove(struct platform_device *pdev)
 #endif
 	rproc_del(rproc);
 	of_reserved_mem_device_release(dev);
-	clk_disable_unprepare(vpu_rproc->jtag);
-	clk_disable_unprepare(vpu_rproc->axi);
-	clk_disable_unprepare(vpu_rproc->ipu);
+	clk_bulk_disable_unprepare(vpu_rproc->num_clks, vpu_rproc->clks);
 	rproc_free(rproc);
 
 	return 0;
