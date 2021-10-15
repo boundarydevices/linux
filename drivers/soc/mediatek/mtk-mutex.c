@@ -14,6 +14,8 @@
 #include <linux/soc/mediatek/mtk-mutex.h>
 #include <linux/soc/mediatek/mtk-cmdq.h>
 
+#define MTK_MUTEX_ENABLE			BIT(0)
+
 #define MT2701_MUTEX0_MOD0			0x2c
 #define MT2701_MUTEX0_SOF0			0x30
 #define MT8183_MUTEX0_MOD0			0x30
@@ -818,7 +820,7 @@ void mtk_mutex_enable_by_cmdq(struct mtk_mutex *mutex,
 
 	cmdq_pkt_write_mask(cmd->pkt, mtx->subsys_id,
 			    mtx->addr + DISP_REG_MUTEX_EN(mutex->id),
-			    0x1, 0x00000001);
+			    MTK_MUTEX_ENABLE, MTK_MUTEX_ENABLE);
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_enable_by_cmdq);
 
@@ -843,7 +845,7 @@ void mtk_mutex_disable_by_cmdq(struct mtk_mutex *mutex,
 
 	cmdq_pkt_write_mask(cmd->pkt, mtx->subsys_id,
 			    mtx->addr + DISP_REG_MUTEX_EN(mutex->id),
-			    0x0, 0x00000001);
+			    0x0, MTK_MUTEX_ENABLE);
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_disable_by_cmdq);
 
