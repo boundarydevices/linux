@@ -44,17 +44,37 @@
 #define  CORE_DEFAULT0_QOS_SWAP_1		(0x01 << 28)
 #define  CORE_DEFAULT0_QOS_SWAP_2		(0x02 << 28)
 #define  CORE_DEFAULT0_QOS_SWAP_3		(0x03 << 28)
-#define  CORE_DEFAULT0_ARUSER_USE_IOMMU		(0x10 << 23)
-#define  CORE_DEFAULT0_AWUSER_USE_IOMMU		(0x10 << 18)
 #define CORE_DEFAULT1				(0x00000140)
-#define  CORE_DEFAULT0_ARUSER_IDMA_USE_IOMMU	(0x10 << 0)
-#define  CORE_DEFAULT0_AWUSER_IDMA_USE_IOMMU	(0x10 << 5)
 #define CORE_DEFAULT2				(0x00000144)
 #define CORE_DEFAULT2_DBG_EN			BIT(3)
 #define CORE_DEFAULT2_NIDEN			BIT(2)
 #define CORE_DEFAULT2_SPNIDEN			BIT(1)
 #define CORE_DEFAULT2_SPIDEN			BIT(0)
 #define CORE_XTENSA_ALTRESETVEC			(0x000001F8)
+
+struct mtk_vpu_conf {
+	u32 core_default0_aruser_use_iommu;
+	u32 core_default0_awuser_use_iommu;
+	u32 core_default1_aruser_idma_use_iommu;
+	u32 core_default1_awuser_idma_use_iommu;
+	u32 num_clks;
+	const char * const *clk_names;
+};
+
+static const char * const mt8183_clk_names[] = {
+	"ipu",
+	"axi",
+	"jtag"
+};
+
+static const struct mtk_vpu_conf mt8183_conf = {
+	.core_default0_aruser_use_iommu = (0x10 << 23),
+	.core_default0_awuser_use_iommu = (0x10 << 18),
+	.core_default1_aruser_idma_use_iommu = (0x10 << 0),
+	.core_default1_awuser_idma_use_iommu = (0x10 << 5),
+	.num_clks = ARRAY_SIZE(mt8183_clk_names),
+	.clk_names = mt8183_clk_names
+};
 
 struct mtk_vpu_rproc {
 	struct device *dev;
@@ -64,6 +84,7 @@ struct mtk_vpu_rproc {
 	int irq;
 	unsigned int num_clks;
 	struct clk_bulk_data *clks;
+	struct mtk_vpu_conf *conf;
 
 #ifdef CONFIG_MTK_APU_JTAG
 	struct pinctrl *pinctrl;
@@ -104,12 +125,14 @@ static int mtk_vpu_rproc_start(struct rproc *rproc)
 	core_ctrl &= ~CORE_CTRL_PIF_GATED;
 	vpu_write32(vpu_rproc, CORE_CTRL, core_ctrl);
 
-	vpu_write32(vpu_rproc, CORE_DEFAULT0, CORE_DEFAULT0_AWUSER_USE_IOMMU |
-					      CORE_DEFAULT0_ARUSER_USE_IOMMU |
-					      CORE_DEFAULT0_QOS_SWAP_1);
+
+	vpu_write32(vpu_rproc, CORE_DEFAULT0,
+		    vpu_rproc->conf->core_default0_awuser_use_iommu |
+		    vpu_rproc->conf->core_default0_aruser_use_iommu |
+		    CORE_DEFAULT0_QOS_SWAP_1);
 	vpu_write32(vpu_rproc, CORE_DEFAULT1,
-		    CORE_DEFAULT0_AWUSER_IDMA_USE_IOMMU |
-		    CORE_DEFAULT0_ARUSER_IDMA_USE_IOMMU);
+		    vpu_rproc->conf->core_default1_awuser_idma_use_iommu |
+		    vpu_rproc->conf->core_default1_aruser_idma_use_iommu);
 
 	core_ctrl &= ~CORE_CTRL_RUN_STALL;
 	vpu_write32(vpu_rproc, CORE_CTRL, core_ctrl);
@@ -330,11 +353,6 @@ static int vpu_jtag_probe(struct mtk_vpu_rproc *vpu_rproc)
 
 static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 {
-	static const char * const clk_names[] = {
-		"ipu",
-		"axi",
-		"jtag"
-	};
 
 	struct device *dev = &pdev->dev;
 	struct mtk_vpu_rproc *vpu_rproc;
@@ -388,7 +406,13 @@ static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 		goto free_rproc;
 	}
 
-	vpu_rproc->num_clks = ARRAY_SIZE(clk_names);
+	vpu_rproc->conf = (struct mtk_vpu_conf *)device_get_match_data(dev);
+	if (!vpu_rproc->conf) {
+		ret = -ENODEV;
+		goto free_rproc;
+	}
+
+	vpu_rproc->num_clks = vpu_rproc->conf->num_clks;
 	vpu_rproc->clks = devm_kcalloc(dev, vpu_rproc->num_clks,
 				     sizeof(*vpu_rproc->clks), GFP_KERNEL);
 	if (!vpu_rproc->clks) {
@@ -397,7 +421,7 @@ static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < vpu_rproc->num_clks; ++i)
-		vpu_rproc->clks[i].id = clk_names[i];
+		vpu_rproc->clks[i].id = vpu_rproc->conf->clk_names[i];
 
 	ret = devm_clk_bulk_get(dev, vpu_rproc->num_clks, vpu_rproc->clks);
 	if (ret) {
@@ -461,7 +485,7 @@ static int mtk_vpu_rproc_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id mtk_vpu_rproc_of_match[] __maybe_unused = {
-	{ .compatible = "mediatek,mt8183-apu", },
+	{ .compatible = "mediatek,mt8183-apu", .data = &mt8183_conf },
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, mtk_vpu_rproc_of_match);
