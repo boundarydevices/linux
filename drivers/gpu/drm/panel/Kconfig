@@ -671,4 +671,13 @@ config DRM_PANEL_AVD_TT70WS_CN_134_A
 	  Say Y here if you want to enable support for AVD TT70WS-CN-134-A DSI panel
 	  based on COGIC-EK731217BGCA controller
 
+config DRM_PANEL_STARTEK_KD070FHFID015
+	tristate "STARTEK KD070FHFID015 panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for STARTEK KD070FHFID015 DSI panel
+	  based on RENESAS-R69429 controller
+
 endmenu
