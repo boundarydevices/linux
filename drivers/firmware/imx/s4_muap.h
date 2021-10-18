@@ -126,6 +126,14 @@ struct s4_read_info {
 	u32 resp[8];
 };
 
+/* Header of the messages exchange with the SENTINEL */
+struct mu_hdr {
+	u8 ver;
+	u8 size;
+	u8 command;
+	u8 tag;
+}  __packed;
+
 struct s400_api_msg {
 	u32 header; /* u8 Tag; u8 Command; u8 Size; u8 Ver; */
 	u32 data[S400_MSG_DATA_NUM];
@@ -158,5 +166,4 @@ struct imx_s400_api {
 };
 
 int get_imx_s400_api(struct imx_s400_api **export);
-int imx_s400_api_call(struct imx_s400_api *s400_api, void *value);
 #endif
