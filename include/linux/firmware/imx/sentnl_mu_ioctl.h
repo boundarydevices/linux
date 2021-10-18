@@ -12,7 +12,7 @@
 #define HASH_MAX_LEN	64
 #define IV_MAX_LEN	32
 
-struct s4_muap_ioctl_signed_message {
+struct sentnl_mu_ioctl_signed_message {
 	u8 *message;
 	u32 msg_size;
 	u32 error_code;
@@ -20,8 +20,8 @@ struct s4_muap_ioctl_signed_message {
 
 
 
-#define S4_MUAP_IOCTL			0x0A /* like MISC_MAJOR. */
+#define SENTNL_MU_IOCTL			0x0A /* like MISC_MAJOR. */
 
-#define S4_MUAP_IOCTL_SIGNED_MSG_CMD	_IOWR(S4_MUAP_IOCTL, 0x03,\
-					struct s4_muap_ioctl_signed_message)
+#define SENTNL_MU_IOCTL_SIGNED_MSG_CMD	_IOWR(SENTNL_MU_IOCTL, 0x03,\
+					struct sentnl_mu_ioctl_signed_message)
 #endif

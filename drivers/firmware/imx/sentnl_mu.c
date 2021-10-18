@@ -26,31 +26,31 @@
 
 #include "sentnl_mu.h"
 
-struct imx_s400_api *s400_api_export;
+struct sentnl_mu_priv *sentnl_priv_export;
 
-int get_imx_s400_api(struct imx_s400_api **export)
+int get_sentnl_mu_priv(struct sentnl_mu_priv **export)
 {
-	if (!s400_api_export)
+	if (!sentnl_priv_export)
 		return -EPROBE_DEFER;
 
-	*export = s400_api_export;
+	*export = sentnl_priv_export;
 	return 0;
 }
-EXPORT_SYMBOL_GPL(get_imx_s400_api);
+EXPORT_SYMBOL_GPL(get_sentnl_mu_priv);
 
 
-static void s400_api_receive_message(struct mbox_client *rx_cl, void *mssg)
+static void sentnl_receive_message(struct mbox_client *rx_cl, void *mssg)
 {
-	struct imx_s400_api *s400_api;
+	struct sentnl_mu_priv *priv;
 
-	s400_api = container_of(rx_cl, struct imx_s400_api, rx_cl);
+	priv = container_of(rx_cl, struct sentnl_mu_priv, rx_cl);
 
-	spin_lock(&s400_api->lock);
+	spin_lock(&priv->lock);
 	if (mssg) {
-		s400_api->rx_msg = *(struct s400_api_msg *)mssg;
-		complete(&s400_api->done);
+		priv->rx_msg = *(struct sentnl_api_msg *)mssg;
+		complete(&priv->done);
 	}
-	spin_unlock(&s400_api->lock);
+	spin_unlock(&priv->lock);
 }
 
 struct device *imx_soc_device_register(void)
@@ -97,7 +97,7 @@ struct device *imx_soc_device_register(void)
  */
 
 /* Write a message to the MU. */
-static ssize_t s4_muap_fops_write(struct file *fp, const char __user *buf,
+static ssize_t sentnl_mu_fops_write(struct file *fp, const char __user *buf,
 				  size_t size, loff_t *ppos)
 {
 	int ret = 0;
@@ -109,7 +109,7 @@ static ssize_t s4_muap_fops_write(struct file *fp, const char __user *buf,
  * Read a message from the MU.
  * Blocking until a message is available.
  */
-static ssize_t s4_muap_fops_read(struct file *fp, char __user *buf,
+static ssize_t sentnl_mu_fops_read(struct file *fp, char __user *buf,
 				 size_t size, loff_t *ppos)
 {
 	int ret = 0;
@@ -118,8 +118,8 @@ static ssize_t s4_muap_fops_read(struct file *fp, char __user *buf,
 }
 
 /* Give access to S40x to the memory we want to share */
-static int s4_muap_setup_s4_memory_access(struct s4_mu_device_ctx *dev_ctx,
-					  u64 addr, u32 len)
+static int sentnl_mu_setup_sentnl_mem_access(struct sentnl_mu_device_ctx *dev_ctx,
+					     u64 addr, u32 len)
 {
 	/* Assuming S400 has access to all the memory regions */
 	int ret = 0;
@@ -139,10 +139,10 @@ exit:
 }
 
 /* Open a char device. */
-static int s4_muap_fops_open(struct inode *nd, struct file *fp)
+static int sentnl_mu_fops_open(struct inode *nd, struct file *fp)
 {
-	struct s4_mu_device_ctx *dev_ctx = container_of(fp->private_data,
-			struct s4_mu_device_ctx, miscdev);
+	struct sentnl_mu_device_ctx *dev_ctx = container_of(fp->private_data,
+			struct sentnl_mu_device_ctx, miscdev);
 	int err;
 
 	/* Avoid race if opened at the same time */
@@ -169,9 +169,9 @@ static int s4_muap_fops_open(struct inode *nd, struct file *fp)
 		goto exit;
 	}
 
-	err = s4_muap_setup_s4_memory_access(dev_ctx,
-					       dev_ctx->non_secure_mem.dma_addr,
-					       MAX_DATA_SIZE_PER_USER);
+	err = sentnl_mu_setup_sentnl_mem_access(dev_ctx,
+						dev_ctx->non_secure_mem.dma_addr,
+						MAX_DATA_SIZE_PER_USER);
 	if (err) {
 		err = -EPERM;
 		devctx_err(dev_ctx,
@@ -188,7 +188,7 @@ static int s4_muap_fops_open(struct inode *nd, struct file *fp)
 	goto exit;
 
 free_coherent:
-	dmam_free_coherent(dev_ctx->s400_muap_priv->dev, MAX_DATA_SIZE_PER_USER,
+	dmam_free_coherent(dev_ctx->priv->dev, MAX_DATA_SIZE_PER_USER,
 			   dev_ctx->non_secure_mem.ptr,
 			   dev_ctx->non_secure_mem.dma_addr);
 
@@ -198,12 +198,12 @@ exit:
 }
 
 /* Close a char device. */
-static int s4_muap_fops_close(struct inode *nd, struct file *fp)
+static int sentnl_mu_fops_close(struct inode *nd, struct file *fp)
 {
-	struct s4_mu_device_ctx *dev_ctx = container_of(fp->private_data,
-					struct s4_mu_device_ctx, miscdev);
-	struct imx_s400_api *s400_muap_priv = dev_ctx->s400_muap_priv;
-	struct s4_out_buffer_desc *out_buf_desc;
+	struct sentnl_mu_device_ctx *dev_ctx = container_of(fp->private_data,
+					struct sentnl_mu_device_ctx, miscdev);
+	struct sentnl_mu_priv *priv = dev_ctx->priv;
+	struct sentnl_obuf_desc *out_buf_desc;
 
 	/* Avoid race if closed at the same time */
 	if (down_trylock(&dev_ctx->fops_lock))
@@ -214,13 +214,13 @@ static int s4_muap_fops_close(struct inode *nd, struct file *fp)
 		goto exit;
 
 	/* check if this device was registered as command receiver. */
-	if (s400_muap_priv->cmd_receiver_dev == dev_ctx)
-		s400_muap_priv->cmd_receiver_dev = NULL;
+	if (priv->cmd_receiver_dev == dev_ctx)
+		priv->cmd_receiver_dev = NULL;
 
 	/* check if this device was registered as waiting response. */
-	if (s400_muap_priv->waiting_rsp_dev == dev_ctx) {
-		s400_muap_priv->waiting_rsp_dev = NULL;
-		mutex_unlock(&s400_muap_priv->mu_cmd_lock);
+	if (priv->waiting_rsp_dev == dev_ctx) {
+		priv->waiting_rsp_dev = NULL;
+		mutex_unlock(&priv->mu_cmd_lock);
 	}
 
 	/* Unmap secure memory shared buffer. */
@@ -233,7 +233,7 @@ static int s4_muap_fops_close(struct inode *nd, struct file *fp)
 	dev_ctx->secure_mem.pos = 0;
 
 	/* Free non-secure shared buffer. */
-	dmam_free_coherent(dev_ctx->s400_muap_priv->dev, MAX_DATA_SIZE_PER_USER,
+	dmam_free_coherent(dev_ctx->priv->dev, MAX_DATA_SIZE_PER_USER,
 			   dev_ctx->non_secure_mem.ptr,
 			   dev_ctx->non_secure_mem.dma_addr);
 
@@ -244,7 +244,7 @@ static int s4_muap_fops_close(struct inode *nd, struct file *fp)
 
 	while (!list_empty(&dev_ctx->pending_out)) {
 		out_buf_desc = list_first_entry_or_null(&dev_ctx->pending_out,
-						struct s4_out_buffer_desc,
+						struct sentnl_obuf_desc,
 						link);
 		__list_del_entry(&out_buf_desc->link);
 		devm_kfree(dev_ctx->dev, out_buf_desc);
@@ -258,10 +258,10 @@ exit:
 }
 
 /* IOCTL entry point of a char device */
-static long s4_muap_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
+static long sentnl_mu_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
-	struct s4_mu_device_ctx *dev_ctx = container_of(fp->private_data,
-					struct s4_mu_device_ctx, miscdev);
+	struct sentnl_mu_device_ctx *dev_ctx = container_of(fp->private_data,
+					struct sentnl_mu_device_ctx, miscdev);
 	int err = -EINVAL;
 
 	/* Prevent race during change of device context */
@@ -269,7 +269,7 @@ static long s4_muap_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		return -EBUSY;
 
 	switch (cmd) {
-	case S4_MUAP_IOCTL_SIGNED_MSG_CMD:
+	case SENTNL_MU_IOCTL_SIGNED_MSG_CMD:
 		devctx_err(dev_ctx, "IOCTL %.8x not supported\n", cmd);
 		break;
 	default:
@@ -282,13 +282,13 @@ static long s4_muap_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 }
 
 /* Char driver setup */
-static const struct file_operations s4_muap_fops = {
-	.open		= s4_muap_fops_open,
+static const struct file_operations sentnl_mu_fops = {
+	.open		= sentnl_mu_fops_open,
 	.owner		= THIS_MODULE,
-	.release	= s4_muap_fops_close,
-	.unlocked_ioctl = s4_muap_ioctl,
-	.read		= s4_muap_fops_read,
-	.write		= s4_muap_fops_write,
+	.release	= sentnl_mu_fops_close,
+	.unlocked_ioctl = sentnl_mu_ioctl,
+	.read		= sentnl_mu_fops_read,
+	.write		= sentnl_mu_fops_write,
 };
 
 /* interface for managed res to free a mailbox channel */
@@ -303,7 +303,7 @@ static void if_misc_deregister(void *miscdevice)
 	misc_deregister(miscdevice);
 }
 
-static int s4_mu_request_channel(struct device *dev,
+static int sentnl_mu_request_channel(struct device *dev,
 				 struct mbox_chan **chan,
 				 struct mbox_client *cl,
 				 const char *name)
@@ -333,11 +333,11 @@ exit:
 	return ret;
 }
 
-static int s400_api_probe(struct platform_device *pdev)
+static int sentnl_probe(struct platform_device *pdev)
 {
-	struct s4_mu_device_ctx *dev_ctx;
+	struct sentnl_mu_device_ctx *dev_ctx;
 	struct device *dev = &pdev->dev;
-	struct imx_s400_api *priv;
+	struct sentnl_mu_priv *priv;
 	struct device_node *np;
 	int max_nb_users = 0;
 	char *devname;
@@ -372,10 +372,10 @@ static int s400_api_probe(struct platform_device *pdev)
 	priv->cmd_receiver_dev = NULL;
 	priv->waiting_rsp_dev = NULL;
 
-	ret = of_property_read_u32(np, "fsl,sentnl_mu_id", &priv->s4_muap_id);
+	ret = of_property_read_u32(np, "fsl,sentnl_mu_id", &priv->sentnl_mu_id);
 	if (ret) {
 		dev_warn(dev, "%s: Not able to read mu_id", __func__);
-		priv->s4_muap_id = S4_DEFAULT_MUAP_INDEX;
+		priv->sentnl_mu_id = S4_DEFAULT_MUAP_INDEX;
 	}
 
 	ret = of_property_read_u32(np, "fsl,sentnl_mu_max_users", &max_nb_users);
@@ -400,14 +400,14 @@ static int s400_api_probe(struct platform_device *pdev)
 	priv->tx_cl.dev			= dev;
 	priv->tx_cl.tx_block		= false;
 	priv->tx_cl.knows_txdone	= true;
-	priv->tx_cl.rx_callback		= s400_api_receive_message;
+	priv->tx_cl.rx_callback		= sentnl_receive_message;
 
 	priv->rx_cl.dev			= dev;
 	priv->rx_cl.tx_block		= false;
 	priv->rx_cl.knows_txdone	= true;
-	priv->rx_cl.rx_callback		= s400_api_receive_message;
+	priv->rx_cl.rx_callback		= sentnl_receive_message;
 
-	ret = s4_mu_request_channel(dev, &priv->tx_chan, &priv->tx_cl, "tx");
+	ret = sentnl_mu_request_channel(dev, &priv->tx_chan, &priv->tx_cl, "tx");
 	if (ret) {
 		if (ret != -EPROBE_DEFER)
 			dev_err(dev, "Failed to request tx channel\n");
@@ -415,7 +415,7 @@ static int s400_api_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	ret = s4_mu_request_channel(dev, &priv->rx_chan, &priv->rx_cl, "rx");
+	ret = sentnl_mu_request_channel(dev, &priv->rx_chan, &priv->rx_cl, "rx");
 	if (ret) {
 		if (ret != -EPROBE_DEFER)
 			dev_err(dev, "Failed to request rx channel\n");
@@ -435,15 +435,15 @@ static int s400_api_probe(struct platform_device *pdev)
 
 		dev_ctx->dev = dev;
 		dev_ctx->status = MU_FREE;
-		dev_ctx->s400_muap_priv = priv;
+		dev_ctx->priv = priv;
 		/* Default value invalid for an header. */
 		init_waitqueue_head(&dev_ctx->wq);
 
 		INIT_LIST_HEAD(&dev_ctx->pending_out);
 		sema_init(&dev_ctx->fops_lock, 1);
 
-		devname = devm_kasprintf(dev, GFP_KERNEL, "s4muap%d_ch%d",
-					 priv->s4_muap_id, i);
+		devname = devm_kasprintf(dev, GFP_KERNEL, "sentnl_mu%d_ch%d",
+					 priv->sentnl_mu_id, i);
 		if (!devname) {
 			ret = -ENOMEM;
 			dev_err(dev,
@@ -453,7 +453,7 @@ static int s400_api_probe(struct platform_device *pdev)
 
 		dev_ctx->miscdev.name = devname;
 		dev_ctx->miscdev.minor = MISC_DYNAMIC_MINOR;
-		dev_ctx->miscdev.fops = &s4_muap_fops;
+		dev_ctx->miscdev.fops = &sentnl_mu_fops;
 		dev_ctx->miscdev.parent = dev;
 		ret = misc_register(&dev_ctx->miscdev);
 		if (ret) {
@@ -470,7 +470,7 @@ static int s400_api_probe(struct platform_device *pdev)
 	init_completion(&priv->done);
 	spin_lock_init(&priv->lock);
 
-	s400_api_export = priv;
+	sentnl_priv_export = priv;
 
 	soc = imx_soc_device_register();
 	if (IS_ERR(soc)) {
@@ -485,31 +485,31 @@ exit:
 	return ret;
 }
 
-static int s400_api_remove(struct platform_device *pdev)
+static int sentnl_remove(struct platform_device *pdev)
 {
-	struct imx_s400_api *s400_api;
+	struct sentnl_mu_priv *priv;
 
-	s400_api = dev_get_drvdata(&pdev->dev);
-	mbox_free_channel(s400_api->tx_chan);
-	mbox_free_channel(s400_api->rx_chan);
+	priv = dev_get_drvdata(&pdev->dev);
+	mbox_free_channel(priv->tx_chan);
+	mbox_free_channel(priv->rx_chan);
 
 	return 0;
 }
 
-static const struct of_device_id s400_api_match[] = {
+static const struct of_device_id sentnl_match[] = {
 	{ .compatible = "fsl,imx-sentinel", },
 	{},
 };
 
-static struct platform_driver s400_api_driver = {
+static struct platform_driver sentnl_driver = {
 	.driver = {
 		.name = "fsl-sentinel-mu",
-		.of_match_table = s400_api_match,
+		.of_match_table = sentnl_match,
 	},
-	.probe = s400_api_probe,
-	.remove = s400_api_remove,
+	.probe = sentnl_probe,
+	.remove = sentnl_remove,
 };
-module_platform_driver(s400_api_driver);
+module_platform_driver(sentnl_driver);
 
 MODULE_AUTHOR("Pankaj Gupta <pankaj.gupta@nxp.com>");
 MODULE_DESCRIPTION("Sentinel Baseline, HSM and SHE API(s)");
