@@ -22,12 +22,6 @@ struct s4_muap_ioctl_signed_message {
 
 #define S4_MUAP_IOCTL			0x0A /* like MISC_MAJOR. */
 
-#define S4_MUAP_IOCTL_GET_INFO_CMD	_IOWR(S4_MUAP_IOCTL, 0x01,\
-					struct s4_read_info)
-
-#define S4_MUAP_IOCTL_IMG_AUTH_CMD	_IOWR(S4_MUAP_IOCTL, 0x02,\
-					struct s4_muap_auth_image)
-
 #define S4_MUAP_IOCTL_SIGNED_MSG_CMD	_IOWR(S4_MUAP_IOCTL, 0x03,\
 					struct s4_muap_ioctl_signed_message)
 #endif
