@@ -56,7 +56,12 @@ static int imx_sentnl_msg_send_rcv(struct sentnl_mu_priv *priv)
 		return -ETIMEDOUT;
 	}
 
-	mutex_unlock(&priv->mu_cmd_lock);
+	/* As part of func sentnl_mu_rx_callback() execution,
+	 * response will copied to sentnl_msg->rsp_msg.
+	 *
+	 * Lock: (mutex_unlock(&sentnl_mu_priv->mu_cmd_lock),
+	 * will be unlocked if it is a response.
+	 */
 	return err;
 }
 

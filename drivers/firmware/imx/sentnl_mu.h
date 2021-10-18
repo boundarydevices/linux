@@ -46,10 +46,13 @@
 #define MAX_DATA_SIZE_PER_USER		(65 * 1024)
 #define S4_DEFAULT_MUAP_INDEX		(2)
 #define S4_MUAP_DEFAULT_MAX_USERS	(4)
-#define CACHELINE_SIZE			64
 
 #define DEFAULT_MESSAGING_TAG_COMMAND           (0x17u)
 #define DEFAULT_MESSAGING_TAG_RESPONSE          (0xe1u)
+
+#define SECO_MU_IO_FLAGS_IS_INPUT	(0x01u)
+#define SECO_MU_IO_FLAGS_USE_SEC_MEM	(0x02u)
+#define SECO_MU_IO_FLAGS_USE_SHORT_ADDR	(0x04u)
 
 struct sentnl_obuf_desc {
 	u8 *out_ptr;
@@ -93,36 +96,6 @@ struct sentnl_mu_device_ctx {
 	struct notifier_block sentnl_notify;
 };
 
-struct container_hdr {
-	u8 version;
-	u8 length_lsb;
-	u8 length_msb;
-	u8 tag;
-	u32 flags;
-	u16 sw_version;
-	u8 fuse_version;
-	u8 num_images;
-	u16 sig_blk_offset;
-	u16 reserved;
-} __packed;
-
-struct image_info {
-	u32 offset;
-	u32 size;
-	u64 dst;
-	u64 entry;
-	u32 hab_flags;
-	u32 meta;
-	u8 hash[HASH_MAX_LEN];
-	u8 iv[IV_MAX_LEN];
-} __packed;
-
-struct sentnl_auth_image {
-	struct container_hdr chdr;
-	struct image_info img_info[MAX_IMG_COUNT];
-	u32 resp;
-};
-
 /* Header of the messages exchange with the SENTINEL */
 struct mu_hdr {
 	u8 ver;
@@ -155,7 +128,7 @@ struct sentnl_mu_priv {
 	u8 cmd_tag;
 	u8 rsp_tag;
 
-	struct mbox_client tx_cl, rx_cl;
+	struct mbox_client sentnl_mb_cl;
 	struct mbox_chan *tx_chan, *rx_chan;
 	struct sentnl_api_msg tx_msg, rx_msg;
 	struct completion done;
