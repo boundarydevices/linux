@@ -6,10 +6,10 @@
  */
 
 #include <linux/types.h>
-#include <linux/firmware/imx/s400-api.h>
-#include <linux/firmware/imx/s4_muap_ioctl.h>
+#include <linux/firmware/imx/sentnl_base_msg.h>
+#include <linux/firmware/imx/sentnl_mu_ioctl.h>
 
-#include "s4_muap.h"
+#include "sentnl_mu.h"
 
 /* Fill a command message header with a given command ID and length in bytes. */
 static int plat_fill_cmd_msg_hdr(struct mu_hdr *hdr, uint8_t cmd, uint32_t len)
