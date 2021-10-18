@@ -6,11 +6,6 @@
 #ifndef SENTNL_BASE_MSG_H
 #define SENTNL_BASE_MSG_H
 
-#include <linux/completion.h>
-#include <linux/mailbox_client.h>
-#include <linux/miscdevice.h>
-#include <linux/semaphore.h>
-
 #define MAX_RECV_SIZE 31
 #define MAX_RECV_SIZE_BYTES (MAX_RECV_SIZE * sizeof(u32))
 #define MAX_MESSAGE_SIZE 31
@@ -18,22 +13,22 @@
 
 #define MESSAGING_VERSION_6		0x6
 
-#define S400_OEM_CNTN_AUTH_REQ		0x87
-#define S400_VERIFY_IMAGE_REQ		0x88
-#define S400_RELEASE_CONTAINER_REQ	0x89
-#define S400_READ_FUSE_REQ		0x97
+#define SENTNL_OEM_CNTN_AUTH_REQ	0x87
+#define SENTNL_VERIFY_IMAGE_REQ		0x88
+#define SENTNL_RELEASE_CONTAINER_REQ	0x89
+#define SENTNL_READ_FUSE_REQ		0x97
 #define OTP_UNIQ_ID			0x01
 #define OTFAD_CONFIG			0x2
 
-#define S400_VERSION			0x6
-#define S400_SUCCESS_IND		0xD6
-#define S400_FAILURE_IND		0x29
+#define SENTNL_VERSION			0x6
+#define SENTNL_SUCCESS_IND		0xD6
+#define SENTNL_FAILURE_IND		0x29
 
-#define S400_MSG_DATA_NUM		10
+#define SENTNL_MSG_DATA_NUM		10
 
-#define S400_OEM_CNTN_AUTH_REQ_SIZE	3
-#define S400_VERIFY_IMAGE_REQ_SIZE	2
-#define S400_RELEASE_CONTAINER_REQ_SIZE	1
+#define SENTNL_OEM_CNTN_AUTH_REQ_SIZE	3
+#define SENTNL_VERIFY_IMAGE_REQ_SIZE	2
+#define SENTNL_REL_CONTAINER_REQ_SIZE	1
 
 
 int read_common_fuse(uint16_t fuse_index, u32 *value);
