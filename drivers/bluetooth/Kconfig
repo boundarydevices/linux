@@ -19,6 +19,9 @@ config BT_QCA
 	tristate
 	select FW_LOADER
 
+config BT_MTK
+	tristate
+	select FW_LOADER
 config BT_HCIBTUSB
 	tristate "HCI USB driver"
 	depends on USB
@@ -41,6 +44,13 @@ config BT_HCIBTUSB_AUTOSUSPEND
 	  This can be overridden by passing btusb.enable_autosuspend=[y|n]
 	  on the kernel commandline.
 
+config BT_HCIBTUSB_INTERVAL
+	bool "Enable notification of USB polling interval"
+	depends on BT_HCIBTUSB
+	help
+	  Say Y here to enable notification of USB polling interval for
+	  Bluetooth USB devices by default.
+
 config BT_HCIBTUSB_BCM
 	bool "Broadcom protocol support"
 	depends on BT_HCIBTUSB
@@ -55,6 +65,7 @@ config BT_HCIBTUSB_BCM
 config BT_HCIBTUSB_MTK
 	bool "MediaTek protocol support"
 	depends on BT_HCIBTUSB
+        select BT_MTK
 	default n
 	help
 	  The MediaTek protocol support enables firmware download
