@@ -11,7 +11,6 @@
 #include <linux/miscdevice.h>
 #include <linux/semaphore.h>
 
-
 #define MAX_RECV_SIZE 31
 #define MAX_RECV_SIZE_BYTES (MAX_RECV_SIZE * sizeof(u32))
 #define MAX_MESSAGE_SIZE 31
@@ -22,6 +21,7 @@
 #define S400_RELEASE_CONTAINER_REQ	0x89
 #define S400_READ_FUSE_REQ		0x97
 #define OTP_UNIQ_ID			0x01
+#define OTFAD_CONFIG			0x2
 
 #define S400_VERSION			0x6
 #define S400_SUCCESS_IND		0xD6
@@ -33,38 +33,7 @@
 #define S400_VERIFY_IMAGE_REQ_SIZE	2
 #define S400_RELEASE_CONTAINER_REQ_SIZE	1
 
-struct s400_api_msg {
-	u32 header; /* u8 Tag; u8 Command; u8 Size; u8 Ver; */
-	u32 data[S400_MSG_DATA_NUM];
-};
 
-struct imx_s400_api {
-	struct s4_mu_device_ctx *cmd_receiver_dev;
-	struct s4_mu_device_ctx *waiting_rsp_dev;
-	/*
-	 * prevent parallel access to the MU registers
-	 * e.g. a user trying to send a command while the other one is
-	 * sending a response.
-	 */
-	struct mutex mu_lock;
-	/*
-	 * prevent a command to be sent on the MU while another one is still
-	 * processing. (response to a command is allowed)
-	 */
-	struct mutex mu_cmd_lock;
-	struct device *dev;
-	u32 s4_muap_id;
-	u8 cmd_tag;
-	u8 rsp_tag;
-
-	struct mbox_client tx_cl, rx_cl;
-	struct mbox_chan *tx_chan, *rx_chan;
-	struct s400_api_msg tx_msg, rx_msg;
-	struct completion done;
-	spinlock_t lock;
-};
-
-int get_imx_s400_api(struct imx_s400_api **export);
-int imx_s400_api_call(struct imx_s400_api *s400_api, void *value);
+int read_common_fuse(uint16_t fuse_index, u32 *value);
 
 #endif

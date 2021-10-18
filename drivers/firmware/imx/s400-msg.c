@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2021 NXP
- * Author: Alice Guo <alice.guo@nxp.com>
+ * Author: Pankaj <pankaj.gupta@nxp.com>
+	   Alice Guo <alice.guo@nxp.com>
  */
 
 #include <linux/types.h>
-
 #include <linux/firmware/imx/s400-api.h>
 #include <linux/firmware/imx/s4_muap_ioctl.h>
 
@@ -63,14 +63,15 @@ static int read_fuse_word(struct imx_s400_api *s400_api, u32 *value)
 	return -EINVAL;
 }
 
-static int read_common_fuse(struct imx_s400_api *s400_api, u32 *value)
+int read_common_fuse(uint16_t fuse_id, u32 *value)
 {
-	unsigned int size = MSG_SIZE(s400_api->tx_msg.header);
-	unsigned int wait, fuse_id;
-	int err;
+	unsigned int wait;
+	struct imx_s400_api *s400_api = NULL;
+	int err = -EINVAL;
 
-	err = -EINVAL;
-	if (size == 2) {
+	err = get_imx_s400_api(&s400_api);
+
+	if (MSG_SIZE(s400_api->tx_msg.header) == 2) {
 		err = s400_api_send_command(s400_api);
 		if (err < 0)
 			return err;
@@ -92,6 +93,7 @@ static int read_common_fuse(struct imx_s400_api *s400_api, u32 *value)
 
 	return err;
 }
+EXPORT_SYMBOL_GPL(read_common_fuse);
 
 int imx_s400_api_call(struct imx_s400_api *s400_api, void *value)
 {
@@ -108,7 +110,7 @@ int imx_s400_api_call(struct imx_s400_api *s400_api, void *value)
 
 		switch (command) {
 		case S400_READ_FUSE_REQ:
-			err = read_common_fuse(s400_api, value);
+			err = read_common_fuse(OTP_UNIQ_ID, value);
 			break;
 		default:
 			return -EINVAL;

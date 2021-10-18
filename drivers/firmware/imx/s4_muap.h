@@ -126,5 +126,37 @@ struct s4_read_info {
 	u32 resp[8];
 };
 
+struct s400_api_msg {
+	u32 header; /* u8 Tag; u8 Command; u8 Size; u8 Ver; */
+	u32 data[S400_MSG_DATA_NUM];
+};
+
+struct imx_s400_api {
+	struct s4_mu_device_ctx *cmd_receiver_dev;
+	struct s4_mu_device_ctx *waiting_rsp_dev;
+	/*
+	 * prevent parallel access to the MU registers
+	 * e.g. a user trying to send a command while the other one is
+	 * sending a response.
+	 */
+	struct mutex mu_lock;
+	/*
+	 * prevent a command to be sent on the MU while another one is still
+	 * processing. (response to a command is allowed)
+	 */
+	struct mutex mu_cmd_lock;
+	struct device *dev;
+	u32 s4_muap_id;
+	u8 cmd_tag;
+	u8 rsp_tag;
+
+	struct mbox_client tx_cl, rx_cl;
+	struct mbox_chan *tx_chan, *rx_chan;
+	struct s400_api_msg tx_msg, rx_msg;
+	struct completion done;
+	spinlock_t lock;
+};
+
 int get_imx_s400_api(struct imx_s400_api **export);
+int imx_s400_api_call(struct imx_s400_api *s400_api, void *value);
 #endif
