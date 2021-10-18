@@ -3,8 +3,8 @@
  * Copyright 2019-2021 NXP
  */
 
-#ifndef S4_MUAP_IOCTL_H
-#define S4_MUAP_IOCTL_H
+#ifndef SENTNL_MU_IOCTL_H
+#define SENTNL_MU_IOCTL_H
 
 /* IOCTL definitions. */
 

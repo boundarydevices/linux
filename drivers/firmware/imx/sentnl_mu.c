@@ -11,8 +11,8 @@
 #include <linux/dev_printk.h>
 #include <linux/errno.h>
 #include <linux/export.h>
-#include <linux/firmware/imx/s400-api.h>
-#include <linux/firmware/imx/s4_muap_ioctl.h>
+#include <linux/firmware/imx/sentnl_base_msg.h>
+#include <linux/firmware/imx/sentnl_mu_ioctl.h>
 #include <linux/io.h>
 #include <linux/init.h>
 #include <linux/mailbox_client.h>
@@ -24,7 +24,7 @@
 #include <linux/slab.h>
 #include <linux/sys_soc.h>
 
-#include "s4_muap.h"
+#include "sentnl_mu.h"
 
 struct imx_s400_api *s400_api_export;
 
@@ -372,25 +372,29 @@ static int s400_api_probe(struct platform_device *pdev)
 	priv->cmd_receiver_dev = NULL;
 	priv->waiting_rsp_dev = NULL;
 
-	ret = of_property_read_u32(np, "fsl,s4_muap_id", &priv->s4_muap_id);
+	ret = of_property_read_u32(np, "fsl,sentnl_mu_id", &priv->s4_muap_id);
 	if (ret) {
 		dev_warn(dev, "%s: Not able to read mu_id", __func__);
 		priv->s4_muap_id = S4_DEFAULT_MUAP_INDEX;
 	}
 
-	ret = of_property_read_u32(np, "fsl,fsl,s4muap_max_users", &max_nb_users);
+	ret = of_property_read_u32(np, "fsl,sentnl_mu_max_users", &max_nb_users);
 	if (ret) {
 		dev_warn(dev, "%s: Not able to read mu_max_user", __func__);
 		max_nb_users = S4_MUAP_DEFAULT_MAX_USERS;
 	}
 
 	ret = of_property_read_u8(np, "fsl,cmd_tag", &priv->cmd_tag);
-	if (ret)
+	if (ret) {
+		dev_warn(dev, "%s: Not able to read cmd_tag", __func__);
 		priv->cmd_tag = DEFAULT_MESSAGING_TAG_COMMAND;
+	}
 
 	ret = of_property_read_u8(np, "fsl,rsp_tag", &priv->rsp_tag);
-	if (ret)
+	if (ret) {
+		dev_warn(dev, "%s: Not able to read rsp_tag", __func__);
 		priv->rsp_tag = DEFAULT_MESSAGING_TAG_RESPONSE;
+	}
 
 	/* Mailbox client configuration */
 	priv->tx_cl.dev			= dev;
@@ -493,13 +497,13 @@ static int s400_api_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id s400_api_match[] = {
-	{ .compatible = "fsl,imx8ulp-s400", },
+	{ .compatible = "fsl,imx-sentinel", },
 	{},
 };
 
 static struct platform_driver s400_api_driver = {
 	.driver = {
-		.name = "fsl-s400-api",
+		.name = "fsl-sentinel-mu",
 		.of_match_table = s400_api_match,
 	},
 	.probe = s400_api_probe,
@@ -507,6 +511,6 @@ static struct platform_driver s400_api_driver = {
 };
 module_platform_driver(s400_api_driver);
 
-MODULE_AUTHOR("Alice Guo <alice.guo@nxp.com>");
-MODULE_DESCRIPTION("S400 Baseline API");
+MODULE_AUTHOR("Pankaj Gupta <pankaj.gupta@nxp.com>");
+MODULE_DESCRIPTION("Sentinel Baseline, HSM and SHE API(s)");
 MODULE_LICENSE("GPL v2");
