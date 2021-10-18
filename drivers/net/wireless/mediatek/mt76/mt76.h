@@ -29,6 +29,7 @@
 struct mt76_dev;
 struct mt76_phy;
 struct mt76_wcid;
+struct mt76s_intr;
 
 struct mt76_reg_pair {
 	u32 reg;
@@ -513,6 +514,7 @@ struct mt76_sdio {
 		int pse_page_size;
 		int deficit;
 	} sched;
+	int (*parse_irq)(struct mt76_dev *dev, struct mt76s_intr *intr);
 };
 
 struct mt76_mmio {
