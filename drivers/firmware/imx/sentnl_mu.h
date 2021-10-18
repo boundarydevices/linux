@@ -3,8 +3,8 @@
  * Copyright 2021 NXP
  */
 
-#ifndef S4_MUAP_H
-#define S4_MUAP_H
+#ifndef SENTNL_MU_H
+#define SENTNL_MU_H
 
 /* macro to log operation of a misc device */
 #define miscdev_dbg(p_miscdev, fmt, va_args...)                                \

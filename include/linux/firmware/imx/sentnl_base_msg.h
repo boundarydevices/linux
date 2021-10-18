@@ -3,8 +3,8 @@
  * Copyright 2021 NXP
  */
 
-#ifndef __S400_API_H
-#define __S400_API_H
+#ifndef SENTNL_BASE_MSG_H
+#define SENTNL_BASE_MSG_H
 
 #include <linux/completion.h>
 #include <linux/mailbox_client.h>
