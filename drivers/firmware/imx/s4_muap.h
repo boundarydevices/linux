@@ -1,0 +1,130 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
+/*
+ * Copyright 2021 NXP
+ */
+
+#ifndef S4_MUAP_H
+#define S4_MUAP_H
+
+/* macro to log operation of a misc device */
+#define miscdev_dbg(p_miscdev, fmt, va_args...)                                \
+	({                                                                     \
+		struct miscdevice *_p_miscdev = p_miscdev;                     \
+		dev_dbg((_p_miscdev)->parent, "%s: " fmt, (_p_miscdev)->name,  \
+		##va_args);                                                    \
+	})
+
+#define miscdev_info(p_miscdev, fmt, va_args...)                               \
+	({                                                                     \
+		struct miscdevice *_p_miscdev = p_miscdev;                     \
+		dev_info((_p_miscdev)->parent, "%s: " fmt, (_p_miscdev)->name, \
+		##va_args);                                                    \
+	})
+
+#define miscdev_err(p_miscdev, fmt, va_args...)                                \
+	({                                                                     \
+		struct miscdevice *_p_miscdev = p_miscdev;                     \
+		dev_err((_p_miscdev)->parent, "%s: " fmt, (_p_miscdev)->name,  \
+		##va_args);                                                    \
+	})
+/* macro to log operation of a device context */
+#define devctx_dbg(p_devctx, fmt, va_args...) \
+	miscdev_dbg(&((p_devctx)->miscdev), fmt, ##va_args)
+#define devctx_info(p_devctx, fmt, va_args...) \
+	miscdev_info(&((p_devctx)->miscdev), fmt, ##va_args)
+#define devctx_err(p_devctx, fmt, va_args...) \
+	miscdev_err((&(p_devctx)->miscdev), fmt, ##va_args)
+
+#define MSG_TAG(x)			(((x) & 0xff000000) >> 24)
+#define MSG_COMMAND(x)			(((x) & 0x00ff0000) >> 16)
+#define MSG_SIZE(x)			(((x) & 0x0000ff00) >> 8)
+#define MSG_VER(x)			((x) & 0x000000ff)
+#define RES_STATUS(x)			((x) & 0x000000ff)
+#define MAX_DATA_SIZE_PER_USER		(65 * 1024)
+#define S4_DEFAULT_MUAP_INDEX		(2)
+#define S4_MUAP_DEFAULT_MAX_USERS	(4)
+#define CACHELINE_SIZE			64
+
+#define DEFAULT_MESSAGING_TAG_COMMAND           (0x17u)
+#define DEFAULT_MESSAGING_TAG_RESPONSE          (0xe1u)
+
+struct s4_out_buffer_desc {
+	u8 *out_ptr;
+	u8 *out_usr_ptr;
+	u32 out_size;
+	struct list_head link;
+};
+
+/* Status of a char device */
+enum mu_device_status_t {
+	MU_FREE,
+	MU_OPENED
+};
+
+struct s4_shared_mem {
+	dma_addr_t dma_addr;
+	u32 size;
+	u32 pos;
+	u8 *ptr;
+};
+
+/* Private struct for each char device instance. */
+struct s4_mu_device_ctx {
+	struct device *dev;
+	struct imx_s400_api *s400_muap_priv;
+	struct miscdevice miscdev;
+
+	enum mu_device_status_t status;
+	wait_queue_head_t wq;
+	struct semaphore fops_lock;
+
+	u32 pending_hdr;
+	struct list_head pending_out;
+
+	struct s4_shared_mem secure_mem;
+	struct s4_shared_mem non_secure_mem;
+
+	u32 temp_cmd[MAX_MESSAGE_SIZE];
+	u32 temp_resp[MAX_RECV_SIZE];
+	u32 temp_resp_size;
+	struct notifier_block s4_notify;
+};
+
+struct container_hdr {
+	u8 version;
+	u8 length_lsb;
+	u8 length_msb;
+	u8 tag;
+	u32 flags;
+	u16 sw_version;
+	u8 fuse_version;
+	u8 num_images;
+	u16 sig_blk_offset;
+	u16 reserved;
+} __packed;
+
+struct image_info {
+	u32 offset;
+	u32 size;
+	u64 dst;
+	u64 entry;
+	u32 hab_flags;
+	u32 meta;
+	u8 hash[HASH_MAX_LEN];
+	u8 iv[IV_MAX_LEN];
+} __packed;
+
+struct s4_muap_auth_image {
+	struct container_hdr chdr;
+	struct image_info img_info[MAX_IMG_COUNT];
+	u32 resp;
+};
+
+struct s4_read_info {
+	u32 cmd_id;
+	u32 size;
+	u32 resp[8];
+};
+
+int get_imx_s400_api(struct imx_s400_api **export);
+#endif
