@@ -11,15 +11,50 @@
 
 #include "s4_muap.h"
 
-static int s400_api_send_command(struct imx_s400_api *s400_api)
+/* Fill a command message header with a given command ID and length in bytes. */
+static int plat_fill_cmd_msg_hdr(struct mu_hdr *hdr, uint8_t cmd, uint32_t len)
 {
-	int err;
+	struct imx_s400_api *priv = NULL;
+	int err = 0;
+
+	err = get_imx_s400_api(&priv);
+	if (err) {
+		pr_err("Error: iMX Sentinel MU is not probed successfully.\n");
+		return err;
+	}
+	hdr->tag = priv->cmd_tag;
+	hdr->ver = MESSAGING_VERSION_6;
+	hdr->command = cmd;
+	hdr->size = (uint8_t)(len / sizeof(uint32_t));
+
+	return err;
+};
+
+static int imx_sentnl_msg_send_rcv(struct imx_s400_api *s400_api)
+{
+	unsigned int wait;
+	int err = 0;
+
+	mutex_lock(&s400_api->mu_cmd_lock);
+	mutex_lock(&s400_api->mu_lock);
 
 	err = mbox_send_message(s400_api->tx_chan, &s400_api->tx_msg);
-	if (err < 0)
+	if (err < 0) {
+		pr_err("Error: mbox_send_message failure.\n");
+		mutex_unlock(&s400_api->mu_lock);
 		return err;
+	}
+	mutex_unlock(&s400_api->mu_lock);
 
-	return 0;
+	wait = msecs_to_jiffies(1000);
+	if (!wait_for_completion_timeout(&s400_api->done, wait)) {
+		mutex_unlock(&s400_api->mu_cmd_lock);
+		pr_err("Error: wait_for_completion timed out.\n");
+		return -ETIMEDOUT;
+	}
+
+	mutex_unlock(&s400_api->mu_cmd_lock);
+	return err;
 }
 
 static int read_otp_uniq_id(struct imx_s400_api *s400_api, u32 *value)
@@ -65,58 +100,34 @@ static int read_fuse_word(struct imx_s400_api *s400_api, u32 *value)
 
 int read_common_fuse(uint16_t fuse_id, u32 *value)
 {
-	unsigned int wait;
 	struct imx_s400_api *s400_api = NULL;
-	int err = -EINVAL;
+	int err = 0;
 
 	err = get_imx_s400_api(&s400_api);
+	if (err) {
+		pr_err("Error: iMX Sentinel MU is not probed successfully.\n");
+		return err;
+	}
+	err = plat_fill_cmd_msg_hdr((struct mu_hdr *)&s400_api->tx_msg.header, S400_READ_FUSE_REQ, 8);
+	if (err) {
+		pr_err("Error: plat_fill_cmd_msg_hdr failed.\n");
+		return err;
+	}
 
-	if (MSG_SIZE(s400_api->tx_msg.header) == 2) {
-		err = s400_api_send_command(s400_api);
-		if (err < 0)
-			return err;
+	s400_api->tx_msg.data[0] = fuse_id;
+	err = imx_sentnl_msg_send_rcv(s400_api);
+	if (err < 0)
+		return err;
 
-		wait = msecs_to_jiffies(1000);
-		if (!wait_for_completion_timeout(&s400_api->done, wait))
-			return -ETIMEDOUT;
-
-		fuse_id = s400_api->tx_msg.data[0] & 0xff;
-		switch (fuse_id) {
-		case OTP_UNIQ_ID:
-			err = read_otp_uniq_id(s400_api, value);
-			break;
-		default:
-			err = read_fuse_word(s400_api, value);
-			break;
-		}
+	switch (fuse_id) {
+	case OTP_UNIQ_ID:
+		err = read_otp_uniq_id(s400_api, value);
+		break;
+	default:
+		err = read_fuse_word(s400_api, value);
+		break;
 	}
 
 	return err;
 }
 EXPORT_SYMBOL_GPL(read_common_fuse);
-
-int imx_s400_api_call(struct imx_s400_api *s400_api, void *value)
-{
-	unsigned int tag, command, ver;
-	int err;
-
-	err = -EINVAL;
-	tag = MSG_TAG(s400_api->tx_msg.header);
-	command = MSG_COMMAND(s400_api->tx_msg.header);
-	ver = MSG_VER(s400_api->tx_msg.header);
-
-	if (tag == s400_api->cmd_tag && ver == S400_VERSION) {
-		reinit_completion(&s400_api->done);
-
-		switch (command) {
-		case S400_READ_FUSE_REQ:
-			err = read_common_fuse(OTP_UNIQ_ID, value);
-			break;
-		default:
-			return -EINVAL;
-		}
-	}
-
-	return err;
-}
-EXPORT_SYMBOL_GPL(imx_s400_api_call);
