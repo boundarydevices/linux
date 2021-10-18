@@ -93,39 +93,6 @@ static int read_common_fuse(struct imx_s400_api *s400_api, u32 *value)
 	return err;
 }
 
-static int s4_auth_cntr_hdr(struct imx_s400_api *s400_api, void *value)
-{
-	int ret;
-
-	ret = s400_api_send_command(s400_api);
-	if (ret < 0)
-		return ret;
-
-	return ret;
-}
-
-static int s4_verify_img(struct imx_s400_api *s400_api, void *value)
-{
-	int ret;
-
-	ret = s400_api_send_command(s400_api);
-	if (ret < 0)
-		return ret;
-
-	return ret;
-}
-
-static int s4_release_cntr(struct imx_s400_api *s400_api, void *value)
-{
-	int ret;
-
-	ret = s400_api_send_command(s400_api);
-	if (ret < 0)
-		return ret;
-
-	return ret;
-}
-
 int imx_s400_api_call(struct imx_s400_api *s400_api, void *value)
 {
 	unsigned int tag, command, ver;
@@ -143,15 +110,6 @@ int imx_s400_api_call(struct imx_s400_api *s400_api, void *value)
 		case S400_READ_FUSE_REQ:
 			err = read_common_fuse(s400_api, value);
 			break;
-		case S400_OEM_CNTN_AUTH_REQ:
-			err = s4_auth_cntr_hdr(s400_api, value);
-			break;
-		case S400_VERIFY_IMAGE_REQ:
-			err = s4_verify_img(s400_api, value);
-			break;
-		case S400_RELEASE_CONTAINER_REQ:
-			err = s4_release_cntr(s400_api, value);
-			break;
 		default:
 			return -EINVAL;
 		}
@@ -160,119 +118,3 @@ int imx_s400_api_call(struct imx_s400_api *s400_api, void *value)
 	return err;
 }
 EXPORT_SYMBOL_GPL(imx_s400_api_call);
-
-#if 0
-static int s4_muap_ioctl_img_auth_cmd_handler(struct s4_mu_device_ctx *dev_ctx,
-					      unsigned long arg)
-{
-	struct imx_s400_api *s400_muap_priv = dev_ctx->s400_muap_priv;
-	struct s4_muap_auth_image s4_muap_auth_image = {0};
-	struct container_hdr *phdr = &s4_muap_auth_image.chdr;
-	struct image_info *img = &s4_muap_auth_image.img_info[0];
-	unsigned long base_addr = (unsigned long) &s4_muap_auth_image;
-
-	int i;
-	u16 length;
-	unsigned long s, e;
-	int ret = -EINVAL;
-
-	/* Check if not already configured. */
-	if (dev_ctx->secure_mem.dma_addr != 0u) {
-		devctx_err(dev_ctx, "Shared memory not configured\n");
-		goto exit;
-	}
-
-	ret = (int)copy_from_user(&s4_muap_auth_image, (u8 *)arg,
-			sizeof(s4_muap_auth_image));
-	if (ret) {
-		devctx_err(dev_ctx, "Fail copy shared memory config to user\n");
-		ret = -EFAULT;
-		goto exit;
-	}
-
-
-	if (!IS_ALIGNED(base_addr, 4)) {
-		devctx_err(dev_ctx, "Error: Image's address is not 4 byte aligned\n");
-		return -EINVAL;
-	}
-
-	if (phdr->tag != 0x87 && phdr->version != 0x0) {
-		devctx_err(dev_ctx, "Error: Wrong container header\n");
-		return -EFAULT;
-	}
-
-	if (!phdr->num_images) {
-		devctx_err(dev_ctx, "Error: Wrong container, no image found\n");
-		return -EFAULT;
-	}
-	length = phdr->length_lsb + (phdr->length_msb << 8);
-
-	devctx_dbg(dev_ctx, "container length %u\n", length);
-
-	s400_muap_priv->tx_msg.header = (s400_muap_priv->cmd_tag << 24) |
-					(S400_OEM_CNTN_AUTH_REQ << 16) |
-					(S400_OEM_CNTN_AUTH_REQ_SIZE << 8) |
-					S400_VERSION;
-	s400_muap_priv->tx_msg.data[0] = ((u32)(((base_addr) >> 16) >> 16));
-	s400_muap_priv->tx_msg.data[1] = ((u32)(base_addr));
-
-	ret = imx_s400_api_call(s400_muap_priv, (void *) &s4_muap_auth_image.resp);
-	if (ret || (s4_muap_auth_image.resp != S400_SUCCESS_IND)) {
-		devctx_err(dev_ctx, "Error: Container Authentication failed.\n");
-		ret = -EIO;
-		goto exit;
-	}
-
-	/* Copy images to dest address */
-	for (i = 0; i < phdr->num_images; i++) {
-		img = img + i;
-
-		//devctx_dbg(dev_ctx, "img %d, dst 0x%x, src 0x%lux, size 0x%x\n",
-		//		i, (u32) img->dst,
-		//		(unsigned long)img->offset + phdr, img->size);
-
-		memcpy((void *)img->dst, (const void *)(img->offset + phdr),
-				img->size);
-
-		s = img->dst & ~(CACHELINE_SIZE - 1);
-		e = ALIGN(img->dst + img->size, CACHELINE_SIZE) - 1;
-
-#ifdef CONFIG_ARM64
-		__flush_dcache_area((void *) s, e);
-#else
-		__cpuc_flush_dcache_area((void *) s, e);
-#endif
-		s400_muap_priv->tx_msg.header = (s400_muap_priv->cmd_tag << 24) |
-						(S400_VERIFY_IMAGE_REQ << 16) |
-						(S400_VERIFY_IMAGE_REQ_SIZE << 8) |
-						S400_VERSION;
-		s400_muap_priv->tx_msg.data[0] = 1 << i;
-		ret = imx_s400_api_call(s400_muap_priv, (void *) &s4_muap_auth_image.resp);
-		if (ret || (s4_muap_auth_image.resp != S400_SUCCESS_IND)) {
-			devctx_err(dev_ctx, "Error: Image Verification failed.\n");
-			ret = -EIO;
-			goto exit;
-		}
-	}
-
-exit:
-	s400_muap_priv->tx_msg.header = (s400_muap_priv->cmd_tag << 24) |
-					(S400_RELEASE_CONTAINER_REQ << 16) |
-					(S400_RELEASE_CONTAINER_REQ_SIZE << 8) |
-					S400_VERSION;
-	ret = imx_s400_api_call(s400_muap_priv, (void *) &s4_muap_auth_image.resp);
-	if (ret || (s4_muap_auth_image.resp != S400_SUCCESS_IND)) {
-		devctx_err(dev_ctx, "Error: Release Container failed.\n");
-		ret = -EIO;
-	}
-
-	ret = (int)copy_to_user((u8 *)arg, &s4_muap_auth_image,
-		sizeof(s4_muap_auth_image));
-	if (ret) {
-		devctx_err(dev_ctx, "Failed to copy iobuff setup to user\n");
-		ret = -EFAULT;
-	}
-	return ret;
-}
-#endif
-
