@@ -60,9 +60,7 @@ struct device *imx_soc_device_register(void)
 	u32 v[4];
 	int err;
 
-	s400_api_export->tx_msg.header = 0x17970206;
-	s400_api_export->tx_msg.data[0] = 0x1;
-	err = imx_s400_api_call(s400_api_export, v);
+	err = read_common_fuse(OTP_UNIQ_ID, v);
 	if (err)
 		return NULL;
 
