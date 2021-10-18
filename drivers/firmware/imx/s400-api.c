@@ -140,45 +140,6 @@ exit:
 	return ret;
 }
 
-static int s4_muap_ioctl_get_info(struct s4_mu_device_ctx *dev_ctx,
-				  unsigned long arg)
-{
-	struct imx_s400_api *s400_muap_priv = dev_ctx->s400_muap_priv;
-	struct s4_read_info info;
-
-	int ret = -EINVAL;
-
-	ret = (int)copy_from_user(&info, (u8 *)arg,
-			sizeof(info));
-	if (ret) {
-		devctx_err(dev_ctx, "Fail copy shared memory config to user\n");
-		ret = -EFAULT;
-		goto exit;
-	}
-
-	s400_muap_priv->tx_msg.header = (s400_muap_priv->cmd_tag << 24) |
-					(info.cmd_id << 16) |
-					(info.size << 8) |
-					S400_VERSION;
-
-	ret = imx_s400_api_call(s400_muap_priv, (void *) &info.resp);
-	if (ret) {
-		devctx_err(dev_ctx, "%s: imx_s400_api_call failed for cmd [0x%x]\n",
-				__func__, info.cmd_id);
-		ret = -EIO;
-	}
-
-	ret = (int)copy_to_user((u8 *)arg, &info,
-		sizeof(info));
-	if (ret) {
-		devctx_err(dev_ctx, "Failed to copy iobuff setup to user\n");
-		ret = -EFAULT;
-	}
-
-exit:
-	return ret;
-}
-
 /* Open a char device. */
 static int s4_muap_fops_open(struct inode *nd, struct file *fp)
 {
@@ -310,12 +271,6 @@ static long s4_muap_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 		return -EBUSY;
 
 	switch (cmd) {
-	case S4_MUAP_IOCTL_IMG_AUTH_CMD:
-		//err = s4_muap_ioctl_img_auth_cmd_handler(dev_ctx, arg);
-		break;
-	case S4_MUAP_IOCTL_GET_INFO_CMD:
-		err = s4_muap_ioctl_get_info(dev_ctx, arg);
-		break;
 	case S4_MUAP_IOCTL_SIGNED_MSG_CMD:
 		devctx_err(dev_ctx, "IOCTL %.8x not supported\n", cmd);
 		break;
