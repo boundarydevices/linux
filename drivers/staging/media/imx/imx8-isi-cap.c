@@ -828,6 +828,8 @@ static int mxc_isi_cap_g_fmt_mplane(struct file *file, void *fh,
 	int i;
 
 	dev_dbg(&isi_cap->pdev->dev, "%s\n", __func__);
+	if (!dst_f->fmt)
+		return -EINVAL;
 
 	pix->width = dst_f->o_width;
 	pix->height = dst_f->o_height;
