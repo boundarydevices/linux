@@ -394,7 +394,8 @@ static int dpaa2_switch_dellink(struct ethsw_core *ethsw, u16 vid)
 
 	for (i = 0; i < ethsw->sw_attr.num_ifs; i++) {
 		ppriv_local = ethsw->ports[i];
-		ppriv_local->vlans[vid] = 0;
+		if (ppriv_local)
+			ppriv_local->vlans[vid] = 0;
 	}
 
 	return 0;
@@ -1872,6 +1873,7 @@ static int dpaa2_switch_port_del_vlan(struct ethsw_port_priv *port_priv, u16 vid
 	vcfg.num_ifs = 1;
 	vcfg.if_id[0] = port_priv->idx;
 	if (port_priv->vlans[vid] & ETHSW_VLAN_UNTAGGED) {
+
 		err = dpsw_vlan_remove_if_untagged(ethsw->mc_io, 0,
 						   ethsw->dpsw_handle,
 						   vid, &vcfg);
@@ -1896,9 +1898,11 @@ static int dpaa2_switch_port_del_vlan(struct ethsw_port_priv *port_priv, u16 vid
 		/* Delete VLAN from switch if it is no longer configured on
 		 * any port
 		 */
-		for (i = 0; i < ethsw->sw_attr.num_ifs; i++)
-			if (ethsw->ports[i]->vlans[vid] & ETHSW_VLAN_MEMBER)
+		for (i = 0; i < ethsw->sw_attr.num_ifs; i++) {
+			if (ethsw->ports[i] &&
+			    ethsw->ports[i]->vlans[vid] & ETHSW_VLAN_MEMBER)
 				return 0; /* Found a port member in VID */
+		}
 
 		ethsw->vlans[vid] &= ~ETHSW_VLAN_GLOBAL;
 
