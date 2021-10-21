@@ -1,0 +1,34 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2021 Boundary Devices
+ */
+
+#include "imx8mp-nitrogen8mp.dts"
+
+/ {
+	model = "Boundary i.MX 8M Plus Nitrogen8MP 3840/4200 board";
+};
+
+&dewarp {
+	status = "okay";
+};
+
+&i2c2c {
+	basler_camera@36 {
+		status = "okay";
+
+		port {
+			basler_ep_1: endpoint {
+				link-frequencies = /bits/ 64 <594000000>;
+			};
+		};
+	};
+};
+
+&isi_1 {
+	status = "okay";
+};
+
+&isp_1 {
+	status = "disabled";
+};
