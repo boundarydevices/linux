@@ -420,7 +420,9 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mn-nitrogen8mn.dtb \
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-bm.dtb \
 			  imx8mp-crs.dtb \
 			  imx8mp-nitrogen8mp.dtb imx8mp-nitrogen8mp-m4.dtb \
+			  imx8mp-nitrogen8mp-basler3840-4200.dtb \
 			  imx8mp-nitrogen8mp_r20.dtb imx8mp-nitrogen8mp_r20-m4.dtb \
+			  imx8mp-nitrogen8mp_r20-basler3840-4200.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-bio.dtb \
 			  imx8mq-ds.dtb \
