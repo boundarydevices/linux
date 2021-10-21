@@ -102,6 +102,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk.dtb imx8mp-evk-root.dtb imx8mp-evk-inmate.d
 			  imx8mp-nitrogen8mp-enc.dtb \
 			  imx8mp-nitrogen8mp-enc-tc358743.dtb \
 			  imx8mp-nitrogen8mp-m4.dtb \
+			  imx8mp-nitrogen8mp-basler3840-4200.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk.dtb imx8mq-evk-rpmsg.dtb imx8mq-evk-pcie1-m2.dtb imx8mq-evk-usd-wifi.dtb \
 			  imx8mq-evk-usdhc2-m2.dtb imx8mq-evk-pcie-ep.dtb
