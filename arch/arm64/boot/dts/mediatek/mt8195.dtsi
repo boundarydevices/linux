@@ -1946,9 +1946,8 @@
 			power-domains = <&spm MT8195_POWER_DOMAIN_VPPSYS0>,
 							<&spm MT8195_POWER_DOMAIN_VPPSYS1>;
 			iommus = <&iommu_vpp M4U_PORT_L4_MDP_RDMA>,
-				 <&iommu_vpp M4U_PORT_L4_MDP_WROT>,
-				 <&iommu_vpp M4U_PORT_L6_SVPP3_MDP_RDMA>,
-				 <&iommu_vpp M4U_PORT_L6_SVPP3_MDP_WROT>;
+				 <&iommu_vpp M4U_PORT_L4_MDP_WROT>;
+			dma-ranges = <0x2 0x0 0x0 0x40000000 0x1 0x0>; /* 8G - 12G IOVA*/
 			clocks = <&vppsys0 CLK_VPP0_MDP_RDMA>,
 					<&topckgen CLK_TOP_CFG_VPP0>,
 					<&topckgen CLK_TOP_CFG_26M_VPP0>,
@@ -2392,7 +2391,7 @@
 
 		svpp1_mdp3_rdma: svpp1_mdp_rdma@14f08000 {
 			compatible = "mediatek,mt8195-mdp3",
-						"mediatek,mt8183-mdp3-rdma";
+				 "mediatek,mt8183-mdp3-rdma";
 			mediatek,mdp3-id = <1>;
 			reg = <0 0x14f08000 0 0x1000>;
 			mediatek,gce-client-reg = <&gce1 SUBSYS_14f0XXXX 0x8000 0x1000>;
@@ -2404,14 +2403,14 @@
 						"TOP_CFG_VPP1",
 						"TOP_CFG_26M_VPP1";
 			iommus = <&iommu_vdo M4U_PORT_L5_SVPP1_MDP_RDMA>,
-				 <&iommu_vdo M4U_PORT_L5_SVPP2_MDP_RDMA>,
-				 <&iommu_vdo M4U_PORT_L5_SVPP1_MDP_WROT>,
-				 <&iommu_vdo M4U_PORT_L5_SVPP2_MDP_WROT>;
+				 <&iommu_vdo M4U_PORT_L5_SVPP1_MDP_WROT>;
+			dma-ranges = <0x2 0x0 0x0 0x40000000 0x1 0x0>; /* 8G - 12G IOVA*/
 			power-domains = <&spm MT8195_POWER_DOMAIN_VPPSYS1>;
 		};
 
 		svpp2_mdp3_rdma: svpp2_mdp_rdma@14f09000 {
-			compatible = "mediatek,mt8195-mdp3-rdma", "mediatek,mt8183-mdp3-rdma";
+			compatible = "mediatek,mt8195-mdp3",
+				 "mediatek,mt8183-mdp3-rdma";
 			mediatek,mdp3-id = <2>;
 			reg = <0 0x14f09000 0 0x1000>;
 			mediatek,gce-client-reg = <&gce1 SUBSYS_14f0XXXX 0x9000 0x1000>;
@@ -2422,12 +2421,15 @@
 			clock-names = "MDP_RDMA2",
 						"TOP_CFG_VPP1",
 						"TOP_CFG_26M_VPP1";
-			iommus = <&iommu_vdo M4U_PORT_L5_SVPP2_MDP_RDMA>;
+			iommus = <&iommu_vdo M4U_PORT_L5_SVPP2_MDP_RDMA>,
+				 <&iommu_vdo M4U_PORT_L5_SVPP2_MDP_WROT>;
+			dma-ranges = <0x2 0x0 0x0 0x40000000 0x1 0x0>; /* 8G - 12G IOVA*/
 			power-domains = <&spm MT8195_POWER_DOMAIN_VPPSYS1>;
 		};
 
 		svpp3_mdp3_rdma: svpp3_mdp_rdma@14f0a000 {
-			compatible = "mediatek,mt8195-mdp3-rdma", "mediatek,mt8183-mdp3-rdma";
+			compatible = "mediatek,mt8195-mdp3",
+				 "mediatek,mt8183-mdp3-rdma";
 			mediatek,mdp3-id = <3>;
 			reg = <0 0x14f0a000 0 0x1000>;
 			mediatek,gce-client-reg = <&gce1 SUBSYS_14f0XXXX 0xa000 0x1000>;
@@ -2438,7 +2440,9 @@
 			clock-names = "MDP_RDMA3",
 						"TOP_CFG_VPP1",
 						"TOP_CFG_26M_VPP1";
-			iommus = <&iommu_vpp M4U_PORT_L6_SVPP3_MDP_RDMA>;
+			iommus = <&iommu_vpp M4U_PORT_L6_SVPP3_MDP_RDMA>,
+				 <&iommu_vpp M4U_PORT_L6_SVPP3_MDP_WROT>;
+			dma-ranges = <0x2 0x0 0x0 0x40000000 0x1 0x0>; /* 8G - 12G IOVA*/
 			power-domains = <&spm MT8195_POWER_DOMAIN_VPPSYS1>;
 		};
 
