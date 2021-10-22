@@ -16915,8 +16915,14 @@ static s32 __wl_update_wiphybands(struct bcm_cfg80211 *cfg, bool notify)
 		wiphy->bands[IEEE80211_BAND_2GHZ] = &__wl_band_2ghz;
 	}
 
-	if (notify)
+	if (notify) {
+		int is_locked = rtnl_is_locked();
+		if (is_locked)
+			rtnl_unlock();
 		wiphy_apply_custom_regulatory(wiphy, &brcm_regdom);
+		if (is_locked)
+			rtnl_lock();
+	}
 
 	return 0;
 }
