@@ -727,7 +727,6 @@
 };
 
 &afe {
-	mediatek,dl1-use-sram = <0x11221000 0x5000>;
 	mediatek,i2s-clock-modes = <0 1>;
 	mediatek,dmic-iir-on = <1>;
 	mediatek,dmic-irr-mode = <5>;
