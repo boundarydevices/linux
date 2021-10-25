@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2021 Boundary Devices
+ */
+
+#include "imx8mp-nitrogen8mp-enc.dts"
+
+/ {
+	model = "Boundary i.MX 8M Plus Nitrogen8MP 4200/ov5640 board";
+};
+
+&dewarp {
+	status = "okay";
+};
+
+&i2c2b {
+	basler_camera@36 {
+		compatible = "basler,basler-camera", "basler-camera";
+		status = "okay";
+
+		port {
+			basler_ep_0: endpoint {
+				link-frequencies = /bits/ 64 <594000000>;
+			};
+		};
+	};
+};
+
+&isi_0 {
+	status = "okay";
+};
+
+&isp_0 {
+	status = "disabled";
+};
+
+&mipi_csi_0 {
+	status = "okay";
+
+};
