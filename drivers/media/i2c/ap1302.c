@@ -497,6 +497,18 @@ static const struct ap1302_sensor_info ap1302_sensor_info[] = {
 			{ "vdd", 0 },
 			{ NULL, 0 },
 		},
+	}, {
+		.model = "onnn,ar0430",
+		.name = "ar0430",
+		.i2c_addr = 0x36,
+		.resolution = { 2316, 1746 },
+		.format = MEDIA_BUS_FMT_SGRBG12_1X12,
+		.supplies = (const struct ap1302_sensor_supply[]) {
+			{ "vddio", 1500 },
+			{ "vdd", 0},
+			{ "vaa", 0 },
+			{ NULL, 0 },
+		},
 	},
 };
 
