@@ -709,7 +709,7 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 	}
 
 	if (wakeup_irq > 0) {
-		ret = dev_pm_set_dedicated_wake_irq(dev, wakeup_irq);
+		ret = dev_pm_set_dedicated_wake_irq_reverse(dev, wakeup_irq);
 		if (ret) {
 			dev_err(dev, "set wakeup irq %d failed\n", wakeup_irq);
 			goto dealloc_usb3_hcd;
