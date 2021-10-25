@@ -107,6 +107,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-ddr4-evk.dtb \
 			  imx8mp-a0-nitrogen8mp.dtb \
 			  imx8mp-nitrogen8mp.dtb \
 			  imx8mp-nitrogen8mp-enc.dtb \
+			  imx8mp-nitrogen8mp-enc-basler4200-ov5640.dtb \
 			  imx8mp-nitrogen8mp-enc-tc358743.dtb \
 			  imx8mp-nitrogen8mp-m4.dtb \
 			  imx8mp-nitrogen8mp-basler3840-4200.dtb \
