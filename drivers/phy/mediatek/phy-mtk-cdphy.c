@@ -217,7 +217,7 @@ static int mtk_mipi_phy_power_on(struct phy *phy)
 	}
 
 	/* End ANA EQ tuning */
-	writel(0x90, pmipi_rx_base + MIPI_RX_ANA40_CSIxA);
+	writel(0x90, pmipi_rx + MIPI_RX_ANA40_CSIxA);
 	MIPI_BITS(pmipi_rx, MIPI_RX_ANA24_CSIxA,
 		  RG_CSIxA_RESERVE, 0x40);
 	if (port->is_4d1c)
