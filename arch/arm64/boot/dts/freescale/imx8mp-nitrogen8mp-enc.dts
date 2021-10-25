@@ -4,7 +4,6 @@
  */
 
 #include "imx8mp-nitrogen8mp.dts"
-#include "imx8mp-a0.dtsi"
 
 / {
 	model = "Boundary i.MX 8M Plus Nitrogen8MP ENC board";
