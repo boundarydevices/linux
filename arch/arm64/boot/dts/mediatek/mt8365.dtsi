@@ -13,6 +13,7 @@
 #include <dt-bindings/phy/phy.h>
 #include <dt-bindings/power/mediatek,mt8365-power.h>
 #include <dt-bindings/memory/mediatek,mt8365-larb-port.h>
+#include <dt-bindings/mailbox/mediatek,mt8365-gce.h>
 
 / {
 	compatible = "mediatek,mt8365";
@@ -735,6 +736,20 @@
 			clocks = <&clk26m>;
 			#clock-cells = <0>;
 			#phy-cells = <0>;
+		};
+
+		gce: gce@1023c000 {
+			compatible = "mediatek,mt8365-gce",
+						"mediatek,mt8173-gce";
+			reg = <0 0x1023c000 0 0x4000>;
+			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_LOW>,
+				     <GIC_SPI 99 IRQ_TYPE_LEVEL_LOW>;
+			clocks = <&infracfg CLK_IFR_GCE>,
+					<&infracfg CLK_IFR_GCE_26M>;
+			clock-names = "gce", "GCE_TIMER";
+
+			#mbox-cells = <3>;
+			#subsys-cells = <3>;
 		};
 
 		camsv1: camsv@15050000 {
