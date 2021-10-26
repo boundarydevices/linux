@@ -7,6 +7,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/phy/phy.h>
+#include <dt-bindings/gce/mt8365-gce.h>
 #include <dt-bindings/power/mt8365-power.h>
 #include <dt-bindings/memory/mt8365-larb-port.h>
 #include <dt-bindings/thermal/thermal.h>
@@ -1246,6 +1247,20 @@
 				 <&infracfg CLK_IFR_NIC_SLV_AXI>;
 			clock-names = "core", "reg", "trans";
 			status = "disabled";
+		};
+
+		gce: gce@1023c000 {
+			compatible = "mediatek,mt8365-gce",
+						"mediatek,mt8173-gce";
+			reg = <0 0x1023c000 0 0x4000>;
+			interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_LOW>,
+				     <GIC_SPI 99 IRQ_TYPE_LEVEL_LOW>;
+			clocks = <&infracfg CLK_IFR_GCE>,
+					<&infracfg CLK_IFR_GCE_26M>;
+			clock-names = "gce", "GCE_TIMER";
+
+			#mbox-cells = <3>;
+			#subsys-cells = <3>;
 		};
 
 		vcu: vcu@16000000 {
