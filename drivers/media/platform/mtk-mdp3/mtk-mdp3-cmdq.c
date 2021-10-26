@@ -372,7 +372,7 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 		mdp_m2m_job_finish(cb_param->mdp_ctx);
 
 #ifdef MDP_DEBUG
-	if (data.sta == CMDQ_CB_ERROR) {
+	if (data.sta < 0) {
 		struct mdp_func_struct *p_func = mdp_get_func();
 
 		p_func->mdp_dump_mmsys_config();
