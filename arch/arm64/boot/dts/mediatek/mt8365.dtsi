@@ -867,6 +867,72 @@
 			#clock-cells = <1>;
 		};
 
+		mdp_vcu: vcu@1 {
+			compatible = "mediatek-vcu",
+				     "mediatek,mt8167-vcu";
+			mediatek,vcuid = <1>;
+			mediatek,vcuname = "vcu1";
+			iommus = <&iommu M4U_PORT_HW_VDEC_MC_EXT>;
+		};
+
+		mdp_rdma0: mdp_rdma0@14004000 {
+			compatible = "mediatek,mt8365-mdp-rdma",
+						"mediatek,mt8167-mdp-rdma",
+						"mediatek,mt8167-mdp";
+			reg = <0 0x14004000 0 0x1000>;
+			mediatek,mdp-id = <0>;
+			clocks = <&mmsys CLK_MM_MM_MDP_RDMA0>,
+				 <&mmsys CLK_MM_MM_MDP_RDMA0>;
+			power-domains = <&spm MT8365_POWER_DOMAIN_MM>;
+			iommus = <&iommu M4U_PORT_MDP_RDMA0>;
+			mediatek,larb = <&larb0>;
+			mediatek,vpu = <&mdp_vcu>;
+			mediatek,gce = <&gce>;
+			mboxes = <&gce 8 2 1>;
+		};
+
+		mdp_rsz0: mdp_rsz0@14006000 {
+			compatible = "mediatek,mt8365-mdp-rsz",
+						"mediatek,mt8167-mdp-rsz";
+			mediatek,mdp-id = <0>;
+			reg = <0 0x14006000 0 0x1000>;
+			mediatek,gce-client-reg = <&gce SUBSYS_1400XXXX 0x6000 0x1000>;
+			clocks = <&mmsys CLK_MM_MM_MDP_RSZ0>;
+		};
+
+		mdp_rsz1: mdp_rsz1@14007000 {
+			compatible = "mediatek,mt8365-mdp-rsz",
+						"mediatek,mt8167-mdp-rsz";
+			mediatek,mdp-id = <1>;
+			reg = <0 0x14007000 0 0x1000>;
+			mediatek,gce-client-reg = <&gce SUBSYS_1400XXXX 0x7000 0x1000>;
+			clocks = <&mmsys CLK_MM_MM_MDP_RSZ1>;
+		};
+
+		mdp_wrot1: mdp_wrot1@14008000 {
+			compatible = "mediatek,mt8365-mdp-wrot",
+						"mediatek,mt8167-mdp-wrot";
+			mediatek,mdp-id = <0>;
+			reg = <0 0x14008000 0 0x1000>;
+			power-domains = <&spm MT8365_POWER_DOMAIN_MM>;
+			mediatek,gce-client-reg = <&gce SUBSYS_1400XXXX 0x8000 0x1000>;
+			clocks = <&mmsys CLK_MM_MM_MDP_WDMA0>;
+			iommus = <&iommu M4U_PORT_MDP_WROT1>;
+			mediatek,larb = <&larb0>;
+		};
+
+		mdp_wrot0: mdp_wrot0@14009000 {
+			compatible = "mediatek,mt8365-mdp-wrot",
+						"mediatek,mt8167-mdp-wrot";
+			mediatek,mdp-id = <0>;
+			reg = <0 0x14009000 0 0x1000>;
+			power-domains = <&spm MT8365_POWER_DOMAIN_MM>;
+			mediatek,gce-client-reg = <&gce SUBSYS_1400XXXX 0x9000 0x1000>;
+			clocks = <&mmsys CLK_MM_MM_MDP_WROT0>;
+			iommus = <&iommu M4U_PORT_MDP_WROT0>;
+			mediatek,larb = <&larb0>;
+		};
+
 		smi_common: smi@14002000 {
 			compatible = "mediatek,mt8365-smi-common", "syscon";
 			reg = <0 0x14002000 0 0x1000>;
