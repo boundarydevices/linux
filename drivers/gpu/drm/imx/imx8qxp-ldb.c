@@ -605,7 +605,8 @@ imx8qxp_ldb_bind(struct device *dev, struct device *master, void *data)
 		if (ret || i < 0 || i > 1)
 			return -EINVAL;
 
-		if (!of_device_is_available(child))
+		if (!of_device_is_available(child) ||
+		    of_node_check_flag(child, OF_DETACHED))
 			continue;
 
 		encoder[i] = &imx8qxp_ldb->channel[i].encoder;
@@ -699,7 +700,8 @@ imx8qxp_ldb_bind(struct device *dev, struct device *master, void *data)
 			goto free_child;
 		}
 
-		if (!of_device_is_available(child))
+		if (!of_device_is_available(child) ||
+		    of_node_check_flag(child, OF_DETACHED))
 			continue;
 
 		imx8qxp_ldb_ch = &imx8qxp_ldb->channel[i];
