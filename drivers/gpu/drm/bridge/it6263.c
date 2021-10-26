@@ -869,8 +869,8 @@ static int it6263_probe(struct i2c_client *client,
 {
 	struct device *dev = &client->dev;
 	struct device_node *np = dev->of_node;
-#if IS_ENABLED(CONFIG_OF_DYNAMIC)
 	struct device_node *remote_node = NULL, *endpoint = NULL;
+#if IS_ENABLED(CONFIG_OF_DYNAMIC)
 	struct of_changeset ocs;
 	struct property *prop;
 #endif
@@ -960,7 +960,6 @@ unregister_lvds_i2c:
 		return ret;
 
 of_reconfig:
-#if IS_ENABLED(CONFIG_OF_DYNAMIC)
 	endpoint = of_graph_get_next_endpoint(dev->of_node, NULL);
 	if (endpoint)
 		remote_node = of_graph_get_remote_port_parent(endpoint);
@@ -983,6 +982,7 @@ of_reconfig:
 			return ret;
 		}
 
+#if IS_ENABLED(CONFIG_OF_DYNAMIC)
 		prop = devm_kzalloc(dev, sizeof(*prop), GFP_KERNEL);
 		prop->name = devm_kstrdup(dev, "status", GFP_KERNEL);
 		prop->value = devm_kstrdup(dev, "disabled", GFP_KERNEL);
@@ -994,10 +994,12 @@ of_reconfig:
 			dev_warn(dev,
 				"Probe failed. Remote port '%s' disabled\n",
 				remote_node->full_name);
+#else
 
+		of_node_set_flag(remote_node, OF_DETACHED);
+#endif
 		of_node_put(remote_node);
 	};
-#endif
 
 	return ret;
 }
