@@ -1447,7 +1447,7 @@
 				      "di0_sel", "di1_sel",
 				      "ldb_di0", "ldb_di1";
 			resets = <&src 2>;
-			bypass_reset = <0>;
+			bypass_reset = <1>;
 
 			ipu1_csi0: port@0 {
 				reg = <0>;
