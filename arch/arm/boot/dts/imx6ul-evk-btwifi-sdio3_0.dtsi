@@ -74,7 +74,7 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	pinctrl-assert-gpios = <&gpio1 5 GPIO_ACTIVE_HIGH>;
-	fsl,sdio-interrupt-enabled;
+	fsl,sdio-async-interrupt-enabled;
 	non-removable;
 	mmc-pwrseq = <&usdhc1_pwrseq>;
 	/delete-property/ enable-sdio-wakeup;
