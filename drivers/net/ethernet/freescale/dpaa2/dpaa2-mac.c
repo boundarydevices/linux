@@ -38,16 +38,6 @@ static int phy_mode(enum dpmac_eth_if eth_if, phy_interface_t *if_mode)
 	return 0;
 }
 
-static bool dpaa2_mac_is_type_phy(struct dpaa2_mac *mac)
-{
-	if (mac &&
-	    (mac->attr.link_type == DPMAC_LINK_TYPE_PHY ||
-	     mac->attr.link_type == DPMAC_LINK_TYPE_BACKPLANE))
-		return true;
-
-	return false;
-}
-
 static struct fwnode_handle *dpaa2_mac_get_node(struct device *dev,
 						u16 dpmac_id)
 {
@@ -510,6 +500,7 @@ void dpaa2_mac_get_ethtool_stats(struct dpaa2_mac *mac, u64 *data)
 	}
 }
 
+#ifdef CONFIG_FSL_DPAA2_MAC
 struct dpaa2_mac_link_mode_map {
 	u64 dpmac_lm;
 	enum ethtool_link_mode_bit_indices ethtool_lm;
@@ -603,6 +594,16 @@ static irqreturn_t dpaa2_mac_irq_handler(int irq_num, void *arg)
 			       DPMAC_IRQ_INDEX, status);
 
 	return IRQ_HANDLED;
+}
+
+static bool dpaa2_mac_is_type_phy(struct dpaa2_mac *mac)
+{
+	if (mac &&
+	    (mac->attr.link_type == DPMAC_LINK_TYPE_PHY ||
+	     mac->attr.link_type == DPMAC_LINK_TYPE_BACKPLANE))
+		return true;
+
+	return false;
 }
 
 static int dpaa2_mac_setup_irqs(struct fsl_mc_device *mc_dev)
@@ -921,3 +922,4 @@ static struct fsl_mc_driver dpaa2_mac_driver = {
 };
 
 module_fsl_mc_driver(dpaa2_mac_driver);
+#endif // CONFIG_FSL_DPAA2_MAC
