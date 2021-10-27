@@ -358,6 +358,7 @@ static int mtk_mipi_dphy_remove(struct platform_device *pdev)
 
 static const struct of_device_id mtk_mipi_dphy_of_match[] = {
 	{.compatible = "mediatek,mt8183-mipi-dphy"},
+	{.compatible = "mediatek,mt8365-mipi-dphy"},
 	{},
 };
 MODULE_DEVICE_TABLE(of, mtk_mipi_dphy_of_match);
