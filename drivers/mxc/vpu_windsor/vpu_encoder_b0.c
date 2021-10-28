@@ -465,11 +465,10 @@ static int vpu_enc_v4l2_ioctl_g_fmt(struct file *file,
 	pix_mp->width = q_data->width;
 	pix_mp->height = q_data->height;
 	pix_mp->field = V4L2_FIELD_NONE;
-	for (i = 0; i < pix_mp->num_planes; i++)
+	for (i = 0; i < pix_mp->num_planes; i++) {
 		pix_mp->plane_fmt[i].sizeimage = q_data->sizeimage[i];
-
-	if (!V4L2_TYPE_IS_OUTPUT(f->type))
-		pix_mp->plane_fmt[0].bytesperline = q_data->width;
+		pix_mp->plane_fmt[i].bytesperline = q_data->stride[i];
+	}
 
 	pix_mp->colorspace = ctx->colorspace;
 	pix_mp->xfer_func = ctx->xfer_func;
@@ -866,11 +865,18 @@ static int set_yuv_queue_fmt(struct queue_data *q_data, struct v4l2_format *f)
 	q_data->rect.top = 0;
 	q_data->rect.width = pix_mp->width;
 	q_data->rect.height = pix_mp->height;
-	q_data->sizeimage[0] = pix_mp->width * pix_mp->height;
-	q_data->sizeimage[1] = pix_mp->width * pix_mp->height / 2;
 	pix_mp->num_planes = fmt->num_planes;
-	for (i = 0; i < pix_mp->num_planes; i++)
+	for (i = 0; i < pix_mp->num_planes; i++) {
+		unsigned int stride = max(pix_mp->width, pix_mp->plane_fmt[i].bytesperline);
+		unsigned int sizeimage = stride * pix_mp->height;
+
+		if (i)
+			sizeimage = sizeimage >> 1;
+		sizeimage = max(sizeimage, pix_mp->plane_fmt[i].sizeimage);
+		q_data->stride[i] = stride;
+		q_data->sizeimage[i] = sizeimage;
 		pix_mp->plane_fmt[i].sizeimage = q_data->sizeimage[i];
+	}
 
 	q_data->current_fmt = fmt;
 
@@ -2006,7 +2012,7 @@ static void update_encode_size(struct vpu_ctx *ctx)
 	dst = &ctx->q_data[V4L2_DST];
 	pEncParam = &attr->param;
 
-	pEncParam->uSrcStride           = src->width;
+	pEncParam->uSrcStride           = src->stride[0];
 	pEncParam->uSrcWidth            = src->width;
 	pEncParam->uSrcHeight           = src->height;
 	pEncParam->uSrcOffset_x         = src->rect.left;
