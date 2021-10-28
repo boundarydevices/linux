@@ -3,7 +3,7 @@
  * Controller-level driver, kernel property detection, initialization
  *
  * Copyright 2008-2012 Freescale Semiconductor, Inc.
- * Copyright 2018-2019 NXP
+ * Copyright 2018-2021 NXP
  */
 
 #include <linux/device.h>
@@ -880,7 +880,7 @@ static int caam_probe(struct platform_device *pdev)
 		np = of_find_compatible_node(NULL, NULL, "fsl,imx-scu");
 
 		if (!np)
-			np = of_find_compatible_node(NULL, NULL, "fsl,imx8ulp-s400");
+			np = of_find_compatible_node(NULL, NULL, "fsl,imx-sentnl");
 
 		ctrlpriv->scu_en = !!np;
 		of_node_put(np);
