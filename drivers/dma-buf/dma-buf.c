@@ -15,7 +15,6 @@
 #include <linux/slab.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-fence.h>
-#include <linux/dma-map-ops.h>
 #include <linux/anon_inodes.h>
 #include <linux/export.h>
 #include <linux/debugfs.h>
@@ -26,7 +25,10 @@
 #include <linux/mm.h>
 #include <linux/mount.h>
 #include <linux/pseudo_fs.h>
+#ifdef CONFIG_ION
+#include <linux/dma-map-ops.h>
 #include <linux/device.h>
+#endif
 
 #include <uapi/linux/dma-buf.h>
 #include <uapi/linux/magic.h>
@@ -426,6 +428,7 @@ static long dma_buf_ioctl(struct file *file,
 	dmabuf = file->private_data;
 
 	switch (cmd) {
+#ifdef CONFIG_ION
 	case DMA_BUF_IOCTL_PHYS: {
 		struct dma_buf_attachment *attachment = NULL;
 		struct sg_table *sgt = NULL;
@@ -456,6 +459,7 @@ static long dma_buf_ioctl(struct file *file,
 			return -EFAULT;
 		return 0;
 	}
+#endif
 	case DMA_BUF_IOCTL_SYNC:
 		if (copy_from_user(&sync, (void __user *) arg, sizeof(sync)))
 			return -EFAULT;
