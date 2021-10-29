@@ -197,6 +197,7 @@ struct clk_hw *imx8m_clk_hw_composite_flags(const char *name,
 	struct clk_mux *mux = NULL;
 	const struct clk_ops *divider_ops;
 	const struct clk_ops *mux_ops;
+	u32 val;
 
 	mux = kzalloc(sizeof(*mux), GFP_KERNEL);
 	if (!mux)
@@ -229,8 +230,14 @@ struct clk_hw *imx8m_clk_hw_composite_flags(const char *name,
 		div->width = PCG_PREDIV_WIDTH;
 		divider_ops = &imx8m_clk_composite_divider_ops;
 		mux_ops = &clk_mux_ops;
-		if (!(composite_flags & IMX_COMPOSITE_FW_MANAGED))
+		if (!(composite_flags & IMX_COMPOSITE_FW_MANAGED)) {
 			flags |= CLK_SET_PARENT_GATE;
+			if (!(flags & CLK_IS_CRITICAL)) {
+				val = readl(reg);
+				val &= ~BIT(PCG_CGC_SHIFT);
+				writel(val, reg);
+			}
+		}
 	}
 
 	div->lock = &imx_ccm_lock;
