@@ -162,12 +162,11 @@
 
 #define FXOS8700_DEVICE_ID          0xC7
 #define FXOS8700_PRE_DEVICE_ID      0xC4
-#define FXOS8700_DATA_BUF_SIZE      3
 
 struct fxos8700_data {
 	struct regmap *regmap;
 	struct iio_trigger *trig;
-	__be16 buf[FXOS8700_DATA_BUF_SIZE] ____cacheline_aligned;
+	__be16 buf ____cacheline_aligned;
 };
 
 /* Regmap info */
@@ -345,13 +344,31 @@ static int fxos8700_set_active_mode(struct fxos8700_data *data,
 static int fxos8700_set_scale(struct fxos8700_data *data,
 			      enum fxos8700_sensor t, int uscale)
 {
-	int i;
+	int i, ret, val;
+	bool active_mode;
 	static const int scale_num = ARRAY_SIZE(fxos8700_accel_scale);
 	struct device *dev = regmap_get_device(data->regmap);
 
 	if (t == FXOS8700_MAGN) {
 		dev_err(dev, "Magnetometer scale is locked at 1200uT\n");
 		return -EINVAL;
+	}
+
+	ret = regmap_read(data->regmap, FXOS8700_CTRL_REG1, &val);
+	if (ret)
+		return ret;
+
+	active_mode = val & FXOS8700_ACTIVE;
+
+	if (active_mode) {
+		/*
+		 * The device must be in standby mode to change any of the
+		 * other fields within CTRL_REG1
+		 */
+		ret = regmap_write(data->regmap, FXOS8700_CTRL_REG1,
+				   val & ~FXOS8700_ACTIVE);
+		if (ret)
+			return ret;
 	}
 
 	for (i = 0; i < scale_num; i++)
@@ -361,8 +378,12 @@ static int fxos8700_set_scale(struct fxos8700_data *data,
 	if (i == scale_num)
 		return -EINVAL;
 
-	return regmap_write(data->regmap, FXOS8700_XYZ_DATA_CFG,
+	ret = regmap_write(data->regmap, FXOS8700_XYZ_DATA_CFG,
 			    fxos8700_accel_scale[i].bits);
+	if (ret)
+		return ret;
+	return regmap_update_bits(data->regmap, FXOS8700_CTRL_REG1,
+				  FXOS8700_ACTIVE, active_mode);
 }
 
 static int fxos8700_get_scale(struct fxos8700_data *data,
@@ -393,23 +414,29 @@ static int fxos8700_get_scale(struct fxos8700_data *data,
 static int fxos8700_get_data(struct fxos8700_data *data, int chan_type,
 			     int axis, int *val)
 {
-	u8 base, reg;
-	int ret;
+	u8 base, offset;
 	enum fxos8700_sensor type = fxos8700_to_sensor(chan_type);
+	u8 tmp_data[2];
+	u16 native_data;
+	int ret;
 
-	base = type ? FXOS8700_OUT_X_MSB : FXOS8700_M_OUT_X_MSB;
+	base = type ? FXOS8700_M_OUT_X_MSB : FXOS8700_OUT_X_MSB;
+	offset = axis - IIO_MOD_X;
 
-	/* Block read 6 bytes of device output registers to avoid data loss */
-	ret = regmap_bulk_read(data->regmap, base, data->buf,
-			       FXOS8700_DATA_BUF_SIZE);
+	ret = regmap_bulk_read(data->regmap, base + offset, &tmp_data[0], 2);
 	if (ret)
-		return ret;
+		return -EIO;
 
-	/* Convert axis to buffer index */
-	reg = axis - IIO_MOD_X;
 
+	data->buf = ((tmp_data[1] << 8) & 0xff00) | tmp_data[0];
 	/* Convert to native endianness */
-	*val = sign_extend32(be16_to_cpu(data->buf[reg]), 15);
+	native_data = be16_to_cpu(data->buf);
+
+	/*accel raw data only has 14 bit */
+	if (!type)
+		native_data = native_data >> 2;
+
+	*val = sign_extend32(native_data, 15);
 
 	return 0;
 }
@@ -462,6 +489,7 @@ static int fxos8700_get_odr(struct fxos8700_data *data, enum fxos8700_sensor t,
 		return ret;
 
 	val &= FXOS8700_CTRL_ODR_MSK;
+	val = val >> 3;
 
 	for (i = 0; i < odr_num; i++)
 		if (val == fxos8700_odr[i].bits)
@@ -592,14 +620,14 @@ static int fxos8700_chip_init(struct fxos8700_data *data, bool use_spi)
 	if (ret)
 		return ret;
 
+	/* Set for max full-scale range (+/-8G) */
+	ret = regmap_write(data->regmap, FXOS8700_XYZ_DATA_CFG, MODE_8G);
 	/* Max ODR (800Hz individual or 400Hz hybrid), active mode */
-	ret = regmap_write(data->regmap, FXOS8700_CTRL_REG1,
-			   FXOS8700_CTRL_ODR_MAX | FXOS8700_ACTIVE);
 	if (ret)
 		return ret;
 
-	/* Set for max full-scale range (+/-8G) */
-	return regmap_write(data->regmap, FXOS8700_XYZ_DATA_CFG, MODE_8G);
+	return regmap_write(data->regmap, FXOS8700_CTRL_REG1,
+			   FXOS8700_CTRL_ODR_MAX << 3 | FXOS8700_ACTIVE);
 }
 
 static void fxos8700_chip_uninit(void *data)
