@@ -119,7 +119,8 @@ static int audio_get_eld(struct device *dev, void *data,
 {
 	struct snd_dw_hdmi *dw = dev_get_drvdata(dev);
 
-	memcpy(buf, dw->data.eld, min_t(size_t, MAX_ELD_BYTES, len));
+	memcpy(buf, dw->data.get_eld(dw->data.hdmi),
+	       min_t(size_t, MAX_ELD_BYTES, len));
 
 	return 0;
 }
