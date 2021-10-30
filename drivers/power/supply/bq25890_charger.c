@@ -761,8 +761,9 @@ static int bq25890_power_supply_init(struct bq25890_device *bq)
 	psy_cfg.supplied_to = bq25890_charger_supplied_to;
 	psy_cfg.num_supplicants = ARRAY_SIZE(bq25890_charger_supplied_to);
 
-	bq->charger = power_supply_register(bq->dev, &bq25890_power_supply_desc,
-					    &psy_cfg);
+	bq->charger = devm_power_supply_register(bq->dev,
+						 &bq25890_power_supply_desc,
+						 &psy_cfg);
 
 	return PTR_ERR_OR_ZERO(bq->charger);
 }
@@ -1024,22 +1025,22 @@ static int bq25890_probe(struct i2c_client *client,
 	}
 	INIT_DELAYED_WORK(&bq->reenable_work, bq25890_reenable_work);
 
+	ret = bq25890_power_supply_init(bq);
+	if (ret < 0) {
+		dev_err(dev, "Failed to register power supply\n");
+		goto err_unregister_usb_notifier;
+	}
+
 	ret = devm_request_threaded_irq(dev, client->irq, NULL,
 					bq25890_irq_handler_thread,
 					IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 					BQ25890_IRQ_PIN, bq);
 	if (ret)
-		goto irq_fail;
-
-	ret = bq25890_power_supply_init(bq);
-	if (ret < 0) {
-		dev_err_probe(dev, ret, "Failed to register power supply.\n");
-		goto irq_fail;
-	}
+		goto err_unregister_usb_notifier;
 
 	return 0;
 
-irq_fail:
+err_unregister_usb_notifier:
 	if (!IS_ERR_OR_NULL(bq->usb_phy))
 		usb_unregister_notifier(bq->usb_phy, &bq->usb_nb);
 
@@ -1051,7 +1052,6 @@ static int bq25890_remove(struct i2c_client *client)
 	struct bq25890_device *bq = i2c_get_clientdata(client);
 
 	cancel_delayed_work_sync(&bq->reenable_work);
-	power_supply_unregister(bq->charger);
 
 	if (!IS_ERR_OR_NULL(bq->usb_phy))
 		usb_unregister_notifier(bq->usb_phy, &bq->usb_nb);
