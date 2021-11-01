@@ -417,6 +417,7 @@ dtb-$(CONFIG_SOC_IMX53) += \
 	imx53-voipac-bsb.dtb
 dtb-$(CONFIG_SOC_IMX6Q) += \
 	imx6dl-a.dtb \
+	imx6dl-a2.dtb \
 	imx6dl-acl.dtb \
 	imx6dl-ap.dtb \
 	imx6dl-apf6dev.dtb \
