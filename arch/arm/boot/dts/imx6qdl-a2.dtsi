@@ -104,9 +104,9 @@
 
 	pinctrl_i2c2_1: i2c2_1grp {
 		fsl,pins = <
-#define GP_I2C2_SCL	<&gpio4 12 GPIO_ACTIVE_HIGH>
+#define GP_I2C2_SCL	<&gpio4 12 GPIO_OPEN_DRAIN>
 			MX6QDL_PAD_KEY_COL3__GPIO4_IO12		0x4001b8b1
-#define GP_I2C2_SDA	<&gpio4 13 GPIO_ACTIVE_HIGH>
+#define GP_I2C2_SDA	<&gpio4 13 GPIO_OPEN_DRAIN>
 			MX6QDL_PAD_KEY_ROW3__GPIO4_IO13		0x4001b8b1
 		>;
 	};
@@ -127,9 +127,9 @@
 
 	pinctrl_i2c3_1: i2c3_1grp {
 		fsl,pins = <
-#define GP_I2C3_SCL	<&gpio1 5 GPIO_ACTIVE_HIGH>
+#define GP_I2C3_SCL	<&gpio1 5 GPIO_OPEN_DRAIN>
 			MX6QDL_PAD_GPIO_5__GPIO1_IO05		0x4001b8b1
-#define GP_I2C3_SDA	<&gpio7 11 GPIO_ACTIVE_HIGH>
+#define GP_I2C3_SDA	<&gpio7 11 GPIO_OPEN_DRAIN>
 			MX6QDL_PAD_GPIO_16__GPIO7_IO11		0x4001b8b1
 		>;
 	};
@@ -147,7 +147,7 @@
 	pinctrl_reg_pci3v3: reg-pci3v3grp {
 		fsl,pins = <
 #define GP_REG_PCI3V3	<&gpio2 23 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_EIM_CS0__GPIO2_IO23
+			MX6QDL_PAD_EIM_CS0__GPIO2_IO23		0x030b0
 		>;
 	};
 
@@ -176,9 +176,9 @@
 		fsl,pins = <
 			MX6QDL_PAD_EIM_D25__UART3_RX_DATA	0x1b0b1
 			MX6QDL_PAD_EIM_D24__UART3_TX_DATA	0x1b0b1
-#define GP_UART3_RX_ACT	<&gpio1 3 GPIO_ACTIVE_LOW>
+#define GP_UART3_RX_ACT	<&gpio1 3 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x0b0b0
-#define GP_UART3_TX_ACT	<&gpio1 4 GPIO_ACTIVE_LOW>
+#define GP_UART3_TX_ACT	<&gpio1 4 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x0b0b0
 		>;
 	};
@@ -284,48 +284,49 @@
 
 	reg_1p8v: regulator-1v8 {
 		compatible = "regulator-fixed";
-		regulator-name = "1P8V";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <1800000>;
 		regulator-always-on;
+		regulator-max-microvolt = <1800000>;
+		regulator-min-microvolt = <1800000>;
+		regulator-name = "1P8V";
 	};
 
 	reg_2p5v: regulator-2v5 {
 		compatible = "regulator-fixed";
-		regulator-name = "2P5V";
-		regulator-min-microvolt = <2500000>;
-		regulator-max-microvolt = <2500000>;
 		regulator-always-on;
+		regulator-max-microvolt = <2500000>;
+		regulator-min-microvolt = <2500000>;
+		regulator-name = "2P5V";
 	};
 
 	reg_3p3v: regulator-3v3 {
 		compatible = "regulator-fixed";
-		regulator-name = "3P3V";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
 		regulator-always-on;
+		regulator-max-microvolt = <3300000>;
+		regulator-min-microvolt = <3300000>;
+		regulator-name = "3P3V";
 	};
 
 	reg_pci3v3: regulator-pci3v3 {
 		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_REG_PCI3V3;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_reg_pci3v3>;
-		regulator-name = "pci3v3";
-		regulator-min-microvolt = <3300000>;
+		regulator-always-on;
 		regulator-max-microvolt = <3300000>;
-		gpio = GP_REG_PCI3V3;
-		enable-active-high;
+		regulator-min-microvolt = <3300000>;
+		regulator-name = "pci3v3";
 	};
 
 	reg_usb_otg_vbus: regulator-usb-otg-vbus {
 		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = GP_REG_USBOTG;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_reg_usb_otg_vbus>;
-		regulator-name = "usb_otg_vbus";
-		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		gpio = GP_REG_USBOTG;
-		enable-active-high;
+		regulator-min-microvolt = <5000000>;
+		regulator-name = "usb_otg_vbus";
 	};
 
 	v4l2_out {
@@ -343,12 +344,11 @@
 &can1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan1>;
-	trx-stby-gpio = GP_FLEXCAN1_STANDBY;
 	status = "okay";
+	trx-stby-gpio = GP_FLEXCAN1_STANDBY;
 };
 
 &ecspi1 {
-	fsl,spi-num-chipselects = <1>;
 	cs-gpios = GP_ECSPI1_NOR_CS;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi1>;
@@ -356,10 +356,11 @@
 
 	flash: m25p80@0 {
 		compatible = "sst,sst25vf016b";
-		spi-max-frequency = <20000000>;
 		reg = <0>;
+		spi-max-frequency = <20000000>;
 		#address-cells = <1>;
 		#size-cells = <1>;
+
 		mtd@00000000 {
 			label = "U-Boot";
 			reg = <0x0 0xC0000>;
@@ -455,47 +456,47 @@
 };
 
 &uart3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart3>;
 	control-gpios = GP_UART3_RX_ACT, GP_UART3_TX_ACT;
+	linux,rs485-enabled-at-boot-time;
 #define M_RX_ACT	1
 #define M_TX_ACT	2
-	off_levels = <0>;
+	off_levels = <3>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3>;
+	rxact_levels = <0>;
 	rxact_mask = <M_RX_ACT>;
-	rxact_levels = <M_RX_ACT>;
-	rs232_levels = <0>;
+	rs232_levels = <3>;
+	rs232_txen_levels = <0>;
 	rs232_txen_mask = <M_TX_ACT>;
-	rs232_txen_levels = <M_TX_ACT>;
-	rs485_levels = <0>;
+	rs485_levels = <3>;
+	rs485_txen_levels = <0>;
 	rs485_txen_mask = <M_TX_ACT>;
-	rs485_txen_levels = <M_TX_ACT>;
-	uart-has-rs485-half-duplex;
-	linux,rs485-enabled-at-boot-time;
 	status = "okay";
+	uart-has-rs485-half-duplex;
 };
 
 &usbh1 {
+	disable-over-current;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbh1>;
-	disable-over-current;
 	reset-gpios = GP_USBH1_HUB_RESET, GP_AX88772A_RESET;
 	status = "okay";
 };
 
 &usbotg {
-	vbus-supply = <&reg_usb_otg_vbus>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg>;
 	status = "okay";
+	vbus-supply = <&reg_usb_otg_vbus>;
 };
 
 &usdhc4 {
+	bus-width = <8>;
+	keep-power-in-suspend;
+	non-removable;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc4>;
-	bus-width = <8>;
-	non-removable;
-	vqmmc-1-8-v;
-	vmmc-supply = <&reg_1p8v>;
-	keep-power-in-suspend;
 	status = "okay";
+	vmmc-supply = <&reg_1p8v>;
+	vqmmc-1-8-v;
 };
