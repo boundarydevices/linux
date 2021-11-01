@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0 OR X11
+/*
+ * Copyright 2021 Boundary Devices, Inc.
+ */
+/dts-v1/;
+
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx6dl.dtsi"
+#include "imx6qdl-a2.dtsi"
+
+/ {
+	model = "Boundary Devices i.MX6 DualLite a2 Board";
+	compatible = "fsl,imx6dl-a2", "fsl,imx6dl";
+};
