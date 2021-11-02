@@ -1623,6 +1623,7 @@ int kbase_gpu_munmap(struct kbase_context *kctx, struct kbase_va_region *reg)
 			}
 		}
 		/* Fall-through */
+		fallthrough;
 	default:
 		kbase_mem_phy_alloc_gpu_unmapped(reg->gpu_alloc);
 		break;
