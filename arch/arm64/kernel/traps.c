@@ -538,6 +538,29 @@ NOKPROBE_SYMBOL(do_ptrauth_fault);
 		uaccess_ttbr0_disable();			\
 	}
 
+#define __user_cache_maint_ivau(insn, address, res)			\
+	do {								\
+		if (address >= user_addr_max()) {			\
+			res = -EFAULT;					\
+		} else {						\
+			uaccess_ttbr0_enable();				\
+			asm volatile (					\
+				"1:	" insn "\n"			\
+				"	mov	%w0, #0\n"		\
+				"2:\n"					\
+				"	.pushsection .fixup,\"ax\"\n"	\
+				"	.align	2\n"			\
+				"3:	mov	%w0, %w2\n"		\
+				"	b	2b\n"			\
+				"	.popsection\n"			\
+				_ASM_EXTABLE(1b, 3b)			\
+				: "=r" (res)				\
+				: "r" (address), "i" (-EFAULT));	\
+			uaccess_ttbr0_disable();			\
+		}							\
+	} while (0)
+
+extern bool TKT340553_SW_WORKAROUND;
 static void user_cache_maint_handler(unsigned int esr, struct pt_regs *regs)
 {
 	unsigned long tagged_address, address;
@@ -565,7 +588,10 @@ static void user_cache_maint_handler(unsigned int esr, struct pt_regs *regs)
 		__user_cache_maint("dc civac", address, ret);
 		break;
 	case ESR_ELx_SYS64_ISS_CRM_IC_IVAU:	/* IC IVAU */
-		__user_cache_maint("ic ivau", address, ret);
+		if (TKT340553_SW_WORKAROUND)
+			__user_cache_maint_ivau("ic ialluis", address, ret);
+		else
+			__user_cache_maint("ic ivau", address, ret);
 		break;
 	default:
 		force_signal_inject(SIGILL, ILL_ILLOPC, regs->pc, 0);
