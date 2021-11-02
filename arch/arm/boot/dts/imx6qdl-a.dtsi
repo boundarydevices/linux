@@ -89,8 +89,6 @@
 			MX6QDL_PAD_EIM_A18__GPIO2_IO20		0x130b0		/* Led1 */
 			MX6QDL_PAD_EIM_A16__GPIO2_IO22		0x130b0		/* LedRed */
 			MX6QDL_PAD_EIM_A17__GPIO2_IO21		0x130b0		/* Led2 */
-			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x1b0b0		/* rxact */
-			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x1b0b0		/* txact */
 		>;
 	};
 
@@ -150,6 +148,10 @@
 			MX6QDL_PAD_EIM_A20__GPIO2_IO18		0x030b0		/* RS485/!RS232 Select: pull down (rs232) */
 #define GP_UART3_AON	<&gpio7 13 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_GPIO_18__GPIO7_IO13		0x030b0		/* ON: pull down */
+#define GP_UART3_RX_ACT	<&gpio1 3 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_3__GPIO1_IO03		0x0b0b0
+#define GP_UART3_TX_ACT	<&gpio1 4 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x0b0b0
 		>;
 	};
 
@@ -400,23 +402,25 @@
 };
 
 &uart3 {
-	control-gpios = GP_UART3_RX_EN, GP_UART3_TX_EN, GP_UART3_RS485_EN, GP_UART3_AON;
+	control-gpios = GP_UART3_RX_EN, GP_UART3_TX_EN, GP_UART3_RS485_EN, GP_UART3_AON, GP_UART3_RX_ACT, GP_UART3_TX_ACT;
 	linux,rs485-enabled-at-boot-time;
 #define M_RX_EN		1
 #define M_TX_EN		2
 #define M_RS485		4
 #define M_AON		8
-	off_levels = <0>;
+#define M_RX_ACT	0x10
+#define M_TX_ACT	0x20
+	off_levels = <0x30>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
 	rxact_levels = <0>;
-	rxact_mask = <0>;
-	rs232_levels = <M_RX_EN>;
+	rxact_mask = <M_RX_ACT>;
+	rs232_levels = <0x31>;
 	rs232_txen_levels = <0>;
-	rs232_txen_mask = <0>;
-	rs485_levels = <0xd>;
+	rs232_txen_mask = <M_TX_ACT>;
+	rs485_levels = <0x3d>;
 	rs485_txen_levels = <M_TX_EN>;
-	rs485_txen_mask = <0x3>;
+	rs485_txen_mask = <0x23>;
 	status = "okay";
 	uart-has-rs485-half-duplex;
 };
