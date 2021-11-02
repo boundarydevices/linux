@@ -847,7 +847,7 @@ static int lpi2c_dma_init(struct device *dev,
 	lpi2c_imx->dma_tx = dma_request_chan(dev, "tx");
 	if (IS_ERR(lpi2c_imx->dma_tx)) {
 		ret = PTR_ERR(lpi2c_imx->dma_tx);
-		dev_err(dev, "can't get the TX DMA channel, error %d!\n", ret);
+		dev_dbg(dev, "can't get the TX DMA channel, error %d!\n", ret);
 		lpi2c_imx->dma_tx = NULL;
 		goto err;
 	}
@@ -866,7 +866,7 @@ static int lpi2c_dma_init(struct device *dev,
 	lpi2c_imx->dma_rx = dma_request_chan(dev, "rx");
 	if (IS_ERR(lpi2c_imx->dma_rx)) {
 		ret = PTR_ERR(lpi2c_imx->dma_rx);
-		dev_err(dev, "can't get the RX DMA channel, error %d\n", ret);
+		dev_dbg(dev, "can't get the RX DMA channel, error %d\n", ret);
 		lpi2c_imx->dma_rx = NULL;
 		goto fail_tx;
 	}
@@ -963,9 +963,9 @@ static int lpi2c_imx_probe(struct platform_device *pdev)
 	lpi2c_imx->dma_rx = lpi2c_imx->dma_tx = NULL;
 	ret = lpi2c_dma_init(&pdev->dev, lpi2c_imx);
 	if (ret) {
-		dev_err_probe(&pdev->dev, ret, "dma setup error %d, use pio\n", ret);
 		if (ret == -EPROBE_DEFER)
 			goto rpm_disable;
+		dev_info(&pdev->dev, "use pio mode\n");
 	}
 
 	init_completion(&lpi2c_imx->complete);
