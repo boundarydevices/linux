@@ -232,7 +232,7 @@ struct clk_hw *imx8m_clk_hw_composite_flags(const char *name,
 		mux_ops = &clk_mux_ops;
 		if (!(composite_flags & IMX_COMPOSITE_FW_MANAGED)) {
 			flags |= CLK_SET_PARENT_GATE;
-			if (!(flags & CLK_IS_CRITICAL)) {
+			if (!(flags & CLK_IS_CRITICAL) && !(imx_src_is_m4_enabled() && m4_lpa_required(name))) {
 				val = readl(reg);
 				val &= ~BIT(PCG_CGC_SHIFT);
 				writel(val, reg);
