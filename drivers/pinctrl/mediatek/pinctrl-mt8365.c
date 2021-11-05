@@ -467,6 +467,7 @@ static const struct mtk_pinctrl_devdata mt8365_pinctrl_data = {
 		.ap_num = 160,
 		.db_cnt = 160,
 	},
+	.quirks = MTK_PINCTRL_MODE_SET_CLR_BROKEN,
 };
 
 static int mtk_pinctrl_probe(struct platform_device *pdev)
