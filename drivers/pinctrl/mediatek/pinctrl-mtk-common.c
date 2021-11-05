@@ -310,23 +310,37 @@ static int mtk_pconf_set_pull_select(struct mtk_pinctrl *pctl,
 		return -EINVAL;
 	}
 
-	bit = BIT(pin & pctl->devdata->mode_mask);
-	if (enable)
-		reg_pullen = SET_ADDR(mtk_get_port(pctl, pin) +
-			pctl->devdata->pullen_offset, pctl);
-	else
-		reg_pullen = CLR_ADDR(mtk_get_port(pctl, pin) +
-			pctl->devdata->pullen_offset, pctl);
+	if (pctl->devdata->quirks & MTK_PINCTRL_MODE_SET_CLR_BROKEN) {
+		bit = pin & pctl->devdata->mode_mask;
+		reg_pullen = mtk_get_port(pctl, pin) +
+				pctl->devdata->pullen_offset;
+		reg_pullsel = mtk_get_port(pctl, pin) +
+				pctl->devdata->pullsel_offset;
 
-	if (isup)
-		reg_pullsel = SET_ADDR(mtk_get_port(pctl, pin) +
-			pctl->devdata->pullsel_offset, pctl);
-	else
-		reg_pullsel = CLR_ADDR(mtk_get_port(pctl, pin) +
-			pctl->devdata->pullsel_offset, pctl);
+		regmap_update_bits(mtk_get_regmap(pctl, pin), reg_pullen,
+			BIT(bit), enable << bit);
+		regmap_update_bits(mtk_get_regmap(pctl, pin), reg_pullsel,
+			BIT(bit), isup << bit);
+	} else {
+		bit = BIT(pin & pctl->devdata->mode_mask);
+		if (enable)
+			reg_pullen = SET_ADDR(mtk_get_port(pctl, pin) +
+				pctl->devdata->pullen_offset, pctl);
+		else
+			reg_pullen = CLR_ADDR(mtk_get_port(pctl, pin) +
+				pctl->devdata->pullen_offset, pctl);
 
-	regmap_write(mtk_get_regmap(pctl, pin), reg_pullen, bit);
-	regmap_write(mtk_get_regmap(pctl, pin), reg_pullsel, bit);
+		if (isup)
+			reg_pullsel = SET_ADDR(mtk_get_port(pctl, pin) +
+				pctl->devdata->pullsel_offset, pctl);
+		else
+			reg_pullsel = CLR_ADDR(mtk_get_port(pctl, pin) +
+				pctl->devdata->pullsel_offset, pctl);
+
+		regmap_write(mtk_get_regmap(pctl, pin), reg_pullen, bit);
+		regmap_write(mtk_get_regmap(pctl, pin), reg_pullsel, bit);
+	}
+
 	return 0;
 }
 
