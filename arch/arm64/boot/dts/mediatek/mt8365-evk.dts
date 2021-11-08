@@ -125,6 +125,12 @@
 		gpio = <&pio 16 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
+
+	apu@0 {
+		compatible = "mediatek,apu-drm";
+		remoteproc = <&vpu0>;
+		iova = <0 0x60000000 0 0x10000000>;
+	};
 };
 
 &mt6357codec {
