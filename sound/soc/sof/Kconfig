@@ -49,7 +49,7 @@ config SND_SOC_SOF_OF_DEV
 	tristate
 
 config SND_SOC_SOF_COMPRESS
-	tristate
+	bool
 	select SND_SOC_COMPRESS
 
 config SND_SOC_SOF_DEBUG_PROBES
