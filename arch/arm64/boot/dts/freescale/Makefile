@@ -51,7 +51,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mm-ddr4-evk.dtb imx8mm-ddr4-evk-rm67191.dtb imx8mm
 			  imx8mm-ddr4-evk-inmate.dtb \
 			  imx8mm-ddr4-evk-revb-rm67199.dtb \
 			  imx8mm-ddr4-evk-rm67199.dtb \
-			  imx8mm-ddr4-evk-rm67191-cmd-ram.dtb
+			  imx8mm-ddr4-evk-rm67191-cmd-ram.dtb \
+			  imx8mm-ddr4-evk-rm67199-cmd-ram.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-icore-mx8mm-ctouch2.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-icore-mx8mm-edimm2.2.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-kontron-n801x-s.dtb
