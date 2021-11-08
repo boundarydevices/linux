@@ -57,7 +57,6 @@ static int mtk_mipi_phy_power_on(struct phy *phy)
 {
 	struct mtk_mipi_dphy_port *port = phy_get_drvdata(phy);
 	struct mtk_mipi_dphy *priv = port->dev;
-	void __iomem *pmipi_rx_base = port->dev->rx;
 	void __iomem *pmipi_rx = port->base;
 	int ret = 0;
 
