@@ -149,7 +149,8 @@ int mdp_enum_fmt_mplane(struct v4l2_fmtdesc *f)
 	return 0;
 }
 
-static u32 mdp_fmt_get_hyfbc_plane_size(u32 width, u32 height, u32 color)
+static u32 mdp_fmt_get_hyfbc_plane_size(u32 width,
+					u32 height, u32 color, unsigned int plane)
 {
 	u32 y_data_size = 0;
 	u32 c_data_size = 0;
@@ -174,7 +175,10 @@ static u32 mdp_fmt_get_hyfbc_plane_size(u32 width, u32 height, u32 color)
 	c_data_ofst = ((y_data_ofst + y_data_size + c_header_size + 4095) >> 12) << 12; // align 4k
 	c_header_ofst = c_data_ofst - c_header_size;
 
-	return (c_data_ofst + c_data_size);
+	if (plane == 0)
+		return c_header_ofst;
+	else
+		return (c_data_ofst + c_data_size);
 }
 
 static u32 mdp_fmt_get_afbc_plane_size(u32 width, u32 height, u32 color)
@@ -254,7 +258,7 @@ const struct mdp_format *mdp_try_fmt_mplane(struct v4l2_format *f,
 
 		if (MDP_COLOR_IS_HYFBC_COMPRESS(fmt->mdp_color)) {
 			si = mdp_fmt_get_hyfbc_plane_size(pix_mp->width,
-							  pix_mp->height, fmt->mdp_color);
+							  pix_mp->height, fmt->mdp_color, i);
 		} else if (MDP_COLOR_IS_COMPRESS(fmt->mdp_color)) {
 			si = mdp_fmt_get_afbc_plane_size(pix_mp->width,
 							 pix_mp->height, fmt->mdp_color);
@@ -491,7 +495,7 @@ static void mdp_prepare_buffer(struct img_image_buffer *b,
 			b->format.plane_fmt[i].size =
 				mdp_fmt_get_hyfbc_plane_size(pix_mp->width,
 							     pix_mp->height,
-							     b->format.colorformat);
+							     b->format.colorformat, i);
 		} else if (MDP_COLOR_IS_COMPRESS(b->format.colorformat)) {
 			b->format.plane_fmt[i].size =
 				mdp_fmt_get_afbc_plane_size(pix_mp->width,
@@ -515,7 +519,7 @@ static void mdp_prepare_buffer(struct img_image_buffer *b,
 			b->format.plane_fmt[i].size =
 				mdp_fmt_get_hyfbc_plane_size(pix_mp->width,
 							     pix_mp->height,
-							     b->format.colorformat);
+							     b->format.colorformat, i);
 		} else if (MDP_COLOR_IS_COMPRESS(b->format.colorformat)) {
 			b->format.plane_fmt[i].size =
 				mdp_fmt_get_afbc_plane_size(pix_mp->width,
