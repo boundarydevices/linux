@@ -417,6 +417,16 @@
 		>;
 	};
 
+	pinctrl_ts_gt911_lvds: ts-gt911-lvdsgrp {
+		fsl,pins = <
+#define GPIRQ_TS_GT911_LVDS	<&gpio1 10 IRQ_TYPE_LEVEL_HIGH>
+#define GP_TS_GT911_LVDS_IRQ	<&gpio1 10 GPIO_ACTIVE_HIGH>
+			MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10	0x1c0
+#define GP_TS_GT911_LVDS_RESET	<&gpio3 14 GPIO_OPEN_DRAIN>
+			MX8MP_IOMUXC_NAND_DQS__GPIO3_IO14	0x149
+		>;
+	};
+
 	pinctrl_ts_ili251x_lvds: ts-ili251x-lvdsgrp {
 		fsl,pins = <
 #define GPIRQ_TS_ILI251X_LVDS	<&gpio1 10 IRQ_TYPE_EDGE_FALLING>
@@ -625,6 +635,8 @@
 		ts_ft5x06 = &ts_ft5x06;
 		ts_ft5x06_2 = &ts_ft5x06_lvds;
 		ts_goodix = &ts_goodix;
+		ts_goodix2 = &ts_goodix_lvds2;
+		ts_goodix3 = &ts_goodix_lvds3;
 		ts_ili251x = &ts_ili251x_lvds;
 		usb_mux = &usb_mux;
 	};
@@ -1304,7 +1316,32 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ts_ft5x06_lvds>;
 		reg = <0x38>;
+		status = "disabled";
 		wakeup-gpios = GP_TS_FT5X06_LVDS_WAKE;
+	};
+
+	ts_goodix_lvds2: touchscreen@14 {
+		compatible = "goodix,gt9271";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_TS_GT911_LVDS;
+		irq-gpios = GP_TS_GT911_LVDS_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_gt911_lvds>;
+		reg = <0x14>;
+		reset-gpios = GP_TS_GT911_LVDS_RESET;
+		status = "disabled";
+	};
+
+	ts_goodix_lvds3: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_TS_GT911_LVDS;
+		irq-gpios = GP_TS_GT911_LVDS_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_gt911_lvds>;
+		reg = <0x5d>;
+		reset-gpios = GP_TS_GT911_LVDS_RESET;
+		status = "disabled";
 	};
 
 	ts_ili251x_lvds: touchscreen@41 {
