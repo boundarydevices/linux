@@ -20,6 +20,12 @@
 	/delete-node/ i2c3a-rv4162grp;
 	/delete-node/ i2c3b-ov5640-mipigrp;
 
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x09)
+		>;
+	};
+
 	pinctrl_i2c2_rv4162: i2c2-rv4162grp {
 		fsl,pins = <
 #undef  GPIRQ_RV4162
