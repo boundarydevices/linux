@@ -294,6 +294,7 @@
 #define AP1302_REG_ADV_START			0xe000
 #define AP1302_ADVANCED_BASE			AP1302_REG_32BIT(0xf038)
 #define AP1302_SIP_CRC				AP1302_REG_16BIT(0xf052)
+#define AP1302_BOOTDATA_CHECKSUM		AP1302_REG_16BIT(0x6134)
 
 /* Advanced System Registers */
 #define AP1302_ADV_IRQ_SYS_INTE			AP1302_REG_ADV_32BIT(0x00230000)
@@ -438,10 +439,12 @@ static inline struct ap1302_device *to_ap1302(struct v4l2_subdev *sd)
 
 struct ap1302_firmware_header {
 	u16 pll_init_size;
-	u16 crc;
+	u16 check;
 } __packed;
 
-#define MAX_FW_LOAD_RETRIES 3
+#define MAX_FW_LOAD_RETRIES		5
+#define MAX_CHIP_DETECT_RETRIES		5
+#define MAX_CHECK_RETRIES		5
 
 static const struct ap1302_format_info supported_video_formats[] = {
 	{
@@ -2259,7 +2262,9 @@ static int ap1302_load_firmware(struct ap1302_device *ap1302)
 	unsigned int fw_size;
 	const u8 *fw_data;
 	unsigned int win_pos = 0;
+	unsigned int checksum;
 	unsigned int crc;
+	unsigned int retries;
 	u8 *buf;
 	int ret;
 
@@ -2270,6 +2275,11 @@ static int ap1302_load_firmware(struct ap1302_device *ap1302)
 	fw_hdr = (const struct ap1302_firmware_header *)ap1302->fw->data;
 	fw_data = (u8 *)&fw_hdr[1];
 	fw_size = ap1302->fw->size - sizeof(*fw_hdr);
+
+	/* Clear the CHECKSUM register. */
+	ret = ap1302_write(ap1302, AP1302_BOOTDATA_CHECKSUM, 0x0000, NULL);
+	if (ret)
+		goto done;
 
 	/* Clear the CRC register. */
 	ret = ap1302_write(ap1302, AP1302_SIP_CRC, 0xffff, NULL);
@@ -2291,7 +2301,7 @@ static int ap1302_load_firmware(struct ap1302_device *ap1302)
 
 	usleep_range(1000, 2000);
 
-	/* Load the rest of the bootdata content and verify the CRC. */
+	/* Load the rest of the bootdata content and verify the CHECKSUM or the CRC. */
 	ret = ap1302_write_fw_window(ap1302, fw_data + fw_hdr->pll_init_size,
 				     fw_size - fw_hdr->pll_init_size, &win_pos,
 				     buf);
@@ -2304,14 +2314,6 @@ static int ap1302_load_firmware(struct ap1302_device *ap1302)
 	if (ret)
 		goto done;
 
-	if (crc != fw_hdr->crc) {
-		dev_warn(ap1302->dev,
-			 "CRC mismatch: expected 0x%04x, got 0x%04x\n",
-			 fw_hdr->crc, crc);
-		ret = -EAGAIN;
-		goto done;
-	}
-
 	/*
 	 * Write 0xffff to the bootdata_stage register to indicate to the
 	 * AP1302 that the whole bootdata content has been loaded.
@@ -2319,6 +2321,25 @@ static int ap1302_load_firmware(struct ap1302_device *ap1302)
 	ret = ap1302_write(ap1302, AP1302_BOOTDATA_STAGE, 0xffff, NULL);
 	if (ret)
 		goto done;
+
+	for (retries = 0; retries < MAX_CHECK_RETRIES; ++retries) {
+		ret = ap1302_read(ap1302, AP1302_BOOTDATA_CHECKSUM, &checksum);
+		if (ret)
+			goto done;
+
+		if ((checksum != 0 && checksum == fw_hdr->check) || crc == fw_hdr->check)
+			break;
+
+		msleep(100);
+	}
+
+	if (retries == MAX_CHECK_RETRIES) {
+		dev_warn(ap1302->dev,
+			 "CHECK mismatch: expected 0x%04x, got CHECKSUM 0x%04x CRC 0x%04x\n",
+			 fw_hdr->check, checksum, crc);
+		ret = -EAGAIN;
+		goto done;
+	}
 
 	/* The AP1302 starts outputting frames right after boot, stop it. */
 	ret = ap1302_stall(ap1302, true);
@@ -2332,17 +2353,25 @@ static int ap1302_detect_chip(struct ap1302_device *ap1302)
 {
 	unsigned int version;
 	unsigned int revision;
+	unsigned int retries;
 	int ret;
 
-	ret = ap1302_read(ap1302, AP1302_CHIP_VERSION, &version);
-	if (ret)
-		return ret;
+	for (retries = 0; retries < MAX_CHIP_DETECT_RETRIES; ++retries) {
+		ret = ap1302_read(ap1302, AP1302_CHIP_VERSION, &version);
+		if (ret)
+			return ret;
 
-	ret = ap1302_read(ap1302, AP1302_CHIP_REV, &revision);
-	if (ret)
-		return ret;
+		ret = ap1302_read(ap1302, AP1302_CHIP_REV, &revision);
+		if (ret)
+			return ret;
 
-	if (version != AP1302_CHIP_ID) {
+		if (version == AP1302_CHIP_ID)
+			break;
+
+		msleep(100);
+	}
+
+	if (retries == MAX_CHIP_DETECT_RETRIES) {
 		dev_err(ap1302->dev,
 			"Invalid chip version, expected 0x%04x, got 0x%04x\n",
 			AP1302_CHIP_ID, version);
@@ -2375,7 +2404,7 @@ static int ap1302_hw_init(struct ap1302_device *ap1302)
 		goto error_firmware;
 
 	/*
-	 * Load the firmware, retrying in case of CRC errors. The AP1302 is
+	 * Load the firmware, retrying in case of CHECKSUM or CRC errors. The AP1302 is
 	 * reset with a full power cycle between each attempt.
 	 */
 	for (retries = 0; retries < MAX_FW_LOAD_RETRIES; ++retries) {
