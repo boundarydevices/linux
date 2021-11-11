@@ -17,6 +17,7 @@
 #include <sound/soc-dapm.h>
 #include <sound/simple_card_utils.h>
 #include "imx-pcm-rpmsg.h"
+#include "imx-pcm512x-rpmsg.h"
 
 struct imx_rpmsg {
 	struct snd_soc_dai_link dai;
@@ -80,6 +81,12 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	if (!data) {
 		ret = -ENOMEM;
 		goto fail;
+	}
+
+	of_property_read_string(np, "model", &model_string);
+
+	if(!strcmp("pcm512x-audio", model_string)) {
+		imx_pcm512x_rpmsg_init_data(pdev, (void **)(&data));
 	}
 
 	ret = of_reserved_mem_device_init_by_idx(&pdev->dev, np, 0);
@@ -149,6 +156,10 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "no enabled rpmsg DAI link\n");
 		ret = -EINVAL;
 		goto fail;
+	}
+
+	if(!strcmp("pcm512x-audio", model_string)) {
+		imx_pcm512x_rpmsg_probe(pdev, data);
 	}
 
 	data->card.dev = &pdev->dev;
