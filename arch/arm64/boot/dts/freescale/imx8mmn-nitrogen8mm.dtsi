@@ -11,6 +11,7 @@
 #define TC358867_I2C_BUS	<&TOUCHSCREEN_I2C_BUS>
 #endif
 #include "panel-dmt050wvnxcmi.dtsi"
+#include "panel-er-tft050.dtsi"
 #include "panel-lcd133-070.dtsi"
 #include "panel-lcm-jm430.dtsi"
 #include "panel-ls050t1sx12.dtsi"
@@ -262,6 +263,13 @@
 		fsl,pins = <
 #define GP_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
+		>;
+	};
+
+	pinctrl_mipi_er_tft050: mipi-er-tft050grp {
+		fsl,pins = <
+#define GP_TC358767_EN	<&gpio1 9 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x100)
 		>;
 	};
 
@@ -578,6 +586,7 @@
 		mipi_dsi = &mipi_dsi;
 		mipi_to_lvds = &mipi_to_lvds;
 		pca9540 = &pca9540;
+		pca9540_2 = &pca9540_2;
 		pca9546 = &pca9546;
 		pwm_mipi = &pwm3;
 #endif
@@ -977,6 +986,41 @@
 				reg = <0x48> ;
 				reset-gpios = GP_LT8912_2_RESET;
 			};
+		};
+	};
+
+	pca9540_2: i2cmux9540_2@70 {
+		compatible = "nxp,pca9540";
+		reg = <0x70>;
+		status = "disabled";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		TOUCHSCREEN_I2C_BUS@0 {
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* Touch screens */
+			touchscreen@5d {
+				compatible = "goodix,gt911";
+				display = <&display_subsystem>;
+				esd-recovery-timeout-ms = <2000>;
+				interrupts-extended = GPIRQ_GT911;
+				irq-gpios = GP_GT911_IRQ;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_ts_gt911>;
+				reg = <0x5d>;
+				reset-gpios = GP_GT911_RESET;
+			};
+		};
+
+		tc358767_bus: TOUCHSCREEN_I2C_BUS@1 {
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
 		};
 	};
 
