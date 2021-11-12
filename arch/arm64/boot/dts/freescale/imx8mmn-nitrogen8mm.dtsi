@@ -5,6 +5,8 @@
 #ifndef TOUCHSCREEN_I2C_BUS
 #define TOUCHSCREEN_I2C_BUS	i2c2
 #endif
+
+#ifndef SKIP_MIPI_PANELS
 #ifndef TC358867_I2C_BUS
 #define TC358867_I2C_BUS	<&TOUCHSCREEN_I2C_BUS>
 #endif
@@ -21,6 +23,7 @@
 #include "panel-m101nwwb.dtsi"
 #include "panel-com50h5n03ulc.dtsi"
 #include "panel-zwt055azh.dtsi"
+#endif
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -254,6 +257,7 @@
 		>;
 	};
 
+#ifndef SKIP_MIPI_PANELS
 	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
 		fsl,pins = <
 #define GP_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
@@ -304,6 +308,7 @@
 			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
 		>;
 	};
+#endif
 
 	pinctrl_pwm1: pwm1grp {
 		fsl,pins = <
@@ -565,6 +570,7 @@
 
 	aliases {
 		a53 = &A53_0;
+#ifndef SKIP_MIPI_PANELS
 		backlight_mipi = &backlight_mipi;
 		fb_mipi = &fb_mipi;
 		lcdif = &lcdif;
@@ -574,7 +580,9 @@
 		pca9540 = &pca9540;
 		pca9546 = &pca9546;
 		pwm_mipi = &pwm3;
+#endif
 		reg_sw4 = &reg_sw4;
+#ifndef SKIP_MIPI_PANELS
 		spi_lcd = &spi_lcd;
 		t_mipi = &t_mipi;
 		ts_ft5x06 = &ts_ft5x06;
@@ -583,8 +591,10 @@
 		ts_gsl1680 = &ts_gsl1680;
 		ts_ili251x = &ts_ili251x;
 		ts_st1633i = &ts_st1633i;
+#endif
 	};
 
+#ifndef SKIP_MIPI_PANELS
 	backlight_mipi: backlight-mipi {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
@@ -593,6 +603,7 @@
 		pwms = <&pwm3 0 30000>;		/* 33.3 Khz */
 		status = "okay";
 	};
+#endif
 
 	bt-rfkill {
 		compatible = "net,rfkill-gpio";
@@ -840,7 +851,7 @@
 	status = "okay";
 };
 
-
+#ifndef SKIP_MIPI_PANELS
 &TOUCHSCREEN_I2C_BUS {
 	spi_lcd: spi@2f {
 		assigned-clocks = <&clk IMX8MMN(VIDEO_PLL1)>;
@@ -1032,6 +1043,7 @@
 		};
 	};
 };
+#endif
 
 &i2c3 {
 	clock-frequency = <100000>;
@@ -1109,9 +1121,11 @@
 	status = "okay";
 };
 
+#ifndef SKIP_MIPI_PANELS
 &lcdif {
 	status = "okay";
 };
+#endif
 
 &mipi_csi_1 {
 	#address-cells = <1>;
@@ -1132,6 +1146,7 @@
 	};
 };
 
+#ifndef SKIP_MIPI_PANELS
 &mipi_dsi {
 	assigned-clocks = <&clk IMX8MMN(CLK_DSI_CORE)>,
 			  <&clk IMX8MMN(CLK_DSI_PHY_REF)>,
@@ -1208,6 +1223,7 @@
 		};
 	};
 };
+#endif
 
 &mu {
 	status = "okay";
@@ -1332,14 +1348,14 @@
 
 &usdhc3 {
 	bus-width = <4>;
-	no-sd-uhs-sdr104;
-	pm-ignore-notify;
 	keep-power-in-suspend;
+	no-sd-uhs-sdr104;
 	non-removable;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc3>;
 	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
+	pm-ignore-notify;
 	status = "okay";
 	vmmc-supply = <&reg_wlan_vmmc>;
 	vqmmc-1-8-v;
