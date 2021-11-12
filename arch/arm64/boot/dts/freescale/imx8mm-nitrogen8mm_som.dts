@@ -193,6 +193,7 @@
 	};
 };
 
+#ifndef SKIP_MIPI_PANELS
 &lt8912_2 {
 	reset-gpios = GP_LT8912_2_RESET;
 };
@@ -200,14 +201,17 @@
 &mipi_to_lvds {
 	enable-gpios = GP_SN65DSI83_EN;
 };
+#endif
 
 &reg_sw4 {
 	/delete-property/ dual-phase;
 };
 
+#ifndef SKIP_MIPI_PANELS
 &spi_lcd {
 	reset-gpios = GP_SC18IS602B_RESET;
 };
+#endif
 
 &usbotg2 {
 	disable-over-current;
