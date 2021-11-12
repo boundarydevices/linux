@@ -3,6 +3,7 @@
  * Copyright 2019 Boundary Devices
  */
 
+#define SKIP_MIPI_PANELS
 #include "imx8mm-nitrogen8mm_som.dts"
 &iomuxc {
 	pinctrl-names = "default";
@@ -16,11 +17,6 @@
 	/delete-node/ ts-gslx680grp;
 	/delete-node/ ts-st1633grp;
 	/delete-node/ i2c3b-ov5640-mipigrp;
-	/delete-node/ mipi-com50h5n03ulcgrp;
-	/delete-node/ mipi-lcd133-070grp;
-	/delete-node/ mipi-lcm-jm430grp;
-	/delete-node/ mipi-ltk0680ytmdbgrp;
-	/delete-node/ mipi-ltk080a60a004tgrp;
 	/delete-node/ pwm1grp;
 	/delete-node/ pwm2grp;
 	/delete-node/ pwm3grp;
@@ -143,53 +139,17 @@
 	model = "Boundary Devices i.MX8MMini Span";
 	compatible = "boundary,imx8mm-span", "fsl,imx8mm";
 
-	/delete-node/ backlight-mipi;
 	/delete-node/ csi-mclk;
 	/delete-node/ mipi-xclk;
-	/delete-node/ mipi-cmds-com50h5n03ulc;
-	/delete-node/ mipi-cmds-dmt050wvnxcmi;
-	/delete-node/ mipi-cmds-lcd133-070;
-	/delete-node/ mipi-cmds-lcm-jm430;
-	/delete-node/ mipi-cmds-ltk0680ytmdb;
-	/delete-node/ mipi-cmds-ltk080a60a004t;
-	/delete-node/ mipi-cmds-m101nwwb;
 	/delete-node/ sound-wm8960;
 
 	aliases {
 		/delete-property/ a53;
-		/delete-property/ backlight_mipi;
-		/delete-property/ fb_mipi;
-		/delete-property/ lcdif;
-		/delete-property/ mipi;
-		/delete-property/ mipi_cmds_com50h5n03ulc;
-		/delete-property/ mipi_cmds_dmt050wvnxcmi;
-		/delete-property/ mipi_cmds_lcd133_070;
-		/delete-property/ mipi_cmds_lcm_jm430;
-		/delete-property/ mipi_cmds_ltk0680ytmdb;
-		/delete-property/ mipi_cmds_ltk080a60a004t;
-		/delete-property/ mipi_cmds_m101nwwb;
-		/delete-property/ mipi_dsi;
-		/delete-property/ mipi_to_lvds;
-		/delete-property/ pca9540;
-		/delete-property/ pca9546;
-		/delete-property/ pinctrl_com50h5n03ulc;
-		/delete-property/ pinctrl_lcd133_070;
-		/delete-property/ pinctrl_lcm_jm430;
-		/delete-property/ pinctrl_ltk0680ytmdb;
-		/delete-property/ pinctrl_ltk080a60a004t;
-		/delete-property/ pwm_mipi;
 		/delete-property/ reg_sw4;
 		/delete-property/ sai1;
 		/delete-property/ sai2;
 		/delete-property/ sai3;
 		/delete-property/ sai5;
-		/delete-property/ spi_lcd;
-		/delete-property/ t_mipi;
-		/delete-property/ ts_ft5x06;
-		/delete-property/ ts_ft7250;
-		/delete-property/ ts_goodix;
-		/delete-property/ ts_gsl1680;
-		/delete-property/ ts_st1633i;
 	};
 
 	clocks {
@@ -205,9 +165,7 @@
 
 /delete-node/ &csi1_bridge;
 /delete-node/ &display_subsystem;
-/delete-node/ &lcdif;
 /delete-node/ &mipi_csi_1;
-/delete-node/ &mipi_dsi;
 /delete-node/ &pwm1;
 /delete-node/ &pwm2;
 /delete-node/ &pwm3;
@@ -258,14 +216,6 @@
 };
 
 &i2c4 {
-	/delete-node/ spi@2f;
-	/delete-node/ touchscreen@38;
-	/delete-node/ touchscreen_ft7250@38;
-	/delete-node/ touchscreen@40;
-	/delete-node/ touchscreen@55;
-	/delete-node/ touchscreen@5d;
-	/delete-node/ i2cmux9540@70;
-	/delete-node/ i2cmux9546@70;
 	/delete-node/ codec@1a;
 
 	sc16is7xx-uart@4c {
