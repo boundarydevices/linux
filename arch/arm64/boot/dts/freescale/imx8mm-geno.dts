@@ -10,7 +10,7 @@
 #include "imx8mmn-nitrogen8mm.dtsi"
 
 &iomuxc {
-
+	/delete-node/ mipi-er-tft050grp;
 	/delete-node/ ecspi2grp;
 	/delete-node/ ts-gt911grp;
 	/delete-node/ ts-ft7250grp;
@@ -80,9 +80,15 @@
 	model = "Boundary Devices i.MX8MMini GENO";
 	compatible = "boundary,imx8mm-geno", "fsl,imx8mm";
 
+	/delete-node/ mipi-cmds-er-tft050;
+
 	aliases {
+		/delete-property/ mipi_cmds_er_tft050;
+		/delete-property/ pca9540_2;
+		/delete-property/ pinctrl_er_tft050;
 		/delete-property/ ts_ft7250;
 		/delete-property/ ts_goodix;
+		/delete-property/ ts_goodix2;
 		/delete-property/ ts_gsl1680;
 		/delete-property/ ts_st1633i;
 		mipi_cmds_x090dtlnc01 = &mipi_cmds_m101nwwb;
@@ -179,6 +185,7 @@
 	/delete-node/ touchscreen@40;
 	/delete-node/ touchscreen@55;
 	/delete-node/ touchscreen@5d;
+	/delete-node/ i2cmux9540_2@70;
 
 	ts_ili251x: touchscreen@41 {
 		status = "okay";
