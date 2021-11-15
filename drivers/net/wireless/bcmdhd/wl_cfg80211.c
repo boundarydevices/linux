@@ -10977,6 +10977,56 @@ s32 wl_mode_to_nl80211_iftype(s32 mode)
 	return err;
 }
 
+static void wl_copy_regd(const struct ieee80211_regdomain *regd_orig,
+	struct ieee80211_regdomain *regd_copy)
+{
+	int i;
+
+	memcpy(regd_copy, regd_orig, sizeof(*regd_orig));
+
+	for (i = 0; i < regd_orig->n_reg_rules; i++) {
+		memcpy(&regd_copy->reg_rules[i], &regd_orig->reg_rules[i],
+			sizeof(regd_orig->reg_rules[i]));
+	}
+}
+
+static void wl_notify_regd(struct wiphy *wiphy, char *country_code)
+{
+	struct ieee80211_regdomain *regd_copy = NULL;
+	int regd_len;
+
+	regd_len = sizeof(brcm_regdom) + (brcm_regdom.n_reg_rules *
+		sizeof(struct ieee80211_reg_rule));
+
+	regd_copy = (struct ieee80211_regdomain *)kmalloc(regd_len, GFP_KERNEL);
+	if (!regd_copy) {
+		WL_ERR(("failed to alloc regd_copy\n"));
+		return;
+	}
+
+	/* the upper layer function below requires non-const type */
+	wl_copy_regd(&brcm_regdom, regd_copy);
+
+	if (country_code) {
+		memcpy(regd_copy->alpha2, country_code, sizeof(regd_copy->alpha2));
+	}
+
+	if (rtnl_is_locked()) {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0))
+		wiphy_lock(wiphy);
+		regulatory_set_wiphy_regd_sync(wiphy, regd_copy);
+		wiphy_unlock(wiphy);
+#else
+		regulatory_set_wiphy_regd_sync_rtnl(wiphy, regd_copy);
+#endif /* LINUX_VERSION > 5.12.0 */
+	} else {
+		regulatory_set_wiphy_regd(wiphy, regd_copy);
+	}
+
+	kfree(regd_copy);
+	return;
+}
+
 #ifdef CONFIG_CFG80211_INTERNAL_REGDB
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 9, 0))
 #define WL_CFG80211_REG_NOTIFIER() static int wl_cfg80211_reg_notifier(struct wiphy *wiphy, struct regulatory_request *request)
@@ -11228,12 +11278,14 @@ static s32 wl_setup_wiphy(struct wireless_dev *wdev, struct device *sdiofunc_dev
 #endif /* CONFIG_PM && WL_CFG80211_P2P_DEV_IF */
 
 	WL_DBG(("Registering custom regulatory)\n"));
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0))
+	wdev->wiphy->regulatory_flags |= REGULATORY_WIPHY_SELF_MANAGED;
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
 	wdev->wiphy->regulatory_flags |= REGULATORY_CUSTOM_REG;
 #else
 	wdev->wiphy->flags |= WIPHY_FLAG_CUSTOM_REGULATORY;
 #endif
-	wiphy_apply_custom_regulatory(wdev->wiphy, &brcm_regdom);
+	wl_notify_regd(wdev->wiphy, NULL);
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 14, 0)) || defined(WL_VENDOR_EXT_SUPPORT)
 	WL_ERR(("Registering Vendor80211\n"));
@@ -16916,7 +16968,7 @@ static s32 __wl_update_wiphybands(struct bcm_cfg80211 *cfg, bool notify)
 	}
 
 	if (notify)
-		wiphy_apply_custom_regulatory(wiphy, &brcm_regdom);
+		wl_notify_regd(wiphy, NULL);
 
 	return 0;
 }
