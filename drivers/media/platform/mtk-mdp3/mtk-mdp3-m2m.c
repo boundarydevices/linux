@@ -113,7 +113,9 @@ static void mdp_m2m_worker(struct work_struct *work)
 	dst_vb = v4l2_m2m_next_dst_buf(ctx->m2m_ctx);
 	mdp_set_dst_config(&param.outputs[0], frame, &dst_vb->vb2_buf);
 
-	param.timestamp = src_vb->vb2_buf.timestamp;
+	dst_vb->vb2_buf.timestamp = src_vb->vb2_buf.timestamp;
+	param.timestamp.tv_sec= (int32_t)(src_vb->vb2_buf.timestamp >> 32);
+	param.timestamp.tv_usec = ((int32_t)(src_vb->vb2_buf.timestamp & 0xFFFFFFFF)) | BIT(1);
 
 	ret = mdp_vpu_process(&ctx->vpu, &param);
 	if (ret) {
