@@ -302,7 +302,7 @@ static int tja11xx_config_init(struct phy_device *phydev)
 		ret = phy_modify(phydev, MII_CFG1, reg_mask, reg_val);
 		if (ret)
 			return ret;
-		/* Fall Through */
+		fallthrough;
 	case PHY_ID_TJA1102:
 		ret = phy_set_bits(phydev, MII_COMMCFG, MII_COMMCFG_AUTO_OP);
 		if (ret)
