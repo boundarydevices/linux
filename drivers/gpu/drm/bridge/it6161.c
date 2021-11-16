@@ -281,6 +281,7 @@ struct it6161 {
 	u8 support_audio;
 	bool hdmi_mode;
 	u8 bAudioChannelEnable;
+	u8 bridge_enable;
 };
 
 struct it6161 *it6161;
@@ -1166,11 +1167,17 @@ static void it6161_bridge_enable(struct drm_bridge *bridge)
 	struct device *dev = &it6161->i2c_hdmi_tx->dev;
 
 	DRM_DEV_DEBUG_DRIVER(dev, "start");
+
+	if (it6161->bridge_enable)
+		return;
+
 	mipi_rx_init(it6161);
 	hdmi_tx_init(it6161);
 	it6161_set_interrupts_active_level(HIGH);
 	it6161_mipi_rx_int_mask_enable(it6161);
 	it6161_hdmi_tx_int_mask_enable(it6161);
+
+	it6161->bridge_enable = true;
 
 }
 
@@ -1185,6 +1192,8 @@ static void it6161_bridge_disable(struct drm_bridge *bridge)
 	it6161_set_interrupts_active_level(HIGH);
 	it6161_mipi_rx_int_mask_enable(it6161);
 	it6161_hdmi_tx_int_mask_enable(it6161);
+
+	it6161->bridge_enable = false;
 }
 
 static enum drm_connector_status it6161_bridge_detect(struct drm_bridge *bridge)
