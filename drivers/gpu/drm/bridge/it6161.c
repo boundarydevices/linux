@@ -438,11 +438,6 @@ static void mipi_rx_logic_reset_release(struct it6161 *it6161)
 	it6161_mipi_rx_set_bits(it6161, 0x05, 0x08, 0x00);
 }
 
-static void hdmi_tx_logic_reset(struct it6161 *it6161)
-{
-	it6161_hdmi_tx_set_bits(it6161, 0x04, 0x20, 0x20);
-}
-
 static void it6161_mipi_rx_int_mask_disable(struct it6161 *it6161)
 {
 	it6161_mipi_rx_set_bits(it6161, 0x0F, 0x03, 0x00);
@@ -1192,11 +1187,12 @@ static void it6161_bridge_disable(struct drm_bridge *bridge)
 	struct device *dev = &it6161->i2c_hdmi_tx->dev;
 
 	DRM_DEV_DEBUG_DRIVER(dev, "start");
-	mipi_rx_logic_reset(it6161);
-	hdmi_tx_logic_reset(it6161);
-	it6161_set_interrupts_active_level(HIGH);
-	it6161_mipi_rx_int_mask_enable(it6161);
-	it6161_hdmi_tx_int_mask_enable(it6161);
+
+	/* only keep HPD for cabe detect */
+	it6161_mipi_rx_int_mask_disable(it6161);
+	it6161_hdmi_tx_int_mask_disable(it6161);
+	it6161_hdmi_tx_set_bits(it6161, 0x0F, 0x03, 0x00);
+	it6161_hdmi_tx_write(it6161, REG_TX_INT_MASK1, ~B_TX_HPD_MASK);
 
 	it6161->bridge_enable = false;
 }
