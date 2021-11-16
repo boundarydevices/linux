@@ -430,6 +430,8 @@ struct ap1302_device {
 		struct mutex lock;
 		u32 sipm_addr;
 	} debugfs;
+
+	struct regulator *supply;
 };
 
 static inline struct ap1302_device *to_ap1302(struct v4l2_subdev *sd)
@@ -1019,7 +1021,15 @@ static int ap1302_power_on(struct ap1302_device *ap1302)
 		usleep_range(200, 1000);
 	}
 
-	/* 2. Power up the regulators. To be implemented. */
+	/* 2. Power up the regulators. */
+	if (ap1302->supply) {
+		ret = regulator_enable(ap1302->supply);
+		if (ret < 0) {
+			dev_err(ap1302->dev, "Failed to enable regulator: %d\n", ret);
+			return ret;
+		}
+		usleep_range(200, 1000);
+	}
 
 	/* 3. De-assert STANDBY. */
 	if (ap1302->standby_gpio) {
@@ -1031,7 +1041,7 @@ static int ap1302_power_on(struct ap1302_device *ap1302)
 	ret = clk_prepare_enable(ap1302->clock);
 	if (ret < 0) {
 		dev_err(ap1302->dev, "Failed to enable clock: %d\n", ret);
-		return ret;
+		goto error_clock;
 	}
 
 	/* 5. De-assert RESET. */
@@ -1044,6 +1054,12 @@ static int ap1302_power_on(struct ap1302_device *ap1302)
 	usleep_range(10000, 11000);
 
 	return 0;
+
+error_clock:
+	if (ap1302->supply)
+		regulator_disable(ap1302->supply);
+
+	return ret;
 }
 
 static void ap1302_power_off(struct ap1302_device *ap1302)
@@ -1060,7 +1076,9 @@ static void ap1302_power_off(struct ap1302_device *ap1302)
 		usleep_range(200, 1000);
 	}
 
-	/* 4. Power down the regulators. To be implemented. */
+	/* 4. Power down the regulators. */
+	if (ap1302->supply)
+		regulator_disable(ap1302->supply);
 
 	/* 5. De-assert STANDBY. */
 	if (ap1302->standby_gpio) {
@@ -2610,6 +2628,18 @@ static int ap1302_parse_of(struct ap1302_device *ap1302)
 
 	ap1302->width_factor = num_sensors;
 
+	/* Regulator */
+	ap1302->supply = regulator_get_optional(ap1302->dev, "power");
+	if (IS_ERR(ap1302->supply)) {
+		if (PTR_ERR(ap1302->supply) == -ENODEV) {
+			ap1302->supply = NULL;
+		} else {
+			dev_err(ap1302->dev, "Can't get regulator: %ld\n",
+				PTR_ERR(ap1302->supply));
+			return PTR_ERR(ap1302->supply);
+		}
+	}
+
 done:
 	of_node_put(sensors);
 	return ret;
@@ -2626,6 +2656,11 @@ static void ap1302_cleanup(struct ap1302_device *ap1302)
 			continue;
 
 		ap1302_sensor_cleanup(sensor);
+	}
+
+	if (ap1302->supply) {
+		regulator_put(ap1302->supply);
+		ap1302->supply = NULL;
 	}
 
 	v4l2_fwnode_endpoint_free(&ap1302->bus_cfg);
