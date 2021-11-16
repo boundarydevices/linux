@@ -470,7 +470,7 @@ static void it6161_hdmi_tx_int_mask_enable(struct it6161 *it6161)
 	it6161_hdmi_tx_set_bits(it6161, 0x0F, 0x03, 0x00);
 	it6161_hdmi_tx_write(it6161, REG_TX_INT_MASK1,
 				~(B_TX_AUDIO_OVFLW_MASK | B_TX_DDC_FIFO_ERR_MASK |
-				B_TX_DDC_BUS_HANG_MASK | B_TX_HPD_MASK | B_TX_RXSEN_MASK));
+				B_TX_DDC_BUS_HANG_MASK | B_TX_HPD_MASK));
 	it6161_hdmi_tx_write(it6161, REG_TX_INT_MASK3, ~B_TX_VIDSTABLE_MASK);
 }
 
