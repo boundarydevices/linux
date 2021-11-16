@@ -38,6 +38,10 @@
 		compatible = "adi,adt7461";
 		reg = <0x4c>;
 	};
+	rtc@51 {
+		compatible = "nxp,pcf85263";
+		reg = <0x51>;
+	};
 	eeprom@52 {
 		compatible = "atmel,24c512";
 		reg = <0x52>;
