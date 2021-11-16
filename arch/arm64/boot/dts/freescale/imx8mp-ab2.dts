@@ -61,6 +61,7 @@
 		regulator-max-microvolt = <3300000>;
 		gpio = <&gpio1 10 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
+		regulator-always-on;
 	};
 
 	reg_ab2_vdd_pwr_5v0: regulator-ab2-vdd-pwr-5v0 {
