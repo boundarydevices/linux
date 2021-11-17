@@ -223,8 +223,6 @@
 			compatible = "fsl,imx8ulp-s400";
 			mboxes = <&s4muap 0 0 &s4muap 1 0>;
 			mbox-names = "tx", "rx";
-			fsl,s4_muap_id = <0>;
-			fsl,s4muap_max_users = <1>;
 			status = "okay";
 		};
 
