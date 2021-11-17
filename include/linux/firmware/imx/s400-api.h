@@ -8,14 +8,6 @@
 
 #include <linux/completion.h>
 #include <linux/mailbox_client.h>
-#include <linux/miscdevice.h>
-#include <linux/semaphore.h>
-
-
-#define MAX_RECV_SIZE 31
-#define MAX_RECV_SIZE_BYTES (MAX_RECV_SIZE * sizeof(u32))
-#define MAX_MESSAGE_SIZE 31
-#define MAX_MESSAGE_SIZE_BYTES (MAX_MESSAGE_SIZE * sizeof(u32))
 
 #define S400_READ_FUSE_REQ		0x97
 #define OTP_UNIQ_ID			0x01
@@ -28,60 +20,7 @@ struct s400_api_msg {
 	u32 data[S400_MSG_DATA_NUM];
 };
 
-/* Status of a char device */
-enum mu_device_status_t {
-	MU_FREE,
-	MU_OPENED
-};
-
-struct s4_shared_mem {
-	dma_addr_t dma_addr;
-	u32 size;
-	u32 pos;
-	u8 *ptr;
-};
-
-/* Private struct for each char device instance. */
-struct s4_mu_device_ctx {
-	struct device *dev;
-	struct imx_s400_api *s400_muap_priv;
-	struct miscdevice miscdev;
-
-	enum mu_device_status_t status;
-	wait_queue_head_t wq;
-	struct semaphore fops_lock;
-
-	u32 pending_hdr;
-	struct list_head pending_out;
-
-	struct s4_shared_mem secure_mem;
-	struct s4_shared_mem non_secure_mem;
-
-	u32 temp_cmd[MAX_MESSAGE_SIZE];
-	u32 temp_resp[MAX_RECV_SIZE];
-	u32 temp_resp_size;
-	struct notifier_block s4_notify;
-};
-
 struct imx_s400_api {
-	struct s4_mu_device_ctx *cmd_receiver_dev;
-	struct s4_mu_device_ctx *waiting_rsp_dev;
-	/*
-	 * prevent parallel access to the MU registers
-	 * e.g. a user trying to send a command while the other one is
-	 * sending a response.
-	 */
-	struct mutex mu_lock;
-	/*
-	 * prevent a command to be sent on the MU while another one is still
-	 * processing. (response to a command is allowed)
-	 */
-	struct mutex mu_cmd_lock;
-	struct device *dev;
-	u32 s4_muap_id;
-	u8 cmd_tag;
-	u8 rsp_tag;
-
 	struct mbox_client tx_cl, rx_cl;
 	struct mbox_chan *tx_chan, *rx_chan;
 	struct s400_api_msg tx_msg, rx_msg;
