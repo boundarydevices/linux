@@ -219,10 +219,12 @@
 			status = "okay";
 		};
 
-		s400_api: s400-api {
-			compatible = "fsl,imx8ulp-s400";
+		sentnl_mu: sentnl-mu {
+			compatible = "fsl,imx-sentnl";
 			mboxes = <&s4muap 0 0 &s4muap 1 0>;
 			mbox-names = "tx", "rx";
+			fsl,sentnl_mu_id = <2>;
+			fsl,sentnl_mu_max_users = <4>;
 			status = "okay";
 		};
 
