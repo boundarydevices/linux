@@ -515,6 +515,8 @@ static int ls_pcie_resume_noirq(struct device *dev)
 		return ret;
 	}
 
+	dw_pcie_setup_rc(&pci->pp);
+
 	ret = dw_pcie_wait_for_link(pci);
 	if (ret) {
 		dev_err(dev, "wait link up timeout! ret = 0x%x\n", ret);
