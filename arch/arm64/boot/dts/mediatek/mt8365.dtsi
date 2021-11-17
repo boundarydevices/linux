@@ -768,6 +768,8 @@
 			#size-cells = <2>;
 			ranges;
 			status = "disabled";
+			wakeup-source;
+			mediatek,syscon-wakeup = <&pericfg 0x400 0>;
 
 			usb_host: usb@11200000 {
 				compatible = "mediatek,mt8365-xhci", "mediatek,mtk-xhci";
