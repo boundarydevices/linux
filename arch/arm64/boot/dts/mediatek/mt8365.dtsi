@@ -391,6 +391,13 @@
 			#dma-cells = <1>;
 		};
 
+		pericfg: power-controller@10003000 {
+			compatible = "mediatek,mt8365-pericfg", "syscon";
+			reg = <0 0x10003000 0 0x1000>;
+			#clock-cells = <1>;
+			#reset-cells = <1>;
+		};
+
 		scpsys: syscon@10006000 {
 			compatible = "syscon", "simple-mfd";
 			reg = <0 0x10006000 0 0x1000>;
@@ -763,6 +770,8 @@
 			#size-cells = <2>;
 			ranges;
 			status = "disabled";
+			wakeup-source;
+			mediatek,syscon-wakeup = <&pericfg 0x400 0>;
 
 			usb_host: xhci@11200000 {
 				compatible = "mediatek,mt8365-xhci",
