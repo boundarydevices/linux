@@ -457,6 +457,10 @@ config BACKLIGHT_LV5207LP
 	help
 	  If you have a Sanyo LV5207LP say Y to enable the backlight driver.
 
+config BACKLIGHT_BD2606
+	tristate "BD2606 Backlight Driver"
+	depends on I2C
+
 config BACKLIGHT_BD6107
 	tristate "Rohm BD6107 Backlight"
 	depends on I2C
