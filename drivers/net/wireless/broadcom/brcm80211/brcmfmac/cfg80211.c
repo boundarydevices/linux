@@ -2081,6 +2081,8 @@ brcmf_set_key_mgmt(struct net_device *ndev, struct cfg80211_connect_params *sme)
 			val = WPA_AUTH_UNSPECIFIED;
 			if (sme->want_1x)
 				profile->use_fwsup = BRCMF_PROFILE_FWSUP_1X;
+			else
+				profile->use_fwsup = BRCMF_PROFILE_FWSUP_ROAM;
 			break;
 		case WLAN_AKM_SUITE_PSK:
 			val = WPA_AUTH_PSK;
@@ -2096,11 +2098,15 @@ brcmf_set_key_mgmt(struct net_device *ndev, struct cfg80211_connect_params *sme)
 			val = WPA2_AUTH_UNSPECIFIED;
 			if (sme->want_1x)
 				profile->use_fwsup = BRCMF_PROFILE_FWSUP_1X;
+			else
+				profile->use_fwsup = BRCMF_PROFILE_FWSUP_ROAM;
 			break;
 		case WLAN_AKM_SUITE_8021X_SHA256:
 			val = WPA2_AUTH_1X_SHA256;
 			if (sme->want_1x)
 				profile->use_fwsup = BRCMF_PROFILE_FWSUP_1X;
+			else
+				profile->use_fwsup = BRCMF_PROFILE_FWSUP_ROAM;
 			break;
 		case WLAN_AKM_SUITE_PSK_SHA256:
 			val = WPA2_AUTH_PSK_SHA256;
@@ -2113,6 +2119,8 @@ brcmf_set_key_mgmt(struct net_device *ndev, struct cfg80211_connect_params *sme)
 			profile->is_ft = true;
 			if (sme->want_1x)
 				profile->use_fwsup = BRCMF_PROFILE_FWSUP_1X;
+			else
+				profile->use_fwsup = BRCMF_PROFILE_FWSUP_ROAM;
 			break;
 		case WLAN_AKM_SUITE_FT_PSK:
 			val = WPA2_AUTH_PSK | WPA2_AUTH_FT;
@@ -2151,7 +2159,8 @@ brcmf_set_key_mgmt(struct net_device *ndev, struct cfg80211_connect_params *sme)
 		}
 	}
 
-	if (profile->use_fwsup == BRCMF_PROFILE_FWSUP_1X) {
+	if ((profile->use_fwsup == BRCMF_PROFILE_FWSUP_1X) ||
+	    (profile->use_fwsup == BRCMF_PROFILE_FWSUP_ROAM)) {
 		brcmf_dbg(INFO, "using 1X offload\n");
 		err = brcmf_fil_bsscfg_int_get(netdev_priv(ndev), "okc_enable",
 					       &okc_enable);
@@ -6013,7 +6022,9 @@ static int brcmf_cfg80211_set_pmk(struct wiphy *wiphy, struct net_device *dev,
 	/* expect using firmware supplicant for 1X */
 	ifp = netdev_priv(dev);
 	drvr = ifp->drvr;
-	if (WARN_ON(ifp->vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_1X))
+	if (WARN_ON((ifp->vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_1X) &&
+			(ifp->vif->profile.is_ft != true) &&
+			(ifp->vif->profile.is_okc != true)))
 		return -EINVAL;
 
 	if (conf->pmk_len > BRCMF_WSEC_MAX_PSK_LEN)
@@ -6631,7 +6642,8 @@ done:
 	roam_info.resp_ie = conn_info->resp_ie;
 	roam_info.resp_ie_len = conn_info->resp_ie_len;
 
-	if (profile->use_fwsup == BRCMF_PROFILE_FWSUP_1X &&
+	if ((profile->use_fwsup == BRCMF_PROFILE_FWSUP_1X ||
+	    profile->use_fwsup == BRCMF_PROFILE_FWSUP_ROAM) &&
 	    (brcmf_has_pmkid(roam_info.req_ie, roam_info.req_ie_len) ||
 	     profile->is_ft || profile->is_okc))
 		roam_info.authorized = true;
@@ -8071,7 +8083,10 @@ static int brcmf_setup_wiphy(struct wiphy *wiphy, struct brcmf_if *ifp)
 		wiphy_ext_feature_set(wiphy,
 				      NL80211_EXT_FEATURE_AP_PMKSA_CACHING);
 	}
-
+	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_FBT) ||
+	    brcmf_feat_is_enabled(ifp, BRCMF_FEAT_OKC))
+		wiphy_ext_feature_set(wiphy,
+					NL80211_EXT_FEATURE_ROAM_OFFLOAD);
 	wiphy->mgmt_stypes = brcmf_txrx_stypes;
 	wiphy->max_remain_on_channel_duration = 5000;
 	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_PNO)) {
