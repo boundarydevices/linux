@@ -126,6 +126,7 @@ struct panel_common {
 	unsigned enable_low_duration_us;
 	unsigned power_delay_ms;
 	struct backlight_device *backlight;
+	unsigned mipi_delay_between_cmds;
 	struct regulator *supply;
 	struct i2c_adapter *ddc;
 
@@ -444,10 +445,14 @@ static int send_cmd_list(struct panel_common *panel, struct cmds *mc, int type, 
 							ret = -EINVAL;
 						}
 					}
-				} else if (generic) {
-					ret = mipi_dsi_generic_write(dsi, p, l);
 				} else {
-					ret = mipi_dsi_dcs_write_buffer(dsi, p, l);
+					if (generic) {
+						ret = mipi_dsi_generic_write(dsi, p, l);
+					} else {
+						ret = mipi_dsi_dcs_write_buffer(dsi, p, l);
+					}
+					if (panel->mipi_delay_between_cmds)
+						msleep(panel->mipi_delay_between_cmds);
 				}
 			}
 		} else if (len == S_MRPS) {
@@ -1047,6 +1052,7 @@ static void init_common(struct panel_common *p, struct device_node *np, struct p
 	of_property_read_u32(np, "delay-unprepare", &ds->delay.unprepare);
 	of_property_read_u32(np, "min-hs-clock-multiple", &dm->min_hs_clock_multiple);
 	of_property_read_u32(np, "mipi-dsi-multiple", &dm->mipi_dsi_multiple);
+	of_property_read_u32(np, "mipi-delay-between-cmds", &p->mipi_delay_between_cmds);
 	of_property_read_u32(np, "enable-high-duration-us", &p->enable_high_duration_us);
 	of_property_read_u32(np, "enable-low-duration-us", &p->enable_low_duration_us);
 	of_property_read_u32(np, "power-delay-ms", &p->power_delay_ms);
