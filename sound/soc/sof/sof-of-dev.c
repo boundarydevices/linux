@@ -12,6 +12,7 @@
 #include <sound/sof.h>
 
 #include "ops.h"
+#include "mediatek/mediatek-ops.h"
 
 extern struct snd_sof_dsp_ops sof_imx8_ops;
 extern struct snd_sof_dsp_ops sof_imx8x_ops;
@@ -51,6 +52,15 @@ static struct sof_dev_desc sof_of_imx8mp_desc = {
 	.default_fw_filename = "sof-imx8m.ri",
 	.nocodec_tplg_filename = "sof-imx8-nocodec.tplg",
 	.ops = &sof_imx8m_ops,
+};
+#endif
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_MT8195)
+static const struct sof_dev_desc sof_of_mt8195_desc = {
+	.default_fw_path = "mediatek/sof",
+	.default_tplg_path = "mediatek/sof-tplg",
+	.default_fw_filename = "sof-mt8195.ri",
+	.nocodec_tplg_filename = "sof-mt8195-nocodec.tplg",
+	.ops = &sof_mt8195_ops,
 };
 #endif
 
@@ -133,6 +143,9 @@ static const struct of_device_id sof_of_ids[] = {
 #endif
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_IMX8M)
 	{ .compatible = "fsl,imx8mp-dsp", .data = &sof_of_imx8mp_desc},
+#endif
+#if IS_ENABLED(CONFIG_SND_SOC_SOF_MT8195)
+	{ .compatible = "mediatek,mt8195-dsp", .data = &sof_of_mt8195_desc},
 #endif
 	{ }
 };
