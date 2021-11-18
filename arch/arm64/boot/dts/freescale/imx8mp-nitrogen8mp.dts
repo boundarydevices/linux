@@ -13,6 +13,7 @@
 #include "panel-ltk080a60a004t.dtsi"
 #include "panel-lcd133-070.dtsi"
 #include "panel-lcm-jm430.dtsi"
+#include "panel-lxd-m8509a.dtsi"
 #include "panel-m101nwwb.dtsi"
 #include "panel-com50h5n03ulc.dtsi"
 
@@ -391,6 +392,16 @@
 		>;
 	};
 
+	pinctrl_ts_ft5x06_3: ts-ft5x06-3grp {
+		fsl,pins = <
+#define GPIRQ_TS_FT5X06_3	<&gpio1 1 IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_FT5X06_WAKE_3	<&gpio1 1 GPIO_ACTIVE_LOW>
+			MX8MP_IOMUXC_GPIO1_IO01__GPIO1_IO01	0x149
+#define GP_TS_FT5X06_RESET_3	<&gpio4 24 GPIO_ACTIVE_LOW>
+			MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24	0x109
+		>;
+	};
+
 	pinctrl_ts_egalax_lvds: ts-egalax-lvdsgrp {
 		fsl,pins = <
 #define GPIRQ_TS_EGALAX_LVDS	<&gpio1 10 IRQ_TYPE_EDGE_FALLING>
@@ -611,6 +622,7 @@
 
 	aliases {
 		backlight_mipi = &backlight_mipi;
+		backlight_mipi2 = &backlight_mipi2;
 		backlight_lvds = &backlight_lvds;
 		backlight_lvds2 = &backlight_lvds2;
 		fb_lvds = &lcdif2;
@@ -634,6 +646,7 @@
 		ts_egalax = &ts_egalax_lvds;
 		ts_ft5x06 = &ts_ft5x06;
 		ts_ft5x06_2 = &ts_ft5x06_lvds;
+		ts_ft5x06_3 = &ts_ft5x06_3;
 		ts_goodix = &ts_goodix;
 		ts_goodix2 = &ts_goodix_lvds2;
 		ts_goodix3 = &ts_goodix_lvds3;
@@ -1226,6 +1239,17 @@
 };
 
 &i2c2d {
+	backlight_mipi2: backlight-mipi2@66 {
+		alias = <&backlight_mipi2>;
+		compatible = "rohm,bd2606";
+		default-brightness = <32>;	/* 63 is max */
+		display = <&display_subsystem>;
+		label = "bklght-bd2606";
+		led-sources = <0 1 2 3 4 5>;
+		reg = <0x66>;
+		status = "disabled";
+	};
+
 	rtc@52 {
 		backup-switchover-dsm;
 		compatible = "microcrystal,rv3028";
@@ -1263,6 +1287,17 @@
 		reg = <0x38>;
 		reset-gpios = GP_TS_FT5X06_RESET;
 		wakeup-gpios = GP_TS_FT5X06_WAKE;
+		status = "disabled";
+	};
+
+	ts_ft5x06_3: touchscreen-3@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = GPIRQ_TS_FT5X06_3;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_ft5x06_3>;
+		reg = <0x38>;
+		reset-gpios = GP_TS_FT5X06_RESET_3;
+		wakeup-gpios = GP_TS_FT5X06_WAKE_3;
 		status = "disabled";
 	};
 
