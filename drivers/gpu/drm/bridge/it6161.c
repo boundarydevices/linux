@@ -264,11 +264,8 @@ struct it6161 {
 
 	struct gpio_desc *enable_gpio;
 
-	u32 hdmi_tx_rclk; /* kHz */
 	u32 hdmi_tx_pclk;
-	u32 mipi_rx_mclk;
 	u32 mipi_rx_rclk;
-	u32 mipi_rx_pclk;
 
 	/* video mode output to hdmi tx */
 	struct drm_display_mode display_mode;
@@ -2196,9 +2193,6 @@ static irqreturn_t it6161_intp_threaded_handler(int unused, void *data)
 	u8 mipi_rx_reg06, mipi_rx_reg07, mipi_rx_reg08, mipi_rx_reg0d;
 	u8 hdmi_tx_reg06, hdmi_tx_reg08;
 
-	if (it6161->enable_drv_hold)
-		goto unlock;
-
 	mipi_rx_reg06 = it6161_mipi_rx_read(it6161, 0x06);
 	mipi_rx_reg07 = it6161_mipi_rx_read(it6161, 0x07);
 	mipi_rx_reg08 = it6161_mipi_rx_read(it6161, 0x08);
@@ -2225,40 +2219,7 @@ static irqreturn_t it6161_intp_threaded_handler(int unused, void *data)
 	it6161_hdmi_tx_interrupt_reg06_process(it6161, hdmi_tx_reg06);
 	it6161_hdmi_tx_interrupt_reg08_process(it6161, hdmi_tx_reg08);
 
-unlock:
 	return IRQ_HANDLED;
-}
-
-static ssize_t enable_drv_hold_show(struct device *dev,
-			struct device_attribute *attr, char *buf)
-{
-	struct it6161 *it6161 = dev_get_drvdata(dev);
-
-	return scnprintf(buf, PAGE_SIZE, "drv_hold: %d\n", it6161->enable_drv_hold);
-}
-
-static ssize_t enable_drv_hold_store(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t count)
-{
-	struct it6161 *it6161 = dev_get_drvdata(dev);
-	u32 drv_hold;
-
-	if (kstrtoint(buf, 10, &drv_hold) < 0)
-		return -EINVAL;
-
-	it6161->enable_drv_hold = drv_hold;
-
-	if (it6161->enable_drv_hold) {
-		it6161_mipi_rx_int_mask_disable(it6161);
-		it6161_hdmi_tx_int_mask_disable(it6161);
-	} else {
-		it6161_mipi_rx_interrupt_clear(it6161, 0xFF, 0xFF, 0xFF);
-		it6161_hdmi_tx_interrupt_clear(it6161, 0xFF, 0xFF);
-		it6161_mipi_rx_int_mask_enable(it6161);
-		it6161_hdmi_tx_int_mask_enable(it6161);
-	}
-	return count;
 }
 
 static ssize_t hdmi_output_color_space_store(struct device *dev,
@@ -2310,11 +2271,9 @@ static ssize_t hdmi_output_color_space_show(struct device *dev,
 	return str - buf;
 }
 
-static DEVICE_ATTR_RW(enable_drv_hold);
 static DEVICE_ATTR_RW(hdmi_output_color_space);
 
 static const struct attribute *it6161_attrs[] = {
-	&dev_attr_enable_drv_hold.attr,
 	&dev_attr_hdmi_output_color_space.attr,
 	NULL,
 };
