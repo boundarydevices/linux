@@ -891,10 +891,9 @@ static int dpaa2_mac_remove(struct fsl_mc_device *mc_dev)
 
 	dpaa2_mac_teardown_irqs(mc_dev);
 
-	if (dpaa2_mac_is_type_phy(priv)) {
-		dpaa2_mac_close(priv);
+	if (dpaa2_mac_is_type_phy(priv))
 		dpaa2_mac_disconnect(priv);
-	}
+	dpaa2_mac_close(priv);
 
 	fsl_mc_portal_free(mc_dev->mc_io);
 	dev_set_drvdata(dev, NULL);
