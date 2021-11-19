@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2021 Boundary Devices LLC
+ */
+
+/dts-v1/;
+
+#include "meson-g12b-a311d.dtsi"
+#include "meson-g12b-w400.dtsi"
+
+/ {
+	compatible = "amlogic,w400", "amlogic,a311d", "amlogic,g12b";
+};
