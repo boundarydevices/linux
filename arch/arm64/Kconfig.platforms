@@ -184,7 +184,6 @@ config ARCH_MXC
 	select ARM64_ERRATUM_843419
 	select ARM64_ERRATUM_845719 if COMPAT
 	select IMX_GPCV2
-	select HAVE_IMX_BUSFREQ
 	select PM
 	select PM_GENERIC_DOMAINS
 	select SOC_BUS
@@ -195,6 +194,7 @@ config ARCH_MXC
 
 config HAVE_IMX_BUSFREQ
 	bool "i.MX8M busfreq"
+	default ARCH_MXC
 
 config ARCH_QCOM
 	bool "Qualcomm Platforms"
