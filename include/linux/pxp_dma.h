@@ -51,7 +51,7 @@ struct pxp_channel {
 void pxp_txd_ack(struct dma_async_tx_descriptor *txd,
 		 struct pxp_channel *pxp_chan);
 
-#ifdef CONFIG_MXC_PXP_CLIENT_DEVICE
+#if IS_ENABLED(CONFIG_MXC_PXP_CLIENT_DEVICE)
 int register_pxp_device(void);
 void unregister_pxp_device(void);
 #else
