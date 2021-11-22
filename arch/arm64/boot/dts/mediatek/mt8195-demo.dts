@@ -126,6 +126,13 @@
 	status = "okay";
 };
 
+&i2c6 {
+	clock-frequency = <400000>;
+	pinctrl-0 = <&i2c6_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
 &spi2 {
 	pinctrl-0 = <&spi2_pins>;
 	pinctrl-names = "default";
@@ -342,6 +349,15 @@
 			bias-pull-up;
 			mediatek,rsel = <MTK_PULL_SET_RSEL_111>;
 			mediatek,drive-strength-adv = <7>;
+		};
+	};
+
+	i2c6_pins: i2c6-pin {
+		pins {
+			pinmux = <PINMUX_GPIO25__FUNC_SDA6>,
+				 <PINMUX_GPIO26__FUNC_SCL6>;
+			bias-pull-up;
+			mediatek,rsel = <MTK_PULL_SET_RSEL_111>;
 		};
 	};
 
