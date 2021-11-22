@@ -17,46 +17,6 @@ struct mfg_timestamp_register_info {
 	unsigned int value;
 };
 
-struct mfg_base {
-	struct clk *clk_mux;
-	struct clk *clk_main_parent;
-	struct clk *clk_sub_parent;
-	struct clk *subsys_mfg_cg;
-	struct platform_device *gpu_core1_dev;
-	struct platform_device *gpu_core2_dev;
-	bool is_powered;
-	bool reg_is_powered;
-	struct regmap *mfgcfg;
-	struct mfg_timestamp_register_info *timestamp_register_info;
-};
-
-/* Definition for PMIC regulators */
-#define VSRAM_GPU_MAX_VOLT (925000)	/* uV */
-#define VSRAM_GPU_MIN_VOLT (850000) /* uV */
-#define VGPU_MAX_VOLT (825000)	/* uV */
-#define VGPU_MIN_VOLT (625000)	/* uV */
-
-#define MIN_VOLT_BIAS (100000) /* uV */
-#define MAX_VOLT_BIAS (250000) /* uV */
-#define VOLT_TOL (125) /* uV */
-
-/**
- * Maximum frequency GPU will be clocked at. Given in kHz.
- * This must be specified as there is no default value.
- *
- * Attached value: number in kHz
- * Default value: NA
- */
-#define GPU_FREQ_KHZ_MAX (800000)
-/**
- * Minimum frequency GPU will be clocked at. Given in kHz.
- * This must be specified as there is no default value.
- *
- * Attached value: number in kHz
- * Default value: NA
- */
-#define GPU_FREQ_KHZ_MIN (300000)
-
 /**
  * CPU_SPEED_FUNC - A pointer to a function that calculates the CPU clock
  *
@@ -98,9 +58,5 @@ struct mfg_base {
 extern struct kbase_pm_callback_conf pm_callbacks;
 extern struct kbase_platform_funcs_conf platform_funcs;
 
-/**
- * Autosuspend delay
- *
- * The delay time (in milliseconds) to be used for autosuspend
- */
-#define AUTO_SUSPEND_DELAY (100)
+extern struct kbase_pm_callback_conf mt8183_pm_callbacks;
+extern struct kbase_platform_funcs_conf mt8183_platform_funcs;
