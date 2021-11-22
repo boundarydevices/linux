@@ -83,23 +83,6 @@
 	non-removable;
 };
 
-&mmc1 {
-	pinctrl-names = "default", "state_uhs";
-	pinctrl-0 = <&mmc1_pins_default>;
-	pinctrl-1 = <&mmc1_pins_uhs>;
-	cd-gpios = <&pio 129 GPIO_ACTIVE_LOW>;
-	bus-width = <4>;
-	max-frequency = <200000000>;
-	cap-sd-highspeed;
-	sd-uhs-sdr50;
-	sd-uhs-sdr104;
-#if 0
-	vmmc-supply = <&mt6357_vmch_reg>;
-	vqmmc-supply = <&mt6357_vio18_reg>;
-#endif
-	status = "okay";
-};
-
 &pmic {
 	interrupt-parent = <&pio>;
 	interrupts = <222 IRQ_TYPE_LEVEL_HIGH>;
@@ -507,4 +490,19 @@
 /* For EMI_VMDDR_EN */
 &mt6360_ldo7 {
 	regulator-always-on;
+};
+
+&mmc1 {
+	pinctrl-names = "default", "state_uhs";
+	pinctrl-0 = <&mmc1_pins_default>;
+	pinctrl-1 = <&mmc1_pins_uhs>;
+	cd-gpios = <&pio 129 GPIO_ACTIVE_LOW>;
+	bus-width = <4>;
+	max-frequency = <200000000>;
+	cap-sd-highspeed;
+	sd-uhs-sdr50;
+	sd-uhs-sdr104;
+	vmmc-supply = <&mt6360_ldo5>;
+	vqmmc-supply = <&mt6360_ldo3>;
+	status = "okay";
 };
