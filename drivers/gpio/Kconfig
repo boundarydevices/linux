@@ -693,7 +693,7 @@ config GPIO_VISCONTI
 	  Say yes here to support GPIO on Tohisba Visconti.
 
 config GPIO_IMX_RPMSG
-	bool "NXP i.MX7ULP RPMSG GPIO support"
+	tristate "NXP i.MX7ULP RPMSG GPIO support"
 	depends on ARCH_MXC && RPMSG && GPIOLIB
 	help
 	  This driver support i.MX7ULP RPMSG virtual GPIOs.
