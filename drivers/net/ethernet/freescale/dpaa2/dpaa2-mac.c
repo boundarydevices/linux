@@ -847,39 +847,30 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
 	}
 	priv->mc_io = mc_dev->mc_io;
 
-	err = dpmac_open(mc_dev->mc_io, 0, mc_dev->obj_desc.id,
-			 &mc_dev->mc_handle);
-	if (err || !mc_dev->mc_handle) {
-		dev_err(dev, "dpmac_open error: %d\n", err);
-		err = -ENODEV;
+	err = dpaa2_mac_open(priv);
+	if (err)
 		goto free_portal;
-	}
-
-	err = dpmac_get_attributes(mc_dev->mc_io, 0, mc_dev->mc_handle, &priv->attr);
-	if (err) {
-		dev_err(dev, "dpmac_get_attributes() = %d\n", err);
-		goto free_portal;
-	}
 
 	err = dpaa2_mac_setup_irqs(mc_dev);
 	if (err) {
 		err = -EFAULT;
-		goto free_portal;
+		goto close_mac;
 	}
-
-	err = dpaa2_mac_open(priv);
-	if (err)
-		goto free_portal;
 
 	if (dpaa2_mac_is_type_phy(priv)) {
 		err = dpaa2_mac_connect(priv);
 		if (err) {
 			dev_err(dev, "Error connecting to the MAC endpoint\n");
-			goto free_portal;
+			goto teardown_irqs;
 		}
 	}
 
 	return 0;
+
+teardown_irqs:
+	dpaa2_mac_teardown_irqs(mc_dev);
+close_mac:
+	dpaa2_mac_close(priv);
 free_portal:
 	fsl_mc_portal_free(mc_dev->mc_io);
 unregister_netdev:
