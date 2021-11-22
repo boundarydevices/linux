@@ -133,7 +133,7 @@
 	status = "okay";
 
 	spidev@0 {
-		compatible = "spidev";
+		compatible = "mediatek,aiot-board";
 		spi-max-frequency = <5000000>;
 		reg = <0>;
 	};
