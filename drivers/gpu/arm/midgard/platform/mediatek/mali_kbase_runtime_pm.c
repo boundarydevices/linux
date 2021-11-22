@@ -14,9 +14,15 @@ static const struct mali_mtk_plat_data mediatek_mt8183_data = {
 	.platform_funcs = &mt8183_platform_funcs,
 };
 
+static const struct mali_mtk_plat_data mediatek_mt8195_data = {
+	.pm_callbacks = &mt8195_pm_callbacks,
+	.platform_funcs = &mt8195_platform_funcs,
+};
+
 static const struct of_device_id device_ids[] = {
 	{ .compatible = "mediatek,mt8183-mali", .data = &mediatek_mt8183_data },
 	{ .compatible = "mediatek,mt8365-mali", .data = &mediatek_mt8183_data },
+	{ .compatible = "mediatek,mt8195-mali", .data = &mediatek_mt8195_data },
 	{ /* sentinel */ }
 };
 

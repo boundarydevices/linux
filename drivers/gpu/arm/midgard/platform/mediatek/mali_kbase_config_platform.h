@@ -60,3 +60,6 @@ extern struct kbase_platform_funcs_conf platform_funcs;
 
 extern struct kbase_pm_callback_conf mt8183_pm_callbacks;
 extern struct kbase_platform_funcs_conf mt8183_platform_funcs;
+
+extern struct kbase_pm_callback_conf mt8195_pm_callbacks;
+extern struct kbase_platform_funcs_conf mt8195_platform_funcs;
