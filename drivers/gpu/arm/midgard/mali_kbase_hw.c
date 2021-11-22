@@ -191,6 +191,12 @@ static const enum base_hw_issue *kbase_hw_get_issues_for_new_id(
 		    { GPU_ID2_VERSION_MAKE(1, 1, 0), base_hw_issues_lBEx_r1p1 },
 		    { U32_MAX, NULL } } },
 
+		/* Workaround for G-57 on MT819X */
+		{GPU_ID2_PRODUCT_TNAX_MT819X,
+		 {{GPU_ID2_VERSION_MAKE(0, 0, 0), base_hw_issues_tNAx_r0p0},
+		  {GPU_ID2_VERSION_MAKE(0, 1, 0), base_hw_issues_tNAx_r0p1},
+		  {U32_MAX, NULL} } },
+
 		{ GPU_ID2_PRODUCT_TBEX,
 		  { { GPU_ID2_VERSION_MAKE(0, 0, 0), base_hw_issues_tBEx_r0p0 },
 		    { GPU_ID2_VERSION_MAKE(0, 0, 3), base_hw_issues_tBEx_r0p0 },
