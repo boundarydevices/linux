@@ -251,3 +251,13 @@ config SND_SOC_MT8365_EVK
 	  Select Y if you have such device.
 	  If unsure select "N".
 	  Ex: MT8365
+
+config SND_SOC_MT8365_PUMPKIN
+	tristate "ASoC Audio driver for MT8365 Pumpkin Board"
+	depends on SND_SOC_MT8365
+	help
+	  This adds support for ASoC machine driver for Mediatek MT8365 Pumpkin
+	  that uses MT6357 codec.
+	  Select Y if you have such device.
+	  If unsure select "N".
+	  Ex: MT8365

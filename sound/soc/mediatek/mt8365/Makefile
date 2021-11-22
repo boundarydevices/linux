@@ -20,3 +20,4 @@ obj-$(CONFIG_SND_SOC_MT8365) += snd-soc-mt8365-pcm.o
 # Machine support
 obj-$(CONFIG_SND_SOC_MT8365_SB35) += mt8365-sb35.o
 obj-$(CONFIG_SND_SOC_MT8365_EVK) += mt8365-evk.o
+obj-$(CONFIG_SND_SOC_MT8365_PUMPKIN) += mt8365-pumpkin.o
