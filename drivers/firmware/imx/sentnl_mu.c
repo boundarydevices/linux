@@ -125,7 +125,7 @@ static void sentnl_mu_rx_callback(struct mbox_client *c, void *msg)
 	}
 }
 
-struct device *imx_soc_device_register(void)
+struct soc_device *imx_soc_device_register(void)
 {
 	struct soc_device_attribute *attr;
 	struct soc_device *dev;
@@ -161,7 +161,7 @@ struct device *imx_soc_device_register(void)
 		return ERR_CAST(dev);
 	}
 
-	return soc_device_to_device(dev);
+	return dev;
 }
 
 /*
@@ -749,7 +749,7 @@ static int sentnl_mu_probe(struct platform_device *pdev)
 	struct device_node *np;
 	int max_nb_users = 0;
 	char *devname;
-	struct device *soc;
+	struct soc_device *soc;
 	int ret;
 	int i;
 
