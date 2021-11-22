@@ -131,6 +131,11 @@
 	pinctrl-0 = <&i2c6_pins>;
 	pinctrl-names = "default";
 	status = "okay";
+
+	mt6360: mt6360@34 {
+		compatible = "mediatek,mt6360";
+		reg = <0x34>;
+	};
 };
 
 &spi2 {
@@ -484,5 +489,22 @@
 
 /* DEBUG: to remove */
 &mt6359_vibr_ldo_reg {
+	regulator-always-on;
+};
+
+#include "mt6360.dtsi"
+
+/* For EMI_VDD2 */
+&mt6360_buck1 {
+	regulator-always-on;
+};
+
+/* For EMI_VDDQ */
+&mt6360_buck2 {
+	regulator-always-on;
+};
+
+/* For EMI_VMDDR_EN */
+&mt6360_ldo7 {
 	regulator-always-on;
 };
