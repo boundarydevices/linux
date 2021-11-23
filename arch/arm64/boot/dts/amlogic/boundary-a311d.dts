@@ -340,15 +340,13 @@
 #endif
 
 &ext_mdio {
-	external_phy: ethernet-phy@7 {
+	external_phy: ethernet-phy@4 {
 		/* Atheros AR8035 */
-#if 0
 		interrupt-parent = <&gpio_intc>;
 		/* MAC_INTR on GPIOZ_14 */
 		interrupts = <26 IRQ_TYPE_LEVEL_LOW>;
-#endif
 		max-speed = <1000>;
-		reg = <7>;
+		reg = <4>;
 #if 0
 		reset-assert-us = <10000>;
 		reset-deassert-us = <30000>;
