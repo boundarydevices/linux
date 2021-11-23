@@ -12,6 +12,7 @@
 #include <dt-bindings/clock/fsl,qoriq-clockgen.h>
 #include <dt-bindings/thermal/thermal.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/gpio/gpio.h>
 
 / {
 	compatible = "fsl,ls2080a";
@@ -1003,7 +1004,7 @@
 
 		i2c0: i2c@2000000 {
 			status = "disabled";
-			compatible = "fsl,vf610-i2c";
+			compatible = "fsl,ls208xa-i2c", "fsl,vf610-i2c";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x0 0x2000000 0x0 0x10000>;
@@ -1015,7 +1016,7 @@
 
 		i2c1: i2c@2010000 {
 			status = "disabled";
-			compatible = "fsl,vf610-i2c";
+			compatible = "fsl,ls208xa-i2c", "fsl,vf610-i2c";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x0 0x2010000 0x0 0x10000>;
@@ -1023,11 +1024,12 @@
 			clock-names = "i2c";
 			clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
 					    QORIQ_CLK_PLL_DIV(4)>;
+			scl-gpios = <&gpio2 12 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
 		};
 
 		i2c2: i2c@2020000 {
 			status = "disabled";
-			compatible = "fsl,vf610-i2c";
+			compatible = "fsl,ls208xa-i2c", "fsl,vf610-i2c";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x0 0x2020000 0x0 0x10000>;
@@ -1035,11 +1037,12 @@
 			clock-names = "i2c";
 			clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
 					    QORIQ_CLK_PLL_DIV(4)>;
+			scl-gpios = <&gpio3 0 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
 		};
 
 		i2c3: i2c@2030000 {
 			status = "disabled";
-			compatible = "fsl,vf610-i2c";
+			compatible = "fsl,ls208xa-i2c", "fsl,vf610-i2c";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x0 0x2030000 0x0 0x10000>;
@@ -1047,6 +1050,7 @@
 			clock-names = "i2c";
 			clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
 					    QORIQ_CLK_PLL_DIV(4)>;
+			scl-gpios = <&gpio3 2 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
 		};
 
 		ifc: memory-controller@2240000 {
