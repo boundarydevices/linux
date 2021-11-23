@@ -9,6 +9,12 @@
 #include <linux/phylink.h>
 #include <linux/pcs-lynx.h>
 
+/* Hack: only here in order to use device_driver_detach.
+ * To be replaced with the use of MC _ENDPOINT_CHANGED interrupts on all
+ * connectable objects
+ */
+#include "../../../../base/base.h"
+
 #include "dpmac.h"
 #include "dpmac-cmd.h"
 
@@ -44,5 +50,9 @@ int dpaa2_mac_get_sset_count(void);
 void dpaa2_mac_get_strings(u8 *data);
 
 void dpaa2_mac_get_ethtool_stats(struct dpaa2_mac *mac, u64 *data);
+
+void dpaa2_mac_driver_attach(struct fsl_mc_device *dpmac_dev);
+
+void dpaa2_mac_driver_detach(struct fsl_mc_device *dpmac_dev);
 
 #endif /* DPAA2_MAC_H */

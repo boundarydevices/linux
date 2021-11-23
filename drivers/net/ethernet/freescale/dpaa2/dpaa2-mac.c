@@ -793,6 +793,28 @@ static const struct ethtool_ops dpaa2_mac_ethtool_ops = {
 };
 #endif
 
+void dpaa2_mac_driver_attach(struct fsl_mc_device *dpmac_dev)
+{
+	struct device_driver *drv = driver_find("fsl_dpaa2_mac", &fsl_mc_bus_type);
+	struct device *dev = &dpmac_dev->dev;
+	int err;
+
+	if (dev && dev->driver == NULL && drv && driver_match_device(drv, dev)) {
+		err = device_driver_attach(drv, dev);
+		if (err && err != -EAGAIN)
+			dev_err(dev, "Error in attaching the fsl_dpaa2_mac driver\n");
+	}
+}
+
+void dpaa2_mac_driver_detach(struct fsl_mc_device *dpmac_dev)
+{
+	struct device_driver *drv = driver_find("fsl_dpaa2_mac", &fsl_mc_bus_type);
+	struct device *dev = &dpmac_dev->dev;
+
+	if (dev && dev->driver == drv)
+		device_driver_detach(dev);
+}
+
 static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
 {
 	struct device *dev = &mc_dev->dev;
@@ -807,6 +829,8 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
 	 */
 	peer_dev = fsl_mc_get_endpoint(mc_dev, 0);
 	if (!IS_ERR_OR_NULL(peer_dev) && peer_dev->dev.type == &fsl_mc_bus_dpni_type)
+		return -EPROBE_DEFER;
+	if (!IS_ERR_OR_NULL(peer_dev) && peer_dev->dev.type == &fsl_mc_bus_dpsw_type)
 		return -EPROBE_DEFER;
 
 	net_dev = alloc_etherdev(sizeof(*priv));

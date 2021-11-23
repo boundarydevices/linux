@@ -19,12 +19,6 @@
 #include <linux/device/driver.h>
 #include <net/pkt_cls.h>
 #include <net/sock.h>
-
-/* Hack: only here in order to use device_driver_detach.
- * To be replaced with the use of MC _ENDPOINT_CHANGED interrupts on all
- * connectable objects
- */
-#include "../../../../base/base.h"
 #include "dpaa2-eth.h"
 #include "dpaa2-eth-ceetm.h"
 
@@ -4168,28 +4162,6 @@ static int dpaa2_eth_poll_link_state(void *arg)
 	return 0;
 }
 
-static void dpaa2_eth_dpmac_driver_attach(struct fsl_mc_device *dpmac_dev)
-{
-	struct device_driver *drv = driver_find("fsl_dpaa2_mac", &fsl_mc_bus_type);
-	struct device *dev = &dpmac_dev->dev;
-	int err;
-
-	if (dev && dev->driver == NULL && drv && driver_match_device(drv, dev)) {
-		err = device_driver_attach(drv, dev);
-		if (err && err != -EAGAIN)
-			dev_err(dev, "Error in attaching the fsl_dpaa2_mac driver\n");
-	}
-}
-
-static void dpaa2_eth_dpmac_driver_detach(struct fsl_mc_device *dpmac_dev)
-{
-	struct device_driver *drv = driver_find("fsl_dpaa2_mac", &fsl_mc_bus_type);
-	struct device *dev = &dpmac_dev->dev;
-
-	if (dev && dev->driver == drv)
-		device_driver_detach(dev);
-}
-
 static int dpaa2_eth_connect_mac(struct dpaa2_eth_priv *priv)
 {
 	struct fsl_mc_device *dpni_dev, *dpmac_dev;
@@ -4205,7 +4177,7 @@ static int dpaa2_eth_connect_mac(struct dpaa2_eth_priv *priv)
 	if (IS_ERR(dpmac_dev) || dpmac_dev->dev.type != &fsl_mc_bus_dpmac_type)
 		return 0;
 
-	dpaa2_eth_dpmac_driver_detach(dpmac_dev);
+	dpaa2_mac_driver_detach(dpmac_dev);
 
 	mac = kzalloc(sizeof(struct dpaa2_mac), GFP_KERNEL);
 	if (!mac)
@@ -4248,7 +4220,7 @@ static void dpaa2_eth_disconnect_mac(struct dpaa2_eth_priv *priv)
 		return;
 
 	dpaa2_mac_close(priv->mac);
-	dpaa2_eth_dpmac_driver_attach(priv->mac->mc_dev);
+	dpaa2_mac_driver_attach(priv->mac->mc_dev);
 	kfree(priv->mac);
 	priv->mac = NULL;
 }
