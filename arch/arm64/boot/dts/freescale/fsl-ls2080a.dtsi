@@ -154,3 +154,11 @@
 &timer {
 	fsl,erratum-a008585;
 };
+
+&usb0 {
+	snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+};
+
+&usb1 {
+	snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+};
