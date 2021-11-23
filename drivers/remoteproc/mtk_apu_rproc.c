@@ -104,6 +104,22 @@ static void vpu_write32(struct mtk_vpu_rproc *vpu_rproc, u32 off, u32 value)
 	writel(value, vpu_rproc->base + off);
 }
 
+static int mtk_vpu_rproc_prepare(struct rproc *rproc)
+{
+	struct mtk_vpu_rproc *vpu_rproc = rproc->priv;
+
+	return clk_bulk_prepare_enable(vpu_rproc->num_clks, vpu_rproc->clks);
+}
+
+static int mtk_vpu_rproc_unprepare(struct rproc *rproc)
+{
+	struct mtk_vpu_rproc *vpu_rproc = rproc->priv;
+
+	clk_bulk_disable_unprepare(vpu_rproc->num_clks, vpu_rproc->clks);
+
+	return 0;
+}
+
 static int mtk_vpu_rproc_start(struct rproc *rproc)
 {
 	struct mtk_vpu_rproc *vpu_rproc = rproc->priv;
@@ -194,6 +210,8 @@ int mtk_vpu_elf_sanity_check(struct rproc *rproc, const struct firmware *fw)
 }
 
 static const struct rproc_ops mtk_vpu_rproc_ops = {
+	.prepare		= mtk_vpu_rproc_prepare,
+	.unprepare		= mtk_vpu_rproc_unprepare,
 	.start			= mtk_vpu_rproc_start,
 	.stop			= mtk_vpu_rproc_stop,
 	.kick			= mtk_vpu_rproc_kick,
@@ -222,6 +240,26 @@ static irqreturn_t handle_event(int irq, void *data)
 	rproc_vq_interrupt(rproc, 1);
 
 	return IRQ_HANDLED;
+}
+
+static int __maybe_unused mtk_vpu_rproc_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct rproc *rproc = platform_get_drvdata(pdev);
+	int ret = 0;
+
+	/* Make sure that VP6 is not running before to suspend */
+	mutex_lock(&rproc->lock);
+	if (rproc->state != RPROC_OFFLINE)
+		ret = -EBUSY;
+	mutex_unlock(&rproc->lock);
+
+	return ret;
+}
+
+static int __maybe_unused mtk_vpu_rproc_resume(struct device *dev)
+{
+	return 0;
 }
 
 #ifdef CONFIG_MTK_APU_JTAG
@@ -430,16 +468,10 @@ static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 		goto free_rproc;
 	}
 
-	ret = clk_bulk_prepare_enable(vpu_rproc->num_clks, vpu_rproc->clks);
-	if (ret) {
-		dev_err(vpu_rproc->dev, "failed to enable clocks: %d\n", ret);
-		goto free_rproc;
-	}
-
 	ret = of_reserved_mem_device_init(dev);
 	if (ret) {
 		dev_err(dev, "device does not have specific CMA pool\n");
-		goto clk_disable;
+		goto free_rproc;
 	}
 
 	ret = rproc_add(rproc);
@@ -458,8 +490,6 @@ static int mtk_vpu_rproc_probe(struct platform_device *pdev)
 
 free_mem:
 	of_reserved_mem_device_release(dev);
-clk_disable:
-	clk_bulk_disable_unprepare(vpu_rproc->num_clks, vpu_rproc->clks);
 free_rproc:
 	rproc_free(rproc);
 
@@ -479,7 +509,6 @@ static int mtk_vpu_rproc_remove(struct platform_device *pdev)
 #endif
 	rproc_del(rproc);
 	of_reserved_mem_device_release(dev);
-	clk_bulk_disable_unprepare(vpu_rproc->num_clks, vpu_rproc->clks);
 	rproc_free(rproc);
 
 	return 0;
@@ -491,11 +520,16 @@ static const struct of_device_id mtk_vpu_rproc_of_match[] __maybe_unused = {
 };
 MODULE_DEVICE_TABLE(of, mtk_vpu_rproc_of_match);
 
+static const struct dev_pm_ops mtk_vpu_rproc_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(mtk_vpu_rproc_suspend, mtk_vpu_rproc_resume)
+};
+
 static struct platform_driver mtk_vpu_rproc_driver = {
 	.probe = mtk_vpu_rproc_probe,
 	.remove = mtk_vpu_rproc_remove,
 	.driver = {
 		.name = "mtk_vpu-rproc",
+		.pm = &mtk_vpu_rproc_pm_ops,
 		.of_match_table = of_match_ptr(mtk_vpu_rproc_of_match),
 	},
 };
