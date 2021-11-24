@@ -32,6 +32,8 @@ struct dpaa2_mac {
 	enum dpmac_link_type if_link_type;
 	struct lynx_pcs *pcs;
 	struct fwnode_handle *fw_node;
+
+	int phy_req_state;
 };
 
 bool dpaa2_mac_is_type_fixed(struct fsl_mc_device *dpmac_dev,

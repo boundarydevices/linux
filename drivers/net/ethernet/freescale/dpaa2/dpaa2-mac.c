@@ -596,11 +596,19 @@ static irqreturn_t dpaa2_mac_irq_handler(int irq_num, void *arg)
 	if (status & DPMAC_IRQ_EVENT_LINK_CFG_REQ)
 		dpaa2_mac_ksettings_change(priv);
 
-	if (status & DPMAC_IRQ_EVENT_LINK_DOWN_REQ)
-		phylink_stop(priv->phylink);
+	if (status & DPMAC_IRQ_EVENT_LINK_DOWN_REQ) {
+		if (priv->phy_req_state) {
+			phylink_stop(priv->phylink);
+			priv->phy_req_state = 0;
+		}
+	}
 
-	if (status & DPMAC_IRQ_EVENT_LINK_UP_REQ)
-		phylink_start(priv->phylink);
+	if (status & DPMAC_IRQ_EVENT_LINK_UP_REQ) {
+		if (!priv->phy_req_state) {
+			priv->phy_req_state = 1;
+			phylink_start(priv->phylink);
+		}
+	}
 	rtnl_unlock();
 
 	dpmac_clear_irq_status(priv->mc_io, 0, dpmac_dev->mc_handle,
@@ -682,9 +690,14 @@ static int dpaa2_mac_netdev_open(struct net_device *net_dev)
 {
 	struct dpaa2_mac *priv = netdev_priv(net_dev);
 
-	if (dpaa2_mac_is_type_phy(priv))
-		phylink_start(priv->phylink);
+	if (!dpaa2_mac_is_type_phy(priv))
+		return 0;
 
+	if (priv->phy_req_state)
+		return 0;
+
+	priv->phy_req_state = 1;
+	phylink_start(priv->phylink);
 	return 0;
 }
 
@@ -694,7 +707,10 @@ static int dpaa2_mac_netdev_stop(struct net_device *net_dev)
 
 	if (!dpaa2_mac_is_type_phy(priv))
 		return 0;
+	if (!priv->phy_req_state)
+		return 0;
 
+	priv->phy_req_state = 0;
 	phylink_stop(priv->phylink);
 
 	return 0;
@@ -842,6 +858,7 @@ static int dpaa2_mac_probe(struct fsl_mc_device *mc_dev)
 	priv = netdev_priv(net_dev);
 	priv->mc_dev = mc_dev;
 	priv->net_dev = net_dev;
+	priv->phy_req_state = 0;
 
 	SET_NETDEV_DEV(net_dev, dev);
 
