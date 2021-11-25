@@ -194,6 +194,7 @@ static int kbase_gpuprops_get_props(struct base_gpu_props * const gpu_props,
 		return err;
 
 	gpu_props->raw_props.gpu_id = regdump.gpu_id;
+	gpu_props->raw_props.orig_gpu_id = regdump.orig_gpu_id;
 	gpu_props->raw_props.tiler_features = regdump.tiler_features;
 	gpu_props->raw_props.mem_features = regdump.mem_features;
 	gpu_props->raw_props.mmu_features = regdump.mmu_features;

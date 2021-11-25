@@ -233,7 +233,10 @@ static const enum base_hw_issue *kbase_hw_get_issues_for_new_id(
 		    { U32_MAX, NULL } } },
 	};
 
-	u32 gpu_id = kbdev->gpu_props.props.raw_props.gpu_id;
+	/* Replacing gpu_id with orig_gpu_id to identify the special G-57 on
+	 * MT819X, and reconfigure its base hw issues.
+	 */
+	u32 gpu_id = kbdev->gpu_props.props.raw_props.orig_gpu_id;
 	const u32 product_model = gpu_id & GPU_ID2_PRODUCT_MODEL;
 	const struct base_hw_product *product = NULL;
 	size_t p;

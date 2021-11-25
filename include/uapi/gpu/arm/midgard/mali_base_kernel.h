@@ -669,6 +669,7 @@ struct gpu_raw_gpu_props {
 	__u32 texture_features[BASE_GPU_NUM_TEXTURE_FEATURES_REGISTERS];
 
 	__u32 gpu_id;
+	__u32 orig_gpu_id;
 
 	__u32 thread_max_threads;
 	__u32 thread_max_workgroup_size;
