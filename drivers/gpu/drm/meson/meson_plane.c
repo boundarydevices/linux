@@ -98,19 +98,21 @@ static int meson_plane_atomic_check(struct drm_plane *plane,
 }
 
 static int meson_plane_atomic_check_axg(struct drm_plane *plane,
-					struct drm_plane_state *state)
+					struct drm_atomic_state *state)
 {
+	struct drm_plane_state *new_plane_state = drm_atomic_get_new_plane_state(state,
+										 plane);
 	struct drm_crtc_state *crtc_state;
 
-	if (!state->crtc)
+	if (!new_plane_state->crtc)
 		return 0;
 
-	crtc_state = drm_atomic_get_crtc_state(state->state, state->crtc);
+	crtc_state = drm_atomic_get_crtc_state(state, new_plane_state->crtc);
 	if (IS_ERR(crtc_state))
 		return PTR_ERR(crtc_state);
 
 	/* AXG VPU OSD plane doesn't support scaling */
-	return drm_atomic_helper_check_plane_state(state, crtc_state,
+	return drm_atomic_helper_check_plane_state(new_plane_state, crtc_state,
 						   DRM_PLANE_HELPER_NO_SCALING,
 						   DRM_PLANE_HELPER_NO_SCALING,
 						   true, true);
@@ -472,7 +474,7 @@ static const struct drm_plane_helper_funcs meson_plane_helper_funcs_axg = {
 	.atomic_check	= meson_plane_atomic_check_axg,
 	.atomic_disable	= meson_plane_atomic_disable,
 	.atomic_update	= meson_plane_atomic_update,
-	.prepare_fb	= drm_gem_fb_prepare_fb,
+	.prepare_fb	= drm_gem_plane_helper_prepare_fb,
 };
 
 static const struct drm_plane_helper_funcs meson_plane_helper_funcs = {
