@@ -2161,6 +2161,17 @@ brcmf_set_key_mgmt(struct net_device *ndev, struct cfg80211_connect_params *sme)
 			brcmf_dbg(INFO, "get okc_enable (%d)\n", okc_enable);
 			profile->is_okc = okc_enable;
 		}
+	} else if (profile->use_fwsup != BRCMF_PROFILE_FWSUP_SAE &&
+			(val == WPA3_AUTH_SAE_PSK)) {
+		brcmf_dbg(INFO, "not using SAE offload\n");
+		err = brcmf_fil_bsscfg_int_get(netdev_priv(ndev), "okc_enable",
+					       &okc_enable);
+		if (err) {
+			bphy_err(drvr, "get okc_enable failed (%d)\n", err);
+		} else {
+			brcmf_dbg(INFO, "get okc_enable (%d)\n", okc_enable);
+			profile->is_okc = okc_enable;
+		}
 	}
 
 	if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP))
@@ -4382,6 +4393,17 @@ brcmf_cfg80211_set_pmksa(struct wiphy *wiphy, struct net_device *ndev,
 	brcmf_dbg(CONN, "%*ph\n", WLAN_PMKID_LEN, pmk[npmk].pmkid);
 
 	err = brcmf_update_pmklist(cfg, ifp);
+
+	if (pmksa->pmk_len) {
+		if (ifp->vif->profile.is_okc) {
+			err = brcmf_fil_iovar_data_set(ifp, "okc_info_pmk", pmksa->pmk,
+						       pmksa->pmk_len);
+			if (err < 0)
+				bphy_err(drvr, "okc_info_pmk iovar failed: ret=%d\n", err);
+		} else {
+			brcmf_set_pmk(ifp, pmksa->pmk, pmksa->pmk_len);
+		}
+	}
 
 	brcmf_dbg(TRACE, "Exit\n");
 	return err;
