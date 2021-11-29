@@ -451,6 +451,10 @@
 	};
 };
 
+&i2c_A0_b {
+	/* vdd_ee fan5355 Regulator */
+};
+
 &i2c_A0_c {
 	vddcpu_b: regulator-vddcpu-b@60 {
 		/* fan5355 Regulator */
@@ -462,6 +466,73 @@
 		regulator-boot-on;
 		regulator-always-on;
 	};
+};
+
+&i2c_A0_d {
+	/* camera connector */
+};
+
+&i2c2 {
+	clock-frequency = <100000>;
+	status = "okay";
+	pinctrl-0 = <&i2c2_sck_x_pins>, <&i2c2_sda_x_pins>;
+	pinctrl-names = "default";
+
+	i2cmux9546@70 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "nxp,pca9546";
+		reg = <0x70>;
+		reset-gpios = <&gpio GPIOA_12 GPIO_ACTIVE_LOW>;
+		status = "okay";
+
+		i2c2_a: i2c@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+		};
+
+		i2c2_b: i2c@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+		};
+
+		i2c2_c: i2c@2 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <2>;
+		};
+
+		i2c2_d: i2c@3 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <3>;
+		};
+	};
+};
+
+&i2c2_a {
+	/* TypeC chip */
+};
+
+&i2c2_b {
+	/* unused */
+};
+
+&i2c2_c {
+	/* RTC */
+	rtc@52 {
+		backup-switchover-dsm;
+		compatible = "microcrystal,rv3028";
+		interrupts-extended = <&gpio_intc 5 IRQ_TYPE_LEVEL_LOW>;
+		reg = <0x52>;
+		wakeup-source;
+	};
+};
+
+&i2c2_d {
+	/* DSI touch controller */
 };
 
 &ir {
