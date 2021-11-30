@@ -223,7 +223,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		spi-max-frequency = <50000000>;
-		spi-rx-bus-width = <4>;
+		spi-rx-bus-width = <1>;
 		spi-tx-bus-width = <1>;
 		reg = <0>;
 	};
@@ -233,7 +233,7 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		spi-max-frequency = <50000000>;
-		spi-rx-bus-width = <4>;
+		spi-rx-bus-width = <1>;
 		spi-tx-bus-width = <1>;
 		reg = <1>;
 	};

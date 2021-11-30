@@ -88,6 +88,7 @@ static int fsl_ifc_ctrl_remove(struct platform_device *dev)
 {
 	struct fsl_ifc_ctrl *ctrl = dev_get_drvdata(&dev->dev);
 
+	of_platform_depopulate(&dev->dev);
 	free_irq(ctrl->nand_irq, ctrl);
 	free_irq(ctrl->irq, ctrl);
 
@@ -284,6 +285,12 @@ static int fsl_ifc_ctrl_probe(struct platform_device *dev)
 			goto err_nandirq;
 		}
 	}
+
+	/* legacy dts may still use "simple-bus" compatible */
+	ret = of_platform_populate(dev->dev.of_node, NULL, NULL,
+					&dev->dev);
+	if (ret)
+		goto err_nandirq;
 
 	return 0;
 
