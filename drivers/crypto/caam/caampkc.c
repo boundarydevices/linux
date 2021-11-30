@@ -380,6 +380,9 @@ static int akcipher_do_one_req(struct crypto_engine *engine, void *areq)
 
 	ret = caam_jr_enqueue(jrdev, desc, req_ctx->akcipher_op_done, req);
 
+	if (ret == -ENOSPC && engine->retry_support)
+		return ret;
+
 	if (ret != -EINPROGRESS) {
 		rsa_pub_unmap(jrdev, req_ctx->edesc, req);
 		rsa_io_unmap(jrdev, req_ctx->edesc, req);
@@ -1159,10 +1162,10 @@ int caam_pkc_init(struct device *ctrldev)
 
 	/* Determine public key hardware accelerator presence. */
 	if (priv->era < 10)
-		pk_inst = (rd_reg32(&priv->ctrl->perfmon.cha_num_ls) &
+		pk_inst = (rd_reg32(&priv->jr[0]->perfmon.cha_num_ls) &
 			   CHA_ID_LS_PK_MASK) >> CHA_ID_LS_PK_SHIFT;
 	else
-		pk_inst = rd_reg32(&priv->ctrl->vreg.pkha) & CHA_VER_NUM_MASK;
+		pk_inst = rd_reg32(&priv->jr[0]->vreg.pkha) & CHA_VER_NUM_MASK;
 
 	/* Do not register algorithms if PKHA is not present. */
 	if (!pk_inst)
