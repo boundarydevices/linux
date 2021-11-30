@@ -508,6 +508,13 @@ config MFD_IMX_MIX
 	  with virtual devices based on what's found in the devicetree node,
 	  leaving the rest of the behavior control to the dedicated driver.
 
+config MFD_MXC_HDMI
+	tristate "Freescale HDMI Core"
+	select MFD_CORE
+	help
+	  This is the core driver for the Freescale i.MX6 on-chip HDMI.
+	  This MFD driver connects with the video and audio drivers for HDMI.
+
 config MFD_HI6421_PMIC
 	tristate "HiSilicon Hi6421 PMU/Codec IC"
 	depends on OF
