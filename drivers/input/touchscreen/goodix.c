@@ -911,7 +911,7 @@ retry_get_irq_gpio:
 	default:
 		if (ts->gpiod_int && ts->gpiod_rst) {
 			ts->reset_controller_at_probe = true;
-			ts->load_cfg_from_disk = true;
+			ts->load_cfg_from_disk = false;
 			ts->irq_pin_access_method = IRQ_PIN_ACCESS_GPIO;
 		}
 	}
@@ -932,7 +932,7 @@ static void goodix_read_config(struct goodix_ts_data *ts)
 	int error;
 
 	error = goodix_i2c_read(ts->client, ts->chip->config_addr,
-				ts->config, ts->chip->config_len);
+				ts->config, 9);
 	if (error) {
 		dev_warn(&ts->client->dev, "Error reading config: %d\n",
 			 error);
@@ -1105,6 +1105,9 @@ static int goodix_configure_dev(struct goodix_ts_data *ts)
 			"Failed to register input device: %d", error);
 		return error;
 	}
+
+	if (device_property_read_bool(ts->input_dev->dev.parent, "edge-failling-trigger"))
+		ts->int_trigger_type = GOODIX_INT_TRIGGER;
 
 	ts->irq_flags = goodix_irq_flags[ts->int_trigger_type] | IRQF_ONESHOT;
 	error = goodix_request_irq(ts);
@@ -1355,9 +1358,11 @@ static int __maybe_unused goodix_resume(struct device *dev)
 			return error;
 		}
 
-		error = goodix_send_cfg(ts, ts->config, ts->chip->config_len);
-		if (error)
-			return error;
+		if (ts->load_cfg_from_disk) {
+			error = goodix_send_cfg(ts, ts->config, ts->chip->config_len);
+			if (error)
+				return error;
+		}
 	}
 
 	error = goodix_request_irq(ts);
