@@ -501,6 +501,8 @@ static int dwc3_usb_role_switch_set(struct usb_role_switch *sw,
 	default:
 		if (dwc->role_switch_default_mode == USB_DR_MODE_HOST)
 			mode = DWC3_GCTL_PRTCAP_HOST;
+		else if (dwc->role_switch_default_mode == USB_DR_MODE_UNKNOWN)
+			mode = DWC3_GCTL_PRTCAP_NONE;
 		else
 			mode = DWC3_GCTL_PRTCAP_DEVICE;
 		break;
@@ -530,6 +532,8 @@ static enum usb_role dwc3_usb_role_switch_get(struct usb_role_switch *sw)
 	default:
 		if (dwc->role_switch_default_mode == USB_DR_MODE_HOST)
 			role = USB_ROLE_HOST;
+		else if (dwc->role_switch_default_mode == USB_DR_MODE_UNKNOWN)
+			role = USB_ROLE_NONE;
 		else
 			role = USB_ROLE_DEVICE;
 		break;
@@ -544,11 +548,16 @@ static int dwc3_setup_role_switch(struct dwc3 *dwc)
 	u32 mode;
 
 	dwc->role_switch_default_mode = usb_get_role_switch_default_mode(dwc->dev);
-	if (dwc->role_switch_default_mode == USB_DR_MODE_HOST) {
+	switch (dwc->role_switch_default_mode) {
+	case USB_DR_MODE_HOST:
 		mode = DWC3_GCTL_PRTCAP_HOST;
-	} else {
-		dwc->role_switch_default_mode = USB_DR_MODE_PERIPHERAL;
+		break;
+	case USB_DR_MODE_UNKNOWN:
+		mode = DWC3_GCTL_PRTCAP_NONE;
+		break;
+	default:
 		mode = DWC3_GCTL_PRTCAP_DEVICE;
+		break;
 	}
 
 	dwc3_role_switch.fwnode = dev_fwnode(dwc->dev);
