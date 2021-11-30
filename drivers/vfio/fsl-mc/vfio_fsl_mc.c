@@ -50,9 +50,37 @@ static int vfio_fsl_mc_open_device(struct vfio_device *core_vdev)
 		vdev->regions[i].flags |= VFIO_REGION_INFO_FLAG_READ;
 		if (!(mc_dev->regions[i].flags & IORESOURCE_READONLY))
 			vdev->regions[i].flags |= VFIO_REGION_INFO_FLAG_WRITE;
+		vdev->regions[i].type = mc_dev->regions[i].flags & IORESOURCE_BITS;
 	}
 
 	return 0;
+}
+
+static int vfio_fsl_mc_reset_device(struct vfio_fsl_mc_device *vdev)
+{
+	struct fsl_mc_device *mc_dev = vdev->mc_dev;
+	int ret = 0;
+
+	if (is_fsl_mc_bus_dprc(vdev->mc_dev)) {
+		return dprc_reset_container(mc_dev->mc_io, 0,
+					mc_dev->mc_handle,
+					mc_dev->obj_desc.id,
+					DPRC_RESET_OPTION_NON_RECURSIVE);
+	} else {
+		int err;
+		u16 token;
+
+		err = fsl_mc_obj_open(mc_dev->mc_io, 0, mc_dev->obj_desc.id,
+				      mc_dev->obj_desc.type,
+				      &token);
+		if (err)
+			return err;
+		ret = fsl_mc_obj_reset(mc_dev->mc_io, 0, token);
+		err = fsl_mc_obj_close(mc_dev->mc_io, 0, token);
+		if (err)
+			return err;
+	}
+	return ret;
 }
 
 static void vfio_fsl_mc_regions_cleanup(struct vfio_fsl_mc_device *vdev)
@@ -78,9 +106,7 @@ static void vfio_fsl_mc_close_device(struct vfio_device *core_vdev)
 	vfio_fsl_mc_regions_cleanup(vdev);
 
 	/* reset the device before cleaning up the interrupts */
-	ret = dprc_reset_container(mc_cont->mc_io, 0, mc_cont->mc_handle,
-				   mc_cont->obj_desc.id,
-				   DPRC_RESET_OPTION_NON_RECURSIVE);
+	ret = vfio_fsl_mc_reset_device(vdev);
 
 	if (WARN_ON(ret))
 		dev_warn(&mc_cont->dev,
@@ -203,18 +229,7 @@ static long vfio_fsl_mc_ioctl(struct vfio_device *core_vdev,
 	}
 	case VFIO_DEVICE_RESET:
 	{
-		int ret;
-		struct fsl_mc_device *mc_dev = vdev->mc_dev;
-
-		/* reset is supported only for the DPRC */
-		if (!is_fsl_mc_bus_dprc(mc_dev))
-			return -ENOTTY;
-
-		ret = dprc_reset_container(mc_dev->mc_io, 0,
-					   mc_dev->mc_handle,
-					   mc_dev->obj_desc.id,
-					   DPRC_RESET_OPTION_NON_RECURSIVE);
-		return ret;
+		return vfio_fsl_mc_reset_device(vdev);
 
 	}
 	default:
@@ -346,7 +361,6 @@ static int vfio_fsl_mc_mmap_mmio(struct vfio_fsl_mc_region region,
 {
 	u64 size = vma->vm_end - vma->vm_start;
 	u64 pgoff, base;
-	u8 region_cacheable;
 
 	pgoff = vma->vm_pgoff &
 		((1U << (VFIO_FSL_MC_OFFSET_SHIFT - PAGE_SHIFT)) - 1);
@@ -355,9 +369,10 @@ static int vfio_fsl_mc_mmap_mmio(struct vfio_fsl_mc_region region,
 	if (region.size < PAGE_SIZE || base + size > region.size)
 		return -EINVAL;
 
-	region_cacheable = (region.type & FSL_MC_REGION_CACHEABLE) &&
-			   (region.type & FSL_MC_REGION_SHAREABLE);
-	if (!region_cacheable)
+	if (region.type & FSL_MC_REGION_CACHEABLE) {
+		if (!(region.type & FSL_MC_REGION_SHAREABLE))
+			vma->vm_page_prot = pgprot_cached_ns(vma->vm_page_prot);
+	} else
 		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
 	vma->vm_pgoff = (region.addr >> PAGE_SHIFT) + pgoff;
