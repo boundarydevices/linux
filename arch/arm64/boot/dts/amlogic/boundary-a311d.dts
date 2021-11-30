@@ -411,26 +411,26 @@
 		reset-gpios = <&gpio_ao GPIOAO_10 GPIO_ACTIVE_LOW>;
 		status = "okay";
 
-		i2c_A0_a: i2c@0 {
+		i2c_AO_a: i2c@0 {
 			#address-cells = <1>;
 			#size-cells = <0>;
 			clock-frequency = <400000>;
 			reg = <0>;
 		};
 
-		i2c_A0_b: i2c@1 {
+		i2c_AO_b: i2c@1 {
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <1>;
 		};
 
-		i2c_A0_c: i2c@2 {
+		i2c_AO_c: i2c@2 {
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <2>;
 		};
 
-		i2c_A0_d: i2c@3 {
+		i2c_AO_d: i2c@3 {
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <3>;
@@ -438,7 +438,7 @@
 	};
 };
 
-&i2c_A0_a {
+&i2c_AO_a {
 	vddcpu_a: regulator-vddcpu-a@42 {
 		/* TPS628660AYCG Regulator */
 		compatible = "ti,tps628660";
@@ -451,11 +451,11 @@
 	};
 };
 
-&i2c_A0_b {
+&i2c_AO_b {
 	/* vdd_ee fan5355 Regulator */
 };
 
-&i2c_A0_c {
+&i2c_AO_c {
 	vddcpu_b: regulator-vddcpu-b@60 {
 		/* fan5355 Regulator */
 		compatible = "ti,fan5355";
@@ -468,7 +468,7 @@
 	};
 };
 
-&i2c_A0_d {
+&i2c_AO_d {
 	/* camera connector */
 };
 
