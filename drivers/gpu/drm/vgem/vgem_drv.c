@@ -302,6 +302,10 @@ static int vgem_prime_pin(struct drm_gem_object *obj)
 	long n_pages = obj->size >> PAGE_SHIFT;
 	struct page **pages;
 
+	obj = kzalloc(sizeof(*obj), GFP_KERNEL);
+	if (!obj)
+		return ERR_PTR(-ENOMEM);
+
 	pages = vgem_pin_pages(bo);
 	if (IS_ERR(pages))
 		return PTR_ERR(pages);
