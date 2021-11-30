@@ -16,8 +16,11 @@
 
 #include <linux/clocksource.h>
 #include <linux/net_tstamp.h>
+#include <linux/pm_qos.h>
 #include <linux/ptp_clock_kernel.h>
 #include <linux/timecounter.h>
+#include <dt-bindings/firmware/imx/rsrc.h>
+#include <linux/firmware/imx/sci.h>
 
 #if defined(CONFIG_M523x) || defined(CONFIG_M527x) || defined(CONFIG_M528x) || \
     defined(CONFIG_M520x) || defined(CONFIG_M532x) || defined(CONFIG_ARM) || \
@@ -383,6 +386,7 @@ struct bufdesc_ex {
 #define FEC_DEFAULT_IMASK (FEC_ENET_TXF | FEC_ENET_RXF)
 #define FEC_RX_DISABLED_IMASK (FEC_DEFAULT_IMASK & (~FEC_ENET_RXF))
 
+#define FEC_ENET_ETHEREN	((uint)0x00000002)
 #define FEC_ENET_TXC_DLY	((uint)0x00010000)
 #define FEC_ENET_RXC_DLY	((uint)0x00020000)
 
@@ -492,8 +496,12 @@ struct bufdesc_ex {
  */
 #define FEC_QUIRK_DELAYED_CLKS_SUPPORT	(1 << 21)
 
+
 /* i.MX8MQ SoC integration mix wakeup interrupt signal into "int2" interrupt line. */
 #define FEC_QUIRK_WAKEUP_FROM_INT2	(1 << 22)
+
+/* request pmqos during low power */
+#define FEC_QUIRK_HAS_PMQOS		(1 << 23)
 
 struct bufdesc_prop {
 	int qid;
@@ -576,6 +584,8 @@ struct fec_enet_private {
 	struct device_node *phy_node;
 	bool	rgmii_txc_dly;
 	bool	rgmii_rxc_dly;
+	bool	mii_bus_share;
+	bool	rpm_active;
 	int	link;
 	int	full_duplex;
 	int	speed;
@@ -605,6 +615,7 @@ struct fec_enet_private {
 	struct delayed_work time_keep;
 	struct regulator *reg_phy;
 	struct fec_stop_mode_gpr stop_gpr;
+	struct pm_qos_request pm_qos_req;
 
 	unsigned int tx_align;
 	unsigned int rx_align;
@@ -630,6 +641,8 @@ struct fec_enet_private {
 	unsigned int reload_period;
 	int pps_enable;
 	unsigned int next_counter;
+
+	struct imx_sc_ipc *ipc_handle;
 
 	u64 ethtool_stats[];
 };

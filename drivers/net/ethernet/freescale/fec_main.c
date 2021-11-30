@@ -62,6 +62,8 @@
 #include <linux/regulator/consumer.h>
 #include <linux/if_vlan.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/pm_runtime.h>
+#include <linux/busfreq-imx.h>
 #include <linux/prefetch.h>
 #include <linux/mfd/syscon.h>
 #include <linux/regmap.h>
@@ -111,7 +113,8 @@ static const struct fec_devinfo fec_imx6q_info = {
 	.quirks = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
 		  FEC_QUIRK_HAS_BUFDESC_EX | FEC_QUIRK_HAS_CSUM |
 		  FEC_QUIRK_HAS_VLAN | FEC_QUIRK_ERR006358 |
-		  FEC_QUIRK_HAS_RACC | FEC_QUIRK_CLEAR_SETUP_MII,
+		  FEC_QUIRK_HAS_RACC | FEC_QUIRK_CLEAR_SETUP_MII |
+		  FEC_QUIRK_HAS_PMQOS,
 };
 
 static const struct fec_devinfo fec_mvf600_info = {
@@ -155,6 +158,13 @@ static const struct fec_devinfo fec_imx8qm_info = {
 		  FEC_QUIRK_DELAYED_CLKS_SUPPORT,
 };
 
+static const struct fec_devinfo fec_s32v234_info = {
+	.quirks = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
+		  FEC_QUIRK_HAS_BUFDESC_EX | FEC_QUIRK_HAS_CSUM |
+		  FEC_QUIRK_HAS_VLAN | FEC_QUIRK_HAS_AVB |
+		  FEC_QUIRK_ERR007885 | FEC_QUIRK_BUG_CAPTURE,
+};
+
 static struct platform_device_id fec_devtype[] = {
 	{
 		/* keep it for coldfire */
@@ -188,6 +198,9 @@ static struct platform_device_id fec_devtype[] = {
 		.name = "imx8qm-fec",
 		.driver_data = (kernel_ulong_t)&fec_imx8qm_info,
 	}, {
+		.name = "s32v234-fec",
+		.driver_data = (kernel_ulong_t)&fec_s32v234_info,
+	}, {
 		/* sentinel */
 	}
 };
@@ -203,6 +216,7 @@ enum imx_fec_type {
 	IMX6UL_FEC,
 	IMX8MQ_FEC,
 	IMX8QM_FEC,
+	S32V234_FEC,
 };
 
 static const struct of_device_id fec_dt_ids[] = {
@@ -215,6 +229,7 @@ static const struct of_device_id fec_dt_ids[] = {
 	{ .compatible = "fsl,imx6ul-fec", .data = &fec_devtype[IMX6UL_FEC], },
 	{ .compatible = "fsl,imx8mq-fec", .data = &fec_devtype[IMX8MQ_FEC], },
 	{ .compatible = "fsl,imx8qm-fec", .data = &fec_devtype[IMX8QM_FEC], },
+	{ .compatible = "fsl,s32v234-fec", .data = &fec_devtype[S32V234_FEC], },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, fec_dt_ids);
@@ -299,7 +314,15 @@ MODULE_PARM_DESC(macaddr, "FEC Ethernet MAC address");
 #define FEC_WOL_FLAG_ENABLE		(0x1 << 1)
 #define FEC_WOL_FLAG_SLEEP_ON		(0x1 << 2)
 
-#define COPYBREAK_DEFAULT	256
+/* By default, set the copybreak to 1518,
+ * then the RX path always keep DMA memory unchanged, and
+ * allocate one new skb and copy DMA memory data to the new skb
+ * buffer, which can improve the performance when SMMU is enabled.
+ *
+ * The driver support .set_tunable() interface for ethtool, user
+ * can dynamicly change the copybreak value.
+ */
+#define COPYBREAK_DEFAULT	1518
 
 /* Max number of allowed TCP segments for software TSO */
 #define FEC_MAX_TSO_SEGS	100
@@ -981,7 +1004,7 @@ fec_restart(struct net_device *ndev)
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	u32 temp_mac[2];
 	u32 rcntl = OPT_FRAME_SIZE | 0x04;
-	u32 ecntl = 0x2; /* ETHEREN */
+	u32 ecntl = FEC_ENET_ETHEREN; /* ETHEREN */
 
 	/* Whack a reset.  We should wait for this.
 	 * For i.MX6SX SOC, enet use AXI bus, we use disable MAC
@@ -1167,6 +1190,34 @@ fec_restart(struct net_device *ndev)
 
 }
 
+static int fec_enet_ipc_handle_init(struct fec_enet_private *fep)
+{
+	if (!(of_machine_is_compatible("fsl,imx8qm") ||
+	    of_machine_is_compatible("fsl,imx8qxp") ||
+	    of_machine_is_compatible("fsl,imx8dxl")))
+		return 0;
+
+	return imx_scu_get_handle(&fep->ipc_handle);
+}
+
+static void fec_enet_ipg_stop_set(struct fec_enet_private *fep, bool enabled)
+{
+	struct device_node *np = fep->pdev->dev.of_node;
+	u32 rsrc_id, val;
+	int idx;
+
+	if (!np || !fep->ipc_handle)
+		return;
+
+	idx = of_alias_get_id(np, "ethernet");
+	if (idx < 0)
+		idx = 0;
+	rsrc_id = idx ? IMX_SC_R_ENET_1 : IMX_SC_R_ENET_0;
+
+	val = enabled ? 1 : 0;
+	imx_sc_misc_set_control(fep->ipc_handle, rsrc_id, IMX_SC_C_IPG_STOP, val);
+}
+
 static void fec_enet_stop_mode(struct fec_enet_private *fep, bool enabled)
 {
 	struct fec_platform_data *pdata = fep->pdev->dev.platform_data;
@@ -1182,7 +1233,16 @@ static void fec_enet_stop_mode(struct fec_enet_private *fep, bool enabled)
 					   BIT(stop_gpr->bit), 0);
 	} else if (pdata && pdata->sleep_mode_enable) {
 		pdata->sleep_mode_enable(enabled);
+	} else {
+		fec_enet_ipg_stop_set(fep, enabled);
 	}
+}
+
+static inline void fec_irqs_disable(struct net_device *ndev)
+{
+	struct fec_enet_private *fep = netdev_priv(ndev);
+
+	writel(0, fep->hwp + FEC_IMASK);
 }
 
 static void
@@ -1217,7 +1277,6 @@ fec_stop(struct net_device *ndev)
 		val = readl(fep->hwp + FEC_ECNTRL);
 		val |= (FEC_ECR_MAGICEN | FEC_ECR_SLEEP);
 		writel(val, fep->hwp + FEC_ECNTRL);
-		fec_enet_stop_mode(fep, true);
 	}
 	writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
 
@@ -2070,6 +2129,26 @@ static int fec_enet_parse_rgmii_delay(struct fec_enet_private *fep,
 	return 0;
 }
 
+static int fec_restore_mii_bus(struct net_device *ndev)
+{
+	struct fec_enet_private *fep = netdev_priv(ndev);
+	int ret;
+
+	ret = pm_runtime_get_sync(&fep->pdev->dev);
+	if (ret < 0)
+		return ret;
+
+	writel(0xffc00000, fep->hwp + FEC_IEVENT);
+	writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
+	writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
+	writel(FEC_ENET_ETHEREN, fep->hwp + FEC_ECNTRL);
+
+	pm_runtime_mark_last_busy(&fep->pdev->dev);
+	pm_runtime_put_autosuspend(&fep->pdev->dev);
+
+	return 0;
+}
+
 static int fec_enet_mii_probe(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
@@ -2140,6 +2219,7 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 static int fec_enet_mii_init(struct platform_device *pdev)
 {
 	static struct mii_bus *fec0_mii_bus;
+	static bool *fec_mii_bus_share;
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	bool suppress_preamble = false;
@@ -2168,6 +2248,7 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 		/* fec1 uses fec0 mii_bus */
 		if (mii_cnt && fec0_mii_bus) {
 			fep->mii_bus = fec0_mii_bus;
+			*fec_mii_bus_share = true;
 			mii_cnt++;
 			return 0;
 		}
@@ -2259,8 +2340,10 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	mii_cnt++;
 
 	/* save fec0 mii_bus */
-	if (fep->quirks & FEC_QUIRK_SINGLE_MDIO)
+	if (fep->quirks & FEC_QUIRK_SINGLE_MDIO) {
 		fec0_mii_bus = fep->mii_bus;
+		fec_mii_bus_share = &fep->mii_bus_share;
+	}
 
 	return 0;
 
@@ -2880,15 +2963,10 @@ fec_enet_set_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
 		return -EINVAL;
 
 	device_set_wakeup_enable(&ndev->dev, wol->wolopts & WAKE_MAGIC);
-	if (device_may_wakeup(&ndev->dev)) {
+	if (device_may_wakeup(&ndev->dev))
 		fep->wol_flag |= FEC_WOL_FLAG_ENABLE;
-		if (fep->wake_irq > 0)
-			enable_irq_wake(fep->wake_irq);
-	} else {
+	else
 		fep->wol_flag &= (~FEC_WOL_FLAG_ENABLE);
-		if (fep->wake_irq > 0)
-			disable_irq_wake(fep->wake_irq);
-	}
 
 	return 0;
 }
@@ -3204,6 +3282,8 @@ fec_enet_open(struct net_device *ndev)
 
 	if (fep->quirks & FEC_QUIRK_ERR006687)
 		imx6q_cpuidle_fec_irqs_used();
+	if (fep->quirks & FEC_QUIRK_HAS_PMQOS)
+		cpu_latency_qos_add_request(&fep->pm_qos_req, 0);
 
 	napi_enable(&fep->napi);
 	phy_start(ndev->phydev);
@@ -3221,7 +3301,8 @@ err_enet_alloc:
 clk_enable:
 	pm_runtime_mark_last_busy(&fep->pdev->dev);
 	pm_runtime_put_autosuspend(&fep->pdev->dev);
-	pinctrl_pm_select_sleep_state(&fep->pdev->dev);
+	if (!fep->mii_bus_share)
+		pinctrl_pm_select_sleep_state(&fep->pdev->dev);
 	return ret;
 }
 
@@ -3239,6 +3320,7 @@ fec_enet_close(struct net_device *ndev)
 	}
 
 	phy_disconnect(ndev->phydev);
+	ndev->phydev = NULL;
 
 	if (fep->quirks & FEC_QUIRK_ERR006687)
 		imx6q_cpuidle_fec_irqs_unused();
@@ -3246,7 +3328,10 @@ fec_enet_close(struct net_device *ndev)
 	fec_enet_update_ethtool_stats(ndev);
 
 	fec_enet_clk_enable(ndev, false);
-	pinctrl_pm_select_sleep_state(&fep->pdev->dev);
+	if (fep->quirks & FEC_QUIRK_HAS_PMQOS)
+		cpu_latency_qos_remove_request(&fep->pm_qos_req);
+	if (!fep->mii_bus_share)
+		pinctrl_pm_select_sleep_state(&fep->pdev->dev);
 	pm_runtime_mark_last_busy(&fep->pdev->dev);
 	pm_runtime_put_autosuspend(&fep->pdev->dev);
 
@@ -3812,6 +3897,10 @@ fec_probe(struct platform_device *pdev)
 	    !of_property_read_bool(np, "fsl,err006687-workaround-present"))
 		fep->quirks |= FEC_QUIRK_ERR006687;
 
+	ret = fec_enet_ipc_handle_init(fep);
+	if (ret)
+		goto failed_ipc_init;
+
 	if (of_get_property(np, "fsl,magic-packet", NULL))
 		fep->wol_flag |= FEC_WOL_HAS_MAGIC_PACKET;
 
@@ -3845,6 +3934,8 @@ fec_probe(struct platform_device *pdev)
 	ret = fec_enet_parse_rgmii_delay(fep, np);
 	if (ret)
 		goto failed_rgmii_delay;
+
+	request_bus_freq(BUS_FREQ_HIGH);
 
 	fep->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
 	if (IS_ERR(fep->clk_ipg)) {
@@ -3953,6 +4044,9 @@ fec_probe(struct platform_device *pdev)
 	/* Decide which interrupt line is wakeup capable */
 	fec_enet_get_wakeup_irq(pdev);
 
+	/* board only enable one mii bus in default */
+	if (!of_get_property(np, "fsl,mii-exclusive", NULL))
+		fep->quirks |= FEC_QUIRK_SINGLE_MDIO;
 	ret = fec_enet_mii_init(pdev);
 	if (ret)
 		goto failed_mii_init;
@@ -4000,11 +4094,13 @@ failed_clk_ahb:
 failed_clk_ipg:
 	fec_enet_clk_enable(ndev, false);
 failed_clk:
+	release_bus_freq(BUS_FREQ_HIGH);
 failed_rgmii_delay:
 	if (of_phy_is_fixed_link(np))
 		of_phy_deregister_fixed_link(np);
 	of_node_put(phy_node);
 failed_stop_mode:
+failed_ipc_init:
 failed_phy:
 	dev_id--;
 failed_ioremap:
@@ -4052,6 +4148,8 @@ static int __maybe_unused fec_suspend(struct device *dev)
 
 	rtnl_lock();
 	if (netif_running(ndev)) {
+		int ret;
+
 		if (fep->wol_flag & FEC_WOL_FLAG_ENABLE)
 			fep->wol_flag |= FEC_WOL_FLAG_SLEEP_ON;
 		phy_stop(ndev->phydev);
@@ -4060,9 +4158,24 @@ static int __maybe_unused fec_suspend(struct device *dev)
 		netif_device_detach(ndev);
 		netif_tx_unlock_bh(ndev);
 		fec_stop(ndev);
-		fec_enet_clk_enable(ndev, false);
-		if (!(fep->wol_flag & FEC_WOL_FLAG_ENABLE))
+		if (!(fep->wol_flag & FEC_WOL_FLAG_ENABLE)) {
+			fec_irqs_disable(ndev);
 			pinctrl_pm_select_sleep_state(&fep->pdev->dev);
+		} else {
+			fec_enet_stop_mode(fep, true);
+			disable_irq(fep->wake_irq);
+			enable_irq_wake(fep->wake_irq);
+		}
+		fec_enet_clk_enable(ndev, false);
+
+		fep->rpm_active = !pm_runtime_status_suspended(dev);
+		if (fep->rpm_active) {
+			ret = pm_runtime_force_suspend(dev);
+			if (ret < 0)
+				return ret;
+		}
+	} else if (fep->mii_bus_share && !ndev->phydev) {
+		pinctrl_pm_select_sleep_state(&fep->pdev->dev);
 	}
 	rtnl_unlock();
 
@@ -4082,7 +4195,7 @@ static int __maybe_unused fec_resume(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct fec_enet_private *fep = netdev_priv(ndev);
-	int ret;
+	int ret = 0;
 	int val;
 
 	if (fep->reg_phy && !(fep->wol_flag & FEC_WOL_FLAG_ENABLE)) {
@@ -4093,14 +4206,18 @@ static int __maybe_unused fec_resume(struct device *dev)
 
 	rtnl_lock();
 	if (netif_running(ndev)) {
+		if (fep->rpm_active)
+			pm_runtime_force_resume(dev);
+
 		ret = fec_enet_clk_enable(ndev, true);
 		if (ret) {
 			rtnl_unlock();
 			goto failed_clk;
 		}
 		if (fep->wol_flag & FEC_WOL_FLAG_ENABLE) {
+			disable_irq_wake(fep->wake_irq);
 			fec_enet_stop_mode(fep, false);
-
+			enable_irq(fep->wake_irq);
 			val = readl(fep->hwp + FEC_ECNTRL);
 			val &= ~(FEC_ECR_MAGICEN | FEC_ECR_SLEEP);
 			writel(val, fep->hwp + FEC_ECNTRL);
@@ -4115,10 +4232,14 @@ static int __maybe_unused fec_resume(struct device *dev)
 		napi_enable(&fep->napi);
 		phy_init_hw(ndev->phydev);
 		phy_start(ndev->phydev);
+	} else if (fep->mii_bus_share && !ndev->phydev) {
+		pinctrl_pm_select_default_state(&fep->pdev->dev);
+		/* And then recovery mii bus */
+		ret = fec_restore_mii_bus(ndev);
 	}
 	rtnl_unlock();
 
-	return 0;
+	return ret;
 
 failed_clk:
 	if (fep->reg_phy)
@@ -4133,6 +4254,7 @@ static int __maybe_unused fec_runtime_suspend(struct device *dev)
 
 	clk_disable_unprepare(fep->clk_ahb);
 	clk_disable_unprepare(fep->clk_ipg);
+	release_bus_freq(BUS_FREQ_HIGH);
 
 	return 0;
 }
@@ -4142,6 +4264,8 @@ static int __maybe_unused fec_runtime_resume(struct device *dev)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	int ret;
+
+	request_bus_freq(BUS_FREQ_HIGH);
 
 	ret = clk_prepare_enable(fep->clk_ahb);
 	if (ret)
@@ -4154,6 +4278,7 @@ static int __maybe_unused fec_runtime_resume(struct device *dev)
 
 failed_clk_ipg:
 	clk_disable_unprepare(fep->clk_ahb);
+	release_bus_freq(BUS_FREQ_HIGH);
 	return ret;
 }
 

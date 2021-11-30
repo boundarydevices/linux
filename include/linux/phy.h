@@ -152,6 +152,7 @@ typedef enum {
 	PHY_INTERFACE_MODE_USXGMII,
 	/* 10GBASE-KR - with Clause 73 AN */
 	PHY_INTERFACE_MODE_10GKR,
+	PHY_INTERFACE_MODE_2500SGMII,
 	PHY_INTERFACE_MODE_MAX,
 } phy_interface_t;
 
@@ -233,6 +234,8 @@ static inline const char *phy_modes(phy_interface_t interface)
 		return "10gbase-kr";
 	case PHY_INTERFACE_MODE_100BASEX:
 		return "100base-x";
+	case PHY_INTERFACE_MODE_2500SGMII:
+		return "sgmii-2500";
 	default:
 		return "unknown";
 	}
@@ -698,6 +701,12 @@ struct phy_tdr_config {
 };
 #define PHY_PAIR_ALL -1
 
+enum phy_inband_aneg {
+	PHY_INBAND_ANEG_UNKNOWN		= BIT(0),
+	PHY_INBAND_ANEG_OFF		= BIT(1),
+	PHY_INBAND_ANEG_ON		= BIT(2),
+};
+
 /**
  * struct phy_driver - Driver structure for a particular PHY type
  *
@@ -766,6 +775,21 @@ struct phy_driver {
 	 * if phydev->autoneg is off
 	 */
 	int (*config_aneg)(struct phy_device *phydev);
+
+	/**
+	 * @validate_inband_aneg: Report what types of in-band auto-negotiation
+	 * are available for the given PHY interface type. Returns a bit mask
+	 * of type enum phy_inband_aneg.
+	 */
+	int (*validate_inband_aneg)(struct phy_device *phydev,
+				    phy_interface_t interface);
+
+	/**
+	 * @config_inband_aneg: Enable or disable in-band auto-negotiation for
+	 * the system-side interface if the PHY operates in a mode that
+	 * requires it: (Q)SGMII, USXGMII, 1000Base-X, etc.
+	 */
+	int (*config_inband_aneg)(struct phy_device *phydev, bool enabled);
 
 	/** @aneg_done: Determines the auto negotiation result */
 	int (*aneg_done)(struct phy_device *phydev);
@@ -1458,6 +1482,9 @@ void phy_start(struct phy_device *phydev);
 void phy_stop(struct phy_device *phydev);
 int phy_config_aneg(struct phy_device *phydev);
 int phy_start_aneg(struct phy_device *phydev);
+int phy_validate_inband_aneg(struct phy_device *phydev,
+			     phy_interface_t interface);
+int phy_config_inband_aneg(struct phy_device *phydev, bool enabled);
 int phy_aneg_done(struct phy_device *phydev);
 int phy_speed_down(struct phy_device *phydev, bool sync);
 int phy_speed_up(struct phy_device *phydev);
