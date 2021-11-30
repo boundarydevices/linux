@@ -368,6 +368,12 @@ static int scsi_fill_sghdr_rq(struct scsi_device *sdev, struct request *rq,
 	return 0;
 }
 
+#ifdef CONFIG_AHCI_IMX
+extern void *sg_io_buffer_hack;
+#else
+#define sg_io_buffer_hack NULL
+#endif
+
 static int scsi_complete_sghdr_rq(struct request *rq, struct sg_io_hdr *hdr,
 		struct bio *bio)
 {
@@ -399,7 +405,12 @@ static int scsi_complete_sghdr_rq(struct request *rq, struct sg_io_hdr *hdr,
 			ret = -EFAULT;
 	}
 
-	r = blk_rq_unmap_user(bio);
+	if (sg_io_buffer_hack && !hdr->iovec_count)
+		r = copy_to_user(hdr->dxferp, sg_io_buffer_hack,
+				hdr->dxfer_len);
+	else
+		r = blk_rq_unmap_user(bio);
+
 	if (!ret)
 		ret = r;
 
@@ -421,6 +432,9 @@ static int sg_io(struct scsi_device *sdev, struct gendisk *disk,
 		return -EINVAL;
 
 	if (hdr->dxfer_len > (queue_max_hw_sectors(sdev->request_queue) << 9))
+		return -EIO;
+
+	if (sg_io_buffer_hack && hdr->dxfer_len > 0x10000)
 		return -EIO;
 
 	if (hdr->dxfer_len)
@@ -469,9 +483,14 @@ static int sg_io(struct scsi_device *sdev, struct gendisk *disk,
 
 		ret = blk_rq_map_user_iov(rq->q, rq, NULL, &i, GFP_KERNEL);
 		kfree(iov);
-	} else if (hdr->dxfer_len)
-		ret = blk_rq_map_user(rq->q, rq, NULL, hdr->dxferp,
-				      hdr->dxfer_len, GFP_KERNEL);
+	} else if (hdr->dxfer_len) {
+		if (sg_io_buffer_hack)
+			ret = blk_rq_map_kern(rq->q, rq, sg_io_buffer_hack,
+					hdr->dxfer_len, GFP_KERNEL);
+		else
+			ret = blk_rq_map_user(rq->q, rq, NULL, hdr->dxferp,
+					hdr->dxfer_len, GFP_KERNEL);
+	}
 
 	if (ret)
 		goto out_free_cdb;
