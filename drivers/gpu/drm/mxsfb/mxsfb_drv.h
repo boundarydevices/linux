@@ -44,6 +44,7 @@ struct mxsfb_drm_private {
 	struct drm_encoder		encoder;
 	struct drm_connector		*connector;
 	struct drm_bridge		*bridge;
+	u32				max_bw;
 };
 
 static inline struct mxsfb_drm_private *
