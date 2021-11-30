@@ -4058,10 +4058,6 @@ static void run_state_machine(struct tcpm_port *port)
 							  : SNK_ATTACHED,
 				       0);
 			port->debouncing = false;
-		} else {
-			/* Wait for VBUS, but not forever */
-			tcpm_set_state(port, PORT_RESET, PD_T_PS_SOURCE_ON);
-			port->debouncing = false;
 		}
 		break;
 
