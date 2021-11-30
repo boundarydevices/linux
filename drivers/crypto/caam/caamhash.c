@@ -765,6 +765,9 @@ static int ahash_do_one_req(struct crypto_engine *engine, void *areq)
 
 	ret = caam_jr_enqueue(jrdev, desc, state->ahash_op_done, req);
 
+	if (ret == -ENOSPC && engine->retry_support)
+		return ret;
+
 	if (ret != -EINPROGRESS) {
 		ahash_unmap(jrdev, state->edesc, req, 0);
 		kfree(state->edesc);
@@ -1946,12 +1949,14 @@ int caam_algapi_hash_init(struct device *ctrldev)
 	 * presence and attributes of MD block.
 	 */
 	if (priv->era < 10) {
-		md_vid = (rd_reg32(&priv->ctrl->perfmon.cha_id_ls) &
+		struct caam_perfmon __iomem *perfmon = &priv->jr[0]->perfmon;
+
+		md_vid = (rd_reg32(&perfmon->cha_id_ls) &
 			  CHA_ID_LS_MD_MASK) >> CHA_ID_LS_MD_SHIFT;
-		md_inst = (rd_reg32(&priv->ctrl->perfmon.cha_num_ls) &
+		md_inst = (rd_reg32(&perfmon->cha_num_ls) &
 			   CHA_ID_LS_MD_MASK) >> CHA_ID_LS_MD_SHIFT;
 	} else {
-		u32 mdha = rd_reg32(&priv->ctrl->vreg.mdha);
+		u32 mdha = rd_reg32(&priv->jr[0]->vreg.mdha);
 
 		md_vid = (mdha & CHA_VER_VID_MASK) >> CHA_VER_VID_SHIFT;
 		md_inst = mdha & CHA_VER_NUM_MASK;
