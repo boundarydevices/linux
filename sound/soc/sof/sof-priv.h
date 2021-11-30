@@ -20,6 +20,8 @@
 #include <uapi/sound/sof/fw.h>
 #include <sound/sof/ext_manifest.h>
 
+struct snd_sof_pcm_stream;
+
 /* debug flags */
 #define SOF_DBG_ENABLE_TRACE	BIT(0)
 #define SOF_DBG_RETAIN_CTX	BIT(1)	/* prevent DSP D3 on FW exception */
@@ -81,6 +83,12 @@ enum sof_system_suspend_state {
 	SOF_SUSPEND_NONE = 0,
 	SOF_SUSPEND_S0IX,
 	SOF_SUSPEND_S3,
+};
+
+struct sof_compr_stream {
+	unsigned int copied_total;
+	unsigned int sample_rate;
+	size_t posn_offset;
 };
 
 struct snd_sof_dev;
@@ -201,7 +209,7 @@ struct snd_sof_dsp_ops {
 
 	/* host read DSP stream data */
 	void (*ipc_msg_data)(struct snd_sof_dev *sdev,
-			     struct snd_pcm_substream *substream,
+			     struct snd_sof_pcm_stream *sps,
 			     void *p, size_t sz); /* mandatory */
 
 	/* host configure DSP HW parameters */
@@ -580,17 +588,17 @@ void sof_block_read(struct snd_sof_dev *sdev, u32 bar, u32 offset, void *dest,
 
 int sof_fw_ready(struct snd_sof_dev *sdev, u32 msg_id);
 
-void intel_ipc_msg_data(struct snd_sof_dev *sdev,
-			struct snd_pcm_substream *substream,
-			void *p, size_t sz);
-int intel_ipc_pcm_params(struct snd_sof_dev *sdev,
-			 struct snd_pcm_substream *substream,
-			 const struct sof_ipc_pcm_params_reply *reply);
+void sof_ipc_msg_data(struct snd_sof_dev *sdev,
+		      struct snd_sof_pcm_stream *sps,
+		      void *p, size_t sz);
+int sof_ipc_pcm_params(struct snd_sof_dev *sdev,
+		       struct snd_pcm_substream *substream,
+		       const struct sof_ipc_pcm_params_reply *reply);
 
-int intel_pcm_open(struct snd_sof_dev *sdev,
-		   struct snd_pcm_substream *substream);
-int intel_pcm_close(struct snd_sof_dev *sdev,
-		    struct snd_pcm_substream *substream);
+int sof_stream_pcm_open(struct snd_sof_dev *sdev,
+			struct snd_pcm_substream *substream);
+int sof_stream_pcm_close(struct snd_sof_dev *sdev,
+			 struct snd_pcm_substream *substream);
 
 int sof_machine_check(struct snd_sof_dev *sdev);
 
