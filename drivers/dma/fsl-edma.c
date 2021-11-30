@@ -2,11 +2,12 @@
 /*
  * drivers/dma/fsl-edma.c
  *
- * Copyright 2013-2014 Freescale Semiconductor, Inc.
+ * Copyright 2013-2016 Freescale Semiconductor, Inc.
+ * Copyright 2020 NXP
  *
  * Driver for the Freescale eDMA engine with flexible channel multiplexing
  * capability for DMA request sources. The eDMA block can be found on some
- * Vybrid and Layerscape SoCs.
+ * Vybrid, Layerscape and S32V234 SoCs.
  */
 
 #include <linux/module.h>
@@ -53,6 +54,7 @@ static irqreturn_t fsl_edma_tx_handler(int irq, void *dev_id)
 			}
 
 			if (!fsl_chan->edesc->iscyclic) {
+				fsl_edma_get_realcnt(fsl_chan);
 				list_del(&fsl_chan->edesc->vdesc.node);
 				vchan_cookie_complete(&fsl_chan->edesc->vdesc);
 				fsl_chan->edesc = NULL;
@@ -138,23 +140,23 @@ fsl_edma_irq_init(struct platform_device *pdev, struct fsl_edma_engine *fsl_edma
 {
 	int ret;
 
-	fsl_edma->txirq = platform_get_irq_byname(pdev, "edma-tx");
-	if (fsl_edma->txirq < 0)
-		return fsl_edma->txirq;
+	*fsl_edma->txirqs = platform_get_irq_byname(pdev, "edma-tx");
+	if (*fsl_edma->txirqs < 0)
+		return *fsl_edma->txirqs;
 
 	fsl_edma->errirq = platform_get_irq_byname(pdev, "edma-err");
 	if (fsl_edma->errirq < 0)
 		return fsl_edma->errirq;
 
-	if (fsl_edma->txirq == fsl_edma->errirq) {
-		ret = devm_request_irq(&pdev->dev, fsl_edma->txirq,
+	if (*fsl_edma->txirqs == fsl_edma->errirq) {
+		ret = devm_request_irq(&pdev->dev, *fsl_edma->txirqs,
 				fsl_edma_irq_handler, 0, "eDMA", fsl_edma);
 		if (ret) {
 			dev_err(&pdev->dev, "Can't register eDMA IRQ.\n");
 			return ret;
 		}
 	} else {
-		ret = devm_request_irq(&pdev->dev, fsl_edma->txirq,
+		ret = devm_request_irq(&pdev->dev, *fsl_edma->txirqs,
 				fsl_edma_tx_handler, 0, "eDMA tx", fsl_edma);
 		if (ret) {
 			dev_err(&pdev->dev, "Can't register eDMA tx IRQ.\n");
@@ -177,14 +179,7 @@ fsl_edma2_irq_init(struct platform_device *pdev,
 		   struct fsl_edma_engine *fsl_edma)
 {
 	int i, ret, irq;
-	int count;
-
-	count = platform_irq_count(pdev);
-	dev_dbg(&pdev->dev, "%s Found %d interrupts\r\n", __func__, count);
-	if (count <= 2) {
-		dev_err(&pdev->dev, "Interrupts in DTS not correct.\n");
-		return -EINVAL;
-	}
+	int count = fsl_edma->drvdata->txirq_count + 1;
 	/*
 	 * 16 channel independent interrupts + 1 error interrupt on i.mx7ulp.
 	 * 2 channel share one interrupt, for example, ch0/ch16, ch1/ch17...
@@ -199,17 +194,58 @@ fsl_edma2_irq_init(struct platform_device *pdev,
 		sprintf(fsl_edma->chans[i].chan_name, "eDMA2-CH%02d", i);
 
 		/* The last IRQ is for eDMA err */
-		if (i == count - 1)
+		if (i == count - 1) {
+			fsl_edma->errirq = irq;
 			ret = devm_request_irq(&pdev->dev, irq,
 						fsl_edma_err_handler,
 						0, "eDMA2-ERR", fsl_edma);
-		else
+		} else {
+			fsl_edma->txirqs[i] = irq;
 			ret = devm_request_irq(&pdev->dev, irq,
 						fsl_edma_tx_handler, 0,
 						fsl_edma->chans[i].chan_name,
 						fsl_edma);
+		}
 		if (ret)
 			return ret;
+	}
+
+	return 0;
+}
+
+static int fsl_edma_irq_init_s32(struct platform_device *pdev,
+				 struct fsl_edma_engine *fsl_edma)
+{
+	int i, ret, irq, txirq_count = fsl_edma->drvdata->txirq_count;
+	static const char * const names[] = {"edma-tx_0-15", "edma-tx_16-31",
+					     "edma-err"};
+
+	for (i = 0; i <= txirq_count; i++) {
+		irq = platform_get_irq_byname(pdev, names[i]);
+		if (irq < 0) {
+			dev_err(&pdev->dev, "Can't get %s IRQ.\n",
+				names[i]);
+			return irq;
+		}
+
+		if (i == txirq_count) {
+			fsl_edma->errirq = irq;
+			ret = devm_request_irq(&pdev->dev, irq,
+					       fsl_edma_err_handler, 0,
+					       names[i], fsl_edma);
+		} else {
+			fsl_edma->txirqs[i] = irq;
+			ret = devm_request_irq(&pdev->dev, irq,
+					       fsl_edma_tx_handler, 0,
+					       names[i], fsl_edma);
+		}
+
+		if (ret) {
+			dev_err(&pdev->dev,
+				"Can't register %s IRQ.\n",
+				names[i]);
+			return ret;
+		}
 	}
 
 	return 0;
@@ -218,12 +254,18 @@ fsl_edma2_irq_init(struct platform_device *pdev,
 static void fsl_edma_irq_exit(
 		struct platform_device *pdev, struct fsl_edma_engine *fsl_edma)
 {
-	if (fsl_edma->txirq == fsl_edma->errirq) {
-		devm_free_irq(&pdev->dev, fsl_edma->txirq, fsl_edma);
-	} else {
-		devm_free_irq(&pdev->dev, fsl_edma->txirq, fsl_edma);
-		devm_free_irq(&pdev->dev, fsl_edma->errirq, fsl_edma);
+	int i;
+	bool free_errirq = true;
+	u8 count = fsl_edma->drvdata->txirq_count;
+
+	for (i = 0; i < count; i++) {
+		devm_free_irq(&pdev->dev, fsl_edma->txirqs[i], fsl_edma);
+		if (fsl_edma->txirqs[i] == fsl_edma->errirq)
+			free_errirq = false;
 	}
+
+	if (free_errirq)
+		devm_free_irq(&pdev->dev, fsl_edma->errirq, fsl_edma);
 }
 
 static void fsl_disable_clocks(struct fsl_edma_engine *fsl_edma, int nr_clocks)
@@ -238,6 +280,7 @@ static struct fsl_edma_drvdata vf610_data = {
 	.version = v1,
 	.dmamuxs = DMAMUX_NR,
 	.setup_irq = fsl_edma_irq_init,
+	.txirq_count = 1,
 };
 
 static struct fsl_edma_drvdata ls1028a_data = {
@@ -245,6 +288,7 @@ static struct fsl_edma_drvdata ls1028a_data = {
 	.dmamuxs = DMAMUX_NR,
 	.mux_swap = true,
 	.setup_irq = fsl_edma_irq_init,
+	.txirq_count = 1,
 };
 
 static struct fsl_edma_drvdata imx7ulp_data = {
@@ -252,12 +296,22 @@ static struct fsl_edma_drvdata imx7ulp_data = {
 	.dmamuxs = 1,
 	.has_dmaclk = true,
 	.setup_irq = fsl_edma2_irq_init,
+	.txirq_count = 16,
+};
+
+static struct fsl_edma_drvdata s32v234_data = {
+	.version = v1,
+	.dmamuxs = DMAMUX_NR,
+	.mux_swap = true,
+	.setup_irq = fsl_edma_irq_init_s32,
+	.txirq_count = 2,
 };
 
 static const struct of_device_id fsl_edma_dt_ids[] = {
 	{ .compatible = "fsl,vf610-edma", .data = &vf610_data},
 	{ .compatible = "fsl,ls1028a-edma", .data = &ls1028a_data},
 	{ .compatible = "fsl,imx7ulp-edma", .data = &imx7ulp_data},
+	{ .compatible = "fsl,s32v234-edma", .data = &s32v234_data},
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, fsl_edma_dt_ids);
@@ -365,6 +419,12 @@ static int fsl_edma_probe(struct platform_device *pdev)
 	}
 
 	edma_writel(fsl_edma, ~0, regs->intl);
+
+	fsl_edma->txirqs = devm_kzalloc(&pdev->dev,
+		drvdata->txirq_count * sizeof(*fsl_edma->txirqs), GFP_KERNEL);
+	if (!fsl_edma->txirqs)
+		return -ENOMEM;
+
 	ret = fsl_edma->drvdata->setup_irq(pdev, fsl_edma);
 	if (ret)
 		return ret;
