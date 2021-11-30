@@ -3,8 +3,6 @@
 snd-sof-acpi-intel-byt-objs := byt.o
 snd-sof-acpi-intel-bdw-objs := bdw.o
 
-snd-sof-intel-ipc-objs := intel-ipc.o
-
 snd-sof-intel-hda-common-objs := hda.o hda-loader.o hda-stream.o hda-trace.o \
 				 hda-dsp.o hda-ipc.o hda-ctrl.o hda-pcm.o \
 				 hda-dai.o hda-bus.o \

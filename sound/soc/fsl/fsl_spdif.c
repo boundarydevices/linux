@@ -11,12 +11,14 @@
 
 #include <linux/bitrev.h>
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/module.h>
 #include <linux/of_address.h>
 #include <linux/of_device.h>
 #include <linux/of_irq.h>
 #include <linux/regmap.h>
 #include <linux/pm_runtime.h>
+#include <linux/busfreq-imx.h>
 
 #include <sound/asoundef.h>
 #include <sound/dmaengine_pcm.h>
@@ -59,6 +61,7 @@ struct fsl_spdif_soc_data {
 	bool imx;
 	bool shared_root_clock;
 	bool raw_capture_mode;
+	bool cchannel_192b;
 	u32 interrupts;
 	u32 tx_burst;
 	u32 rx_burst;
@@ -124,7 +127,7 @@ struct fsl_spdif_priv {
 	u16 sysclk_df[SPDIF_TXRATE_MAX];
 	u8 txclk_src[SPDIF_TXRATE_MAX];
 	u8 rxclk_src;
-	struct clk *txclk[SPDIF_TXRATE_MAX];
+	struct clk *txclk[STC_TXCLK_SRC_MAX];
 	struct clk *rxclk;
 	struct clk *coreclk;
 	struct clk *sysclk;
@@ -133,6 +136,9 @@ struct fsl_spdif_priv {
 	struct snd_dmaengine_dai_dma_data dma_params_rx;
 	/* regcache for SRPC */
 	u32 regcache_srpc;
+	struct clk *pll8k_clk;
+	struct clk *pll11k_clk;
+	bool bypass;
 };
 
 static struct fsl_spdif_soc_data fsl_spdif_vf610 = {
@@ -184,6 +190,17 @@ static struct fsl_spdif_soc_data fsl_spdif_imx8mm = {
 	.tx_burst = FSL_SPDIF_TXFIFO_WML,
 	.rx_burst = FSL_SPDIF_RXFIFO_WML,
 	.tx_formats = FSL_SPDIF_FORMATS_PLAYBACK,
+};
+
+static struct fsl_spdif_soc_data fsl_spdif_imx8ulp = {
+	.imx = true,
+	.shared_root_clock = true,
+	.raw_capture_mode = false,
+	.tx_burst = 2,
+	.rx_burst = 2,
+	.interrupts = 1,
+	.tx_formats = SNDRV_PCM_FMTBIT_S24_LE,
+	.cchannel_192b = true,
 };
 
 /* Check if clk is a root clock that does not share clock source with others */
@@ -429,6 +446,24 @@ static void spdif_write_channel_status(struct fsl_spdif_priv *spdif_priv)
 	regmap_write(regmap, REG_SPDIF_STCSCL, ch_status);
 
 	dev_dbg(&pdev->dev, "STCSCL: 0x%06x\n", ch_status);
+
+	if (spdif_priv->soc->cchannel_192b) {
+		ch_status = (bitrev8(ctrl->ch_status[0]) << 24) |
+			    (bitrev8(ctrl->ch_status[1]) << 16) |
+			    (bitrev8(ctrl->ch_status[2]) << 8) |
+			    bitrev8(ctrl->ch_status[3]);
+
+		regmap_update_bits(regmap, REG_SPDIF_SCR, 0x1000000, 0x1000000);
+
+		/*
+		 * FIXME: In theory, the first 32bit should be in
+		 * REG_SPDIF_STCCA_31_0 register, but here we need to
+		 * set REG_SPDIF_STCCA_191_160 on 8ULP then get correct
+		 * result with HDMI analyzer capture. suspect there is
+		 * a hardware bug here.
+		 */
+		regmap_write(regmap, REG_SPDIF_STCCA_191_160, ch_status);
+	}
 }
 
 /* Set SPDIF PhaseConfig register for rx clock */
@@ -514,7 +549,7 @@ static int spdif_set_sample_rate(struct snd_pcm_substream *substream,
 		goto clk_set_bypass;
 
 	/* The S/PDIF block needs a clock of 64 * fs * txclk_df */
-	ret = clk_set_rate(spdif_priv->txclk[rate],
+	ret = clk_set_rate(spdif_priv->txclk[clk],
 			   64 * sample_rate * txclk_df);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to set tx clock rate\n");
@@ -525,7 +560,7 @@ clk_set_bypass:
 	dev_dbg(&pdev->dev, "expected clock rate = %d\n",
 			(64 * sample_rate * txclk_df * sysclk_df));
 	dev_dbg(&pdev->dev, "actual clock rate = %ld\n",
-			clk_get_rate(spdif_priv->txclk[rate]));
+			clk_get_rate(spdif_priv->txclk[clk]));
 
 	/* set fs field in consumer channel status */
 	spdif_set_cstatus(ctrl, IEC958_AES3_CON_FS, csfs);
@@ -672,13 +707,182 @@ static int fsl_spdif_trigger(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+static u32 fsl_spdif_txclk_caldiv(struct fsl_spdif_priv *spdif_priv,
+				struct clk *clk, u64 savesub,
+				enum spdif_txrate index, bool round)
+{
+	static const u32 rate[] = { 32000, 44100, 48000, 88200, 96000, 176400,
+				    192000, };
+	bool is_sysclk = clk_is_match(clk, spdif_priv->sysclk);
+	u64 rate_ideal, rate_actual, sub;
+	u32 arate;
+	u16 sysclk_dfmin, sysclk_dfmax, sysclk_df;
+	u8 txclk_df;
+
+	/* The sysclk has an extra divisor [2, 512] */
+	sysclk_dfmin = is_sysclk ? 2 : 1;
+	sysclk_dfmax = is_sysclk ? 512 : 1;
+
+	for (sysclk_df = sysclk_dfmin; sysclk_df <= sysclk_dfmax; sysclk_df++) {
+		for (txclk_df = 1; txclk_df <= 128; txclk_df++) {
+			rate_ideal = rate[index] * txclk_df * 64ULL;
+			if (round)
+				rate_actual = clk_round_rate(clk, rate_ideal);
+			else
+				rate_actual = clk_get_rate(clk);
+
+			arate = rate_actual / 64;
+			arate /= txclk_df * sysclk_df;
+
+			if (arate == rate[index]) {
+				/* We are lucky */
+				savesub = 0;
+				spdif_priv->txclk_df[index] = txclk_df;
+				spdif_priv->sysclk_df[index] = sysclk_df;
+				spdif_priv->txrate[index] = arate;
+				goto out;
+			} else if (arate / rate[index] == 1) {
+				/* A little bigger than expect */
+				sub = (u64)(arate - rate[index]) * 100000;
+				do_div(sub, rate[index]);
+				if (sub >= savesub)
+					continue;
+				savesub = sub;
+				spdif_priv->txclk_df[index] = txclk_df;
+				spdif_priv->sysclk_df[index] = sysclk_df;
+				spdif_priv->txrate[index] = arate;
+			} else if (rate[index] / arate == 1) {
+				/* A little smaller than expect */
+				sub = (u64)(rate[index] - arate) * 100000;
+				do_div(sub, rate[index]);
+				if (sub >= savesub)
+					continue;
+				savesub = sub;
+				spdif_priv->txclk_df[index] = txclk_df;
+				spdif_priv->sysclk_df[index] = sysclk_df;
+				spdif_priv->txrate[index] = arate;
+			}
+		}
+	}
+
+out:
+	return savesub;
+}
+
+static int fsl_spdif_probe_txclk(struct fsl_spdif_priv *spdif_priv,
+				enum spdif_txrate index)
+{
+	static const u32 rate[] = { 32000, 44100, 48000, 88200, 96000, 176400,
+				    192000, };
+	struct platform_device *pdev = spdif_priv->pdev;
+	struct device *dev = &pdev->dev;
+	u64 savesub = 100000, ret;
+	struct clk *clk;
+	int i;
+
+	for (i = 0; i < STC_TXCLK_SRC_MAX; i++) {
+		clk = spdif_priv->txclk[i];
+		if (IS_ERR(clk)) {
+			dev_err(dev, "no rxtx%d clock in devicetree\n", i);
+			return PTR_ERR(clk);
+		}
+		if (!clk_get_rate(clk))
+			continue;
+
+		ret = fsl_spdif_txclk_caldiv(spdif_priv, clk, savesub, index,
+					     fsl_spdif_can_set_clk_rate(spdif_priv, i));
+		if (savesub == ret)
+			continue;
+
+		savesub = ret;
+		spdif_priv->txclk_src[index] = i;
+
+		/* To quick catch a divisor, we allow a 0.1% deviation */
+		if (savesub < 100)
+			break;
+	}
+
+	dev_dbg(&pdev->dev, "use rxtx%d as tx clock source for %dHz sample rate\n",
+			spdif_priv->txclk_src[index], rate[index]);
+	dev_dbg(&pdev->dev, "use txclk df %d for %dHz sample rate\n",
+			spdif_priv->txclk_df[index], rate[index]);
+	if (clk_is_match(spdif_priv->txclk[spdif_priv->txclk_src[index]], spdif_priv->sysclk))
+		dev_dbg(&pdev->dev, "use sysclk df %d for %dHz sample rate\n",
+				spdif_priv->sysclk_df[index], rate[index]);
+	dev_dbg(&pdev->dev, "the best rate for %dHz sample rate is %dHz\n",
+			rate[index], spdif_priv->txrate[index]);
+
+	return 0;
+}
+
+static int fsl_spdif_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
+		int clk_id, unsigned int freq, int dir)
+{
+	struct fsl_spdif_priv *data = snd_soc_dai_get_drvdata(cpu_dai);
+	struct platform_device *pdev = data->pdev;
+	struct device *dev = &pdev->dev;
+	struct clk *clk, *p, *pll = 0, *npll = 0;
+	u64 ratio = freq;
+	int ret, i;
+	bool reparent = false;
+
+	if (dir != SND_SOC_CLOCK_OUT || freq == 0 || clk_id != STC_TXCLK_SPDIF_ROOT)
+		return 0;
+
+	if (data->pll8k_clk == NULL || data->pll11k_clk == NULL)
+		return 0;
+
+	clk = data->txclk[clk_id];
+	if (IS_ERR_OR_NULL(clk)) {
+		dev_err(dev, "no rxtx%d clock in devicetree\n", clk_id);
+		return PTR_ERR(clk);
+	}
+
+	p = clk;
+	while (p && data->pll8k_clk && data->pll11k_clk) {
+		struct clk *pp = clk_get_parent(p);
+
+		if (clk_is_match(pp, data->pll8k_clk) ||
+		    clk_is_match(pp, data->pll11k_clk)) {
+			pll = pp;
+			break;
+		}
+		p = pp;
+	}
+
+	npll = (do_div(ratio, 8000) ? data->pll11k_clk : data->pll8k_clk);
+	reparent = (pll && !clk_is_match(pll, npll));
+
+	clk_disable_unprepare(clk);
+	if (reparent) {
+		ret = clk_set_parent(p, npll);
+		if (ret < 0)
+			dev_warn(cpu_dai->dev, "failed to set parent %s: %d\n",
+				 __clk_get_name(npll), ret);
+	}
+
+	ret = clk_set_rate(clk, freq);
+	if (ret < 0)
+		dev_warn(cpu_dai->dev, "failed to set clock rate (%u): %d\n",
+			 freq, ret);
+	clk_prepare_enable(clk);
+
+	for (i = 0; i < SPDIF_TXRATE_MAX; i++) {
+		ret = fsl_spdif_probe_txclk(data, i);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
 static const struct snd_soc_dai_ops fsl_spdif_dai_ops = {
 	.startup = fsl_spdif_startup,
+	.set_sysclk = fsl_spdif_set_dai_sysclk,
 	.hw_params = fsl_spdif_hw_params,
 	.trigger = fsl_spdif_trigger,
 	.shutdown = fsl_spdif_shutdown,
 };
-
 
 /*
  * FSL SPDIF IEC958 controller(mixer) functions
@@ -895,6 +1099,69 @@ static int fsl_spdif_rx_rcm_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int fsl_spdif_bypass_get(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_spdif_priv *priv = snd_soc_dai_get_drvdata(dai);
+
+	ucontrol->value.integer.value[0] = priv->bypass ? 1 : 0;
+
+	return 0;
+}
+
+static int fsl_spdif_bypass_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_dai *dai = snd_kcontrol_chip(kcontrol);
+	struct fsl_spdif_priv *priv = snd_soc_dai_get_drvdata(dai);
+	struct snd_soc_card *card = dai->component->card;
+	struct snd_soc_pcm_runtime *rtd;
+	struct regmap *regmap = priv->regmap;
+	bool set = (ucontrol->value.integer.value[0] != 0);
+	int stream;
+	u32 scr, mask;
+
+	rtd = snd_soc_get_pcm_runtime(card, card->dai_link);
+
+	if (priv->bypass == set)
+		return 0; /* nothing to do */
+
+	if (snd_soc_dai_active(dai)) {
+		dev_err(dai->dev, "Cannot change BYPASS mode while stream is running.\n");
+		return -EBUSY;
+	}
+
+	pm_runtime_get_sync(dai->dev);
+
+	if (set) {
+		/* Disable interrupts */
+		regmap_update_bits(regmap, REG_SPDIF_SIE, 0xffffff, 0);
+
+		/* Configure BYPASS mode */
+		scr = SCR_TXSEL_RX | SCR_RXFIFO_OFF;
+		mask = SCR_RXFIFO_FSEL_MASK | SCR_RXFIFO_AUTOSYNC_MASK |
+			SCR_RXFIFO_CTL_MASK | SCR_RXFIFO_OFF_MASK | SCR_TXSEL_MASK;
+		/* Power up SPDIF module */
+		mask |= SCR_LOW_POWER;
+	} else {
+		/* Power down SPDIF module, disable TX */
+		scr = SCR_LOW_POWER | SCR_TXSEL_OFF;
+		mask = SCR_LOW_POWER | SCR_TXSEL_MASK;
+	}
+
+	regmap_update_bits(regmap, REG_SPDIF_SCR, mask, scr);
+
+	/* Disable playback & capture if BYPASS mode is enabled, enable otherwise */
+	for_each_pcm_streams(stream)
+		rtd->pcm->streams[stream].substream_count = (set ? 0 : 1);
+
+	priv->bypass = set;
+	pm_runtime_put_sync(dai->dev);
+
+	return 0;
+}
+
 /* DPLL lock information */
 static int fsl_spdif_rxrate_info(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_info *uinfo)
@@ -1065,6 +1332,15 @@ static struct snd_kcontrol_new fsl_spdif_ctrls[] = {
 		.info = fsl_spdif_rxrate_info,
 		.get = fsl_spdif_rxrate_get,
 	},
+	/* RX bypass controller */
+	{
+		.iface = SNDRV_CTL_ELEM_IFACE_PCM,
+		.name = "Bypass Mode",
+		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
+		.info = snd_ctl_boolean_mono_info,
+		.get = fsl_spdif_bypass_get,
+		.put = fsl_spdif_bypass_put,
+	},
 	/* User bit sync mode set/get controller */
 	{
 		.iface = SNDRV_CTL_ELEM_IFACE_PCM,
@@ -1143,6 +1419,8 @@ static const struct reg_default fsl_spdif_reg_defaults[] = {
 	{REG_SPDIF_STR,	   0x00000000},
 	{REG_SPDIF_STCSCH, 0x00000000},
 	{REG_SPDIF_STCSCL, 0x00000000},
+	{REG_SPDIF_STCSPH, 0x00000000},
+	{REG_SPDIF_STCSPL, 0x00000000},
 	{REG_SPDIF_STC,	   0x00020f00},
 };
 
@@ -1162,8 +1440,22 @@ static bool fsl_spdif_readable_reg(struct device *dev, unsigned int reg)
 	case REG_SPDIF_SRQ:
 	case REG_SPDIF_STCSCH:
 	case REG_SPDIF_STCSCL:
+	case REG_SPDIF_STCSPH:
+	case REG_SPDIF_STCSPL:
 	case REG_SPDIF_SRFM:
 	case REG_SPDIF_STC:
+	case REG_SPDIF_SRCCA_31_0:
+	case REG_SPDIF_SRCCA_63_32:
+	case REG_SPDIF_SRCCA_95_64:
+	case REG_SPDIF_SRCCA_127_96:
+	case REG_SPDIF_SRCCA_159_128:
+	case REG_SPDIF_SRCCA_191_160:
+	case REG_SPDIF_STCCA_31_0:
+	case REG_SPDIF_STCCA_63_32:
+	case REG_SPDIF_STCCA_95_64:
+	case REG_SPDIF_STCCA_127_96:
+	case REG_SPDIF_STCCA_159_128:
+	case REG_SPDIF_STCCA_191_160:
 		return true;
 	default:
 		return false;
@@ -1182,6 +1474,12 @@ static bool fsl_spdif_volatile_reg(struct device *dev, unsigned int reg)
 	case REG_SPDIF_SRU:
 	case REG_SPDIF_SRQ:
 	case REG_SPDIF_SRFM:
+	case REG_SPDIF_SRCCA_31_0:
+	case REG_SPDIF_SRCCA_63_32:
+	case REG_SPDIF_SRCCA_95_64:
+	case REG_SPDIF_SRCCA_127_96:
+	case REG_SPDIF_SRCCA_159_128:
+	case REG_SPDIF_SRCCA_191_160:
 		return true;
 	default:
 		return false;
@@ -1200,7 +1498,15 @@ static bool fsl_spdif_writeable_reg(struct device *dev, unsigned int reg)
 	case REG_SPDIF_STR:
 	case REG_SPDIF_STCSCH:
 	case REG_SPDIF_STCSCL:
+	case REG_SPDIF_STCSPH:
+	case REG_SPDIF_STCSPL:
 	case REG_SPDIF_STC:
+	case REG_SPDIF_STCCA_31_0:
+	case REG_SPDIF_STCCA_63_32:
+	case REG_SPDIF_STCCA_95_64:
+	case REG_SPDIF_STCCA_127_96:
+	case REG_SPDIF_STCCA_159_128:
+	case REG_SPDIF_STCCA_191_160:
 		return true;
 	default:
 		return false;
@@ -1212,7 +1518,7 @@ static const struct regmap_config fsl_spdif_regmap_config = {
 	.reg_stride = 4,
 	.val_bits = 32,
 
-	.max_register = REG_SPDIF_STC,
+	.max_register = REG_SPDIF_STCCA_191_160,
 	.reg_defaults = fsl_spdif_reg_defaults,
 	.num_reg_defaults = ARRAY_SIZE(fsl_spdif_reg_defaults),
 	.readable_reg = fsl_spdif_readable_reg,
@@ -1221,117 +1527,6 @@ static const struct regmap_config fsl_spdif_regmap_config = {
 	.cache_type = REGCACHE_FLAT,
 };
 
-static u32 fsl_spdif_txclk_caldiv(struct fsl_spdif_priv *spdif_priv,
-				struct clk *clk, u64 savesub,
-				enum spdif_txrate index, bool round)
-{
-	static const u32 rate[] = { 32000, 44100, 48000, 88200, 96000, 176400,
-				    192000, };
-	bool is_sysclk = clk_is_match(clk, spdif_priv->sysclk);
-	u64 rate_ideal, rate_actual, sub;
-	u32 arate;
-	u16 sysclk_dfmin, sysclk_dfmax, sysclk_df;
-	u8 txclk_df;
-
-	/* The sysclk has an extra divisor [2, 512] */
-	sysclk_dfmin = is_sysclk ? 2 : 1;
-	sysclk_dfmax = is_sysclk ? 512 : 1;
-
-	for (sysclk_df = sysclk_dfmin; sysclk_df <= sysclk_dfmax; sysclk_df++) {
-		for (txclk_df = 1; txclk_df <= 128; txclk_df++) {
-			rate_ideal = rate[index] * txclk_df * 64ULL;
-			if (round)
-				rate_actual = clk_round_rate(clk, rate_ideal);
-			else
-				rate_actual = clk_get_rate(clk);
-
-			arate = rate_actual / 64;
-			arate /= txclk_df * sysclk_df;
-
-			if (arate == rate[index]) {
-				/* We are lucky */
-				savesub = 0;
-				spdif_priv->txclk_df[index] = txclk_df;
-				spdif_priv->sysclk_df[index] = sysclk_df;
-				spdif_priv->txrate[index] = arate;
-				goto out;
-			} else if (arate / rate[index] == 1) {
-				/* A little bigger than expect */
-				sub = (u64)(arate - rate[index]) * 100000;
-				do_div(sub, rate[index]);
-				if (sub >= savesub)
-					continue;
-				savesub = sub;
-				spdif_priv->txclk_df[index] = txclk_df;
-				spdif_priv->sysclk_df[index] = sysclk_df;
-				spdif_priv->txrate[index] = arate;
-			} else if (rate[index] / arate == 1) {
-				/* A little smaller than expect */
-				sub = (u64)(rate[index] - arate) * 100000;
-				do_div(sub, rate[index]);
-				if (sub >= savesub)
-					continue;
-				savesub = sub;
-				spdif_priv->txclk_df[index] = txclk_df;
-				spdif_priv->sysclk_df[index] = sysclk_df;
-				spdif_priv->txrate[index] = arate;
-			}
-		}
-	}
-
-out:
-	return savesub;
-}
-
-static int fsl_spdif_probe_txclk(struct fsl_spdif_priv *spdif_priv,
-				enum spdif_txrate index)
-{
-	static const u32 rate[] = { 32000, 44100, 48000, 88200, 96000, 176400,
-				    192000, };
-	struct platform_device *pdev = spdif_priv->pdev;
-	struct device *dev = &pdev->dev;
-	u64 savesub = 100000, ret;
-	struct clk *clk;
-	char tmp[16];
-	int i;
-
-	for (i = 0; i < STC_TXCLK_SRC_MAX; i++) {
-		sprintf(tmp, "rxtx%d", i);
-		clk = devm_clk_get(dev, tmp);
-		if (IS_ERR(clk)) {
-			dev_err(dev, "no rxtx%d clock in devicetree\n", i);
-			return PTR_ERR(clk);
-		}
-		if (!clk_get_rate(clk))
-			continue;
-
-		ret = fsl_spdif_txclk_caldiv(spdif_priv, clk, savesub, index,
-					     fsl_spdif_can_set_clk_rate(spdif_priv, i));
-		if (savesub == ret)
-			continue;
-
-		savesub = ret;
-		spdif_priv->txclk[index] = clk;
-		spdif_priv->txclk_src[index] = i;
-
-		/* To quick catch a divisor, we allow a 0.1% deviation */
-		if (savesub < 100)
-			break;
-	}
-
-	dev_dbg(dev, "use rxtx%d as tx clock source for %dHz sample rate\n",
-			spdif_priv->txclk_src[index], rate[index]);
-	dev_dbg(dev, "use txclk df %d for %dHz sample rate\n",
-			spdif_priv->txclk_df[index], rate[index]);
-	if (clk_is_match(spdif_priv->txclk[index], spdif_priv->sysclk))
-		dev_dbg(dev, "use sysclk df %d for %dHz sample rate\n",
-				spdif_priv->sysclk_df[index], rate[index]);
-	dev_dbg(dev, "the best rate for %dHz sample rate is %dHz\n",
-			rate[index], spdif_priv->txrate[index]);
-
-	return 0;
-}
-
 static int fsl_spdif_probe(struct platform_device *pdev)
 {
 	struct fsl_spdif_priv *spdif_priv;
@@ -1339,6 +1534,7 @@ static int fsl_spdif_probe(struct platform_device *pdev)
 	struct resource *res;
 	void __iomem *regs;
 	int irq, ret, i;
+	char tmp[16];
 
 	spdif_priv = devm_kzalloc(&pdev->dev, sizeof(*spdif_priv), GFP_KERNEL);
 	if (!spdif_priv)
@@ -1378,8 +1574,17 @@ static int fsl_spdif_probe(struct platform_device *pdev)
 		}
 	}
 
+	for (i = 0; i < STC_TXCLK_SRC_MAX; i++) {
+		sprintf(tmp, "rxtx%d", i);
+		spdif_priv->txclk[i] = devm_clk_get(&pdev->dev, tmp);
+		if (IS_ERR(spdif_priv->txclk[i])) {
+			dev_err(&pdev->dev, "no rxtx%d clock in devicetree\n", i);
+			return PTR_ERR(spdif_priv->txclk[i]);
+		}
+	}
+
 	/* Get system clock for rx clock rate calculation */
-	spdif_priv->sysclk = devm_clk_get(&pdev->dev, "rxtx5");
+	spdif_priv->sysclk = spdif_priv->txclk[5];
 	if (IS_ERR(spdif_priv->sysclk)) {
 		dev_err(&pdev->dev, "no sys clock (rxtx5) in devicetree\n");
 		return PTR_ERR(spdif_priv->sysclk);
@@ -1397,12 +1602,20 @@ static int fsl_spdif_probe(struct platform_device *pdev)
 		dev_warn(&pdev->dev, "no spba clock in devicetree\n");
 
 	/* Select clock source for rx/tx clock */
-	spdif_priv->rxclk = devm_clk_get(&pdev->dev, "rxtx1");
+	spdif_priv->rxclk = spdif_priv->txclk[1];
 	if (IS_ERR(spdif_priv->rxclk)) {
 		dev_err(&pdev->dev, "no rxtx1 clock in devicetree\n");
 		return PTR_ERR(spdif_priv->rxclk);
 	}
 	spdif_priv->rxclk_src = DEFAULT_RXCLK_SRC;
+
+	spdif_priv->pll8k_clk = devm_clk_get(&pdev->dev, "pll8k");
+	if (IS_ERR(spdif_priv->pll8k_clk))
+		spdif_priv->pll8k_clk = NULL;
+
+	spdif_priv->pll11k_clk = devm_clk_get(&pdev->dev, "pll11k");
+	if (IS_ERR(spdif_priv->pll11k_clk))
+		spdif_priv->pll11k_clk = NULL;
 
 	for (i = 0; i < SPDIF_TXRATE_MAX; i++) {
 		ret = fsl_spdif_probe_txclk(spdif_priv, i);
@@ -1478,9 +1691,9 @@ static int fsl_spdif_runtime_suspend(struct device *dev)
 			&spdif_priv->regcache_srpc);
 	regcache_cache_only(spdif_priv->regmap, true);
 
-	clk_disable_unprepare(spdif_priv->rxclk);
+	release_bus_freq(BUS_FREQ_HIGH);
 
-	for (i = 0; i < SPDIF_TXRATE_MAX; i++)
+	for (i = 0; i < STC_TXCLK_SRC_MAX; i++)
 		clk_disable_unprepare(spdif_priv->txclk[i]);
 
 	if (!IS_ERR(spdif_priv->spbaclk))
@@ -1510,15 +1723,13 @@ static int fsl_spdif_runtime_resume(struct device *dev)
 		}
 	}
 
-	for (i = 0; i < SPDIF_TXRATE_MAX; i++) {
+	for (i = 0; i < STC_TXCLK_SRC_MAX; i++) {
 		ret = clk_prepare_enable(spdif_priv->txclk[i]);
 		if (ret)
 			goto disable_tx_clk;
 	}
 
-	ret = clk_prepare_enable(spdif_priv->rxclk);
-	if (ret)
-		goto disable_tx_clk;
+	request_bus_freq(BUS_FREQ_HIGH);
 
 	regcache_cache_only(spdif_priv->regmap, false);
 	regcache_mark_dirty(spdif_priv->regmap);
@@ -1529,12 +1740,10 @@ static int fsl_spdif_runtime_resume(struct device *dev)
 
 	ret = regcache_sync(spdif_priv->regmap);
 	if (ret)
-		goto disable_rx_clk;
+		goto disable_tx_clk;
 
 	return 0;
 
-disable_rx_clk:
-	clk_disable_unprepare(spdif_priv->rxclk);
 disable_tx_clk:
 	for (i--; i >= 0; i--)
 		clk_disable_unprepare(spdif_priv->txclk[i]);
@@ -1560,6 +1769,7 @@ static const struct of_device_id fsl_spdif_dt_ids[] = {
 	{ .compatible = "fsl,imx6sx-spdif", .data = &fsl_spdif_imx6sx, },
 	{ .compatible = "fsl,imx8qm-spdif", .data = &fsl_spdif_imx8qm, },
 	{ .compatible = "fsl,imx8mm-spdif", .data = &fsl_spdif_imx8mm, },
+	{ .compatible = "fsl,imx8ulp-spdif", .data = &fsl_spdif_imx8ulp, },
 	{}
 };
 MODULE_DEVICE_TABLE(of, fsl_spdif_dt_ids);

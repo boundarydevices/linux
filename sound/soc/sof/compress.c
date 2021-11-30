@@ -1,80 +1,174 @@
 // SPDX-License-Identifier: (GPL-2.0-only OR BSD-3-Clause)
 //
-// This file is provided under a dual BSD/GPLv2 license.  When using or
-// redistributing this file, you may do so under either license.
+// Copyright 2021 NXP
 //
-// Copyright(c) 2019-2020 Intel Corporation. All rights reserved.
-//
-// Author: Cezary Rojewski <cezary.rojewski@intel.com>
-//
+// Author: Daniel Baluta <daniel.baluta@nxp.com>
 
 #include <sound/soc.h>
-#include "compress.h"
-#include "ops.h"
-#include "probe.h"
+#include <sound/sof.h>
+#include <sound/compress_driver.h>
+#include "sof-audio.h"
+#include "sof-priv.h"
 
-const struct snd_compress_ops sof_probe_compressed_ops = {
-	.copy		= sof_probe_compr_copy,
-};
-EXPORT_SYMBOL(sof_probe_compressed_ops);
-
-int sof_probe_compr_open(struct snd_compr_stream *cstream,
-		struct snd_soc_dai *dai)
+static void sof_set_transferred_bytes(struct sof_compr_stream *sstream,
+				      u64 host_pos, u64 buffer_size)
 {
-	struct snd_sof_dev *sdev =
-				snd_soc_component_get_drvdata(dai->component);
-	int ret;
+	u64 prev_pos;
+	unsigned int copied;
 
-	ret = snd_sof_probe_compr_assign(sdev, cstream, dai);
-	if (ret < 0) {
-		dev_err(dai->dev, "Failed to assign probe stream: %d\n", ret);
-		return ret;
+	div64_u64_rem(sstream->copied_total, buffer_size, &prev_pos);
+
+	if (host_pos < prev_pos)
+		copied = (buffer_size - prev_pos) + host_pos;
+	else
+		copied = host_pos - prev_pos;
+
+	sstream->copied_total += copied;
+}
+
+static void snd_sof_compr_fragment_elapsed_work(struct work_struct *work)
+{
+	struct snd_sof_pcm_stream *sps =
+		container_of(work, struct snd_sof_pcm_stream,
+			     period_elapsed_work);
+
+	snd_compr_fragment_elapsed(sps->cstream);
+}
+
+void snd_sof_compr_init_elapsed_work(struct work_struct *work)
+{
+	INIT_WORK(work, snd_sof_compr_fragment_elapsed_work);
+}
+
+/*
+ * sof compr fragment elapse, this could be called in irq thread context
+ */
+void snd_sof_compr_fragment_elapsed(struct snd_compr_stream *cstream)
+{
+	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
+	struct snd_compr_runtime *runtime = cstream->runtime;
+	struct sof_compr_stream *sstream = runtime->private_data;
+	struct snd_soc_component *component =
+		snd_soc_rtdcom_lookup(rtd, SOF_AUDIO_PCM_DRV_NAME);
+	struct snd_sof_pcm *spcm;
+
+	spcm = snd_sof_find_spcm_dai(component, rtd);
+	if (!spcm) {
+		dev_err(component->dev,
+			"error: fragment elapsed for unknown stream!\n");
+		return;
 	}
 
-	sdev->extractor_stream_tag = ret;
+	sof_set_transferred_bytes(sstream, spcm->stream[cstream->direction].posn.host_posn,
+				  runtime->buffer_size);
+
+	/* use the same workqueue-based solution as for PCM, cf. snd_sof_pcm_elapsed */
+	schedule_work(&spcm->stream[cstream->direction].period_elapsed_work);
+}
+
+static int create_page_table(struct snd_soc_component *component,
+			     struct snd_compr_stream *cstream,
+			     unsigned char *dma_area, size_t size)
+{
+	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
+	struct snd_dma_buffer *dmab = cstream->runtime->dma_buffer_p;
+	int dir = cstream->direction;
+	struct snd_sof_pcm *spcm;
+
+	spcm = snd_sof_find_spcm_dai(component, rtd);
+	if (!spcm)
+		return -EINVAL;
+
+	return snd_sof_create_page_table(component->dev, dmab,
+					 spcm->stream[dir].page_table.area, size);
+}
+
+int sof_compr_open(struct snd_soc_component *component,
+		   struct snd_compr_stream *cstream)
+{
+	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
+	struct snd_compr_runtime *runtime = cstream->runtime;
+	struct sof_compr_stream *sstream;
+	struct snd_sof_pcm *spcm;
+	int dir;
+
+	sstream = kzalloc(sizeof(*sstream), GFP_KERNEL);
+	if (!sstream)
+		return -ENOMEM;
+
+	spcm = snd_sof_find_spcm_dai(component, rtd);
+	if (!spcm) {
+		kfree(sstream);
+		return -EINVAL;
+	}
+
+	dir = cstream->direction;
+
+	if (spcm->stream[dir].cstream) {
+		kfree(sstream);
+		return -EBUSY;
+	}
+
+	spcm->stream[dir].cstream = cstream;
+	spcm->stream[dir].posn.host_posn = 0;
+	spcm->stream[dir].posn.dai_posn = 0;
+	spcm->prepared[dir] = false;
+
+	runtime->private_data = sstream;
+
 	return 0;
 }
-EXPORT_SYMBOL(sof_probe_compr_open);
 
-int sof_probe_compr_free(struct snd_compr_stream *cstream,
-		struct snd_soc_dai *dai)
+int sof_compr_free(struct snd_soc_component *component,
+		   struct snd_compr_stream *cstream)
 {
-	struct snd_sof_dev *sdev =
-				snd_soc_component_get_drvdata(dai->component);
-	struct sof_probe_point_desc *desc;
-	size_t num_desc;
-	int i, ret;
+	struct snd_sof_dev *sdev = snd_soc_component_get_drvdata(component);
+	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
+	struct snd_compr_runtime *runtime = cstream->runtime;
+	struct sof_compr_stream *sstream = runtime->private_data;
+	struct sof_ipc_stream stream;
+	struct sof_ipc_reply reply;
+	struct snd_sof_pcm *spcm;
+	int ret = 0;
 
-	/* disconnect all probe points */
-	ret = sof_ipc_probe_points_info(sdev, &desc, &num_desc);
-	if (ret < 0) {
-		dev_err(dai->dev, "Failed to get probe points: %d\n", ret);
-		goto exit;
+	spcm = snd_sof_find_spcm_dai(component, rtd);
+	if (!spcm)
+		return -EINVAL;
+
+	stream.hdr.size = sizeof(stream);
+	stream.hdr.cmd = SOF_IPC_GLB_STREAM_MSG | SOF_IPC_STREAM_PCM_FREE;
+	stream.comp_id = spcm->stream[cstream->direction].comp_id;
+
+	if (spcm->prepared[cstream->direction]) {
+		ret = sof_ipc_tx_message(sdev->ipc, stream.hdr.cmd,
+					 &stream, sizeof(stream),
+					 &reply, sizeof(reply));
+		if (!ret)
+			spcm->prepared[cstream->direction] = false;
 	}
 
-	for (i = 0; i < num_desc; i++)
-		sof_ipc_probe_points_remove(sdev, &desc[i].buffer_id, 1);
-	kfree(desc);
+	cancel_work_sync(&spcm->stream[cstream->direction].period_elapsed_work);
+	spcm->stream[cstream->direction].cstream = NULL;
+	kfree(sstream);
 
-exit:
-	ret = sof_ipc_probe_deinit(sdev);
-	if (ret < 0)
-		dev_err(dai->dev, "Failed to deinit probe: %d\n", ret);
-
-	sdev->extractor_stream_tag = SOF_PROBE_INVALID_NODE_ID;
-	snd_compr_free_pages(cstream);
-
-	return snd_sof_probe_compr_free(sdev, cstream, dai);
+	return ret;
 }
-EXPORT_SYMBOL(sof_probe_compr_free);
 
-int sof_probe_compr_set_params(struct snd_compr_stream *cstream,
-		struct snd_compr_params *params, struct snd_soc_dai *dai)
+int sof_compr_set_params(struct snd_soc_component *component,
+			 struct snd_compr_stream *cstream, struct snd_compr_params *params)
 {
+	struct snd_sof_dev *sdev = snd_soc_component_get_drvdata(component);
+	struct snd_soc_pcm_runtime *rtd_pcm = cstream->private_data;
 	struct snd_compr_runtime *rtd = cstream->runtime;
-	struct snd_sof_dev *sdev =
-				snd_soc_component_get_drvdata(dai->component);
+	struct sof_compr_stream *sstream = rtd->private_data;
+	struct sof_ipc_pcm_params_reply ipc_params_reply;
+	struct sof_ipc_pcm_params pcm;
+	struct snd_sof_pcm *spcm;
 	int ret;
+
+	spcm = snd_sof_find_spcm_dai(component, rtd_pcm);
+	if (!spcm)
+		return -EINVAL;
 
 	cstream->dma_buffer.dev.type = SNDRV_DMA_TYPE_DEV_SG;
 	cstream->dma_buffer.dev.dev = sdev->dev;
@@ -82,44 +176,90 @@ int sof_probe_compr_set_params(struct snd_compr_stream *cstream,
 	if (ret < 0)
 		return ret;
 
-	ret = snd_sof_probe_compr_set_params(sdev, cstream, params, dai);
-	if (ret < 0)
-		return ret;
+	create_page_table(component, cstream, rtd->dma_area, rtd->dma_bytes);
 
-	ret = sof_ipc_probe_init(sdev, sdev->extractor_stream_tag,
-				 rtd->dma_bytes);
+	memset(&pcm, 0, sizeof(pcm));
+
+	pcm.params.buffer.pages = PFN_UP(rtd->dma_bytes);
+	pcm.hdr.size = sizeof(pcm);
+	pcm.hdr.cmd = SOF_IPC_GLB_STREAM_MSG | SOF_IPC_STREAM_PCM_PARAMS;
+
+	pcm.comp_id = spcm->stream[cstream->direction].comp_id;
+	pcm.params.hdr.size = sizeof(pcm.params);
+	pcm.params.buffer.phy_addr = spcm->stream[cstream->direction].page_table.addr;
+	pcm.params.buffer.size = rtd->dma_bytes;
+	pcm.params.direction = cstream->direction;
+	pcm.params.channels = params->codec.ch_out;
+	pcm.params.rate = params->codec.sample_rate;
+	pcm.params.buffer_fmt = SOF_IPC_BUFFER_INTERLEAVED;
+	pcm.params.frame_fmt = SOF_IPC_FRAME_S32_LE;
+	pcm.params.sample_container_bytes =
+		snd_pcm_format_physical_width(SNDRV_PCM_FORMAT_S32) >> 3;
+	pcm.params.host_period_bytes = params->buffer.fragment_size;
+
+	ret = sof_ipc_tx_message(sdev->ipc, pcm.hdr.cmd, &pcm, sizeof(pcm),
+				 &ipc_params_reply, sizeof(ipc_params_reply));
 	if (ret < 0) {
-		dev_err(dai->dev, "Failed to init probe: %d\n", ret);
+		dev_err(component->dev, "error ipc failed\n");
 		return ret;
 	}
 
+	sstream->posn_offset = sdev->stream_box.offset + ipc_params_reply.posn_offset;
+	sstream->sample_rate = params->codec.sample_rate;
+	spcm->prepared[cstream->direction] = true;
+
 	return 0;
 }
-EXPORT_SYMBOL(sof_probe_compr_set_params);
 
-int sof_probe_compr_trigger(struct snd_compr_stream *cstream, int cmd,
-		struct snd_soc_dai *dai)
+int sof_compr_get_params(struct snd_soc_component *component,
+			 struct snd_compr_stream *cstream, struct snd_codec *params)
 {
-	struct snd_sof_dev *sdev =
-				snd_soc_component_get_drvdata(dai->component);
-
-	return snd_sof_probe_compr_trigger(sdev, cstream, cmd, dai);
+	return 0;
 }
-EXPORT_SYMBOL(sof_probe_compr_trigger);
 
-int sof_probe_compr_pointer(struct snd_compr_stream *cstream,
-		struct snd_compr_tstamp *tstamp, struct snd_soc_dai *dai)
+int sof_compr_trigger(struct snd_soc_component *component,
+		      struct snd_compr_stream *cstream, int cmd)
 {
-	struct snd_sof_dev *sdev =
-				snd_soc_component_get_drvdata(dai->component);
+	struct sof_ipc_stream stream;
+	struct sof_ipc_reply reply;
+	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
+	struct snd_sof_dev *sdev = snd_soc_component_get_drvdata(component);
+	struct snd_sof_pcm *spcm;
 
-	return snd_sof_probe_compr_pointer(sdev, cstream, tstamp, dai);
+	spcm = snd_sof_find_spcm_dai(component, rtd);
+	if (!spcm)
+		return -EINVAL;
+
+	stream.hdr.size = sizeof(stream);
+	stream.hdr.cmd = SOF_IPC_GLB_STREAM_MSG;
+	stream.comp_id = spcm->stream[cstream->direction].comp_id;
+
+	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_START:
+		stream.hdr.cmd |= SOF_IPC_STREAM_TRIG_START;
+		break;
+	case SNDRV_PCM_TRIGGER_STOP:
+		stream.hdr.cmd |= SOF_IPC_STREAM_TRIG_STOP;
+		break;
+	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+		stream.hdr.cmd |= SOF_IPC_STREAM_TRIG_PAUSE;
+		break;
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		stream.hdr.cmd |= SOF_IPC_STREAM_TRIG_RELEASE;
+		break;
+	default:
+		dev_err(component->dev, "error: unhandled trigger cmd %d\n", cmd);
+		break;
+	}
+
+	return sof_ipc_tx_message(sdev->ipc, stream.hdr.cmd,
+				  &stream, sizeof(stream),
+				  &reply, sizeof(reply));
 }
-EXPORT_SYMBOL(sof_probe_compr_pointer);
 
-int sof_probe_compr_copy(struct snd_soc_component *component,
-			 struct snd_compr_stream *cstream,
-			 char __user *buf, size_t count)
+int sof_compr_copy(struct snd_soc_component *component,
+		   struct snd_compr_stream *cstream,
+		   char __user *buf, size_t count)
 {
 	struct snd_compr_runtime *rtd = cstream->runtime;
 	unsigned int offset, n;
@@ -129,19 +269,114 @@ int sof_probe_compr_copy(struct snd_soc_component *component,
 	if (count > rtd->buffer_size)
 		count = rtd->buffer_size;
 
-	div_u64_rem(rtd->total_bytes_transferred, rtd->buffer_size, &offset);
+	div_u64_rem(rtd->total_bytes_available, rtd->buffer_size, &offset);
 	ptr = rtd->dma_area + offset;
 	n = rtd->buffer_size - offset;
 
 	if (count < n) {
-		ret = copy_to_user(buf, ptr, count);
+		ret = copy_from_user(ptr, buf, count);
 	} else {
-		ret = copy_to_user(buf, ptr, n);
-		ret += copy_to_user(buf + n, rtd->dma_area, count - n);
+		ret = copy_from_user(ptr, buf, n);
+		ret += copy_from_user(rtd->dma_area, buf + n, count - n);
 	}
 
-	if (ret)
-		return count - ret;
-	return count;
+	return count - ret;
 }
-EXPORT_SYMBOL(sof_probe_compr_copy);
+
+static int sof_compr_pointer(struct snd_soc_component *component,
+			     struct snd_compr_stream *cstream,
+			     struct snd_compr_tstamp *tstamp)
+{
+	struct snd_compr_runtime *runtime = cstream->runtime;
+	struct sof_compr_stream *sstream = runtime->private_data;
+
+	tstamp->sampling_rate = sstream->sample_rate;
+	tstamp->copied_total = sstream->copied_total;
+
+	return 0;
+}
+
+static int sof_compr_get_caps(struct snd_soc_component *component,
+			      struct snd_compr_stream *cstream,
+			      struct snd_compr_caps *caps)
+{
+	caps->num_codecs = 3;
+	caps->min_fragment_size = 3840;
+	caps->max_fragment_size = 3840;
+	caps->min_fragments = 2;
+	caps->max_fragments = 2;
+	caps->codecs[0] = SND_AUDIOCODEC_MP3;
+	caps->codecs[1] = SND_AUDIOCODEC_AAC;
+	caps->codecs[2] = SND_AUDIOCODEC_PCM;
+
+	return 0;
+}
+
+static struct snd_compr_codec_caps caps_pcm = {
+	.num_descriptors = 1,
+	.descriptor[0].max_ch = 2,
+	.descriptor[0].sample_rates[0] = 48000,
+	.descriptor[0].num_sample_rates = 1,
+	.descriptor[0].bit_rate = {1536, 3072},
+	.descriptor[0].num_bitrates = 2,
+	.descriptor[0].profiles = SND_AUDIOPROFILE_PCM,
+	.descriptor[0].modes = 0,
+	.descriptor[0].formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S32_LE,
+};
+
+static struct snd_compr_codec_caps caps_mp3 = {
+	.num_descriptors = 1,
+	.descriptor[0].max_ch = 2,
+	.descriptor[0].sample_rates[0] = 48000,
+	.descriptor[0].num_sample_rates = 1,
+	.descriptor[0].bit_rate = {32, 40, 48, 56, 64, 80, 96, 112, 224, 256, 320},
+	.descriptor[0].num_bitrates = 11,
+	.descriptor[0].profiles = 0,
+	.descriptor[0].modes = SND_AUDIOCHANMODE_MP3_STEREO,
+	.descriptor[0].formats = 0,
+};
+
+static struct snd_compr_codec_caps caps_aac = {
+	.num_descriptors = 1,
+	.descriptor[0].max_ch = 2,
+	.descriptor[0].sample_rates[0] = 48000,
+	.descriptor[0].num_sample_rates = 1,
+	.descriptor[0].bit_rate = {128, 192},
+	.descriptor[0].num_bitrates = 2,
+	.descriptor[0].profiles = 0,
+	.descriptor[0].modes = 0,
+	.descriptor[0].formats = SND_AUDIOSTREAMFORMAT_MP4ADTS | SND_AUDIOSTREAMFORMAT_MP2ADTS,
+};
+
+static int sof_compr_get_codec_caps(struct snd_soc_component *component,
+				    struct snd_compr_stream *cstream,
+				    struct snd_compr_codec_caps *codec)
+{
+	switch (codec->codec) {
+	case SND_AUDIOCODEC_MP3:
+		*codec = caps_mp3;
+		break;
+	case SND_AUDIOCODEC_AAC:
+		*codec = caps_aac;
+		break;
+	case SND_AUDIOCODEC_PCM:
+		*codec = caps_pcm;
+		break;
+	default:
+		return -EINVAL;
+	}
+	return 0;
+}
+
+struct snd_compress_ops sof_compressed_ops = {
+	.open		= sof_compr_open,
+	.free		= sof_compr_free,
+	.set_params	= sof_compr_set_params,
+	.get_params	= sof_compr_get_params,
+	.trigger	= sof_compr_trigger,
+	.pointer	= sof_compr_pointer,
+	.copy		= sof_compr_copy,
+	.get_caps	= sof_compr_get_caps,
+	.get_codec_caps	= sof_compr_get_codec_caps,
+};
+EXPORT_SYMBOL(sof_compressed_ops);

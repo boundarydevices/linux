@@ -17,7 +17,7 @@
 #include "sof-audio.h"
 #include "ops.h"
 #if IS_ENABLED(CONFIG_SND_SOC_SOF_DEBUG_PROBES)
-#include "compress.h"
+#include "probe_compress.h"
 #endif
 
 /* Create DMA buffer page table for DSP */
@@ -57,13 +57,18 @@ static int sof_pcm_dsp_params(struct snd_sof_pcm *spcm, struct snd_pcm_substream
 /*
  * sof pcm period elapse work
  */
-void snd_sof_pcm_period_elapsed_work(struct work_struct *work)
+static void snd_sof_pcm_period_elapsed_work(struct work_struct *work)
 {
 	struct snd_sof_pcm_stream *sps =
 		container_of(work, struct snd_sof_pcm_stream,
 			     period_elapsed_work);
 
 	snd_pcm_period_elapsed(sps->substream);
+}
+
+void snd_sof_pcm_init_elapsed_work(struct work_struct *work)
+{
+	 INIT_WORK(work, snd_sof_pcm_period_elapsed_work);
 }
 
 /*
@@ -816,7 +821,10 @@ void snd_sof_new_platform_drv(struct snd_sof_dev *sdev)
 	struct snd_sof_pdata *plat_data = sdev->pdata;
 	const char *drv_name;
 
-	drv_name = plat_data->machine->drv_name;
+	if (plat_data->machine)
+		drv_name = plat_data->machine->drv_name;
+	else
+		drv_name = plat_data->machine_drv_name;
 
 	pd->name = "sof-audio-component";
 	pd->probe = sof_pcm_probe;
