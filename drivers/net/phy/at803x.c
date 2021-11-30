@@ -820,6 +820,20 @@ static int at803x_config_init(struct phy_device *phydev)
 			return ret;
 	}
 
+	/* The Atheros 803x PHY will go to hibernate mode after
+	 * 10 seconds if no activity on the link.
+	 * When in hibernation, it will not provide any clock to the MAC.
+	 *
+	 * This caused issue when trying to bring up the interface when
+	 * no cable was connected: MAC driver would timeout, and the PHY
+	 * power domain would stay on. It is also possible that this caused
+	 * issues with EEE capable remote PHY.
+	 *
+	 * Disabling this feature during initialization to avoid potential
+	 * side effect
+	 */
+	at803x_debug_reg_mask(phydev, 0xB, BIT(15), 0);
+
 	/* Ar803x extended next page bit is enabled by default. Cisco
 	 * multigig switches read this bit and attempt to negotiate 10Gbps
 	 * rates even if the next page bit is disabled. This is incorrect
