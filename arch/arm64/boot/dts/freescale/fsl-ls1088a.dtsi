@@ -206,6 +206,19 @@
 		clock-output-names = "sysclk";
 	};
 
+	rstcr: syscon@1e60000 {
+		compatible = "fsl,ls1088a-rstcr", "syscon";
+		reg = <0x0 0x1e60000 0x0 0x4>;
+	};
+
+	reboot {
+		compatible = "syscon-reboot";
+		regmap = <&rstcr>;
+		offset = <0x0>;
+		mask = <0x02>;
+	};
+
+
 	soc {
 		compatible = "simple-bus";
 		#address-cells = <2>;
@@ -384,8 +397,8 @@
 			#interrupt-cells = <2>;
 		};
 
-		ifc: ifc@2240000 {
-			compatible = "fsl,ifc", "simple-bus";
+		ifc: memory-controller@2240000 {
+			compatible = "fsl,ifc";
 			reg = <0x0 0x2240000 0x0 0x20000>;
 			interrupts = <0 21 IRQ_TYPE_LEVEL_HIGH>;
 			little-endian;
@@ -395,13 +408,14 @@
 		};
 
 		i2c0: i2c@2000000 {
-			compatible = "fsl,vf610-i2c";
+			compatible = "fsl,vf610-i2c", "fsl,ls1088a-vf610-i2c";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			reg = <0x0 0x2000000 0x0 0x10000>;
 			interrupts = <0 34 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&clockgen QORIQ_CLK_PLATFORM_PLL
 					    QORIQ_CLK_PLL_DIV(8)>;
+			scl-gpios = <&gpio3 30 0>;
 			status = "disabled";
 		};
 
@@ -468,23 +482,28 @@
 		};
 
 		usb0: usb@3100000 {
-			compatible = "snps,dwc3";
+			compatible = "fsl,ls1088a-dwc3", "snps,dwc3";
 			reg = <0x0 0x3100000 0x0 0x10000>;
 			interrupts = <0 80 IRQ_TYPE_LEVEL_HIGH>;
 			dr_mode = "host";
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,dis_rxdet_inp3_quirk;
 			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			snps,host-vbus-glitches;
+			dma-coherent;
 			status = "disabled";
 		};
 
 		usb1: usb@3110000 {
-			compatible = "snps,dwc3";
+			compatible = "fsl,ls1088a-dwc3", "snps,dwc3";
 			reg = <0x0 0x3110000 0x0 0x10000>;
 			interrupts = <0 81 IRQ_TYPE_LEVEL_HIGH>;
 			dr_mode = "host";
 			snps,quirk-frame-length-adjustment = <0x20>;
 			snps,dis_rxdet_inp3_quirk;
+			snps,incr-burst-type-adjustment = <1>, <4>, <8>, <16>;
+			snps,host-vbus-glitches;
+			dma-coherent;
 			status = "disabled";
 		};
 
@@ -570,9 +589,12 @@
 			reg = <0x00 0x03400000 0x0 0x00100000>,
 			      <0x20 0x00000000 0x8 0x00000000>;
 			reg-names = "regs", "addr_space";
+			interrupts = <GIC_SPI 108 IRQ_TYPE_LEVEL_HIGH>; /* PME interrupt */
+			interrupt-names = "pme";
 			num-ib-windows = <24>;
 			num-ob-windows = <256>;
 			max-functions = /bits/ 8 <2>;
+			big-endian;
 			status = "disabled";
 		};
 
@@ -607,8 +629,11 @@
 			reg = <0x00 0x03500000 0x0 0x00100000>,
 			      <0x28 0x00000000 0x8 0x00000000>;
 			reg-names = "regs", "addr_space";
+			interrupts = <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>; /* PME interrupt */
+			interrupt-names = "pme";
 			num-ib-windows = <6>;
 			num-ob-windows = <6>;
+			big-endian;
 			status = "disabled";
 		};
 
@@ -643,8 +668,11 @@
 			reg = <0x00 0x03600000 0x0 0x00100000>,
 			      <0x30 0x00000000 0x8 0x00000000>;
 			reg-names = "regs", "addr_space";
+			interrupts = <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>; /* PME interrupt */
+			interrupt-names = "pme";
 			num-ib-windows = <6>;
 			num-ob-windows = <6>;
+			big-endian;
 			status = "disabled";
 		};
 
