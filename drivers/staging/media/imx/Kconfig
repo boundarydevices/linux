@@ -63,6 +63,8 @@ config IMX8_MIPI_CSI2_SAM
 	help
 	  Enable support for video4linux MIPI CSI2 Samsung driver for
 	  i.MX8MN platform.
-
 endmenu
+
+source "drivers/staging/media/imx/hdmirx/Kconfig"
+
 endif  #VIDEO_IMX_CAPTURE
