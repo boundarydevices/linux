@@ -8,7 +8,6 @@
  */
 
 #include <linux/module.h>
-
 #include <linux/interrupt.h>
 #include <linux/msi.h>
 #include <linux/kthread.h>
@@ -394,7 +393,8 @@ static int dpaa2_switch_dellink(struct ethsw_core *ethsw, u16 vid)
 
 	for (i = 0; i < ethsw->sw_attr.num_ifs; i++) {
 		ppriv_local = ethsw->ports[i];
-		ppriv_local->vlans[vid] = 0;
+		if (ppriv_local)
+			ppriv_local->vlans[vid] = 0;
 	}
 
 	return 0;
@@ -1438,6 +1438,8 @@ static int dpaa2_switch_port_connect_mac(struct ethsw_port_priv *port_priv)
 	if (IS_ERR(dpmac_dev) || dpmac_dev->dev.type != &fsl_mc_bus_dpmac_type)
 		return 0;
 
+	dpaa2_mac_driver_detach(dpmac_dev);
+
 	mac = kzalloc(sizeof(*mac), GFP_KERNEL);
 	if (!mac)
 		return -ENOMEM;
@@ -1480,6 +1482,7 @@ static void dpaa2_switch_port_disconnect_mac(struct ethsw_port_priv *port_priv)
 		return;
 
 	dpaa2_mac_close(port_priv->mac);
+	dpaa2_mac_driver_attach(port_priv->mac->mc_dev);
 	kfree(port_priv->mac);
 	port_priv->mac = NULL;
 }
@@ -1508,12 +1511,10 @@ static irqreturn_t dpaa2_switch_irq0_handler_thread(int irq_num, void *arg)
 	}
 
 	if (status & DPSW_IRQ_EVENT_ENDPOINT_CHANGED) {
-		rtnl_lock();
 		if (dpaa2_switch_port_has_mac(port_priv))
 			dpaa2_switch_port_disconnect_mac(port_priv);
 		else
 			dpaa2_switch_port_connect_mac(port_priv);
-		rtnl_unlock();
 	}
 
 out:
@@ -1872,6 +1873,7 @@ static int dpaa2_switch_port_del_vlan(struct ethsw_port_priv *port_priv, u16 vid
 	vcfg.num_ifs = 1;
 	vcfg.if_id[0] = port_priv->idx;
 	if (port_priv->vlans[vid] & ETHSW_VLAN_UNTAGGED) {
+
 		err = dpsw_vlan_remove_if_untagged(ethsw->mc_io, 0,
 						   ethsw->dpsw_handle,
 						   vid, &vcfg);
@@ -1896,9 +1898,11 @@ static int dpaa2_switch_port_del_vlan(struct ethsw_port_priv *port_priv, u16 vid
 		/* Delete VLAN from switch if it is no longer configured on
 		 * any port
 		 */
-		for (i = 0; i < ethsw->sw_attr.num_ifs; i++)
-			if (ethsw->ports[i]->vlans[vid] & ETHSW_VLAN_MEMBER)
+		for (i = 0; i < ethsw->sw_attr.num_ifs; i++) {
+			if (ethsw->ports[i] &&
+			    ethsw->ports[i]->vlans[vid] & ETHSW_VLAN_MEMBER)
 				return 0; /* Found a port member in VID */
+		}
 
 		ethsw->vlans[vid] &= ~ETHSW_VLAN_GLOBAL;
 
@@ -2930,9 +2934,7 @@ static void dpaa2_switch_remove_port(struct ethsw_core *ethsw,
 {
 	struct ethsw_port_priv *port_priv = ethsw->ports[port_idx];
 
-	rtnl_lock();
 	dpaa2_switch_port_disconnect_mac(port_priv);
-	rtnl_unlock();
 	free_netdev(port_priv->netdev);
 	ethsw->ports[port_idx] = NULL;
 }
