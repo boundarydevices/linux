@@ -227,7 +227,7 @@ static const struct flash_info spansion_parts[] = {
 			      SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ |
 			      USE_CLSR) },
 	{ "s25fs512s",  INFO6(0x010220, 0x4d0081, 256 * 1024, 256,
-			      SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ | USE_CLSR)
+			      SPI_NOR_4B_OPCODES | USE_CLSR)
 	  .fixups = &s25fs_s_fixups, },
 	{ "s25sl12800", INFO(0x012018, 0x0300, 256 * 1024,  64, 0) },
 	{ "s25sl12801", INFO(0x012018, 0x0301,  64 * 1024, 256, 0) },
