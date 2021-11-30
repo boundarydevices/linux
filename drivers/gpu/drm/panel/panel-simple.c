@@ -4099,6 +4099,40 @@ static const struct panel_desc_dsi boe_tv080wum_nl0 = {
 	.lanes = 4,
 };
 
+static const struct drm_display_mode leadtek_ltk080a60a004t_mode = {
+	.clock = 159000,
+	.hdisplay = 1200,
+	.hsync_start = 1200 + 80,
+	.hsync_end = 1200 + 80 + 60,
+	.htotal = 1200 + 80 + 60 + 1,
+	.vdisplay = 1920,
+	.vsync_start = 1920 + 25,
+	.vsync_end = 1920 + 25 + 35,
+	.vtotal = 1920 + 25 + 35 + 1,
+};
+
+static const struct panel_desc_dsi leadtek_ltk080a60a004t = {
+	.desc = {
+		.modes = &leadtek_ltk080a60a004t_mode,
+		.num_modes = 1,
+		.bpc = 8,
+		.size = {
+			.width = 108,
+			.height = 178,
+		},
+		.delay = {
+			.prepare = 100,
+			.enable = 2,
+			.disable = 50,
+			.unprepare = 2,
+		},
+		.connector_type = DRM_MODE_CONNECTOR_DSI,
+	},
+	.flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_BURST,
+	.format = MIPI_DSI_FMT_RGB888,
+	.lanes = 4,
+};
+
 static const struct drm_display_mode lg_ld070wx3_sl01_mode = {
 	.clock = 71000,
 	.hdisplay = 800,
@@ -4250,6 +4284,9 @@ static const struct of_device_id dsi_of_match[] = {
 	}, {
 		.compatible = "boe,tv080wum-nl0",
 		.data = &boe_tv080wum_nl0
+	}, {
+		.compatible = "leadtek,ltk080a60a004t",
+		.data = &leadtek_ltk080a60a004t
 	}, {
 		.compatible = "lg,ld070wx3-sl01",
 		.data = &lg_ld070wx3_sl01
