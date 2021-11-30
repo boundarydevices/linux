@@ -138,6 +138,13 @@ Required properties:
 			 "fsl,imx8dxl-sc-rtc";
 			 "fsl,imx8qxp-sc-rtc";
 
+Optional Child nodes:
+
+- read-only:
+  For some use cases, like cockpit, one cockpit domain owns it
+  while other domain is just a reader. Its needed to provide
+  /dev/rtc funtion for applications.
+
 OCOTP bindings based on SCU Message Protocol
 ------------------------------------------------------------
 Required properties:
