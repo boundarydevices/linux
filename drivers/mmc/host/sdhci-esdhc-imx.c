@@ -9,6 +9,7 @@
  */
 
 #include <linux/bitfield.h>
+#include <linux/busfreq-imx.h>
 #include <linux/io.h>
 #include <linux/iopoll.h>
 #include <linux/delay.h>
@@ -195,6 +196,8 @@
  * disable the ACMD23 feature.
  */
 #define ESDHC_FLAG_BROKEN_AUTO_CMD23	BIT(16)
+/* need request bus freq during low power */
+#define ESDHC_FLAG_BUSFREQ		BIT(17)
 
 enum wp_types {
 	ESDHC_WP_NONE,		/* no WP, neither controller nor gpio */
@@ -226,6 +229,7 @@ struct esdhc_platform_data {
 	unsigned int tuning_step;       /* The delay cell steps in tuning procedure */
 	unsigned int tuning_start_tap;	/* The start delay cell point in tuning procedure */
 	unsigned int strobe_dll_delay_target;	/* The delay cell for strobe pad (read clock) */
+	bool sdio_async_interrupt_enabled;
 };
 
 struct esdhc_soc_data {
@@ -257,28 +261,32 @@ static const struct esdhc_soc_data usdhc_imx6sl_data = {
 	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
 			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_ERR004536
 			| ESDHC_FLAG_HS200
-			| ESDHC_FLAG_BROKEN_AUTO_CMD23,
+			| ESDHC_FLAG_BROKEN_AUTO_CMD23
+			| ESDHC_FLAG_BUSFREQ,
 };
 
 static const struct esdhc_soc_data usdhc_imx6sll_data = {
 	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
 			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_HS200
 			| ESDHC_FLAG_HS400
-			| ESDHC_FLAG_STATE_LOST_IN_LPMODE,
+			| ESDHC_FLAG_STATE_LOST_IN_LPMODE
+			| ESDHC_FLAG_BUSFREQ,
 };
 
 static const struct esdhc_soc_data usdhc_imx6sx_data = {
 	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
 			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_HS200
 			| ESDHC_FLAG_STATE_LOST_IN_LPMODE
-			| ESDHC_FLAG_BROKEN_AUTO_CMD23,
+			| ESDHC_FLAG_BROKEN_AUTO_CMD23
+			| ESDHC_FLAG_BUSFREQ,
 };
 
 static const struct esdhc_soc_data usdhc_imx6ull_data = {
 	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
 			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_HS200
 			| ESDHC_FLAG_ERR010450
-			| ESDHC_FLAG_STATE_LOST_IN_LPMODE,
+			| ESDHC_FLAG_STATE_LOST_IN_LPMODE
+			| ESDHC_FLAG_BUSFREQ,
 };
 
 static const struct esdhc_soc_data usdhc_imx7d_data = {
@@ -286,7 +294,8 @@ static const struct esdhc_soc_data usdhc_imx7d_data = {
 			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_HS200
 			| ESDHC_FLAG_HS400
 			| ESDHC_FLAG_STATE_LOST_IN_LPMODE
-			| ESDHC_FLAG_BROKEN_AUTO_CMD23,
+			| ESDHC_FLAG_BROKEN_AUTO_CMD23
+			| ESDHC_FLAG_BUSFREQ,
 };
 
 static struct esdhc_soc_data usdhc_imx7ulp_data = {
@@ -300,7 +309,6 @@ static struct esdhc_soc_data usdhc_imx8qxp_data = {
 	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
 			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_HS200
 			| ESDHC_FLAG_HS400 | ESDHC_FLAG_HS400_ES
-			| ESDHC_FLAG_CQHCI
 			| ESDHC_FLAG_STATE_LOST_IN_LPMODE
 			| ESDHC_FLAG_CLK_RATE_LOST_IN_PM_RUNTIME,
 };
@@ -309,8 +317,12 @@ static struct esdhc_soc_data usdhc_imx8mm_data = {
 	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_STD_TUNING
 			| ESDHC_FLAG_HAVE_CAP1 | ESDHC_FLAG_HS200
 			| ESDHC_FLAG_HS400 | ESDHC_FLAG_HS400_ES
-			| ESDHC_FLAG_CQHCI
-			| ESDHC_FLAG_STATE_LOST_IN_LPMODE,
+			| ESDHC_FLAG_STATE_LOST_IN_LPMODE
+			| ESDHC_FLAG_BUSFREQ,
+};
+
+static struct esdhc_soc_data usdhc_s32v234_data = {
+	.flags = ESDHC_FLAG_USDHC,
 };
 
 struct pltfm_imx_data {
@@ -347,6 +359,7 @@ static const struct of_device_id imx_esdhc_dt_ids[] = {
 	{ .compatible = "fsl,imx7ulp-usdhc", .data = &usdhc_imx7ulp_data, },
 	{ .compatible = "fsl,imx8qxp-usdhc", .data = &usdhc_imx8qxp_data, },
 	{ .compatible = "fsl,imx8mm-usdhc", .data = &usdhc_imx8mm_data, },
+	{ .compatible = "fsl,s32v234-usdhc", .data = &usdhc_s32v234_data, },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, imx_esdhc_dt_ids);
@@ -359,6 +372,11 @@ static inline int is_imx25_esdhc(struct pltfm_imx_data *data)
 static inline int is_imx53_esdhc(struct pltfm_imx_data *data)
 {
 	return data->socdata == &esdhc_imx53_data;
+}
+
+static inline int is_s32v234_usdhc(struct pltfm_imx_data *data)
+{
+	return data->socdata == &usdhc_s32v234_data;
 }
 
 static inline int esdhc_is_usdhc(struct pltfm_imx_data *data)
@@ -416,6 +434,8 @@ static inline void esdhc_wait_for_card_clock_gate_off(struct sdhci_host *host)
 /* Enable the auto tuning circuit to check the CMD line and BUS line */
 static inline void usdhc_auto_tuning_mode_sel(struct sdhci_host *host)
 {
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct pltfm_imx_data *imx_data = sdhci_pltfm_priv(pltfm_host);
 	u32 buswidth, auto_tune_buswidth;
 
 	buswidth = USDHC_GET_BUSWIDTH(readl(host->ioaddr + SDHCI_HOST_CONTROL));
@@ -431,6 +451,18 @@ static inline void usdhc_auto_tuning_mode_sel(struct sdhci_host *host)
 		auto_tune_buswidth = ESDHC_VEND_SPEC2_AUTO_TUNE_1BIT_EN;
 		break;
 	}
+
+	/*
+	 * If sdio device use async interrupt, it will use DAT[1] to signal
+	 * the device's interrupt asynchronous when use 4 data lines.
+	 * Then hardware auto tuning circuit MUST NOT check the DAT[1] line,
+	 * otherwise auto tuning will be impacted by this async interrupt,
+	 * and change the delay cell incorrectly, which then cause data/cmd
+	 * errors.
+	 * This is the hardware auto tuning circuit limitation.
+	 */
+	if (imx_data->boarddata.sdio_async_interrupt_enabled)
+		auto_tune_buswidth = ESDHC_VEND_SPEC2_AUTO_TUNE_1BIT_EN;
 
 	esdhc_clrset_le(host, ESDHC_VEND_SPEC2_AUTO_TUNE_MODE_MASK,
 			auto_tune_buswidth | ESDHC_VEND_SPEC2_AUTO_TUNE_CMD_EN,
@@ -475,6 +507,12 @@ static u32 esdhc_readl_le(struct sdhci_host *host, int reg)
 		if (esdhc_is_usdhc(imx_data)) {
 			if (imx_data->socdata->flags & ESDHC_FLAG_HAVE_CAP1)
 				val = readl(host->ioaddr + SDHCI_CAPABILITIES) & 0xFFFF;
+			else if (is_s32v234_usdhc(imx_data))
+				/* S32V234 HOST_CTRL_CAP register does not
+				 * provide speed info.
+				 * S32V234 has support for DDR50.
+				 */
+				val = SDHCI_SUPPORT_SDR50 | SDHCI_SUPPORT_DDR50;
 			else
 				/* imx6q/dl does not have cap_1 register, fake one */
 				val = SDHCI_SUPPORT_DDR50 | SDHCI_SUPPORT_SDR104
@@ -1375,8 +1413,9 @@ static void sdhci_esdhc_imx_hwinit(struct sdhci_host *host)
 		 * erratum ESDHC_FLAG_ERR004536 fix for MX6Q TO1.2 and MX6DL
 		 * TO1.1, it's harmless for MX6SL
 		 */
-		writel(readl(host->ioaddr + 0x6c) & ~BIT(7),
-			host->ioaddr + 0x6c);
+		if (!is_s32v234_usdhc(imx_data))
+			writel(readl(host->ioaddr + 0x6c) & ~BIT(7),
+				host->ioaddr + 0x6c);
 
 		/* disable DLL_CTRL delay line settings */
 		writel(0x0, host->ioaddr + ESDHC_DLL_CTRL);
@@ -1547,9 +1586,13 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	if (of_property_read_u32(np, "fsl,delay-line", &boarddata->delay_line))
 		boarddata->delay_line = 0;
 
+	if (of_property_read_bool(np, "fsl,sdio-async-interrupt-enabled"))
+		boarddata->sdio_async_interrupt_enabled = true;
+
 	mmc_of_parse_voltage(host->mmc, &host->ocr_mask);
 
-	if (esdhc_is_usdhc(imx_data) && !IS_ERR(imx_data->pinctrl)) {
+	if (!is_s32v234_usdhc(imx_data) && esdhc_is_usdhc(imx_data) 
+					&& !IS_ERR(imx_data->pinctrl)) {
 		imx_data->pins_100mhz = pinctrl_lookup_state(imx_data->pinctrl,
 						ESDHC_PINCTRL_STATE_100MHZ);
 		imx_data->pins_200mhz = pinctrl_lookup_state(imx_data->pinctrl,
@@ -1585,6 +1628,9 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 	imx_data = sdhci_pltfm_priv(pltfm_host);
 
 	imx_data->socdata = device_get_match_data(&pdev->dev);
+
+	if (imx_data->socdata->flags & ESDHC_FLAG_BUSFREQ)
+		request_bus_freq(BUS_FREQ_HIGH);
 
 	if (imx_data->socdata->flags & ESDHC_FLAG_PMQOS)
 		cpu_latency_qos_add_request(&imx_data->pm_qos_req, 0);
@@ -1715,6 +1761,10 @@ disable_per_clk:
 free_sdhci:
 	if (imx_data->socdata->flags & ESDHC_FLAG_PMQOS)
 		cpu_latency_qos_remove_request(&imx_data->pm_qos_req);
+
+	if (imx_data->socdata->flags & ESDHC_FLAG_BUSFREQ)
+		release_bus_freq(BUS_FREQ_HIGH);
+
 	sdhci_pltfm_free(pdev);
 	return err;
 }
@@ -1740,6 +1790,9 @@ static int sdhci_esdhc_imx_remove(struct platform_device *pdev)
 	if (imx_data->socdata->flags & ESDHC_FLAG_PMQOS)
 		cpu_latency_qos_remove_request(&imx_data->pm_qos_req);
 
+	if (imx_data->socdata->flags & ESDHC_FLAG_BUSFREQ)
+		release_bus_freq(BUS_FREQ_HIGH);
+
 	sdhci_pltfm_free(pdev);
 
 	return 0;
@@ -1752,6 +1805,8 @@ static int sdhci_esdhc_suspend(struct device *dev)
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct pltfm_imx_data *imx_data = sdhci_pltfm_priv(pltfm_host);
 	int ret;
+
+	pm_runtime_get_sync(dev);
 
 	if (host->mmc->caps2 & MMC_CAP2_CQE) {
 		ret = cqhci_suspend(host->mmc);
@@ -1778,6 +1833,9 @@ static int sdhci_esdhc_suspend(struct device *dev)
 
 	ret = mmc_gpio_set_cd_wake(host->mmc, true);
 
+	pm_runtime_disable(dev);
+	pm_runtime_set_suspended(dev);
+
 	return ret;
 }
 
@@ -1785,6 +1843,9 @@ static int sdhci_esdhc_resume(struct device *dev)
 {
 	struct sdhci_host *host = dev_get_drvdata(dev);
 	int ret;
+
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
 
 	ret = pinctrl_pm_select_default_state(dev);
 	if (ret)
@@ -1802,6 +1863,9 @@ static int sdhci_esdhc_resume(struct device *dev)
 
 	if (!ret)
 		ret = mmc_gpio_set_cd_wake(host->mmc, false);
+
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
 
 	return ret;
 }
@@ -1837,6 +1901,9 @@ static int sdhci_esdhc_runtime_suspend(struct device *dev)
 	if (imx_data->socdata->flags & ESDHC_FLAG_PMQOS)
 		cpu_latency_qos_remove_request(&imx_data->pm_qos_req);
 
+	if (imx_data->socdata->flags & ESDHC_FLAG_BUSFREQ)
+		release_bus_freq(BUS_FREQ_HIGH);
+
 	return ret;
 }
 
@@ -1846,6 +1913,9 @@ static int sdhci_esdhc_runtime_resume(struct device *dev)
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct pltfm_imx_data *imx_data = sdhci_pltfm_priv(pltfm_host);
 	int err;
+
+	if (imx_data->socdata->flags & ESDHC_FLAG_BUSFREQ)
+		request_bus_freq(BUS_FREQ_HIGH);
 
 	if (imx_data->socdata->flags & ESDHC_FLAG_PMQOS)
 		cpu_latency_qos_add_request(&imx_data->pm_qos_req, 0);
@@ -1885,6 +1955,9 @@ disable_ahb_clk:
 remove_pm_qos_request:
 	if (imx_data->socdata->flags & ESDHC_FLAG_PMQOS)
 		cpu_latency_qos_remove_request(&imx_data->pm_qos_req);
+
+	if (imx_data->socdata->flags & ESDHC_FLAG_BUSFREQ)
+		release_bus_freq(BUS_FREQ_HIGH);
 	return err;
 }
 #endif

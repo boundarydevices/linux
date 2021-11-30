@@ -132,6 +132,16 @@ properties:
           - const: default
           - const: sleep
 
+  fsl,sdio-async-interrupt-enabled:
+    description: |
+      Recommend for SDIO cards that enables SDIO async interrupt for SDR104 and SDR50
+      operating modes. SDIO async interrupt uses DAT[1] to signal the card's interrupt.
+      uSDHC tuning mechanism must use DAT[0] and CMD signals to avoid a possible
+      conflict and incorrect delay line calculated by the uSDHC auto tuning mechanism.
+      Enabling this device tree property is only recommended for layouts that are
+      matching the SD interface length.
+    type: boolean
+
 required:
   - compatible
   - reg
