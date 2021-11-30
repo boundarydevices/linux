@@ -26,6 +26,13 @@
 		serial1 = &uart_AO_B;
 	};
 
+	backlight_mipi: backlight-mipi {
+		compatible = "gpio-backlight";
+		gpios = <&gpio GPIOA_11 GPIO_ACTIVE_HIGH>;
+		default-on;
+		status = "okay";
+	};
+
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
@@ -533,6 +540,14 @@
 
 &i2c2_d {
 	/* DSI touch controller */
+	ts_goodix: touchscreen@14 {
+		compatible = "goodix,gt9271";
+		interrupts-extended = <&gpio_intc 87 IRQ_TYPE_LEVEL_HIGH>;
+		irq-gpios = <&gpio GPIOX_10 GPIO_ACTIVE_HIGH>;
+		reg = <0x14>;
+		reset-gpios = <&gpio GPIOX_9 GPIO_ACTIVE_LOW>;
+		status = "okay";
+	};
 };
 
 &ir {
@@ -540,6 +555,48 @@
 	pinctrl-0 = <&remote_input_ao_pins>;
 	pinctrl-names = "default";
 	linux,rc-map-name = "rc-khadas";
+};
+
+&mipi_dsi {
+	status = "okay";
+
+	assigned-clocks = <&clkc CLKID_GP0_PLL>,
+			  <&clkc CLKID_MIPI_DSI_PXCLK_SEL>,
+			  <&clkc CLKID_MIPI_DSI_PXCLK>;
+	assigned-clock-parents = <0>,
+				 <&clkc CLKID_GP0_PLL>,
+				 <0>;
+	assigned-clock-rates = <720000000>,
+			       <0>,
+			       <720000000>;
+
+	panel@0 {
+		compatible = "leadtek,ltk080a60a004t";
+		backlight = <&backlight_mipi>;
+		enable-gpios = <&gpio GPIOX_11 GPIO_ACTIVE_HIGH>;
+		power-supply = <&reg_3v3>;
+		reg = <0>;
+
+		port {
+			mipi_in_panel: endpoint {
+				remote-endpoint = <&mipi_out_panel>;
+			};
+		};
+	};
+};
+
+&mipi_analog_dphy {
+	status = "okay";
+};
+
+&mipi_dphy {
+	status = "okay";
+};
+
+&mipi_dsi_panel_port {
+	mipi_out_panel: endpoint {
+		remote-endpoint = <&mipi_in_panel>;
+	};
 };
 
 #if 0
