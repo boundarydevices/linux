@@ -87,3 +87,6 @@ thunderbolt-net-y += thunderbolt.o
 obj-$(CONFIG_USB4_NET) += thunderbolt-net.o
 obj-$(CONFIG_NETDEVSIM) += netdevsim/
 obj-$(CONFIG_NET_FAILOVER) += net_failover.o
+
+obj-$(CONFIG_IVSHMEM_NET) += ivshmem-net.o
+obj-$(CONFIG_IMX_SHMEM_NET) += imx-shmem-net.o
