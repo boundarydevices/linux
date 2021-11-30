@@ -545,6 +545,13 @@ System ON/OFF key driver
       Value type: <boo>
       Definition: Button can wake-up the system.
 
+  - emulate-press:
+     Usage: option
+     Value type: <bool>
+     Definition: For ONOFF key only trigger interrupt after release but
+                 not press like i.mx6q/dl/sl, emulate press event before
+		 release.
+
  - regmap:
       Usage: required:
       Value type: <phandle>
