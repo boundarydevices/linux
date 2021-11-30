@@ -39,7 +39,7 @@
 #define DEFAULT_TIMEOUT	60
 #define MAX_TIMEOUT	128
 #define WDOG_CLOCK_RATE	1000
-#define WDOG_WAIT_TIMEOUT	20
+#define WDOG_WAIT_TIMEOUT	10000
 
 static bool nowayout = WATCHDOG_NOWAYOUT;
 module_param(nowayout, bool, 0000);
@@ -80,7 +80,7 @@ static int imx7ulp_wdt_enable(struct watchdog_device *wdog, bool enable)
 		writel(val | WDOG_CS_EN, wdt->base + WDOG_CS);
 	else
 		writel(val & ~WDOG_CS_EN, wdt->base + WDOG_CS);
-	imx7ulp_wdt_wait(wdt->base, WDOG_CS_RCS);
+	ret = imx7ulp_wdt_wait(wdt->base, WDOG_CS_RCS);
 
 enable_out:
 	local_irq_enable();
@@ -127,7 +127,9 @@ static int imx7ulp_wdt_set_timeout(struct watchdog_device *wdog,
 	if (ret)
 		goto timeout_out;
 	writel(val, wdt->base + WDOG_TOVAL);
-	imx7ulp_wdt_wait(wdt->base, WDOG_CS_RCS);
+	ret = imx7ulp_wdt_wait(wdt->base, WDOG_CS_RCS);
+	if (ret)
+		goto timeout_out;
 
 	wdog->timeout = timeout;
 
@@ -179,9 +181,18 @@ static int imx7ulp_wdt_init(void __iomem *base, unsigned int timeout)
 	int ret;
 
 	local_irq_disable();
-	/* unlock the wdog for reconfiguration */
-	writel_relaxed(UNLOCK_SEQ0, base + WDOG_CNT);
-	writel_relaxed(UNLOCK_SEQ1, base + WDOG_CNT);
+
+	val = readl(base + WDOG_CS);
+	if (val & WDOG_CS_CMD32EN) {
+		writel(UNLOCK, base + WDOG_CNT);
+	} else {
+		mb();
+		/* unlock the wdog for reconfiguration */
+		writel_relaxed(UNLOCK_SEQ0, base + WDOG_CNT);
+		writel_relaxed(UNLOCK_SEQ1, base + WDOG_CNT);
+		mb();
+	}
+
 	ret = imx7ulp_wdt_wait(base, WDOG_CS_ULK);
 	if (ret)
 		goto init_out;
@@ -255,7 +266,7 @@ static int imx7ulp_wdt_probe(struct platform_device *pdev)
 	return devm_watchdog_register_device(dev, wdog);
 }
 
-static int __maybe_unused imx7ulp_wdt_suspend(struct device *dev)
+static int __maybe_unused imx7ulp_wdt_suspend_noirq(struct device *dev)
 {
 	struct imx7ulp_wdt_device *imx7ulp_wdt = dev_get_drvdata(dev);
 
@@ -267,7 +278,7 @@ static int __maybe_unused imx7ulp_wdt_suspend(struct device *dev)
 	return 0;
 }
 
-static int __maybe_unused imx7ulp_wdt_resume(struct device *dev)
+static int __maybe_unused imx7ulp_wdt_resume_noirq(struct device *dev)
 {
 	struct imx7ulp_wdt_device *imx7ulp_wdt = dev_get_drvdata(dev);
 	u32 timeout = imx7ulp_wdt->wdd.timeout * WDOG_CLOCK_RATE;
@@ -286,8 +297,10 @@ static int __maybe_unused imx7ulp_wdt_resume(struct device *dev)
 	return 0;
 }
 
-static SIMPLE_DEV_PM_OPS(imx7ulp_wdt_pm_ops, imx7ulp_wdt_suspend,
-			 imx7ulp_wdt_resume);
+static const struct dev_pm_ops imx7ulp_wdt_pm_ops = {
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(imx7ulp_wdt_suspend_noirq,
+				      imx7ulp_wdt_resume_noirq)
+};
 
 static const struct of_device_id imx7ulp_wdt_dt_ids[] = {
 	{ .compatible = "fsl,imx7ulp-wdt", },
