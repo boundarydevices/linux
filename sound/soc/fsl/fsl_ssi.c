@@ -40,6 +40,9 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/pm_runtime.h>
+#include <linux/busfreq-imx.h>
+#include <linux/platform_data/dma-imx.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -255,6 +258,7 @@ struct fsl_ssi {
 	bool synchronous;
 	bool use_dma;
 	bool use_dual_fifo;
+	bool use_dyna_fifo;
 	bool has_ipg_clk_name;
 	unsigned int fifo_depth;
 	unsigned int slot_width;
@@ -287,6 +291,7 @@ struct fsl_ssi {
 	u32 dma_maxburst;
 
 	struct mutex ac97_reg_lock;
+	struct sdma_audio_config audio_config[2];
 };
 
 /*
@@ -643,7 +648,7 @@ static int fsl_ssi_startup(struct snd_pcm_substream *substream,
 	 * task from fifo0, fifo1 would be neglected at the end of each
 	 * period. But SSI would still access fifo1 with an invalid data.
 	 */
-	if (ssi->use_dual_fifo)
+	if (ssi->use_dual_fifo || ssi->use_dyna_fifo)
 		snd_pcm_hw_constraint_step(substream->runtime, 0,
 					   SNDRV_PCM_HW_PARAM_PERIOD_SIZE, 2);
 
@@ -807,6 +812,7 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	unsigned int sample_size = params_width(hw_params);
 	u32 wl = SSI_SxCCR_WL(sample_size);
 	int ret;
+	struct fsl_ssi_regvals *vals = ssi->regvals;
 
 	if (fsl_ssi_is_i2s_master(ssi)) {
 		ret = fsl_ssi_set_bclk(substream, dai, hw_params);
@@ -855,6 +861,32 @@ static int fsl_ssi_hw_params(struct snd_pcm_substream *substream,
 	/* In synchronous mode, the SSI uses STCCR for capture */
 	tx2 = tx || ssi->synchronous;
 	regmap_update_bits(regs, REG_SSI_SxCCR(tx2), SSI_SxCCR_WL_MASK, wl);
+
+	if (ssi->use_dyna_fifo) {
+		if (channels == 1) {
+			ssi->audio_config[0].dst_fifo_num = 1;
+			ssi->audio_config[1].src_fifo_num = 1;
+			ssi->dma_params_tx.peripheral_config = &ssi->audio_config[0];
+			ssi->dma_params_tx.peripheral_size = sizeof(ssi->audio_config[0]);
+			ssi->dma_params_rx.peripheral_config = &ssi->audio_config[1];
+			ssi->dma_params_rx.peripheral_size = sizeof(ssi->audio_config[1]);
+			vals[RX].srcr &= ~SSI_SRCR_RFEN1;
+			vals[TX].stcr &= ~SSI_STCR_TFEN1;
+			vals[RX].scr  &= ~SSI_SCR_TCH_EN;
+			vals[TX].scr  &= ~SSI_SCR_TCH_EN;
+		} else {
+			ssi->audio_config[0].dst_fifo_num = 2;
+			ssi->audio_config[1].src_fifo_num = 2;
+			ssi->dma_params_tx.peripheral_config = &ssi->audio_config[0];
+			ssi->dma_params_tx.peripheral_size = sizeof(ssi->audio_config[0]);
+			ssi->dma_params_rx.peripheral_config = &ssi->audio_config[1];
+			ssi->dma_params_rx.peripheral_size = sizeof(ssi->audio_config[1]);
+			vals[RX].srcr |= SSI_SRCR_RFEN1;
+			vals[TX].stcr |= SSI_STCR_TFEN1;
+			vals[RX].scr  |= SSI_SCR_TCH_EN;
+			vals[TX].scr  |= SSI_SCR_TCH_EN;
+		}
+	}
 
 	return 0;
 }
@@ -1347,6 +1379,8 @@ static int fsl_ssi_imx_probe(struct platform_device *pdev,
 		dev_dbg(dev, "failed to get baud clock: %ld\n",
 			 PTR_ERR(ssi->baudclk));
 
+	ssi->dma_params_rx.chan_name = "rx";
+	ssi->dma_params_tx.chan_name = "tx";
 	ssi->dma_params_tx.maxburst = ssi->dma_maxburst;
 	ssi->dma_params_rx.maxburst = ssi->dma_maxburst;
 	ssi->dma_params_tx.addr = ssi->ssi_phys + REG_SSI_STX0;
@@ -1446,6 +1480,8 @@ static int fsl_ssi_probe_from_dt(struct fsl_ssi *ssi)
 	if (ssi->use_dma && !ret && dmas[2] == IMX_DMATYPE_SSI_DUAL)
 		ssi->use_dual_fifo = true;
 
+	if (ssi->use_dma && !ret && dmas[2] == IMX_DMATYPE_MULTI_SAI)
+		ssi->use_dyna_fifo = true;
 	/*
 	 * Backward compatible for older bindings by manually triggering the
 	 * machine driver's probe(). Use /compatible property, including the
@@ -1564,6 +1600,7 @@ static int fsl_ssi_probe(struct platform_device *pdev)
 	}
 
 	dev_set_drvdata(dev, ssi);
+	pm_runtime_enable(&pdev->dev);
 
 	if (ssi->soc->imx) {
 		ret = fsl_ssi_imx_probe(pdev, ssi, iomem);
@@ -1663,6 +1700,20 @@ static int fsl_ssi_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int fsl_ssi_runtime_resume(struct device *dev)
+{
+	request_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+
+static int fsl_ssi_runtime_suspend(struct device *dev)
+{
+	release_bus_freq(BUS_FREQ_AUDIO);
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_PM_SLEEP
 static int fsl_ssi_suspend(struct device *dev)
 {
@@ -1697,6 +1748,8 @@ static int fsl_ssi_resume(struct device *dev)
 
 static const struct dev_pm_ops fsl_ssi_pm = {
 	SET_SYSTEM_SLEEP_PM_OPS(fsl_ssi_suspend, fsl_ssi_resume)
+	SET_RUNTIME_PM_OPS(fsl_ssi_runtime_suspend, fsl_ssi_runtime_resume,
+			   NULL)
 };
 
 static struct platform_driver fsl_ssi_driver = {
