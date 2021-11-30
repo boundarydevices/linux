@@ -14,11 +14,14 @@
 #include <sound/control.h>
 #include <sound/pcm_params.h>
 #include <sound/soc-dapm.h>
+#include <sound/simple_card_utils.h>
 #include "imx-pcm-rpmsg.h"
 
 struct imx_rpmsg {
 	struct snd_soc_dai_link dai;
 	struct snd_soc_card card;
+	struct asoc_simple_jack hp_jack;
+	unsigned int sysclk;
 };
 
 static const struct snd_soc_dapm_widget imx_rpmsg_dapm_widgets[] = {
@@ -28,6 +31,26 @@ static const struct snd_soc_dapm_widget imx_rpmsg_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Main MIC", NULL),
 };
 
+static int imx_rpmsg_late_probe(struct snd_soc_card *card)
+{
+	struct imx_rpmsg *data = snd_soc_card_get_drvdata(card);
+	struct snd_soc_pcm_runtime *rtd = list_first_entry(&card->rtd_list,
+							   struct snd_soc_pcm_runtime, list);
+	struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 0);
+	struct device *dev = card->dev;
+	int ret;
+
+	if (data->sysclk) {
+		ret = snd_soc_dai_set_sysclk(codec_dai, 0, data->sysclk, SND_SOC_CLOCK_IN);
+		if (ret && ret != -ENOTSUPP) {
+			dev_err(dev, "failed to set sysclk in %s\n", __func__);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
 static int imx_rpmsg_probe(struct platform_device *pdev)
 {
 	struct snd_soc_dai_link_component *dlc;
@@ -36,6 +59,8 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	struct platform_device *rpmsg_pdev = to_platform_device(dev);
 	struct device_node *np = rpmsg_pdev->dev.of_node;
 	struct of_phandle_args args;
+	const char *platform_name;
+	const char *model_string;
 	struct imx_rpmsg *data;
 	int ret = 0;
 
@@ -67,21 +92,40 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 			    SND_SOC_DAIFMT_CBS_CFS;
 
 	/* Optional codec node */
+	of_property_read_string(np, "model", &model_string);
 	ret = of_parse_phandle_with_fixed_args(np, "audio-codec", 0, 0, &args);
 	if (ret) {
-		data->dai.codecs->dai_name = "snd-soc-dummy-dai";
-		data->dai.codecs->name = "snd-soc-dummy";
+		if (of_device_is_compatible(np, "fsl,imx7ulp-rpmsg-audio")) {
+			data->dai.codecs->dai_name = "rpmsg-wm8960-hifi";
+			data->dai.codecs->name = RPMSG_CODEC_DRV_NAME_WM8960;
+		} else if (of_device_is_compatible(np, "fsl,imx8mm-rpmsg-audio") &&
+				!strcmp("ak4497-audio", model_string)) {
+			data->dai.codecs->dai_name = "rpmsg-ak4497-aif";
+			data->dai.codecs->name = RPMSG_CODEC_DRV_NAME_AK4497;
+		} else {
+			data->dai.codecs->dai_name = "snd-soc-dummy-dai";
+			data->dai.codecs->name = "snd-soc-dummy";
+		}
 	} else {
+		struct clk *clk;
+
 		data->dai.codecs->of_node = args.np;
 		ret = snd_soc_get_dai_name(&args, &data->dai.codecs->dai_name);
 		if (ret) {
 			dev_err(&pdev->dev, "Unable to get codec_dai_name\n");
 			goto fail;
 		}
+
+		clk = devm_get_clk_from_child(&pdev->dev, args.np, NULL);
+		if (!IS_ERR(clk))
+			data->sysclk = clk_get_rate(clk);
 	}
 
 	data->dai.cpus->dai_name = dev_name(&rpmsg_pdev->dev);
 	data->dai.platforms->name = IMX_PCM_DRV_NAME;
+	if (!of_property_read_string(np, "fsl,platform", &platform_name))
+		data->dai.platforms->name = platform_name;
+
 	data->dai.playback_only = true;
 	data->dai.capture_only = true;
 	data->card.num_links = 1;
@@ -103,6 +147,7 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	data->card.owner = THIS_MODULE;
 	data->card.dapm_widgets = imx_rpmsg_dapm_widgets;
 	data->card.num_dapm_widgets = ARRAY_SIZE(imx_rpmsg_dapm_widgets);
+	data->card.late_probe = imx_rpmsg_late_probe;
 	/*
 	 * Inoder to use common api to get card name and audio routing.
 	 * Use parent of_node for this device, revert it after finishing using
@@ -129,6 +174,11 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	data->hp_jack.pin.pin = "Headphone Jack";
+	data->hp_jack.pin.mask = SND_JACK_HEADPHONE;
+	snd_soc_card_jack_new(&data->card, "Headphone Jack", SND_JACK_HEADPHONE,
+			      &data->hp_jack.jack, &data->hp_jack.pin, 1);
+	snd_soc_jack_report(&data->hp_jack.jack, SND_JACK_HEADPHONE, SND_JACK_HEADPHONE);
 fail:
 	pdev->dev.of_node = NULL;
 	return ret;
