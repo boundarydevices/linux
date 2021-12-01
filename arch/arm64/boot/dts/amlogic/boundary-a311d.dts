@@ -540,11 +540,11 @@
 
 &i2c2_d {
 	/* DSI touch controller */
-	ts_goodix: touchscreen@14 {
+	ts_goodix: touchscreen@5d {
 		compatible = "goodix,gt9271";
-		interrupts-extended = <&gpio_intc 87 IRQ_TYPE_LEVEL_HIGH>;
-		irq-gpios = <&gpio GPIOX_10 GPIO_ACTIVE_HIGH>;
-		reg = <0x14>;
+		interrupts-extended = <&gpio_intc 85 IRQ_TYPE_LEVEL_HIGH>;
+		irq-gpios = <&gpio GPIOX_8 GPIO_ACTIVE_HIGH>;
+		reg = <0x5d>;
 		reset-gpios = <&gpio GPIOX_9 GPIO_ACTIVE_LOW>;
 		status = "okay";
 	};
