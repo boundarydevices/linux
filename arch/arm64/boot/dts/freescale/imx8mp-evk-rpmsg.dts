@@ -95,6 +95,7 @@
 		compatible = "fsl,imx8mp-rpmsg-audio";
 		model = "micfil-audio";
 		fsl,platform = "rpmsg-micfil-channel";
+		fsl,enable-lpa;
 		fsl,rpmsg-in;
 		assigned-clocks = <&clk IMX8MP_CLK_PDM>;
 		assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL1_OUT>;
