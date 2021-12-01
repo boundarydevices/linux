@@ -143,6 +143,10 @@
 	status = "disabled";
 };
 
+&sai6 {
+	status = "disabled";
+};
+
 &sai3 {
 	status = "disabled";
 };
