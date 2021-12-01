@@ -50,9 +50,7 @@ struct scu_wakeup {
 /* Sysfs functions */
 struct kobject *wakeup_obj;
 static ssize_t wakeup_source_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf);
-static ssize_t num_wakeup_groups_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf);
 static struct kobj_attribute wakeup_source_attr = __ATTR(wakeup_src, 0660, wakeup_source_show, NULL);
-static struct kobj_attribute num_wakeup_groups = __ATTR(num_wakeup_grps, 0660, num_wakeup_groups_show, NULL);
 
 static struct scu_wakeup scu_irq_wakeup[IMX_SC_IRQ_NUM_GROUP];
 
@@ -191,12 +189,6 @@ static ssize_t wakeup_source_show(struct kobject *kobj,
 		}
 	}
 	return strlen(buf);
-}
-
-static ssize_t num_wakeup_groups_show(struct kobject *kobj,
-					struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf, "%d\n", IMX_SC_IRQ_NUM_GROUP);
 }
 
 int imx_scu_enable_general_irq_channel(struct device *dev)
