@@ -1316,6 +1316,7 @@ static int rpmsg_wm8960_probe(struct snd_soc_component *component)
 	snd_soc_dapm_ignore_suspend(snd_soc_component_get_dapm(component), "Playback");
 	snd_soc_dapm_ignore_suspend(snd_soc_component_get_dapm(component), "Capture");
 	snd_soc_dapm_ignore_suspend(snd_soc_component_get_dapm(component), "MICB");
+	snd_soc_dapm_ignore_suspend(snd_soc_component_get_dapm(component), "LINPUT1");
 
 	return 0;
 }
