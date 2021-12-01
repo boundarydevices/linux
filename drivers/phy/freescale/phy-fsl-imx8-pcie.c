@@ -34,15 +34,21 @@
 #define  LANE_TX_DATA_CLK_MUX_SEL	0x00
 
 #define IMX8MP_PCIE_PHY_TRSV_REG001	0x404
-#define  LN0_OVRD_TX_DRV_LVL		0x3F
+#define  LN0_OVRD_TX_DRV_LVL_G1		0x3F
+#define IMX8MP_PCIE_PHY_TRSV_REG002	0x408
+#define  LN0_OVRD_TX_DRV_LVL_G2		0x1F
+#define IMX8MP_PCIE_PHY_TRSV_REG003	0x40C
+#define  LN0_OVRD_TX_DRV_LVL_G3		0x1F
 #define IMX8MP_PCIE_PHY_TRSV_REG005	0x414
 #define  LN0_OVRD_TX_DRV_PST_LVL_G1	0x2B
 #define IMX8MP_PCIE_PHY_TRSV_REG006	0x418
-#define  LN0_OVRD_TX_DRV_PST_LVL_G2	0x3
+#define  LN0_OVRD_TX_DRV_PST_LVL_G2	0xB
 #define IMX8MP_PCIE_PHY_TRSV_REG007	0x41C
-#define  LN0_OVRD_TX_DRV_PST_LVL_G3	0xA
+#define  LN0_OVRD_TX_DRV_PST_LVL_G3	0xB
 #define IMX8MP_PCIE_PHY_TRSV_REG009	0x424
-#define  LN0_OVRD_TX_DRV_PRE_LVL_G1	0x10
+#define  LN0_OVRD_TX_DRV_PRE_LVL_G1	0x15
+#define IMX8MP_PCIE_PHY_TRSV_REG00A	0x428
+#define  LN0_OVRD_TX_DRV_PRE_LVL_G23	0x55
 #define IMX8MP_PCIE_PHY_TRSV_REG059	0x4EC
 #define  LN0_OVRD_RX_CTLE_RS1_G1	0x13
 #define IMX8MP_PCIE_PHY_TRSV_REG060	0x4F0
@@ -137,8 +143,12 @@ static int imx8_pcie_phy_cal(struct phy *phy)
 	 * between two EVK boards in the EP/RC validation system.
 	 */
 	if (imx8_pcie_phy_tuned) {
-		writel(LN0_OVRD_TX_DRV_LVL,
+		writel(LN0_OVRD_TX_DRV_LVL_G1,
 		       imx8_phy->base + IMX8MP_PCIE_PHY_TRSV_REG001);
+		writel(LN0_OVRD_TX_DRV_LVL_G2,
+		       imx8_phy->base + IMX8MP_PCIE_PHY_TRSV_REG002);
+		writel(LN0_OVRD_TX_DRV_LVL_G3,
+		       imx8_phy->base + IMX8MP_PCIE_PHY_TRSV_REG003);
 		writel(LN0_OVRD_TX_DRV_PST_LVL_G1,
 		       imx8_phy->base + IMX8MP_PCIE_PHY_TRSV_REG005);
 		writel(LN0_OVRD_TX_DRV_PST_LVL_G2,
@@ -147,6 +157,8 @@ static int imx8_pcie_phy_cal(struct phy *phy)
 		       imx8_phy->base + IMX8MP_PCIE_PHY_TRSV_REG007);
 		writel(LN0_OVRD_TX_DRV_PRE_LVL_G1,
 		       imx8_phy->base + IMX8MP_PCIE_PHY_TRSV_REG009);
+		writel(LN0_OVRD_TX_DRV_PRE_LVL_G23,
+		       imx8_phy->base + IMX8MP_PCIE_PHY_TRSV_REG00A);
 		writel(LN0_OVRD_RX_CTLE_RS1_G1,
 		       imx8_phy->base + IMX8MP_PCIE_PHY_TRSV_REG059);
 		writel(LN0_OVRD_RX_CTLE_RS1_G2_G3,
