@@ -797,6 +797,18 @@
 	pinctrl-names = "default";
 };
 
+&uart_AO_B {
+	status = "okay";
+	pinctrl-0 = <&uart_ao_b_2_pins>;
+	pinctrl-names = "default";
+};
+
+&uart_A {
+	status = "okay";
+	pinctrl-0 = <&uart_a_pins>, <&uart_a_cts_rts_pins>;
+	pinctrl-names = "default";
+};
+
 &usb {
 	status = "okay";
 #if 0
