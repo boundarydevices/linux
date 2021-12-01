@@ -137,23 +137,24 @@ ssize_t HDCPTX_Status_store(struct device *dev,
 
 	dev_info(dev, "%s &hdp->state desired %s count=%d\n ", __func__, buf, (int)count);
 
-    if (strncmp(buf, "HDCP_STATE_NO_AKSV", count - 1) == 0)
+	if (strncmp(buf, "HDCP_STATE_NO_AKSV", count - 1) == 0)
 		mhdp->hdcp.state = HDCP_STATE_NO_AKSV;
-    else if (strncmp(buf, "HDCP_STATE_INACTIVE", count - 1) == 0)
+	else if (strncmp(buf, "HDCP_STATE_INACTIVE", count - 1) == 0)
 		mhdp->hdcp.state = HDCP_STATE_INACTIVE;
-    else if (strncmp(buf, "HDCP_STATE_ENABLING", count - 1) == 0)
+	else if (strncmp(buf, "HDCP_STATE_ENABLING", count - 1) == 0)
 		mhdp->hdcp.state = HDCP_STATE_ENABLING;
-    else if (strncmp(buf, "HDCP_STATE_AUTHENTICATING", count - 1) == 0)
+	else if (strncmp(buf, "HDCP_STATE_AUTHENTICATING", count - 1) == 0)
 		mhdp->hdcp.state = HDCP_STATE_AUTHENTICATING;
-    else if (strncmp(buf, "HDCP_STATE_AUTHENTICATED", count - 1) == 0)
+	else if (strncmp(buf, "HDCP_STATE_AUTHENTICATED", count - 1) == 0)
 		mhdp->hdcp.state = HDCP_STATE_AUTHENTICATED;
-    else if (strncmp(buf, "HDCP_STATE_DISABLING", count - 1) == 0)
+	else if (strncmp(buf, "HDCP_STATE_DISABLING", count - 1) == 0)
 		mhdp->hdcp.state = HDCP_STATE_DISABLING;
-    else if (strncmp(buf, "HDCP_STATE_AUTH_FAILED", count - 1) == 0)
+	else if (strncmp(buf, "HDCP_STATE_AUTH_FAILED", count - 1) == 0)
 		mhdp->hdcp.state = HDCP_STATE_AUTH_FAILED;
-    else
+	else
 		dev_err(dev, "%s &hdp->state invalid\n", __func__);
-		return -1;
+
+	return -1;
 }
 
 static void hdmi_sink_config(struct cdns_mhdp_device *mhdp)
