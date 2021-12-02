@@ -241,6 +241,7 @@ static int fan53555_voltages_setup_fairchild(struct fan53555_device_info *di)
 		}
 		break;
 	case FAN53555_CHIP_ID_01:
+	case FAN53555_CHIP_ID_02:
 	case FAN53555_CHIP_ID_03:
 	case FAN53555_CHIP_ID_05:
 	case FAN53555_CHIP_ID_08:
