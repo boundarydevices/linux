@@ -602,15 +602,15 @@ static int ipu_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "failed to reset: %d\n", ret);
 			return ret;
 		}
-
-		ipu_mem_reset(ipu);
-
-		ipu_disp_init(ipu);
-
-		/* Set MCU_T to divide MCU access window into 2 */
-		ipu_cm_write(ipu, 0x00400000L | (IPU_MCU_T_DEFAULT << 18),
-			     IPU_DISP_GEN);
 	}
+
+	ipu_mem_reset(ipu);
+
+	ipu_disp_init(ipu);
+
+	/* Set MCU_T to divide MCU access window into 2 */
+	ipu_cm_write(ipu, 0x00400000L | (IPU_MCU_T_DEFAULT << 18),
+		     IPU_DISP_GEN);
 
 	/* setup ipu clk tree after ipu reset  */
 	ret = ipu_clk_setup_enable(ipu);
