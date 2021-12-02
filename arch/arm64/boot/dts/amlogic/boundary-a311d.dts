@@ -33,6 +33,14 @@
 		status = "okay";
 	};
 
+	bt-rfkill {
+		compatible = "net,rfkill-gpio";
+		name = "bt-rfkill";
+		type = <2>; /* bluetooth */
+		reset-gpios = <&gpio GPIOX_19 GPIO_ACTIVE_LOW>;
+		status = "okay";
+	};
+
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
