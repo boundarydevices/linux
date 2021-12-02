@@ -465,7 +465,7 @@
 &i2c_AO_c {
 	vddcpu_b: regulator-vddcpu-b@60 {
 		/* fan5355 Regulator */
-		compatible = "ti,fan5355";
+		compatible = "fcs,fan53555";
 		reg = <0x60>;
 		regulator-name = "VDDCPU_B";
 		regulator-min-microvolt = <690000>;
