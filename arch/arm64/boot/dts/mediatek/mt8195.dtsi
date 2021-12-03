@@ -492,7 +492,7 @@
 			#gpio-cells = <2>;
 			gpio-ranges = <&pio 0 0 144>;
 			interrupt-controller;
-			interrupts = <GIC_SPI 212 IRQ_TYPE_LEVEL_HIGH 0>;
+			interrupts = <GIC_SPI 235 IRQ_TYPE_LEVEL_HIGH 0>;
 			#interrupt-cells = <2>;
 
 			pmif_pin: pmif_default_pin {
