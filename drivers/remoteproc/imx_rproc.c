@@ -79,10 +79,10 @@ struct imx_rproc_mem {
 /* att flags */
 /* M4 own area. Can be mapped at probe */
 #define ATT_OWN		BIT(31)
+#define ATT_IOMEM	BIT(30)
 /* I = [0:7] */
 #define ATT_CORE_MASK	0xffff
 #define ATT_CORE(I)	BIT((I))
-#define ATT_IOMEM	BIT(2)
 
 /* address translation table */
 struct imx_rproc_att {
