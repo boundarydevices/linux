@@ -3086,6 +3086,9 @@ EXPORT_SYMBOL_GPL(dw_hdmi_unbind);
 
 void dw_hdmi_resume(struct dw_hdmi *hdmi)
 {
+	if (!hdmi)
+		return;
+
 	dw_hdmi_init_hw(hdmi);
 }
 EXPORT_SYMBOL_GPL(dw_hdmi_resume);
