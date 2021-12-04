@@ -211,7 +211,9 @@
 				"Headphone Jack", "WM HP_L",
 				"Headphone Jack", "WM HP_R",
 				"WM LINPUT1", "AMIC",
+				"AMIC", "WM MICB",
 				"WM RINPUT1", "AMIC2",
+				"AMIC2", "WM MICB",
 				"TDM_B Capture", "WM Capture",
 				"WM Playback", "TDM_B Playback",
 
@@ -232,8 +234,8 @@
 #endif
 				/* 0-2:tdmin_a-c | 3:spdifin | 4:pdmin | 6:tdmin_lb,  */
 				"TODDR_A IN 1", "TDMIN_B OUT",
-				"TODDR_B IN 1", "TDMIN_B OUT",
 #if 0
+				"TODDR_B IN 1", "TDMIN_B OUT",
 				"TODDR_C IN 1", "TDMIN_B OUT",
 #endif
 #define PLAY_HDMI_WOLFSON_TOGETHER	/* TOHDMITX I2S SRC - I2S A(separate), I2S B(together) */
@@ -268,11 +270,11 @@
 			sound-dai = <&toddr_a>;
 		};
 
+#if 0
 		dai-link-4 {
 			sound-dai = <&toddr_b>;
 		};
 
-#if 0
 		dai-link-5 {
 			sound-dai = <&toddr_c>;
 		};
@@ -282,6 +284,7 @@
 		/* 8ch hdmi interface */
 		dai-link-6 {
 			dai-format = "i2s";
+			dai-tdm-slot-rx-mask-0 = <1 1>;
 			dai-tdm-slot-tx-mask-0 = <1 1>;
 			dai-tdm-slot-tx-mask-1 = <1 1>;
 			dai-tdm-slot-tx-mask-2 = <1 1>;
@@ -649,6 +652,8 @@
 		compatible = "wlf,wm8960";
 		reg = <0x1a>;
 		sound-name-prefix = "WM";
+		wlf,gpio-cfg = <1 3>;
+		wlf,hp-cfg = <2 2 3>;
 		wlf,shared-lrclk;
 		#sound-dai-cells = <0>;
 	};
