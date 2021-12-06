@@ -1018,7 +1018,7 @@ static inline bool epdc_any_luts_active(int rev)
 static inline bool epdc_any_luts_real_available(void)
 {
 	if ((__raw_readl(EPDC_STATUS_LUTS) != 0xfffffffe) ||
-		(__raw_readl(EPDC_STATUS_LUTS2) != ~0UL))
+		(__raw_readl(EPDC_STATUS_LUTS2) != ~0xffffffff))
 		return true;
 	else
 		return false;
