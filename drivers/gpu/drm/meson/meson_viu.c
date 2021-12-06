@@ -476,7 +476,7 @@ void meson_viu_init(struct meson_drm *priv)
 	if (meson_vpu_is_compatible(priv, VPU_COMPATIBLE_AXG))
 		reg |= VIU_OSD_HOLD_FIFO_LINES(24);
 	else
-		reg |= VIU_OSD_HOLD_FIFO_LINES(31);
+		reg |= VIU_OSD_HOLD_FIFO_LINES(24);
 
 	if (meson_vpu_is_compatible(priv, VPU_COMPATIBLE_GXM) ||
 	    meson_vpu_is_compatible(priv, VPU_COMPATIBLE_GXL) ||
