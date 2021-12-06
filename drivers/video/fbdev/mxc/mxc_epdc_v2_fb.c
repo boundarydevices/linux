@@ -4849,12 +4849,23 @@ static void mxc_epdc_fb_fw_handler(const struct firmware *fw,
 	target_pix_clk = fb_data->cur_mode->vmode->pixclock;
 
 	rounded_pix_clk = clk_round_rate(fb_data->epdc_clk_pix, target_pix_clk);
+	if (rounded_pix_clk < 0) {
+		dev_err(fb_data->dev,
+			"Failed to round clock rate: %ld\n", rounded_pix_clk);
+		return;
+	}
 
 	if (((rounded_pix_clk >= target_pix_clk + target_pix_clk/100) ||
 		(rounded_pix_clk <= target_pix_clk - target_pix_clk/100))) {
 		/* Can't get close enough without changing parent clk */
 		epdc_parent = clk_get_parent(fb_data->epdc_clk_pix);
 		rounded_parent_rate = clk_round_rate(epdc_parent, target_pix_clk);
+		if (rounded_parent_rate < 0) {
+			dev_err(fb_data->dev,
+				"Failed to round parent clock rate: %ld\n",
+				rounded_parent_rate);
+			return;
+		}
 
 		epdc_pix_rate = target_pix_clk;
 		while (epdc_pix_rate < rounded_parent_rate)
@@ -4862,6 +4873,12 @@ static void mxc_epdc_fb_fw_handler(const struct firmware *fw,
 		clk_set_rate(epdc_parent, epdc_pix_rate);
 
 		rounded_pix_clk = clk_round_rate(fb_data->epdc_clk_pix, target_pix_clk);
+		if (rounded_pix_clk < 0) {
+			dev_err(fb_data->dev,
+				"Failed to round clock rate: %ld\n",
+				rounded_pix_clk);
+			return;
+		}
 		if (((rounded_pix_clk >= target_pix_clk + target_pix_clk/100) ||
 			(rounded_pix_clk <= target_pix_clk - target_pix_clk/100)))
 			/* Still can't get a good clock, provide warning */
