@@ -667,9 +667,7 @@
 };
 
 &mipi_dsi {
-#if 0
 	status = "okay";
-#endif
 	assigned-clocks = <&clkc CLKID_GP0_PLL>,
 			  <&clkc CLKID_MIPI_DSI_PXCLK_SEL>,
 			  <&clkc CLKID_MIPI_DSI_PXCLK>;
