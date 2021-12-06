@@ -764,7 +764,7 @@ static int gswip_port_vlan_filtering(struct dsa_switch *ds, int port,
 				     bool vlan_filtering,
 				     struct netlink_ext_ack *extack)
 {
-	struct net_device *bridge = dsa_to_port(ds, port)->bridge_dev;
+	struct net_device *bridge = dsa_port_bridge_dev_get(dsa_to_port(ds, port));
 	struct gswip_priv *priv = ds->priv;
 
 	/* Do not allow changing the VLAN filtering options while in bridge */
@@ -1188,8 +1188,8 @@ static int gswip_port_vlan_prepare(struct dsa_switch *ds, int port,
 				   const struct switchdev_obj_port_vlan *vlan,
 				   struct netlink_ext_ack *extack)
 {
+	struct net_device *bridge = dsa_port_bridge_dev_get(dsa_to_port(ds, port));
 	struct gswip_priv *priv = ds->priv;
-	struct net_device *bridge = dsa_to_port(ds, port)->bridge_dev;
 	unsigned int max_ports = priv->hw_info->max_ports;
 	int pos = max_ports;
 	int i, idx = -1;
@@ -1234,8 +1234,8 @@ static int gswip_port_vlan_add(struct dsa_switch *ds, int port,
 			       const struct switchdev_obj_port_vlan *vlan,
 			       struct netlink_ext_ack *extack)
 {
+	struct net_device *bridge = dsa_port_bridge_dev_get(dsa_to_port(ds, port));
 	struct gswip_priv *priv = ds->priv;
-	struct net_device *bridge = dsa_to_port(ds, port)->bridge_dev;
 	bool untagged = vlan->flags & BRIDGE_VLAN_INFO_UNTAGGED;
 	bool pvid = vlan->flags & BRIDGE_VLAN_INFO_PVID;
 	int err;
@@ -1259,8 +1259,8 @@ static int gswip_port_vlan_add(struct dsa_switch *ds, int port,
 static int gswip_port_vlan_del(struct dsa_switch *ds, int port,
 			       const struct switchdev_obj_port_vlan *vlan)
 {
+	struct net_device *bridge = dsa_port_bridge_dev_get(dsa_to_port(ds, port));
 	struct gswip_priv *priv = ds->priv;
-	struct net_device *bridge = dsa_to_port(ds, port)->bridge_dev;
 	bool pvid = vlan->flags & BRIDGE_VLAN_INFO_PVID;
 
 	/* We have to receive all packets on the CPU port and should not
@@ -1345,8 +1345,8 @@ static void gswip_port_stp_state_set(struct dsa_switch *ds, int port, u8 state)
 static int gswip_port_fdb(struct dsa_switch *ds, int port,
 			  const unsigned char *addr, u16 vid, bool add)
 {
+	struct net_device *bridge = dsa_port_bridge_dev_get(dsa_to_port(ds, port));
 	struct gswip_priv *priv = ds->priv;
-	struct net_device *bridge = dsa_to_port(ds, port)->bridge_dev;
 	struct gswip_pce_table_entry mac_bridge = {0,};
 	unsigned int cpu_port = priv->hw_info->cpu_port;
 	int fid = -1;
