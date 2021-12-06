@@ -3310,7 +3310,8 @@ static int mxc_epdc_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			if (put_user(pwrdown_delay,
 				(int __user *)argp))
 				ret = -EFAULT;
-			ret = 0;
+			else
+				ret = 0;
 			break;
 		}
 
