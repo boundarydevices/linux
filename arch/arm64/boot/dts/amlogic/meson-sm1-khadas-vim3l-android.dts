@@ -38,14 +38,6 @@
     gpio-open-drain;
 };
 
-&uart_A {
-	bluetooth {
-        interrupt-parent = <&gpio_intc>;
-        interrupts = <95 IRQ_TYPE_LEVEL_HIGH>;
-		interrupt-names = "host-wakeup";
-    };
-};
-
 &uart_C {
         status = "disabled";
         pinctrl-0 = <&uart_c_pins>;
