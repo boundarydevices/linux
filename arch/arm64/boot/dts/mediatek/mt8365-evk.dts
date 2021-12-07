@@ -714,6 +714,7 @@
 		pins_irq_ite {
 			pinmux = <MT8365_PIN_68_CMDAT0__FUNC_GPIO68>;
 			input-enable;
+			bias-pull-up;
 		};
 
 		pins_pwr {
