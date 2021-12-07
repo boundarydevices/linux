@@ -538,11 +538,11 @@
 &i2c_AO_b {
 	vdd_ee: regulator-vddcpu-b@60 {
 		/* fan5355 Regulator */
-		compatible = "fcs,fan5355";
+		compatible = "fcs,fan53555";
 		reg = <0x60>;
 		regulator-name = "VDD_EE";
-		regulator-min-microvolt = <690000>;
-		regulator-max-microvolt = <1050000>;
+		regulator-min-microvolt = <780000>;
+		regulator-max-microvolt = <900000>;
 		regulator-boot-on;
 		regulator-always-on;
 	};
