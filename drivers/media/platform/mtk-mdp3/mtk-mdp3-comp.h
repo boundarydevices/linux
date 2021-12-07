@@ -325,6 +325,8 @@ enum mdp_comp_id get_comp_tdshp0(void);
 enum mdp_comp_id get_comp_color0(void);
 enum mdp_comp_id get_comp_wrot0(void);
 enum mdp_comp_id get_comp_wdma(void);
+enum mdp_comp_id get_comp_merge2(void);
+enum mdp_comp_id get_comp_merge3(void);
 
 int mdp_component_init(struct mdp_dev *mdp);
 void mdp_component_deinit(struct mdp_dev *mdp);
