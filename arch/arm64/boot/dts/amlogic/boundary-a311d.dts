@@ -525,7 +525,7 @@
 &i2c_AO_a {
 	vddcpu_a: regulator-vddcpu-a@42 {
 		/* TPS628660AYCG Regulator */
-		compatible = "ti,tps628660";
+		compatible = "ti,tps6286x";
 		reg = <0x42>;
 		regulator-name = "VDDCPU_A";
 		regulator-min-microvolt = <690000>;
