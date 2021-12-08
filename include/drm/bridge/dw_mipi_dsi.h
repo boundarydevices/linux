@@ -24,6 +24,7 @@ struct dw_mipi_dsi_dphy_timing {
 	u16 data_lp2hs;
 	u16 clk_hs2lp;
 	u16 clk_lp2hs;
+	u32 px_clk_div;
 };
 
 struct dw_mipi_dsi_phy_ops {
