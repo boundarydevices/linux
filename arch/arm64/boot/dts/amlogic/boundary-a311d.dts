@@ -413,6 +413,7 @@
 };
 
 &cpu_thermal {
+#if 0
 	trips {
 		cpu_active: cpu-active {
 			temperature = <50000>; /* millicelsius */
@@ -424,11 +425,10 @@
 	cooling-maps {
 		map {
 			trip = <&cpu_active>;
-#if 0
 			cooling-device = <&khadas_mcu THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-#endif
 		};
 	};
+#endif
 };
 
 &ext_mdio {
