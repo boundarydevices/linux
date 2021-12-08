@@ -245,6 +245,9 @@ struct dw_mipi_dsi {
 	void __iomem *base;
 
 	struct clk *pclk;
+	struct clk *px_clk;
+	unsigned long byte_clock;
+	unsigned long pixelclock;
 
 	unsigned int lane_mbps; /* per lane */
 	u32 channel;
@@ -710,44 +713,101 @@ static void dw_mipi_dsi_command_mode_config(struct dw_mipi_dsi *dsi)
 	dsi_write(dsi, DSI_MODE_CFG, ENABLE_CMD_MODE);
 }
 
-/* Get lane byte clock cycles. */
-static u32 dw_mipi_dsi_get_hcomponent_lbcc(struct dw_mipi_dsi *dsi,
-					   const struct drm_display_mode *mode,
-					   u32 hcomponent)
+static unsigned pix_to_delay_byte_clocks(struct dw_mipi_dsi *dsi, unsigned pixels,
+		int base, int min, unsigned *pix_cnt, unsigned *hs_clk_cnt)
 {
-	u32 frac, lbcc;
+	unsigned n;
+	unsigned long a;
 
-	lbcc = hcomponent * dsi->lane_mbps * MSEC_PER_SEC / 8;
+	*pix_cnt += pixels;
+	a = *pix_cnt;
+	/*
+	 * byte clock can be faster than minimum allowed,
+	 * so use actual byte clock
+	 */
+	a *= dsi->byte_clock;
+	a += (dsi->pixelclock >> 1);
+	a /= dsi->pixelclock;
+	n = a;
 
-	frac = lbcc % mode->clock;
-	lbcc = lbcc / mode->clock;
-	if (frac)
-		lbcc++;
+//	n *= dsim->lanes;
+	n -= *hs_clk_cnt;
 
-	return lbcc;
+	if (n >= base + min)
+		n -= base;
+	else
+		n = min;
+	*hs_clk_cnt += n + base;
+	pr_info("%s:pix_cnt = %d %d, byte_clock = %ld, pixelclock = %ld, n=%d "
+		"hs_clk_cnt=%d\n", __func__, *pix_cnt, pixels, dsi->byte_clock,
+		dsi->pixelclock, n, *hs_clk_cnt);
+
+	return n;
+}
+
+static unsigned pix_to_delay_byte_clocks_burst(struct dw_mipi_dsi *dsi, unsigned pixels, unsigned bpp,
+		unsigned *pix_cnt, unsigned *hs_clk_cnt)
+{
+	unsigned n;
+
+	*pix_cnt += pixels;
+	n = ((pixels * bpp) + (dsi->lanes * 8) - 1) / (dsi->lanes * 8);
+//	n *= dsim->lanes;
+	*hs_clk_cnt += n;
+	pr_info("%s:pix_cnt = %d, bpp=%d, n=%d\n", __func__, *pix_cnt, bpp, n);
+
+	return n;
+}
+
+static int dw_mipi_get_px_clk_div(struct dw_mipi_dsi *dsi)
+{
+	const struct dw_mipi_dsi_phy_ops *phy_ops = dsi->plat_data->phy_ops;
+	struct dw_mipi_dsi_dphy_timing timing;
+	int ret;
+
+	ret = phy_ops->get_timing(dsi->plat_data->priv_data,
+				  dsi->lane_mbps, &timing);
+	if (ret) {
+		DRM_DEV_ERROR(dsi->dev, "Retrieving phy timings failed\n");
+		ret = 0;
+	} else {
+		ret = timing.px_clk_div;
+	}
+	return ret;
 }
 
 static void dw_mipi_dsi_line_timer_config(struct dw_mipi_dsi *dsi,
 					  const struct drm_display_mode *mode)
 {
-	u32 htotal, hsa, hbp, lbcc;
+	u32 hbp, hfp, hsa, bpp;
+	u32 hbp_wc, hsa_wc;
+	unsigned hs_clk;
+	unsigned pix_cnt = 0;
+	unsigned hs_clk_cnt = 0;
+	unsigned px_clk_div = dw_mipi_get_px_clk_div(dsi);
 
-	htotal = mode->htotal;
+	bpp = mipi_dsi_pixel_format_to_bpp(dsi->format);
+	hs_clk = clk_get_rate(dsi->px_clk);
+	if (!px_clk_div) {
+		px_clk_div = (bpp + dsi->lanes - 1) / dsi->lanes;
+	}
+	dsi->byte_clock = hs_clk >> 3;
+	dsi->pixelclock = hs_clk / px_clk_div;
+
+	pr_info("%s: hs_clk=%d px_clk_div=%d\n", __func__, hs_clk, px_clk_div);
+	hfp = mode->hsync_start - mode->hdisplay;
 	hsa = mode->hsync_end - mode->hsync_start;
 	hbp = mode->htotal - mode->hsync_end;
 
-	/*
-	 * TODO dw drv improvements
-	 * computations below may be improved...
-	 */
-	lbcc = dw_mipi_dsi_get_hcomponent_lbcc(dsi, mode, htotal);
-	dsi_write(dsi, DSI_VID_HLINE_TIME, lbcc);
+	hbp_wc = pix_to_delay_byte_clocks(dsi, hbp, 0, 1, &pix_cnt, &hs_clk_cnt);
+	pix_to_delay_byte_clocks_burst(dsi, mode->hdisplay, bpp, &pix_cnt, &hs_clk_cnt);
+	pix_to_delay_byte_clocks(dsi, hfp, 0, 1, &pix_cnt, &hs_clk_cnt);
+	hsa_wc = pix_to_delay_byte_clocks(dsi, hsa, 0, 1, &pix_cnt, &hs_clk_cnt);
 
-	lbcc = dw_mipi_dsi_get_hcomponent_lbcc(dsi, mode, hsa);
-	dsi_write(dsi, DSI_VID_HSA_TIME, lbcc);
-
-	lbcc = dw_mipi_dsi_get_hcomponent_lbcc(dsi, mode, hbp);
-	dsi_write(dsi, DSI_VID_HBP_TIME, lbcc);
+	pr_info("%s: hbp_wc=%d hsa_wc=%d hs_clk_cnt=%d\n", __func__, hbp_wc, hsa_wc, hs_clk_cnt);
+	dsi_write(dsi, DSI_VID_HBP_TIME, hbp_wc);
+	dsi_write(dsi, DSI_VID_HSA_TIME, hsa_wc);
+	dsi_write(dsi, DSI_VID_HLINE_TIME, hs_clk_cnt);
 }
 
 static void dw_mipi_dsi_vertical_timing_config(struct dw_mipi_dsi *dsi,
@@ -1133,6 +1193,12 @@ __dw_mipi_dsi_probe(struct platform_device *pdev,
 	if (IS_ERR(dsi->pclk)) {
 		ret = PTR_ERR(dsi->pclk);
 		dev_err(dev, "Unable to get pclk: %d\n", ret);
+		return ERR_PTR(ret);
+	}
+	dsi->px_clk = devm_clk_get(&pdev->dev, "px_clk");
+	if (IS_ERR(dsi->px_clk)) {
+		ret = PTR_ERR(dsi->px_clk);
+		dev_err(dev, "Unable to get px_clk: %d\n", ret);
 		return ERR_PTR(ret);
 	}
 
