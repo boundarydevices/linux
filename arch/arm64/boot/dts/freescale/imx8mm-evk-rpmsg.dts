@@ -59,6 +59,7 @@
 	rpmsg_audio: rpmsg_audio {
 		compatible = "fsl,imx8mm-rpmsg-audio";
 		model = "ak4497-audio";
+		fsl,platform = "rpmsg-audio-channel";
 		fsl,enable-lpa;
 		fsl,rpmsg-out;
 		assigned-clocks = <&clk IMX8MM_CLK_SAI1>;
