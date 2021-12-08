@@ -178,7 +178,7 @@ DECLARE_RESTRICTED_HOOK(android_rvh_account_irq,
 
 struct sched_entity;
 DECLARE_RESTRICTED_HOOK(android_rvh_place_entity,
-	TP_PROTO(struct cfs_rq *cfs_rq, struct sched_entity *se, int initial, u64 vruntime),
+	TP_PROTO(struct cfs_rq *cfs_rq, struct sched_entity *se, int initial, u64 *vruntime),
 	TP_ARGS(cfs_rq, se, initial, vruntime), 1);
 
 DECLARE_RESTRICTED_HOOK(android_rvh_build_perf_domains,
@@ -310,6 +310,10 @@ DECLARE_RESTRICTED_HOOK(android_rvh_enqueue_task_fair,
 DECLARE_RESTRICTED_HOOK(android_rvh_dequeue_task_fair,
 	TP_PROTO(struct rq *rq, struct task_struct *p, int flags),
 	TP_ARGS(rq, p, flags), 1);
+
+DECLARE_HOOK(android_vh_em_dev_register_pd,
+	TP_PROTO(bool *cond),
+	TP_ARGS(cond));
 
 #endif /* _TRACE_HOOK_SCHED_H */
 /* This part must be outside protection */
