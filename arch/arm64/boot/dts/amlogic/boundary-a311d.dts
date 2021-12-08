@@ -47,6 +47,27 @@
 		stdout-path = "serial0:115200n8";
 	};
 
+	connector {
+		compatible = "usb-c-connector";
+		label = "USB-C";
+		data-role = "dual";
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@1 {
+				reg = <1>;
+				con_ep: endpoint {
+					remote-endpoint = <&hd3ss3220_in_ep>;
+				};
+			};
+		};
+	};
+
 	emmc_pwrseq: emmc-pwrseq {
 		compatible = "mmc-pwrseq-emmc";
 		reset-gpios = <&gpio BOOT_12 GPIO_ACTIVE_LOW>;
@@ -153,18 +174,24 @@
 		regulator-name = "VCC_5V";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		gpio = <&gpio GPIOH_8 GPIO_OPEN_DRAIN>;
 		enable-active-high;
 	};
 
-	reg_usb: regulator-reg_usb {
+	reg_usb_otg: regulator-reg-usb-otg {
 		compatible = "regulator-fixed";
-		regulator-name = "USB_PWR";
+		regulator-name = "USB_OTGPWR";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		vin-supply = <&reg_5v0>;
+		gpio = <&gpio GPIOH_8 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
 
-		gpio = <&gpio GPIOA_8 GPIO_ACTIVE_HIGH>;
+	reg_usb_host: regulator-reg-usb-host {
+		compatible = "regulator-fixed";
+		regulator-name = "USB_HOSTPWR";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio GPIOA_10 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
 
@@ -607,6 +634,33 @@
 
 &i2c2_a {
 	/* TypeC chip */
+	usb_mux: hd3ss3220@60 {
+		/* tusb320 is compatible with hd3ss3220 */
+		compatible = "ti,hd3ss3220";
+		interrupts-extended = <&gpio_intc 70 IRQ_TYPE_LEVEL_LOW>; /* GPIOA_9 */
+		mode = <2>;
+		mode-gpios = <&gpio_ao GPIOE_1 GPIO_ACTIVE_HIGH>;
+		reg = <0x60>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				hd3ss3220_in_ep: endpoint {
+					remote-endpoint = <&con_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				hd3ss3220_out_ep: endpoint {
+					remote-endpoint = <&usb3_role_switch>;
+				};
+			};
+		};
+	};
 };
 
 &i2c2_b {
@@ -707,11 +761,10 @@
 	};
 };
 
-#if 0
 &pcie {
+	status = "disabled";
 	reset-gpios = <&gpio GPIOA_8 GPIO_ACTIVE_LOW>;
 };
-#endif
 
 &pwm_ab {
 	pinctrl-0 = <&pwm_a_e_pins>;
@@ -915,11 +968,27 @@
 
 &usb {
 	status = "okay";
-#if 0
-	dr_mode = "peripheral";
-#endif
-	dr_mode = "host";
-	vbus-supply = <&reg_usb>;
+	dr_mode = "otg";
+	usb-role-switch;
+	ss-select-gpios = <&gpio GPIOA_13 GPIO_ACTIVE_LOW>;
+
+	vbus-supply = <&reg_usb_otg>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@1 {
+			reg = <1>;
+			usb3_role_switch: endpoint {
+				remote-endpoint = <&hd3ss3220_out_ep>;
+			};
+		};
+	};
+};
+
+&dwc3 {
+	vbus-supply = <&reg_usb_host>;
 };
 
 &usb2_phy0 {
