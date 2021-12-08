@@ -218,6 +218,13 @@ static const struct mtk_iommu_iova_region mt8192_multi_dom_apu[] = {
 	{ .iova_base = 0x70000000ULL,	.size = 0x12600000}, /* APU REG */
 };
 
+static const struct mtk_iommu_iova_region mt8195_multi_dom_apu[] = {
+	{ .iova_base = 0x0,		.size = SZ_4G}, /* APU DATA */
+	{ .iova_base = 0x8000000ULL,	.size = 0x8000000},  /* APU VLM */
+	{ .iova_base = 0x20000000ULL,	.size = 0xe0000000}, /* APU VPU */
+	{ .iova_base = 0x70000000ULL,	.size = 0x12600000}, /* APU REG */
+};
+
 /* If 2 M4U share a domain(use the same hwlist), Put the corresponding info in first data.*/
 static struct mtk_iommu_data *mtk_iommu_get_frst_data(struct list_head *hwlist)
 {
@@ -1342,6 +1349,18 @@ static const struct mtk_iommu_plat_data mt8192_data_apu = {
 	.iova_region_nr = ARRAY_SIZE(mt8192_multi_dom_apu),
 };
 
+static const struct mtk_iommu_plat_data mt8195_data_apu = {
+	.m4u_plat       = M4U_MT8195,
+	.flags          = DCM_DISABLE | MTK_IOMMU_TYPE_APU |
+			  SHARE_PGTABLE,
+	.inv_sel_reg    = REG_MMU_INV_SEL_GEN2,
+	.hw_list        = &apulist,
+	.bank_nr	= 1,
+	.bank_enable    = {true},
+	.iova_region    = mt8195_multi_dom_apu,
+	.iova_region_nr = ARRAY_SIZE(mt8195_multi_dom_apu),
+};
+
 static const struct mtk_iommu_plat_data mt8195_data_infra = {
 	.m4u_plat	  = M4U_MT8195,
 	.flags            = WR_THROT_EN | DCM_DISABLE |
@@ -1409,6 +1428,7 @@ static const struct of_device_id mtk_iommu_of_ids[] = {
 	{ .compatible = "mediatek,mt8183-m4u", .data = &mt8183_data},
 	{ .compatible = "mediatek,mt8192-m4u", .data = &mt8192_data},
 	{ .compatible = "mediatek,mt8192-iommu-apu",   .data = &mt8192_data_apu},
+	{ .compatible = "mediatek,mt8195-iommu-apu",   .data = &mt8195_data_apu},
 	{ .compatible = "mediatek,mt8195-iommu-infra", .data = &mt8195_data_infra},
 	{ .compatible = "mediatek,mt8195-iommu-vdo",   .data = &mt8195_data_vdo},
 	{ .compatible = "mediatek,mt8195-iommu-vpp",   .data = &mt8195_data_vpp},
