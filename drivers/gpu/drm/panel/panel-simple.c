@@ -4100,11 +4100,11 @@ static const struct panel_desc_dsi boe_tv080wum_nl0 = {
 };
 
 static const struct drm_display_mode leadtek_ltk080a60a004t_mode = {
-	.clock = 125000,
+	.clock = 160000,
 	.hdisplay = 1200,
-	.hsync_start = 1200 + 128,
-	.hsync_end = 1200 + 128 + 4,
-	.htotal = 1200 + 128 + 4 + 20,
+	.hsync_start = 1200 + 144,
+	.hsync_end = 1200 + 144 + 4,
+	.htotal = 1200 + 144 + 4 + 20,
 	.vdisplay = 1920,
 	.vsync_start = 1920 + 35,
 	.vsync_end = 1920 + 35 + 1,
