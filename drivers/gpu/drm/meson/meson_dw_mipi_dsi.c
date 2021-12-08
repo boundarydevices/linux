@@ -81,6 +81,9 @@ struct meson_dw_mipi_dsi {
 	struct mipi_dsi_device *dsi_device;
 	const struct drm_display_mode *mode;
 	struct clk *px_clk;
+	struct clk *hs_base_clk;
+	int px_clk_en;
+	int px_clk_div;
 };
 
 #define encoder_to_meson_dw_mipi_dsi(x) \
@@ -107,18 +110,40 @@ static void meson_dw_mipi_dsi_hw_init(struct meson_dw_mipi_dsi *mipi_dsi)
 static int dw_mipi_dsi_phy_init(void *priv_data)
 {
 	struct meson_dw_mipi_dsi *mipi_dsi = priv_data;
+	unsigned int vclk2_div;
+	unsigned int desired_pixel_clock = mipi_dsi->mode->clock * 1000;
+	unsigned int pll_rate;
 	unsigned int dpi_data_format, venc_data_width;
-	int ret;
+	int ret, ret2;
 
 	pr_err("%s:%d\n", __func__, __LINE__);
 
-	ret = clk_set_rate(mipi_dsi->px_clk, mipi_dsi->phy_opts.mipi_dphy.hs_clk_rate);
+	pll_rate = mipi_dsi->phy_opts.mipi_dphy.hs_clk_rate;
+	vclk2_div = (pll_rate + desired_pixel_clock - 1)/ desired_pixel_clock;
+	mipi_dsi->px_clk_div = vclk2_div;
+
+	if (mipi_dsi->px_clk_en) {
+		clk_disable_unprepare(mipi_dsi->px_clk);
+		ret = clk_set_rate(mipi_dsi->hs_base_clk, pll_rate);
+		ret = clk_set_rate(mipi_dsi->px_clk, pll_rate);
+		ret2 = clk_prepare_enable(mipi_dsi->px_clk);
+		if (ret2) {
+			pr_err("Unable to prepare/enable PX clock\n");
+			mipi_dsi->px_clk_en = 0;
+		}
+	} else {
+		ret = clk_set_rate(mipi_dsi->hs_base_clk, pll_rate);
+		ret = clk_set_rate(mipi_dsi->px_clk, pll_rate);
+	}
+
 	if (ret) {
 		pr_err("Failed to set DSI PLL rate %lu\n",
 		       mipi_dsi->phy_opts.mipi_dphy.hs_clk_rate);
 
 		return ret;
 	}
+	pr_info("%s:pll_rate=%d, mode->clock=%d, vclk2_div=%d %ld\n", __func__,
+			pll_rate, mipi_dsi->mode->clock, vclk2_div, clk_get_rate(mipi_dsi->px_clk));
 
 	switch (mipi_dsi->dsi_device->format) {
 	case MIPI_DSI_FMT_RGB888:
@@ -187,6 +212,7 @@ static int
 dw_mipi_dsi_phy_get_timing(void *priv_data, unsigned int lane_mbps,
 			   struct dw_mipi_dsi_dphy_timing *timing)
 {
+	struct meson_dw_mipi_dsi *mipi_dsi = priv_data;
 	/* TOFIX handle other cases */
 
 	pr_err("%s:%d\n", __func__, __LINE__);
@@ -195,6 +221,7 @@ dw_mipi_dsi_phy_get_timing(void *priv_data, unsigned int lane_mbps,
 	timing->clk_hs2lp = 135;
 	timing->data_lp2hs = 50;
 	timing->data_hs2lp = 3;
+	timing->px_clk_div = mipi_dsi->px_clk_div;
 
 	return 0;
 }
@@ -327,6 +354,11 @@ static int meson_dw_mipi_dsi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Unable to get PLL clk\n");
 		return PTR_ERR(mipi_dsi->px_clk);
 	}
+	mipi_dsi->hs_base_clk = devm_clk_get(&pdev->dev, "hs_base");
+	if (IS_ERR(mipi_dsi->hs_base_clk)) {
+		dev_err(&pdev->dev, "Unable to get hs_base clk\n");
+		return PTR_ERR(mipi_dsi->hs_base_clk);
+	}
 
 	pr_err("%s:%d\n", __func__, __LINE__);
 
@@ -351,6 +383,7 @@ static int meson_dw_mipi_dsi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Unable to prepare/enable PX clock\n");
 		return ret;
 	}
+	mipi_dsi->px_clk_en = 1;
 
 	pr_err("%s:%d\n", __func__, __LINE__);
 
