@@ -152,8 +152,8 @@ static const struct mdp_comp_info mt8183_comp_dt_info[] = {
 	[MDP_COMP_TYPE_PATH1]		= {0, 0, 2},
 	[MDP_COMP_TYPE_PATH2]		= {0, 0, 3},
 	[MDP_COMP_TYPE_CCORR]		= {1, 0, 0},
-	[MDP_COMP_TYPE_IMGI]		= {0, 0, 2},
-	[MDP_COMP_TYPE_EXTO]		= {0, 0, 2},
+	[MDP_COMP_TYPE_IMGI]		= {0, 0, 4},
+	[MDP_COMP_TYPE_EXTO]		= {0, 0, 4},
 	[MDP_COMP_TYPE_DL_PATH1]	= {2, 2, 1},
 	[MDP_COMP_TYPE_DL_PATH2]	= {2, 4, 1},
 };
