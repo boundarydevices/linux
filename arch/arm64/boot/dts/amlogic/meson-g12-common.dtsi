@@ -2248,8 +2248,9 @@
 				resets = <&reset RESET_MIPI_DSI_HOST>;
 				reset-names = "top";
 				clocks = <&clkc CLKID_MIPI_DSI_HOST>,
-				       	 <&clkc CLKID_MIPI_DSI_PXCLK>;
-				clock-names = "pclk", "px_clk";
+					 <&clkc CLKID_MIPI_DSI_PXCLK>,
+					 <&clkc CLKID_GP0_PLL>;
+				clock-names = "pclk", "px_clk", "hs_base";
 				phys = <&mipi_dphy>;
 				phy-names = "dphy";
 				#address-cells = <1>;
