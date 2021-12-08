@@ -372,6 +372,15 @@ static const struct mtk_iommu_iova_region mt8192_multi_dom[MT8192_MULTI_REGION_N
 	#endif
 };
 
+static const struct mtk_iommu_iova_region mt8195_multi_dom_apu[] = {
+	{ .iova_base = 0x0,		.size = SZ_4G}, /* APU DATA */
+	#if IS_ENABLED(CONFIG_ARCH_DMA_ADDR_T_64BIT)
+	{ .iova_base = 0x8000000ULL,	.size = 0x8000000},  /* APU VLM */
+	{ .iova_base = 0x20000000ULL,	.size = 0xe0000000}, /* APU VPU */
+	{ .iova_base = 0x70000000ULL,	.size = 0x12600000}, /* APU REG */
+	#endif
+};
+
 /* If 2 M4U share a domain(use the same hwlist), Put the corresponding info in first data.*/
 static struct mtk_iommu_data *mtk_iommu_get_frst_data(struct list_head *hwlist)
 {
@@ -1768,6 +1777,27 @@ static const struct mtk_iommu_plat_data mt8192_data = {
 			   {0, 14, 16}, {0, 13, 18, 17}},
 };
 
+static const unsigned int mt8195_apu_region_msk[][MTK_LARB_NR_MAX] = {
+	[0] = {[0] = BIT(0)},   /* Region0: IOMMU_PORT_APU_DATA is MTK_M4U_ID(0, 0) */
+	[1] = {[0] = BIT(1)},   /* Region1: IOMMU_PORT_APU_VLM is MTK_M4U_ID(0, 1) */
+	[2] = {[0] = BIT(2)},   /* Region2: IOMMU_PORT_APU_VPU is MTK_M4U_ID(0, 2) */
+	[3] = {[0] = BIT(3)},   /* Region3: IOMMU_PORT_APU_REG is MTK_M4U_ID(0, 3) */
+};
+
+static const struct mtk_iommu_plat_data mt8195_data_apu = {
+	.m4u_plat       = M4U_MT8195,
+	.flags          = DCM_DISABLE | MTK_IOMMU_TYPE_APU |
+			  SHARE_PGTABLE,
+	.inv_sel_reg    = REG_MMU_INV_SEL_GEN2,
+	.hw_list        = &apulist,
+	.banks_num	= 1,
+	.banks_enable    = {true},
+	.iova_region    = mt8195_multi_dom_apu,
+	.iova_region_nr = ARRAY_SIZE(mt8195_multi_dom_apu),
+	.iova_region_larb_msk = mt8195_apu_region_msk,
+	.larbid_remap	= {{0}, {1}, {2}, {3}},
+};
+
 static const struct mtk_iommu_plat_data mt8195_data_infra = {
 	.m4u_plat	  = M4U_MT8195,
 	.flags            = WR_THROT_EN | DCM_DISABLE | STD_AXI_MODE | PM_CLK_AO |
@@ -1856,6 +1886,7 @@ static const struct of_device_id mtk_iommu_of_ids[] = {
 	{ .compatible = "mediatek,mt8188-iommu-vdo",   .data = &mt8188_data_vdo},
 	{ .compatible = "mediatek,mt8188-iommu-vpp",   .data = &mt8188_data_vpp},
 	{ .compatible = "mediatek,mt8192-m4u", .data = &mt8192_data},
+	{ .compatible = "mediatek,mt8195-iommu-apu",   .data = &mt8195_data_apu},
 	{ .compatible = "mediatek,mt8195-iommu-infra", .data = &mt8195_data_infra},
 	{ .compatible = "mediatek,mt8195-iommu-vdo",   .data = &mt8195_data_vdo},
 	{ .compatible = "mediatek,mt8195-iommu-vpp",   .data = &mt8195_data_vpp},
