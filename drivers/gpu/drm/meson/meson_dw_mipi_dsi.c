@@ -103,6 +103,9 @@ struct meson_dw_mipi_dsi {
 	struct mipi_dsi_device *dsi_device;
 	unsigned long mode_flags;
 	struct clk *px_clk;
+	struct clk *hs_base_clk;
+	int px_clk_en;
+	int px_clk_div;
 };
 #define encoder_to_meson_dw_mipi_dsi(x) \
 	container_of(x, struct meson_dw_mipi_dsi, encoder)
@@ -119,19 +122,36 @@ static void dw_mipi_dsi_set_vclk(struct meson_dw_mipi_dsi *mipi_dsi,
 {
 	struct meson_drm *priv = mipi_dsi->priv;
 	unsigned int vclk2_div;
+	unsigned int desired_pixel_clock = mode->clock * 1000;
 	unsigned int pll_rate;
-	int ret;
+	int ret, ret2;
 
 	pll_rate = mipi_dsi->phy_opts.mipi_dphy.hs_clk_rate;
-	vclk2_div = pll_rate / (mode->clock * 1000);
+	vclk2_div = (pll_rate + desired_pixel_clock - 1)/ desired_pixel_clock;
+	mipi_dsi->px_clk_div = vclk2_div;
 
-	ret = clk_set_rate(mipi_dsi->px_clk, pll_rate);
+	if (mipi_dsi->px_clk_en) {
+		clk_disable_unprepare(mipi_dsi->px_clk);
+		ret = clk_set_rate(mipi_dsi->hs_base_clk, pll_rate);
+		ret = clk_set_rate(mipi_dsi->px_clk, pll_rate);
+		ret2 = clk_prepare_enable(mipi_dsi->px_clk);
+		if (ret2) {
+			pr_err("Unable to prepare/enable PX clock\n");
+			mipi_dsi->px_clk_en = 0;
+		}
+	} else {
+		ret = clk_set_rate(mipi_dsi->hs_base_clk, pll_rate);
+		ret = clk_set_rate(mipi_dsi->px_clk, pll_rate);
+	}
+
 	if (ret) {
 		pr_err("Failed to set DSI PLL rate %lu\n",
 		       mipi_dsi->phy_opts.mipi_dphy.hs_clk_rate);
 
 		return;
 	}
+	pr_info("%s:pll_rate=%d, mode->clock=%d, vclk2_div=%d %ld\n", __func__,
+			pll_rate, mode->clock, vclk2_div, clk_get_rate(mipi_dsi->px_clk));
 
 	/* Disable VCLK2 */
 	regmap_update_bits(priv->hhi, HHI_VIID_CLK_CNTL, VCLK2_EN, 0);
@@ -208,12 +228,14 @@ static int
 dw_mipi_dsi_phy_get_timing(void *priv_data, unsigned int lane_mbps,
 			   struct dw_mipi_dsi_dphy_timing *timing)
 {
+	struct meson_dw_mipi_dsi *mipi_dsi = priv_data;
 	/* TOFIX handle other cases */
 
 	timing->clk_lp2hs = 37;
 	timing->clk_hs2lp = 135;
 	timing->data_lp2hs = 50;
 	timing->data_hs2lp = 3;
+	timing->px_clk_div = mipi_dsi->px_clk_div;
 
 	return 0;
 }
@@ -574,6 +596,11 @@ static int meson_dw_mipi_dsi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Unable to get PLL clk\n");
 		return PTR_ERR(mipi_dsi->px_clk);
 	}
+	mipi_dsi->hs_base_clk = devm_clk_get(&pdev->dev, "hs_base");
+	if (IS_ERR(mipi_dsi->hs_base_clk)) {
+		dev_err(&pdev->dev, "Unable to get hs_base clk\n");
+		return PTR_ERR(mipi_dsi->hs_base_clk);
+	}
 
 	/*
 	 * We use a TOP reset signal because the APB reset signal
@@ -594,6 +621,7 @@ static int meson_dw_mipi_dsi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Unable to prepare/enable PX clock\n");
 		goto err_clkdisable;
 	}
+	mipi_dsi->px_clk_en = 1;
 
 	reset_control_assert(top_rst);
 	usleep_range(10, 20);
