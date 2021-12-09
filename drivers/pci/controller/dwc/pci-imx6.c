@@ -142,6 +142,7 @@ struct imx6_pcie {
 	u32			local_addr;
 	int			link_gen;
 	struct regulator	*vpcie;
+	u32			vpcie_enabled;
 	void __iomem		*phy_base;
 	void __iomem		*hsmix_base;
 
@@ -1205,12 +1206,13 @@ static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 		break;
 	}
 
-	if (imx6_pcie->vpcie && regulator_is_enabled(imx6_pcie->vpcie) > 0) {
+	if (imx6_pcie->vpcie && imx6_pcie->vpcie_enabled) {
 		int ret = regulator_disable(imx6_pcie->vpcie);
 
 		if (ret)
 			dev_err(dev, "failed to disable vpcie regulator: %d\n",
 				ret);
+		imx6_pcie->vpcie_enabled = 0;
 	}
 }
 
@@ -1250,13 +1252,14 @@ static void imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
 
 	activate_reset(imx6_pcie);
 
-	if (imx6_pcie->vpcie && !regulator_is_enabled(imx6_pcie->vpcie)) {
+	if (imx6_pcie->vpcie && !imx6_pcie->vpcie_enabled) {
 		ret = regulator_enable(imx6_pcie->vpcie);
 		if (ret) {
 			dev_err(dev, "failed to enable vpcie regulator: %d\n",
 				ret);
 			return;
 		}
+		imx6_pcie->vpcie_enabled = 1;
 	}
 
 	switch (imx6_pcie->drvdata->variant) {
