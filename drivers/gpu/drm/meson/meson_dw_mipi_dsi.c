@@ -41,6 +41,7 @@ struct meson_dw_mipi_dsi {
 	struct dw_mipi_dsi *dmd;
 	struct dw_mipi_dsi_plat_data pdata;
 	struct mipi_dsi_device *dsi_device;
+	struct drm_display_mode *mode;
 	struct clk *px_clk;
 };
 
@@ -50,8 +51,11 @@ struct meson_dw_mipi_dsi {
 static int dw_mipi_dsi_phy_init(void *priv_data)
 {
 	struct meson_dw_mipi_dsi *mipi_dsi = priv_data;
+	unsigned int dpi_data_format, venc_data_width;
 	struct meson_drm *priv = mipi_dsi->priv;
 	int ret;
+
+	phy_configure(encoder_dsi->phy, &mipi_dsi->phy_opts);
 
 	ret = clk_set_rate(mipi_dsi->px_clk, mipi_dsi->phy_opts.mipi_dphy.hs_clk_rate);
 	if (ret) {
@@ -61,9 +65,30 @@ static int dw_mipi_dsi_phy_init(void *priv_data)
 		return ret;
 	}
 
-	phy_power_on(mipi_dsi->phy);
+	meson_dw_mipi_dsi_hw_init(mipi_dsi);
 
-	writel_relaxed(1, priv->io_base + _REG(ENCL_VIDEO_EN));
+	switch (mipi_dsi->dsi_device->format) {
+	case MIPI_DSI_FMT_RGB888:
+		dpi_data_format = COLOR_24BIT;
+		venc_data_width = MIPI_DSI_VENC_COLOR_24B;
+		break;
+	case MIPI_DSI_FMT_RGB666:
+		dpi_data_format = COLOR_18BIT_CFG_2;
+		venc_data_width = MIPI_DSI_VENC_COLOR_18B;
+		break;
+	};
+
+	/* Configure color format for DPI register */
+	writel_relaxed((dpi_data_format  << BIT_DPI_COLOR_MODE)  |
+		       (venc_data_width  << BIT_IN_COLOR_MODE) |
+			0 << BIT_COMP0_SEL |
+			1 << BIT_COMP1_SEL |
+			2 << BIT_COMP2_SEL,
+			(mipi_dsi->mode->flags & DRM_MODE_FLAG_NHSYNC ? 0 : BIT(BIT_HSYNC_POL)) |
+			(mipi_dsi->mode->flags & DRM_MODE_FLAG_NVSYNC ? 0 : BIT(BIT_VSYNC_POL)),
+			mipi_dsi->base + MIPI_DSI_TOP_CNTL);
+
+	phy_power_on(mipi_dsi->phy);
 
 	return 0;
 }
@@ -81,6 +106,15 @@ dw_mipi_dsi_get_lane_mbps(void *priv_data, const struct drm_display_mode *mode,
 			  unsigned int *lane_mbps)
 {
 	struct meson_dw_mipi_dsi *mipi_dsi = priv_data;
+	int bpp;
+
+	mipi_dsi->mode = mode;
+
+	bpp = encoder_dsi_pixel_format_to_bpp(mipi_dsi->dsi_device->format);
+
+	phy_mipi_dphy_get_default_config(mode->clock * 1000,
+					 bpp, encoder_dsi->dsi_device->lanes,
+					 &mipi_dsi->phy_opts.mipi_dphy);
 
 	*lane_mbps = mipi_dsi->phy_opts.mipi_dphy.hs_clk_rate / 1000000;
 
@@ -139,12 +173,44 @@ static const struct component_ops meson_dw_mipi_dsi_ops = {
 	.bind	= meson_dw_mipi_dsi_bind,
 };
 
+static void meson_dw_mipi_dsi_hw_init(struct meson_dw_mipi_dsi *mipi_dsi)
+{
+	writel_relaxed((1 << 4) | (1 << 5) | (0 << 6),
+			mipi_dsi->base + MIPI_DSI_TOP_CNTL);
+
+	writel_bits_relaxed(0xf, 0xf,
+			    mipi_dsi->base + MIPI_DSI_TOP_SW_RESET);
+	writel_bits_relaxed(0xf, 0,
+			    mipi_dsi->base + MIPI_DSI_TOP_SW_RESET);
+
+	writel_bits_relaxed(0x3, 0x3,
+			    mipi_dsi->base + MIPI_DSI_TOP_CLK_CNTL);
+
+	writel_relaxed(0, mipi_dsi->base + MIPI_DSI_TOP_MEM_PD);
+}
+
 static int meson_dw_mipi_dsi_host_attach(void *priv_data,
 					 struct mipi_dsi_device *device)
 {
 	struct meson_dw_mipi_dsi *mipi_dsi = priv_data;
+	u32 reg;
 
 	mipi_dsi->dsi_device = device;
+
+	witch (device->format) {
+	case MIPI_DSI_FMT_RGB888:
+		dpi_data_format = COLOR_24BIT;
+		venc_data_width = MIPI_DSI_VENC_COLOR_24B;
+		break;
+	case MIPI_DSI_FMT_RGB666:
+		dpi_data_format = COLOR_18BIT_CFG_2;
+		venc_data_width = MIPI_DSI_VENC_COLOR_18B;
+		break;
+	case MIPI_DSI_FMT_RGB666_PACKED:
+	case MIPI_DSI_FMT_RGB565:
+		DRM_DEV_ERROR(mipi_dsi->dev, "invalid pixel format %d\n", device->format);
+		return -EINVAL;
+	};
 
 	phy_init(mipi_dsi->phy);
 
