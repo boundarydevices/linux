@@ -197,6 +197,13 @@
 		>;
 	};
 
+	pinctrl_reg_wifi_en: reg-wifi-engrp {
+		fsl,pins = <
+#define GP_REG_WIFI_EN		<&gpio5 10 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_ECSPI2_SCLK_GPIO5_IO10		0x16
+		>;
+	};
+
 	pinctrl_uart2: uart2grp {
 		fsl,pins = <
 			MX8MQ_IOMUXC_UART2_RXD_UART2_DCE_RX		0x45
@@ -376,6 +383,17 @@
 		regulator-name = "vref-5v";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
+	};
+
+	reg_wifi_en: regulator-wifi-en {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_wifi_en>;
+		regulator-name = "wifi_en";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = GP_REG_WIFI_EN;
+		enable-active-high;
 	};
 
 	resmem: reserved-memory {
@@ -611,14 +629,15 @@
 	clocks = <&clk IMX8MQ_CLK_PCIE1_ROOT>,
 		<&clk IMX8MQ_CLK_PCIE1_AUX>,
 		<&clk IMX8MQ_CLK_PCIE1_PHY>,
-		<&pcie0_refclk>;
-	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
+		<&pcie0_refclk>, <&pcie0_refclk>;
+	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus", "pcie_ext_src";
 	ext_osc = <1>;
 	hard-wired;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie0>;
 	reset-gpio = GP_PCIE0_RESET;
 	status = "okay";
+	vpcie-supply = <&reg_wifi_en>;
 };
 
 &pcie1 { /* Edge TPU */
@@ -632,8 +651,8 @@
 	clocks = <&clk IMX8MQ_CLK_PCIE2_ROOT>,
 		<&clk IMX8MQ_CLK_PCIE2_AUX>,
 		<&clk IMX8MQ_CLK_PCIE2_PHY>,
-		<&pcie1_refclk>;
-	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
+		<&pcie1_refclk>, <&pcie1_refclk>;
+	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus", "pcie_ext_src";
 	ext_osc = <1>;
 	hard-wired;
 	pinctrl-names = "default";
