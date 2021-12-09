@@ -89,12 +89,55 @@ struct meson_dw_mipi_dsi {
 #define encoder_to_meson_dw_mipi_dsi(x) \
 	container_of(x, struct meson_dw_mipi_dsi, encoder)
 
+static void meson_mipi_dsi_set_top_cntl(struct meson_dw_mipi_dsi *mipi_dsi)
+{
+	unsigned dpi_data_format = COLOR_24BIT;
+	unsigned venc_data_width = MIPI_DSI_VENC_COLOR_24B;
+	u32 new, cur;
+
+	switch (mipi_dsi->dsi_device->format) {
+	case MIPI_DSI_FMT_RGB888:
+		break;
+	case MIPI_DSI_FMT_RGB666:
+		dpi_data_format = COLOR_18BIT_CFG_2;
+		venc_data_width = MIPI_DSI_VENC_COLOR_18B;
+		break;
+	case MIPI_DSI_FMT_RGB666_PACKED:
+	case MIPI_DSI_FMT_RGB565:
+		/* invalid */
+		pr_warn("Invalid format\n");
+		break;
+	};
+
+	/* Configure Set color format for DPI register */
+	cur = readl_relaxed(mipi_dsi->base + MIPI_DSI_TOP_CNTL);
+	new = cur &
+		~((0xf<<BIT_DPI_COLOR_MODE) |
+		(0x7<<BIT_IN_COLOR_MODE) |
+		(0x3<<BIT_CHROMA_SUBSAMPLE) |
+		(0x3<<BIT_COMP2_SEL) |
+		(0x3<<BIT_COMP1_SEL) |
+		(0x3<<BIT_COMP0_SEL) |
+		BIT(BIT_DE_POL) | BIT(BIT_HSYNC_POL) | BIT(BIT_VSYNC_POL));
+	new |= (dpi_data_format  << BIT_DPI_COLOR_MODE) |
+		(venc_data_width  << BIT_IN_COLOR_MODE) |
+		2 << BIT_COMP2_SEL |
+		1 << BIT_COMP1_SEL |
+		0 << BIT_COMP0_SEL;
+	if (mipi_dsi->mode) {
+		new |= (mipi_dsi->mode->flags & DRM_MODE_FLAG_NHSYNC ? 0 : BIT(BIT_HSYNC_POL)) |
+			(mipi_dsi->mode->flags & DRM_MODE_FLAG_NVSYNC ? 0 : BIT(BIT_VSYNC_POL));
+	}
+
+	if (new != cur)
+		writel_relaxed(new, mipi_dsi->base + MIPI_DSI_TOP_CNTL);
+}
+
 static void meson_dw_mipi_dsi_hw_init(struct meson_dw_mipi_dsi *mipi_dsi)
 {
 
 	pr_err("%s:%d\n", __func__, __LINE__);
-	writel_relaxed((1 << 4) | (1 << 5) | (0 << 6),
-			mipi_dsi->base + MIPI_DSI_TOP_CNTL);
+	meson_mipi_dsi_set_top_cntl(mipi_dsi);
 
 	writel_bits_relaxed(0xf, 0xf,
 			    mipi_dsi->base + MIPI_DSI_TOP_SW_RESET);
@@ -113,7 +156,6 @@ static int dw_mipi_dsi_phy_init(void *priv_data)
 	unsigned int vclk2_div;
 	unsigned int desired_pixel_clock = mipi_dsi->mode->clock * 1000;
 	unsigned int pll_rate;
-	unsigned int dpi_data_format, venc_data_width;
 	int ret, ret2;
 
 	pr_err("%s:%d\n", __func__, __LINE__);
@@ -145,30 +187,7 @@ static int dw_mipi_dsi_phy_init(void *priv_data)
 	pr_info("%s:pll_rate=%d, mode->clock=%d, vclk2_div=%d %ld\n", __func__,
 			pll_rate, mipi_dsi->mode->clock, vclk2_div, clk_get_rate(mipi_dsi->px_clk));
 
-	switch (mipi_dsi->dsi_device->format) {
-	case MIPI_DSI_FMT_RGB888:
-		dpi_data_format = COLOR_24BIT;
-		venc_data_width = MIPI_DSI_VENC_COLOR_24B;
-		break;
-	case MIPI_DSI_FMT_RGB666:
-		dpi_data_format = COLOR_18BIT_CFG_2;
-		venc_data_width = MIPI_DSI_VENC_COLOR_18B;
-		break;
-	case MIPI_DSI_FMT_RGB666_PACKED:
-	case MIPI_DSI_FMT_RGB565:
-		return -EINVAL;
-	};
-
-	/* Configure color format for DPI register */
-	writel_relaxed((dpi_data_format  << BIT_DPI_COLOR_MODE)  |
-		       (venc_data_width  << BIT_IN_COLOR_MODE) |
-			0 << BIT_COMP0_SEL |
-			1 << BIT_COMP1_SEL |
-			2 << BIT_COMP2_SEL |
-			(mipi_dsi->mode->flags & DRM_MODE_FLAG_NHSYNC ? 0 : BIT(BIT_HSYNC_POL)) |
-			(mipi_dsi->mode->flags & DRM_MODE_FLAG_NVSYNC ? 0 : BIT(BIT_VSYNC_POL)),
-			mipi_dsi->base + MIPI_DSI_TOP_CNTL);
-
+	meson_mipi_dsi_set_top_cntl(mipi_dsi);
 	phy_power_on(mipi_dsi->phy);
 
 	return 0;
