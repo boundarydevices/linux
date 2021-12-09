@@ -111,6 +111,7 @@ struct imx6_pcie {
 	u32			ext_osc;
 	u32			local_addr;
 	struct regulator	*vpcie;
+	u32			vpcie_enabled;
 	struct regulator	*vph;
 	void __iomem		*phy_base;
 
@@ -1623,13 +1624,14 @@ static int imx6_pcie_host_init(struct dw_pcie_rp *pp)
 	int ret;
 
 	activate_reset(imx6_pcie);
-	if (imx6_pcie->vpcie) {
+	if (imx6_pcie->vpcie && !imx6_pcie->vpcie_enabled) {
 		ret = regulator_enable(imx6_pcie->vpcie);
 		if (ret) {
 			dev_err(dev, "failed to enable vpcie regulator: %d\n",
 				ret);
 			return ret;
 		}
+		imx6_pcie->vpcie_enabled = 1;
 	}
 
 	imx6_pcie_assert_core_reset(imx6_pcie);
@@ -1682,8 +1684,10 @@ err_phy_off:
 err_clk_disable:
 	imx6_pcie_clk_disable(imx6_pcie);
 err_reg_disable:
-	if (imx6_pcie->vpcie)
+	if (imx6_pcie->vpcie && imx6_pcie->vpcie_enabled) {
 		regulator_disable(imx6_pcie->vpcie);
+		imx6_pcie->vpcie_enabled = 0;
+	}
 	return ret;
 }
 
@@ -1699,8 +1703,10 @@ static void imx6_pcie_host_exit(struct dw_pcie_rp *pp)
 	}
 	imx6_pcie_clk_disable(imx6_pcie);
 
-	if (imx6_pcie->vpcie)
+	if (imx6_pcie->vpcie && imx6_pcie->vpcie_enabled) {
 		regulator_disable(imx6_pcie->vpcie);
+		imx6_pcie->vpcie_enabled = 0;
+	}
 }
 
 static const struct dw_pcie_host_ops imx6_pcie_host_ops = {
