@@ -852,6 +852,7 @@ static int lpi2c_dma_init(struct device *dev,
 		goto err;
 	}
 
+	memset(&dma_sconfig, 0, sizeof(dma_sconfig));
 	dma_sconfig.dst_addr = lpi2c_imx->phy_addr + LPI2C_MTDR;
 	dma_sconfig.dst_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE;
 	dma_sconfig.dst_maxburst = 1;
