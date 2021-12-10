@@ -1029,20 +1029,17 @@ static void meson_vclk_set(struct meson_drm *priv, unsigned int pll_base_freq,
 
 static void meson_dsi_clock_config(struct meson_drm *priv, unsigned freq)
 {
-	meson_hdmi_pll_generic_set(priv, freq);
+	meson_hdmi_pll_generic_set(priv, freq * 10);
 
 	/* Setup vid_pll bypass */
-	meson_vid_pll_set(priv, VID_PLL_DIV_1);
+	meson_vid_pll_set(priv, VID_PLL_DIV_5);
 	
 	/* Disable VCLK2 */
 	regmap_update_bits(priv->hhi, HHI_VIID_CLK_CNTL, VCLK2_EN, 0);
 
-	/* Setup vid_pll to /1 */
-	meson_vid_pll_set(priv, VID_PLL_DIV_1);
-
 	/* Setup the VCLK2 divider value */
 	regmap_update_bits(priv->hhi, HHI_VIID_CLK_DIV,
-				VCLK2_DIV_MASK, 0);
+				VCLK2_DIV_MASK, 2 - 1);
 
 	/* select vid_pll for vclk2 */
 	regmap_update_bits(priv->hhi, HHI_VIID_CLK_CNTL,
