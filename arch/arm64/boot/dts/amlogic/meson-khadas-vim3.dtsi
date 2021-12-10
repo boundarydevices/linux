@@ -167,6 +167,7 @@
 	hdmi-connector {
 		compatible = "hdmi-connector";
 		type = "a";
+		status = "disabled";
 
 		port {
 			hdmi_connector_in: endpoint {
@@ -329,7 +330,7 @@
 };
 
 &hdmi_tx {
-	status = "okay";
+	status = "disabled";
 	pinctrl-0 = <&hdmitx_hpd_pins>, <&hdmitx_ddc_pins>;
 	pinctrl-names = "default";
 	hdmi-supply = <&vcc_5v>;
