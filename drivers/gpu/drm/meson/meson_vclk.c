@@ -1031,8 +1031,8 @@ static void meson_dsi_clock_config(struct meson_drm *priv, unsigned freq)
 {
 	meson_hdmi_pll_generic_set(priv, freq);
 
-	/* Setup vid_pll divider */
-	meson_vid_pll_set(priv, vid_pll_div);
+	/* Setup vid_pll bypass */
+	meson_vid_pll_set(priv, VID_PLL_DIV_1);
 	
 	/* Disable VCLK2 */
 	regmap_update_bits(priv->hhi, HHI_VIID_CLK_CNTL, VCLK2_EN, 0);
