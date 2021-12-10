@@ -903,6 +903,8 @@ static int mtk_iommu_mm_dts_parse(struct device *dev,
 	larb_nr = of_count_phandle_with_args(dev->of_node, "mediatek,larbs", NULL);
 	if (larb_nr < 0)
 		return larb_nr;
+	if (larb_nr == 0)
+		return -EINVAL;
 
 	for (i = 0; i < larb_nr; i++) {
 		u32 id;
@@ -955,7 +957,7 @@ static int mtk_iommu_mm_dts_parse(struct device *dev,
 
 	if (!link) {
 		dev_err(dev, "Unable link %s.\n", dev_name(data->smicomm_dev));
-		return PTR_ERR(link);
+		return -EINVAL;
 	}
 	return 0;
 }
