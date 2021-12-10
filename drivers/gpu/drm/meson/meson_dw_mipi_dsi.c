@@ -88,6 +88,8 @@ struct meson_dw_mipi_dsi {
 
 static void meson_dw_mipi_dsi_hw_init(struct meson_dw_mipi_dsi *mipi_dsi)
 {
+
+	pr_err("%s:%d\n", __func__, __LINE__);
 	writel_relaxed((1 << 4) | (1 << 5) | (0 << 6),
 			mipi_dsi->base + MIPI_DSI_TOP_CNTL);
 
@@ -108,7 +110,7 @@ static int dw_mipi_dsi_phy_init(void *priv_data)
 	unsigned int dpi_data_format, venc_data_width;
 	int ret;
 
-	phy_configure(mipi_dsi->phy, &mipi_dsi->phy_opts);
+	pr_err("%s:%d\n", __func__, __LINE__);
 
 	ret = clk_set_rate(mipi_dsi->px_clk, mipi_dsi->phy_opts.mipi_dphy.hs_clk_rate);
 	if (ret) {
@@ -117,8 +119,6 @@ static int dw_mipi_dsi_phy_init(void *priv_data)
 
 		return ret;
 	}
-
-	meson_dw_mipi_dsi_hw_init(mipi_dsi);
 
 	switch (mipi_dsi->dsi_device->format) {
 	case MIPI_DSI_FMT_RGB888:
@@ -153,6 +153,8 @@ static void dw_mipi_dsi_phy_power_off(void *priv_data)
 {
 	struct meson_dw_mipi_dsi *mipi_dsi = priv_data;
 
+	pr_err("%s:%d\n", __func__, __LINE__);
+
 	phy_power_off(mipi_dsi->phy);
 }
 
@@ -164,6 +166,8 @@ dw_mipi_dsi_get_lane_mbps(void *priv_data, const struct drm_display_mode *mode,
 	struct meson_dw_mipi_dsi *mipi_dsi = priv_data;
 	int bpp;
 
+	pr_err("%s:%d\n", __func__, __LINE__);
+
 	mipi_dsi->mode = mode;
 
 	bpp = mipi_dsi_pixel_format_to_bpp(mipi_dsi->dsi_device->format);
@@ -171,6 +175,8 @@ dw_mipi_dsi_get_lane_mbps(void *priv_data, const struct drm_display_mode *mode,
 	phy_mipi_dphy_get_default_config(mode->clock * 1000,
 					 bpp, mipi_dsi->dsi_device->lanes,
 					 &mipi_dsi->phy_opts.mipi_dphy);
+
+	phy_configure(mipi_dsi->phy, &mipi_dsi->phy_opts);
 
 	*lane_mbps = mipi_dsi->phy_opts.mipi_dphy.hs_clk_rate / 1000000;
 
@@ -182,6 +188,8 @@ dw_mipi_dsi_phy_get_timing(void *priv_data, unsigned int lane_mbps,
 			   struct dw_mipi_dsi_dphy_timing *timing)
 {
 	/* TOFIX handle other cases */
+
+	pr_err("%s:%d\n", __func__, __LINE__);
 
 	timing->clk_lp2hs = 37;
 	timing->clk_hs2lp = 135;
@@ -195,6 +203,8 @@ static int
 dw_mipi_dsi_get_esc_clk_rate(void *priv_data, unsigned int *esc_clk_rate)
 {
 	*esc_clk_rate = 4; /* Mhz */
+
+	pr_err("%s:%d\n", __func__, __LINE__);
 
 	return 0;
 }
@@ -214,11 +224,18 @@ static int meson_dw_mipi_dsi_bind(struct device *dev, struct device *master,
 	struct drm_device *drm = data;
 	struct meson_drm *priv = drm->dev_private;
 
+	pr_err("%s:%d\n", __func__, __LINE__);
+
 	/* Check before if we are supposed to have a sub-device... */
-	if (!mipi_dsi->dsi_device)
+	if (!mipi_dsi->dsi_device) {
+		dw_mipi_dsi_remove(mipi_dsi->dmd);
+		//clk_disable_unprepare(mipi_dsi->px_clk);
 		return -EPROBE_DEFER;
+	}
 
 	mipi_dsi->priv = priv;
+
+	meson_dw_mipi_dsi_hw_init(mipi_dsi);
 
 	return 0;
 }
@@ -233,6 +250,8 @@ static int meson_dw_mipi_dsi_host_attach(void *priv_data,
 	struct meson_dw_mipi_dsi *mipi_dsi = priv_data;
 
 	mipi_dsi->dsi_device = device;
+
+	pr_err("%s:%d\n", __func__, __LINE__);
 
 	switch (device->format) {
 	case MIPI_DSI_FMT_RGB888:
@@ -254,6 +273,8 @@ static int meson_dw_mipi_dsi_host_detach(void *priv_data,
 					 struct mipi_dsi_device *device)
 {
 	struct meson_dw_mipi_dsi *mipi_dsi = priv_data;
+
+	pr_err("%s:%d\n", __func__, __LINE__);
 
 	if (device == mipi_dsi->dsi_device)
 		mipi_dsi->dsi_device = NULL;
@@ -277,6 +298,8 @@ static int meson_dw_mipi_dsi_probe(struct platform_device *pdev)
 	struct resource *res;
 	int ret;
 
+	pr_err("%s:%d\n", __func__, __LINE__);
+
 	mipi_dsi = devm_kzalloc(&pdev->dev, sizeof(*mipi_dsi), GFP_KERNEL);
 	if (!mipi_dsi)
 		return -ENOMEM;
@@ -288,6 +311,8 @@ static int meson_dw_mipi_dsi_probe(struct platform_device *pdev)
 	if (IS_ERR(mipi_dsi->base))
 		return PTR_ERR(mipi_dsi->base);
 
+	pr_err("%s:%d\n", __func__, __LINE__);
+
 	mipi_dsi->phy = devm_phy_get(&pdev->dev, "dphy");
 	if (IS_ERR(mipi_dsi->phy)) {
 		ret = PTR_ERR(mipi_dsi->phy);
@@ -295,11 +320,15 @@ static int meson_dw_mipi_dsi_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	pr_err("%s:%d\n", __func__, __LINE__);
+
 	mipi_dsi->px_clk = devm_clk_get(&pdev->dev, "px_clk");
 	if (IS_ERR(mipi_dsi->px_clk)) {
 		dev_err(&pdev->dev, "Unable to get PLL clk\n");
 		return PTR_ERR(mipi_dsi->px_clk);
 	}
+
+	pr_err("%s:%d\n", __func__, __LINE__);
 
 	/*
 	 * We use a TOP reset signal because the APB reset signal
@@ -315,15 +344,21 @@ static int meson_dw_mipi_dsi_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	pr_err("%s:%d\n", __func__, __LINE__);
+
 	ret = clk_prepare_enable(mipi_dsi->px_clk);
 	if (ret) {
 		dev_err(&pdev->dev, "Unable to prepare/enable PX clock\n");
-		goto err_clkdisable;
+		return ret;
 	}
+
+	pr_err("%s:%d\n", __func__, __LINE__);
 
 	reset_control_assert(top_rst);
 	usleep_range(10, 20);
 	reset_control_deassert(top_rst);
+
+	pr_err("%s:%d\n", __func__, __LINE__);
 
 	/* MIPI DSI Controller */
 
@@ -334,6 +369,8 @@ static int meson_dw_mipi_dsi_probe(struct platform_device *pdev)
 	mipi_dsi->pdata.priv_data = mipi_dsi;
 	platform_set_drvdata(pdev, mipi_dsi);
 
+	pr_err("%s:%d\n", __func__, __LINE__);
+
 	mipi_dsi->dmd = dw_mipi_dsi_probe(pdev, &mipi_dsi->pdata);
 	if (IS_ERR(mipi_dsi->dmd)) {
 		ret = PTR_ERR(mipi_dsi->dmd);
@@ -342,6 +379,8 @@ static int meson_dw_mipi_dsi_probe(struct platform_device *pdev)
 				"Failed to probe dw_mipi_dsi: %d\n", ret);
 		goto err_clkdisable;
 	}
+
+	pr_err("%s:%d\n", __func__, __LINE__);
 
 	return component_add(mipi_dsi->dev, &meson_dw_mipi_dsi_ops);
 
@@ -355,6 +394,10 @@ static int meson_dw_mipi_dsi_remove(struct platform_device *pdev)
 {
 	struct meson_dw_mipi_dsi *mipi_dsi = dev_get_drvdata(&pdev->dev);
 
+	pr_err("%s:%d\n", __func__, __LINE__);
+
+	dw_mipi_dsi_remove(mipi_dsi->dmd);
+
 	component_del(mipi_dsi->dev, &meson_dw_mipi_dsi_ops);
 
 	clk_disable_unprepare(mipi_dsi->px_clk);
@@ -363,7 +406,7 @@ static int meson_dw_mipi_dsi_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id meson_dw_mipi_dsi_of_table[] = {
-	{ .compatible = "amlogic,meson-axg-dw-mipi-dsi", },
+	{ .compatible = "amlogic,meson-g12a-dw-mipi-dsi", },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, meson_dw_mipi_dsi_of_table);
