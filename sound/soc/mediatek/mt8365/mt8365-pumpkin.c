@@ -63,6 +63,7 @@ enum {
 };
 
 static const struct snd_soc_dapm_widget mt8365_pumpkin_widgets[] = {
+	SND_SOC_DAPM_MIC("PMIC MIC", NULL),
 	SND_SOC_DAPM_HP("Headphone", NULL),
 	SND_SOC_DAPM_OUTPUT("TDM_OUT Out"),
 	SND_SOC_DAPM_OUTPUT("I2S1 Out"),
@@ -70,6 +71,7 @@ static const struct snd_soc_dapm_widget mt8365_pumpkin_widgets[] = {
 
 static const struct snd_soc_dapm_route mt8365_pumpkin_routes[] = {
 	{"Headphone", NULL, "MT6357 Playback"},
+	{"MT6357 Capture", NULL, "PMIC MIC"},
 	{"TDM_OUT Out", NULL, "TDM_OUT Playback"},
 	{"I2S1 Out", NULL, "I2S Playback"},
 
