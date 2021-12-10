@@ -1039,7 +1039,7 @@ static const struct drm_bridge_funcs dw_mipi_dsi_bridge_funcs = {
 	.attach	      = dw_mipi_dsi_bridge_attach,
 };
 
-#ifdef CONFIG_DEBUG_FS
+#if 0 //def CONFIG_DEBUG_FS
 
 static int dw_mipi_dsi_debugfs_write(void *data, u64 val)
 {
