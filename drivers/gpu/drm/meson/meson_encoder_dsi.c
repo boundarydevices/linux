@@ -22,6 +22,7 @@
 #include "meson_encoder_dsi.h"
 #include "meson_registers.h"
 #include "meson_venc.h"
+#include "meson_vclk.h"
 
 struct meson_encoder_dsi {
 	struct drm_encoder encoder;
@@ -71,7 +72,7 @@ static void meson_encoder_dsi_atomic_enable(struct drm_bridge *bridge,
 
 	meson_vclk_setup(priv, MESON_VCLK_TARGET_DSI, mode->clock * 1000, 0, 0, 0, false);
 
-	meson_venc_encoder_dsi_mode_set(priv, mode);
+	meson_venc_mipi_dsi_mode_set(priv, mode);
 
 	meson_encl_load_gamma(priv);
 
@@ -93,10 +94,8 @@ static void meson_encoder_dsi_atomic_disable(struct drm_bridge *bridge,
 
 static const struct drm_bridge_funcs meson_encoder_dsi_bridge_funcs = {
 	.attach		= meson_encoder_dsi_attach,
-	.atomic_check	= meson_encoder_dsi_atomic_check,
-	.atomic_enable	= meson_encoder_dsi_atomic_check,
-	.atomic_disable	= meson_encoder_dsi_atomic_check,
-	.atomic_check = meson_encoder_dsi_atomic_check,
+	.atomic_enable	= meson_encoder_dsi_atomic_enable,
+	.atomic_disable	= meson_encoder_dsi_atomic_disable,
 	.atomic_duplicate_state = drm_atomic_helper_bridge_duplicate_state,
 	.atomic_destroy_state = drm_atomic_helper_bridge_destroy_state,
 	.atomic_reset = drm_atomic_helper_bridge_reset,
