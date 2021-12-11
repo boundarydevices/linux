@@ -6,6 +6,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/usb/role.h>
 #include <linux/irqreturn.h>
@@ -69,6 +70,7 @@ static enum usb_role hd3ss3220_get_attached_state(struct hd3ss3220 *hd3ss3220)
 		attached_state = USB_ROLE_NONE;
 		break;
 	}
+	pr_debug("%s: reg_val=%x, attached_state=%d\n", __func__, reg_val, attached_state);
 
 	return attached_state;
 }
@@ -104,6 +106,7 @@ static void hd3ss3220_set_role(struct hd3ss3220 *hd3ss3220)
 {
 	enum usb_role role_state = hd3ss3220_get_attached_state(hd3ss3220);
 
+	pr_debug("%s: role_state=%d\n", __func__, role_state);
 	usb_role_switch_set_role(hd3ss3220->role_sw, role_state);
 	if (role_state == USB_ROLE_NONE)
 		hd3ss3220_set_source_pref(hd3ss3220,
@@ -149,6 +152,20 @@ static const struct regmap_config config = {
 	.max_register = 0x0A,
 };
 
+int hd3ss3220_reset(struct hd3ss3220 *hd3ss3220)
+{
+	int rc;
+
+	rc = regmap_update_bits(hd3ss3220->regmap, HD3SS3220_REG_GEN_CTRL,
+			HD3SS3220_REG_GEN_CTRL_SOFT_RESET,
+			HD3SS3220_REG_GEN_CTRL_SOFT_RESET);
+	if (rc < 0)
+		return rc;
+
+	hd3ss3220_set_role(hd3ss3220);
+	return 0;
+}
+
 static ssize_t store_reset(struct device *dev,
 				struct device_attribute *attr,
 				const char *buff, size_t size)
@@ -156,16 +173,11 @@ static ssize_t store_reset(struct device *dev,
 	struct i2c_client *client = to_i2c_client(dev);
 	struct hd3ss3220 *hd3ss3220 = i2c_get_clientdata(client);
 	unsigned state = 0;
-	int rc = 0;
+	int rc;
 
 	if (sscanf(buff, "%u", &state) == 1) {
-		rc = regmap_update_bits(hd3ss3220->regmap, HD3SS3220_REG_GEN_CTRL,
-					  HD3SS3220_REG_GEN_CTRL_SOFT_RESET,
-					  HD3SS3220_REG_GEN_CTRL_SOFT_RESET);
-		if (rc < 0)
-			return rc;
-
-		return size;
+		rc = hd3ss3220_reset(hd3ss3220);
+		return (rc < 0) ? rc : size;
 	}
 
 	return -EINVAL;
@@ -201,6 +213,8 @@ static int hd3ss3220_probe(struct i2c_client *client,
 	struct typec_capability typec_cap = { };
 	struct hd3ss3220 *hd3ss3220;
 	struct fwnode_handle *connector, *ep;
+	struct gpio_desc* gp_mode;
+	u32 mode;
 	int ret;
 	unsigned int data;
 
@@ -211,13 +225,29 @@ static int hd3ss3220_probe(struct i2c_client *client,
 
 	i2c_set_clientdata(client, hd3ss3220);
 
+	/* mode 0 - device only, 1 - host only, 2 - otg */
+	gp_mode = devm_gpiod_get_optional(&client->dev, "mode", GPIOD_IN);
+	if (IS_ERR(gp_mode))
+		return dev_err_probe(&client->dev, PTR_ERR(gp_mode),
+				"failed to get mode GPIO\n");
+	if (gp_mode) {
+		if (of_property_read_u32(client->dev.of_node, "mode", &mode))
+			mode = 2;
+		if (mode < 2)
+			gpiod_direction_output(gp_mode, mode);
+	}
+
 	hd3ss3220->dev = &client->dev;
 	hd3ss3220->regmap = devm_regmap_init_i2c(client, &config);
 	if (IS_ERR(hd3ss3220->regmap))
 		return PTR_ERR(hd3ss3220->regmap);
 
-	hd3ss3220_set_source_pref(hd3ss3220,
+	if (gp_mode) {
+		hd3ss3220_reset(hd3ss3220);
+	} else {
+		hd3ss3220_set_source_pref(hd3ss3220,
 				  HD3SS3220_REG_GEN_CTRL_SRC_PREF_DRP_DEFAULT);
+	}
 	/* For backward compatibility check the connector child node first */
 	connector = device_get_named_child_node(hd3ss3220->dev, "connector");
 	if (connector) {
