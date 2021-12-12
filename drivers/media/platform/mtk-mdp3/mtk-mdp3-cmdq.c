@@ -77,7 +77,7 @@ static int mdp_path_subfrm_require(struct mdp_path_subfrm *subfrm,
 	const struct mtk_mdp_driver_data *data = path->mdp_dev->mdp_data;
 	struct device *dev = &path->mdp_dev->pdev->dev;
 	struct mtk_mutex **mutex = path->mdp_dev->mdp_mutex;
-	s32 mutex_id = -1;
+	s32 mutex_id = MDP_PIPE_NONE;
 	u32 mutex_sof = 0;
 	int index, j;
 	enum mtk_mdp_comp_id mtk_comp_id = MDP_COMP_NONE;
@@ -144,7 +144,7 @@ static int mdp_path_subfrm_require(struct mdp_path_subfrm *subfrm,
 	}
 
 	subfrm->mutex_id = mutex_id;
-	if (-1 == mutex_id) {
+	if (MDP_PIPE_NONE == mutex_id) {
 		dev_err(dev, "No mutex assigned");
 		return -EINVAL;
 	}

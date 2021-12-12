@@ -151,6 +151,7 @@ enum mtk_mdp_comp_id {
 };
 
 enum mtk_mdp_pipe_id {
+	MDP_PIPE_NONE = -1,
 	MDP_PIPE_RDMA0,
 	MDP_PIPE_IMGI,
 	MDP_PIPE_WPEI,

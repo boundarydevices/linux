@@ -799,13 +799,17 @@ void mtk_mutex_add_mod_by_cmdq(struct mtk_mutex *mutex, u32 mod,
 
 	WARN_ON(&mtx->mutex[mutex->id] != mutex);
 
-	offset = DISP_REG_MUTEX_MOD(mtx->data->mutex_mod_reg, mutex->id);
-	cmdq_pkt_write_mask(cmd->pkt, mtx->subsys_id, mtx->addr + offset,
-			    mod, mtx->data->mutex_mdp_mod_mask);
+	if (mod != MDP_PIPE_NONE) {
+		offset = DISP_REG_MUTEX_MOD(mtx->data->mutex_mod_reg, mutex->id);
+		cmdq_pkt_write_mask(cmd->pkt, mtx->subsys_id, mtx->addr + offset,
+				    mod, mtx->data->mutex_mdp_mod_mask);
+	}
 
-	offset = DISP_REG_MUTEX_MOD1(mtx->data->mutex_mod_reg, mutex->id);
-	cmdq_pkt_write_mask(cmd->pkt, mtx->subsys_id, mtx->addr + offset,
-			    mod1, mtx->data->mutex_mdp_mod_mask);
+	if (mod1 != MDP_PIPE_NONE) {
+		offset = DISP_REG_MUTEX_MOD1(mtx->data->mutex_mod_reg, mutex->id);
+		cmdq_pkt_write_mask(cmd->pkt, mtx->subsys_id, mtx->addr + offset,
+				    mod1, mtx->data->mutex_mdp_mod_mask);
+	}
 
 	offset = DISP_REG_MUTEX_SOF(mtx->data->mutex_sof_reg, mutex->id);
 	cmdq_pkt_write_mask(cmd->pkt, mtx->subsys_id, mtx->addr + offset,
