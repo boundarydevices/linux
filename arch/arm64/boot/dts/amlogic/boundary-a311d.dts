@@ -179,11 +179,11 @@
 
 	reg_usb_otg: regulator-reg-usb-otg {
 		compatible = "regulator-fixed";
-		regulator-name = "USB_OTGPWR";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
-		gpio = <&gpio GPIOH_8 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
+		gpio = <&gpio GPIOH_8 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		regulator-max-microvolt = <5000000>;
+		regulator-min-microvolt = <5000000>;
+		regulator-name = "USB_OTGPWR";
 	};
 
 	reg_usb_host: regulator-reg-usb-host {
