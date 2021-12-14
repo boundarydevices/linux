@@ -248,12 +248,8 @@ static struct dsa_switch_tree *dsa_tree_alloc(int index)
 
 static void dsa_tree_free(struct dsa_switch_tree *dst)
 {
-	if (dst->tag_ops) {
-		if (dst->tag_ops->disconnect)
-			dst->tag_ops->disconnect(dst);
-
+	if (dst->tag_ops)
 		dsa_tag_driver_put(dst->tag_ops);
-	}
 	list_del(&dst->list);
 	kfree(dst);
 }
@@ -844,17 +840,29 @@ static int dsa_switch_setup_tag_protocol(struct dsa_switch *ds)
 	}
 
 connect:
+	if (tag_ops->connect) {
+		err = tag_ops->connect(ds);
+		if (err)
+			return err;
+	}
+
 	if (ds->ops->connect_tag_protocol) {
 		err = ds->ops->connect_tag_protocol(ds, tag_ops->proto);
 		if (err) {
 			dev_err(ds->dev,
 				"Unable to connect to tag protocol \"%s\": %pe\n",
 				tag_ops->name, ERR_PTR(err));
-			return err;
+			goto disconnect;
 		}
 	}
 
 	return 0;
+
+disconnect:
+	if (tag_ops->disconnect)
+		tag_ops->disconnect(ds);
+
+	return err;
 }
 
 static int dsa_switch_setup(struct dsa_switch *ds)
@@ -1174,13 +1182,6 @@ static int dsa_tree_bind_tag_proto(struct dsa_switch_tree *dst,
 
 	dst->tag_ops = tag_ops;
 
-	/* Notify the new tagger about the connection to this tree */
-	if (tag_ops->connect) {
-		err = tag_ops->connect(dst);
-		if (err)
-			goto out_revert;
-	}
-
 	/* Notify the switches from this tree about the connection
 	 * to the new tagger
 	 */
@@ -1190,16 +1191,14 @@ static int dsa_tree_bind_tag_proto(struct dsa_switch_tree *dst,
 		goto out_disconnect;
 
 	/* Notify the old tagger about the disconnection from this tree */
-	if (old_tag_ops->disconnect)
-		old_tag_ops->disconnect(dst);
+	info.tag_ops = old_tag_ops;
+	dsa_tree_notify(dst, DSA_NOTIFIER_TAG_PROTO_DISCONNECT, &info);
 
 	return 0;
 
 out_disconnect:
-	/* Revert the new tagger's connection to this tree */
-	if (tag_ops->disconnect)
-		tag_ops->disconnect(dst);
-out_revert:
+	info.tag_ops = tag_ops;
+	dsa_tree_notify(dst, DSA_NOTIFIER_TAG_PROTO_DISCONNECT, &info);
 	dst->tag_ops = old_tag_ops;
 
 	return err;
@@ -1332,7 +1331,6 @@ static int dsa_port_parse_cpu(struct dsa_port *dp, struct net_device *master,
 	struct dsa_switch_tree *dst = ds->dst;
 	const struct dsa_device_ops *tag_ops;
 	enum dsa_tag_protocol default_proto;
-	int err;
 
 	/* Find out which protocol the switch would prefer. */
 	default_proto = dsa_get_tag_protocol(dp, master);
@@ -1380,12 +1378,6 @@ static int dsa_port_parse_cpu(struct dsa_port *dp, struct net_device *master,
 		 */
 		dsa_tag_driver_put(tag_ops);
 	} else {
-		if (tag_ops->connect) {
-			err = tag_ops->connect(dst);
-			if (err)
-				return err;
-		}
-
 		dst->tag_ops = tag_ops;
 	}
 
