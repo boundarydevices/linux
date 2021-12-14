@@ -1308,8 +1308,7 @@ static int ocelot_gpiochip_register(struct platform_device *pdev,
 	gc = &info->gpio_chip;
 	gc->ngpio = info->desc->npins;
 	gc->parent = &pdev->dev;
-	gc->base = 0;
-	gc->of_node = info->dev->of_node;
+	gc->base = -1;
 	gc->label = "ocelot-gpio";
 
 	irq = irq_of_parse_and_map(gc->of_node, 0);
