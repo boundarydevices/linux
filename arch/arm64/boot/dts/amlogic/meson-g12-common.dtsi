@@ -2487,8 +2487,9 @@
 			/*
 			 *  When otg is in host mode, this is the USB2.0 host controller.
 			 *  It is also the controller for the host only SS capable port.
-			 *  So, you can have 1 usb2.0 stick and 1 usb3.0 stick, but you
-			 *  cannot have 2 usb2.0 sticks. My opinion only, please show me I am wrong.
+			 *
+			 *  The 2.0 hub supports 2 ports. So, otg and hs port can be used
+			 *  simultaneously.
 			 */
 			dwc3: usb@ff500000 {
 				compatible = "snps,dwc3";
