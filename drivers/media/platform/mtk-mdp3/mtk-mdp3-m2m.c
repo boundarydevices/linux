@@ -103,6 +103,7 @@ static void mdp_m2m_worker(struct work_struct *work)
 	param.type = ctx->curr_param.type;
 	param.num_inputs = 1;
 	param.num_outputs = 1;
+	param.frame_change = (ctx->frame_count[MDP_M2M_SRC] == 0);
 
 	frame = ctx_get_frame(ctx, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
 	src_vb = v4l2_m2m_next_src_buf(ctx->m2m_ctx);
@@ -357,6 +358,11 @@ static int mdp_m2m_s_fmt_mplane(struct file *file, void *fh,
 		ctx->curr_param.ycbcr_enc = f->fmt.pix_mp.ycbcr_enc;
 		ctx->curr_param.quant = f->fmt.pix_mp.quantization;
 		ctx->curr_param.xfer_func = f->fmt.pix_mp.xfer_func;
+
+		if (MDP_COLOR_IS_HYFBC_COMPRESS(fmt->mdp_color)) {
+			frame->stride.width = ((f->fmt.pix_mp.width + 63) >> 6) << 6;
+			frame->stride.height = ((f->fmt.pix_mp.height + 31) >> 5) << 5;
+		}
 	} else {
 		capture->compose.left = 0;
 		capture->compose.top = 0;

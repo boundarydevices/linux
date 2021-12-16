@@ -355,6 +355,8 @@ struct mdp_frame {
 	u32			dre:1;
 	u32			sharpness:1;
 	u32			dither:1;
+	/* H and V stride, only for HYFBC format */
+	struct v4l2_rect	stride;
 };
 
 static inline bool mdp_target_is_crop(u32 target)

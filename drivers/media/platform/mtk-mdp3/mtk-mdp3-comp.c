@@ -27,6 +27,10 @@
 #include "mdp_reg_wdma.h"
 #include "mdp_reg_isp.h"
 
+#define is_wrot(id) \
+	((mdp)->mdp_data->comp_data[id].match.type == MDP_COMP_TYPE_WROT)
+#define byte2pixel(byte) ((byte) / 2)
+
 static struct mdp_comp_list comp_list;
 
 enum mdp_comp_id get_comp_camin(void)
@@ -450,14 +454,40 @@ static const struct mdp_comp_ops fg_ops = {
 
 static int init_rsz(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 {
+	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
+	u32 value, mask, alias_id;
 
 	/* Reset RSZ */
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_ENABLE, 0x10000, BIT(16));
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_ENABLE, 0x0, BIT(16));
 	/* Enable RSZ */
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_ENABLE, BIT(0), BIT(0));
+
+	if (mdp_cfg && mdp_cfg->mdp_version_8195) {
+		const struct mtk_mdp_driver_data *data = ctx->comp->mdp_dev->mdp_data;
+
+		value = (1 << 25);
+		mask = (1 << 25);
+		alias_id = data->config_table[CONFIG_VPP1_HW_DCM_1ST_DIS0];
+		mtk_mmsys_mdp_write_config(ctx->comp->mdp_dev->mdp_mmsys2,
+					   cmd, alias_id, value, mask);
+
+		alias_id = data->config_table[CONFIG_VPP1_HW_DCM_2ND_DIS0];
+		mtk_mmsys_mdp_write_config(ctx->comp->mdp_dev->mdp_mmsys2,
+					   cmd, alias_id, value, mask);
+
+		value = (1 << 4 | 1 << 5);
+		mask = (1 << 4 | 1 << 5);
+		alias_id = data->config_table[CONFIG_VPP1_HW_DCM_1ST_DIS1];
+		mtk_mmsys_mdp_write_config(ctx->comp->mdp_dev->mdp_mmsys2,
+					   cmd, alias_id, value, mask);
+
+		alias_id = data->config_table[CONFIG_VPP1_HW_DCM_2ND_DIS1];
+		mtk_mmsys_mdp_write_config(ctx->comp->mdp_dev->mdp_mmsys2,
+					   cmd, alias_id, value, mask);
+	}
 	return 0;
 }
 
@@ -528,6 +558,48 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_OUTPUT_IMAGE, subfrm->clip,
 		     0xFFFFFFFF);
 
+	if (mdp_cfg && mdp_cfg->mdp_version_8195) {
+		struct mdp_comp *merge;
+		const struct mtk_mdp_driver_data *data = ctx->comp->mdp_dev->mdp_data;
+		enum mtk_mdp_comp_id id = data->comp_data[ctx->comp->id].match.public_id;
+		u32 alias_id;
+
+		switch(id) {
+		case MDP_COMP_RSZ2:
+			merge = ctx->comp->mdp_dev->comp[MDP_MERGE2];
+
+			alias_id = data->config_table[CONFIG_SVPP2_BUF_BF_RSZ_SWITCH];
+			mtk_mmsys_mdp_write_config(ctx->comp->mdp_dev->mdp_mmsys2,
+						   cmd, alias_id,
+						   subfrm->rsz_switch, 0xFFFFFFFF);
+			break;
+		case MDP_COMP_RSZ3:
+			merge = ctx->comp->mdp_dev->comp[MDP_MERGE3];
+
+			alias_id = data->config_table[CONFIG_SVPP3_BUF_BF_RSZ_SWITCH];
+			mtk_mmsys_mdp_write_config(ctx->comp->mdp_dev->mdp_mmsys2,
+						   cmd, alias_id,
+						   subfrm->rsz_switch, 0xFFFFFFFF);
+			break;
+		default:
+			goto subfrm_done;
+		}
+		MM_REG_WRITE(cmd, merge->subsys_id, merge->reg_base,
+			     VPP_MERGE_CFG_0, subfrm->merge_cfg, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, merge->subsys_id, merge->reg_base,
+			     VPP_MERGE_CFG_4, subfrm->merge_cfg, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, merge->subsys_id, merge->reg_base,
+			     VPP_MERGE_CFG_24, subfrm->merge_cfg, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, merge->subsys_id, merge->reg_base,
+			     VPP_MERGE_CFG_25, subfrm->merge_cfg, 0xFFFFFFFF);
+
+		MM_REG_WRITE(cmd, merge->subsys_id, merge->reg_base,
+			     VPP_MERGE_CFG_12, 0x1, 0xFFFFFFFF); // bypass mode
+		MM_REG_WRITE(cmd, merge->subsys_id, merge->reg_base,
+			     VPP_MERGE_ENABLE, 0x1, 0xFFFFFFFF);
+	}
+
+subfrm_done:
 	return 0;
 }
 
@@ -1047,10 +1119,12 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 {
 	const struct mdp_wrot_data *wrot = &ctx->param->wrot;
 	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
+	const struct mtk_mdp_driver_data *data = ctx->comp->mdp_dev->mdp_data;
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
 	bool comp;
 	u32 colorformat = ctx->outputs[0]->buffer.format.colorformat;
+	u32 alias_id;
 
 	/* Write frame base address */
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_BASE_ADDR, wrot->iova[0],
@@ -1110,11 +1184,36 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 	if (wrot->fifo_test != 0)
 		MM_REG_WRITE(cmd, subsys_id, base, VIDO_FIFO_TEST,
 			     wrot->fifo_test, 0xFFF);
-	/* Filter enable */
-	if (mdp_cfg && mdp_cfg->wrot_filter_constraint)
-		MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAIN_BUF_SIZE,
-			     wrot->filter, 0x77);
+	if (mdp_cfg) {
+		/* Filter enable */
+		if (mdp_cfg->wrot_filter_constraint)
+			MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAIN_BUF_SIZE,
+				     wrot->filter, 0x77);
 
+		if (mdp_cfg->mdp_version_8195) {
+			/* Turn off WROT dma dcm */
+			MM_REG_WRITE(cmd, subsys_id, base, VIDO_ROT_EN,
+				     (0x1 << 23) + (0x1 << 20), 0x900000);
+
+			if (wrot->vpp02vpp1) {
+				// Disable DCM (VPP02VPP1_RELAY)
+				alias_id = data->config_table[CONFIG_VPP0_HW_DCM_1ST_DIS0];
+				mtk_mmsys_mdp_write_config(ctx->comp->mdp_dev->mdp_mmsys,
+							   cmd, alias_id, 0x4000,
+							   0xFFFFFFFF);
+				// Set default size
+				alias_id = data->config_table[CONFIG_VPP0_DL_IRELAY_WR];
+				mtk_mmsys_mdp_write_config(ctx->comp->mdp_dev->mdp_mmsys2,
+							   cmd, alias_id, 0x0,
+							   0xFFFFFFFF);
+			} else {
+				alias_id = data->config_table[CONFIG_VPP0_HW_DCM_1ST_DIS0];
+				mtk_mmsys_mdp_write_config(ctx->comp->mdp_dev->mdp_mmsys,
+							   cmd, alias_id, 0x0,
+							   0xFFFFFFFF);
+			}
+		}
+	}
 	return 0;
 }
 
@@ -1581,17 +1680,30 @@ static const struct mdp_comp_ops camin_ops = {
 };
 
 static const struct mdp_comp_ops *mdp_comp_ops[MDP_COMP_TYPE_COUNT] = {
-	[MDP_COMP_TYPE_RDMA] =		&rdma_ops,
-	[MDP_COMP_TYPE_RSZ] =		&rsz_ops,
-	[MDP_COMP_TYPE_WROT] =		&wrot_ops,
-	[MDP_COMP_TYPE_WDMA] =		&wdma_ops,
-	[MDP_COMP_TYPE_PATH1] =		NULL,
-	[MDP_COMP_TYPE_PATH2] =		NULL,
-	[MDP_COMP_TYPE_CCORR] =		&ccorr_ops,
-	[MDP_COMP_TYPE_IMGI] =		&imgi_ops,
-	[MDP_COMP_TYPE_EXTO] =		NULL,
-	[MDP_COMP_TYPE_DL_PATH1] =	&camin_ops,
-	[MDP_COMP_TYPE_DL_PATH2] =	&camin_ops,
+	[MDP_COMP_TYPE_WPEI]     = &camin_ops,
+	[MDP_COMP_TYPE_SPLIT]    = &split_ops,
+	[MDP_COMP_TYPE_STITCH]   = &stitch_ops,
+	[MDP_COMP_TYPE_RDMA]     = &rdma_ops,
+	[MDP_COMP_TYPE_FG]       = &fg_ops,
+	[MDP_COMP_TYPE_HDR]      = &hdr_ops,
+	[MDP_COMP_TYPE_AAL]      = &aal_ops,
+	[MDP_COMP_TYPE_RSZ]      = &rsz_ops,
+	[MDP_COMP_TYPE_TDSHP]    = &tdshp_ops,
+	[MDP_COMP_TYPE_COLOR]    = &color_ops,
+	[MDP_COMP_TYPE_OVL]      = &ovl_ops,
+	[MDP_COMP_TYPE_PAD]      = &pad_ops,
+	[MDP_COMP_TYPE_TCC]      = &tcc_ops,
+	[MDP_COMP_TYPE_WROT]     = &wrot_ops,
+	[MDP_COMP_TYPE_WDMA]     = &wdma_ops,
+	[MDP_COMP_TYPE_MERGE]    = NULL,
+	[MDP_COMP_TYPE_PATH1]    = NULL,
+	[MDP_COMP_TYPE_PATH2]    = NULL,
+	[MDP_COMP_TYPE_CCORR]    = &ccorr_ops,
+	[MDP_COMP_TYPE_IMGI]     = &imgi_ops,
+	[MDP_COMP_TYPE_EXTO]     = NULL,
+	[MDP_COMP_TYPE_DL_PATH1] = &camin_ops,
+	[MDP_COMP_TYPE_DL_PATH2] = &camin_ops,
+	[MDP_COMP_TYPE_DUMMY]    = NULL,
 };
 
 static const struct of_device_id mdp_comp_dt_ids[] = {
@@ -1610,6 +1722,39 @@ static const struct of_device_id mdp_comp_dt_ids[] = {
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-wdma",
 		.data = (void *)MDP_COMP_TYPE_WDMA,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-split",
+		.data = (void *)MDP_COMP_TYPE_SPLIT,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-stitch",
+		.data = (void *)MDP_COMP_TYPE_STITCH,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-fg",
+		.data = (void *)MDP_COMP_TYPE_FG,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-hdr",
+		.data = (void *)MDP_COMP_TYPE_HDR,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-aal",
+		.data = (void *)MDP_COMP_TYPE_AAL,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-merge",
+		.data = (void *)MDP_COMP_TYPE_MERGE,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-tdshp",
+		.data = (void *)MDP_COMP_TYPE_TDSHP,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-color",
+		.data = (void *)MDP_COMP_TYPE_COLOR,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-ovl",
+		.data = (void *)MDP_COMP_TYPE_OVL,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-pad",
+		.data = (void *)MDP_COMP_TYPE_PAD,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-tcc",
+		.data = (void *)MDP_COMP_TYPE_TCC,
 	},
 	{}
 };
@@ -1628,11 +1773,35 @@ static const struct of_device_id mdp_sub_comp_dt_ids[] = {
 		.compatible = "mediatek,mt8183-mdp3-exto",
 		.data = (void *)MDP_COMP_TYPE_EXTO,
 	}, {
+		.compatible = "mediatek,mt8195-mdp3-path1",
+		.data = (void *)MDP_COMP_TYPE_PATH1,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-path2",
+		.data = (void *)MDP_COMP_TYPE_PATH2,
+	}, {
 		.compatible = "mediatek,mt8183-mdp3-dl1",
 		.data = (void *)MDP_COMP_TYPE_DL_PATH1,
 	}, {
 		.compatible = "mediatek,mt8183-mdp3-dl2",
 		.data = (void *)MDP_COMP_TYPE_DL_PATH2,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-dl1",
+		.data = (void *)MDP_COMP_TYPE_DL_PATH1,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-dl2",
+		.data = (void *)MDP_COMP_TYPE_DL_PATH2,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-dl3",
+		.data = (void *)MDP_COMP_TYPE_DL_PATH3,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-dl4",
+		.data = (void *)MDP_COMP_TYPE_DL_PATH4,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-dl5",
+		.data = (void *)MDP_COMP_TYPE_DL_PATH5,
+	}, {
+		.compatible = "mediatek,mt8195-mdp3-dl6",
+		.data = (void *)MDP_COMP_TYPE_DL_PATH6,
 	},
 	{}
 };
@@ -1976,5 +2145,192 @@ int mdp_comp_ctx_init(struct mdp_dev *mdp, struct mdp_comp_ctx *ctx,
 	ctx->input = &frame->inputs[param->input];
 	for (i = 0; i < param->num_outputs; i++)
 		ctx->outputs[i] = &frame->outputs[param->outputs[i]];
+	return 0;
+}
+
+int mdp_hyfbc_patch(struct mdp_dev *mdp, struct mmsys_cmdq_cmd *cmd,
+		    struct hyfbc_init_info *hyfbc, enum mdp_comp_id wrot)
+{
+	struct mtk_mutex **mutex = mdp->mdp_mutex;
+	struct mtk_mutex **mutex2 = mdp->mdp_mutex2;
+	enum mtk_mdp_comp_id mtk_wrot = MDP_COMP_NONE;
+	phys_addr_t base;
+	u16 subsys_id;
+	u32 offset;
+	u32 mutex_id;
+	u32 mutex2_id;
+	u32 alias_id;
+	int evt;
+
+	if (!is_wrot(wrot)) {
+		dev_err(&mdp->pdev->dev, "Invalid wrot id %d", wrot);
+		return -EINVAL;
+	}
+
+	base = mdp->comp[wrot]->reg_base;
+	subsys_id = mdp->comp[wrot]->subsys_id;
+	offset = hyfbc->width_in_mb * hyfbc->byte_per_mb;
+
+	/* Reset WROT */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_SOFT_RST,
+		     0x01, 0x00000001);
+	MM_REG_POLL(cmd, subsys_id, base, VIDO_SOFT_RST_STAT,
+		    0x01, 0x00000001);
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_SOFT_RST,
+		     0x00, 0x00000001);
+	MM_REG_POLL(cmd, subsys_id, base, VIDO_SOFT_RST_STAT,
+		    0x00, 0x00000001);
+
+	/* Write frame base address */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_BASE_ADDR,
+		     (hyfbc->pa_base + offset), 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_BASE_ADDR_C,
+		     0x0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_BASE_ADDR_V,
+		     0x0, 0xFFFFFFFF);
+
+	/* Write frame related registers */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_CTRL,
+		     0x5020, 0xF131512F);
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_BKGD,
+		     ((hyfbc->is10b) ? 0xC8E438 : 0x18f4f8), 0xFFFFFFFF);
+
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_SCAN_10BIT,
+		     0x0, 0x0000000F);
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_PENDING_ZERO,
+		     0x0, 0x04000000);
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_CTRL_2,
+		     0x0, 0x00000007);
+
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_PVRIC,
+		     0x0, 0x03);
+	/* Write pre-ultra threshold */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_DMA_PREULTRA,
+		     0x8804c, 0x00FFFFFF);
+	/* Write frame Y pitch */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_STRIDE,
+		     (hyfbc->w_stride_in_mb * hyfbc->byte_per_mb), 0x0000FFFF);
+	/* Write frame UV pitch */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_STRIDE_C,
+		     0x0, 0x0000FFFF);
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_STRIDE_V,
+		     0x0, 0x0000FFFF);
+	/* Write matrix control */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAT_CTRL,
+		     0x60, 0x000000F3);
+
+	/* Set the fixed ALPHA as 0xFF */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_DITHER,
+		     0xFF000000, 0xFF000000);
+	/* Set VIDO_EOL_SEL */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_RSV_1,
+		     0x80000000, 0x80000000);
+	/* Set VIDO_FIFO_TEST */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_FIFO_TEST,
+		     0x200, 0x00000FFF);
+
+	/* Filter enable */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAIN_BUF_SIZE,
+		     0x0, 0x00000077);
+
+	/* Turn off WROT dma dcm */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_ROT_EN,
+		     (0x1 << 23) + (0x1 << 20), 0x00900000);
+
+	alias_id = mdp->mdp_data->config_table[CONFIG_VPP0_HW_DCM_1ST_DIS0];
+	mtk_mmsys_mdp_write_config(mdp->mdp_mmsys, cmd,
+				   alias_id, 0x0, 0xFFFFFFFF);
+
+	mtk_wrot = mdp->mdp_data->comp_data[wrot].match.public_id;
+	/* Set mutex modules */
+	switch (mtk_wrot) {
+	case MDP_COMP_WROT0:
+		mutex_id = 2;
+		mtk_mutex_add_mod_by_cmdq(mutex[mutex_id],
+				      0x800, 0x0, 0x0, cmd);
+		break;
+	case MDP_COMP_WROT1:
+		mutex2_id = 1;
+		mtk_mutex_add_mod_by_cmdq(mutex2[mutex2_id],
+				      0x80000000, 0x0, 0x0, cmd);
+		break;
+	case MDP_COMP_WROT2:
+		mutex2_id = 2;
+		mtk_mutex_add_mod_by_cmdq(mutex2[mutex2_id],
+				      0x0, 0x1, 0x0, cmd);
+		break;
+	case MDP_COMP_WROT3:
+		mutex2_id = 3;
+		mtk_mutex_add_mod_by_cmdq(mutex2[mutex2_id],
+				      0x0, 0x2, 0x0, cmd);
+		break;
+	default:
+		break;
+	}
+
+	/* Write Y pixel offset */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_OFST_ADDR,
+		     0x0, 0x0FFFFFFF);
+	/* Write U pixel offset */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_OFST_ADDR_C,
+		     0x0, 0x0FFFFFFF);
+	/* Write V pixel offset */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_OFST_ADDR_V,
+		     0x0, 0x0FFFFFFF);
+	/* Write source size */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_IN_SIZE,
+		     (hyfbc->height_in_mb << 16) | byte2pixel(hyfbc->byte_per_mb), 0xFFFFFFFF);
+	/* Write target size */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_TAR_SIZE,
+		     (hyfbc->height_in_mb << 16) | byte2pixel(hyfbc->byte_per_mb), 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_CROP_OFST, 0x0,
+		     0xFFFFFFFF);
+
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAIN_BUF_SIZE,
+		     ((byte2pixel(hyfbc->byte_per_mb) << 16) | 0x400), 0xFFFF7F00);
+
+	/* Enable WROT */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_ROT_EN, 0x01, 0x00000001);
+
+	switch (mtk_wrot) {
+	case MDP_COMP_WROT0:
+		evt = mdp_get_event_idx(mdp, WROT0_SOF);
+		MM_REG_CLEAR(cmd, evt);
+		mtk_mutex_enable_by_cmdq(mutex[mutex_id], cmd);
+		MM_REG_WAIT(cmd, evt);
+		evt = mdp_get_event_idx(mdp, WROT0_DONE);
+		MM_REG_WAIT(cmd, evt);
+		break;
+	case MDP_COMP_WROT1:
+		evt = mdp_get_event_idx(mdp, WROT1_SOF);
+		MM_REG_CLEAR(cmd, evt);
+		mtk_mutex_enable_by_cmdq(mutex2[mutex2_id], cmd);
+		MM_REG_WAIT(cmd, evt);
+		evt = mdp_get_event_idx(mdp, WROT1_DONE);
+		MM_REG_WAIT(cmd, evt);
+		break;
+	case MDP_COMP_WROT2:
+		evt = mdp_get_event_idx(mdp, WROT2_SOF);
+		MM_REG_CLEAR(cmd, evt);
+		mtk_mutex_enable_by_cmdq(mutex2[mutex2_id], cmd);
+		MM_REG_WAIT(cmd, evt);
+		evt = mdp_get_event_idx(mdp, WROT2_DONE);
+		MM_REG_WAIT(cmd, evt);
+		break;
+	case MDP_COMP_WROT3:
+		evt = mdp_get_event_idx(mdp, WROT3_SOF);
+		MM_REG_CLEAR(cmd, evt);
+		mtk_mutex_enable_by_cmdq(mutex2[mutex2_id], cmd);
+		MM_REG_WAIT(cmd, evt);
+		evt = mdp_get_event_idx(mdp, WROT3_DONE);
+		MM_REG_WAIT(cmd, evt);
+		break;
+	default:
+		break;
+	}
+
+	/* Disable WROT */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_ROT_EN, 0x00, 0x00000001);
+
 	return 0;
 }

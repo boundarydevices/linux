@@ -1045,6 +1045,9 @@ static const struct of_device_id mdp_of_ids[] = {
 	{ .compatible = "mediatek,mt8183-mdp3",
 	  .data = &mt8183_mdp_driver_data,
 	},
+	{ .compatible = "mediatek,mt8195-mdp3",
+	  .data = &mt8195_mdp_driver_data,
+	},
 	{},
 };
 MODULE_DEVICE_TABLE(of, mdp_of_ids);
@@ -1151,9 +1154,9 @@ static int mdp_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct mdp_dev *mdp;
 	struct device_node *mdp_node;
-	struct platform_device *mm_pdev;
+	struct platform_device *mm_pdev, *mm_pdev2;
 	u32 event_ofst;
-	int ret, i, mutex_id;
+	int ret, i, mutex_id, id;
 
 	mdp = kzalloc(sizeof(*mdp), GFP_KERNEL);
 	if (!mdp) {
@@ -1163,12 +1166,33 @@ static int mdp_probe(struct platform_device *pdev)
 
 	mdp->pdev = pdev;
 	mdp->mdp_data = of_device_get_match_data(&pdev->dev);
+
+	if (of_get_property(pdev->dev.of_node, "dma-ranges", NULL))
+		dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(34));
+
+	ret = of_property_read_u32(dev->of_node, "mediatek,mdp3-id", &id);
+	if (ret) {
+		dev_err(dev, "Failed to get mdp-id\n");
+		goto err_return;
+	}
+
+	if (id != MDP_RDMA0_NODE) {
+		platform_set_drvdata(pdev, mdp);
+		goto success_return;
+	}
+
 	mm_pdev = __get_pdev_by_name(pdev, "mediatek,mmsys");
 	if (!mm_pdev) {
 		ret = -ENODEV;
 		goto err_return;
 	}
 	mdp->mdp_mmsys = &mm_pdev->dev;
+
+	mm_pdev2 = __get_pdev_by_name(pdev, "mediatek,mmsys2");
+	if (!mm_pdev2)
+		dev_err(dev, "Failed to get mdp mmsys2\n");
+	else
+		mdp->mdp_mmsys2 = &mm_pdev2->dev;
 
 	mdp_node = of_parse_phandle(pdev->dev.of_node, "mediatek,mm-mutex", 0);
 	if (!mdp_node) {
@@ -1201,17 +1225,43 @@ static int mdp_probe(struct platform_device *pdev)
 		goto err_return;
 	}
 
-	for (i = 0; i < mdp->mdp_data->pipe_info_len; i++) {
-		mutex_id = mdp->mdp_data->pipe_info[i].mutex_id;
-		if (mdp->mdp_mutex[mutex_id])
-			continue;
-
-		mdp->mdp_mutex[mutex_id] =
-			mtk_mutex_mdp_get(&mm_pdev->dev, mdp->mdp_data->pipe_info[i].pipe_id);
-
-		if (!mdp->mdp_mutex[mutex_id]) {
+	mdp_node = of_parse_phandle(pdev->dev.of_node, "mediatek,mm-mutex2", 0);
+	if (!mdp_node) {
+		dev_err(dev, "Failed to get mdp mm-mutex2\n");
+	} else {
+		mm_pdev2 = of_find_device_by_node(mdp_node);
+		of_node_put(mdp_node);
+		if (WARN_ON(!mm_pdev2)) {
 			ret = -ENODEV;
 			goto err_return;
+		}
+	}
+
+	for (i = 0; i < mdp->mdp_data->pipe_info_len; i++) {
+		mutex_id = mdp->mdp_data->pipe_info[i].mutex_id;
+
+		if (mdp->mdp_data->pipe_info[i].mmsys_id != 0) {
+			if (mdp->mdp_mutex2[mutex_id])
+				continue;
+			mdp->mdp_mutex2[mutex_id] =
+				mtk_mutex_mdp_get(&mm_pdev2->dev,
+						  mdp->mdp_data->pipe_info[i].pipe_id);
+
+			if (!mdp->mdp_mutex2[mutex_id]) {
+				ret = -ENODEV;
+				goto err_return;
+			}
+		} else {
+			if (mdp->mdp_mutex[mutex_id])
+				continue;
+			mdp->mdp_mutex[mutex_id] =
+				mtk_mutex_mdp_get(&mm_pdev->dev,
+						  mdp->mdp_data->pipe_info[i].pipe_id);
+
+			if (!mdp->mdp_mutex[mutex_id]) {
+				ret = -ENODEV;
+				goto err_return;
+			}
 		}
 	}
 
@@ -1277,6 +1327,7 @@ static int mdp_probe(struct platform_device *pdev)
 		goto err_unregister_device;
 	}
 
+success_return:
 	dev_dbg(dev, "mdp-%d registered successfully\n", pdev->id);
 	return 0;
 

@@ -417,7 +417,8 @@ void mdp_comp_clocks_off(struct device *dev, struct mdp_comp *comps, int num);
 int mdp_comp_ctx_init(struct mdp_dev *mdp, struct mdp_comp_ctx *ctx,
 		      const struct img_compparam *param,
 	const struct img_ipi_frameparam *frame);
-
+int mdp_hyfbc_patch(struct mdp_dev *mdp, struct mmsys_cmdq_cmd *cmd,
+		    struct hyfbc_init_info *hyfbc, enum mdp_comp_id wrot);
 int mdp_get_event_idx(struct mdp_dev *mdp, enum mdp_comp_event event);
 
 #endif  /* __MTK_MDP3_COMP_H__ */

@@ -147,6 +147,45 @@ int mdp_enum_fmt_mplane(struct v4l2_fmtdesc *f)
 	return 0;
 }
 
+static u32 mdp_fmt_get_hyfbc_plane_size(u32 width, u32 height, u32 color)
+{
+	u32 y_data_size = 0;
+	u32 c_data_size = 0;
+	u32 y_header_size = 0;
+	u32 c_header_size = 0;
+	u32 y_data_ofst = 0;
+	u32 y_header_ofst = 0;
+	u32 c_data_ofst = 0;
+	u32 c_header_ofst = 0;
+
+	y_data_size = (((width + 63) >> 6) << 6) * (((height + 63) >> 6) << 6);
+	y_header_size = y_data_size >> 6;
+	if (MDP_COLOR_IS_10BIT_PACKED(color))
+		y_data_size = (y_data_size * 6) >> 2;
+
+	c_data_size = y_data_size >> 1;
+	c_header_size = (((y_header_size >> 1) + 63) >> 6) << 6;
+
+	// Setup source buffer base
+	y_data_ofst = ((y_header_size + 4095) >> 12) << 12; // align 4k
+	y_header_ofst = y_data_ofst - y_header_size;
+	c_data_ofst = ((y_data_ofst + y_data_size + c_header_size + 4095) >> 12) << 12; // align 4k
+	c_header_ofst = c_data_ofst - c_header_size;
+
+	return (c_data_ofst + c_data_size);
+}
+
+static u32 mdp_fmt_get_afbc_plane_size(u32 width, u32 height, u32 color)
+{
+	u32 align_w = ((width + 31) >> 5) << 5;
+	u32 align_h = ((height + 31) >> 5) << 5;
+
+	if (MDP_COLOR_IS_10BIT_PACKED(color))
+		return ((align_w >> 4) * (align_h >> 4) * (16 + 512));
+	else
+		return ((align_w >> 4) * (align_h >> 4) * (16 + 384));
+}
+
 const struct mdp_format *mdp_try_fmt_mplane(struct v4l2_format *f,
 					    struct mdp_frameparam *param,
 					    u32 ctx_id)
@@ -211,11 +250,17 @@ const struct mdp_format *mdp_try_fmt_mplane(struct v4l2_format *f,
 			bpl = min_bpl;
 		si = (bpl * pix_mp->height * fmt->depth[i]) / fmt->row_depth[i];
 
+		if (MDP_COLOR_IS_HYFBC_COMPRESS(fmt->mdp_color)) {
+			si = mdp_fmt_get_hyfbc_plane_size(pix_mp->width,
+							  pix_mp->height, fmt->mdp_color);
+		} else if (MDP_COLOR_IS_COMPRESS(fmt->mdp_color)) {
+			si = mdp_fmt_get_afbc_plane_size(pix_mp->width,
+							 pix_mp->height, fmt->mdp_color);
+		}
+
 		pix_mp->plane_fmt[i].bytesperline = bpl;
 		if (pix_mp->plane_fmt[i].sizeimage < si)
 			pix_mp->plane_fmt[i].sizeimage = si;
-		dev_dbg(dev, "%d: p%u, bpl:%u (%u), sizeimage:%u (%u)", ctx_id,
-			i, bpl, min_bpl, pix_mp->plane_fmt[i].sizeimage, si);
 	}
 
 	return fmt;
@@ -324,8 +369,14 @@ static u32 mdp_fmt_get_stride(const struct mdp_format *fmt,
 	enum mdp_color c = fmt->mdp_color;
 	u32 stride;
 
-	stride = (bytesperline * MDP_COLOR_BITS_PER_PIXEL(c))
-		/ fmt->row_depth[0];
+	if (MDP_COLOR_IS_COMPRESS(c)) {
+		bytesperline = ((bytesperline + 31) >> 5) << 5;
+		stride = (bytesperline * MDP_COLOR_BITS_PER_PIXEL(c))
+			/ fmt->row_depth[0];
+	} else {
+		stride = (bytesperline * MDP_COLOR_BITS_PER_PIXEL(c))
+			/ fmt->row_depth[0];
+	}
 	if (plane == 0)
 		return stride;
 	if (plane < MDP_COLOR_GET_PLANE_COUNT(c)) {
@@ -398,6 +449,19 @@ static void mdp_prepare_buffer(struct img_image_buffer *b,
 			mdp_fmt_get_plane_size(frame->mdp_fmt, stride,
 					       pix_mp->height, i) -
 					       vb->planes[i].data_offset;
+
+		if (MDP_COLOR_IS_HYFBC_COMPRESS(b->format.colorformat)) {
+			b->format.plane_fmt[i].size =
+				mdp_fmt_get_hyfbc_plane_size(pix_mp->width,
+							     pix_mp->height,
+							     b->format.colorformat);
+		} else if (MDP_COLOR_IS_COMPRESS(b->format.colorformat)) {
+			b->format.plane_fmt[i].size =
+				mdp_fmt_get_afbc_plane_size(pix_mp->width,
+							    pix_mp->height,
+							    b->format.colorformat);
+		}
+
 		b->iova[i] = vb2_dma_contig_plane_dma_addr(vb, i) +
 			     vb->planes[i].data_offset;
 	}
@@ -409,6 +473,18 @@ static void mdp_prepare_buffer(struct img_image_buffer *b,
 		b->format.plane_fmt[i].size =
 			mdp_fmt_get_plane_size(frame->mdp_fmt, stride,
 					       pix_mp->height, i);
+
+		if (MDP_COLOR_IS_HYFBC_COMPRESS(b->format.colorformat)) {
+			b->format.plane_fmt[i].size =
+				mdp_fmt_get_hyfbc_plane_size(pix_mp->width,
+							     pix_mp->height,
+							     b->format.colorformat);
+		} else if (MDP_COLOR_IS_COMPRESS(b->format.colorformat)) {
+			b->format.plane_fmt[i].size =
+				mdp_fmt_get_afbc_plane_size(pix_mp->width,
+							    pix_mp->height,
+							    b->format.colorformat);
+		}
 		b->iova[i] = b->iova[i - 1] + b->format.plane_fmt[i - 1].size;
 	}
 	b->usage = frame->usage;
