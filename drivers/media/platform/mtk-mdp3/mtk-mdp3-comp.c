@@ -15,6 +15,14 @@
 #include "mdp_reg_rdma.h"
 #include "mdp_reg_ccorr.h"
 #include "mdp_reg_rsz.h"
+#include "mdp_reg_fg.h"
+#include "mdp_reg_aal.h"
+#include "mdp_reg_tdshp.h"
+#include "mdp_reg_hdr.h"
+#include "mdp_reg_color.h"
+#include "mdp_reg_ovl.h"
+#include "mdp_reg_pad.h"
+#include "mdp_reg_merge.h"
 #include "mdp_reg_wrot.h"
 #include "mdp_reg_wdma.h"
 #include "mdp_reg_isp.h"
@@ -111,7 +119,7 @@ static int init_rdma(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
 
-	if (mdp_cfg && mdp_cfg->rdma_support_10bit) {
+	if (mdp_cfg && mdp_cfg->rdma_rsz1_sram_sharing) {
 		struct mdp_comp *prz1 = ctx->comp->mdp_dev->comp[MDP_RSZ1];
 
 		/* Disable RSZ1 */
@@ -133,7 +141,10 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 {
 	const struct mdp_rdma_data *rdma = &ctx->param->rdma;
 	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
+	u32 width = ctx->input->buffer.format.width;
+	u32 height = ctx->input->buffer.format.height;
 	u32 colorformat = ctx->input->buffer.format.colorformat;
+	u32 write_mask = 0;
 	bool block10bit = MDP_COLOR_IS_10BIT_PACKED(colorformat);
 	bool en_ufo = MDP_COLOR_IS_UFP(colorformat);
 	phys_addr_t base = ctx->comp->reg_base;
@@ -158,7 +169,7 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_CON, rdma->src_ctrl,
 		     0x03C8FE0F);
 
-	if (mdp_cfg)
+	if (mdp_cfg) {
 		if (mdp_cfg->rdma_support_10bit && en_ufo) {
 			/* Setup source buffer base */
 			MM_REG_WRITE(cmd, subsys_id,
@@ -174,8 +185,47 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 					     rdma->mf_bkgd_in_pxl, 0x001FFFFF);
 		}
 
-	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_CON, rdma->control,
-		     0x1110);
+		if (mdp_cfg->rdma_support_extend_ufo)
+			write_mask |= 0xB0000000;
+
+		if (mdp_cfg->rdma_support_afbc)
+			write_mask |= 0x0603000;
+
+		if (mdp_cfg->rdma_support_hyfbc &&
+		    (MDP_COLOR_IS_HYFBC_COMPRESS(colorformat))) {
+			/* Setup source buffer base */
+			MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_UFO_DEC_LENGTH_BASE_Y,
+				     rdma->ufo_dec_y, 0xFFFFFFFF);
+			MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_UFO_DEC_LENGTH_BASE_C,
+				     rdma->ufo_dec_c, 0xFFFFFFFF);
+			MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_MF_BKGD_SIZE_IN_PXL,
+				     ((width + 31) >> 5) << 5, 0x1FFFFF);
+			MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_MF_BKGD_H_SIZE_IN_PXL,
+				     ((height + 7) >> 3) << 3, 0x1FFFFF);
+
+			/* Setup Compression Control */
+			MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_COMP_CON,
+				     rdma->comp_ctrl, write_mask);
+		} else if (mdp_cfg->rdma_support_afbc &&
+		    (MDP_COLOR_IS_COMPRESS(colorformat))) {
+			MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_MF_BKGD_SIZE_IN_PXL,
+				     ((width + 31) >> 5) << 5, 0x1FFFFF);
+			MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_MF_BKGD_H_SIZE_IN_PXL,
+				     ((height + 7) >> 3) << 3, 0x1FFFFF);
+
+			/* Setup Compression Control */
+			MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_COMP_CON,
+				     rdma->comp_ctrl, write_mask);
+		} else {
+			/* Setup Compression Control */
+			MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_COMP_CON,
+				     rdma->comp_ctrl, write_mask);
+		}
+	}
+
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_CON,
+		     rdma->control, 0x1130);
+
 	/* Setup source buffer base */
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_BASE_0, rdma->iova[0],
 		     0xFFFFFFFF);
@@ -199,6 +249,29 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_TRANSFORM_0,
 		     rdma->transform, 0x0F110000);
 
+	if (mdp_cfg->rdma_esl_setting) {
+		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_DMABUF_CON_0,
+			     rdma->dmabuf_con0, 0x0FFF00FF);
+		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_ULTRA_TH_HIGH_CON_0,
+			     rdma->ultra_th_high_con0, 0x3FFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_ULTRA_TH_LOW_CON_0,
+			     rdma->ultra_th_low_con0, 0x3FFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_DMABUF_CON_1,
+			     rdma->dmabuf_con1, 0x0F7F007F);
+		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_ULTRA_TH_HIGH_CON_1,
+			     rdma->ultra_th_high_con1, 0x3FFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_ULTRA_TH_LOW_CON_1,
+			     rdma->ultra_th_low_con1, 0x3FFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_DMABUF_CON_2,
+			     rdma->dmabuf_con2, 0x0F3F003F);
+		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_ULTRA_TH_HIGH_CON_2,
+			     rdma->ultra_th_high_con2, 0x3FFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_ULTRA_TH_LOW_CON_2,
+			     rdma->ultra_th_low_con2, 0x3FFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_DMABUF_CON_3,
+			     rdma->dmabuf_con3, 0x0F3F003F);
+	}
+
 	return 0;
 }
 
@@ -215,7 +288,18 @@ static int config_rdma_subfrm(struct mdp_comp_ctx *ctx,
 	u8 subsys_id = ctx->comp->subsys_id;
 
 	/* Enable RDMA */
-	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_EN, BIT(0), BIT(0));
+	MM_REG_WRITE_MASK(cmd, subsys_id, base, MDP_RDMA_EN, BIT(0), BIT(0));
+
+	if (mdp_cfg->rdma_support_afbc ||
+	    mdp_cfg->rdma_support_hyfbc) {
+		if (MDP_COLOR_IS_COMPRESS(colorformat) ||
+		    MDP_COLOR_IS_HYFBC_COMPRESS(colorformat)) {
+			MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_OFFSET_0_P,
+				     subfrm->in_tile_xleft, 0xFFFFFFFF);
+			MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_OFFSET_HP,
+				     subfrm->in_tile_ytop, 0xFFFFFFFF);
+		}
+	}
 
 	/* Set Y pixel offset */
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_OFFSET_0,
@@ -258,16 +342,30 @@ static int wait_rdma_event(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
 	int evt = -1;
+	const struct mtk_mdp_driver_data *data = ctx->comp->mdp_dev->mdp_data;
+	enum mtk_mdp_comp_id id = data->comp_data[ctx->comp->id].match.public_id;
 
-	if (ctx->comp->alias_id == 0)
+	switch (id) {
+	case MDP_COMP_RDMA0:
 		evt = mdp_get_event_idx(ctx->comp->mdp_dev, RDMA0_DONE);
-	else
-		dev_err(dev, "Do not support RDMA1_DONE event\n");
+		break;
+	case MDP_COMP_RDMA1:
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, RDMA1_DONE);
+		break;
+	case MDP_COMP_RDMA2:
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, RDMA2_DONE);
+		break;
+	case MDP_COMP_RDMA3:
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, RDMA3_DONE);
+		break;
+	default:
+		dev_err(dev, "Invalid Engine!\n");
+	}
 
 	if (evt > 0)
 		MM_REG_WAIT(cmd, evt);
 	/* Disable RDMA */
-	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_EN, 0x0, BIT(0));
+	MM_REG_WRITE_MASK(cmd, subsys_id, base, MDP_RDMA_EN, 0x0, BIT(0));
 	return 0;
 }
 
@@ -277,6 +375,75 @@ static const struct mdp_comp_ops rdma_ops = {
 	.config_frame = config_rdma_frame,
 	.config_subfrm = config_rdma_subfrm,
 	.wait_comp_event = wait_rdma_event,
+	.advance_subfrm = NULL,
+	.post_process = NULL,
+};
+
+static const struct mdp_comp_ops split_ops = {
+	.get_comp_flag = get_comp_flag,
+	.init_comp = NULL,
+	.config_frame = NULL,
+	.config_subfrm = NULL,
+	.wait_comp_event = NULL,
+	.advance_subfrm = NULL,
+	.post_process = NULL,
+};
+
+static const struct mdp_comp_ops stitch_ops = {
+	.get_comp_flag = get_comp_flag,
+	.init_comp = NULL,
+	.config_frame = NULL,
+	.config_subfrm = NULL,
+	.wait_comp_event = NULL,
+	.advance_subfrm = NULL,
+	.post_process = NULL,
+};
+
+static int init_fg(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
+{
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_FG_TRIGGER,
+		     (0x00000001 << 2), 0x00000004);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_FG_TRIGGER,
+		     0x00000000, 0x00000004);
+
+	return 0;
+}
+
+static int config_fg_frame(struct mdp_comp_ctx *ctx,
+			   struct mmsys_cmdq_cmd *cmd,
+			   const struct v4l2_rect *compose)
+{
+	const struct mdp_fg_data *fg = &ctx->param->fg;
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_FG_FG_CTRL_0, fg->ctrl_0, 0x1);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_FG_FG_CK_EN, fg->ck_en, 0x7);
+	return 0;
+}
+
+static int config_fg_subfrm(struct mdp_comp_ctx *ctx,
+			    struct mmsys_cmdq_cmd *cmd, u32 index)
+{
+	const struct mdp_fg_subfrm *subfrm = &ctx->param->fg.subfrms[index];
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_FG_TILE_INFO_0, subfrm->info_0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_FG_TILE_INFO_1, subfrm->info_1, 0xFFFFFFFF);
+
+	return 0;
+}
+
+static const struct mdp_comp_ops fg_ops = {
+	.get_comp_flag = get_comp_flag,
+	.init_comp = init_fg,
+	.config_frame = config_fg_frame,
+	.config_subfrm = config_fg_subfrm,
+	.wait_comp_event = NULL,
 	.advance_subfrm = NULL,
 	.post_process = NULL,
 };
@@ -299,8 +466,12 @@ static int config_rsz_frame(struct mdp_comp_ctx *ctx,
 			    const struct v4l2_rect *compose)
 {
 	const struct mdp_rsz_data *rsz = &ctx->param->rsz;
+	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
+
+	if (mdp_cfg && mdp_cfg->rsz_etc_control)
+		MM_REG_WRITE(cmd, subsys_id, base, RSZ_ETC_CONTROL, 0x0, 0xFFFFFFFF);
 
 	if (ctx->param->frame.bypass) {
 		/* Disable RSZ */
@@ -388,6 +559,473 @@ static const struct mdp_comp_ops rsz_ops = {
 	.post_process = NULL,
 };
 
+static int init_aal(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
+{
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	// Always set MDP_AAL enable to 1
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_AAL_EN, 0x1, 0x1);
+
+	return 0;
+}
+
+static int config_aal_frame(struct mdp_comp_ctx *ctx,
+			    struct mmsys_cmdq_cmd *cmd,
+			    const struct v4l2_rect *compose)
+{
+	const struct mdp_aal_data *aal = &ctx->param->aal;
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_AAL_CFG_MAIN, aal->cfg_main, 0x80);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_AAL_CFG, aal->cfg, 0x1);
+
+	return 0;
+}
+
+static int config_aal_subfrm(struct mdp_comp_ctx *ctx,
+			     struct mmsys_cmdq_cmd *cmd, u32 index)
+{
+	const struct mdp_aal_subfrm *subfrm = &ctx->param->aal.subfrms[index];
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_AAL_SIZE,
+		     subfrm->src, MDP_AAL_SIZE_MASK);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_AAL_OUTPUT_OFFSET,
+		     subfrm->clip_ofst, 0x00FF00FF);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_AAL_OUTPUT_SIZE,
+		     subfrm->clip, MDP_AAL_OUTPUT_SIZE_MASK);
+
+	return 0;
+}
+
+static const struct mdp_comp_ops aal_ops = {
+	.get_comp_flag = get_comp_flag,
+	.init_comp = init_aal,
+	.config_frame = config_aal_frame,
+	.config_subfrm = config_aal_subfrm,
+	.wait_comp_event = NULL,
+	.advance_subfrm = NULL,
+	.post_process = NULL,
+};
+
+static int init_hdr(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
+{
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	// Always set MDP_HDR enable to 1
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_TOP, 1, 0x1);
+
+	return 0;
+}
+
+static int config_hdr_frame(struct mdp_comp_ctx *ctx,
+			    struct mmsys_cmdq_cmd *cmd,
+			    const struct v4l2_rect *compose)
+{
+	const struct mdp_hdr_data *hdr = &ctx->param->hdr;
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_TOP,
+		     hdr->top, 0x30000000);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_RELAY,
+		     hdr->relay, 0x1);
+
+	return 0;
+}
+
+static int config_hdr_subfrm(struct mdp_comp_ctx *ctx,
+			     struct mmsys_cmdq_cmd *cmd, u32 index)
+{
+	const struct mdp_hdr_subfrm *subfrm = &ctx->param->hdr.subfrms[index];
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_TILE_POS,
+		     subfrm->win_size, MDP_HDR_TILE_POS_MASK);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_SIZE_0,
+		     subfrm->src, 0x1FFF1FFF);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_SIZE_1,
+		     subfrm->clip_ofst0, 0x1FFF1FFF);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_SIZE_2,
+		     subfrm->clip_ofst1, 0x1FFF1FFF);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_HIST_CTRL_0,
+		     subfrm->hist_ctrl_0, 0x00003FFF);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_HIST_CTRL_1,
+		     subfrm->hist_ctrl_1, 0x00003FFF);
+
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_TOP,
+		     subfrm->hdr_top, 0x00000060);
+	// enable hist_clr_en
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_HIST_ADDR,
+		     subfrm->hist_addr, 0x00000200);
+
+	return 0;
+}
+
+static const struct mdp_comp_ops hdr_ops = {
+	.get_comp_flag = get_comp_flag,
+	.init_comp = init_hdr,
+	.config_frame = config_hdr_frame,
+	.config_subfrm = config_hdr_subfrm,
+	.wait_comp_event = NULL,
+	.advance_subfrm = NULL,
+	.post_process = NULL,
+};
+
+void reset_luma_hist(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
+{
+	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	// reset LUMA HIST
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_00, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_01, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_02, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_03, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_04, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_05, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_06, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_07, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_08, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_09, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_10, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_11, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_12, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_13, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_14, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_15, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_HIST_INIT_16, 0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     MDP_LUMA_SUM_INIT, 0, 0xFFFFFFFF);
+
+	if (mdp_cfg && mdp_cfg->tdshp_1_1) {
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_DC_TWO_D_W1_RESULT_INIT, 0, 0xFFFFFFFF);
+	}
+
+	if (mdp_cfg && mdp_cfg->tdshp_dyn_contrast_version == 2) {
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_00, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_01, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_02, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_03, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_04, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_05, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_06, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_07, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_08, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_09, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_10, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_11, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_12, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_13, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_14, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_15, 0, 0xFFFFFFFF);
+		MM_REG_WRITE(cmd, subsys_id, base,
+			     MDP_CONTOUR_HIST_INIT_16, 0, 0xFFFFFFFF);
+	}
+}
+
+static int init_tdshp(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
+{
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_TDSHP_CTRL, 0x00000001,
+		     0x00000001);
+	// Enable fifo
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_TDSHP_CFG, 0x00000002,
+		     0x00000002);
+	reset_luma_hist(ctx, cmd);
+
+	return 0;
+}
+
+static int config_tdshp_frame(struct mdp_comp_ctx *ctx,
+			      struct mmsys_cmdq_cmd *cmd,
+			      const struct v4l2_rect *compose)
+{
+	const struct mdp_tdshp_data *tdshp = &ctx->param->tdshp;
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_TDSHP_CFG, tdshp->cfg, 0x00000001);
+
+	return 0;
+}
+
+static int config_tdshp_subfrm(struct mdp_comp_ctx *ctx,
+			       struct mmsys_cmdq_cmd *cmd, u32 index)
+{
+	const struct mdp_tdshp_subfrm *subfrm = &ctx->param->tdshp.subfrms[index];
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_TDSHP_INPUT_SIZE,
+		     subfrm->src, MDP_TDSHP_INPUT_SIZE_MASK);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_TDSHP_OUTPUT_OFFSET,
+		     subfrm->clip_ofst, 0x00FF00FF);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_TDSHP_OUTPUT_SIZE,
+		     subfrm->clip, MDP_TDSHP_OUTPUT_SIZE_MASK);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HIST_CFG_00,
+		     subfrm->hist_cfg_0, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base, MDP_HIST_CFG_01,
+		     subfrm->hist_cfg_1, 0xFFFFFFFF);
+
+	return 0;
+}
+
+static const struct mdp_comp_ops tdshp_ops = {
+	.get_comp_flag = get_comp_flag,
+	.init_comp = init_tdshp,
+	.config_frame = config_tdshp_frame,
+	.config_subfrm = config_tdshp_subfrm,
+	.wait_comp_event = NULL,
+	.advance_subfrm = NULL,
+	.post_process = NULL,
+};
+
+static int init_color(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
+{
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     DISP_COLOR_START, 0x1, 0x3);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     DISP_COLOR_WIN_X_MAIN, 0xFFFF0000, 0xFFFFFFFF);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     DISP_COLOR_WIN_Y_MAIN, 0xFFFF0000, 0xFFFFFFFF);
+
+	// R2Y/Y2R are disabled in MDP
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     DISP_COLOR_CM1_EN, 0x0, 0x1);
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     DISP_COLOR_CM2_EN, 0x0, 0x1);
+
+	//enable interrupt
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     DISP_COLOR_INTEN, 0x00000007, 0x00000007);
+
+	//Set 10bit->8bit Rounding
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     DISP_COLOR_OUT_SEL, 0x333, 0x333);
+
+	return 0;
+}
+
+static int config_color_frame(struct mdp_comp_ctx *ctx,
+			      struct mmsys_cmdq_cmd *cmd,
+			      const struct v4l2_rect *compose)
+{
+	const struct mdp_color_data *color = &ctx->param->color;
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base,
+		     DISP_COLOR_START, color->start, DISP_COLOR_START_MASK);
+
+	return 0;
+}
+
+static int config_color_subfrm(struct mdp_comp_ctx *ctx,
+			       struct mmsys_cmdq_cmd *cmd, u32 index)
+{
+	const struct mdp_color_subfrm *subfrm = &ctx->param->color.subfrms[index];
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, DISP_COLOR_INTERNAL_IP_WIDTH,
+		     subfrm->in_hsize, 0x00003FFF);
+	MM_REG_WRITE(cmd, subsys_id, base, DISP_COLOR_INTERNAL_IP_HEIGHT,
+		     subfrm->in_vsize, 0x00003FFF);
+
+	return 0;
+}
+
+static const struct mdp_comp_ops color_ops = {
+	.get_comp_flag = get_comp_flag,
+	.init_comp = init_color,
+	.config_frame = config_color_frame,
+	.config_subfrm = config_color_subfrm,
+	.wait_comp_event = NULL,
+	.advance_subfrm = NULL,
+	.post_process = NULL,
+};
+
+static int init_ovl(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
+{
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, OVL_EN,
+		     0x1, OVL_EN_MASK);
+	//Relay Mode
+	MM_REG_WRITE(cmd, subsys_id, base, OVL_SRC_CON,
+		     0x200, OVL_SRC_CON_MASK);
+	//Connect OVL, enable smi_id mode
+	MM_REG_WRITE(cmd, subsys_id, base, OVL_DATAPATH_CON,
+		     0x1, OVL_DATAPATH_CON_MASK);
+
+	return 0;
+}
+
+static int config_ovl_frame(struct mdp_comp_ctx *ctx,
+			    struct mmsys_cmdq_cmd *cmd,
+			    const struct v4l2_rect *compose)
+{
+	const struct mdp_ovl_data *ovl = &ctx->param->ovl;
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	//Layer0 for PQ-direct-in
+	MM_REG_WRITE(cmd, subsys_id, base, OVL_L0_CON,
+		     ovl->L0_con, 0x30000000);
+	//Enable Layer0
+	MM_REG_WRITE(cmd, subsys_id, base, OVL_SRC_CON,
+		     ovl->src_con, 0x1);
+
+	return 0;
+}
+
+static int config_ovl_subfrm(struct mdp_comp_ctx *ctx,
+			     struct mmsys_cmdq_cmd *cmd, u32 index)
+{
+	const struct mdp_ovl_subfrm *subfrm = &ctx->param->ovl.subfrms[index];
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	//Setup Layer0 source size
+	MM_REG_WRITE(cmd, subsys_id, base, OVL_L0_SRC_SIZE,
+		     subfrm->L0_src_size, OVL_L0_SRC_SIZE_MASK);
+	//Setup ROI size (output size)
+	MM_REG_WRITE(cmd, subsys_id, base, OVL_ROI_SIZE,
+		     subfrm->roi_size, OVL_ROI_SIZE_MASK);
+
+	return 0;
+}
+
+static const struct mdp_comp_ops ovl_ops = {
+	.get_comp_flag = get_comp_flag,
+	.init_comp = init_ovl,
+	.config_frame = config_ovl_frame,
+	.config_subfrm = config_ovl_subfrm,
+	.wait_comp_event = NULL,
+	.advance_subfrm = NULL,
+	.post_process = NULL,
+};
+
+static int init_pad(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
+{
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_PADDING0_PADDING_CON,
+		     0x2, VPP_PADDING0_PADDING_CON_MASK);
+	//Clear padding area
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_PADDING0_W_PADDING_SIZE,
+		     0x0, VPP_PADDING0_W_PADDING_SIZE_MASK);
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_PADDING0_H_PADDING_SIZE,
+		     0x0, VPP_PADDING0_H_PADDING_SIZE_MASK);
+
+	return 0;
+}
+
+static int config_pad_frame(struct mdp_comp_ctx *ctx,
+			    struct mmsys_cmdq_cmd *cmd,
+			    const struct v4l2_rect *compose)
+{
+	return 0;
+}
+
+static int config_pad_subfrm(struct mdp_comp_ctx *ctx,
+			     struct mmsys_cmdq_cmd *cmd, u32 index)
+{
+	const struct mdp_pad_subfrm *subfrm = &ctx->param->pad.subfrms[index];
+	phys_addr_t base = ctx->comp->reg_base;
+	u16 subsys_id = ctx->comp->subsys_id;
+
+	MM_REG_WRITE(cmd, subsys_id, base, VPP_PADDING0_PADDING_PIC_SIZE,
+		     subfrm->pic_size, VPP_PADDING0_PADDING_CON_MASK);
+
+	return 0;
+}
+
+static const struct mdp_comp_ops pad_ops = {
+	.get_comp_flag = get_comp_flag,
+	.init_comp = init_pad,
+	.config_frame = config_pad_frame,
+	.config_subfrm = config_pad_subfrm,
+	.wait_comp_event = NULL,
+	.advance_subfrm = NULL,
+	.post_process = NULL,
+};
+
+static int init_tcc(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
+{
+	return 0;
+}
+
+static int config_tcc_frame(struct mdp_comp_ctx *ctx,
+			    struct mmsys_cmdq_cmd *cmd,
+			    const struct v4l2_rect *compose)
+{
+	return 0;
+}
+
+static int config_tcc_subfrm(struct mdp_comp_ctx *ctx,
+			     struct mmsys_cmdq_cmd *cmd, u32 index)
+{
+	return 0;
+}
+
+static const struct mdp_comp_ops tcc_ops = {
+	.get_comp_flag = get_comp_flag,
+	.init_comp = init_tcc,
+	.config_frame = config_tcc_frame,
+	.config_subfrm = config_tcc_subfrm,
+	.wait_comp_event = NULL,
+	.advance_subfrm = NULL,
+	.post_process = NULL,
+};
 static int init_wrot(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 {
 	phys_addr_t base = ctx->comp->reg_base;
@@ -396,6 +1034,8 @@ static int init_wrot(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 	/* Reset WROT */
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_SOFT_RST, BIT(0), BIT(0));
 	MM_REG_POLL(cmd, subsys_id, base, VIDO_SOFT_RST_STAT, BIT(0), BIT(0));
+	/* Reset setting */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_CTRL, 0x0, 0xFFFFFFFF);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_SOFT_RST, 0x0, BIT(0));
 	MM_REG_POLL(cmd, subsys_id, base, VIDO_SOFT_RST_STAT, 0x0, BIT(0));
 	return 0;
@@ -409,6 +1049,8 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
+	bool comp;
+	u32 colorformat = ctx->outputs[0]->buffer.format.colorformat;
 
 	/* Write frame base address */
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_BASE_ADDR, wrot->iova[0],
@@ -417,9 +1059,37 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 		     0xFFFFFFFF);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_BASE_ADDR_V, wrot->iova[2],
 		     0xFFFFFFFF);
+
+	if (mdp_cfg) {
+		if (mdp_cfg->wrot_support_afbc) {
+			comp = MDP_COLOR_IS_COMPRESS(colorformat);
+			if (comp) {
+				MM_REG_WRITE(cmd, subsys_id, base, VIDO_FRAME_SIZE,
+					     wrot->framesize, 0xFFFFFFFF);
+				MM_REG_WRITE(cmd, subsys_id, base, VIDO_AFBC_YUVTRANS,
+					     wrot->afbc_yuvtrans, 0x1);
+			}
+			MM_REG_WRITE(cmd, subsys_id, base, VIDO_PVRIC,  wrot->pvric, 0x03);
+		}
+
+		if (mdp_cfg->wrot_support_10bit) {
+			MM_REG_WRITE(cmd, subsys_id, base, VIDO_SCAN_10BIT,
+				     wrot->scan_10bit, 0x0000000F);
+			MM_REG_WRITE(cmd, subsys_id, base, VIDO_PENDING_ZERO,
+				     wrot->pending_zero, 0x04000000);
+		}
+		if (mdp_cfg->mdp_version_6885)
+			MM_REG_WRITE(cmd, subsys_id, base, VIDO_CTRL_2, wrot->bit_number, 0x00000007);
+	}
+
 	/* Write frame related registers */
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_CTRL, wrot->control,
 		     0xF131510F);
+
+	/* Write pre-ultra threshold */
+	MM_REG_WRITE(cmd, subsys_id, base, VIDO_DMA_PREULTRA, wrot->pre_ultra,
+		     0x00FFFFFF);
+
 	/* Write frame Y pitch */
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_STRIDE, wrot->stride[0],
 		     0x0000FFFF);
@@ -472,7 +1142,6 @@ static int config_wrot_subfrm(struct mdp_comp_ctx *ctx,
 		     0x1FFF1FFF);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_CROP_OFST, subfrm->clip_ofst,
 		     0x1FFF1FFF);
-
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAIN_BUF_SIZE,
 		     subfrm->main_buf, 0x1FFF7F00);
 
@@ -484,17 +1153,30 @@ static int config_wrot_subfrm(struct mdp_comp_ctx *ctx,
 
 static int wait_wrot_event(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 {
-	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
 	struct device *dev = &ctx->comp->mdp_dev->pdev->dev;
+	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
 	int evt = -1;
+	const struct mtk_mdp_driver_data *data = ctx->comp->mdp_dev->mdp_data;
+	enum mtk_mdp_comp_id id = data->comp_data[ctx->comp->id].match.public_id;
 
-	if (ctx->comp->alias_id == 0)
+	switch (id) {
+	case MDP_COMP_WROT0:
 		evt = mdp_get_event_idx(ctx->comp->mdp_dev, WROT0_DONE);
-	else
-		dev_err(dev, "Do not support WROT1_DONE event\n");
-
+		break;
+	case MDP_COMP_WROT1:
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, WROT1_DONE);
+		break;
+	case MDP_COMP_WROT2:
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, WROT2_DONE);
+		break;
+	case MDP_COMP_WROT3:
+		evt = mdp_get_event_idx(ctx->comp->mdp_dev, WROT3_DONE);
+		break;
+	default:
+		dev_err(dev, "Invalid Engine!\n");
+	}
 	if (evt > 0)
 		MM_REG_WAIT(cmd, evt);
 
