@@ -25,12 +25,23 @@ enum mdp_buffer_usage {
 };
 
 struct mdp_platform_config {
-	bool	rdma_support_10bit;
-	bool	rdma_rsz1_sram_sharing;
-	bool	rdma_upsample_repeat_only;
-	bool	rsz_disable_dcm_small_sample;
-	bool	wrot_filter_constraint;
-	u32	gce_event_offset;
+	bool rdma_support_10bit;
+	bool rdma_rsz1_sram_sharing;
+	bool rdma_upsample_repeat_only;
+	bool rdma_support_extend_ufo;
+	bool rdma_support_hyfbc;
+	bool rdma_support_afbc;
+	bool rdma_esl_setting;
+	bool rsz_disable_dcm_small_sample;
+	bool rsz_etc_control;
+	bool tdshp_1_1;
+	bool wrot_filter_constraint;
+	bool wrot_support_afbc;
+	bool wrot_support_10bit;
+	bool mdp_version_6885;
+	bool mdp_version_8195;
+	u8 tdshp_dyn_contrast_version;
+	u32 gce_event_offset;
 };
 
 struct mtk_mdp_driver_data {
