@@ -17,7 +17,7 @@
 
 /dts-v1/;
 
-#include "partition_mbox_normal.dtsi"
+#include "partition_mbox_normal_P_32.dtsi"
 #include "mesong12b.dtsi"
 #include "mesong12b_skt-panel.dtsi"
 
