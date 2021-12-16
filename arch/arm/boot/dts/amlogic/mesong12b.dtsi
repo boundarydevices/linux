@@ -1975,6 +1975,14 @@
 		};
 	};
 
+	ao_b_alt_uart_pins: ao_b_alt_uart {
+		mux {
+			groups = "uart_ao_tx_b_8",
+				"uart_ao_rx_b_9";
+			function = "uart_ao_b";
+		};
+	};
+
 	ao_i2c_master_pins1:ao_i2c_pins1 {
 		mux {
 			groups = "i2c_ao_sck",
