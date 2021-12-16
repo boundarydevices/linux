@@ -47,13 +47,8 @@ config SND_SOC_SOF_OF
 	  Say Y if you need this option. If unsure select "N".
 
 config SND_SOC_SOF_COMPRESS
-	bool "SOF enable compress interface"
+	tristate
 	select SND_SOC_COMPRESS
-	help
-	  This option enables the compress interface that can be used to
-	  offload compress files decoding/encoding on the DSP.
-	  Say Y if you want to enable the compress interface.
-	  If unsure, select "N".
 
 config SND_SOC_SOF_DEBUG_PROBES
 	bool "SOF enable data probing"
