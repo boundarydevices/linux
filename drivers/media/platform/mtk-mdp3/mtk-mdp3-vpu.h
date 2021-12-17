@@ -58,6 +58,14 @@ struct mdp_vpu_dev {
 	size_t			work_size;
 	struct mdp_config_pool	*pool;
 	u32			status;
+
+	void			*config;
+	dma_addr_t		config_addr;
+	size_t			config_size;
+
+	void			*path;
+	dma_addr_t		path_addr;
+	size_t			path_size;
 };
 
 struct mdp_vpu_ctx {
