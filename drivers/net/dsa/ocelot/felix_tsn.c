@@ -1561,6 +1561,7 @@ static int felix_qos_shaper_conf_set(struct ocelot *ocelot, int idx,
 
 static int felix_cbs_set(struct net_device *ndev, u8 tc, u8 bw)
 {
+	struct ocelot_port *ocelot_port;
 	struct phylink_link_state state;
 	struct phylink_pcs *pcs;
 	struct ocelot *ocelot;
@@ -1571,11 +1572,15 @@ static int felix_cbs_set(struct net_device *ndev, u8 tc, u8 bw)
 	dp = dsa_port_from_netdev(ndev);
 	ocelot = dp->ds->priv;
 	port = dp->index;
+	ocelot_port = ocelot->ports[port];
 
 	if (tc > capa.qos_cos_max) {
 		dev_err(ocelot->dev, "Invalid tc: %u\n", tc);
 		return -EINVAL;
 	}
+
+	memset(&state, 0, sizeof(state));
+	state.interface = ocelot_port->phy_mode;
 
 	felix = ocelot_to_felix(ocelot);
 	pcs = &felix->pcs[port]->pcs;
