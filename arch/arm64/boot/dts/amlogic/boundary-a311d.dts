@@ -99,7 +99,7 @@
 		memory-region = <&galcore_reserved>;
 	};
 #endif
-	
+
 	gpio-keys-polled {
 		compatible = "gpio-keys-polled";
 		poll-interval = <100>;
@@ -110,7 +110,7 @@
 			gpios = <&gpio_ao GPIOAO_7 GPIO_ACTIVE_LOW>;
 		};
 	};
-	
+
 	gpiomem {
 		compatible = "amlogic, gpiomem";
 		reg = <0x0 0xff634000 0x0 0x1000>;
@@ -213,15 +213,6 @@
 		};
 	};
 
-#if 0
-	spdif_dit: audio-codec-1 {
-		#sound-dai-cells = <0>;
-		compatible = "linux,spdif-dit";
-		status = "okay";
-		sound-name-prefix = "DIT";
-	};
-#endif
-	
 	sound {
 		compatible = "amlogic,axg-sound-card";
 		model = "boundary-a311d";
@@ -475,12 +466,12 @@
 };
 
 &ethmac {
+	amlogic,tx-delay-ns = <2>;
+	phy-handle = <&external_phy>;
+	phy-mode = "rgmii";
 	pinctrl-0 = <&eth_pins>, <&eth_rgmii_pins>;
 	pinctrl-names = "default";
 	status = "okay";
-	phy-mode = "rgmii";
-	phy-handle = <&external_phy>;
-	amlogic,tx-delay-ns = <2>;
 };
 
 &frddr_a {
@@ -762,8 +753,8 @@
 };
 
 &pcie {
-	status = "disabled";
 	reset-gpios = <&gpio GPIOA_8 GPIO_ACTIVE_LOW>;
+	status = "disabled";
 };
 
 &pwm_ab {
@@ -795,7 +786,6 @@
 };
 #endif
 
-#if 1
 /* SDIO */
 &sd_emmc_a {
 	status = "okay";
@@ -825,9 +815,7 @@
 		compatible = "brcm,bcm4329-fmac";
 	};
 };
-#endif
 
-#if 1
 /* SD card */
 &sd_emmc_b {
 	status = "okay";
@@ -844,9 +832,7 @@
 	vmmc-supply = <&reg_3v3>;
 	vqmmc-supply = <&reg_3v3>;
 };
-#endif
 
-#if 1
 /* eMMC */
 &sd_emmc_c {
 	status = "okay";
@@ -865,7 +851,6 @@
 	vmmc-supply = <&reg_3v3>;
 	vqmmc-supply = <&reg_1v8>;
 };
-#endif
 
 #if 0
 /*
@@ -948,6 +933,12 @@
 	status = "okay";
 };
 
+&uart_A {
+	status = "okay";
+	pinctrl-0 = <&uart_a_pins>, <&uart_a_cts_rts_pins>;
+	pinctrl-names = "default";
+};
+
 &uart_AO {
 	status = "okay";
 	pinctrl-0 = <&uart_ao_a_pins>;
@@ -957,12 +948,6 @@
 &uart_AO_B {
 	status = "okay";
 	pinctrl-0 = <&uart_ao_b_2_pins>;
-	pinctrl-names = "default";
-};
-
-&uart_A {
-	status = "okay";
-	pinctrl-0 = <&uart_a_pins>, <&uart_a_cts_rts_pins>;
 	pinctrl-names = "default";
 };
 
@@ -1002,4 +987,3 @@
 &usb3_pcie_phy {
 	phy-supply = <&reg_5v0>;
 };
-
