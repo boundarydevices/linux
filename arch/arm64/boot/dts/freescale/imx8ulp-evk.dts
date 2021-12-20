@@ -120,6 +120,11 @@
 			no-map;
 			reg = <0 0xa8500000 0 0x100000>;
 		};
+
+		m33_reserved: m33_noncacheable_section@a8600000 {
+			no-map;
+			reg = <0 0xa8600000 0 0x1000000>;
+		};
 	};
 
 	reg_5v: regulator-5v {
