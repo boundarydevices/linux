@@ -263,10 +263,10 @@ static int mdp_path_config_subfrm(struct mmsys_cmdq_cmd *cmd,
 {
 	struct mdp_path_subfrm subfrm;
 	const struct img_config *config = path->config;
+	const struct img_mmsys_ctrl *ctrl = &config->ctrls[count];
+	const struct img_mux *set;
 	struct device *mmsys_dev = path->mdp_dev->mdp_mmsys;
-	const struct mtk_mdp_driver_data *data = path->mdp_dev->mdp_data;
 	struct mdp_comp_ctx *ctx;
-	enum mdp_comp_id cur, next;
 	int index, ret;
 
 	/* Acquire components */
@@ -274,12 +274,12 @@ static int mdp_path_config_subfrm(struct mmsys_cmdq_cmd *cmd,
 	if (ret)
 		return ret;
 	/* Enable mux settings */
-	for (index = 0; index < (config->num_components - 1); index++) {
-		cur = path->comps[index].comp->id;
-		next = path->comps[index + 1].comp->id;
-		mtk_mmsys_mdp_connect(mmsys_dev, cmd,
-				data->comp_data[cur].match.public_id,
-				data->comp_data[next].match.public_id);
+	for (index = 0; index < ctrl->num_sets; index++) {
+		set = &ctrl->sets[index];
+		mmsys_dev = path->mdp_dev->mdp_mmsys;
+
+		mtk_mmsys_write_reg_by_cmdq(mmsys_dev, cmd,
+					    set->reg, set->value, 0xFFFFFFFF);
 	}
 
 	/* Config sub-frame information */
@@ -312,12 +312,12 @@ static int mdp_path_config_subfrm(struct mmsys_cmdq_cmd *cmd,
 			return ret;
 	}
 	/* Disable mux settings */
-	for (index = 0; index < (config->num_components - 1); index++) {
-		cur = path->comps[index].comp->id;
-		next = path->comps[index + 1].comp->id;
-		mtk_mmsys_mdp_disconnect(mmsys_dev, cmd,
-				data->comp_data[cur].match.public_id,
-				data->comp_data[next].match.public_id);
+	for (index = 0; index < ctrl->num_sets; index++) {
+		set = &ctrl->sets[index];
+		mmsys_dev = path->mdp_dev->mdp_mmsys;
+
+		mtk_mmsys_write_reg_by_cmdq(mmsys_dev, cmd,
+					    set->reg, 0, 0xFFFFFFFF);
 	}
 
 	return 0;
