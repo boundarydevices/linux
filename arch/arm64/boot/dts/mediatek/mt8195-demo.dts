@@ -545,3 +545,7 @@
 		};
 	};
 };
+
+&mfg0 {
+	domain-supply = <&mt6315_7_vbuck1>;
+};
