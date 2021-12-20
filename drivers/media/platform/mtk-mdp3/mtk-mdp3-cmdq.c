@@ -532,6 +532,7 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 		dev_err(dev, "cmdq_pkt_flush_async fail!\n");
 		goto err_clock_off;
 	}
+	kfree(path);
 	return 0;
 
 err_clock_off:
