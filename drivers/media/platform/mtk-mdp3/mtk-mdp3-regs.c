@@ -11,6 +11,8 @@
 #include "mtk-mdp3-regs.h"
 #include "mtk-mdp3-m2m.h"
 
+#define FHD (1920 * 1080)
+
 static const struct mdp_format *mdp_formats;
 static u32 format_len;
 
@@ -436,7 +438,7 @@ void mdp_set_scenario(struct mdp_dev *mdp,
 		return;
 
 	if (mdp->mdp_data->mdp_cfg->support_dual_pipe) {
-		if ((width * height) >= (2560 * 1440))
+		if ((width * height) >= FHD)
 			param->type = MDP_STREAM_TYPE_DUAL_BITBLT;
 	}
 }
