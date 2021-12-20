@@ -11,6 +11,7 @@
 #include <media/v4l2-mem2mem.h>
 #include <linux/soc/mediatek/mtk-mmsys.h>
 #include <linux/soc/mediatek/mtk-mutex.h>
+#include "mtk-mdp3-regs.h"
 #include "mtk-mdp3-comp.h"
 #include "mtk-mdp3-vpu.h"
 
@@ -100,6 +101,7 @@ struct mdp_dev {
 	atomic_t				suspended;
 	atomic_t				job_count;
 	atomic_t				cmdq_count[MDP_CMDQ_NUM];
+	struct mdp_framechange_param		prev_image;
 };
 
 struct mdp_pipe_info {

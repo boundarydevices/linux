@@ -90,6 +90,7 @@ static void mdp_m2m_worker(struct work_struct *work)
 	struct vb2_v4l2_buffer *src_vb, *dst_vb;
 	struct img_ipi_frameparam param = {0};
 	struct mdp_cmdq_param task = {0};
+	struct mdp_framechange_param cur_frame = {0};
 	enum vb2_buffer_state vb_state = VB2_BUF_STATE_ERROR;
 	int ret;
 
@@ -103,19 +104,32 @@ static void mdp_m2m_worker(struct work_struct *work)
 	param.type = ctx->curr_param.type;
 	param.num_inputs = 1;
 	param.num_outputs = 1;
-	param.frame_change = (ctx->frame_count[MDP_M2M_SRC] == 0);
 
 	frame = ctx_get_frame(ctx, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
 	src_vb = v4l2_m2m_next_src_buf(ctx->m2m_ctx);
 	mdp_set_src_config(&param.inputs[0], frame, &src_vb->vb2_buf);
 	mdp_set_scenario(ctx->mdp_dev, &param, frame);
-	if (param.frame_change)
-		dev_info(&ctx->mdp_dev->pdev->dev,
-			 "MDP Scenario: %d\n", param.type);
 
 	frame = ctx_get_frame(ctx, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
 	dst_vb = v4l2_m2m_next_dst_buf(ctx->m2m_ctx);
 	mdp_set_dst_config(&param.outputs[0], frame, &dst_vb->vb2_buf);
+
+	cur_frame.scenario = param.type;
+	cur_frame.frame_count = ctx->frame_count[MDP_M2M_SRC];
+	memcpy(&cur_frame.in, &param.inputs[0], sizeof(cur_frame.in));
+	memcpy(&cur_frame.out, &param.outputs[0], sizeof(cur_frame.out));
+
+	if (mdp_is_framechange(&ctx->mdp_dev->prev_image, &cur_frame)) {
+		memcpy(&ctx->mdp_dev->prev_image, &cur_frame,
+		       sizeof(struct mdp_framechange_param));
+		param.frame_change = true;
+	} else {
+		param.frame_change = false;
+	}
+
+	if (param.frame_change)
+		dev_dbg(&ctx->mdp_dev->pdev->dev,
+			"MDP Scenario: %d\n", param.type);
 
 	param.timestamp.tv_sec= (int32_t)(src_vb->vb2_buf.timestamp >> 32);
 	param.timestamp.tv_usec = ((int32_t)(src_vb->vb2_buf.timestamp & 0xFFFFFFFF)) | BIT(1);

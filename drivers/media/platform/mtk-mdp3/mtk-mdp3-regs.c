@@ -427,6 +427,25 @@ static u32 mdp_fmt_get_plane_size(const struct mdp_format *fmt,
 	return 0;
 }
 
+bool mdp_is_framechange(struct mdp_framechange_param *prev,
+			struct mdp_framechange_param *cur)
+{
+	if (cur->frame_count == 0 ||
+	    prev->scenario != cur->scenario ||
+	    prev->in.buffer.format.colorformat != cur->in.buffer.format.colorformat ||
+	    prev->in.buffer.format.width != cur->in.buffer.format.width ||
+	    prev->in.buffer.format.height != cur->in.buffer.format.height ||
+	    prev->out.buffer.format.width != cur->out.buffer.format.width ||
+	    prev->out.buffer.format.height != cur->out.buffer.format.height ||
+	    prev->out.crop.left != cur->out.crop.left ||
+	    prev->out.crop.top != cur->out.crop.top ||
+	    prev->out.crop.width != cur->out.crop.width ||
+	    prev->out.crop.height != cur->out.crop.height)
+		return true;
+
+	return false;
+}
+
 void mdp_set_scenario(struct mdp_dev *mdp,
 		      struct img_ipi_frameparam *param,
 		      struct mdp_frame *frame)

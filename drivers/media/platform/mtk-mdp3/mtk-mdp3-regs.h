@@ -397,6 +397,13 @@ struct mdp_frameparam {
 	enum v4l2_quantization		quant;
 };
 
+struct mdp_framechange_param {
+	u8 scenario;
+	u32 frame_count;
+	struct img_input in;
+	struct img_output out;
+};
+
 int mdp_enum_fmt_mplane(struct v4l2_fmtdesc *f);
 const struct mdp_format *mdp_try_fmt_mplane(struct v4l2_format *f,
 					    struct mdp_frameparam *param,
@@ -408,6 +415,8 @@ int mdp_try_crop(struct mdp_m2m_ctx *ctx, struct v4l2_rect *r,
 int mdp_check_scaling_ratio(const struct v4l2_rect *crop,
 			    const struct v4l2_rect *compose, s32 rotation,
 	const struct mdp_limit *limit);
+bool mdp_is_framechange(struct mdp_framechange_param *prev,
+			struct mdp_framechange_param *cur);
 void mdp_set_scenario(struct mdp_dev *mdp,
 		      struct img_ipi_frameparam *param,
 		      struct mdp_frame *frame);
