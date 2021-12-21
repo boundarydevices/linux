@@ -14,7 +14,7 @@ fsl-dpaa2-eth-${CONFIG_DEBUG_FS} += dpaa2-eth-debugfs.o
 fsl-dpaa2-eth-${CONFIG_FSL_DPAA2_ETH_CEETM} += dpaa2-eth-ceetm.o
 fsl-dpaa2-ptp-objs	:= dpaa2-ptp.o dprtc.o
 fsl-dpaa2-switch-objs	:= dpaa2-switch.o dpaa2-switch-ethtool.o dpsw.o dpaa2-switch-flower.o dpaa2-mac.o dpmac.o
-fsl-dpaa2-mac-objs	:= dpaa2-mac.o dpmac.o
+fsl-dpaa2-mac-objs	:= dpaa2-mac-standalone.o dpaa2-mac.o dpmac.o
 
 # Needed by the tracing framework
 CFLAGS_dpaa2-eth.o := -I$(src)
