@@ -411,7 +411,7 @@ void mtk_mmsys_ddp_config(struct device *dev, enum mtk_mmsys_config_type config,
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_ddp_config);
 
-void mtk_mmsys_write_reg(struct device *dev,
+void mtk_mmsys_mdp_write_config(struct device *dev,
 			 struct mmsys_cmdq_cmd *cmd,
 			 u32 alias_id, u32 value, u32 mask)
 {
@@ -421,7 +421,18 @@ void mtk_mmsys_write_reg(struct device *dev,
 	cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id,
 			    mmsys->addr + configs[alias_id], value, mask);
 }
-EXPORT_SYMBOL_GPL(mtk_mmsys_write_reg);
+EXPORT_SYMBOL_GPL(mtk_mmsys_mdp_write_config);
+
+void mtk_mmsys_write_reg_by_cmdq(struct device *dev,
+			 struct mmsys_cmdq_cmd *cmd,
+			 u32 offset, u32 value, u32 mask)
+{
+	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
+
+	cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id,
+			    mmsys->addr + offset, value, mask);
+}
+EXPORT_SYMBOL_GPL(mtk_mmsys_write_reg_by_cmdq);
 
 static int mtk_mmsys_probe(struct platform_device *pdev)
 {
