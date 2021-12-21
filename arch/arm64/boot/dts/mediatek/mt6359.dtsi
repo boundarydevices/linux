@@ -2,6 +2,7 @@
 /*
  * Copyright (c) 2021 MediaTek Inc.
  */
+#include <dt-bindings/input/input.h>
 
 &pwrap {
 	pmic: pmic {
@@ -293,6 +294,18 @@
 
 		mt6359rtc: mt6359rtc {
 			compatible = "mediatek,mt6358-rtc";
+		};
+
+		mt6359keys: mt6359keys {
+			compatible = "mediatek,mt6359-keys";
+			power {
+				linux,keycodes = <KEY_POWER>;
+				wakeup-source;
+			};
+
+			home {
+				linux,keycodes = <KEY_HOME>;
+			};
 		};
 	};
 };
