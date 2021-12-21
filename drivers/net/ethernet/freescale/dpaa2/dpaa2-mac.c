@@ -519,8 +519,8 @@ void dpaa2_mac_driver_attach(struct fsl_mc_device *dpmac_dev)
 	struct device *dev = &dpmac_dev->dev;
 	int err;
 
-	if (dev && dev->driver == NULL && drv && driver_match_device(drv, dev)) {
-		err = device_driver_attach(drv, dev);
+	if (dev && dev->driver == NULL && drv) {
+		err = device_attach(dev);
 		if (err && err != -EAGAIN)
 			dev_err(dev, "Error in attaching the fsl_dpaa2_mac driver\n");
 	}
@@ -532,5 +532,5 @@ void dpaa2_mac_driver_detach(struct fsl_mc_device *dpmac_dev)
 	struct device *dev = &dpmac_dev->dev;
 
 	if (dev && dev->driver == drv)
-		device_driver_detach(dev);
+		device_release_driver(dev);
 }

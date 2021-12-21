@@ -8,13 +8,6 @@
 #include <linux/of_net.h>
 #include <linux/phylink.h>
 #include <linux/pcs-lynx.h>
-
-/* Hack: only here in order to use device_driver_detach.
- * To be replaced with the use of MC _ENDPOINT_CHANGED interrupts on all
- * connectable objects
- */
-#include "../../../../base/base.h"
-
 #include "dpmac.h"
 #include "dpmac-cmd.h"
 
