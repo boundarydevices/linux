@@ -73,6 +73,7 @@ static void mdp_m2m_process_done(void *priv, int vb_state)
 			v4l2_m2m_src_buf_remove(ctx->m2m_ctx);
 	dst_vbuf = (struct vb2_v4l2_buffer *)
 			v4l2_m2m_dst_buf_remove(ctx->m2m_ctx);
+	ctx->curr_param.frame_no = ctx->frame_count[MDP_M2M_SRC];
 	src_vbuf->sequence = ctx->frame_count[MDP_M2M_SRC]++;
 	dst_vbuf->sequence = ctx->frame_count[MDP_M2M_DST]++;
 	v4l2_m2m_buf_copy_metadata(src_vbuf, dst_vbuf, true);
@@ -80,8 +81,6 @@ static void mdp_m2m_process_done(void *priv, int vb_state)
 	v4l2_m2m_buf_done(src_vbuf, vb_state);
 	v4l2_m2m_buf_done(dst_vbuf, vb_state);
 	v4l2_m2m_job_finish(ctx->mdp_dev->m2m_dev, ctx->m2m_ctx);
-
-	ctx->curr_param.frame_no = ctx->frame_count[MDP_M2M_SRC];
 }
 
 static void mdp_m2m_worker(struct work_struct *work)
