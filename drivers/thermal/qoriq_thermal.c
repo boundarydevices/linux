@@ -214,7 +214,7 @@ static int qoriq_tmu_register_tmu_zone(struct device *dev,
 				 "Failed to add hwmon sysfs attributes\n");
 		/* first thermal zone takes care of system-wide device cooling */
 		if (id == 0) {
-			sensor->cdev = devfreq_cooling_register();
+			sensor->cdev = device_cooling_register();
 			if (IS_ERR(sensor->cdev)) {
 				ret = PTR_ERR(sensor->cdev);
 				pr_err("failed to register devfreq cooling device: %d\n",
@@ -233,7 +233,7 @@ static int qoriq_tmu_register_tmu_zone(struct device *dev,
 					sensor->tzd->type,
 					sensor->cdev->type,
 					ret);
-				devfreq_cooling_unregister(sensor->cdev);
+				device_cooling_unregister(sensor->cdev);
 				return ret;
 			}
 
