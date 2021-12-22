@@ -11,6 +11,7 @@
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/leds/common.h>
 #include <dt-bindings/gpio/meson-g12a-gpio.h>
+#include <dt-bindings/sound/meson-g12a-toacodec.h>
 #include <dt-bindings/sound/meson-g12a-tohdmitx.h>
 #include "meson-g12b-a311d.dtsi"
 
@@ -220,7 +221,8 @@
 		audio-widgets = "Speaker", "Ext Spk",
 				"Headphone", "Headphone Jack",
 				"Microphone", "AMIC",
-				"Microphone", "AMIC2";
+				"Microphone", "AMIC2",
+				"Line", "Lineout";
 		audio-routing =
 				"Ext Spk", "WM SPK_LN",
 				"Ext Spk", "WM SPK_LP",
@@ -235,6 +237,8 @@
 				"TDM_B Capture", "WM Capture",
 				"WM Playback", "TDM_B Playback",
 
+				"Lineout", "ACODEC LOLP",
+				"Lineout", "ACODEC LORP",
 				/*
 				 * The below routes are unchanged for all boards.
 				 * But may be commented out to force a path.
@@ -317,6 +321,10 @@
 			codec-1 {
 				sound-dai = <&tohdmitx TOHDMITX_I2S_IN_B>;
 			};
+
+			codec-2 {
+				sound-dai = <&toacodec TOACODEC_IN_B>;
+			};
 		};
 #else
 		/* i2s wm8960 interface */
@@ -356,6 +364,15 @@
 				sound-dai = <&hdmi_tx>;
 			};
 		};
+
+		/* acodec glue */
+		dai-link-9 {
+			sound-dai = <&toacodec TOACODEC_OUT>;
+
+			codec {
+				sound-dai = <&acodec>;
+			};
+		};
 	};
 
 	wifi32k: wifi32k {
@@ -364,6 +381,11 @@
 		clock-frequency = <32768>;
 		pwms = <&pwm_ef 0 30518 0>; /* PWM_E at 32.768KHz */
 	};
+};
+
+&acodec {
+	AVDD-supply = <&reg_1v8>;
+	status = "okay";
 };
 
 &arb {
@@ -926,6 +948,10 @@
 };
 
 &toddr_c {
+	status = "okay";
+};
+
+&toacodec {
 	status = "okay";
 };
 
