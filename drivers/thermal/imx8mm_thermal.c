@@ -396,7 +396,7 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 
 		devm_thermal_add_hwmon_sysfs(&pdev->dev, tmu->sensors[i].tzd);
 
-		tmu->sensors[i].cdev = devfreq_cooling_register();
+		tmu->sensors[i].cdev = device_cooling_register();
 		if (IS_ERR(tmu->sensors[i].cdev)) {
 			ret = PTR_ERR(tmu->sensors[i].cdev);
 			if (ret != -EPROBE_DEFER)
@@ -415,7 +415,7 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev,
 				"binding zone %s with cdev %s failed:%d\n",
 				tmu->sensors[i].tzd->type, tmu->sensors[i].cdev->type, ret);
-			devfreq_cooling_unregister(tmu->sensors[i].cdev);
+			device_cooling_unregister(tmu->sensors[i].cdev);
 			return ret;
 		}
 
