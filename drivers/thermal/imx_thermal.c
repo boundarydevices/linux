@@ -652,7 +652,7 @@ static int imx_thermal_register_legacy_cooling(struct imx_thermal_data *data)
 	if (ret)
 		return ret;
 
-	data->cdev[1] = devfreq_cooling_register();
+	data->cdev[1] = device_cooling_register();
 	if (IS_ERR(data->cdev[1])) {
 		ret = PTR_ERR(data->cdev[1]);
 		if (ret != -EPROBE_DEFER) {
@@ -670,7 +670,7 @@ static void imx_thermal_unregister_legacy_cooling(struct imx_thermal_data *data)
 {
 	cpufreq_cooling_unregister(data->cdev[0]);
 	cpufreq_cpu_put(data->policy);
-	devfreq_cooling_unregister(data->cdev[1]);
+	device_cooling_unregister(data->cdev[1]);
 }
 
 #else
