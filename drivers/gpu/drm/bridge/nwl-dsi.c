@@ -415,15 +415,17 @@ static int nwl_dsi_config_dpi(struct nwl_dsi *dsi)
 	}
 
 	if (of_device_is_compatible(dsi->panel_bridge->of_node,
-				    "raydium,rm68200")) {
+				    "raydium,rm68200") ||
+	    of_device_is_compatible(dsi->panel_bridge->of_node,
+				    "rocktech,hx8394f")) {
 		int bytes = mipi_dsi_pixel_format_to_bpp(dsi->format) >> 3;
 
 		/*
 		 * FIXME: This is a workaround for display shift
-		 * of the RM68200 panel. It is based on previous
-		 * knowledge got from support task for external
-		 * DSI bridges by turning the hfp/hbp/hsa to be
-		 * in bytes and substracting certain magic values.
+		 * of the RM68200 and HX8394F panels. It is based
+		 * on previous knowledge got from support task for
+		 * external DSI bridges by turning the hfp/hbp/hsa
+		 * to be in bytes and substracting certain magic values.
 		 * Furthermore, rounding hsa up to 2 is needed.
 		 * This can be fixed as soon as formulas to
 		 * determine the settings are available.
