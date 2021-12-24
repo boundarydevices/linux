@@ -25,16 +25,6 @@
 		#size-cells = <2>;
 		ranges;
 
-		/*
-		 * 0x8800_0000 ~ 0x8FFF_FFFF is reserved for M4
-		 * Shouldn't be used at A core and Linux side.
-		 *
-		 */
-		m4_reserved: m4@0x88000000 {
-			no-map;
-			reg = <0 0x88000000 0 0x8000000>;
-		};
-
 		vdev0vring0: vdev0vring0@90000000 {
 			compatible = "shared-dma-pool";
 			reg = <0 0x90000000 0 0x8000>;
