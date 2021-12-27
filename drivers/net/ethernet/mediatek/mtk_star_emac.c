@@ -131,6 +131,11 @@ static const char *const mtk_star_clk_names[] = { "core", "reg", "trans" };
 #define MTK_STAR_REG_INT_MASK			0x0054
 #define MTK_STAR_BIT_INT_MASK_FNRC		BIT(6)
 
+/* Mac Delay Register */
+#define MTK_STAR_REG_TEST0			0x0058
+#define MTK_STAR_BIT_INV_TX_CLK			BIT(31)
+#define MTK_STAR_BIT_INV_RX_CLK			BIT(30)
+
 /* Misc. Config Register */
 #define MTK_STAR_REG_TEST1			0x005c
 #define MTK_STAR_BIT_TEST1_RST_HASH_MBIST	BIT(31)
@@ -245,6 +250,11 @@ struct mtk_star_compat {
 	unsigned int irq_trigger;
 };
 
+struct mac_delay_struct {
+	bool tx_inv;
+	bool rx_inv;
+};
+
 struct mtk_star_priv {
 	struct net_device *ndev;
 
@@ -258,6 +268,7 @@ struct mtk_star_priv {
 	dma_addr_t dma_addr;
 	struct mtk_star_ring tx_ring;
 	struct mtk_star_ring rx_ring;
+	struct mac_delay_struct mac_delay;
 
 	struct mii_bus *mii;
 	struct napi_struct napi;
@@ -1453,8 +1464,34 @@ static void mtk_star_clk_disable_unprepare(void *data)
 	clk_bulk_disable_unprepare(MTK_STAR_NCLKS, priv->clks);
 }
 
+static int mtk_star_set_mac_delay(struct mtk_star_priv *priv)
+{
+	struct mac_delay_struct *mac_delay = &priv->mac_delay;
+	struct device *dev = mtk_star_get_dev(priv);
+	unsigned int delay_val = 0;
+
+	switch (priv->phy_intf) {
+	case PHY_INTERFACE_MODE_MII:
+		delay_val |= FIELD_PREP(MTK_STAR_BIT_INV_TX_CLK, mac_delay->tx_inv);
+		delay_val |= FIELD_PREP(MTK_STAR_BIT_INV_RX_CLK, mac_delay->rx_inv);
+		break;
+	case PHY_INTERFACE_MODE_RMII:
+		delay_val |= FIELD_PREP(MTK_STAR_BIT_INV_TX_CLK, mac_delay->tx_inv);
+		delay_val |= FIELD_PREP(MTK_STAR_BIT_INV_RX_CLK, mac_delay->rx_inv);
+		break;
+	default:
+		dev_err(dev, "This interface not supported\n");
+		return -EINVAL;
+	}
+
+	regmap_write(priv->regs, MTK_STAR_REG_TEST0, delay_val);
+
+	return 0;
+}
+
 static int mtk_star_probe(struct platform_device *pdev)
 {
+	struct mac_delay_struct *mac_delay;
 	struct device_node *of_node;
 	struct mtk_star_priv *priv;
 	struct net_device *ndev;
@@ -1474,6 +1511,8 @@ static int mtk_star_probe(struct platform_device *pdev)
 	priv->compat_data = of_device_get_match_data(&pdev->dev);
 	SET_NETDEV_DEV(ndev, dev);
 	platform_set_drvdata(pdev, ndev);
+
+	mac_delay = &priv->mac_delay;
 
 	ndev->min_mtu = ETH_ZLEN;
 	ndev->max_mtu = MTK_STAR_MAX_FRAME_SIZE;
@@ -1536,10 +1575,18 @@ static int mtk_star_probe(struct platform_device *pdev)
 	}
 
 	priv->rmii_rxc = of_property_read_bool(of_node, "mediatek,rmii-rxc");
+	mac_delay->tx_inv = of_property_read_bool(of_node, "mediatek,txc-inverse");
+	mac_delay->rx_inv = of_property_read_bool(of_node, "mediatek,rxc-inverse");
 
 	priv->compat_data->set_interface_mode(ndev);
 	if (ret) {
 		dev_err(dev, "Failed to set ethernet interface.\n");
+		return -EINVAL;
+	}
+
+	ret = mtk_star_set_mac_delay(priv);
+	if (ret) {
+		dev_err(dev, "Failed to set delay val.\n");
 		return -EINVAL;
 	}
 
