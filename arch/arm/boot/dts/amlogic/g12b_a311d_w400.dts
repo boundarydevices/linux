@@ -468,7 +468,31 @@
 	status = "okay";
 	memory-region = <&adapt_cma_reserved>;
 };
+#if 0
+&CPU0 {
+	cpu-supply = <&vddcpu_b>;
+};
 
+&CPU1 {
+	cpu-supply = <&vddcpu_b>;
+};
+
+&CPU2 {
+	cpu-supply = <&vddcpu_a>;
+};
+
+&CPU3 {
+	cpu-supply = <&vddcpu_a>;
+};
+
+&CPU4 {
+	cpu-supply = <&vddcpu_a>;
+};
+
+&CPU5 {
+	cpu-supply = <&vddcpu_a>;
+};
+#endif
 &i2c_AO {
 	clock-frequency = <100000>;
 	status = "okay";
@@ -819,3 +843,12 @@
 &saradc {
 	status = "okay";
 };
+#if 0
+&vddcpu0 {
+	status = "disabled";
+};
+
+&vddcpu1 {
+	status = "disabled";
+};
+#endif
