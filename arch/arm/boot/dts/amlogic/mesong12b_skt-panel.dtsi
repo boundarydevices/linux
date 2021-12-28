@@ -48,9 +48,8 @@
 		 * power value:(0=output low, 1=output high, 2=input)
 		 * power delay:(unit in ms)
 		 */
-		lcd_cpu-gpios = <&gpio GPIOZ_9 GPIO_ACTIVE_HIGH
-				&gpio GPIOZ_8 GPIO_ACTIVE_HIGH>;
-		lcd_cpu_gpio_names = "GPIOZ_9","GPIOZ_8";
+		lcd_cpu-gpios = <&gpio GPIOX_11 GPIO_ACTIVE_HIGH>;
+		lcd_cpu_gpio_names = "GPIOX_11";
 
 		lcd_0{
 			model_name = "B080XAN01";
@@ -748,7 +747,7 @@
 		status = "okay";
 		key_valid = <0>;
 		pinctrl-names = "pwm_on","pwm_off";
-		pinctrl-0 = <&pwm_f_pins2>;
+		pinctrl-0 = <&pwm_f_pins4>;
 		pinctrl-1 = <&bl_pwm_off_pins>;
 		pinctrl_version = <2>; /* for uboot */
 		bl_pwm_config = <&bl_pwm_conf>;
