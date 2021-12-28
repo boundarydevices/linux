@@ -613,6 +613,7 @@
 		ts_ft7250 = &ts_ft7250;
 		ts_goodix = &ts_goodix;
 		ts_goodix2 = &ts_goodix2;
+		ts_goodix3 = &ts_goodix3;
 		ts_ili251x = &ts_ili251x;
 		ts_st1633i = &ts_st1633i;
 	};
@@ -1253,6 +1254,18 @@
 			#size-cells = <0>;
 
 			/* Touch screens */
+			ts_goodix2: touchscreen@14 {
+				compatible = "goodix,gt9271";
+				esd-recovery-timeout-ms = <2000>;
+				interrupts-extended = GPIRQ_GT911;
+				irq-gpios = GP_GT911_IRQ;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_ts_gt911>;
+				reg = <0x14>;
+				reset-gpios = GP_GT911_RESET;
+				status = "disabled";
+			};
+
 			ts_ft5x06_2: touchscreen@38 {
 				compatible = "edt,ft5x06-ts";
 				interrupts-extended = GPIRQ_TS_FT5X06;
@@ -1264,7 +1277,7 @@
 				status = "disabled";
 			};
 
-			ts_goodix2: touchscreen@5d {
+			ts_goodix3: touchscreen@5d {
 				compatible = "goodix,gt9271";
 				esd-recovery-timeout-ms = <2000>;
 				interrupts-extended = GPIRQ_GT911;
