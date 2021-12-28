@@ -249,6 +249,45 @@
 					0xff 0 0 0>;
 			backlight_index = <0>;
 		};
+
+		lcd_4 {
+			model_name = "ltk080a60a004t";
+			interface = "mipi";
+			basic_setting = <1200 1920 /*h_active, v_active*/
+				1341 1981 /*h_period, v_period*/
+				8 /*lcd_bits*/
+				87 154>; /*screen_widht, screen_height*/
+			lcd_timing = <1 60 0 /*hs_width, hs_bp, hs_pol*/
+				1 25 0>; /*vs_width, vs_bp, vs_pol*/
+			clk_attr = <0 /*fr_adj_type(0=clk, 1=htotal, 2=vtotal)*/
+				0 /*clk_ss_level */
+				1 /*clk_auto_generate*/
+				159400000>; /*pixel_clk(unit in Hz)*/
+			mipi_attr = <4 /*lane_num*/
+				500 /*bit_rate_max(MHz)*/
+				0 /*factor(*100, default 0 for auto)*/
+				1 /*operation_mode_init(0=video, 1=command)*/
+				0 /*operation_mode_display(0=video, 1=command)*/
+				2 /*
+				   *video_mode_type
+				   *(0=sync_pulse,1=sync_event,2=burst)
+				   */
+				1 /*clk_always_hs(0=disable,1=enable)*/
+				0>; /*phy_switch(0=auto,1=standard,2=slow)*/
+
+			/* dsi_init: data_type, num, data... */
+			dsi_init_on = <0xff 0>; /*ending*/
+			dsi_init_off = <0xff 0>; /*ending*/
+			extern_init = <0x3>; /*0xff for invalid*/
+			/* power step: type, index, value, delay(ms) */
+			power_on_step = <
+				0 0 1 20
+				0xff 0 0 0>; /*ending*/
+			power_off_step = <
+				0 0 0 20
+				0xff 0 0 0>; /*ending*/
+			backlight_index = <0>;
+		};
 	};
 
 	lcd_extern{
@@ -740,6 +779,20 @@
 				0xfd 1 150  /* delay 150ms */
 				0xff 0>;    /*ending*/
 		};
+
+		extern_3 {
+			index = <3>;
+			extern_name = "mipi_default";/*default*/
+			status = "okay";
+			type = <2>; /* 0=i2c, 1=spi, 2=mipi */
+			cmd_size = <0xff>;
+			init_on = <
+				0xfd 1 120  /* delay 120ms */
+				0xff 0>;    /*ending*/
+			init_off = <
+				0xfd 1 150  /* delay 150ms */
+				0xff 0>;    /*ending*/
+		};
 	};
 
 	backlight{
@@ -751,9 +804,8 @@
 		pinctrl-1 = <&bl_pwm_off_pins>;
 		pinctrl_version = <2>; /* for uboot */
 		bl_pwm_config = <&bl_pwm_conf>;
-		bl-gpios = <&gpio GPIOH_4 GPIO_ACTIVE_HIGH
-			&gpio GPIOH_5 GPIO_ACTIVE_HIGH>;
-		bl_gpio_names = "GPIOH_4","GPIOH_5";
+		//bl-gpios = <&gpio GPIOA_11 GPIO_ACTIVE_HIGH>;
+		//bl_gpio_names = "GPIOA_11";
 
 		/* pwm port: PWM_A, PWM_B, PWM_C, PWM_D, PWM_E, PWM_F, PWM_VS*/
 		/* power index:(point gpios_index, 0xff=invalid)
@@ -768,9 +820,6 @@
 			bl_level_attr = <255 10 /*max, min*/
 				128 128>; /*mid, mid_mapping*/
 			bl_ctrl_method = <1>; /* 1=pwm, 2=pwm_combo, 4=extern */
-			bl_power_attr = <0 /*en_gpio_index*/
-				1 0 /*on_value, off_value*/
-				200 200>; /*on_delay(ms), off_delay(ms)*/
 			bl_pwm_port = "PWM_F";
 			bl_pwm_attr = <0 /*pwm_method*/
 				180 /*pwm_freq(pwm:Hz, pwm_vs:multiple of vs)*/
@@ -778,18 +827,6 @@
 			bl_pwm_power = <1 1 /*pwm_gpio_index, pwm_gpio_off*/
 				10 10>; /*pwm_on_delay(ms), pwm_off_delay(ms)*/
 			bl_pwm_en_sequence_reverse = <0>; /* 1 for reverse */
-		};
-		backlight_1{
-			index = <1>;
-			bl_name = "bl_extern";
-			bl_level_default_uboot_kernel = <100 100>;
-			bl_level_attr = <255 10 /*max, min*/
-				128 128>; /*mid, mid_mapping*/
-			bl_ctrl_method = <4>; /*1=pwm, 2=pwm_combo, 4=extern*/
-			bl_power_attr = <1 /*en_gpio_index*/
-				1 0 /*on_value, off_value*/
-				200 200>; /*on_delay(ms), off_delay(ms)*/
-			bl_extern_index = <0>;
 		};
 	};
 	bl_pwm_conf:bl_pwm_conf{
