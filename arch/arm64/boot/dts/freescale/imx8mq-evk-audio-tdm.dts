@@ -16,10 +16,18 @@
 
 / {
 	sound-ak4458 {
-		fsl,tdm;
+		pri-dai-link {
+			format = "dsp_b";
+			dai-tdm-slot-num = <8>;
+			dai-tdm-slot-width = <32>;
+		};
 	};
 
 	sound-ak5558 {
-		fsl,tdm;
+		pri-dai-link {
+			format = "dsp_b";
+			dai-tdm-slot-num = <8>;
+			dai-tdm-slot-width = <32>;
+		};
 	};
 };
