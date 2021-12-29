@@ -19,6 +19,23 @@
 #define MDP_RDMA0_NODE      0
 #define MDP_DUAL_PIPE       2
 
+#define MDP_STAGE_JOB_INC		BIT(0)
+#define MDP_STAGE_SUSPEND_CHECK		BIT(1)
+#define MDP_STAGE_MUTEX_ON		BIT(2)
+#define MDP_STAGE_CLK_ON		BIT(3)
+#define MDP_STAGE_CMDQ_FLUSH		BIT(4)
+#define MDP_STAGE_CB_START		BIT(5)
+#define MDP_STAGE_M2M_JOB_DONE		BIT(6)
+#define MDP_STAGE_SEND_CB		BIT(7)
+#define MDP_STAGE_CB_DONE		BIT(8)
+#define MDP_STAGE_RELEASE_START		BIT(9)
+#define MDP_STAGE_MUTEX_OFF		BIT(10)
+#define MDP_STAGE_CLK_OFF		BIT(11)
+#define MDP_STAGE_FREE_COMP		BIT(12)
+#define MDP_STAGE_RELEASE_DONE		BIT(13)
+
+#define MDP_STAGE_ERROR(x) (((x) != (0)) || ((x) != (0x3FFF)))
+
 enum mdp_buffer_usage {
 	MDP_BUFFER_USAGE_HW_READ,
 	MDP_BUFFER_USAGE_MDP,
@@ -102,6 +119,7 @@ struct mdp_dev {
 	atomic_t				job_count;
 	atomic_t				cmdq_count[MDP_CMDQ_NUM];
 	struct mdp_framechange_param		prev_image;
+	u32	stage_flag[MDP_CMDQ_NUM];
 };
 
 struct mdp_pipe_info {

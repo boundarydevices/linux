@@ -1376,8 +1376,12 @@ static int __maybe_unused mdp_suspend(struct device *dev)
 	struct mdp_dev *mdp = dev_get_drvdata(dev);
 	int ret;
 
+	if (MDP_STAGE_ERROR(mdp->stage_flag[0]) || MDP_STAGE_ERROR(mdp->stage_flag[1]))
+		dev_err(dev, "suspend enter : stage flag 1st %x, 2nd %x\n", mdp->stage_flag[0], mdp->stage_flag[1]);
 	atomic_set(&mdp->suspended, 1);
 
+	if (MDP_STAGE_ERROR(mdp->stage_flag[0]) || MDP_STAGE_ERROR(mdp->stage_flag[1]))
+		dev_err(dev, "suspend check job : stage flag 1st %x, 2nd %x\n", mdp->stage_flag[0], mdp->stage_flag[1]);
 	if (atomic_read(&mdp->job_count)) {
 		ret = wait_event_timeout(mdp->callback_wq,
 					 !atomic_read(&mdp->job_count),
@@ -1386,9 +1390,14 @@ static int __maybe_unused mdp_suspend(struct device *dev)
 			dev_err(dev,
 				"%s:flushed cmdq task incomplete, count=%d\n",
 				__func__, atomic_read(&mdp->job_count));
+			if (MDP_STAGE_ERROR(mdp->stage_flag[0]) || MDP_STAGE_ERROR(mdp->stage_flag[1]))
+				dev_err(dev, "suspend timeout : stage flag 1st %x, 2nd %x\n", mdp->stage_flag[0], mdp->stage_flag[1]);
 			return -EBUSY;
 		}
 	}
+
+	if (MDP_STAGE_ERROR(mdp->stage_flag[0]) || MDP_STAGE_ERROR(mdp->stage_flag[1]))
+		dev_err(dev, "suspend done : stage flag 1st %x, 2nd %x\n", mdp->stage_flag[0], mdp->stage_flag[1]);
 
 	return 0;
 }
@@ -1397,7 +1406,12 @@ static int __maybe_unused mdp_resume(struct device *dev)
 {
 	struct mdp_dev *mdp = dev_get_drvdata(dev);
 
+	if (MDP_STAGE_ERROR(mdp->stage_flag[0]) || MDP_STAGE_ERROR(mdp->stage_flag[1]))
+		dev_err(dev, "resume enter : stage flag 1st %x, 2nd %x\n", mdp->stage_flag[0], mdp->stage_flag[1]);
 	atomic_set(&mdp->suspended, 0);
+
+	if (MDP_STAGE_ERROR(mdp->stage_flag[0]) || MDP_STAGE_ERROR(mdp->stage_flag[1]))
+		dev_err(dev, "resume done : stage flag 1st %x, 2nd %x\n", mdp->stage_flag[0], mdp->stage_flag[1]);
 
 	return 0;
 }

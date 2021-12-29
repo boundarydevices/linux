@@ -720,11 +720,15 @@ static void mdp_auto_release_work(struct work_struct *work)
 	struct mdp_dev *mdp;
 	int i;
 	bool finalize;
+	u32 cmdq_user;
 
 	cb_param = container_of(work, struct mdp_cmdq_cb_param,
 				auto_release_work);
+	cmdq_user = cb_param->cmdq_user;
 	mdp = cb_param->mdp;
 	finalize = cb_param->finalize;
+
+	mdp->stage_flag[cmdq_user] |= MDP_STAGE_RELEASE_START;
 
 	if (finalize) {
 		i = mdp_get_mutex_idx(mdp->mdp_data, MDP_PIPE_RDMA0);
@@ -734,16 +738,24 @@ static void mdp_auto_release_work(struct work_struct *work)
 		if (i >= 0)
 			mtk_mutex_unprepare(mdp->mdp_mutex2[mdp->mdp_data->pipe_info[i].mutex_id]);
 	}
+
+	mdp->stage_flag[cmdq_user] |= MDP_STAGE_MUTEX_OFF;
+
 	mdp_comp_clocks_off(&mdp->pdev->dev, cb_param->comps,
 			    cb_param->num_comps);
 
+	mdp->stage_flag[cmdq_user] |= MDP_STAGE_CLK_OFF;
+
 	kfree(cb_param->comps);
 	kfree(cb_param);
+
+	mdp->stage_flag[cmdq_user] |= MDP_STAGE_FREE_COMP;
 
 	if (finalize) {
 		atomic_dec(&mdp->job_count);
 		wake_up(&mdp->callback_wq);
 	}
+	mdp->stage_flag[cmdq_user] |= MDP_STAGE_RELEASE_DONE;
 }
 
 static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
@@ -762,6 +774,8 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 	mdp = cb_param->mdp;
 	dev = &mdp->pdev->dev;
 
+	mdp->stage_flag[cb_param->cmdq_user] |= MDP_STAGE_CB_START;
+
 	if (cb_param->dualpipe)
 		cb_param->finalize =
 			(atomic_dec_and_test(&mdp->cmdq_count[cb_param->cmdq_user]));
@@ -770,6 +784,8 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 
 	if (cb_param->finalize && cb_param->mdp_ctx)
 		mdp_m2m_job_finish(cb_param->mdp_ctx);
+
+	mdp->stage_flag[cb_param->cmdq_user] |= MDP_STAGE_M2M_JOB_DONE;
 
 #ifdef MDP_DEBUG
 		if (data.sta < 0) {
@@ -787,6 +803,8 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 		user_cb_data.data = cb_param->user_cb_data;
 		cb_param->user_cmdq_cb(user_cb_data);
 	}
+
+	mdp->stage_flag[cb_param->cmdq_user] |= MDP_STAGE_SEND_CB;
 
 	cmdq_pkt_destroy(cb_param->pkt);
 	INIT_WORK(&cb_param->auto_release_work, mdp_auto_release_work);
@@ -808,6 +826,8 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 		atomic_dec(&mdp->job_count);
 		wake_up(&mdp->callback_wq);
 	}
+
+	mdp->stage_flag[cb_param->cmdq_user] |= MDP_STAGE_CB_DONE;
 }
 
 int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
@@ -821,10 +841,16 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 	enum mdp_stream_type scenario = param->param->type;
 	int i, j, ret;
 
-	if (atomic_read(&mdp->suspended))
-		return -ECANCELED;
-
 	atomic_inc(&mdp->job_count);
+
+	mdp->stage_flag[param->cmdq_user] |= MDP_STAGE_JOB_INC;
+
+	if (atomic_read(&mdp->suspended)) {
+		atomic_dec(&mdp->job_count);
+		return -ECANCELED;
+	}
+
+	mdp->stage_flag[param->cmdq_user] |= MDP_STAGE_SUSPEND_CHECK;
 
 	/* Prepare cmdq pkt */
 	for (i = 0; i < get_pipe_num(scenario); i++) {
@@ -875,6 +901,8 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 	if (i >= 0)
 		mtk_mutex_prepare(mdp->mdp_mutex2[mdp->mdp_data->pipe_info[i].mutex_id]);
 
+	mdp->stage_flag[param->cmdq_user] |= MDP_STAGE_MUTEX_ON;
+
 	for (i = 0; i < get_pipe_num(scenario); i++) {
 		for (j = 0; j < param->config[i].num_components; j++) {
 			if (is_dummy_engine(mdp, paths[i]->config->components[j].type))
@@ -883,6 +911,8 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 			mdp_comp_clock_on(&mdp->pdev->dev, paths[i]->comps[j].comp);
 		}
 	}
+
+	mdp->stage_flag[param->cmdq_user] |= MDP_STAGE_CLK_ON;
 
 	if (mdp->mdp_data->mdp_cfg->mdp_version_8195) {
 		ret = mdp_hyfbc_config(mdp, &cmd[0], paths[0], param);
@@ -954,6 +984,8 @@ int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
 		kfree(paths[i]);
 	}
 
+	mdp->stage_flag[param->cmdq_user] |= MDP_STAGE_CMDQ_FLUSH;
+
 	return 0;
 
 err_destroy_cmdq_request:
@@ -1005,6 +1037,8 @@ int mdp_cmdq_sendtask(struct platform_device *pdev, struct img_config *config,
 		.cb_data = cb_data,
 		.cmdq_user = MDP_CMDQ_DL,
 	};
+
+	mdp->stage_flag[MDP_CMDQ_DL] = 0;
 
 	return mdp_cmdq_send(mdp, &task);
 }

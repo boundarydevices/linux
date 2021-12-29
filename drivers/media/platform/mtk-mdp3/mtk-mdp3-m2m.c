@@ -149,6 +149,8 @@ static void mdp_m2m_worker(struct work_struct *work)
 	task.mdp_ctx = ctx;
 	task.cmdq_user = MDP_CMDQ_V4L2;
 
+	ctx->mdp_dev->stage_flag[MDP_CMDQ_V4L2] = 0;
+
 	ret = mdp_cmdq_send(ctx->mdp_dev, &task);
 	if (ret) {
 		dev_err(&ctx->mdp_dev->pdev->dev,
