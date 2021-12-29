@@ -1583,7 +1583,7 @@ static int felix_cbs_set(struct net_device *ndev, u8 tc, u8 bw)
 	state.interface = ocelot_port->phy_mode;
 
 	felix = ocelot_to_felix(ocelot);
-	pcs = &felix->pcs[port]->pcs;
+	pcs = felix->pcs[port];
 	pcs->ops->pcs_get_state(pcs, &state);
 
 	speed = state.speed;
