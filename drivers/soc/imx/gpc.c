@@ -74,6 +74,11 @@ static inline bool cpu_is_imx6q(void)
 	return of_machine_is_compatible("fsl,imx6q");
 }
 
+static inline bool cpu_is_imx6qp(void)
+{
+	return of_machine_is_compatible("fsl,imx6qp");
+}
+
 struct imx_pm_domain {
 	struct generic_pm_domain base;
 	struct regmap *regmap;
@@ -555,8 +560,7 @@ static int imx_gpc_old_dt_init(struct device *dev, struct regmap *regmap,
 	}
 
 	is_off = IS_ENABLED(CONFIG_PM);
-	if (is_off && !(cpu_is_imx6q() &&
-		imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)) {
+	if (is_off && !cpu_is_imx6qp()) {
 		_imx6_pm_domain_power_off(&pu_domain->base);
 	} else {
 		/*

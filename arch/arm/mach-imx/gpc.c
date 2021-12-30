@@ -207,7 +207,7 @@ void imx_gpc_pre_suspend(bool arm_power_off)
 	void __iomem *reg_imr1 = gpc_base + GPC_IMR1;
 	int i;
 
-	if (cpu_is_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)
+	if (cpu_is_imx6qp())
 		_imx6_pm_pu_power_off();
 
 	/* power down the mega-fast power domain */
@@ -230,7 +230,7 @@ void imx_gpc_post_resume(void)
 	void __iomem *reg_imr1 = gpc_base + GPC_IMR1;
 	int i;
 
-	if (cpu_is_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)
+	if (cpu_is_imx6qp())
 		_imx6_pm_pu_power_on();
 
 	/* Keep ARM core powered on for other low-power modes */
