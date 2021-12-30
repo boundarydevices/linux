@@ -232,7 +232,7 @@ void imx_gpc_pre_suspend(bool arm_power_off)
 	void __iomem *reg_imr1 = gpc_base + GPC_IMR1;
 	int i;
 
-	if (cpu_is_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)
+	if (cpu_is_imx6qp())
 		_imx6q_pm_pu_power_off(&imx6q_pu_domain.base);
 
 	/* power down the mega-fast power domain */
@@ -255,7 +255,7 @@ void imx_gpc_post_resume(void)
 	void __iomem *reg_imr1 = gpc_base + GPC_IMR1;
 	int i;
 
-	if (cpu_is_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)
+	if (cpu_is_imx6qp())
 		_imx6q_pm_pu_power_on(&imx6q_pu_domain.base);
 
 	/* Keep ARM core powered on for other low-power modes */
@@ -648,8 +648,7 @@ static int imx6q_pm_pu_power_off(struct generic_pm_domain *genpd)
 {
 	struct pu_domain *pu = container_of(genpd, struct pu_domain, base);
 
-	if (&imx6q_pu_domain == pu && pu_on && cpu_is_imx6q() &&
-		imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)
+	if (&imx6q_pu_domain == pu && pu_on && cpu_is_imx6qp())
 		return 0;
 
 	_imx6q_pm_pu_power_off(genpd);
@@ -694,8 +693,7 @@ static int imx6q_pm_pu_power_on(struct generic_pm_domain *genpd)
 	struct pu_domain *pu = container_of(genpd, struct pu_domain, base);
 	int ret;
 
-	if (cpu_is_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0
-		&& &imx6q_pu_domain == pu) {
+	if (cpu_is_imx6qp() && &imx6q_pu_domain == pu) {
 		if (!pu_on)
 			pu_on = true;
 		else
@@ -856,8 +854,7 @@ static int imx_gpc_genpd_init(struct device *dev, struct regulator *pu_reg)
 	imx6s_display_domain.num_clks = k;
 
 	is_off = IS_ENABLED(CONFIG_PM);
-	if (is_off && !(cpu_is_imx6q() &&
-		imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)) {
+	if (is_off && !cpu_is_imx6qp()) {
 		_imx6q_pm_pu_power_off(&imx6q_pu_domain.base);
 	} else {
 		/*
