@@ -142,7 +142,7 @@ void imx_anatop_pre_suspend(void)
 		return;
 	}
 
-	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)
+	if (cpu_is_imx6qp())
 		imx_anatop_disable_pu(true);
 
 	if ((imx_mmdc_get_ddr_type() == IMX_DDR_TYPE_LPDDR2) &&
@@ -170,7 +170,7 @@ void imx_anatop_post_resume(void)
 		return;
 	}
 
-	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0)
+	if (cpu_is_imx6qp())
 		imx_anatop_disable_pu(false);
 
 	if ((imx_mmdc_get_ddr_type() == IMX_DDR_TYPE_LPDDR2) &&
@@ -214,33 +214,13 @@ void __init imx_init_revision_from_anatop(void)
 	digprog = readl_relaxed(anatop_base + offset);
 	iounmap(anatop_base);
 
-	switch (digprog & 0xff) {
-	case 0:
-		if (digprog >> 8 & 0x01)
-			revision = IMX_CHIP_REVISION_2_0;
+	if ((digprog & 0xff) <= 5) {
+		if (((digprog >> 16 & 0xff) == MXC_CPU_IMX6Q) &&
+				(digprog >> 8 & 0x01))
+			revision = IMX_CHIP_REVISION_2_0 | (digprog & 0xff);
 		else
-			revision = IMX_CHIP_REVISION_1_0;
-		break;
-	case 1:
-		revision = IMX_CHIP_REVISION_1_1;
-		break;
-	case 2:
-		revision = IMX_CHIP_REVISION_1_2;
-		break;
-	case 3:
-		revision = IMX_CHIP_REVISION_1_3;
-		break;
-	case 4:
-		revision = IMX_CHIP_REVISION_1_4;
-		break;
-	case 5:
-		/*
-		 * i.MX6DQ TO1.5 is defined as Rev 1.3 in Data Sheet, marked
-		 * as 'D' in Part Number last character.
-		 */
-		revision = IMX_CHIP_REVISION_1_5;
-		break;
-	default:
+			revision = IMX_CHIP_REVISION_1_0 | (digprog & 0xff);
+	} else {
 		revision = IMX_CHIP_REVISION_UNKNOWN;
 	}
 

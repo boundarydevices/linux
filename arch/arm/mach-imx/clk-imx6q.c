@@ -518,7 +518,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	/*                                                        name                 parent_name    reg        shift width busy: reg, shift */
 	clk[IMX6QDL_CLK_AXI]               = imx_clk_busy_divider("axi",               "axi_sel",     base + 0x14, 16,  3,   base + 0x48, 0);
 	clk[IMX6QDL_CLK_MMDC_CH0_AXI]      = imx_clk_busy_divider("mmdc_ch0_axi",      "periph",      base + 0x14, 19,  3,   base + 0x48, 4);
-	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+	if (cpu_is_imx6qp()) {
 		clk[IMX6QDL_CLK_MMDC_CH1_AXI_CG] = imx_clk_gate("mmdc_ch1_axi_cg", "periph2", base + 0x4, 18);
 		clk[IMX6QDL_CLK_MMDC_CH1_AXI]      = imx_clk_busy_divider("mmdc_ch1_axi",      "mmdc_ch1_axi_cg",     base + 0x14, 3,   3,   base + 0x48, 2);
 	} else {
@@ -536,7 +536,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	clk[IMX6QDL_CLK_PERIPH]  = imx_clk_busy_mux("periph",  base + 0x14, 25,  1,   base + 0x48, 5,  periph_sels,  ARRAY_SIZE(periph_sels));
 	clk[IMX6QDL_CLK_PERIPH2] = imx_clk_busy_mux("periph2", base + 0x14, 26,  1,   base + 0x48, 3,  periph2_sels, ARRAY_SIZE(periph2_sels));
 
-	if ((cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) || cpu_is_imx6dl()) {
+	if (cpu_is_imx6qp() || cpu_is_imx6dl()) {
 		clk[IMX6QDL_CLK_GPU2D_AXI] = imx_clk_fixed_factor("gpu2d_axi", "mmdc_ch0_axi", 1, 1);
 		clk[IMX6QDL_CLK_GPU3D_AXI] = imx_clk_fixed_factor("gpu3d_axi", "mmdc_ch0_axi", 1, 1);
 	} else {
@@ -546,7 +546,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 
 	clk[IMX6QDL_CLK_GPU3D_CORE_SEL]   = imx_clk_mux("gpu3d_core_sel",   base + 0x18, 4,  2, gpu3d_core_sels,   ARRAY_SIZE(gpu3d_core_sels));
 	clk[IMX6QDL_CLK_GPU3D_SHADER_SEL] = imx_clk_mux("gpu3d_shader_sel", base + 0x18, 8,  2, gpu3d_shader_sels, ARRAY_SIZE(gpu3d_shader_sels));
-	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+	if (cpu_is_imx6qp()) {
 		clk[IMX6QDL_CLK_CAN_SEL] = imx_clk_mux("can_sel", base + 0x20, 8,  2, can_sels, ARRAY_SIZE(can_sels));
 		clk[IMX6QDL_CLK_ECSPI_SEL] = imx_clk_mux("ecspi_sel", base + 0x38, 18,  1, ecspi_sels, ARRAY_SIZE(ecspi_sels));
 		clk[IMX6QDL_CLK_IPG_PER_SEL] = imx_clk_mux("ipg_per_sel", base + 0x1c, 6,  1, ipg_per_sels, ARRAY_SIZE(ipg_per_sels));
@@ -557,7 +557,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	}
 	clk[IMX6QDL_CLK_IPU1_SEL]         = imx_clk_mux("ipu1_sel",         base + 0x3c, 9,  2, ipu_sels,          ARRAY_SIZE(ipu_sels));
 	clk[IMX6QDL_CLK_IPU2_SEL]         = imx_clk_mux("ipu2_sel",         base + 0x3c, 14, 2, ipu_sels,          ARRAY_SIZE(ipu_sels));
-	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+	if (cpu_is_imx6qp()) {
 		clk[IMX6QDL_CLK_LDB_DI0_SEL]      = imx_clk_mux_flags("ldb_di0_sel", base + 0x2c, 9,  3, ldb_di_sels,      ARRAY_SIZE(ldb_di_sels), CLK_SET_RATE_PARENT);
 		clk[IMX6QDL_CLK_LDB_DI1_SEL]      = imx_clk_mux_flags("ldb_di1_sel", base + 0x2c, 12, 3, ldb_di_sels,      ARRAY_SIZE(ldb_di_sels), CLK_SET_RATE_PARENT);
 	} else {
@@ -580,7 +580,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 
 	clk[IMX6QDL_CLK_HSI_TX_SEL]       = imx_clk_mux("hsi_tx_sel",       base + 0x30, 28, 1, hsi_tx_sels,       ARRAY_SIZE(hsi_tx_sels));
 	clk[IMX6QDL_CLK_PCIE_AXI_SEL]     = imx_clk_mux("pcie_axi_sel",     base + 0x18, 10, 1, pcie_axi_sels,     ARRAY_SIZE(pcie_axi_sels));
-	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+	if (cpu_is_imx6qp()) {
 		clk[IMX6QDL_CLK_IPU1_DI0_SEL]     = imx_clk_mux_flags("ipu1_di0_sel",     base + 0x34, 0,  3, ipu1_di0_sels_2,     ARRAY_SIZE(ipu1_di0_sels_2), CLK_SET_RATE_PARENT);
 		clk[IMX6QDL_CLK_IPU1_DI1_SEL]     = imx_clk_mux_flags("ipu1_di1_sel",     base + 0x34, 9,  3, ipu1_di1_sels_2,     ARRAY_SIZE(ipu1_di1_sels_2), CLK_SET_RATE_PARENT);
 		clk[IMX6QDL_CLK_IPU2_DI0_SEL]     = imx_clk_mux_flags("ipu2_di0_sel",     base + 0x38, 0,  3, ipu2_di0_sels_2,     ARRAY_SIZE(ipu2_di0_sels_2), CLK_SET_RATE_PARENT);
@@ -625,7 +625,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	clk[IMX6QDL_CLK_ASRC_PODF]        = imx_clk_divider("asrc_podf",        "asrc_pred",         base + 0x30, 9,  3);
 	clk[IMX6QDL_CLK_SPDIF_PRED]       = imx_clk_divider("spdif_pred",       "spdif_sel",         base + 0x30, 25, 3);
 	clk[IMX6QDL_CLK_SPDIF_PODF]       = imx_clk_divider("spdif_podf",       "spdif_pred",        base + 0x30, 22, 3);
-	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+	if (cpu_is_imx6qp()) {
 		clk[IMX6QDL_CLK_IPG_PER]          = imx_clk_divider("ipg_per",    "ipg_per_sel",       base + 0x1c, 0,  6);
 		clk[IMX6QDL_CLK_ECSPI_ROOT]       = imx_clk_divider("ecspi_root",       "ecspi_sel",          base + 0x38, 19, 6);
 		clk[IMX6QDL_CLK_CAN_ROOT]         = imx_clk_divider("can_root",         "can_sel",          base + 0x20, 2,  6);
@@ -666,7 +666,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	clk[IMX6QDL_CLK_USDHC4_PODF]      = imx_clk_divider("usdhc4_podf",      "usdhc4_sel",        base + 0x24, 22, 3);
 	clk[IMX6QDL_CLK_ENFC_PRED]        = imx_clk_divider("enfc_pred",        "enfc_sel",          base + 0x2c, 18, 3);
 	clk[IMX6QDL_CLK_ENFC_PODF]        = imx_clk_divider("enfc_podf",        "enfc_pred",         base + 0x2c, 21, 6);
-	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+	if (cpu_is_imx6qp()) {
 		clk[IMX6QDL_CLK_EMI_PODF]         = imx_clk_divider("emi_podf",   "emi_sel",           base + 0x1c, 20, 3);
 		clk[IMX6QDL_CLK_EMI_SLOW_PODF]    = imx_clk_divider("emi_slow_podf", "emi_slow_sel",   base + 0x1c, 23, 3);
 	} else {
@@ -728,7 +728,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	clk[IMX6QDL_CLK_IPU2]         = imx_clk_gate2("ipu2",          "ipu2_podf",         base + 0x74, 6);
 	clk[IMX6QDL_CLK_IPU2_DI0]     = imx_clk_gate2("ipu2_di0",      "ipu2_di0_sel",      base + 0x74, 8);
 
-	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+	if (cpu_is_imx6qp()) {
 		clk[IMX6QDL_CLK_LDB_DI0]      = imx_clk_gate2("ldb_di0",       "ldb_di0_sel",   base + 0x74, 12);
 		clk[IMX6QDL_CLK_LDB_DI1]      = imx_clk_gate2("ldb_di1",       "ldb_di1_sel",   base + 0x74, 14);
 	} else {
@@ -779,7 +779,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	clk[IMX6QDL_CLK_EIM_SLOW]     = imx_clk_gate2("eim_slow",      "emi_slow_podf",     base + 0x80, 10);
 	clk[IMX6QDL_CLK_VDO_AXI]      = imx_clk_gate2("vdo_axi",       "vdo_axi_sel",       base + 0x80, 12);
 	clk[IMX6QDL_CLK_VPU_AXI]      = imx_clk_gate2("vpu_axi",       "vpu_axi_podf",      base + 0x80, 14);
-	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+	if (cpu_is_imx6qp()) {
 		clk[IMX6QDL_CLK_PRE0] = imx_clk_gate2("pre0",          "pre_axi",         base + 0x80, 16);
 		clk[IMX6QDL_CLK_PRE1] = imx_clk_gate2("pre1",          "pre_axi",         base + 0x80, 18);
 		clk[IMX6QDL_CLK_PRE2] = imx_clk_gate2("pre2",          "pre_axi",         base + 0x80, 20);
@@ -806,7 +806,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	clk_register_clkdev(clk[IMX6QDL_CLK_GPT_3M], "gpt_3m", "imx-gpt.0");
 	clk_register_clkdev(clk[IMX6QDL_CLK_ENET_REF], "enet_ref", NULL);
 
-	if (cpu_is_imx6q() && imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+	if (cpu_is_imx6qp()) {
 		imx_clk_set_parent(clk[IMX6QDL_CLK_LDB_DI0_SEL], clk[IMX6QDL_CLK_PLL2_PFD0_352M]);
 		imx_clk_set_parent(clk[IMX6QDL_CLK_LDB_DI1_SEL], clk[IMX6QDL_CLK_PLL2_PFD0_352M]);
 	}
@@ -859,7 +859,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 		imx_clk_set_parent(clk[IMX6QDL_CLK_GPU2D_CORE_SEL], clk[IMX6QDL_CLK_PLL2_PFD1_594M]);
 		imx_clk_set_rate(clk[IMX6QDL_CLK_GPU2D_CORE], 528000000);
 	} else if (cpu_is_imx6q()) {
-		if(imx_get_soc_revision() == IMX_CHIP_REVISION_2_0) {
+		if (cpu_is_imx6qp()) {
 			imx_clk_set_parent(clk[IMX6QDL_CLK_GPU3D_SHADER_SEL], clk[IMX6QDL_CLK_PLL3_PFD0_720M]);
 			imx_clk_set_rate(clk[IMX6QDL_CLK_GPU3D_SHADER], 720000000);
 			imx_clk_set_parent(clk[IMX6QDL_CLK_GPU3D_CORE_SEL], clk[IMX6QDL_CLK_PLL2_PFD1_594M]);
