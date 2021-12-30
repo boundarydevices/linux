@@ -191,16 +191,18 @@ static void __init imx6q_axi_init(void)
 
 static void __init imx6q_init_machine(void)
 {
-	if (cpu_is_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)
+	u32 rev = imx_get_soc_revision();
+
+	if (cpu_is_imx6qp())
 		/*
 		 * SoCs that identify as i.MX6Q >= rev 2.0 are really i.MX6QP.
 		 * Quirk: i.MX6QP revision = i.MX6Q revision - (1, 0),
 		 * e.g. i.MX6QP rev 1.1 identifies as i.MX6Q rev 2.1.
 		 */
-		imx_print_silicon_rev("i.MX6QP", imx_get_soc_revision() - 0x10);
+		imx_print_silicon_rev("i.MX6QP", rev - 0x10);
 	else
 		imx_print_silicon_rev(cpu_is_imx6dl() ? "i.MX6DL" : "i.MX6Q",
-				imx_get_soc_revision());
+				rev);
 
 	imx6q_enet_phy_init();
 
