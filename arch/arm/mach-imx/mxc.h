@@ -9,6 +9,9 @@
 
 #include <linux/types.h>
 #include <soc/imx/cpu.h>
+#ifndef __ASSEMBLY__
+#include "common.h"
+#endif
 
 #ifndef __ASM_ARCH_MXC_HARDWARE_H__
 #error "Do not include directly."
@@ -69,6 +72,12 @@ static inline bool cpu_is_imx6sll(void)
 static inline bool cpu_is_imx6q(void)
 {
 	return __mxc_cpu_type == MXC_CPU_IMX6Q;
+}
+
+static inline bool cpu_is_imx6qp(void)
+{
+	return (__mxc_cpu_type == MXC_CPU_IMX6Q) &&
+		((imx_get_soc_revision() & ~0x0f) == IMX_CHIP_REVISION_2_0);
 }
 
 static inline bool cpu_is_imx6(void)
