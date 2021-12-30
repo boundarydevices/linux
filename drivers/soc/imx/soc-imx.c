@@ -23,6 +23,11 @@
 #define OCOTP_ULP_UID_3		0x4d0
 #define OCOTP_ULP_UID_4		0x4e0
 
+static inline bool cpu_is_imx6qp(void)
+{
+	return of_machine_is_compatible("fsl,imx6qp");
+}
+
 static int __init imx_soc_device_init(void)
 {
 	struct soc_device_attribute *soc_dev_attr;
@@ -96,7 +101,7 @@ static int __init imx_soc_device_init(void)
 		break;
 	case MXC_CPU_IMX6Q:
 		ocotp_compat = "fsl,imx6q-ocotp";
-		if (imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)
+		if (cpu_is_imx6qp())
 			soc_id = "i.MX6QP";
 		else
 			soc_id = "i.MX6Q";
