@@ -63,6 +63,7 @@
 	ldr	r0, =IMX_IO_P2V(MX6Q_ANATOP_BASE_ADDR)
 	ldr	r1, [r0, #ANADIG_DIGPROG]
 	ldr	r2, =IMX6QP_REVISION_ID
+	bic	r1, r1, #0xff
 	cmp	r1, r2
 
 	.endm
