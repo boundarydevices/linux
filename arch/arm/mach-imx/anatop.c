@@ -136,7 +136,7 @@ void imx_anatop_pre_suspend(void)
 		return;
 	}
 
-	if (cpu_is_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)
+	if (cpu_is_imx6qp())
 		imx_anatop_disable_pu(true);
 	imx_anatop_enable_weak2p5(true);
 
@@ -160,7 +160,7 @@ void imx_anatop_post_resume(void)
 		return;
 	}
 
-	if (cpu_is_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)
+	if (cpu_is_imx6qp())
 		imx_anatop_disable_pu(false);
 
 	imx_anatop_enable_weak2p5(false);

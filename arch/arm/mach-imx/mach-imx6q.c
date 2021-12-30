@@ -270,7 +270,7 @@ static inline void imx6q_enet_init(void)
 	imx6_enet_mac_init("fsl,imx6q-fec", "fsl,imx6q-ocotp");
 	imx6q_enet_phy_init();
 	imx6q_1588_init();
-	if (cpu_is_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)
+	if (cpu_is_imx6qp())
 		imx6q_enet_clk_sel();
 }
 
@@ -309,11 +309,13 @@ static void __init imx6q_axi_init(void)
 
 static void __init imx6q_init_machine(void)
 {
-	if (cpu_is_imx6q() && imx_get_soc_revision() >= IMX_CHIP_REVISION_2_0)
-		imx_print_silicon_rev("i.MX6QP", IMX_CHIP_REVISION_1_0);
+	u32 rev = imx_get_soc_revision();
+
+	if (cpu_is_imx6qp())
+		imx_print_silicon_rev("i.MX6QP", rev - 0x10);
 	else
 		imx_print_silicon_rev(cpu_is_imx6dl() ? "i.MX6DL" : "i.MX6Q",
-				imx_get_soc_revision());
+				rev);
 
 	of_platform_default_populate(NULL, NULL, NULL);
 
