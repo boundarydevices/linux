@@ -33,10 +33,11 @@
 	};
 
 	backlight_mipi: backlight-mipi {
-		compatible = "gpio-backlight";
-		gpios = <&gpio GPIOA_11 GPIO_ACTIVE_HIGH>;
-		default-on;
-		status = "okay";
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <8>;
+		pwms = <&pwm_ef 1 30000 0>; /* 33.3 Khz */
+		status = "disabled";
 	};
 
 	bt-rfkill {
@@ -675,7 +676,7 @@
 
 &pwm_ef {
 	status = "okay";
-	pinctrl-0 = <&pwm_e_pins>;
+	pinctrl-0 = <&pwm_e_pins>, <&pwm_f_a_pins>;
 	pinctrl-names = "default";
 };
 
