@@ -1,10 +1,9 @@
-linux-imx6
-==========
+linux
+=====
 
-Boundary Devices Kernel tree for i.MX6/i.MX7/i.MX8.
+Kernel tree for Boundary Devices platforms.
 
-This repository contains kernel source trees for Boundary Devices'
-i.MX6/i.MX7/i.MX8 based boards:
+This repository contains kernel source trees for the following:
 
 * [BD-SL-i.MX6 (SABRE Lite)][sabrelite]
 * [Nitrogen6X][nitrogen6x]
@@ -23,12 +22,10 @@ i.MX6/i.MX7/i.MX8 based boards:
 * [Nitrogen8M Nano SOM][nitrogen8mn-som]
 * [Nitrogen8M Plus SOM][nitrogen8mp-som]
 
-It is based largely on NXP's kernel tree at [codeaurora.org/external/imx][nxp].
-
 Latest kernel releases:
 
-Android
------------
+Android (i.MX)
+--------------
 Latest KitKat sources are in branch [boundary-imx-kk4.4.3\_2.0.1-ga][latest-kitkat]
 
 Latest Lollipop sources are in branch [boundary-imx-l5.1.1\_2.1.0-ga][latest-lollipop]
@@ -45,8 +42,8 @@ Latest Android 10 sources are in branch [boundary-android-10.0.0\_2.5.0][latest-
 
 Latest Android 11 sources are in branch [boundary-android-11.0.0\_2.2.0][latest-11]
 
-Non-Android
-------------------
+Linux (i.MX)
+------------
 The latest 3.0.35 kernel is in branch [boundary-imx\_3.0.35\_4.1.0][latest-3.0.35]
 
 The latest 3.10.x kernel is in branch [boundary-imx\_3.10.53\_1.1.1\_ga][latest-3.10.x]
