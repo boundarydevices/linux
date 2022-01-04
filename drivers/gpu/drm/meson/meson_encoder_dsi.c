@@ -127,7 +127,7 @@ int meson_encoder_dsi_init(struct meson_drm *priv)
 
 	meson_encoder_dsi->next_bridge = of_drm_find_bridge(remote);
 	if (!meson_encoder_dsi->next_bridge) {
-		dev_err(priv->dev, "Failed to find DSI transceiver bridge: %d\n", ret);
+		dev_err(priv->dev, "Failed to find DSI transceiver bridge\n");
 		return -EPROBE_DEFER;
 	}
 
