@@ -68,7 +68,7 @@ void meson_venc_hdmi_mode_set(struct meson_drm *priv, int vic,
 			      bool yuv420_mode,
 			      const struct drm_display_mode *mode);
 void meson_venc_mipi_dsi_mode_set(struct meson_drm *priv,
-				  struct drm_display_mode *mode);
+				  const struct drm_display_mode *mode);
 unsigned int meson_venci_get_field(struct meson_drm *priv);
 
 void meson_venc_enable_vsync(struct meson_drm *priv);

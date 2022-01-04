@@ -1651,7 +1651,7 @@ void meson_encl_load_gamma(struct meson_drm *priv)
 }
 
 void meson_venc_mipi_dsi_mode_set(struct meson_drm *priv,
-				  struct drm_display_mode *mode)
+				  const struct drm_display_mode *mode)
 {
 	unsigned int max_pxcnt;
 	unsigned int max_lncnt;
