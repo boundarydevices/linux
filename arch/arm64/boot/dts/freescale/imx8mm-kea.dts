@@ -636,10 +636,10 @@
 	};
 
 	clocks {
-		clk20m: clk20m {
+		clk16m: clk16m {
 			#clock-cells = <0>;
 			compatible = "fixed-clock";
-			clock-frequency = <20000000>;
+			clock-frequency = <16000000>;
 		};
 	};
 
@@ -780,7 +780,7 @@
 	#size-cells = <0>;
 
 	can0: can@0 {
-		clocks = <&clk20m>;
+		clocks = <&clk16m>;
 		compatible = "microchip,mcp25625";
 		interrupts-extended = GPIRQ_MCP25625_1;
 		pinctrl-names = "default";
@@ -804,7 +804,7 @@
 	#size-cells = <0>;
 
 	can1: can@0 {
-		clocks = <&clk20m>;
+		clocks = <&clk16m>;
 		compatible = "microchip,mcp25625";
 		interrupts-extended = GPIRQ_MCP25625_2;
 		pinctrl-names = "default";
