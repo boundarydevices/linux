@@ -134,9 +134,6 @@ struct dsa_switch_tree {
 	 */
 	struct net_device **lags;
 
-	/* Has this tree been applied to the hardware? */
-	bool setup;
-
 	/* Tagging protocol operations */
 	const struct dsa_device_ops *tag_ops;
 
@@ -144,6 +141,9 @@ struct dsa_switch_tree {
 	 * tree.
 	 */
 	enum dsa_tag_protocol default_proto;
+
+	/* Has this tree been applied to the hardware? */
+	bool setup;
 
 	/*
 	 * Configuration data for the platform device that owns
