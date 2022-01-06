@@ -137,6 +137,20 @@ config COMPILE_TEST
 	  here. If you are a user/distributor, say N here to exclude useless
 	  drivers to be distributed.
 
+config WERROR
+	bool "Compile the kernel with warnings as errors"
+	default y
+	help
+	  A kernel build should not cause any compiler warnings, and this
+	  enables the '-Werror' flag to enforce that rule by default.
+
+	  However, if you have a new (or very old) compiler with odd and
+	  unusual warnings, or you have some architecture with problems,
+	  you may need to disable this config option in order to
+	  successfully build the kernel.
+
+	  If in doubt, say Y.
+
 config UAPI_HEADER_TEST
 	bool "Compile test UAPI headers"
 	depends on HEADERS_INSTALL && CC_CAN_LINK
@@ -2181,6 +2195,20 @@ config MODULE_SIG_FORCE
 	help
 	  Reject unsigned modules or signed modules for which we don't have a
 	  key.  Without this, such modules will simply taint the kernel.
+
+config MODULE_SIG_PROTECT
+	bool "Android GKI module protection"
+	depends on MODULE_SIG && !MODULE_SIG_FORCE
+	select MODULE_SIG_ALL
+	help
+	  Enables Android GKI symbol and export protection support.
+
+	  This modifies the behavior of the MODULE_SIG_FORCE as follows:
+	  - Allows Android GKI Modules signed using MODULE_SIG_ALL during build.
+	  - Allows other modules to load if they don't violate the access to
+	    Android GKI protected symbols and do not export the symbols already
+	    exported by the Android GKI modules. Loading will fail and return
+	    -EACCES (Permission denied) if symbol access contidions are not met.
 
 config MODULE_SIG_ALL
 	bool "Automatically sign all modules"
