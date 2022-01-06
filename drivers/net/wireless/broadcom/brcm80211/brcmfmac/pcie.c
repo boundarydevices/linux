@@ -244,7 +244,8 @@ static const struct brcmf_firmware_mapping brcmf_pcie_fwnames[] = {
 
 #define BRCMF_DEF_MAX_RXBUFPOST			255
 
-#define BRCMF_H2D_ENABLE_HOSTRDY		0x400
+#define BRCMF_HOSTCAP_H2D_ENABLE_HOSTRDY	0x400
+#define BRCMF_HOSTCAP_DS_NO_OOB_DW			0x1000
 
 #define BRCMF_CONSOLE_BUFADDR_OFFSET		8
 #define BRCMF_CONSOLE_BUFSIZE_OFFSET		12
@@ -2052,18 +2053,22 @@ brcmf_pcie_init_share_ram_info(struct brcmf_pciedev_info *devinfo,
 	if (shared->version >= BRCMF_PCIE_SHARED_VERSION_6) {
 		host_cap = shared->version;
 
+		/* Disable OOB Device Wake based DeepSleep State Machine */
+		host_cap |= BRCMF_HOSTCAP_DS_NO_OOB_DW;
+
 		devinfo->hostready =
 			((shared->flags & BRCMF_PCIE_SHARED_HOSTRDY_DB1)
 			 == BRCMF_PCIE_SHARED_HOSTRDY_DB1);
 		if (devinfo->hostready) {
 			brcmf_dbg(PCIE, "HostReady supported by dongle.\n");
-			host_cap = host_cap | BRCMF_H2D_ENABLE_HOSTRDY;
+			host_cap |= BRCMF_HOSTCAP_H2D_ENABLE_HOSTRDY;
 		}
 		devinfo->use_mailbox =
 			((shared->flags & BRCMF_PCIE_SHARED_USE_MAILBOX)
 			 == BRCMF_PCIE_SHARED_USE_MAILBOX);
 		devinfo->use_d0_inform = false;
 		addr = sharedram_addr + BRCMF_SHARED_HOST_CAP_OFFSET;
+
 		brcmf_pcie_write_tcm32(devinfo, addr, host_cap);
 	} else {
 		devinfo->use_d0_inform = true;
