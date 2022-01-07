@@ -163,3 +163,4 @@ EXTRA_LDFLAGS += --strip-debug
 endif
 
 ccflags-y += -I$(srctree)/drivers/net/wireless/bcmdhd -I$(srctree)/drivers/net/wireless/bcmdhd/include
+ccflags-y += $(call cc-disable-warning, macro-redefined)
