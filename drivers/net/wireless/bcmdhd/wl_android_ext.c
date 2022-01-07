@@ -2044,7 +2044,7 @@ wl_ext_iapsta_config(struct net_device *dev, char *command, int total_len)
 {
 	struct dhd_pub *dhd = dhd_get_pub(dev);
 	int ret=0, i;
-	char *pch, *pch2, *pick_tmp, *pick_next=NULL, *param;
+	char *pch, *pch2, *pick_tmp, *pick_next=NULL;
 	struct wl_apsta_params *apsta_params = dhd->iapsta_params;
 	char ifname[IFNAMSIZ+1];
 	struct wl_if_info *cur_if = NULL;
@@ -2057,7 +2057,7 @@ wl_ext_iapsta_config(struct net_device *dev, char *command, int total_len)
 	ANDROID_TRACE(("%s: command=%s, len=%d\n", __FUNCTION__, command, total_len));
 
 	pick_tmp = command;
-	param = bcmstrtok(&pick_tmp, " ", 0); // skip iapsta_config
+	bcmstrtok(&pick_tmp, " ", 0); // skip iapsta_config
 
 	while (pick_tmp != NULL) {
 		memset(ifname, 0, IFNAMSIZ+1);

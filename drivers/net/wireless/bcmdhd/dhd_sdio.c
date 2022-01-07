@@ -946,7 +946,6 @@ dhdsdio_srwar_init(dhd_bus_t *bus)
 static int
 dhdsdio_sr_init(dhd_bus_t *bus)
 {
-	uint8 val;
 	int err = 0;
 
 	if ((bus->sih->chip == BCM4334_CHIP_ID) && (bus->sih->chiprev == 2))
@@ -954,17 +953,15 @@ dhdsdio_sr_init(dhd_bus_t *bus)
 
 
 	if (bus->sih->chip == BCM43012_CHIP_ID) {
-		val = bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_WAKEUPCTRL, NULL);
-		val |= 1 << SBSDIO_FUNC1_WCTRL_ALPWAIT_SHIFT;
+		bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_WAKEUPCTRL, NULL);
 		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_WAKEUPCTRL,
 			1 << SBSDIO_FUNC1_WCTRL_ALPWAIT_SHIFT, &err);
-		val = bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_WAKEUPCTRL, NULL);
+		bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_WAKEUPCTRL, NULL);
 	} else {
-		val = bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_WAKEUPCTRL, NULL);
-		val |= 1 << SBSDIO_FUNC1_WCTRL_HTWAIT_SHIFT;
+		bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_WAKEUPCTRL, NULL);
 		bcmsdh_cfg_write(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_WAKEUPCTRL,
 			1 << SBSDIO_FUNC1_WCTRL_HTWAIT_SHIFT, &err);
-		val = bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_WAKEUPCTRL, NULL);
+		bcmsdh_cfg_read(bus->sdh, SDIO_FUNC_1, SBSDIO_FUNC1_WAKEUPCTRL, NULL);
 	}
 
 #ifdef USE_CMD14

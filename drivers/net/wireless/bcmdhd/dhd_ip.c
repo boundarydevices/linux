@@ -957,7 +957,8 @@ dhd_tcpdata_info_get(dhd_pub_t *dhdp, void *pkt)
 	tcp_hdr = ip_hdr + ip_hdr_len;
 	cur_framelen -= ip_hdr_len;
 
-	ASSERT(cur_framelen >= TCP_MIN_HEADER_LEN);
+	if (cur_framelen < TCP_MIN_HEADER_LEN)
+		ASSERT(cur_framelen >= TCP_MIN_HEADER_LEN);
 
 	DHD_TRACE(("%s %d: TCP pkt!\n", __FUNCTION__, __LINE__));
 

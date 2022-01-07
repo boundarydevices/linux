@@ -16118,10 +16118,12 @@ int write_file(const char * file_name, uint32 flags, uint8 *buf, int size)
 {
 	int ret = 0;
 	struct file *fp = NULL;
-	mm_segment_t old_fs;
 	loff_t pos = 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
+	mm_segment_t old_fs;
 	/* change to KERNEL_DS address limit */
 	old_fs = get_fs();
+#endif
 	set_fs(KERNEL_DS);
 
 	/* open file to write */
@@ -19026,11 +19028,13 @@ int
 dhd_write_file(const char *filepath, char *buf, int buf_len)
 {
 	struct file *fp = NULL;
-	mm_segment_t old_fs;
 	int ret = 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
+	mm_segment_t old_fs;
 
 	/* change to KERNEL_DS address limit */
 	old_fs = get_fs();
+#endif
 	set_fs(KERNEL_DS);
 
 	/* File is always created. */
@@ -19067,11 +19071,13 @@ int
 dhd_read_file(const char *filepath, char *buf, int buf_len)
 {
 	struct file *fp = NULL;
-	mm_segment_t old_fs;
 	int ret;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
+	mm_segment_t old_fs;
 
 	/* change to KERNEL_DS address limit */
 	old_fs = get_fs();
+#endif
 	set_fs(KERNEL_DS);
 
 	fp = filp_open(filepath, O_RDONLY, 0);

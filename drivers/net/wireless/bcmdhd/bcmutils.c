@@ -3282,7 +3282,8 @@ bcm_mwbmap_audit(struct bcm_mwbmap * mwbmap_hdl)
 		}
 	}
 
-	ASSERT((int)free_cnt == mwbmap_p->ifree);
+	if ((int)free_cnt != mwbmap_p->ifree)
+		ASSERT((int)free_cnt == mwbmap_p->ifree);
 }
 /* END : Multiword bitmap based 64bit to Unique 32bit Id allocator. */
 
