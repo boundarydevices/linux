@@ -3678,6 +3678,14 @@ brcmf_cfg80211_escan_handler(struct brcmf_if *ifp,
 		}
 		bss_info_le = &escan_result_le->bss_info_le;
 
+		/* WAR to skip 6G scan results before 6E support is complete in host */
+		if ((bss_info_le->chanspec & BRCMU_CHSPEC_D11AC_BND_MASK) ==
+			BRCMU_CHSPEC_D11AC_BND_6G) {
+			bphy_err(drvr, "Currently skip 6G scan, chanspec 0x%04x\n",
+				 bss_info_le->chanspec);
+			goto exit;
+		}
+
 		if (brcmf_p2p_scan_finding_common_channel(cfg, bss_info_le))
 			goto exit;
 
