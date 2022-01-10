@@ -69,6 +69,14 @@
 		};
 	};
 
+	csi_mclk: csi-mclk {
+		compatible = "pwm-clock";
+		#clock-cells = <0>;
+		clock-frequency = <20000000>;
+		clock-output-names = "csi_mclk";
+		pwms = <&pwm_AO_ab 0 50 0>; /* 1 / 50 ns = 20 MHz */
+	};
+
 	emmc_pwrseq: emmc-pwrseq {
 		compatible = "mmc-pwrseq-emmc";
 		reset-gpios = <&gpio BOOT_12 GPIO_ACTIVE_LOW>;
@@ -159,6 +167,14 @@
 		regulator-name = "VCC_1V8";
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+	};
+
+	reg_2v5: regulator-reg_2v5 {
+		compatible = "regulator-fixed";
+		regulator-name = "VCC_2V5";
+		regulator-min-microvolt = <2500000>;
+		regulator-max-microvolt = <2500000>;
 		regulator-always-on;
 	};
 
@@ -603,6 +619,28 @@
 
 &i2c_AO_d {
 	/* camera connector */
+	ov5640-mipi1@3c {
+		AVDD-supply = <&reg_2v5>;
+		DOVDD-supply = <&reg_1v8>;
+		DVDD-supply = <&reg_3v3>;
+		clocks = <&csi_mclk>;
+		clock-names = "xclk";
+		compatible = "ovti,ov5640";
+		powerdown-gpios = <&gpio BOOT_11 GPIO_ACTIVE_HIGH>;
+		reg = <0x3c>;
+		reset-gpios = <&gpio BOOT_9 GPIO_ACTIVE_LOW>;
+		status = "okay";
+
+#if 0
+		port {
+			ov5640_mipi1_ep: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				remote-endpoint = <&mipi1_ov5640_ep>;
+			};
+		};
+#endif
+	};
 };
 
 &i2c2 {
@@ -784,6 +822,14 @@
 	pinctrl-names = "default";
 	clocks = <&xtal>;
 	clock-names = "clkin0";
+	status = "okay";
+};
+
+&pwm_AO_ab {
+	clocks = <&xtal>;
+	clock-names = "clkin0";
+	pinctrl-0 = <&pwm_ao_a_pins>;
+	pinctrl-names = "default";
 	status = "okay";
 };
 
