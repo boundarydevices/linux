@@ -164,7 +164,9 @@
 		};
 		be-dai-link {
 			link-name = "HiFi-ASRC-BE";
-			format = "i2s";
+			format = "dsp_b";
+			dai-tdm-slot-num = <8>;
+			dai-tdm-slot-width = <32>;
 			cpu {
 				sound-dai = <&sai5>;
 			};
