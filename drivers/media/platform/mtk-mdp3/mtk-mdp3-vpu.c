@@ -17,40 +17,50 @@ static inline struct mdp_dev *vpu_to_mdp(struct mdp_vpu_dev *vpu)
 	return container_of(vpu, struct mdp_dev, vpu);
 }
 
+/* The shared VPU memory is used to communicate between scp and ap.
+ * It will cost lot of time to allocate such large memory (> 480KB)
+ * when every time playback starts which may decrease performance.
+ * So this memory only allocated once and will be freed when mdp device released.
+ * To avoid occupied memory without using, memory will be allocated in streamon().
+ *
+ * These memory is tied to the MDP device.
+ * Although multi-instances scenario do exist, but there is only one v4l2 device
+ * which implies there only exists one work_queue
+ * and frame flip from each instance will be processed one by one.
+ */
 static int mdp_vpu_shared_mem_alloc(struct mdp_vpu_dev *vpu)
 {
-	if (vpu->work && vpu->work_addr)
-		return 0;
+	if (!vpu->work) {
+		vpu->work = dma_alloc_wc(scp_get_device(vpu->scp), vpu->work_size,
+					 &vpu->work_addr, GFP_KERNEL);
+		if (!vpu->work)
+			goto err_return;
+	}
 
-	if (vpu->config && vpu->config_addr)
-		return 0;
+	if (!vpu->config) {
+		vpu->config = dma_alloc_wc(scp_get_device(vpu->scp), vpu->config_size,
+					   &vpu->config_addr, GFP_KERNEL);
+		if (!vpu->config)
+			goto err_free_work;
+	}
 
-	if (vpu->path && vpu->path_addr)
-		return 0;
-
-	vpu->work = dma_alloc_wc(scp_get_device(vpu->scp), vpu->work_size,
-				 &vpu->work_addr, GFP_KERNEL);
-	if (!vpu->work)
-		goto err_return;
-
-	vpu->config = dma_alloc_wc(scp_get_device(vpu->scp), vpu->config_size,
-				   &vpu->config_addr, GFP_KERNEL);
-	if (!vpu->config)
-		goto err_free_work;
-
-	vpu->path = dma_alloc_wc(scp_get_device(vpu->scp), vpu->path_size,
-				 &vpu->path_addr, GFP_KERNEL);
-	if (!vpu->path)
-		goto err_free_config;
+	if (!vpu->path) {
+		vpu->path = dma_alloc_wc(scp_get_device(vpu->scp), vpu->path_size,
+					 &vpu->path_addr, GFP_KERNEL);
+		if (!vpu->path)
+			goto err_free_config;
+	}
 
 	return 0;
 
 err_free_config:
 	dma_free_wc(scp_get_device(vpu->scp), vpu->config_size,
 		    vpu->config, vpu->config_addr);
+	vpu->config = NULL;
 err_free_work:
 	dma_free_wc(scp_get_device(vpu->scp), vpu->work_size,
 		    vpu->work, vpu->work_addr);
+	vpu->work = NULL;
 err_return:
 	return -ENOMEM;
 }
@@ -202,7 +212,8 @@ int mdp_vpu_dev_init(struct mdp_vpu_dev *vpu, struct mtk_scp *scp,
 
 	vpu->config_size = MDP_DUAL_PIPE * sizeof(struct img_config);
 	vpu->path_size = MDP_VPU_PATH_SIZE;
-	if (mdp_vpu_shared_mem_alloc(vpu)) {
+	err = mdp_vpu_shared_mem_alloc(vpu);
+	if (err) {
 		dev_err(&mdp->pdev->dev, "VPU memory alloc fail!");
 		goto err_mem_alloc;
 	}
@@ -292,16 +303,8 @@ int mdp_vpu_ctx_deinit(struct mdp_vpu_ctx *ctx)
 
 int mdp_vpu_process(struct mdp_vpu_ctx *ctx, struct img_ipi_frameparam *param)
 {
-	struct mdp_vpu_dev *vpu = ctx->vpu_dev;
-	struct mdp_dev *mdp = vpu_to_mdp(vpu);
 	struct img_sw_addr addr;
 
-	if (!ctx->vpu_dev->work || !ctx->vpu_dev->work_addr) {
-		if (mdp_vpu_shared_mem_alloc(vpu)) {
-			dev_err(&mdp->pdev->dev, "VPU memory alloc fail!");
-			return -ENOMEM;
-		}
-	}
 	memset((void *)ctx->vpu_dev->work, 0, ctx->vpu_dev->work_size);
 
 	if (param->frame_change)
