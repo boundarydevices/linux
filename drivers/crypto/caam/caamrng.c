@@ -64,12 +64,19 @@ static void caam_rng_done(struct device *jrdev, u32 *desc, u32 err,
 	complete(jctx->done);
 }
 
-static u32 *caam_init_desc(u32 *desc, dma_addr_t dst_dma)
+static u32 *caam_init_desc(struct device *jrdev, u32 *desc, dma_addr_t dst_dma)
 {
+	struct caam_drv_private *priv = dev_get_drvdata(jrdev->parent);
+
 	init_job_desc(desc, 0);	/* + 1 cmd_sz */
 	/* Generate random bytes: + 1 cmd_sz */
-	append_operation(desc, OP_ALG_ALGSEL_RNG | OP_TYPE_CLASS1_ALG |
-			 OP_ALG_PR_ON);
+
+	if (priv->mc_en)
+		append_operation(desc, OP_ALG_ALGSEL_RNG | OP_TYPE_CLASS1_ALG |
+				  OP_ALG_PR_ON);
+	else
+		append_operation(desc, OP_ALG_ALGSEL_RNG | OP_TYPE_CLASS1_ALG);
+
 	/* Store bytes: + 1 cmd_sz + caam_ptr_sz  */
 	append_fifo_store(desc, dst_dma,
 			  CAAM_RNG_MAX_FIFO_STORE_SIZE, FIFOST_TYPE_RNGSTORE);
@@ -103,7 +110,7 @@ static int caam_rng_read_one(struct device *jrdev,
 	request_bus_freq(BUS_FREQ_HIGH);
 	init_completion(done);
 	err = caam_jr_enqueue(jrdev,
-			      caam_init_desc(desc, dst_dma),
+			      caam_init_desc(jrdev, desc, dst_dma),
 			      caam_rng_done, &jctx);
 	if (err == -EINPROGRESS) {
 		wait_for_completion(done);
