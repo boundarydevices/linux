@@ -221,6 +221,65 @@ static int mtk_pconf_set_driving(struct mtk_pinctrl *pctl,
 	return -EINVAL;
 }
 
+int mtk_rsel_r1r0_set_samereg(struct regmap *regmap,
+		const struct mtk_pin_info *rsel_infos,
+		unsigned int info_num, unsigned int pin,
+		unsigned int r1r0)
+{
+	unsigned int i;
+	unsigned int reg_addr;
+	unsigned int bit_r0, bit_r1;
+	unsigned int reg_value = 0;
+	const struct mtk_pin_info *rsel_pin;
+	bool find = false;
+
+	for (i = 0; i < info_num; i++) {
+		if (pin == rsel_infos[i].pin) {
+			find = true;
+			break;
+		}
+	}
+
+	if (!find)
+		return -EINVAL;
+
+	rsel_pin = rsel_infos + i;
+	reg_addr = rsel_pin->offset;
+	bit_r0 = BIT(rsel_pin->bit);
+	bit_r1 = BIT(rsel_pin->bit + 1);
+
+	switch (r1r0) {
+	case MTK_RSEL_SET_R1R0_00:
+		regmap_read(regmap, reg_addr, &reg_value);
+		regmap_write(regmap, reg_addr, ~bit_r0 & reg_value);
+		regmap_read(regmap, reg_addr, &reg_value);
+		regmap_write(regmap, reg_addr, ~bit_r1 & reg_value);
+		break;
+	case MTK_RSEL_SET_R1R0_01:
+		regmap_read(regmap, reg_addr, &reg_value);
+		regmap_write(regmap, reg_addr, bit_r0 | reg_value);
+		regmap_read(regmap, reg_addr, &reg_value);
+		regmap_write(regmap, reg_addr, ~bit_r1 & reg_value);
+		break;
+	case MTK_RSEL_SET_R1R0_10:
+		regmap_read(regmap, reg_addr, &reg_value);
+		regmap_write(regmap, reg_addr, ~bit_r0 & reg_value);
+		regmap_read(regmap, reg_addr, &reg_value);
+		regmap_write(regmap, reg_addr, bit_r1 | reg_value);
+		break;
+	case MTK_RSEL_SET_R1R0_11:
+		regmap_read(regmap, reg_addr, &reg_value);
+		regmap_write(regmap, reg_addr, bit_r0 | reg_value);
+		regmap_read(regmap, reg_addr, &reg_value);
+		regmap_write(regmap, reg_addr, bit_r1 | reg_value);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 int mtk_pctrl_spec_pull_set_samereg(struct regmap *regmap,
 		const struct mtk_pin_spec_pupd_set_samereg *pupd_infos,
 		unsigned int info_num, unsigned int pin,
