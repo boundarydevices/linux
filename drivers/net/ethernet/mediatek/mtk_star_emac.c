@@ -247,7 +247,6 @@ struct mtk_star_ring {
 struct mtk_star_compat {
 	int (*set_interface_mode)(struct net_device *ndev);
 	unsigned char bit_clk_div;
-	unsigned int irq_trigger;
 };
 
 struct mac_delay_struct {
@@ -973,7 +972,7 @@ static int mtk_star_enable(struct net_device *ndev)
 
 	/* Request the interrupt */
 	ret = request_irq(ndev->irq, mtk_star_handle_irq,
-			  priv->compat_data->irq_trigger, ndev->name, ndev);
+			  IRQF_TRIGGER_NONE, ndev->name, ndev);
 	if (ret)
 		goto err_free_skbs;
 
@@ -1678,13 +1677,11 @@ static int mt8365_set_interface_mode(struct net_device *ndev)
 static struct mtk_star_compat mtk_star_mt8516_compat = {
 	.set_interface_mode = mt8516_set_interface_mode,
 	.bit_clk_div = MTK_STAR_BIT_CLK_DIV_10,
-	.irq_trigger = IRQF_TRIGGER_FALLING,
 };
 
 static struct mtk_star_compat mtk_star_mt8365_compat = {
 	.set_interface_mode = mt8365_set_interface_mode,
 	.bit_clk_div = MTK_STAR_BIT_CLK_DIV_50,
-	.irq_trigger = IRQF_TRIGGER_RISING,
 };
 
 static const struct of_device_id mtk_star_of_match[] = {
