@@ -415,6 +415,29 @@ static const struct mtk_pin_ies_smt_set mt8365_smt_set[] = {
 	MTK_PIN_IES_SMT_SPEC(144, 144, 0x480, 22),
 };
 
+static const struct mtk_pin_info mt8365_pin_info_rsel[] = {
+	MTK_PIN_INFO(57, 0x060, 0, 2),
+	MTK_PIN_INFO(58, 0x060, 2, 2),
+	MTK_PIN_INFO(59, 0x060, 4, 2),
+	MTK_PIN_INFO(60, 0x060, 6, 2),
+	MTK_PIN_INFO(61, 0x060, 8, 2),
+	MTK_PIN_INFO(62, 0x060, 10, 2),
+	MTK_PIN_INFO(63, 0x060, 12, 2),
+	MTK_PIN_INFO(64, 0x060, 14, 2),
+};
+
+static int mt8365_spec_pull_set(struct regmap *regmap,
+		const struct mtk_pinctrl_devdata *devdata,
+		unsigned int pin, bool isup, unsigned int r1r0)
+{
+	if (r1r0 >= MTK_RSEL_SET_R1R0_00 && r1r0 <= MTK_RSEL_SET_R1R0_11)
+		return mtk_rsel_r1r0_set_samereg(regmap, mt8365_pin_info_rsel,
+			ARRAY_SIZE(mt8365_pin_info_rsel), pin, r1r0);
+
+	return mtk_pctrl_spec_pull_set_samereg(regmap, devdata,
+		pin, isup, r1r0);
+}
+
 static int mt8365_set_clr_mode(struct regmap *regmap,
 		unsigned int bit, unsigned int reg_pullen, unsigned int reg_pullsel,
 		bool enable, bool isup)
@@ -445,7 +468,7 @@ static const struct mtk_pinctrl_devdata mt8365_pinctrl_data = {
 	.n_spec_smt = ARRAY_SIZE(mt8365_smt_set),
 	.spec_pupd = mt8365_spec_pupd,
 	.n_spec_pupd = ARRAY_SIZE(mt8365_spec_pupd),
-	.spec_pull_set = mtk_pctrl_spec_pull_set_samereg,
+	.spec_pull_set = mt8365_spec_pull_set,
 	.spec_ies_smt_set = mtk_pconf_spec_set_ies_smt_range,
 	.mt8365_set_clr_mode = mt8365_set_clr_mode,
 	.dir_offset = 0x0140,
