@@ -792,7 +792,7 @@
 
 &uart_AO_B {
 	status = "okay";
-	pinctrl-0 = <&uart_ao_b_2_pins>;
+	pinctrl-0 = <&uart_ao_b_8_9_pins>;
 	pinctrl-names = "default";
 };
 
