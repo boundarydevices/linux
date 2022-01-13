@@ -105,7 +105,7 @@
 		reg = <0x0 0x0 0x0 0x80000000>;
 	};
 
-	reg_1v8: regulator-reg_1v8 {
+	reg_1v8: regulator-1v8 {
 		compatible = "regulator-fixed";
 		regulator-name = "VCC_1V8";
 		regulator-min-microvolt = <1800000>;
@@ -113,7 +113,7 @@
 		regulator-always-on;
 	};
 
-	reg_3v3: regulator-reg_3v3 {
+	reg_3v3: regulator-3v3 {
 		compatible = "regulator-fixed";
 		regulator-name = "VSYS_3V3";
 		regulator-min-microvolt = <3300000>;
@@ -121,7 +121,7 @@
 		regulator-always-on;
 	};
 
-	reg_5v0: regulator-reg_5v0 {
+	reg_5v0: regulator-5v0 {
 		compatible = "regulator-fixed";
 		regulator-name = "VCC_5V";
 		regulator-min-microvolt = <5000000>;
@@ -129,7 +129,18 @@
 		enable-active-high;
 	};
 
-	reg_usb_otg: regulator-reg-usb-otg {
+	reg_sd_vqmmc: regulator-sd-vqmmc {
+		compatible = "regulator-gpio";
+		gpios = <&gpio GPIOC_7 GPIO_ACTIVE_HIGH>;
+		gpios-states = <1>;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-name = "SD_VQMMC";
+		states = <1800000 0>,
+			 <3300000 1>;
+	};
+
+	reg_usb_otg: regulator-usb-otg {
 		compatible = "regulator-fixed";
 		enable-active-high;
 		gpio = <&gpio GPIOH_8 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
@@ -138,7 +149,7 @@
 		regulator-name = "USB_OTGPWR";
 	};
 
-	reg_usb_host: regulator-reg-usb-host {
+	reg_usb_host: regulator-usb-host {
 		compatible = "regulator-fixed";
 		regulator-name = "USB_HOSTPWR";
 		regulator-min-microvolt = <5000000>;
@@ -714,7 +725,7 @@
 
 	cd-gpios = <&gpio GPIOC_6 GPIO_ACTIVE_LOW>;
 	vmmc-supply = <&reg_3v3>;
-	vqmmc-supply = <&reg_3v3>;
+	vqmmc-supply = <&reg_sd_vqmmc>;
 };
 
 /* eMMC */
