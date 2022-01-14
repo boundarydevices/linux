@@ -3665,7 +3665,8 @@ static void check_wait_res_changed(struct vpu_ctx *ctx)
 			continue;
 		if (verify_frame_buffer_size(q_data, p_data_req)) {
 			ctx->res_change_done_count++;
-			ctx->wait_res_change_done = false;
+			if (ctx->res_change_done_count == ctx->res_change_send_count)
+				ctx->wait_res_change_done = false;
 			vpu_dbg(LVL_BIT_FLOW,
 				"ctx[%d] res change done, %d, %d, %d\n",
 				ctx->str_index,
@@ -4138,7 +4139,6 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 //		MediaIPFW_Video_FrameBuffer *pStreamDCPBuffer = &pSharedInterface->StreamDCPBuffer[uStrIdx];
 		MediaIPFW_Video_PitchInfo   *pStreamPitchInfo = &pSharedInterface->StreamPitchInfo[uStrIdx];
 		unsigned int num = pSharedInterface->SeqInfoTabDesc.uNumSizeDescriptors;
-		int wait_times = 0;
 
 		get_seq_info(&info, event_data, &pSeqInfo[ctx->str_index]);
 		if (!check_seq_info_is_valid(ctx->str_index, &info)) {
@@ -4146,13 +4146,6 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 			break;
 		}
 
-		while (ctx->wait_res_change_done && wait_times++ < 100) {
-			if (!vpu_dec_is_active(ctx))
-				break;
-			if (ctx->wait_rst_done)
-				break;
-			mdelay(10);
-		}
 		if (!vpu_dec_is_active(ctx))
 			break;
 		if (ctx->wait_res_change_done)
