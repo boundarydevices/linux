@@ -2971,11 +2971,11 @@ static int mtk_dp_probe(struct platform_device *pdev)
 	mutex_init(&mtk_dp->dp_lock);
 	mutex_init(&mtk_dp->edid_lock);
 	mutex_init(&mtk_dp->eld_lock);
+	mutex_init(&mtk_dp->update_plugged_status_lock);
 
 	platform_set_drvdata(pdev, mtk_dp);
 
 	if (!mtk_dp_is_edp(mtk_dp)) {
-		mutex_init(&mtk_dp->update_plugged_status_lock);
 		ret = mtk_dp_register_audio_driver(dev);
 		if (ret) {
 			dev_err(dev, "Failed to register audio driver: %d\n",
