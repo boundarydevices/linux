@@ -65,6 +65,7 @@ enum {
 	DAI_LINK_AWB_CAPTURE,
 	DAI_LINK_VUL_CAPTURE,
 	/* BE */
+	DAI_LINK_2ND_I2S_INTF,
 	DAI_LINK_DMIC,
 	DAI_LINK_INT_ADDA,
 	DAI_LINK_NUM
@@ -73,11 +74,13 @@ enum {
 static const struct snd_soc_dapm_widget mt8365_evk_widgets[] = {
 	SND_SOC_DAPM_MIC("PMIC MIC", NULL),
 	SND_SOC_DAPM_HP("Headphone", NULL),
+	SND_SOC_DAPM_OUTPUT("HDMI Out"),
 };
 
 static const struct snd_soc_dapm_route mt8365_evk_routes[] = {
 	{"Headphone", NULL, "MT6357 Playback"},
 	{"MT6357 Capture", NULL, "PMIC MIC"},
+	{"HDMI Out", NULL, "2ND I2S Playback"},
 };
 
 static int mt8365_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
@@ -210,6 +213,10 @@ SND_SOC_DAILINK_DEFS(vul,
 	DAILINK_COMP_ARRAY(COMP_DUMMY()),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
+SND_SOC_DAILINK_DEFS(i2s3,
+	DAILINK_COMP_ARRAY(COMP_CPU("2ND I2S")),
+	DAILINK_COMP_ARRAY(COMP_DUMMY()),
+	DAILINK_COMP_ARRAY(COMP_EMPTY()));
 SND_SOC_DAILINK_DEFS(dmic,
 	DAILINK_COMP_ARRAY(COMP_CPU("DMIC")),
 	DAILINK_COMP_ARRAY(COMP_DUMMY()),
@@ -271,6 +278,17 @@ static struct snd_soc_dai_link mt8365_evk_dais[] = {
 		SND_SOC_DAILINK_REG(vul),
 	},
 	/* Back End DAI links */
+	[DAI_LINK_2ND_I2S_INTF] = {
+		.name = "2ND I2S BE",
+		.no_pcm = 1,
+		.id = DAI_LINK_2ND_I2S_INTF,
+		.dai_fmt = SND_SOC_DAIFMT_I2S |
+				SND_SOC_DAIFMT_NB_NF |
+				SND_SOC_DAIFMT_CBS_CFS,
+		.dpcm_playback = 1,
+		.dpcm_capture = 1,
+		SND_SOC_DAILINK_REG(i2s3),
+	},
 	[DAI_LINK_DMIC] = {
 		.name = "DMIC BE",
 		.no_pcm = 1,
@@ -451,6 +469,74 @@ static struct snd_soc_card mt8365_evk_card = {
 	.num_dapm_routes = ARRAY_SIZE(mt8365_evk_routes),
 };
 
+static int set_card_codec_info(struct snd_soc_card *card)
+{
+	struct snd_soc_dai_link_component *dai_link_codecs, *dlc;
+	struct device_node *dl_node, *c_node;
+	struct device *dev = card->dev;
+	struct of_phandle_args args;
+	const char *dai_link_name;
+	int num_codecs;
+	int ret, i;
+
+	/* Loop over all the dai link sub nodes*/
+	for_each_child_of_node(dev->of_node, dl_node) {
+		if (of_property_read_string(dl_node, "dai-link-name",
+					    &dai_link_name))
+			return -EINVAL;
+
+		num_codecs = of_get_child_count(dl_node);
+		/* Allocate the snd_soc_dai_link_component array that will be
+		 * used to dynamically add the list of codecs to the static
+		 * snd_soc_dai_link array.
+		 */
+		dai_link_codecs = devm_kcalloc(dev, num_codecs,
+					       sizeof(*dai_link_codecs),
+					       GFP_KERNEL);
+		if (!dai_link_codecs)
+			return -ENOMEM;
+
+		dlc = dai_link_codecs;
+
+		/* Loop over all the codec sub nodes for this dai link */
+		for_each_child_of_node(dl_node, c_node) {
+			/* Retrieve the node and the dai_name that are used
+			 * by the soundcard.
+			 */
+			ret = of_parse_phandle_with_args(c_node, "sound-dai",
+							 "#sound-dai-cells", 0,
+							 &args);
+			if (ret) {
+				if (ret != -EPROBE_DEFER)
+					dev_err(dev,
+						"can't parse dai %d\n", ret);
+				return ret;
+			}
+			dlc->of_node = args.np;
+			ret =  snd_soc_get_dai_name(&args, &dlc->dai_name);
+			if (ret) {
+				of_node_put(c_node);
+				return ret;
+			}
+
+			dlc++;
+		}
+
+		/* Update the snd_soc_dai_link static array with the codecs
+		 * we have just found.
+		 */
+		for (i = 0; i < card->num_links; i++) {
+			if (!strcmp(dai_link_name, card->dai_link[i].name)) {
+				card->dai_link[i].num_codecs = num_codecs;
+				card->dai_link[i].codecs = dai_link_codecs;
+				break;
+			}
+		}
+	}
+
+	return 0;
+}
+
 static int mt8365_evk_dev_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &mt8365_evk_card;
@@ -459,6 +545,14 @@ static int mt8365_evk_dev_probe(struct platform_device *pdev)
 	struct device_node *platform_node;
 	struct mt8365_evk_priv *priv;
 	int i, ret;
+
+	card->dev = dev;
+	ret = set_card_codec_info(card);
+	if (ret) {
+		dev_err(&pdev->dev, "%s set_card_codec_info failed %d\n",
+			__func__, ret);
+		return ret;
+	}
 
 	platform_node = of_parse_phandle(dev->of_node, "mediatek,platform", 0);
 	if (!platform_node) {
@@ -471,8 +565,6 @@ static int mt8365_evk_dev_probe(struct platform_device *pdev)
 			continue;
 		mt8365_evk_dais[i].platforms->of_node = platform_node;
 	}
-
-	card->dev = dev;
 
 	priv = devm_kzalloc(dev, sizeof(struct mt8365_evk_priv),
 			    GFP_KERNEL);
