@@ -729,7 +729,7 @@
 				power-domains = <&scmi_devpd IMX8ULP_PD_USDHC0>;
 				assigned-clocks = <&cgc1 IMX8ULP_CLK_SPLL3_PFD2>, <&pcc4 IMX8ULP_CLK_USDHC0>;
 				assigned-clock-parents = <0>, <&cgc1 IMX8ULP_CLK_SPLL3_PFD2_DIV1>;
-				assigned-clock-rates = <396000000>, <396000000>;
+				assigned-clock-rates = <0>, <389283840>;
 				fsl,tuning-start-tap = <20>;
 				fsl,tuning-step= <2>;
 				bus-width = <4>;
@@ -747,7 +747,7 @@
 				power-domains = <&scmi_devpd IMX8ULP_PD_USDHC1>;
 				assigned-clocks = <&cgc1 IMX8ULP_CLK_SPLL3_PFD2>, <&pcc4 IMX8ULP_CLK_USDHC1>;
 				assigned-clock-parents = <0>, <&cgc1 IMX8ULP_CLK_SPLL3_PFD2_DIV1>;
-				assigned-clock-rates = <396000000>, <396000000>;
+				assigned-clock-rates = <0>, <389283840>;
 				fsl,tuning-start-tap = <20>;
 				fsl,tuning-step= <2>;
 				bus-width = <4>;
@@ -765,7 +765,7 @@
 				power-domains = <&scmi_devpd IMX8ULP_PD_USDHC2_USB1>;
 				assigned-clocks = <&cgc1 IMX8ULP_CLK_SPLL3_PFD2>, <&pcc4 IMX8ULP_CLK_USDHC2>;
 				assigned-clock-parents = <0>, <&cgc1 IMX8ULP_CLK_SPLL3_PFD2_DIV1>;
-				assigned-clock-rates = <396000000>, <396000000>;
+				assigned-clock-rates = <0>, <389283840>;
 				fsl,tuning-start-tap = <20>;
 				fsl,tuning-step= <2>;
 				bus-width = <4>;
