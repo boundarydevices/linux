@@ -955,7 +955,7 @@ static int mtk_iommu_mm_dts_parse(struct device *dev,
 		plarbdev = of_find_device_by_node(larbnode);
 		if (!plarbdev || !plarbdev->dev.driver) {
 			of_node_put(larbnode);
-			return -EPROBE_DEFER;
+			return -ENODEV;
 		}
 		data->larb_imu[id].dev = &plarbdev->dev;
 
