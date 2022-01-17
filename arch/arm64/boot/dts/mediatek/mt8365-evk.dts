@@ -88,6 +88,15 @@
 		pinctrl-4 = <&aud_pins_default>;
 		pinctrl-5 = <&aud_pins_dmic>;
 		status = "okay";
+
+		dai-link-hdmi {
+			sound-dai = <&afe>;
+			dai-link-name = "2ND I2S BE";
+
+			codec-0 {
+				sound-dai = <&it66121hdmitx>;
+			};
+		};
 	};
 
 	reserved-memory {
@@ -316,6 +325,8 @@
 		interrupts = <68 IRQ_TYPE_LEVEL_LOW>;
 		reg = <0x4c>;
 		pclk-dual-edge;
+
+		#sound-dai-cells = <0>;
 
 		ports {
 			#address-cells = <1>;

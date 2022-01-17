@@ -1257,6 +1257,7 @@
 
 		afe: audio-controller@11220000 {
 			compatible = "mediatek,mt8365-afe-pcm";
+			#sound-dai-cells = <0>;
 			reg = <0 0x11220000 0 0x1000>,
 			      <0 0x11221000 0 0xA000>;
 			interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_LOW>;
