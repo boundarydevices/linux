@@ -6387,7 +6387,7 @@ err_irq:
 	return IRQ_HANDLED;
 }
 
-static int mt8365_afe_runtime_suspend(struct device *dev)
+static int __maybe_unused mt8365_afe_runtime_suspend(struct device *dev)
 {
 	return 0;
 }
@@ -6397,7 +6397,7 @@ static int mt8365_afe_runtime_resume(struct device *dev)
 	return 0;
 }
 
-static int mt8365_afe_dev_runtime_suspend(struct device *dev)
+static int __maybe_unused mt8365_afe_dev_runtime_suspend(struct device *dev)
 {
 	struct mtk_base_afe *afe = dev_get_drvdata(dev);
 	struct regmap *regmap = afe->regmap;
@@ -6429,7 +6429,7 @@ static int mt8365_afe_dev_runtime_suspend(struct device *dev)
 	return 0;
 }
 
-static int mt8365_afe_dev_runtime_resume(struct device *dev)
+static int __maybe_unused mt8365_afe_dev_runtime_resume(struct device *dev)
 {
 	struct mtk_base_afe *afe = dev_get_drvdata(dev);
 	struct regmap *regmap = afe->regmap;
