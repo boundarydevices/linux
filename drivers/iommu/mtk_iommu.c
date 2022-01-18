@@ -1324,6 +1324,8 @@ static const struct mtk_iommu_plat_data mt8365_data = {
 	.inv_sel_reg  = REG_MMU_INV_SEL_GEN1,
 	.bank_nr      = 1,
 	.bank_enable  = {true},
+	.iova_region  = single_domain,
+	.iova_region_nr = ARRAY_SIZE(single_domain),
 	.larbid_remap = {{0}, {1}, {2}, {3}, {4}, {5}}, /* Linear mapping. */
 };
 
