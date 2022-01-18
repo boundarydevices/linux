@@ -51,6 +51,13 @@
 	>;
 };
 
+&i2c_rpbus_0 {
+	fxls8974@18 {
+		compatible = "nxp,fxls8974cf";
+		reg = <0x18>;
+	};
+};
+
 &pinctrl_lpuart6 {
 	fsl,pins = <
 		MX8ULP_PAD_PTF18__LPUART6_TX    0x3
