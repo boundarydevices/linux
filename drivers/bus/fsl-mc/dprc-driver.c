@@ -802,6 +802,7 @@ int dprc_cleanup(struct fsl_mc_device *mc_dev)
 		return -EINVAL;
 
 	if (dev_get_msi_domain(&mc_dev->dev)) {
+		dprc_teardown_irq(mc_dev);
 		fsl_mc_cleanup_irq_pool(mc_dev);
 		dev_set_msi_domain(&mc_dev->dev, NULL);
 	}
@@ -867,9 +868,6 @@ static void dprc_shutdown(struct fsl_mc_device *mc_dev)
 
 	if (!mc_bus->irq_resources)
 		return;
-
-	if (dev_get_msi_domain(&mc_dev->dev))
-		dprc_teardown_irq(mc_dev);
 
 	dprc_cleanup(mc_dev);
 
