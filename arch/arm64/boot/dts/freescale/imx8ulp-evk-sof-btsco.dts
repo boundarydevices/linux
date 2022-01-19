@@ -37,7 +37,7 @@
 		simple-audio-card,dai-link {
 			format = "i2s";
 			cpudai: cpu {
-				sound-dai = <&dsp>;
+				sound-dai = <&dsp 0>;
 			};
 			sndcodec: codec {
 				sound-dai = <&bt_sco_codec 1>;
@@ -67,7 +67,7 @@
 };
 
 &dsp {
-	#sound-dai-cells = <0>;
+	#sound-dai-cells = <1>;
 	compatible = "fsl,imx8ulp-dsp";
 	memory-reserved = <&dsp_reserved0>;
 	memory-region = <&dsp_reserved1>;
