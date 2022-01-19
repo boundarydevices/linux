@@ -515,6 +515,17 @@ static struct snd_soc_dai_driver imx8ulp_dai[] = {
 		.channels_max = 32,
 	},
 },
+{
+	.name = "sai6",
+	.playback = {
+		.channels_min = 1,
+		.channels_max = 32,
+	},
+	.capture = {
+		.channels_min = 1,
+		.channels_max = 32,
+	},
+},
 };
 
 int imx8ulp_dsp_set_power_state(struct snd_sof_dev *sdev,
