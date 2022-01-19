@@ -33,7 +33,7 @@ int unregister_devfreq_cooling_notifier(struct notifier_block *nb)
 static inline
 struct thermal_cooling_device *devfreq_cooling_register(void)
 {
-	return NULL;
+	return ERR_PTR(-EINVAL);
 }
 
 static inline
