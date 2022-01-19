@@ -44,6 +44,9 @@ int imx_pcm_dma_init(struct platform_device *pdev, size_t size)
 		return -ENOMEM;
 	*config = imx_dmaengine_pcm_config;
 
+	if (size)
+		config->prealloc_buffer_size = size;
+
 	return devm_snd_dmaengine_pcm_register(&pdev->dev,
 		config,
 		SND_DMAENGINE_PCM_FLAG_COMPAT);
