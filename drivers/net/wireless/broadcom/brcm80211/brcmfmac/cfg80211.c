@@ -8554,6 +8554,9 @@ brcmf_cfg80211_dump_survey(struct wiphy *wiphy, struct net_device *ndev,
 
 	brcmf_dbg(TRACE, "Enter: channel idx=%d\n", idx);
 
+	if (!brcmf_is_apmode(ifp->vif))
+		return -ENOENT;
+
 	/* Do not run survey when VIF in CONNECTING / CONNECTED states */
 	if ((test_bit(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) ||
 	    (test_bit(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state))) {
