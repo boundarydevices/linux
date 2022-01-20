@@ -720,18 +720,24 @@
 	pinctrl-names = "default", "clk-gate";
 
 	bus-width = <4>;
+#if 0
 	cap-sd-highspeed;
 	sd-uhs-sdr12;
 	sd-uhs-sdr25;
 	sd-uhs-sdr50;
 	sd-uhs-ddr50;
 	sd-uhs-sdr104;
+#endif
 	max-frequency = <200000000>;
 	disable-wp;
 
 	cd-gpios = <&gpio GPIOC_6 GPIO_ACTIVE_LOW>;
 	vmmc-supply = <&reg_3v3>;
+#if 0
 	vqmmc-supply = <&reg_sd_vqmmc>;
+#else
+	vqmmc-supply = <&reg_3v3>;
+#endif
 };
 
 /* eMMC */
