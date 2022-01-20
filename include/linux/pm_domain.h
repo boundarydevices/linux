@@ -165,7 +165,9 @@ struct generic_pm_domain {
 		};
 	};
 
+#ifdef CONFIG_MX8QDX_PM_DOMAINS
 	unsigned int state_idx_saved; /* saved power state for recovery after system suspend/resume */
+#endif
 	struct clk_bulk_data *clks;
 	int num_clks;
 };
