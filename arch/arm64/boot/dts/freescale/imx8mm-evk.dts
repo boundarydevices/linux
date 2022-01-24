@@ -7,6 +7,7 @@
 
 #include <dt-bindings/usb/pd.h>
 #include "imx8mm-evk.dtsi"
+#include "imx8mm-android.dtsi"
 
 / {
 	model = "FSL i.MX8MM EVK board";

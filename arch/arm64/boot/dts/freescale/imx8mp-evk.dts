@@ -7,6 +7,7 @@
 
 #include <dt-bindings/usb/pd.h>
 #include "imx8mp.dtsi"
+#include "imx8mp-android.dtsi"
 
 / {
 	model = "NXP i.MX8MPlus EVK board";

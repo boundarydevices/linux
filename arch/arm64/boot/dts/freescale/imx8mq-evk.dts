@@ -8,6 +8,7 @@
 
 #include <dt-bindings/usb/pd.h>
 #include "imx8mq.dtsi"
+#include "imx8mq-android.dtsi"
 
 / {
 	model = "NXP i.MX8MQ EVK";
