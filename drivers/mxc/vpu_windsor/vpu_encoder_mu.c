@@ -35,11 +35,6 @@ static void vpu_enc_mbox_free(struct core_device *core_dev)
 
 static void vpu_enc_mu_inq_msg(struct core_device *core_dev, void *msg)
 {
-	if (&core_dev->mu_msg_fifo == NULL) {
-		vpu_err("mu_msg_fifo is NULL\n");
-		return;
-	}
-
 	if (kfifo_in(&core_dev->mu_msg_fifo, msg, sizeof(u_int32)) != sizeof(u_int32)) {
 		vpu_err("No memory for mu msg fifo\n");
 		return;
