@@ -1891,6 +1891,13 @@ static int v4l2_ioctl_streamon(struct file *file,
 
 	down(&q_data->drv_q_lock);
 	q_data->enable = true;
+
+	if (!ctx->seek_flag && ctx->wait_res_change_done) {
+		ctx->res_change_done_count++;
+		if (ctx->res_change_done_count == ctx->res_change_send_count)
+			ctx->wait_res_change_done = false;
+	}
+
 	if (!V4L2_TYPE_IS_OUTPUT(i))
 		respond_req_frame(ctx, q_data, false);
 	up(&q_data->drv_q_lock);
@@ -3651,44 +3658,10 @@ static bool alloc_dcp_to_firmware(struct vpu_ctx *ctx,
 	return true;
 }
 
-static void check_wait_res_changed(struct vpu_ctx *ctx)
-{
-	struct queue_data *q_data = &ctx->q_data[V4L2_DST];
-	struct vb2_data_req *p_data_req;
-	struct vb2_data_req *p_temp;
-
-	if (!q_data->enable)
-		return;
-
-	list_for_each_entry_safe(p_data_req, p_temp, &q_data->drv_q, list) {
-		if (!p_data_req->vb2_buf)
-			continue;
-		if (verify_frame_buffer_size(q_data, p_data_req)) {
-			ctx->res_change_done_count++;
-			if (ctx->res_change_done_count == ctx->res_change_send_count)
-				ctx->wait_res_change_done = false;
-			vpu_dbg(LVL_BIT_FLOW,
-				"ctx[%d] res change done, %d, %d, %d\n",
-				ctx->str_index,
-				ctx->res_change_occu_count,
-				ctx->res_change_send_count,
-				ctx->res_change_done_count);
-				vpu_calculate_performance(ctx, 0xff, "first provide buffer");
-			break;
-		}
-	}
-}
-
 static void respond_req_frame(struct vpu_ctx *ctx,
 				struct queue_data *queue,
 				bool abnormal)
 {
-	if (ctx->wait_res_change_done) {
-		if (ctx->seek_flag)
-			return;
-		check_wait_res_changed(ctx);
-	}
-
 	if (ctx->wait_res_change_done)
 		return;
 
@@ -4139,11 +4112,20 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 //		MediaIPFW_Video_FrameBuffer *pStreamDCPBuffer = &pSharedInterface->StreamDCPBuffer[uStrIdx];
 		MediaIPFW_Video_PitchInfo   *pStreamPitchInfo = &pSharedInterface->StreamPitchInfo[uStrIdx];
 		unsigned int num = pSharedInterface->SeqInfoTabDesc.uNumSizeDescriptors;
+		int wait_times = 0;
 
 		get_seq_info(&info, event_data, &pSeqInfo[ctx->str_index]);
 		if (!check_seq_info_is_valid(ctx->str_index, &info)) {
 			vpu_dec_event_decode_error(ctx);
 			break;
+		}
+
+		while (ctx->wait_res_change_done && wait_times++ < 200) {
+			if (!vpu_dec_is_active(ctx))
+				break;
+			if (ctx->wait_rst_done)
+				break;
+			mdelay(10);
 		}
 
 		if (!vpu_dec_is_active(ctx))
