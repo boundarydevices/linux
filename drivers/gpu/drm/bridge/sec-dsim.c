@@ -592,6 +592,9 @@ static int sec_mipi_choose_ref_clk(struct sec_mipi_dsim *dsim, unsigned long pix
 	if (clk_ref_parent) {
 		ref_parent_clk = clk_get_rate(clk_ref_parent);
 
+		if (ref_parent_clk < (pix_clk - 5000))
+			ref_parent_clk = clk_round_rate(dsim->clk_pllref, bit_clk * 2);
+
 		if (ref_parent_clk)
 			div = (ref_parent_clk + (pix_clk >> 1)) / pix_clk;
 
