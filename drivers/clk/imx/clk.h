@@ -205,6 +205,9 @@ extern struct imx_fracn_gppll_clk imx_fracn_gppll;
 #define imx_clk_hw_mux_flags(name, reg, shift, width, parents, num_parents, flags) \
 	__imx_clk_hw_mux(NULL, name, reg, shift, width, parents, num_parents, flags, 0)
 
+#define imx_dev_clk_hw_mux_flags(dev, name, reg, shift, width, parents, num_parents, flags) \
+	__imx_clk_hw_mux(dev, name, reg, shift, width, parents, num_parents, flags, 0)
+
 #define imx_clk_hw_mux_ldb(name, reg, shift, width, parents, num_parents) \
 	__imx_clk_hw_mux(NULL, name, reg, shift, width, parents, num_parents, CLK_SET_RATE_PARENT, CLK_MUX_READ_ONLY)
 
