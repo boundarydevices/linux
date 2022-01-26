@@ -23,6 +23,8 @@
 #include <linux/imx_rpmsg.h>
 #include "rpmsg_internal.h"
 
+#define IMX_SC_IRQ_GROUP_REBOOTED       5
+
 enum imx_rpmsg_variants {
 	IMX8QM,
 	IMX8QXP,
