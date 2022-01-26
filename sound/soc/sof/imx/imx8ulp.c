@@ -47,6 +47,22 @@ static struct clk_bulk_data imx8ulp_dsp_clks[] = {
 	{ .id = "mu" },
 };
 
+static struct clk_bulk_data imx8ulp_aux_clks[] = {
+	{ .id = "bus" },
+	{ .id = "mclk0" },
+	{ .id = "mclk1" },
+	{ .id = "edma-mp-clk" },
+
+	{ .id = "edma2-chan0-clk" },
+	{ .id = "edma2-chan1-clk" },
+	{ .id = "edma2-chan2-clk" },
+	{ .id = "edma2-chan3-clk" },
+	{ .id = "edma2-chan4-clk" },
+	{ .id = "edma2-chan5-clk" },
+	{ .id = "edma2-chan6-clk" },
+	{ .id = "edma2-chan7-clk" },
+};
+
 struct imx8ulp_priv {
 	struct device *dev;
 	struct snd_sof_dev *sdev;
@@ -261,6 +277,9 @@ static int imx8ulp_probe(struct snd_sof_dev *sdev)
 
 	priv->clks->dsp_clks = imx8ulp_dsp_clks;
 	priv->clks->num_dsp_clks = ARRAY_SIZE(imx8ulp_dsp_clks);
+
+	priv->clks->aux_clks = imx8ulp_aux_clks;
+	priv->clks->num_aux_clks = ARRAY_SIZE(imx8ulp_aux_clks);
 
 	ret = imx8_parse_clocks(sdev, priv->clks);
 	if (ret < 0)

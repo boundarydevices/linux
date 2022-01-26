@@ -48,6 +48,18 @@ static struct clk_bulk_data imx8_dsp_clks[] = {
 	{ .id = "core" },
 };
 
+static struct clk_bulk_data imx8_aux_clks[] = {
+	{ .id = "esai0_core" },
+	{ .id = "esai0_extal" },
+	{ .id = "esai0_fsys" },
+	{ .id = "esai0_spba" },
+	{ .id = "sai1_bus" },
+	{ .id = "sai1_mclk0" },
+	{ .id = "sai1_mclk1" },
+	{ .id = "sai1_mclk2" },
+	{ .id = "sai1_mclk3" },
+};
+
 struct imx8_priv {
 	struct device *dev;
 	struct snd_sof_dev *sdev;
@@ -317,7 +329,11 @@ static int imx8_probe(struct snd_sof_dev *sdev)
 	priv->clks->dsp_clks = imx8_dsp_clks;
 	priv->clks->num_dsp_clks = ARRAY_SIZE(imx8_dsp_clks);
 
+	priv->clks->aux_clks = imx8_aux_clks;
+	priv->clks->num_aux_clks = ARRAY_SIZE(imx8_aux_clks);
+
 	ret = imx8_parse_clocks(sdev, priv->clks);
+
 	if (ret < 0)
 		goto exit_pdev_unregister;
 
