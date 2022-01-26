@@ -55,7 +55,7 @@ static int __init early_init_dt_alloc_reserved_memory_arch(unsigned long node,
 	    && of_flat_dt_is_compatible(node, "shared-dma-pool")
 	    && of_get_flat_dt_prop(node, "reusable", NULL) && !nomap) {
 		if (base < highmem_start && (base + size) > highmem_start) {
-			memblock_free(base, size);
+			memblock_phys_free(base, size);
 			base = memblock_phys_alloc_range(size, align, start,
 							 highmem_start);
 			if (!base)
