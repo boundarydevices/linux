@@ -2,7 +2,7 @@
  * Copyright 2004-2016 Freescale Semiconductor, Inc. All Rights Reserved.
  */
 
-/* Copyright 2019,2021 NXP */
+/* Copyright 2019,2021,2022 NXP */
 
 /*
  * The code contained herein is licensed under the GNU General Public
@@ -597,6 +597,7 @@ static int _setup_disp_channel2(struct fb_info *fbi)
 				}
 			}
 		} else {
+			pre.field_inverse = 0;
 			pre.interlaced = 0;
 			pre.interlace_offset = 0;
 		}
