@@ -34,13 +34,25 @@ int sof_ipc_msg_data(struct snd_sof_dev *sdev,
 		snd_sof_dsp_mailbox_read(sdev, sdev->dsp_box.offset, p, sz);
 	} else {
 		struct snd_pcm_substream *substream = sps->substream;
-		struct sof_stream *stream = substream->runtime->private_data;
+		struct snd_compr_stream *cstream = sps->cstream;
+		size_t posn_offset;
 
-		/* The stream might already be closed */
-		if (!stream)
-			return -ESTRPIPE;
+		if (substream) {
+			struct sof_stream *pstream = substream->runtime->private_data;
 
-		snd_sof_dsp_mailbox_read(sdev, stream->posn_offset, p, sz);
+			if (!pstream)
+				return -ESTRPIPE;
+
+			posn_offset = pstream->posn_offset;
+		} else {
+			struct snd_compr_tstamp *tstamp = cstream->runtime->private_data;
+
+			if (!tstamp)
+				return -ESTRPIPE;
+			posn_offset = tstamp->byte_offset;
+		}
+
+		snd_sof_dsp_mailbox_read(sdev, posn_offset, p, sz);
 	}
 
 	return 0;
