@@ -541,8 +541,10 @@
 		spi_lcd = &spi_lcd;
 		t_mipi = &t_mipi;
 		ts_ft5x06 = &ts_ft5x06;
+		ts_ft5x06_2 = &ts_ft5x06_2;
 		ts_ft7250 = &ts_ft7250;
 		ts_goodix = &ts_goodix;
+		ts_goodix2 = &ts_goodix2;
 		ts_gsl1680 = &ts_gsl1680;
 		ts_st1633i = &ts_st1633i;
 	};
@@ -1057,6 +1059,19 @@
 				reg = <0x38>;
 				reset-gpios = GP_TS_FT5X06_RESET;
 				wakeup-gpios = GP_TS_FT5X06_WAKE;
+				status = "disabled";
+			};
+
+			ts_goodix2: touchscreen@5d {
+				compatible = "goodix,gt9271";
+				esd-recovery-timeout-ms = <2000>;
+				interrupts-extended = GPIRQ_GT911;
+				irq-gpios = GP_GT911_IRQ;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_ts_gt911>;
+				reg = <0x5d>;
+				reset-gpios = GP_GT911_RESET;
+				status = "disabled";
 			};
 		};
 
