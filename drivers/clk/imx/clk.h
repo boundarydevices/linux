@@ -175,6 +175,9 @@ extern struct imx_fracn_gppll_clk imx_fracn_gppll;
 #define imx_clk_hw_gate_flags(name, parent, reg, shift, flags) \
 	__imx_clk_hw_gate(NULL, name, parent, reg, shift, flags, 0)
 
+#define imx_dev_clk_hw_gate(dev, name, parent, reg, shift) \
+	__imx_clk_hw_gate(dev, name, parent, reg, shift, 0, 0)
+
 #define imx_clk_hw_gate2_flags(name, parent, reg, shift, flags) \
 	__imx_clk_hw_gate2(name, parent, reg, shift, 0x3, flags, NULL)
 
