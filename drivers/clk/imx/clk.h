@@ -170,10 +170,10 @@ extern struct imx_fracn_gppll_clk imx_fracn_gppll;
 	imx_clk_hw_gate_dis_flags(name, parent, reg, shift, 0)
 
 #define imx_clk_hw_gate_dis_flags(name, parent, reg, shift, flags) \
-	__imx_clk_hw_gate(name, parent, reg, shift, flags, CLK_GATE_SET_TO_DISABLE)
+	__imx_clk_hw_gate(NULL, name, parent, reg, shift, flags, CLK_GATE_SET_TO_DISABLE)
 
 #define imx_clk_hw_gate_flags(name, parent, reg, shift, flags) \
-	__imx_clk_hw_gate(name, parent, reg, shift, flags, 0)
+	__imx_clk_hw_gate(NULL, name, parent, reg, shift, flags, 0)
 
 #define imx_clk_hw_gate2_flags(name, parent, reg, shift, flags) \
 	__imx_clk_hw_gate2(name, parent, reg, shift, 0x3, flags, NULL)
@@ -188,7 +188,7 @@ extern struct imx_fracn_gppll_clk imx_fracn_gppll;
 	imx_clk_hw_gate3_flags(name, parent, reg, shift, 0)
 
 #define imx_clk_hw_gate3_flags(name, parent, reg, shift, flags) \
-	__imx_clk_hw_gate(name, parent, reg, shift, flags | CLK_OPS_PARENT_ENABLE, 0)
+	__imx_clk_hw_gate(NULL, name, parent, reg, shift, flags | CLK_OPS_PARENT_ENABLE, 0)
 
 #define imx_clk_hw_gate4(name, parent, reg, shift) \
 	imx_clk_hw_gate4_flags(name, parent, reg, shift, 0)
@@ -398,12 +398,13 @@ static inline struct clk_hw *__imx_clk_hw_divider(const char *name,
 				       reg, shift, width, 0, &imx_ccm_lock);
 }
 
-static inline struct clk_hw *__imx_clk_hw_gate(const char *name, const char *parent,
+static inline struct clk_hw *__imx_clk_hw_gate(struct device *dev, const char *name,
+						const char *parent,
 						void __iomem *reg, u8 shift,
 						unsigned long flags,
 						unsigned long clk_gate_flags)
 {
-	return clk_hw_register_gate(NULL, name, parent, flags | CLK_SET_RATE_PARENT, reg,
+	return clk_hw_register_gate(dev, name, parent, flags | CLK_SET_RATE_PARENT, reg,
 					shift, clk_gate_flags, &imx_ccm_lock);
 }
 
