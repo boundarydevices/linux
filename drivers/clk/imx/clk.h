@@ -200,16 +200,16 @@ extern struct imx_fracn_gppll_clk imx_fracn_gppll;
 	imx_clk_hw_mux2_flags(name, reg, shift, width, parents, num_parents, 0)
 
 #define imx_clk_hw_mux(name, reg, shift, width, parents, num_parents) \
-	__imx_clk_hw_mux(name, reg, shift, width, parents, num_parents, 0, 0)
+	__imx_clk_hw_mux(NULL, name, reg, shift, width, parents, num_parents, 0, 0)
 
 #define imx_clk_hw_mux_flags(name, reg, shift, width, parents, num_parents, flags) \
-	__imx_clk_hw_mux(name, reg, shift, width, parents, num_parents, flags, 0)
+	__imx_clk_hw_mux(NULL, name, reg, shift, width, parents, num_parents, flags, 0)
 
 #define imx_clk_hw_mux_ldb(name, reg, shift, width, parents, num_parents) \
-	__imx_clk_hw_mux(name, reg, shift, width, parents, num_parents, CLK_SET_RATE_PARENT, CLK_MUX_READ_ONLY)
+	__imx_clk_hw_mux(NULL, name, reg, shift, width, parents, num_parents, CLK_SET_RATE_PARENT, CLK_MUX_READ_ONLY)
 
 #define imx_clk_hw_mux2_flags(name, reg, shift, width, parents, num_parents, flags) \
-	__imx_clk_hw_mux(name, reg, shift, width, parents, num_parents, flags | CLK_OPS_PARENT_ENABLE, 0)
+	__imx_clk_hw_mux(NULL, name, reg, shift, width, parents, num_parents, flags | CLK_OPS_PARENT_ENABLE, 0)
 
 #define imx_clk_hw_divider(name, parent, reg, shift, width) \
 	__imx_clk_hw_divider(name, parent, reg, shift, width, CLK_SET_RATE_PARENT)
@@ -422,11 +422,12 @@ static inline struct clk *imx_dev_clk_mux(struct device *dev, const char *name,
 			reg, shift, width, 0, &imx_ccm_lock);
 }
 
-static inline struct clk_hw *__imx_clk_hw_mux(const char *name, void __iomem *reg,
+static inline struct clk_hw *__imx_clk_hw_mux(struct device *dev,
+			const char *name, void __iomem *reg,
 			u8 shift, u8 width, const char * const *parents,
 			int num_parents, unsigned long flags, unsigned long clk_mux_flags)
 {
-	return clk_hw_register_mux(NULL, name, parents, num_parents,
+	return clk_hw_register_mux(dev, name, parents, num_parents,
 			flags | CLK_SET_RATE_NO_REPARENT, reg, shift,
 			width, clk_mux_flags, &imx_ccm_lock);
 }
