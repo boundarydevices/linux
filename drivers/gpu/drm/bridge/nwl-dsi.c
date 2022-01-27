@@ -1214,7 +1214,7 @@ static int nwl_dsi_bridge_atomic_check(struct drm_bridge *bridge,
 
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "lanes=%u, data_rate=%lu\n",
 			     config->lanes, config->bitclock);
-	if (config->lanes < 2 || config->lanes > 4)
+	if (config->lanes < 1 || config->lanes > 4)
 		return -EINVAL;
 
 	/* Max data rate for this controller is 1.5Gbps */
