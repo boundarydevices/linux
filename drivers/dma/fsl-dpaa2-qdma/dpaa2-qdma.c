@@ -307,6 +307,7 @@ static int __cold dpaa2_qdma_setup(struct fsl_mc_device *ls_dev)
 	struct dpaa2_qdma_priv_per_prio *ppriv;
 	struct device *dev = &ls_dev->dev;
 	struct dpaa2_qdma_priv *priv;
+	u8 prio_def = DPDMAI_PRIO_NUM;
 	int err = -EINVAL;
 	int i;
 
@@ -331,7 +332,7 @@ static int __cold dpaa2_qdma_setup(struct fsl_mc_device *ls_dev)
 		goto exit;
 	}
 
-	priv->num_pairs = priv->dpdmai_attr.num_of_queues;
+	priv->num_pairs = min(priv->dpdmai_attr.num_of_priorities, prio_def);
 	ppriv = kcalloc(priv->num_pairs, sizeof(*ppriv), GFP_KERNEL);
 	if (!ppriv) {
 		err = -ENOMEM;
@@ -613,13 +614,14 @@ static int dpaa2_dpdmai_init_channels(struct dpaa2_qdma_engine *dpaa2_qdma)
 {
 	struct dpaa2_qdma_priv *priv = dpaa2_qdma->priv;
 	struct dpaa2_qdma_chan *dpaa2_chan;
+	int num = priv->num_pairs;
 	int i;
 
 	INIT_LIST_HEAD(&dpaa2_qdma->dma_dev.channels);
 	for (i = 0; i < dpaa2_qdma->n_chans; i++) {
 		dpaa2_chan = &dpaa2_qdma->chans[i];
 		dpaa2_chan->qdma = dpaa2_qdma;
-		dpaa2_chan->fqid = priv->tx_queue_attr[i].fqid;
+		dpaa2_chan->fqid = priv->tx_queue_attr[i % num].fqid;
 		dpaa2_chan->vchan.desc_free = dpaa2_qdma_free_desc;
 		vchan_init(&dpaa2_chan->vchan, &dpaa2_qdma->dma_dev);
 		spin_lock_init(&dpaa2_chan->queue_lock);
