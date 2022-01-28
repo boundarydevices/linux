@@ -7,10 +7,25 @@
 		pinctrl_lcm_jm430 = &pinctrl_mipi_lcm_jm430;
 	};
 
+#ifndef TC358867_I2C_BUS
+#define TC358867_I2C_BUS	<&i2c2>
+#endif
 	mipi_cmds_lcm_jm430: mipi-cmds-lcm-jm430 {
 		alias = <&mipi_cmds_lcm_jm430>;
 		aliasp = <&pinctrl_mipi_lcm_jm430>;
+#if 0
+		i2c-address = <0x0b>;
+		i2c-bus = TC358867_I2C_BUS;
+		i2c-cmds-enable = /bits/ 8 <
+			GEN_L3P(0x7c, 0x04,  0x00, 0x00)
+			DELAY(1)
+#if 1
+		>;
 		mipi-cmds-enable = /bits/ 8 <
+#endif
+#else
+		mipi-cmds-enable = /bits/ 8 <
+#endif
 			DELAY(1)
 
 			/* 1 data lane, 1 clock lane*/
@@ -33,7 +48,7 @@
 			S_IF_2_LANES GEN_L5P(0x64,0x04, 0x00,0x02,0x00,0x00)	/* TC_SYSCTRL - 0x0200 (divide by 2) */
 
 			GEN_L5P(0x14,0x04, 0x77,0x00,0x00,0x00)	/* TC_PXLFMT - 0x77  */
-#if 0
+#if 1
 			/* VTGEN off */
 			GEN_L5P(0x20,0x04, 0x50,0x01,0x10,0x00)	/* TC_LCDCTRL_PORT - 0x100150  */
 #else
