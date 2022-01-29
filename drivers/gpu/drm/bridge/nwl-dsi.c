@@ -1374,10 +1374,6 @@ static void nwl_dsi_bridge_enable(struct drm_bridge *bridge)
 		drm_panel_unprepare(dsi->panel);
 		goto enable_err;
 	}
-
-	if (dsi_device->mode_flags & MIPI_DSI_CLOCK_NON_CONTINUOUS)
-		nwl_dsi_write(dsi, CFG_NONCONTINUOUS_CLK, 0x00);
-
 	dsi->enabled = true;
 
 	return;
