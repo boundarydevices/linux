@@ -299,21 +299,20 @@ static void nwl_dsi_bridge_pre_enable(struct drm_bridge *bridge)
 		DRM_DEV_ERROR(dsi->dev, "Failed to deassert MIPI: %d\n", ret);
 		return;
 	}
-
-	/*
-	 * We need to force call enable for the panel here, in order to
-	 * make the panel initialization execute before our call to
-	 * bridge_enable, where we will enable the DPI and start streaming
-	 * pixels on the data lanes.
-	 */
-	if (dsi->panel)
-		drm_panel_enable(dsi->panel);
 }
 
 static void nwl_dsi_bridge_enable(struct drm_bridge *bridge)
 {
 	struct nwl_dsi *dsi = bridge_to_dsi(bridge);
 	int ret;
+
+	/*
+	 * We need to force call enable for the panel here, in order to
+	 * make the panel initialization execute before we enable the DPI
+	 * and start streaming pixels on the data lanes.
+	 */
+	if (dsi->panel)
+		drm_panel_enable(dsi->panel);
 
 	/* Perform Step 5 from DSI reset-out instructions */
 	ret = dsi->pdata->dpi_reset(dsi, false);
