@@ -202,7 +202,16 @@ static int send_mipi_cmd_list(struct mipi_dsi_info *dsi, struct mipi_cmd *mc)
 		}
 
 		ret = 0;
-		if (len < S_DELAY) {
+		if ((len < S_DELAY) || (len == S_DCS_LENGTH)) {
+			if (len == S_DCS_LENGTH) {
+				len = *cmd++;
+				length--;
+				if (!len) {
+					pr_err("%s:!!! unexpected end of data, cmd=%p %d\n",
+						__func__, cmd, length);
+					break;
+				}
+			}
 			data = cmd[0];
 			if (len > 1)
 				data |= cmd[1] << 8;
