@@ -195,6 +195,11 @@ static int send_mipi_cmd_list(struct mipi_dsi_info *dsi, struct mipi_cmd *mc)
 		length--;
 		generic = len & 0x80;
 		len &= 0x7f;
+		if (!len) {
+			pr_err("%s:!!! unexpected end of data, cmd=%p %d\n",
+				__func__, cmd, length);
+			break;
+		}
 
 		ret = 0;
 		if (len < S_DELAY) {
@@ -203,12 +208,13 @@ static int send_mipi_cmd_list(struct mipi_dsi_info *dsi, struct mipi_cmd *mc)
 				data |= cmd[1] << 8;
 			if (len > 2) {
 				data |= cmd[2] << 16;
-				data |= cmd[3] << 24;
+				if (len > 3)
+					data |= cmd[3] << 24;
 			}
 			if (generic) {
 				if (len > 2) {
 					ret = dsi->mipi_dsi_pkt_write(dsi,
-						MIPI_DSI_GENERIC_LONG_WRITE, &data, len);
+						MIPI_DSI_GENERIC_LONG_WRITE, (u32 *)cmd, len);
 				} else if (len == 2) {
 					ret = dsi->mipi_dsi_pkt_write(dsi,
 						MIPI_DSI_GENERIC_SHORT_WRITE_2_PARAM, &data, 0);
@@ -219,7 +225,7 @@ static int send_mipi_cmd_list(struct mipi_dsi_info *dsi, struct mipi_cmd *mc)
 			} else {
 				if (len > 2) {
 					ret = dsi->mipi_dsi_pkt_write(dsi,
-						MIPI_DSI_DCS_LONG_WRITE, &data, len);
+						MIPI_DSI_DCS_LONG_WRITE, (u32 *)cmd, len);
 				} else if (len == 2) {
 					ret = dsi->mipi_dsi_pkt_write(dsi,
 						MIPI_DSI_DCS_SHORT_WRITE_PARAM, &data, 0);
@@ -247,6 +253,7 @@ static int send_mipi_cmd_list(struct mipi_dsi_info *dsi, struct mipi_cmd *mc)
 		} else {
 			msleep(cmd[0]);
 			len = 1;
+			data = 0;
 		}
 		if (ret < 0) {
 			dev_err(&dsi->pdev->dev,
