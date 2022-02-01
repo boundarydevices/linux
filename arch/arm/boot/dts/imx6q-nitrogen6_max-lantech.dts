@@ -20,6 +20,16 @@
 / {
 	model = "Boundary Devices i.MX6 Quad Nitrogen6 Max lantech Board";
 	compatible = "fsl,imx6q-nitrogen6_max", "fsl,imx6q";
+
+	aliases {
+		/delete-property/ ts_atmel_mt;
+		/delete-property/ ts_egalax;
+		/delete-property/ ts_ft5x06;
+		/delete-property/ ts_goodix;
+		/delete-property/ ts_goodix2;
+		/delete-property/ ts_ili210x;
+		/delete-property/ ts_tsc2004;
+	};
 };
 
 &iomuxc {
@@ -171,14 +181,14 @@
 };
 
 &i2c3 {
-	/delete-node/ atmel_maxtouch@4a;
-	/delete-node/ egalax_ts@04;
-	/delete-node/ ft5x06_ts@38;
-	/delete-node/ gt911@14;
-	/delete-node/ gt911@5d;
-	/delete-node/ ili210x@41;
+	/delete-node/ touchscreen@4a;
+	/delete-node/ touchscreen@4;
+	/delete-node/ touchscreen@38;
+	/delete-node/ touchscreen@14;
+	/delete-node/ touchscreen@5d;
+	/delete-node/ touchscreen@41;
+	/delete-node/ touchscreen@48;
 	/delete-node/ ov5640@3c;
-	/delete-node/ tsc2004@48;
 };
 
 &sata {
