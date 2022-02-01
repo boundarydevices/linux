@@ -509,6 +509,12 @@ static int mxc4005_remove(struct i2c_client *client)
 	return 0;
 }
 
+static struct of_device_id mxc4005_dt_match[] = {
+        { .compatible = "memsic,mxc4005" },
+        { }
+};
+MODULE_DEVICE_TABLE(of, mxc4005_dt_match);
+
 static const struct acpi_device_id mxc4005_acpi_match[] = {
 	{"MXC4005",	0},
 	{ },
@@ -525,6 +531,7 @@ static struct i2c_driver mxc4005_driver = {
 	.driver = {
 		.name = MXC4005_DRV_NAME,
 		.acpi_match_table = ACPI_PTR(mxc4005_acpi_match),
+		.of_match_table = mxc4005_dt_match,
 	},
 	.probe		= mxc4005_probe,
 	.remove		= mxc4005_remove,
