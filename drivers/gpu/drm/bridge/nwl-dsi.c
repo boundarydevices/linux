@@ -751,9 +751,20 @@ static void nwl_dsi_begin_transmission(struct nwl_dsi *dsi)
 		fallthrough;
 	case 2:
 		val |= payload[1] << 8;
-		hs_workaround |= !(val & 0xFFFF00);
 		fallthrough;
 	case 1:
+		if (!(val & 0xFFFF00) &&
+		    (dsi->quirks & E11418_HS_MODE_QUIRK)) {
+			if (length > 2) {
+				hs_workaround |= 1;
+			} else {
+				/*
+				 * Set bit 23 of unused byte of payload to avoid
+				 * triggering quirk
+				 */
+				val |= BIT(23);
+			}
+		}
 		val |= payload[0];
 		nwl_dsi_write(dsi, NWL_DSI_TX_PAYLOAD, val);
 		break;
