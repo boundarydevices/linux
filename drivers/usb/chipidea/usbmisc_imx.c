@@ -550,6 +550,29 @@ static int usbmisc_imx6sx_init(struct imx_usbmisc_data *data)
 
 	usbmisc_imx6q_init(data);
 
+	spin_lock_irqsave(&usbmisc->lock, flags);
+
+	val = readl(usbmisc->base + data->index * 4);
+	if (data->disable_oc) {
+		val |= MX6_BM_OVER_CUR_DIS;
+	} else {
+		val &= ~MX6_BM_OVER_CUR_DIS;
+
+		/*
+		 * If the polarity is not configured keep it as setup by the
+		 * bootloader.
+		 */
+		if (data->oc_pol_configured && data->oc_pol_active_low)
+			val |= MX6_BM_OVER_CUR_POLARITY;
+		else if (data->oc_pol_configured)
+			val &= ~MX6_BM_OVER_CUR_POLARITY;
+	}
+	/* If the polarity is not set keep it as setup by the bootlader */
+	if (data->pwr_pol == 1)
+		val |= MX6_BM_PWR_POLARITY;
+	writel(val, usbmisc->base + data->index * 4);
+	spin_unlock_irqrestore(&usbmisc->lock, flags);
+
 	if (data->index == 0 || data->index == 1) {
 		reg = usbmisc->base + MX6_USB_OTG1_PHY_CTRL + data->index * 4;
 		spin_lock_irqsave(&usbmisc->lock, flags);
