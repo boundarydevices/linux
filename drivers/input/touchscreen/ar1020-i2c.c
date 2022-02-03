@@ -486,6 +486,12 @@ static const struct i2c_device_id ar1020_i2c_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, ar1020_i2c_id);
 
+static const struct of_device_id ar1020_i2c_of_match[] = {
+	{ .compatible = "microchip,ar1020-i2c", },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, ar1020_i2c_of_match);
+
 /*
  * This is the initial set of information the kernel has
  * before probing drivers on the system
@@ -493,6 +499,7 @@ MODULE_DEVICE_TABLE(i2c, ar1020_i2c_id);
 static struct i2c_driver ar1020_i2c_driver = {
 	.driver = {
 		.name	= "ar1020_i2c",
+		.of_match_table = ar1020_i2c_of_match,
 	},
 	.probe		= ar1020_i2c_probe,
 	.remove		= ar1020_i2c_remove,
