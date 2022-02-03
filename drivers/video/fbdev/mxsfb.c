@@ -134,6 +134,7 @@
 						 CTRL1_CUR_FRAME_DONE_IRQ | \
 						 CTRL1_VSYNC_EDGE_IRQ)
 #define CTRL1_IRQ_STATUS_SHIFT			8
+#define CTRL1_LCD_RESET                       BIT(0)
 
 #define CTRL2_OUTSTANDING_REQS__REQ_16		(4 << 21)
 
@@ -737,7 +738,7 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 		host->base + LCDC_V4_CTRL2 + REG_SET);
 
 	/* De-assert LCD Reset bit */
-	writel(CTRL_LCD_RESET, host->base + LCDC_CTRL1 + REG_SET);
+	writel(CTRL1_LCD_RESET, host->base + LCDC_CTRL1 + REG_SET);
 
 	/* if it was disabled, re-enable the mode again */
 	writel(CTRL_DOTCLK_MODE, host->base + LCDC_CTRL + REG_SET);
@@ -770,6 +771,9 @@ static void mxsfb_disable_controller(struct fb_info *fb_info)
 
 	if (host->dispdrv && host->dispdrv->drv->disable)
 		host->dispdrv->drv->disable(host->dispdrv, fb_info);
+
+	/* Assert LCD Reset bit */
+	writel(CTRL1_LCD_RESET, host->base + LCDC_CTRL1 + REG_CLR);
 
 	/*
 	 * Even if we disable the controller here, it will still continue
