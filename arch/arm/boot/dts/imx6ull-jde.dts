@@ -415,7 +415,7 @@
 	status = "okay";
 
 	touchscreen@4d {
-		compatible = "microchip,ar1021-i2c";
+		compatible = "microchip,ar1020-i2c";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ts_ar1021>;
 		reg = <0x4d>;
