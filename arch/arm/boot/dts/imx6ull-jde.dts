@@ -417,11 +417,11 @@
 			native-mode = <&t_lcd>;
 			t_lcd: t-lcd-default {
 				/* default to Ampire 320240UTMQW display */
-				clock-frequency = <6500000>;
+				clock-frequency = <6438270>;
 				hactive = <320>;
 				vactive = <240>;
-				hback-porch = <16>;
-				hfront-porch = <71>;
+				hback-porch = <69>;
+				hfront-porch = <18>;
 				hsync-len = <1>;
 				vback-porch = <12>;
 				vfront-porch = <10>;
