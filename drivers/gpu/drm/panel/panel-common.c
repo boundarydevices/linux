@@ -24,6 +24,7 @@
  */
 
 #include <linux/backlight.h>
+#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
 #include <linux/iopoll.h>
@@ -132,6 +133,7 @@ struct panel_common {
 	unsigned mipi_delay_between_cmds;
 	struct regulator *supply;
 	struct i2c_adapter *ddc;
+	struct clk *mipi_clk;
 
 	struct gpio_desc *gpd_prepare_enable;
 	struct gpio_desc *hpd_gpio;
@@ -372,6 +374,10 @@ int common_i2c_read(struct panel_common *panel, const u8 *tx, int tx_len, u8 *rx
 #define TYPE_I2C	1
 #define TYPE_SPI	2
 
+#define lptxtime_ns 75
+#define prepare_ns 100
+#define zero_ns 250
+
 static int send_cmd_list(struct panel_common *panel, struct cmds *mc, int type, const unsigned char *id)
 {
 	struct drm_display_mode *dm = &panel->dt_mode;
@@ -384,6 +390,8 @@ static int send_cmd_list(struct panel_common *panel, struct cmds *mc, int type, 
 	unsigned l;
 	unsigned len;
 	unsigned mask;
+	u32 mipi_clk_rate = 0;
+	unsigned long tmp;
 	int ret;
 	int generic;
 	int match = 0;
@@ -407,6 +415,14 @@ static int send_cmd_list(struct panel_common *panel, struct cmds *mc, int type, 
 			int lane_match = 1 + len - S_IF_1_LANE;
 
 			if (lane_match != dsi->lanes)
+				skip = 1;
+			continue;
+		} else if (len == S_IF_BURST) {
+			if (!(dsi->mode_flags & MIPI_DSI_MODE_VIDEO_BURST))
+				skip = 1;
+			continue;
+		} else if (len == S_IF_NONBURST) {
+			if (dsi->mode_flags & MIPI_DSI_MODE_VIDEO_BURST)
 				skip = 1;
 			continue;
 		}
@@ -529,7 +545,7 @@ static int send_cmd_list(struct panel_common *panel, struct cmds *mc, int type, 
 			cmd += len;
 			length -= len;
 			l = len = 0;
-		} else if ((len >= S_CONST) && (len <= S_VFP)) {
+		} else if (len >= S_CONST) {
 			int scmd, dest_start, dest_len, src_start;
 			unsigned val;
 
@@ -568,6 +584,42 @@ static int send_cmd_list(struct panel_common *panel, struct cmds *mc, int type, 
 				case S_VFP:
 					val = dm->vsync_start - dm->vdisplay;
 					break;
+				case S_LPTXTIME:
+					val = 3;
+					if (!mipi_clk_rate && panel->mipi_clk)
+						mipi_clk_rate = clk_get_rate(panel->mipi_clk);
+					if (!mipi_clk_rate) {
+						dev_warn(&dsi->dev, "Unknown mipi_clk_rate\n");
+						break;
+					}
+					/* val = ROUND(lptxtime_ns * mipi_clk_rate/4  /1000000000) */
+					tmp = lptxtime_ns;
+					tmp *= mipi_clk_rate;
+					tmp += 2000000000;
+					tmp /= 4000000000;
+					val = (unsigned)tmp;
+					pr_debug("%s:lptxtime=%d\n", __func__, val);
+					if (val > 2047)
+						val = 2047;
+					break;
+				case S_CLRSIPOCOUNT:
+					val = 5;
+					if (!mipi_clk_rate && panel->mipi_clk)
+						mipi_clk_rate = clk_get_rate(panel->mipi_clk);
+					if (!mipi_clk_rate) {
+						dev_warn(&dsi->dev, "Unknown mipi_clk_rate\n");
+						break;
+					}
+					/* clrsipocount = ROUNDUP((prepare_ns + zero_ns/2) * mipi_clk_rate/4 /1000000000) - 5 */
+					tmp = prepare_ns + (zero_ns >> 1) ;
+					tmp *= mipi_clk_rate;
+					tmp += 4000000000 - 1;
+					tmp /= 4000000000;
+					val = (unsigned)tmp - 5;
+					pr_debug("%s:clrsipocount=%d\n", __func__, val);
+					if (val > 63)
+						val = 63;
+					break;
 				default:
 					dev_err(&dsi->dev, "Unknown scmd 0x%x0x\n", scmd);
 					val = 0;
@@ -589,10 +641,6 @@ static int send_cmd_list(struct panel_common *panel, struct cmds *mc, int type, 
 					dest_len = 0;
 			}
 			l = 0;
-		} else {
-			dev_err(&dsi->dev, "Unknown DCS command 0x%x 0x%x\n", cmd[-1], cmd[0]);
-			match = -EINVAL;
-			break;
 		}
 		if (ret < 0) {
 			if (l >= 6) {
@@ -1124,6 +1172,7 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 	struct panel_common *panel;
 	struct display_timing dt;
 	struct device_node *ddc;
+	struct clk *mipi_clk;
 	int connector_type;
 	u32 bus_flags;
 	int err;
@@ -1272,6 +1321,14 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 			ds->delay.prepare, ds->delay.enable,
 			ds->delay.disable, ds->delay.unprepare);
 	}
+
+	mipi_clk = devm_clk_get_optional(dev, "mipi_clk");
+	if (IS_ERR(mipi_clk)) {
+		err = PTR_ERR(mipi_clk);
+		dev_dbg(dev, "%s:devm_clk_get mipi_clk  %d\n", __func__, err);
+		return err;
+	}
+	panel->mipi_clk = mipi_clk;
 
 	panel->no_hpd = of_property_read_bool(np, "no-hpd");
 	if (!panel->no_hpd) {
