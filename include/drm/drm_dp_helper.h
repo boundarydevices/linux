@@ -556,6 +556,7 @@ struct drm_panel;
 # define DP_TRAINING_PATTERN_DISABLE	    0
 # define DP_TRAINING_PATTERN_1		    1
 # define DP_TRAINING_PATTERN_2		    2
+# define DP_TRAINING_PATTERN_2_CDS	    3	    /* 2.0 E11 */
 # define DP_TRAINING_PATTERN_3		    3	    /* 1.2 */
 # define DP_TRAINING_PATTERN_4              7       /* 1.4 */
 # define DP_TRAINING_PATTERN_MASK	    0x3
@@ -1329,6 +1330,11 @@ struct drm_panel;
 #define DP_MAX_LANE_COUNT_PHY_REPEATER			    0xf0004 /* 1.4a */
 #define DP_Repeater_FEC_CAPABILITY			    0xf0004 /* 1.4 */
 #define DP_PHY_REPEATER_EXTENDED_WAIT_TIMEOUT		    0xf0005 /* 1.4a */
+#define DP_MAIN_LINK_CHANNEL_CODING_PHY_REPEATER	    0xf0006 /* 2.0 */
+# define DP_PHY_REPEATER_128B132B_SUPPORTED		    (1 << 0)
+/* See DP_128B132B_SUPPORTED_LINK_RATES for values */
+#define DP_PHY_REPEATER_128B132B_RATES			    0xf0007 /* 2.0 */
+#define DP_PHY_REPEATER_EQ_DONE                             0xf0008 /* 2.0 E11 */
 
 enum drm_dp_phy {
 	DP_PHY_DPRX,
