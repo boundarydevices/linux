@@ -21,6 +21,8 @@
 #define S_IF_2_LANES	0x52
 #define S_IF_3_LANES	0x53
 #define S_IF_4_LANES	0x54
+#define S_IF_BURST	0x55
+#define S_IF_NONBURST	0x56
 #define S_CONST		0x57
 #define S_HSYNC		0x58
 #define S_HBP		0x59
@@ -30,6 +32,8 @@
 #define S_VBP		0x5d
 #define S_VACTIVE	0x5e
 #define S_VFP		0x5f
+#define S_LPTXTIME	0x60
+#define S_CLRSIPOCOUNT	0x61
 
 #define S_GEN_S0P	0x81
 #define S_GEN_S1P	0x82
