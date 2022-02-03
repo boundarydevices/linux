@@ -736,6 +736,9 @@ static void mxsfb_enable_controller(struct fb_info *fb_info)
 	writel(CTRL2_OUTSTANDING_REQS__REQ_16,
 		host->base + LCDC_V4_CTRL2 + REG_SET);
 
+	/* De-assert LCD Reset bit */
+	writel(CTRL_LCD_RESET, host->base + LCDC_CTRL1 + REG_SET);
+
 	/* if it was disabled, re-enable the mode again */
 	writel(CTRL_DOTCLK_MODE, host->base + LCDC_CTRL + REG_SET);
 
