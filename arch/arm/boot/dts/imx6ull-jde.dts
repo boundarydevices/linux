@@ -12,6 +12,13 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
+	pinctrl_adc: adcgrp {
+		fsl,pins = <
+			MX6UL_PAD_GPIO1_IO01__GPIO1_IO01	0xb0
+			MX6UL_PAD_GPIO1_IO02__GPIO1_IO02	0xb0
+		>;
+	};
+
 	pinctrl_can1: can1grp {
 		fsl,pins = <
 			MX6UL_PAD_ENET1_RX_DATA0__FLEXCAN1_TX	0x1b0b0
@@ -50,15 +57,6 @@
 			MX6UL_PAD_CSI_DATA00__ECSPI2_SCLK	0x100b1
 #define GP_ECSPI2_CS0			<&gpio4 22 GPIO_ACTIVE_LOW>
 			MX6UL_PAD_CSI_DATA01__GPIO4_IO22	0x0b0b1
-		>;
-	};
-
-	pinctrl_gpio_keys: gpio-keysgrp {
-		fsl,pins = <
-#define GP_VPP_DETECT		<&gpio1 1 GPIO_ACTIVE_HIGH>
-			MX6UL_PAD_GPIO1_IO01__GPIO1_IO01	0x130b0
-#define GP_18V_DETECT		<&gpio1 2 GPIO_ACTIVE_HIGH>
-			MX6UL_PAD_GPIO1_IO02__GPIO1_IO02	0x130b0
 		>;
 	};
 
@@ -148,6 +146,8 @@
 		fsl,pins = <
 			MX6UL_PAD_UART1_TX_DATA__UART1_DCE_TX	0x1b0b1
 			MX6UL_PAD_UART1_RX_DATA__UART1_DCE_RX	0x1b0b1
+			MX6UL_PAD_ENET1_RX_DATA0__GPIO2_IO00	0xb0
+			MX6UL_PAD_ENET1_RX_DATA1__GPIO2_IO01    0xb0
 		>;
 	};
 
@@ -269,9 +269,11 @@
 
 	aliases {
 		backlight_lcd = &backlight_lcd;
+		can1 = &flexcan1;
 		fb_lcd = &lcdif;
 		lcd = &display0;
 		t_lcd = &t_lcd;
+		uart1 = &uart1;
 	};
 
 	backlight_lcd: backlight-lcd {
@@ -279,28 +281,8 @@
 		compatible = "pwm-backlight";
 		display = <&lcdif>;
 		default-brightness-level = <8>;
-		pwms = <&pwm7 0 1000000 0>;
+		pwms = <&pwm7 0 2000000 0>;
 		status = "okay";
-	};
-
-	gpio-keys {
-		compatible = "gpio-keys";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_gpio_keys>;
-
-		vpp-det {
-			label = "vpp detect";
-			gpios = GP_VPP_DETECT;
-			linux,code = <KEY_1>;
-			gpio-key,wakeup;
-		};
-
-		18v-det {
-			label = "18v detect";
-			gpios = GP_18V_DETECT;
-			linux,code = <KEY_POWER>;
-			gpio-key,wakeup;
-		};
 	};
 
 	memory {
@@ -347,6 +329,14 @@
 			linux,cma-default;
 		};
 	};
+};
+
+&adc1 {
+	vref-supply = <&reg_vpp>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_adc>;
+	num-channels = <3>;
+	status = "okay";
 };
 
 &flexcan1 {
