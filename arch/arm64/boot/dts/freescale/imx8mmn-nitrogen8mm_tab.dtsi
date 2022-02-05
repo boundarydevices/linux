@@ -1091,7 +1091,7 @@
 
 		port {
 			ov5640_mipi2_ep: endpoint {
-				remote-endpoint = <&mipi1_ov5640_ep>;
+				remote-endpoint = <&mipi2_ov5640_ep>;
 			};
 		};
 	};
@@ -1147,6 +1147,14 @@
 
 		csi1_mipi_ep: endpoint@2 {
 			remote-endpoint = <&csi1_ep>;
+		};
+
+		mipi2_ov5640_ep: endpoint@3 {
+			remote-endpoint = <&ov5640_mipi2_ep>;
+			data-lanes = <2>;
+			csis-hs-settle = <13>;
+			csis-clk-settle = <2>;
+			csis-wclk;
 		};
 	};
 };
