@@ -436,17 +436,13 @@ static int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,
 				u8 data_type, const u32 *buf, int len)
 {
 	u32 val;
-	u32 status = 0;
+	u32 status;
 	int write_len = len;
 	uint32_t	timeout = 0;
 
 	if (len) {
 		/* generic long write command */
-		while (len / DSI_GEN_PLD_DATA_BUF_SIZE) {
-			mipi_dsi_write_register(mipi_dsi,
-				MIPI_DSI_GEN_PLD_DATA, *buf);
-			buf++;
-			len -= DSI_GEN_PLD_DATA_BUF_SIZE;
+		while (len > 0) {
 			mipi_dsi_read_register(mipi_dsi,
 				MIPI_DSI_CMD_PKT_STATUS, &status);
 			while ((status & DSI_CMD_PKT_STATUS_GEN_PLD_W_FULL) ==
@@ -458,20 +454,14 @@ static int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,
 				mipi_dsi_read_register(mipi_dsi,
 					MIPI_DSI_CMD_PKT_STATUS, &status);
 			}
-		}
-		/* write the remainder bytes */
-		if (len > 0) {
-			while ((status & DSI_CMD_PKT_STATUS_GEN_PLD_W_FULL) ==
-					 DSI_CMD_PKT_STATUS_GEN_PLD_W_FULL) {
-				udelay(100);
-				timeout++;
-				if (timeout == MIPI_DSI_REG_RW_TIMEOUT)
-					return -EIO;
-				mipi_dsi_read_register(mipi_dsi,
-					MIPI_DSI_CMD_PKT_STATUS, &status);
+			val = *buf;
+			if (len < 4) {
+				val &= 0xffffffff >> ((4 - len) * 8);
 			}
 			mipi_dsi_write_register(mipi_dsi,
-				MIPI_DSI_GEN_PLD_DATA, *buf);
+				MIPI_DSI_GEN_PLD_DATA, val);
+			buf++;
+			len -= DSI_GEN_PLD_DATA_BUF_SIZE;
 		}
 
 		val = data_type | ((write_len & DSI_GEN_HDR_DATA_MASK)
