@@ -10,8 +10,8 @@
 #include <linux/dev_printk.h>
 #include <linux/errno.h>
 #include <linux/export.h>
-#include <linux/firmware/imx/senclave_base_msg.h>
-#include <linux/firmware/imx/sentnl_mu_ioctl.h>
+#include <linux/firmware/imx/ele_base_msg.h>
+#include <linux/firmware/imx/ele_mu_ioctl.h>
 #include <linux/io.h>
 #include <linux/init.h>
 #include <linux/mailbox_client.h>
@@ -23,29 +23,29 @@
 #include <linux/slab.h>
 #include <linux/sys_soc.h>
 
-#include "sentnl_mu.h"
+#include "ele_mu.h"
 
-struct sentnl_mu_priv *sentnl_priv_export;
+struct ele_mu_priv *ele_priv_export;
 
-int get_sentnl_mu_priv(struct sentnl_mu_priv **export)
+int get_ele_mu_priv(struct ele_mu_priv **export)
 {
-	if (!sentnl_priv_export)
+	if (!ele_priv_export)
 		return -EPROBE_DEFER;
 
-	*export = sentnl_priv_export;
+	*export = ele_priv_export;
 	return 0;
 }
-EXPORT_SYMBOL_GPL(get_sentnl_mu_priv);
+EXPORT_SYMBOL_GPL(get_ele_mu_priv);
 
 
 /*
  * Callback called by mailbox FW when data are received
  */
-static void sentnl_mu_rx_callback(struct mbox_client *c, void *msg)
+static void ele_mu_rx_callback(struct mbox_client *c, void *msg)
 {
 	struct device *dev = c->dev;
-	struct sentnl_mu_priv *priv = dev_get_drvdata(dev);
-	struct sentnl_mu_device_ctx *dev_ctx;
+	struct ele_mu_priv *priv = dev_get_drvdata(dev);
+	struct ele_mu_device_ctx *dev_ctx;
 	bool is_response = false;
 	int msg_size;
 	struct mu_hdr header;
@@ -73,20 +73,20 @@ static void sentnl_mu_rx_callback(struct mbox_client *c, void *msg)
 
 	/* Incoming command: wake up the receiver if any. */
 	if (header.tag == priv->cmd_tag) {
-		dev_dbg(dev, "Selecting cmd receiver\n");
+		dev_info(dev, "Selecting cmd receiver\n");
 		dev_ctx = priv->cmd_receiver_dev;
 	} else if (header.tag == priv->rsp_tag) {
 		if (priv->waiting_rsp_dev) {
-			dev_dbg(dev, "Selecting rsp waiter\n");
+			dev_info(dev, "Selecting rsp waiter\n");
 			dev_ctx = priv->waiting_rsp_dev;
 			is_response = true;
 		} else {
-			/* Reading the Sentinel response
+			/* Reading the EdgeLock Enclave response
 			 * to the command sent by other
 			 * linux kernel services.
 			 */
 			spin_lock(&priv->lock);
-			priv->rx_msg = *(struct sentnl_api_msg *)msg;
+			priv->rx_msg = *(struct ele_api_msg *)msg;
 			complete(&priv->done);
 			spin_unlock(&priv->lock);
 			mutex_unlock(&priv->mu_cmd_lock);
@@ -168,12 +168,12 @@ struct device *imx_soc_device_register(void)
  */
 
 /* Write a message to the MU. */
-static ssize_t sentnl_mu_fops_write(struct file *fp, const char __user *buf,
+static ssize_t ele_mu_fops_write(struct file *fp, const char __user *buf,
 				    size_t size, loff_t *ppos)
 {
-	struct sentnl_mu_device_ctx *dev_ctx = container_of(fp->private_data,
-					   struct sentnl_mu_device_ctx, miscdev);
-	struct sentnl_mu_priv *sentnl_mu_priv = dev_ctx->priv;
+	struct ele_mu_device_ctx *dev_ctx = container_of(fp->private_data,
+					   struct ele_mu_device_ctx, miscdev);
+	struct ele_mu_priv *ele_mu_priv = dev_ctx->priv;
 	u32 nb_words = 0;
 	struct mu_hdr header;
 	int err;
@@ -218,16 +218,16 @@ static ssize_t sentnl_mu_fops_write(struct file *fp, const char __user *buf,
 	header = *((struct mu_hdr *) (&dev_ctx->temp_cmd[0]));
 
 	/* Check the message is valid according to tags */
-	if (header.tag == sentnl_mu_priv->cmd_tag) {
+	if (header.tag == ele_mu_priv->cmd_tag) {
 		/*
-		 * unlocked in sentnl_mu_receive_work_handler when the
+		 * unlocked in ele_mu_receive_work_handler when the
 		 * response to this command is received.
 		 */
-		mutex_lock(&sentnl_mu_priv->mu_cmd_lock);
-		sentnl_mu_priv->waiting_rsp_dev = dev_ctx;
-	} else if (header.tag == sentnl_mu_priv->rsp_tag) {
+		mutex_lock(&ele_mu_priv->mu_cmd_lock);
+		ele_mu_priv->waiting_rsp_dev = dev_ctx;
+	} else if (header.tag == ele_mu_priv->rsp_tag) {
 		/* Check the device context can send the command */
-		if (dev_ctx != sentnl_mu_priv->cmd_receiver_dev) {
+		if (dev_ctx != ele_mu_priv->cmd_receiver_dev) {
 			devctx_err(dev_ctx,
 				   "This channel is not configured to send response to SECO\n");
 			err = -EPERM;
@@ -249,11 +249,11 @@ static ssize_t sentnl_mu_fops_write(struct file *fp, const char __user *buf,
 		goto exit;
 	}
 
-	mutex_lock(&sentnl_mu_priv->mu_lock);
+	mutex_lock(&ele_mu_priv->mu_lock);
 
 	/* Send message */
 	devctx_dbg(dev_ctx, "sending message\n");
-	err = mbox_send_message(sentnl_mu_priv->tx_chan, dev_ctx->temp_cmd);
+	err = mbox_send_message(ele_mu_priv->tx_chan, dev_ctx->temp_cmd);
 	if (err < 0) {
 		devctx_err(dev_ctx, "Failed to send message\n");
 		goto unlock;
@@ -262,7 +262,7 @@ static ssize_t sentnl_mu_fops_write(struct file *fp, const char __user *buf,
 	err = nb_words * (u32)sizeof(u32);
 
 unlock:
-	mutex_unlock(&sentnl_mu_priv->mu_lock);
+	mutex_unlock(&ele_mu_priv->mu_lock);
 
 exit:
 	up(&dev_ctx->fops_lock);
@@ -273,13 +273,13 @@ exit:
  * Read a message from the MU.
  * Blocking until a message is available.
  */
-static ssize_t sentnl_mu_fops_read(struct file *fp, char __user *buf,
+static ssize_t ele_mu_fops_read(struct file *fp, char __user *buf,
 				 size_t size, loff_t *ppos)
 {
-	struct sentnl_mu_device_ctx *dev_ctx = container_of(fp->private_data,
-					   struct sentnl_mu_device_ctx, miscdev);
+	struct ele_mu_device_ctx *dev_ctx = container_of(fp->private_data,
+					   struct ele_mu_device_ctx, miscdev);
 	u32 data_size = 0, size_to_copy = 0;
-	struct sentnl_obuf_desc *b_desc;
+	struct ele_obuf_desc *b_desc;
 	int err;
 
 	devctx_dbg(dev_ctx, "read to buf %p(%ld), ppos=%lld\n", buf, size,
@@ -296,7 +296,7 @@ static ssize_t sentnl_mu_fops_read(struct file *fp, char __user *buf,
 	/* Wait until the complete message is received on the MU. */
 	err = wait_event_interruptible(dev_ctx->wq, dev_ctx->pending_hdr != 0);
 	if (err) {
-		devctx_err(dev_ctx, "Interrupted by signal\n");
+		devctx_err(dev_ctx, "Err[0x%x]:Interrupted by signal.\n", err);
 		goto exit;
 	}
 
@@ -319,7 +319,7 @@ static ssize_t sentnl_mu_fops_read(struct file *fp, char __user *buf,
 	 */
 	while (!list_empty(&dev_ctx->pending_out)) {
 		b_desc = list_first_entry_or_null(&dev_ctx->pending_out,
-						  struct sentnl_obuf_desc,
+						  struct ele_obuf_desc,
 						  link);
 		if (b_desc->out_usr_ptr && b_desc->out_ptr) {
 			devctx_dbg(dev_ctx, "Copy output data to user\n");
@@ -360,11 +360,11 @@ exit:
 	return err;
 }
 
-/* Give access to Sentinel, to the memory we want to share */
-static int sentnl_mu_setup_sentnl_mem_access(struct sentnl_mu_device_ctx *dev_ctx,
+/* Give access to EdgeLock Enclave, to the memory we want to share */
+static int ele_mu_setup_ele_mem_access(struct ele_mu_device_ctx *dev_ctx,
 					     u64 addr, u32 len)
 {
-	/* Assuming Sentinel has access to all the memory regions */
+	/* Assuming EdgeLock Enclave has access to all the memory regions */
 	int ret = 0;
 
 	if (ret) {
@@ -381,21 +381,21 @@ exit:
 	return ret;
 }
 
-static int sentnl_mu_ioctl_get_mu_info(struct sentnl_mu_device_ctx *dev_ctx,
+static int ele_mu_ioctl_get_mu_info(struct ele_mu_device_ctx *dev_ctx,
 				  unsigned long arg)
 {
-	struct sentnl_mu_priv *priv = dev_get_drvdata(dev_ctx->dev);
-	struct sentnl_mu_ioctl_get_mu_info info;
+	struct ele_mu_priv *priv = dev_get_drvdata(dev_ctx->dev);
+	struct ele_mu_ioctl_get_mu_info info;
 	int err = -EINVAL;
 
-	info.sentnl_mu_id = (u8)priv->sentnl_mu_id;
+	info.ele_mu_id = (u8)priv->ele_mu_id;
 	info.interrupt_idx = 0;
 	info.tz = 0;
 	info.did = 0x7;
 
 	devctx_dbg(dev_ctx,
 		   "info [mu_idx: %d, irq_idx: %d, tz: 0x%x, did: 0x%x]\n",
-		   info.sentnl_mu_id, info.interrupt_idx, info.tz, info.did);
+		   info.ele_mu_id, info.interrupt_idx, info.tz, info.did);
 
 	err = (int)copy_to_user((u8 *)arg, &info,
 		sizeof(info));
@@ -413,12 +413,12 @@ exit:
  * Copy a buffer of daa to/from the user and return the address to use in
  * messages
  */
-static int sentnl_mu_ioctl_setup_iobuf_handler(struct sentnl_mu_device_ctx *dev_ctx,
+static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 					       unsigned long arg)
 {
-	struct sentnl_obuf_desc *out_buf_desc;
-	struct sentnl_mu_ioctl_setup_iobuf io = {0};
-	struct sentnl_shared_mem *shared_mem;
+	struct ele_obuf_desc *out_buf_desc;
+	struct ele_mu_ioctl_setup_iobuf io = {0};
+	struct ele_shared_mem *shared_mem;
 	int err = -EINVAL;
 	u32 pos;
 
@@ -441,7 +441,7 @@ static int sentnl_mu_ioctl_setup_iobuf_handler(struct sentnl_mu_device_ctx *dev_
 		 * pointer to be embedded into the message.
 		 * Skip all data copy part of code below.
 		 */
-		io.sentnl_addr = 0;
+		io.ele_addr = 0;
 		goto copy;
 	}
 
@@ -466,7 +466,7 @@ static int sentnl_mu_ioctl_setup_iobuf_handler(struct sentnl_mu_device_ctx *dev_
 	/* Allocate space in shared memory. 8 bytes aligned. */
 	pos = shared_mem->pos;
 	shared_mem->pos += round_up(io.length, 8u);
-	io.sentnl_addr = (u64)shared_mem->dma_addr + pos;
+	io.ele_addr = (u64)shared_mem->dma_addr + pos;
 
 	if ((io.flags & SECO_MU_IO_FLAGS_USE_SEC_MEM) &&
 	    !(io.flags & SECO_MU_IO_FLAGS_USE_SHORT_ADDR)) {
@@ -513,7 +513,7 @@ static int sentnl_mu_ioctl_setup_iobuf_handler(struct sentnl_mu_device_ctx *dev_
 	}
 
 copy:
-	/* Provide the sentinel address to user space only if success. */
+	/* Provide the EdgeLock Enclave address to user space only if success. */
 	err = (int)copy_to_user((u8 *)arg, &io,
 		sizeof(io));
 	if (err) {
@@ -528,10 +528,10 @@ exit:
 
 
 /* Open a char device. */
-static int sentnl_mu_fops_open(struct inode *nd, struct file *fp)
+static int ele_mu_fops_open(struct inode *nd, struct file *fp)
 {
-	struct sentnl_mu_device_ctx *dev_ctx = container_of(fp->private_data,
-							    struct sentnl_mu_device_ctx,
+	struct ele_mu_device_ctx *dev_ctx = container_of(fp->private_data,
+							    struct ele_mu_device_ctx,
 							    miscdev);
 	int err;
 
@@ -559,7 +559,7 @@ static int sentnl_mu_fops_open(struct inode *nd, struct file *fp)
 		goto exit;
 	}
 
-	err = sentnl_mu_setup_sentnl_mem_access(dev_ctx,
+	err = ele_mu_setup_ele_mem_access(dev_ctx,
 						dev_ctx->non_secure_mem.dma_addr,
 						MAX_DATA_SIZE_PER_USER);
 	if (err) {
@@ -588,12 +588,12 @@ exit:
 }
 
 /* Close a char device. */
-static int sentnl_mu_fops_close(struct inode *nd, struct file *fp)
+static int ele_mu_fops_close(struct inode *nd, struct file *fp)
 {
-	struct sentnl_mu_device_ctx *dev_ctx = container_of(fp->private_data,
-					struct sentnl_mu_device_ctx, miscdev);
-	struct sentnl_mu_priv *priv = dev_ctx->priv;
-	struct sentnl_obuf_desc *out_buf_desc;
+	struct ele_mu_device_ctx *dev_ctx = container_of(fp->private_data,
+					struct ele_mu_device_ctx, miscdev);
+	struct ele_mu_priv *priv = dev_ctx->priv;
+	struct ele_obuf_desc *out_buf_desc;
 
 	/* Avoid race if closed at the same time */
 	if (down_trylock(&dev_ctx->fops_lock))
@@ -634,7 +634,7 @@ static int sentnl_mu_fops_close(struct inode *nd, struct file *fp)
 
 	while (!list_empty(&dev_ctx->pending_out)) {
 		out_buf_desc = list_first_entry_or_null(&dev_ctx->pending_out,
-						struct sentnl_obuf_desc,
+						struct ele_obuf_desc,
 						link);
 		__list_del_entry(&out_buf_desc->link);
 		devm_kfree(dev_ctx->dev, out_buf_desc);
@@ -648,12 +648,12 @@ exit:
 }
 
 /* IOCTL entry point of a char device */
-static long sentnl_mu_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
+static long ele_mu_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
-	struct sentnl_mu_device_ctx *dev_ctx = container_of(fp->private_data,
-							    struct sentnl_mu_device_ctx,
+	struct ele_mu_device_ctx *dev_ctx = container_of(fp->private_data,
+							    struct ele_mu_device_ctx,
 							    miscdev);
-	struct sentnl_mu_priv *sentnl_mu_priv = dev_ctx->priv;
+	struct ele_mu_priv *ele_mu_priv = dev_ctx->priv;
 	int err = -EINVAL;
 
 	/* Prevent race during change of device context */
@@ -661,23 +661,23 @@ static long sentnl_mu_ioctl(struct file *fp, unsigned int cmd, unsigned long arg
 		return -EBUSY;
 
 	switch (cmd) {
-	case SENTNL_MU_IOCTL_ENABLE_CMD_RCV:
-		if (!sentnl_mu_priv->cmd_receiver_dev) {
-			sentnl_mu_priv->cmd_receiver_dev = dev_ctx;
+	case ELE_MU_IOCTL_ENABLE_CMD_RCV:
+		if (!ele_mu_priv->cmd_receiver_dev) {
+			ele_mu_priv->cmd_receiver_dev = dev_ctx;
 			err = 0;
 		};
 		break;
-	case SENTNL_MU_IOCTL_GET_MU_INFO:
-		err = sentnl_mu_ioctl_get_mu_info(dev_ctx, arg);
+	case ELE_MU_IOCTL_GET_MU_INFO:
+		err = ele_mu_ioctl_get_mu_info(dev_ctx, arg);
 		break;
-	case SENTNL_MU_IOCTL_SHARED_BUF_CFG:
-		devctx_err(dev_ctx, "SENTNL_MU_IOCTL_SHARED_BUF_CFG not supported [0x%x].\n", err);
+	case ELE_MU_IOCTL_SHARED_BUF_CFG:
+		devctx_err(dev_ctx, "ELE_MU_IOCTL_SHARED_BUF_CFG not supported [0x%x].\n", err);
 		break;
-	case SENTNL_MU_IOCTL_SETUP_IOBUF:
-		err = sentnl_mu_ioctl_setup_iobuf_handler(dev_ctx, arg);
+	case ELE_MU_IOCTL_SETUP_IOBUF:
+		err = ele_mu_ioctl_setup_iobuf_handler(dev_ctx, arg);
 		break;
-	case SENTNL_MU_IOCTL_SIGNED_MESSAGE:
-		devctx_err(dev_ctx, "SENTNL_MU_IOCTL_SIGNED_MESSAGE not supported [0x%x].\n", err);
+	case ELE_MU_IOCTL_SIGNED_MESSAGE:
+		devctx_err(dev_ctx, "ELE_MU_IOCTL_SIGNED_MESSAGE not supported [0x%x].\n", err);
 		break;
 	default:
 		err = -EINVAL;
@@ -689,13 +689,13 @@ static long sentnl_mu_ioctl(struct file *fp, unsigned int cmd, unsigned long arg
 }
 
 /* Char driver setup */
-static const struct file_operations sentnl_mu_fops = {
-	.open		= sentnl_mu_fops_open,
+static const struct file_operations ele_mu_fops = {
+	.open		= ele_mu_fops_open,
 	.owner		= THIS_MODULE,
-	.release	= sentnl_mu_fops_close,
-	.unlocked_ioctl = sentnl_mu_ioctl,
-	.read		= sentnl_mu_fops_read,
-	.write		= sentnl_mu_fops_write,
+	.release	= ele_mu_fops_close,
+	.unlocked_ioctl = ele_mu_ioctl,
+	.read		= ele_mu_fops_read,
+	.write		= ele_mu_fops_write,
 };
 
 /* interface for managed res to free a mailbox channel */
@@ -710,7 +710,7 @@ static void if_misc_deregister(void *miscdevice)
 	misc_deregister(miscdevice);
 }
 
-static int sentnl_mu_request_channel(struct device *dev,
+static int ele_mu_request_channel(struct device *dev,
 				 struct mbox_chan **chan,
 				 struct mbox_client *cl,
 				 const char *name)
@@ -740,11 +740,11 @@ exit:
 	return ret;
 }
 
-static int sentnl_mu_probe(struct platform_device *pdev)
+static int ele_mu_probe(struct platform_device *pdev)
 {
-	struct sentnl_mu_device_ctx *dev_ctx;
+	struct ele_mu_device_ctx *dev_ctx;
 	struct device *dev = &pdev->dev;
-	struct sentnl_mu_priv *priv;
+	struct ele_mu_priv *priv;
 	struct device_node *np;
 	int max_nb_users = 0;
 	char *devname;
@@ -779,13 +779,13 @@ static int sentnl_mu_probe(struct platform_device *pdev)
 	priv->cmd_receiver_dev = NULL;
 	priv->waiting_rsp_dev = NULL;
 
-	ret = of_property_read_u32(np, "fsl,sentnl_mu_id", &priv->sentnl_mu_id);
+	ret = of_property_read_u32(np, "fsl,ele_mu_id", &priv->ele_mu_id);
 	if (ret) {
 		dev_warn(dev, "%s: Not able to read mu_id", __func__);
-		priv->sentnl_mu_id = S4_DEFAULT_MUAP_INDEX;
+		priv->ele_mu_id = S4_DEFAULT_MUAP_INDEX;
 	}
 
-	ret = of_property_read_u32(np, "fsl,sentnl_mu_max_users", &max_nb_users);
+	ret = of_property_read_u32(np, "fsl,ele_mu_max_users", &max_nb_users);
 	if (ret) {
 		dev_warn(dev, "%s: Not able to read mu_max_user", __func__);
 		max_nb_users = S4_MUAP_DEFAULT_MAX_USERS;
@@ -804,12 +804,12 @@ static int sentnl_mu_probe(struct platform_device *pdev)
 	}
 
 	/* Mailbox client configuration */
-	priv->sentnl_mb_cl.dev		= dev;
-	priv->sentnl_mb_cl.tx_block	= false;
-	priv->sentnl_mb_cl.knows_txdone	= true;
-	priv->sentnl_mb_cl.rx_callback	= sentnl_mu_rx_callback;
+	priv->ele_mb_cl.dev		= dev;
+	priv->ele_mb_cl.tx_block	= false;
+	priv->ele_mb_cl.knows_txdone	= true;
+	priv->ele_mb_cl.rx_callback	= ele_mu_rx_callback;
 
-	ret = sentnl_mu_request_channel(dev, &priv->tx_chan, &priv->sentnl_mb_cl, "tx");
+	ret = ele_mu_request_channel(dev, &priv->tx_chan, &priv->ele_mb_cl, "tx");
 	if (ret) {
 		if (ret != -EPROBE_DEFER)
 			dev_err(dev, "Failed to request tx channel\n");
@@ -817,7 +817,7 @@ static int sentnl_mu_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	ret = sentnl_mu_request_channel(dev, &priv->rx_chan, &priv->sentnl_mb_cl, "rx");
+	ret = ele_mu_request_channel(dev, &priv->rx_chan, &priv->ele_mb_cl, "rx");
 	if (ret) {
 		if (ret != -EPROBE_DEFER)
 			dev_err(dev, "Failed to request rx channel\n");
@@ -844,8 +844,8 @@ static int sentnl_mu_probe(struct platform_device *pdev)
 		INIT_LIST_HEAD(&dev_ctx->pending_out);
 		sema_init(&dev_ctx->fops_lock, 1);
 
-		devname = devm_kasprintf(dev, GFP_KERNEL, "sentnl_mu%d_ch%d",
-					 priv->sentnl_mu_id, i);
+		devname = devm_kasprintf(dev, GFP_KERNEL, "ele_mu%d_ch%d",
+					 priv->ele_mu_id, i);
 		if (!devname) {
 			ret = -ENOMEM;
 			dev_err(dev,
@@ -855,7 +855,7 @@ static int sentnl_mu_probe(struct platform_device *pdev)
 
 		dev_ctx->miscdev.name = devname;
 		dev_ctx->miscdev.minor = MISC_DYNAMIC_MINOR;
-		dev_ctx->miscdev.fops = &sentnl_mu_fops;
+		dev_ctx->miscdev.fops = &ele_mu_fops;
 		dev_ctx->miscdev.parent = dev;
 		ret = misc_register(&dev_ctx->miscdev);
 		if (ret) {
@@ -872,7 +872,7 @@ static int sentnl_mu_probe(struct platform_device *pdev)
 	init_completion(&priv->done);
 	spin_lock_init(&priv->lock);
 
-	sentnl_priv_export = priv;
+	ele_priv_export = priv;
 
 	soc = imx_soc_device_register();
 	if (IS_ERR(soc)) {
@@ -887,9 +887,9 @@ exit:
 	return ret;
 }
 
-static int sentnl_mu_remove(struct platform_device *pdev)
+static int ele_mu_remove(struct platform_device *pdev)
 {
-	struct sentnl_mu_priv *priv;
+	struct ele_mu_priv *priv;
 
 	priv = dev_get_drvdata(&pdev->dev);
 	mbox_free_channel(priv->tx_chan);
@@ -898,20 +898,20 @@ static int sentnl_mu_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id sentnl_mu_match[] = {
-	{ .compatible = "fsl,imx-sentnl", },
+static const struct of_device_id ele_mu_match[] = {
+	{ .compatible = "fsl,imx-ele", },
 	{},
 };
 
-static struct platform_driver sentnl_mu_driver = {
+static struct platform_driver ele_mu_driver = {
 	.driver = {
-		.name = "fsl-sentnl-mu",
-		.of_match_table = sentnl_mu_match,
+		.name = "fsl-ele-mu",
+		.of_match_table = ele_mu_match,
 	},
-	.probe = sentnl_mu_probe,
-	.remove = sentnl_mu_remove,
+	.probe = ele_mu_probe,
+	.remove = ele_mu_remove,
 };
-module_platform_driver(sentnl_mu_driver);
+module_platform_driver(ele_mu_driver);
 
 MODULE_AUTHOR("Pankaj Gupta <pankaj.gupta@nxp.com>");
 MODULE_DESCRIPTION("iMX Secure Enclave MU Driver.");

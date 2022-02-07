@@ -40,13 +40,13 @@ config IMX_SECO_MU
 	  interfaces via a set of file descriptors allowing to configure shared
 	  memory, send and receive messages.
 
-config IMX_SENCLAVE_MU
-	tristate "i.MX Embedded Secure Enclave support."
+config IMX_EL_ENCLAVE
+	tristate "i.MX Embedded EdgeLock Enclave support."
 	depends on IMX_MBOX
 	default y if ARM64
 
 	help
-	  It is possible to use APIs exposed by the iMX Secure Enclave like base, HSM &
+	  It is possible to use APIs exposed by the iMX EdgeLock Enclave like base, HSM &
 	  SHE using the SAB protocol via the shared Messaging Unit. This driver exposes
 	  these interfaces via a set of file descriptors allowing to configure shared
 	  memory, send and receive messages.
