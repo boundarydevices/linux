@@ -11,3 +11,4 @@ obj-$(CONFIG_IMX8M_PM_DOMAINS) += imx8m_pm_domains.o
 obj-$(CONFIG_SOC_IMX9) += imx93-src.o imx93-pd.o
 obj-$(CONFIG_SOC_IMX9) += imx93-blk-ctrl.o
 obj-$(CONFIG_RPMSG_LIFE_CYCLE) += rpmsg_life_cycle.o
+obj-$(CONFIG_IMX8ULP_LPM_CTRL) += imx8ulp_lpm.o
