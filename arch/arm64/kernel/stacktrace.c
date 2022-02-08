@@ -55,6 +55,7 @@ void start_backtrace(struct stackframe *frame, unsigned long fp,
 	frame->prev_fp = 0;
 	frame->prev_type = STACK_TYPE_UNKNOWN;
 }
+EXPORT_SYMBOL_GPL(start_backtrace);
 
 /*
  * Unwind from one frame record (A) to the next frame record (B).
@@ -209,6 +210,7 @@ void dump_backtrace(struct pt_regs *regs, struct task_struct *tsk,
 
 	put_task_stack(tsk);
 }
+EXPORT_SYMBOL_GPL(dump_backtrace);
 
 void show_stack(struct task_struct *tsk, unsigned long *sp, const char *loglvl)
 {
