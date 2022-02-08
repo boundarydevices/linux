@@ -15,6 +15,7 @@
 #include "clk-mtk.h"
 #include "clk-mux.h"
 #include "clk-gate.h"
+#include "clk-pll.h"
 
 #include <dt-bindings/clock/mt8365-clk.h>
 
