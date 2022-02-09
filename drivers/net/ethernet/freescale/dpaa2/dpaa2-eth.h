@@ -500,6 +500,11 @@ struct dpaa2_eth_trap_data {
 
 #define DPAA2_ETH_DEFAULT_COPYBREAK	512
 
+#define DPAA2_ETH_ENQUEUE_MAX_FDS	200
+struct dpaa2_eth_fds {
+	struct dpaa2_fd array[DPAA2_ETH_ENQUEUE_MAX_FDS];
+};
+
 /* Driver private data */
 struct dpaa2_eth_priv {
 	struct net_device *net_dev;
@@ -584,6 +589,7 @@ struct dpaa2_eth_priv {
 
 	u32 rx_copybreak;
 	bool ceetm_en;
+	struct dpaa2_eth_fds __percpu *fd;
 };
 
 struct dpaa2_eth_devlink_priv {
