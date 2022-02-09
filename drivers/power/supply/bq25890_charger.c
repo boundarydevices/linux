@@ -602,7 +602,7 @@ static int bq25890_power_supply_get_property(struct power_supply *psy,
 			return ret;
 
 		/* converted_val = ADC_val * 50mA (table 10.3.19) */
-		val->intval = ret * -50000;
+		val->intval = ret * 50000; /* positive for charging battery */
 		break;
 
 	case POWER_SUPPLY_PROP_TEMP:
