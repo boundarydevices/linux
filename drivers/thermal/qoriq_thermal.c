@@ -68,14 +68,25 @@
 						   */
 #define REGS_V2_TEUMR(n)	(0xf00 + 4 * (n))
 
+enum tmu_trip {
+	TMU_TRIP_PASSIVE,
+	TMU_TRIP_CRITICAL,
+	TMU_TRIP_ACTIVE1,
+	TMU_TRIP_ACTIVE2,
+	TMU_TRIP_ACTIVE3,
+	TMU_TRIP_ACTIVE4,
+	TMU_TRIP_ACTIVE5,
+	TMU_TRIP_NUM,
+};
+
 /*
  * Thermal zone data
  */
 struct qoriq_sensor {
 	int				id;
 	struct thermal_zone_device	*tzd;
-	int				temp_passive;
-	int				temp_critical;
+	int				temp_trip[TMU_TRIP_NUM];
+	int				hyst_trip[TMU_TRIP_NUM];
 	struct thermal_cooling_device	*cdev;
 };
 
@@ -84,12 +95,6 @@ struct qoriq_tmu_data {
 	struct regmap *regmap;
 	struct clk *clk;
 	struct qoriq_sensor	sensor[SITES_MAX];
-};
-
-enum tmu_trip {
-	TMU_TRIP_PASSIVE,
-	TMU_TRIP_CRITICAL,
-	TMU_TRIP_NUM,
 };
 
 static struct qoriq_tmu_data *qoriq_sensor_to_data(struct qoriq_sensor *s)
@@ -154,15 +159,18 @@ static int tmu_get_trend(struct thermal_zone_device *tz, int trip,
 {
 	struct qoriq_sensor *qsensor = tz->devdata;
 	int trip_temp;
+	int trip_hyst;
 
 	if (!qsensor->tzd)
 		return 0;
 
-	trip_temp = (trip == TMU_TRIP_PASSIVE) ? qsensor->temp_passive :
-					     qsensor->temp_critical;
 
-	if (qsensor->tzd->temperature >=
-		(trip_temp - TMU_TEMP_PASSIVE_COOL_DELTA))
+	trip_temp = ((unsigned)trip < TMU_TRIP_NUM) ?
+		qsensor->temp_trip[trip] : 0x7fffffff;
+	trip_hyst = ((unsigned)trip < TMU_TRIP_NUM) ?
+		qsensor->hyst_trip[trip] : 10000;
+
+	if (qsensor->tzd->temperature >= (trip_temp - trip_hyst))
 		*trend = THERMAL_TREND_RAISING;
 	else
 		*trend = THERMAL_TREND_DROPPING;
@@ -175,12 +183,8 @@ static int tmu_set_trip_temp(struct thermal_zone_device *tz, int trip,
 {
 	struct qoriq_sensor *qsensor = tz->devdata;
 
-	if (trip == TMU_TRIP_CRITICAL)
-		qsensor->temp_critical = temp;
-
-	if (trip == TMU_TRIP_PASSIVE)
-		qsensor->temp_passive = temp;
-
+	if ((unsigned)trip < TMU_TRIP_NUM)
+		qsensor->temp_trip[trip] = temp;
 	return 0;
 }
 
@@ -200,6 +204,7 @@ static int qoriq_tmu_register_tmu_zone(struct device *dev,
 		struct thermal_zone_device *tzd;
 		struct qoriq_sensor *sensor = &qdata->sensor[id];
 		int ret;
+		int ntrips, i;
 
 		sensor->id = id;
 
@@ -251,8 +256,13 @@ static int qoriq_tmu_register_tmu_zone(struct device *dev,
 			}
 
 			trip = of_thermal_get_trip_points(sensor->tzd);
-			sensor->temp_passive = trip[0].temperature;
-			sensor->temp_critical = trip[1].temperature;
+			ntrips = of_thermal_get_ntrips(sensor->tzd);
+			for (i = 0; i < TMU_TRIP_NUM; i++) {
+				sensor->temp_trip[i] = (i < ntrips) ?
+					trip[i].temperature : 0x7fffffff;
+				sensor->hyst_trip[i] = (i >= ntrips) ?
+					10000 : trip[i].hysteresis ?: 10000;
+			}
 		}
 	}
 
