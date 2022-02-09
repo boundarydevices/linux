@@ -18,7 +18,6 @@
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
-#include <linux/gpio/consumer.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
@@ -262,15 +261,12 @@ struct dwc3_meson_g12a {
 	struct phy		*phys[PHY_COUNT];
 	enum usb_dr_mode	otg_mode;
 	enum phy_mode		otg_phy_mode;
-	enum phy_mode		apply_mode;
 	unsigned int		usb2_ports;
 	unsigned int		usb3_ports;
 	struct regulator	*vbus;
-	int			vbus_enabled;
 	struct usb_role_switch_desc switch_desc;
 	struct usb_role_switch	*role_switch;
 	const struct dwc3_meson_g12a_drvdata *drvdata;
-	struct gpio_desc	*ss_select;
 };
 
 static int dwc3_meson_gxl_set_phy_mode(struct dwc3_meson_g12a *priv,
@@ -382,9 +378,6 @@ static void dwc3_meson_g12a_usb3_init(struct dwc3_meson_g12a *priv)
 static void dwc3_meson_g12a_usb_otg_apply_mode(struct dwc3_meson_g12a *priv,
 					       enum phy_mode mode)
 {
-	if (priv->apply_mode == mode)
-		return;
-	priv->apply_mode = mode;
 	if (mode == PHY_MODE_USB_DEVICE) {
 		if (priv->otg_mode != USB_DR_MODE_OTG &&
 		    priv->drvdata->otg_phy_host_port_disable)
@@ -476,8 +469,6 @@ static int dwc3_meson_g12a_get_phys(struct dwc3_meson_g12a *priv)
 
 	dev_info(priv->dev, "USB2 ports: %d\n", priv->usb2_ports);
 	dev_info(priv->dev, "USB3 ports: %d\n", priv->usb3_ports);
-	if (priv->ss_select && priv->usb3_ports)
-		gpiod_set_value(priv->ss_select, 1);
 
 	return 0;
 }
@@ -494,30 +485,6 @@ static enum phy_mode dwc3_meson_g12a_get_id(struct dwc3_meson_g12a *priv)
 	return PHY_MODE_USB_HOST;
 }
 
-static int dwc3_set_vbus(struct dwc3_meson_g12a *priv, int enable)
-{
-	int ret = 0;
-
-	if (priv->vbus) {
-		if (enable) {
-			if (!priv->vbus_enabled) {
-				ret = regulator_enable(priv->vbus);
-				if (!ret)
-					priv->vbus_enabled = 1;
-			}
-		} else {
-			if (priv->vbus_enabled) {
-				priv->vbus_enabled = 0;
-				ret = regulator_disable(priv->vbus);
-			}
-		}
-	}
-	if (ret)
-		dev_err(priv->dev, "%s vbus error %d\n",
-			enable ? "enabling" : "disabling", ret);
-	return ret;
-}
-
 static int dwc3_meson_g12a_otg_mode_set(struct dwc3_meson_g12a *priv,
 					enum phy_mode mode)
 {
@@ -526,11 +493,16 @@ static int dwc3_meson_g12a_otg_mode_set(struct dwc3_meson_g12a *priv,
 	if (!priv->drvdata->otg_switch_supported || !priv->phys[USB2_OTG_PHY])
 		return -EINVAL;
 
-	if (mode == PHY_MODE_USB_HOST) {
+	if (mode == PHY_MODE_USB_HOST)
 		dev_info(priv->dev, "switching to Host Mode\n");
-	} else {
+	else
 		dev_info(priv->dev, "switching to Device Mode\n");
-		ret = dwc3_set_vbus(priv, 0);
+
+	if (priv->vbus) {
+		if (mode == PHY_MODE_USB_DEVICE)
+			ret = regulator_disable(priv->vbus);
+		else
+			ret = regulator_enable(priv->vbus);
 		if (ret)
 			return ret;
 	}
@@ -538,15 +510,11 @@ static int dwc3_meson_g12a_otg_mode_set(struct dwc3_meson_g12a *priv,
 	priv->otg_phy_mode = mode;
 
 	ret = priv->drvdata->set_phy_mode(priv, USB2_OTG_PHY, mode);
-	if (ret) {
-		dev_err(priv->dev, "set_phy_mode error %d\n", ret);
+	if (ret)
 		return ret;
-	}
 
 	dwc3_meson_g12a_usb_otg_apply_mode(priv, mode);
 
-	if (mode == PHY_MODE_USB_HOST)
-		 dwc3_set_vbus(priv, 1);
 	return 0;
 }
 
@@ -556,10 +524,14 @@ static int dwc3_meson_g12a_role_set(struct usb_role_switch *sw,
 	struct dwc3_meson_g12a *priv = usb_role_switch_get_drvdata(sw);
 	enum phy_mode mode;
 
-	dev_dbg(priv->dev, "%s: role=%d\n", __func__, role);
+	if (role == USB_ROLE_NONE)
+		return 0;
 
 	mode = (role == USB_ROLE_HOST) ? PHY_MODE_USB_HOST
 				       : PHY_MODE_USB_DEVICE;
+
+	if (mode == priv->otg_phy_mode)
+		return 0;
 
 	if (priv->drvdata->otg_phy_host_port_disable)
 		dev_warn_once(priv->dev, "Broken manual OTG switch\n");
@@ -616,13 +588,11 @@ static int dwc3_meson_g12a_otg_init(struct platform_device *pdev,
 	enum phy_mode otg_id;
 	int ret, irq;
 	struct device *dev = &pdev->dev;
-	struct fwnode_handle *ports;
 
 	if (!priv->drvdata->otg_switch_supported)
 		return 0;
 
-	ports = device_get_named_child_node(dev, "ports");
-	if (priv->otg_mode == USB_DR_MODE_OTG && !ports) {
+	if (priv->otg_mode == USB_DR_MODE_OTG) {
 		/* Ack irq before registering */
 		regmap_update_bits(priv->usb_glue_regmap, USB_R5,
 				   USB_R5_ID_DIG_IRQ, 0);
@@ -652,10 +622,8 @@ static int dwc3_meson_g12a_otg_init(struct platform_device *pdev,
 	priv->switch_desc.udc = dwc3_meson_g12_find_child(dev, "snps,dwc2");
 	priv->switch_desc.allow_userspace_control = true;
 	priv->switch_desc.set = dwc3_meson_g12a_role_set;
-	if (!ports)
-		priv->switch_desc.get = dwc3_meson_g12a_role_get;
+	priv->switch_desc.get = dwc3_meson_g12a_role_get;
 	priv->switch_desc.driver_data = priv;
-	priv->switch_desc.fwnode = dev_fwnode(dev);
 
 	priv->role_switch = usb_role_switch_register(dev, &priv->switch_desc);
 	if (IS_ERR(priv->role_switch))
@@ -751,16 +719,8 @@ static int dwc3_meson_g12a_probe(struct platform_device *pdev)
 	if (IS_ERR(base))
 		return PTR_ERR(base);
 
-	priv->apply_mode = -1;
 	priv->drvdata = of_device_get_match_data(&pdev->dev);
 	priv->dev = dev;
-
-	priv->ss_select = devm_gpiod_get_optional(dev, "ss-select", GPIOD_OUT_LOW);
-	if (IS_ERR(priv->ss_select)) {
-		if (PTR_ERR(priv->ss_select) == -EPROBE_DEFER)
-			return PTR_ERR(priv->ss_select);
-		priv->ss_select = NULL;
-	}
 
 	priv->vbus = devm_regulator_get_optional(dev, "vbus");
 	if (IS_ERR(priv->vbus)) {
@@ -801,6 +761,12 @@ static int dwc3_meson_g12a_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_disable_clks;
 
+	if (priv->vbus) {
+		ret = regulator_enable(priv->vbus);
+		if (ret)
+			goto err_disable_clks;
+	}
+
 	/* Get dr_mode */
 	priv->otg_mode = usb_get_dr_mode(dev);
 
@@ -811,13 +777,13 @@ static int dwc3_meson_g12a_probe(struct platform_device *pdev)
 
 	ret = priv->drvdata->usb_init(priv);
 	if (ret)
-		goto err_disable_clks;
+		goto err_disable_regulator;
 
 	/* Init PHYs */
 	for (i = 0 ; i < PHY_COUNT ; ++i) {
 		ret = phy_init(priv->phys[i]);
 		if (ret)
-			goto err_disable_clks;
+			goto err_disable_regulator;
 	}
 
 	/* Set PHY Power */
@@ -841,10 +807,6 @@ static int dwc3_meson_g12a_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_phys_power;
 
-	ret = dwc3_set_vbus(priv, (priv->otg_phy_mode == PHY_MODE_USB_HOST) ? 1 : 0);
-	if (ret)
-		goto err_phys_power;
-
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
 	pm_runtime_get_sync(dev);
@@ -858,6 +820,10 @@ err_phys_power:
 err_phys_exit:
 	for (i = 0 ; i < PHY_COUNT ; ++i)
 		phy_exit(priv->phys[i]);
+
+err_disable_regulator:
+	if (priv->vbus)
+		regulator_disable(priv->vbus);
 
 err_disable_clks:
 	clk_bulk_disable_unprepare(priv->drvdata->num_clks,
@@ -915,8 +881,8 @@ static int __maybe_unused dwc3_meson_g12a_suspend(struct device *dev)
 	struct dwc3_meson_g12a *priv = dev_get_drvdata(dev);
 	int i, ret;
 
-	if (priv->otg_phy_mode == PHY_MODE_USB_HOST) {
-		ret = dwc3_set_vbus(priv, 0);
+	if (priv->vbus && priv->otg_phy_mode == PHY_MODE_USB_HOST) {
+		ret = regulator_disable(priv->vbus);
 		if (ret)
 			return ret;
 	}
@@ -956,8 +922,8 @@ static int __maybe_unused dwc3_meson_g12a_resume(struct device *dev)
 			return ret;
 	}
 
-	if (priv->otg_phy_mode == PHY_MODE_USB_HOST) {
-		ret = dwc3_set_vbus(priv, 1);
+	if (priv->vbus && priv->otg_phy_mode == PHY_MODE_USB_HOST) {
+		ret = regulator_enable(priv->vbus);
 		if (ret)
 			return ret;
 	}
