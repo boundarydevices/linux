@@ -334,7 +334,7 @@ mt7915_mcu_rx_csa_notify(struct mt7915_dev *dev, struct sk_buff *skb)
 
 	c = (struct mt7915_mcu_csa_notify *)skb->data;
 
-	if (c->band_idx && dev->mt76.phy2)
+	if ((c->band_idx && !dev->phy.band_idx) && dev->mt76.phy2)
 		mphy = dev->mt76.phy2;
 
 	ieee80211_iterate_active_interfaces_atomic(mphy->hw,
@@ -353,7 +353,7 @@ mt7915_mcu_rx_thermal_notify(struct mt7915_dev *dev, struct sk_buff *skb)
 	if (t->ctrl.ctrl_id != THERMAL_PROTECT_ENABLE)
 		return;
 
-	if (t->ctrl.band_idx && dev->mt76.phy2)
+	if ((t->ctrl.band_idx && !dev->phy.band_idx) && dev->mt76.phy2)
 		mphy = dev->mt76.phy2;
 
 	phy = (struct mt7915_phy *)mphy->priv;
@@ -368,7 +368,7 @@ mt7915_mcu_rx_radar_detected(struct mt7915_dev *dev, struct sk_buff *skb)
 
 	r = (struct mt7915_mcu_rdd_report *)skb->data;
 
-	if (r->band_idx && dev->mt76.phy2)
+	if ((r->band_idx && !dev->phy.band_idx) && dev->mt76.phy2)
 		mphy = dev->mt76.phy2;
 
 	ieee80211_radar_detected(mphy->hw);
@@ -553,12 +553,7 @@ mt7915_mcu_bss_rfch_tlv(struct sk_buff *skb, struct ieee80211_vif *vif,
 	}
 
 	if (vif->bss_conf.he_support && vif->type == NL80211_IFTYPE_STATION) {
-		struct mt7915_dev *dev = phy->dev;
-		struct mt76_phy *mphy = &dev->mt76.phy;
-		bool ext_phy = phy != &dev->phy;
-
-		if (ext_phy && dev->mt76.phy2)
-			mphy = dev->mt76.phy2;
+		struct mt76_phy *mphy = phy->mt76;
 
 		ch->he_ru26_block =
 			mt7915_check_he_obss_narrow_bw_ru(mphy->hw, vif);
@@ -1241,8 +1236,7 @@ mt7915_mcu_sta_bfer_tlv(struct mt7915_dev *dev, struct sk_buff *skb,
 			struct ieee80211_vif *vif, struct ieee80211_sta *sta)
 {
 	struct mt7915_vif *mvif = (struct mt7915_vif *)vif->drv_priv;
-	struct mt7915_phy *phy =
-		mvif->mt76.band_idx ? mt7915_ext_phy(dev) : &dev->phy;
+	struct mt7915_phy *phy = mvif->phy;
 	int tx_ant = hweight8(phy->mt76->chainmask) - 1;
 	struct sta_rec_bf *bf;
 	struct tlv *tlv;
@@ -1308,8 +1302,7 @@ mt7915_mcu_sta_bfee_tlv(struct mt7915_dev *dev, struct sk_buff *skb,
 			struct ieee80211_vif *vif, struct ieee80211_sta *sta)
 {
 	struct mt7915_vif *mvif = (struct mt7915_vif *)vif->drv_priv;
-	struct mt7915_phy *phy =
-		mvif->mt76.band_idx ? mt7915_ext_phy(dev) : &dev->phy;
+	struct mt7915_phy *phy = mvif->phy;
 	int tx_ant = hweight8(phy->mt76->chainmask) - 1;
 	struct sta_rec_bfee *bfee;
 	struct tlv *tlv;
@@ -1922,6 +1915,7 @@ int mt7915_mcu_add_beacon(struct ieee80211_hw *hw,
 	struct tlv *tlv;
 	struct bss_info_bcn *bcn;
 	int len = MT7915_BEACON_UPDATE_SIZE + MAX_BEACON_SIZE;
+	bool ext_phy = phy != &dev->phy;
 
 	rskb = __mt76_connac_mcu_alloc_sta_req(&dev->mt76, &mvif->mt76,
 					       NULL, len);
@@ -1945,7 +1939,7 @@ int mt7915_mcu_add_beacon(struct ieee80211_hw *hw,
 		return -EINVAL;
 	}
 
-	if (mvif->mt76.band_idx) {
+	if (ext_phy) {
 		info = IEEE80211_SKB_CB(skb);
 		info->hw_queue |= MT_TX_HW_QUEUE_EXT_PHY;
 	}
@@ -2286,7 +2280,7 @@ int mt7915_mcu_muru_debug_get(struct mt7915_phy *phy, void *ms)
 		u8 band_idx;
 	} req = {
 		.cmd = cpu_to_le32(MURU_GET_TXC_TX_STATS),
-		.band_idx = phy != &dev->phy,
+		.band_idx = phy->band_idx,
 	};
 
 	ret = mt76_mcu_send_and_get_msg(&dev->mt76, MCU_EXT_CMD(MURU_CTRL),
@@ -2666,7 +2660,6 @@ int mt7915_mcu_set_chan_info(struct mt7915_phy *phy, int cmd)
 	struct mt7915_dev *dev = phy->dev;
 	struct cfg80211_chan_def *chandef = &phy->mt76->chandef;
 	int freq1 = chandef->center_freq1;
-	bool ext_phy = phy != &dev->phy;
 	struct {
 		u8 control_ch;
 		u8 center_ch;
@@ -2690,7 +2683,7 @@ int mt7915_mcu_set_chan_info(struct mt7915_phy *phy, int cmd)
 		.bw = mt76_connac_chan_bw(chandef),
 		.tx_streams_num = hweight8(phy->mt76->antenna_mask),
 		.rx_streams = phy->mt76->antenna_mask,
-		.band_idx = ext_phy,
+		.band_idx = phy->band_idx,
 		.channel_band = chandef->chan->band,
 	};
 
@@ -2702,7 +2695,7 @@ int mt7915_mcu_set_chan_info(struct mt7915_phy *phy, int cmd)
 		req.tx_streams_num = fls(phy->mt76->test.tx_antenna_mask);
 		req.rx_streams = phy->mt76->test.tx_antenna_mask;
 
-		if (ext_phy)
+		if (phy != &dev->phy)
 			req.rx_streams >>= dev->chainshift;
 	}
 #endif
@@ -3056,7 +3049,7 @@ int mt7915_mcu_set_thermal_throttling(struct mt7915_phy *phy, u8 state)
 		u8 rsv[2];
 	} __packed req = {
 		.ctrl = {
-			.band_idx = phy != &dev->phy,
+			.band_idx = phy->band_idx,
 		},
 	};
 	int level;
