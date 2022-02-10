@@ -73,11 +73,11 @@ static void ele_mu_rx_callback(struct mbox_client *c, void *msg)
 
 	/* Incoming command: wake up the receiver if any. */
 	if (header.tag == priv->cmd_tag) {
-		dev_info(dev, "Selecting cmd receiver\n");
+		dev_dbg(dev, "Selecting cmd receiver\n");
 		dev_ctx = priv->cmd_receiver_dev;
 	} else if (header.tag == priv->rsp_tag) {
 		if (priv->waiting_rsp_dev) {
-			dev_info(dev, "Selecting rsp waiter\n");
+			dev_dbg(dev, "Selecting rsp waiter\n");
 			dev_ctx = priv->waiting_rsp_dev;
 			is_response = true;
 		} else {
