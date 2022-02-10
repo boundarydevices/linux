@@ -6,7 +6,7 @@
 
 #include <linux/dev_printk.h>
 #include <linux/errno.h>
-#include <linux/firmware/imx/senclave_base_msg.h>
+#include <linux/firmware/imx/ele_base_msg.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
