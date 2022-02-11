@@ -40,6 +40,7 @@
 #define RSN_OUI				"\x00\x0F\xAC"	/* RSN OUI */
 #define	WME_OUI_TYPE			2
 #define WPS_OUI_TYPE			4
+#define WFA_OUI_TYPE_MBO_OCE		0x16
 
 #define VS_IE_FIXED_HDR_LEN		6
 #define WPA_IE_VERSION_LEN		2
@@ -317,6 +318,41 @@ struct wl_interface_create_v3 {
 	u8 pad[3];
 	u8 data[];			/* Optional for specific data */
 };
+
+static bool
+wl_cfgoce_has_ie(const u8 *ie, const u8 **tlvs, u32 *tlvs_len,
+		 const u8 *oui, u32 oui_len, u8 type);
+
+/* Check whether the given IE looks like WFA OCE IE. */
+#define wl_cfgoce_is_oce_ie(ie, tlvs, len)	\
+	wl_cfgoce_has_ie(ie, tlvs, len,		\
+			 (const u8 *)WFA_OUI, TLV_OUI_LEN, WFA_OUI_TYPE_MBO_OCE)
+
+/* Is any of the tlvs the expected entry? If
+ * not update the tlvs buffer pointer/length.
+ */
+static bool
+wl_cfgoce_has_ie(const u8 *ie, const u8 **tlvs, u32 *tlvs_len,
+		 const u8 *oui, u32 oui_len, u8 type)
+{
+	/* If the contents match the OUI and the type */
+	if (ie[TLV_LEN_OFF] >= oui_len + 1 &&
+	    !memcmp(&ie[TLV_BODY_OFF], oui, oui_len) &&
+	    type == ie[TLV_BODY_OFF + oui_len]) {
+		return true;
+	}
+
+	if (!tlvs)
+		return false;
+	/* point to the next ie */
+	ie += ie[TLV_LEN_OFF] + TLV_HDR_LEN;
+	/* calculate the length of the rest of the buffer */
+	*tlvs_len -= (int)(ie - *tlvs);
+	/* update the pointer to the start of the buffer */
+	*tlvs = ie;
+
+	return false;
+}
 
 static u8 nl80211_band_to_fwil(enum nl80211_band band)
 {
@@ -2357,6 +2393,43 @@ static void brcmf_set_join_pref(struct brcmf_if *ifp,
 		bphy_err(drvr, "Set join_pref error (%d)\n", err);
 }
 
+static bool
+wl_cfg80211_is_oce_ap(struct brcmf_if *ifp,
+		      struct wiphy *wiphy, const u8 *bssid_hint)
+{
+	struct brcmf_pub *drvr = ifp->drvr;
+	const struct brcmf_tlv *ie;
+	const struct cfg80211_bss_ies *ies;
+	struct cfg80211_bss *bss;
+	const u8 *parse = NULL;
+	u32 len;
+
+	bss = cfg80211_get_bss(wiphy, NULL, bssid_hint, 0, 0,
+			       IEEE80211_BSS_TYPE_ANY, IEEE80211_PRIVACY_ANY);
+	if (!bss) {
+		bphy_err(drvr, "Unable to find AP in the cache");
+		return false;
+	}
+
+	if (rcu_access_pointer(bss->ies)) {
+		ies = rcu_access_pointer(bss->ies);
+		parse = ies->data;
+		len = ies->len;
+	} else {
+		bphy_err(drvr, "ies is NULL");
+		return false;
+	}
+
+	while ((ie = brcmf_parse_tlvs(parse, len, WLAN_EID_VENDOR_SPECIFIC))) {
+		if (wl_cfgoce_is_oce_ie((const u8 *)ie,
+					(u8 const **)&parse, &len) == true) {
+			return true;
+		}
+	}
+	brcmf_dbg(TRACE, "OCE IE NOT found");
+	return false;
+}
+
 static s32
 brcmf_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 		       struct cfg80211_connect_params *sme)
@@ -2376,6 +2449,7 @@ brcmf_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 	u16 chanspec;
 	s32 err = 0;
 	u32 ssid_len;
+	bool skip_hints = ifp->drvr->settings->fw_ap_select;
 
 	brcmf_dbg(TRACE, "Enter\n");
 	if (!check_vif_up(ifp->vif))
@@ -2386,12 +2460,18 @@ brcmf_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 		return -EOPNOTSUPP;
 	}
 
-	if (sme->channel_hint) {
-		chan = sme->channel_hint;
-	}
+	/* override bssid_hint for oce networks */
+	skip_hints = (skip_hints &&
+			wl_cfg80211_is_oce_ap(ifp, wiphy, sme->bssid_hint));
+	if (skip_hints) {
+		/* Let fw choose the best AP */
+		brcmf_dbg(TRACE, "Skipping bssid & channel hint\n");
+	} else {
+		if (sme->channel_hint)
+			chan = sme->channel_hint;
 
-	if (sme->bssid_hint) {
-		sme->bssid = sme->bssid_hint;
+		if (sme->bssid_hint)
+			sme->bssid = sme->bssid_hint;
 	}
 
 	if (ifp->vif == cfg->p2p.bss_idx[P2PAPI_BSSCFG_PRIMARY].vif) {
