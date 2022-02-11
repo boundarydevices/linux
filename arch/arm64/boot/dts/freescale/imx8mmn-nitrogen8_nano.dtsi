@@ -5,10 +5,6 @@
 
 #include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk080a60a004t.dtsi"
-&mipi_cmds_ltk0680ytmdb {
-	min-hs-clock-multiple = <8>;
-};
-
 #include "panel-lcm-jm430.dtsi"
 #include "panel-m101nwwb.dtsi"
 #include "panel-com50h5n03ulc.dtsi"
