@@ -2293,6 +2293,9 @@ int sec_mipi_dsim_bind(struct device *dev, struct device *master, void *data,
 		dev_err(dev, "Unable to allocate 'bridge'\n");
 		return -ENOMEM;
 	}
+#ifdef CONFIG_COMMON_CLK
+	sec_mipi_dsim_clk_register_clk(dsim);
+#endif
 
 	/* mipi dsi host needs to be registered before bridge attach, since:
 	 * 1. Have Panel
@@ -2308,7 +2311,7 @@ int sec_mipi_dsim_bind(struct device *dev, struct device *master, void *data,
 	ret = mipi_dsi_host_register(&dsim->dsi_host);
 	if (ret) {
 		dev_err(dev, "Unable to register mipi dsi host: %d\n", ret);
-		return ret;
+		goto dsim_clk_cleanup;
 	}
 
 	dsim->bridge = bridge;
@@ -2340,9 +2343,7 @@ int sec_mipi_dsim_bind(struct device *dev, struct device *master, void *data,
 				ret = PTR_ERR(dsim->panel);
 			}
 		}
-
-		mipi_dsi_host_unregister(&dsim->dsi_host);
-		return ret;
+		goto host_unregister;
 	}
 
 panel:
@@ -2370,9 +2371,6 @@ panel:
 			goto cleanup_connector;
 	}
 
-#ifdef CONFIG_COMMON_CLK
-	sec_mipi_dsim_clk_register_clk(dsim);
-#endif
 	dev_dbg(dev, "sec-dsim bridge bind end\n");
 
 	return 0;
@@ -2381,6 +2379,10 @@ cleanup_connector:
 	drm_connector_cleanup(connector);
 host_unregister:
 	mipi_dsi_host_unregister(&dsim->dsi_host);
+dsim_clk_cleanup:
+#ifdef CONFIG_COMMON_CLK
+	sec_mipi_dsim_clk_unregister_clk(dsim);
+#endif
 	return ret;
 }
 EXPORT_SYMBOL(sec_mipi_dsim_bind);
