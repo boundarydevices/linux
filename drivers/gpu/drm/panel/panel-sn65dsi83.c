@@ -149,21 +149,11 @@ static void sn_enable_irq(struct panel_sn65dsi83 *sn)
 static int sn_get_dsi_clk_divider(struct panel_sn65dsi83 *sn)
 {
 	u32 dsi_clk_divider = 25;
-	struct clk *mipi_clk;
 	u32 mipi_clk_rate = 0;
 	u8 mipi_clk_index;
 	int ret;
 	u32 pixelclock = sn->vm.pixelclock;
 
-	if (!sn->mipi_clk) {
-		mipi_clk = devm_clk_get(sn->dev, "mipi_clk");
-		if (IS_ERR(mipi_clk)) {
-			ret = PTR_ERR(mipi_clk);
-			dev_dbg(sn->dev, "%s:devm_clk_get mipi_clk  %d\n", __func__, ret);
-		} else {
-			sn->mipi_clk = mipi_clk;
-		}
-	}
 	if (sn->mipi_clk)
 		mipi_clk_rate = clk_get_rate(sn->mipi_clk);
 	if (!mipi_clk_rate) {
