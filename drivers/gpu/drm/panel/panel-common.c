@@ -1387,6 +1387,7 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 	sn65_np = of_parse_phandle(np, "sn65dsi83", 0);
 	if (sn65_np) {
 		if (of_device_is_available(sn65_np)) {
+			panel->sn65.mipi_clk = mipi_clk;
 			err = sn65_init(dev, &panel->sn65, np, sn65_np);
 			if (err < 0)
 				goto free_ddc;
