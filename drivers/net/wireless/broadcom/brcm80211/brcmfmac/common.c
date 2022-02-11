@@ -85,6 +85,10 @@ module_param_named(ignore_probe_fail, brcmf_ignore_probe_fail, int, 0);
 MODULE_PARM_DESC(ignore_probe_fail, "always succeed probe for debugging");
 #endif
 
+static int brcmf_fw_ap_select;
+module_param_named(fw_ap_select, brcmf_fw_ap_select, int, 0400);
+MODULE_PARM_DESC(fw_ap_select, "Allow FW for AP selection");
+
 static struct brcmfmac_platform_data *brcmfmac_pdata;
 struct brcmf_mp_global_t brcmf_mp_global;
 
@@ -526,6 +530,7 @@ struct brcmf_mp_device *brcmf_get_module_param(struct device *dev,
 #ifdef DEBUG
 	settings->ignore_probe_fail = !!brcmf_ignore_probe_fail;
 #endif
+	settings->fw_ap_select = !!brcmf_fw_ap_select;
 
 	if (bus_type == BRCMF_BUSTYPE_SDIO)
 		settings->bus.sdio.txglomsz = brcmf_sdiod_txglomsz;
