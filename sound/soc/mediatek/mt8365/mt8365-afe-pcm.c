@@ -368,6 +368,12 @@ static const unsigned int mt8365_afe_backup_list[] = {
 	AFE_HDMI_OUT_END,
 	AFE_HDMI_IN_2CH_BASE,
 	AFE_HDMI_IN_2CH_END,
+	AFE_ADDA_UL_DL_CON0,
+	AFE_ADDA_DL_SRC2_CON0,
+	AFE_ADDA_DL_SRC2_CON1,
+	AFE_I2S_CON1,
+	AFE_ADDA_UL_SRC_CON0,
+	AFE_AUD_PAD_TOP,
 };
 
 static const struct snd_pcm_hardware mt8365_afe_hardware = {
