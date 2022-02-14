@@ -6397,17 +6397,11 @@ static int mt8365_afe_runtime_resume(struct device *dev)
 	return 0;
 }
 
-static int __maybe_unused mt8365_afe_dev_runtime_suspend(struct device *dev)
+static int __maybe_unused mt8365_afe_suspend(struct device *dev)
 {
 	struct mtk_base_afe *afe = dev_get_drvdata(dev);
 	struct regmap *regmap = afe->regmap;
 	int i;
-
-	dev_dbg(afe->dev, "%s suspend %d %d >>\n", __func__,
-		pm_runtime_status_suspended(dev), afe->suspended);
-
-	if (pm_runtime_status_suspended(dev) || afe->suspended)
-		return 0;
 
 	mt8365_afe_enable_main_clk(afe);
 
@@ -6422,28 +6416,17 @@ static int __maybe_unused mt8365_afe_dev_runtime_suspend(struct device *dev)
 
 	mt8365_afe_disable_main_clk(afe);
 
-	afe->suspended = true;
-
-	dev_dbg(afe->dev, "%s <<\n", __func__);
-
 	return 0;
 }
 
-static int __maybe_unused mt8365_afe_dev_runtime_resume(struct device *dev)
+static int __maybe_unused mt8365_afe_resume(struct device *dev)
 {
 	struct mtk_base_afe *afe = dev_get_drvdata(dev);
 	struct regmap *regmap = afe->regmap;
 	int i = 0;
 
-	dev_dbg(afe->dev, "%s suspend %d %d >>\n", __func__,
-		pm_runtime_status_suspended(dev), afe->suspended);
-
-	if (pm_runtime_status_suspended(dev) || !afe->suspended)
-		return 0;
-
 	if (!afe->reg_back_up) {
 		dev_dbg(dev, "%s no reg_backup\n", __func__);
-		afe->suspended = false;
 		return 0;
 	}
 
@@ -6454,6 +6437,40 @@ static int __maybe_unused mt8365_afe_dev_runtime_resume(struct device *dev)
 				 afe->reg_back_up[i]);
 
 	mt8365_afe_disable_main_clk(afe);
+
+	return 0;
+}
+
+static int __maybe_unused mt8365_afe_dev_runtime_suspend(struct device *dev)
+{
+	struct mtk_base_afe *afe = dev_get_drvdata(dev);
+
+	dev_dbg(afe->dev, "%s suspend %d %d >>\n", __func__,
+		pm_runtime_status_suspended(dev), afe->suspended);
+
+	if (pm_runtime_status_suspended(dev) || afe->suspended)
+		return 0;
+
+	mt8365_afe_suspend(dev);
+
+	afe->suspended = true;
+
+	dev_dbg(afe->dev, "%s <<\n", __func__);
+
+	return 0;
+}
+
+static int __maybe_unused mt8365_afe_dev_runtime_resume(struct device *dev)
+{
+	struct mtk_base_afe *afe = dev_get_drvdata(dev);
+
+	dev_dbg(afe->dev, "%s suspend %d %d >>\n", __func__,
+		pm_runtime_status_suspended(dev), afe->suspended);
+
+	if (pm_runtime_status_suspended(dev) || !afe->suspended)
+		return 0;
+
+	mt8365_afe_resume(dev);
 
 	afe->suspended = false;
 
@@ -6809,6 +6826,8 @@ MODULE_DEVICE_TABLE(of, mt8365_afe_pcm_dt_match);
 static const struct dev_pm_ops mt8365_afe_pm_ops = {
 	SET_RUNTIME_PM_OPS(mt8365_afe_dev_runtime_suspend,
 			   mt8365_afe_dev_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(mt8365_afe_suspend,
+				mt8365_afe_resume)
 };
 
 static struct platform_driver mt8365_afe_pcm_driver = {
