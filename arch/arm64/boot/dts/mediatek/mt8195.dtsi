@@ -1688,6 +1688,8 @@
 				"clk_sub_parent",
 				"subsys_bg3d";
 
+			operating-points-v2 = <&gpu_opp_table>;
+
 			power-domains =
 				<&spm MT8195_POWER_DOMAIN_MFG2>,
 				<&spm MT8195_POWER_DOMAIN_MFG3>,
@@ -1715,128 +1717,112 @@
 				opp-hz = /bits/ 64 <390000000>;
 				opp-hz-real = /bits/ 64 <390000000>,
 					      /bits/ 64 <390000000>;
-				opp-microvolt = <625000>,
-						<750000>;
+				opp-microvolt = <575000>;
 			};
 
 			opp-410000000 {
 				opp-hz = /bits/ 64 <410000000>;
 				opp-hz-real = /bits/ 64 <410000000>,
 					      /bits/ 64 <410000000>;
-				opp-microvolt = <631250>,
-						<750000>;
+				opp-microvolt = <581250>;
 			};
 
 			opp-431000000 {
 				opp-hz = /bits/ 64 <431000000>;
 				opp-hz-real = /bits/ 64 <431000000>,
 					      /bits/ 64 <431000000>;
-				opp-microvolt = <631250>,
-						<750000>;
+				opp-microvolt = <587500>;
 			};
 
 			opp-473000000 {
 				opp-hz = /bits/ 64 <473000000>;
 				opp-hz-real = /bits/ 64 <473000000>,
 					      /bits/ 64 <473000000>;
-				opp-microvolt = <637500>,
-						<750000>;
+				opp-microvolt = <600000>;
 			};
 
 			opp-515000000 {
 				opp-hz = /bits/ 64 <515000000>;
 				opp-hz-real = /bits/ 64 <515000000>,
 					      /bits/ 64 <515000000>;
-				opp-microvolt = <637500>,
-						<750000>;
+				opp-microvolt = <612500>;
 			};
 
 			opp-556000000 {
 				opp-hz = /bits/ 64 <556000000>;
 				opp-hz-real = /bits/ 64 <556000000>,
 					      /bits/ 64 <556000000>;
-				opp-microvolt = <643750>,
-						<750000>;
+				opp-microvolt = <625000>;
 			};
 
 			opp-598000000 {
 				opp-hz = /bits/ 64 <598000000>;
 				opp-hz-real = /bits/ 64 <598000000>,
 					      /bits/ 64 <598000000>;
-				opp-microvolt = <650000>,
-						<750000>;
+				opp-microvolt = <637500>;
 			};
 
 			opp-640000000 {
 				opp-hz = /bits/ 64 <640000000>;
 				opp-hz-real = /bits/ 64 <640000000>,
 					      /bits/ 64 <640000000>;
-				opp-microvolt = <650000>,
-						<750000>;
+				opp-microvolt = <650000>;
 			};
 
 			opp-670000000 {
 				opp-hz = /bits/ 64 <670000000>;
 				opp-hz-real = /bits/ 64 <670000000>,
 					      /bits/ 64 <670000000>;
-				opp-microvolt = <662500>,
-						<750000>;
+				opp-microvolt = <662500>;
 			};
 
 			opp-700000000 {
 				opp-hz = /bits/ 64 <700000000>;
 				opp-hz-real = /bits/ 64 <700000000>,
 					      /bits/ 64 <700000000>;
-				opp-microvolt = <675000>,
-						<750000>;
+				opp-microvolt = <675000>;
 			};
 
 			opp-730000000 {
 				opp-hz = /bits/ 64 <730000000>;
 				opp-hz-real = /bits/ 64 <730000000>,
 					      /bits/ 64 <730000000>;
-				opp-microvolt = <687500>,
-						<750000>;
+				opp-microvolt = <687500>;
 			};
 
 			opp-760000000 {
 				opp-hz = /bits/ 64 <760000000>;
 				opp-hz-real = /bits/ 64 <760000000>,
 					      /bits/ 64 <760000000>;
-				opp-microvolt = <700000>,
-						<750000>;
+				opp-microvolt = <700000>;
 			};
 
 			opp-790000000 {
 				opp-hz = /bits/ 64 <790000000>;
 				opp-hz-real = /bits/ 64 <790000000>,
 					      /bits/ 64 <790000000>;
-				opp-microvolt = <712500>,
-						<750000>;
+				opp-microvolt = <712500>;
 			};
 
 			opp-820000000 {
 				opp-hz = /bits/ 64 <820000000>;
 				opp-hz-real = /bits/ 64 <820000000>,
 					      /bits/ 64 <820000000>;
-				opp-microvolt = <725000>,
-						<750000>;
+				opp-microvolt = <725000>;
 			};
 
 			opp-850000000 {
 				opp-hz = /bits/ 64 <850000000>;
 				opp-hz-real = /bits/ 64 <850000000>,
 					      /bits/ 64 <850000000>;
-				opp-microvolt = <737500>,
-						<750000>;
+				opp-microvolt = <737500>;
 			};
 
 			opp-880000000 {
 				opp-hz = /bits/ 64 <880000000>;
 				opp-hz-real = /bits/ 64 <880000000>,
 					      /bits/ 64 <880000000>;
-				opp-microvolt = <750000>,
-						<750000>;
+				opp-microvolt = <750000>;
 			};
 		};
 
