@@ -893,23 +893,22 @@ static ssize_t mtk_dsi_host_transfer(struct mipi_dsi_host *host,
 	void *src_addr;
 	u8 irq_flag = CMD_DONE_INT_FLAG;
 	u32 dsi_mode;
+	int ret;
 
 	dsi_mode = readl(dsi->regs + DSI_MODE_CTRL);
 	if (dsi_mode & MODE) {
 		mtk_dsi_stop(dsi);
-		if (mtk_dsi_switch_to_cmd_mode(dsi, VM_DONE_INT_FLAG, 500)) {
-			recv_cnt = -EINVAL;
+		ret = mtk_dsi_switch_to_cmd_mode(dsi, VM_DONE_INT_FLAG, 500);
+		if (ret)
 			goto restore_dsi_mode;
-		}
 	}
 
 	if (MTK_DSI_HOST_IS_READ(msg->type))
 		irq_flag |= LPRX_RD_RDY_INT_FLAG;
 
-	if (mtk_dsi_host_send_cmd(dsi, msg, irq_flag) < 0) {
-		recv_cnt = -ETIME;
+	ret = mtk_dsi_host_send_cmd(dsi, msg, irq_flag);
+	if (ret)
 		goto restore_dsi_mode;
-	}
 
 	if (!MTK_DSI_HOST_IS_READ(msg->type)) {
 		recv_cnt = 0;
@@ -918,7 +917,7 @@ static ssize_t mtk_dsi_host_transfer(struct mipi_dsi_host *host,
 
 	if (!msg->rx_buf) {
 		DRM_ERROR("dsi receive buffer size may be NULL\n");
-		recv_cnt = -EINVAL;
+		ret = -EINVAL;
 		goto restore_dsi_mode;
 	}
 
@@ -950,7 +949,7 @@ restore_dsi_mode:
 		mtk_dsi_start(dsi);
 	}
 
-	return recv_cnt;
+	return ret < 0 ? ret : recv_cnt;
 }
 
 static const struct mipi_dsi_host_ops mtk_dsi_ops = {
