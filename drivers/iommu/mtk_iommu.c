@@ -1244,6 +1244,42 @@ err_larbdev_put:
 	return ret;
 }
 
+static int mtk_apu_iommu_prepare(struct mtk_iommu_data *data,
+				 struct device *dev)
+{
+	struct device_node *apunode;
+	struct platform_device *apudev;
+	struct device_link *link;
+	/* void *apudata; */
+
+	apunode = of_parse_phandle(dev->of_node, "mediatek,apu_power", 0);
+	if (!apunode) {
+		dev_warn(dev, "Can't find apu power node!\n");
+		return -EINVAL;
+	}
+	apudev = of_find_device_by_node(apunode);
+	if (!apudev) {
+		of_node_put(apunode);
+		dev_warn(dev, "Find apudev fail!\n");
+		return -EPROBE_DEFER;
+	}
+	/*
+	 * apudata = platform_get_drvdata(apudev);
+	 * if (!apudata) {
+	 *	of_node_put(apunode);
+	 *	dev_warn(dev, "Find apudata fail!\n");
+	 *	return -EPROBE_DEFER;
+	 * }
+	 */
+
+	link = device_link_add(&apudev->dev, dev,
+			DL_FLAG_STATELESS | DL_FLAG_PM_RUNTIME);
+	if (!link)
+		dev_err(dev, "Unable link %s.\n", apudev->name);
+
+	return 0;
+}
+
 static int mtk_iommu_probe(struct platform_device *pdev)
 {
 	struct mtk_iommu_data   *data;
@@ -1367,6 +1403,10 @@ static int mtk_iommu_probe(struct platform_device *pdev)
 			ret = PTR_ERR(data->pericfg);
 			goto out_runtime_disable;
 		}
+	} else if (MTK_IOMMU_IS_TYPE(data->plat_data, MTK_IOMMU_TYPE_APU)) {
+		ret = mtk_apu_iommu_prepare(data, dev);
+		if (ret)
+			goto out_runtime_disable;
 	}
 
 	platform_set_drvdata(pdev, data);
