@@ -3,6 +3,7 @@
 #define __ARM64_KVM_NVHE_IOMMU_H__
 
 #include <asm/kvm_host.h>
+#include <asm/kvm_pgtable.h>
 
 #include <kvm/iommu.h>
 
@@ -31,6 +32,9 @@ void kvm_iommu_reclaim_pages(void *p, u8 order);
 #define kvm_iommu_donate_page()		kvm_iommu_donate_pages(0, 0)
 #define kvm_iommu_donate_page_nc()	kvm_iommu_donate_pages(0, IOMMU_PAGE_NOCACHE)
 #define kvm_iommu_reclaim_page(p)	kvm_iommu_reclaim_pages(p, 0)
+
+void kvm_iommu_host_stage2_idmap(phys_addr_t start, phys_addr_t end,
+				 enum kvm_pgtable_prot prot);
 
 struct kvm_iommu_ops {
 	int (*init)(void);

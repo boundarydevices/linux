@@ -432,3 +432,8 @@ int kvm_iommu_init_device(struct kvm_hyp_iommu *iommu)
 
 	return pkvm_init_power_domain(&iommu->power_domain, &iommu_power_ops);
 }
+
+void kvm_iommu_host_stage2_idmap(phys_addr_t start, phys_addr_t end,
+				 enum kvm_pgtable_prot prot)
+{
+}
