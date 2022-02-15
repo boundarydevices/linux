@@ -1183,8 +1183,10 @@ static uint64_t va2par(vaddr_t va)
         return par;
 }
 static void get_pgprot_from_memory(pgprot_t* prot, struct dma_buf *dmabuf) {
-        uint64_t vaddr = (uint64_t)dma_buf_vmap(dmabuf);
-        if (vaddr) {
+        struct dma_buf_map map;
+        int ret = dma_buf_vmap(dmabuf, &map);
+        if (!ret) {
+             uint64_t vaddr = (uint64_t)(map.vaddr);
             uint64_t par_el1 = va2par((vaddr_t)vaddr);
             uint8_t attr = (par_el1 & 0xff00000000000000) >> 56;
             u64 mair;
@@ -1206,14 +1208,13 @@ static void get_pgprot_from_memory(pgprot_t* prot, struct dma_buf *dmabuf) {
                     *prot = __pgprot(PROT_NORMAL_NC);
                     break;
                 case 3:
-                    *prot = __pgprot(PROT_NORMAL_WT);
-                    break;
-                case 4:
                     *prot = __pgprot(PROT_DEVICE_nGnRnE);
                     break;
-                case 5:
+                case 4:
                     *prot = __pgprot(PROT_DEVICE_nGnRE);
                     break;
+                case 5:
+                    goto vunmap;
                 case 6:
                     goto vunmap;
                 case 7:
@@ -1224,7 +1225,7 @@ static void get_pgprot_from_memory(pgprot_t* prot, struct dma_buf *dmabuf) {
             }
         }
 vunmap:
-        dma_buf_vunmap(dmabuf, (uint8_t*)vaddr);
+        dma_buf_vunmap(dmabuf, &map);
 
 }
 #endif
