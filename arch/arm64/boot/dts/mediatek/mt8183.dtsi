@@ -1377,7 +1377,7 @@
 				compatible = "mediatek,mt8183-audio";
 				interrupts = <GIC_SPI 161 IRQ_TYPE_LEVEL_LOW>;
 				power-domains =
-					<&scpsys MT8183_POWER_DOMAIN_AUDIO>;
+					<&spm MT8183_POWER_DOMAIN_AUDIO>;
 				clocks = <&audiosys CLK_AUDIO_AFE>,
 					 <&audiosys CLK_AUDIO_DAC>,
 					 <&audiosys CLK_AUDIO_DAC_PREDIS>,
@@ -1574,7 +1574,7 @@
 				"clk_sub_parent",
 				"subsys_mfg_cg";
 
-			power-domains = <&scpsys MT8183_POWER_DOMAIN_MFG_CORE0>;
+			power-domains = <&spm MT8183_POWER_DOMAIN_MFG_CORE0>;
 
 			#cooling-cells = <2>;
 			cooling-min-level = <0>;
@@ -1583,12 +1583,12 @@
 
 		gpu_core1: mali_gpu_core1 {
 			compatible = "mediatek,gpu_core1";
-			power-domains = <&scpsys MT8183_POWER_DOMAIN_MFG_CORE1>;
+			power-domains = <&spm MT8183_POWER_DOMAIN_MFG_CORE1>;
 		};
 
 		gpu_core2: mali_gpu_core2 {
 			compatible = "mediatek,gpu_core2";
-			power-domains = <&scpsys MT8183_POWER_DOMAIN_MFG_2D>;
+			power-domains = <&spm MT8183_POWER_DOMAIN_MFG_2D>;
 		};
 
 		gpu_opp_table: opp_table0 {
@@ -2080,7 +2080,7 @@
 				 <&iommu M4U_PORT_HW_VDEC_PRED_WR_EXT>,
 				 <&iommu M4U_PORT_HW_VDEC_PPWRAP_EXT>;
 			mediatek,vpu = <&vcu>;
-			power-domains = <&scpsys MT8183_POWER_DOMAIN_VDEC>;
+			power-domains = <&spm MT8183_POWER_DOMAIN_VDEC>;
 			clocks = <&vdecsys CLK_VDEC_VDEC>, <&vdecsys CLK_VDEC_VDEC>;
 			clock-names = "vdec_sel", "normal";
 		};
@@ -2115,7 +2115,7 @@
 				 <&iommu M4U_PORT_VENC_REF_LUMA>,
 				 <&iommu M4U_PORT_VENC_REF_CHROMA>;
 			mediatek,vpu = <&vcu>;
-			power-domains = <&scpsys MT8183_POWER_DOMAIN_VENC>;
+			power-domains = <&spm MT8183_POWER_DOMAIN_VENC>;
 			clocks = <&vencsys CLK_VENC_VENC>;
 			clock-names = "img_venc";
 		};
@@ -2147,7 +2147,7 @@
 				 <&ipu_core0 CLK_IPU_CORE0_JTAG>;
 			clock-names = "axi", "ipu", "jtag";
 
-			power-domains = <&scpsys MT8183_POWER_DOMAIN_VPU_CORE0>;
+			power-domains = <&spm MT8183_POWER_DOMAIN_VPU_CORE0>;
 
 			status = "disabled";
 		};
@@ -2167,7 +2167,7 @@
 			       <&ipu_core1 CLK_IPU_CORE1_JTAG>;
 			clock-names = "axi", "ipu", "jtag";
 
-			power-domains = <&scpsys MT8183_POWER_DOMAIN_VPU_CORE1>;
+			power-domains = <&spm MT8183_POWER_DOMAIN_VPU_CORE1>;
 
 			status = "disabled";
 		      };
@@ -2201,7 +2201,7 @@
 						"camsys_camsv";
 			iommus = <&iommu M4U_PORT_CAM_IMGO>;
 			mediatek,larb = <&larb3>, <&larb6>;
-			power-domains = <&scpsys MT8183_POWER_DOMAIN_CAM>;
+			power-domains = <&spm MT8183_POWER_DOMAIN_CAM>;
 			status = "disabled";
 
 			ports {
@@ -2228,7 +2228,7 @@
 						"camsys_camsv";
 			iommus = <&iommu M4U_PORT_CAM_IMGO>;
 			mediatek,larb = <&larb3>, <&larb6>;
-			power-domains = <&scpsys MT8183_POWER_DOMAIN_CAM>;
+			power-domains = <&spm MT8183_POWER_DOMAIN_CAM>;
 			status = "disabled";
 
 			ports {
@@ -2255,7 +2255,7 @@
 						"camsys_camsv";
 			iommus = <&iommu M4U_PORT_CAM_IMGO>;
 			mediatek,larb = <&larb3>, <&larb6>;
-			power-domains = <&scpsys MT8183_POWER_DOMAIN_CAM>;
+			power-domains = <&spm MT8183_POWER_DOMAIN_CAM>;
 			status = "disabled";
 
 			ports {
@@ -2282,7 +2282,7 @@
 						"camsys_camsv";
 			iommus = <&iommu M4U_PORT_CAM_IMGO>;
 			mediatek,larb = <&larb3>, <&larb6>;
-			power-domains = <&scpsys MT8183_POWER_DOMAIN_CAM>;
+			power-domains = <&spm MT8183_POWER_DOMAIN_CAM>;
 			status = "disabled";
 
 			ports {
@@ -2305,7 +2305,7 @@
 			clocks = <&camsys CLK_CAM_SENINF>,
 					<&topckgen CLK_TOP_MUX_SENINF>;
 			clock-names = "cam_seninf", "top_mux_seninf";
-			power-domains = <&scpsys MT8183_POWER_DOMAIN_CAM>;
+			power-domains = <&spm MT8183_POWER_DOMAIN_CAM>;
 
 			phys = <&mipi_rx 0>, <&mipi_rx 1>, <&mipi_rx 2>,
 			       <&mipi_rx 3>, <&mipi_rx 4>;
@@ -2397,7 +2397,7 @@
 			compatible = "mediatek,mt8183-dpi";
 			reg = <0 0x14015000 0 0x1000>;
 			interrupts = <GIC_SPI 237 IRQ_TYPE_LEVEL_LOW>;
-			power-domains = <&scpsys MT8183_POWER_DOMAIN_DISP>;
+			power-domains = <&spm MT8183_POWER_DOMAIN_DISP>;
 			clocks = <&mmsys CLK_MM_DPI_IF>,
 				 <&mmsys CLK_MM_DPI_MM>,
 				 <&apmixedsys CLK_APMIXED_TVDPLL>;
