@@ -1102,7 +1102,8 @@
 		};
 
 		aal0: aal@14011000 {
-			compatible = "mediatek,mt8365-disp-aal";
+			compatible = "mediatek,mt8365-disp-aal",
+				     "mediatek,mt8183-disp-aal";
 			reg = <0 0x14011000 0 0x1000>;
 			interrupts = <GIC_SPI 166 IRQ_TYPE_LEVEL_LOW>;
 			power-domains = <&spm MT8365_POWER_DOMAIN_MM>;
