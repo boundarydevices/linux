@@ -1128,7 +1128,6 @@
 
 
 &lcdif {
-	display = <&fb_mipi>;
 	status = "okay";
 };
 
@@ -1178,10 +1177,11 @@
 	fb_mipi: panel@0 {
 		backlight = <&backlight_mipi>;
 		bits-per-color = <8>;
-		bits-per-pixel = <24>;
 		bridge-de-active = <0>;
 		bus-format = "rgb888";
-		bus-width = <24>;
+		clocks = <&mipi_dsi 0>,
+			<&clk IMX8MMN(CLK_LCDIF_PIXEL)>;
+		clock-names = "mipi_clk", "pixel_clock";
 		compatible = "panel,common";
 		dsi-format = "rgb888";
 		dsi-lanes = <4>;
