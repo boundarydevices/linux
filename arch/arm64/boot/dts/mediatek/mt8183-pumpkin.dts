@@ -108,6 +108,18 @@
 		remoteproc = <&vpu0>, <&vpu1>;
 		iova = <0 0x60000000 0 0x10000000>;
 	};
+
+	connector {
+		compatible = "hdmi-connector";
+		label = "hdmi";
+		type = "d";
+
+		port {
+			hdmi_connector_in: endpoint {
+				remote-endpoint = <&hdmi_connector_out>;
+			};
+		};
+	};
 };
 
 &auxadc {
@@ -224,9 +236,22 @@
 		reg = <0x4c>;
 		pclk-dual-edge;
 
-		port {
-			it66121_in: endpoint {
-				remote-endpoint = <&dpi_out>;
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				it66121_in: endpoint {
+					bus-width = <12>;
+					remote-endpoint = <&dpi_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				hdmi_connector_out: endpoint {
+					remote-endpoint = <&hdmi_connector_in>;
+				};
 			};
 		};
 	};
