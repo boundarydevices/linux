@@ -1270,6 +1270,10 @@
 	status = "okay";
 };
 
+&snvs_pwrkey {
+	status = "okay";
+};
+
 &uart1 { /* BT */
 	assigned-clocks = <&clk IMX8MMN(CLK_UART1)>;
 	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_80M)>;
