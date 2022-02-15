@@ -666,7 +666,7 @@
 
 &pcie {
 	status = "disabled";
-	reset-gpios = <&gpio GPIOA_8 GPIO_ACTIVE_LOW>;
+	reset-gpios = <&gpio BOOT_13 GPIO_ACTIVE_LOW>;
 };
 
 &pwm_ab {
