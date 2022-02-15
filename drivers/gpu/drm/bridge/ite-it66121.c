@@ -740,9 +740,7 @@ void it66121_bridge_mode_set(struct drm_bridge *bridge,
 		goto unlock;
 
 	/* Set TX mode to HDMI */
-	if (regmap_write(ctx->regmap, IT66121_HDMI_MODE_REG,
-			 ctx->connector->display_info.is_hdmi ?
-			 IT66121_HDMI_MODE_HDMI : 0))
+	if (regmap_write(ctx->regmap, IT66121_HDMI_MODE_REG, IT66121_HDMI_MODE_HDMI))
 		goto unlock;
 
 	if (regmap_write_bits(ctx->regmap, IT66121_CLK_BANK_REG,
