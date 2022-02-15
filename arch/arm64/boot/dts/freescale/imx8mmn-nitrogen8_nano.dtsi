@@ -1215,14 +1215,14 @@
 	status = "okay";
 };
 
-&snvs_pwrkey {
-	status = "okay";
-};
-
 &sai5 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai5>;
 	status = "disabled";
+};
+
+&snvs_pwrkey {
+	status = "okay";
 };
 
 &uart1 { /* BT */
