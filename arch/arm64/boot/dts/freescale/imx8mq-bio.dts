@@ -141,7 +141,7 @@
 		>;
 	};
 
-	pinctrl_i2c2_sn65dsi83: i2c2-sn65dsi83 {
+	pinctrl_i2c2_sn65dsi83: i2c2-sn65dsi83grp {
 		fsl,pins = <
 #define GP_I2C2_SN65DSI83_IRQ_REV0	<&gpio4 28 GPIO_ACTIVE_HIGH>
 #define GPIRQ_I2C2_SN65DSI83_REV0	<&gpio4 28 IRQ_TYPE_LEVEL_HIGH>
@@ -741,7 +741,7 @@
 &dcss {
 	status = "okay";
 
-	port@0 {
+	port {
 		dcss_out: endpoint {
 			remote-endpoint = <&hdmi_in>;
 		};
@@ -767,7 +767,7 @@
 	lane-mapping = <0xe4>;
 	status = "okay";
 
-	port@1 {
+	port {
 		hdmi_in: endpoint {
 			remote-endpoint = <&dcss_out>;
 		};
@@ -1117,20 +1117,19 @@
 			};
 		};
 
-		port {
-			panel1_in: endpoint {
-				remote-endpoint = <&mipi_dsi_out>;
-			};
-		};
-
 		mipi_to_lvds: mipi-to-lvds {
 			alias = <&mipi_to_lvds>;
 			enable-gpios = GP_I2C2_SN65DSI83_EN_REV0, GP_I2C2_SN65DSI83_EN;
 			i2c-address = <0x2c>;
 			i2c-bus = <&i2c2>;
 			interrupts-extended = GPIRQ_I2C2_SN65DSI83_REV0, GPIRQ_I2C2_SN65DSI83;
-			interrupts-gpios = GP_I2C2_SN65DSI83_IRQ_REV0, GP_I2C2_SN65DSI83_IRQ;
 			status = "disabled";
+		};
+
+		port {
+			panel1_in: endpoint {
+				remote-endpoint = <&mipi_dsi_out>;
+			};
 		};
 	};
 
@@ -1276,8 +1275,9 @@
 	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
 	non-removable;
+	vmmc-supply = <&reg_vref_3v3>;
 	vqmmc-1-8-v;
-	vmmc-supply = <&reg_vref_1v8>;
+	vqmmc-supply = <&reg_vref_1v8>;
 	status = "okay";
 };
 
