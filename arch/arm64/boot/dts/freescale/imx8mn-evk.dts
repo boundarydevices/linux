@@ -8,7 +8,6 @@
 #include "imx8mn.dtsi"
 #include "imx8mn-evk.dtsi"
 #include <dt-bindings/interrupt-controller/irq.h>
-#include "imx8mn-android.dtsi"
 
 / {
 	model = "NXP i.MX8MNano EVK board";
@@ -131,3 +130,5 @@
 &gpu {
 	status= "okay";
 };
+
+#include "imx8mn-android.dtsi"

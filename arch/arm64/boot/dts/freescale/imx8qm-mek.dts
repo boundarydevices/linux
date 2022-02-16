@@ -8,7 +8,6 @@
 
 #include <dt-bindings/usb/pd.h>
 #include "imx8qm.dtsi"
-#include "imx8qm-android.dtsi"
 
 / {
 	model = "Freescale i.MX8QM MEK";
@@ -1887,3 +1886,5 @@
 		print-buf-size = <0x80000>;
 	};
 };
+
+#include "imx8qm-android.dtsi"

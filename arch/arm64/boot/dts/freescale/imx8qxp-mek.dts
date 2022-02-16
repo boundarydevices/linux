@@ -7,9 +7,10 @@
 
 #include "imx8qxp.dtsi"
 #include "imx8x-mek.dtsi"
-#include "imx8qxp-android.dtsi"
 
 / {
 	model = "Freescale i.MX8QXP MEK";
 	compatible = "fsl,imx8qxp-mek", "fsl,imx8qxp";
 };
+
+#include "imx8qxp-android.dtsi"
