@@ -1486,7 +1486,6 @@
 	status = "disabled";
 };
 
-
 &ldb {
 	lvds-channel@0 {
 		backlight = <&backlight_lvds>;
