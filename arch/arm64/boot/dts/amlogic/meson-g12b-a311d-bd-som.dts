@@ -157,43 +157,17 @@
 	sound {
 		compatible = "amlogic,axg-sound-card";
 		model = "boundary-a311d";
-		audio-aux-devs = <&tdmout_a>, <&tdmin_b>, <&tdmout_b>;
-		audio-widgets = "Speaker", "Ext Spk",
-				"Headphone", "Headphone Jack",
-				"Microphone", "AMIC",
-				"Microphone", "AMIC2";
-		audio-routing = "Ext Spk", "WM SPK_LN",
-				"Ext Spk", "WM SPK_LP",
-				"Ext Spk", "WM SPK_RN",
-				"Ext Spk", "WM SPK_RP",
-				"Headphone Jack", "WM HP_L",
-				"Headphone Jack", "WM HP_R",
-				"WM LINPUT1", "AMIC",
-				"AMIC", "WM MICB",
-				"WM RINPUT1", "AMIC2",
-				"AMIC2", "WM MICB",
-				"TDM_B Capture", "WM Capture",
-				"WM Playback", "TDM_B Playback",
-				/*
-				 * The below routes are unchanged for all boards
-				 * But may be commented out to force a path.
-				 * ie. FRDDR_A to wolfson codec only
-				 * FRDDR_B to hdmi only
-				 */
-				/* 0-2:frddr_a-c*, 0-2:tdmout_a-c | 3-4:spdifout-b */
-				/* Wolfson path */
-				"TDMOUT_B IN 0", "FRDDR_A OUT 1",
-				/* hdmi path */
+		audio-aux-devs = <&tdmin_a>, <&tdmout_a>;
+		audio-routing = "TDMOUT_A IN 0", "FRDDR_A OUT 0",
 				"TDMOUT_A IN 1", "FRDDR_B OUT 0",
-				/* 0-2:tdmin_a-c | 3:spdifin | 4:pdmin | 6:tdmin_lb */
-				"TODDR_A IN 1", "TDMIN_B OUT",
-/* TOHDMITX I2S SRC - I2S A(separate), I2S B(together) */
-#define PLAY_HDMI_WOLFSON_TOGETHER
-#ifndef PLAY_HDMI_WOLFSON_TOGETHER
+				"TDMOUT_A IN 2", "FRDDR_C OUT 0",
 				"TDM_A Playback", "TDMOUT_A OUT",
-#endif
-				"TDM_B Playback", "TDMOUT_B OUT",
-				"TDMIN_B IN 0", "TDM_B Capture";
+				"TDMIN_A IN 0", "TDM_A Capture",
+				"TDMIN_A IN 3", "TDM_A Loopback",
+				"TODDR_A IN 0", "TDMIN_A OUT",
+				"TODDR_B IN 0", "TDMIN_A OUT",
+				"TODDR_C IN 0", "TDMIN_A OUT";
+
 		assigned-clocks = <&clkc CLKID_MPLL2>,
 				  <&clkc CLKID_MPLL0>,
 				  <&clkc CLKID_MPLL1>;
@@ -211,61 +185,39 @@
 			sound-dai = <&frddr_b>;
 		};
 
+		dai-link-2 {
+			sound-dai = <&frddr_c>;
+		};
+
 		dai-link-3 {
 			sound-dai = <&toddr_a>;
 		};
-#ifdef PLAY_HDMI_WOLFSON_TOGETHER
-		/* i2s wm8960 interface */
-		/* 8ch hdmi interface */
-		dai-link-6 {
-			dai-format = "i2s";
-			dai-tdm-slot-rx-mask-0 = <1 1>;
-			dai-tdm-slot-tx-mask-0 = <1 1>;
-			dai-tdm-slot-tx-mask-1 = <1 1>;
-			dai-tdm-slot-tx-mask-2 = <1 1>;
-			dai-tdm-slot-tx-mask-3 = <1 1>;
-			mclk-fs = <256>;
-			sound-dai = <&tdmif_b>;
 
-			codec-0 {
-				sound-dai = <&wm8960 0>;
-			};
-
-			codec-1 {
-				sound-dai = <&tohdmitx TOHDMITX_I2S_IN_B>;
-			};
+		dai-link-4 {
+			sound-dai = <&toddr_b>;
 		};
-#else
-		/* i2s wm8960 interface */
-		dai-link-6 {
-			dai-format = "i2s";
-			dai-tdm-slot-rx-mask-0 = <1 1>;
-			dai-tdm-slot-tx-mask-0 = <1 1>;
-			mclk-fs = <256>;
-			sound-dai = <&tdmif_b>;
 
-			codec {
-				sound-dai = <&wm8960 0>;
-			};
+		dai-link-5 {
+			sound-dai = <&toddr_c>;
 		};
 
 		/* 8ch hdmi interface */
-		dai-link-7 {
-			dai-format = "i2s";
-			dai-tdm-slot-tx-mask-0 = <1 1>;
-			dai-tdm-slot-tx-mask-1 = <1 1>;
-			dai-tdm-slot-tx-mask-2 = <1 1>;
-			dai-tdm-slot-tx-mask-3 = <1 1>;
-			mclk-fs = <256>;
+		dai-link-6 {
 			sound-dai = <&tdmif_a>;
+			dai-format = "i2s";
+			dai-tdm-slot-tx-mask-0 = <1 1>;
+			dai-tdm-slot-tx-mask-1 = <1 1>;
+			dai-tdm-slot-tx-mask-2 = <1 1>;
+			dai-tdm-slot-tx-mask-3 = <1 1>;
+			mclk-fs = <256>;
 
 			codec {
 				sound-dai = <&tohdmitx TOHDMITX_I2S_IN_A>;
 			};
 		};
-#endif
+
 		/* hdmi glue */
-		dai-link-8 {
+		dai-link-7 {
 			sound-dai = <&tohdmitx TOHDMITX_I2S_OUT>;
 
 			codec {
