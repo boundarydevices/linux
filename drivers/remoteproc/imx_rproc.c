@@ -740,6 +740,8 @@ static void imx_rproc_vq_work(struct work_struct *work)
 
 	rproc_vq_interrupt(priv->rproc, 0);
 	rproc_vq_interrupt(priv->rproc, 1);
+	rproc_vq_interrupt(priv->rproc, 2);
+	rproc_vq_interrupt(priv->rproc, 3);
 }
 
 static void imx_rproc_rx_callback(struct mbox_client *cl, void *msg)
