@@ -825,7 +825,7 @@
 &dcss {
 	status = "okay";
 
-	port@0 {
+	port {
 		dcss_out: endpoint {
 			remote-endpoint = <&hdmi_in>;
 		};
@@ -910,7 +910,7 @@
 	lane-mapping = <0xe4>;
 	status = "okay";
 
-	port@1 {
+	port {
 		hdmi_in: endpoint {
 			remote-endpoint = <&dcss_out>;
 		};
@@ -1202,12 +1202,6 @@
 			};
 		};
 
-		port {
-			panel1_in: endpoint {
-				remote-endpoint = <&mipi_dsi_out>;
-			};
-		};
-
 		mipi_to_lvds: mipi-to-lvds {
 			alias = <&mipi_to_lvds>;
 			enable-gpios = GP_I2C2A_SN65DSI83_EN;
@@ -1215,6 +1209,12 @@
 			i2c-bus = <&i2c2a>;
 			interrupts-extended = GPIRQ_I2C2A_SN65DSI83;
 			status = "disabled";
+		};
+
+		port {
+			panel1_in: endpoint {
+				remote-endpoint = <&mipi_dsi_out>;
+			};
 		};
 	};
 
