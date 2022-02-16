@@ -1243,7 +1243,7 @@
 
 &usb3_phy0 {
 	status = "okay";
-	vbus-supply = <&reg_usb_otg_vbus>;
+	vbus-supply = <&reg_vref_5v>;
 };
 
 &usb_dwc3_0 {
@@ -1251,10 +1251,12 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usb3_0>;
 	status = "okay";
+	vbus-supply = <&reg_usb_otg_vbus>;
 };
 
 &usb3_phy1 {
 	status = "okay";
+	vbus-supply = <&reg_vref_5v>;
 };
 
 &usb_dwc3_1 {
@@ -1263,6 +1265,7 @@
 	pinctrl-0 = <&pinctrl_usb3_1>;
 	reset-gpios = GP_USB3_1_HUB_RESET, GP_USB3_1_DN3_SD_RESET;
 	status = "okay";
+	vbus-supply = <&reg_vref_5v>;
 };
 
 &usdhc1 {
