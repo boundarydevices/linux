@@ -18,6 +18,7 @@
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
+#include <linux/gpio/consumer.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/pm_runtime.h>
@@ -267,6 +268,7 @@ struct dwc3_meson_g12a {
 	struct usb_role_switch_desc switch_desc;
 	struct usb_role_switch	*role_switch;
 	const struct dwc3_meson_g12a_drvdata *drvdata;
+	struct gpio_desc	*ss_select;
 };
 
 static int dwc3_meson_gxl_set_phy_mode(struct dwc3_meson_g12a *priv,
@@ -469,6 +471,8 @@ static int dwc3_meson_g12a_get_phys(struct dwc3_meson_g12a *priv)
 
 	dev_info(priv->dev, "USB2 ports: %d\n", priv->usb2_ports);
 	dev_info(priv->dev, "USB3 ports: %d\n", priv->usb3_ports);
+	if (priv->ss_select && priv->usb3_ports)
+		gpiod_set_value(priv->ss_select, 1);
 
 	return 0;
 }
@@ -721,6 +725,13 @@ static int dwc3_meson_g12a_probe(struct platform_device *pdev)
 
 	priv->drvdata = of_device_get_match_data(&pdev->dev);
 	priv->dev = dev;
+
+	priv->ss_select = devm_gpiod_get_optional(dev, "ss-select", GPIOD_OUT_LOW);
+	if (IS_ERR(priv->ss_select)) {
+		if (PTR_ERR(priv->ss_select) == -EPROBE_DEFER)
+			return PTR_ERR(priv->ss_select);
+		priv->ss_select = NULL;
+	}
 
 	priv->vbus = devm_regulator_get_optional(dev, "vbus");
 	if (IS_ERR(priv->vbus)) {
