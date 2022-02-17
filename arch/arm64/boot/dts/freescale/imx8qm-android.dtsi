@@ -82,3 +82,7 @@
 &{/reserved-memory/linux,cma} {
 	status = "disabled";
 };
+
+&usbotg1 {
+	dr_mode = "host";
+};
