@@ -100,6 +100,8 @@
 #define MT8183_MDP_PATH0_SOUT_SEL_WROT0		0
 #define MT8183_MDP_PATH1_SOUT_SEL_WDMA		0
 
+#define MT8183_MMSYS_SW0_RST_B			0x140
+
 static const struct mtk_mmsys_routes mmsys_mt8183_routing_table[] = {
 	{
 		DDP_COMPONENT_OVL0, DDP_COMPONENT_OVL_2L0,

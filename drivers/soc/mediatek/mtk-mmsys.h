@@ -78,8 +78,6 @@
 #define DSI_SEL_IN_RDMA				0x1
 #define DSI_SEL_IN_MASK				0x1
 
-#define MMSYS_SW0_RST_B				0x140
-
 struct mtk_mmsys_routes {
 	u32 from_comp;
 	u32 to_comp;
@@ -95,6 +93,7 @@ struct mtk_mmsys_driver_data {
 	const struct mtk_mmsys_routes *mdp_routes;
 	const unsigned int mdp_num_routes;
 	const unsigned int *mdp_isp_ctrl;
+	const u16 sw0_rst_offset;
 };
 
 /*
