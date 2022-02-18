@@ -55,17 +55,6 @@
 	};
 };
 
-&rpmsg {
-	/*
-	 * 64K for one rpmsg instance:
-	 * --0x71000000~0x7100ffff: pingpong
-	 */
-	vdev-nums = <1>;
-	reg = <0x0 0x71000000 0x0 0x10000>;
-	memory-region = <&vdevbuffer>;
-	status = "disabled";
-};
-
 &uart4 {
 	status = "disabled";
 };
