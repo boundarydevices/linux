@@ -379,7 +379,6 @@
 };
 
 &lcdif {
-	trusty;
 	status = "okay";
 };
 

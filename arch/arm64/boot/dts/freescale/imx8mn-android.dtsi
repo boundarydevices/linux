@@ -82,3 +82,8 @@
 &{/reserved-memory/linux,cma} {
 	status = "disabled";
 };
+
+&lcdif {
+	trusty;
+	status = "okay";
+};
