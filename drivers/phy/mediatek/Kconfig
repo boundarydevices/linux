@@ -79,3 +79,11 @@ config PHY_MTK_PCIE
 	help
 	  Say 'Y' here to add support for MediaTeck PCIe PHY driver,
 	  This driver support for PCIe GEN3 port.
+
+config PHY_MTK_DP
+	tristate "MediaTek DP-PHY Driver"
+	depends on ARCH_MEDIATEK || COMPILE_TEST
+	depends on OF
+	select GENERIC_PHY
+	help
+	  Support DisplayPort PHY for Mediatek SoCs.
