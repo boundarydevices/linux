@@ -298,10 +298,8 @@ int cdns_mhdp_register_cec_driver(struct device *dev)
 	int ret;
 
 	cec->adap = cec_allocate_adapter(&cdns_mhdp_cec_adap_ops, cec,
-					 CEC_NAME,
-					 CEC_CAP_PHYS_ADDR | CEC_CAP_LOG_ADDRS |
-					 CEC_CAP_TRANSMIT | CEC_CAP_PASSTHROUGH
-					 | CEC_CAP_RC, CEC_MAX_LOG_ADDRS);
+					 CEC_NAME, CEC_CAP_DEFAULTS,
+					 CEC_MAX_LOG_ADDRS);
 	ret = PTR_ERR_OR_ZERO(cec->adap);
 	if (ret)
 		return ret;
