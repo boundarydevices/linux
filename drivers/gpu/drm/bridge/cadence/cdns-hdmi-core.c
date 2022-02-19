@@ -29,6 +29,8 @@
 #include <linux/of_device.h>
 #include <linux/extcon-provider.h>
 
+#include <media/cec-notifier.h>
+
 #include "cdns-mhdp-hdcp.h"
 #include "cdns-hdcp-common.h"
 
@@ -311,6 +313,7 @@ static int cdns_hdmi_connector_get_modes(struct drm_connector *connector)
 			 edid->header[4], edid->header[5],
 			 edid->header[6], edid->header[7]);
 		drm_connector_update_edid_property(connector, edid);
+		cec_notifier_set_phys_addr_from_edid(mhdp->hdmi.cec.notifier, edid);
 		num_modes = drm_add_edid_modes(connector, edid);
 		mhdp->hdmi.hdmi_type = drm_detect_hdmi_monitor(edid) ?
 						MODE_HDMI_1_4 : MODE_DVI;
@@ -610,6 +613,7 @@ static void hotplug_work_func(struct work_struct *work)
 		/* force mode set for cable replugin to recovery HDMI2.0 video modes */
 		mhdp->force_mode_set = true;
 		enable_irq(mhdp->irq[IRQ_IN]);
+		cec_notifier_phys_addr_invalidate(mhdp->hdmi.cec.notifier);
 #ifdef CONFIG_EXTCON
 		extcon_set_state_sync(cdns_hdmi_edev, EXTCON_DISP_HDMI, 0);
 #endif
