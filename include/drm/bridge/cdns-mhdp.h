@@ -675,6 +675,7 @@ struct cdns_mhdp_cec {
 
 	struct cec_msg msg;
 	struct task_struct *cec_worker;
+	struct cec_notifier *notifier;
 };
 
 struct cdns_plat_data {
