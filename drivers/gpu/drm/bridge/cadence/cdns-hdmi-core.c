@@ -27,6 +27,8 @@
 #include <linux/mutex.h>
 #include <linux/of_device.h>
 
+#include <media/cec-notifier.h>
+
 static void hdmi_sink_config(struct cdns_mhdp_device *mhdp)
 {
 	struct drm_scdc *scdc = &mhdp->connector.base.display_info.hdmi.scdc;
@@ -264,6 +266,7 @@ static int cdns_hdmi_connector_get_modes(struct drm_connector *connector)
 			 edid->header[4], edid->header[5],
 			 edid->header[6], edid->header[7]);
 		drm_connector_update_edid_property(connector, edid);
+		cec_notifier_set_phys_addr_from_edid(mhdp->cec_notifier, edid);
 		num_modes = drm_add_edid_modes(connector, edid);
 		mhdp->hdmi.hdmi_type = drm_detect_hdmi_monitor(edid) ?
 						MODE_HDMI_1_4 : MODE_DVI;
@@ -331,6 +334,8 @@ static int cdns_hdmi_bridge_attach(struct drm_bridge *bridge)
 	struct drm_mode_config *config = &bridge->dev->mode_config;
 	struct drm_encoder *encoder = bridge->encoder;
 	struct drm_connector *connector = &mhdp->connector.base;
+	struct cec_connector_info conn_info;
+	struct cec_notifier *notifier;
 
 	connector->interlace_allowed = 1;
 	connector->polled = DRM_CONNECTOR_POLL_HPD;
@@ -353,7 +358,28 @@ static int cdns_hdmi_bridge_attach(struct drm_bridge *bridge)
 
 	drm_connector_attach_encoder(connector, encoder);
 
+	cec_fill_conn_info_from_drm(&conn_info, connector);
+
+	notifier = cec_notifier_conn_register(mhdp->dev, NULL, &conn_info);
+	if (!notifier)
+		return -ENOMEM;
+
+	mutex_lock(&mhdp->cec_notifier_mutex);
+	mhdp->cec_notifier = notifier;
+	mutex_unlock(&mhdp->cec_notifier_mutex);
+	cec_register_cec_notifier(mhdp->hdmi.cec.adap, mhdp->cec_notifier);
+
 	return 0;
+}
+
+static void cdns_hdmi_bridge_detach(struct drm_bridge *bridge)
+{
+	struct cdns_mhdp_device *mhdp = bridge->driver_private;
+
+	mutex_lock(&mhdp->cec_notifier_mutex);
+	cec_notifier_conn_unregister(mhdp->cec_notifier);
+	mhdp->cec_notifier = NULL;
+	mutex_unlock(&mhdp->cec_notifier_mutex);
 }
 
 static enum drm_mode_status
@@ -470,6 +496,7 @@ bool cdns_hdmi_bridge_mode_fixup(struct drm_bridge *bridge,
 
 static const struct drm_bridge_funcs cdns_hdmi_bridge_funcs = {
 	.attach = cdns_hdmi_bridge_attach,
+	.detach = cdns_hdmi_bridge_detach,
 	.mode_set = cdns_hdmi_bridge_mode_set,
 	.mode_valid = cdns_hdmi_bridge_mode_valid,
 	.mode_fixup = cdns_hdmi_bridge_mode_fixup,
@@ -493,6 +520,9 @@ static void hotplug_work_func(struct work_struct *work)
 		/* force mode set for cable replugin to recovery HDMI2.0 video modes */
 		mhdp->force_mode_set = true;
 		enable_irq(mhdp->irq[IRQ_IN]);
+		mutex_lock(&mhdp->cec_notifier_mutex);
+		cec_notifier_phys_addr_invalidate(mhdp->cec_notifier);
+		mutex_unlock(&mhdp->cec_notifier_mutex);
 	}
 }
 
@@ -531,6 +561,7 @@ static int __cdns_hdmi_probe(struct platform_device *pdev,
 
 	mutex_init(&mhdp->lock);
 	mutex_init(&mhdp->iolock);
+	mutex_init(&mhdp->cec_notifier_mutex);
 
 	INIT_DELAYED_WORK(&mhdp->hotplug_work, hotplug_work_func);
 

@@ -682,6 +682,8 @@ struct cdns_mhdp_device {
 
 	struct drm_dp_mst_topology_mgr mst_mgr;
 	struct delayed_work hotplug_work;
+	struct mutex cec_notifier_mutex;
+	struct cec_notifier *cec_notifier;
 
 	u32 lane_mapping;
 	bool link_up;
