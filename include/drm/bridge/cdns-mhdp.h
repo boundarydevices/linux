@@ -675,6 +675,7 @@ struct cdns_mhdp_cec {
 
 	struct cec_msg msg;
 	struct task_struct *cec_worker;
+	struct cec_notifier *notifier;
 };
 
 struct cdns_plat_data {
@@ -914,7 +915,7 @@ int cdns_hdmi_set_plugged_cb(struct cdns_mhdp_device *mhdp, hdmi_codec_plugged_c
 
 /* CEC */
 #ifdef CONFIG_DRM_CDNS_HDMI_CEC
-int cdns_mhdp_register_cec_driver(struct cdns_mhdp_cec *cec);
+int cdns_mhdp_register_cec_driver(struct cdns_mhdp_cec *cec, struct device *dev);
 int cdns_mhdp_unregister_cec_driver(struct cdns_mhdp_cec *cec);
 #endif
 
