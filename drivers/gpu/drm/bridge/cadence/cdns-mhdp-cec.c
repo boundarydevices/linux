@@ -16,6 +16,7 @@
 #include <linux/kthread.h>
 #include <linux/freezer.h>
 #include <drm/bridge/cdns-mhdp.h>
+#include <media/cec-notifier.h>
 
 #define CEC_NAME	"cdns-mhdp-cec"
 
@@ -327,18 +328,20 @@ int cdns_mhdp_register_cec_driver(struct cdns_mhdp_cec *cec)
 	int ret;
 
 	cec->adap = cec_allocate_adapter(&cdns_mhdp_cec_adap_ops, cec,
-					 CEC_NAME,
-					 CEC_CAP_PHYS_ADDR | CEC_CAP_LOG_ADDRS |
-					 CEC_CAP_TRANSMIT | CEC_CAP_PASSTHROUGH
-					 | CEC_CAP_RC, CEC_MAX_LOG_ADDRS);
+					 CEC_NAME, CEC_CAP_DEFAULTS,
+					 CEC_MAX_LOG_ADDRS);
 	ret = PTR_ERR_OR_ZERO(cec->adap);
 	if (ret)
 		return ret;
-	ret = cec_register_adapter(cec->adap, cec->dev);
-	if (ret) {
-		cec_delete_adapter(cec->adap);
-		return ret;
+	cec->notifier = cec_notifier_cec_adap_register(cec->dev, NULL, cec->adap);
+	if (!cec->notifier) {
+		ret = -ENOMEM;
+		goto exit1;
 	}
+
+	ret = cec_register_adapter(cec->adap, cec->dev);
+	if (ret)
+		goto exit2;
 
 	cec->cec_worker = kthread_create(mhdp_cec_poll_worker, cec, "cdns-mhdp-cec");
 	if (IS_ERR(cec->cec_worker))
@@ -348,6 +351,12 @@ int cdns_mhdp_register_cec_driver(struct cdns_mhdp_cec *cec)
 
 	dev_dbg(cec->dev, "CEC successfuly probed\n");
 	return 0;
+exit2:
+	cec_notifier_cec_adap_unregister(cec->notifier, cec->adap);
+exit1:
+	cec_delete_adapter(cec->adap);
+	dev_err(cec->dev, "CEC controller registration failed\n");
+	return ret;
 }
 
 int cdns_mhdp_unregister_cec_driver(struct cdns_mhdp_cec *cec)
@@ -356,6 +365,7 @@ int cdns_mhdp_unregister_cec_driver(struct cdns_mhdp_cec *cec)
 		kthread_stop(cec->cec_worker);
 		cec->cec_worker = NULL;
 	}
+	cec_notifier_cec_adap_unregister(cec->notifier, cec->adap);
 	cec_unregister_adapter(cec->adap);
 	return 0;
 }
