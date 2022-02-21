@@ -259,6 +259,10 @@ static int get_ssusb_rscs(struct platform_device *pdev, struct ssusb_mtk *ssusb)
 	if (IS_ERR(ssusb->ippc_base))
 		return PTR_ERR(ssusb->ippc_base);
 
+	ssusb->mac_base = devm_platform_ioremap_resource_byname(pdev, "mac");
+	if (IS_ERR(ssusb->mac_base))
+		return PTR_ERR(ssusb->mac_base);
+
 	ssusb->wakeup_irq = platform_get_irq_byname_optional(pdev, "wakeup");
 	if (ssusb->wakeup_irq == -EPROBE_DEFER)
 		return ssusb->wakeup_irq;

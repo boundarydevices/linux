@@ -939,16 +939,10 @@ int ssusb_gadget_init(struct ssusb_mtk *ssusb)
 	}
 	dev_info(dev, "irq %d\n", mtu->irq);
 
-	mtu->mac_base = devm_platform_ioremap_resource_byname(pdev, "mac");
-	if (IS_ERR(mtu->mac_base)) {
-		dev_err(dev, "error mapping memory for dev mac\n");
-		return PTR_ERR(mtu->mac_base);
-	}
-
 	spin_lock_init(&mtu->lock);
 	mtu->dev = dev;
 	mtu->ippc_base = ssusb->ippc_base;
-	ssusb->mac_base	= mtu->mac_base;
+	mtu->mac_base = ssusb->mac_base;
 	ssusb->u3d = mtu;
 	mtu->ssusb = ssusb;
 	mtu->max_speed = usb_get_maximum_speed(dev);
