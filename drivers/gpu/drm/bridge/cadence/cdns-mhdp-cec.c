@@ -323,7 +323,7 @@ static const struct cec_adap_ops cdns_mhdp_cec_adap_ops = {
 	.adap_transmit = mhdp_cec_adap_transmit,
 };
 
-int cdns_mhdp_register_cec_driver(struct cdns_mhdp_cec *cec, struct device *dev)
+int cdns_mhdp_register_cec_driver(struct cdns_mhdp_cec *cec)
 {
 	int ret;
 
@@ -333,7 +333,7 @@ int cdns_mhdp_register_cec_driver(struct cdns_mhdp_cec *cec, struct device *dev)
 	ret = PTR_ERR_OR_ZERO(cec->adap);
 	if (ret)
 		return ret;
-	cec->notifier = cec_notifier_cec_adap_register(dev, NULL, cec->adap);
+	cec->notifier = cec_notifier_cec_adap_register(cec->dev, NULL, cec->adap);
 	if (!cec->notifier) {
 		ret = -ENOMEM;
 		goto exit1;
@@ -355,7 +355,7 @@ exit2:
 	cec_notifier_cec_adap_unregister(cec->notifier, cec->adap);
 exit1:
 	cec_delete_adapter(cec->adap);
-	dev_err(dev, "CEC controller registration failed\n");
+	dev_err(cec->dev, "CEC controller registration failed\n");
 	return ret;
 }
 

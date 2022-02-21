@@ -868,7 +868,7 @@ static int __cdns_hdmi_probe(struct platform_device *pdev,
 	/* register cec driver */
 #ifdef CONFIG_DRM_CDNS_HDMI_CEC
 	cdns_mhdp_cec_init(mhdp);
-	cdns_mhdp_register_cec_driver(&mhdp->hdmi.cec, dev);
+	cdns_mhdp_register_cec_driver(&mhdp->hdmi.cec);
 #endif
 
 	return 0;
