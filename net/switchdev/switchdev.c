@@ -563,7 +563,7 @@ static int __switchdev_handle_port_obj_add(struct net_device *dev,
 				      struct netlink_ext_ack *extack))
 {
 	struct switchdev_notifier_info *info = &port_obj_info->info;
-	struct net_device *br, *lower_dev;
+	struct net_device *br, *lower_dev, *switchdev;
 	struct netlink_ext_ack *extack;
 	struct list_head *iter;
 	int err = -EOPNOTSUPP;
@@ -613,7 +613,11 @@ static int __switchdev_handle_port_obj_add(struct net_device *dev,
 	if (!br || !netif_is_bridge_master(br))
 		return err;
 
-	if (!switchdev_lower_dev_find(br, check_cb, foreign_dev_check_cb))
+	switchdev = switchdev_lower_dev_find(br, check_cb, foreign_dev_check_cb);
+	if (!switchdev)
+		return err;
+
+	if (!foreign_dev_check_cb(switchdev, dev))
 		return err;
 
 	return __switchdev_handle_port_obj_add(br, port_obj_info, check_cb,
@@ -673,7 +677,7 @@ static int __switchdev_handle_port_obj_del(struct net_device *dev,
 				      const struct switchdev_obj *obj))
 {
 	struct switchdev_notifier_info *info = &port_obj_info->info;
-	struct net_device *br, *lower_dev;
+	struct net_device *br, *lower_dev, *switchdev;
 	struct list_head *iter;
 	int err = -EOPNOTSUPP;
 
@@ -720,7 +724,11 @@ static int __switchdev_handle_port_obj_del(struct net_device *dev,
 	if (!br || !netif_is_bridge_master(br))
 		return err;
 
-	if (!switchdev_lower_dev_find(br, check_cb, foreign_dev_check_cb))
+	switchdev = switchdev_lower_dev_find(br, check_cb, foreign_dev_check_cb);
+	if (!switchdev)
+		return err;
+
+	if (!foreign_dev_check_cb(switchdev, dev))
 		return err;
 
 	return __switchdev_handle_port_obj_del(br, port_obj_info, check_cb,
