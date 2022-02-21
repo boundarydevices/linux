@@ -138,7 +138,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&u3_p0_vbus>;
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
-	mediatek,force-vbus;
 	dr_mode = "peripheral";
 	mediatek,usb3-drd;
 	usb-role-switch;
