@@ -40,7 +40,8 @@
 #define MFG_DEBUG_TOP 0x178
 #define BUS_IDLE_BIT 0x4
 #define MFG_TIMESTAMP 0x130
-#define TOP_TSVALUEB_EN 0x00000001
+#define TOP_TSVALUEB_EN 0b00000001
+#define TIMER_SEL 0b00000010
 
 /**
  * Maximum frequency GPU will be clocked at. Given in kHz.
@@ -193,10 +194,12 @@ static void enable_timestamp_register(struct kbase_device *kbdev)
 {
 	struct mfg_base *mfg = kbdev->platform_context;
 
-	/* MFG_TIMESTAMP (0x13fb_f130) bit [0:0]: TOP_TSVALUEB_EN,
-	 * write 1 into 0x13fb_f130 bit 0 to enable timestamp register
+	/* MFG_TIMESTAMP (0x13fb_f130):
+	 * bit[0]: TOP_TSVALUEB_EN. Set 1 to enable SOC timer; Set 0 to enable MFG timer
+	 * bit[1]: TIMER_SEL. Set 1 to enable mali timestamp
+	 * write 1 into 0x13fb_f130 bit 0 and bit 1 to enable timestamp register
 	 */
-	writel(TOP_TSVALUEB_EN, mfg->g_mfg_base + MFG_TIMESTAMP);
+	writel(TOP_TSVALUEB_EN+TIMER_SEL, mfg->g_mfg_base + MFG_TIMESTAMP);
 }
 
 static void *get_mfg_base(const char *node_name)
