@@ -160,6 +160,8 @@ int drm_panel_enable(struct drm_panel *panel)
 		if (ret < 0)
 			return ret;
 	}
+	if (panel && panel->funcs && panel->funcs->enable2)
+		return 0;
 
 	ret = backlight_enable(panel->backlight);
 	if (ret < 0)
@@ -182,8 +184,18 @@ EXPORT_SYMBOL(drm_panel_enable);
  */
 int drm_panel_enable2(struct drm_panel *panel)
 {
-	if (panel && panel->funcs && panel->funcs->enable2)
-		return panel->funcs->enable2(panel);
+	int ret;
+
+	if (panel && panel->funcs && panel->funcs->enable2) {
+		ret = panel->funcs->enable2(panel);
+		if (ret < 0)
+			return ret;
+		ret = backlight_enable(panel->backlight);
+		if (ret < 0)
+			DRM_DEV_INFO(panel->dev, "failed to enable backlight: %d\n",
+				     ret);
+		return ret;
+	}
 
 	return panel ? -ENOSYS : -EINVAL;
 }
