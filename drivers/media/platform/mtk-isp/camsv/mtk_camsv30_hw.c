@@ -41,8 +41,8 @@ static void fmt_to_sparams(u32 mbus_fmt, struct mtk_cam_sparams *sparams)
 		sparams->w_factor = 1;
 		sparams->module_en_pak = 0x4;
 		sparams->fmt_sel = 0x2;
-		sparams->pak = 0x12;
-		sparams->imgo_stride = 0x01030000;
+		sparams->pak = 0x5;
+		sparams->imgo_stride = 0x000B0000;
 		break;
 	case MEDIA_BUS_FMT_SBGGR10_1X10:
 	case MEDIA_BUS_FMT_SGBRG10_1X10:
@@ -51,8 +51,8 @@ static void fmt_to_sparams(u32 mbus_fmt, struct mtk_cam_sparams *sparams)
 		sparams->w_factor = 1;
 		sparams->module_en_pak = 0x4;
 		sparams->fmt_sel = 0x1;
-		sparams->pak = 0x11;
-		sparams->imgo_stride = 0x01030000;
+		sparams->pak = 0x6;
+		sparams->imgo_stride = 0x000B0000;
 		break;
 	case MEDIA_BUS_FMT_SBGGR8_1X8:
 	case MEDIA_BUS_FMT_SGBRG8_1X8:
@@ -61,8 +61,8 @@ static void fmt_to_sparams(u32 mbus_fmt, struct mtk_cam_sparams *sparams)
 		sparams->w_factor = 1;
 		sparams->module_en_pak = 0x4;
 		sparams->fmt_sel = 0x0;
-		sparams->pak = 0x10;
-		sparams->imgo_stride = 0x01030000;
+		sparams->pak = 0x7;
+		sparams->imgo_stride = 0x000B0000;
 		break;
 	case MEDIA_BUS_FMT_UYVY8_1X16:
 	case MEDIA_BUS_FMT_VYUY8_1X16:
@@ -72,7 +72,7 @@ static void fmt_to_sparams(u32 mbus_fmt, struct mtk_cam_sparams *sparams)
 		sparams->module_en_pak = 0x8;
 		sparams->fmt_sel = 0x1000003;
 		sparams->pak = 0x0;
-		sparams->imgo_stride = 0x01010000;
+		sparams->imgo_stride = 0x00090000;
 		break;
 	default:
 		break;
