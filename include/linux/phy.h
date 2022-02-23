@@ -779,7 +779,8 @@ struct phy_driver {
 	/**
 	 * @validate_inband_aneg: Report what types of in-band auto-negotiation
 	 * are available for the given PHY interface type. Returns a bit mask
-	 * of type enum phy_inband_aneg.
+	 * of type enum phy_inband_aneg. Returning negative error codes is not
+	 * permitted.
 	 */
 	int (*validate_inband_aneg)(struct phy_device *phydev,
 				    phy_interface_t interface);
