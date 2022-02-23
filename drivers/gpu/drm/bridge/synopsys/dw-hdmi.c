@@ -19,6 +19,7 @@
 #include <linux/regmap.h>
 #include <linux/dma-mapping.h>
 #include <linux/spinlock.h>
+#include <linux/extcon-provider.h>
 
 #include <media/cec-notifier.h>
 
@@ -38,6 +39,14 @@
 #include "dw-hdmi-audio.h"
 #include "dw-hdmi-cec.h"
 #include "dw-hdmi.h"
+
+#ifdef CONFIG_EXTCON
+static const unsigned int dwhdmi_extcon_cables[] = {
+	EXTCON_DISP_HDMI,
+	EXTCON_NONE,
+};
+struct extcon_dev *dwhdmi_edev;
+#endif
 
 #define DDC_CI_ADDR		0x37
 #define DDC_SEGMENT_ADDR	0x30
@@ -3156,6 +3165,12 @@ static irqreturn_t dw_hdmi_irq(int irq, void *dev_id)
 			status == connector_status_connected ?
 			"plugin" : "plugout");
 
+#ifdef CONFIG_EXTCON
+		if (status == connector_status_connected)
+			extcon_set_state_sync(dwhdmi_edev, EXTCON_DISP_HDMI, 1);
+		else
+			extcon_set_state_sync(dwhdmi_edev, EXTCON_DISP_HDMI, 0);
+#endif
 		if (hdmi->bridge.dev) {
 			drm_helper_hpd_irq_event(hdmi->bridge.dev);
 			drm_bridge_hpd_notify(&hdmi->bridge, status);
@@ -3518,6 +3533,19 @@ struct dw_hdmi *dw_hdmi_probe(struct platform_device *pdev,
 		ret = irq;
 		goto err_iahb;
 	}
+
+#ifdef CONFIG_EXTCON
+	dwhdmi_edev = devm_extcon_dev_allocate(&pdev->dev, dwhdmi_extcon_cables);
+	if (IS_ERR(dwhdmi_edev)) {
+		dev_err(&pdev->dev, "failed to allocate extcon device\n");
+		goto fail;
+	}
+	if (devm_extcon_dev_register(&pdev->dev,dwhdmi_edev) < 0) {
+		dev_err(&pdev->dev, "failed to register extcon device\n");
+		goto fail;
+	}
+fail:
+#endif
 
 	ret = devm_request_threaded_irq(dev, irq, dw_hdmi_hardirq,
 					dw_hdmi_irq, IRQF_SHARED,
