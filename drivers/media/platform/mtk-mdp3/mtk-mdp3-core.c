@@ -1089,6 +1089,7 @@ int mdp_vpu_get_locked(struct mdp_dev *mdp)
 {
 	int ret = 0;
 
+	mutex_lock(&mdp->vpu_lock);
 	if (mdp->vpu_count++ == 0) {
 		ret = rproc_boot(mdp->rproc_handle);
 		if (ret) {
@@ -1109,6 +1110,7 @@ int mdp_vpu_get_locked(struct mdp_dev *mdp)
 			goto err_init_vpu;
 		}
 	}
+	mutex_unlock(&mdp->vpu_lock);
 	return 0;
 
 err_init_vpu:
@@ -1121,10 +1123,12 @@ err_load_vpu:
 
 void mdp_vpu_put_locked(struct mdp_dev *mdp)
 {
+	mutex_lock(&mdp->vpu_lock);
 	if (--mdp->vpu_count == 0) {
 		mdp_vpu_dev_deinit(&mdp->vpu);
 		mdp_vpu_unregister(mdp);
 	}
+	mutex_unlock(&mdp->vpu_lock);
 }
 
 void mdp_video_device_release(struct video_device *vdev)
