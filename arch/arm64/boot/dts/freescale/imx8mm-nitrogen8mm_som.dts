@@ -6,6 +6,10 @@
 #define TOUCHSCREEN_I2C_BUS	i2c4
 #include "imx8mm-nitrogen8mm.dts"
 
+#ifndef SKIP_MIPI_PANELS
+#include "panel-dmt055fhnmcmi.dtsi"
+#endif
+
 &iomuxc {
 	/delete-property/ pinctrl-names;
 	/delete-property/ pinctrl-0;
@@ -129,6 +133,12 @@
 	model = "Boundary Devices i.MX8MMini Nitrogen8MM Som";
 	compatible = "boundary,imx8mm-nitrogen8mm_som", "fsl,imx8mm";
 
+#ifndef SKIP_MIPI_PANELS
+	aliases {
+		ts_goodix2 = &ts_goodix2;
+	};
+#endif
+
 	mipi_xclk: mipi-xclk {
 		assigned-clocks = <&clk IMX8MMN(CLK_PWM4)>;
 		assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_40M)>;
@@ -155,6 +165,21 @@
 };
 
 &i2c2 {
+#ifndef SKIP_MIPI_PANELS
+	ts_goodix2: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		display = <&display_subsystem>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_gt911>;
+		reg = <0x5d>;
+		reset-gpios = GP_GT911_RESET;
+		status = "disabled";
+	};
+#endif
+
 	rtc@68 {
 		compatible = "microcrystal,rv4162";
 		pinctrl-names = "default";
