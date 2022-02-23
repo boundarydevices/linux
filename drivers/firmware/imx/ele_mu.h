@@ -50,6 +50,10 @@
 #define DEFAULT_MESSAGING_TAG_COMMAND           (0x17u)
 #define DEFAULT_MESSAGING_TAG_RESPONSE          (0xe1u)
 
+#define SECO_MU_IO_FLAGS_IS_INPUT	(0x01u)
+#define SECO_MU_IO_FLAGS_USE_SEC_MEM	(0x02u)
+#define SECO_MU_IO_FLAGS_USE_SHORT_ADDR	(0x04u)
+
 struct ele_obuf_desc {
 	u8 *out_ptr;
 	u8 *out_usr_ptr;
@@ -120,6 +124,7 @@ struct ele_mu_priv {
 	 */
 	struct mutex mu_cmd_lock;
 	struct device *dev;
+	u32 ele_mu_did;
 	u32 ele_mu_id;
 	u8 cmd_tag;
 	u8 rsp_tag;
