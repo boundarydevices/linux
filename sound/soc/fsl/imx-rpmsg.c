@@ -9,6 +9,7 @@
 #include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/clk.h>
+#include <linux/extcon-provider.h>
 #include <sound/soc.h>
 #include <sound/jack.h>
 #include <sound/control.h>
@@ -31,6 +32,13 @@ static const struct snd_soc_dapm_widget imx_rpmsg_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_MIC("Main MIC", NULL),
 };
+#ifdef CONFIG_EXTCON
+struct extcon_dev *rpmsg_edev;
+static const unsigned int imx_rpmsg_extcon_cables[] = {
+	EXTCON_JACK_LINE_OUT,
+	EXTCON_NONE,
+};
+#endif
 
 static int imx_rpmsg_late_probe(struct snd_soc_card *card)
 {
@@ -194,6 +202,21 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	snd_soc_card_jack_new(&data->card, "Headphone Jack", SND_JACK_HEADPHONE,
 			      &data->hp_jack.jack, &data->hp_jack.pin, 1);
 	snd_soc_jack_report(&data->hp_jack.jack, SND_JACK_HEADPHONE, SND_JACK_HEADPHONE);
+
+#ifdef CONFIG_EXTCON
+	rpmsg_edev  = devm_extcon_dev_allocate(&pdev->dev, imx_rpmsg_extcon_cables);
+	if (IS_ERR(rpmsg_edev)) {
+		dev_err(&pdev->dev, "failed to allocate extcon device\n");
+		goto fail;
+	}
+	ret = devm_extcon_dev_register(&pdev->dev,rpmsg_edev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to register extcon device\n");
+		goto fail;
+	}
+	extcon_set_state_sync(rpmsg_edev, EXTCON_JACK_LINE_OUT, 1);
+#endif
+
 fail:
 	pdev->dev.of_node = NULL;
 	return ret;
