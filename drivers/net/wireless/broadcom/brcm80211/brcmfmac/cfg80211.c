@@ -676,7 +676,7 @@ static int brcmf_cfg80211_request_sta_if(struct brcmf_if *ifp, u8 *macaddr)
 				       &iface_v1,
 				       sizeof(iface_v1));
 	if (err) {
-		brcmf_info("failed to create interface(v1), err=%d\n",
+		brcmf_dbg(INFO, "failed to create interface(v1), err=%d\n",
 			   err);
 	} else {
 		brcmf_dbg(INFO, "interface created(v1)\n");
@@ -697,7 +697,7 @@ static int brcmf_cfg80211_request_sta_if(struct brcmf_if *ifp, u8 *macaddr)
 				       &iface_v2,
 				       sizeof(iface_v2));
 	if (err) {
-		brcmf_info("failed to create interface(v2), err=%d\n",
+		brcmf_dbg(INFO, "failed to create interface(v2), err=%d\n",
 			   err);
 	} else {
 		brcmf_dbg(INFO, "interface created(v2)\n");
@@ -771,7 +771,7 @@ static int brcmf_cfg80211_request_ap_if(struct brcmf_if *ifp)
 				       &iface_v1,
 				       sizeof(iface_v1));
 	if (err) {
-		brcmf_info("failed to create interface(v1), err=%d\n",
+		brcmf_dbg(INFO, "failed to create interface(v1), err=%d\n",
 			   err);
 	} else {
 		brcmf_dbg(INFO, "interface created(v1)\n");
@@ -790,7 +790,7 @@ static int brcmf_cfg80211_request_ap_if(struct brcmf_if *ifp)
 				       &iface_v2,
 				       sizeof(iface_v2));
 	if (err) {
-		brcmf_info("failed to create interface(v2), err=%d\n",
+		brcmf_dbg(INFO, "failed to create interface(v2), err=%d\n",
 			   err);
 	} else {
 		brcmf_dbg(INFO, "interface created(v2)\n");
