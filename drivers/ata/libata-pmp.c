@@ -12,6 +12,7 @@
 #include <linux/slab.h>
 #include "libata.h"
 #include "libata-transport.h"
+#include "ahci.h"
 
 const struct ata_port_operations sata_pmp_port_ops = {
 	.inherits		= &sata_port_ops,
@@ -253,8 +254,36 @@ static const char *sata_pmp_spec_rev_str(const u32 *gscr)
 	return "<unknown>";
 }
 
-#define PMP_GSCR_SII_POL 129
+#ifdef CONFIG_AHCI_IMX_PMP
+struct hotplug_priv {
+	struct ata_port *ap;
+	void __iomem *port_mmio;
+};
+struct hotplug_priv hpriv;
 
+#define TIMER_INTERVAL  (2)
+static int poll_thread(void *t)
+{
+	u32 rc;
+	struct ata_port *ap = hpriv.ap;
+
+	for (;;) {
+		rc = ata_wait_register(ap, hpriv.port_mmio + PORT_SCR_NTF,
+					0x8000, 0, 1, 2);
+
+		if (rc == 0)
+			continue;
+
+		DPRINTK("----- %s %s %d  hotplug detected ----\n", __FILE__,__func__,__LINE__);
+		hpriv.ap->flags |= (1 << 31);
+		sata_async_notification(hpriv.ap);
+	}
+
+	return 0;
+}
+#endif
+
+#define PMP_GSCR_SII_POL 129
 static int sata_pmp_configure(struct ata_device *dev, int print_info)
 {
 	struct ata_port *ap = dev->link->ap;
@@ -323,6 +352,15 @@ static int sata_pmp_configure(struct ata_device *dev, int print_info)
 				"Asynchronous notification not supported, "
 				"hotplug won't work on fan-out ports. Use warm-plug instead.\n");
 	}
+
+#ifdef CONFIG_AHCI_IMX_PMP
+	/* create a polling thread for hotplug */
+#if 1
+	hpriv.ap = ap;
+	hpriv.port_mmio = ahci_port_base(ap);
+	kernel_thread(poll_thread, (void *)ap, CLONE_SIGHAND | SIGCHLD);
+#endif
+#endif
 
 	return 0;
 
@@ -1102,6 +1140,10 @@ static int sata_pmp_eh_recover(struct ata_port *ap)
  */
 void sata_pmp_error_handler(struct ata_port *ap)
 {
+#ifdef CONFIG_AHCI_IMX_PMP
+	if (system_state >= SYSTEM_RUNNING)
+		ap->flags |= (1 << 31);
+#endif
 	ata_eh_autopsy(ap);
 	ata_eh_report(ap);
 	sata_pmp_eh_recover(ap);
