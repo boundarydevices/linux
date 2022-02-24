@@ -70,6 +70,7 @@ struct meson_pcie {
 	struct meson_pcie_clk_res clk_res;
 	struct meson_pcie_rc_reset mrst;
 	struct gpio_desc *reset_gpio;
+	struct gpio_desc *ss_select;
 	struct phy *phy;
 };
 
@@ -419,6 +420,13 @@ static int meson_pcie_probe(struct platform_device *pdev)
 	if (IS_ERR(mp->reset_gpio)) {
 		dev_err(dev, "get reset gpio failed\n");
 		return PTR_ERR(mp->reset_gpio);
+	}
+
+	mp->ss_select = devm_gpiod_get_optional(dev, "ss-select", GPIOD_OUT_LOW);
+	if (IS_ERR(mp->ss_select)) {
+		if (PTR_ERR(mp->ss_select) == -EPROBE_DEFER)
+			return PTR_ERR(mp->ss_select);
+		mp->ss_select = NULL;
 	}
 
 	ret = meson_pcie_get_resets(mp);
