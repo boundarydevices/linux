@@ -261,10 +261,11 @@ static void *secure_heap_do_vmap(struct secure_heap_buffer *buffer)
 	return vaddr;
 }
 
-static void *secure_heap_vmap(struct dma_buf *dmabuf)
+static int secure_heap_vmap(struct dma_buf *dmabuf, struct dma_buf_map *map)
 {
 	struct secure_heap_buffer *buffer = dmabuf->priv;
 	void *vaddr;
+	int ret = 0;
 
 	mutex_lock(&buffer->lock);
 	if (buffer->vmap_cnt) {
@@ -274,18 +275,21 @@ static void *secure_heap_vmap(struct dma_buf *dmabuf)
 	}
 
 	vaddr = secure_heap_do_vmap(buffer);
-	if (IS_ERR(vaddr))
+	if (IS_ERR(vaddr)) {
+		ret = PTR_ERR(vaddr);
 		goto out;
+	}
 
 	buffer->vaddr = vaddr;
 	buffer->vmap_cnt++;
+	dma_buf_map_set_vaddr(map, buffer->vaddr);
 out:
 	mutex_unlock(&buffer->lock);
 
-	return vaddr;
+	return ret;
 }
 
-static void secure_heap_vunmap(struct dma_buf *dmabuf, void *vaddr)
+static void secure_heap_vunmap(struct dma_buf *dmabuf, struct dma_buf_map *map)
 {
 	struct secure_heap_buffer *buffer = dmabuf->priv;
 
@@ -295,6 +299,7 @@ static void secure_heap_vunmap(struct dma_buf *dmabuf, void *vaddr)
 		buffer->vaddr = NULL;
 	}
 	mutex_unlock(&buffer->lock);
+	dma_buf_map_clear(map);
 }
 
 static int secure_heap_zero_buffer(struct secure_heap_buffer *buffer)

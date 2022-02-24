@@ -1223,10 +1223,9 @@ static void get_pgprot_from_memory(pgprot_t* prot, struct dma_buf *dmabuf) {
                     printk("attr is not in the mair register \n");
                     goto vunmap;
             }
-        }
 vunmap:
         dma_buf_vunmap(dmabuf, &map);
-
+        }
 }
 #endif
 
