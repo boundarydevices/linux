@@ -2009,79 +2009,6 @@ static int mtk_dp_train_start(struct mtk_dp *mtk_dp)
 	return -ETIMEDOUT;
 }
 
-static void mtk_dp_train_handler(struct mtk_dp *mtk_dp)
-{
-	int ret = 0;
-	int i = 50;
-
-	do {
-		if (mtk_dp->train_state == MTK_DP_TRAIN_STATE_NORMAL)
-			continue;
-
-		switch (mtk_dp->train_state) {
-		case MTK_DP_TRAIN_STATE_STARTUP:
-			mtk_dp->train_state = MTK_DP_TRAIN_STATE_CHECKCAP;
-			break;
-
-		case MTK_DP_TRAIN_STATE_CHECKCAP:
-			if (mtk_dp_parse_capabilities(mtk_dp)) {
-				mtk_dp->train_info.check_cap_count = 0;
-				mtk_dp->train_state = MTK_DP_TRAIN_STATE_CHECKEDID;
-			} else {
-				mtk_dp->train_info.check_cap_count++;
-
-				if (mtk_dp->train_info.check_cap_count >
-					MTK_DP_CHECK_SINK_CAP_TIMEOUT_COUNT) {
-					mtk_dp->train_info.check_cap_count = 0;
-					mtk_dp->train_state = MTK_DP_TRAIN_STATE_DPIDLE;
-					ret = -ETIMEDOUT;
-				}
-			}
-			break;
-
-		case MTK_DP_TRAIN_STATE_CHECKEDID: {
-			int caps_found = mtk_dp_edid_parse_audio_capabilities(mtk_dp,
-				&mtk_dp->info.audio_caps);
-			mtk_dp->audio_enable = caps_found > 0;
-			if (!mtk_dp->audio_enable)
-				memset(&mtk_dp->info.audio_caps, 0,
-				       sizeof(mtk_dp->info.audio_caps));
-		}
-
-			mtk_dp->train_state = MTK_DP_TRAIN_STATE_TRAINING_PRE;
-			break;
-
-		case MTK_DP_TRAIN_STATE_TRAINING_PRE:
-			mtk_dp->train_state = MTK_DP_TRAIN_STATE_TRAINING;
-			break;
-
-		case MTK_DP_TRAIN_STATE_TRAINING:
-			ret = mtk_dp_train_start(mtk_dp);
-			if (!ret) {
-				mtk_dp_video_mute(mtk_dp, true);
-				mtk_dp_audio_mute(mtk_dp, true);
-				mtk_dp->train_state = MTK_DP_TRAIN_STATE_NORMAL;
-				mtk_dp_fec_enable(mtk_dp, mtk_dp->has_fec);
-			} else if (ret != -EAGAIN) {
-				mtk_dp->train_state = MTK_DP_TRAIN_STATE_DPIDLE;
-			}
-
-			ret = 0;
-			break;
-
-		case MTK_DP_TRAIN_STATE_NORMAL:
-			break;
-		case MTK_DP_TRAIN_STATE_DPIDLE:
-			break;
-		default:
-			break;
-		}
-	} while (ret && i--);
-
-	if (ret)
-		drm_err(mtk_dp->drm_dev, "Train handler failed %d\n", ret);
-}
-
 static void mtk_dp_video_enable(struct mtk_dp *mtk_dp, bool enable)
 {
 	if (enable) {
@@ -2157,7 +2084,6 @@ static void mtk_dp_state_handler(struct mtk_dp *mtk_dp)
 		if (mtk_dp->train_state == MTK_DP_TRAIN_STATE_NORMAL)
 			mtk_dp->state = MTK_DP_STATE_PREPARE;
 		break;
-
 	case MTK_DP_STATE_PREPARE:
 		mtk_dp_video_config(mtk_dp);
 		mtk_dp_video_enable(mtk_dp, true);
@@ -2182,6 +2108,87 @@ static void mtk_dp_state_handler(struct mtk_dp *mtk_dp)
 	default:
 		break;
 	}
+}
+
+static int mtk_dp_train_handler(struct mtk_dp *mtk_dp)
+{
+	bool training_done = false;
+	short max_retry = 50;
+	int ret = 0;
+
+	do {
+		switch (mtk_dp->train_state) {
+		case MTK_DP_TRAIN_STATE_STARTUP:
+			mtk_dp_state_handler(mtk_dp);
+			mtk_dp->train_state = MTK_DP_TRAIN_STATE_CHECKCAP;
+			break;
+
+		case MTK_DP_TRAIN_STATE_CHECKCAP:
+			if (mtk_dp_parse_capabilities(mtk_dp)) {
+				mtk_dp->train_info.check_cap_count = 0;
+				mtk_dp->train_state = MTK_DP_TRAIN_STATE_CHECKEDID;
+			} else {
+				mtk_dp->train_info.check_cap_count++;
+
+				if (mtk_dp->train_info.check_cap_count >
+				    MTK_DP_CHECK_SINK_CAP_TIMEOUT_COUNT) {
+					mtk_dp->train_info.check_cap_count = 0;
+					mtk_dp->train_state = MTK_DP_TRAIN_STATE_DPIDLE;
+					ret = -ETIMEDOUT;
+				}
+			}
+			break;
+
+		case MTK_DP_TRAIN_STATE_CHECKEDID:
+			mtk_dp->audio_enable =
+					!mtk_dp_edid_parse_audio_capabilities(
+						mtk_dp, &mtk_dp->info.audio_caps);
+
+			if (!mtk_dp->audio_enable)
+				memset(&mtk_dp->info.audio_caps, 0,
+				       sizeof(mtk_dp->info.audio_caps));
+
+			mtk_dp->train_state = MTK_DP_TRAIN_STATE_TRAINING_PRE;
+			break;
+
+		case MTK_DP_TRAIN_STATE_TRAINING_PRE:
+			mtk_dp_state_handler(mtk_dp);
+			mtk_dp->train_state = MTK_DP_TRAIN_STATE_TRAINING;
+			break;
+
+		case MTK_DP_TRAIN_STATE_TRAINING:
+			ret = mtk_dp_train_start(mtk_dp);
+			if (ret == 0) {
+				mtk_dp_video_mute(mtk_dp, true);
+				mtk_dp_audio_mute(mtk_dp, true);
+				mtk_dp->train_state = MTK_DP_TRAIN_STATE_NORMAL;
+				mtk_dp_fec_enable(mtk_dp, mtk_dp->has_fec);
+			} else if (ret != -EAGAIN) {
+				mtk_dp->train_state = MTK_DP_TRAIN_STATE_DPIDLE;
+			}
+			break;
+		case MTK_DP_TRAIN_STATE_NORMAL:
+			mtk_dp_state_handler(mtk_dp);
+			training_done = true;
+			break;
+		case MTK_DP_TRAIN_STATE_DPIDLE:
+			break;
+		default:
+			break;
+		}
+
+		if (ret) {
+			if (ret == -EAGAIN)
+				continue;
+			/*
+			 * If we get any other error number, it doesn't
+			 * make any sense to keep iterating.
+			 */
+			break;
+		}
+	} while (!training_done || --max_retry);
+
+	return ret;
 }
 
 static void mtk_dp_init_port(struct mtk_dp *mtk_dp)
@@ -2610,6 +2617,7 @@ static void mtk_dp_bridge_atomic_enable(struct drm_bridge *bridge,
 	struct drm_connector_state *conn_state;
 	struct drm_crtc *crtc;
 	struct drm_crtc_state *crtc_state;
+	int ret;
 
 	mtk_dp->conn = drm_atomic_get_new_connector_for_encoder(old_state->base.state,
 								bridge->encoder);
@@ -2652,10 +2660,14 @@ static void mtk_dp_bridge_atomic_enable(struct drm_bridge *bridge,
 		return;
 	}
 
-	/* Training */
-	mtk_dp_train_handler(mtk_dp);
-	mtk_dp_state_handler(mtk_dp);
+	ret = mtk_dp_train_handler(mtk_dp);
+	if (ret) {
+		drm_err(mtk_dp->drm_dev, "Train handler failed %d\n", ret);
+		return;
+	}
+
 	mtk_dp->enabled = true;
+	mtk_dp_update_plugged_status(mtk_dp);
 }
 
 static enum drm_mode_status
@@ -2917,8 +2929,7 @@ static int mtk_dp_probe(struct platform_device *pdev)
 		mtk_dp->next_bridge = NULL;
 	} else if (IS_ERR(mtk_dp->next_bridge)) {
 		ret = PTR_ERR(mtk_dp->next_bridge);
-		dev_err_probe(dev, ret, "Failed to get bridge\n");
-		return ret;
+		return dev_err_probe(dev, ret, "Failed to get bridge\n");
 	}
 
 	ret = mtk_dp_dt_parse(mtk_dp, pdev);
@@ -2973,7 +2984,6 @@ static int mtk_dp_probe(struct platform_device *pdev)
 
 	mtk_dp->bridge.funcs = &mtk_dp_bridge_funcs;
 	mtk_dp->bridge.of_node = dev->of_node;
-	mtk_dp->bridge.type = DRM_MODE_CONNECTOR_eDP;
 
 	mtk_dp->bridge.ops =
 		DRM_BRIDGE_OP_DETECT | DRM_BRIDGE_OP_EDID | DRM_BRIDGE_OP_HPD;
@@ -2981,6 +2991,8 @@ static int mtk_dp_probe(struct platform_device *pdev)
 		mtk_dp->bridge.type = DRM_MODE_CONNECTOR_eDP;
 	else
 		mtk_dp->bridge.type = DRM_MODE_CONNECTOR_DisplayPort;
+
+	drm_bridge_add(&mtk_dp->bridge);
 
 	mtk_dp->need_debounce = true;
 	timer_setup(&mtk_dp->debounce_timer, mtk_dp_debounce_timer, 0);
