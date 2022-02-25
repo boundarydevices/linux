@@ -2311,7 +2311,8 @@ unlock:
 }
 
 static int mv88e6xxx_port_fdb_add(struct dsa_switch *ds, int port,
-				  const unsigned char *addr, u16 vid)
+				  const unsigned char *addr, u16 vid,
+				  struct dsa_db db)
 {
 	struct mv88e6xxx_chip *chip = ds->priv;
 	int err;
@@ -2325,7 +2326,8 @@ static int mv88e6xxx_port_fdb_add(struct dsa_switch *ds, int port,
 }
 
 static int mv88e6xxx_port_fdb_del(struct dsa_switch *ds, int port,
-				  const unsigned char *addr, u16 vid)
+				  const unsigned char *addr, u16 vid,
+				  struct dsa_db db)
 {
 	struct mv88e6xxx_chip *chip = ds->priv;
 	int err;
@@ -5784,7 +5786,8 @@ static int mv88e6xxx_change_tag_protocol(struct dsa_switch *ds, int port,
 }
 
 static int mv88e6xxx_port_mdb_add(struct dsa_switch *ds, int port,
-				  const struct switchdev_obj_port_mdb *mdb)
+				  const struct switchdev_obj_port_mdb *mdb,
+				  struct dsa_db db)
 {
 	struct mv88e6xxx_chip *chip = ds->priv;
 	int err;
@@ -5798,7 +5801,8 @@ static int mv88e6xxx_port_mdb_add(struct dsa_switch *ds, int port,
 }
 
 static int mv88e6xxx_port_mdb_del(struct dsa_switch *ds, int port,
-				  const struct switchdev_obj_port_mdb *mdb)
+				  const struct switchdev_obj_port_mdb *mdb,
+				  struct dsa_db db)
 {
 	struct mv88e6xxx_chip *chip = ds->priv;
 	int err;

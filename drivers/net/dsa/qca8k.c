@@ -1959,7 +1959,8 @@ qca8k_port_fdb_insert(struct qca8k_priv *priv, const u8 *addr,
 
 static int
 qca8k_port_fdb_add(struct dsa_switch *ds, int port,
-		   const unsigned char *addr, u16 vid)
+		   const unsigned char *addr, u16 vid,
+		   struct dsa_db db)
 {
 	struct qca8k_priv *priv = (struct qca8k_priv *)ds->priv;
 	u16 port_mask = BIT(port);
@@ -1969,7 +1970,8 @@ qca8k_port_fdb_add(struct dsa_switch *ds, int port,
 
 static int
 qca8k_port_fdb_del(struct dsa_switch *ds, int port,
-		   const unsigned char *addr, u16 vid)
+		   const unsigned char *addr, u16 vid,
+		   struct dsa_db db)
 {
 	struct qca8k_priv *priv = (struct qca8k_priv *)ds->priv;
 	u16 port_mask = BIT(port);
@@ -2006,7 +2008,8 @@ qca8k_port_fdb_dump(struct dsa_switch *ds, int port,
 
 static int
 qca8k_port_mdb_add(struct dsa_switch *ds, int port,
-		   const struct switchdev_obj_port_mdb *mdb)
+		   const struct switchdev_obj_port_mdb *mdb,
+		   struct dsa_db db)
 {
 	struct qca8k_priv *priv = ds->priv;
 	const u8 *addr = mdb->addr;
@@ -2017,7 +2020,8 @@ qca8k_port_mdb_add(struct dsa_switch *ds, int port,
 
 static int
 qca8k_port_mdb_del(struct dsa_switch *ds, int port,
-		   const struct switchdev_obj_port_mdb *mdb)
+		   const struct switchdev_obj_port_mdb *mdb,
+		   struct dsa_db db)
 {
 	struct qca8k_priv *priv = ds->priv;
 	const u8 *addr = mdb->addr;
