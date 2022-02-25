@@ -13,6 +13,10 @@
 	mipi_cmds_lcm_jm430: mipi-cmds-lcm-jm430 {
 		alias = <&mipi_cmds_lcm_jm430>;
 		aliasp = <&pinctrl_mipi_lcm_jm430>;
+#ifdef GP_JM430_DISPLAY_EN
+		delay-before-backlight-on = <150>;
+		display-enable-gpios = GP_JM430_DISPLAY_EN;
+#endif
 #if 0
 		i2c-address = <0x0b>;
 		i2c-bus = TC358867_I2C_BUS;
