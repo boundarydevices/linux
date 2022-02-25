@@ -3666,7 +3666,7 @@
 
 		aal0: aal@1c005000 {
 			compatible = "mediatek,mt8195-disp-aal",
-				     "mediatek,mt8173-disp-aal";
+				     "mediatek,mt8183-disp-aal";
 			reg = <0 0x1c005000 0 0x1000>;
 			interrupts = <GIC_SPI 641 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
@@ -3730,7 +3730,7 @@
 		};
 
 		vdosys0: syscon@1c01a000 {
-			compatible = "mediatek,mt8195-vdosys0", "syscon";
+			compatible = "mediatek,mt8195-mmsys", "syscon";
 			reg = <0 0x1c01a000 0 0x1000>;
 			mboxes = <&gce0 0 CMDQ_THR_PRIO_4>;
 			#clock-cells = <1>;
