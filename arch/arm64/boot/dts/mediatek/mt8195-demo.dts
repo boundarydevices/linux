@@ -607,6 +607,10 @@
 	status = "okay";
 };
 
+&u3phy1 {
+	status = "okay";
+};
+
 &pciephy {
 	status = "okay";
 };
