@@ -971,7 +971,7 @@
 			#iommu-cells = <1>;
 		};
 
-		gce0: disp_mailbox@10320000 {
+		gce0: mailbox@10320000 {
 			compatible = "mediatek,mt8195-gce";
 			reg = <0 0x10320000 0 0x4000>;
 			interrupts = <GIC_SPI 226 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -979,7 +979,7 @@
 			clocks = <&infracfg_ao CLK_INFRA_AO_GCE>;
 		};
 
-		gce1: mdp_mailbox@10330000 {
+		gce1: mailbox@10330000 {
 			compatible = "mediatek,mt8195-gce";
 			reg = <0 0x10330000 0 0x4000>;
 			interrupts = <GIC_SPI 228 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -3330,7 +3330,7 @@
 				<0 0x19020000 0 0x1000>;  /* apu_conn_config */
 			interrupts = <GIC_SPI 439 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
-		
+
 		apu_pcu: syscon@190f1000 {
 			compatible = "mediatek,mt8195-apu_pcu", "syscon";
 			reg = <0 0x190f1000 0 0x1000>;
@@ -3428,7 +3428,7 @@
 			// iommus = <&iommu3 M4U_PORT_L31_APU_CODE>;
 			iommus = <&iommu_apu1 IOMMU_PORT_APU_DATA>;
 		};
-		
+
 		apusys_rv: apusys_rv@19001000 {
 			compatible = "mediatek,mt8195-apusys_rv";
 
