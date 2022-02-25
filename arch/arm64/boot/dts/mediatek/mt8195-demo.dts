@@ -463,6 +463,12 @@
 				 <PINMUX_GPIO24__FUNC_WAKEN_1>;
 			bias-pull-up;
 		};
+
+		mt7921 {
+			pinmux = <PINMUX_GPIO65__FUNC_GPIO65>,
+				 <PINMUX_GPIO67__FUNC_GPIO67>;
+			output-high;
+		};
 	};
 
 	gpio_keys: gpio-keys {
