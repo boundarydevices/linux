@@ -1832,14 +1832,20 @@ static int mtk_dp_train_flow(struct mtk_dp *mtk_dp, int target_link_rate,
 static bool mtk_dp_parse_capabilities(struct mtk_dp *mtk_dp)
 {
 	u8 buf[DP_RECEIVER_CAP_SIZE] = {};
+	u8 plug_wait;
 	u8 val;
 	struct mtk_dp_train_info *train_info = &mtk_dp->train_info;
 
-	if (!mtk_dp_plug_state(mtk_dp))
-		return false;
-
 	drm_dp_dpcd_writeb(&mtk_dp->aux, DP_SET_POWER, DP_SET_POWER_D0);
 	usleep_range(2000, 5000);
+
+	for (plug_wait = 7; !mtk_dp_plug_state(mtk_dp) && plug_wait > 0; --plug_wait)
+		usleep_range(1000, 5000);
+	if (plug_wait == 0)
+		return false;
+
+//	if (!mtk_dp_plug_state(mtk_dp))
+//		return false;
 
 	drm_dp_read_dpcd_caps(&mtk_dp->aux, buf);
 
@@ -2367,7 +2373,21 @@ static void mtk_dp_update_plugged_status(struct mtk_dp *mtk_dp)
 
 static enum drm_connector_status mtk_dp_bdg_detect(struct drm_bridge *bridge)
 {
-	return connector_status_connected;
+	struct mtk_dp *mtk_dp = mtk_dp_from_bridge(bridge);
+	enum drm_connector_status ret = connector_status_disconnected;
+	u8 sink_count = 0;
+
+	if (mtk_dp_is_edp(mtk_dp))
+		return connector_status_connected;
+
+	if (mtk_dp_plug_state(mtk_dp)) {
+		drm_dp_dpcd_readb(&mtk_dp->aux, DP_SINK_COUNT, &sink_count);
+		if (DP_GET_SINK_COUNT(sink_count))
+			ret = connector_status_connected;
+	}
+
+	mtk_dp_update_plugged_status(mtk_dp);
+	return ret;
 }
 
 static struct edid *mtk_dp_get_edid(struct drm_bridge *bridge,
@@ -2574,6 +2594,7 @@ static int mtk_dp_bridge_attach(struct drm_bridge *bridge,
 	return 0;
 
 err_bridge_attach:
+	mtk_dp_poweroff(mtk_dp);
 	return ret;
 }
 
@@ -2582,6 +2603,7 @@ static void mtk_dp_bridge_detach(struct drm_bridge *bridge)
 	struct mtk_dp *mtk_dp = mtk_dp_from_bridge(bridge);
 
 	mtk_dp->drm_dev = NULL;
+	mtk_dp_poweroff(mtk_dp);
 }
 
 static void mtk_dp_bridge_atomic_disable(struct drm_bridge *bridge,
@@ -2596,7 +2618,6 @@ static void mtk_dp_bridge_atomic_disable(struct drm_bridge *bridge,
 
 	mtk_dp->enabled = false;
 	msleep(100);
-	mtk_dp_poweroff(mtk_dp);
 }
 
 static void mtk_dp_parse_drm_mode_timings(struct mtk_dp *mtk_dp,
