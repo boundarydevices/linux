@@ -167,6 +167,10 @@
 	status = "okay";
 };
 
+&xhci1 {
+	status = "okay";
+};
+
 &u2port0 {
 	status = "okay";
 };
