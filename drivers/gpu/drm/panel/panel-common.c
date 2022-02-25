@@ -95,6 +95,7 @@ struct panel_desc {
 		unsigned int enable;
 		unsigned int disable;
 		unsigned int unprepare;
+		unsigned int before_backlight_on;
 	} delay;
 
 	u32 bus_format;
@@ -135,6 +136,7 @@ struct panel_common {
 	struct drm_display_mode override_mode;
 	struct gpio_desc *gpd_prepare_enable;
 	struct gpio_desc *gpd_power;
+	struct gpio_desc *gpd_display_enable;
 	struct gpio_desc *reset;
 	struct videomode vm;
 	struct spi_device *spi;
@@ -823,6 +825,7 @@ static int panel_common_disable(struct drm_panel *panel)
 		p->backlight->props.state |= BL_CORE_FBBLANK;
 		backlight_update_status(p->backlight);
 	}
+	gpiod_set_value_cansleep(p->gpd_display_enable, 0);
 
 	if (p->desc->delay.disable)
 		msleep(p->desc->delay.disable);
@@ -953,6 +956,9 @@ static int panel_common_enable2(struct drm_panel *panel)
 		goto fail;
 
 	sn65_enable2(&p->sn65);
+	gpiod_set_value_cansleep(p->gpd_display_enable, 1);
+	if (p->desc->delay.before_backlight_on)
+		msleep(p->desc->delay.before_backlight_on);
 	if (p->backlight) {
 		p->backlight->props.state &= ~BL_CORE_FBBLANK;
 		p->backlight->props.power = FB_BLANK_UNBLANK;
@@ -1098,6 +1104,7 @@ static void init_common(struct panel_common *p, struct device_node *np, struct p
 	of_property_read_u32(np, "delay-enable", &ds->delay.enable);
 	of_property_read_u32(np, "delay-disable", &ds->delay.disable);
 	of_property_read_u32(np, "delay-unprepare", &ds->delay.unprepare);
+	of_property_read_u32(np, "delay-before-backlight-on", &ds->delay.before_backlight_on);
 	of_property_read_u32(np, "min-hs-clock-multiple", &dm->min_hs_clock_multiple);
 	of_property_read_u32(np, "mipi-dsi-multiple", &dm->mipi_dsi_multiple);
 	of_property_read_u32(np, "mipi-delay-between-cmds", &p->mipi_delay_between_cmds);
@@ -1203,6 +1210,20 @@ static int panel_common_probe(struct device *dev, const struct panel_desc *desc,
 		panel->desc = ds;
 		cmds_np = of_parse_phandle(np, "mipi-cmds", 0);
 		if (cmds_np) {
+			struct fwnode_handle *fwnode;
+
+			fwnode = of_fwnode_handle(cmds_np);
+			panel->gpd_display_enable =
+				devm_fwnode_get_gpiod_from_child(dev,
+					"display-enable", fwnode,
+					GPIOD_OUT_LOW, "display-enable");
+			if (IS_ERR(panel->gpd_display_enable)) {
+				err = PTR_ERR(panel->gpd_display_enable);
+				if (err != -ENOENT)
+					dev_err(dev, "failed to request display-enable: %d\n", err);
+				panel->gpd_display_enable = NULL;
+			}
+
 			i2c_node = of_parse_phandle(cmds_np, "i2c-bus", 0);
 			if (i2c_node) {
 				i2c = of_find_i2c_adapter_by_node(i2c_node);
