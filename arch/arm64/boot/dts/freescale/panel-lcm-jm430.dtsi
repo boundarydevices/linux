@@ -3,6 +3,10 @@
 /* TC358762: mipi to rgb bridge */
 / {
 	mipi_cmds_lcm_jm430: mipi-cmds-lcm-jm430 {
+#ifdef GP_JM430_DISPLAY_EN
+		delay-before-backlight-on = <150>;
+		display-enable-gpios = GP_JM430_DISPLAY_EN;
+#endif
 		mipi-cmds-enable = /bits/ 8 <
 			DELAY(1)
 
