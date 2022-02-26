@@ -6,11 +6,6 @@
 /dts-v1/;
 
 #include "imx8mq.dtsi"
-#include "panel-lcm-jm430.dtsi"
-#include "panel-ltk0680ytmdb.dtsi"
-#include "panel-ltk080a60a004t.dtsi"
-#include "panel-m101nwwb.dtsi"
-#include "panel-com50h5n03ulc.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -281,6 +276,8 @@
 		fsl,pins = <
 #define GP_TC358762_EN	<&gpio3 15 GPIO_ACTIVE_HIGH>
 			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15		0x16
+#define GP_JM430_DISPLAY_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1		0x06
 		>;
 	};
 
@@ -529,6 +526,12 @@
 		>;
 	};
 };
+
+#include "panel-com50h5n03ulc.dtsi"
+#include "panel-lcm-jm430.dtsi"
+#include "panel-ltk0680ytmdb.dtsi"
+#include "panel-ltk080a60a004t.dtsi"
+#include "panel-m101nwwb.dtsi"
 
 / {
 	model = "Boundary Devices i.MX8MQ Nitrogen8M_som";
