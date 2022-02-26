@@ -267,14 +267,14 @@ static int pwm_backlight_initial_power_state(const struct pwm_bl_data *pb)
 	}
 #endif
 
-	/* Not booted with device tree or no phandle link to the node */
-	if (!node || !node->phandle)
+	/* Not booted with device tree */
+	if (!node)
 		return FB_BLANK_UNBLANK;
 
 	/* The regulator is disabled, do not enable the backlight */
 	if (!regulator_is_enabled(pb->power_supply))
 		return FB_BLANK_POWERDOWN;
-#if 0
+#if !defined(CONFIG_FB_MXC_LCDIF) && !defined(CONFIG_FB_MXC_SYNC_PANEL)
 	/* The PWM is disabled, keep it like this */
 	if (!pwm_is_enabled(pb->pwm))
 		return FB_BLANK_POWERDOWN;
