@@ -8,18 +8,6 @@
 #ifndef TC358867_I2C_BUS
 #define TC358867_I2C_BUS	<&TOUCHSCREEN_I2C_BUS>
 #endif
-#include "panel-dmt050wvnxcmi.dtsi"
-#include "panel-ls050t1sx12.dtsi"
-#include "panel-ltk0680ytmdb.dtsi"
-#include "panel-ltk080a60a004t.dtsi"
-&mipi_cmds_ltk0680ytmdb {
-	min-hs-clock-multiple = <8>;
-};
-
-#include "panel-lcd133-070.dtsi"
-#include "panel-lcm-jm430.dtsi"
-#include "panel-m101nwwb.dtsi"
-#include "panel-com50h5n03ulc.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -273,6 +261,8 @@
 		fsl,pins = <
 #define GP_TC358762_EN	<&gpio1 9 GPIO_ACTIVE_HIGH>
 			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
+#define GP_JM430_DISPLAY_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x106)
 		>;
 	};
 
@@ -311,7 +301,7 @@
 
 	pinctrl_pwm3: pwm3grp {
 		fsl,pins = <
-			MX8MMN(IOMUXC_SPDIF_TX_PWM3_OUT, 0x16)
+			MX8MMN(IOMUXC_SPDIF_TX_PWM3_OUT, 0x116)
 		>;
 	};
 
@@ -550,6 +540,19 @@
 		>;
 	};
 };
+
+#include "panel-com50h5n03ulc.dtsi"
+#include "panel-dmt050wvnxcmi.dtsi"
+#include "panel-lcd133-070.dtsi"
+#include "panel-lcm-jm430.dtsi"
+#include "panel-ls050t1sx12.dtsi"
+#include "panel-ltk0680ytmdb.dtsi"
+#include "panel-ltk080a60a004t.dtsi"
+&mipi_cmds_ltk0680ytmdb {
+	min-hs-clock-multiple = <8>;
+};
+
+#include "panel-m101nwwb.dtsi"
 
 / {
 	model = "Boundary Devices i.MX8MMini Nitrogen8MM";
@@ -1172,6 +1175,7 @@
 	status = "okay";
 
 	fb_mipi: panel@0 {
+		backlight = <&backlight_mipi>;
 		bits-per-color = <8>;
 		bridge-de-active = <0>;
 		bus-format = "rgb888";
