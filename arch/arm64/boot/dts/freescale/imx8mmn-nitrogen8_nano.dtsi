@@ -3,12 +3,6 @@
  * Copyright 2018 Boundary Devices
  */
 
-#include "panel-ltk0680ytmdb.dtsi"
-#include "panel-ltk080a60a004t.dtsi"
-#include "panel-lcm-jm430.dtsi"
-#include "panel-m101nwwb.dtsi"
-#include "panel-com50h5n03ulc.dtsi"
-
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
@@ -274,6 +268,8 @@
 		fsl,pins = <
 #define GP_TC358762_EN	<&gpio1 9 GPIO_ACTIVE_HIGH>
 			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
+#define GP_JM430_DISPLAY_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x106)
 		>;
 	};
 
@@ -299,7 +295,7 @@
 
 	pinctrl_pwm3: pwm3grp {
 		fsl,pins = <
-			MX8MMN(IOMUXC_SPDIF_TX_PWM3_OUT, 0x16)
+			MX8MMN(IOMUXC_SPDIF_TX_PWM3_OUT, 0x116)
 		>;
 	};
 
@@ -514,6 +510,12 @@
 		>;
 	};
 };
+
+#include "panel-com50h5n03ulc.dtsi"
+#include "panel-lcm-jm430.dtsi"
+#include "panel-ltk0680ytmdb.dtsi"
+#include "panel-ltk080a60a004t.dtsi"
+#include "panel-m101nwwb.dtsi"
 
 / {
 	aliases {
