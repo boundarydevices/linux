@@ -804,11 +804,8 @@ static int panel_simple_enable(struct drm_panel *panel)
 	gpiod_set_value_cansleep(p->gpd_display_enable, 1);
 	if (p->desc->delay.before_backlight_on)
 		msleep(p->desc->delay.before_backlight_on);
-	if (p->backlight) {
-		p->backlight->props.state &= ~BL_CORE_FBBLANK;
-		p->backlight->props.power = FB_BLANK_UNBLANK;
-		backlight_update_status(p->backlight);
-	}
+	if (p->backlight)
+		backlight_enable(p->backlight);
 
 	p->enabled = true;
 
