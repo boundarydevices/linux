@@ -3,6 +3,7 @@
  * Copyright 2019 Boundary Devices
  */
 
+#define SKIP_MIPI_PANELS
 #include "imx8mm-nitrogen8mm_som.dts"
 &iomuxc {
 	pinctrl-names = "default";
