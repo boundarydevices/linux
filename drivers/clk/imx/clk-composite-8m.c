@@ -178,7 +178,7 @@ struct clk_hw *imx8m_clk_hw_composite_flags(const char *name,
 					unsigned long flags)
 {
 	struct clk_hw *hw = ERR_PTR(-ENOMEM), *mux_hw;
-	struct clk_hw *div_hw, *gate_hw;
+	struct clk_hw *div_hw, *gate_hw = NULL;
 	struct clk_divider *div = NULL;
 	struct clk_gate *gate = NULL;
 	struct clk_mux *mux = NULL;
@@ -224,7 +224,7 @@ struct clk_hw *imx8m_clk_hw_composite_flags(const char *name,
 	div->flags = CLK_DIVIDER_ROUND_CLOSEST;
 
 	/* skip registering the gate ops if M4 is enabled */
-	if (imx_src_is_m4_enabled()) {
+	if (imx_src_is_m4_enabled() || mcore_booted) {
 		gate_hw = NULL;
 	} else {
 		gate = kzalloc(sizeof(*gate), GFP_KERNEL);
