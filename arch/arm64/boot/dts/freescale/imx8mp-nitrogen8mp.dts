@@ -8,14 +8,6 @@
 #include <dt-bindings/usb/pd.h>
 #include "imx8mp.dtsi"
 #define TC358867_I2C_BUS	<&i2c2d>
-#include "panel-dmt050wvnxcmi.dtsi"
-#include "panel-ltk0680ytmdb.dtsi"
-#include "panel-ltk080a60a004t.dtsi"
-#include "panel-lcd133-070.dtsi"
-#include "panel-lcm-jm430.dtsi"
-#include "panel-lxd-m8509a.dtsi"
-#include "panel-m101nwwb.dtsi"
-#include "panel-com50h5n03ulc.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -269,6 +261,8 @@
 		fsl,pins = <
 #define GP_TC358762_EN	<&gpio4 27 GPIO_ACTIVE_HIGH>
 			MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27	0x16
+#define GP_JM430_DISPLAY_EN	<&gpio4 0 GPIO_ACTIVE_HIGH>
+			MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00	0x106
 		>;
 	};
 
@@ -615,6 +609,15 @@
 		>;
 	};
 };
+
+#include "panel-com50h5n03ulc.dtsi"
+#include "panel-dmt050wvnxcmi.dtsi"
+#include "panel-lcd133-070.dtsi"
+#include "panel-lcm-jm430.dtsi"
+#include "panel-ltk0680ytmdb.dtsi"
+#include "panel-ltk080a60a004t.dtsi"
+#include "panel-lxd-m8509a.dtsi"
+#include "panel-m101nwwb.dtsi"
 
 / {
 	model = "Boundary i.MX8MPlus nitrogen8mp board";
