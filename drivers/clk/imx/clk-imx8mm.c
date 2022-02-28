@@ -756,6 +756,9 @@ late_initcall(pll_debug_init);
 #endif /* MODULE */
 #endif /* CONFIG_DEBUG_FS */
 
+module_param(mcore_booted, bool, S_IRUGO);
+MODULE_PARM_DESC(mcore_booted, "See Cortex-M core is booted or not");
+
 MODULE_AUTHOR("Bai Ping <ping.bai@nxp.com>");
 MODULE_DESCRIPTION("NXP i.MX8MM clock driver");
 MODULE_LICENSE("GPL v2");

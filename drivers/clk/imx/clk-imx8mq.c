@@ -755,6 +755,9 @@ static void __exit imx8mq_clk_driver_exit(void)
 	platform_driver_unregister(&imx8mq_clk_driver);
 }
 module_exit(imx8mq_clk_driver_exit);
+module_param(mcore_booted, bool, S_IRUGO);
+MODULE_PARM_DESC(mcore_booted, "See Cortex-M core is booted or not");
+
 MODULE_AUTHOR("Abel Vesa <abel.vesa@nxp.com>");
 MODULE_DESCRIPTION("NXP i.MX8MQ clock driver");
 MODULE_LICENSE("GPL v2");
