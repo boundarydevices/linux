@@ -1692,6 +1692,9 @@ static int v4l2_ioctl_qbuf(struct file *file,
 				ctx->total_qbuf_bytes);
 		q_data = &ctx->q_data[V4L2_SRC];
 
+		if (buf->timestamp.tv_sec < 0 || buf->timestamp.tv_usec < 0)
+			buf->flags |= V4L2_NXP_BUF_FLAG_TIMESTAMP_INVALID;
+
 		v4l2_update_stream_addr(ctx, 0);
 	} else if (buf->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		q_data = &ctx->q_data[V4L2_DST];
