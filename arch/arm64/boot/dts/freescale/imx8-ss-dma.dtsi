@@ -200,7 +200,7 @@ dma_subsys: bus@5a000000 {
 	};
 
 	adc0: adc@5a880000 {
-		compatible = "fsl,imx8qxp-adc";
+		compatible = "nxp,imx8qxp-adc";
 		reg = <0x5a880000 0x10000>;
 		interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-parent = <&gic>;
