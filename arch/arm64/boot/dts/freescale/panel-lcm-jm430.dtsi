@@ -120,6 +120,7 @@
 		>;
 		min-hs-clock-multiple = <16>;
 #endif
+		mipi-delay-between-cmds = <1>;
 		mode-video-hbp-disable;
 		mode-video-hfp-disable;
 		mode-video-hsa-disable;
