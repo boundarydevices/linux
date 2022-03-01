@@ -178,7 +178,7 @@
 	status = "okay";
 };
 
-&u2port0 {
+&u3port0 {
 	status = "okay";
 };
 
