@@ -702,10 +702,11 @@ static int phy_check_link_status(struct phy_device *phydev)
 int phy_validate_inband_aneg(struct phy_device *phydev,
 			     phy_interface_t interface)
 {
-	if (!phydev->drv)
-		return -EIO;
-
-	if (!phydev->drv->validate_inband_aneg)
+	/* We may be called before phy_attach_direct() force-binds the
+	 * generic PHY driver to this device. In that case, report an unknown
+	 * setting rather than -EIO as most other functions do.
+	 */
+	if (!phydev->drv || !phydev->drv->validate_inband_aneg)
 		return PHY_INBAND_ANEG_UNKNOWN;
 
 	return phydev->drv->validate_inband_aneg(phydev, interface);

@@ -3447,7 +3447,7 @@ t_Handle FM_Config(t_FmParams *p_FmParam)
 #endif /* FM_QMI_NO_DEQ_OPTIONS_SUPPORT */
 
         p_Fm->p_FmStateStruct->totalFifoSize        = 0;
-        p_Fm->p_FmStateStruct->totalNumOfTasks      = 
+        p_Fm->p_FmStateStruct->totalNumOfTasks      =
             DEFAULT_totalNumOfTasks(p_Fm->p_FmStateStruct->revInfo.majorRev,
                                     p_Fm->p_FmStateStruct->revInfo.minorRev);
 
@@ -4253,7 +4253,7 @@ t_Error FmGetSetParams(t_Handle h_Fm, t_FmGetSetParams *p_Params)
 	if (p_Params->setParams.type & UPDATE_FPM_EXTC_CLEAR)
 		WRITE_UINT32(p_Fm->p_FmFpmRegs->fmfp_extc,0x00800000);
 	if (p_Params->setParams.type & UPDATE_FPM_BRKC_SLP)
-	{	
+	{
 		if (p_Params->setParams.sleep)
 			WRITE_UINT32(p_Fm->p_FmFpmRegs->fmfp_brkc, GET_UINT32(
 				p_Fm->p_FmFpmRegs->fmfp_brkc) | FPM_BRKC_SLP);
@@ -4804,7 +4804,7 @@ uint32_t FM_GetCounter(t_Handle h_Fm, e_FmCounters counter)
     {
         case (e_FM_COUNTERS_DEQ_1):
         case (e_FM_COUNTERS_DEQ_2):
-            /* fall through */
+            fallthrough;
         case (e_FM_COUNTERS_DEQ_3):
             if ((p_Fm->p_FmStateStruct->revInfo.majorRev == 4) ||
                 (p_Fm->p_FmStateStruct->revInfo.majorRev >= 6))
@@ -4812,14 +4812,14 @@ uint32_t FM_GetCounter(t_Handle h_Fm, e_FmCounters counter)
                 REPORT_ERROR(MAJOR, E_NOT_SUPPORTED, ("Requested counter not supported"));
                 return 0;
             }
-            /* fall through */
+            fallthrough;
         case (e_FM_COUNTERS_ENQ_TOTAL_FRAME):
         case (e_FM_COUNTERS_DEQ_TOTAL_FRAME):
         case (e_FM_COUNTERS_DEQ_0):
         case (e_FM_COUNTERS_DEQ_FROM_DEFAULT):
         case (e_FM_COUNTERS_DEQ_FROM_CONTEXT):
         case (e_FM_COUNTERS_DEQ_FROM_FD):
-            /* fall through */
+            fallthrough;
         case (e_FM_COUNTERS_DEQ_CONFIRM):
             if (!(GET_UINT32(p_Fm->p_FmQmiRegs->fmqm_gc) & QMI_CFG_EN_COUNTERS))
             {

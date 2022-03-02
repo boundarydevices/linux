@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /*
- * Copyright 2021 NXP
+ * Copyright 2021-2022 NXP
  */
 
 #include <dt-bindings/clock/imx8ulp-clock.h>
@@ -246,14 +246,14 @@
 			status = "okay";
 		};
 
-		sentnl_mu: sentnl-mu {
+		ele_mu: ele-mu {
 			#address-cells = <1>;
 			#size-cells = <1>;
-			compatible = "fsl,imx-sentnl";
+			compatible = "fsl,imx-ele";
 			mboxes = <&s4muap 0 0 &s4muap 1 0>;
 			mbox-names = "tx", "rx";
-			fsl,sentnl_mu_id = <2>;
-			fsl,sentnl_mu_max_users = <4>;
+			fsl,ele_mu_id = <2>;
+			fsl,ele_mu_max_users = <4>;
 			status = "okay";
 			dma-ranges = <0x80000000 0x80000000 0x20000000>;
 		};

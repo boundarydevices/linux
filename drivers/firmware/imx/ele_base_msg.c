@@ -9,20 +9,20 @@
 #include <linux/completion.h>
 #include <linux/mailbox_client.h>
 
-#include <linux/firmware/imx/senclave_base_msg.h>
-#include <linux/firmware/imx/sentnl_mu_ioctl.h>
+#include <linux/firmware/imx/ele_base_msg.h>
+#include <linux/firmware/imx/ele_mu_ioctl.h>
 
-#include "sentnl_mu.h"
+#include "ele_mu.h"
 
 /* Fill a command message header with a given command ID and length in bytes. */
 static int plat_fill_cmd_msg_hdr(struct mu_hdr *hdr, uint8_t cmd, uint32_t len)
 {
-	struct sentnl_mu_priv *priv = NULL;
+	struct ele_mu_priv *priv = NULL;
 	int err = 0;
 
-	err = get_sentnl_mu_priv(&priv);
+	err = get_ele_mu_priv(&priv);
 	if (err) {
-		pr_err("Error: iMX Sentinel MU is not probed successfully.\n");
+		pr_err("Error: iMX EdgeLock Enclave MU is not probed successfully.\n");
 		return err;
 	}
 	hdr->tag = priv->cmd_tag;
@@ -33,7 +33,7 @@ static int plat_fill_cmd_msg_hdr(struct mu_hdr *hdr, uint8_t cmd, uint32_t len)
 	return err;
 }
 
-static int imx_sentnl_msg_send_rcv(struct sentnl_mu_priv *priv)
+static int imx_ele_msg_send_rcv(struct ele_mu_priv *priv)
 {
 	unsigned int wait;
 	int err = 0;
@@ -56,16 +56,16 @@ static int imx_sentnl_msg_send_rcv(struct sentnl_mu_priv *priv)
 		return -ETIMEDOUT;
 	}
 
-	/* As part of func sentnl_mu_rx_callback() execution,
-	 * response will copied to sentnl_msg->rsp_msg.
+	/* As part of func ele_mu_rx_callback() execution,
+	 * response will copied to ele_msg->rsp_msg.
 	 *
-	 * Lock: (mutex_unlock(&sentnl_mu_priv->mu_cmd_lock),
+	 * Lock: (mutex_unlock(&ele_mu_priv->mu_cmd_lock),
 	 * will be unlocked if it is a response.
 	 */
 	return err;
 }
 
-static int read_otp_uniq_id(struct sentnl_mu_priv *priv, u32 *value)
+static int read_otp_uniq_id(struct ele_mu_priv *priv, u32 *value)
 {
 	unsigned int tag, command, size, ver, status;
 
@@ -75,8 +75,8 @@ static int read_otp_uniq_id(struct sentnl_mu_priv *priv, u32 *value)
 	ver = MSG_VER(priv->rx_msg.header);
 	status = RES_STATUS(priv->rx_msg.data[0]);
 
-	if (tag == 0xe1 && command == SENTNL_READ_FUSE_REQ &&
-	    size == 0x07 && ver == SENTNL_VERSION && status == SENTNL_SUCCESS_IND) {
+	if (tag == 0xe1 && command == ELE_READ_FUSE_REQ &&
+	    size == 0x07 && ver == ELE_VERSION && status == ELE_SUCCESS_IND) {
 		value[0] = priv->rx_msg.data[1];
 		value[1] = priv->rx_msg.data[2];
 		value[2] = priv->rx_msg.data[3];
@@ -87,7 +87,7 @@ static int read_otp_uniq_id(struct sentnl_mu_priv *priv, u32 *value)
 	return -EINVAL;
 }
 
-static int read_fuse_word(struct sentnl_mu_priv *priv, u32 *value)
+static int read_fuse_word(struct ele_mu_priv *priv, u32 *value)
 {
 	unsigned int tag, command, size, ver, status;
 
@@ -97,8 +97,8 @@ static int read_fuse_word(struct sentnl_mu_priv *priv, u32 *value)
 	ver = MSG_VER(priv->rx_msg.header);
 	status = RES_STATUS(priv->rx_msg.data[0]);
 
-	if (tag == 0xe1 && command == SENTNL_READ_FUSE_REQ &&
-	    size == 0x03 && ver == 0x06 && status == SENTNL_SUCCESS_IND) {
+	if (tag == 0xe1 && command == ELE_READ_FUSE_REQ &&
+	    size == 0x03 && ver == 0x06 && status == ELE_SUCCESS_IND) {
 		value[0] = priv->rx_msg.data[1];
 		return 0;
 	}
@@ -108,22 +108,22 @@ static int read_fuse_word(struct sentnl_mu_priv *priv, u32 *value)
 
 int read_common_fuse(uint16_t fuse_id, u32 *value)
 {
-	struct sentnl_mu_priv *priv = NULL;
+	struct ele_mu_priv *priv = NULL;
 	int err = 0;
 
-	err = get_sentnl_mu_priv(&priv);
+	err = get_ele_mu_priv(&priv);
 	if (err) {
-		pr_err("Error: iMX Sentinel MU is not probed successfully.\n");
+		pr_err("Error: iMX EdgeLock Enclave MU is not probed successfully.\n");
 		return err;
 	}
-	err = plat_fill_cmd_msg_hdr((struct mu_hdr *)&priv->tx_msg.header, SENTNL_READ_FUSE_REQ, 8);
+	err = plat_fill_cmd_msg_hdr((struct mu_hdr *)&priv->tx_msg.header, ELE_READ_FUSE_REQ, 8);
 	if (err) {
 		pr_err("Error: plat_fill_cmd_msg_hdr failed.\n");
 		return err;
 	}
 
 	priv->tx_msg.data[0] = fuse_id;
-	err = imx_sentnl_msg_send_rcv(priv);
+	err = imx_ele_msg_send_rcv(priv);
 	if (err < 0)
 		return err;
 

@@ -3,8 +3,8 @@
  * Copyright 2021 NXP
  */
 
-#ifndef SENTNL_MU_H
-#define SENTNL_MU_H
+#ifndef ELE_MU_H
+#define ELE_MU_H
 
 #include <linux/miscdevice.h>
 #include <linux/semaphore.h>
@@ -54,7 +54,7 @@
 #define SECO_MU_IO_FLAGS_USE_SEC_MEM	(0x02u)
 #define SECO_MU_IO_FLAGS_USE_SHORT_ADDR	(0x04u)
 
-struct sentnl_obuf_desc {
+struct ele_obuf_desc {
 	u8 *out_ptr;
 	u8 *out_usr_ptr;
 	u32 out_size;
@@ -67,7 +67,7 @@ enum mu_device_status_t {
 	MU_OPENED
 };
 
-struct sentnl_shared_mem {
+struct ele_shared_mem {
 	dma_addr_t dma_addr;
 	u32 size;
 	u32 pos;
@@ -75,9 +75,9 @@ struct sentnl_shared_mem {
 };
 
 /* Private struct for each char device instance. */
-struct sentnl_mu_device_ctx {
+struct ele_mu_device_ctx {
 	struct device *dev;
-	struct sentnl_mu_priv *priv;
+	struct ele_mu_priv *priv;
 	struct miscdevice miscdev;
 
 	enum mu_device_status_t status;
@@ -87,16 +87,16 @@ struct sentnl_mu_device_ctx {
 	u32 pending_hdr;
 	struct list_head pending_out;
 
-	struct sentnl_shared_mem secure_mem;
-	struct sentnl_shared_mem non_secure_mem;
+	struct ele_shared_mem secure_mem;
+	struct ele_shared_mem non_secure_mem;
 
 	u32 temp_cmd[MAX_MESSAGE_SIZE];
 	u32 temp_resp[MAX_RECV_SIZE];
 	u32 temp_resp_size;
-	struct notifier_block sentnl_notify;
+	struct notifier_block ele_notify;
 };
 
-/* Header of the messages exchange with the SENTINEL */
+/* Header of the messages exchange with the EdgeLock Enclave */
 struct mu_hdr {
 	u8 ver;
 	u8 size;
@@ -104,14 +104,14 @@ struct mu_hdr {
 	u8 tag;
 }  __packed;
 
-struct sentnl_api_msg {
+struct ele_api_msg {
 	u32 header; /* u8 Tag; u8 Command; u8 Size; u8 Ver; */
-	u32 data[SENTNL_MSG_DATA_NUM];
+	u32 data[ELE_MSG_DATA_NUM];
 };
 
-struct sentnl_mu_priv {
-	struct sentnl_mu_device_ctx *cmd_receiver_dev;
-	struct sentnl_mu_device_ctx *waiting_rsp_dev;
+struct ele_mu_priv {
+	struct ele_mu_device_ctx *cmd_receiver_dev;
+	struct ele_mu_device_ctx *waiting_rsp_dev;
 	/*
 	 * prevent parallel access to the MU registers
 	 * e.g. a user trying to send a command while the other one is
@@ -124,16 +124,16 @@ struct sentnl_mu_priv {
 	 */
 	struct mutex mu_cmd_lock;
 	struct device *dev;
-	u32 sentnl_mu_id;
+	u32 ele_mu_id;
 	u8 cmd_tag;
 	u8 rsp_tag;
 
-	struct mbox_client sentnl_mb_cl;
+	struct mbox_client ele_mb_cl;
 	struct mbox_chan *tx_chan, *rx_chan;
-	struct sentnl_api_msg tx_msg, rx_msg;
+	struct ele_api_msg tx_msg, rx_msg;
 	struct completion done;
 	spinlock_t lock;
 };
 
-int get_sentnl_mu_priv(struct sentnl_mu_priv **export);
+int get_ele_mu_priv(struct ele_mu_priv **export);
 #endif

@@ -147,7 +147,7 @@ static int keys_rpmsg_cb(struct rpmsg_device *rpdev,
 
 static void keys_init_handler(struct work_struct *work)
 {
-	struct key_rpmsg_data msg;
+	struct key_rpmsg_data msg = {};
 	int i;
 
 	/* setup keys */
