@@ -411,8 +411,8 @@ int imx_pcm512x_rpmsg_probe(struct platform_device *pdev, void *_data){
                                 ARRAY_SIZE(hifiberry_dacplus_aux_devs);
         }
 
-	data->daifmt = snd_soc_of_parse_daifmt(np, NULL, &bitclkmaster, &framemaster);
-	data->daifmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
+	data->daifmt = snd_soc_daifmt_parse_format(np, NULL);
+	snd_soc_daifmt_parse_clock_provider_as_phandle(np, NULL, &bitclkmaster, &framemaster);
 
 	if (codec_np == bitclkmaster)
 		data->daifmt |= (codec_np == framemaster) ?
