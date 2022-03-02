@@ -73,9 +73,9 @@ struct imx_blk_ctrl_dev_data {
 #define IMX_BLK_CTRL_RESET_MASK(_id, _offset, _shift, mask) \
 	IMX_BLK_CTRL(BLK_CTRL_RESET, NULL, _id, _offset, _shift, 0, mask, NULL, 0, 0, NULL, NULL)
 
-extern const struct imx_blk_ctrl_dev_data imx8mp_audio_blk_ctrl_dev_data __initconst;
-extern const struct imx_blk_ctrl_dev_data imx8mp_media_blk_ctrl_dev_data __initconst;
-extern const struct imx_blk_ctrl_dev_data imx8mp_hdmi_blk_ctrl_dev_data __initconst;
+extern const struct imx_blk_ctrl_dev_data imx8mp_audio_blk_ctrl_dev_data;
+extern const struct imx_blk_ctrl_dev_data imx8mp_media_blk_ctrl_dev_data;
+extern const struct imx_blk_ctrl_dev_data imx8mp_hdmi_blk_ctrl_dev_data;
 
 #endif
 
