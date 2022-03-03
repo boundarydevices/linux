@@ -8,8 +8,9 @@
 #include "mt6359.dtsi"
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/pinctrl/mt8195-pinfunc.h>
-
+#include <dt-bindings/usb/pd.h>
 
 / {
 	model = "MediaTek MT8195 demo board";
@@ -135,11 +136,45 @@
 	clock-frequency = <400000>;
 	pinctrl-0 = <&i2c6_pins>;
 	pinctrl-names = "default";
+	#address-cells = <1>;
+	#size-cells = <0>;
 	status = "okay";
 
 	mt6360: mt6360@34 {
 		compatible = "mediatek,mt6360";
 		reg = <0x34>;
+		pinctrl-0 = <&mt6360_pins>;
+		pinctrl-names = "default";
+
+		tcpc {
+			compatible = "mediatek,mt6360-tcpc";
+			interrupts-extended = <&pio 100 IRQ_TYPE_LEVEL_LOW>;
+			interrupt-names = "PD_IRQB";
+
+			connector {
+				compatible = "usb-c-connector";
+				label = "USB-C";
+				data-role = "dual";
+				power-role = "dual";
+				try-power-role = "sink";
+				source-pdos = <PDO_FIXED(5000, 1000, PDO_FIXED_DUAL_ROLE | PDO_FIXED_DATA_SWAP)>;
+				sink-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE | PDO_FIXED_DATA_SWAP)>;
+				op-sink-microwatt = <10000000>;
+			};
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					mt6360_ssusb_ep: endpoint {
+						remote-endpoint = <&ssusb_ep>;
+					};
+				};
+
+			};
+		};
 	};
 };
 
@@ -160,10 +195,16 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&u3_p0_vbus>;
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
-	dr_mode = "peripheral";
+	dr_mode = "otg";
 	mediatek,usb3-drd;
 	usb-role-switch;
 	status = "okay";
+
+	port {
+		ssusb_ep: endpoint {
+			remote-endpoint = <&mt6360_ssusb_ep>;
+		};
+	};
 };
 
 &xhci3 {
@@ -171,6 +212,7 @@
 };
 
 &xhci0 {
+	vbus-supply = <&otg_vbus_regulator>;
 	status = "okay";
 };
 
@@ -487,6 +529,15 @@
 			pinmux = <PINMUX_GPIO106__FUNC_GPIO106>;
 			bias-pull-up;
 			input-enable;
+		};
+	};
+
+	mt6360_pins: mt6360-pins {
+		pins {
+			pinmux = <PINMUX_GPIO100__FUNC_GPIO100>,
+				 <PINMUX_GPIO101__FUNC_GPIO101>;
+			input-enable;
+			bias-pull-up;
 		};
 	};
 };
