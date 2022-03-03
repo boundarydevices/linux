@@ -852,6 +852,14 @@
 			#iommu-cells = <1>;
 		};
 
+		rng: rng@1020f000 {
+			compatible = "mediatek,mt8183-rng",
+				     "mediatek,mt7623-rng";
+			reg = <0 0x1020f000 0 0x100>;
+			clocks = <&infracfg CLK_INFRA_TRNG>;
+			clock-names = "rng";
+		};
+
 		gce: mailbox@10238000 {
 			compatible = "mediatek,mt8183-gce";
 			reg = <0 0x10238000 0 0x4000>;
