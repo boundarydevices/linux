@@ -262,6 +262,7 @@ static int lcdifv3_enable_vblank(struct drm_crtc *crtc)
 	struct lcdifv3_crtc *lcdifv3_crtc = to_lcdifv3_crtc(crtc);
 	struct lcdifv3_soc *lcdifv3 = dev_get_drvdata(lcdifv3_crtc->dev->parent);
 
+	pm_runtime_get_sync(lcdifv3_crtc->dev->parent);
 	lcdifv3_vblank_irq_enable(lcdifv3);
 	enable_irq(lcdifv3_crtc->vbl_irq);
 
@@ -275,6 +276,7 @@ static void lcdifv3_disable_vblank(struct drm_crtc *crtc)
 
 	disable_irq_nosync(lcdifv3_crtc->vbl_irq);
 	lcdifv3_vblank_irq_disable(lcdifv3);
+	pm_runtime_put(lcdifv3_crtc->dev->parent);
 }
 
 static const struct drm_crtc_funcs lcdifv3_crtc_funcs = {
