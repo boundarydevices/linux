@@ -861,6 +861,14 @@
 			assigned-clock-parents = <&topckgen CLK_TOP_ULPOSC1_D10>;
 		};
 
+		rng: rng@1020f000 {
+			compatible = "mediatek,mt8195-rng",
+				     "mediatek,mt7623-rng";
+			reg = <0 0x1020f000 0 0x100>;
+			clocks = <&infracfg_ao CLK_INFRA_AO_TRNG>;
+			clock-names = "rng";
+		};
+
 		iommu_infra: infra-iommu@10315000 {
 			compatible = "mediatek,mt8195-iommu-infra";
 			reg = <0 0x10315000 0 0x5000>;
