@@ -464,18 +464,23 @@ static int secure_heap_create(void)
 	struct reserved_mem *rmem = of_reserved_mem_lookup(&np);
 	if (!rmem) {
 		pr_err("of_reserved_mem_lookup() returned NULL\n");
-		return -ENODEV;
+		gen_pool_destroy(pool);
+		return 0;
 	}
 
 	secure_data.base = rmem->base;
 	secure_data.size = rmem->size;
 
-	if (secure_data.base == 0 || secure_data.size == 0)
+	if (secure_data.base == 0 || secure_data.size == 0) {
+		pr_err("secure_data base or size is not correct\n");
+		gen_pool_destroy(pool);
 		return -EINVAL;
+	}
 
 	ret = gen_pool_add(pool, secure_data.base, secure_data.size, -1);
 	if (ret < 0) {
 		pr_err("failed to add memory into pool");
+		gen_pool_destroy(pool);
 		return -EINVAL;
 	}
 
