@@ -6,6 +6,18 @@
 	interrupts = <101 IRQ_TYPE_EDGE_FALLING>;
 	interrupt-names = "IRQB";
 
+	charger {
+		compatible = "mediatek,mt6360-chg";
+		richtek,vinovp-microvolt = <14500000>;
+
+		otg_vbus_regulator: usb-otg-vbus-regulator {
+			regulator-compatible = "usb-otg-vbus";
+			regulator-name = "usb-otg-vbus";
+			regulator-min-microvolt = <4425000>;
+			regulator-max-microvolt = <5825000>;
+		};
+	};
+
 	regulator {
 		compatible = "mediatek,mt6360-regulator";
 		LDO_VIN3-supply = <&mt6360_buck2>;
