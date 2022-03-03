@@ -149,8 +149,6 @@ static void lcdif_plane_atomic_update(struct drm_plane *plane,
 
 		crop  = src_w != stride ? true : false;
 		lcdif_set_fb_hcrop(lcdif, src_w, stride, crop);
-
-		lcdif_enable_controller(lcdif);
 	}
 }
 
