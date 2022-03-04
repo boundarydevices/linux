@@ -832,6 +832,7 @@
 			clock-names = "main";
 			memory-region = <&scp_mem_reserved>;
 			status = "disabled";
+			firmware-name = "mediatek/mt8183/scp.img";
 		};
 
 		systimer: timer@10017000 {
