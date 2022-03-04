@@ -7,6 +7,7 @@
 
 #include <linux/types.h>
 #include <linux/completion.h>
+#include <linux/module.h>
 
 #include <linux/firmware/imx/ele_base_msg.h>
 #include <linux/firmware/imx/ele_mu_ioctl.h>
@@ -353,3 +354,4 @@ int ele_start_rng(void)
 	return -EINVAL;
 }
 EXPORT_SYMBOL_GPL(ele_start_rng);
+MODULE_LICENSE("GPL v2");
