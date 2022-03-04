@@ -753,8 +753,16 @@ static int scp_probe(struct platform_device *pdev)
 	struct mtk_scp *scp;
 	struct rproc *rproc;
 	struct resource *res;
-	char *fw_name = "scp.img";
+	const char *fw_name_default = "scp.img";
+	const char *fw_name;
 	int ret, i;
+
+	ret = rproc_of_parse_firmware(dev, 0, &fw_name);
+	if (ret) {
+		dev_warn(dev, "failed to parse firmware-name property, ret = %d, use default value.\n",
+			ret);
+		fw_name = fw_name_default;
+	}
 
 	rproc = rproc_alloc(dev,
 			    np->name,
