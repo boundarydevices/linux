@@ -1615,6 +1615,10 @@ static inline void put_power(void)
 #endif
 
 #if gcdENABLE_FSCALE_VAL_ADJUST && (defined(CONFIG_DEVICE_THERMAL) || defined(CONFIG_DEVICE_THERMAL_MODULE))
+#if defined(CONFIG_ANDROID)
+    gcdENABLE_GPU_THERMAL = 0;
+#endif
+
     UNREG_THERMAL_NOTIFIER(&thermal_hot_pm_notifier);
 
     driver_remove_file(pdevice->dev.driver, &driver_attr_gpu3DMinClock);
