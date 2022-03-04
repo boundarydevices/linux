@@ -8,6 +8,7 @@
 #include <linux/types.h>
 #include <linux/completion.h>
 #include <linux/mailbox_client.h>
+#include <linux/module.h>
 
 #include <linux/firmware/imx/ele_base_msg.h>
 #include <linux/firmware/imx/ele_mu_ioctl.h>
@@ -139,3 +140,4 @@ int read_common_fuse(uint16_t fuse_id, u32 *value)
 	return err;
 }
 EXPORT_SYMBOL_GPL(read_common_fuse);
+MODULE_LICENSE("GPL v2");
