@@ -456,6 +456,7 @@ static const struct of_device_id mt_it5205_match_table[] = {
 	{.compatible = "mediatek,it5205fn",},
 	{},
 };
+MODULE_DEVICE_TABLE(of, mt_it5205_match_table);
 
 
 static struct i2c_driver it5205fn_driver = {
