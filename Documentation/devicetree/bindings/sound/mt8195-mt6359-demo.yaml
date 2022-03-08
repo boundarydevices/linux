@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/sound/mt8195-mt6359-demo.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Mediatek MT8195 with MT6359 Demo ASoC sound card driver
+
+maintainers:
+  - Nicolas Belin <nbelin@baylibre.com>
+
+description:
+  This binding describes the MT8195 demo sound card.
+
+properties:
+  compatible:
+    const: mediatek,mt8195_mt6359_demo
+
+  mediatek,platform:
+    $ref: "/schemas/types.yaml#/definitions/phandle"
+    description: The phandle of the MT8195 ASoC platform.
+
+  model:
+    $ref: /schemas/types.yaml#/definitions/string
+    description: User specified audio sound card name
+
+additionalProperties: false
+
+required:
+  - compatible
+  - mediatek,platform
+  - model
+
+examples:
+  - |
+
+    sound: mt8195-sound {
+        compatible = "mediatek,mt8195_mt6359_demo";
+        mediatek,platform = <&afe>;
+        model = "mt8195_demo";
+        pinctrl-names = "default";
+        pinctrl-0 = <&aud_pins_default>;
+    };
+
+...
