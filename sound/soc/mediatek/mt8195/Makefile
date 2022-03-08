@@ -6,6 +6,7 @@ snd-soc-mt8195-afe-objs := \
 	mt8195-afe-clk.o \
 	mt8195-afe-pcm.o \
 	mt8195-dai-adda.o \
+	mt8195-dai-dmic.o \
 	mt8195-dai-etdm.o \
 	mt8195-dai-pcm.o
 
