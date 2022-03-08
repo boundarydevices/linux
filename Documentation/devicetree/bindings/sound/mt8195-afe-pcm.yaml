@@ -51,22 +51,22 @@ properties:
   clock-names:
     items:
       - const: clk26m
-      - const: apll1_ck
-      - const: apll2_ck
+      - const: apll1
+      - const: apll2
       - const: apll12_div0
       - const: apll12_div1
       - const: apll12_div2
       - const: apll12_div3
       - const: apll12_div9
-      - const: a1sys_hp_sel
-      - const: aud_intbus_sel
-      - const: audio_h_sel
-      - const: audio_local_bus_sel
-      - const: dptx_m_sel
-      - const: i2so1_m_sel
-      - const: i2so2_m_sel
-      - const: i2si1_m_sel
-      - const: i2si2_m_sel
+      - const: top_a1sys_hp
+      - const: top_aud_intbus
+      - const: top_audio_h
+      - const: top_audio_local_bus
+      - const: top_dptx_mck
+      - const: top_i2so1_mck
+      - const: top_i2so2_mck
+      - const: top_i2si1_mck
+      - const: top_i2si2_mck
       - const: infra_ao_audio_26m_b
       - const: scp_adsp_audiodsp
 
@@ -158,23 +158,24 @@ examples:
                  <&topckgen 97>, //CLK_TOP_I2SI2_M_SEL
                  <&infracfg_ao 50>, //CLK_INFRA_AO_AUDIO_26M_B
                  <&scp_adsp 0>; //CLK_SCP_ADSP_AUDIODSP
+
         clock-names = "clk26m",
-                      "apll1_ck",
-                      "apll2_ck",
+                      "apll1",
+                      "apll2",
                       "apll12_div0",
                       "apll12_div1",
                       "apll12_div2",
                       "apll12_div3",
                       "apll12_div9",
-                      "a1sys_hp_sel",
-                      "aud_intbus_sel",
-                      "audio_h_sel",
-                      "audio_local_bus_sel",
-                      "dptx_m_sel",
-                      "i2so1_m_sel",
-                      "i2so2_m_sel",
-                      "i2si1_m_sel",
-                      "i2si2_m_sel",
+                      "top_a1sys_hp",
+                      "top_aud_intbus",
+                      "top_audio_h",
+                      "top_audio_local_bus",
+                      "top_dptx_mck",
+                      "top_i2so1_mck",
+                      "top_i2so2_mck",
+                      "top_i2si1_mck",
+                      "top_i2si2_mck",
                       "infra_ao_audio_26m_b",
                       "scp_adsp_audiodsp";
     };
