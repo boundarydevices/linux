@@ -63,7 +63,7 @@ conn_subsys: bus@5b000000 {
 		reg = <0x5b0d0200 0x200>;
 	};
 
-	usbphy1: usbphy@0x5b100000 {
+	usbphy1: usbphy@5b100000 {
 		compatible = "fsl,imx8qm-usbphy", "fsl,imx7ulp-usbphy",
 			"fsl,imx6ul-usbphy", "fsl,imx23-usbphy";
 		reg = <0x5b100000 0x1000>;
