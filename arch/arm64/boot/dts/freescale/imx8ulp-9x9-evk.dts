@@ -20,6 +20,12 @@
 	};
 };
 
+&pinctrl_dsi {
+	fsl,pins = <
+		MX8ULP_PAD_PTF21__PTF21		0x3
+	>;
+};
+
 &pinctrl_enet {
 	fsl,pins = <
 		MX8ULP_PAD_PTF9__ENET0_MDC     0x43
