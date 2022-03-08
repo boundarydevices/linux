@@ -53,6 +53,12 @@
 			no-map;
 			reg = <0 0x54600000 0x0 0x30000>;
 		};
+
+		snd_dma_mem_reserved: snd_dma_mem_region {
+			compatible = "shared-dma-pool";
+			reg = <0 0x60000000 0 0x1100000>;
+			no-map;
+		};
 	};
 
 	firmware {
@@ -379,6 +385,36 @@
 		};
 	};
 
+	aud_pins_default: audiodefault {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO70__FUNC_AUD_SYNC_MOSI>,
+				 <PINMUX_GPIO69__FUNC_AUD_CLK_MOSI>,
+				 <PINMUX_GPIO71__FUNC_AUD_DAT_MOSI0>,
+				 <PINMUX_GPIO72__FUNC_AUD_DAT_MOSI1>,
+				 <PINMUX_GPIO73__FUNC_AUD_DAT_MISO0>,
+				 <PINMUX_GPIO74__FUNC_AUD_DAT_MISO1>,
+				 <PINMUX_GPIO75__FUNC_AUD_DAT_MISO2>,
+				 <PINMUX_GPIO46__FUNC_I2SIN_MCK>,
+				 <PINMUX_GPIO47__FUNC_I2SIN_BCK>,
+				 <PINMUX_GPIO48__FUNC_I2SIN_WS>,
+				 <PINMUX_GPIO49__FUNC_I2SIN_D0>,
+				 <PINMUX_GPIO50__FUNC_I2SO1_MCK>,
+				 <PINMUX_GPIO51__FUNC_I2SO1_BCK>,
+				 <PINMUX_GPIO52__FUNC_I2SO1_WS>,
+				 <PINMUX_GPIO53__FUNC_I2SO1_D0>,
+				 <PINMUX_GPIO54__FUNC_I2SO1_D1>,
+				 <PINMUX_GPIO55__FUNC_I2SO1_D2>,
+				 <PINMUX_GPIO56__FUNC_I2SO1_D3>,
+				 <PINMUX_GPIO61__FUNC_DMIC1_CLK>,
+				 <PINMUX_GPIO62__FUNC_DMIC1_DAT>,
+				 <PINMUX_GPIO64__FUNC_DMIC2_DAT>,
+				 <PINMUX_GPIO14__FUNC_DMIC3_DAT>,
+				 <PINMUX_GPIO15__FUNC_DMIC3_CLK>,
+				 <PINMUX_GPIO16__FUNC_DMIC4_DAT>,
+				 <PINMUX_GPIO17__FUNC_DMIC4_CLK>;
+		};
+	};
+
 	i2c0_pins: i2c0-pins {
 		pins {
 			pinmux = <PINMUX_GPIO8__FUNC_SDA0>,
@@ -659,6 +695,22 @@
 			};
 		};
 	};
+};
+
+&afe {
+	memory-region = <&snd_dma_mem_reserved>;
+	mediatek,etdm-out1-multi-pin-mode = <1>;
+	mediatek,dmic-iir-on = <0>;
+	mediatek,dmic-two-wire-mode = <0>;
+	status = "okay";
+};
+
+&sound {
+	compatible = "mediatek,mt8195_mt6359_demo";
+	model = "mt8195_demo";
+	pinctrl-names = "default";
+	pinctrl-0 = <&aud_pins_default>;
+	status = "okay";
 };
 
 &mfg0 {
