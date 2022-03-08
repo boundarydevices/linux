@@ -115,7 +115,7 @@
 			no-map;
 		};
 
-		audio_reserved: audio@0xa8500000 {
+		audio_reserved: audio@a8500000 {
 			compatible = "shared-dma-pool";
 			no-map;
 			reg = <0 0xa8500000 0 0x100000>;
