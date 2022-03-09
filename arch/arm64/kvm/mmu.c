@@ -1160,12 +1160,12 @@ static enum kvm_pgtable_prot stage1_to_stage2_pgprot(pgprot_t prot)
 	return KVM_PGTABLE_PROT_DEVICE;
 }
 
-static int pkvm_host_donate_guest(u64 pfn, u64 gfn, struct kvm_vcpu *vcpu)
+static int pkvm_host_donate_guest(u64 pfn, u64 gfn)
 {
 	struct arm_smccc_res res;
 
 	arm_smccc_1_1_hvc(KVM_HOST_SMCCC_FUNC(__pkvm_host_donate_guest),
-			  pfn, gfn, vcpu, &res);
+			  pfn, gfn, &res);
 	WARN_ON(res.a0 != SMCCC_RET_SUCCESS);
 
 	/*
@@ -1217,7 +1217,7 @@ static int pkvm_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 
 	spin_lock(&kvm->mmu_lock);
 	pfn = page_to_pfn(page);
-	ret = pkvm_host_donate_guest(pfn, fault_ipa >> PAGE_SHIFT, vcpu);
+	ret = pkvm_host_donate_guest(pfn, fault_ipa >> PAGE_SHIFT);
 	if (ret) {
 		if (ret == -EAGAIN)
 			ret = 0;

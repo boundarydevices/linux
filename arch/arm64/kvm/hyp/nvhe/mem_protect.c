@@ -286,17 +286,13 @@ static int reclaim_walker(u64 addr, u64 end, u32 level, kvm_pte_t *ptep,
 		void * const arg)
 {
 	kvm_pte_t pte = *ptep;
-	phys_addr_t phys;
+	struct hyp_page *page;
 
 	if (!kvm_pte_valid(pte))
 		return 0;
 
-	/*
-	 * Only update the host stage-2 -- we're about to tear-down the guest
-	 * stage-2 so no need to waste effort trying to keep it in sync.
-	 */
-	phys = kvm_pte_to_phys(pte);
-	BUG_ON(host_stage2_set_owner_locked(phys, PAGE_SIZE, pkvm_host_poison));
+	page = hyp_phys_to_page(kvm_pte_to_phys(pte));
+	page->flags |= HOST_PAGE_NEED_POISONING;
 
 	return 0;
 }
@@ -382,7 +378,7 @@ struct kvm_mem_range {
 	u64 end;
 };
 
-static bool find_mem_range(phys_addr_t addr, struct kvm_mem_range *range)
+static struct memblock_region *find_mem_range(phys_addr_t addr, struct kvm_mem_range *range)
 {
 	int cur, left = 0, right = hyp_memblock_nr;
 	struct memblock_region *reg;
@@ -405,18 +401,28 @@ static bool find_mem_range(phys_addr_t addr, struct kvm_mem_range *range)
 		} else {
 			range->start = reg->base;
 			range->end = end;
-			return true;
+			return reg;
 		}
 	}
 
-	return false;
+	return NULL;
 }
 
 bool addr_is_memory(phys_addr_t phys)
 {
 	struct kvm_mem_range range;
 
-	return find_mem_range(phys, &range);
+	return !!find_mem_range(phys, &range);
+}
+
+static bool addr_is_allowed_memory(phys_addr_t phys)
+{
+	struct memblock_region *reg;
+	struct kvm_mem_range range;
+
+	reg = find_mem_range(phys, &range);
+
+	return reg && !(reg->flags & MEMBLOCK_NOMAP);
 }
 
 static bool is_in_mem_range(u64 addr, struct kvm_mem_range *range)
@@ -510,11 +516,6 @@ static kvm_pte_t kvm_init_invalid_leaf_owner(pkvm_id owner_id)
 	return FIELD_PREP(KVM_INVALID_PTE_OWNER_MASK, owner_id);
 }
 
-static pkvm_id kvm_get_owner_id(kvm_pte_t pte)
-{
-	return FIELD_GET(KVM_INVALID_PTE_OWNER_MASK, pte);
-}
-
 int host_stage2_set_owner_locked(phys_addr_t addr, u64 size,
 				 pkvm_id owner_id)
 {
@@ -555,7 +556,7 @@ static bool host_stage2_force_pte_cb(u64 addr, u64 end, enum kvm_pgtable_prot pr
 static int host_stage2_idmap(u64 addr)
 {
 	struct kvm_mem_range range;
-	bool is_memory = find_mem_range(addr, &range);
+	bool is_memory = !!find_mem_range(addr, &range);
 	enum kvm_pgtable_prot prot;
 	int ret;
 
@@ -619,6 +620,7 @@ void handle_host_mem_abort(struct kvm_cpu_context *host_ctxt)
 	BUG_ON(!__get_fault_info(esr, &fault));
 
 	addr = (fault.hpfar_el2 & HPFAR_MASK) << 8;
+	addr |= fault.far_el2 & FAR_MASK;
 
 	/* See if any subsystem can handle this abort. */
 	if (is_dabt(esr) && !addr_is_memory(addr))
@@ -636,6 +638,7 @@ enum pkvm_component_id {
 	PKVM_ID_HOST,
 	PKVM_ID_HYP,
 	PKVM_ID_GUEST,
+	PKVM_ID_FFA,
 };
 
 struct pkvm_mem_transition {
@@ -725,7 +728,7 @@ static int __check_page_state_visitor(u64 addr, u64 end, u32 level,
 	struct check_walk_data *d = arg;
 	kvm_pte_t pte = *ptep;
 
-	if (kvm_pte_valid(pte) && !addr_is_memory(kvm_pte_to_phys(pte)))
+	if (kvm_pte_valid(pte) && !addr_is_allowed_memory(kvm_pte_to_phys(pte)))
 		return -EINVAL;
 
 	return d->get_page_state(pte) == d->desired ? 0 : -EPERM;
@@ -1120,7 +1123,7 @@ static int __guest_request_page_transition(u64 *completer_addr,
 		return -EINVAL;
 
 	phys = kvm_pte_to_phys(pte);
-	if (!addr_is_memory(phys))
+	if (!addr_is_allowed_memory(phys))
 		return -EINVAL;
 
 	return __guest_get_completer_addr(completer_addr, phys, tx);
@@ -1212,6 +1215,13 @@ static int check_share(struct pkvm_mem_share *share)
 	case PKVM_ID_GUEST:
 		ret = guest_ack_share(completer_addr, tx, share->completer_prot);
 		break;
+	case PKVM_ID_FFA:
+		/*
+		 * We only check the host; the secure side will check the other
+		 * end when we forward the FFA call.
+		 */
+		ret = 0;
+		break;
 	default:
 		ret = -EINVAL;
 	}
@@ -1248,6 +1258,13 @@ static int __do_share(struct pkvm_mem_share *share)
 		break;
 	case PKVM_ID_GUEST:
 		ret = guest_complete_share(completer_addr, tx, share->completer_prot);
+		break;
+	case PKVM_ID_FFA:
+		/*
+		 * We're not responsible for any secure page-tables, so there's
+		 * nothing to do here.
+		 */
+		ret = 0;
 		break;
 	default:
 		ret = -EINVAL;
@@ -1303,6 +1320,10 @@ static int check_unshare(struct pkvm_mem_share *share)
 	case PKVM_ID_HYP:
 		ret = hyp_ack_unshare(completer_addr, tx);
 		break;
+	case PKVM_ID_FFA:
+		/* See check_share() */
+		ret = 0;
+		break;
 	default:
 		ret = -EINVAL;
 	}
@@ -1336,6 +1357,10 @@ static int __do_unshare(struct pkvm_mem_share *share)
 		break;
 	case PKVM_ID_HYP:
 		ret = hyp_complete_unshare(completer_addr, tx);
+		break;
+	case PKVM_ID_FFA:
+		/* See __do_share() */
+		ret = 0;
 		break;
 	default:
 		ret = -EINVAL;
@@ -1768,6 +1793,52 @@ int __pkvm_host_donate_guest(u64 pfn, u64 gfn, struct kvm_vcpu *vcpu)
 	return ret;
 }
 
+int __pkvm_host_share_ffa(u64 pfn, u64 nr_pages)
+{
+	int ret;
+	struct pkvm_mem_share share = {
+		.tx	= {
+			.nr_pages	= nr_pages,
+			.initiator	= {
+				.id	= PKVM_ID_HOST,
+				.addr	= hyp_pfn_to_phys(pfn),
+			},
+			.completer	= {
+				.id	= PKVM_ID_FFA,
+			},
+		},
+	};
+
+	host_lock_component();
+	ret = do_share(&share);
+	host_unlock_component();
+
+	return ret;
+}
+
+int __pkvm_host_unshare_ffa(u64 pfn, u64 nr_pages)
+{
+	int ret;
+	struct pkvm_mem_share share = {
+		.tx	= {
+			.nr_pages	= nr_pages,
+			.initiator	= {
+				.id	= PKVM_ID_HOST,
+				.addr	= hyp_pfn_to_phys(pfn),
+			},
+			.completer	= {
+				.id	= PKVM_ID_FFA,
+			},
+		},
+	};
+
+	host_lock_component();
+	ret = do_unshare(&share);
+	host_unlock_component();
+
+	return ret;
+}
+
 static int hyp_zero_page(phys_addr_t phys)
 {
 	void *addr;
@@ -1784,7 +1855,7 @@ static int hyp_zero_page(phys_addr_t phys)
 int __pkvm_host_reclaim_page(u64 pfn)
 {
 	u64 addr = hyp_pfn_to_phys(pfn);
-	enum pkvm_page_state state;
+	struct hyp_page *page;
 	kvm_pte_t pte;
 	int ret;
 
@@ -1794,23 +1865,17 @@ int __pkvm_host_reclaim_page(u64 pfn)
 	if (ret)
 		goto unlock;
 
-	if (kvm_pte_valid(pte)) {
-		state = host_get_page_state(pte);
-		ret = (state == PKVM_PAGE_OWNED) ? 0 : -EPERM;
+	if (host_get_page_state(pte) == PKVM_PAGE_OWNED)
 		goto unlock;
-	}
 
-	switch (kvm_get_owner_id(pte)) {
-	case pkvm_host_id:
-		ret = 0;
-		break;
-	case pkvm_host_poison:
+	page = hyp_phys_to_page(addr);
+	if (page->flags & HOST_PAGE_NEED_POISONING) {
 		ret = hyp_zero_page(addr);
 		if (ret)
 			goto unlock;
+		page->flags &= ~HOST_PAGE_NEED_POISONING;
 		ret = host_stage2_set_owner_locked(addr, PAGE_SIZE, pkvm_host_id);
-		break;
-	default:
+	} else {
 		ret = -EPERM;
 	}
 

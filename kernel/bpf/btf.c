@@ -4332,8 +4332,7 @@ static struct btf *btf_parse(bpfptr_t btf_data, u32 btf_data_size,
 		log->len_total = log_size;
 
 		/* log attributes have to be sane */
-		if (log->len_total < 128 || log->len_total > UINT_MAX >> 8 ||
-		    !log->level || !log->ubuf) {
+		if (!bpf_verifier_log_attr_valid(log)) {
 			err = -EINVAL;
 			goto errout;
 		}
@@ -6053,7 +6052,8 @@ static int btf_module_notify(struct notifier_block *nb, unsigned long op,
 			pr_warn("failed to validate module [%s] BTF: %ld\n",
 				mod->name, PTR_ERR(btf));
 			kfree(btf_mod);
-			err = PTR_ERR(btf);
+			if (!IS_ENABLED(CONFIG_MODULE_ALLOW_BTF_MISMATCH))
+				err = PTR_ERR(btf);
 			goto out;
 		}
 		err = btf_alloc_id(btf);

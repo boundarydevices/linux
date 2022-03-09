@@ -1072,7 +1072,8 @@ stop_rr_fcf_flogi:
 
 		/* FLOGI failed, so there is no fabric */
 		spin_lock_irq(shost->host_lock);
-		vport->fc_flag &= ~(FC_FABRIC | FC_PUBLIC_LOOP);
+		vport->fc_flag &= ~(FC_FABRIC | FC_PUBLIC_LOOP |
+				    FC_PT2PT_NO_NVME);
 		spin_unlock_irq(shost->host_lock);
 
 		/* If private loop, then allow max outstanding els to be
@@ -3531,11 +3532,6 @@ lpfc_issue_els_rscn(struct lpfc_vport *vport, uint8_t retry)
 		return 1;
 	}
 
-	/* This will cause the callback-function lpfc_cmpl_els_cmd to
-	 * trigger the release of node.
-	 */
-	if (!(vport->fc_flag & FC_PT2PT))
-		lpfc_nlp_put(ndlp);
 	return 0;
 }
 
@@ -4592,6 +4588,23 @@ lpfc_els_retry(struct lpfc_hba *phba, struct lpfc_iocbq *cmdiocb,
 		/* Added for Vendor specifc support
 		 * Just keep retrying for these Rsn / Exp codes
 		 */
+		if ((vport->fc_flag & FC_PT2PT) &&
+		    cmd == ELS_CMD_NVMEPRLI) {
+			switch (stat.un.b.lsRjtRsnCode) {
+			case LSRJT_UNABLE_TPC:
+			case LSRJT_INVALID_CMD:
+			case LSRJT_LOGICAL_ERR:
+			case LSRJT_CMD_UNSUPPORTED:
+				lpfc_printf_vlog(vport, KERN_WARNING, LOG_ELS,
+						 "0168 NVME PRLI LS_RJT "
+						 "reason %x port doesn't "
+						 "support NVME, disabling NVME\n",
+						 stat.un.b.lsRjtRsnCode);
+				retry = 0;
+				vport->fc_flag |= FC_PT2PT_NO_NVME;
+				goto out_retry;
+			}
+		}
 		switch (stat.un.b.lsRjtRsnCode) {
 		case LSRJT_UNABLE_TPC:
 			/* The driver has a VALID PLOGI but the rport has
@@ -6877,6 +6890,7 @@ static int
 lpfc_get_rdp_info(struct lpfc_hba *phba, struct lpfc_rdp_context *rdp_context)
 {
 	LPFC_MBOXQ_t *mbox = NULL;
+	struct lpfc_dmabuf *mp;
 	int rc;
 
 	mbox = mempool_alloc(phba->mbox_mem_pool, GFP_KERNEL);
@@ -6892,8 +6906,11 @@ lpfc_get_rdp_info(struct lpfc_hba *phba, struct lpfc_rdp_context *rdp_context)
 	mbox->mbox_cmpl = lpfc_mbx_cmpl_rdp_page_a0;
 	mbox->ctx_ndlp = (struct lpfc_rdp_context *)rdp_context;
 	rc = lpfc_sli_issue_mbox(phba, mbox, MBX_NOWAIT);
-	if (rc == MBX_NOT_FINISHED)
+	if (rc == MBX_NOT_FINISHED) {
+		mp = (struct lpfc_dmabuf *)mbox->ctx_buf;
+		lpfc_mbuf_free(phba, mp->virt, mp->phys);
 		goto issue_mbox_fail;
+	}
 
 	return 0;
 

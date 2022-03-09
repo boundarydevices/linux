@@ -100,9 +100,13 @@ int kvm_vm_ioctl_enable_cap(struct kvm *kvm,
 	/* Capabilities without flags */
 	switch (cap->cap) {
 	case KVM_CAP_ARM_NISV_TO_USER:
-		r = 0;
-		set_bit(KVM_ARCH_FLAG_RETURN_NISV_IO_ABORT_TO_USER,
-			&kvm->arch.flags);
+		if (kvm_vm_is_protected(kvm)) {
+			r = -EINVAL;
+		} else {
+			r = 0;
+			set_bit(KVM_ARCH_FLAG_RETURN_NISV_IO_ABORT_TO_USER,
+				&kvm->arch.flags);
+		}
 		break;
 	case KVM_CAP_ARM_MTE:
 		mutex_lock(&kvm->lock);
@@ -191,31 +195,6 @@ vm_fault_t kvm_arch_vcpu_fault(struct kvm_vcpu *vcpu, struct vm_fault *vmf)
 	return VM_FAULT_SIGBUS;
 }
 
-void free_hyp_memcache(struct kvm_hyp_memcache *mc);
-static void kvm_shadow_destroy(struct kvm *kvm)
-{
-	struct kvm_pinned_page *ppage, *tmp;
-	struct mm_struct *mm = current->mm;
-	struct list_head *ppages;
-
-	if (kvm->arch.pkvm.shadow_handle)
-		WARN_ON(kvm_call_hyp_nvhe(__pkvm_teardown_shadow, kvm));
-
-	free_hyp_memcache(&kvm->arch.pkvm.teardown_mc);
-
-	ppages = &kvm->arch.pkvm.pinned_pages;
-	list_for_each_entry_safe(ppage, tmp, ppages, link) {
-		WARN_ON(kvm_call_hyp_nvhe(__pkvm_host_reclaim_page,
-					  page_to_pfn(ppage->page)));
-		cond_resched();
-
-		account_locked_vm(mm, 1, false);
-		unpin_user_pages_dirty_lock(&ppage->page, 1, true);
-		list_del(&ppage->link);
-		kfree(ppage);
-	}
-}
-
 /**
  * kvm_arch_destroy_vm - destroy the VM data structure
  * @kvm:	pointer to the KVM struct
@@ -227,7 +206,9 @@ void kvm_arch_destroy_vm(struct kvm *kvm)
 	bitmap_free(kvm->arch.pmu_filter);
 
 	kvm_vgic_destroy(kvm);
-	kvm_shadow_destroy(kvm);
+
+	if (is_protected_kvm_enabled())
+		kvm_shadow_destroy(kvm);
 
 	for (i = 0; i < KVM_MAX_VCPUS; ++i) {
 		if (kvm->vcpus[i]) {
@@ -261,12 +242,14 @@ static int kvm_check_extension(struct kvm *kvm, long ext)
 	case KVM_CAP_IMMEDIATE_EXIT:
 	case KVM_CAP_VCPU_EVENTS:
 	case KVM_CAP_ARM_IRQ_LINE_LAYOUT_2:
-	case KVM_CAP_ARM_NISV_TO_USER:
 	case KVM_CAP_ARM_INJECT_EXT_DABT:
 	case KVM_CAP_SET_GUEST_DEBUG:
 	case KVM_CAP_VCPU_ATTRIBUTES:
 	case KVM_CAP_PTP_KVM:
 		r = 1;
+		break;
+	case KVM_CAP_ARM_NISV_TO_USER:
+		r = !kvm || !kvm_vm_is_protected(kvm);
 		break;
 	case KVM_CAP_SET_GUEST_DEBUG2:
 		return KVM_GUESTDBG_VALID_MASK;
@@ -571,7 +554,9 @@ nommu:
 	kvm_arch_vcpu_load_debug_state_flags(vcpu);
 
 	if (is_protected_kvm_enabled()) {
-		kvm_call_hyp_nvhe(__pkvm_vcpu_load, vcpu);
+		kvm_call_hyp_nvhe(__pkvm_vcpu_load,
+				  vcpu->kvm->arch.pkvm.shadow_handle,
+				  vcpu->vcpu_idx, vcpu->arch.hcr_el2);
 		kvm_call_hyp(__vgic_v3_restore_vmcr_aprs,
 			     &vcpu->arch.vgic_cpu.vgic_v3);
 	}
@@ -582,7 +567,7 @@ void kvm_arch_vcpu_put(struct kvm_vcpu *vcpu)
 	if (is_protected_kvm_enabled()) {
 		kvm_call_hyp(__vgic_v3_save_vmcr_aprs,
 			     &vcpu->arch.vgic_cpu.vgic_v3);
-		kvm_call_hyp_nvhe(__pkvm_vcpu_put, vcpu);
+		kvm_call_hyp_nvhe(__pkvm_vcpu_put);
 
 		/* __pkvm_vcpu_put implies a sync of the state */
 		if (!kvm_vm_is_protected(vcpu->kvm))
@@ -930,6 +915,24 @@ static bool kvm_vcpu_exit_request(struct kvm_vcpu *vcpu, int *ret)
 			xfer_to_guest_mode_work_pending();
 }
 
+/*
+ * Actually run the vCPU, entering an RCU extended quiescent state (EQS) while
+ * the vCPU is running.
+ *
+ * This must be noinstr as instrumentation may make use of RCU, and this is not
+ * safe during the EQS.
+ */
+static int noinstr kvm_arm_vcpu_enter_exit(struct kvm_vcpu *vcpu)
+{
+	int ret;
+
+	guest_state_enter_irqoff();
+	ret = kvm_call_hyp_ret(__kvm_vcpu_run, vcpu);
+	guest_state_exit_irqoff();
+
+	return ret;
+}
+
 /**
  * kvm_arch_vcpu_ioctl_run - the main VCPU run function to execute guest code
  * @vcpu:	The VCPU pointer
@@ -1020,9 +1023,9 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 		 * Enter the guest
 		 */
 		trace_kvm_entry(*vcpu_pc(vcpu));
-		guest_enter_irqoff();
+		guest_timing_enter_irqoff();
 
-		ret = kvm_call_hyp_ret(__kvm_vcpu_run, vcpu);
+		ret = kvm_arm_vcpu_enter_exit(vcpu);
 
 		vcpu->mode = OUTSIDE_GUEST_MODE;
 		vcpu->stat.exits++;
@@ -1057,26 +1060,23 @@ int kvm_arch_vcpu_ioctl_run(struct kvm_vcpu *vcpu)
 		kvm_arch_vcpu_ctxsync_fp(vcpu);
 
 		/*
-		 * We may have taken a host interrupt in HYP mode (ie
-		 * while executing the guest). This interrupt is still
-		 * pending, as we haven't serviced it yet!
+		 * We must ensure that any pending interrupts are taken before
+		 * we exit guest timing so that timer ticks are accounted as
+		 * guest time. Transiently unmask interrupts so that any
+		 * pending interrupts are taken.
 		 *
-		 * We're now back in SVC mode, with interrupts
-		 * disabled.  Enabling the interrupts now will have
-		 * the effect of taking the interrupt again, in SVC
-		 * mode this time.
+		 * Per ARM DDI 0487G.b section D1.13.4, an ISB (or other
+		 * context synchronization event) is necessary to ensure that
+		 * pending interrupts are taken.
 		 */
 		local_irq_enable();
+		isb();
+		local_irq_disable();
 
-		/*
-		 * We do local_irq_enable() before calling guest_exit() so
-		 * that if a timer interrupt hits while running the guest we
-		 * account that tick as being spent in the guest.  We enable
-		 * preemption after calling guest_exit() so that if we get
-		 * preempted we make sure ticks after that is not counted as
-		 * guest time.
-		 */
-		guest_exit();
+		guest_timing_exit_irqoff();
+
+		local_irq_enable();
+
 		trace_kvm_exit(ret, kvm_vcpu_trap_get_class(vcpu), *vcpu_pc(vcpu));
 
 		/* Exit types that need handling before we can be preempted */
@@ -1892,6 +1892,7 @@ static bool init_psci_relay(void)
 	}
 
 	kvm_host_psci_config.version = psci_ops.get_version();
+	kvm_host_psci_config.smccc_version = arm_smccc_get_version();
 
 	if (kvm_host_psci_config.version == PSCI_VERSION(0, 1)) {
 		kvm_host_psci_config.function_ids_0_1 = get_psci_0_1_function_ids();
