@@ -371,9 +371,13 @@ static const unsigned int mt8365_afe_backup_list[] = {
 	AFE_ADDA_UL_DL_CON0,
 	AFE_ADDA_DL_SRC2_CON0,
 	AFE_ADDA_DL_SRC2_CON1,
+	AFE_I2S_CON,
 	AFE_I2S_CON1,
+	AFE_I2S_CON2,
+	AFE_I2S_CON3,
 	AFE_ADDA_UL_SRC_CON0,
 	AFE_AUD_PAD_TOP,
+	AFE_HD_ENGEN_ENABLE,
 };
 
 static const struct snd_pcm_hardware mt8365_afe_hardware = {
