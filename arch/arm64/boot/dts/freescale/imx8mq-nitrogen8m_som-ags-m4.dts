@@ -101,8 +101,29 @@
 	/delete-property/ sn65dsi83;
 };
 
+&i2c1 {
+	pinctrl-names = "default";
+	/delete-property/ pinctrl-1;
+	/delete-property/ scl-gpios;
+	/delete-property/ sda-gpios;
+};
+
+&i2c2 {
+	pinctrl-names = "default";
+	/delete-property/ pinctrl-1;
+	/delete-property/ scl-gpios;
+	/delete-property/ sda-gpios;
+};
+
 &i2c3 {
 	status = "disabled";
+};
+
+&i2c4 {
+	pinctrl-names = "default";
+	/delete-property/ pinctrl-1;
+	/delete-property/ scl-gpios;
+	/delete-property/ sda-gpios;
 };
 
 &gpio3 {
