@@ -277,7 +277,7 @@
 	};
 
 	backlight_lcd: backlight-lcd {
-		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		brightness-levels = <0 800 1000 3000 8000 16000 25000 40000 65535>;
 		compatible = "pwm-backlight";
 		display = <&lcdif>;
 		default-brightness-level = <8>;
