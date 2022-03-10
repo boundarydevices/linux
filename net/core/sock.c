@@ -830,6 +830,8 @@ static int sock_timestamping_bind_phc(struct sock *sk, int phc_index)
 	}
 
 	num = ethtool_get_phc_vclocks(dev, &vclock_index);
+	dev_put(dev);
+
 	for (i = 0; i < num; i++) {
 		if (*(vclock_index + i) == phc_index) {
 			match = true;
@@ -864,9 +866,9 @@ int sock_set_timestamping(struct sock *sk, int optname,
 			if ((1 << sk->sk_state) &
 			    (TCPF_CLOSE | TCPF_LISTEN))
 				return -EINVAL;
-			sk->sk_tskey = tcp_sk(sk)->snd_una;
+			atomic_set(&sk->sk_tskey, tcp_sk(sk)->snd_una);
 		} else {
-			sk->sk_tskey = 0;
+			atomic_set(&sk->sk_tskey, 0);
 		}
 	}
 

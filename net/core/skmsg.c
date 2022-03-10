@@ -1124,6 +1124,8 @@ void sk_psock_start_strp(struct sock *sk, struct sk_psock *psock)
 
 void sk_psock_stop_strp(struct sock *sk, struct sk_psock *psock)
 {
+	psock_set_prog(&psock->progs.stream_parser, NULL);
+
 	if (!psock->saved_data_ready)
 		return;
 
@@ -1151,7 +1153,7 @@ static int sk_psock_verdict_recv(read_descriptor_t *desc, struct sk_buff *skb,
 	struct sk_psock *psock;
 	struct bpf_prog *prog;
 	int ret = __SK_DROP;
-	int len = skb->len;
+	int len = orig_len;
 
 	/* clone here so sk_eat_skb() in tcp_read_sock does not drop our data */
 	skb = skb_clone(skb, GFP_ATOMIC);
@@ -1212,6 +1214,9 @@ void sk_psock_start_verdict(struct sock *sk, struct sk_psock *psock)
 
 void sk_psock_stop_verdict(struct sock *sk, struct sk_psock *psock)
 {
+	psock_set_prog(&psock->progs.stream_verdict, NULL);
+	psock_set_prog(&psock->progs.skb_verdict, NULL);
+
 	if (!psock->saved_data_ready)
 		return;
 

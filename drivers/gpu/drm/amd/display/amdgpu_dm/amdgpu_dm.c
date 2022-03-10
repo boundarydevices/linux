@@ -2213,6 +2213,9 @@ static int dm_resume(void *handle)
 	if (amdgpu_in_reset(adev)) {
 		dc_state = dm->cached_dc_state;
 
+		if (dc_enable_dmub_notifications(adev->dm.dc))
+			amdgpu_dm_outbox_init(adev);
+
 		r = dm_dmub_hw_init(adev);
 		if (r)
 			DRM_ERROR("DMUB interface failed to initialize: status=%d\n", r);
@@ -2224,8 +2227,8 @@ static int dm_resume(void *handle)
 
 		for (i = 0; i < dc_state->stream_count; i++) {
 			dc_state->streams[i]->mode_changed = true;
-			for (j = 0; j < dc_state->stream_status->plane_count; j++) {
-				dc_state->stream_status->plane_states[j]->update_flags.raw
+			for (j = 0; j < dc_state->stream_status[i].plane_count; j++) {
+				dc_state->stream_status[i].plane_states[j]->update_flags.raw
 					= 0xffffffff;
 			}
 		}
@@ -2259,6 +2262,10 @@ static int dm_resume(void *handle)
 	dm_state->context = dc_create_state(dm->dc);
 	/* TODO: Remove dc_state->dccg, use dc->dccg directly. */
 	dc_resource_state_construct(dm->dc, dm_state->context);
+
+	/* Re-enable outbox interrupts for DPIA. */
+	if (dc_enable_dmub_notifications(adev->dm.dc))
+		amdgpu_dm_outbox_init(adev);
 
 	/* Before powering on DC we need to re-initialize DMUB. */
 	r = dm_dmub_hw_init(adev);
@@ -3220,7 +3227,7 @@ static int dcn10_register_irq_handlers(struct amdgpu_device *adev)
 
 	/* Use GRPH_PFLIP interrupt */
 	for (i = DCN_1_0__SRCID__HUBP0_FLIP_INTERRUPT;
-			i <= DCN_1_0__SRCID__HUBP0_FLIP_INTERRUPT + adev->mode_info.num_crtc - 1;
+			i <= DCN_1_0__SRCID__HUBP0_FLIP_INTERRUPT + dc->caps.max_otg_num - 1;
 			i++) {
 		r = amdgpu_irq_add_id(adev, SOC15_IH_CLIENTID_DCE, i, &adev->pageflip_irq);
 		if (r) {
@@ -3805,6 +3812,9 @@ static int amdgpu_dm_initialize_drm_device(struct amdgpu_device *adev)
 	}
 #endif
 
+	/* Disable vblank IRQs aggressively for power-saving. */
+	adev_to_drm(adev)->vblank_disable_immediate = true;
+
 	/* loops over all connectors on the board */
 	for (i = 0; i < link_cnt; i++) {
 		struct dc_link *link = NULL;
@@ -3846,8 +3856,17 @@ static int amdgpu_dm_initialize_drm_device(struct amdgpu_device *adev)
 		} else if (dc_link_detect(link, DETECT_REASON_BOOT)) {
 			amdgpu_dm_update_connector_after_detect(aconnector);
 			register_backlight_device(dm, link);
+
+			if (dm->num_of_edps)
+				update_connector_ext_caps(aconnector);
 			if (amdgpu_dc_feature_mask & DC_PSR_MASK)
 				amdgpu_dm_set_psr_caps(link);
+
+			/* TODO: Fix vblank control helpers to delay PSR entry to allow this when
+			 * PSR is also supported.
+			 */
+			if (link->psr_settings.psr_feature_enabled)
+				adev_to_drm(adev)->vblank_disable_immediate = false;
 		}
 
 
@@ -5594,6 +5613,7 @@ static void update_dsc_caps(struct amdgpu_dm_connector *aconnector,
 							struct dsc_dec_dpcd_caps *dsc_caps)
 {
 	stream->timing.flags.DSC = 0;
+	dsc_caps->is_dsc_supported = false;
 
 	if (aconnector->dc_link && sink->sink_signal == SIGNAL_TYPE_DISPLAY_PORT) {
 		dc_dsc_parse_dsc_dpcd(aconnector->dc_link->ctx->dc,

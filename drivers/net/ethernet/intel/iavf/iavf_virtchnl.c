@@ -607,7 +607,7 @@ void iavf_add_vlans(struct iavf_adapter *adapter)
 		if (f->add)
 			count++;
 	}
-	if (!count) {
+	if (!count || !VLAN_ALLOWED(adapter)) {
 		adapter->aq_required &= ~IAVF_FLAG_AQ_ADD_VLAN_FILTER;
 		spin_unlock_bh(&adapter->mac_vlan_list_lock);
 		return;
@@ -673,9 +673,19 @@ void iavf_del_vlans(struct iavf_adapter *adapter)
 
 	spin_lock_bh(&adapter->mac_vlan_list_lock);
 
-	list_for_each_entry(f, &adapter->vlan_filter_list, list) {
-		if (f->remove)
+	list_for_each_entry_safe(f, ftmp, &adapter->vlan_filter_list, list) {
+		/* since VLAN capabilities are not allowed, we dont want to send
+		 * a VLAN delete request because it will most likely fail and
+		 * create unnecessary errors/noise, so just free the VLAN
+		 * filters marked for removal to enable bailing out before
+		 * sending a virtchnl message
+		 */
+		if (f->remove && !VLAN_ALLOWED(adapter)) {
+			list_del(&f->list);
+			kfree(f);
+		} else if (f->remove) {
 			count++;
+		}
 	}
 	if (!count) {
 		adapter->aq_required &= ~IAVF_FLAG_AQ_DEL_VLAN_FILTER;
@@ -784,6 +794,8 @@ void iavf_request_stats(struct iavf_adapter *adapter)
 		/* no error message, this isn't crucial */
 		return;
 	}
+
+	adapter->aq_required &= ~IAVF_FLAG_AQ_REQUEST_STATS;
 	adapter->current_op = VIRTCHNL_OP_GET_STATS;
 	vqs.vsi_id = adapter->vsi_res->vsi_id;
 	/* queue maps are ignored for this message - only the vsi is used */
@@ -1722,8 +1734,25 @@ void iavf_virtchnl_completion(struct iavf_adapter *adapter,
 		}
 		spin_lock_bh(&adapter->mac_vlan_list_lock);
 		iavf_add_filter(adapter, adapter->hw.mac.addr);
+
+		if (VLAN_ALLOWED(adapter)) {
+			if (!list_empty(&adapter->vlan_filter_list)) {
+				struct iavf_vlan_filter *vlf;
+
+				/* re-add all VLAN filters over virtchnl */
+				list_for_each_entry(vlf,
+						    &adapter->vlan_filter_list,
+						    list)
+					vlf->add = true;
+
+				adapter->aq_required |=
+					IAVF_FLAG_AQ_ADD_VLAN_FILTER;
+			}
+		}
+
 		spin_unlock_bh(&adapter->mac_vlan_list_lock);
 		iavf_process_config(adapter);
+		adapter->flags |= IAVF_FLAG_SETUP_NETDEV_FEATURES;
 		}
 		break;
 	case VIRTCHNL_OP_ENABLE_QUEUES:
@@ -1735,7 +1764,7 @@ void iavf_virtchnl_completion(struct iavf_adapter *adapter,
 		iavf_free_all_tx_resources(adapter);
 		iavf_free_all_rx_resources(adapter);
 		if (adapter->state == __IAVF_DOWN_PENDING) {
-			adapter->state = __IAVF_DOWN;
+			iavf_change_state(adapter, __IAVF_DOWN);
 			wake_up(&adapter->down_waitqueue);
 		}
 		break;

@@ -117,9 +117,15 @@ static int audio_mute_stream(struct device *dev, void *data,
 static int audio_get_eld(struct device *dev, void *data,
 			 u8 *buf, size_t len)
 {
-	struct snd_dw_hdmi *dw = dev_get_drvdata(dev);
+	struct dw_hdmi_audio_data *audio = data;
+	u8 *eld;
 
-	memcpy(buf, dw->data.eld, min_t(size_t, MAX_ELD_BYTES, len));
+	eld = audio->get_eld(audio->hdmi);
+	if (eld)
+		memcpy(buf, eld, min_t(size_t, MAX_ELD_BYTES, len));
+	else
+		/* Pass en empty ELD if connector not available */
+		memset(buf, 0, len);
 
 	return 0;
 }

@@ -1226,12 +1226,10 @@ static struct page *dma_pte_clear_level(struct dmar_domain *domain, int level,
 	pte = &pte[pfn_level_offset(pfn, level)];
 
 	do {
-		unsigned long level_pfn;
+		unsigned long level_pfn = pfn & level_mask(level);
 
 		if (!dma_pte_present(pte))
 			goto next;
-
-		level_pfn = pfn & level_mask(level);
 
 		/* If range covers entire pagetable, free it */
 		if (start_pfn <= level_pfn &&
@@ -1253,7 +1251,7 @@ static struct page *dma_pte_clear_level(struct dmar_domain *domain, int level,
 						       freelist);
 		}
 next:
-		pfn += level_size(level);
+		pfn = level_pfn + level_size(level);
 	} while (!first_pte_in_page(++pte) && pfn <= last_pfn);
 
 	if (first_pte)
@@ -2653,7 +2651,7 @@ static struct dmar_domain *dmar_insert_one_dev_info(struct intel_iommu *iommu,
 	spin_unlock_irqrestore(&device_domain_lock, flags);
 
 	/* PASID table is mandatory for a PCI device in scalable mode. */
-	if (dev && dev_is_pci(dev) && sm_supported(iommu)) {
+	if (sm_supported(iommu) && !dev_is_real_dma_subdevice(dev)) {
 		ret = intel_pasid_alloc_table(dev);
 		if (ret) {
 			dev_err(dev, "PASID table allocation failed\n");

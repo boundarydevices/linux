@@ -36,7 +36,7 @@
 				 <&clk IMX8MQ_CLK_27M>;
 	assigned-clock-rate = <126000000>, <0>, <0>, <1134000000>;
 
-	port@0 {
+	port {
 		lcdif_out: endpoint {
 			remote-endpoint = <&mipi_dsi_in>;
 		};
