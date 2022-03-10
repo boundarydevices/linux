@@ -64,6 +64,7 @@
 		fsl,pins = <
 			MX6UL_PAD_GPIO1_IO04__GPIO1_IO04	0x1b0b0		/* software reset */
 			MX6UL_PAD_ENET2_TX_CLK__GPIO2_IO14	0x130b0		/* R27 to ground */
+			MX6UL_PAD_GPIO1_IO03__GPIO1_IO03	0x130b0		/* REG_VPP */
 			/* Test points */
 			MX6UL_PAD_CSI_HSYNC__GPIO4_IO20		0x1b0b0		/* tp3 */
 		>;
@@ -123,14 +124,6 @@
 		/* Backlight */
 		fsl,pins = <
 			MX6UL_PAD_CSI_VSYNC__PWM7_OUT		0x030b0
-		>;
-	};
-
-	/* J7, can1/can2 */
-	pinctrl_reg_vpp: reg-vppgrp {
-		fsl,pins = <
-#define GP_REG_VPP		<&gpio1 3 GPIO_ACTIVE_HIGH>
-			MX6UL_PAD_GPIO1_IO03__GPIO1_IO03	0x130b0
 		>;
 	};
 
@@ -305,18 +298,6 @@
 		regulator-always-on;
 	};
 
-	reg_vpp: regulator-vpp {
-		compatible = "regulator-fixed";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_reg_vpp>;
-		regulator-name = "reg_vpp";
-		regulator-min-microvolt = <18000000>;
-		regulator-max-microvolt = <18000000>;
-		gpio = GP_REG_VPP;
-		startup-delay-us = <70000>;
-		enable-active-high;
-	};
-
 	reserved-memory {
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -332,7 +313,7 @@
 };
 
 &adc1 {
-	vref-supply = <&reg_vpp>;
+	vref-supply = <&reg_vref_1v8>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_adc>;
 	num-channels = <3>;
