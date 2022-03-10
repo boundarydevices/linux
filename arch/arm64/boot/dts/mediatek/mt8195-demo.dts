@@ -83,6 +83,14 @@
 };
 
 &uart0 {
+	pinctrl-0 = <&uart0_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&uart1 {
+	pinctrl-0 = <&uart1_pins>;
+	pinctrl-names = "default";
 	status = "okay";
 };
 
@@ -451,6 +459,20 @@
 				 <PINMUX_GPIO26__FUNC_SCL6>;
 			bias-pull-up;
 			mediatek,rsel = <MTK_PULL_SET_RSEL_111>;
+		};
+	};
+
+	uart0_pins: uart0-pins {
+		pins {
+			pinmux = <PINMUX_GPIO98__FUNC_UTXD0>,
+				 <PINMUX_GPIO99__FUNC_URXD0>;
+		};
+	};
+
+	uart1_pins: uart1-pins {
+		pins {
+			pinmux = <PINMUX_GPIO102__FUNC_UTXD1>,
+				 <PINMUX_GPIO103__FUNC_URXD1>;
 		};
 	};
 
