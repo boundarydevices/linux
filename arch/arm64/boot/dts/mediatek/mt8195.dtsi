@@ -1003,6 +1003,7 @@
 			interrupts = <GIC_SPI 142 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&clk26m>, <&infracfg_ao CLK_INFRA_AO_UART1>;
 			clock-names = "baud", "bus";
+			status = "disabled";
 		};
 
 		uart2: serial@11001300 {
