@@ -1292,11 +1292,14 @@ static void clear_queue(struct queue_data *queue)
 
 	vpu_dbg(LVL_BIT_FUNC, "%s() is called\n", __func__);
 	ctx = container_of(queue, struct vpu_ctx, q_data[queue->type]);
-	check_queue_is_releasd(queue, "clear queue");
+	if (queue->type == V4L2_DST)
+		check_queue_is_releasd(queue, "clear queue");
 
 	list_for_each_entry_safe(p_data_req, p_temp, &queue->drv_q, list) {
 		list_del(&p_data_req->list);
 		p_data_req->queued = false;
+		if (queue->type == V4L2_SRC)
+			set_data_req_status(p_data_req, FRAME_ALLOC);
 	}
 
 	list_for_each_entry(vb, &queue->vb2_q.queued_list, queued_entry) {
@@ -3240,12 +3243,13 @@ static int increase_frame_num(struct vpu_ctx *ctx, struct vb2_buffer *vb)
 static void enqueue_stream_data(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 {
 	struct vb2_data_req *p_data_req;
+	struct vb2_data_req *p_temp;
 	struct queue_data *This = &ctx->q_data[V4L2_SRC];
 	void *input_buffer;
 	uint32_t buffer_size;
 	int frame_bytes;
 
-	while (!list_empty(&This->drv_q)) {
+	list_for_each_entry_safe(p_data_req, p_temp, &This->drv_q, list) {
 		struct vb2_buffer *vb;
 
 		if (!vpu_dec_stream_is_ready(ctx)) {
@@ -3253,11 +3257,11 @@ static void enqueue_stream_data(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 				"[%d] stream is not ready\n", ctx->str_index);
 			break;
 		}
-		p_data_req = list_first_entry(&This->drv_q,
-				typeof(*p_data_req), list);
 
 		if (!p_data_req->vb2_buf)
 			break;
+		if (p_data_req->status != FRAME_ALLOC)
+			continue;
 
 		vb = p_data_req->vb2_buf;
 		buffer_size = vb->planes[0].bytesused;
@@ -3292,12 +3296,19 @@ static void enqueue_stream_data(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 			vpu_dec_receive_ts(ctx, vb, frame_bytes);
 			This->process_count++;
 		}
-
-		list_del(&p_data_req->list);
-		p_data_req->queued = false;
-		vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
+		if (ctx->stream_input_mode == FRAME_LVL) {
+			set_data_req_status(p_data_req, FRAME_FREE);
+		} else {
+			list_del(&p_data_req->list);
+			p_data_req->queued = false;
+			vb2_buffer_done(p_data_req->vb2_buf, VB2_BUF_STATE_DONE);
+		}
 	}
-	if (list_empty(&This->drv_q) && ctx->eos_stop_received) {
+	if (ctx->eos_stop_received) {
+		list_for_each_entry_safe(p_data_req, p_temp, &This->drv_q, list) {
+			if (p_data_req->status == FRAME_ALLOC)
+				return;
+		}
 		if (vpu_dec_is_active(ctx) && ctx->statistic.frame_input) {
 			vpu_dbg(LVL_EVENT, "ctx[%d]: insert eos directly\n", ctx->str_index);
 			if (ctx->statistic.eos_cnt) {
@@ -3556,6 +3567,49 @@ static struct vb2_data_req *get_frame_buffer(struct queue_data *queue)
 
 	return p_data_req;
 }
+
+static struct vb2_data_req *get_src_buffer(struct queue_data *queue, u32 count)
+{
+	struct vb2_data_req *p_data_req;
+	struct vpu_ctx *ctx = queue->ctx;
+	u32 i;
+
+	for (i = 1; i < count; i++) {
+		p_data_req = list_first_entry_or_null(&queue->drv_q, struct vb2_data_req, list);
+		if (!p_data_req || !p_data_req->vb2_buf)
+			return NULL;
+		if (p_data_req->status == FRAME_ALLOC)
+			return NULL;
+		if (p_data_req->status == FRAME_DECODED)
+			vb2_buffer_done(p_data_req->vb2_buf, VB2_BUF_STATE_DONE);
+		else
+			vb2_buffer_done(p_data_req->vb2_buf, VB2_BUF_STATE_ERROR);
+		list_del(&p_data_req->list);
+		p_data_req->queued = false;
+		set_data_req_status(p_data_req, FRAME_ALLOC);
+	}
+
+	return  list_first_entry_or_null(&queue->drv_q, struct vb2_data_req, list);
+}
+
+static void report_src_buffer_done(struct vpu_ctx *ctx, u32 count)
+{
+	struct vb2_data_req *p_data_req = NULL;
+
+	p_data_req = get_src_buffer(&ctx->q_data[V4L2_SRC], count);
+	if (p_data_req && p_data_req->vb2_buf &&
+		p_data_req->status != FRAME_ALLOC) {
+		if (count) {
+			list_del(&p_data_req->list);
+			p_data_req->queued = false;
+			set_data_req_status(p_data_req, FRAME_ALLOC);
+			vb2_buffer_done(p_data_req->vb2_buf, VB2_BUF_STATE_DONE);
+		} else {
+			set_data_req_status(p_data_req, FRAME_DECODED);
+		}
+	}
+}
+
 
 static void respond_req_frame_abnormal(struct vpu_ctx *ctx)
 {
@@ -4070,6 +4124,8 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 
 		down(&ctx->q_data[V4L2_SRC].drv_q_lock);
 		ctx->statistic.frame_decoded++;
+		if (ctx->stream_input_mode == FRAME_LVL)
+			report_src_buffer_done(ctx, consumed_count);
 		up(&ctx->q_data[V4L2_SRC].drv_q_lock);
 
 		if (This->vdec_std == VPU_VIDEO_HEVC)
