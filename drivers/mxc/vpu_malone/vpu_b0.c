@@ -70,6 +70,7 @@ static int vpu_show_perf_ena;
 static int vpu_show_perf_idx = (1 << VPU_MAX_NUM_STREAMS) - 1;
 static int vpu_show_perf_ent;
 static int vpu_datadump_ena;
+static int vpu_tsm_ena = 1;
 static unsigned short frame_threshold[VPU_MAX_NUM_STREAMS];
 module_param_array(frame_threshold, ushort, NULL, 0644);
 
@@ -3361,8 +3362,6 @@ static void report_buffer_done(struct vpu_ctx *ctx, void *frame_info)
 
 	vpu_dbg(LVL_BIT_FUNC, "%s() fs_id=%d, ulFsLumaBase[0]=%x, stride=%d, b10BitFormat=%d, ctx->seqinfo.uBitDepthLuma=%d\n",
 			__func__, fs_id, FrameInfo[1], stride, b10BitFormat, ctx->seqinfo.uBitDepthLuma);
-	vpu_dbg(LVL_BIT_TS, "[OUTPUT TS]%32lld\n", timestamp);
-	ctx->capture_ts = timestamp;
 	v4l2_update_stream_addr(ctx, 0);
 
 	buffer_id = find_buffer_id(ctx, FrameInfo[1]);
@@ -3402,7 +3401,11 @@ static void report_buffer_done(struct vpu_ctx *ctx, void *frame_info)
 	if (p_data_req->vb2_buf) {
 		p_data_req->vb2_buf->planes[0].bytesused = This->sizeimage[0];
 		p_data_req->vb2_buf->planes[1].bytesused = This->sizeimage[1];
-		p_data_req->vb2_buf->timestamp = timestamp;
+		if (vpu_tsm_ena) {
+			vpu_dbg(LVL_BIT_TS, "[OUTPUT TS]%32lld\n", timestamp);
+			ctx->capture_ts = timestamp;
+			p_data_req->vb2_buf->timestamp = timestamp;
+		}
 		if (p_data_req->vb2_buf->state == VB2_BUF_STATE_ACTIVE) {
 			vbuf = to_vb2_v4l2_buffer(p_data_req->vb2_buf);
 			vbuf->sequence = ctx->cap_sequence++;
@@ -3602,7 +3605,7 @@ static struct vb2_data_req *get_src_buffer(struct queue_data *queue, u32 count)
 	return  list_first_entry_or_null(&queue->drv_q, struct vb2_data_req, list);
 }
 
-static void report_src_buffer_done(struct vpu_ctx *ctx, u32 count)
+static void report_src_buffer_done(struct vpu_ctx *ctx, u32 count, s64 *timestamp)
 {
 	struct vb2_data_req *p_data_req = NULL;
 	struct vb2_v4l2_buffer *vbuf;
@@ -3610,6 +3613,7 @@ static void report_src_buffer_done(struct vpu_ctx *ctx, u32 count)
 	p_data_req = get_src_buffer(&ctx->q_data[V4L2_SRC], count);
 	if (p_data_req && p_data_req->vb2_buf &&
 		p_data_req->status != FRAME_ALLOC) {
+		*timestamp = p_data_req->vb2_buf->timestamp;
 		if (count) {
 			list_del(&p_data_req->list);
 			p_data_req->queued = false;
@@ -4134,11 +4138,12 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		size_t wr_size;
 		struct vb2_data_req *p_data_req = NULL;
 		u32 consumed_count = event_data[13];
+		s64 timestamp;
 
 		down(&ctx->q_data[V4L2_SRC].drv_q_lock);
 		ctx->statistic.frame_decoded++;
 		if (ctx->stream_input_mode == FRAME_LVL)
-			report_src_buffer_done(ctx, consumed_count);
+			report_src_buffer_done(ctx, consumed_count, &timestamp);
 		up(&ctx->q_data[V4L2_SRC].drv_q_lock);
 
 		if (This->vdec_std == VPU_VIDEO_HEVC)
@@ -4167,6 +4172,11 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		}
 
 		p_data_req = &This->vb2_reqs[buffer_id];
+		if (!vpu_tsm_ena) {
+			p_data_req->vb2_buf->timestamp = timestamp;
+			ctx->capture_ts = timestamp;
+			vpu_dbg(LVL_BIT_TS, "[OUTPUT TS]%32lld\n", timestamp);
+		}
 		set_data_req_status(p_data_req, FRAME_DECODED);
 		if (ctx->seqinfo.uProgressive == 1)
 			p_data_req->bfield = false;
@@ -6851,3 +6861,5 @@ module_param(vpu_show_perf_ent, int, 0644);
 MODULE_PARM_DESC(vpu_show_perf_ent, "show performance of which event(1: decoded, 2: ready)");
 module_param(vpu_datadump_ena, int, 0644);
 MODULE_PARM_DESC(vpu_datadump_ena, "enable dump input frame data (0-1)");
+module_param(vpu_tsm_ena, int, 0644);
+MODULE_PARM_DESC(vpu_tsm_ena, "enable time stamp manager (0-1)");
