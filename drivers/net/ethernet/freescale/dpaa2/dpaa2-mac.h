@@ -29,6 +29,7 @@ struct dpaa2_mac {
 	struct fwnode_handle *fw_node;
 
 	int phy_req_state;
+	struct phy *serdes_phy;
 };
 
 bool dpaa2_mac_is_type_fixed(struct fsl_mc_device *dpmac_dev,
@@ -51,5 +52,9 @@ void dpaa2_mac_get_ethtool_stats(struct dpaa2_mac *mac, u64 *data);
 void dpaa2_mac_driver_attach(struct fsl_mc_device *dpmac_dev);
 
 void dpaa2_mac_driver_detach(struct fsl_mc_device *dpmac_dev);
+
+void dpaa2_mac_start(struct dpaa2_mac *mac);
+
+void dpaa2_mac_stop(struct dpaa2_mac *mac);
 
 #endif /* DPAA2_MAC_H */
