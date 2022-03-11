@@ -475,6 +475,9 @@ struct vpu_ctx {
 	u8 xfer_func;
 	u8 ycbcr_enc;
 	u8 quantization;
+
+	u32 out_min_buffer;
+	u32 cap_min_buffer;
 };
 
 #define LVL_WARN		(1 << 0)
@@ -514,6 +517,9 @@ struct vpu_ctx {
 #define V4L2_NXP_FRAME_HORIZONTAL_ALIGN		512
 
 #define VPU_IMX_DECODER_FUSE_OFFSET		14
+
+#define VPU_IMX_OUT_MIN_BUFFER			16
+#define VPU_IMX_CAP_MIN_BUFFER			8
 
 pSTREAM_BUFFER_DESCRIPTOR_TYPE get_str_buffer_desc(struct vpu_ctx *ctx);
 u_int32 got_free_space(u_int32 wptr, u_int32 rptr, u_int32 start, u_int32 end);

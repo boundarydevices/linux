@@ -2077,6 +2077,14 @@ static struct vpu_v4l2_control vpu_controls_dec[] = {
 		.default_value = 4,
 		.is_volatile = true,
 	},
+	{
+		.id = V4L2_CID_MIN_BUFFERS_FOR_OUTPUT,
+		.minimum = 1,
+		.maximum = 32,
+		.step = 1,
+		.default_value = 4,
+		.is_volatile = true,
+	},
 };
 
 static	struct v4l2_ctrl_config vpu_custom_s_cfg[] = {
@@ -2141,7 +2149,10 @@ static int v4l2_dec_g_v_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_MIN_BUFFERS_FOR_CAPTURE:
-		ctrl->val = ctx->seqinfo.uNumDPBFrms + ctx->seqinfo.uNumRefFrms;
+		ctrl->val = ctx->cap_min_buffer;
+		break;
+	case V4L2_CID_MIN_BUFFERS_FOR_OUTPUT:
+		ctrl->val = ctx->out_min_buffer;
 		break;
 	default:
 		vpu_err("%s() Invalid control(%d)\n",
@@ -4176,6 +4187,7 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 				ctx->seqinfo.uVideoFullRangeFlag);
 		vdec_setup_capture_size(ctx);
 		ctx->dcp_size = get_dcp_size(ctx);
+		ctx->cap_min_buffer = ctx->seqinfo.uNumDPBFrms + ctx->seqinfo.uNumRefFrms;
 		if (ctx->b_firstseq) {
 			ctx->b_firstseq = false;
 			ctx->mbi_size = get_mbi_size(&ctx->q_data[V4L2_DST]);
@@ -5885,6 +5897,8 @@ static int v4l2_open(struct file *filp)
 			goto err_open_crc;
 	}
 	ctx->seqinfo.uProgressive = 1;
+	ctx->out_min_buffer = VPU_IMX_OUT_MIN_BUFFER;
+	ctx->cap_min_buffer = VPU_IMX_CAP_MIN_BUFFER;
 
 	init_queue_data(ctx);
 	init_log_info_queue(ctx);
