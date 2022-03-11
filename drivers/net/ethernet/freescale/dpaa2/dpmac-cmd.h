@@ -19,6 +19,8 @@
 #define DPMAC_CMDID_CLOSE		DPMAC_CMD(0x800)
 #define DPMAC_CMDID_OPEN		DPMAC_CMD(0x80c)
 
+#define DPMAC_CMDID_GET_API_VERSION	DPMAC_CMD(0xa0c)
+
 #define DPMAC_CMDID_GET_ATTR		DPMAC_CMD(0x004)
 
 #define DPMAC_CMDID_SET_IRQ_ENABLE	DPMAC_CMD(0x012)
@@ -126,6 +128,11 @@ struct dpmac_rsp_get_link_cfg {
 	u32 rate;
 	u32 pad;
 	u64 advertising;
+};
+
+struct dpmac_rsp_get_api_version {
+	__le16 major;
+	__le16 minor;
 };
 
 #endif /* _FSL_DPMAC_CMD_H */

@@ -280,4 +280,6 @@ int dpmac_clear_irq_status(struct fsl_mc_io *mc_io,
 			   u8 irq_index,
 			   u32 status);
 
+int dpmac_get_api_version(struct fsl_mc_io *mc_io, u32 cmd_flags,
+			  u16 *major_ver, u16 *minor_ver);
 #endif /* __FSL_DPMAC_H */
