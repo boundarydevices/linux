@@ -3251,6 +3251,7 @@ static void enqueue_stream_data(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 
 	list_for_each_entry_safe(p_data_req, p_temp, &This->drv_q, list) {
 		struct vb2_buffer *vb;
+		struct vb2_v4l2_buffer *vbuf;
 
 		if (!vpu_dec_stream_is_ready(ctx)) {
 			vpu_dbg(LVL_INFO,
@@ -3301,6 +3302,8 @@ static void enqueue_stream_data(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 		} else {
 			list_del(&p_data_req->list);
 			p_data_req->queued = false;
+			vbuf = to_vb2_v4l2_buffer(p_data_req->vb2_buf);
+			vbuf->sequence++;
 			vb2_buffer_done(p_data_req->vb2_buf, VB2_BUF_STATE_DONE);
 		}
 	}
@@ -3354,6 +3357,7 @@ static void report_buffer_done(struct vpu_ctx *ctx, void *frame_info)
 	s64 timestamp = ((s32)FrameInfo[9] * NSEC_PER_SEC) + FrameInfo[10];
 	bool b10BitFormat = is_10bit_format(ctx);
 	int buffer_id;
+	struct vb2_v4l2_buffer *vbuf;
 
 	vpu_dbg(LVL_BIT_FUNC, "%s() fs_id=%d, ulFsLumaBase[0]=%x, stride=%d, b10BitFormat=%d, ctx->seqinfo.uBitDepthLuma=%d\n",
 			__func__, fs_id, FrameInfo[1], stride, b10BitFormat, ctx->seqinfo.uBitDepthLuma);
@@ -3377,6 +3381,7 @@ static void report_buffer_done(struct vpu_ctx *ctx, void *frame_info)
 
 			send_skip_event(ctx);
 			ctx->frm_dis_delay--;
+			ctx->cap_sequence++;
 			return;
 		}
 		vpu_err("error: find buffer_id(%d) and firmware return id(%d) doesn't match\n",
@@ -3398,12 +3403,14 @@ static void report_buffer_done(struct vpu_ctx *ctx, void *frame_info)
 		p_data_req->vb2_buf->planes[0].bytesused = This->sizeimage[0];
 		p_data_req->vb2_buf->planes[1].bytesused = This->sizeimage[1];
 		p_data_req->vb2_buf->timestamp = timestamp;
-		if (p_data_req->vb2_buf->state == VB2_BUF_STATE_ACTIVE)
-			vb2_buffer_done(p_data_req->vb2_buf,
-					VB2_BUF_STATE_DONE);
-		else
+		if (p_data_req->vb2_buf->state == VB2_BUF_STATE_ACTIVE) {
+			vbuf = to_vb2_v4l2_buffer(p_data_req->vb2_buf);
+			vbuf->sequence = ctx->cap_sequence++;
+			vb2_buffer_done(p_data_req->vb2_buf, VB2_BUF_STATE_DONE);
+		} else {
 			vpu_err("warning: wait_rst_done(%d) check buffer(%d) state(%d)\n",
 					ctx->wait_rst_done, buffer_id, p_data_req->vb2_buf->state);
+		}
 	}
 	up(&This->drv_q_lock);
 	vpu_dbg(LVL_INFO, "leave %s\n", __func__);
@@ -3572,6 +3579,7 @@ static struct vb2_data_req *get_src_buffer(struct queue_data *queue, u32 count)
 {
 	struct vb2_data_req *p_data_req;
 	struct vpu_ctx *ctx = queue->ctx;
+	struct vb2_v4l2_buffer *vbuf;
 	u32 i;
 
 	for (i = 1; i < count; i++) {
@@ -3580,6 +3588,8 @@ static struct vb2_data_req *get_src_buffer(struct queue_data *queue, u32 count)
 			return NULL;
 		if (p_data_req->status == FRAME_ALLOC)
 			return NULL;
+		vbuf = to_vb2_v4l2_buffer(p_data_req->vb2_buf);
+		vbuf->sequence = ctx->out_sequence++;
 		if (p_data_req->status == FRAME_DECODED)
 			vb2_buffer_done(p_data_req->vb2_buf, VB2_BUF_STATE_DONE);
 		else
@@ -3595,6 +3605,7 @@ static struct vb2_data_req *get_src_buffer(struct queue_data *queue, u32 count)
 static void report_src_buffer_done(struct vpu_ctx *ctx, u32 count)
 {
 	struct vb2_data_req *p_data_req = NULL;
+	struct vb2_v4l2_buffer *vbuf;
 
 	p_data_req = get_src_buffer(&ctx->q_data[V4L2_SRC], count);
 	if (p_data_req && p_data_req->vb2_buf &&
@@ -3603,6 +3614,8 @@ static void report_src_buffer_done(struct vpu_ctx *ctx, u32 count)
 			list_del(&p_data_req->list);
 			p_data_req->queued = false;
 			set_data_req_status(p_data_req, FRAME_ALLOC);
+			vbuf = to_vb2_v4l2_buffer(p_data_req->vb2_buf);
+			vbuf->sequence = ctx->out_sequence++;
 			vb2_buffer_done(p_data_req->vb2_buf, VB2_BUF_STATE_DONE);
 		} else {
 			set_data_req_status(p_data_req, FRAME_DECODED);
@@ -4314,8 +4327,10 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 				vpu_dbg(LVL_INFO, "warning: normal release and previous status %s, frame not for display, queue the buffer to list again\n",
 						bufstat[p_data_req->status]);
 
-				if (p_data_req->status == FRAME_DECODED)
+				if (p_data_req->status == FRAME_DECODED) {
 					send_skip_event(ctx);
+					ctx->cap_sequence++;
+				}
 			}
 			if (p_data_req->status != FRAME_ALLOC) {
 				set_data_req_status(p_data_req, FRAME_RELEASE);
@@ -4874,11 +4889,16 @@ static int vpu_start_streaming(struct vb2_queue *q,
 		unsigned int count
 		)
 {
-	int ret = 0;
+	struct queue_data *queue = (struct queue_data *)q->drv_priv;
+	struct vpu_ctx *ctx = queue->ctx;
 
 	vpu_dbg(LVL_BIT_FUNC, "%s() is called\n", __func__);
+	if (V4L2_TYPE_IS_OUTPUT(q->type))
+		ctx->out_sequence = 0;
+	else
+		ctx->cap_sequence = 0;
 
-	return ret;
+	return 0;
 }
 
 

@@ -478,6 +478,9 @@ struct vpu_ctx {
 
 	u32 out_min_buffer;
 	u32 cap_min_buffer;
+
+	u32 out_sequence;
+	u32 cap_sequence;
 };
 
 #define LVL_WARN		(1 << 0)
