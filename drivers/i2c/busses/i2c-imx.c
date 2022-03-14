@@ -273,8 +273,10 @@ struct imx_i2c_struct {
 	int			pmuxcr_endian;
 	void __iomem		*pmuxcr_addr;
 
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 	struct i2c_client	*slave;
 	enum i2c_slave_event last_slave_event;
+#endif
 };
 
 static const struct imx_i2c_hwdata imx1_i2c_hwdata = {
@@ -760,6 +762,7 @@ static void i2c_imx_enable_bus_idle(struct imx_i2c_struct *i2c_imx)
 	}
 }
 
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 static void i2c_imx_slave_event(struct imx_i2c_struct *i2c_imx,
 				enum i2c_slave_event event, u8 *val)
 {
@@ -918,6 +921,7 @@ static int i2c_imx_unreg_slave(struct i2c_client *client)
 
 	return ret;
 }
+#endif
 
 static irqreturn_t i2c_imx_master_isr(struct imx_i2c_struct *i2c_imx, unsigned int status)
 {
@@ -938,6 +942,7 @@ static irqreturn_t i2c_imx_isr(int irq, void *dev_id)
 
 	if (status & I2SR_IIF) {
 		i2c_imx_clear_irq(i2c_imx, I2SR_IIF);
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 		if (i2c_imx->slave) {
 			if (!(ctl & I2CR_MSTA)) {
 				return i2c_imx_slave_isr(i2c_imx, status, ctl);
@@ -946,6 +951,7 @@ static irqreturn_t i2c_imx_isr(int irq, void *dev_id)
 				i2c_imx_slave_finish_op(i2c_imx);
 			}
 		}
+#endif
 		return i2c_imx_master_isr(i2c_imx, status);
 	}
 
@@ -1323,8 +1329,10 @@ fail0:
 		(result < 0) ? "error" : "success msg",
 			(result < 0) ? result : num);
 	/* After data is transferred, switch to slave mode(as a receiver) */
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 	if (i2c_imx->slave)
 		i2c_imx_slave_init(i2c_imx);
+#endif
 
 	return (result < 0) ? result : num;
 }
@@ -1584,8 +1592,10 @@ static const struct i2c_algorithm i2c_imx_algo = {
 	.master_xfer = i2c_imx_xfer,
 	.master_xfer_atomic = i2c_imx_xfer_atomic,
 	.functionality = i2c_imx_func,
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 	.reg_slave	= i2c_imx_reg_slave,
 	.unreg_slave	= i2c_imx_unreg_slave,
+#endif
 };
 
 static int i2c_imx_probe(struct platform_device *pdev)
