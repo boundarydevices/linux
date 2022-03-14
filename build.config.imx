@@ -17,3 +17,4 @@ function update_config() {
 }
 
 ABI_DEFINITION=android/abi_gki_aarch64.xml
+KMI_SYMBOL_LIST=android/abi_gki_aarch64_imx
