@@ -31,7 +31,6 @@ struct uio_map;
  * @offs:               offset of device memory within the page
  * @size:		size of IO (multiple of page size)
  * @memtype:		type of memory addr points to
- * @readonly:		true of region is read-only
  * @internal_addr:	ioremap-ped version of addr, for driver internal use
  * @map:		for use by the UIO core only.
  */
@@ -41,7 +40,6 @@ struct uio_mem {
 	unsigned long		offs;
 	resource_size_t		size;
 	int			memtype;
-	bool			readonly;
 	void __iomem		*internal_addr;
 	struct uio_map		*map;
 };
