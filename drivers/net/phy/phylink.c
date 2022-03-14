@@ -979,7 +979,6 @@ static int phylink_bringup_phy(struct phylink *pl, struct phy_device *phy,
 {
 	struct phylink_link_state config;
 	__ETHTOOL_DECLARE_LINK_MODE_MASK(supported);
-	bool use_inband;
 	char *irq_str;
 	int ret;
 
@@ -1016,15 +1015,6 @@ static int phylink_bringup_phy(struct phylink *pl, struct phy_device *phy,
 			     __ETHTOOL_LINK_MODE_MASK_NBITS, phy->supported,
 			     __ETHTOOL_LINK_MODE_MASK_NBITS, config.advertising,
 			     ret);
-		return ret;
-	}
-
-	use_inband = phylink_autoneg_inband(pl->cur_link_an_mode);
-
-	ret = phy_config_inband_aneg(phy, use_inband);
-	if (ret && ret != -EOPNOTSUPP) {
-		phylink_warn(pl, "failed to configure PHY in-band autoneg: %pe\n",
-			     ERR_PTR(ret));
 		return ret;
 	}
 
@@ -1077,39 +1067,6 @@ static int phylink_attach_phy(struct phylink *pl, struct phy_device *phy,
 	return phy_attach_direct(pl->netdev, phy, 0, interface);
 }
 
-static unsigned int phylink_fixup_inband_aneg(struct phylink *pl,
-					      struct phy_device *phy,
-					      unsigned int mode)
-{
-	int ret;
-
-	ret = phy_validate_inband_aneg(phy, pl->link_interface);
-	if (ret == PHY_INBAND_ANEG_UNKNOWN) {
-		phylink_dbg(pl,
-			    "PHY driver does not report in-band autoneg capability, assuming %s\n",
-			    phylink_autoneg_inband(mode) ? "true" : "false");
-
-		return mode;
-	}
-
-	if (phylink_autoneg_inband(mode) && !(ret & PHY_INBAND_ANEG_ON)) {
-		phylink_err(pl,
-			    "Requested in-band autoneg but driver does not support this, disabling it.\n");
-
-		return MLO_AN_PHY;
-	}
-
-	if (!phylink_autoneg_inband(mode) && !(ret & PHY_INBAND_ANEG_OFF)) {
-		phylink_dbg(pl,
-			    "PHY driver requests in-band autoneg, force-enabling it.\n");
-
-		mode = MLO_AN_INBAND;
-	}
-
-	/* Peaceful agreement, isn't it great? */
-	return mode;
-}
-
 /**
  * phylink_connect_phy() - connect a PHY to the phylink instance
  * @pl: a pointer to a &struct phylink returned from phylink_create()
@@ -1128,9 +1085,6 @@ static unsigned int phylink_fixup_inband_aneg(struct phylink *pl,
 int phylink_connect_phy(struct phylink *pl, struct phy_device *phy)
 {
 	int ret;
-
-	pl->cur_link_an_mode = phylink_fixup_inband_aneg(pl, phy,
-							 pl->cfg_link_an_mode);
 
 	/* Use PHY device/driver interface */
 	if (pl->link_interface == PHY_INTERFACE_MODE_NA) {
@@ -1206,9 +1160,6 @@ int phylink_fwnode_phy_connect(struct phylink *pl,
 	fwnode_handle_put(phy_fwnode);
 	if (!phy_dev)
 		return -ENODEV;
-
-	pl->cur_link_an_mode = phylink_fixup_inband_aneg(pl, phy_dev,
-							 pl->cfg_link_an_mode);
 
 	ret = phy_attach_direct(pl->netdev, phy_dev, flags,
 				pl->link_interface);
@@ -2219,6 +2170,15 @@ int phylink_speed_up(struct phylink *pl)
 }
 EXPORT_SYMBOL_GPL(phylink_speed_up);
 
+/* The Broadcom BCM84881 in the Methode DM7052 is unable to provide a SGMII
+ * or 802.3z control word, so inband will not work.
+ */
+static bool phylink_phy_no_inband(struct phy_device *phy)
+{
+	return phy->is_c45 &&
+		(phy->c45_ids.device_ids[1] & 0xfffffff0) == 0xae025150;
+}
+
 static void phylink_sfp_attach(void *upstream, struct sfp_bus *bus)
 {
 	struct phylink *pl = upstream;
@@ -2271,24 +2231,10 @@ static int phylink_sfp_config(struct phylink *pl, struct phy_device *phy,
 		return -EINVAL;
 	}
 
-	/* Select whether to operate in in-band mode or not, based on the
-	 * presence and capability of the PHY in the current link mode.
-	 */
-	if (phy) {
-		ret = phy_validate_inband_aneg(phy, iface);
-		if (ret == PHY_INBAND_ANEG_UNKNOWN) {
-			mode = MLO_AN_INBAND;
-
-			phylink_dbg(pl,
-				    "PHY driver does not report in-band autoneg capability, assuming true\n");
-		} else if (ret & PHY_INBAND_ANEG_ON) {
-			mode = MLO_AN_INBAND;
-		} else {
-			mode = MLO_AN_PHY;
-		}
-	} else {
+	if (phy && phylink_phy_no_inband(phy))
+		mode = MLO_AN_PHY;
+	else
 		mode = MLO_AN_INBAND;
-	}
 
 	config.interface = iface;
 	linkmode_copy(support1, support);
