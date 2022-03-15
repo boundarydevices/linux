@@ -204,11 +204,15 @@ int __of_mdiobus_register(struct mii_bus *mdio, struct device_node *np,
 
 	/* auto scan for PHYs with empty reg property */
 	for_each_available_child_of_node(np, child) {
+		u32 reg_mask = 0xffffffff;
 		/* Skip PHYs with reg property set */
 		if (of_property_present(child, "reg"))
 			continue;
 
-		for (addr = 0; addr < PHY_MAX_ADDR; addr++) {
+		of_property_read_u32(child, "reg-mask", &reg_mask);
+		while (reg_mask) {
+			addr = __ffs(reg_mask);
+			reg_mask &= ~(1 << addr);
 			/* skip already registered PHYs */
 			if (mdiobus_is_registered_device(mdio, addr))
 				continue;
