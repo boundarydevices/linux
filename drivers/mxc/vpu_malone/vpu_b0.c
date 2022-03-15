@@ -1743,7 +1743,7 @@ static int v4l2_ioctl_dqbuf(struct file *file,
 	ret = vpu_dec_queue_dqbuf(q_data, buf, file->f_flags & O_NONBLOCK);
 
 	if (ret) {
-		vpu_err("error: %s() return ret=%d\n", __func__, ret);
+		vpu_dbg(LVL_BIT_FUNC, "vpu_dec_queue_dqbuf fail, ret=%d\n", ret);
 		return ret;
 	}
 
@@ -3241,6 +3241,18 @@ static int increase_frame_num(struct vpu_ctx *ctx, struct vb2_buffer *vb)
 	return 0;
 }
 
+static void send_last_buffer_dqueued(struct vpu_ctx *ctx)
+{
+	struct vb2_queue *q = &ctx->q_data[V4L2_DST].vb2_q;
+
+	if (!list_empty(&q->done_list))
+		return;
+
+	q->last_buffer_dequeued = true;
+	wake_up(&q->done_wq);
+	send_eos_event(ctx);
+}
+
 static void enqueue_stream_data(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 {
 	struct vb2_data_req *p_data_req;
@@ -3333,7 +3345,7 @@ static void enqueue_stream_data(struct vpu_ctx *ctx, uint32_t uStrBufIdx)
 			}
 		} else	{
 			ctx->eos_stop_received = false;
-			send_eos_event(ctx);
+			send_last_buffer_dqueued(ctx);
 		}
 	}
 }
@@ -4510,8 +4522,8 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		vpu_dbg(LVL_BIT_FLOW, "ctx[%d] FINISHED\n", ctx->str_index);
 		vpu_dbg(LVL_INFO, "receive VID_API_EVENT_FINISHED and notfiy app eos\n");
 		vpu_log_buffer_state(ctx);
-		send_eos_event(ctx); //notfiy app stream eos reached
-	}	break;
+		send_last_buffer_dqueued(ctx);
+	} break;
 	case VID_API_EVENT_FIRMWARE_XCPT: {
 		char *xcpt_info = (char*)event_data;
 
@@ -4961,6 +4973,19 @@ static void vpu_buf_queue(struct vb2_buffer *vb)
 	This->qbuf_count++;
 }
 
+static void vpu_buf_finish(struct vb2_buffer *vb)
+{
+	struct vb2_queue    *q = vb->vb2_queue;
+	struct queue_data   *q_data = (struct queue_data *)q->drv_priv;
+	struct vpu_ctx *ctx = container_of(q_data, struct vpu_ctx, q_data[q_data->type]);
+
+	if (V4L2_TYPE_IS_OUTPUT(q->type))
+		return;
+
+	if (ctx->firmware_finished && list_empty(&q->done_list))
+		send_last_buffer_dqueued(ctx);
+}
+
 static void vpu_prepare(struct vb2_queue *q)
 {
 	vpu_dbg(LVL_BIT_FUNC, "%s() is called\n", __func__);
@@ -4981,6 +5006,7 @@ struct vb2_ops v4l2_qops = {
 	.start_streaming    = vpu_start_streaming,
 	.stop_streaming     = vpu_stop_streaming,
 	.buf_queue          = vpu_buf_queue,
+	.buf_finish         = vpu_buf_finish,
 };
 
 static void init_vb2_queue(struct queue_data *This, unsigned int type, struct vpu_ctx *ctx)
@@ -6168,7 +6194,7 @@ static unsigned int v4l2_poll(struct file *filp, poll_table *wait)
 	if (!list_empty(&src_q->done_list))
 		rc |= POLLOUT | POLLWRNORM;
 	poll_wait(filp, &dst_q->done_wq, wait);
-	if (!list_empty(&dst_q->done_list))
+	if (!list_empty(&dst_q->done_list) || dst_q->last_buffer_dequeued)
 		rc |= POLLIN | POLLRDNORM;
 
 	return rc;
