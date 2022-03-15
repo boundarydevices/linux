@@ -42,7 +42,8 @@ static inline int of_mdio_parse_addr(struct device *dev,
 
 	ret = of_property_read_u32(np, "reg", &addr);
 	if (ret < 0) {
-		dev_err(dev, "%s has invalid PHY address\n", np->full_name);
+		if (of_property_read_u32(np, "reg-mask", &addr) < 0)
+			dev_err(dev, "%s has invalid PHY address\n", np->full_name);
 		return ret;
 	}
 
