@@ -665,7 +665,7 @@
 };
 
 &pcie {
-	status = "okay";
+	status = "disabled";
 	reset-gpios = <&gpio BOOT_13 GPIO_ACTIVE_LOW>;
 	ss-select-gpios = <&gpio GPIOA_13 GPIO_ACTIVE_LOW>;
 };
@@ -829,7 +829,6 @@
 &usb {
 	status = "okay";
 	dr_mode = "otg";
-	phy-names = "usb2-phy0", "usb2-phy1";
 	usb-role-switch;
 	ss-select-gpios = <&gpio GPIOA_13 GPIO_ACTIVE_LOW>;
 
