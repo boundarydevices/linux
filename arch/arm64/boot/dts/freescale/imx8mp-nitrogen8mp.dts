@@ -961,7 +961,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		ethphy0: ethernet-phy@4 {
+		ethphy0: ethernet-phy {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			at803x,hib-disabled;
 			eee-broken-1000t;
@@ -969,7 +969,7 @@
 #if 0
 			reset-gpios = GP_EQOS_RESET;
 #endif
-			reg = <4>;
+			reg-mask = <0x90>;
 		};
 	};
 };
@@ -989,11 +989,11 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		ethphy1: ethernet-phy@4 {
+		ethphy1: ethernet-phy {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			eee-broken-1000t;
 			interrupts-extended = GPIRQ_FEC_PHY;
-			reg = <4>;
+			reg-mask = <0x90>;
 		};
 	};
 };
