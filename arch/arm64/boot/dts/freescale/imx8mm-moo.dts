@@ -757,10 +757,10 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		ethphy0: ethernet-phy@4 {
+		ethphy0: ethernet-phy {
 			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <4>;
 			interrupts-extended = GPIRQ_FEC1_PHY;
+			reg-mask = <0x90>;
 		};
 	};
 };
