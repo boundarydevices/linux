@@ -75,6 +75,8 @@ extern unsigned int vpu_dbg_level_decoder;
 #define DEFAULT_FRMDBG_ENABLE 0
 #define DEFAULT_FRMDBG_LEVEL 0
 #define VPU_DEC_CMD_DATA_MAX_NUM	16
+#define VPU_DEC_MIN_WIDTH		16
+#define VPU_DEC_MIN_HEIGHT		16
 #define VPU_DEC_MAX_WIDTH		8188
 #define VPU_DEC_MAX_HEIGTH		8188
 #define VPU_DEC_FMT_DIVX_MASK		(1 << 20)
@@ -218,6 +220,7 @@ struct queue_data {
 	unsigned long dqbuf_count;
 	unsigned long process_count;
 	bool enable;
+	struct v4l2_rect rect;
 	struct vpu_ctx *ctx;
 };
 
