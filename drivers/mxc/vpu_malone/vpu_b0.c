@@ -1105,6 +1105,8 @@ static int v4l2_ioctl_s_fmt(struct file *file,
 
 	set_colorspace(ctx, f);
 	pix_mp->num_planes = q_data->num_planes;
+	pix_mp->width = clamp(pix_mp->width, VPU_DEC_MIN_WIDTH, VPU_DEC_MAX_WIDTH);
+	pix_mp->height = clamp(pix_mp->height, VPU_DEC_MIN_HEIGHT, VPU_DEC_MAX_HEIGTH);
 
 	down(&q_data->drv_q_lock);
 	if (V4L2_TYPE_IS_OUTPUT(f->type)) {
@@ -1115,26 +1117,39 @@ static int v4l2_ioctl_s_fmt(struct file *file,
 		q_data->width = pix_mp->width;
 		q_data->height = pix_mp->height;
 		set_output_default_sizeimage(q_data);
-	} else if (ctx->b_firstseq) {
-		calculate_frame_size(q_data, pix_mp->width, pix_mp->height, false);
-		for (i = 0; i < q_data->num_planes; i++) {
-			if (q_data->stride < pix_mp->plane_fmt[i].bytesperline)
-				q_data->stride = pix_mp->plane_fmt[i].bytesperline;
-			else
-				pix_mp->plane_fmt[i].bytesperline = q_data->stride;
-			if (q_data->sizeimage[i] < pix_mp->plane_fmt[i].sizeimage)
-				q_data->sizeimage[i] = pix_mp->plane_fmt[i].sizeimage;
-			else
-				pix_mp->plane_fmt[i].sizeimage = q_data->sizeimage[i];
+
+		if (ctx->b_firstseq) {
+			struct queue_data *q_data_cap = &ctx->q_data[V4L2_DST];
+
+			calculate_frame_size(q_data_cap, pix_mp->width, pix_mp->height, false);
+			q_data_cap->rect.left = 0;
+			q_data_cap->rect.top = 0;
+			q_data_cap->rect.width = pix_mp->width;
+			q_data_cap->rect.height = pix_mp->height;
 		}
 	} else {
-		for (i = 0; i < q_data->num_planes; i++) {
-			pix_mp->plane_fmt[i].bytesperline = q_data->stride;
-			pix_mp->plane_fmt[i].sizeimage = q_data->sizeimage[i];
+		if (ctx->b_firstseq) {
+			calculate_frame_size(q_data, pix_mp->width, pix_mp->height, false);
+			for (i = 0; i < q_data->num_planes; i++) {
+				if (q_data->stride < pix_mp->plane_fmt[i].bytesperline)
+					q_data->stride = pix_mp->plane_fmt[i].bytesperline;
+				else
+					pix_mp->plane_fmt[i].bytesperline = q_data->stride;
+				if (q_data->sizeimage[i] < pix_mp->plane_fmt[i].sizeimage)
+					q_data->sizeimage[i] = pix_mp->plane_fmt[i].sizeimage;
+				else
+					pix_mp->plane_fmt[i].sizeimage = q_data->sizeimage[i];
+			}
+		} else {
+			for (i = 0; i < q_data->num_planes; i++) {
+				pix_mp->plane_fmt[i].bytesperline = q_data->stride;
+				pix_mp->plane_fmt[i].sizeimage = q_data->sizeimage[i];
+			}
+			pix_mp->width = q_data->width;
+			pix_mp->height = q_data->height;
 		}
-		pix_mp->width = q_data->width;
-		pix_mp->height = q_data->height;
 	}
+
 	up(&q_data->drv_q_lock);
 
 	if (f->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
@@ -1814,10 +1829,10 @@ static int vpu_dec_v4l2_ioctl_g_selection(struct file *file, void *fh,
 	if (s->target != V4L2_SEL_TGT_CROP && s->target != V4L2_SEL_TGT_COMPOSE)
 		return -EINVAL;
 
-	s->r.left = ctx->seqinfo.uFrameCropLeftOffset;
-	s->r.top = ctx->seqinfo.uFrameCropTopOffset;
-	s->r.width = ctx->seqinfo.uHorRes;
-	s->r.height = ctx->seqinfo.uVerRes;
+	s->r = ctx->q_data[V4L2_DST].rect;
+
+	vpu_dbg(LVL_BIT_FLOW, "g_selection : %d %d %d %d\n",
+		s->r.left, s->r.top, s->r.width, s->r.height);
 
 	return 0;
 }
@@ -3565,6 +3580,14 @@ static int parse_frame_interval_from_seqinfo(struct vpu_ctx *ctx,
 	return 0;
 }
 
+static void parse_frame_crop(struct vpu_ctx *ctx, MediaIPFW_Video_SeqInfo *seq_info)
+{
+	ctx->q_data[V4L2_DST].rect.left = seq_info->uFrameCropLeftOffset;
+	ctx->q_data[V4L2_DST].rect.top = seq_info->uFrameCropTopOffset;
+	ctx->q_data[V4L2_DST].rect.width = seq_info->uHorRes;
+	ctx->q_data[V4L2_DST].rect.height = seq_info->uVerRes;
+}
+
 static struct vb2_data_req *get_frame_buffer(struct queue_data *queue)
 {
 	struct vb2_data_req *p_data_req;
@@ -3862,6 +3885,8 @@ static bool check_seq_info_is_valid(u32 ctx_id, MediaIPFW_Video_SeqInfo *info)
 static bool check_res_is_changed(struct vpu_ctx *ctx,
 				MediaIPFW_Video_SeqInfo *pSeqInfo)
 {
+	if (ctx->q_data[V4L2_DST].enable == false)
+		return true;
 	if (ctx->seqinfo.uHorDecodeRes != pSeqInfo->uHorDecodeRes)
 		return true;
 	if (ctx->seqinfo.uVerDecodeRes != pSeqInfo->uVerDecodeRes)
@@ -4279,14 +4304,17 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		vdec_setup_capture_size(ctx);
 		ctx->dcp_size = get_dcp_size(ctx);
 		ctx->cap_min_buffer = ctx->seqinfo.uNumDPBFrms + ctx->seqinfo.uNumRefFrms;
+		parse_frame_crop(ctx, &ctx->seqinfo);
 		if (ctx->b_firstseq) {
 			ctx->b_firstseq = false;
-			ctx->mbi_size = get_mbi_size(&ctx->q_data[V4L2_DST]);
-			reset_frame_buffer(ctx);
-			ctx->q_data[V4L2_DST].enable = false;
-			ctx->wait_res_change_done = true;
-			send_source_change_event(ctx);
-			pStreamPitchInfo->uFramePitch = 0x4000;
+			if (ctx->res_change_occu_count > ctx->res_change_send_count) {
+				ctx->mbi_size = get_mbi_size(&ctx->q_data[V4L2_DST]);
+				reset_frame_buffer(ctx);
+				ctx->q_data[V4L2_DST].enable = false;
+				ctx->wait_res_change_done = true;
+				send_source_change_event(ctx);
+				pStreamPitchInfo->uFramePitch = 0x4000;
+			}
 			vpu_calculate_performance(ctx, uEvent, "seq_hdr_found");
 		}
 		up(&ctx->q_data[V4L2_DST].drv_q_lock);
@@ -4471,11 +4499,13 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 			"warning: ctx[%d] RES_CHANGE event, seq id: %d\n",
 			ctx->str_index, ctx->seqinfo.uActiveSeqTag);
 		vpu_log_buffer_state(ctx);
-		down(&This->drv_q_lock);
-		This->enable = false;
-		up(&This->drv_q_lock);
-		ctx->wait_res_change_done = true;
-		send_source_change_event(ctx);
+		if (ctx->res_change_occu_count > ctx->res_change_send_count) {
+			down(&This->drv_q_lock);
+			This->enable = false;
+			up(&This->drv_q_lock);
+			ctx->wait_res_change_done = true;
+			send_source_change_event(ctx);
+		}
 		}
 		break;
 	case VID_API_EVENT_STR_BUF_RST: {
