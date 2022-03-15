@@ -1942,7 +1942,12 @@ static int fec_enet_mdio_read_bb(struct mii_bus *bus, int mii_id, int regnum)
 	dev_dbg(&fep->pdev->dev, "%s: phy: %02x reg:%02x val:%#x\n", __func__, mii_id,
 		regnum, val);
 	if (val & BIT(16)) {
-		dev_err(&fep->pdev->dev, "phy not responding(%x)!!!\n", val);
+		if ((regnum != 2) && (regnum != 3)) {
+			dev_err(&fep->pdev->dev,
+				"%s: phy not responding: adr=0x%02x regnum:0x%02x val:0x%x\n",
+				__func__, mii_id, regnum, val);
+			msleep(1);
+		}
 		val = 0xffff; /* could return -EIO, but mii-tool looks for 0xffff */
 	}
 	return val;
