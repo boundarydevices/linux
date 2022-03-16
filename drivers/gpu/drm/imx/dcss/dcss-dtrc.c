@@ -102,6 +102,7 @@ struct dcss_dtrc_ch {
 
 	int irq;
 	int ch_num;
+
 };
 
 struct dcss_dtrc {
@@ -111,6 +112,8 @@ struct dcss_dtrc {
 
 	u32 ctx_id;
 	struct dcss_ctxld *ctxld;
+
+	struct device* trusty_dev;
 };
 
 static irqreturn_t dcss_dtrc_irq_handler(int irq, void *data)
@@ -122,7 +125,8 @@ static irqreturn_t dcss_dtrc_irq_handler(int irq, void *data)
 	b1 = dcss_readl(ch->base_reg + DTRC_F1_OFS + DCSS_DTRC_DCTL) & 0x1;
 	curr_bank = dcss_readl(ch->base_reg + DCSS_DTRC_DTCTRL) >> 31;
 
-	dcss_update(1, 1, ch->base_reg + DCSS_DTRC_FDINTR);
+	dcss_update(ch->dtrc->trusty_dev, 1, 1, ch->base_reg + DCSS_DTRC_FDINTR,
+			DCSS_DTRC_FDINTR, DTRC, ch->ch_num);
 
 	return IRQ_HANDLED;
 }
@@ -151,7 +155,8 @@ static int dcss_dtrc_irq_config(struct dcss_dtrc *dtrc, int ch_num)
 		return ret;
 	}
 
-	dcss_writel(1, ch->base_reg + DCSS_DTRC_INTEN);
+	dcss_writel(dtrc->trusty_dev, 1, ch->base_reg + DCSS_DTRC_INTEN,
+			DCSS_DTRC_INTEN, DTRC, ch_num);
 
 	return 0;
 }
@@ -207,6 +212,7 @@ int dcss_dtrc_init(struct dcss_dev *dcss, unsigned long dtrc_base)
 	dtrc->dev = dcss->dev;
 	dtrc->ctxld = dcss->ctxld;
 	dtrc->ctx_id = CTX_SB_HP;
+	dtrc->trusty_dev = dcss->trusty_dev;
 
 	if (dcss_dtrc_ch_init_all(dtrc, dtrc_base)) {
 		struct dcss_dtrc_ch *ch;
@@ -239,8 +245,9 @@ void dcss_dtrc_exit(struct dcss_dtrc *dtrc)
 
 		if (ch->base_reg) {
 			/* reset the module to default */
-			dcss_writel(HOT_RESET,
-				    ch->base_reg + DCSS_DTRC_DTCTRL);
+			dcss_writel(dtrc->trusty_dev, HOT_RESET,
+				    ch->base_reg + DCSS_DTRC_DTCTRL,
+				    DCSS_DTRC_DTCTRL, DTRC, ch_no);
 			iounmap(ch->base_reg);
 		}
 
@@ -440,7 +447,8 @@ void dcss_dtrc_enable(struct dcss_dtrc *dtrc, int ch_num, bool enable)
 	if (ch->running)
 		return;
 
-	dcss_update(HOT_RESET, HOT_RESET, ch->base_reg + DCSS_DTRC_DTCTRL);
+	dcss_update(ch->dtrc->trusty_dev, HOT_RESET, HOT_RESET, ch->base_reg + DCSS_DTRC_DTCTRL,
+			DCSS_DTRC_DTCTRL, DTRC, ch->ch_num);
 	while (dcss_readl(ch->base_reg + DCSS_DTRC_DTCTRL) & HOT_RESET)
 		usleep_range(100, 200);
 
