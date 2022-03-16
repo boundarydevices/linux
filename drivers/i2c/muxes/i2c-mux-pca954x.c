@@ -462,7 +462,7 @@ static int pca954x_resume(struct device *dev)
 	struct pca954x *data = i2c_mux_priv(muxc);
 
 	data->last_chan = 0;
-	return i2c_smbus_write_byte(client, 0);
+	return 0;
 }
 #endif
 
