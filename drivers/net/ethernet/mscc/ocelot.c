@@ -3052,8 +3052,8 @@ int ocelot_port_del_dscp_prio(struct ocelot *ocelot, int port, u8 dscp, u8 prio)
 }
 EXPORT_SYMBOL_GPL(ocelot_port_del_dscp_prio);
 
-static struct ocelot_mirror *ocelot_mirror_get(struct ocelot *ocelot, int to,
-					       struct netlink_ext_ack *extack)
+struct ocelot_mirror *ocelot_mirror_get(struct ocelot *ocelot, int to,
+					struct netlink_ext_ack *extack)
 {
 	struct ocelot_mirror *m = ocelot->mirror;
 
@@ -3082,7 +3082,7 @@ static struct ocelot_mirror *ocelot_mirror_get(struct ocelot *ocelot, int to,
 	return m;
 }
 
-static void ocelot_mirror_put(struct ocelot *ocelot)
+void ocelot_mirror_put(struct ocelot *ocelot)
 {
 	struct ocelot_mirror *m = ocelot->mirror;
 
