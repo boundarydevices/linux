@@ -400,14 +400,18 @@ static void pca954x_cleanup(struct i2c_mux_core *muxc)
 	i2c_mux_del_adapters(muxc);
 }
 
-static int pca954x_init(struct i2c_client *client, struct pca954x *data)
+static int pca954x_init(struct i2c_client *client, struct pca954x *data,
+		int can_skip_write)
 {
 	int ret;
 
-	if (data->idle_state >= 0)
+	if (data->idle_state >= 0) {
 		data->last_chan = pca954x_regval(data, data->idle_state);
-	else
+	} else {
 		data->last_chan = 0; /* Disconnect multiplexer */
+		if (can_skip_write && (data->idle_state == MUX_IDLE_AS_IS))
+			return 0;
+	}
 
 	ret = i2c_smbus_write_byte(client, data->last_chan);
 	if (ret < 0)
@@ -486,7 +490,7 @@ static int pca954x_probe(struct i2c_client *client,
 	 * initializes the mux to a channel
 	 * or disconnected state.
 	 */
-	ret = pca954x_init(client, data);
+	ret = pca954x_init(client, data, 0);
 	if (ret < 0) {
 		dev_warn(dev, "probe failed\n");
 		return -ENODEV;
@@ -547,7 +551,7 @@ static int pca954x_resume(struct device *dev)
 	struct pca954x *data = i2c_mux_priv(muxc);
 	int ret;
 
-	ret = pca954x_init(client, data);
+	ret = pca954x_init(client, data, 1);
 	if (ret < 0)
 		dev_err(&client->dev, "failed to verify mux presence\n");
 
