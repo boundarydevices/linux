@@ -7,6 +7,7 @@
  */
 
 #include <linux/bits.h>
+#include <linux/bitfield.h>
 #include <linux/clk.h>
 #include <linux/compiler.h>
 #include <linux/dma-mapping.h>
