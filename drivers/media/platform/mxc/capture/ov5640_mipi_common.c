@@ -2457,42 +2457,6 @@ static int ov5640_s_power(struct ov5640 *sensor, int on)
 	return on ? ov5640_power_on_reset(sensor) : ov5640_power_off(sensor);
 }
 
-static int ov5640_g_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
-{
-	struct device *dev = &sensor->i2c_client->dev;
-	struct v4l2_captureparm *cparm = &a->parm.capture;
-	int ret = 0;
-
-	switch (a->type) {
-	/* This is the only case currently handled. */
-	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
-		memset(a, 0, sizeof(*a));
-		a->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		cparm->capability = sensor->streamcap.capability;
-		cparm->timeperframe = sensor->streamcap.timeperframe;
-		cparm->capturemode = sensor->streamcap.capturemode;
-		ret = 0;
-		break;
-
-	/* These are all the possible cases. */
-	case V4L2_BUF_TYPE_VIDEO_OUTPUT:
-	case V4L2_BUF_TYPE_VIDEO_OVERLAY:
-	case V4L2_BUF_TYPE_VBI_CAPTURE:
-	case V4L2_BUF_TYPE_VBI_OUTPUT:
-	case V4L2_BUF_TYPE_SLICED_VBI_CAPTURE:
-	case V4L2_BUF_TYPE_SLICED_VBI_OUTPUT:
-		ret = -EINVAL;
-		break;
-
-	default:
-		dev_warn(dev, "Type is unknown - %d\n", a->type);
-		ret = -EINVAL;
-		break;
-	}
-
-	return ret;
-}
-
 static int ov5640_s_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 {
 	struct device *dev = &sensor->i2c_client->dev;
