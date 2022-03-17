@@ -19,6 +19,7 @@
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pm_runtime.h>
 
 #include <media/media-entity.h>
 #include <media/v4l2-ctrls.h>
@@ -2668,6 +2669,40 @@ static void ap1302_cleanup(struct ap1302_device *ap1302)
 	mutex_destroy(&ap1302->lock);
 }
 
+static int ap1302_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct ap1302_device *ap1302 = to_ap1302(sd);
+
+	dev_dbg(dev, "ap1302 suspend\n");
+
+	ap1302_hw_cleanup(ap1302);
+	release_firmware(ap1302->fw);
+
+	return 0;
+}
+
+static int ap1302_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct ap1302_device *ap1302 = to_ap1302(sd);
+	int ret;
+
+	dev_dbg(dev, "ap1302 resume\n");
+
+	mutex_lock(&ap1302->lock);
+	ret = ap1302_hw_init(ap1302);
+	mutex_unlock(&ap1302->lock);
+
+	return ret;
+}
+
+static const struct dev_pm_ops runtime_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(ap1302_suspend, ap1302_resume)
+};
+
 static int ap1302_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct ap1302_device *ap1302;
@@ -2748,6 +2783,7 @@ static struct i2c_driver ap1302_i2c_driver = {
 	.driver = {
 		.name	= DRIVER_NAME,
 		.of_match_table	= ap1302_of_id_table,
+		.pm  = &runtime_pm_ops,
 	},
 	.probe		= ap1302_probe,
 	.remove		= ap1302_remove,
