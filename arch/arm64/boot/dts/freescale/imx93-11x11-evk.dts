@@ -175,6 +175,10 @@
 	status = "okay";
 };
 
+&dphy {
+	status = "okay";
+};
+
 &flexcan2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan2>;
