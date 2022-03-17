@@ -234,16 +234,18 @@
 	};
 };
 
-&xhci3 {
-	status = "okay";
-};
-
 &xhci0 {
 	vbus-supply = <&otg_vbus_regulator>;
 	status = "okay";
 };
 
 &xhci1 {
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	status = "okay";
+};
+
+&xhci2 {
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	status = "okay";
 };
 
@@ -255,16 +257,20 @@
 	status = "okay";
 };
 
-&u2port3 {
+&u2port2 {
 	status = "okay";
 };
 
 &u3phy0 {
-	status="okay";
+	status = "okay";
 };
 
-&u3phy3 {
-	status="okay";
+&u3phy1 {
+	status = "okay";
+};
+
+&u3phy2 {
+	status = "okay";
 };
 
 &eth {
