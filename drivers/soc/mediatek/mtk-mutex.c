@@ -288,6 +288,11 @@ enum mtk_mutex_sof_id {
 	DDP_MUTEX_SOF_MAX,
 };
 
+struct mtk_mutex_mod {
+	u8 tab;
+	u32 value;
+};
+
 struct mtk_mutex_data {
 	const u64 *mutex_mod;
 	const unsigned int *mutex_sof;
@@ -296,6 +301,7 @@ struct mtk_mutex_data {
 	const unsigned int *mutex_mdp_offset;
 	const unsigned int mutex_mdp_mod_mask;
 	const unsigned int mutex_mdp_sof_mask;
+	const struct mtk_mutex_mod *mutex_table_mod;
 	const bool no_clk;
 };
 
@@ -748,6 +754,65 @@ void mtk_mutex_add_comp(struct mtk_mutex *mutex,
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_add_comp);
 
+void mtk_mutex_set_mod(struct mtk_mutex *mutex,
+		       enum mtk_mutex_table_index idx)
+{
+	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
+						 mutex[mutex->id]);
+	unsigned int reg;
+	unsigned int offset;
+
+	WARN_ON(&mtx->mutex[mutex->id] != mutex);
+
+	if (idx < MUTEX_TABLE_IDX_MDP_RDMA0 ||
+	    idx >= MUTEX_TABLE_IDX_MAX)
+		return;
+
+	if (mtx->data->mutex_table_mod[idx].tab)
+		offset = DISP_REG_MUTEX_MOD2(mutex->id);
+	else
+		offset = DISP_REG_MUTEX_MOD(mtx->data->mutex_mod_reg,
+					    mutex->id);
+
+	reg = readl_relaxed(mtx->regs + offset);
+	reg |= 1 << mtx->data->mutex_table_mod[idx].value;
+	writel_relaxed(reg, mtx->regs + offset);
+}
+EXPORT_SYMBOL_GPL(mtk_mutex_set_mod);
+
+void mtk_mutex_set_sof(struct mtk_mutex *mutex,
+		       enum mtk_mutex_table_index idx)
+{
+	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
+						 mutex[mutex->id]);
+	unsigned int sof_id;
+
+	WARN_ON(&mtx->mutex[mutex->id] != mutex);
+
+	if (idx < MUTEX_TABLE_IDX_MDP_RDMA0 ||
+	    idx >= MUTEX_TABLE_IDX_MAX)
+		return;
+
+	switch (idx) {
+	case MUTEX_TABLE_IDX_MDP_RDMA0:
+	case MUTEX_TABLE_IDX_MDP_RSZ0:
+	case MUTEX_TABLE_IDX_MDP_RSZ1:
+	case MUTEX_TABLE_IDX_MDP_TDSHP0:
+	case MUTEX_TABLE_IDX_MDP_WROT0:
+	case MUTEX_TABLE_IDX_MDP_WDMA:
+	case MUTEX_TABLE_IDX_MDP_AAL0:
+	case MUTEX_TABLE_IDX_MDP_CCORR0:
+	default:
+		sof_id = MUTEX_SOF_SINGLE_MODE;
+		break;
+	}
+
+	writel_relaxed(mtx->data->mutex_sof[sof_id],
+		       mtx->regs +
+		       DISP_REG_MUTEX_SOF(mtx->data->mutex_sof_reg, mutex->id));
+}
+EXPORT_SYMBOL_GPL(mtk_mutex_set_sof);
+
 void mtk_mutex_remove_comp(struct mtk_mutex *mutex,
 			   enum mtk_ddp_comp_id id)
 {
@@ -816,6 +881,46 @@ void mtk_mutex_add_mod_by_cmdq(struct mtk_mutex *mutex, u32 mod,
 			    sof, mtx->data->mutex_mdp_sof_mask);
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_add_mod_by_cmdq);
+
+void mtk_mutex_clear_mod(struct mtk_mutex *mutex,
+			 enum mtk_mutex_table_index idx)
+{
+	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
+						 mutex[mutex->id]);
+	unsigned int reg;
+	unsigned int offset;
+
+	WARN_ON(&mtx->mutex[mutex->id] != mutex);
+
+	if (idx < MUTEX_TABLE_IDX_MDP_RDMA0 ||
+	    idx >= MUTEX_TABLE_IDX_MAX)
+		return;
+
+	if (mtx->data->mutex_table_mod[idx].tab)
+		offset = DISP_REG_MUTEX_MOD2(mutex->id);
+	else
+		offset = DISP_REG_MUTEX_MOD(mtx->data->mutex_mod_reg,
+					    mutex->id);
+
+	reg = readl_relaxed(mtx->regs + offset);
+	reg &= ~(1 << mtx->data->mutex_table_mod[idx].value);
+	writel_relaxed(reg, mtx->regs + offset);
+}
+EXPORT_SYMBOL_GPL(mtk_mutex_clear_mod);
+
+void mtk_mutex_clear_sof(struct mtk_mutex *mutex)
+{
+	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
+						 mutex[mutex->id]);
+
+	WARN_ON(&mtx->mutex[mutex->id] != mutex);
+
+	writel_relaxed(MUTEX_SOF_SINGLE_MODE,
+		       mtx->regs +
+		       DISP_REG_MUTEX_SOF(mtx->data->mutex_sof_reg,
+					  mutex->id));
+}
+EXPORT_SYMBOL_GPL(mtk_mutex_clear_sof);
 
 void mtk_mutex_enable(struct mtk_mutex *mutex)
 {
