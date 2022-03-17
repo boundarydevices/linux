@@ -8,7 +8,7 @@
  * Baseline and extended sequential jpeg decoding is supported.
  * Progressive jpeg decoding is not supported by the IP.
  * Supports encode and decode of various formats:
- *     YUV444, YUV422, YUV420, RGB, ARGB, Gray
+ *     YUV444, YUV422, YUV420, BGR, ABGR, Gray
  * YUV420 is the only multi-planar format supported.
  * Minimum resolution is 64 x 64, maximum 8192 x 8192.
  * To achieve 8192 x 8192, modify in defconfig: CONFIG_CMA_SIZE_MBYTES=320
@@ -73,7 +73,7 @@ static const struct mxc_jpeg_fmt mxc_formats[] = {
 		.flags		= MXC_JPEG_FMT_TYPE_ENC,
 	},
 	{
-		.name		= "RGB", /*RGBRGB packed format*/
+		.name		= "BGR", /*BGR packed format*/
 		.fourcc		= V4L2_PIX_FMT_BGR24,
 		.subsampling	= V4L2_JPEG_CHROMA_SUBSAMPLING_444,
 		.nc		= 3,
@@ -85,7 +85,7 @@ static const struct mxc_jpeg_fmt mxc_formats[] = {
 		.precision	= 8,
 	},
 	{
-		.name		= "ARGB", /* ARGBARGB packed format */
+		.name		= "ABGR", /* ABGR packed format */
 		.fourcc		= V4L2_PIX_FMT_ABGR32,
 		.subsampling	= V4L2_JPEG_CHROMA_SUBSAMPLING_444,
 		.nc		= 4,
@@ -421,9 +421,9 @@ static enum mxc_jpeg_image_format mxc_jpeg_fourcc_to_imgfmt(u32 fourcc)
 	case V4L2_PIX_FMT_YUV24:
 		return MXC_JPEG_YUV444;
 	case V4L2_PIX_FMT_BGR24:
-		return MXC_JPEG_RGB;
+		return MXC_JPEG_BGR;
 	case V4L2_PIX_FMT_ABGR32:
-		return MXC_JPEG_ARGB;
+		return MXC_JPEG_ABGR;
 	default:
 		return MXC_JPEG_INVALID;
 	}
