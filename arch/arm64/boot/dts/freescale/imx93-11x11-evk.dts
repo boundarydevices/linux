@@ -172,6 +172,10 @@
 	status = "okay";
 };
 
+&dsi {
+	status = "okay";
+};
+
 &lcdif {
 	status = "okay";
 	assigned-clock-rates = <445333333>, <148444444>, <400000000>, <133333333>;
