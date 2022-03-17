@@ -283,7 +283,7 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
 }
 
 /*!
- * ov5640_g_parm - V4L2 sensor interface handler for VIDIOC_G_PARM ioctl
+ * ioctl_g_parm - V4L2 sensor interface handler for VIDIOC_G_PARM ioctl
  * @s: pointer to standard V4L2 device structure
  * @a: pointer to standard V4L2 VIDIOC_G_PARM ioctl structure
  *
@@ -291,7 +291,39 @@ static int ioctl_s_power(struct v4l2_int_device *s, int on)
  */
 static int ioctl_g_parm(struct v4l2_int_device *s, struct v4l2_streamparm *a)
 {
-	return ov5640_g_parm(s->priv, a);
+	struct ov5640 *sensor = s->priv;
+	struct device *dev = &sensor->i2c_client->dev;
+	struct v4l2_captureparm *cparm = &a->parm.capture;
+	int ret = 0;
+
+	switch (a->type) {
+	/* This is the only case currently handled. */
+	case V4L2_BUF_TYPE_VIDEO_CAPTURE:
+		memset(a, 0, sizeof(*a));
+		a->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		cparm->capability = sensor->streamcap.capability;
+		cparm->timeperframe = sensor->streamcap.timeperframe;
+		cparm->capturemode = sensor->streamcap.capturemode;
+		ret = 0;
+		break;
+
+	/* These are all the possible cases. */
+	case V4L2_BUF_TYPE_VIDEO_OUTPUT:
+	case V4L2_BUF_TYPE_VIDEO_OVERLAY:
+	case V4L2_BUF_TYPE_VBI_CAPTURE:
+	case V4L2_BUF_TYPE_VBI_OUTPUT:
+	case V4L2_BUF_TYPE_SLICED_VBI_CAPTURE:
+	case V4L2_BUF_TYPE_SLICED_VBI_OUTPUT:
+		ret = -EINVAL;
+		break;
+
+	default:
+		dev_warn(dev, "Type is unknown - %d\n", a->type);
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
 }
 
 /*!
