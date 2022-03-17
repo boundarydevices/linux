@@ -406,35 +406,36 @@ static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
 };
 
 /*!
- * ov5640_g_parm - V4L2 sensor interface handler for VIDIOC_G_PARM ioctl
- * @s: pointer to standard V4L2 sub device structure
- * @a: pointer to standard V4L2 VIDIOC_G_PARM ioctl structure
- *
- * Returns the sensor's video CAPTURE parameters.
+ * ov5640_g_frame_interval - V4L2 sensor interface handler for VIDIOC_G_PARM ioctl
+ * @sd: pointer to standard V4L2 sub device structure
+ * @a: pointer to v4l2_subdev_frame_interval
  */
-static int _ov5640_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
+static int ov5640_g_frame_interval(struct v4l2_subdev *sd,
+			struct v4l2_subdev_frame_interval *ival)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *sensor = to_ov5640(client);
 
-	return ov5640_g_parm(sensor, a);
+	ival->interval = sensor->streamcap.timeperframe;
+
+	return 0;
 }
 
 /*!
- * ov5460_s_parm - V4L2 sensor interface handler for VIDIOC_S_PARM ioctl
- * @s: pointer to standard V4L2 sub device structure
- * @a: pointer to standard V4L2 VIDIOC_S_PARM ioctl structure
- *
- * Configures the sensor to use the input parameters, if possible.  If
- * not possible, reverts to the old parameters and returns the
- * appropriate error code.
+ * ov5640_s_frame_interval - V4L2 sensor interface handler for VIDIOC_S_PARM ioctl
+ * @sd: pointer to standard V4L2 sub device structure
+ * @ival: pointer to v4l2_subdev_frame_interval
  */
-static int _ov5640_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
+static int ov5640_s_frame_interval(struct v4l2_subdev *sd,
+			struct v4l2_subdev_frame_interval *ival)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *sensor = to_ov5640(client);
+	struct v4l2_fract *timeperframe = &ival->interval;
 
-	return ov5640_s_parm(sensor, a);
+	sensor->streamcap.timeperframe = *timeperframe;
+
+	return 0;
 }
 
 static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
@@ -457,8 +458,8 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 }
 
 static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
-	.g_parm = _ov5640_g_parm,
-	.s_parm = _ov5640_s_parm,
+	.g_frame_interval = ov5640_g_frame_interval,
+	.s_frame_interval = ov5640_s_frame_interval,
 	.s_stream = ov5640_s_stream,
 };
 
@@ -601,10 +602,15 @@ static int ov5640_set_fmt(struct v4l2_subdev *sd,
 	capturemode = get_capturemode(ov5640_mode_info_data[0], ov5640_mode_MAX,
 			mf->width, mf->height);
 	if (capturemode >= 0) {
+		struct v4l2_streamparm sp;
+
 		sensor->streamcap.capturemode = capturemode;
 		sensor->pix.width = mf->width;
 		sensor->pix.height = mf->height;
-		return 0;
+		sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		sp.parm.capture.timeperframe = sensor->streamcap.timeperframe;
+
+		return ov5640_s_parm(sensor, &sp);
 	}
 
 	dev_err(&client->dev, "Set format failed %d, %d\n",
