@@ -91,3 +91,11 @@
 		};
 	};
 };
+
+&dcss {
+	trusty;
+};
+
+&irqsteer {
+	trusty;
+};
