@@ -298,8 +298,9 @@ static u32 secure_regs_g2[5] = {HWIF_DEC_RSY_BASE,
 static bool check_secure_regs(u32 target, int id)
 {
 	int array_size = id == 0 ? 2 : 5;
+	size_t i;
 
-	for (size_t i = 0; i < array_size; i++) {
+	for (i = 0; i < array_size; i++) {
 		if (id == 0)
 			comp_secure_regs(g1);
 		else
