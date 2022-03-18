@@ -68,6 +68,7 @@ struct mtk_ddp_comp_funcs {
 	void (*bgclr_in_off)(struct device *dev);
 	void (*ctm_set)(struct device *dev,
 			struct drm_crtc_state *state);
+	struct device * (*dma_dev_get)(struct device *dev);
 };
 
 struct mtk_ddp_comp {
@@ -185,6 +186,13 @@ static inline void mtk_ddp_ctm_set(struct mtk_ddp_comp *comp,
 {
 	if (comp->funcs && comp->funcs->ctm_set)
 		comp->funcs->ctm_set(comp->dev, state);
+}
+
+static inline struct device *mtk_ddp_comp_dma_dev_get(struct mtk_ddp_comp *comp)
+{
+	if (comp->funcs && comp->funcs->dma_dev_get)
+		return comp->funcs->dma_dev_get(comp->dev);
+	return comp->dev;
 }
 
 int mtk_ddp_comp_get_id(struct device_node *node,
