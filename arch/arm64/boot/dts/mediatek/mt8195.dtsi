@@ -425,6 +425,7 @@
 	};
 
 	dmic_codec: dmic-codec {
+		#sound-dai-cells = <0>;
 		compatible = "dmic-codec";
 		num-channels = <2>;
 		wakeup-delay-ms = <50>;

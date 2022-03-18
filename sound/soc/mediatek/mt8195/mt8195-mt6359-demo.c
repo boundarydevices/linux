@@ -15,6 +15,7 @@
 #include <sound/soc.h>
 #include "../../codecs/mt6359.h"
 #include "../common/mtk-afe-platform-driver.h"
+#include "../common/mtk-soundcard-driver.h"
 #include "mt8195-afe-clk.h"
 #include "mt8195-afe-common.h"
 
@@ -372,8 +373,7 @@ SND_SOC_DAILINK_DEFS(UL10_FE,
 /* BE */
 SND_SOC_DAILINK_DEFS(DL_SRC_BE,
 		     DAILINK_COMP_ARRAY(COMP_CPU("DL_SRC")),
-		     DAILINK_COMP_ARRAY(COMP_CODEC("mt6359-sound",
-						   "mt6359-snd-codec-aif1")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
 		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
 SND_SOC_DAILINK_DEFS(ETDM2_IN_BE,
@@ -388,16 +388,12 @@ SND_SOC_DAILINK_DEFS(ETDM1_OUT_BE,
 
 SND_SOC_DAILINK_DEFS(UL_SRC1_BE,
 		     DAILINK_COMP_ARRAY(COMP_CPU("UL_SRC1")),
-		     DAILINK_COMP_ARRAY(COMP_CODEC("mt6359-sound",
-						   "mt6359-snd-codec-aif1"),
-					COMP_CODEC("dmic-codec",
-						   "dmic-hifi")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
 		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
 SND_SOC_DAILINK_DEFS(UL_SRC2_BE,
 		     DAILINK_COMP_ARRAY(COMP_CPU("UL_SRC2")),
-		     DAILINK_COMP_ARRAY(COMP_CODEC("mt6359-sound",
-						   "mt6359-snd-codec-aif2")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
 		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
 SND_SOC_DAILINK_DEFS(DMIC_BE,
@@ -652,6 +648,13 @@ static int mt8195_mt6359_demo_dev_probe(struct platform_device *pdev)
 	int ret, i;
 
 	card->dev = &pdev->dev;
+	ret = set_card_codec_info(card);
+	if (ret) {
+		dev_err(&pdev->dev, "%s set_card_codec_info failed %d\n",
+		__func__, ret);
+		return ret;
+	}
+
 	ret = snd_soc_of_parse_card_name(card, "model");
 	if (ret) {
 		dev_err(&pdev->dev, "%s new card name parsing error %d\n",

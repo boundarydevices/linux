@@ -941,6 +941,7 @@
 };
 
 &afe {
+	#sound-dai-cells = <0>;
 	memory-region = <&snd_dma_mem_reserved>;
 	mediatek,etdm-out1-multi-pin-mode = <1>;
 	mediatek,dmic-iir-on = <0>;
@@ -954,6 +955,37 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&aud_pins_default>;
 	status = "okay";
+
+	dai-link-0 {
+		sound-dai = <&afe>;
+		dai-link-name = "DL_SRC_BE";
+
+		codec-0 {
+			sound-dai = <&pmic 0>;
+		};
+	};
+
+	dai-link-1 {
+		sound-dai = <&afe>;
+		dai-link-name = "UL_SRC1_BE";
+
+		codec-0 {
+			sound-dai = <&pmic 0>;
+		};
+
+		codec-1 {
+			sound-dai = <&dmic_codec>;
+		};
+	};
+
+	dai-link-2 {
+		sound-dai = <&afe>;
+		dai-link-name = "UL_SRC2_BE";
+
+		codec-0 {
+			sound-dai = <&pmic 1>;
+		};
+	};
 };
 
 &mfg0 {
