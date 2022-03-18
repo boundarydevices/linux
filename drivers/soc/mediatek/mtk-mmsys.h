@@ -86,6 +86,14 @@ struct mtk_mmsys_routes {
 	u32 val;
 };
 
+struct mtk_mmsys_config {
+	enum mtk_mmsys_config_type config;
+	u32 id;
+	u32 addr;
+	u32 mask;
+	u32 shift;
+};
+
 struct mtk_mmsys_driver_data {
 	const char *clk_driver;
 	const struct mtk_mmsys_routes *routes;
@@ -94,6 +102,8 @@ struct mtk_mmsys_driver_data {
 	const unsigned int mdp_num_routes;
 	const unsigned int *mdp_isp_ctrl;
 	const u16 sw0_rst_offset;
+	const struct mtk_mmsys_config *config;
+	const unsigned int num_configs;
 };
 
 /*
