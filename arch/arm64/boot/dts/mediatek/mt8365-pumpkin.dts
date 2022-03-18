@@ -264,6 +264,12 @@
 
 		gpio-controller;
 		#gpio-cells = <2>;
+             
+                cam_stdby {
+                         gpios = <12 0>;
+                         output-low;
+                         line-name = "cam_stdby";
+                };
 	};
 
 	it66121hdmitx: it66121hdmitx@4c {
