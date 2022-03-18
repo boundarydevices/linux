@@ -58,8 +58,6 @@ struct tmu_sensor {
 	int temp_critical;
 };
 
-struct thermal_cooling_device *cdev_gpufreq;
-
 struct imx8mm_tmu {
 	void __iomem *base;
 	struct clk *clk;
@@ -272,14 +270,6 @@ static int imx8mm_tmu_probe(struct platform_device *pdev)
 				"devfreq: missing throttle max state\n");
 			return ret;
 		}
-
-		cdev_gpufreq = device_gpu_cooling_register(np_cdev, val);
-		if (IS_ERR(cdev_gpufreq)) {
-			dev_err(&pdev->dev,
-				"failed to register devfreq cooling device: %d\n",
-				ret);
-			return PTR_ERR(cdev_gpufreq);
-		}
 	}
 
 	platform_set_drvdata(pdev, tmu);
@@ -302,8 +292,6 @@ static int imx8mm_tmu_remove(struct platform_device *pdev)
 	imx8mm_tmu_enable(tmu, false);
 
 	clk_disable_unprepare(tmu->clk);
-	if (cdev_gpufreq)
-		device_gpu_cooling_unregister(cdev_gpufreq);
 	platform_set_drvdata(pdev, NULL);
 
 	return 0;
