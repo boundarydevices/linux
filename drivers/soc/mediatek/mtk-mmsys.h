@@ -102,6 +102,7 @@ struct mtk_mmsys_driver_data {
 	const unsigned int mdp_num_routes;
 	const unsigned int *mdp_isp_ctrl;
 	const u16 sw0_rst_offset;
+	const u32 num_resets;
 	const struct mtk_mmsys_config *config;
 	const unsigned int num_configs;
 };
