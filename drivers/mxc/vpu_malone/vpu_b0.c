@@ -1105,8 +1105,10 @@ static int v4l2_ioctl_s_fmt(struct file *file,
 
 	set_colorspace(ctx, f);
 	pix_mp->num_planes = q_data->num_planes;
-	pix_mp->width = clamp(pix_mp->width, VPU_DEC_MIN_WIDTH, VPU_DEC_MAX_WIDTH);
-	pix_mp->height = clamp(pix_mp->height, VPU_DEC_MIN_HEIGHT, VPU_DEC_MAX_HEIGTH);
+	pix_mp->width = clamp(pix_mp->width, (unsigned int)VPU_DEC_MIN_WIDTH,
+				(unsigned int)VPU_DEC_MAX_WIDTH);
+	pix_mp->height = clamp(pix_mp->height, (unsigned int)VPU_DEC_MIN_HEIGHT,
+				(unsigned int)VPU_DEC_MAX_HEIGTH);
 
 	down(&q_data->drv_q_lock);
 	if (V4L2_TYPE_IS_OUTPUT(f->type)) {
