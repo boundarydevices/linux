@@ -8,6 +8,7 @@
 
 #include <linux/soc/mediatek/mtk-cmdq.h>
 #include "mtk_drm_plane.h"
+#include "mtk_mdp_rdma.h"
 
 int mtk_aal_clk_enable(struct device *dev);
 void mtk_aal_clk_disable(struct device *dev);
@@ -106,4 +107,10 @@ void mtk_rdma_enable_vblank(struct device *dev,
 			    void *vblank_cb_data);
 void mtk_rdma_disable_vblank(struct device *dev);
 
+int mtk_mdp_rdma_clk_enable(struct device *dev);
+void mtk_mdp_rdma_clk_disable(struct device *dev);
+void mtk_mdp_rdma_start(struct device *dev, struct cmdq_pkt *cmdq_pkt);
+void mtk_mdp_rdma_stop(struct device *dev, struct cmdq_pkt *cmdq_pkt);
+void mtk_mdp_rdma_config(struct device *dev, struct mtk_mdp_rdma_cfg *cfg,
+			 struct cmdq_pkt *cmdq_pkt);
 #endif
