@@ -2344,8 +2344,8 @@ static int kmp_search(u8 *s, int s_len, const u8 *p, int p_len, int *next)
 
 static int get_stuff_data_size(u8 *data, int size)
 {
-	const u8 pattern[] = VPU_STRM_END_PATTERN;
-	int next[] = VPU_STRM_END_PATTERN;
+	const u8 pattern[] = VPU_STRM_END_OF_STREAM;
+	int next[] = VPU_STRM_END_OF_STREAM;
 	int index;
 
 	if (size < ARRAY_SIZE(pattern))
@@ -2669,43 +2669,16 @@ static int transfer_stream_output(struct vpu_ctx *ctx,
 static int append_empty_end_frame(struct vb2_data_req *p_data_req)
 {
 	struct vb2_buffer *vb = NULL;
-	const u8 pattern[] = VPU_STRM_END_OF_SEQ;
-	void *pdst;
 
 	WARN_ON(!p_data_req);
 
 	vb = p_data_req->vb2_buf;
-	pdst = vb2_plane_vaddr(vb, 0);
-	memcpy(pdst, pattern, ARRAY_SIZE(pattern));
-
-	vb2_set_plane_payload(vb, 0, ARRAY_SIZE(pattern));
+	vb2_set_plane_payload(vb, 0, 0);
 	p_data_req->buffer_flags = V4L2_BUF_FLAG_LAST;
 
 	vpu_dbg(LVL_INFO, "append the last frame\n");
 
 	return 0;
-}
-
-static s64 calculate_timestamp_for_eos(struct vpu_ctx *ctx)
-{
-	struct vpu_attr *attr = NULL;
-	struct v4l2_fract *fival;
-	s64 timestamp;
-	u64 delta = 0;
-
-	timestamp = ctx->timestamp;
-	attr = get_vpu_ctx_attr(ctx);
-	fival = &attr->fival;
-	if (ctx->timestamp != VPU_ENC_INVALID_TIMESTAMP && fival->denominator) {
-		delta = NSEC_PER_SEC * fival->numerator / fival->denominator;
-		timestamp += delta;
-	}
-
-	vpu_dbg(LVL_INFO, "[%d]eos ts : %lld, delta = %lld, %lld, %d / %d\n",
-			ctx->str_index,
-			timestamp, delta, ctx->timestamp,
-			fival->numerator, fival->denominator);
-	return timestamp;
 }
 
 static bool is_valid_frame_read_pos(u32 ptr, struct vpu_frame_info *frame)
@@ -3189,7 +3162,7 @@ static int handle_event_stop_done(struct vpu_ctx *ctx)
 	frame = get_idle_frame(queue);
 	if (frame) {
 		frame->eos = true;
-		frame->timestamp = calculate_timestamp_for_eos(ctx);
+		frame->timestamp = ctx->timestamp;
 		frame->info.uFrameID = ctx->sequence;
 		list_add_tail(&frame->list, &queue->frame_q);
 	} else {
