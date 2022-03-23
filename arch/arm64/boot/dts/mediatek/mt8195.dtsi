@@ -1594,6 +1594,9 @@
 			svs_calibration: calib@580 {
 				reg = <0x580 0x64>;
 			};
+			dp_calibration: dp-data@1ac {
+				reg = <0x1ac 0x10>;
+			};
 			u3_tx_imp_p0: usb3-tx-imp@184,1 {
 				reg = <0x184 0x1>;
 				bits = <0 5>;
@@ -4083,6 +4086,10 @@
 			status = "disabled";
 			compatible = "mediatek,mt8195-edp-tx";
 			reg = <0 0x1c500000 0 0x8000>;
+			clocks = <&topckgen CLK_TOP_EDP>;
+			clock-names = "faxi";
+			nvmem-cells = <&dp_calibration>;
+			nvmem-cell-names = "dp_calibration_data";
 			power-domains = <&spm MT8195_POWER_DOMAIN_EPD_TX>;
 			interrupts = <GIC_SPI 676 IRQ_TYPE_LEVEL_HIGH 0>;
 		};
@@ -4090,6 +4097,10 @@
 		dp_tx: dp-tx@1c600000 {
 			compatible = "mediatek,mt8195-dp-tx";
 			reg = <0 0x1c600000 0 0x8000>;
+			clocks = <&topckgen CLK_TOP_DPTX_MCK>;
+			clock-names = "faxi";
+			nvmem-cells = <&dp_calibration>;
+			nvmem-cell-names = "dp_calibration_data";
 			power-domains = <&spm MT8195_POWER_DOMAIN_DP_TX>;
 			interrupts = <GIC_SPI 458 IRQ_TYPE_LEVEL_HIGH 0>;
 			status = "disabled";
