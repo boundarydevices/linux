@@ -110,6 +110,13 @@
 		method = "smc";
 	};
 
+	imx8ulp-lpm {
+		compatible = "nxp,imx8ulp-lpm";
+		clocks = <&cgc2 IMX8ULP_CLK_DDR_SEL >, <&cgc2 IMX8ULP_CLK_DDR_DIV>,
+			 <&cgc2 IMX8ULP_CLK_PLL4 >, <&frosc>;
+		clock-names = "ddr_sel", "ddr_div", "pll4", "frosc";
+	};
+
 	thermal-zones {
 		cpu-thermal {
 			polling-delay-passive = <250>;
