@@ -3685,7 +3685,7 @@
 
 		gamma0: gamma@1c006000 {
 			compatible = "mediatek,mt8195-disp-gamma",
-				     "mediatek,mt8173-disp-gamma";
+				     "mediatek,mt8183-disp-gamma";
 			reg = <0 0x1c006000 0 0x1000>;
 			interrupts = <GIC_SPI 642 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
