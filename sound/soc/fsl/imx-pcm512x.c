@@ -54,24 +54,14 @@ static const struct imx_pcm512x_fs_map {
 	unsigned int wmin;
 	unsigned int wmax;
 } fs_map[] = {
-	/* Normal, < 32kHz */
-	{ .rmin = 8000,   .rmax = 24000,  .wmin = 1024, .wmax = 1024, },
-	/* Normal, 32kHz */
-	{ .rmin = 32000,  .rmax = 32000,  .wmin = 256,  .wmax = 1024, },
-	/* Normal */
-	{ .rmin = 44100,  .rmax = 48000,  .wmin = 256,  .wmax = 768,  },
-	/* Double */
-	{ .rmin = 88200,  .rmax = 96000,  .wmin = 256,  .wmax = 512,  },
-	/* Quad */
-	{ .rmin = 176400, .rmax = 192000, .wmin = 128,  .wmax = 256,  },
-	/* Oct */
-	{ .rmin = 352800, .rmax = 384000, .wmin = 32,   .wmax = 128,  },
+	{ .rmin = 8000,   .rmax = 192000, .wmin = 128, .wmax = 3072, },
+	{ .rmin = 384000, .rmax = 384000, .wmin = 64,  .wmax = 128,  },
 };
 
 static const u32 pcm512x_rates[] = {
 	8000, 11025, 16000, 22050, 32000,
 	44100, 48000, 64000, 88200, 96000,
-	176400, 192000, 352800, 384000,
+	176400, 192000, 384000,
 };
 
 static int imx_pcm512x_select_ext_clk(struct snd_soc_component *comp,
