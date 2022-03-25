@@ -436,7 +436,9 @@ int brcmf_c_preinit_dcmds(struct brcmf_if *ifp)
 
 	/* Enable tx beamforming, errors can be ignored (not supported) */
 	(void)brcmf_fil_iovar_int_set(ifp, "txbf", 1);
-
+	err = brcmf_fil_iovar_int_set(ifp, "chanspec", 0x1001);
+	if (err < 0)
+		bphy_err(drvr, "Initial Channel failed %d\n", err);
 	/* add unicast packet filter */
 	err = brcmf_pktfilter_add_remove(ifp->ndev,
 					 BRCMF_UNICAST_FILTER_NUM, true);

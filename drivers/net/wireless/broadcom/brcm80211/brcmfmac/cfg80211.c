@@ -317,6 +317,7 @@ struct wl_interface_create_v3 {
 	u8 data[];			/* Optional for specific data */
 };
 
+static int brcmf_setup_wiphybands(struct brcmf_cfg80211_info *cfg);
 static bool
 wl_cfgoce_has_ie(const u8 *ie, const u8 **tlvs, u32 *tlvs_len,
 		 const u8 *oui, u32 oui_len, u8 type);
@@ -1352,6 +1353,7 @@ brcmf_cfg80211_change_iface(struct wiphy *wiphy, struct net_device *ndev,
 	ndev->ieee80211_ptr->iftype = type;
 
 	brcmf_cfg80211_update_proto_addr_mode(&vif->wdev);
+	brcmf_setup_wiphybands(cfg);
 
 done:
 	brcmf_dbg(TRACE, "Exit\n");
@@ -7435,14 +7437,14 @@ static int brcmf_construct_chaninfo(struct brcmf_cfg80211_info *cfg,
 	struct brcmf_pub *drvr = cfg->pub;
 	struct brcmf_if *ifp = brcmf_get_ifp(drvr, 0);
 	struct ieee80211_supported_band *band;
-	struct ieee80211_channel *channel;
+	struct ieee80211_channel *channel, *cur, *next;
 	struct brcmf_chanspec_list *list;
 	struct brcmu_chan ch;
 	int err;
 	u8 *pbuf;
 	u32 i, j;
 	u32 total;
-	u32 chaninfo;
+	u32 chaninfo, n_2g = 0, n_5g = 0;
 
 	pbuf = kzalloc(BRCMF_DCMD_MEDLEN, GFP_KERNEL);
 
@@ -7556,6 +7558,40 @@ static int brcmf_construct_chaninfo(struct brcmf_cfg80211_info *cfg,
 						IEEE80211_CHAN_NO_IR;
 			}
 		}
+	}
+
+	/* Remove disabled channels to avoid unexpected restore. */
+	band = wiphy->bands[NL80211_BAND_2GHZ];
+	if (band) {
+		n_2g = band->n_channels;
+		for (i = 0; i < band->n_channels; i++) {
+			cur = &band->channels[i];
+			if (cur->flags == IEEE80211_CHAN_DISABLED) {
+				for (j = i; j < n_2g - 1; j++) {
+					cur = &band->channels[j];
+					next = &band->channels[j + 1];
+					memcpy(cur, next, sizeof(*cur));
+				}
+				n_2g--;
+			}
+		}
+		wiphy->bands[NL80211_BAND_2GHZ]->n_channels = n_2g;
+	}
+	band = wiphy->bands[NL80211_BAND_5GHZ];
+	if (band) {
+		n_5g = band->n_channels;
+		for (i = 0; i < band->n_channels; i++) {
+			cur = &band->channels[i];
+			if (cur->flags == IEEE80211_CHAN_DISABLED) {
+				for (j = i; j < n_5g - 1; j++) {
+					cur = &band->channels[j];
+					next = &band->channels[j + 1];
+					memcpy(cur, next, sizeof(*cur));
+				}
+				n_5g--;
+			}
+		}
+		wiphy->bands[NL80211_BAND_5GHZ]->n_channels = n_5g;
 	}
 
 fail_pbuf:
@@ -8329,6 +8365,7 @@ static s32 __brcmf_cfg80211_down(struct brcmf_if *ifp)
 		   the state fw and WPA_Supplicant state consistent
 		 */
 		brcmf_delay(500);
+		cfg->dongle_up = false;
 	}
 
 	brcmf_abort_scanning(cfg);
