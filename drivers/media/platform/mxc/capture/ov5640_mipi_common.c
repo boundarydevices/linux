@@ -2387,8 +2387,14 @@ static int ov5640_init_mode(struct ov5640 *sensor,
 	if (!mipi_csi2_info)
 		return -EINVAL;
 
-	dn_mode = ov5640_mode_info_data[frame_rate][mode].dn_mode;
-	orig_dn_mode = ov5640_mode_info_data[frame_rate][orig_mode].dn_mode;
+	if (mode == ov5640_mode_INIT) {
+		dn_mode = 0;
+		orig_dn_mode = 0;
+	} else {
+		dn_mode = ov5640_mode_info_data[frame_rate][mode].dn_mode;
+		orig_dn_mode = ov5640_mode_info_data[frame_rate][orig_mode].dn_mode;
+	}
+
 	if (mode == ov5640_mode_INIT) {
 		pModeSetting = ov5640_init_setting_30fps_VGA;
 		ArySize = ARRAY_SIZE(ov5640_init_setting_30fps_VGA);
