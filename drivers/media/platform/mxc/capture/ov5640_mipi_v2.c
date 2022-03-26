@@ -609,6 +609,7 @@ static int ov5640_set_fmt(struct v4l2_subdev *sd,
 		sensor->pix.height = mf->height;
 		sp.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		sp.parm.capture.timeperframe = sensor->streamcap.timeperframe;
+		sp.parm.capture.capturemode = capturemode;
 
 		return ov5640_s_parm(sensor, &sp);
 	}
