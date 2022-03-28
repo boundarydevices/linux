@@ -110,21 +110,22 @@ static int it5205fn_switch_set(struct typec_switch *sw,
 	u8 new_conf = 0;
 	u8 value = 0;
 
-	dev_info(&it5205->client->dev, "%s %d\n", __func__, orientation);
+	dev_info(&it5205->client->dev, "%s orientation: %u\n",
+		__func__, orientation);
 
 	mutex_lock(&it5205->lock);
+	it5205_read(it5205, IT5205_REG_MUXCR, &new_conf);
+
 	switch (orientation) {
 	case TYPEC_ORIENTATION_NONE:
 		/* enter sleep mode */
+		new_conf = 0x0;
 		break;
 	case TYPEC_ORIENTATION_NORMAL:
-		it5205_read(it5205, IT5205_REG_MUXCR, &new_conf);
-		new_conf |= (IT5205_POLARITY_INVERTED | IT5205_USB);
+		new_conf &= ~IT5205_POLARITY_INVERTED;
 		break;
 	case TYPEC_ORIENTATION_REVERSE:
-		it5205_read(it5205, IT5205_REG_MUXCR, &new_conf);
-		new_conf &= ~IT5205_POLARITY_INVERTED;
-		new_conf |= IT5205_USB;
+		new_conf |= (IT5205_POLARITY_INVERTED);
 		break;
 	default:
 		break;
@@ -141,31 +142,37 @@ static int it5205fn_switch_set(struct typec_switch *sw,
 static int it5205fn_mux_set(struct typec_mux *mux, struct typec_mux_state *state)
 {
 	struct it5205fn *it5205 = typec_mux_get_drvdata(mux);
-	/*u8 new_conf;*/
 	int ret = 0;
+	u8 new_conf = 0;
 
-	pr_info("%s\n", __func__);
+	dev_info(&it5205->client->dev, "%s mode: %lu\n",
+		__func__, state->mode);
 
 	mutex_lock(&it5205->lock);
+
+	it5205_read(it5205, IT5205_REG_MUXCR, &new_conf);
+	new_conf &= ~IT5205_DP_USB_CTRL_MASK;
+
 	switch (state->mode) {
 	case TYPEC_STATE_SAFE:
-		/* todo */
+		/* Do nothing */
 		break;
 	case TYPEC_STATE_USB:
-		/* todo */
+		new_conf |= IT5205_USB;
 		break;
 	case TYPEC_DP_STATE_C:
 	case TYPEC_DP_STATE_E:
-		/* todo */
+		new_conf |= IT5205_DP;
 		break;
 	case TYPEC_DP_STATE_D:
-		/* todo */
+	case TYPEC_DP_STATE_F:
+		new_conf |= IT5205_DP_USB;
 		break;
 	default:
 		break;
 	}
 
-	/*ret = it5205fn_set_conf(it5205, new_conf);*/
+	ret = it5205fn_set_conf(it5205, new_conf);
 	mutex_unlock(&it5205->lock);
 
 	return ret;
