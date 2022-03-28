@@ -19,7 +19,6 @@ int set_card_codec_info(struct snd_soc_card *card)
 	struct device *dev = card->dev;
 	struct of_phandle_args args;
 	const char *dai_link_name;
-	int dai_driver_index;
 	int num_codecs;
 	int ret, i;
 
