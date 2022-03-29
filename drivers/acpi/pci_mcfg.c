@@ -46,6 +46,7 @@ static struct mcfg_fixup mcfg_quirks[] = {
 #define AL_ECAM(table_id, rev, seg, ops) \
 	{ "AMAZON", table_id, rev, seg, MCFG_BUS_ANY, ops }
 
+#ifdef CONFIG_PCIE_AL
 	AL_ECAM("GRAVITON", 0, 0, &al_pcie_ops),
 	AL_ECAM("GRAVITON", 0, 1, &al_pcie_ops),
 	AL_ECAM("GRAVITON", 0, 2, &al_pcie_ops),
@@ -54,6 +55,7 @@ static struct mcfg_fixup mcfg_quirks[] = {
 	AL_ECAM("GRAVITON", 0, 5, &al_pcie_ops),
 	AL_ECAM("GRAVITON", 0, 6, &al_pcie_ops),
 	AL_ECAM("GRAVITON", 0, 7, &al_pcie_ops),
+#endif
 
 #define QCOM_ECAM32(seg) \
 	{ "QCOM  ", "QDF2432 ", 1, seg, MCFG_BUS_ANY, &pci_32b_ops }
@@ -73,12 +75,14 @@ static struct mcfg_fixup mcfg_quirks[] = {
 	{ "HISI  ", table_id, 0, (seg) + 2, MCFG_BUS_ANY, ops }, \
 	{ "HISI  ", table_id, 0, (seg) + 3, MCFG_BUS_ANY, ops }
 
+#ifdef CONFIG_PCI_HISI
 	HISI_QUAD_DOM("HIP05   ",  0, &hisi_pcie_ops),
 	HISI_QUAD_DOM("HIP06   ",  0, &hisi_pcie_ops),
 	HISI_QUAD_DOM("HIP07   ",  0, &hisi_pcie_ops),
 	HISI_QUAD_DOM("HIP07   ",  4, &hisi_pcie_ops),
 	HISI_QUAD_DOM("HIP07   ",  8, &hisi_pcie_ops),
 	HISI_QUAD_DOM("HIP07   ", 12, &hisi_pcie_ops),
+#endif
 
 #define THUNDER_PEM_RES(addr, node) \
 	DEFINE_RES_MEM((addr) + ((u64) (node) << 44), 0x39 * SZ_16M)
@@ -118,12 +122,14 @@ static struct mcfg_fixup mcfg_quirks[] = {
 	THUNDER_ECAM_QUIRK(2, 12),
 	THUNDER_ECAM_QUIRK(2, 13),
 
+#ifdef CONFIG_PCIE_TEGRA194
 	{ "NVIDIA", "TEGRA194", 1, 0, MCFG_BUS_ANY, &tegra194_pcie_ops},
 	{ "NVIDIA", "TEGRA194", 1, 1, MCFG_BUS_ANY, &tegra194_pcie_ops},
 	{ "NVIDIA", "TEGRA194", 1, 2, MCFG_BUS_ANY, &tegra194_pcie_ops},
 	{ "NVIDIA", "TEGRA194", 1, 3, MCFG_BUS_ANY, &tegra194_pcie_ops},
 	{ "NVIDIA", "TEGRA194", 1, 4, MCFG_BUS_ANY, &tegra194_pcie_ops},
 	{ "NVIDIA", "TEGRA194", 1, 5, MCFG_BUS_ANY, &tegra194_pcie_ops},
+#endif
 
 #define XGENE_V1_ECAM_MCFG(rev, seg) \
 	{"APM   ", "XGENE   ", rev, seg, MCFG_BUS_ANY, \
