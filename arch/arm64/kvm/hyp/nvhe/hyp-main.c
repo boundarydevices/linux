@@ -40,7 +40,7 @@ static void handle_pvm_entry_wfx(struct pkvm_hyp_vcpu *hyp_vcpu)
 	}
 }
 
-static void handle_pvm_entry_hvc64(struct pkvm_hyp_vcpu *hyp_vcpu)
+static void handle_pvm_entry_psci(struct pkvm_hyp_vcpu *hyp_vcpu)
 {
 	u32 psci_fn = smccc_get_function(&hyp_vcpu->vcpu);
 	u64 ret = READ_ONCE(hyp_vcpu->host_vcpu->arch.ctxt.regs.regs[0]);
@@ -75,6 +75,22 @@ static void handle_pvm_entry_hvc64(struct pkvm_hyp_vcpu *hyp_vcpu)
 	}
 
 	vcpu_set_reg(&hyp_vcpu->vcpu, 0, ret);
+}
+
+static void handle_pvm_entry_hvc64(struct pkvm_hyp_vcpu *hyp_vcpu)
+{
+	u32 fn = smccc_get_function(&hyp_vcpu->vcpu);
+
+	switch (fn) {
+	case ARM_SMCCC_VENDOR_HYP_KVM_MEM_SHARE_FUNC_ID:
+		fallthrough;
+	case ARM_SMCCC_VENDOR_HYP_KVM_MEM_UNSHARE_FUNC_ID:
+		vcpu_set_reg(&hyp_vcpu->vcpu, 0, SMCCC_RET_SUCCESS);
+		break;
+	default:
+		handle_pvm_entry_psci(hyp_vcpu);
+		break;
+	}
 }
 
 static void handle_pvm_entry_sys64(struct pkvm_hyp_vcpu *hyp_vcpu)
@@ -232,6 +248,12 @@ static void handle_pvm_exit_hvc64(struct pkvm_hyp_vcpu *hyp_vcpu)
 	case PSCI_0_2_FN_CPU_SUSPEND:
 	case PSCI_0_2_FN64_CPU_SUSPEND:
 		n = 1;
+		break;
+
+	case ARM_SMCCC_VENDOR_HYP_KVM_MEM_SHARE_FUNC_ID:
+		fallthrough;
+	case ARM_SMCCC_VENDOR_HYP_KVM_MEM_UNSHARE_FUNC_ID:
+		n = 4;
 		break;
 
 	case PSCI_1_1_FN_SYSTEM_RESET2:
