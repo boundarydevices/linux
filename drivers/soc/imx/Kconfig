@@ -61,4 +61,8 @@ config IMX_LPA_CTRL
 	depends on ARCH_MXC
 	default n
 
+config IMX_GKI_FIX
+	bool "IMX GKI fix issue"
+	default n
+
 endmenu

@@ -1069,7 +1069,7 @@ static void genpd_sync_power_off(struct generic_pm_domain *genpd, bool use_lock,
 {
 	struct gpd_link *link;
 
-#ifdef CONFIG_MX8QDX_PM_DOMAINS
+#ifndef CONFIG_IMX_GKI_FIX
 	/*
 	 * Give the power domain a chance to switch to the deepest state in
 	 * case it's already off but in an intermediate low power state.
@@ -1095,7 +1095,7 @@ static void genpd_sync_power_off(struct generic_pm_domain *genpd, bool use_lock,
 	if (_genpd_power_off(genpd, false))
 		return;
 
-#ifdef CONFIG_MX8QDX_PM_DOMAINS
+#ifndef CONFIG_IMX_GKI_FIX
 	if (genpd->status == GENPD_STATE_OFF)
 		return;
 #endif
@@ -1147,7 +1147,7 @@ static void genpd_sync_power_on(struct generic_pm_domain *genpd, bool use_lock,
 
 	_genpd_power_on(genpd, false);
 
-#ifdef CONFIG_MX8QDX_PM_DOMAINS
+#ifndef CONFIG_IMX_GKI_FIX
 	/* restore save power domain state after resume */
 	genpd->state_idx = genpd->state_idx_saved;
 #endif

@@ -160,7 +160,7 @@ struct generic_pm_domain {
 		};
 	};
 
-#ifdef CONFIG_MX8QDX_PM_DOMAINS
+#ifndef CONFIG_IMX_GKI_FIX
 	unsigned int state_idx_saved; /* saved power state for recovery after system suspend/resume */
 #endif
 };
