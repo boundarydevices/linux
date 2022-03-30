@@ -16,25 +16,6 @@
 static const struct mdp_format *mdp_formats;
 static u32 format_len;
 
-static const struct mdp_limit mdp_def_limit = {
-	.out_limit = {
-		.wmin	= 16,
-		.hmin	= 16,
-		.wmax	= 8176,
-		.hmax	= 8176,
-	},
-	.cap_limit = {
-		.wmin	= 2,
-		.hmin	= 2,
-		.wmax	= 8176,
-		.hmax	= 8176,
-	},
-	.h_scale_up_max = 32,
-	.v_scale_up_max = 32,
-	.h_scale_down_max = 20,
-	.v_scale_down_max = 128,
-};
-
 const struct mdp_format *mdp_find_fmt(u32 pixelformat, u32 type)
 {
 	u32 i, flag;
@@ -602,13 +583,18 @@ void mdp_set_dst_config(struct img_output *out,
 int mdp_frameparam_init(struct mdp_frameparam *param)
 {
 	struct mdp_frame *frame;
+	struct mdp_dev *mdp;
+	struct mdp_m2m_ctx *ctx;
 
 	if (!param)
 		return -EINVAL;
 
+	ctx = container_of(param, struct mdp_m2m_ctx, curr_param);
+	mdp = ctx->mdp_dev;
+
 	INIT_LIST_HEAD(&param->list);
 	mutex_init(&param->state_lock);
-	param->limit = &mdp_def_limit;
+	param->limit = mdp->mdp_data->def_limit;
 	param->type = MDP_STREAM_TYPE_BITBLT;
 
 	frame = &param->output;

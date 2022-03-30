@@ -85,6 +85,7 @@ struct mtk_mdp_driver_data {
 	const struct mdp_format *format;
 	unsigned int format_len;
 	const enum mdp_mmsys_config_id *config_table;
+	const struct mdp_limit *def_limit;
 };
 
 struct mdp_dev {

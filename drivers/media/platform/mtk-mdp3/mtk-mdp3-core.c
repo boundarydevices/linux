@@ -1004,6 +1004,44 @@ static const struct mdp_format mt8195_formats[] = {
 	}
 };
 
+static const struct mdp_limit mt8183_def_limit = {
+	.out_limit = {
+		.wmin	= 16,
+		.hmin	= 16,
+		.wmax	= 8176,
+		.hmax	= 8176,
+	},
+	.cap_limit = {
+		.wmin	= 2,
+		.hmin	= 2,
+		.wmax	= 8176,
+		.hmax	= 8176,
+	},
+	.h_scale_up_max = 32,
+	.v_scale_up_max = 32,
+	.h_scale_down_max = 20,
+	.v_scale_down_max = 128,
+};
+
+static const struct mdp_limit mt8195_def_limit = {
+	.out_limit = {
+		.wmin	= 64,
+		.hmin	= 64,
+		.wmax	= 8192,
+		.hmax	= 8192,
+	},
+	.cap_limit = {
+		.wmin	= 64,
+		.hmin	= 64,
+		.wmax	= 8192,
+		.hmax	= 8192,
+	},
+	.h_scale_up_max = 64,
+	.v_scale_up_max = 64,
+	.h_scale_down_max = 128,
+	.v_scale_down_max = 128,
+};
+
 static const u32 mt8195_mdp_mmsys_config_table[] = {
 	[CONFIG_VPP0_HW_DCM_1ST_DIS0]    = 0,
 	[CONFIG_VPP0_DL_IRELAY_WR]       = 1,
@@ -1028,6 +1066,7 @@ static const struct mtk_mdp_driver_data mt8183_mdp_driver_data = {
 	.pipe_info_len = ARRAY_SIZE(mt8183_pipe_info),
 	.format = mt8183_formats,
 	.format_len = ARRAY_SIZE(mt8183_formats),
+	.def_limit = &mt8183_def_limit,
 };
 
 static const struct mtk_mdp_driver_data mt8195_mdp_driver_data = {
@@ -1044,6 +1083,7 @@ static const struct mtk_mdp_driver_data mt8195_mdp_driver_data = {
 	.format = mt8195_formats,
 	.format_len = ARRAY_SIZE(mt8195_formats),
 	.config_table = mt8195_mdp_mmsys_config_table,
+	.def_limit = &mt8195_def_limit,
 };
 
 static const struct of_device_id mdp_of_ids[] = {
