@@ -1924,18 +1924,24 @@ int rproc_trigger_recovery(struct rproc *rproc)
 	rproc->ops->coredump(rproc);
 
 	/* load firmware */
+#ifndef CONFIG_IMX_GKI_FIX
 	if (!rproc->skip_fw_recovery) {
+#endif
 		ret = request_firmware(&firmware_p, rproc->firmware, dev);
 		if (ret < 0) {
 			dev_err(dev, "request_firmware failed: %d\n", ret);
 			goto unlock_mutex;
 		}
+#ifndef CONFIG_IMX_GKI_FIX
 	}
+#endif
 
 	/* boot the remote processor up again */
 	ret = rproc_start(rproc, firmware_p);
 
+#ifndef CONFIG_IMX_GKI_FIX
 	if (!rproc->skip_fw_recovery)
+#endif
 		release_firmware(firmware_p);
 
 unlock_mutex:

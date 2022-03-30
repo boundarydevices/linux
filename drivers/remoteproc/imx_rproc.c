@@ -1071,7 +1071,9 @@ static int imx_rproc_detect_mode(struct imx_rproc *priv)
 		if (!imx_sc_rm_is_resource_owned(ipc_handle, priv->rsrc)) {
 			priv->ipc_only = true;
 			priv->early_boot = true;
+		#ifndef CONFIG_IMX_GKI_FIX
 			priv->rproc->skip_fw_recovery = true;
+		#endif
 			priv->rproc->state = RPROC_DETACHED;
 			/*
 			 * Get muB partition id and enable irq in SCFW

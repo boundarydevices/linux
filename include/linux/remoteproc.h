@@ -568,7 +568,9 @@ struct rproc {
 	u16 elf_machine;
 	struct cdev cdev;
 	bool cdev_put_on_release;
+#ifndef CONFIG_IMX_GKI_FIX
 	bool skip_fw_recovery;
+#endif
 };
 
 /**
