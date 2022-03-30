@@ -173,6 +173,10 @@
 				      <64000>, <96000>, <192000>;
 	};
 
+	rpmsg_sensor: rpmsg-sensor {
+		compatible = "nxp,rpmsg-iio-pedometer", "fsl,rpmsg-input";
+	};
+
 	rpmsg_audio: rpmsg-audio {
 		compatible = "fsl,imx8ulp-rpmsg-audio";
 		model = "wm8960-audio";
@@ -273,11 +277,6 @@
 	mpl3115@60 {
 		compatible = "fsl,mpl3115";
 		reg = <0x60>;
-	};
-
-	lsm6dsm@6a {
-		compatible = "st,lsm6dso";
-		reg = <0x6a>;
 	};
 
 	wm8960: wm8960@1a {
