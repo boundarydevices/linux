@@ -303,7 +303,13 @@ int mdp_vpu_ctx_deinit(struct mdp_vpu_ctx *ctx)
 
 int mdp_vpu_process(struct mdp_vpu_ctx *ctx, struct img_ipi_frameparam *param)
 {
+	struct mdp_dev *mdp = vpu_to_mdp(ctx->vpu_dev);
 	struct img_sw_addr addr;
+
+	if (IS_ERR_OR_NULL(ctx->config)) {
+		dev_err(&mdp->pdev->dev, "VPU without initialize");
+		return -ENOMEM;
+	}
 
 	memset((void *)ctx->vpu_dev->work, 0, ctx->vpu_dev->work_size);
 

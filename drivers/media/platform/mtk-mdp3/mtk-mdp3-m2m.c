@@ -753,6 +753,7 @@ static int mdp_m2m_release(struct file *file)
 	struct mdp_dev *mdp = video_drvdata(file);
 	struct device *dev = &mdp->pdev->dev;
 
+	flush_workqueue(ctx->mdp_dev->job_wq);
 	mutex_lock(&mdp->m2m_lock);
 	v4l2_m2m_ctx_release(ctx->m2m_ctx);
 	if (mdp_m2m_ctx_is_state_set(ctx, MDP_VPU_INIT)) {
