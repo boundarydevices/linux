@@ -143,7 +143,7 @@
 };
 
 &A53_0 {
-	cpu-supply = <&reg_sw3>;
+	cpu-supply = <&reg_buck3>;
 };
 
 &csi1_bridge {
@@ -251,7 +251,7 @@
 	status = "okay";
 };
 
-&reg_sw4 {
+&reg_buck4 {
 	/delete-property/ dual-phase;
 };
 
@@ -286,7 +286,7 @@
 };
 
 &vpumix_pd {
-	dvfs-supply = <&reg_sw5>;
+	dvfs-supply = <&reg_buck5>;
 	idle-microvolt = <850000 805000 900000>;
 };
 
