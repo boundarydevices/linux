@@ -145,7 +145,7 @@
 
 	aliases {
 		/delete-property/ a53;
-		/delete-property/ reg_sw4;
+		/delete-property/ reg_buck4;
 		/delete-property/ sai1;
 		/delete-property/ sai2;
 		/delete-property/ sai3;
