@@ -545,7 +545,7 @@ NOKPROBE_SYMBOL(do_el1_fpac)
 
 #define __user_cache_maint_ivau(insn, address, res)			\
 	do {								\
-		if (address >= user_addr_max()) {			\
+		if (address >= TASK_SIZE_MAX) {			\
 			res = -EFAULT;					\
 		} else {						\
 			uaccess_ttbr0_enable();				\
