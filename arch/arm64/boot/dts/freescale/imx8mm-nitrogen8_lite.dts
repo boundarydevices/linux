@@ -96,6 +96,6 @@
 };
 
 &vpumix_pd {
-	dvfs-supply = <&reg_sw5>;
+	dvfs-supply = <&reg_buck5>;
 	idle-microvolt = <850000 805000 900000>;
 };
