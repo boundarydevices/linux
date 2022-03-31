@@ -5499,11 +5499,6 @@ static int brcmf_cfg80211_stop_ap(struct wiphy *wiphy, struct net_device *ndev,
 			return 0;
 		}
 
-		if (ifp->vif->mbss) {
-			err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1);
-			return err;
-		}
-
 		/* First BSS doesn't get a full reset */
 		if (ifp->bsscfgidx == 0)
 			brcmf_fil_iovar_int_set(ifp, "closednet", 0);
