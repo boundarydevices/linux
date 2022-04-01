@@ -77,6 +77,24 @@
 #define PF8X00_FAULT_TIMER	0x49
 #define PF8X00_AMUX		0x4a
 
+/* regulators */
+enum pf8x00_regulators {
+	PF8X00_LDO1,
+	PF8X00_LDO2,
+	PF8X00_LDO3,
+	PF8X00_LDO4,
+	PF8X00_BUCK1,
+	PF8X00_BUCK2,
+	PF8X00_BUCK3,
+	PF8X00_BUCK4,
+	PF8X00_BUCK5,
+	PF8X00_BUCK6,
+	PF8X00_BUCK7,
+	PF8X00_VSNVS,
+
+	PF8X00_MAX_REGULATORS,
+};
+
 #define SW_CONFIG1	0
 #define SW_CONFIG2	1
 #define SW_PWRUP	2
@@ -84,8 +102,8 @@
 #define SW_RUN_VOLT	4
 #define SW_STBY_VOLT	5
 
-/* i is in REG_SW1..REG_SW7 */
-#define PF8X00_SW(i)		(8 * (i - REG_SW1) + 0x4d)
+/* i is in PF8X00_BUCK1..PF8X00_BUCK7 */
+#define PF8X00_SW(i)		(8 * (i - PF8X00_BUCK1) + 0x4d)
 
 #define LDO_CONFIG1	0
 #define LDO_CONFIG2	1
@@ -93,8 +111,8 @@
 #define LDO_RUN_VOLT	3
 #define LDO_STBY_VOLT	4
 
-/* i is in REG_LDO1..REG_LDO4 */
-#define PF8X00_LDO(i)		(6 * (i - REG_LDO1) + 0x85)
+/* i is in PF8X00_LDO1..PF8X00_LDO4 */
+#define PF8X00_LDO(i)		(6 * (i - PF8X00_LDO1) + 0x85)
 
 #define PF8X00_VSNVS_CONFIG1	0x9d
 
@@ -124,15 +142,15 @@
 #define OTP_SW_CONFIG1	2
 #define OTP_SW_CONFIG2	3
 
-/* i is in REG_SW1..REG_SW7 */
-#define PF8X00_OTP_SW(i)	(4 * (i - REG_SW1) + 0xb2)
+/* i is in PF8X00_BUCK1..PF8X00_BUCK7 */
+#define PF8X00_OTP_SW(i)	(4 * (i - PF8X00_BUCK1) + 0xb2)
 
 #define OTP_LDO_VOLT	0
 #define OTP_LDO_PWRUP	1
 #define OTP_LDO_CONFIG	2
 
-/* i is in REG_LDO1..REG_LDO4 */
-#define PF8X00_OTP_LDO(i)	(3 * (i - REG_LDO1) + 0xce)
+/* i is in PF8X00_LDO1..PF8X00_LDO4 */
+#define PF8X00_OTP_LDO(i)	(3 * (i - PF8X00_LDO1) + 0xce)
 
 #define PF8X00_OTP_VSNVS_CONFIG	0xda
 #define PF8X00_OTP_OV_BYPASS1	0xdb
@@ -144,20 +162,6 @@
 
 #define PF8X00_OTP_DEBUG1	0xe3
 #define PF8X_NUMREGS		0xe4
-
-#define REG_LDO1		0
-#define REG_LDO2		1
-#define REG_LDO3		2
-#define REG_LDO4		3
-#define REG_SW1			4
-#define REG_SW2			5
-#define REG_SW3			6
-#define REG_SW4			7
-#define REG_SW5			8
-#define REG_SW6			9
-#define REG_SW7			10
-#define REG_VSNVS		11
-#define REG_NUM_REGULATORS	(4 + 7 + 1)
 
 enum chips {
 	PF8100 = 0x40,
@@ -189,8 +193,8 @@ struct pf8x_chip {
 	int	clk_freq;
 	struct regmap *regmap;
 	struct device *dev;
-	struct pf8x_regulator regulator_descs[REG_NUM_REGULATORS];
-	struct regulator_dev *regulators[REG_NUM_REGULATORS];
+	struct pf8x_regulator regulator_descs[PF8X00_MAX_REGULATORS];
+	struct regulator_dev *regulators[PF8X00_MAX_REGULATORS];
 };
 
 /* Output: 1.5V to 5.0V, LDO2 can use VSELECT */
@@ -381,32 +385,32 @@ static int pf8x00_of_parse_cb(struct device_node *np,
 	if (of_get_property(np, "vselect-en", NULL))
 		vselect_en = 1;
 
-	if ((desc->id != REG_SW1) && quad_phase) {
-		dev_err(pf->dev, "ignoring, only sw1 can use quad-phase\n");
+	if ((desc->id != PF8X00_BUCK1) && quad_phase) {
+		dev_err(pf->dev, "ignoring, only buck1 can use quad-phase\n");
 		quad_phase = 0;
 	}
-	if ((desc->id != REG_SW1) && (desc->id != REG_SW4)
-			 && (desc->id != REG_SW5) && dual_phase) {
-		dev_err(pf->dev, "ignoring, only sw1/sw4/sw5 can use dual-phase\n");
+	if ((desc->id != PF8X00_BUCK1) && (desc->id != PF8X00_BUCK4)
+			 && (desc->id != PF8X00_BUCK5) && dual_phase) {
+		dev_err(pf->dev, "ignoring, only buck1/buck4/buck5 can use dual-phase\n");
 		dual_phase = 0;
 	}
-	if ((desc->id != REG_LDO2) && vselect_en) {
+	if ((desc->id != PF8X00_LDO2) && vselect_en) {
 		/* LDO2 has gpio vselect */
 		dev_err(pf->dev, "ignoring, only ldo2 can use vselect-en\n");
 		vselect_en = 0;
 	}
-	if ((desc->id != REG_LDO2) && hw_en) {
+	if ((desc->id != PF8X00_LDO2) && hw_en) {
 		/* LDO2 has gpio vselect */
 		dev_err(pf->dev, "ignoring, only ldo2 can use hw-en\n");
 		hw_en = 0;
 	}
-	if ((desc->id < REG_SW1) && (desc->id > REG_SW7)) {
+	if ((desc->id < PF8X00_BUCK1) && (desc->id > PF8X00_BUCK7)) {
 		if ((unsigned)ilim <= 3) {
-			dev_err(pf->dev, "ignoring, only sw1-7 can use ilim\n");
+			dev_err(pf->dev, "ignoring, only buck1-7 can use ilim\n");
 			ilim = -1;
 		}
 		if ((unsigned)phase <= 7) {
-			dev_err(pf->dev, "ignoring, only sw1-7 can use phase\n");
+			dev_err(pf->dev, "ignoring, only buck1-7 can use phase\n");
 			ilim = -1;
 		}
 	}
@@ -522,18 +526,18 @@ static struct regulator_ops pf8x00_vsnvs_regulator_ops = {
 	}
 
 static const struct pf8x_regulator pf8x00_regulators[] = {
-	STRUCT_LDO_REG(REG_LDO1, ldo1, PF8X00_LDO(REG_LDO1), pf8x00_ldo_voltages),
-	STRUCT_LDO_REG(REG_LDO2, ldo2, PF8X00_LDO(REG_LDO2), pf8x00_ldo_voltages),
-	STRUCT_LDO_REG(REG_LDO3, ldo3, PF8X00_LDO(REG_LDO3), pf8x00_ldo_voltages),
-	STRUCT_LDO_REG(REG_LDO4, ldo4, PF8X00_LDO(REG_LDO4), pf8x00_ldo_voltages),
-	STRUCT_SW_REG(REG_SW1, sw1, PF8X00_SW(REG_SW1), pf8x00_sw1_to_6_voltages),
-	STRUCT_SW_REG(REG_SW2, sw2, PF8X00_SW(REG_SW2), pf8x00_sw1_to_6_voltages),
-	STRUCT_SW_REG(REG_SW3, sw3, PF8X00_SW(REG_SW3), pf8x00_sw1_to_6_voltages),
-	STRUCT_SW_REG(REG_SW4, sw4, PF8X00_SW(REG_SW4), pf8x00_sw1_to_6_voltages),
-	STRUCT_SW_REG(REG_SW5, sw5, PF8X00_SW(REG_SW5), pf8x00_sw1_to_6_voltages),
-	STRUCT_SW_REG(REG_SW6, sw6, PF8X00_SW(REG_SW6), pf8x00_sw1_to_6_voltages),
-	STRUCT_SW_REG(REG_SW7, sw7, PF8X00_SW(REG_SW7), pf8x00_sw7_voltages),
-	STRUCT_VSNVS_REG(REG_VSNVS, vsnvs, PF8X00_VSNVS_CONFIG1, pf8x00_vsnvs_voltages),
+	STRUCT_LDO_REG(PF8X00_LDO1, ldo1, PF8X00_LDO(PF8X00_LDO1), pf8x00_ldo_voltages),
+	STRUCT_LDO_REG(PF8X00_LDO2, ldo2, PF8X00_LDO(PF8X00_LDO2), pf8x00_ldo_voltages),
+	STRUCT_LDO_REG(PF8X00_LDO3, ldo3, PF8X00_LDO(PF8X00_LDO3), pf8x00_ldo_voltages),
+	STRUCT_LDO_REG(PF8X00_LDO4, ldo4, PF8X00_LDO(PF8X00_LDO4), pf8x00_ldo_voltages),
+	STRUCT_SW_REG(PF8X00_BUCK1, buck1, PF8X00_SW(PF8X00_BUCK1), pf8x00_sw1_to_6_voltages),
+	STRUCT_SW_REG(PF8X00_BUCK2, buck2, PF8X00_SW(PF8X00_BUCK2), pf8x00_sw1_to_6_voltages),
+	STRUCT_SW_REG(PF8X00_BUCK3, buck3, PF8X00_SW(PF8X00_BUCK3), pf8x00_sw1_to_6_voltages),
+	STRUCT_SW_REG(PF8X00_BUCK4, buck4, PF8X00_SW(PF8X00_BUCK4), pf8x00_sw1_to_6_voltages),
+	STRUCT_SW_REG(PF8X00_BUCK5, buck5, PF8X00_SW(PF8X00_BUCK5), pf8x00_sw1_to_6_voltages),
+	STRUCT_SW_REG(PF8X00_BUCK6, buck6, PF8X00_SW(PF8X00_BUCK6), pf8x00_sw1_to_6_voltages),
+	STRUCT_SW_REG(PF8X00_BUCK7, buck7, PF8X00_SW(PF8X00_BUCK7), pf8x00_sw7_voltages),
+	STRUCT_VSNVS_REG(PF8X00_VSNVS, vsnvs, PF8X00_VSNVS_CONFIG1, pf8x00_vsnvs_voltages),
 };
 
 #ifdef CONFIG_OF
@@ -542,13 +546,13 @@ static struct of_regulator_match pf8x00_matches[] = {
 	{ .name = "ldo2",	},
 	{ .name = "ldo3",	},
 	{ .name = "ldo4",	},
-	{ .name = "sw1",	},
-	{ .name = "sw2",	},
-	{ .name = "sw3",	},
-	{ .name = "sw4",	},
-	{ .name = "sw5",	},
-	{ .name = "sw6",	},
-	{ .name = "sw7",	},
+	{ .name = "buck1",	},
+	{ .name = "buck2",	},
+	{ .name = "buck3",	},
+	{ .name = "buck4",	},
+	{ .name = "buck5",	},
+	{ .name = "buck6",	},
+	{ .name = "buck7",	},
 	{ .name = "vsnvs",	},
 };
 
@@ -760,7 +764,7 @@ static int pf8x00_regulator_probe(struct i2c_client *client,
 				desc->name);
 			return PTR_ERR(pf->regulators[i]);
 		}
-		if ((i >= REG_SW1) && (i <= REG_SW7)) {
+		if ((i >= PF8X00_BUCK1) && (i <= PF8X00_BUCK7)) {
 			unsigned phase = pf->regulator_descs[i].phase;
 			unsigned ilim = pf->regulator_descs[i].ilim;
 			unsigned mask = 0;
@@ -795,44 +799,44 @@ static int pf8x00_regulator_probe(struct i2c_client *client,
 			}
 		}
 	}
-	hw_en = pf->regulator_descs[REG_LDO2].hw_en;
-	vselect_en = pf->regulator_descs[REG_LDO2].vselect_en;
+	hw_en = pf->regulator_descs[PF8X00_LDO2].hw_en;
+	vselect_en = pf->regulator_descs[PF8X00_LDO2].vselect_en;
 	val = vselect_en ? 8 : 0;
 	if (hw_en)
 		val |= 0x10;
 	ret = regmap_update_bits(pf->regmap,
-			PF8X00_LDO(REG_LDO2) + LDO_CONFIG2,
+			PF8X00_LDO(PF8X00_LDO2) + LDO_CONFIG2,
 				 0x18, val);
 
 	ctrl3 = get_otp_reg(pf, PF8X00_OTP_CTRL3);
 	if (ctrl3 >= 0) {
-		quad_phase = pf->regulator_descs[REG_SW1].quad_phase;
-		dual_phase = pf->regulator_descs[REG_SW1].dual_phase;
+		quad_phase = pf->regulator_descs[PF8X00_BUCK1].quad_phase;
+		dual_phase = pf->regulator_descs[PF8X00_BUCK1].dual_phase;
 		if (quad_phase) {
 			if ((ctrl3 & 3) != 2)
-				format = "sw1 quad_phase not set in otp_ctrl3 %x\n";
+				format = "buck1 quad_phase not set in otp_ctrl3 %x\n";
 
 		} else if (dual_phase) {
 			if ((ctrl3 & 3) != 1)
-				format = "sw1 dual_phase not set in otp_ctrl3 %x\n";
+				format = "buck1 dual_phase not set in otp_ctrl3 %x\n";
 		} else if (ctrl3 & 3) {
-			format = "sw1 single_phase not set in otp_ctrl3 %x\n";
+			format = "buck1 single_phase not set in otp_ctrl3 %x\n";
 		}
 		if (!quad_phase) {
-			dual_phase = pf->regulator_descs[REG_SW4].dual_phase;
+			dual_phase = pf->regulator_descs[PF8X00_BUCK4].dual_phase;
 			if (dual_phase) {
 				if ((ctrl3 & 0x0c) != 4)
-					format = "sw4 dual_phase not set in otp_ctrl3 %x\n";
+					format = "buck4 dual_phase not set in otp_ctrl3 %x\n";
 			} else if (ctrl3 & 0x0c) {
-				format = "sw4 single_phase not set in otp_ctrl3 %x\n";
+				format = "buck4 single_phase not set in otp_ctrl3 %x\n";
 			}
 		}
-		dual_phase = pf->regulator_descs[REG_SW5].dual_phase;
+		dual_phase = pf->regulator_descs[PF8X00_BUCK5].dual_phase;
 		if (dual_phase) {
 			if ((ctrl3 & 0x30) != 0x10)
-				format = "sw5 dual_phase not set in otp_ctrl3 %x\n";
+				format = "buck5 dual_phase not set in otp_ctrl3 %x\n";
 		} else if (ctrl3 & 0x30) {
-			format = "sw5 single_phase not set in otp_ctrl3 %x\n";
+			format = "buck5 single_phase not set in otp_ctrl3 %x\n";
 		}
 		if (format) {
 			dev_err(pf->dev, format, ctrl3);
