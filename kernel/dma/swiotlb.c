@@ -563,8 +563,7 @@ phys_addr_t swiotlb_tbl_map_single(struct device *dev, phys_addr_t orig_addr,
 		enum dma_data_direction dir, unsigned long attrs)
 {
 	unsigned int offset = swiotlb_align_offset(dev, orig_addr);
-	unsigned int i;
-	int index;
+	unsigned int index, i;
 	phys_addr_t tlb_addr;
 
 	if (no_iotlb_memory)
