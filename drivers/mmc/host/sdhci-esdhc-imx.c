@@ -1593,7 +1593,8 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 	if (of_find_property(np, "vqmmc-1-8-v", NULL))
 		boarddata->vqmmc_18v = true;
 
-	if (of_property_read_bool(np, "fsl,sdio-interrupt-enabled"))
+	if (of_property_read_bool(np, "fsl,sdio-interrupt-enabled") ||
+	    of_property_read_bool(np, "fsl,sdio-async-interrupt-enabled"))
 		boarddata->sdio_interrupt_enabled = true;
 
 	if (of_property_read_u32(np, "fsl,delay-line", &boarddata->delay_line))
