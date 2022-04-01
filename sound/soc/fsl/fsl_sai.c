@@ -547,8 +547,13 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
 	int ret, i, trce_mask = 0, dl_cfg_cnt, dl_cfg_idx = 0;
 	struct fsl_sai_dl_cfg *dl_cfg;
 
+	if (sai->slot_width)
+		slot_width = sai->slot_width;
+
 	if (sai->slots)
 		slots = sai->slots;
+	else if (sai->bclk_ratio)
+		slots = sai->bclk_ratio / slot_width;
 
 	pins = DIV_ROUND_UP(channels, slots);
 	sai->is_dsd = fsl_is_dsd(params);
@@ -573,9 +578,6 @@ static int fsl_sai_hw_params(struct snd_pcm_substream *substream,
 			sai->is_dsd ? ",dsd" : "");
 		return -EINVAL;
 	}
-
-	if (sai->slot_width)
-		slot_width = sai->slot_width;
 
 	bclk = rate*(sai->bclk_ratio ? sai->bclk_ratio : slots * slot_width);
 
