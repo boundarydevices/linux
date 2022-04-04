@@ -353,7 +353,6 @@
 		partition@C0000 {
 			label = "env";
 			reg = <0xC0000 0x2000>;
-			read-only;
 		};
 		partition@C2000 {
 			label = "Kernel";
