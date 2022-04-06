@@ -1218,7 +1218,7 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 
 	fsl_edma3->dma_dev.copy_align = DMAENGINE_ALIGN_64_BYTES;
 	/* Per worst case 'nbytes = 1' take CITER as the max_seg_size */
-	dma_set_max_seg_size(fsl_edma3->dma_dev.dev, 0x3fff);
+	dma_set_max_seg_size(fsl_edma3->dma_dev.dev, 0x7fff);
 
 	platform_set_drvdata(pdev, fsl_edma3);
 
