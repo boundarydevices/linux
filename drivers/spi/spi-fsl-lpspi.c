@@ -926,7 +926,7 @@ static int fsl_lpspi_probe(struct platform_device *pdev)
 	ret = devm_spi_register_controller(&pdev->dev, controller);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "spi_register_controller error.\n");
-		goto out_pm_get;
+		goto out_dma_init;
 	}
 
 	pm_runtime_mark_last_busy(fsl_lpspi->dev);
@@ -934,6 +934,8 @@ static int fsl_lpspi_probe(struct platform_device *pdev)
 
 	return 0;
 
+out_dma_init:
+	fsl_lpspi_dma_exit(controller);
 out_pm_get:
 	pm_runtime_dont_use_autosuspend(fsl_lpspi->dev);
 	pm_runtime_put_sync(fsl_lpspi->dev);
