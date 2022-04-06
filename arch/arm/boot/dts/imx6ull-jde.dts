@@ -257,8 +257,8 @@
 };
 
 / {
-	model = "Freescale i.MX6 ULL tc Board";
-	compatible = "fsl,imx6ull-tc", "fsl,imx6ull";
+	model = "Freescale i.MX6 ULL JDE Board";
+	compatible = "fsl,imx6ull-jde", "fsl,imx6ull";
 
 	aliases {
 		backlight_lcd = &backlight_lcd;
