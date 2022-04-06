@@ -63,7 +63,16 @@ static char dpaa2_ethtool_extras[][ETH_GSTRING_LEN] = {
 	"[qbman] rx pending bytes",
 	"[qbman] tx conf pending frames",
 	"[qbman] tx conf pending bytes",
-	"[qbman] buffer count",
+	"[qbman] num dpbps",
+	"[qbman] buffer count dpbp#1",
+	"[qbman] buffer count dpbp#2",
+	"[qbman] buffer count dpbp#3",
+	"[qbman] buffer count dpbp#4",
+	"[qbman] buffer count dpbp#5",
+	"[qbman] buffer count dpbp#6",
+	"[qbman] buffer count dpbp#7",
+	"[qbman] buffer count dpbp#8",
+	"[qbman] buffer count dpbp#9",
 };
 
 #define DPAA2_ETH_NUM_EXTRA_STATS	ARRAY_SIZE(dpaa2_ethtool_extras)
@@ -307,12 +316,16 @@ static void dpaa2_eth_get_ethtool_stats(struct net_device *net_dev,
 	*(data + i++) = fcnt_tx_total;
 	*(data + i++) = bcnt_tx_total;
 
-	err = dpaa2_io_query_bp_count(NULL, priv->bpid, &buf_cnt);
-	if (err) {
-		netdev_warn(net_dev, "Buffer count query error %d\n", err);
-		return;
+	*(data + i++) = priv->num_bps;
+	for (j = 0; j < priv->num_bps; j++) {
+		err = dpaa2_io_query_bp_count(NULL, priv->bp[j]->bpid, &buf_cnt);
+		if (err) {
+			netdev_warn(net_dev, "Buffer count query error %d\n", err);
+			return;
+		}
+		*(data + i + j) = buf_cnt;
 	}
-	*(data + i++) = buf_cnt;
+	i += DPAA2_ETH_MAX_BPS;
 
 	if (dpaa2_eth_has_mac(priv))
 		dpaa2_mac_get_ethtool_stats(priv->mac, data + i);

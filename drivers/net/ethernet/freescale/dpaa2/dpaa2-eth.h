@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: (GPL-2.0+ OR BSD-3-Clause) */
 /* Copyright 2014-2016 Freescale Semiconductor Inc.
- * Copyright 2016-2020 NXP
+ * Copyright 2016-2022 NXP
  */
 
 #ifndef __DPAA2_ETH_H
@@ -108,6 +108,14 @@
  */
 #define DPAA2_ETH_RX_BUF_ALIGN_REV1	256
 #define DPAA2_ETH_RX_BUF_ALIGN		64
+
+/* The firmware allows assigning multiple buffer pools to a single DPNI - maximum
+ * 8 DPBP objects. By default, only the first DPBP is used. Thus, when enabling
+ * AF_XDP we must accommodate up to 9 DPBPs object: the default and 8 other distinct
+ * buffer pools.
+ */
+#define DPAA2_ETH_DEFAULT_BP		0
+#define DPAA2_ETH_MAX_BPS		9
 
 /* We are accommodating a skb backpointer and some S/G info
  * in the frame's software annotation. The hardware
@@ -457,6 +465,11 @@ struct dpaa2_eth_ch_xdp {
 	unsigned int res;
 };
 
+struct dpaa2_eth_buf_pool {
+	struct fsl_mc_device *dpbp_dev;
+	int bpid;
+};
+
 struct dpaa2_eth_channel {
 	struct dpaa2_io_notification_ctx nctx;
 	struct fsl_mc_device *dpcon;
@@ -475,6 +488,8 @@ struct dpaa2_eth_channel {
 	/* Buffers to be recycled back in the buffer pool */
 	u64 recycled_bufs[DPAA2_ETH_BUFS_PER_CMD];
 	int recycled_bufs_cnt;
+
+	struct dpaa2_eth_buf_pool *bp;
 };
 
 struct dpaa2_eth_dist_fields {
@@ -536,9 +551,9 @@ struct dpaa2_eth_priv {
 	u16 tx_data_offset;
 	void __iomem *onestep_reg_base;
 	u8 ptp_correction_off;
-	struct fsl_mc_device *dpbp_dev;
+	struct dpaa2_eth_buf_pool *bp[DPAA2_ETH_MAX_BPS];
+	int num_bps;
 	u16 rx_buf_size;
-	u16 bpid;
 	struct iommu_domain *iommu_domain;
 
 	enum hwtstamp_tx_types tx_tstamp_type;	/* Tx timestamping type */
