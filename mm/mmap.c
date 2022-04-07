@@ -183,9 +183,8 @@ static struct vm_area_struct *remove_vma(struct vm_area_struct *vma)
 	might_sleep();
 	if (vma->vm_ops && vma->vm_ops->close)
 		vma->vm_ops->close(vma);
-	if (vma->vm_file)
-		fput(vma->vm_file);
 	mpol_put(vma_policy(vma));
+	/* fput(vma->vm_file) happens in vm_area_free after an RCU delay. */
 	vm_area_free(vma);
 	return next;
 }
@@ -953,7 +952,8 @@ again:
 	if (remove_next) {
 		if (file) {
 			uprobe_munmap(next, next->vm_start, next->vm_end);
-			fput(file);
+			/* fput(file) happens whthin vm_area_free(next) */
+			VM_BUG_ON(file != next->vm_file);
 		}
 		if (next->anon_vma)
 			anon_vma_merge(vma, next);
@@ -1031,7 +1031,7 @@ again:
 static inline int is_mergeable_vma(struct vm_area_struct *vma,
 				struct file *file, unsigned long vm_flags,
 				struct vm_userfaultfd_ctx vm_userfaultfd_ctx,
-				const char *anon_name)
+				struct anon_vma_name *anon_name)
 {
 	/*
 	 * VM_SOFTDIRTY should not prevent from VMA merging, if we
@@ -1049,7 +1049,7 @@ static inline int is_mergeable_vma(struct vm_area_struct *vma,
 		return 0;
 	if (!is_mergeable_vm_userfaultfd_ctx(vma, vm_userfaultfd_ctx))
 		return 0;
-	if (!is_same_vma_anon_name(vma, anon_name))
+	if (!anon_vma_name_eq(anon_vma_name(vma), anon_name))
 		return 0;
 	return 1;
 }
@@ -1084,7 +1084,7 @@ can_vma_merge_before(struct vm_area_struct *vma, unsigned long vm_flags,
 		     struct anon_vma *anon_vma, struct file *file,
 		     pgoff_t vm_pgoff,
 		     struct vm_userfaultfd_ctx vm_userfaultfd_ctx,
-		     const char *anon_name)
+		     struct anon_vma_name *anon_name)
 {
 	if (is_mergeable_vma(vma, file, vm_flags, vm_userfaultfd_ctx, anon_name) &&
 	    is_mergeable_anon_vma(anon_vma, vma->anon_vma, vma)) {
@@ -1106,7 +1106,7 @@ can_vma_merge_after(struct vm_area_struct *vma, unsigned long vm_flags,
 		    struct anon_vma *anon_vma, struct file *file,
 		    pgoff_t vm_pgoff,
 		    struct vm_userfaultfd_ctx vm_userfaultfd_ctx,
-		    const char *anon_name)
+		    struct anon_vma_name *anon_name)
 {
 	if (is_mergeable_vma(vma, file, vm_flags, vm_userfaultfd_ctx, anon_name) &&
 	    is_mergeable_anon_vma(anon_vma, vma->anon_vma, vma)) {
@@ -1167,7 +1167,7 @@ struct vm_area_struct *vma_merge(struct mm_struct *mm,
 			struct anon_vma *anon_vma, struct file *file,
 			pgoff_t pgoff, struct mempolicy *policy,
 			struct vm_userfaultfd_ctx vm_userfaultfd_ctx,
-			const char *anon_name)
+			struct anon_vma_name *anon_name)
 {
 	pgoff_t pglen = (end - addr) >> PAGE_SHIFT;
 	struct vm_area_struct *area, *next;
@@ -1817,7 +1817,7 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
 				 * fput the vma->vm_file here or we would add an extra fput for file
 				 * and cause general protection fault ultimately.
 				 */
-				fput(vma->vm_file);
+				/* fput happens within vm_area_free */
 				vm_area_free(vma);
 				vma = merge;
 				/* Update vm_flags to pick up the change. */
@@ -1889,6 +1889,7 @@ unmap_and_free_vma:
 	if (vm_flags & VM_SHARED)
 		mapping_unmap_writable(file->f_mapping);
 free_vma:
+	VM_BUG_ON(vma->vm_file);
 	vm_area_free(vma);
 unacct_error:
 	if (charged)
@@ -2277,12 +2278,11 @@ get_unmapped_area(struct file *file, unsigned long addr, unsigned long len,
 EXPORT_SYMBOL(get_unmapped_area);
 
 /* Look up the first VMA which satisfies  addr < vm_end,  NULL if none. */
-struct vm_area_struct *find_vma(struct mm_struct *mm, unsigned long addr)
+struct vm_area_struct *__find_vma(struct mm_struct *mm, unsigned long addr)
 {
 	struct rb_node *rb_node;
 	struct vm_area_struct *vma;
 
-	mmap_assert_locked(mm);
 	/* Check the cache first. */
 	vma = vmacache_find(mm, addr);
 	if (likely(vma))
@@ -2309,7 +2309,7 @@ struct vm_area_struct *find_vma(struct mm_struct *mm, unsigned long addr)
 	return vma;
 }
 
-EXPORT_SYMBOL(find_vma);
+EXPORT_SYMBOL(__find_vma);
 
 /*
  * Same as find_vma, but also return a pointer to the previous VMA in *pprev.
@@ -2762,6 +2762,7 @@ int __split_vma(struct mm_struct *mm, struct vm_area_struct *vma,
  out_free_mpol:
 	mpol_put(vma_policy(new));
  out_free_vma:
+	new->vm_file = NULL;	/* prevents fput within vm_area_free() */
 	vm_area_free(new);
 	return err;
 }
@@ -3257,7 +3258,7 @@ struct vm_area_struct *copy_vma(struct vm_area_struct **vmap,
 		return NULL;	/* should never get here */
 	new_vma = vma_merge(mm, prev, addr, addr + len, vma->vm_flags,
 			    vma->anon_vma, vma->vm_file, pgoff, vma_policy(vma),
-			    vma->vm_userfaultfd_ctx, vma_anon_name(vma));
+			    vma->vm_userfaultfd_ctx, anon_vma_name(vma));
 	if (new_vma) {
 		/*
 		 * Source vma may have been merged into new_vma
@@ -3303,6 +3304,7 @@ struct vm_area_struct *copy_vma(struct vm_area_struct **vmap,
 out_free_mempol:
 	mpol_put(vma_policy(new_vma));
 out_free_vma:
+	new_vma->vm_file = NULL;	/* Prevent fput within vm_area_free */
 	vm_area_free(new_vma);
 out:
 	return NULL;
@@ -3595,6 +3597,10 @@ int mm_take_all_locks(struct mm_struct *mm)
 
 	mutex_lock(&mm_all_locks_mutex);
 
+#if defined(CONFIG_MMU_NOTIFIER) && defined(CONFIG_SPECULATIVE_PAGE_FAULT)
+	percpu_down_write(mm->mmu_notifier_lock);
+#endif
+
 	for (vma = mm->mmap; vma; vma = vma->vm_next) {
 		if (signal_pending(current))
 			goto out_unlock;
@@ -3681,6 +3687,10 @@ void mm_drop_all_locks(struct mm_struct *mm)
 		if (vma->vm_file && vma->vm_file->f_mapping)
 			vm_unlock_mapping(vma->vm_file->f_mapping);
 	}
+
+#if defined(CONFIG_MMU_NOTIFIER) && defined(CONFIG_SPECULATIVE_PAGE_FAULT)
+	percpu_up_write(mm->mmu_notifier_lock);
+#endif
 
 	mutex_unlock(&mm_all_locks_mutex);
 }

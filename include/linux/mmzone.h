@@ -39,6 +39,8 @@
  */
 #define PAGE_ALLOC_COSTLY_ORDER 3
 
+#define MAX_KSWAPD_THREADS 16
+
 enum migratetype {
 	MIGRATE_UNMOVABLE,
 	MIGRATE_MOVABLE,
@@ -843,6 +845,7 @@ typedef struct pglist_data {
 	wait_queue_head_t pfmemalloc_wait;
 	struct task_struct *kswapd;	/* Protected by
 					   mem_hotplug_begin/end() */
+	struct task_struct *mkswapd[MAX_KSWAPD_THREADS];
 	int kswapd_order;
 	enum zone_type kswapd_highest_zoneidx;
 
@@ -1096,6 +1099,7 @@ static inline struct pglist_data *NODE_DATA(int nid)
 extern struct pglist_data *first_online_pgdat(void);
 extern struct pglist_data *next_online_pgdat(struct pglist_data *pgdat);
 extern struct zone *next_zone(struct zone *zone);
+extern int isolate_anon_lru_page(struct page *page);
 
 /**
  * for_each_online_pgdat - helper macro to iterate over all online nodes
