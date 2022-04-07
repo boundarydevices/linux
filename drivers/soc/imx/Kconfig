@@ -65,4 +65,12 @@ config IMX_GKI_FIX
 	bool "IMX GKI fix issue"
 	default n
 
+config IMX8ULP_LPM_CTRL
+	tristate "i.MX8ULP DDR Low Power Control support"
+	depends on ARCH_MXC || COMPILE_TEST
+	default ARCH_MXC && ARM64
+	help
+	  If you say yes here you get supoort for DDR frequency scaling support on
+	  i.MX8ULP for scaling the DDR frequency based on user case. The DDR frequency
+	  need to be switched manually by user.
 endmenu
