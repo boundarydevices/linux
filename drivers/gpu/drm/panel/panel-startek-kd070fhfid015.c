@@ -210,9 +210,9 @@ static int stk_panel_prepare(struct drm_panel *panel)
 		return ret;
 	mdelay(8);
 	mdelay(20);
-	gpiod_set_value(stk->dcdc_en_gpio, 1);
-	mdelay(20);
 	gpiod_set_value(stk->enable_gpio, 1);
+	mdelay(20);
+	gpiod_set_value(stk->dcdc_en_gpio, 1);
 	mdelay(20);
 	gpiod_set_value(stk->reset_gpio, 1);
 	mdelay(10);
