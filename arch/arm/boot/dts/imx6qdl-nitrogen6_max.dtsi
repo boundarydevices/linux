@@ -867,7 +867,7 @@
 	cs-gpios = GP_ECSPI1_NOR_CS;
 	status = "okay";
 
-	flash: m25p80@0 {
+	flash: flash@0 {
 		compatible = "sst,sst25vf016b";
 		spi-max-frequency = <20000000>;
 		reg = <0>;
