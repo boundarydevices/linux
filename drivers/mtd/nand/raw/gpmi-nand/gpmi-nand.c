@@ -926,11 +926,27 @@ static int gpmi_nfc_apply_timings(struct gpmi_nand_data *this)
 	unsigned int dll_wait_time_us;
 	int ret;
 
-	clk_disable_unprepare(r->clock[0]);
+	/* Clock dividers do NOT guarantee a clean clock signal on its output
+	 * during the change of the divide factor on i.MX6Q/UL/SX. On i.MX7/8,
+	 * all clock dividers provide these guarantee.
+	 */
+	if (GPMI_IS_MX6Q(this) || GPMI_IS_MX6SX(this))
+		clk_disable_unprepare(r->clock[0]);
+
 	if (GPMI_IS_MX6SX(this) && hw->clk_rate > 88000000)
 		hw->clk_rate = 88000000;
-	clk_set_rate(r->clock[0], hw->clk_rate);
-	clk_prepare_enable(r->clock[0]);
+
+	ret = clk_set_rate(r->clock[0], hw->clk_rate);
+	if (ret) {
+		dev_err(this->dev, "cannot set clock rate to %lu Hz: %d\n", hw->clk_rate, ret);
+		return ret;
+	}
+
+	if (GPMI_IS_MX6Q(this) || GPMI_IS_MX6SX(this)) {
+		ret = clk_prepare_enable(r->clock[0]);
+		if (ret)
+			return ret;
+	}
 
 	writel(hw->timing0, gpmi_regs + HW_GPMI_TIMING0);
 	writel(hw->timing1, gpmi_regs + HW_GPMI_TIMING1);

@@ -376,9 +376,9 @@ static int cdns_hdmi_connector_atomic_check(struct drm_connector *connector,
 			!new_con_state->hdr_output_metadata ||
 			!old_con_state->hdr_output_metadata ||
 			new_con_state->colorspace != old_con_state->colorspace;
-		/* save new connector state */
-		memcpy(&mhdp->connector.new_state, new_con_state, sizeof(struct drm_connector_state));
 	}
+	/* save new connector state */
+	memcpy(&mhdp->connector.new_state, new_con_state, sizeof(struct drm_connector_state));
 
 	/*
 	 * These properties are handled by fastset, and might not end up in a
@@ -557,8 +557,11 @@ bool cdns_hdmi_bridge_mode_fixup(struct drm_bridge *bridge,
 			video->color_fmt = YCBCR_4_2_0;
 		else
 			video->color_fmt = YCBCR_4_4_4;
-	} else if (new_state->colorspace == DRM_MODE_COLORIMETRY_DEFAULT)
-		return !drm_mode_is_420_only(di, mode);
+	} else if (new_state->colorspace == DRM_MODE_COLORIMETRY_DEFAULT) {
+		/* set default color fmt for YUV420 only mode */
+		if (drm_mode_is_420_only(di, mode))
+			video->color_fmt = YCBCR_4_2_0;
+	}
 
 	return true;
 }
