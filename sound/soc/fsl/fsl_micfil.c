@@ -183,7 +183,7 @@ static const struct soc_enum fsl_micfil_hwvad_zcd_enum =
 			    micfil_hwvad_zcd_enable);
 static const struct soc_enum fsl_micfil_hwvad_zcdauto_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(micfil_hwvad_zcdauto_enable),
-			    micfil_hwvad_zcd_enable);
+			    micfil_hwvad_zcdauto_enable);
 static const struct soc_enum fsl_micfil_hwvad_ndec_enum =
 	SOC_ENUM_SINGLE(REG_MICFIL_VAD0_NCONFIG,
 			MICFIL_VAD0_NCONFIG_NOREN_SHIFT,
