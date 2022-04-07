@@ -67,11 +67,6 @@ struct imx8ulp_priv {
 	struct imx_dsp_ipc *dsp_ipc;
 	struct platform_device *ipc_dev;
 
-	/* Power domain handling */
-	int num_domains;
-	struct device **pd_dev;
-	struct device_link **link;
-
 	struct regmap *regmap_sim;
 	struct clk *dsp_clks[IMX8ULP_DSP_CLK_NUM];
 	struct clk *dai_clks[IMX8ULP_DAI_CLK_NUM];
@@ -291,7 +286,6 @@ static int imx8ulp_probe(struct snd_sof_dev *sdev)
 	struct resource res;
 	u32 base, size;
 	int ret = 0;
-	int i;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -384,10 +378,6 @@ static int imx8ulp_probe(struct snd_sof_dev *sdev)
 exit_pdev_unregister:
 	platform_device_unregister(priv->ipc_dev);
 exit_unroll_pm:
-	while (--i >= 0) {
-		device_link_del(priv->link[i]);
-		dev_pm_domain_detach(priv->pd_dev[i], false);
-	}
 
 	return ret;
 }
@@ -395,14 +385,8 @@ exit_unroll_pm:
 static int imx8ulp_remove(struct snd_sof_dev *sdev)
 {
 	struct imx8ulp_priv *priv = sdev->pdata->hw_pdata;
-	int i;
 
 	platform_device_unregister(priv->ipc_dev);
-
-	for (i = 0; i < priv->num_domains; i++) {
-		device_link_del(priv->link[i]);
-		dev_pm_domain_detach(priv->pd_dev[i], false);
-	}
 
 	return 0;
 }
