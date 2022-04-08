@@ -19,6 +19,7 @@
 #include <video/videomode.h>
 
 #include <drm/drm_atomic_helper.h>
+#include <drm/drm_panel.h>
 #include <drm/drm_bridge.h>
 #include <drm/drm_bridge_connector.h>
 #include <drm/drm_crtc.h>
@@ -65,6 +66,7 @@ enum mtk_dpi_out_color_format {
 
 struct mtk_dpi {
 	struct drm_encoder encoder;
+	struct drm_panel *panel;
 	struct drm_bridge bridge;
 	struct drm_bridge *next_bridge;
 	struct drm_connector *connector;
@@ -934,11 +936,23 @@ static int mtk_dpi_probe(struct platform_device *pdev)
 		return -EINVAL;
 
 	ret = drm_of_find_panel_or_bridge(dev->of_node, 0, 0,
-					  NULL, &dpi->next_bridge);
-	if (ret)
+					  &dpi->panel, &dpi->next_bridge);
+	if (ret) {
+		dev_err(dev, "Failed to get panel/bridge: %d\n", ret);
 		return ret;
+	}
 
-	dev_info(dev, "Found bridge node: %pOF\n", dpi->next_bridge->of_node);
+	if (dpi->panel) {
+		dev_info(dev, "Found panel node: %pOF\n", dpi->panel->dev->of_node);
+		dpi->next_bridge = devm_drm_panel_bridge_add(dev, dpi->panel);
+		if (IS_ERR(dpi->next_bridge)) {
+			ret = PTR_ERR(dpi->next_bridge);
+			dev_err(dev, "Failed to add the panel's bridge: %d\n", ret);
+			return ret;
+		}
+	} else if (dpi->next_bridge) {
+		dev_info(dev, "Found bridge node: %pOF\n", dpi->next_bridge->of_node);
+	}
 
 	platform_set_drvdata(pdev, dpi);
 
