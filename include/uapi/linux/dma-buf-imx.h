@@ -19,9 +19,11 @@
 #ifndef _LINUX_DMABUF_IMX_H
 #define _LINUX_DMABUF_IMX_H
 
+#include <linux/types.h>
+
 struct dmabuf_imx_phys_data {
 	__u32 dmafd;
-	uint64_t phys;
+	__u64 phys;
 };
 struct dmabuf_imx_heap_name {
 	__u32 dmafd;
