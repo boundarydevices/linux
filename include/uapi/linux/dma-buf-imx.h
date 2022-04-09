@@ -19,9 +19,11 @@
 #ifndef _LINUX_DMABUF_IMX_H
 #define _LINUX_DMABUF_IMX_H
 
+#include <linux/types.h>
+
 struct dmabuf_imx_phys_data {
 	__u32 dmafd;
-	uint64_t phys;
+	__u64 phys;
 };
 
 #define DMABUF_GET_PHYS   _IOWR('M', 32, struct dmabuf_imx_phys_data)
