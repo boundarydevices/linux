@@ -37,6 +37,7 @@ no-header-test += linux/fmd/%
 no-header-test += linux/fmd/Peripherals/%
 no-header-test += linux/fsmap.h
 no-header-test += linux/hdlc/ioctl.h
+no-header-test += linux/imx_vpu.h
 no-header-test += linux/ipu.h
 no-header-test += linux/ivtv.h
 no-header-test += linux/kexec.h
