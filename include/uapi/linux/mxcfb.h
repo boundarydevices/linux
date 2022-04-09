@@ -170,12 +170,12 @@ struct mxcfb_csc_matrix {
 
 struct mxcfb_datainfo {
 	struct fb_var_screeninfo screeninfo;
-	// physical address.
+	/* physical address. */
 	unsigned long smem_start;
-	// in fence.
-	int32_t fence_fd;
-	// out fence.
-	int64_t fence_ptr;
+	/* in fence. */
+	__s32 fence_fd;
+	/* out fence. */
+	__s64 fence_ptr;
 };
 
 #define MXCFB_WAIT_FOR_VSYNC	_IOW('F', 0x20, u_int32_t)
@@ -208,6 +208,6 @@ struct mxcfb_datainfo {
 #define MXCFB_DISABLE_EPDC_ACCESS	_IO('F', 0x35)
 #define MXCFB_ENABLE_EPDC_ACCESS	_IO('F', 0x36)
 
-// update screen interface.
+/* update screen interface. */
 #define MXCFB_PRESENT_SCREEN	_IOW('F', 0x102, struct mxcfb_datainfo)
 #endif
