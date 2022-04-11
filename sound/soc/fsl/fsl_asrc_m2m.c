@@ -168,6 +168,7 @@ static int fsl_asrc_dmaconfig(struct fsl_asrc_pair *pair, struct dma_chan *chan,
 	struct scatterlist *sg = m2m->sg[dir];
 	struct dma_slave_config slave_config;
 	enum dma_slave_buswidth buswidth;
+	enum dma_data_direction dma_dir;
 	int ret, i;
 
 	switch (snd_pcm_format_physical_width(word_format)) {
@@ -191,6 +192,7 @@ static int fsl_asrc_dmaconfig(struct fsl_asrc_pair *pair, struct dma_chan *chan,
 	memset(&slave_config, 0, sizeof(slave_config));
 	if (dir == IN) {
 		slave_config.direction = DMA_MEM_TO_DEV;
+		dma_dir = DMA_TO_DEVICE;
 		slave_config.dst_addr = dma_addr;
 		slave_config.dst_addr_width = buswidth;
 		if (!asrc_priv->soc->use_edma)
@@ -200,6 +202,7 @@ static int fsl_asrc_dmaconfig(struct fsl_asrc_pair *pair, struct dma_chan *chan,
 			slave_config.dst_maxburst = 1;
 	} else {
 		slave_config.direction = DMA_DEV_TO_MEM;
+		dma_dir = DMA_FROM_DEVICE;
 		slave_config.src_addr = dma_addr;
 		slave_config.src_addr_width = buswidth;
 		if (!asrc_priv->soc->use_edma)
@@ -236,7 +239,7 @@ static int fsl_asrc_dmaconfig(struct fsl_asrc_pair *pair, struct dma_chan *chan,
 		return -EINVAL;
 	}
 
-	ret = dma_map_sg(&asrc->pdev->dev, sg, sg_nent, slave_config.direction);
+	ret = dma_map_sg(&asrc->pdev->dev, sg, sg_nent, dma_dir);
 	if (ret != sg_nent) {
 		pair_err("failed to map DMA sg for %sput task\n", DIR_STR(dir));
 		return -EINVAL;
@@ -359,9 +362,9 @@ int fsl_asrc_process_buffer_pre(struct completion *complete,
 #define mxc_asrc_dma_umap(dev, m2m) \
 	do { \
 		dma_unmap_sg(dev, m2m->sg[IN], m2m->sg_nodes[IN], \
-			     DMA_MEM_TO_DEV); \
+			     DMA_TO_DEVICE); \
 		dma_unmap_sg(dev, m2m->sg[OUT], m2m->sg_nodes[OUT], \
-			     DMA_DEV_TO_MEM); \
+			     DMA_FROM_DEVICE); \
 	} while (0)
 
 int fsl_asrc_process_buffer(struct fsl_asrc_pair *pair,

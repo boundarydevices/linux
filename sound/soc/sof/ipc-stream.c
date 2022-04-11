@@ -35,8 +35,8 @@ void sof_ipc_msg_data(struct snd_sof_dev *sdev,
 	} else {
 		struct snd_pcm_substream *substream = sps->substream;
 		struct snd_compr_stream *cstream = sps->cstream;
-		struct sof_pcm_stream *pstream;
-		struct sof_compr_stream *sstream;
+		struct sof_pcm_stream *pstream = NULL;
+		struct sof_compr_stream *sstream = NULL;
 		size_t posn_offset;
 
 		if (substream) {

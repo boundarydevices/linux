@@ -157,6 +157,7 @@ static int snd_dw_hdmi_probe(struct platform_device *pdev)
 		.spdif = 0,
 		.ops = &audio_codec_ops,
 		.max_i2s_channels = 8,
+		.data = (void *)data,
 	};
 
 	dw = devm_kzalloc(&pdev->dev, sizeof(*dw), GFP_KERNEL);

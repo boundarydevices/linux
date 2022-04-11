@@ -24,11 +24,11 @@ void fsl_easrc_get_status(struct fsl_asrc_pair *ctx,
 
 #define mxc_easrc_dma_umap_in(dev, m2m) \
 	dma_unmap_sg(dev, m2m->sg[IN], m2m->sg_nodes[IN], \
-					DMA_MEM_TO_DEV) \
+					DMA_TO_DEVICE) \
 
 #define mxc_easrc_dma_umap_out(dev, m2m) \
 	dma_unmap_sg(dev, m2m->sg[OUT], m2m->sg_nodes[OUT], \
-					DMA_DEV_TO_MEM) \
+					DMA_FROM_DEVICE) \
 
 #define EASRC_xPUT_DMA_CALLBACK(dir) \
 	((dir == IN) ? fsl_easrc_input_dma_callback \
@@ -85,6 +85,7 @@ static int fsl_easrc_dmaconfig(struct fsl_easrc_m2m *m2m,
 	struct scatterlist *sg = m2m->sg[dir];
 	struct dma_slave_config slave_config;
 	enum dma_slave_buswidth buswidth;
+	enum dma_data_direction dma_dir;
 	int ret, i;
 
 	switch (bits) {
@@ -101,12 +102,14 @@ static int fsl_easrc_dmaconfig(struct fsl_easrc_m2m *m2m,
 	memset(&slave_config, 0, sizeof(slave_config));
 	if (dir == IN) {
 		slave_config.direction = DMA_MEM_TO_DEV;
+		dma_dir = DMA_TO_DEVICE;
 		slave_config.dst_addr = dma_addr;
 		slave_config.dst_addr_width = buswidth;
 		slave_config.dst_maxburst =
 			ctx_priv->in_params.fifo_wtmk * ctx->channels;
 	} else {
 		slave_config.direction = DMA_DEV_TO_MEM;
+		dma_dir = DMA_FROM_DEVICE;
 		slave_config.src_addr = dma_addr;
 		slave_config.src_addr_width = buswidth;
 		slave_config.src_maxburst =
@@ -147,7 +150,7 @@ static int fsl_easrc_dmaconfig(struct fsl_easrc_m2m *m2m,
 		return -EINVAL;
 	}
 
-	ret = dma_map_sg(dev, sg, sg_nent, slave_config.direction);
+	ret = dma_map_sg(dev, sg, sg_nent, dma_dir);
 	if (ret != sg_nent) {
 		dev_err(dev, "failed to map DMA sg for %sput task\n",
 			DIR_STR(dir));
