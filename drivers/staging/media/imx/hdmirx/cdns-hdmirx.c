@@ -475,7 +475,7 @@ static const struct media_entity_operations hdmi_media_ops = {
  * v4l2_subdev_pad_ops
  */
 static int hdmirx_enum_framesizes(struct v4l2_subdev *sd,
-			       struct v4l2_subdev_pad_config *cfg,
+			       struct v4l2_subdev_state *state,
 			       struct v4l2_subdev_frame_size_enum *fse)
 {
 	struct cdns_hdmirx_device *hdmirx = cdns_sd_to_hdmi(sd);
@@ -496,7 +496,7 @@ static int hdmirx_enum_framesizes(struct v4l2_subdev *sd,
 	return 0;
 }
 static int hdmirx_enum_frame_interval(struct v4l2_subdev *sd,
-				   struct v4l2_subdev_pad_config *cfg,
+				   struct v4l2_subdev_state *state,
 				   struct v4l2_subdev_frame_interval_enum *fie)
 {
 	struct cdns_hdmirx_device *hdmirx = cdns_sd_to_hdmi(sd);
@@ -518,7 +518,7 @@ static int hdmirx_enum_frame_interval(struct v4l2_subdev *sd,
 }
 
 static int hdmirx_enum_mbus_code(struct v4l2_subdev *sd,
-				  struct v4l2_subdev_pad_config *cfg,
+				  struct v4l2_subdev_state *state,
 				  struct v4l2_subdev_mbus_code_enum *code)
 {
 	if (code->index != 0)
@@ -530,7 +530,7 @@ static int hdmirx_enum_mbus_code(struct v4l2_subdev *sd,
 }
 
 static int hdmirx_get_format(struct v4l2_subdev *sd,
-				   struct v4l2_subdev_pad_config *cfg,
+				   struct v4l2_subdev_state *state,
 				   struct v4l2_subdev_format *sdformat)
 {
 	struct cdns_hdmirx_device *hdmirx = cdns_sd_to_hdmi(sd);
@@ -540,9 +540,6 @@ static int hdmirx_get_format(struct v4l2_subdev *sd,
 		dev_warn(&hdmirx->pdev->dev, "No Cable Connected!\n");
 		return -EINVAL;
 	}
-
-	if (sdformat->pad != MXC_HDMI_RX_PAD_SOURCE)
-		return -EINVAL;
 
 	switch (hdmirx->pixel_encoding) {
 	case PIXEL_ENCODING_YUV422:
@@ -1123,7 +1120,7 @@ static void hpd5v_work_func(struct work_struct *work)
 		dev_warn(&hdmirx->pdev->dev, "HDMI RX Cable State unknow\n");
 }
 
-#define HOTPLUG_DEBOUNCE_MS		200
+#define RX_HOTPLUG_DEBOUNCE_MS		200
 static irqreturn_t hdp5v_irq_thread(int irq, void *data)
 {
 	struct cdns_hdmirx_device *hdmirx =  data;
@@ -1133,7 +1130,7 @@ static irqreturn_t hdp5v_irq_thread(int irq, void *data)
 	disable_irq_nosync(irq);
 
 	mod_delayed_work(system_wq, &hdmirx->hpd5v_work,
-			msecs_to_jiffies(HOTPLUG_DEBOUNCE_MS));
+			msecs_to_jiffies(RX_HOTPLUG_DEBOUNCE_MS));
 
 	return IRQ_HANDLED;
 }

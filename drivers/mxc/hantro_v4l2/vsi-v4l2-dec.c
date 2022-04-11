@@ -124,6 +124,18 @@ static int vsi_dec_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 	if (mutex_lock_interruptible(&ctx->ctxlock))
 		return -EBUSY;
 	ret = vsiv4l2_setfmt(ctx, f);
+
+	if (V4L2_TYPE_IS_OUTPUT(f->type) && !test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag)) {
+		struct v4l2_format fc;
+
+		memset(&fc, 0, sizeof(fc));
+		fc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		fc.fmt.pix.pixelformat = ctx->mediacfg.outfmt_fourcc;
+		fc.fmt.pix.width = f->fmt.pix.width;
+		fc.fmt.pix.height = f->fmt.pix.height;
+		ret = vsiv4l2_setfmt(ctx, &fc);
+	}
+
 	mutex_unlock(&ctx->ctxlock);
 	return ret;
 }
@@ -185,6 +197,8 @@ static int vsi_dec_qbuf(struct file *filp, void *priv, struct v4l2_buffer *buf)
 	} else {
 		ctx->inbuflen[buf->index] = buf->length;
 		ctx->inbufbytes[buf->index] = buf->bytesused;
+		if (buf->timestamp.tv_sec < 0 || buf->timestamp.tv_usec < 0)
+			set_bit(BUF_FLAG_TIMESTAMP_INVALID, &ctx->srcvbufflag[buf->index]);
 		ret = vb2_qbuf(&ctx->input_que, vdev->v4l2_dev->mdev, buf);
 	}
 	if (ret == 0)
@@ -306,9 +320,11 @@ static bool vsi_dec_check_reschange(struct vsi_v4l2_ctx *ctx)
 		return true;
 	if (pcfg->sizeimagedst[0] < pcfg->sizeimagedst_bkup)
 		return true;
-	if (pcfg->decparams.dec_info.dec_info.needed_dpb_nums != pcfg->decparams_bkup.dec_info.dec_info.needed_dpb_nums)
-		return true;
-	if (q->num_buffers < pcfg->minbuf_4output_bkup)
+	if (test_bit(CTX_FLAG_SRCCHANGED_BIT, &ctx->flag)) {
+		if (pcfg->decparams.dec_info.dec_info.needed_dpb_nums != pcfg->decparams_bkup.dec_info.dec_info.needed_dpb_nums)
+			return true;
+	}
+	if (q->num_buffers < (pcfg->minbuf_4output_bkup + VSI_EXTRA_CAPTURE_BUFFER_COUNT))
 		return true;
 
 	return false;
@@ -794,6 +810,13 @@ static int vsi_dec_buf_prepare(struct vb2_buffer *vb)
 
 static int vsi_dec_start_streaming(struct vb2_queue *q, unsigned int count)
 {
+	struct vsi_v4l2_ctx *ctx = fh_to_ctx(q->drv_priv);
+
+	if (V4L2_TYPE_IS_OUTPUT(q->type))
+		ctx->out_sequence = 0;
+	else
+		ctx->cap_sequence = 0;
+
 	return 0;
 }
 static void vsi_dec_stop_streaming(struct vb2_queue *vq)

@@ -39,6 +39,7 @@
 #define DEFAULT_GOP_SIZE	1
 #define DEFAULT_INTRA_PIC_RATE	30
 #define DEFAULT_QP			30
+#define DEFAULT_CHROMA_QP_INDEX_OFFSET	0
 
 #define DEFAULT_PIXELDEPTH		10		//set outputPixelDepth to this will make daemon return default pixeldepth
 
@@ -151,6 +152,8 @@ enum VCEncColorConversionType {
 #define V4L2_XFER_FUNC_ST428			(V4L2_XFER_FUNC_SMPTE2084+7)
 
 #define V4L2_YCBCR_ENC_BT470_6M		(V4L2_YCBCR_ENC_SMPTE240M+1)
+
+#define VSI_EXTRA_CAPTURE_BUFFER_COUNT		2
 
 /*V4L2 status*/
 enum CTX_STATUS {
@@ -298,6 +301,7 @@ enum {
 	BUF_FLAG_QUEUED = 0,		/*buf queued from app*/
 	BUF_FLAG_DONE,			/*buf returned from daemon*/
 	BUF_FLAG_CROPCHANGE,		/*crop area update not sent to app but buffed */
+	BUF_FLAG_TIMESTAMP_INVALID,
 };
 
 struct vsi_v4l2_ctx {
@@ -305,6 +309,7 @@ struct vsi_v4l2_ctx {
 	struct vsi_v4l2_device *dev;
 	ulong ctxid;
 	struct mutex ctxlock;
+	atomic_t refcnt;
 
 	s32 status;		/*hold current status*/
 	s32 error;
@@ -345,6 +350,9 @@ struct vsi_v4l2_ctx {
 	bool reschanged_need_notify;
 	bool need_capture_on;
 	bool need_output_on;
+
+	u32 out_sequence;
+	u32 cap_sequence;
 };
 
 int vsi_v4l2_release(struct file *filp);
