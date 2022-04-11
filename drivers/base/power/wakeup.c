@@ -1029,7 +1029,6 @@ void pm_system_irq_wakeup(unsigned int irq_number)
 		pm_system_wakeup();
 	}
 }
-EXPORT_SYMBOL_GPL(pm_system_irq_wakeup);
 
 unsigned int pm_wakeup_irq(void)
 {
