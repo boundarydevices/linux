@@ -624,6 +624,8 @@
 				clocks = <&pcc4 IMX8ULP_CLK_FLEXSPI2>,
 					 <&pcc4 IMX8ULP_CLK_FLEXSPI2>;
 				clock-names = "fspi", "fspi_en";
+				assigned-clocks = <&pcc4 IMX8ULP_CLK_FLEXSPI2>;
+				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_FROSC_DIV1>;
 				status = "disabled";
 			};
 
