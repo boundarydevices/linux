@@ -306,10 +306,7 @@ static const struct of_device_id mtk_smi_larb_of_ids[] = {
 	{.compatible = "mediatek,mt8173-smi-larb", .data = &mtk_smi_larb_mt8173},
 	{.compatible = "mediatek,mt8183-smi-larb", .data = &mtk_smi_larb_mt8183},
 	{.compatible = "mediatek,mt8192-smi-larb", .data = &mtk_smi_larb_mt8192},
-	{
-		.compatible = "mediatek,mt8365-smi-larb",
-		.data = &mtk_smi_larb_mt8365
-	},
+	{.compatible = "mediatek,mt8365-smi-larb", .data = &mtk_smi_larb_mt8365},
 	{}
 };
 
@@ -501,10 +498,7 @@ static const struct of_device_id mtk_smi_common_of_ids[] = {
 	{.compatible = "mediatek,mt8173-smi-common", .data = &mtk_smi_common_gen2},
 	{.compatible = "mediatek,mt8183-smi-common", .data = &mtk_smi_common_mt8183},
 	{.compatible = "mediatek,mt8192-smi-common", .data = &mtk_smi_common_mt8192},
-	{
-		.compatible = "mediatek,mt8365-smi-common",
-		.data = &mtk_smi_common_mt8365,
-	},
+	{.compatible = "mediatek,mt8365-smi-common", .data = &mtk_smi_common_mt8365},
 	{}
 };
 
