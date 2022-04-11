@@ -1106,7 +1106,7 @@ static void __exit trusty_driver_exit(void)
 	platform_driver_unregister(&trusty_driver);
 }
 
-subsys_initcall(trusty_driver_init);
+module_init(trusty_driver_init);
 module_exit(trusty_driver_exit);
 
 #define CREATE_TRACE_POINTS
