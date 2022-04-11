@@ -418,6 +418,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mn-nitrogen8mn.dtb \
 			  imx8mn-nitrogen8_nano.dtb imx8mn-nitrogen8_nano-m4.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-bm.dtb \
+			  imx8mp-crs.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-bio.dtb \
 			  imx8mq-ds.dtb \
