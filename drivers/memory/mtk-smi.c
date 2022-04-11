@@ -504,7 +504,7 @@ static const struct mtk_smi_common_plat mtk_smi_common_mt8192 = {
 };
 
 static const struct mtk_smi_common_plat mtk_smi_common_mt8365 = {
-	.gen = MTK_SMI_GEN2,
+	.type     = MTK_SMI_GEN2,
 	.support_dcm = true,
 	.has_gals = true,
 	.smi_comm_dcm_ctrl = mtk_smi_comm_dcm_ctrl_mt8168,
