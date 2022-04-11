@@ -86,6 +86,11 @@
 			linux,code = <KEY_VOLUMEUP>;
 		};
 	};
+
+	mtk_fsource: fsource {
+		compatible = "mtk-fsource";
+		vfsource-supply = <&mt6359_vefuse_ldo_reg>;
+	};
 };
 
 &uart0 {

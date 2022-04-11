@@ -120,6 +120,11 @@
 			};
 		};
 	};
+
+	mtk_fsource: fsource {
+		compatible = "mtk-fsource";
+		vfsource-supply = <&mt6358_vefuse_reg>;
+	};
 };
 
 &auxadc {

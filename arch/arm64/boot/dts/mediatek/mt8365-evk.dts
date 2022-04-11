@@ -152,6 +152,11 @@
 			};
 		};
 	};
+
+	mtk_fsource: fsource {
+		compatible = "mtk-fsource";
+		vfsource-supply = <&mt6357_vefuse_reg>;
+	};
 };
 
 &mt6357codec {
