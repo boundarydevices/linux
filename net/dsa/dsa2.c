@@ -564,7 +564,6 @@ static void dsa_port_teardown(struct dsa_port *dp)
 {
 	struct devlink_port *dlp = &dp->devlink_port;
 	struct dsa_switch *ds = dp->ds;
-	struct net_device *slave;
 
 	if (!dp->setup)
 		return;
@@ -586,11 +585,9 @@ static void dsa_port_teardown(struct dsa_port *dp)
 		dsa_port_link_unregister_of(dp);
 		break;
 	case DSA_PORT_TYPE_USER:
-		slave = dp->slave;
-
-		if (slave) {
+		if (dp->slave) {
+			dsa_slave_destroy(dp->slave);
 			dp->slave = NULL;
-			dsa_slave_destroy(slave);
 		}
 		break;
 	}
@@ -1141,17 +1138,17 @@ static int dsa_tree_setup(struct dsa_switch_tree *dst)
 	if (err)
 		goto teardown_cpu_ports;
 
-	err = dsa_tree_setup_master(dst);
+	err = dsa_tree_setup_ports(dst);
 	if (err)
 		goto teardown_switches;
 
-	err = dsa_tree_setup_ports(dst);
+	err = dsa_tree_setup_master(dst);
 	if (err)
-		goto teardown_master;
+		goto teardown_ports;
 
 	err = dsa_tree_setup_lags(dst);
 	if (err)
-		goto teardown_ports;
+		goto teardown_master;
 
 	dst->setup = true;
 
@@ -1159,10 +1156,10 @@ static int dsa_tree_setup(struct dsa_switch_tree *dst)
 
 	return 0;
 
-teardown_ports:
-	dsa_tree_teardown_ports(dst);
 teardown_master:
 	dsa_tree_teardown_master(dst);
+teardown_ports:
+	dsa_tree_teardown_ports(dst);
 teardown_switches:
 	dsa_tree_teardown_switches(dst);
 teardown_cpu_ports:
@@ -1180,9 +1177,9 @@ static void dsa_tree_teardown(struct dsa_switch_tree *dst)
 
 	dsa_tree_teardown_lags(dst);
 
-	dsa_tree_teardown_ports(dst);
-
 	dsa_tree_teardown_master(dst);
+
+	dsa_tree_teardown_ports(dst);
 
 	dsa_tree_teardown_switches(dst);
 
