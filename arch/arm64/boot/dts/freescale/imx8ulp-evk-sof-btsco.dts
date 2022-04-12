@@ -3,7 +3,7 @@
  * Copyright 2021 NXP
  */
 
-#include "imx8ulp-evk.dts"
+#include "imx8ulp-evk-rk055hdmipi4mv2.dts"
 
 / {
 	reserved-memory {
