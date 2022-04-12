@@ -1950,11 +1950,13 @@ static const struct dw_pcie_ops dw_pcie_ops = {
 
 static void imx_pcie_ep_init(struct dw_pcie_ep *ep)
 {
+#ifdef CONFIG_IMX_GKI_FIX
 	enum pci_barno bar;
 	struct dw_pcie *pci = to_dw_pcie_from_ep(ep);
 
 	for (bar = BAR_0; bar <= BAR_5; bar++)
 		dw_pcie_ep_reset_bar(pci, bar);
+#endif
 }
 
 static int imx_pcie_ep_raise_irq(struct dw_pcie_ep *ep, u8 func_no,
@@ -1964,12 +1966,14 @@ static int imx_pcie_ep_raise_irq(struct dw_pcie_ep *ep, u8 func_no,
 	struct dw_pcie *pci = to_dw_pcie_from_ep(ep);
 
 	switch (type) {
+#ifdef CONFIG_IMX_GKI_FIX
 	case PCI_EPC_IRQ_LEGACY:
 		return dw_pcie_ep_raise_legacy_irq(ep, func_no);
 	case PCI_EPC_IRQ_MSI:
 		return dw_pcie_ep_raise_msi_irq(ep, func_no, interrupt_num);
 	case PCI_EPC_IRQ_MSIX:
 		return dw_pcie_ep_raise_msix_irq(ep, func_no, interrupt_num);
+#endif
 	default:
 		dev_err(pci->dev, "UNKNOWN IRQ type\n");
 		return -EINVAL;
