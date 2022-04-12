@@ -211,6 +211,8 @@ struct dw_hdmi {
 	hdmi_codec_plugged_cb plugged_cb;
 	struct device *codec_dev;
 	enum drm_connector_status last_connector_result;
+	struct delayed_work debounce_work;
+	unsigned phy_stat_debounce;
 };
 
 #define HDMI_IH_PHY_STAT0_RX_SENSE \
@@ -1735,6 +1737,8 @@ void dw_hdmi_phy_setup_hpd(struct dw_hdmi *hdmi, void *data)
 	 * any pending interrupt.
 	 */
 	hdmi_writeb(hdmi, HDMI_PHY_HPD | HDMI_PHY_RX_SENSE, HDMI_PHY_POL0);
+	cancel_delayed_work_sync(&hdmi->debounce_work);
+	hdmi->phy_stat_debounce = ~0;
 	hdmi_writeb(hdmi, HDMI_IH_PHY_STAT0_HPD | HDMI_IH_PHY_STAT0_RX_SENSE,
 		    HDMI_IH_PHY_STAT0);
 
@@ -2425,6 +2429,9 @@ static void dw_hdmi_update_power(struct dw_hdmi *hdmi)
 {
 	int force = hdmi->force;
 
+	dev_dbg(hdmi->dev, "%s %d %d %d, %d\n", __func__,
+			hdmi->bridge_is_on, hdmi->force, hdmi->disabled,
+			hdmi->rxsense);
 	if (hdmi->disabled) {
 		force = DRM_FORCE_OFF;
 	} else if (force == DRM_FORCE_UNSPECIFIED) {
@@ -2435,11 +2442,15 @@ static void dw_hdmi_update_power(struct dw_hdmi *hdmi)
 	}
 
 	if (force == DRM_FORCE_OFF) {
-		if (hdmi->bridge_is_on)
+		if (hdmi->bridge_is_on) {
+			hdmi->phy_stat_debounce &= ~HDMI_PHY_HPD;
 			dw_hdmi_poweroff(hdmi);
+		}
 	} else {
-		if (!hdmi->bridge_is_on)
+		if (!hdmi->bridge_is_on) {
+			hdmi->phy_stat_debounce |= HDMI_PHY_HPD;
 			dw_hdmi_poweron(hdmi);
+		}
 	}
 }
 
@@ -2974,6 +2985,9 @@ static void dw_hdmi_bridge_atomic_disable(struct drm_bridge *bridge,
 	mutex_lock(&hdmi->mutex);
 	hdmi->disabled = true;
 	hdmi->curr_conn = NULL;
+	dev_dbg(hdmi->dev, "%s: %d %d %d, %d\n", __func__,
+			hdmi->bridge_is_on, hdmi->force, hdmi->disabled,
+			hdmi->rxsense);
 	dw_hdmi_update_power(hdmi);
 	dw_hdmi_update_phy_mask(hdmi);
 	mutex_unlock(&hdmi->mutex);
@@ -2992,6 +3006,10 @@ static void dw_hdmi_bridge_atomic_enable(struct drm_bridge *bridge,
 	mutex_lock(&hdmi->mutex);
 	hdmi->disabled = false;
 	hdmi->curr_conn = connector;
+	hdmi->rxsense = true;
+	dev_dbg(hdmi->dev, "%s: %d %d %d, %d\n", __func__,
+			hdmi->bridge_is_on, hdmi->force, hdmi->disabled,
+			hdmi->rxsense);
 	dw_hdmi_update_power(hdmi);
 	dw_hdmi_update_phy_mask(hdmi);
 
@@ -3077,6 +3095,22 @@ static irqreturn_t dw_hdmi_hardirq(int irq, void *dev_id)
 	return ret;
 }
 
+static bool dw_hdmi_power_on_needed(struct dw_hdmi *hdmi, bool hpd, bool rx_sense)
+{
+	dev_dbg(hdmi->dev, "%s %d %d %d, %d %d %d\n", __func__,
+			hdmi->bridge_is_on, hdmi->force, hdmi->disabled,
+			hpd, rx_sense, hdmi->rxsense);
+	if (hdmi->bridge_is_on || hdmi->force || hdmi->disabled)
+		return false;
+	if (hpd)
+		return true;
+	if (!rx_sense)
+		return false;
+	if (hdmi->rxsense)
+		return true;
+	return false;
+}
+
 void dw_hdmi_setup_rx_sense(struct dw_hdmi *hdmi, bool hpd, bool rx_sense)
 {
 	mutex_lock(&hdmi->mutex);
@@ -3105,31 +3139,24 @@ void dw_hdmi_setup_rx_sense(struct dw_hdmi *hdmi, bool hpd, bool rx_sense)
 }
 EXPORT_SYMBOL_GPL(dw_hdmi_setup_rx_sense);
 
-static irqreturn_t dw_hdmi_irq(int irq, void *dev_id)
+static void hdmi_debounce_work(struct work_struct *work)
 {
-	struct dw_hdmi *hdmi = dev_id;
-	u8 intr_stat, phy_int_pol, phy_pol_mask, phy_stat;
+	struct dw_hdmi *hdmi = container_of(work, struct dw_hdmi,
+			debounce_work.work);
 	enum drm_connector_status status = connector_status_unknown;
+	u8 phy_stat;
 
-	intr_stat = hdmi_readb(hdmi, HDMI_IH_PHY_STAT0);
-	phy_int_pol = hdmi_readb(hdmi, HDMI_PHY_POL0);
-	phy_stat = hdmi_readb(hdmi, HDMI_PHY_STAT0);
+	hdmi->phy_stat_debounce = phy_stat = hdmi_readb(hdmi, HDMI_PHY_STAT0);
+	if (phy_stat & HDMI_PHY_HPD)
+		status = connector_status_connected;
 
-	phy_pol_mask = 0;
-	if (intr_stat & HDMI_IH_PHY_STAT0_HPD)
-		phy_pol_mask |= HDMI_PHY_HPD;
-	if (intr_stat & HDMI_IH_PHY_STAT0_RX_SENSE0)
-		phy_pol_mask |= HDMI_PHY_RX_SENSE0;
-	if (intr_stat & HDMI_IH_PHY_STAT0_RX_SENSE1)
-		phy_pol_mask |= HDMI_PHY_RX_SENSE1;
-	if (intr_stat & HDMI_IH_PHY_STAT0_RX_SENSE2)
-		phy_pol_mask |= HDMI_PHY_RX_SENSE2;
-	if (intr_stat & HDMI_IH_PHY_STAT0_RX_SENSE3)
-		phy_pol_mask |= HDMI_PHY_RX_SENSE3;
+	if (!(phy_stat & (HDMI_PHY_HPD | HDMI_PHY_RX_SENSE)))
+		status = connector_status_disconnected;
 
-	if (phy_pol_mask)
-		hdmi_modb(hdmi, ~phy_int_pol, phy_pol_mask, HDMI_PHY_POL0);
-
+	if (status != connector_status_unknown)
+		dev_dbg(hdmi->dev, "EVENT=%s 0x%02x\n",
+			status == connector_status_connected ?
+			"plugin" : "plugout", phy_stat);
 	/*
 	 * RX sense tells us whether the TDMS transmitters are detecting
 	 * load - in other words, there's something listening on the
@@ -3137,40 +3164,49 @@ static irqreturn_t dw_hdmi_irq(int irq, void *dev_id)
 	 * power on the phy as HPD may be toggled by the sink to merely
 	 * ask the source to re-read the EDID.
 	 */
-	if (intr_stat &
-	    (HDMI_IH_PHY_STAT0_RX_SENSE | HDMI_IH_PHY_STAT0_HPD)) {
+	if ((phy_stat & (HDMI_PHY_RX_SENSE | HDMI_PHY_HPD)) == 0) {
+		mutex_lock(&hdmi->cec_notifier_mutex);
+		cec_notifier_phys_addr_invalidate(hdmi->cec_notifier);
+		mutex_unlock(&hdmi->cec_notifier_mutex);
+	}
+	if (dw_hdmi_power_on_needed(hdmi, phy_stat & HDMI_PHY_HPD,
+			phy_stat & HDMI_PHY_RX_SENSE)) {
 		dw_hdmi_setup_rx_sense(hdmi,
-				       phy_stat & HDMI_PHY_HPD,
-				       phy_stat & HDMI_PHY_RX_SENSE);
-
-		if ((phy_stat & (HDMI_PHY_RX_SENSE | HDMI_PHY_HPD)) == 0) {
-			mutex_lock(&hdmi->cec_notifier_mutex);
-			cec_notifier_phys_addr_invalidate(hdmi->cec_notifier);
-			mutex_unlock(&hdmi->cec_notifier_mutex);
-		}
-
-		if (phy_stat & HDMI_PHY_HPD)
-			status = connector_status_connected;
-
-		if (!(phy_stat & (HDMI_PHY_HPD | HDMI_PHY_RX_SENSE)))
-			status = connector_status_disconnected;
+				phy_stat & HDMI_PHY_HPD,
+				phy_stat & HDMI_PHY_RX_SENSE);
 	}
 
-	if (status != connector_status_unknown) {
-		dev_dbg(hdmi->dev, "EVENT=%s\n",
-			status == connector_status_connected ?
-			"plugin" : "plugout");
-
-		if (hdmi->bridge.dev) {
-			drm_helper_hpd_irq_event(hdmi->bridge.dev);
-			drm_bridge_hpd_notify(&hdmi->bridge, status);
-		}
+	if (hdmi->bridge.dev && !hdmi->force &&
+	    (hdmi->bridge_is_on || (status != connector_status_unknown))) {
+		drm_helper_hpd_irq_event(hdmi->bridge.dev);
+		drm_bridge_hpd_notify(&hdmi->bridge, status);
+		dw_hdmi_setup_rx_sense(hdmi,
+		       phy_stat & HDMI_PHY_HPD,
+		       phy_stat & HDMI_PHY_RX_SENSE);
 	}
+}
+
+static irqreturn_t dw_hdmi_irq(int irq, void *dev_id)
+{
+	struct dw_hdmi *hdmi = dev_id;
+	u8 intr_stat, phy_int_pol, phy_int_pol_new, phy_stat;
+
+	intr_stat = hdmi_readb(hdmi, HDMI_IH_PHY_STAT0);
+	phy_stat = hdmi_readb(hdmi, HDMI_PHY_STAT0);
+
+	phy_int_pol_new = (~phy_stat) & (HDMI_PHY_HPD | HDMI_PHY_RX_SENSE);
+	phy_int_pol = hdmi_readb(hdmi, HDMI_PHY_POL0);
+	if (phy_int_pol_new != phy_int_pol)
+		hdmi_writeb(hdmi, phy_int_pol_new, HDMI_PHY_POL0);
 
 	hdmi_writeb(hdmi, intr_stat, HDMI_IH_PHY_STAT0);
 	hdmi_writeb(hdmi, ~(HDMI_IH_PHY_STAT0_HPD | HDMI_IH_PHY_STAT0_RX_SENSE),
 		    HDMI_IH_MUTE_PHY_STAT0);
 
+	cancel_delayed_work_sync(&hdmi->debounce_work);
+	if (hdmi->phy_stat_debounce != phy_stat)
+		schedule_delayed_work(&hdmi->debounce_work,
+			msecs_to_jiffies((phy_stat & HDMI_PHY_HPD) ? 5 : 1000));
 	return IRQ_HANDLED;
 }
 
@@ -3381,6 +3417,7 @@ struct dw_hdmi *dw_hdmi_probe(struct platform_device *pdev,
 	if (!hdmi)
 		return ERR_PTR(-ENOMEM);
 
+	INIT_DELAYED_WORK(&hdmi->debounce_work, hdmi_debounce_work);
 	hdmi->plat_data = plat_data;
 	hdmi->dev = dev;
 	hdmi->sample_rate = 48000;
@@ -3661,13 +3698,14 @@ void dw_hdmi_remove(struct dw_hdmi *hdmi)
 {
 	drm_bridge_remove(&hdmi->bridge);
 
+	/* Disable all interrupts */
+	hdmi_writeb(hdmi, ~0, HDMI_IH_MUTE_PHY_STAT0);
+	cancel_delayed_work_sync(&hdmi->debounce_work);
+
 	if (hdmi->audio && !IS_ERR(hdmi->audio))
 		platform_device_unregister(hdmi->audio);
 	if (!IS_ERR(hdmi->cec))
 		platform_device_unregister(hdmi->cec);
-
-	/* Disable all interrupts */
-	hdmi_writeb(hdmi, ~0, HDMI_IH_MUTE_PHY_STAT0);
 
 	clk_disable_unprepare(hdmi->iahb_clk);
 	clk_disable_unprepare(hdmi->isfr_clk);
