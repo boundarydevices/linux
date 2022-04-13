@@ -3269,6 +3269,8 @@ static void send_last_buffer_dqueued(struct vpu_ctx *ctx)
 {
 	struct vb2_queue *q = &ctx->q_data[V4L2_DST].vb2_q;
 
+	if (!vb2_is_streaming(q))
+		return;
 	if (!list_empty(&q->done_list))
 		return;
 
@@ -4958,6 +4960,7 @@ static int vpu_start_streaming(struct vb2_queue *q,
 		ctx->out_sequence = 0;
 	else
 		ctx->cap_sequence = 0;
+	vb2_clear_last_buffer_dequeued(q);
 
 	return 0;
 }
