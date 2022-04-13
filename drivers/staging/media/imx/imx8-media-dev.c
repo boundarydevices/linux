@@ -559,7 +559,12 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 		if (mxc_md->sensor[i].fwnode ==
 		    of_fwnode_handle(sd->dev->of_node)) {
 			sensor = &mxc_md->sensor[i];
+			break;
 		}
+		if (mxc_md->sensor[i].fwnode)
+			dev_dbg(&mxc_md->pdev->dev, "'%pOF' vs '%pOF'\n",
+				to_of_node(mxc_md->sensor[i].fwnode),
+				sd->dev->of_node);
 	}
 
 	if (!sensor)
@@ -572,6 +577,10 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 	v4l2_info(&mxc_md->v4l2_dev, "Registered sensor subdevice: %s (%d)\n",
 		  sd->name, mxc_md->valid_num_sensors);
 
+	if (!mxc_md->link_status) {
+		schedule_delayed_work(&mxc_md->complete_work,
+				      msecs_to_jiffies(500));
+	}
 	return 0;
 }
 
@@ -1089,6 +1098,8 @@ static void mxc_md_complete_work(struct work_struct *work)
 	struct mxc_md *mxc_md = container_of(work, struct mxc_md,
 					     complete_work.work);
 
+	dev_dbg(&mxc_md->pdev->dev, "%s: %d %d\n", __func__,
+		mxc_md->link_status, mxc_md->valid_num_sensors);
 	if (!mxc_md->link_status) {
 		if (mxc_md->valid_num_sensors > 0) {
 			int ret = subdev_notifier_complete(
@@ -1120,6 +1131,7 @@ static int mxc_md_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	mxc_md->pdev = pdev;
+	INIT_DELAYED_WORK(&mxc_md->complete_work, mxc_md_complete_work);
 	platform_set_drvdata(pdev, mxc_md);
 
 	mxc_md->parallel_csi = of_property_read_bool(nd, "parallel_csi");
@@ -1165,7 +1177,6 @@ static int mxc_md_probe(struct platform_device *pdev)
 			return ret;
 		}
 
-		INIT_DELAYED_WORK(&mxc_md->complete_work, mxc_md_complete_work);
 		schedule_delayed_work(&mxc_md->complete_work,
 				      msecs_to_jiffies(500));
 	}
