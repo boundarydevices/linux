@@ -258,7 +258,6 @@ static void mtk_iommu_tlb_flush_range_sync(unsigned long iova, size_t size,
 					   struct mtk_iommu_bank_data *bank)
 {
 	struct list_head *head = bank->pdata->hw_list;
-	bool has_pm = !!bank->pdev->pm_domain;
 	struct mtk_iommu_bank_data *curbank;
 	struct mtk_iommu_data *data;
 	unsigned long flags;
@@ -267,10 +266,8 @@ static void mtk_iommu_tlb_flush_range_sync(unsigned long iova, size_t size,
 	u32 tmp;
 
 	for_each_m4u(data, head) {
-		if (has_pm) {
-			if (pm_runtime_get_if_in_use(data->dev) <= 0)
-				continue;
-		}
+		if (pm_runtime_get_if_in_use(data->dev) <= 0)
+			continue;
 
 		curbank = &data->bank[bank->id];
 		base = curbank->base;
@@ -298,8 +295,7 @@ static void mtk_iommu_tlb_flush_range_sync(unsigned long iova, size_t size,
 			mtk_iommu_tlb_flush_all(data);
 		}
 
-		if (has_pm)
-			pm_runtime_put(data->dev);
+		pm_runtime_put(data->dev);
 	}
 }
 
