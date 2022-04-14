@@ -7591,7 +7591,7 @@ static int brcmf_construct_chaninfo(struct brcmf_cfg80211_info *cfg,
 	band = wiphy->bands[NL80211_BAND_2GHZ];
 	if (band) {
 		n_2g = band->n_channels;
-		for (i = 0; i < band->n_channels; i++) {
+		for (i = 0; i < n_2g;) {
 			cur = &band->channels[i];
 			if (cur->flags == IEEE80211_CHAN_DISABLED) {
 				for (j = i; j < n_2g - 1; j++) {
@@ -7600,14 +7600,15 @@ static int brcmf_construct_chaninfo(struct brcmf_cfg80211_info *cfg,
 					memcpy(cur, next, sizeof(*cur));
 				}
 				n_2g--;
-			}
+			} else
+				i++;
 		}
 		wiphy->bands[NL80211_BAND_2GHZ]->n_channels = n_2g;
 	}
 	band = wiphy->bands[NL80211_BAND_5GHZ];
 	if (band) {
 		n_5g = band->n_channels;
-		for (i = 0; i < band->n_channels; i++) {
+		for (i = 0; i < n_5g;) {
 			cur = &band->channels[i];
 			if (cur->flags == IEEE80211_CHAN_DISABLED) {
 				for (j = i; j < n_5g - 1; j++) {
@@ -7616,7 +7617,8 @@ static int brcmf_construct_chaninfo(struct brcmf_cfg80211_info *cfg,
 					memcpy(cur, next, sizeof(*cur));
 				}
 				n_5g--;
-			}
+			} else
+				i++;
 		}
 		wiphy->bands[NL80211_BAND_5GHZ]->n_channels = n_5g;
 	}
