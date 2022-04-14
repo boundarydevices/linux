@@ -329,47 +329,6 @@
 		arm,no-tick-in-suspend;
 	};
 
-	lcdif_resets: lcdif-resets {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		#reset-cells = <0>;
-
-		lcdif-soft-resetn {
-			compatible = "lcdif,soft-resetn";
-			resets = <&dispmix_sft_rstn IMX8MN_LCDIF_APB_CLK_RESET>,
-				 <&dispmix_sft_rstn IMX8MN_LCDIF_PIXEL_CLK_RESET>;
-		};
-
-		lcdif-clk-enable {
-			compatible = "lcdif,clk-enable";
-			resets = <&dispmix_clk_en IMX8MN_LCDIF_APB_CLK_EN>,
-				 <&dispmix_clk_en IMX8MN_LCDIF_PIXEL_CLK_EN>;
-		};
-	};
-
-	mipi_dsi_resets: mipi-dsi-resets {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		#reset-cells = <0>;
-
-		dsi-soft-resetn {
-			compatible = "dsi,soft-resetn";
-			resets = <&dispmix_sft_rstn IMX8MN_MIPI_DSI_CLKREF_RESET>,
-				 <&dispmix_sft_rstn IMX8MN_MIPI_DSI_PCLK_RESET>;
-		};
-
-		dsi-clk-enable {
-			compatible = "dsi,clk-enable";
-			resets = <&dispmix_clk_en IMX8MN_MIPI_DSI_CLKREF_EN>,
-				 <&dispmix_clk_en IMX8MN_MIPI_DSI_PCLK_EN>;
-		};
-
-		dsi-mipi-reset {
-			compatible = "dsi,mipi-reset";
-			resets = <&dispmix_mipi_rst IMX8MN_MIPI_M_RESET>;
-		};
-	};
-
 	isi_resets: isi-resets {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -1264,7 +1223,11 @@
 						      <500000000>,
 						      <200000000>;
 				interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
-				resets = <&lcdif_resets>;
+				resets = <&dispmix_clk_en IMX8MN_LCDIF_APB_CLK_EN>,
+					 <&dispmix_clk_en IMX8MN_LCDIF_PIXEL_CLK_EN>,
+					 <&dispmix_sft_rstn IMX8MN_LCDIF_APB_CLK_RESET>,
+					 <&dispmix_sft_rstn IMX8MN_LCDIF_PIXEL_CLK_RESET>;
+				reset-names = "apb_clk_en", "pixel_clk_en", "apb_clk_reset", "pixel_clk_reset";
 				power-domains = <&dispmix_pd>;
 				status = "disabled";
 
@@ -1292,7 +1255,12 @@
 				assigned-clock-rates = <266000000>,
 						       <12000000>;
 				interrupts = <GIC_SPI 18 IRQ_TYPE_LEVEL_HIGH>;
-				resets = <&mipi_dsi_resets>;
+				resets = <&dispmix_sft_rstn IMX8MN_MIPI_DSI_CLKREF_RESET>,
+					 <&dispmix_sft_rstn IMX8MN_MIPI_DSI_PCLK_RESET>,
+					 <&dispmix_clk_en IMX8MN_MIPI_DSI_CLKREF_EN>,
+					 <&dispmix_clk_en IMX8MN_MIPI_DSI_PCLK_EN>,
+					 <&dispmix_mipi_rst IMX8MN_MIPI_M_RESET>;
+				reset-names = "clkref_reset", "pclk_reset", "clkref_en", "pclk_en", "m_reset";
 				power-domains = <&mipi_pd>;
 				status = "disabled";
 
