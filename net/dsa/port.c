@@ -825,12 +825,10 @@ int dsa_port_bridge_flags(struct dsa_port *dp,
 	return 0;
 }
 
-int dsa_port_mtu_change(struct dsa_port *dp, int new_mtu,
-			bool targeted_match)
+int dsa_port_mtu_change(struct dsa_port *dp, int new_mtu)
 {
 	struct dsa_notifier_mtu_info info = {
 		.dp = dp,
-		.targeted_match = targeted_match,
 		.mtu = new_mtu,
 	};
 
