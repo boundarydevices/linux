@@ -98,7 +98,6 @@ struct dsa_notifier_vlan_info {
 /* DSA_NOTIFIER_MTU */
 struct dsa_notifier_mtu_info {
 	const struct dsa_port *dp;
-	bool targeted_match;
 	int mtu;
 };
 
@@ -217,8 +216,7 @@ int dsa_port_vlan_filtering(struct dsa_port *dp, bool vlan_filtering,
 			    struct netlink_ext_ack *extack);
 bool dsa_port_skip_vlan_configuration(struct dsa_port *dp);
 int dsa_port_ageing_time(struct dsa_port *dp, clock_t ageing_clock);
-int dsa_port_mtu_change(struct dsa_port *dp, int new_mtu,
-			bool targeted_match);
+int dsa_port_mtu_change(struct dsa_port *dp, int new_mtu);
 int dsa_port_fdb_add(struct dsa_port *dp, const unsigned char *addr,
 		     u16 vid);
 int dsa_port_fdb_del(struct dsa_port *dp, const unsigned char *addr,
