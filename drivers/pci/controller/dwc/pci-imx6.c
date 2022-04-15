@@ -844,7 +844,7 @@ static void imx7d_pcie_wait_for_phy_pll_lock(struct imx6_pcie *imx6_pcie)
 static void imx8_pcie_wait_for_phy_pll_lock(struct imx6_pcie *imx6_pcie)
 {
 	u32 val, offset = 0, cond = 0;
-	int ret;
+	int ret = 0;
 	struct dw_pcie *pci = imx6_pcie->pci;
 	struct device *dev = pci->dev;
 
@@ -2923,7 +2923,7 @@ static void imx6_pcie_l1ss_quirk(struct pci_dev *dev)
 	}
 	ret = dw_pcie_read(pp->va_cfg0_base + pos + PCI_L1SS_CAP, 4, &ep_l1sub);
 
-	if ((rc_l1sub && ep_l1sub) && PCI_L1SS_CAP_L1_PM_SS) {
+	if (rc_l1sub & ep_l1sub & PCI_L1SS_CAP_L1_PM_SS) {
 		imx6_pcie->l1ss_clkreq = 1;
 		imx6_pcie_clkreq_enable(imx6_pcie);
 	} else {
