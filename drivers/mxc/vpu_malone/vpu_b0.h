@@ -524,7 +524,7 @@ struct vpu_ctx {
 
 #define VPU_IMX_DECODER_FUSE_OFFSET		14
 
-#define VPU_IMX_OUT_MIN_BUFFER			16
+#define VPU_IMX_OUT_MIN_BUFFER			8
 #define VPU_IMX_CAP_MIN_BUFFER			8
 
 pSTREAM_BUFFER_DESCRIPTOR_TYPE get_str_buffer_desc(struct vpu_ctx *ctx);

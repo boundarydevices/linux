@@ -3045,11 +3045,18 @@ static void vpu_dec_event_decode_error(struct vpu_ctx *ctx)
 		.id = 0,
 		.type = V4L2_EVENT_CODEC_ERROR
 	};
+	struct queue_data *q_src;
+	struct queue_data *q_dst;
 
 	if (!ctx)
 		return;
 
 	vpu_dbg(LVL_BIT_FLOW, "send decode error event\n");
+	q_src = &ctx->q_data[V4L2_SRC];
+	q_dst = &ctx->q_data[V4L2_DST];
+	q_src->vb2_q.error = 1;
+	q_dst->vb2_q.error = 1;
+
 	v4l2_event_queue_fh(&ctx->fh, &ev);
 }
 
@@ -3262,6 +3269,8 @@ static void send_last_buffer_dqueued(struct vpu_ctx *ctx)
 {
 	struct vb2_queue *q = &ctx->q_data[V4L2_DST].vb2_q;
 
+	if (!vb2_is_streaming(q))
+		return;
 	if (!list_empty(&q->done_list))
 		return;
 
@@ -4951,6 +4960,7 @@ static int vpu_start_streaming(struct vb2_queue *q,
 		ctx->out_sequence = 0;
 	else
 		ctx->cap_sequence = 0;
+	vb2_clear_last_buffer_dequeued(q);
 
 	return 0;
 }
@@ -6216,6 +6226,9 @@ static unsigned int v4l2_poll(struct file *filp, poll_table *wait)
 	dst_q = &ctx->q_data[V4L2_DST].vb2_q;
 
 	if (ctx->firmware_finished && !src_q->streaming && !dst_q->streaming)
+		return POLLERR;
+
+	if (src_q->error || dst_q->error)
 		return POLLERR;
 
 	if ((ctx->firmware_finished || ctx->wait_res_change_done) &&
