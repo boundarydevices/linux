@@ -945,7 +945,7 @@
 
 &i2c3a {
 	basler_camera@36 {
-		compatible = "basler,basler-camera-vvcam", "basler-camera-vvcam";
+		compatible = "basler,basler-camera", "basler-camera";
 		reg = <0x36>;
 		csi_id = <0x01>;
 		status = "okay";
@@ -966,7 +966,7 @@
 
 &i2c3b {
 	basler_camera@36 {
-		compatible = "basler,basler-camera-vvcam", "basler-camera-vvcam";
+		compatible = "basler,basler-camera", "basler-camera";
 		reg = <0x36>;
 		csi_id = <0x00>;
 		status = "okay";
