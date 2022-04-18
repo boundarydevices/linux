@@ -10,16 +10,27 @@
 		status = "disabled";
 	};
 
+	dmic: dmic {
+		#sound-dai-cells = <0>;
+		compatible = "dmic-codec";
+		wakeup-delay-ms = <250>;
+	};
+
 	sound-swpdm {
-		compatible = "fsl,imx-pdm-mic";
+		compatible = "fsl,imx-audio-card";
+		model = "imx-swpdm-audio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_swpdm_mute_irq>;
-		mute-gpios = <&gpio5 8 GPIO_ACTIVE_LOW>;
-		model = "imx-swpdm-audio";
-		audio-cpu = <&sai5>;
-		decimation = <64>;
-		status = "okay";
-		fixed-mclk;
+		pri-dai-link {
+			link-name = "PDM PCM";
+			format = "pdm";
+			cpu {
+				sound-dai = <&sai5>;
+			};
+			codec {
+				sound-dai = <&dmic>;
+			};
+		};
 	};
 };
 
@@ -28,6 +39,7 @@
 };
 
 &sai5 {
+	/delete-property/ fsl,sai-multi-lane;
 	dmas = <&sdma2 8 24 0>, <&sdma2 9 24 0>;
 	assigned-clock-rates = <24576000>;
 	fsl,dataline,dsd = <4 0xf 0xf>;
