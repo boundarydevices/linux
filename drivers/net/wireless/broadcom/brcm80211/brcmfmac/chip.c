@@ -968,7 +968,10 @@ int brcmf_chip_dmp_erom_scan(struct brcmf_chip_priv *ci)
 	u32 base, wrap;
 	int err;
 
-	eromaddr = ci->ops->read32(ci->ctx,
+	if (ci->pub.ccsec)
+		eromaddr = ci->pub.ccsec->erombase;
+	else
+		eromaddr = ci->ops->read32(ci->ctx,
 				   CORE_CC_REG(ci->pub.enum_base, eromptr));
 
 	while (desc_type != DMP_DESC_EOT) {
@@ -1169,11 +1172,15 @@ static int brcmf_chip_recognition(struct brcmf_chip_priv *ci)
 	int ret;
 
 	/* Get CC core rev
-	 * Chipid is assume to be at offset 0 from SI_ENUM_BASE
+	 * Chipid is in bus core if CC space is protected or
+	 * it is assume to be at offset 0 from SI_ENUM_BASE
 	 * For different chiptypes or old sdio hosts w/o chipcommon,
 	 * other ways of recognition should be added here.
 	 */
-	regdata = ci->ops->read32(ci->ctx,
+	if (ci->pub.ccsec)
+		regdata = ci->pub.ccsec->chipid;
+	else
+		regdata = ci->ops->read32(ci->ctx,
 				  CORE_CC_REG(ci->pub.enum_base, chipid));
 	ci->pub.chip = regdata & CID_ID_MASK;
 	ci->pub.chiprev = (regdata & CID_REV_MASK) >> CID_REV_SHIFT;
@@ -1278,6 +1285,9 @@ static int brcmf_chip_setup(struct brcmf_chip_priv *chip)
 	u32 val;
 	int ret = 0;
 
+	if (chip->pub.ccsec)
+		return 0;
+
 	pub = &chip->pub;
 	cc = list_first_entry(&chip->cores, struct brcmf_core_priv, list);
 	base = cc->pub.base;
@@ -1313,6 +1323,7 @@ struct brcmf_chip *brcmf_chip_attach(void *ctx, u16 devid,
 {
 	struct brcmf_chip_priv *chip;
 	struct brcmf_blhs *blhs;
+	struct brcmf_ccsec *ccsec;
 	int err = 0;
 
 	if (WARN_ON(!ops->read32))
@@ -1341,8 +1352,9 @@ struct brcmf_chip *brcmf_chip_attach(void *ctx, u16 devid,
 		goto fail;
 
 	blhs = NULL;
-	if (chip->ops->blhs_attach) {
-		err = chip->ops->blhs_attach(chip->ctx, &blhs,
+	ccsec = NULL;
+	if (chip->ops->sec_attach) {
+		err = chip->ops->sec_attach(chip->ctx, &blhs, &ccsec,
 					     BRCMF_BLHS_D2H_READY,
 					     BRCMF_BLHS_D2H_READY_TIMEOUT,
 					     BRCMF_BLHS_POLL_INTERVAL);
@@ -1359,6 +1371,7 @@ struct brcmf_chip *brcmf_chip_attach(void *ctx, u16 devid,
 		}
 	}
 	chip->pub.blhs = blhs;
+	chip->pub.ccsec = ccsec;
 
 	err = brcmf_chip_recognition(chip);
 	if (err < 0)
@@ -1386,7 +1399,9 @@ void brcmf_chip_detach(struct brcmf_chip *pub)
 		list_del(&core->list);
 		kfree(core);
 	}
+
 	kfree(pub->blhs);
+	kfree(pub->ccsec);
 	kfree(chip);
 }
 
