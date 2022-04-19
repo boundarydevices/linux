@@ -4858,12 +4858,6 @@ static void _tcpm_cc_change(struct tcpm_port *port, enum typec_cc_status cc1,
 			tcpm_set_state(port, SRC_ATTACH_WAIT, 0);
 		else if (tcpm_port_is_sink(port))
 			tcpm_set_state(port, SNK_ATTACH_WAIT, 0);
-
-		/* Dual Role OTG connector for HOST mode */
-		if (tcpm_cc_is_open(old_cc1) && tcpm_cc_is_source(cc1))
-			tcpm_mux_set(port, TYPEC_STATE_USB, USB_ROLE_HOST, TYPEC_ORIENTATION_NORMAL);
-		else if (tcpm_cc_is_open(old_cc2) && tcpm_cc_is_source(cc2))
-			tcpm_mux_set(port, TYPEC_STATE_USB, USB_ROLE_HOST, TYPEC_ORIENTATION_REVERSE);
 		break;
 	case SRC_UNATTACHED:
 	case ACC_UNATTACHED:
@@ -4873,12 +4867,8 @@ static void _tcpm_cc_change(struct tcpm_port *port, enum typec_cc_status cc1,
 		break;
 	case SRC_ATTACH_WAIT:
 		if (tcpm_port_is_disconnected(port) ||
-		    tcpm_port_is_audio_detached(port)) {
+		    tcpm_port_is_audio_detached(port))
 			tcpm_set_state(port, SRC_UNATTACHED, 0);
-
-			/* Dual Role OTG connector for HOST mode */
-			tcpm_mux_set(port, TYPEC_STATE_USB, USB_ROLE_NONE, TYPEC_ORIENTATION_NONE);
-		}
 		else if (cc1 != old_cc1 || cc2 != old_cc2)
 			tcpm_set_state(port, SRC_ATTACH_WAIT, 0);
 		break;
