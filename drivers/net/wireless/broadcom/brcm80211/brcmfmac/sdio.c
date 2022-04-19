@@ -173,6 +173,8 @@ struct rte_console {
 #define SBSDIO_DEVCTL_RST_BPRESET	0x10
 /*   Force no backplane reset */
 #define SBSDIO_DEVCTL_RST_NOBPRESET	0x20
+/* Reset SB Address to default value */
+#define SBSDIO_DEVCTL_ADDR_RESET    0x40
 
 /* direct(mapped) cis space */
 
@@ -550,6 +552,8 @@ struct brcmf_sdio {
 	bool txglom;		/* host tx glomming enable flag */
 	u16 head_align;		/* buffer pointer alignment */
 	u16 sgentry_align;	/* scatter-gather buffer alignment */
+	struct mutex sdsem;
+	bool chipid_preset;
 };
 
 /* clkstate */
@@ -4185,6 +4189,33 @@ brcmf_sdio_drivestrengthinit(struct brcmf_sdio_dev *sdiodev,
 	}
 }
 
+static u32
+brcmf_sdio_ccsec_get_buscorebase(struct brcmf_sdio_dev *sdiodev)
+{
+	u8 devctl = 0;
+	u32 addr = 0;
+	int err = 0;
+
+	devctl = brcmf_sdiod_readb(sdiodev, SBSDIO_DEVICE_CTL, NULL);
+	brcmf_sdiod_writeb(sdiodev, SBSDIO_DEVICE_CTL, devctl | SBSDIO_DEVCTL_ADDR_RESET, &err);
+	if (err)
+		goto exit;
+
+	addr |= (brcmf_sdiod_readb(sdiodev, SBSDIO_FUNC1_SBADDRLOW, NULL) << 8) |
+			(brcmf_sdiod_readb(sdiodev, SBSDIO_FUNC1_SBADDRMID, NULL) << 16) |
+			(brcmf_sdiod_readb(sdiodev, SBSDIO_FUNC1_SBADDRHIGH, NULL) << 24);
+
+	brcmf_dbg(INFO, "sdiod core address is 0x%x\n", addr);
+exit:
+	if (err) {
+		brcmf_err("Get SDIO core base address failed, err=%d", err);
+		addr = 0;
+	}
+	brcmf_sdiod_writeb(sdiodev, SBSDIO_DEVICE_CTL, devctl, &err);
+
+	return addr;
+}
+
 static u32 brcmf_sdio_buscore_blhs_read(void *ctx, u32 reg_offset)
 {
 	struct brcmf_sdio_dev *sdiodev = (struct brcmf_sdio_dev *)ctx;
@@ -4295,11 +4326,14 @@ static void brcmf_sdio_buscore_write32(void *ctx, u32 addr, u32 val)
 	brcmf_sdiod_writel(sdiodev, addr, val, NULL);
 }
 
-static int brcmf_sdio_buscore_blhs_attach(void *ctx, struct brcmf_blhs **blhs,
-					  u32 flag, uint timeout, uint interval)
+static int
+brcmf_sdio_buscore_sec_attach(void *ctx, struct brcmf_blhs **blhs, struct brcmf_ccsec **ccsec,
+			      u32 flag, uint timeout, uint interval)
 {
 	struct brcmf_sdio_dev *sdiodev = (struct brcmf_sdio_dev *)ctx;
-	struct brcmf_blhs *blhsh;
+	struct brcmf_blhs *blhsh = NULL;
+	struct brcmf_ccsec *ccsech = NULL;
+	u32 reg_addr;
 	u8 cardcap;
 
 	if (sdiodev->func1->vendor != SDIO_VENDOR_ID_CYPRESS)
@@ -4319,6 +4353,20 @@ static int brcmf_sdio_buscore_blhs_attach(void *ctx, struct brcmf_blhs **blhs,
 		*blhs = blhsh;
 	}
 
+	if (cardcap & SDIO_CCCR_BRCM_CARDCAP_CHIPID_PRESENT) {
+		ccsech = kzalloc(sizeof(*ccsech), GFP_KERNEL);
+		if (!ccsech) {
+			kfree(blhsh);
+			return -ENOMEM;
+		}
+		ccsech->bus_corebase = brcmf_sdio_ccsec_get_buscorebase(sdiodev);
+		reg_addr = ccsech->bus_corebase + SD_REG(eromptr);
+		ccsech->erombase = brcmf_sdio_buscore_read32(ctx, reg_addr);
+		reg_addr = ccsech->bus_corebase + SD_REG(chipid);
+		ccsech->chipid = brcmf_sdio_buscore_read32(ctx, reg_addr);
+		*ccsec = ccsech;
+	}
+
 	return 0;
 }
 
@@ -4327,7 +4375,7 @@ static const struct brcmf_buscore_ops brcmf_sdio_buscore_ops = {
 	.activate = brcmf_sdio_buscore_activate,
 	.read32 = brcmf_sdio_buscore_read32,
 	.write32 = brcmf_sdio_buscore_write32,
-	.blhs_attach = brcmf_sdio_buscore_blhs_attach,
+	.sec_attach = brcmf_sdio_buscore_sec_attach,
 };
 
 static bool
@@ -4345,9 +4393,6 @@ brcmf_sdio_probe_attach(struct brcmf_sdio *bus)
 	sdio_claim_host(sdiodev->func1);
 
 	enum_base = brcmf_chip_enum_base(sdiodev->func1->device);
-
-	pr_debug("F1 signature read @0x%08x=0x%4x\n", enum_base,
-		 brcmf_sdiod_readl(sdiodev, enum_base, NULL));
 
 	/*
 	 * Force PLL off until brcmf_chip_attach()
@@ -4373,6 +4418,10 @@ brcmf_sdio_probe_attach(struct brcmf_sdio *bus)
 		bus->ci = NULL;
 		goto fail;
 	}
+
+	if (!bus->ci->ccsec)
+		pr_debug("F1 signature read @0x18000000=0x%4x\n",
+			 brcmf_sdiod_readl(sdiodev, enum_base, NULL));
 
 	/* Pick up the SDIO core info struct from chip.c */
 	bus->sdio_core   = brcmf_chip_get_core(bus->ci, BCMA_CORE_SDIO_DEV);
