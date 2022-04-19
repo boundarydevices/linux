@@ -37,6 +37,7 @@
 #define SDIO_CCCR_BRCM_CARDCAP_CMD14_SUPPORT	BIT(1)
 #define SDIO_CCCR_BRCM_CARDCAP_CMD14_EXT	BIT(2)
 #define SDIO_CCCR_BRCM_CARDCAP_CMD_NODEC	BIT(3)
+#define SDIO_CCCR_BRCM_CARDCAP_CHIPID_PRESENT	BIT(6)
 #define SDIO_CCCR_BRCM_CARDCAP_SECURE_MODE	BIT(7)
 
 /* Interrupt enable bits for each function */
@@ -299,7 +300,11 @@ struct sdpcmd_regs {
 	u32 clockctlstatus;		/* rev8 */
 	u32 PAD[7];
 
-	u32 PAD[128];			/* DMA engines */
+	u32 PAD[76];			/* DMA engines */
+
+	u32 chipid;			/* SDIO ChipID Register, 0x330, rev31 */
+	u32 eromptr;			/* SDIO EromPtrOffset Register, 0x334, rev31 */
+	u32 PAD[50];
 
 	/* SDIO/PCMCIA CIS region */
 	char cis[512];			/* 0x400-0x5ff, rev6 */

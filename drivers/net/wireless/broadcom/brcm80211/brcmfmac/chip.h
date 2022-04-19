@@ -44,6 +44,7 @@ struct brcmf_chip {
 	u32 srsize;
 	char name[12];
 	struct brcmf_blhs *blhs;
+	struct brcmf_ccsec *ccsec;
 };
 
 /**
@@ -77,8 +78,8 @@ struct brcmf_buscore_ops {
 	int (*reset)(void *ctx, struct brcmf_chip *chip);
 	int (*setup)(void *ctx, struct brcmf_chip *chip);
 	void (*activate)(void *ctx, struct brcmf_chip *chip, u32 rstvec);
-	int (*blhs_attach)(void *ctx, struct brcmf_blhs **blhs, u32 flag,
-			   uint timeout, uint interval);
+	int (*sec_attach)(void *ctx, struct brcmf_blhs **blhs, struct brcmf_ccsec **ccsec,
+			  u32 flag, uint timeout, uint interval);
 };
 
 /**
@@ -106,6 +107,12 @@ struct brcmf_blhs {
 	int (*post_wdreset)(struct brcmf_chip *pub);
 	u32 (*read)(void *ctx, u32 addr);
 	void (*write)(void *ctx, u32 addr, u32 value);
+};
+
+struct brcmf_ccsec {
+	u32	bus_corebase;
+	u32 erombase;
+	u32 chipid;
 };
 
 int brcmf_chip_get_raminfo(struct brcmf_chip *pub);
