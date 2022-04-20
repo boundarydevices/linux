@@ -578,11 +578,6 @@ static int mxc_isi_m2m_open(struct file *file)
 		goto unlock;
 	}
 
-	if (isi_m2m->refcnt > 0) {
-		ret = -EBUSY;
-		goto unlock;
-	}
-
 	mxc_ctx = kzalloc(sizeof(*mxc_ctx), GFP_KERNEL);
 	if (!mxc_ctx) {
 		ret = -ENOMEM;
@@ -609,8 +604,11 @@ static int mxc_isi_m2m_open(struct file *file)
 	isi_m2m_fmt_init(&isi_m2m->src_f, &mxc_isi_input_formats[0]);
 	isi_m2m_fmt_init(&isi_m2m->dst_f, &mxc_isi_out_formats[0]);
 
+	if (isi_m2m->refcnt > 0)
+		goto unlock;
 	pm_runtime_get_sync(dev);
-	mxc_isi_channel_init(mxc_isi);
+	if (atomic_inc_return(&mxc_isi->usage_count) == 1)
+		mxc_isi_channel_init(mxc_isi);
 
 	/* lock host data */
 	mxc_isi->m2m_enabled = true;
@@ -631,15 +629,15 @@ static int mxc_isi_m2m_release(struct file *file)
 	struct mxc_isi_ctx *mxc_ctx = file_to_ctx(file);
 
 	mutex_lock(&isi_m2m->lock);
+	v4l2_fh_del(&mxc_ctx->fh);
+	v4l2_fh_exit(&mxc_ctx->fh);
+
+	v4l2_m2m_ctx_release(mxc_ctx->fh.m2m_ctx);
+	kfree(mxc_ctx);
 	isi_m2m->refcnt--;
 	if (isi_m2m->refcnt == 0) {
-		v4l2_fh_del(&mxc_ctx->fh);
-		v4l2_fh_exit(&mxc_ctx->fh);
-
-		v4l2_m2m_ctx_release(mxc_ctx->fh.m2m_ctx);
-
-		kfree(mxc_ctx);
-		mxc_isi_channel_deinit(mxc_isi);
+		if (atomic_dec_and_test(&mxc_isi->usage_count))
+			mxc_isi_channel_deinit(mxc_isi);
 
 		mxc_isi->m2m_enabled = false;
 
