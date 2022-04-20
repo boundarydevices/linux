@@ -297,9 +297,10 @@ static u32 secure_regs_g2[5] = {HWIF_DEC_RSY_BASE,
 
 static bool check_secure_regs(u32 target, int id)
 {
+	size_t i;
 	int array_size = id == 0 ? 2 : 5;
 
-	for (size_t i = 0; i < array_size; i++) {
+	for (i = 0; i < array_size; i++) {
 		if (id == 0)
 			comp_secure_regs(g1);
 		else
@@ -344,15 +345,6 @@ static void trusty_vpu_write(hantrodec_t *dev, u32 target, u32 value, u32 id,
 	} else {
 		iowrite32(value, dev->hwregs[id] + target);
 	}
-}
-
-static u32 trusty_ctrlblk_read(hantrodec_t *dev, u32 target, volatile u8 *iobase)
-{
-	if (dev->trusty_dev)
-		return trusty_fast_call32(dev->trusty_dev, SMC_CTRLBLK_REGS_OP,
-				target, OPT_READ, 0);
-	else
-		return ioread32(iobase + target);
 }
 
 static void trusty_ctrlblk_write(hantrodec_t *dev, u32 target, u32 value, volatile u8 *iobase)
@@ -1789,7 +1781,6 @@ irqreturn_t hantrodec_isr(int irq, void *dev_id)
 	unsigned long flags;
 	unsigned int handled = 0;
 	int i;
-	volatile u8 *hwregs;
 
 	hantrodec_t *dev = (hantrodec_t *) dev_id;
 	u32 irq_status_dec;
@@ -1797,8 +1788,6 @@ irqreturn_t hantrodec_isr(int irq, void *dev_id)
 	spin_lock_irqsave(&owner_lock, flags);
 
 	for (i = 0; i < dev->cores; i++) {
-		volatile u8 *hwregs = dev->hwregs[i];
-
 		/* interrupt status register read */
 		irq_status_dec = trusty_vpu_read(dev, HANTRODEC_IRQ_STAT_DEC_OFF, i);
 
@@ -1825,7 +1814,6 @@ irqreturn_t hantrodec_isr(int irq, void *dev_id)
 	if (!handled)
 		pr_info("IRQ received, but not hantrodec's!\n");
 
-	(void)hwregs;
 	return IRQ_RETVAL(handled);
 }
 
