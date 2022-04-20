@@ -322,12 +322,14 @@ struct vpu_dev {
 	struct device_link *pd_mu_link;
 };
 
+#define VDEC_EVENT_RECORD_LAST		VID_API_EVENT_PIC_SKIPPED
 struct vpu_statistic {
 	unsigned long cmd[VID_API_CMD_TS + 2];
-	unsigned long event[VID_API_EVENT_DEC_CFG_INFO + 2];
+	unsigned long event[VDEC_EVENT_RECORD_LAST + 2];
 	unsigned long current_cmd;
 	unsigned long current_event;
 	unsigned long skipped_frame_count;
+	unsigned long error_frame_count;
 	struct timespec64 ts_cmd;
 	struct timespec64 ts_event;
 	atomic64_t total_dma_size;

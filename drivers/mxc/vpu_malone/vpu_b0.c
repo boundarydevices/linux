@@ -179,6 +179,8 @@ static char *event2str[] = {
 	"VID_API_EVENT_DBG_FIFO_DUMP",
 	"VID_API_EVENT_DEC_CHECK_RES",
 	"VID_API_EVENT_DEC_CFG_INFO",  /*0x25*/
+	"VID_API_EVENT_UNSUPPORTED_STREAM",
+	"VID_API_EVENT_PIC_SKIPPED",   /*0x27*/
 };
 
 static char *bufstat[] = {
@@ -267,10 +269,10 @@ static void count_event(struct vpu_statistic *statistic, u32 event)
 	if (!statistic)
 		return;
 
-	if (event < ARRAY_SIZE(event2str))
+	if (event <= VDEC_EVENT_RECORD_LAST)
 		statistic->event[event]++;
 	else
-		statistic->event[VID_API_EVENT_DEC_CFG_INFO + 1]++;
+		statistic->event[VDEC_EVENT_RECORD_LAST + 1]++;
 
 	statistic->current_event = event;
 	ktime_get_raw_ts64(&statistic->ts_event);
@@ -3624,31 +3626,52 @@ static struct vb2_data_req *get_frame_buffer(struct queue_data *queue)
 	return p_data_req;
 }
 
-static struct vb2_data_req *get_src_buffer(struct queue_data *queue, u32 count)
+static struct vb2_data_req *vpu_dec_next_src_buffer(struct queue_data *queue)
 {
 	struct vb2_data_req *p_data_req;
-	struct vpu_ctx *ctx = queue->ctx;
-	struct vb2_v4l2_buffer *vbuf;
-	u32 i;
 
-	for (i = 1; i < count; i++) {
-		p_data_req = list_first_entry_or_null(&queue->drv_q, struct vb2_data_req, list);
-		if (!p_data_req || !p_data_req->vb2_buf)
-			return NULL;
-		if (p_data_req->status == FRAME_ALLOC)
-			return NULL;
+	p_data_req = list_first_entry_or_null(&queue->drv_q, struct vb2_data_req, list);
+	if (!p_data_req || !p_data_req->vb2_buf)
+		return NULL;
+	if (p_data_req->status == FRAME_ALLOC)
+		return NULL;
+	return p_data_req;
+}
+
+static void vpu_dec_skip_frame(struct queue_data *queue, u32 count)
+{
+	struct vpu_ctx *ctx = queue->ctx;
+	struct vb2_data_req *p_data_req;
+	struct vb2_v4l2_buffer *vbuf;
+	enum vb2_buffer_state state;
+	u32 i = 0;
+
+	while (i < count) {
+		p_data_req = vpu_dec_next_src_buffer(queue);
+		if (!p_data_req)
+			return;
 		vbuf = to_vb2_v4l2_buffer(p_data_req->vb2_buf);
-		vbuf->sequence = ctx->out_sequence++;
 		if (p_data_req->status == FRAME_DECODED)
-			vb2_buffer_done(p_data_req->vb2_buf, VB2_BUF_STATE_DONE);
+			state = VB2_BUF_STATE_DONE;
 		else
-			vb2_buffer_done(p_data_req->vb2_buf, VB2_BUF_STATE_ERROR);
+			state = VB2_BUF_STATE_ERROR;
+		i++;
+		vbuf->sequence = ctx->out_sequence++;
 		list_del(&p_data_req->list);
 		p_data_req->queued = false;
+		vb2_buffer_done(p_data_req->vb2_buf, state);
 		set_data_req_status(p_data_req, FRAME_ALLOC);
+		if (state == VB2_BUF_STATE_ERROR)
+			ctx->statistic.error_frame_count++;
 	}
+}
 
-	return  list_first_entry_or_null(&queue->drv_q, struct vb2_data_req, list);
+static struct vb2_data_req *get_src_buffer(struct queue_data *queue, u32 count)
+{
+	if (count > 1)
+		vpu_dec_skip_frame(queue, count - 1);
+
+	return vpu_dec_next_src_buffer(queue);
 }
 
 static void report_src_buffer_done(struct vpu_ctx *ctx, u32 count, s64 *timestamp)
@@ -4065,6 +4088,8 @@ static void vpu_ctx_show_statstic(struct vpu_ctx *ctx, const char *desc)
 			ctx->statistic.skipped_frame_count);
 	num += scnprintf(buf + num, size - num, "disp:%ld,",
 			ctx->statistic.frame_display);
+	num += scnprintf(buf + num, size - num, "error:%ld,",
+			ctx->statistic.error_frame_count);
 	num += scnprintf(buf + num, size - num, "bytes:%ld %ld,",
 			ctx->total_qbuf_bytes, ctx->total_write_bytes);
 	num += scnprintf(buf + num, size - num, "eos:%ld %ld %ld",
@@ -4093,6 +4118,17 @@ static void vpu_ctx_clear_statistic_on_abort(struct vpu_ctx *ctx)
 	ctx->statistic.frame_ready = 0;
 	ctx->statistic.frame_display = 0;
 };
+
+static void vpu_dec_handle_pic_skipped(struct vpu_ctx *ctx)
+{
+	if (ctx->stream_input_mode != FRAME_LVL)
+		return;
+
+	vpu_dbg(LVL_INFO, "skip one frame\n");
+	down(&ctx->q_data[V4L2_SRC].drv_q_lock);
+	vpu_dec_skip_frame(&ctx->q_data[V4L2_SRC], 1);
+	up(&ctx->q_data[V4L2_SRC].drv_q_lock);
+}
 
 static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 uEvent, u_int32 *event_data)
 {
@@ -4579,6 +4615,9 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 	case VID_API_EVENT_UNSUPPORTED_STREAM:
 		vpu_dbg(LVL_WARN, "warning: HW unsupprot the format or stream\n");
 		vpu_dec_event_decode_error(ctx);
+		break;
+	case VID_API_EVENT_PIC_SKIPPED:
+		vpu_dec_handle_pic_skipped(ctx);
 		break;
 	default:
 		vpu_err("warning: uEvent %d is not handled\n", uEvent);
@@ -5367,7 +5406,7 @@ static ssize_t show_instance_event_info(struct device *dev,
 	statistic = &ctx->statistic;
 
 	num += scnprintf(buf + num, PAGE_SIZE - num, "event number:\n");
-	for (i = VID_API_EVENT_NULL; i < VID_API_EVENT_DEC_CFG_INFO + 1; i++) {
+	for (i = VID_API_EVENT_NULL; i < VDEC_EVENT_RECORD_LAST + 1; i++) {
 		size = scnprintf(buf + num, PAGE_SIZE - num,
 				"\t%40s(%2d):%16ld\n",
 				event2str[i], i, statistic->event[i]);
@@ -5376,7 +5415,7 @@ static ssize_t show_instance_event_info(struct device *dev,
 
 	num += scnprintf(buf + num, PAGE_SIZE - num, "\t%40s    :%16ld\n",
 			"UNKNOWN EVENT",
-			statistic->event[VID_API_EVENT_DEC_CFG_INFO + 1]);
+			statistic->event[VDEC_EVENT_RECORD_LAST + 1]);
 
 	num += scnprintf(buf + num, PAGE_SIZE - num, "current event:\n");
 	num += scnprintf(buf + num, PAGE_SIZE - num,
@@ -5497,6 +5536,9 @@ static ssize_t show_instance_buffer_info(struct device *dev,
 	num += scnprintf(buf + num, PAGE_SIZE - num,
 			"\t%40s:%16ld\n", "skipped frame count",
 			ctx->statistic.skipped_frame_count);
+	num += scnprintf(buf + num, PAGE_SIZE - num,
+			"\t%40s:%16ld\n", "error frame count",
+			ctx->statistic.error_frame_count);
 	num += scnprintf(buf + num, PAGE_SIZE - num,
 			"\t%40s:%16x\n", "beginning",
 			ctx->beginning);
