@@ -1671,7 +1671,7 @@ static void vpu_dec_receive_ts(struct vpu_ctx *ctx,
 	if (TSM_TS_IS_VALID(input_ts) && input_ts > ctx->output_ts)
 		ctx->output_ts = input_ts;
 
-	if (is_codec_config_data(vb) && !TSM_TS_IS_VALID(input_ts)) {
+	if (is_codec_config_data(vb)) {
 		vpu_dbg(LVL_BIT_TS, "[INPUT  TS]codec data\n");
 		ctx->extra_size += size;
 		return;
@@ -3626,7 +3626,7 @@ static struct vb2_data_req *get_frame_buffer(struct queue_data *queue)
 	return p_data_req;
 }
 
-static struct vb2_data_req *vpu_dec_next_src_buffer(struct queue_data *queue)
+static struct vb2_data_req *get_next_src_buffer(struct queue_data *queue)
 {
 	struct vb2_data_req *p_data_req;
 
@@ -3635,6 +3635,26 @@ static struct vb2_data_req *vpu_dec_next_src_buffer(struct queue_data *queue)
 		return NULL;
 	if (p_data_req->status == FRAME_ALLOC)
 		return NULL;
+	return p_data_req;
+}
+
+static struct vb2_data_req *vpu_dec_next_src_buffer(struct queue_data *queue)
+{
+	struct vpu_ctx *ctx = queue->ctx;
+	struct vb2_data_req *p_data_req = get_next_src_buffer(queue);
+
+	while (p_data_req && is_codec_config_data(p_data_req->vb2_buf)) {
+		struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(p_data_req->vb2_buf);
+
+		vbuf->sequence = ctx->out_sequence++;
+		list_del(&p_data_req->list);
+		p_data_req->queued = false;
+		vb2_buffer_done(p_data_req->vb2_buf, VB2_BUF_STATE_DONE);
+		set_data_req_status(p_data_req, FRAME_ALLOC);
+
+		p_data_req = get_next_src_buffer(queue);
+	}
+
 	return p_data_req;
 }
 
