@@ -103,10 +103,12 @@ static const struct attribute_group *lpa_ctrl_attr_groups[] = {
 
 static int __init lpa_ctrl_init(void)
 {
+	int error;
+
 	struct kobject * lpa_ctrl_kobj = kobject_create_and_add("lpa_ctrl", NULL);
 	if (!lpa_ctrl_kobj)
 		return -ENOMEM;
-	int error = sysfs_create_groups(lpa_ctrl_kobj, lpa_ctrl_attr_groups);
+	error = sysfs_create_groups(lpa_ctrl_kobj, lpa_ctrl_attr_groups);
 	if (error)
 		return error;
 
