@@ -1183,16 +1183,16 @@ static uint64_t va2par(vaddr_t va)
         return par;
 }
 static void get_pgprot_from_memory(pgprot_t* prot, struct dma_buf *dmabuf) {
+        size_t index;
         struct dma_buf_map map;
         int ret = dma_buf_vmap(dmabuf, &map);
         if (!ret) {
-             uint64_t vaddr = (uint64_t)(map.vaddr);
+            uint64_t vaddr = (uint64_t)(map.vaddr);
             uint64_t par_el1 = va2par((vaddr_t)vaddr);
             uint8_t attr = (par_el1 & 0xff00000000000000) >> 56;
             u64 mair;
             asm ("mrs %0, mair_el1\n" : "=&r" (mair));
-            size_t index = 0;
-            for(; index < sizeof(mair); index++) {
+            for(index = 0; index < sizeof(mair); index++) {
                 uint8_t attr_temp = (mair >> index*8) & 0x00000000000000ff;
                 if (attr == attr_temp)
                     break;
