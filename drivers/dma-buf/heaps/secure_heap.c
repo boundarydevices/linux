@@ -378,8 +378,6 @@ static struct dma_buf *secure_heap_do_allocate(struct dma_heap *heap,
 	unsigned long size = roundup(len,  PAGE_SIZE);
 	struct dma_buf *dmabuf;
 	struct sg_table *table;
-	struct list_head pages;
-	struct page *page;
 	int ret = -ENOMEM;
 	unsigned long phy_addr;
 
@@ -448,7 +446,8 @@ static const struct dma_heap_ops secure_heap_ops = {
 static int secure_heap_create(void)
 {
 	struct dma_heap_export_info exp_info;
-	int i;
+	struct device_node np;
+	struct reserved_mem *rmem;
 	int ret;
 
 	pool = gen_pool_create(PAGE_SHIFT+4, -1);
@@ -458,10 +457,9 @@ static int secure_heap_create(void)
 	}
 
 	/*add secure memory which reserved in dts into pool of genallocater*/
-	struct device_node np;
 	np.full_name = "secure";
 	np.name = "secure";
-	struct reserved_mem *rmem = of_reserved_mem_lookup(&np);
+	rmem = of_reserved_mem_lookup(&np);
 	if (!rmem) {
 		pr_err("of_reserved_mem_lookup() returned NULL\n");
 		gen_pool_destroy(pool);
