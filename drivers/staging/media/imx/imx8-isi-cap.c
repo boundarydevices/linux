@@ -675,7 +675,7 @@ static int mxc_isi_capture_open(struct file *file)
 	}
 	mutex_unlock(&isi_cap->lock);
 
-	if (mxc_isi->m2m_enabled || isi_cap->is_streaming[isi_cap->id]) {
+	if (mxc_isi->m2m_enabled) {
 		dev_err(dev, "ISI channel[%d] is busy\n", isi_cap->id);
 		return ret;
 	}
@@ -692,6 +692,7 @@ static int mxc_isi_capture_open(struct file *file)
 
 	mutex_lock(&isi_cap->lock);
 	ret = isi_cap_fmt_init(isi_cap);
+	isi_cap->refcnt++;
 	mutex_unlock(&isi_cap->lock);
 
 	/* increase usage count for ISI channel */
@@ -715,10 +716,16 @@ static int mxc_isi_capture_release(struct file *file)
 	if (!isi_cap->is_link_setup)
 		return 0;
 
-	if (isi_cap->is_streaming[isi_cap->id])
-		mxc_isi_cap_streamoff(file, NULL, q->type);
-
 	mutex_lock(&isi_cap->lock);
+	isi_cap->refcnt--;
+	if (isi_cap->refcnt == 0) {
+		if (isi_cap->is_streaming[isi_cap->id]) {
+			mutex_unlock(&isi_cap->lock);
+			mxc_isi_cap_streamoff(file, NULL, q->type);
+			mutex_lock(&isi_cap->lock);
+		}
+	}
+
 	ret = _vb2_fop_release(file, NULL);
 	if (ret) {
 		dev_err(dev, "%s fail\n", __func__);
