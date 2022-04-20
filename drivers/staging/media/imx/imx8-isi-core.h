@@ -316,6 +316,7 @@ struct mxc_isi_cap_dev {
 
 	struct mxc_isi_frame src_f;
 	struct mxc_isi_frame dst_f;
+	int refcnt;
 
 	u32 frame_count;
 	u32 id;
