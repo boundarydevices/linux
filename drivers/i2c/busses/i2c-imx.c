@@ -746,6 +746,7 @@ static void i2c_imx_stop(struct imx_i2c_struct *i2c_imx, bool atomic)
 	imx_i2c_write_reg(temp, i2c_imx, IMX_I2C_I2CR);
 }
 
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 /*
  * Enable bus idle interrupts
  * Note: IBIC register will be cleared after disabled i2c module.
@@ -762,7 +763,6 @@ static void i2c_imx_enable_bus_idle(struct imx_i2c_struct *i2c_imx)
 	}
 }
 
-#if IS_ENABLED(CONFIG_I2C_SLAVE)
 static void i2c_imx_slave_event(struct imx_i2c_struct *i2c_imx,
 				enum i2c_slave_event event, u8 *val)
 {
