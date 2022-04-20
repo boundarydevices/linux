@@ -143,6 +143,7 @@ void mxc_isi_m2m_frame_write_done(struct mxc_isi_dev *mxc_isi)
 	}
 
 job_finish:
+	mxc_isi_disable_irq(mxc_isi);
 	v4l2_m2m_job_finish(isi_m2m->m2m_dev, fh->m2m_ctx);
 }
 EXPORT_SYMBOL_GPL(mxc_isi_m2m_frame_write_done);
