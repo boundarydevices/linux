@@ -125,7 +125,9 @@ static const struct clk_ops imx8m_clk_composite_divider_ops = {
 	.set_rate = imx8m_clk_composite_divider_set_rate,
 };
 
+#ifdef CONFIG_CLK_POWER_SAVE
 static char *m4_lpa_required_ccm_slices[ ] = {"audio_ahb","i2c3","sai1","sai2","sai3","sai5","uart4","gic","gpt1","pwm3","m7_core","arm_m4_core","audio_axi","ecspi2","dram_alt","dram_apb"};
+#endif
 
 static bool m4_lpa_required(const char *name){
 #ifdef CONFIG_CLK_POWER_SAVE
