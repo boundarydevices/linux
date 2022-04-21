@@ -4721,6 +4721,7 @@ static void vpu_receive_msg_event(struct vpu_dev *dev)
 
 	memset(&msg, 0, sizeof(struct event_msg));
 	while (rpc_MediaIPFW_Video_message_check(This) == API_MSG_AVAILABLE) {
+		memset(&msg, 0, sizeof(msg));
 		rpc_receive_msg_buf(This, &msg);
 
 		mutex_lock(&dev->dev_mutex);
