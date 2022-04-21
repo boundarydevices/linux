@@ -2310,8 +2310,7 @@ static int flexcan_probe(struct platform_device *pdev)
 	err = flexcan_setup_stop_mode(pdev);
 	if (err < 0) {
 		if (err != -EPROBE_DEFER)
-			dev_err(&pdev->dev, "setup stop mode failed\n");
-		goto failed_setup_stop_mode;
+			dev_warn(&pdev->dev, "setup stop mode failed\n");
 	}
 
 	of_can_transceiver(dev);
@@ -2319,8 +2318,6 @@ static int flexcan_probe(struct platform_device *pdev)
 
 	return 0;
 
- failed_setup_stop_mode:
-	unregister_flexcandev(dev);
  failed_register:
 	pm_runtime_put_noidle(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
