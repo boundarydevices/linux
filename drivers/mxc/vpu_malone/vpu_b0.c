@@ -4186,7 +4186,7 @@ static void vpu_api_event_handler(struct vpu_ctx *ctx, u_int32 uStrIdx, u_int32 
 		size_t wr_size;
 		struct vb2_data_req *p_data_req = NULL;
 		u32 consumed_count = event_data[13];
-		s64 timestamp;
+		s64 timestamp = 0;
 
 		down(&ctx->q_data[V4L2_SRC].drv_q_lock);
 		ctx->statistic.frame_decoded++;
@@ -4721,6 +4721,7 @@ static void vpu_receive_msg_event(struct vpu_dev *dev)
 
 	memset(&msg, 0, sizeof(struct event_msg));
 	while (rpc_MediaIPFW_Video_message_check(This) == API_MSG_AVAILABLE) {
+		memset(&msg, 0, sizeof(msg));
 		rpc_receive_msg_buf(This, &msg);
 
 		mutex_lock(&dev->dev_mutex);
