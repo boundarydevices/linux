@@ -213,6 +213,7 @@ static struct phy_ops imx8_pcie_phy_ops = {
 	.owner		= THIS_MODULE,
 };
 
+#ifndef MODULE
 static int __init imx8_pcie_phy_fine_tune(char *str)
 {
 	if (!strcmp(str, "yes")) {
@@ -223,6 +224,7 @@ static int __init imx8_pcie_phy_fine_tune(char *str)
 }
 
 __setup("pcie_phy_tuned=", imx8_pcie_phy_fine_tune);
+#endif
 
 static int imx8_pcie_phy_probe(struct platform_device *pdev)
 {
