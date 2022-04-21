@@ -293,6 +293,16 @@
 						THERMAL_NO_LIMIT>;
 					contribution = <1024>;
 				};
+				map2 {
+					trip = <&target>;
+					cooling-device = <&mdla_devfreq
+						THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>,
+						<&vpu_devfreq
+						THERMAL_NO_LIMIT
+						THERMAL_NO_LIMIT>;
+					contribution = <1024>;
+				};
 			};
 		};
 		cpu_big1 {
