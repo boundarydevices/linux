@@ -557,7 +557,7 @@ static int subdev_notifier_bound(struct v4l2_async_notifier *notifier,
 
 	if (!mxc_md->link_status) {
 		schedule_delayed_work(&mxc_md->complete_work,
-				      msecs_to_jiffies(2000));
+				      msecs_to_jiffies(500));
 	}
 	return 0;
 }
@@ -1040,6 +1040,7 @@ static int mxc_md_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	mxc_md->pdev = pdev;
+	INIT_DELAYED_WORK(&mxc_md->complete_work, mxc_md_complete_work);
 	platform_set_drvdata(pdev, mxc_md);
 
 	mxc_md->parallel_csi = of_property_read_bool(nd, "parallel_csi");
@@ -1085,7 +1086,6 @@ static int mxc_md_probe(struct platform_device *pdev)
 			return ret;
 		}
 
-		INIT_DELAYED_WORK(&mxc_md->complete_work, mxc_md_complete_work);
 		schedule_delayed_work(&mxc_md->complete_work,
 				      msecs_to_jiffies(500));
 	}
