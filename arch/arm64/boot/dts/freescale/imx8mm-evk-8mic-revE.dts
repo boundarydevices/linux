@@ -55,26 +55,34 @@
 
 		sw4: volume_down {
 			label = "Volume Down";
-			gpios = <&pca9555 14 GPIO_ACTIVE_LOW>;
+			gpios = <&pca9555 15 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEDOWN>;
+			interrupt-parent = <&pca9555>;
+			interrupts = <15 IRQ_TYPE_LEVEL_LOW>;
 		};
 
 		sw3: volume_up {
 			label = "Volume Up";
-			gpios = <&pca9555 15 GPIO_ACTIVE_LOW>;
+			gpios = <&pca9555 14 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEUP>;
+			interrupt-parent = <&pca9555>;
+			interrupts = <14 IRQ_TYPE_LEVEL_LOW>;
 		};
 
 		sw2: volume_mute {
 			label = "Volume Mute";
-			gpios = <&pca9555 16 GPIO_ACTIVE_LOW>;
+			gpios = <&pca9555 13 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_MUTE>;
+			interrupt-parent = <&pca9555>;
+			interrupts = <13 IRQ_TYPE_LEVEL_LOW>;
 		};
 
 		sw1: key_act {
 			label = "Key Act";
-			gpios = <&pca9555 17 GPIO_ACTIVE_LOW>;
+			gpios = <&pca9555 12 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_F9>;
+			interrupt-parent = <&pca9555>;
+			interrupts = <12 IRQ_TYPE_LEVEL_LOW>;
 		};
 	};
 
@@ -108,6 +116,8 @@
 		reg = <0x21>;
 		gpio-controller;
 		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
 		interrupt-parent = <&gpio5>;
 		interrupts = <9 IRQ_TYPE_LEVEL_LOW>;
 		vcc-supply = <&reg_vddext_3v3>;

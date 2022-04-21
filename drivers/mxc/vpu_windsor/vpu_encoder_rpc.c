@@ -250,13 +250,19 @@ void rpc_send_cmd_buf_encoder(struct shared_addr *This,
 		u_int32 *local_cmddata)
 {
 	pENC_RPC_HOST_IFACE pSharedInterface = (pENC_RPC_HOST_IFACE)This->shared_mem_vir;
-	BUFFER_DESCRIPTOR_TYPE *pCmdDesc = &pSharedInterface->StreamCmdBufferDesc;
+	BUFFER_DESCRIPTOR_TYPE *pCmdDesc;
 	u_int32 *cmddata;
 	u_int32 i;
-	u_int32 *cmdword = (u_int32 *)(This->cmd_mem_vir+pCmdDesc->wptr - pCmdDesc->start);
+	u_int32 *cmdword;
 	u_int32 uIgnore;
 	u_int32 uSpace;
 
+	if (!pSharedInterface)
+		return;
+	pCmdDesc = &pSharedInterface->StreamCmdBufferDesc;
+	if (pCmdDesc->wptr < pCmdDesc->start || pCmdDesc->wptr >= pCmdDesc->end)
+		return;
+	cmdword = (u_int32 *)(This->cmd_mem_vir + pCmdDesc->wptr - pCmdDesc->start);
 	uSpace = rpc_MediaIPFW_Video_buffer_space_check_encoder(pCmdDesc,
 								FALSE,
 								0,
@@ -274,7 +280,7 @@ void rpc_send_cmd_buf_encoder(struct shared_addr *This,
 	rpc_update_cmd_buffer_ptr_encoder(pCmdDesc);
 
 	for (i = 0; i < cmdnum; i++) {
-		cmddata = (u_int32 *)(This->cmd_mem_vir+pCmdDesc->wptr - pCmdDesc->start);
+		cmddata = (u_int32 *)(This->cmd_mem_vir + pCmdDesc->wptr - pCmdDesc->start);
 		*cmddata = local_cmddata[i];
 		rpc_update_cmd_buffer_ptr_encoder(pCmdDesc);
 	}
@@ -285,17 +291,22 @@ u_int32 rpc_MediaIPFW_Video_message_check_encoder(struct shared_addr *This)
 	u_int32 uSpace;
 	u_int32 uIgnore;
 	pENC_RPC_HOST_IFACE pSharedInterface = (pENC_RPC_HOST_IFACE)This->shared_mem_vir;
-	BUFFER_DESCRIPTOR_TYPE *pMsgDesc = &pSharedInterface->StreamMsgBufferDesc;
+	BUFFER_DESCRIPTOR_TYPE *pMsgDesc;
 	u_int32 msgword;
 	u_int32 msgnum;
 
+	if (!pSharedInterface)
+		return API_MSG_UNAVAILABLE;
+	pMsgDesc = &pSharedInterface->StreamMsgBufferDesc;
+	if (pMsgDesc->rptr < pMsgDesc->start || pMsgDesc->rptr >= pMsgDesc->end)
+		return API_MSG_UNAVAILABLE;
 	uSpace = rpc_MediaIPFW_Video_buffer_space_check_encoder(pMsgDesc, TRUE, 0, &uIgnore);
 	uSpace = (uSpace >> 2);
 	if (uSpace) {
 		/* get current msgword word */
-		msgword      = *((u_int32 *)(This->msg_mem_vir+pMsgDesc->rptr - pMsgDesc->start));
+		msgword = *((u_int32 *)(This->msg_mem_vir + pMsgDesc->rptr - pMsgDesc->start));
 		/* Find the number of additional words */
-		msgnum  = ((msgword & 0x00ff0000) >> 16);
+		msgnum = ((msgword & 0x00ff0000) >> 16);
 
 		/*
 		 * * Check the number of message words against
@@ -338,6 +349,8 @@ u32 rpc_read_msg_u32(struct shared_addr *shared_mem)
 
 	iface = shared_mem->pSharedInterface;
 	msg_buf = &iface->StreamMsgBufferDesc;
+	if (msg_buf->rptr < msg_buf->start || msg_buf->rptr >= msg_buf->end)
+		return 0;
 	ptr = shared_mem->msg_mem_vir + msg_buf->rptr - msg_buf->start;
 	rpc_update_msg_buffer_ptr_encoder(msg_buf);
 	msgword = *ptr;
