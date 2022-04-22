@@ -39,6 +39,14 @@
 		};
 	};
 
+	reg_1p8v_ext: regulator-1p8v-ext {
+		compatible = "regulator-fixed";
+		regulator-name = "1.8V_EXT";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+	};
+
 	sound: sound {
 		compatible = "mediatek,mt8365-pumpkin";
 		mediatek,platform = <&afe>;
