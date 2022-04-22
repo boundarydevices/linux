@@ -457,7 +457,7 @@ int dcss_crtc_init(struct dcss_crtc *crtc, struct drm_device *drm)
 	prop = drm_property_create_range(drm, 0, "force_modeset", 0, 2);
 	if (!prop) {
 		dev_err(dcss->dev, "cannot create force_modeset property\n");
-		return ERR_PTR(-ENOMEM);
+		return -ENOMEM;
 	}
 	crtc->force_modeset = prop;
 	drm_object_attach_property(&crtc->base.base, prop, 0);
