@@ -8,7 +8,7 @@
  * Baseline and extended sequential jpeg decoding is supported.
  * Progressive jpeg decoding is not supported by the IP.
  * Supports encode and decode of various formats:
- *     YUV444, YUV422, YUV420, RGB, ARGB, Gray
+ *     YUV444, YUV422, YUV420, BGR, ABGR, Gray
  * YUV420 is the only multi-planar format supported.
  * Minimum resolution is 64 x 64, maximum 8192 x 8192.
  * To achieve 8192 x 8192, modify in defconfig: CONFIG_CMA_SIZE_MBYTES=320
@@ -73,8 +73,8 @@ static const struct mxc_jpeg_fmt mxc_formats[] = {
 		.flags		= MXC_JPEG_FMT_TYPE_ENC,
 	},
 	{
-		.name		= "RGB", /*RGBRGB packed format*/
-		.fourcc		= V4L2_PIX_FMT_RGB24,
+		.name		= "BGR", /*BGR packed format*/
+		.fourcc		= V4L2_PIX_FMT_BGR24,
 		.subsampling	= V4L2_JPEG_CHROMA_SUBSAMPLING_444,
 		.nc		= 3,
 		.depth		= 24,
@@ -85,8 +85,8 @@ static const struct mxc_jpeg_fmt mxc_formats[] = {
 		.precision	= 8,
 	},
 	{
-		.name		= "ARGB", /* ARGBARGB packed format */
-		.fourcc		= V4L2_PIX_FMT_ARGB32,
+		.name		= "ABGR", /* ABGR packed format */
+		.fourcc		= V4L2_PIX_FMT_ABGR32,
 		.subsampling	= V4L2_JPEG_CHROMA_SUBSAMPLING_444,
 		.nc		= 4,
 		.depth		= 32,
@@ -420,10 +420,10 @@ static enum mxc_jpeg_image_format mxc_jpeg_fourcc_to_imgfmt(u32 fourcc)
 		return MXC_JPEG_YUV420;
 	case V4L2_PIX_FMT_YUV24:
 		return MXC_JPEG_YUV444;
-	case V4L2_PIX_FMT_RGB24:
-		return MXC_JPEG_RGB;
-	case V4L2_PIX_FMT_ARGB32:
-		return MXC_JPEG_ARGB;
+	case V4L2_PIX_FMT_BGR24:
+		return MXC_JPEG_BGR;
+	case V4L2_PIX_FMT_ABGR32:
+		return MXC_JPEG_ABGR;
 	default:
 		return MXC_JPEG_INVALID;
 	}
@@ -624,6 +624,7 @@ static irqreturn_t mxc_jpeg_dec_irq(int irq, void *priv)
 	    ctx->enc_state == MXC_JPEG_ENC_CONF) {
 		ctx->enc_state = MXC_JPEG_ENCODING;
 		dev_dbg(dev, "Encoder config finished. Start encoding...\n");
+		mxc_jpeg_enc_set_quality(dev, reg, ctx->jpeg_quality);
 		mxc_jpeg_enc_mode_go(dev, reg);
 		goto job_unlock;
 	}
@@ -696,11 +697,11 @@ static int mxc_jpeg_fixup_sof(struct mxc_jpeg_sof *sof,
 		sof->comp[0].h = 0x2;
 		break;
 	case V4L2_PIX_FMT_YUV24:
-	case V4L2_PIX_FMT_RGB24:
+	case V4L2_PIX_FMT_BGR24:
 	default:
 		sof->components_no = 3;
 		break;
-	case V4L2_PIX_FMT_ARGB32:
+	case V4L2_PIX_FMT_ABGR32:
 		sof->components_no = 4;
 		break;
 	case V4L2_PIX_FMT_GREY:
@@ -728,11 +729,11 @@ static int mxc_jpeg_fixup_sos(struct mxc_jpeg_sos *sos,
 		sos->components_no = 3;
 		break;
 	case V4L2_PIX_FMT_YUV24:
-	case V4L2_PIX_FMT_RGB24:
+	case V4L2_PIX_FMT_BGR24:
 	default:
 		sos->components_no = 3;
 		break;
-	case V4L2_PIX_FMT_ARGB32:
+	case V4L2_PIX_FMT_ABGR32:
 		sos->components_no = 4;
 		break;
 	case V4L2_PIX_FMT_GREY:
@@ -763,8 +764,8 @@ static unsigned int mxc_jpeg_setup_cfg_stream(void *cfg_stream_vaddr,
 	memcpy(cfg + offset, jpeg_soi, ARRAY_SIZE(jpeg_soi));
 	offset += ARRAY_SIZE(jpeg_soi);
 
-	if (fourcc == V4L2_PIX_FMT_RGB24 ||
-	    fourcc == V4L2_PIX_FMT_ARGB32) {
+	if (fourcc == V4L2_PIX_FMT_BGR24 ||
+	    fourcc == V4L2_PIX_FMT_ABGR32) {
 		memcpy(cfg + offset, jpeg_app14, sizeof(jpeg_app14));
 		offset += sizeof(jpeg_app14);
 	} else {
@@ -1276,9 +1277,9 @@ static u32 mxc_jpeg_get_image_format(struct device *dev,
 	 * encoded with 3 components have RGB colorspace, see Recommendation
 	 * ITU-T T.872 chapter 6.5.3 APP14 marker segment for colour encoding
 	 */
-	if (fourcc == V4L2_PIX_FMT_YUV24 || fourcc == V4L2_PIX_FMT_RGB24) {
+	if (fourcc == V4L2_PIX_FMT_YUV24 || fourcc == V4L2_PIX_FMT_BGR24) {
 		if (header->app14_tf == V4L2_JPEG_APP14_TF_CMYK_RGB)
-			fourcc = V4L2_PIX_FMT_RGB24;
+			fourcc = V4L2_PIX_FMT_BGR24;
 		else
 			fourcc = V4L2_PIX_FMT_YUV24;
 	}
@@ -1561,6 +1562,51 @@ static void mxc_jpeg_set_default_params(struct mxc_jpeg_ctx *ctx)
 	}
 }
 
+static int mxc_jpeg_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct mxc_jpeg_ctx *ctx =
+		container_of(ctrl->handler, struct mxc_jpeg_ctx, ctrl_handler);
+
+	switch (ctrl->id) {
+	case V4L2_CID_JPEG_COMPRESSION_QUALITY:
+		ctx->jpeg_quality = ctrl->val;
+		break;
+	default:
+		dev_err(ctx->mxc_jpeg->dev, "Invalid control, id = %d, val = %d\n",
+			ctrl->id, ctrl->val);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static const struct v4l2_ctrl_ops mxc_jpeg_ctrl_ops = {
+	.s_ctrl = mxc_jpeg_s_ctrl,
+};
+
+static void mxc_jpeg_encode_ctrls(struct mxc_jpeg_ctx *ctx)
+{
+	v4l2_ctrl_new_std(&ctx->ctrl_handler, &mxc_jpeg_ctrl_ops,
+			  V4L2_CID_JPEG_COMPRESSION_QUALITY, 1, 100, 1, 75);
+}
+
+static int mxc_jpeg_ctrls_setup(struct mxc_jpeg_ctx *ctx)
+{
+	v4l2_ctrl_handler_init(&ctx->ctrl_handler, 2);
+
+	if (ctx->mxc_jpeg->mode == MXC_JPEG_ENCODE)
+		mxc_jpeg_encode_ctrls(ctx);
+
+	if (ctx->ctrl_handler.error) {
+		int err = ctx->ctrl_handler.error;
+
+		v4l2_ctrl_handler_free(&ctx->ctrl_handler);
+		return err;
+	}
+
+	return v4l2_ctrl_handler_setup(&ctx->ctrl_handler);
+}
+
 static int mxc_jpeg_open(struct file *file)
 {
 	struct mxc_jpeg_dev *mxc_jpeg = video_drvdata(file);
@@ -1592,6 +1638,12 @@ static int mxc_jpeg_open(struct file *file)
 		goto error;
 	}
 
+	ret = mxc_jpeg_ctrls_setup(ctx);
+	if (ret) {
+		dev_err(ctx->mxc_jpeg->dev, "failed to setup mxc jpeg controls\n");
+		goto err_ctrls_setup;
+	}
+	ctx->fh.ctrl_handler = &ctx->ctrl_handler;
 	mxc_jpeg_set_default_params(ctx);
 	ctx->slot = MXC_MAX_SLOTS; /* slot not allocated yet */
 
@@ -1603,6 +1655,8 @@ static int mxc_jpeg_open(struct file *file)
 
 	return 0;
 
+err_ctrls_setup:
+	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
 error:
 	v4l2_fh_del(&ctx->fh);
 	v4l2_fh_exit(&ctx->fh);
@@ -1960,6 +2014,8 @@ static int mxc_jpeg_subscribe_event(struct v4l2_fh *fh,
 		return v4l2_event_subscribe(fh, sub, 0, NULL);
 	case V4L2_EVENT_SOURCE_CHANGE:
 		return v4l2_src_change_event_subscribe(fh, sub);
+	case V4L2_EVENT_CTRL:
+		return v4l2_ctrl_subscribe_event(fh, sub);
 	default:
 		return -EINVAL;
 	}
@@ -2033,6 +2089,7 @@ static int mxc_jpeg_release(struct file *file)
 	else
 		dev_dbg(dev, "Release JPEG encoder instance on slot %d.",
 			ctx->slot);
+	v4l2_ctrl_handler_free(&ctx->ctrl_handler);
 	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
 	v4l2_fh_del(&ctx->fh);
 	v4l2_fh_exit(&ctx->fh);
