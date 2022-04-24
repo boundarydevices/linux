@@ -17,7 +17,7 @@
 #define MXC_JPEG_FMT_TYPE_RAW		1
 #define MXC_JPEG_DEFAULT_WIDTH		1280
 #define MXC_JPEG_DEFAULT_HEIGHT		720
-#define MXC_JPEG_DEFAULT_PFMT		V4L2_PIX_FMT_RGB24
+#define MXC_JPEG_DEFAULT_PFMT		V4L2_PIX_FMT_BGR24
 #define MXC_JPEG_MIN_WIDTH		64
 #define MXC_JPEG_MIN_HEIGHT		64
 #define MXC_JPEG_MAX_WIDTH		0x2000
@@ -96,6 +96,8 @@ struct mxc_jpeg_ctx {
 	unsigned int			slot;
 	unsigned int			source_change;
 	bool				header_parsed;
+	struct v4l2_ctrl_handler	ctrl_handler;
+	u8				jpeg_quality;
 };
 
 struct mxc_jpeg_slot_data {

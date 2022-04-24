@@ -102,11 +102,11 @@ enum mxc_jpeg_image_format {
 	MXC_JPEG_INVALID = -1,
 	MXC_JPEG_YUV420 = 0x0, /* 2 Plannar, Y=1st plane UV=2nd plane */
 	MXC_JPEG_YUV422 = 0x1, /* 1 Plannar, YUYV sequence */
-	MXC_JPEG_RGB	= 0x2, /* RGBRGB packed format */
+	MXC_JPEG_BGR	= 0x2, /* BGR packed format */
 	MXC_JPEG_YUV444	= 0x3, /* 1 Plannar, YUVYUV sequence */
 	MXC_JPEG_GRAY = 0x4, /* Y8 or Y12 or Single Component */
 	MXC_JPEG_RESERVED = 0x5,
-	MXC_JPEG_ARGB	= 0x6,
+	MXC_JPEG_ABGR	= 0x6,
 };
 
 #include "mxc-jpeg.h"
@@ -119,6 +119,7 @@ int mxc_jpeg_enable(void __iomem *reg);
 void wait_frmdone(struct device *dev, void __iomem *reg);
 void mxc_jpeg_enc_mode_conf(struct device *dev, void __iomem *reg);
 void mxc_jpeg_enc_mode_go(struct device *dev, void __iomem *reg);
+void mxc_jpeg_enc_set_quality(struct device *dev, void __iomem *reg, u8 quality);
 void mxc_jpeg_dec_mode_go(struct device *dev, void __iomem *reg);
 int mxc_jpeg_get_slot(void __iomem *reg);
 u32 mxc_jpeg_get_offset(void __iomem *reg, int slot);
