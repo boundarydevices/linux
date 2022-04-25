@@ -21,15 +21,6 @@
 #define MT8183_MUTEX0_MOD0			0x30
 #define MT8183_MUTEX0_SOF0			0x2c
 
-#define MT8195_DISP_MUTEX0_MOD0			0x30
-#define MT8195_DISP_MUTEX0_SOF			0x2c
-
-#define MT8365_MUTEX0_MOD0			0x30
-#define MT8365_MUTEX0_SOF0			0x2c
-
-#define MT8195_DISP_MUTEX0_MOD0			0x30
-#define MT8195_DISP_MUTEX0_SOF			0x2c
-
 #define DISP_REG_MUTEX_EN(n)			(0x20 + 0x20 * (n))
 #define DISP_REG_MUTEX(n)			(0x24 + 0x20 * (n))
 #define DISP_REG_MUTEX_RST(n)			(0x28 + 0x20 * (n))
@@ -644,8 +635,8 @@ static const struct mtk_mutex_data mt8183_mutex_driver_data = {
 static const struct mtk_mutex_data mt8365_mutex_driver_data = {
 	.mutex_mod = mt8365_mutex_mod,
 	.mutex_sof = mt8365_mutex_sof,
-	.mutex_mod_reg = MT8365_MUTEX0_MOD0,
-	.mutex_sof_reg = MT8365_MUTEX0_SOF0,
+	.mutex_mod_reg = MT8183_MUTEX0_MOD0,
+	.mutex_sof_reg = MT8183_MUTEX0_SOF0,
 	.no_clk = true,
 };
 
@@ -666,21 +657,21 @@ static const struct mtk_mutex_data mt8192_mutex_driver_data = {
 static const struct mtk_mutex_data mt8195_mutex_driver_data = {
 	.mutex_mod = mt8195_mutex_mod,
 	.mutex_sof = mt8195_mutex_sof,
-	.mutex_mod_reg = MT8195_DISP_MUTEX0_MOD0,
-	.mutex_sof_reg = MT8195_DISP_MUTEX0_SOF,
+	.mutex_mod_reg = MT8183_MUTEX0_MOD0,
+	.mutex_sof_reg = MT8183_MUTEX0_SOF0,
 };
 
 static const struct mtk_mutex_data mt8195_vpp0_mutex_driver_data = {
-	.mutex_mod_reg = MT8195_DISP_MUTEX0_MOD0,
-	.mutex_sof_reg = MT8195_DISP_MUTEX0_SOF,
+	.mutex_mod_reg = MT8183_MUTEX0_MOD0,
+	.mutex_sof_reg = MT8183_MUTEX0_SOF0,
 	.mutex_mdp_offset = mt8195_mutex_vpp0_offset,
 	.mutex_mdp_mod_mask = MT8195_MUTEX_MDP_MOD_MASK,
 	.mutex_mdp_sof_mask = MT8195_MUTEX_MDP_SOF_MASK,
 };
 
 static const struct mtk_mutex_data mt8195_vpp1_mutex_driver_data = {
-	.mutex_mod_reg = MT8195_DISP_MUTEX0_MOD0,
-	.mutex_sof_reg = MT8195_DISP_MUTEX0_SOF,
+	.mutex_mod_reg = MT8183_MUTEX0_MOD0,
+	.mutex_sof_reg = MT8183_MUTEX0_SOF0,
 	.mutex_mdp_offset = mt8195_mutex_vpp1_offset,
 	.mutex_mdp_mod_mask = MT8195_MUTEX_MDP_MOD_MASK,
 	.mutex_mdp_sof_mask = MT8195_MUTEX_MDP_SOF_MASK,
