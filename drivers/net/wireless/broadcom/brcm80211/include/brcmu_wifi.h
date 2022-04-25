@@ -92,7 +92,8 @@
 #define	WLC_BAND_AUTO			0	/* auto-select */
 #define	WLC_BAND_5G			1	/* 5 Ghz */
 #define	WLC_BAND_2G			2	/* 2.4 Ghz */
-#define	WLC_BAND_ALL			3	/* all bands */
+#define	WLC_BAND_6G			3	/* 6 Ghz */
+#define	WLC_BAND_ALL			4	/* all bands */
 
 #define CHSPEC_CHANNEL(chspec)	((u8)((chspec) & WL_CHANSPEC_CHAN_MASK))
 #define CHSPEC_BAND(chspec)	((chspec) & WL_CHANSPEC_BAND_MASK)
