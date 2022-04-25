@@ -80,8 +80,10 @@
 #define	DOT11_MGMT_HDR_LEN		24	/* d11 management header len */
 #define	DOT11_BCN_PRB_FIXED_LEN		12	/* beacon/probe fixed length */
 
-#define BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS	320
-#define BRCMF_SCAN_JOIN_PASSIVE_DWELL_TIME_MS	400
+#define BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS		320
+#define BRCMF_SCAN_JOIN_PASSIVE_DWELL_TIME_MS		400
+#define BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS_6E		80
+#define BRCMF_SCAN_JOIN_PASSIVE_DWELL_TIME_MS_6E	130
 #define BRCMF_SCAN_JOIN_PROBE_INTERVAL_MS	20
 
 #define BRCMF_SCAN_CHANNEL_TIME		40
@@ -183,6 +185,14 @@ static struct ieee80211_rate __wl_rates[] = {
 	.max_power		= 30,				\
 }
 
+#define CHAN6G(_channel) {				\
+	.band			= NL80211_BAND_6GHZ,		\
+	.center_freq		= 5950 + (5 * (_channel)),	\
+	.hw_value		= (_channel),			\
+	.max_antenna_gain	= 0,				\
+	.max_power		= 30,				\
+}
+
 static struct ieee80211_channel __wl_2ghz_channels[] = {
 	CHAN2G(1, 2412), CHAN2G(2, 2417), CHAN2G(3, 2422), CHAN2G(4, 2427),
 	CHAN2G(5, 2432), CHAN2G(6, 2437), CHAN2G(7, 2442), CHAN2G(8, 2447),
@@ -199,6 +209,23 @@ static struct ieee80211_channel __wl_5ghz_channels[] = {
 	CHAN5G(153), CHAN5G(157), CHAN5G(161), CHAN5G(165)
 };
 
+static struct ieee80211_channel __wl_6ghz_channels[] = {
+	CHAN6G(1), CHAN6G(5), CHAN6G(9), CHAN6G(13), CHAN6G(17),
+	CHAN6G(21), CHAN6G(25), CHAN6G(29), CHAN6G(33), CHAN6G(37),
+	CHAN6G(41), CHAN6G(45), CHAN6G(49), CHAN6G(53),	CHAN6G(57),
+	CHAN6G(61), CHAN6G(65), CHAN6G(69), CHAN6G(73), CHAN6G(77),
+	CHAN6G(81), CHAN6G(85), CHAN6G(89), CHAN6G(93), CHAN6G(97),
+	CHAN6G(101), CHAN6G(105), CHAN6G(109), CHAN6G(113), CHAN6G(117),
+	CHAN6G(121), CHAN6G(125), CHAN6G(129), CHAN6G(133), CHAN6G(137),
+	CHAN6G(141), CHAN6G(145), CHAN6G(149), CHAN6G(153), CHAN6G(157),
+	CHAN6G(161), CHAN6G(165), CHAN6G(169), CHAN6G(173), CHAN6G(177),
+	CHAN6G(181), CHAN6G(185), CHAN6G(189), CHAN6G(193), CHAN6G(197),
+	CHAN6G(201), CHAN6G(205), CHAN6G(209), CHAN6G(213), CHAN6G(217),
+	CHAN6G(221), CHAN6G(225), CHAN6G(229), CHAN6G(233)
+};
+
+struct ieee80211_sband_iftype_data sdata[NUM_NL80211_BANDS];
+
 /* Band templates duplicated per wiphy. The channel info
  * above is added to the band during setup.
  */
@@ -214,6 +241,12 @@ static const struct ieee80211_supported_band __wl_band_5ghz = {
 	.n_bitrates = wl_a_rates_size,
 };
 
+static struct ieee80211_supported_band __wl_band_6ghz = {
+	.band = NL80211_BAND_6GHZ,
+	.bitrates = wl_a_rates,
+	.n_bitrates = wl_a_rates_size,
+};
+
 /* This is to override regulatory domains defined in cfg80211 module (reg.c)
  * By default world regulatory domain defined in reg.c puts the flags
  * NL80211_RRF_NO_IR for 5GHz channels (for * 36..48 and 149..165).
@@ -222,7 +255,7 @@ static const struct ieee80211_supported_band __wl_band_5ghz = {
  * domain are to be done here.
  */
 static const struct ieee80211_regdomain brcmf_regdom = {
-	.n_reg_rules = 4,
+	.n_reg_rules = 5,
 	.alpha2 =  "99",
 	.reg_rules = {
 		/* IEEE 802.11b/g, channels 1..11 */
@@ -235,7 +268,10 @@ static const struct ieee80211_regdomain brcmf_regdom = {
 		/* IEEE 802.11a, channel 36..64 */
 		REG_RULE(5150-10, 5350+10, 160, 6, 20, 0),
 		/* IEEE 802.11a, channel 100..165 */
-		REG_RULE(5470-10, 5850+10, 160, 6, 20, 0), }
+		REG_RULE(5470-10, 5850+10, 160, 6, 20, 0),
+		/* IEEE 802.11ax, 6E */
+		REG_RULE(5935-10, 7115+10, 160, 6, 20, 0),
+	}
 };
 
 /* Note: brcmf_cipher_suites is an array of int defining which cipher suites
@@ -360,6 +396,8 @@ static u8 nl80211_band_to_fwil(enum nl80211_band band)
 		return WLC_BAND_2G;
 	case NL80211_BAND_5GHZ:
 		return WLC_BAND_5G;
+	case NL80211_BAND_6GHZ:
+		return WLC_BAND_6G;
 	default:
 		WARN_ON(1);
 		break;
@@ -433,6 +471,9 @@ static u16 chandef_to_chanspec(struct brcmu_d11inf *d11inf,
 	case NL80211_BAND_5GHZ:
 		ch_inf.band = BRCMU_CHAN_BAND_5G;
 		break;
+	case NL80211_BAND_6GHZ:
+		ch_inf.band = BRCMU_CHAN_BAND_6G;
+		break;
 	case NL80211_BAND_60GHZ:
 	default:
 		WARN_ON_ONCE(1);
@@ -448,6 +489,20 @@ u16 channel_to_chanspec(struct brcmu_d11inf *d11inf,
 {
 	struct brcmu_chan ch_inf;
 
+	switch (ch->band) {
+	case NL80211_BAND_2GHZ:
+		ch_inf.band = BRCMU_CHAN_BAND_2G;
+		break;
+	case NL80211_BAND_5GHZ:
+		ch_inf.band = BRCMU_CHAN_BAND_5G;
+		break;
+	case NL80211_BAND_6GHZ:
+		ch_inf.band = BRCMU_CHAN_BAND_6G;
+		break;
+	case NL80211_BAND_60GHZ:
+	default:
+		WARN_ON_ONCE(1);
+	}
 	ch_inf.chnum = ieee80211_frequency_to_channel(ch->center_freq);
 	ch_inf.bw = BRCMU_CHAN_BW_20;
 	d11inf->encchspec(&ch_inf);
@@ -2623,17 +2678,25 @@ brcmf_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 
 	if (cfg->channel) {
 		ext_join_params->assoc_le.chanspec_num = cpu_to_le32(1);
-
 		ext_join_params->assoc_le.chanspec_list[0] =
 			cpu_to_le16(chanspec);
+
 		/* Increase dwell time to receive probe response or detect
 		 * beacon from target AP at a noisy air only during connect
 		 * command.
 		 */
-		ext_join_params->scan_le.active_time =
-			cpu_to_le32(BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS);
-		ext_join_params->scan_le.passive_time =
-			cpu_to_le32(BRCMF_SCAN_JOIN_PASSIVE_DWELL_TIME_MS);
+		if (BRCMU_CHSPEC_IS6G(chanspec)) {
+			ext_join_params->scan_le.active_time =
+				cpu_to_le32(BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS_6E);
+			ext_join_params->scan_le.passive_time =
+				cpu_to_le32(BRCMF_SCAN_JOIN_PASSIVE_DWELL_TIME_MS_6E);
+		} else {
+			ext_join_params->scan_le.active_time =
+				cpu_to_le32(BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS);
+			ext_join_params->scan_le.passive_time =
+				cpu_to_le32(BRCMF_SCAN_JOIN_PASSIVE_DWELL_TIME_MS);
+		}
+
 		/* To sync with presence period of VSDB GO send probe request
 		 * more frequently. Probe request will be stopped when it gets
 		 * probe response from target AP/GO.
@@ -3433,18 +3496,13 @@ static s32 brcmf_inform_single_bss(struct brcmf_cfg80211_info *cfg,
 		return -EINVAL;
 	}
 
-	if (!bi->ctl_ch) {
-		ch.chspec = le16_to_cpu(bi->chanspec);
-		cfg->d11inf.decchspec(&ch);
+	ch.chspec = le16_to_cpu(bi->chanspec);
+	cfg->d11inf.decchspec(&ch);
+	if (!bi->ctl_ch)
 		bi->ctl_ch = ch.control_ch_num;
-	}
+
 	channel = bi->ctl_ch;
-
-	if (channel <= CH_MAX_2G_CHANNEL)
-		band = NL80211_BAND_2GHZ;
-	else
-		band = NL80211_BAND_5GHZ;
-
+	band = BRCMU_CHAN_BAND_TO_NL80211(ch.band);
 	freq = ieee80211_channel_to_frequency(channel, band);
 	bss_data.chan = ieee80211_get_channel(wiphy, freq);
 	bss_data.scan_width = NL80211_BSS_CHAN_WIDTH_20;
@@ -3558,11 +3616,7 @@ static s32 brcmf_inform_ibss(struct brcmf_cfg80211_info *cfg,
 	ch.chspec = le16_to_cpu(bi->chanspec);
 	cfg->d11inf.decchspec(&ch);
 
-	if (ch.band == BRCMU_CHAN_BAND_2G)
-		band = wiphy->bands[NL80211_BAND_2GHZ];
-	else
-		band = wiphy->bands[NL80211_BAND_5GHZ];
-
+	band = wiphy->bands[BRCMU_CHAN_BAND_TO_NL80211(ch.band)];
 	freq = ieee80211_channel_to_frequency(ch.control_ch_num, band->band);
 	cfg->channel = freq;
 	notify_channel = ieee80211_get_channel(wiphy, freq);
@@ -3752,14 +3806,6 @@ brcmf_cfg80211_escan_handler(struct brcmf_if *ifp,
 			goto exit;
 		}
 		bss_info_le = &escan_result_le->bss_info_le;
-
-		/* WAR to skip 6G scan results before 6E support is complete in host */
-		if ((bss_info_le->chanspec & BRCMU_CHSPEC_D11AC_BND_MASK) ==
-			BRCMU_CHSPEC_D11AC_BND_6G) {
-			bphy_err(drvr, "Currently skip 6G scan, chanspec 0x%04x\n",
-				 bss_info_le->chanspec);
-			goto exit;
-		}
 
 		if (brcmf_p2p_scan_finding_common_channel(cfg, bss_info_le))
 			goto exit;
@@ -5729,7 +5775,7 @@ brcmf_cfg80211_mgmt_tx(struct wiphy *wiphy, struct wireless_dev *wdev,
 			  *cookie, le16_to_cpu(action_frame->len), freq);
 
 		ack = brcmf_p2p_send_action_frame(cfg, cfg_to_ndev(cfg),
-						  af_params, vif);
+						  af_params, vif, chan);
 
 		cfg80211_mgmt_tx_status(wdev, *cookie, buf, len, ack,
 					GFP_KERNEL);
@@ -5902,15 +5948,7 @@ static int brcmf_cfg80211_get_channel(struct wiphy *wiphy,
 
 	ch.chspec = chanspec;
 	cfg->d11inf.decchspec(&ch);
-
-	switch (ch.band) {
-	case BRCMU_CHAN_BAND_2G:
-		band = NL80211_BAND_2GHZ;
-		break;
-	case BRCMU_CHAN_BAND_5G:
-		band = NL80211_BAND_5GHZ;
-		break;
-	}
+	band = BRCMU_CHAN_BAND_TO_NL80211(ch.band);
 
 	switch (ch.bw) {
 	case BRCMU_CHAN_BW_80:
@@ -6708,11 +6746,7 @@ brcmf_bss_roaming_done(struct brcmf_cfg80211_info *cfg,
 	ch.chspec = le16_to_cpu(bi->chanspec);
 	cfg->d11inf.decchspec(&ch);
 
-	if (ch.band == BRCMU_CHAN_BAND_2G)
-		band = wiphy->bands[NL80211_BAND_2GHZ];
-	else
-		band = wiphy->bands[NL80211_BAND_5GHZ];
-
+	band = wiphy->bands[BRCMU_CHAN_BAND_TO_NL80211(ch.band)];
 	freq = ieee80211_channel_to_frequency(ch.control_ch_num, band->band);
 	notify_channel = ieee80211_get_channel(wiphy, freq);
 
@@ -7154,9 +7188,7 @@ brcmf_notify_auth_frame_rx(struct brcmf_if *ifp,
 	       mgmt_frame_len - offsetof(struct ieee80211_mgmt, u));
 
 	freq = ieee80211_channel_to_frequency(ch.control_ch_num,
-					      ch.band == BRCMU_CHAN_BAND_2G ?
-					      NL80211_BAND_2GHZ :
-					      NL80211_BAND_5GHZ);
+			BRCMU_CHAN_BAND_TO_NL80211(ch.band));
 
 	cfg80211_rx_mgmt(wdev, freq, 0, (u8 *)mgmt_frame, mgmt_frame_len,
 			 NL80211_RXMGMT_FLAG_EXTERNAL_AUTH);
@@ -7724,6 +7756,10 @@ static void brcmf_get_bwcap(struct brcmf_if *ifp, u32 bw_cap[])
 static void brcmf_update_ht_cap(struct ieee80211_supported_band *band,
 				u32 bw_cap[2], u32 nchain)
 {
+	/* not allowed in 6G band */
+	if (band->band == NL80211_BAND_6GHZ)
+		return;
+
 	band->ht_cap.ht_supported = true;
 	if (bw_cap[band->band] & WLC_BW_40MHZ_BIT) {
 		band->ht_cap.cap |= IEEE80211_HT_CAP_SGI_40;
@@ -7754,8 +7790,8 @@ static void brcmf_update_vht_cap(struct ieee80211_supported_band *band,
 {
 	__le16 mcs_map;
 
-	/* not allowed in 2.4G band */
-	if (band->band == NL80211_BAND_2GHZ)
+	/* not allowed in 2.4G & 6G band */
+	if (band->band == NL80211_BAND_2GHZ || band->band == NL80211_BAND_6GHZ)
 		return;
 
 	band->vht_cap.vht_supported = true;
@@ -7790,6 +7826,64 @@ static void brcmf_update_vht_cap(struct ieee80211_supported_band *band,
 	}
 }
 
+static void brcmf_update_he_cap(struct ieee80211_supported_band *band,
+				struct ieee80211_sband_iftype_data *data)
+{
+	int idx = 1;
+	struct ieee80211_sta_he_cap *he_cap = &data->he_cap;
+	struct ieee80211_he_cap_elem *he_cap_elem = &he_cap->he_cap_elem;
+	struct ieee80211_he_mcs_nss_supp *he_mcs = &he_cap->he_mcs_nss_supp;
+
+	if (data == NULL) {
+		brcmf_dbg(INFO, "failed to allco mem\n");
+		return;
+	}
+
+	data->types_mask = BIT(NL80211_IFTYPE_STATION) | BIT(NL80211_IFTYPE_AP);
+	he_cap->has_he = true;
+	he_cap_elem->mac_cap_info[0] = IEEE80211_HE_MAC_CAP0_HTC_HE;
+	if (band->band == NL80211_BAND_5GHZ) {
+		he_cap_elem->phy_cap_info[0] =
+			IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_80MHZ_IN_5G |
+			IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_160MHZ_IN_5G |
+			IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_80PLUS80_MHZ_IN_5G;
+	}
+	he_cap_elem->phy_cap_info[1] =
+		IEEE80211_HE_PHY_CAP1_LDPC_CODING_IN_PAYLOAD;
+	he_cap_elem->phy_cap_info[2] =
+		IEEE80211_HE_PHY_CAP2_NDP_4x_LTF_AND_3_2US;
+	he_cap_elem->phy_cap_info[3] =
+		IEEE80211_HE_PHY_CAP3_SU_BEAMFORMER;
+	he_cap_elem->phy_cap_info[4] =
+		IEEE80211_HE_PHY_CAP4_SU_BEAMFORMEE |
+		IEEE80211_HE_PHY_CAP4_BEAMFORMEE_MAX_STS_UNDER_80MHZ_MASK |
+		IEEE80211_HE_PHY_CAP4_BEAMFORMEE_MAX_STS_ABOVE_80MHZ_4;
+	he_cap_elem->phy_cap_info[5] =
+		IEEE80211_HE_PHY_CAP5_BEAMFORMEE_NUM_SND_DIM_UNDER_80MHZ_2;
+	he_cap_elem->phy_cap_info[6] =
+		IEEE80211_HE_PHY_CAP6_CODEBOOK_SIZE_42_SU |
+		IEEE80211_HE_PHY_CAP6_CODEBOOK_SIZE_75_MU |
+		IEEE80211_HE_PHY_CAP6_TRIG_SU_BEAMFORMING_FB |
+		IEEE80211_HE_PHY_CAP6_TRIG_MU_BEAMFORMING_PARTIAL_BW_FB |
+		IEEE80211_HE_PHY_CAP6_TRIG_CQI_FB |
+		IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT;
+	he_cap_elem->phy_cap_info[7] =
+		IEEE80211_HE_PHY_CAP7_MAX_NC_1;
+	he_cap_elem->phy_cap_info[8] =
+		IEEE80211_HE_PHY_CAP8_20MHZ_IN_160MHZ_HE_PPDU |
+		IEEE80211_HE_PHY_CAP8_80MHZ_IN_160MHZ_HE_PPDU;
+	he_cap_elem->phy_cap_info[9] =
+		IEEE80211_HE_PHY_CAP9_TX_1024_QAM_LESS_THAN_242_TONE_RU |
+		IEEE80211_HE_PHY_CAP9_RX_1024_QAM_LESS_THAN_242_TONE_RU;
+	he_mcs->rx_mcs_80 = cpu_to_le16(0xfffa);
+	he_mcs->tx_mcs_80 = cpu_to_le16(0xfffa);
+	he_mcs->rx_mcs_160 = cpu_to_le16((0xfffa));
+	he_mcs->tx_mcs_160 = cpu_to_le16((0xfffa));
+
+	band->n_iftype_data = idx;
+	band->iftype_data = data;
+}
+
 static int brcmf_setup_wiphybands(struct brcmf_cfg80211_info *cfg)
 {
 	struct brcmf_pub *drvr = cfg->pub;
@@ -7806,6 +7900,7 @@ static int brcmf_setup_wiphybands(struct brcmf_cfg80211_info *cfg)
 	u32 txstreams = 0;
 	u32 txbf_bfe_cap = 0;
 	u32 txbf_bfr_cap = 0;
+	u32 he[2] = {0, 0};
 
 	(void)brcmf_fil_iovar_int_get(ifp, "vhtmode", &vhtmode);
 	err = brcmf_fil_iovar_int_get(ifp, "nmode", &nmode);
@@ -7814,8 +7909,10 @@ static int brcmf_setup_wiphybands(struct brcmf_cfg80211_info *cfg)
 	} else {
 		brcmf_get_bwcap(ifp, bw_cap);
 	}
-	brcmf_dbg(INFO, "nmode=%d, vhtmode=%d, bw_cap=(%d, %d)\n",
-		  nmode, vhtmode, bw_cap[NL80211_BAND_2GHZ],
+	(void)brcmf_fil_iovar_data_get(ifp, "he", he, sizeof(he));
+
+	brcmf_dbg(INFO, "nmode=%d, vhtmode=%d, he=%d, bw_cap=(%d, %d)\n",
+		  nmode, vhtmode, he[0], bw_cap[NL80211_BAND_2GHZ],
 		  bw_cap[NL80211_BAND_5GHZ]);
 
 	err = brcmf_fil_iovar_int_get(ifp, "rxchain", &rxchain);
@@ -7857,6 +7954,8 @@ static int brcmf_setup_wiphybands(struct brcmf_cfg80211_info *cfg)
 		if (vhtmode)
 			brcmf_update_vht_cap(band, bw_cap, nchain, txstreams,
 					     txbf_bfe_cap, txbf_bfr_cap);
+		if (he[0])
+			brcmf_update_he_cap(band, &sdata[band->band]);
 	}
 
 	return 0;
@@ -8132,7 +8231,7 @@ static int brcmf_setup_wiphy(struct wiphy *wiphy, struct brcmf_if *ifp)
 	struct ieee80211_supported_band *band;
 	u16 max_interfaces = 0;
 	bool gscan;
-	__le32 bandlist[3];
+	__le32 bandlist[4];
 	u32 n_bands;
 	int err, i;
 
@@ -8263,6 +8362,23 @@ static int brcmf_setup_wiphy(struct wiphy *wiphy, struct brcmf_if *ifp)
 			band->n_channels = ARRAY_SIZE(__wl_5ghz_channels);
 			wiphy->bands[NL80211_BAND_5GHZ] = band;
 		}
+		if (bandlist[i] == cpu_to_le32(WLC_BAND_6G)) {
+			band = kmemdup(&__wl_band_6ghz, sizeof(__wl_band_6ghz),
+					   GFP_KERNEL);
+			if (!band)
+				return -ENOMEM;
+
+			band->channels = kmemdup(&__wl_6ghz_channels,
+						 sizeof(__wl_6ghz_channels),
+						 GFP_KERNEL);
+			if (!band->channels) {
+				kfree(band);
+				return -ENOMEM;
+			}
+
+			band->n_channels = ARRAY_SIZE(__wl_6ghz_channels);
+			wiphy->bands[NL80211_BAND_6GHZ] = band;
+		}
 	}
 
 	if (wiphy->bands[NL80211_BAND_5GHZ] &&
@@ -8273,7 +8389,6 @@ static int brcmf_setup_wiphy(struct wiphy *wiphy, struct brcmf_if *ifp)
 	wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_CQM_RSSI_LIST);
 
 	wiphy_read_of_freq_limits(wiphy);
-
 	return 0;
 }
 
@@ -8814,6 +8929,11 @@ static void brcmf_free_wiphy(struct wiphy *wiphy)
 		kfree(wiphy->bands[NL80211_BAND_5GHZ]->channels);
 		kfree(wiphy->bands[NL80211_BAND_5GHZ]);
 	}
+	if (wiphy->bands[NL80211_BAND_6GHZ]) {
+		kfree(wiphy->bands[NL80211_BAND_6GHZ]->channels);
+		kfree(wiphy->bands[NL80211_BAND_6GHZ]);
+	}
+
 #if IS_ENABLED(CONFIG_PM)
 	if (wiphy->wowlan != &brcmf_wowlan_support)
 		kfree(wiphy->wowlan);
@@ -8909,16 +9029,16 @@ struct brcmf_cfg80211_info *brcmf_cfg80211_attach(struct brcmf_pub *drvr,
 	else
 		ops->dump_survey = NULL;
 
-	err = wiphy_register(wiphy);
-	if (err < 0) {
-		bphy_err(drvr, "Could not register wiphy device (%d)\n", err);
-		goto priv_out;
-	}
-
 	err = brcmf_setup_wiphybands(cfg);
 	if (err) {
 		bphy_err(drvr, "Setting wiphy bands failed (%d)\n", err);
 		goto wiphy_unreg_out;
+	}
+
+	err = wiphy_register(wiphy);
+	if (err < 0) {
+		bphy_err(drvr, "Could not register wiphy device (%d)\n", err);
+		goto priv_out;
 	}
 
 	/* If cfg80211 didn't disable 40MHz HT CAP in wiphy_register(),
