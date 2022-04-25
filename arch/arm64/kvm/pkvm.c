@@ -247,8 +247,15 @@ void pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 	mutex_unlock(&host_kvm->arch.config_lock);
 }
 
-int pkvm_init_host_vm(struct kvm *host_kvm)
+int pkvm_init_host_vm(struct kvm *host_kvm, unsigned long type)
 {
+	if (!(type & KVM_VM_TYPE_ARM_PROTECTED))
+		return 0;
+
+	if (!is_protected_kvm_enabled())
+		return -EINVAL;
+
+	host_kvm->arch.pkvm.enabled = true;
 	return 0;
 }
 
