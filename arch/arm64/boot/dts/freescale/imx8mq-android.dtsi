@@ -7,8 +7,6 @@
 	firmware {
 		android {
 			compatible = "android,firmware";
-			/* default emmc node used for GSI */
-			boot_devices = "soc@0/30800000.bus/30b40000.mmc";
 			/* sd card node which used if androidboot.boot_device_root=mmcblk1 */
 			boot_devices_mmcblk1 = "soc@0/30800000.bus/30b50000.mmc";
 			/* emmc node which used if androidboot.boot_device_root=mmcblk0 */
