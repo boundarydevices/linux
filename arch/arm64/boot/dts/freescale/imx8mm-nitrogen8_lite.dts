@@ -39,6 +39,16 @@
 			clock-frequency = <100000000>;
 		};
 	};
+
+	dummy-battery {
+		i2c-parent = <&i2c3>;
+		i2c-batt-address = <0x4c>;
+		i2c-batt-register = <0x00>;
+		i2c-batt-voltage-min = <10500>;
+		i2c-batt-voltage-max = <13000>;
+		i2c-batt-voltage-mult = <3939>;
+		i2c-batt-voltage-div = <1000>;
+	};
 };
 
 &csi1_bridge {
