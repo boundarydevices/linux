@@ -70,7 +70,7 @@ static int vpu_show_perf_ena;
 static int vpu_show_perf_idx = (1 << VPU_MAX_NUM_STREAMS) - 1;
 static int vpu_show_perf_ent;
 static int vpu_datadump_ena;
-static int vpu_tsm_ena = 1;
+static int vpu_tsm_ena;
 static unsigned short frame_threshold[VPU_MAX_NUM_STREAMS];
 module_param_array(frame_threshold, ushort, NULL, 0644);
 
