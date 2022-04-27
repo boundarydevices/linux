@@ -18,6 +18,8 @@
 #include <linux/power_supply.h>
 #include <linux/errno.h>
 #include <linux/slab.h>
+#include <linux/i2c.h>
+#include <linux/of.h>
 
 #define DUMMY_POWER_NUM 2
 #define POWER_SUPPLY_PROP_CAPACITY_VALUE 85
@@ -50,6 +52,13 @@ struct dummy_battery_property{
     int constant_charge_current_max;
     int constant_charge_voltage_max;
     int online;
+    struct i2c_adapter *i2c_parent;
+    int i2c_batt_address;
+    int i2c_batt_register;
+    int i2c_batt_voltage_min;
+    int i2c_batt_voltage_max;
+    int i2c_batt_voltage_mult;
+    int i2c_batt_voltage_div;
 };
 struct dummy_battery_property *battery_property;
 
@@ -112,6 +121,35 @@ static int dummy_usb_property_is_writeable(struct power_supply *psy,
     return psp == POWER_SUPPLY_PROP_ONLINE;
 }
 
+static int dummy_i2c_read_voltage(int *voltage)
+{
+    u8 buf[2];
+    struct i2c_msg msgs[2];
+    int ret;
+
+    buf[0] = battery_property->i2c_batt_register & 0xFF;
+
+    msgs[0].addr = battery_property->i2c_batt_address;
+    msgs[0].flags = 0;
+    msgs[0].len = 1;
+    msgs[0].buf = &buf;
+
+    msgs[1].addr = battery_property->i2c_batt_address;
+    msgs[1].flags = I2C_M_RD;
+    msgs[1].len = 2;
+    msgs[1].buf = &buf;
+
+    ret = i2c_transfer(battery_property->i2c_parent, msgs, 2);
+    if (ret >= 0) {
+        ret = 0;
+        *voltage = (buf[1] | (buf[0] << 8)) & 0xFFF;
+        *voltage *= battery_property->i2c_batt_voltage_mult;
+        *voltage /= battery_property->i2c_batt_voltage_div;
+    }
+
+    return ret;
+}
+
 static int dummy_battery_get_property(struct power_supply *psy,
                                       enum power_supply_property psp,
                                       union power_supply_propval *val)
@@ -119,7 +157,7 @@ static int dummy_battery_get_property(struct power_supply *psy,
     int ret = 0;
     switch (psp) {
         case POWER_SUPPLY_PROP_STATUS:
-            val->intval = POWER_SUPPLY_STATUS_CHARGING;
+            val->intval = battery_property->status;
             break;
         case POWER_SUPPLY_PROP_HEALTH:
             val->intval = POWER_SUPPLY_HEALTH_GOOD;
@@ -132,9 +170,31 @@ static int dummy_battery_get_property(struct power_supply *psy,
             break;
         case POWER_SUPPLY_PROP_CAPACITY:
             val->intval = POWER_SUPPLY_PROP_CAPACITY_VALUE;
+            if (battery_property->i2c_parent) {
+                int voltage;
+
+                ret = dummy_i2c_read_voltage(&voltage);
+                if (!ret) {
+                    int delta;
+                    int delta_max = battery_property->i2c_batt_voltage_max -
+                        battery_property->i2c_batt_voltage_min;
+
+                    if (voltage > battery_property->i2c_batt_voltage_max)
+                        voltage = battery_property->i2c_batt_voltage_max;
+                    if (voltage < battery_property->i2c_batt_voltage_min)
+                        voltage = battery_property->i2c_batt_voltage_min;
+
+                    delta = voltage - battery_property->i2c_batt_voltage_min;
+
+                    val->intval = delta * 100 / delta_max;
+                }
+            }
             break;
         case POWER_SUPPLY_PROP_VOLTAGE_NOW:
             val->intval = POWER_SUPPLY_PROP_VOLTAGE_NOW_VALUE;
+            if (battery_property->i2c_parent) {
+                ret = dummy_i2c_read_voltage(&val->intval);
+            }
             break;
         case POWER_SUPPLY_PROP_CURRENT_NOW:
             val->intval = POWER_SUPPLY_PROP_CURRENT_NOW_VALUE;
@@ -213,6 +273,7 @@ static const struct power_supply_desc dummy_power_desc[] = {
 
 static int __init dummy_power_init(void)
 {
+    struct device_node *np, *parent_np;
     struct power_supply_config psy_cfg = {};
     int i;
     int ret;
@@ -222,6 +283,8 @@ static int __init dummy_power_init(void)
 
     battery_property = (struct dummy_battery_property*)kmalloc(sizeof(struct dummy_battery_property*),GFP_KERNEL);
     battery_property->online = 1;
+    battery_property->i2c_parent = NULL;
+    battery_property->status = POWER_SUPPLY_STATUS_CHARGING;
 
     for (i = 0; i < ARRAY_SIZE(dummy_power_supplies); i++) {
         dummy_power_supplies[i] = power_supply_register(NULL,
@@ -232,6 +295,48 @@ static int __init dummy_power_init(void)
             goto failed;
         }
     }
+
+    np = of_find_node_by_name(NULL, "dummy-battery");
+    if (np == NULL)
+        return 0;
+
+    parent_np = of_parse_phandle(np, "i2c-parent", 0);
+    if (parent_np == NULL) {
+        of_node_put(np);
+        return 0;
+    }
+
+    battery_property->i2c_parent = of_find_i2c_adapter_by_node(parent_np);
+    of_node_put(parent_np);
+    if (!battery_property->i2c_parent) {
+        pr_info("%s: i2c entry present but not found!", __func__);
+        of_node_put(np);
+        return 0;
+    }
+
+    ret = of_property_read_u32(np, "i2c-batt-address",
+                               &battery_property->i2c_batt_address);
+    ret |= of_property_read_u32(np, "i2c-batt-register",
+                                &battery_property->i2c_batt_register);
+    ret |= of_property_read_u32(np, "i2c-batt-voltage-min",
+                                &battery_property->i2c_batt_voltage_min);
+    ret |= of_property_read_u32(np, "i2c-batt-voltage-max",
+                                &battery_property->i2c_batt_voltage_max);
+    ret |= of_property_read_u32(np, "i2c-batt-voltage-mult",
+                                &battery_property->i2c_batt_voltage_mult);
+    ret |= of_property_read_u32(np, "i2c-batt-voltage-div",
+                                &battery_property->i2c_batt_voltage_div);
+    if (ret) {
+        pr_info("%s: one of the parameters is missing!", __func__);
+        battery_property->i2c_parent = NULL;
+    } else {
+        /* a battery is present so we consider it discharging */
+        usb_property->online = 0;
+        battery_property->status = POWER_SUPPLY_STATUS_DISCHARGING;
+    }
+
+    of_node_put(np);
+
     return 0;
 failed:
     while (--i >= 0)
