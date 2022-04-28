@@ -719,7 +719,6 @@
 };
 
 &eqos {
-	fsl,magic-packet;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_eqos>;
 	phy-mode = "rgmii-id";
@@ -734,16 +733,14 @@
 		#size-cells = <0>;
 
 		ethphy0: ethernet-phy@7 {
-			at803x,hib-disabled;
 			compatible = "ethernet-phy-ieee802.3-c22";
-			eee-broken-1000t;
 			interrupts-extended = GPIRQ_EQOS_PHY;
 			reg = <7>;
 #if 0
 			reset-gpios = GP_EQOS_RESET;
 #endif
-			rxc-skew-ps = <1860>;
-			txc-skew-ps = <1860>;
+			rxc-skew-ps = <3000>;
+			txc-skew-ps = <3000>;
 		};
 	};
 };
