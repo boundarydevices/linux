@@ -234,7 +234,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8ulp-evk.dtb imx8ulp-evk-lpspi-slave.dtb \
 			  imx8ulp-9x9-evk-rk055hdmipi4m.dtb imx8ulp-9x9-evk-rk055hdmipi4mv2.dtb \
 			  imx8ulp-9x9-evk-sof-btsco.dtb \
 			  imx8ulp-9x9-evk-lpspi.dtb imx8ulp-9x9-evk-lpspi-slave.dtb \
-			  imx8ulp-9x9-evk-i3c.dtb
+			  imx8ulp-9x9-evk-i3c.dtb imx8ulp-evk-lpa.dtb imx8ulp-9x9-evk-lpa.dtb
 
 
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-sof-cs42888.dtb imx8qm-mek-sof-wm8960.dtb
