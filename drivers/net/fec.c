@@ -796,13 +796,20 @@ static int fec_enet_mii_probe(struct net_device *dev)
 	fep->phy_dev = NULL;
 
 	/* find the phy, assuming fec index corresponds to addr */
-	for (phy_addr = 0; phy_addr < PHY_MAX_ADDR; phy_addr++) {
+	for (phy_addr = 1; phy_addr < PHY_MAX_ADDR; phy_addr++) {
 		if (fep->mii_bus->phy_map[phy_addr]) {
 			if (fec_index--)
 				continue;
 			phy_dev = fep->mii_bus->phy_map[phy_addr];
 			break;
 		}
+	}
+	if (!phy_dev) {
+		/*
+		 * Check 0 last, because some phys are at 0 as well
+		 * as their normal address
+		 */
+		phy_dev = fep->mii_bus->phy_map[0];
 	}
 
 	if (!phy_dev) {
