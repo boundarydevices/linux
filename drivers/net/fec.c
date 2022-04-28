@@ -825,6 +825,7 @@ static int fec_enet_mii_probe(struct net_device *dev)
 		printk(KERN_ERR "%s: Could not attach to PHY\n", dev->name);
 		return PTR_ERR(phy_dev);
 	}
+	fep->phy_interface = phy_dev->interface;
 
 	/* mask with MAC supported features */
 	phy_dev->supported &= PHY_BASIC_FEATURES;
@@ -835,9 +836,12 @@ static int fec_enet_mii_probe(struct net_device *dev)
 	fep->full_duplex = 0;
 
 	printk(KERN_INFO "%s: Freescale FEC PHY driver [%s] "
-		"(mii_bus:phy_addr=%s, irq=%d)\n", dev->name,
+		"(mii_bus:phy_addr=%s, irq=%d %s)\n", dev->name,
 		fep->phy_dev->drv->name, dev_name(&fep->phy_dev->dev),
-		fep->phy_dev->irq);
+		fep->phy_dev->irq,
+		(fep->phy_interface == PHY_INTERFACE_MODE_RMII) ? "rmii" :
+		(fep->phy_interface == PHY_INTERFACE_MODE_GMII) ? "gmii" : "?"
+	);
 
 	return 0;
 }
