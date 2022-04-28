@@ -120,7 +120,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx8ulp-evk.dtb imx8ulp-evk-lpspi-slave.dtb \
 			  imx8ulp-evk-flexio-i2c.dtb imx8ulp-evk-nd.dtb imx8ulp-9x9-evk.dtb \
 			  imx8ulp-9x9-evk-rk055hdmipi4m.dtb imx8ulp-9x9-evk-rk055hdmipi4mv2.dtb \
 			  imx8ulp-9x9-evk-lpspi.dtb imx8ulp-9x9-evk-lpspi-slave.dtb \
-			  imx8ulp-9x9-evk-i3c.dtb imx8ulp-9x9-evk-sof-btsco.dtb
+			  imx8ulp-9x9-evk-i3c.dtb imx8ulp-9x9-evk-sof-btsco.dtb \
+			  imx8ulp-evk-lpa.dtb imx8ulp-9x9-evk-lpa.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx93-11x11-evk.dtb
 
 imx8mm-venice-gw72xx-0x-imx219-dtbs	:= imx8mm-venice-gw73xx-0x.dtb imx8mm-venice-gw73xx-0x-imx219.dtbo
