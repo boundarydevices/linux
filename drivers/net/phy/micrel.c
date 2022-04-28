@@ -112,6 +112,12 @@ static int kszphy_config_init(struct phy_device *phydev)
 	return 0;
 }
 
+static int kszphy8081_config_init(struct phy_device *phydev)
+{
+	phydev->interface = PHY_INTERFACE_MODE_RMII;
+	return 0;
+}
+
 static int ksz8021_config_init(struct phy_device *phydev)
 {
 	const u16 val = KSZPHY_OMSO_B_CAST_OFF | KSZPHY_OMSO_RMII_OVERRIDE;
@@ -235,7 +241,7 @@ static struct phy_driver ksphy_driver[] = {
 	.phy_id_mask	= 0x00fffff0,
 	.features	= (PHY_BASIC_FEATURES | SUPPORTED_Pause),
 	.flags		= PHY_HAS_MAGICANEG | PHY_HAS_INTERRUPT,
-	.config_init	= kszphy_config_init,
+	.config_init	= kszphy8081_config_init,
 	.config_aneg	= genphy_config_aneg,
 	.read_status	= genphy_read_status,
 	.ack_interrupt	= kszphy_ack_interrupt,
