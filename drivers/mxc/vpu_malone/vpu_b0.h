@@ -512,6 +512,15 @@ struct vpu_ctx {
 			pr_info("[VPU Decoder] " fmt, ## arg); \
 	} while (0)
 
+#define vpu_warn(ctx, fmt, arg...)	\
+	vpu_dbg(LVL_WARN, "warning: ctx[%d] %c%c%c%c: "fmt, \
+			ctx->str_index, \
+			ctx->q_data[0].fourcc, \
+			ctx->q_data[0].fourcc >> 8, \
+			ctx->q_data[0].fourcc >> 16, \
+			ctx->q_data[0].fourcc >> 24, \
+			## arg)
+
 #define V4L2_NXP_BUF_FLAG_CODECCONFIG		0x00200000
 #define V4L2_NXP_BUF_FLAG_TIMESTAMP_INVALID	0x00400000
 
