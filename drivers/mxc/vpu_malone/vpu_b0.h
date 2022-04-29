@@ -69,7 +69,6 @@ extern unsigned int vpu_dbg_level_decoder;
 
 #define V4L2_PIX_FMT_NV12_10BIT    v4l2_fourcc('N', 'T', '1', '2') /*  Y/CbCr 4:2:0 for 10bit  */
 #define	VPU_FRAME_DEPTH_MAX     512
-#define VPU_FRAME_DEPTH_DEFAULT 256
 #define DECODER_NODE_NUMBER 12 // use /dev/video12 as vpu decoder
 #define DEFAULT_LOG_DEPTH 20
 #define DEFAULT_FRMDBG_ENABLE 0
@@ -448,10 +447,6 @@ struct vpu_ctx {
 
 	struct file *crc_fp;
 	loff_t pos;
-
-	int frm_dis_delay;
-	int frm_dec_delay;
-	int frm_total_num;
 
 	long total_qbuf_bytes;
 	long total_write_bytes;
