@@ -3048,7 +3048,9 @@ static void vpu_dec_event_decode_error(struct vpu_ctx *ctx)
 	q_src = &ctx->q_data[V4L2_SRC];
 	q_dst = &ctx->q_data[V4L2_DST];
 	q_src->vb2_q.error = 1;
+	wake_up(&q_src->vb2_q.done_wq);
 	q_dst->vb2_q.error = 1;
+	wake_up(&q_dst->vb2_q.done_wq);
 
 	v4l2_event_queue_fh(&ctx->fh, &ev);
 }
