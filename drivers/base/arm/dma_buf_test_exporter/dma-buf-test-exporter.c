@@ -822,3 +822,4 @@ static void __exit dma_buf_te_exit(void)
 module_init(dma_buf_te_init);
 module_exit(dma_buf_te_exit);
 MODULE_LICENSE("GPL");
+MODULE_IMPORT_NS(DMA_BUF);
