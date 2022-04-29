@@ -521,15 +521,15 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		ethphy1: ethernet-phy@4 {
+		ethphy1: ethernet-phy1 {
 			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <4>;
+			reg-mask = <0x18>;	/* 3 - micrel, 4 - atheros */
 			interrupts-extended = GPIRQ_RGMII1_PHY;
 		};
 
-		ethphy2: ethernet-phy@5 {
+		ethphy2: ethernet-phy2 {
 			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <5>;
+			reg-mask = <0xa0>;	/* 5 - atheros, 7 micrel */
 			interrupts-extended = GPIRQ_RGMII2_PHY;
 		};
 	};
