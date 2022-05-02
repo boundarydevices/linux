@@ -250,6 +250,7 @@
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_5__I2C3_SCL		0x4001b8b1
 			MX6QDL_PAD_GPIO_16__I2C3_SDA		0x4001b8b1
+			/* gt911 driver writes levels, instead of active/inactive */
 #define GP_TS_GT911_RESET	<&gpio1 4 GPIO_ACTIVE_HIGH>
 #define GP_I2C3_J7_RESET	<&gpio1 4 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x1b0b0
@@ -775,6 +776,7 @@
 
 	ts_goodix: touchscreen@14 {
 		compatible = "goodix,gt911";
+		display = <&fb_lvds>;
 		esd-recovery-timeout-ms = <2000>;
 		interrupts-extended = GPIRQ_GT911;
 		irq-gpios = GP_GT911_IRQ;
@@ -785,6 +787,7 @@
 
 	ts_goodix2: touchscreen@5d {
 		compatible = "goodix,gt911";
+		display = <&fb_lvds>;
 		esd-recovery-timeout-ms = <2000>;
 		interrupts-extended = GPIRQ_GT911;
 		irq-gpios = GP_GT911_IRQ;
