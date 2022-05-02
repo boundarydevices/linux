@@ -190,6 +190,38 @@
 		};
 	};
 
+	edp_panel_fixed_3v3: regulator@0 {
+		compatible = "regulator-fixed";
+		regulator-name = "edp_panel_3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-high;
+		gpio = <&pio 6 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&edp_panel_3v3_en_pins>;
+	};
+
+	edp_panel_fixed_12v: regulator@1 {
+		compatible = "regulator-fixed";
+		regulator-name = "edp_backlight_12v";
+		regulator-min-microvolt = <12000000>;
+		regulator-max-microvolt = <12000000>;
+		enable-active-high;
+		gpio = <&pio 96 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&edp_panel_12v_en_pins>;
+	};
+
+	backlight_lcd0: backlight_lcd0 {
+		compatible = "pwm-backlight";
+		pwms = <&disp_pwm1 0 500000>;
+		power-supply = <&edp_panel_fixed_12v>;
+		enable-gpios = <&pio 95 GPIO_ACTIVE_HIGH>;
+		brightness-levels = <0 1023>;
+		num-interpolated-steps = <1023>;
+		default-brightness-level = <576>;
+	};
+
 	gpio-keys {
 		compatible = "gpio-keys";
 		input-name = "gpio-keys";
@@ -737,6 +769,20 @@
 		mt7921 {
 			pinmux = <PINMUX_GPIO65__FUNC_GPIO65>,
 				 <PINMUX_GPIO67__FUNC_GPIO67>;
+			output-high;
+		};
+	};
+
+	edp_panel_12v_en_pins: edp_panel_12v_en_pins {
+		pins1 {
+			pinmux = <PINMUX_GPIO96__FUNC_GPIO96>;
+			output-high;
+		};
+	};
+
+	edp_panel_3v3_en_pins: edp_panel_3v3_en_pins {
+		pins1 {
+			pinmux = <PINMUX_GPIO6__FUNC_GPIO6>;
 			output-high;
 		};
 	};
