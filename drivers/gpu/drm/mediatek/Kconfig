@@ -15,6 +15,7 @@ config DRM_MEDIATEK
 	select MTK_SMI
 	select PHY_MTK_MIPI_DSI
 	select VIDEOMODE_HELPERS
+	select DRM_DP_HELPER
 	help
 	  Choose this option if you have a Mediatek SoCs.
 	  The module will be called mediatek-drm
