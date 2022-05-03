@@ -164,15 +164,21 @@ int sof_compr_set_params(struct snd_soc_component *component,
 	struct sof_ipc_pcm_params_reply ipc_params_reply;
 	struct sof_ipc_pcm_params *pcm;
 	struct snd_sof_pcm *spcm;
+	int data_size;
 	int ret;
 
 	spcm = snd_sof_find_spcm_dai(component, rtd_pcm);
 	if (!spcm)
 		return -EINVAL;
 
-	pcm = kzalloc(GFP_KERNEL, sizeof(*pcm));
+	data_size = sizeof(params->codec);
+
+	pcm = kzalloc(GFP_KERNEL, sizeof(*pcm) + data_size);
 	if (!pcm)
 		return -ENOMEM;
+
+	if (data_size + sizeof(*pcm) > SOF_IPC_MSG_MAX_SIZE)
+		return -EINVAL;
 
 	cstream->dma_buffer.dev.type = SNDRV_DMA_TYPE_DEV_SG;
 	cstream->dma_buffer.dev.dev = sdev->dev;
@@ -183,11 +189,11 @@ int sof_compr_set_params(struct snd_soc_component *component,
 	create_page_table(component, cstream, rtd->dma_area, rtd->dma_bytes);
 
 	pcm->params.buffer.pages = PFN_UP(rtd->dma_bytes);
-	pcm->hdr.size = sizeof(*pcm);
+	pcm->hdr.size = sizeof(*pcm) + data_size;
 	pcm->hdr.cmd = SOF_IPC_GLB_STREAM_MSG | SOF_IPC_STREAM_PCM_PARAMS;
 
 	pcm->comp_id = spcm->stream[cstream->direction].comp_id;
-	pcm->params.hdr.size = sizeof(pcm->params);
+	pcm->params.hdr.size = sizeof(pcm->params) + data_size;
 	pcm->params.buffer.phy_addr = spcm->stream[cstream->direction].page_table.addr;
 	pcm->params.buffer.size = rtd->dma_bytes;
 	pcm->params.direction = cstream->direction;
@@ -198,8 +204,11 @@ int sof_compr_set_params(struct snd_soc_component *component,
 	pcm->params.sample_container_bytes =
 		snd_pcm_format_physical_width(SNDRV_PCM_FORMAT_S32) >> 3;
 	pcm->params.host_period_bytes = params->buffer.fragment_size;
+	pcm->params.ext_data_length = data_size;
 
-	ret = sof_ipc_tx_message(sdev->ipc, pcm->hdr.cmd, pcm, sizeof(*pcm),
+	memcpy((u8*)pcm->params.data, &params->codec, data_size);
+
+	ret = sof_ipc_tx_message(sdev->ipc, pcm->hdr.cmd, pcm, sizeof(*pcm) + data_size,
 				 &ipc_params_reply, sizeof(ipc_params_reply));
 	if (ret < 0) {
 		kfree(pcm);
