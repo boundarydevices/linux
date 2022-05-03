@@ -51,7 +51,6 @@
  */
 
 /* Reserve some destination PGIDs at the end of the range:
- * PGID_FRER: Destinations for multicast traffic in 802.1CB redundant network.
  * PGID_BLACKHOLE: used for not forwarding the frames
  * PGID_CPU: used for whitelisting certain MAC addresses, such as the addresses
  *           of the switch port net devices, towards the CPU port module.
@@ -61,7 +60,6 @@
  * PGID_MCIPV6: the flooding destinations for IPv6 multicast traffic.
  * PGID_BC: the flooding destinations for broadcast traffic.
  */
-#define PGID_FRER			56
 #define PGID_BLACKHOLE			57
 #define PGID_CPU			58
 #define PGID_UC				59
@@ -77,7 +75,7 @@
 
 #define for_each_nonreserved_multicast_dest_pgid(ocelot, pgid)	\
 	for ((pgid) = (ocelot)->num_phys_ports + 1;		\
-	     (pgid) < PGID_FRER;				\
+	     (pgid) < PGID_BLACKHOLE;				\
 	     (pgid)++)
 
 #define for_each_aggr_pgid(ocelot, pgid)			\
@@ -418,9 +416,6 @@ enum ocelot_reg {
 	DEV_MAC_FC_MAC_LOW_CFG,
 	DEV_MAC_FC_MAC_HIGH_CFG,
 	DEV_MAC_STICKY,
-	DEV_MM_ENABLE_CONFIG,
-	DEV_MM_VERIF_CONFIG,
-	DEV_MM_STATUS,
 	PCS1G_CFG,
 	PCS1G_MODE_CFG,
 	PCS1G_SD_CFG,
@@ -690,38 +685,6 @@ struct ocelot_policer {
 	u32 rate; /* kilobit per second */
 	u32 burst; /* bytes */
 };
-
-/* MAC table entry types.
- * ENTRYTYPE_NORMAL is subject to aging.
- * ENTRYTYPE_LOCKED is not subject to aging.
- * ENTRYTYPE_MACv4 is not subject to aging. For IPv4 multicast.
- * ENTRYTYPE_MACv6 is not subject to aging. For IPv6 multicast.
- */
-enum macaccess_entry_type {
-	ENTRYTYPE_NORMAL = 0,
-	ENTRYTYPE_LOCKED,
-	ENTRYTYPE_MACv4,
-	ENTRYTYPE_MACv6,
-};
-
-struct ocelot_mact_entry {
-	u8 mac[ETH_ALEN];
-	u16 vid;
-	enum macaccess_entry_type type;
-};
-
-int ocelot_mact_read(struct ocelot *ocelot, int row, int col, int *dst,
-		     struct ocelot_mact_entry *entry);
-int ocelot_mact_learn(struct ocelot *ocelot, int port,
-		      const unsigned char mac[ETH_ALEN],
-		      unsigned int vid, enum macaccess_entry_type type);
-int ocelot_mact_forget(struct ocelot *ocelot, const unsigned char mac[ETH_ALEN],
-		       unsigned int vid);
-int ocelot_mact_lookup(struct ocelot *ocelot, const unsigned char mac[ETH_ALEN],
-		       unsigned int vid, int *row, int *col);
-void ocelot_mact_write(struct ocelot *ocelot, int port,
-		       const struct ocelot_mact_entry *entry,
-		       int row, int col);
 
 #define ocelot_read_ix(ocelot, reg, gi, ri) __ocelot_read_ix(ocelot, reg, reg##_GSZ * (gi) + reg##_RSZ * (ri))
 #define ocelot_read_gix(ocelot, reg, gi) __ocelot_read_ix(ocelot, reg, reg##_GSZ * (gi))
