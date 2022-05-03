@@ -47,7 +47,7 @@ struct felix_info {
 	int	(*port_setup_tc)(struct dsa_switch *ds, int port,
 				 enum tc_setup_type type, void *type_data);
 	void	(*port_sched_speed_set)(struct ocelot *ocelot, int port,
-					int speed);
+					u32 speed);
 };
 
 extern const struct dsa_switch_ops felix_switch_ops;
