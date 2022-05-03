@@ -1236,6 +1236,8 @@ static void ocelot_vcap_block_remove_filter(struct ocelot *ocelot,
 		if (ocelot_vcap_filter_equal(filter, tmp)) {
 			ocelot_vcap_filter_del_aux_resources(ocelot, tmp);
 			list_del(&tmp->list);
+			if (!list_empty(&tmp->trap_list))
+				list_del(&tmp->trap_list);
 			kfree(tmp);
 		}
 	}
