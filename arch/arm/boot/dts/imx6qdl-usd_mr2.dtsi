@@ -387,7 +387,7 @@
 		enable-gpios = GP_LVDS_J5_PIN36;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_lvds>;
-		pwms = <&pwm4 0 200000 0>;
+		pwms = <&pwm4 0 200000>;
 	};
 
 	fb_hdmi: fb@0 {
@@ -845,6 +845,7 @@
 };
 
 &pwm4 {
+	#pwm-cells = <2>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm4>;
 	status = "okay";
