@@ -221,6 +221,10 @@
 	status = "okay";
 };
 
+&scp {
+	status = "okay";
+};
+
 &mmc0 {
 	status = "okay";
 	pinctrl-names = "default", "state_uhs";

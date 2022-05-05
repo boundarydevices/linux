@@ -27,3 +27,7 @@
 &uart0 {
 	status = "okay";
 };
+
+&scp {
+	status = "okay";
+};
