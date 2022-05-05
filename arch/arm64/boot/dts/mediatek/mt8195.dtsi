@@ -919,7 +919,7 @@
 			#iommu-cells = <1>;
 		};
 
-		gce0: mdp_mailbox@10320000 {
+		gce0: disp_mailbox@10320000 {
 			compatible = "mediatek,mt8195-gce";
 			reg = <0 0x10320000 0 0x4000>;
 			interrupts = <GIC_SPI 226 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -927,7 +927,7 @@
 			clocks = <&infracfg_ao CLK_INFRA_AO_GCE>;
 		};
 
-		gce1: disp_mailbox@10330000 {
+		gce1: mdp_mailbox@10330000 {
 			compatible = "mediatek,mt8195-gce";
 			reg = <0 0x10330000 0 0x4000>;
 			interrupts = <GIC_SPI 228 IRQ_TYPE_LEVEL_HIGH 0>;
