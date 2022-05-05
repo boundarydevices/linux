@@ -877,7 +877,7 @@ static int fsl_qspi_probe(struct platform_device *pdev)
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM,
 					"QuadSPI-memory");
 	if (!res) {
-		ret = -ENOMEM;
+		ret = -EINVAL;
 		goto err_put_ctrl;
 	}
 	q->memmap_phy = res->start;
