@@ -1413,6 +1413,7 @@ static int mdp_remove(struct platform_device *pdev)
 {
 	struct mdp_dev *mdp = platform_get_drvdata(pdev);
 
+	mdp_m2m_device_unregister(mdp);
 	v4l2_device_unregister(&mdp->v4l2_dev);
 
 	dev_dbg(&pdev->dev, "%s driver unloaded\n", pdev->name);
