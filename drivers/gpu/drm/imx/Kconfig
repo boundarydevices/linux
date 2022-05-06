@@ -33,11 +33,17 @@ config DRM_IMX_LDB
 	  Choose this to enable the internal LVDS Display Bridge (LDB)
 	  found on i.MX53 and i.MX6 processors.
 
+config IMX8MP_HDMI_PAVI
+	tristate "NXP i.MX8MP HDMI Audio Video (PVI/PAI)"
+	help
+	  Choose this if you want to use HDMI PAI/PVI on i.MX8MP.
+
 config DRM_IMX_HDMI
 	tristate "Freescale i.MX DRM HDMI"
 	select DRM_DW_HDMI
+	select IMX8MP_HDMI_PAVI
 	depends on DRM_IMX && OF
 	help
-	  Choose this if you want to use HDMI on i.MX6.
+	  Choose this if you want to use HDMI on i.MX6/i.MX8.
 
 source "drivers/gpu/drm/imx/dcss/Kconfig"
