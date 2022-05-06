@@ -63,10 +63,9 @@
 		ranges;
 		#address-cells = <2>;
 		#size-cells = <2>;
-		use-gicv3-workaround;
 		trusty-irq {
-			use-gicv3-workaround;
 			compatible = "android,trusty-irq-v1";
+			interrupt-parent = <&gic>;
 			interrupt-ranges = < 0 15 0>;
 			ipi-range = <8 15 8>;
 		};
