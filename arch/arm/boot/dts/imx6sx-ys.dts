@@ -508,7 +508,7 @@
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1>;
-	phy-mode = "rgmii";
+	phy-mode = "rgmii-id";
 #if 0
 	phy-reset-gpios = GP_RGMII1_PHY_RESET;
 #endif
@@ -525,12 +525,36 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg-mask = <0x18>;	/* 3 - micrel, 4 - atheros */
 			interrupts-extended = GPIRQ_RGMII1_PHY;
+			rxc-skew-ps = <3000>;
+			rxd0-skew-ps = <0>;
+			rxd1-skew-ps = <0>;
+			rxd2-skew-ps = <0>;
+			rxd3-skew-ps = <0>;
+			rxdv-skew-ps = <0>;
+			txc-skew-ps = <3000>;
+			txd0-skew-ps = <0>;
+			txd1-skew-ps = <0>;
+			txd2-skew-ps = <0>;
+			txd3-skew-ps = <0>;
+			txen-skew-ps = <0>;
 		};
 
 		ethphy2: ethernet-phy2 {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg-mask = <0xa0>;	/* 5 - atheros, 7 micrel */
 			interrupts-extended = GPIRQ_RGMII2_PHY;
+			rxc-skew-ps = <3000>;
+			rxd0-skew-ps = <0>;
+			rxd1-skew-ps = <0>;
+			rxd2-skew-ps = <0>;
+			rxd3-skew-ps = <0>;
+			rxdv-skew-ps = <0>;
+			txc-skew-ps = <3000>;
+			txd0-skew-ps = <0>;
+			txd1-skew-ps = <0>;
+			txd2-skew-ps = <0>;
+			txd3-skew-ps = <0>;
+			txen-skew-ps = <0>;
 		};
 	};
 };
@@ -538,7 +562,7 @@
 &fec2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet2>;
-	phy-mode = "rgmii";
+	phy-mode = "rgmii-id";
 #if 0
 	phy-reset-gpios = GP_RGMII2_PHY_RESET;
 #endif
