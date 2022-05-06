@@ -761,7 +761,7 @@
 
 &fec {
 	phy-handle = <&ethphy>;
-	phy-mode = "rgmii";
+	phy-mode = "rgmii-id";
 #if 0
 	phy-reset-gpios = GP_ENET_PHY_RESET;
 #endif
