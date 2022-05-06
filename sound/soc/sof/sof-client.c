@@ -245,10 +245,14 @@ EXPORT_SYMBOL_NS_GPL(sof_client_dev_unregister, SND_SOC_SOF_CLIENT);
 int sof_client_ipc_tx_message(struct sof_client_dev *cdev, void *ipc_msg,
 			      void *reply_data, size_t reply_bytes)
 {
-	struct sof_ipc_cmd_hdr *hdr = ipc_msg;
+	if (cdev->sdev->pdata->ipc_type == SOF_IPC) {
+		struct sof_ipc_cmd_hdr *hdr = ipc_msg;
 
-	return sof_ipc_tx_message(cdev->sdev->ipc, ipc_msg, hdr->size,
-				  reply_data, reply_bytes);
+		return sof_ipc_tx_message(cdev->sdev->ipc, ipc_msg, hdr->size,
+					  reply_data, reply_bytes);
+	}
+
+	return -EINVAL;
 }
 EXPORT_SYMBOL_NS_GPL(sof_client_ipc_tx_message, SND_SOC_SOF_CLIENT);
 
@@ -358,9 +362,18 @@ EXPORT_SYMBOL_NS_GPL(sof_client_core_module_put, SND_SOC_SOF_CLIENT);
 /* IPC event handling */
 void sof_client_ipc_rx_dispatcher(struct snd_sof_dev *sdev, void *msg_buf)
 {
-	struct sof_ipc_cmd_hdr *hdr = msg_buf;
-	u32 msg_type = hdr->cmd & SOF_GLB_TYPE_MASK;
 	struct sof_ipc_event_entry *event;
+	u32 msg_type;
+
+	if (sdev->pdata->ipc_type == SOF_IPC) {
+		struct sof_ipc_cmd_hdr *hdr = msg_buf;
+
+		msg_type = hdr->cmd & SOF_GLB_TYPE_MASK;
+	} else {
+		dev_dbg_once(sdev->dev, "%s: Not supported IPC version: %d\n",
+			     __func__, sdev->pdata->ipc_type);
+		return;
+	}
 
 	mutex_lock(&sdev->client_event_handler_mutex);
 
@@ -379,8 +392,17 @@ int sof_client_register_ipc_rx_handler(struct sof_client_dev *cdev,
 	struct snd_sof_dev *sdev = sof_client_dev_to_sof_dev(cdev);
 	struct sof_ipc_event_entry *event;
 
-	if (!callback || !(ipc_msg_type & SOF_GLB_TYPE_MASK))
+	if (!callback)
 		return -EINVAL;
+
+	if (cdev->sdev->pdata->ipc_type == SOF_IPC) {
+		if (!(ipc_msg_type & SOF_GLB_TYPE_MASK))
+			return -EINVAL;
+	} else {
+		dev_warn(sdev->dev, "%s: Not supported IPC version: %d\n",
+			 __func__, sdev->pdata->ipc_type);
+		return -EINVAL;
+	}
 
 	event = kmalloc(sizeof(*event), GFP_KERNEL);
 	if (!event)
