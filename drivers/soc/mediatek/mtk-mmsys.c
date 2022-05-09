@@ -321,7 +321,6 @@ static int mtk_mmsys_reset_update(struct reset_controller_dev *rcdev, unsigned l
 	unsigned long flags;
 	u32 offset;
 	u32 reg;
-	int i;
 
 	offset = (id / MMSYS_SW_RESET_PER_REG) * sizeof(u32);
 	id = id % MMSYS_SW_RESET_PER_REG;

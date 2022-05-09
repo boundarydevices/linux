@@ -1047,7 +1047,6 @@ static int mtk_mutex_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_mutex_ctx *mtx;
-	struct cmdq_client_reg cmdq_reg;
 	struct resource *regs, addr;
 	int i;
 
