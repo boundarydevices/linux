@@ -1515,12 +1515,11 @@ static irqreturn_t dpaa2_switch_irq0_handler_thread(int irq_num, void *arg)
 	if_id = (status & 0xFFFF0000) >> 16;
 	port_priv = ethsw->ports[if_id];
 
-	if (status & DPSW_IRQ_EVENT_LINK_CHANGED) {
+	if (status & DPSW_IRQ_EVENT_LINK_CHANGED)
 		dpaa2_switch_port_link_state_update(port_priv->netdev);
-		dpaa2_switch_port_set_mac_addr(port_priv);
-	}
 
 	if (status & DPSW_IRQ_EVENT_ENDPOINT_CHANGED) {
+		dpaa2_switch_port_set_mac_addr(port_priv);
 		if (dpaa2_switch_port_has_mac(port_priv))
 			dpaa2_switch_port_disconnect_mac(port_priv);
 		else
