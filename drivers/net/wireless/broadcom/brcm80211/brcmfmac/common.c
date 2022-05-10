@@ -23,6 +23,9 @@
 #include "defs.h"
 #include "fweh.h"
 #include <brcm_hw_ids.h>
+#include <linux/reboot.h>
+#include <linux/notifier.h>
+#include "pcie.h"
 
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("Broadcom 802.11 wireless LAN fullmac driver.");
@@ -91,6 +94,12 @@ MODULE_PARM_DESC(fw_ap_select, "Allow FW for AP selection");
 
 static struct brcmfmac_platform_data *brcmfmac_pdata;
 struct brcmf_mp_global_t brcmf_mp_global;
+
+static int brcmf_reboot_callback(struct notifier_block *this, unsigned long code, void *unused);
+static struct notifier_block brcmf_reboot_notifier = {
+	.notifier_call = brcmf_reboot_callback,
+	.priority = 1,
+};
 
 void brcmf_c_set_joinpref_default(struct brcmf_if *ifp)
 {
@@ -530,6 +539,15 @@ void brcmf_release_module_param(struct brcmf_mp_device *module_param)
 	kfree(module_param);
 }
 
+static int
+brcmf_reboot_callback(struct notifier_block *this, unsigned long code, void *unused)
+{
+	brcmf_dbg(INFO, "code = %ld\n", code);
+	if (code == SYS_RESTART)
+		brcmf_core_exit();
+	return NOTIFY_DONE;
+}
+
 static int __init brcmf_common_pd_probe(struct platform_device *pdev)
 {
 	brcmf_dbg(INFO, "Enter\n");
@@ -576,6 +594,8 @@ static int __init brcmfmac_module_init(void)
 	if (err) {
 		if (brcmfmac_pdata)
 			platform_driver_unregister(&brcmf_pd);
+	} else {
+		register_reboot_notifier(&brcmf_reboot_notifier);
 	}
 
 	return err;
@@ -584,6 +604,7 @@ static int __init brcmfmac_module_init(void)
 static void __exit brcmfmac_module_exit(void)
 {
 	brcmf_core_exit();
+	unregister_reboot_notifier(&brcmf_reboot_notifier);
 	if (brcmfmac_pdata)
 		platform_driver_unregister(&brcmf_pd);
 }

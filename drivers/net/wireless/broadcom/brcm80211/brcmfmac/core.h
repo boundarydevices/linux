@@ -234,7 +234,7 @@ void brcmf_net_detach(struct net_device *ndev, bool locked);
 int brcmf_net_mon_attach(struct brcmf_if *ifp);
 void brcmf_net_setcarrier(struct brcmf_if *ifp, bool on);
 int __init brcmf_core_init(void);
-void __exit brcmf_core_exit(void);
+void brcmf_core_exit(void);
 int brcmf_pktfilter_add_remove(struct net_device *ndev, int filter_num,
 			       bool add);
 int brcmf_pktfilter_enable(struct net_device *ndev, bool enable);
