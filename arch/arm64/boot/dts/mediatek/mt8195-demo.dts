@@ -346,6 +346,13 @@
 				op-sink-microwatt = <10000000>;
 				orientation-switch = <&it5205fn>;
 				mode-switch = <&it5205fn>;
+
+				altmodes {
+					dp {
+						svid = <0xff01>;
+						vdo = <0xc0c47>;
+					};
+				};
 			};
 
 			ports {
