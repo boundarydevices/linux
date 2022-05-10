@@ -1492,6 +1492,8 @@
 				 <&pericfg_ao CLK_PERI_AO_SSUSB_3P_XHCI>,
 				 <&topckgen CLK_TOP_SSUSB_P3_REF>;
 			clock-names = "sys_ck", "xhci_ck", "ref_ck";
+			mediatek,syscon-wakeup = <&pericfg 0x400 106>;
+			wakeup-source;
 			usb2-lpm-disable;
 			status = "disabled";
 		};
