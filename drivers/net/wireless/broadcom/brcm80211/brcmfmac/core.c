@@ -1580,7 +1580,7 @@ error_usb_register:
 	return err;
 }
 
-void __exit brcmf_core_exit(void)
+void brcmf_core_exit(void)
 {
 	brcmf_sdio_exit();
 	brcmf_usb_exit();
