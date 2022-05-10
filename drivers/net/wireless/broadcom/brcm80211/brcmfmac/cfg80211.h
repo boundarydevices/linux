@@ -303,6 +303,11 @@ struct escan_info {
 		   struct cfg80211_scan_request *request);
 };
 
+struct cqm_rssi_info {
+	bool enable;
+	s32 rssi_threshold;
+};
+
 /**
  * struct brcmf_cfg80211_vif_event - virtual interface event information.
  *
@@ -399,6 +404,7 @@ struct brcmf_cfg80211_info {
 	struct escan_info escan_info;
 	struct timer_list escan_timeout;
 	struct work_struct escan_timeout_work;
+	struct cqm_rssi_info cqm_info;
 	struct list_head vif_list;
 	struct brcmf_cfg80211_vif_event vif_event;
 	struct completion vif_disabled;
