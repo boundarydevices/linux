@@ -1364,6 +1364,8 @@
 				 <&topckgen CLK_TOP_SSUSB_P1_REF>,
 				 <&apmixedsys CLK_APMIXED_USB1PLL>;
 			clock-names = "sys_ck", "xhci_ck", "ref_ck", "mcu_ck";
+			mediatek,syscon-wakeup = <&pericfg 0x400 104>;
+			wakeup-source;
 			status = "disabled";
 		};
 
@@ -1383,6 +1385,8 @@
 				 <&pericfg_ao CLK_PERI_AO_SSUSB_2P_XHCI>,
 				 <&topckgen CLK_TOP_SSUSB_P2_REF>;
 			clock-names = "sys_ck", "xhci_ck", "ref_ck";
+			mediatek,syscon-wakeup = <&pericfg 0x400 105>;
+			wakeup-source;
 			status = "disabled";
 		};
 
@@ -1402,6 +1406,8 @@
 				 <&pericfg_ao CLK_PERI_AO_SSUSB_3P_XHCI>,
 				 <&topckgen CLK_TOP_SSUSB_P3_REF>;
 			clock-names = "sys_ck", "xhci_ck", "ref_ck";
+			mediatek,syscon-wakeup = <&pericfg 0x400 106>;
+			wakeup-source;
 			usb2-lpm-disable;
 			status = "disabled";
 		};
