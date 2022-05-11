@@ -471,7 +471,7 @@
 
 	pinctrl_usb3_0: usb3-0grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO13__USB1_OC	0x116
+			MX8MP_IOMUXC_GPIO1_IO13__USB1_OC	0x1c0
 		>;
 	};
 
@@ -1720,6 +1720,7 @@
 };
 
 &usb3_0 {
+	fsl,over-current-active-low;
 	status = "okay";
 };
 
