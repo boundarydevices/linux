@@ -557,7 +557,7 @@
 
 		gic: interrupt-controller@c000000 {
 			compatible = "arm,gic-v3";
-			#interrupt-cells = <4>;
+			#interrupt-cells = <3>;
 			interrupt-parent = <&gic>;
 			interrupt-controller;
 			reg = <0 0xc000000 0 0x80000>,
