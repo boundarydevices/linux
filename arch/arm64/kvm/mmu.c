@@ -55,7 +55,7 @@ static phys_addr_t stage2_range_addr_end(phys_addr_t addr, phys_addr_t end)
  */
 static int stage2_apply_range(struct kvm_s2_mmu *mmu, phys_addr_t addr,
 			      phys_addr_t end,
-			      int (*fn)(struct kvm_pgtable *, u64, u64),
+			      int (*fn)(struct kvm_s2_mmu *, u64, u64),
 			      bool resched)
 {
 	struct kvm *kvm = kvm_s2_mmu_to_kvm(mmu);
@@ -64,7 +64,7 @@ static int stage2_apply_range(struct kvm_s2_mmu *mmu, phys_addr_t addr,
 
 	do {
 		next = stage2_range_addr_end(addr, end);
-		ret = fn(mmu->pgt, addr, next - addr);
+		ret = fn(mmu, addr, next - addr);
 		if (ret)
 			break;
 
@@ -312,6 +312,12 @@ static void invalidate_icache_guest_page(void *va, size_t size)
  * destroying the VM), otherwise another faulting VCPU may come in and mess
  * with things behind our backs.
  */
+
+static int ___unmap_stage2_range(struct kvm_s2_mmu *mmu, u64 addr, u64 size)
+{
+	return kvm_pgtable_stage2_unmap(mmu->pgt, addr, size);
+}
+
 static void __unmap_stage2_range(struct kvm_s2_mmu *mmu, phys_addr_t start, u64 size,
 				 bool may_block)
 {
@@ -320,7 +326,7 @@ static void __unmap_stage2_range(struct kvm_s2_mmu *mmu, phys_addr_t start, u64 
 
 	lockdep_assert_held_write(&kvm->mmu_lock);
 	WARN_ON(size & ~PAGE_MASK);
-	WARN_ON(stage2_apply_range(mmu, start, end, kvm_pgtable_stage2_unmap,
+	WARN_ON(stage2_apply_range(mmu, start, end, ___unmap_stage2_range,
 				   may_block));
 }
 
@@ -331,11 +337,6 @@ void kvm_stage2_unmap_range(struct kvm_s2_mmu *mmu, phys_addr_t start,
 		return;
 
 	__unmap_stage2_range(mmu, start, size, may_block);
-}
-
-void kvm_stage2_flush_range(struct kvm_s2_mmu *mmu, phys_addr_t addr, phys_addr_t end)
-{
-	stage2_apply_range_resched(mmu, addr, end, kvm_pgtable_stage2_flush);
 }
 
 static void pkvm_stage2_flush(struct kvm *kvm)
@@ -354,6 +355,16 @@ static void pkvm_stage2_flush(struct kvm *kvm)
 		__clean_dcache_guest_page(page_address(ppage->page), PAGE_SIZE);
 		cond_resched_rwlock_write(&kvm->mmu_lock);
 	}
+}
+
+static int __stage2_flush_range(struct kvm_s2_mmu *mmu, u64 addr, u64 size)
+{
+	return kvm_pgtable_stage2_flush(mmu->pgt, addr, size);
+}
+
+void kvm_stage2_flush_range(struct kvm_s2_mmu *mmu, phys_addr_t addr, phys_addr_t end)
+{
+	stage2_apply_range_resched(mmu, addr, end, __stage2_flush_range);
 }
 
 static void stage2_flush_memslot(struct kvm *kvm,
@@ -1173,6 +1184,11 @@ int kvm_phys_addr_ioremap(struct kvm *kvm, phys_addr_t guest_ipa,
 	return ret;
 }
 
+static int __stage2_wp_range(struct kvm_s2_mmu *mmu, u64 addr, u64 size)
+{
+	return kvm_pgtable_stage2_wrprotect(mmu->pgt, addr, size);
+}
+
 /**
  * kvm_stage2_wp_range() - write protect stage2 memory region range
  * @mmu:        The KVM stage-2 MMU pointer
@@ -1181,7 +1197,7 @@ int kvm_phys_addr_ioremap(struct kvm *kvm, phys_addr_t guest_ipa,
  */
 void kvm_stage2_wp_range(struct kvm_s2_mmu *mmu, phys_addr_t addr, phys_addr_t end)
 {
-	stage2_apply_range_resched(mmu, addr, end, kvm_pgtable_stage2_wrprotect);
+	stage2_apply_range_resched(mmu, addr, end, __stage2_wp_range);
 }
 
 /**
