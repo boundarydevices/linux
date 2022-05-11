@@ -330,6 +330,10 @@ static unsigned int debug;
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "Debug level (0-3)");
 
+static unsigned int sw_reset = 1;
+module_param(sw_reset, int, 0644);
+MODULE_PARM_DESC(sw_reset, "SW reset every frame (0=no reset, 1=do reset)");
+
 static void mxc_jpeg_bytesperline(struct mxc_jpeg_q_data *q, u32 precision);
 static void mxc_jpeg_sizeimage(struct mxc_jpeg_q_data *q);
 
@@ -665,6 +669,8 @@ buffers_done:
 	v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
 	v4l2_m2m_buf_done(src_buf, buf_state);
 	v4l2_m2m_buf_done(dst_buf, buf_state);
+	if (sw_reset)
+		mxc_jpeg_sw_reset(reg);
 	spin_unlock(&jpeg->hw_lock);
 	v4l2_m2m_job_finish(jpeg->m2m_dev, ctx->fh.m2m_ctx);
 	return IRQ_HANDLED;
