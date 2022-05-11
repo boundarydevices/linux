@@ -1499,23 +1499,6 @@
 			status = "disabled";
 		};
 
-		efuse: efuse@11c10000 {
-			compatible = "mediatek,efuse";
-			reg = <0 0x11c10000 0 0x1000>;
-			#address-cells = <1>;
-			#size-cells = <1>;
-
-			lvts_e_data1: data1 {
-				reg = <0x1bc 0x14>;
-			};
-			lvts_e_data2: data1-1 {
-				reg = <0x1d0 0x38>;
-			};
-			svs_calibration: calib@580 {
-				reg = <0x580 0x64>;
-			};
-		};
-
 		u3phy2: t-phy@11c40000 {
 			compatible = "mediatek,mt8195-tphy", "mediatek,generic-tphy-v2";
 			#address-cells = <1>;
