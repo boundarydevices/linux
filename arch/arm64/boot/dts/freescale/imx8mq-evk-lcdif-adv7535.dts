@@ -35,12 +35,6 @@
 				 <&clk IMX8MQ_VIDEO_PLL1>,
 				 <&clk IMX8MQ_CLK_27M>;
 	assigned-clock-rate = <126000000>, <0>, <0>, <1134000000>;
-
-	port@0 {
-		lcdif_out: endpoint {
-			remote-endpoint = <&mipi_dsi_in>;
-		};
-	};
 };
 
 &adv_bridge {
@@ -60,16 +54,6 @@
 	ports {
 		#address-cells = <1>;
 		#size-cells = <0>;
-
-		port@0 {
-			#address-cells = <1>;
-			#size-cells = <0>;
-			reg = <0>;
-			mipi_dsi_in: endpoint@0 {
-				reg = <0>;
-				remote-endpoint = <&lcdif_out>;
-			};
-		};
 
 		port@1 {
 			reg = <1>;
