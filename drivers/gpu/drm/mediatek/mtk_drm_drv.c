@@ -309,6 +309,7 @@ static const struct mtk_mmsys_driver_data mt8192_mmsys_driver_data = {
 	.main_len = ARRAY_SIZE(mt8192_mtk_ddp_main),
 	.ext_path = mt8192_mtk_ddp_ext,
 	.ext_len = ARRAY_SIZE(mt8192_mtk_ddp_ext),
+	.mmsys_dev_num = 1,
 };
 
 static const struct mtk_mmsys_match_data mt8192_mmsys_match_data = {
@@ -854,13 +855,19 @@ static int mtk_drm_probe(struct platform_device *pdev)
 	int ret;
 	int i;
 
-	of_id = of_match_node(mtk_drm_of_ids, phandle);
-	if (!of_id)
-		return -ENODEV;
-
 	private = devm_kzalloc(dev, sizeof(*private), GFP_KERNEL);
 	if (!private)
 		return -ENOMEM;
+
+	private->mmsys_dev = dev->parent;
+	if (!private->mmsys_dev) {
+		dev_err(dev, "Failed to get MMSYS device\n");
+		return -ENODEV;
+	}
+
+	of_id = of_match_node(mtk_drm_of_ids, phandle);
+	if (!of_id)
+		return -ENODEV;
 
 	match_data = of_id->data;
 	if (match_data->num_drv_data > 1) {
@@ -881,12 +888,6 @@ static int mtk_drm_probe(struct platform_device *pdev)
 						      GFP_KERNEL);
 	if (!private->all_drm_private)
 		return -ENOMEM;
-
-	private->mmsys_dev = dev->parent;
-	if (!private->mmsys_dev) {
-		dev_err(dev, "Failed to get MMSYS device\n");
-		return -ENODEV;
-	}
 
 	/* Bringup ovl_adaptor */
 	if (mtk_drm_find_mmsys_comp(private, DDP_COMPONENT_OVL_ADAPTOR)) {
