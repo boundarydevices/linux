@@ -3737,7 +3737,7 @@
 		};
 
 		vdosys1: syscon@1c100000 {
-			compatible = "mediatek,mt8195-vdosys1", "syscon";
+			compatible = "mediatek,mt8195-mmsys", "syscon";
 			reg = <0 0x1c100000 0 0x1000>;
 			mboxes = <&gce0 1 CMDQ_THR_PRIO_4>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x0000 0x1000>;
@@ -3756,7 +3756,7 @@
 			mediatek,gce-events = <CMDQ_EVENT_VDO1_STREAM_DONE_ENG_0>;
 		};
 
-		vdo1_rdma0: mdp-rdma@1c104000 {
+		vdo1_rdma0: rdma@1c104000 {
 			compatible = "mediatek,mt8195-vdo1-rdma";
 			reg = <0 0x1c104000 0 0x1000>;
 			interrupts = <GIC_SPI 495 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -3766,7 +3766,7 @@
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x4000 0x1000>;
 		};
 
-		vdo1_rdma1: mdp-rdma@1c105000 {
+		vdo1_rdma1: rdma@1c105000 {
 			compatible = "mediatek,mt8195-vdo1-rdma";
 			reg = <0 0x1c105000 0 0x1000>;
 			interrupts = <GIC_SPI 496 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -3776,7 +3776,7 @@
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x5000 0x1000>;
 		};
 
-		vdo1_rdma2: mdp-rdma@1c106000 {
+		vdo1_rdma2: rdma@1c106000 {
 			compatible = "mediatek,mt8195-vdo1-rdma";
 			reg = <0 0x1c106000 0 0x1000>;
 			interrupts = <GIC_SPI 497 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -3786,7 +3786,7 @@
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x6000 0x1000>;
 		};
 
-		vdo1_rdma3: mdp-rdma@1c107000 {
+		vdo1_rdma3: rdma@1c107000 {
 			compatible = "mediatek,mt8195-vdo1-rdma";
 			reg = <0 0x1c107000 0 0x1000>;
 			interrupts = <GIC_SPI 498 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -3796,7 +3796,7 @@
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x7000 0x1000>;
 		};
 
-		vdo1_rdma4: mdp-rdma@1c108000 {
+		vdo1_rdma4: rdma@1c108000 {
 			compatible = "mediatek,mt8195-vdo1-rdma";
 			reg = <0 0x1c108000 0 0x1000>;
 			interrupts = <GIC_SPI 499 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -3806,7 +3806,7 @@
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x8000 0x1000>;
 		};
 
-		vdo1_rdma5: mdp-rdma@1c109000 {
+		vdo1_rdma5: rdma@1c109000 {
 			compatible = "mediatek,mt8195-vdo1-rdma";
 			reg = <0 0x1c109000 0 0x1000>;
 			interrupts = <GIC_SPI 500 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -3816,7 +3816,7 @@
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x9000 0x1000>;
 		};
 
-		vdo1_rdma6: mdp-rdma@1c10a000 {
+		vdo1_rdma6: rdma@1c10a000 {
 			compatible = "mediatek,mt8195-vdo1-rdma";
 			reg = <0 0x1c10a000 0 0x1000>;
 			interrupts = <GIC_SPI 501 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -3826,7 +3826,7 @@
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0xa000 0x1000>;
 		};
 
-		vdo1_rdma7: mdp-rdma@1c10b000 {
+		vdo1_rdma7: rdma@1c10b000 {
 			compatible = "mediatek,mt8195-vdo1-rdma";
 			reg = <0 0x1c10b000 0 0x1000>;
 			interrupts = <GIC_SPI 502 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -3901,7 +3901,7 @@
 			resets = <&vdosys1 MT8195_VDOSYS1_SW0_RST_B_MERGE4_DL_ASYNC>;
 		};
 
-		ethdr0: ethdr@1c114000 {
+		ethdr0: hdr-engine@1c114000 {
 			compatible = "mediatek,mt8195-disp-ethdr";
 			reg = <0 0x1c114000 0 0x1000>,
 			      <0 0x1c115000 0 0x1000>,
@@ -3945,6 +3945,8 @@
 				 <&vdosys1 MT8195_VDOSYS1_SW1_RST_B_HDR_GFX_FE0_DL_ASYNC>,
 				 <&vdosys1 MT8195_VDOSYS1_SW1_RST_B_HDR_GFX_FE1_DL_ASYNC>,
 				 <&vdosys1 MT8195_VDOSYS1_SW1_RST_B_HDR_VDO_BE_DL_ASYNC>;
+			reset-names = "vdo_fe0_async", "vdo_fe1_async", "gfx_fe0_async",
+				      "gfx_fe1_async", "vdo_be_async";
 		};
 
 		dp_intf0: dp-intf@1c015000 {
