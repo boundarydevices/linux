@@ -97,14 +97,27 @@ static const char * const ethdr_clk_str[] = {
 	"vdo_be_async",
 };
 
-void mtk_ethdr_enable_vblank(struct device *dev,
-			     void (*vblank_cb)(void *),
-			     void *vblank_cb_data)
+void mtk_ethdr_register_vblank_cb(struct device *dev,
+				  void (*vblank_cb)(void *),
+				  void *vblank_cb_data)
 {
 	struct mtk_ethdr *priv = dev_get_drvdata(dev);
 
 	priv->vblank_cb = vblank_cb;
 	priv->vblank_cb_data = vblank_cb_data;
+}
+
+void mtk_ethdr_unregister_vblank_cb(struct device *dev)
+{
+	struct mtk_ethdr *priv = dev_get_drvdata(dev);
+
+	priv->vblank_cb = NULL;
+	priv->vblank_cb_data = NULL;
+}
+
+void mtk_ethdr_enable_vblank(struct device *dev)
+{
+	struct mtk_ethdr *priv = dev_get_drvdata(dev);
 
 	writel(MIX_FME_CPL_INTEN, priv->ethdr_comp[ETHDR_MIXER].regs + MIX_INTEN);
 }
@@ -112,9 +125,6 @@ void mtk_ethdr_enable_vblank(struct device *dev,
 void mtk_ethdr_disable_vblank(struct device *dev)
 {
 	struct mtk_ethdr *priv = dev_get_drvdata(dev);
-
-	priv->vblank_cb = NULL;
-	priv->vblank_cb_data = NULL;
 
 	writel(0x0, priv->ethdr_comp[ETHDR_MIXER].regs + MIX_INTEN);
 }
@@ -151,31 +161,16 @@ void mtk_ethdr_layer_config(struct device *dev, unsigned int idx,
 
 	if (!pending->enable) {
 		mtk_ddp_write(cmdq_pkt, 0, &mixer->cmdq_base, mixer->regs, MIX_L_SRC_SIZE(idx));
-		mtk_mmsys_ddp_config(priv->mmsys_dev, MMSYS_CONFIG_MIXER_IN_MODE,
-				     idx + 1, MIXER_INX_MODE_BYPASS, cmdq_pkt);
-		mtk_mmsys_ddp_config(priv->mmsys_dev, MMSYS_CONFIG_MIXER_IN_BIWIDTH,
-				     idx + 1, 0, cmdq_pkt);
 		return;
 	}
 
-	mtk_mmsys_ddp_config(priv->mmsys_dev, MMSYS_CONFIG_MIXER_IN_MODE,
-			     idx + 1, pending->x & 1 ? MIXER_INX_MODE_EVEN_EXTEND :
-			     MIXER_INX_MODE_BYPASS, cmdq_pkt);
-	mtk_mmsys_ddp_config(priv->mmsys_dev, MMSYS_CONFIG_MIXER_IN_BIWIDTH,
-			     idx + 1, align_width / 2 - 1, cmdq_pkt);
-
-	if (state->base.fb && state->base.fb->format->has_alpha) {
+	if (state->base.fb && state->base.fb->format->has_alpha)
 		alpha_con = MIXER_ALPHA_AEN | MIXER_ALPHA;
-		mtk_mmsys_ddp_config(priv->mmsys_dev, MMSYS_CONFIG_HDR_ALPHA_SEL,
-				     idx + 1, 0, cmdq_pkt);
-	} else {
-		mtk_mmsys_ddp_config(priv->mmsys_dev, MMSYS_CONFIG_HDR_ALPHA_SEL,
-				     idx + 1, 1, cmdq_pkt);
-	}
-	mtk_mmsys_ddp_config(priv->mmsys_dev, MMSYS_CONFIG_MIXER_IN_ALPHA_ODD, idx + 1,
-			     DEFAULT_9BIT_ALPHA, cmdq_pkt);
-	mtk_mmsys_ddp_config(priv->mmsys_dev, MMSYS_CONFIG_MIXER_IN_ALPHA_EVEN, idx + 1,
-			     DEFAULT_9BIT_ALPHA, cmdq_pkt);
+
+	mtk_mmsys_mixer_in_config(priv->mmsys_dev, idx + 1, alpha_con ? false : true,
+				  DEFAULT_9BIT_ALPHA,
+				  pending->x & 1 ? MIXER_INX_MODE_EVEN_EXTEND :
+				  MIXER_INX_MODE_BYPASS, align_width / 2 - 1, cmdq_pkt);
 
 	mtk_ddp_write(cmdq_pkt, pending->height << 16 | align_width, &mixer->cmdq_base,
 		      mixer->regs, MIX_L_SRC_SIZE(idx));
@@ -233,11 +228,8 @@ void mtk_ethdr_config(struct device *dev, unsigned int w,
 	mtk_ddp_write_mask(cmdq_pkt, MIX_SRC_L0_EN, &mixer->cmdq_base, mixer->regs,
 			   MIX_SRC_CON, MIX_SRC_L0_EN);
 
-	mtk_mmsys_ddp_config(priv->mmsys_dev, MMSYS_CONFIG_HDR_BE_ASYNC_WIDTH, 0,
-			     w / 2, cmdq_pkt);
-	mtk_mmsys_ddp_config(priv->mmsys_dev, MMSYS_CONFIG_HDR_BE_ASYNC_HEIGHT, 0,
-			     h, cmdq_pkt);
-	mtk_mmsys_ddp_config(priv->mmsys_dev, MMSYS_CONFIG_MIXER_IN_CH_SWAP, 4, 0, cmdq_pkt);
+	mtk_mmsys_hdr_confing(priv->mmsys_dev, w / 2, h, cmdq_pkt);
+	mtk_mmsys_mixer_in_channel_swap(priv->mmsys_dev, 4, 0, cmdq_pkt);
 }
 
 void mtk_ethdr_start(struct device *dev)
@@ -303,8 +295,6 @@ static int mtk_ethdr_probe(struct platform_device *pdev)
 	int ret;
 	int i;
 
-	dev_info(dev, "%s+\n", __func__);
-
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
@@ -341,6 +331,10 @@ static int mtk_ethdr_probe(struct platform_device *pdev)
 	}
 
 	priv->reset_ctl = devm_reset_control_array_get_optional_exclusive(dev);
+	if (IS_ERR(priv->reset_ctl)) {
+		dev_err_probe(dev, PTR_ERR(priv->reset_ctl), "cannot get ethdr reset control\n");
+		return PTR_ERR(priv->reset_ctl);
+	}
 
 	platform_set_drvdata(pdev, priv);
 
@@ -348,7 +342,6 @@ static int mtk_ethdr_probe(struct platform_device *pdev)
 	if (ret)
 		dev_notice(dev, "Failed to add component: %d\n", ret);
 
-	dev_info(dev, "%s-\n", __func__);
 	return ret;
 }
 
