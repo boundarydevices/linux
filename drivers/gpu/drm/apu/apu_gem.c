@@ -59,7 +59,7 @@ int ioctl_gem_new(struct drm_device *dev, void *data,
 	ret = drm_gem_handle_create(file_priv, gem_obj, &args->handle);
 	drm_gem_object_put(gem_obj);
 	if (ret) {
-		drm_gem_cma_free_object(gem_obj);
+		drm_gem_cma_free(cma_obj);
 		return ret;
 	}
 	args->offset = drm_vma_node_offset_addr(&gem_obj->vma_node);
