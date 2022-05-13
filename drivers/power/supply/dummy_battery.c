@@ -59,6 +59,7 @@ struct dummy_battery_property{
     int i2c_batt_voltage_max;
     int i2c_batt_voltage_mult;
     int i2c_batt_voltage_div;
+    int old_capacity;
 };
 struct dummy_battery_property *battery_property;
 
@@ -187,6 +188,15 @@ static int dummy_battery_get_property(struct power_supply *psy,
                     delta = voltage - battery_property->i2c_batt_voltage_min;
 
                     val->intval = delta * 100 / delta_max;
+                }
+                if (val->intval > battery_property->old_capacity) {
+                    battery_property->old_capacity = val->intval;
+                    battery_property->status = POWER_SUPPLY_STATUS_CHARGING;
+                    usb_property->online = 1;
+                } else if (val->intval < battery_property->old_capacity) {
+                    battery_property->old_capacity = val->intval;
+                    battery_property->status = POWER_SUPPLY_STATUS_DISCHARGING;
+                    usb_property->online = 0;
                 }
             }
             break;
@@ -333,6 +343,7 @@ static int __init dummy_power_init(void)
         /* a battery is present so we consider it discharging */
         usb_property->online = 0;
         battery_property->status = POWER_SUPPLY_STATUS_DISCHARGING;
+        battery_property->old_capacity = 100;
     }
 
     of_node_put(np);
