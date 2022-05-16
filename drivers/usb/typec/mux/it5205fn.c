@@ -18,11 +18,6 @@
 #include <linux/gpio/consumer.h>
 #include <linux/gpio.h>
 #include <linux/usb/tcpm.h>
-/* #include "../tcpm/tcpci.h" */
-
-#if IS_ENABLED(CONFIG_MTK_DPTX_SUPPORT)
-extern void mtk_dp_sw_interrupt_set(u8 status);
-#endif
 
 /* MUX power down register */
 #define IT5205_REG_MUXPDR        0x10
@@ -44,27 +39,6 @@ struct it5205fn {
 	u8 conf;
 	struct regulator *type3v3;
 };
-
-#if IS_ENABLED(CONFIG_MTK_DPTX_SUPPORT)
-static struct notifier_block it_dp_nb;
-static struct tcpc_device *it_dp_tcpc_dev;
-static int it_hdp_state;
-static bool it_dp_sw_connect;
-#define CHECK_HPD_DELAY 2000
-static struct delayed_work it_check_wk;
-static struct it5205fn *g_it5205;
-static struct gpio_desc *vbus_gpio;
-
-static void it_check_hpd(struct work_struct *work)
-{
-	if (it_hdp_state == 0) {
-		dev_info(&g_it5205->client->dev, "%s No HPD connection event", __func__);
-		#if IS_ENABLED(CONFIG_MTK_DPTX_SUPPORT)
-		mtk_dp_sw_interrupt_set(0x4);
-		#endif
-	}
-}
-#endif
 
 static int it5205_read(struct it5205fn *it5205, uint8_t reg, u8 *data)
 {
@@ -205,153 +179,6 @@ static int it5205fn_init(struct it5205fn *it5205)
 	return ret;
 }
 
-/*
- * xxxxx1xx = Pin Assignment C is supported. 4 lanes
- * xxx1xxxx = Pin Assignment E is supported. 4 lanes
- * xxxx1xxx = Pin Assignment D is supported. 2 lanes
- * xx1xxxxx = Pin Assignment F is supported. 2 lanes
- */
-#if IS_ENABLED(CONFIG_MTK_DPTX_SUPPORT)
-static int it5205_tcp_notifier_call(struct notifier_block *nb,
-	unsigned long event, void *data)
-{
-	/*
-	 * struct tcp_ny_ama_dp_state {
-	 * uint8_t sel_config; sel_config: 0(SW_USB) / 1(SW_DFP_D) / 2(SW_UFP_D)
-	 * uint8_t signal;
-	 * uint8_t pin_assignment;
-	 * uint8_t polarity; polarity: 0 for up side, 1 back side.
-	 * uint8_t active;
-	 * };
-	 */
-	struct tcp_notify *noti = data;
-	u8 new_conf;
-
-	dev_info(&g_it5205->client->dev, "%s event=%x", __func__, event);
-
-	if (event == TCP_NOTIFY_AMA_DP_STATE) {
-		uint8_t signal = noti->ama_dp_state.signal;
-		uint8_t pin = noti->ama_dp_state.pin_assignment;
-		uint8_t polarity = noti->ama_dp_state.polarity;
-		uint8_t active = noti->ama_dp_state.active;
-
-		if (!active) {
-			dev_info(&g_it5205->client->dev, "%s Not active", __func__);
-			return NOTIFY_OK;
-		}
-
-		dev_info(&g_it5205->client->dev, "TCP_NOTIFY_AMA_DP_STATE signal:%x pin:%x polarity:%x\n",
-			signal, pin, polarity);
-
-		if (!polarity) {
-
-			it5205_read(g_it5205, IT5205_REG_MUXCR, &new_conf);
-			new_conf &= ~IT5205_POLARITY_INVERTED;
-			new_conf &= ~IT5205_DP_USB_CTRL_MASK;
-			new_conf |= IT5205_USB;
-			it5205fn_set_conf(g_it5205, new_conf);
-			switch (pin) {
-			case 4:  // state C
-			case 16: // state E
-				it5205_read(g_it5205, IT5205_REG_MUXCR, &new_conf);
-				new_conf &= ~IT5205_DP_USB_CTRL_MASK;
-				new_conf |= IT5205_DP;
-				it5205fn_set_conf(g_it5205, new_conf);
-				break;
-			case 8: // state D
-			case 32: // state F
-				it5205_read(g_it5205, IT5205_REG_MUXCR, &new_conf);
-				new_conf &= ~IT5205_DP_USB_CTRL_MASK;
-				new_conf |= IT5205_DP_USB;
-				it5205fn_set_conf(g_it5205, new_conf);
-				break;
-			default:
-				dev_info(&g_it5205->client->dev, "%s: pin_assignment not support\n",
-					__func__);
-			}
-		} else {
-			it5205_read(g_it5205, IT5205_REG_MUXCR, &new_conf);
-			new_conf |= (IT5205_POLARITY_INVERTED | IT5205_USB);
-			it5205fn_set_conf(g_it5205, new_conf);
-			switch (pin) {
-			case 4:
-			case 16:
-				it5205_read(g_it5205, IT5205_REG_MUXCR, &new_conf);
-				new_conf &= ~IT5205_DP_USB_CTRL_MASK;
-				new_conf |= IT5205_DP;
-				it5205fn_set_conf(g_it5205, new_conf);
-				break;
-			case 8:
-			case 32:
-				it5205_read(g_it5205, IT5205_REG_MUXCR, &new_conf);
-				new_conf &= ~IT5205_DP_USB_CTRL_MASK;
-				new_conf |= IT5205_DP_USB;
-				it5205fn_set_conf(g_it5205, new_conf);
-				break;
-			default:
-				dev_info(&g_it5205->client->dev, "%s: pin_assignment not support\n",
-					__func__);
-			}
-		}
-
-		it_hdp_state = 0;
-		schedule_delayed_work(&it_check_wk, msecs_to_jiffies(CHECK_HPD_DELAY));
-	} else if (event == TCP_NOTIFY_AMA_DP_HPD_STATE) {
-		uint8_t irq = noti->ama_dp_hpd_state.irq;
-		uint8_t state = noti->ama_dp_hpd_state.state;
-
-		dev_info(&g_it5205->client->dev, "TCP_NOTIFY_AMA_DP_HPD_STATE irq:%x state:%x\n",
-			irq, state);
-
-		it_hdp_state = state;
-
-		if (state) {
-
-			if (irq) {
-				if (it_dp_sw_connect == false) {
-					dev_info(&g_it5205->client->dev, "Force connect\n");
-					mtk_dp_sw_interrupt_set(0x4);
-					it_dp_sw_connect = true;
-				}
-				mtk_dp_sw_interrupt_set(0x8);
-			} else {
-				mtk_dp_sw_interrupt_set(0x4);
-				it_dp_sw_connect = true;
-			}
-		} else {
-			mtk_dp_sw_interrupt_set(0x2);
-			it_dp_sw_connect = false;
-		}
-	} else if (event == TCP_NOTIFY_TYPEC_STATE) {
-		if ((noti->typec_state.old_state == TYPEC_ATTACHED_SRC ||
-			noti->typec_state.old_state == TYPEC_ATTACHED_SNK) &&
-			noti->typec_state.new_state == TYPEC_UNATTACHED) {
-			dev_info(&g_it5205->client->dev, "Plug out\n");
-			mtk_dp_sw_interrupt_set(0x2);
-			it_dp_sw_connect = false;
-		}
-	} else if (event == TCP_NOTIFY_SOURCE_VBUS) {
-		if (noti->vbus_state.mv == 0) {
-			dev_info(&g_it5205->client->dev, "noti->vbus_state.mv == 0\n");
-			if (vbus_gpio) {
-				dev_info(&g_it5205->client->dev, "vbus set to 1\n");
-				gpiod_set_value(vbus_gpio, 0);
-			}
-		}
-
-		if (noti->vbus_state.mv == 5000) {
-			dev_info(&g_it5205->client->dev, "noti->vbus_state.mv == 5000\n");
-			if (vbus_gpio) {
-				dev_info(&g_it5205->client->dev, "vbus set to 0\n");
-				gpiod_set_value(vbus_gpio, 1);
-			}
-		}
-	}
-
-	return NOTIFY_OK;
-}
-#endif
-
 static int it5205fn_probe(struct i2c_client *client,
 			    const struct i2c_device_id *id)
 {
@@ -364,18 +191,6 @@ static int it5205fn_probe(struct i2c_client *client,
 	it5205 = devm_kzalloc(&client->dev, sizeof(*it5205), GFP_KERNEL);
 	if (!it5205)
 		return -ENOMEM;
-
-#if IS_ENABLED(CONFIG_MTK_DPTX_SUPPORT)
-	it_dp_tcpc_dev = tcpc_dev_get_by_name("type_c_port0");
-	if (!it_dp_tcpc_dev) {
-		dev_err(dev, "%s get tcpc device type_c_port0 fail\n",
-			__func__);
-		return -EPROBE_DEFER;
-	}
-
-	vbus_gpio = devm_gpiod_get(dev, "vbus", GPIOD_OUT_HIGH);
-	gpiod_direction_output(vbus_gpio, 1);
-#endif
 
 	it5205->type3v3 = devm_regulator_get(dev, "type3v3");
 	if (IS_ERR(it5205->type3v3)) {
@@ -432,15 +247,6 @@ static int it5205fn_probe(struct i2c_client *client,
 		return ret;
 	}
 
-#if IS_ENABLED(CONFIG_MTK_DPTX_SUPPORT)
-	g_it5205 = it5205;
-
-	it_dp_nb.notifier_call = it5205_tcp_notifier_call;
-	register_tcp_dev_notifier(it_dp_tcpc_dev, &it_dp_nb, TCP_NOTIFY_TYPE_MODE |
-		TCP_NOTIFY_TYPE_VBUS | TCP_NOTIFY_TYPE_USB |
-		TCP_NOTIFY_TYPE_MISC);
-	INIT_DEFERRABLE_WORK(&it_check_wk, it_check_hpd);
-#endif
 	dev_info(dev, "%s done\n", __func__);
 	return ret;
 }
