@@ -268,6 +268,7 @@ static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
 	.main_len = ARRAY_SIZE(mt8365_mtk_ddp_main),
 	.ext_path = mt8365_mtk_ddp_ext,
 	.ext_len = ARRAY_SIZE(mt8365_mtk_ddp_ext),
+	.mmsys_dev_num = 1,
 };
 
 static const struct mtk_mmsys_driver_data mt8195_vdosys0_driver_data = {
