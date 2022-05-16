@@ -26,6 +26,9 @@ properties:
     items:
       - const: PD_IRQB
 
+  tcpc-vbus-supply:
+    description: A phandle to the regulator for USB VBUS.
+
   connector:
     type: object
     $ref: ../connector/usb-connector.yaml#
