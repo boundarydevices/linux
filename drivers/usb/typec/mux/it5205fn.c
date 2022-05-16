@@ -84,7 +84,7 @@ static int it5205fn_switch_set(struct typec_switch *sw,
 	u8 new_conf = 0;
 	u8 value = 0;
 
-	dev_info(&it5205->client->dev, "%s orientation: %u\n",
+	dev_dbg(&it5205->client->dev, "%s orientation: %u\n",
 		__func__, orientation);
 
 	mutex_lock(&it5205->lock);
@@ -108,7 +108,7 @@ static int it5205fn_switch_set(struct typec_switch *sw,
 	mutex_unlock(&it5205->lock);
 
 	ret = it5205_read(it5205, IT5205_REG_MUXCR, &value);
-	dev_info(&it5205->client->dev, "IT5205_REG_MUXCR = 0x%x\n", value);
+	dev_dbg(&it5205->client->dev, "IT5205_REG_MUXCR = 0x%x\n", value);
 
 	return 0;
 }
@@ -119,7 +119,7 @@ static int it5205fn_mux_set(struct typec_mux *mux, struct typec_mux_state *state
 	int ret = 0;
 	u8 new_conf = 0;
 
-	dev_info(&it5205->client->dev, "%s mode: %lu\n",
+	dev_dbg(&it5205->client->dev, "%s mode: %lu\n",
 		__func__, state->mode);
 
 	mutex_lock(&it5205->lock);
@@ -166,7 +166,7 @@ static int it5205fn_init(struct it5205fn *it5205)
 	}
 
 	ret = it5205_read(it, IT5205_REG_MUXPDR, &value);
-	dev_info(&it->client->dev, "IT5205_REG_MUXPDR = 0x%x\n", value);
+	dev_dbg(&it->client->dev, "IT5205_REG_MUXPDR = 0x%x\n", value);
 	/*default set to USB mode = 0x07*/
 	ret = it5205_write(it, IT5205_REG_MUXCR, 0x17);
 	if (ret) {
@@ -174,7 +174,7 @@ static int it5205fn_init(struct it5205fn *it5205)
 		return ret;
 	}
 	ret = it5205_read(it, IT5205_REG_MUXCR, &value);
-	dev_info(&it->client->dev, "IT5205_REG_MUXCR = 0x%x\n", value);
+	dev_dbg(&it->client->dev, "IT5205_REG_MUXCR = 0x%x\n", value);
 
 	return ret;
 }
@@ -247,7 +247,7 @@ static int it5205fn_probe(struct i2c_client *client,
 		return ret;
 	}
 
-	dev_info(dev, "%s done\n", __func__);
+	dev_dbg(dev, "%s done\n", __func__);
 	return ret;
 }
 
