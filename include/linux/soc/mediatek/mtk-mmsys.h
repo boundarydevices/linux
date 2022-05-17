@@ -197,6 +197,9 @@ void mtk_mmsys_ddp_disconnect(struct device *dev,
 			      enum mtk_ddp_comp_id cur,
 			      enum mtk_ddp_comp_id next);
 
+void mtk_mmsys_ddp_config(struct device *dev, enum mtk_mmsys_config_type config,
+			  u32 id, u32 val, struct cmdq_pkt *cmdq_pkt);
+
 void mtk_mmsys_mdp_connect(struct device *dev,
 			   struct mmsys_cmdq_cmd *cmd,
 			   enum mtk_mdp_comp_id cur,
