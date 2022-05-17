@@ -354,8 +354,12 @@ static int imx_aif_hw_params(struct snd_pcm_substream *substream,
 	else
 		mclk_freq = params_rate(params) * slots * slot_width;
 	/* Use the maximum freq from DSD512 (512*44100 = 22579200) */
-	if (format_is_dsd(params) && (params_rate(params) % 44100 == 0))
-		mclk_freq = 22579200;
+	if (format_is_dsd(params)) {
+		if (params_rate(params) % 11025 == 0)
+			mclk_freq = 22579200;
+		else
+			mclk_freq = 24576000;
+	}
 
 	ret = snd_soc_dai_set_sysclk(cpu_dai, link_data->cpu_sysclk_id, mclk_freq,
 				     SND_SOC_CLOCK_OUT);
