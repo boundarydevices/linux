@@ -1,5 +1,5 @@
 menuconfig BATTERY_SAMSUNG
-	bool "samsung battery driver"
+	tristate "samsung battery driver"
 	help
 	 Say Y to include support for samsung battery driver
 	 This battery driver integrated all battery-related functions
