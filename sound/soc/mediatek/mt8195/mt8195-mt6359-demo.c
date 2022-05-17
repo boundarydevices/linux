@@ -264,6 +264,18 @@ static const struct snd_soc_ops mt8195_dptx_ops = {
 	.hw_params = mt8195_dptx_hw_params,
 };
 
+static int mt8195_dptx_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
+				       struct snd_pcm_hw_params *params)
+{
+	/* fix BE i2s format to S24_LE, clean param mask first */
+	snd_mask_reset_range(hw_param_mask(params, SNDRV_PCM_HW_PARAM_FORMAT),
+			     0, (__force unsigned int)SNDRV_PCM_FORMAT_LAST);
+
+	params_set_format(params, SNDRV_PCM_FORMAT_S24_LE);
+
+	return 0;
+}
+
 enum {
 	DAI_LINK_DL2_FE,
 	DAI_LINK_DL3_FE,
@@ -282,6 +294,7 @@ enum {
 	DAI_LINK_UL9_FE,
 	DAI_LINK_UL10_FE,
 	DAI_LINK_DL_SRC_BE,
+	DAI_LINK_DPTX_BE,
 	DAI_LINK_ETDM2_IN_BE,
 	DAI_LINK_ETDM1_OUT_BE,
 	DAI_LINK_UL_SRC1_BE,
@@ -373,6 +386,11 @@ SND_SOC_DAILINK_DEFS(UL10_FE,
 /* BE */
 SND_SOC_DAILINK_DEFS(DL_SRC_BE,
 		     DAILINK_COMP_ARRAY(COMP_CPU("DL_SRC")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
+
+SND_SOC_DAILINK_DEFS(DPTX_BE,
+		     DAILINK_COMP_ARRAY(COMP_CPU("DPTX")),
 		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
 		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
@@ -586,6 +604,14 @@ static struct snd_soc_dai_link mt8195_mt6359_demo_dai_links[] = {
 		.no_pcm = 1,
 		.dpcm_playback = 1,
 		SND_SOC_DAILINK_REG(DL_SRC_BE),
+	},
+	[DAI_LINK_DPTX_BE] = {
+		.name = "DPTX_BE",
+		.no_pcm = 1,
+		.dpcm_playback = 1,
+		.ops = &mt8195_dptx_ops,
+		.be_hw_params_fixup = mt8195_dptx_hw_params_fixup,
+		SND_SOC_DAILINK_REG(DPTX_BE),
 	},
 	[DAI_LINK_ETDM2_IN_BE] = {
 		.name = "ETDM2_IN_BE",
