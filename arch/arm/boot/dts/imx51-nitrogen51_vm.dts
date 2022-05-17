@@ -360,6 +360,7 @@
 
 	aliases {
 		backlight_lcd = &backlight_lcd;
+		backlight_lcd2 = &backlight_lcd;
 		fb_lcd = &fb_lcd;
 		fb_lcd2 = &fb_lcd2;
 #ifdef USE_DRM
