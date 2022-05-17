@@ -263,11 +263,13 @@ int adc_read(struct sec_battery_info *battery, int channel)
 
 	return adc;
 }
+EXPORT_SYMBOL_GPL(adc_read);
 
 void adc_exit(struct sec_battery_info *battery)
 {
 	adc_exit_type(battery);
 }
+EXPORT_SYMBOL_GPL(adc_exit);
 
 bool sec_bat_check_jig_status(void)
 {
@@ -298,6 +300,7 @@ bool sec_bat_check_jig_status(void)
 	return false;
 #endif
 }
+EXPORT_SYMBOL_GPL(sec_bat_check_jig_status);
 
 /* callback for battery check
  * return : bool
@@ -326,6 +329,7 @@ bool sec_bat_check_callback(struct sec_battery_info *battery)
 	}
 	return value.intval;
 }
+EXPORT_SYMBOL_GPL(sec_bat_check_callback);
 
 void sec_bat_check_cable_result_callback(struct device *dev,
 		int cable_type)
@@ -368,6 +372,7 @@ void sec_bat_check_cable_result_callback(struct device *dev,
 	regulator_put(pma8084_lvs2);
 #endif
 }
+EXPORT_SYMBOL_GPL(sec_bat_check_cable_result_callback);
 
 int sec_bat_check_cable_callback(struct sec_battery_info *battery)
 {
@@ -404,6 +409,7 @@ int sec_bat_check_cable_callback(struct sec_battery_info *battery)
 
 	return current_cable_type;
 }
+EXPORT_SYMBOL_GPL(sec_bat_check_cable_callback);
 
 void board_battery_init(struct platform_device *pdev, struct sec_battery_info *battery)
 {
@@ -441,6 +447,7 @@ void board_battery_init(struct platform_device *pdev, struct sec_battery_info *b
 
 	adc_init_type(pdev, battery);
 }
+EXPORT_SYMBOL_GPL(board_battery_init);
 
 void board_fuelgauge_init(void *data)
 {
@@ -513,3 +520,4 @@ void cable_initial_check(struct sec_battery_info *battery)
 }
 EXPORT_SYMBOL_GPL(cable_initial_check);
 
+MODULE_LICENSE("GPL");
