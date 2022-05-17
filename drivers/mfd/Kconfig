@@ -888,7 +888,7 @@ config MFD_MAX77693
 	  of the device.
 
 config MFD_MAX77823
-	bool "Maxim Semiconductor MAX77823 Support"
+	tristate "Maxim Semiconductor MAX77823 Support"
 	depends on I2C=y
 	select MFD_CORE
 	help
