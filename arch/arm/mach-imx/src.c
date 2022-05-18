@@ -6,6 +6,7 @@
 
 #include <linux/init.h>
 #include <linux/io.h>
+#include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/platform_device.h>
@@ -215,4 +216,20 @@ static struct platform_driver imx_src_driver = {
 	},
 	.probe = imx_src_probe,
 };
-builtin_platform_driver(imx_src_driver);
+
+int32_t __init imx_src_drv_init(void)
+{
+	int32_t ret;
+
+	ret = platform_driver_register(&imx_src_driver);
+	return 0;
+}
+
+subsys_initcall(imx_src_drv_init);
+
+static void __exit imx_src_drv_uninit(void)
+{
+	platform_driver_unregister(&imx_src_driver);
+}
+
+module_exit(imx_src_drv_uninit);
