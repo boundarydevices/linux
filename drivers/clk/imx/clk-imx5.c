@@ -446,6 +446,9 @@ static void __init mx51_clocks_init(struct device_node *np)
 	clk_set_parent(clk[IMX5_CLK_ESDHC_A_SEL], clk[IMX5_CLK_PLL2_SW]);
 	clk_set_parent(clk[IMX5_CLK_ESDHC_B_SEL], clk[IMX5_CLK_PLL2_SW]);
 
+	/* Set ECSPIC parent to be PLL2 */
+	clk_set_parent(clk[IMX5_CLK_ECSPI_SEL], clk[IMX5_CLK_PLL2_SW]);
+
 	/* set SDHC root clock to 166.25MHZ*/
 	clk_set_rate(clk[IMX5_CLK_ESDHC_A_PODF], 166250000);
 	clk_set_rate(clk[IMX5_CLK_ESDHC_B_PODF], 166250000);
