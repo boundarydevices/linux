@@ -13,6 +13,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/phy/phy.h>
+#include <linux/pm.h>
 #include <linux/reset.h>
 
 #define PHY_REGS_84 0x84
@@ -1032,6 +1033,7 @@ static int samsung_hdmi_phy_probe(struct platform_device *pdev)
 	if (!samsung)
 		return -ENOMEM;
 
+	platform_set_drvdata(pdev, samsung);
 	samsung->dev = &pdev->dev;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -1098,6 +1100,45 @@ static int samsung_hdmi_phy_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int samsung_hdmi_phy_suspend(struct device *dev)
+{
+	struct samsung_hdmi_phy *samsung = dev_get_drvdata(dev);
+
+	clk_disable_unprepare(samsung->apbclk);
+
+	return 0;
+}
+
+static int samsung_hdmi_phy_resume(struct device *dev)
+{
+	struct samsung_hdmi_phy *samsung = dev_get_drvdata(dev);
+	int i, ret = 0;
+
+	ret = clk_prepare_enable(samsung->apbclk);
+	if (ret) {
+		dev_err(samsung->dev, "failed to enable apbclk\n");
+		return ret;
+	}
+
+	if (samsung->cur_cfg) {
+		writeb(FIX_DA, samsung->regs + PHY_REGS_84);
+
+		for (i = 0; i < PHY_PLL_REGS_NUM; i++)
+			writeb(samsung->cur_cfg->regs[i], samsung->regs + i * 4);
+
+		writeb(FIX_DA | MODE_SET_DONE, samsung->regs + PHY_REGS_84);
+	}
+
+	return ret;
+}
+#endif
+
+static const struct dev_pm_ops samsung_hdmi_phy_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(samsung_hdmi_phy_suspend,
+			   samsung_hdmi_phy_resume)
+};
+
 static const struct of_device_id samsung_hdmi_phy_of_match[] = {
 	{
 		.compatible = "fsl,samsung-hdmi-phy",
@@ -1111,6 +1152,7 @@ static struct platform_driver samsung_hdmi_phy_driver = {
 	.driver = {
 		.name = "samsung-hdmi-phy",
 		.of_match_table = samsung_hdmi_phy_of_match,
+		.pm = &samsung_hdmi_phy_pm_ops,
 	},
 };
 module_platform_driver(samsung_hdmi_phy_driver);
