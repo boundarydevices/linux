@@ -157,7 +157,8 @@ static int clk_pllv2_set_rate(struct clk_hw *hw, unsigned long rate,
 {
 	struct clk_pllv2 *pll = to_clk_pllv2(hw);
 	void __iomem *pllbase;
-	u32 dp_ctl, dp_op, dp_mfd, dp_mfn;
+	u32 dp_ctl, dp_op, dp_mfd, dp_mfn, cfg;
+	int i;
 	int ret;
 
 	pllbase = pll->base;
@@ -168,13 +169,21 @@ static int clk_pllv2_set_rate(struct clk_hw *hw, unsigned long rate,
 		return ret;
 
 	dp_ctl = __raw_readl(pllbase + MXC_PLL_DP_CTL);
-	/* use dpdck0_2 */
-	__raw_writel(dp_ctl | 0x1000L, pllbase + MXC_PLL_DP_CTL);
+	dp_ctl |= 0x1000L;	/* use dpdck0_2 */
+	__raw_writel(dp_ctl, pllbase + MXC_PLL_DP_CTL);
 
 	__raw_writel(dp_op, pllbase + MXC_PLL_DP_OP);
 	__raw_writel(dp_mfd, pllbase + MXC_PLL_DP_MFD);
 	__raw_writel(dp_mfn, pllbase + MXC_PLL_DP_MFN);
+	__raw_writel(MXC_PLL_DP_CONFIG_LDREQ, pllbase + MXC_PLL_DP_CONFIG);	/* changes made */
+	i = 0;
+	do {
+		cfg = __raw_readl(pllbase + MXC_PLL_DP_CONFIG);
+		if (!(cfg & MXC_PLL_DP_CONFIG_LDREQ))
+			break;
+	} while (i++ < 100);
 
+	__raw_writel(dp_ctl | 0x10L, pllbase + MXC_PLL_DP_CTL);	/* restart pll */
 	return 0;
 }
 
