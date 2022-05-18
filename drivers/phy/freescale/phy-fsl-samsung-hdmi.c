@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright 2020 NXP
+ * Copyright 2020-2022 NXP
  *
  */
 #include <linux/clk.h>
@@ -885,7 +885,7 @@ struct samsung_hdmi_phy {
 	struct clk *apbclk;
 	struct clk *refclk;
 
-	unsigned long pclk_rate;
+	const struct phy_config *cur_cfg;
 
 	/* clk provider */
 	struct clk_hw hw;
@@ -910,7 +910,9 @@ unsigned long samsung_hdmi_phy_clk_recalc_rate(struct clk_hw *hw,
 
 	/* Samsung hdmi phy couldn't recalculate the rate by querying hardware.
 	 * return the clock rate that setting in set_rate function. */
-	return samsung->pclk_rate;
+	if (!samsung->cur_cfg)
+		return 0;
+	return samsung->cur_cfg->clk_rate;
 }
 
 static long samsung_hdmi_phy_clk_round_rate(struct clk_hw *hw,
@@ -954,7 +956,7 @@ static int samsung_hdmi_phy_clk_set_rate(struct clk_hw *hw,
 
 	writeb(FIX_DA | MODE_SET_DONE , samsung->regs + PHY_REGS_84);
 
-	samsung->pclk_rate = phy_cfg->clk_rate;
+	samsung->cur_cfg = phy_cfg;
 
 	/* Wait for PHY PLL lock */
 	msleep(20);
