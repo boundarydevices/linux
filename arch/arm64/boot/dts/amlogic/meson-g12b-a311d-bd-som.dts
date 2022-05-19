@@ -362,18 +362,30 @@
 };
 
 &ext_mdio {
-	external_phy: ethernet-phy@4 {
+	external_phy: ethernet-phy {
 		/* Atheros AR8035 */
 		interrupt-parent = <&gpio_intc>;
 		/* MAC_INTR on GPIOZ_14 */
 		interrupts = <26 IRQ_TYPE_LEVEL_LOW>;
 		max-speed = <1000>;
-		reg = <4>;
+		reg-mask = <0x90>;
 #if 0
 		reset-assert-us = <10000>;
 		reset-deassert-us = <30000>;
 		reset-gpios = <&gpio GPIOZ_15 (GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN)>;
 #endif
+		rxc-skew-ps = <0>;	/* a311d does the delay */
+		rxd0-skew-ps = <0>;
+		rxd1-skew-ps = <0>;
+		rxd2-skew-ps = <0>;
+		rxd3-skew-ps = <0>;
+		rxdv-skew-ps = <0>;
+		txc-skew-ps = <0>;
+		txd0-skew-ps = <0>;
+		txd1-skew-ps = <0>;
+		txd2-skew-ps = <0>;
+		txd3-skew-ps = <0>;
+		txen-skew-ps = <0>;
 	};
 };
 
