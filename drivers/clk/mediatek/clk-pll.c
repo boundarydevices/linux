@@ -378,7 +378,7 @@ static void mtk_clk_unregister_pll(struct clk *clk)
 
 int mtk_clk_register_plls(struct device_node *node,
 			  const struct mtk_pll_data *plls, int num_plls,
-			  struct clk_onecell_data *clk_data)
+			  struct clk_hw_onecell_data *clk_data)
 {
 	void __iomem *base;
 	int i;
@@ -393,7 +393,7 @@ int mtk_clk_register_plls(struct device_node *node,
 	for (i = 0; i < num_plls; i++) {
 		const struct mtk_pll_data *pll = &plls[i];
 
-		if (!IS_ERR_OR_NULL(clk_data->clks[pll->id])) {
+		if (!IS_ERR_OR_NULL(clk_data->hws[pll->id])) {
 			pr_warn("%pOF: Trying to register duplicate clock ID: %d\n",
 				node, pll->id);
 			continue;
@@ -406,7 +406,7 @@ int mtk_clk_register_plls(struct device_node *node,
 			goto err;
 		}
 
-		clk_data->clks[pll->id] = clk;
+		clk_data->hws[pll->id] = __clk_get_hw(clk);
 	}
 
 	return 0;
@@ -415,8 +415,8 @@ err:
 	while (--i >= 0) {
 		const struct mtk_pll_data *pll = &plls[i];
 
-		mtk_clk_unregister_pll(clk_data->clks[pll->id]);
-		clk_data->clks[pll->id] = ERR_PTR(-ENOENT);
+		mtk_clk_unregister_pll(clk_data->hws[pll->id]->clk);
+		clk_data->hws[pll->id] = ERR_PTR(-ENOENT);
 	}
 
 	iounmap(base);
@@ -425,17 +425,16 @@ err:
 }
 EXPORT_SYMBOL_GPL(mtk_clk_register_plls);
 
-static __iomem void *mtk_clk_pll_get_base(struct clk *clk,
+static __iomem void *mtk_clk_pll_get_base(struct clk_hw *hw,
 					  const struct mtk_pll_data *data)
 {
-	struct clk_hw *hw = __clk_get_hw(clk);
 	struct mtk_clk_pll *pll = to_mtk_clk_pll(hw);
 
 	return pll->base_addr - data->reg;
 }
 
 void mtk_clk_unregister_plls(const struct mtk_pll_data *plls, int num_plls,
-			     struct clk_onecell_data *clk_data)
+			     struct clk_hw_onecell_data *clk_data)
 {
 	__iomem void *base = NULL;
 	int i;
@@ -446,7 +445,7 @@ void mtk_clk_unregister_plls(const struct mtk_pll_data *plls, int num_plls,
 	for (i = num_plls; i > 0; i--) {
 		const struct mtk_pll_data *pll = &plls[i - 1];
 
-		if (IS_ERR_OR_NULL(clk_data->clks[pll->id]))
+		if (IS_ERR_OR_NULL(clk_data->hws[pll->id]))
 			continue;
 
 		/*
@@ -455,10 +454,10 @@ void mtk_clk_unregister_plls(const struct mtk_pll_data *plls, int num_plls,
 		 * pointer to the I/O region base address. We have to fetch
 		 * it from one of the registered clks.
 		 */
-		base = mtk_clk_pll_get_base(clk_data->clks[pll->id], pll);
+		base = mtk_clk_pll_get_base(clk_data->hws[pll->id], pll);
 
-		mtk_clk_unregister_pll(clk_data->clks[pll->id]);
-		clk_data->clks[pll->id] = ERR_PTR(-ENOENT);
+		mtk_clk_unregister_pll(clk_data->hws[pll->id]->clk);
+		clk_data->hws[pll->id] = ERR_PTR(-ENOENT);
 	}
 
 	iounmap(base);
