@@ -56,12 +56,12 @@ static const struct clk_ops clk_cpumux_ops = {
 	.set_parent = clk_cpumux_set_parent,
 };
 
-static struct clk *
+static struct clk_hw *
 mtk_clk_register_cpumux(const struct mtk_composite *mux,
 			struct regmap *regmap)
 {
 	struct mtk_clk_cpumux *cpumux;
-	struct clk *clk;
+	int ret;
 	struct clk_init_data init;
 
 	cpumux = kzalloc(sizeof(*cpumux), GFP_KERNEL);
@@ -80,25 +80,24 @@ mtk_clk_register_cpumux(const struct mtk_composite *mux,
 	cpumux->regmap = regmap;
 	cpumux->hw.init = &init;
 
-	clk = clk_register(NULL, &cpumux->hw);
-	if (IS_ERR(clk))
+	ret = clk_hw_register(NULL, &cpumux->hw);
+	if (ret) {
 		kfree(cpumux);
+		return ERR_PTR(ret);
+	}
 
-	return clk;
+	return &cpumux->hw;
 }
 
-static void mtk_clk_unregister_cpumux(struct clk *clk)
+static void mtk_clk_unregister_cpumux(struct clk_hw *hw)
 {
 	struct mtk_clk_cpumux *cpumux;
-	struct clk_hw *hw;
-
-	hw = __clk_get_hw(clk);
 	if (!hw)
 		return;
 
 	cpumux = to_mtk_clk_cpumux(hw);
 
-	clk_unregister(clk);
+	clk_hw_unregister(hw);
 	kfree(cpumux);
 }
 
@@ -107,7 +106,7 @@ int mtk_clk_register_cpumuxes(struct device_node *node,
 			      struct clk_hw_onecell_data *clk_data)
 {
 	int i;
-	struct clk *clk;
+	struct clk_hw *hw;
 	struct regmap *regmap;
 
 	regmap = device_node_to_regmap(node);
@@ -125,13 +124,14 @@ int mtk_clk_register_cpumuxes(struct device_node *node,
 			continue;
 		}
 
-		clk = mtk_clk_register_cpumux(mux, regmap);
-		if (IS_ERR(clk)) {
-			pr_err("Failed to register clk %s: %pe\n", mux->name, clk);
+		hw = mtk_clk_register_cpumux(mux, regmap);
+		if (IS_ERR(hw)) {
+			pr_err("Failed to register clk %s: %pe\n", mux->name,
+			       hw);
 			goto err;
 		}
 
-		clk_data->hws[mux->id] = __clk_get_hw(clk);
+		clk_data->hws[mux->id] = hw;
 	}
 
 	return 0;
@@ -143,11 +143,11 @@ err:
 		if (IS_ERR_OR_NULL(clk_data->hws[mux->id]))
 			continue;
 
-		mtk_clk_unregister_cpumux(clk_data->hws[mux->id]->clk);
+		mtk_clk_unregister_cpumux(clk_data->hws[mux->id]);
 		clk_data->hws[mux->id] = ERR_PTR(-ENOENT);
 	}
 
-	return PTR_ERR(clk);
+	return PTR_ERR(hw);
 }
 
 void mtk_clk_unregister_cpumuxes(const struct mtk_composite *clks, int num,
@@ -161,7 +161,7 @@ void mtk_clk_unregister_cpumuxes(const struct mtk_composite *clks, int num,
 		if (IS_ERR_OR_NULL(clk_data->hws[mux->id]))
 			continue;
 
-		mtk_clk_unregister_cpumux(clk_data->hws[mux->id]->clk);
+		mtk_clk_unregister_cpumux(clk_data->hws[mux->id]);
 		clk_data->hws[mux->id] = ERR_PTR(-ENOENT);
 	}
 }

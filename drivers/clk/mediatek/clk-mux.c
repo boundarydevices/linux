@@ -140,13 +140,13 @@ const struct clk_ops mtk_mux_gate_clr_set_upd_ops  = {
 	.set_parent = mtk_clk_mux_set_parent_setclr_lock,
 };
 
-static struct clk *mtk_clk_register_mux(const struct mtk_mux *mux,
+static struct clk_hw *mtk_clk_register_mux(const struct mtk_mux *mux,
 				 struct regmap *regmap,
 				 spinlock_t *lock)
 {
 	struct mtk_clk_mux *clk_mux;
 	struct clk_init_data init = {};
-	struct clk *clk;
+	int ret;
 
 	clk_mux = kzalloc(sizeof(*clk_mux), GFP_KERNEL);
 	if (!clk_mux)
@@ -163,27 +163,24 @@ static struct clk *mtk_clk_register_mux(const struct mtk_mux *mux,
 	clk_mux->lock = lock;
 	clk_mux->hw.init = &init;
 
-	clk = clk_register(NULL, &clk_mux->hw);
-	if (IS_ERR(clk)) {
+	ret = clk_hw_register(NULL, &clk_mux->hw);
+	if (ret) {
 		kfree(clk_mux);
-		return clk;
+		return ERR_PTR(ret);
 	}
 
-	return clk;
+	return &clk_mux->hw;
 }
 
-static void mtk_clk_unregister_mux(struct clk *clk)
+static void mtk_clk_unregister_mux(struct clk_hw *hw)
 {
 	struct mtk_clk_mux *mux;
-	struct clk_hw *hw;
-
-	hw = __clk_get_hw(clk);
 	if (!hw)
 		return;
 
 	mux = to_mtk_clk_mux(hw);
 
-	clk_unregister(clk);
+	clk_hw_unregister(hw);
 	kfree(mux);
 }
 
@@ -193,7 +190,7 @@ int mtk_clk_register_muxes(const struct mtk_mux *muxes,
 			   struct clk_hw_onecell_data *clk_data)
 {
 	struct regmap *regmap;
-	struct clk *clk;
+	struct clk_hw *hw;
 	int i;
 
 	regmap = device_node_to_regmap(node);
@@ -211,14 +208,15 @@ int mtk_clk_register_muxes(const struct mtk_mux *muxes,
 			continue;
 		}
 
-		clk = mtk_clk_register_mux(mux, regmap, lock);
+		hw = mtk_clk_register_mux(mux, regmap, lock);
 
-		if (IS_ERR(clk)) {
-			pr_err("Failed to register clk %s: %pe\n", mux->name, clk);
+		if (IS_ERR(hw)) {
+			pr_err("Failed to register clk %s: %pe\n", mux->name,
+			       hw);
 			goto err;
 		}
 
-		clk_data->hws[mux->id] = __clk_get_hw(clk);
+		clk_data->hws[mux->id] = hw;
 	}
 
 	return 0;
@@ -230,11 +228,11 @@ err:
 		if (IS_ERR_OR_NULL(clk_data->hws[mux->id]))
 			continue;
 
-		mtk_clk_unregister_mux(clk_data->hws[mux->id]->clk);
+		mtk_clk_unregister_mux(clk_data->hws[mux->id]);
 		clk_data->hws[mux->id] = ERR_PTR(-ENOENT);
 	}
 
-	return PTR_ERR(clk);
+	return PTR_ERR(hw);
 }
 EXPORT_SYMBOL_GPL(mtk_clk_register_muxes);
 
@@ -252,7 +250,7 @@ void mtk_clk_unregister_muxes(const struct mtk_mux *muxes, int num,
 		if (IS_ERR_OR_NULL(clk_data->hws[mux->id]))
 			continue;
 
-		mtk_clk_unregister_mux(clk_data->hws[mux->id]->clk);
+		mtk_clk_unregister_mux(clk_data->hws[mux->id]);
 		clk_data->hws[mux->id] = ERR_PTR(-ENOENT);
 	}
 }
