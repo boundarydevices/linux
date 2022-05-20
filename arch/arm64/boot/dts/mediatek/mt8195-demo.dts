@@ -346,6 +346,7 @@
 				op-sink-microwatt = <10000000>;
 				orientation-switch = <&it5205fn>;
 				mode-switch = <&it5205fn>;
+				displayport = <&dp_intf1>;
 
 				altmodes {
 					dp {
@@ -810,6 +811,13 @@
 			bias-pull-up;
 		};
 	};
+
+	dptx_pin: dptx_pin_default {
+		pins_cmd_dat1 {
+			pinmux = <PINMUX_GPIO18__FUNC_DP_TX_HPD>;
+			bias-pull-up;
+		};
+	};
 };
 
 &mt6359_vgpu11_buck_reg {
@@ -1059,4 +1067,29 @@
 		      <119>,
 		      <87>;
 	status = "okay";
+};
+
+&dp_intf1 {
+	status = "okay";
+	ports {
+		port {
+			dp_intf1_out: endpoint {
+				remote-endpoint = <&dptx_in>;
+			};
+		};
+	};
+};
+
+&dp_tx {
+	pinctrl-names = "default";
+	pinctrl-0 = <&dptx_pin>;
+	status = "okay";
+
+	ports {
+		port {
+			dptx_in: endpoint {
+				remote-endpoint = <&dp_intf1_out>;
+			};
+		};
+	};
 };
