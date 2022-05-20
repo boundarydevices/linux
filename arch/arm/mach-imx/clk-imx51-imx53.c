@@ -296,6 +296,9 @@ static void __init mx5_clocks_common_init(void __iomem *ccm_base)
 	clk_set_parent(clk[IMX5_CLK_ESDHC_A_SEL], clk[IMX5_CLK_PLL2_SW]);
 	clk_set_parent(clk[IMX5_CLK_ESDHC_B_SEL], clk[IMX5_CLK_PLL2_SW]);
 
+	/* Set ECSPIC parent to be PLL2 */
+	clk_set_parent(clk[IMX5_CLK_ECSPI_SEL], clk[IMX5_CLK_PLL2_SW]);
+
 	/* move usb phy clk to 24MHz */
 	clk_set_parent(clk[IMX5_CLK_USB_PHY_SEL], clk[IMX5_CLK_OSC]);
 
