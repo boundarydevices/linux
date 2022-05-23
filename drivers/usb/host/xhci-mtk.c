@@ -19,6 +19,7 @@
 #include <linux/pm_wakeirq.h>
 #include <linux/regmap.h>
 #include <linux/regulator/consumer.h>
+#include <linux/reset.h>
 
 #include "xhci.h"
 #include "xhci-mtk.h"
@@ -609,6 +610,11 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 	if (ret)
 		goto disable_ldos;
 
+	ret = device_reset_optional(dev);
+	if (ret) {
+		dev_err_probe(dev, ret, "failed to reset controller\n");
+		goto disable_clk;
+	}
 	gpiod_set_value_cansleep(reset, 0);
 	mtk->reset = reset;
 
