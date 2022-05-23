@@ -150,6 +150,8 @@ struct mtk_iommu_domain {
 
 	struct mtk_iommu_bank_data	*bank;
 	struct iommu_domain		domain;
+
+	struct mutex			mutex; /* Protect "data" in this structure */
 };
 
 static const struct iommu_ops mtk_iommu_ops;
@@ -523,6 +525,7 @@ static struct iommu_domain *mtk_iommu_domain_alloc(unsigned type)
 	dom = kzalloc(sizeof(*dom), GFP_KERNEL);
 	if (!dom)
 		return NULL;
+	mutex_init(&dom->mutex);
 
 	return &dom->domain;
 }
@@ -549,14 +552,19 @@ static int mtk_iommu_attach_device(struct iommu_domain *domain,
 
 	bankid = mtk_iommu_get_bank_id(dev, data->plat_data);
 	bank = &data->bank[bankid];
+	mutex_lock(&dom->mutex);
 	if (!dom->bank) {
 		/* Data is in the frstdata in sharing pgtable case. */
 		frstdata = mtk_iommu_get_frst_data(hw_list);
 
-		if (mtk_iommu_domain_finalise(dom, frstdata, region_id))
+		ret = mtk_iommu_domain_finalise(dom, frstdata, region_id);
+		if (ret) {
+			mutex_unlock(&dom->mutex);
 			return -ENODEV;
+		}
 		dom->bank = bank;
 	}
+	mutex_unlock(&dom->mutex);
 
 	mutex_lock(&data->mutex);
 	if (!bank->m4u_dom) { /* Initialize the M4U HW for each a BANK */
