@@ -113,6 +113,7 @@ struct mtk_iommu_data {
 	struct device			*smicomm_dev;
 
 	struct dma_iommu_mapping	*mapping; /* For mtk_iommu_v1.c */
+	struct mutex			mutex; /* Protect m4u_group/m4u_dom above */
 	struct regmap			*pericfg;
 
 	/*

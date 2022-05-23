@@ -558,15 +558,16 @@ static int mtk_iommu_attach_device(struct iommu_domain *domain,
 		dom->bank = bank;
 	}
 
+	mutex_lock(&data->mutex);
 	if (!bank->m4u_dom) { /* Initialize the M4U HW for each a BANK */
 		ret = pm_runtime_resume_and_get(m4udev);
 		if (ret < 0)
-			return ret;
+			goto err_unlock;
 
 		ret = mtk_iommu_hw_init(data, bankid);
 		if (ret) {
 			pm_runtime_put(m4udev);
-			return ret;
+			goto err_unlock;
 		}
 		bank->m4u_dom = dom;
 		writel(dom->cfg.arm_v7s_cfg.ttbr & MMU_PT_ADDR_MASK,
@@ -574,8 +575,13 @@ static int mtk_iommu_attach_device(struct iommu_domain *domain,
 
 		pm_runtime_put(m4udev);
 	}
+	mutex_unlock(&data->mutex);
 
 	return mtk_iommu_config(data, dev, true, region_id);
+
+err_unlock:
+	mutex_unlock(&data->mutex);
+	return ret;
 }
 
 static void mtk_iommu_detach_device(struct iommu_domain *domain,
@@ -742,6 +748,7 @@ static struct iommu_group *mtk_iommu_device_group(struct device *dev)
 	 * otherwise, each a iova region is a iommu group/domain.
 	 */
 	groupid = bankid ? bankid : regionid;
+	mutex_lock(&data->mutex);
 	group = data->m4u_group[groupid];
 	if (!group) {
 		group = iommu_group_alloc();
@@ -750,6 +757,7 @@ static struct iommu_group *mtk_iommu_device_group(struct device *dev)
 	} else {
 		iommu_group_ref_get(group);
 	}
+	mutex_unlock(&data->mutex);
 	return group;
 }
 
@@ -1133,6 +1141,7 @@ static int mtk_iommu_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, data);
+	mutex_init(&data->mutex);
 
 	ret = iommu_device_sysfs_add(&data->iommu, dev, NULL,
 				     "mtk-iommu.%pa", &ioaddr);
