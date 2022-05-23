@@ -650,6 +650,11 @@
 	status = "okay";
 };
 
+&clks {
+	assigned-clocks = <&clks IMX5_CLK_DI_PRED>;
+	assigned-clock-rates = <12480000>;
+};
+
 &ecspi1 {
 	/delete-property/ dmas;
 	/delete-property/ dma-names;
