@@ -15,6 +15,8 @@
 struct clk;
 struct clk_onecell_data;
 
+#include "reset.h"
+
 #define MAX_MUX_GATE_BIT	31
 #define INVALID_MUX_GATE_BIT	(MAX_MUX_GATE_BIT + 1)
 
@@ -246,12 +248,6 @@ void mtk_clk_register_plls(struct device_node *node,
 
 struct clk *mtk_clk_register_ref2usb_tx(const char *name,
 			const char *parent_name, void __iomem *reg);
-
-void mtk_register_reset_controller(struct device_node *np,
-			unsigned int num_regs, int regofs);
-
-void mtk_register_reset_controller_set_clr(struct device_node *np,
-	unsigned int num_regs, int regofs);
 
 struct mtk_clk_desc {
 	const struct mtk_gate *clks;
