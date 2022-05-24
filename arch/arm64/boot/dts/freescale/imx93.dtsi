@@ -782,5 +782,11 @@
 			#index-cells = <1>;
 			reg = <0x4c200200 0x200>;
 		};
+
+		ddr-pmu@4e300dc0 {
+			compatible = "fsl,imx93-ddr-pmu";
+			reg = <0x4e300dc0 0x200>;
+			interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
+		};
 	};
 };
