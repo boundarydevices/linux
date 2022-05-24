@@ -79,6 +79,7 @@
 	fxls8974@18 {
 		compatible = "nxp,fxls8974cf";
 		reg = <0x18>;
+		drive-open-drain;
 	};
 };
 
