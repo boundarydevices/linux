@@ -137,10 +137,10 @@
 #define MTK_IOMMU_TYPE_MASK		(0x3 << 13)
 #define IFA_IOMMU_PCIe_SUPPORT		BIT(15)
 
-#define MTK_IOMMU_HAS_FLAG(pdata, _x)	(!!(((pdata)->flags) & (_x)))
-
 #define MTK_IOMMU_HAS_FLAG_MASK(pdata, _x, mask)	\
 				((((pdata)->flags) & (mask)) == (_x))
+
+#define MTK_IOMMU_HAS_FLAG(pdata, _x)	MTK_IOMMU_HAS_FLAG_MASK(pdata, _x, _x)
 #define MTK_IOMMU_IS_TYPE(pdata, _x)	MTK_IOMMU_HAS_FLAG_MASK(pdata, _x,\
 							MTK_IOMMU_TYPE_MASK)
 
