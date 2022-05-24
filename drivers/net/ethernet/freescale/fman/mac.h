@@ -55,6 +55,7 @@ struct mac_device {
 	struct device_node	*phy_node;
 	struct fwnode_handle	*fwnode_phy;
 
+	bool fixed_link_phy;
 	bool autoneg_pause;
 	bool rx_pause_req;
 	bool tx_pause_req;
