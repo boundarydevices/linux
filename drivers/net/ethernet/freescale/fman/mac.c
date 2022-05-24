@@ -446,12 +446,6 @@ static int acpi_mac_probe(struct platform_device *pdev)
 	/* Get the rest of the PHY information */
 	mac_dev->fwnode_phy =
 		fwnode_find_reference(dev->fwnode, "phy-handle", 0);
-	if (IS_ERR_OR_NULL(mac_dev->fwnode_phy) &&
-	    fwnode_property_present(dev->fwnode, "fixed-link")) {
-		dev_err(dev, "%s : No fixed-link phy support available.\n",
-			__func__);
-		goto _return;
-	}
 
 	params.basex_if		= false;
 	params.mac_id		= priv->cell_index;

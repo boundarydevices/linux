@@ -1159,11 +1159,12 @@ int memac_initialization(struct mac_device *mac_dev,
 	int			 err;
 	struct device_node	*phy_node;
 	struct fwnode_handle	*phy_fwnode;
-	struct fixed_phy_status *fixed_link;
+	struct fixed_phy_status *fixed_link, status = {0};
 	struct fman_mac		*memac;
 	struct device		*pcs_dev, *dev = mac_dev->dev;
 	struct device_node	*mac_node = dev->of_node;
 	struct fwnode_handle	*mac_fwnode = dev->fwnode;
+	u32			fixed_link_prop[5];
 
 	mac_dev->set_promisc		= memac_set_promiscuous;
 	mac_dev->change_addr		= memac_modify_mac_address;
@@ -1222,35 +1223,79 @@ int memac_initialization(struct mac_device *mac_dev,
 		}
 	}
 
-	if (!mac_dev->phy_node && of_phy_is_fixed_link(mac_node)) {
-		struct phy_device *phy;
+	if (is_of_node(mac_fwnode)) {
+		if (!mac_dev->phy_node && of_phy_is_fixed_link(mac_node)) {
+			struct phy_device *phy;
 
-		err = of_phy_register_fixed_link(mac_node);
-		if (err)
-			goto _return_fm_mac_free;
+			err = of_phy_register_fixed_link(mac_node);
+			if (err)
+				goto _return_fm_mac_free;
 
-		fixed_link = kzalloc(sizeof(*fixed_link), GFP_KERNEL);
-		if (!fixed_link) {
-			err = -ENOMEM;
-			goto _return_fm_mac_free;
+			fixed_link = kzalloc(sizeof(*fixed_link), GFP_KERNEL);
+			if (!fixed_link) {
+				err = -ENOMEM;
+				goto _return_fm_mac_free;
+			}
+
+			mac_dev->phy_node = of_node_get(mac_node);
+			phy = of_phy_find_device(mac_dev->phy_node);
+			if (!phy) {
+				err = -EINVAL;
+				of_node_put(mac_dev->phy_node);
+				goto _return_fixed_link_free;
+			}
+
+			fixed_link->link = phy->link;
+			fixed_link->speed = phy->speed;
+			fixed_link->duplex = phy->duplex;
+			fixed_link->pause = phy->pause;
+			fixed_link->asym_pause = phy->asym_pause;
+
+			put_device(&phy->mdio.dev);
+			memac->memac_drv_param->fixed_link = fixed_link;
 		}
+	} else {
+		if (IS_ERR_OR_NULL(mac_dev->fwnode_phy) &&
+		    fwnode_property_present(dev->fwnode, "fixed-link")) {
+			struct phy_device *phy = NULL;
 
-		mac_dev->phy_node = of_node_get(mac_node);
-		phy = of_phy_find_device(mac_dev->phy_node);
-		if (!phy) {
-			err = -EINVAL;
-			of_node_put(mac_dev->phy_node);
-			goto _return_fixed_link_free;
+			err = fwnode_property_read_u32_array(dev->fwnode,
+							     "fixed-link",
+							     fixed_link_prop,
+							     5);
+			if (err) {
+				dev_err(dev, "fwnode_property_read_u32_array failed\n");
+				goto _return_fm_mac_free;
+			}
+
+			status.link = 1;
+			status.duplex = fixed_link_prop[1];
+			status.speed  = fixed_link_prop[2];
+			status.pause  = fixed_link_prop[3];
+			status.asym_pause = fixed_link_prop[4];
+
+			phy = fwnode_fixed_phy_register(dev->fwnode, &status);
+			if (IS_ERR_OR_NULL(phy)) {
+				err = -EINVAL;
+				dev_err(dev, "fixed_phy_register failed\n");
+				goto _return_fm_mac_free;
+			}
+
+			fixed_link = kzalloc(sizeof(*fixed_link), GFP_KERNEL);
+			if (!fixed_link) {
+				err = -ENOMEM;
+				goto _return_fm_mac_free;
+			}
+
+			fixed_link->link = phy->link;
+			fixed_link->speed = phy->speed;
+			fixed_link->duplex = phy->duplex;
+			fixed_link->pause = phy->pause;
+			fixed_link->asym_pause = phy->asym_pause;
+
+			mac_dev->fwnode_phy = dev->fwnode;
+			memac->memac_drv_param->fixed_link = fixed_link;
 		}
-
-		fixed_link->link = phy->link;
-		fixed_link->speed = phy->speed;
-		fixed_link->duplex = phy->duplex;
-		fixed_link->pause = phy->pause;
-		fixed_link->asym_pause = phy->asym_pause;
-
-		put_device(&phy->mdio.dev);
-		memac->memac_drv_param->fixed_link = fixed_link;
 	}
 
 	err = memac_init(mac_dev->fman_mac);
