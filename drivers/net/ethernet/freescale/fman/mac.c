@@ -630,6 +630,7 @@ static int acpi_mac_probe(struct platform_device *pdev)
 	phy_interface_t		phy_if;
 	struct resource		*mem_res;
 	u8			macbuff[ETH_ALEN];
+	u32			fixed_link_prop[5];
 	const char		*cp = NULL;
 	struct device		*fman_dev = NULL;
 	struct fwnode_handle	*fman_fwnode = NULL;
@@ -812,19 +813,53 @@ static int acpi_mac_probe(struct platform_device *pdev)
 		mac_dev->if_support = SUPPORTED_10000baseT_Full;
 
 	/* Get the rest of the PHY information */
+	mac_dev->fixed_link_phy = false;
 	mac_dev->fwnode_phy =
 		fwnode_find_reference(dev->fwnode, "phy-handle", 0);
+	mac_dev->fixed_link_phy =
+		fwnode_property_present(dev->fwnode, "fixed-link");
 	if (IS_ERR_OR_NULL(mac_dev->fwnode_phy) &&
-	    fwnode_property_present(dev->fwnode, "fixed-link")) {
-		dev_err(dev, "%s : No fixed-link phy support available.\n",
-			__func__);
-		goto _return;
+	    mac_dev->fixed_link_phy) {
+		struct phy_device *phy = NULL;
+		struct fixed_phy_status status = {0};
+
+		if (fwnode_property_read_u32_array(dev->fwnode, "fixed-link",
+						   fixed_link_prop, 5) == 0) {
+			status.link = 1;
+			status.duplex = fixed_link_prop[1];
+			status.speed  = fixed_link_prop[2];
+			status.pause  = fixed_link_prop[3];
+			status.asym_pause = fixed_link_prop[4];
+		}
+
+		phy = fwnode_fixed_phy_register(dev->fwnode, &status);
+		if (IS_ERR_OR_NULL(phy)) {
+			err = -EINVAL;
+			dev_err(dev, "fixed_phy_register failed\n");
+			goto _return;
+		}
+
+		priv->fixed_link = kzalloc(sizeof(*priv->fixed_link),
+					   GFP_KERNEL);
+		if (!priv->fixed_link) {
+			err = -ENOMEM;
+			dev_err(dev, "fixed_link alloc failed\n");
+			goto _return;
+		}
+
+		priv->fixed_link->link = phy->link;
+		priv->fixed_link->speed = phy->speed;
+		priv->fixed_link->duplex = phy->duplex;
+		priv->fixed_link->pause = phy->pause;
+		priv->fixed_link->asym_pause = phy->asym_pause;
+		mac_dev->fwnode_phy = dev->fwnode;
+		mac_dev->phy_dev = phy;
 	}
 
 	err = mac_dev->init(mac_dev);
 	if (err < 0) {
 		dev_err(dev, "%s : mac_dev->init() = %d\n", __func__, err);
-		goto _return;
+		goto _return_free_fixed;
 	}
 
 	/* pause frame autonegotiation enabled */
@@ -853,6 +888,8 @@ static int acpi_mac_probe(struct platform_device *pdev)
 
 	goto _return;
 
+_return_free_fixed:
+	kfree(priv->fixed_link);
 _return:
 	return err;
 }
