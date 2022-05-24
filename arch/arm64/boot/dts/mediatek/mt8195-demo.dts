@@ -1071,6 +1071,7 @@
 
 &dp_intf1 {
 	status = "okay";
+	mediatek,oob-hpd;
 	ports {
 		port {
 			dp_intf1_out: endpoint {

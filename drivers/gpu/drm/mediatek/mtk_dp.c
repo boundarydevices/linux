@@ -193,6 +193,8 @@ struct mtk_dp {
 	struct drm_connector *conn;
 	bool need_debounce;
 	struct timer_list debounce_timer;
+
+	enum drm_connector_status hpd_state;
 };
 
 enum mtk_dp_sdp_type {
@@ -617,8 +619,15 @@ static void mtk_dp_audio_set_divider(struct mtk_dp *mtk_dp)
 
 static bool mtk_dp_plug_state(struct mtk_dp *mtk_dp)
 {
-	return !!(mtk_dp_read(mtk_dp, MTK_DP_TRANS_P0_3414) &
-		  HPD_DB_DP_TRANS_P0_MASK);
+	bool state;
+
+	state = !!(mtk_dp_read(mtk_dp, MTK_DP_TRANS_P0_3414) &
+		HPD_DB_DP_TRANS_P0_MASK);
+
+	if (!mtk_dp_is_edp(mtk_dp))
+		return mtk_dp->hpd_state == connector_status_connected;
+
+	return state;
 }
 
 static void mtk_dp_sdp_trigger_packet(struct mtk_dp *mtk_dp,
@@ -2193,7 +2202,6 @@ static int mtk_dp_train_handler(struct mtk_dp *mtk_dp)
 			break;
 		}
 	} while (!training_done || --max_retry);
-
 	return ret;
 }
 
@@ -2213,25 +2221,9 @@ static void mtk_dp_init_port(struct mtk_dp *mtk_dp)
 	mtk_dp_digital_sw_reset(mtk_dp);
 }
 
-static irqreturn_t mtk_dp_hpd_event_thread(int hpd, void *dev)
+static void mtk_dp_train(struct mtk_dp *mtk_dp)
 {
-	struct mtk_dp *mtk_dp = dev;
-	int event;
 	u8 buf[DP_RECEIVER_CAP_SIZE] = {};
-
-	event = mtk_dp_plug_state(mtk_dp) ? connector_status_connected :
-						  connector_status_disconnected;
-
-	if (event < 0)
-		return IRQ_HANDLED;
-
-	if (mtk_dp->need_debounce && mtk_dp->train_info.cable_plugged_in)
-		msleep(100);
-
-	if (mtk_dp->drm_dev) {
-		dev_info(mtk_dp->dev, "drm_helper_hpd_irq_event\n");
-		drm_helper_hpd_irq_event(mtk_dp->bridge.dev);
-	}
 
 	if (mtk_dp->train_info.cable_state_change) {
 		mtk_dp->train_info.cable_state_change = false;
@@ -2266,6 +2258,26 @@ static irqreturn_t mtk_dp_hpd_event_thread(int hpd, void *dev)
 				      drm_dp_max_lane_count(buf));
 		}
 	}
+}
+
+static irqreturn_t mtk_dp_hpd_event_thread(int hpd, void *dev)
+{
+	struct mtk_dp *mtk_dp = dev;
+	int event;
+
+	event = mtk_dp_plug_state(mtk_dp) ? connector_status_connected :
+						  connector_status_disconnected;
+
+	if (event < 0)
+		return IRQ_HANDLED;
+
+	if (mtk_dp->need_debounce && mtk_dp->train_info.cable_plugged_in)
+		msleep(100);
+
+	if (mtk_dp->drm_dev)
+		drm_helper_hpd_irq_event(mtk_dp->bridge.dev);
+
+	mtk_dp_train(mtk_dp);
 
 	if (mtk_dp->train_info.irq_status & MTK_DP_HPD_INTERRUPT) {
 		dev_info(mtk_dp->dev, "MTK_DP_HPD_INTERRUPT\n");
@@ -2803,6 +2815,33 @@ static int mtk_dp_bridge_atomic_check(struct drm_bridge *bridge,
 	return 0;
 }
 
+static void mtk_dp_bridge_hpd_notify(struct drm_bridge *bridge,
+				     enum drm_connector_status status)
+{
+	struct mtk_dp *mtk_dp = mtk_dp_from_bridge(bridge);
+	struct mtk_dp_train_info *train_info = &mtk_dp->train_info;
+
+	if (!mtk_dp_is_edp(mtk_dp)) {
+		if (mtk_dp->hpd_state != status) {
+			if (status == connector_status_disconnected) {
+				train_info->cable_plugged_in = false;
+				mtk_dp->train_state = MTK_DP_TRAIN_STATE_STARTUP;
+			} else {
+				train_info->cable_plugged_in = true;
+			}
+
+			train_info->cable_state_change = true;
+			mtk_dp->hpd_state = status;
+
+			if (mtk_dp->drm_dev)
+				drm_helper_hpd_irq_event(mtk_dp->bridge.dev);
+
+			mtk_dp_train(mtk_dp);
+			mtk_dp_hpd_sink_event(mtk_dp);
+		}
+	}
+}
+
 static const struct drm_bridge_funcs mtk_dp_bridge_funcs = {
 	.atomic_check = mtk_dp_bridge_atomic_check,
 	.atomic_duplicate_state = drm_atomic_helper_bridge_duplicate_state,
@@ -2817,6 +2856,7 @@ static const struct drm_bridge_funcs mtk_dp_bridge_funcs = {
 	.mode_valid = mtk_dp_bridge_mode_valid,
 	.get_edid = mtk_dp_get_edid,
 	.detect = mtk_dp_bdg_detect,
+	.hpd_notify = mtk_dp_bridge_hpd_notify,
 };
 
 static void mtk_dp_debounce_timer(struct timer_list *t)
@@ -2942,6 +2982,8 @@ static int mtk_dp_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to request dp irq resource\n");
 		return irq_num;
 	}
+
+	mtk_dp->hpd_state = connector_status_disconnected;
 
 	mtk_dp->next_bridge = devm_drm_of_get_bridge(dev, dev->of_node, 1, 0);
 	if (IS_ERR(mtk_dp->next_bridge) && PTR_ERR(mtk_dp->next_bridge) == -ENODEV) {
