@@ -985,5 +985,59 @@
 			fsl,ele_mu_max_users = <4>;
 			status = "okay";
 		};
+
+		usbphynop1: usbphynop1 {
+			compatible = "usb-nop-xceiv";
+			clocks = <&clk IMX93_CLK_USB_PHY_BURUNIN>;
+			clock-names = "main_clk";
+		};
+
+		usbotg1: usb@4c100000 {
+			compatible = "fsl,imx8mm-usb", "fsl,imx7d-usb";
+			reg = <0x4c100000 0x200>;
+			interrupts = <GIC_SPI 187 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk IMX93_CLK_USB_CONTROLLER_GATE>,
+				 <&clk IMX93_CLK_HSIO_32K_GATE>;
+			clock-names = "usb_ctrl_root_clk", "usb_wakeup_clk";
+			assigned-clocks = <&clk IMX93_CLK_HSIO>;
+			assigned-clock-parents = <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>;
+			assigned-clock-rates = <133000000>;
+			fsl,usbphy = <&usbphynop1>;
+			fsl,usbmisc = <&usbmisc1 0>;
+			status = "disabled";
+		};
+
+		usbmisc1: usbmisc@4c100200 {
+			compatible = "fsl,imx8mm-usbmisc", "fsl,imx7d-usbmisc";
+			#index-cells = <1>;
+			reg = <0x4c100200 0x200>;
+		};
+
+		usbphynop2: usbphynop2 {
+			compatible = "usb-nop-xceiv";
+			clocks = <&clk IMX93_CLK_USB_PHY_BURUNIN>;
+			clock-names = "main_clk";
+		};
+
+		usbotg2: usb@4c200000 {
+			compatible = "fsl,imx8mm-usb", "fsl,imx7d-usb";
+			reg = <0x4c200000 0x200>;
+			interrupts = <GIC_SPI 188 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&clk IMX93_CLK_USB_CONTROLLER_GATE>,
+				 <&clk IMX93_CLK_HSIO_32K_GATE>;
+			clock-names = "usb_ctrl_root_clk", "usb_wakeup_clk";
+			assigned-clocks = <&clk IMX93_CLK_HSIO>;
+			assigned-clock-parents = <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>;
+			assigned-clock-rates = <133000000>;
+			fsl,usbphy = <&usbphynop2>;
+			fsl,usbmisc = <&usbmisc2 0>;
+			status = "disabled";
+		};
+
+		usbmisc2: usbmisc@4c200200 {
+			compatible = "fsl,imx8mm-usbmisc", "fsl,imx7d-usbmisc";
+			#index-cells = <1>;
+			reg = <0x4c200200 0x200>;
+		};
 	};
 };
