@@ -173,7 +173,7 @@ int sof_compr_set_params(struct snd_soc_component *component,
 
 	data_size = sizeof(params->codec);
 
-	pcm = kzalloc(GFP_KERNEL, sizeof(*pcm) + data_size);
+	pcm = kzalloc(sizeof(*pcm) + data_size, GFP_KERNEL);
 	if (!pcm)
 		return -ENOMEM;
 
