@@ -92,10 +92,33 @@ config PCI_EXYNOS
 	  functions to implement the driver.
 
 config PCI_IMX6
-	bool "Freescale i.MX6/7/8 PCIe controller"
+	bool
+
+config PCI_IMX6_HOST
+	bool "Freescale i.MX6/7/8 PCIe controller host mode"
 	depends on ARCH_MXC || COMPILE_TEST
 	depends on PCI_MSI_IRQ_DOMAIN
 	select PCIE_DW_HOST
+	select PCI_IMX6
+	help
+	  Enables support for the PCIe controller Root Complex mode in the
+	  iMX6/7/8 SoCs.
+	  This controller can work either as EP or RC. In order to enable
+	  host-specific features PCIE_DW_HOST must be selected and in order
+	  to enable device-specific features PCIE_DW_EP must be selected.
+
+config PCI_IMX6_EP
+	bool "Freescale i.MX6/7/8 PCIe controller endpoint mode"
+	depends on ARCH_MXC || COMPILE_TEST
+	depends on PCI_ENDPOINT
+	select PCIE_DW_EP
+	select PCI_IMX6
+	help
+	  Enables support for the PCIe controller endpoint mode in the
+	  iMX6/7/8 SoCs.
+	  This controller can work either as EP or RC. In order to enable
+	  host-specific features PCIE_DW_HOST must be selected and in order
+	  to enable device-specific features PCIE_DW_EP must be selected.
 
 config PCIE_SPEAR13XX
 	bool "STMicroelectronics SPEAr PCIe controller"
