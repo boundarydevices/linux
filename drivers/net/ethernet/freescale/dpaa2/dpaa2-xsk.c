@@ -260,6 +260,9 @@ static int dpaa2_xsk_enable_pool(struct net_device *dev,
 		err = dpaa2_eth_open(dev);
 		if (err)
 			return err;
+
+		while (!READ_ONCE(priv->link_state.up))
+			cpu_relax();
 	}
 
 	return 0;

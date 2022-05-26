@@ -2764,6 +2764,9 @@ static int dpaa2_eth_setup_xdp(struct net_device *dev, struct bpf_prog *prog)
 		err = dpaa2_eth_open(dev);
 		if (err)
 			return err;
+
+		while (!READ_ONCE(priv->link_state.up))
+			cpu_relax();
 	}
 
 	return 0;
