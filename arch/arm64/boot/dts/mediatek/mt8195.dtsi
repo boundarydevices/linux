@@ -582,43 +582,6 @@
 				#power-domain-cells = <1>;
 
 				/* power domain of the SoC */
-				power-domain@MT8195_POWER_DOMAIN_PCIE_MAC_P0 {
-					reg = <MT8195_POWER_DOMAIN_PCIE_MAC_P0>;
-					mediatek,infracfg = <&infracfg_ao>;
-					#power-domain-cells = <0>;
-				};
-
-				power-domain@MT8195_POWER_DOMAIN_PCIE_MAC_P1 {
-					reg = <MT8195_POWER_DOMAIN_PCIE_MAC_P1>;
-					mediatek,infracfg = <&infracfg_ao>;
-					#power-domain-cells = <0>;
-				};
-
-				power-domain@MT8195_POWER_DOMAIN_PCIE_PHY {
-					reg = <MT8195_POWER_DOMAIN_PCIE_PHY>;
-					#power-domain-cells = <0>;
-				};
-
-				power-domain@MT8195_POWER_DOMAIN_SSUSB_PCIE_PHY {
-					reg = <MT8195_POWER_DOMAIN_SSUSB_PCIE_PHY>;
-					#power-domain-cells = <0>;
-				};
-
-				power-domain@MT8195_POWER_DOMAIN_CSI_RX_TOP {
-					reg = <MT8195_POWER_DOMAIN_CSI_RX_TOP>;
-					clocks = <&topckgen CLK_TOP_SENINF>,
-						 <&topckgen CLK_TOP_SENINF2>;
-					clock-names = "csi_rx_top", "csi_rx_top1";
-					#power-domain-cells = <0>;
-				};
-
-				power-domain@MT8195_POWER_DOMAIN_ETHER {
-					reg = <MT8195_POWER_DOMAIN_ETHER>;
-					clocks = <&pericfg_ao CLK_PERI_AO_ETHERNET_MAC>;
-					clock-names = "ether";
-					#power-domain-cells = <0>;
-				};
-
 				mfg0: power-domain@MT8195_POWER_DOMAIN_MFG0 {
 					reg = <MT8195_POWER_DOMAIN_MFG0>;
 					#address-cells = <1>;
@@ -891,6 +854,42 @@
 							};
 						};
 					};
+				};
+				power-domain@MT8195_POWER_DOMAIN_PCIE_MAC_P0 {
+					reg = <MT8195_POWER_DOMAIN_PCIE_MAC_P0>;
+					mediatek,infracfg = <&infracfg_ao>;
+					#power-domain-cells = <0>;
+				};
+
+				power-domain@MT8195_POWER_DOMAIN_PCIE_MAC_P1 {
+					reg = <MT8195_POWER_DOMAIN_PCIE_MAC_P1>;
+					mediatek,infracfg = <&infracfg_ao>;
+					#power-domain-cells = <0>;
+				};
+
+				power-domain@MT8195_POWER_DOMAIN_PCIE_PHY {
+					reg = <MT8195_POWER_DOMAIN_PCIE_PHY>;
+					#power-domain-cells = <0>;
+				};
+
+				power-domain@MT8195_POWER_DOMAIN_SSUSB_PCIE_PHY {
+					reg = <MT8195_POWER_DOMAIN_SSUSB_PCIE_PHY>;
+					#power-domain-cells = <0>;
+				};
+
+				power-domain@MT8195_POWER_DOMAIN_CSI_RX_TOP {
+					reg = <MT8195_POWER_DOMAIN_CSI_RX_TOP>;
+					clocks = <&topckgen CLK_TOP_SENINF>,
+						 <&topckgen CLK_TOP_SENINF2>;
+					clock-names = "csi_rx_top", "csi_rx_top1";
+					#power-domain-cells = <0>;
+				};
+
+				power-domain@MT8195_POWER_DOMAIN_ETHER {
+					reg = <MT8195_POWER_DOMAIN_ETHER>;
+					clocks = <&pericfg_ao CLK_PERI_AO_ETHERNET_MAC>;
+					clock-names = "ether";
+					#power-domain-cells = <0>;
 				};
 			};
 		};
