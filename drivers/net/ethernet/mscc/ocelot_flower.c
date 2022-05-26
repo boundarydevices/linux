@@ -810,11 +810,6 @@ static struct ocelot_vcap_filter
 		filter->egress_port.mask = GENMASK(key_length - 1, 0);
 	}
 
-	/* Allow the filter to be removed from ocelot->traps
-	 * without traversing the list
-	 */
-	INIT_LIST_HEAD(&filter->trap_list);
-
 	return filter;
 }
 
