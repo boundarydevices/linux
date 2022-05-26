@@ -138,39 +138,39 @@ create_tcam_skeleton()
 
 setup_prepare()
 {
-	ip link set $swp2 up
 	ip link set $swp1 up
-	ip link set $h1 up
+	ip link set $swp2 up
 	ip link set $h2 up
+	ip link set $h1 up
 
-	create_tcam_skeleton $swp2
+	create_tcam_skeleton $swp1
 
 	ip link add br0 type bridge
-	ip link set $swp2 master br0
 	ip link set $swp1 master br0
+	ip link set $swp2 master br0
 	ip link set br0 up
 
-	ip link add link $h2 name $h2.100 type vlan id 100
-	ip link set $h2.100 up
+	ip link add link $h1 name $h1.100 type vlan id 100
+	ip link set $h1.100 up
 
-	ip link add link $h2 name $h2.200 type vlan id 200
-	ip link set $h2.200 up
+	ip link add link $h1 name $h1.200 type vlan id 200
+	ip link set $h1.200 up
 
-	tc filter add dev $swp2 ingress chain $(IS1 1) pref 1 \
+	tc filter add dev $swp1 ingress chain $(IS1 1) pref 1 \
 		protocol 802.1Q flower skip_sw vlan_id 100 \
 		action vlan pop \
 		action goto chain $(IS1 2)
 
-	tc filter add dev $swp2 egress chain $(ES0) pref 1 \
-		flower skip_sw indev $swp1 \
+	tc filter add dev $swp1 egress chain $(ES0) pref 1 \
+		flower skip_sw indev $swp2 \
 		action vlan push protocol 802.1Q id 100
 
-	tc filter add dev $swp2 ingress chain $(IS1 0) pref 2 \
+	tc filter add dev $swp1 ingress chain $(IS1 0) pref 2 \
 		protocol ipv4 flower skip_sw src_ip 10.1.1.2 \
 		action skbedit priority 7 \
 		action goto chain $(IS1 1)
 
-	tc filter add dev $swp2 ingress chain $(IS2 0 0) pref 1 \
+	tc filter add dev $swp1 ingress chain $(IS2 0 0) pref 1 \
 		protocol ipv4 flower skip_sw ip_proto udp dst_port 5201 \
 		action police rate 50mbit burst 64k conform-exceed drop/pipe \
 		action goto chain $(IS2 1 0)
@@ -178,9 +178,9 @@ setup_prepare()
 
 cleanup()
 {
-	ip link del $h2.200
-	ip link del $h2.100
-	tc qdisc del dev $swp2 clsact
+	ip link del $h1.200
+	ip link del $h1.100
+	tc qdisc del dev $swp1 clsact
 	ip link del br0
 }
 
@@ -191,21 +191,21 @@ test_vlan_pop()
 
 	RET=0
 
-	tcpdump_start $h1
+	tcpdump_start $h2
 
 	# Work around Mausezahn VLAN builder bug
 	# (https://github.com/netsniff-ng/netsniff-ng/issues/225) by using
 	# an 8021q upper
-	$MZ $h2.100 -q -c 1 -p 64 -a $h2_mac -b $h1_mac -t ip
+	$MZ $h1.100 -q -c 1 -p 64 -a $h1_mac -b $h2_mac -t ip
 
 	sleep 1
 
-	tcpdump_stop $h1
+	tcpdump_stop $h2
 
-	tcpdump_show $h1 | grep -q "$h2_mac > $h1_mac, ethertype IPv4"
+	tcpdump_show $h2 | grep -q "$h1_mac > $h2_mac, ethertype IPv4"
 	check_err "$?" "untagged reception"
 
-	tcpdump_cleanup $h1
+	tcpdump_cleanup $h2
 
 	log_test "VLAN pop"
 }
@@ -217,18 +217,18 @@ test_vlan_push()
 
 	RET=0
 
-	tcpdump_start $h2.100
+	tcpdump_start $h1.100
 
-	$MZ $h1 -q -c 1 -p 64 -a $h1_mac -b $h2_mac -t ip
+	$MZ $h2 -q -c 1 -p 64 -a $h2_mac -b $h1_mac -t ip
 
 	sleep 1
 
-	tcpdump_stop $h2.100
+	tcpdump_stop $h1.100
 
-	tcpdump_show $h2.100 | grep -q "$h1_mac > $h2_mac"
+	tcpdump_show $h1.100 | grep -q "$h2_mac > $h1_mac"
 	check_err "$?" "tagged reception"
 
-	tcpdump_cleanup $h2.100
+	tcpdump_cleanup $h1.100
 
 	log_test "VLAN push"
 }
@@ -241,33 +241,33 @@ test_vlan_ingress_modify()
 	RET=0
 
 	ip link set br0 type bridge vlan_filtering 1
-	bridge vlan add dev $swp2 vid 200
-	bridge vlan add dev $swp2 vid 300
+	bridge vlan add dev $swp1 vid 200
 	bridge vlan add dev $swp1 vid 300
+	bridge vlan add dev $swp2 vid 300
 
-	tc filter add dev $swp2 ingress chain $(IS1 2) pref 3 \
+	tc filter add dev $swp1 ingress chain $(IS1 2) pref 3 \
 		protocol 802.1Q flower skip_sw vlan_id 200 \
 		action vlan modify id 300 \
 		action goto chain $(IS2 0 0)
 
-	tcpdump_start $h1
+	tcpdump_start $h2
 
-	$MZ $h2.200 -q -c 1 -p 64 -a $h2_mac -b $h1_mac -t ip
+	$MZ $h1.200 -q -c 1 -p 64 -a $h1_mac -b $h2_mac -t ip
 
 	sleep 1
 
-	tcpdump_stop $h1
+	tcpdump_stop $h2
 
-	tcpdump_show $h1 | grep -q "$h2_mac > $h1_mac, .* vlan 300"
+	tcpdump_show $h2 | grep -q "$h1_mac > $h2_mac, .* vlan 300"
 	check_err "$?" "tagged reception"
 
-	tcpdump_cleanup $h1
+	tcpdump_cleanup $h2
 
-	tc filter del dev $swp2 ingress chain $(IS1 2) pref 3
+	tc filter del dev $swp1 ingress chain $(IS1 2) pref 3
 
-	bridge vlan del dev $swp2 vid 200
-	bridge vlan del dev $swp2 vid 300
+	bridge vlan del dev $swp1 vid 200
 	bridge vlan del dev $swp1 vid 300
+	bridge vlan del dev $swp2 vid 300
 	ip link set br0 type bridge vlan_filtering 0
 
 	log_test "Ingress VLAN modification"
@@ -280,34 +280,34 @@ test_vlan_egress_modify()
 
 	RET=0
 
-	tc qdisc add dev $swp1 clsact
+	tc qdisc add dev $swp2 clsact
 
 	ip link set br0 type bridge vlan_filtering 1
-	bridge vlan add dev $swp2 vid 200
 	bridge vlan add dev $swp1 vid 200
+	bridge vlan add dev $swp2 vid 200
 
-	tc filter add dev $swp1 egress chain $(ES0) pref 3 \
+	tc filter add dev $swp2 egress chain $(ES0) pref 3 \
 		protocol 802.1Q flower skip_sw vlan_id 200 vlan_prio 0 \
 		action vlan modify id 300 priority 7
 
-	tcpdump_start $h1
+	tcpdump_start $h2
 
-	$MZ $h2.200 -q -c 1 -p 64 -a $h2_mac -b $h1_mac -t ip
+	$MZ $h1.200 -q -c 1 -p 64 -a $h1_mac -b $h2_mac -t ip
 
 	sleep 1
 
-	tcpdump_stop $h1
+	tcpdump_stop $h2
 
-	tcpdump_show $h1 | grep -q "$h2_mac > $h1_mac, .* vlan 300"
+	tcpdump_show $h2 | grep -q "$h1_mac > $h2_mac, .* vlan 300"
 	check_err "$?" "tagged reception"
 
-	tcpdump_cleanup $h1
+	tcpdump_cleanup $h2
 
-	tc filter del dev $swp1 egress chain $(ES0) pref 3
-	tc qdisc del dev $swp1 clsact
+	tc filter del dev $swp2 egress chain $(ES0) pref 3
+	tc qdisc del dev $swp2 clsact
 
-	bridge vlan del dev $swp2 vid 200
 	bridge vlan del dev $swp1 vid 200
+	bridge vlan del dev $swp2 vid 200
 	ip link set br0 type bridge vlan_filtering 0
 
 	log_test "Egress VLAN modification"
@@ -319,11 +319,11 @@ test_skbedit_priority()
 	local h2_mac=$(mac_get $h2)
 	local num_pkts=100
 
-	before=$(ethtool_stats_get $swp2 'rx_green_prio_7')
+	before=$(ethtool_stats_get $swp1 'rx_green_prio_7')
 
-	$MZ $h2 -q -c $num_pkts -p 64 -a $h2_mac -b $h1_mac -t ip -A 10.1.1.2
+	$MZ $h1 -q -c $num_pkts -p 64 -a $h1_mac -b $h2_mac -t ip -A 10.1.1.2
 
-	after=$(ethtool_stats_get $swp2 'rx_green_prio_7')
+	after=$(ethtool_stats_get $swp1 'rx_green_prio_7')
 
 	if [ $((after - before)) = $num_pkts ]; then
 		RET=0
