@@ -468,7 +468,7 @@ static int mdp_path_subfrm_run(const struct mdp_path_subfrm *subfrm,
 		}
 
 		/* Enable the mutex */
-		mtk_mutex_enable_by_cmdq(mutex2[mutex2_id], cmd);
+		mtk_mutex_enable_by_cmdq(mutex2[mutex2_id], cmd->pkt);
 
 		/* Wait SOF events and clear mutex modules (optional) */
 		for (index = 0; index < subfrm->num_sof2s; index++) {

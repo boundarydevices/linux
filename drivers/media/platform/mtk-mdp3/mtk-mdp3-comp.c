@@ -2296,7 +2296,7 @@ int mdp_hyfbc_patch(struct mdp_dev *mdp, struct mmsys_cmdq_cmd *cmd,
 	case MDP_COMP_WROT0:
 		evt = mdp_get_event_idx(mdp, WROT0_SOF);
 		MM_REG_CLEAR(cmd, evt);
-		mtk_mutex_enable_by_cmdq(mutex[mutex_id], cmd);
+		mtk_mutex_enable_by_cmdq(mutex[mutex_id], cmd->pkt);
 		MM_REG_WAIT(cmd, evt);
 		evt = mdp_get_event_idx(mdp, WROT0_DONE);
 		MM_REG_WAIT(cmd, evt);
@@ -2304,7 +2304,7 @@ int mdp_hyfbc_patch(struct mdp_dev *mdp, struct mmsys_cmdq_cmd *cmd,
 	case MDP_COMP_WROT1:
 		evt = mdp_get_event_idx(mdp, WROT1_SOF);
 		MM_REG_CLEAR(cmd, evt);
-		mtk_mutex_enable_by_cmdq(mutex2[mutex2_id], cmd);
+		mtk_mutex_enable_by_cmdq(mutex2[mutex2_id], cmd->pkt);
 		MM_REG_WAIT(cmd, evt);
 		evt = mdp_get_event_idx(mdp, WROT1_DONE);
 		MM_REG_WAIT(cmd, evt);
@@ -2312,7 +2312,7 @@ int mdp_hyfbc_patch(struct mdp_dev *mdp, struct mmsys_cmdq_cmd *cmd,
 	case MDP_COMP_WROT2:
 		evt = mdp_get_event_idx(mdp, WROT2_SOF);
 		MM_REG_CLEAR(cmd, evt);
-		mtk_mutex_enable_by_cmdq(mutex2[mutex2_id], cmd);
+		mtk_mutex_enable_by_cmdq(mutex2[mutex2_id], cmd->pkt);
 		MM_REG_WAIT(cmd, evt);
 		evt = mdp_get_event_idx(mdp, WROT2_DONE);
 		MM_REG_WAIT(cmd, evt);
@@ -2320,7 +2320,7 @@ int mdp_hyfbc_patch(struct mdp_dev *mdp, struct mmsys_cmdq_cmd *cmd,
 	case MDP_COMP_WROT3:
 		evt = mdp_get_event_idx(mdp, WROT3_SOF);
 		MM_REG_CLEAR(cmd, evt);
-		mtk_mutex_enable_by_cmdq(mutex2[mutex2_id], cmd);
+		mtk_mutex_enable_by_cmdq(mutex2[mutex2_id], cmd->pkt);
 		MM_REG_WAIT(cmd, evt);
 		evt = mdp_get_event_idx(mdp, WROT3_DONE);
 		MM_REG_WAIT(cmd, evt);
