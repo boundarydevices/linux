@@ -964,7 +964,7 @@
 &pcie1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pcie1_pins_default>;
-	status = "okay";
+	status = "disabled";
 };
 
 &u3phy1 {
