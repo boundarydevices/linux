@@ -397,9 +397,15 @@ static const struct mtk_ddp_comp_funcs ddp_ovl_adaptor = {
 	.stop = mtk_ovl_adaptor_stop,
 	.layer_nr = mtk_ovl_adaptor_layer_nr,
 	.layer_config = mtk_ovl_adaptor_layer_config,
+	.register_vblank_cb = mtk_ovl_adaptor_register_vblank_cb,
+	.unregister_vblank_cb = mtk_ovl_adaptor_unregister_vblank_cb,
 	.enable_vblank = mtk_ovl_adaptor_enable_vblank,
 	.disable_vblank = mtk_ovl_adaptor_disable_vblank,
 	.dma_dev_get = mtk_ovl_adaptor_dma_dev_get,
+	.connect = mtk_ovl_adaptor_connect,
+	.disconnect = mtk_ovl_adaptor_disconnect,
+	.add = mtk_ovl_adaptor_add_comp,
+	.remove = mtk_ovl_adaptor_remove_comp,
 };
 
 static const char * const mtk_ddp_comp_stem[MTK_DDP_COMP_TYPE_MAX] = {
@@ -424,10 +430,6 @@ static const char * const mtk_ddp_comp_stem[MTK_DDP_COMP_TYPE_MAX] = {
 	[MTK_DPI] = "dpi",
 	[MTK_DSI] = "dsi",
 	[MTK_DP_INTF] = "dp-intf",
-	[MTK_DISP_PWM] = "pwm",
-	[MTK_DISP_MUTEX] = "mutex",
-	[MTK_DISP_OD] = "od",
-	[MTK_DISP_BLS] = "bls",
 };
 
 struct mtk_ddp_comp_match {
@@ -436,7 +438,7 @@ struct mtk_ddp_comp_match {
 	const struct mtk_ddp_comp_funcs *funcs;
 };
 
-static const struct mtk_ddp_comp_match mtk_ddp_matches[DDP_COMPONENT_ID_MAX] = {
+static const struct mtk_ddp_comp_match mtk_ddp_matches[DDP_COMPONENT_DRM_ID_MAX] = {
 	[DDP_COMPONENT_AAL0]		= { MTK_DISP_AAL,		0, &ddp_aal },
 	[DDP_COMPONENT_AAL1]		= { MTK_DISP_AAL,		1, &ddp_aal },
 	[DDP_COMPONENT_BLS]		= { MTK_DISP_BLS,		0, NULL },
@@ -448,6 +450,7 @@ static const struct mtk_ddp_comp_match mtk_ddp_matches[DDP_COMPONENT_ID_MAX] = {
 	[DDP_COMPONENT_DP_INTF1]	= { MTK_DP_INTF,		1, &ddp_dpi },
 	[DDP_COMPONENT_DPI0]		= { MTK_DPI,			0, &ddp_dpi },
 	[DDP_COMPONENT_DPI1]		= { MTK_DPI,			1, &ddp_dpi },
+	[DDP_COMPONENT_DRM_OVL_ADAPTOR]	= { MTK_DISP_OVL_ADAPTOR,	0, &ddp_ovl_adaptor },
 	[DDP_COMPONENT_DSC0]		= { MTK_DISP_DSC,		0, &ddp_dsc },
 	[DDP_COMPONENT_DSC1]		= { MTK_DISP_DSC,		1, &ddp_dsc },
 	[DDP_COMPONENT_DSI0]		= { MTK_DSI,			0, &ddp_dsi },
@@ -468,7 +471,6 @@ static const struct mtk_ddp_comp_match mtk_ddp_matches[DDP_COMPONENT_ID_MAX] = {
 	[DDP_COMPONENT_OVL_2L0]		= { MTK_DISP_OVL_2L,		0, &ddp_ovl },
 	[DDP_COMPONENT_OVL_2L1]		= { MTK_DISP_OVL_2L,		1, &ddp_ovl },
 	[DDP_COMPONENT_OVL_2L2]		= { MTK_DISP_OVL_2L,		2, &ddp_ovl },
-	[DDP_COMPONENT_OVL_ADAPTOR]	= { MTK_DISP_OVL_ADAPTOR,	0, &ddp_ovl_adaptor },
 	[DDP_COMPONENT_POSTMASK0]	= { MTK_DISP_POSTMASK,		0, &ddp_postmask },
 	[DDP_COMPONENT_PWM0]		= { MTK_DISP_PWM,		0, NULL },
 	[DDP_COMPONENT_PWM1]		= { MTK_DISP_PWM,		1, NULL },
@@ -483,7 +485,7 @@ static const struct mtk_ddp_comp_match mtk_ddp_matches[DDP_COMPONENT_ID_MAX] = {
 };
 
 static bool mtk_drm_find_comp_in_ddp(struct device *dev,
-				     const enum mtk_ddp_comp_id *path,
+				     const unsigned int *path,
 				     unsigned int path_len,
 				     struct mtk_ddp_comp *ddp_comp)
 {
@@ -514,46 +516,29 @@ int mtk_ddp_comp_get_id(struct device_node *node,
 	return -EINVAL;
 }
 
-static bool mtk_drm_comp_is_enabled(struct drm_device *drm,
-				    enum mtk_ddp_comp_id ddp_comp)
-{
-	struct mtk_drm_private *priv = drm->dev_private;
-	return !!priv->comp_node[ddp_comp];
-}
-
 unsigned int mtk_drm_find_possible_crtc_by_comp(struct drm_device *drm,
 						struct device *dev)
 {
 	struct mtk_drm_private *private = drm->dev_private;
-	unsigned int index = 0;
+	unsigned int ret = 0;
 
-	if (mtk_drm_find_comp_in_ddp(dev, private->data->main_path,
-				     private->data->main_len, private->ddp_comp))
-		return BIT(index);
-
-	if (mtk_drm_comp_is_enabled(drm,
-			private->data->main_path[private->data->main_len - 1]))
-		index++;
-
-	if (mtk_drm_find_comp_in_ddp(dev, private->data->ext_path,
-				     private->data->ext_len, private->ddp_comp))
-		return BIT(index);
-
-	if (mtk_drm_comp_is_enabled(drm,
-			private->data->ext_path[private->data->ext_len - 1]))
-		index++;
-
-	if (mtk_drm_find_comp_in_ddp(dev, private->data->third_path,
+	if (mtk_drm_find_comp_in_ddp(dev, private->data->main_path, private->data->main_len,
+				     private->ddp_comp))
+		ret = BIT(0);
+	else if (mtk_drm_find_comp_in_ddp(dev, private->data->ext_path,
+					  private->data->ext_len, private->ddp_comp))
+		ret = BIT(1);
+	else if (mtk_drm_find_comp_in_ddp(dev, private->data->third_path,
 					  private->data->third_len, private->ddp_comp))
-		return BIT(index);
+		ret = BIT(2);
+	else
+		DRM_INFO("Failed to find comp in ddp table\n");
 
-	DRM_INFO("Failed to find comp in ddp table\n");
-
-	return -EINVAL;
+	return ret;
 }
 
 int mtk_ddp_comp_init(struct device_node *node, struct mtk_ddp_comp *comp,
-		      enum mtk_ddp_comp_id comp_id)
+		      unsigned int comp_id)
 {
 	struct platform_device *comp_pdev;
 	enum mtk_ddp_comp_type type;
@@ -562,13 +547,14 @@ int mtk_ddp_comp_init(struct device_node *node, struct mtk_ddp_comp *comp,
 	int ret;
 #endif
 
-	if (comp_id < 0 || comp_id >= DDP_COMPONENT_ID_MAX)
+	if (comp_id < 0 || comp_id >= DDP_COMPONENT_DRM_ID_MAX)
 		return -EINVAL;
 
 	type = mtk_ddp_matches[comp_id].type;
 
 	comp->id = comp_id;
 	comp->funcs = mtk_ddp_matches[comp_id].funcs;
+
 	/* Not all drm components have a DTS device node, such as ovl_adaptor,
 	 * which is the drm bring up sub driver
 	 */
