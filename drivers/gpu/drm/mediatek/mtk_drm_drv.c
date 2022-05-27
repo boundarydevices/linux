@@ -207,7 +207,7 @@ static const unsigned int mt8195_mtk_ddp_main[] = {
 };
 
 static const unsigned int mt8195_mtk_ddp_ext[] = {
-	DDP_COMPONENT_OVL_ADAPTOR,
+	DDP_COMPONENT_DRM_OVL_ADAPTOR,
 	DDP_COMPONENT_MERGE5,
 	DDP_COMPONENT_DP_INTF1,
 };
