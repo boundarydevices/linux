@@ -677,6 +677,17 @@ config VIDEO_OV9734
 	  To compile this driver as a module, choose M here: the
 	  module's name is ov9734.
 
+config VIDEO_AP1302
+	tristate "ON Semiconductor's Advanced Image Coporcessor AP1302 support"
+	depends on OF
+	depends on GPIOLIB && VIDEO_DEV && I2C
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  This is a Video4Linux2 sensor driver for the ONSEMI AP1302 camera
+	  sensor with a MIPI CSI-2 interface
+
 config VIDEO_RDACM20
 	tristate "IMI RDACM20 camera support"
 	depends on I2C
