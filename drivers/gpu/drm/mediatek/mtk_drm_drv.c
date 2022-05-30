@@ -201,16 +201,21 @@ static const unsigned int mt8195_mtk_ddp_main[] = {
 	DDP_COMPONENT_AAL0,
 	DDP_COMPONENT_GAMMA,
 	DDP_COMPONENT_DITHER0,
-	DDP_COMPONENT_DSC0,
-	DDP_COMPONENT_MERGE0,
 };
 
 static const unsigned int mt8195_mtk_ddp_main_routes_0[] = {
-	DDP_COMPONENT_DP_INTF0
+	DDP_COMPONENT_DSC0,
+	DDP_COMPONENT_MERGE0,
+	DDP_COMPONENT_DP_INTF0,
+};
+
+static const unsigned int mt8195_mtk_ddp_main_routes_1[] = {
+	DDP_COMPONENT_DSI0
 };
 
 static const struct mtk_drm_route mt8195_mtk_ddp_main_routes[] = {
 	{0, ARRAY_SIZE(mt8195_mtk_ddp_main_routes_0), mt8195_mtk_ddp_main_routes_0},
+	{0, ARRAY_SIZE(mt8195_mtk_ddp_main_routes_1), mt8195_mtk_ddp_main_routes_1}
 };
 
 static const unsigned int mt8195_mtk_ddp_ext[] = {
@@ -414,6 +419,7 @@ static bool mtk_drm_get_all_drm_priv(struct device *dev)
 {
 	struct mtk_drm_private *drm_priv = dev_get_drvdata(dev);
 	struct mtk_drm_private *all_drm_priv[MAX_CRTC];
+	struct mtk_drm_private *drm_dev_priv;
 	struct device_node *phandle = dev->parent->of_node;
 	const struct of_device_id *of_id;
 	struct device_node *node;
@@ -436,9 +442,16 @@ static bool mtk_drm_get_all_drm_priv(struct device *dev)
 		if (!drm_dev || !dev_get_drvdata(drm_dev))
 			continue;
 
-		all_drm_priv[cnt] = dev_get_drvdata(drm_dev);
-		if (all_drm_priv[cnt] && all_drm_priv[cnt]->mtk_drm_bound)
+		drm_dev_priv = dev_get_drvdata(drm_dev);
+		if (drm_dev_priv && drm_dev_priv->mtk_drm_bound)
 			cnt++;
+		if (drm_dev_priv && drm_dev_priv->data->main_len) {
+			all_drm_priv[0] = drm_dev_priv;
+		} else if (drm_dev_priv && drm_dev_priv->data->ext_len) {
+			all_drm_priv[1] = drm_dev_priv;
+		} else if (drm_dev_priv && drm_dev_priv->data->third_len) {
+			all_drm_priv[2] = drm_dev_priv;
+		}
 	}
 
 	if (drm_priv->data->mmsys_dev_num == cnt) {
