@@ -1997,28 +1997,6 @@ static int dpaa2_switch_port_mdb_add(struct net_device *netdev,
 	return err;
 }
 
-static int dpaa2_switch_port_obj_add(struct net_device *netdev,
-				     const struct switchdev_obj *obj)
-{
-	int err;
-
-	switch (obj->id) {
-	case SWITCHDEV_OBJ_ID_PORT_VLAN:
-		err = dpaa2_switch_port_vlans_add(netdev,
-						  SWITCHDEV_OBJ_PORT_VLAN(obj));
-		break;
-	case SWITCHDEV_OBJ_ID_PORT_MDB:
-		err = dpaa2_switch_port_mdb_add(netdev,
-						SWITCHDEV_OBJ_PORT_MDB(obj));
-		break;
-	default:
-		err = -EOPNOTSUPP;
-		break;
-	}
-
-	return err;
-}
-
 static int dpaa2_switch_port_del_vlan(struct ethsw_port_priv *port_priv, u16 vid)
 {
 	struct ethsw_core *ethsw = port_priv->ethsw_data;
@@ -2115,25 +2093,6 @@ static int dpaa2_switch_port_mdb_del(struct net_device *netdev,
 	return err;
 }
 
-static int dpaa2_switch_port_obj_del(struct net_device *netdev,
-				     const struct switchdev_obj *obj)
-{
-	int err;
-
-	switch (obj->id) {
-	case SWITCHDEV_OBJ_ID_PORT_VLAN:
-		err = dpaa2_switch_port_vlans_del(netdev, SWITCHDEV_OBJ_PORT_VLAN(obj));
-		break;
-	case SWITCHDEV_OBJ_ID_PORT_MDB:
-		err = dpaa2_switch_port_mdb_del(netdev, SWITCHDEV_OBJ_PORT_MDB(obj));
-		break;
-	default:
-		err = -EOPNOTSUPP;
-		break;
-	}
-	return err;
-}
-
 static int dpaa2_switch_port_attr_set_event(struct net_device *netdev,
 					    struct switchdev_notifier_port_attr_info *ptr)
 {
@@ -2189,7 +2148,7 @@ static int dpaa2_switch_port_bridge_join(struct net_device *netdev,
 	if (err)
 		goto err_egress_flood;
 
-	err = switchdev_bridge_port_offload(netdev, netdev, NULL,
+	err = switchdev_bridge_port_offload(netdev, netdev, port_priv,
 					    &dpaa2_switch_port_switchdev_nb,
 					    &dpaa2_switch_port_switchdev_blocking_nb,
 					    false, extack);
@@ -2705,37 +2664,81 @@ err_addr_alloc:
 	return NOTIFY_BAD;
 }
 
-static int dpaa2_switch_port_obj_event(unsigned long event,
-				       struct net_device *netdev,
-				       struct switchdev_notifier_port_obj_info *port_obj_info)
+static int dpaa2_switch_port_obj_add(struct net_device *dev, const void *ctx,
+				     const struct switchdev_obj *obj,
+				     struct netlink_ext_ack *extack)
 {
+	struct ethsw_port_priv *port_priv = netdev_priv(dev);
 	int err = -EOPNOTSUPP;
 
-	if (!dpaa2_switch_port_dev_check(netdev))
-		return NOTIFY_DONE;
+	if (ctx && ctx != port_priv)
+		return 0;
 
-	switch (event) {
-	case SWITCHDEV_PORT_OBJ_ADD:
-		err = dpaa2_switch_port_obj_add(netdev, port_obj_info->obj);
+	if (!dpaa2_switch_port_offloads_bridge_port(port_priv, obj->orig_dev))
+		return -EOPNOTSUPP;
+
+	switch (obj->id) {
+	case SWITCHDEV_OBJ_ID_PORT_VLAN:
+		err = dpaa2_switch_port_vlans_add(dev,
+						  SWITCHDEV_OBJ_PORT_VLAN(obj));
 		break;
-	case SWITCHDEV_PORT_OBJ_DEL:
-		err = dpaa2_switch_port_obj_del(netdev, port_obj_info->obj);
+	case SWITCHDEV_OBJ_ID_PORT_MDB:
+		err = dpaa2_switch_port_mdb_add(dev,
+						SWITCHDEV_OBJ_PORT_MDB(obj));
+		break;
+	default:
+		err = -EOPNOTSUPP;
 		break;
 	}
 
-	port_obj_info->handled = true;
-	return notifier_from_errno(err);
+	return err;
+}
+
+static int dpaa2_switch_port_obj_del(struct net_device *dev, const void *ctx,
+				     const struct switchdev_obj *obj,
+				     struct netlink_ext_ack *extack)
+{
+	struct ethsw_port_priv *port_priv = netdev_priv(dev);
+	int err = -EOPNOTSUPP;
+
+	if (ctx && ctx != port_priv)
+		return 0;
+
+	if (!dpaa2_switch_port_offloads_bridge_port(port_priv, obj->orig_dev))
+		return -EOPNOTSUPP;
+
+	switch (obj->id) {
+	case SWITCHDEV_OBJ_ID_PORT_VLAN:
+		err = dpaa2_switch_port_vlans_del(dev, SWITCHDEV_OBJ_PORT_VLAN(obj));
+		break;
+	case SWITCHDEV_OBJ_ID_PORT_MDB:
+		err = dpaa2_switch_port_mdb_del(dev, SWITCHDEV_OBJ_PORT_MDB(obj));
+		break;
+	default:
+		err = -EOPNOTSUPP;
+		break;
+	}
+
+	return err;
 }
 
 static int dpaa2_switch_port_blocking_event(struct notifier_block *nb,
 					    unsigned long event, void *ptr)
 {
 	struct net_device *dev = switchdev_notifier_info_to_dev(ptr);
+	int err;
 
 	switch (event) {
 	case SWITCHDEV_PORT_OBJ_ADD:
+		err = switchdev_handle_port_obj_add(dev, ptr,
+						    dpaa2_switch_port_dev_check,
+						    dpaa2_switch_port_obj_add);
+		return notifier_from_errno(err);
 	case SWITCHDEV_PORT_OBJ_DEL:
-		return dpaa2_switch_port_obj_event(event, dev, ptr);
+		err = switchdev_handle_port_obj_add(dev, ptr,
+						    dpaa2_switch_port_dev_check,
+						    dpaa2_switch_port_obj_del);
+		return notifier_from_errno(err);
 	case SWITCHDEV_PORT_ATTR_SET:
 		return dpaa2_switch_port_attr_set_event(dev, ptr);
 	}

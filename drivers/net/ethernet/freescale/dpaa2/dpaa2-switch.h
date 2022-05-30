@@ -284,4 +284,33 @@ int dpaa2_switch_block_offload_mirror(struct dpaa2_switch_filter_block *block,
 
 int dpaa2_switch_block_unoffload_mirror(struct dpaa2_switch_filter_block *block,
 					struct ethsw_port_priv *port_priv);
+
+/* Returns true if any port of this switch offloads the given bridge */
+static inline bool
+dpaa2_switch_offloads_bridge_dev(struct ethsw_core *ethsw,
+				 const struct net_device *bridge_dev)
+{
+	struct ethsw_port_priv *port_priv;
+	int i;
+
+	for (i = 0; i < ethsw->sw_attr.num_ifs; i++) {
+		port_priv = ethsw->ports[i];
+		if (port_priv->fdb->bridge_dev == bridge_dev)
+			return true;
+	}
+
+	return false;
+}
+
+static inline bool
+dpaa2_switch_port_offloads_bridge_port(struct ethsw_port_priv *port_priv,
+				       const struct net_device *dev)
+{
+	if (port_priv->lag && port_priv->lag->bond_dev == dev)
+		return true;
+	if (port_priv->netdev == dev)
+		return true;
+	return false;
+}
+
 #endif	/* __ETHSW_H */
