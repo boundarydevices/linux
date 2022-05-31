@@ -222,6 +222,15 @@
 		default-brightness-level = <576>;
 	};
 
+	backlight_lcd1: backlight_lcd1 {
+		compatible = "pwm-backlight";
+		pwms = <&disp_pwm0 0 500000>;
+		enable-gpios = <&pio 137 GPIO_ACTIVE_HIGH>;
+		brightness-levels = <0 1023>;
+		num-interpolated-steps = <1023>;
+		default-brightness-level = <576>;
+	};
+
 	gpio-keys {
 		compatible = "gpio-keys";
 		input-name = "gpio-keys";
@@ -312,6 +321,26 @@
 		type3v3-supply = <&mt6359_vibr_ldo_reg>;
 		svid = /bits/ 16 <0xff01>;
 		status = "okay";
+	};
+
+	rt4801@3e {
+		compatible = "richtek,rt4801";
+		reg = <0x3e>;
+		status = "okay";
+		enable-gpios = <&pio 138 0>, <&pio 139 0>;
+
+		dsvp: DSVP {
+			regulator-name = "rt4801,dsvp";
+			regulator-min-microvolt = <5800000>;
+			regulator-max-microvolt = <5800000>;
+			regulator-boot-on;
+		};
+		dsvn: DSVN {
+			regulator-name = "rt4801,dsvn";
+			regulator-min-microvolt = <5800000>;
+			regulator-max-microvolt = <5800000>;
+			regulator-boot-on;
+		};
 	};
 };
 
@@ -453,6 +482,46 @@
 	status = "okay";
 };
 
+&mipi_tx0 {
+	status = "disabled";
+};
+
+&dsi0 {
+	status = "disabled";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	dsi_panel@0 {
+		compatible = "boe,tv101wum-nl6";
+		reg = <0>;
+		enable-gpios = <&pio 108 0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&panel_pins_default>;
+		backlight = <&backlight_lcd1>;
+		pp1800-supply = <&mt6360_ldo2>;
+		avdd-supply = <&dsvp>;
+		avee-supply = <&dsvn>;
+		status = "okay";
+		port {
+			dsi_panel_in: endpoint {
+				remote-endpoint = <&dsi_out>;
+			};
+		};
+	};
+	ports {
+		port {
+			dsi_out: endpoint {
+				remote-endpoint = <&dsi_panel_in>;
+			};
+		};
+	};
+};
+
+&disp_pwm0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm0_gpio_def_cfg>;
+	status = "disabled";
+};
+
 &eth {
 	phy-mode ="rgmii-rxid";
 	phy-handle = <&eth_phy0>;
@@ -587,6 +656,20 @@
 			pinmux = <PINMUX_GPIO111__FUNC_MSDC1_CLK>;
 			drive-strength = <MTK_DRIVE_8mA>;
 			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+		};
+	};
+
+	panel_pins_default: panel_pins_default {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO108__FUNC_GPIO108>,
+				<PINMUX_GPIO137__FUNC_GPIO137>;
+			output-high;
+		};
+	};
+
+	pwm0_gpio_def_cfg: pwm0default {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO97__FUNC_DISP_PWM0>;
 		};
 	};
 
@@ -795,6 +878,12 @@
 		};
 	};
 
+	disp_pwm1_pin_default: disp_pwm1_pin_default {
+		pins1 {
+			pinmux = <PINMUX_GPIO104__FUNC_DISP_PWM1>;
+		};
+	};
+
 	gpio_keys: gpio-keys {
 		pins {
 			pinmux = <PINMUX_GPIO106__FUNC_GPIO106>;
@@ -881,6 +970,17 @@
 /* For EMI_VDDQ */
 &mt6360_buck2 {
 	regulator-always-on;
+};
+
+&mt6360_ldo1 {
+	regulator-min-microvolt = <3000000>;
+	regulator-max-microvolt = <3000000>;
+	regulator-always-on;
+};
+
+&mt6360_ldo2 {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
 };
 
 /* For EMI_VMDDR_EN */
