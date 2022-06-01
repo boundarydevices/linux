@@ -114,11 +114,13 @@
   cdev_init
   cfg80211_gtk_rekey_notify
   cfg80211_register_netdevice
+  cfg80211_rx_control_port
   cfg80211_rx_unprot_mlme_mgmt
   cfg80211_stop_iface
   cfg80211_update_owe_info_event
   cfg80211_vendor_cmd_get_sender
   __cfi_slowpath_diag
+  cgroup_path_ns
   cgroup_taskset_first
   cgroup_taskset_next
   __check_object_size
@@ -928,8 +930,8 @@
   irq_domain_set_hwirq_and_chip
   irq_domain_set_info
   irq_domain_update_bus_token
-  irq_do_set_affinity
   irq_domain_xlate_twocell
+  irq_do_set_affinity
   irq_find_matching_fwspec
   irq_get_irqchip_state
   irq_get_irq_data
@@ -1144,6 +1146,10 @@
   netdev_alert
   netdev_rss_key_fill
   netif_receive_skb_list
+  nla_find
+  nla_reserve
+  nla_reserve_64bit
+  __nla_validate
   no_llseek
   nonseekable_open
   nr_cpu_ids
@@ -1299,6 +1305,7 @@
   pci_store_saved_state
   pci_walk_bus
   pci_write_config_dword
+  pcpu_nr_pages
   __percpu_down_read
   percpu_down_write
   percpu_free_rwsem
@@ -1368,6 +1375,7 @@
   phy_write_mmd
   pick_highest_pushable_task
   pick_migrate_task
+  pid_nr_ns
   pinconf_generic_dt_node_to_map
   pinctrl_dev_get_drvdata
   pinctrl_force_default
@@ -1621,6 +1629,7 @@
   resched_curr
   reset_control_assert
   reset_control_deassert
+  __reset_control_get
   root_task_group
   round_jiffies_relative
   rpmsg_get_signals
@@ -1732,6 +1741,7 @@
   sg_free_table
   sg_init_table
   sg_miter_next
+  sg_miter_skip
   sg_miter_start
   sg_miter_stop
   sg_next
@@ -1757,6 +1767,7 @@
   skb_append_pagefrags
   skb_clone
   skb_copy_bits
+  skb_copy_datagram_from_iter
   skb_copy_datagram_iter
   skb_dequeue
   skb_free_datagram
@@ -1796,6 +1807,7 @@
   snprintf
   soc_device_register
   soc_device_unregister
+  sock_alloc_send_pskb
   sock_alloc_send_skb
   sock_create_kern
   sock_gettstamp
@@ -1946,8 +1958,8 @@
   trace_event_raw_init
   trace_event_reg
   trace_handle_return
-  __tracepoint_android_rvh_account_irq_start
   __tracepoint_android_rvh_account_irq_end
+  __tracepoint_android_rvh_account_irq_start
   __tracepoint_android_rvh_after_dequeue_task
   __tracepoint_android_rvh_after_enqueue_task
   __tracepoint_android_rvh_audio_usb_offload_disconnect
@@ -2009,6 +2021,7 @@
   __tracepoint_android_vh_ftrace_oops_exit
   __tracepoint_android_vh_ftrace_size_check
   __tracepoint_android_vh_gic_resume
+  __tracepoint_android_vh_gic_v3_set_affinity
   __tracepoint_android_vh_ipi_stop
   __tracepoint_android_vh_jiffies_update
   __tracepoint_android_vh_kswapd_per_node
@@ -2016,6 +2029,7 @@
   __tracepoint_android_vh_logbuf_pr_cont
   __tracepoint_android_vh_printk_hotplug
   __tracepoint_android_vh_rproc_recovery
+  __tracepoint_android_vh_rproc_recovery_set
   __tracepoint_android_vh_scheduler_tick
   __tracepoint_android_vh_show_resume_epoch_val
   __tracepoint_android_vh_show_suspend_epoch_val
@@ -2032,7 +2046,6 @@
   __tracepoint_ipi_entry
   __tracepoint_ipi_raise
   __tracepoint_irq_handler_entry
-  __tracepoint_android_vh_gic_v3_set_affinity
   tracepoint_probe_register
   tracepoint_probe_register_prio
   tracepoint_probe_unregister
@@ -2200,6 +2213,7 @@
   vhost_vq_init_access
   vhost_vring_ioctl
   vmalloc
+  vmalloc_nr_pages
   vmalloc_to_page
   vmalloc_to_pfn
   vmap
