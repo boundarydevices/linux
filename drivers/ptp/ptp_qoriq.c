@@ -3,7 +3,6 @@
  * PTP 1588 clock for Freescale QorIQ 1588 timer
  *
  * Copyright (C) 2010 OMICRON electronics GmbH
- * Copyright (C) 2020 Puresoftware Ltd.
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -17,7 +16,6 @@
 #include <linux/timex.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
-#include <linux/acpi.h>
 
 #include <linux/fsl/ptp_qoriq.h>
 
@@ -390,20 +388,10 @@ static int ptp_qoriq_auto_config(struct ptp_qoriq *ptp_qoriq,
 
 	ptp_qoriq->cksel = DEFAULT_CKSEL;
 
-	if (is_of_node(ptp_qoriq->dev->fwnode)) {
-		clk = of_clk_get(node, 0);
-		if (!IS_ERR(clk)) {
-			clk_src = clk_get_rate(clk);
-			clk_put(clk);
-		}
-	} else {
-		/* Fetch clock frq. from DSD property */
-		if (fwnode_property_read_u32(ptp_qoriq->dev->fwnode,
-					     "clock-frequency", &clk_src))
-			dev_err(ptp_qoriq->dev,
-				"%s: failed to read clk for %pOF\n",
-				__func__, ptp_qoriq->dev);
-		return -EINVAL;
+	clk = of_clk_get(node, 0);
+	if (!IS_ERR(clk)) {
+		clk_src = clk_get_rate(clk);
+		clk_put(clk);
 	}
 
 	if (clk_src <= 100000000UL) {
@@ -442,49 +430,6 @@ static int ptp_qoriq_auto_config(struct ptp_qoriq *ptp_qoriq,
 	return 0;
 }
 
-static int ptp_acpi_init(struct ptp_qoriq *ptp_qoriq, void __iomem *base)
-{
-	struct fwnode_handle *ptp_fwnode;
-
-	/* Check for fw node first */
-	ptp_fwnode = ptp_qoriq->dev->fwnode;
-
-	/* Set the properties in case of ACPI/DSDT
-	 * NOTE: None of these properties are present in ACPI tables,
-	 * therefore go for automatic configuration.
-	 */
-	if (fwnode_property_read_u32(ptp_fwnode, "fsl,cksel",
-				     &ptp_qoriq->cksel))
-		ptp_qoriq->cksel = DEFAULT_CKSEL;
-
-	if (fwnode_property_present(ptp_fwnode, "fsl,extts-fifo"))
-		ptp_qoriq->extts_fifo_support = true;
-	else
-		ptp_qoriq->extts_fifo_support = false;
-
-	if (CLK_DSDT_PROPS) {
-		pr_warn("ACPI DSD missing required elements, try auto config\n");
-		if (ptp_qoriq_auto_config(ptp_qoriq, NULL))
-			return -ENODEV;
-	}
-
-	if (fwnode_property_present(ptp_fwnode, "little-endian")) {
-		ptp_qoriq->read = qoriq_read_le;
-		ptp_qoriq->write = qoriq_write_le;
-	} else {
-		ptp_qoriq->read = qoriq_read_be;
-		ptp_qoriq->write = qoriq_write_be;
-	}
-
-	/* memory map with DPAA */
-	ptp_qoriq->regs.ctrl_regs = base + CTRL_REGS_OFFSET;
-	ptp_qoriq->regs.alarm_regs = base + ALARM_REGS_OFFSET;
-	ptp_qoriq->regs.fiper_regs = base + FIPER_REGS_OFFSET;
-	ptp_qoriq->regs.etts_regs = base + ETTS_REGS_OFFSET;
-
-	return 0;
-}
-
 int ptp_qoriq_init(struct ptp_qoriq *ptp_qoriq, void __iomem *base,
 		   const struct ptp_clock_info *caps)
 {
@@ -493,13 +438,6 @@ int ptp_qoriq_init(struct ptp_qoriq *ptp_qoriq, void __iomem *base,
 	struct timespec64 now;
 	unsigned long flags;
 	u32 tmr_ctrl;
-
-	if (is_acpi_node(ptp_qoriq->dev->fwnode)) {
-		if (!ptp_acpi_init(ptp_qoriq, base))
-			goto continue_clk;
-		else
-			return -ENODEV;
-	}
 
 	if (!node)
 		return -ENODEV;
@@ -561,7 +499,6 @@ int ptp_qoriq_init(struct ptp_qoriq *ptp_qoriq, void __iomem *base,
 		ptp_qoriq->regs.etts_regs = base + ETTS_REGS_OFFSET;
 	}
 
-continue_clk:
 	spin_lock_init(&ptp_qoriq->lock);
 
 	ktime_get_real_ts64(&now);
@@ -644,9 +581,11 @@ static int ptp_qoriq_probe(struct platform_device *dev)
 		pr_err("no resource\n");
 		goto no_resource;
 	}
-	/* Note: Disabling request_resource because DPAA architecture has
-	 * memory overlaps, go for ioremap directly.
-	 */
+	if (request_resource(&iomem_resource, ptp_qoriq->rsrc)) {
+		pr_err("resource busy\n");
+		goto no_resource;
+	}
+
 	base = ioremap(ptp_qoriq->rsrc->start,
 		       resource_size(ptp_qoriq->rsrc));
 	if (!base) {
@@ -690,16 +629,10 @@ static const struct of_device_id match_table[] = {
 };
 MODULE_DEVICE_TABLE(of, match_table);
 
-static const struct acpi_device_id acpi_ptp_table[] = {
-	{"NXP0027", 0}
-};
-MODULE_DEVICE_TABLE(acpi, acpi_ptp_table);
-
 static struct platform_driver ptp_qoriq_driver = {
 	.driver = {
 		.name		= "ptp_qoriq",
 		.of_match_table	= match_table,
-		.acpi_match_table = ACPI_PTR(acpi_ptp_table),
 	},
 	.probe       = ptp_qoriq_probe,
 	.remove      = ptp_qoriq_remove,

@@ -138,19 +138,6 @@ struct ptp_qoriq_registers {
 #define DEFAULT_FIPER2_PERIOD	1000000000
 #define DEFAULT_FIPER3_PERIOD	1000000000
 
-#define CLK_DSDT_PROPS	((fwnode_property_read_u32(ptp_fwnode,		    \
-			 "tclk-period", &ptp_qoriq->tclk_period))	||  \
-			 (fwnode_property_read_u32(ptp_fwnode,		    \
-			 "fsl,tmr-prsc", &ptp_qoriq->tmr_prsc))		||  \
-			 (fwnode_property_read_u32(ptp_fwnode,		    \
-			 "fsl,tmr-add", &ptp_qoriq->tmr_add))		||  \
-			 (fwnode_property_read_u32(ptp_fwnode,		    \
-			 "fsl,tmr-fiper1", &ptp_qoriq->tmr_fiper1))	||  \
-			 (fwnode_property_read_u32(ptp_fwnode,		    \
-			 "fsl,tmr-fiper2", &ptp_qoriq->tmr_fiper1))	||  \
-			 (fwnode_property_read_u32(ptp_fwnode,		    \
-			 "fsl,max-adj", &ptp_qoriq->caps.max_adj)))	    \
-
 struct ptp_qoriq {
 	void __iomem *base;
 	struct ptp_qoriq_registers regs;
