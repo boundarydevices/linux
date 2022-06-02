@@ -457,6 +457,25 @@
 		compatible = "amlogic, cpufreq-meson";
 		status = "okay";
 	};
+
+	reg_usb3_select: regulator-usb3-select {
+		compatible = "regulator-fixed";
+		gpio = <&gpio GPIOA_13 GPIO_ACTIVE_LOW>;
+		regulator-always-on;
+		regulator-max-microvolt = <5000000>;
+		regulator-min-microvolt = <5000000>;
+		regulator-name = "USB3_SELECT";
+	};
+
+	reg_usb_host: regulator-usb-host {
+		compatible = "regulator-fixed";
+		gpio = <&gpio GPIOA_10 GPIO_ACTIVE_HIGH>;
+		regulator-always-on;
+		enable-active-high;
+		regulator-max-microvolt = <5000000>;
+		regulator-min-microvolt = <5000000>;
+		regulator-name = "USB_HOSTPWR";
+	};
 }; /* end of / */
 
 &isp {
@@ -797,8 +816,6 @@
 	status = "okay";
 	portnum = <1>;
 	otg = <1>;
-	gpio-vbus-power = "GPIOH_6";
-	gpios = <&gpio GPIOH_6 GPIO_ACTIVE_HIGH>;
 };
 
 &dwc2_a {
@@ -836,8 +853,8 @@
 };
 
 &pcie_A {
-	reset-gpio = <&gpio GPIOX_7 GPIO_ACTIVE_HIGH>;
-	status = "disable";
+	reset-gpio = <&gpio BOOT_13 GPIO_ACTIVE_LOW>;
+	status = "disabled";
 };
 
 &saradc {
