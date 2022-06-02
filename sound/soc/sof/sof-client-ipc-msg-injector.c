@@ -98,7 +98,7 @@ static ssize_t sof_msg_inject_dfs_write(struct file *file, const char __user *bu
 {
 	struct sof_client_dev *cdev = file->private_data;
 	struct sof_msg_inject_priv *priv = cdev->data;
-	size_t size;
+	ssize_t size;
 	int ret;
 
 	if (*ppos)
@@ -106,8 +106,10 @@ static ssize_t sof_msg_inject_dfs_write(struct file *file, const char __user *bu
 
 	size = simple_write_to_buffer(priv->tx_buffer, priv->max_msg_size,
 				      ppos, buffer, count);
+	if (size < 0)
+		return size;
 	if (size != count)
-		return size > 0 ? -EFAULT : size;
+		return -EFAULT;
 
 	memset(priv->rx_buffer, 0, priv->max_msg_size);
 
