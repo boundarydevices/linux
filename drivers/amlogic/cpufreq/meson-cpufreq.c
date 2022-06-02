@@ -757,7 +757,6 @@ static int meson_cpufreq_probe(struct platform_device *pdev)
 	if (IS_ERR(cpu_reg)) {
 		pr_err("failed  in regulator getting %ld\n",
 				PTR_ERR(cpu_reg));
-		devm_regulator_put(cpu_reg);
 		return PTR_ERR(cpu_reg);
 	}
 
