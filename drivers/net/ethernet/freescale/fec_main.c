@@ -2484,7 +2484,8 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	 * mdio interface in board design, and need to be configured by
 	 * fec0 mii_bus.
 	 */
-	if ((fep->quirks & FEC_QUIRK_SINGLE_MDIO) && fep->dev_id > 0) {
+	if (((fep->quirks & FEC_QUIRK_SINGLE_MDIO) && fep->dev_id > 0) ||
+	    of_find_property(pdev->dev.of_node, "skip-mdio", NULL)) {
 		/* fec1 uses fec0 mii_bus */
 		if (mii_cnt && fec0_mii_bus) {
 			fep->mii_bus = fec0_mii_bus;
@@ -2586,10 +2587,8 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	mii_cnt++;
 
 	/* save fec0 mii_bus */
-	if (fep->quirks & FEC_QUIRK_SINGLE_MDIO) {
-		fec0_mii_bus = fep->mii_bus;
-		fec_mii_bus_share = &fep->mii_bus_share;
-	}
+	fec0_mii_bus = fep->mii_bus;
+	fec_mii_bus_share = &fep->mii_bus_share;
 
 	return 0;
 
