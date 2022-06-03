@@ -1505,7 +1505,6 @@ static int aml_spdif_parse_of(struct platform_device *pdev)
 		p_spdif->pin_ctl = devm_pinctrl_get_select(dev, "spdif_pins");
 		if (IS_ERR(p_spdif->pin_ctl)) {
 			dev_info(dev, "aml_spdif_get_pins error!\n");
-			return PTR_ERR(p_spdif->pin_ctl);
 		}
 
 		/* spdifin sample rate change event */
