@@ -508,7 +508,7 @@
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1>;
-	phy-mode = "rgmii";
+	phy-mode = "rgmii-id";
 #if 0
 	phy-reset-gpios = GP_RGMII1_PHY_RESET;
 #endif
@@ -538,7 +538,7 @@
 &fec2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet2>;
-	phy-mode = "rgmii";
+	phy-mode = "rgmii-id";
 #if 0
 	phy-reset-gpios = GP_RGMII2_PHY_RESET;
 #endif
