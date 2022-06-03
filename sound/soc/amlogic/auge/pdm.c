@@ -1210,7 +1210,6 @@ static int aml_pdm_platform_probe(struct platform_device *pdev)
 		p_pdm->pdm_pins = NULL;
 		dev_err(&pdev->dev,
 			"Can't get pdm pinmux\n");
-		return PTR_ERR(p_pdm->pdm_pins);
 	}
 
 	p_pdm->sysclk_srcpll = devm_clk_get(&pdev->dev, "sysclk_srcpll");
