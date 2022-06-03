@@ -738,6 +738,29 @@
 		regulator-min-microvolt = <5000000>;
 		regulator-name = "USB_HOSTPWR";
 	};
+
+	wifi {
+		compatible = "amlogic, aml_wifi";
+		dev_name = "aml_wifi";
+		status = "okay";
+		power_on_pin = <&gpio GPIOX_6 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwm_e_pins>;
+		pwm_config = <&wifi_pwm_conf>;
+	};
+
+	wifi_pwm_conf: wifi-pwm-conf {
+		pwm_channel1_conf {
+			pwms = <&pwm_ef MESON_PWM_0 30541 0>;
+			duty-cycle = <15270>;
+			times = <10>;
+		};
+		pwm_channel2_conf {
+			pwms = <&pwm_ef MESON_PWM_2 30500 0>;
+			duty-cycle = <15250>;
+			times = <12>;
+		};
+	};
 }; /* end of / */
 
 &isp {
