@@ -259,8 +259,16 @@ static void of_mdiobus_link_mdiodev(struct mii_bus *bus,
 
 		ret = of_property_read_u32(child, "reg", &addr);
 		if (ret < 0) {
-			dev_err(dev, "%s has invalid MDIO address\n",
-				child->full_name);
+			ret = of_property_read_u32(child, "reg-mask", &addr);
+			if (ret < 0) {
+				dev_err(dev, "%s has invalid MDIO address\n",
+					child->full_name);
+				continue;
+			}
+			if ((1 << mdiodev->addr) & addr) {
+				dev->of_node = child;
+				return;
+			}
 			continue;
 		}
 
