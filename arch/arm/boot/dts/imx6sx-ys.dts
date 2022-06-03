@@ -569,6 +569,7 @@
 	phy-handle = <&ethphy2>;
 	phy-supply = <&reg_3p3v>;
 	fsl,magic-packet;
+	skip-mdio;
 	status = "okay";
 };
 
