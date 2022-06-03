@@ -165,10 +165,60 @@
 		memory-region = <&galcore_reserved>;
 	};
 
+	cvbsout {
+		compatible = "amlogic, cvbsout-g12b";
+		dev_name = "cvbsout";
+		status = "okay";
+		clocks = <&clkc CLKID_VCLK2_ENCI
+			&clkc CLKID_VCLK2_VENCI0
+			&clkc CLKID_VCLK2_VENCI1
+			&clkc CLKID_DAC_CLK>;
+		clock-names = "venci_top_gate",
+			"venci_0_gate",
+			"venci_1_gate",
+			"vdac_clk_gate";
+		/* clk path */
+		/* 0:vid_pll vid2_clk */
+		/* 1:gp0_pll vid2_clk */
+		/* 2:vid_pll vid1_clk */
+		/* 3:gp0_pll vid1_clk */
+		clk_path = <0>;
+
+		/* performance: reg_address, reg_value */
+		/* g12b */
+		performance = <0x1bf0  0x9
+			0x1b56  0x333
+			0x1b12  0x8080
+			0x1b05  0xfd
+			0x1c59  0xf850
+			0xffff  0x0>; /* ending flag */
+		performance_sarft = <0x1bf0  0x9
+			0x1b56  0x333
+			0x1b12  0x0
+			0x1b05  0x9
+			0x1c59  0xfc48
+			0xffff  0x0>; /* ending flag */
+	};
+
 	codec_mm {
 		compatible = "amlogic, codec, mm";
 		memory-region = <&codec_mm_cma &codec_mm_reserved>;
 		dev_name = "codec_mm";
+		status = "okay";
+	};
+
+	picdec_cma_reserved:linux,picdec {
+		compatible = "shared-dma-pool";
+		reusable;
+		size = <0x0>;
+		alignment = <0x0>;
+		linux,contiguous-region;
+	};
+
+	picdec {
+		compatible = "amlogic, picdec";
+		memory-region = <&picdec_cma_reserved>;
+		dev_name = "picdec";
 		status = "okay";
 	};
 
@@ -177,6 +227,31 @@
 		memory-region = <&ppmgr_reserved>;
 		dev_name = "ppmgr";
 		status = "okay";
+	};
+
+	deinterlace {
+		compatible = "amlogic, deinterlace";
+		status = "okay";
+		/* 0:use reserved; 1:use cma; 2:use cma as reserved */
+		flag_cma = <1>;
+		//memory-region = <&di_reserved>;
+		memory-region = <&di_cma_reserved>;
+		interrupts = <0 46 1
+				0 40 1>;
+		interrupt-names = "pre_irq", "post_irq";
+		clocks = <&clkc CLKID_VPU_CLKB_TMP_COMP>,
+			<&clkc CLKID_VPU_CLKB_COMP>;
+		clock-names = "vpu_clkb_tmp_composite",
+			"vpu_clkb_composite";
+		clock-range = <334 667>;
+		/* buffer-size = <3621952>;(yuv422 8bit) */
+		buffer-size = <4074560>;/*yuv422 fullpack*/
+		/* reserve-iomap = "true"; */
+		/* if enable nr10bit, set nr10bit-support to 1 */
+		post-wr-support = <1>;
+		nr10bit-support = <1>;
+		nrds-enable = <1>;
+		pps-enable = <1>;
 	};
 
 	ionvideo {
