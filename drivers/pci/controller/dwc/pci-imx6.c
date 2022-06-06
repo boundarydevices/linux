@@ -52,6 +52,7 @@ enum imx6_pcie_variants {
 	IMX6QP,
 	IMX6QP_EP,
 	IMX7D,
+	IMX7D_EP,
 	IMX8MQ,
 	IMX8MQ_EP,
 	IMX8MM,
@@ -357,6 +358,7 @@ static void imx6_pcie_init_phy(struct imx6_pcie *imx6_pcie)
 					   0);
 		break;
 	case IMX7D:
+	case IMX7D_EP:
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
 				   IMX7D_GPR12_PCIE_PHY_REFCLK_SEL, 0);
 		break;
@@ -588,6 +590,7 @@ static int imx6_pcie_enable_ref_clk(struct imx6_pcie *imx6_pcie)
 				   IMX6Q_GPR1_PCIE_REF_CLK_EN, 1 << 16);
 		break;
 	case IMX7D:
+	case IMX7D_EP:
 		break;
 	case IMX8MM:
 	case IMX8MM_EP:
@@ -636,6 +639,7 @@ static void imx6_pcie_disable_ref_clk(struct imx6_pcie *imx6_pcie)
 				IMX6Q_GPR1_PCIE_TEST_PD);
 		break;
 	case IMX7D:
+	case IMX7D_EP:
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
 				   IMX7D_GPR12_PCIE_PHY_REFCLK_SEL,
 				   IMX7D_GPR12_PCIE_PHY_REFCLK_SEL);
@@ -709,6 +713,7 @@ static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 {
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX7D:
+	case IMX7D_EP:
 	case IMX8MQ:
 	case IMX8MQ_EP:
 		reset_control_assert(imx6_pcie->pciephy_reset);
@@ -761,6 +766,7 @@ static int imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
 		reset_control_deassert(imx6_pcie->pciephy_reset);
 		break;
 	case IMX7D:
+	case IMX7D_EP:
 		reset_control_deassert(imx6_pcie->pciephy_reset);
 
 		/* Workaround for ERR010728, failure of PCI-e PLL VCO to
@@ -852,6 +858,7 @@ static void imx6_pcie_ltssm_enable(struct device *dev)
 				   IMX6Q_GPR12_PCIE_CTL_2);
 		break;
 	case IMX7D:
+	case IMX7D_EP:
 	case IMX8MQ:
 	case IMX8MQ_EP:
 	case IMX8MM:
@@ -878,6 +885,7 @@ static void imx6_pcie_ltssm_disable(struct device *dev)
 				   IMX6Q_GPR12_PCIE_CTL_2, 0);
 		break;
 	case IMX7D:
+	case IMX7D_EP:
 	case IMX8MQ:
 	case IMX8MQ_EP:
 	case IMX8MM:
@@ -1389,6 +1397,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 					     "pcie_aux clock source missing or invalid\n");
 		fallthrough;
 	case IMX7D:
+	case IMX7D_EP:
 		if (dbi_base->start == IMX8MQ_PCIE2_BASE_ADDR)
 			imx6_pcie->controller_id = 1;
 
@@ -1568,6 +1577,11 @@ static const struct imx6_pcie_drvdata drvdata[] = {
 		.flags = IMX6_PCIE_FLAG_SUPPORTS_SUSPEND,
 		.gpr = "fsl,imx7d-iomuxc-gpr",
 	},
+	[IMX7D_EP] = {
+		.variant = IMX7D_EP,
+		.mode = DW_PCIE_EP_TYPE,
+		.gpr = "fsl,imx7d-iomuxc-gpr",
+	},
 	[IMX8MQ] = {
 		.variant = IMX8MQ,
 		.flags = IMX6_PCIE_FLAG_SUPPORTS_SUSPEND,
@@ -1608,6 +1622,7 @@ static const struct of_device_id imx6_pcie_of_match[] = {
 	{ .compatible = "fsl,imx6qp-pcie", .data = &drvdata[IMX6QP], },
 	{ .compatible = "fsl,imx6qp-pcie-ep", .data = &drvdata[IMX6QP_EP], },
 	{ .compatible = "fsl,imx7d-pcie",  .data = &drvdata[IMX7D],  },
+	{ .compatible = "fsl,imx7d-pcie-ep", .data = &drvdata[IMX7D_EP], },
 	{ .compatible = "fsl,imx8mq-pcie", .data = &drvdata[IMX8MQ], },
 	{ .compatible = "fsl,imx8mq-pcie-ep", .data = &drvdata[IMX8MQ_EP], },
 	{ .compatible = "fsl,imx8mm-pcie", .data = &drvdata[IMX8MM], },
