@@ -46,8 +46,10 @@
 
 enum imx6_pcie_variants {
 	IMX6Q,
+	IMX6Q_EP,
 	IMX6SX,
 	IMX6QP,
+	IMX6QP_EP,
 	IMX7D,
 	IMX8MQ,
 	IMX8MM,
@@ -567,7 +569,9 @@ static int imx6_pcie_enable_ref_clk(struct imx6_pcie *imx6_pcie)
 				   IMX6SX_GPR12_PCIE_TEST_POWERDOWN, 0);
 		break;
 	case IMX6QP:
+	case IMX6QP_EP:
 	case IMX6Q:
+	case IMX6Q_EP:
 		/* power up core phy and enable ref clock */
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
 				   IMX6Q_GPR1_PCIE_TEST_PD, 0 << 18);
@@ -619,7 +623,9 @@ static void imx6_pcie_disable_ref_clk(struct imx6_pcie *imx6_pcie)
 		clk_disable_unprepare(imx6_pcie->pcie_inbound_axi);
 		break;
 	case IMX6QP:
+	case IMX6QP_EP:
 	case IMX6Q:
+	case IMX6Q_EP:
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
 				IMX6Q_GPR1_PCIE_REF_CLK_EN, 0);
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
@@ -720,11 +726,13 @@ static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 				   IMX6SX_GPR5_PCIE_BTNRST_RESET);
 		break;
 	case IMX6QP:
+	case IMX6QP_EP:
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
 				   IMX6Q_GPR1_PCIE_SW_RST,
 				   IMX6Q_GPR1_PCIE_SW_RST);
 		break;
 	case IMX6Q:
+	case IMX6Q_EP:
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
 				   IMX6Q_GPR1_PCIE_TEST_PD, 1 << 18);
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
@@ -777,12 +785,14 @@ static int imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
 				   IMX6SX_GPR5_PCIE_BTNRST_RESET, 0);
 		break;
 	case IMX6QP:
+	case IMX6QP_EP:
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR1,
 				   IMX6Q_GPR1_PCIE_SW_RST, 0);
 
 		usleep_range(200, 500);
 		break;
 	case IMX6Q:		/* Nothing to do */
+	case IMX6Q_EP:
 	case IMX8MM:
 	case IMX8MM_EP:
 	case IMX8MP:
@@ -827,8 +837,10 @@ static void imx6_pcie_ltssm_enable(struct device *dev)
 
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX6Q:
+	case IMX6Q_EP:
 	case IMX6SX:
 	case IMX6QP:
+	case IMX6QP_EP:
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
 				   IMX6Q_GPR12_PCIE_CTL_2,
 				   IMX6Q_GPR12_PCIE_CTL_2);
@@ -851,8 +863,10 @@ static void imx6_pcie_ltssm_disable(struct device *dev)
 
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX6Q:
+	case IMX6Q_EP:
 	case IMX6SX:
 	case IMX6QP:
+	case IMX6QP_EP:
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
 				   IMX6Q_GPR12_PCIE_CTL_2, 0);
 		break;
@@ -1078,6 +1092,14 @@ static int imx6_pcie_ep_raise_irq(struct dw_pcie_ep *ep, u8 func_no,
 	return 0;
 }
 
+static const struct pci_epc_features imx6q_pcie_epc_features = {
+	.linkup_notifier = false,
+	.msi_capable = true,
+	.msix_capable = false,
+	.reserved_bar = 1 << BAR_0 | 1 << BAR_1 | 1 << BAR_2,
+	.align = SZ_64K,
+};
+
 static const struct pci_epc_features imx8m_pcie_epc_features = {
 	.linkup_notifier = false,
 	.msi_capable = true,
@@ -1089,7 +1111,16 @@ static const struct pci_epc_features imx8m_pcie_epc_features = {
 static const struct pci_epc_features*
 imx6_pcie_ep_get_features(struct dw_pcie_ep *ep)
 {
-	return &imx8m_pcie_epc_features;
+	struct dw_pcie *pci = to_dw_pcie_from_ep(ep);
+	struct imx6_pcie *imx6_pcie = to_imx6_pcie(pci);
+
+	switch (imx6_pcie->drvdata->variant) {
+	case IMX6Q_EP:
+	case IMX6QP_EP:
+		return &imx6q_pcie_epc_features;
+	default:
+		return &imx8m_pcie_epc_features;
+	}
 }
 
 static const struct dw_pcie_ep_ops pcie_ep_ops = {
@@ -1158,6 +1189,7 @@ static void imx6_pcie_pm_turnoff(struct imx6_pcie *imx6_pcie)
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX6SX:
 	case IMX6QP:
+	case IMX6QP_EP:
 		regmap_update_bits(imx6_pcie->iomuxc_gpr, IOMUXC_GPR12,
 				IMX6SX_GPR12_PCIE_PM_TURN_OFF,
 				IMX6SX_GPR12_PCIE_PM_TURN_OFF);
@@ -1502,6 +1534,12 @@ static const struct imx6_pcie_drvdata drvdata[] = {
 		.dbi_length = 0x200,
 		.gpr = "fsl,imx6q-iomuxc-gpr",
 	},
+	[IMX6Q_EP] = {
+		.variant = IMX6Q_EP,
+		.mode = DW_PCIE_EP_TYPE,
+		.flags = IMX6_PCIE_FLAG_IMX6_PHY,
+		.gpr = "fsl,imx6q-iomuxc-gpr",
+	},
 	[IMX6SX] = {
 		.variant = IMX6SX,
 		.flags = IMX6_PCIE_FLAG_IMX6_PHY |
@@ -1515,6 +1553,12 @@ static const struct imx6_pcie_drvdata drvdata[] = {
 			 IMX6_PCIE_FLAG_IMX6_SPEED_CHANGE |
 			 IMX6_PCIE_FLAG_SUPPORTS_SUSPEND,
 		.dbi_length = 0x200,
+		.gpr = "fsl,imx6q-iomuxc-gpr",
+	},
+	[IMX6QP_EP] = {
+		.variant = IMX6QP_EP,
+		.mode = DW_PCIE_EP_TYPE,
+		.flags = IMX6_PCIE_FLAG_IMX6_PHY,
 		.gpr = "fsl,imx6q-iomuxc-gpr",
 	},
 	[IMX7D] = {
@@ -1556,8 +1600,10 @@ static const struct imx6_pcie_drvdata drvdata[] = {
 
 static const struct of_device_id imx6_pcie_of_match[] = {
 	{ .compatible = "fsl,imx6q-pcie",  .data = &drvdata[IMX6Q],  },
+	{ .compatible = "fsl,imx6q-pcie-ep", .data = &drvdata[IMX6Q_EP], },
 	{ .compatible = "fsl,imx6sx-pcie", .data = &drvdata[IMX6SX], },
 	{ .compatible = "fsl,imx6qp-pcie", .data = &drvdata[IMX6QP], },
+	{ .compatible = "fsl,imx6qp-pcie-ep", .data = &drvdata[IMX6QP_EP], },
 	{ .compatible = "fsl,imx7d-pcie",  .data = &drvdata[IMX7D],  },
 	{ .compatible = "fsl,imx8mq-pcie", .data = &drvdata[IMX8MQ], },
 	{ .compatible = "fsl,imx8mm-pcie", .data = &drvdata[IMX8MM], },
