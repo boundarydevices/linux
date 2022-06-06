@@ -312,7 +312,7 @@ static int ocelot_flower_parse_action(struct ocelot *ocelot, int port,
 			filter->action.cpu_copy_ena = true;
 			filter->action.cpu_qu_num = 0;
 			filter->type = OCELOT_VCAP_FILTER_OFFLOAD;
-			list_add_tail(&filter->trap_list, &ocelot->traps);
+			filter->is_trap = true;
 			break;
 		case FLOW_ACTION_POLICE:
 			if (filter->block_id == PSFP_BLOCK_ID) {
@@ -810,11 +810,6 @@ static struct ocelot_vcap_filter
 		filter->egress_port.mask = GENMASK(key_length - 1, 0);
 	}
 
-	/* Allow the filter to be removed from ocelot->traps
-	 * without traversing the list
-	 */
-	INIT_LIST_HEAD(&filter->trap_list);
-
 	return filter;
 }
 
@@ -900,8 +895,6 @@ int ocelot_cls_flower_replace(struct ocelot *ocelot, int port,
 
 	ret = ocelot_flower_parse(ocelot, port, ingress, f, filter);
 	if (ret) {
-		if (!list_empty(&filter->trap_list))
-			list_del(&filter->trap_list);
 		kfree(filter);
 		return ret;
 	}
