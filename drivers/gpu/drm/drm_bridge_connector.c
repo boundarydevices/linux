@@ -131,7 +131,7 @@ static void drm_bridge_connector_oob_hotplug_event(struct drm_connector *connect
 	struct drm_bridge *hpd = bridge_connector->bridge_hpd;
 
 	if (hpd)
-		drm_bridge_hpd_notify(hpd, status);
+		drm_bridge_connector_hpd_cb(bridge_connector, status);
 }
 
 /**
