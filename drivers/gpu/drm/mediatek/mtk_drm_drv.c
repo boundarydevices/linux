@@ -598,6 +598,8 @@ err_deinit:
 	mtk_drm_kms_deinit(drm);
 err_free:
 	drm_dev_put(drm);
+	private->drm_master = false;
+
 	return ret;
 }
 
