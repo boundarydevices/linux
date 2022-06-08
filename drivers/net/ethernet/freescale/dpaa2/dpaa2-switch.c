@@ -2107,6 +2107,17 @@ static int dpaa2_switch_port_attr_set_event(struct net_device *netdev,
 static struct notifier_block dpaa2_switch_port_switchdev_nb;
 static struct notifier_block dpaa2_switch_port_switchdev_blocking_nb;
 
+static struct net_device *dpaa2_switch_port_to_bridge_port(struct ethsw_port_priv *port_priv)
+{
+	if (!port_priv->fdb->bridge_dev)
+		return NULL;
+
+	if (port_priv->lag)
+		return port_priv->lag->bond_dev;
+
+	return port_priv->netdev;
+}
+
 static int dpaa2_switch_port_bridge_join(struct net_device *netdev,
 					 struct net_device *upper_dev,
 					 struct netlink_ext_ack *extack)
@@ -2115,7 +2126,7 @@ static int dpaa2_switch_port_bridge_join(struct net_device *netdev,
 	struct ethsw_core *ethsw = port_priv->ethsw_data;
 	struct dpaa2_switch_fdb *old_fdb = port_priv->fdb;
 	struct ethsw_port_priv *other_port_priv;
-	struct net_device *other_dev;
+	struct net_device *other_dev, *brport_dev;
 	struct list_head *iter;
 	bool learn_ena;
 	int err;
@@ -2154,7 +2165,8 @@ static int dpaa2_switch_port_bridge_join(struct net_device *netdev,
 	if (err)
 		goto err_egress_flood;
 
-	err = switchdev_bridge_port_offload(netdev, netdev, port_priv,
+	brport_dev = dpaa2_switch_port_to_bridge_port(port_priv);
+	err = switchdev_bridge_port_offload(brport_dev, netdev, port_priv,
 					    &dpaa2_switch_port_switchdev_nb,
 					    &dpaa2_switch_port_switchdev_blocking_nb,
 					    false, extack);
@@ -2191,7 +2203,12 @@ static int dpaa2_switch_port_restore_rxvlan(struct net_device *vdev, int vid, vo
 
 static void dpaa2_switch_port_pre_bridge_leave(struct net_device *netdev)
 {
-	switchdev_bridge_port_unoffload(netdev, NULL,
+	struct ethsw_port_priv *port_priv = netdev_priv(netdev);
+	struct net_device *brport_dev;
+
+	brport_dev = dpaa2_switch_port_to_bridge_port(port_priv);
+
+	switchdev_bridge_port_unoffload(brport_dev, port_priv,
 					&dpaa2_switch_port_switchdev_nb,
 					&dpaa2_switch_port_switchdev_blocking_nb);
 }
