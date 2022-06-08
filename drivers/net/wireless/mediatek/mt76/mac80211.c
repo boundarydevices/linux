@@ -26,6 +26,7 @@
 	.hw_value = (_idx),			\
 	.max_power = 30,			\
 }
+
 static const struct ieee80211_channel mt76_channels_2ghz[] = {
 	CHAN2G(1, 2412),
 	CHAN2G(2, 2417),
@@ -75,6 +76,7 @@ static const struct ieee80211_channel mt76_channels_5ghz[] = {
 	CHAN5G(169, 5845),
 	CHAN5G(173, 5865),
 };
+
 static const struct ieee80211_channel mt76_channels_6ghz[] = {
 	/* UNII-5 */
 	CHAN6G(1, 5955),
@@ -296,6 +298,7 @@ mt76_init_sband(struct mt76_phy *phy, struct mt76_sband *msband,
 	sband->n_channels = n_chan;
 	sband->bitrates = rates;
 	sband->n_bitrates = n_rates;
+
 	if (!ht)
 		return 0;
 
@@ -348,11 +351,13 @@ mt76_init_sband_5g(struct mt76_phy *phy, struct ieee80211_rate *rates,
 			       ARRAY_SIZE(mt76_channels_5ghz), rates,
 			       n_rates, true, vht);
 }
+
 static int
 mt76_init_sband_6g(struct mt76_phy *phy, struct ieee80211_rate *rates,
 		   int n_rates)
 {
 	phy->hw->wiphy->bands[NL80211_BAND_6GHZ] = &phy->sband_6g.sband;
+
 	return mt76_init_sband(phy, &phy->sband_6g, mt76_channels_6ghz,
 			       ARRAY_SIZE(mt76_channels_6ghz), rates,
 			       n_rates, false, false);
@@ -496,6 +501,7 @@ int mt76_register_phy(struct mt76_phy *phy, bool vht,
 		if (ret)
 			return ret;
 	}
+
 	wiphy_read_of_freq_limits(phy->hw->wiphy);
 	mt76_check_sband(phy, &phy->sband_2g, NL80211_BAND_2GHZ);
 	mt76_check_sband(phy, &phy->sband_5g, NL80211_BAND_5GHZ);
@@ -616,6 +622,7 @@ int mt76_register_device(struct mt76_dev *dev, bool vht,
 		if (ret)
 			return ret;
 	}
+
 	wiphy_read_of_freq_limits(hw->wiphy);
 	mt76_check_sband(&dev->phy, &phy->sband_2g, NL80211_BAND_2GHZ);
 	mt76_check_sband(&dev->phy, &phy->sband_5g, NL80211_BAND_5GHZ);

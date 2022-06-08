@@ -119,10 +119,12 @@
 #define MCR_WTQCR13			0x01A4 /* supported in CONNAC2 */
 #define MCR_WTQCR14			0x01A8 /* supported in CONNAC2 */
 #define MCR_WTQCR15			0x01AC /* supported in CONNAC2 */
+
 enum mt76_connac_sdio_ver {
 	MT76_CONNAC_SDIO,
 	MT76_CONNAC2_SDIO,
 };
+
 struct mt76s_intr {
 	u32 isr;
 	u32 *rec_mb;

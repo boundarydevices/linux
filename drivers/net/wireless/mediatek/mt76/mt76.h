@@ -521,6 +521,7 @@ struct mt76_sdio {
 		int pse_page_size;
 		int deficit;
 	} sched;
+
 	int (*parse_irq)(struct mt76_dev *dev, struct mt76s_intr *intr);
 };
 

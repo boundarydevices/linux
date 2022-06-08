@@ -118,6 +118,7 @@ struct mt7663s_intr {
 	} rx;
 	u32 rec_mb[2];
 } __packed;
+
 struct mt7615_sta {
 	struct mt76_wcid wcid; /* must be first */
 

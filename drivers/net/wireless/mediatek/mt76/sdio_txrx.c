@@ -178,6 +178,7 @@ mt76s_tx_pick_quota(struct mt76_sdio *sdio, bool mcu, int buf_sz,
 
 	if (mcu && sdio->hw_ver == MT76_CONNAC2_SDIO)
 		pse_sz = 1;
+
 	if (mcu) {
 		if (sdio->sched.pse_mcu_quota < *pse_size + pse_sz)
 			return -EBUSY;

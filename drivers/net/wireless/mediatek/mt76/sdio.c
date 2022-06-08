@@ -227,6 +227,7 @@ int mt76s_hw_init(struct mt76_dev *dev, struct sdio_func *func, int hw_ver)
 {
 	u32 status, ctrl;
 	int ret;
+
 	dev->sdio.hw_ver = hw_ver;
 
 	sdio_claim_host(func);
@@ -266,8 +267,8 @@ int mt76s_hw_init(struct mt76_dev *dev, struct sdio_func *func, int hw_ver)
 
 	switch (hw_ver) {
 	case MT76_CONNAC_SDIO:
-	/* set WHISR as read clear and Rx aggregation number as 16 */
-	ctrl = FIELD_PREP(MAX_HIF_RX_LEN_NUM, 16);
+		/* set WHISR as read clear and Rx aggregation number as 16 */
+		ctrl = FIELD_PREP(MAX_HIF_RX_LEN_NUM, 16);
 		break;
 	default:
 		ctrl = sdio_readl(func, MCR_WHCR, &ret);
@@ -278,6 +279,7 @@ int mt76s_hw_init(struct mt76_dev *dev, struct sdio_func *func, int hw_ver)
 		ctrl |= FIELD_PREP(MAX_HIF_RX_LEN_NUM_CONNAC2, 0);
 		break;
 	}
+
 	sdio_writel(func, ctrl, MCR_WHCR, &ret);
 	if (ret < 0)
 		goto disable_func;
