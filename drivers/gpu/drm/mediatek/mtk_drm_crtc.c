@@ -61,8 +61,13 @@ struct mtk_drm_crtc {
 	struct device			*mmsys_dev;
 	struct device			*dma_dev;
 	struct mtk_mutex		*mutex;
+
+	unsigned int			ddp_comp_nr_ori;
+	unsigned int			max_ddp_comp_nr;
 	unsigned int			ddp_comp_nr;
 	struct mtk_ddp_comp		**ddp_comp;
+	unsigned int			conn_route_nr;
+	const struct mtk_drm_route	*conn_routes;
 
 	/* lock for display hardware access */
 	struct mutex			hw_lock;
@@ -641,6 +646,86 @@ static void mtk_drm_crtc_disable_vblank(struct drm_crtc *crtc)
 	mtk_ddp_comp_disable_vblank(comp);
 }
 
+static unsigned int mtk_drm_crtc_max_num_route_comp(struct mtk_drm_crtc *mtk_crtc)
+{
+	unsigned int max_num = 0;
+	unsigned int i;
+
+	if (!mtk_crtc->conn_route_nr)
+		return 0;
+
+	for (i = 0; i < mtk_crtc->conn_route_nr; i++) {
+		max_num = (max_num > mtk_crtc->conn_routes[i].route_len) ? max_num :
+				mtk_crtc->conn_routes[i].route_len;
+	}
+	return max_num;
+}
+
+static int mtk_drm_crtc_update_output(struct drm_crtc *crtc,
+				      struct drm_atomic_state *state)
+{
+	struct mtk_drm_crtc *mtk_crtc = to_mtk_crtc(crtc);
+	int crtc_index = drm_crtc_index(crtc);
+	struct mtk_drm_private *priv = crtc->dev->dev_private;
+	struct device *dev;
+	struct drm_crtc_state *crtc_state = state->crtcs[crtc_index].new_state;
+	u32 encoder_mask = crtc_state->encoder_mask;
+	int i;
+	int route_index;
+	int route_len;
+	unsigned int comp_id;
+	const struct mtk_drm_route *conn_routes;
+
+	if (!mtk_crtc->conn_route_nr)
+		return 0;
+
+	priv = priv->all_drm_private[crtc_index];
+	dev = priv->dev;
+
+	dev_dbg(dev, "connector change:%d, encoder mask0x%x for crtc%d",
+		crtc_state->connectors_changed, encoder_mask, crtc_index);
+
+	if (!crtc_state->connectors_changed)
+		return 0;
+
+	conn_routes = mtk_crtc->conn_routes;
+
+	for (i = 0; i < mtk_crtc->conn_route_nr; i++) {
+		route_len = conn_routes[i].route_len;
+		if (route_len > 0) {
+			comp_id = conn_routes[i].route_ddp[route_len - 1];
+			if (priv->comp_node[comp_id]) {
+				if ((1 << priv->ddp_comp[comp_id].encoder_index) == encoder_mask) {
+					route_index = i;
+					break;
+				}
+			}
+		}
+	}
+
+	for (i = 0; i < route_len; i++) {
+		struct mtk_ddp_comp *comp;
+		struct device_node *node;
+
+		comp_id = conn_routes[route_index].route_ddp[i];
+		node = priv->comp_node[comp_id];
+		comp = &priv->ddp_comp[comp_id];
+		if (!comp) {
+			dev_err(dev, "Component %pOF not initialized\n", node);
+			return -ENODEV;
+		}
+
+		mtk_crtc->ddp_comp[mtk_crtc->ddp_comp_nr_ori + i] = comp;
+		dev_dbg(dev, "Add comp_id: %d at path index %d\n",
+			comp->id, mtk_crtc->ddp_comp_nr_ori + i);
+	}
+
+	mtk_crtc->ddp_comp_nr = mtk_crtc->ddp_comp_nr_ori + route_len;
+	dev_dbg(dev, "Update total comp num:%d", mtk_crtc->ddp_comp_nr);
+
+	return 0;
+}
+
 int mtk_drm_crtc_plane_check(struct drm_crtc *crtc, struct drm_plane *plane,
 			     struct mtk_plane_state *state)
 {
@@ -672,6 +757,11 @@ static void mtk_drm_crtc_atomic_enable(struct drm_crtc *crtc,
 	int ret;
 
 	DRM_DEBUG_DRIVER("%s %d\n", __func__, crtc->base.id);
+
+	ret = mtk_drm_crtc_update_output(crtc, state);
+	if (ret < 0)
+		DRM_DEV_ERROR(comp->dev, "Failed to update crtc output: %d\n",
+			      ret);
 
 	ret = pm_runtime_resume_and_get(comp->dev);
 	if (ret < 0) {
@@ -878,7 +968,8 @@ struct device *mtk_drm_crtc_dma_dev_get(struct drm_crtc *crtc)
 
 int mtk_drm_crtc_create(struct drm_device *drm_dev,
 			const unsigned int *path, unsigned int path_len,
-			int priv_data_index)
+			int priv_data_index, const struct mtk_drm_route *conn_routes,
+			unsigned int conn_routes_num)
 {
 	struct mtk_drm_private *priv = drm_dev->dev_private;
 	struct device *dev = drm_dev->dev;
@@ -890,6 +981,8 @@ int mtk_drm_crtc_create(struct drm_device *drm_dev,
 	uint gamma_lut_size = 0;
 	struct drm_crtc *tmp;
 	int crtc_i = 0;
+	unsigned int max_route_comp_num;
+	unsigned int route_len;
 
 	if (!path)
 		return 0;
@@ -922,7 +1015,24 @@ int mtk_drm_crtc_create(struct drm_device *drm_dev,
 
 	mtk_crtc->mmsys_dev = priv->mmsys_dev;
 	mtk_crtc->ddp_comp_nr = path_len;
-	mtk_crtc->ddp_comp = devm_kmalloc_array(dev, mtk_crtc->ddp_comp_nr,
+	mtk_crtc->ddp_comp_nr_ori = path_len;
+	if (conn_routes) {
+		unsigned int comp_id;
+
+		for (i = 0; i < conn_routes_num; i++) {
+			route_len = conn_routes[i].route_len;
+			if (route_len > 0) {
+				comp_id = conn_routes[i].route_ddp[route_len - 1];
+				mtk_ddp_comp_encoder_index_set(&priv->ddp_comp[comp_id]);
+			}
+		}
+
+		mtk_crtc->conn_route_nr = conn_routes_num;
+		mtk_crtc->conn_routes = conn_routes;
+	}
+	max_route_comp_num = mtk_drm_crtc_max_num_route_comp(mtk_crtc);
+	mtk_crtc->max_ddp_comp_nr  = mtk_crtc->ddp_comp_nr + max_route_comp_num;
+	mtk_crtc->ddp_comp = devm_kmalloc_array(dev, mtk_crtc->max_ddp_comp_nr,
 						sizeof(*mtk_crtc->ddp_comp),
 						GFP_KERNEL);
 	if (!mtk_crtc->ddp_comp)

@@ -203,13 +203,32 @@ static const unsigned int mt8195_mtk_ddp_main[] = {
 	DDP_COMPONENT_DITHER0,
 	DDP_COMPONENT_DSC0,
 	DDP_COMPONENT_MERGE0,
-	DDP_COMPONENT_DP_INTF0,
+};
+
+static const unsigned int mt8195_mtk_ddp_main_routes_0[] = {
+	DDP_COMPONENT_DP_INTF0
+};
+
+static const struct mtk_drm_route mt8195_mtk_ddp_main_routes[] = {
+	{0, ARRAY_SIZE(mt8195_mtk_ddp_main_routes_0), mt8195_mtk_ddp_main_routes_0},
 };
 
 static const unsigned int mt8195_mtk_ddp_ext[] = {
 	DDP_COMPONENT_DRM_OVL_ADAPTOR,
 	DDP_COMPONENT_MERGE5,
-	DDP_COMPONENT_DP_INTF1,
+};
+
+static const unsigned int mt8195_mtk_ddp_ext_routes_0[] = {
+	DDP_COMPONENT_DP_INTF1
+};
+
+static const unsigned int mt8195_mtk_ddp_ext_routes_1[] = {
+	DDP_COMPONENT_DPI1
+};
+
+static const struct mtk_drm_route mt8195_mtk_ddp_ext_routes[] = {
+	{1, ARRAY_SIZE(mt8195_mtk_ddp_ext_routes_0), mt8195_mtk_ddp_ext_routes_0},
+	{1, ARRAY_SIZE(mt8195_mtk_ddp_ext_routes_1), mt8195_mtk_ddp_ext_routes_1}
 };
 
 static const struct mtk_mmsys_driver_data mt2701_mmsys_driver_data = {
@@ -323,13 +342,17 @@ static const struct mtk_mmsys_driver_data mt8195_vdosys0_driver_data = {
 	.io_start = 0x1c01a000,
 	.main_path = mt8195_mtk_ddp_main,
 	.main_len = ARRAY_SIZE(mt8195_mtk_ddp_main),
-	.mmsys_dev_num = 1,
+	.conn_routes = mt8195_mtk_ddp_main_routes,
+	.conn_routes_num = ARRAY_SIZE(mt8195_mtk_ddp_main_routes),
+	.mmsys_dev_num = 2,
 };
 
 static const struct mtk_mmsys_driver_data mt8195_vdosys1_driver_data = {
 	.io_start = 0x1c100000,
 	.ext_path = mt8195_mtk_ddp_ext,
 	.ext_len = ARRAY_SIZE(mt8195_mtk_ddp_ext),
+	.conn_routes = mt8195_mtk_ddp_ext_routes,
+	.conn_routes_num = ARRAY_SIZE(mt8195_mtk_ddp_ext_routes),
 	.mmsys_id = 1,
 	.mmsys_dev_num = 2,
 };
@@ -432,7 +455,7 @@ static bool mtk_drm_get_all_drm_priv(struct device *dev)
 static bool mtk_drm_find_mmsys_comp(struct mtk_drm_private *private, int comp_id)
 {
 	const struct mtk_mmsys_driver_data *drv_data = private->data;
-	int i;
+	int i, j;
 
 	if (drv_data->main_path)
 		for (i = 0; i < drv_data->main_len; i++)
@@ -448,6 +471,13 @@ static bool mtk_drm_find_mmsys_comp(struct mtk_drm_private *private, int comp_id
 		for (i = 0; i < drv_data->third_len; i++)
 			if (drv_data->third_path[i] == comp_id)
 				return true;
+
+	if (drv_data->conn_routes_num)
+		for (i = 0; i < drv_data->conn_routes_num; i++) {
+			for (j = 0; j < drv_data->conn_routes[i].route_len; j++)
+				if (drv_data->conn_routes[i].route_ddp[j] == comp_id)
+					return true;
+		}
 
 	return false;
 }
@@ -501,21 +531,25 @@ static int mtk_drm_kms_init(struct drm_device *drm)
 
 			if (i == 0 && priv_n->data->main_len) {
 				ret = mtk_drm_crtc_create(drm, priv_n->data->main_path,
-							  priv_n->data->main_len, j);
+							  priv_n->data->main_len, j,
+							  priv_n->data->conn_routes,
+							  priv_n->data->conn_routes_num);
 				if (ret)
 					goto err_component_unbind;
 
 				continue;
 			} else if (i == 1 && priv_n->data->ext_len) {
 				ret = mtk_drm_crtc_create(drm, priv_n->data->ext_path,
-							  priv_n->data->ext_len, j);
+							  priv_n->data->ext_len, j,
+							  priv_n->data->conn_routes,
+							  priv_n->data->conn_routes_num);
 				if (ret)
 					goto err_component_unbind;
 
 				continue;
 			} else if (i == 2 && priv_n->data->third_len) {
 				ret = mtk_drm_crtc_create(drm, priv_n->data->third_path,
-							  priv_n->data->third_len, j);
+							  priv_n->data->third_len, j, NULL, 0);
 				if (ret)
 					goto err_component_unbind;
 

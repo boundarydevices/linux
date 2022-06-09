@@ -78,6 +78,7 @@ struct mtk_ddp_comp_funcs {
 	void (*disconnect)(struct device *dev, struct device *mmsys_dev, unsigned int next);
 	void (*add)(struct device *dev, struct mtk_mutex *mutex);
 	void (*remove)(struct device *dev, struct mtk_mutex *mutex);
+	int (*encoder_index)(struct device *dev);
 };
 
 struct mtk_ddp_comp {
@@ -85,6 +86,7 @@ struct mtk_ddp_comp {
 	int irq;
 	unsigned int id;
 	const struct mtk_ddp_comp_funcs *funcs;
+	int encoder_index;
 };
 
 static inline int mtk_ddp_comp_clk_enable(struct mtk_ddp_comp *comp)
@@ -253,6 +255,12 @@ static inline bool mtk_ddp_comp_disconnect(struct mtk_ddp_comp *comp, struct dev
 		return true;
 	}
 	return false;
+}
+
+static inline void mtk_ddp_comp_encoder_index_set(struct mtk_ddp_comp *comp)
+{
+	if (comp->funcs && comp->funcs->encoder_index)
+		comp->encoder_index = comp->funcs->encoder_index(comp->dev);
 }
 
 int mtk_ddp_comp_get_id(struct device_node *node,
