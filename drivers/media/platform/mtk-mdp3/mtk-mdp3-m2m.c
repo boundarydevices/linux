@@ -10,20 +10,6 @@
 #include <media/videobuf2-dma-contig.h>
 #include "mtk-mdp3-m2m.h"
 
-#define IMG_MAX_WIDTH			5376
-#define IMG_MAX_HEIGHT			4032
-#define IMG_MIN_WIDTH			80
-#define IMG_MIN_HEIGHT			60
-
-struct v4l2_frmsize_stepwise mdp_frmsize_stepwise = {
-	.max_width = IMG_MAX_WIDTH,
-	.min_width = IMG_MIN_WIDTH,
-	.max_height = IMG_MAX_HEIGHT,
-	.min_height = IMG_MIN_HEIGHT,
-	.step_height = 1,
-	.step_width = 1,
-};
-
 static inline struct mdp_m2m_ctx *fh_to_ctx(struct v4l2_fh *fh)
 {
 	return container_of(fh, struct mdp_m2m_ctx, fh);
@@ -299,6 +285,11 @@ static int mdp_m2m_querycap(struct file *file, void *fh,
 static int mdp_m2m_enum_framesizes(struct file *file, void *fh,
 					    struct v4l2_frmsizeenum *sizes)
 {
+	struct video_device *vdev = video_devdata(file);
+	struct mdp_dev *mdp = video_get_drvdata(vdev);
+	struct mdp_pix_limit *out_limit = &mdp->mdp_data->def_limit->out_limit;
+	struct mdp_pix_limit *cap_limit = &mdp->mdp_data->def_limit->cap_limit;
+
 	if (sizes->index)
 		return -EINVAL;
 
@@ -306,7 +297,12 @@ static int mdp_m2m_enum_framesizes(struct file *file, void *fh,
 		return -EINVAL;
 
 	sizes->type = V4L2_FRMSIZE_TYPE_CONTINUOUS;
-	memcpy(&sizes->stepwise, &mdp_frmsize_stepwise, sizeof(sizes->stepwise));
+	sizes->stepwise.min_width = max(out_limit->wmin, cap_limit->wmin);
+	sizes->stepwise.max_width = min(out_limit->wmax, cap_limit->wmax);
+	sizes->stepwise.step_width = 1;
+	sizes->stepwise.min_height = max(out_limit->hmin, cap_limit->hmin);
+	sizes->stepwise.max_height = min(out_limit->hmax, cap_limit->hmax);
+	sizes->stepwise.step_height = 1;
 
 	return 0;
 }
