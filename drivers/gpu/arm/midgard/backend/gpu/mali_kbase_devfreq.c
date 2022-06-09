@@ -125,15 +125,15 @@ static int set_voltages(struct kbase_device *kbdev, unsigned long *volts,
 		return kbdev->devfreq_ops.set_voltages(kbdev, volts, inc);
 
 	if (inc) {
-		first = kbdev->nr_clocks - 1;
+		first = kbdev->nr_regulators - 1;
 		step = -1;
 	} else {
 		first = 0;
 		step = 1;
 	}
 
-	for (i = first; i >= 0 && i < kbdev->nr_clocks; i += step) {
-		if (kbdev->current_voltages[i] == volts[i])
+	for (i = first; i >= 0 && i < kbdev->nr_regulators; i += step) {
+		if (!kbdev->regulators[i] || kbdev->current_voltages[i] == volts[i])
 			continue;
 
 		err = regulator_set_voltage(kbdev->regulators[i],
