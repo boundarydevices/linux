@@ -6181,6 +6181,7 @@ static int brcmf_cfg80211_set_pmk(struct wiphy *wiphy, struct net_device *dev,
 	ifp = netdev_priv(dev);
 	drvr = ifp->drvr;
 	if (WARN_ON((ifp->vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_1X) &&
+			(ifp->vif->profile.use_fwsup != BRCMF_PROFILE_FWSUP_ROAM) &&
 			(ifp->vif->profile.is_ft != true) &&
 			(ifp->vif->profile.is_okc != true)))
 		return -EINVAL;
