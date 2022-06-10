@@ -935,6 +935,11 @@
 	};
 };
 
+&gpu {
+	supply-names = "mali";
+	mali-supply = <&mt6315_7_vbuck1>;
+};
+
 &afe {
 	memory-region = <&snd_dma_mem_reserved>;
 	mediatek,etdm-out1-multi-pin-mode = <1>;
