@@ -4777,11 +4777,10 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 		goto checkdied;
 	}
 
-	sdio_release_host(sdiod->func1);
-
 	/* Start the watchdog timer */
 	bus->sdcnt.tickcnt = 0;
 	brcmf_sdio_wd_timer(bus, true);
+	sdio_release_host(sdiod->func1);
 
 	err = brcmf_alloc(sdiod->dev, sdiod->settings);
 	if (err) {
