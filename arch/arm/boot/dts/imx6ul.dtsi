@@ -182,6 +182,9 @@
 		ocram: sram@905000 {
 			compatible = "mmio-sram";
 			reg = <0x00905000 0x1B000>;
+			ranges = <0 0x00905000 0x1B000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
 		};
 
 		ocram_optee: sram@918000 {
