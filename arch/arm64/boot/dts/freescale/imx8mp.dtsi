@@ -1507,7 +1507,26 @@
 						     "hrv", "hdcp";
 				#power-domain-cells = <1>;
 			};
+		};
 
+		aips5: bus@30c00000 {
+			compatible = "fsl,aips-bus", "simple-bus";
+			reg = <0x30c00000 0x400000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges;
+
+			audio_blk_ctrl: audio-blk-ctrl@30e20000 {
+				compatible = "fsl,imx8mp-audio-blk-ctrl-legacy", "syscon";
+				reg = <0x30e20000 0x50C>;
+				power-domains = <&audiomix_pd>;
+
+				#clock-cells = <1>;
+				#reset-cells = <1>;
+
+				assigned-clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI_PLL_BYPASS>;
+				assigned-clock-parents = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI_PLL>;
+			};
 		};
 
 		pcie: pcie@33800000 {
