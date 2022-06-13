@@ -22,8 +22,11 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/sys_soc.h>
+#include <linux/workqueue.h>
 
 #include "ele_mu.h"
+
+#define ELE_PING_INTERVAL	(3600 * HZ)
 
 struct ele_mu_priv *ele_priv_export;
 
@@ -122,6 +125,19 @@ static void ele_mu_rx_callback(struct mbox_client *c, void *msg)
 		mutex_unlock(&priv->mu_cmd_lock);
 	}
 }
+
+static void ele_ping_handler(struct work_struct *work)
+{
+	int ret;
+
+	ret = ele_ping();
+	if (ret)
+		pr_err("ping ele failed, try again!\n");
+
+	/* reschedule the delay work */
+	schedule_delayed_work(to_delayed_work(work), ELE_PING_INTERVAL);
+}
+static DECLARE_DELAYED_WORK(ele_ping_work, ele_ping_handler);
 
 static int imx_soc_device_register(void)
 {
@@ -888,6 +904,12 @@ static int ele_mu_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	/*
+	 * A ELE ping request must be send at least once every day(24 hours),
+	 * so setup a delay work with 1 hour interval to ping sentinel periodically.
+	 */
+	schedule_delayed_work(&ele_ping_work, ELE_PING_INTERVAL);
+
 	dev_set_drvdata(dev, priv);
 	return devm_of_platform_populate(dev);
 
@@ -899,6 +921,7 @@ static int ele_mu_remove(struct platform_device *pdev)
 {
 	struct ele_mu_priv *priv;
 
+	cancel_delayed_work_sync(&ele_ping_work);
 	priv = dev_get_drvdata(&pdev->dev);
 	mbox_free_channel(priv->tx_chan);
 	mbox_free_channel(priv->rx_chan);
