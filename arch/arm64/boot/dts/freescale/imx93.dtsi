@@ -1157,6 +1157,20 @@
 					power-domains = <&media_blk_ctrl IMX93_MEDIABLK_PD_MIPI_CSI>;
 					status = "disabled";
 				};
+
+				parallel_csi: pcsi@4ac10070 {
+					compatible = "fsl,imx93-parallel-csi";
+					reg = <0x4ac10070 0x10>;
+					clocks = <&clk IMX93_CLK_MIPI_CSI_GATE>,
+						 <&clk IMX93_CLK_MEDIA_APB>;
+					clock-names = "pixel", "ipg";
+					assigned-clocks = <&clk IMX93_CLK_CAM_PIX>;
+					assigned-clock-parents = <&clk IMX93_CLK_VIDEO_PLL>;
+					assigned-clock-rates = <140000000>;
+					pi_gpr = <&media_blk_ctrl>;
+					power-domains = <&media_blk_ctrl IMX93_MEDIABLK_PD_MIPI_CSI>;
+					status = "disabled";
+				};
 			};
 		};
 
@@ -1259,7 +1273,7 @@
 
 		media_blk_ctrl: blk-ctrl@4ac10000 {
 			compatible = "fsl,imx93-media-blk-ctrl", "syscon", "simple-mfd";
-			reg = <0x4ac10000 0x10000>;
+			reg = <0x4ac10000 0x70>;
 			power-domains = <&mediamix>;
 			clocks = <&clk IMX93_CLK_MEDIA_APB>,
 				 <&clk IMX93_CLK_MEDIA_AXI>,
