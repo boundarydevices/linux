@@ -51,3 +51,7 @@
 		pmsg-size      = <0x00020000>;
 	};
 };
+
+&dcnano {
+	trusty;
+};
