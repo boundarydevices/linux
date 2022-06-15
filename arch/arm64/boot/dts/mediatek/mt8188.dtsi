@@ -1022,6 +1022,57 @@
 			#clock-cells = <1>;
 		};
 
+		efuse: efuse@11f20000 {
+			compatible = "mediatek,efuse";
+			reg = <0 0x11f20000 0 0x1000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			dp_calibration: dp-data {
+				reg = <0x19c 0x10>;
+			};
+
+			lvts_e_data1: data1 {
+				reg = <0x1ac 0x40>;
+			};
+
+			hdmirx_efuse: data2 {
+				reg = <0x50 0xc>;
+			};
+
+			hdmirx_rterm: data3 {
+				reg = <0x1ac 0x4>;
+			};
+
+			hdmitx_efuse: calib@184 {
+				reg = <0x184 0x4>;
+			};
+
+			csi_efuse0: csi-data0 {
+				reg = <0x18c 0x4>;
+			};
+
+			csi_efuse1: csi-data1 {
+				reg = <0x190 0x4>;
+			};
+
+			svs_calibration: calib@534 {
+				reg = <0x534 0x68>;
+			};
+
+			gpu_segment_table0: gpu-efuse0 {
+				reg = <0x40 0x4>;
+			};
+
+			gpu_segment_table1: gpu-efuse1 {
+				reg = <0x4c 0x4>;
+			};
+
+			gpu_segment_table2: gpu-efuse2 {
+				reg = <0x4c 0x4>;
+			};
+		};
+
 		mfgcfg: syscon@13fbf000 {
 			compatible = "mediatek,mt8188-mfgcfg", "syscon";
 			reg = <0 0x13fbf000 0 0x1000>;
