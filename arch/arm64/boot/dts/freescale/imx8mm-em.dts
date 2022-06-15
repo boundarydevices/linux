@@ -176,6 +176,13 @@
 		>;
 	};
 
+	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
+		fsl,pins = <
+#define GP_LTK08_MIPI_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
+			MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1		0x116
+		>;
+	};
+
 	pinctrl_pcie0: pcie0grp {
 		fsl,pins = <
 #define GP_PCIE0_RESET		<&gpio4 31 GPIO_ACTIVE_LOW>
@@ -380,6 +387,9 @@
 	};
 };
 
+#include "panel-ltk080a60a004t.dtsi"
+#include "panel-m101nwwb.dtsi"
+
 / {
 	model = "Boundary Devices i.MX 8M Mini EM";
 	compatible = "boundary,imx8mm-em", "fsl,imx8mm";
@@ -391,6 +401,7 @@
 		lcdif = &lcdif;
 		mipi = &fb_mipi;
 		mipi_dsi = &mipi_dsi;
+		mipi_to_lvds = &mipi_to_lvds;
 		pwm_mipi = &pwm3;
 		t_mipi = &t_mipi;
 		ts_ft5x06 = &ts_ft5x06;
