@@ -186,7 +186,7 @@
 &dsi0 {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	status = "disabled";
+	status = "okay";
 
 	panel@0 {
 		compatible = "startek,kd070fhfid015";
@@ -195,6 +195,7 @@
 		reset-gpios = <&pio 20 GPIO_ACTIVE_HIGH>;
 		iovcc-supply = <&mt6357_vsim1_reg>;
 		power-supply = <&vsys_lcm_reg>;
+		status = "disabled";
 
 		port {
 			panel_in: endpoint {
@@ -204,6 +205,8 @@
 	};
 
 	port {
+		status = "disabled";
+
 		dsi_out: endpoint {
 			remote-endpoint = <&panel_in>;
 		};
