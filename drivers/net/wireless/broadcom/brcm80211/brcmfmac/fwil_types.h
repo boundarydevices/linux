@@ -202,6 +202,8 @@ enum {
 
 #define DL_TYPE_CLM			2
 
+#define MAX_RSSI_LEVELS			8
+
 /* join preference types for join_pref iovar */
 enum brcmf_join_pref_types {
 	BRCMF_JOIN_PREF_RSSI = 1,
@@ -1129,5 +1131,20 @@ struct brcmf_mkeep_alive_pkt_le {
 	u8   keep_alive_id;
 	u8   data[];
 } __packed;
+
+/* BRCM_E_RSSI event data */
+struct wl_event_data_rssi {
+	s32 rssi;
+	s32 snr;
+	s32 noise;
+};
+
+/** RSSI event notification configuration. */
+struct wl_rssi_event {
+	u32 rate_limit_msec;
+	u8 num_rssi_levels;
+	s8 rssi_levels[MAX_RSSI_LEVELS];
+	s8 pad[3];
+};
 
 #endif /* FWIL_TYPES_H_ */
