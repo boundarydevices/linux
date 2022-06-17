@@ -2126,6 +2126,8 @@
 						"SVPP3_VDO1_DL_RELAY",
 						"SVPP2_VDO1_DL_RELAY",
 						"SVPP3_VDO0_DL_RELAY";
+			assigned-clocks = <&topckgen CLK_TOP_VPP>;
+			assigned-clock-parents = <&topckgen CLK_TOP_MAINPLL_D4>;
 			mediatek,mmsys2 = <&vppsys1>;
 			mediatek,mm-mutex2 = <&vpp1_mutex>;
 			mediatek,mmsys = <&vppsys0>;
