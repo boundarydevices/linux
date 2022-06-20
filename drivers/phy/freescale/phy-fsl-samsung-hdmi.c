@@ -1003,7 +1003,7 @@ static int samsung_hdmi_phy_clk_register(struct samsung_hdmi_phy *samsung)
 		return ret;
 	}
 
-	ret = device_reset(dev);
+	ret = device_reset_optional(dev);
 	if (ret) {
 		dev_warn(dev, "failed to reset hdmi phy %d\n", ret);
 		return ret;
@@ -1038,14 +1038,14 @@ static int samsung_hdmi_phy_probe(struct platform_device *pdev)
 		return PTR_ERR(regs);
 	samsung->regs = regs;
 
-	samsung->apbclk = devm_clk_get(samsung->dev, "apb");
+	samsung->apbclk = devm_clk_get_optional(samsung->dev, "apb");
 	if (IS_ERR(samsung->apbclk)) {
 		ret = PTR_ERR(samsung->apbclk);
 		dev_err(samsung->dev, "failed to get phy apb clk: %d\n", ret);
 		return ret;
 	}
 
-	samsung->refclk = devm_clk_get(samsung->dev, "ref");
+	samsung->refclk = devm_clk_get_optional(samsung->dev, "ref");
 	if (IS_ERR(samsung->refclk)) {
 		ret =  PTR_ERR(samsung->refclk);
 		dev_err(samsung->dev, "failed to get phy refclk: %d\n", ret);
