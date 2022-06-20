@@ -315,15 +315,15 @@ static const struct dev_pm_ops imx_blk_ctrl_pm_ops = {
 
 static const struct of_device_id imx_blk_ctrl_of_match[] = {
 	{
-		.compatible = "fsl,imx8mp-audio-blk-ctrl",
+		.compatible = "fsl,imx8mp-audio-blk-ctrl-legacy",
 		.data = &imx8mp_audio_blk_ctrl_dev_data
 	},
 	{
-		.compatible = "fsl,imx8mp-media-blk-ctrl",
+		.compatible = "fsl,imx8mp-media-blk-ctrl-legacy",
 		.data = &imx8mp_media_blk_ctrl_dev_data
 	},
 	{
-		.compatible = "fsl,imx8mp-hdmi-blk-ctrl",
+		.compatible = "fsl,imx8mp-hdmi-blk-ctrl-legacy",
 		.data = &imx8mp_hdmi_blk_ctrl_dev_data
 	},
 	{ /* Sentinel */ }
