@@ -117,6 +117,7 @@ static const struct scpsys_domain_data scpsys_domain_data_mt8195[] = {
 				    MT8195_TOP_AXI_PROT_EN_2_CLR,
 				    MT8195_TOP_AXI_PROT_EN_2_STA1),
 		},
+		.caps = MTK_SCPD_ALWAYS_ON,
 	},
 	[MT8195_POWER_DOMAIN_MFG0] = {
 		.name = "mfg0",
