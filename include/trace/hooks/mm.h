@@ -55,6 +55,11 @@ DECLARE_HOOK(android_vh_look_around,
 	TP_PROTO(struct page_vma_mapped_walk *pvmw, struct folio *folio,
 		struct vm_area_struct *vma, int *referenced),
 	TP_ARGS(pvmw, folio, vma, referenced));
+
+DECLARE_HOOK(android_vh_calc_alloc_flags,
+	TP_PROTO(gfp_t gfp_mask, unsigned int *alloc_flags,
+		bool *bypass),
+	TP_ARGS(gfp_mask, alloc_flags, bypass));
 #endif /* _TRACE_HOOK_MM_H */
 
 /* This part must be outside protection */
