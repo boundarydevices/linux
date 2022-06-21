@@ -23,6 +23,7 @@ properties:
       - mediatek,mt8173-dpi
       - mediatek,mt8183-dpi
       - mediatek,mt8192-dpi
+      - mediatek,mt8195-dpintf
 
   reg:
     maxItems: 1
@@ -49,6 +50,11 @@ properties:
     items:
       - const: default
       - const: sleep
+
+  mediatek,oob-hpd:
+    type: boolean
+    description:
+      The DPI has out of bound hotplug detection capabilities.
 
   port:
     $ref: /schemas/graph.yaml#/properties/port
