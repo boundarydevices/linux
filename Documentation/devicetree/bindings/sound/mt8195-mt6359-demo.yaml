@@ -24,6 +24,42 @@ properties:
     $ref: /schemas/types.yaml#/definitions/string
     description: User specified audio sound card name
 
+patternProperties:
+  "^dai-link-[0-9]+$":
+    type: object
+    description: |
+      Array of dai-links with their corresponding codecs.
+
+    properties:
+      sound-dai:
+          $ref: "/schemas/types.yaml#/definitions/phandle"
+          description: |
+            The phandle of the MT8195 ASoC platform.
+          maxItems: 1
+
+      dai-link-name:
+        description: |
+          This property corresponds to the name of the dai-link to which we are
+          going to attached the codecs present in this node.
+        maxItems: 1
+
+    patternProperties:
+      "^codec-[0-9]+$":
+        type: object
+        description: |
+          Array of nodes containing information about a codec to be attached to
+          the given dai-link.
+
+        properties:
+          sound-dai:
+            $ref: /schemas/types.yaml#/definitions/phandle-array
+            description: |
+              The phandle of the audio codec and the driver id when needed.
+            maxItems: 1
+
+    required:
+      - dai-link-name
+
 additionalProperties: false
 
 required:
@@ -40,6 +76,47 @@ examples:
         model = "mt8195_demo";
         pinctrl-names = "default";
         pinctrl-0 = <&aud_pins_default>;
+
+
+        dai-link-0 {
+            sound-dai = <&afe>;
+            dai-link-name = "DL_SRC_BE";
+
+            codec-0 {
+                sound-dai = <&pmic 0>;
+            };
+        };
+
+        dai-link-1 {
+            sound-dai = <&afe>;
+            dai-link-name = "UL_SRC1_BE";
+
+            codec-0 {
+                sound-dai = <&pmic 0>;
+            };
+
+            codec-1 {
+                sound-dai = <&dmic_codec>;
+            };
+        };
+
+        dai-link-2 {
+            sound-dai = <&afe>;
+            dai-link-name = "UL_SRC2_BE";
+
+            codec-0 {
+                sound-dai = <&pmic 1>;
+            };
+        };
+
+        dai-link-3 {
+            sound-dai = <&afe>;
+            dai-link-name = "ETDM3_OUT_BE";
+
+            codec-0 {
+                sound-dai = <&hdmi0>;
+            };
+        };
     };
 
 ...
