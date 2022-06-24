@@ -496,7 +496,7 @@ failed:
 }
 #endif /* CONFIG_PM */
 
-struct pci_driver mt7921_pci_driver = {
+static struct pci_driver mt7921_pci_driver = {
 	.name		= KBUILD_MODNAME,
 	.id_table	= mt7921_pci_device_table,
 	.probe		= mt7921_pci_probe,
