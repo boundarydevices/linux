@@ -21,6 +21,8 @@
 #define CMDQ_WFE_WAIT			BIT(15)
 #define CMDQ_WFE_WAIT_VALUE		0x1
 
+#define CMDQ_TIMEOUT_DEFAULT		1000
+
 /*
  * WFE arg_b
  * bit 0-11: wait value

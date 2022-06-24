@@ -12,6 +12,9 @@
 #include <linux/iopoll.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/timer.h>
+#include <linux/workqueue.h>
+#include <linux/sched/clock.h>
 #include <linux/platform_device.h>
 #include <linux/mailbox_controller.h>
 #include <linux/mailbox/mtk-cmdq-mailbox.h>
@@ -62,7 +65,12 @@ struct cmdq_thread {
 	struct mbox_chan	*chan;
 	void __iomem		*base;
 	struct list_head	task_busy_list;
+	struct timer_list	timeout;
+	u32			timeout_ms;
+	struct work_struct	timeout_work;
+	u64			timer_mod;
 	u32			priority;
+	u32			idx;
 };
 
 struct cmdq_task {
@@ -82,6 +90,7 @@ struct cmdq {
 	struct cmdq_thread	*thread;
 	struct clk_bulk_data	clocks[CMDQ_GCE_NUM_MAX];
 	bool			suspended;
+	struct workqueue_struct	*timeout_wq;
 	spinlock_t		event_lock;
 	struct cmdq_backup_event_list	*cmdq_backup_event_list;
 };
@@ -317,8 +326,161 @@ static void cmdq_thread_irq_handler(struct cmdq *cmdq,
 			break;
 	}
 
-	if (list_empty(&thread->task_busy_list))
+	task = list_first_entry_or_null(&thread->task_busy_list,
+					struct cmdq_task, list_entry);
+
+	if (!task) {
 		cmdq_thread_disable(cmdq, thread);
+		pr_debug("empty task thread:%u", thread->idx);
+	} else {
+		mod_timer(&thread->timeout, jiffies +
+			  msecs_to_jiffies(thread->timeout_ms));
+		thread->timer_mod = sched_clock();
+		pr_debug("mod_timer pkt:0x%p timeout:%u thread:%u",
+			task->pkt, thread->timeout_ms, thread->idx);
+	}
+}
+
+static bool cmdq_thread_timeout_exceed(struct cmdq_thread *thread)
+{
+	u64 duration;
+
+	/* If first time exec time stamp smaller than timeout value,
+	 * it is last round timeout. Skip it.
+	 */
+	duration = div_s64(sched_clock() - thread->timer_mod, 1000000);
+	if (duration < thread->timeout_ms) {
+		mod_timer(&thread->timeout, jiffies +
+		    msecs_to_jiffies(thread->timeout_ms - duration));
+		thread->timer_mod = sched_clock();
+		pr_info("thread:%u mod time:%llu dur:%llu timeout not exceed",
+			thread->idx, thread->timer_mod, duration);
+		return false;
+	}
+
+	return true;
+}
+
+static void cmdq_thread_handle_timeout_work(struct work_struct *work_item)
+{
+	struct cmdq_thread *thread = container_of(work_item,
+	    struct cmdq_thread, timeout_work);
+	struct cmdq *cmdq = container_of(thread->chan->mbox, struct cmdq, mbox);
+	struct cmdq_task *task, *tmp, *timeout_task = NULL;
+	unsigned long flags;
+	dma_addr_t pa_curr;
+	struct list_head removes;
+
+	INIT_LIST_HEAD(&removes);
+
+	spin_lock_irqsave(&thread->chan->lock, flags);
+	if (list_empty(&thread->task_busy_list)) {
+		spin_unlock_irqrestore(&thread->chan->lock, flags);
+		return;
+	}
+
+	/* Check before suspend thread to prevent hurt performance. */
+	if (!cmdq_thread_timeout_exceed(thread)) {
+		spin_unlock_irqrestore(&thread->chan->lock, flags);
+		return;
+	}
+
+	WARN_ON(cmdq_thread_suspend(cmdq, thread) < 0);
+
+	/*
+	 * Although IRQ is disabled, GCE continues to execute.
+	 * It may have pending IRQ before GCE thread is suspended,
+	 * so check this condition again.
+	 */
+	cmdq_thread_irq_handler(cmdq, thread);
+
+	if (list_empty(&thread->task_busy_list)) {
+		pr_err("thread:%u empty after irq handle in timeout", thread->idx);
+		goto unlock_free_done;
+	}
+
+	/* After IRQ, first task may change. */
+	if (!cmdq_thread_timeout_exceed(thread)) {
+		cmdq_thread_resume(thread);
+		goto unlock_free_done;
+	}
+
+	pr_err("timeout for thread:0x%p idx:%u", thread->base, thread->idx);
+
+	pa_curr = readl(thread->base + CMDQ_THR_CURR_ADDR) << cmdq->pdata->shift;
+
+	list_for_each_entry_safe(task, tmp, &thread->task_busy_list,
+				 list_entry) {
+		u32 task_end_pa = task->pa_base + task->pkt->cmd_buf_size;
+
+		if (pa_curr >= task->pa_base && pa_curr < task_end_pa) {
+			timeout_task = task;
+			break;
+		}
+
+		pr_info("ending not curr in timeout pkt:0x%p curr_pa:%pa", task->pkt, &pa_curr);
+		cmdq_task_exec_done(task, 0);
+		kfree(task);
+	}
+
+	if (timeout_task) {
+		spin_unlock_irqrestore(&thread->chan->lock, flags);
+
+		cmdq_task_exec_done(timeout_task, -ETIMEDOUT);
+
+		spin_lock_irqsave(&thread->chan->lock, flags);
+
+		task = list_first_entry_or_null(&thread->task_busy_list,
+		    struct cmdq_task, list_entry);
+		if (timeout_task == task) {
+			cmdq_task_exec_done(task, -ETIMEDOUT);
+			kfree(task);
+		} else {
+			pr_err("task list changed");
+		}
+	}
+
+	task = list_first_entry_or_null(&thread->task_busy_list,
+					struct cmdq_task, list_entry);
+	if (task) {
+		mod_timer(&thread->timeout, jiffies +
+			msecs_to_jiffies(thread->timeout_ms));
+		thread->timer_mod = sched_clock();
+		cmdq_thread_reset(cmdq, thread);
+		cmdq_thread_resume(thread);
+	} else {
+		cmdq_thread_resume(thread);
+		cmdq_thread_disable(cmdq, thread);
+	}
+
+unlock_free_done:
+	spin_unlock_irqrestore(&thread->chan->lock, flags);
+
+	list_for_each_entry_safe(task, tmp, &removes, list_entry) {
+		list_del(&task->list_entry);
+		kfree(task);
+	}
+}
+
+static void cmdq_thread_handle_timeout(struct timer_list *t)
+{
+	struct cmdq_thread *thread = from_timer(thread, t, timeout);
+	struct cmdq *cmdq = container_of(thread->chan->mbox, struct cmdq, mbox);
+	unsigned long flags;
+	bool empty;
+
+	spin_lock_irqsave(&thread->chan->lock, flags);
+	empty = list_empty(&thread->task_busy_list);
+	spin_unlock_irqrestore(&thread->chan->lock, flags);
+	if (empty)
+		return;
+
+	if (!work_pending(&thread->timeout_work)) {
+		pr_debug("queue cmdq timeout thread:%u", thread->idx);
+		queue_work(cmdq->timeout_wq, &thread->timeout_work);
+	} else {
+		pr_info("ignore cmdq timeout thread:%u", thread->idx);
+	}
 }
 
 static irqreturn_t cmdq_irq_handler(int irq, void *dev)
@@ -432,6 +594,11 @@ static int cmdq_mbox_send_data(struct mbox_chan *chan, void *data)
 		writel(thread->priority, thread->base + CMDQ_THR_PRIORITY);
 		writel(CMDQ_THR_IRQ_EN, thread->base + CMDQ_THR_IRQ_ENABLE);
 		writel(CMDQ_THR_ENABLED, thread->base + CMDQ_THR_ENABLE_TASK);
+		if (thread->timeout_ms != 0) {
+			mod_timer(&thread->timeout, jiffies +
+				msecs_to_jiffies(thread->timeout_ms));
+			thread->timer_mod = sched_clock();
+		}
 	} else {
 		WARN_ON(cmdq_thread_suspend(cmdq, thread) < 0);
 		curr_pa = readl(thread->base + CMDQ_THR_CURR_ADDR) <<
@@ -645,10 +812,14 @@ static int cmdq_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	for (i = 0; i < cmdq->pdata->thread_nr; i++) {
+		cmdq->thread[i].idx = i;
 		cmdq->thread[i].base = cmdq->base + CMDQ_THR_BASE +
 				CMDQ_THR_SIZE * i;
+		cmdq->thread[i].timeout_ms = CMDQ_TIMEOUT_DEFAULT;
 		INIT_LIST_HEAD(&cmdq->thread[i].task_busy_list);
 		cmdq->mbox.chans[i].con_priv = (void *)&cmdq->thread[i];
+		timer_setup(&cmdq->thread[i].timeout, cmdq_thread_handle_timeout, 0);
+		INIT_WORK(&cmdq->thread[i].timeout_work, cmdq_thread_handle_timeout_work);
 	}
 
 	err = devm_mbox_controller_register(dev, &cmdq->mbox);
@@ -656,6 +827,8 @@ static int cmdq_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to register mailbox: %d\n", err);
 		return err;
 	}
+
+	cmdq->timeout_wq = create_singlethread_workqueue("cmdq_timeout_handler");
 
 	platform_set_drvdata(pdev, cmdq);
 
