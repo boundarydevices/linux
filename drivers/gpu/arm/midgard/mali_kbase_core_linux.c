@@ -3196,6 +3196,40 @@ static DEVICE_ATTR(dvfs_period, S_IRUGO | S_IWUSR, show_dvfs_period,
 		set_dvfs_period);
 
 /**
+ * show_gpu_utilization - Show GPU utilization
+ * @dev:  The device this sysfs file is for.
+ * @attr: The attributes of the sysfs file.
+ * @buf:  The output buffer to receive the GPU information.
+ *
+ * This function is called to get the current GPU utilization
+ *
+ * Return: The number of bytes output to @buf.
+ */
+static ssize_t show_gpu_utilization(struct device *dev,
+		struct device_attribute *attr, char * const buf)
+{
+	struct kbase_device *kbdev;
+	struct devfreq_dev_status stat;
+	int utilization;
+	ssize_t len;
+
+	kbdev = dev_get_drvdata(dev);
+	if (!kbdev)
+		return -ENODEV;
+
+	kbdev->devfreq_profile.get_dev_status(dev, &stat);
+
+	utilization = (100 * stat.busy_time) /
+		max(stat.total_time, 1u);
+
+	len = sprintf(buf, "Mali GPU utilization:%lu@%luHz\n", utilization, stat.current_frequency);
+
+	return len;
+}
+
+static DEVICE_ATTR(gpu_utilization, S_IRUSR | S_IRGRP | S_IROTH, show_gpu_utilization, NULL);
+
+/**
  * set_pm_poweroff - Store callback for the pm_poweroff sysfs file.
  * @dev:   The device with sysfs file is for
  * @attr:  The attributes of the sysfs file
@@ -5016,6 +5050,7 @@ static struct attribute *kbase_attrs[] = {
 #endif /* !MALI_USE_CSF */
 	&dev_attr_gpuinfo.attr,
 	&dev_attr_dvfs_period.attr,
+	&dev_attr_gpu_utilization.attr,
 	&dev_attr_pm_poweroff.attr,
 #if MALI_USE_CSF
 	&dev_attr_idle_hysteresis_time.attr,
