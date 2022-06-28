@@ -1326,10 +1326,10 @@ static int wm8960_set_bias_level(struct snd_soc_component *component,
 	return wm8960->set_bias_level(component, level);
 }
 
-static int wm8960_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
+static int wm8960_set_component_sysclk(struct snd_soc_component *component,
+					int clk_id, int source,
 					unsigned int freq, int dir)
 {
-	struct snd_soc_component *component = dai->component;
 	struct wm8960_priv *wm8960 = snd_soc_component_get_drvdata(component);
 
 	switch (clk_id) {
@@ -1366,7 +1366,6 @@ static const struct snd_soc_dai_ops wm8960_dai_ops = {
 	.set_fmt = wm8960_set_dai_fmt,
 	.set_clkdiv = wm8960_set_dai_clkdiv,
 	.set_pll = wm8960_set_dai_pll,
-	.set_sysclk = wm8960_set_dai_sysclk,
 	.no_capture_mute = 1,
 };
 
@@ -1408,6 +1407,7 @@ static int wm8960_probe(struct snd_soc_component *component)
 static const struct snd_soc_component_driver soc_component_dev_wm8960 = {
 	.probe			= wm8960_probe,
 	.set_bias_level		= wm8960_set_bias_level,
+	.set_sysclk		= wm8960_set_component_sysclk,
 	.suspend_bias_off	= 1,
 	.idle_bias_on		= 1,
 	.use_pmdown_time	= 1,
