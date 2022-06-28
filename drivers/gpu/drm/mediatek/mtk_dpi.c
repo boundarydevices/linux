@@ -715,9 +715,9 @@ static int mtk_dpi_bridge_atomic_check(struct drm_bridge *bridge,
 		if (dpi->conf->num_output_fmts)
 			out_bus_format = dpi->conf->output_fmts[0];
 
-	dev_info(dpi->dev, "input format 0x%04x, output format 0x%04x\n",
-		 bridge_state->input_bus_cfg.format,
-		 bridge_state->output_bus_cfg.format);
+	dev_dbg(dpi->dev, "input format 0x%04x, output format 0x%04x\n",
+		bridge_state->input_bus_cfg.format,
+		bridge_state->output_bus_cfg.format);
 
 	dpi->output_fmt = out_bus_format;
 	dpi->bit_num = MTK_DPI_OUT_BIT_NUM_8BITS;

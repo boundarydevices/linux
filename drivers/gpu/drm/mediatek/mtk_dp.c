@@ -2802,9 +2802,9 @@ static int mtk_dp_bridge_atomic_check(struct drm_bridge *bridge,
 
 	input_bus_format = bridge_state->input_bus_cfg.format;
 
-	dev_info(mtk_dp->dev, "input format 0x%04x, output format 0x%04x\n",
-		 bridge_state->input_bus_cfg.format,
-		 bridge_state->output_bus_cfg.format);
+	dev_dbg(mtk_dp->dev, "input format 0x%04x, output format 0x%04x\n",
+		bridge_state->input_bus_cfg.format,
+		bridge_state->output_bus_cfg.format);
 
 	mtk_dp->input_fmt = input_bus_format;
 	if (mtk_dp->input_fmt == MEDIA_BUS_FMT_YUYV8_1X16)
