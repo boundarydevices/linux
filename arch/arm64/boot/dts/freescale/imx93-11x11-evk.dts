@@ -70,6 +70,10 @@
 				<&vdev1vring0>, <&vdev1vring1>, <&rsc_table>;
 	};
 
+	ethosu {
+		compatible = "arm,ethosu";
+	};
+
 	reg_can2_stby: regulator-can2-stby {
 		compatible = "regulator-fixed";
 		regulator-name = "can2-stby";
