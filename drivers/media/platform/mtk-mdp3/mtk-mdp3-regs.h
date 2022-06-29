@@ -418,8 +418,7 @@ int mdp_check_scaling_ratio(const struct v4l2_rect *crop,
 bool mdp_is_framechange(struct mdp_framechange_param *prev,
 			struct mdp_framechange_param *cur);
 void mdp_set_scenario(struct mdp_dev *mdp,
-		      struct img_ipi_frameparam *param,
-		      struct mdp_frame *frame);
+		      struct img_ipi_frameparam *param);
 void mdp_set_src_config(struct img_input *in,
 			struct mdp_frame *frame, struct vb2_buffer *vb);
 void mdp_set_dst_config(struct img_output *out,

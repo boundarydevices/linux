@@ -432,17 +432,19 @@ bool mdp_is_framechange(struct mdp_framechange_param *prev,
 }
 
 void mdp_set_scenario(struct mdp_dev *mdp,
-		      struct img_ipi_frameparam *param,
-		      struct mdp_frame *frame)
+		      struct img_ipi_frameparam *param)
 {
-	u32 width = frame->format.fmt.pix_mp.width;
-	u32 height = frame->format.fmt.pix_mp.height;
+	u32 in_width = param->inputs[0].buffer.format.width;
+	u32 in_height = param->inputs[0].buffer.format.height;
+	u32 out_width = param->outputs[0].buffer.format.width;
+	u32 out_height = param->outputs[0].buffer.format.height;
 
 	if (!mdp)
 		return;
 
 	if (mdp->mdp_data->mdp_cfg->support_dual_pipe) {
-		if ((width * height) >= FHD)
+		if ((in_width * in_height) >= FHD ||
+		   (out_width * out_height) >= FHD)
 			param->type = MDP_STREAM_TYPE_DUAL_BITBLT;
 	}
 }

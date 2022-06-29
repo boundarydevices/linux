@@ -94,11 +94,11 @@ static void mdp_m2m_worker(struct work_struct *work)
 	frame = ctx_get_frame(ctx, V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
 	src_vb = v4l2_m2m_next_src_buf(ctx->m2m_ctx);
 	mdp_set_src_config(&param.inputs[0], frame, &src_vb->vb2_buf);
-	mdp_set_scenario(ctx->mdp_dev, &param, frame);
 
 	frame = ctx_get_frame(ctx, V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE);
 	dst_vb = v4l2_m2m_next_dst_buf(ctx->m2m_ctx);
 	mdp_set_dst_config(&param.outputs[0], frame, &dst_vb->vb2_buf);
+	mdp_set_scenario(ctx->mdp_dev, &param);
 
 	cur_frame.scenario = param.type;
 	cur_frame.frame_count = ctx->frame_count[MDP_M2M_SRC];
