@@ -416,7 +416,8 @@ static int evb_port_fdb_add(struct ndmsg *ndm, struct nlattr *tb[],
 
 static int evb_port_fdb_del(struct ndmsg *ndm, struct nlattr *tb[],
 			    struct net_device *netdev,
-			    const unsigned char *addr, u16 vid)
+			    const unsigned char *addr, u16 vid,
+			    struct netlink_ext_ack *extack)
 {
 	u16 _vid;
 	int err;
