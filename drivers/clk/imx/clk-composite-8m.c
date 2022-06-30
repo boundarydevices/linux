@@ -52,22 +52,40 @@ static int imx8m_clk_composite_compute_dividers(unsigned long rate,
 						int *prediv, int *postdiv)
 {
 	int div1, div2;
-	int error = INT_MAX;
+	long error = INT_MAX;
 	int ret = -EINVAL;
+	long maxdiv = (parent_rate + (rate >> 1)) / rate;
 
+	if (maxdiv < 1)
+		maxdiv = 1;
 	*prediv = 1;
+	if (maxdiv <= PCG_DIV_MAX) {
+		*postdiv = maxdiv;
+		return 0;
+	}
 	*postdiv = 1;
 
 	for (div1 = 1; div1 <= PCG_PREDIV_MAX; div1++) {
-		for (div2 = 1; div2 <= PCG_DIV_MAX; div2++) {
-			int new_error = ((parent_rate / div1) / div2) - rate;
+		unsigned long new_rate;
+		long new_error;
+		int rate_div = rate * div1;
 
-			if (abs(new_error) < abs(error)) {
-				*prediv = div1;
-				*postdiv = div2;
-				error = new_error;
-				ret = 0;
-			}
+		div2 = (parent_rate + (rate_div >> 1)) / rate_div;
+		if (div2 < 1)
+			div2 = 1;
+		else if (div2 > PCG_DIV_MAX)
+			div2 = PCG_DIV_MAX;
+
+		new_rate = parent_rate / (div1 * div2);
+		new_error = abs(new_rate - rate);
+
+		if (new_error < error) {
+			*prediv = div1;
+			*postdiv = div2;
+			error = new_error;
+			ret = 0;
+			if (!error)
+				return ret;
 		}
 	}
 	return ret;
@@ -79,13 +97,12 @@ static long imx8m_clk_composite_divider_round_rate(struct clk_hw *hw,
 {
 	int prediv_value;
 	int div_value;
+	int div;
 
 	imx8m_clk_composite_compute_dividers(rate, *prate,
 						&prediv_value, &div_value);
-	rate = DIV_ROUND_UP(*prate, prediv_value);
-
-	return DIV_ROUND_UP(rate, div_value);
-
+	div = prediv_value * div_value;
+	return DIV_ROUND_UP(*prate, div);
 }
 
 static int imx8m_clk_composite_divider_set_rate(struct clk_hw *hw,
