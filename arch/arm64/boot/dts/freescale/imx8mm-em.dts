@@ -57,8 +57,8 @@
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 			MX8MM_IOMUXC_SAI1_RXFS_GPIO4_IO0		0x1c0	/* PI-Awake */
-			MX8MM_IOMUXC_SPDIF_RX_GPIO5_IO4			0x1c0	/* BGM Coex 1 */
-			MX8MM_IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5		0x1c0	/* BGM Coex 2 */
+			MX8MM_IOMUXC_SPDIF_RX_GPIO5_IO4			0x180	/* BGM Coex 1 */
+			MX8MM_IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5		0x180	/* BGM Coex 2 */
 			/* test points */
 			MX8MM_IOMUXC_SAI1_RXD2_GPIO4_IO4		0x1c0	/* tp2 */
 			MX8MM_IOMUXC_SAI1_RXD4_GPIO4_IO6		0x1c0	/* tp7 */
