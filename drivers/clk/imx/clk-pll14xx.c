@@ -60,11 +60,14 @@ static const struct imx_pll14xx_rate_table imx_pll1416x_tbl[] = {
 static const struct imx_pll14xx_rate_table imx_pll1443x_tbl[] = {
 	PLL_1443X_RATE(1039500000U, 173, 2, 1, 16384),
 	PLL_1443X_RATE(650000000U, 325, 3, 2, 0),	/* 12M * 325 / 6 = 650M */
-	PLL_1443X_RATE(594000000U, 198, 2, 2, 0),	/* 12M * 198 / 4 = 549M */
+	PLL_1443X_RATE(594000000U, 198, 2, 2, 0),	/* 12M * 198 / 4 = 594M */
+	PLL_1443X_RATE(519750000U, 173, 2, 2, 16384),
+	PLL_1443X_RATE(497755966U, 166, 2, 2, -5331),	/* 12M * (166 - 5331/65536) / 4 = 497.7M */
+	PLL_1443X_RATE(453000000U, 151, 2, 2, 0),	/* 12M * 151 / 4 = 453M */
+	PLL_1443X_RATE(452900000U, 151, 2, 2, -2185),	/* 12M * (151 - 2185/65536) / 4 = 452.9M */
+	PLL_1443X_RATE(393216000U, 262, 2, 3, 9437),
 	PLL_1443X_RATE(384000000U, 192, 3, 2, 0),	/* 12M * 192 / 6 = 384M */
 	PLL_1443X_RATE(364000000U, 182, 3, 2, 0),	/* 12M * 182 / 6 = 364M */
-	PLL_1443X_RATE(519750000U, 173, 2, 2, 16384),
-	PLL_1443X_RATE(393216000U, 262, 2, 3, 9437),
 	PLL_1443X_RATE(361267200U, 361, 3, 3, 17511),
 };
 
@@ -96,10 +99,13 @@ static const struct imx_pll14xx_rate_table *imx_get_pll_settings(
 	const struct imx_pll14xx_rate_table *rate_table = pll->rate_table;
 	int i;
 
-	for (i = 0; i < pll->rate_count; i++)
-		if (rate == rate_table[i].rate)
+	for (i = 0; i < pll->rate_count; i++) {
+		ulong diff = (rate >= rate_table[i].rate) ?
+			(rate - rate_table[i].rate) :
+			(rate_table[i].rate - rate);
+		if (diff <= 10)
 			return &rate_table[i];
-
+	}
 	return NULL;
 }
 
