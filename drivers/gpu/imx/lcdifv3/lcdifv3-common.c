@@ -35,6 +35,8 @@ struct lcdifv3_soc {
 	struct clk *clk_pix;
 	struct clk *clk_disp_axi;
 	struct clk *clk_disp_apb;
+	struct clk *clk_ldb;
+	struct clk *clk_ldb_pll;
 
 	u32 thres_low_mul;
 	u32 thres_low_div;
@@ -366,6 +368,7 @@ void lcdifv3_set_mode(struct lcdifv3_soc *lcdifv3, struct videomode *vmode)
 	const struct of_device_id *of_id =
 			of_match_device(imx_lcdifv3_dt_ids, lcdifv3->dev);
 	const struct lcdifv3_soc_pdata *soc_pdata;
+	unsigned long pixelclock = vmode->pixelclock;
 	u32 disp_size, hsyn_para, vsyn_para, vsyn_hsyn_width, ctrldescl0_1;
 
 	if (unlikely(!of_id))
@@ -374,7 +377,17 @@ void lcdifv3_set_mode(struct lcdifv3_soc *lcdifv3, struct videomode *vmode)
 
 	/* set pixel clock rate */
 	clk_disable_unprepare(lcdifv3->clk_pix);
-	clk_set_rate(lcdifv3->clk_pix, vmode->pixelclock);
+	if (lcdifv3->clk_ldb_pll) {
+		clk_set_rate(lcdifv3->clk_ldb_pll, pixelclock * 7);
+		pixelclock = clk_get_rate(lcdifv3->clk_ldb_pll) / 7;
+		pr_info("%s: wanted %ld got %ld\n", __func__, vmode->pixelclock * 7, pixelclock * 7);
+	}
+	if (lcdifv3->clk_ldb) {
+		clk_set_rate(lcdifv3->clk_ldb, pixelclock * 7);
+		pixelclock = clk_get_rate(lcdifv3->clk_ldb) / 7;
+		pr_info("%s: wanted %ld got %ld\n", __func__, vmode->pixelclock * 7, pixelclock * 7);
+	}
+	clk_set_rate(lcdifv3->clk_pix, pixelclock);
 	clk_prepare_enable(lcdifv3->clk_pix);
 
 	/* config display timings */
@@ -656,6 +669,16 @@ static int imx_lcdifv3_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return dev_err_probe(dev, ret, "irq failed\n");
 	lcdifv3->irq = ret;
+
+	lcdifv3->clk_ldb = devm_clk_get_optional(dev, "ldb");
+	if (IS_ERR(lcdifv3->clk_ldb))
+		return dev_err_probe(dev, PTR_ERR(lcdifv3->clk_ldb),
+				"clk_ldb clock failed\n");
+
+	lcdifv3->clk_ldb_pll = devm_clk_get_optional(dev, "ldb_pll");
+	if (IS_ERR(lcdifv3->clk_ldb_pll))
+		return dev_err_probe(dev, PTR_ERR(lcdifv3->clk_ldb_pll),
+				"clk_ldb_pll clock failed\n");
 
 	lcdifv3->clk_pix = devm_clk_get(dev, "pix");
 	if (IS_ERR(lcdifv3->clk_pix))
