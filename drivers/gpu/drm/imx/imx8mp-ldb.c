@@ -223,10 +223,12 @@ imx8mp_ldb_encoder_atomic_check(struct drm_encoder *encoder,
 	struct imx8mp_ldb_channel *imx8mp_ldb_ch =
 						enc_to_imx8mp_ldb_ch(encoder);
 	struct ldb_channel *ldb_ch = &imx8mp_ldb_ch->base;
+#if 0
 	struct imx8mp_ldb *imx8mp_ldb = imx8mp_ldb_ch->imx8mp_ldb;
 	struct ldb *ldb = &imx8mp_ldb->base;
-	struct drm_display_info *di = &conn_state->connector->display_info;
 	struct drm_display_mode *mode = &crtc_state->adjusted_mode;
+#endif
+	struct drm_display_info *di = &conn_state->connector->display_info;
 	u32 bus_format = ldb_ch->bus_format;
 
 	/* Bus format description in DT overrides connector display info. */
@@ -249,6 +251,7 @@ imx8mp_ldb_encoder_atomic_check(struct drm_encoder *encoder,
 		return -EINVAL;
 	}
 
+#if 0
 	/*
 	 * Due to limited video PLL frequency points on i.MX8mp,
 	 * we do mode fixup here in case any mode is unsupported.
@@ -257,6 +260,7 @@ imx8mp_ldb_encoder_atomic_check(struct drm_encoder *encoder,
 		mode->clock = mode->clock > 100000 ? 148500 : 74250;
 	else
 		mode->clock = 74250;
+#endif
 
 	return 0;
 }
