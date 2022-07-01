@@ -734,11 +734,10 @@ static void encx24j600_hw_get_macaddr(struct encx24j600_priv *priv,
 static int encx24j600_set_hw_macaddr(struct net_device *dev)
 {
 	struct encx24j600_priv *priv = netdev_priv(dev);
+	int hw_enabled = priv->hw_enabled;
 
-	if (priv->hw_enabled) {
-		netif_info(priv, drv, dev, "Hardware must be disabled to set Mac address\n");
-		return -EBUSY;
-	}
+	if (hw_enabled)
+		encx24j600_hw_disable(priv);
 
 	mutex_lock(&priv->lock);
 
@@ -754,6 +753,8 @@ static int encx24j600_set_hw_macaddr(struct net_device *dev)
 
 	mutex_unlock(&priv->lock);
 
+	if (hw_enabled)
+		encx24j600_hw_enable(priv);
 	return 0;
 }
 
