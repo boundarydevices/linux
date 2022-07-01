@@ -315,6 +315,8 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 		}
 
 		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, 0, SND_SOC_CLOCK_OUT);
+		if (ret == -ENOTSUPP)
+			ret = 0;
 		if (ret) {
 			dev_err(dev, "failed to set cpu sysclk: %d\n", ret);
 			return ret;
@@ -322,6 +324,8 @@ static int imx_hifi_hw_params(struct snd_pcm_substream *substream,
 		return 0;
 	} else {
 		ret = snd_soc_dai_set_sysclk(cpu_dai, 0, 0, SND_SOC_CLOCK_IN);
+		if (ret == -ENOTSUPP)
+			ret = 0;
 		if (ret) {
 			dev_err(dev, "failed to set cpu sysclk: %d\n", ret);
 			return ret;
