@@ -237,7 +237,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8ulp-evk.dtb imx8ulp-evk-lpspi-slave.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-sof-cs42888.dtb imx8qm-mek-sof-wm8960.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx93-11x11-evk.dtb \
-			  imx93-11x11-evk-inmate.dtb imx93-11x11-evk-root.dtb \
+			  imx93-11x11-evk-inmate.dtb imx93-11x11-evk-root.dtb imx93-11x11-evk-flexio-i2c.dtb \
 			  imx93-11x11-evk-lpspi.dtb imx93-11x11-evk-lpspi-slave.dtb \
 			  imx93-11x11-evk-i3c.dtb imx93-11x11-evk-rm67199.dtb \
 			  imx93-11x11-evk-boe-wxga-lvds-panel.dtb imx93-11x11-evk-lpuart.dtb \
