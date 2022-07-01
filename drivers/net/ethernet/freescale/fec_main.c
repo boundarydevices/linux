@@ -1987,10 +1987,11 @@ static void fec_enet_adjust_link(struct net_device *ndev)
 		if (fep->link) {
 			napi_disable(&fep->napi);
 			netif_tx_lock_bh(ndev);
+			fep->link = phy_dev->link;
 			fec_stop(ndev);
+			fec_enet_bd_init(ndev);
 			netif_tx_unlock_bh(ndev);
 			napi_enable(&fep->napi);
-			fep->link = phy_dev->link;
 			status_change = 1;
 		}
 	}
