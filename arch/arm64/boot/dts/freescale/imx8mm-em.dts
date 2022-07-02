@@ -18,6 +18,13 @@
 		>;
 	};
 
+	pinctrl_bt2_rfkill: bt2-rfkillgrp {
+		fsl,pins = <
+#define GP_BT2_RFKILL_RESET	<&gpio4 1 GPIO_ACTIVE_LOW>
+			MX8MM_IOMUXC_SAI1_RXC_GPIO4_IO1		0x119
+		>;
+	};
+
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
 #define GP_ECSPI2_CS0	<&gpio5 13 GPIO_ACTIVE_LOW>
@@ -31,10 +38,9 @@
 
 	pinctrl_fec1: fec1grp {
 		fsl,pins = <
-#define GP_MII_MDC	<&gpio1 16 GPIO_ACTIVE_HIGH>
-			MX8MM_IOMUXC_ENET_MDC_GPIO1_IO16		0x00
-#define GP_MII_MDIO	<&gpio1 17 GPIO_ACTIVE_HIGH>
-			MX8MM_IOMUXC_ENET_MDIO_GPIO1_IO17		0x00
+			/* PAD_CTL_ODE is screwy on 8mm mini, avoid it */
+			MX8MM_IOMUXC_ENET_MDC_ENET1_MDC			0x00
+			MX8MM_IOMUXC_ENET_MDIO_ENET1_MDIO		0x00
 			MX8MM_IOMUXC_ENET_RD0_ENET1_RGMII_RD0		0x91
 			MX8MM_IOMUXC_ENET_RD1_ENET1_RGMII_RD1		0x91
 			MX8MM_IOMUXC_ENET_RD2_ENET1_RGMII_RD2		0x91
@@ -56,9 +62,9 @@
 
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
-			MX8MM_IOMUXC_SAI1_RXFS_GPIO4_IO0		0x1c0	/* PI-Awake */
 			MX8MM_IOMUXC_SPDIF_RX_GPIO5_IO4			0x180	/* BGM Coex 1 */
 			MX8MM_IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5		0x180	/* BGM Coex 2 */
+			MX8MM_IOMUXC_SAI5_RXFS_GPIO3_IO19		0x140	/* 5V_BOOST_EN */
 			/* test points */
 			MX8MM_IOMUXC_SAI1_RXD2_GPIO4_IO4		0x1c0	/* tp2 */
 			MX8MM_IOMUXC_SAI1_RXD4_GPIO4_IO6		0x1c0	/* tp7 */
@@ -116,15 +122,22 @@
 
 	pinctrl_i2c2_max77975: i2c2-max77975grp {
 		fsl,pins = <
+#define GP_MAX77975_STAT	<&gpio4 14 GPIO_ACTIVE_LOW>
 			MX8MM_IOMUXC_SAI1_TXD2_GPIO4_IO14		0x1c0
 #define GPIRQ_MAX77975	<&gpio4 15 IRQ_TYPE_LEVEL_LOW>
 			MX8MM_IOMUXC_SAI1_TXD3_GPIO4_IO15		0x1c9
+	/* Also to MSP430*/
 #define GP_DISABLE_BATT	<&gpio4 16 GPIO_ACTIVE_HIGH>
 			MX8MM_IOMUXC_SAI1_TXD4_GPIO4_IO16		0x06
+#define GP_MAX77975_EXTSM	<&gpio4 17 GPIO_ACTIVE_HIGH>
 			MX8MM_IOMUXC_SAI1_TXD5_GPIO4_IO17		0x1c0
 #define GP_SUSPEND	<&gpio4 18 GPIO_ACTIVE_HIGH>
 			MX8MM_IOMUXC_SAI1_TXD6_GPIO4_IO18		0x06
+	/* MSP430*/
+#define GP_MSP430_PG		<&gpio4 19 IRQ_TYPE_LEVEL_LOW>
 			MX8MM_IOMUXC_SAI1_TXD7_GPIO4_IO19		0x1c0
+#define GP_MSP430_AWAKEN	<&gpio4 0 IRQ_TYPE_LEVEL_LOW>
+			MX8MM_IOMUXC_SAI1_RXFS_GPIO4_IO0		0x1c0
 		>;
 	};
 
@@ -198,7 +211,7 @@
 		>;
 	};
 
-	pinctrl_reg_usdhc2_vqmmc: reg_usdhc2_vqmmcgrp {
+	pinctrl_reg_usdhc2_vqmmc: reg-usdhc2-vqmmcgrp {
 		fsl,pins = <
 #define GP_USDHC2_VSEL	<&gpio3 2 GPIO_ACTIVE_HIGH>
 			MX8MM_IOMUXC_NAND_CE1_B_GPIO3_IO2		0x16
@@ -355,6 +368,8 @@
 			MX8MM_IOMUXC_NAND_DATA07_USDHC3_DATA3		0x1d0
 			/* Bluetooth slow clock */
 			MX8MM_IOMUXC_GPIO1_IO00_ANAMIX_REF_CLK_32K	0x03
+			/* CLK_REQ */
+			MX8MM_IOMUXC_SAI3_RXC_GPIO4_IO29		0x140
 		>;
 	};
 
@@ -425,6 +440,16 @@
 		name = "bt-rfkill";
 		type = <2>; /* Bluetooth */
 		reset-gpios = GP_BT_RFKILL_RESET;
+		status = "okay";
+	};
+
+	bt2-rfkill {
+		compatible = "net,rfkill-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_bt2_rfkill>;
+		name = "bt2-rfkill";
+		type = <2>; /* Bluetooth */
+		reset-gpios = GP_BT2_RFKILL_RESET;
 		status = "okay";
 	};
 
@@ -513,8 +538,6 @@
 };
 
 &fec1 {
-	mdc-gpios = GP_MII_MDC;
-	mdio-gpios = GP_MII_MDIO;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_fec1>;
 #if 0
@@ -529,10 +552,10 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		ethphy0: ethernet-phy {
+		ethphy0: ethernet-phy@7 {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			interrupts-extended = GPIRQ_FEC1_PHY;
-			reg-mask = <0x90>;
+			reg = <7>;
 			rxc-skew-ps = <3000>;
 			rxd0-skew-ps = <0>;
 			rxd1-skew-ps = <0>;
@@ -1062,7 +1085,7 @@
 };
 
 &wdog1 {
-	pinctrl-names = "default", "gpio";
+	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_wdog>;
 	fsl,ext-reset-output;
 	status = "okay";
