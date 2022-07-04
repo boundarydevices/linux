@@ -59,6 +59,7 @@
 #define BRCMF_SCANTYPE_PASSIVE		1
 
 #define BRCMF_WSEC_MAX_PSK_LEN		32
+#define BRCMF_WSEC_MAX_PMK_LEN		64	/* SUITE-B-192's PMK is 48 bytes */
 #define	BRCMF_WSEC_PASSPHRASE		BIT(0)
 
 #define BRCMF_WSEC_MAX_SAE_PASSWORD_LEN 128
@@ -537,7 +538,7 @@ struct brcmf_wsec_key_le {
 struct brcmf_wsec_pmk_le {
 	__le16  key_len;
 	__le16  flags;
-	u8 key[2 * BRCMF_WSEC_MAX_PSK_LEN + 1];
+	u8 key[2 * BRCMF_WSEC_MAX_PMK_LEN + 1];
 };
 
 /**
