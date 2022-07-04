@@ -278,15 +278,21 @@ static const struct ieee80211_regdomain brcmf_regdom = {
  * are supported. A pointer to this array and the number of entries is passed
  * on to upper layers. AES_CMAC defines whether or not the driver supports MFP.
  * So the cipher suite AES_CMAC has to be the last one in the array, and when
- * device does not support MFP then the number of suites will be decreased by 1
+ * device does not support MFP then the number of suites will be decreased by 4
  */
 static const u32 brcmf_cipher_suites[] = {
 	WLAN_CIPHER_SUITE_WEP40,
 	WLAN_CIPHER_SUITE_WEP104,
 	WLAN_CIPHER_SUITE_TKIP,
 	WLAN_CIPHER_SUITE_CCMP,
+	WLAN_CIPHER_SUITE_CCMP_256,
+	WLAN_CIPHER_SUITE_GCMP,
+	WLAN_CIPHER_SUITE_GCMP_256,
 	/* Keep as last entry: */
-	WLAN_CIPHER_SUITE_AES_CMAC
+	WLAN_CIPHER_SUITE_AES_CMAC,
+	WLAN_CIPHER_SUITE_BIP_CMAC_256,
+	WLAN_CIPHER_SUITE_BIP_GMAC_128,
+	WLAN_CIPHER_SUITE_BIP_GMAC_256
 };
 
 /* Vendor specific ie. id = 221, oui and type defines exact ie */
@@ -2088,6 +2094,9 @@ brcmf_set_wsec_mode(struct net_device *ndev,
 		case WLAN_CIPHER_SUITE_AES_CMAC:
 			pval = AES_ENABLED;
 			break;
+		case WLAN_CIPHER_SUITE_GCMP_256:
+			pval = AES_ENABLED;
+			break;
 		default:
 			bphy_err(drvr, "invalid cipher pairwise (%d)\n",
 				 sme->crypto.ciphers_pairwise[0]);
@@ -2107,6 +2116,9 @@ brcmf_set_wsec_mode(struct net_device *ndev,
 			gval = AES_ENABLED;
 			break;
 		case WLAN_CIPHER_SUITE_AES_CMAC:
+			gval = AES_ENABLED;
+			break;
+		case WLAN_CIPHER_SUITE_GCMP_256:
 			gval = AES_ENABLED;
 			break;
 		default:
@@ -2220,6 +2232,9 @@ brcmf_set_key_mgmt(struct net_device *ndev, struct cfg80211_connect_params *sme)
 		case WLAN_AKM_SUITE_DPP:
 			val = WFA_AUTH_DPP;
 			profile->use_fwsup = BRCMF_PROFILE_FWSUP_NONE;
+			break;
+		case WLAN_AKM_SUITE_8021X_SUITE_B_192:
+			val = WPA3_AUTH_1X_SUITE_B_SHA384;
 			break;
 		default:
 			bphy_err(drvr, "invalid akm suite (%d)\n",
@@ -3024,6 +3039,16 @@ brcmf_cfg80211_add_key(struct wiphy *wiphy, struct net_device *ndev,
 		key->algo = CRYPTO_ALGO_AES_CCM;
 		val = AES_ENABLED;
 		brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_CCMP\n");
+		break;
+	case WLAN_CIPHER_SUITE_GCMP_256:
+		key->algo = CRYPTO_ALGO_AES_GCM256;
+		val = AES_ENABLED;
+		brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_GCMP_256\n");
+		break;
+	case WLAN_CIPHER_SUITE_BIP_GMAC_256:
+		key->algo = CRYPTO_ALGO_BIP_GMAC256;
+		val = AES_ENABLED;
+		brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_BIP_GMAC_256\n");
 		break;
 	default:
 		bphy_err(drvr, "Invalid cipher (0x%x)\n", params->cipher);
@@ -8332,7 +8357,7 @@ static int brcmf_setup_wiphy(struct wiphy *wiphy, struct brcmf_if *ifp)
 	wiphy->cipher_suites = brcmf_cipher_suites;
 	wiphy->n_cipher_suites = ARRAY_SIZE(brcmf_cipher_suites);
 	if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP))
-		wiphy->n_cipher_suites--;
+		wiphy->n_cipher_suites -= 4;
 	wiphy->bss_select_support = BIT(NL80211_BSS_SELECT_ATTR_RSSI) |
 				    BIT(NL80211_BSS_SELECT_ATTR_BAND_PREF) |
 				    BIT(NL80211_BSS_SELECT_ATTR_RSSI_ADJUST);
