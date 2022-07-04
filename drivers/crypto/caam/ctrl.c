@@ -863,13 +863,6 @@ static bool check_version(struct fsl_mc_version *mc_version, u32 major,
 }
 #endif
 
-static bool needs_entropy_delay_adjustment(void)
-{
-	if (of_machine_is_compatible("fsl,imx6sx"))
-		return true;
-	return false;
-}
-
 /* Probe routine for CAAM top (controller) level */
 static int caam_probe(struct platform_device *pdev)
 {
