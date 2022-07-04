@@ -45,6 +45,12 @@ properties:
       - const: fspi_en
       - const: fspi
 
+  nxp,fspi-dll-slvdly:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: |
+      Specify the DLL slave line delay value.
+    default: 0
+
 required:
   - compatible
   - reg
