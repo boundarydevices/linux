@@ -7537,8 +7537,7 @@ static int brcmf_construct_chaninfo(struct brcmf_cfg80211_info *cfg,
 	u8 *pbuf;
 	u32 i, j;
 	u32 total;
-	u32 chaninfo, n_2g = 0, n_5g = 0;
-
+	u32 chaninfo, n_2g = 0, n_5g = 0, n_6g = 0;
 	pbuf = kzalloc(BRCMF_DCMD_MEDLEN, GFP_KERNEL);
 
 	if (pbuf == NULL)
@@ -7561,6 +7560,10 @@ static int brcmf_construct_chaninfo(struct brcmf_cfg80211_info *cfg,
 	if (band)
 		for (i = 0; i < band->n_channels; i++)
 			band->channels[i].flags = IEEE80211_CHAN_DISABLED;
+	band = wiphy->bands[NL80211_BAND_6GHZ];
+	if (band)
+		for (i = 0; i < band->n_channels; i++)
+			band->channels[i].flags = IEEE80211_CHAN_DISABLED;
 
 	total = le32_to_cpu(list->count);
 	for (i = 0; i < total; i++) {
@@ -7571,6 +7574,8 @@ static int brcmf_construct_chaninfo(struct brcmf_cfg80211_info *cfg,
 			band = wiphy->bands[NL80211_BAND_2GHZ];
 		} else if (ch.band == BRCMU_CHAN_BAND_5G) {
 			band = wiphy->bands[NL80211_BAND_5GHZ];
+		} else if (ch.band == BRCMU_CHAN_BAND_6G) {
+			band = wiphy->bands[NL80211_BAND_6GHZ];
 		} else {
 			bphy_err(drvr, "Invalid channel Spec. 0x%x.\n",
 				 ch.chspec);
@@ -7681,6 +7686,26 @@ static int brcmf_construct_chaninfo(struct brcmf_cfg80211_info *cfg,
 		}
 		wiphy->bands[NL80211_BAND_5GHZ]->n_channels = n_5g;
 	}
+	band = wiphy->bands[NL80211_BAND_6GHZ];
+	if (band) {
+		n_6g = band->n_channels;
+		for (i = 0; i < n_6g;) {
+			cur = &band->channels[i];
+			if (cur->flags == IEEE80211_CHAN_DISABLED) {
+				for (j = i; j < n_6g - 1; j++) {
+					cur = &band->channels[j];
+					next = &band->channels[j + 1];
+					memcpy(cur, next, sizeof(*cur));
+				}
+			/* To avoid fw crash while delete all channels */
+				if (n_6g == 1)
+					break;
+				n_6g--;
+			} else
+				i++;
+		}
+		wiphy->bands[NL80211_BAND_6GHZ]->n_channels = n_6g;
+	}
 
 fail_pbuf:
 	kfree(pbuf);
@@ -7779,7 +7804,13 @@ static void brcmf_get_bwcap(struct brcmf_if *ifp, u32 bw_cap[])
 		err = brcmf_fil_iovar_int_get(ifp, "bw_cap", &band);
 		if (!err) {
 			bw_cap[NL80211_BAND_5GHZ] = band;
-			return;
+			band = WLC_BAND_6G;
+			err = brcmf_fil_iovar_int_get(ifp, "bw_cap", &band);
+			if (!err) {
+				bw_cap[NL80211_BAND_6GHZ] = band;
+				return;
+			}
+			WARN_ON(1);
 		}
 		WARN_ON(1);
 		return;
@@ -7945,7 +7976,10 @@ static int brcmf_setup_wiphybands(struct brcmf_cfg80211_info *cfg)
 	struct wiphy *wiphy = cfg_to_wiphy(cfg);
 	u32 nmode = 0;
 	u32 vhtmode = 0;
-	u32 bw_cap[2] = { WLC_BW_20MHZ_BIT, WLC_BW_20MHZ_BIT };
+	u32 bw_cap[4] = { WLC_BW_20MHZ_BIT,  /* 2GHz  */
+					  WLC_BW_20MHZ_BIT,  /* 5GHz  */
+					  0,                 /* 60GHz */
+					  WLC_BW_20MHZ_BIT };/* 6GHz  */
 	u32 rxchain;
 	u32 nchain;
 	int err;
