@@ -202,6 +202,13 @@ static inline bool ac_bitmap_tst(u8 bitmap, int prec)
 #define CRYPTO_ALGO_AES_RESERVED2	6
 #define CRYPTO_ALGO_NALG		7
 
+#define CRYPTO_ALGO_AES_GCM     14  /* 128 bit GCM */
+#define CRYPTO_ALGO_AES_CCM256  15  /* 256 bit CCM */
+#define CRYPTO_ALGO_AES_GCM256  16  /* 256 bit GCM */
+#define CRYPTO_ALGO_BIP_CMAC256 17  /* 256 bit BIP CMAC */
+#define CRYPTO_ALGO_BIP_GMAC    18  /* 128 bit BIP GMAC */
+#define CRYPTO_ALGO_BIP_GMAC256 19  /* 256 bit BIP GMAC */
+
 /* wireless security bitvec */
 
 #define WEP_ENABLED		0x0001
@@ -235,6 +242,8 @@ static inline bool ac_bitmap_tst(u8 bitmap, int prec)
 #define WPA3_AUTH_SAE_PSK	0x40000	/* SAE with 4-way handshake */
 
 #define WFA_AUTH_DPP		0x200000 /* WFA DPP AUTH */
+#define WPA3_AUTH_1X_SUITE_B_SHA384	0x400000 /* Suite B-192 SHA384 */
+
 
 #define WFA_OUI			"\x50\x6F\x9A"	/* WFA OUI */
 #define DPP_VER			0x1A	/* WFA DPP v1.0 */
