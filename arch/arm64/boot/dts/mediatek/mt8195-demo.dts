@@ -1085,3 +1085,11 @@
 		};
 	};
 };
+
+&disp_dpi1 {
+	status = "okay";
+};
+
+&hdmi0 {
+	status = "okay";
+};
