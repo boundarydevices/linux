@@ -110,10 +110,17 @@ static int mtk_hdmi_pll_performance_setting(struct clk_hw *hw)
 			  0x1 << RG_HDMITXPLL_TCL_EN_SHIFT,
 			  RG_HDMITXPLL_TCL_EN);
 
-	/* disable read calibration impedance from efuse */
-	mtk_hdmi_phy_mask(hdmi_phy, HDMI_CTL_1,
-			  0x1f << RG_INTR_IMP_RG_MODE_SHIFT,
-			  RG_INTR_IMP_RG_MODE);
+	/* we should always read calibration impedance 
+	 * from efuse, unless for debugging purposes. 
+	 * This calibraion value is not board-dependent
+	 * so no SW adjustment required.
+	 */
+	if (hdmi_phy->conf->efuse_sw_mode) {
+		dev_info(hdmi_phy->dev, "efuse_sw_mode ENABLED!!!");
+		mtk_hdmi_phy_mask(hdmi_phy, HDMI_CTL_1,
+				0x1f << RG_INTR_IMP_RG_MODE_SHIFT,
+				RG_INTR_IMP_RG_MODE);
+	}
 
 	return 0;
 }
@@ -331,6 +338,8 @@ static int mtk_hdmi_pll_calculate_params(struct clk_hw *hw, unsigned long rate,
 	int i = 0;
 	unsigned char txpredivs[4] = { 2, 4, 6, 12 };
 
+	struct mtk_hdmi_phy *hdmi_phy = to_mtk_hdmi_phy(hw);
+
 	pixel_clk = rate;
 	tmds_clk = pixel_clk;
 
@@ -422,10 +431,16 @@ static int mtk_hdmi_pll_drv_setting(struct clk_hw *hw)
 {
 	unsigned char data_channel_bias, clk_channel_bias;
 	unsigned char impedance, impedance_en;
+	unsigned char calibration;
 	struct mtk_hdmi_phy *hdmi_phy = to_mtk_hdmi_phy(hw);
 	unsigned long tmds_clk;
 	unsigned long pixel_clk = hdmi_phy->pll_rate;
 
+	/* TODO: TMDS clk frequency equals to pixel_clk
+	 * only when using 8-bit RGB or YUV444.
+	 * We need to adjust tmds_clk frequency
+	 * according to color space and color depth.
+	 */
 	tmds_clk = pixel_clk;
 
 	/* bias & impedance setting:
@@ -455,6 +470,7 @@ static int mtk_hdmi_pll_drv_setting(struct clk_hw *hw)
 		impedance_en = 0x0;
 		impedance = 0x0;
 	} else {
+
 		return -EINVAL;
 	}
 
@@ -488,6 +504,15 @@ static int mtk_hdmi_pll_drv_setting(struct clk_hw *hw)
 	mtk_hdmi_phy_mask(hdmi_phy, HDMI_1_CFG_2,
 			  impedance << RG_HDMITX21_DRV_IMP_CLK_EN1_SHIFT,
 			  RG_HDMITX21_DRV_IMP_CLK_EN1);
+
+	/* calibration */
+	if (hdmi_phy->conf->efuse_sw_mode) {
+		/* default SW calibration setting suggested */
+		calibration = 0x11;
+		mtk_hdmi_phy_mask(hdmi_phy, HDMI_1_CFG_6,
+				calibration << RG_HDMITX21_INTR_CAL_SHIFT,
+				RG_HDMITX21_INTR_CAL);
+	}
 
 	return 0;
 }
@@ -671,6 +696,7 @@ struct mtk_hdmi_phy_conf mtk_hdmi_phy_8195_conf = {
 	.hdmi_phy_enable_tmds = mtk_hdmi_phy_enable_tmds,
 	.hdmi_phy_disable_tmds = mtk_hdmi_phy_disable_tmds,
 	.hdmi_phy_configure = mtk_hdmi_phy_configure,
+	.efuse_sw_mode = false,
 };
 
 MODULE_AUTHOR("Can Zeng <can.zeng@mediatek.com>");
