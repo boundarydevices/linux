@@ -828,14 +828,22 @@ void mtk_dpi_start(struct device *dev)
 {
 	struct mtk_dpi *dpi = dev_get_drvdata(dev);
 
-	mtk_dpi_power_on(dpi);
+	/* mtk_dpi_power_on() has been moved to bridge_enable.
+	 * add a log here in case there are legacy platforms
+	 * relying on this behavior.
+	 */
+	dev_dbg(dpi->dev, "do nothing in %s\n", __func__);
 }
 
 void mtk_dpi_stop(struct device *dev)
 {
 	struct mtk_dpi *dpi = dev_get_drvdata(dev);
 
-	mtk_dpi_power_off(dpi);
+	/* TODO: mtk_dpi_power_off() has no users now -
+	 * dpi_bridge_disable() only disables DPI rather
+	 * than doing a full mtk_dpi_power_off().
+	 */
+	dev_dbg(dpi->dev, "do nothing in mtk_dpi_stop\n");
 }
 
 int mtk_dpi_encoder_index(struct device *dev)
