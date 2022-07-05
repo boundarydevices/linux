@@ -60,7 +60,7 @@
 		};
 	};
 
-	imx93-cm33 {
+	cm33: imx93-cm33 {
 		compatible = "fsl,imx93-cm33";
 		mbox-names = "tx", "rx", "rxdb";
 		mboxes = <&mu1 0 1
@@ -72,6 +72,7 @@
 
 	ethosu {
 		compatible = "arm,ethosu";
+		fsl,cm33-proc = <&cm33>;
 	};
 
 	reg_can2_stby: regulator-can2-stby {
