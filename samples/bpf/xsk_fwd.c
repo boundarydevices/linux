@@ -721,6 +721,7 @@ static const struct xsk_umem_config umem_cfg_default = {
 	.frame_size = XSK_UMEM__DEFAULT_FRAME_SIZE,
 	.frame_headroom = XSK_UMEM__DEFAULT_FRAME_HEADROOM,
 	.flags = 0,
+	.tx_frame_headroom = XSK_UMEM__DEFAULT_FRAME_HEADROOM,
 };
 
 static const struct port_params port_params_default = {

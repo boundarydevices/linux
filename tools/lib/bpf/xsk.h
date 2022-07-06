@@ -261,6 +261,7 @@ struct xsk_umem_config {
 	__u32 frame_size;
 	__u32 frame_headroom;
 	__u32 flags;
+	__u32 tx_frame_headroom;
 };
 
 LIBBPF_API int xsk_setup_xdp_prog(int ifindex,
