@@ -53,6 +53,12 @@
  */
 #define DPAA2_ETH_TXCONF_PER_NAPI	256
 
+/* Maximum number of Tx frames to be processed in a single NAPI
+ * call when AF_XDP is running. Bind it to DPAA2_ETH_TXCONF_PER_NAPI
+ * to maximize the throughput.
+ */
+#define DPAA2_ETH_TX_ZC_PER_NAPI	DPAA2_ETH_TXCONF_PER_NAPI
+
 /* Buffer qouta per channel. We want to keep in check number of ingress frames
  * in flight: for small sized frames, congestion group taildrop may kick in
  * first; for large sizes, Rx FQ taildrop threshold will ensure only a
@@ -494,6 +500,7 @@ struct dpaa2_eth_channel {
 	int recycled_bufs_cnt;
 
 	bool xsk_zc;
+	int xsk_frames_done;
 	struct xsk_buff_pool *xsk_pool;
 	struct dpaa2_eth_buf_pool *bp;
 };
@@ -530,7 +537,7 @@ struct dpaa2_eth_trap_data {
 
 #define DPAA2_ETH_DEFAULT_COPYBREAK	512
 
-#define DPAA2_ETH_ENQUEUE_MAX_FDS	200
+#define DPAA2_ETH_ENQUEUE_MAX_FDS	256
 struct dpaa2_eth_fds {
 	struct dpaa2_fd array[DPAA2_ETH_ENQUEUE_MAX_FDS];
 };
@@ -830,5 +837,12 @@ void dpaa2_eth_receive_skb(struct dpaa2_eth_priv *priv, struct dpaa2_eth_channel
 int dpaa2_xsk_wakeup(struct net_device *dev, u32 qid, u32 flags);
 int dpaa2_xsk_setup_pool(struct net_device *dev, struct xsk_buff_pool *pool,
 			 u16 qid);
+
+void dpaa2_eth_free_tx_fd(struct dpaa2_eth_priv *priv,
+			  struct dpaa2_eth_channel *ch,
+			  struct dpaa2_eth_fq *fq,
+			  const struct dpaa2_fd *fd, bool in_napi);
+bool dpaa2_xsk_tx(struct dpaa2_eth_priv *priv,
+		  struct dpaa2_eth_channel *ch);
 
 #endif	/* __DPAA2_H */

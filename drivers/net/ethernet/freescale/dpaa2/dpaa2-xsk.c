@@ -172,6 +172,7 @@ static int dpaa2_xsk_disable_pool(struct net_device *dev, u16 qid)
 
 	priv->channel[qid]->xsk_zc = false;
 	priv->channel[qid]->xsk_pool = NULL;
+	priv->channel[qid]->xsk_frames_done = 0;
 	priv->channel[qid]->bp = priv->bp[DPAA2_ETH_DEFAULT_BP];
 
 	/* Restore Rx callback to slow path */
@@ -210,6 +211,12 @@ static int dpaa2_xsk_enable_pool(struct net_device *dev,
 
 	if (priv->dpni_attrs.num_queues > 8) {
 		netdev_err(dev, "Create a DPNI with maximum 8 queues for AF_XDP\n");
+		return -EOPNOTSUPP;
+	}
+
+	if (pool->tx_headroom < priv->tx_data_offset) {
+		netdev_err(dev, "Must reserve at least %d Tx headroom within the frame buffer\n",
+			   priv->tx_data_offset);
 		return -EOPNOTSUPP;
 	}
 
@@ -294,5 +301,119 @@ int dpaa2_xsk_setup_pool(struct net_device *dev, struct xsk_buff_pool *pool, u16
 
 int dpaa2_xsk_wakeup(struct net_device *dev, u32 qid, u32 flags)
 {
+	struct dpaa2_eth_priv *priv = netdev_priv(dev);
+	struct dpaa2_eth_channel *ch = priv->channel[qid];
+
+	if (!priv->link_state.up)
+		return -ENETDOWN;
+
+	if (!ch->xsk_zc)
+		return -EOPNOTSUPP;
+
+	if (!priv->xdp_prog)
+		return -ENXIO;
+
+	/* If NAPI is already scheduled, mark a miss so it will run again. This
+	 * way we ensure that no wakeup calls are missed, even though this can
+	 * lead to rescheduling NAPI even though previously we did not consume
+	 * the entire budget.
+	 */
+	if (!napi_if_scheduled_mark_missed(&ch->napi))
+		napi_schedule(&ch->napi);
+
 	return 0;
+}
+
+bool dpaa2_xsk_tx(struct dpaa2_eth_priv *priv,
+		  struct dpaa2_eth_channel *ch)
+{
+	struct xdp_desc *xdp_descs = ch->xsk_pool->tx_descs;
+	int store_cleaned = 0, total_enqueued, enqueued;
+	struct dpaa2_eth_drv_stats *percpu_extras;
+	struct rtnl_link_stats64 *percpu_stats;
+	int bytes_sent = 0, batch, i, err;
+	struct dpaa2_eth_swa *swa;
+	bool work_done_zc = false;
+	int retries, max_retries;
+	struct dpaa2_eth_fq *fq;
+	struct dpaa2_fd *fds;
+	bool flush = false;
+	dma_addr_t addr;
+	void *vaddr;
+	u8 prio = 0;
+
+	percpu_stats = this_cpu_ptr(priv->percpu_stats);
+	percpu_extras = this_cpu_ptr(priv->percpu_extras);
+	fds = (this_cpu_ptr(priv->fd))->array;
+
+	/* Use the FQ with the same idx as the affine CPU */
+	fq = &priv->fq[ch->nctx.desired_cpu];
+
+	while (!work_done_zc) {
+		batch = xsk_tx_peek_release_desc_batch(ch->xsk_pool,
+						       DPAA2_ETH_TX_ZC_PER_NAPI - store_cleaned);
+		if (!batch)
+			break;
+
+		for (i = 0; i < batch; i++) {
+			addr = xsk_buff_raw_get_dma(ch->xsk_pool, xdp_descs[i].addr);
+			vaddr = dpaa2_iova_to_virt(priv->iommu_domain, addr);
+			xsk_buff_raw_dma_sync_for_device(ch->xsk_pool, addr, xdp_descs[i].len);
+
+			/* Store the buffer type at the beginning of the frame
+			 * (in the private data area) such that we can release it
+			 * on Tx confirm
+			 */
+			swa = (struct dpaa2_eth_swa *)vaddr;
+			swa->type = DPAA2_ETH_SWA_XSK;
+
+			/* Initialize FD fields */
+			memset(&fds[i], 0, sizeof(struct dpaa2_fd));
+			dpaa2_fd_set_addr(&fds[i], addr);
+			dpaa2_fd_set_offset(&fds[i], ch->xsk_pool->tx_headroom);
+			dpaa2_fd_set_len(&fds[i], xdp_descs[i].len);
+			dpaa2_fd_set_format(&fds[i], dpaa2_fd_single);
+			dpaa2_fd_set_ctrl(&fds[i], FD_CTRL_PTA);
+			bytes_sent += xdp_descs[i].len;
+
+			/* tracing point */
+			trace_dpaa2_tx_xsk_fd(priv->net_dev, &fds[i]);
+		}
+
+		/* Enqueue frames */
+		max_retries = batch * DPAA2_ETH_ENQUEUE_RETRIES;
+		total_enqueued = 0;
+		enqueued = 0;
+		retries = 0;
+		while (total_enqueued < batch && retries < max_retries) {
+			err = priv->enqueue(priv, fq, &fds[total_enqueued], prio,
+					    batch - total_enqueued, &enqueued);
+			if (err == -EBUSY) {
+				retries++;
+				continue;
+			}
+
+			total_enqueued += enqueued;
+		}
+		percpu_extras->tx_portal_busy += retries;
+		store_cleaned += total_enqueued;
+
+		if (unlikely(err < 0)) {
+			for (i = total_enqueued; i < batch; i++)
+				dpaa2_eth_free_tx_fd(priv, ch, fq, &fds[i], false);
+			percpu_stats->tx_errors++;
+		} else {
+			percpu_stats->tx_packets += total_enqueued;
+			percpu_stats->tx_bytes += bytes_sent;
+			flush = true;
+		}
+
+		if (store_cleaned == DPAA2_ETH_TX_ZC_PER_NAPI)
+			work_done_zc = true;
+	}
+
+	if (flush)
+		xsk_tx_release(ch->xsk_pool);
+
+	return work_done_zc;
 }

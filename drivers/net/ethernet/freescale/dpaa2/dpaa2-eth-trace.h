@@ -73,6 +73,14 @@ DEFINE_EVENT(dpaa2_eth_fd, dpaa2_tx_fd,
 	     TP_ARGS(netdev, fd)
 );
 
+/* Tx (egress) XSK fd */
+DEFINE_EVENT(dpaa2_eth_fd, dpaa2_tx_xsk_fd,
+	     TP_PROTO(struct net_device *netdev,
+		      const struct dpaa2_fd *fd),
+
+	     TP_ARGS(netdev, fd)
+);
+
 /* Rx fd */
 DEFINE_EVENT(dpaa2_eth_fd, dpaa2_rx_fd,
 	     TP_PROTO(struct net_device *netdev,
