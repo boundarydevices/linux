@@ -148,9 +148,9 @@ static bool pkvm_teardown_vm(struct kvm *host_kvm)
 
 static void __pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 {
-	struct kvm_pinned_page *ppage, *tmp;
+	struct kvm_pinned_page *ppage;
 	struct mm_struct *mm = current->mm;
-	struct list_head *ppages;
+	struct rb_node *node;
 	unsigned long pages = 0;
 
 	if (!pkvm_teardown_vm(host_kvm))
@@ -158,14 +158,16 @@ static void __pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 
 	free_hyp_memcache(&host_kvm->arch.pkvm.teardown_mc);
 
-	ppages = &host_kvm->arch.pkvm.pinned_pages;
-	list_for_each_entry_safe(ppage, tmp, ppages, link) {
+	node = rb_first(&host_kvm->arch.pkvm.pinned_pages);
+	while (node) {
+		ppage = rb_entry(node, struct kvm_pinned_page, node);
 		WARN_ON(kvm_call_hyp_nvhe(__pkvm_host_reclaim_page,
 					  page_to_pfn(ppage->page)));
 		cond_resched();
 
 		unpin_user_pages_dirty_lock(&ppage->page, 1, true);
-		list_del(&ppage->link);
+		node = rb_next(node);
+		rb_erase(&ppage->node, &host_kvm->arch.pkvm.pinned_pages);
 		kfree(ppage);
 		pages++;
 	}
