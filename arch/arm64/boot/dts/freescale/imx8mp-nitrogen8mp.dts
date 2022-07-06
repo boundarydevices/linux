@@ -376,6 +376,16 @@
 		>;
 	};
 
+	pinctrl_ts_atmel_lvds: ts-atmel-lvdsgrp {
+		fsl,pins = <
+#define GPIRQ_TS_ATMEL	<&gpio1 10 IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_ATMEL	<&gpio1 10 GPIO_ACTIVE_LOW>
+			MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10	0x149
+#define GP_TS_ATMEL_RESET	<&gpio3 14 GPIO_ACTIVE_LOW>
+			MX8MP_IOMUXC_NAND_DQS__GPIO3_IO14	0x149
+		>;
+	};
+
 	pinctrl_ts_ft5x06: ts-ft5x06grp {
 		fsl,pins = <
 #define GPIRQ_TS_FT5X06	<&gpio4 25 IRQ_TYPE_EDGE_FALLING>
@@ -646,6 +656,7 @@
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
 		t_mipi = &t_mipi;
+		ts_atmel_mt = &ts_atmel_mt;
 		ts_egalax = &ts_egalax_lvds;
 		ts_ft5x06 = &ts_ft5x06;
 		ts_ft5x06_2 = &ts_ft5x06_lvds;
@@ -1329,6 +1340,16 @@
 	scl-gpios = GP_I2C4_SCL;
 	sda-gpios = GP_I2C4_SDA;
 	status = "okay";
+
+	ts_atmel_mt: touchscreen@4a {
+		compatible = "atmel,maxtouch";
+		interrupts-extended = GPIRQ_TS_ATMEL;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_atmel_lvds>;
+		reg = <0x4a>;
+		reset-gpios = GP_TS_ATMEL_RESET;
+		wakeup-gpios = GP_TS_ATMEL;
+	};
 
 	ts_egalax_lvds: touchscreen@4 {
 		compatible = "eeti,egalax_ts";
