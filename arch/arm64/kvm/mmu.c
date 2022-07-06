@@ -2345,7 +2345,7 @@ int kvm_arch_prepare_memory_region(struct kvm *kvm,
 
 	if (is_protected_kvm_enabled()) {
 		if ((change == KVM_MR_DELETE || change == KVM_MR_MOVE) &&
-		    pkvm_is_hyp_created(kvm)) {
+		    pkvm_is_hyp_created(kvm) && kvm->arch.pkvm.enabled) {
 			return -EPERM;
 		}
 
