@@ -276,6 +276,67 @@ static void invalidate_icache_guest_page(void *va, size_t size)
 	__invalidate_icache_guest_page(va, size);
 }
 
+static int pkvm_unmap_guest(struct kvm *kvm, struct kvm_pinned_page *ppage)
+{
+	struct mm_struct *mm = kvm->mm;
+	int ret;
+
+	ret = kvm_call_hyp_nvhe(__pkvm_host_unmap_guest,
+				kvm->arch.pkvm.handle,
+				ppage->ipa >> PAGE_SHIFT);
+	if (ret)
+		return ret;
+
+	account_locked_vm(mm, 1, false);
+	unpin_user_pages_dirty_lock(&ppage->page, 1, true);
+	rb_erase(&ppage->node, &kvm->arch.pkvm.pinned_pages);
+	kfree(ppage);
+
+	return 0;
+}
+
+static struct rb_node *find_first_ppage_node(struct rb_root *root, u64 ipa)
+{
+	struct rb_node *node = root->rb_node, *prev = NULL;
+	struct kvm_pinned_page *ppage;
+
+	while (node) {
+		ppage = rb_entry(node, struct kvm_pinned_page, node);
+		if (ppage->ipa == ipa)
+			return node;
+		prev = node;
+		node = (ipa < ppage->ipa) ? node->rb_left : node->rb_right;
+	}
+
+	return prev;
+}
+
+#define for_ppage_node_in_range(kvm, start, end, __node, __tmp)				\
+	for (__node = find_first_ppage_node(&(kvm)->arch.pkvm.pinned_pages, start);	\
+	     __node && ({ __tmp = rb_next(__node); 1; });									\
+	     __node = __tmp)							\
+		if (rb_entry(__node, struct kvm_pinned_page, node)->ipa < start)	\
+			continue;							\
+		else if (rb_entry(__node, struct kvm_pinned_page, node)->ipa >= end)	\
+			break;								\
+		else
+
+static int pkvm_unmap_range(struct kvm *kvm, u64 start, u64 end)
+{
+	struct kvm_pinned_page *ppage;
+	struct rb_node *node, *tmp;
+	int ret;
+
+	for_ppage_node_in_range(kvm, start, end, node, tmp) {
+		ppage = rb_entry(node, struct kvm_pinned_page, node);
+		ret = pkvm_unmap_guest(kvm, ppage);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
 /*
  * Unmapping vs dcache management:
  *
@@ -315,7 +376,10 @@ static void invalidate_icache_guest_page(void *va, size_t size)
 
 static int ___unmap_stage2_range(struct kvm_s2_mmu *mmu, u64 addr, u64 size)
 {
-	return kvm_pgtable_stage2_unmap(mmu->pgt, addr, size);
+	if (!is_protected_kvm_enabled())
+		return kvm_pgtable_stage2_unmap(mmu->pgt, addr, size);
+
+	return pkvm_unmap_range(kvm_s2_mmu_to_kvm(mmu), addr, addr + size);
 }
 
 static void __unmap_stage2_range(struct kvm_s2_mmu *mmu, phys_addr_t start, u64 size,
@@ -323,6 +387,9 @@ static void __unmap_stage2_range(struct kvm_s2_mmu *mmu, phys_addr_t start, u64 
 {
 	struct kvm *kvm = kvm_s2_mmu_to_kvm(mmu);
 	phys_addr_t end = start + size;
+
+	if (is_protected_kvm_enabled() && kvm->arch.pkvm.enabled)
+		return;
 
 	lockdep_assert_held_write(&kvm->mmu_lock);
 	WARN_ON(size & ~PAGE_MASK);
@@ -333,9 +400,6 @@ static void __unmap_stage2_range(struct kvm_s2_mmu *mmu, phys_addr_t start, u64 
 void kvm_stage2_unmap_range(struct kvm_s2_mmu *mmu, phys_addr_t start,
 			    u64 size, bool may_block)
 {
-	if (is_protected_kvm_enabled())
-		return;
-
 	__unmap_stage2_range(mmu, start, size, may_block);
 }
 
@@ -1011,7 +1075,7 @@ out_free_pgtable:
 void kvm_uninit_stage2_mmu(struct kvm *kvm)
 {
 	write_lock(&kvm->mmu_lock);
-	kvm_stage2_unmap_range(&kvm->arch.mmu, 0, BIT(kvm->arch.mmu.pgt->ia_bits));
+	kvm_stage2_unmap_range(&kvm->arch.mmu, 0, BIT(VTCR_EL2_IPA(kvm->arch.mmu.vtcr)), true);
 	write_unlock(&kvm->mmu_lock);
 	kvm_mmu_free_memory_cache(&kvm->arch.mmu.split_page_cache);
 }
@@ -2356,10 +2420,6 @@ void kvm_arch_flush_shadow_memslot(struct kvm *kvm,
 {
 	gpa_t gpa = slot->base_gfn << PAGE_SHIFT;
 	phys_addr_t size = slot->npages << PAGE_SHIFT;
-
-	/* Stage-2 is managed by hyp in protected mode. */
-	if (is_protected_kvm_enabled())
-		return;
 
 	write_lock(&kvm->mmu_lock);
 	kvm_stage2_unmap_range(&kvm->arch.mmu, gpa, size, true);
