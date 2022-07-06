@@ -646,7 +646,6 @@
 				 <&clk IMX8MQ_SYS2_PLL_100M>,
 				 <&clk IMX8MQ_SYS2_PLL_250M>;
 	vph-supply = <&vgen5_reg>;
-	hard-wired = <1>;
 	status = "okay";
 };
 
