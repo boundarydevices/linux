@@ -57,6 +57,7 @@ struct ovl_adaptor_comp_match {
 struct mtk_disp_ovl_adaptor {
 	struct device *ovl_adaptor_comp[OVL_ADAPTOR_ID_MAX];
 	struct device *mmsys_dev;
+	bool children_bound;
 };
 
 static const char * const private_comp_stem[OVL_ADAPTOR_TYPE_NUM] = {
@@ -435,6 +436,11 @@ static int ovl_adaptor_comp_init(struct device *dev, struct component_match **ma
 static int mtk_disp_ovl_adaptor_comp_bind(struct device *dev, struct device *master,
 					  void *data)
 {
+	struct mtk_disp_ovl_adaptor *priv = dev_get_drvdata(dev);
+
+	if (!priv->children_bound)
+		return -EPROBE_DEFER;
+
 	return 0;
 }
 
@@ -451,13 +457,21 @@ static const struct component_ops mtk_disp_ovl_adaptor_comp_ops = {
 static int mtk_disp_ovl_adaptor_master_bind(struct device *dev)
 {
 	struct mtk_disp_ovl_adaptor *priv = dev_get_drvdata(dev);
+	int ret;
 
-	component_bind_all(dev, priv->mmsys_dev);
+	ret = component_bind_all(dev, priv->mmsys_dev);
+	if (ret)
+		return dev_err_probe(dev, ret, "component_bind_all failed!\n");
+
+	priv->children_bound = true;
 	return 0;
 }
 
 static void mtk_disp_ovl_adaptor_master_unbind(struct device *dev)
 {
+	struct mtk_disp_ovl_adaptor *priv = dev_get_drvdata(dev);
+
+	priv->children_bound = false;
 }
 
 static const struct component_master_ops mtk_disp_ovl_adaptor_master_ops = {
