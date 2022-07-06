@@ -251,7 +251,7 @@ static void __pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 					  ppage->ipa));
 		cond_resched();
 
-		unpin_user_pages_dirty_lock(&ppage->page, 1, true);
+		unpin_user_pages_dirty_lock(&ppage->page, 1, ppage->dirty);
 		node = rb_next(node);
 		rb_erase(&ppage->node, &host_kvm->arch.pkvm.pinned_pages);
 		kfree(ppage);

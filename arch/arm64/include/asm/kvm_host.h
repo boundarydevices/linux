@@ -245,6 +245,7 @@ struct kvm_pinned_page {
 	struct rb_node		node;
 	struct page		*page;
 	u64			ipa;
+	bool			dirty;
 };
 
 typedef unsigned int pkvm_handle_t;

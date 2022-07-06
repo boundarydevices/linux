@@ -291,7 +291,7 @@ static int pkvm_unmap_guest(struct kvm *kvm, struct kvm_pinned_page *ppage)
 		return ret;
 
 	account_locked_vm(mm, 1, false);
-	unpin_user_pages_dirty_lock(&ppage->page, 1, true);
+	unpin_user_pages_dirty_lock(&ppage->page, 1, ppage->dirty);
 	rb_erase(&ppage->node, &kvm->arch.pkvm.pinned_pages);
 	kfree(ppage);
 
@@ -1264,6 +1264,7 @@ static int pkvm_wp_range(struct kvm *kvm, u64 start, u64 end)
 					ppage->ipa >> PAGE_SHIFT);
 		if (ret)
 			return ret;
+		ppage->dirty = false;
 	}
 
 	return 0;
@@ -1565,22 +1566,65 @@ static int pkvm_host_map_guest(u64 pfn, u64 gfn, enum kvm_pgtable_prot prot)
 	return (ret == -EPERM) ? -EAGAIN : ret;
 }
 
-static int cmp_ppages(struct rb_node *node, const struct rb_node *parent)
+static int cmp_ppage_ipa(const void *key, const struct rb_node *node)
 {
-	struct kvm_pinned_page *a = container_of(node, struct kvm_pinned_page, node);
-	struct kvm_pinned_page *b = container_of(parent, struct kvm_pinned_page, node);
+	s64 a_ipa = (s64)key;
+	s64 b_ipa = (s64)container_of(node, struct kvm_pinned_page, node)->ipa;
 
-	if (a->ipa < b->ipa)
+	if (a_ipa < b_ipa)
 		return -1;
-	if (a->ipa > b->ipa)
+	if (a_ipa > b_ipa)
 		return 1;
 	return 0;
+}
+
+static int cmp_ppages(struct rb_node *node, const struct rb_node *parent)
+{
+	return cmp_ppage_ipa((void *)container_of(node, struct kvm_pinned_page, node)->ipa, parent);
 }
 
 static int insert_ppage(struct kvm *kvm, struct kvm_pinned_page *ppage)
 {
 	if (rb_find_add(&ppage->node, &kvm->arch.pkvm.pinned_pages, cmp_ppages))
 		return -EEXIST;
+
+	return 0;
+}
+
+static struct kvm_pinned_page *find_ppage(struct kvm *kvm, u64 ipa)
+{
+	struct rb_node *node = rb_find((void *)ipa, &kvm->arch.pkvm.pinned_pages, cmp_ppage_ipa);
+
+	return node ? container_of(node, struct kvm_pinned_page, node) : NULL;
+}
+
+static int pkvm_relax_perms(struct kvm *kvm, u64 pfn, u64 gfn,
+			    enum kvm_pgtable_prot prot)
+{
+	struct kvm_pinned_page *ppage;
+	int ret;
+
+
+	ppage = find_ppage(kvm, gfn << PAGE_SHIFT);
+
+	/*
+	 * In the rare case that we raced with an MMU notifier, the page might
+	 * already be gone by now, so let's just try again.
+	 */
+	if (!ppage)
+		return kvm->arch.pkvm.enabled ? -EAGAIN : -EFAULT;
+
+	if (page_to_pfn(ppage->page) != pfn)
+		return -EFAULT;
+
+	if (!folio_test_swapbacked(page_folio(ppage->page)))
+		return -EIO;
+
+	ret = kvm_call_hyp_nvhe(__pkvm_host_relax_guest_perms, gfn, prot);
+	if (ret)
+		return ret;
+
+	ppage->dirty |= !!(prot & KVM_PGTABLE_PROT_W);
 
 	return 0;
 }
@@ -1621,7 +1665,8 @@ static int pkvm_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 	} else if (ret != 1) {
 		ret = -EFAULT;
 		goto dec_account;
-	} else if (!folio_test_swapbacked(page_folio(page))) {
+	} else if (kvm->arch.pkvm.enabled
+		   && !folio_test_swapbacked(page_folio(page))) {
 		/*
 		 * We really can't deal with page-cache pages returned by GUP
 		 * because (a) we may trigger writeback of a page for which we
@@ -1642,7 +1687,7 @@ static int pkvm_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 
 	write_lock(&kvm->mmu_lock);
 	pfn = page_to_pfn(page);
-	ret = pkvm_host_map_guest(pfn, fault_ipa >> PAGE_SHIFT, KVM_PGTABLE_PROT_RWX);
+	ret = pkvm_host_map_guest(pfn, fault_ipa >> PAGE_SHIFT, KVM_PGTABLE_PROT_R);
 	if (ret) {
 		if (ret == -EAGAIN)
 			ret = 0;
@@ -1651,6 +1696,7 @@ static int pkvm_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 
 	ppage->page = page;
 	ppage->ipa = fault_ipa;
+	ppage->dirty = kvm->arch.pkvm.enabled;
 	WARN_ON(insert_ppage(kvm, ppage));
 	write_unlock(&kvm->mmu_lock);
 
@@ -1709,7 +1755,7 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 	 * only exception to this is when dirty logging is enabled at runtime
 	 * and a write fault needs to collapse a block entry into a table.
 	 */
-	if (!fault_is_perm || (logging_active && write_fault)) {
+	if (!is_protected_kvm_enabled() && (!fault_is_perm || (logging_active && write_fault))) {
 		ret = kvm_mmu_topup_memory_cache(memcache,
 						 kvm_mmu_cache_min_pages(vcpu->arch.hw_mmu));
 		if (ret)
@@ -1732,7 +1778,7 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 	 * logging_active is guaranteed to never be true for VM_PFNMAP
 	 * memslots.
 	 */
-	if (logging_active) {
+	if (logging_active || is_protected_kvm_enabled()) {
 		force_pte = true;
 		vma_shift = PAGE_SHIFT;
 	} else {
@@ -1872,7 +1918,10 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 		prot |= kvm_encode_nested_level(nested);
 	}
 
-	read_lock(&kvm->mmu_lock);
+	if (!is_protected_kvm_enabled())
+		read_lock(&kvm->mmu_lock);
+	else
+		write_lock(&kvm->mmu_lock);
 	pgt = vcpu->arch.hw_mmu->pgt;
 	if (mmu_invalidate_retry(kvm, mmu_seq)) {
 		ret = -EAGAIN;
@@ -1933,8 +1982,12 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 		 * Drop the SW bits in favour of those stored in the
 		 * PTE, which will be preserved.
 		 */
-		prot &= ~KVM_NV_GUEST_MAP_SZ;
-		ret = kvm_pgtable_stage2_relax_perms(pgt, fault_ipa, prot, flags);
+		if (!is_protected_kvm_enabled()) {
+			prot &= ~KVM_NV_GUEST_MAP_SZ;
+			ret = kvm_pgtable_stage2_relax_perms(pgt, fault_ipa, prot, flags);
+		} else {
+			ret = pkvm_relax_perms(kvm, pfn, gfn, prot);
+		}
 	} else {
 		ret = kvm_pgtable_stage2_map(pgt, fault_ipa, vma_pagesize,
 					     __pfn_to_phys(pfn), prot,
@@ -1942,7 +1995,10 @@ static int user_mem_abort(struct kvm_vcpu *vcpu, phys_addr_t fault_ipa,
 	}
 
 out_unlock:
-	read_unlock(&kvm->mmu_lock);
+	if (!is_protected_kvm_enabled())
+		read_unlock(&kvm->mmu_lock);
+	else
+		write_unlock(&kvm->mmu_lock);
 
 	/* Mark the page dirty only if the fault is handled successfully */
 	if (writable && !ret) {
@@ -2138,7 +2194,7 @@ int kvm_handle_guest_abort(struct kvm_vcpu *vcpu)
 		goto out_unlock;
 	}
 
-	if (is_protected_kvm_enabled())
+	if (is_protected_kvm_enabled() && !esr_fsc_is_permission_fault(esr))
 		ret = pkvm_mem_abort(vcpu, fault_ipa, memslot);
 	else
 		ret = user_mem_abort(vcpu, fault_ipa, nested, memslot,
