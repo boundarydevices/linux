@@ -101,6 +101,7 @@ enum __kvm_host_smccc_func {
 	__KVM_HOST_SMCCC_FUNC___pkvm_swap_reader_tracing,
 	__KVM_HOST_SMCCC_FUNC___pkvm_enable_event,
 	__KVM_HOST_SMCCC_FUNC___pkvm_selftest_event,
+	__KVM_HOST_SMCCC_FUNC___pkvm_tlb_flush_vmid,
 
 	/*
 	 * Start of the dynamically registered hypercalls. Start a bit
