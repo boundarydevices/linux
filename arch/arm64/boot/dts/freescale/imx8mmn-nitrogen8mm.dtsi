@@ -126,6 +126,16 @@
 		>;
 	};
 
+	pinctrl_ts_atmel: ts-atmelgrp {
+		fsl,pins = <
+#define GPIRQ_TS_ATMEL	<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_ATMEL	<&gpio1 6 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, 0x149)
+#define GP_TS_ATMEL_RESET	<&gpio1 7 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, 0x149)
+		>;
+	};
+
 	pinctrl_ts_gt911: ts-gt911grp {
 		fsl,pins = <
 #define GPIRQ_GT911 		<&gpio1 6 IRQ_TYPE_LEVEL_HIGH>
@@ -247,6 +257,16 @@
 		fsl,pins = <
 #define GP_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
+		>;
+	};
+
+	pinctrl_mipi_cs005_0004_03: mipi-cs005-0004-03grp {
+		fsl,pins = <
+#undef GP_CS005_0004_03_BKL_EN
+#define GP_CS005_0004_03_BKL_EN	<&gpio1 9 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
+#define GP_CS005_0004_03_DISPLAY_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x106)
 		>;
 	};
 
@@ -560,6 +580,7 @@
 
 #ifndef SKIP_MIPI_PANELS
 #include "panel-com50h5n03ulc.dtsi"
+#include "panel-cs005-0004-03.dtsi"
 #include "panel-dmt050wvnxcmi.dtsi"
 #include "panel-er-tft050.dtsi"
 #include "panel-lcd133-070.dtsi"
@@ -592,6 +613,7 @@
 #ifndef SKIP_MIPI_PANELS
 		spi_lcd = &spi_lcd;
 		t_mipi = &t_mipi;
+		ts_atmel_mt = &ts_atmel_mt;
 		ts_ft5x06 = &ts_ft5x06;
 		ts_ft7250 = &ts_ft7250;
 		ts_goodix = &ts_goodix;
@@ -890,6 +912,16 @@
 			spi-max-frequency = <20000000>;
 			reg = <0>;
 		};
+	};
+
+	ts_atmel_mt: touchscreen@4a {
+		compatible = "atmel,maxtouch";
+		interrupts-extended = GPIRQ_TS_ATMEL;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_atmel>;
+		reg = <0x4a>;
+		reset-gpios = GP_TS_ATMEL_RESET;
+		wakeup-gpios = GP_TS_ATMEL;
 	};
 
 	ts_ft5x06: touchscreen@38 {
