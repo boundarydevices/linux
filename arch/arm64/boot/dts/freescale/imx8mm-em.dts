@@ -1044,7 +1044,7 @@
 	pinctrl-0 = <&pinctrl_uart4>;
 	assigned-clocks = <&clk IMX8MM_CLK_UART4>;
 	assigned-clock-parents = <&clk IMX8MM_CLK_24M>;
-	status = "okay";
+	status = "disabled";
 };
 
 &usbotg1 {
