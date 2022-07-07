@@ -1,0 +1,63 @@
+#include <dt-bindings/display/simple_panel_mipi_cmds.h>
+
+/ {
+	aliases {
+		mipi_cmds_cs005_0004_03 = &mipi_cmds_cs005_0004_03;
+		pinctrl_cs005_0004_03 = &pinctrl_mipi_cs005_0004_03;
+	};
+
+	/* ST7262-G4-1-H2 controller, 4 lane mipi controller */
+	/* LCD 800x480, pixel_clock 29 MHz
+	 * hfp 110, hsw 10, hbp 30
+	 * vfp   8, vsw  4, vbp  8
+	 */
+	mipi_cmds_cs005_0004_03: mipi-cmds-cs005_0004_03 {
+		alias = <&mipi_cmds_cs005_0004_03>;
+		aliasp = <&pinctrl_mipi_cs005_0004_03>;
+		delay-before-backlight-on = <250>;
+		mipi-cmds-enable = /bits/ 8 <
+			DELAY(10)
+			GEN_S1P(0x7A,0xC1)
+			GEN_S1P(0x20,0x20)
+			GEN_S1P(0x21,0xE0)
+			GEN_S1P(0x22,0x13)
+			GEN_S1P(0x23,0x14)
+			GEN_S1P(0x24,0x06)
+			GEN_S1P(0x25,0x14)
+			GEN_S1P(0x26,0x00)
+			GEN_S1P(0x27,0x08)
+			GEN_S1P(0x28,0x04)
+			GEN_S1P(0x29,0x08)
+			GEN_S1P(0x34,0x80)
+			GEN_S1P(0x36,0x14)
+			GEN_S1P(0xB5,0xA0)
+			GEN_S1P(0x5C,0xFF)
+			GEN_S1P(0x2A,0x01)
+			GEN_S1P(0x56,0x92)
+			GEN_S1P(0x6B,0x71)
+			GEN_S1P(0x69,0x26)
+			GEN_S1P(0x10,0x45)
+			GEN_S1P(0x11,0x88)
+			GEN_S1P(0xB6,0x20)
+			GEN_S1P(0x51,0x20)
+			GEN_S1P(0x09,0x10)
+#if 0
+			DELAY(10)
+			DCS_S0P(0x11)		/* Exit sleep */
+			DELAY(120)
+			DCS_S0P(0x29)		/* MIPI_DCS_SET_DISPLAY_ON */
+			DELAY(20)
+#endif
+		>;
+#if 0
+		mipi-cmds-disable = /bits/ 8 <
+			DCS_S0P(0x28)		/* MIPI_DCS_SET_DISPLAY_OFF */
+			DELAY(50)
+			DCS_S0P(0x10)		/* Enter sleep */
+			DELAY(100)
+		>;
+#endif
+		mode-video-hfp-disable;
+		mode-video-hsa-disable;
+	};
+};
