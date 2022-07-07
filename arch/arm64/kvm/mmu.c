@@ -1251,9 +1251,30 @@ int kvm_phys_addr_ioremap(struct kvm *kvm, phys_addr_t guest_ipa,
 	return ret;
 }
 
+static int pkvm_wp_range(struct kvm *kvm, u64 start, u64 end)
+{
+	struct kvm_pinned_page *ppage;
+	struct rb_node *node, *tmp;
+	int ret;
+
+	for_ppage_node_in_range(kvm, start, end, node, tmp) {
+		ppage = rb_entry(node, struct kvm_pinned_page, node);
+		ret = kvm_call_hyp_nvhe(__pkvm_host_wrprotect_guest,
+					kvm->arch.pkvm.handle,
+					ppage->ipa >> PAGE_SHIFT);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
 static int __stage2_wp_range(struct kvm_s2_mmu *mmu, u64 addr, u64 size)
 {
-	return kvm_pgtable_stage2_wrprotect(mmu->pgt, addr, size);
+	if (!is_protected_kvm_enabled())
+		return kvm_pgtable_stage2_wrprotect(mmu->pgt, addr, size);
+
+	return pkvm_wp_range(kvm_s2_mmu_to_kvm(mmu), addr, addr + size);
 }
 
 /**
