@@ -50,6 +50,15 @@ static const u16 cpufreq_mtk_offsets[REG_ARRAY_SIZE] = {
 	[REG_FREQ_LATENCY]	= 0x110,
 };
 
+static const u16 cpufreq_mt8188_offsets[REG_ARRAY_SIZE] = {
+	[REG_FREQ_LUT_TABLE]	= 0x0,
+	[REG_FREQ_ENABLE]	= 0x84,
+	[REG_FREQ_PERF_STATE]	= 0x88,
+	[REG_FREQ_HW_STATE]	= 0x8c,
+	[REG_EM_POWER_TBL]	= 0x90,
+	[REG_FREQ_LATENCY]	= 0x114,
+};
+
 static int __maybe_unused
 mtk_cpufreq_get_cpu_power(unsigned long *mW,
 			  unsigned long *KHz, struct device *cpu_dev)
@@ -317,6 +326,7 @@ static int mtk_cpufreq_hw_driver_remove(struct platform_device *pdev)
 
 static const struct of_device_id mtk_cpufreq_hw_match[] = {
 	{ .compatible = "mediatek,cpufreq-hw", .data = &cpufreq_mtk_offsets },
+	{ .compatible = "mediatek,mt8188-cpufreq-hw", .data = &cpufreq_mt8188_offsets },
 	{}
 };
 
