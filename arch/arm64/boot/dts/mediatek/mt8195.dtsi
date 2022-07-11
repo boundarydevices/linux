@@ -4088,6 +4088,7 @@
 
 		hdmi0: hdmi@1c300000 {
 			compatible = "mediatek,mt8195-hdmi";
+			#sound-dai-cells = <0>;
 			reg = <0 0x1c300000 0 0x1000>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_HDMI_TX>;
 			clocks = <&topckgen CLK_TOP_UNIVPLL_D6_D4>,
