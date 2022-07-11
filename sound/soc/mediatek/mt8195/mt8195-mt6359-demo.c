@@ -297,6 +297,7 @@ enum {
 	DAI_LINK_DPTX_BE,
 	DAI_LINK_ETDM2_IN_BE,
 	DAI_LINK_ETDM1_OUT_BE,
+	DAI_LINK_ETDM3_OUT_BE,
 	DAI_LINK_UL_SRC1_BE,
 	DAI_LINK_UL_SRC2_BE,
 	DAI_LINK_DMIC_BE,
@@ -401,6 +402,11 @@ SND_SOC_DAILINK_DEFS(ETDM2_IN_BE,
 
 SND_SOC_DAILINK_DEFS(ETDM1_OUT_BE,
 		     DAILINK_COMP_ARRAY(COMP_CPU("ETDM1_OUT")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
+
+SND_SOC_DAILINK_DEFS(ETDM3_OUT_BE,
+		     DAILINK_COMP_ARRAY(COMP_CPU("ETDM3_OUT")),
 		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
 		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
@@ -634,6 +640,15 @@ static struct snd_soc_dai_link mt8195_mt6359_demo_dai_links[] = {
 		.ops = &mt8195_etdm_ops,
 		.be_hw_params_fixup = mt8195_etdm_hw_params_fixup,
 		SND_SOC_DAILINK_REG(ETDM1_OUT_BE),
+	},
+	[DAI_LINK_ETDM3_OUT_BE] = {
+		.name = "ETDM3_OUT_BE",
+		.no_pcm = 1,
+		.dai_fmt = SND_SOC_DAIFMT_I2S |
+			SND_SOC_DAIFMT_NB_NF |
+			SND_SOC_DAIFMT_CBS_CFS,
+		.dpcm_playback = 1,
+		SND_SOC_DAILINK_REG(ETDM3_OUT_BE),
 	},
 	[DAI_LINK_UL_SRC1_BE] = {
 		.name = "UL_SRC1_BE",
