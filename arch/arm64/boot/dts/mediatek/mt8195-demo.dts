@@ -994,6 +994,15 @@
 			sound-dai = <&pmic 1>;
 		};
 	};
+
+	dai-link-3 {
+		sound-dai = <&afe>;
+		dai-link-name = "ETDM3_OUT_BE";
+
+		codec-0 {
+			sound-dai = <&hdmi0>;
+		};
+	};
 };
 
 &mfg0 {
