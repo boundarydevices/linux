@@ -994,15 +994,6 @@
 			sound-dai = <&pmic 1>;
 		};
 	};
-
-	dai-link-3 {
-		sound-dai = <&afe>;
-		dai-link-name = "DPTX_BE";
-
-		codec-0 {
-			sound-dai = <&dp_tx>;
-		};
-	};
 };
 
 &mfg0 {
