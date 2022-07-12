@@ -1085,7 +1085,6 @@
 				fsl,num-tx-queues = <3>;
 				fsl,num-rx-queues = <3>;
 				fsl,stop-mode = <&gpr 0x10 3>;
-				fsl,wakeup_irq = <0>;
 				status = "disabled";
 			};
 
@@ -1206,7 +1205,6 @@
 				fsl,stop-mode = <&gpr 0x10 4>;
 				fsl,num-tx-queues=<3>;
 				fsl,num-rx-queues=<3>;
-				fsl,wakeup_irq = <0>;
 				status = "disabled";
 			};
 
