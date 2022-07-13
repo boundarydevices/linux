@@ -691,7 +691,11 @@ out:
 }
 
 struct mtk_hdmi_phy_conf mtk_hdmi_phy_8195_conf = {
-	.flags = CLK_SET_RATE_PARENT | CLK_SET_RATE_GATE,
+	/* TODO: CLK_SET_RATE_GATE causes hdmi_txpll clock
+	 * set_rate() fails. We need to adjust client 
+	 * calling sequences to properly address this issue.
+	 */
+	.flags = CLK_SET_RATE_PARENT,
 	.hdmi_phy_clk_ops = &mtk_hdmi_pll_ops,
 	.hdmi_phy_enable_tmds = mtk_hdmi_phy_enable_tmds,
 	.hdmi_phy_disable_tmds = mtk_hdmi_phy_disable_tmds,
