@@ -12,6 +12,7 @@
 #include <linux/export.h>
 #include <linux/firmware/imx/ele_base_msg.h>
 #include <linux/firmware/imx/ele_mu_ioctl.h>
+#include <linux/genalloc.h>
 #include <linux/io.h>
 #include <linux/init.h>
 #include <linux/mailbox_client.h>
@@ -26,6 +27,8 @@
 #include "ele_mu.h"
 
 struct ele_mu_priv *ele_priv_export;
+static u32 *get_info_data;
+static phys_addr_t get_info_addr;
 
 int get_ele_mu_priv(struct ele_mu_priv **export)
 {
@@ -128,12 +131,18 @@ struct device *imx_soc_device_register(void)
 {
 	struct soc_device_attribute *attr;
 	struct soc_device *dev;
+	u32 soc_rev;
 	u32 v[4];
 	int err;
 
 	err = read_common_fuse(OTP_UNIQ_ID, v);
 	if (err)
 		return NULL;
+
+	err = ele_get_info(get_info_addr, 23 * sizeof(u32));
+	if (err)
+		return NULL;
+	soc_rev = (get_info_data[1] & 0xffff0000) >> 16;
 
 	attr = kzalloc(sizeof(*attr), GFP_KERNEL);
 	if (!attr)
@@ -145,7 +154,12 @@ struct device *imx_soc_device_register(void)
 		return NULL;
 	}
 	attr->family = kasprintf(GFP_KERNEL, "Freescale i.MX");
-	attr->revision = kasprintf(GFP_KERNEL, "1.0");
+
+	if (soc_rev == 0xA100)
+		attr->revision = kasprintf(GFP_KERNEL, "A1");
+	else
+		attr->revision = kasprintf(GFP_KERNEL, "A0");
+
 	attr->serial_number = kasprintf(GFP_KERNEL, "%016llX", (u64)v[3] << 32 | v[0]);
 	attr->soc_id = kasprintf(GFP_KERNEL, "i.MX8ULP");
 
@@ -746,6 +760,7 @@ static int ele_mu_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct ele_mu_priv *priv;
 	struct device_node *np;
+	struct gen_pool *sram_pool;
 	int max_nb_users = 0;
 	char *devname;
 	struct device *soc;
@@ -872,6 +887,19 @@ static int ele_mu_probe(struct platform_device *pdev)
 	init_completion(&priv->done);
 	spin_lock_init(&priv->lock);
 
+	sram_pool = of_gen_pool_get(pdev->dev.of_node, "sram-pool", 0);
+	if (!sram_pool) {
+		pr_err("Unable to get sram pool\n");
+		return -ENODEV;
+	}
+
+	get_info_data = (u32 *)gen_pool_alloc(sram_pool, 0x100);
+	if (!get_info_data) {
+		pr_warn("Unable to alloc sram from sram pool\n");
+		return -ENOMEM;
+	}
+
+	get_info_addr = gen_pool_virt_to_phys(sram_pool, (ulong)get_info_data);
 	ele_priv_export = priv;
 
 	soc = imx_soc_device_register();
