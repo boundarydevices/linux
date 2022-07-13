@@ -1061,7 +1061,7 @@
 };
 
 &dp_intf1 {
-	status = "okay";
+	status = "disabled";
 	mediatek,oob-hpd;
 	ports {
 		port {
@@ -1075,7 +1075,7 @@
 &dp_tx {
 	pinctrl-names = "default";
 	pinctrl-0 = <&dptx_pin>;
-	status = "okay";
+	status = "disabled";
 
 	ports {
 		port {
