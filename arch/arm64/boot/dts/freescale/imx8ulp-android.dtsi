@@ -98,3 +98,9 @@
 	trusty;
 };
 
+&resmem {
+	secure_region: secure {
+		 compatible = "imx-secure-ion-pool";
+		 reg = <0x0 0xA9600000 0 0x6000000>;
+	};
+};
