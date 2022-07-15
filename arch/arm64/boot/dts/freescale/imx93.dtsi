@@ -279,6 +279,14 @@
 						clocks = <&clk IMX93_CLK_MEDIA_AXI>,
 							 <&clk IMX93_CLK_MEDIA_APB>;
 					};
+
+					mlmix: power-domain@1 {
+						reg = <IMX93_POWER_DOMAIN_MLMIX>;
+						#power-domain-cells = <0>;
+						clocks = <&clk IMX93_CLK_ML_APB>,
+							 <&clk IMX93_CLK_ML>;
+					};
+
 				};
 			};
 
