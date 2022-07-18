@@ -7848,7 +7848,7 @@ static void brcmf_get_bwcap(struct brcmf_if *ifp, u32 bw_cap[])
 				bw_cap[NL80211_BAND_6GHZ] = band;
 				return;
 			}
-			WARN_ON(1);
+			return;
 		}
 		WARN_ON(1);
 		return;
