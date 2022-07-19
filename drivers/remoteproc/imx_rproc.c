@@ -6,6 +6,7 @@
 #include <dt-bindings/firmware/imx/rsrc.h>
 #include <linux/arm-smccc.h>
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/firmware/imx/sci.h>
 #include <linux/interrupt.h>
@@ -110,6 +111,7 @@ struct imx_rproc {
 	u32				core_index;
 	struct device                   **pd_dev;
 	struct device_link              **pd_dev_link;
+	u32				startup_delay;
 };
 
 static const struct imx_rproc_att imx_rproc_att_imx93[] = {
@@ -381,6 +383,9 @@ static int imx_rproc_start(struct rproc *rproc)
 
 	if (ret)
 		dev_err(dev, "Failed to enable remote core!\n");
+
+	if (priv->startup_delay)
+		msleep(priv->startup_delay);
 
 	return ret;
 }
@@ -1099,6 +1104,10 @@ static int imx_rproc_probe(struct platform_device *pdev)
 
 	if (rproc->state != RPROC_DETACHED)
 		rproc->auto_boot = of_property_read_bool(np, "fsl,auto-boot");
+
+	ret = of_property_read_u32(dev->of_node, "fsl,startup-delay-ms", &priv->startup_delay);
+	if (ret)
+		priv->startup_delay = 0;
 
 	ret = rproc_add(rproc);
 	if (ret) {
