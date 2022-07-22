@@ -4,7 +4,7 @@
  */
 #define TOUCHSCREEN_I2C_BUS	i2c3b
 #define PWM_MIPI	pwm1
-#include "imx8mm-nitrogen8mm.dts"
+#include "imx8mm-nitrogen8mm_rev2.dts"
 
 &iomuxc {
 	/delete-node/ ecspi2-mcp2515tgrp;
