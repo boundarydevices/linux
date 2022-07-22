@@ -2834,8 +2834,15 @@ brcmf_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 
 	brcmf_set_join_pref(ifp, &sme->bss_select);
 
-	err  = brcmf_fil_bsscfg_data_set(ifp, "join", ext_join_params,
-					 join_params_size);
+	if (sme->prev_bssid) {
+		brcmf_dbg(CONN, "Trying to REASSOC\n");
+		join_params_size = sizeof(ext_join_params->assoc_le);
+		err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_REASSOC,
+					     &ext_join_params->assoc_le, join_params_size);
+	} else {
+		err  = brcmf_fil_bsscfg_data_set(ifp, "join", ext_join_params,
+						 join_params_size);
+	}
 	kfree(ext_join_params);
 	if (!err)
 		/* This is it. join command worked, we are done */
@@ -6947,6 +6954,7 @@ done:
 	cfg80211_roamed(ndev, &roam_info, GFP_KERNEL);
 	brcmf_dbg(CONN, "Report roaming result\n");
 
+	clear_bit(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
 	set_bit(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
 	brcmf_dbg(TRACE, "Exit\n");
 	return err;
