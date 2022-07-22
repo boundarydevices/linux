@@ -786,7 +786,7 @@ static void mtk_dpi_bridge_disable(struct drm_bridge *bridge)
 {
 	struct mtk_dpi *dpi = bridge_to_dpi(bridge);
 
-	mtk_dpi_disable(dpi);
+	mtk_dpi_power_off(dpi);
 }
 
 static void mtk_dpi_bridge_enable(struct drm_bridge *bridge)
