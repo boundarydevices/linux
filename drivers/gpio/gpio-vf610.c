@@ -354,4 +354,8 @@ static struct platform_driver vf610_gpio_driver = {
 	.probe		= vf610_gpio_probe,
 };
 
-builtin_platform_driver(vf610_gpio_driver);
+static int __init gpio_vf610_init(void)
+{
+	return platform_driver_register(&vf610_gpio_driver);
+}
+subsys_initcall(gpio_vf610_init);
