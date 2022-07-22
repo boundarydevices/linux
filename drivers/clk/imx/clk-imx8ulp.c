@@ -563,8 +563,19 @@ static struct platform_driver imx8ulp_clk_driver = {
 		.of_match_table	= imx8ulp_clk_dt_ids,
 	},
 };
-module_platform_driver(imx8ulp_clk_driver);
 
 MODULE_AUTHOR("Peng Fan <peng.fan@nxp.com>");
 MODULE_DESCRIPTION("NXP i.MX8ULP clock driver");
 MODULE_LICENSE("GPL v2");
+
+static int __init imx8ulp_clk_driver_init(void)
+{
+	return platform_driver_register(&imx8ulp_clk_driver);
+}
+subsys_initcall(imx8ulp_clk_driver_init);
+
+static void __exit imx8ulp_clk_driver_exit(void)
+{
+	platform_driver_unregister(&imx8ulp_clk_driver);
+}
+module_exit(imx8ulp_clk_driver_exit);
