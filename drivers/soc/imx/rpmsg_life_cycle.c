@@ -122,6 +122,10 @@ static int __maybe_unused rpmsg_lifecycle_pm_notify(bool enter)
 	struct pm_rpmsg_data msg;
 	int ret;
 
+	/* Only need to do lifecycle notify when APD enter mem(HW PD) mode */
+	if (pm_suspend_target_state != PM_SUSPEND_MEM)
+		return 0;
+
 	msg.data = enter ? PM_RPMSG_SUSPEND : PM_RPMSG_ACTIVE;
 	msg.header.cate = IMX_RMPSG_LIFECYCLE;
 	msg.header.major = IMX_RMPSG_MAJOR;
