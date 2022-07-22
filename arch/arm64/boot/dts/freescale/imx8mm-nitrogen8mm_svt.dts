@@ -2,7 +2,7 @@
 /*
  * Copyright 2022 Boundary Devices
  */
-
+#define TOUCHSCREEN_I2C_BUS	i2c3b
 #include "imx8mm-nitrogen8mm.dts"
 
 &iomuxc {
@@ -35,6 +35,8 @@
 			MX8MMN(IOMUXC_ENET_TD3_ENET1_RGMII_TD3, 0x1f)
 			MX8MMN(IOMUXC_ENET_TXC_ENET1_RGMII_TXC, 0x1f)
 			MX8MMN(IOMUXC_ENET_TX_CTL_ENET1_RGMII_TX_CTL, 0x1f)
+			MX8MMN(IOMUXC_SAI3_TXFS_GPT1_CAPTURE2, 0x0)
+			MX8MMN(IOMUXC_I2C2_SDA_ENET1_1588_EVENT1_OUT, 0x0)
 #undef GP_FEC1_RESET
 #define GP_FEC1_RESET	<&gpio1 3 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, 0x159)
@@ -109,8 +111,6 @@
 			MX8MMN(IOMUXC_SPDIF_TX_SPDIF1_OUT, 0xd6)
 		>;
 	};
-
-	/delete-node/ ts-atmelgrp;
 };
 
 / {
@@ -121,7 +121,6 @@
 		/delete-property/ sai2;
 		/delete-property/ sai5;
 		/delete-property/ spi1;
-		/delete-property/ ts_atmel_mt;
 	};
 
 	bt-rfkill {
@@ -219,7 +218,9 @@
 	};
 };
 
-/delete-node/ &ts_atmel_mt;
+&i2c2 {
+	status = "disabled";
+};
 
 &i2c3a {
 	rtc@68 {
