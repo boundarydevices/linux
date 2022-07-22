@@ -3245,7 +3245,7 @@ static void __exit lpuart_serial_exit(void)
 	uart_unregister_driver(&lpuart_reg);
 }
 
-module_init(lpuart_serial_init);
+subsys_initcall(lpuart_serial_init);
 module_exit(lpuart_serial_exit);
 
 MODULE_DESCRIPTION("Freescale lpuart serial port driver");
