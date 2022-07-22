@@ -6,6 +6,10 @@
 #define TOUCHSCREEN_I2C_BUS	i2c2
 #endif
 
+#ifndef PWM_MIPI
+#define PWM_MIPI	pwm3
+#endif
+
 #ifndef TC358867_I2C_BUS
 #define TC358867_I2C_BUS	<&TOUCHSCREEN_I2C_BUS>
 #endif
@@ -608,7 +612,7 @@
 		pca9540 = &pca9540;
 		pca9540_2 = &pca9540_2;
 		pca9546 = &pca9546;
-		pwm_mipi = &pwm3;
+		pwm_mipi = &PWM_MIPI;
 #endif
 #ifndef SKIP_MIPI_PANELS
 		spi_lcd = &spi_lcd;
@@ -629,7 +633,7 @@
 		compatible = "pwm-backlight";
 		default-brightness-level = <8>;
 		display = <&display_subsystem>;
-		pwms = <&pwm3 0 30000 0>;		/* 33.3 Khz */
+		pwms = <&PWM_MIPI 0 30000 0>;		/* 33.3 Khz */
 		status = "okay";
 	};
 #endif

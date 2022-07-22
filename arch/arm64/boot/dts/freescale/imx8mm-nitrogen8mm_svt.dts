@@ -3,6 +3,7 @@
  * Copyright 2022 Boundary Devices
  */
 #define TOUCHSCREEN_I2C_BUS	i2c3b
+#define PWM_MIPI	pwm1
 #include "imx8mm-nitrogen8mm.dts"
 
 &iomuxc {
