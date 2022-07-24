@@ -20,6 +20,30 @@
 
 #define BLK_MAX_CLKS 4
 
+#define LCDIF_QOS_REG		0xC
+#define LCDIF_DEFAULT_QOS_OFF	12
+#define LCDIF_CFG_QOS_OFF	8
+
+#define PXP_QOS_REG		0x10
+#define PXP_R_DEFAULT_QOS_OFF	28
+#define PXP_R_CFG_QOS_OFF	24
+#define PXP_W_DEFAULT_QOS_OFF	20
+#define PXP_W_CFG_QOS_OFF	16
+
+#define ISI_QOS_REG		0x1C
+#define ISI_V_DEFAULT_QOS_OFF	28
+#define ISI_V_CFG_QOS_OFF	24
+#define ISI_U_DEFAULT_QOS_OFF	20
+#define ISI_U_CFG_QOS_OFF	16
+#define ISI_Y_R_DEFAULT_QOS_OFF	12
+#define ISI_Y_R_CFG_QOS_OFF	8
+#define ISI_Y_W_DEFAULT_QOS_OFF	4
+#define ISI_Y_W_CFG_QOS_OFF	0
+
+#define PRIO_MASK		0xF
+
+#define PRIO(X)			(X)
+
 struct imx93_blk_ctrl_domain;
 
 struct imx93_blk_ctrl {
@@ -31,13 +55,23 @@ struct imx93_blk_ctrl {
 	struct genpd_onecell_data onecell_data;
 };
 
+#define DOMAIN_MAX_QOS 4
+
+struct imx93_blk_ctrl_qos {
+	u32 reg;
+	u32 cfg_off;
+	u32 default_prio;
+	u32 cfg_prio;
+};
+
 struct imx93_blk_ctrl_domain_data {
 	const char *name;
 	const char * const *clk_names;
 	int num_clks;
 	u32 rst_mask;
 	u32 clk_mask;
-
+	u32 num_qos;
+	struct imx93_blk_ctrl_qos qos[DOMAIN_MAX_QOS];
 };
 
 #define DOMAIN_MAX_CLKS 4
@@ -65,6 +99,30 @@ static inline struct imx93_blk_ctrl_domain *
 to_imx93_blk_ctrl_domain(struct generic_pm_domain *genpd)
 {
 	return container_of(genpd, struct imx93_blk_ctrl_domain, genpd);
+}
+
+static int imx93_blk_ctrl_set_qos(struct imx93_blk_ctrl_domain *domain)
+{
+	const struct imx93_blk_ctrl_domain_data *data = domain->data;
+	struct imx93_blk_ctrl *bc = domain->bc;
+	const struct imx93_blk_ctrl_qos *qos;
+	u32 val, mask;
+	int i;
+
+	for (i = 0; i < data->num_qos; i++) {
+		qos = &data->qos[i];
+
+		mask = PRIO_MASK << qos->cfg_off;
+		mask |= PRIO_MASK << (qos->cfg_off + 4);
+		val = qos->cfg_prio << qos->cfg_off;
+		val |= qos->default_prio << (qos->cfg_off + 4);
+
+		regmap_write_bits(bc->regmap, qos->reg, mask, val);
+
+		dev_dbg(bc->dev, "data->qos[i].reg 0x%x 0x%x\n", qos->reg, val);
+	}
+
+	return 0;
 }
 
 static int imx93_blk_ctrl_power_on(struct generic_pm_domain *genpd)
@@ -103,7 +161,7 @@ static int imx93_blk_ctrl_power_on(struct generic_pm_domain *genpd)
 
 	dev_dbg(bc->dev, "pd_on: name: %s\n", genpd->name);
 
-	return 0;
+	return imx93_blk_ctrl_set_qos(domain);
 
 disable_clk:
 	clk_bulk_disable_unprepare(data->num_clks, domain->clks);
@@ -290,6 +348,20 @@ static const struct imx93_blk_ctrl_domain_data imx93_media_blk_ctl_domain_data[]
 		.num_clks = 1,
 		.rst_mask = BIT(7) | BIT(8),
 		.clk_mask = BIT(7) | BIT(8),
+		.num_qos = 2,
+		.qos = {
+			{
+				.reg = PXP_QOS_REG,
+				.cfg_off = PXP_R_CFG_QOS_OFF,
+				.default_prio = PRIO(1),
+				.cfg_prio = PRIO(7),
+			}, {
+				.reg = PXP_QOS_REG,
+				.cfg_off = PXP_W_CFG_QOS_OFF,
+				.default_prio = PRIO(1),
+				.cfg_prio = PRIO(7),
+			}
+		}
 	},
 	[IMX93_MEDIABLK_PD_LCDIF] = {
 		.name = "mediablk-lcdif",
@@ -297,6 +369,15 @@ static const struct imx93_blk_ctrl_domain_data imx93_media_blk_ctl_domain_data[]
 		.num_clks = 2,
 		.rst_mask = BIT(4) | BIT(5) | BIT(6),
 		.clk_mask = BIT(4) | BIT(5) | BIT(6),
+		.num_qos = 1,
+		.qos = {
+			{
+			.reg = LCDIF_QOS_REG,
+			.cfg_off = LCDIF_CFG_QOS_OFF,
+			.default_prio = PRIO(1),
+			.cfg_prio = PRIO(7),
+			}
+		}
 	},
 	[IMX93_MEDIABLK_PD_ISI] = {
 		.name = "mediablk-isi",
@@ -304,6 +385,30 @@ static const struct imx93_blk_ctrl_domain_data imx93_media_blk_ctl_domain_data[]
 		.num_clks = 1,
 		.rst_mask = BIT(2) | BIT(3),
 		.clk_mask = BIT(2) | BIT(3),
+		.num_qos = 4,
+		.qos = {
+			{
+				.reg = ISI_QOS_REG,
+				.cfg_off = ISI_Y_W_CFG_QOS_OFF,
+				.default_prio = PRIO(1),
+				.cfg_prio = PRIO(7),
+			}, {
+				.reg = ISI_QOS_REG,
+				.cfg_off = ISI_Y_R_CFG_QOS_OFF,
+				.default_prio = PRIO(1),
+				.cfg_prio = PRIO(7),
+			}, {
+				.reg = ISI_QOS_REG,
+				.cfg_off = ISI_U_CFG_QOS_OFF,
+				.default_prio = PRIO(1),
+				.cfg_prio = PRIO(7),
+			}, {
+				.reg = ISI_QOS_REG,
+				.cfg_off = ISI_V_CFG_QOS_OFF,
+				.default_prio = PRIO(1),
+				.cfg_prio = PRIO(7),
+			}
+		}
 	},
 };
 
