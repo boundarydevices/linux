@@ -1458,7 +1458,7 @@ static const struct of_device_id dwc_mipi_csi2_host_of_match[] = {
 	{ .compatible = "fsl,dwc-mipi-csi2-host", },
 	{ /* sentinel */ },
 };
-MODULE_DEVICE_TABLE(of, mipi_csi2_of_match);
+MODULE_DEVICE_TABLE(of, dwc_mipi_csi2_host_of_match);
 
 static struct platform_driver dwc_mipi_csi2_host_driver = {
 	.driver = {
