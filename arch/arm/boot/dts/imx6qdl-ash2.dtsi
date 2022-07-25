@@ -637,9 +637,21 @@
 		#address-cells = <0>;
 		#size-cells = <1>;
 
-		ethphy: ethernet-phy@6 {
-			reg = <6>;
+		ethphy: ethernet-phy {
 			interrupts-extended = GPIRQ_ENET_PHY;
+			reg-mask = <0xc0>;	/* 6 - atheros, 7 - micrel */
+			rxc-skew-ps = <3000>;
+			rxd0-skew-ps = <0>;
+			rxd1-skew-ps = <0>;
+			rxd2-skew-ps = <0>;
+			rxd3-skew-ps = <0>;
+			rxdv-skew-ps = <0>;
+			txc-skew-ps = <3000>;
+			txd0-skew-ps = <0>;
+			txd1-skew-ps = <0>;
+			txd2-skew-ps = <0>;
+			txd3-skew-ps = <0>;
+			txen-skew-ps = <0>;
 		};
 	};
 };
