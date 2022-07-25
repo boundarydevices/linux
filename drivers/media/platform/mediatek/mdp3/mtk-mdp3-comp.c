@@ -145,6 +145,8 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.src_ctrl);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.src_ctrl);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.src_ctrl);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_CON, reg,
 		     0x03C8FE0F);
 
@@ -155,6 +157,8 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 				reg = CFG_COMP(MT8183, ctx->param, rdma.ufo_dec_y);
 			else if (CFG_CHECK(MT8195, p_id))
 				reg = CFG_COMP(MT8195, ctx->param, rdma.ufo_dec_y);
+			else if (CFG_CHECK(MT8188, p_id))
+				reg = CFG_COMP(MT8188, ctx->param, rdma.ufo_dec_y);
 			MM_REG_WRITE(cmd, subsys_id,
 				     base, MDP_RDMA_UFO_DEC_LENGTH_BASE_Y,
 				     reg, 0xFFFFFFFF);
@@ -163,6 +167,8 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 				reg = CFG_COMP(MT8183, ctx->param, rdma.ufo_dec_c);
 			else if (CFG_CHECK(MT8195, p_id))
 				reg = CFG_COMP(MT8195, ctx->param, rdma.ufo_dec_c);
+			else if (CFG_CHECK(MT8188, p_id))
+				reg = CFG_COMP(MT8188, ctx->param, rdma.ufo_dec_c);
 			MM_REG_WRITE(cmd, subsys_id,
 				     base, MDP_RDMA_UFO_DEC_LENGTH_BASE_C,
 				     reg, 0xFFFFFFFF);
@@ -173,6 +179,8 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 					reg = CFG_COMP(MT8183, ctx->param, rdma.mf_bkgd_in_pxl);
 				else if (CFG_CHECK(MT8195, p_id))
 					reg = CFG_COMP(MT8195, ctx->param, rdma.mf_bkgd_in_pxl);
+				else if (CFG_CHECK(MT8188, p_id))
+					reg = CFG_COMP(MT8188, ctx->param, rdma.mf_bkgd_in_pxl);
 				MM_REG_WRITE(cmd, subsys_id,
 					     base, MDP_RDMA_MF_BKGD_SIZE_IN_PXL,
 					     reg, 0x001FFFFF);
@@ -185,6 +193,9 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 	} else if (CFG_CHECK(MT8195, p_id)) {
 		reg = CFG_COMP(MT8195, ctx->param, rdma.control);
 		rdma_con_mask = 0x1130;
+	} else if (CFG_CHECK(MT8188, p_id)) {
+		reg = CFG_COMP(MT8188, ctx->param, rdma.control);
+		rdma_con_mask = 0x1130;
 	}
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_CON, reg,
 		     rdma_con_mask);
@@ -194,6 +205,8 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.iova[0]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.iova[0]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.iova[0]);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_BASE_0, reg,
 		     0xFFFFFFFF);
 
@@ -201,6 +214,8 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.iova[1]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.iova[1]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.iova[1]);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_BASE_1, reg,
 		     0xFFFFFFFF);
 
@@ -208,6 +223,8 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.iova[2]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.iova[2]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.iova[2]);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_BASE_2, reg,
 		     0xFFFFFFFF);
 
@@ -216,6 +233,8 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.iova_end[0]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.iova_end[0]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.iova_end[0]);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_END_0,
 		     reg, 0xFFFFFFFF);
 
@@ -223,6 +242,8 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.iova_end[1]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.iova_end[1]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.iova_end[1]);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_END_1,
 		     reg, 0xFFFFFFFF);
 
@@ -230,6 +251,8 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.iova_end[2]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.iova_end[2]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.iova_end[2]);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_END_2,
 		     reg, 0xFFFFFFFF);
 
@@ -238,6 +261,8 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.mf_bkgd);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.mf_bkgd);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.mf_bkgd);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_MF_BKGD_SIZE_IN_BYTE,
 		     reg, 0x001FFFFF);
 
@@ -245,6 +270,8 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.sf_bkgd);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.sf_bkgd);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.sf_bkgd);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SF_BKGD_SIZE_IN_BYTE,
 		     reg, 0x001FFFFF);
 
@@ -253,57 +280,79 @@ static int config_rdma_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.transform);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.transform);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.transform);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_TRANSFORM_0,
 		     reg, 0x0F110000);
 
 	if (mdp_cfg && mdp_cfg->rdma_esl_setting) {
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rdma.dmabuf_con0);
+		else if (CFG_CHECK(MT8188, p_id))
+			reg = CFG_COMP(MT8188, ctx->param, rdma.dmabuf_con0);
 		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_DMABUF_CON_0,
 			     reg, 0x0FFF00FF);
 
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rdma.ultra_th_high_con0);
+		else if (CFG_CHECK(MT8188, p_id))
+			reg = CFG_COMP(MT8188, ctx->param, rdma.ultra_th_high_con0);
 		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_ULTRA_TH_HIGH_CON_0,
 			     reg, 0x3FFFFFFF);
 
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rdma.ultra_th_low_con0);
+		else if (CFG_CHECK(MT8188, p_id))
+			reg = CFG_COMP(MT8188, ctx->param, rdma.ultra_th_low_con0);
 		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_ULTRA_TH_LOW_CON_0,
 			     reg, 0x3FFFFFFF);
 
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rdma.dmabuf_con1);
+		else if (CFG_CHECK(MT8188, p_id))
+			reg = CFG_COMP(MT8188, ctx->param, rdma.dmabuf_con1);
 		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_DMABUF_CON_1,
 			     reg, 0x0F7F007F);
 
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rdma.ultra_th_high_con1);
+		else if (CFG_CHECK(MT8188, p_id))
+			reg = CFG_COMP(MT8188, ctx->param, rdma.ultra_th_high_con1);
 		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_ULTRA_TH_HIGH_CON_1,
 			     reg, 0x3FFFFFFF);
 
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rdma.ultra_th_low_con1);
+		else if (CFG_CHECK(MT8188, p_id))
+			reg = CFG_COMP(MT8188, ctx->param, rdma.ultra_th_low_con1);
 		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_ULTRA_TH_LOW_CON_1,
 			     reg, 0x3FFFFFFF);
 
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rdma.dmabuf_con2);
+		else if (CFG_CHECK(MT8188, p_id))
+			reg = CFG_COMP(MT8188, ctx->param, rdma.dmabuf_con2);
 		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_DMABUF_CON_2,
 			     reg, 0x0F3F003F);
 
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rdma.ultra_th_high_con2);
+		else if (CFG_CHECK(MT8188, p_id))
+			reg = CFG_COMP(MT8188, ctx->param, rdma.ultra_th_high_con2);
 		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_ULTRA_TH_HIGH_CON_2,
 			     reg, 0x3FFFFFFF);
 
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rdma.ultra_th_low_con2);
+		else if (CFG_CHECK(MT8188, p_id))
+			reg = CFG_COMP(MT8188, ctx->param, rdma.ultra_th_low_con2);
 		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_ULTRA_TH_LOW_CON_2,
 			     reg, 0x3FFFFFFF);
 
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rdma.dmabuf_con3);
+		else if (CFG_CHECK(MT8188, p_id))
+			reg = CFG_COMP(MT8188, ctx->param, rdma.dmabuf_con3);
 		MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_DMABUF_CON_3,
 			     reg, 0x0F3F003F);
 	}
@@ -331,6 +380,8 @@ static int config_rdma_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.subfrms[index].offset[0]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.subfrms[index].offset[0]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.subfrms[index].offset[0]);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_OFFSET_0,
 		     reg, 0xFFFFFFFF);
 
@@ -341,6 +392,8 @@ static int config_rdma_subfrm(struct mdp_comp_ctx *ctx,
 				reg = CFG_COMP(MT8183, ctx->param, rdma.subfrms[index].offset_0_p);
 			else if (CFG_CHECK(MT8195, p_id))
 				reg = CFG_COMP(MT8195, ctx->param, rdma.subfrms[index].offset_0_p);
+			else if (CFG_CHECK(MT8188, p_id))
+				reg = CFG_COMP(MT8188, ctx->param, rdma.subfrms[index].offset_0_p);
 			MM_REG_WRITE(cmd, subsys_id, base,
 				     MDP_RDMA_SRC_OFFSET_0_P,
 				     reg, 0xFFFFFFFF);
@@ -352,6 +405,8 @@ static int config_rdma_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.subfrms[index].offset[1]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.subfrms[index].offset[1]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.subfrms[index].offset[1]);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_OFFSET_1,
 		     reg, 0xFFFFFFFF);
 
@@ -360,6 +415,8 @@ static int config_rdma_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.subfrms[index].offset[2]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.subfrms[index].offset[2]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.subfrms[index].offset[2]);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_SRC_OFFSET_2,
 		     reg, 0xFFFFFFFF);
 
@@ -368,6 +425,8 @@ static int config_rdma_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.subfrms[index].src);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.subfrms[index].src);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.subfrms[index].src);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_MF_SRC_SIZE, reg,
 		     0x1FFF1FFF);
 
@@ -376,6 +435,8 @@ static int config_rdma_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.subfrms[index].clip);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.subfrms[index].clip);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.subfrms[index].clip);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_MF_CLIP_SIZE,
 		     reg, 0x1FFF1FFF);
 
@@ -384,6 +445,8 @@ static int config_rdma_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rdma.subfrms[index].clip_ofst);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rdma.subfrms[index].clip_ofst);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rdma.subfrms[index].clip_ofst);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_RDMA_MF_OFFSET_1,
 		     reg, 0x003F001F);
 
@@ -393,6 +456,9 @@ static int config_rdma_subfrm(struct mdp_comp_ctx *ctx,
 	} else if (CFG_CHECK(MT8195, p_id)) {
 		csf_l = CFG_COMP(MT8195, ctx->param, subfrms[index].in.left);
 		csf_r = CFG_COMP(MT8195, ctx->param, subfrms[index].in.right);
+	} else if (CFG_CHECK(MT8188, p_id)) {
+		csf_l = CFG_COMP(MT8188, ctx->param, subfrms[index].in.left);
+		csf_r = CFG_COMP(MT8188, ctx->param, subfrms[index].in.right);
 	}
 	if (mdp_cfg && mdp_cfg->rdma_upsample_repeat_only)
 		if ((csf_r - csf_l + 1) > 320)
@@ -450,10 +516,14 @@ static int config_fg_frame(struct mdp_comp_ctx *ctx,
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, fg.ctrl_0);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, fg.ctrl_0);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_FG_FG_CTRL_0, reg, BIT(0));
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, fg.ck_en);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, fg.ck_en);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_FG_FG_CK_EN, reg, 0x7);
 
 	return 0;
@@ -468,10 +538,14 @@ static int config_fg_subfrm(struct mdp_comp_ctx *ctx,
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, fg.subfrms[index].info_0);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, fg.subfrms[index].info_0);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_FG_TILE_INFO_0, reg, 0xFFFFFFFF);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, fg.subfrms[index].info_1);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, fg.subfrms[index].info_1);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_FG_TILE_INFO_1, reg, 0xFFFFFFFF);
 
 	return 0;
@@ -497,6 +571,8 @@ static int init_rsz(struct mdp_comp_ctx *ctx, struct mdp_cmdq_cmd *cmd)
 
 	if (CFG_CHECK(MT8195, p_id))
 		mtk_mmsys_vpp_rsz_dcm_config(ctx->comp->mdp_dev->mdp_mmsys2, true);
+	else if (CFG_CHECK(MT8188, p_id))
+		mtk_mmsys_vpp_rsz_dcm_config(ctx->comp->mdp_dev->mdp_mmsys2, true);
 
 	return 0;
 }
@@ -518,6 +594,8 @@ static int config_rsz_frame(struct mdp_comp_ctx *ctx,
 		bypass = CFG_COMP(MT8183, ctx->param, frame.bypass);
 	else if (CFG_CHECK(MT8195, p_id))
 		bypass = CFG_COMP(MT8195, ctx->param, frame.bypass);
+	else if (CFG_CHECK(MT8188, p_id))
+		bypass = CFG_COMP(MT8188, ctx->param, frame.bypass);
 
 	if (bypass) {
 		/* Disable RSZ */
@@ -529,6 +607,8 @@ static int config_rsz_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rsz.control1);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rsz.control1);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rsz.control1);
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_CONTROL_1, reg,
 		     0x03FFFDF3);
 
@@ -536,6 +616,8 @@ static int config_rsz_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rsz.control2);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rsz.control2);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rsz.control2);
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_CONTROL_2, reg,
 		     0x0FFFC290);
 
@@ -543,6 +625,8 @@ static int config_rsz_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rsz.coeff_step_x);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rsz.coeff_step_x);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rsz.coeff_step_x);
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_HORIZONTAL_COEFF_STEP,
 		     reg, 0x007FFFFF);
 
@@ -550,6 +634,8 @@ static int config_rsz_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rsz.coeff_step_y);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rsz.coeff_step_y);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rsz.coeff_step_y);
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_VERTICAL_COEFF_STEP,
 		     reg, 0x007FFFFF);
 
@@ -570,6 +656,8 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rsz.subfrms[index].control2);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rsz.subfrms[index].control2);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rsz.subfrms[index].control2);
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_CONTROL_2, reg,
 		     0x00003800);
 
@@ -577,6 +665,8 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rsz.subfrms[index].src);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rsz.subfrms[index].src);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rsz.subfrms[index].src);
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_INPUT_IMAGE, reg,
 		     0xFFFFFFFF);
 
@@ -586,6 +676,9 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 	} else if (CFG_CHECK(MT8195, p_id)) {
 		csf_l = CFG_COMP(MT8195, ctx->param, subfrms[index].in.left);
 		csf_r = CFG_COMP(MT8195, ctx->param, subfrms[index].in.right);
+	} else if (CFG_CHECK(MT8188, p_id)) {
+		csf_l = CFG_COMP(MT8188, ctx->param, subfrms[index].in.left);
+		csf_r = CFG_COMP(MT8188, ctx->param, subfrms[index].in.right);
 	}
 	if (mdp_cfg && mdp_cfg->rsz_disable_dcm_small_sample)
 		if ((csf_r - csf_l + 1) <= 16)
@@ -596,6 +689,8 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, subfrms[index].luma.left);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, subfrms[index].luma.left);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, subfrms[index].luma.left);
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_LUMA_HORIZONTAL_INTEGER_OFFSET,
 		     reg, 0xFFFF);
 
@@ -603,6 +698,8 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, subfrms[index].luma.left_subpix);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, subfrms[index].luma.left_subpix);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, subfrms[index].luma.left_subpix);
 	MM_REG_WRITE(cmd, subsys_id,
 		     base, PRZ_LUMA_HORIZONTAL_SUBPIXEL_OFFSET,
 		     reg, 0x1FFFFF);
@@ -611,6 +708,8 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, subfrms[index].luma.top);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, subfrms[index].luma.top);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, subfrms[index].luma.top);
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_LUMA_VERTICAL_INTEGER_OFFSET,
 		     reg, 0xFFFF);
 
@@ -618,6 +717,8 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, subfrms[index].luma.top_subpix);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, subfrms[index].luma.top_subpix);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, subfrms[index].luma.top_subpix);
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_LUMA_VERTICAL_SUBPIXEL_OFFSET,
 		     reg, 0x1FFFFF);
 
@@ -625,6 +726,8 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, subfrms[index].chroma.left);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, subfrms[index].chroma.left);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, subfrms[index].chroma.left);
 	MM_REG_WRITE(cmd, subsys_id,
 		     base, PRZ_CHROMA_HORIZONTAL_INTEGER_OFFSET,
 		     reg, 0xFFFF);
@@ -633,6 +736,8 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, subfrms[index].chroma.left_subpix);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, subfrms[index].chroma.left_subpix);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, subfrms[index].chroma.left_subpix);
 	MM_REG_WRITE(cmd, subsys_id,
 		     base, PRZ_CHROMA_HORIZONTAL_SUBPIXEL_OFFSET,
 		     reg, 0x1FFFFF);
@@ -641,10 +746,12 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, rsz.subfrms[index].clip);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, rsz.subfrms[index].clip);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, rsz.subfrms[index].clip);
 	MM_REG_WRITE(cmd, subsys_id, base, PRZ_OUTPUT_IMAGE, reg,
 		     0xFFFFFFFF);
 
-	if (CFG_CHECK(MT8195, p_id)) {
+	if (CFG_CHECK(MT8195, p_id) || CFG_CHECK(MT8188, p_id)) {
 		struct mdp_comp *merge;
 		const struct mtk_mdp_driver_data *data = ctx->comp->mdp_dev->mdp_data;
 		enum mtk_mdp_comp_id public_id = ctx->comp->public_id;
@@ -662,10 +769,14 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		id = data->comp_data[public_id].match.alias_id;
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rsz.subfrms[index].rsz_switch);
+		else if (CFG_CHECK(MT8188, p_id))
+			reg = CFG_COMP(MT8188, ctx->param, rsz.subfrms[index].rsz_switch);
 		mtk_mmsys_vpp_rsz_merge_config(ctx->comp->mdp_dev->mdp_mmsys2, id, reg);
 
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rsz.subfrms[index].merge_cfg);
+		else if (CFG_CHECK(MT8188, p_id))
+			reg = CFG_COMP(MT8188, ctx->param, rsz.subfrms[index].merge_cfg);
 		MM_REG_WRITE(cmd, merge->subsys_id, merge->reg_base,
 			     MDP_MERGE_CFG_0, reg, 0xFFFFFFFF);
 		MM_REG_WRITE(cmd, merge->subsys_id, merge->reg_base,
@@ -702,6 +813,9 @@ static int advance_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		} else if (CFG_CHECK(MT8195, p_id)) {
 			csf_l = CFG_COMP(MT8195, ctx->param, subfrms[index].in.left);
 			csf_r = CFG_COMP(MT8195, ctx->param, subfrms[index].in.right);
+		} else if (CFG_CHECK(MT8188, p_id)) {
+			csf_l = CFG_COMP(MT8188, ctx->param, subfrms[index].in.left);
+			csf_r = CFG_COMP(MT8188, ctx->param, subfrms[index].in.right);
 		}
 
 		if ((csf_r - csf_l + 1) <= 16)
@@ -741,10 +855,14 @@ static int config_aal_frame(struct mdp_comp_ctx *ctx,
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, aal.cfg_main);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, aal.cfg_main);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_AAL_CFG_MAIN, reg, BIT(7));
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, aal.cfg);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, aal.cfg);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_AAL_CFG, reg, BIT(0));
 
 	return 0;
@@ -759,16 +877,22 @@ static int config_aal_subfrm(struct mdp_comp_ctx *ctx,
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, aal.subfrms[index].src);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, aal.subfrms[index].src);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_AAL_SIZE,
 		     reg, MDP_AAL_SIZE_MASK);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, aal.subfrms[index].clip_ofst);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, aal.subfrms[index].clip_ofst);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_AAL_OUTPUT_OFFSET,
 		     reg, 0x00FF00FF);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, aal.subfrms[index].clip);
+	if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, aal.subfrms[index].clip);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_AAL_OUTPUT_SIZE,
 		     reg, MDP_AAL_OUTPUT_SIZE_MASK);
 
@@ -803,10 +927,14 @@ static int config_hdr_frame(struct mdp_comp_ctx *ctx,
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, hdr.top);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, hdr.top);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_TOP, reg, BIT(29) | BIT(28));
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, hdr.relay);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, hdr.relay);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_RELAY, reg, BIT(0));
 
 	return 0;
@@ -821,36 +949,52 @@ static int config_hdr_subfrm(struct mdp_comp_ctx *ctx,
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, hdr.subfrms[index].win_size);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, hdr.subfrms[index].win_size);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_TILE_POS,
 		     reg, MDP_HDR_TILE_POS_MASK);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, hdr.subfrms[index].src);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, hdr.subfrms[index].src);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_SIZE_0, reg, 0x1FFF1FFF);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, hdr.subfrms[index].clip_ofst0);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, hdr.subfrms[index].clip_ofst0);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_SIZE_1, reg, 0x1FFF1FFF);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, hdr.subfrms[index].clip_ofst1);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, hdr.subfrms[index].clip_ofst1);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_SIZE_2, reg, 0x1FFF1FFF);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, hdr.subfrms[index].hist_ctrl_0);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, hdr.subfrms[index].hist_ctrl_0);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_HIST_CTRL_0, reg, 0x00003FFF);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, hdr.subfrms[index].hist_ctrl_1);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, hdr.subfrms[index].hist_ctrl_1);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_HIST_CTRL_1, reg, 0x00003FFF);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, hdr.subfrms[index].hdr_top);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, hdr.subfrms[index].hdr_top);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_TOP, reg, BIT(6) | BIT(5));
 
 	/* Enable histogram */
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, hdr.subfrms[index].hist_addr);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, hdr.subfrms[index].hist_addr);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_HDR_HIST_ADDR, reg, BIT(9));
 
 	return 0;
@@ -911,6 +1055,8 @@ static int config_tdshp_frame(struct mdp_comp_ctx *ctx,
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, tdshp.cfg);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, tdshp.cfg);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_TDSHP_CFG, reg, BIT(0));
 
 	return 0;
@@ -925,25 +1071,35 @@ static int config_tdshp_subfrm(struct mdp_comp_ctx *ctx,
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, tdshp.subfrms[index].src);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, tdshp.subfrms[index].src);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_TDSHP_INPUT_SIZE,
 		     reg, MDP_TDSHP_INPUT_SIZE_MASK);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, tdshp.subfrms[index].clip_ofst);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, tdshp.subfrms[index].clip_ofst);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_TDSHP_OUTPUT_OFFSET,
 		     reg, 0x00FF00FF);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, tdshp.subfrms[index].clip);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, tdshp.subfrms[index].clip);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_TDSHP_OUTPUT_SIZE,
 		     reg, MDP_TDSHP_OUTPUT_SIZE_MASK);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, tdshp.subfrms[index].hist_cfg_0);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, tdshp.subfrms[index].hist_cfg_0);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_HIST_CFG_00, reg, 0xFFFFFFFF);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, tdshp.subfrms[index].hist_cfg_1);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, tdshp.subfrms[index].hist_cfg_1);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_HIST_CFG_01, reg, 0xFFFFFFFF);
 
 	return 0;
@@ -990,6 +1146,8 @@ static int config_color_frame(struct mdp_comp_ctx *ctx,
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, color.start);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, color.start);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_COLOR_START,
 		     reg, MDP_COLOR_START_MASK);
 
@@ -1005,11 +1163,15 @@ static int config_color_subfrm(struct mdp_comp_ctx *ctx,
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, color.subfrms[index].in_hsize);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, color.subfrms[index].in_hsize);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_COLOR_INTERNAL_IP_WIDTH,
 		     reg, 0x00003FFF);
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, color.subfrms[index].in_vsize);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, color.subfrms[index].in_vsize);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_COLOR_INTERNAL_IP_HEIGHT,
 		     reg, 0x00003FFF);
 
@@ -1050,10 +1212,14 @@ static int config_ovl_frame(struct mdp_comp_ctx *ctx,
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, ovl.L0_con);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, ovl.L0_con);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_OVL_L0_CON, reg, BIT(29) | BIT(28));
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, ovl.src_con);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, ovl.src_con);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_OVL_SRC_CON, reg, BIT(0));
 
 	return 0;
@@ -1068,12 +1234,16 @@ static int config_ovl_subfrm(struct mdp_comp_ctx *ctx,
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, ovl.subfrms[index].L0_src_size);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, ovl.subfrms[index].L0_src_size);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_OVL_L0_SRC_SIZE,
 		     reg, MDP_OVL_L0_SRC_SIZE_MASK);
 
 	/* Setup output size */
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, ovl.subfrms[index].roi_size);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, ovl.subfrms[index].roi_size);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_OVL_ROI_SIZE,
 		     reg, MDP_OVL_ROI_SIZE_MASK);
 
@@ -1112,6 +1282,8 @@ static int config_pad_subfrm(struct mdp_comp_ctx *ctx,
 
 	if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, pad.subfrms[index].pic_size);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, pad.subfrms[index].pic_size);
 	MM_REG_WRITE(cmd, subsys_id, base, MDP_PAD_PIC_SIZE,
 		     reg, MDP_PAD_PIC_SIZE_MASK);
 
@@ -1134,7 +1306,7 @@ static int init_wrot(struct mdp_comp_ctx *ctx, struct mdp_cmdq_cmd *cmd)
 	MM_REG_POLL(cmd, subsys_id, base, VIDO_SOFT_RST_STAT, BIT(0), BIT(0));
 
 	/* Reset setting */
-	if (CFG_CHECK(MT8195, p_id))
+	if (CFG_CHECK(MT8195, p_id) || CFG_CHECK(MT8188, p_id))
 		MM_REG_WRITE(cmd, subsys_id, base, VIDO_CTRL, 0x0, 0xFFFFFFFF);
 
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_SOFT_RST, 0x0, BIT(0));
@@ -1156,6 +1328,8 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.iova[0]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.iova[0]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.iova[0]);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_BASE_ADDR, reg,
 		     0xFFFFFFFF);
 
@@ -1163,6 +1337,8 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.iova[1]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.iova[1]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.iova[1]);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_BASE_ADDR_C, reg,
 		     0xFFFFFFFF);
 
@@ -1170,6 +1346,8 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.iova[2]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.iova[2]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.iova[2]);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_BASE_ADDR_V, reg,
 		     0xFFFFFFFF);
 
@@ -1177,17 +1355,25 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 		if (mdp_cfg->wrot_support_10bit) {
 			if (CFG_CHECK(MT8195, p_id))
 				reg = CFG_COMP(MT8195, ctx->param, wrot.scan_10bit);
+			else if (CFG_CHECK(MT8188, p_id))
+				reg = CFG_COMP(MT8188, ctx->param, wrot.scan_10bit);
 			MM_REG_WRITE(cmd, subsys_id, base, VIDO_SCAN_10BIT,
 				     reg, 0x0000000F);
 
 			if (CFG_CHECK(MT8195, p_id))
 				reg = CFG_COMP(MT8195, ctx->param, wrot.pending_zero);
+			else if (CFG_CHECK(MT8188, p_id))
+				reg = CFG_COMP(MT8188, ctx->param, wrot.pending_zero);
 			MM_REG_WRITE(cmd, subsys_id, base, VIDO_PENDING_ZERO,
 				     reg, 0x04000000);
 		}
 
 		if (CFG_CHECK(MT8195, p_id)) {
 			reg = CFG_COMP(MT8195, ctx->param, wrot.bit_number);
+			MM_REG_WRITE(cmd, subsys_id, base, VIDO_CTRL_2,
+				     reg, 0x00000007);
+		} else if (CFG_CHECK(MT8188, p_id)) {
+			reg = CFG_COMP(MT8188, ctx->param, wrot.bit_number);
 			MM_REG_WRITE(cmd, subsys_id, base, VIDO_CTRL_2,
 				     reg, 0x00000007);
 		}
@@ -1198,12 +1384,18 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.control);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.control);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.control);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_CTRL, reg,
 		     0xF131510F);
 
 	/* Write pre-ultra threshold */
 	if (CFG_CHECK(MT8195, p_id)) {
 		reg = CFG_COMP(MT8195, ctx->param, wrot.pre_ultra);
+		MM_REG_WRITE(cmd, subsys_id, base, VIDO_DMA_PREULTRA, reg,
+			     0x00FFFFFF);
+	} else if (CFG_CHECK(MT8188, p_id)) {
+		reg = CFG_COMP(MT8188, ctx->param, wrot.pre_ultra);
 		MM_REG_WRITE(cmd, subsys_id, base, VIDO_DMA_PREULTRA, reg,
 			     0x00FFFFFF);
 	}
@@ -1213,6 +1405,8 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.stride[0]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.stride[0]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.stride[0]);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_STRIDE, reg,
 		     0x0000FFFF);
 
@@ -1221,6 +1415,8 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.stride[1]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.stride[1]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.stride[1]);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_STRIDE_C, reg,
 		     0xFFFF);
 
@@ -1228,6 +1424,8 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.stride[2]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.stride[2]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.stride[2]);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_STRIDE_V, reg,
 		     0xFFFF);
 
@@ -1236,6 +1434,8 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.mat_ctrl);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.mat_ctrl);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.mat_ctrl);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAT_CTRL, reg, 0xF3);
 
 	/* Set the fixed ALPHA as 0xFF */
@@ -1250,6 +1450,8 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.fifo_test);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.fifo_test);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.fifo_test);
 
 	if (reg != 0)
 		MM_REG_WRITE(cmd, subsys_id, base, VIDO_FIFO_TEST,
@@ -1261,11 +1463,13 @@ static int config_wrot_frame(struct mdp_comp_ctx *ctx,
 			reg = CFG_COMP(MT8183, ctx->param, wrot.filter);
 		else if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, wrot.filter);
+		else if (CFG_CHECK(MT8188, p_id))
+			reg = CFG_COMP(MT8188, ctx->param, wrot.filter);
 		MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAIN_BUF_SIZE,
 			     reg, 0x77);
 
 		/* Turn off WROT dma dcm */
-		if (CFG_CHECK(MT8195, p_id))
+		if (CFG_CHECK(MT8195, p_id) || CFG_CHECK(MT8188, p_id))
 			MM_REG_WRITE(cmd, subsys_id, base, VIDO_ROT_EN,
 				     (0x1 << 23) + (0x1 << 20), 0x900000);
 	}
@@ -1285,6 +1489,8 @@ static int config_wrot_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.subfrms[index].offset[0]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.subfrms[index].offset[0]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.subfrms[index].offset[0]);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_OFST_ADDR,
 		     reg, 0x0FFFFFFF);
 
@@ -1293,6 +1499,8 @@ static int config_wrot_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.subfrms[index].offset[1]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.subfrms[index].offset[1]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.subfrms[index].offset[1]);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_OFST_ADDR_C,
 		     reg, 0x0FFFFFFF);
 
@@ -1301,6 +1509,8 @@ static int config_wrot_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.subfrms[index].offset[2]);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.subfrms[index].offset[2]);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.subfrms[index].offset[2]);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_OFST_ADDR_V,
 		     reg, 0x0FFFFFFF);
 
@@ -1309,6 +1519,8 @@ static int config_wrot_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.subfrms[index].src);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.subfrms[index].src);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.subfrms[index].src);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_IN_SIZE, reg,
 		     0x1FFF1FFF);
 
@@ -1317,6 +1529,8 @@ static int config_wrot_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.subfrms[index].clip);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.subfrms[index].clip);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.subfrms[index].clip);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_TAR_SIZE, reg,
 		     0x1FFF1FFF);
 
@@ -1324,6 +1538,8 @@ static int config_wrot_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.subfrms[index].clip_ofst);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.subfrms[index].clip_ofst);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.subfrms[index].clip_ofst);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_CROP_OFST, reg,
 		     0x1FFF1FFF);
 
@@ -1331,6 +1547,8 @@ static int config_wrot_subfrm(struct mdp_comp_ctx *ctx,
 		reg = CFG_COMP(MT8183, ctx->param, wrot.subfrms[index].main_buf);
 	else if (CFG_CHECK(MT8195, p_id))
 		reg = CFG_COMP(MT8195, ctx->param, wrot.subfrms[index].main_buf);
+	else if (CFG_CHECK(MT8188, p_id))
+		reg = CFG_COMP(MT8188, ctx->param, wrot.subfrms[index].main_buf);
 	MM_REG_WRITE(cmd, subsys_id, base, VIDO_MAIN_BUF_SIZE,
 		     reg, 0x1FFF7F00);
 
@@ -1601,6 +1819,9 @@ static const struct of_device_id mdp_comp_dt_ids[] = {
 	}, {
 		.compatible = "mediatek,mt8195-mdp3-tcc",
 		.data = (void *)MDP_COMP_TYPE_TCC,
+	}, {
+		.compatible = "mediatek,mt8188-mdp3-rdma",
+		.data = (void *)MDP_COMP_TYPE_RDMA,
 	},
 	{}
 };
@@ -1997,6 +2218,8 @@ int mdp_comp_ctx_config(struct mdp_dev *mdp, struct mdp_comp_ctx *ctx,
 		arg = CFG_COMP(MT8183, param, type);
 	else if (CFG_CHECK(MT8195, p_id))
 		arg = CFG_COMP(MT8195, param, type);
+	else if (CFG_CHECK(MT8188, p_id))
+		arg = CFG_COMP(MT8188, param, type);
 	else
 		return -EINVAL;
 	public_id = get_comp_public_id(mdp, arg);
@@ -2016,6 +2239,8 @@ int mdp_comp_ctx_config(struct mdp_dev *mdp, struct mdp_comp_ctx *ctx,
 		arg = CFG_COMP(MT8183, param, input);
 	else if (CFG_CHECK(MT8195, p_id))
 		arg = CFG_COMP(MT8195, param, input);
+	else if (CFG_CHECK(MT8188, p_id))
+		arg = CFG_COMP(MT8188, param, input);
 	else
 		return -EINVAL;
 	ctx->input = &frame->inputs[arg];
@@ -2023,6 +2248,8 @@ int mdp_comp_ctx_config(struct mdp_dev *mdp, struct mdp_comp_ctx *ctx,
 		idx = CFG_COMP(MT8183, param, num_outputs);
 	else if (CFG_CHECK(MT8195, p_id))
 		idx = CFG_COMP(MT8195, param, num_outputs);
+	else if (CFG_CHECK(MT8188, p_id))
+		idx = CFG_COMP(MT8188, param, num_outputs);
 	else
 		return -EINVAL;
 	for (i = 0; i < idx; i++) {
@@ -2030,6 +2257,8 @@ int mdp_comp_ctx_config(struct mdp_dev *mdp, struct mdp_comp_ctx *ctx,
 			arg = CFG_COMP(MT8183, param, outputs[i]);
 		else if (CFG_CHECK(MT8195, p_id))
 			arg = CFG_COMP(MT8195, param, outputs[i]);
+		else if (CFG_CHECK(MT8188, p_id))
+			arg = CFG_COMP(MT8188, param, outputs[i]);
 		else
 			return -EINVAL;
 		ctx->outputs[i] = &frame->outputs[arg];

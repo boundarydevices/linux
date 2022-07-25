@@ -13,6 +13,7 @@
 #include "mtk-mdp3-type.h"
 #include "mt8183/mdp3-comp-mt8183.h"
 #include "mt8195/mdp3-comp-mt8195.h"
+#include "mt8188/mdp3-comp-mt8188.h"
 
 /* ISP-MDP generic input information */
 
@@ -118,6 +119,7 @@ struct img_frameparam {
 /* Platform config indicator */
 #define MT8183 8183
 #define MT8195 8195
+#define MT8188 8188
 
 #define CFG_CHECK(plat, id) (plat == id)
 
@@ -137,6 +139,7 @@ struct img_config {
 	union {
 		struct img_config_8183 config_8183;
 		struct img_config_8195 config_8195;
+		struct img_config_8188 config_8188;
 	};
 } __packed;
 
@@ -144,6 +147,7 @@ struct img_compparam {
 	union {
 		struct img_compparam_8183 comp_8183;
 		struct img_compparam_8195 comp_8195;
+		struct img_compparam_8188 comp_8188;
 	};
 } __packed;
 
