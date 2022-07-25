@@ -885,6 +885,10 @@ static int fsl_sai_startup(struct snd_pcm_substream *substream,
 				}
 			}
 		}
+
+		/* protection for if there is no proper rate found*/
+		if (!sai->constraint_rates.count)
+			sai->constraint_rates = fsl_sai_rate_constraints;
 	}
 	ret = snd_pcm_hw_constraint_list(substream->runtime, 0,
 			SNDRV_PCM_HW_PARAM_RATE, &sai->constraint_rates);

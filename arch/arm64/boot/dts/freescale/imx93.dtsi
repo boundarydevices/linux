@@ -42,6 +42,8 @@
 		serial5 = &lpuart6;
 		serial6 = &lpuart7;
 		serial7 = &lpuart8;
+		isi0 = &isi_0;
+		csi0 = &mipi_csi;
 	};
 
 	cpus {
@@ -973,6 +975,69 @@
 				fsl,tuning-start-tap = <20>;
 				fsl,tuning-step= <2>;
 				status = "disabled";
+			};
+
+			epxp: epxp@4ae20000 {
+				compatible = "fsl,imx93-pxp-dma", "fsl,imx8ulp-pxp-dma";
+				reg = <0x4ae20000 0x10000>;
+				interrupts = <GIC_SPI 173 IRQ_TYPE_LEVEL_HIGH>,
+					     <GIC_SPI 174 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clk IMX93_CLK_MEDIA_APB>,
+					 <&clk IMX93_CLK_MEDIA_AXI>;
+				clock-names = "pxp_ipg", "pxp_axi";
+				pxp-gpr = <&media_blk_ctrl>;
+				power-domains = <&media_blk_ctrl IMX93_MEDIABLK_PD_PXP>;
+				status = "disabled";
+			};
+
+			cameradev: camera {
+				compatible = "fsl,mxc-md", "simple-bus";
+				#address-cells = <1>;
+				#size-cells = <1>;
+				ranges;
+				status = "disabled";
+
+				isi_0: isi@4ae40000{
+					compatible = "fsl,imx93-isi", "fsl,imx8-isi";
+					reg = <0x4ae40000 0x10000>;
+					interrupts = <GIC_SPI 172 IRQ_TYPE_LEVEL_HIGH>;
+					clocks = <&clk IMX93_CLK_ISI_GATE>,
+						 <&clk IMX93_CLK_MEDIA_AXI>;
+					clock-names = "per", "axi";
+					assigned-clocks = <&clk IMX93_CLK_MEDIA_AXI>,
+							  <&clk IMX93_CLK_MEDIA_APB>;
+					assigned-clock-parents = <&clk IMX93_CLK_SYS_PLL_PFD1>,
+								 <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>;
+					assigned-clock-rates = <400000000>, <133333333>;
+					interface = <2 0 2>;
+					no-reset-control;
+					power-domains = <&media_blk_ctrl IMX93_MEDIABLK_PD_ISI>;
+					gasket = <&media_blk_ctrl>;
+					status = "disabled";
+
+					cap_device {
+						compatible = "imx-isi-capture";
+						status = "disabled";
+					};
+				};
+
+				mipi_csi: csi@4ae00000 {
+					compatible = "fsl,dwc-mipi-csi2-host";
+					reg = <0x4ae00000 0x10000>;
+					interrupts = <GIC_SPI 175 IRQ_TYPE_LEVEL_HIGH>;
+					clocks = <&clk IMX93_CLK_MIPI_CSI_GATE>,
+						 <&clk IMX93_CLK_CAM_PIX>,
+						 <&clk IMX93_CLK_MIPI_PHY_CFG>;
+					clock-names = "clk_core", "clk_pixel", "phy_cfg";
+					assigned-clocks = <&clk IMX93_CLK_CAM_PIX>,
+							  <&clk IMX93_CLK_MIPI_PHY_CFG>;
+					assigned-clock-parents = <&clk IMX93_CLK_VIDEO_PLL>,
+								 <&clk IMX93_CLK_24M>;
+					assigned-clock-rates = <140000000>, <24000000>;
+					gasket = <&media_blk_ctrl>;
+					power-domains = <&media_blk_ctrl IMX93_MEDIABLK_PD_MIPI_CSI>;
+					status = "disabled";
+				};
 			};
 		};
 
