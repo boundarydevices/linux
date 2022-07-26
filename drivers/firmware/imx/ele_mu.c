@@ -392,7 +392,7 @@ static int ele_mu_ioctl_get_mu_info(struct ele_mu_device_ctx *dev_ctx,
 	info.ele_mu_id = (u8)priv->ele_mu_id;
 	info.interrupt_idx = 0;
 	info.tz = 0;
-	info.did = 0x7;
+	info.did = (u8)priv->ele_mu_did;
 
 	devctx_dbg(dev_ctx,
 		   "info [mu_idx: %d, irq_idx: %d, tz: 0x%x, did: 0x%x]\n",
@@ -779,10 +779,18 @@ static int ele_mu_probe(struct platform_device *pdev)
 	priv->cmd_receiver_dev = NULL;
 	priv->waiting_rsp_dev = NULL;
 
+	ret = of_property_read_u32(np, "fsl,ele_mu_did", &priv->ele_mu_did);
+	if (ret) {
+		ret = -EINVAL;
+		dev_err(dev, "%s: Not able to read ele_mu_did", __func__);
+		goto exit;
+	}
+
 	ret = of_property_read_u32(np, "fsl,ele_mu_id", &priv->ele_mu_id);
 	if (ret) {
-		dev_warn(dev, "%s: Not able to read mu_id", __func__);
-		priv->ele_mu_id = S4_DEFAULT_MUAP_INDEX;
+		ret = -EINVAL;
+		dev_err(dev, "%s: Not able to read ele_mu_id", __func__);
+		goto exit;
 	}
 
 	ret = of_property_read_u32(np, "fsl,ele_mu_max_users", &max_nb_users);
