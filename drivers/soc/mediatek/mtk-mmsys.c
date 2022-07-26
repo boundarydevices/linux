@@ -99,6 +99,16 @@ static const struct mtk_mmsys_driver_data mt8188_vdosys1_driver_data = {
 	.num_resets = 96,
 };
 
+static const struct mtk_mmsys_driver_data mt8188_vppsys0_driver_data = {
+	.clk_driver = "clk-mt8188-vpp0",
+	.is_vppsys = true,
+};
+
+static const struct mtk_mmsys_driver_data mt8188_vppsys1_driver_data = {
+	.clk_driver = "clk-mt8188-vpp1",
+	.is_vppsys = true,
+};
+
 static const struct mtk_mmsys_driver_data mt8192_mmsys_driver_data = {
 	.clk_driver = "clk-mt8192-mm",
 	.routes = mmsys_mt8192_routing_table,
@@ -498,6 +508,14 @@ static const struct of_device_id of_match_mtk_mmsys[] = {
 	{
 		.compatible = "mediatek,mt8188-vdosys1",
 		.data = &mt8188_vdosys1_driver_data,
+	},
+	{
+		.compatible = "mediatek,mt8188-vppsys0",
+		.data = &mt8188_vppsys0_driver_data,
+	},
+	{
+		.compatible = "mediatek,mt8188-vppsys1",
+		.data = &mt8188_vppsys1_driver_data,
 	},
 	{
 		.compatible = "mediatek,mt8192-mmsys",
