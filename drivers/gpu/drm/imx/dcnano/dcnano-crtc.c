@@ -385,6 +385,7 @@ static int dcnano_crtc_enable_vblank(struct drm_crtc *crtc)
 {
 	struct dcnano_dev *dcnano = crtc_to_dcnano_dev(crtc);
 
+	pm_runtime_get_sync(dcnano->base.dev);
 	dcnano_write(dcnano, DCNANO_DISPLAYINTRENABLE, DISPLAYINTR_DISP0);
 
 	return 0;
@@ -395,6 +396,7 @@ static void dcnano_crtc_disable_vblank(struct drm_crtc *crtc)
 	struct dcnano_dev *dcnano = crtc_to_dcnano_dev(crtc);
 
 	dcnano_write(dcnano, DCNANO_DISPLAYINTRENABLE, 0);
+	pm_runtime_put(dcnano->base.dev);
 }
 
 static const struct drm_crtc_funcs dcnano_crtc_funcs = {
