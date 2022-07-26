@@ -98,7 +98,10 @@ dcnano_crtc_find_pll_clock_rate(struct drm_crtc *crtc,
 {
 	struct dcnano_dev *dcnano = crtc_to_dcnano_dev(crtc);
 	unsigned long pll_clk_rate, rounded_pll_clk_rate;
+	unsigned long rate, max, min, div;
 	int i;
+	max = mode->clock * 1000;
+	min = max - (max >> 3);
 
 	for (i = DCNANO_CRTC_PLL_MIN_DIV; i <= DCNANO_CRTC_PLL_MAX_DIV; i++) {
 		pll_clk_rate = mode->clock * 1000 * i;
@@ -108,15 +111,18 @@ dcnano_crtc_find_pll_clock_rate(struct drm_crtc *crtc,
 
 		rounded_pll_clk_rate = clk_round_rate(dcnano->pll_clk,
 						      pll_clk_rate);
-		if (rounded_pll_clk_rate != pll_clk_rate) {
-			dcnano_crtc_dbg(crtc,
-					"rounded pll clock rate %lu, expected %lu\n",
-					rounded_pll_clk_rate, pll_clk_rate);
+		pr_debug("%s: requested %lu, got %lu \n", __func__,
+				pll_clk_rate, rounded_pll_clk_rate);
+		div = DIV_ROUND_UP(rounded_pll_clk_rate, max);
+		rate = rounded_pll_clk_rate / div;
+		if (rate < min) {
+			dcnano_crtc_dbg(crtc, "rate %lu, expected %lu\n",
+					rate, min);
 			continue;
 		}
 
-		dcnano_crtc_dbg(crtc, "find pll clock rate %lu with div %d\n",
-				pll_clk_rate, i);
+		dcnano_crtc_dbg(crtc, "find pll clock rate %lu with div %ld\n",
+				rounded_pll_clk_rate, div);
 
 		return pll_clk_rate;
 	}
@@ -155,6 +161,9 @@ static void dcnano_crtc_set_pixel_clock(struct drm_crtc *crtc)
 	if (ret)
 		dcnano_crtc_err(crtc, "%s: failed to set pll clock rate: %d\n",
 				__func__, ret);
+	pr_debug("%s: wanted %u *n, requested %lu, got %lu \n",
+			__func__, adj->clock * 1000, pll_clk_rate,
+			clk_get_rate(dcnano->pll_clk));
 
 	/* FIXME: The rate of pixel clock's parent is pixel clock rate. */
 	ret = clk_set_rate(parent, pixel_clk_rate);
@@ -167,6 +176,8 @@ static void dcnano_crtc_set_pixel_clock(struct drm_crtc *crtc)
 	if (ret)
 		dcnano_crtc_err(crtc, "%s: failed to set pixel clock rate: %d\n",
 				__func__, ret);
+	pr_debug("%s: requested %lu, got %lu \n", __func__,
+			pixel_clk_rate, clk_get_rate(dcnano->pixel_clk));
 
 	ret = clk_prepare_enable(dcnano->pixel_clk);
 	if (ret)
