@@ -4,6 +4,7 @@
  * Copyright 2020,2021 NXP
  */
 
+#include <linux/pm_runtime.h>
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_atomic_state_helper.h>
@@ -137,10 +138,12 @@ static void dcnano_primary_plane_atomic_update(struct drm_plane *plane,
 	dcnano_plane_dbg(plane, "fb address %pad, pitch 0x%08x\n",
 			 &baseaddr, fb->pitches[0]);
 
+	pm_runtime_get_sync(dcnano->base.dev);
 	dcnano_write(dcnano, DCNANO_FRAMEBUFFERADDRESS, baseaddr);
 
 	dcnano_write(dcnano, DCNANO_FRAMEBUFFERSTRIDE,
 		     ALIGN(fb->pitches[0], DCNANO_FB_PITCH_ALIGN));
+	pm_runtime_put(dcnano->base.dev);
 }
 
 static const struct drm_plane_helper_funcs dcnano_primary_plane_helper_funcs = {
