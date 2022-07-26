@@ -156,7 +156,7 @@ static const struct drm_mode_config_funcs dcnano_mode_config_funcs = {
 };
 
 static const struct drm_mode_config_helper_funcs dcnano_mode_config_helpers = {
-	.atomic_commit_tail = drm_atomic_helper_commit_tail_rpm,
+	.atomic_commit_tail = drm_atomic_helper_commit_tail,
 };
 
 int dcnano_kms_prepare(struct dcnano_dev *dcnano)
