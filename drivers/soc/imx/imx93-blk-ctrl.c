@@ -353,13 +353,13 @@ static const struct imx93_blk_ctrl_domain_data imx93_media_blk_ctl_domain_data[]
 			{
 				.reg = PXP_QOS_REG,
 				.cfg_off = PXP_R_CFG_QOS_OFF,
-				.default_prio = PRIO(1),
-				.cfg_prio = PRIO(7),
+				.default_prio = PRIO(3),
+				.cfg_prio = PRIO(6),
 			}, {
 				.reg = PXP_QOS_REG,
 				.cfg_off = PXP_W_CFG_QOS_OFF,
-				.default_prio = PRIO(1),
-				.cfg_prio = PRIO(7),
+				.default_prio = PRIO(3),
+				.cfg_prio = PRIO(6),
 			}
 		}
 	},
@@ -374,7 +374,7 @@ static const struct imx93_blk_ctrl_domain_data imx93_media_blk_ctl_domain_data[]
 			{
 			.reg = LCDIF_QOS_REG,
 			.cfg_off = LCDIF_CFG_QOS_OFF,
-			.default_prio = PRIO(1),
+			.default_prio = PRIO(3),
 			.cfg_prio = PRIO(7),
 			}
 		}
@@ -390,22 +390,22 @@ static const struct imx93_blk_ctrl_domain_data imx93_media_blk_ctl_domain_data[]
 			{
 				.reg = ISI_QOS_REG,
 				.cfg_off = ISI_Y_W_CFG_QOS_OFF,
-				.default_prio = PRIO(1),
+				.default_prio = PRIO(3),
 				.cfg_prio = PRIO(7),
 			}, {
 				.reg = ISI_QOS_REG,
 				.cfg_off = ISI_Y_R_CFG_QOS_OFF,
-				.default_prio = PRIO(1),
+				.default_prio = PRIO(3),
 				.cfg_prio = PRIO(7),
 			}, {
 				.reg = ISI_QOS_REG,
 				.cfg_off = ISI_U_CFG_QOS_OFF,
-				.default_prio = PRIO(1),
+				.default_prio = PRIO(3),
 				.cfg_prio = PRIO(7),
 			}, {
 				.reg = ISI_QOS_REG,
 				.cfg_off = ISI_V_CFG_QOS_OFF,
-				.default_prio = PRIO(1),
+				.default_prio = PRIO(3),
 				.cfg_prio = PRIO(7),
 			}
 		}
