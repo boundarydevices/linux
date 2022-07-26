@@ -27,8 +27,24 @@
 #include "ele_mu.h"
 
 struct ele_mu_priv *ele_priv_export;
-static u32 *get_info_data;
-static phys_addr_t get_info_addr;
+
+struct imx_info {
+	bool socdev;
+};
+
+static const struct imx_info imx8ulp_info = {
+	.socdev = true,
+};
+
+static const struct imx_info imx93_info = {
+	.socdev = false,
+};
+
+static const struct of_device_id ele_mu_match[] = {
+	{ .compatible = "fsl,imx-ele", .data = (void *)&imx8ulp_info},
+	{ .compatible = "fsl,imx93-ele", .data = (void *)&imx93_info},
+	{},
+};
 
 int get_ele_mu_priv(struct ele_mu_priv **export)
 {
@@ -127,10 +143,13 @@ static void ele_mu_rx_callback(struct mbox_client *c, void *msg)
 	}
 }
 
-struct device *imx_soc_device_register(void)
+struct device *imx_soc_device_register(struct platform_device *pdev)
 {
 	struct soc_device_attribute *attr;
 	struct soc_device *dev;
+	struct gen_pool *sram_pool;
+	u32 *get_info_data;
+	phys_addr_t get_info_addr;
 	u32 soc_rev;
 	u32 v[4];
 	int err;
@@ -138,6 +157,20 @@ struct device *imx_soc_device_register(void)
 	err = read_common_fuse(OTP_UNIQ_ID, v);
 	if (err)
 		return NULL;
+
+	sram_pool = of_gen_pool_get(pdev->dev.of_node, "sram-pool", 0);
+	if (!sram_pool) {
+		pr_err("Unable to get sram pool\n");
+		return NULL;
+	}
+
+	get_info_data = (u32 *)gen_pool_alloc(sram_pool, 0x100);
+	if (!get_info_data) {
+		pr_err("Unable to alloc sram from sram pool\n");
+		return NULL;
+	}
+
+	get_info_addr = gen_pool_virt_to_phys(sram_pool, (ulong)get_info_data);
 
 	err = ele_get_info(get_info_addr, 23 * sizeof(u32));
 	if (err)
@@ -760,7 +793,8 @@ static int ele_mu_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct ele_mu_priv *priv;
 	struct device_node *np;
-	struct gen_pool *sram_pool;
+	const struct of_device_id *of_id = of_match_device(ele_mu_match, dev);
+	struct imx_info *info = (struct imx_info *)of_id->data;
 	int max_nb_users = 0;
 	char *devname;
 	struct device *soc;
@@ -887,25 +921,14 @@ static int ele_mu_probe(struct platform_device *pdev)
 	init_completion(&priv->done);
 	spin_lock_init(&priv->lock);
 
-	sram_pool = of_gen_pool_get(pdev->dev.of_node, "sram-pool", 0);
-	if (!sram_pool) {
-		pr_err("Unable to get sram pool\n");
-		return -ENODEV;
-	}
-
-	get_info_data = (u32 *)gen_pool_alloc(sram_pool, 0x100);
-	if (!get_info_data) {
-		pr_warn("Unable to alloc sram from sram pool\n");
-		return -ENOMEM;
-	}
-
-	get_info_addr = gen_pool_virt_to_phys(sram_pool, (ulong)get_info_data);
 	ele_priv_export = priv;
 
-	soc = imx_soc_device_register();
-	if (IS_ERR(soc)) {
-		pr_err("failed to register SoC device: %ld\n", PTR_ERR(soc));
-		return PTR_ERR(soc);
+	if (info->socdev) {
+		soc = imx_soc_device_register(pdev);
+		if (IS_ERR(soc)) {
+			pr_err("failed to register SoC device: %ld\n", PTR_ERR(soc));
+			return PTR_ERR(soc);
+		}
 	}
 
 	dev_set_drvdata(dev, priv);
@@ -925,11 +948,6 @@ static int ele_mu_remove(struct platform_device *pdev)
 
 	return 0;
 }
-
-static const struct of_device_id ele_mu_match[] = {
-	{ .compatible = "fsl,imx-ele", },
-	{},
-};
 
 static struct platform_driver ele_mu_driver = {
 	.driver = {
