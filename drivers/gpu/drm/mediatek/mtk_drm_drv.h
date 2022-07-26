@@ -80,5 +80,5 @@ extern struct platform_driver mtk_ethdr_driver;
 extern struct platform_driver mtk_mdp_rdma_driver;
 extern struct platform_driver mtk_dpintf_driver;
 extern struct platform_driver mtk_dp_tx_driver;
-
+extern struct platform_driver mtk_disp_padding_driver;
 #endif /* MTK_DRM_DRV_H */

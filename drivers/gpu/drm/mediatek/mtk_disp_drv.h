@@ -150,4 +150,8 @@ void mtk_mdp_rdma_start(struct device *dev, struct cmdq_pkt *cmdq_pkt);
 void mtk_mdp_rdma_stop(struct device *dev, struct cmdq_pkt *cmdq_pkt);
 void mtk_mdp_rdma_config(struct device *dev, struct mtk_mdp_rdma_cfg *cfg,
 			 struct cmdq_pkt *cmdq_pkt);
+
+int mtk_disp_padding_clk_enable(struct device *dev);
+void mtk_disp_padding_clk_disable(struct device *dev);
+void mtk_disp_padding_config(struct device *dev, struct cmdq_pkt *cmdq_pkt);
 #endif
