@@ -1128,7 +1128,7 @@
 		sentnl_mu: sentnl-mu {
 			#address-cells = <1>;
 			#size-cells = <1>;
-			compatible = "fsl,imx-ele";
+			compatible = "fsl,imx93-ele";
 			mboxes = <&s4muap 0 0 &s4muap 1 0>;
 			mbox-names = "tx", "rx";
 			fsl,sentnl_mu_id = <2>;
