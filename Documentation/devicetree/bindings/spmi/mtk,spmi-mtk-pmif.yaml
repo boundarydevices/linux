@@ -21,6 +21,7 @@ properties:
     oneOf:
       - enum:
           - mediatek,mt6873-spmi
+          - mediatek,mt8188-spmi
           - mediatek,mt8195-spmi
       - items:
           - enum:
