@@ -55,7 +55,7 @@ struct ovl_adaptor_comp_match {
 };
 
 struct mtk_disp_ovl_adaptor {
-	struct device *ovl_adaptor_comp[OVL_ADAPTOR_ID_MAX];
+	struct device *comp[OVL_ADAPTOR_ID_MAX];
 	struct device *mmsys_dev;
 	bool children_bound;
 };
@@ -67,19 +67,19 @@ static const char * const private_comp_stem[OVL_ADAPTOR_TYPE_NUM] = {
 };
 
 static const struct ovl_adaptor_comp_match comp_matches[OVL_ADAPTOR_ID_MAX] = {
-	[OVL_ADAPTOR_MDP_RDMA0]	= { OVL_ADAPTOR_TYPE_RDMA, 0 },
-	[OVL_ADAPTOR_MDP_RDMA1]	= { OVL_ADAPTOR_TYPE_RDMA, 1 },
-	[OVL_ADAPTOR_MDP_RDMA2]	= { OVL_ADAPTOR_TYPE_RDMA, 2 },
-	[OVL_ADAPTOR_MDP_RDMA3]	= { OVL_ADAPTOR_TYPE_RDMA, 3 },
-	[OVL_ADAPTOR_MDP_RDMA4]	= { OVL_ADAPTOR_TYPE_RDMA, 4 },
-	[OVL_ADAPTOR_MDP_RDMA5]	= { OVL_ADAPTOR_TYPE_RDMA, 5 },
-	[OVL_ADAPTOR_MDP_RDMA6]	= { OVL_ADAPTOR_TYPE_RDMA, 6 },
-	[OVL_ADAPTOR_MDP_RDMA7]	= { OVL_ADAPTOR_TYPE_RDMA, 7 },
-	[OVL_ADAPTOR_MERGE0]	= { OVL_ADAPTOR_TYPE_MERGE, 1 },
-	[OVL_ADAPTOR_MERGE1]	= { OVL_ADAPTOR_TYPE_MERGE, 2 },
-	[OVL_ADAPTOR_MERGE2]	= { OVL_ADAPTOR_TYPE_MERGE, 3 },
-	[OVL_ADAPTOR_MERGE3]	= { OVL_ADAPTOR_TYPE_MERGE, 4 },
-	[OVL_ADAPTOR_ETHDR0]	= { OVL_ADAPTOR_TYPE_ETHDR, 0 },
+	[OVL_ADAPTOR_MDP_RDMA0]		= { OVL_ADAPTOR_TYPE_RDMA, 0 },
+	[OVL_ADAPTOR_MDP_RDMA1]		= { OVL_ADAPTOR_TYPE_RDMA, 1 },
+	[OVL_ADAPTOR_MDP_RDMA2]		= { OVL_ADAPTOR_TYPE_RDMA, 2 },
+	[OVL_ADAPTOR_MDP_RDMA3]		= { OVL_ADAPTOR_TYPE_RDMA, 3 },
+	[OVL_ADAPTOR_MDP_RDMA4]		= { OVL_ADAPTOR_TYPE_RDMA, 4 },
+	[OVL_ADAPTOR_MDP_RDMA5]		= { OVL_ADAPTOR_TYPE_RDMA, 5 },
+	[OVL_ADAPTOR_MDP_RDMA6]		= { OVL_ADAPTOR_TYPE_RDMA, 6 },
+	[OVL_ADAPTOR_MDP_RDMA7]		= { OVL_ADAPTOR_TYPE_RDMA, 7 },
+	[OVL_ADAPTOR_MERGE0]		= { OVL_ADAPTOR_TYPE_MERGE, 1 },
+	[OVL_ADAPTOR_MERGE1]		= { OVL_ADAPTOR_TYPE_MERGE, 2 },
+	[OVL_ADAPTOR_MERGE2]		= { OVL_ADAPTOR_TYPE_MERGE, 3 },
+	[OVL_ADAPTOR_MERGE3]		= { OVL_ADAPTOR_TYPE_MERGE, 4 },
+	[OVL_ADAPTOR_ETHDR0]		= { OVL_ADAPTOR_TYPE_ETHDR, 0 },
 };
 
 void mtk_ovl_adaptor_layer_config(struct device *dev, unsigned int idx,
@@ -105,10 +105,10 @@ void mtk_ovl_adaptor_layer_config(struct device *dev, unsigned int idx,
 		&pending->addr, (pending->pitch / fmt_info->cpp[0]),
 		pending->src_x, pending->src_y, pending->width, pending->height);
 
-	rdma_l = ovl_adaptor->ovl_adaptor_comp[OVL_ADAPTOR_MDP_RDMA0 + 2 * idx];
-	rdma_r = ovl_adaptor->ovl_adaptor_comp[OVL_ADAPTOR_MDP_RDMA0 + 2 * idx + 1];
-	merge = ovl_adaptor->ovl_adaptor_comp[OVL_ADAPTOR_MERGE0 + idx];
-	ethdr = ovl_adaptor->ovl_adaptor_comp[OVL_ADAPTOR_ETHDR0];
+	rdma_l = ovl_adaptor->comp[OVL_ADAPTOR_MDP_RDMA0 + 2 * idx];
+	rdma_r = ovl_adaptor->comp[OVL_ADAPTOR_MDP_RDMA0 + 2 * idx + 1];
+	merge = ovl_adaptor->comp[OVL_ADAPTOR_MERGE0 + idx];
+	ethdr = ovl_adaptor->comp[OVL_ADAPTOR_ETHDR0];
 
 	if (!pending->enable) {
 		mtk_merge_stop_cmdq(merge, cmdq_pkt);
@@ -165,7 +165,7 @@ void mtk_ovl_adaptor_config(struct device *dev, unsigned int w,
 {
 	struct mtk_disp_ovl_adaptor *ovl_adaptor = dev_get_drvdata(dev);
 
-	mtk_ethdr_config(ovl_adaptor->ovl_adaptor_comp[OVL_ADAPTOR_ETHDR0], w, h,
+	mtk_ethdr_config(ovl_adaptor->comp[OVL_ADAPTOR_ETHDR0], w, h,
 			 vrefresh, is_dual_pipe, bpc, cmdq_pkt);
 }
 
@@ -173,14 +173,14 @@ void mtk_ovl_adaptor_start(struct device *dev)
 {
 	struct mtk_disp_ovl_adaptor *ovl_adaptor = dev_get_drvdata(dev);
 
-	mtk_ethdr_start(ovl_adaptor->ovl_adaptor_comp[OVL_ADAPTOR_ETHDR0]);
+	mtk_ethdr_start(ovl_adaptor->comp[OVL_ADAPTOR_ETHDR0]);
 }
 
 void mtk_ovl_adaptor_stop(struct device *dev)
 {
 	struct mtk_disp_ovl_adaptor *ovl_adaptor = dev_get_drvdata(dev);
 
-	mtk_ethdr_stop(ovl_adaptor->ovl_adaptor_comp[OVL_ADAPTOR_ETHDR0]);
+	mtk_ethdr_stop(ovl_adaptor->comp[OVL_ADAPTOR_ETHDR0]);
 }
 
 int mtk_ovl_adaptor_clk_enable(struct device *dev)
@@ -191,7 +191,7 @@ int mtk_ovl_adaptor_clk_enable(struct device *dev)
 	int i;
 
 	for (i = 0; i < OVL_ADAPTOR_MERGE0; i++) {
-		comp = ovl_adaptor->ovl_adaptor_comp[i];
+		comp = ovl_adaptor->comp[i];
 		ret = pm_runtime_get_sync(comp);
 		if (ret < 0) {
 			dev_err(dev, "Failed to enable power domain %d, err %d\n", i, ret);
@@ -200,7 +200,7 @@ int mtk_ovl_adaptor_clk_enable(struct device *dev)
 	}
 
 	for (i = 0; i < OVL_ADAPTOR_ID_MAX; i++) {
-		comp = ovl_adaptor->ovl_adaptor_comp[i];
+		comp = ovl_adaptor->comp[i];
 
 		if (i < OVL_ADAPTOR_MERGE0)
 			ret = mtk_mdp_rdma_clk_enable(comp);
@@ -218,7 +218,7 @@ int mtk_ovl_adaptor_clk_enable(struct device *dev)
 
 clk_err:
 	while (--i >= 0) {
-		comp = ovl_adaptor->ovl_adaptor_comp[i];
+		comp = ovl_adaptor->comp[i];
 		if (i < OVL_ADAPTOR_MERGE0)
 			mtk_mdp_rdma_clk_disable(comp);
 		else if (i < OVL_ADAPTOR_ETHDR0)
@@ -230,7 +230,7 @@ clk_err:
 
 pwr_err:
 	while (--i >= 0)
-		pm_runtime_put(ovl_adaptor->ovl_adaptor_comp[i]);
+		pm_runtime_put(ovl_adaptor->comp[i]);
 
 	return ret;
 }
@@ -242,7 +242,7 @@ void mtk_ovl_adaptor_clk_disable(struct device *dev)
 	int i;
 
 	for (i = 0; i < OVL_ADAPTOR_ID_MAX; i++) {
-		comp = ovl_adaptor->ovl_adaptor_comp[i];
+		comp = ovl_adaptor->comp[i];
 
 		if (i < OVL_ADAPTOR_MERGE0) {
 			mtk_mdp_rdma_clk_disable(comp);
@@ -264,7 +264,7 @@ struct device *mtk_ovl_adaptor_dma_dev_get(struct device *dev)
 {
 	struct mtk_disp_ovl_adaptor *ovl_adaptor = dev_get_drvdata(dev);
 
-	return ovl_adaptor->ovl_adaptor_comp[OVL_ADAPTOR_MDP_RDMA0];
+	return ovl_adaptor->comp[OVL_ADAPTOR_MDP_RDMA0];
 }
 
 void mtk_ovl_adaptor_register_vblank_cb(struct device *dev, void (*vblank_cb)(void *),
@@ -272,7 +272,7 @@ void mtk_ovl_adaptor_register_vblank_cb(struct device *dev, void (*vblank_cb)(vo
 {
 	struct mtk_disp_ovl_adaptor *ovl_adaptor = dev_get_drvdata(dev);
 
-	mtk_ethdr_register_vblank_cb(ovl_adaptor->ovl_adaptor_comp[OVL_ADAPTOR_ETHDR0],
+	mtk_ethdr_register_vblank_cb(ovl_adaptor->comp[OVL_ADAPTOR_ETHDR0],
 				     vblank_cb, vblank_cb_data);
 }
 
@@ -280,21 +280,21 @@ void mtk_ovl_adaptor_unregister_vblank_cb(struct device *dev)
 {
 	struct mtk_disp_ovl_adaptor *ovl_adaptor = dev_get_drvdata(dev);
 
-	mtk_ethdr_unregister_vblank_cb(ovl_adaptor->ovl_adaptor_comp[OVL_ADAPTOR_ETHDR0]);
+	mtk_ethdr_unregister_vblank_cb(ovl_adaptor->comp[OVL_ADAPTOR_ETHDR0]);
 }
 
 void mtk_ovl_adaptor_enable_vblank(struct device *dev)
 {
 	struct mtk_disp_ovl_adaptor *ovl_adaptor = dev_get_drvdata(dev);
 
-	mtk_ethdr_enable_vblank(ovl_adaptor->ovl_adaptor_comp[OVL_ADAPTOR_ETHDR0]);
+	mtk_ethdr_enable_vblank(ovl_adaptor->comp[OVL_ADAPTOR_ETHDR0]);
 }
 
 void mtk_ovl_adaptor_disable_vblank(struct device *dev)
 {
 	struct mtk_disp_ovl_adaptor *ovl_adaptor = dev_get_drvdata(dev);
 
-	mtk_ethdr_disable_vblank(ovl_adaptor->ovl_adaptor_comp[OVL_ADAPTOR_ETHDR0]);
+	mtk_ethdr_disable_vblank(ovl_adaptor->comp[OVL_ADAPTOR_ETHDR0]);
 }
 
 void mtk_ovl_adaptor_add_comp(struct device *dev, struct mtk_mutex *mutex)
@@ -424,7 +424,7 @@ static int ovl_adaptor_comp_init(struct device *dev, struct component_match **ma
 		if (!comp_pdev)
 			return -EPROBE_DEFER;
 
-		priv->ovl_adaptor_comp[id] = &comp_pdev->dev;
+		priv->comp[id] = &comp_pdev->dev;
 
 		drm_of_component_match_add(dev, match, compare_of, node);
 		dev_dbg(dev, "Adding component match for %pOF\n", node);
@@ -447,6 +447,9 @@ static int mtk_disp_ovl_adaptor_comp_bind(struct device *dev, struct device *mas
 static void mtk_disp_ovl_adaptor_comp_unbind(struct device *dev, struct device *master,
 					     void *data)
 {
+	struct mtk_disp_ovl_adaptor *priv = dev_get_drvdata(dev);
+
+	priv->children_bound = false;
 }
 
 static const struct component_ops mtk_disp_ovl_adaptor_comp_ops = {
