@@ -172,14 +172,20 @@ struct device *imx_soc_device_register(struct platform_device *pdev)
 
 	get_info_addr = gen_pool_virt_to_phys(sram_pool, (ulong)get_info_data);
 
-	err = ele_get_info(get_info_addr, 23 * sizeof(u32));
-	if (err)
-		return NULL;
-	soc_rev = (get_info_data[1] & 0xffff0000) >> 16;
-
 	attr = kzalloc(sizeof(*attr), GFP_KERNEL);
 	if (!attr)
 		return NULL;
+
+	err = ele_get_info(get_info_addr, 23 * sizeof(u32));
+	if (err) {
+		attr->revision = kasprintf(GFP_KERNEL, "A0");
+	} else {
+		soc_rev = (get_info_data[1] & 0xffff0000) >> 16;
+		if (soc_rev == 0xA100)
+			attr->revision = kasprintf(GFP_KERNEL, "A1");
+		else
+			attr->revision = kasprintf(GFP_KERNEL, "A0");
+	}
 
 	err = of_property_read_string(of_root, "model", &attr->machine);
 	if (err) {
@@ -187,12 +193,6 @@ struct device *imx_soc_device_register(struct platform_device *pdev)
 		return NULL;
 	}
 	attr->family = kasprintf(GFP_KERNEL, "Freescale i.MX");
-
-	if (soc_rev == 0xA100)
-		attr->revision = kasprintf(GFP_KERNEL, "A1");
-	else
-		attr->revision = kasprintf(GFP_KERNEL, "A0");
-
 	attr->serial_number = kasprintf(GFP_KERNEL, "%016llX", (u64)v[3] << 32 | v[0]);
 	attr->soc_id = kasprintf(GFP_KERNEL, "i.MX8ULP");
 
