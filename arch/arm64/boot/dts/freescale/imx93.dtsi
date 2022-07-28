@@ -875,6 +875,19 @@
 				clock-names = "per", "ipg";
 				status = "disabled";
 			};
+
+			flexio_i2c_master: flexio@425c0000 {
+				compatible = "imx,flexio_i2c_master";
+				reg = <0x425c0000 0x10000>;
+				interrupts = <GIC_SPI 53 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clk IMX93_CLK_FLEXIO1_GATE>,
+					 <&clk IMX93_CLK_FLEXIO1_GATE>;
+				clock-names = "per", "ipg";
+				assigned-clocks = <&clk IMX93_CLK_FLEXIO1_GATE>;
+				assigned-clock-parents = <&clk IMX93_CLK_FLEXIO1>;
+				assigned-clock-rates = <24000000>;
+				status = "disabled";
+			};
 		};
 
 		aips3: bus@42800000 {
@@ -1092,7 +1105,7 @@
 			#size-cells = <1>;
 
 			imx93_uid: soc-uid@6 {
-				reg = <0xc0 0x8>;
+				reg = <0x30 0x8>;
 			};
 
 			imx93_soc: imx93-soc {
@@ -1112,14 +1125,15 @@
 			status = "okay";
 		};
 
-		sentnl_mu: sentnl-mu {
+		ele_mu: ele-mu {
 			#address-cells = <1>;
 			#size-cells = <1>;
-			compatible = "fsl,imx-ele";
+			compatible = "fsl,imx93-ele";
 			mboxes = <&s4muap 0 0 &s4muap 1 0>;
 			mbox-names = "tx", "rx";
-			fsl,sentnl_mu_id = <2>;
-			fsl,sentnl_mu_max_users = <4>;
+			fsl,ele_mu_did = <3>;
+			fsl,ele_mu_id = <2>;
+			fsl,ele_mu_max_users = <4>;
 			status = "okay";
 			dma-ranges = <0x80000000 0x80000000 0x20000000>;
 		};
@@ -1274,6 +1288,12 @@
 					reg = <2>;
 				};
 			};
+		};
+
+		ddr-pmu@4e300dc0 {
+			compatible = "fsl,imx93-ddr-pmu";
+			reg = <0x4e300dc0 0x200>;
+			interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		usbphynop1: usbphynop1 {
