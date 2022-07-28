@@ -1221,6 +1221,7 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 	fsl_edma3->dma_dev.device_terminate_all = fsl_edma3_terminate_all;
 	fsl_edma3->dma_dev.device_issue_pending = fsl_edma3_issue_pending;
 	fsl_edma3->dma_dev.device_synchronize = fsl_edma3_synchronize;
+	fsl_edma3->dma_dev.residue_granularity = DMA_RESIDUE_GRANULARITY_SEGMENT;
 
 	fsl_edma3->dma_dev.src_addr_widths = FSL_EDMA_BUSWIDTHS;
 	fsl_edma3->dma_dev.dst_addr_widths = FSL_EDMA_BUSWIDTHS;
