@@ -229,7 +229,6 @@ static void ap1302_fw_handler(const struct firmware *fw, void *context)
 	struct ap1302_device *ap1302_dev = context;
 	struct device *dev = &ap1302_dev->i2c_client->dev;
 	struct v4l2_subdev *sd = &ap1302_dev->subdev;
-	struct v4l2_mbus_framefmt *fmt = &ap1302_dev->fmt;
 	struct ap1302_firmware *ap1302_fw;
 	const u8 *fw_data;
 	u16 regVal, win_pos = 0;
@@ -311,9 +310,7 @@ static void ap1302_fw_handler(const struct firmware *fw, void *context)
 			ap1302_fw->checksum, regVal);
 		return;
 	}
-
-	ap1302_write_reg(ap1302_dev, REG_PREVIEW_WIDTH, fmt->width);
-	ap1302_write_reg(ap1302_dev, REG_PREVIEW_HEIGHT, fmt->height);
+	ap1302_write_reg(ap1302_dev, 0x6124, 0x0001);
 
 	release_firmware(fw);
 	ap1302_s_stream(sd, 0);
@@ -499,26 +496,23 @@ static int ap1302_s_stream(struct v4l2_subdev *sd, int enable)
 	struct v4l2_mbus_framefmt *fmt = &ap1302_dev->fmt;
 
 	mutex_lock(&ap1302_dev->lock);
+
+	ap1302_write_reg(ap1302_dev, 0x601A, 0x0080);
+
 	if (enable) {
-		ap1302_write_reg(ap1302_dev, 0x601A, 0x8340);
+		ap1302_write_reg(ap1302_dev, 0x601A, 0x0380);
+		mdelay(50);
 		if (ap1302_dev->mode_change) {
 			ap1302_write_reg(ap1302_dev, REG_ATOMIC, 0x1);
 			ap1302_write_reg(ap1302_dev, REG_PREVIEW_WIDTH, fmt->width);
 			ap1302_write_reg(ap1302_dev, REG_PREVIEW_HEIGHT, fmt->height);
 			ap1302_write_reg(ap1302_dev, REG_ATOMIC, 0xB);
+			mdelay(50);
 		}
-		mdelay(50);
 	}
 	else {
-		ap1302_write_reg(ap1302_dev, 0x601A, 0x8040);
-		ap1302_write_reg(ap1302_dev, 0x601A, 0x8140);
+		ap1302_write_reg(ap1302_dev, 0x601A, 0x0180);
 		mdelay(50);
-
-		ap1302_write_reg(ap1302_dev, 0xF038, 0x0023);
-		ap1302_write_reg(ap1302_dev, 0xF040, 0x0000);
-		ap1302_write_reg(ap1302_dev, 0xE000, 0x0000);
-		ap1302_write_reg(ap1302_dev, 0xE002, 0x00C8);
-		mdelay(10);
 	}
 	mutex_unlock(&ap1302_dev->lock);
 	return 0;
@@ -653,10 +647,10 @@ static int ap1302_probe(struct i2c_client *client,
 	fmt->ycbcr_enc    = V4L2_MAP_YCBCR_ENC_DEFAULT(fmt->colorspace);
 	fmt->quantization = V4L2_QUANTIZATION_FULL_RANGE;
 	fmt->xfer_func    = V4L2_MAP_XFER_FUNC_DEFAULT(fmt->colorspace);
-	fmt->width        = ap1302_preview_res[0].width;
-	fmt->height       = ap1302_preview_res[0].height;
+	fmt->width        = ap1302_preview_res[1].width;
+	fmt->height       = ap1302_preview_res[1].height;
 	fmt->field        = V4L2_FIELD_NONE;
-	ap1302_dev->cur_mode = &ap1302_preview_res[0];
+	ap1302_dev->cur_mode = &ap1302_preview_res[1];
 
 	/* default 60fps */
 	ap1302_dev->frame_interval.numerator = 1;
