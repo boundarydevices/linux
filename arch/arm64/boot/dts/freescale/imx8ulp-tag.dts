@@ -286,6 +286,10 @@
 
 };
 
+&crypto {
+	status = "disabled";
+};
+
 &dcnano {
 	status = "okay";
 };
