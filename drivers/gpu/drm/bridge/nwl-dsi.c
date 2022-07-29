@@ -1163,7 +1163,7 @@ nwl_dsi_bridge_mode_valid(struct drm_bridge *bridge,
 	struct nwl_dsi *dsi = bridge_to_dsi(bridge);
 	struct mode_config *config;
 	unsigned long pll_rate;
-	int bit_rate;
+	unsigned long bit_rate;
 
 	bit_rate = nwl_dsi_get_bit_clock(dsi, mode->clock * 1000, dsi->lanes);
  
@@ -1206,7 +1206,7 @@ static int nwl_dsi_bridge_atomic_check(struct drm_bridge *bridge,
 
 	DRM_DEV_DEBUG_DRIVER(dsi->dev, "lanes=%u, data_rate=%lu\n",
 			     config->lanes, config->bitclock);
-	if (config->lanes < 2 || config->lanes > 4)
+	if (config->lanes < 1 || config->lanes > 4)
 		return -EINVAL;
 
 	/* Max data rate for this controller is 1.5Gbps */
