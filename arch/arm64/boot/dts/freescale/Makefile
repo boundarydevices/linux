@@ -355,3 +355,4 @@ imx8mp-evk-revb4-powersave-non-rpmsg-dtbs := imx8mp-evk-powersave-non-rpmsg.dtb 
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-revb4-powersave-non-rpmsg.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-revb4-powersave.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8ulp-watch.dtb
