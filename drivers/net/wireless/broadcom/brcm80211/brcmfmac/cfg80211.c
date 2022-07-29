@@ -2235,6 +2235,10 @@ brcmf_set_key_mgmt(struct net_device *ndev, struct cfg80211_connect_params *sme)
 			break;
 		case WLAN_AKM_SUITE_8021X_SUITE_B_192:
 			val = WPA3_AUTH_1X_SUITE_B_SHA384;
+			if (sme->want_1x)
+				profile->use_fwsup = BRCMF_PROFILE_FWSUP_1X;
+			else
+				profile->use_fwsup = BRCMF_PROFILE_FWSUP_ROAM;
 			break;
 		default:
 			bphy_err(drvr, "invalid akm suite (%d)\n",
@@ -4558,12 +4562,13 @@ brcmf_cfg80211_set_pmksa(struct wiphy *wiphy, struct net_device *ndev,
 		return -EINVAL;
 	}
 
-	brcmf_dbg(CONN, "set_pmksa - PMK bssid: %pM =\n", pmk[npmk].bssid);
-	brcmf_dbg(CONN, "%*ph\n", WLAN_PMKID_LEN, pmk[npmk].pmkid);
+	brcmf_dbg(CONN, "set_pmksa - PMK bssid: %pM =\n", pmk[i].bssid);
+	brcmf_dbg(CONN, "%*ph\n", WLAN_PMKID_LEN, pmk[i].pmkid);
 
 	err = brcmf_update_pmklist(cfg, ifp);
 
-	if (pmksa->pmk_len) {
+	if (pmksa->pmk_len && pmksa->pmk_len < BRCMF_WSEC_PMK_LEN_SUITEB_192) {
+		/* external supplicant stores SUITEB-192 PMK */
 		if (ifp->vif->profile.is_okc) {
 			err = brcmf_fil_iovar_data_set(ifp, "okc_info_pmk", pmksa->pmk,
 						       pmksa->pmk_len);
