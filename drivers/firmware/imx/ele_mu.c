@@ -158,7 +158,7 @@ static void ele_ping_handler(struct work_struct *work)
 }
 static DECLARE_DELAYED_WORK(ele_ping_work, ele_ping_handler);
 
-struct device *imx_soc_device_register(struct platform_device *pdev)
+static int imx_soc_device_register(struct platform_device *pdev)
 {
 	struct soc_device_attribute *attr;
 	struct soc_device *dev;
@@ -171,25 +171,25 @@ struct device *imx_soc_device_register(struct platform_device *pdev)
 
 	err = read_common_fuse(OTP_UNIQ_ID, v);
 	if (err)
-		return NULL;
+		return err;
 
 	sram_pool = of_gen_pool_get(pdev->dev.of_node, "sram-pool", 0);
 	if (!sram_pool) {
 		pr_err("Unable to get sram pool\n");
-		return NULL;
+		return -EINVAL;
 	}
 
 	get_info_data = (u32 *)gen_pool_alloc(sram_pool, 0x100);
 	if (!get_info_data) {
 		pr_err("Unable to alloc sram from sram pool\n");
-		return NULL;
+		return -ENOMEM;
 	}
 
 	get_info_addr = gen_pool_virt_to_phys(sram_pool, (ulong)get_info_data);
 
 	attr = kzalloc(sizeof(*attr), GFP_KERNEL);
 	if (!attr)
-		return NULL;
+		return -ENOMEM;
 
 	err = ele_get_info(get_info_addr, 23 * sizeof(u32));
 	if (err) {
@@ -205,7 +205,7 @@ struct device *imx_soc_device_register(struct platform_device *pdev)
 	err = of_property_read_string(of_root, "model", &attr->machine);
 	if (err) {
 		kfree(attr);
-		return NULL;
+		return -EINVAL
 	}
 	attr->family = kasprintf(GFP_KERNEL, "Freescale i.MX");
 	attr->serial_number = kasprintf(GFP_KERNEL, "%016llX", (u64)v[3] << 32 | v[0]);
@@ -219,10 +219,10 @@ struct device *imx_soc_device_register(struct platform_device *pdev)
 		kfree(attr->family);
 		kfree(attr->machine);
 		kfree(attr);
-		return ERR_CAST(dev);
+		return PTR_ERR(dev);
 	}
 
-	return soc_device_to_device(dev);
+	return 0;
 }
 
 /*
@@ -812,7 +812,6 @@ static int ele_mu_probe(struct platform_device *pdev)
 	struct imx_info *info = (struct imx_info *)of_id->data;
 	int max_nb_users = 0;
 	char *devname;
-	struct device *soc;
 	int ret;
 	int i;
 
@@ -947,10 +946,10 @@ static int ele_mu_probe(struct platform_device *pdev)
 	ele_priv_export = priv;
 
 	if (info->socdev) {
-		soc = imx_soc_device_register(pdev);
-		if (IS_ERR(soc)) {
-			pr_err("failed to register SoC device: %ld\n", PTR_ERR(soc));
-			return PTR_ERR(soc);
+		ret = imx_soc_device_register(pdev);
+		if (ret) {
+			pr_err("failed to register SoC device: %d\n", ret);
+			return ret;
 		}
 	}
 
