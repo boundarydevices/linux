@@ -36,13 +36,13 @@
  *   +---------------+---+---+---+---+---+---+---+---+
  *   |       11      |         Return Value          |
  *   +---------------+---+---+---+---+---+---+---+---+
- *   |    12 ~ 13    |            BUS ID             |
+ *   |    12 ~ 13    |            Address            |
  *   +---------------+---+---+---+---+---+---+---+---+
- *   |    14 ~ 15    |            Address            |
+ *   |    14 ~ 15    |             Flags             |
  *   +---------------+---+---+---+---+---+---+---+---+
  *   |    16 ~ 17    |           Data Len            |
  *   +---------------+---+---+---+---+---+---+---+---+
- *   |    18 ~ 33    |        16 Bytes Data          |
+ *   |    18 ~ 495   |        478 Bytes Data         |
  *   +---------------+---+---+---+---+---+---+---+---+
  *
  * The definition of Return Value:
@@ -78,7 +78,7 @@
 #include <linux/delay.h>
 #include <linux/rpmsg.h>
 
-#define I2C_RPMSG_MAX_BUF_SIZE			16
+#define I2C_RPMSG_MAX_BUF_SIZE			478
 #define I2C_RPMSG_TIMEOUT			500 /* unit: ms */
 
 #define I2C_RPMSG_CATEGORY			0x09
