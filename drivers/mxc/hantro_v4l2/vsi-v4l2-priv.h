@@ -143,7 +143,6 @@ enum VCEncColorConversionType {
 #define V4L2_COLORSPACE_GENERIC_FILM  (V4L2_COLORSPACE_DCI_P3+1)
 #define V4L2_COLORSPACE_ST428			(V4L2_COLORSPACE_DCI_P3+2)
 
-#define V4L2_XFER_FUNC_LINEAR			(V4L2_XFER_FUNC_SMPTE2084+1)
 #define V4L2_XFER_FUNC_GAMMA22		(V4L2_XFER_FUNC_SMPTE2084+2)
 #define V4L2_XFER_FUNC_GAMMA28		(V4L2_XFER_FUNC_SMPTE2084+3)
 #define V4L2_XFER_FUNC_HLG				(V4L2_XFER_FUNC_SMPTE2084+4)
@@ -185,6 +184,7 @@ struct vsi_video_fmt {
 	s32 dec_fmt;	//our own dec video format defines
 	u32 flag;
 	u32 num_planes;
+	u32 comp_planes;
 };
 
 struct vsi_v4l2_mediacfg {
@@ -414,6 +414,7 @@ int vsiv4l2_buffer_config(
 struct vsi_video_fmt *vsi_find_format(struct vsi_v4l2_ctx *ctx, struct v4l2_format *f);
 struct vsi_video_fmt *vsi_enum_dec_format(int idx, int braw, struct vsi_v4l2_ctx *ctx);
 struct vsi_video_fmt *vsi_enum_encformat(int idx, int braw);
+struct vsi_video_fmt *vsi_get_fmt_by_fourcc(u32 fourcc);
 int vsi_set_profile(struct vsi_v4l2_ctx *ctx, int type, int profile);
 int vsi_get_profile(struct vsi_v4l2_ctx *ctx, int type);
 void vsiv4l2_set_hwinfo(struct vsi_v4l2_dev_info *hwinfo);
