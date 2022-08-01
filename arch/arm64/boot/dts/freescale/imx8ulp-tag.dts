@@ -157,7 +157,7 @@
 
 / {
 	model = "FSL i.MX8ULP tag";
-	compatible = "fsl,imx8ulp-tag", "fsl,imx8ulp";
+	compatible = "boundary,imx8ulp-tag", "fsl,imx8ulp";
 
 	aliases {
 		backlight_mipi = &backlight_mipi;
