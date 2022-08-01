@@ -12,28 +12,11 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/sys_soc.h>
-#include <linux/workqueue.h>
 
 #define DEVICE_ID		0x800
 #define DIGPROG_MAJOR_UPPER(x)	(((x) & 0x00f00000) >> 20)
 #define DIGPROG_MAJOR_LOWER(x)	(((x) & 0x0000f000) >> 12)
 #define BASE_LAYER_REV(x)	(((x) & 0x000000f0) >> 4)
-
-#define ELE_PING_INTERVAL	(3600 * HZ)
-
-static void ele_ping_handler(struct work_struct *work)
-{
-	int ret;
-
-	ret = ele_ping();
-	if (ret)
-		pr_err("ping ele failed, try again!\n");
-
-	/* reschedule the delay work */
-	schedule_delayed_work(to_delayed_work(work), ELE_PING_INTERVAL);
-}
-
-static DECLARE_DELAYED_WORK(ele_ping_work, ele_ping_handler);
 
 static int imx9_soc_device_register(struct device *dev)
 {
@@ -116,12 +99,6 @@ static int imx9_init_soc_probe(struct platform_device *pdev)
 		pr_err("failed to register SoC device: %d\n", ret);
 		return ret;
 	}
-
-	/*
-	 * A ELE ping request must be send at least once every day(24 hours),
-	 * so setup a delay work with 1 hour interval to ping sentinel periodically.
-	 */
-	schedule_delayed_work(&ele_ping_work, ELE_PING_INTERVAL);
 
 	return 0;
 }
