@@ -609,6 +609,11 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 		};
+
+		adp5585pwm_isp: pwm-isp@34 {
+			compatible = "adp5585-pwm";
+			#pwm-cells = <3>;
+		};
 	};
 
 	ap1302: ap1302_mipi@3c {
