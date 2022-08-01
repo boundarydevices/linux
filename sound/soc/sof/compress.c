@@ -218,6 +218,8 @@ int sof_compr_set_params(struct snd_soc_component *component,
 
 	sstream->posn_offset = sdev->stream_box.offset + ipc_params_reply.posn_offset;
 	sstream->sample_rate = params->codec.sample_rate;
+	sstream->channels = params->codec.ch_out;
+	sstream->sample_container_bytes = pcm->params.sample_container_bytes;
 	spcm->prepared[cstream->direction] = true;
 
 	kfree(pcm);
