@@ -205,7 +205,7 @@ static int imx_soc_device_register(struct platform_device *pdev)
 	err = of_property_read_string(of_root, "model", &attr->machine);
 	if (err) {
 		kfree(attr);
-		return -EINVAL
+		return -EINVAL;
 	}
 	attr->family = kasprintf(GFP_KERNEL, "Freescale i.MX");
 	attr->serial_number = kasprintf(GFP_KERNEL, "%016llX", (u64)v[3] << 32 | v[0]);
