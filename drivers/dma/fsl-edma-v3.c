@@ -82,6 +82,7 @@
 
 #define EDMA_TCD_SOFF_SOFF(x)		(x)
 #define EDMA_TCD_NBYTES_NBYTES(x)	(x)
+#define EDMA_TCD_NBYTES_MLOFF_NBYTES(x)	((x) & GENMASK(9, 0))
 #define EDMA_TCD_NBYTES_MLOFF(x)	(x << 10)
 #define EDMA_TCD_NBYTES_DMLOE		(1 << 30)
 #define EDMA_TCD_NBYTES_SMLOE		(1 << 31)
@@ -407,12 +408,19 @@ static size_t fsl_edma3_desc_residue(struct fsl_edma3_chan *fsl_chan,
 	enum dma_transfer_direction dir = fsl_chan->fsc.dir;
 	dma_addr_t cur_addr, dma_addr;
 	size_t len, size;
+	u32 nbytes = 0;
 	int i;
 
 	/* calculate the total size in this desc */
-	for (len = i = 0; i < fsl_chan->edesc->n_tcds; i++)
-		len += le32_to_cpu(edesc->tcd[i].vtcd->nbytes)
-			* le16_to_cpu(edesc->tcd[i].vtcd->biter);
+	for (len = i = 0; i < fsl_chan->edesc->n_tcds; i++) {
+		if ((edesc->tcd[i].vtcd->nbytes & EDMA_TCD_NBYTES_DMLOE) ||
+		    (edesc->tcd[i].vtcd->nbytes & EDMA_TCD_NBYTES_SMLOE))
+			nbytes = EDMA_TCD_NBYTES_MLOFF_NBYTES(edesc->tcd[i].vtcd->nbytes);
+		else
+			nbytes = le32_to_cpu(edesc->tcd[i].vtcd->nbytes);
+
+		len += nbytes * le16_to_cpu(edesc->tcd[i].vtcd->biter);
+	}
 
 	if (!in_progress)
 		return len;
@@ -424,8 +432,14 @@ static size_t fsl_edma3_desc_residue(struct fsl_edma3_chan *fsl_chan,
 
 	/* figure out the finished and calculate the residue */
 	for (i = 0; i < fsl_chan->edesc->n_tcds; i++) {
-		size = le32_to_cpu(edesc->tcd[i].vtcd->nbytes)
-			* le16_to_cpu(edesc->tcd[i].vtcd->biter);
+		if ((edesc->tcd[i].vtcd->nbytes & EDMA_TCD_NBYTES_DMLOE) ||
+		    (edesc->tcd[i].vtcd->nbytes & EDMA_TCD_NBYTES_SMLOE))
+			nbytes = EDMA_TCD_NBYTES_MLOFF_NBYTES(edesc->tcd[i].vtcd->nbytes);
+		else
+			nbytes = le32_to_cpu(edesc->tcd[i].vtcd->nbytes);
+
+		size = nbytes * le16_to_cpu(edesc->tcd[i].vtcd->biter);
+
 		if (dir == DMA_MEM_TO_DEV)
 			dma_addr = le32_to_cpu(edesc->tcd[i].vtcd->saddr);
 		else
