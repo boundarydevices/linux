@@ -3,7 +3,7 @@
  * DPAA2 Ethernet Switch driver
  *
  * Copyright 2014-2016 Freescale Semiconductor Inc.
- * Copyright 2017-2021 NXP
+ * Copyright 2017-2022 NXP
  *
  */
 
@@ -49,6 +49,79 @@ dpaa2_switch_filter_block_get_unused(struct ethsw_core *ethsw)
 		if (!ethsw->filter_blocks[i].in_use)
 			return &ethsw->filter_blocks[i];
 	return NULL;
+}
+
+static struct dpaa2_switch_lag *dpaa2_switch_lag_get_unused(struct ethsw_core *ethsw)
+{
+	int i;
+
+	for (i = 0; i < ethsw->sw_attr.num_ifs; i++)
+		if (!ethsw->lags[i].in_use)
+			return &ethsw->lags[i];
+	return NULL;
+}
+
+static u16 dpaa2_switch_bond_port_set_fdb(struct ethsw_port_priv *port_priv,
+					  struct net_device *bond_dev)
+{
+	struct ethsw_port_priv *other_port_priv = NULL;
+	struct dpaa2_switch_fdb *fdb = NULL;
+	struct net_device *other_dev;
+	struct list_head *iter;
+
+	/* If we leave a bond (bond_dev is NULL), find an unused
+	 * FDB and use that.
+	 */
+	if (!bond_dev) {
+		fdb = dpaa2_switch_fdb_get_unused(port_priv->ethsw_data);
+
+		/* If there is no unused FDB, we must be the last port that
+		 * leaves the last bond, all the others are standalone. We
+		 * can just keep the FDB that we already have.
+		 */
+		if (!fdb)
+			return 0;
+
+		port_priv->fdb = fdb;
+		port_priv->fdb->in_use = true;
+		return 0;
+	}
+
+	/* The below call to netdev_for_each_lower_dev() demands the RTNL lock
+	 * being held. Assert on it so that it's easier to catch new code
+	 * paths that reach this point without the RTNL lock.
+	 */
+	ASSERT_RTNL();
+
+	/* If part of a bond, use the FDB of the first dpaa2 switch interface
+	 * that is present in that bond.
+	 * First interface to join the bond keeps its own FDB.
+	 */
+	netdev_for_each_lower_dev(bond_dev, other_dev, iter) {
+		if (!dpaa2_switch_port_dev_check(other_dev))
+			continue;
+
+		if (other_dev == port_priv->netdev)
+			continue;
+
+		other_port_priv = netdev_priv(other_dev);
+		break;
+	}
+
+	/* The current port is about to change its FDB to the one used by the
+	 * first port that joined the bond.
+	 */
+	if (other_port_priv) {
+		/* The previous FDB is about to become unused, since the
+		 * interface is no longer standalone.
+		 */
+		port_priv->fdb->in_use = false;
+
+		/* Get a reference to the new FDB */
+		port_priv->fdb = other_port_priv->fdb;
+	}
+
+	return 0;
 }
 
 static u16 dpaa2_switch_port_set_fdb(struct ethsw_port_priv *port_priv,
@@ -2253,6 +2326,167 @@ dpaa2_switch_prechangeupper_sanity_checks(struct net_device *netdev,
 	return 0;
 }
 
+static int dpaa2_switch_port_set_lag_group(struct ethsw_port_priv *port_priv,
+					   struct net_device *bond_dev)
+{
+	struct ethsw_core *ethsw = port_priv->ethsw_data;
+	struct ethsw_port_priv *other_port_priv = NULL;
+	struct dpaa2_switch_lag *lag = NULL;
+	struct net_device *other_dev;
+	struct list_head *iter;
+	int err = 0;
+
+	netdev_for_each_lower_dev(bond_dev, other_dev, iter) {
+		if (!dpaa2_switch_port_dev_check(other_dev))
+			continue;
+
+		other_port_priv = netdev_priv(other_dev);
+		if (!other_port_priv->lag)
+			continue;
+
+		if (other_port_priv->lag->bond_dev == bond_dev) {
+			port_priv->lag = other_port_priv->lag;
+			return 0;
+		}
+	}
+
+	/* This is the first interface to be added under a bond device.
+	 * Find an unused LAG group.
+	 */
+	lag = dpaa2_switch_lag_get_unused(ethsw);
+	lag->in_use = true;
+	lag->bond_dev = bond_dev;
+	port_priv->lag = lag;
+
+	return err;
+}
+
+static int dpaa2_switch_set_lag_cfg(struct net_device *bond_dev, u8 lag_id,
+				    struct ethsw_core *ethsw)
+{
+	struct dpaa2_switch_lag *lag = &ethsw->lags[lag_id - 1];
+	struct ethsw_port_priv *other_port_priv = NULL;
+	struct dpsw_lag_cfg cfg = {0};
+	struct net_device *other_dev;
+	struct list_head *iter;
+	u8 num_ifs = 0;
+
+	cfg.group_id = lag_id;
+	netdev_for_each_lower_dev(bond_dev, other_dev, iter) {
+		if (!dpaa2_switch_port_dev_check(other_dev))
+			continue;
+
+		other_port_priv = netdev_priv(other_dev);
+		cfg.if_id[num_ifs++] = other_port_priv->idx;
+	}
+
+	cfg.num_ifs = num_ifs;
+
+	/* No more interfaces under this LAG group, mark it as not in use */
+	if (!num_ifs) {
+		lag->bond_dev = NULL;
+		lag->in_use = false;
+	}
+
+	return dpsw_lag_set(ethsw->mc_io, 0, ethsw->dpsw_handle, &cfg);
+}
+
+static int dpaa2_switch_port_bond_join(struct net_device *netdev,
+				       struct net_device *bond_dev,
+				       struct netlink_ext_ack *extack)
+{
+	struct ethsw_port_priv *port_priv = netdev_priv(netdev);
+	struct ethsw_core *ethsw = port_priv->ethsw_data;
+	struct ethsw_port_priv *other_port_priv;
+	struct net_device *other_dev;
+	struct list_head *iter;
+	int err = 0;
+
+	if (!dpaa2_switch_port_has_mac(port_priv)) {
+		NL_SET_ERR_MSG_MOD(extack,
+				   "Only switch interfaces connected to MACs can be under a LAG");
+		return -EINVAL;
+	}
+
+	netdev_for_each_lower_dev(bond_dev, other_dev, iter) {
+		if (!dpaa2_switch_port_dev_check(other_dev))
+			continue;
+
+		other_port_priv = netdev_priv(other_dev);
+		if (other_port_priv->ethsw_data != port_priv->ethsw_data) {
+			NL_SET_ERR_MSG_MOD(extack,
+					   "Interface from a different DPSW is in the bond already");
+			return -EINVAL;
+		}
+	}
+
+	/* Setup the egress flood policy (broadcast, unknown unicast) */
+	dpaa2_switch_bond_port_set_fdb(port_priv, bond_dev);
+	err = dpaa2_switch_fdb_set_egress_flood(ethsw, port_priv->fdb->fdb_id);
+	if (err)
+		goto err_egress_flood;
+
+	/* Setup the port_priv->lag pointer for this switch port */
+	err = dpaa2_switch_port_set_lag_group(port_priv, bond_dev);
+	if (err)
+		return err;
+
+	/* Create the LAG configuration and apply it in MC */
+	err = dpaa2_switch_set_lag_cfg(bond_dev, port_priv->lag->id, ethsw);
+	if (err)
+		return err;
+
+	return err;
+
+err_egress_flood:
+	dpaa2_switch_bond_port_set_fdb(port_priv, NULL);
+	return err;
+}
+
+static int dpaa2_switch_port_bond_leave(struct net_device *netdev,
+					struct net_device *bond_dev)
+{
+	struct ethsw_port_priv *port_priv = netdev_priv(netdev);
+	struct dpaa2_switch_fdb *old_fdb = port_priv->fdb;
+	struct ethsw_core *ethsw = port_priv->ethsw_data;
+	int err = 0;
+
+	/* Delete the default VLAN, we might change out FDB in this operation */
+	err = dpaa2_switch_port_del_vlan(port_priv, DEFAULT_VLAN_ID);
+	if (err)
+		return err;
+
+	/* Setup the FDB for this port which is now standalone, not under a bond */
+	dpaa2_switch_bond_port_set_fdb(port_priv, NULL);
+
+	/* Setup the egress flood policy (broadcast, unknown unicast).
+	 * When the port is not under a bond, only the CTRL interface is part
+	 * of the flooding domain besides the actual port.
+	 */
+	err = dpaa2_switch_fdb_set_egress_flood(ethsw, port_priv->fdb->fdb_id);
+	if (err)
+		return err;
+
+	/* Recreate the egress flood domain of the FDB that we just left. */
+	err = dpaa2_switch_fdb_set_egress_flood(ethsw, old_fdb->fdb_id);
+	if (err)
+		return err;
+
+	/* Add the VLAN 1 as PVID when not under a bond. We need this since
+	 * the dpaa2 switch interfaces are not capable to be VLAN unaware
+	 */
+	err = dpaa2_switch_port_add_vlan(port_priv, DEFAULT_VLAN_ID,
+					 BRIDGE_VLAN_INFO_UNTAGGED | BRIDGE_VLAN_INFO_PVID);
+	if (err)
+		return err;
+
+	/* Recreate the LAG configuration for the LAG group that we left */
+	dpaa2_switch_set_lag_cfg(bond_dev, port_priv->lag->id, ethsw);
+	port_priv->lag = NULL;
+
+	return 0;
+}
+
 static int dpaa2_switch_port_prechangeupper(struct net_device *netdev,
 					    struct netdev_notifier_changeupper_info *info)
 {
@@ -2284,7 +2518,6 @@ static int dpaa2_switch_port_changeupper(struct net_device *netdev,
 	int err = 0;
 
 	extack = netdev_notifier_info_to_extack(&info->info);
-
 	upper_dev = info->upper_dev;
 	if (netif_is_bridge_master(upper_dev)) {
 		if (info->linking)
@@ -2293,6 +2526,49 @@ static int dpaa2_switch_port_changeupper(struct net_device *netdev,
 							     extack);
 		else
 			return dpaa2_switch_port_bridge_leave(netdev);
+	} else if (netif_is_lag_master(upper_dev)) {
+		if (info->linking)
+			return dpaa2_switch_port_bond_join(netdev, upper_dev, extack);
+		else
+			return dpaa2_switch_port_bond_leave(netdev, upper_dev);
+	}
+
+	return err;
+}
+
+static int dpaa2_switch_lag_prechangeupper(struct net_device *netdev,
+					   struct netdev_notifier_changeupper_info *info)
+{
+	struct net_device *lower;
+	struct list_head *iter;
+	int err = 0;
+
+	netdev_for_each_lower_dev(netdev, lower, iter) {
+		if (!dpaa2_switch_port_dev_check(lower))
+			continue;
+
+		err = dpaa2_switch_port_prechangeupper(lower, info);
+		if (err)
+			return err;
+	}
+
+	return err;
+}
+
+static int dpaa2_switch_lag_changeupper(struct net_device *netdev,
+					struct netdev_notifier_changeupper_info *info)
+{
+	struct net_device *lower;
+	struct list_head *iter;
+	int err = 0;
+
+	netdev_for_each_lower_dev(netdev, lower, iter) {
+		if (!dpaa2_switch_port_dev_check(lower))
+			continue;
+
+		err = dpaa2_switch_port_changeupper(lower, info);
+		if (err)
+			return err;
 	}
 
 	return err;
@@ -2309,10 +2585,16 @@ static int dpaa2_switch_port_netdevice_event(struct notifier_block *nb,
 		if (dpaa2_switch_port_dev_check(netdev))
 			err = dpaa2_switch_port_prechangeupper(netdev, ptr);
 
+		if (netif_is_lag_master(netdev))
+			err = dpaa2_switch_lag_prechangeupper(netdev, ptr);
+
 		break;
 	case NETDEV_CHANGEUPPER:
 		if (dpaa2_switch_port_dev_check(netdev))
 			err = dpaa2_switch_port_changeupper(netdev, ptr);
+
+		if (netif_is_lag_master(netdev))
+			err = dpaa2_switch_lag_changeupper(netdev, ptr);
 
 		break;
 	}
@@ -2517,7 +2799,6 @@ static void dpaa2_switch_rx(struct dpaa2_switch_fq *fq,
 	}
 	port_priv = ethsw->ports[if_id];
 	netdev = port_priv->netdev;
-
 	/* build the SKB based on the FD received */
 	if (dpaa2_fd_get_format(fd) != dpaa2_fd_single) {
 		if (net_ratelimit()) {
@@ -2551,8 +2832,11 @@ static void dpaa2_switch_rx(struct dpaa2_switch_fq *fq,
 	skb->dev = netdev;
 	skb->protocol = eth_type_trans(skb, skb->dev);
 
-	/* Setup the offload_fwd_mark only if the port is under a bridge */
+	/* Setup the offload_fwd_mark only if the port is under a bridge
+	 * or under a bond.
+	 */
 	skb->offload_fwd_mark = !!(port_priv->fdb->bridge_dev);
+	skb->offload_fwd_mark |= !!(port_priv->lag ? port_priv->lag->bond_dev : 0);
 
 	netif_receive_skb(skb);
 
@@ -3368,6 +3652,7 @@ static int dpaa2_switch_probe_port(struct ethsw_core *ethsw,
 	port_priv = netdev_priv(port_netdev);
 	port_priv->netdev = port_netdev;
 	port_priv->ethsw_data = ethsw;
+	port_priv->lag = NULL;
 
 	mutex_init(&port_priv->mac_lock);
 
