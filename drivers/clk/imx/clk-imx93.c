@@ -336,15 +336,8 @@ static int imx93_clocks_probe(struct platform_device *pdev)
 
 	for (i = 0; i < ARRAY_SIZE(ccgr_array); i++) {
 		ccgr = &ccgr_array[i];
-		if (ccgr->shared_count) {
-			clks[ccgr->clk] = imx_clk_hw_gate2_shared2(ccgr->name, ccgr->parent_name,
-								   base + ccgr->off, 0,
-								   ccgr->shared_count);
-		} else {
-			clks[ccgr->clk] = imx_clk_hw_gate4_flags(ccgr->name, ccgr->parent_name,
-								 base + ccgr->off, 0,
-								 ccgr->flags);
-		}
+		clks[ccgr->clk] = imx93_clk_gate(NULL, ccgr->name, ccgr->parent_name, ccgr->flags,
+						 base + ccgr->off, 0, 1, 1, 3, ccgr->shared_count);
 	}
 
 	imx_check_clk_hws(clks, IMX93_CLK_END);
