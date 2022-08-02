@@ -157,6 +157,28 @@ static int vpu_init_format(struct vpu_inst *inst, struct vpu_format *fmt)
 	return 0;
 }
 
+static int vpu_calc_fmt_bytesperline(struct v4l2_format *f, struct vpu_format *fmt)
+{
+	struct v4l2_pix_format_mplane *pixmp = &f->fmt.pix_mp;
+	int i;
+
+	if (pixmp->num_planes == fmt->comp_planes) {
+		for (i = 0; i < fmt->comp_planes; i++)
+			fmt->bytesperline[i] = pixmp->plane_fmt[i].bytesperline;
+		return 0;
+	}
+	if (pixmp->num_planes > 1)
+		return -EINVAL;
+
+	/*amphion vpu only support nv12 and nv12 tiled,
+	 * so the bytesperline of luma and chroma should be same
+	 */
+	for (i = 0; i < fmt->comp_planes; i++)
+		fmt->bytesperline[i] = pixmp->plane_fmt[0].bytesperline;
+
+	return 0;
+}
+
 static int vpu_calc_fmt_sizeimage(struct vpu_inst *inst, struct vpu_format *fmt)
 {
 	u32 stride = 1;
@@ -221,6 +243,7 @@ int vpu_try_fmt_common(struct vpu_inst *inst, struct v4l2_format *f, struct vpu_
 	if (fmt->height)
 		fmt->height = vpu_helper_valid_frame_height(inst, fmt->height);
 	fmt->field = pixmp->field == V4L2_FIELD_ANY ? V4L2_FIELD_NONE : pixmp->field;
+	vpu_calc_fmt_bytesperline(f, fmt);
 	vpu_calc_fmt_sizeimage(inst, fmt);
 	if (fmt->flags & V4L2_FMT_FLAG_COMPRESSED)
 		fmt->sizeimage[0] = max_t(u32, pixmp->plane_fmt[0].sizeimage, fmt->sizeimage[0]);
@@ -231,9 +254,11 @@ int vpu_try_fmt_common(struct vpu_inst *inst, struct v4l2_format *f, struct vpu_
 	pixmp->flags = fmt->flags;
 	pixmp->num_planes = fmt->mem_planes;
 	pixmp->field = fmt->field;
+	memset(pixmp->reserved, 0, sizeof(pixmp->reserved));
 	for (i = 0; i < pixmp->num_planes; i++) {
 		pixmp->plane_fmt[i].bytesperline = fmt->bytesperline[i];
 		pixmp->plane_fmt[i].sizeimage = vpu_get_fmt_plane_size(fmt, i);
+		memset(pixmp->plane_fmt[i].reserved, 0, sizeof(pixmp->plane_fmt[i].reserved));
 	}
 
 	return 0;
