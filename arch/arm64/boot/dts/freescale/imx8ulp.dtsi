@@ -195,6 +195,31 @@
 	};
 
 	firmware {
+		android {
+			compatible = "android,firmware";
+			fstab {
+				compatible = "android,fstab";
+				system {
+					compatible = "android,system";
+					dev = "/dev/block/platform/soc@0/30800000.bus/30b40000.mmc/by-name/system";
+					type = "ext4";
+					mnt_flags = "noatime,errors=panic,ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,avb";
+				};
+				vendor {
+					compatible = "android,vendor";
+					dev = "/dev/block/platform/soc@0/30800000.bus/30b40000.mmc/by-name/vendor";
+					type = "ext4";
+					mnt_flags = "ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,avb";
+				};
+			};
+			vbmeta {
+				compatible = "android,vbmeta";
+				parts = "vbmeta,dtbo,boot,system,vendor";
+			};
+		};
+
 		scmi {
 			compatible = "arm,scmi-smc";
 			arm,smc-id = <0xc20000fe>;
@@ -211,6 +236,24 @@
 				reg = <0x15>;
 				#thermal-sensor-cells = <0>;
 			};
+		};
+	};
+
+	trusty {
+		compatible = "android,trusty-smc-v1";
+		ranges;
+		#address-cells = <2>;
+		#size-cells = <2>;
+		trusty-irq {
+			compatible = "android,trusty-irq-v1";
+			interrupt-ranges = < 0 15 0>;
+			ipi-range = <8 15 8>;
+		};
+		trusty-virtio {
+			compatible = "android,trusty-virtio-v1";
+		};
+		trusty-log {
+			compatible = "android,trusty-log-v1";
 		};
 	};
 
