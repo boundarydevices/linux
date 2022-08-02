@@ -54,30 +54,71 @@ dpaa2_switch_filter_block_get_unused(struct ethsw_core *ethsw)
 static u16 dpaa2_switch_port_set_fdb(struct ethsw_port_priv *port_priv,
 				     struct net_device *bridge_dev)
 {
+	struct ethsw_core *ethsw = port_priv->ethsw_data;
 	struct ethsw_port_priv *other_port_priv = NULL;
-	struct dpaa2_switch_fdb *fdb;
-	struct net_device *other_dev;
-	struct list_head *iter;
+	struct net_device *other_dev, *other_dev2;
+	u16 fdb_id_old = port_priv->fdb->fdb_id;
+	struct dpaa2_switch_fdb *fdb = NULL;
+	struct list_head *iter, *iter2;
+	int i;
 
 	/* If we leave a bridge (bridge_dev is NULL), find an unused
 	 * FDB and use that.
 	 */
 	if (!bridge_dev) {
-		fdb = dpaa2_switch_fdb_get_unused(port_priv->ethsw_data);
+		if (port_priv->lag) {
+			/* This port leaves a bridge, but it's still under a
+			 * bond. Search for the first port under the same bond
+			 * which already left the bridge.
+			 */
+			for (i = 0; i < ethsw->sw_attr.num_ifs; i++) {
+				other_port_priv = ethsw->ports[i];
+				if (!other_port_priv)
+					continue;
 
-		/* If there is no unused FDB, we must be the last port that
-		 * leaves the last bridge, all the others are standalone. We
-		 * can just keep the FDB that we already have.
-		 */
+				if (other_port_priv == port_priv)
+					continue;
 
-		if (!fdb) {
+				/* Found a port which is under the same bond
+				 * device but already left the bridge. Use
+				 * this port's FDB.
+				 */
+				if (other_port_priv->lag == port_priv->lag &&
+				    other_port_priv->fdb->fdb_id != fdb_id_old) {
+					fdb = other_port_priv->fdb;
+					break;
+				}
+			}
+			if (fdb) {
+				port_priv->fdb = fdb;
+			} else {
+				/* If we are the first to leave the bridge,
+				 * just get a new FDB.
+				 */
+				fdb = dpaa2_switch_fdb_get_unused(port_priv->ethsw_data);
+				port_priv->fdb = fdb;
+				port_priv->fdb->in_use = true;
+				port_priv->fdb->bridge_dev = NULL;
+			}
+
+		} else {
+			fdb = dpaa2_switch_fdb_get_unused(port_priv->ethsw_data);
+
+			/* If there is no unused FDB, we must be the last port that
+			 * leaves the last bridge, all the others are standalone. We
+			 * can just keep the FDB that we already have.
+			 */
+
+			if (!fdb) {
+				port_priv->fdb->bridge_dev = NULL;
+				return 0;
+			}
+
+			port_priv->fdb = fdb;
+			port_priv->fdb->in_use = true;
 			port_priv->fdb->bridge_dev = NULL;
-			return 0;
 		}
 
-		port_priv->fdb = fdb;
-		port_priv->fdb->in_use = true;
-		port_priv->fdb->bridge_dev = NULL;
 		return 0;
 	}
 
@@ -88,17 +129,39 @@ static u16 dpaa2_switch_port_set_fdb(struct ethsw_port_priv *port_priv,
 	ASSERT_RTNL();
 
 	/* If part of a bridge, use the FDB of the first dpaa2 switch interface
-	 * to be present in that bridge
+	 * to be present in that bridge. We also have to search through the lowers
+	 * of bond bridged port.
 	 */
+	other_port_priv = NULL;
 	netdev_for_each_lower_dev(bridge_dev, other_dev, iter) {
-		if (!dpaa2_switch_port_dev_check(other_dev))
-			continue;
+		if (netif_is_lag_master(other_dev)) {
+			/* Search through all the lowers of the bridged lag */
+			netdev_for_each_lower_dev(other_dev, other_dev2, iter2) {
+				if (!dpaa2_switch_port_dev_check(other_dev2))
+					continue;
+				if (other_dev2 == port_priv->netdev)
+					continue;
 
-		if (other_dev == port_priv->netdev)
-			continue;
+				/* Skip the port if we are under the same bond.*/
+				other_port_priv = netdev_priv(other_dev2);
+				if (other_port_priv->lag == port_priv->lag) {
+					other_port_priv = NULL;
+					continue;
+				}
 
-		other_port_priv = netdev_priv(other_dev);
-		break;
+				other_port_priv = netdev_priv(other_dev2);
+				break;
+			}
+
+			if (other_port_priv)
+				break;
+		} else if (dpaa2_switch_port_dev_check(other_dev)) {
+			if (other_dev == port_priv->netdev)
+				continue;
+
+			other_port_priv = netdev_priv(other_dev);
+			break;
+		}
 	}
 
 	/* The current port is about to change its FDB to the one used by the
