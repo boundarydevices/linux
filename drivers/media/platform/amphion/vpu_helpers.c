@@ -156,9 +156,10 @@ static u32 get_nv12_plane_size(u32 width, u32 height, int plane_no,
 	u32 bytesperline;
 	u32 size = 0;
 
-	bytesperline = ALIGN(width, stride);
+	bytesperline = width;
 	if (pbl)
 		bytesperline = max(bytesperline, *pbl);
+	bytesperline = ALIGN(bytesperline, stride);
 	height = ALIGN(height, 2);
 	if (plane_no == 0)
 		size = bytesperline * height;
@@ -184,10 +185,10 @@ static u32 get_tiled_8l128_plane_size(u32 fmt, u32 width, u32 height, int plane_
 	if (fmt == V4L2_PIX_FMT_NV12M_10BE_8L128 || fmt == V4L2_PIX_FMT_NV12_10BE_8L128)
 		bitdepth = 10;
 	bytesperline = DIV_ROUND_UP(width * bitdepth, BITS_PER_BYTE);
-	bytesperline = ALIGN(bytesperline, 1 << ws);
-	bytesperline = ALIGN(bytesperline, stride);
 	if (pbl)
 		bytesperline = max(bytesperline, *pbl);
+	bytesperline = ALIGN(bytesperline, 1 << ws);
+	bytesperline = ALIGN(bytesperline, stride);
 	height = ALIGN(height, 1 << hs);
 	if (plane_no == 0)
 		size = bytesperline * height;
@@ -205,9 +206,10 @@ static u32 get_default_plane_size(u32 width, u32 height, int plane_no,
 	u32 bytesperline;
 	u32 size = 0;
 
-	bytesperline = ALIGN(width, stride);
+	bytesperline = width;
 	if (pbl)
 		bytesperline = max(bytesperline, *pbl);
+	bytesperline = ALIGN(bytesperline, stride);
 	if (plane_no == 0)
 		size = bytesperline * height;
 	if (pbl)
