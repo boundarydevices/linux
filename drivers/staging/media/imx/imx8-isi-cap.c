@@ -171,8 +171,7 @@ void mxc_isi_cap_frame_write_done(struct mxc_isi_dev *mxc_isi)
 
 	if (list_empty(&isi_cap->out_active)) {
 		dev_warn(dev, "trying to access empty active list\n");
-		spin_unlock_irqrestore(&isi_cap->slock, flags);
-		return;
+		goto unlock;
 	}
 
 	buf = list_first_entry(&isi_cap->out_active, struct mxc_isi_buffer, list);
@@ -184,8 +183,7 @@ void mxc_isi_cap_frame_write_done(struct mxc_isi_dev *mxc_isi)
 	if ((is_buf_active(mxc_isi, 1) && buf->id == MXC_ISI_BUF1) ||
 	    (is_buf_active(mxc_isi, 2) && buf->id == MXC_ISI_BUF2)) {
 		dev_dbg(dev, "status=0x%x id=%d\n", mxc_isi->status, buf->id);
-		spin_unlock_irqrestore(&isi_cap->slock, flags);
-		return;
+		goto unlock;
 	}
 
 	if (buf->discard) {
@@ -202,8 +200,7 @@ void mxc_isi_cap_frame_write_done(struct mxc_isi_dev *mxc_isi)
 	if (list_empty(&isi_cap->out_pending)) {
 		if (list_empty(&isi_cap->out_discard)) {
 			dev_warn(dev, "trying to access empty discard list\n");
-			spin_unlock_irqrestore(&isi_cap->slock, flags);
-			return;
+			goto unlock;
 		}
 
 		buf = list_first_entry(&isi_cap->out_discard,
@@ -211,8 +208,7 @@ void mxc_isi_cap_frame_write_done(struct mxc_isi_dev *mxc_isi)
 		buf->v4l2_buf.sequence = isi_cap->frame_count;
 		mxc_isi_channel_set_outbuf(mxc_isi, buf);
 		list_move_tail(isi_cap->out_discard.next, &isi_cap->out_active);
-		spin_unlock_irqrestore(&isi_cap->slock, flags);
-		return;
+		goto unlock;
 	}
 
 	/* ISI channel output buffer */
@@ -222,6 +218,8 @@ void mxc_isi_cap_frame_write_done(struct mxc_isi_dev *mxc_isi)
 	vb2 = &buf->v4l2_buf.vb2_buf;
 	vb2->state = VB2_BUF_STATE_ACTIVE;
 	list_move_tail(isi_cap->out_pending.next, &isi_cap->out_active);
+
+unlock:
 	spin_unlock_irqrestore(&isi_cap->slock, flags);
 }
 EXPORT_SYMBOL_GPL(mxc_isi_cap_frame_write_done);
@@ -385,9 +383,13 @@ static int cap_vb2_start_streaming(struct vb2_queue *q, unsigned int count)
 
 	/* add two list member to out_discard list head */
 	isi_cap->buf_discard[0].discard = true;
+	vb2 = &isi_cap->buf_discard[0].v4l2_buf.vb2_buf;
+	vb2->num_planes = isi_cap->pix.num_planes;
 	list_add_tail(&isi_cap->buf_discard[0].list, &isi_cap->out_discard);
 
 	isi_cap->buf_discard[1].discard = true;
+	vb2 = &isi_cap->buf_discard[1].v4l2_buf.vb2_buf;
+	vb2->num_planes = isi_cap->pix.num_planes;
 	list_add_tail(&isi_cap->buf_discard[1].list, &isi_cap->out_discard);
 
 	/* ISI channel output buffer 1 */
