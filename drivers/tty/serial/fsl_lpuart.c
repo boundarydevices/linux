@@ -1158,8 +1158,28 @@ static void lpuart_handle_sysrq(struct lpuart_port *sport)
 	}
 }
 
-static void lpuart_rx_error_stat(struct lpuart_port *sport)
+static inline int lpuart_tty_insert_flip_string(struct tty_port *port,
+		unsigned char *chars, size_t size, bool is_cs7)
 {
+	int i;
+
+	if (is_cs7)
+		for (i = 0; i < size; i++)
+			chars[i] &= 0x7F;
+
+	return tty_insert_flip_string(port, chars, size);
+}
+
+static void lpuart_copy_rx_to_tty(struct lpuart_port *sport)
+{
+	struct tty_port *port = &sport->port.state->port;
+	struct dma_tx_state state;
+	enum dma_status dmastat;
+	struct dma_chan *chan = sport->dma_rx_chan;
+	struct circ_buf *ring = &sport->rx_ring;
+	unsigned long flags;
+	int count = 0, copied;
+
 	if (lpuart_is_32(sport)) {
 		unsigned long sr = lpuart32_read(&sport->port, UARTSTAT);
 
@@ -1211,34 +1231,8 @@ static void lpuart_rx_error_stat(struct lpuart_port *sport)
 			writeb(cr2, sport->port.membase + UARTCR2);
 		}
 	}
-}
 
-static inline int lpuart_tty_insert_flip_string(struct tty_port *port,
-		unsigned char *chars, size_t size, bool is_cs7)
-{
-	int i;
-
-	if (is_cs7)
-		for (i = 0; i < size; i++)
-			chars[i] &= 0x7F;
-
-	return tty_insert_flip_string(port, chars, size);
-}
-
-static void lpuart_copy_rx_to_tty(struct lpuart_port *sport)
-{
-	struct tty_port *port = &sport->port.state->port;
-	struct dma_tx_state state;
-	enum dma_status dmastat;
-	struct dma_chan *chan = sport->dma_rx_chan;
-	struct circ_buf *ring = &sport->rx_ring;
-	unsigned long flags;
-	int count = 0, copied;
-
-	if (!is_imx8qxp_lpuart(sport) && !is_imx8ulp_lpuart(sport)) {
-		lpuart_rx_error_stat(sport);
-		async_tx_ack(sport->dma_rx_desc);
-	}
+	async_tx_ack(sport->dma_rx_desc);
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 
