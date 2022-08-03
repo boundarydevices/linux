@@ -982,11 +982,11 @@
 				interrupts = <GIC_SPI 183 IRQ_TYPE_LEVEL_HIGH>,
 					     <GIC_SPI 184 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "eth_wake_irq", "macirq";
-				clocks = <&clk IMX93_CLK_WAKEUP_AXI>,
-					 <&clk IMX93_CLK_WAKEUP_AXI>,
+				clocks = <&clk IMX93_CLK_ENET_QOS_GATE>,
+					 <&clk IMX93_CLK_ENET_QOS_GATE>,
 					 <&clk IMX93_CLK_ENET_TIMER2>,
 					 <&clk IMX93_CLK_ENET>,
-					 <&clk IMX93_CLK_WAKEUP_AXI>;
+					 <&clk IMX93_CLK_ENET_QOS_GATE>;
 				clock-names = "stmmaceth", "pclk", "ptp_ref", "tx", "mem";
 				assigned-clocks = <&clk IMX93_CLK_ENET_TIMER2>,
 						  <&clk IMX93_CLK_ENET>;
