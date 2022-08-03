@@ -986,6 +986,8 @@ static struct platform_driver ele_mu_driver = {
 	.probe = ele_mu_probe,
 	.remove = ele_mu_remove,
 };
+MODULE_DEVICE_TABLE(of, ele_mu_match);
+
 module_platform_driver(ele_mu_driver);
 
 MODULE_AUTHOR("Pankaj Gupta <pankaj.gupta@nxp.com>");

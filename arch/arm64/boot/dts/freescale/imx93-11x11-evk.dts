@@ -642,6 +642,11 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 		};
+
+		adp5585pwm_isp: pwm-isp@34 {
+			compatible = "adp5585-pwm";
+			#pwm-cells = <3>;
+		};
 	};
 
 	ap1302: ap1302_mipi@3c {
@@ -671,6 +676,7 @@
 &lpuart5 {
 	/* BT */
 	pinctrl-names = "default";
+	pinctrl-assert-gpios = <&pcal6524 19 GPIO_ACTIVE_HIGH>;
 	pinctrl-0 = <&pinctrl_uart5>;
 	status = "okay";
 };
