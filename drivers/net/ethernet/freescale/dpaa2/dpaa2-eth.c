@@ -1710,7 +1710,7 @@ static int dpaa2_eth_add_bufs(struct dpaa2_eth_priv *priv,
 	struct device *dev = priv->net_dev->dev.parent;
 	u64 buf_array[DPAA2_ETH_BUFS_PER_CMD];
 	struct dpaa2_eth_swa *swa;
-	struct page *page;
+	struct page *page = NULL;
 	dma_addr_t addr;
 	int retries = 0;
 	int i = 0, err;

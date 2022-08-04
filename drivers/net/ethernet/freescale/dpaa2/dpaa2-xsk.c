@@ -88,7 +88,7 @@ static void dpaa2_xsk_rx(struct dpaa2_eth_priv *priv,
 {
 	dma_addr_t addr = dpaa2_fd_get_addr(fd);
 	u8 fd_format = dpaa2_fd_get_format(fd);
-	struct rtnl_link_stats64 *percpu_stats;
+	struct rtnl_link_stats64 *percpu_stats = NULL;
 	u32 fd_length = dpaa2_fd_get_len(fd);
 	struct sk_buff *skb;
 	void *vaddr;
