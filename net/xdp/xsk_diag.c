@@ -65,6 +65,7 @@ static int xsk_diag_put_umem(const struct xdp_sock *xs, struct sk_buff *nlskb)
 	if (umem->zc)
 		du.flags |= XDP_DU_F_ZEROCOPY;
 	du.refs = refcount_read(&umem->users);
+	du.tx_headroom = umem->tx_headroom;
 
 	err = nla_put(nlskb, XDP_DIAG_UMEM, sizeof(du), &du);
 	if (!err && pool && pool->fq)

@@ -91,6 +91,8 @@ static u32 opt_umem_flags;
 static int opt_unaligned_chunks;
 static int opt_mmap_flags;
 static int opt_xsk_frame_size = XSK_UMEM__DEFAULT_FRAME_SIZE;
+static int opt_xsk_frame_headroom = XSK_UMEM__DEFAULT_FRAME_HEADROOM;
+static int opt_xsk_tx_frame_headroom = XSK_UMEM__DEFAULT_FRAME_HEADROOM;
 static int opt_timeout = 1000;
 static bool opt_need_wakeup = true;
 static u32 opt_num_xsks = 1;
@@ -794,8 +796,8 @@ static void gen_eth_hdr_data(void)
 
 static void gen_eth_frame(struct xsk_umem_info *umem, u64 addr)
 {
-	memcpy(xsk_umem__get_data(umem->buffer, addr), pkt_data,
-	       PKT_SIZE);
+	memcpy(xsk_umem__get_data(umem->buffer, addr) + opt_xsk_tx_frame_headroom,
+	       pkt_data, PKT_SIZE);
 }
 
 static struct xsk_umem_info *xsk_configure_umem(void *buffer, u64 size)
@@ -814,8 +816,9 @@ static struct xsk_umem_info *xsk_configure_umem(void *buffer, u64 size)
 		.fill_size = XSK_RING_PROD__DEFAULT_NUM_DESCS * 2,
 		.comp_size = XSK_RING_CONS__DEFAULT_NUM_DESCS,
 		.frame_size = opt_xsk_frame_size,
-		.frame_headroom = XSK_UMEM__DEFAULT_FRAME_HEADROOM,
-		.flags = opt_umem_flags
+		.frame_headroom = opt_xsk_frame_headroom,
+		.flags = opt_umem_flags,
+		.tx_frame_headroom = opt_xsk_tx_frame_headroom,
 	};
 	int ret;
 
@@ -923,6 +926,8 @@ static struct option long_options[] = {
 	{"irq-string", no_argument, 0, 'I'},
 	{"busy-poll", no_argument, 0, 'B'},
 	{"reduce-cap", no_argument, 0, 'R'},
+	{"rx-headroom", required_argument, 0, 'e'},
+	{"tx-headroom", required_argument, 0, 'E'},
 	{0, 0, 0, 0}
 };
 
@@ -963,6 +968,8 @@ static void usage(const char *prog)
 		"  -I, --irq-string	Display driver interrupt statistics for interface associated with irq-string.\n"
 		"  -B, --busy-poll      Busy poll.\n"
 		"  -R, --reduce-cap	Use reduced capabilities (cannot be used with -M)\n"
+		"  -e, --rx-headroom    Reserve frame headroom within the buffer for Rx frames\n"
+		"  -E, --tx-headroom    Reserve frame headroom within the buffer for Tx frames\n"
 		"\n";
 	fprintf(stderr, str, prog, XSK_UMEM__DEFAULT_FRAME_SIZE,
 		opt_batch_size, MIN_PKT_SIZE, MIN_PKT_SIZE,
@@ -978,7 +985,7 @@ static void parse_command_line(int argc, char **argv)
 	opterr = 0;
 
 	for (;;) {
-		c = getopt_long(argc, argv, "Frtli:q:pSNn:czf:muMd:b:C:s:P:xQaI:BR",
+		c = getopt_long(argc, argv, "Frtli:q:pSNn:czf:muMd:b:C:s:P:xQaI:BRe:E:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1083,6 +1090,12 @@ static void parse_command_line(int argc, char **argv)
 		case 'R':
 			opt_reduced_cap = true;
 			break;
+		case 'e':
+			opt_xsk_frame_headroom = atoi(optarg);
+			break;
+		case 'E':
+			opt_xsk_tx_frame_headroom = atoi(optarg);
+			break;
 		default:
 			usage(basename(argv[0]));
 		}
@@ -1108,6 +1121,26 @@ static void parse_command_line(int argc, char **argv)
 	if (opt_reduced_cap && opt_num_xsks > 1) {
 		fprintf(stderr, "ERROR: -M and -R cannot be used together\n");
 		usage(basename(argv[0]));
+	}
+
+	if (opt_pkt_size + opt_xsk_frame_headroom > XSK_UMEM__DEFAULT_FRAME_SIZE &&
+	    opt_bench == BENCH_RXDROP) {
+		fprintf(stderr, "ERROR: Rx headroom causes frame to exceed buffer limits\n");
+		opt_xsk_frame_headroom = XSK_UMEM__DEFAULT_FRAME_HEADROOM;
+	}
+
+	if (opt_pkt_size + opt_xsk_tx_frame_headroom > XSK_UMEM__DEFAULT_FRAME_SIZE &&
+	    opt_bench == BENCH_TXONLY) {
+		fprintf(stderr, "ERROR: Tx headroom causes frame to exceed buffer limits\n");
+		opt_xsk_tx_frame_headroom = XSK_UMEM__DEFAULT_FRAME_HEADROOM;
+	}
+
+	if (opt_pkt_size + opt_xsk_frame_headroom + opt_xsk_tx_frame_headroom >
+			XSK_UMEM__DEFAULT_FRAME_SIZE &&
+	    opt_bench == BENCH_L2FWD) {
+		fprintf(stderr, "ERROR: Rx & Tx headroom cause frame to exceed buffer limits\n");
+		opt_xsk_frame_headroom = XSK_UMEM__DEFAULT_FRAME_HEADROOM;
+		opt_xsk_tx_frame_headroom = XSK_UMEM__DEFAULT_FRAME_HEADROOM;
 	}
 }
 
