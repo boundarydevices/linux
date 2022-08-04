@@ -1086,11 +1086,11 @@ static int imx_rproc_detect_mode(struct imx_rproc *priv)
 
 		if (priv->num_domains) {
 			priv->pm_devices = devm_kcalloc(dev, priv->num_domains,
-							sizeof(struct device), GFP_KERNEL);
+							sizeof(*priv->pm_devices), GFP_KERNEL);
 			if (!priv->pm_devices)
 				return -ENOMEM;
 			priv->pm_devices_link = devm_kcalloc(dev, priv->num_domains,
-							     sizeof(struct device_link),
+							     sizeof(*priv->pm_devices_link),
 							     GFP_KERNEL);
 			if (!priv->pm_devices)
 				return -ENOMEM;
