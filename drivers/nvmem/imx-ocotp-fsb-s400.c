@@ -261,6 +261,7 @@ static struct platform_driver imx_fsb_s400_fuse_driver = {
 	},
 	.probe = imx_fsb_s400_fuse_probe,
 };
+MODULE_DEVICE_TABLE(of, imx_fsb_s400_fuse_match);
 module_platform_driver(imx_fsb_s400_fuse_driver);
 
 MODULE_AUTHOR("Alice Guo <alice.guo@nxp.com>");
