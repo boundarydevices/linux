@@ -21,6 +21,7 @@ struct xdp_umem {
 	void *addrs;
 	u64 size;
 	u32 headroom;
+	u32 tx_headroom;
 	u32 chunk_size;
 	u32 chunks;
 	u32 npgs;
