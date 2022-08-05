@@ -64,6 +64,7 @@ enum imx6_pcie_variants {
 	IMX8QM,
 	IMX8QM_EP,
 	IMX8QXP,
+	IMX8QXP_EP,
 };
 
 #define IMX6_PCIE_FLAG_IMX6_PHY			BIT(0)
@@ -201,6 +202,7 @@ static void imx6_pcie_configure_type(struct imx6_pcie *imx6_pcie)
 	case IMX8QM:
 	case IMX8QM_EP:
 	case IMX8QXP:
+	case IMX8QXP_EP:
 		addr = IMX8QM_PCIE_CTRL0_OFFSET;
 		mask = IMX8QM_PCIE_CTRL0_TYPE_MASK;
 		val = FIELD_PREP(IMX8QM_PCIE_CTRL0_TYPE_MASK, mode);
@@ -356,6 +358,7 @@ static void imx6_pcie_init_phy(struct imx6_pcie *imx6_pcie)
 	case IMX8QM:
 	case IMX8QM_EP:
 	case IMX8QXP:
+	case IMX8QXP_EP:
 	case IMX8MM:
 	case IMX8MM_EP:
 	case IMX8MP:
@@ -647,6 +650,7 @@ static int imx6_pcie_enable_ref_clk(struct imx6_pcie *imx6_pcie)
 	case IMX8QM:
 	case IMX8QM_EP:
 	case IMX8QXP:
+	case IMX8QXP_EP:
 		ret = clk_prepare_enable(imx6_pcie->pcie_inbound_axi);
 		if (ret) {
 			dev_err(dev, "unable to enable pcie_axi clock\n");
@@ -692,6 +696,7 @@ static void imx6_pcie_disable_ref_clk(struct imx6_pcie *imx6_pcie)
 	case IMX8QM:
 	case IMX8QM_EP:
 	case IMX8QXP:
+	case IMX8QXP_EP:
 		clk_disable_unprepare(imx6_pcie->pcie_inbound_axi);
 		break;
 	default:
@@ -792,6 +797,7 @@ static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 	case IMX8QM:
 	case IMX8QM_EP:
 	case IMX8QXP:
+	case IMX8QXP_EP:
 		break;
 	}
 
@@ -857,6 +863,7 @@ static int imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
 	case IMX8QM:
 	case IMX8QM_EP:
 	case IMX8QXP:
+	case IMX8QXP_EP:
 		break;
 	}
 
@@ -919,6 +926,7 @@ static void imx6_pcie_ltssm_enable(struct device *dev)
 	case IMX8QM:
 	case IMX8QM_EP:
 	case IMX8QXP:
+	case IMX8QXP_EP:
 		/* Bit4 of the CTRL2 */
 		regmap_update_bits(imx6_pcie->iomuxc_gpr,
 				IMX8QM_PCIE_CTRL2_OFFSET,
@@ -955,6 +963,7 @@ static void imx6_pcie_ltssm_disable(struct device *dev)
 	case IMX8QM:
 	case IMX8QM_EP:
 	case IMX8QXP:
+	case IMX8QXP_EP:
 		/* Bit4 of the CTRL2 */
 		regmap_update_bits(imx6_pcie->iomuxc_gpr,
 				IMX8QM_PCIE_CTRL2_OFFSET,
@@ -1243,6 +1252,7 @@ imx6_pcie_ep_get_features(struct dw_pcie_ep *ep)
 
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX8QM_EP:
+	case IMX8QXP_EP:
 		return &imx8q_pcie_epc_features;
 	case IMX6Q_EP:
 	case IMX6QP_EP:
@@ -1330,6 +1340,7 @@ static void imx6_pcie_pm_turnoff(struct imx6_pcie *imx6_pcie)
 	case IMX8QM:
 	case IMX8QM_EP:
 	case IMX8QXP:
+	case IMX8QXP_EP:
 		regmap_update_bits(imx6_pcie->iomuxc_gpr,
 				IMX8QM_PCIE_CTRL2_OFFSET,
 				CTRL2_PM_XMT_TURNOFF,
@@ -1592,6 +1603,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 	case IMX8QM:
 	case IMX8QM_EP:
 	case IMX8QXP:
+	case IMX8QXP_EP:
 		if (dbi_base->start == IMX8_HSIO_PCIEB_BASE_ADDR)
 			imx6_pcie->controller_id = 1;
 
@@ -1817,6 +1829,11 @@ static const struct imx6_pcie_drvdata drvdata[] = {
 		.flags = IMX6_PCIE_FLAG_SUPPORTS_SUSPEND |
 			 IMX6_PCIE_FLAG_IMX6_CPU_ADDR_FIXUP,
 	},
+	[IMX8QXP_EP] = {
+		.variant = IMX8QXP_EP,
+		.mode = DW_PCIE_EP_TYPE,
+		.flags = IMX6_PCIE_FLAG_IMX6_CPU_ADDR_FIXUP,
+	},
 };
 
 static const struct of_device_id imx6_pcie_of_match[] = {
@@ -1837,6 +1854,7 @@ static const struct of_device_id imx6_pcie_of_match[] = {
 	{ .compatible = "fsl,imx8qm-pcie", .data = &drvdata[IMX8QM], },
 	{ .compatible = "fsl,imx8qm-pcie-ep", .data = &drvdata[IMX8QM_EP], },
 	{ .compatible = "fsl,imx8qxp-pcie", .data = &drvdata[IMX8QXP], },
+	{ .compatible = "fsl,imx8qxp-pcie-ep", .data = &drvdata[IMX8QXP_EP], },
 	{},
 };
 
