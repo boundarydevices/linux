@@ -151,19 +151,19 @@ static int __maybe_unused rpmsg_lifecycle_pm_notify(bool enter)
 	return 0;
 }
 
-static int __maybe_unused rpmsg_lifecycle_suspend(struct device *dev)
+static int __maybe_unused rpmsg_lifecycle_suspend_noirq(struct device *dev)
 {
 	return rpmsg_lifecycle_pm_notify(true);
 }
 
-static int __maybe_unused rpmsg_lifecycle_resume(struct device *dev)
+static int __maybe_unused rpmsg_lifecycle_resume_noirq(struct device *dev)
 {
 	return rpmsg_lifecycle_pm_notify(false);
 }
 
 static const struct dev_pm_ops rpmsg_lifecyle_ops = {
-	SET_LATE_SYSTEM_SLEEP_PM_OPS(rpmsg_lifecycle_suspend,
-			rpmsg_lifecycle_resume)
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(rpmsg_lifecycle_suspend_noirq,
+			rpmsg_lifecycle_resume_noirq)
 };
 
 static int rpmsg_lifecycle_probe(struct platform_device *pdev)
