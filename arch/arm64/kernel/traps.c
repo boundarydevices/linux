@@ -553,14 +553,9 @@ NOKPROBE_SYMBOL(do_el1_fpac)
 				"1:	" insn "\n"			\
 				"	mov	%w0, #0\n"		\
 				"2:\n"					\
-				"	.pushsection .fixup,\"ax\"\n"	\
-				"	.align	2\n"			\
-				"3:	mov	%w0, %w2\n"		\
-				"	b	2b\n"			\
-				"	.popsection\n"			\
-				_ASM_EXTABLE(1b, 3b)			\
+				_ASM_EXTABLE_UACCESS_ERR(1b, 2b, %w0)	\
 				: "=r" (res)				\
-				: "r" (address), "i" (-EFAULT));	\
+				: "r" (address));			\
 			uaccess_ttbr0_disable();			\
 		}							\
 	} while (0)
