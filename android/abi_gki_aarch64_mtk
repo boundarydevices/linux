@@ -29,6 +29,10 @@
   __arch_copy_to_user
   arch_freq_scale
   arch_timer_read_counter
+  arm_smccc_1_1_get_conduit
+  arm_smccc_1_2_hvc
+  arm_smccc_1_2_smc
+  arm_smccc_get_version
   arm64_const_caps_ready
   arm64_use_ng_mappings
   __arm_smccc_hvc
@@ -317,6 +321,7 @@
   device_init_wakeup
   device_link_add
   device_link_remove
+  device_match_any
   device_node_to_regmap
   device_property_present
   device_property_read_string
@@ -1755,6 +1760,7 @@
   skb_put
   skb_queue_tail
   skb_realloc_headroom
+  skb_split
   skb_trim
   smp_call_function
   smp_call_function_single
@@ -1990,6 +1996,7 @@
   __traceiter_android_vh_rwsem_init
   __traceiter_android_vh_rwsem_wake
   __traceiter_android_vh_rwsem_write_finished
+  __traceiter_android_vh_sched_pelt_multiplier
   __traceiter_android_vh_scheduler_tick
   __traceiter_android_vh_set_memory_nx
   __traceiter_android_vh_set_memory_rw
@@ -2065,6 +2072,7 @@
   __tracepoint_android_vh_rwsem_init
   __tracepoint_android_vh_rwsem_wake
   __tracepoint_android_vh_rwsem_write_finished
+  __tracepoint_android_vh_sched_pelt_multiplier
   __tracepoint_android_vh_scheduler_tick
   __tracepoint_android_vh_set_memory_nx
   __tracepoint_android_vh_set_memory_rw
@@ -2096,13 +2104,16 @@
   tracing_off
   try_module_get
   try_wait_for_completion
+  tty_chars_in_buffer
   tty_driver_flush_buffer
   tty_flip_buffer_push
   tty_insert_flip_string_fixed_flag
   tty_register_ldisc
+  tty_set_termios
   tty_termios_baud_rate
   tty_termios_encode_baud_rate
   tty_unregister_ldisc
+  tty_write_room
   typec_mux_get_drvdata
   typec_mux_register
   typec_mux_set

@@ -52,6 +52,7 @@
   bio_end_io_acct_remapped
   bio_start_io_acct
   bitmap_allocate_region
+  __balance_callbacks
   __bitmap_and
   __bitmap_clear
   bitmap_find_next_zero_area_off
@@ -145,6 +146,7 @@
   __clk_get_name
   clk_get_parent
   clk_get_rate
+  clk_get_sys
   clk_hw_get_flags
   clk_hw_get_name
   clk_hw_get_num_parents
@@ -1496,6 +1498,7 @@
   pwmchip_add
   pwmchip_remove
   qcom_smem_state_get
+  qcom_smem_state_put
   qcom_smem_state_register
   qcom_smem_state_unregister
   qcom_smem_state_update_bits
