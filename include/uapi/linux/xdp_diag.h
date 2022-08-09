@@ -69,7 +69,6 @@ struct xdp_diag_umem {
 	__u32	queue_id;
 	__u32	flags;
 	__u32	refs;
-	__u32	tx_headroom;
 };
 
 struct xdp_diag_stats {

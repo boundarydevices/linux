@@ -243,7 +243,6 @@ static void xsk_configure_umem(struct ifobject *data, void *buffer, u64 size, in
 		.frame_size = XSK_UMEM__DEFAULT_FRAME_SIZE,
 		.frame_headroom = umem->frame_headroom,
 		.flags = XSK_UMEM__DEFAULT_FLAGS
-		.tx_frame_headroom = umem->tx_frame_headroom,
 	};
 	struct xsk_umem_info *umem;
 	int ret;

@@ -816,7 +816,6 @@ static struct xsk_umem_info *xsk_configure_umem(void *buffer, u64 size)
 		.frame_size = opt_xsk_frame_size,
 		.frame_headroom = XSK_UMEM__DEFAULT_FRAME_HEADROOM,
 		.flags = opt_umem_flags
-		.tx_frame_headroom = XSK_UMEM__DEFAULT_FRAME_HEADROOM,
 	};
 	int ret;
 

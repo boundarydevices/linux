@@ -67,7 +67,6 @@ struct xsk_buff_pool {
 	u32 dma_pages_cnt;
 	u32 free_heads_cnt;
 	u32 headroom;
-	u32 tx_headroom;
 	u32 chunk_size;
 	u32 frame_len;
 	u8 cached_need_wakeup;
