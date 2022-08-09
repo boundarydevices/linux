@@ -51,9 +51,7 @@
 			MX8ULP_PAD_PTE8__PTE8		0x7	/* 20 */
 			MX8ULP_PAD_PTE9__PTE9		0x7	/* 31 */
 			MX8ULP_PAD_PTE10__PTE10		0x7	/* 55 */
-			MX8ULP_PAD_PTE11__PTE11		0x7	/* 28 */
 			MX8ULP_PAD_PTE14__PTE14		0x7	/* 41 */
-			MX8ULP_PAD_PTE15__PTE15		0x7	/* Left */
 			MX8ULP_PAD_PTE16__PTE16		0x7	/* Start */
 			MX8ULP_PAD_PTE17__PTE17		0x7	/* Up */
 			MX8ULP_PAD_PTE18__PTE18		0x7	/* Right */
@@ -76,14 +74,14 @@
 		>;
 	};
 
-	pinctrl_i2c5: lpuart4grp {
+	pinctrl_lpi2c5: lpi2c5grp {
 		fsl,pins = <
-			MX8ULP_PAD_PTE4__LPI2C5_SCL	0x7	/* 36 */
-			MX8ULP_PAD_PTE5__LPI2C5_SDA	0x7	/* 35 */
+			MX8ULP_PAD_PTE4__LPI2C5_SCL	0x27	/* 36 */
+			MX8ULP_PAD_PTE5__LPI2C5_SDA	0x27	/* 35 */
 		>;
 	};
 
-	pinctrl_lpspi5: lpuart4grp {
+	pinctrl_lpspi5: lpspi5grp {
 		fsl,pins = <
 			MX8ULP_PAD_PTE20__LPSPI5_SIN	0x10043
 			MX8ULP_PAD_PTE21__LPSPI5_SOUT	0x00043
@@ -117,6 +115,16 @@
 		fsl,pins = <
 #define GP_LCD_RESET	<&gpioe 7 GPIO_ACTIVE_LOW>
 			MX8ULP_PAD_PTE7__PTE7		0x02
+		>;
+	};
+
+	pinctrl_ts_atmel: ts-atmelgrp {
+		fsl,pins = <
+#define GPIRQ_TS_ATMEL	<&gpioe 15 IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_ATMEL	<&gpioe 15 GPIO_ACTIVE_LOW>
+			MX8ULP_PAD_PTE15__PTE15		0x03
+#define GP_TS_ATMEL_RESET	<&gpioe 11 GPIO_ACTIVE_LOW>
+			MX8ULP_PAD_PTE11__PTE11		0x03
 		>;
 	};
 
@@ -398,6 +406,26 @@
 	memory-region = <&vdevbuffer>, <&vdev0vring0>, <&vdev0vring1>,
 			<&vdev1vring0>, <&vdev1vring1>, <&rsc_table>;
 	status = "okay";
+};
+
+&lpi2c5 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpi2c5>;
+	pinctrl-1 = <&pinctrl_lpi2c5>;
+	status = "okay";
+
+	ts_atmel_mt: touchscreen@4a {
+		compatible = "atmel,maxtouch";
+		interrupts-extended = GPIRQ_TS_ATMEL;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_atmel>;
+		reg = <0x4a>;
+		reset-gpios = GP_TS_ATMEL_RESET;
+		wakeup-gpios = GP_TS_ATMEL;
+	};
 };
 
 &lpspi5 {
