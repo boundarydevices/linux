@@ -185,6 +185,7 @@ static int vf610_gpio_irq_set_type(struct irq_data *d, u32 type)
 	case IRQ_TYPE_EDGE_BOTH:
 		irqc = PORT_INT_EITHER_EDGE;
 		break;
+	case IRQ_TYPE_NONE:
 	case IRQ_TYPE_LEVEL_LOW:
 		irqc = PORT_INT_LOGIC_ZERO;
 		break;
