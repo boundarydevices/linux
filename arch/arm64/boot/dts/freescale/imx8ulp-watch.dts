@@ -17,6 +17,16 @@
 		stdout-path = &lpuart5;
 	};
 
+	vibrator-controller {
+		compatible = "pwm-leds";
+		vibrator {
+			/* vibrator */
+			label = "vibrator";
+			pwms = <&tpm_rpchip_0 3 50000 0>;
+			max-brightness = <255>;
+		};
+	};
+
 	memory@40000000 {
 		device_type = "memory";
 		reg = <0x0 0x80000000 0 0x80000000>;
@@ -168,6 +178,10 @@
 		interrupt-parent = <&rpmsg_gpioc>;
 		status = "okay";
 	};
+};
+
+&tpm_rpchip_0 {
+	status = "okay";
 };
 
 &clock_ext_ts {
