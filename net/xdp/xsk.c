@@ -1054,7 +1054,6 @@ struct xdp_umem_reg_v1 {
 	__u64 len; /* Length of packet data area */
 	__u32 chunk_size;
 	__u32 headroom;
-	__u32 tx_headroom;
 };
 
 static int xsk_setsockopt(struct socket *sock, int level, int optname,

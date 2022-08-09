@@ -77,7 +77,6 @@ struct xsk_buff_pool *xp_create_and_assign_umem(struct xdp_sock *xs,
 	pool->heads_cnt = umem->chunks;
 	pool->free_heads_cnt = umem->chunks;
 	pool->headroom = umem->headroom;
-	pool->tx_headroom = umem->tx_headroom;
 	pool->chunk_size = umem->chunk_size;
 	pool->unaligned = umem->flags & XDP_UMEM_UNALIGNED_CHUNK_FLAG;
 	pool->frame_len = umem->chunk_size - umem->headroom -

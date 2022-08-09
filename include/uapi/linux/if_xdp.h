@@ -70,7 +70,6 @@ struct xdp_umem_reg {
 	__u32 chunk_size;
 	__u32 headroom;
 	__u32 flags;
-	__u32 tx_headroom;
 };
 
 struct xdp_statistics {
