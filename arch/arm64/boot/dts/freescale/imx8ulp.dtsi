@@ -570,8 +570,10 @@
 				assigned-clocks = <&pcc3 IMX8ULP_CLK_LPI2C5>;
 				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_FROSC_DIV2>;
 				assigned-clock-rates = <48000000>;
+#if 0
 				dmas = <&edma1 48 0 0>, <&edma1 47 0 1>;
 				dma-names = "tx","rx";
+#endif
 				status = "disabled";
 			};
 
