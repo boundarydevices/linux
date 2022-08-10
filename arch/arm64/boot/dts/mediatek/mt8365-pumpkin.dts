@@ -538,7 +538,7 @@
 		};
 
 		pins_sysrstb_en {
-			pinmux = <MT8365_PIN_74_CMDAT6__FUNC_GPIO74>;
+			pinmux = <MT8365_PIN_126_DMIC3_CLK__FUNC_GPIO126>;
 			output-low;
 		};
 	};
