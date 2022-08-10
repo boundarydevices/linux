@@ -97,14 +97,14 @@ static void dpaa2_xsk_rx(struct dpaa2_eth_priv *priv,
 	/* Tracing point */
 	trace_dpaa2_rx_xsk_fd(priv->net_dev, fd);
 
+	vaddr = dpaa2_iova_to_virt(priv->iommu_domain, addr);
+	percpu_stats = this_cpu_ptr(priv->percpu_stats);
+
 	if (fd_format != dpaa2_fd_single) {
 		WARN_ON(priv->xdp_prog);
 		/* AF_XDP doesn't support any other formats */
 		goto err_frame_format;
 	}
-
-	vaddr = dpaa2_iova_to_virt(priv->iommu_domain, addr);
-	percpu_stats = this_cpu_ptr(priv->percpu_stats);
 
 	xdp_act = dpaa2_xsk_run_xdp(priv, ch, fq, (struct dpaa2_fd *)fd, vaddr);
 	if (xdp_act != XDP_PASS) {
