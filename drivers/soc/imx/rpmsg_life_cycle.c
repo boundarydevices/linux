@@ -42,7 +42,7 @@ static int rpmsg_life_cycle_notifier(struct notifier_block *nb,
 #ifdef CONFIG_HOTPLUG_CPU
 	int cpu;
 #endif
-	struct pm_rpmsg_data msg;
+	struct pm_rpmsg_data msg = {};
 
 	/* return early if it is RESTART case */
 	if (action == SYS_RESTART)
@@ -119,7 +119,7 @@ static struct rpmsg_driver rpmsg_life_cycle_driver = {
 
 static int __maybe_unused rpmsg_lifecycle_pm_notify(bool enter)
 {
-	struct pm_rpmsg_data msg;
+	struct pm_rpmsg_data msg = {};
 	int ret;
 
 	/* Only need to do lifecycle notify when APD enter mem(HW PD) mode */
