@@ -116,6 +116,9 @@ DECLARE_RESTRICTED_HOOK(android_rvh_vmalloc_node_bypass,
 DECLARE_RESTRICTED_HOOK(android_rvh_vfree_bypass,
 	TP_PROTO(const void *addr, bool *bypass),
 	TP_ARGS(addr, bypass), 1);
+DECLARE_HOOK(android_vh_cma_alloc_retry,
+	TP_PROTO(char *name, int *retry),
+	TP_ARGS(name, retry));
 #endif /* _TRACE_HOOK_MM_H */
 
 /* This part must be outside protection */
