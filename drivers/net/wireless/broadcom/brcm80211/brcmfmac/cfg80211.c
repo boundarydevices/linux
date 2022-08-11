@@ -2171,6 +2171,10 @@ brcmf_set_wsec_mode(struct net_device *ndev,
 			pval = AES_ENABLED;
 			break;
 		case WLAN_CIPHER_SUITE_GCMP_256:
+			if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_GCMP)) {
+				brcmf_err("the low layer not support GCMP\n");
+				return -EOPNOTSUPP;
+			}
 			pval = AES_ENABLED;
 			algos = KEY_ALGO_MASK(CRYPTO_ALGO_AES_GCM256);
 			mask = algos | KEY_ALGO_MASK(CRYPTO_ALGO_AES_CCM);
@@ -2197,6 +2201,10 @@ brcmf_set_wsec_mode(struct net_device *ndev,
 			gval = AES_ENABLED;
 			break;
 		case WLAN_CIPHER_SUITE_GCMP_256:
+			if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_GCMP)) {
+				brcmf_err("the low layer not support GCMP\n");
+				return -EOPNOTSUPP;
+			}
 			gval = AES_ENABLED;
 			algos = KEY_ALGO_MASK(CRYPTO_ALGO_AES_GCM256);
 			mask = algos | KEY_ALGO_MASK(CRYPTO_ALGO_AES_CCM);
@@ -2223,10 +2231,15 @@ brcmf_set_wsec_mode(struct net_device *ndev,
 		return err;
 	}
 
-	err = wl_set_wsec_info_algos(ifp, algos, mask);
-	if (err) {
-		bphy_err(drvr, "set wsec_info error (%d)\n", err);
-		return err;
+	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_GCMP)) {
+		brcmf_dbg(CONN,
+			  "set_wsdec_info algos (0x%x) mask (0x%x)\n",
+			  algos, mask);
+		err = wl_set_wsec_info_algos(ifp, algos, mask);
+		if (err) {
+			brcmf_err("set wsec_info error (%d)\n", err);
+			return err;
+		}
 	}
 
 	sec = &profile->sec;
@@ -3156,6 +3169,11 @@ brcmf_cfg80211_add_key(struct wiphy *wiphy, struct net_device *ndev,
 		brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_CCMP\n");
 		break;
 	case WLAN_CIPHER_SUITE_GCMP_256:
+		if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_GCMP)) {
+			brcmf_err("the low layer not support GCMP\n");
+			err = -EOPNOTSUPP;
+			goto done;
+		}
 		key->algo = CRYPTO_ALGO_AES_GCM256;
 		val = AES_ENABLED;
 		brcmf_dbg(CONN, "WLAN_CIPHER_SUITE_GCMP_256\n");
@@ -3163,6 +3181,11 @@ brcmf_cfg80211_add_key(struct wiphy *wiphy, struct net_device *ndev,
 		mask = algos | KEY_ALGO_MASK(CRYPTO_ALGO_AES_CCM);
 		break;
 	case WLAN_CIPHER_SUITE_BIP_GMAC_256:
+		if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_GCMP)) {
+			brcmf_err("the low layer not support GCMP\n");
+			err = -EOPNOTSUPP;
+			goto done;
+		}
 		key->algo = CRYPTO_ALGO_BIP_GMAC256;
 		val = AES_ENABLED;
 		algos = KEY_ALGO_MASK(CRYPTO_ALGO_BIP_GMAC256);
@@ -3191,10 +3214,16 @@ brcmf_cfg80211_add_key(struct wiphy *wiphy, struct net_device *ndev,
 		goto done;
 	}
 
-	brcmf_dbg(CONN, "algos (0x%x) mask (0x%x)\n", algos, mask);
-	err = wl_set_wsec_info_algos(ifp, algos, mask);
-	if (err)
-		bphy_err(drvr, "set wsec_info error (%d)\n", err);
+	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_GCMP)) {
+		brcmf_dbg(CONN,
+			  "set_wsdec_info algos (0x%x) mask (0x%x)\n",
+			  algos, mask);
+		err = wl_set_wsec_info_algos(ifp, algos, mask);
+		if (err) {
+			brcmf_err("set wsec_info error (%d)\n", err);
+			return err;
+		}
+	}
 
 done:
 	brcmf_dbg(TRACE, "Exit\n");
