@@ -684,7 +684,7 @@ static int brcmstb_i2c_probe(struct platform_device *pdev)
 	adap = &dev->adapter;
 	i2c_set_adapdata(adap, dev);
 	adap->owner = THIS_MODULE;
-	strlcpy(adap->name, "Broadcom STB : ", sizeof(adap->name));
+	strscpy(adap->name, "Broadcom STB : ", sizeof(adap->name));
 	if (int_name)
 		strlcat(adap->name, int_name, sizeof(adap->name));
 	adap->algo = &brcmstb_i2c_algo;
