@@ -351,7 +351,7 @@
 				altmodes {
 					dp {
 						svid = <0xff01>;
-						vdo = <0xc0c47>;
+						vdo = <0x1c1c47>;
 					};
 				};
 			};
