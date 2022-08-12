@@ -7,6 +7,7 @@
 
 #include "imx8ulp.dtsi"
 #include <dt-bindings/input/linux-event-codes.h>
+#include <dt-bindings/input/ti-drv260x.h>
 #include "imx8ulp-rpmsg.dtsi"
 
 &iomuxc1 {
@@ -35,7 +36,6 @@
 
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
-			MX8ULP_PAD_PTD11__PTD11		0x7	/* HAPT_EN */
 			MX8ULP_PAD_PTD15__PTD15		0x7	/* IMU_IRQ */
 			MX8ULP_PAD_PTD16__PTD16		0x7	/* 29 */
 			MX8ULP_PAD_PTD17__PTD17		0x7	/* 30 */
@@ -57,8 +57,6 @@
 			MX8ULP_PAD_PTE18__PTE18		0x7	/* Right */
 			MX8ULP_PAD_PTE19__PTE19		0x7	/* Down */
 			MX8ULP_PAD_PTF15__TPM4_CH3	0x7	/* pwm4 */
-			MX8ULP_PAD_PTF16__PTF16		0x7	/* 44 */
-			MX8ULP_PAD_PTF17__PTF17		0x7	/* 45 */
 			MX8ULP_PAD_PTF18__PTF18		0x7	/* 54 */
 			MX8ULP_PAD_PTF19__PTF19		0x7	/* 47 */
 			MX8ULP_PAD_PTF20__PTF20		0x7	/* 48 */
@@ -76,8 +74,22 @@
 
 	pinctrl_lpi2c5: lpi2c5grp {
 		fsl,pins = <
-			MX8ULP_PAD_PTE4__LPI2C5_SCL	0x27	/* 36 */
-			MX8ULP_PAD_PTE5__LPI2C5_SDA	0x27	/* 35 */
+			MX8ULP_PAD_PTE4__LPI2C5_SCL	0x27
+			MX8ULP_PAD_PTE5__LPI2C5_SDA	0x27
+		>;
+	};
+
+	pinctrl_lpi2c6: lpi2c6grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTF16__LPI2C6_SCL	0x27
+			MX8ULP_PAD_PTF17__LPI2C6_SDA	0x27
+		>;
+	};
+
+	pinctrl_lpi2c6_haptics: lpi2c6-hapticsgrp {
+		fsl,pins = <
+#define GP_I2C6_HAPTICS_EN	<&gpiod 11 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTD11__PTD11		0x02
 		>;
 	};
 
@@ -190,6 +202,13 @@
 	memory@40000000 {
 		device_type = "memory";
 		reg = <0x0 0x80000000 0 0x80000000>;
+	};
+
+	reg_vref_3p3v: regulator-vref-3p3v {
+		compatible = "regulator-fixed";
+		regulator-name = "vref-3p3v";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
 	};
 
 	reg_vref_5v: regulator-vref-5v {
@@ -436,7 +455,29 @@
 		pinctrl-0 = <&pinctrl_ts_atmel>;
 		reg = <0x4a>;
 		reset-gpios = GP_TS_ATMEL_RESET;
-		wakeup-gpios = GP_TS_ATMEL;
+	};
+};
+
+&lpi2c6 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpi2c6>;
+	pinctrl-1 = <&pinctrl_lpi2c6>;
+	status = "okay";
+
+	haptics: haptics@5a {
+		compatible = "ti,drv2605";
+		reg = <0x5a>;
+		vbat-supply = <&reg_vref_3p3v>;
+		enable-gpio = GP_I2C6_HAPTICS_EN;
+		mode = <DRV260X_LRA_MODE>;
+		library-sel = <DRV260X_LIB_LRA>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_lpi2c6_haptics>;
+		vib-rated-mv = <3200>;
+		vib-overdrive-mv = <3200>;
 	};
 };
 
