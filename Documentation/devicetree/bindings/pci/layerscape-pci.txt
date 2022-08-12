@@ -22,6 +22,7 @@ Required properties:
         "fsl,ls1043a-pcie"
         "fsl,ls1012a-pcie"
         "fsl,ls1028a-pcie"
+	"fsl,lx2160ar2-pcie", "fsl,ls2088a-pcie"
   EP mode:
 	"fsl,ls1028a-pcie-ep", "fsl,ls-pcie-ep"
 	"fsl,ls1046a-pcie-ep", "fsl,ls-pcie-ep"
