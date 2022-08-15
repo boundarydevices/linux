@@ -424,7 +424,7 @@ mxc_pcsi_get_remote_sensor_pad(struct mxc_parallel_csi_dev *pcsidev)
 			sink_pad = &subdev->entity.pads[i];
 
 			if (sink_pad->flags & MEDIA_PAD_FL_SINK) {
-				source_pad = media_entity_remote_pad(sink_pad);
+				source_pad = media_pad_remote_pad_first(sink_pad);
 				if (source_pad)
 					break;
 			}
