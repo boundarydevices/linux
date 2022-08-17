@@ -4,6 +4,7 @@
  *
  */
 
+#include <dt-bindings/clock/mediatek,mt8188-clk.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/pinctrl/mediatek,mt8188-pinfunc.h>
@@ -166,6 +167,25 @@
 			};
 		};
 
+		topckgen: syscon@10000000 {
+			compatible = "mediatek,mt8188-topckgen", "syscon";
+			reg = <0 0x10000000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		infracfg_ao: syscon@10001000 {
+			compatible = "mediatek,mt8188-infracfg_ao", "syscon", "simple-mfd";
+			reg = <0 0x10001000 0 0x1000>;
+			#clock-cells = <1>;
+			#reset-cells = <1>;
+		};
+
+		pericfg: syscon@10003000 {
+			compatible = "mediatek,mt8188-pericfg", "syscon";
+			reg = <0 0x10003000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
 		pio: pinctrl@10005000 {
 			compatible = "mediatek,mt8188-pinctrl";
 			reg = <0 0x10005000 0 0x1000>,
@@ -191,13 +211,25 @@
 			reg = <0 0x10007000 0 0x100>;
 		};
 
+		apmixedsys: syscon@1000c000 {
+			compatible = "mediatek,mt8188-apmixedsys", "syscon";
+			reg = <0 0x1000c000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
 		uart0: serial@11001100 {
 			compatible = "mediatek,mt6577-uart";
 			reg = <0 0x11001100 0 0x100>;
 			interrupts = <GIC_SPI 141 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&clk26m>, <&clk26m>;
+			clocks = <&clk26m>, <&infracfg_ao CLK_INFRA_AO_UART0>;
 			clock-names = "baud", "bus";
 			status = "disabled";
+		};
+
+		pericfg_ao: syscon@11003000 {
+			compatible = "mediatek,mt8188-pericfg_ao", "syscon";
+			reg = <0 0x11003000 0 0x1000>;
+			#clock-cells = <1>;
 		};
 
 		mmc0: mmc@11230000 {
@@ -207,10 +239,11 @@
 			reg = <0 0x11230000 0 0x10000>,
 			      <0 0x11f50000 0 0x1000>;
 			interrupts = <GIC_SPI 131 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&clk26m>,
-				 <&clk26m>,
-				 <&clk26m>;
-			clock-names = "source", "hclk", "source_cg";
+			clocks = <&topckgen CLK_TOP_MSDC50_0>,
+				 <&infracfg_ao CLK_INFRA_AO_MSDC0>,
+				 <&infracfg_ao CLK_INFRA_AO_MSDC0_SRC>,
+				 <&infracfg_ao CLK_INFRA_AO_RG_AES_MSDCFDE_CK_0P>;
+			clock-names = "source", "hclk", "source_cg", "crypto_clk";
 			status = "disabled";
 		};
 
@@ -219,9 +252,173 @@
 			reg = <0 0x10024000 0 0x1000>;
 			reg-names = "pwrap";
 			interrupts = <GIC_SPI 243 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&clk26m>,
-				 <&clk26m>;
+			clocks = <&infracfg_ao CLK_INFRA_AO_PMIC_AP>,
+				 <&infracfg_ao CLK_INFRA_AO_PMIC_TMR>;
 			clock-names = "spi", "wrap";
+		};
+
+		imp_iic_wrap_w: syscon@11e02000 {
+			compatible = "mediatek,mt8188-imp_iic_wrap_w", "syscon";
+			reg = <0 0x11e02000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		mfgcfg: syscon@13fbf000 {
+			compatible = "mediatek,mt8188-mfgcfg", "syscon";
+			reg = <0 0x13fbf000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		vppsys0: syscon@14000000 {
+			compatible = "mediatek,mt8188-vppsys0", "syscon";
+			reg = <0 0x14000000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		wpesys_vpp0: syscon@14e02000 {
+			compatible = "mediatek,mt8188-wpesys_vpp0", "syscon";
+			reg = <0 0x14e02000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		vppsys1: syscon@14f00000 {
+			compatible = "mediatek,mt8188-vppsys1", "syscon";
+			reg = <0 0x14f00000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		wpesys: syscon@14e00000 {
+			compatible = "mediatek,mt8188-wpesys", "syscon";
+			reg = <0 0x14e00000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		imgsys: syscon@15000000 {
+			compatible = "mediatek,mt8188-imgsys", "syscon";
+			reg = <0 0x15000000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		ipesys: syscon@15330000 {
+			compatible = "mediatek,mt8188-ipesys", "syscon";
+			reg = <0 0x15330000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		smi_img0: syscon@15002000 {
+			compatible = "mediatek,mt8188-smi-img0", "syscon";
+			reg = <0 0x15002000 0 0x1000>;
+		};
+
+		smi_img1: syscon@15003000 {
+			compatible = "mediatek,mt8188-smi-img1", "syscon";
+			reg = <0 0x15003000 0 0x1000>;
+		};
+
+		imgsys1_dip_top: syscon@15110000 {
+			compatible = "mediatek,mt8188-imgsys1_dip_top", "syscon";
+			reg = <0 0x15110000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		imgsys1_dip_nr: syscon@15130000 {
+			compatible = "mediatek,mt8188-imgsys1_dip_nr", "syscon";
+			reg = <0 0x15130000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		imgsys_wpe1: syscon@15220000 {
+			compatible = "mediatek,mt8188-imgsys_wpe1", "syscon";
+			reg = <0 0x15220000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		imgsys_wpe2: syscon@15520000 {
+			compatible = "mediatek,mt8188-imgsys_wpe2", "syscon";
+			reg = <0 0x15520000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		imgsys_wpe3: syscon@15620000 {
+			compatible = "mediatek,mt8188-imgsys_wpe3", "syscon";
+			reg = <0 0x15620000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		camsys: syscon@16000000 {
+			compatible = "mediatek,mt8188-camsys", "syscon";
+			reg = <0 0x16000000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		smi_cam0: syscon@16005000 {
+			compatible = "mediatek,mt8188-smi-cam0", "syscon";
+			reg = <0 0x16005000 0 0x1000>;
+		};
+
+		smi_cam1: syscon@16006000 {
+			compatible = "mediatek,mt8188-smi-cam1", "syscon";
+			reg = <0 0x16006000 0 0x1000>;
+		};
+
+		camsys_rawa: syscon@1604f000 {
+			compatible = "mediatek,mt8188-camsys_rawa", "syscon";
+			reg = <0 0x1604f000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		camsys_yuva: syscon@1606f000 {
+			compatible = "mediatek,mt8188-camsys_yuva", "syscon";
+			reg = <0 0x1606f000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		camsys_rawb: syscon@1608f000 {
+			compatible = "mediatek,mt8188-camsys_rawb", "syscon";
+			reg = <0 0x1608f000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		camsys_yuvb: syscon@160af000 {
+			compatible = "mediatek,mt8188-camsys_yuvb", "syscon";
+			reg = <0 0x160af000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		ccusys: syscon@17200000 {
+			compatible = "mediatek,mt8188-ccusys", "syscon";
+			reg = <0 0x17200000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		vdecsys_soc: syscon@1800f000 {
+			compatible = "mediatek,mt8188-vdecsys_soc", "syscon";
+			reg = <0 0x1800f000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		vdecsys: syscon@1802f000 {
+			compatible = "mediatek,mt8188-vdecsys", "syscon";
+			reg = <0 0x1802f000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		vencsys: syscon@1a000000 {
+			compatible = "mediatek,mt8188-vencsys", "syscon";
+			reg = <0 0x1a000000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		vdosys0: syscon@1c01d000 {
+			compatible = "mediatek,mt8188-vdosys0", "syscon";
+			reg = <0 0x1c01d000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		vdosys1: syscon@1c100000 {
+			compatible = "mediatek,mt8188-vdosys1", "syscon";
+			reg = <0 0x1c100000 0 0x1000>;
+			#clock-cells = <1>;
 		};
 	};
 };
