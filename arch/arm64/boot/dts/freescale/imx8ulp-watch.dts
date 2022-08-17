@@ -236,14 +236,11 @@
 		interrupt-parent = <&rpmsg_gpiob>;
 		interrupts = <4 IRQ_TYPE_EDGE_FALLING>;
 		irq-gpios = <&rpmsg_gpiob 4 GPIO_ACTIVE_HIGH>;
-		reset-gpios = <&rpmsg_gpioc 12 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&rpmsg_gpioc 12 GPIO_ACTIVE_LOW>;
 		vcc33-supply = <&reg_5v>;
 		vccio-supply = <&reg_5v>;
-		touchscreen-size-x = <400>;
-		touchscreen-size-y = <400>;
-		elan,normal-mode;
-		elan,num_fingers = <2>;
-		status = "disabled";
+		elan,non-buffer-mode;
+		elan,num-fingers = <2>;
 	};
 };
 
