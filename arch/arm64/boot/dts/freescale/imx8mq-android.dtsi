@@ -53,6 +53,12 @@
 		ftrace-size     = <0x00020000>;
 		pmsg-size       = <0x00020000>;
 	};
+
+	secure_dma: secure_mm@f8000000 {
+		compatible = "shared-dma-pool";
+		no-map;
+		reg = <0 0xF8000000 0 0x6000000>;
+	};
 };
 
 &tmu {
@@ -94,6 +100,7 @@
 
 &dcss {
 	trusty;
+	memory-region = <&secure_dma>;
 };
 
 &irqsteer {
