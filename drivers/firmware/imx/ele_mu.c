@@ -942,7 +942,10 @@ static int ele_mu_probe(struct platform_device *pdev)
 
 		ret = devm_add_action(dev, if_misc_deregister,
 				      &dev_ctx->miscdev);
-
+		if (ret)
+			dev_err(dev,
+				"failed[%d] to add action to the misc-dev\n",
+				ret);
 	}
 
 	init_completion(&priv->done);
