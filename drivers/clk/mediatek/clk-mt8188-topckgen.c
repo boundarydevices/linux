@@ -1067,8 +1067,8 @@ static const struct mtk_mux top_mtk_muxes[] = {
 			     usb_3p_parents, 0x0A4, 0x0A8, 0x0AC, 8, 4, 15, 0x08, 13),
 	MUX_GATE_CLR_SET_UPD(CLK_TOP_SSUSB_XHCI_3P, "top_ssusb_xhci_3p",
 			     ssusb_xhci_3p_parents, 0x0A4, 0x0A8, 0x0AC, 16, 4, 23, 0x08, 14),
-	MUX_GATE_CLR_SET_UPD(CLK_TOP_I2C, "top_i2c",
-			     i2c_parents, 0x0A4, 0x0A8, 0x0AC, 24, 4, 31, 0x08, 15),
+	MUX_GATE_CLR_SET_UPD_FLAGS(CLK_TOP_I2C, "top_i2c",
+			     i2c_parents, 0x0A4, 0x0A8, 0x0AC, 24, 4, 31, 0x08, 15, CLK_IS_CRITICAL),
 	/* CLK_CFG_12 */
 	MUX_GATE_CLR_SET_UPD(CLK_TOP_SENINF, "top_seninf",
 			     seninf_parents, 0x0B0, 0x0B4, 0x0B8, 0, 4, 7, 0x08, 16),
