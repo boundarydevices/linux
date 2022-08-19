@@ -403,8 +403,8 @@ static int mtk_uart_apdma_terminate_all(struct dma_chan *chan)
 
 	mtk_uart_apdma_write(c, VFF_FLUSH, VFF_FLUSH_B);
 
-	ret = readx_poll_timeout(readl, c->base + VFF_FLUSH,
-			  status, status != VFF_FLUSH_B, 10, 100);
+	ret = readx_poll_timeout_atomic(readl, c->base + VFF_FLUSH,
+			  status, status != VFF_FLUSH_B, 10, 1000);
 	if (ret)
 		dev_err(c->vc.chan.device->dev, "flush: fail, status=0x%x\n",
 			mtk_uart_apdma_read(c, VFF_DEBUG_STATUS));
@@ -416,7 +416,7 @@ static int mtk_uart_apdma_terminate_all(struct dma_chan *chan)
 	 * 3. set stop as 0
 	 */
 	mtk_uart_apdma_write(c, VFF_STOP, VFF_STOP_B);
-	ret = readx_poll_timeout(readl, c->base + VFF_EN,
+	ret = readx_poll_timeout_atomic(readl, c->base + VFF_EN,
 			  status, !status, 10, 100);
 	if (ret)
 		dev_err(c->vc.chan.device->dev, "stop: fail, status=0x%x\n",
@@ -433,6 +433,7 @@ static int mtk_uart_apdma_terminate_all(struct dma_chan *chan)
 	synchronize_irq(c->irq);
 
 	spin_lock_irqsave(&c->vc.lock, flags);
+	mtk_uart_apdma_chan_complete_handler(c);
 	vchan_get_all_descriptors(&c->vc, &head);
 	spin_unlock_irqrestore(&c->vc.lock, flags);
 
