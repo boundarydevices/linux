@@ -1120,8 +1120,10 @@
 				clocks = <&cgc2 IMX8ULP_CLK_LPAV_BUS_DIV>,
 					 <&pcc5 IMX8ULP_CLK_DSI>,
 					 <&pcc5 IMX8ULP_CLK_DSI_TX_ESC>,
-					 <&cgc2 IMX8ULP_CLK_DSI_PHY_REF>;
-				clock-names = "core", "rx_esc", "tx_esc", "phy_ref";
+					 <&cgc2 IMX8ULP_CLK_DSI_PHY_REF>,
+					 <&cgc2 IMX8ULP_CLK_PLL4>,
+					 <&pcc5 IMX8ULP_CLK_DC_NANO>;
+				clock-names = "core", "rx_esc", "tx_esc", "phy_ref", "video_pll", "lcdif";
 				power-domains = <&scmi_devpd IMX8ULP_PD_MIPI_DSI>;
 				assigned-clocks = <&pcc5 IMX8ULP_CLK_DSI>;
 				assigned-clock-parents = <&cgc2 IMX8ULP_CLK_PLL4_PFD3_DIV2>;
