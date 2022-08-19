@@ -204,6 +204,16 @@
 			interrupt-controller;
 			interrupts = <GIC_SPI 235 IRQ_TYPE_LEVEL_HIGH 0>;
 			#interrupt-cells = <2>;
+
+			pmif_pin: pmif-default-pin {
+				pinmux = <PINMUX_GPIO99__FUNC_I0_RTC32K_CK>,
+					 <PINMUX_GPIO92__FUNC_O_PWRAP_SPI0_CSN>,
+					 <PINMUX_GPIO93__FUNC_O_PWRAP_SPI0_CK>,
+					 <PINMUX_GPIO94__FUNC_B0_PWRAP_SPI0_MO>,
+					 <PINMUX_GPIO95__FUNC_B0_PWRAP_SPI0_MI>,
+					 <PINMUX_GPIO175__FUNC_B0_SPMI_M_SCL>,
+					 <PINMUX_GPIO176__FUNC_B0_SPMI_M_SDA>;
+			};
 		};
 
 		scpsys: syscon@10006000 {
@@ -726,6 +736,8 @@
 			clocks = <&infracfg_ao CLK_INFRA_AO_PMIC_AP>,
 				 <&infracfg_ao CLK_INFRA_AO_PMIC_TMR>;
 			clock-names = "spi", "wrap";
+			pinctrl-names = "default";
+			pinctrl-0 = <&pmif_pin>;
 		};
 
 		i2c0: i2c@11280000 {
