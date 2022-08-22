@@ -110,7 +110,7 @@
 
 #define ARGS_RX				BIT(0)
 #define ARGS_REMOTE			BIT(1)
-#define ARGS_DFIFO			BIT(2)
+#define ARGS_MULTI_FIFO			BIT(2)
 
 /* channel name template define in dts */
 #define CHAN_PREFIX			"edma0-chan"
@@ -160,8 +160,8 @@ struct fsl_edma3_chan {
 	int				priority;
 	int				is_rxchan;
 	int				is_remote;
-	int				is_dfifo;
-	bool				is_sw;
+	int				is_multi_fifo;
+	bool                            is_sw;
 	struct dma_pool			*tcd_pool;
 	u32				chn_real_count;
 	char                            txirq_name[32];
@@ -560,8 +560,8 @@ void fsl_edma3_fill_tcd(struct fsl_edma3_chan *fsl_chan,
 
 	tcd->soff = cpu_to_le16(EDMA_TCD_SOFF_SOFF(soff));
 
-	if (fsl_chan->is_dfifo) {
-		/* set mloff to support dual fifo and multiple fifo */
+	if (fsl_chan->is_multi_fifo) {
+		/* set mloff to support multiple fifo */
 		nbytes |= EDMA_TCD_NBYTES_MLOFF(-(fsl_chan->fsc.burst * 4));
 		/* enable DMLOE/SMLOE */
 		if (fsl_chan->fsc.dir == DMA_MEM_TO_DEV) {
@@ -683,14 +683,14 @@ static struct dma_async_tx_descriptor *fsl_edma3_prep_dma_cyclic(
 			src_addr = dma_buf_next;
 			dst_addr = fsl_chan->fsc.dev_addr;
 			soff = fsl_chan->fsc.addr_width;
-			if (fsl_chan->is_dfifo)
+			if (fsl_chan->is_multi_fifo)
 				doff = 4;
 			else
 				doff = 0;
 		} else if (fsl_chan->fsc.dir == DMA_DEV_TO_MEM) {
 			src_addr = fsl_chan->fsc.dev_addr;
 			dst_addr = dma_buf_next;
-			if (fsl_chan->is_dfifo)
+			if (fsl_chan->is_multi_fifo)
 				soff = 4;
 			else
 				soff = 0;
@@ -914,7 +914,7 @@ static struct dma_chan *fsl_edma3_xlate(struct of_phandle_args *dma_spec,
 			fsl_chan->priority = dma_spec->args[1];
 			fsl_chan->is_rxchan = dma_spec->args[2] & ARGS_RX;
 			fsl_chan->is_remote = dma_spec->args[2] & ARGS_REMOTE;
-			fsl_chan->is_dfifo = dma_spec->args[2] & ARGS_DFIFO;
+			fsl_chan->is_multi_fifo = dma_spec->args[2] & ARGS_MULTI_FIFO;
 			mutex_unlock(&fsl_edma3->fsl_edma3_mutex);
 			return chan;
 		} else if ((fsl_edma3->drvdata->dmamuxs || fsl_edma3->bus_axi) &&
@@ -925,7 +925,7 @@ static struct dma_chan *fsl_edma3_xlate(struct of_phandle_args *dma_spec,
 			fsl_chan->srcid = dma_spec->args[0];
 			fsl_chan->is_rxchan = dma_spec->args[2] & ARGS_RX;
 			fsl_chan->is_remote = dma_spec->args[2] & ARGS_REMOTE;
-			fsl_chan->is_dfifo = dma_spec->args[2] & ARGS_DFIFO;
+			fsl_chan->is_multi_fifo = dma_spec->args[2] & ARGS_MULTI_FIFO;
 			mutex_unlock(&fsl_edma3->fsl_edma3_mutex);
 			return chan;
 		}
