@@ -14,6 +14,7 @@
 #include <linux/of_platform.h>
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
+#include <linux/rational.h>
 #include <linux/regmap.h>
 
 /* DPHY registers */
@@ -260,42 +261,6 @@ static struct clk *mixel_dsi_clk_register_clk(struct mixel_dphy_priv *priv, stru
 	return clk;
 }
 #endif
-/*
- * Find a ratio close to the desired one using continued fraction
- * approximation ending either at exact match or maximum allowed
- * nominator, denominator.
- * continued fraction
- *      2  1  2  1  2
- * 0 1  2  3  8 11 30
- * 1 0  1  1  3  4 11
- */
-static void get_best_ratio(unsigned long *pnum, unsigned long *pdenom, u32 max_n, u32 max_d)
-{
-	unsigned long a = *pnum;
-	unsigned long b = *pdenom;
-	unsigned long c;
-	u32 n[] = {0, 1};
-	u32 d[] = {1, 0};
-	u32 whole;
-	unsigned int i = 1;
-
-	while (b) {
-		i ^= 1;
-		whole = a / b;
-		n[i] += (n[i ^ 1] * whole);
-		d[i] += (d[i ^ 1] * whole);
-//		printf("cf=%i n=%i d=%i\n", whole, n[i], d[i]);
-		if ((n[i] > max_n) || (d[i] > max_d)) {
-			i ^= 1;
-			break;
-		}
-		c = a - (b * whole);
-		a = b;
-		b = c;
-	}
-	*pnum = n[i];
-	*pdenom = d[i];
-}
 
 static int mixel_dphy_config_from_opts(struct phy *phy,
 	       struct phy_configure_opts_mipi_dphy *dphy_opts,
@@ -322,7 +287,7 @@ static int mixel_dphy_config_from_opts(struct phy *phy,
 	do {
 		numerator = bit_clk << i;
 		denominator = ref_clk;
-		get_best_ratio(&numerator, &denominator, 255, max_d >> i);
+		rational_best_ratio_bigger(&numerator, &denominator, 255, max_d >> i);
 		denominator <<= i;
 		i++;
 	} while ((denominator >> __ffs(denominator)) > 32);
