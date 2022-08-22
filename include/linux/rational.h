@@ -17,4 +17,7 @@ void rational_best_approximation(
 	unsigned long max_numerator, unsigned long max_denominator,
 	unsigned long *best_numerator, unsigned long *best_denominator);
 
+void rational_best_ratio_bigger(unsigned long *pnum, unsigned long *pdenom,
+		unsigned max_n, unsigned max_d);
+
 #endif /* _LINUX_RATIONAL_H */
