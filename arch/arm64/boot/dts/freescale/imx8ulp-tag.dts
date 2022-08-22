@@ -346,8 +346,8 @@
 				vfront-porch = <24>;
 				hsync-len = <1>;
 				vsync-len = <1>;
-				hsync-active = <1>;
-				vsync-active = <1>;
+				hsync-active = <0>;
+				vsync-active = <0>;
 				de-active = <1>;
 			};
 		};
