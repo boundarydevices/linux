@@ -1060,7 +1060,7 @@ static void phyref_set_rate(struct nwl_dsi *dsi, unsigned long rate)
 
 static u32 get_pixclock(struct nwl_dsi *dsi, unsigned long pixclock)
 {
-	u32 video_pll, n;
+	u32 video_pll;
 	int ret;
 
 	video_pll = pixclock;
@@ -1084,8 +1084,16 @@ static u32 get_pixclock(struct nwl_dsi *dsi, unsigned long pixclock)
 		video_pll = clk_get_rate(dsi->pll_clk);
 		DRM_DEV_INFO(dsi->dev, "rate is %d\n", video_pll);
 	}
-	n = (video_pll + (pixclock >> 1)) / pixclock;
-	pixclock = video_pll / n;
+	if (dsi->lcdif_clk) {
+		unsigned long pix;
+
+		pix = clk_round_rate(dsi->lcdif_clk, pixclock);
+		pr_debug("%s: desired=%ld, got=%ld\n", __func__, pixclock, pix);
+		pixclock = pix;
+	} else {
+		u32 n = (video_pll + (pixclock >> 1)) / pixclock;
+		pixclock = video_pll / n;
+	}
 	dsi->pixclock = pixclock;
 	return pixclock;
 }
@@ -1937,7 +1945,7 @@ static const struct nwl_dsi_platform_data imx8ulp_dev = {
 	.pclk_reset = &imx8_common_dsi_pclk_reset,
 	.mipi_reset = &imx8_common_dsi_mipi_reset,
 	.dpi_reset = &imx8_common_dsi_dpi_reset,
-	.clks = NWL_DSI_CORE_CLK,
+	.clks = NWL_DSI_CORE_CLK | NWL_DSI_LCDIF_CLK,
 	.reg_cm = 0x8,
 	.mux_present = true,
 	.bit_hs_tx_timeout = BIT(31),
