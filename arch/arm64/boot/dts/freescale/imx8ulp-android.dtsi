@@ -18,6 +18,14 @@
 					mnt_flags = "ro";
 					fsmgr_flags = "wait,slotselect,avb,avb_keys=/avb,logical,first_stage_mount";
 				};
+				system_ext4 {
+					compatible = "android,system";
+					dev = "system";
+					type = "ext4";
+					mnt_point = "/system";
+					mnt_flags = "noatime,errors=panic,ro,barrier=1,inode_readahead_blks=8";
+					fsmgr_flags = "wait,slotselect,avb,avb_keys=/avb,logical,first_stage_mount";
+				};
 				system_ext {
 					compatible = "android,system_ext";
 					dev = "system_ext";
