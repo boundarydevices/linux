@@ -114,8 +114,27 @@ static int dp_altmode_configure(struct dp_altmode *dp, u8 con)
 		else if (pin_assign & DP_PIN_ASSIGN_DP_ONLY_MASK)
 			pin_assign &= DP_PIN_ASSIGN_DP_ONLY_MASK;
 
-		if (!pin_assign)
+
+		/*
+		 * According to DisplayPort Alt Mode v2.0 standard,
+		 * section 5.2.4: DFP_U never selects Pin Assignment E
+		 * when Pin Assignment C and possibly Pin assignment D are
+		 * offered by the UFP_U.
+		 */
+		if (pin_assign & BIT(DP_PIN_ASSIGN_E)) {
+			if (pin_assign & BIT(DP_PIN_ASSIGN_C))
+				pin_assign &= BIT(DP_PIN_ASSIGN_C);
+
+			if (pin_assign & BIT(DP_PIN_ASSIGN_D))
+				pin_assign &= BIT(DP_PIN_ASSIGN_D);
+		}
+
+		if (!pin_assign) {
+			dev_err(&dp->alt->dev,
+				"%s: [NO PIN_ASSIGN]con: %d, pin_assign: %x\n",
+				__func__, con, pin_assign);
 			return -EINVAL;
+		}
 
 		conf |= DP_CONF_SET_PIN_ASSIGN(pin_assign);
 	}
