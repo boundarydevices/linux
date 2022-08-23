@@ -256,6 +256,7 @@ config VIDEO_IMX_PXP
 	  color space conversion, and rotation.
 
 source "drivers/media/platform/imx-jpeg/Kconfig"
+source "drivers/media/platform/mediatek/Kconfig"
 
 config VIDEO_MEDIATEK_JPEG
 	tristate "Mediatek JPEG Codec driver"
