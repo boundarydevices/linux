@@ -1245,6 +1245,7 @@
 };
 
 &vpu {
+	vpu-supply = <&sw1c_reg>;
 	status = "okay";
 };
 
