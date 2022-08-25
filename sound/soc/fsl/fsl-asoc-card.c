@@ -385,6 +385,12 @@ static int fsl_asoc_card_startup(struct snd_pcm_substream *substream)
 		if (ret)
 			return ret;
 
+		ret = snd_pcm_hw_constraint_mask64(runtime,
+						 SNDRV_PCM_HW_PARAM_FORMAT,
+						 SNDRV_PCM_FMTBIT_S16_LE |
+						 SNDRV_PCM_FMTBIT_S32_LE);
+		if (ret)
+			return ret;
 	}
 
 	return 0;
