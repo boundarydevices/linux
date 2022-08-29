@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 
 #ifndef __UAPI_APU_DRM_H__
 #define __UAPI_APU_DRM_H__
