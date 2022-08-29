@@ -483,7 +483,6 @@
 				#size-cells = <1>;
 				reg = <0x292e0000 0x10000>;
 				ranges = <0 0x292e0000 0x10000>;
-				dma-coherent;
 
 				sec_jr0: jr@1000 {
 					compatible = "fsl,sec-v4.0-job-ring";
