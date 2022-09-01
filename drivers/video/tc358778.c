@@ -19,6 +19,7 @@
  */
 
 #include <drm/drm_device.h>
+#include <drm/drm_mipi_dsi.h>
 #include <drm/drm_notifier.h>
 #include <drm/drm_mode.h>
 #include <linux/module.h>
@@ -64,6 +65,7 @@ struct tc358778_priv
 	struct mutex		power_mutex;
 	struct delayed_work	tc_work;
 	struct workqueue_struct *tc_workqueue;
+	unsigned long		mode_flags;
 	u32			int_cnt;
 	u32			pixelclock;
 	u32			byte_clock;
@@ -594,9 +596,9 @@ static int tc_mipi_dsi_pkt_write(struct tc358778_priv *tc, u8 id, const u8* buf,
 	return ret;
 }
 
-static int tc_mipi_dsi_pkt_read(struct tc358778_priv *tc, u8 id, u8* buf, int buf_cnt)
+static int tc_mipi_dsi_pkt_read(struct tc358778_priv *tc, u8 id, const u8* cmd, u8* dst, int dst_cnt)
 {
-	u8 type = (buf_cnt <= 2) ? 0x10 : 0x40;
+	u8 type = (dst_cnt <= 2) ? 0x10 : 0x40;
 	int ret;
 	u32 val;
 	u32 status;
@@ -606,10 +608,10 @@ static int tc_mipi_dsi_pkt_read(struct tc358778_priv *tc, u8 id, u8* buf, int bu
 	tc_flush_read_fifo(tc);
 	tc_write16(tc, TC_DSICMD_TYPE, DCS_TYPE(type) | DCS_ID(id));
 	tc_write16(tc, TC_DSICMD_WC, 0);
-	tc_write16(tc, TC_DSICMD_WD0, buf[0]);
+	tc_write16(tc, TC_DSICMD_WD0, cmd[0]);
 	tc_start_tx_and_complete(tc);
 
-	while (buf_cnt) {
+	while (dst_cnt) {
 		do {
 			status = 0;
 			ret = tc_read32(tc, TC_DSI_STATUS, &status);
@@ -630,38 +632,38 @@ static int tc_mipi_dsi_pkt_read(struct tc358778_priv *tc, u8 id, u8* buf, int bu
 			switch (resp) {
 			case MIPI_DSI_RX_GENERIC_SHORT_READ_RESPONSE_2BYTE:
 			case MIPI_DSI_RX_DCS_SHORT_READ_RESPONSE_2BYTE:
-				*buf++ = val;
-				if (!--buf_cnt)
+				*dst++ = val;
+				if (!--dst_cnt)
 					break;
 				val >>= 8;
 				fallthrough;
 			case MIPI_DSI_RX_GENERIC_SHORT_READ_RESPONSE_1BYTE:
 			case MIPI_DSI_RX_DCS_SHORT_READ_RESPONSE_1BYTE:
-				*buf++ = val;
-				--buf_cnt;
-				if (--buf_cnt)
+				*dst++ = val;
+				--dst_cnt;
+				if (--dst_cnt)
 					return -EINVAL;
 				break;
 			}
 			continue;
 		}
-		*buf++ = val;
-		if (!--buf_cnt)
+		*dst++ = val;
+		if (!--dst_cnt)
 			break;
 
 		val >>= 8;
-		*buf++ = val;
-		if (!--buf_cnt)
+		*dst++ = val;
+		if (!--dst_cnt)
 			break;
 
 		val >>= 8;
-		*buf++ = val;
-		if (!--buf_cnt)
+		*dst++ = val;
+		if (!--dst_cnt)
 			break;
 
 		val >>= 8;
-		*buf++ = val;
-		if (!--buf_cnt)
+		*dst++ = val;
+		if (!--dst_cnt)
 			break;
 	}
 	return 0;
@@ -669,14 +671,24 @@ static int tc_mipi_dsi_pkt_read(struct tc358778_priv *tc, u8 id, u8* buf, int bu
 
 static int send_mipi_cmd_list(struct tc358778_priv *tc, struct mipi_cmd *mc)
 {
+	struct fb_var_screeninfo *var = NULL;
 	const u8 *cmd = mc->mipi_cmds;
 	unsigned length = mc->length;
+	u8 data[8];
+	u8 cmd_buf[32];
+	const u8 *p;
+	unsigned l;
 	unsigned len;
+	unsigned mask;
+	u32 mipi_clk_rate = 0;
+	u64 tmp;
 	int ret;
 	int generic;
 	int match = 0;
-	u8 buf[4];
-	u8 id;
+	u64 readval, matchval;
+	int skip = 0;
+	int match_index;
+	int i;
 
 	pr_debug("%s:%p %x\n", __func__, cmd, length);
 	if (!cmd || !length)
@@ -685,70 +697,293 @@ static int send_mipi_cmd_list(struct tc358778_priv *tc, struct mipi_cmd *mc)
 	while (1) {
 		len = *cmd++;
 		length--;
+		if (!length)
+			break;
+		if ((len >= S_IF_1_LANE) && (len <= S_IF_4_LANES)) {
+			int lane_match = 1 + len - S_IF_1_LANE;
+
+			if (lane_match != tc->dsi_lanes)
+				skip = 1;
+			continue;
+		} else if (len == S_IF_BURST) {
+			if (!(tc->mode_flags & MIPI_DSI_MODE_VIDEO_BURST))
+				skip = 1;
+			continue;
+		} else if (len == S_IF_NONBURST) {
+			if (tc->mode_flags & MIPI_DSI_MODE_VIDEO_BURST)
+				skip = 1;
+			continue;
+		}
 		generic = len & 0x80;
 		len &= 0x7f;
 
+		p = cmd;
+		l = len;
 		ret = 0;
-		if (len < S_DELAY) {
-			id = 0;
-			if (generic) {
-				if (len > 2)
-					id = MIPI_DSI_GENERIC_LONG_WRITE;
-				else if (len == 2)
-					id = MIPI_DSI_GENERIC_SHORT_WRITE_2_PARAM;
-				else if (len == 1)
-					id = MIPI_DSI_GENERIC_SHORT_WRITE_1_PARAM;
+		if ((len < S_DELAY) || (len == S_DCS_LENGTH)
+				|| (len == S_DCS_BUF)) {
+			if (len == S_DCS_LENGTH) {
+				len = *cmd++;
+				length--;
+				p = cmd;
+				l = len;
+			} else if (len == S_DCS_BUF) {
+				l = *cmd++;
+				length--;
+				if (l > 32)
+					l = 32;
+				p = cmd_buf;
+				len = 0;
 			} else {
-				if (len > 2)
-					id = MIPI_DSI_DCS_LONG_WRITE;
-				else if (len == 2)
-					id = MIPI_DSI_DCS_SHORT_WRITE_PARAM;
-				else if (len == 1)
-					id = MIPI_DSI_DCS_SHORT_WRITE;
+				p = cmd;
+				l = len;
 			}
-			if (id)
-				ret = tc_mipi_dsi_pkt_write(tc, id, cmd, len);
+			if (length < len) {
+				dev_err(&tc->client->dev, "Unexpected end of data\n");
+				break;
+			}
+			if (!skip) {
+				u8 id = 0;
+
+				if (generic) {
+					if (len > 2)
+						id = MIPI_DSI_GENERIC_LONG_WRITE;
+					else if (len == 2)
+						id = MIPI_DSI_GENERIC_SHORT_WRITE_2_PARAM;
+					else if (len == 1)
+						id = MIPI_DSI_GENERIC_SHORT_WRITE_1_PARAM;
+				} else {
+					if (len > 2)
+						id = MIPI_DSI_DCS_LONG_WRITE;
+					else if (len == 2)
+						id = MIPI_DSI_DCS_SHORT_WRITE_PARAM;
+					else if (len == 1)
+						id = MIPI_DSI_DCS_SHORT_WRITE;
+				}
+				if (id)
+					ret = tc_mipi_dsi_pkt_write(tc, id, p, l);
+			}
 		} else if (len == S_MRPS) {
-			len = 1;
+			l = len = 1;
 			ret = tc_mipi_dsi_pkt_write(tc,
 					MIPI_DSI_SET_MAXIMUM_RETURN_PACKET_SIZE,
 					cmd, len);
-		} else if (len == S_DCS_READ1) {
-			buf[0] = cmd[0];
-			ret =  tc_mipi_dsi_pkt_read(tc,
-					MIPI_DSI_DCS_READ,
-					buf, 1);
-			pr_debug("Read MCS(%d): (%x) %x cmp %x\n",
-				ret, cmd[0], cmd[1], buf[0]);
-			len = 2;
-			if (buf[0] != cmd[1])
-				match = -EINVAL;
-		} else {
-			msleep(cmd[0]);
+		} else if ((len >= S_DCS_READ1) && (len <= S_DCS_READ8)) {
+			data[0] = data[1] = data[2] = data[3] = 0;
+			data[4] = data[5] = data[6] = data[7] = 0;
+			len = len - S_DCS_READ1 + 1;
+			match_index = generic ? 2 : 1;
+			if (!skip) {
+				/* fixme generic not done yet */
+				ret =  tc_mipi_dsi_pkt_read(tc,
+						MIPI_DSI_DCS_READ, cmd,
+						data, len);
+				readval = 0;
+				matchval = 0;
+				for (i = 0; i < len; i++) {
+					readval |= ((u64)data[i]) << (i << 3);
+					matchval |= ((u64)cmd[match_index + i]) << (i << 3);
+				}
+				if (generic) {
+					pr_debug("Read (%d) GEN: (%04x) 0x%llx cmp 0x%llx\n",
+						ret, cmd[0] + (cmd[1] << 8), readval, matchval);
+				} else {
+					pr_debug("Read (%d) DCS: (%02x) 0x%llx cmp 0x%llx\n",
+						ret, cmd[0], readval, matchval);
+				}
+				if (readval != matchval)
+					match = -EINVAL;
+			}
+			l = len = len + match_index;
+		} else if (len == S_DELAY) {
+			if (!skip) {
+				msleep(cmd[0]);
+			}
 			len = 1;
+			if (length <= len)
+				break;
+			cmd += len;
+			length -= len;
+			l = len = 0;
+		} else if (len >= S_CONST) {
+			int scmd, dest_start, dest_len, src_start;
+			unsigned val;
+
+			if (!var) {
+				struct fb_info *fbi = find_registered_fb_from_dt(tc->disp_node);
+				if (fbi)
+					var = &fbi->var;
+			}
+
+			scmd = len;
+			dest_start = cmd[0];
+			dest_len = cmd[1];
+			val = 0;
+			src_start = cmd[2];
+			len = 3;
+			if (scmd == S_CONST) {
+				val = cmd[2] | (cmd[3] << 8) | (cmd[4] << 16) | (cmd[5] << 24);
+				len = 6;
+				src_start = 0;
+			} else if (!var) {
+				dev_err(&tc->client->dev, "Unknown display settings\n");
+			} else {
+				switch (scmd) {
+				case S_HSYNC:
+					val = var->hsync_len;
+					break;
+				case S_HBP:
+					val = var->left_margin;
+					break;
+				case S_HACTIVE:
+					val = var->xres;
+					break;
+				case S_HFP:
+					val = var->right_margin;
+					break;
+				case S_VSYNC:
+					val = var->vsync_len;
+					break;
+				case S_VBP:
+					val = var->upper_margin;
+					break;
+				case S_VACTIVE:
+					val = var->yres;
+					break;
+				case S_VFP:
+					val = var->lower_margin;
+					break;
+				case S_LPTXTIME:
+					val = 3;
+					if (!mipi_clk_rate)
+						mipi_clk_rate = tc->bit_clock >> 1;
+					if (!mipi_clk_rate) {
+						dev_warn(&tc->client->dev, "Unknown mipi_clk_rate\n");
+						break;
+					}
+					/* val = ROUND(lptxtime_ns * mipi_clk_rate/4  /1000000000) */
+#define lptxtime_ns 75
+#define prepare_ns 100
+#define zero_ns 250
+					tmp = lptxtime_ns;
+					tmp *= mipi_clk_rate;
+					tmp += 2000000000ULL;
+					do_div(tmp, 4000000000ULL);
+					val = (unsigned)tmp;
+					pr_debug("%s:lptxtime=%d\n", __func__, val);
+					if (val > 2047)
+						val = 2047;
+					break;
+				case S_CLRSIPOCOUNT:
+					val = 5;
+					if (!mipi_clk_rate)
+						mipi_clk_rate = tc->bit_clock >> 1;
+					if (!mipi_clk_rate) {
+						dev_warn(&tc->client->dev, "Unknown mipi_clk_rate\n");
+						break;
+					}
+					/* clrsipocount = ROUNDUP((prepare_ns + zero_ns/2) * mipi_clk_rate/4 /1000000000) - 5 */
+					tmp = prepare_ns + (zero_ns >> 1) ;
+					tmp *= mipi_clk_rate;
+					tmp += 4000000000ULL - 1;
+					do_div(tmp, 4000000000UL);
+					val = (unsigned)tmp - 5;
+					pr_debug("%s:clrsipocount=%d\n", __func__, val);
+					if (val > 63)
+						val = 63;
+					break;
+				default:
+					dev_err(&tc->client->dev, "Unknown scmd 0x%x0x\n", scmd);
+					val = 0;
+					break;
+				}
+			}
+			val >>= src_start;
+			while (dest_len && dest_start < 256) {
+				l = dest_start & 7;
+				mask = (dest_len < 8) ? ((1 << dest_len) - 1) : 0xff;
+				cmd_buf[dest_start >> 3] &= ~(mask << l);
+				cmd_buf[dest_start >> 3] |= (val << l);
+				l = 8 - l;
+				dest_start += l;
+				val >>= l;
+				if (dest_len >= l)
+					dest_len -= l;
+				else
+					dest_len = 0;
+			}
+			l = 0;
 		}
 		if (ret < 0) {
-			dev_err(&tc->client->dev,
-				"Failed to send MCS (%d), (%d) %02x %02x\n",
-				ret, len, cmd[0], cmd[1]);
+			if (l >= 6) {
+				dev_err(&tc->client->dev,
+					"Failed to send (%d), (%d)%02x %02x: %02x %02x %02x %02x\n",
+					ret, l, p[0], p[1], p[2], p[3], p[4], p[5]);
+			} else if (l >= 2) {
+				dev_err(&tc->client->dev,
+					"Failed to send (%d), (%d)%02x %02x\n",
+					ret, l, p[0], p[1]);
+			} else {
+				dev_err(&tc->client->dev,
+					"Failed to send (%d), (%d)%02x\n",
+					ret, l, p[0]);
+			}
 			return ret;
 		} else {
-			pr_debug("Sent MCS (%d), (%d) %02x %02x\n",
-				ret, len, cmd[0], cmd[1]);
+			if (!skip) {
+				if (l >= 18) {
+					pr_debug("Sent (%d), (%d)%02x %02x: %02x %02x %02x %02x"
+							"  %02x %02x %02x %02x"
+							"  %02x %02x %02x %02x"
+							"  %02x %02x %02x %02x\n",
+						ret, l, p[0], p[1], p[2], p[3], p[4], p[5],
+						p[6], p[7], p[8], p[9],
+						p[10], p[11], p[12], p[13],
+						p[14], p[15], p[16], p[17]);
+				} else if (l >= 6) {
+					pr_debug("Sent (%d), (%d)%02x %02x: %02x %02x %02x %02x\n",
+						ret, l, p[0], p[1], p[2], p[3], p[4], p[5]);
+				} else if (l >= 2) {
+					pr_debug("Sent (%d), (%d)%02x %02x\n",
+						ret, l, p[0], p[1]);
+				} else if (l) {
+					pr_debug("Sent (%d), (%d)%02x\n",
+						ret, l, p[0]);
+				}
+			}
 		}
-		if (length <= len)
+		if (length < len) {
+			dev_err(&tc->client->dev, "Unexpected end of data\n");
 			break;
+		}
 		cmd += len;
 		length -= len;
+		if (!length)
+			break;
+		skip = 0;
 	}
 	return match;
 };
 
+static void set_speed_lpm_mode(struct tc358778_priv *tc, bool lpm_mode)
+{
+	if (lpm_mode) {
+		/* Set to LP mode */
+		tc->mode_flags |= MIPI_DSI_MODE_LPM;
+		tc_write32(tc, TC_DSI_CONFW, CLR_DSI_CONTROL | 0x80);
+	} else {
+		/* Set to HS mode */
+		tc->mode_flags &= ~MIPI_DSI_MODE_LPM;
+		tc_write32(tc, TC_DSI_CONFW, SET_DSI_CONTROL | 0x80);
+	}
+
+}
 static void tc_powerdown_locked(struct tc358778_priv *tc, int cmd_disable)
 {
 	tc->chip_enabled = 0;
 	if (tc->client->irq)
 		disable_irq(tc->client->irq);
+	set_speed_lpm_mode(tc, true);
 	if (cmd_disable)
 		send_mipi_cmd_list(tc, &tc->mipi_cmds_disable);
 	/*
@@ -764,8 +999,6 @@ static void tc_powerdown_locked(struct tc358778_priv *tc, int cmd_disable)
 	tc_update16(tc, TC_PP_MISC, 0, BIT(14));
 	/* Stop dsi continuous clock */
 	tc_write32(tc, TC_TXOPTIONCNTRL, 0);
-	/* Set to LP mode */
-	tc_write32(tc, TC_DSI_CONFW, CLR_DSI_CONTROL | 0x80);
 	/* Disable D-PHY */
 	tc_write32(tc, TC_CLW_CNTRL, 0x1);
 	tc_write32(tc, TC_D0W_CNTRL, 0x1);
@@ -843,35 +1076,79 @@ static void check_for_cmds(struct device_node *np, const char *dt_name, struct m
  * 0 1  2  3  8 11 30
  * 1 0  1  1  3  4 11
  */
-static void get_best_bigger_ratio(unsigned long *pnum, unsigned long *pdenom, unsigned max_n, unsigned max_d)
+static void rational_best_ratio_bigger(unsigned long *pnum, unsigned long *pdenom, unsigned max_n, unsigned max_d)
 {
 	unsigned long a = *pnum;
 	unsigned long b = *pdenom;
 	unsigned long c;
-	unsigned n[] = {0, 1};
-	unsigned d[] = {1, 0};
+	unsigned n0 = 0;
+	unsigned n1 = 1;
+	unsigned d0 = 1;
+	unsigned d1 = 0;
+	unsigned _n = 0;
+	unsigned _d = 1;
 	unsigned whole;
-	unsigned i = 1;
-	unsigned best_n = 1;
-	unsigned best_d = 0;
+
 	while (b) {
-		i ^= 1;
 		whole = a / b;
-		n[i] += (n[i ^ 1] * whole);
-		d[i] += (d[i ^ 1] * whole);
-//		pr_info("i=%d cf=%i n=%i d=%i\n", i, whole, n[i], d[i]);
-		if ((n[i] > max_n) || (d[i] > max_d))
-			break;
+		/* n0/d0 is the earlier term */
+		n0 = n0 + (n1 * whole);
+		d0 = d0 + (d1 * whole);
+
 		c = a - (b * whole);
 		a = b;
 		b = c;
-		if (i || !b) {
-			best_n = n[i];
-			best_d = d[i];
+
+		if (b) {
+			/* n1/d1 is the earlier term */
+			whole = a / b;
+			_n = n1 + (n0 * whole);
+			_d = d1 + (d0 * whole);
+		} else {
+			_n = n0;
+			_d = d0;
 		}
+		pr_debug("%s: cf=%i %d/%d, %d/%d\n", __func__, whole, n0, d0, _n, _d);
+		if ((_n > max_n) || (_d > max_d)) {
+			unsigned h;
+
+			h = n0;
+			if (h) {
+				_n = max_n - n1;
+				_n /= h;
+				if (whole > _n)
+					whole = _n;
+			}
+			h = d0;
+			if (h) {
+				_d = max_d - d1;
+				_d /= h;
+				if (whole > _d)
+					whole = _d;
+			}
+			_n = n1 + (n0 * whole);
+			_d = d1 + (d0 * whole);
+			pr_debug("%s: b=%ld, n=%d of %d, d=%d of %d\n", __func__, b, _n, max_n, _d, max_d);
+			if (!_d) {
+				/* Don't choose infinite for a bigger ratio */
+				_n = n0 + 1;
+				_d = d0;
+				pr_err("%s: %d/%d is too big\n", __func__, _n, _d);
+			}
+			break;
+		}
+
+		if (!b)
+			break;
+		n1 = _n;
+		d1 = _d;
+		c = a - (b * whole);
+		a = b;
+		b = c;
 	}
-	*pnum = best_n;
-	*pdenom = best_d;
+
+	*pnum = _n;
+	*pdenom = _d;
 }
 
 static void tc_setup_pll(struct tc358778_priv *tc, u32 pixelclock)
@@ -908,7 +1185,7 @@ static void tc_setup_pll(struct tc358778_priv *tc, u32 pixelclock)
 	/* try for pll 1/8 more than what is needed */
 //	fbd += (fbd >> 3);
 	prd = tc->dsi_lanes;
-	get_best_bigger_ratio(&fbd, &prd, 512, 16);
+	rational_best_ratio_bigger(&fbd, &prd, 512, 16);
 
 	temp = pixelclock;
 	temp *= fbd;
@@ -968,6 +1245,7 @@ static int tc_powerup1(struct tc358778_priv *tc)
 	tc_write16(tc, TC_CONFCTL, 4);
 	tc_write16(tc, TC_SYSCTL, 1);
 	tc_write16(tc, TC_SYSCTL, 0);
+	set_speed_lpm_mode(tc, true);
 	msleep(2);
 
 	/* Enable PLL */
@@ -1005,10 +1283,6 @@ static int tc_powerup1(struct tc358778_priv *tc)
 	ctrl = tc->dsi_lanes ? (tc->dsi_lanes - 1) << 1 : 0;
 	if (tc->skip_eot)
 		ctrl |= 1;
-	/* set bits */
-	tc_write32(tc, TC_DSI_CONFW, SET_DSI_CONTROL | ctrl | 0x120);
-	/* clear bits */
-	tc_write32(tc, TC_DSI_CONFW, CLR_DSI_CONTROL | (ctrl ^ 7) | 0x8000);
 
 	tc_write32(tc, TC_CLW_CNTRL, 0x0);
 	tc_write32(tc, TC_D0W_CNTRL, 0x0);
@@ -1016,6 +1290,10 @@ static int tc_powerup1(struct tc358778_priv *tc)
 	tc_write32(tc, TC_D2W_CNTRL, 0x0);
 	tc_write32(tc, TC_D3W_CNTRL, 0x0);
 	tc_write32(tc, TC_DSI_START, 1);
+	/* clear bits */
+	tc_write32(tc, TC_DSI_CONFW, CLR_DSI_CONTROL | (ctrl ^ 7) | 0x8000);
+	/* set bits */
+	tc_write32(tc, TC_DSI_CONFW, SET_DSI_CONTROL | ctrl | 0x100);
 	/* ppi setup */
 #if 0
 	tc_write32(tc, TC_LINEINITCNT, 0x2c88);
@@ -1215,6 +1493,7 @@ static void check_mipi_cmds_from_dtb(struct tc358778_priv *tc, struct device_nod
 		check_for_cmds(np1, "mipi-cmds-detect", &tc->mipi_cmds_detect);
 		if (!tc->mipi_cmds_detect.length)
 			continue;
+		set_speed_lpm_mode(tc, true);
 		ret = send_mipi_cmd_list(tc, &tc->mipi_cmds_detect);
 		if (!ret) {
 			npd = np1;
@@ -1224,8 +1503,10 @@ static void check_mipi_cmds_from_dtb(struct tc358778_priv *tc, struct device_nod
 		tc_powerdown(tc);
 		msleep(150);
 		ret = tc_powerup1(tc);
-		if (ret)
+		if (ret) {
+			pr_err("%s: tc_powerup1 failed ret=%d", __func__, ret);
 			return;
+		}
 		msleep(150);
 
 	}
@@ -1267,13 +1548,19 @@ static int tc_setup_regs(struct tc358778_priv *tc)
 	unsigned conf, hsw, hsw_hbpr;
 	u64 temp;
 	u32 t1, vsdelay;
+	u32 xres, left_margin, right_margin;
 
 	if (!fbi)
 		return -EBUSY;
 	var = &fbi->var;
+
+	left_margin = var->left_margin;
+	right_margin = var->right_margin;
+	xres = var->xres;
+
 	pr_info("%s: %dx%d margins= %d,%d %d,%d  syncs=%d %d\n",
-		__func__, var->xres, var->yres,
-		var->left_margin, var->right_margin,
+		__func__, xres, var->yres,
+		left_margin, right_margin,
 		var->upper_margin, var->lower_margin,
 		var->hsync_len, var->vsync_len);
 
@@ -1294,7 +1581,7 @@ static int tc_setup_regs(struct tc358778_priv *tc)
 	tc_write16(tc, TC_DSI_VACT, var->yres);
 
 	hsw = pix_to_delay_byte_clocks(tc, var->hsync_len);
-	hsw_hbpr = pix_to_delay_byte_clocks(tc, var->hsync_len + var->left_margin);
+	hsw_hbpr = pix_to_delay_byte_clocks(tc, var->hsync_len + left_margin);
 #if 1
 	tc_write16(tc, TC_DSI_HSW, tc->pulse ? hsw : hsw_hbpr);
 #else
@@ -1308,7 +1595,7 @@ static int tc_setup_regs(struct tc358778_priv *tc)
 			hbpr = 2;
 		tc_write16(tc, TC_DSI_HBPR, hbpr);
 	}
-	tc_write16(tc, TC_DSI_HACT, pix_to_bytecnt(tc, var->xres));
+	tc_write16(tc, TC_DSI_HACT, pix_to_bytecnt(tc, xres));
 
 	/*
 	 *  delay_time + output_time > input_time
@@ -1323,10 +1610,10 @@ static int tc_setup_regs(struct tc358778_priv *tc)
 	 *  vsdelay  > (HSW+HBP+HACT)/pixelclock * byte_clock - (((HACT*bpp/8)/lanes) + 40 + hsw_hbpr)
 	 *
 	 */
-	temp = var->hsync_len + var->left_margin + var->xres;
+	temp = var->hsync_len + left_margin + xres;
 	temp *= tc->byte_clock;
 	do_div(temp, tc->pixelclock);
-	t1 = (var->xres * ((tc->dsi_bpp + 7) / 8)) / tc->dsi_lanes + 40 + hsw_hbpr;
+	t1 = (xres * ((tc->dsi_bpp + 7) / 8)) / tc->dsi_lanes + 40 + hsw_hbpr;
 	vsdelay = temp;
 	if (vsdelay > t1)
 		vsdelay -= t1;
@@ -1341,22 +1628,19 @@ static int tc_setup_regs(struct tc358778_priv *tc)
 
 static int tc_powerup_locked(struct tc358778_priv *tc)
 {
-	u32 ctrl;
 	int ret = tc_powerup1(tc);
 	unsigned id = (tc->dsi_bpp == 24) ? MIPI_DSI_PACKED_PIXEL_STREAM_24 : (tc->dsi_bpp == 18) ?
 			MIPI_DSI_PACKED_PIXEL_STREAM_18 : MIPI_DSI_PACKED_PIXEL_STREAM_16;
 
-	ctrl = tc->dsi_lanes ? (tc->dsi_lanes - 1) << 1 : 0;
-	if (tc->skip_eot)
-		ctrl |= 1;
-
 	if (ret)
 		return ret;
+
 	if (!tc->mipi_cmds_init.length)
 		check_mipi_cmds_from_dtb(tc, tc->of_node);
 
 	tc_setup_regs(tc);
 
+	set_speed_lpm_mode(tc, true);
 	ret = send_mipi_cmd_list(tc, &tc->mipi_cmds_init);
 	if (ret < 0)
 		return ret;
@@ -1368,8 +1652,7 @@ static int tc_powerup_locked(struct tc358778_priv *tc)
 		return ret;
 
 	check_for_halt(tc, 'b');
-	/* Set to HS mode */
-	tc_write32(tc, TC_DSI_CONFW, SET_DSI_CONTROL | 0x80 | ctrl);
+	set_speed_lpm_mode(tc, false);
 	check_for_halt(tc, 'c');
 
 	tc_write16(tc, TC_DSITX_DT, DCS_ID(id));
@@ -1815,6 +2098,8 @@ static int tc358778_probe(struct i2c_client *client,
 		dev_err(&client->dev, "dsi-format missing %d\n", ret);
 		goto exit1;
 	}
+	if (of_property_read_bool(np, "mode-video-burst"))
+		tc->mode_flags |= MIPI_DSI_MODE_VIDEO_BURST;
 	tc->dsi_bpp = !strcmp(df, "rgb666") ? 18 : 24;
 	tc->pixel_clk = devm_clk_get(&client->dev, "pixel");
 	if (IS_ERR(tc->pixel_clk))
@@ -1880,14 +2165,24 @@ static const struct i2c_device_id tc358778_id[] = {
 	{"tc358778", 0},
 	{},
 };
-
 MODULE_DEVICE_TABLE(i2c, tc358778_id);
+
+static const struct of_device_id tc358778_of_match[] = {
+	{
+		.compatible = "tc358778",
+		.data = NULL
+	}, {
+		/* sentinel */
+	}
+};
+MODULE_DEVICE_TABLE(of, tc358778_of_match);
 
 static struct i2c_driver tc358778_driver = {
 	.driver = {
-		   .name = "tc358778",
-		   .owner = THIS_MODULE,
-		   },
+		.name = "tc358778",
+		.of_match_table = tc358778_of_match,
+		.owner = THIS_MODULE,
+	},
 	.probe = tc358778_probe,
 	.remove = tc358778_remove,
 	.shutdown = tc358778_shutdown,
