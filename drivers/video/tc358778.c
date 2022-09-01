@@ -1566,7 +1566,7 @@ static int tc_setup_regs(struct tc358778_priv *tc)
 
 	tc_write16(tc, TC_PP_MISC,
 		(fbi->var.sync & FB_SYNC_HOR_HIGH_ACT) ? 1 : 0);
-	conf = (1 << 6) | 4;
+	conf = 4;
 	if (fbi->var.sync & FB_SYNC_VERT_HIGH_ACT)
 		conf |= (1 << 5);
 	if (fbi->var.sync & FB_SYNC_OE_LOW_ACT)
