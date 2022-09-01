@@ -13,6 +13,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 #include "panel-ltk0680ytmdb.dtsi"
+#include "panel-ltk069wxbct02.dtsi"
 
 &iomuxc {
 	pinctrl-names = "default";
