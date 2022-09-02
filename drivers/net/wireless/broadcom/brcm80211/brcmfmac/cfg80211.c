@@ -2238,7 +2238,7 @@ brcmf_set_wsec_mode(struct net_device *ndev,
 
 	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_GCMP)) {
 		brcmf_dbg(CONN,
-			  "set_wsdec_info algos (0x%x) mask (0x%x)\n",
+			  "set_wsec_info algos (0x%x) mask (0x%x)\n",
 			  algos, mask);
 		err = wl_set_wsec_info_algos(ifp, algos, mask);
 		if (err) {
@@ -4065,6 +4065,13 @@ static struct cfg80211_scan_request *
 brcmf_alloc_internal_escan_request(struct wiphy *wiphy, u32 n_netinfo) {
 	struct cfg80211_scan_request *req;
 	size_t req_size;
+	size_t size_sanity = ~0;
+
+	if (n_netinfo > ((size_sanity - sizeof(*req)) /
+			(sizeof(req->channels[0]) + sizeof(*req->ssids)))) {
+		brcmf_err("requesting a huge count:%d\n", n_netinfo);
+		return NULL;
+	}
 
 	req_size = sizeof(*req) +
 		   n_netinfo * sizeof(req->channels[0]) +
@@ -4215,9 +4222,18 @@ brcmf_notify_sched_scan_results(struct brcmf_if *ifp,
 	}
 
 	netinfo_start = brcmf_get_netinfo_array(pfn_result);
-	datalen = e->datalen - ((void *)netinfo_start - (void *)pfn_result);
-	if (datalen < result_count * sizeof(*netinfo)) {
-		bphy_err(drvr, "insufficient event data\n");
+	/* To make sure e->datalen is big enough */
+	if (e->datalen >= ((void *)netinfo_start - (void *)pfn_result)) {
+		u32 cnt_sanity = ~0;
+
+		datalen = e->datalen - ((void *)netinfo_start - (void *)pfn_result);
+		if (datalen < result_count * sizeof(*netinfo) ||
+		    (result_count > cnt_sanity / sizeof(*netinfo))) {
+			brcmf_err("insufficient event data\n");
+			goto out_err;
+		}
+	} else {
+		brcmf_err("insufficient event data\n");
 		goto out_err;
 	}
 
