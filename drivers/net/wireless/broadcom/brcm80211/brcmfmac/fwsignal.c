@@ -1847,7 +1847,7 @@ void brcmf_fws_hdrpull(struct brcmf_if *ifp, s16 siglen, struct sk_buff *skb)
 	u8 *signal_data;
 	s16 data_len;
 	u8 type;
-	u8 len;
+	s16 len;
 	u8 *data;
 	s32 status;
 	s32 err;
