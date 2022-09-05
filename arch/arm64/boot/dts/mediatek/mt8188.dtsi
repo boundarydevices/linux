@@ -820,6 +820,14 @@
 			status = "disabled";
 		};
 
+		sys-timer@10017000 {
+			compatible = "mediatek,mt6765-timer";
+			reg = <0 0x10017000 0 0x1000>;
+			reg-names = "sys_timer_base";
+			interrupts = <GIC_SPI 265 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&clk13m>;
+		};
+
 		pwrap: pwrap@10024000 {
 			compatible = "mediatek,mt8188-pwrap", "syscon";
 			reg = <0 0x10024000 0 0x1000>;
