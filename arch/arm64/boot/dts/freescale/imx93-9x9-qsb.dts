@@ -106,7 +106,7 @@
 		regulator-name = "audio-pwr";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&pcal6524 17 GPIO_ACTIVE_HIGH>;
+		gpio = <&pcal6524 16 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		regulator-always-on;
 	};
