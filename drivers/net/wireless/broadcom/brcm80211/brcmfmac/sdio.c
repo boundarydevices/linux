@@ -1616,13 +1616,20 @@ static u8 brcmf_sdio_rxglom(struct brcmf_sdio *bus, u8 rxseq)
 	/* If there's a descriptor, generate the packet chain */
 	if (bus->glomd) {
 		pfirst = pnext = NULL;
-		dlen = (u16) (bus->glomd->len);
-		dptr = bus->glomd->data;
-		if (!dlen || (dlen & 1)) {
-			brcmf_err("bad glomd len(%d), ignore descriptor\n",
+		/* it is a u32 len to u16 dlen, should have a sanity check here. */
+		if (bus->glomd->len <= 0xFFFF) {
+			dlen = (u16)(bus->glomd->len);
+			if (!dlen || (dlen & 1)) {
+				brcmf_err("bad glomd len(%d), ignore descriptor\n",
+					  dlen);
+				dlen = 0;
+			}
+		} else {
+			brcmf_err("overflowed glomd len(%d), ignore descriptor\n",
 				  dlen);
 			dlen = 0;
 		}
+		dptr = bus->glomd->data;
 
 		for (totlen = num = 0; dlen; num++) {
 			/* Get (and move past) next length */
@@ -1688,6 +1695,7 @@ static u8 brcmf_sdio_rxglom(struct brcmf_sdio *bus, u8 rxseq)
 	/* Ok -- either we just generated a packet chain,
 		 or had one from before */
 	if (!skb_queue_empty(&bus->glom)) {
+		u32 len_glom = 0;
 		if (BRCMF_GLOM_ON()) {
 			brcmf_dbg(GLOM, "try superframe read, packet chain:\n");
 			skb_queue_walk(&bus->glom, pnext) {
@@ -1698,7 +1706,14 @@ static u8 brcmf_sdio_rxglom(struct brcmf_sdio *bus, u8 rxseq)
 		}
 
 		pfirst = skb_peek(&bus->glom);
-		dlen = (u16) brcmf_sdio_glom_len(bus);
+		len_glom = brcmf_sdio_glom_len(bus);
+		if (len_glom > 0xFFFF) {
+			brcmf_err("glom_len is %d bytes, overflowed\n",
+				  len_glom);
+			goto frame_error_handle;
+		} else {
+			dlen = (u16)len_glom;
+		}
 
 		/* Do an SDIO read for the superframe.  Configurable iovar to
 		 * read directly into the chained packet, or allocate a large
@@ -1714,13 +1729,7 @@ static u8 brcmf_sdio_rxglom(struct brcmf_sdio *bus, u8 rxseq)
 		if (errcode < 0) {
 			brcmf_err("glom read of %d bytes failed: %d\n",
 				  dlen, errcode);
-
-			sdio_claim_host(bus->sdiodev->func1);
-			brcmf_sdio_rxfail(bus, true, false);
-			bus->sdcnt.rxglomfail++;
-			brcmf_sdio_free_glom(bus);
-			sdio_release_host(bus->sdiodev->func1);
-			return 0;
+			goto frame_error_handle;
 		}
 
 		brcmf_dbg_hex_dump(BRCMF_GLOM_ON(),
@@ -1757,16 +1766,9 @@ static u8 brcmf_sdio_rxglom(struct brcmf_sdio *bus, u8 rxseq)
 			num++;
 		}
 
-		if (errcode) {
-			/* Terminate frame on error */
-			sdio_claim_host(bus->sdiodev->func1);
-			brcmf_sdio_rxfail(bus, true, false);
-			bus->sdcnt.rxglomfail++;
-			brcmf_sdio_free_glom(bus);
-			sdio_release_host(bus->sdiodev->func1);
-			bus->cur_read.len = 0;
-			return 0;
-		}
+		/* Terminate frame on error */
+		if (errcode)
+			goto frame_error_handle;
 
 		/* Basic SD framing looks ok - process each packet (header) */
 
@@ -1807,6 +1809,16 @@ static u8 brcmf_sdio_rxglom(struct brcmf_sdio *bus, u8 rxseq)
 		bus->sdcnt.rxglomframes++;
 	}
 	return num;
+
+frame_error_handle:
+	sdio_claim_host(bus->sdiodev->func1);
+	brcmf_sdio_rxfail(bus, true, false);
+	bus->sdcnt.rxglomfail++;
+	brcmf_sdio_free_glom(bus);
+	sdio_release_host(bus->sdiodev->func1);
+	bus->cur_read.len = 0;
+
+	return 0;
 }
 
 static int brcmf_sdio_dcmd_resp_wait(struct brcmf_sdio *bus, uint *condition,
