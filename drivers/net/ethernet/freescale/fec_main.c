@@ -934,15 +934,8 @@ static void fec_napi_enable(struct fec_enet_private *fep)
 
 static void fec_napi_disable(struct fec_enet_private *fep)
 {
-	int i;
-
 	fep->napi_disabling = 1;
 	writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
-	for (i = 0; i < FEC_IRQ_NUM; i++) {
-		if (fep->irq[i] > 0) {
-			synchronize_irq(fep->irq[0]);
-		}
-	}
 	napi_disable(&fep->napi);
 	fep->napi_disabling = 0;
 }
