@@ -617,6 +617,7 @@ struct fec_enet_private {
 	bool	rgmii_rxc_dly;
 	bool	rpm_active;
 	bool	mii_bus_share;
+	bool	napi_disabling;
 	int	link;
 	int	full_duplex;
 	int	speed;

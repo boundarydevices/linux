@@ -1004,6 +1004,24 @@ static void fec_enet_reset_skb(struct net_device *ndev)
 	}
 }
 
+static void fec_napi_enable(struct fec_enet_private *fep)
+{
+	napi_enable(&fep->napi);
+	/* Enable interrupts we wish to service */
+	if (fep->link)
+		writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+	else
+		writel(0, fep->hwp + FEC_IMASK);
+}
+
+static void fec_napi_disable(struct fec_enet_private *fep)
+{
+	fep->napi_disabling = 1;
+	writel(0, fep->hwp + FEC_IMASK);
+	napi_disable(&fep->napi);
+	fep->napi_disabling = 0;
+}
+
 /*
  * This function is called to start or restart the FEC during a link
  * change, transmit timeout, or to reconfigure the FEC.  The network
@@ -1190,12 +1208,6 @@ fec_restart(struct net_device *ndev)
 	if (fep->bufdesc_ex)
 		fec_ptp_start_cyclecounter(ndev);
 
-	/* Enable interrupts we wish to service */
-	if (fep->link)
-		writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
-	else
-		writel(0, fep->hwp + FEC_IMASK);
-
 	/* Init the interrupt coalescing */
 	if (fep->quirks & FEC_QUIRK_HAS_COALESCE)
 		fec_enet_itr_coal_set(ndev);
@@ -1361,12 +1373,12 @@ static void fec_enet_timeout_work(struct work_struct *work)
 
 	rtnl_lock();
 	if (netif_device_present(ndev) || netif_running(ndev)) {
-		napi_disable(&fep->napi);
+		fec_napi_disable(fep);
 		netif_tx_lock_bh(ndev);
 		fec_restart(ndev);
 		netif_tx_wake_all_queues(ndev);
 		netif_tx_unlock_bh(ndev);
-		napi_enable(&fep->napi);
+		fec_napi_enable(fep);
 	}
 	rtnl_unlock();
 }
@@ -1814,8 +1826,9 @@ static int fec_enet_napi_q3(struct napi_struct *napi, int budget)
 		events &= FEC_ENET_RXF | FEC_ENET_TXF;
 		if (!events) {
 			if (budget) {
-				napi_complete_done(napi, done);
-				writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+				if (napi_complete_done(napi, done) &&
+						!fep->napi_disabling)
+					writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
 			}
 			return done;
 		}
@@ -1854,8 +1867,9 @@ static int fec_enet_napi_q1(struct napi_struct *napi, int budget)
 		events &= FEC_ENET_RXF_0 | FEC_ENET_TXF_0;
 		if (!events) {
 			if (budget) {
-				napi_complete(napi);
-				writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+				if (napi_complete_done(napi, pkts) &&
+						!fep->napi_disabling)
+					writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
 			}
 			return pkts;
 		}
@@ -1976,22 +1990,22 @@ static void fec_enet_adjust_link(struct net_device *ndev)
 
 		/* if any of the above changed restart the FEC */
 		if (status_change) {
-			napi_disable(&fep->napi);
+			fec_napi_disable(fep);
 			netif_tx_lock_bh(ndev);
 			fec_restart(ndev);
 			netif_tx_wake_all_queues(ndev);
 			netif_tx_unlock_bh(ndev);
-			napi_enable(&fep->napi);
+			fec_napi_enable(fep);
 		}
 	} else {
 		if (fep->link) {
-			napi_disable(&fep->napi);
+			fec_napi_disable(fep);
 			netif_tx_lock_bh(ndev);
 			fep->link = phy_dev->link;
 			fec_stop(ndev);
 			fec_enet_bd_init(ndev);
 			netif_tx_unlock_bh(ndev);
-			napi_enable(&fep->napi);
+			fec_napi_enable(fep);
 			status_change = 1;
 		}
 	}
@@ -2825,12 +2839,12 @@ static int fec_enet_set_pauseparam(struct net_device *ndev,
 		phy_start_aneg(ndev->phydev);
 	}
 	if (netif_running(ndev)) {
-		napi_disable(&fep->napi);
+		fec_napi_disable(fep);
 		netif_tx_lock_bh(ndev);
 		fec_restart(ndev);
 		netif_tx_wake_all_queues(ndev);
 		netif_tx_unlock_bh(ndev);
-		napi_enable(&fep->napi);
+		fec_napi_enable(fep);
 	}
 
 	return 0;
@@ -3624,7 +3638,7 @@ fec_enet_open(struct net_device *ndev)
 	if (fep->quirks & FEC_QUIRK_HAS_PMQOS)
 		cpu_latency_qos_add_request(&fep->pm_qos_req, 0);
 
-	napi_enable(&fep->napi);
+	fec_napi_enable(fep);
 	phy_start(ndev->phydev);
 	netif_tx_start_all_queues(ndev);
 
@@ -3653,7 +3667,7 @@ fec_enet_close(struct net_device *ndev)
 	phy_stop(ndev->phydev);
 
 	if (netif_device_present(ndev)) {
-		napi_disable(&fep->napi);
+		fec_napi_disable(fep);
 		netif_tx_disable(ndev);
 		fec_stop(ndev);
 	}
@@ -3817,14 +3831,14 @@ static int fec_set_features(struct net_device *netdev,
 	netdev_features_t changed = features ^ netdev->features;
 
 	if (netif_running(netdev) && changed & NETIF_F_RXCSUM) {
-		napi_disable(&fep->napi);
+		fec_napi_disable(fep);
 		netif_tx_lock_bh(netdev);
 		fec_stop(netdev);
 		fec_enet_set_netdev_features(netdev, features);
 		fec_restart(netdev);
 		netif_tx_wake_all_queues(netdev);
 		netif_tx_unlock_bh(netdev);
-		napi_enable(&fep->napi);
+		fec_napi_enable(fep);
 	} else {
 		fec_enet_set_netdev_features(netdev, features);
 	}
@@ -4749,7 +4763,7 @@ static int __maybe_unused fec_suspend(struct device *dev)
 		if (fep->wol_flag & FEC_WOL_FLAG_ENABLE)
 			fep->wol_flag |= FEC_WOL_FLAG_SLEEP_ON;
 		phy_stop(ndev->phydev);
-		napi_disable(&fep->napi);
+		fec_napi_disable(fep);
 		netif_tx_lock_bh(ndev);
 		netif_device_detach(ndev);
 		netif_tx_unlock_bh(ndev);
@@ -4834,7 +4848,7 @@ static int __maybe_unused fec_resume(struct device *dev)
 		netif_tx_lock_bh(ndev);
 		netif_device_attach(ndev);
 		netif_tx_unlock_bh(ndev);
-		napi_enable(&fep->napi);
+		fec_napi_enable(fep);
 		phy_init_hw(ndev->phydev);
 		phy_start(ndev->phydev);
 	} else if (fep->mii_bus_share && !ndev->phydev) {
