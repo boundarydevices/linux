@@ -1195,6 +1195,7 @@ fec_stop(struct net_device *ndev)
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	u32 rmii_mode = readl(fep->hwp + FEC_R_CNTRL) & (1 << 8);
 	u32 val;
+	u32 mask = fep->link ? FEC_DEFAULT_IMASK : FEC_ENET_MII;
 
 	/* We cannot expect a graceful transmit stop without link !!! */
 	if (fep->link) {
@@ -1215,9 +1216,9 @@ fec_stop(struct net_device *ndev)
 			writel(1, fep->hwp + FEC_ECNTRL);
 			udelay(10);
 		}
-		writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
+		writel(mask, fep->hwp + FEC_IMASK);
 	} else {
-		writel(FEC_DEFAULT_IMASK | FEC_ENET_WAKEUP, fep->hwp + FEC_IMASK);
+		writel(mask | FEC_ENET_WAKEUP, fep->hwp + FEC_IMASK);
 		val = readl(fep->hwp + FEC_ECNTRL);
 		val |= (FEC_ECR_MAGICEN | FEC_ECR_SLEEP);
 		writel(val, fep->hwp + FEC_ECNTRL);
@@ -1865,6 +1866,7 @@ static void fec_enet_adjust_link(struct net_device *ndev)
 		}
 	} else {
 		if (fep->link) {
+			writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
 			napi_disable(&fep->napi);
 			netif_tx_lock_bh(ndev);
 			fep->link = phy_dev->link;
