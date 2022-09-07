@@ -267,6 +267,13 @@
 		reg = <0x6a>;
 	};
 
+	tsl2540@39 {
+		compatible = "ams,tsl2540";
+		reg = <0x39>;
+		interrupt-parent = <&rpmsg_gpioa>;
+		interrupts = <24 IRQ_TYPE_EDGE_FALLING>;
+	};
+
 	heart-rate@57 {
 		compatible = "maxim,max30105";// max30101 is almost the same as max30105
 		reg = <0x57>;
