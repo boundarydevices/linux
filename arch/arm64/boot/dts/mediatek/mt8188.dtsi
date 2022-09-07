@@ -632,6 +632,24 @@
 			status = "disabled";
 		};
 
+		spmi: spmi@10027000 {
+			compatible = "mediatek,mt8188-spmi",
+				     "mediatek,mt8195-spmi";
+			reg = <0 0x10027000 0 0x000e00>,
+			      <0 0x10029000 0 0x000100>;
+			reg-names = "pmif", "spmimst";
+			interrupts = <GIC_SPI 244 IRQ_TYPE_LEVEL_HIGH 0>,
+				     <GIC_SPI 256 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&infracfg_ao CLK_INFRA_AO_PMIC_AP>,
+				 <&infracfg_ao CLK_INFRA_AO_PMIC_TMR>,
+				 <&topckgen CLK_TOP_SPMI_M_MST>;
+			clock-names = "pmif_sys_ck",
+				      "pmif_tmr_ck",
+				      "spmimst_clk_mux";
+			assigned-clocks = <&topckgen CLK_TOP_SPMI_M_MST>;
+			assigned-clock-parents = <&topckgen CLK_TOP_ULPOSC1_D10>;
+		};
+
 		uart0: serial@11001100 {
 			compatible = "mediatek,mt6577-uart";
 			reg = <0 0x11001100 0 0x100>;
