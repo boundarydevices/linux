@@ -255,6 +255,7 @@ MODULE_DEVICE_TABLE(i2c, pf8x_device_id);
 
 static const struct of_device_id pf8x_dt_ids[] = {
 	{ .compatible = "nxp,pf8x00",},
+	{ .compatible = "nxp,pf8100",},
 	{ }
 };
 MODULE_DEVICE_TABLE(of, pf8x_dt_ids);
