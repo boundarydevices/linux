@@ -22,6 +22,8 @@
 #define ELE_READ_FUSE_REQ		0x97
 #define OTP_UNIQ_ID			0x01
 #define OTFAD_CONFIG			0x2
+#define ELE_GET_INFO_REQ                0xDA
+#define GET_INFO_DATA                   0x17
 
 #define ELE_VERSION			0x6
 #define ELE_SUCCESS_IND			0xD6
@@ -36,5 +38,6 @@
 
 int read_common_fuse(uint16_t fuse_index, u32 *value);
 int ele_ping(void);
+int ele_get_info(phys_addr_t addr, u32 data_size);
 
 #endif

@@ -176,3 +176,37 @@ int ele_ping(void)
 	return -EAGAIN;
 }
 EXPORT_SYMBOL_GPL(ele_ping);
+
+int ele_get_info(phys_addr_t addr, u32 data_size)
+{
+	struct ele_mu_priv *priv;
+	int ret;
+	unsigned int tag, command, size, ver, status;
+
+	ret = get_ele_mu_priv(&priv);
+	if (ret)
+		return ret;
+
+	ret = plat_fill_cmd_msg_hdr((struct mu_hdr *)&priv->tx_msg.header, ELE_GET_INFO_REQ, 16);
+	if (ret)
+		return ret;
+
+	priv->tx_msg.data[0] = upper_32_bits(addr);
+	priv->tx_msg.data[1] = lower_32_bits(addr);
+	priv->tx_msg.data[2] = data_size;
+	ret = imx_ele_msg_send_rcv(priv);
+	if (ret < 0)
+		return ret;
+
+	tag = MSG_TAG(priv->rx_msg.header);
+	command = MSG_COMMAND(priv->rx_msg.header);
+	size = MSG_SIZE(priv->rx_msg.header);
+	ver = MSG_VER(priv->rx_msg.header);
+	status = RES_STATUS(priv->rx_msg.data[0]);
+	if (tag == 0xe1 && command == ELE_GET_INFO_REQ && size == 0x02 &&
+	    ver == 0x06 && status == 0xd6)
+		return 0;
+
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(ele_get_info);
