@@ -24,9 +24,11 @@
 #define TMTMIR_DEFAULT	0x0000000f
 #define TIER_DISABLE	0x0
 #define TEUMR0_V2		0x51009c00
+#define TEUMR0_V21		0x55010c00
 #define TMSARA_V2		0xe
 #define TMU_VER1		0x1
 #define TMU_VER2		0x2
+#define TMU_VER21		0x01900201
 #define TMU_TEMP_PASSIVE_COOL_DELTA	10000
 
 #define REGS_TMR	0x000	/* Mode Register */
@@ -311,6 +313,33 @@ static int qoriq_tmu_calibration(struct device *dev,
 	return 0;
 }
 
+static int imx93_tmu_calibration(struct device *dev,
+				 struct qoriq_tmu_data *data)
+{
+	const u32 *calibration = NULL;
+	u32 cal_pt = 0;
+	u32 val = 0;
+	unsigned int len = 0;
+	unsigned int i = 0;
+
+	calibration = of_get_property(dev->of_node, "fsl,tmu-calibration", &len);
+	if (calibration == NULL || len / 8 > 16 || len % 8) {
+		dev_err(dev, "invalid tmu calibration\n");
+		return -ENODEV;
+	}
+
+	for (i = 0; i < len; i += 0x8, calibration += 2) {
+		cal_pt = i / 8;
+		regmap_write(data->regmap, REGS_TTCFGR, cal_pt);
+		val = of_read_number(calibration, 1);
+		regmap_write(data->regmap, REGS_TSCFGR, val);
+		val = of_read_number(calibration + 1, 1);
+		regmap_write(data->regmap, REGS_TTRnCR(cal_pt), val);
+	}
+
+	return 0;
+}
+
 static void qoriq_tmu_init_device(struct qoriq_tmu_data *data)
 {
 	/* Disable interrupt, using polling instead */
@@ -320,6 +349,11 @@ static void qoriq_tmu_init_device(struct qoriq_tmu_data *data)
 
 	if (data->ver == TMU_VER1) {
 		regmap_write(data->regmap, REGS_TMTMIR, TMTMIR_DEFAULT);
+	} if (data->ver == TMU_VER21) {
+		regmap_write(data->regmap, REGS_V2_TMTMIR, TMTMIR_DEFAULT);
+		regmap_write(data->regmap, REGS_V2_TEUMR(0), TEUMR0_V21);
+		for (i = 0; i < SITES_MAX; i++)
+			regmap_write(data->regmap, REGS_V2_TMSAR(i), TMSARA_V2);
 	} else {
 		regmap_write(data->regmap, REGS_V2_TMTMIR, TMTMIR_DEFAULT);
 		regmap_write(data->regmap, REGS_V2_TEUMR(0), TEUMR0_V2);
@@ -419,9 +453,15 @@ static int qoriq_tmu_probe(struct platform_device *pdev)
 	}
 	data->ver = (ver >> 8) & 0xff;
 
+	if (ver == TMU_VER21)
+		data->ver = TMU_VER21;
+
 	qoriq_tmu_init_device(data);	/* TMU initialization */
 
-	ret = qoriq_tmu_calibration(dev, data);	/* TMU calibration */
+	if (data->ver == TMU_VER21)
+		ret = imx93_tmu_calibration(dev, data);
+	else
+		ret = qoriq_tmu_calibration(dev, data);	/* TMU calibration */
 	if (ret < 0)
 		return ret;
 
@@ -469,6 +509,7 @@ static SIMPLE_DEV_PM_OPS(qoriq_tmu_pm_ops,
 static const struct of_device_id qoriq_tmu_match[] = {
 	{ .compatible = "fsl,qoriq-tmu", },
 	{ .compatible = "fsl,imx8mq-tmu", },
+	{ .compatible = "fsl,imx93-tmu", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, qoriq_tmu_match);
