@@ -2959,13 +2959,13 @@ static int lpuart_probe(struct platform_device *pdev)
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 
-	ret = uart_add_one_port(&lpuart_reg, &sport->port);
-	if (ret)
-		goto failed_attach_port;
-
 	ret = lpuart_global_reset(sport);
 	if (ret)
 		goto failed_reset;
+
+	ret = uart_add_one_port(&lpuart_reg, &sport->port);
+	if (ret)
+		goto failed_attach_port;
 
 	ret = uart_get_rs485_mode(&sport->port);
 	if (ret)
@@ -2989,9 +2989,9 @@ static int lpuart_probe(struct platform_device *pdev)
 
 failed_irq_request:
 failed_get_rs485:
-failed_reset:
 	uart_remove_one_port(&lpuart_reg, &sport->port);
 failed_attach_port:
+failed_reset:
 	pm_runtime_disable(&pdev->dev);
 	pm_runtime_set_suspended(&pdev->dev);
 	pm_runtime_dont_use_autosuspend(&pdev->dev);
