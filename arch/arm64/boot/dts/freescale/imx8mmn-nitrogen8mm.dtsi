@@ -954,6 +954,7 @@
 		pinctrl-0 = <&pinctrl_ts_atmel>;
 		reg = <0x4a>;
 		reset-gpios = GP_TS_ATMEL_RESET;
+		status = "disabled";
 		wakeup-gpios = GP_TS_ATMEL;
 	};
 
