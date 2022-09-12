@@ -33,6 +33,16 @@
 		#size-cells = <2>;
 		ranges;
 	};
+
+	VDD_3V3: VDD-3V3 {
+		compatible = "regulator-fixed";
+		regulator-name = "VDD-3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&pio 9 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
 };
 
 &pio {
