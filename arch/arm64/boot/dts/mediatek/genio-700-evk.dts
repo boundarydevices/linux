@@ -34,6 +34,16 @@
 		ranges;
 	};
 
+	VDD_5V: VDD-5V {
+		compatible = "regulator-fixed";
+		regulator-name = "VDD-5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&pio 10 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
 	VDD_3V3: VDD-3V3 {
 		compatible = "regulator-fixed";
 		regulator-name = "VDD-3V3";
