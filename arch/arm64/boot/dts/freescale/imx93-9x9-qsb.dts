@@ -233,6 +233,11 @@
 			self-powered;
 		};
 	};
+
+	lsm6dsm@6a {
+		compatible = "st,lsm6dso";
+		reg = <0x6a>;
+	};
 };
 
 &lpi2c2 {
