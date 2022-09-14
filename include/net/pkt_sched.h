@@ -186,6 +186,7 @@ struct tc_taprio_qopt_offload {
 #if IS_ENABLED(CONFIG_NET_SCH_TAPRIO)
 
 /* Reference counting */
+struct tc_taprio_qopt_offload *taprio_offload_alloc(int num_entries);
 struct tc_taprio_qopt_offload *taprio_offload_get(struct tc_taprio_qopt_offload
 						  *offload);
 void taprio_offload_free(struct tc_taprio_qopt_offload *offload);
@@ -193,6 +194,12 @@ void taprio_offload_free(struct tc_taprio_qopt_offload *offload);
 #else
 
 /* Reference counting */
+static inline struct tc_taprio_qopt_offload *
+taprio_offload_alloc(int num_entries)
+{
+	return NULL;
+}
+
 static inline struct tc_taprio_qopt_offload *
 taprio_offload_get(struct tc_taprio_qopt_offload *offload)
 {

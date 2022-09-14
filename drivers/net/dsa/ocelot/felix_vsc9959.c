@@ -17,6 +17,7 @@
 #include <linux/mdio.h>
 #include <linux/pci.h>
 #include <linux/time.h>
+#include "felix_tsn.h"
 #include "felix.h"
 
 #define VSC9959_NUM_PORTS		6
@@ -439,6 +440,9 @@ static const u32 vsc9959_dev_gmii_regmap[] = {
 	REG(DEV_MAC_FC_MAC_LOW_CFG,		0x3c),
 	REG(DEV_MAC_FC_MAC_HIGH_CFG,		0x40),
 	REG(DEV_MAC_STICKY,			0x44),
+	REG(DEV_MM_ENABLE_CONFIG,		0x48),
+	REG(DEV_MM_VERIF_CONFIG,		0x4C),
+	REG(DEV_MM_STATUS,			0x50),
 	REG_RESERVED(PCS1G_CFG),
 	REG_RESERVED(PCS1G_MODE_CFG),
 	REG_RESERVED(PCS1G_SD_CFG),
@@ -1330,7 +1334,7 @@ static void vsc9959_tas_guard_bands_update(struct ocelot *ocelot, int port)
 }
 
 static void vsc9959_sched_speed_set(struct ocelot *ocelot, int port,
-				    u32 speed)
+				    int speed)
 {
 	struct ocelot_port *ocelot_port = ocelot->ports[port];
 	u8 tas_speed;
@@ -1364,11 +1368,14 @@ static void vsc9959_sched_speed_set(struct ocelot *ocelot, int port,
 		vsc9959_tas_guard_bands_update(ocelot, port);
 
 	mutex_unlock(&ocelot->tas_lock);
+
+#ifdef CONFIG_MSCC_FELIX_SWITCH_TSN
+	felix_cbs_reset(ocelot, port, speed);
+#endif
 }
 
-static void vsc9959_new_base_time(struct ocelot *ocelot, ktime_t base_time,
-				  u64 cycle_time,
-				  struct timespec64 *new_base_ts)
+void vsc9959_new_base_time(struct ocelot *ocelot, ktime_t base_time,
+			   u64 cycle_time, struct timespec64 *new_base_ts)
 {
 	struct timespec64 ts;
 	ktime_t new_base_time;
@@ -2526,12 +2533,12 @@ static void vsc9959_cut_through_fwd(struct ocelot *ocelot)
 				min_speed = other_ocelot_port->speed;
 		}
 
-		/* Enable cut-through forwarding for all traffic classes that
-		 * don't have oversized dropping enabled, since this check is
-		 * bypassed in cut-through mode.
+		/* Enable cut-through forwarding for all traffic classes
+		 * selected by ethtool that don't have oversized dropping
+		 * enabled, since this check is bypassed in cut-through mode.
 		 */
 		if (ocelot_port->speed == min_speed) {
-			val = GENMASK(7, 0);
+			val = ocelot_port->cut_thru;
 
 			for (tc = 0; tc < OCELOT_NUM_TC; tc++)
 				if (vsc9959_port_qmaxsdu_get(ocelot, port, tc))
@@ -2603,10 +2610,13 @@ static irqreturn_t felix_irq_handler(int irq, void *data)
 	 * and preemption status change interrupt on each port.
 	 *
 	 * - Get txtstamp if have
-	 * - TODO: handle preemption. Without handling it, driver may get
-	 *   interrupt storm.
+	 * - Handle preemption if it's preemption IRQ. Without handling it,
+	 *   driver may get interrupt storm.
 	 */
 
+#ifdef CONFIG_MSCC_FELIX_SWITCH_TSN
+	felix_preempt_irq_clean(ocelot);
+#endif
 	ocelot_get_txtstamp(ocelot);
 
 	return IRQ_HANDLED;
@@ -2677,6 +2687,10 @@ static int felix_pci_probe(struct pci_dev *pdev,
 		dev_err_probe(&pdev->dev, err, "Failed to register DSA switch\n");
 		goto err_register_ds;
 	}
+
+#ifdef CONFIG_MSCC_FELIX_SWITCH_TSN
+	felix_tsn_enable(ds);
+#endif
 
 	return 0;
 
