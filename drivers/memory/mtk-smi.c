@@ -35,6 +35,10 @@
 #define SMI_DUMMY			0x444
 
 /* SMI LARB */
+#define SMI_LARB_SLP_CON                0xc
+#define SLP_PROT_EN                     BIT(0)
+#define SLP_PROT_RDY                    BIT(16)
+
 #define SMI_LARB_CMD_THRT_CON		0x24
 #define SMI_LARB_THRT_RD_NU_LMT_MSK	GENMASK(7, 4)
 #define SMI_LARB_THRT_RD_NU_LMT		(5 << 4)
@@ -84,16 +88,13 @@
 
 #define MTK_SMI_FLAG_THRT_UPDATE	BIT(0)
 #define MTK_SMI_FLAG_SW_FLAG		BIT(1)
+#define MTK_SMI_FLAG_SLEEP_CTL		BIT(2)
 #define MTK_SMI_CAPS(flags, _x)		(!!((flags) & (_x)))
 
 struct mtk_smi_reg_pair {
 	unsigned int		offset;
 	u32			value;
 };
-
-#define SMI_LARB_SLP_CON		0x00c
-#define SLP_PROT_EN			BIT(0)
-#define SLP_PROT_RDY			BIT(16)
 
 /* mt8168 */
 #define MMSYS_HW_DCM_1ST_DIS_SET0	0x124
@@ -136,7 +137,6 @@ struct mtk_smi_common_plat {
 struct mtk_smi_larb_gen {
 	int port_in_larb[MTK_LARB_NR_MAX + 1];
 	void (*config_port)(struct device *dev);
-	void (*larb_sleep_ctrl)(struct device *dev, bool toslp);
 	unsigned int			larb_direct_to_common_mask;
 	unsigned int			flags_general;
 	const u8			(*ostd)[SMI_LARB_PORT_NR_MAX];
@@ -224,25 +224,6 @@ static void mtk_smi_larb_config_port_gen1(struct device *dev)
 			common->smi_ao_base
 			+ REG_SMI_SECUR_CON_ADDR(m4u_port_id));
 	}
-}
-
-static void mtk_smi_larb_sleep_ctrl_mt8168(struct device *dev, bool toslp)
-{
-	struct mtk_smi_larb *larb = dev_get_drvdata(dev);
-	void __iomem *base = larb->base;
-	u32 tmp;
-
-	/* larb4 should be use a general way. */
-	if (larb->larbid == 4)
-		return;
-
-	if (toslp) {
-		writel_relaxed(SLP_PROT_EN, base + SMI_LARB_SLP_CON);
-		if (readl_poll_timeout_atomic(base + SMI_LARB_SLP_CON,
-				tmp, !!(tmp & SLP_PROT_RDY), 10, 10000))
-			dev_warn(dev, "larb sleep con not ready(%d)\n", tmp);
-	} else
-		writel_relaxed(0, base + SMI_LARB_SLP_CON);
 }
 
 static void mtk_smi_larb_config_port_mt8167(struct device *dev)
@@ -377,7 +358,8 @@ static const struct mtk_smi_larb_gen mtk_smi_larb_mt8192 = {
 
 static const struct mtk_smi_larb_gen mtk_smi_larb_mt8365 = {
 	.config_port = mtk_smi_larb_config_port_gen2_general,
-	.larb_sleep_ctrl = mtk_smi_larb_sleep_ctrl_mt8168,
+	.flags_general = MTK_SMI_FLAG_SLEEP_CTL,
+
 };
 
 static const struct mtk_smi_larb_gen mtk_smi_larb_mt8195 = {
@@ -398,6 +380,26 @@ static const struct of_device_id mtk_smi_larb_of_ids[] = {
 	{.compatible = "mediatek,mt8365-smi-larb", .data = &mtk_smi_larb_mt8365},
 	{}
 };
+
+static int mtk_smi_larb_sleep_ctrl_enable(struct mtk_smi_larb *larb)
+{
+	int ret;
+	u32 tmp;
+
+	writel_relaxed(SLP_PROT_EN, larb->base + SMI_LARB_SLP_CON);
+	ret = readl_poll_timeout_atomic(larb->base + SMI_LARB_SLP_CON,
+					tmp, !!(tmp & SLP_PROT_RDY), 10, 1000);
+	if (ret) {
+		/* TODO: Reset this larb if it fails here. */
+		dev_err(larb->smi.dev, "sleep ctrl is not ready(0x%x).\n", tmp);
+	}
+	return ret;
+}
+
+static void mtk_smi_larb_sleep_ctrl_disable(struct mtk_smi_larb *larb)
+{
+	writel_relaxed(0, larb->base + SMI_LARB_SLP_CON);
+}
 
 static int mtk_smi_device_link_common(struct device *dev, struct device **com_dev)
 {
@@ -511,8 +513,8 @@ static int __maybe_unused mtk_smi_larb_resume(struct device *dev)
 	if (ret)
 		return ret;
 
-	if (larb_gen->larb_sleep_ctrl)
-		larb_gen->larb_sleep_ctrl(dev, false);
+	if (MTK_SMI_CAPS(larb->larb_gen->flags_general, MTK_SMI_FLAG_SLEEP_CTL))
+		mtk_smi_larb_sleep_ctrl_disable(larb);
 
 	/* Configure the basic setting for this larb */
 	larb_gen->config_port(dev);
@@ -523,10 +525,13 @@ static int __maybe_unused mtk_smi_larb_resume(struct device *dev)
 static int __maybe_unused mtk_smi_larb_suspend(struct device *dev)
 {
 	struct mtk_smi_larb *larb = dev_get_drvdata(dev);
-	const struct mtk_smi_larb_gen *larb_gen = larb->larb_gen;
+	int ret;
 
-	if (larb_gen->larb_sleep_ctrl)
-		larb_gen->larb_sleep_ctrl(dev, true);
+	if (MTK_SMI_CAPS(larb->larb_gen->flags_general, MTK_SMI_FLAG_SLEEP_CTL)) {
+		ret = mtk_smi_larb_sleep_ctrl_enable(larb);
+		if (ret)
+			return ret;
+	}
 
 	clk_bulk_disable_unprepare(larb->smi.clk_num, larb->smi.clks);
 	return 0;
