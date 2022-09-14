@@ -363,7 +363,7 @@ struct mdp_comp {
 	void __iomem			*regs;
 	phys_addr_t			reg_base;
 	u8				subsys_id;
-	struct clk			*clks[6];
+	struct clk			*clks[7];
 	struct device			*comp_dev;
 	enum mdp_comp_type		type;
 	enum mdp_comp_id		id;
