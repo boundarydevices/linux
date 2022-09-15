@@ -111,6 +111,11 @@
 #define BRCMF_MAX_CHANSPEC_LIST \
 	(BRCMF_DCMD_MEDLEN / sizeof(__le32) - 1)
 
+#define BSS_MEMBERSHIP_SELECTOR_SAE_H2E_ONLY 123
+#define BSS_MEMBERSHIP_SELECTOR_SET 0x80
+#define SAE_H2E_ONLY_ENABLE (BSS_MEMBERSHIP_SELECTOR_SAE_H2E_ONLY | \
+				BSS_MEMBERSHIP_SELECTOR_SET)
+
 struct brcmf_dump_survey {
 	u32 obss;
 	u32 ibss;
@@ -5381,6 +5386,75 @@ brcmf_config_ap_mgmt_ie(struct brcmf_cfg80211_vif *vif,
 }
 
 static s32
+brcmf_parse_configure_sae_pwe(struct brcmf_if *ifp,
+			      struct cfg80211_ap_settings *settings)
+{
+	s32 err = 0;
+	const struct brcmf_tlv *rsnx_ie;
+	const struct brcmf_tlv *ext_rate_ie;
+	const struct brcmf_tlv *supp_rate_ie;
+	u8 ie_len, i;
+	bool support_sae_h2e = false, must_sae_h2e = false;
+
+	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_SAE_EXT)) {
+		rsnx_ie = brcmf_parse_tlvs((u8 *)settings->beacon.tail,
+					   settings->beacon.tail_len,
+					   WLAN_EID_RSNX);
+		if (rsnx_ie) {
+			ie_len = rsnx_ie->len;
+			if (ie_len) {
+				if (rsnx_ie->data[0] & WLAN_RSNX_CAPA_SAE_H2E)
+					support_sae_h2e = true;
+			}
+			brcmf_dbg(INFO, "found RSNX IE, support_sae_h2e:%d\n",
+				  support_sae_h2e);
+		}
+
+		/* found rsnx_ie with SAE_H2E, check the bss selector to know if it is a H2E only */
+		if (support_sae_h2e) {
+			supp_rate_ie = brcmf_parse_tlvs((u8 *)settings->beacon.head,
+							settings->beacon.head_len,
+							WLAN_EID_SUPP_RATES);
+			ext_rate_ie = brcmf_parse_tlvs((u8 *)settings->beacon.tail,
+						       settings->beacon.tail_len,
+						       WLAN_EID_EXT_SUPP_RATES);
+			if (ext_rate_ie) {
+				ie_len = ext_rate_ie->len;
+				for (i = 0; i < ie_len; i++) {
+					if (ext_rate_ie->data[i] == SAE_H2E_ONLY_ENABLE) {
+						must_sae_h2e = true;
+						break;
+					}
+				}
+			}
+
+			/* if we cannot found H2E only selector in ext_supp_rate ie.
+			 * traversal supp_rate ie to make sure it really doesn't exist.
+			 */
+			if (!must_sae_h2e && supp_rate_ie) {
+				ie_len = supp_rate_ie->len;
+				for (i = 0; i < ie_len; i++) {
+					if (supp_rate_ie->data[i] == SAE_H2E_ONLY_ENABLE) {
+						must_sae_h2e = true;
+						break;
+					}
+				}
+			}
+			brcmf_dbg(INFO, "must_sae_h2e:%d\n", must_sae_h2e);
+		}
+
+		if (must_sae_h2e) /* support SAE H2E only */
+			err = brcmf_fil_iovar_int_set(ifp, "extsae_pwe", 1);
+		else if (support_sae_h2e) /* support SAE P&H and H2E both */
+			err = brcmf_fil_iovar_int_set(ifp, "extsae_pwe", 2);
+		else /* support SAE P&H only */
+			err = brcmf_fil_iovar_int_set(ifp, "extsae_pwe", 0);
+	}
+
+	return err;
+}
+
+static s32
 brcmf_parse_configure_security(struct brcmf_if *ifp,
 			       struct cfg80211_ap_settings *settings,
 			       enum nl80211_iftype dev_role)
@@ -5411,6 +5485,10 @@ brcmf_parse_configure_security(struct brcmf_if *ifp,
 
 			/* RSN IE */
 			err = brcmf_configure_wpaie(ifp, tmp_ie, true);
+			if (err < 0)
+				return err;
+
+			err = brcmf_parse_configure_sae_pwe(ifp, settings);
 			if (err < 0)
 				return err;
 		}
