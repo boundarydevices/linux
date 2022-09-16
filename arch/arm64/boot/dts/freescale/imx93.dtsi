@@ -735,6 +735,21 @@
 				status = "disabled";
 			};
 
+			flexspi1: spi@425e0000 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				compatible = "nxp,imx93-fspi", "nxp,imx8mm-fspi";
+				reg = <0x425e0000 0x10000>, <0x28000000 0x10000000>;
+				reg-names = "fspi_base", "fspi_mmap";
+				interrupts = <GIC_SPI 55 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&clk IMX93_CLK_FLEXSPI1_GATE>,
+					 <&clk IMX93_CLK_FLEXSPI1_GATE>;
+				clock-names = "fspi", "fspi_en";
+				assigned-clocks = <&clk IMX93_CLK_FLEXSPI1>;
+				assigned-clock-parents = <&clk IMX93_CLK_SYS_PLL_PFD1>;
+				status = "disabled";
+			};
+
 			sai2: sai@42650000 {
 				compatible = "fsl,imx93-sai";
 				reg = <0x42650000 0x10000>;
