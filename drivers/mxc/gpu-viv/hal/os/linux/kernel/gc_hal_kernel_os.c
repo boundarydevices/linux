@@ -513,6 +513,38 @@ _QueryProcessPageTable(
     }
 }
 
+#if 0
+static inline gceSTATUS
+_AllowAccess(
+    IN gckOS Os,
+    IN gceCORE Core,
+    IN gctUINT32 Address
+    )
+{
+    gctUINT32 data;
+
+    /* Check external clock state. */
+    if (Os->clockStates[Core] == gcvFALSE)
+    {
+        return gcvSTATUS_NOT_SUPPORTED;
+    }
+
+    /* Check internal clock state. */
+    if (Address == 0)
+    {
+        return gcvSTATUS_OK;
+    }
+
+    data = readl((gctUINT8 *)Os->device->registerBases[Core] + 0x0);
+
+    if ((data & 0x3) == 0x3)
+    {
+        return gcvSTATUS_NOT_SUPPORTED;
+    }
+
+    return gcvSTATUS_OK;
+}
+#endif
 
 static gceSTATUS
 _ShrinkMemory(
@@ -876,6 +908,13 @@ gckOS_Destroy(
     /* Mark the gckOS object as unknown. */
     Os->object.type = gcvOBJ_UNKNOWN;
 
+#if !defined(gcdREMOVE_FROM_FINAL_RELEASE)
+    if (atomic_read(&Os->allocateCount) != 0)
+    {
+        gcmkPRINT("[galcore]: Memory leak detected, %d allocation not freed",
+                  atomic_read(&Os->allocateCount));
+    }
+#endif
 
 #if gcdDUMP_IN_KERNEL
     mutex_lock(&Os->dumpFilpMutex);
@@ -2351,7 +2390,7 @@ OnError:
     gcmkFOOTER_ARG("*Logical=%p", *Logical);
     return status;
 }
-
+#endif
 /*******************************************************************************
 **
 **  gckOS_UnmapPhysical
@@ -2436,6 +2475,38 @@ gckOS_UnmapPhysical(
 **
 **      Nothing.
 */
+#if IS_ENABLED(CONFIG_PROVE_LOCKING)
+gceSTATUS
+gckOS_DeleteMutex(
+    IN gckOS Os,
+    IN gctPOINTER Mutex
+    )
+{
+    gceSTATUS status = gcvSTATUS_OK;
+
+    struct key_mutex *key_mut = (struct key_mutex *)Mutex;
+
+    gcmkHEADER_ARG("Os=%p Mutex=%p", Os, Mutex);
+
+    /* Validate the arguments. */
+    gcmkVERIFY_OBJECT(Os, gcvOBJ_OS);
+    gcmkVERIFY_ARGUMENT(Mutex != gcvNULL);
+
+    /* Destroy the mutex. */
+
+    mutex_destroy((struct mutex *)&key_mut->mut);
+    lockdep_unregister_key(&key_mut->key);
+
+    /* Free the mutex structure. */
+    gcmkONERROR(gckOS_Free(Os, Mutex));
+
+OnError:
+    /* Return status. */
+    gcmkFOOTER();
+    return status;
+}
+
+#else
 gceSTATUS
 gckOS_DeleteMutex(
     IN gckOS Os,
@@ -2461,6 +2532,7 @@ OnError:
     gcmkFOOTER();
     return status;
 }
+#endif
 
 /*******************************************************************************
 **
@@ -4696,6 +4768,11 @@ gckOS_BroadcastHurry(
     gcmkHEADER_ARG("Os=%p Hardware=%p Urgency=%u", Os, Hardware, Urgency);
 
     /* Do whatever you need to do to speed up the GPU now. */
+#if 0
+    {
+        gcmkPRINT("Hurry! (%u)",Urgency);
+    }
+#endif
 
     /* Success. */
     gcmkFOOTER_NO();
@@ -4736,6 +4813,12 @@ gckOS_BroadcastCalibrateSpeed(
                    Os, Hardware, Idle, Time);
 
     /* Do whatever you need to do to callibrate the GPU speed. */
+#if 0
+    {
+        gctUINT percent = ((Time - Idle) * 100) / Time;
+        gcmkPRINT("Calibrate to %u%% (%u/%u).", percent, Idle, Time);
+    }
+#endif
 
     /* Success. */
     gcmkFOOTER_NO();
