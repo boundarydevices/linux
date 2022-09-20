@@ -57,8 +57,8 @@
 				metadata {
 					compatible = "android,metadata";
 					dev = "/dev/block/by-name/metadata";
-					type = "ext4";
-					mnt_flags = "noatime,nosuid,nodev,discard,sync";
+					type = "f2fs";
+					mnt_flags = "noatime,nosuid,nodev,discard,sync,fsync_mode=nobarrier";
 					fsmgr_flags = "wait,formattable,first_stage_mount,check";
 				};
 			};
