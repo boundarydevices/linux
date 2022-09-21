@@ -281,6 +281,21 @@
 &pmic {
 	interrupt-parent = <&pio>;
 	interrupts = <222 IRQ_TYPE_LEVEL_HIGH>;
+
+	pmic_key: pmic-key {
+		compatible = "mediatek,mt6359-keys";
+		mediatek,long-press-mode = <1>;
+		power-off-time-sec = <0>;
+
+		power-key{
+			linux,keycodes = <116>;
+			wakeup-source;
+		};
+
+		home-key{
+			linux,keycodes = <114>;
+		};
+	};
 };
 
 &mt6359_vbbck_ldo_reg {
