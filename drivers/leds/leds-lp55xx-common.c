@@ -630,15 +630,13 @@ static int lp55xx_parse_logical_led(struct device_node *np,
 				   struct lp55xx_led_config *cfg,
 				   int child_number)
 {
-	int led_color, ret;
+	int led_color = 0, ret;
 	int chan_nr = 0;
 
 	cfg[child_number].default_trigger =
 		of_get_property(np, "linux,default-trigger", NULL);
 
-	ret = of_property_read_u32(np, "color", &led_color);
-	if (ret)
-		return ret;
+	of_property_read_u32(np, "color", &led_color);
 
 	if (led_color == LED_COLOR_ID_RGB)
 		return lp55xx_parse_multi_led(np, cfg, child_number);
