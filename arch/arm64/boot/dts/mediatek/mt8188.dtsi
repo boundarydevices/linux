@@ -252,6 +252,15 @@
 		interrupts = <GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH &ppi_cluster0>;
 	};
 
+	keypad: keypad@10010000 {
+		compatible = "mediatek,mt8188-keypad",
+				"mediatek,mt6779-keypad",
+				"mediatek,kp";
+		reg = <0 0x10010000 0 0x1000>;
+		clocks = <&clk26m>;
+		clock-names = "kpd";
+		interrupts = <GIC_SPI 106 IRQ_TYPE_EDGE_RISING 0>;
+	};
 
 	psci {
 		compatible = "arm,psci-1.0";
