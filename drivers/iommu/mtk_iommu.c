@@ -321,6 +321,15 @@ static const struct mtk_iommu_iova_region mt8192_multi_dom[] = {
 	#endif
 };
 
+static const struct mtk_iommu_iova_region mt8188_multi_dom_apu[] = {
+	{ .iova_base = 0x200000ULL,	.size = SZ_512M},	/* APU SECURE */
+	#if IS_ENABLED(CONFIG_ARCH_DMA_ADDR_T_64BIT)
+	{ .iova_base = SZ_1G,		.size = 0xc0000000},	/* APU CODE */
+	{ .iova_base = 0x70000000ULL,	.size = 0x12600000},	/* APU VLM */
+	{ .iova_base = SZ_4G,		.size = SZ_4G * 3},	/* APU VPU */
+	#endif
+};
+
 static const struct mtk_iommu_iova_region mt8192_multi_dom_apu[] = {
 	{ .iova_base = 0x0,		.size = SZ_4G}, /* APU DATA */
 	{ .iova_base = 0x4000000ULL,	.size = 0x4000000},  /* APU VLM */
@@ -816,9 +825,6 @@ static struct iommu_device *mtk_iommu_probe_device(struct device *dev)
 
 	data = dev_iommu_priv_get(dev);
 
-	if (!MTK_IOMMU_IS_TYPE(data->plat_data, MTK_IOMMU_TYPE_MM))
-		return &data->iommu;
-
 	if (MTK_IOMMU_IS_TYPE(data->plat_data, MTK_IOMMU_TYPE_APU)) {
 		/*
 		 * The APU IOMMU HWs must work together. The consumer device
@@ -830,15 +836,15 @@ static struct iommu_device *mtk_iommu_probe_device(struct device *dev)
 			if (!link)
 				dev_err(dev, "Unable to link %s\n", dev_name(curdata->dev));
 		}
-	} else {
+	} else if (MTK_IOMMU_IS_TYPE(data->plat_data, MTK_IOMMU_TYPE_MM)) {
 		/*
 		 * Link the consumer device with the smi-larb device(supplier).
 		 * The device that connects with each a larb is a independent HW.
 		 * All the ports in each a device should be in the same larbs.
 		 */
 		larbid = MTK_M4U_TO_LARB(fwspec->ids[0]);
-	if (larbid >= MTK_LARB_NR_MAX)
-		return ERR_PTR(-EINVAL);
+		if (larbid >= MTK_LARB_NR_MAX)
+			return ERR_PTR(-EINVAL);
 
 		for (i = 1; i < fwspec->num_ids; i++) {
 			larbidx = MTK_M4U_TO_LARB(fwspec->ids[i]);
@@ -849,8 +855,8 @@ static struct iommu_device *mtk_iommu_probe_device(struct device *dev)
 			}
 		}
 		larbdev = data->larb_imu[larbid].dev;
-	if (!larbdev)
-		return ERR_PTR(-EINVAL);
+		if (!larbdev)
+			return ERR_PTR(-EINVAL);
 
 		link = device_link_add(dev, larbdev,
 				       DL_FLAG_PM_RUNTIME | DL_FLAG_STATELESS);
@@ -1307,6 +1313,10 @@ static int mtk_iommu_probe(struct platform_device *pdev)
 			ret = PTR_ERR(data->pericfg);
 			goto out_runtime_disable;
 		}
+	} else if (MTK_IOMMU_IS_TYPE(data->plat_data, MTK_IOMMU_TYPE_APU)) {
+		ret = mtk_apu_iommu_prepare(data, dev);
+		if (ret)
+			goto out_runtime_disable;
 	}
 
 	platform_set_drvdata(pdev, data);
@@ -1592,6 +1602,18 @@ static const struct mtk_iommu_plat_data mt8188_data_vpp = {
 			   27, 28 /* ccu0 */, MTK_INVALID_LARBID}, {4, 6}},
 };
 
+static const struct mtk_iommu_plat_data mt8188_data_apu = {
+	.m4u_plat       = M4U_MT8188,
+	.flags          = DCM_DISABLE | MTK_IOMMU_TYPE_APU |
+			  SHARE_PGTABLE | IOVA_34_EN | STD_AXI_MODE,
+	.inv_sel_reg    = REG_MMU_INV_SEL_GEN2,
+	.hw_list        = &apulist,
+	.banks_num	= 1,
+	.banks_enable    = {true},
+	.iova_region    = mt8188_multi_dom_apu,
+	.iova_region_nr = ARRAY_SIZE(mt8188_multi_dom_apu),
+};
+
 static const struct mtk_iommu_plat_data mt8192_data = {
 	.m4u_plat       = M4U_MT8192,
 	.flags          = HAS_BCLK | HAS_SUB_COMM_2BITS | OUT_ORDER_WR_EN |
@@ -1694,6 +1716,7 @@ static const struct of_device_id mtk_iommu_of_ids[] = {
 	{ .compatible = "mediatek,mt8173-m4u", .data = &mt8173_data},
 	{ .compatible = "mediatek,mt8183-m4u", .data = &mt8183_data},
 	{ .compatible = "mediatek,mt8186-iommu-mm",    .data = &mt8186_data_mm}, /* mm: m4u */
+	{ .compatible = "mediatek,mt8188-iommu-apu",   .data = &mt8188_data_apu},
 	{ .compatible = "mediatek,mt8188-iommu-infra", .data = &mt8188_data_infra},
 	{ .compatible = "mediatek,mt8188-iommu-vdo", .data = &mt8188_data_vdo},
 	{ .compatible = "mediatek,mt8188-iommu-vpp", .data = &mt8188_data_vpp},
