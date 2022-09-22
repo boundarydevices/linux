@@ -711,10 +711,10 @@
 		ialrt-min = <(-5000)>; /* mA */
 		ialrt-max = <5000>;    /* mA */
 		/* EZ model parameters */
-		designcap = /bits/ 16 <0x2260>; /* 8800 mAh */
+		designcap = /bits/ 16 <0x1770>; /* 6000 mAh */
 		ichgterm = /bits/ 16 <0x0640>;
 		vempty = /bits/ 16 <0x9652>; /* VE: 3000mV VR: 3300mV */
-		vcharge = <4300>; /* mV */
+		vcharge = <4200>; /* mV */
 	};
 
 	max77975@6b {
