@@ -339,7 +339,7 @@ static void xhci_mtk_procfs_init(struct xhci_hcd_mtk *mtk)
 	struct device_node *np = mtk->dev->of_node;
 	char name[32];
 
-	snprintf(name, sizeof(name), PROC_MTK_USB "/%s", np->name);
+	snprintf(name, sizeof(name), PROC_MTK_USB "_%s", np->name);
 	root = proc_mkdir(name, NULL);
 	if (!root) {
 		dev_info(mtk->dev, "%s, failed to create root\n", __func__);
