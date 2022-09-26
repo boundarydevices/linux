@@ -131,6 +131,12 @@ const struct clk_ops mtk_clk_gate_ops_setclr = {
 };
 EXPORT_SYMBOL_GPL(mtk_clk_gate_ops_setclr);
 
+const struct clk_ops mtk_clk_gate_ops_setclr_counted = {
+	.enable		= mtk_cg_enable,
+	.disable	= mtk_cg_disable,
+};
+EXPORT_SYMBOL_GPL(mtk_clk_gate_ops_setclr_counted);
+
 const struct clk_ops mtk_clk_gate_ops_setclr_inv = {
 	.is_enabled	= mtk_cg_bit_is_set,
 	.enable		= mtk_cg_enable_inv,

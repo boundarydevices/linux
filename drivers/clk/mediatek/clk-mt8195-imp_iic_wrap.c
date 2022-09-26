@@ -20,7 +20,7 @@ static const struct mtk_gate_regs imp_iic_wrap_cg_regs = {
 
 #define GATE_IMP_IIC_WRAP(_id, _name, _parent, _shift)				\
 	GATE_MTK_FLAGS(_id, _name, _parent, &imp_iic_wrap_cg_regs, _shift,	\
-		&mtk_clk_gate_ops_setclr, CLK_OPS_PARENT_ENABLE)
+		&mtk_clk_gate_ops_setclr_counted, CLK_OPS_PARENT_ENABLE)
 
 static const struct mtk_gate imp_iic_wrap_s_clks[] = {
 	GATE_IMP_IIC_WRAP(CLK_IMP_IIC_WRAP_S_I2C5, "imp_iic_wrap_s_i2c5", "top_i2c", 0),
