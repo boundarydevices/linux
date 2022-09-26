@@ -227,6 +227,7 @@ struct mtk_iommu_data {
 	struct device			*smicomm_dev;
 
 	struct mtk_iommu_bank_data	*bank;
+	struct mtk_iommu_domain         *share_dom;
 
 	struct dma_iommu_mapping	*mapping; /* For mtk_iommu_v1.c */
 	struct regmap			*pericfg;
@@ -622,8 +623,8 @@ static int mtk_iommu_domain_finalise(struct mtk_iommu_domain *dom,
 	const struct mtk_iommu_iova_region *region;
 	struct mtk_iommu_domain	*m4u_dom;
 
-	/* Always use bank0 in sharing pgtable case */
-	m4u_dom = data->bank[0].m4u_dom;
+	/* Always use share domain in sharing pgtable case */
+	m4u_dom = data->share_dom;
 	if (m4u_dom) {
 		dom->iop = m4u_dom->iop;
 		dom->cfg = m4u_dom->cfg;
@@ -653,6 +654,9 @@ static int mtk_iommu_domain_finalise(struct mtk_iommu_domain *dom,
 
 	/* Update our support page sizes bitmap */
 	dom->domain.pgsize_bitmap = dom->cfg.pgsize_bitmap;
+
+	/* Update share_dom of firstdata for later master */
+	data->share_dom = dom;
 
 update_iova_region:
 	/* Update the iova region for this domain */
