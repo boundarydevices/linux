@@ -95,7 +95,6 @@ struct mtk_mmsys_config {
 };
 
 struct mtk_mmsys_driver_data {
-	const resource_size_t io_start;
 	const char *clk_driver;
 	const struct mtk_mmsys_routes *routes;
 	const unsigned int num_routes;
@@ -108,11 +107,6 @@ struct mtk_mmsys_driver_data {
 	const u32 *cross_sys_w_h_configs;
 	const unsigned int num_cross_sys_w_h_configs;
 	bool vppsys;
-};
-
-struct mtk_mmsys_match_data {
-	unsigned short num_drv_data;
-	const struct mtk_mmsys_driver_data *drv_data[];
 };
 
 /*
