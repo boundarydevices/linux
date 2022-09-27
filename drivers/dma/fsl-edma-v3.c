@@ -33,6 +33,8 @@
 
 #include "virt-dma.h"
 
+#define EDMA_MP_CH_MUX			0x200
+
 #define EDMA_CH_CSR			0x00
 #define EDMA_CH_ES			0x04
 #define EDMA_CH_INT			0x08
@@ -52,6 +54,24 @@
 #define EDMA_TCD_CSR			0x3C
 #define EDMA_TCD_BITER_ELINK		0x3E
 #define EDMA_TCD_BITER			0x3E
+
+#define EDMA_V5_TCD_SADDR_L		0x20
+#define EDMA_V5_TCD_SADDR_H		0x24
+#define EDMA_V5_TCD_SOFF		0x28
+#define EDMA_V5_TCD_ATTR		0x2A
+#define EDMA_V5_TCD_NBYTES		0x2C
+#define EDMA_V5_TCD_SLAST_L		0x30
+#define EDMA_V5_TCD_SLAST_H		0x34
+#define EDMA_V5_TCD_DADDR_L		0x38
+#define EDMA_V5_TCD_DADDR_H		0x3C
+#define EDMA_V5_TCD_DLAST_SGA_L		0x40
+#define EDMA_V5_TCD_DLAST_SGA_H		0x44
+#define EDMA_V5_TCD_DOFF		0x48
+#define EDMA_V5_TCD_CITER_ELINK		0x4A
+#define EDMA_V5_TCD_CITER		0x4A
+#define EDMA_V5_TCD_CSR			0x4C
+#define EDMA_V5_TCD_BITER_ELINK		0x4E
+#define EDMA_V5_TCD_BITER		0x4E
 
 #define EDMA_CH_SBR_RD		BIT(22)
 #define EDMA_CH_SBR_WR		BIT(21)
@@ -108,6 +128,8 @@
 				BIT(DMA_SLAVE_BUSWIDTH_8_BYTES) | \
 				BIT(DMA_SLAVE_BUSWIDTH_16_BYTES))
 
+#define EDMA_ADDR_WIDTH                 0x4
+
 #define ARGS_RX				BIT(0)
 #define ARGS_REMOTE			BIT(1)
 #define ARGS_MULTI_FIFO			BIT(2)
@@ -133,9 +155,27 @@ struct fsl_edma3_hw_tcd {
 	__le16	biter;
 };
 
+struct fsl_edma3_hw_tcd_v5 {
+	__le32	saddr_l;
+	__le32	saddr_h;
+	__le16	soff;
+	__le16	attr;
+	__le32	nbytes;
+	__le32	slast_l;
+	__le32	slast_h;
+	__le32	daddr_l;
+	__le32	daddr_h;
+	__le32	dlast_sga_l;
+	__le32	dlast_sga_h;
+	__le16	doff;
+	__le16	citer;
+	__le16	csr;
+	__le16	biter;
+};
+
 struct fsl_edma3_sw_tcd {
 	dma_addr_t			ptcd;
-	struct fsl_edma3_hw_tcd		*vtcd;
+	void		*vtcd;
 };
 
 struct fsl_edma3_slave_config {
@@ -155,6 +195,7 @@ struct fsl_edma3_chan {
 	struct fsl_edma3_desc		*edesc;
 	struct fsl_edma3_slave_config	fsc;
 	void __iomem			*membase;
+	void __iomem                    *mux_addr;
 	int				txirq;
 	int				hw_chanid;
 	int				priority;
@@ -177,6 +218,8 @@ struct fsl_edma3_drvdata {
 	u32 dmamuxs;
 	bool has_chclk;
 	bool has_chmux;
+	bool mp_chmux;
+	bool edma_v5;
 };
 
 struct fsl_edma3_desc {
@@ -214,6 +257,8 @@ static struct fsl_edma3_drvdata fsl_edma_imx8q = {
 	.dmamuxs = 0,
 	.has_chclk = false,
 	.has_chmux = true,
+	.mp_chmux = false,
+	.edma_v5 = false,
 };
 
 static struct fsl_edma3_drvdata fsl_edma_imx8ulp = {
@@ -221,6 +266,8 @@ static struct fsl_edma3_drvdata fsl_edma_imx8ulp = {
 	.dmamuxs = 1,
 	.has_chclk = true,
 	.has_chmux = true,
+	.mp_chmux = false,
+	.edma_v5 = false,
 };
 
 static struct fsl_edma3_drvdata fsl_edma_imx93 = {
@@ -228,6 +275,17 @@ static struct fsl_edma3_drvdata fsl_edma_imx93 = {
 	.dmamuxs = 0,
 	.has_chclk = false,
 	.has_chmux = false,
+	.mp_chmux = false,
+	.edma_v5 = false,
+};
+
+static struct fsl_edma3_drvdata fsl_edma_imx95 = {
+	.has_pd = false,
+	.dmamuxs = 0,
+	.has_chclk = false,
+	.has_chmux = false,
+	.mp_chmux = true,
+	.edma_v5 = true,
 };
 
 static struct fsl_edma3_chan *to_fsl_edma3_chan(struct dma_chan *chan)
@@ -281,9 +339,10 @@ static void fsl_edma3_enable_request(struct fsl_edma3_chan *fsl_chan)
 	writel(val, addr + EDMA_CH_SBR);
 
 	if ((fsl_chan->edma3->drvdata->has_chmux || fsl_chan->edma3->bus_axi) &&
-	    fsl_chan->srcid && !readl(addr + EDMA_CH_MUX))
-		writel(fsl_chan->srcid, addr + EDMA_CH_MUX);
-
+	    fsl_chan->srcid) {
+		if (!readl(fsl_chan->mux_addr))
+			writel(fsl_chan->srcid, fsl_chan->mux_addr);
+	}
 	val = readl(addr + EDMA_CH_CSR);
 
 	val |= EDMA_CH_CSR_ERQ;
@@ -296,9 +355,9 @@ static void fsl_edma3_disable_request(struct fsl_edma3_chan *fsl_chan)
 	u32 val = readl(addr + EDMA_CH_CSR);
 
 	if ((fsl_chan->edma3->drvdata->has_chmux || fsl_chan->edma3->bus_axi) &&
-	    fsl_chan->srcid)
-		writel(0, addr + EDMA_CH_MUX);
-
+	    fsl_chan->srcid) {
+		writel(fsl_chan->srcid, fsl_chan->mux_addr);
+	}
 	val &= ~EDMA_CH_CSR_ERQ;
 	writel(val, addr + EDMA_CH_CSR);
 }
@@ -444,44 +503,111 @@ static size_t fsl_edma3_desc_residue(struct fsl_edma3_chan *fsl_chan,
 	u32 nbytes = 0;
 	int i;
 
-	/* calculate the total size in this desc */
-	for (len = i = 0; i < fsl_chan->edesc->n_tcds; i++) {
-		if ((edesc->tcd[i].vtcd->nbytes & EDMA_TCD_NBYTES_DMLOE) ||
-		    (edesc->tcd[i].vtcd->nbytes & EDMA_TCD_NBYTES_SMLOE))
-			nbytes = EDMA_TCD_NBYTES_MLOFF_NBYTES(edesc->tcd[i].vtcd->nbytes);
-		else
-			nbytes = le32_to_cpu(edesc->tcd[i].vtcd->nbytes);
+	if (fsl_chan->edma3->drvdata->edma_v5) {
+		struct fsl_edma3_hw_tcd_v5         *vtcd;
+		u32 cur_addr_l, cur_addr_h;
+		u32 dma_addr_l, dma_addr_h;
 
-		len += nbytes * le16_to_cpu(edesc->tcd[i].vtcd->biter);
-	}
+		/* calculate the total size in this desc */
+		for (len = i = 0; i < fsl_chan->edesc->n_tcds; i++) {
+			vtcd = edesc->tcd[i].vtcd;
+			if ((vtcd->nbytes & EDMA_TCD_NBYTES_DMLOE) ||
+			    (vtcd->nbytes & EDMA_TCD_NBYTES_SMLOE))
+				nbytes = EDMA_TCD_NBYTES_MLOFF_NBYTES(vtcd->nbytes);
+			else
+				nbytes = le32_to_cpu(vtcd->nbytes);
+			len += nbytes * le16_to_cpu(vtcd->biter);
+		}
 
-	if (!in_progress)
-		return len;
+		if (!in_progress)
+			return len;
 
-	if (dir == DMA_MEM_TO_DEV)
-		cur_addr = readl(addr + EDMA_TCD_SADDR);
-	else
-		cur_addr = readl(addr + EDMA_TCD_DADDR);
+		if (dir == DMA_MEM_TO_DEV) {
+			do {
+				cur_addr_h = readl(addr + EDMA_V5_TCD_SADDR_H);
+				cur_addr_l = readl(addr + EDMA_V5_TCD_SADDR_L);
+			} while (cur_addr_h != readl(addr + EDMA_V5_TCD_SADDR_H));
+			cur_addr = cur_addr_h;
+			cur_addr = (cur_addr << 32) | cur_addr_l;
+		} else {
+			do {
+				cur_addr_h = readl(addr + EDMA_V5_TCD_DADDR_H);
+				cur_addr_l = readl(addr + EDMA_V5_TCD_DADDR_L);
+			} while (cur_addr_h != readl(addr + EDMA_V5_TCD_DADDR_H));
+			cur_addr = cur_addr_h;
+			cur_addr = (cur_addr << 32) | cur_addr_l;
+		}
+		/* figure out the finished and calculate the residue */
+		for (i = 0; i < fsl_chan->edesc->n_tcds; i++) {
+			vtcd = edesc->tcd[i].vtcd;
+			if ((vtcd->nbytes & EDMA_TCD_NBYTES_DMLOE) ||
+			    (vtcd->nbytes & EDMA_TCD_NBYTES_SMLOE))
+				nbytes = EDMA_TCD_NBYTES_MLOFF_NBYTES(vtcd->nbytes);
+			else
+				nbytes = le32_to_cpu(vtcd->nbytes);
 
-	/* figure out the finished and calculate the residue */
-	for (i = 0; i < fsl_chan->edesc->n_tcds; i++) {
-		if ((edesc->tcd[i].vtcd->nbytes & EDMA_TCD_NBYTES_DMLOE) ||
-		    (edesc->tcd[i].vtcd->nbytes & EDMA_TCD_NBYTES_SMLOE))
-			nbytes = EDMA_TCD_NBYTES_MLOFF_NBYTES(edesc->tcd[i].vtcd->nbytes);
-		else
-			nbytes = le32_to_cpu(edesc->tcd[i].vtcd->nbytes);
+			size = nbytes * le16_to_cpu(vtcd->biter);
 
-		size = nbytes * le16_to_cpu(edesc->tcd[i].vtcd->biter);
+			if (dir == DMA_MEM_TO_DEV) {
+				dma_addr_l = le32_to_cpu(vtcd->saddr_l);
+				dma_addr_h = le32_to_cpu(vtcd->saddr_h);
+				dma_addr = dma_addr_h;
+				dma_addr = (dma_addr << 32) | dma_addr_l;
+			} else {
+				dma_addr_l = le32_to_cpu(vtcd->daddr_l);
+				dma_addr_h = le32_to_cpu(vtcd->daddr_h);
+				dma_addr = dma_addr_h;
+				dma_addr = (dma_addr << 32) | dma_addr_l;
+			}
+			len -= size;
+			if (cur_addr >= dma_addr && cur_addr < dma_addr + size) {
+				len += dma_addr + size - cur_addr;
+				break;
+			}
+		}
+	} else {
+
+		struct fsl_edma3_hw_tcd         *vtcd;
+		/* calculate the total size in this desc */
+		for (len = i = 0; i < fsl_chan->edesc->n_tcds; i++) {
+			vtcd = edesc->tcd[i].vtcd;
+			if ((vtcd->nbytes & EDMA_TCD_NBYTES_DMLOE) ||
+			    (vtcd->nbytes & EDMA_TCD_NBYTES_SMLOE))
+				nbytes = EDMA_TCD_NBYTES_MLOFF_NBYTES(vtcd->nbytes);
+			else
+				nbytes = le32_to_cpu(vtcd->nbytes);
+			len += nbytes * le16_to_cpu(vtcd->biter);
+		}
+
+		if (!in_progress)
+			return len;
 
 		if (dir == DMA_MEM_TO_DEV)
-			dma_addr = le32_to_cpu(edesc->tcd[i].vtcd->saddr);
+			cur_addr = readl(addr + EDMA_TCD_SADDR);
 		else
-			dma_addr = le32_to_cpu(edesc->tcd[i].vtcd->daddr);
+			cur_addr = readl(addr + EDMA_TCD_DADDR);
 
-		len -= size;
-		if (cur_addr >= dma_addr && cur_addr < dma_addr + size) {
-			len += dma_addr + size - cur_addr;
-			break;
+		/* figure out the finished and calculate the residue */
+		for (i = 0; i < fsl_chan->edesc->n_tcds; i++) {
+			vtcd = edesc->tcd[i].vtcd;
+			if ((vtcd->nbytes & EDMA_TCD_NBYTES_DMLOE) ||
+			    (vtcd->nbytes & EDMA_TCD_NBYTES_SMLOE))
+				nbytes = EDMA_TCD_NBYTES_MLOFF_NBYTES(vtcd->nbytes);
+			else
+				nbytes = le32_to_cpu(vtcd->nbytes);
+
+			size = nbytes * le16_to_cpu(vtcd->biter);
+
+			if (dir == DMA_MEM_TO_DEV)
+				dma_addr = le32_to_cpu(vtcd->saddr);
+			else
+				dma_addr = le32_to_cpu(vtcd->daddr);
+
+			len -= size;
+			if (cur_addr >= dma_addr && cur_addr < dma_addr + size) {
+				len += dma_addr + size - cur_addr;
+				break;
+			}
 		}
 	}
 
@@ -524,7 +650,7 @@ static enum dma_status fsl_edma3_tx_status(struct dma_chan *chan,
 }
 
 static void fsl_edma3_set_tcd_regs(struct fsl_edma3_chan *fsl_chan,
-				  struct fsl_edma3_hw_tcd *tcd)
+				  void *tcd_tmp)
 {
 	void __iomem *addr = fsl_chan->membase;
 	/*
@@ -532,88 +658,181 @@ static void fsl_edma3_set_tcd_regs(struct fsl_edma3_chan *fsl_chan,
 	 * endian format. However, we need to load the TCD registers in
 	 * big- or little-endian obeying the eDMA engine model endian.
 	 */
-	writew(0, addr + EDMA_TCD_CSR);
-	writel(le32_to_cpu(tcd->saddr), addr + EDMA_TCD_SADDR);
-	writel(le32_to_cpu(tcd->daddr), addr + EDMA_TCD_DADDR);
 
-	writew(le16_to_cpu(tcd->attr), addr + EDMA_TCD_ATTR);
-	writew(le16_to_cpu(tcd->soff), addr + EDMA_TCD_SOFF);
+	if (fsl_chan->edma3->drvdata->edma_v5) {
+		struct fsl_edma3_hw_tcd_v5 *tcd = tcd_tmp;
 
-	writel(le32_to_cpu(tcd->nbytes), addr + EDMA_TCD_NBYTES);
-	writel(le32_to_cpu(tcd->slast), addr + EDMA_TCD_SLAST);
+		writew(0, addr + EDMA_V5_TCD_CSR);
+		writel(le32_to_cpu(tcd->saddr_l), addr + EDMA_V5_TCD_SADDR_L);
+		writel(le32_to_cpu(tcd->saddr_h), addr + EDMA_V5_TCD_SADDR_H);
+		writel(le32_to_cpu(tcd->daddr_l), addr + EDMA_V5_TCD_DADDR_L);
+		writel(le32_to_cpu(tcd->daddr_h), addr + EDMA_V5_TCD_DADDR_H);
 
-	writew(le16_to_cpu(tcd->citer), addr + EDMA_TCD_CITER);
-	writew(le16_to_cpu(tcd->biter), addr + EDMA_TCD_BITER);
-	writew(le16_to_cpu(tcd->doff), addr + EDMA_TCD_DOFF);
+		writew(le16_to_cpu(tcd->attr), addr + EDMA_V5_TCD_ATTR);
+		writew(le16_to_cpu(tcd->soff), addr + EDMA_V5_TCD_SOFF);
 
-	writel(le32_to_cpu(tcd->dlast_sga), addr + EDMA_TCD_DLAST_SGA);
+		writel(le32_to_cpu(tcd->nbytes), addr + EDMA_V5_TCD_NBYTES);
+		writel(le32_to_cpu(tcd->slast_l), addr + EDMA_V5_TCD_SLAST_L);
+		writel(le32_to_cpu(tcd->slast_h), addr + EDMA_V5_TCD_SLAST_H);
 
-	/* Must clear CHa_CSR[DONE] bit before enable TCDa_CSR[ESG] */
-	writel(readl(addr + EDMA_CH_CSR), addr + EDMA_CH_CSR);
+		writew(le16_to_cpu(tcd->citer), addr + EDMA_V5_TCD_CITER);
+		writew(le16_to_cpu(tcd->biter), addr + EDMA_V5_TCD_BITER);
+		writew(le16_to_cpu(tcd->doff), addr + EDMA_V5_TCD_DOFF);
 
-	writew(le16_to_cpu(tcd->csr), addr + EDMA_TCD_CSR);
+		writel(le32_to_cpu(tcd->dlast_sga_l), addr + EDMA_V5_TCD_DLAST_SGA_L);
+		writel(le32_to_cpu(tcd->dlast_sga_h), addr + EDMA_V5_TCD_DLAST_SGA_H);
+
+		/* Must clear CHa_CSR[DONE] bit before enable TCDa_CSR[ESG] */
+		writel(readl(addr + EDMA_CH_CSR), addr + EDMA_CH_CSR);
+
+		writew(le16_to_cpu(tcd->csr), addr + EDMA_V5_TCD_CSR);
+
+	} else {
+		struct fsl_edma3_hw_tcd *tcd = tcd_tmp;
+
+		writew(0, addr + EDMA_TCD_CSR);
+		writel(le32_to_cpu(tcd->saddr), addr + EDMA_TCD_SADDR);
+		writel(le32_to_cpu(tcd->daddr), addr + EDMA_TCD_DADDR);
+
+		writew(le16_to_cpu(tcd->attr), addr + EDMA_TCD_ATTR);
+		writew(le16_to_cpu(tcd->soff), addr + EDMA_TCD_SOFF);
+
+		writel(le32_to_cpu(tcd->nbytes), addr + EDMA_TCD_NBYTES);
+		writel(le32_to_cpu(tcd->slast), addr + EDMA_TCD_SLAST);
+
+		writew(le16_to_cpu(tcd->citer), addr + EDMA_TCD_CITER);
+		writew(le16_to_cpu(tcd->biter), addr + EDMA_TCD_BITER);
+		writew(le16_to_cpu(tcd->doff), addr + EDMA_TCD_DOFF);
+
+		writel(le32_to_cpu(tcd->dlast_sga), addr + EDMA_TCD_DLAST_SGA);
+
+		/* Must clear CHa_CSR[DONE] bit before enable TCDa_CSR[ESG] */
+		writel(readl(addr + EDMA_CH_CSR), addr + EDMA_CH_CSR);
+
+		writew(le16_to_cpu(tcd->csr), addr + EDMA_TCD_CSR);
+	}
 }
 
 static inline
-void fsl_edma3_fill_tcd(struct fsl_edma3_chan *fsl_chan,
-			struct fsl_edma3_hw_tcd *tcd, u32 src, u32 dst,
-			u16 attr, u16 soff, u32 nbytes, u32 slast, u16 citer,
-			u16 biter, u16 doff, u32 dlast_sga, bool major_int,
+void fsl_edma3_fill_tcd(struct fsl_edma3_chan *fsl_chan, void *tcd_tmp,
+			dma_addr_t src, dma_addr_t dst, u16 attr, u16 soff,
+			u32 nbytes, dma_addr_t slast, u16 citer, u16 biter,
+			u16 doff, dma_addr_t dlast_sga, bool major_int,
 			bool disable_req, bool enable_sg)
 {
 	u16 csr = 0;
 
-	/*
-	 * eDMA hardware SGs require the TCDs to be stored in little
-	 * endian format irrespective of the register endian model.
-	 * So we put the value in little endian in memory, waiting
-	 * for fsl_edma3_set_tcd_regs doing the swap.
-	 */
-	tcd->saddr = cpu_to_le32(src);
-	tcd->daddr = cpu_to_le32(dst);
+	if (fsl_chan->edma3->drvdata->edma_v5) {
+		struct fsl_edma3_hw_tcd_v5 *tcd = tcd_tmp;
+		/*
+		 * eDMA hardware SGs require the TCDs to be stored in little
+		 * endian format irrespective of the register endian model.
+		 * So we put the value in little endian in memory, waiting
+		 * for fsl_edma3_set_tcd_regs doing the swap.
+		 */
+		tcd->saddr_l = cpu_to_le32(src & 0xffffffff);
+		tcd->saddr_h = cpu_to_le32((src >> 32) & 0xffffffff);
+		tcd->daddr_l = cpu_to_le32(dst & 0xffffffff);
+		tcd->daddr_h = cpu_to_le32((dst >> 32) & 0xffffffff);
 
-	tcd->attr = cpu_to_le16(attr);
+		tcd->attr = cpu_to_le16(attr);
 
-	tcd->soff = cpu_to_le16(EDMA_TCD_SOFF_SOFF(soff));
+		tcd->soff = cpu_to_le16(EDMA_TCD_SOFF_SOFF(soff));
 
-	if (fsl_chan->is_multi_fifo) {
-		/* set mloff to support multiple fifo */
-		nbytes |= EDMA_TCD_NBYTES_MLOFF(-(fsl_chan->fsc.burst * 4));
-		/* enable DMLOE/SMLOE */
-		if (fsl_chan->fsc.dir == DMA_MEM_TO_DEV) {
-			nbytes |= EDMA_TCD_NBYTES_DMLOE;
-			nbytes &= ~EDMA_TCD_NBYTES_SMLOE;
-		} else {
-			nbytes |= EDMA_TCD_NBYTES_SMLOE;
-			nbytes &= ~EDMA_TCD_NBYTES_DMLOE;
+		if (fsl_chan->is_multi_fifo) {
+			/* set mloff to support multiple fifo */
+			nbytes |= EDMA_TCD_NBYTES_MLOFF(-(fsl_chan->fsc.burst * 4));
+			/* enable DMLOE/SMLOE */
+			if (fsl_chan->fsc.dir == DMA_MEM_TO_DEV) {
+				nbytes |= EDMA_TCD_NBYTES_DMLOE;
+				nbytes &= ~EDMA_TCD_NBYTES_SMLOE;
+			} else {
+				nbytes |= EDMA_TCD_NBYTES_SMLOE;
+				nbytes &= ~EDMA_TCD_NBYTES_DMLOE;
+			}
 		}
+
+		tcd->nbytes = cpu_to_le32(EDMA_TCD_NBYTES_NBYTES(nbytes));
+		tcd->slast_l = cpu_to_le32(slast & 0xffffffff);
+		tcd->slast_h = cpu_to_le32((slast >> 32) & 0xffffffff);
+
+		tcd->citer = cpu_to_le16(EDMA_TCD_CITER_CITER(citer));
+		tcd->doff = cpu_to_le16(EDMA_TCD_DOFF_DOFF(doff));
+
+		tcd->dlast_sga_l = cpu_to_le32(dlast_sga & 0xffffffff);
+		tcd->dlast_sga_h = cpu_to_le32((dlast_sga >> 32) & 0xffffffff);
+
+		tcd->biter = cpu_to_le16(EDMA_TCD_BITER_BITER(biter));
+		if (major_int)
+			csr |= EDMA_TCD_CSR_INT_MAJOR;
+
+		if (disable_req)
+			csr |= EDMA_TCD_CSR_D_REQ;
+
+		if (enable_sg)
+			csr |= EDMA_TCD_CSR_E_SG;
+
+		if (fsl_chan->is_rxchan)
+			csr |= EDMA_TCD_CSR_ACTIVE;
+
+		if (fsl_chan->is_sw)
+			csr |= EDMA_TCD_CSR_START;
+
+		tcd->csr = cpu_to_le16(csr);
+	} else {
+		struct fsl_edma3_hw_tcd *tcd = tcd_tmp;
+		/*
+		 * eDMA hardware SGs require the TCDs to be stored in little
+		 * endian format irrespective of the register endian model.
+		 * So we put the value in little endian in memory, waiting
+		 * for fsl_edma3_set_tcd_regs doing the swap.
+		 */
+		tcd->saddr = cpu_to_le32(src);
+		tcd->daddr = cpu_to_le32(dst);
+
+		tcd->attr = cpu_to_le16(attr);
+
+		tcd->soff = cpu_to_le16(EDMA_TCD_SOFF_SOFF(soff));
+
+		if (fsl_chan->is_multi_fifo) {
+			/* set mloff to support multiple fifo */
+			nbytes |= EDMA_TCD_NBYTES_MLOFF(-(fsl_chan->fsc.burst * 4));
+			/* enable DMLOE/SMLOE */
+			if (fsl_chan->fsc.dir == DMA_MEM_TO_DEV) {
+				nbytes |= EDMA_TCD_NBYTES_DMLOE;
+				nbytes &= ~EDMA_TCD_NBYTES_SMLOE;
+			} else {
+				nbytes |= EDMA_TCD_NBYTES_SMLOE;
+				nbytes &= ~EDMA_TCD_NBYTES_DMLOE;
+			}
+		}
+
+		tcd->nbytes = cpu_to_le32(EDMA_TCD_NBYTES_NBYTES(nbytes));
+		tcd->slast = cpu_to_le32(EDMA_TCD_SLAST_SLAST(slast));
+
+		tcd->citer = cpu_to_le16(EDMA_TCD_CITER_CITER(citer));
+		tcd->doff = cpu_to_le16(EDMA_TCD_DOFF_DOFF(doff));
+
+		tcd->dlast_sga = cpu_to_le32(EDMA_TCD_DLAST_SGA_DLAST_SGA(dlast_sga));
+
+		tcd->biter = cpu_to_le16(EDMA_TCD_BITER_BITER(biter));
+		if (major_int)
+			csr |= EDMA_TCD_CSR_INT_MAJOR;
+
+		if (disable_req)
+			csr |= EDMA_TCD_CSR_D_REQ;
+
+		if (enable_sg)
+			csr |= EDMA_TCD_CSR_E_SG;
+
+		if (fsl_chan->is_rxchan)
+			csr |= EDMA_TCD_CSR_ACTIVE;
+
+		if (fsl_chan->is_sw)
+			csr |= EDMA_TCD_CSR_START;
+
+		tcd->csr = cpu_to_le16(csr);
 	}
-
-	tcd->nbytes = cpu_to_le32(EDMA_TCD_NBYTES_NBYTES(nbytes));
-	tcd->slast = cpu_to_le32(EDMA_TCD_SLAST_SLAST(slast));
-
-	tcd->citer = cpu_to_le16(EDMA_TCD_CITER_CITER(citer));
-	tcd->doff = cpu_to_le16(EDMA_TCD_DOFF_DOFF(doff));
-
-	tcd->dlast_sga = cpu_to_le32(EDMA_TCD_DLAST_SGA_DLAST_SGA(dlast_sga));
-
-	tcd->biter = cpu_to_le16(EDMA_TCD_BITER_BITER(biter));
-	if (major_int)
-		csr |= EDMA_TCD_CSR_INT_MAJOR;
-
-	if (disable_req)
-		csr |= EDMA_TCD_CSR_D_REQ;
-
-	if (enable_sg)
-		csr |= EDMA_TCD_CSR_E_SG;
-
-	if (fsl_chan->is_rxchan)
-		csr |= EDMA_TCD_CSR_ACTIVE;
-
-	if (fsl_chan->is_sw)
-		csr |= EDMA_TCD_CSR_START;
-
-	tcd->csr = cpu_to_le16(csr);
 }
 
 static struct fsl_edma3_desc *fsl_edma3_alloc_desc(struct fsl_edma3_chan
@@ -654,7 +873,8 @@ static struct dma_async_tx_descriptor *fsl_edma3_prep_dma_cyclic(
 	struct fsl_edma3_desc *fsl_desc;
 	dma_addr_t dma_buf_next;
 	int sg_len, i;
-	u32 src_addr, dst_addr, last_sg, nbytes;
+	dma_addr_t src_addr, dst_addr, last_sg;
+	u32 nbytes;
 	u16 soff, doff, iter;
 	bool major_int = true;
 
@@ -737,7 +957,8 @@ static struct dma_async_tx_descriptor *fsl_edma3_prep_slave_sg(
 	struct fsl_edma3_chan *fsl_chan = to_fsl_edma3_chan(chan);
 	struct fsl_edma3_desc *fsl_desc;
 	struct scatterlist *sg;
-	u32 src_addr, dst_addr, last_sg, nbytes;
+	dma_addr_t src_addr, dst_addr, last_sg;
+	u32 nbytes;
 	u16 soff, doff, iter;
 	int i;
 
@@ -863,7 +1084,6 @@ static irqreturn_t fsl_edma3_tx_handler(int irq, void *dev_id)
 	void __iomem *base_addr;
 
 	spin_lock(&fsl_chan->vchan.lock);
-
 	/* Ignore this interrupt since channel has been freeed with power off */
 	if (!fsl_chan->edesc && !fsl_chan->tcd_pool)
 		goto irq_handled;
@@ -967,7 +1187,12 @@ static int fsl_edma3_alloc_chan_resources(struct dma_chan *chan)
 	if (fsl_chan->edma3->drvdata->has_chclk)
 		clk_prepare_enable(fsl_chan->clk);
 
-	fsl_chan->tcd_pool = dma_pool_create("tcd_pool", chan->device->dev,
+	if (fsl_chan->edma3->drvdata->edma_v5)
+		fsl_chan->tcd_pool = dma_pool_create("tcd_pool", chan->device->dev,
+				sizeof(struct fsl_edma3_hw_tcd_v5),
+				32, 0);
+	else
+		fsl_chan->tcd_pool = dma_pool_create("tcd_pool", chan->device->dev,
 				sizeof(struct fsl_edma3_hw_tcd),
 				32, 0);
 
@@ -1099,6 +1324,7 @@ static const struct of_device_id fsl_edma3_dt_ids[] = {
 	{ .compatible = "fsl,imx8qm-adma", .data = &fsl_edma_imx8q},
 	{ .compatible = "fsl,imx8ulp-edma", .data = &fsl_edma_imx8ulp},
 	{ .compatible = "fsl,imx93-edma", .data = &fsl_edma_imx93},
+	{ .compatible = "fsl,imx95-edma", .data = &fsl_edma_imx95},
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, fsl_edma3_dt_ids);
@@ -1114,6 +1340,7 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 	struct resource *res;
 	int len, chans;
 	int ret, i;
+	void __iomem *mp_membase, *mp_chan_membase;
 
 	if (!of_id)
 		return -EINVAL;
@@ -1140,6 +1367,9 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&fsl_edma3->dma_dev.channels);
 
 	res_mp = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	mp_membase = devm_ioremap_resource(&pdev->dev, res_mp);
+	if (IS_ERR(mp_membase))
+		return PTR_ERR(mp_membase);
 
 	if (of_property_read_bool(np, "fsl,edma-axi"))
 		fsl_edma3->bus_axi = true;
@@ -1159,6 +1389,7 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 		}
 		clk_prepare_enable(fsl_edma3->dmaclk);
 	}
+
 	for (i = 0; i < fsl_edma3->n_chans; i++) {
 		struct fsl_edma3_chan *fsl_chan = &fsl_edma3->chans[i];
 		const char *txirq_name;
@@ -1171,11 +1402,23 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 		fsl_chan->pdev = pdev;
 		fsl_chan->idle = true;
 		fsl_chan->srcid = 0;
+
+		if (fsl_chan->edma3->drvdata->mp_chmux) {
+			/* Get mp membase */
+			mp_chan_membase = mp_membase + i * EDMA_ADDR_WIDTH;
+			if (IS_ERR(mp_chan_membase))
+				return PTR_ERR(mp_chan_membase);
+			fsl_chan->mux_addr = mp_chan_membase + EDMA_MP_CH_MUX;
+		}
 		/* Get per channel membase */
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i + 1);
 		fsl_chan->membase = devm_ioremap_resource(&pdev->dev, res);
 		if (IS_ERR(fsl_chan->membase))
 			return PTR_ERR(fsl_chan->membase);
+
+		if ((fsl_chan->edma3->drvdata->has_chmux || fsl_edma3->bus_axi) &&
+		    !fsl_chan->edma3->drvdata->mp_chmux)
+			fsl_chan->mux_addr = fsl_chan->membase + EDMA_CH_MUX;
 
 		if (fsl_edma3->bus_axi) {
 			fsl_chan->hw_chanid = ((res->start - res_mp->start) >> 15) & 0x7f;
@@ -1246,6 +1489,8 @@ static int fsl_edma3_probe(struct platform_device *pdev)
 	dma_cap_set(DMA_SLAVE, fsl_edma3->dma_dev.cap_mask);
 	dma_cap_set(DMA_CYCLIC, fsl_edma3->dma_dev.cap_mask);
 	dma_cap_set(DMA_MEMCPY, fsl_edma3->dma_dev.cap_mask);
+	if (fsl_edma3->drvdata->edma_v5)
+		dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(64));
 
 	fsl_edma3->dma_dev.dev = &pdev->dev;
 	fsl_edma3->dma_dev.device_alloc_chan_resources
