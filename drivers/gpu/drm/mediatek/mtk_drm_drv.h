@@ -31,7 +31,6 @@ struct mtk_drm_route {
 };
 
 struct mtk_mmsys_driver_data {
-	const resource_size_t io_start;
 	const unsigned int *main_path;
 	unsigned int main_len;
 	const unsigned int *main_subpipe_path;
@@ -46,11 +45,6 @@ struct mtk_mmsys_driver_data {
 	bool shadow_register;
 	unsigned int mmsys_id;
 	unsigned int mmsys_dev_num;
-};
-
-struct mtk_mmsys_match_data {
-	unsigned short num_drv_data;
-	const struct mtk_mmsys_driver_data *drv_data[];
 };
 
 struct mtk_drm_private {
