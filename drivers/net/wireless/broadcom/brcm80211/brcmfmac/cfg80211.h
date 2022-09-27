@@ -101,6 +101,14 @@
 #define WL_WOWLAN_PKT_FILTER_ID_FIRST	201
 #define WL_WOWLAN_PKT_FILTER_ID_LAST	(WL_WOWLAN_PKT_FILTER_ID_FIRST + \
 					WL_WOWLAN_MAX_PATTERNS - 1)
+
+#define WL_RSPEC_ENCODE_HE	     0x03000000 /* HE MCS and Nss is stored in RSPEC_RATE_MASK */
+#define WL_RSPEC_HE_NSS_UNSPECIFIED	0xF
+#define WL_RSPEC_HE_NSS_SHIFT	     4               /* HE Nss value shift */
+#define WL_RSPEC_HE_GI_MASK	     0x00000C00      /* HE GI indices */
+#define WL_RSPEC_HE_GI_SHIFT	     10
+#define HE_GI_TO_RSPEC(gi)	     (((gi) << WL_RSPEC_HE_GI_SHIFT) & WL_RSPEC_HE_GI_MASK)
+
 /**
  * enum brcmf_scan_status - scan engine status
  *
