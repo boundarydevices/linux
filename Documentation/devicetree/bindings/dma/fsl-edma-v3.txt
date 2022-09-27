@@ -11,6 +11,7 @@ Required properties:
 	- "fsl,imx8qm-adma" for audio eDMA used on i.MX8QM
 	- "fsl,imx8ulp-edma" for eDMA used on i.MX8ULP
 	- "fsl,imx93-edma" for eDMA used on i.MX93
+	- "fsl,imx95-edma" for eDMA used on i.MX95
 - reg : Specifies base physical address(s) and size of the eDMA channel registers.
 	Each eDMA channel has separated register's address and size. The first one
 	is Manage Page address space.
