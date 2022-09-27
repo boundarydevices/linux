@@ -757,7 +757,7 @@
 &dcss {
 	status = "okay";
 
-	port@0 {
+	port {
 		dcss_out: endpoint {
 			remote-endpoint = <&hdmi_in>;
 		};
@@ -1221,9 +1221,13 @@
 		};
 	};
 
-	port {
-		mipi_dsi_out: endpoint {
-			remote-endpoint = <&panel1_in>;
+	ports {
+		port@1 {
+			reg = <1>;
+
+			mipi_dsi_out: endpoint {
+				remote-endpoint = <&panel1_in>;
+			};
 		};
 	};
 };
