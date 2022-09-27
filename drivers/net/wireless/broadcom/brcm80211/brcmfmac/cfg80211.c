@@ -6518,6 +6518,55 @@ brcmf_cfg80211_external_auth(struct wiphy *wiphy, struct net_device *dev,
 }
 
 static int
+brcmf_cfg80211_set_bitrate(struct wiphy *wiphy,  struct net_device *ndev,
+			   unsigned int link_id, const u8 *addr, const struct cfg80211_bitrate_mask *mask)
+{
+	struct brcmf_if *ifp;
+	u32 he[2] = {0, 0};
+	u32 rspec = 0;
+	uint hegi;
+	int ret = TIME_OK, i = 0;
+
+	ifp = netdev_priv(ndev);
+	ret = brcmf_fil_iovar_data_get(ifp, "he", he, sizeof(he));
+	if (unlikely(ret)) {
+		brcmf_dbg(INFO, "error reading he (%d)\n", ret);
+		return -EOPNOTSUPP;
+	}
+	for (i = 0; i < NUM_NL80211_BANDS; i++) {
+		if (i != NL80211_BAND_2GHZ && i != NL80211_BAND_5GHZ &&
+		    i != NL80211_BAND_6GHZ) {
+			continue;
+		}
+		if (he[0]) {
+			rspec = WL_RSPEC_ENCODE_HE;     /* 11ax HE */
+			rspec |= (WL_RSPEC_HE_NSS_UNSPECIFIED << WL_RSPEC_HE_NSS_SHIFT) |
+				  mask->control[i].he_mcs[0];
+			/* set the other rspec fields */
+			hegi = mask->control[i].he_gi;
+			rspec |= ((hegi != 0xFF) ? HE_GI_TO_RSPEC(hegi) : 0);
+
+			if (i == NL80211_BAND_2GHZ)
+				ret = brcmf_fil_iovar_data_set(ifp, "2g_rate", (char *)&rspec, 4);
+
+			if (i == NL80211_BAND_5GHZ)
+				ret = brcmf_fil_iovar_data_set(ifp, "5g_rate", (char *)&rspec, 4);
+
+			if (i == NL80211_BAND_6GHZ)
+				ret = brcmf_fil_iovar_data_set(ifp, "6g_rate", (char *)&rspec, 4);
+
+			if (unlikely(ret))
+				brcmf_dbg(INFO, "%s: set rate failed, retcode = %d\n",
+					  __func__, ret);
+		} else {
+			brcmf_dbg(INFO, "Only HE supported\n");
+			return -EOPNOTSUPP;
+		}
+	}
+	return ret;
+}
+
+static int
 brcmf_cfg80211_set_cqm_rssi_config(struct wiphy *wiphy, struct net_device *dev,
 				   s32 rssi_thold, u32 rssi_hyst)
 {
@@ -6578,6 +6627,7 @@ static struct cfg80211_ops brcmf_cfg80211_ops = {
 	.start_ap = brcmf_cfg80211_start_ap,
 	.stop_ap = brcmf_cfg80211_stop_ap,
 	.change_beacon = brcmf_cfg80211_change_beacon,
+	.set_bitrate_mask = brcmf_cfg80211_set_bitrate,
 	.del_station = brcmf_cfg80211_del_station,
 	.change_station = brcmf_cfg80211_change_station,
 	.sched_scan_start = brcmf_cfg80211_sched_scan_start,
