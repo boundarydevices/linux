@@ -11,6 +11,13 @@
 	/delete-node/ sound-micfil;
 	/delete-node/ sound-ak5558;
 
+	ak4458_reset: gpio-reset {
+		compatible = "gpio-reset";
+		reset-gpios = <&pca6416 4 GPIO_ACTIVE_LOW>;
+		#reset-cells = <0>;
+		initially-in-reset;
+	};
+
 	gpio-leds {
 		panel {
 			label = "green:panel";
@@ -94,11 +101,19 @@
 	};
 
 	sound-ak4458 {
-		compatible = "fsl,imx-audio-ak4458";
+		compatible = "fsl,imx-audio-card";
 		model = "ak4458-audio";
-		audio-cpu = <&sai3>;
-		audio-codec = <&ak4458_1>, <&ak4458_2>;
-		reset-gpios = <&pca6416 4 GPIO_ACTIVE_LOW>;
+		pri-dai-link {
+			link-name = "akcodec";
+			format = "i2s";
+			fsl,mclk-equal-bclk;
+			cpu {
+				sound-dai = <&sai3>;
+			};
+			codec {
+				sound-dai = <&ak4458_1>;
+			};
+		};
 	};
 };
 
@@ -168,30 +183,40 @@
 	};
 
 	ak4458_1: ak4458@10 {
+		#sound-dai-cells = <0>;
+		sound-name-prefix = "0";
 		compatible = "asahi-kasei,ak4458";
 		reg = <0x10>;
+		resets = <&ak4458_reset>;
 		AVDD-supply = <&reg_dac_avdd_5v0>;
 		DVDD-supply = <&reg_dac_dvdd_3v3>;
 		status = "okay";
 	};
 
 	ak4458_2: ak4458@12 {
+		#sound-dai-cells = <0>;
+		sound-name-prefix = "1";
 		compatible = "asahi-kasei,ak4458";
 		reg = <0x12>;
+		resets = <&ak4458_reset>;
 		AVDD-supply = <&reg_dac_avdd_5v0>;
 		DVDD-supply = <&reg_dac_dvdd_3v3>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	ak4458_3: ak4458@11 {
+		#sound-dai-cells = <0>;
+		sound-name-prefix = "2";
 		compatible = "asahi-kasei,ak4458";
 		reg = <0x11>;
+		resets = <&ak4458_reset>;
 		AVDD-supply = <&reg_dac_avdd_5v0>;
 		DVDD-supply = <&reg_dac_dvdd_3v3>;
 		status = "disabled";
 	};
 
 	ak5552: ak5552@13 {
+		#sound-dai-cells = <0>;
 		compatible = "asahi-kasei,ak5552";
 		reg = <0x13>;
 		reset-gpios = <&pca6416 3 GPIO_ACTIVE_LOW>;
@@ -299,6 +324,7 @@
 };
 
 &sai3 {
+	#sound-dai-cells = <0>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai3>;
 	assigned-clocks = <&clk IMX8MN_CLK_SAI3>;
@@ -309,5 +335,6 @@
 		<&clk IMX8MN_CLK_DUMMY>, <&clk IMX8MN_AUDIO_PLL1_OUT>,
 		<&clk IMX8MN_AUDIO_PLL2_OUT>;
 	clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3", "pll8k", "pll11k";
+	fsl,dataline = <2 0x3 0x3>;
 	status = "okay";
 };
