@@ -121,6 +121,10 @@
 #define SBSDIO_FUNC1_MISC_REG_START	0x10000	/* f1 misc register start */
 #define SBSDIO_FUNC1_MISC_REG_LIMIT	0x1001F	/* f1 misc register end */
 
+/* Sdio Core Rev 31 */
+/* Hard Reset SDIO core, output soft reset signal which should cause backplane reset */
+#define SDIO_IO_CARD_RESET                0x08
+
 /* function 1 OCP space */
 
 /* sb offset addr is <= 15 bits, 32k */
