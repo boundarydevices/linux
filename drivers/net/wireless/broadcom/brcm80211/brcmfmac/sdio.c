@@ -5084,10 +5084,37 @@ void brcmf_sdio_remove(struct brcmf_sdio *bus)
 
 				if (bus->ci->blhs)
 					bus->ci->blhs->init(bus->ci);
-				/* Reset the PMU, backplane and all the
-				 * cores by using the PMUWatchdogCounter.
+
+				/* Configure registers to trigger WLAN reset on
+				 * "SDIO Soft Reset", and set RES bit to trigger
+				 *  SDIO as well as WLAN reset
+				 * (instead of using PMU/CC Watchdog register)
 				 */
-				brcmf_chip_reset_watchdog(bus->ci);
+				if (bus->ci->ccsec) {
+					struct brcmf_sdio_dev *sdiodev;
+					int err = 0;
+					u32 reg_val = 0;
+
+					sdiodev = bus->sdiodev;
+					/* Set card control so an SDIO card reset
+					 *does a WLAN backplane reset */
+					reg_val = brcmf_sdiod_func0_rb(sdiodev,
+								       SDIO_CCCR_BRCM_CARDCTRL,
+								       &err);
+					reg_val |= SDIO_CCCR_BRCM_CARDCTRL_WLANRESET;
+
+					brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_BRCM_CARDCTRL,
+							     reg_val, &err);
+					brcmf_sdiod_func0_wb(sdiodev, SDIO_CCCR_ABORT,
+							    sdiodev->func1->num |\
+								SDIO_IO_CARD_RESET,
+								NULL);
+				} else {
+					/* Reset the PMU, backplane and all the
+					 * cores by using the PMUWatchdogCounter.
+					 */
+					brcmf_chip_reset_watchdog(bus->ci);
+				}
 				if (bus->ci->blhs)
 					bus->ci->blhs->post_wdreset(bus->ci);
 
