@@ -656,6 +656,7 @@ CY_FW_DEF(4373, "cyfmac4373-sdio");
 CY_FW_DEF(43012, "cyfmac43012-sdio");
 BRCMF_FW_CLM_DEF(43752, "brcmfmac43752-sdio");
 CY_FW_DEF(89459, "cyfmac54591-sdio");
+CY_FW_TRXSE_DEF(55500, "cyfmac55500-sdio");
 CY_FW_TRXSE_DEF(55572, "cyfmac55572-sdio");
 
 /* firmware config files */
@@ -692,6 +693,7 @@ static const struct brcmf_firmware_mapping brcmf_sdio_fwnames[] = {
 	BRCMF_FW_ENTRY(CY_CC_43439_CHIP_ID, 0xFFFFFFFF, 43439),
 	BRCMF_FW_ENTRY(CY_CC_43752_CHIP_ID, 0xFFFFFFFF, 43752),
 	BRCMF_FW_ENTRY(CY_CC_89459_CHIP_ID, 0xFFFFFFFF, 89459),
+	BRCMF_FW_ENTRY(CY_CC_55500_CHIP_ID, 0xFFFFFFFF, 55500),
 	BRCMF_FW_ENTRY(CY_CC_55572_CHIP_ID, 0xFFFFFFFF, 55572)
 };
 
@@ -754,6 +756,7 @@ brcmf_sdio_kso_control(struct brcmf_sdio *bus, bool on)
 	 * bit, to avoid polling of KSO bit.
 	 */
 	if (!on && ((bus->ci->chip == CY_CC_43012_CHIP_ID) ||
+		    (bus->ci->chip == CY_CC_55500_CHIP_ID) ||
 		    (bus->ci->chip == CY_CC_55572_CHIP_ID)))
 		return err;
 
@@ -2569,6 +2572,7 @@ static bool brcmf_chip_is_ulp(struct brcmf_chip *ci)
 static bool brcmf_sdio_use_ht_avail(struct brcmf_chip *ci)
 {
 	if (ci->chip == CY_CC_4373_CHIP_ID ||
+	    ci->chip == CY_CC_55500_CHIP_ID ||
 	    ci->chip == CY_CC_55572_CHIP_ID)
 		return true;
 	else
@@ -3764,6 +3768,7 @@ static bool brcmf_sdio_aos_no_decode(struct brcmf_sdio *bus)
 	if (bus->ci->chip == CY_CC_43012_CHIP_ID ||
 	    bus->ci->chip == CY_CC_43752_CHIP_ID ||
 	    bus->ci->chip == CY_CC_4373_CHIP_ID ||
+	    bus->ci->chip == CY_CC_55500_CHIP_ID ||
 	    bus->ci->chip == CY_CC_55572_CHIP_ID ||
 	    bus->ci->chip == BRCM_CC_4339_CHIP_ID ||
 	    bus->ci->chip == BRCM_CC_4345_CHIP_ID ||
@@ -4786,6 +4791,7 @@ static void brcmf_sdio_firmware_callback(struct device *dev, int err,
 					   CY_89459_MESBUSYCTRL, &err);
 			break;
 		case SDIO_DEVICE_ID_CYPRESS_55572:
+		case SDIO_DEVICE_ID_CYPRESS_55500:
 			brcmf_dbg(INFO, "set F2 watermark to 0x%x*4 bytes\n",
 				  CYW55572_F2_WATERMARK);
 			brcmf_sdiod_writeb(sdiod, SBSDIO_WATERMARK,
