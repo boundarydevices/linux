@@ -10,3 +10,19 @@ config MTK_SENINF
 	  This driver provides a MIPI CSI-2 receiver interface to connect
 	  an external camera module with MediaTek's MT8183 ISP SoC. It is
 	  able to handle multiple cameras at the same time.
+
+config MTK_CAMSV30
+        tristate "MediaTek ISP3.0 CAMSV driver"
+        depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+        depends on ARCH_MEDIATEK
+        depends on PM
+        select VIDEOBUF2_VMALLOC
+        select VIDEOBUF2_DMA_CONTIG
+        select MTK_SENINF
+        select PHY_MTK_CDPHY
+        default n
+        help
+          This driver provides a path to bypass the SoC ISP so that
+          image data come from the SENINF can go directly into memory
+          without any image processing.
+
