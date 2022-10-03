@@ -379,7 +379,8 @@ static int spi_match_device(struct device *dev, struct device_driver *drv)
 		return 1;
 
 	if (sdrv->id_table)
-		return !!spi_match_id(sdrv->id_table, spi->modalias);
+		if (spi_match_id(sdrv->id_table, spi->modalias))
+			return 1;
 
 	return strcmp(spi->modalias, drv->name) == 0;
 }
