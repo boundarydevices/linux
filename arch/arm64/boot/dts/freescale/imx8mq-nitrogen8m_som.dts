@@ -769,7 +769,7 @@
 	pinctrl-0 = <&pinctrl_ecspi2>;
 	fsl,spi-num-chipselects = <1>;
 	cs-gpios = GP_ECSPI2_CS0;
-	status = "disabled";
+	status = "okay";
 	#address-cells = <1>;
 	#size-cells = <0>;
 
