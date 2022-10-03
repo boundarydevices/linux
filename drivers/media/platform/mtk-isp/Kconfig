@@ -1,0 +1,12 @@
+config MTK_SENINF
+	tristate "MediaTek sensor interface driver"
+	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+	depends on MEDIA_CAMERA_SUPPORT
+	depends on ARCH_MEDIATEK || COMPILE_TEST
+	depends on OF
+	select V4L2_FWNODE
+	default n
+	help
+	  This driver provides a MIPI CSI-2 receiver interface to connect
+	  an external camera module with MediaTek's MT8183 ISP SoC. It is
+	  able to handle multiple cameras at the same time.
