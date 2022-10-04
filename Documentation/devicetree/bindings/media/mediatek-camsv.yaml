@@ -1,0 +1,107 @@
+# SPDX-License-Identifier: (GPL-2.0-Only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/media/mediatek-camsv.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: MediaTek CAMSV Device Tree Bindings
+
+maintainers:
+  - Phi-Bang Nguyen <pnguyen@baylibre.com>
+
+description: |
+  The CAMSVs is a set of DMA engines connected to the SENINF CSI-2
+  receivers. The number of CAMSVs depend on the SoC model.
+
+properties:
+  compatible:
+    const: mediatek,mt8365-camsv
+
+  reg:
+    minItems: 1
+
+  interrupts:
+    maxItems: 1
+
+  power-domains:
+    maxItems: 1
+
+  clocks:
+    items:
+      - description: cam clock
+      - description: camtg clock
+      - description: camsv clock
+
+  clock-names:
+    items:
+      - const: camsys_cam_cgpdn
+      - const: camsys_camtg_cgpdn
+      - const: camsys_camsv
+
+  iommus:
+    items:
+      - const: M4U_PORT_CAM_IMGO
+
+  mediatek,larb:
+    items:
+      - const: larb3
+      - const: larb6
+
+  ports:
+    $ref: /schemas/graph.yaml#/properties/ports
+
+    properties:
+      port@0:
+        $ref: /schemas/graph.yaml#/properties/port
+        unevaluatedProperties: false
+        description: connection point for camsv0
+
+        patternProperties:
+          endpoint:
+            $ref: video-interfaces.yaml#
+            unevaluatedProperties: false
+
+    required:
+      - port@0
+
+required:
+  - compatible
+  - interrupts
+  - clocks
+  - clock-names
+  - power-domains
+  - iommus
+  - mediatek,larb
+  - ports
+
+additionalProperties: false
+
+examples:
+  - |
+    camsv0: camsv@1a050000 {
+        compatible = "mediatek,mt8365-camsv";
+        reg = <0 0x1a050000 0 0x1000>;
+        interrupts = <GIC_SPI 258 IRQ_TYPE_LEVEL_LOW>;
+        clocks = <&camsys CLK_CAM_CAM>,
+                <&camsys CLK_CAM_CAMTG>,
+                <&camsys CLK_CAM_CAMSV0>;
+        clock-names = "camsys_cam_cgpdn", "camsys_camtg_cgpdn",
+                    "camsys_camsv";
+        iommus = <&iommu M4U_PORT_CAM_IMGO>;
+        mediatek,larb = <&larb3>, <&larb6>;
+        power-domains = <&scpsys MT8365_POWER_DOMAIN_CAM>;
+        status = "disabled";
+
+        ports {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            port@0 {
+                reg = <0>;
+                camsv0_endpoint: endpoint {
+                    remote-endpoint =
+                        <&seninf_camsv0_endpoint>;
+                };
+            };
+        };
+    };
+...
