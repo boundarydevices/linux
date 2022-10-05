@@ -1349,6 +1349,7 @@
 		reg = <0x4a>;
 		reset-gpios = GP_TS_ATMEL_RESET;
 		wakeup-gpios = GP_TS_ATMEL;
+		status = "disabled";
 	};
 
 	ts_egalax_lvds: touchscreen@4 {
