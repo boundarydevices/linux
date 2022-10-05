@@ -9,6 +9,7 @@
 #include <linux/etherdevice.h>
 #include <linux/module.h>
 #include <linux/vmalloc.h>
+#include <linux/bitfield.h>
 #include <net/cfg80211.h>
 #include <net/netlink.h>
 #include <uapi/linux/if_arp.h>
@@ -8292,6 +8293,7 @@ static void brcmf_update_he_cap(struct ieee80211_supported_band *band,
 	struct ieee80211_sta_he_cap *he_cap = &data->he_cap;
 	struct ieee80211_he_cap_elem *he_cap_elem = &he_cap->he_cap_elem;
 	struct ieee80211_he_mcs_nss_supp *he_mcs = &he_cap->he_mcs_nss_supp;
+	struct ieee80211_he_6ghz_capa *he_6ghz_capa = &data->he_6ghz_capa;
 
 	if (data == NULL) {
 		brcmf_dbg(INFO, "failed to allco mem\n");
@@ -8360,7 +8362,18 @@ static void brcmf_update_he_cap(struct ieee80211_supported_band *band,
 	/* HE Supported MCS and NSS Set */
 	he_mcs->rx_mcs_80 = cpu_to_le16(0xfffa);
 	he_mcs->tx_mcs_80 = cpu_to_le16(0xfffa);
+	/* HE 6 GHz band capabilities */
+	if (band->band == NL80211_BAND_6GHZ) {
+		u16 capa = 0;
 
+		capa = FIELD_PREP(IEEE80211_HE_6GHZ_CAP_MIN_MPDU_START,
+				   IEEE80211_HT_MPDU_DENSITY_8) |
+			FIELD_PREP(IEEE80211_HE_6GHZ_CAP_MAX_AMPDU_LEN_EXP,
+				   IEEE80211_VHT_MAX_AMPDU_1024K) |
+			FIELD_PREP(IEEE80211_HE_6GHZ_CAP_MAX_MPDU_LEN,
+				   IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_11454);
+		he_6ghz_capa->capa = cpu_to_le16(capa);
+	}
 	band->n_iftype_data = idx;
 	band->iftype_data = data;
 }
