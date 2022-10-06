@@ -1620,9 +1620,9 @@ static int fec_rxq(struct net_device *ndev, struct fec_enet_priv_rx_q *rxq,
 	bdp = rxq->bd.cur;
 	xdp_init_buff(&xdp, PAGE_SIZE, &rxq->xdp_rxq);
 
-	while (!((status = fec16_to_cpu(bdp->cbd_sc)) & BD_ENET_RX_EMPTY)) {
-
-		if (pkt_received >= budget)
+	while (pkt_received < budget) {
+		status = fec16_to_cpu(READ_ONCE(bdp->cbd_sc));
+		if (status & BD_ENET_RX_EMPTY)
 			break;
 		pkt_received++;
 
@@ -1642,7 +1642,7 @@ static int fec_rxq(struct net_device *ndev, struct fec_enet_priv_rx_q *rxq,
 				/* Frame too long or too short. */
 				ndev->stats.rx_length_errors++;
 				if (status & BD_ENET_RX_LAST)
-					netdev_err(ndev, "rcv is not +last\n");
+					netdev_err(ndev, "rcv is not +last %x\n", status);
 			}
 			if (status & BD_ENET_RX_CR)	/* CRC Error */
 				ndev->stats.rx_crc_errors++;
