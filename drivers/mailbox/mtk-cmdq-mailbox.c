@@ -910,12 +910,20 @@ static const struct gce_plat gce_plat_v6 = {
 	.gpr_timer_event = 226
 };
 
+static const struct gce_plat gce_plat_v7 = {
+	.thread_nr = 32,
+	.shift = 3,
+	.control_by_sw = false,
+	.gce_num = 2
+};
+
 static const struct of_device_id cmdq_of_ids[] = {
 	{.compatible = "mediatek,mt8173-gce", .data = (void *)&gce_plat_v2},
 	{.compatible = "mediatek,mt8183-gce", .data = (void *)&gce_plat_v3},
 	{.compatible = "mediatek,mt6779-gce", .data = (void *)&gce_plat_v4},
 	{.compatible = "mediatek,mt8192-gce", .data = (void *)&gce_plat_v5},
 	{.compatible = "mediatek,mt8195-gce", .data = (void *)&gce_plat_v6},
+	{.compatible = "mediatek,mt8188-gce", .data = (void *)&gce_plat_v7},
 	{}
 };
 
