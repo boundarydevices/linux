@@ -185,7 +185,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8dxl-phantom-mek.dtb \
 			  imx8dxl-phantom-mek-rpmsg.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-mek.dtb imx8qxp-mek-ov5640.dtb \
 			  imx8qxp-mek-enet2.dtb imx8qxp-mek-enet2-tja1100.dtb \
-			  imx8qxp-mek-sof-cs42888.dtb imx8qxp-mek-sof-wm8960.dtb \
+			  imx8qxp-mek-sof-cs42888.dtb imx8qxp-mek-sof-wm8960.dtb imx8qxp-mek-sof.dtb\
 			  imx8qxp-mek-rpmsg.dtb imx8qxp-mek-a0.dtb \
 			  imx8qxp-mek-it6263-lvds0-dual-channel.dtb \
 			  imx8qxp-mek-it6263-lvds1-dual-channel.dtb \
@@ -233,7 +233,7 @@ dtb-$(CONFIG_ARCH_MXC) += imx8ulp-evk.dtb imx8ulp-evk-lpspi-slave.dtb \
 			  imx8ulp-9x9-evk-i3c.dtb imx8ulp-evk-lpa.dtb imx8ulp-9x9-evk-lpa.dtb
 
 
-dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-sof-cs42888.dtb imx8qm-mek-sof-wm8960.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-sof-cs42888.dtb imx8qm-mek-sof-wm8960.dtb imx8qm-mek-sof.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx93-11x11-evk.dtb \
 			  imx93-11x11-evk-inmate.dtb imx93-11x11-evk-root.dtb imx93-11x11-evk-flexio-i2c.dtb \
 			  imx93-11x11-evk-lpspi.dtb imx93-11x11-evk-lpspi-slave.dtb \
