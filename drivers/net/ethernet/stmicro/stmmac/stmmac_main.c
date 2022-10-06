@@ -3782,6 +3782,7 @@ static int stmmac_open(struct net_device *dev)
 	stmmac_enable_all_queues(priv);
 	netif_tx_start_all_queues(priv->dev);
 	stmmac_enable_all_dma_irq(priv);
+	phylink_set_mac_pm(priv->phylink);
 
 	return 0;
 
