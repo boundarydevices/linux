@@ -146,6 +146,8 @@ struct cca_msrmnt_query {
 #define WL_WSEC_INFO_BSS_BASE 0x0100
 #define WL_WSEC_INFO_BSS_ALGOS (WL_WSEC_INFO_BSS_BASE + 6)
 
+#define WL_HE_CMD_BSSCOLOR 5
+
 static bool check_vif_up(struct brcmf_cfg80211_vif *vif)
 {
 	if (!test_bit(BRCMF_VIF_STATUS_READY, &vif->sme_state)) {
@@ -5539,6 +5541,8 @@ brcmf_cfg80211_start_ap(struct wiphy *wiphy, struct net_device *ndev,
 	bool mbss;
 	int is_11d;
 	bool supports_11d;
+	struct bcm_xtlv *he_tlv;
+	struct cfg80211_beacon_data *beacon = &settings->beacon;
 
 	brcmf_dbg(TRACE, "ctrlchn=%d, center=%d, bw=%d, beacon_interval=%d, dtim_period=%d,\n",
 		  settings->chandef.chan->hw_value,
@@ -5755,6 +5759,19 @@ brcmf_cfg80211_start_ap(struct wiphy *wiphy, struct net_device *ndev,
 		brcmf_dbg(TRACE, "GO mode configuration complete\n");
 	} else {
 		WARN_ON(1);
+	}
+	/* Set he_bss_color in hostapd */
+	if (beacon->he_bss_color.enabled) {
+		u8 param[8] = {0};
+
+		he_tlv = (struct bcm_xtlv *)param;
+		he_tlv->id = cpu_to_le16(WL_HE_CMD_BSSCOLOR);
+		he_tlv->len = cpu_to_le16(1);
+		memcpy(he_tlv->data, &beacon->he_bss_color.color, sizeof(u8));
+		err = brcmf_fil_iovar_data_set(ifp, "he", param, sizeof(param));
+
+		if (err)
+			brcmf_err("set he bss_color error:%d\n", err);
 	}
 
 	brcmf_config_ap_mgmt_ie(ifp->vif, &settings->beacon);
