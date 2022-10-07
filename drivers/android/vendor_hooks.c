@@ -44,6 +44,7 @@
 #include <trace/hooks/fault.h>
 #include <trace/hooks/topology.h>
 #include <trace/hooks/rwsem.h>
+#include <trace/hooks/bl_hib.h>
 
 /*
  * Export tracepoints that act as a bare tracehook (ie: have no trace event
@@ -155,3 +156,6 @@ EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_downgrade_wake_finish);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_rwsem_wake_finish);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_alter_mutex_list_add);
 EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_mutex_unlock_slowpath);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_check_hibernation_swap);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_save_cpu_resume);
+EXPORT_TRACEPOINT_SYMBOL_GPL(android_vh_save_hib_resume_bdev);
