@@ -622,6 +622,7 @@ static const struct reg_value ov5640_init_setting[] = {
 };
 
 static const struct reg_value ov5640_setting_low_res[] = {
+	{0x3008, 0x42, 0, 0},
 	{0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3814, 0x31, 0, 0},
@@ -637,6 +638,7 @@ static const struct reg_value ov5640_setting_low_res[] = {
 };
 
 static const struct reg_value ov5640_setting_720P_1280_720[] = {
+	{0x3008, 0x42, 0, 0},
 	{0x3c07, 0x07, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3814, 0x31, 0, 0},
@@ -649,9 +651,11 @@ static const struct reg_value ov5640_setting_720P_1280_720[] = {
 	{0x4001, 0x02, 0, 0}, {0x4004, 0x02, 0, 0},
 	{0x4407, 0x04, 0, 0}, {0x460b, 0x37, 0, 0}, {0x460c, 0x20, 0, 0},
 	{0x3824, 0x04, 0, 0}, {0x5001, 0x83, 0, 0},
+	{0x3008, 0x02, 0, 15},
 };
 
 static const struct reg_value ov5640_setting_1080P_1920_1080[] = {
+	{0x3008, 0x42, 0, 0},
 	{0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3814, 0x11, 0, 0},
@@ -672,10 +676,11 @@ static const struct reg_value ov5640_setting_1080P_1920_1080[] = {
 	{0x3a0e, 0x03, 0, 0}, {0x3a0d, 0x04, 0, 0}, {0x3a14, 0x04, 0, 0},
 	{0x3a15, 0x60, 0, 0}, {0x4407, 0x04, 0, 0},
 	{0x460b, 0x37, 0, 0}, {0x460c, 0x20, 0, 0}, {0x3824, 0x04, 0, 0},
-	{0x4005, 0x1a, 0, 0},
+	{0x4005, 0x1a, 0, 0}, {0x3008, 0x02, 0, 15},
 };
 
 static const struct reg_value ov5640_setting_QSXGA_2592_1944[] = {
+	{0x3008, 0x42, 0, 0},
 	{0x3c07, 0x08, 0, 0},
 	{0x3c09, 0x1c, 0, 0}, {0x3c0a, 0x9c, 0, 0}, {0x3c0b, 0x40, 0, 0},
 	{0x3814, 0x11, 0, 0},
@@ -688,6 +693,7 @@ static const struct reg_value ov5640_setting_QSXGA_2592_1944[] = {
 	{0x4001, 0x02, 0, 0}, {0x4004, 0x06, 0, 0},
 	{0x4407, 0x04, 0, 0}, {0x460b, 0x35, 0, 0}, {0x460c, 0x22, 0, 0},
 	{0x3824, 0x02, 0, 0}, {0x5001, 0x83, 0, 70},
+	{0x3008, 0x02, 0, 20},
 };
 
 static const struct ov5640_mode_info ov5640_mode_data[OV5640_NUM_MODES] = {
@@ -1851,8 +1857,13 @@ static int ov5640_set_stream_mipi(struct ov5640_dev *sensor, bool on)
 	if (ret)
 		return ret;
 
-	return ov5640_write_reg(sensor, OV5640_REG_FRAME_CTRL01,
+	ret = ov5640_write_reg(sensor, OV5640_REG_FRAME_CTRL01,
 				on ? 0x00 : 0x0f);
+	if (ret)
+		return ret;
+
+	return ov5640_write_reg(sensor, OV5640_REG_SYS_CTRL0,
+				on ? 0x02 : 0x42);
 }
 
 static int ov5640_get_sysclk(struct ov5640_dev *sensor)
