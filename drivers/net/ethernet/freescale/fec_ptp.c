@@ -88,6 +88,9 @@
 #define FEC_CHANNLE_0		0
 #define DEFAULT_PPS_CHANNEL	FEC_CHANNLE_0
 
+#define FEC_PTP_MAX_NSEC_PERIOD	4000000000ULL
+#define FEC_PTP_MIN_NSEC_DELTA	1500000000ULL
+
 /**
  * fec_ptp_enable_pps
  * @fep: the fec_enet_private structure handle
@@ -547,7 +550,7 @@ static int fec_ptp_enable(struct ptp_clock_info *ptp,
 		/* FEC PTP timer only has 31 bits, so if the period exceed
 		 * 4s is not supported.
 		 */
-		if (period_ns > 4 * NSEC_PER_SEC) {
+		if (period_ns > FEC_PTP_MAX_NSEC_PERIOD) {
 			dev_err(&fep->pdev->dev, "The period must equal to or less than 4s!\n");
 			return -EOPNOTSUPP;
 		}
@@ -574,7 +577,7 @@ static int fec_ptp_enable(struct ptp_clock_info *ptp,
 			/* Calculate time difference */
 			delta = fep->perout_stime - curr_time;
 
-			if (fep->perout_stime <= curr_time || delta < (3 * NSEC_PER_SEC / 2)) {
+			if (fep->perout_stime <= curr_time || delta < FEC_PTP_MIN_NSEC_DELTA) {
 				dev_err(&fep->pdev->dev, "Start time at least 1.5s > current time!\n");
 				return -EOPNOTSUPP;
 			}
