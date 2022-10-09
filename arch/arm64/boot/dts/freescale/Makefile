@@ -159,7 +159,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx93-9x9-qsb.dtb \
 			  imx93-9x9-qsb-flexspi-m2.dtb \
 			  imx93-9x9-qsb-ontat-wvga-panel.dtb \
 			  imx93-9x9-qsb-mt9m114.dtb \
-			  imx93-9x9-qsb-i3c.dtb
+			  imx93-9x9-qsb-i3c.dtb \
+			  imx93-9x9-qsb-lpspi.dtb imx93-9x9-qsb-lpspi-slave.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx93-tqma9352-mba93xxla.dtb
 
 imx8mm-venice-gw72xx-0x-imx219-dtbs	:= imx8mm-venice-gw72xx-0x.dtb imx8mm-venice-gw72xx-0x-imx219.dtbo
