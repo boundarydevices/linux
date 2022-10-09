@@ -224,6 +224,7 @@ u32 vpu_get_fmt_plane_size(struct vpu_format *fmt, u32 plane_no)
 		return fmt->sizeimage[plane_no];
 	if (plane_no < fmt->mem_planes - 1)
 		return fmt->sizeimage[plane_no];
+
 	size = fmt->sizeimage[plane_no];
 	for (i = fmt->mem_planes; i < fmt->comp_planes; i++)
 		size += fmt->sizeimage[i];
