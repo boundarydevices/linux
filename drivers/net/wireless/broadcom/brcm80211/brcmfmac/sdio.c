@@ -4339,6 +4339,7 @@ brcmf_sdio_buscore_sec_attach(void *ctx, struct brcmf_blhs **blhs, struct brcmf_
 	struct brcmf_blhs *blhsh = NULL;
 	struct brcmf_ccsec *ccsech = NULL;
 	u32 reg_addr;
+	u32 regdata;
 	u8 cardcap;
 
 	if (sdiodev->func1->vendor != SDIO_VENDOR_ID_CYPRESS)
@@ -4355,6 +4356,17 @@ brcmf_sdio_buscore_sec_attach(void *ctx, struct brcmf_blhs **blhs, struct brcmf_
 		blhsh->read = brcmf_sdio_buscore_blhs_read;
 		blhsh->write = brcmf_sdio_buscore_blhs_write;
 
+		blhsh->write(ctx, blhsh->h2d, 0);
+
+		SPINWAIT_MS((blhsh->read(ctx, blhsh->d2h) & flag) == 0,
+			    timeout, interval);
+
+		regdata = blhsh->read(ctx, blhsh->d2h);
+		if (!(regdata & flag)) {
+			brcmf_err("Timeout waiting for bootloader ready\n");
+			kfree(blhsh);
+			return -EPERM;
+		}
 		*blhs = blhsh;
 	}
 
