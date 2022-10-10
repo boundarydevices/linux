@@ -109,6 +109,6 @@
 		record-size     = <0x00020000>;
 		console-size    = <0x00020000>;
 		ftrace-size     = <0x00020000>;
-		rpmsg-size      = <0x00020000>;
+		pmsg-size      = <0x00020000>;
 	};
 };
