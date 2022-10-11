@@ -326,35 +326,6 @@ enum mxc_mipi_csi2_pm_state {
  */
 static u8 rxhs_settle[3] = {0xD, 0xA, 0x7};
 
-static struct mxc_hs_info hs_setting[] = {
-	{2592, 1944, 30, 0x0B},
-	{2592, 1944, 15, 0x10},
-
-	{1920, 1080, 30, 0x0B},
-	{1920, 1080, 15, 0x10},
-
-	{1280, 720,  30, 0x11},
-	{1280, 720,  15, 0x16},
-
-	{1024, 768,  30, 0x11},
-	{1024, 768,  15, 0x23},
-
-	{720,  576,  30, 0x1E},
-	{720,  576,  15, 0x23},
-
-	{720,  480,  30, 0x1E},
-	{720,  480,  15, 0x23},
-
-	{640,  480,  30, 0x1E},
-	{640,  480,  15, 0x23},
-
-	{320,  240,  30, 0x1E},
-	{320,  240,  15, 0x23},
-
-	{176,  144,  30, 0x1E},
-	{176,  144,  15, 0x23},
-};
-
 static struct imx_sc_ipc *pm_ipc_handle;
 
 static inline struct mxc_mipi_csi2_dev *sd_to_mxc_mipi_csi2_dev(struct v4l2_subdev *sdev)
@@ -449,31 +420,6 @@ static int mipi_sc_fw_init(struct mxc_mipi_csi2_dev *csi2dev, int enable)
 		return ops->reset(csi2dev, enable);
 
 	return 0;
-}
-
-static uint16_t find_hs_configure(struct v4l2_subdev_format *sd_fmt)
-{
-	struct v4l2_mbus_framefmt *fmt = &sd_fmt->format;
-	u32 frame_rate;
-	int i;
-
-	if (!fmt)
-		return -EINVAL;
-
-	frame_rate = fmt->reserved[1];
-
-	for (i = 0; i < ARRAY_SIZE(hs_setting); i++) {
-		if (hs_setting[i].width  == fmt->width &&
-		    hs_setting[i].height == fmt->height &&
-		    hs_setting[i].frame_rate == frame_rate)
-			return hs_setting[i].val;
-	}
-
-	if (i == ARRAY_SIZE(hs_setting))
-		pr_err("can not find HS setting for w/h@fps=(%d, %d)@%d\n",
-		       fmt->width, fmt->height, frame_rate);
-
-	return -EINVAL;
 }
 
 static void mxc_mipi_csi2_reset(struct mxc_mipi_csi2_dev *csi2dev)
@@ -636,6 +582,7 @@ static int mxc_csi2_get_sensor_fmt(struct mxc_mipi_csi2_dev *csi2dev)
 	struct v4l2_subdev *sen_sd;
 	struct v4l2_subdev_format src_fmt;
 	struct media_pad *source_pad;
+	s64 link_freq;
 	int ret;
 
 	/* Get remote source pad */
@@ -662,12 +609,17 @@ static int mxc_csi2_get_sensor_fmt(struct mxc_mipi_csi2_dev *csi2dev)
 	dev_dbg(&csi2dev->pdev->dev, "width=%d, height=%d, fmt.code=0x%x\n",
 		mf->width, mf->height, mf->code);
 
-	/* Get rxhs settle */
-	if (src_fmt.format.reserved[0] != 0) {
+	/* get link rate from transmitter */
+	link_freq = v4l2_get_link_freq(sen_sd->ctrl_handler,
+				src_fmt.format.width,
+				csi2dev->num_lanes * 2);
+
+	if (link_freq == -ENOENT && src_fmt.format.reserved[0] != 0) {
 		csi2dev->hs_settle =
 			calc_hs_settle(csi2dev, src_fmt.format.reserved[0]);
-	} else if (src_fmt.format.reserved[1] != 0) {
-		csi2dev->hs_settle = find_hs_configure(&src_fmt);
+	} else if (link_freq > 0) {
+		csi2dev->hs_settle =
+			calc_hs_settle(csi2dev, div_s64(link_freq * 2, 1000000));
 	} else {
 		if (src_fmt.format.height * src_fmt.format.width > 1024 * 768)
 			csi2dev->hs_settle = rxhs_settle[2];
