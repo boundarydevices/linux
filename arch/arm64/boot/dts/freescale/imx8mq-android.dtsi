@@ -113,7 +113,7 @@
 	secure_dma: secure_mm@f8000000 {
 		compatible = "shared-dma-pool";
 		no-map;
-		reg = <0 0xF8000000 0 0x2800000>;
+		reg = <0 0xF8000000 0 0x6000000>;
 	};
 };
 
