@@ -29,6 +29,7 @@ struct rfkill_gpio_data {
 	struct gpio_desc	*shutdown_gpio;
 	struct gpio_desc	*pulse_on_gpio;
 	unsigned		pulse_duration;
+	unsigned		reset_pulse_duration;
 	struct gpio_desc	*power_key_gpio;
 	unsigned		power_key_low_off;
 	unsigned		power_key_low_on;
@@ -118,6 +119,12 @@ static int rfkill_gpio_set_power(void *data, bool blocked)
 			if (!IS_ERR(rfkill->clk))
 				clk_prepare_enable(rfkill->clk);
 
+			if (rfkill->reset_pulse_duration) {
+				gpiod_set_value_cansleep(rfkill->reset_gpio, 0);
+				msleep(2);
+				gpiod_set_value_cansleep(rfkill->reset_gpio, 1);
+				msleep(rfkill->reset_pulse_duration);
+			}
 			gpiod_set_value_cansleep(rfkill->reset_gpio, 0);
 			gpiod_set_value_cansleep(rfkill->shutdown_gpio, 0);
 			if (rfkill->power_key_gpio) {
@@ -262,6 +269,9 @@ static int rfkill_gpio_probe(struct platform_device *pdev)
 
 	ret = of_property_read_u32(dev->of_node, "pulse-duration",
 			&rfkill->pulse_duration);
+
+	ret = of_property_read_u32(dev->of_node, "reset-pulse-duration",
+			&rfkill->reset_pulse_duration);
 
 	gpio = devm_gpiod_get_optional(dev, "power-key", GPIOD_OUT_HIGH);
 	if (IS_ERR(gpio))
