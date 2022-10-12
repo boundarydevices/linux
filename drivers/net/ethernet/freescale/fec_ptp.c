@@ -88,8 +88,8 @@
 #define FEC_CHANNLE_0		0
 #define DEFAULT_PPS_CHANNEL	FEC_CHANNLE_0
 
-#define FEC_PTP_MAX_NSEC_PERIOD	4000000000ULL
-#define FEC_PTP_MIN_NSEC_DELTA	1500000000ULL
+#define FEC_PTP_MAX_NSEC_PERIOD		4000000000ULL
+#define FEC_PTP_MAX_NSEC_COUNTER	0x80000000ULL
 
 /**
  * fec_ptp_enable_pps
@@ -555,7 +555,7 @@ static int fec_ptp_enable(struct ptp_clock_info *ptp,
 			return -EOPNOTSUPP;
 		}
 
-		fep->reload_period =  period_ns / 2;
+		fep->reload_period = div_u64(period_ns, 2);
 		if (on && fep->reload_period) {
 			/* Convert 1588 timestamp to ns*/
 			start_time.tv_sec = rq->perout.start.sec;
@@ -577,15 +577,23 @@ static int fec_ptp_enable(struct ptp_clock_info *ptp,
 			/* Calculate time difference */
 			delta = fep->perout_stime - curr_time;
 
-			if (fep->perout_stime <= curr_time || delta < FEC_PTP_MIN_NSEC_DELTA) {
-				dev_err(&fep->pdev->dev, "Start time at least 1.5s > current time!\n");
-				return -EOPNOTSUPP;
+			if (fep->perout_stime <= curr_time) {
+				dev_err(&fep->pdev->dev, "Start time must larger than current time!\n");
+				return -EINVAL;
 			}
 
-			/* Start hrtimer, about one second ahead of start_time. */
-			timeout = ns_to_ktime(delta - NSEC_PER_SEC);
-			hrtimer_start(&fep->perout_timer, timeout, HRTIMER_MODE_REL);
-
+			/* Because the timer counter of FEC only has 31-bits, correspondingly,
+			 * the time comparison register FEC_TCCR also only low 31 bits can be
+			 * set. If the start time of pps signal exceeds current time more than
+			 * 0x80000000 ns, a software timer is used and the timer expires about
+			 * 1 second before the start time to be able to set FEC_TCCR.
+			 */
+			if (delta > FEC_PTP_MAX_NSEC_COUNTER) {
+				timeout = ns_to_ktime(delta - NSEC_PER_SEC);
+				hrtimer_start(&fep->perout_timer, timeout, HRTIMER_MODE_REL);
+			} else {
+				return fec_ptp_pps_perout(fep);
+			}
 		} else {
 			fec_ptp_pps_disable(fep, fep->pps_channel);
 		}
