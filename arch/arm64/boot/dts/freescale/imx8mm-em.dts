@@ -197,9 +197,9 @@
 
 	pinctrl_pcie0: pcie0grp {
 		fsl,pins = <
-#define GP_PCIE0_RESET		<&gpio4 31 GPIO_ACTIVE_LOW>
+#define GP_PCIE0_RESET		<&gpio4 31 (GPIO_OPEN_DRAIN | GPIO_ACTIVE_LOW)>
 			MX8MM_IOMUXC_SAI3_TXFS_GPIO4_IO31		0x100
-#define GP_PCIE0_DISABLE	<&gpio3 21 GPIO_ACTIVE_LOW>
+#define GP_PCIE0_DISABLE	<&gpio3 21 (GPIO_OPEN_DRAIN | GPIO_ACTIVE_LOW)>
 			MX8MM_IOMUXC_SAI5_RXD0_GPIO3_IO21		0x100
 		>;
 	};
@@ -402,6 +402,15 @@
 			MX8MM_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B		0x140
 		>;
 	};
+
+	pinctrl_wwan_rfkill: wwan-rfkillgrp {
+		fsl,pins = <
+#define GP_PCIE0_RESET		<&gpio4 31 (GPIO_OPEN_DRAIN | GPIO_ACTIVE_LOW)>
+			MX8MM_IOMUXC_SAI3_TXFS_GPIO4_IO31		0x140
+#define GP_PCIE0_DISABLE	<&gpio3 21 (GPIO_OPEN_DRAIN | GPIO_ACTIVE_LOW)>
+			MX8MM_IOMUXC_SAI5_RXD0_GPIO3_IO21		0x140
+		>;
+	};
 };
 
 #include "panel-ltk080a60a004t.dtsi"
@@ -516,6 +525,19 @@
 		gpio = GP_REG_WLAN_VMMC;
 		startup-delay-us = <70000>;
 		enable-active-high;
+	};
+
+	wwan_rfkill: wwan-rfkill {
+		compatible = "net,rfkill-gpio";
+		high-gpios = GP_PCIE0_DISABLE;	/* keep disable low */
+		name = "wwan-rfkill";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wwan_rfkill>;
+		reset-gpios = GP_PCIE0_RESET;
+		status = "okay";
+		type = <5>;     /* WWAN */
+		vdd-supply = <&reg_vref_3v3>;
+		wakeup-dev = <&usbotg2>;
 	};
 };
 
@@ -972,7 +994,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie0>;
 	reset-gpio = GP_PCIE0_RESET;
-	status = "okay";
+	status = "disabled";
 };
 
 &pgc_vpumix {
@@ -1034,6 +1056,7 @@
 };
 
 &usbotg2 {
+	autosuspend-delay-ms = <15000>;
 	disable-over-current;
 	dr_mode = "host";
 	pinctrl-names = "default";
