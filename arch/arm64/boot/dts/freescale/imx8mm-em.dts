@@ -534,6 +534,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_wwan_rfkill>;
 		reset-gpios = GP_PCIE0_RESET;
+		reset-pulse-duration = <200>;
 		status = "okay";
 		type = <5>;     /* WWAN */
 		vdd-supply = <&reg_vref_3v3>;
