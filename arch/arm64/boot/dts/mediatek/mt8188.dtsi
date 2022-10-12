@@ -60,6 +60,7 @@
 			enable-method = "psci";
 			performance-domains = <&performance 0>;
 			clock-frequency = <2000000000>;
+			cpu-idle-states = <&cpuoff_l &clusteroff_l>;
 			capacity-dmips-mhz = <282>;
 			#cooling-cells = <2>;
 		};
@@ -71,6 +72,7 @@
 			enable-method = "psci";
 			performance-domains = <&performance 0>;
 			clock-frequency = <2000000000>;
+			cpu-idle-states = <&cpuoff_l &clusteroff_l>;
 			capacity-dmips-mhz = <282>;
 			#cooling-cells = <2>;
 		};
@@ -82,6 +84,7 @@
 			enable-method = "psci";
 			performance-domains = <&performance 0>;
 			clock-frequency = <2000000000>;
+			cpu-idle-states = <&cpuoff_l &clusteroff_l>;
 			capacity-dmips-mhz = <282>;
 			#cooling-cells = <2>;
 		};
@@ -93,6 +96,7 @@
 			enable-method = "psci";
 			performance-domains = <&performance 0>;
 			clock-frequency = <2000000000>;
+			cpu-idle-states = <&cpuoff_l &clusteroff_l>;
 			capacity-dmips-mhz = <282>;
 			#cooling-cells = <2>;
 		};
@@ -104,6 +108,7 @@
 			enable-method = "psci";
 			performance-domains = <&performance 0>;
 			clock-frequency = <2000000000>;
+			cpu-idle-states = <&cpuoff_l &clusteroff_l>;
 			capacity-dmips-mhz = <282>;
 			#cooling-cells = <2>;
 		};
@@ -115,6 +120,7 @@
 			enable-method = "psci";
 			performance-domains = <&performance 0>;
 			clock-frequency = <2000000000>;
+			cpu-idle-states = <&cpuoff_l &clusteroff_l>;
 			capacity-dmips-mhz = <282>;
 			#cooling-cells = <2>;
 		};
@@ -126,6 +132,7 @@
 			enable-method = "psci";
 			performance-domains = <&performance 1>;
 			clock-frequency = <2200000000>;
+			cpu-idle-states = <&cpuoff_b &clusteroff_b>;
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 		};
@@ -137,6 +144,7 @@
 			enable-method = "psci";
 			performance-domains = <&performance 1>;
 			clock-frequency = <2200000000>;
+			cpu-idle-states = <&cpuoff_b &clusteroff_b>;
 			capacity-dmips-mhz = <1024>;
 			#cooling-cells = <2>;
 		};
@@ -176,6 +184,42 @@
 				core1 {
 					cpu = <&cpu7>;
 				};
+			};
+		};
+
+		idle-states {
+			entry-method = "arm,psci";
+			cpuoff_l: cpuoff-l {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x00010001>;
+				local-timer-stop;
+				entry-latency-us = <50>;
+				exit-latency-us = <95>;
+				min-residency-us = <580>;
+			};
+			cpuoff_b: cpuoff-b {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x00010001>;
+				local-timer-stop;
+				entry-latency-us = <45>;
+				exit-latency-us = <140>;
+				min-residency-us = <740>;
+			};
+			clusteroff_l: clusteroff-l {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x01010002>;
+				local-timer-stop;
+				entry-latency-us = <55>;
+				exit-latency-us = <155>;
+				min-residency-us = <840>;
+			};
+			clusteroff_b: clusteroff-b {
+				compatible = "arm,idle-state";
+				arm,psci-suspend-param = <0x01010002>;
+				local-timer-stop;
+				entry-latency-us = <50>;
+				exit-latency-us = <200>;
+				min-residency-us = <1000>;
 			};
 		};
 
