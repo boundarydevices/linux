@@ -333,3 +333,8 @@ bool brcmf_feat_is_quirk_enabled(struct brcmf_if *ifp,
 {
 	return (ifp->drvr->chip_quirks & BIT(quirk));
 }
+
+bool brcmf_feat_is_6ghz_enabled(struct brcmf_if *ifp)
+{
+	return (!ifp->drvr->settings->disable_6ghz);
+}
