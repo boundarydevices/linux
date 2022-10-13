@@ -444,7 +444,7 @@ static void mxc_pcsi_config_ctrl_reg1(struct mxc_parallel_csi_dev *pcsidev)
 	u32 pixel_width;
 	u32 vsync_pulse;
 	u32 val;
-	u32 ret;
+	int ret;
 
 	if (pcsidev->format.width <= 0 || pcsidev->format.height <= 0) {
 		dev_dbg(dev, "%s width/height invalid\n", __func__);
