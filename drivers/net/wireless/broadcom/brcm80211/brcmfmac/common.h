@@ -42,6 +42,7 @@ extern struct brcmf_mp_global_t brcmf_mp_global;
  * @ignore_probe_fail: Ignore probe failure.
  * @trivial_ccode_map: Assume firmware uses ISO3166 country codes with rev 0
  * @fw_ap_select: Allow FW to select AP.
+ * @disable_6ghz: Disable 6GHz operation
  * @country_codes: If available, pointer to struct for translating country codes
  * @bus: Bus specific platform data. Only SDIO at the mmoment.
  */
@@ -56,6 +57,7 @@ struct brcmf_mp_device {
 	bool		ignore_probe_fail;
 	bool		trivial_ccode_map;
 	bool		fw_ap_select;
+	bool		disable_6ghz;
 	struct brcmfmac_pd_cc *country_codes;
 	const char	*board_type;
 	unsigned char	mac[ETH_ALEN];
