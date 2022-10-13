@@ -69,5 +69,6 @@ extern const struct nl80211_vendor_cmd_info brcmf_vendor_events[];
 s32 brcmf_wiphy_phy_temp_evt_handler(struct brcmf_if *ifp,
 				     const struct brcmf_event_msg *e,
 				     void *data);
+int get_brcmf_num_vndr_cmds(void);
 
 #endif /* _vendor_h_ */

@@ -8829,7 +8829,7 @@ static int brcmf_setup_wiphy(struct wiphy *wiphy, struct brcmf_if *ifp)
 	}
 	/* vendor commands/events support */
 	wiphy->vendor_commands = brcmf_vendor_cmds;
-	wiphy->n_vendor_commands = BRCMF_VNDR_CMDS_LAST - 1;
+	wiphy->n_vendor_commands = get_brcmf_num_vndr_cmds();
 	wiphy->vendor_events = brcmf_vendor_events;
 	wiphy->n_vendor_events = BRCMF_VNDR_EVTS_LAST;
 	brcmf_fweh_register(cfg->pub, BRCMF_E_PHY_TEMP,
