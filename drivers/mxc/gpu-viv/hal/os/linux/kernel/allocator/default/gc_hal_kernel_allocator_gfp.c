@@ -491,6 +491,9 @@ _GFPAlloc(
     int result;
     int low = 0;
     int high = 0;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)
+    void *addr = NULL;
+#endif
 
     gcmkHEADER_ARG("Allocator=%p Mdl=%p NumPages=%zu Flags=0x%x", Allocator, Mdl, NumPages, Flags);
 
@@ -565,8 +568,6 @@ _GFPAlloc(
 
 Alloc:
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)
-        void *addr = NULL;
-
         addr = alloc_pages_exact(bytes, (gfp & ~__GFP_HIGHMEM) | __GFP_NORETRY);
 
         mdlPriv->contiguousPages = addr ? virt_to_page(addr) : gcvNULL;
