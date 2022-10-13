@@ -15,6 +15,7 @@
 #include "cfg80211.h"
 #include "vendor.h"
 #include "fwil.h"
+#include "vendor_ifx.h"
 
 static int brcmf_cfg80211_vndr_cmds_dcmd_handler(struct wiphy *wiphy,
 						 struct wireless_dev *wdev,
@@ -239,6 +240,20 @@ const struct wiphy_vendor_command brcmf_vendor_cmds[] = {
 		.policy = VENDOR_CMD_RAW_DATA,
 		.doit = brcmf_cfg80211_vndr_cmds_frameburst
 	},
+	{
+		IFX_SUBCMD(DCMD,
+			   (WIPHY_VENDOR_CMD_NEED_WDEV |
+			    WIPHY_VENDOR_CMD_NEED_NETDEV),
+			   VENDOR_CMD_RAW_DATA,
+			   brcmf_cfg80211_vndr_cmds_dcmd_handler)
+	},
+	{
+		IFX_SUBCMD(FRAMEBURST,
+			   (WIPHY_VENDOR_CMD_NEED_WDEV |
+			    WIPHY_VENDOR_CMD_NEED_NETDEV),
+			   VENDOR_CMD_RAW_DATA,
+			   brcmf_cfg80211_vndr_cmds_frameburst)
+	},
 };
 
 const struct nl80211_vendor_cmd_info brcmf_vendor_events[] = {
@@ -247,3 +262,10 @@ const struct nl80211_vendor_cmd_info brcmf_vendor_events[] = {
 		.subcmd = BRCMF_VNDR_EVTS_PHY_TEMP,
 	},
 };
+
+int get_brcmf_num_vndr_cmds(void)
+{
+	int num = ARRAY_SIZE(brcmf_vendor_cmds);
+
+	return num;
+}
