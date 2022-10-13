@@ -106,7 +106,7 @@ struct mtk_mmsys_driver_data {
 	const unsigned int num_main_sys_w_h_configs;
 	const u32 *cross_sys_w_h_configs;
 	const unsigned int num_cross_sys_w_h_configs;
-	bool vppsys;
+	const bool is_vppsys;
 };
 
 /*

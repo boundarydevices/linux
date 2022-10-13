@@ -82,16 +82,6 @@ static const struct mtk_mmsys_driver_data mt8192_mmsys_driver_data = {
 	.sw0_rst_offset = MT8186_MMSYS_SW0_RST_B,
 };
 
-static const struct mtk_mmsys_driver_data mt8195_vppsys0_driver_data = {
-	.clk_driver = "clk-mt8195-vpp0",
-	.vppsys = true,
-};
-
-static const struct mtk_mmsys_driver_data mt8195_vppsys1_driver_data = {
-	.clk_driver = "clk-mt8195-vpp1",
-	.vppsys = true,
-};
-
 static const struct mtk_mmsys_driver_data mt8195_vdosys0_driver_data = {
 	.clk_driver = "clk-mt8195-vdo0",
 	.routes = mmsys_mt8195_routing_table,
@@ -112,6 +102,16 @@ static const struct mtk_mmsys_driver_data mt8195_vdosys1_driver_data = {
 	.num_cross_sys_w_h_configs = ARRAY_SIZE(mmsys_mt8195_vdo1_cross_sys_w_h_configs_list),
 	.sw0_rst_offset = MT8195_VDO1_SW0_RST_B,
 	.num_resets = 64,
+};
+
+static const struct mtk_mmsys_driver_data mt8195_vppsys0_driver_data = {
+	.clk_driver = "clk-mt8195-vpp0",
+	.is_vppsys = true,
+};
+
+static const struct mtk_mmsys_driver_data mt8195_vppsys1_driver_data = {
+	.clk_driver = "clk-mt8195-vpp1",
+	.is_vppsys = true,
 };
 
 static const struct mtk_mmsys_driver_data mt8365_mmsys_driver_data = {
@@ -378,8 +378,8 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 	if (IS_ERR(clks))
 		return PTR_ERR(clks);
 
-	if (mmsys->data->vppsys)
-		goto EXIT;
+	if (mmsys->data->is_vppsys)
+		goto out_probe_done;
 
 	drm = platform_device_register_data(&pdev->dev, "mediatek-drm",
 					    PLATFORM_DEVID_AUTO, NULL, 0);
@@ -388,7 +388,7 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 		return PTR_ERR(drm);
 	}
 
-EXIT:
+out_probe_done:
 	return 0;
 }
 
@@ -430,20 +430,20 @@ static const struct of_device_id of_match_mtk_mmsys[] = {
 		.data = &mt8192_mmsys_driver_data,
 	},
 	{
-		.compatible = "mediatek,mt8195-vppsys0",
-		.data = &mt8195_vppsys0_driver_data,
-	},
-	{
-		.compatible = "mediatek,mt8195-vppsys1",
-		.data = &mt8195_vppsys1_driver_data,
-	},
-	{
 		.compatible = "mediatek,mt8195-vdosys0",
 		.data = &mt8195_vdosys0_driver_data,
 	},
 	{
 		.compatible = "mediatek,mt8195-vdosys1",
 		.data = &mt8195_vdosys1_driver_data,
+	},
+	{
+		.compatible = "mediatek,mt8195-vppsys0",
+		.data = &mt8195_vppsys0_driver_data,
+	},
+	{
+		.compatible = "mediatek,mt8195-vppsys1",
+		.data = &mt8195_vppsys1_driver_data,
 	},
 	{
 		.compatible = "mediatek,mt8365-mmsys",
