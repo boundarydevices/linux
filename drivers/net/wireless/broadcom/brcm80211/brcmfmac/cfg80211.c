@@ -7959,8 +7959,14 @@ static int brcmf_construct_chaninfo(struct brcmf_cfg80211_info *cfg,
 			band = wiphy->bands[NL80211_BAND_2GHZ];
 		} else if (ch.band == BRCMU_CHAN_BAND_5G) {
 			band = wiphy->bands[NL80211_BAND_5GHZ];
-		} else if (ch.band == BRCMU_CHAN_BAND_6G) {
-			band = wiphy->bands[NL80211_BAND_6GHZ];
+		} else if ((ch.band == BRCMU_CHAN_BAND_6G)) {
+			if (brcmf_feat_is_6ghz_enabled(ifp)) {
+				band = wiphy->bands[NL80211_BAND_6GHZ];
+			} else {
+				brcmf_dbg(INFO, "Disabled channel Spec. 0x%x.\n",
+					  ch.chspec);
+				continue;
+			}
 		} else {
 			bphy_err(drvr, "Invalid channel Spec. 0x%x.\n",
 				 ch.chspec);
@@ -8196,6 +8202,10 @@ static void brcmf_get_bwcap(struct brcmf_if *ifp, u32 bw_cap[])
 		err = brcmf_fil_iovar_int_get(ifp, "bw_cap", &band);
 		if (!err) {
 			bw_cap[NL80211_BAND_5GHZ] = band;
+
+			if (!brcmf_feat_is_6ghz_enabled(ifp))
+				return;
+
 			band = WLC_BAND_6G;
 			err = brcmf_fil_iovar_int_get(ifp, "bw_cap", &band);
 			if (!err) {
@@ -8403,9 +8413,9 @@ static int brcmf_setup_wiphybands(struct brcmf_cfg80211_info *cfg)
 	u32 nmode = 0;
 	u32 vhtmode = 0;
 	u32 bw_cap[4] = { WLC_BW_20MHZ_BIT,  /* 2GHz  */
-					  WLC_BW_20MHZ_BIT,  /* 5GHz  */
-					  0,                 /* 60GHz */
-					  WLC_BW_20MHZ_BIT };/* 6GHz  */
+			  WLC_BW_20MHZ_BIT,  /* 5GHz  */
+			  0,                 /* 60GHz */
+			  0 };		     /* 6GHz  */
 	u32 rxchain;
 	u32 nchain;
 	int err;
@@ -8425,9 +8435,9 @@ static int brcmf_setup_wiphybands(struct brcmf_cfg80211_info *cfg)
 	}
 	(void)brcmf_fil_iovar_data_get(ifp, "he", he, sizeof(he));
 
-	brcmf_dbg(INFO, "nmode=%d, vhtmode=%d, he=%d, bw_cap=(%d, %d)\n",
+	brcmf_dbg(INFO, "nmode=%d, vhtmode=%d, he=%d, bw_cap=(%d, %d, %d)\n",
 		  nmode, vhtmode, he[0], bw_cap[NL80211_BAND_2GHZ],
-		  bw_cap[NL80211_BAND_5GHZ]);
+		  bw_cap[NL80211_BAND_5GHZ], bw_cap[NL80211_BAND_6GHZ]);
 
 	err = brcmf_fil_iovar_int_get(ifp, "rxchain", &rxchain);
 	if (err) {
@@ -8461,6 +8471,10 @@ static int brcmf_setup_wiphybands(struct brcmf_cfg80211_info *cfg)
 	for (i = 0; i < ARRAY_SIZE(wiphy->bands); i++) {
 		band = wiphy->bands[i];
 		if (band == NULL)
+			continue;
+
+		if ((band->band == NL80211_BAND_6GHZ) &&
+		    !brcmf_feat_is_6ghz_enabled(ifp))
 			continue;
 
 		if (nmode)
@@ -8788,8 +8802,7 @@ static int brcmf_setup_wiphy(struct wiphy *wiphy, struct brcmf_if *ifp)
 			WIPHY_FLAG_PS_ON_BY_DEFAULT |
 			WIPHY_FLAG_HAVE_AP_SME |
 			WIPHY_FLAG_OFFCHAN_TX |
-			WIPHY_FLAG_HAS_REMAIN_ON_CHANNEL |
-			WIPHY_FLAG_SPLIT_SCAN_6GHZ;
+			WIPHY_FLAG_HAS_REMAIN_ON_CHANNEL;
 	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_TDLS))
 		wiphy->flags |= WIPHY_FLAG_SUPPORTS_TDLS;
 	if (!ifp->drvr->settings->roamoff)
@@ -8879,7 +8892,8 @@ static int brcmf_setup_wiphy(struct wiphy *wiphy, struct brcmf_if *ifp)
 			band->n_channels = ARRAY_SIZE(__wl_5ghz_channels);
 			wiphy->bands[NL80211_BAND_5GHZ] = band;
 		}
-		if (bandlist[i] == cpu_to_le32(WLC_BAND_6G)) {
+		if (bandlist[i] == cpu_to_le32(WLC_BAND_6G) &&
+		    brcmf_feat_is_6ghz_enabled(ifp)) {
 			band = kmemdup(&__wl_band_6ghz, sizeof(__wl_band_6ghz),
 					   GFP_KERNEL);
 			if (!band)
