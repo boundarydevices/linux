@@ -24,6 +24,9 @@
 #define OTFAD_CONFIG			0x2
 #define ELE_GET_INFO_REQ                0xDA
 #define GET_INFO_DATA                   0x17
+#define ELE_START_RNG_REQ		0xA3
+#define ELE_GET_TRNG_STATE_REQ		0xA4
+#define CSAL_TRNG_STATE_MASK		0x0000ffff
 
 #define ELE_VERSION			0x6
 #define ELE_SUCCESS_IND		0xD6
@@ -39,5 +42,7 @@
 int read_common_fuse(uint16_t fuse_index, u32 *value);
 int ele_ping(void);
 int ele_get_info(phys_addr_t addr, u32 data_size);
+int ele_start_rng(void);
+int ele_get_trng_state(void);
 
 #endif
