@@ -7,7 +7,6 @@
 
 #include <linux/types.h>
 #include <linux/completion.h>
-#include <linux/mailbox_client.h>
 
 #include <linux/firmware/imx/ele_base_msg.h>
 #include <linux/firmware/imx/ele_mu_ioctl.h>
@@ -33,7 +32,7 @@ static int plat_fill_cmd_msg_hdr(struct mu_hdr *hdr, uint8_t cmd, uint32_t len)
 	return err;
 }
 
-static int imx_ele_msg_send_rcv(struct ele_mu_priv *priv)
+int imx_ele_msg_send_rcv(struct ele_mu_priv *priv)
 {
 	unsigned int wait;
 	int err = 0;
