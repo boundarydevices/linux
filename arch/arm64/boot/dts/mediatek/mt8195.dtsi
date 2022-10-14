@@ -4268,6 +4268,19 @@
 			interrupts = <GIC_SPI 458 IRQ_TYPE_LEVEL_HIGH 0>;
 			status = "disabled";
 		};
+
+		jpgenc@1a030000 {
+			compatible = "mediatek,mtk-jpgenc";
+			reg = <0 0x1a030000 0 0x10000>;
+			mediatek,larb = <&larb19>;
+			iommus = <&iommu_vdo M4U_PORT_L19_JPGENC_Y_RDMA>,
+				 <&iommu_vdo M4U_PORT_L19_JPGENC_C_RDMA>,
+				 <&iommu_vdo M4U_PORT_L19_JPGENC_Q_TABLE>,
+				 <&iommu_vdo M4U_PORT_L19_JPGENC_BSDMA>;
+			interrupts = <GIC_SPI 342 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&vencsys CLK_VENC_JPGENC>;
+			clock-names = "jpgenc";
+		};
 	};
 
 	sound: mt8195-sound {
