@@ -1774,19 +1774,24 @@ static void mxc_jpeg_encode_ctrls(struct mxc_jpeg_ctx *ctx)
 
 static int mxc_jpeg_ctrls_setup(struct mxc_jpeg_ctx *ctx)
 {
+	int err;
+
 	v4l2_ctrl_handler_init(&ctx->ctrl_handler, 2);
 
 	if (ctx->mxc_jpeg->mode == MXC_JPEG_ENCODE)
 		mxc_jpeg_encode_ctrls(ctx);
 
 	if (ctx->ctrl_handler.error) {
-		int err = ctx->ctrl_handler.error;
+		err = ctx->ctrl_handler.error;
 
 		v4l2_ctrl_handler_free(&ctx->ctrl_handler);
 		return err;
 	}
 
-	return v4l2_ctrl_handler_setup(&ctx->ctrl_handler);
+	err = v4l2_ctrl_handler_setup(&ctx->ctrl_handler);
+	if (err)
+		v4l2_ctrl_handler_free(&ctx->ctrl_handler);
+	return err;
 }
 
 static int mxc_jpeg_open(struct file *file)
