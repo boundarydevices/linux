@@ -18,6 +18,7 @@
 
 	aliases {
 		serial0 = &uart0;
+		dsi0 = &dsi0;
 	};
 
 	chosen {
@@ -128,6 +129,37 @@
 		ethernet_phy0: ethernet-phy@1 {
 			compatible = "ethernet-phy-id001c.c916";
 			reg = <0x1>;
+		};
+	};
+};
+
+&dsi0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	poweron-in-hs-mode = <0>;
+
+	panel@0 {
+		compatible = "startek,kd070fhfid015";
+		status = "okay";
+		reg = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&panel_pins_default>;
+		reset-gpios = <&pio 25 GPIO_ACTIVE_HIGH>;
+		dcdc-gpios = <&pio 45 GPIO_ACTIVE_HIGH>;
+		enable-gpios = <&pio 111 GPIO_ACTIVE_HIGH>;
+		port {
+			panel0_in: endpoint {
+				remote-endpoint = <&dsi0_out>;
+			};
+		};
+	};
+
+	ports {
+		port {
+			dsi0_out: endpoint {
+				remote-endpoint = <&panel0_in>;
+			};
 		};
 	};
 };
@@ -286,6 +318,23 @@
 			pinmux = <PINMUX_GPIO44__FUNC_B1_KPROW0>,
 					<PINMUX_GPIO43__FUNC_B1_KPCOL1>,
 					<PINMUX_GPIO42__FUNC_B1_KPCOL0>;
+		};
+	};
+
+	panel_pins_default: panel-pins-default {
+		panel-dcdc {
+			pinmux = <PINMUX_GPIO45__FUNC_B_GPIO45>;
+			output-low;
+		};
+
+		panel-en {
+			pinmux = <PINMUX_GPIO111__FUNC_B_GPIO111>;
+			output-low;
+		};
+
+		panel-rst {
+			pinmux = <PINMUX_GPIO25__FUNC_B_GPIO25>;
+			output-high;
 		};
 	};
 
@@ -694,6 +743,10 @@
 &uart0 {
 	pinctrl-0 = <&uart0_pins>;
 	pinctrl-names = "default";
+	status = "okay";
+};
+
+&mipi_tx0 {
 	status = "okay";
 };
 
