@@ -74,6 +74,7 @@
 
 	ethosu {
 		compatible = "arm,ethosu";
+		fsl,cm33-proc = <&cm33>;
 	};
 
 	reg_can2_stby: regulator-can2-stby {
