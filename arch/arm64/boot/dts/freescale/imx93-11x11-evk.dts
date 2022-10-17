@@ -72,6 +72,10 @@
 		fsl,startup-delay-ms = <500>;
 	};
 
+	ethosu {
+		compatible = "arm,ethosu";
+	};
+
 	reg_can2_stby: regulator-can2-stby {
 		compatible = "regulator-fixed";
 		regulator-name = "can2-stby";
