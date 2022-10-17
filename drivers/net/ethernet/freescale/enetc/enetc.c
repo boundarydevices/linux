@@ -2355,15 +2355,72 @@ void enetc_start(struct net_device *ndev)
 	netif_tx_start_all_queues(ndev);
 }
 
+static int enetc_xdp_rxq_mem_model_register(struct enetc_ndev_priv *priv,
+					    int rxq)
+{
+	struct enetc_bdr *rx_ring = priv->rx_ring[rxq];
+	int err;
+
+	err = xdp_rxq_info_reg(&rx_ring->xdp.rxq, priv->ndev, rxq, 0);
+	if (err)
+		return err;
+
+	err = xdp_rxq_info_reg_mem_model(&rx_ring->xdp.rxq,
+					 MEM_TYPE_PAGE_SHARED, NULL);
+	if (err)
+		xdp_rxq_info_unreg(&rx_ring->xdp.rxq);
+
+	return err;
+}
+
+static void enetc_xdp_rxq_mem_model_unregister(struct enetc_ndev_priv *priv,
+					       int rxq)
+{
+	struct enetc_bdr *rx_ring = priv->rx_ring[rxq];
+
+	xdp_rxq_info_unreg_mem_model(&rx_ring->xdp.rxq);
+	xdp_rxq_info_unreg(&rx_ring->xdp.rxq);
+}
+
+static int enetc_xdp_mem_model_register(struct enetc_ndev_priv *priv)
+{
+	int i, err;
+
+	for (i = 0; i < priv->num_rx_rings; i++) {
+		err = enetc_xdp_rxq_mem_model_register(priv, i);
+		if (err)
+			goto rollback;
+	}
+
+	return 0;
+
+rollback:
+	for (; i >= 0; i--)
+		enetc_xdp_rxq_mem_model_unregister(priv, i);
+	return err;
+}
+
+static void enetc_xdp_mem_model_unregister(struct enetc_ndev_priv *priv)
+{
+	int i;
+
+	for (i = 0; i < priv->num_rx_rings; i++)
+		enetc_xdp_rxq_mem_model_unregister(priv, i);
+}
+
 int enetc_open(struct net_device *ndev)
 {
 	struct enetc_ndev_priv *priv = netdev_priv(ndev);
 	int num_stack_tx_queues;
 	int err;
 
+	err = enetc_xdp_mem_model_register(priv);
+	if (err)
+		goto err_xdp_mem_model;
+
 	err = enetc_setup_irqs(priv);
 	if (err)
-		return err;
+		goto err_setup_irqs;
 
 	err = enetc_phylink_connect(ndev);
 	if (err)
@@ -2402,7 +2459,9 @@ err_alloc_tx:
 		phylink_disconnect_phy(priv->phylink);
 err_phy_connect:
 	enetc_free_irqs(priv);
-
+err_setup_irqs:
+	enetc_xdp_mem_model_unregister(priv);
+err_xdp_mem_model:
 	return err;
 }
 
@@ -2443,6 +2502,7 @@ int enetc_close(struct net_device *ndev)
 	enetc_free_rx_resources(priv);
 	enetc_free_tx_resources(priv);
 	enetc_free_irqs(priv);
+	enetc_xdp_mem_model_unregister(priv);
 
 	return 0;
 }
@@ -2754,20 +2814,6 @@ int enetc_alloc_msix(struct enetc_ndev_priv *priv)
 		bdr->buffer_offset = ENETC_RXB_PAD;
 		priv->rx_ring[i] = bdr;
 
-		err = xdp_rxq_info_reg(&bdr->xdp.rxq, priv->ndev, i, 0);
-		if (err) {
-			kfree(v);
-			goto fail;
-		}
-
-		err = xdp_rxq_info_reg_mem_model(&bdr->xdp.rxq,
-						 MEM_TYPE_PAGE_SHARED, NULL);
-		if (err) {
-			xdp_rxq_info_unreg(&bdr->xdp.rxq);
-			kfree(v);
-			goto fail;
-		}
-
 		/* init defaults for adaptive IC */
 		if (priv->ic_mode & ENETC_IC_RX_ADAPTIVE) {
 			v->rx_ictt = 0x1;
@@ -2801,10 +2847,7 @@ int enetc_alloc_msix(struct enetc_ndev_priv *priv)
 fail:
 	while (i--) {
 		struct enetc_int_vector *v = priv->int_vector[i];
-		struct enetc_bdr *rx_ring = &v->rx_ring;
 
-		xdp_rxq_info_unreg_mem_model(&rx_ring->xdp.rxq);
-		xdp_rxq_info_unreg(&rx_ring->xdp.rxq);
 		netif_napi_del(&v->napi);
 		cancel_work_sync(&v->rx_dim.work);
 		kfree(v);
@@ -2821,10 +2864,7 @@ void enetc_free_msix(struct enetc_ndev_priv *priv)
 
 	for (i = 0; i < priv->bdr_int_num; i++) {
 		struct enetc_int_vector *v = priv->int_vector[i];
-		struct enetc_bdr *rx_ring = &v->rx_ring;
 
-		xdp_rxq_info_unreg_mem_model(&rx_ring->xdp.rxq);
-		xdp_rxq_info_unreg(&rx_ring->xdp.rxq);
 		netif_napi_del(&v->napi);
 		cancel_work_sync(&v->rx_dim.work);
 	}
