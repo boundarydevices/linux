@@ -32,14 +32,18 @@ struct ele_mu_priv *ele_priv_export;
 
 struct imx_info {
 	bool socdev;
+	/* platform specific flag to enable/disable the Sentinel True RNG */
+	bool enable_ele_trng;
 };
 
 static const struct imx_info imx8ulp_info = {
 	.socdev = true,
+	.enable_ele_trng = false,
 };
 
 static const struct imx_info imx93_info = {
 	.socdev = false,
+	.enable_ele_trng = true,
 };
 
 static const struct of_device_id ele_mu_match[] = {
@@ -957,6 +961,12 @@ static int ele_mu_probe(struct platform_device *pdev)
 				"failed[%d] to register SoC device\n", ret);
 			goto exit;
 		}
+	}
+
+	if (info && info->enable_ele_trng) {
+		ret = ele_trng_init(&pdev->dev);
+		if (ret)
+			dev_err(dev, "Failed to init ele-trng\n");
 	}
 
 	/*

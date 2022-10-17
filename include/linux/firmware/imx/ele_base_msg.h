@@ -14,6 +14,7 @@
 #define MAX_MESSAGE_SIZE_BYTES (MAX_MESSAGE_SIZE * sizeof(u32))
 
 #define MESSAGING_VERSION_6		0x6
+#define MESSAGING_VERSION_7		0x7
 
 #define ELE_PING_REQ			0x1
 #define ELE_OEM_CNTN_AUTH_REQ	0x87
@@ -26,6 +27,7 @@
 #define GET_INFO_DATA                   0x17
 #define ELE_START_RNG_REQ		0xA3
 #define ELE_GET_TRNG_STATE_REQ		0xA4
+#define ELE_GET_RANDOM_REQ		0x22
 #define CSAL_TRNG_STATE_MASK		0x0000ffff
 
 #define ELE_VERSION			0x6
