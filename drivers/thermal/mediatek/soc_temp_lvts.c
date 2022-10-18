@@ -27,6 +27,10 @@
  * Definition or macro function
  *==================================================
  */
+#define TSV2F_CHOP_CKSEL_AND_TSV2F_EN_V5	(DEVICE_WRITE | RG_TSV2F_CTRL_2 << 8 | 0x8C)
+#define TSBG_DEM_CKSEL_X_TSBG_CHOP_EN_V5	(DEVICE_WRITE | RG_TSV2F_CTRL_4 << 8 | 0xFC)
+#define SET_TS_CHOP_V5				(DEVICE_WRITE | RG_TSV2F_CTRL_0 << 8 | 0xF1)
+
 #define STOP_COUNTING_V4 (DEVICE_WRITE | RG_TSFM_CTRL_0 << 8 | 0x00)
 #define SET_RG_TSFM_LPDLY_V4 (DEVICE_WRITE | RG_TSFM_CTRL_4 << 8 | 0xA6)
 #define SET_COUNTING_WINDOW_20US1_V4 (DEVICE_WRITE | RG_TSFM_CTRL_2 << 8 | 0x00)
@@ -145,15 +149,16 @@ static int lvts_read_all_tc_temperature(struct lvts_data *lvts_data)
 {
 	struct tc_settings *tc = lvts_data->tc;
 	unsigned int i, j, s_index, msr_raw;
-	int max_temp = 0, current_temp;
+	int max_temp = 0, current_temp, x;
 	void __iomem *base;
 
 	for (i = 0; i < lvts_data->num_tc; i++) {
 		base = GET_BASE_ADDR(i);
 		for (j = 0; j < tc[i].num_sensor; j++) {
 			s_index = tc[i].sensor_map[j];
+			x = j + tc[i].ts_offset;
 
-			msr_raw = readl(LVTSMSR0_0 + base + 0x4 * j) & MRS_RAW_MASK;
+			msr_raw = readl(LVTSMSR0_0 + base + 0x4 * (x)) & MRS_RAW_MASK;
 			current_temp = lvts_raw_to_temp(&lvts_data->coeff, msr_raw);
 
 			if (msr_raw == 0)
@@ -178,8 +183,10 @@ static int soc_temp_lvts_read_temp(void *data, int *temperature)
 		*temperature = lvts_read_all_tc_temperature(lvts_data);
 	else if (lvts_tz->id - 1 < lvts_data->num_sensor)
 		*temperature = lvts_data->sen_data[lvts_tz->id - 1].temp;
-	else
+	else {
+		*temperature = 0;
 		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -339,7 +346,11 @@ static void enable_all_sensing_points(struct lvts_data *lvts_data)
 			continue;
 		}
 
-		writel(ENABLE_SENSING_POINT(num), LVTSMONCTL0_0 + base);
+		if ((tc[i].ts_offset == 1) && (num == 1))
+			writel(LVTS_SINGLE_SENSE | (0x1 << tc[i].ts_offset),
+			       LVTSMONCTL0_0 + base);
+		else
+			writel(ENABLE_SENSING_POINT(num), LVTSMONCTL0_0 + base);
 	}
 }
 
@@ -417,8 +428,8 @@ static int get_dominator_index(struct lvts_data *lvts_data, int tc_id)
 
 	if (tc[tc_id].dominator_sensing_point == ALL_SENSING_POINTS) {
 		d_index = ALL_SENSING_POINTS;
-	} else if (tc[tc_id].dominator_sensing_point <
-		tc[tc_id].num_sensor){
+	} else if ((tc[tc_id].dominator_sensing_point <
+		tc[tc_id].num_sensor) || (tc[tc_id].ts_offset != 0)) {
 		d_index = tc[tc_id].dominator_sensing_point;
 	} else {
 		dev_err(dev,
@@ -924,6 +935,22 @@ static int lvts_resume(struct platform_device *pdev)
 	return 0;
 }
 
+static void device_enable_and_init_v5(struct lvts_data *lvts_data)
+{
+	unsigned int i;
+
+	for (i = 0; i < lvts_data->num_tc; i++) {
+		lvts_write_device(lvts_data, STOP_COUNTING_V4, i);
+		lvts_write_device(lvts_data, SET_RG_TSFM_LPDLY_V4, i);
+		lvts_write_device(lvts_data, SET_COUNTING_WINDOW_20US1_V4, i);
+		lvts_write_device(lvts_data, SET_COUNTING_WINDOW_20US2_V4, i);
+		lvts_write_device(lvts_data, TSV2F_CHOP_CKSEL_AND_TSV2F_EN_V5, i);
+		lvts_write_device(lvts_data, TSBG_DEM_CKSEL_X_TSBG_CHOP_EN_V5, i);
+		lvts_write_device(lvts_data, SET_TS_RSV_V4, i);
+		lvts_write_device(lvts_data, SET_TS_CHOP_V5, i);
+	}
+}
+
 /*==================================================
  * LVTS v4 common code
  *==================================================
@@ -1019,7 +1046,7 @@ static void set_calibration_data_v4(struct lvts_data *lvts_data)
 {
 	struct tc_settings *tc = lvts_data->tc;
 	struct sensor_cal_data *cal_data = &lvts_data->cal_data;
-	unsigned int i, j, s_index, e_data;
+	unsigned int i, j, s_index, e_data, x;
 	void __iomem *base;
 
 	for (i = 0; i < lvts_data->num_tc; i++) {
@@ -1027,6 +1054,8 @@ static void set_calibration_data_v4(struct lvts_data *lvts_data)
 
 		for (j = 0; j < tc[i].num_sensor; j++) {
 			s_index = tc[i].sensor_map[j];
+			x = j + tc[i].ts_offset;
+
 			if (IS_ENABLE(FEATURE_DEVICE_AUTO_RCK))
 				e_data = cal_data->count_r[s_index];
 			else
@@ -1034,7 +1063,7 @@ static void set_calibration_data_v4(struct lvts_data *lvts_data)
 					cal_data->count_rc_now[s_index]) *
 					cal_data->count_r[s_index]) >> 14;
 
-			writel(e_data, LVTSEDATA00_0 + base + 0x4 * j);
+			writel(e_data, LVTSEDATA00_0 + base + 0x4 * (x));
 		}
 	}
 }
@@ -1253,6 +1282,188 @@ static struct lvts_data mt6873_lvts_data = {
 };
 
 /*==================================================
+ * LVTS MT8188
+ *==================================================
+ */
+
+enum mt8188_lvts_domain {
+	MT8188_AP_DOMAIN,
+	MT8188_MCU_DOMAIN,
+	MT8188_NUM_DOMAIN
+};
+
+enum mt8188_lvts_sensor_enum {
+	MT8188_TS1_0,
+	MT8188_TS1_1,
+	MT8188_TS1_2,
+	MT8188_TS1_3,
+	MT8188_TS2_0,
+	MT8188_TS2_1,
+	MT8188_TS3_1,
+	MT8188_TS4_0,
+	MT8188_TS4_1,
+	MT8188_TS4_2,
+	MT8188_TS5_0,
+	MT8188_TS5_1,
+	MT8188_TS6_0,
+	MT8188_TS6_1,
+	MT8188_NUM_TS
+};
+
+enum lvts_tc_enum {
+	LVTS_MCU_CONTROLLER0 = 0,
+	LVTS_MCU_CONTROLLER1,
+	LVTS_AP_CONTROLLER0,
+	LVTS_AP_CONTROLLER1,
+	LVTS_AP_CONTROLLER2,
+	LVTS_AP_CONTROLLER3,
+	LVTS_CONTROLLER_NUM
+};
+
+static void mt8188_efuse_to_cal_data(struct lvts_data *lvts_data)
+{
+	struct sensor_cal_data *cal_data = &lvts_data->cal_data;
+
+	cal_data->golden_temp = GET_CAL_DATA_BITMASK(0, 27, 20);
+
+	cal_data->count_r[MT8188_TS1_0] = (GET_CAL_DATA_BITMASK(6, 7, 0) << 16) +
+		GET_CAL_DATA_BITMASK(5, 31, 16);
+	cal_data->count_r[MT8188_TS1_1] = GET_CAL_DATA_BITMASK(6, 31, 8);
+	cal_data->count_r[MT8188_TS1_2] = GET_CAL_DATA_BITMASK(7, 23, 0);
+	cal_data->count_r[MT8188_TS1_3] = (GET_CAL_DATA_BITMASK(8, 15, 0) << 8) +
+		GET_CAL_DATA_BITMASK(7, 31, 24);
+	cal_data->count_r[MT8188_TS2_0] = (GET_CAL_DATA_BITMASK(9, 7, 0) << 16) +
+		GET_CAL_DATA_BITMASK(8, 31, 16);
+	cal_data->count_r[MT8188_TS2_1] = GET_CAL_DATA_BITMASK(9, 31, 8);
+
+	cal_data->count_r[MT8188_TS3_1] = GET_CAL_DATA_BITMASK(10, 23, 0);
+	cal_data->count_r[MT8188_TS4_0] = (GET_CAL_DATA_BITMASK(11, 15, 0) << 8) +
+		GET_CAL_DATA_BITMASK(10, 31, 24);
+	cal_data->count_r[MT8188_TS4_1] = (GET_CAL_DATA_BITMASK(12, 7, 0) << 16) +
+		GET_CAL_DATA_BITMASK(11, 31, 16);
+	cal_data->count_r[MT8188_TS4_2] = GET_CAL_DATA_BITMASK(12, 31, 8);
+	cal_data->count_r[MT8188_TS5_0] = GET_CAL_DATA_BITMASK(13, 23, 0);
+	cal_data->count_r[MT8188_TS5_1] = (GET_CAL_DATA_BITMASK(14, 15, 0) << 8) +
+		GET_CAL_DATA_BITMASK(13, 31, 24);
+	cal_data->count_r[MT8188_TS6_0] = (GET_CAL_DATA_BITMASK(15, 7, 0) << 16) +
+		GET_CAL_DATA_BITMASK(14, 31, 16);
+	cal_data->count_r[MT8188_TS6_1] = GET_CAL_DATA_BITMASK(15, 31, 8);
+
+	cal_data->count_rc[LVTS_MCU_CONTROLLER0] = GET_CAL_DATA_BITMASK(1, 23, 0);
+	cal_data->count_rc[LVTS_MCU_CONTROLLER1] = (GET_CAL_DATA_BITMASK(2, 15, 0) << 8) +
+						    GET_CAL_DATA_BITMASK(1, 31, 24);
+	cal_data->count_rc[LVTS_AP_CONTROLLER0] = (GET_CAL_DATA_BITMASK(3, 7, 0) << 16) +
+		GET_CAL_DATA_BITMASK(2, 31, 16);
+	cal_data->count_rc[LVTS_AP_CONTROLLER1] = GET_CAL_DATA_BITMASK(3, 31, 8);
+	cal_data->count_rc[LVTS_AP_CONTROLLER2] = GET_CAL_DATA_BITMASK(4, 23, 0);
+	cal_data->count_rc[LVTS_AP_CONTROLLER3] = (GET_CAL_DATA_BITMASK(5, 15, 0) << 8) +
+		GET_CAL_DATA_BITMASK(4, 31, 24);
+}
+
+static const struct tc_settings mt8188_tc_settings[] = {
+	[0] = {
+		.domain_index = MT8188_MCU_DOMAIN,
+		.addr_offset = 0x0,
+		.num_sensor = 4,
+		.ts_offset = 0,
+		.sensor_map = {MT8188_TS1_0, MT8188_TS1_1, MT8188_TS1_2, MT8188_TS1_3},
+		.tc_speed = SET_TC_SPEED_IN_US(118, 118, 118, 118),
+		.hw_filter = LVTS_FILTER_2_OF_4,
+		.dominator_sensing_point = SENSING_POINT1,
+		.hw_reboot_trip_point = 117000,
+		.irq_bit = BIT(3),
+	},
+	[1] = {
+		.domain_index = MT8188_MCU_DOMAIN,
+		.addr_offset = 0x100,
+		.num_sensor = 2,
+		.ts_offset = 0,
+		.sensor_map = {MT8188_TS2_0, MT8188_TS2_1},
+		.tc_speed = SET_TC_SPEED_IN_US(118, 118, 118, 118),
+		.hw_filter = LVTS_FILTER_2_OF_4,
+		.dominator_sensing_point = SENSING_POINT0,
+		.hw_reboot_trip_point = 117000,
+		.irq_bit = BIT(4),
+	},
+	[2] = {
+		.domain_index = MT8188_AP_DOMAIN,
+		.addr_offset = 0x0,
+		.num_sensor = 1,
+		.ts_offset = 1,
+		.sensor_map = {MT8188_TS3_1},
+		.tc_speed = SET_TC_SPEED_IN_US(118, 118, 118, 118),
+		.hw_filter = LVTS_FILTER_2_OF_4,
+		.dominator_sensing_point = SENSING_POINT1,
+		.hw_reboot_trip_point = 117000,
+		.irq_bit = BIT(3),
+	},
+	[3] = {
+		.domain_index = MT8188_AP_DOMAIN,
+		.addr_offset = 0x100,
+		.num_sensor = 3,
+		.ts_offset = 0,
+		.sensor_map = {MT8188_TS4_0, MT8188_TS4_1, MT8188_TS4_2},
+		.tc_speed = SET_TC_SPEED_IN_US(118, 118, 118, 118),
+		.hw_filter = LVTS_FILTER_2_OF_4,
+		.dominator_sensing_point = SENSING_POINT1,
+		.hw_reboot_trip_point = 117000,
+		.irq_bit = BIT(4),
+	},
+	[4] = {
+		.domain_index = MT8188_AP_DOMAIN,
+		.addr_offset = 0x200,
+		.num_sensor = 2,
+		.ts_offset = 0,
+		.sensor_map = {MT8188_TS5_0, MT8188_TS5_1},
+		.tc_speed = SET_TC_SPEED_IN_US(118, 118, 118, 118),
+		.hw_filter = LVTS_FILTER_2_OF_4,
+		.dominator_sensing_point = SENSING_POINT1,
+		.hw_reboot_trip_point = 117000,
+		.irq_bit = BIT(5),
+	},
+	[5] = {
+		.domain_index = MT8188_AP_DOMAIN,
+		.addr_offset = 0x300,
+		.num_sensor = 2,
+		.ts_offset = 0,
+		.sensor_map = {MT8188_TS6_0, MT8188_TS6_1},
+		.tc_speed = SET_TC_SPEED_IN_US(118, 118, 118, 118),
+		.hw_filter = LVTS_FILTER_2_OF_4,
+		.dominator_sensing_point = SENSING_POINT0,
+		.hw_reboot_trip_point = 117000,
+		.irq_bit = BIT(6),
+	}
+};
+
+static const struct lvts_data mt8188_lvts_data = {
+	.counting_window_us = 20,
+	.num_domain = MT8188_NUM_DOMAIN,
+	.num_tc = (ARRAY_SIZE(mt8188_tc_settings)),
+	.tc = mt8188_tc_settings,
+	.num_sensor = MT8188_NUM_TS,
+	.ops = {
+		.efuse_to_cal_data = mt8188_efuse_to_cal_data,
+		.device_enable_and_init = device_enable_and_init_v5,
+		.device_enable_auto_rck = device_enable_auto_rck_v4,
+		.device_read_count_rc_n = device_read_count_rc_n_v4,
+		.set_cal_data = set_calibration_data_v4,
+		.init_controller = init_controller_v4,
+	},
+	.feature_bitmap = FEATURE_DEVICE_AUTO_RCK | FEATURE_CK26M_ACTIVE,
+	.num_efuse_addr = 16,
+	.num_efuse_block = 1,
+	.cal_data = {
+		.default_golden_temp = 50,
+		.default_count_r = 35000,
+		.default_count_rc = 2750,
+	},
+	.coeff = {
+		.a = -250460,
+		.b = 250460,
+	},
+};
+
+/*==================================================
  * LVTS MT8195
  *==================================================
  */
@@ -1354,6 +1565,7 @@ static struct tc_settings mt8195_tc_settings[] = {
 		.domain_index = MT8195_MCU_DOMAIN,
 		.addr_offset = 0x0,
 		.num_sensor = 2,
+		.ts_offset = 0,
 		.sensor_map = {MT8195_TS1_0, MT8195_TS1_1},
 		.tc_speed = SET_TC_SPEED_IN_US(118, 118, 118, 118),
 		.hw_filter = LVTS_FILTER_2_OF_4,
@@ -1365,6 +1577,7 @@ static struct tc_settings mt8195_tc_settings[] = {
 		.domain_index = MT8195_MCU_DOMAIN,
 		.addr_offset = 0x100,
 		.num_sensor = 2,
+		.ts_offset = 0,
 		.sensor_map = {MT8195_TS2_0, MT8195_TS2_1},
 		.tc_speed = SET_TC_SPEED_IN_US(118, 118, 118, 118),
 		.hw_filter = LVTS_FILTER_2_OF_4,
@@ -1376,6 +1589,7 @@ static struct tc_settings mt8195_tc_settings[] = {
 		.domain_index = MT8195_MCU_DOMAIN,
 		.addr_offset = 0x200,
 		.num_sensor = 4,
+		.ts_offset = 0,
 		.sensor_map = {MT8195_TS3_0, MT8195_TS3_1, MT8195_TS3_2, MT8195_TS3_3},
 		.tc_speed = SET_TC_SPEED_IN_US(118, 118, 118, 118),
 		.hw_filter = LVTS_FILTER_2_OF_4,
@@ -1387,6 +1601,7 @@ static struct tc_settings mt8195_tc_settings[] = {
 		.domain_index = MT8195_AP_DOMAIN,
 		.addr_offset = 0x0,
 		.num_sensor = 2,
+		.ts_offset = 0,
 		.sensor_map = {MT8195_TS4_0, MT8195_TS4_1},
 		.tc_speed = SET_TC_SPEED_IN_US(118, 118, 118, 118),
 		.hw_filter = LVTS_FILTER_2_OF_4,
@@ -1398,6 +1613,7 @@ static struct tc_settings mt8195_tc_settings[] = {
 		.domain_index = MT8195_AP_DOMAIN,
 		.addr_offset = 0x100,
 		.num_sensor = 2,
+		.ts_offset = 0,
 		.sensor_map = {MT8195_TS5_0, MT8195_TS5_1},
 		.tc_speed = SET_TC_SPEED_IN_US(118, 118, 118, 118),
 		.hw_filter = LVTS_FILTER_2_OF_4,
@@ -1409,6 +1625,7 @@ static struct tc_settings mt8195_tc_settings[] = {
 		.domain_index = MT8195_AP_DOMAIN,
 		.addr_offset = 0x200,
 		.num_sensor = 3,
+		.ts_offset = 0,
 		.sensor_map = {MT8195_TS6_0, MT8195_TS6_1, MT8195_TS6_2},
 		.tc_speed = SET_TC_SPEED_IN_US(118, 118, 118, 118),
 		.hw_filter = LVTS_FILTER_2_OF_4,
@@ -1420,6 +1637,7 @@ static struct tc_settings mt8195_tc_settings[] = {
 		.domain_index = MT8195_AP_DOMAIN,
 		.addr_offset = 0x300,
 		.num_sensor = 2,
+		.ts_offset = 0,
 		.sensor_map = {MT8195_TS7_0, MT8195_TS7_1},
 		.tc_speed = SET_TC_SPEED_IN_US(118, 118, 118, 118),
 		.hw_filter = LVTS_FILTER_2_OF_4,
@@ -1469,6 +1687,10 @@ static const struct of_device_id lvts_of_match[] = {
 	{
 		.compatible = "mediatek,mt8195-lvts",
 		.data = (void *)&mt8195_lvts_data,
+	},
+	{
+		.compatible = "mediatek,mt8188-lvts",
+		.data = (void *)&mt8188_lvts_data,
 	},
 	{
 	},

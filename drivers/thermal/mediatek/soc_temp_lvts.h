@@ -48,6 +48,7 @@ struct tc_settings {
 	unsigned int domain_index;
 	unsigned int addr_offset;
 	unsigned int num_sensor;
+	unsigned int ts_offset;
 	unsigned int sensor_map[ALL_SENSING_POINTS]; /* In sensor ID */
 	struct speed_settings tc_speed;
 	/* HW filter setting
