@@ -8078,9 +8078,6 @@ static int brcmf_construct_chaninfo(struct brcmf_cfg80211_info *cfg,
 					next = &band->channels[j + 1];
 					memcpy(cur, next, sizeof(*cur));
 				}
-			/* To avoid fw crash while delete all channels */
-				if (n_6g == 1)
-					break;
 				n_6g--;
 			} else
 				i++;
