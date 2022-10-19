@@ -48,10 +48,10 @@ struct enetc_tx_swbd {
 	(SKB_WITH_OVERHEAD(ENETC_RXB_TRUESIZE) - XDP_PACKET_HEADROOM)
 
 struct enetc_rx_swbd {
-	dma_addr_t dma;
 	struct page *page;
-	u16 page_offset;
+	dma_addr_t dma;
 	enum dma_data_direction dir;
+	u16 page_offset;
 	u16 len;
 };
 
