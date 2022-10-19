@@ -15,7 +15,7 @@
 #include <linux/init.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
-#include <linux/pm_runtime.h>
+#include <linux/of_device.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/types.h>
@@ -448,6 +448,8 @@ struct ov5640_dev {
 
 	/* lock to protect all members below */
 	struct mutex lock;
+
+	int power_count;
 
 	struct v4l2_mbus_framefmt fmt;
 	bool pending_fmt_change;
@@ -2738,23 +2740,38 @@ power_off:
 	return ret;
 }
 
-static int ov5640_sensor_suspend(struct device *dev)
-{
-	struct v4l2_subdev *sd = dev_get_drvdata(dev);
-	struct ov5640_dev *ov5640 = to_ov5640_dev(sd);
-
-	return ov5640_set_power(ov5640, false);
-}
-
-static int ov5640_sensor_resume(struct device *dev)
-{
-	struct v4l2_subdev *sd = dev_get_drvdata(dev);
-	struct ov5640_dev *ov5640 = to_ov5640_dev(sd);
-
-	return ov5640_set_power(ov5640, true);
-}
-
 /* --------------- Subdev Operations --------------- */
+
+static int ov5640_s_power(struct v4l2_subdev *sd, int on)
+{
+	struct ov5640_dev *sensor = to_ov5640_dev(sd);
+	int ret = 0;
+
+	mutex_lock(&sensor->lock);
+
+	/*
+	 * If the power count is modified from 0 to != 0 or from != 0 to 0,
+	 * update the power state.
+	 */
+	if (sensor->power_count == !on) {
+		ret = ov5640_set_power(sensor, !!on);
+		if (ret)
+			goto out;
+	}
+
+	/* Update the power count. */
+	sensor->power_count += on ? 1 : -1;
+	WARN_ON(sensor->power_count < 0);
+out:
+	mutex_unlock(&sensor->lock);
+
+	if (on && !ret && sensor->power_count == 1) {
+		/* restore controls */
+		ret = v4l2_ctrl_handler_setup(&sensor->ctrls.handler);
+	}
+
+	return ret;
+}
 
 static int ov5640_try_frame_interval(struct ov5640_dev *sensor,
 				     struct v4l2_fract *fi,
@@ -3326,9 +3343,6 @@ static int ov5640_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 
 	/* v4l2_ctrl_lock() locks our own mutex */
 
-	if (!pm_runtime_get_if_in_use(&sensor->i2c_client->dev))
-		return 0;
-
 	switch (ctrl->id) {
 	case V4L2_CID_AUTOGAIN:
 		val = ov5640_get_gain(sensor);
@@ -3343,9 +3357,6 @@ static int ov5640_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 		sensor->ctrls.exposure->val = val;
 		break;
 	}
-
-	pm_runtime_mark_last_busy(&sensor->i2c_client->dev);
-	pm_runtime_put_autosuspend(&sensor->i2c_client->dev);
 
 	return 0;
 }
@@ -3376,9 +3387,9 @@ static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 	/*
 	 * If the device is not powered up by the host driver do
 	 * not apply any controls to H/W at this time. Instead
-	 * the controls will be restored at start streaming time.
+	 * the controls will be restored right after power-up.
 	 */
-	if (!pm_runtime_get_if_in_use(&sensor->i2c_client->dev))
+	if (sensor->power_count == 0)
 		return 0;
 
 	switch (ctrl->id) {
@@ -3419,9 +3430,6 @@ static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 		ret = -EINVAL;
 		break;
 	}
-
-	pm_runtime_mark_last_busy(&sensor->i2c_client->dev);
-	pm_runtime_put_autosuspend(&sensor->i2c_client->dev);
 
 	return ret;
 }
@@ -3701,18 +3709,6 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 	int delay;
 	int ret = 0;
 
-	if (enable) {
-		ret = pm_runtime_resume_and_get(&sensor->i2c_client->dev);
-		if (ret < 0)
-			return ret;
-
-		ret = v4l2_ctrl_handler_setup(&sensor->ctrls.handler);
-		if (ret) {
-			pm_runtime_put(&sensor->i2c_client->dev);
-			return ret;
-		}
-	}
-
 	mutex_lock(&sensor->lock);
 
 	if (sensor->streaming == !enable) {
@@ -3741,15 +3737,8 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		delay = (enable) ? 100 : 0;
 		msleep(delay);
 	}
-
 out:
 	mutex_unlock(&sensor->lock);
-
-	if (!enable || ret) {
-		pm_runtime_mark_last_busy(&sensor->i2c_client->dev);
-		pm_runtime_put_autosuspend(&sensor->i2c_client->dev);
-	}
-
 	return ret;
 }
 
@@ -3773,6 +3762,7 @@ static int ov5640_init_cfg(struct v4l2_subdev *sd,
 }
 
 static const struct v4l2_subdev_core_ops ov5640_core_ops = {
+	.s_power = ov5640_s_power,
 	.log_status = v4l2_ctrl_subdev_log_status,
 	.subscribe_event = v4l2_ctrl_subdev_subscribe_event,
 	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
@@ -3829,20 +3819,26 @@ static int ov5640_check_chip_id(struct ov5640_dev *sensor)
 	int ret = 0;
 	u16 chip_id;
 
+	ret = ov5640_set_power_on(sensor);
+	if (ret)
+		return ret;
+
 	ret = ov5640_read_reg16(sensor, OV5640_REG_CHIP_ID, &chip_id);
 	if (ret) {
 		dev_err(&client->dev, "%s: failed to read chip identifier\n",
 			__func__);
-		return ret;
+		goto power_off;
 	}
 
 	if (chip_id != 0x5640) {
 		dev_err(&client->dev, "%s: wrong chip identifier, expected 0x5640, got 0x%x\n",
 			__func__, chip_id);
-		return -ENXIO;
+		ret = -ENXIO;
 	}
 
-	return 0;
+power_off:
+	ov5640_set_power_off(sensor);
+	return ret;
 }
 
 static int ov5640_probe(struct i2c_client *client)
@@ -3937,44 +3933,26 @@ static int ov5640_probe(struct i2c_client *client)
 
 	ret = ov5640_get_regulators(sensor);
 	if (ret)
-		goto entity_cleanup;
+		return ret;
 
 	mutex_init(&sensor->lock);
+
+	ret = ov5640_check_chip_id(sensor);
+	if (ret)
+		goto entity_cleanup;
 
 	ret = ov5640_init_controls(sensor);
 	if (ret)
 		goto entity_cleanup;
 
-	ret = ov5640_sensor_resume(dev);
-	if (ret) {
-		dev_err(dev, "failed to power on\n");
-		goto entity_cleanup;
-	}
-
-	pm_runtime_set_active(dev);
-	pm_runtime_get_noresume(dev);
-	pm_runtime_enable(dev);
-
-	ret = ov5640_check_chip_id(sensor);
-	if (ret)
-		goto err_pm_runtime;
-
 	ret = v4l2_async_register_subdev_sensor(&sensor->sd);
 	if (ret)
-		goto err_pm_runtime;
-
-	pm_runtime_set_autosuspend_delay(dev, 1000);
-	pm_runtime_use_autosuspend(dev);
-	pm_runtime_mark_last_busy(dev);
-	pm_runtime_put_autosuspend(dev);
+		goto free_ctrls;
 
 	return 0;
 
-err_pm_runtime:
-	pm_runtime_put_noidle(dev);
-	pm_runtime_disable(dev);
+free_ctrls:
 	v4l2_ctrl_handler_free(&sensor->ctrls.handler);
-	ov5640_sensor_suspend(dev);
 entity_cleanup:
 	media_entity_cleanup(&sensor->sd.entity);
 	mutex_destroy(&sensor->lock);
@@ -3985,22 +3963,12 @@ static void ov5640_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct ov5640_dev *sensor = to_ov5640_dev(sd);
-	struct device *dev = &client->dev;
-
-	pm_runtime_disable(dev);
-	if (!pm_runtime_status_suspended(dev))
-		ov5640_sensor_suspend(dev);
-	pm_runtime_set_suspended(dev);
 
 	v4l2_async_unregister_subdev(&sensor->sd);
 	media_entity_cleanup(&sensor->sd.entity);
 	v4l2_ctrl_handler_free(&sensor->ctrls.handler);
 	mutex_destroy(&sensor->lock);
 }
-
-static const struct dev_pm_ops ov5640_pm_ops = {
-	SET_RUNTIME_PM_OPS(ov5640_sensor_suspend, ov5640_sensor_resume, NULL)
-};
 
 static const struct i2c_device_id ov5640_id[] = {
 	{"ov5640", 0},
@@ -4018,7 +3986,6 @@ static struct i2c_driver ov5640_i2c_driver = {
 	.driver = {
 		.name  = "ov5640",
 		.of_match_table	= ov5640_dt_ids,
-		.pm = &ov5640_pm_ops,
 	},
 	.id_table = ov5640_id,
 	.probe    = ov5640_probe,
