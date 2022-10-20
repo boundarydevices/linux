@@ -6518,8 +6518,10 @@ brcmf_cfg80211_set_bitrate(struct wiphy *wiphy, struct net_device *ndev,
 	struct brcmf_if *ifp;
 	u32 he[2] = {0, 0};
 	u32 rspec = 0;
+	s32 ret = TIME_OK;
 	uint hegi;
-	int ret = TIME_OK, i = 0;
+	u16 mcs_mask;
+	u8 band, mcs;
 
 	ifp = netdev_priv(ndev);
 	ret = brcmf_fil_iovar_data_get(ifp, "he", he, sizeof(he));
@@ -6527,34 +6529,54 @@ brcmf_cfg80211_set_bitrate(struct wiphy *wiphy, struct net_device *ndev,
 		brcmf_dbg(INFO, "error reading he (%d)\n", ret);
 		return -EOPNOTSUPP;
 	}
-	for (i = 0; i < NUM_NL80211_BANDS; i++) {
-		if (i != NL80211_BAND_2GHZ && i != NL80211_BAND_5GHZ &&
-		    i != NL80211_BAND_6GHZ) {
+
+	if (!he[0]) {
+		brcmf_dbg(INFO, "Only HE supported\n");
+		return -EOPNOTSUPP;
+	}
+
+	for (band = 0; band < NUM_NL80211_BANDS; band++) {
+		if (band != NL80211_BAND_2GHZ && band != NL80211_BAND_5GHZ &&
+		    band != NL80211_BAND_6GHZ) {
 			continue;
 		}
-		if (he[0]) {
-			rspec = WL_RSPEC_ENCODE_HE;     /* 11ax HE */
-			rspec |= (WL_RSPEC_HE_NSS_UNSPECIFIED << WL_RSPEC_HE_NSS_SHIFT) |
-				  mask->control[i].he_mcs[0];
-			/* set the other rspec fields */
-			hegi = mask->control[i].he_gi;
-			rspec |= ((hegi != 0xFF) ? HE_GI_TO_RSPEC(hegi) : 0);
 
-			if (i == NL80211_BAND_2GHZ)
-				ret = brcmf_fil_iovar_data_set(ifp, "2g_rate", (char *)&rspec, 4);
+		/* Skip setting HE rates if legacy rate set is called from userspace.
+		 * Also if any one of 2.4, 5 or 6GHz is being called then other two will have
+		 * an invalid he mask of 0xFFF so skip setting he rates for other two bands.
+		 */
+		if (!mask->control[band].he_mcs[0] || mask->control[band].he_mcs[0] == 0xFFF)
+			continue;
 
-			if (i == NL80211_BAND_5GHZ)
-				ret = brcmf_fil_iovar_data_set(ifp, "5g_rate", (char *)&rspec, 4);
+		mcs_mask = mask->control[band].he_mcs[0];
+		mcs_mask = (mcs_mask ^ ((mcs_mask - 1) & mcs_mask));
+		if (mcs_mask != mask->control[band].he_mcs[0])
+			continue;
 
-			if (i == NL80211_BAND_6GHZ)
-				ret = brcmf_fil_iovar_data_set(ifp, "6g_rate", (char *)&rspec, 4);
+		while (mcs_mask) {
+			mcs++;
+			mcs_mask >>= 1;
+		}
 
-			if (unlikely(ret))
-				brcmf_dbg(INFO, "%s: set rate failed, retcode = %d\n",
-					  __func__, ret);
-		} else {
-			brcmf_dbg(INFO, "Only HE supported\n");
-			return -EOPNOTSUPP;
+		rspec = WL_RSPEC_ENCODE_HE;     /* 11ax HE */
+		rspec |= (WL_RSPEC_HE_NSS_UNSPECIFIED << WL_RSPEC_HE_NSS_SHIFT) | (mcs - 1);
+		/* set the other rspec fields */
+		hegi = mask->control[band].he_gi;
+		rspec |= ((hegi != 0xFF) ? HE_GI_TO_RSPEC(hegi) : 0);
+
+		if (band == NL80211_BAND_2GHZ)
+			ret = brcmf_fil_iovar_data_set(ifp, "2g_rate", (char *)&rspec, 4);
+
+		if (band == NL80211_BAND_5GHZ)
+			ret = brcmf_fil_iovar_data_set(ifp, "5g_rate", (char *)&rspec, 4);
+
+		if (band == NL80211_BAND_6GHZ)
+			ret = brcmf_fil_iovar_data_set(ifp, "6g_rate", (char *)&rspec, 4);
+
+		if (unlikely(ret)) {
+			brcmf_dbg(INFO, "%s: set rate failed, retcode = %d\n",
+				  __func__, ret);
+			return ret;
 		}
 	}
 	return ret;
