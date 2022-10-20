@@ -119,7 +119,8 @@ static void voltage_range_check(struct kbase_device *kbdev,
 static int set_voltages(struct kbase_device *kbdev, unsigned long *volts,
 			bool inc)
 {
-	int first, step, err, i;
+	int first, step, i;
+	int err = 0;
 
 	if (kbdev->devfreq_ops.set_voltages)
 		return kbdev->devfreq_ops.set_voltages(kbdev, volts, inc);
