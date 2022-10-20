@@ -491,9 +491,6 @@ _GFPAlloc(
     int result;
     int low = 0;
     int high = 0;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)
-    void *addr = NULL;
-#endif
 
     gcmkHEADER_ARG("Allocator=%p Mdl=%p NumPages=%zu Flags=0x%x", Allocator, Mdl, NumPages, Flags);
 
