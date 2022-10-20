@@ -21,6 +21,7 @@
 int pkvm_init_host_vm(struct kvm *kvm, unsigned long type);
 int pkvm_create_hyp_vm(struct kvm *kvm);
 void pkvm_destroy_hyp_vm(struct kvm *kvm);
+bool pkvm_is_hyp_created(struct kvm *kvm);
 
 /*
  * Definitions for features to be allowed or restricted for guest virtual

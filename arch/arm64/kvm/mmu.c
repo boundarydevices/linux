@@ -18,6 +18,7 @@
 #include <asm/kvm_ras.h>
 #include <asm/kvm_asm.h>
 #include <asm/kvm_emulate.h>
+#include <asm/kvm_pkvm.h>
 #include <asm/virt.h>
 
 #include "trace.h"
@@ -2241,9 +2242,8 @@ int kvm_arch_prepare_memory_region(struct kvm *kvm,
 	int ret = 0;
 
 	if (is_protected_kvm_enabled()) {
-		/* In protected mode, cannot modify memslots once a VM has run. */
 		if ((change == KVM_MR_DELETE || change == KVM_MR_MOVE) &&
-		    kvm->arch.pkvm.handle) {
+		    pkvm_is_hyp_created(kvm)) {
 			return -EPERM;
 		}
 
