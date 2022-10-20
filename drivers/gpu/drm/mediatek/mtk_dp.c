@@ -1180,7 +1180,7 @@ static int mtk_dp_get_calibration_data(struct mtk_dp *mtk_dp)
 	struct device *dev = mtk_dp->dev;
 	struct nvmem_cell *cell;
 	u32 *buf;
-	size_t len;
+	size_t len = 0;
 
 	cell = nvmem_cell_get(dev, "dp_calibration_data");
 	if (IS_ERR(cell)) {
