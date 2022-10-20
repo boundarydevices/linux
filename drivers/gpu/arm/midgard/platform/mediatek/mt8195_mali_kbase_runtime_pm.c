@@ -434,8 +434,8 @@ static int mali_mfgsys_init(struct kbase_device *kbdev, struct mfg_base *mfg)
 static void voltage_range_check(struct kbase_device *kbdev,
 				unsigned long *voltages)
 {
-	if (voltages[1] - voltages[0] < MIN_VOLT_BIAS ||
-	    voltages[1] - voltages[0] > MAX_VOLT_BIAS)
+	if (voltages[1] < voltages[0] + MIN_VOLT_BIAS ||
+	    voltages[1] > voltages[0] + MAX_VOLT_BIAS)
 		voltages[1] = voltages[0] + MIN_VOLT_BIAS;
 	voltages[1] = clamp_t(unsigned long, voltages[1], VSRAM_GPU_MIN_VOLT,
 			      VSRAM_GPU_MAX_VOLT);
