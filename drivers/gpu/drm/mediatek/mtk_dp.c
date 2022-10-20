@@ -1155,7 +1155,7 @@ static void mtk_dp_get_calibration_data(struct mtk_dp *mtk_dp)
 	u32 *cal_data = mtk_dp->cal_data;
 	u32 *buf;
 	int i;
-	size_t len;
+	size_t len = 0;
 
 	cell = nvmem_cell_get(dev, "dp_calibration_data");
 	if (IS_ERR(cell)) {
