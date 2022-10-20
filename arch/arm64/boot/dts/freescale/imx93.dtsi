@@ -1462,10 +1462,9 @@
 			clocks = <&clk IMX93_CLK_USB_CONTROLLER_GATE>,
 				 <&clk IMX93_CLK_HSIO_32K_GATE>;
 			clock-names = "usb_ctrl_root_clk", "usb_wakeup_clk";
-			assigned-clocks = <&clk IMX93_CLK_USB_CONTROLLER_GATE>,
-					  <&clk IMX93_CLK_HSIO_32K_GATE>;
-			assigned-clock-parents = <&clk IMX93_CLK_HSIO>,
-						 <&clk IMX93_CLK_32K>;
+			assigned-clocks = <&clk IMX93_CLK_HSIO>;
+			assigned-clock-parents = <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>;
+			assigned-clock-rates = <133000000>;
 			fsl,usbphy = <&usbphynop1>;
 			fsl,usbmisc = <&usbmisc1 0>;
 			status = "disabled";
@@ -1490,10 +1489,9 @@
 			clocks = <&clk IMX93_CLK_USB_CONTROLLER_GATE>,
 				 <&clk IMX93_CLK_HSIO_32K_GATE>;
 			clock-names = "usb_ctrl_root_clk", "usb_wakeup_clk";
-			assigned-clocks = <&clk IMX93_CLK_USB_CONTROLLER_GATE>,
-					  <&clk IMX93_CLK_HSIO_32K_GATE>;
-			assigned-clock-parents = <&clk IMX93_CLK_HSIO>,
-						 <&clk IMX93_CLK_32K>;
+			assigned-clocks = <&clk IMX93_CLK_HSIO>;
+			assigned-clock-parents = <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>;
+			assigned-clock-rates = <133000000>;
 			fsl,usbphy = <&usbphynop2>;
 			fsl,usbmisc = <&usbmisc2 0>;
 			status = "disabled";

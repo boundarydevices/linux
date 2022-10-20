@@ -19,6 +19,7 @@
 #include <linux/refcount.h>
 #include <linux/slab.h>
 #include <linux/completion.h>
+#include <linux/hw_bound_key.h>
 
 /*
  * Autoloaded crypto modules should only use a prefixed name to avoid allowing
@@ -629,6 +630,10 @@ int crypto_has_alg(const char *name, u32 type, u32 mask);
 struct crypto_tfm {
 
 	u32 crt_flags;
+
+	unsigned int is_hbk;
+
+	struct hw_bound_key_info hbk_info;
 
 	int node;
 	

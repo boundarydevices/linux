@@ -388,7 +388,7 @@
 	pinctrl-0 = <&pinctrl_pdm>;
 	assigned-clocks = <&clk IMX93_CLK_PDM>;
 	assigned-clock-parents = <&clk IMX93_CLK_AUDIO_PLL>;
-	assigned-clock-rates = <196608000>;
+	assigned-clock-rates = <49152000>;
 	status = "okay";
 };
 

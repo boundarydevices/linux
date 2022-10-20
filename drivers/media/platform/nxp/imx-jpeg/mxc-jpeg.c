@@ -116,7 +116,7 @@ static const struct mxc_jpeg_fmt mxc_formats[] = {
 	},
 	{
 		.name		= "YUV420", /* 1st plane = Y, 2nd plane = UV */
-		.fourcc		= V4L2_PIX_FMT_NV12M,
+		.fourcc		= V4L2_PIX_FMT_NV12,
 		.subsampling	= V4L2_JPEG_CHROMA_SUBSAMPLING_420,
 		.nc		= 3,
 		.depth		= 12, /* 6 bytes (4Y + UV) for 4 pixels */
@@ -1298,23 +1298,11 @@ static int mxc_jpeg_queue_setup(struct vb2_queue *q,
 {
 	struct mxc_jpeg_ctx *ctx = vb2_get_drv_priv(q);
 	struct mxc_jpeg_q_data *q_data = NULL;
-	struct mxc_jpeg_q_data tmp_q;
 	int i;
 
 	q_data = mxc_jpeg_get_q_data(ctx, q->type);
 	if (!q_data)
 		return -EINVAL;
-
-	tmp_q.fmt = q_data->fmt;
-	tmp_q.w = q_data->w_adjusted;
-	tmp_q.h = q_data->h_adjusted;
-	for (i = 0; i < MXC_JPEG_MAX_PLANES; i++) {
-		tmp_q.bytesperline[i] = q_data->bytesperline[i];
-		tmp_q.sizeimage[i] = q_data->sizeimage[i];
-	}
-	mxc_jpeg_sizeimage(&tmp_q);
-	for (i = 0; i < MXC_JPEG_MAX_PLANES; i++)
-		tmp_q.sizeimage[i] = max(tmp_q.sizeimage[i], q_data->sizeimage[i]);
 
 	/* Handle CREATE_BUFS situation - *nplanes != 0 */
 	if (*nplanes) {
@@ -1663,10 +1651,6 @@ static int mxc_jpeg_buf_prepare(struct vb2_buffer *vb)
 		vb2_set_plane_payload(vb, 0, 0);
 		vb2_set_plane_payload(vb, 1, 0);
 	}
-	if (V4L2_TYPE_IS_CAPTURE(vb->vb2_queue->type)) {
-		vb2_set_plane_payload(vb, 0, 0);
-		vb2_set_plane_payload(vb, 1, 0);
-	}
 	return 0;
 }
 
@@ -1774,19 +1758,24 @@ static void mxc_jpeg_encode_ctrls(struct mxc_jpeg_ctx *ctx)
 
 static int mxc_jpeg_ctrls_setup(struct mxc_jpeg_ctx *ctx)
 {
+	int err;
+
 	v4l2_ctrl_handler_init(&ctx->ctrl_handler, 2);
 
 	if (ctx->mxc_jpeg->mode == MXC_JPEG_ENCODE)
 		mxc_jpeg_encode_ctrls(ctx);
 
 	if (ctx->ctrl_handler.error) {
-		int err = ctx->ctrl_handler.error;
+		err = ctx->ctrl_handler.error;
 
 		v4l2_ctrl_handler_free(&ctx->ctrl_handler);
 		return err;
 	}
 
-	return v4l2_ctrl_handler_setup(&ctx->ctrl_handler);
+	err = v4l2_ctrl_handler_setup(&ctx->ctrl_handler);
+	if (err)
+		v4l2_ctrl_handler_free(&ctx->ctrl_handler);
+	return err;
 }
 
 static int mxc_jpeg_open(struct file *file)
