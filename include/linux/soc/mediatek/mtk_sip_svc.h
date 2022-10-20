@@ -29,4 +29,7 @@
 /* IOMMU related SMC call */
 #define MTK_SIP_KERNEL_IOMMU_CONTROL	MTK_SIP_SMC_CMD(0x514)
 
+/* APUSYS related SMC call */
+#define MTK_SIP_APUSYS_CONTROL MTK_SIP_SMC_CMD(0x51E)
+
 #endif
