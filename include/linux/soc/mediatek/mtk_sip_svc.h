@@ -28,4 +28,9 @@
 /* DEVAPC */
 #define MTK_SIP_KERNEL_DAPC_CAM_CONTROL \
 	MTK_SIP_SMC_CMD(0x52D)
+
+/* APUSYS related SMC call */
+#define MTK_SIP_APUSYS_CONTROL \
+	MTK_SIP_SMC_CMD(0x51E)
+
 #endif
