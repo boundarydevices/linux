@@ -154,14 +154,6 @@ struct iommu_resv_region {
 	enum iommu_resv_type	type;
 };
 
-struct iommu_iort_rmr_data {
-	struct iommu_resv_region rr;
-
-	/* Stream IDs associated with IORT RMR entry */
-	const u32 *sids;
-	u32 num_sids;
-};
-
 /**
  * enum iommu_dev_features - Per device IOMMU features
  * @IOMMU_DEV_FEAT_AUX: Auxiliary domain feature
