@@ -586,6 +586,16 @@
 	pinctrl-0 = <&i2c0_pin>;
 	clock-frequency = <400000>;
 	status = "okay";
+	touchscreen@5d {
+		compatible = "goodix,gt9271";
+		reg = <0x5d>;
+		interrupt-parent = <&pio>;
+		interrupts = <6 IRQ_TYPE_EDGE_RISING>;
+		irq-gpios = <&pio 6 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&pio 5 GPIO_ACTIVE_HIGH>;
+		AVDD28-supply = <&lcm1_tp_avdd>;
+		VDDIO-supply = <&mt6359_vio18_ldo_reg>;
+	};
 };
 
 &i2c1 {
