@@ -46,7 +46,7 @@
 			MX8ULP_PAD_PTE2__PTE2		0x7	/* BACK */
 			MX8ULP_PAD_PTE3__PTE3		0x7	/* 19 */
 			MX8ULP_PAD_PTE6__PTE6		0x7	/* 34 */
-			MX8ULP_PAD_PTE8__PTE8		0x7	/* 20 */
+			MX8ULP_PAD_PTE8__TPM4_CH0	0x7	/* 20 */
 			MX8ULP_PAD_PTE9__PTE9		0x7	/* 31 */
 			MX8ULP_PAD_PTE10__PTE10		0x7	/* 55 */
 			MX8ULP_PAD_PTE14__PTE14		0x7	/* 41 */
@@ -192,12 +192,28 @@
 		mipi_dsi = &dsi;
 		mipi_dsi_bridge = &dsi;
 		mipi_dsi_phy = &dphy;
-		pwm_mipi = &tpm5;
+		pwm_mipi = &tpm4;
 		t_mipi = &t_mipi;
 	};
 
 	backlight_mipi: backlight-mipi {
-		status = "disabled";
+		compatible = "pwm-backlight";
+		pwms = <&tpm4 0 50000 0>;
+		brightness-levels = <
+				0  /*1  2  3  4  5  6  7  8  9
+				10 11 12 13 14 15 16 17 18 19*/
+				20 21 22 23 24 25 26 27 28 29
+				30 31 32 33 34 35 36 37 38 39
+				40 41 42 43 44 45 46 47 48 49
+				50 51 52 53 54 55 56 57 58 59
+				60 61 62 63 64 65 66 67 68 69
+				70 71 72 73 74 75 76 77 78 79
+				80 81 82 83 84 85 86 87 88 89
+				90 91 92 93 94 95 96 97 98 99
+				100
+				>;
+		default-brightness-level = <81>;
+		status = "okay";
 	};
 
 	chosen {
@@ -301,9 +317,7 @@
 	#size-cells = <0>;
 
 	fb_mipi: panel@0 {
-#if 0
 		backlight = <&backlight_mipi>;
-#endif
 		bits-per-color = <8>;
 		bridge-de-active = <0>;
 		bus-format = "rgb888";
@@ -465,6 +479,10 @@
 };
 
 &mu3 {
+	status = "okay";
+};
+
+&tpm4 {
 	status = "okay";
 };
 
