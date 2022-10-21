@@ -160,7 +160,7 @@ static int cdns_mhdp_imx_bind(struct device *dev, struct device *master,
 	const struct cdns_plat_data *plat_data;
 	const struct of_device_id *match;
 	struct drm_device *drm = data;
-	struct drm_encoder *encoder;
+	struct drm_encoder *encoder = NULL;
 	struct imx_mhdp_device *imx_mhdp;
 	int ret;
 
