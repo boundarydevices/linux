@@ -459,6 +459,15 @@
 				};
 			};
 
+			tpm4: pwm@29330000 {
+				compatible = "fsl,imx7ulp-pwm";
+				reg = <0x29330000 0x1000>;
+				interrupts = <GIC_SPI 86 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&pcc3 IMX8ULP_CLK_TPM4>;
+				#pwm-cells = <3>;
+				status = "disabled";
+			};
+
 			tpm5: tpm@29340000 {
 				compatible = "fsl,imx8ulp-tpm", "fsl,imx7ulp-tpm";
 				reg = <0x29340000 0x1000>;
