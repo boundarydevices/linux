@@ -1,12 +1,39 @@
-/* SPDX-License-Identifier: ISC
+/*
+ * Infineon WLAN driver: vendor specific implement
  *
- * Infineon Technologies OUI and vendor specific assignments
- *
- * $ Copyright Infineon $
+ * ©2022 Cypress Semiconductor Corporation (an Infineon company)
+ * or an affiliate of Cypress Semiconductor Corporation. All rights reserved.
+ * This software, including source code, documentation and related materials
+ * ("Software") is owned by Cypress Semiconductor Corporation or one of its
+ * affiliates ("Cypress") and is protected by and subject to
+ * worldwide patent protection (United States and foreign),
+ * United States copyright laws and international treaty provisions.
+ * Therefore, you may use this Software only as provided in the license agreement
+ * accompanying the software package from which you obtained this Software ("EULA").
+ * If no EULA applies, Cypress hereby grants you a personal, non-exclusive,
+ * non-transferable license to copy, modify, and compile the Software source code
+ * solely for use in connection with Cypress's integrated circuit products.
+ * Any reproduction, modification, translation, compilation, or representation
+ * of this Software except as specified above is prohibited without
+ * the expresswritten permission of Cypress.
+ * Disclaimer: THIS SOFTWARE IS PROVIDED AS-IS, WITH NO WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, NONINFRINGEMENT,
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+ * Cypress reserves the right to make changes to the Software without notice.
+ * Cypress does not assume any liability arising out of the application or
+ * use of the Software or any product or circuit described in the Software.
+ * Cypress does not authorize its products for use in any products where a malfunction
+ * or failure of the Cypress product may reasonably be expected to result in
+ * significant property damage, injury or death ("High Risk Product").
+ * By including Cypress's product in a High Risk Product, the manufacturer
+ * of such system or application assumes all risk of such use and in doing so
+ * agrees to indemnify Cypress against all liability.
  */
 
 #ifndef IFX_VENDOR_H
 #define IFX_VENDOR_H
+
+#include <net/netlink.h>
 
 /* This file is a registry of identifier assignments from the Infineon
  * OUI 00:03:19 for purposes other than MAC address assignment. New identifiers
@@ -56,7 +83,7 @@ enum ifx_nl80211_vendor_subcmds {
 	SCMD(RSV11)		= 11,
 	SCMD(RSV12)		= 12,
 	SCMD(RSV13)		= 13,
-	SCMD(RSV14)		= 14,
+	SCMD(TWT)		= 14,
 	SCMD(RSV15)		= 15,
 	SCMD(MAX)		= 16
 };
@@ -77,6 +104,344 @@ enum ifx_vendor_attr {
 	/* Reserved 1-10 */
 	IFX_VENDOR_ATTR_MAX		= 11
 };
+
+/* TWT define/enum/struct
+ */
+/* TWT cmd version*/
+#define IFX_TWT_SETUP_VER	0u
+#define IFX_TWT_TEARDOWN_VER	0u
+/* Flow flags */
+#define IFX_TWT_FLOW_FLAG_BROADCAST	(1 << 0)
+#define IFX_TWT_FLOW_FLAG_IMPLICIT	(1 << 1)
+#define IFX_TWT_FLOW_FLAG_UNANNOUNCED	(1 << 2)
+#define IFX_TWT_FLOW_FLAG_TRIGGER	(1 << 3)
+#define IFX_TWT_FLOW_FLAG_WAKE_TBTT_NEGO (1 << 4)
+#define IFX_TWT_FLOW_FLAG_REQUEST	(1 << 5)
+#define IFX_TWT_FLOW_FLAG_PROTECT	(1u << 0u)
+#define IFX_TWT_FLOW_FLAG_RESPONDER_PM	(1u << 6u)
+#define IFX_TWT_FLOW_FLAG_UNSOLICITED	(1u << 7u)
+/* Flow id */
+#define IFX_TWT_FLOW_ID_FID	0x07u	/* flow id */
+#define IFX_TWT_FLOW_ID_GID_MASK	0x70u	/* group id - broadcast TWT only */
+#define IFX_TWT_FLOW_ID_GID_SHIFT 4u
+#define IFX_TWT_INV_BCAST_ID	0xFFu
+#define IFX_TWT_INV_FLOW_ID	0xFFu
+/* auto flow_id */
+#define IFX_TWT_SETUP_FLOW_ID_AUTO	0xFFu
+/* auto broadcast ID */
+#define IFX_TWT_SETUP_BCAST_ID_AUTO	0xFFu
+/* Infinite persistence for broadcast schedule */
+#define IFX_TWT_INFINITE_BTWT_PERSIST	0xFFFFFFFFu
+/* Wake type */
+/* TODO: not yet finalized */
+#define IFX_TWT_TIME_TYPE_BSS	0u	/* The time specified in wake_time_h/l is
+					 * the BSS TSF time.
+					 */
+#define IFX_TWT_TIME_TYPE_OFFSET	1u	/* The time specified in wake_time_h/l is an offset
+					 * of the TSF time when the iovar is processed.
+					 */
+#define IFX_TWT_TIME_TYPE_AUTO	2u	/* The target wake time is chosen internally by the FW */
+ 
+/*
+ * enum ifx_vendor_attr_twt - Attributes for the TWT vendor command
+ *
+ * @IFX_VENDOR_ATTR_TWT_UNSPEC: Reserved value 0
+ *
+ * @IFX_VENDOR_ATTR_TWT_OPER: To specify the type of TWT operation
+ *	to be performed. Uses attributes defined in enum ifx_twt_oper.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAMS: Nester attributes representing the
+ *	parameters configured for TWT. These parameters are defined in
+ *	the enum ifx_vendor_attr_twt_param.
+ *
+ * @IFX_VENDOR_ATTR_TWT_MAX: This acts as a the tail of cmds list.
+ *      Make sure it located at the end of the list.
+ */
+enum ifx_vendor_attr_twt {
+	IFX_VENDOR_ATTR_TWT_UNSPEC,
+	IFX_VENDOR_ATTR_TWT_OPER,
+	IFX_VENDOR_ATTR_TWT_PARAMS,
+	IFX_VENDOR_ATTR_TWT_MAX
+};
+
+/*
+ * enum ifx_twt_oper - TWT operation to be specified using the vendor
+ * attribute IFX_VENDOR_ATTR_TWT_OPER
+ *
+ * @IFX_TWT_OPER_UNSPEC: Reserved value 0
+ *
+ * @IFX_TWT_OPER_SETUP: Setup a TWT session. Required parameters are
+ *	obtained through the nested attrs under IFX_VENDOR_ATTR_TWT_PARAMS.
+ *
+ * @IFX_TWT_OPER_TEARDOWN: Teardown the already negotiated TWT session.
+ *	Required parameters are obtained through the nested attrs under
+ *	IFX_VENDOR_ATTR_TWT_PARAMS.
+ *
+ * @IFX_TWT_OPER_MAX: This acts as a the tail of the list.
+ *      Make sure it located at the end of the list.
+ */
+enum ifx_twt_oper {
+	IFX_TWT_OPER_UNSPEC,
+	IFX_TWT_OPER_SETUP,
+	IFX_TWT_OPER_TEARDOWN,
+	IFX_TWT_OPER_MAX
+};
+
+/*
+ * enum ifx_vendor_attr_twt_param - TWT parameters
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_UNSPEC: Reserved value 0
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_NEGO_TYPE: Specifies the type of Negotiation to be
+ *	done during Setup. The four possible types are
+ *	0 - Individual TWT Negotiation
+ *	1 - Wake TBTT Negotiation
+ *	2 - Broadcast TWT in Beacon
+ *	3 - Broadcast TWT Membership Negotiation
+ *
+ *	The possible values are defined in the enum ifx_twt_param_nego_type
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_SETUP_CMD_TYPE: Specifies the type of TWT Setup frame
+ *	when sent by the TWT Requesting STA
+ *	0 - Request
+ *	1 - Suggest
+ *	2 - Demand
+ *
+ *	when sent by the TWT Responding STA.
+ *	3 - Grouping
+ *	4 - Accept
+ *	5 - Alternate
+ *	6 - Dictate
+ *	7 - Reject
+ *
+ *	The possible values are defined in the enum ifx_twt_oper_setup_cmd_type.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_DIALOG_TOKEN: Dialog Token used by the TWT Requesting STA to
+ *	identify the TWT Setup request/response transaction.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_WAKE_TIME: Target Wake Time.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_WAKE_TIME_OFFSET: Target Wake Time Offset.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_MIN_WAKE_DURATION: Nominal Minimum TWT Wake Duration.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_WAKE_INTVL_EXPONENT: TWT Wake Interval Exponent.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_WAKE_INTVL_MANTISSA: TWT Wake Interval Mantissa.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_REQUESTOR: Specify this is a TWT Requesting / Responding STA.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_TRIGGER: Specify Trigger based / Non-Trigger based TWT Session.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_IMPLICIT: Specify Implicit / Explicit TWT session.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_FLOW_TYPE: Specify Un-Announced / Announced TWT session.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_FLOW_ID: Flow ID of an iTWT session.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_BCAST_TWT_ID: Brocast TWT ID of a bTWT session.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_PROTECTION: Specifies whether Tx within SP is protected.
+ *	Set to 1 to indicate that TXOPs within the TWT SPs shall be initiated
+ *	with a NAV protection mechanism, such as (MU) RTS/CTS or CTS-to-self frame;
+ *	otherwise, it shall set it to 0.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_CHANNEL: TWT channel field which is set to 0, unless
+ * 	the HE STA sets up a subchannel selective transmission operation.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_TWT_INFO_FRAME_DISABLED: TWT Information frame RX handing
+ *	disabled / enabled.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_MIN_WAKE_DURATION_UNIT: Nominal Minimum TWT Wake Duration
+ *	Unit. 0 represents unit in "256 usecs" and 1 represents unit in "TUs".
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_TEARDOWN_ALL_TWT: Teardown all negotiated TWT sessions.
+ *
+ * @IFX_VENDOR_ATTR_TWT_PARAM_MAX: This acts as a the tail of the list.
+ *      Make sure it located at the end of the list.
+ */
+enum ifx_vendor_attr_twt_param {
+	IFX_VENDOR_ATTR_TWT_PARAM_UNSPEC,
+	IFX_VENDOR_ATTR_TWT_PARAM_NEGO_TYPE,
+	IFX_VENDOR_ATTR_TWT_PARAM_SETUP_CMD_TYPE,
+	IFX_VENDOR_ATTR_TWT_PARAM_DIALOG_TOKEN,
+	IFX_VENDOR_ATTR_TWT_PARAM_WAKE_TIME,
+	IFX_VENDOR_ATTR_TWT_PARAM_WAKE_TIME_OFFSET,
+	IFX_VENDOR_ATTR_TWT_PARAM_MIN_WAKE_DURATION,
+	IFX_VENDOR_ATTR_TWT_PARAM_WAKE_INTVL_EXPONENT,
+	IFX_VENDOR_ATTR_TWT_PARAM_WAKE_INTVL_MANTISSA,
+	IFX_VENDOR_ATTR_TWT_PARAM_REQUESTOR,
+	IFX_VENDOR_ATTR_TWT_PARAM_TRIGGER,
+	IFX_VENDOR_ATTR_TWT_PARAM_IMPLICIT,
+	IFX_VENDOR_ATTR_TWT_PARAM_FLOW_TYPE,
+	IFX_VENDOR_ATTR_TWT_PARAM_FLOW_ID,
+	IFX_VENDOR_ATTR_TWT_PARAM_BCAST_TWT_ID,
+	IFX_VENDOR_ATTR_TWT_PARAM_PROTECTION,
+	IFX_VENDOR_ATTR_TWT_PARAM_CHANNEL,
+	IFX_VENDOR_ATTR_TWT_PARAM_TWT_INFO_FRAME_DISABLED,
+	IFX_VENDOR_ATTR_TWT_PARAM_MIN_WAKE_DURATION_UNIT,
+	IFX_VENDOR_ATTR_TWT_PARAM_TEARDOWN_ALL_TWT,
+	IFX_VENDOR_ATTR_TWT_PARAM_MAX
+};
+
+enum ifx_twt_param_nego_type {
+	IFX_TWT_PARAM_NEGO_TYPE_INVALID			= -1,
+	IFX_TWT_PARAM_NEGO_TYPE_ITWT			= 0,
+	IFX_TWT_PARAM_NEGO_TYPE_WAKE_TBTT		= 1,
+	IFX_TWT_PARAM_NEGO_TYPE_BTWT_IE_BCN		= 2,
+	IFX_TWT_PARAM_NEGO_TYPE_BTWT			= 3,
+	IFX_TWT_PARAM_NEGO_TYPE_MAX			= 4
+};
+
+enum ifx_twt_oper_setup_cmd_type {
+	IFX_TWT_OPER_SETUP_CMD_TYPE_INVALID	= -1,
+	IFX_TWT_OPER_SETUP_CMD_TYPE_REQUEST	= 0,
+	IFX_TWT_OPER_SETUP_CMD_TYPE_SUGGEST	= 1,
+	IFX_TWT_OPER_SETUP_CMD_TYPE_DEMAND	= 2,
+	IFX_TWT_OPER_SETUP_CMD_TYPE_GROUPING	= 3,
+	IFX_TWT_OPER_SETUP_CMD_TYPE_ACCEPT	= 4,
+	IFX_TWT_OPER_SETUP_CMD_TYPE_ALTERNATE	= 5,
+	IFX_TWT_OPER_SETUP_CMD_TYPE_DICTATE	= 6,
+	IFX_TWT_OPER_SETUP_CMD_TYPE_REJECT	= 7,
+	IFX_TWT_OPER_SETUP_CMD_TYPE_MAX		= 8
+};
+
+/* TWT top level command IDs */
+enum {
+	IFX_TWT_CMD_ENAB = 0,
+	IFX_TWT_CMD_SETUP = 1,
+	IFX_TWT_CMD_TEARDOWN = 2,
+	IFX_TWT_CMD_INFO = 3,
+	IFX_TWT_CMD_AUTOSCHED = 4,
+	IFX_TWT_CMD_STATS = 5,
+	IFX_TWT_CMD_EARLY_TERM_TIME = 6,
+	IFX_TWT_CMD_RESP_CONFIG = 7,
+	IFX_TWT_CMD_SPPS_ENAB = 8,
+	IFX_TWT_CMD_FEATURES = 9,
+	IFX_TWT_CMD_LAST
+};
+
+static const struct nla_policy
+ifx_vendor_attr_twt_param_policy[IFX_VENDOR_ATTR_TWT_PARAM_MAX + 1] = {
+	[IFX_VENDOR_ATTR_TWT_PARAM_UNSPEC] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_NEGO_TYPE] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_SETUP_CMD_TYPE] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_DIALOG_TOKEN] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_WAKE_TIME] = {.type = NLA_U64},
+	[IFX_VENDOR_ATTR_TWT_PARAM_WAKE_TIME_OFFSET] = {.type = NLA_U64},
+	[IFX_VENDOR_ATTR_TWT_PARAM_MIN_WAKE_DURATION] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_WAKE_INTVL_EXPONENT] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_WAKE_INTVL_MANTISSA] = {.type = NLA_U16},
+	[IFX_VENDOR_ATTR_TWT_PARAM_REQUESTOR] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_TRIGGER] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_IMPLICIT] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_FLOW_TYPE] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_FLOW_ID] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_BCAST_TWT_ID] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_PROTECTION] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_CHANNEL] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_TWT_INFO_FRAME_DISABLED] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_MIN_WAKE_DURATION_UNIT] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_TEARDOWN_ALL_TWT] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAM_MAX] = {.type = NLA_U8},
+};
+
+static const struct nla_policy ifx_vendor_attr_twt_policy[IFX_VENDOR_ATTR_TWT_MAX + 1] = {
+	[IFX_VENDOR_ATTR_TWT_UNSPEC] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_OPER] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_TWT_PARAMS] =
+		NLA_POLICY_NESTED(ifx_vendor_attr_twt_param_policy),
+	[IFX_VENDOR_ATTR_TWT_MAX] = {.type = NLA_U8},
+};
+
+struct ifx_twt {
+	u8 twt_oper;
+	enum ifx_twt_param_nego_type negotiation_type;
+	enum ifx_twt_oper_setup_cmd_type setup_cmd;
+	u8 dialog_token;
+	u64 twt;
+	u64 twt_offset;
+	u8 min_twt;
+	u8 exponent;
+	u16 mantissa;
+	u8 requestor;
+	u8 trigger;
+	u8 implicit;
+	u8 flow_type;
+	u8 flow_id;
+	u8 bcast_twt_id;
+	u8 protection;
+	u8 twt_channel;
+	u8 twt_info_frame_disabled;
+	u8 min_twt_unit;
+	u8 teardown_all_twt;
+};
+
+/*
+ * NOTES:
+ * ifx_twt_sdesc_t is used to support both broadcast TWT and individual TWT.
+ * Value in bit[0:2] in 'flow_id' field is interpreted differently:
+ * - flow id for individual TWT (when IFX_TWT_FLOW_FLAG_BROADCAST bit is NOT set
+ *   in 'flow_flags' field)
+ * - flow id as defined in Table 8-248l1 for broadcast TWT (when
+ *   IFX_TWT_FLOW_FLAG_BROADCAST bit is set)
+ * In latter case other bits could be used to differentiate different flows
+ * in order to support multiple broadcast TWTs with the same flow id.
+ */
+
+/* TWT Setup descriptor */
+typedef struct ifx_twt_sdesc {
+	/* Setup Command. */
+	u8 setup_cmd;		/* See TWT_SETUP_CMD_XXXX in 802.11ah.h */
+	u8 flow_flags;		/* Flow attributes. See WL_TWT_FLOW_FLAG_XXXX below */
+	u8 flow_id;		/* must be between 0 and 7. Set 0xFF for auto assignment */
+	u8 wake_type;	/* See WL_TWT_TIME_TYPE_XXXX below */
+	u32 wake_time_h;	/* target wake time - BSS TSF (us) */
+	u32 wake_time_l;
+	u32 wake_dur;	/* target wake duration in unit of microseconds */
+	u32 wake_int;	/* target wake interval */
+	u32 btwt_persistence;	/* Broadcast TWT Persistence */
+	u32 wake_int_max;	/* max wake interval(uS) for TWT */
+	u8 duty_cycle_min;	/* min duty cycle for TWT(Percentage) */
+	u8 pad;
+	u8 bid;		/* must be between 0 and 31. Set 0xFF for auto assignment */
+	u8 channel;		/* Twt channel - Not used for now */
+	u8 negotiation_type;	/* Negotiation Type: See macros TWT_NEGO_TYPE_X */
+	u8 frame_recomm;	/* frame recommendation for broadcast TWTs - Not used for now	 */
+} ifx_twt_sdesc_t;
+
+/* twt teardown descriptor */
+typedef struct ifx_twt_teardesc {
+	u8 negotiation_type;
+	u8 flow_id;		/* must be between 0 and 7 */
+	u8 bid;		/* must be between 0 and 31 */
+	u8 alltwt;		/* all twt teardown - 0 or 1 */
+} ifx_twt_teardesc_t;
+
+/* HE TWT Setup command */
+typedef struct ifx_twt_setup {
+	/* structure control */
+	u16 version;	/* structure version */
+	u16 length;	/* data length (starting after this field) */
+	/* peer address */
+	struct ether_addr peer;	/* leave it all 0s' for AP */
+	u8 pad[2];
+	/* setup descriptor */
+	ifx_twt_sdesc_t desc;
+} ifx_twt_setup_t;
+
+/* HE TWT Teardown command */
+typedef struct ifx_twt_teardown {
+	/* structure control */
+	u16 version;	/* structure version */
+	u16 length;	/* data length (starting after this field) */
+	/* peer address */
+	struct ether_addr peer;	/* leave it all 0s' for AP */
+	ifx_twt_teardesc_t teardesc;	/* Teardown descriptor */
+} ifx_twt_teardown_t;
+
+int ifx_cfg80211_vndr_cmds_twt(struct wiphy *wiphy, 
+	struct wireless_dev *wdev, const void  *data, int len);
 
 #endif /* IFX_VENDOR_H */
 
