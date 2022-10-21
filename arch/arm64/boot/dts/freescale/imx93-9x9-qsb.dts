@@ -386,6 +386,7 @@
 	#sound-dai-cells = <0>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pdm>;
+	pinctrl-assert-gpios = <&pcal6524 17 GPIO_ACTIVE_LOW>;
 	assigned-clocks = <&clk IMX93_CLK_PDM>;
 	assigned-clock-parents = <&clk IMX93_CLK_AUDIO_PLL>;
 	assigned-clock-rates = <49152000>;
@@ -413,6 +414,7 @@
 &sai3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_sai3>;
+	pinctrl-assert-gpios = <&pcal6524 22 GPIO_ACTIVE_LOW>;
 	assigned-clocks = <&clk IMX93_CLK_SAI3>;
 	assigned-clock-parents = <&clk IMX93_CLK_AUDIO_PLL>;
 	assigned-clock-rates = <12288000>;
