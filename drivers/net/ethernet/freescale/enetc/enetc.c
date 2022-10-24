@@ -1136,7 +1136,8 @@ static bool enetc_check_bd_errors_and_consume(struct enetc_bdr *rx_ring,
 
 static struct sk_buff *enetc_build_skb(struct enetc_bdr *rx_ring,
 				       u32 bd_status, union enetc_rx_bd **rxbd,
-				       int *i, int *cleaned_cnt, int buffer_size)
+				       int *i, int *buffs_missing,
+				       int buffer_size)
 {
 	struct sk_buff *skb;
 	u16 size;
@@ -1148,7 +1149,7 @@ static struct sk_buff *enetc_build_skb(struct enetc_bdr *rx_ring,
 
 	enetc_get_offloads(rx_ring, *rxbd, skb);
 
-	(*cleaned_cnt)++;
+	(*buffs_missing)++;
 
 	enetc_rxbd_next(rx_ring, rxbd, i);
 
@@ -1164,7 +1165,7 @@ static struct sk_buff *enetc_build_skb(struct enetc_bdr *rx_ring,
 
 		enetc_add_rx_buff_to_skb(rx_ring, *i, size, skb);
 
-		(*cleaned_cnt)++;
+		(*buffs_missing)++;
 
 		enetc_rxbd_next(rx_ring, rxbd, i);
 	}
@@ -1181,9 +1182,9 @@ static int enetc_clean_rx_ring(struct enetc_bdr *rx_ring,
 			       struct napi_struct *napi, int work_limit)
 {
 	int rx_frm_cnt = 0, rx_byte_cnt = 0;
-	int cleaned_cnt, i;
+	int buffs_missing, i;
 
-	cleaned_cnt = enetc_bd_unused(rx_ring);
+	buffs_missing = enetc_bd_unused(rx_ring);
 	/* next descriptor to process */
 	i = rx_ring->next_to_clean;
 
@@ -1192,9 +1193,9 @@ static int enetc_clean_rx_ring(struct enetc_bdr *rx_ring,
 		struct sk_buff *skb;
 		u32 bd_status;
 
-		if (cleaned_cnt >= ENETC_RXBD_BUNDLE)
-			cleaned_cnt -= enetc_refill_rx_ring(rx_ring,
-							    cleaned_cnt);
+		if (buffs_missing >= ENETC_RXBD_BUNDLE)
+			buffs_missing -= enetc_refill_rx_ring(rx_ring,
+							      buffs_missing);
 
 		rxbd = enetc_rxbd(rx_ring, i);
 		bd_status = le32_to_cpu(rxbd->r.lstatus);
@@ -1209,7 +1210,7 @@ static int enetc_clean_rx_ring(struct enetc_bdr *rx_ring,
 			break;
 
 		skb = enetc_build_skb(rx_ring, bd_status, &rxbd, &i,
-				      &cleaned_cnt, ENETC_RXB_DMA_SIZE);
+				      &buffs_missing, ENETC_RXB_DMA_SIZE);
 		if (!skb)
 			break;
 
@@ -1425,14 +1426,14 @@ static void enetc_add_rx_buff_to_xdp(struct enetc_bdr *rx_ring, int i,
 
 static void enetc_build_xdp_buff(struct enetc_bdr *rx_ring, u32 bd_status,
 				 union enetc_rx_bd **rxbd, int *i,
-				 int *cleaned_cnt, struct xdp_buff *xdp_buff)
+				 int *buffs_missing, struct xdp_buff *xdp_buff)
 {
 	u16 size = le16_to_cpu((*rxbd)->r.buf_len);
 
 	xdp_init_buff(xdp_buff, ENETC_RXB_TRUESIZE, &rx_ring->xdp.rxq);
 
 	enetc_map_rx_buff_to_xdp(rx_ring, *i, xdp_buff, size);
-	(*cleaned_cnt)++;
+	(*buffs_missing)++;
 	enetc_rxbd_next(rx_ring, rxbd, i);
 
 	/* not last BD in frame? */
@@ -1446,7 +1447,7 @@ static void enetc_build_xdp_buff(struct enetc_bdr *rx_ring, u32 bd_status,
 		}
 
 		enetc_add_rx_buff_to_xdp(rx_ring, *i, size, xdp_buff);
-		(*cleaned_cnt)++;
+		(*buffs_missing)++;
 		enetc_rxbd_next(rx_ring, rxbd, i);
 	}
 }
@@ -1519,16 +1520,16 @@ static int enetc_clean_rx_ring_xdp(struct enetc_bdr *rx_ring,
 	struct enetc_ndev_priv *priv = netdev_priv(rx_ring->ndev);
 	int rx_frm_cnt = 0, rx_byte_cnt = 0;
 	struct enetc_bdr *tx_ring;
-	int cleaned_cnt, i;
+	int buffs_missing, i;
 	u32 xdp_act;
 
-	cleaned_cnt = enetc_bd_unused(rx_ring);
+	buffs_missing = enetc_bd_unused(rx_ring);
 	/* next descriptor to process */
 	i = rx_ring->next_to_clean;
 
 	while (likely(rx_frm_cnt < work_limit)) {
 		union enetc_rx_bd *rxbd, *orig_rxbd;
-		int orig_i, orig_cleaned_cnt;
+		int orig_i, orig_buffs_missing;
 		struct xdp_buff xdp_buff;
 		struct sk_buff *skb;
 		int tmp_orig_i, err;
@@ -1547,11 +1548,11 @@ static int enetc_clean_rx_ring_xdp(struct enetc_bdr *rx_ring,
 			break;
 
 		orig_rxbd = rxbd;
-		orig_cleaned_cnt = cleaned_cnt;
+		orig_buffs_missing = buffs_missing;
 		orig_i = i;
 
 		enetc_build_xdp_buff(rx_ring, bd_status, &rxbd, &i,
-				     &cleaned_cnt, &xdp_buff);
+				     &buffs_missing, &xdp_buff);
 
 		xdp_act = bpf_prog_run_xdp(prog, &xdp_buff);
 
@@ -1567,11 +1568,11 @@ static int enetc_clean_rx_ring_xdp(struct enetc_bdr *rx_ring,
 			break;
 		case XDP_PASS:
 			rxbd = orig_rxbd;
-			cleaned_cnt = orig_cleaned_cnt;
+			buffs_missing = orig_buffs_missing;
 			i = orig_i;
 
 			skb = enetc_build_skb(rx_ring, bd_status, &rxbd,
-					      &i, &cleaned_cnt,
+					      &i, &buffs_missing,
 					      ENETC_RXB_DMA_SIZE_XDP);
 			if (unlikely(!skb))
 				goto out;
@@ -1613,7 +1614,7 @@ static int enetc_clean_rx_ring_xdp(struct enetc_bdr *rx_ring,
 			 * S/G frames ourselves to avoid memory leaks which
 			 * would otherwise leave the kernel OOM.
 			 */
-			if (unlikely(cleaned_cnt - orig_cleaned_cnt != 1)) {
+			if (unlikely(buffs_missing - orig_buffs_missing != 1)) {
 				enetc_xdp_drop(rx_ring, orig_i, i);
 				rx_ring->stats.xdp_redirect_sg++;
 				break;
@@ -1651,7 +1652,7 @@ out:
 	if (xdp_tx_frm_cnt)
 		enetc_update_tx_ring_tail(tx_ring);
 
-	if (cleaned_cnt > rx_ring->xdp.xdp_tx_in_flight)
+	if (buffs_missing > rx_ring->xdp.xdp_tx_in_flight)
 		enetc_refill_rx_ring(rx_ring, enetc_bd_unused(rx_ring) -
 				     rx_ring->xdp.xdp_tx_in_flight);
 
