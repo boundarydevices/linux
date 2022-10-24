@@ -1745,17 +1745,20 @@ void enetc_get_si_caps(struct enetc_si *si)
 
 static int enetc_dma_alloc_bdr(struct enetc_bdr *r, size_t bd_size)
 {
-	r->bd_base = dma_alloc_coherent(r->dev, r->bd_count * bd_size,
-					&r->bd_dma_base, GFP_KERNEL);
+	size_t size = r->bd_count * bd_size;
+
+	r->bd_base = dma_alloc_coherent(r->dev, size, &r->bd_dma_base,
+					GFP_KERNEL);
 	if (!r->bd_base)
 		return -ENOMEM;
 
 	/* h/w requires 128B alignment */
 	if (!IS_ALIGNED(r->bd_dma_base, 128)) {
-		dma_free_coherent(r->dev, r->bd_count * bd_size, r->bd_base,
-				  r->bd_dma_base);
+		dma_free_coherent(r->dev, size, r->bd_base, r->bd_dma_base);
 		return -EINVAL;
 	}
+
+	memset(r->bd_base, 0, size);
 
 	return 0;
 }
@@ -2097,7 +2100,12 @@ static void enetc_setup_rxbdr(struct enetc_hw *hw, struct enetc_bdr *rx_ring)
 	else
 		enetc_rxbdr_wr(hw, idx, ENETC_RBBSR, ENETC_RXB_DMA_SIZE);
 
+	/* Also prepare the consumer index in case page allocation never
+	 * succeeds. In that case, hardware will never advance producer index
+	 * to match consumer index, and will drop all frames.
+	 */
 	enetc_rxbdr_wr(hw, idx, ENETC_RBPIR, 0);
+	enetc_rxbdr_wr(hw, idx, ENETC_RBCIR, 1);
 
 	/* enable Rx ints by setting pkt thr to 1 */
 	enetc_rxbdr_wr(hw, idx, ENETC_RBICR0, ENETC_RBICR0_ICEN | 0x1);
