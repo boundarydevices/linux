@@ -845,7 +845,9 @@ static bool enetc_clean_tx_ring(struct enetc_bdr *tx_ring, int napi_budget,
 				tx_win_drop++;
 		}
 
-		if (tx_swbd->is_xsk)
+		if (tx_swbd->is_xsk && tx_swbd->is_xdp_tx)
+			xsk_buff_free(tx_swbd->xsk_buff);
+		else if (tx_swbd->is_xsk)
 			(*xsk_confirmed)++;
 		else if (tx_swbd->is_xdp_tx)
 			enetc_recycle_xdp_tx_buff(tx_ring, tx_swbd);
@@ -1637,6 +1639,21 @@ static int enetc_rx_swbd_to_xdp_tx_swbd(struct enetc_tx_swbd *xdp_tx_arr,
 	return n;
 }
 
+static bool enetc_xsk_xdp_tx(struct enetc_bdr *tx_ring,
+			     struct xdp_buff *xsk_buff)
+{
+	struct enetc_tx_swbd tx_swbd = {
+		.dma = xsk_buff_xdp_get_dma(xsk_buff),
+		.len = xsk_buff->data_end - xsk_buff->data,
+		.is_xdp_tx = true,
+		.is_xsk = true,
+		.is_eof = true,
+		.xsk_buff = xsk_buff,
+	};
+
+	return enetc_xdp_tx(tx_ring, &tx_swbd, 1);
+}
+
 static void enetc_xdp_drop(struct enetc_bdr *rx_ring, int rx_ring_first,
 			   int rx_ring_last)
 {
@@ -1841,10 +1858,12 @@ static int enetc_clean_rx_ring_xsk(struct enetc_bdr *rx_ring,
 				   struct bpf_prog *prog,
 				   struct xsk_buff_pool *pool)
 {
+	struct enetc_ndev_priv *priv = netdev_priv(rx_ring->ndev);
+	struct enetc_bdr *tx_ring = priv->xdp_tx_ring[rx_ring->index];
+	int xdp_redirect_frm_cnt = 0, xdp_tx_frm_cnt = 0;
 	struct net_device *ndev = rx_ring->ndev;
 	union enetc_rx_bd *rxbd, *orig_rxbd;
 	int rx_frm_cnt = 0, rx_byte_cnt = 0;
-	int xdp_redirect_frm_cnt = 0;
 	struct xdp_buff *xsk_buff;
 	int buffs_missing, err, i;
 	bool wakeup_xsk = false;
@@ -1897,6 +1916,15 @@ static int enetc_clean_rx_ring_xsk(struct enetc_bdr *rx_ring,
 			enetc_xsk_buff_to_skb(xsk_buff, rx_ring, orig_rxbd,
 					      napi);
 			break;
+		case XDP_TX:
+			if (enetc_xsk_xdp_tx(tx_ring, xsk_buff)) {
+				xdp_tx_frm_cnt++;
+				tx_ring->stats.xdp_tx++;
+			} else {
+				xsk_buff_free(xsk_buff);
+				tx_ring->stats.xdp_tx_drops++;
+			}
+			break;
 		case XDP_REDIRECT:
 			err = xdp_do_redirect(ndev, xsk_buff, prog);
 			if (unlikely(err)) {
@@ -1920,6 +1948,9 @@ static int enetc_clean_rx_ring_xsk(struct enetc_bdr *rx_ring,
 
 	if (xdp_redirect_frm_cnt)
 		xdp_do_flush_map();
+
+	if (xdp_tx_frm_cnt)
+		enetc_update_tx_ring_tail(tx_ring);
 
 	if (xsk_uses_need_wakeup(pool)) {
 		if (wakeup_xsk)
