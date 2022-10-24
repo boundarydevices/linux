@@ -83,6 +83,17 @@ static void enetc_free_tx_frame(struct enetc_bdr *tx_ring,
 	}
 }
 
+static void enetc_free_rx_swbd(struct enetc_bdr *rx_ring,
+			       struct enetc_rx_swbd *rx_swbd)
+{
+	if (rx_swbd->page) {
+		dma_unmap_page(rx_ring->dev, rx_swbd->dma, PAGE_SIZE,
+			       rx_swbd->dir);
+		__free_page(rx_swbd->page);
+		rx_swbd->page = NULL;
+	}
+}
+
 /* Let H/W know BD ring has been updated */
 static void enetc_update_tx_ring_tail(struct enetc_bdr *tx_ring)
 {
@@ -783,9 +794,7 @@ static void enetc_recycle_xdp_tx_buff(struct enetc_bdr *tx_ring,
 		 */
 		rx_ring->stats.recycle_failures++;
 
-		dma_unmap_page(rx_ring->dev, rx_swbd.dma, PAGE_SIZE,
-			       rx_swbd.dir);
-		__free_page(rx_swbd.page);
+		enetc_free_rx_swbd(rx_ring, &rx_swbd);
 	}
 
 	rx_ring->xdp.xdp_tx_in_flight--;
@@ -1071,9 +1080,7 @@ static void enetc_flip_rx_buff(struct enetc_bdr *rx_ring,
 
 		enetc_put_rx_buff(rx_ring, rx_swbd);
 	} else {
-		dma_unmap_page(rx_ring->dev, rx_swbd->dma, PAGE_SIZE,
-			       rx_swbd->dir);
-		rx_swbd->page = NULL;
+		enetc_free_rx_swbd(rx_ring, rx_swbd);
 	}
 }
 
@@ -1502,14 +1509,7 @@ static void enetc_xdp_free(struct enetc_bdr *rx_ring, int rx_ring_first,
 			   int rx_ring_last)
 {
 	while (rx_ring_first != rx_ring_last) {
-		struct enetc_rx_swbd *rx_swbd = &rx_ring->rx_swbd[rx_ring_first];
-
-		if (rx_swbd->page) {
-			dma_unmap_page(rx_ring->dev, rx_swbd->dma, PAGE_SIZE,
-				       rx_swbd->dir);
-			__free_page(rx_swbd->page);
-			rx_swbd->page = NULL;
-		}
+		enetc_free_rx_swbd(rx_ring, &rx_ring->rx_swbd[rx_ring_first]);
 		enetc_bdr_idx_inc(rx_ring, &rx_ring_first);
 	}
 	rx_ring->stats.xdp_redirect_failures++;
@@ -1946,17 +1946,8 @@ static void enetc_free_rx_ring(struct enetc_bdr *rx_ring)
 	if (!rx_ring->rx_swbd)
 		return;
 
-	for (i = 0; i < rx_ring->bd_count; i++) {
-		struct enetc_rx_swbd *rx_swbd = &rx_ring->rx_swbd[i];
-
-		if (!rx_swbd->page)
-			continue;
-
-		dma_unmap_page(rx_ring->dev, rx_swbd->dma, PAGE_SIZE,
-			       rx_swbd->dir);
-		__free_page(rx_swbd->page);
-		rx_swbd->page = NULL;
-	}
+	for (i = 0; i < rx_ring->bd_count; i++)
+		enetc_free_rx_swbd(rx_ring, &rx_ring->rx_swbd[i]);
 
 	rx_ring->next_to_clean = 0;
 	rx_ring->next_to_use = 0;
