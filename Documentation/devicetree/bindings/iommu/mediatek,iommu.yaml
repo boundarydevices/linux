@@ -79,6 +79,7 @@ properties:
           - mediatek,mt8188-iommu-vdo        # generation two
           - mediatek,mt8188-iommu-vpp        # generation two
           - mediatek,mt8188-iommu-infra      # generation two
+          - mediatek,mt8188-iommu-apu        # generation two
           - mediatek,mt8192-m4u  # generation two
           - mediatek,mt8195-iommu-vdo        # generation two
           - mediatek,mt8195-iommu-vpp        # generation two
