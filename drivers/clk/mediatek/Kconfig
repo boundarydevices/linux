@@ -495,6 +495,17 @@ config COMMON_CLK_MT8183_VENCSYS
 	help
 	  This driver supports MediaTek MT8183 vencsys clocks.
 
+config COMMON_CLK_MT8188
+	bool "Clock driver for MediaTek MT8188"
+	depends on ARM64 || COMPILE_TEST
+	select COMMON_CLK_MEDIATEK
+	default ARCH_MEDIATEK
+	help
+	  This driver supports MediaTek MT8188 basic clocks and clocks
+	  required for various peripheral found on MediaTek. Choose
+	  M or Y here if you want to use clocks such as peri_ao,
+	  infra_ao, etc.
+
 config COMMON_CLK_MT8192
 	bool "Clock driver for MediaTek MT8192"
 	depends on ARM64 || COMPILE_TEST
