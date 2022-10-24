@@ -48,6 +48,7 @@ struct enetc_tx_swbd {
 	(SKB_WITH_OVERHEAD(ENETC_RXB_TRUESIZE) - XDP_PACKET_HEADROOM)
 
 struct enetc_rx_swbd {
+	struct xdp_buff *xsk_buff;
 	struct page *page;
 	dma_addr_t dma;
 	enum dma_data_direction dir;
@@ -78,6 +79,7 @@ struct enetc_ring_stats {
 
 struct enetc_xdp_data {
 	struct xdp_rxq_info rxq;
+	struct xsk_buff_pool *xsk_pool;
 	struct bpf_prog *prog;
 	int xdp_tx_in_flight;
 };
@@ -401,6 +403,7 @@ int enetc_setup_tc_mqprio(struct net_device *ndev, void *type_data);
 int enetc_setup_bpf(struct net_device *ndev, struct netdev_bpf *bpf);
 int enetc_xdp_xmit(struct net_device *ndev, int num_frames,
 		   struct xdp_frame **frames, u32 flags);
+int enetc_xsk_wakeup(struct net_device *dev, u32 queue, u32 flags);
 
 /* ethtool */
 void enetc_set_ethtool_ops(struct net_device *ndev);
