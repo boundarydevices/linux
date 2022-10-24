@@ -16,8 +16,10 @@ struct mtk_plane_pending_state {
 	dma_addr_t			addr;
 	unsigned int			pitch;
 	unsigned int			format;
-	unsigned int			x;
-	unsigned int			y;
+	unsigned int			src_x;
+	unsigned int			src_y;
+	unsigned int			dst_x;
+	unsigned int			dst_y;
 	unsigned int			width;
 	unsigned int			height;
 	unsigned int			rotation;

@@ -32,6 +32,8 @@ struct mtk_mmsys_driver_data {
 	const resource_size_t io_start;
 	const unsigned int *main_path;
 	unsigned int main_len;
+	const unsigned int *main_subpipe_path;
+	unsigned int main_subpipe_len;
 	const unsigned int *ext_path;
 	unsigned int ext_len;
 	const unsigned int *third_path;

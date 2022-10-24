@@ -32,7 +32,11 @@
 #define DISP_REG_OVL_CON(n)			(0x0030 + 0x20 * (n))
 #define DISP_REG_OVL_SRC_SIZE(n)		(0x0038 + 0x20 * (n))
 #define DISP_REG_OVL_OFFSET(n)			(0x003c + 0x20 * (n))
+#define DISP_REG_OVL_PITCH_MSB(n)		(0x0040 + 0x20 * (n))
 #define DISP_REG_OVL_PITCH(n)			(0x0044 + 0x20 * (n))
+#define DISP_REG_OVL_CLIP(n)			(0x004c + 0x20 * (n))
+#define OVL_L_CLIP_FLD_LEFT			GENMASK(7, 0)
+#define OVL_L_CLIP_FLD_RIGHT			GENMASK(15, 8)
 #define DISP_REG_OVL_RDMA_CTRL(n)		(0x00c0 + 0x20 * (n))
 #define DISP_REG_OVL_RDMA_GMC(n)		(0x00c8 + 0x20 * (n))
 #define DISP_REG_OVL_ADDR_MT2701		0x0040
@@ -174,11 +178,13 @@ void mtk_ovl_stop(struct device *dev)
 }
 
 void mtk_ovl_config(struct device *dev, unsigned int w,
-		    unsigned int h, unsigned int vrefresh,
+		    unsigned int h, unsigned int vrefresh, bool is_dual_pipe,
 		    unsigned int bpc, struct cmdq_pkt *cmdq_pkt)
 {
 	struct mtk_disp_ovl *ovl = dev_get_drvdata(dev);
 
+	if (is_dual_pipe)
+		w /= 2;
 	if (w != 0 && h != 0)
 		mtk_ddp_write_relaxed(cmdq_pkt, h << 16 | w, &ovl->cmdq_reg, ovl->regs,
 				      DISP_REG_OVL_ROI_SIZE);
@@ -308,17 +314,39 @@ void mtk_ovl_layer_config(struct device *dev, unsigned int idx,
 	struct mtk_disp_ovl *ovl = dev_get_drvdata(dev);
 	struct mtk_plane_pending_state *pending = &state->pending;
 	unsigned int addr = pending->addr;
-	unsigned int pitch = pending->pitch & 0xffff;
 	unsigned int fmt = pending->format;
-	unsigned int offset = (pending->y << 16) | pending->x;
-	unsigned int src_size = (pending->height << 16) | pending->width;
+	unsigned int pitch = pending->pitch & 0xffff;
+	unsigned int pitch_msb = (pending->pitch >> 16) & 0xf;
+	unsigned int src_x = pending->src_x;
+	unsigned int src_y = pending->src_y;
+	unsigned int dst_h = pending->height;
+	unsigned int dst_w = pending->width;
+	unsigned int offset = (pending->dst_y << 16) | pending->dst_x;
+	unsigned int src_size = (pending->height << 16) | (pending->width);
 	unsigned int con;
+	unsigned int bpp = (fmt == DRM_FORMAT_YUYV || fmt == DRM_FORMAT_UYVY) ? 2 : 4;
+	unsigned int clip = 0;
 
 	if (!pending->enable) {
 		mtk_ovl_layer_off(dev, idx, cmdq_pkt);
 		return;
 	}
 
+	if (fmt == DRM_FORMAT_YUYV || fmt == DRM_FORMAT_YVYU ||
+	    fmt == DRM_FORMAT_UYVY || fmt == DRM_FORMAT_VYUY) {
+		if (src_x % 2) {
+			src_x -= 1;
+			dst_w += 1;
+			clip |= (0x1 & OVL_L_CLIP_FLD_LEFT);
+		}
+		if ((src_x + dst_w) % 2) {
+			dst_w += 1;
+			clip |= (0x1 << 8 & OVL_L_CLIP_FLD_RIGHT);
+		}
+	}
+
+	addr += src_x * bpp + src_y * pitch;
+	src_size = (dst_h << 16) | dst_w;
 	con = ovl_fmt_convert(ovl, fmt);
 	if (state->base.fb && state->base.fb->format->has_alpha)
 		con |= OVL_CON_AEN | OVL_CON_ALPHA;
@@ -337,13 +365,16 @@ void mtk_ovl_layer_config(struct device *dev, unsigned int idx,
 			      DISP_REG_OVL_CON(idx));
 	mtk_ddp_write_relaxed(cmdq_pkt, pitch, &ovl->cmdq_reg, ovl->regs,
 			      DISP_REG_OVL_PITCH(idx));
+	mtk_ddp_write_relaxed(cmdq_pkt, pitch_msb, &ovl->cmdq_reg, ovl->regs,
+			      DISP_REG_OVL_PITCH_MSB(idx));
 	mtk_ddp_write_relaxed(cmdq_pkt, src_size, &ovl->cmdq_reg, ovl->regs,
 			      DISP_REG_OVL_SRC_SIZE(idx));
 	mtk_ddp_write_relaxed(cmdq_pkt, offset, &ovl->cmdq_reg, ovl->regs,
 			      DISP_REG_OVL_OFFSET(idx));
 	mtk_ddp_write_relaxed(cmdq_pkt, addr, &ovl->cmdq_reg, ovl->regs,
 			      DISP_REG_OVL_ADDR(ovl, idx));
-
+	mtk_ddp_write_relaxed(cmdq_pkt, clip, &ovl->cmdq_reg, ovl->regs,
+			      DISP_REG_OVL_CLIP(idx));
 	mtk_ovl_layer_on(dev, idx, cmdq_pkt);
 }
 
