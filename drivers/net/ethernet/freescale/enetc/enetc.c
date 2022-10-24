@@ -1112,12 +1112,14 @@ static void enetc_add_rx_buff_to_skb(struct enetc_bdr *rx_ring, int i,
 
 static bool enetc_check_bd_errors_and_consume(struct enetc_bdr *rx_ring,
 					      u32 bd_status,
-					      union enetc_rx_bd **rxbd, int *i)
+					      union enetc_rx_bd **rxbd, int *i,
+					      int *buffs_missing)
 {
 	if (likely(!(bd_status & ENETC_RXBD_LSTATUS(ENETC_RXBD_ERR_MASK))))
 		return false;
 
 	enetc_put_rx_buff(rx_ring, &rx_ring->rx_swbd[*i]);
+	(*buffs_missing)++;
 	enetc_rxbd_next(rx_ring, rxbd, i);
 
 	while (!(bd_status & ENETC_RXBD_LSTATUS_F)) {
@@ -1125,6 +1127,7 @@ static bool enetc_check_bd_errors_and_consume(struct enetc_bdr *rx_ring,
 		bd_status = le32_to_cpu((*rxbd)->r.lstatus);
 
 		enetc_put_rx_buff(rx_ring, &rx_ring->rx_swbd[*i]);
+		(*buffs_missing)++;
 		enetc_rxbd_next(rx_ring, rxbd, i);
 	}
 
@@ -1206,8 +1209,9 @@ static int enetc_clean_rx_ring(struct enetc_bdr *rx_ring,
 		dma_rmb(); /* for reading other rxbd fields */
 
 		if (enetc_check_bd_errors_and_consume(rx_ring, bd_status,
-						      &rxbd, &i))
-			break;
+						      &rxbd, &i,
+						      &buffs_missing))
+			continue;
 
 		skb = enetc_build_skb(rx_ring, bd_status, &rxbd, &i,
 				      &buffs_missing, ENETC_RXB_DMA_SIZE);
@@ -1544,8 +1548,9 @@ static int enetc_clean_rx_ring_xdp(struct enetc_bdr *rx_ring,
 		dma_rmb(); /* for reading other rxbd fields */
 
 		if (enetc_check_bd_errors_and_consume(rx_ring, bd_status,
-						      &rxbd, &i))
-			break;
+						      &rxbd, &i,
+						      &buffs_missing))
+			continue;
 
 		orig_rxbd = rxbd;
 		orig_buffs_missing = buffs_missing;
