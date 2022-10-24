@@ -65,8 +65,8 @@ static void enetc_unmap_tx_buff(struct enetc_bdr *tx_ring,
 	tx_swbd->dma = 0;
 }
 
-static void enetc_free_tx_frame(struct enetc_bdr *tx_ring,
-				struct enetc_tx_swbd *tx_swbd)
+static void enetc_free_tx_swbd(struct enetc_bdr *tx_ring,
+			       struct enetc_tx_swbd *tx_swbd)
 {
 	struct xdp_frame *xdp_frame = enetc_tx_swbd_get_xdp_frame(tx_swbd);
 	struct sk_buff *skb = enetc_tx_swbd_get_skb(tx_swbd);
@@ -319,7 +319,7 @@ dma_err:
 
 	do {
 		tx_swbd = &tx_ring->tx_swbd[i];
-		enetc_free_tx_frame(tx_ring, tx_swbd);
+		enetc_free_tx_swbd(tx_ring, tx_swbd);
 		if (i == 0)
 			i = tx_ring->bd_count;
 		i--;
@@ -568,7 +568,7 @@ err_map_data:
 err_chained_bd:
 	do {
 		tx_swbd = &tx_ring->tx_swbd[i];
-		enetc_free_tx_frame(tx_ring, tx_swbd);
+		enetc_free_tx_swbd(tx_ring, tx_swbd);
 		if (i == 0)
 			i = tx_ring->bd_count;
 		i--;
@@ -1811,7 +1811,7 @@ static void enetc_free_txbdr(struct enetc_bdr *txr)
 	int size, i;
 
 	for (i = 0; i < txr->bd_count; i++)
-		enetc_free_tx_frame(txr, &txr->tx_swbd[i]);
+		enetc_free_tx_swbd(txr, &txr->tx_swbd[i]);
 
 	size = txr->bd_count * sizeof(union enetc_tx_bd);
 
@@ -1929,11 +1929,8 @@ static void enetc_free_tx_ring(struct enetc_bdr *tx_ring)
 	if (!tx_ring->tx_swbd)
 		return;
 
-	for (i = 0; i < tx_ring->bd_count; i++) {
-		struct enetc_tx_swbd *tx_swbd = &tx_ring->tx_swbd[i];
-
-		enetc_free_tx_frame(tx_ring, tx_swbd);
-	}
+	for (i = 0; i < tx_ring->bd_count; i++)
+		enetc_free_tx_swbd(tx_ring, &tx_ring->tx_swbd[i]);
 
 	tx_ring->next_to_clean = 0;
 	tx_ring->next_to_use = 0;
