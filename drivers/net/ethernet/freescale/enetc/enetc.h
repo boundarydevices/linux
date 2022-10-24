@@ -24,6 +24,7 @@ struct enetc_tx_swbd {
 	union {
 		struct sk_buff *skb;
 		struct xdp_frame *xdp_frame;
+		struct xdp_buff *xsk_buff;
 	};
 	dma_addr_t dma;
 	struct page *page;	/* valid only if is_xdp_tx */
