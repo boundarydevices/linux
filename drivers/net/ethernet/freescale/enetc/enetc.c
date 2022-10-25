@@ -1248,6 +1248,10 @@ static void enetc_xdp_map_tx_buff(struct enetc_bdr *tx_ring, int i,
 	txbd->buf_len = cpu_to_le16(tx_swbd->len);
 	txbd->frm_len = cpu_to_le16(frm_len);
 
+	/* last BD needs 'F' bit set */
+	if (tx_swbd->is_eof)
+		txbd->flags = ENETC_TXBD_FLAGS_F;
+
 	memcpy(&tx_ring->tx_swbd[i], tx_swbd, sizeof(*tx_swbd));
 }
 
@@ -1271,17 +1275,7 @@ static bool enetc_xdp_tx(struct enetc_bdr *tx_ring,
 	i = tx_ring->next_to_use;
 
 	for (k = 0; k < num_tx_swbd; k++) {
-		struct enetc_tx_swbd *xdp_tx_swbd = &xdp_tx_arr[k];
-
-		enetc_xdp_map_tx_buff(tx_ring, i, xdp_tx_swbd, frm_len);
-
-		/* last BD needs 'F' bit set */
-		if (xdp_tx_swbd->is_eof) {
-			union enetc_tx_bd *txbd = ENETC_TXBD(*tx_ring, i);
-
-			txbd->flags = ENETC_TXBD_FLAGS_F;
-		}
-
+		enetc_xdp_map_tx_buff(tx_ring, i, &xdp_tx_arr[k], frm_len);
 		enetc_bdr_idx_inc(tx_ring, &i);
 	}
 
