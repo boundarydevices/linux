@@ -1498,7 +1498,7 @@ static const struct mtk_iommu_plat_data mt8173_data = {
 
 static const struct mtk_iommu_plat_data mt8183_data = {
 	.m4u_plat     = M4U_MT8183,
-	.flags        = RESET_AXI | MTK_IOMMU_TYPE_MM,
+	.flags        = RESET_AXI | MTK_IOMMU_TYPE_MM | PM_CLK_AO,
 	.inv_sel_reg  = REG_MMU_INV_SEL_GEN1,
 	.banks_num    = 1,
 	.banks_enable = {true},
