@@ -423,7 +423,7 @@ static int mtk_hdmi_ddc_xfer(struct i2c_adapter *adapter, struct i2c_msg *msgs,
 	struct device *dev = adapter->dev.parent;
 	int ret;
 	int i;
-	unsigned char offset;
+	unsigned char offset = 0;
 
 	if (!ddc)
 		return -EINVAL;
