@@ -209,6 +209,9 @@ static const struct of_device_id mtk_hdmi_phy_match[] = {
 	{ .compatible = "mediatek,mt8195-hdmi-phy",
 	  .data = &mtk_hdmi_phy_8195_conf,
 	},
+	{ .compatible = "mediatek,mt8188-hdmi-phy",
+	  .data = &mtk_hdmi_phy_8195_conf,
+	},
 	{},
 };
 MODULE_DEVICE_TABLE(of, mtk_hdmi_phy_match);

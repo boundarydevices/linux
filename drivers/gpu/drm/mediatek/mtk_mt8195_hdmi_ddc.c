@@ -537,6 +537,9 @@ static const struct of_device_id mtk_hdmi_ddc_match[] = {
 	{
 		.compatible = "mediatek,mt8195-hdmi-ddc",
 	},
+	{
+		.compatible = "mediatek,mt8188-hdmi-ddc",
+	},
 	{},
 };
 

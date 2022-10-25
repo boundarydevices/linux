@@ -37,6 +37,8 @@ struct mtk_hdmi_conf {
 	bool is_mt8195;
 	bool low_power;
 	unsigned long max_mode_clock;
+	const u32 reg_hdmitx_config_ofs;
+	void (*set_abist)(struct device *dev, enum mtk_abist_pattern mode_num);
 };
 
 enum hdmi_color_depth { HDMI_8_BIT, HDMI_10_BIT, HDMI_12_BIT, HDMI_16_BIT };
@@ -153,6 +155,11 @@ enum mtk_hdmi_clk_id_mt8183 {
 
 extern const char *const mtk_hdmi_clk_names_mt8183[MTK_MT8183_HDMI_CLK_COUNT];
 extern const char *const mtk_hdmi_clk_names_mt8195[MTK_MT8195_HDMI_CLK_COUNT];
+
+extern struct drm_display_mode mode_720x480_60hz_4v3;
+extern struct drm_display_mode mode_1280x720_50hz_16v9;
+extern struct drm_display_mode mode_1920x1080_60hz_16v9;
+extern struct drm_display_mode mode_3840x2160_30hz_16v9;
 
 enum hdmi_hpd_state {
 	HDMI_PLUG_OUT = 0,

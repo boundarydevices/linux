@@ -113,10 +113,10 @@ static inline void mtk_hdmi_clr_htplg_pord_irq(struct mtk_hdmi *hdmi)
 static inline void mtk_hdmi_set_sw_hpd(struct mtk_hdmi *hdmi, bool high)
 {
 	if (high)
-		mtk_hdmi_mask(hdmi, HDMITX_CONFIG, 0x1 << HDMITX_SW_HPD_SHIFT,
+		mtk_hdmi_mask(hdmi, hdmi->conf->reg_hdmitx_config_ofs, 0x1 << HDMITX_SW_HPD_SHIFT,
 			      HDMITX_SW_HPD);
 	else
-		mtk_hdmi_mask(hdmi, HDMITX_CONFIG, 0x0 << HDMITX_SW_HPD_SHIFT,
+		mtk_hdmi_mask(hdmi, hdmi->conf->reg_hdmitx_config_ofs, 0x0 << HDMITX_SW_HPD_SHIFT,
 			      HDMITX_SW_HPD);
 }
 
@@ -138,7 +138,7 @@ static void mtk_hdmi_disable_hdcp_encrypt(struct mtk_hdmi *hdmi)
 static void mtk_hdmi_yuv420_downsample(struct mtk_hdmi *hdmi, bool enable)
 {
 	if (enable) {
-		mtk_hdmi_mask(hdmi, HDMITX_CONFIG,
+		mtk_hdmi_mask(hdmi, hdmi->conf->reg_hdmitx_config_ofs,
 			      HDMI_YUV420_MODE | HDMITX_SW_HPD,
 			      HDMI_YUV420_MODE | HDMITX_SW_HPD);
 		mtk_hdmi_mask(hdmi, VID_DOWNSAMPLE_CONFIG,
@@ -154,7 +154,7 @@ static void mtk_hdmi_yuv420_downsample(struct mtk_hdmi *hdmi, bool enable)
 			      OUTPUT_FORMAT_DEMUX_420_ENABLE,
 			      OUTPUT_FORMAT_DEMUX_420_ENABLE);
 	} else {
-		mtk_hdmi_mask(hdmi, HDMITX_CONFIG, 0 | HDMITX_SW_HPD,
+		mtk_hdmi_mask(hdmi, hdmi->conf->reg_hdmitx_config_ofs, 0 | HDMITX_SW_HPD,
 			      HDMI_YUV420_MODE | HDMITX_SW_HPD);
 		mtk_hdmi_mask(hdmi, VID_DOWNSAMPLE_CONFIG, 0,
 			      C444_C422_CONFIG_ENABLE);
@@ -232,10 +232,10 @@ static void mtk_hdmi_hw_aud_unmute(struct mtk_hdmi *hdmi)
 
 static void mtk_hdmi_hw_reset(struct mtk_hdmi *hdmi)
 {
-	mtk_hdmi_mask(hdmi, HDMITX_CONFIG, 0x0 << HDMITX_SW_RSTB_SHIFT,
+	mtk_hdmi_mask(hdmi, hdmi->conf->reg_hdmitx_config_ofs, 0x0 << HDMITX_SW_RSTB_SHIFT,
 		      HDMITX_SW_RSTB);
 	usleep_range(1, 5);
-	mtk_hdmi_mask(hdmi, HDMITX_CONFIG, 0x1 << HDMITX_SW_RSTB_SHIFT,
+	mtk_hdmi_mask(hdmi, hdmi->conf->reg_hdmitx_config_ofs, 0x1 << HDMITX_SW_RSTB_SHIFT,
 		      HDMITX_SW_RSTB);
 }
 
@@ -1798,4 +1798,54 @@ void set_hdmi_codec_pdata_mt8195(struct hdmi_codec_pdata *codec_data)
 	codec_data->ops = &mtk_hdmi_audio_codec_ops;
 	codec_data->max_i2s_channels = 2;
 	codec_data->i2s = 1;
+}
+
+void set_abist_pattern(struct device *dev, enum mtk_abist_pattern mode_num)
+{
+	unsigned char abist_format;
+	struct drm_display_mode *mode;
+	struct mtk_hdmi *hdmi = dev_get_drvdata(dev);
+
+	dev_err(hdmi->dev, "mode_num:%d\n", mode_num);
+
+	switch (mode_num) {
+	case MTK_ABIST_480P:
+		dev_err(hdmi->dev, "0x2: 720*480P@60\n");
+		mode = &mode_720x480_60hz_4v3;
+		abist_format = ABIST_VIDEO_FORMAT_720x480P;
+		break;
+	case MTK_ABIST_720P:
+		dev_err(hdmi->dev, "0x4: 1280*720P@50\n");
+		mode = &mode_1280x720_50hz_16v9;
+		abist_format = ABIST_VIDEO_FORMAT_720P50;
+		break;
+	case MTK_ABIST_1080P:
+		dev_err(hdmi->dev, "0x5: 1920*1080P@60\n");
+		mode = &mode_1920x1080_60hz_16v9;
+		abist_format = ABIST_VIDEO_FORMAT_1080P60;
+		break;
+	case MTK_ABIST_2160P:
+		dev_err(hdmi->dev, "0x7: 3840*2160P@30\n");
+		mode = &mode_3840x2160_30hz_16v9;
+		abist_format = ABIST_VIDEO_FORMAT_3840x2160P30;
+		break;
+	default:
+		dev_err(hdmi->dev, "Wrong Mode!!\n");
+		mode = &mode_720x480_60hz_4v3;
+		abist_format = 0x2;
+	}
+
+	if (hdmi->enabled == true)
+		drm_bridge_chain_disable(&hdmi->bridge);
+	if (hdmi->powered == true)
+		drm_bridge_chain_post_disable(&hdmi->bridge);
+
+	msleep(50);
+
+	drm_bridge_chain_mode_set(&hdmi->bridge, NULL, mode);
+	drm_bridge_chain_pre_enable(&hdmi->bridge);
+	drm_bridge_chain_enable(&hdmi->bridge);
+
+	mtk_hdmi_mask(hdmi, TOP_CFG00, abist_format, ABIST_VIDEO_FORMAT_MASKBIT);
+	mtk_hdmi_mask(hdmi, TOP_CFG00, (0x1 << 31), ABIST_ENABLE);
 }

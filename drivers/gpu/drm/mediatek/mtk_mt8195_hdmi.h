@@ -23,4 +23,14 @@ struct mtk_hdmi_info {
 	unsigned char edid_sink_support_dynamic_hdr;
 };
 
+enum mtk_abist_pattern {
+	MTK_ABIST_480P,
+	MTK_ABIST_720P,
+	MTK_ABIST_1080P,
+	MTK_ABIST_2160P,
+	MTK_ABIST_COUNT,
+};
+
+void set_abist_pattern(struct device *dev, enum mtk_abist_pattern mode_num);
+
 #endif /* _MTK_HDMI_MT8195_CTRL_H */
