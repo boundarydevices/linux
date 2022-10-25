@@ -708,6 +708,8 @@ static inline void mtk_hdmi_hw_audio_type(struct mtk_hdmi *hdmi,
 static unsigned char mtk_hdmi_get_i2s_ch_mapping(struct mtk_hdmi *hdmi,
 						 unsigned char channel_type)
 {
+	unsigned char LFE, RRC, RLC;
+	unsigned char FC = 0, RR = 0, RL = 0, RC = 0;
 	unsigned char FC, LFE, RR, RL, RRC, RLC, RC;
 	unsigned char ch_number = 0;
 	unsigned char channelmap = 0x00;
