@@ -966,7 +966,7 @@ static int mtk_drm_crtc_update_output(struct drm_crtc *crtc,
 	struct drm_crtc_state *crtc_state = state->crtcs[crtc_index].new_state;
 	u32 encoder_mask = crtc_state->encoder_mask;
 	int i;
-	int route_index;
+	int route_index = -1;
 	int route_len;
 	unsigned int comp_id;
 	const struct mtk_drm_route *conn_routes;
@@ -996,6 +996,11 @@ static int mtk_drm_crtc_update_output(struct drm_crtc *crtc,
 				}
 			}
 		}
+	}
+
+	if (route_index == -1) {
+		dev_err(dev, "Route index not found\n");
+		return -ENODEV;
 	}
 
 	if (conn_routes[route_index].route_mmsys_id != priv->data->mmsys_id) {
