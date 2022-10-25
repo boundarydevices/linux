@@ -674,7 +674,7 @@ static int mtk_drm_crtc_update_output(struct drm_crtc *crtc,
 	struct drm_crtc_state *crtc_state = state->crtcs[crtc_index].new_state;
 	u32 encoder_mask = crtc_state->encoder_mask;
 	int i;
-	int route_index;
+	int route_index = 0;
 	int route_len;
 	unsigned int comp_id;
 	const struct mtk_drm_route *conn_routes;
