@@ -1672,10 +1672,19 @@ static int enetc_poll(struct napi_struct *napi, int budget)
 	struct enetc_int_vector
 		*v = container_of(napi, struct enetc_int_vector, napi);
 	struct enetc_bdr *rx_ring = &v->rx_ring;
+	struct enetc_ndev_priv *priv;
 	struct bpf_prog *prog;
 	bool complete = true;
 	int work_done;
 	int i;
+
+	priv = netdev_priv(rx_ring->ndev);
+
+	/* Prioritize device ability to go down over packet processing */
+	if (test_bit(ENETC_DOWN, &priv->flags)) {
+		napi_complete(napi);
+		return 0;
+	}
 
 	enetc_lock_mdio();
 
@@ -2350,6 +2359,14 @@ void enetc_start(struct net_device *ndev)
 		netif_carrier_on(ndev);
 
 	netif_tx_start_all_queues(ndev);
+
+	clear_bit(ENETC_DOWN, &priv->flags);
+
+	for (i = 0; i < priv->bdr_int_num; i++) {
+		struct enetc_int_vector *v = priv->int_vector[i];
+
+		napi_schedule(&v->napi);
+	}
 }
 
 static int enetc_xdp_rxq_mem_model_register(struct enetc_ndev_priv *priv,
@@ -2466,6 +2483,8 @@ void enetc_stop(struct net_device *ndev)
 {
 	struct enetc_ndev_priv *priv = netdev_priv(ndev);
 	int i;
+
+	set_bit(ENETC_DOWN, &priv->flags);
 
 	netif_tx_stop_all_queues(ndev);
 
