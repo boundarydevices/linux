@@ -36,6 +36,7 @@ struct enetc_tx_swbd {
 	u8 is_eof:1;
 	u8 is_xdp_tx:1;
 	u8 is_xdp_redirect:1;
+	u8 is_xsk:1;
 	u8 qbv_en:1;
 };
 
@@ -87,6 +88,7 @@ struct enetc_xdp_data {
 #define ENETC_RX_RING_DEFAULT_SIZE	2048
 #define ENETC_TX_RING_DEFAULT_SIZE	2048
 #define ENETC_DEFAULT_TX_WORK		(ENETC_TX_RING_DEFAULT_SIZE / 2)
+#define ENETC_XSK_TX_BATCH		ENETC_DEFAULT_TX_WORK
 
 struct enetc_bdr {
 	struct device *dev; /* for DMA mapping */
