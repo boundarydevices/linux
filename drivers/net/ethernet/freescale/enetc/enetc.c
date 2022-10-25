@@ -72,7 +72,7 @@ static void enetc_free_tx_swbd(struct enetc_bdr *tx_ring,
 	struct xdp_frame *xdp_frame = enetc_tx_swbd_get_xdp_frame(tx_swbd);
 	struct sk_buff *skb = enetc_tx_swbd_get_skb(tx_swbd);
 
-	if (tx_swbd->dma)
+	if (!tx_swbd->is_xsk && tx_swbd->dma)
 		enetc_unmap_tx_buff(tx_ring, tx_swbd);
 
 	if (xdp_frame) {
@@ -804,7 +804,8 @@ static void enetc_recycle_xdp_tx_buff(struct enetc_bdr *tx_ring,
 	rx_ring->xdp.xdp_tx_in_flight--;
 }
 
-static bool enetc_clean_tx_ring(struct enetc_bdr *tx_ring, int napi_budget)
+static bool enetc_clean_tx_ring(struct enetc_bdr *tx_ring, int napi_budget,
+				int *xsk_confirmed)
 {
 	int tx_frm_cnt = 0, tx_byte_cnt = 0, tx_win_drop = 0;
 	struct net_device *ndev = tx_ring->ndev;
@@ -844,7 +845,9 @@ static bool enetc_clean_tx_ring(struct enetc_bdr *tx_ring, int napi_budget)
 				tx_win_drop++;
 		}
 
-		if (tx_swbd->is_xdp_tx)
+		if (tx_swbd->is_xsk)
+			(*xsk_confirmed)++;
+		else if (tx_swbd->is_xdp_tx)
 			enetc_recycle_xdp_tx_buff(tx_ring, tx_swbd);
 		else if (likely(tx_swbd->dma))
 			enetc_unmap_tx_buff(tx_ring, tx_swbd);
@@ -1449,6 +1452,58 @@ int enetc_xdp_xmit(struct net_device *ndev, int num_frames,
 	return xdp_tx_frm_cnt;
 }
 
+static void enetc_xsk_map_tx_desc(struct enetc_tx_swbd *tx_swbd,
+				  const struct xdp_desc *xsk_desc,
+				  struct xsk_buff_pool *pool)
+{
+	dma_addr_t dma;
+
+	dma = xsk_buff_raw_get_dma(pool, xsk_desc->addr);
+	xsk_buff_raw_dma_sync_for_device(pool, dma, xsk_desc->len);
+
+	tx_swbd->dma = dma;
+	tx_swbd->len = xsk_desc->len;
+	tx_swbd->is_xsk = true;
+	tx_swbd->is_eof = true;
+}
+
+static bool enetc_xsk_xmit(struct net_device *ndev, struct xsk_buff_pool *pool,
+			   u32 queue_id)
+{
+	struct enetc_ndev_priv *priv = netdev_priv(ndev);
+	struct xdp_desc *xsk_descs = pool->tx_descs;
+	struct enetc_tx_swbd tx_swbd = {0};
+	struct enetc_bdr *tx_ring;
+	u32 budget, batch;
+	int i, k;
+
+	tx_ring = priv->xdp_tx_ring[queue_id];
+
+	/* Shouldn't race with anyone because we are running in the softirq
+	 * of the only CPU that sends packets to this TX ring
+	 */
+	budget = min(enetc_bd_unused(tx_ring) - 1, ENETC_XSK_TX_BATCH);
+
+	batch = xsk_tx_peek_release_desc_batch(pool, budget);
+	if (!batch)
+		return true;
+
+	i = tx_ring->next_to_use;
+
+	for (k = 0; k < batch; k++) {
+		enetc_xsk_map_tx_desc(&tx_swbd, &xsk_descs[k], pool);
+		enetc_xdp_map_tx_buff(tx_ring, i, &tx_swbd, tx_swbd.len);
+		enetc_bdr_idx_inc(tx_ring, &i);
+	}
+
+	tx_ring->next_to_use = i;
+
+	xsk_tx_release(pool);
+	enetc_update_tx_ring_tail(tx_ring);
+
+	return budget != batch;
+}
+
 static void enetc_map_rx_buff_to_xdp(struct enetc_bdr *rx_ring, int i,
 				     struct xdp_buff *xdp_buff, u16 size)
 {
@@ -1884,6 +1939,7 @@ static int enetc_poll(struct napi_struct *napi, int budget)
 	struct enetc_ndev_priv *priv;
 	struct xsk_buff_pool *pool;
 	struct bpf_prog *prog;
+	int xsk_confirmed = 0;
 	bool complete = true;
 	int work_done;
 	int i;
@@ -1899,7 +1955,8 @@ static int enetc_poll(struct napi_struct *napi, int budget)
 	enetc_lock_mdio();
 
 	for (i = 0; i < v->count_tx_rings; i++)
-		if (!enetc_clean_tx_ring(&v->tx_ring[i], budget))
+		if (!enetc_clean_tx_ring(&v->tx_ring[i], budget,
+					 &xsk_confirmed))
 			complete = false;
 
 	prog = rx_ring->xdp.prog;
@@ -1911,6 +1968,17 @@ static int enetc_poll(struct napi_struct *napi, int budget)
 		work_done = enetc_clean_rx_ring_xdp(rx_ring, napi, budget, prog);
 	else
 		work_done = enetc_clean_rx_ring(rx_ring, napi, budget);
+
+	if (pool) {
+		if (xsk_confirmed)
+			xsk_tx_completed(pool, xsk_confirmed);
+
+		if (xsk_uses_need_wakeup(pool))
+			xsk_set_tx_need_wakeup(pool);
+
+		if (!enetc_xsk_xmit(rx_ring->ndev, pool, rx_ring->index))
+			complete = false;
+	}
 
 	if (work_done == budget)
 		complete = false;
@@ -2919,10 +2987,43 @@ static int enetc_setup_xsk_pool(struct net_device *ndev,
 		      enetc_disable_xsk_pool(ndev, queue_id);
 }
 
+static void napi_schedule_or_mark_missed(void *data)
+{
+	struct napi_struct *napi = data;
+
+	if (!napi_if_scheduled_mark_missed(napi))
+		napi_schedule(napi);
+}
+
+/* No way to kick TX by triggering a hardirq right away => raise softirq on the
+ * given CPU using an IPI. Do this to avoid scheduling the wrong NAPI instance.
+ * More details: https://www.spinics.net/lists/netdev/msg554657.html
+ */
+static int napi_schedule_on(struct napi_struct *napi, int cpu)
+{
+	return smp_call_function_single(cpu, napi_schedule_or_mark_missed,
+					napi, true);
+}
+
 int enetc_xsk_wakeup(struct net_device *ndev, u32 queue_id, u32 flags)
 {
-	/* xp_assign_dev() wants this; nothing needed for RX */
-	return 0;
+	struct enetc_ndev_priv *priv = netdev_priv(ndev);
+	struct enetc_int_vector *v;
+	struct enetc_bdr *rx_ring;
+
+	if (!netif_running(ndev) || !netif_carrier_ok(ndev))
+		return -ENETDOWN;
+
+	if (queue_id >= priv->bdr_int_num)
+		return -ERANGE;
+
+	v = priv->int_vector[queue_id];
+	rx_ring = &v->rx_ring;
+
+	if (!rx_ring->xdp.xsk_pool || !rx_ring->xdp.prog)
+		return -EINVAL;
+
+	return napi_schedule_on(&v->napi, queue_id);
 }
 
 int enetc_setup_bpf(struct net_device *ndev, struct netdev_bpf *bpf)
