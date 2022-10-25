@@ -1437,7 +1437,8 @@ static void enetc_add_rx_buff_to_xdp(struct enetc_bdr *rx_ring, int i,
 
 static void enetc_build_xdp_buff(struct enetc_bdr *rx_ring, u32 bd_status,
 				 union enetc_rx_bd **rxbd, int *i,
-				 int *buffs_missing, struct xdp_buff *xdp_buff)
+				 int *buffs_missing, struct xdp_buff *xdp_buff,
+				 int *rx_byte_cnt)
 {
 	u16 size = le16_to_cpu((*rxbd)->r.buf_len);
 
@@ -1445,6 +1446,7 @@ static void enetc_build_xdp_buff(struct enetc_bdr *rx_ring, u32 bd_status,
 
 	enetc_map_rx_buff_to_xdp(rx_ring, *i, xdp_buff, size);
 	(*buffs_missing)++;
+	(*rx_byte_cnt) += size;
 	enetc_rxbd_next(rx_ring, rxbd, i);
 
 	/* not last BD in frame? */
@@ -1459,6 +1461,7 @@ static void enetc_build_xdp_buff(struct enetc_bdr *rx_ring, u32 bd_status,
 
 		enetc_add_rx_buff_to_xdp(rx_ring, *i, size, xdp_buff);
 		(*buffs_missing)++;
+		(*rx_byte_cnt) += size;
 		enetc_rxbd_next(rx_ring, rxbd, i);
 	}
 }
@@ -1557,7 +1560,7 @@ static int enetc_clean_rx_ring_xdp(struct enetc_bdr *rx_ring,
 		orig_i = i;
 
 		enetc_build_xdp_buff(rx_ring, bd_status, &rxbd, &i,
-				     &buffs_missing, &xdp_buff);
+				     &buffs_missing, &xdp_buff, &rx_byte_cnt);
 
 		xdp_act = bpf_prog_run_xdp(prog, &xdp_buff);
 
