@@ -2099,6 +2099,9 @@ static int brcmf_pcie_download_fw_nvram(struct brcmf_pciedev_info *devinfo,
 
 		/* Convert nvram_len to words to determine the length token */
 		nvram_lenw = nvram_len / 4;
+		/* subtract word used to store the token itself on non-blhs devices */
+		if (!devinfo->ci->blhs)
+			nvram_lenw -= 1;
 		nvram_csm = (~nvram_lenw << 16) | (nvram_lenw & 0x0000FFFF);
 		brcmf_fw_nvram_free(nvram);
 	} else {
