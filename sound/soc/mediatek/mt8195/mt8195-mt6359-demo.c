@@ -730,18 +730,13 @@ static const struct of_device_id mt8195_mt6359_demo_dt_match[] = {
 };
 #endif
 
-static const struct dev_pm_ops mt8195_mt6359_demo_pm_ops = {
-	.poweroff = snd_soc_poweroff,
-	.restore = snd_soc_resume,
-};
-
 static struct platform_driver mt8195_mt6359_demo_driver = {
 	.driver = {
 		.name = "mt8195_mt6359_demo",
 #ifdef CONFIG_OF
 		.of_match_table = mt8195_mt6359_demo_dt_match,
 #endif
-		.pm = &mt8195_mt6359_demo_pm_ops,
+		.pm = &snd_soc_pm_ops,
 	},
 	.probe = mt8195_mt6359_demo_dev_probe,
 };
