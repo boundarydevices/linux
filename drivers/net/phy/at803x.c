@@ -195,6 +195,7 @@ struct at803x_priv {
 	struct regulator_dev *vddh_rdev;
 	struct regulator *vddio;
 	u64 stats[ARRAY_SIZE(at803x_hw_stats)];
+	bool rx_clk_enable;
 };
 
 struct at803x_context {
@@ -430,14 +431,19 @@ static int at803x_suspend(struct phy_device *phydev)
 {
 	int value;
 	int wol_enabled;
+	struct at803x_priv *priv = phydev->priv;
 
 	value = phy_read(phydev, AT803X_INTR_ENABLE);
 	wol_enabled = value & AT803X_INTR_ENABLE_WOL;
 
 	if (wol_enabled)
 		value = BMCR_ISOLATE;
-	else
-		value = BMCR_PDOWN;
+	else {
+		if (!priv->rx_clk_enable)
+			value = BMCR_PDOWN;
+		else
+			value = 0;
+	}
 
 	phy_modify(phydev, MII_BMCR, 0, value);
 
@@ -639,6 +645,9 @@ static int at803x_parse_dt(struct phy_device *phydev)
 			phydev_err(phydev, "failed to get VDDIO regulator\n");
 			return PTR_ERR(priv->vddio);
 		}
+
+		if (of_property_read_bool(node, "qca,rx-clk-enable"))
+			priv->rx_clk_enable = true;
 	}
 
 	return 0;
