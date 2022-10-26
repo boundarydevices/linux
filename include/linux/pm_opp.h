@@ -143,7 +143,12 @@ int dev_pm_opp_get_sharing_cpus(struct device *cpu_dev, struct cpumask *cpumask)
 void dev_pm_opp_remove_table(struct device *dev);
 void dev_pm_opp_cpumask_remove_table(const struct cpumask *cpumask);
 #else
-static inline struct opp_table *dev_pm_opp_get_opp_table(struct device *dev, struct device_node *np)
+static inline struct opp_table *dev_pm_opp_get_opp_table(struct device *dev)
+{
+	return ERR_PTR(-EOPNOTSUPP);
+}
+
+static inline struct opp_table *dev_pm_opp_get_opp_table_np(struct device *dev, struct device_node *np)
 {
 	return ERR_PTR(-ENOTSUPP);
 }
