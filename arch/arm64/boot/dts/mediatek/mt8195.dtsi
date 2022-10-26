@@ -565,7 +565,6 @@
 				};
 				pins-5vctrl {
 					pinmux = <PINMUX_GPIO31__FUNC_GPIO31>;
-					slew-rate = <1>;
 					output-high;
 				};
 			};
