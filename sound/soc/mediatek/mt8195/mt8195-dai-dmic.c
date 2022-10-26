@@ -59,94 +59,6 @@ static const struct mtk_dai_dmic_ctrl_reg *get_dmic_ctrl_reg(int id)
 	return &dmic_ctrl_regs[id];
 }
 
-static void mtk_dai_dmic_enable(struct mtk_base_afe *afe,
-				struct snd_soc_dai *dai)
-{
-	const struct mtk_dai_dmic_ctrl_reg *reg = NULL;
-	unsigned int channels = dai->channels;
-	unsigned int val;
-	unsigned int msk;
-
-	val = PWR2_TOP_CON1_DMIC_CKDIV_ON;
-	msk = PWR2_TOP_CON1_DMIC_CKDIV_ON;
-	regmap_update_bits(afe->regmap, PWR2_TOP_CON1, msk, val);
-
-	msk = 0;
-	msk |= AFE_DMIC_UL_SRC_CON0_UL_MODE_3P25M_CH1_CTL;
-	msk |= AFE_DMIC_UL_SRC_CON0_UL_MODE_3P25M_CH2_CTL;
-	msk |= AFE_DMIC_UL_SRC_CON0_UL_SRC_ON_TMP_CTL;
-	msk |= AFE_DMIC_UL_SRC_CON0_UL_SDM_3_LEVEL_CTL;
-	val = msk;
-
-	if (channels > 6) {
-		reg = get_dmic_ctrl_reg(DMIC3);
-		if (reg)
-			regmap_set_bits(afe->regmap, reg->con0, msk);
-	}
-	if (channels > 4) {
-		reg = get_dmic_ctrl_reg(DMIC2);
-		if (reg)
-			regmap_set_bits(afe->regmap, reg->con0, msk);
-	}
-	if (channels > 2) {
-		reg = get_dmic_ctrl_reg(DMIC1);
-		if (reg)
-			regmap_set_bits(afe->regmap, reg->con0, msk);
-	}
-	if (channels > 0) {
-		reg = get_dmic_ctrl_reg(DMIC0);
-		if (reg)
-			regmap_set_bits(afe->regmap, reg->con0, msk);
-	}
-}
-
-static void mtk_dai_dmic_disable(struct mtk_base_afe *afe,
-				 struct snd_soc_dai *dai)
-{
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-	struct mtk_dai_dmic_priv *dmic_priv;
-	const struct mtk_dai_dmic_ctrl_reg *reg;
-	unsigned int channels;
-	unsigned int val = 0;
-	unsigned int msk = 0;
-
-	if (dai->id < 0)
-		return;
-
-	dmic_priv = afe_priv->dai_priv[dai->id];
-	channels = dmic_priv->channels;
-
-	msk |= AFE_DMIC_UL_SRC_CON0_UL_MODE_3P25M_CH1_CTL;
-	msk |= AFE_DMIC_UL_SRC_CON0_UL_MODE_3P25M_CH2_CTL;
-	msk |= AFE_DMIC_UL_SRC_CON0_UL_SRC_ON_TMP_CTL;
-	msk |= AFE_DMIC_UL_SRC_CON0_UL_IIR_ON_TMP_CTL;
-	msk |= AFE_DMIC_UL_SRC_CON0_UL_SDM_3_LEVEL_CTL;
-
-	if (channels > 6) {
-		reg = get_dmic_ctrl_reg(DMIC3);
-		if (reg)
-			regmap_clear_bits(afe->regmap, reg->con0, msk);
-	}
-	if (channels > 4) {
-		reg = get_dmic_ctrl_reg(DMIC2);
-		if (reg)
-			regmap_clear_bits(afe->regmap, reg->con0, msk);
-	}
-	if (channels > 2) {
-		reg = get_dmic_ctrl_reg(DMIC1);
-		if (reg)
-			regmap_clear_bits(afe->regmap, reg->con0, msk);
-	}
-	if (channels > 0) {
-		reg = get_dmic_ctrl_reg(DMIC0);
-		if (reg)
-			regmap_clear_bits(afe->regmap, reg->con0, msk);
-	}
-
-	msk = PWR2_TOP_CON1_DMIC_CKDIV_ON;
-	regmap_update_bits(afe->regmap, PWR2_TOP_CON1, msk, val);
-}
-
 static const struct reg_sequence mtk_dai_dmic_iir_coeff_reg_defaults[] = {
 	{ AFE_DMIC0_IIR_COEF_02_01, 0x00000000 },
 	{ AFE_DMIC0_IIR_COEF_04_03, 0x00003FB8 },
@@ -213,14 +125,156 @@ static int mtk_dai_dmic_configure_array(struct snd_soc_dai *dai)
 	return 0;
 }
 
-static int mtk_dai_dmic_configure(struct mtk_base_afe *afe,
-				  struct snd_pcm_substream *substream,
+static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
+			  struct snd_kcontrol *kcontrol,
+			  int event)
+{
+	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
+	struct mt8195_afe_private *afe_priv = afe->platform_priv;
+	struct mtk_dai_dmic_priv *dmic_priv = NULL;
+	const struct mtk_dai_dmic_ctrl_reg *reg = NULL;
+	unsigned int channels;
+	unsigned int msk;
+
+	dev_dbg(afe->dev, "%s(), name %s, event 0x%x\n",
+		__func__, w->name, event);
+
+	dmic_priv = afe_priv->dai_priv[MT8195_AFE_IO_DMIC_IN];
+	channels = dmic_priv->channels;
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		/* request fifo soft rst */
+		msk = 0;
+		if (channels > 6)
+			msk |= PWR2_TOP_CON1_DMIC4_FIFO_SOFT_RST_EN;
+		if (channels > 4)
+			msk |= PWR2_TOP_CON1_DMIC3_FIFO_SOFT_RST_EN;
+		if (channels > 2)
+			msk |= PWR2_TOP_CON1_DMIC2_FIFO_SOFT_RST_EN;
+		if (channels > 0)
+			msk |= PWR2_TOP_CON1_DMIC1_FIFO_SOFT_RST_EN;
+
+		regmap_set_bits(afe->regmap, PWR2_TOP_CON1, msk);
+
+		msk = 0;
+		msk |= AFE_DMIC_UL_SRC_CON0_UL_MODE_3P25M_CH1_CTL;
+		msk |= AFE_DMIC_UL_SRC_CON0_UL_MODE_3P25M_CH2_CTL;
+		msk |= AFE_DMIC_UL_SRC_CON0_UL_SDM_3_LEVEL_CTL;
+		if (dmic_priv->iir_on)
+			msk |= AFE_DMIC_UL_SRC_CON0_UL_IIR_ON_TMP_CTL;
+
+		if (channels > 6) {
+			reg = get_dmic_ctrl_reg(DMIC3);
+			if (reg)
+				regmap_set_bits(afe->regmap, reg->con0, msk);
+		}
+		if (channels > 4) {
+			reg = get_dmic_ctrl_reg(DMIC2);
+			if (reg)
+				regmap_set_bits(afe->regmap, reg->con0, msk);
+		}
+		if (channels > 2) {
+			reg = get_dmic_ctrl_reg(DMIC1);
+			if (reg)
+				regmap_set_bits(afe->regmap, reg->con0, msk);
+		}
+		if (channels > 0) {
+			reg = get_dmic_ctrl_reg(DMIC0);
+			if (reg)
+				regmap_set_bits(afe->regmap, reg->con0, msk);
+		}
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		msk = AFE_DMIC_UL_SRC_CON0_UL_SRC_ON_TMP_CTL;
+		if (channels > 6) {
+			reg = get_dmic_ctrl_reg(DMIC3);
+			if (reg)
+				regmap_set_bits(afe->regmap, reg->con0, msk);
+		}
+		if (channels > 4) {
+			reg = get_dmic_ctrl_reg(DMIC2);
+			if (reg)
+				regmap_set_bits(afe->regmap, reg->con0, msk);
+		}
+		if (channels > 2) {
+			reg = get_dmic_ctrl_reg(DMIC1);
+			if (reg)
+				regmap_set_bits(afe->regmap, reg->con0, msk);
+		}
+		if (channels > 0) {
+			reg = get_dmic_ctrl_reg(DMIC0);
+			if (reg)
+				regmap_set_bits(afe->regmap, reg->con0, msk);
+		}
+
+		mt8195_afe_enable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_AFE_DMIC]);
+
+		/* release fifo soft rst */
+		msk = 0;
+		if (channels > 6)
+			msk |= PWR2_TOP_CON1_DMIC4_FIFO_SOFT_RST_EN;
+		if (channels > 4)
+			msk |= PWR2_TOP_CON1_DMIC3_FIFO_SOFT_RST_EN;
+		if (channels > 2)
+			msk |= PWR2_TOP_CON1_DMIC2_FIFO_SOFT_RST_EN;
+		if (channels > 0)
+			msk |= PWR2_TOP_CON1_DMIC1_FIFO_SOFT_RST_EN;
+
+		regmap_clear_bits(afe->regmap, PWR2_TOP_CON1, msk);
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		msk =  AFE_DMIC_UL_SRC_CON0_UL_MODE_3P25M_CH1_CTL |
+			AFE_DMIC_UL_SRC_CON0_UL_MODE_3P25M_CH2_CTL |
+			AFE_DMIC_UL_SRC_CON0_UL_SRC_ON_TMP_CTL |
+			AFE_DMIC_UL_SRC_CON0_UL_IIR_ON_TMP_CTL |
+			AFE_DMIC_UL_SRC_CON0_UL_SDM_3_LEVEL_CTL;
+
+		if (channels > 6) {
+			reg = get_dmic_ctrl_reg(DMIC3);
+			if (reg)
+				regmap_clear_bits(afe->regmap, reg->con0, msk);
+		}
+		if (channels > 4) {
+			reg = get_dmic_ctrl_reg(DMIC2);
+			if (reg)
+				regmap_clear_bits(afe->regmap, reg->con0, msk);
+		}
+		if (channels > 2) {
+			reg = get_dmic_ctrl_reg(DMIC1);
+			if (reg)
+				regmap_clear_bits(afe->regmap, reg->con0, msk);
+		}
+		if (channels > 0) {
+			reg = get_dmic_ctrl_reg(DMIC0);
+			if (reg)
+				regmap_clear_bits(afe->regmap, reg->con0, msk);
+		}
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		/* should delayed 1/fs(smallest is 8k) = 125us before afe off */
+		usleep_range(125, 126);
+
+		mt8195_afe_disable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_AFE_DMIC]);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+/* dai ops */
+static int mtk_dai_dmic_hw_params(struct snd_pcm_substream *substream,
+				  struct snd_pcm_hw_params *params,
 				  struct snd_soc_dai *dai)
 {
+	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
 	struct mt8195_afe_private *afe_priv = afe->platform_priv;
 	struct mtk_dai_dmic_priv *dmic_priv;
-	unsigned int rate = dai->rate;
-	unsigned int channels = dai->channels;
+	unsigned int rate = params_rate(params);
+	unsigned int channels = params_channels(params);
 	unsigned int two_wire_mode;
 	unsigned int clk_phase_sel_ch1;
 	unsigned int clk_phase_sel_ch2;
@@ -270,7 +324,6 @@ static int mtk_dai_dmic_configure(struct mtk_base_afe *afe,
 	if (iir_on) {
 		mtk_dai_dmic_load_iir_coeff_table(afe);
 		val |= AFE_DMIC_UL_SRC_CON0_UL_IIR_MODE_CTL(0);
-		val |= AFE_DMIC_UL_SRC_CON0_UL_IIR_ON_TMP_CTL;
 	}
 
 	msk = val;
@@ -301,60 +354,8 @@ static int mtk_dai_dmic_configure(struct mtk_base_afe *afe,
 	return 0;
 }
 
-/* dai ops */
-static int mtk_dai_dmic_startup(struct snd_pcm_substream *substream,
-				struct snd_soc_dai *dai)
-{
-	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-
-	mt8195_afe_enable_main_clock(afe);
-
-	mt8195_afe_enable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_AFE_DMIC1]);
-	mt8195_afe_enable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_AFE_DMIC2]);
-	mt8195_afe_enable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_AFE_DMIC3]);
-	mt8195_afe_enable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_AFE_DMIC4]);
-
-	return 0;
-}
-
-static void mtk_dai_dmic_shutdown(struct snd_pcm_substream *substream,
-				  struct snd_soc_dai *dai)
-{
-	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-
-	mtk_dai_dmic_disable(afe, dai);
-
-	usleep_range(125, 126);
-
-	mt8195_afe_disable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_AFE_DMIC4]);
-	mt8195_afe_disable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_AFE_DMIC3]);
-	mt8195_afe_disable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_AFE_DMIC2]);
-	mt8195_afe_disable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_AFE_DMIC1]);
-
-	mt8195_afe_disable_main_clock(afe);
-}
-
-static int mtk_dai_dmic_prepare(struct snd_pcm_substream *substream,
-				struct snd_soc_dai *dai)
-{
-	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
-	int ret = 0;
-
-	ret = mtk_dai_dmic_configure(afe, substream, dai);
-	if (ret)
-		return ret;
-
-	mtk_dai_dmic_enable(afe, dai);
-
-	return 0;
-}
-
 static const struct snd_soc_dai_ops mtk_dai_dmic_ops = {
-	.startup	= mtk_dai_dmic_startup,
-	.shutdown	= mtk_dai_dmic_shutdown,
-	.prepare	= mtk_dai_dmic_prepare,
+	.hw_params	= mtk_dai_dmic_hw_params,
 };
 
 /* dai driver */
@@ -390,6 +391,14 @@ static const struct snd_soc_dapm_widget mtk_dai_dmic_widgets[] = {
 	SND_SOC_DAPM_MIXER("I009", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_MIXER("I010", SND_SOC_NOPM, 0, 0, NULL, 0),
 	SND_SOC_DAPM_MIXER("I011", SND_SOC_NOPM, 0, 0, NULL, 0),
+
+	SND_SOC_DAPM_SUPPLY("DMIC_CK_ON",
+			    PWR2_TOP_CON1,
+			    PWR2_TOP_CON1_DMIC_CKDIV_ON_SHIFT, 0,
+			    mtk_dmic_event,
+			    SND_SOC_DAPM_PRE_POST_PMU |
+			    SND_SOC_DAPM_PRE_POST_PMD),
+
 	SND_SOC_DAPM_INPUT("DMIC_INPUT"),
 };
 
@@ -403,6 +412,7 @@ static const struct snd_soc_dapm_route mtk_dai_dmic_routes[] = {
 	{"I010", NULL, "DMIC Capture"},
 	{"I011", NULL, "DMIC Capture"},
 
+	{"DMIC Capture", NULL, "DMIC_CK_ON"},
 	{"DMIC Capture", NULL, "DMIC_INPUT"},
 };
 
