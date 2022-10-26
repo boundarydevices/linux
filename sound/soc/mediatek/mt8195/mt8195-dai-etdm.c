@@ -21,6 +21,13 @@
 #define ENUM_TO_STR(x)	#x
 
 enum {
+	SUPPLY_SEQ_ETDM_MCLK,
+	SUPPLY_SEQ_ETDM_CG,
+	SUPPLY_SEQ_DPTX_EN,
+	SUPPLY_SEQ_ETDM_EN,
+};
+
+enum {
 	MTK_DAI_ETDM_FORMAT_I2S = 0,
 	MTK_DAI_ETDM_FORMAT_LJ,
 	MTK_DAI_ETDM_FORMAT_RJ,
@@ -314,6 +321,517 @@ static int get_etdm_cowork_master_id(struct snd_soc_dai *dai)
 
 	return dai_id;
 }
+
+static int mtk_dai_etdm_get_cg_id_by_dai_id(int dai_id)
+{
+	int cg_id = -1;
+
+	switch (dai_id) {
+	case MT8195_AFE_IO_DPTX:
+		cg_id = MT8195_CLK_AUD_HDMI_OUT;
+		break;
+	case MT8195_AFE_IO_ETDM1_IN:
+		cg_id = MT8195_CLK_AUD_TDM_IN;
+		break;
+	case MT8195_AFE_IO_ETDM2_IN:
+		cg_id = MT8195_CLK_AUD_I2SIN;
+		break;
+	case MT8195_AFE_IO_ETDM1_OUT:
+		cg_id = MT8195_CLK_AUD_TDM_OUT;
+		break;
+	case MT8195_AFE_IO_ETDM2_OUT:
+		cg_id = MT8195_CLK_AUD_I2S_OUT;
+		break;
+	case MT8195_AFE_IO_ETDM3_OUT:
+		cg_id = MT8195_CLK_AUD_HDMI_OUT;
+		break;
+	default:
+		break;
+	}
+
+	return cg_id;
+}
+
+static int mtk_dai_etdm_get_clk_id_by_dai_id(int dai_id)
+{
+	int clk_id = -1;
+
+	switch (dai_id) {
+	case MT8195_AFE_IO_DPTX:
+		clk_id = MT8195_CLK_TOP_DPTX_M_SEL;
+		break;
+	case MT8195_AFE_IO_ETDM1_IN:
+		clk_id = MT8195_CLK_TOP_I2SI1_M_SEL;
+		break;
+	case MT8195_AFE_IO_ETDM2_IN:
+		clk_id = MT8195_CLK_TOP_I2SI2_M_SEL;
+		break;
+	case MT8195_AFE_IO_ETDM1_OUT:
+		clk_id = MT8195_CLK_TOP_I2SO1_M_SEL;
+		break;
+	case MT8195_AFE_IO_ETDM2_OUT:
+		clk_id = MT8195_CLK_TOP_I2SO2_M_SEL;
+		break;
+	case MT8195_AFE_IO_ETDM3_OUT:
+	default:
+		break;
+	}
+
+	return clk_id;
+}
+
+static int mtk_dai_etdm_get_clkdiv_id_by_dai_id(int dai_id)
+{
+	int clk_id = -1;
+
+	switch (dai_id) {
+	case MT8195_AFE_IO_DPTX:
+		clk_id = MT8195_CLK_TOP_APLL12_DIV9;
+		break;
+	case MT8195_AFE_IO_ETDM1_IN:
+		clk_id = MT8195_CLK_TOP_APLL12_DIV0;
+		break;
+	case MT8195_AFE_IO_ETDM2_IN:
+		clk_id = MT8195_CLK_TOP_APLL12_DIV1;
+		break;
+	case MT8195_AFE_IO_ETDM1_OUT:
+		clk_id = MT8195_CLK_TOP_APLL12_DIV2;
+		break;
+	case MT8195_AFE_IO_ETDM2_OUT:
+		clk_id = MT8195_CLK_TOP_APLL12_DIV3;
+		break;
+	case MT8195_AFE_IO_ETDM3_OUT:
+	default:
+		break;
+	}
+
+	return clk_id;
+}
+
+static int get_etdm_id_by_name(struct mtk_base_afe *afe,
+			       const char *name)
+{
+	if (!strncmp(name, "ETDM1_IN", 8))
+		return MT8195_AFE_IO_ETDM1_IN;
+	else if (!strncmp(name, "ETDM2_IN", 8))
+		return MT8195_AFE_IO_ETDM2_IN;
+	else if (!strncmp(name, "ETDM1_OUT", 9))
+		return MT8195_AFE_IO_ETDM1_OUT;
+	else if (!strncmp(name, "ETDM2_OUT", 9))
+		return MT8195_AFE_IO_ETDM2_OUT;
+	else
+		return -EINVAL;
+}
+
+static struct mtk_dai_etdm_priv *get_etdm_priv_by_name(struct mtk_base_afe *afe,
+						       const char *name)
+{
+	struct mt8195_afe_private *afe_priv = afe->platform_priv;
+	int dai_id = get_etdm_id_by_name(afe, name);
+
+	if (dai_id < MT8195_AFE_IO_ETDM_START ||
+	    dai_id >= MT8195_AFE_IO_ETDM_END)
+		return NULL;
+
+	return afe_priv->dai_priv[dai_id];
+}
+
+static int mt8195_afe_enable_etdm(struct mtk_base_afe *afe, int dai_id)
+{
+	int ret = 0;
+	struct etdm_con_reg etdm_reg;
+	struct mt8195_afe_private *afe_priv = afe->platform_priv;
+	struct mtk_dai_etdm_priv *etdm_data = afe_priv->dai_priv[dai_id];
+	unsigned long flags;
+
+	spin_lock_irqsave(&afe_priv->afe_ctrl_lock, flags);
+	etdm_data->en_ref_cnt++;
+	if (etdm_data->en_ref_cnt == 1) {
+		ret = get_etdm_reg(dai_id, &etdm_reg);
+		if (ret < 0)
+			goto out;
+
+		regmap_update_bits(afe->regmap, etdm_reg.con0,
+				   ETDM_CON0_EN, ETDM_CON0_EN);
+	}
+out:
+	spin_unlock_irqrestore(&afe_priv->afe_ctrl_lock, flags);
+	return ret;
+}
+
+static int mt8195_afe_disable_etdm(struct mtk_base_afe *afe, int dai_id)
+{
+	int ret = 0;
+	struct etdm_con_reg etdm_reg;
+	struct mt8195_afe_private *afe_priv = afe->platform_priv;
+	struct mtk_dai_etdm_priv *etdm_data = afe_priv->dai_priv[dai_id];
+	unsigned long flags;
+
+	spin_lock_irqsave(&afe_priv->afe_ctrl_lock, flags);
+	if (etdm_data->en_ref_cnt > 0) {
+		etdm_data->en_ref_cnt--;
+		if (etdm_data->en_ref_cnt == 0) {
+			ret = get_etdm_reg(dai_id, &etdm_reg);
+			if (ret < 0)
+				goto out;
+
+			regmap_update_bits(afe->regmap, etdm_reg.con0,
+					   ETDM_CON0_EN, 0);
+		}
+	}
+out:
+	spin_unlock_irqrestore(&afe_priv->afe_ctrl_lock, flags);
+	return 0;
+}
+
+static int mtk_dai_etdm_enable_mclk(struct mtk_base_afe *afe, int dai_id)
+{
+	struct mt8195_afe_private *afe_priv = afe->platform_priv;
+	struct mtk_dai_etdm_priv *etdm_data = afe_priv->dai_priv[dai_id];
+	int clkmux_id = mtk_dai_etdm_get_clk_id_by_dai_id(dai_id);
+	int clkdiv_id = mtk_dai_etdm_get_clkdiv_id_by_dai_id(dai_id);
+	int apll = etdm_data->mclk_apll;
+	int apll_clk_id = mt8195_afe_get_mclk_source_clk_id(apll);
+	struct etdm_con_reg etdm_reg;
+	unsigned int val = 0;
+	unsigned int mask = 0;
+	int ret = 0;
+
+	if (clkmux_id < 0 || clkdiv_id < 0)
+		return -EINVAL;
+
+	if (apll_clk_id < 0)
+		return apll_clk_id;
+
+	ret = get_etdm_reg(dai_id, &etdm_reg);
+	if (ret < 0)
+		return ret;
+
+	mask |= ETDM_CON1_MCLK_OUTPUT;
+	if (etdm_data->mclk_dir == SND_SOC_CLOCK_OUT)
+		val |= ETDM_CON1_MCLK_OUTPUT;
+	regmap_update_bits(afe->regmap, etdm_reg.con1, mask, val);
+
+	/* enable parent clock before select apll*/
+	mt8195_afe_enable_clk(afe, afe_priv->clk[clkmux_id]);
+
+	/* select apll */
+	ret = mt8195_afe_set_clk_parent(afe, afe_priv->clk[clkmux_id],
+					afe_priv->clk[apll_clk_id]);
+	if (ret)
+		return ret;
+
+	/* set rate */
+	ret = mt8195_afe_set_clk_rate(afe, afe_priv->clk[clkdiv_id],
+				      etdm_data->mclk_freq);
+
+	mt8195_afe_enable_clk(afe, afe_priv->clk[clkdiv_id]);
+
+	return 0;
+}
+
+static int mtk_dai_etdm_disable_mclk(struct mtk_base_afe *afe, int dai_id)
+{
+	struct mt8195_afe_private *afe_priv = afe->platform_priv;
+	int clkmux_id = mtk_dai_etdm_get_clk_id_by_dai_id(dai_id);
+	int clkdiv_id = mtk_dai_etdm_get_clkdiv_id_by_dai_id(dai_id);
+
+	if (clkmux_id < 0 || clkdiv_id < 0)
+		return -EINVAL;
+
+	mt8195_afe_disable_clk(afe, afe_priv->clk[clkdiv_id]);
+	mt8195_afe_disable_clk(afe, afe_priv->clk[clkmux_id]);
+
+	return 0;
+}
+
+static int mtk_etdm_mclk_connect(struct snd_soc_dapm_widget *source,
+				     struct snd_soc_dapm_widget *sink)
+{
+	struct snd_soc_dapm_widget *w = sink;
+	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
+	struct mt8195_afe_private *afe_priv = afe->platform_priv;
+	struct mtk_dai_etdm_priv *etdm_priv;
+	int mclk_id;
+
+	mclk_id = get_etdm_id_by_name(afe, source->name);
+	if (mclk_id < 0) {
+		dev_info(afe->dev, "mclk_id < 0");
+		return 0;
+	}
+
+	etdm_priv = get_etdm_priv_by_name(afe, w->name);
+	if (!etdm_priv) {
+		dev_info(afe->dev, "etdm_priv == NULL");
+		return 0;
+	}
+
+	if (get_etdm_id_by_name(afe, sink->name) == mclk_id)
+		return !!(etdm_priv->mclk_freq > 0);
+
+	if (etdm_priv->cowork_source_id == mclk_id) {
+		etdm_priv = afe_priv->dai_priv[mclk_id];
+		return !!(etdm_priv->mclk_freq > 0);
+	}
+
+	return 0;
+}
+
+static int mtk_etdm_cg_connect(struct snd_soc_dapm_widget *source,
+			       struct snd_soc_dapm_widget *sink)
+{
+	struct snd_soc_dapm_widget *w = sink;
+	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
+	struct mt8195_afe_private *afe_priv = afe->platform_priv;
+	struct mtk_dai_etdm_priv *etdm_priv;
+	int cg_id;
+	int i;
+
+	cg_id = get_etdm_id_by_name(afe, source->name);
+	if (cg_id < 0) {
+		dev_info(afe->dev, "%s() cg_id < 0\n", __func__);
+		return 0;
+	}
+
+	etdm_priv = get_etdm_priv_by_name(afe, w->name);
+	if (!etdm_priv) {
+		dev_info(afe->dev, "%s() etdm_priv == NULL\n", __func__);
+		return 0;
+	}
+
+	if (etdm_priv->cowork_source_id != COWORK_ETDM_NONE) {
+		if (etdm_priv->cowork_source_id == cg_id)
+			return 1;
+
+		etdm_priv = afe_priv->dai_priv[etdm_priv->cowork_source_id];
+	}
+
+	for (i = 0; i < etdm_priv->cowork_slv_count; i++) {
+		if (etdm_priv->cowork_slv_id[i] == cg_id)
+			return 1;
+	}
+
+	return 0;
+}
+
+static int mtk_etdm_mclk_event(struct snd_soc_dapm_widget *w,
+			     struct snd_kcontrol *kcontrol,
+			     int event)
+{
+	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
+	int mclk_id = get_etdm_id_by_name(afe, w->name);
+
+	if (mclk_id < 0) {
+		dev_info(afe->dev, "%s() mclk_id < 0\n", __func__);
+		return 0;
+	}
+
+	dev_dbg(cmpnt->dev, "%s(), name %s, event 0x%x\n",
+		__func__, w->name, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		mtk_dai_etdm_enable_mclk(afe, mclk_id);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		mtk_dai_etdm_disable_mclk(afe, mclk_id);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+static int mtk_dptx_mclk_event(struct snd_soc_dapm_widget *w,
+			     struct snd_kcontrol *kcontrol,
+			     int event)
+{
+	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
+
+	dev_dbg(cmpnt->dev, "%s(), name %s, event 0x%x\n",
+		__func__, w->name, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		mtk_dai_etdm_enable_mclk(afe, MT8195_AFE_IO_DPTX);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		mtk_dai_etdm_disable_mclk(afe, MT8195_AFE_IO_DPTX);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+static int mtk_etdm_cg_event(struct snd_soc_dapm_widget *w,
+			     struct snd_kcontrol *kcontrol,
+			     int event)
+{
+	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
+	struct mt8195_afe_private *afe_priv = afe->platform_priv;
+	int etdm_id;
+	int cg_id;
+
+	etdm_id = get_etdm_id_by_name(afe, w->name);
+	if (etdm_id < 0) {
+		dev_info(afe->dev, "%s() etdm_id < 0\n", __func__);
+		return 0;
+	}
+
+	cg_id = mtk_dai_etdm_get_cg_id_by_dai_id(etdm_id);
+	if (cg_id < 0) {
+		dev_info(afe->dev, "%s() cg_id < 0\n", __func__);
+		return 0;
+	}
+
+	dev_dbg(cmpnt->dev, "%s(), name %s, event 0x%x\n",
+		__func__, w->name, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		mt8195_afe_enable_clk(afe, afe_priv->clk[cg_id]);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		mt8195_afe_disable_clk(afe, afe_priv->clk[cg_id]);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+static int mtk_etdm3_cg_event(struct snd_soc_dapm_widget *w,
+			      struct snd_kcontrol *kcontrol,
+			      int event)
+{
+	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
+	struct mt8195_afe_private *afe_priv = afe->platform_priv;
+
+	dev_dbg(cmpnt->dev, "%s(), name %s, event 0x%x\n",
+		__func__, w->name, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		mt8195_afe_enable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_HDMI_OUT]);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		mt8195_afe_disable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_HDMI_OUT]);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+static int mtk_etdm_en_event(struct snd_soc_dapm_widget *w,
+			     struct snd_kcontrol *kcontrol,
+			     int event)
+{
+	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
+	struct mt8195_afe_private *afe_priv = afe->platform_priv;
+	struct mtk_dai_etdm_priv *etdm_priv;
+	int dai_id;
+	int i;
+	int ret = 0;
+
+	etdm_priv = get_etdm_priv_by_name(afe, w->name);
+	if (!etdm_priv) {
+		dev_info(afe->dev, "%s() etdm_priv == NULL\n", __func__);
+		return 0;
+	}
+
+	dev_dbg(cmpnt->dev, "%s(), name %s, event 0x%x\n",
+		__func__, w->name, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		if (etdm_priv->cowork_source_id != COWORK_ETDM_NONE ||
+		    etdm_priv->cowork_slv_count > 0) {
+			dai_id = etdm_priv->cowork_source_id;
+			if (dai_id == COWORK_ETDM_NONE) {
+				dai_id = get_etdm_id_by_name(afe, w->name);
+				if (dai_id < 0) {
+					dev_info(afe->dev, "%s() dai_id < 0\n",
+						 __func__);
+					return 0;
+				}
+			} else {
+				etdm_priv = afe_priv->dai_priv[dai_id];
+			}
+			/* open master first */
+			ret |= mt8195_afe_enable_etdm(afe, dai_id);
+			for (i = 0; i < etdm_priv->cowork_slv_count; i++) {
+				dai_id = etdm_priv->cowork_slv_id[i];
+				ret |= mt8195_afe_enable_etdm(afe, dai_id);
+			}
+		} else {
+			dai_id = get_etdm_id_by_name(afe, w->name);
+			if (dai_id < 0) {
+				dev_info(afe->dev, "%s() dai_id < 0\n",
+					 __func__);
+				return 0;
+			}
+			ret = mt8195_afe_enable_etdm(afe, dai_id);
+		}
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		if (etdm_priv->cowork_slv_count > 0) {
+			for (i = 0; i < etdm_priv->cowork_slv_count; i++) {
+				dai_id = etdm_priv->cowork_slv_id[i];
+				ret |= mt8195_afe_disable_etdm(afe, dai_id);
+			}
+
+			/* close master at last */
+			dai_id = get_etdm_id_by_name(afe, w->name);
+			if (dai_id < 0) {
+				dev_info(afe->dev, "%s() dai_id < 0\n",
+					 __func__);
+				return 0;
+			}
+			ret |= mt8195_afe_disable_etdm(afe, dai_id);
+		} else if (etdm_priv->cowork_source_id != COWORK_ETDM_NONE) {
+			dai_id = etdm_priv->cowork_source_id;
+			etdm_priv = afe_priv->dai_priv[dai_id];
+
+			for (i = 0; i < etdm_priv->cowork_slv_count; i++) {
+				dai_id = etdm_priv->cowork_slv_id[i];
+				ret |= mt8195_afe_disable_etdm(afe, dai_id);
+			}
+
+			/* close master at last */
+			dai_id = etdm_priv->cowork_source_id;
+			ret |= mt8195_afe_disable_etdm(afe, dai_id);
+		} else {
+			dai_id = get_etdm_id_by_name(afe, w->name);
+			if (dai_id < 0) {
+				dev_info(afe->dev, "%s() dai_id < 0\n",
+					 __func__);
+				return 0;
+			}
+			ret = mt8195_afe_disable_etdm(afe, dai_id);
+		}
+		break;
+	default:
+		break;
+	}
+
+	if (ret)
+		dev_info(afe->dev, "%s() ret = %d\n", __func__, ret);
+	return 0;
+}
+
 
 static const struct snd_kcontrol_new mtk_dai_etdm_o048_mix[] = {
 	SOC_DAPM_SINGLE_AUTODISABLE("I020 Switch", AFE_CONN48, 20, 1, 0),
@@ -1008,97 +1526,219 @@ static const struct snd_soc_dapm_widget mtk_dai_etdm_widgets[] = {
 	SND_SOC_DAPM_MUX("HDMI_CH7_MUX", SND_SOC_NOPM, 0, 0,
 			 &hdmi_ch7_mux_control),
 
+	/* mclk en */
+	SND_SOC_DAPM_SUPPLY_S("ETDM1_IN_MCLK", SUPPLY_SEQ_ETDM_MCLK,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_etdm_mclk_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_SUPPLY_S("ETDM2_IN_MCLK", SUPPLY_SEQ_ETDM_MCLK,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_etdm_mclk_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_SUPPLY_S("ETDM1_OUT_MCLK", SUPPLY_SEQ_ETDM_MCLK,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_etdm_mclk_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_SUPPLY_S("ETDM2_OUT_MCLK", SUPPLY_SEQ_ETDM_MCLK,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_etdm_mclk_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_SUPPLY_S("DPTX_MCLK", SUPPLY_SEQ_ETDM_MCLK,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_dptx_mclk_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+
+	/* cg */
+	SND_SOC_DAPM_SUPPLY_S("ETDM1_IN_CG", SUPPLY_SEQ_ETDM_CG,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_etdm_cg_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_SUPPLY_S("ETDM2_IN_CG", SUPPLY_SEQ_ETDM_CG,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_etdm_cg_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_SUPPLY_S("ETDM1_OUT_CG", SUPPLY_SEQ_ETDM_CG,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_etdm_cg_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_SUPPLY_S("ETDM2_OUT_CG", SUPPLY_SEQ_ETDM_CG,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_etdm_cg_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_SUPPLY_S("ETDM3_OUT_CG", SUPPLY_SEQ_ETDM_CG,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_etdm3_cg_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+
+	/* en */
+	SND_SOC_DAPM_SUPPLY_S("ETDM1_IN_EN", SUPPLY_SEQ_ETDM_EN,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_etdm_en_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_SUPPLY_S("ETDM2_IN_EN", SUPPLY_SEQ_ETDM_EN,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_etdm_en_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_SUPPLY_S("ETDM1_OUT_EN", SUPPLY_SEQ_ETDM_EN,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_etdm_en_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_SUPPLY_S("ETDM2_OUT_EN", SUPPLY_SEQ_ETDM_EN,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_etdm_en_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	SND_SOC_DAPM_SUPPLY_S("ETDM3_OUT_EN", SUPPLY_SEQ_ETDM_EN,
+			      ETDM_OUT3_CON0, ETDM_CON0_EN_SHIFT, 0, NULL, 0),
+	SND_SOC_DAPM_SUPPLY_S("DPTX_EN", SUPPLY_SEQ_DPTX_EN,
+			      AFE_DPTX_CON, AFE_DPTX_CON_ON_SHIFT, 0, NULL, 0),
+
 	SND_SOC_DAPM_INPUT("ETDM_INPUT"),
 	SND_SOC_DAPM_OUTPUT("ETDM_OUTPUT"),
 };
 
 static const struct snd_soc_dapm_route mtk_dai_etdm_routes[] = {
-	{"I012", NULL, "ETDM2 Capture"},
-	{"I013", NULL, "ETDM2 Capture"},
-	{"I014", NULL, "ETDM2 Capture"},
-	{"I015", NULL, "ETDM2 Capture"},
-	{"I016", NULL, "ETDM2 Capture"},
-	{"I017", NULL, "ETDM2 Capture"},
-	{"I018", NULL, "ETDM2 Capture"},
-	{"I019", NULL, "ETDM2 Capture"},
+	/* mclk */
+	{"ETDM1_IN", NULL, "ETDM1_IN_MCLK", mtk_etdm_mclk_connect},
+	{"ETDM1_IN", NULL, "ETDM2_IN_MCLK", mtk_etdm_mclk_connect},
+	{"ETDM1_IN", NULL, "ETDM1_OUT_MCLK", mtk_etdm_mclk_connect},
+	{"ETDM1_IN", NULL, "ETDM2_OUT_MCLK", mtk_etdm_mclk_connect},
 
-	{"I072", NULL, "ETDM1 Capture"},
-	{"I073", NULL, "ETDM1 Capture"},
-	{"I074", NULL, "ETDM1 Capture"},
-	{"I075", NULL, "ETDM1 Capture"},
-	{"I076", NULL, "ETDM1 Capture"},
-	{"I077", NULL, "ETDM1 Capture"},
-	{"I078", NULL, "ETDM1 Capture"},
-	{"I079", NULL, "ETDM1 Capture"},
-	{"I080", NULL, "ETDM1 Capture"},
-	{"I081", NULL, "ETDM1 Capture"},
-	{"I082", NULL, "ETDM1 Capture"},
-	{"I083", NULL, "ETDM1 Capture"},
-	{"I084", NULL, "ETDM1 Capture"},
-	{"I085", NULL, "ETDM1 Capture"},
-	{"I086", NULL, "ETDM1 Capture"},
-	{"I087", NULL, "ETDM1 Capture"},
-	{"I088", NULL, "ETDM1 Capture"},
-	{"I089", NULL, "ETDM1 Capture"},
-	{"I090", NULL, "ETDM1 Capture"},
-	{"I091", NULL, "ETDM1 Capture"},
-	{"I092", NULL, "ETDM1 Capture"},
-	{"I093", NULL, "ETDM1 Capture"},
-	{"I094", NULL, "ETDM1 Capture"},
-	{"I095", NULL, "ETDM1 Capture"},
+	{"ETDM2_IN", NULL, "ETDM1_IN_MCLK", mtk_etdm_mclk_connect},
+	{"ETDM2_IN", NULL, "ETDM2_IN_MCLK", mtk_etdm_mclk_connect},
+	{"ETDM2_IN", NULL, "ETDM1_OUT_MCLK", mtk_etdm_mclk_connect},
+	{"ETDM2_IN", NULL, "ETDM2_OUT_MCLK", mtk_etdm_mclk_connect},
 
-	{"UL8", NULL, "ETDM1 Capture"},
-	{"UL3", NULL, "ETDM2 Capture"},
+	{"ETDM1_OUT", NULL, "ETDM1_IN_MCLK", mtk_etdm_mclk_connect},
+	{"ETDM1_OUT", NULL, "ETDM2_IN_MCLK", mtk_etdm_mclk_connect},
+	{"ETDM1_OUT", NULL, "ETDM1_OUT_MCLK", mtk_etdm_mclk_connect},
+	{"ETDM1_OUT", NULL, "ETDM2_OUT_MCLK", mtk_etdm_mclk_connect},
 
-	{"ETDM2 Playback", NULL, "O048"},
-	{"ETDM2 Playback", NULL, "O049"},
-	{"ETDM2 Playback", NULL, "O050"},
-	{"ETDM2 Playback", NULL, "O051"},
-	{"ETDM2 Playback", NULL, "O052"},
-	{"ETDM2 Playback", NULL, "O053"},
-	{"ETDM2 Playback", NULL, "O054"},
-	{"ETDM2 Playback", NULL, "O055"},
-	{"ETDM2 Playback", NULL, "O056"},
-	{"ETDM2 Playback", NULL, "O057"},
-	{"ETDM2 Playback", NULL, "O058"},
-	{"ETDM2 Playback", NULL, "O059"},
-	{"ETDM2 Playback", NULL, "O060"},
-	{"ETDM2 Playback", NULL, "O061"},
-	{"ETDM2 Playback", NULL, "O062"},
-	{"ETDM2 Playback", NULL, "O063"},
-	{"ETDM2 Playback", NULL, "O064"},
-	{"ETDM2 Playback", NULL, "O065"},
-	{"ETDM2 Playback", NULL, "O066"},
-	{"ETDM2 Playback", NULL, "O067"},
-	{"ETDM2 Playback", NULL, "O068"},
-	{"ETDM2 Playback", NULL, "O069"},
-	{"ETDM2 Playback", NULL, "O070"},
-	{"ETDM2 Playback", NULL, "O071"},
+	{"ETDM2_OUT", NULL, "ETDM1_IN_MCLK", mtk_etdm_mclk_connect},
+	{"ETDM2_OUT", NULL, "ETDM2_IN_MCLK", mtk_etdm_mclk_connect},
+	{"ETDM2_OUT", NULL, "ETDM1_OUT_MCLK", mtk_etdm_mclk_connect},
+	{"ETDM2_OUT", NULL, "ETDM2_OUT_MCLK", mtk_etdm_mclk_connect},
 
-	{"ETDM1 Playback", NULL, "O072"},
-	{"ETDM1 Playback", NULL, "O073"},
-	{"ETDM1 Playback", NULL, "O074"},
-	{"ETDM1 Playback", NULL, "O075"},
-	{"ETDM1 Playback", NULL, "O076"},
-	{"ETDM1 Playback", NULL, "O077"},
-	{"ETDM1 Playback", NULL, "O078"},
-	{"ETDM1 Playback", NULL, "O079"},
-	{"ETDM1 Playback", NULL, "O080"},
-	{"ETDM1 Playback", NULL, "O081"},
-	{"ETDM1 Playback", NULL, "O082"},
-	{"ETDM1 Playback", NULL, "O083"},
-	{"ETDM1 Playback", NULL, "O084"},
-	{"ETDM1 Playback", NULL, "O085"},
-	{"ETDM1 Playback", NULL, "O086"},
-	{"ETDM1 Playback", NULL, "O087"},
-	{"ETDM1 Playback", NULL, "O088"},
-	{"ETDM1 Playback", NULL, "O089"},
-	{"ETDM1 Playback", NULL, "O090"},
-	{"ETDM1 Playback", NULL, "O091"},
-	{"ETDM1 Playback", NULL, "O092"},
-	{"ETDM1 Playback", NULL, "O093"},
-	{"ETDM1 Playback", NULL, "O094"},
-	{"ETDM1 Playback", NULL, "O095"},
+	{"DPTX", NULL, "DPTX_MCLK"},
+
+	/* cg */
+	{"ETDM1_IN", NULL, "ETDM1_IN_CG"},
+	{"ETDM1_IN", NULL, "ETDM2_IN_CG", mtk_etdm_cg_connect},
+	{"ETDM1_IN", NULL, "ETDM1_OUT_CG", mtk_etdm_cg_connect},
+	{"ETDM1_IN", NULL, "ETDM2_OUT_CG", mtk_etdm_cg_connect},
+
+	{"ETDM2_IN", NULL, "ETDM1_IN_CG", mtk_etdm_cg_connect},
+	{"ETDM2_IN", NULL, "ETDM2_IN_CG"},
+	{"ETDM2_IN", NULL, "ETDM1_OUT_CG", mtk_etdm_cg_connect},
+	{"ETDM2_IN", NULL, "ETDM2_OUT_CG", mtk_etdm_cg_connect},
+
+	{"ETDM1_OUT", NULL, "ETDM1_IN_CG", mtk_etdm_cg_connect},
+	{"ETDM1_OUT", NULL, "ETDM2_IN_CG", mtk_etdm_cg_connect},
+	{"ETDM1_OUT", NULL, "ETDM1_OUT_CG"},
+	{"ETDM1_OUT", NULL, "ETDM2_OUT_CG", mtk_etdm_cg_connect},
+
+	{"ETDM2_OUT", NULL, "ETDM1_IN_CG", mtk_etdm_cg_connect},
+	{"ETDM2_OUT", NULL, "ETDM2_IN_CG", mtk_etdm_cg_connect},
+	{"ETDM2_OUT", NULL, "ETDM1_OUT_CG", mtk_etdm_cg_connect},
+	{"ETDM2_OUT", NULL, "ETDM2_OUT_CG"},
+
+	{"ETDM3_OUT", NULL, "ETDM3_OUT_CG"},
+	{"DPTX", NULL, "ETDM3_OUT_CG"},
+
+	/* en */
+	{"ETDM1_IN", NULL, "ETDM1_IN_EN"},
+	{"ETDM2_IN", NULL, "ETDM2_IN_EN"},
+	{"ETDM1_OUT", NULL, "ETDM1_OUT_EN"},
+	{"ETDM2_OUT", NULL, "ETDM2_OUT_EN"},
+	{"ETDM3_OUT", NULL, "ETDM3_OUT_EN"},
+	{"DPTX", NULL, "ETDM3_OUT_EN"},
+	{"DPTX", NULL, "DPTX_EN"},
+
+	{"I012", NULL, "ETDM2_IN"},
+	{"I013", NULL, "ETDM2_IN"},
+	{"I014", NULL, "ETDM2_IN"},
+	{"I015", NULL, "ETDM2_IN"},
+	{"I016", NULL, "ETDM2_IN"},
+	{"I017", NULL, "ETDM2_IN"},
+	{"I018", NULL, "ETDM2_IN"},
+	{"I019", NULL, "ETDM2_IN"},
+
+	{"I072", NULL, "ETDM1_IN"},
+	{"I073", NULL, "ETDM1_IN"},
+	{"I074", NULL, "ETDM1_IN"},
+	{"I075", NULL, "ETDM1_IN"},
+	{"I076", NULL, "ETDM1_IN"},
+	{"I077", NULL, "ETDM1_IN"},
+	{"I078", NULL, "ETDM1_IN"},
+	{"I079", NULL, "ETDM1_IN"},
+	{"I080", NULL, "ETDM1_IN"},
+	{"I081", NULL, "ETDM1_IN"},
+	{"I082", NULL, "ETDM1_IN"},
+	{"I083", NULL, "ETDM1_IN"},
+	{"I084", NULL, "ETDM1_IN"},
+	{"I085", NULL, "ETDM1_IN"},
+	{"I086", NULL, "ETDM1_IN"},
+	{"I087", NULL, "ETDM1_IN"},
+	{"I088", NULL, "ETDM1_IN"},
+	{"I089", NULL, "ETDM1_IN"},
+	{"I090", NULL, "ETDM1_IN"},
+	{"I091", NULL, "ETDM1_IN"},
+	{"I092", NULL, "ETDM1_IN"},
+	{"I093", NULL, "ETDM1_IN"},
+	{"I094", NULL, "ETDM1_IN"},
+	{"I095", NULL, "ETDM1_IN"},
+
+	{"UL8", NULL, "ETDM1_IN"},
+	{"UL3", NULL, "ETDM2_IN"},
+
+	{"ETDM2_OUT", NULL, "O048"},
+	{"ETDM2_OUT", NULL, "O049"},
+	{"ETDM2_OUT", NULL, "O050"},
+	{"ETDM2_OUT", NULL, "O051"},
+	{"ETDM2_OUT", NULL, "O052"},
+	{"ETDM2_OUT", NULL, "O053"},
+	{"ETDM2_OUT", NULL, "O054"},
+	{"ETDM2_OUT", NULL, "O055"},
+	{"ETDM2_OUT", NULL, "O056"},
+	{"ETDM2_OUT", NULL, "O057"},
+	{"ETDM2_OUT", NULL, "O058"},
+	{"ETDM2_OUT", NULL, "O059"},
+	{"ETDM2_OUT", NULL, "O060"},
+	{"ETDM2_OUT", NULL, "O061"},
+	{"ETDM2_OUT", NULL, "O062"},
+	{"ETDM2_OUT", NULL, "O063"},
+	{"ETDM2_OUT", NULL, "O064"},
+	{"ETDM2_OUT", NULL, "O065"},
+	{"ETDM2_OUT", NULL, "O066"},
+	{"ETDM2_OUT", NULL, "O067"},
+	{"ETDM2_OUT", NULL, "O068"},
+	{"ETDM2_OUT", NULL, "O069"},
+	{"ETDM2_OUT", NULL, "O070"},
+	{"ETDM2_OUT", NULL, "O071"},
+
+	{"ETDM1_OUT", NULL, "O072"},
+	{"ETDM1_OUT", NULL, "O073"},
+	{"ETDM1_OUT", NULL, "O074"},
+	{"ETDM1_OUT", NULL, "O075"},
+	{"ETDM1_OUT", NULL, "O076"},
+	{"ETDM1_OUT", NULL, "O077"},
+	{"ETDM1_OUT", NULL, "O078"},
+	{"ETDM1_OUT", NULL, "O079"},
+	{"ETDM1_OUT", NULL, "O080"},
+	{"ETDM1_OUT", NULL, "O081"},
+	{"ETDM1_OUT", NULL, "O082"},
+	{"ETDM1_OUT", NULL, "O083"},
+	{"ETDM1_OUT", NULL, "O084"},
+	{"ETDM1_OUT", NULL, "O085"},
+	{"ETDM1_OUT", NULL, "O086"},
+	{"ETDM1_OUT", NULL, "O087"},
+	{"ETDM1_OUT", NULL, "O088"},
+	{"ETDM1_OUT", NULL, "O089"},
+	{"ETDM1_OUT", NULL, "O090"},
+	{"ETDM1_OUT", NULL, "O091"},
+	{"ETDM1_OUT", NULL, "O092"},
+	{"ETDM1_OUT", NULL, "O093"},
+	{"ETDM1_OUT", NULL, "O094"},
+	{"ETDM1_OUT", NULL, "O095"},
 
 	{"O048", "I020 Switch", "I020"},
 	{"O049", "I021 Switch", "I021"},
@@ -1302,72 +1942,16 @@ static const struct snd_soc_dapm_route mtk_dai_etdm_routes[] = {
 	{"DPTX_OUT_MUX", "Connect", "HDMI_CH6_MUX"},
 	{"DPTX_OUT_MUX", "Connect", "HDMI_CH7_MUX"},
 
-	{"ETDM3 Playback", NULL, "HDMI_OUT_MUX"},
-	{"DPTX Playback", NULL, "DPTX_OUT_MUX"},
+	{"ETDM3_OUT", NULL, "HDMI_OUT_MUX"},
+	{"DPTX", NULL, "DPTX_OUT_MUX"},
 
-	{"ETDM_OUTPUT", NULL, "DPTX Playback"},
-	{"ETDM_OUTPUT", NULL, "ETDM1 Playback"},
-	{"ETDM_OUTPUT", NULL, "ETDM2 Playback"},
-	{"ETDM_OUTPUT", NULL, "ETDM3 Playback"},
-	{"ETDM1 Capture", NULL, "ETDM_INPUT"},
-	{"ETDM2 Capture", NULL, "ETDM_INPUT"},
+	{"ETDM_OUTPUT", NULL, "DPTX"},
+	{"ETDM_OUTPUT", NULL, "ETDM1_OUT"},
+	{"ETDM_OUTPUT", NULL, "ETDM2_OUT"},
+	{"ETDM_OUTPUT", NULL, "ETDM3_OUT"},
+	{"ETDM1_IN", NULL, "ETDM_INPUT"},
+	{"ETDM2_IN", NULL, "ETDM_INPUT"},
 };
-
-static int mt8195_afe_enable_etdm(struct mtk_base_afe *afe, int dai_id)
-{
-	int ret = 0;
-	struct etdm_con_reg etdm_reg;
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-	struct mtk_dai_etdm_priv *etdm_data;
-	unsigned long flags;
-
-	if (!mt8195_afe_etdm_is_valid(dai_id))
-		return -EINVAL;
-
-	etdm_data = afe_priv->dai_priv[dai_id];
-	spin_lock_irqsave(&afe_priv->afe_ctrl_lock, flags);
-	etdm_data->en_ref_cnt++;
-	if (etdm_data->en_ref_cnt == 1) {
-		ret = get_etdm_reg(dai_id, &etdm_reg);
-		if (ret < 0)
-			goto out;
-
-		regmap_update_bits(afe->regmap, etdm_reg.con0,
-				   ETDM_CON0_EN, ETDM_CON0_EN);
-	}
-out:
-	spin_unlock_irqrestore(&afe_priv->afe_ctrl_lock, flags);
-	return ret;
-}
-
-static int mt8195_afe_disable_etdm(struct mtk_base_afe *afe, int dai_id)
-{
-	int ret = 0;
-	struct etdm_con_reg etdm_reg;
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-	struct mtk_dai_etdm_priv *etdm_data;
-	unsigned long flags;
-
-	if (!mt8195_afe_etdm_is_valid(dai_id))
-		return -EINVAL;
-
-	etdm_data = afe_priv->dai_priv[dai_id];
-	spin_lock_irqsave(&afe_priv->afe_ctrl_lock, flags);
-	if (etdm_data->en_ref_cnt > 0) {
-		etdm_data->en_ref_cnt--;
-		if (etdm_data->en_ref_cnt == 0) {
-			ret = get_etdm_reg(dai_id, &etdm_reg);
-			if (ret < 0)
-				goto out;
-
-			regmap_update_bits(afe->regmap, etdm_reg.con0,
-					   ETDM_CON0_EN, 0);
-		}
-	}
-out:
-	spin_unlock_irqrestore(&afe_priv->afe_ctrl_lock, flags);
-	return ret;
-}
 
 static int etdm_cowork_slv_sel(int id, int slave_mode)
 {
@@ -1458,198 +2042,6 @@ static int mt8195_etdm_sync_mode_configure(struct mtk_base_afe *afe, int dai_id)
 	regmap_update_bits(afe->regmap, reg, mask, val);
 
 	return 0;
-}
-
-static int mtk_dai_etdm_get_cg_id_by_dai_id(int dai_id)
-{
-	int cg_id = -1;
-
-	switch (dai_id) {
-	case MT8195_AFE_IO_DPTX:
-		cg_id = MT8195_CLK_AUD_HDMI_OUT;
-		break;
-	case MT8195_AFE_IO_ETDM1_IN:
-		cg_id = MT8195_CLK_AUD_TDM_IN;
-		break;
-	case MT8195_AFE_IO_ETDM2_IN:
-		cg_id = MT8195_CLK_AUD_I2SIN;
-		break;
-	case MT8195_AFE_IO_ETDM1_OUT:
-		cg_id = MT8195_CLK_AUD_TDM_OUT;
-		break;
-	case MT8195_AFE_IO_ETDM2_OUT:
-		cg_id = MT8195_CLK_AUD_I2S_OUT;
-		break;
-	case MT8195_AFE_IO_ETDM3_OUT:
-		cg_id = MT8195_CLK_AUD_HDMI_OUT;
-		break;
-	default:
-		break;
-	}
-
-	return cg_id;
-}
-
-static int mtk_dai_etdm_get_clk_id_by_dai_id(int dai_id)
-{
-	int clk_id = -1;
-
-	switch (dai_id) {
-	case MT8195_AFE_IO_DPTX:
-		clk_id = MT8195_CLK_TOP_DPTX_M_SEL;
-		break;
-	case MT8195_AFE_IO_ETDM1_IN:
-		clk_id = MT8195_CLK_TOP_I2SI1_M_SEL;
-		break;
-	case MT8195_AFE_IO_ETDM2_IN:
-		clk_id = MT8195_CLK_TOP_I2SI2_M_SEL;
-		break;
-	case MT8195_AFE_IO_ETDM1_OUT:
-		clk_id = MT8195_CLK_TOP_I2SO1_M_SEL;
-		break;
-	case MT8195_AFE_IO_ETDM2_OUT:
-		clk_id = MT8195_CLK_TOP_I2SO2_M_SEL;
-		break;
-	case MT8195_AFE_IO_ETDM3_OUT:
-	default:
-		break;
-	}
-
-	return clk_id;
-}
-
-static int mtk_dai_etdm_get_clkdiv_id_by_dai_id(int dai_id)
-{
-	int clk_id = -1;
-
-	switch (dai_id) {
-	case MT8195_AFE_IO_DPTX:
-		clk_id = MT8195_CLK_TOP_APLL12_DIV9;
-		break;
-	case MT8195_AFE_IO_ETDM1_IN:
-		clk_id = MT8195_CLK_TOP_APLL12_DIV0;
-		break;
-	case MT8195_AFE_IO_ETDM2_IN:
-		clk_id = MT8195_CLK_TOP_APLL12_DIV1;
-		break;
-	case MT8195_AFE_IO_ETDM1_OUT:
-		clk_id = MT8195_CLK_TOP_APLL12_DIV2;
-		break;
-	case MT8195_AFE_IO_ETDM2_OUT:
-		clk_id = MT8195_CLK_TOP_APLL12_DIV3;
-		break;
-	case MT8195_AFE_IO_ETDM3_OUT:
-	default:
-		break;
-	}
-
-	return clk_id;
-}
-
-static int mtk_dai_etdm_enable_mclk(struct mtk_base_afe *afe, int dai_id)
-{
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-	int clkdiv_id = mtk_dai_etdm_get_clkdiv_id_by_dai_id(dai_id);
-
-	if (clkdiv_id < 0)
-		return -EINVAL;
-
-	mt8195_afe_enable_clk(afe, afe_priv->clk[clkdiv_id]);
-
-	return 0;
-}
-
-static int mtk_dai_etdm_disable_mclk(struct mtk_base_afe *afe, int dai_id)
-{
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-	int clkdiv_id = mtk_dai_etdm_get_clkdiv_id_by_dai_id(dai_id);
-
-	if (clkdiv_id < 0)
-		return -EINVAL;
-
-	mt8195_afe_disable_clk(afe, afe_priv->clk[clkdiv_id]);
-
-	return 0;
-}
-
-/* dai ops */
-static int mtk_dai_etdm_startup(struct snd_pcm_substream *substream,
-				struct snd_soc_dai *dai)
-{
-	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-	struct mtk_dai_etdm_priv *mst_etdm_data;
-	int cg_id;
-	int mst_dai_id;
-	int slv_dai_id;
-	int i;
-
-	if (is_cowork_mode(dai)) {
-		mst_dai_id = get_etdm_cowork_master_id(dai);
-		if (!mt8195_afe_etdm_is_valid(mst_dai_id))
-			return -EINVAL;
-
-		mtk_dai_etdm_enable_mclk(afe, mst_dai_id);
-		cg_id = mtk_dai_etdm_get_cg_id_by_dai_id(mst_dai_id);
-		if (cg_id >= 0)
-			mt8195_afe_enable_clk(afe, afe_priv->clk[cg_id]);
-
-		mst_etdm_data = afe_priv->dai_priv[mst_dai_id];
-
-		for (i = 0; i < mst_etdm_data->cowork_slv_count; i++) {
-			slv_dai_id = mst_etdm_data->cowork_slv_id[i];
-			cg_id = mtk_dai_etdm_get_cg_id_by_dai_id(slv_dai_id);
-			if (cg_id >= 0)
-				mt8195_afe_enable_clk(afe,
-						      afe_priv->clk[cg_id]);
-		}
-	} else {
-		mtk_dai_etdm_enable_mclk(afe, dai->id);
-
-		cg_id = mtk_dai_etdm_get_cg_id_by_dai_id(dai->id);
-		if (cg_id >= 0)
-			mt8195_afe_enable_clk(afe, afe_priv->clk[cg_id]);
-	}
-
-	return 0;
-}
-
-static void mtk_dai_etdm_shutdown(struct snd_pcm_substream *substream,
-				  struct snd_soc_dai *dai)
-{
-	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-	struct mtk_dai_etdm_priv *mst_etdm_data;
-	int cg_id;
-	int mst_dai_id;
-	int slv_dai_id;
-	int i;
-
-	if (is_cowork_mode(dai)) {
-		mst_dai_id = get_etdm_cowork_master_id(dai);
-		if (!mt8195_afe_etdm_is_valid(mst_dai_id))
-			return;
-
-		cg_id = mtk_dai_etdm_get_cg_id_by_dai_id(mst_dai_id);
-		if (cg_id >= 0)
-			mt8195_afe_disable_clk(afe, afe_priv->clk[cg_id]);
-
-		mst_etdm_data = afe_priv->dai_priv[mst_dai_id];
-		for (i = 0; i < mst_etdm_data->cowork_slv_count; i++) {
-			slv_dai_id = mst_etdm_data->cowork_slv_id[i];
-			cg_id = mtk_dai_etdm_get_cg_id_by_dai_id(slv_dai_id);
-			if (cg_id >= 0)
-				mt8195_afe_disable_clk(afe,
-						       afe_priv->clk[cg_id]);
-		}
-		mtk_dai_etdm_disable_mclk(afe, mst_dai_id);
-	} else {
-		cg_id = mtk_dai_etdm_get_cg_id_by_dai_id(dai->id);
-		if (cg_id >= 0)
-			mt8195_afe_disable_clk(afe, afe_priv->clk[cg_id]);
-
-		mtk_dai_etdm_disable_mclk(afe, dai->id);
-	}
 }
 
 static int mtk_dai_etdm_fifo_mode(struct mtk_base_afe *afe,
@@ -1908,57 +2300,6 @@ static int mtk_dai_etdm_out_configure(struct mtk_base_afe *afe,
 	return 0;
 }
 
-static int mtk_dai_etdm_mclk_configure(struct mtk_base_afe *afe, int dai_id)
-{
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-	struct mtk_dai_etdm_priv *etdm_data;
-	int clk_id = mtk_dai_etdm_get_clk_id_by_dai_id(dai_id);
-	int clkdiv_id = mtk_dai_etdm_get_clkdiv_id_by_dai_id(dai_id);
-	int apll;
-	int apll_clk_id;
-	struct etdm_con_reg etdm_reg;
-	unsigned int val = 0;
-	unsigned int mask = 0;
-	int ret = 0;
-
-	if (clk_id < 0 || clkdiv_id < 0)
-		return 0;
-
-	if (!mt8195_afe_etdm_is_valid(dai_id))
-		return -EINVAL;
-
-	etdm_data = afe_priv->dai_priv[dai_id];
-	ret = get_etdm_reg(dai_id, &etdm_reg);
-	if (ret < 0)
-		return ret;
-
-	mask |= ETDM_CON1_MCLK_OUTPUT;
-	if (etdm_data->mclk_dir == SND_SOC_CLOCK_OUT)
-		val |= ETDM_CON1_MCLK_OUTPUT;
-	regmap_update_bits(afe->regmap, etdm_reg.con1, mask, val);
-
-	if (etdm_data->mclk_freq) {
-		apll = etdm_data->mclk_apll;
-		apll_clk_id = mt8195_afe_get_mclk_source_clk_id(apll);
-		if (apll_clk_id < 0)
-			return apll_clk_id;
-
-		/* select apll */
-		ret = mt8195_afe_set_clk_parent(afe, afe_priv->clk[clk_id],
-						afe_priv->clk[apll_clk_id]);
-		if (ret)
-			return ret;
-
-		/* set rate */
-		ret = mt8195_afe_set_clk_rate(afe, afe_priv->clk[clkdiv_id],
-					      etdm_data->mclk_freq);
-	} else {
-		if (etdm_data->mclk_dir == SND_SOC_CLOCK_OUT)
-			dev_dbg(afe->dev, "%s mclk freq = 0\n", __func__);
-	}
-	return ret;
-}
-
 static int mtk_dai_etdm_configure(struct mtk_base_afe *afe,
 				  unsigned int rate,
 				  unsigned int channels,
@@ -2059,10 +2400,6 @@ static int mtk_dai_etdm_hw_params(struct snd_pcm_substream *substream,
 		if (!mt8195_afe_etdm_is_valid(mst_dai_id))
 			return -EINVAL;
 
-		ret = mtk_dai_etdm_mclk_configure(afe, mst_dai_id);
-		if (ret)
-			return ret;
-
 		ret = mtk_dai_etdm_configure(afe, rate, channels,
 					     bit_width, mst_dai_id);
 		if (ret)
@@ -2081,71 +2418,10 @@ static int mtk_dai_etdm_hw_params(struct snd_pcm_substream *substream,
 				return ret;
 		}
 	} else {
-		ret = mtk_dai_etdm_mclk_configure(afe, dai->id);
-		if (ret)
-			return ret;
-
 		ret = mtk_dai_etdm_configure(afe, rate, channels,
 					     bit_width, dai->id);
 	}
 
-	return ret;
-}
-
-static int mtk_dai_etdm_trigger(struct snd_pcm_substream *substream, int cmd,
-				struct snd_soc_dai *dai)
-{
-	int ret = 0;
-	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-	struct mtk_dai_etdm_priv *mst_etdm_data;
-	int mst_dai_id;
-	int slv_dai_id;
-	int i;
-
-	dev_dbg(afe->dev, "%s(), cmd %d, dai id %d\n", __func__, cmd, dai->id);
-	switch (cmd) {
-	case SNDRV_PCM_TRIGGER_START:
-	case SNDRV_PCM_TRIGGER_RESUME:
-		if (is_cowork_mode(dai)) {
-			mst_dai_id = get_etdm_cowork_master_id(dai);
-			if (!mt8195_afe_etdm_is_valid(mst_dai_id))
-				return -EINVAL;
-
-			mst_etdm_data = afe_priv->dai_priv[mst_dai_id];
-
-			//open master first
-			ret |= mt8195_afe_enable_etdm(afe, mst_dai_id);
-			for (i = 0; i < mst_etdm_data->cowork_slv_count; i++) {
-				slv_dai_id = mst_etdm_data->cowork_slv_id[i];
-				ret |= mt8195_afe_enable_etdm(afe, slv_dai_id);
-			}
-		} else {
-			ret = mt8195_afe_enable_etdm(afe, dai->id);
-		}
-		break;
-	case SNDRV_PCM_TRIGGER_STOP:
-	case SNDRV_PCM_TRIGGER_SUSPEND:
-		if (is_cowork_mode(dai)) {
-			mst_dai_id = get_etdm_cowork_master_id(dai);
-			if (!mt8195_afe_etdm_is_valid(mst_dai_id))
-				return -EINVAL;
-
-			mst_etdm_data = afe_priv->dai_priv[mst_dai_id];
-
-			for (i = 0; i < mst_etdm_data->cowork_slv_count; i++) {
-				slv_dai_id = mst_etdm_data->cowork_slv_id[i];
-				ret |= mt8195_afe_disable_etdm(afe, slv_dai_id);
-			}
-			// close master at last
-			ret |= mt8195_afe_disable_etdm(afe, mst_dai_id);
-		} else {
-			ret = mt8195_afe_disable_etdm(afe, dai->id);
-		}
-		break;
-	default:
-		break;
-	}
 	return ret;
 }
 
@@ -2292,34 +2568,6 @@ static int mtk_dai_etdm_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	return 0;
 }
 
-static int mtk_dai_hdmitx_dptx_startup(struct snd_pcm_substream *substream,
-				       struct snd_soc_dai *dai)
-{
-	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-	int cg_id = mtk_dai_etdm_get_cg_id_by_dai_id(dai->id);
-
-	if (cg_id >= 0)
-		mt8195_afe_enable_clk(afe, afe_priv->clk[cg_id]);
-
-	mtk_dai_etdm_enable_mclk(afe, dai->id);
-
-	return 0;
-}
-
-static void mtk_dai_hdmitx_dptx_shutdown(struct snd_pcm_substream *substream,
-					 struct snd_soc_dai *dai)
-{
-	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-	int cg_id = mtk_dai_etdm_get_cg_id_by_dai_id(dai->id);
-
-	mtk_dai_etdm_disable_mclk(afe, dai->id);
-
-	if (cg_id >= 0)
-		mt8195_afe_disable_clk(afe, afe_priv->clk[cg_id]);
-}
-
 static unsigned int mtk_dai_get_dptx_ch_en(unsigned int channel)
 {
 	switch (channel) {
@@ -2388,49 +2636,7 @@ static int mtk_dai_hdmitx_dptx_hw_params(struct snd_pcm_substream *substream,
 		etdm_data->data_mode = MTK_DAI_ETDM_DATA_MULTI_PIN;
 	}
 
-	ret = mtk_dai_etdm_mclk_configure(afe, dai->id);
-	if (ret)
-		return ret;
-
 	ret = mtk_dai_etdm_configure(afe, rate, channels, width, dai->id);
-
-	return ret;
-}
-
-static int mtk_dai_hdmitx_dptx_trigger(struct snd_pcm_substream *substream,
-				       int cmd,
-				       struct snd_soc_dai *dai)
-{
-	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
-	int ret = 0;
-
-	dev_dbg(afe->dev, "%s(), cmd %d, dai id %d\n", __func__, cmd, dai->id);
-
-	switch (cmd) {
-	case SNDRV_PCM_TRIGGER_START:
-	case SNDRV_PCM_TRIGGER_RESUME:
-		/* enable dptx interface */
-		if (dai->id == MT8195_AFE_IO_DPTX)
-			regmap_update_bits(afe->regmap, AFE_DPTX_CON,
-					   AFE_DPTX_CON_ON_MASK,
-					   AFE_DPTX_CON_ON);
-
-		/* enable etdm_out3 */
-		ret = mt8195_afe_enable_etdm(afe, dai->id);
-		break;
-	case SNDRV_PCM_TRIGGER_STOP:
-	case SNDRV_PCM_TRIGGER_SUSPEND:
-		/* disable etdm_out3 */
-		ret = mt8195_afe_disable_etdm(afe, dai->id);
-
-		/* disable dptx interface */
-		if (dai->id == MT8195_AFE_IO_DPTX)
-			regmap_update_bits(afe->regmap, AFE_DPTX_CON,
-					   AFE_DPTX_CON_ON_MASK, 0);
-		break;
-	default:
-		return -EINVAL;
-	}
 
 	return ret;
 }
@@ -2479,7 +2685,6 @@ static int mtk_dai_etdm_probe(struct snd_soc_dai *dai)
 		dev_dbg(afe->dev, "MCLK always on, rate %d\n",
 			etdm_data->mclk_freq);
 		pm_runtime_get_sync(afe->dev);
-		mtk_dai_etdm_mclk_configure(afe, dai->id);
 		mtk_dai_etdm_enable_mclk(afe, dai->id);
 		pm_runtime_put_sync(afe->dev);
 	}
@@ -2487,30 +2692,21 @@ static int mtk_dai_etdm_probe(struct snd_soc_dai *dai)
 }
 
 static const struct snd_soc_dai_ops mtk_dai_hdmitx_dptx_ops = {
-	.startup	= mtk_dai_hdmitx_dptx_startup,
-	.shutdown	= mtk_dai_hdmitx_dptx_shutdown,
 	.hw_params	= mtk_dai_hdmitx_dptx_hw_params,
-	.trigger	= mtk_dai_hdmitx_dptx_trigger,
 	.set_sysclk	= mtk_dai_hdmitx_dptx_set_sysclk,
 	.set_fmt	= mtk_dai_etdm_set_fmt,
 };
 
 static const struct snd_soc_dai_ops mtk_dai_hdmitx_dptx_ops2 = {
 	.probe		= mtk_dai_etdm_probe,
-	.startup	= mtk_dai_hdmitx_dptx_startup,
-	.shutdown	= mtk_dai_hdmitx_dptx_shutdown,
 	.hw_params	= mtk_dai_hdmitx_dptx_hw_params,
-	.trigger	= mtk_dai_hdmitx_dptx_trigger,
 	.set_sysclk	= mtk_dai_hdmitx_dptx_set_sysclk,
 	.set_fmt	= mtk_dai_etdm_set_fmt,
 };
 
 static const struct snd_soc_dai_ops mtk_dai_etdm_ops = {
 	.probe		= mtk_dai_etdm_probe,
-	.startup	= mtk_dai_etdm_startup,
-	.shutdown	= mtk_dai_etdm_shutdown,
 	.hw_params	= mtk_dai_etdm_hw_params,
-	.trigger	= mtk_dai_etdm_trigger,
 	.set_sysclk	= mtk_dai_etdm_set_sysclk,
 	.set_fmt	= mtk_dai_etdm_set_fmt,
 	.set_tdm_slot	= mtk_dai_etdm_set_tdm_slot,
@@ -2521,7 +2717,7 @@ static struct snd_soc_dai_driver mtk_dai_etdm_driver[] = {
 		.name = "DPTX",
 		.id = MT8195_AFE_IO_DPTX,
 		.playback = {
-			.stream_name = "DPTX Playback",
+			.stream_name = "DPTX",
 			.channels_min = 1,
 			.channels_max = 8,
 			.rates = MTK_ETDM_RATES,
@@ -2533,7 +2729,7 @@ static struct snd_soc_dai_driver mtk_dai_etdm_driver[] = {
 		.name = "ETDM1_IN",
 		.id = MT8195_AFE_IO_ETDM1_IN,
 		.capture = {
-			.stream_name = "ETDM1 Capture",
+			.stream_name = "ETDM1_IN",
 			.channels_min = 1,
 			.channels_max = 24,
 			.rates = MTK_ETDM_RATES,
@@ -2545,7 +2741,7 @@ static struct snd_soc_dai_driver mtk_dai_etdm_driver[] = {
 		.name = "ETDM2_IN",
 		.id = MT8195_AFE_IO_ETDM2_IN,
 		.capture = {
-			.stream_name = "ETDM2 Capture",
+			.stream_name = "ETDM2_IN",
 			.channels_min = 1,
 			.channels_max = 16,
 			.rates = MTK_ETDM_RATES,
@@ -2557,7 +2753,7 @@ static struct snd_soc_dai_driver mtk_dai_etdm_driver[] = {
 		.name = "ETDM1_OUT",
 		.id = MT8195_AFE_IO_ETDM1_OUT,
 		.playback = {
-			.stream_name = "ETDM1 Playback",
+			.stream_name = "ETDM1_OUT",
 			.channels_min = 1,
 			.channels_max = 24,
 			.rates = MTK_ETDM_RATES,
@@ -2569,7 +2765,7 @@ static struct snd_soc_dai_driver mtk_dai_etdm_driver[] = {
 		.name = "ETDM2_OUT",
 		.id = MT8195_AFE_IO_ETDM2_OUT,
 		.playback = {
-			.stream_name = "ETDM2 Playback",
+			.stream_name = "ETDM2_OUT",
 			.channels_min = 1,
 			.channels_max = 24,
 			.rates = MTK_ETDM_RATES,
@@ -2581,7 +2777,7 @@ static struct snd_soc_dai_driver mtk_dai_etdm_driver[] = {
 		.name = "ETDM3_OUT",
 		.id = MT8195_AFE_IO_ETDM3_OUT,
 		.playback = {
-			.stream_name = "ETDM3 Playback",
+			.stream_name = "ETDM3_OUT",
 			.channels_min = 1,
 			.channels_max = 8,
 			.rates = MTK_ETDM_RATES,
