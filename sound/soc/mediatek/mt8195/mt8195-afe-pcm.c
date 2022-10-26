@@ -1864,8 +1864,37 @@ static const struct snd_kcontrol_new mt8195_memif_controls[] = {
 			    MT8195_AFE_IRQ_28),
 };
 
+int mt8195_afe_dai_suspend(struct snd_soc_component *component)
+{
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
+	struct regmap *regmap = afe->regmap;
+	int i;
+
+	for (i = 0; i < afe->reg_back_up_list_num; i++)
+		regmap_read(regmap, afe->reg_back_up_list[i],
+			    &afe->reg_back_up[i]);
+
+	return 0;
+}
+
+
+int mt8195_afe_dai_resume(struct snd_soc_component *component)
+{
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
+	struct regmap *regmap = afe->regmap;
+	int i;
+
+	for (i = 0; i < afe->reg_back_up_list_num; i++)
+		regmap_write(regmap, afe->reg_back_up_list[i],
+			     afe->reg_back_up[i]);
+
+	return 0;
+}
+
 static const struct snd_soc_component_driver mt8195_afe_pcm_dai_component = {
 	.name = "mt8195-afe-pcm-dai",
+	.suspend = mt8195_afe_dai_suspend,
+	.resume = mt8195_afe_dai_resume,
 };
 
 static const struct mtk_base_memif_data memif_data[MT8195_AFE_MEMIF_NUM] = {
@@ -3096,6 +3125,10 @@ static const struct reg_sequence mt8195_cg_patch[] = {
 	{ AUDIO_TOP_CON1, 0xfffffff8 },
 };
 
+static const unsigned int afe_backup_list[] = {
+	AUDIO_TOP_CON5,
+};
+
 static int mt8195_afe_pcm_dev_probe(struct platform_device *pdev)
 {
 	struct mtk_base_afe *afe;
@@ -3198,6 +3231,13 @@ static int mt8195_afe_pcm_dev_probe(struct platform_device *pdev)
 	afe->mtk_afe_hardware = &mt8195_afe_hardware;
 	afe->memif_fs = mt8195_memif_fs;
 	afe->irq_fs = mt8195_irq_fs;
+
+	afe->reg_back_up_list = afe_backup_list;
+	afe->reg_back_up_list_num = ARRAY_SIZE(afe_backup_list);
+	afe->reg_back_up = devm_kcalloc(dev, afe->reg_back_up_list_num,
+					sizeof(unsigned int), GFP_KERNEL);
+	if (!afe->reg_back_up)
+		return -ENOMEM;
 
 	afe->runtime_resume = mt8195_afe_runtime_resume;
 	afe->runtime_suspend = mt8195_afe_runtime_suspend;
@@ -3306,6 +3346,7 @@ MODULE_DEVICE_TABLE(of, mt8195_afe_pcm_dt_match);
 static const struct dev_pm_ops mt8195_afe_pm_ops = {
 	SET_RUNTIME_PM_OPS(mt8195_afe_runtime_suspend,
 			   mt8195_afe_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
 };
 
 static struct platform_driver mt8195_afe_pcm_driver = {
