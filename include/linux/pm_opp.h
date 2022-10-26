@@ -178,7 +178,12 @@ void dev_pm_opp_remove_table(struct device *dev);
 void dev_pm_opp_cpumask_remove_table(const struct cpumask *cpumask);
 int dev_pm_opp_sync_regulators(struct device *dev);
 #else
-static inline struct opp_table *dev_pm_opp_get_opp_table(struct device *dev, struct device_node *np)
+static inline struct opp_table *dev_pm_opp_get_opp_table(struct device *dev)
+{
+	return ERR_PTR(-EOPNOTSUPP);
+}
+
+static inline struct opp_table *dev_pm_opp_get_opp_table_np(struct device *dev, struct device_node *np)
 {
 	return ERR_PTR(-EOPNOTSUPP);
 }
