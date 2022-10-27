@@ -126,7 +126,7 @@ static const struct scpsys_domain_data scpsys_domain_data_mt8195[] = {
 		.pwr_sta2nd_offs = 0x178,
 		.sram_pdn_bits = GENMASK(8, 8),
 		.sram_pdn_ack_bits = GENMASK(12, 12),
-		.caps = MTK_SCPD_KEEP_DEFAULT_OFF,
+		.caps = MTK_SCPD_KEEP_DEFAULT_OFF | MTK_SCPD_DOMAIN_SUPPLY,
 	},
 	[MT8195_POWER_DOMAIN_MFG1] = {
 		.name = "mfg1",
