@@ -468,6 +468,12 @@ static inline int dev_pm_opp_of_add_table_indexed_np(struct device *dev,
 	return -EOPNOTSUPP;
 }
 
+static inline int dev_pm_opp_of_add_table_np(struct device *dev, struct device_node *np,
+		struct device_node **ref_np, int max_tables)
+{
+	return -EOPNOTSUPP;
+}
+
 static inline void dev_pm_opp_of_remove_table(struct device *dev)
 {
 }
