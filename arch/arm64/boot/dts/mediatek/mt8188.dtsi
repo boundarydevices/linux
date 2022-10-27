@@ -888,6 +888,41 @@
 			status = "disabled";
 		};
 
+		ssusb1: usb1@11201000 {
+			compatible = "mediatek,mt8188-mtu3", "mediatek,mtu3";
+			reg = <0 0x11201000 0 0x2dff>,
+			      <0 0x11203e00 0 0x0100>;
+			reg-names = "mac", "ippc";
+			interrupts = <GIC_SPI 128 IRQ_TYPE_LEVEL_HIGH 0>;
+			phys = <&u2port1 PHY_TYPE_USB2>, <&u3port1 PHY_TYPE_USB3>;
+			assigned-clocks = <&topckgen CLK_TOP_USB_TOP>;
+			assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D5_D4>;
+			clocks = <&pericfg_ao CLK_PERI_AO_SSUSB_BUS>,
+				 <&topckgen CLK_TOP_SSUSB_TOP_REF>,
+				 <&pericfg_ao CLK_PERI_AO_SSUSB_XHCI>,
+				 <&topckgen CLK_TOP_UNIVPLL_192M_D4>;
+			clock-names = "sys_ck", "ref_ck", "mcu_ck", "dma_ck";
+			mediatek,syscon-wakeup = <&pericfg 0x468 2>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+			status = "disabled";
+
+			usb_host1: xhci1@11200000 {
+				compatible = "mediatek,mt8188-xhci", "mediatek,mtk-xhci";
+				reg = <0 0x11200000 0 0x1000>;
+				reg-names = "mac";
+				interrupts-extended = <&gic GIC_SPI 129 IRQ_TYPE_LEVEL_HIGH 0>,
+						      <&pio 219 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "host", "wakeup";
+				assigned-clocks = <&topckgen CLK_TOP_SSUSB_XHCI>;
+				assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D5_D4>;
+				clocks = <&pericfg_ao CLK_PERI_AO_SSUSB_XHCI>;
+				clock-names = "sys_ck";
+				status = "disabled";
+			};
+		};
+
 		mmc0: mmc@11230000 {
 			compatible = "mediatek,mt8195-mmc",
 				     "mediatek,mt8192-mmc",
@@ -1004,6 +1039,76 @@
 			#clock-cells = <1>;
 		};
 
+		ssusb2: usb2@112a1000 {
+			compatible = "mediatek,mt8188-mtu3", "mediatek,mtu3";
+			reg = <0 0x112a1000 0 0x2dff>,
+			      <0 0x112a3e00 0 0x0100>;
+			reg-names = "mac", "ippc";
+			interrupts = <GIC_SPI 535 IRQ_TYPE_LEVEL_HIGH 0>;
+			phys = <&u2port2 PHY_TYPE_USB2>;
+			assigned-clocks = <&topckgen CLK_TOP_USB_TOP_3P>;
+			assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D5_D4>;
+			clocks = <&pericfg_ao CLK_PERI_AO_SSUSB_3P_BUS>,
+				 <&topckgen CLK_TOP_SSUSB_TOP_P3_REF>,
+				 <&pericfg_ao CLK_PERI_AO_SSUSB_3P_XHCI>,
+				 <&topckgen CLK_TOP_UNIVPLL_192M_D4>;
+			clock-names = "sys_ck", "ref_ck", "mcu_ck", "dma_ck";
+			mediatek,syscon-wakeup = <&pericfg 0x470 2>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+			status = "disabled";
+
+			usb_host2: xhci2@112a0000 {
+				compatible = "mediatek,mt8188-xhci", "mediatek,mtk-xhci";
+				reg = <0 0x112a0000 0 0x1000>;
+				reg-names = "mac";
+				interrupts-extended = <&gic GIC_SPI 536 IRQ_TYPE_LEVEL_HIGH 0>,
+						      <&pio 220 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "host", "wakeup";
+				assigned-clocks = <&topckgen CLK_TOP_SSUSB_XHCI_3P>;
+				assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D5_D4>;
+				clocks = <&pericfg_ao CLK_PERI_AO_SSUSB_3P_XHCI>;
+				clock-names = "sys_ck";
+				status = "disabled";
+			};
+		};
+
+		ssusb: usb@112b1000 {
+			compatible = "mediatek,mt8188-mtu3", "mediatek,mtu3";
+			reg = <0 0x112b1000 0 0x2dff>,
+			      <0 0x112b3e00 0 0x0100>;
+			reg-names = "mac", "ippc";
+			interrupts = <GIC_SPI 532 IRQ_TYPE_LEVEL_HIGH 0>;
+			phys = <&u2port0 PHY_TYPE_USB2>;
+			assigned-clocks = <&topckgen CLK_TOP_USB_TOP_2P>;
+			assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D5_D4>;
+			clocks = <&pericfg_ao CLK_PERI_AO_SSUSB_2P_BUS>,
+				 <&topckgen CLK_TOP_SSUSB_TOP_P2_REF>,
+				 <&pericfg_ao CLK_PERI_AO_SSUSB_2P_XHCI>,
+				 <&topckgen CLK_TOP_UNIVPLL_192M_D4>;
+			clock-names = "sys_ck", "ref_ck", "mcu_ck", "dma_ck";
+			mediatek,syscon-wakeup = <&pericfg 0x460 2>;
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+			status = "disabled";
+
+			usb_host0: xhci@112b0000 {
+				compatible = "mediatek,mt8188-xhci", "mediatek,mtk-xhci";
+				reg = <0 0x112b0000 0 0x1000>;
+				reg-names = "mac";
+				interrupts-extended = <&gic GIC_SPI 533 IRQ_TYPE_LEVEL_HIGH 0>,
+						      <&pio 218 IRQ_TYPE_LEVEL_HIGH>;
+				interrupt-names = "host", "wakeup";
+				assigned-clocks = <&topckgen CLK_TOP_SSUSB_XHCI_2P>;
+				assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D5_D4>;
+				clocks = <&pericfg_ao CLK_PERI_AO_SSUSB_2P_XHCI>;
+				clock-names = "sys_ck";
+				status = "disabled";
+			};
+		};
+
 		i2c1: i2c@11e00000 {
 			compatible = "mediatek,mt8188-i2c";
 			reg = <0 0x11e00000 0 0x1000>,
@@ -1036,6 +1141,71 @@
 			compatible = "mediatek,mt8188-imp_iic_wrap_w", "syscon";
 			reg = <0 0x11e02000 0 0x1000>;
 			#clock-cells = <1>;
+		};
+
+		u3phy0: usb-phy0@11e30000 {
+			compatible = "mediatek,mt8188-tphy",
+				     "mediatek,generic-tphy-v2";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+			status = "disabled";
+
+			u2port0: usb2-phy0@11e30000 {
+				reg = <0 0x11e30000 0 0x700>;
+				clocks = <&topckgen CLK_TOP_SSUSB_PHY_P2_REF>,
+					 <&apmixedsys CLK_APMIXED_PLL_SSUSB26M_EN>;
+				clock-names = "ref", "da_ref";
+				mediatek,eye-rev6 = <1>;
+				#phy-cells = <1>;
+				status = "disabled";
+			};
+		};
+
+		u3phy1: usb-phy1@11e40000 {
+			compatible = "mediatek,mt8188-tphy",
+				     "mediatek,generic-tphy-v2";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+			status = "disabled";
+
+			u2port1: usb2-phy1@11e40000 {
+				reg = <0 0x11e40000 0 0x700>;
+				clocks = <&topckgen CLK_TOP_SSUSB_PHY_REF>,
+					 <&apmixedsys CLK_APMIXED_PLL_SSUSB26M_EN>;
+				clock-names = "ref", "da_ref";
+				mediatek,eye-rev6 = <1>;
+				#phy-cells = <1>;
+				status = "disabled";
+			};
+
+			u3port1: usb3-phy1@11e40700 {
+				reg = <0 0x11e40700 0 0x700>;
+				clocks = <&apmixedsys CLK_APMIXED_PLL_SSUSB26M_EN>, <&clk26m>;
+				clock-names = "ref", "da_ref";
+				#phy-cells = <1>;
+				status = "disabled";
+			};
+		};
+
+		u3phy2: usb-phy2@11e80000 {
+			compatible = "mediatek,mt8188-tphy",
+				     "mediatek,generic-tphy-v2";
+			#address-cells = <2>;
+			#size-cells = <2>;
+			ranges;
+			status = "disabled";
+
+			u2port2: usb2-phy2@11e80000 {
+				reg = <0 0x11e80000 0 0x700>;
+				clocks = <&topckgen CLK_TOP_SSUSB_PHY_P3_REF>,
+					 <&apmixedsys CLK_APMIXED_PLL_SSUSB26M_EN>;
+				clock-names = "ref", "da_ref";
+				mediatek,eye-rev6 = <1>;
+				#phy-cells = <1>;
+				status = "disabled";
+			};
 		};
 
 		i2c5: i2c@11ec0000 {
