@@ -22,7 +22,7 @@
 
 #define CMDQ_OP_CODE_MASK		(0xff << CMDQ_OP_CODE_SHIFT)
 #define CMDQ_NUM_CMD(t)			(t->cmd_buf_size / CMDQ_INST_SIZE)
-#define CMDQ_GCE_NUM_MAX		(2)
+#define CMDQ_GCE_CLK_NUM_MAX		(3)
 
 #define CMDQ_CURR_IRQ_STATUS		0x10
 #define CMDQ_SYNC_TOKEN_ID		0x60
@@ -86,7 +86,7 @@ struct cmdq {
 	u32			thread_nr;
 	u32			irq_mask;
 	struct cmdq_thread	*thread;
-	struct clk_bulk_data	clocks[CMDQ_GCE_NUM_MAX];
+	struct clk_bulk_data	clocks[CMDQ_GCE_CLK_NUM_MAX];
 	bool			suspended;
 	u8			shift_pa;
 	bool			control_by_sw;
@@ -94,6 +94,7 @@ struct cmdq {
 	struct workqueue_struct	*timeout_wq;
 	spinlock_t		event_lock;
 	struct cmdq_backup_event_list	*cmdq_backup_event_list;
+	bool			gce_timer_en;
 };
 
 struct gce_plat {
@@ -101,6 +102,7 @@ struct gce_plat {
 	u8 shift;
 	bool control_by_sw;
 	u32 gce_num;
+	bool gce_timer_en;
 };
 
 u8 cmdq_get_shift_pa(struct mbox_chan *chan)
@@ -728,6 +730,7 @@ static int cmdq_probe(struct platform_device *pdev)
 	int alias_id = 0;
 	static const char * const clk_name = "gce";
 	static const char * const clk_names[] = { "gce0", "gce1" };
+	static const char * const timer_clk_name = "gce-timer";
 
 	cmdq = devm_kzalloc(dev, sizeof(*cmdq), GFP_KERNEL);
 	if (!cmdq)
@@ -752,6 +755,7 @@ static int cmdq_probe(struct platform_device *pdev)
 	cmdq->shift_pa = plat_data->shift;
 	cmdq->control_by_sw = plat_data->control_by_sw;
 	cmdq->gce_num = plat_data->gce_num;
+	cmdq->gce_timer_en = plat_data->gce_timer_en;
 	cmdq->irq_mask = GENMASK(cmdq->thread_nr - 1, 0);
 	err = devm_request_irq(dev, cmdq->irq, cmdq_irq_handler, IRQF_SHARED,
 			       "mtk_cmdq", cmdq);
@@ -782,6 +786,16 @@ static int cmdq_probe(struct platform_device *pdev)
 			dev_err(dev, "failed to get gce clk\n");
 			return PTR_ERR(cmdq->clocks[alias_id].clk);
 		}
+	}
+
+	if (cmdq->gce_timer_en) {
+		cmdq->clocks[cmdq->gce_num].id = timer_clk_name;
+		cmdq->clocks[cmdq->gce_num].clk = devm_clk_get(&pdev->dev, timer_clk_name);
+		if (IS_ERR(cmdq->clocks[cmdq->gce_num].clk)) {
+			return dev_err_probe(dev, PTR_ERR(cmdq->clocks[cmdq->gce_num].clk),
+					     "failed to get gce timer clk\n");
+		}
+		cmdq->gce_num++;
 	}
 
 	cmdq->mbox.dev = dev;
@@ -869,7 +883,8 @@ static const struct gce_plat gce_plat_v6 = {
 	.thread_nr = 24,
 	.shift = 3,
 	.control_by_sw = false,
-	.gce_num = 2
+	.gce_num = 2,
+	.gce_timer_en = true
 };
 
 static const struct of_device_id cmdq_of_ids[] = {
