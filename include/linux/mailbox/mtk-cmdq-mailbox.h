@@ -36,6 +36,9 @@
 #define CMDQ_MAX_EVENT			0x3ff
 
 /*
+ * CMDQ_CODE_MOVE:
+ *   move bit[47:0] to GPR[52:48]
+ *   format: op move
  * CMDQ_CODE_MASK:
  *   set write mask
  *   format: op mask
