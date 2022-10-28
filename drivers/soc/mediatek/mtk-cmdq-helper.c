@@ -179,6 +179,17 @@ static int cmdq_pkt_append_command(struct cmdq_pkt *pkt,
 	return 0;
 }
 
+int cmdq_pkt_move(struct cmdq_pkt *pkt, u8 gpr_idx, u32 value)
+{
+	struct cmdq_instruction inst = { {0} };
+
+	inst.op = CMDQ_CODE_MOVE;
+	inst.value = value;
+	inst.subsys = gpr_idx;
+	return cmdq_pkt_append_command(pkt, inst);
+}
+EXPORT_SYMBOL(cmdq_pkt_move);
+
 int cmdq_pkt_write(struct cmdq_pkt *pkt, u8 subsys, u16 offset, u32 value)
 {
 	struct cmdq_instruction inst;

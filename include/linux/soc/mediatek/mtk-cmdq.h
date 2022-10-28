@@ -134,6 +134,16 @@ int cmdq_pkt_mem_move(struct cmdq_pkt *pkt, dma_addr_t src_addr,
 		      dma_addr_t dst_addr, u16 swap_reg_idx);
 
 /**
+ * cmdq_pkt_move() - append move command to the CMDQ packet
+ * @pkt:	the CMDQ packet
+ * @gpr_idx:	the GCE GPR register index
+ * @value:	move extra handle APB address to GPR
+ *
+ * Return: 0 for success; else the error code is returned
+ */
+int cmdq_pkt_move(struct cmdq_pkt *pkt, u8 gpr_idx, u32 value);
+
+/**
  * cmdq_pkt_write() - append write command to the CMDQ packet
  * @pkt:	the CMDQ packet
  * @subsys:	the CMDQ sub system code
