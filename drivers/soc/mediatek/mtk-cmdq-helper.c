@@ -576,6 +576,64 @@ int cmdq_pkt_logic_command(struct cmdq_pkt *pkt, enum CMDQ_LOGIC_ENUM s_op,
 }
 EXPORT_SYMBOL(cmdq_pkt_logic_command);
 
+
+int cmdq_pkt_cond_jump(struct cmdq_pkt *pkt,
+	u16 offset_reg_idx,
+	struct cmdq_operand *left_operand,
+	struct cmdq_operand *right_operand,
+	enum CMDQ_CONDITION_ENUM condition_operator)
+{
+	struct cmdq_instruction inst = { {0} };
+	u32 left_idx_value;
+	u32 right_idx_value;
+
+	if (!left_operand || !right_operand)
+		return -EINVAL;
+
+	left_idx_value = CMDQ_OPERAND_GET_IDX_VALUE(left_operand);
+	right_idx_value = CMDQ_OPERAND_GET_IDX_VALUE(right_operand);
+
+	inst.op = CMDQ_CODE_JUMP_C_RELATIVE;
+	inst.arg_a_type = CMDQ_REG_TYPE;
+	inst.arg_b_type = CMDQ_OPERAND_TYPE(left_operand);
+	inst.arg_c_type = CMDQ_OPERAND_TYPE(right_operand);
+	inst.s_op = condition_operator;
+	inst.arg_c = right_idx_value;
+	inst.arg_b = left_idx_value;
+	inst.reg_dst = offset_reg_idx;
+
+	return cmdq_pkt_append_command(pkt, inst);
+}
+EXPORT_SYMBOL(cmdq_pkt_cond_jump);
+
+int cmdq_pkt_cond_jump_abs(struct cmdq_pkt *pkt,
+	u16 addr_reg_idx,
+	struct cmdq_operand *left_operand,
+	struct cmdq_operand *right_operand,
+	enum CMDQ_CONDITION_ENUM condition_operator)
+{
+	struct cmdq_instruction inst = { {0} };
+	u16 left_idx_value;
+	u16 right_idx_value;
+
+	if (!left_operand || !right_operand)
+		return -EINVAL;
+
+	left_idx_value = CMDQ_OPERAND_GET_IDX_VALUE(left_operand);
+	right_idx_value = CMDQ_OPERAND_GET_IDX_VALUE(right_operand);
+
+	inst.op = CMDQ_CODE_JUMP_C_ABSOLUTE;
+	inst.arg_a_type = CMDQ_REG_TYPE;
+	inst.arg_b_type = CMDQ_OPERAND_TYPE(left_operand);
+	inst.arg_c_type = CMDQ_OPERAND_TYPE(right_operand);
+	inst.s_op = condition_operator;
+	inst.arg_c = right_idx_value;
+	inst.arg_b = left_idx_value;
+	inst.reg_dst = addr_reg_idx;
+
+	return cmdq_pkt_append_command(pkt, inst);
+}
+
 int cmdq_pkt_assign(struct cmdq_pkt *pkt, u16 reg_idx, u32 value)
 {
 	struct cmdq_instruction inst = {};

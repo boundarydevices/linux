@@ -69,6 +69,8 @@ enum cmdq_code {
 	CMDQ_CODE_WRITE_S = 0x90,
 	CMDQ_CODE_WRITE_S_MASK = 0x91,
 	CMDQ_CODE_LOGIC = 0xa0,
+	CMDQ_CODE_JUMP_C_ABSOLUTE = 0xb0, /* conditional jump (absolute) */
+	CMDQ_CODE_JUMP_C_RELATIVE = 0xb1, /* conditional jump (related) */
 };
 
 struct cmdq_cb_data {
