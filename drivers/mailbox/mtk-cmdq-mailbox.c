@@ -103,6 +103,7 @@ struct gce_plat {
 	bool sw_ddr_en;
 	u32 gce_num;
 	bool gce_timer_en;
+	s16 gpr_timer_event;
 };
 
 static void cmdq_sw_ddr_enable(struct cmdq *cmdq, bool enable)
@@ -164,6 +165,14 @@ phys_addr_t cmdq_mbox_get_base_pa(struct mbox_chan *chan)
 	return cmdq->base_pa;
 }
 EXPORT_SYMBOL(cmdq_mbox_get_base_pa);
+
+s16 cmdq_get_gpr_timer_event(struct mbox_chan *chan)
+{
+	struct cmdq *cmdq = container_of(chan->mbox, struct cmdq, mbox);
+
+	return cmdq->pdata->gpr_timer_event;
+}
+EXPORT_SYMBOL(cmdq_get_gpr_timer_event);
 
 static int cmdq_thread_suspend(struct cmdq *cmdq, struct cmdq_thread *thread)
 {
@@ -910,7 +919,8 @@ static const struct gce_plat gce_plat_v6 = {
 	.shift = 3,
 	.control_by_sw = true,
 	.gce_num = 3, // 2 if gce_timer_en == false
-	.gce_timer_en = true
+	.gce_timer_en = true,
+	.gpr_timer_event = 226
 };
 
 static const struct gce_plat gce_plat_v7 = {
