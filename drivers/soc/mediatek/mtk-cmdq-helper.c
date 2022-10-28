@@ -724,6 +724,19 @@ int cmdq_pkt_jump(struct cmdq_pkt *pkt, dma_addr_t addr)
 }
 EXPORT_SYMBOL(cmdq_pkt_jump);
 
+s32 cmdq_pkt_jump_offset(struct cmdq_pkt *pkt, s32 offset)
+{
+	struct cmdq_instruction inst = { {0} };
+	s64 off = ((s64)offset >> cmdq_get_shift_pa(((struct cmdq_client *)pkt->cl)->chan));
+
+	inst.op = CMDQ_CODE_JUMP;
+	inst.arg_c = CMDQ_GET_ARG_C(off);
+	inst.arg_b = CMDQ_GET_ARG_B(off);
+
+	return cmdq_pkt_append_command(pkt, inst);
+}
+EXPORT_SYMBOL(cmdq_pkt_jump_offset);
+
 int cmdq_pkt_finalize(struct cmdq_pkt *pkt)
 {
 	struct cmdq_instruction inst = { {0} };

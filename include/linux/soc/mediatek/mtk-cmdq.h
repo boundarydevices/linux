@@ -460,6 +460,17 @@ int cmdq_pkt_assign(struct cmdq_pkt *pkt, u16 reg_idx, u32 value);
 int cmdq_pkt_jump(struct cmdq_pkt *pkt, dma_addr_t addr);
 
 /**
+ * cmdq_pkt_jump_offset() - Append jump command to the CMDQ packet, ask GCE
+ *             to execute an instruction that change current thread PC to
+ *             an offset address which should contains more instruction.
+ * @pkt:        the CMDQ packet
+ * @offset:     offset address of target instruction buffer
+ *
+ * Return: 0 for success; else the error code is returned
+ */
+int cmdq_pkt_jump_offset(struct cmdq_pkt *pkt, s32 offset);
+
+/**
  * cmdq_pkt_finalize() - Append EOC and jump command to pkt.
  * @pkt:	the CMDQ packet
  *
