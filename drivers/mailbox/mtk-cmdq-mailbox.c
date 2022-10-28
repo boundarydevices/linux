@@ -22,7 +22,7 @@
 
 #define CMDQ_OP_CODE_MASK		(0xff << CMDQ_OP_CODE_SHIFT)
 #define CMDQ_NUM_CMD(t)			(t->cmd_buf_size / CMDQ_INST_SIZE)
-#define CMDQ_GCE_NUM_MAX		(2)
+#define CMDQ_GCE_CLK_NUM_MAX		(3)
 
 #define CMDQ_CURR_IRQ_STATUS		0x10
 #define CMDQ_SYNC_TOKEN_ID		0x60
@@ -88,7 +88,7 @@ struct cmdq {
 	u32			irq_mask;
 	const struct gce_plat	*pdata;
 	struct cmdq_thread	*thread;
-	struct clk_bulk_data	clocks[CMDQ_GCE_NUM_MAX];
+	struct clk_bulk_data	clocks[CMDQ_GCE_CLK_NUM_MAX];
 	bool			suspended;
 	struct workqueue_struct	*timeout_wq;
 	spinlock_t		event_lock;
@@ -101,6 +101,7 @@ struct gce_plat {
 	bool control_by_sw;
 	bool sw_ddr_en;
 	u32 gce_num;
+	bool gce_timer_en;
 };
 
 static void cmdq_sw_ddr_enable(struct cmdq *cmdq, bool enable)
@@ -744,6 +745,7 @@ static int cmdq_probe(struct platform_device *pdev)
 	int alias_id = 0;
 	static const char * const clk_name = "gce";
 	static const char * const clk_names[] = { "gce0", "gce1" };
+	static const char * const timer_clk_name = "gce-timer";
 
 	cmdq = devm_kzalloc(dev, sizeof(*cmdq), GFP_KERNEL);
 	if (!cmdq)
@@ -789,6 +791,17 @@ static int cmdq_probe(struct platform_device *pdev)
 		if (IS_ERR(cmdq->clocks[alias_id].clk)) {
 			return dev_err_probe(dev, PTR_ERR(cmdq->clocks[alias_id].clk),
 					     "failed to get gce clk\n");
+		}
+	}
+
+	if (cmdq->pdata->gce_timer_en) {
+		int gce_timer_idx = cmdq->pdata->gce_num - 1;
+
+		cmdq->clocks[gce_timer_idx].id = timer_clk_name;
+		cmdq->clocks[gce_timer_idx].clk = devm_clk_get(&pdev->dev, timer_clk_name);
+		if (IS_ERR(cmdq->clocks[cmdq->pdata->gce_num].clk)) {
+			return dev_err_probe(dev, PTR_ERR(cmdq->clocks[gce_timer_idx].clk),
+					     "failed to get gce timer clk\n");
 		}
 	}
 
@@ -884,7 +897,8 @@ static const struct gce_plat gce_plat_v6 = {
 	.thread_nr = 24,
 	.shift = 3,
 	.control_by_sw = true,
-	.gce_num = 2
+	.gce_num = 3, // 2 if gce_timer_en == false
+	.gce_timer_en = true
 };
 
 static const struct gce_plat gce_plat_v7 = {
