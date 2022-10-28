@@ -99,5 +99,6 @@ struct cmdq_pkt {
 u8 cmdq_get_shift_pa(struct mbox_chan *chan);
 void cmdq_set_event(void *chan, u16 event_id);
 u32 cmdq_get_event(void *chan, u16 event_id);
+phys_addr_t cmdq_mbox_get_base_pa(struct mbox_chan *chan);
 
 #endif /* __MTK_CMDQ_MAILBOX_H__ */

@@ -82,6 +82,7 @@ struct cmdq_task {
 struct cmdq {
 	struct mbox_controller	mbox;
 	void __iomem		*base;
+	u32			base_pa;
 	int			irq;
 	u32			thread_nr;
 	u32			irq_mask;
@@ -144,6 +145,14 @@ u32 cmdq_get_event(void *chan, u16 event_id)
 	return val;
 }
 EXPORT_SYMBOL(cmdq_get_event);
+
+phys_addr_t cmdq_mbox_get_base_pa(struct mbox_chan *chan)
+{
+	struct cmdq *cmdq = container_of(chan->mbox, struct cmdq, mbox);
+
+	return cmdq->base_pa;
+}
+EXPORT_SYMBOL(cmdq_mbox_get_base_pa);
 
 static int cmdq_thread_suspend(struct cmdq *cmdq, struct cmdq_thread *thread)
 {
@@ -737,6 +746,7 @@ static int cmdq_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	cmdq->base_pa = res->start;
 	cmdq->base = devm_ioremap_resource(dev, res);
 	if (IS_ERR(cmdq->base))
 		return PTR_ERR(cmdq->base);
