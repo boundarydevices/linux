@@ -96,6 +96,7 @@ struct cmdq {
 	spinlock_t		event_lock;
 	struct cmdq_backup_event_list	*cmdq_backup_event_list;
 	bool			gce_timer_en;
+	s16			gpr_timer_event;
 };
 
 struct gce_plat {
@@ -104,6 +105,7 @@ struct gce_plat {
 	bool control_by_sw;
 	u32 gce_num;
 	bool gce_timer_en;
+	s16 gpr_timer_event;
 };
 
 u8 cmdq_get_shift_pa(struct mbox_chan *chan)
@@ -153,6 +155,14 @@ phys_addr_t cmdq_mbox_get_base_pa(struct mbox_chan *chan)
 	return cmdq->base_pa;
 }
 EXPORT_SYMBOL(cmdq_mbox_get_base_pa);
+
+s16 cmdq_get_gpr_timer_event(struct mbox_chan *chan)
+{
+	struct cmdq *cmdq = container_of(chan->mbox, struct cmdq, mbox);
+
+	return cmdq->gpr_timer_event;
+}
+EXPORT_SYMBOL(cmdq_get_gpr_timer_event);
 
 static int cmdq_thread_suspend(struct cmdq *cmdq, struct cmdq_thread *thread)
 {
@@ -766,6 +776,7 @@ static int cmdq_probe(struct platform_device *pdev)
 	cmdq->control_by_sw = plat_data->control_by_sw;
 	cmdq->gce_num = plat_data->gce_num;
 	cmdq->gce_timer_en = plat_data->gce_timer_en;
+	cmdq->gpr_timer_event = CMDQ_EVENT_INVALID;
 	cmdq->irq_mask = GENMASK(cmdq->thread_nr - 1, 0);
 	err = devm_request_irq(dev, cmdq->irq, cmdq_irq_handler, IRQF_SHARED,
 			       "mtk_cmdq", cmdq);
@@ -799,6 +810,7 @@ static int cmdq_probe(struct platform_device *pdev)
 	}
 
 	if (cmdq->gce_timer_en) {
+		cmdq->gpr_timer_event = plat_data->gpr_timer_event;
 		cmdq->clocks[cmdq->gce_num].id = timer_clk_name;
 		cmdq->clocks[cmdq->gce_num].clk = devm_clk_get(&pdev->dev, timer_clk_name);
 		if (IS_ERR(cmdq->clocks[cmdq->gce_num].clk)) {
@@ -894,7 +906,8 @@ static const struct gce_plat gce_plat_v6 = {
 	.shift = 3,
 	.control_by_sw = false,
 	.gce_num = 2,
-	.gce_timer_en = true
+	.gce_timer_en = true,
+	.gpr_timer_event = 226
 };
 
 static const struct of_device_id cmdq_of_ids[] = {

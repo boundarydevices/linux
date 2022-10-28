@@ -18,6 +18,7 @@
 #define CMDQ_THR_SPR_IDX3		3
 
 #define CMDQ_GPR_IDX			32
+#define CMDQ_TPR_IDX			56
 #define CMDQ_CPR_IDX			0x8000
 
 #define SUBSYS_NO_SUPPORT		99

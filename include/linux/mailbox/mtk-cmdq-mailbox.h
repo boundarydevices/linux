@@ -23,6 +23,8 @@
 
 #define CMDQ_TIMEOUT_DEFAULT		1000
 
+#define CMDQ_EVENT_INVALID		(-1)
+
 /*
  * WFE arg_b
  * bit 0-11: wait value
@@ -100,5 +102,6 @@ u8 cmdq_get_shift_pa(struct mbox_chan *chan);
 void cmdq_set_event(void *chan, u16 event_id);
 u32 cmdq_get_event(void *chan, u16 event_id);
 phys_addr_t cmdq_mbox_get_base_pa(struct mbox_chan *chan);
+s16 cmdq_get_gpr_timer_event(struct mbox_chan *chan);
 
 #endif /* __MTK_CMDQ_MAILBOX_H__ */

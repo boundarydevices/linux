@@ -19,6 +19,8 @@
 #define CMDQ_GET_ARG_B(arg)		(((arg) & GENMASK(31, 16)) >> 16)
 #define CMDQ_GET_ARG_C(arg)		((arg) & GENMASK(15, 0))
 
+#define CMDQ_TPR_TIMEOUT_EN	(0xdc)
+
 #define CMDQ_OPERAND_GET_IDX_VALUE(operand) \
 	((operand)->reg ? (operand)->idx : (operand)->value)
 #define CMDQ_OPERAND_TYPE(operand) \
@@ -633,6 +635,70 @@ int cmdq_pkt_cond_jump_abs(struct cmdq_pkt *pkt,
 
 	return cmdq_pkt_append_command(pkt, inst);
 }
+
+int cmdq_pkt_sleep(struct cmdq_pkt *pkt, u32 tick, u16 reg_gpr)
+{
+	const u32 tpr_en = 1 << reg_gpr;
+	struct cmdq_client *cl = (struct cmdq_client *)pkt->cl;
+	struct cmdq_operand lop, rop;
+	const u32 timeout_en = cmdq_mbox_get_base_pa(cl->chan) +
+		CMDQ_TPR_TIMEOUT_EN;
+	u16 event = CMDQ_EVENT_INVALID;
+
+	/* get platform version event gpr timer value and add reg_gpr */
+	event = cmdq_get_gpr_timer_event(((struct cmdq_client *)pkt->cl)->chan) + reg_gpr;
+
+	/* set target gpr value to max to avoid event trigger
+	 * before new value write to gpr
+	 */
+	lop.reg = true;
+	lop.idx = CMDQ_TPR_IDX;
+	rop.reg = false;
+	rop.value = 1;
+	cmdq_pkt_logic_command(pkt, CMDQ_LOGIC_SUBTRACT,
+		CMDQ_GPR_IDX + reg_gpr, &lop, &rop);
+
+	lop.reg = true;
+	lop.idx = CMDQ_CPR_IDX;
+	rop.reg = false;
+	rop.value = tpr_en;
+	cmdq_pkt_logic_command(pkt, CMDQ_LOGIC_OR, CMDQ_CPR_IDX,
+		&lop, &rop);
+
+	cmdq_pkt_assign(pkt, CMDQ_THR_SPR_IDX0, CMDQ_ADDR_HIGH(timeout_en));
+	cmdq_pkt_write_s(pkt, CMDQ_THR_SPR_IDX0, CMDQ_ADDR_LOW(timeout_en), CMDQ_CPR_IDX);
+	cmdq_pkt_assign(pkt, CMDQ_THR_SPR_IDX0, CMDQ_ADDR_HIGH(timeout_en));
+	cmdq_pkt_read_s(pkt, CMDQ_THR_SPR_IDX0, CMDQ_ADDR_LOW(timeout_en), CMDQ_THR_SPR_IDX0);
+	cmdq_pkt_clear_event(pkt, event);
+
+	if (tick < U16_MAX) {
+		lop.reg = true;
+		lop.idx = CMDQ_TPR_IDX;
+		rop.reg = false;
+		rop.value = tick;
+		cmdq_pkt_logic_command(pkt, CMDQ_LOGIC_ADD,
+			CMDQ_GPR_IDX + reg_gpr, &lop, &rop);
+	} else {
+		cmdq_pkt_assign(pkt, CMDQ_THR_SPR_IDX0, tick);
+		lop.reg = true;
+		lop.idx = CMDQ_TPR_IDX;
+		rop.reg = true;
+		rop.value = CMDQ_THR_SPR_IDX0;
+		cmdq_pkt_logic_command(pkt, CMDQ_LOGIC_ADD,
+				CMDQ_GPR_IDX + reg_gpr, &lop, &rop);
+	}
+	cmdq_pkt_wfe(pkt, event, true);
+
+	lop.reg = true;
+	lop.idx = CMDQ_CPR_IDX;
+	rop.reg = false;
+	rop.value = ~tpr_en;
+	cmdq_pkt_logic_command(pkt, CMDQ_LOGIC_AND, CMDQ_CPR_IDX,
+		&lop, &rop);
+
+	return 0;
+}
+EXPORT_SYMBOL(cmdq_pkt_sleep);
 
 int cmdq_pkt_assign(struct cmdq_pkt *pkt, u16 reg_idx, u32 value)
 {
