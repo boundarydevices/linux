@@ -65,6 +65,30 @@ enum cmdq_gpr {
 };
 struct cmdq_pkt;
 
+enum CMDQ_LOGIC_ENUM {
+	CMDQ_LOGIC_ASSIGN = 0,
+	CMDQ_LOGIC_ADD = 1,
+	CMDQ_LOGIC_SUBTRACT = 2,
+	CMDQ_LOGIC_MULTIPLY = 3,
+	CMDQ_LOGIC_XOR = 8,
+	CMDQ_LOGIC_NOT = 9,
+	CMDQ_LOGIC_OR = 10,
+	CMDQ_LOGIC_AND = 11,
+	CMDQ_LOGIC_LEFT_SHIFT = 12,
+	CMDQ_LOGIC_RIGHT_SHIFT = 13,
+};
+
+struct cmdq_operand {
+	/* register type */
+	bool reg;
+	union {
+		/* index */
+		u16 idx;
+		/* value */
+		u16 value;
+	};
+};
+
 struct cmdq_client_reg {
 	u8 subsys;
 	u16 offset;
@@ -380,6 +404,24 @@ int cmdq_pkt_poll_mask(struct cmdq_pkt *pkt, u8 subsys,
  */
 int cmdq_pkt_poll_addr(struct cmdq_pkt *pkt, u32 value, u32 addr,
 		       u32 mask, u8 reg_gpr);
+
+/**
+ * cmdq_pkt_logic_command() - Append logic command to the CMDQ packet, ask GCE to
+ *		          execute an instruction that perform logic operation with
+ *		          left and right side operands and store result into the
+ *		          specified register.
+ * @pkt:	the CMDQ packet
+ * @s_op:	the logic operation to execute.
+ * @result_reg_idx:	the register index for storing result.
+ * @left_operand:	the left side operand for the specified logic operation.
+ * @right_operand: the right side operand for the specified logic operation.
+ *
+ * Return: 0 for success; else the error code is returned
+ */
+int cmdq_pkt_logic_command(struct cmdq_pkt *pkt, enum CMDQ_LOGIC_ENUM s_op,
+			   u16 result_reg_idx,
+			   struct cmdq_operand *left_operand,
+			   struct cmdq_operand *right_operand);
 
 /**
  * cmdq_pkt_assign() - Append logic assign command to the CMDQ packet, ask GCE
