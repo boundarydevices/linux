@@ -16,12 +16,53 @@
 #define CMDQ_THR_SPR_IDX1		1
 #define CMDQ_THR_SPR_IDX2		2
 #define CMDQ_THR_SPR_IDX3		3
-#define CMDQ_THR_SPR_MAX		4
+
+#define CMDQ_GPR_IDX			32
+#define CMDQ_CPR_IDX			0x8000
+
+#define SUBSYS_NO_SUPPORT		99
 
 #define CMDQ_NO_MASK		GENMASK(31, 0)
 #define CMDQ_ADDR_HIGH(addr)	((u32)(((addr) >> 16) & GENMASK(31, 0)))
 #define CMDQ_ADDR_LOW(addr)	((u16)(addr) | BIT(1))
 
+/* GCE provide 32/64 bit General Purpose Register (GPR)
+ * use as data cache or address register
+ *	 32bit: R0-R15
+ *	 64bit: P0-P7
+ * Note:
+ *	R0-R15 and P0-P7 actullay share same memory
+ *	R0 use as mask in instruction, thus be care of use R1/P0.
+ */
+enum cmdq_gpr {
+	/* 32bit R0 to R15 */
+	CMDQ_GPR_R0 = 0x0,
+	CMDQ_GPR_R1 = 0x1,
+	CMDQ_GPR_R2 = 0x2,
+	CMDQ_GPR_R3 = 0x3,
+	CMDQ_GPR_R4 = 0x4,
+	CMDQ_GPR_R5 = 0x5,
+	CMDQ_GPR_R6 = 0x6,
+	CMDQ_GPR_R7 = 0x7,
+	CMDQ_GPR_R8 = 0x8,
+	CMDQ_GPR_R9 = 0x9,
+	CMDQ_GPR_R10 = 0xa,
+	CMDQ_GPR_R11 = 0xb,
+	CMDQ_GPR_R12 = 0xc,
+	CMDQ_GPR_R13 = 0xd,
+	CMDQ_GPR_R14 = 0xe,
+	CMDQ_GPR_R15 = 0xf,
+
+	/* 64bit P0 to P7 */
+	CMDQ_GPR_P0 = 0x10,
+	CMDQ_GPR_P1 = 0x11,
+	CMDQ_GPR_P2 = 0x12,
+	CMDQ_GPR_P3 = 0x13,
+	CMDQ_GPR_P4 = 0x14,
+	CMDQ_GPR_P5 = 0x15,
+	CMDQ_GPR_P6 = 0x16,
+	CMDQ_GPR_P7 = 0x17,
+};
 struct cmdq_pkt;
 
 struct cmdq_client_reg {
