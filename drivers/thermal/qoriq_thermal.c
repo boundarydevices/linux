@@ -30,7 +30,7 @@
 #define TMSARA_V2		0xe
 #define TMU_VER1		0x1
 #define TMU_VER2		0x2
-#define TMU_VER21		0x01900201
+#define TMU_VER93		0x3
 #define TMU_TEMP_PASSIVE_COOL_DELTA	10000
 
 #define REGS_TMR	0x000	/* Mode Register */
@@ -132,7 +132,7 @@ static int tmu_get_temp(struct thermal_zone_device *tz, int *temp)
 
 	if (qdata->ver == TMU_VER1) {
 		*temp = (val & GENMASK(7, 0)) * MILLIDEGREE_PER_DEGREE;
-	} else if (qdata->ver == TMU_VER21) {
+	} else if (qdata->ver == TMU_VER93) {
 		if (val & TRITSR_TP5)
 			*temp = milli_kelvin_to_millicelsius((val & GENMASK(8, 0)) * MILLIDEGREE_PER_DEGREE + 500);
 		else
@@ -334,7 +334,7 @@ static void qoriq_tmu_init_device(struct qoriq_tmu_data *data)
 
 	if (data->ver == TMU_VER1) {
 		regmap_write(data->regmap, REGS_TMTMIR, TMTMIR_DEFAULT);
-	} if (data->ver == TMU_VER21) {
+	} else if (data->ver == TMU_VER93) {
 		regmap_write(data->regmap, REGS_V2_TMTMIR, TMTMIR_DEFAULT);
 		regmap_write(data->regmap, REGS_V2_TEUMR(0), TEUMR0_V21);
 	} else {
@@ -436,12 +436,12 @@ static int qoriq_tmu_probe(struct platform_device *pdev)
 	}
 	data->ver = (ver >> 8) & 0xff;
 
-	if (ver == TMU_VER21)
-		data->ver = TMU_VER21;
+	if (of_find_compatible_node(NULL, NULL, "fsl,imx93-tmu"))
+		data->ver = TMU_VER93;
 
 	qoriq_tmu_init_device(data);	/* TMU initialization */
 
-	if (data->ver == TMU_VER21)
+	if (data->ver == TMU_VER93)
 		ret = imx93_tmu_calibration(dev, data);
 	else
 		ret = qoriq_tmu_calibration(dev, data);	/* TMU calibration */
