@@ -482,6 +482,9 @@
 				reg = <0x29330000 0x1000>;
 				interrupts = <GIC_SPI 86 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&pcc3 IMX8ULP_CLK_TPM4>;
+				assigned-clocks = <&pcc3 IMX8ULP_CLK_TPM4>;
+				assigned-clock-parents = <&cgc1 IMX8ULP_CLK_FROSC_DIV2>;
+				assigned-clock-rates = <48000000>;
 				#pwm-cells = <3>;
 				status = "disabled";
 			};
