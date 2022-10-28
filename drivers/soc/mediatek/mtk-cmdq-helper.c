@@ -15,6 +15,8 @@
 #define CMDQ_IMMEDIATE_VALUE	0
 #define CMDQ_REG_TYPE		1
 #define CMDQ_JUMP_RELATIVE	1
+/* sleep for 312 tick, which around 12us */
+#define CMDQ_POLL_TICK			312
 
 #define CMDQ_GET_ARG_B(arg)		(((arg) & GENMASK(31, 16)) >> 16)
 #define CMDQ_GET_ARG_C(arg)		((arg) & GENMASK(15, 0))
@@ -699,6 +701,108 @@ int cmdq_pkt_sleep(struct cmdq_pkt *pkt, u32 tick, u16 reg_gpr)
 	return 0;
 }
 EXPORT_SYMBOL(cmdq_pkt_sleep);
+
+int cmdq_pkt_poll_timeout(struct cmdq_pkt *pkt, u32 value, u8 subsys,
+	u32 addr, u32 mask, u16 count, u16 reg_gpr)
+{
+	const u16 reg_tmp = CMDQ_THR_SPR_IDX0;
+	const u16 reg_val = CMDQ_THR_SPR_IDX1;
+	const u16 reg_poll = CMDQ_THR_SPR_IDX2;
+	const u16 reg_counter = CMDQ_THR_SPR_IDX3;
+	u32 begin_mark, end_addr_mark, cnt_end_addr_mark = 0, shift_pa;
+	u32 cmd_pa;
+	struct cmdq_operand lop, rop;
+	struct cmdq_instruction *inst = NULL;
+	//bool absolute = true;
+	u8 shift_bits = cmdq_get_shift_pa(((struct cmdq_client *)pkt->cl)->chan);
+
+	/* assign compare value as compare target later */
+	cmdq_pkt_assign(pkt, reg_val, value);
+
+	/* init loop counter as 0, counter can be count poll limit or debug */
+	cmdq_pkt_assign(pkt, reg_counter, 0);
+
+	/* mark begin offset of this operation */
+	begin_mark = pkt->cmd_buf_size;
+
+	/* read target address */
+	cmdq_pkt_assign(pkt, CMDQ_THR_SPR_IDX0, CMDQ_ADDR_HIGH(addr));
+	cmdq_pkt_read_s(pkt, CMDQ_THR_SPR_IDX0, CMDQ_ADDR_LOW(addr), reg_poll);
+
+	/* mask it */
+	if (mask != U32_MAX) {
+		lop.reg = true;
+		lop.idx = reg_poll;
+		rop.reg = true;
+		rop.idx = reg_tmp;
+
+		cmdq_pkt_assign(pkt, reg_tmp, mask);
+		cmdq_pkt_logic_command(pkt, CMDQ_LOGIC_AND, reg_poll, &lop, &rop);
+	}
+
+	/* assign temp spr as empty, should fill in end addr later */
+	end_addr_mark = pkt->cmd_buf_size;
+	cmdq_pkt_assign(pkt, reg_tmp, 0);
+
+	/* compare and jump to end if equal
+	 * note that end address will fill in later into last instruction
+	 */
+	lop.reg = true;
+	lop.idx = reg_poll;
+	rop.reg = true;
+	rop.idx = reg_val;
+	cmdq_pkt_cond_jump_abs(pkt, reg_tmp, &lop, &rop, CMDQ_EQUAL);
+
+	/* check if timeup and inc counter */
+	if (count != U16_MAX) {
+		lop.reg = true;
+		lop.idx = reg_counter;
+		rop.reg = false;
+		rop.value = count;
+		cmdq_pkt_cond_jump_abs(pkt, reg_tmp, &lop, &rop,
+			CMDQ_GREATER_THAN_AND_EQUAL);
+	}
+
+	/* always inc counter */
+	lop.reg = true;
+	lop.idx = reg_counter;
+	rop.reg = false;
+	rop.value = 1;
+	cmdq_pkt_logic_command(pkt, CMDQ_LOGIC_ADD, reg_counter, &lop, &rop);
+
+	cmdq_pkt_sleep(pkt, CMDQ_POLL_TICK, reg_gpr);
+
+	/* loop to begin */
+	cmd_pa = pkt->pa_base + begin_mark;
+	cmdq_pkt_jump(pkt, cmd_pa);
+
+	/* read current buffer pa as end mark and fill preview assign */
+	cmd_pa = pkt->pa_base + pkt->cmd_buf_size;
+	inst = (struct cmdq_instruction *)(pkt->va_base + end_addr_mark);
+	/* instruction may hit boundary case,
+	 * check if op code is jump and get next instruction if necessary
+	 */
+	if (inst && inst->op == CMDQ_CODE_JUMP)
+		inst = (struct cmdq_instruction *)(pkt->va_base + end_addr_mark + CMDQ_INST_SIZE);
+	shift_pa = cmd_pa >> shift_bits;
+	inst->arg_b = CMDQ_GET_ARG_B(shift_pa);
+	inst->arg_c = CMDQ_GET_ARG_C(shift_pa);
+
+	/* relative case the counter have different offset */
+	if (cnt_end_addr_mark) {
+		inst = (struct cmdq_instruction *)(pkt->va_base + cnt_end_addr_mark);
+		if (inst && inst->op == CMDQ_CODE_JUMP)
+			inst = (struct cmdq_instruction *)((u32)inst + CMDQ_INST_SIZE);
+		shift_pa = (pkt->cmd_buf_size - cnt_end_addr_mark - CMDQ_INST_SIZE) >> shift_bits;
+		if (inst) {
+			inst->arg_b = CMDQ_GET_ARG_B(shift_pa);
+			inst->arg_c = CMDQ_GET_ARG_C(shift_pa);
+		}
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(cmdq_pkt_poll_timeout);
 
 int cmdq_pkt_assign(struct cmdq_pkt *pkt, u16 reg_idx, u32 value)
 {

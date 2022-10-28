@@ -436,6 +436,25 @@ int cmdq_pkt_logic_command(struct cmdq_pkt *pkt, enum CMDQ_LOGIC_ENUM s_op,
 			   struct cmdq_operand *right_operand);
 
 /**
+ * cmdq_pkt_poll_timeout() - Append polling command to the CMDQ packet, ask GCE to
+ *		          execute an instruction that wait for a specified
+ *		          hardware register to check for the value w/ mask
+ *		          and it's limited in a specific number of gce-timer tick.
+ *		          All GCE hardware threads will be blocked by this
+ *		          instruction.
+ * @pkt:	the CMDQ packet
+ * @subsys:	the CMDQ sub system code
+ * @addr:	the specified target address to read.
+ * @mask:	the specified target register mask
+ * @count:	the count limit for polling the target address.
+ * @reg_gpr:	the specified target register value used for storing polling data.
+ *
+ * Return: 0 for success; else the error code is returned
+ */
+int cmdq_pkt_poll_timeout(struct cmdq_pkt *pkt, u32 value, u8 subsys,
+	u32 addr, u32 mask, u16 count, u16 reg_gpr);
+
+/**
  * cmdq_pkt_assign() - Append logic assign command to the CMDQ packet, ask GCE
  *		       to execute an instruction that set a constant value into
  *		       internal register and use as value, mask or address in
