@@ -3041,18 +3041,24 @@ static int __maybe_unused lpuart_runtime_resume(struct device *dev)
 
 static void serial_lpuart_enable_wakeup(struct lpuart_port *sport, bool on)
 {
-	unsigned int val;
+	unsigned int val, baud;
 
 	if (lpuart_is_32(sport)) {
 		val = lpuart32_read(&sport->port, UARTCTRL);
+		baud = lpuart32_read(&sport->port, UARTBAUD);
 		if (on) {
 			/* set rx_watermark to 0 in wakeup source mode */
 			lpuart32_write(&sport->port, 0, UARTWATER);
 			val |= UARTCTRL_RIE;
+			/* clear RXEDGIF flag before enable RXEDGIE interrupt */
+			lpuart32_write(&sport->port, UARTSTAT_RXEDGIF, UARTSTAT);
+			baud |= UARTBAUD_RXEDGIE;
 		} else {
 			val &= ~UARTCTRL_RIE;
+			baud &= ~UARTBAUD_RXEDGIE;
 		}
 		lpuart32_write(&sport->port, val, UARTCTRL);
+		lpuart32_write(&sport->port, baud, UARTBAUD);
 	} else {
 		val = readb(sport->port.membase + UARTCR2);
 		if (on)
