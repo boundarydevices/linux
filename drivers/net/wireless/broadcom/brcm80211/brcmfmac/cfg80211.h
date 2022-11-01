@@ -438,6 +438,12 @@ struct brcmf_tlv {
 	u8 data[1];
 };
 
+struct bcm_xtlv {
+	u16	id;
+	u16	len;
+	u8	data[1];
+};
+
 static inline struct wiphy *cfg_to_wiphy(struct brcmf_cfg80211_info *cfg)
 {
 	return cfg->wiphy;
