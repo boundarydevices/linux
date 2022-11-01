@@ -496,3 +496,35 @@ int ifx_cfg80211_vndr_cmds_amsdu(struct wiphy *wiphy,
 
 	return ret;
 }
+
+int ifx_cfg80211_vndr_cmds_ldpc_cap(struct wiphy *wiphy,
+				    struct wireless_dev *wdev,
+				    const void *data, int len)
+{
+	int ret = 0;
+	struct brcmf_cfg80211_vif *vif;
+	struct brcmf_if *ifp;
+	int val = *(s32 *)data;
+	s32 buf = 0;
+
+	vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+	ifp = vif->ifp;
+
+	if (val == 0xa) {
+		ret = brcmf_fil_iovar_int_get(ifp, "ldpc_cap", &buf);
+		if (ret) {
+			brcmf_err("get ldpc_cap error:%d\n", ret);
+
+			return ret;
+		}
+
+		brcmf_dbg(INFO, "get ldpc_cap: %d\n", buf);
+		ifx_cfg80211_vndr_send_cmd_reply(wiphy, &buf, sizeof(int));
+	} else {
+		ret = brcmf_fil_iovar_int_set(ifp, "ldpc_cap", val);
+		if (ret)
+			brcmf_err("set ldpc_cap error:%d\n", ret);
+	}
+
+	return ret;
+}
