@@ -1367,7 +1367,7 @@
 			snps,mtl-tx-config = <&mtl_tx_setup>;
 			snps,txpbl = <16>;
 			snps,rxpbl = <16>;
-			clk_csr = <0>;
+			snps,clk-csr = <0>;
 			status = "disabled";
 
 			stmmac_axi_setup: stmmac-axi-config {
