@@ -36,13 +36,26 @@ static u32 orig_ddr_err_disable;
 static u32 orig_ddr_err_sbe;
 static bool little_endian;
 
-static inline u32 ddr_in32(void __iomem *addr)
+static inline void __iomem *ddr_reg_addr(struct fsl_mc_pdata *pdata, unsigned int off)
 {
+	if (pdata->flag == TYPE_IMX9 && off >= FSL_MC_DATA_ERR_INJECT_HI && off <= FSL_MC_ERR_SBE)
+		return pdata->mc_vbase + off - FSL_MC_DATA_ERR_INJECT_HI
+		       + IMX9_MC_DATA_ERR_INJECT_HI;
+
+	return pdata->mc_vbase + off;
+}
+
+static inline u32 ddr_in32(struct fsl_mc_pdata *pdata, unsigned int off)
+{
+	void __iomem *addr = ddr_reg_addr(pdata, off);
+
 	return little_endian ? ioread32(addr) : ioread32be(addr);
 }
 
-static inline void ddr_out32(void __iomem *addr, u32 value)
+static inline void ddr_out32(struct fsl_mc_pdata *pdata, unsigned int off, u32 value)
 {
+	void __iomem *addr = ddr_reg_addr(pdata, off);
+
 	if (little_endian)
 		iowrite32(value, addr);
 	else
@@ -61,7 +74,7 @@ static ssize_t fsl_mc_inject_data_hi_show(struct device *dev,
 	struct mem_ctl_info *mci = to_mci(dev);
 	struct fsl_mc_pdata *pdata = mci->pvt_info;
 	return sprintf(data, "0x%08x",
-		       ddr_in32(pdata->mc_vbase + FSL_MC_DATA_ERR_INJECT_HI));
+		       ddr_in32(pdata, FSL_MC_DATA_ERR_INJECT_HI));
 }
 
 static ssize_t fsl_mc_inject_data_lo_show(struct device *dev,
@@ -71,7 +84,7 @@ static ssize_t fsl_mc_inject_data_lo_show(struct device *dev,
 	struct mem_ctl_info *mci = to_mci(dev);
 	struct fsl_mc_pdata *pdata = mci->pvt_info;
 	return sprintf(data, "0x%08x",
-		       ddr_in32(pdata->mc_vbase + FSL_MC_DATA_ERR_INJECT_LO));
+		       ddr_in32(pdata, FSL_MC_DATA_ERR_INJECT_LO));
 }
 
 static ssize_t fsl_mc_inject_ctrl_show(struct device *dev,
@@ -81,7 +94,7 @@ static ssize_t fsl_mc_inject_ctrl_show(struct device *dev,
 	struct mem_ctl_info *mci = to_mci(dev);
 	struct fsl_mc_pdata *pdata = mci->pvt_info;
 	return sprintf(data, "0x%08x",
-		       ddr_in32(pdata->mc_vbase + FSL_MC_ECC_ERR_INJECT));
+		       ddr_in32(pdata, FSL_MC_ECC_ERR_INJECT));
 }
 
 static ssize_t fsl_mc_inject_data_hi_store(struct device *dev,
@@ -98,7 +111,7 @@ static ssize_t fsl_mc_inject_data_hi_store(struct device *dev,
 		if (rc)
 			return rc;
 
-		ddr_out32(pdata->mc_vbase + FSL_MC_DATA_ERR_INJECT_HI, val);
+		ddr_out32(pdata, FSL_MC_DATA_ERR_INJECT_HI, val);
 		return count;
 	}
 	return 0;
@@ -118,7 +131,7 @@ static ssize_t fsl_mc_inject_data_lo_store(struct device *dev,
 		if (rc)
 			return rc;
 
-		ddr_out32(pdata->mc_vbase + FSL_MC_DATA_ERR_INJECT_LO, val);
+		ddr_out32(pdata, FSL_MC_DATA_ERR_INJECT_LO, val);
 		return count;
 	}
 	return 0;
@@ -138,7 +151,7 @@ static ssize_t fsl_mc_inject_ctrl_store(struct device *dev,
 		if (rc)
 			return rc;
 
-		ddr_out32(pdata->mc_vbase + FSL_MC_ECC_ERR_INJECT, val);
+		ddr_out32(pdata, FSL_MC_ECC_ERR_INJECT, val);
 		return count;
 	}
 	return 0;
@@ -287,7 +300,7 @@ static void fsl_mc_check(struct mem_ctl_info *mci)
 	int bad_data_bit;
 	int bad_ecc_bit;
 
-	err_detect = ddr_in32(pdata->mc_vbase + FSL_MC_ERR_DETECT);
+	err_detect = ddr_in32(pdata, FSL_MC_ERR_DETECT);
 	if (!err_detect)
 		return;
 
@@ -296,14 +309,14 @@ static void fsl_mc_check(struct mem_ctl_info *mci)
 
 	/* no more processing if not ECC bit errors */
 	if (!(err_detect & (DDR_EDE_SBE | DDR_EDE_MBE))) {
-		ddr_out32(pdata->mc_vbase + FSL_MC_ERR_DETECT, err_detect);
+		ddr_out32(pdata, FSL_MC_ERR_DETECT, err_detect);
 		return;
 	}
 
-	syndrome = ddr_in32(pdata->mc_vbase + FSL_MC_CAPTURE_ECC);
+	syndrome = ddr_in32(pdata, FSL_MC_CAPTURE_ECC);
 
 	/* Mask off appropriate bits of syndrome based on bus width */
-	bus_width = (ddr_in32(pdata->mc_vbase + FSL_MC_DDR_SDRAM_CFG) &
+	bus_width = (ddr_in32(pdata, FSL_MC_DDR_SDRAM_CFG) &
 		     DSC_DBW_MASK) ? 32 : 64;
 	if (bus_width == 64)
 		syndrome &= 0xff;
@@ -311,8 +324,8 @@ static void fsl_mc_check(struct mem_ctl_info *mci)
 		syndrome &= 0xffff;
 
 	err_addr = make64(
-		ddr_in32(pdata->mc_vbase + FSL_MC_CAPTURE_EXT_ADDRESS),
-		ddr_in32(pdata->mc_vbase + FSL_MC_CAPTURE_ADDRESS));
+		ddr_in32(pdata, FSL_MC_CAPTURE_EXT_ADDRESS),
+		ddr_in32(pdata, FSL_MC_CAPTURE_ADDRESS));
 	pfn = err_addr >> PAGE_SHIFT;
 
 	for (row_index = 0; row_index < mci->nr_csrows; row_index++) {
@@ -321,8 +334,8 @@ static void fsl_mc_check(struct mem_ctl_info *mci)
 			break;
 	}
 
-	cap_high = ddr_in32(pdata->mc_vbase + FSL_MC_CAPTURE_DATA_HI);
-	cap_low = ddr_in32(pdata->mc_vbase + FSL_MC_CAPTURE_DATA_LO);
+	cap_high = ddr_in32(pdata, FSL_MC_CAPTURE_DATA_HI);
+	cap_low = ddr_in32(pdata, FSL_MC_CAPTURE_DATA_LO);
 
 	/*
 	 * Analyze single-bit errors on 64-bit wide buses
@@ -374,7 +387,7 @@ static void fsl_mc_check(struct mem_ctl_info *mci)
 				     row_index, 0, -1,
 				     mci->ctl_name, "");
 
-	ddr_out32(pdata->mc_vbase + FSL_MC_ERR_DETECT, err_detect);
+	ddr_out32(pdata, FSL_MC_ERR_DETECT, err_detect);
 }
 
 static irqreturn_t fsl_mc_isr(int irq, void *dev_id)
@@ -383,7 +396,7 @@ static irqreturn_t fsl_mc_isr(int irq, void *dev_id)
 	struct fsl_mc_pdata *pdata = mci->pvt_info;
 	u32 err_detect;
 
-	err_detect = ddr_in32(pdata->mc_vbase + FSL_MC_ERR_DETECT);
+	err_detect = ddr_in32(pdata, FSL_MC_ERR_DETECT);
 	if (!err_detect)
 		return IRQ_NONE;
 
@@ -403,7 +416,7 @@ static void fsl_ddr_init_csrows(struct mem_ctl_info *mci)
 	u32 cs_bnds;
 	int index;
 
-	sdram_ctl = ddr_in32(pdata->mc_vbase + FSL_MC_DDR_SDRAM_CFG);
+	sdram_ctl = ddr_in32(pdata, FSL_MC_DDR_SDRAM_CFG);
 
 	sdtype = sdram_ctl & DSC_SDTYPE_MASK;
 	if (sdram_ctl & DSC_RD_EN) {
@@ -438,6 +451,9 @@ static void fsl_ddr_init_csrows(struct mem_ctl_info *mci)
 		case 0x05000000:
 			mtype = MEM_DDR4;
 			break;
+		case 0x04000000:
+			mtype = MEM_LPDDR4;
+			break;
 		default:
 			mtype = MEM_UNKNOWN;
 			break;
@@ -451,7 +467,7 @@ static void fsl_ddr_init_csrows(struct mem_ctl_info *mci)
 		csrow = mci->csrows[index];
 		dimm = csrow->channels[0]->dimm;
 
-		cs_bnds = ddr_in32(pdata->mc_vbase + FSL_MC_CS_BNDS_0 +
+		cs_bnds = ddr_in32(pdata, FSL_MC_CS_BNDS_0 +
 				   (index * FSL_MC_CS_BNDS_OFS));
 
 		start = (cs_bnds & 0xffff0000) >> 16;
@@ -471,7 +487,9 @@ static void fsl_ddr_init_csrows(struct mem_ctl_info *mci)
 		dimm->grain = 8;
 		dimm->mtype = mtype;
 		dimm->dtype = DEV_UNKNOWN;
-		if (sdram_ctl & DSC_X32_EN)
+		if (pdata->flag == TYPE_IMX9)
+			dimm->dtype = DEV_X16;
+		else if (sdram_ctl & DSC_X32_EN)
 			dimm->dtype = DEV_X32;
 		dimm->edac_mode = EDAC_SECDED;
 	}
@@ -483,7 +501,7 @@ int fsl_mc_err_probe(struct platform_device *op)
 	struct edac_mc_layer layers[2];
 	struct fsl_mc_pdata *pdata;
 	struct resource r;
-	u32 sdram_ctl;
+	u32 sdram_ctl, ecc_en_mask;
 	int res;
 
 	if (!devres_open_group(&op->dev, fsl_mc_err_probe, GFP_KERNEL))
@@ -509,6 +527,8 @@ int fsl_mc_err_probe(struct platform_device *op)
 	dev_set_drvdata(mci->pdev, mci);
 	mci->ctl_name = pdata->name;
 	mci->dev_name = pdata->name;
+
+	pdata->flag = (unsigned long)device_get_match_data(&op->dev);
 
 	/*
 	 * Get the endianness of DDR controller registers.
@@ -538,8 +558,14 @@ int fsl_mc_err_probe(struct platform_device *op)
 		goto err;
 	}
 
-	sdram_ctl = ddr_in32(pdata->mc_vbase + FSL_MC_DDR_SDRAM_CFG);
-	if (!(sdram_ctl & DSC_ECC_EN)) {
+	if (pdata->flag == TYPE_IMX9) {
+		sdram_ctl = ddr_in32(pdata, IMX9_MC_ERR_EN);
+		ecc_en_mask = ERR_ECC_EN | ERR_INLINE_ECC;
+	} else {
+		sdram_ctl = ddr_in32(pdata, FSL_MC_DDR_SDRAM_CFG);
+		ecc_en_mask = DSC_ECC_EN;
+	}
+	if ((sdram_ctl & ecc_en_mask) != ecc_en_mask) {
 		/* no ECC */
 		pr_warn("%s: No ECC DIMMs discovered\n", __func__);
 		res = -ENODEV;
@@ -550,7 +576,8 @@ int fsl_mc_err_probe(struct platform_device *op)
 	mci->mtype_cap = MEM_FLAG_DDR | MEM_FLAG_RDDR |
 			 MEM_FLAG_DDR2 | MEM_FLAG_RDDR2 |
 			 MEM_FLAG_DDR3 | MEM_FLAG_RDDR3 |
-			 MEM_FLAG_DDR4 | MEM_FLAG_RDDR4;
+			 MEM_FLAG_DDR4 | MEM_FLAG_RDDR4 |
+			 MEM_FLAG_LPDDR4;
 	mci->edac_ctl_cap = EDAC_FLAG_NONE | EDAC_FLAG_SECDED;
 	mci->edac_cap = EDAC_FLAG_SECDED;
 	mci->mod_name = EDAC_MOD_STR;
@@ -565,11 +592,11 @@ int fsl_mc_err_probe(struct platform_device *op)
 	fsl_ddr_init_csrows(mci);
 
 	/* store the original error disable bits */
-	orig_ddr_err_disable = ddr_in32(pdata->mc_vbase + FSL_MC_ERR_DISABLE);
-	ddr_out32(pdata->mc_vbase + FSL_MC_ERR_DISABLE, 0);
+	orig_ddr_err_disable = ddr_in32(pdata, FSL_MC_ERR_DISABLE);
+	ddr_out32(pdata, FSL_MC_ERR_DISABLE, 0);
 
 	/* clear all error bits */
-	ddr_out32(pdata->mc_vbase + FSL_MC_ERR_DETECT, ~0);
+	ddr_out32(pdata, FSL_MC_ERR_DETECT, ~0);
 
 	res = edac_mc_add_mc_with_groups(mci, fsl_ddr_dev_groups);
 	if (res) {
@@ -578,15 +605,15 @@ int fsl_mc_err_probe(struct platform_device *op)
 	}
 
 	if (edac_op_state == EDAC_OPSTATE_INT) {
-		ddr_out32(pdata->mc_vbase + FSL_MC_ERR_INT_EN,
+		ddr_out32(pdata, FSL_MC_ERR_INT_EN,
 			  DDR_EIE_MBEE | DDR_EIE_SBEE);
 
 		/* store the original error management threshold */
-		orig_ddr_err_sbe = ddr_in32(pdata->mc_vbase +
+		orig_ddr_err_sbe = ddr_in32(pdata,
 					    FSL_MC_ERR_SBE) & 0xff0000;
 
 		/* set threshold to 1 error per interrupt */
-		ddr_out32(pdata->mc_vbase + FSL_MC_ERR_SBE, 0x10000);
+		ddr_out32(pdata, FSL_MC_ERR_SBE, 0x10000);
 
 		/* register interrupts */
 		pdata->irq = platform_get_irq(op, 0);
@@ -627,12 +654,12 @@ int fsl_mc_err_remove(struct platform_device *op)
 	edac_dbg(0, "\n");
 
 	if (edac_op_state == EDAC_OPSTATE_INT) {
-		ddr_out32(pdata->mc_vbase + FSL_MC_ERR_INT_EN, 0);
+		ddr_out32(pdata, FSL_MC_ERR_INT_EN, 0);
 	}
 
-	ddr_out32(pdata->mc_vbase + FSL_MC_ERR_DISABLE,
+	ddr_out32(pdata, FSL_MC_ERR_DISABLE,
 		  orig_ddr_err_disable);
-	ddr_out32(pdata->mc_vbase + FSL_MC_ERR_SBE, orig_ddr_err_sbe);
+	ddr_out32(pdata, FSL_MC_ERR_SBE, orig_ddr_err_sbe);
 
 	edac_mc_del_mc(&op->dev);
 	edac_mc_free(mci);
