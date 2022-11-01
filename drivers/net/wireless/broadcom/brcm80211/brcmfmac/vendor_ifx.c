@@ -463,3 +463,36 @@ int ifx_cfg80211_vndr_cmds_muedca_opt(struct wiphy *wiphy,
 
 	return ret;
 }
+
+int ifx_cfg80211_vndr_cmds_amsdu(struct wiphy *wiphy,
+				 struct wireless_dev *wdev,
+				 const void *data, int len)
+{
+	int ret = 0;
+	struct brcmf_cfg80211_vif *vif;
+	struct brcmf_if *ifp;
+	int val = *(s32 *)data;
+	s32 get_amsdu = 0;
+
+	vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+	ifp = vif->ifp;
+
+	if (val == 0xa) {
+		ret = brcmf_fil_iovar_int_get(ifp, "amsdu", &get_amsdu);
+		if (ret) {
+			brcmf_err("get amsdu error:%d\n", ret);
+
+			return ret;
+		}
+
+		brcmf_dbg(INFO, "get amsdu: %d\n", get_amsdu);
+		ifx_cfg80211_vndr_send_cmd_reply(
+						wiphy, &get_amsdu, sizeof(int));
+	} else {
+		ret = brcmf_fil_iovar_int_set(ifp, "amsdu", val);
+		if (ret)
+			brcmf_err("set amsdu error:%d\n", ret);
+	}
+
+	return ret;
+}

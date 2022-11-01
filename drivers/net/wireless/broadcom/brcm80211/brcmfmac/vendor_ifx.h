@@ -82,7 +82,7 @@ enum ifx_nl80211_vendor_subcmds {
 	SCMD(RSV10)		= 10,
 	SCMD(MUEDCA_OPT_ENABLE)		= 11,
 	SCMD(RSV12)		= 12,
-	SCMD(RSV13)		= 13,
+	SCMD(AMSDU)		= 13,
 	SCMD(TWT)		= 14,
 	SCMD(RSV15)		= 15,
 	SCMD(BSSCOLOR)		= 16,
@@ -484,6 +484,9 @@ int ifx_cfg80211_vndr_cmds_bsscolor(struct wiphy *wiphy,
 int ifx_cfg80211_vndr_cmds_muedca_opt(struct wiphy *wiphy,
 				      struct wireless_dev *wdev,
 				      const void *data, int len);
+int ifx_cfg80211_vndr_cmds_amsdu(struct wiphy *wiphy,
+				 struct wireless_dev *wdev,
+				 const void *data, int len);
 
 #endif /* IFX_VENDOR_H */
 
