@@ -421,3 +421,45 @@ int ifx_cfg80211_vndr_cmds_bsscolor(struct wiphy *wiphy,
 
 	return ret;
 }
+
+int ifx_cfg80211_vndr_cmds_muedca_opt(struct wiphy *wiphy,
+				      struct wireless_dev *wdev,
+				      const void *data, int len)
+{
+	int ret = 0;
+	struct brcmf_cfg80211_vif *vif;
+	struct brcmf_if *ifp;
+	struct bcm_xtlv *he_tlv;
+	u8 val = *(u8 *)data;
+	u8 param[8] = {0};
+
+	vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+	ifp = vif->ifp;
+	he_tlv = (struct bcm_xtlv *)param;
+	he_tlv->id = cpu_to_le16(IFX_HE_CMD_MUEDCA_OPT);
+
+	if (val == 0xa) {
+		/* To get fw iovars of the form "wl he muedca_opt_enable"
+		 * using iw, call the parent iovar "he" with the subcmd
+		 * filled and passed along
+		 * ./iw dev wlan0 vendor recv 0x000319 0xb 0xa
+		 */
+		ret = brcmf_fil_iovar_data_get(ifp, "he", param, sizeof(param));
+		if (ret) {
+			brcmf_err("get he muedca_opt_enable error:%d\n", ret);
+		} else {
+			brcmf_dbg(INFO,
+				  "get he muedca_opt_enable: %d\n", *param);
+			ifx_cfg80211_vndr_send_cmd_reply(wiphy, param, 1);
+		}
+	} else {
+		he_tlv->len = cpu_to_le16(1);
+		he_tlv->data[0] = val;
+		ret = brcmf_fil_iovar_data_set(ifp, "he",
+					       param, sizeof(param));
+		if (ret)
+			brcmf_err("set he muedca_opt_enable error:%d\n", ret);
+	}
+
+	return ret;
+}
