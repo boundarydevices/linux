@@ -85,7 +85,8 @@ enum ifx_nl80211_vendor_subcmds {
 	SCMD(RSV13)		= 13,
 	SCMD(TWT)		= 14,
 	SCMD(RSV15)		= 15,
-	SCMD(MAX)		= 16
+	SCMD(BSSCOLOR)		= 16,
+	SCMD(MAX)		= 17
 };
 
 /* enum ifx_vendor_attr - IFX nl80211 vendor attributes
@@ -321,6 +322,41 @@ enum {
 	IFX_TWT_CMD_LAST
 };
 
+/**
+ * HE top level command IDs
+ */
+enum {
+	IFX_HE_CMD_ENAB = 0,
+	IFX_HE_CMD_FEATURES = 1,
+	IFX_HE_CMD_TWT_SETUP = 2,
+	IFX_HE_CMD_TWT_TEARDOWN = 3,
+	IFX_HE_CMD_TWT_INFO = 4,
+	IFX_HE_CMD_BSSCOLOR = 5,
+	IFX_HE_CMD_PARTIAL_BSSCOLOR = 6,
+	IFX_HE_CMD_CAP = 7,
+	IFX_HE_CMD_STAID = 8,
+	IFX_HE_CMD_RTSDURTHRESH = 10,
+	IFX_HE_CMD_PEDURATION = 11,
+	IFX_HE_CMD_TESTBED_MODE = 12,
+	IFX_HE_CMD_OMI = 13,
+	IFX_HE_CMD_MAC_PAD_DUR = 14,
+	IFX_HE_CMD_MUEDCA = 15,
+	IFX_HE_CMD_MACCAP = 16,
+	IFX_HE_CMD_PHYCAP = 17,
+	IFX_HE_CMD_DISPLAY = 18,
+	IFX_HE_CMD_ACTION = 19,
+	IFX_HE_CMD_OFDMATX = 20,
+	IFX_HE_CMD_20IN80_MODE = 21,
+	IFX_HE_CMD_SMPS = 22,
+	IFX_HE_CMD_PPETHRESH = 23,
+	IFX_HE_CMD_HTC_OMI_EN = 24,
+	IFX_HE_CMD_ERSU_EN = 25,
+	IFX_HE_CMD_PREPUNCRX_EN = 26,
+	IFX_HE_CMD_MIMOCAP_EN = 27,
+	IFX_HE_CMD_MUEDCA_OPT = 28,
+	IFX_HE_CMD_LAST
+};
+
 static const struct nla_policy
 ifx_vendor_attr_twt_param_policy[IFX_VENDOR_ATTR_TWT_PARAM_MAX + 1] = {
 	[IFX_VENDOR_ATTR_TWT_PARAM_UNSPEC] = {.type = NLA_U8},
@@ -442,6 +478,9 @@ typedef struct ifx_twt_teardown {
 
 int ifx_cfg80211_vndr_cmds_twt(struct wiphy *wiphy, 
 	struct wireless_dev *wdev, const void  *data, int len);
+int ifx_cfg80211_vndr_cmds_bsscolor(struct wiphy *wiphy,
+				    struct wireless_dev *wdev,
+				    const void *data, int len);
 
 #endif /* IFX_VENDOR_H */
 

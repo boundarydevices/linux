@@ -37,6 +37,23 @@
 #include "fwil.h"
 #include "vendor_ifx.h"
 
+static int ifx_cfg80211_vndr_send_cmd_reply(struct wiphy *wiphy,
+					    const void  *data, int len)
+{
+	struct sk_buff *skb;
+
+	/* Alloc the SKB for vendor_event */
+	skb = cfg80211_vendor_cmd_alloc_reply_skb(wiphy, len);
+	if (unlikely(!skb)) {
+		brcmf_err("skb alloc failed\n");
+		return -ENOMEM;
+	}
+
+	/* Push the data to the skb */
+	nla_put_nohdr(skb, len, data);
+	return cfg80211_vendor_cmd_reply(skb);
+}
+
 /*
  * Wake Duration derivation from Nominal Minimum Wake Duration
  */
@@ -370,4 +387,37 @@ int ifx_cfg80211_vndr_cmds_twt(struct wiphy *wiphy,
 	return ifx_twt_oper(wdev, twt);
 }
 
+int ifx_cfg80211_vndr_cmds_bsscolor(struct wiphy *wiphy,
+				    struct wireless_dev *wdev,
+				    const void *data, int len)
+{
+	int ret = 0;
+	struct brcmf_cfg80211_vif *vif;
+	struct brcmf_if *ifp;
+	struct bcm_xtlv *he_tlv;
+	u8 val = *(u8 *)data;
+	u8 param[8] = {0};
 
+	vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+	ifp = vif->ifp;
+	he_tlv = (struct bcm_xtlv *)param;
+	he_tlv->id = cpu_to_le16(IFX_HE_CMD_BSSCOLOR);
+
+	if (val == 0xa) {
+		/* To get fw iovars of the form "wl he bsscolor" using iw,
+		 * call the parent iovar "he" with the subcmd filled and
+		 * passed along ./iw dev wlan0 vendor recv 0x000319 0x10 0xa
+		 */
+		ret = brcmf_fil_iovar_data_get(ifp, "he", param, sizeof(param));
+		if (ret) {
+			brcmf_err("get he bss_color error:%d\n", ret);
+		} else {
+			brcmf_dbg(INFO, "get he bss_color: %d\n", *param);
+			ifx_cfg80211_vndr_send_cmd_reply(wiphy, param, 1);
+		}
+	} else {
+		brcmf_dbg(INFO, "not support set bsscolor during runtime!\n");
+	}
+
+	return ret;
+}
