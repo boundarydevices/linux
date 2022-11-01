@@ -262,6 +262,13 @@ const struct wiphy_vendor_command brcmf_vendor_cmds[] = {
 			   ifx_cfg80211_vndr_cmds_muedca_opt)
 	},
 	{
+		IFX_SUBCMD(AMSDU,
+			   (WIPHY_VENDOR_CMD_NEED_WDEV |
+			    WIPHY_VENDOR_CMD_NEED_NETDEV),
+			   VENDOR_CMD_RAW_DATA,
+			   ifx_cfg80211_vndr_cmds_amsdu)
+	},
+	{
 		IFX_SUBCMD(TWT,
 			   (WIPHY_VENDOR_CMD_NEED_WDEV |
 			    WIPHY_VENDOR_CMD_NEED_NETDEV),
