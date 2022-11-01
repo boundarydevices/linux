@@ -25,6 +25,7 @@ struct enetc_tx_swbd {
 	union {
 		struct sk_buff *skb;
 		struct xdp_frame *xdp_frame;
+		struct xdp_buff *xsk_buff;
 	};
 	dma_addr_t dma;
 	struct page *page;	/* valid only if is_xdp_tx */
@@ -37,6 +38,7 @@ struct enetc_tx_swbd {
 	u8 is_eof:1;
 	u8 is_xdp_tx:1;
 	u8 is_xdp_redirect:1;
+	u8 is_xsk:1;
 	u8 qbv_en:1;
 };
 
@@ -49,10 +51,11 @@ struct enetc_tx_swbd {
 	(SKB_WITH_OVERHEAD(ENETC_RXB_TRUESIZE) - XDP_PACKET_HEADROOM)
 
 struct enetc_rx_swbd {
-	dma_addr_t dma;
+	struct xdp_buff *xsk_buff;
 	struct page *page;
-	u16 page_offset;
+	dma_addr_t dma;
 	enum dma_data_direction dir;
+	u16 page_offset;
 	u16 len;
 };
 
@@ -79,6 +82,7 @@ struct enetc_ring_stats {
 
 struct enetc_xdp_data {
 	struct xdp_rxq_info rxq;
+	struct xsk_buff_pool *xsk_pool;
 	struct bpf_prog *prog;
 	int xdp_tx_in_flight;
 };
@@ -86,6 +90,7 @@ struct enetc_xdp_data {
 #define ENETC_RX_RING_DEFAULT_SIZE	2048
 #define ENETC_TX_RING_DEFAULT_SIZE	2048
 #define ENETC_DEFAULT_TX_WORK		(ENETC_TX_RING_DEFAULT_SIZE / 2)
+#define ENETC_XSK_TX_BATCH		ENETC_DEFAULT_TX_WORK
 
 struct enetc_bdr {
 	struct device *dev; /* for DMA mapping */
@@ -337,6 +342,7 @@ enum enetc_active_offloads {
 
 enum enetc_flags_bit {
 	ENETC_TX_ONESTEP_TSTAMP_IN_PROGRESS = 0,
+	ENETC_DOWN,
 };
 
 /* interrupt coalescing modes */
@@ -424,9 +430,10 @@ struct net_device_stats *enetc_get_stats(struct net_device *ndev);
 void enetc_set_features(struct net_device *ndev, netdev_features_t features);
 int enetc_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd);
 int enetc_setup_tc_mqprio(struct net_device *ndev, void *type_data);
-int enetc_setup_bpf(struct net_device *dev, struct netdev_bpf *xdp);
+int enetc_setup_bpf(struct net_device *ndev, struct netdev_bpf *bpf);
 int enetc_xdp_xmit(struct net_device *ndev, int num_frames,
 		   struct xdp_frame **frames, u32 flags);
+int enetc_xsk_wakeup(struct net_device *dev, u32 queue, u32 flags);
 
 /* ethtool */
 void enetc_set_ethtool_ops(struct net_device *ndev);
