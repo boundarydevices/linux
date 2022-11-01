@@ -30,6 +30,7 @@
 #include "fwil.h"
 #include "proto.h"
 #include "vendor.h"
+#include "vendor_ifx.h"
 #include "bus.h"
 #include "common.h"
 
@@ -141,7 +142,6 @@ struct cca_msrmnt_query {
 /* start enum value for BSS properties */
 #define WL_WSEC_INFO_BSS_BASE 0x0100
 #define WL_WSEC_INFO_BSS_ALGOS (WL_WSEC_INFO_BSS_BASE + 6)
-#define WL_HE_CMD_BSSCOLOR 5
 
 static bool check_vif_up(struct brcmf_cfg80211_vif *vif)
 {
@@ -407,12 +407,6 @@ struct wl_wsec_info {
 	u8 pad[2];
 	u8 num_tlvs;
 	struct wl_wsec_info_tlv tlvs[1]; /* tlv data follows */
-};
-
-struct bcm_xtlv {
-	u16	id;
-	u16	len;
-	u8	data[1];
 };
 
 static int brcmf_setup_wiphybands(struct brcmf_cfg80211_info *cfg);
@@ -5890,7 +5884,7 @@ brcmf_cfg80211_start_ap(struct wiphy *wiphy, struct net_device *ndev,
 		u8 param[8] = {0};
 
 		he_tlv = (struct bcm_xtlv *)param;
-		he_tlv->id = cpu_to_le16(WL_HE_CMD_BSSCOLOR);
+		he_tlv->id = cpu_to_le16(IFX_HE_CMD_BSSCOLOR);
 		he_tlv->len = cpu_to_le16(1);
 		memcpy(he_tlv->data, &settings->he_bss_color.color, sizeof(u8));
 		err = brcmf_fil_iovar_data_set(ifp, "he", param, sizeof(param));
