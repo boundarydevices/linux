@@ -187,7 +187,19 @@ static const struct mtk_drm_route mt8188_mtk_ddp_main_routes[] = {
 static const unsigned int mt8188_mtk_ddp_ext[] = {
 	DDP_COMPONENT_DRM_OVL_ADAPTOR,
 	DDP_COMPONENT_MERGE5,
-	DDP_COMPONENT_DP_INTF1,
+};
+
+static const unsigned int mt8188_mtk_ddp_ext_routes_0[] = {
+	DDP_COMPONENT_DP_INTF1
+};
+
+static const unsigned int mt8188_mtk_ddp_ext_routes_1[] = {
+	DDP_COMPONENT_DPI1
+};
+
+static const struct mtk_drm_route mt8188_mtk_ddp_ext_routes[] = {
+	{1, 1, ARRAY_SIZE(mt8188_mtk_ddp_ext_routes_0), mt8188_mtk_ddp_ext_routes_0},
+	{1, 1, ARRAY_SIZE(mt8188_mtk_ddp_ext_routes_1), mt8188_mtk_ddp_ext_routes_1}
 };
 
 static const unsigned int mt8192_mtk_ddp_main[] = {
@@ -346,6 +358,8 @@ static const struct mtk_mmsys_driver_data mt8188_vdosys0_driver_data = {
 static const struct mtk_mmsys_driver_data mt8188_vdosys1_driver_data = {
 	.ext_path = mt8188_mtk_ddp_ext,
 	.ext_len = ARRAY_SIZE(mt8188_mtk_ddp_ext),
+	.conn_routes = mt8188_mtk_ddp_ext_routes,
+	.conn_routes_num = ARRAY_SIZE(mt8188_mtk_ddp_ext_routes),
 	.mmsys_id = 1,
 	.mmsys_dev_num = 2,
 };

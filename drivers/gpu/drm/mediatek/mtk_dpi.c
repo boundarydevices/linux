@@ -1172,7 +1172,6 @@ static int mtk_dpi_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-
 	dpi->dpi_ck_cg = devm_clk_get_optional(dev, "ck_cg");
 	if (IS_ERR(dpi->dpi_ck_cg)) {
 		ret = PTR_ERR(dpi->dpi_ck_cg);
