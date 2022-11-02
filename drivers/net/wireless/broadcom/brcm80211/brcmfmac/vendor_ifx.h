@@ -1,5 +1,6 @@
-/*
- * Infineon WLAN driver: vendor specific implement
+// SPDX-License-Identifier: ISC
+
+/* Infineon WLAN driver: vendor specific implement
  *
  * ©2022 Cypress Semiconductor Corporation (an Infineon company)
  * or an affiliate of Cypress Semiconductor Corporation. All rights reserved.
@@ -112,15 +113,15 @@ enum ifx_vendor_attr {
 #define IFX_TWT_SETUP_VER	0u
 #define IFX_TWT_TEARDOWN_VER	0u
 /* Flow flags */
-#define IFX_TWT_FLOW_FLAG_BROADCAST	(1 << 0)
-#define IFX_TWT_FLOW_FLAG_IMPLICIT	(1 << 1)
-#define IFX_TWT_FLOW_FLAG_UNANNOUNCED	(1 << 2)
-#define IFX_TWT_FLOW_FLAG_TRIGGER	(1 << 3)
-#define IFX_TWT_FLOW_FLAG_WAKE_TBTT_NEGO (1 << 4)
-#define IFX_TWT_FLOW_FLAG_REQUEST	(1 << 5)
-#define IFX_TWT_FLOW_FLAG_PROTECT	(1u << 0u)
-#define IFX_TWT_FLOW_FLAG_RESPONDER_PM	(1u << 6u)
-#define IFX_TWT_FLOW_FLAG_UNSOLICITED	(1u << 7u)
+#define IFX_TWT_FLOW_FLAG_BROADCAST	BIT(0)
+#define IFX_TWT_FLOW_FLAG_IMPLICIT	BIT(1)
+#define IFX_TWT_FLOW_FLAG_UNANNOUNCED	BIT(2)
+#define IFX_TWT_FLOW_FLAG_TRIGGER	BIT(3)
+#define IFX_TWT_FLOW_FLAG_WAKE_TBTT_NEGO BIT(4)
+#define IFX_TWT_FLOW_FLAG_REQUEST	BIT(5)
+#define IFX_TWT_FLOW_FLAG_PROTECT	BIT(0)
+#define IFX_TWT_FLOW_FLAG_RESPONDER_PM BIT(6)
+#define IFX_TWT_FLOW_FLAG_UNSOLICITED	BIT(7)
 /* Flow id */
 #define IFX_TWT_FLOW_ID_FID	0x07u	/* flow id */
 #define IFX_TWT_FLOW_ID_GID_MASK	0x70u	/* group id - broadcast TWT only */
@@ -135,16 +136,14 @@ enum ifx_vendor_attr {
 #define IFX_TWT_INFINITE_BTWT_PERSIST	0xFFFFFFFFu
 /* Wake type */
 /* TODO: not yet finalized */
-#define IFX_TWT_TIME_TYPE_BSS	0u	/* The time specified in wake_time_h/l is
-					 * the BSS TSF time.
-					 */
-#define IFX_TWT_TIME_TYPE_OFFSET	1u	/* The time specified in wake_time_h/l is an offset
-					 * of the TSF time when the iovar is processed.
-					 */
-#define IFX_TWT_TIME_TYPE_AUTO	2u	/* The target wake time is chosen internally by the FW */
- 
-/*
- * enum ifx_vendor_attr_twt - Attributes for the TWT vendor command
+/* The time specified in wake_time_h/l is the BSS TSF time. */
+#define IFX_TWT_TIME_TYPE_BSS	0u
+/* The time specified in wake_time_h/l is an offset of the TSF time when the iovar is processed. */
+#define IFX_TWT_TIME_TYPE_OFFSET 1u
+/* The target wake time is chosen internally by the FW */
+#define IFX_TWT_TIME_TYPE_AUTO 2u
+
+/* enum ifx_vendor_attr_twt - Attributes for the TWT vendor command
  *
  * @IFX_VENDOR_ATTR_TWT_UNSPEC: Reserved value 0
  *
@@ -165,8 +164,7 @@ enum ifx_vendor_attr_twt {
 	IFX_VENDOR_ATTR_TWT_MAX
 };
 
-/*
- * enum ifx_twt_oper - TWT operation to be specified using the vendor
+/* enum ifx_twt_oper - TWT operation to be specified using the vendor
  * attribute IFX_VENDOR_ATTR_TWT_OPER
  *
  * @IFX_TWT_OPER_UNSPEC: Reserved value 0
@@ -188,8 +186,7 @@ enum ifx_twt_oper {
 	IFX_TWT_OPER_MAX
 };
 
-/*
- * enum ifx_vendor_attr_twt_param - TWT parameters
+/* enum ifx_vendor_attr_twt_param - TWT parameters
  *
  * @IFX_VENDOR_ATTR_TWT_PARAM_UNSPEC: Reserved value 0
  *
@@ -248,7 +245,7 @@ enum ifx_twt_oper {
  *	otherwise, it shall set it to 0.
  *
  * @IFX_VENDOR_ATTR_TWT_PARAM_CHANNEL: TWT channel field which is set to 0, unless
- * 	the HE STA sets up a subchannel selective transmission operation.
+ *	the HE STA sets up a subchannel selective transmission operation.
  *
  * @IFX_VENDOR_ATTR_TWT_PARAM_TWT_INFO_FRAME_DISABLED: TWT Information frame RX handing
  *	disabled / enabled.
@@ -413,9 +410,8 @@ struct ifx_twt {
 	u8 teardown_all_twt;
 };
 
-/*
- * NOTES:
- * ifx_twt_sdesc_t is used to support both broadcast TWT and individual TWT.
+/* NOTES:
+ * ifx_twt_sdesc is used to support both broadcast TWT and individual TWT.
  * Value in bit[0:2] in 'flow_id' field is interpreted differently:
  * - flow id for individual TWT (when IFX_TWT_FLOW_FLAG_BROADCAST bit is NOT set
  *   in 'flow_flags' field)
@@ -426,7 +422,7 @@ struct ifx_twt {
  */
 
 /* TWT Setup descriptor */
-typedef struct ifx_twt_sdesc {
+struct ifx_twt_sdesc {
 	/* Setup Command. */
 	u8 setup_cmd;		/* See TWT_SETUP_CMD_XXXX in 802.11ah.h */
 	u8 flow_flags;		/* Flow attributes. See WL_TWT_FLOW_FLAG_XXXX below */
@@ -444,18 +440,18 @@ typedef struct ifx_twt_sdesc {
 	u8 channel;		/* Twt channel - Not used for now */
 	u8 negotiation_type;	/* Negotiation Type: See macros TWT_NEGO_TYPE_X */
 	u8 frame_recomm;	/* frame recommendation for broadcast TWTs - Not used for now	 */
-} ifx_twt_sdesc_t;
+};
 
 /* twt teardown descriptor */
-typedef struct ifx_twt_teardesc {
+struct ifx_twt_teardesc {
 	u8 negotiation_type;
 	u8 flow_id;		/* must be between 0 and 7 */
 	u8 bid;		/* must be between 0 and 31 */
 	u8 alltwt;		/* all twt teardown - 0 or 1 */
-} ifx_twt_teardesc_t;
+};
 
 /* HE TWT Setup command */
-typedef struct ifx_twt_setup {
+struct ifx_twt_setup {
 	/* structure control */
 	u16 version;	/* structure version */
 	u16 length;	/* data length (starting after this field) */
@@ -463,21 +459,21 @@ typedef struct ifx_twt_setup {
 	struct ether_addr peer;	/* leave it all 0s' for AP */
 	u8 pad[2];
 	/* setup descriptor */
-	ifx_twt_sdesc_t desc;
-} ifx_twt_setup_t;
+	struct ifx_twt_sdesc desc;
+};
 
 /* HE TWT Teardown command */
-typedef struct ifx_twt_teardown {
+struct ifx_twt_teardown {
 	/* structure control */
 	u16 version;	/* structure version */
 	u16 length;	/* data length (starting after this field) */
 	/* peer address */
 	struct ether_addr peer;	/* leave it all 0s' for AP */
-	ifx_twt_teardesc_t teardesc;	/* Teardown descriptor */
-} ifx_twt_teardown_t;
+	struct ifx_twt_teardesc teardesc;	/* Teardown descriptor */
+};
 
-int ifx_cfg80211_vndr_cmds_twt(struct wiphy *wiphy, 
-	struct wireless_dev *wdev, const void  *data, int len);
+int ifx_cfg80211_vndr_cmds_twt(struct wiphy *wiphy,
+			       struct wireless_dev *wdev, const void  *data, int len);
 int ifx_cfg80211_vndr_cmds_bsscolor(struct wiphy *wiphy,
 				    struct wireless_dev *wdev,
 				    const void *data, int len);
