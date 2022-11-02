@@ -2337,8 +2337,22 @@ static int of_spi_get_gpio_numbers(struct spi_controller *ctlr)
 	for (i = 0; i < ctlr->num_chipselect; i++)
 		cs[i] = -ENOENT;
 
-	for (i = 0; i < nb; i++)
-		cs[i] = of_get_named_gpio(np, "cs-gpios", i);
+	for (i = 0; i < nb; i++) {
+		int ret;
+
+		ret = cs[i] = of_get_named_gpio(np, "cs-gpios", i);
+		if (!gpio_is_valid(ret)) {
+			if (ret == -EPROBE_DEFER)
+				return ret;
+			continue;
+		}
+
+		ret = devm_gpio_request(&ctlr->dev, cs[i], "spi_cs");
+		if (ret) {
+			dev_err(&ctlr->dev, "Can't get CS GPIO %i\n", cs[i]);
+			return ret;
+		}
+	}
 
 	return 0;
 }

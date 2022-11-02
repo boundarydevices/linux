@@ -1971,24 +1971,6 @@ static int spi_imx_probe(struct platform_device *pdev)
 	if (!spi_imx->slave_mode && master->cs_gpios) {
 		if (!spi_imx->idle_state_provided)
 			num_cs = master->num_chipselect;
-		for (i = 0; i < num_cs; i++) {
-			if (!gpio_is_valid(master->cs_gpios[i])) {
-				if (master->cs_gpios[i] == -EPROBE_DEFER) {
-					ret = -EPROBE_DEFER;
-					goto out_spi_bitbang;
-				}
-				continue;
-			}
-
-			ret = devm_gpio_request(&pdev->dev,
-						master->cs_gpios[i],
-						DRIVER_NAME);
-			if (ret) {
-				dev_err(&pdev->dev, "Can't get CS GPIO %i\n",
-					master->cs_gpios[i]);
-				goto out_spi_bitbang;
-			}
-		}
 	}
 	if (spi_imx->idle_state_provided) {
 		spi_imx->current_state = ~spi_imx->idle_state &
@@ -2002,8 +1984,6 @@ static int spi_imx_probe(struct platform_device *pdev)
 	clk_disable_unprepare(spi_imx->clk_per);
 	return ret;
 
-out_spi_bitbang:
-	spi_bitbang_stop(&spi_imx->bitbang);
 out_clk_put:
 	clk_disable_unprepare(spi_imx->clk_ipg);
 out_put_per:
