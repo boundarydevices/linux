@@ -843,8 +843,10 @@
 						audio@MT8188_POWER_DOMAIN_AUDIO {
 							reg = <MT8188_POWER_DOMAIN_AUDIO>;
 							clocks = <&topckgen CLK_TOP_A1SYS_HP>,
-								 <&topckgen CLK_TOP_AUD_INTBUS>;
-							clock-names = "audio0", "audio1";
+								 <&topckgen CLK_TOP_AUD_INTBUS>,
+								 <&adsp_audio26m
+									CLK_AUDIODSP_AUDIO26M>;
+							clock-names = "audio0", "audio1", "audio2";
 							mediatek,infracfg = <&infracfg_ao>;
 							#power-domain-cells = <0>;
 						};
@@ -953,6 +955,66 @@
 			clocks = <&infracfg_ao CLK_INFRA_AO_GCE2>;
 		};
 
+		afe: afe@10b10000 {
+			compatible = "mediatek,mt8188-afe";
+			mediatek,topckgen = <&topckgen>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_AUDIO>;
+			interrupts = <GIC_SPI 822 IRQ_TYPE_LEVEL_HIGH 0>;
+			reg = <0 0x10b10000 0 0x10000>;
+			resets = <&watchdog 14>;
+			reset-names = "audiosys";
+			clocks = <&clk26m>,
+				 <&apmixedsys CLK_APMIXED_APLL1>,
+				 <&apmixedsys CLK_APMIXED_APLL2>,
+				 <&topckgen CLK_TOP_APLL12_CK_DIV0>,
+				 <&topckgen CLK_TOP_APLL12_CK_DIV1>,
+				 <&topckgen CLK_TOP_APLL12_CK_DIV2>,
+				 <&topckgen CLK_TOP_APLL12_CK_DIV3>,
+				 <&topckgen CLK_TOP_APLL12_CK_DIV4>,
+				 <&topckgen CLK_TOP_APLL12_CK_DIV9>,
+				 <&topckgen CLK_TOP_A1SYS_HP>,
+				 <&topckgen CLK_TOP_ASM_H>,
+				 <&topckgen CLK_TOP_ASM_L>,
+				 <&topckgen CLK_TOP_AUD_INTBUS>,
+				 <&topckgen CLK_TOP_AUDIO_H>,
+				 <&topckgen CLK_TOP_AUDIO_LOCAL_BUS>,
+				 <&topckgen CLK_TOP_DPTX>,
+				 <&topckgen CLK_TOP_INTDIR>,
+				 <&topckgen CLK_TOP_I2SO1>,
+				 <&topckgen CLK_TOP_I2SO2>,
+				 <&topckgen CLK_TOP_I2SI1>,
+				 <&topckgen CLK_TOP_I2SI2>,
+				 <&adsp_audio26m CLK_AUDIODSP_AUDIO26M>;
+			clock-names = "clk26m",
+				      "apll1_ck",
+				      "apll2_ck",
+				      "apll12_div0",
+				      "apll12_div1",
+				      "apll12_div2",
+				      "apll12_div3",
+				      "apll12_div4",
+				      "apll12_div9",
+				      "top_a1sys_hp",
+				      "top_asm_h",
+				      "top_asm_l",
+				      "top_aud_intbus",
+				      "top_audio_h",
+				      "top_audio_local_bus",
+				      "top_dptx",
+				      "top_intdir",
+				      "top_i2so1",
+				      "top_i2so2",
+				      "top_i2si1",
+				      "top_i2si2",
+				      "adsp_audio_26m";
+			status = "disabled";
+		};
+
+		adsp_audio26m: clock-controller@10b91100 {
+			compatible = "mediatek,mt8188-adsp_audio26m";
+			reg = <0 0x10b91100 0 0x100>;
+			#clock-cells = <1>;
+		};
 
 		uart0: serial@11001100 {
 			compatible = "mediatek,mt6577-uart";
@@ -2801,6 +2863,11 @@
 				 <&infracfg_ao MT8188_INFRA_RST1_THERMAL_MCU_RST>;
 			nvmem-cells = <&lvts_e_data1>;
 			nvmem-cell-names = "e_data1";
+		};
+
+		sound: sound {
+			mediatek,platform = <&afe>;
+			status = "disabled";
 		};
 
 		thermal_zones: thermal-zones {
