@@ -82,6 +82,7 @@
 		compatible = "arm,ethosu";
 		fsl,cm33-proc = <&cm33>;
 		memory-region = <&ethosu_mem>;
+		power-domains = <&mlmix>;
 	};
 
 	reg_can2_stby: regulator-can2-stby {
