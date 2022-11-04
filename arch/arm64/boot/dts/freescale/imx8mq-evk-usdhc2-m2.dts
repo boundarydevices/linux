@@ -58,6 +58,10 @@
 	>;
 };
 
+&reg_pcie1{
+	status = "disabled";
+};
+
 &pcie0{
 	status = "disabled";
 };
