@@ -298,6 +298,7 @@
 		assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_100M>;
 		clock-names = "main_clk";
 		power-domains = <&pgc_otg1>;
+		wakeup-source;
 	};
 
 	usbphynop2: usbphynop2 {
@@ -308,6 +309,7 @@
 		assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_100M>;
 		clock-names = "main_clk";
 		power-domains = <&pgc_otg2>;
+		wakeup-source;
 	};
 
 	busfreq { /* BUSFREQ */
