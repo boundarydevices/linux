@@ -2113,10 +2113,10 @@ static int mtk_dai_etdm_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	}
 
 	switch (fmt & SND_SOC_DAIFMT_CLOCK_PROVIDER_MASK) {
-	case SND_SOC_DAIFMT_BC_FC:
+	case SND_SOC_DAIFMT_CBP_CFP:
 		etdm_data->slave_mode = true;
 		break;
-	case SND_SOC_DAIFMT_BP_FP:
+	case SND_SOC_DAIFMT_CBC_CFC:
 		etdm_data->slave_mode = false;
 		break;
 	default:
