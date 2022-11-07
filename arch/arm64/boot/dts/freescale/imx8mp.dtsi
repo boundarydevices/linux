@@ -706,6 +706,18 @@
 						       <393216000>,	/* AUDIO_PLL1 */
 						       <361267200>,	/* AUDIO_PLL2 */
 						       <24000000>;	/* HDMI_24M */
+
+				video_pll1 {
+					spread-spectrum = <2>;
+					modulation-frequency = <30000>;
+					modulation-range = <5>;
+				};
+
+				audio_pll2 {
+					spread-spectrum = <2>;
+					modulation-frequency = <30000>;
+					modulation-range = <2>;
+				};
 			};
 
 			src: reset-controller@30390000 {
