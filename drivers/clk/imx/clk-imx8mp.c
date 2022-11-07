@@ -79,7 +79,7 @@ static const char *imx_pdm_sels[] = {"pdm_root", "sai_pll_div2", "dummy", "dummy
 static const char *imx_sai_pll_ref_sels[] = {"osc_24m", "dummy", "dummy", "dummy", };
 static const char *imx_sai_pll_bypass_sels[] = {"sai_pll", "sai_pll_ref_sel", };
 
-static const char *imx_hdmi_phy_clks_sels[] = { "hdmi_glb_24m", "dummy",};
+static const char *imx_hdmi_phy_clks_sels[] = { "osc_24m", "video_pll1_out",};
 static const char *imx_lcdif_clks_sels[] = { "dummy", "hdmi_glb_pix", };
 static const char *imx_hdmi_pipe_clks_sels[] = {"dummy","hdmi_glb_pix", };
 
@@ -114,7 +114,7 @@ static struct imx_blk_ctrl_hw imx8mp_hdmi_blk_ctrl_hws[] = {
 	IMX_BLK_CTRL_CLK_GATE("hdmi_tx_skp", IMX8MP_CLK_HDMI_BLK_CTRL_TX_SKP_CLK, 0x50, 20, "hdmi_glb_apb"),
 	IMX_BLK_CTRL_CLK_GATE("hdmi_tx_prep", IMX8MP_CLK_HDMI_BLK_CTRL_TX_PREP_CLK, 0x50, 21, "hdmi_glb_apb"),
 	IMX_BLK_CTRL_CLK_GATE("hdmi_phy_apb", IMX8MP_CLK_HDMI_BLK_CTRL_TX_PHY_APB_CLK, 0x50, 22, "hdmi_glb_apb"),
-	IMX_BLK_CTRL_CLK_GATE("hdmi_phy_int", IMX8MP_CLK_HDMI_BLK_CTRL_TX_PHY_INT_CLK, 0x50, 24, "hdmi_glb_apb"),
+	IMX_BLK_CTRL_CLK_GATE("hdmi_phy_int", IMX8MP_CLK_HDMI_BLK_CTRL_TX_PHY_INT_CLK, 0x50, 24, "hdmi_phy_sel"),
 	IMX_BLK_CTRL_CLK_GATE("hdmi_sec_mem", IMX8MP_CLK_HDMI_BLK_CTRL_TX_SEC_MEM_CLK, 0x50, 25, "hdmi_glb_ref_266m"),
 	IMX_BLK_CTRL_CLK_GATE("hdmi_trng_skp", IMX8MP_CLK_HDMI_BLK_CTRL_TX_TRNG_SKP_CLK, 0x50, 27, "hdmi_glb_apb"),
 	IMX_BLK_CTRL_CLK_GATE("hdmi_vid_pix",  IMX8MP_CLK_HDMI_BLK_CTRL_TX_VID_LINK_PIX_CLK, 0x50, 28, "hdmi_glb_pix"),
