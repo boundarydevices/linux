@@ -2220,6 +2220,37 @@
 				};
 			};
 		};
+
+		jpgenc@1a030000 {
+			compatible ="mediatek,mtk-jpgenc";
+			reg = <0 0x1a030000 0 0x10000>;
+			mediatek,larb = <SMI_L19_ID>;
+			iommus = <&iommu_vdo M4U_PORT_L19_JPGENC_Y_RDMA>,
+				 <&iommu_vdo M4U_PORT_L19_JPGENC_C_RDMA>,
+				 <&iommu_vdo M4U_PORT_L19_JPGENC_Q_TABLE>,
+				 <&iommu_vdo M4U_PORT_L19_JPGENC_BSDMA>;
+			interrupts = <GIC_SPI 354 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&vencsys CLK_VEN1_CKE2_JPGENC>;
+			clock-names = "jpgenc";
+			power-domains = <&spm MT8188_POWER_DOMAIN_VENC>;
+		};
+
+		jpgdec@1a040000 {
+			compatible = "mediatek,mt8173-jpgdec";
+			reg = <0 0x1a040000 0 0x10000>;/* JPGDEC_C0 */
+			mediatek,larb = <SMI_L19_ID>;
+			iommus = <&iommu_vdo M4U_PORT_L19_JPGDEC_WDMA_0>,
+				 <&iommu_vdo M4U_PORT_L19_JPGDEC_BSDMA_0>,
+				 <&iommu_vdo M4U_PORT_L19_JPGDEC_WDMA_1>,
+				 <&iommu_vdo M4U_PORT_L19_JPGDEC_BSDMA_1>,
+				 <&iommu_vdo M4U_PORT_L19_JPGDEC_HUFF_OFFSET_1>,
+				 <&iommu_vdo M4U_PORT_L19_JPGDEC_HUFF_OFFSET_0>;
+			interrupts = <GIC_SPI 355 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&vencsys CLK_VEN1_CKE0_LARB>,
+				 <&vencsys CLK_VEN1_CKE3_JPGDEC>;
+			clock-names = "jpgdec-smi", "jpgdec";
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDEC0>;
+		};
 	};
 };
 
