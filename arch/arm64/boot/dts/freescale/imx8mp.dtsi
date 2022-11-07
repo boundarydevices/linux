@@ -688,23 +688,24 @@
 						  <&clk IMX8MP_CLK_AUDIO_AXI_SRC>,
 						  <&clk IMX8MP_AUDIO_PLL1>,
 						  <&clk IMX8MP_AUDIO_PLL2>,
-						  <&clk IMX8MP_VIDEO_PLL1>;
-				assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_800M>,
-							 <&clk IMX8MP_ARM_PLL_OUT>,
-							 <&clk IMX8MP_SYS_PLL2_1000M>,
-							 <&clk IMX8MP_SYS_PLL1_800M>,
-							 <0>,
-							 <&clk IMX8MP_SYS_PLL1_800M>,
-							 <&clk IMX8MP_SYS_PLL1_800M>;
-				assigned-clock-rates = <0>, <0>,
-						       <1000000000>,
-						       <800000000>,
-						       <500000000>,
-						       <400000000>,
-						       <800000000>,
-						       <393216000>,
-						       <361267200>,
-						       <1039500000>;
+						  <&clk IMX8MP_CLK_HDMI_24M>;
+				assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_800M>,	/* SRC */
+							 <&clk IMX8MP_ARM_PLL_OUT>,	/* CORE */
+							 <&clk IMX8MP_SYS_PLL2_1000M>,	/* NOC */
+							 <&clk IMX8MP_SYS_PLL1_800M>,	/* NOC_IO */
+							 <0>,				/* GIC */
+							 <&clk IMX8MP_SYS_PLL1_800M>,	/* AHB */
+							 <&clk IMX8MP_SYS_PLL1_800M>;	/* SRC */
+				assigned-clock-rates = <0>,		/* SRC */
+						       <0>,		/* CORE */
+						       <1000000000>,	/* NOC */
+						       <800000000>,	/* NOC_IO */
+						       <500000000>,	/* GIC */
+						       <400000000>,	/* AHB */
+						       <800000000>,	/* SRC */
+						       <393216000>,	/* AUDIO_PLL1 */
+						       <361267200>,	/* AUDIO_PLL2 */
+						       <24000000>;	/* HDMI_24M */
 			};
 
 			src: reset-controller@30390000 {
@@ -2032,12 +2033,10 @@
 						<&hdmiphy 0>;
 				clock-names = "iahb", "isfr", "pix";
 				assigned-clocks = <&clk IMX8MP_CLK_HDMI_APB>,
-							<&clk IMX8MP_CLK_HDMI_AXI>,
-							<&clk IMX8MP_CLK_HDMI_24M>;
+							<&clk IMX8MP_CLK_HDMI_AXI>;
 				assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_133M>,
-							<&clk IMX8MP_SYS_PLL2_500M>,
-							<&clk IMX8MP_CLK_24M>;
-				assigned-clock-rates = <133000000>, <500000000>, <24000000>;
+							<&clk IMX8MP_SYS_PLL2_500M>;
+				assigned-clock-rates = <133000000>, <500000000>;
 				status = "disabled";
 
 				port@0 {
