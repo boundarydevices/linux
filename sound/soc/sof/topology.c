@@ -359,6 +359,21 @@ int get_token_uuid(void *elem, void *object, u32 offset)
 	return 0;
 }
 
+/*
+ * The string gets from topology will be stored in heap, the owner only
+ * holds a char* member point to the heap.
+ */
+int get_token_string(void *elem, void *object, u32 offset)
+{
+	/* "dst" here points to the char* member of the owner */
+	char **dst = (char **)((u8 *)object + offset);
+
+	*dst = kstrdup(elem, GFP_KERNEL);
+	if (!*dst)
+		return -ENOMEM;
+	return 0;
+};
+
 int get_token_comp_format(void *elem, void *object, u32 offset)
 {
 	u32 *val = (u32 *)((u8 *)object + offset);
@@ -396,6 +411,16 @@ static const struct sof_topology_token comp_pin_tokens[] = {
 		offsetof(struct snd_sof_widget, num_sink_pins)},
 	{SOF_TKN_COMP_NUM_SOURCE_PINS, SND_SOC_TPLG_TUPLE_TYPE_WORD, get_token_u32,
 		offsetof(struct snd_sof_widget, num_source_pins)},
+};
+
+static const struct sof_topology_token comp_sink_pin_binding_tokens[] = {
+	{SOF_TKN_COMP_SINK_PIN_BINDING_WNAME, SND_SOC_TPLG_TUPLE_TYPE_STRING,
+		get_token_string, 0},
+};
+
+static const struct sof_topology_token comp_src_pin_binding_tokens[] = {
+	{SOF_TKN_COMP_SRC_PIN_BINDING_WNAME, SND_SOC_TPLG_TUPLE_TYPE_STRING,
+		get_token_string, 0},
 };
 
 /**
@@ -578,7 +603,7 @@ static int sof_parse_string_tokens(struct snd_soc_component *scomp,
 {
 	struct snd_soc_tplg_vendor_string_elem *elem;
 	int found = 0;
-	int i, j;
+	int i, j, ret;
 
 	/* parse element by element */
 	for (i = 0; i < le32_to_cpu(array->num_elems); i++) {
@@ -595,7 +620,9 @@ static int sof_parse_string_tokens(struct snd_soc_component *scomp,
 				continue;
 
 			/* matched - now load token */
-			tokens[j].get_token(elem->string, object, offset + tokens[j].offset);
+			ret = tokens[j].get_token(elem->string, object, offset + tokens[j].offset);
+			if (ret < 0)
+				return ret;
 
 			found++;
 		}
@@ -675,6 +702,7 @@ static int sof_parse_token_sets(struct snd_soc_component *scomp,
 	int found = 0;
 	int total = 0;
 	int asize;
+	int ret;
 
 	while (array_size > 0 && total < count * token_instance_num) {
 		asize = le32_to_cpu(array->size);
@@ -701,8 +729,15 @@ static int sof_parse_token_sets(struct snd_soc_component *scomp,
 						       array);
 			break;
 		case SND_SOC_TPLG_TUPLE_TYPE_STRING:
-			found += sof_parse_string_tokens(scomp, object, offset, tokens, count,
-							 array);
+
+			ret = sof_parse_string_tokens(scomp, object, offset, tokens, count,
+						      array);
+			if (ret < 0) {
+				dev_err(scomp->dev, "error: no memory to copy string token\n");
+				return ret;
+			}
+
+			found += ret;
 			break;
 		case SND_SOC_TPLG_TUPLE_TYPE_BOOL:
 		case SND_SOC_TPLG_TUPLE_TYPE_BYTE:
@@ -1257,6 +1292,79 @@ err:
 	return ret;
 }
 
+static void sof_free_pin_binding(struct snd_sof_widget *swidget,
+				 bool pin_type)
+{
+	char **pin_binding;
+	u32 num_pins;
+	int i;
+
+	if (pin_type == SOF_PIN_TYPE_SINK) {
+		pin_binding = swidget->sink_pin_binding;
+		num_pins = swidget->num_sink_pins;
+	} else {
+		pin_binding = swidget->src_pin_binding;
+		num_pins = swidget->num_source_pins;
+	}
+
+	if (pin_binding) {
+		for (i = 0; i < num_pins; i++)
+			kfree(pin_binding[i]);
+	}
+
+	kfree(pin_binding);
+}
+
+static int sof_parse_pin_binding(struct snd_sof_widget *swidget,
+				 struct snd_soc_tplg_private *priv, bool pin_type)
+{
+	const struct sof_topology_token *pin_binding_token;
+	char *pin_binding[SOF_WIDGET_MAX_NUM_PINS];
+	int token_count;
+	u32 num_pins;
+	char **pb;
+	int ret;
+	int i;
+
+	if (pin_type == SOF_PIN_TYPE_SINK) {
+		num_pins = swidget->num_sink_pins;
+		pin_binding_token = comp_sink_pin_binding_tokens;
+		token_count = ARRAY_SIZE(comp_sink_pin_binding_tokens);
+	} else {
+		num_pins = swidget->num_source_pins;
+		pin_binding_token = comp_src_pin_binding_tokens;
+		token_count = ARRAY_SIZE(comp_src_pin_binding_tokens);
+	}
+
+	memset(pin_binding, 0, SOF_WIDGET_MAX_NUM_PINS * sizeof(char *));
+	ret = sof_parse_token_sets(swidget->scomp, pin_binding, pin_binding_token,
+				   token_count, priv->array, le32_to_cpu(priv->size),
+				   num_pins, sizeof(char *));
+	if (ret < 0)
+		goto err;
+
+	/* copy pin binding array to swidget only if it is defined in topology */
+	if (pin_binding[0]) {
+		pb = kmemdup(pin_binding, num_pins * sizeof(char *), GFP_KERNEL);
+		if (!pb) {
+			ret = -ENOMEM;
+			goto err;
+		}
+		if (pin_type == SOF_PIN_TYPE_SINK)
+			swidget->sink_pin_binding = pb;
+		else
+			swidget->src_pin_binding = pb;
+	}
+
+	return 0;
+
+err:
+	for (i = 0; i < num_pins; i++)
+		kfree(pin_binding[i]);
+
+	return ret;
+}
+
 /* external widget init - used for any driver specific init */
 static int sof_widget_ready(struct snd_soc_component *scomp, int index,
 			    struct snd_soc_dapm_widget *w,
@@ -1298,6 +1406,26 @@ static int sof_widget_ready(struct snd_soc_component *scomp, int index,
 		dev_err(scomp->dev, "invalid pins for %s: [sink: %d, src: %d]\n",
 			swidget->widget->name, swidget->num_sink_pins, swidget->num_source_pins);
 		return -EINVAL;
+	}
+
+	if (swidget->num_sink_pins > 1) {
+		ret = sof_parse_pin_binding(swidget, priv, SOF_PIN_TYPE_SINK);
+		/* on parsing error, pin binding is not allocated, nothing to free. */
+		if (ret < 0) {
+			dev_err(scomp->dev, "failed to parse sink pin binding for %s\n",
+				w->name);
+			return ret;
+		}
+	}
+
+	if (swidget->num_source_pins > 1) {
+		ret = sof_parse_pin_binding(swidget, priv, SOF_PIN_TYPE_SOURCE);
+		/* on parsing error, pin binding is not allocated, nothing to free. */
+		if (ret < 0) {
+			dev_err(scomp->dev, "failed to parse source pin binding for %s\n",
+				w->name);
+			return ret;
+		}
 	}
 
 	dev_dbg(scomp->dev,
@@ -1494,6 +1622,9 @@ out:
 	/* free IPC related data */
 	if (widget_ops[swidget->id].ipc_free)
 		widget_ops[swidget->id].ipc_free(swidget);
+
+	sof_free_pin_binding(swidget, SOF_PIN_TYPE_SINK);
+	sof_free_pin_binding(swidget, SOF_PIN_TYPE_SOURCE);
 
 	kfree(swidget->tuples);
 
