@@ -2924,10 +2924,13 @@ static int imx_tc358743_probe(struct platform_device *pdev)
 	if (!g_td)
 		return -EPROBE_DEFER;
 
-	cpu_np = of_parse_phandle(np, "cpu-dai", 0);
+	cpu_np = of_parse_phandle(np, "ssi-controller", 0);
 	if (!cpu_np) {
-		dev_err(dev, "cpu-dai missing or invalid\n");
-		return -EINVAL;
+		cpu_np = of_parse_phandle(np, "cpu-dai", 0);
+		if (!cpu_np) {
+			dev_err(dev, "cpu-dai or ssi-controller missing or invalid\n");
+			return -EINVAL;
+		}
 	}
 	link->cpu_of_node = cpu_np;
 	link->platform_of_node = cpu_np;
