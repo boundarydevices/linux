@@ -181,7 +181,7 @@ static int mt8365_afe_hw_gain1_vol_get(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
 	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
-	unsigned int val;
+	unsigned int val = 0;
 
 	mt8365_afe_enable_main_clk(afe);
 	regmap_read(afe->regmap, AFE_GAIN1_CON1, &val);
@@ -211,7 +211,7 @@ static int mt8365_afe_hw_gain1_sampleperstep_get(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
 	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
-	unsigned int val;
+	unsigned int val = 0;
 
 	mt8365_afe_enable_main_clk(afe);
 	regmap_read(afe->regmap, AFE_GAIN1_CON0, &val);
@@ -329,7 +329,7 @@ static int mt8365_afe_sinegen_loopback_mode_get(struct snd_kcontrol *kcontrol,
 	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
 	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
 	unsigned int mode;
-	unsigned int val;
+	unsigned int val = 0;
 	unsigned int in_out_sel;
 
 	mt8365_afe_enable_main_clk(afe);
@@ -409,7 +409,7 @@ static int mt8365_afe_sinegen_timing_get(struct snd_kcontrol *kcontrol,
 	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
 	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
 	unsigned int timing;
-	unsigned int val;
+	unsigned int val = 0;
 
 	mt8365_afe_enable_main_clk(afe);
 

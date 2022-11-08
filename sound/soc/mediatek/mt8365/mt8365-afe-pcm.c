@@ -4585,7 +4585,7 @@ static int mt8365_afe_hw_gain1_prepare(struct snd_pcm_substream *substream,
 	const unsigned int rate = runtime->rate;
 	const unsigned int stream = substream->stream;
 	int fs;
-	unsigned int val1, val2;
+	unsigned int val1 = 0, val2 = 0;
 
 	if (be->prepared[stream]) {
 		dev_info(afe->dev, "%s prepared already\n", __func__);
