@@ -953,6 +953,7 @@ static int mtk_hdmi_bridge_mode_valid(struct drm_bridge *bridge,
 	next_bridge = drm_bridge_get_next_bridge(&hdmi->bridge);
 	if (next_bridge) {
 		struct drm_display_mode adjusted_mode;
+		memset(&adjusted_mode, 0, sizeof(struct drm_display_mode));
 
 		drm_mode_copy(&adjusted_mode, mode);
 		if (!drm_bridge_chain_mode_fixup(next_bridge, mode,
