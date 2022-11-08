@@ -21,7 +21,9 @@ properties:
     pattern: "^hdmi-phy@[0-9a-f]+$"
 
   compatible:
-    - const: mediatek,mt8195-hdmi-phy
+    enum:
+      - mediatek,mt8195-hdmi-phy
+      - mediatek,mt8188-hdmi-phy
 
   reg:
     maxItems: 1

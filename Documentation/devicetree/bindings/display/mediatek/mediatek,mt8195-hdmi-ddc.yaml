@@ -17,6 +17,7 @@ properties:
   compatible:
     enum:
       - mediatek,mt8195-hdmi-ddc
+      - mediatek,mt8188-hdmi-ddc
 
   clocks:
     maxItems: 1

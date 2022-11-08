@@ -19,6 +19,7 @@ properties:
       - mediatek,mt7623-cec
       - mediatek,mt8167-cec
       - mediatek,mt8173-cec
+      - mediatek,mt8188-cec
 
   reg:
     maxItems: 1

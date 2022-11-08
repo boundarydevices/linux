@@ -18,6 +18,7 @@ properties:
   compatible:
     enum:
       - mediatek,mt8195-hdmi
+      - mediatek,mt8188-hdmi
 
   reg:
     maxItems: 1
