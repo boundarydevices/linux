@@ -1475,6 +1475,28 @@ static const struct panel_desc lg_lp120up1 = {
 	},
 };
 
+static const struct drm_display_mode auo_g156han03_mode = {
+	.clock = 140910,
+	.hdisplay = 1920,
+	.hsync_start = 1920 + 40,
+	.hsync_end = 1920 + 40 + 40,
+	.htotal = 1920 + 40 + 40 + 80,
+	.vdisplay = 1080,
+	.vsync_start = 1080 + 10,
+	.vsync_end = 1080 + 10 + 10,
+	.vtotal = 1080 + 10 + 10 + 28,
+};
+
+static const struct panel_desc auo_g156han03 = {
+	.modes = &auo_g156han03_mode,
+	.num_modes = 1,
+	.bpc = 8,
+	.size = {
+		.width = 350,
+		.height = 216,
+	},
+};
+
 static const struct drm_display_mode lg_lp129qe_mode = {
 	.clock = 285250,
 	.hdisplay = 2560,
@@ -1685,6 +1707,9 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "auo,b140han06",
 		.data = &auo_b140han06,
+	}, {
+		.compatible = "auo,g156han03",
+		.data = &auo_g156han03,
 	}, {
 		.compatible = "boe,nv101wxmn51",
 		.data = &boe_nv101wxmn51,
