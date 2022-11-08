@@ -155,6 +155,10 @@
 	};
 };
 
+&dpi1 {
+	status = "okay";
+};
+
 &dsi0 {
 	#address-cells = <1>;
 	#size-cells = <0>;
@@ -184,6 +188,10 @@
 			};
 		};
 	};
+};
+
+&hdmi0 {
+	status = "okay";
 };
 
 &pio {
