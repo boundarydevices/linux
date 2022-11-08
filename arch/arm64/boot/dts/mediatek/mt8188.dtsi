@@ -23,6 +23,8 @@
 	#size-cells = <2>;
 
 	aliases {
+		dpi1 = &dpi1;
+		hdmi0 = &hdmi0;
 		gce0 = &gce0;
 		gce1 = &gce1;
 		mmc0 = &mmc0;
@@ -275,6 +277,12 @@
 		};
 	};
 
+	hdmiddc0: ddc-i2c {
+		compatible = "mediatek,mt8188-hdmi-ddc";
+		clocks = <&clk26m>;
+		clock-names = "ddc-i2c";
+	};
+
 	dsu-pmu {
 		compatible = "arm,dsu-pmu";
 		interrupts = <GIC_SPI 18 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -392,6 +400,27 @@
 					 <PINMUX_GPIO95__FUNC_B0_PWRAP_SPI0_MI>,
 					 <PINMUX_GPIO175__FUNC_B0_SPMI_M_SCL>,
 					 <PINMUX_GPIO176__FUNC_B0_SPMI_M_SDA>;
+			};
+
+			hdmi_pins: hdmi-pins {
+				pins-hotplug {
+					pinmux = <PINMUX_GPIO51__FUNC_I0_HDMITX20_HTPLG>;
+					bias-pull-down;
+				};
+				pins-ddc {
+					pinmux = <PINMUX_GPIO53__FUNC_B1_HDMITX20_SCL>,
+						<PINMUX_GPIO54__FUNC_B1_HDMITX20_SDA>;
+					mediatek,drive-strength-adv = <0>;
+					drive-strength = <MTK_DRIVE_10mA>;
+				};
+				pins-cec {
+					pinmux = <PINMUX_GPIO52__FUNC_B1_HDMITX20_CEC>;
+					bias-disable;
+				};
+				pins-5vctrl {
+					pinmux = <PINMUX_GPIO50__FUNC_B_GPIO50>;
+					output-high;
+				};
 			};
 		};
 
@@ -796,6 +825,12 @@
 			#clock-cells = <1>;
 		};
 
+		cec: cec@10014000 {
+			compatible = "mediatek,mt8188-cec";
+			reg = <0 0x10014000 0 0x100>;
+			interrupts = <GIC_SPI 680 IRQ_TYPE_LEVEL_HIGH 0>;
+		};
+
 		pwm: pwm@10048000 {
 			compatible = "mediatek,mt8188-pwm";
 			reg = <0 0x10048000 0 0x1000>;
@@ -1153,6 +1188,19 @@
 				clock-names = "sys_ck";
 				status = "disabled";
 			};
+		};
+
+		hdmi_phy: hdmi-phy@11d5f000 {
+			compatible = "mediatek,mt8188-hdmi-phy";
+			reg = <0 0x11d5f000 0 0x100>;
+			clocks = <&infracfg_ao CLK_INFRA_AO_HDMI_26M>;
+			clock-names = "pll_ref";
+			#clock-names = "hdmi_xtal_sel";
+			clock-output-names = "hdmi_txpll";
+			mediatek,ibias = <0xa>;
+			mediatek,ibias_up = <0x1c>;
+			#clock-cells = <0>;
+			#phy-cells = <0>;
 		};
 
 		mipi_tx0: mipi-dphy0@11c80000 {
@@ -2668,6 +2716,68 @@
 				 <&vencsys CLK_VEN1_CKE3_JPGDEC>;
 			clock-names = "jpgdec-smi", "jpgdec";
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDEC0>;
+		};
+
+		dpi1: dpi1@1c112000 {
+			compatible = "mediatek,mt8195-dpi";
+			reg = <0 0x1c112000 0 0x1000>;
+			mediatek,vdosys1-dpi = <&vdosys1 0x0>;
+			interrupts = <GIC_SPI 524 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			clocks = <&vdosys1 CLK_VDO1_DPI1_MM>,
+				 <&vdosys1 CLK_VDO1_DPI1>,
+				 <&vdosys1 CLK_VDO1_DPI1_HDMI>;
+			clock-names = "engine", "ck_cg", "hdmi_cg";
+			status = "disabled";
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					dpi1_out: endpoint {
+						remote-endpoint = <&hdmi0_in>;
+					};
+				};
+			};
+		};
+
+		hdmi0: hdmi@1c300000 {
+			compatible = "mediatek,mt8188-hdmi";
+			#sound-dai-cells = <0>;
+			reg = <0 0x1c300000 0 0x1000>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_HDMI_TX>;
+			clocks = <&topckgen CLK_TOP_UNIVPLL_D6_D4>,
+				 <&topckgen CLK_TOP_MSDCPLL_D2>,
+				 <&topckgen CLK_TOP_HDMI_APB>,
+				 <&topckgen CLK_TOP_UNIVPLL_D4_D8>,
+				 <&topckgen CLK_TOP_HDCP>,
+				 <&topckgen CLK_TOP_HDCP_24M>,
+				 <&vppsys1 CLK_VPP1_VPP_SPLIT_HDMI>;
+			clock-names = "univpll_d6_d4",
+				      "msdcpll_d2",
+				      "hdmi_apb_sel",
+				      "univpll_d4_d8",
+				      "hdcp_sel",
+				      "hdcp24_sel",
+				      "split_hdmi";
+			interrupts = <GIC_SPI 686 IRQ_TYPE_LEVEL_HIGH 0>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&hdmi_pins>;
+			phys = <&hdmi_phy>;
+			phy-names = "hdmi";
+			cec = <&cec>;
+			ddc-i2c-bus = <&hdmiddc0>;
+			status = "disabled";
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					hdmi0_in: endpoint {
+						remote-endpoint = <&dpi1_out>;
+					};
+				};
+			};
 		};
 	};
 };
