@@ -622,7 +622,7 @@ static int mt8365_afe_set_2nd_i2s_asrc(struct mtk_base_afe *afe,
 
 	ofs = mt8365_afe_fs_timing(rate_out);
 
-	if (ifs < 0)
+	if (ofs < 0)
 		return -EINVAL;
 
 	regmap_update_bits(afe->regmap, AFE_ASRC_2CH_CON2,
