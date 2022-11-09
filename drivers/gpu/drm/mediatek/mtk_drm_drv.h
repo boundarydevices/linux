@@ -11,6 +11,7 @@
 
 #define MAX_CRTC	3
 #define MAX_CONNECTOR	2
+#define MAX_ALIAS	3
 #define DDP_COMPONENT_DRM_OVL_ADAPTOR (DDP_COMPONENT_ID_MAX + 1)
 #define DDP_COMPONENT_DRM_ID_MAX (DDP_COMPONENT_DRM_OVL_ADAPTOR + 1)
 
@@ -24,6 +25,7 @@ struct regmap;
 
 struct mtk_drm_route {
 	const unsigned int crtc_id;
+	const unsigned int route_mmsys_id;
 	const unsigned int route_len;
 	const unsigned int *route_ddp;
 };

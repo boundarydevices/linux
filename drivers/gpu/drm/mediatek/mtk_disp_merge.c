@@ -65,6 +65,7 @@ struct mtk_disp_merge {
 	void __iomem			*regs;
 	struct clk			*clk;
 	struct clk			*async_clk;
+	struct clk			*async2_clk;
 	struct cmdq_client_reg		cmdq_reg;
 	bool				fifo_en;
 	bool				mute_support;
@@ -215,6 +216,16 @@ int mtk_merge_clk_enable(struct device *dev)
 		return ret;
 	}
 
+	ret = clk_prepare_enable(priv->async2_clk);
+	if (ret) {
+		/* should clean up the state of priv->clk */
+		clk_disable_unprepare(priv->async_clk);
+		clk_disable_unprepare(priv->clk);
+
+		dev_err(dev, "async2 clk prepare enable failed\n");
+		return ret;
+	}
+
 	return ret;
 }
 
@@ -222,6 +233,7 @@ void mtk_merge_clk_disable(struct device *dev)
 {
 	struct mtk_disp_merge *priv = dev_get_drvdata(dev);
 
+	clk_disable_unprepare(priv->async2_clk);
 	clk_disable_unprepare(priv->async_clk);
 	clk_disable_unprepare(priv->clk);
 }
@@ -270,6 +282,12 @@ static int mtk_disp_merge_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->async_clk)) {
 		dev_err(dev, "failed to get merge async clock\n");
 		return PTR_ERR(priv->async_clk);
+	}
+
+	priv->async2_clk = devm_clk_get_optional(dev, "merge_async2");
+	if (IS_ERR(priv->async2_clk)) {
+		dev_err(dev, "failed to get merge async2 clock\n");
+		return PTR_ERR(priv->async2_clk);
 	}
 
 	if (priv->async_clk) {
