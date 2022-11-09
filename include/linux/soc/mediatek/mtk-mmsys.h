@@ -249,4 +249,6 @@ void mtk_mmsys_mixer_in_config(struct device *dev, int idx, bool alpha_sel, u16 
 void mtk_mmsys_mixer_in_channel_swap(struct device *dev, int idx, bool channel_swap,
 				     struct cmdq_pkt *cmdq_pkt);
 
+void mtk_mmsys_cross_sys_config(struct device *dev_sys0, struct device *dev_sys1,
+				int width, int height, struct cmdq_pkt *cmdq_pkt);
 #endif /* __MTK_MMSYS_H */

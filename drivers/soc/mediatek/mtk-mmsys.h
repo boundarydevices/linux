@@ -108,6 +108,10 @@ struct mtk_mmsys_driver_data {
 	const unsigned int num_configs;
 	const u32 *mdp_mmsys_configs;
 	const unsigned int mdp_num_mmsys_configs;
+	const u32 *main_sys_w_h_configs;
+	const unsigned int num_main_sys_w_h_configs;
+	const u32 *cross_sys_w_h_configs;
+	const unsigned int num_cross_sys_w_h_configs;
 	bool vppsys;
 };
 
