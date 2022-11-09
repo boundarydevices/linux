@@ -788,6 +788,7 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 	struct mdp_cmdq_cb_param *cb_param;
 	struct mdp_dev *mdp;
 	struct device *dev;
+	u32 cmdq_user;
 	int i;
 
 	if (!data.data) {
@@ -798,19 +799,20 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 	cb_param = (struct mdp_cmdq_cb_param *)data.data;
 	mdp = cb_param->mdp;
 	dev = &mdp->pdev->dev;
+	cmdq_user = cb_param->cmdq_user;
 
-	mdp->stage_flag[cb_param->cmdq_user] |= MDP_STAGE_CB_START;
+	mdp->stage_flag[cmdq_user] |= MDP_STAGE_CB_START;
 
 	if (cb_param->dualpipe)
 		cb_param->finalize =
-			(atomic_dec_and_test(&mdp->cmdq_count[cb_param->cmdq_user]));
+			(atomic_dec_and_test(&mdp->cmdq_count[cmdq_user]));
 	else
 		cb_param->finalize = true;
 
 	if (cb_param->finalize && cb_param->mdp_ctx)
 		mdp_m2m_job_finish(cb_param->mdp_ctx);
 
-	mdp->stage_flag[cb_param->cmdq_user] |= MDP_STAGE_M2M_JOB_DONE;
+	mdp->stage_flag[cmdq_user] |= MDP_STAGE_M2M_JOB_DONE;
 
 #ifdef MDP_DEBUG
 		if (data.sta < 0) {
@@ -830,7 +832,7 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 		cb_param->user_cmdq_cb(user_cb_data);
 	}
 
-	mdp->stage_flag[cb_param->cmdq_user] |= MDP_STAGE_SEND_CB;
+	mdp->stage_flag[cmdq_user] |= MDP_STAGE_SEND_CB;
 
 	cmdq_pkt_destroy(cb_param->pkt);
 	INIT_WORK(&cb_param->auto_release_work, mdp_auto_release_work);
@@ -853,7 +855,7 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 		wake_up(&mdp->callback_wq);
 	}
 
-	mdp->stage_flag[cb_param->cmdq_user] |= MDP_STAGE_CB_DONE;
+	mdp->stage_flag[cmdq_user] |= MDP_STAGE_CB_DONE;
 }
 
 int mdp_cmdq_send(struct mdp_dev *mdp, struct mdp_cmdq_param *param)
