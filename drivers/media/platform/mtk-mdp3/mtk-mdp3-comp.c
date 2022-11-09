@@ -1960,6 +1960,10 @@ static struct mdp_comp *mdp_comp_create(struct mdp_dev *mdp,
 	struct mdp_comp *comp;
 	int ret;
 
+	/* Check id range */
+	if ((id <= MDP_COMP_NONE) || (id >= MDP_MAX_COMP_COUNT))
+		return ERR_PTR(-EINVAL);
+
 	if (mdp->comp[id])
 		return ERR_PTR(-EEXIST);
 
