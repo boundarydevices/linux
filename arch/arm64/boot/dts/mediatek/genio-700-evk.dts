@@ -10,6 +10,7 @@
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/pinctrl/mediatek,mt8188-pinfunc.h>
+#include <dt-bindings/usb/pd.h>
 
 / {
 	model = "MediaTek Genio-700 EVK";
@@ -40,6 +41,24 @@
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
 		gpio = <&pio 84 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	usb_p1_vbus: usb-p1-vbus {
+		compatible = "regulator-fixed";
+		regulator-name = "p1_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&pio 87 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+	};
+
+	lcm1_tp_avdd: lcm1-tp-avdd {
+		compatible = "regulator-fixed";
+		regulator-name = "lcm1-tp-avdd";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&pio 119 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
 
@@ -246,8 +265,16 @@
 		};
 	};
 
+	rt1715_int: rt1715_int_pin {
+		pins_cmd0_dat {
+			pinmux = <PINMUX_GPIO12__FUNC_B_GPIO12>;
+			bias-pull-up;
+			input-enable;
+		};
+	};
+
 	kpd_gpios_def_cfg: keypad-pins-default {
-		pins-kp {
+		pins_kp {
 			pinmux = <PINMUX_GPIO44__FUNC_B1_KPROW0>,
 					<PINMUX_GPIO43__FUNC_B1_KPCOL1>,
 					<PINMUX_GPIO42__FUNC_B1_KPCOL0>;
@@ -523,10 +550,39 @@
 };
 
 &i2c4 {
-	pinctrl-names = "default";
+	pinctrl-names = "default", "default";
 	pinctrl-0 = <&i2c4_pin>;
-	clock-frequency = <400000>;
+	pinctrl-1 = <&rt1715_int>;
+	clock-frequency = <1000000>;
 	status = "okay";
+
+	rt1715@4e {
+		compatible = "richtek,rt1715";
+		reg = <0x4e>;
+		interrupts-extended = <&pio 12 IRQ_TYPE_LEVEL_LOW>;
+		vbus-supply = <&usb_p1_vbus>;
+		status = "disabled";
+
+		usb_con: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			data-role = "dual";
+			power-role = "dual";
+			try-power-role = "sink";
+			source-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
+							PDO_FIXED_DATA_SWAP)>;
+			sink-pdos = <PDO_FIXED(5000, 2000, PDO_FIXED_DUAL_ROLE |
+							PDO_FIXED_DATA_SWAP)>;
+			op-sink-microwatt = <10000000>;
+			orientation-switch = <&it5205fn>;
+			mode-switch = <&it5205fn>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+		};
+	};
 };
 
 &i2c5 {
