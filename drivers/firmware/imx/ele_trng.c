@@ -11,10 +11,6 @@
 #include <linux/firmware/imx/ele_base_msg.h>
 #include "ele_mu.h"
 
-#define CSAL_STATE_SHIFT	8
-#define CSAL_STATE_MASK		0x0000ff00
-#define TRNG_STATE_MASK		0x000000ff
-
 struct ele_trng {
 	struct hwrng rng;
 };
@@ -83,23 +79,7 @@ int ele_get_random(struct hwrng *rng, void *data, size_t len, bool wait)
 int ele_trng_init(struct device *dev)
 {
 	struct ele_trng *trng;
-	int ret, csal_state, trng_state;
-
-	ret = ele_get_trng_state();
-	if (ret < 0) {
-		dev_err(dev, "Failed to get trng state\n");
-		return ret;
-	}
-
-	csal_state = (ret & CSAL_STATE_MASK) >> CSAL_STATE_SHIFT;
-	trng_state = ret & TRNG_STATE_MASK;
-	if (csal_state != 0x2 || trng_state != 0x3) {
-		ret = ele_start_rng();
-		if (ret) {
-			dev_err(dev, "Failed to start rng\n");
-			return ret;
-		}
-	}
+	int ret;
 
 	trng = devm_kzalloc(dev, sizeof(*trng), GFP_KERNEL);
 	if (!trng)
