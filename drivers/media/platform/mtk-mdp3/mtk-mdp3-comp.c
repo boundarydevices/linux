@@ -531,6 +531,7 @@ static int config_rsz_frame(struct mdp_comp_ctx *ctx,
 static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 			     struct mmsys_cmdq_cmd *cmd, u32 index)
 {
+	struct device *dev = &ctx->comp->mdp_dev->pdev->dev;
 	const struct mdp_rsz_subfrm *subfrm = &ctx->param->rsz.subfrms[index];
 	const struct img_comp_subfrm *csf = &ctx->param->subfrms[index];
 	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
@@ -574,21 +575,40 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 
 		switch(id) {
 		case MDP_COMP_RSZ2:
-			merge = ctx->comp->mdp_dev->comp[MDP_MERGE2];
+			{
+				const enum mdp_comp_id merge_id = MDP_MERGE2;
 
-			alias_id = data->config_table[CONFIG_SVPP2_BUF_BF_RSZ_SWITCH];
-			mtk_mmsys_mdp_write_config(ctx->comp->mdp_dev->mdp_mmsys2,
-						   cmd, alias_id,
-						   subfrm->rsz_switch, 0xFFFFFFFF);
-			break;
+				if ((merge_id <= MDP_COMP_INVALID) ||
+					(merge_id >= MT8195_MDP_MAX_COMP_COUNT)) {
+					dev_err(dev, "Invalid merge2_id!\n");
+					return -EINVAL;
+				}
+				merge = ctx->comp->mdp_dev->comp[merge_id];
+
+				alias_id = data->config_table[CONFIG_SVPP2_BUF_BF_RSZ_SWITCH];
+				mtk_mmsys_mdp_write_config(ctx->comp->mdp_dev->mdp_mmsys2,
+							cmd, alias_id,
+							subfrm->rsz_switch, 0xFFFFFFFF);
+				break;
+			}
 		case MDP_COMP_RSZ3:
-			merge = ctx->comp->mdp_dev->comp[MDP_MERGE3];
+			{
+				const enum mdp_comp_id merge_id = MDP_MERGE3;
 
-			alias_id = data->config_table[CONFIG_SVPP3_BUF_BF_RSZ_SWITCH];
-			mtk_mmsys_mdp_write_config(ctx->comp->mdp_dev->mdp_mmsys2,
-						   cmd, alias_id,
-						   subfrm->rsz_switch, 0xFFFFFFFF);
-			break;
+				if ((merge_id <= MDP_COMP_INVALID) ||
+					(merge_id >= MT8195_MDP_MAX_COMP_COUNT)) {
+					dev_err(dev, "Invalid merge3_id!\n");
+					return -EINVAL;
+				}
+
+				merge = ctx->comp->mdp_dev->comp[merge_id];
+
+				alias_id = data->config_table[CONFIG_SVPP3_BUF_BF_RSZ_SWITCH];
+				mtk_mmsys_mdp_write_config(ctx->comp->mdp_dev->mdp_mmsys2,
+							cmd, alias_id,
+							subfrm->rsz_switch, 0xFFFFFFFF);
+				break;
+			}
 		default:
 			goto subfrm_done;
 		}
