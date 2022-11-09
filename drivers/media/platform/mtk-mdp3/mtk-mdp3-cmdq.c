@@ -361,8 +361,8 @@ static int mdp_path_subfrm_run(const struct mdp_path_subfrm *subfrm,
 	struct device *dev = &path->mdp_dev->pdev->dev;
 	struct mtk_mutex **mutex = path->mdp_dev->mdp_mutex;
 	struct mtk_mutex **mutex2 = path->mdp_dev->mdp_mutex2;
-	s32 mutex_id = subfrm->mutex_id;
-	s32 mutex2_id = subfrm->mutex2_id;
+	const s32 mutex_id = subfrm->mutex_id;
+	const s32 mutex2_id = subfrm->mutex2_id;
 
 	if ((MDP_PIPE_NONE == mutex_id) && (MDP_PIPE_NONE == mutex2_id)) {
 		dev_err(dev, "Incorrect mutex id");
@@ -400,6 +400,13 @@ static int mdp_path_subfrm_run(const struct mdp_path_subfrm *subfrm,
 			}
 			if (evt > 0)
 				MM_REG_CLEAR(cmd, evt);
+		}
+
+
+		/* check the mutex_id */
+		if ((mutex_id <= MDP_PIPE_NONE) || (mutex_id >= MDP_PIPE_MAX)) {
+			dev_err(dev, "Invalid mutex_id!");
+			return -EINVAL;
 		}
 
 		/* Enable the mutex */
@@ -465,6 +472,12 @@ static int mdp_path_subfrm_run(const struct mdp_path_subfrm *subfrm,
 			}
 			if (evt > 0)
 				MM_REG_CLEAR(cmd, evt);
+		}
+
+		/* Check the mutex_id */
+		if ((mutex2_id <= MDP_PIPE_NONE) || (mutex2_id >= MDP_PIPE_MAX)) {
+			dev_err(dev, "Invalid mutex2_id!");
+			return -EINVAL;
 		}
 
 		/* Enable the mutex */
