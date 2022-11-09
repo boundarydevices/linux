@@ -2751,13 +2751,17 @@ static int ov5640_try_frame_interval(struct ov5640_dev *sensor,
 	int minfps, maxfps, best_fps, fps;
 	int i;
 
+	mode = ov5640_find_mode(sensor, width, height, false);
+	if (!mode)
+		return -EINVAL;
+
 	minfps = ov5640_framerates[OV5640_15_FPS];
-	maxfps = ov5640_framerates[OV5640_60_FPS];
+	maxfps = ov5640_framerates[mode->max_fps];
 
 	if (fi->numerator == 0) {
 		fi->denominator = maxfps;
 		fi->numerator = 1;
-		rate = OV5640_60_FPS;
+		rate = mode->max_fps;
 		goto find_mode;
 	}
 
