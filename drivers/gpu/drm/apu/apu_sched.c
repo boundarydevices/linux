@@ -288,8 +288,10 @@ static int apu_job_hw_submit(struct apu_job *job)
 	memcpy(dev_req->data, job->data_in, job->size_in);
 
 	apu_req = kzalloc(sizeof(*apu_req), GFP_KERNEL);
-	if (!apu_req)
-		return -ENOMEM;
+	if (!apu_req) {
+		ret = -ENOMEM;
+		goto err_free_memory;
+	}
 
 	for (i = 0; i < job->bo_count; i++) {
 		struct apu_gem_object *obj = to_apu_bo(job->bos[i]);
