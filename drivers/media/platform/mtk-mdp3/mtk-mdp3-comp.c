@@ -2051,8 +2051,12 @@ void mdp_component_deinit(struct mdp_dev *mdp)
 {
 	int i;
 
-	for (i = 0; i < mdp->mdp_data->pipe_info_len; i++)
-		mtk_mutex_put(mdp->mdp_mutex[mdp->mdp_data->pipe_info[i].pipe_id]);
+	for (i = 0; i < mdp->mdp_data->pipe_info_len; i++) {
+		const enum mtk_mdp_pipe_id pipe_id = mdp->mdp_data->pipe_info[i].pipe_id;
+
+		if ((pipe_id > MDP_PIPE_NONE) && (pipe_id < MDP_PIPE_MAX))
+			mtk_mutex_put(mdp->mdp_mutex[pipe_id]);
+	}
 
 	for (i = 0; i < ARRAY_SIZE(mdp->comp); i++) {
 		if (mdp->comp[i]) {
