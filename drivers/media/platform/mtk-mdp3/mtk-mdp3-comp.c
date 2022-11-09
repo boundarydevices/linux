@@ -119,13 +119,21 @@ static s64 get_comp_flag(const struct mdp_comp_ctx *ctx)
 
 static int init_rdma(struct mdp_comp_ctx *ctx, struct mmsys_cmdq_cmd *cmd)
 {
+	struct device *dev = &ctx->comp->mdp_dev->pdev->dev;
 	const struct mdp_platform_config *mdp_cfg = __get_plat_cfg(ctx);
 	phys_addr_t base = ctx->comp->reg_base;
 	u8 subsys_id = ctx->comp->subsys_id;
 
 	if (mdp_cfg && mdp_cfg->rdma_rsz1_sram_sharing) {
-		struct mdp_comp *prz1 = ctx->comp->mdp_dev->comp[MDP_RSZ1];
+		const enum mdp_comp_id comp_id = MDP_RSZ1;
+		struct mdp_comp *prz1;
 
+		if ((comp_id <= MDP_COMP_INVALID) || (comp_id >= MT8195_MDP_MAX_COMP_COUNT)) {
+			dev_err(dev, "Invalid component id!\n");
+			return -EINVAL;
+		}
+
+		prz1 = ctx->comp->mdp_dev->comp[comp_id];
 		/* Disable RSZ1 */
 		if (ctx->comp->id == MDP_RDMA0 && prz1)
 			MM_REG_WRITE(cmd, subsys_id, prz1->reg_base, PRZ_ENABLE,
