@@ -822,6 +822,7 @@ static void mdp_handle_cmdq_callback(struct cmdq_cb_data data)
 	if (cb_param->user_cmdq_cb) {
 		struct cmdq_cb_data user_cb_data;
 
+		memset(&user_cb_data, 0, sizeof(user_cb_data));
 		user_cb_data.sta = data.sta;
 		user_cb_data.data = cb_param->user_cb_data;
 		cb_param->user_cmdq_cb(user_cb_data);
