@@ -51,5 +51,7 @@ void mtk_mutex_unprepare(struct mtk_mutex *mutex);
 void mtk_mutex_put(struct mtk_mutex *mutex);
 void mtk_mutex_acquire(struct mtk_mutex *mutex);
 void mtk_mutex_release(struct mtk_mutex *mutex);
+void mtk_mutex_cross_sys_config(struct mtk_mutex *mutex0, struct mtk_mutex *mutex1);
+void mtk_mutex_cross_sys_deconfig(struct mtk_mutex *mutex0, struct mtk_mutex *mutex1);
 
 #endif /* MTK_MUTEX_H */

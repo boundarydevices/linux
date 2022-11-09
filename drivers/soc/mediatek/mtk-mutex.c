@@ -324,6 +324,11 @@ struct mtk_mutex_mod {
 	u32 value;
 };
 
+struct mtk_mutex_cross_sys_config {
+	const unsigned int mutex_sys_id;
+	const unsigned int mod_id;
+};
+
 struct mtk_mutex_data {
 	const unsigned int *mutex_mod;
 	const unsigned int *mutex_sof;
@@ -333,6 +338,8 @@ struct mtk_mutex_data {
 	const unsigned int mutex_mdp_mod_mask;
 	const unsigned int mutex_mdp_sof_mask;
 	const struct mtk_mutex_mod *mutex_table_mod;
+	const struct mtk_mutex_cross_sys_config *mutex_cross_sys_config;
+	const unsigned int mutex_cross_sys_config_num;
 	const bool no_clk;
 };
 
@@ -614,6 +621,15 @@ static const unsigned int mt8195_mutex_vpp1_offset[MDP_PIPE_MAX] = {
 	[MDP_PIPE_VPP0_SOUT] = MT8195_MDP_PIPE_SPLIT,
 };
 
+static const struct mtk_mutex_cross_sys_config mt8195_mutex_cross_sys_config[] = {
+	{0, MT8195_MUTEX_MOD_DISP_VDO1_DL_RELAY2},
+	{0, MT8195_MUTEX_MOD_DISP_VDO0_DL_RELAY3},
+	{0, MT8195_MUTEX_MOD_DISP_VDO0_DL_RELAY4},
+	{1, MT8195_MUTEX_MOD_DISP1_VDO0_DSC_DL_ASYNC},
+	{1, MT8195_MUTEX_MOD_DISP1_VDO0_MERGE_DL_ASYNC},
+	{1, MT8195_MUTEX_MOD_DISP1_VDO1_OUT_DL_RELAY},
+};
+
 static const struct mtk_mutex_data mt2701_mutex_driver_data = {
 	.mutex_mod = mt2701_mutex_mod,
 	.mutex_sof = mt2712_mutex_sof,
@@ -682,6 +698,8 @@ static const struct mtk_mutex_data mt8195_mutex_driver_data = {
 	.mutex_sof = mt8195_mutex_sof,
 	.mutex_mod_reg = MT8183_MUTEX0_MOD0,
 	.mutex_sof_reg = MT8183_MUTEX0_SOF0,
+	.mutex_cross_sys_config = mt8195_mutex_cross_sys_config,
+	.mutex_cross_sys_config_num = ARRAY_SIZE(mt8195_mutex_cross_sys_config),
 };
 
 static const struct mtk_mutex_data mt8195_vpp0_mutex_driver_data = {
@@ -920,6 +938,106 @@ void mtk_mutex_remove_comp(struct mtk_mutex *mutex,
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_remove_comp);
 
+void mtk_mutex_cross_sys_config(struct mtk_mutex *mutex0, struct mtk_mutex *mutex1)
+{
+	struct mtk_mutex_ctx *mtx0 = container_of(mutex0, struct mtk_mutex_ctx,
+						 mutex[mutex0->id]);
+	struct mtk_mutex_ctx *mtx1 = container_of(mutex1, struct mtk_mutex_ctx,
+						 mutex[mutex1->id]);
+
+	unsigned int aliasid0 = of_alias_get_id(mtx0->dev->of_node, "mutex");
+	unsigned int aliasid1 = of_alias_get_id(mtx1->dev->of_node, "mutex");
+	unsigned int reg;
+	unsigned int offset;
+	int i;
+
+	if ((mtx0->data->mutex_cross_sys_config_num) && (mtx0->data->mutex_cross_sys_config))
+		for (i = 0; i < mtx0->data->mutex_cross_sys_config_num; i++)
+			if (mtx0->data->mutex_cross_sys_config[i].mutex_sys_id == aliasid0)
+				if (mtx0->data->mutex_cross_sys_config[i].mod_id < 32) {
+					offset = DISP_REG_MUTEX_MOD(mtx0->data->mutex_mod_reg,
+								    mutex0->id);
+					reg = readl_relaxed(mtx0->regs + offset);
+					reg |= 1 << mtx0->data->mutex_cross_sys_config[i].mod_id;
+					writel_relaxed(reg, mtx0->regs + offset);
+				} else {
+					offset = DISP_REG_MUTEX_MOD2(mutex0->id);
+					reg = readl_relaxed(mtx0->regs + offset);
+					reg |=
+					1 << (mtx0->data->mutex_cross_sys_config[i].mod_id - 32);
+					writel_relaxed(reg, mtx0->regs + offset);
+				}
+
+	if ((mtx1->data->mutex_cross_sys_config_num) && (mtx1->data->mutex_cross_sys_config))
+		for (i = 0; i < mtx1->data->mutex_cross_sys_config_num; i++)
+			if (mtx1->data->mutex_cross_sys_config[i].mutex_sys_id == aliasid1)
+				if (mtx1->data->mutex_cross_sys_config[i].mod_id < 32) {
+					offset = DISP_REG_MUTEX_MOD(mtx1->data->mutex_mod_reg,
+								    mutex1->id);
+					reg = readl_relaxed(mtx1->regs + offset);
+					reg |= 1 << mtx1->data->mutex_cross_sys_config[i].mod_id;
+					writel_relaxed(reg, mtx1->regs + offset);
+				} else {
+					offset = DISP_REG_MUTEX_MOD2(mutex0->id);
+					reg = readl_relaxed(mtx1->regs + offset);
+					reg |=
+					1 << (mtx1->data->mutex_cross_sys_config[i].mod_id - 32);
+					writel_relaxed(reg, mtx1->regs + offset);
+				}
+
+}
+EXPORT_SYMBOL_GPL(mtk_mutex_cross_sys_config);
+
+void mtk_mutex_cross_sys_deconfig(struct mtk_mutex *mutex0, struct mtk_mutex *mutex1)
+{
+	struct mtk_mutex_ctx *mtx0 = container_of(mutex0, struct mtk_mutex_ctx,
+						 mutex[mutex0->id]);
+	struct mtk_mutex_ctx *mtx1 = container_of(mutex1, struct mtk_mutex_ctx,
+						 mutex[mutex1->id]);
+
+	unsigned int aliasid0 = of_alias_get_id(mtx0->dev->of_node, "mutex");
+	unsigned int aliasid1 = of_alias_get_id(mtx1->dev->of_node, "mutex");
+	unsigned int reg;
+	unsigned int offset;
+	int i;
+
+	if ((mtx0->data->mutex_cross_sys_config_num) && (mtx0->data->mutex_cross_sys_config))
+		for (i = 0; i < mtx0->data->mutex_cross_sys_config_num; i++)
+			if (mtx0->data->mutex_cross_sys_config[i].mutex_sys_id == aliasid0)
+				if (mtx0->data->mutex_cross_sys_config[i].mod_id < 32) {
+					offset = DISP_REG_MUTEX_MOD(mtx0->data->mutex_mod_reg,
+								    mutex0->id);
+					reg = readl_relaxed(mtx0->regs + offset);
+					reg &= ~(1 << mtx0->data->mutex_cross_sys_config[i].mod_id);
+					writel_relaxed(reg, mtx0->regs + offset);
+				} else {
+					offset = DISP_REG_MUTEX_MOD2(mutex0->id);
+					reg = readl_relaxed(mtx0->regs + offset);
+					reg &=
+					~(1 << (mtx0->data->mutex_cross_sys_config[i].mod_id - 32));
+					writel_relaxed(reg, mtx0->regs + offset);
+				}
+
+	if ((mtx1->data->mutex_cross_sys_config_num) && (mtx1->data->mutex_cross_sys_config))
+		for (i = 0; i < mtx1->data->mutex_cross_sys_config_num; i++)
+			if (mtx1->data->mutex_cross_sys_config[i].mutex_sys_id == aliasid1)
+				if (mtx1->data->mutex_cross_sys_config[i].mod_id < 32) {
+					offset = DISP_REG_MUTEX_MOD(mtx1->data->mutex_mod_reg,
+								    mutex1->id);
+					reg = readl_relaxed(mtx1->regs + offset);
+					reg &= ~(1 << mtx1->data->mutex_cross_sys_config[i].mod_id);
+					writel_relaxed(reg, mtx1->regs + offset);
+				} else {
+					offset = DISP_REG_MUTEX_MOD2(mutex0->id);
+					reg = readl_relaxed(mtx1->regs + offset);
+					reg &=
+					~(1 << (mtx1->data->mutex_cross_sys_config[i].mod_id - 32));
+					writel_relaxed(reg, mtx1->regs + offset);
+				}
+
+}
+EXPORT_SYMBOL_GPL(mtk_mutex_cross_sys_deconfig);
+
 void mtk_mutex_add_mod_by_cmdq(struct mtk_mutex *mutex, u32 mod,
 			       u32 mod1, u32 sof, struct mmsys_cmdq_cmd *cmd)
 {
@@ -1113,6 +1231,8 @@ static int mtk_mutex_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to map mutex registers\n");
 		return PTR_ERR(mtx->regs);
 	}
+
+	mtx->dev = dev;
 
 	platform_set_drvdata(pdev, mtx);
 
