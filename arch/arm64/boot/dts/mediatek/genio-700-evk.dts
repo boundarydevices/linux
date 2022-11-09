@@ -511,6 +511,18 @@
 			bias-disable;
 		};
 	};
+
+	usb1_default: usbp1default {
+		valid_pin {
+			pinmux = <PINMUX_GPIO88__FUNC_I0_VBUSVALID_1P>;
+			input-enable;
+		};
+
+		usb-hub-3v3-en-pin {
+			pinmux = <PINMUX_GPIO112__FUNC_B_GPIO112>;
+			output-high;
+		};
+	};
 };
 
 &i2c0 {
@@ -561,7 +573,7 @@
 		reg = <0x4e>;
 		interrupts-extended = <&pio 12 IRQ_TYPE_LEVEL_LOW>;
 		vbus-supply = <&usb_p1_vbus>;
-		status = "disabled";
+		status = "okay";
 
 		usb_con: connector {
 			compatible = "usb-c-connector";
@@ -580,6 +592,13 @@
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
+
+				port@0 {
+					reg = <0>;
+					tcpc_typec_usb: endpoint {
+							remote-endpoint = <&ssusb1_ep>;
+					};
+				};
 			};
 		};
 	};
@@ -839,4 +858,41 @@
 &usb_host0 {
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+};
+
+&ssusb1 {
+	pinctrl-0 = <&usb1_default>;
+	pinctrl-names = "default";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	dr_mode = "otg";
+	mediatek,usb3-drd;
+	usb-role-switch;
+	status = "okay";
+
+	port {
+		ssusb1_ep: endpoint {
+			remote-endpoint = <&tcpc_typec_usb>;
+		};
+	};
+};
+
+&u2port1 {
+	status = "okay";
+};
+
+&u3port1 {
+	status = "okay";
+};
+
+&u3phy1 {
+	status = "okay";
+};
+
+&usb_host1 {
+	status = "okay";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+};
+
+&mfg0 {
+	domain-supply = <&mt6359_vproc2_buck_reg>;
 };
