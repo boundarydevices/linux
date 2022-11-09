@@ -1132,7 +1132,7 @@ static int it661221_set_ncts(struct it66121_ctx *ctx, u8 fs)
 		unsigned int cts = 0;
 		unsigned int last_cts = 0;
 		unsigned int diff;
-		unsigned int val;
+		unsigned int val = 0;
 
 		while (loop_cnt--) {
 			msleep(30);
