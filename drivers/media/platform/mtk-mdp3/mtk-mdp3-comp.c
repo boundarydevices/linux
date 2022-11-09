@@ -2178,8 +2178,13 @@ int mdp_hyfbc_patch(struct mdp_dev *mdp, struct mmsys_cmdq_cmd *cmd,
 	u32 alias_id;
 	int evt;
 
-	if (!is_wrot(wrot)) {
+	if ((wrot <= MDP_COMP_INVALID) && (wrot >= MT8195_MDP_MAX_COMP_COUNT)) {
 		dev_err(&mdp->pdev->dev, "Invalid wrot id %d", wrot);
+		return -EINVAL;
+	}
+
+	if (!is_wrot(wrot)) {
+		dev_err(&mdp->pdev->dev, "Invalid wrot id %d, type not match!", wrot);
 		return -EINVAL;
 	}
 
