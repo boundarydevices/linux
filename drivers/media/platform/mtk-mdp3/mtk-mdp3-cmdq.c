@@ -636,7 +636,7 @@ static int mdp_path_config(struct mdp_dev *mdp, struct mmsys_cmdq_cmd *cmd,
 			   struct mdp_path *path)
 {
 	const struct img_config *config = path->config;
-	struct mdp_comp_ctx *ctx;
+	struct mdp_comp_ctx *ctx = NULL;
 	int index, count, ret;
 
 	/* Config path frame */
@@ -651,17 +651,19 @@ static int mdp_path_config(struct mdp_dev *mdp, struct mmsys_cmdq_cmd *cmd,
 			return ret;
 	}
 	/* Config frame mode */
-	for (index = 0; index < config->num_components; index++) {
-		const struct v4l2_rect *compose =
-			path->composes[ctx->param->outputs[0]];
+	if (ctx) {
+		for (index = 0; index < config->num_components; index++) {
+			const struct v4l2_rect *compose =
+				path->composes[ctx->param->outputs[0]];
 
-		if (is_dummy_engine(mdp, config->components[index].type))
-			continue;
+			if (is_dummy_engine(mdp, config->components[index].type))
+				continue;
 
-		ctx = &path->comps[index];
-		ret = call_op(ctx, config_frame, cmd, compose);
-		if (ret)
-			return ret;
+			ctx = &path->comps[index];
+			ret = call_op(ctx, config_frame, cmd, compose);
+			if (ret)
+				return ret;
+		}
 	}
 
 	/* Config path sub-frames */
