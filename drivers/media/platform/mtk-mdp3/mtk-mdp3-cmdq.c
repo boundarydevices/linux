@@ -343,11 +343,21 @@ static int mdp_path_subfrm_require(struct mdp_path_subfrm *subfrm,
 
 	/* Set mutex modules */
 	if (subfrm->mutex_mod || subfrm->mutex_mod2) {
+		/* check the mutex_id */
+		if ((mutex_id <= MDP_PIPE_NONE) || (mutex_id >= MDP_PIPE_MAX)) {
+			dev_err(dev, "Invalid mutex_id!");
+			return -EINVAL;
+		}
 		mtk_mutex_add_mod_by_cmdq(mutex[mutex_id], subfrm->mutex_mod,
 				      subfrm->mutex_mod2, mutex_sof, cmd);
 	}
 
 	if (subfrm->mutex2_mod || subfrm->mutex2_mod2) {
+		/* check the mutex_id */
+		if ((mutex2_id <= MDP_PIPE_NONE) || (mutex2_id >= MDP_PIPE_MAX)) {
+			dev_err(dev, "Invalid mutex2_id!");
+			return -EINVAL;
+		}
 		mtk_mutex_add_mod_by_cmdq(mutex2[mutex2_id], subfrm->mutex2_mod,
 				      subfrm->mutex2_mod2, mutex2_sof, cmd);
 	}
