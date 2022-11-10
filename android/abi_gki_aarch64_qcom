@@ -488,6 +488,7 @@
   divider_ro_round_rate_parent
   divider_round_rate_parent
   dma_alloc_attrs
+  dma_alloc_noncontiguous
   dma_alloc_pages
   dma_async_device_register
   dma_async_device_unregister
@@ -522,6 +523,7 @@
   dma_fence_signal_timestamp_locked
   dma_fence_wait_timeout
   dma_free_attrs
+  dma_free_noncontiguous
   dma_free_pages
   dma_get_sgtable_attrs
   dma_get_slave_channel
@@ -552,6 +554,8 @@
   dma_unmap_page_attrs
   dma_unmap_resource
   dma_unmap_sg_attrs
+  dma_vmap_noncontiguous
+  dma_vunmap_noncontiguous
   do_exit
   __do_once_done
   __do_once_start
@@ -1134,6 +1138,10 @@
   __local_bh_enable_ip
   __lock_page
   lock_sock_nested
+  log_post_read_mmio
+  log_post_write_mmio
+  log_read_mmio
+  log_write_mmio
   lookup_page_ext
   match_string
   mbox_chan_received_data
@@ -2052,6 +2060,7 @@
   tick_nohz_get_sleep_length
   time64_to_tm
   timer_unstable_counter_workaround
+  timespec64_to_jiffies
   topology_clear_scale_freq_source
   topology_set_thermal_pressure
   topology_update_done
