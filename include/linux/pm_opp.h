@@ -414,9 +414,12 @@ static inline int dev_pm_opp_sync_regulators(struct device *dev)
 
 #endif		/* CONFIG_PM_OPP */
 
-#if defined(CONFIG_PM_OPP) && defined(CONFIG_OF)
+#if defined(CONFIG_OF)
 void opp_return_volts(struct dev_pm_opp *opp, unsigned long *u_volt,
 		unsigned long *u_volt_min, unsigned long *u_volt_max);
+#endif
+
+#if defined(CONFIG_PM_OPP) && defined(CONFIG_OF)
 int dev_pm_opp_of_add_table(struct device *dev);
 int dev_pm_opp_of_add_table_indexed(struct device *dev, int index);
 int dev_pm_opp_of_add_table_indexed_np(struct device *dev,
@@ -441,11 +444,6 @@ static inline void dev_pm_opp_of_unregister_em(struct device *dev)
 	em_dev_unregister_perf_domain(dev);
 }
 #else
-void opp_return_volts(struct dev_pm_opp *opp, unsigned long *u_volt,
-		unsigned long *u_volt_min, unsigned long *u_volt_max)
-{
-}
-
 static inline int dev_pm_opp_of_add_table(struct device *dev)
 {
 	return -EOPNOTSUPP;
