@@ -548,6 +548,11 @@ int ioctl_gem_queue(struct drm_device *dev, void *data,
 		goto fail_job;
 
 	event = kzalloc(sizeof(*event), GFP_KERNEL);
+	if (!event) {
+		ret = -ENOMEM;
+		goto fail_job;
+	}
+
 	event->base.length = sizeof(struct apu_job_event);
 	event->base.type = APU_JOB_COMPLETED;
 	event->job_event.out_sync = args->out_sync;
