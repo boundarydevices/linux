@@ -1225,7 +1225,8 @@ static int mtk_dpi_probe(struct platform_device *pdev)
 	ret = drm_of_find_panel_or_bridge(dev->of_node, 0, 0,
 					  &dpi->panel, &dpi->next_bridge);
 	if (ret) {
-		dev_err(dev, "Failed to get panel/bridge: %d\n", ret);
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "Failed to get panel/bridge: %d\n", ret);
 		return ret;
 	}
 
