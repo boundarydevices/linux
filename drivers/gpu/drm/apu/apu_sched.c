@@ -497,6 +497,9 @@ int ioctl_gem_queue(struct drm_device *dev, void *data,
 	int ret = 0;
 
 	core = get_apu_core(apu_drm, args->device);
+	if (!core)
+		return -ENODEV;
+
 	if (!apu_core_is_running(core))
 		return -ENODEV;
 
