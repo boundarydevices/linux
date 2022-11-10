@@ -62,7 +62,6 @@ enum imx6_pcie_variants {
 	IMX8MP,
 	IMX8MP_EP,
 	IMX8QM,
-	IMX8QM_EP,
 	IMX8QXP,
 };
 
@@ -331,7 +330,6 @@ static void imx6_pcie_configure_type(struct imx6_pcie *imx6_pcie)
 
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX8QM:
-	case IMX8QM_EP:
 	case IMX8QXP:
 		if (imx6_pcie->controller_id)
 			addr = IMX8QM_CSR_PCIEB_OFFSET;
@@ -492,7 +490,6 @@ static void imx6_pcie_init_phy(struct imx6_pcie *imx6_pcie)
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX8QXP:
 	case IMX8QM:
-	case IMX8QM_EP:
 		if (imx6_pcie->hsio_cfg == PCIEAX2SATA) {
 			/*
 			 * bit 0 rx ena 1.
@@ -678,7 +675,6 @@ static void imx8_pcie_wait_for_phy_pll_lock(struct imx6_pcie *imx6_pcie)
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX8QXP:
 	case IMX8QM:
-	case IMX8QM_EP:
 		if (imx6_pcie->hsio_cfg == PCIEAX1PCIEBX1SATA) {
 			if (imx6_pcie->controller_id == 0) /* pciea 1 lanes */
 				cond = IMX8QM_STTS0_LANE0_TX_PLL_LOCK;
@@ -853,7 +849,6 @@ static int imx6_pcie_attach_pd(struct device *dev)
 
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX8QM:
-	case IMX8QM_EP:
 		/*
 		 * PCIA CSR would be touched during the initialization of the
 		 * PCIEB of 8QM.
@@ -952,7 +947,6 @@ static int imx6_pcie_enable_ref_clk(struct imx6_pcie *imx6_pcie)
 		break;
 	case IMX8QXP:
 	case IMX8QM:
-	case IMX8QM_EP:
 		ret = clk_prepare_enable(imx6_pcie->pcie_inbound_axi);
 		if (ret) {
 			dev_err(dev, "unable to enable pcie_axi clock\n");
@@ -979,8 +973,7 @@ static int imx6_pcie_enable_ref_clk(struct imx6_pcie *imx6_pcie)
 		 * PCIEB of 8QM.
 		 * Enable the PCIEA peripheral clock for this case here.
 		 */
-		if ((imx6_pcie->drvdata->variant == IMX8QM
-				|| imx6_pcie->drvdata->variant == IMX8QM_EP)
+		if (imx6_pcie->drvdata->variant == IMX8QM
 				&& imx6_pcie->controller_id == 1) {
 			ret = clk_prepare_enable(imx6_pcie->pcie_phy_pclk);
 			if (unlikely(ret)) {
@@ -1042,7 +1035,6 @@ static void imx6_pcie_disable_ref_clk(struct imx6_pcie *imx6_pcie)
 		clk_disable_unprepare(imx6_pcie->pcie_aux);
 		break;
 	case IMX8QM:
-	case IMX8QM_EP:
 		if (imx6_pcie->controller_id == 1) {
 			clk_disable_unprepare(imx6_pcie->pciex2_per);
 			clk_disable_unprepare(imx6_pcie->pcie_phy_pclk);
@@ -1168,7 +1160,6 @@ static void imx6_pcie_assert_core_reset(struct imx6_pcie *imx6_pcie)
 				IMX8QM_CTRL_POWER_UP_RST_N);
 		break;
 	case IMX8QM:
-	case IMX8QM_EP:
 		imx6_pcie_clk_enable(imx6_pcie);
 		for (i = 0; i <= imx6_pcie->controller_id; i++) {
 			val = IMX8QM_CSR_PCIEA_OFFSET + i * SZ_64K;
@@ -1243,7 +1234,6 @@ static int imx6_pcie_deassert_core_reset(struct imx6_pcie *imx6_pcie)
 		usleep_range(200, 500);
 		break;
 	case IMX8QM:
-	case IMX8QM_EP:
 		if (imx6_pcie->controller_id)
 			/* Set the APB clock masks */
 			regmap_update_bits(imx6_pcie->iomuxc_gpr,
@@ -1339,7 +1329,6 @@ static void imx6_pcie_ltssm_enable(struct device *dev)
 		break;
 	case IMX8QXP:
 	case IMX8QM:
-	case IMX8QM_EP:
 		/* Bit4 of the CTRL2 */
 		regmap_update_bits(imx6_pcie->iomuxc_gpr,
 				IMX8QM_CSR_PCIEA_OFFSET +
@@ -1377,7 +1366,6 @@ static void imx6_pcie_ltssm_disable(struct device *dev)
 		break;
 	case IMX8QXP:
 	case IMX8QM:
-	case IMX8QM_EP:
 		/* Bit4 of the CTRL2 */
 		regmap_update_bits(imx6_pcie->iomuxc_gpr,
 				IMX8QM_CSR_PCIEA_OFFSET +
@@ -1540,7 +1528,6 @@ static int imx6_pcie_host_init(struct dw_pcie_rp *pp)
 	switch (imx6_pcie->drvdata->variant) {
 	case IMX8QXP:
 	case IMX8QM:
-	case IMX8QM_EP:
 		/* ClKs had been enabled */
 		break;
 	default:
@@ -1661,13 +1648,6 @@ static const struct pci_epc_features imx8m_pcie_epc_features = {
 	.align = SZ_64K,
 };
 
-static const struct pci_epc_features imx8q_pcie_epc_features = {
-	.linkup_notifier = false,
-	.msi_capable = true,
-	.msix_capable = false,
-	.reserved_bar = 1 << BAR_1 | 1 << BAR_3 | 1 << BAR_5,
-};
-
 static const struct pci_epc_features*
 imx6_pcie_ep_get_features(struct dw_pcie_ep *ep)
 {
@@ -1675,8 +1655,6 @@ imx6_pcie_ep_get_features(struct dw_pcie_ep *ep)
 	struct imx6_pcie *imx6_pcie = to_imx6_pcie(pci);
 
 	switch (imx6_pcie->drvdata->variant) {
-	case IMX8QM_EP:
-		return &imx8q_pcie_epc_features;
 	case IMX6Q_EP:
 	case IMX6QP_EP:
 		return &imx6q_pcie_epc_features;
@@ -1762,7 +1740,6 @@ static void imx6_pcie_pm_turnoff(struct imx6_pcie *imx6_pcie)
 		break;
 	case IMX8QXP:
 	case IMX8QM:
-	case IMX8QM_EP:
 		dst = IMX8QM_CSR_PCIEA_OFFSET + imx6_pcie->controller_id * SZ_64K;
 		regmap_update_bits(imx6_pcie->iomuxc_gpr,
 				dst + IMX8QM_CSR_PCIE_CTRL2_OFFSET,
@@ -2009,7 +1986,6 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 
 		break;
 	case IMX8QM:
-	case IMX8QM_EP:
 	case IMX8QXP:
 		if (dbi_base->start == IMX8_HSIO_PCIEB_BASE_ADDR)
 			imx6_pcie->controller_id = 1;
@@ -2039,8 +2015,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 			dev_err(dev, "failed to get misc per clock\n");
 			return PTR_ERR(imx6_pcie->misc_per);
 		}
-		if ((imx6_pcie->drvdata->variant == IMX8QM
-				|| imx6_pcie->drvdata->variant == IMX8QM_EP)
+		if (imx6_pcie->drvdata->variant == IMX8QM
 				&& imx6_pcie->controller_id == 1) {
 			imx6_pcie->pcie_phy_pclk = devm_clk_get(dev,
 					"pcie_phy_pclk");
@@ -2257,11 +2232,6 @@ static const struct imx6_pcie_drvdata drvdata[] = {
 		.flags = IMX6_PCIE_FLAG_SUPPORTS_SUSPEND |
 			 IMX6_PCIE_FLAG_IMX6_CPU_ADDR_FIXUP,
 	},
-	[IMX8QM_EP] = {
-		.variant = IMX8QM_EP,
-		.mode = DW_PCIE_EP_TYPE,
-		.flags = IMX6_PCIE_FLAG_IMX6_CPU_ADDR_FIXUP,
-	},
 	[IMX8QXP] = {
 		.variant = IMX8QXP,
 		.flags = IMX6_PCIE_FLAG_SUPPORTS_SUSPEND |
@@ -2285,7 +2255,6 @@ static const struct of_device_id imx6_pcie_of_match[] = {
 	{ .compatible = "fsl,imx8mp-pcie", .data = &drvdata[IMX8MP], },
 	{ .compatible = "fsl,imx8mp-pcie-ep", .data = &drvdata[IMX8MP_EP], },
 	{ .compatible = "fsl,imx8qm-pcie", .data = &drvdata[IMX8QM], },
-	{ .compatible = "fsl,imx8qm-pcie-ep", .data = &drvdata[IMX8QM_EP], },
 	{ .compatible = "fsl,imx8qxp-pcie", .data = &drvdata[IMX8QXP], },
 	{},
 };
