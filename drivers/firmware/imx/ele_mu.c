@@ -140,6 +140,7 @@ static void ele_mu_rx_callback(struct mbox_client *c, void *msg)
 	wake_up_interruptible(&dev_ctx->wq);
 
 	if (is_response) {
+		priv->waiting_rsp_dev = NULL;
 		/* Allow user to send new command */
 		mutex_unlock(&priv->mu_cmd_lock);
 	}
