@@ -2229,7 +2229,7 @@ static int imxpac_tc358743_hw_params(struct snd_pcm_substream *substream,
 		pr_err("%s: failed setting codec sysclk\n", __func__);
 		return ret;
 	}
-	snd_soc_dai_set_tdm_slot(cpu_dai, 0xffffffc, 0xffffffc, 2, 24);
+	snd_soc_dai_set_tdm_slot(cpu_dai, 0x3, 0x3, 2, 24);
 #if 1
 	// clear SSI_SRCR_RXBIT0 and SSI_SRCR_RSHFD in order to push Right-justified MSB data from
 	{
