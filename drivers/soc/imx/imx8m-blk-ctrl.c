@@ -13,6 +13,7 @@
 #include <linux/regmap.h>
 #include <linux/clk.h>
 #include <linux/mfd/syscon.h>
+#include <soc/imx/gpcv2.h>
 
 #include <dt-bindings/power/imx8mm-power.h>
 #include <dt-bindings/power/imx8mn-power.h>
@@ -59,6 +60,7 @@ struct imx8m_blk_ctrl_domain_data {
 	 * register.
 	 */
 	u32 mipi_phy_rst_mask;
+	notifier_fn_t power_notifier_fn;
 	const struct imx8m_blk_ctrl_noc_data *noc_data[DOMAIN_MAX_NOC];
 };
 
@@ -70,6 +72,7 @@ struct imx8m_blk_ctrl_domain {
 	struct clk_bulk_data clks[DOMAIN_MAX_CLKS];
 	struct device *power_dev;
 	struct imx8m_blk_ctrl *bc;
+	struct notifier_block power_nb;
 };
 
 struct imx8m_blk_ctrl_data {
@@ -269,6 +272,15 @@ static int imx8m_blk_ctrl_probe(struct platform_device *pdev)
 				      data->gpc_name);
 			ret = PTR_ERR(domain->power_dev);
 			goto cleanup_pds;
+		}
+
+		if (data->power_notifier_fn) {
+			domain->power_nb.notifier_call = data->power_notifier_fn;
+			ret = dev_pm_genpd_add_notifier(domain->power_dev, &domain->power_nb);
+			if (ret) {
+				dev_err_probe(dev, ret, "failed to add power notifier\n");
+				goto cleanup_pds;
+			}
 		}
 
 		domain->genpd.name = data->name;
@@ -481,6 +493,21 @@ static const struct imx8m_blk_ctrl_data imx8mm_vpu_blk_ctl_dev_data = {
 	.num_domains = ARRAY_SIZE(imx8mm_vpu_blk_ctl_domain_data),
 };
 
+static int imx8mp_vpu_h1_power_notifier(struct notifier_block *nb,
+					unsigned long action, void *data)
+{
+	struct imx8m_blk_ctrl_domain *domain = container_of(nb, struct imx8m_blk_ctrl_domain,
+							    power_nb);
+	struct imx8m_blk_ctrl *bc = domain->bc;
+
+	if (action == GENPD_NOTIFY_PRE_ON)
+		regmap_clear_bits(bc->regmap, BLK_CLK_EN, BIT(2));
+	else if (action == IMX_GPCV2_NOTIFY_ON_ADB400)
+		regmap_set_bits(bc->regmap, BLK_CLK_EN, BIT(2));
+
+	return NOTIFY_OK;
+}
+
 #define IMX8MP_VPUBLK_G1	0
 #define IMX8MP_VPUBLK_G2	1
 #define IMX8MP_VPUBLK_VCE	2
@@ -533,6 +560,7 @@ static const struct imx8m_blk_ctrl_domain_data imx8mp_vpu_blk_ctl_domain_data[] 
 		.noc_data = {
 			&imx8mp_vpu_noc_data[IMX8MP_VPUBLK_VCE],
 		},
+		.power_notifier_fn = imx8mp_vpu_h1_power_notifier,
 	},
 };
 
