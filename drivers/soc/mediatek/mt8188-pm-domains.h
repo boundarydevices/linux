@@ -195,7 +195,7 @@ static const struct scpsys_domain_data scpsys_domain_data_mt8188[] = {
 				MT8188_TOP_AXI_PROT_EN_2_CLR,
 				MT8188_TOP_AXI_PROT_EN_2_STA),
 		},
-		.caps = MTK_SCPD_SRAM_ISO,
+		.caps = MTK_SCPD_SRAM_ISO | MTK_SCPD_ALWAYS_ON,
 	},
 	[MT8188_POWER_DOMAIN_ADSP] = {
 		.name = "adsp",
