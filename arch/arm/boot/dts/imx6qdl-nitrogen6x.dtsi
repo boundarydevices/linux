@@ -273,13 +273,13 @@
 };
 
 &usdhc2 {
-	pinctrl-names = "default";
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc2>;
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
 	bus-width = <4>;
 	non-removable;
+	no-sd-uhs-sdr104;
 	vmmc-supply = <&reg_wlan_vmmc>;
 	vqmmc-1-8-v;
 	cap-power-off-card;
