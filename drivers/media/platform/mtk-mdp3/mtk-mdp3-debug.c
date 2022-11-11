@@ -77,7 +77,7 @@ static void __iomem *mdp_alloc_reference_VA_by_name(const char *ref_name)
 
 	node = of_parse_phandle(dev->of_node, ref_name, 0);
 	if (!node) {
-		mdp_err("DEV: cannot parse node name:%s\n", ref_name);
+		mdp_dbg(2, "DEV: cannot parse node name:%s\n", ref_name);
 		return 0;
 	}
 
