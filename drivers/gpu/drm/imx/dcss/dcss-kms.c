@@ -107,7 +107,6 @@ static int dcss_kms_bridge_connector_init(struct dcss_kms_dev *kms)
 	struct drm_panel *panel;
 	struct drm_bridge *bridge;
 	int ret;
-	struct drm_connector_list_iter iter;
 
 	ret = drm_of_find_panel_or_bridge(ddev->dev->of_node, 0, 0,
 					  &panel, &bridge);
@@ -129,13 +128,18 @@ static int dcss_kms_bridge_connector_init(struct dcss_kms_dev *kms)
 		return ret;
 	}
 
-	ret = drm_bridge_attach(encoder, bridge, NULL,0);
+	ret = drm_bridge_attach(encoder, bridge, NULL,
+				DRM_BRIDGE_ATTACH_NO_CONNECTOR);
 	if (ret < 0)
 		return ret;
 
-	drm_connector_list_iter_begin(ddev, &iter);
-	kms->connector = drm_connector_list_iter_next(&iter);
-	drm_connector_list_iter_end(&iter);
+	kms->connector = drm_bridge_connector_init(ddev, encoder);
+	if (IS_ERR(kms->connector)) {
+		dev_err(ddev->dev, "Unable to create bridge connector.\n");
+		return PTR_ERR(kms->connector);
+	}
+
+	drm_connector_attach_encoder(kms->connector, encoder);
 
 	return 0;
 }
