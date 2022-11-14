@@ -878,7 +878,7 @@ static const struct ov5640_mode_info ov5640_mode_data[OV5640_NUM_MODES] = {
 		},
 		.reg_data	= ov5640_setting_low_res,
 		.reg_data_size	= ARRAY_SIZE(ov5640_setting_low_res),
-		.max_fps	= OV5640_60_FPS,
+		.max_fps	= OV5640_30_FPS,
 		.def_fps	= OV5640_30_FPS
 	}, {
 		/* 720x480 */
