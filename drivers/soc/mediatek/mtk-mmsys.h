@@ -113,6 +113,7 @@ struct mtk_mmsys_driver_data {
 	const u32 *cross_sys_w_h_configs;
 	const unsigned int num_cross_sys_w_h_configs;
 	bool vppsys;
+	const bool has_gce_client_reg;
 };
 
 struct mtk_mmsys_match_data {
