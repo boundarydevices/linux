@@ -691,8 +691,8 @@ static int mt8195_mt6359_demo_dev_probe(struct platform_device *pdev)
 	card->dev = &pdev->dev;
 	ret = set_card_codec_info(card);
 	if (ret) {
-		dev_err(&pdev->dev, "%s set_card_codec_info failed %d\n",
-		__func__, ret);
+		dev_err_probe(&pdev->dev, ret, "%s set_card_codec_info failed\n",
+			     __func__);
 		return ret;
 	}
 
@@ -718,8 +718,8 @@ static int mt8195_mt6359_demo_dev_probe(struct platform_device *pdev)
 
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret)
-		dev_err(&pdev->dev, "%s snd_soc_register_card fail %d\n",
-			__func__, ret);
+		dev_err_probe(&pdev->dev, ret, "%s snd_soc_register_card fail\n",
+			     __func__);
 	return ret;
 }
 
