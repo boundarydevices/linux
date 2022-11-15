@@ -15,32 +15,37 @@
 #include <linux/genalloc.h>
 #include <linux/io.h>
 #include <linux/init.h>
-#include <linux/mailbox_client.h>
 #include <linux/miscdevice.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/delay.h>
 #include <linux/sys_soc.h>
 #include <linux/workqueue.h>
 
 #include "ele_mu.h"
 
 #define ELE_PING_INTERVAL	(3600 * HZ)
+#define ELE_TRNG_STATE_OK	0x203
 
 struct ele_mu_priv *ele_priv_export;
 
 struct imx_info {
 	bool socdev;
+	/* platform specific flag to enable/disable the Sentinel True RNG */
+	bool enable_ele_trng;
 };
 
 static const struct imx_info imx8ulp_info = {
 	.socdev = true,
+	.enable_ele_trng = false,
 };
 
 static const struct imx_info imx93_info = {
 	.socdev = false,
+	.enable_ele_trng = true,
 };
 
 static const struct of_device_id ele_mu_match[] = {
@@ -225,6 +230,40 @@ static int imx_soc_device_register(struct platform_device *pdev)
 		kfree(attr->machine);
 		kfree(attr);
 		return PTR_ERR(dev);
+	}
+
+	return 0;
+}
+
+static int ele_do_start_rng(void)
+{
+	int ret;
+	int count = 5;
+
+	ret = ele_get_trng_state();
+	if (ret < 0) {
+		pr_err("Failed to get trng state\n");
+		return ret;
+	} else if (ret != ELE_TRNG_STATE_OK) {
+		/* call start rng */
+		ret = ele_start_rng();
+		if (ret) {
+			pr_err("Failed to start rng\n");
+			return ret;
+		}
+
+		/* poll get trng state API 5 times or while trng state != 0x203 */
+		do {
+			msleep(10);
+			ret = ele_get_trng_state();
+			if (ret < 0) {
+				pr_err("Failed to get trng state\n");
+				return ret;
+			}
+			count--;
+		} while ((ret != ELE_TRNG_STATE_OK) && count);
+		if (ret != ELE_TRNG_STATE_OK)
+			return -EIO;
 	}
 
 	return 0;
@@ -965,6 +1004,17 @@ static int ele_mu_probe(struct platform_device *pdev)
 				"failed[%d] to register SoC device\n", ret);
 			goto exit;
 		}
+	}
+
+	/* start ele rng */
+	ret = ele_do_start_rng();
+	if (ret)
+		dev_err(dev, "Failed to start ele rng\n");
+
+	if (!ret && info && info->enable_ele_trng) {
+		ret = ele_trng_init(dev);
+		if (ret)
+			dev_err(dev, "Failed to init ele-trng\n");
 	}
 
 	/*

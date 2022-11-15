@@ -4,3 +4,4 @@ obj-$(CONFIG_IMX_SCU)		+= imx-scu.o misc.o imx-scu-irq.o rm.o imx-scu-soc.o seco
 obj-${CONFIG_IMX_SECO_MU}	+= seco_mu.o
 el_enclave-objs			= ele_mu.o ele_base_msg.o
 obj-${CONFIG_IMX_EL_ENCLAVE}	+= el_enclave.o
+el_enclave-${CONFIG_IMX_ELE_TRNG} += ele_trng.o
