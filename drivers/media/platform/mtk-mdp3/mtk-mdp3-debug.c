@@ -953,7 +953,7 @@ int32_t mdp_dump_info(uint64_t comp_flag, int log_level)
 
 void mdp_debug_init(struct platform_device *pDevice)
 {
-	pr_err("%s:start\n", __func__);
+	mdp_dbg(2, "debug init:start\n");
 	g_mdp_debug.mdp_device = pDevice;
 
 	mdp_init_module_base_VA();
@@ -961,7 +961,7 @@ void mdp_debug_init(struct platform_device *pDevice)
 	mdp_virtual_function_setting();
 	mdp_platform_function_setting();
 
-	pr_err("%s:end\n", __func__);
+	mdp_dbg(2, "debug init:end\n");
 }
 
 void mdp_debug_deinit(void)
