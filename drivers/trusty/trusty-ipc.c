@@ -1161,7 +1161,7 @@ static void arm64_write_ATS1ExW(uint64_t vaddr)
             break;
         case 0x3:
         default:
-            printk("Unsupported execution state: EL%lu\n", _current_el );
+            printk("Unsupported execution state: EL%llu\n", _current_el );
             break;
         }
 
