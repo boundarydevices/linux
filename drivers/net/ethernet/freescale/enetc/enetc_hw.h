@@ -744,8 +744,8 @@ struct tgs_gcl_conf {
 			u8	res2[2];
 		};
 		struct {
-			u32 cctl;
-			u32 ccth;
+			__le32 cctl;
+			__le32 ccth;
 		};
 	};
 };
@@ -783,22 +783,22 @@ struct streamid_conf {
 /* streamid_conf address point to this data space */
 struct null_streamid_data {
 	u8	dmac[6];
-	u16	vid_vidm_tg;
+	__le16	vid_vidm_tg;
 };
 
 struct smac_streamid_data {
 	u8	smac[6];
-	u16	vid_vidm_tg;
+	__le16	vid_vidm_tg;
 };
 
 /*  Stream ID Query Response Data Buffer */
 struct streamid_query_resp {
-	u32	stream_handle;
-	u32	input_ports;
+	__le32	stream_handle;
+	__le32	input_ports;
 	u8	id_type;
 	u8	oui[3];
 	u8	mac[6];
-	u16	vid_vidm_tg;
+	__le16	vid_vidm_tg;
 	u8	res[3];
 	u8  en;
 };
@@ -961,18 +961,18 @@ struct sgcl_query {
 #define ENETC_CBDR_SGIQ_OCL_LEN_MASK 0x3000
 /* class 9, command 3 data space */
 struct sgcl_query_resp {
-	u16 stat;
-	u16 res;
-	u32	abtl;
-	u32 abth;
-	u32	act;
-	u32	acte;
-	u32	cctl;
-	u32 ccth;
-	u32	obtl;
-	u32 obth;
-	u32	oct;
-	u32	octe;
+	__le16 stat;
+	__le16 res;
+	__le32 abtl;
+	__le32 abth;
+	__le32 act;
+	__le32 acte;
+	__le32 cctl;
+	__le32 ccth;
+	__le32 obtl;
+	__le32 obth;
+	__le32 oct;
+	__le32 octe;
 };
 
 /* class 9, command 4 Stream Gate Instance Table Query Statistics Response
@@ -1036,35 +1036,33 @@ struct fmi_query_stat_resp {
 
 /* class 5, command 1 */
 struct tgs_gcl_query {
-		u8	res[12];
-		union {
-			struct {
-				__le16	acl_len; /* admin list length */
-				__le16	ocl_len; /* operation list length */
-			};
-			struct {
-				u16 admin_list_len;
-				u16 oper_list_len;
-			};
+	u8	res[12];
+	union {
+		struct {
+			__le16	acl_len; /* admin list length */
+			__le16	ocl_len; /* operation list length */
 		};
-
+		struct {
+			__le16 admin_list_len;
+			__le16 oper_list_len;
+		};
+	};
 };
 
 /* tgs_gcl_query command response data format */
 struct tgs_gcl_resp {
-	u32	abtl;	/* base time */
-	u32 abth;
-	u32	act;	/* cycle time */
-	u32	acte;	/* cycle time extend */
-	u32	cctl;	/* config change time */
-	u32 ccth;
-	u32 obtl;	/* operation base time */
-	u32 obth;
-	u32	oct;	/* operation cycle time */
-	u32	octe;	/* operation cycle time extend */
-	u32	ccel;	/* config change error */
-	u32 cceh;
-	/*struct gce	*gcl;*/
+	__le32 abtl;	/* base time */
+	__le32 abth;
+	__le32 act;	/* cycle time */
+	__le32 acte;	/* cycle time extend */
+	__le32 cctl;	/* config change time */
+	__le32 ccth;
+	__le32 obtl;	/* operation base time */
+	__le32 obth;
+	__le32 oct;	/* operation cycle time */
+	__le32 octe;	/* operation cycle time extend */
+	__le32 ccel;	/* config change error */
+	__le32 cceh;
 };
 
 struct enetc_cbd {
