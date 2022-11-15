@@ -46,7 +46,6 @@
 			MX8ULP_PAD_PTE2__PTE2		0x7	/* BACK */
 			MX8ULP_PAD_PTE3__PTE3		0x7	/* 19 */
 			MX8ULP_PAD_PTE6__PTE6		0x7	/* 34 */
-			MX8ULP_PAD_PTE7__PTE7		0x7	/* 32 */
 			MX8ULP_PAD_PTE8__PTE8		0x7	/* 20 */
 			MX8ULP_PAD_PTE9__PTE9		0x7	/* 31 */
 			MX8ULP_PAD_PTE10__PTE10		0x7	/* 55 */
@@ -122,6 +121,13 @@
 		>;
 	};
 
+	pinctrl_mipi_com35h3r04uly: mipi-com35h3r04ulygrp {
+		fsl,pins = <
+#define GP_LCD_RESET	<&gpioe 7 GPIO_ACTIVE_LOW>
+			MX8ULP_PAD_PTE7__PTE7		0x02
+		>;
+	};
+
 	pinctrl_mipi_q035_014: mipi-q035-014grp {
 		fsl,pins = <
 #define GP_LCD_RESET	<&gpioe 7 GPIO_ACTIVE_LOW>
@@ -172,6 +178,7 @@
 	};
 };
 
+#include "panel-com35h3r04uly.dtsi"
 #include "panel-q035-014.dtsi"
 
 / {
