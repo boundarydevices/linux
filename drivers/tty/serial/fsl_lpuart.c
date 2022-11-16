@@ -1102,9 +1102,6 @@ static irqreturn_t lpuart32_int(int irq, void *dev_id)
 	if ((sts & UARTSTAT_TDRE) && !sport->lpuart_dma_tx_use)
 		lpuart32_txint(sport);
 
-	if (sport->lpuart_dma_rx_use && sport->dma_eeop)
-		sts &= ~UARTSTAT_IDLE;
-
 	lpuart32_write(&sport->port, sts, UARTSTAT);
 	return IRQ_HANDLED;
 }
