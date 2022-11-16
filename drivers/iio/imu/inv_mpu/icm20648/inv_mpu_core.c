@@ -2348,6 +2348,10 @@ int inv_check_chip_type(struct iio_dev *indio_dev, const char *name)
 				sizeof(inv_bac_confidence_attributes));
 	t_ind += ARRAY_SIZE(inv_bac_confidence_attributes);
 
+	memcpy(&inv_attributes[t_ind], inv_debug_attributes,
+				sizeof(inv_debug_attributes));
+	t_ind += ARRAY_SIZE(inv_debug_attributes);
+
 	inv_attributes[t_ind] = NULL;
 
 	indio_dev->name = st->hw->name;
