@@ -494,7 +494,7 @@ static ssize_t pin_assignment_show(struct device *dev,
 	struct dp_altmode *dp = dev_get_drvdata(dev);
 	u8 assignments;
 	int len = 0;
-	u8 cur;
+	int cur;
 	int i;
 
 	mutex_lock(&dp->lock);
