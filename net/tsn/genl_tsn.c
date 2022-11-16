@@ -1681,7 +1681,7 @@ static int cmd_qci_sgi_get(struct genl_info *info)
 		s8 ipv;
 		u32 ti, omax;
 
-		if (!(gcl + i)) {
+		if (!gcl) {
 			pr_err("error: list count too big\n");
 			ret = -EINVAL;
 			kfree(sgiadmin.admin.gcl);
@@ -1877,7 +1877,7 @@ static int cmd_qci_sgi_status_get(struct genl_info *info)
 		s8 ipv;
 		u32 ti, omax;
 
-		if (!(gcl + i)) {
+		if (!gcl) {
 			pr_err("error: list count too big\n");
 			ret = -EINVAL;
 			kfree(sgistat.oper.gcl);
