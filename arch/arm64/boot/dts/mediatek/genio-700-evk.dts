@@ -991,3 +991,11 @@
 &mfg0 {
 	domain-supply = <&mt6359_vproc2_buck_reg>;
 };
+
+&mt6359_vmodem_buck_reg {
+	regulator-always-on;
+};
+
+&mt6359_vsram_md_ldo_reg {
+	regulator-always-on;
+};
