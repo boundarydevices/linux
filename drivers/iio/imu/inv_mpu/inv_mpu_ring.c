@@ -563,8 +563,8 @@ int inv_mpu_configure_ring(struct iio_dev *indio_dev)
 		return ret;
 	}
 
-	st->trig = iio_trigger_alloc("%s-dev%d", indio_dev->name,
-				     indio_dev->id);
+	st->trig = iio_trigger_alloc(st->dev, "%s-dev%d", indio_dev->name,
+				     iio_device_id(indio_dev));
 	if (st->trig == NULL) {
 		ret = -ENOMEM;
 		dev_err(st->dev, "iio trigger alloc error\n");
