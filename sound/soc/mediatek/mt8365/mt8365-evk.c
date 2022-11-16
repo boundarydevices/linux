@@ -482,9 +482,8 @@ static int mt8365_evk_dev_probe(struct platform_device *pdev)
 	card->dev = dev;
 	ret = set_card_codec_info(card);
 	if (ret) {
-		dev_err(&pdev->dev, "%s set_card_codec_info failed %d\n",
-			__func__, ret);
-		return ret;
+		return dev_err_probe(&pdev->dev, ret, "%s set_card_codec_info failed\n",
+				    __func__);
 	}
 
 	platform_node = of_parse_phandle(dev->of_node, "mediatek,platform", 0);
