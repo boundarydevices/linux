@@ -1137,9 +1137,9 @@
 					 <&pcc5 IMX8ULP_CLK_DC_NANO>;
 				clock-names = "core", "rx_esc", "tx_esc", "phy_ref", "video_pll", "lcdif";
 				power-domains = <&scmi_devpd IMX8ULP_PD_MIPI_DSI>;
-				assigned-clocks = <&pcc5 IMX8ULP_CLK_DSI>, <&cgc2 IMX8ULP_CLK_PLL4_PFD0>;
+				assigned-clocks = <&pcc5 IMX8ULP_CLK_DSI>;
 				assigned-clock-parents = <&cgc2 IMX8ULP_CLK_PLL4_PFD3_DIV2>;
-				assigned-clock-rates = <79200000>, <316800000>;
+				assigned-clock-rates = <79200000>;
 				interrupts = <GIC_SPI 114 IRQ_TYPE_LEVEL_HIGH>;
 				mux-controls = <&mux 0>;
 				csr = <&avd_sim>;
