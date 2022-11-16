@@ -45,11 +45,11 @@ int sof_ipc_msg_data(struct snd_sof_dev *sdev,
 
 			posn_offset = pstream->posn_offset;
 		} else {
-			struct snd_compr_tstamp *tstamp = cstream->runtime->private_data;
+			struct sof_compr_stream *sstream = cstream->runtime->private_data;
 
-			if (!tstamp)
+			if (!sstream)
 				return -ESTRPIPE;
-			posn_offset = tstamp->byte_offset;
+			posn_offset = sstream->posn_offset;
 		}
 
 		snd_sof_dsp_mailbox_read(sdev, posn_offset, p, sz);
