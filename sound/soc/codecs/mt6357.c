@@ -2683,7 +2683,7 @@ static struct snd_soc_dai_driver mtk_6357_dai_codecs[] = {
 		      .formats = SND_SOC_ADV_MT_FMTS,
 		      },
 	 .capture = {
-		     .stream_name = MT_SOC_VOICE_MD1_STREAM_NAME,
+		     .stream_name = MT_SOC_VOICE_MD1_CAPTURE_STREAM_NAME,
 		     .channels_min = 1,
 		     .channels_max = 2,
 		     .rates = SNDRV_PCM_RATE_8000_48000,
@@ -2701,7 +2701,7 @@ static struct snd_soc_dai_driver mtk_6357_dai_codecs[] = {
 		      .formats = SND_SOC_ADV_MT_FMTS,
 		      },
 	 .capture = {
-		     .stream_name = MT_SOC_VOICE_MD2_STREAM_NAME,
+		     .stream_name = MT_SOC_VOICE_MD2_CAPTURE_STREAM_NAME,
 		     .channels_min = 1,
 		     .channels_max = 2,
 		     .rates = SNDRV_PCM_RATE_8000_48000,
@@ -2752,7 +2752,7 @@ static struct snd_soc_dai_driver mtk_6357_dai_codecs[] = {
 			   .formats = SND_SOC_ADV_MT_FMTS,
 			   },
 		.capture = {
-			  .stream_name = MT_SOC_VOICE_USB_STREAM_NAME,
+			  .stream_name = MT_SOC_VOICE_USB_CAPTURE_STREAM_NAME,
 			  .channels_min = 1,
 			  .channels_max = 2,
 			  .rates = SNDRV_PCM_RATE_8000_192000,
@@ -2770,7 +2770,7 @@ static struct snd_soc_dai_driver mtk_6357_dai_codecs[] = {
 			   .formats = SND_SOC_ADV_MT_FMTS,
 			   },
 		.capture = {
-			  .stream_name = MT_SOC_VOICE_USB_ECHOREF_STREAM_NAME,
+			  .stream_name = MT_SOC_VOICE_USB_ECHOREF_CAPTURE_STREAM_NAME,
 			  .channels_min = 1,
 			  .channels_max = 2,
 			  .rates = SNDRV_PCM_RATE_8000_192000,
@@ -2817,7 +2817,7 @@ static struct snd_soc_dai_driver mtk_6357_dai_codecs[] = {
 		      .formats = SND_SOC_ADV_MT_FMTS,
 		      },
 	 .capture = {
-		     .stream_name = MT_SOC_ULDLLOOPBACK_STREAM_NAME,
+		     .stream_name = MT_SOC_ULDLLOOPBACK_CAPTURE_STREAM_NAME,
 		     .channels_min = 1,
 		     .channels_max = 2,
 		     .rates = SNDRV_PCM_RATE_8000_48000,
@@ -2856,7 +2856,7 @@ static struct snd_soc_dai_driver mtk_6357_dai_codecs[] = {
 		      .formats = SND_SOC_ADV_MT_FMTS,
 		      },
 	 .capture = {
-		     .stream_name = MT_SOC_MRGRX_STREAM_NAME,
+		     .stream_name = MT_SOC_MRGRX_CAPTURE_STREAM_NAME,
 		     .channels_min = 1,
 		     .channels_max = 8,
 		     .rates = SNDRV_PCM_RATE_8000_192000,
