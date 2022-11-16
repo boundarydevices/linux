@@ -186,7 +186,7 @@ static short ilim_table[] = {
 
 static int swxilim_select(int ilim)
 {
-	u8 ilim_sel;
+	u8 ilim_sel = 0;
 
 	if (ilim <= 0)
 		return -1;
