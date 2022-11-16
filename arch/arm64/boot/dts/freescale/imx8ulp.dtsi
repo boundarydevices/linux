@@ -1121,7 +1121,7 @@
 					 <&pcc5 IMX8ULP_CLK_DSI>,
 					 <&pcc5 IMX8ULP_CLK_DSI_TX_ESC>,
 					 <&cgc2 IMX8ULP_CLK_DSI_PHY_REF>,
-					 <&cgc2 IMX8ULP_CLK_PLL4>,
+					 <&cgc2 IMX8ULP_CLK_PLL4_PFD0>,
 					 <&pcc5 IMX8ULP_CLK_DC_NANO>;
 				clock-names = "core", "rx_esc", "tx_esc", "phy_ref", "video_pll", "lcdif";
 				power-domains = <&scmi_devpd IMX8ULP_PD_MIPI_DSI>;
