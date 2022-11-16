@@ -360,7 +360,6 @@ MODULE_DEVICE_TABLE(of, lpuart_dt_ids);
 
 /* Forward declare this for the dma callbacks*/
 static void lpuart_dma_tx_complete(void *arg);
-static void lpuart_dma_rx_free(struct uart_port *port, bool dma_terminate);
 
 static inline bool is_layerscape_lpuart(struct lpuart_port *sport)
 {
@@ -1399,15 +1398,13 @@ static inline int lpuart_start_rx_dma(struct lpuart_port *sport)
 	return 0;
 }
 
-static void lpuart_dma_rx_free(struct uart_port *port, bool dma_terminate)
+static void lpuart_dma_rx_free(struct uart_port *port)
 {
 	struct lpuart_port *sport = container_of(port,
 					struct lpuart_port, port);
 	struct dma_chan *chan = sport->dma_rx_chan;
 
-	if (dma_terminate)
-		dmaengine_terminate_sync(sport->dma_rx_chan);
-
+	dmaengine_terminate_sync(chan);
 	dma_unmap_sg(chan->device->dev, &sport->rx_sgl, 1, DMA_FROM_DEVICE);
 	kfree(sport->rx_ring.buf);
 	sport->rx_ring.tail = 0;
@@ -1872,7 +1869,7 @@ static void lpuart_dma_shutdown(struct lpuart_port *sport)
 {
 	if (sport->lpuart_dma_rx_use) {
 		lpuart_del_timer_sync(sport);
-		lpuart_dma_rx_free(&sport->port, true);
+		lpuart_dma_rx_free(&sport->port);
 		sport->lpuart_dma_rx_use = false;
 	}
 
@@ -2035,7 +2032,7 @@ lpuart_set_termios(struct uart_port *port, struct ktermios *termios,
 	 */
 	if (old && sport->lpuart_dma_rx_use) {
 		lpuart_del_timer_sync(sport);
-		lpuart_dma_rx_free(&sport->port, true);
+		lpuart_dma_rx_free(&sport->port);
 	}
 
 	spin_lock_irqsave(&sport->port.lock, flags);
@@ -2272,7 +2269,7 @@ lpuart32_set_termios(struct uart_port *port, struct ktermios *termios,
 	 */
 	if (old && sport->lpuart_dma_rx_use) {
 		lpuart_del_timer_sync(sport);
-		lpuart_dma_rx_free(&sport->port, true);
+		lpuart_dma_rx_free(&sport->port);
 	}
 
 	spin_lock_irqsave(&sport->port.lock, flags);
@@ -3103,7 +3100,7 @@ static int __maybe_unused lpuart_suspend(struct device *dev)
 			 * Rx DMA path before suspend and start Rx DMA path on resume.
 			 */
 			lpuart_del_timer_sync(sport);
-			lpuart_dma_rx_free(&sport->port, true);
+			lpuart_dma_rx_free(&sport->port);
 
 			/* Disable Rx DMA to use UART port as wakeup source */
 			spin_lock_irqsave(&sport->port.lock, flags);
