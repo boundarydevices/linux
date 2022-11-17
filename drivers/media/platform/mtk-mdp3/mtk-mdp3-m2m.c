@@ -384,19 +384,6 @@ static int mdp_m2m_s_fmt_mplane(struct file *file, void *fh,
 		capture->compose.top = 0;
 		capture->compose.width = f->fmt.pix_mp.width;
 		capture->compose.height = f->fmt.pix_mp.height;
-
-		/* set destination color format */
-		if (MDP_COLOR_IS_RGB(fmt->mdp_color)) {
-			f->fmt.pix_mp.colorspace = V4L2_COLORSPACE_SRGB;
-			f->fmt.pix_mp.quantization = V4L2_QUANTIZATION_FULL_RANGE;
-			f->fmt.pix_mp.ycbcr_enc = V4L2_YCBCR_ENC_601;
-			f->fmt.pix_mp.xfer_func = V4L2_XFER_FUNC_SRGB;
-		} else {
-			f->fmt.pix_mp.colorspace = V4L2_COLORSPACE_SMPTE170M; /* bt601 */
-			f->fmt.pix_mp.quantization = V4L2_QUANTIZATION_LIM_RANGE;
-			f->fmt.pix_mp.ycbcr_enc = V4L2_YCBCR_ENC_601;
-			f->fmt.pix_mp.xfer_func = V4L2_XFER_FUNC_709;
-		}
 	}
 	frame->format = *f;
 
