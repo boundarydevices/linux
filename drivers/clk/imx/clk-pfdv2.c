@@ -102,8 +102,8 @@ static int clk_pfdv2_determine_rate(struct clk_hw *hw,
 				    struct clk_rate_request *req)
 {
 	unsigned long parent_rates[] = {
-					480000000,
-					528000000,
+//					480000000,
+//					528000000,
 					req->best_parent_rate
 				       };
 	unsigned long best_rate = -1UL, rate = req->rate;
