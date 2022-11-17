@@ -337,7 +337,6 @@ static void mtk_drm_layer_dispatch_to_dual_pipe(
 	int left_bg = w/2;
 	int right_bg = w/2;
 	int roi_w = w;
-	struct mtk_crtc_state *crtc_state = NULL;
 
 	if ((plane_state == NULL) || (plane_state_l == NULL) || (plane_state_r == NULL)) {
 		DRM_ERROR("%s input ptr is NULL\n", __func__);
@@ -349,17 +348,11 @@ static void mtk_drm_layer_dispatch_to_dual_pipe(
 	memcpy(plane_state_r,
 		plane_state, sizeof(struct mtk_plane_state));
 
-	if (plane_state->base.crtc != NULL) {
-		crtc_state = to_mtk_crtc_state(plane_state->base.crtc->state);
+	src_w = drm_rect_width(&plane_state->base.src) >> 16;
+	src_h = drm_rect_height(&plane_state->base.src) >> 16;
+	dst_w = drm_rect_width(&plane_state->base.dst);
+	dst_h = drm_rect_height(&plane_state->base.dst);
 
-		src_w = drm_rect_width(&plane_state->base.src) >> 16;
-		src_h = drm_rect_height(&plane_state->base.src) >> 16;
-		dst_w = drm_rect_width(&plane_state->base.dst);
-		dst_h = drm_rect_height(&plane_state->base.dst);
-
-	} else {
-		DRM_ERROR("%s crtc is NULL\n", __func__);
-	}
 	DRM_DEBUG_DRIVER("plane_ori: src_xy(%u,%u) dst_xy(%u,%u), src_wh(%u,%u), dst_wh(%u,%u)\n",
 			plane_state->pending.src_x, plane_state->pending.src_y,
 			plane_state->pending.dst_x, plane_state->pending.dst_y,
@@ -1095,10 +1088,10 @@ static void mtk_drm_crtc_atomic_disable(struct drm_crtc *crtc,
 		wait_event_timeout(mtk_crtc->cb_blocking_queue,
 				   mtk_crtc->cmdq_vblank_cnt == 0,
 				   msecs_to_jiffies(500));
-#endif
+#else
 	/* Wait for planes to be disabled */
 	drm_crtc_wait_one_vblank(crtc);
-
+#endif
 	drm_crtc_vblank_off(crtc);
 	mtk_ddp_comp_unregister_vblank_cb(comp);
 	mtk_crtc_ddp_hw_fini(mtk_crtc);
