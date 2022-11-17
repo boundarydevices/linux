@@ -122,6 +122,13 @@
 		>;
 	};
 
+	pinctrl_mipi_q035_014: mipi-q035-014grp {
+		fsl,pins = <
+#define GP_LCD_RESET	<&gpioe 7 GPIO_ACTIVE_LOW>
+			MX8ULP_PAD_PTE7__PTE7		0x02
+		>;
+	};
+
 	pinctrl_ts_atmel: ts-atmelgrp {
 		fsl,pins = <
 #define GPIRQ_TS_ATMEL	<&gpioe 15 IRQ_TYPE_EDGE_FALLING>
