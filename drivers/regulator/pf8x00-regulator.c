@@ -172,8 +172,10 @@ struct id_name {
 
 struct pf8x_regulator {
 	struct regulator_desc desc;
-	unsigned char stby_reg;
-	unsigned char stby_mask;
+	unsigned int suspend_enable_reg;
+	unsigned int suspend_enable_mask;
+	unsigned int suspend_voltage_reg;
+	unsigned int suspend_voltage_cache;
 	int ilim;
 	int phase;
 	unsigned char hw_en;
@@ -424,6 +426,53 @@ static int pf8x00_of_parse_cb(struct device_node *np,
 	return 0;
 }
 
+static int pf8x00_suspend_enable(struct regulator_dev *rdev)
+{
+	struct pf8x_regulator *regl = container_of(rdev->desc, struct pf8x_regulator, desc);
+	struct regmap *rmap = rdev_get_regmap(rdev);
+
+	return regmap_update_bits(rmap, regl->suspend_enable_reg,
+				  regl->suspend_enable_mask,
+				  regl->suspend_enable_mask);
+}
+
+static int pf8x00_suspend_disable(struct regulator_dev *rdev)
+{
+	struct pf8x_regulator *regl = container_of(rdev->desc, struct pf8x_regulator, desc);
+	struct regmap *rmap = rdev_get_regmap(rdev);
+
+	return regmap_update_bits(rmap, regl->suspend_enable_reg,
+				  regl->suspend_enable_mask, 0);
+}
+
+static int pf8x00_set_suspend_voltage(struct regulator_dev *rdev, int uV)
+{
+	struct pf8x_regulator *regl = container_of(rdev->desc, struct pf8x_regulator, desc);
+	int ret;
+
+	if (regl->suspend_voltage_cache == uV)
+		return 0;
+
+	ret = regulator_map_voltage_iterate(rdev, uV, uV);
+	if (ret < 0) {
+		dev_err(rdev_get_dev(rdev), "failed to map %i uV\n", uV);
+		return ret;
+	}
+
+	dev_dbg(rdev_get_dev(rdev), "uV: %i, reg: 0x%x, msk: 0x%x, val: 0x%x\n",
+		uV, regl->suspend_voltage_reg, regl->desc.vsel_mask, ret);
+	ret = regmap_update_bits(rdev->regmap, regl->suspend_voltage_reg,
+				 regl->desc.vsel_mask, ret);
+	if (ret < 0) {
+		dev_err(rdev_get_dev(rdev), "failed to set %i uV\n", uV);
+		return ret;
+	}
+
+	regl->suspend_voltage_cache = uV;
+
+	return 0;
+}
+
 static struct regulator_ops pf8x00_ldo_regulator_ops = {
 	.enable = regulator_enable_regmap,
 	.disable = regulator_disable_regmap,
@@ -431,6 +480,9 @@ static struct regulator_ops pf8x00_ldo_regulator_ops = {
 	.list_voltage = regulator_list_voltage_table,
 	.set_voltage_sel = regulator_set_voltage_sel_regmap,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
+	.set_suspend_enable = pf8x00_suspend_enable,
+	.set_suspend_disable = pf8x00_suspend_disable,
+	.set_suspend_voltage = pf8x00_set_suspend_voltage,
 };
 
 static struct regulator_ops pf8x00_sw_regulator_ops = {
@@ -441,6 +493,9 @@ static struct regulator_ops pf8x00_sw_regulator_ops = {
 	.set_voltage_sel = regulator_set_voltage_sel_regmap,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
 	.set_voltage_time_sel = pf8x00_regulator_set_voltage_time_sel,
+	.set_suspend_enable = pf8x00_suspend_enable,
+	.set_suspend_disable = pf8x00_suspend_disable,
+	.set_suspend_voltage = pf8x00_set_suspend_voltage,
 };
 
 static struct regulator_ops pf8x00_vsnvs_regulator_ops = {
@@ -473,8 +528,9 @@ static struct regulator_ops pf8x00_vsnvs_regulator_ops = {
 			.disable_val = 0x0,			\
 			.enable_mask = 2,			\
 		},						\
-		.stby_reg = (base) + LDO_STBY_VOLT,		\
-		.stby_mask = 0x20,				\
+		.suspend_enable_reg = (base) + LDO_CONFIG2,	\
+		.suspend_enable_mask = 1,			\
+		.suspend_voltage_reg = (base) + LDO_STBY_VOLT,	\
 	}
 
 #define STRUCT_SW_REG(_id, _name, base, voltages)		\
@@ -498,8 +554,9 @@ static struct regulator_ops pf8x00_vsnvs_regulator_ops = {
 			.enable_mask = 0x3,			\
 			.enable_time = 500,			\
 		},						\
-		.stby_reg = (base) + SW_STBY_VOLT,		\
-		.stby_mask = 0xff,				\
+		.suspend_enable_reg = (base) + SW_MODE1,	\
+		.suspend_enable_mask = 0xc,			\
+		.suspend_voltage_reg = (base) + SW_STBY_VOLT,	\
 	}
 
 
