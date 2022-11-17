@@ -1928,28 +1928,6 @@
 			#clock-cells = <1>;
 		};
 
-		iommu_apu0: iommu@19010000 {
-			compatible = "mediatek,mt8188-iommu-apu";
-			reg = <0 0x19010000 0 0x1000>;
-			interrupts = <GIC_SPI 433 IRQ_TYPE_LEVEL_HIGH 0>;
-			/* mediatek,apu_power = <&apusys_rv>; */
-			clocks = <&clk26m>;
-			clock-names = "bclk";
-			#iommu-cells = <1>;
-			/* status = "disabled"; */
-		};
-
-		iommu_apu1: iommu@19015000 {
-			compatible = "mediatek,mt8188-iommu-apu";
-			reg = <0 0x19015000 0 0x1000>;
-			interrupts = <GIC_SPI 438 IRQ_TYPE_LEVEL_HIGH 0>;
-			/* mediatek,apu_power = <&apusys_rv>; */
-			clocks = <&clk26m>;
-			clock-names = "bclk";
-			#iommu-cells = <1>;
-			/* status = "disabled"; */
-		};
-
 		lvts: thermal-sensor@1100b000 {
 			compatible = "mediatek,mt8188-lvts";
 			#thermal-sensor-cells = <1>;
