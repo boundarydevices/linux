@@ -535,6 +535,8 @@ static const struct regulator_ops pf8x00_vsnvs_ops = {
 			.enable_mask = 0x3,			\
 			.enable_time = 500,			\
 		},						\
+		.suspend_enable_reg = (base) + SW_MODE1,	\
+		.suspend_enable_mask = 0xc,			\
 	}
 
 
