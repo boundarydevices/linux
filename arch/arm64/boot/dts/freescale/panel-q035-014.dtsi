@@ -3,11 +3,13 @@
 / {
 	aliases {
 		mipi_cmds_q035_014 = &mipi_cmds_q035_014;
+		pinctrl_q035_014 = &pinctrl_mipi_q035_014;
 	};
 
 	/* ST7703 controller */
 	mipi_cmds_q035_014: mipi-cmds-q035-014 {
 		alias = <&mipi_cmds_q035_014>;
+		aliasp = <&pinctrl_mipi_q035_014>;
 		delay-prepare = <100>;
 		delay-unprepare = <2>;
 		mipi-cmds-enable = /bits/ 8 <
