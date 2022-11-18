@@ -776,8 +776,6 @@ static ssize_t crtouch_write(struct file *filep, const char __user *buf, size_t 
 
 	if (data_to_write == NULL)
 		return -ENOMEM;
-	if ((data_to_write + 1) == NULL)
-		return -EINVAL;
 
 	/*update driver variable*/
 	if (*data_to_write == CONFIGURATION)	{
