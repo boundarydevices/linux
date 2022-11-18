@@ -1,7 +1,7 @@
 #ifndef __SOC_IMX_SRC_H
 #define __SOC_IMX_SRC_H
 
-#if IS_ENABLED(CONFIG_SOC_IMX8M)
+#if IS_ENABLED(CONFIG_SOC_IMX8M) || IS_ENABLED(CONFIG_HAVE_IMX_SRC)
 bool imx_src_is_m4_enabled(void);
 #else
 static bool imx_src_is_m4_enabled(void) { return false; }
