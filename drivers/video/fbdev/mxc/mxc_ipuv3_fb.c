@@ -3553,7 +3553,7 @@ static void mxcfb_unsetup_overlay(struct fb_info *fbi_bg)
 
 	mxcfb_unregister(ovfbi);
 
-	if (&ovfbi->cmap)
+	if (ovfbi->cmap.red)
 		fb_dealloc_cmap(&ovfbi->cmap);
 	framebuffer_release(ovfbi);
 }
@@ -3867,7 +3867,7 @@ static int mxcfb_remove(struct platform_device *pdev)
 	}
 
 	ipu_clear_usage(mxc_fbi->ipu_id, mxc_fbi->ipu_di);
-	if (&fbi->cmap)
+	if (fbi->cmap.red)
 		fb_dealloc_cmap(&fbi->cmap);
 	framebuffer_release(fbi);
 	return 0;
