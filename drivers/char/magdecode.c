@@ -456,7 +456,7 @@ static ssize_t mag_read
 			result = mag_decode(dev, temp);
 			dev->d_take = dev->events[dev->e_take].ptr;
 			if (result) {
-				if (copy_to_user(buf, temp, result))
+				if (copy_to_user(buf, temp, sizeof(temp)))
 					return -EFAULT;
 			}
 		} else { /* switch closure */
