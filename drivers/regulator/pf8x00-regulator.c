@@ -199,7 +199,7 @@ static const int pf8x00_ldo_voltages[] = {
 	3100000, 3150000, 3200000, 3300000, 3350000, 4000000, 4900000, 5000000,
 };
 
-#define SWV(i)	(6250 * i + 400000)
+#define SWV(i)	(6250 * (i) + 400000)
 #define SWV_LINE(i)	SWV(i*8+0), SWV(i*8+1), SWV(i*8+2), SWV(i*8+3), \
 			SWV(i*8+4), SWV(i*8+5), SWV(i*8+6), SWV(i*8+7)
 
