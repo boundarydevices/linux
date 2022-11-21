@@ -519,3 +519,52 @@ int ifx_cfg80211_vndr_cmds_ldpc_cap(struct wiphy *wiphy,
 
 	return ret;
 }
+
+int ifx_cfg80211_vndr_cmds_oce_enable(struct wiphy *wiphy,
+				      struct wireless_dev *wdev,
+				      const void *data, int len)
+{
+	int ret = 0;
+	struct brcmf_cfg80211_vif *vif;
+	struct brcmf_if *ifp;
+	struct bcm_iov_buf *oce_iov;
+	struct bcm_xtlv *oce_xtlv;
+	u8 val = *(u8 *)data;
+	u8 param[16] = {0};
+
+	vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+	ifp = vif->ifp;
+	oce_iov = (struct bcm_iov_buf *)param;
+	oce_iov->version = cpu_to_le16(IFX_OCE_IOV_VERSION);
+	oce_iov->id = cpu_to_le16(IFX_OCE_CMD_ENABLE);
+	oce_xtlv = (struct bcm_xtlv *)oce_iov->data;
+
+	if (val == 0xa) {
+		/* To get fw iovars of the form "wl oce enable"
+		 * using iw, call the parent iovar "oce" with the subcmd
+		 * filled and passed along
+		 * ./iw dev wlan0 vendor recv 0x000319 0xf 0xa
+		 */
+		ret = brcmf_fil_iovar_data_get(ifp, "oce",
+					       param, sizeof(param));
+		if (ret) {
+			brcmf_err("get oce enable error:%d\n", ret);
+		} else {
+			brcmf_dbg(INFO,
+				  "get oce enable: %d\n", oce_xtlv->data[0]);
+			ifx_cfg80211_vndr_send_cmd_reply(wiphy, oce_xtlv->data,
+							 sizeof(int));
+		}
+	} else {
+		oce_iov->len = cpu_to_le16(8);
+		oce_xtlv->id = cpu_to_le16(IFX_OCE_XTLV_ENABLE);
+		oce_xtlv->len = cpu_to_le16(1);
+		oce_xtlv->data[0] = val;
+		ret = brcmf_fil_iovar_data_set(ifp, "oce",
+					       param, sizeof(param));
+		if (ret)
+			brcmf_err("set oce enable error:%d\n", ret);
+	}
+
+	return ret;
+}
