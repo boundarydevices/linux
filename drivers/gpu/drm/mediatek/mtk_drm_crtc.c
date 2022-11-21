@@ -1048,9 +1048,21 @@ static void mtk_drm_crtc_atomic_enable(struct drm_crtc *crtc,
 		return;
 	}
 
+	if (mtk_crtc->is_dual_pipe) {
+		ret = pm_runtime_resume_and_get(mtk_crtc->ddp_dualpipe_comp[0]->dev);
+		if (ret < 0) {
+			DRM_DEV_ERROR(mtk_crtc->ddp_dualpipe_comp[0]->dev,
+				"Failed to enable power domain: %d\n", ret);
+			pm_runtime_put(comp->dev);
+			return;
+		}
+	}
+
 	ret = mtk_crtc_ddp_hw_init(mtk_crtc);
 	if (ret) {
 		pm_runtime_put(comp->dev);
+		if (mtk_crtc->is_dual_pipe)
+			pm_runtime_put(mtk_crtc->ddp_dualpipe_comp[0]->dev);
 		return;
 	}
 
@@ -1098,6 +1110,12 @@ static void mtk_drm_crtc_atomic_disable(struct drm_crtc *crtc,
 	ret = pm_runtime_put(comp->dev);
 	if (ret < 0)
 		DRM_DEV_ERROR(comp->dev, "Failed to disable power domain: %d\n", ret);
+	if (mtk_crtc->is_dual_pipe) {
+		ret = pm_runtime_put(mtk_crtc->ddp_dualpipe_comp[0]->dev);
+		if (ret < 0)
+			DRM_DEV_ERROR(mtk_crtc->ddp_dualpipe_comp[0]->dev,
+				"Failed to disable power domain: %d\n", ret);
+	}
 
 	mtk_crtc->enabled = false;
 }
