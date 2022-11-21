@@ -209,6 +209,13 @@
 	};
 };
 
+&afe {
+	#sound-dai-cells = <0>;
+	mediatek,dmic-iir-on;
+	mediatek,dmic-clk-mono;
+	status = "okay";
+};
+
 &eth {
 	phy-mode ="rgmii-rxid";
 	phy-handle = <&ethernet_phy0>;
@@ -341,6 +348,34 @@
 };
 
 &pio {
+	aud_pins_default: audiodefault {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO101__FUNC_O_AUD_CLK_MOSI>,
+				 <PINMUX_GPIO102__FUNC_O_AUD_SYNC_MOSI>,
+				 <PINMUX_GPIO103__FUNC_O_AUD_DAT_MOSI0>,
+				 <PINMUX_GPIO104__FUNC_O_AUD_DAT_MOSI1>,
+				 <PINMUX_GPIO105__FUNC_I0_AUD_DAT_MISO0>,
+				 <PINMUX_GPIO106__FUNC_I0_AUD_DAT_MISO1>,
+				 <PINMUX_GPIO107__FUNC_B0_I2SIN_MCK>,
+				 <PINMUX_GPIO108__FUNC_B0_I2SIN_BCK>,
+				 <PINMUX_GPIO109__FUNC_B0_I2SIN_WS>,
+				 <PINMUX_GPIO110__FUNC_I0_I2SIN_D0>,
+				 <PINMUX_GPIO114__FUNC_O_I2SO2_MCK>,
+				 <PINMUX_GPIO115__FUNC_B0_I2SO2_BCK>,
+				 <PINMUX_GPIO116__FUNC_B0_I2SO2_WS>,
+				 <PINMUX_GPIO117__FUNC_O_I2SO2_D0>,
+				 <PINMUX_GPIO118__FUNC_O_I2SO2_D1>,
+				 <PINMUX_GPIO119__FUNC_O_I2SO2_D2>,
+				 <PINMUX_GPIO120__FUNC_O_I2SO2_D3>,
+				 <PINMUX_GPIO125__FUNC_O_DMIC1_CLK>,
+				 <PINMUX_GPIO126__FUNC_I0_DMIC1_DAT>,
+				 <PINMUX_GPIO128__FUNC_O_DMIC2_CLK>,
+				 <PINMUX_GPIO129__FUNC_I0_DMIC2_DAT>,
+				 <PINMUX_GPIO121__FUNC_B0_PCM_CLK>,
+				 <PINMUX_GPIO122__FUNC_B0_PCM_SYNC>,
+				 <PINMUX_GPIO124__FUNC_I0_PCM_DI>;
+		};
+	};
 
 	disp_pwm0_pin_default: disp-pwm0-pin-default {
 		pins1 {
@@ -1215,4 +1250,37 @@
 
 &mt6359_vsram_md_ldo_reg {
 	regulator-always-on;
+};
+
+&sound {
+	compatible = "mediatek,mt8390-evk";
+	model = "mt8390-evk";
+	pinctrl-names = "default";
+	pinctrl-0 = <&aud_pins_default>;
+	audio-routing =
+		"Headphone", "Headphone L",
+		"Headphone", "Headphone R",
+		"AIN1", "Headset Mic",
+		"DMIC_INPUT", "AP DMIC",
+		"AP DMIC", "MIC_BIAS_0",
+		"AP DMIC", "MIC_BIAS_2";
+	status = "okay";
+
+	dai-link-0 {
+		sound-dai = <&afe>;
+		dai-link-name = "ADDA_BE";
+
+		codec-0 {
+			sound-dai = <&pmic 0>;
+		};
+	};
+
+	dai-link-1 {
+		sound-dai = <&afe>;
+		dai-link-name = "ETDM3_OUT_BE";
+
+		codec-0 {
+			sound-dai = <&hdmi0>;
+		};
+	};
 };
