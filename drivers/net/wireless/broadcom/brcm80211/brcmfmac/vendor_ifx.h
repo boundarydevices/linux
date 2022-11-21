@@ -60,6 +60,13 @@
 	.policy = (_POLICY),	\
 	.doit = (_FN)
 
+struct bcm_iov_buf {
+	u16	version;
+	u16	len;
+	u16	id;
+	u16	data[1];
+};
+
 enum ifx_nl80211_vendor_subcmds {
 	/* TODO: IFX Vendor subcmd enum IDs between 2-15 are reserved
 	 * to be filled later with BRCM Vendor subcmds that are
@@ -85,7 +92,7 @@ enum ifx_nl80211_vendor_subcmds {
 	SCMD(LDPC_CAP)		= 12,
 	SCMD(AMSDU)		= 13,
 	SCMD(TWT)		= 14,
-	SCMD(RSV15)		= 15,
+	SCMD(OCE_ENABLE)	= 15,
 	SCMD(BSSCOLOR)		= 16,
 	SCMD(MAX)		= 17
 };
@@ -354,6 +361,34 @@ enum {
 	IFX_HE_CMD_LAST
 };
 
+#define IFX_OCE_IOV_MAJOR_VER 1
+#define IFX_OCE_IOV_MINOR_VER 1
+#define IFX_OCE_IOV_MAJOR_VER_SHIFT 8
+#define IFX_OCE_IOV_VERSION \
+	((IFX_OCE_IOV_MAJOR_VER << IFX_OCE_IOV_MAJOR_VER_SHIFT) | \
+	IFX_OCE_IOV_MINOR_VER)
+
+enum {
+	IFX_OCE_CMD_ENABLE = 1,
+	IFX_OCE_CMD_PROBE_DEF_TIME = 2,
+	IFX_OCE_CMD_FD_TX_PERIOD = 3,
+	IFX_OCE_CMD_FD_TX_DURATION = 4,
+	IFX_OCE_CMD_RSSI_TH = 5,
+	IFX_OCE_CMD_RWAN_LINKS = 6,
+	IFX_OCE_CMD_CU_TRIGGER = 7,
+	IFX_OCE_CMD_LAST
+};
+
+enum {
+	IFX_OCE_XTLV_ENABLE  = 0x1,
+	IFX_OCE_XTLV_PROBE_DEF_TIME  = 0x2,
+	IFX_OCE_XTLV_FD_TX_PERIOD    = 0x3,
+	IFX_OCE_XTLV_FD_TX_DURATION  = 0x4,
+	IFX_OCE_XTLV_RSSI_TH = 0x5,
+	IFX_OCE_XTLV_RWAN_LINKS = 0x6,
+	IFX_OCE_XTLV_CU_TRIGGER = 0x7
+};
+
 static const struct nla_policy
 ifx_vendor_attr_twt_param_policy[IFX_VENDOR_ATTR_TWT_PARAM_MAX + 1] = {
 	[IFX_VENDOR_ATTR_TWT_PARAM_UNSPEC] = {.type = NLA_U8},
@@ -486,6 +521,9 @@ int ifx_cfg80211_vndr_cmds_amsdu(struct wiphy *wiphy,
 int ifx_cfg80211_vndr_cmds_ldpc_cap(struct wiphy *wiphy,
 				    struct wireless_dev *wdev,
 				    const void *data, int len);
+int ifx_cfg80211_vndr_cmds_oce_enable(struct wiphy *wiphy,
+				      struct wireless_dev *wdev,
+				      const void *data, int len);
 
 #endif /* IFX_VENDOR_H */
 
