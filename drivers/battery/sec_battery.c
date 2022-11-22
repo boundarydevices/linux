@@ -174,16 +174,6 @@ static int tuner_running_status;
 #endif
 
 int poweroff_charging;
-static int sec_bat_is_lpm_check(char *str)
-{
-	if (strncmp(str, "charger", 7) == 0)
-		poweroff_charging = 1;
-
-	pr_info("%s: Low power charging mode: %d\n", __func__, poweroff_charging);
-
-	return poweroff_charging;
-}
-__setup("androidboot.mode=", sec_bat_is_lpm_check);
 
 static struct sec_charging_current *get_charging_info(struct sec_battery_info *battery, int index)
 {
