@@ -9,6 +9,13 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
+	pinctrl_backlight_alt: backlight-altgrp {
+		fsl,pins = <
+			MX6QDL_PAD_GPIO_17__GPIO7_IO12		0x1b0b0		/* J6 pin 19, high: 24 bit color */
+			MX6QDL_PAD_SD1_CMD__GPIO1_IO18		0x130b1		/* J6 pin 20, low: don't rotate 180 */
+		>;
+	};
+
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x1b0b0		/* J28 pin 7 - barcode scanner gpio */
@@ -339,6 +346,7 @@
 
 / {
 	aliases {
+		backlight_alt = &backlight_alt;
 		backlight_lcd = &backlight_lcd;
 		backlight_lvds = &backlight_lvds;
 		fb_hdmi = &fb_hdmi;
@@ -351,6 +359,7 @@
 		mxcfb0 = &fb_lvds;
 		mxcfb1 = &fb_lcd;
 		mxcfb2 = &fb_hdmi;
+		pwm_alt = &pwm1;
 		pwm_lcd = &pwm3;
 		pwm_lvds = &pwm4;
 		t_lvds = &t_lvds;
@@ -361,11 +370,15 @@
 		ts_tsc2004 = &ts_tsc2004;
 	};
 
-	backlight-j7 {
+	backlight_alt: backlight-alt {
 		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
 		compatible = "pwm-backlight";
 		default-brightness-level = <10>;
+		display = <&fb_lvds>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight_alt>;
 		pwms = <&pwm1 0 100000 0>;
+		status = "disabled";
 	};
 
 	backlight_lcd: backlight-lcd {
