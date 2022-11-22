@@ -80,7 +80,8 @@ static int __nat25_add_pppoe_tag(struct sk_buff *skb, struct pppoe_tag *tag)
 	/*  have a room for new tag */
 	memmove(((unsigned char *)ph->tag + data_len), (unsigned char *)ph->tag, ntohs(ph->length));
 	ph->length = htons(ntohs(ph->length) + data_len);
-	memcpy((unsigned char *)ph->tag, tag, data_len);
+	memcpy((unsigned char *)ph->tag, tag, tag->tag_len + TAG_HDR_LEN);
+
 	return data_len;
 }
 
