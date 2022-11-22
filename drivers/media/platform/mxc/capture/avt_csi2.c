@@ -3642,7 +3642,8 @@ static int avt_set_selection(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int avt_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *parm)
+static int avt_s_frame_interval(struct v4l2_subdev *sd,
+				struct v4l2_subdev_frame_interval *ival)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct avt_csi2_priv *priv = to_avt_csi2(client);
@@ -3674,7 +3675,7 @@ static int avt_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *parm)
 	}
 
 	/* Copy new settings to internal structure */
-	memcpy(&priv->streamcap, &parm->parm.capture, sizeof(struct v4l2_captureparm));
+	memcpy(&priv->streamcap.timeperframe, &ival->interval, sizeof(struct v4l2_fract));
 
 	/* reading the Minimum Frame Rate Level */
 	ret = avt_reg_read(client,
@@ -3769,17 +3770,22 @@ static int avt_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *parm)
 	tpf->denominator = value64;
 
 	/* Copy modified settings back */
-	memcpy(&parm->parm.capture, &priv->streamcap, sizeof(struct v4l2_captureparm));
+	memcpy(&ival->interval, &priv->streamcap.timeperframe, sizeof(struct v4l2_fract));
 
 	return 0;
 }
 
-static int avt_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *parm)
+static int avt_g_frame_interval(struct v4l2_subdev *sd,
+				struct v4l2_subdev_frame_interval *ival)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct avt_csi2_priv *priv = to_avt_csi2(client);
 
-	memcpy(&parm->parm.capture, &priv->streamcap, sizeof(struct v4l2_captureparm));
+	if (ival->pad != 0)
+		return -EINVAL;
+
+	memcpy(&ival->interval, &priv->streamcap.timeperframe,
+	       sizeof(struct v4l2_fract));
 
 	return 0;
 }
@@ -3903,8 +3909,8 @@ static const struct v4l2_subdev_internal_ops avt_csi2_int_ops = {
 
 static const struct v4l2_subdev_video_ops avt_csi2_video_ops = {
 	.s_stream = avt_csi2_s_stream,
-	.s_parm = avt_s_parm,
-	.g_parm = avt_g_parm,
+	.s_frame_interval = avt_s_frame_interval,
+	.g_frame_interval = avt_g_frame_interval,
 };
 
 static const struct v4l2_subdev_pad_ops avt_csi2_pad_ops = {
