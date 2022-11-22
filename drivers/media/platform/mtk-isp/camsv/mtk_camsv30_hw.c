@@ -143,7 +143,7 @@ static void mtk_camsv30_setup(struct mtk_cam_dev *cam_dev, u32 w, u32 h,
 	const struct mtk_cam_conf *conf = cam_dev->conf;
 	int poll_num = 1000;
 	u32 int_en = INT_ST_MASK_CAMSV;
-	struct mtk_cam_sparams sparams;
+	struct mtk_cam_sparams sparams = {0};
 
 	fmt_to_sparams(mbus_fmt, &sparams);
 
