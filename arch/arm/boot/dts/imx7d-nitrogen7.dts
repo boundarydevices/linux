@@ -1066,6 +1066,7 @@
 	bus-width = <4>;
 	mmc-pwrseq = <&usdhc2_pwrseq>;
 	non-removable;
+	no-sd-uhs-sdr104;
 	vmmc-supply = <&reg_wlan>;
 	vqmmc-1-8-v;
 	cap-power-off-card;
