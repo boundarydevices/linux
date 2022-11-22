@@ -51,7 +51,7 @@ mt7915_fw_ser_set(struct file *file, const char __user *user_buf,
 {
 	struct mt7915_phy *phy = file->private_data;
 	struct mt7915_dev *dev = phy->dev;
-	bool ext_phy = phy != &dev->phy;
+	bool band = phy->band_idx;
 	char buf[16];
 	int ret = 0;
 	u16 val;
@@ -73,7 +73,7 @@ mt7915_fw_ser_set(struct file *file, const char __user *user_buf,
 	switch (val) {
 	case SER_QUERY:
 		/* grab firmware SER stats */
-		ret = mt7915_mcu_set_ser(dev, 0, 0, ext_phy);
+		ret = mt7915_mcu_set_ser(dev, 0, 0, band);
 		break;
 	case SER_SET_RECOVER_L1:
 	case SER_SET_RECOVER_L2:
@@ -81,11 +81,11 @@ mt7915_fw_ser_set(struct file *file, const char __user *user_buf,
 	case SER_SET_RECOVER_L3_TX_ABORT:
 	case SER_SET_RECOVER_L3_TX_DISABLE:
 	case SER_SET_RECOVER_L3_BF:
-		ret = mt7915_mcu_set_ser(dev, SER_ENABLE, BIT(val), ext_phy);
+		ret = mt7915_mcu_set_ser(dev, SER_ENABLE, BIT(val), band);
 		if (ret)
 			return ret;
 
-		ret = mt7915_mcu_set_ser(dev, SER_RECOVER, val, ext_phy);
+		ret = mt7915_mcu_set_ser(dev, SER_RECOVER, val, band);
 		break;
 	default:
 		break;
