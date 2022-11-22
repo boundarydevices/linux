@@ -12,6 +12,8 @@
 #include <linux/types.h>
 #include <linux/nvmem-consumer.h>
 
+#include <drm/drm_print.h>
+
 #include "phy-mtk-hdmi.h"
 #include "phy-mtk-hdmi-mt8195.h"
 
@@ -652,13 +654,16 @@ static const struct clk_ops mtk_hdmi_pll_ops = {
 
 static void vtx_signal_en(struct mtk_hdmi_phy *hdmi_phy, bool on)
 {
-	if (on)
+	if (on) {
+		DRM_DEV_DEBUG_DRIVER(hdmi_phy->dev, "HDMI Tx TMDS ON\n");
 		mtk_hdmi_phy_mask(hdmi_phy, HDMI_1_CFG_0, RG_HDMITX21_DRV_EN,
 				  RG_HDMITX21_DRV_EN);
-	else
+	} else {
+		DRM_DEV_DEBUG_DRIVER(hdmi_phy->dev, "HDMI Tx TMDS OFF\n");
 		mtk_hdmi_phy_mask(hdmi_phy, HDMI_1_CFG_0,
 				  0x0 << RG_HDMITX21_DRV_EN_SHIFT,
 				  RG_HDMITX21_DRV_EN);
+	}
 }
 
 static void mtk_hdmi_phy_enable_tmds(struct mtk_hdmi_phy *hdmi_phy)
