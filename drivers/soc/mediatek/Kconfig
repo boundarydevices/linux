@@ -84,4 +84,12 @@ config MTK_SVS
 	  chip process corner, temperatures and other factors. Then DVFS
 	  driver could apply SVS bank voltage to PMIC/Buck.
 
+config MTK_HDMI_RX
+	tristate "MediaTek HDMI RX"
+	help
+	  MediaTek HDMI-Rx driver.
+	  Say 'm' here to add MediaTek HDMI-Rx driver,
+	  it supports HDMI 2.0.
+	  If unsure, say 'N'.
+
 endmenu
