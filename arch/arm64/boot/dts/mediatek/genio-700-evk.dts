@@ -53,6 +53,14 @@
 		enable-active-high;
 	};
 
+	usb_p2_vbus: usb-p2-vbus {
+		compatible = "regulator-fixed";
+		regulator-name = "p2_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+	};
+
 	lcm1_tp_avdd: lcm1-tp-avdd {
 		compatible = "regulator-fixed";
 		regulator-name = "lcm1-tp-avdd";
@@ -501,14 +509,13 @@
 		};
 
 		vbus-pins {
-			pinmux = <PINMUX_GPIO84__FUNC_B_GPIO84>;
-			bias-disable;
-			output-low;
+			pinmux = <PINMUX_GPIO84__FUNC_O_USB_DRVVBUS>;
+			output-high;
 		};
 
 		valid-pin {
-			pinmux = <PINMUX_GPIO85__FUNC_B_GPIO85>;
-			bias-disable;
+			pinmux = <PINMUX_GPIO85__FUNC_I0_VBUSVALID>;
+			input-enable;
 		};
 	};
 
@@ -832,9 +839,8 @@
 	pinctrl-0 = <&usb_default>;
 	pinctrl-names = "default";
 	maximum-speed = "high-speed";
-	mediatek,force-vbus;
 	usb-role-switch;
-	dr_mode = "peripheral";
+	dr_mode = "otg";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	status = "okay";
 
@@ -842,7 +848,6 @@
 		compatible = "gpio-usb-b-connector", "usb-b-connector";
 		type = "micro";
 		id-gpios = <&pio 83 GPIO_ACTIVE_HIGH>;
-		vbus-gpios = <&pio 85 0>;
 		vbus-supply = <&usb_p0_vbus>;
 	};
 };
@@ -864,7 +869,7 @@
 	pinctrl-0 = <&usb1_default>;
 	pinctrl-names = "default";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
-	dr_mode = "otg";
+	dr_mode = "host";
 	mediatek,usb3-drd;
 	usb-role-switch;
 	status = "okay";
@@ -889,6 +894,33 @@
 };
 
 &usb_host1 {
+	status = "okay";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+};
+
+&ssusb2 {
+	maximum-speed = "high-speed";
+	usb-role-switch;
+	dr_mode = "host";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	status = "okay";
+
+	connector {
+		compatible = "gpio-usb-b-connector", "usb-b-connector";
+		type = "micro";
+		vbus-supply = <&usb_p2_vbus>;
+	};
+};
+
+&u2port2 {
+	status = "okay";
+};
+
+&u3phy2 {
+	status = "okay";
+};
+
+&usb_host2 {
 	status = "okay";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 };
