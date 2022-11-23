@@ -1,0 +1,3733 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2020 MediaTek Inc.
+ */
+
+#include <linux/cdev.h>
+#include <linux/clk.h>
+#include <linux/debugfs.h>
+#include <linux/delay.h>
+#include <linux/device.h>
+#include <linux/file.h>
+#include <linux/gpio.h>
+#include <linux/i2c.h>
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/kthread.h>
+#include <linux/list.h>
+#include <linux/module.h>
+#include <linux/of.h>
+#include <linux/of_gpio.h>
+#include <linux/of_graph.h>
+#include <linux/of_platform.h>
+#include <linux/platform_device.h>
+#include <linux/slab.h>
+#include <linux/vmalloc.h>
+
+#include "mtk_hdmirx.h"
+
+#include "hdmi_rx21_phy.h"
+#include "hdmi_rx21_phy_hw.h"
+#include "hdmi_rx2_hal.h"
+#include "hdmi_rx2_ctrl.h"
+
+#include "coda/HDMI_RX_ENTRY.h"
+
+#define IS_2P1_PORT TRUE
+#define PHY_SW_VERSION 0x0001
+
+#define vUtDelay2us(delay) udelay(delay<<1)
+#define vUtDelay1ms(delay) delay_ms(delay)
+
+u32 Read16Msk(void __iomem *addr, u32 msk)
+{
+	u32 i, temp;
+
+	temp = msk;
+	for (i = 0; i < 16; i++) {
+		if ((temp & 1) == 1)
+			break;
+		temp = temp >> 1;
+	}
+
+	return (r_reg(addr) & msk) >> i;
+}
+
+void vHDMI21PhyTermCtrl(struct MTK_HDMI *myhdmi, bool bOnOff)
+{
+	if (bOnOff)
+		pw_fld(REG_0000_HD21_PM, 0,
+			REG_0000_HD21_PM_NODIE_PD_RT_OV);
+	else
+		pw_fld(REG_0000_HD21_PM, 0xF,
+			REG_0000_HD21_PM_NODIE_PD_RT_OV);
+}
+
+void vHDMI21PHY14(struct MTK_HDMI *myhdmi)
+{
+	RX_DEF_LOG("[RX]%s\n", __func__);
+
+	w_reg(A_ADR + 0x0B5C, 0xFF000800);
+	w_reg(A_ADR + 0x0EB0, 0xFF001400);
+	w_reg(A_ADR + 0x0F68, 0xFF00F800);
+	w_reg(A_ADR + 0x09A8, 0x00FF0030);
+	w_reg(A_ADR + 0x1140, 0x00FF00C0);
+	w_reg(A_ADR + 0x1140, 0xFF001200);
+	w_reg(A_ADR + 0x1144, 0x00FF0000);
+	w_reg(A_ADR + 0x1144, 0xFF000F00);
+	w_reg(A_ADR + 0x1148, 0x00FF0080);
+	w_reg(A_ADR + 0x1148, 0xFF000C00);
+	w_reg(A_ADR + 0x114C, 0x00FF0080);
+	w_reg(A_ADR + 0x114C, 0xFF000700);
+	w_reg(A_ADR + 0x1150, 0x00FF00C0);
+	w_reg(A_ADR + 0x1150, 0xFF000300);
+	w_reg(A_ADR + 0x1154, 0x00FF0015);
+	w_reg(A_ADR + 0x1154, 0xFF000200);
+	w_reg(A_ADR + 0x1158, 0x00FF005A);
+	w_reg(A_ADR + 0x1158, 0xFF000600);
+	w_reg(A_ADR + 0x115C, 0x00FF00B0);
+	w_reg(A_ADR + 0x115C, 0xFF000400);
+	w_reg(A_ADR + 0x1160, 0x00FF00C0);
+	w_reg(A_ADR + 0x1160, 0xFF000300);
+	w_reg(A_ADR + 0x1164, 0x00FF0020);
+	w_reg(A_ADR + 0x1164, 0xFF000300);
+	w_reg(A_ADR + 0x1530, 0x00FF0000);
+	w_reg(A_ADR + 0x1530, 0xFF000000);
+	w_reg(A_ADR + 0x1430, 0x00FF0000);
+	w_reg(A_ADR + 0x1430, 0xFF000000);
+	w_reg(A_ADR + 0x1434, 0x00FF0080);
+	w_reg(A_ADR + 0x1434, 0xFF002A00);
+	w_reg(A_ADR + 0x1438, 0x00FF0000);
+	w_reg(A_ADR + 0x1438, 0xFF000000);
+	w_reg(A_ADR + 0x143C, 0x00FF00A0);
+	w_reg(A_ADR + 0x143C, 0xFF000A00);
+	w_reg(A_ADR + 0x1440, 0x00FF0000);
+	w_reg(A_ADR + 0x1440, 0xFF000000);
+	w_reg(A_ADR + 0x1444, 0x00FF00A8);
+	w_reg(A_ADR + 0x1444, 0xFF000200);
+	w_reg(A_ADR + 0x1448, 0x00FF0000);
+	w_reg(A_ADR + 0x1448, 0xFF000000);
+	w_reg(A_ADR + 0x144C, 0x00FF00AA);
+	w_reg(A_ADR + 0x144C, 0xFF000000);
+	w_reg(A_ADR + 0x1474, 0x00FF0000);
+	w_reg(A_ADR + 0x1474, 0xFF001000);
+	w_reg(A_ADR + 0x1480, 0x00FF0000);
+	w_reg(A_ADR + 0x1480, 0xFF001000);
+	w_reg(A_ADR + 0x148C, 0x00FF0000);
+	w_reg(A_ADR + 0x148C, 0xFF001000);
+	w_reg(A_ADR + 0x1498, 0x00FF0000);
+	w_reg(A_ADR + 0x1498, 0xFF001000);
+	w_reg(A_ADR + 0x0000, 0x00FF0000);
+	w_reg(A_ADR + 0x0F54, 0xFF008700);
+	w_reg(A_ADR + 0x0980, 0xFF000000);
+	w_reg(A_ADR + 0x0984, 0x00FF0000);
+	w_reg(A_ADR + 0x0984, 0xFF000000);
+	w_reg(A_ADR + 0x0988, 0x00FF0000);
+	w_reg(A_ADR + 0x0988, 0xFF000000);
+	w_reg(A_ADR + 0x098C, 0x00FF0000);
+	w_reg(A_ADR + 0x098C, 0xFF000000);
+	w_reg(A_ADR + 0x0990, 0x00FF0080);
+	w_reg(A_ADR + 0x0990, 0xFF000400);
+	w_reg(A_ADR + 0x09A0, 0x00FF0000);
+	w_reg(A_ADR + 0x09A0, 0xFF000000);
+	w_reg(A_ADR + 0x0BC4, 0x00FF0000);
+
+	//Band
+	w_reg(A_ADR + 0x1140, 0x00FF004E);
+	w_reg(A_ADR + 0x1140, 0xFF001100);
+	w_reg(A_ADR + 0x1144, 0x00FF00D8);
+	w_reg(A_ADR + 0x1144, 0xFF000D00);
+	w_reg(A_ADR + 0x1148, 0x00FF00EC);
+	w_reg(A_ADR + 0x1148, 0xFF000B00);
+	w_reg(A_ADR + 0x114C, 0x00FF00EC);
+	w_reg(A_ADR + 0x114C, 0xFF000600);
+	w_reg(A_ADR + 0x1150, 0x00FF0076);
+	w_reg(A_ADR + 0x1150, 0xFF000300);
+	w_reg(A_ADR + 0x1154, 0x00FF00EC);
+	w_reg(A_ADR + 0x1154, 0xFF000100);
+	w_reg(A_ADR + 0x1158, 0x00FF000E);
+	w_reg(A_ADR + 0x1158, 0xFF000600);
+	w_reg(A_ADR + 0x115C, 0x00FF0053);
+	w_reg(A_ADR + 0x115C, 0xFF000400);
+	w_reg(A_ADR + 0x1160, 0x00FF0076);
+	w_reg(A_ADR + 0x1160, 0xFF000300);
+	w_reg(A_ADR + 0x1164, 0x00FF00E2);
+	w_reg(A_ADR + 0x1164, 0xFF000200);
+
+	w_reg(A_ADR + 0x2000, 0x00010001);
+	w_reg(A_ADR + 0x2080, 0x00070007);
+	w_reg(A_ADR + 0x0728, 0xFF000200);
+	w_reg(A_ADR + 0x0730, 0xFF000200);
+	w_reg(A_ADR + 0x0738, 0xFF000200);
+	w_reg(A_ADR + 0x0740, 0xFF000200);
+	w_reg(A_ADR + 0x074C, 0xFF001000);
+	w_reg(A_ADR + 0x1530, 0x00FF007F);
+}
+
+#define HDMI_20_patch 0
+
+void vHDMI21PHY20(struct MTK_HDMI *myhdmi)
+{
+	RX_DEF_LOG("[RX]%s\n", __func__);
+
+	w_reg(A_ADR + 0x0B5C, 0xFF000B00);
+	w_reg(A_ADR + 0x0EB0, 0xFF001400);
+	w_reg(A_ADR + 0x0F68, 0xFF00F800);
+	w_reg(A_ADR + 0x09A8, 0x00FF0030);
+	w_reg(A_ADR + 0x1140, 0x00FF00C0);
+	w_reg(A_ADR + 0x1140, 0xFF001200);
+	w_reg(A_ADR + 0x1144, 0x00FF0000);
+	w_reg(A_ADR + 0x1144, 0xFF000F00);
+	w_reg(A_ADR + 0x1148, 0x00FF0080);
+	w_reg(A_ADR + 0x1148, 0xFF000C00);
+	w_reg(A_ADR + 0x114C, 0x00FF0080);
+	w_reg(A_ADR + 0x114C, 0xFF000700);
+	w_reg(A_ADR + 0x1150, 0x00FF00C0);
+	w_reg(A_ADR + 0x1150, 0xFF000300);
+	w_reg(A_ADR + 0x1154, 0x00FF0015);
+	w_reg(A_ADR + 0x1154, 0xFF000200);
+	w_reg(A_ADR + 0x1158, 0x00FF005A);
+	w_reg(A_ADR + 0x1158, 0xFF000600);
+	w_reg(A_ADR + 0x115C, 0x00FF00B0);
+	w_reg(A_ADR + 0x115C, 0xFF000400);
+	w_reg(A_ADR + 0x1160, 0x00FF00C0);
+	w_reg(A_ADR + 0x1160, 0xFF000300);
+	w_reg(A_ADR + 0x1164, 0x00FF0020);
+	w_reg(A_ADR + 0x1164, 0xFF000300);
+	w_reg(A_ADR + 0x1530, 0x00FF0000);
+	w_reg(A_ADR + 0x1530, 0xFF000000);
+	w_reg(A_ADR + 0x1430, 0x00FF0000);
+	w_reg(A_ADR + 0x1430, 0xFF000000);
+	w_reg(A_ADR + 0x1434, 0x00FF0080);
+	w_reg(A_ADR + 0x1434, 0xFF002A00);
+	w_reg(A_ADR + 0x1438, 0x00FF0000);
+	w_reg(A_ADR + 0x1438, 0xFF000000);
+	w_reg(A_ADR + 0x143C, 0x00FF00A0);
+	w_reg(A_ADR + 0x143C, 0xFF000A00);
+	w_reg(A_ADR + 0x1440, 0x00FF0000);
+	w_reg(A_ADR + 0x1440, 0xFF000000);
+	w_reg(A_ADR + 0x1444, 0x00FF00A8);
+	w_reg(A_ADR + 0x1444, 0xFF000200);
+	w_reg(A_ADR + 0x1448, 0x00FF0000);
+	w_reg(A_ADR + 0x1448, 0xFF000000);
+	w_reg(A_ADR + 0x144C, 0x00FF00AA);
+	w_reg(A_ADR + 0x144C, 0xFF000000);
+	w_reg(A_ADR + 0x1474, 0x00FF0000);
+	w_reg(A_ADR + 0x1474, 0xFF001000);
+	w_reg(A_ADR + 0x1480, 0x00FF0000);
+	w_reg(A_ADR + 0x1480, 0xFF001000);
+	w_reg(A_ADR + 0x148C, 0x00FF0000);
+	w_reg(A_ADR + 0x148C, 0xFF001000);
+	w_reg(A_ADR + 0x1498, 0x00FF0000);
+	w_reg(A_ADR + 0x1498, 0xFF001000);
+	w_reg(A_ADR + 0x0000, 0x00FF0000);
+	w_reg(A_ADR + 0x0F54, 0xFF008700);
+	w_reg(A_ADR + 0x0980, 0xFF000000);
+	w_reg(A_ADR + 0x0984, 0x00FF0000);
+	w_reg(A_ADR + 0x0984, 0xFF000000);
+	w_reg(A_ADR + 0x0988, 0x00FF0000);
+	w_reg(A_ADR + 0x0988, 0xFF000000);
+	w_reg(A_ADR + 0x098C, 0x00FF0000);
+	w_reg(A_ADR + 0x098C, 0xFF000000);
+	w_reg(A_ADR + 0x0990, 0x00FF0080);
+	w_reg(A_ADR + 0x0990, 0xFF000400);
+	w_reg(A_ADR + 0x09A0, 0x00FF0000);
+	w_reg(A_ADR + 0x09A0, 0xFF000000);
+	w_reg(A_ADR + 0x0BC4, 0x00FF0000);
+
+	w_reg(A_ADR + 0x1140, 0x00FF004E);
+	w_reg(A_ADR + 0x1140, 0xFF001100);
+	w_reg(A_ADR + 0x1144, 0x00FF00D8);
+	w_reg(A_ADR + 0x1144, 0xFF000D00);
+
+	//w_reg(A_ADR + 0x1148, 0x00FF0089);
+	w_reg(A_ADR + 0x1148, 0x00FF00EC);
+
+	//w_reg(A_ADR + 0x1148, 0xFF000D00);
+	w_reg(A_ADR + 0x1148, 0xFF000B00);
+
+	w_reg(A_ADR + 0x114C, 0x00FF00EC);
+	w_reg(A_ADR + 0x114C, 0xFF000600);
+	w_reg(A_ADR + 0x1150, 0x00FF0076);
+	w_reg(A_ADR + 0x1150, 0xFF000300);
+	w_reg(A_ADR + 0x1154, 0x00FF00EC);
+	w_reg(A_ADR + 0x1154, 0xFF000100);
+
+	//w_reg(A_ADR + 0x1158, 0x00FF00A7);
+	w_reg(A_ADR + 0x1158, 0x00FF000E);
+
+	//w_reg(A_ADR + 0x1158, 0xFF00A600);
+	w_reg(A_ADR + 0x1158, 0xFF000600);
+
+	//w_reg(A_ADR + 0x115C, 0x00FF000E);
+	w_reg(A_ADR + 0x115C, 0x00FF0053);
+
+	//w_reg(A_ADR + 0x115C, 0xFF008600);
+	w_reg(A_ADR + 0x115C, 0xFF000400);
+
+	//w_reg(A_ADR + 0x1160, 0x00FF0053);
+	w_reg(A_ADR + 0x1160, 0x00FF0076);
+
+	//w_reg(A_ADR + 0x1160, 0xFF00A400);
+	w_reg(A_ADR + 0x1160, 0xFF000300);
+
+	//w_reg(A_ADR + 0x1164, 0x00FF00B1);
+	w_reg(A_ADR + 0x1164, 0x00FF00E2);
+
+	w_reg(A_ADR + 0x1164, 0xFF000200);
+
+#if HDMI_20_patch
+	w_reg(A_ADR + 0x2000, 0x00010001);
+	w_reg(A_ADR + 0x2080, 0x00070007);
+#endif
+	w_reg(A_ADR + 0x0728, 0xFF000200);
+	w_reg(A_ADR + 0x0730, 0xFF000200);
+	w_reg(A_ADR + 0x0738, 0xFF000200);
+	w_reg(A_ADR + 0x0740, 0xFF000200);
+	w_reg(A_ADR + 0x074C, 0xFF001000);
+	w_reg(A_ADR + 0x1530, 0x00FF007F);
+
+#if HDMI_20_patch
+	w_reg(A_ADR + 0x117c, 0xFFFF7777);
+
+	//PGA gain override enable = 1
+	w_reg(A_ADR + 0x0574, 0x00010001);
+	w_reg(A_ADR + 0x0574, 0x01000100);
+	w_reg(A_ADR + 0x0578, 0x00010001);
+	w_reg(A_ADR + 0x0578, 0x01000100);
+
+	//PGA gain override value = 10
+	w_reg(A_ADR + 0x0474, 0x00FF000F);
+	w_reg(A_ADR + 0x0474, 0xFF000F00);
+	w_reg(A_ADR + 0x0478, 0x00FF000F);
+	w_reg(A_ADR + 0x0478, 0xFF000F00);
+
+	//idac_in_tap1~8_ov = 0
+	w_reg(A_ADR + 0x0474, 0x00FF000F);
+	w_reg(A_ADR + 0x0434, 0xFFFF0000);
+	w_reg(A_ADR + 0x0438, 0xFFFF0000);
+	w_reg(A_ADR + 0x043C, 0xFFFF0000);
+	w_reg(A_ADR + 0x0440, 0xFFFF0000);
+	w_reg(A_ADR + 0x0444, 0xFFFF0000);
+	w_reg(A_ADR + 0x0448, 0xFFFF0000);
+	w_reg(A_ADR + 0x044C, 0xFFFF0000);
+	w_reg(A_ADR + 0x0450, 0xFFFF0000);
+	w_reg(A_ADR + 0x0454, 0xFFFF0000);
+	w_reg(A_ADR + 0x0458, 0xFFFF0000);
+	w_reg(A_ADR + 0x045C, 0xFFFF0000);
+	w_reg(A_ADR + 0x0460, 0xFFFF0000);
+	w_reg(A_ADR + 0x0464, 0x00FF0000);
+	w_reg(A_ADR + 0x0464, 0x03000000);
+
+	//idac_in_tap1~8_ove =1
+	w_reg(A_ADR + 0x0534, 0xFFFF0081);
+	w_reg(A_ADR + 0x0538, 0xFFFF0081);
+	w_reg(A_ADR + 0x053C, 0xFFFF0041);
+	w_reg(A_ADR + 0x0540, 0xFFFF0041);
+	w_reg(A_ADR + 0x0544, 0xFFFF0041);
+	w_reg(A_ADR + 0x0548, 0xFFFF0041);
+	w_reg(A_ADR + 0x054C, 0xFFFF0421);
+	w_reg(A_ADR + 0x0550, 0xFFFF0421);
+	w_reg(A_ADR + 0x0554, 0xFFFF0421);
+	w_reg(A_ADR + 0x0558, 0xFFFF0421);
+	w_reg(A_ADR + 0x055C, 0xFFFF0421);
+	w_reg(A_ADR + 0x0560, 0xFFFF0421);
+	w_reg(A_ADR + 0x0564, 0x00210021);
+
+	//set Pre-DFE Mode
+	w_reg(A_ADR + 0x0404, 0x00FF0055);
+	w_reg(A_ADR + 0x0504, 0x00550055);
+
+	//Phdac SA calibration Reset
+	w_reg(A_ADR + 0x0700, 0x20002000);
+	w_reg(A_ADR + 0x0708, 0x20002000);
+	w_reg(A_ADR + 0x0710, 0x20002000);
+	w_reg(A_ADR + 0x0718, 0x20002000);
+
+	//SAFF calibration Reset
+	w_reg(A_ADR + 0x0564, 0x04000400);
+	w_reg(A_ADR + 0x0464, 0x04000400);
+	vUtDelay2us(50);
+	w_reg(A_ADR + 0x0564, 0x04000400);
+	w_reg(A_ADR + 0x0464, 0x04000000);
+
+	//EQ digital calibration Reset
+	w_reg(A_ADR + 0x0728, 0x02000200);
+	w_reg(A_ADR + 0x0730, 0x02000200);
+	w_reg(A_ADR + 0x0738, 0x02000200);
+	w_reg(A_ADR + 0x0740, 0x02000200);
+
+	//Power down EQ analog calibration
+	w_reg(A_ADR + 0x0644, 0x00ff0060);
+	w_reg(A_ADR + 0x0650, 0x00ff0060);
+	w_reg(A_ADR + 0x065c, 0x00ff0060);
+	w_reg(A_ADR + 0x0668, 0x00ff0060);
+
+	//Power down EQ-PGA NegC off
+	w_reg(A_ADR + 0x0640, 0xff008000);
+	w_reg(A_ADR + 0x064c, 0xff008000);
+	w_reg(A_ADR + 0x0658, 0xff008000);
+	w_reg(A_ADR + 0x0664, 0xff008000);
+
+	//Force EN SQH
+	w_reg(A_ADR + 0x2000, 0x00010001);
+	w_reg(A_ADR + 0x2080, 0x00070007);
+
+	//trigger auto EQ
+	w_reg(A_ADR + 0x0EA8, 0x00FF002F);
+	w_reg(A_ADR + 0x0E80, 0x00800080);
+	vUtDelay2us(50);
+	w_reg(A_ADR + 0x0E80, 0x00800000);
+	w_reg(A_ADR + 0x0E80, 0x80000000);
+	vUtDelay2us(50);
+	w_reg(A_ADR + 0x0E80, 0x80008000);
+	w_reg(A_ADR + 0x0E14, 0x0F000F00);
+	vUtDelay1ms(10);
+#endif
+}
+
+void _KHal_PHY_force_CLK_radio_1_40(struct MTK_HDMI *myhdmi,
+	bool en)
+{
+	pw_fld(REG_015C_DTOP_1, 1,
+			REG_015C_DTOP_1_TMDS_RATE_OV_EN);
+	if (en)
+		pw_fld(REG_015C_DTOP_1, 1,
+			REG_015C_DTOP_1_TMDS_RATE_OV);
+	else
+		pw_fld(REG_015C_DTOP_1, 0,
+			REG_015C_DTOP_1_TMDS_RATE_OV);
+}
+
+#define IS_2P1_PORT TRUE
+#define PHY_SW_VERSION 0x0001
+
+enum HDMI_RESET_PHY_DTOP {
+	HDMI_RESET_PHY_DTOP_SYNTH = BIT(0),
+	HDMI_RESET_PHY_DTOP_IRQ = BIT(1),
+	HDMI_RESET_PHY_DTOP_1ST_FIFO = BIT(2),
+	HDMI_RESET_PHY_DTOP_AFIFO = BIT(3),
+	HDMI_RESET_PHY_DTOP_40to36_FIFO = BIT(4),
+	HDMI_RESET_PHY_DTOP_SQH = BIT(5),
+	HDMI_RESET_PHY_DTOP_LANE0 = BIT(6),
+	HDMI_RESET_PHY_DTOP_LANE1 = BIT(7),
+	HDMI_RESET_PHY_DTOP_LANE2 = BIT(8),
+	HDMI_RESET_PHY_DTOP_LANE3 = BIT(9),
+	HDMI_RESET_PHY_DTOP_FREQ_DET = BIT(10),
+	HDMI_RESET_PHY_DTOP_MISC = BIT(11),
+	HDMI_RESET_PHY_DTOP_CLOCK_DET = BIT(12),
+	HDMI_RESET_PHY_DTOP_LONG_ZERO_ONE = BIT(13),
+};
+
+u8 u8SetEQValue[4] = {28, 28, 28, 28};
+
+void _KHal_HDMIRx_SetPGAGainValue(struct MTK_HDMI *myhdmi,
+	bool bOvenFlag, u8 *pu8PGAvalue)
+{
+	if (bOvenFlag)	{
+		if (pu8PGAvalue != NULL) {
+			//enable overwrite
+			pw_fld(REG_0174_ATOP_2, 0x1, REG_0174_ATOP_2_PGA_GAIN_L0_OV_EN);
+			pw_fld(REG_0174_ATOP_2, 0x1, REG_0174_ATOP_2_PGA_GAIN_L1_OV_EN);
+			pw_fld(REG_0178_ATOP_2, 0x1, REG_0178_ATOP_2_PGA_GAIN_L2_OV_EN);
+			pw_fld(REG_0178_ATOP_2, 0x1, REG_0178_ATOP_2_PGA_GAIN_L3_OV_EN);
+
+			//insert the overwrite value
+			pw_fld(REG_0074_ATOP_2, pu8PGAvalue[0], REG_0074_ATOP_2_PGA_GAIN_L0_OV);
+			pw_fld(REG_0074_ATOP_2, pu8PGAvalue[1], REG_0074_ATOP_2_PGA_GAIN_L1_OV);
+			pw_fld(REG_0078_ATOP_2, pu8PGAvalue[2], REG_0078_ATOP_2_PGA_GAIN_L2_OV);
+			pw_fld(REG_0078_ATOP_2, pu8PGAvalue[3], REG_0078_ATOP_2_PGA_GAIN_L3_OV);
+		}
+	} else {
+		pw_fld(REG_0174_ATOP_2, 0x0, REG_0174_ATOP_2_PGA_GAIN_L0_OV_EN);
+		pw_fld(REG_0174_ATOP_2, 0x0, REG_0174_ATOP_2_PGA_GAIN_L1_OV_EN);
+		pw_fld(REG_0178_ATOP_2, 0x0, REG_0178_ATOP_2_PGA_GAIN_L2_OV_EN);
+		pw_fld(REG_0178_ATOP_2, 0x0, REG_0178_ATOP_2_PGA_GAIN_L3_OV_EN);
+	}
+}
+
+void _KHal_HDMIRx_OverrideCRLock(struct MTK_HDMI *myhdmi,
+	enum HDMI_FRL_MODE_TYPE u8FRLRate,
+	bool bFlag)
+{
+	// u16 u16CRLockValue = 0;
+	if (IS_2P1_PORT == TRUE) {
+		if (bFlag) {
+			if ((u8FRLRate == HDMI_FRL_MODE_FRL_3G_3CH) ||
+			(u8FRLRate == HDMI_FRL_MODE_FRL_6G_3CH)) {
+				//u16CRLockValue = 0x7;
+				pw_fld(REG_0000_ATOP_2, 0x1, REG_0000_ATOP_2_CR_LOCK_L0_OV);
+				pw_fld(REG_0000_ATOP_2, 0x1, REG_0000_ATOP_2_CR_LOCK_L1_OV);
+				pw_fld(REG_0000_ATOP_2, 0x1, REG_0000_ATOP_2_CR_LOCK_L2_OV);
+			} else {
+				//u16CRLockValue = 0x7;
+				pw_fld(REG_0000_ATOP_2, 0x1, REG_0000_ATOP_2_CR_LOCK_L0_OV);
+				pw_fld(REG_0000_ATOP_2, 0x1, REG_0000_ATOP_2_CR_LOCK_L1_OV);
+				pw_fld(REG_0000_ATOP_2, 0x1, REG_0000_ATOP_2_CR_LOCK_L2_OV);
+				pw_fld(REG_0000_ATOP_2, 0x1, REG_0000_ATOP_2_CR_LOCK_L3_OV);
+			}
+
+			pw_fld(REG_0100_ATOP_2, 0x1, REG_0100_ATOP_2_CR_LOCK_L0_OV_EN);
+			pw_fld(REG_0100_ATOP_2, 0x1, REG_0100_ATOP_2_CR_LOCK_L1_OV_EN);
+			pw_fld(REG_0100_ATOP_2, 0x1, REG_0100_ATOP_2_CR_LOCK_L2_OV_EN);
+			pw_fld(REG_0100_ATOP_2, 0x1, REG_0100_ATOP_2_CR_LOCK_L3_OV_EN);
+
+			// MHAL_HDMIRX_MSG_INFO("** HDMI 21 override CR lock\r\n");
+		} else {
+			// release CR lock
+			pw_fld(REG_0100_ATOP_2, 0x0, REG_0100_ATOP_2_CR_LOCK_L0_OV_EN);
+			pw_fld(REG_0100_ATOP_2, 0x0, REG_0100_ATOP_2_CR_LOCK_L1_OV_EN);
+			pw_fld(REG_0100_ATOP_2, 0x0, REG_0100_ATOP_2_CR_LOCK_L2_OV_EN);
+			pw_fld(REG_0100_ATOP_2, 0x0, REG_0100_ATOP_2_CR_LOCK_L3_OV_EN);
+		}
+	}
+}
+
+void _KHal_HDMIRx_PHY_NegC_Control(struct MTK_HDMI *myhdmi,
+	bool bNegCOn)
+{
+	//open NegC
+	// phy_atop3_10/13/16/19[15] NegC value override enable
+	if (bNegCOn == TRUE) {
+		//not to set on the  overwrite enable of the NegC value to "Open" NegC,
+		//since the OV value is 0 as HW default
+		pw_fld(REG_0040_ATOP_3, 0x0, Fld(1, 15, AC_MSKB1));
+		pw_fld(REG_004C_ATOP_3, 0x0, Fld(1, 15, AC_MSKB1));
+		pw_fld(REG_0058_ATOP_3, 0x0, Fld(1, 15, AC_MSKB1));
+		pw_fld(REG_0064_ATOP_3, 0x0, Fld(1, 15, AC_MSKB1));
+	} else {
+		//set on the  overwrite enable of the NegC value to "Close" NegC,
+		//since the OV value is 0 as HW default
+		pw_fld(REG_0040_ATOP_3, 0x1, Fld(1, 15, AC_MSKB1));
+		pw_fld(REG_004C_ATOP_3, 0x1, Fld(1, 15, AC_MSKB1));
+		pw_fld(REG_0058_ATOP_3, 0x1, Fld(1, 15, AC_MSKB1));
+		pw_fld(REG_0064_ATOP_3, 0x1, Fld(1, 15, AC_MSKB1));
+	}
+}
+
+void _KHal_PHY_H14_Init(struct MTK_HDMI *myhdmi)
+{
+	_KHal_PHY_force_CLK_radio_1_40(myhdmi, FALSE);
+
+	//relase OVERWRITE ACDR mode
+	pw_fld(REG_0014_ATOP_2, 0x0, REG_0014_ATOP_2_EN_ACDR_MODE_OV);
+
+	pw_fld(REG_0114_ATOP_2, 0x0, REG_0114_ATOP_2_EN_ACDR_MODE_OV_EN);
+
+	//wriu 0x30020e 0x06
+	//0x3002_7
+	// w_fld(INVALID, 0x06, FLD_BMSK(7:0));
+	//wriu 0xe50759 0x14
+	//0xe507_2c
+	pw_fld(REG_00B0_LANE_0, 0x1, REG_00B0_LANE_0_EQ_MODE_ADD_OV);
+	pw_fld(REG_00B0_LANE_0, 0x0, REG_00B0_LANE_0_EQ_MODE_ADD_OV_EN);
+	pw_fld(REG_00B0_LANE_0, 0x1, REG_00B0_LANE_0_EQ_STH_ACC_SEL);
+	//wriu 0xe507b5 0xf8
+	//0xe507_5a
+	pw_fld(REG_0168_LANE_0, 0xf, REG_0168_LANE_0_DFE_AGC_FREERUN);
+	pw_fld(REG_0168_LANE_0, 0x2, REG_0168_LANE_0_EQ_OUTPUT_SEL);
+	//wriu 0xe504d4 0x30
+	//0xe504_6a
+	pw_fld(REG_01A8_DTOP_0, 0x0, REG_01A8_DTOP_0_EN_DVI_CLK_DIV);
+	if (myhdmi->my_debug2 == 15) {
+		pw_fld(REG_01A8_DTOP_0, 0x1, REG_01A8_DTOP_0_FIFO_FULL_RST_EN);
+		pw_fld(REG_01A8_DTOP_0, 0x1, REG_01A8_DTOP_0_FIFO_EMPTY_RST_EN);
+	} else {
+		pw_fld(REG_01A8_DTOP_0, 0, REG_01A8_DTOP_0_FIFO_FULL_RST_EN);
+		pw_fld(REG_01A8_DTOP_0, 0, REG_01A8_DTOP_0_FIFO_EMPTY_RST_EN);
+	}
+	pw_fld(REG_01A8_DTOP_0, 0x0, REG_01A8_DTOP_0_FIFO_FULL_EMPTY_FLAG_CLR);
+
+	//wriu 0xe508a0 0xc0
+	//wriu 0xe508a1 0x12
+	//0xe508_50
+	pw_fld(REG_0140_LANE_1, 0x12c0, REG_0140_LANE_1_HDMI_CLK_THR6);
+	//wriu 0xe508a2 0x00
+	//wriu 0xe508a3 0x0f
+	//0xe508_51
+	pw_fld(REG_0144_LANE_1, 0xf00, REG_0144_LANE_1_HDMI_CLK_THR5);
+	//wriu 0xe508a4 0x80
+	//wriu 0xe508a5 0x0c
+	//0xe508_52
+	pw_fld(REG_0148_LANE_1, 0xc80, REG_0148_LANE_1_HDMI_CLK_THR4);
+	//wriu 0xe508a6 0x80
+	//wriu 0xe508a7 0x07
+	//0xe508_53
+	pw_fld(REG_014C_LANE_1, 0x780, REG_014C_LANE_1_HDMI_CLK_THR3);
+	//wriu 0xe508a8 0xc0
+	//wriu 0xe508a9 0x03
+	//0xe508_54
+	pw_fld(REG_0150_LANE_1, 0x3c0, REG_0150_LANE_1_HDMI_CLK_THR2);
+	//wriu 0xe508aa 0x15
+	//wriu 0xe508ab 0x02
+	//0xe508_55
+	pw_fld(REG_0154_LANE_1, 0x215, REG_0154_LANE_1_HDMI_CLK_THR1);
+	//wriu 0xe508ac 0x5a
+	//wriu 0xe508ad 0x06
+	//0xe508_56
+	pw_fld(REG_0158_LANE_1, 0x65a, REG_0158_LANE_1_HDMI2_CLK_THR4);
+	//wriu 0xe508ae 0xb0
+	//wriu 0xe508af 0x04
+	//0xe508_57
+	pw_fld(REG_015C_LANE_1, 0x4b0, REG_015C_LANE_1_HDMI2_CLK_THR3);
+	//wriu 0xe508b0 0xc0
+	//wriu 0xe508b1 0x03
+	//0xe508_58
+	pw_fld(REG_0160_LANE_1, 0x3c0, REG_0160_LANE_1_HDMI2_CLK_THR2);
+	//wriu 0xe508b2 0x20
+	//wriu 0xe508b3 0x03
+	//0xe508_59
+	pw_fld(REG_0164_LANE_1, 0x320, REG_0164_LANE_1_HDMI2_CLK_THR1);
+	//wriu 0xe50a98 0x00
+	//wriu 0xe50a99 0x00
+	//0xe50a_4c
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_4_HDMI2P1_3G);
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_7_HDMI2P0_3G);
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_ACDR_MODE_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_ACDR_MODE_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_ACDR_MODE_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_ACDR_MODE_MOD_14_HDMI1P4_0P5G);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_CLKO_PIX_2X_MOD_FIX);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_CLKO_RX2TX_MOD_FIX);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_CLKO_VCODIV_L0_MOD_FIX);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_CLKO_VCODIV_L1_MOD_FIX);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_CLKO_VCODIV_L2_MOD_FIX);
+
+
+//	not to modified the DFE mode
+	pw_fld(REG_004C_PM, 0x0, REG_004C_PM_DIVSEL_IN_L0_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_004C_PM, 0x0, REG_004C_PM_DIVSEL_IN_L0_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_004C_PM, 0x0, REG_004C_PM_DIVSEL_IN_L0_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_004C_PM, 0x0, REG_004C_PM_DIVSEL_IN_L0_MOD_3_HDMI2P1_6G);
+
+	//wriu 0xe50000 0x00
+	//0xe500_0
+	pw_fld(REG_0000_ATOP_0, 0x0, REG_0000_ATOP_0_GLOBAL_OV_EN);
+	//wriu 0xe507ab 0x87
+	//0xe507_55
+	pw_fld(REG_0154_LANE_0, 0x7, REG_0154_LANE_0_UPDATE_DAC_TIME_OUT_THRD);
+	pw_fld(REG_0154_LANE_0, 0x1, REG_0154_LANE_0_UPDATE_DAC_TIME_OUT_ENABLE);
+	//wriu 0xe504c1 0x00
+	//0xe504_60
+	pw_fld(REG_0180_DTOP_0, 0x0, REG_0180_DTOP_0_CKG_XTAL);
+	pw_fld(REG_0180_DTOP_0, 0x0, REG_0180_DTOP_0_CKG_MPLL);
+	pw_fld(REG_0180_DTOP_0, 0x0, REG_0180_DTOP_0_CKG_DVI_RAW);
+	pw_fld(REG_0180_DTOP_0, 0x0, REG_0180_DTOP_0_CKG_MPLL_SEL);
+	pw_fld(REG_0180_DTOP_0, 0x0, REG_0180_DTOP_0_LANE_SWAP_OV_EN);
+
+	//wriu 0xe504c2 0x00
+	//wriu 0xe504c3 0x00
+	//0xe504_61
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_DATA_L0_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_DATA_L1_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_DATA_L2_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_DATA_L3_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_EDATA_L0_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_EDATA_L1_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_EDATA_L2_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_EDATA_L3_1ST);
+
+	//wriu 0xe504c4 0x00
+	//wriu 0xe504c5 0x00
+	//0xe504_62
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_DATA_L0_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_DATA_L1_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_DATA_L2_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_DATA_L3_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_EDATA_L0_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_EDATA_L1_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_EDATA_L2_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_EDATA_L3_SWAP);
+
+	//wriu 0xe504c6 0x00
+	//wriu 0xe504c7 0x00
+	//0xe504_63
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_LCKDET_L0_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_LCKDET_L1_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_LCKDET_L2_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_LCKDET_L3_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_PLL_FB_L0_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_PLL_FB_L1_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_PLL_FB_L2_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_PLL_FB_L3_SWAP);
+
+	//wriu 0xe504c8 0x80
+	//wriu 0xe504c9 0x04
+	//0xe504_64
+	// where is [7] and [10]???
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_CKG_CLKO_DATA_AF_LS_40);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_CKG_CLKO_DATA_AF_LS_36);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_CKG_TSTBUS_SEL);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_CLK_XTAL_DIV2_EN);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_EN_AUTO_EQ_SCAN_SYMBOL);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_ATOP_CLK_SYNTH_SEL);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_HD20_BIT_SEL);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_LINK_TRAIN_SRC_SEL);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_CKG_CLK_AF_LS_PHY_HD20);
+	//wriu 0xe504d0 0x00
+	//wriu 0xe504d1 0x00
+	//0xe504_68
+	pw_fld(REG_01A0_DTOP_0, 0x0, REG_01A0_DTOP_0_CKG_BR_DET_L0_SWAP);
+	pw_fld(REG_01A0_DTOP_0, 0x0, REG_01A0_DTOP_0_CKG_BR_DET_L1_SWAP);
+	pw_fld(REG_01A0_DTOP_0, 0x0, REG_01A0_DTOP_0_CKG_BR_DET_L2_SWAP);
+	pw_fld(REG_01A0_DTOP_0, 0x0, REG_01A0_DTOP_0_CKG_BR_DET_L3_SWAP);
+	pw_fld(REG_01A0_DTOP_0, 0x0, REG_01A0_DTOP_0_CKG_TMDS_FG);
+
+	//wriu 0xe505e2 0x00
+	//0xe505_71
+	pw_fld(REG_01C4_DTOP_1, 0x00, REG_01C4_DTOP_1_HD21_SYNTH_SET_1);
+
+	// dcdr mode, and pfd overwrite disable
+	// h20 only 1
+	//wriu 0xe5020b 0x10
+	//0xe502_5
+	pw_fld(REG_0014_ATOP_2, 0x0, REG_0014_ATOP_2_EN_ACDR_MODE_OV);
+
+	//wriu 0xe5028b 0x10
+	//0xe502_45
+	pw_fld(REG_0114_ATOP_2, 0x0, REG_0114_ATOP_2_EN_ACDR_MODE_OV_EN);
+
+
+	pw_fld(REG_012C_ATOP_2, 0x0, REG_012C_ATOP_2_ICTRL_PFD_L0_OV_EN);
+	pw_fld(REG_012C_ATOP_2, 0x0, REG_012C_ATOP_2_ICTRL_PFD_L1_OV_EN);
+
+	//wriu 0xe50298 0x21
+	//0xe502_4c
+	pw_fld(REG_0130_ATOP_2, 0x0, REG_0130_ATOP_2_ICTRL_PFD_L2_OV_EN);
+	pw_fld(REG_0130_ATOP_2, 0x0, REG_0130_ATOP_2_ICTRL_PFD_L3_OV_EN);
+	// h20 only 2
+
+	//modified part
+	pw_fld(REG_0080_LANE_0, 0x10, REG_0080_LANE_0_EQ_STRENGTH_INI);
+	pw_fld(REG_00B8_LANE_0, 0x10, REG_00B8_LANE_0_AGC_MAX);
+	pw_fld(REG_0174_LANE_0, 0x10, REG_0174_LANE_0_AGC_INITIAL);
+	pw_fld(REG_0174_LANE_0, 0x40, REG_0174_LANE_0_AGC_DLEV_TARGET);
+	//enable digital EQ calibration
+	pw_fld(REG_014C_ATOP_3, 1, FLD_BIT(12));
+	//open analog calibration
+	//RG_HDMI2P1RX_TEST_CH_Lx[38:37]=0x00;
+	pw_fld(REG_0044_ATOP_3, 0x0, FLD_BMSK(6 : 5));
+	pw_fld(REG_0050_ATOP_3, 0x0, FLD_BMSK(6 : 5));
+	pw_fld(REG_005C_ATOP_3, 0x0, FLD_BMSK(6 : 5));
+	pw_fld(REG_0068_ATOP_3, 0x0, FLD_BMSK(6 : 5));
+
+	pw_fld(REG_0154_LANE_0, 0x1, REG_0154_LANE_0_DLEV_SWAP_OV_EN_0);
+	pw_fld(REG_0154_LANE_0, 0x1, REG_0154_LANE_0_DLEV_SWAP_OV_EN_1);
+	pw_fld(REG_0154_LANE_0, 0x1, REG_0154_LANE_0_DLEV_SWAP_OV_EN_2);
+	pw_fld(REG_0154_LANE_0, 0x1, REG_0154_LANE_0_DLEV_SWAP_OV_EN_3);
+
+	pw_fld(REG_0154_LANE_0, 0x0, REG_0154_LANE_0_DLEV_SWAP_OV_0);
+	pw_fld(REG_0154_LANE_0, 0x0, REG_0154_LANE_0_DLEV_SWAP_OV_1);
+	pw_fld(REG_0154_LANE_0, 0x0, REG_0154_LANE_0_DLEV_SWAP_OV_2);
+	pw_fld(REG_0154_LANE_0, 0x0, REG_0154_LANE_0_DLEV_SWAP_OV_3);
+
+	pw_fld(REG_0070_ATOP_3, 0x1, Fld(1, 0, AC_MSKB0));
+	pw_fld(REG_007C_ATOP_3, 0x1, Fld(1, 0, AC_MSKB0));
+	pw_fld(REG_0088_ATOP_3, 0x1, Fld(1, 0, AC_MSKB0));
+	pw_fld(REG_0094_ATOP_3, 0x1, Fld(1, 0, AC_MSKB0));
+}
+
+void _KHal_PHY_H20_Init(struct MTK_HDMI *myhdmi)
+{
+	_KHal_PHY_force_CLK_radio_1_40(myhdmi, TRUE);
+
+	// adcr, enable pfd overwrite
+	// h20 only 1
+	//wriu 0xe5020b 0x10
+	//0xe502_5
+
+	//pw_fld(REG_0014_ATOP_2, 0x1, REG_0014_ATOP_2_EN_ACDR_MODE_OV);
+	pw_fld(REG_0014_ATOP_2, 0x0, REG_0014_ATOP_2_EN_CLKO_PIX_2X_OV);
+	pw_fld(REG_0014_ATOP_2, 0x0, REG_0014_ATOP_2_EN_CLKO_RX2TX_OV);
+	pw_fld(REG_0014_ATOP_2, 0x0, REG_0014_ATOP_2_EN_CLKO_VCODIV_L0_OV);
+	//wriu 0xe5028b 0x10
+	//0xe502_45
+
+	//pw_fld(REG_0114_ATOP_2, 0x1, REG_0114_ATOP_2_EN_ACDR_MODE_OV_EN);
+	pw_fld(REG_0114_ATOP_2, 0x0, REG_0114_ATOP_2_EN_CLKO_PIX_2X_OV_EN);
+	pw_fld(REG_0114_ATOP_2, 0x0, REG_0114_ATOP_2_EN_CLKO_RX2TX_OV_EN);
+	pw_fld(REG_0114_ATOP_2, 0x0, REG_0114_ATOP_2_EN_CLKO_VCODIV_L0_OV_EN);
+
+	//wriu 0xe50759 0x14
+	//0xe507_2c
+	pw_fld(REG_00B0_LANE_0, 0x1, REG_00B0_LANE_0_EQ_MODE_ADD_OV);
+	pw_fld(REG_00B0_LANE_0, 0x0, REG_00B0_LANE_0_EQ_MODE_ADD_OV_EN);
+	pw_fld(REG_00B0_LANE_0, 0x1, REG_00B0_LANE_0_EQ_STH_ACC_SEL);
+	//wriu 0xe507b5 0xf8
+	//0xe507_5a
+	pw_fld(REG_0168_LANE_0, 0xf, REG_0168_LANE_0_DFE_AGC_FREERUN);
+	pw_fld(REG_0168_LANE_0, 0x2, REG_0168_LANE_0_EQ_OUTPUT_SEL);
+	//wriu 0xe504d4 0x30
+	//0xe504_6a
+	pw_fld(REG_01A8_DTOP_0, 0x0, REG_01A8_DTOP_0_EN_DVI_CLK_DIV);
+	if (myhdmi->my_debug2 == 15) {
+		pw_fld(REG_01A8_DTOP_0, 0x1, REG_01A8_DTOP_0_FIFO_FULL_RST_EN);
+		pw_fld(REG_01A8_DTOP_0, 0x1, REG_01A8_DTOP_0_FIFO_EMPTY_RST_EN);
+	} else {
+		pw_fld(REG_01A8_DTOP_0, 0x0, REG_01A8_DTOP_0_FIFO_FULL_RST_EN);
+		pw_fld(REG_01A8_DTOP_0, 0x0, REG_01A8_DTOP_0_FIFO_EMPTY_RST_EN);
+	}
+	pw_fld(REG_01A8_DTOP_0, 0x0, REG_01A8_DTOP_0_FIFO_FULL_EMPTY_FLAG_CLR);
+
+	//wriu 0xe508a0 0xc0
+	//wriu 0xe508a1 0x12
+	//0xe508_50
+	pw_fld(REG_0140_LANE_1, 0x114E, REG_0140_LANE_1_HDMI_CLK_THR6);
+	//wriu 0xe508a2 0x00
+	//wriu 0xe508a3 0x0f
+	//0xe508_51
+	pw_fld(REG_0144_LANE_1, 0xDD8, REG_0144_LANE_1_HDMI_CLK_THR5);
+	//wriu 0xe508a4 0x80
+	//wriu 0xe508a5 0x0c
+	//0xe508_52
+	pw_fld(REG_0148_LANE_1, 0xBEC, REG_0148_LANE_1_HDMI_CLK_THR4);
+	//wriu 0xe508a6 0x80
+	//wriu 0xe508a7 0x07
+	//0xe508_53
+	pw_fld(REG_014C_LANE_1, 0x6EC, REG_014C_LANE_1_HDMI_CLK_THR3);
+	//wriu 0xe508a8 0xc0
+	//wriu 0xe508a9 0x03
+	//0xe508_54
+	pw_fld(REG_0150_LANE_1, 0x376, REG_0150_LANE_1_HDMI_CLK_THR2);
+	//wriu 0xe508aa 0x15
+	//wriu 0xe508ab 0x02
+	//0xe508_55
+	pw_fld(REG_0154_LANE_1, 0x1EC, REG_0154_LANE_1_HDMI_CLK_THR1);
+	//wriu 0xe508ac 0x5a
+	//wriu 0xe508ad 0x06
+	//0xe508_56
+	pw_fld(REG_0158_LANE_1, 0x60E, REG_0158_LANE_1_HDMI2_CLK_THR4);
+	//wriu 0xe508ae 0xb0
+	//wriu 0xe508af 0x04
+	//0xe508_57
+	pw_fld(REG_015C_LANE_1, 0x453, REG_015C_LANE_1_HDMI2_CLK_THR3);
+	//wriu 0xe508b0 0xc0
+	//wriu 0xe508b1 0x03
+	//0xe508_58
+	pw_fld(REG_0160_LANE_1, 0x376, REG_0160_LANE_1_HDMI2_CLK_THR2);
+	//wriu 0xe508b2 0x20
+	//wriu 0xe508b3 0x03
+	//0xe508_59
+	pw_fld(REG_0164_LANE_1, 0x2E2, REG_0164_LANE_1_HDMI2_CLK_THR1);
+	//wriu 0xe50a98 0x00
+	//wriu 0xe50a99 0x00
+	//0xe50a_4c
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_4_HDMI2P1_3G);
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_7_HDMI2P0_3G);
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_0130_PM, 0x1, REG_0130_PM_EN_ACDR_MODE_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_ACDR_MODE_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_ACDR_MODE_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_ACDR_MODE_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_ACDR_MODE_MOD_14_HDMI1P4_0P5G);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_CLKO_PIX_2X_MOD_FIX);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_CLKO_RX2TX_MOD_FIX);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_CLKO_VCODIV_L0_MOD_FIX);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_CLKO_VCODIV_L1_MOD_FIX);
+	pw_fld(REG_0130_PM, 0x0, REG_0130_PM_EN_CLKO_VCODIV_L2_MOD_FIX);
+
+	pw_fld(REG_004C_PM, 0x0, REG_004C_PM_DIVSEL_IN_L0_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_004C_PM, 0x0, REG_004C_PM_DIVSEL_IN_L0_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_004C_PM, 0x0, REG_004C_PM_DIVSEL_IN_L0_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_004C_PM, 0x0, REG_004C_PM_DIVSEL_IN_L0_MOD_3_HDMI2P1_6G);
+
+	//wriu 0xe50000 0x00
+	//0xe500_0
+	pw_fld(REG_0000_ATOP_0, 0x0, REG_0000_ATOP_0_GLOBAL_OV_EN);
+	//wriu 0xe507ab 0x87
+	//0xe507_55
+	pw_fld(REG_0154_LANE_0, 0x7, REG_0154_LANE_0_UPDATE_DAC_TIME_OUT_THRD);
+	pw_fld(REG_0154_LANE_0, 0x1, REG_0154_LANE_0_UPDATE_DAC_TIME_OUT_ENABLE);
+	//wriu 0xe504c1 0x00
+	//0xe504_60
+	pw_fld(REG_0180_DTOP_0, 0x0, REG_0180_DTOP_0_CKG_XTAL);
+	pw_fld(REG_0180_DTOP_0, 0x0, REG_0180_DTOP_0_CKG_MPLL);
+	pw_fld(REG_0180_DTOP_0, 0x0, REG_0180_DTOP_0_CKG_DVI_RAW);
+	pw_fld(REG_0180_DTOP_0, 0x0, REG_0180_DTOP_0_CKG_MPLL_SEL);
+	pw_fld(REG_0180_DTOP_0, 0x0, REG_0180_DTOP_0_LANE_SWAP_OV_EN);
+
+	//wriu 0xe504c2 0x00
+	//wriu 0xe504c3 0x00
+	//0xe504_61
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_DATA_L0_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_DATA_L1_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_DATA_L2_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_DATA_L3_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_EDATA_L0_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_EDATA_L1_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_EDATA_L2_1ST);
+	pw_fld(REG_0184_DTOP_0, 0x0, REG_0184_DTOP_0_CKG_CLKO_EDATA_L3_1ST);
+
+	//wriu 0xe504c4 0x00
+	//wriu 0xe504c5 0x00
+	//0xe504_62
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_DATA_L0_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_DATA_L1_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_DATA_L2_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_DATA_L3_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_EDATA_L0_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_EDATA_L1_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_EDATA_L2_SWAP);
+	pw_fld(REG_0188_DTOP_0, 0x0, REG_0188_DTOP_0_CKG_CLKO_EDATA_L3_SWAP);
+
+	//wriu 0xe504c6 0x00
+	//wriu 0xe504c7 0x00
+	//0xe504_63
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_LCKDET_L0_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_LCKDET_L1_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_LCKDET_L2_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_LCKDET_L3_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_PLL_FB_L0_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_PLL_FB_L1_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_PLL_FB_L2_SWAP);
+	pw_fld(REG_018C_DTOP_0, 0x0, REG_018C_DTOP_0_CKG_PLL_FB_L3_SWAP);
+
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_CKG_CLKO_DATA_AF_LS_40);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_CKG_CLKO_DATA_AF_LS_36);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_CKG_TSTBUS_SEL);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_CLK_XTAL_DIV2_EN);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_EN_AUTO_EQ_SCAN_SYMBOL);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_ATOP_CLK_SYNTH_SEL);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_HD20_BIT_SEL);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_LINK_TRAIN_SRC_SEL);
+	pw_fld(REG_0190_DTOP_0, 0x0, REG_0190_DTOP_0_CKG_CLK_AF_LS_PHY_HD20);
+
+	pw_fld(REG_01A0_DTOP_0, 0x0, REG_01A0_DTOP_0_CKG_BR_DET_L0_SWAP);
+	pw_fld(REG_01A0_DTOP_0, 0x0, REG_01A0_DTOP_0_CKG_BR_DET_L1_SWAP);
+	pw_fld(REG_01A0_DTOP_0, 0x0, REG_01A0_DTOP_0_CKG_BR_DET_L2_SWAP);
+	pw_fld(REG_01A0_DTOP_0, 0x0, REG_01A0_DTOP_0_CKG_BR_DET_L3_SWAP);
+	pw_fld(REG_01A0_DTOP_0, 0x0, REG_01A0_DTOP_0_CKG_TMDS_FG);
+
+	pw_fld(REG_01C4_DTOP_1, 0x00, REG_01C4_DTOP_1_HD21_SYNTH_SET_1);
+
+	//modified part
+	pw_fld(REG_0080_LANE_0, 0x10, REG_0080_LANE_0_EQ_STRENGTH_INI);
+	pw_fld(REG_00B8_LANE_0, 0x10, REG_00B8_LANE_0_AGC_MAX);
+	pw_fld(REG_0174_LANE_0, 0x10, REG_0174_LANE_0_AGC_INITIAL);
+	pw_fld(REG_0174_LANE_0, 0x40, REG_0174_LANE_0_AGC_DLEV_TARGET);
+
+	//disable digital EQ calibration
+	pw_fld(REG_014C_ATOP_3, 0, FLD_BIT(12));
+
+	//RG_HDMI2P1RX_TEST_CH_Lx[38:37]=0x03;
+	pw_fld(REG_0044_ATOP_3, 0x3, FLD_BMSK(6:5));
+	pw_fld(REG_0050_ATOP_3, 0x3, FLD_BMSK(6:5));
+	pw_fld(REG_005C_ATOP_3, 0x3, FLD_BMSK(6:5));
+	pw_fld(REG_0068_ATOP_3, 0x3, FLD_BMSK(6:5));
+
+	pw_fld(REG_0154_LANE_0, 0x1, REG_0154_LANE_0_DLEV_SWAP_OV_EN_0);
+	pw_fld(REG_0154_LANE_0, 0x1, REG_0154_LANE_0_DLEV_SWAP_OV_EN_1);
+	pw_fld(REG_0154_LANE_0, 0x1, REG_0154_LANE_0_DLEV_SWAP_OV_EN_2);
+	pw_fld(REG_0154_LANE_0, 0x1, REG_0154_LANE_0_DLEV_SWAP_OV_EN_3);
+
+	pw_fld(REG_0154_LANE_0, 0x0, REG_0154_LANE_0_DLEV_SWAP_OV_0);
+	pw_fld(REG_0154_LANE_0, 0x0, REG_0154_LANE_0_DLEV_SWAP_OV_1);
+	pw_fld(REG_0154_LANE_0, 0x0, REG_0154_LANE_0_DLEV_SWAP_OV_2);
+	pw_fld(REG_0154_LANE_0, 0x0, REG_0154_LANE_0_DLEV_SWAP_OV_3);
+
+	// dLev calibration refer to common mode voltage (Vcm)
+	// reg_rg_hdmi2p1rx_test_dfe_Lx[0]=1; phy_atop3_1c/1f/22/25[0]=1
+	pw_fld(REG_0070_ATOP_3, 0x1, Fld(1, 0, AC_MSKB0));
+	pw_fld(REG_007C_ATOP_3, 0x1, Fld(1, 0, AC_MSKB0));
+	pw_fld(REG_0088_ATOP_3, 0x1, Fld(1, 0, AC_MSKB0));
+	pw_fld(REG_0094_ATOP_3, 0x1, Fld(1, 0, AC_MSKB0));
+}
+
+bool _KHal_HDMIRx_GetClockStableFlag(struct MTK_HDMI *myhdmi)
+{
+	bool bStatusFlag = FALSE;
+
+	bStatusFlag = ((r_reg(REG_017C_LANE_1) & 0x0888) == 0x0888) ? TRUE : FALSE;
+	if (bStatusFlag == FALSE) {
+		// Release FSM when clock unstable for C_T_S issue
+		pw_fld(REG_0040_LANE_0, 0, REG_0040_LANE_0_OV_LANE_FSM_STAT_0);
+		pw_fld(REG_0044_LANE_0, 0, REG_0044_LANE_0_OV_LANE_FSM_STAT_1);
+		pw_fld(REG_0048_LANE_0, 0, REG_0048_LANE_0_OV_LANE_FSM_STAT_2);
+		pw_fld(REG_004C_LANE_0, 0, REG_004C_LANE_0_OV_LANE_FSM_STAT_3);
+		pw_fld(REG_0168_LANE_0, 0x0, REG_0168_LANE_0_DFE_AGC_FREERUN);
+	}
+	return bStatusFlag;
+}
+
+void _KHal_HDMIRx_EnableDfeTap(struct MTK_HDMI *myhdmi,
+	bool bEnTap1to4, bool bEnTap5to8, bool bEnTap9to12)
+{
+	//TODO: PHY part
+	if (bEnTap1to4) {
+		if (IS_2P1_PORT) {
+			// enable dfe tap1~tap4
+			//REG_015C_LANE_0_EN_TAP
+			pw_fld(REG_015C_LANE_0, 0x0f, Fld(4, 0, AC_MSKB0));
+		}
+
+		//TAP1~4 override release
+		//TAP1
+		pw_fld(REG_0134_ATOP_2, 0x0, REG_0134_ATOP_2_IDAC_IN_TAP1_L0_OV_EN);
+		pw_fld(REG_0134_ATOP_2, 0x0, REG_0134_ATOP_2_IDAC_IN_TAP1_L1_OV_EN);
+		pw_fld(REG_0138_ATOP_2, 0x0, REG_0138_ATOP_2_IDAC_IN_TAP1_L2_OV_EN);
+		pw_fld(REG_0138_ATOP_2, 0x0, REG_0138_ATOP_2_IDAC_IN_TAP1_L3_OV_EN);
+		//TAP2
+		pw_fld(REG_013C_ATOP_2, 0x0, REG_013C_ATOP_2_IDAC_IN_TAP2_L0_OV_EN);
+		pw_fld(REG_013C_ATOP_2, 0x0, REG_013C_ATOP_2_IDAC_IN_TAP2_L1_OV_EN);
+		pw_fld(REG_0140_ATOP_2, 0x0, REG_0140_ATOP_2_IDAC_IN_TAP2_L2_OV_EN);
+		pw_fld(REG_0140_ATOP_2, 0x0, REG_0140_ATOP_2_IDAC_IN_TAP2_L3_OV_EN);
+		//TAP3
+		pw_fld(REG_0144_ATOP_2, 0x0, REG_0144_ATOP_2_IDAC_IN_TAP3_L0_OV_EN);
+		pw_fld(REG_0144_ATOP_2, 0x0, REG_0144_ATOP_2_IDAC_IN_TAP3_L1_OV_EN);
+		pw_fld(REG_0148_ATOP_2, 0x0, REG_0148_ATOP_2_IDAC_IN_TAP3_L2_OV_EN);
+		pw_fld(REG_0148_ATOP_2, 0x0, REG_0148_ATOP_2_IDAC_IN_TAP3_L3_OV_EN);
+		//TAP4
+		pw_fld(REG_014C_ATOP_2, 0x0, REG_014C_ATOP_2_IDAC_IN_TAP4_L0_OV_EN);
+		pw_fld(REG_014C_ATOP_2, 0x0, REG_014C_ATOP_2_IDAC_IN_TAP4_L1_OV_EN);
+		pw_fld(REG_014C_ATOP_2, 0x0, REG_014C_ATOP_2_IDAC_IN_TAP4_L2_OV_EN);
+		pw_fld(REG_0150_ATOP_2, 0x0, REG_0150_ATOP_2_IDAC_IN_TAP4_L3_OV_EN);
+	} else {
+		//TAP1~4 override enable
+		//TAP1
+		pw_fld(REG_0134_ATOP_2, 0x1, REG_0134_ATOP_2_IDAC_IN_TAP1_L0_OV_EN);
+		pw_fld(REG_0134_ATOP_2, 0x1, REG_0134_ATOP_2_IDAC_IN_TAP1_L1_OV_EN);
+		pw_fld(REG_0138_ATOP_2, 0x1, REG_0138_ATOP_2_IDAC_IN_TAP1_L2_OV_EN);
+		pw_fld(REG_0138_ATOP_2, 0x1, REG_0138_ATOP_2_IDAC_IN_TAP1_L3_OV_EN);
+		//TAP2
+		pw_fld(REG_013C_ATOP_2, 0x1, REG_013C_ATOP_2_IDAC_IN_TAP2_L0_OV_EN);
+		pw_fld(REG_013C_ATOP_2, 0x1, REG_013C_ATOP_2_IDAC_IN_TAP2_L1_OV_EN);
+		pw_fld(REG_0140_ATOP_2, 0x1, REG_0140_ATOP_2_IDAC_IN_TAP2_L2_OV_EN);
+		pw_fld(REG_0140_ATOP_2, 0x1, REG_0140_ATOP_2_IDAC_IN_TAP2_L3_OV_EN);
+		//TAP3
+		pw_fld(REG_0144_ATOP_2, 0x1, REG_0144_ATOP_2_IDAC_IN_TAP3_L0_OV_EN);
+		pw_fld(REG_0144_ATOP_2, 0x1, REG_0144_ATOP_2_IDAC_IN_TAP3_L1_OV_EN);
+		pw_fld(REG_0148_ATOP_2, 0x1, REG_0148_ATOP_2_IDAC_IN_TAP3_L2_OV_EN);
+		pw_fld(REG_0148_ATOP_2, 0x1, REG_0148_ATOP_2_IDAC_IN_TAP3_L3_OV_EN);
+		//TAP4
+		pw_fld(REG_014C_ATOP_2, 0x1, REG_014C_ATOP_2_IDAC_IN_TAP4_L0_OV_EN);
+		pw_fld(REG_014C_ATOP_2, 0x1, REG_014C_ATOP_2_IDAC_IN_TAP4_L1_OV_EN);
+		pw_fld(REG_014C_ATOP_2, 0x1, REG_014C_ATOP_2_IDAC_IN_TAP4_L2_OV_EN);
+		pw_fld(REG_0150_ATOP_2, 0x1, REG_0150_ATOP_2_IDAC_IN_TAP4_L3_OV_EN);
+
+		//set the tap to zero
+		pw_fld(REG_0034_ATOP_2, 0x0, REG_0034_ATOP_2_IDAC_IN_TAP1_L0_OV);
+		pw_fld(REG_0034_ATOP_2, 0x0, REG_0034_ATOP_2_IDAC_IN_TAP1_L1_OV);
+
+		pw_fld(REG_0038_ATOP_2, 0x0, REG_0038_ATOP_2_IDAC_IN_TAP1_L2_OV);
+		pw_fld(REG_0038_ATOP_2, 0x0, REG_0038_ATOP_2_IDAC_IN_TAP1_L3_OV);
+
+		pw_fld(REG_003C_ATOP_2, 0x0, REG_003C_ATOP_2_IDAC_IN_TAP2_L0_OV);
+		pw_fld(REG_003C_ATOP_2, 0x0, REG_003C_ATOP_2_IDAC_IN_TAP2_L1_OV);
+
+		pw_fld(REG_0040_ATOP_2, 0x0, REG_0040_ATOP_2_IDAC_IN_TAP2_L2_OV);
+		pw_fld(REG_0040_ATOP_2, 0x0, REG_0040_ATOP_2_IDAC_IN_TAP2_L3_OV);
+
+		pw_fld(REG_0044_ATOP_2, 0x0, REG_0044_ATOP_2_IDAC_IN_TAP3_L0_OV);
+		pw_fld(REG_0044_ATOP_2, 0x0, REG_0044_ATOP_2_IDAC_IN_TAP3_L1_OV);
+
+		pw_fld(REG_0048_ATOP_2, 0x0, REG_0048_ATOP_2_IDAC_IN_TAP3_L2_OV);
+		pw_fld(REG_0048_ATOP_2, 0x0, REG_0048_ATOP_2_IDAC_IN_TAP3_L3_OV);
+
+		pw_fld(REG_004C_ATOP_2, 0x0, REG_004C_ATOP_2_IDAC_IN_TAP4_L1_OV);
+		pw_fld(REG_004C_ATOP_2, 0x0, REG_004C_ATOP_2_IDAC_IN_TAP4_L2_OV);
+
+		pw_fld(REG_004C_ATOP_2, 0x0, REG_004C_ATOP_2_IDAC_IN_TAP4_L2_OV);
+		pw_fld(REG_0050_ATOP_2, 0x0, REG_0050_ATOP_2_IDAC_IN_TAP4_L3_OV);
+	}
+
+	if (bEnTap5to8) {
+		if (IS_2P1_PORT) {
+			// enable dfe tap5~tap12
+			//REG_015C_LANE_0_EN_TAP
+			pw_fld(REG_015C_LANE_0, 0xf, Fld(4, 4, AC_MSKB0));
+		}
+
+		//TAP5
+		pw_fld(REG_0150_ATOP_2, 0x0, REG_0150_ATOP_2_IDAC_IN_TAP5_L0_OV_EN);
+		pw_fld(REG_0150_ATOP_2, 0x0, REG_0150_ATOP_2_IDAC_IN_TAP5_L1_OV_EN);
+		pw_fld(REG_0154_ATOP_2, 0x0, REG_0154_ATOP_2_IDAC_IN_TAP5_L2_OV_EN);
+		pw_fld(REG_0154_ATOP_2, 0x0, REG_0154_ATOP_2_IDAC_IN_TAP5_L3_OV_EN);
+		//TAP6
+		pw_fld(REG_0154_ATOP_2, 0x0, REG_0154_ATOP_2_IDAC_IN_TAP6_L0_OV_EN);
+		pw_fld(REG_0158_ATOP_2, 0x0, REG_0158_ATOP_2_IDAC_IN_TAP6_L1_OV_EN);
+		pw_fld(REG_0158_ATOP_2, 0x0, REG_0158_ATOP_2_IDAC_IN_TAP6_L2_OV_EN);
+		pw_fld(REG_0158_ATOP_2, 0x0, REG_0158_ATOP_2_IDAC_IN_TAP6_L3_OV_EN);
+		//TAP7
+		pw_fld(REG_015C_ATOP_2, 0x0, REG_015C_ATOP_2_IDAC_IN_TAP7_L0_OV_EN);
+		pw_fld(REG_015C_ATOP_2, 0x0, REG_015C_ATOP_2_IDAC_IN_TAP7_L1_OV_EN);
+		pw_fld(REG_015C_ATOP_2, 0x0, REG_015C_ATOP_2_IDAC_IN_TAP7_L2_OV_EN);
+		pw_fld(REG_0160_ATOP_2, 0x0, REG_0160_ATOP_2_IDAC_IN_TAP7_L3_OV_EN);
+		//TAP8
+		pw_fld(REG_0160_ATOP_2, 0x0, REG_0160_ATOP_2_IDAC_IN_TAP8_L0_OV_EN);
+		pw_fld(REG_0160_ATOP_2, 0x0, REG_0160_ATOP_2_IDAC_IN_TAP8_L1_OV_EN);
+		pw_fld(REG_0164_ATOP_2, 0x0, REG_0164_ATOP_2_IDAC_IN_TAP8_L2_OV_EN);
+		pw_fld(REG_0164_ATOP_2, 0x0, REG_0164_ATOP_2_IDAC_IN_TAP8_L3_OV_EN);
+	} else {
+		//TAP5
+		pw_fld(REG_0150_ATOP_2, 0x1, REG_0150_ATOP_2_IDAC_IN_TAP5_L0_OV_EN);
+		pw_fld(REG_0150_ATOP_2, 0x1, REG_0150_ATOP_2_IDAC_IN_TAP5_L1_OV_EN);
+		pw_fld(REG_0154_ATOP_2, 0x1, REG_0154_ATOP_2_IDAC_IN_TAP5_L2_OV_EN);
+		pw_fld(REG_0154_ATOP_2, 0x1, REG_0154_ATOP_2_IDAC_IN_TAP5_L3_OV_EN);
+		//TAP6
+		pw_fld(REG_0154_ATOP_2, 0x1, REG_0154_ATOP_2_IDAC_IN_TAP6_L0_OV_EN);
+		pw_fld(REG_0158_ATOP_2, 0x1, REG_0158_ATOP_2_IDAC_IN_TAP6_L1_OV_EN);
+		pw_fld(REG_0158_ATOP_2, 0x1, REG_0158_ATOP_2_IDAC_IN_TAP6_L2_OV_EN);
+		pw_fld(REG_0158_ATOP_2, 0x1, REG_0158_ATOP_2_IDAC_IN_TAP6_L3_OV_EN);
+		//TAP7
+		pw_fld(REG_015C_ATOP_2, 0x1, REG_015C_ATOP_2_IDAC_IN_TAP7_L0_OV_EN);
+		pw_fld(REG_015C_ATOP_2, 0x1, REG_015C_ATOP_2_IDAC_IN_TAP7_L1_OV_EN);
+		pw_fld(REG_015C_ATOP_2, 0x1, REG_015C_ATOP_2_IDAC_IN_TAP7_L2_OV_EN);
+		pw_fld(REG_0160_ATOP_2, 0x1, REG_0160_ATOP_2_IDAC_IN_TAP7_L3_OV_EN);
+		//TAP8
+		pw_fld(REG_0160_ATOP_2, 0x1, REG_0160_ATOP_2_IDAC_IN_TAP8_L0_OV_EN);
+		pw_fld(REG_0160_ATOP_2, 0x1, REG_0160_ATOP_2_IDAC_IN_TAP8_L1_OV_EN);
+		pw_fld(REG_0164_ATOP_2, 0x1, REG_0164_ATOP_2_IDAC_IN_TAP8_L2_OV_EN);
+		pw_fld(REG_0164_ATOP_2, 0x1, REG_0164_ATOP_2_IDAC_IN_TAP8_L3_OV_EN);
+
+		//set the tap to zero
+		pw_fld(REG_0050_ATOP_2, 0x0, REG_0050_ATOP_2_IDAC_IN_TAP5_L0_OV);
+		pw_fld(REG_0050_ATOP_2, 0x0, REG_0050_ATOP_2_IDAC_IN_TAP5_L1_OV);
+
+		pw_fld(REG_0054_ATOP_2, 0x0, REG_0054_ATOP_2_IDAC_IN_TAP5_L2_OV);
+		pw_fld(REG_0054_ATOP_2, 0x0, REG_0054_ATOP_2_IDAC_IN_TAP5_L3_OV);
+
+		pw_fld(REG_0054_ATOP_2, 0x0, REG_0054_ATOP_2_IDAC_IN_TAP6_L0_OV);
+		pw_fld(REG_0058_ATOP_2, 0x0, REG_0058_ATOP_2_IDAC_IN_TAP6_L1_OV);
+
+		pw_fld(REG_0058_ATOP_2, 0x0, REG_0058_ATOP_2_IDAC_IN_TAP6_L2_OV);
+		pw_fld(REG_0058_ATOP_2, 0x0, REG_0058_ATOP_2_IDAC_IN_TAP6_L3_OV);
+
+		pw_fld(REG_005C_ATOP_2, 0x0, REG_005C_ATOP_2_IDAC_IN_TAP7_L0_OV);
+		pw_fld(REG_005C_ATOP_2, 0x0, REG_005C_ATOP_2_IDAC_IN_TAP7_L1_OV);
+
+		pw_fld(REG_005C_ATOP_2, 0x0, REG_005C_ATOP_2_IDAC_IN_TAP7_L2_OV);
+		pw_fld(REG_0060_ATOP_2, 0x0, REG_0060_ATOP_2_IDAC_IN_TAP7_L3_OV);
+
+		pw_fld(REG_0060_ATOP_2, 0x0, REG_0060_ATOP_2_IDAC_IN_TAP8_L0_OV);
+		pw_fld(REG_0060_ATOP_2, 0x0, REG_0060_ATOP_2_IDAC_IN_TAP8_L1_OV);
+
+		pw_fld(REG_0064_ATOP_2, 0x0, REG_0064_ATOP_2_IDAC_IN_TAP8_L2_OV);
+		pw_fld(REG_0064_ATOP_2, 0x0, REG_0064_ATOP_2_IDAC_IN_TAP8_L3_OV);
+	}
+
+	// make sure other part is 0
+	//REG_015C_LANE_0_EN_TAP
+	pw_fld(REG_015C_LANE_0, 0x0, Fld(4, 8, AC_MSKB1));
+}
+
+
+void _KHal_HDMIRx_ResetPhyDtop(struct MTK_HDMI *myhdmi, u16 u16Reset)
+{
+	u16 u16RegVal;
+
+	u16RegVal = r_reg(REG_0000_DTOP_1);
+
+	u16RegVal |= u16Reset;
+	 pw_reg(REG_0000_DTOP_1, u16RegVal);
+	 RX_DEF_LOG("%s, 0x%08x/0x%08x\n", __func__, u16Reset, r_reg(REG_0000_DTOP_1));
+	 u16RegVal &= (~u16Reset);
+	 pw_reg(REG_0000_DTOP_1, u16RegVal);
+}
+
+void _KHal_HDMIRx_PowerOnLane3(struct MTK_HDMI *myhdmi, bool bPowerOnFlag)
+{
+	if (bPowerOnFlag) {
+		//pd_lane
+		pw_fld(REG_0068_ATOP_2, 0x0, REG_0068_ATOP_2_PD_LANE_L3_OV);
+		pw_fld(REG_0168_ATOP_2, 0x1, REG_0168_ATOP_2_PD_LANE_L3_OV_EN);
+		//pd pll
+		pw_fld(REG_006C_ATOP_2, 0x0, REG_006C_ATOP_2_PD_PLL_L3_OV);
+		pw_fld(REG_006C_ATOP_2, 0x1, REG_016C_ATOP_2_PD_PLL_L3_OV_EN);
+
+		// sw reset lane3
+		//reset fifo
+		_KHal_HDMIRx_ResetPhyDtop(myhdmi, HDMI_RESET_PHY_DTOP_LANE3);
+	} else {
+		// power control - lane3 power down
+		//pd_lane
+		pw_fld(REG_0068_ATOP_2, 0x1, REG_0068_ATOP_2_PD_LANE_L3_OV);
+		pw_fld(REG_0168_ATOP_2, 0x1, REG_0168_ATOP_2_PD_LANE_L3_OV_EN);
+		//pd pll
+		pw_fld(REG_006C_ATOP_2, 0x1, REG_006C_ATOP_2_PD_PLL_L3_OV);
+		pw_fld(REG_006C_ATOP_2, 0x1, REG_016C_ATOP_2_PD_PLL_L3_OV_EN);
+
+		//sw rst lane 3
+		pw_fld(REG_0000_DTOP_1, 0x1, Fld(1, 9, AC_MSKB1));
+	}
+}
+
+
+#define SA_CALIBRATION_TIMEOUT_VALUE 10
+void _KHal_HDMIRx_WaitCalibrationDone2p1Port(struct MTK_HDMI *myhdmi)
+{
+	u16 u16SA_Calibration_Done_Lane[4] = {0};
+	bool bSACalibrationDone = FALSE;
+	unsigned long CurrTime, u4timeout, u32TimeRecord;
+
+	u4timeout = SA_CALIBRATION_TIMEOUT_VALUE;
+
+	Linux_Time(&u32TimeRecord); //start time
+
+	while (bSACalibrationDone == FALSE) {
+		Linux_Time(&CurrTime);
+		if (Linux_DeltaTime(&u4timeout, &u32TimeRecord, &CurrTime)) {
+			u16SA_Calibration_Done_Lane[0] =
+				r_fld(REG_01AC_ATOP_2,
+				REG_01AC_ATOP_2_RGS_HDMI2P1RX_SAFF_CAL_DONE_L0);
+			u16SA_Calibration_Done_Lane[1] =
+				r_fld(REG_01AC_ATOP_2,
+				REG_01AC_ATOP_2_RGS_HDMI2P1RX_SAFF_CAL_DONE_L1);
+			u16SA_Calibration_Done_Lane[2] =
+				r_fld(REG_01AC_ATOP_2,
+				REG_01AC_ATOP_2_RGS_HDMI2P1RX_SAFF_CAL_DONE_L2);
+			u16SA_Calibration_Done_Lane[3] =
+				r_fld(REG_01AC_ATOP_2,
+				REG_01AC_ATOP_2_RGS_HDMI2P1RX_SAFF_CAL_DONE_L3);
+
+			bSACalibrationDone = TRUE;
+
+			if ((u16SA_Calibration_Done_Lane[0] == 0) ||
+				(u16SA_Calibration_Done_Lane[1] == 0) ||
+				(u16SA_Calibration_Done_Lane[2] == 0))
+				bSACalibrationDone = FALSE;
+
+			//if tmds or FRL 3L case, only need to wait 3 lane calibration done,
+			//otherwise, all lane need to be wait for calibration done
+			if ((r_fld(REG_01C0_DTOP_0, REG_01C0_DTOP_0_RD_BR_MODE_OV) >= 3)) {
+				if (u16SA_Calibration_Done_Lane[3] == 0)
+					bSACalibrationDone = FALSE;
+			}
+		}
+	}
+
+	if (bSACalibrationDone == FALSE)
+		RX_DEF_LOG("[RX]SA calibration not done\n");
+}
+
+void _KHal_HDMIRx_SACalibration2p1Port(struct MTK_HDMI *myhdmi)
+{
+	//u32 u32PHY2P1BankOffset = _KHal_HDMIRx_GetPHY2P1BankOffset(enInputPortType);
+	//volatile u16 u16temp = 0;
+
+	/////////////// Redo SA Calibration - Start ////////////////////
+	// SAFF calibration Reset
+	//wriu -b 0xe502b3 0x04 0x04         // phy_atop2_59[10], pd_bg_ov_en=1
+	pw_fld(REG_0164_ATOP_2, 0x1, REG_0164_ATOP_2_PD_BG_OV_EN);
+	//wriu -b 0xe50233 0x04 0x04         // phy_atop2_19[10], pd_bg_ov=1
+	pw_fld(REG_0064_ATOP_2, 0x1, REG_0064_ATOP_2_PD_BG_OV);
+	//wait 1
+	udelay(10);
+	//wriu -b 0xe50233 0x04 0x00         // phy_atop2_19[10], pd_bg_ov=0
+	pw_fld(REG_0064_ATOP_2, 0x0, REG_0064_ATOP_2_PD_BG_OV);
+
+	// Force CR unlock (for PHDAC SA calibration)
+	//wriu -b 0xe50280 0x0f 0x0f          // phy_atop2_40[3:0], cr_lock_l0_ov_en=1
+	pw_fld(REG_0100_ATOP_2, 0x1, REG_0100_ATOP_2_CR_LOCK_L0_OV_EN);
+	pw_fld(REG_0100_ATOP_2, 0x1, REG_0100_ATOP_2_CR_LOCK_L1_OV_EN);
+	pw_fld(REG_0100_ATOP_2, 0x1, REG_0100_ATOP_2_CR_LOCK_L2_OV_EN);
+	pw_fld(REG_0100_ATOP_2, 0x1, REG_0100_ATOP_2_CR_LOCK_L3_OV_EN);
+	//wriu -b 0xe50200 0x0f 0x00          // phy_atop2_00[3:0], cr_lock_ov=0
+	pw_fld(REG_0000_ATOP_2, 0x0, REG_0000_ATOP_2_CR_LOCK_L0_OV);
+	pw_fld(REG_0000_ATOP_2, 0x0, REG_0000_ATOP_2_CR_LOCK_L1_OV);
+	pw_fld(REG_0000_ATOP_2, 0x0, REG_0000_ATOP_2_CR_LOCK_L2_OV);
+	pw_fld(REG_0000_ATOP_2, 0x0, REG_0000_ATOP_2_CR_LOCK_L3_OV);
+
+	// SAFF calibration Start
+	//wriu -b 0xe502c2 0x0f 0x0f           // phy_atop2_61[3:0], saff_cal_start_ov_en=1
+	pw_fld(REG_0184_ATOP_2, 0x1, REG_0184_ATOP_2_SAFF_CAL_START_L0_OV_EN);
+	pw_fld(REG_0184_ATOP_2, 0x1, REG_0184_ATOP_2_SAFF_CAL_START_L1_OV_EN);
+	pw_fld(REG_0184_ATOP_2, 0x1, REG_0184_ATOP_2_SAFF_CAL_START_L2_OV_EN);
+	pw_fld(REG_0184_ATOP_2, 0x1, REG_0184_ATOP_2_SAFF_CAL_START_L3_OV_EN);
+
+	//wriu -b 0xe50242 0x0f 0x0f          // phy_atop2_21[3:0], saff_cal_start_ov=1
+	pw_fld(REG_0084_ATOP_2, 0x1, REG_0084_ATOP_2_SAFF_CAL_START_L0_OV);
+	pw_fld(REG_0084_ATOP_2, 0x1, REG_0084_ATOP_2_SAFF_CAL_START_L1_OV);
+	pw_fld(REG_0084_ATOP_2, 0x1, REG_0084_ATOP_2_SAFF_CAL_START_L2_OV);
+	pw_fld(REG_0084_ATOP_2, 0x1, REG_0084_ATOP_2_SAFF_CAL_START_L3_OV);
+
+	//wait 1
+	udelay(10);
+	//wriu -b 0xe50242 0x0f 0x00          // phy_atop2_21[3:0], saff_cal_start_ov=1
+	pw_fld(REG_0084_ATOP_2, 0x0, REG_0084_ATOP_2_SAFF_CAL_START_L0_OV);
+	pw_fld(REG_0084_ATOP_2, 0x0, REG_0084_ATOP_2_SAFF_CAL_START_L1_OV);
+	pw_fld(REG_0084_ATOP_2, 0x0, REG_0084_ATOP_2_SAFF_CAL_START_L2_OV);
+	pw_fld(REG_0084_ATOP_2, 0x0, REG_0084_ATOP_2_SAFF_CAL_START_L3_OV);
+	// Release Force CR unlock (for PHDAC SA calibration)
+	//wriu -b 0xe50280 0x0f 0x00          // phy_atop2_40[3:0], cr_lock_l0_ov_en=1
+	//wriu -b 0xe50200 0x0f 0x00          // phy_atop2_00[3:0], cr_lock_ov=0
+
+	pw_fld(REG_0100_ATOP_2, 0x0, REG_0100_ATOP_2_CR_LOCK_L0_OV_EN);
+	pw_fld(REG_0100_ATOP_2, 0x0, REG_0100_ATOP_2_CR_LOCK_L1_OV_EN);
+	pw_fld(REG_0100_ATOP_2, 0x0, REG_0100_ATOP_2_CR_LOCK_L2_OV_EN);
+	pw_fld(REG_0100_ATOP_2, 0x0, REG_0100_ATOP_2_CR_LOCK_L3_OV_EN);
+
+	pw_fld(REG_0000_ATOP_2, 0x0, REG_0000_ATOP_2_CR_LOCK_L0_OV);
+	pw_fld(REG_0000_ATOP_2, 0x0, REG_0000_ATOP_2_CR_LOCK_L1_OV);
+	pw_fld(REG_0000_ATOP_2, 0x0, REG_0000_ATOP_2_CR_LOCK_L2_OV);
+	pw_fld(REG_0000_ATOP_2, 0x0, REG_0000_ATOP_2_CR_LOCK_L3_OV);
+
+	_KHal_HDMIRx_WaitCalibrationDone2p1Port(myhdmi);
+}
+
+u8 _KHal_HDMIRx_EnCodeGray(u8 u8BinaryValue)
+{
+	u8 u8GrayValue = u8BinaryValue ^ (u8BinaryValue >> 1);
+
+	return u8GrayValue;
+}
+
+u8 _KHal_HDMIRx_DeCodeGray(u8 u8GrayValue)
+{
+	u8 u8BinaryValue = 0;
+
+	while (u8GrayValue != 0x00) {
+		u8BinaryValue = u8BinaryValue ^ u8GrayValue;
+		u8GrayValue = u8GrayValue >> 1;
+	}
+
+	return u8BinaryValue;
+}
+
+void _KHal_HDMIRx_SetNewPHYEQValue(struct MTK_HDMI *myhdmi,
+	bool bOvenFlag, u8 *pu8EQvalue)
+{
+	if (bOvenFlag) {
+		if (pu8EQvalue != NULL) {
+			//overwrite the EQ value
+			pw_fld(REG_0020_ATOP_2, _KHal_HDMIRx_EnCodeGray(pu8EQvalue[0]),
+				REG_0020_ATOP_2_EQ_L0_OV);
+			pw_fld(REG_0020_ATOP_2, _KHal_HDMIRx_EnCodeGray(pu8EQvalue[1]),
+				REG_0020_ATOP_2_EQ_L1_OV);
+			pw_fld(REG_0024_ATOP_2, _KHal_HDMIRx_EnCodeGray(pu8EQvalue[2]),
+				REG_0024_ATOP_2_EQ_L2_OV);
+			pw_fld(REG_0024_ATOP_2, _KHal_HDMIRx_EnCodeGray(pu8EQvalue[3]),
+				REG_0024_ATOP_2_EQ_L3_OV);
+
+			//enable overwrite first
+			pw_fld(REG_0120_ATOP_2, 0x1, REG_0120_ATOP_2_EQ_L0_OV_EN);
+			pw_fld(REG_0120_ATOP_2, 0x1, REG_0120_ATOP_2_EQ_L1_OV_EN);
+			pw_fld(REG_0124_ATOP_2, 0x1, REG_0124_ATOP_2_EQ_L2_OV_EN);
+			pw_fld(REG_0124_ATOP_2, 0x1, REG_0124_ATOP_2_EQ_L3_OV_EN);
+		}
+	} else {
+		//relase overwrite enable
+		pw_fld(REG_0120_ATOP_2, 0x0, REG_0120_ATOP_2_EQ_L0_OV_EN);
+		pw_fld(REG_0120_ATOP_2, 0x0, REG_0120_ATOP_2_EQ_L1_OV_EN);
+		pw_fld(REG_0124_ATOP_2, 0x0, REG_0124_ATOP_2_EQ_L2_OV_EN);
+		pw_fld(REG_0124_ATOP_2, 0x0, REG_0124_ATOP_2_EQ_L3_OV_EN);
+	}
+}
+
+u32 u4HDMI2ComGetRefClkKhz(struct MTK_HDMI *myhdmi)
+{
+	u32 u4Val = 0;
+	u32 u4CpuBusClock;
+
+	u4Val = r_fld(RG_RX_DEBUG_CLK_XPCNT,
+				AAC_XCLK_IN_DEBUG_CLK_23_0_);
+	if (u4Val == 0) {
+		RX_DEF_LOG("invalid clock\n");
+		return u4Val;
+	}
+
+	u4CpuBusClock = hdmi2com_bus_clk_freq(myhdmi);
+	u4CpuBusClock = u4CpuBusClock / 1000;
+	u4Val = (2048 * (u4CpuBusClock)) / u4Val;
+
+	return u4Val;
+}
+void _KHal_HDMIRx_NewPHYAutoEQTrigger(struct MTK_HDMI *myhdmi,
+	u32 LanSel)
+{
+	RX_DET_LOG("[rx]%s, 0x%08x\n", __func__, LanSel);
+
+	// trigger autoEQ
+	if (LanSel & BIT(8))
+		pw_fld(REG_0014_LANE_0, 0x1, REG_0014_LANE_0_TRG_FSM_RE_RUN_0);
+	if (LanSel & BIT(9))
+		pw_fld(REG_0014_LANE_0, 0x1, REG_0014_LANE_0_TRG_FSM_RE_RUN_1);
+	if (LanSel & BIT(10))
+		pw_fld(REG_0014_LANE_0, 0x1, REG_0014_LANE_0_TRG_FSM_RE_RUN_2);
+	if (LanSel & BIT(11))
+		pw_fld(REG_0014_LANE_0, 0x1, REG_0014_LANE_0_TRG_FSM_RE_RUN_3);
+}
+
+void _KHal_HDMIRx_NewPHYSwitch2p1Port(struct MTK_HDMI *myhdmi,
+	enum HDMI_FRL_MODE_TYPE u8FRLRate)
+{
+	u8 ucPGAValue[4] = {0xF, 0xF, 0xF, 0xF};
+
+	//close TX check dc balance
+	 //_KHal_HDMIRx_CheckTxDcBalanceEn(myhdmi, FALSE);
+
+	// don't override CR lock
+	// release CR lock
+	_KHal_HDMIRx_OverrideCRLock(myhdmi, u8FRLRate, FALSE);
+
+	// release DFE overwrite
+	pw_fld(REG_0004_ATOP_2, 0x0, REG_0004_ATOP_2_DFE_MODE_L0_OV);
+	pw_fld(REG_0004_ATOP_2, 0x0, REG_0004_ATOP_2_DFE_MODE_L1_OV);
+	pw_fld(REG_0004_ATOP_2, 0x0, REG_0004_ATOP_2_DFE_MODE_L2_OV);
+	pw_fld(REG_0004_ATOP_2, 0x0, REG_0004_ATOP_2_DFE_MODE_L3_OV);
+
+	pw_fld(REG_0104_ATOP_2, 0x0, REG_0104_ATOP_2_DFE_MODE_L0_OV_EN);
+	pw_fld(REG_0104_ATOP_2, 0x0, REG_0104_ATOP_2_DFE_MODE_L1_OV_EN);
+	pw_fld(REG_0104_ATOP_2, 0x0, REG_0104_ATOP_2_DFE_MODE_L2_OV_EN);
+	pw_fld(REG_0104_ATOP_2, 0x0, REG_0104_ATOP_2_DFE_MODE_L3_OV_EN);
+
+	_KHal_HDMIRx_SetPGAGainValue(myhdmi, FALSE, NULL);
+
+	//_KHal_HDMIRx_BandDependSetting2p1Port(myhdmi);
+
+	// Release VDAC
+	pw_fld(REG_008C_ATOP_2, 0, REG_008C_ATOP_2_VDAC_IN_DLEVP_L0_OV);
+	pw_fld(REG_0090_ATOP_2, 0, REG_0090_ATOP_2_VDAC_IN_DLEVP_L1_OV);
+	pw_fld(REG_0094_ATOP_2, 0, REG_0094_ATOP_2_VDAC_IN_DLEVP_L2_OV);
+	pw_fld(REG_0098_ATOP_2, 0, REG_0098_ATOP_2_VDAC_IN_DLEVP_L3_OV);
+
+	pw_fld(REG_018C_ATOP_2, 0, REG_018C_ATOP_2_VDAC_IN_DLEVP_L0_OV_EN);
+	pw_fld(REG_0190_ATOP_2, 0, REG_0190_ATOP_2_VDAC_IN_DLEVP_L1_OV_EN);
+	pw_fld(REG_0194_ATOP_2, 0, REG_0194_ATOP_2_VDAC_IN_DLEVP_L2_OV_EN);
+	pw_fld(REG_0198_ATOP_2, 0, REG_0198_ATOP_2_VDAC_IN_DLEVP_L3_OV_EN);
+
+	// Release FSM
+	pw_fld(REG_0040_LANE_0, 0, REG_0040_LANE_0_OV_LANE_FSM_STAT_0);
+	pw_fld(REG_0044_LANE_0, 0, REG_0044_LANE_0_OV_LANE_FSM_STAT_1);
+	pw_fld(REG_0048_LANE_0, 0, REG_0048_LANE_0_OV_LANE_FSM_STAT_2);
+	pw_fld(REG_004C_LANE_0, 0, REG_004C_LANE_0_OV_LANE_FSM_STAT_3);
+
+	//release SCAN_OV_EN
+	pw_fld(REG_0118_ATOP_2, 0x0, REG_0118_ATOP_2_EN_SCAN_L0_OV_EN);
+	pw_fld(REG_0118_ATOP_2, 0x0, REG_0118_ATOP_2_EN_SCAN_L1_OV_EN);
+	pw_fld(REG_0118_ATOP_2, 0x0, REG_0118_ATOP_2_EN_SCAN_L2_OV_EN);
+	pw_fld(REG_0118_ATOP_2, 0x0, REG_0118_ATOP_2_EN_SCAN_L3_OV_EN);
+
+	//dlev_sw_mode
+	//filter_depth_tap
+	//filter_depth_dlev
+	pw_fld(REG_0144_LANE_0, 0x0, REG_0144_LANE_0_EN_DLEV_SW_MODE);
+	pw_fld(REG_0144_LANE_0, 0x2, REG_0144_LANE_0_FILTER_DEPTH_DLEV);
+	pw_fld(REG_0144_LANE_0, 0x3, REG_0144_LANE_0_FILTER_DEPTH_TAP);
+
+
+	//modified the EQ/PGA BW to 12G
+	pw_fld(REG_0018_ATOP_2, 0x0, REG_0018_ATOP_2_EQ_BW_L0_OV);
+	pw_fld(REG_001C_ATOP_2, 0x0, REG_001C_ATOP_2_EQ_BW_L1_OV);
+	pw_fld(REG_001C_ATOP_2, 0x0, REG_001C_ATOP_2_EQ_BW_L2_OV);
+	pw_fld(REG_001C_ATOP_2, 0x0, REG_001C_ATOP_2_EQ_BW_L3_OV);
+
+	pw_fld(REG_0118_ATOP_2, 0x0, REG_0118_ATOP_2_EQ_BW_L0_OV_EN);
+	pw_fld(REG_011C_ATOP_2, 0x0, REG_011C_ATOP_2_EQ_BW_L1_OV_EN);
+	pw_fld(REG_011C_ATOP_2, 0x0, REG_011C_ATOP_2_EQ_BW_L2_OV_EN);
+	pw_fld(REG_011C_ATOP_2, 0x0, REG_011C_ATOP_2_EQ_BW_L3_OV_EN);
+
+	pw_fld(REG_0070_ATOP_2, 0x0, REG_0070_ATOP_2_PGA_BW_L0_OV);
+	pw_fld(REG_0070_ATOP_2, 0x0, REG_0070_ATOP_2_PGA_BW_L1_OV);
+	pw_fld(REG_0070_ATOP_2, 0x0, REG_0070_ATOP_2_PGA_BW_L2_OV);
+	pw_fld(REG_0070_ATOP_2, 0x0, REG_0070_ATOP_2_PGA_BW_L3_OV);
+
+	pw_fld(REG_0170_ATOP_2, 0x0, REG_0170_ATOP_2_PGA_BW_L0_OV_EN);
+	pw_fld(REG_0170_ATOP_2, 0x0, REG_0170_ATOP_2_PGA_BW_L1_OV_EN);
+	pw_fld(REG_0170_ATOP_2, 0x0, REG_0170_ATOP_2_PGA_BW_L2_OV_EN);
+	pw_fld(REG_0170_ATOP_2, 0x0, REG_0170_ATOP_2_PGA_BW_L3_OV_EN);
+
+	switch (u8FRLRate) {
+	case HDMI_FRL_MODE_LEGACY_14:
+
+		_KHal_PHY_H14_Init(myhdmi);
+
+		// disable dfe tap1~tap4 & disable dfe tap5~tap12
+		_KHal_HDMIRx_EnableDfeTap(myhdmi, FALSE, FALSE, FALSE);
+
+		// under threshold = 0x1/0x3FFF
+		pw_fld(REG_008C_LANE_0, 0x1, REG_008C_LANE_0_EQ_STH_CHG_TH);
+		pw_fld(REG_0090_LANE_0, 0x3fff, REG_0090_LANE_0_PAT_PASS2_NUM);
+
+		// search each aaba timeout
+		pw_fld(REG_0078_LANE_0, 0xFFFF, REG_0078_LANE_0_EQ_STH_DET_DURATION);
+
+		pw_fld(REG_0084_LANE_0, 0x23, REG_0084_LANE_0_EQ_UP_BOND);
+		pw_fld(REG_0084_LANE_0, 0x05, REG_0084_LANE_0_EQ_LW_BOND);
+
+		// aaba reference to blanking
+		pw_fld(REG_009C_LANE_0, 0x9300, REG_009C_LANE_0_EQ_TOP_CONDI);
+
+		// EQ fine tune symbol continue time value in hdmi1.4 mode
+		pw_fld(REG_01F0_SSLMS, 0x0500, REG_01F0_SSLMS_EQ_FINE_SYMBOL_CONTINUE_TIMES);
+
+		// select eq output type: average
+		pw_fld(REG_0168_LANE_0, 0x1, REG_0168_LANE_0_EQ_OUTPUT_SEL);
+
+		pw_fld(REG_00A0_LANE_0, 0x0, REG_00A0_LANE_0_EQ_TOP_LATCH_CLR);
+		pw_fld(REG_00A0_LANE_0, 0x0, REG_00A0_LANE_0_LANE_TOP_TSTBUS_SEL);
+		pw_fld(REG_00A0_LANE_0, 0x0, REG_00A0_LANE_0_LANE_TOP_TSTBUS_M);
+
+		pw_fld(REG_014C_LANE_0, 0x0, REG_014C_LANE_0_TAP_STEP);
+
+		//release the EQ overwrite value
+		pw_fld(REG_0018_ATOP_2, 0x0, REG_0018_ATOP_2_EQ_BW_L0_OV);
+		pw_fld(REG_001C_ATOP_2, 0x0, REG_001C_ATOP_2_EQ_BW_L1_OV);
+		pw_fld(REG_001C_ATOP_2, 0x0, REG_001C_ATOP_2_EQ_BW_L2_OV);
+		pw_fld(REG_001C_ATOP_2, 0x0, REG_001C_ATOP_2_EQ_BW_L3_OV);
+
+		pw_fld(REG_0118_ATOP_2, 0x0, REG_0118_ATOP_2_EQ_BW_L0_OV_EN);
+		pw_fld(REG_011C_ATOP_2, 0x0, REG_011C_ATOP_2_EQ_BW_L1_OV_EN);
+		pw_fld(REG_011C_ATOP_2, 0x0, REG_011C_ATOP_2_EQ_BW_L1_OV_EN);
+		pw_fld(REG_011C_ATOP_2, 0x0, REG_011C_ATOP_2_EQ_BW_L1_OV_EN);
+
+		pw_fld(REG_0084_ATOP_2, 0x0, REG_0084_ATOP_2_SEL_CLKIN_L0_OV);
+		pw_fld(REG_0084_ATOP_2, 0x0, REG_0084_ATOP_2_SEL_CLKIN_L1_OV);
+		pw_fld(REG_0084_ATOP_2, 0x0, REG_0084_ATOP_2_SEL_CLKIN_L2_OV);
+		pw_fld(REG_0084_ATOP_2, 0x0, REG_0084_ATOP_2_SEL_CLKIN_L3_OV);
+
+		pw_fld(REG_0184_ATOP_2, 0x0, REG_0184_ATOP_2_SEL_CLKIN_L0_OV_EN);
+		pw_fld(REG_0184_ATOP_2, 0x0, REG_0184_ATOP_2_SEL_CLKIN_L1_OV_EN);
+		pw_fld(REG_0184_ATOP_2, 0x0, REG_0184_ATOP_2_SEL_CLKIN_L2_OV_EN);
+		pw_fld(REG_0184_ATOP_2, 0x0, REG_0184_ATOP_2_SEL_CLKIN_L3_OV_EN);
+
+		//Turn NegC on for H14 as initial, but will judge again by different data rate
+		if (u4HDMI2ComGetRefClkKhz(myhdmi) >= 135000)
+			_KHal_HDMIRx_PHY_NegC_Control(myhdmi, FALSE);
+		else
+			_KHal_HDMIRx_PHY_NegC_Control(myhdmi, TRUE);
+
+		_KHal_HDMIRx_SetPGAGainValue(myhdmi, TRUE, ucPGAValue);
+
+		_KHal_HDMIRx_PowerOnLane3(myhdmi, FALSE);
+
+		// r3 plus auto eq >>>>>
+		pw_fld(REG_0060_LANE_0, 0x0, REG_0060_LANE_0_DIS_SQH_CONDI);
+
+		pw_fld(REG_0074_LANE_0, 0x28, REG_0074_LANE_0_EQ_CHG_SATTLE_TIME);
+
+		pw_fld(REG_0060_LANE_0, 0x5, REG_0060_LANE_0_AABA_EXT);
+
+		pw_fld(REG_006C_LANE_0, 0x1, REG_006C_LANE_0_AABA_PARSE_NUM);
+
+		pw_fld(REG_0040_DTOP_1, 0x12C, REG_0040_DTOP_1_PAT_PASS2_NUM_H14_A);
+		pw_fld(REG_0044_DTOP_1, 0x12C, REG_0044_DTOP_1_PAT_PASS2_NUM_H14_B);
+		pw_fld(REG_0048_DTOP_1, 0x12C, REG_0048_DTOP_1_PAT_PASS2_NUM_H14_C);
+		pw_fld(REG_004C_DTOP_1, 0x12C, REG_004C_DTOP_1_PAT_PASS2_NUM_H14_D);
+
+		pw_fld(REG_00A0_DTOP_1, 0xf, REG_00A0_DTOP_1_EQ_STH_CHG_TH_H14_A);
+		pw_fld(REG_00A4_DTOP_1, 0xf, REG_00A4_DTOP_1_EQ_STH_CHG_TH_H14_B);
+		pw_fld(REG_00A8_DTOP_1, 0xf, REG_00A8_DTOP_1_EQ_STH_CHG_TH_H14_C);
+		pw_fld(REG_00AC_DTOP_1, 0xf, REG_00AC_DTOP_1_EQ_STH_CHG_TH_H14_D);
+
+		pw_fld(REG_0094_LANE_0, 0xf, REG_0094_LANE_0_STH_EQ_SEQ_VLD);
+
+		pw_fld(REG_00A8_LANE_0, 0x3f, REG_00A8_LANE_0_UNDER_OVER_MAX_TIME);
+		pw_fld(REG_0098_LANE_0, 0x2, REG_0098_LANE_0_STH_EQ_DIFF_TH);
+
+		//disable coarse to done, and set the coarse tune range
+		pw_fld(REG_0060_LANE_0, 0x0, REG_0060_LANE_0_EQ_BYPASS_COARSE);
+		pw_fld(REG_0050_LANE_0, 0x1e, REG_0050_LANE_0_COA_EQ_UP_BOND);
+		pw_fld(REG_0054_LANE_0, 0x0f, REG_0054_LANE_0_COA_EQ_LW_BOND);
+
+		//set good phase scan path to decode error
+		pw_fld(REG_00D0_LANE_0, 0x1, REG_00D0_LANE_0_SCAN_SRC_SEL);
+
+		break;
+
+	case HDMI_FRL_MODE_LEGACY_20:
+
+		_KHal_PHY_H20_Init(myhdmi);
+
+		// enable dfe tap1~tap4 and tap5~8
+		if ((hdmi2com_is_tmds_clk_radio_40x(myhdmi) == TRUE) &&
+			(hdmi2com_is_scrambing_by_scdc(myhdmi) == FALSE)) {
+			RX_DEF_LOG("[rx]disable dfe\n");
+			_KHal_HDMIRx_EnableDfeTap(myhdmi, FALSE, FALSE, FALSE);
+		} else
+			_KHal_HDMIRx_EnableDfeTap(myhdmi, TRUE, TRUE, FALSE);
+
+		// search each aaba timeout
+		pw_fld(REG_0078_LANE_0, 0x000a, REG_0078_LANE_0_EQ_STH_DET_DURATION);
+
+		pw_fld(REG_0084_LANE_0, 0x23, REG_0084_LANE_0_EQ_UP_BOND);
+		pw_fld(REG_0084_LANE_0, 0x05, REG_0084_LANE_0_EQ_LW_BOND);
+
+		// aaba reference to full screen
+		pw_fld(REG_009C_LANE_0, 0x9300, REG_009C_LANE_0_EQ_TOP_CONDI);
+
+		// EQ fine tune symbol continue time value in hdmi1.4 mode
+		pw_fld(REG_01F0_SSLMS, 0x350, REG_01F0_SSLMS_EQ_FINE_SYMBOL_CONTINUE_TIMES);
+
+		// select eq output type: average
+		pw_fld(REG_0168_LANE_0, 0x1, REG_0168_LANE_0_EQ_OUTPUT_SEL);
+
+		_KHal_HDMIRx_SetPGAGainValue(myhdmi, FALSE, NULL);
+
+		_KHal_HDMIRx_PowerOnLane3(myhdmi, FALSE);
+
+		// decrease DFE step
+		pw_fld(REG_014C_LANE_0, 0x01, REG_014C_LANE_0_TAP_STEP);
+
+		pw_fld(REG_0018_ATOP_2, 0x0, REG_0018_ATOP_2_EQ_BW_L0_OV);
+		pw_fld(REG_001C_ATOP_2, 0x0, REG_001C_ATOP_2_EQ_BW_L1_OV);
+		pw_fld(REG_001C_ATOP_2, 0x0, REG_001C_ATOP_2_EQ_BW_L2_OV);
+		pw_fld(REG_001C_ATOP_2, 0x0, REG_001C_ATOP_2_EQ_BW_L3_OV);
+
+		pw_fld(REG_0118_ATOP_2, 0x0, REG_0118_ATOP_2_EQ_BW_L0_OV_EN);
+		pw_fld(REG_011C_ATOP_2, 0x0, REG_011C_ATOP_2_EQ_BW_L1_OV_EN);
+		pw_fld(REG_011C_ATOP_2, 0x0, REG_011C_ATOP_2_EQ_BW_L1_OV_EN);
+		pw_fld(REG_011C_ATOP_2, 0x0, REG_011C_ATOP_2_EQ_BW_L1_OV_EN);
+
+		pw_fld(REG_0084_ATOP_2, 0x0, REG_0084_ATOP_2_SEL_CLKIN_L0_OV);
+		pw_fld(REG_0084_ATOP_2, 0x0, REG_0084_ATOP_2_SEL_CLKIN_L1_OV);
+		pw_fld(REG_0084_ATOP_2, 0x0, REG_0084_ATOP_2_SEL_CLKIN_L2_OV);
+		pw_fld(REG_0084_ATOP_2, 0x0, REG_0084_ATOP_2_SEL_CLKIN_L3_OV);
+
+		pw_fld(REG_0184_ATOP_2, 0x0, REG_0184_ATOP_2_SEL_CLKIN_L0_OV_EN);
+		pw_fld(REG_0184_ATOP_2, 0x0, REG_0184_ATOP_2_SEL_CLKIN_L1_OV_EN);
+		pw_fld(REG_0184_ATOP_2, 0x0, REG_0184_ATOP_2_SEL_CLKIN_L2_OV_EN);
+		pw_fld(REG_0184_ATOP_2, 0x0, REG_0184_ATOP_2_SEL_CLKIN_L3_OV_EN);
+
+		//close NegC for H20 as default
+		_KHal_HDMIRx_PHY_NegC_Control(myhdmi, FALSE);
+
+		// auto eq setting >>>>>
+		//reg_dis_sqh_condi
+		pw_fld(REG_0060_LANE_0, 0x0, REG_0060_LANE_0_DIS_SQH_CONDI);
+		//reg_eq_chg_sattle_time;
+		pw_fld(REG_0074_LANE_0, 0x0008, REG_0060_LANE_0_DIS_SQH_CONDI);
+
+		//R2 plus pattern
+		pw_fld(REG_0060_LANE_0, 0x5, REG_0060_LANE_0_AABA_EXT);
+		//R2 plus pattern ext number
+		pw_fld(REG_006C_LANE_0, 0x0, REG_006C_LANE_0_AABA_PARSE_NUM);
+
+		pw_fld(REG_0030_DTOP_1, 0x3ff, REG_0030_DTOP_1_PAT_PASS2_NUM_H20_A);
+		pw_fld(REG_0034_DTOP_1, 0x3ff, REG_0034_DTOP_1_PAT_PASS2_NUM_H20_B);
+		pw_fld(REG_0038_DTOP_1, 0x3ff, REG_0038_DTOP_1_PAT_PASS2_NUM_H20_C);
+		pw_fld(REG_003C_DTOP_1, 0x3ff, REG_003C_DTOP_1_PAT_PASS2_NUM_H20_D);
+
+		pw_fld(REG_0090_DTOP_1, 0x00ff, REG_0090_DTOP_1_EQ_STH_CHG_TH_H20_A);
+		pw_fld(REG_0094_DTOP_1, 0x00ff, REG_0094_DTOP_1_EQ_STH_CHG_TH_H20_B);
+		pw_fld(REG_0098_DTOP_1, 0x00ff, REG_0098_DTOP_1_EQ_STH_CHG_TH_H20_C);
+		pw_fld(REG_009C_DTOP_1, 0x00ff, REG_009C_DTOP_1_EQ_STH_CHG_TH_H20_D);
+
+		pw_fld(REG_0094_LANE_0, 0xa, REG_0094_LANE_0_STH_EQ_SEQ_VLD);
+		pw_fld(REG_00A8_LANE_0, 0x2f, REG_00A8_LANE_0_UNDER_OVER_MAX_TIME);
+		pw_fld(REG_0098_LANE_0, 0x03, REG_0098_LANE_0_STH_EQ_DIFF_TH);
+
+
+		//disable coarse to done, and set the coarse tune range
+		pw_fld(REG_0060_LANE_0, 0x0, REG_0060_LANE_0_EQ_BYPASS_COARSE);
+		pw_fld(REG_0050_LANE_0, 0x1E, REG_0050_LANE_0_COA_EQ_UP_BOND);
+		pw_fld(REG_0054_LANE_0, 0x0F, REG_0054_LANE_0_COA_EQ_LW_BOND);
+		// <<<<< auto eq setting
+
+		//set good phase scan path to I/E error
+		pw_fld(REG_00D0_LANE_0, 0x0, REG_00D0_LANE_0_SCAN_SRC_SEL);
+
+		break;
+
+	default:
+		break;
+	};
+
+	_KHal_HDMIRx_SetNewPHYEQValue(myhdmi, FALSE, NULL);
+
+	_KHal_HDMIRx_SACalibration2p1Port(myhdmi);
+
+	_KHal_HDMIRx_NewPHYAutoEQTrigger(myhdmi, BMASK(11 : 8));
+
+	if ((hdmi2com_is_tmds_clk_radio_40x(myhdmi) == TRUE) &&
+		(hdmi2com_is_scrambing_by_scdc(myhdmi) == FALSE)) {
+		RX_DEF_LOG("[rx]fix AEQ to 28\n");
+		_KHal_HDMIRx_SetNewPHYEQValue(myhdmi, TRUE, &u8SetEQValue[0]);
+	}
+}
+
+void _KHal_HDMIRx_BusyPolling2p1Port(struct MTK_HDMI *myhdmi,
+	enum HDMI_FRL_MODE_TYPE u8FRLRate)
+{
+	RX_DET_LOG("[RX]%s, %d\n", __func__, u8FRLRate);
+
+	_KHal_HDMIRx_NewPHYSwitch2p1Port(myhdmi, u8FRLRate);
+}
+
+static void _KHal_HD21_PM_PHY_Init(struct MTK_HDMI *myhdmi)
+{
+	u32 temp;
+
+#if HDMIRX_YOCTO
+#if HDMIRX_RTERM_50OHM
+	temp = (myhdmi->rterm >> 22) & 0xF;
+#else
+	temp = (myhdmi->rterm >> 17) & 0xF;
+#endif
+#else
+	temp = 9;
+#endif
+	//wriu 0x060000 0x01
+	//0x600_0
+	pw_fld(REG_0000_HD21_PM, 0x01, REG_0000_HD21_PM_NODIE_EN_SQH_OV);
+	pw_fld(REG_0000_HD21_PM, temp, REG_0000_HD21_PM_NODIE_TEST_RT_CTRL_OV);
+
+	pw_fld(REG_0184_HD21_PM, 0, REG_0184_HD21_PM_HDMIRX_PHY_PM_FIQ_MASK);
+	//wriu 0x060040 0x07
+	//0x600_20
+	pw_fld(REG_0080_HD21_PM, 0x01, REG_0080_HD21_PM_NODIE_EN_SQH_OV_EN);
+	pw_fld(REG_0080_HD21_PM, 0x01, REG_0080_HD21_PM_NODIE_PD_CLKIN_OV_EN);
+	pw_fld(REG_0080_HD21_PM, 0x01, REG_0080_HD21_PM_NODIE_PD_RT_OV_EN);
+	pw_fld(REG_0080_HD21_PM, 0x01, REG_0080_HD21_PM_NODIE_TEST_RT_CTRL_OV_EN);
+
+	//force SQH det
+	pw_fld(REG_0144_HD21_PM, 0xf, REG_0144_HD21_PM_DATA_SQ_OUT_FORCE_ENABLE);
+	pw_fld(REG_0144_HD21_PM, 0xf, REG_0144_HD21_PM_DATA_SQ_OUT_FORCE_VALUE);
+
+	RX_DEF_LOG("[RX]2080=0x08%x\n", r_reg(REG_0080_HD21_PM));
+}
+
+static void _KHal_PHY_Function_Mux_Mod(struct MTK_HDMI *myhdmi)
+{
+	//--------------modifed DIVSELPLL
+	//=====H21
+	//L0
+	pw_fld(REG_006C_PM, 0x1, REG_006C_PM_DIVSEL_PLL_L0_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_006C_PM, 0x1, REG_006C_PM_DIVSEL_PLL_L0_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_006C_PM, 0x1, REG_006C_PM_DIVSEL_PLL_L0_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_006C_PM, 0x1, REG_006C_PM_DIVSEL_PLL_L0_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_006C_PM, 0x1, REG_006C_PM_DIVSEL_PLL_L0_MOD_4_HDMI2P1_3G);
+
+	//L1
+	pw_fld(REG_0078_PM, 0x1, REG_0078_PM_DIVSEL_PLL_L1_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_0078_PM, 0x1, REG_0078_PM_DIVSEL_PLL_L1_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_0078_PM, 0x1, REG_0078_PM_DIVSEL_PLL_L1_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_0078_PM, 0x1, REG_0078_PM_DIVSEL_PLL_L1_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_0078_PM, 0x1, REG_0078_PM_DIVSEL_PLL_L1_MOD_4_HDMI2P1_3G);
+
+	//L2
+	pw_fld(REG_0084_PM, 0x1, REG_0084_PM_DIVSEL_PLL_L2_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_0084_PM, 0x1, REG_0084_PM_DIVSEL_PLL_L2_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_0084_PM, 0x1, REG_0084_PM_DIVSEL_PLL_L2_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_0084_PM, 0x1, REG_0084_PM_DIVSEL_PLL_L2_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_0084_PM, 0x1, REG_0084_PM_DIVSEL_PLL_L2_MOD_4_HDMI2P1_3G);
+
+	//L3
+	pw_fld(REG_0090_PM, 0x1, REG_0090_PM_DIVSEL_PLL_L3_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_0090_PM, 0x1, REG_0090_PM_DIVSEL_PLL_L3_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_0090_PM, 0x1, REG_0090_PM_DIVSEL_PLL_L3_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_0090_PM, 0x1, REG_0090_PM_DIVSEL_PLL_L3_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_0090_PM, 0x1, REG_0090_PM_DIVSEL_PLL_L3_MOD_4_HDMI2P1_3G);
+
+
+	//=====H20
+	//L0
+	pw_fld(REG_0070_PM, 0x1, REG_0070_PM_DIVSEL_PLL_L0_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_0070_PM, 0x1, REG_0070_PM_DIVSEL_PLL_L0_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0070_PM, 0x1, REG_0070_PM_DIVSEL_PLL_L0_MOD_7_HDMI2P0_3G);
+
+	//L1
+	pw_fld(REG_007C_PM, 0x1, REG_007C_PM_DIVSEL_PLL_L1_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_007C_PM, 0x1, REG_007C_PM_DIVSEL_PLL_L1_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_007C_PM, 0x1, REG_007C_PM_DIVSEL_PLL_L1_MOD_7_HDMI2P0_3G);
+
+	//L2
+	pw_fld(REG_0088_PM, 0x1, REG_0088_PM_DIVSEL_PLL_L2_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_0088_PM, 0x1, REG_0088_PM_DIVSEL_PLL_L2_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0088_PM, 0x1, REG_0088_PM_DIVSEL_PLL_L2_MOD_7_HDMI2P0_3G);
+
+	//L3
+	pw_fld(REG_0094_PM, 0x1, REG_0094_PM_DIVSEL_PLL_L3_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_0094_PM, 0x1, REG_0094_PM_DIVSEL_PLL_L3_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0094_PM, 0x1, REG_0094_PM_DIVSEL_PLL_L3_MOD_7_HDMI2P0_3G);
+
+
+	//=====H14
+	//L0
+	pw_fld(REG_0070_PM, 0x1, REG_0070_PM_DIVSEL_PLL_L0_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_0070_PM, 0x1, REG_0070_PM_DIVSEL_PLL_L0_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_0074_PM, 0x0, REG_0074_PM_DIVSEL_PLL_L0_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_0074_PM, 0x0, REG_0074_PM_DIVSEL_PLL_L0_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_0074_PM, 0x0, REG_0074_PM_DIVSEL_PLL_L0_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_0074_PM, 0x0, REG_0074_PM_DIVSEL_PLL_L0_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_0074_PM, 0x1, REG_0074_PM_DIVSEL_PLL_L0_MOD_14_HDMI1P4_0P5G);
+
+	//L1
+	pw_fld(REG_007C_PM, 0x1, REG_007C_PM_DIVSEL_PLL_L1_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_007C_PM, 0x1, REG_007C_PM_DIVSEL_PLL_L1_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_0080_PM, 0x0, REG_0080_PM_DIVSEL_PLL_L1_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_0080_PM, 0x0, REG_0080_PM_DIVSEL_PLL_L1_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_0080_PM, 0x0, REG_0080_PM_DIVSEL_PLL_L1_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_0080_PM, 0x0, REG_0080_PM_DIVSEL_PLL_L1_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_0080_PM, 0x1, REG_0080_PM_DIVSEL_PLL_L1_MOD_14_HDMI1P4_0P5G);
+
+	//L2
+	pw_fld(REG_0088_PM, 0x1, REG_0088_PM_DIVSEL_PLL_L2_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_0088_PM, 0x1, REG_0088_PM_DIVSEL_PLL_L2_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_008C_PM, 0x0, REG_008C_PM_DIVSEL_PLL_L2_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_008C_PM, 0x0, REG_008C_PM_DIVSEL_PLL_L2_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_008C_PM, 0x0, REG_008C_PM_DIVSEL_PLL_L2_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_008C_PM, 0x0, REG_008C_PM_DIVSEL_PLL_L2_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_008C_PM, 0x1, REG_008C_PM_DIVSEL_PLL_L2_MOD_14_HDMI1P4_0P5G);
+
+	//L3
+	pw_fld(REG_0094_PM, 0x1, REG_0094_PM_DIVSEL_PLL_L3_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_0094_PM, 0x1, REG_0094_PM_DIVSEL_PLL_L3_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_0098_PM, 0x0, REG_0098_PM_DIVSEL_PLL_L3_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_0098_PM, 0x0, REG_0098_PM_DIVSEL_PLL_L3_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_0098_PM, 0x0, REG_0098_PM_DIVSEL_PLL_L3_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_0098_PM, 0x0, REG_0098_PM_DIVSEL_PLL_L3_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_0098_PM, 0x1, REG_0098_PM_DIVSEL_PLL_L3_MOD_14_HDMI1P4_0P5G);
+
+
+	//----------------modifed ICtrlPD
+	//======H21 part
+	//L0
+	pw_fld(REG_0184_PM, 0x2, REG_0184_PM_ICTRL_PD_L0_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_0188_PM, 0x2, REG_0188_PM_ICTRL_PD_L0_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_0188_PM, 0x2, REG_0188_PM_ICTRL_PD_L0_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_0188_PM, 0x2, REG_0188_PM_ICTRL_PD_L0_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_018C_PM, 0x2, REG_018C_PM_ICTRL_PD_L0_MOD_4_HDMI2P1_3G);
+
+	//L1
+	pw_fld(REG_0198_PM, 0x2, REG_0198_PM_ICTRL_PD_L1_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_019C_PM, 0x2, REG_019C_PM_ICTRL_PD_L1_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_019C_PM, 0x2, REG_019C_PM_ICTRL_PD_L1_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_019C_PM, 0x2, REG_019C_PM_ICTRL_PD_L1_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_01A0_PM, 0x2, REG_01A0_PM_ICTRL_PD_L1_MOD_4_HDMI2P1_3G);
+
+
+	//L2
+	pw_fld(REG_01AC_PM, 0x2, REG_01AC_PM_ICTRL_PD_L2_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_01B0_PM, 0x2, REG_01B0_PM_ICTRL_PD_L2_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_01B0_PM, 0x2, REG_01B0_PM_ICTRL_PD_L2_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_01B0_PM, 0x2, REG_01B0_PM_ICTRL_PD_L2_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_01B4_PM, 0x2, REG_01B4_PM_ICTRL_PD_L2_MOD_4_HDMI2P1_3G);
+
+	//L3
+	pw_fld(REG_01C0_PM, 0x2, REG_01C0_PM_ICTRL_PD_L3_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_01C4_PM, 0x2, REG_01C4_PM_ICTRL_PD_L3_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_01C4_PM, 0x2, REG_01C4_PM_ICTRL_PD_L3_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_01C4_PM, 0x2, REG_01C4_PM_ICTRL_PD_L3_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_01C8_PM, 0x2, REG_01C8_PM_ICTRL_PD_L3_MOD_4_HDMI2P1_3G);
+
+	//=====H20 part
+	//L0
+	pw_fld(REG_018C_PM, 0x2, REG_018C_PM_ICTRL_PD_L0_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_018C_PM, 0x2, REG_018C_PM_ICTRL_PD_L0_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0190_PM, 0x2, REG_0190_PM_ICTRL_PD_L0_MOD_7_HDMI2P0_3G);
+
+	//L1
+	pw_fld(REG_01A0_PM, 0x2, REG_01A0_PM_ICTRL_PD_L1_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_01A0_PM, 0x2, REG_01A0_PM_ICTRL_PD_L1_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_01A4_PM, 0x2, REG_01A4_PM_ICTRL_PD_L1_MOD_7_HDMI2P0_3G);
+
+	//L2
+	pw_fld(REG_01B4_PM, 0x2, REG_01B4_PM_ICTRL_PD_L2_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_01B4_PM, 0x2, REG_01B4_PM_ICTRL_PD_L2_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_01B8_PM, 0x2, REG_01B8_PM_ICTRL_PD_L2_MOD_7_HDMI2P0_3G);
+
+	//L3
+	pw_fld(REG_01C8_PM, 0x2, REG_01C8_PM_ICTRL_PD_L3_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_01C8_PM, 0x2, REG_01C8_PM_ICTRL_PD_L3_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_01CC_PM, 0x2, REG_01CC_PM_ICTRL_PD_L3_MOD_7_HDMI2P0_3G);
+
+	//=====H14 part
+	//L0
+	pw_fld(REG_0190_PM, 0x2, REG_0190_PM_ICTRL_PD_L0_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_0190_PM, 0x2, REG_0190_PM_ICTRL_PD_L0_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_0194_PM, 0x2, REG_0194_PM_ICTRL_PD_L0_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_0194_PM, 0x0, REG_0194_PM_ICTRL_PD_L0_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_0194_PM, 0x0, REG_0194_PM_ICTRL_PD_L0_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_0198_PM, 0x0, REG_0198_PM_ICTRL_PD_L0_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_0198_PM, 0x0, REG_0198_PM_ICTRL_PD_L0_MOD_14_HDMI1P4_0P5G);
+
+	//L1
+	pw_fld(REG_01A4_PM, 0x2, REG_01A4_PM_ICTRL_PD_L1_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_01A4_PM, 0x2, REG_01A4_PM_ICTRL_PD_L1_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_01A8_PM, 0x2, REG_01A8_PM_ICTRL_PD_L1_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_01A8_PM, 0x0, REG_01A8_PM_ICTRL_PD_L1_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_01A8_PM, 0x0, REG_01A8_PM_ICTRL_PD_L1_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_01AC_PM, 0x0, REG_01AC_PM_ICTRL_PD_L1_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_01AC_PM, 0x0, REG_01AC_PM_ICTRL_PD_L1_MOD_14_HDMI1P4_0P5G);
+
+	//L2
+	pw_fld(REG_01B8_PM, 0x2, REG_01B8_PM_ICTRL_PD_L2_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_01B8_PM, 0x2, REG_01B8_PM_ICTRL_PD_L2_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_01BC_PM, 0x2, REG_01BC_PM_ICTRL_PD_L2_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_01BC_PM, 0x0, REG_01BC_PM_ICTRL_PD_L2_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_01BC_PM, 0x0, REG_01BC_PM_ICTRL_PD_L2_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_01C0_PM, 0x0, REG_01C0_PM_ICTRL_PD_L2_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_01C0_PM, 0x0, REG_01C0_PM_ICTRL_PD_L2_MOD_14_HDMI1P4_0P5G);
+
+	//L3
+	pw_fld(REG_01CC_PM, 0x2, REG_01CC_PM_ICTRL_PD_L3_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_01CC_PM, 0x2, REG_01CC_PM_ICTRL_PD_L3_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_01D0_PM, 0x2, REG_01D0_PM_ICTRL_PD_L3_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_01D0_PM, 0x0, REG_01D0_PM_ICTRL_PD_L3_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_01D0_PM, 0x0, REG_01D0_PM_ICTRL_PD_L3_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_01D4_PM, 0x0, REG_01D4_PM_ICTRL_PD_L3_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_01D4_PM, 0x0, REG_01D4_PM_ICTRL_PD_L3_MOD_14_HDMI1P4_0P5G);
+
+	//---------------modified ICtrlPFD
+	//======H21 part
+	//L0
+	pw_fld(REG_01D4_PM, 0x01, REG_01D4_PM_ICTRL_PFD_L0_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_01D8_PM, 0x01, REG_01D8_PM_ICTRL_PFD_L0_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_01D8_PM, 0x01, REG_01D8_PM_ICTRL_PFD_L0_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_01D8_PM, 0x01, REG_01D8_PM_ICTRL_PFD_L0_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_01DC_PM, 0x01, REG_01DC_PM_ICTRL_PFD_L0_MOD_4_HDMI2P1_3G);
+	//L1
+	pw_fld(REG_01E8_PM, 0x01, REG_01E8_PM_ICTRL_PFD_L1_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_01EC_PM, 0x01, REG_01EC_PM_ICTRL_PFD_L1_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_01EC_PM, 0x01, REG_01EC_PM_ICTRL_PFD_L1_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_01EC_PM, 0x01, REG_01EC_PM_ICTRL_PFD_L1_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_01F0_PM, 0x01, REG_01F0_PM_ICTRL_PFD_L1_MOD_4_HDMI2P1_3G);
+
+	//L2
+	pw_fld(REG_01FC_PM, 0x01, REG_01FC_PM_ICTRL_PFD_L2_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_0000_RNA, 0x01, REG_0000_RNA_ICTRL_PFD_L2_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_0000_RNA, 0x01, REG_0000_RNA_ICTRL_PFD_L2_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_0000_RNA, 0x01, REG_0000_RNA_ICTRL_PFD_L2_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_0004_RNA, 0x01, REG_0004_RNA_ICTRL_PFD_L2_MOD_4_HDMI2P1_3G);
+
+	//L3
+	pw_fld(REG_0010_RNA, 0x01, REG_0010_RNA_ICTRL_PFD_L3_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_0014_RNA, 0x01, REG_0014_RNA_ICTRL_PFD_L3_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_0014_RNA, 0x01, REG_0014_RNA_ICTRL_PFD_L3_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_0014_RNA, 0x01, REG_0014_RNA_ICTRL_PFD_L3_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_0018_RNA, 0x01, REG_0018_RNA_ICTRL_PFD_L3_MOD_4_HDMI2P1_3G);
+	//=====H20 part
+	//L0
+	pw_fld(REG_01DC_PM, 0x01, REG_01DC_PM_ICTRL_PFD_L0_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_01DC_PM, 0x01, REG_01DC_PM_ICTRL_PFD_L0_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_01E0_PM, 0x01, REG_01E0_PM_ICTRL_PFD_L0_MOD_7_HDMI2P0_3G);
+
+	//L1
+	pw_fld(REG_01F0_PM, 0x01, REG_01F0_PM_ICTRL_PFD_L1_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_01F0_PM, 0x01, REG_01F0_PM_ICTRL_PFD_L1_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_01F4_PM, 0x01, REG_01F4_PM_ICTRL_PFD_L1_MOD_7_HDMI2P0_3G);
+
+	//L2
+	pw_fld(REG_0004_RNA, 0x01, REG_0004_RNA_ICTRL_PFD_L2_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_0004_RNA, 0x01, REG_0004_RNA_ICTRL_PFD_L2_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0008_RNA, 0x01, REG_0008_RNA_ICTRL_PFD_L2_MOD_7_HDMI2P0_3G);
+
+	//L3
+	pw_fld(REG_0018_RNA, 0x01, REG_0018_RNA_ICTRL_PFD_L3_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_0018_RNA, 0x01, REG_0018_RNA_ICTRL_PFD_L3_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_001C_RNA, 0x01, REG_001C_RNA_ICTRL_PFD_L3_MOD_7_HDMI2P0_3G);
+
+	//=====H14 part
+	//L0
+	pw_fld(REG_01E0_PM, 0x02, REG_01E0_PM_ICTRL_PFD_L0_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_01E0_PM, 0x02, REG_01E0_PM_ICTRL_PFD_L0_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_01E4_PM, 0x03, REG_01E4_PM_ICTRL_PFD_L0_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_01E4_PM, 0x14, REG_01E4_PM_ICTRL_PFD_L0_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_01E4_PM, 0x05, REG_01E4_PM_ICTRL_PFD_L0_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_01E8_PM, 0x05, REG_01E8_PM_ICTRL_PFD_L0_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_01E8_PM, 0x05, REG_01E8_PM_ICTRL_PFD_L0_MOD_14_HDMI1P4_0P5G);
+
+	//L1
+	pw_fld(REG_01F4_PM, 0x02, REG_01F4_PM_ICTRL_PFD_L1_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_01F4_PM, 0x02, REG_01F4_PM_ICTRL_PFD_L1_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_01F8_PM, 0x03, REG_01F8_PM_ICTRL_PFD_L1_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_01F8_PM, 0x14, REG_01F8_PM_ICTRL_PFD_L1_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_01F8_PM, 0x05, REG_01F8_PM_ICTRL_PFD_L1_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_01FC_PM, 0x05, REG_01FC_PM_ICTRL_PFD_L1_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_01FC_PM, 0x05, REG_01FC_PM_ICTRL_PFD_L1_MOD_14_HDMI1P4_0P5G);
+
+	//L2
+	pw_fld(REG_0008_RNA, 0x02, REG_0008_RNA_ICTRL_PFD_L2_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_0008_RNA, 0x02, REG_0008_RNA_ICTRL_PFD_L2_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_000C_RNA, 0x03, REG_000C_RNA_ICTRL_PFD_L2_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_000C_RNA, 0x14, REG_000C_RNA_ICTRL_PFD_L2_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_000C_RNA, 0x05, REG_000C_RNA_ICTRL_PFD_L2_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_0010_RNA, 0x05, REG_0010_RNA_ICTRL_PFD_L2_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_0010_RNA, 0x05, REG_0010_RNA_ICTRL_PFD_L2_MOD_14_HDMI1P4_0P5G);
+
+	//L3
+	pw_fld(REG_001C_RNA, 0x02, REG_001C_RNA_ICTRL_PFD_L3_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_001C_RNA, 0x02, REG_001C_RNA_ICTRL_PFD_L3_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_0020_RNA, 0x03, REG_0020_RNA_ICTRL_PFD_L3_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_0020_RNA, 0x14, REG_0020_RNA_ICTRL_PFD_L3_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_0020_RNA, 0x05, REG_0020_RNA_ICTRL_PFD_L3_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_0024_RNA, 0x05, REG_0024_RNA_ICTRL_PFD_L3_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_0024_RNA, 0x05, REG_0024_RNA_ICTRL_PFD_L3_MOD_14_HDMI1P4_0P5G);
+
+	//-------------modified RCTRL PLL
+	//======H21 part
+	//L0
+	pw_fld(REG_0078_RNA, 0x2, REG_0078_RNA_RCTRL_PLL_L0_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_0078_RNA, 0x2, REG_0078_RNA_RCTRL_PLL_L0_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_0078_RNA, 0x2, REG_0084_RNA_RCTRL_PLL_L1_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_0078_RNA, 0x2, REG_0078_RNA_RCTRL_PLL_L0_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_0078_RNA, 0x2, REG_0078_RNA_RCTRL_PLL_L0_MOD_4_HDMI2P1_3G);
+
+
+	//L1
+	pw_fld(REG_0084_RNA, 0x2, REG_0084_RNA_RCTRL_PLL_L1_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_0084_RNA, 0x2, REG_0084_RNA_RCTRL_PLL_L1_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_0084_RNA, 0x2, REG_0084_RNA_RCTRL_PLL_L1_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_0084_RNA, 0x2, REG_0084_RNA_RCTRL_PLL_L1_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_0084_RNA, 0x2, REG_0084_RNA_RCTRL_PLL_L1_MOD_4_HDMI2P1_3G);
+
+	//L2
+	pw_fld(REG_0090_RNA, 0x2, REG_0090_RNA_RCTRL_PLL_L2_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_0090_RNA, 0x2, REG_0090_RNA_RCTRL_PLL_L2_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_0090_RNA, 0x2, REG_0090_RNA_RCTRL_PLL_L2_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_0090_RNA, 0x2, REG_0090_RNA_RCTRL_PLL_L2_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_0090_RNA, 0x2, REG_0090_RNA_RCTRL_PLL_L2_MOD_4_HDMI2P1_3G);
+
+	//L3
+	pw_fld(REG_009C_RNA, 0x2, REG_009C_RNA_RCTRL_PLL_L3_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_009C_RNA, 0x2, REG_009C_RNA_RCTRL_PLL_L3_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_009C_RNA, 0x2, REG_009C_RNA_RCTRL_PLL_L3_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_009C_RNA, 0x2, REG_009C_RNA_RCTRL_PLL_L3_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_009C_RNA, 0x2, REG_009C_RNA_RCTRL_PLL_L3_MOD_4_HDMI2P1_3G);
+
+	//======H20 part
+	//L0
+	pw_fld(REG_007C_RNA, 0x2, REG_007C_RNA_RCTRL_PLL_L0_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_007C_RNA, 0x2, REG_007C_RNA_RCTRL_PLL_L0_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_007C_RNA, 0x2, REG_007C_RNA_RCTRL_PLL_L0_MOD_7_HDMI2P0_3G);
+
+	//L1
+	pw_fld(REG_0088_RNA, 0x2, REG_0088_RNA_RCTRL_PLL_L1_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_0088_RNA, 0x2, REG_0088_RNA_RCTRL_PLL_L1_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0088_RNA, 0x2, REG_0088_RNA_RCTRL_PLL_L1_MOD_7_HDMI2P0_3G);
+
+	//L2
+	pw_fld(REG_0094_RNA, 0x2, REG_0094_RNA_RCTRL_PLL_L2_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_0094_RNA, 0x2, REG_0094_RNA_RCTRL_PLL_L2_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0094_RNA, 0x2, REG_0094_RNA_RCTRL_PLL_L2_MOD_7_HDMI2P0_3G);
+
+	//L3
+	pw_fld(REG_00A0_RNA, 0x2, REG_00A0_RNA_RCTRL_PLL_L3_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_00A0_RNA, 0x2, REG_00A0_RNA_RCTRL_PLL_L3_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_00A0_RNA, 0x2, REG_00A0_RNA_RCTRL_PLL_L3_MOD_7_HDMI2P0_3G);
+
+	//======H14 part
+	//L0
+	pw_fld(REG_007C_RNA, 0x2, REG_007C_RNA_RCTRL_PLL_L0_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_007C_RNA, 0x2, REG_007C_RNA_RCTRL_PLL_L0_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_0080_RNA, 0x5, REG_0080_RNA_RCTRL_PLL_L0_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_0080_RNA, 0x4, REG_0080_RNA_RCTRL_PLL_L0_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_0080_RNA, 0x4, REG_0080_RNA_RCTRL_PLL_L0_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_0080_RNA, 0x6, REG_0080_RNA_RCTRL_PLL_L0_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_0080_RNA, 0x6, REG_0080_RNA_RCTRL_PLL_L0_MOD_14_HDMI1P4_0P5G);
+
+	//L1
+	pw_fld(REG_0088_RNA, 0x2, REG_0088_RNA_RCTRL_PLL_L1_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_0088_RNA, 0x2, REG_0088_RNA_RCTRL_PLL_L1_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_008C_RNA, 0x5, REG_008C_RNA_RCTRL_PLL_L1_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_008C_RNA, 0x4, REG_008C_RNA_RCTRL_PLL_L1_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_008C_RNA, 0x4, REG_008C_RNA_RCTRL_PLL_L1_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_008C_RNA, 0x6, REG_008C_RNA_RCTRL_PLL_L1_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_008C_RNA, 0x6, REG_008C_RNA_RCTRL_PLL_L1_MOD_14_HDMI1P4_0P5G);
+
+	//L2
+	pw_fld(REG_0094_RNA, 0x2, REG_0094_RNA_RCTRL_PLL_L2_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_0094_RNA, 0x2, REG_0094_RNA_RCTRL_PLL_L2_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_0098_RNA, 0x5, REG_0098_RNA_RCTRL_PLL_L2_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_0098_RNA, 0x4, REG_0098_RNA_RCTRL_PLL_L2_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_0098_RNA, 0x4, REG_0098_RNA_RCTRL_PLL_L2_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_0098_RNA, 0x6, REG_0098_RNA_RCTRL_PLL_L2_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_0098_RNA, 0x6, REG_0098_RNA_RCTRL_PLL_L2_MOD_14_HDMI1P4_0P5G);
+
+	//L3
+	pw_fld(REG_00A0_RNA, 0x2, REG_00A0_RNA_RCTRL_PLL_L3_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_00A0_RNA, 0x2, REG_00A0_RNA_RCTRL_PLL_L3_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_00A4_RNA, 0x5, REG_00A4_RNA_RCTRL_PLL_L3_MOD_10_HDMI1P4_3P6G);
+	pw_fld(REG_00A4_RNA, 0x4, REG_00A4_RNA_RCTRL_PLL_L3_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_00A4_RNA, 0x4, REG_00A4_RNA_RCTRL_PLL_L3_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_00A4_RNA, 0x6, REG_00A4_RNA_RCTRL_PLL_L3_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_00A4_RNA, 0x6, REG_00A4_RNA_RCTRL_PLL_L3_MOD_14_HDMI1P4_0P5G);
+
+	//------------modified DFE mode
+	//======H21 part
+	//L0
+	pw_fld(REG_0030_PM, 0x0, REG_0030_PM_DFE_MODE_L0_MOD_4_HDMI2P1_3G);
+	//L1
+	pw_fld(REG_0038_PM, 0x0, REG_0038_PM_DFE_MODE_L1_MOD_4_HDMI2P1_3G);
+	//L2
+	pw_fld(REG_0040_PM, 0x0, REG_0040_PM_DFE_MODE_L2_MOD_4_HDMI2P1_3G);
+	//L3
+	pw_fld(REG_0048_PM, 0x0, REG_0048_PM_DFE_MODE_L3_MOD_4_HDMI2P1_3G);
+
+	//======H20 part, DFE mode
+	//L0
+	pw_fld(REG_0030_PM, 0x0, REG_0030_PM_DFE_MODE_L0_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0030_PM, 0x0, REG_0030_PM_DFE_MODE_L0_MOD_7_HDMI2P0_3G);
+	//L1
+	pw_fld(REG_0038_PM, 0x0, REG_0038_PM_DFE_MODE_L1_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0038_PM, 0x0, REG_0038_PM_DFE_MODE_L1_MOD_7_HDMI2P0_3G);
+	//L2
+	pw_fld(REG_0040_PM, 0x0, REG_0040_PM_DFE_MODE_L2_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0040_PM, 0x0, REG_0040_PM_DFE_MODE_L2_MOD_7_HDMI2P0_3G);
+	//L3
+	pw_fld(REG_0048_PM, 0x0, REG_0048_PM_DFE_MODE_L3_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0048_PM, 0x0, REG_0048_PM_DFE_MODE_L3_MOD_7_HDMI2P0_3G);
+
+	//======H14 part, pre DFE mode
+	//L0
+	pw_fld(REG_0034_PM, 0x1, REG_0034_PM_DFE_MODE_L0_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_0034_PM, 0x1, REG_0034_PM_DFE_MODE_L0_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_0034_PM, 0x1, REG_0034_PM_DFE_MODE_L0_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_0034_PM, 0x1, REG_0034_PM_DFE_MODE_L0_MOD_14_HDMI1P4_0P5G);
+
+	//L1
+	pw_fld(REG_003C_PM, 0x1, REG_003C_PM_DFE_MODE_L1_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_003C_PM, 0x1, REG_003C_PM_DFE_MODE_L1_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_003C_PM, 0x1, REG_003C_PM_DFE_MODE_L1_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_003C_PM, 0x1, REG_003C_PM_DFE_MODE_L1_MOD_14_HDMI1P4_0P5G);
+
+	//L2
+	pw_fld(REG_0044_PM, 0x1, REG_0044_PM_DFE_MODE_L2_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_0044_PM, 0x1, REG_0044_PM_DFE_MODE_L2_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_0044_PM, 0x1, REG_0044_PM_DFE_MODE_L2_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_0044_PM, 0x1, REG_0044_PM_DFE_MODE_L2_MOD_14_HDMI1P4_0P5G);
+
+	//L3
+	pw_fld(REG_004C_PM, 0x1, REG_004C_PM_DFE_MODE_L3_MOD_11_HDMI1P4_3G);
+	pw_fld(REG_004C_PM, 0x1, REG_004C_PM_DFE_MODE_L3_MOD_12_HDMI1P4_1P5G);
+	pw_fld(REG_004C_PM, 0x1, REG_004C_PM_DFE_MODE_L3_MOD_13_HDMI1P4_0P9G);
+	pw_fld(REG_004C_PM, 0x1, REG_004C_PM_DFE_MODE_L3_MOD_14_HDMI1P4_0P5G);
+
+	//------------modified DFE BW
+	//======H21 part
+	//modified the DFE BW in FRL 8G band from 8G to 10G as temporary solution
+	//L0
+	pw_fld(REG_0000_PM, 0x1, REG_0000_PM_DFE_BW_L0_MOD_2_HDMI2P1_8G);
+	//L1
+	pw_fld(REG_000C_PM, 0x1, REG_000C_PM_DFE_BW_L1_MOD_2_HDMI2P1_8G);
+	//L2
+	pw_fld(REG_0018_PM, 0x1, REG_0018_PM_DFE_BW_L2_MOD_2_HDMI2P1_8G);
+	//L3
+	pw_fld(REG_0024_PM, 0x1, REG_0024_PM_DFE_BW_L3_MOD_2_HDMI2P1_8G);
+
+
+	//------------modified PD_UPDN_DMX
+	//======H21 part
+	//L0
+	pw_fld(REG_0038_RNA, 0x0, REG_0038_RNA_PD_UPDN_DMX_L0_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_0038_RNA, 0x0, REG_0038_RNA_PD_UPDN_DMX_L0_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_0038_RNA, 0x0, REG_0038_RNA_PD_UPDN_DMX_L0_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_0038_RNA, 0x0, REG_0038_RNA_PD_UPDN_DMX_L0_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_0038_RNA, 0x0, REG_0038_RNA_PD_UPDN_DMX_L0_MOD_4_HDMI2P1_3G);
+
+	//L1
+	pw_fld(REG_0038_RNA, 0x0, REG_0038_RNA_PD_UPDN_DMX_L1_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_003C_RNA, 0x0, REG_003C_RNA_PD_UPDN_DMX_L1_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_003C_RNA, 0x0, REG_003C_RNA_PD_UPDN_DMX_L1_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_003C_RNA, 0x0, REG_003C_RNA_PD_UPDN_DMX_L1_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_003C_RNA, 0x0, REG_003C_RNA_PD_UPDN_DMX_L1_MOD_4_HDMI2P1_3G);
+
+	//L2
+	pw_fld(REG_003C_RNA, 0x0, REG_003C_RNA_PD_UPDN_DMX_L2_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_003C_RNA, 0x0, REG_003C_RNA_PD_UPDN_DMX_L2_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_0040_RNA, 0x0, REG_0040_RNA_PD_UPDN_DMX_L2_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_0040_RNA, 0x0, REG_0040_RNA_PD_UPDN_DMX_L2_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_0040_RNA, 0x0, REG_0040_RNA_PD_UPDN_DMX_L2_MOD_4_HDMI2P1_3G);
+
+	//L3
+	pw_fld(REG_0040_RNA, 0x0, REG_0040_RNA_PD_UPDN_DMX_L3_MOD_0_HDMI2P1_12G);
+	pw_fld(REG_0040_RNA, 0x0, REG_0040_RNA_PD_UPDN_DMX_L3_MOD_1_HDMI2P1_10G);
+	pw_fld(REG_0040_RNA, 0x0, REG_0040_RNA_PD_UPDN_DMX_L3_MOD_2_HDMI2P1_8G);
+	pw_fld(REG_0044_RNA, 0x0, REG_0044_RNA_PD_UPDN_DMX_L3_MOD_3_HDMI2P1_6G);
+	pw_fld(REG_0044_RNA, 0x0, REG_0044_RNA_PD_UPDN_DMX_L3_MOD_4_HDMI2P1_3G);
+
+	//======H20 part
+	//L0
+	pw_fld(REG_0038_RNA, 0x0, REG_0038_RNA_PD_UPDN_DMX_L0_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_0038_RNA, 0x0, REG_0038_RNA_PD_UPDN_DMX_L0_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0038_RNA, 0x0, REG_0038_RNA_PD_UPDN_DMX_L0_MOD_7_HDMI2P0_3G);
+
+	//L1
+	pw_fld(REG_003C_RNA, 0x0, REG_003C_RNA_PD_UPDN_DMX_L1_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_003C_RNA, 0x0, REG_003C_RNA_PD_UPDN_DMX_L1_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_003C_RNA, 0x0, REG_003C_RNA_PD_UPDN_DMX_L1_MOD_7_HDMI2P0_3G);
+
+	//L2
+	pw_fld(REG_0040_RNA, 0x0, REG_0040_RNA_PD_UPDN_DMX_L2_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_0040_RNA, 0x0, REG_0040_RNA_PD_UPDN_DMX_L2_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0040_RNA, 0x0, REG_0040_RNA_PD_UPDN_DMX_L2_MOD_7_HDMI2P0_3G);
+
+	//L3
+	pw_fld(REG_0044_RNA, 0x0, REG_0044_RNA_PD_UPDN_DMX_L3_MOD_5_HDMI2P0_6G);
+	pw_fld(REG_0044_RNA, 0x0, REG_0044_RNA_PD_UPDN_DMX_L3_MOD_6_HDMI2P0_4P5G);
+	pw_fld(REG_0044_RNA, 0x0, REG_0044_RNA_PD_UPDN_DMX_L3_MOD_7_HDMI2P0_3G);
+
+	//======H14 part
+	//L0
+	pw_fld(REG_0038_RNA, 0x0, REG_0038_RNA_PD_UPDN_DMX_L0_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_0038_RNA, 0x0, REG_0038_RNA_PD_UPDN_DMX_L0_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_0038_RNA, 0x0, REG_0038_RNA_PD_UPDN_DMX_L0_MOD_10_HDMI1P4_3P6G);
+
+	//L1
+	pw_fld(REG_003C_RNA, 0x0, REG_003C_RNA_PD_UPDN_DMX_L1_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_003C_RNA, 0x0, REG_003C_RNA_PD_UPDN_DMX_L1_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_003C_RNA, 0x0, REG_003C_RNA_PD_UPDN_DMX_L1_MOD_10_HDMI1P4_3P6G);
+
+	//L2
+	pw_fld(REG_0040_RNA, 0x0, REG_0040_RNA_PD_UPDN_DMX_L2_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_0040_RNA, 0x0, REG_0040_RNA_PD_UPDN_DMX_L2_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_0040_RNA, 0x0, REG_0040_RNA_PD_UPDN_DMX_L2_MOD_10_HDMI1P4_3P6G);
+
+	//L3
+	pw_fld(REG_0044_RNA, 0x0, REG_0044_RNA_PD_UPDN_DMX_L3_MOD_8_HDMI1P4_6G);
+	pw_fld(REG_0044_RNA, 0x0, REG_0044_RNA_PD_UPDN_DMX_L3_MOD_9_HDMI1P4_4P5G);
+	pw_fld(REG_0044_RNA, 0x0, REG_0044_RNA_PD_UPDN_DMX_L3_MOD_10_HDMI1P4_3P6G);
+
+	//------------modified PHD_REG
+	//all lane applied the same setting
+	//======H20 part
+	pw_fld(REG_0018_LANE_1, 0x0, REG_0018_LANE_1_HD20_GC_SEL_PHD_L0_BAND_0);
+	//H14
+	pw_fld(REG_0018_LANE_1, 0x0, REG_0018_LANE_1_HD14_GC_SEL_PHD_L0_BAND_4);
+	pw_fld(REG_0018_LANE_1, 0x0, REG_0018_LANE_1_HD14_GC_SEL_PHD_L0_BAND_3);
+	pw_fld(REG_001C_LANE_1, 0x2, REG_001C_LANE_1_HD14_GC_SEL_PHD_L0_BAND_1);
+	pw_fld(REG_001C_LANE_1, 0x3, REG_001C_LANE_1_HD14_GC_SEL_PHD_L0_BAND_0);
+}
+
+void _KHal_HDMIRx_PHYInit2p1Port(struct MTK_HDMI *myhdmi)
+{
+	_KHal_HD21_PM_PHY_Init(myhdmi);
+
+	_KHal_PHY_H14_Init(myhdmi);
+
+	// enable dfe tap1~tap4, tap5~tap8 and tap9~tap12
+	_KHal_HDMIRx_EnableDfeTap(myhdmi, TRUE, TRUE, FALSE);
+	_KHal_PHY_Function_Mux_Mod(myhdmi);
+
+	pw_fld(REG_00D0_DTOP_1, 0x0088, FLD_BMSK(15:0));
+	// sw usage register
+	//W2BYTE(REG_PHY2P1_1_P0_33_L +u32PHY2P1BankOffset, PHY_SW_VERSION);
+	//W2BYTE(REG_PHY2P1_1_P0_34_L, 0);
+	pw_fld(REG_00CC_DTOP_1, PHY_SW_VERSION, REG_00CC_DTOP_1_DUMMY_33);
+	//W2BYTE(REG_PHY2P1_1_P0_36_L, 0);
+	pw_fld(REG_00D8_DTOP_1, 0x0000, REG_00D8_DTOP_1_DUMMY_36);
+}
+
+bool fgHDMI2Get40xMode(struct MTK_HDMI *myhdmi)
+{
+	if (myhdmi->force_40x == 1)
+		return TRUE;
+
+	return r_fld(TOP_MISC, TMDS_CLK_RATIO);
+}
+
+#define HDMIRXPLL_BAND_TOLERANCE 1000	// 1000KHz = 1 MHz
+enum HdmiTmdsClkRate_t bHDMI2GetRefClkRate(struct MTK_HDMI *myhdmi,
+	u32 u4ClkKhz, bool b40xMode)
+{
+	u8 u1ClkRate = HDMI_TMDS_CLOCK_UNKNOWN;
+
+	if (b40xMode) {
+		if (u4ClkKhz <= (85000 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI20_TMDS_CLOCK_290_340;
+		else if (u4ClkKhz <= (106375 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI20_TMDS_CLOCK_340_425P5;
+		else if (u4ClkKhz <= (127500 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI20_TMDS_CLOCK_425P5_510;
+		else if (u4ClkKhz <= (150000 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI20_TMDS_CLOCK_510_594;
+		else
+			u1ClkRate = HDMI_TMDS_CLOCK_UNKNOWN;
+	} else {
+		if (u4ClkKhz == 0)
+			u1ClkRate = HDMI_TMDS_CLOCK_UNKNOWN;
+		else if (u4ClkKhz <= (27000 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI_TMDS_CLOCK_27;
+		else if (u4ClkKhz <= (33750 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI_TMDS_CLOCK_27_33P75;
+		else if (u4ClkKhz <= (40500 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI_TMDS_CLOCK_33P75_40P5;
+		else if (u4ClkKhz <= (54000 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI_TMDS_CLOCK_40P5_54;
+		else if (u4ClkKhz <= (75000 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI_TMDS_CLOCK_54_75;
+		else if (u4ClkKhz <= (93750 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI_TMDS_CLOCK_75_93P75;
+		else if (u4ClkKhz <= (112500 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI_TMDS_CLOCK_93P75_112P5;
+		else if (u4ClkKhz <= (148500 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI_TMDS_CLOCK_112P5_148P5;
+		else if (u4ClkKhz <= (150000 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI_TMDS_CLOCK_148P5_150;
+		else if (u4ClkKhz <= (185625 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI_TMDS_CLOCK_150_185P625;
+		else if (u4ClkKhz <= (227750 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI_TMDS_CLOCK_185P625_227P75;
+		else if (u4ClkKhz <= (289000 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI_TMDS_CLOCK_227P75_290;
+		else if (u4ClkKhz <= (599000 + HDMIRXPLL_BAND_TOLERANCE))
+			u1ClkRate = HDMI_TMDS_CLOCK_297_594;
+		else
+			u1ClkRate = HDMI_TMDS_CLOCK_UNKNOWN;
+	}
+
+	return (enum HdmiTmdsClkRate_t) u1ClkRate;
+}
+
+void vHDMI21PhySetting(struct MTK_HDMI *myhdmi)
+{
+	enum HdmiTmdsClkRate_t eBand = HDMI_TMDS_CLOCK_UNKNOWN;
+	bool b40xMode = 0;
+	u32 u4TmdsClkKhz;
+
+	b40xMode = fgHDMI2Get40xMode(myhdmi);
+	u4TmdsClkKhz = u4HDMI2ComGetRefClkKhz(myhdmi);
+	eBand = bHDMI2GetRefClkRate(myhdmi, u4TmdsClkKhz, b40xMode);
+
+	myhdmi->_fgHDMI40xMode = b40xMode;
+	myhdmi->_dwHDMIClkKhz = u4TmdsClkKhz;
+	myhdmi->_bPLLBandSel = eBand;
+
+	RX_DEF_LOG("[RX]_40xMode=%d,TmdsClkKhz=%d, Band=%d\n",
+		   b40xMode, u4TmdsClkKhz, eBand);
+
+	if (myhdmi->my_debug2 == 1) {
+		if (b40xMode)
+			vHDMI21PHY20(myhdmi);
+		else
+			vHDMI21PHY14(myhdmi);
+	} else {
+		if (b40xMode)
+			_KHal_HDMIRx_BusyPolling2p1Port(myhdmi, HDMI_FRL_MODE_LEGACY_20);
+		else
+			_KHal_HDMIRx_BusyPolling2p1Port(myhdmi, HDMI_FRL_MODE_LEGACY_14);
+	}
+
+	vUtDelay1ms(1);
+	w_reg(A_ADR + 0x117c, 0xFFFF7777);
+	vUtDelay1ms(1);
+	RX_DEF_LOG("[RX]lock: 0x117C=0x%08x, 0x9A8=0x%08x\n",
+		r_reg(A_ADR + 0x117c),
+		r_reg(REG_01A8_DTOP_0));
+}
+
+void vHDMI21PhyInit(struct MTK_HDMI *myhdmi)
+{
+	/* select clk for CKDT, phy misc */
+	w_reg(A_ADR + 0x27C4, 0x00700000);
+
+	_KHal_HDMIRx_PHYInit2p1Port(myhdmi);
+}
+
+void vHDMI21Phy2xCLK(struct MTK_HDMI *myhdmi, bool en)
+{
+	/* force deep340m 2x mode */
+	pw_fld(REG_0114_ATOP_2, 1,
+		REG_0114_ATOP_2_EN_CLKO_PIX_2X_OV_EN);
+	//w_reg(A_ADR + 0x0514, 0x20002000);
+	if (en)
+		//w_reg(A_ADR + 0x0414, 0x20002000);
+		pw_fld(REG_0014_ATOP_2, 1,
+			REG_0014_ATOP_2_EN_CLKO_PIX_2X_OV);
+	else
+		//w_reg(A_ADR + 0x0414, 0x20000000);
+		pw_fld(REG_0014_ATOP_2, 0,
+			REG_0014_ATOP_2_EN_CLKO_PIX_2X_OV);
+}
+
+void vHDMI21PhyIRQEnable(struct MTK_HDMI *myhdmi, u32 mask, bool en)
+{
+	RX_DEF_LOG("[RX]%s, 0x%x, %d\n", __func__, mask, en);
+
+	if (mask & 0x00000001) {
+		if (en) {
+			pw_fld(REG_0140_DTOP_1, 0,
+				REG_0140_DTOP_1_LANE_INT_MASK1);
+			pw_fld(REG_01E0_DTOP_0, 0,
+				REG_01E0_DTOP_0_HDMIRX_PHY_IRQ_MASK_0);
+			pw_fld(REG_01E8_DTOP_0, 0,
+				REG_01E8_DTOP_0_HDMIRX_PHY_IRQ_MASK_1);
+		} else {
+			pw_fld(REG_0140_DTOP_1, 0xFFFF,
+				REG_0140_DTOP_1_LANE_INT_MASK1);
+			pw_fld(REG_01E0_DTOP_0, 0xF,
+				REG_01E0_DTOP_0_HDMIRX_PHY_IRQ_MASK_0);
+			pw_fld(REG_01E8_DTOP_0, 0xF,
+				REG_01E8_DTOP_0_HDMIRX_PHY_IRQ_MASK_1);
+		}
+	}
+}
+
+u32 vHDMI21PhyIRQClear(struct MTK_HDMI *myhdmi)
+{
+	u32 temp;
+
+	temp = r_fld(REG_014C_DTOP_1, REG_014C_DTOP_1_LANE_INT_STATUS1);
+	w_reg(REG_00F8_LANE_0, 0xFFFFFFFF);
+	w_reg(REG_00F8_LANE_0, 0xFFFF0000);
+	w_reg(REG_0148_DTOP_1, 0xFFFFFFFF);
+	w_reg(REG_0148_DTOP_1, 0xFFFF0000);
+	w_reg(REG_01E0_DTOP_0, 0xF000F000);
+	w_reg(REG_01E0_DTOP_0, 0xF0000000);
+	w_reg(REG_01E8_DTOP_0, 0xF000F000);
+	w_reg(REG_01E8_DTOP_0, 0xF0000000);
+
+	return temp;
+}
+
+void vHDMI21PhyPowerDown(struct MTK_HDMI *myhdmi)
+{
+	RX_DEF_LOG("[RX]%s\n", __func__);
+
+	pw_reg(A_ADR + 0x0464, 0xfffffc00);
+	pw_reg(A_ADR + 0x0564, 0xfffffc00);
+	pw_reg(A_ADR + 0x0468, 0xffffffff);
+	pw_reg(A_ADR + 0x0568, 0xffffffff);
+	pw_reg(A_ADR + 0x046c, 0xffff000f);
+	pw_reg(A_ADR + 0x056c, 0xffff000f);
+	pw_reg(A_ADR + 0x2000, 0xffff0006);
+	pw_reg(A_ADR + 0x2080, 0xffff0007);
+}
+
+void vHDMI21PhyFIFOMACRST(struct MTK_HDMI *myhdmi)
+{
+	_KHal_HDMIRx_ResetPhyDtop(myhdmi, HDMI_RESET_PHY_DTOP_40to36_FIFO);
+}
+
+void RIU_R16Msk(void __iomem *addr, u32 msk)
+{
+	u32 i, temp;
+
+	temp = msk;
+	for (i = 0; i < 16; i++) {
+		if ((temp & 1) == 1)
+			break;
+		temp = temp >> 1;
+	}
+
+	RX_DEF_LOG("0x%x\n", (r_reg(addr) & msk) >> i);
+}
+
+void RIU_W16Msk(void __iomem *addr, u32 msk, u32 val)
+{
+	w_reg(addr, (msk << 16) | val);
+}
+
+void riu_read(struct MTK_HDMI *myhdmi)
+{
+	RX_DEF_LOG("\n\n=== %s start ===\n", __func__);
+
+	// enable SQH
+	RIU_R16Msk(A_ADR + 0x2080, 0x0001);
+	// SQH output
+	RIU_R16Msk(A_ADR + 0x2114, 0x000f);
+	// Power down Rterm
+	RIU_R16Msk(A_ADR + 0x2000, 0x003c);
+	// Power down Rterm OVE
+	RIU_R16Msk(A_ADR + 0x2080, 0x0004);
+	// [c] Clear clock stable indication
+	RIU_W16Msk(A_ADR + 0x117c, 0xffff, 0x7777);
+	// BR mode	override
+	RIU_R16Msk(A_ADR + 0x0b5c, 0x000f);
+	// TMDS ratio override
+	RIU_R16Msk(A_ADR + 0x0b5c, 0x0100);
+	// Control signal to atop (H21 or H20)
+	RIU_R16Msk(A_ADR + 0x0998, 0x1000);
+	// DFE mode
+	RIU_R16Msk(A_ADR + 0x0304, 0x00ff);
+	// EN_ACDR_Mode_Status
+	RIU_R16Msk(A_ADR + 0x0318, 0x0008);
+	// EQ bypass fine tune (coarse2done)
+	RIU_R16Msk(A_ADR + 0x0ee8, 0x0002);
+	// EQ bypass coarse tune
+	RIU_R16Msk(A_ADR + 0x0e60, 0x0800);
+	// EQ code mode - L0
+	RIU_R16Msk(A_ADR + 0x0320, 0x0003);
+	// EQ code mode - L1
+	RIU_R16Msk(A_ADR + 0x0320, 0x000c);
+	// EQ code mode - L2
+	RIU_R16Msk(A_ADR + 0x0320, 0x0030);
+	// EQ code mode - L3
+	RIU_R16Msk(A_ADR + 0x0320, 0x00c0);
+	// EQ code mode OVE - L0
+	RIU_R16Msk(A_ADR + 0x051c, 0x0200);
+	// EQ code mode OVE - L1
+	RIU_R16Msk(A_ADR + 0x051c, 0x0800);
+	// EQ code mode OVE - L2
+	RIU_R16Msk(A_ADR + 0x051c, 0x2000);
+	// EQ code mode OVE - L3
+	RIU_R16Msk(A_ADR + 0x0520, 0x0001);
+	// Raw clock count - L0
+	RIU_R16Msk(A_ADR + 0x11d0, 0xffff);
+	// Raw clock count - L1
+	RIU_R16Msk(A_ADR + 0x11d4, 0xffff);
+	// Raw clock count - L2
+	RIU_R16Msk(A_ADR + 0x11d8, 0xffff);
+	// Raw clock count - L3
+	RIU_R16Msk(A_ADR + 0x11dc, 0xffff);
+	// CR Lock (ACDR) - L0
+	RIU_R16Msk(A_ADR + 0x0300, 0x0001);
+	// CR Lock (ACDR) - L1
+	RIU_R16Msk(A_ADR + 0x0300, 0x0002);
+	// CR Lock (ACDR) - L2
+	RIU_R16Msk(A_ADR + 0x0300, 0x0004);
+	// CR Lock (ACDR) - L3
+	RIU_R16Msk(A_ADR + 0x0300, 0x0008);
+	// CR Lock override enable
+	RIU_R16Msk(A_ADR + 0x0500, 0x000f);
+	// Digital Lock (DCDR) - L0
+	RIU_R16Msk(A_ADR + 0x1178, 0x1000);
+	// Digital Lock (DCDR) - L1
+	RIU_R16Msk(A_ADR + 0x1178, 0x2000);
+	// Digital Lock (DCDR) - L2
+	RIU_R16Msk(A_ADR + 0x1178, 0x4000);
+	// Digital Lock (DCDR) - L3
+	RIU_R16Msk(A_ADR + 0x1178, 0x8000);
+	// Lane FSM Status - L0
+	RIU_R16Msk(A_ADR + 0x1800, 0x0fff);
+	// Lane FSM Status - L1
+	RIU_R16Msk(A_ADR + 0x1804, 0x0fff);
+	// Lane FSM Status - L2
+	RIU_R16Msk(A_ADR + 0x1808, 0x0fff);
+	// Lane FSM Status - L3
+	RIU_R16Msk(A_ADR + 0x180c, 0x0fff);
+	// EQ  FSM Status - L0
+	RIU_R16Msk(A_ADR + 0x1810, 0x00ff);
+	// EQ  FSM Status - L1
+	RIU_R16Msk(A_ADR + 0x1810, 0xff00);
+	// EQ  FSM Status - L2
+	RIU_R16Msk(A_ADR + 0x1814, 0x00ff);
+	// EQ  FSM Status - L3
+	RIU_R16Msk(A_ADR + 0x1814, 0xff00);
+	// AABA under threshold
+	RIU_R16Msk(A_ADR + 0x0e8c, 0x03ff);
+	// AABA parse number w/o AEQ
+	RIU_R16Msk(A_ADR + 0x0e90, 0xffff);
+	// AABA parse number H21
+	RIU_R16Msk(A_ADR + 0x0a20, 0xffff);
+	// AABA parse number H21
+	RIU_R16Msk(A_ADR + 0x0a24, 0xffff);
+	// AABA parse number H21
+	RIU_R16Msk(A_ADR + 0x0a28, 0xffff);
+	// AABA parse number H21
+	RIU_R16Msk(A_ADR + 0x0a2c, 0xffff);
+	// AABA parse number H20
+	RIU_R16Msk(A_ADR + 0x0a30, 0xffff);
+	// AABA parse number H20
+	RIU_R16Msk(A_ADR + 0x0a34, 0xffff);
+	// AABA parse number H20
+	RIU_R16Msk(A_ADR + 0x0a38, 0xffff);
+	// AABA parse number H20
+	RIU_R16Msk(A_ADR + 0x0a3c, 0xffff);
+	// AABA parse number H14
+	RIU_R16Msk(A_ADR + 0x0a40, 0xffff);
+	// AABA parse number H14
+	RIU_R16Msk(A_ADR + 0x0a44, 0xffff);
+	// AABA parse number H14
+	RIU_R16Msk(A_ADR + 0x0a48, 0xffff);
+	// AABA parse number H14
+	RIU_R16Msk(A_ADR + 0x0a4c, 0xffff);
+	// AABA acc-change threshold H21
+	RIU_R16Msk(A_ADR + 0x0a80, 0x03ff);
+	// AABA acc-change threshold H21
+	RIU_R16Msk(A_ADR + 0x0a84, 0x03ff);
+	// AABA acc-change threshold H21
+	RIU_R16Msk(A_ADR + 0x0a88, 0x03ff);
+	// AABA acc-change threshold H21
+	RIU_R16Msk(A_ADR + 0x0a8c, 0x03ff);
+	// AABA acc-change threshold H20
+	RIU_R16Msk(A_ADR + 0x0a90, 0x03ff);
+	// AABA acc-change threshold H20
+	RIU_R16Msk(A_ADR + 0x0a94, 0x03ff);
+	// AABA acc-change threshold H20
+	RIU_R16Msk(A_ADR + 0x0a98, 0x03ff);
+	// AABA acc-change threshold H20
+	RIU_R16Msk(A_ADR + 0x0a9c, 0x03ff);
+	// AABA acc-change threshold H14
+	RIU_R16Msk(A_ADR + 0x0aa0, 0x03ff);
+	// AABA acc-change threshold H14
+	RIU_R16Msk(A_ADR + 0x0aa4, 0x03ff);
+	// AABA acc-change threshold H14
+	RIU_R16Msk(A_ADR + 0x0aa8, 0x03ff);
+	// AABA acc-change threshold H14
+	RIU_R16Msk(A_ADR + 0x0aac, 0x03ff);
+	// select scan report - 0x1 last report
+	RIU_W16Msk(A_ADR + 0x0ed0, 0x000c, 0x0004);
+	// set lane report select to L0
+	RIU_W16Msk(A_ADR + 0x0eb4, 0x0c00, 0x0000);
+	// AABA under case count - L0
+	RIU_R16Msk(A_ADR + 0x0eb0, 0x03ff);
+	// GP scan report A - L0
+	RIU_R16Msk(A_ADR + 0x0ec0, 0xffff);
+	// GP scan report B - L0
+	RIU_R16Msk(A_ADR + 0x0ec4, 0xffff);
+	// GP scan report C - L0
+	RIU_R16Msk(A_ADR + 0x0ec8, 0xffff);
+	// GP scan report D - L0
+	RIU_R16Msk(A_ADR + 0x0ecc, 0xffff);
+	// set lane report select to L1
+	RIU_W16Msk(A_ADR + 0x0eb4, 0x0c00, 0x0400);
+	// AABA under case count - L1
+	RIU_R16Msk(A_ADR + 0x0eb0, 0x03ff);
+	// GP scan report A - L1
+	RIU_R16Msk(A_ADR + 0x0ec0, 0xffff);
+	// GP scan report B - L1
+	RIU_R16Msk(A_ADR + 0x0ec4, 0xffff);
+	// GP scan report C - L1
+	RIU_R16Msk(A_ADR + 0x0ec8, 0xffff);
+	// GP scan report D - L1
+	RIU_R16Msk(A_ADR + 0x0ecc, 0xffff);
+	// set lane report select to L2
+	RIU_W16Msk(A_ADR + 0x0eb4, 0x0c00, 0x0800);
+	// AABA under case count - L2
+	RIU_R16Msk(A_ADR + 0x0eb0, 0x03ff);
+	// GP scan report A - L2
+	RIU_R16Msk(A_ADR + 0x0ec0, 0xffff);
+	// GP scan report B - L2
+	RIU_R16Msk(A_ADR + 0x0ec4, 0xffff);
+	// GP scan report C - L2
+	RIU_R16Msk(A_ADR + 0x0ec8, 0xffff);
+	// GP scan report D - L2
+	RIU_R16Msk(A_ADR + 0x0ecc, 0xffff);
+	// set lane report select to L3
+	RIU_W16Msk(A_ADR + 0x0eb4, 0x0c00, 0x0c00);
+	// AABA under case count - L3
+	RIU_R16Msk(A_ADR + 0x0eb0, 0x03ff);
+	// GP scan report A - L3
+	RIU_R16Msk(A_ADR + 0x0ec0, 0xffff);
+	// GP scan report B - L3
+	RIU_R16Msk(A_ADR + 0x0ec4, 0xffff);
+	// GP scan report C - L3
+	RIU_R16Msk(A_ADR + 0x0ec8, 0xffff);
+	// GP scan report D - L3
+	RIU_R16Msk(A_ADR + 0x0ecc, 0xffff);
+	// dLev inner eye height - L0
+	RIU_R16Msk(A_ADR + 0x0e2c, 0x00ff);
+	// dLev inner eye height - L1
+	RIU_R16Msk(A_ADR + 0x0e2c, 0xff00);
+	// dLev inner eye height - L2
+	RIU_R16Msk(A_ADR + 0x0e30, 0x00ff);
+	// dLev inner eye height - L3
+	RIU_R16Msk(A_ADR + 0x0e30, 0xff00);
+	// [c] clear PRBS error count, toggle 1'b1
+	RIU_W16Msk(A_ADR + 0x12f0, 0x4000, 0x4000);
+	// wait 1ms
+	vUtDelay1ms(1);
+	// [c] clear PRBS error count, toggle 1'b0
+	RIU_W16Msk(A_ADR + 0x12f0, 0x4000, 0x0000);
+	// [c] Read Delay Time
+	vUtDelay1ms(500);
+	// PRBS decode error - L0
+	RIU_R16Msk(A_ADR + 0x1120, 0xffff);
+	// PRBS decode error - L1
+	RIU_R16Msk(A_ADR + 0x1124, 0xffff);
+	// PRBS decode error - L2
+	RIU_R16Msk(A_ADR + 0x1128, 0xffff);
+	// PRBS decode error - L3
+	RIU_R16Msk(A_ADR + 0x112c, 0xffff);
+	// AMUX select to read PHDAC code - L0
+	RIU_W16Msk(A_ADR + 0x06dc, 0x00c0, 0x0040);
+	// AMUX select to read PHDAC code - L1
+	RIU_W16Msk(A_ADR + 0x06e0, 0x00c0, 0x0040);
+	// AMUX select to read PHDAC code - L2
+	RIU_W16Msk(A_ADR + 0x06e4, 0x00c0, 0x0040);
+	// AMUX select to read PHDAC code - L3
+	RIU_W16Msk(A_ADR + 0x06e8, 0x00c0, 0x0040);
+	// PHDAC code saff_cal_dlevn - L0
+	RIU_R16Msk(A_ADR + 0x05b4, 0x7f00);
+	// PHDAC code saff_cal_dlevn - L1
+	RIU_R16Msk(A_ADR + 0x05b8, 0x007f);
+	// PHDAC code saff_cal_dlevn - L2
+	RIU_R16Msk(A_ADR + 0x05b8, 0x7f00);
+	// PHDAC code saff_cal_dlevn - L3
+	RIU_R16Msk(A_ADR + 0x05bc, 0x007f);
+	// AMUX select to read PHDAC code - L0
+	RIU_W16Msk(A_ADR + 0x06dc, 0x00c0, 0x0000);
+	// AMUX select to read PHDAC code - L1
+	RIU_W16Msk(A_ADR + 0x06e0, 0x00c0, 0x0000);
+	// AMUX select to read PHDAC code - L2
+	RIU_W16Msk(A_ADR + 0x06e4, 0x00c0, 0x0000);
+	// AMUX select to read PHDAC code - L3
+	RIU_W16Msk(A_ADR + 0x06e8, 0x00c0, 0x0000);
+	// PHDAC override enable - L0
+	RIU_R16Msk(A_ADR + 0x0600, 0x0080);
+	// PHDAC override enable - L1
+	RIU_R16Msk(A_ADR + 0x0604, 0x0080);
+	// PHDAC override enable - L2
+	RIU_R16Msk(A_ADR + 0x0608, 0x0080);
+	// PHDAC override enable - L3
+	RIU_R16Msk(A_ADR + 0x060c, 0x0080);
+	// PHDAC override value - L0
+	RIU_R16Msk(A_ADR + 0x0600, 0x007f);
+	// PHDAC override value - L1
+	RIU_R16Msk(A_ADR + 0x0604, 0x007f);
+	// PHDAC override value - L2
+	RIU_R16Msk(A_ADR + 0x0608, 0x007f);
+	// PHDAC override value - L3
+	RIU_R16Msk(A_ADR + 0x060c, 0x007f);
+	// EQ control code (analog) - L0
+	RIU_R16Msk(A_ADR + 0x0320, 0x3f00);
+	// EQ control code (analog) - L1
+	RIU_R16Msk(A_ADR + 0x0324, 0x003f);
+	// EQ control code (analog) - L2
+	RIU_R16Msk(A_ADR + 0x0324, 0x0fc0);
+	// EQ control code (analog) - L3
+	RIU_R16Msk(A_ADR + 0x0328, 0x003f);
+	// EQ override enable - L0
+	RIU_R16Msk(A_ADR + 0x0520, 0x0004);
+	// EQ override enable - L1
+	RIU_R16Msk(A_ADR + 0x0520, 0x0100);
+	// EQ override enable - L2
+	RIU_R16Msk(A_ADR + 0x0524, 0x0001);
+	// EQ override enable - L3
+	RIU_R16Msk(A_ADR + 0x0524, 0x0040);
+	// EQ binary value (digital) - L0
+	RIU_R16Msk(A_ADR + 0x0f80, 0x00ff);
+	// EQ binary value (digital) - L1
+	RIU_R16Msk(A_ADR + 0x0f84, 0x00ff);
+	// EQ binary value (digital) - L2
+	RIU_R16Msk(A_ADR + 0x0f88, 0x00ff);
+	// EQ binary value (digital) - L3
+	RIU_R16Msk(A_ADR + 0x0f8c, 0x00ff);
+	// PGA gain control code (analog) - L0
+	RIU_R16Msk(A_ADR + 0x0374, 0x00ff);
+	// PGA gain control code (analog) - L1
+	RIU_R16Msk(A_ADR + 0x0374, 0xff00);
+	// PGA gain control code (analog) - L2
+	RIU_R16Msk(A_ADR + 0x0378, 0x00ff);
+	// PGA gain control code (analog) - L3
+	RIU_R16Msk(A_ADR + 0x0378, 0xff00);
+	// PGA gain override enable - L0
+	RIU_R16Msk(A_ADR + 0x0574, 0x0001);
+	// PGA gain override enable - L1
+	RIU_R16Msk(A_ADR + 0x0574, 0x0100);
+	// PGA gain override enable - L2
+	RIU_R16Msk(A_ADR + 0x0578, 0x0001);
+	// PGA gain override enable - L3
+	RIU_R16Msk(A_ADR + 0x0578, 0x0100);
+	// PGA gain binary value (digital) - L0
+	RIU_R16Msk(A_ADR + 0x0f80, 0xff00);
+	// PGA gain binary value (digital) - L1
+	RIU_R16Msk(A_ADR + 0x0f84, 0xff00);
+	// PGA gain binary value (digital) - L2
+	RIU_R16Msk(A_ADR + 0x0f88, 0xff00);
+	// PGA gain binary value (digital) - L3
+	RIU_R16Msk(A_ADR + 0x0f8c, 0xff00);
+	// AGC dLev Target
+	RIU_R16Msk(A_ADR + 0x0f74, 0xff00);
+	// dLev_P control code (analog) - L0
+	RIU_R16Msk(A_ADR + 0x038c, 0x01ff);
+	// dLev_P control code (analog) - L1
+	RIU_R16Msk(A_ADR + 0x0390, 0x01ff);
+	// dLev_P control code (analog) - L2
+	RIU_R16Msk(A_ADR + 0x0394, 0x01ff);
+	// dLev_P control code (analog) - L3
+	RIU_R16Msk(A_ADR + 0x0398, 0x01ff);
+	// dLev_P override enable (analog) - L0
+	RIU_R16Msk(A_ADR + 0x058c, 0x0001);
+	// dLev_P override enable (analog) - L1
+	RIU_R16Msk(A_ADR + 0x0590, 0x0001);
+	// dLev_P override enable (analog) - L2
+	RIU_R16Msk(A_ADR + 0x0594, 0x0001);
+	// dLev_P override enable (analog) - L3
+	RIU_R16Msk(A_ADR + 0x0598, 0x0001);
+	// dLev_N control code (analog) - L0
+	RIU_R16Msk(A_ADR + 0x039c, 0x01ff);
+	// dLev_N control code (analog) - L1
+	RIU_R16Msk(A_ADR + 0x03a0, 0x01ff);
+	// dLev_N control code (analog) - L2
+	RIU_R16Msk(A_ADR + 0x03a4, 0x01ff);
+	// dLev_N control code (analog) - L3
+	RIU_R16Msk(A_ADR + 0x03a8, 0x01ff);
+	// dLev_N override enable (analog) - L0
+	RIU_R16Msk(A_ADR + 0x059c, 0x0001);
+	// dLev_N override enable (analog) - L1
+	RIU_R16Msk(A_ADR + 0x05a0, 0x0001);
+	// dLev_N override enable (analog) - L2
+	RIU_R16Msk(A_ADR + 0x05a4, 0x0001);
+	// dLev_N override enable (analog) - L3
+	RIU_R16Msk(A_ADR + 0x05a8, 0x0001);
+	// dLev binary value (digital) -L0
+	RIU_R16Msk(A_ADR + 0x0f90, 0x03ff);
+	// dLev binary value (digital) -L1
+	RIU_R16Msk(A_ADR + 0x0f94, 0x03ff);
+	// dLev binary value (digital) -L2
+	RIU_R16Msk(A_ADR + 0x0f98, 0x03ff);
+	// dLev binary value (digital) -L3
+	RIU_R16Msk(A_ADR + 0x0f9c, 0x03ff);
+	// select MUX to report dfe binary code
+	RIU_W16Msk(A_ADR + 0x0f6c, 0x0300, 0x0000);
+	// DFE Tap1 control code (analog) - L0
+	RIU_R16Msk(A_ADR + 0x0334, 0x007f);
+	// DFE Tap1 control code (analog) - L1
+	RIU_R16Msk(A_ADR + 0x0334, 0x3f80);
+	// DFE Tap1 control code (analog) - L2
+	RIU_R16Msk(A_ADR + 0x0338, 0x007f);
+	// DFE Tap1 control code (analog) - L3
+	RIU_R16Msk(A_ADR + 0x0338, 0x3f80);
+	// DFE Tap1 override enable - L0
+	RIU_R16Msk(A_ADR + 0x0534, 0x0001);
+	// DFE Tap1 override enable - L1
+	RIU_R16Msk(A_ADR + 0x0534, 0x0080);
+	// DFE Tap1 override enable - L2
+	RIU_R16Msk(A_ADR + 0x0538, 0x0001);
+	// DFE Tap1 override enable - L3
+	RIU_R16Msk(A_ADR + 0x0538, 0x0080);
+	// DFE Tap1 binary value (digital) - L0
+	RIU_R16Msk(A_ADR + 0x0fc0, 0x00ff);
+	// DFE Tap1 binary value (digital) - L1
+	RIU_R16Msk(A_ADR + 0x0fc0, 0xff00);
+	// DFE Tap1 binary value (digital) - L2
+	RIU_R16Msk(A_ADR + 0x0fc4, 0x00ff);
+	// DFE Tap1 binary value (digital) - L3
+	RIU_R16Msk(A_ADR + 0x0fc4, 0xff00);
+	// DFE Tap2 control code (analog) - L0
+	RIU_R16Msk(A_ADR + 0x033c, 0x003f);
+	// DFE Tap2 control code (analog) - L1
+	RIU_R16Msk(A_ADR + 0x033c, 0x0fc0);
+	// DFE Tap2 control code (analog) - L2
+	RIU_R16Msk(A_ADR + 0x0340, 0x003f);
+	// DFE Tap2 control code (analog) - L3
+	RIU_R16Msk(A_ADR + 0x0340, 0x0fc0);
+	// DFE Tap2 override enable - L0
+	RIU_R16Msk(A_ADR + 0x053c, 0x0001);
+	// DFE Tap2 override enable - L1
+	RIU_R16Msk(A_ADR + 0x053c, 0x0040);
+	// DFE Tap2 override enable - L2
+	RIU_R16Msk(A_ADR + 0x0540, 0x0001);
+	// DFE Tap2 override enable - L3
+	RIU_R16Msk(A_ADR + 0x0540, 0x0040);
+	// DFE Tap2 binary value (digital) - L0
+	RIU_R16Msk(A_ADR + 0x0fc8, 0x00ff);
+	// DFE Tap2 binary value (digital) - L1
+	RIU_R16Msk(A_ADR + 0x0fc8, 0xff00);
+	// DFE Tap2 binary value (digital) - L2
+	RIU_R16Msk(A_ADR + 0x0fcc, 0x00ff);
+	// DFE Tap2 binary value (digital) - L3
+	RIU_R16Msk(A_ADR + 0x0fcc, 0xff00);
+	// DFE Tap3 control code (analog) - L0
+	RIU_R16Msk(A_ADR + 0x0344, 0x003f);
+	// DFE Tap3 control code (analog) - L1
+	RIU_R16Msk(A_ADR + 0x0344, 0x0fc0);
+	// DFE Tap3 control code (analog) - L2
+	RIU_R16Msk(A_ADR + 0x0348, 0x003f);
+	// DFE Tap3 control code (analog) - L3
+	RIU_R16Msk(A_ADR + 0x0348, 0x0fc0);
+	// DFE Tap3 override enable - L0
+	RIU_R16Msk(A_ADR + 0x0544, 0x0001);
+	// DFE Tap3 override enable - L1
+	RIU_R16Msk(A_ADR + 0x0544, 0x0040);
+	// DFE Tap3 override enable - L2
+	RIU_R16Msk(A_ADR + 0x0548, 0x0001);
+	// DFE Tap3 override enable - L3
+	RIU_R16Msk(A_ADR + 0x0548, 0x0040);
+	// DFE Tap3 binary value (digital) - L0
+	RIU_R16Msk(A_ADR + 0x0fd0, 0x00ff);
+	// DFE Tap3 binary value (digital) - L1
+	RIU_R16Msk(A_ADR + 0x0fd0, 0xff00);
+	// DFE Tap3 binary value (digital) - L2
+	RIU_R16Msk(A_ADR + 0x0fd4, 0x00ff);
+	// DFE Tap3 binary value (digital) - L3
+	RIU_R16Msk(A_ADR + 0x0fd4, 0xff00);
+	// DFE Tap4 control code (analog) - L0
+	RIU_R16Msk(A_ADR + 0x034c, 0x001f);
+	// DFE Tap4 control code (analog) - L1
+	RIU_R16Msk(A_ADR + 0x034c, 0x03e0);
+	// DFE Tap4 control code (analog) - L2
+	RIU_R16Msk(A_ADR + 0x034c, 0xfc00);
+	// DFE Tap4 control code (analog) - L3
+	RIU_R16Msk(A_ADR + 0x0350, 0x001f);
+	// DFE Tap4 override enable - L0
+	RIU_R16Msk(A_ADR + 0x054c, 0x0001);
+	// DFE Tap4 override enable - L1
+	RIU_R16Msk(A_ADR + 0x054c, 0x0020);
+	// DFE Tap4 override enable - L2
+	RIU_R16Msk(A_ADR + 0x054c, 0x0400);
+	// DFE Tap4 override enable - L3
+	RIU_R16Msk(A_ADR + 0x0550, 0x0001);
+	// DFE Tap4 binary value (digital) - L0
+	RIU_R16Msk(A_ADR + 0x0fd8, 0x00ff);
+	// DFE Tap4 binary value (digital) - L1
+	RIU_R16Msk(A_ADR + 0x0fd8, 0xff00);
+	// DFE Tap4 binary value (digital) - L2
+	RIU_R16Msk(A_ADR + 0x0fdc, 0x00ff);
+	// DFE Tap4 binary value (digital) - L3
+	RIU_R16Msk(A_ADR + 0x0fdc, 0xff00);
+	// Clock stable indication -L0
+	RIU_R16Msk(A_ADR + 0x117c, 0x000f);
+	// Clock stable indication -L1
+	RIU_R16Msk(A_ADR + 0x117c, 0x00f0);
+	// Clock stable indication -L2
+	RIU_R16Msk(A_ADR + 0x117c, 0x0f00);
+	// Clock stable indication -L3
+	RIU_R16Msk(A_ADR + 0x117c, 0xf000);
+	// Clock stable indication -All Lane
+	RIU_R16Msk(A_ADR + 0x117c, 0xffff);
+	// EN_IDAC_TAP
+	RIU_R16Msk(A_ADR + 0x0f5c, 0x0fff);
+	// PRBS check enable
+	RIU_R16Msk(A_ADR + 0x12f0, 0x8000);
+	// DFE freerun status
+	RIU_R16Msk(A_ADR + 0x0f68, 0x3000);
+	// select MUX to report eq stable flag
+	RIU_W16Msk(A_ADR + 0x0ea0, 0x3f00, 0x0200);
+	// set report eq stable flag - L0
+	RIU_W16Msk(A_ADR + 0x0b64, 0x1f00, 0x0e00);
+	// read eq_stable - L0, 1'b1 is stable
+	RIU_R16Msk(A_ADR + 0x0b64, 0x0080);
+	// read eq_cur - L0
+	RIU_R16Msk(A_ADR + 0x0b60, 0x3f00);
+	// read eq_min - L0
+	RIU_R16Msk(A_ADR + 0x0b60, 0x003f);
+	// read eq_max - L0
+	RIU_R16Msk(A_ADR + 0x0b64, 0x003f);
+	// set report eq stable flag - L1
+	RIU_W16Msk(A_ADR + 0x0b64, 0x1f00, 0x0f00);
+	// read eq_stable - L1, 1'b1 is stable
+	RIU_R16Msk(A_ADR + 0x0b64, 0x0080);
+	// read eq_cur - L1
+	RIU_R16Msk(A_ADR + 0x0b60, 0x3f00);
+	// read eq_min - L1
+	RIU_R16Msk(A_ADR + 0x0b60, 0x003f);
+	// read eq_max - L1
+	RIU_R16Msk(A_ADR + 0x0b64, 0x003f);
+	// set report eq stable flag - L2
+	RIU_W16Msk(A_ADR + 0x0b64, 0x1f00, 0x1000);
+	// read eq_stable - L2, 1'b1 is stable
+	RIU_R16Msk(A_ADR + 0x0b64, 0x0080);
+	// read eq_cur - L2
+	RIU_R16Msk(A_ADR + 0x0b60, 0x3f00);
+	// read eq_min - L2
+	RIU_R16Msk(A_ADR + 0x0b60, 0x003f);
+	// read eq_max - L2
+	RIU_R16Msk(A_ADR + 0x0b64, 0x003f);
+	// set report eq stable flag - L3
+	RIU_W16Msk(A_ADR + 0x0b64, 0x1f00, 0x1100);
+	// read eq_stable - L3, 1'b1 is stable
+	RIU_R16Msk(A_ADR + 0x0b64, 0x0080);
+	// read eq_cur - L3
+	RIU_R16Msk(A_ADR + 0x0b60, 0x3f00);
+	// read eq_min - L3
+	RIU_R16Msk(A_ADR + 0x0b60, 0x003f);
+	// read eq_max - L3
+	RIU_R16Msk(A_ADR + 0x0b64, 0x003f);
+	// clear set report eq stable flag
+	RIU_W16Msk(A_ADR + 0x0b64, 0x1f00, 0x0000);
+	// clear select MUX to report eq stable flag
+	RIU_W16Msk(A_ADR + 0x0ea0, 0x3f00, 0x0000);
+	// FRL Training Done Flag
+	RIU_R16Msk(A_ADR + 0x1aa0, 0x0f00);
+	// FRL Tx FFE Level
+	RIU_R16Msk(A_ADR + 0x1aa0, 0x000f);
+	// FRL PLL CLK source select
+	RIU_R16Msk(A_ADR + 0x0484, 0xff00);
+	// read SAFF calibration done - L0
+	RIU_R16Msk(A_ADR + 0x05ac, 0x0002);
+	// read SAFF calibration done - L1
+	RIU_R16Msk(A_ADR + 0x05ac, 0x0004);
+	// read SAFF calibration done - L2
+	RIU_R16Msk(A_ADR + 0x05ac, 0x0008);
+	// read SAFF calibration done - L3
+	RIU_R16Msk(A_ADR + 0x05ac, 0x0010);
+	// Read PHD calibration done - L0
+	RIU_R16Msk(A_ADR + 0x05a8, 0x2000);
+	// Read PHD calibration done - L1
+	RIU_R16Msk(A_ADR + 0x05a8, 0x4000);
+	// Read PHD calibration done - L2
+	RIU_R16Msk(A_ADR + 0x05a8, 0x8000);
+	// Read PHD calibration done - L3
+	RIU_R16Msk(A_ADR + 0x05ac, 0x0001);
+	// select report of EQ/DFE convergence time
+	RIU_W16Msk(A_ADR + 0x0f6c, 0x0300, 0x0200);
+	// EQ convergence time - L0
+	RIU_R16Msk(A_ADR + 0x0fc0, 0xffff);
+	// EQ convergence time - L1
+	RIU_R16Msk(A_ADR + 0x0fc4, 0xffff);
+	// EQ convergence time - L2
+	RIU_R16Msk(A_ADR + 0x0fc8, 0xffff);
+	// EQ convergence time - L3
+	RIU_R16Msk(A_ADR + 0x0fcc, 0xffff);
+	// AGC convergence time - L0
+	RIU_R16Msk(A_ADR + 0x0fd0, 0xffff);
+	// AGC convergence time - L1
+	RIU_R16Msk(A_ADR + 0x0fd4, 0xffff);
+	// AGC convergence time - L2
+	RIU_R16Msk(A_ADR + 0x0fd8, 0xffff);
+	// AGC convergence time - L3
+	RIU_R16Msk(A_ADR + 0x0fdc, 0xffff);
+	// DFE convergence time - L0
+	RIU_R16Msk(A_ADR + 0x0fe0, 0xffff);
+	// DFE convergence time - L1
+	RIU_R16Msk(A_ADR + 0x0fe4, 0xffff);
+	// DFE convergence time - L2
+	RIU_R16Msk(A_ADR + 0x0fe8, 0xffff);
+	// DFE convergence time - L3
+	RIU_R16Msk(A_ADR + 0x0fec, 0xffff);
+	// DFE TAP LSB current
+	RIU_R16Msk(A_ADR + 0x0674, 0xe000);
+	// Digital EQ Calibration On
+	RIU_R16Msk(A_ADR + 0x074c, 0x1000);
+	// Band Select Detection
+	RIU_R16Msk(A_ADR + 0x0adc, 0xffff);
+	// DIVSEL_IN
+	RIU_R16Msk(A_ADR + 0x0304, 0x0300);
+	// DIVSEL_PLL
+	RIU_R16Msk(A_ADR + 0x0308, 0x0007);
+	// DIVSEL_POST (0x0 is HR, else FR)
+	RIU_R16Msk(A_ADR + 0x0308, 0x7000);
+	// SEL_PHD_REG
+	RIU_R16Msk(A_ADR + 0x022c, 0x0003);
+	// ICTRL_PFD
+	RIU_R16Msk(A_ADR + 0x032c, 0x7c00);
+	// ICTRL_PD
+	RIU_R16Msk(A_ADR + 0x0328, 0x07c0);
+	// RCTRL_PLL
+	RIU_R16Msk(A_ADR + 0x0380, 0x0070);
+	// PHDAC_SLEWRATE
+	RIU_R16Msk(A_ADR + 0x037c, 0x0007);
+	// EQ_BW
+	RIU_R16Msk(A_ADR + 0x031c, 0x0070);
+	// PGA_BW
+	RIU_R16Msk(A_ADR + 0x0370, 0x0007);
+	// DFE_BW
+	RIU_R16Msk(A_ADR + 0x0300, 0x0070);
+	// DFE_MODE
+	RIU_R16Msk(A_ADR + 0x0304, 0x0003);
+	// DIVSEL_VCODIV
+	RIU_R16Msk(A_ADR + 0x030c, 0x7000);
+	// EQ_CODE_MODE
+	RIU_R16Msk(A_ADR + 0x0320, 0x0003);
+	// DLPF_KI
+	RIU_R16Msk(A_ADR + 0x0310, 0x0e00);
+	// DLPF_KP
+	RIU_R16Msk(A_ADR + 0x0314, 0x01c0);
+	// clock_xtal_divider_1p4
+	RIU_R16Msk(A_ADR + 0x11cc, 0xff00);
+	// clock_xtal_divider_2p0
+	RIU_R16Msk(A_ADR + 0x11cc, 0x00ff);
+	// clock_xtal_divider_H21-3G3L
+	RIU_R16Msk(A_ADR + 0x11c8, 0xff00);
+	// clock_xtal_divider_H21-6G3L
+	RIU_R16Msk(A_ADR + 0x11c8, 0x00ff);
+	// clock_xtal_divider_H21-6G4L
+	RIU_R16Msk(A_ADR + 0x11c8, 0x00ff);
+	// clock_xtal_divider_H21-8G4L
+	RIU_R16Msk(A_ADR + 0x11c4, 0xff00);
+	// clock_xtal_divider_H21-10G4L
+	RIU_R16Msk(A_ADR + 0x11c4, 0x00ff);
+	// clock_xtal_divider_H21-12G4L
+	RIU_R16Msk(A_ADR + 0x11c0, 0xff00);
+	// set DFE Tap freerun
+	RIU_W16Msk(A_ADR + 0x0f68, 0x3000, 0x2000);
+	// select inner-EH during non agc period
+	RIU_W16Msk(A_ADR + 0x12c8, 0x0700, 0x0200);
+	// dLev binary value (digital) -L0
+	RIU_R16Msk(A_ADR + 0x0f90, 0x03ff);
+	// dLev binary value (digital) -L1
+	RIU_R16Msk(A_ADR + 0x0f94, 0x03ff);
+	// dLev binary value (digital) -L2
+	RIU_R16Msk(A_ADR + 0x0f98, 0x03ff);
+	// dLev binary value (digital) -L3
+	RIU_R16Msk(A_ADR + 0x0f9c, 0x03ff);
+	// select outter-EH during non agc period
+	RIU_W16Msk(A_ADR + 0x12c8, 0x0700, 0x0100);
+	// dLev binary value (digital) -L0
+	RIU_R16Msk(A_ADR + 0x0f90, 0x03ff);
+	// dLev binary value (digital) -L1
+	RIU_R16Msk(A_ADR + 0x0f94, 0x03ff);
+	// dLev binary value (digital) -L2
+	RIU_R16Msk(A_ADR + 0x0f98, 0x03ff);
+	// dLev binary value (digital) -L3
+	RIU_R16Msk(A_ADR + 0x0f9c, 0x03ff);
+	// select dLev mode during non agc period
+	RIU_W16Msk(A_ADR + 0x12c8, 0x0700, 0x0000);
+	// dLev binary value (digital) -L0
+	RIU_R16Msk(A_ADR + 0x0f90, 0x03ff);
+	// dLev binary value (digital) -L1
+	RIU_R16Msk(A_ADR + 0x0f94, 0x03ff);
+	// dLev binary value (digital) -L2
+	RIU_R16Msk(A_ADR + 0x0f98, 0x03ff);
+	// dLev binary value (digital) -L3
+	RIU_R16Msk(A_ADR + 0x0f9c, 0x03ff);
+
+	RX_DEF_LOG("\n\n=== %s end ===\n", __func__);
+}
+
+void riu_read2(struct MTK_HDMI *myhdmi)
+{
+	RX_DEF_LOG("\n\n=== %s start ===\n", __func__);
+
+	// Read PHD calibration done - L0
+	RIU_R16Msk(A_ADR + 0x05a8, 0x2000);
+	// Read PHD calibration done - L1
+	RIU_R16Msk(A_ADR + 0x05a8, 0x4000);
+	// Read PHD calibration done - L2
+	RIU_R16Msk(A_ADR + 0x05a8, 0x8000);
+	// Read PHD calibration done - L3
+	RIU_R16Msk(A_ADR + 0x05ac, 0x0001);
+	// MUX PHD TEST_LANE[11:8]=9h - L0
+	RIU_W16Msk(A_ADR + 0x06dc, 0x0f00, 0x0900);
+	// MUX PHD TEST_LANE[11:8]=9h - L1
+	RIU_W16Msk(A_ADR + 0x06e0, 0x0f00, 0x0900);
+	// MUX PHD TEST_LANE[11:8]=9h - L2
+	RIU_W16Msk(A_ADR + 0x06e4, 0x0f00, 0x0900);
+	// MUX PHD TEST_LANE[11:8]=9h - L3
+	RIU_W16Msk(A_ADR + 0x06e8, 0x0f00, 0x0900);
+	// MUX PHD, TEST_PLL[12]=0 - L0
+	RIU_W16Msk(A_ADR + 0x0700, 0x1000, 0x0000);
+	// MUX PHD, TEST_PLL[12]=0 - L1
+	RIU_W16Msk(A_ADR + 0x0708, 0x1000, 0x0000);
+	// MUX PHD, TEST_PLL[12]=0 - L2
+	RIU_W16Msk(A_ADR + 0x0710, 0x1000, 0x0000);
+	// MUX PHD, TEST_PLL[12]=0 - L3
+	RIU_W16Msk(A_ADR + 0x0718, 0x1000, 0x0000);
+	// Read PHD cal. value - L0
+	RIU_R16Msk(A_ADR + 0x0790, 0x1f00);
+	// Read PHD cal. value - L1
+	RIU_R16Msk(A_ADR + 0x0794, 0x001f);
+	// Read PHD cal. value - L2
+	RIU_R16Msk(A_ADR + 0x0794, 0x1f00);
+	// Read PHD cal. value - L3
+	RIU_R16Msk(A_ADR + 0x0798, 0x001f);
+	// MUX PHD-SA, test_dummy_top[25]=1
+	RIU_W16Msk(A_ADR + 0x074c, 0x0200, 0x0200);
+	// Read PHD-SA cal. value - L0
+	RIU_R16Msk(A_ADR + 0x0790, 0x3f00);
+	// Read PHD-SA cal. value - L1
+	RIU_R16Msk(A_ADR + 0x0794, 0x003f);
+	// Read PHD-SA cal. value - L2
+	RIU_R16Msk(A_ADR + 0x0794, 0x3f00);
+	// Read PHD-SA cal. value - L3
+	RIU_R16Msk(A_ADR + 0x0798, 0x003f);
+	// MUX PHD-SA, test_dummy_top[25]=0
+	RIU_W16Msk(A_ADR + 0x074c, 0x0200, 0x0000);
+	// clear TEST_LANE[8]=1 - L0
+	RIU_W16Msk(A_ADR + 0x06dc, 0x0f00, 0x0000);
+	// clear TEST_LANE[8]=1 - L1
+	RIU_W16Msk(A_ADR + 0x06e0, 0x0f00, 0x0000);
+	// clear TEST_LANE[8]=1 - L2
+	RIU_W16Msk(A_ADR + 0x06e4, 0x0f00, 0x0000);
+	// clear TEST_LANE[8]=1 - L3
+	RIU_W16Msk(A_ADR + 0x06e8, 0x0f00, 0x0000);
+	// read SAFF calibration done - L0
+	RIU_R16Msk(A_ADR + 0x05ac, 0x0002);
+	// read SAFF calibration done - L1
+	RIU_R16Msk(A_ADR + 0x05ac, 0x0004);
+	// read SAFF calibration done - L2
+	RIU_R16Msk(A_ADR + 0x05ac, 0x0008);
+	// read SAFF calibration done - L3
+	RIU_R16Msk(A_ADR + 0x05ac, 0x0010);
+	// MUX SAFF TEST_LANE[11] - L0
+	RIU_W16Msk(A_ADR + 0x06dc, 0x0800, 0x0800);
+	// MUX SAFF TEST_LANE[11] - L1
+	RIU_W16Msk(A_ADR + 0x06e0, 0x0800, 0x0800);
+	// MUX SAFF TEST_LANE[11] - L2
+	RIU_W16Msk(A_ADR + 0x06e4, 0x0800, 0x0800);
+	// MUX SAFF TEST_LANE[11] - L3
+	RIU_W16Msk(A_ADR + 0x06e8, 0x0800, 0x0800);
+	// MUX Saff-0, TEST_SAFF_CAL_L0
+	RIU_W16Msk(A_ADR + 0x0720, 0x0070, 0x0000);
+	// Read saff-0 cal. value - L0
+	RIU_R16Msk(A_ADR + 0x0790, 0x7f00);
+	// Read saff-0 cal. value - L1
+	RIU_R16Msk(A_ADR + 0x0794, 0x007f);
+	// Read saff-0 cal. value - L2
+	RIU_R16Msk(A_ADR + 0x0794, 0x7f00);
+	// Read saff-0 cal. value - L3
+	RIU_R16Msk(A_ADR + 0x0798, 0x007f);
+	// MUX Saff-90, TEST_SAFF_CAL_L0
+	RIU_W16Msk(A_ADR + 0x0720, 0x0070, 0x0010);
+	// Read saff-90 cal. value - L0
+	RIU_R16Msk(A_ADR + 0x0790, 0x7f00);
+	// Read saff-90 cal. value - L1
+	RIU_R16Msk(A_ADR + 0x0794, 0x007f);
+	// Read saff-90 cal. value - L2
+	RIU_R16Msk(A_ADR + 0x0794, 0x7f00);
+	// Read saff-90 cal. value - L3
+	RIU_R16Msk(A_ADR + 0x0798, 0x007f);
+	// MUX Saff-180, TEST_SAFF_CAL_L0
+	RIU_W16Msk(A_ADR + 0x0720, 0x0070, 0x0020);
+	// Read saff-180 cal. value - L0
+	RIU_R16Msk(A_ADR + 0x0790, 0x7f00);
+	// Read saff-180 cal. value - L1
+	RIU_R16Msk(A_ADR + 0x0794, 0x007f);
+	// Read saff-180 cal. value - L2
+	RIU_R16Msk(A_ADR + 0x0794, 0x7f00);
+	// Read saff-180 cal. value - L3
+	RIU_R16Msk(A_ADR + 0x0798, 0x007f);
+	// MUX Saff-270, TEST_SAFF_CAL_L0
+	RIU_W16Msk(A_ADR + 0x0720, 0x0070, 0x0030);
+	// Read saff-270 cal. value - L0
+	RIU_R16Msk(A_ADR + 0x0790, 0x7f00);
+	// Read saff-270 cal. value - L1
+	RIU_R16Msk(A_ADR + 0x0794, 0x007f);
+	// Read saff-270 cal. value - L2
+	RIU_R16Msk(A_ADR + 0x0794, 0x7f00);
+	// Read saff-270 cal. value - L3
+	RIU_R16Msk(A_ADR + 0x0798, 0x007f);
+	// clear TEST_SAFF_CAL_L0
+	RIU_W16Msk(A_ADR + 0x0720, 0x0070, 0x0000);
+	// MUX digi-EQ-Cal, TEST_LANE[8] - L0
+	RIU_W16Msk(A_ADR + 0x06dc, 0x0100, 0x0000);
+	// MUX digi-EQ-Cal, TEST_LANE[8] - L1
+	RIU_W16Msk(A_ADR + 0x06e0, 0x0100, 0x0000);
+	// MUX digi-EQ-Cal, TEST_LANE[8] - L2
+	RIU_W16Msk(A_ADR + 0x06e4, 0x0100, 0x0000);
+	// MUX digi-EQ-Cal, TEST_LANE[8] - L3
+	RIU_W16Msk(A_ADR + 0x06e8, 0x0100, 0x0000);
+	// MUX TEST_SAFF_CAL_L1_ov[0]=1
+	RIU_W16Msk(A_ADR + 0x0724, 0x0100, 0x0100);
+	// Read digital EQ cal. value - L0
+	RIU_R16Msk(A_ADR + 0x0790, 0xff00);
+	// Read digital EQ cal. value - L1
+	RIU_R16Msk(A_ADR + 0x0794, 0x00ff);
+	// Read digital EQ cal. value - L2
+	RIU_R16Msk(A_ADR + 0x0794, 0xff00);
+	// Read digital EQ cal. value - L3
+	RIU_R16Msk(A_ADR + 0x0798, 0x00ff);
+	// MUX TEST_SAFF_CAL_L1_ov[0]=0
+	RIU_W16Msk(A_ADR + 0x0724, 0x0100, 0x0000);
+	// clear TEST_LANE[11] - L0
+	RIU_W16Msk(A_ADR + 0x06dc, 0x0800, 0x0000);
+	// clear TEST_LANE[11] - L1
+	RIU_W16Msk(A_ADR + 0x06e0, 0x0800, 0x0000);
+	// clear TEST_LANE[11] - L2
+	RIU_W16Msk(A_ADR + 0x06e4, 0x0800, 0x0000);
+	// clear TEST_LANE[11] - L3
+	RIU_W16Msk(A_ADR + 0x06e8, 0x0800, 0x0000);
+	// Read saff_cal_dLevp_L0
+	RIU_R16Msk(A_ADR + 0x05ac, 0x1fe0);
+	// Read saff_cal_dLevp_L1
+	RIU_R16Msk(A_ADR + 0x05b0, 0x00ff);
+	// Read saff_cal_dLevp_L2
+	RIU_R16Msk(A_ADR + 0x05b0, 0xff00);
+	// Read saff_cal_dLevp_L3
+	RIU_R16Msk(A_ADR + 0x05b4, 0x00ff);
+	// Read saff_cal_dLevn_L0
+	RIU_R16Msk(A_ADR + 0x05b4, 0xff00);
+	// Read saff_cal_dLevn_L1
+	RIU_R16Msk(A_ADR + 0x05b8, 0x00ff);
+	// Read saff_cal_dLevn_L2
+	RIU_R16Msk(A_ADR + 0x05b8, 0xff00);
+	// Read saff_cal_dLevn_L3
+	RIU_R16Msk(A_ADR + 0x05b4, 0x00ff);
+	// select MUX to report eq state record
+	RIU_W16Msk(A_ADR + 0x0f6c, 0x0300, 0x0100);
+	// select MUX to report eq state record - L0
+	RIU_W16Msk(A_ADR + 0x0eb4, 0x0c00, 0x0000);
+	// EQ state record - 0 (Current)
+	RIU_R16Msk(A_ADR + 0x0fc0, 0xf000);
+	// EQ state record - 1
+	RIU_R16Msk(A_ADR + 0x0fc0, 0x0f00);
+	// EQ state record - 2
+	RIU_R16Msk(A_ADR + 0x0fc0, 0x00f0);
+	// EQ state record - 3
+	RIU_R16Msk(A_ADR + 0x0fc0, 0x000f);
+	// EQ state record - 4
+	RIU_R16Msk(A_ADR + 0x0fc4, 0xf000);
+	// EQ state record - 5
+	RIU_R16Msk(A_ADR + 0x0fc4, 0x0f00);
+	// EQ state record - 6
+	RIU_R16Msk(A_ADR + 0x0fc4, 0x00f0);
+	// EQ state record - 7
+	RIU_R16Msk(A_ADR + 0x0fc4, 0x000f);
+	// EQ state record - 8
+	RIU_R16Msk(A_ADR + 0x0fc8, 0xf000);
+	// EQ state record - 9
+	RIU_R16Msk(A_ADR + 0x0fc8, 0x0f00);
+	// EQ state record - 10
+	RIU_R16Msk(A_ADR + 0x0fc8, 0x00f0);
+	// EQ state record - 11
+	RIU_R16Msk(A_ADR + 0x0fc8, 0x000f);
+	// EQ state record - 12
+	RIU_R16Msk(A_ADR + 0x0fcc, 0xf000);
+	// EQ state record - 13
+	RIU_R16Msk(A_ADR + 0x0fcc, 0x0f00);
+	// EQ state record - 14
+	RIU_R16Msk(A_ADR + 0x0fcc, 0x00f0);
+	// EQ state record - 15
+	RIU_R16Msk(A_ADR + 0x0fcc, 0x000f);
+	// EQ state record - 16
+	RIU_R16Msk(A_ADR + 0x0fd0, 0xf000);
+	// EQ state record - 17
+	RIU_R16Msk(A_ADR + 0x0fd0, 0x0f00);
+	// EQ state record - 18
+	RIU_R16Msk(A_ADR + 0x0fd0, 0x00f0);
+	// EQ state record - 19
+	RIU_R16Msk(A_ADR + 0x0fd0, 0x000f);
+	// EQ state record - 20
+	RIU_R16Msk(A_ADR + 0x0fd4, 0xf000);
+	// EQ state record - 21
+	RIU_R16Msk(A_ADR + 0x0fd4, 0x0f00);
+	// EQ state record - 22
+	RIU_R16Msk(A_ADR + 0x0fd4, 0x00f0);
+	// EQ state record - 23
+	RIU_R16Msk(A_ADR + 0x0fd4, 0x000f);
+	// EQ state record - 24
+	RIU_R16Msk(A_ADR + 0x0fd8, 0xf000);
+	// EQ state record - 25
+	RIU_R16Msk(A_ADR + 0x0fd8, 0x0f00);
+	// EQ state record - 26
+	RIU_R16Msk(A_ADR + 0x0fd8, 0x00f0);
+	// EQ state record - 27
+	RIU_R16Msk(A_ADR + 0x0fd8, 0x000f);
+	// EQ state record - 28
+	RIU_R16Msk(A_ADR + 0x0fdc, 0xf000);
+	// EQ state record - 29
+	RIU_R16Msk(A_ADR + 0x0fdc, 0x0f00);
+	// EQ state record - 30
+	RIU_R16Msk(A_ADR + 0x0fdc, 0x00f0);
+	// EQ state record - 31
+	RIU_R16Msk(A_ADR + 0x0fdc, 0x000f);
+	// EQ state record - 32
+	RIU_R16Msk(A_ADR + 0x0fe0, 0xf000);
+	// EQ state record - 33
+	RIU_R16Msk(A_ADR + 0x0fe0, 0x0f00);
+	// EQ state record - 34
+	RIU_R16Msk(A_ADR + 0x0fe0, 0x00f0);
+	// EQ state record - 35
+	RIU_R16Msk(A_ADR + 0x0fe0, 0x000f);
+	// EQ state record - 36
+	RIU_R16Msk(A_ADR + 0x0fe4, 0xf000);
+	// EQ state record - 37
+	RIU_R16Msk(A_ADR + 0x0fe4, 0x0f00);
+	// EQ state record - 38
+	RIU_R16Msk(A_ADR + 0x0fe4, 0x00f0);
+	// EQ state record - 39
+	RIU_R16Msk(A_ADR + 0x0fe4, 0x000f);
+	// EQ state record - 40
+	RIU_R16Msk(A_ADR + 0x0fe8, 0xf000);
+	// EQ state record - 41
+	RIU_R16Msk(A_ADR + 0x0fe8, 0x0f00);
+	// EQ state record - 42
+	RIU_R16Msk(A_ADR + 0x0fe8, 0x00f0);
+	// EQ state record - 43
+	RIU_R16Msk(A_ADR + 0x0fe8, 0x000f);
+	// EQ state record - 44
+	RIU_R16Msk(A_ADR + 0x0fec, 0xf000);
+	// EQ state record - 45
+	RIU_R16Msk(A_ADR + 0x0fec, 0x0f00);
+	// EQ state record - 46
+	RIU_R16Msk(A_ADR + 0x0fec, 0x00f0);
+	// EQ state record - 47
+	RIU_R16Msk(A_ADR + 0x0fec, 0x000f);
+	// EQ state record - 48
+	RIU_R16Msk(A_ADR + 0x0ff0, 0xf000);
+	// EQ state record - 49
+	RIU_R16Msk(A_ADR + 0x0ff0, 0x0f00);
+	// EQ state record - 50
+	RIU_R16Msk(A_ADR + 0x0ff0, 0x00f0);
+	// EQ state record - 51
+	RIU_R16Msk(A_ADR + 0x0ff0, 0x000f);
+	// EQ state record - 52
+	RIU_R16Msk(A_ADR + 0x0ff4, 0xf000);
+	// EQ state record - 53
+	RIU_R16Msk(A_ADR + 0x0ff4, 0x0f00);
+	// EQ state record - 54
+	RIU_R16Msk(A_ADR + 0x0ff4, 0x00f0);
+	// EQ state record - 55
+	RIU_R16Msk(A_ADR + 0x0ff4, 0x000f);
+	// EQ state record - 56
+	RIU_R16Msk(A_ADR + 0x0ff8, 0xf000);
+	// EQ state record - 57
+	RIU_R16Msk(A_ADR + 0x0ff8, 0x0f00);
+	// EQ state record - 58
+	RIU_R16Msk(A_ADR + 0x0ff8, 0x00f0);
+	// EQ state record - 59
+	RIU_R16Msk(A_ADR + 0x0ff8, 0x000f);
+	// EQ state record - 60
+	RIU_R16Msk(A_ADR + 0x0ffc, 0xf000);
+	// EQ state record - 61
+	RIU_R16Msk(A_ADR + 0x0ffc, 0x0f00);
+	// EQ state record - 62
+	RIU_R16Msk(A_ADR + 0x0ffc, 0x00f0);
+	// EQ state record - 63
+	RIU_R16Msk(A_ADR + 0x0ffc, 0x000f);
+	// select MUX to report eq state record - L1
+	RIU_W16Msk(A_ADR + 0x0eb4, 0x0c00, 0x0400);
+	// EQ state record - 0 (Current)
+	RIU_R16Msk(A_ADR + 0x0fc0, 0xf000);
+	// EQ state record - 1
+	RIU_R16Msk(A_ADR + 0x0fc0, 0x0f00);
+	// EQ state record - 2
+	RIU_R16Msk(A_ADR + 0x0fc0, 0x00f0);
+	// EQ state record - 3
+	RIU_R16Msk(A_ADR + 0x0fc0, 0x000f);
+	// EQ state record - 4
+	RIU_R16Msk(A_ADR + 0x0fc4, 0xf000);
+	// EQ state record - 5
+	RIU_R16Msk(A_ADR + 0x0fc4, 0x0f00);
+	// EQ state record - 6
+	RIU_R16Msk(A_ADR + 0x0fc4, 0x00f0);
+	// EQ state record - 7
+	RIU_R16Msk(A_ADR + 0x0fc4, 0x000f);
+	// EQ state record - 8
+	RIU_R16Msk(A_ADR + 0x0fc8, 0xf000);
+	// EQ state record - 9
+	RIU_R16Msk(A_ADR + 0x0fc8, 0x0f00);
+	// EQ state record - 10
+	RIU_R16Msk(A_ADR + 0x0fc8, 0x00f0);
+	// EQ state record - 11
+	RIU_R16Msk(A_ADR + 0x0fc8, 0x000f);
+	// EQ state record - 12
+	RIU_R16Msk(A_ADR + 0x0fcc, 0xf000);
+	// EQ state record - 13
+	RIU_R16Msk(A_ADR + 0x0fcc, 0x0f00);
+	// EQ state record - 14
+	RIU_R16Msk(A_ADR + 0x0fcc, 0x00f0);
+	// EQ state record - 15
+	RIU_R16Msk(A_ADR + 0x0fcc, 0x000f);
+	// EQ state record - 16
+	RIU_R16Msk(A_ADR + 0x0fd0, 0xf000);
+	// EQ state record - 17
+	RIU_R16Msk(A_ADR + 0x0fd0, 0x0f00);
+	// EQ state record - 18
+	RIU_R16Msk(A_ADR + 0x0fd0, 0x00f0);
+	// EQ state record - 19
+	RIU_R16Msk(A_ADR + 0x0fd0, 0x000f);
+	// EQ state record - 20
+	RIU_R16Msk(A_ADR + 0x0fd4, 0xf000);
+	// EQ state record - 21
+	RIU_R16Msk(A_ADR + 0x0fd4, 0x0f00);
+	// EQ state record - 22
+	RIU_R16Msk(A_ADR + 0x0fd4, 0x00f0);
+	// EQ state record - 23
+	RIU_R16Msk(A_ADR + 0x0fd4, 0x000f);
+	// EQ state record - 24
+	RIU_R16Msk(A_ADR + 0x0fd8, 0xf000);
+	// EQ state record - 25
+	RIU_R16Msk(A_ADR + 0x0fd8, 0x0f00);
+	// EQ state record - 26
+	RIU_R16Msk(A_ADR + 0x0fd8, 0x00f0);
+	// EQ state record - 27
+	RIU_R16Msk(A_ADR + 0x0fd8, 0x000f);
+	// EQ state record - 28
+	RIU_R16Msk(A_ADR + 0x0fdc, 0xf000);
+	// EQ state record - 29
+	RIU_R16Msk(A_ADR + 0x0fdc, 0x0f00);
+	// EQ state record - 30
+	RIU_R16Msk(A_ADR + 0x0fdc, 0x00f0);
+	// EQ state record - 31
+	RIU_R16Msk(A_ADR + 0x0fdc, 0x000f);
+	// EQ state record - 32
+	RIU_R16Msk(A_ADR + 0x0fe0, 0xf000);
+	// EQ state record - 33
+	RIU_R16Msk(A_ADR + 0x0fe0, 0x0f00);
+	// EQ state record - 34
+	RIU_R16Msk(A_ADR + 0x0fe0, 0x00f0);
+	// EQ state record - 35
+	RIU_R16Msk(A_ADR + 0x0fe0, 0x000f);
+	// EQ state record - 36
+	RIU_R16Msk(A_ADR + 0x0fe4, 0xf000);
+	// EQ state record - 37
+	RIU_R16Msk(A_ADR + 0x0fe4, 0x0f00);
+	// EQ state record - 38
+	RIU_R16Msk(A_ADR + 0x0fe4, 0x00f0);
+	// EQ state record - 39
+	RIU_R16Msk(A_ADR + 0x0fe4, 0x000f);
+	// EQ state record - 40
+	RIU_R16Msk(A_ADR + 0x0fe8, 0xf000);
+	// EQ state record - 41
+	RIU_R16Msk(A_ADR + 0x0fe8, 0x0f00);
+	// EQ state record - 42
+	RIU_R16Msk(A_ADR + 0x0fe8, 0x00f0);
+	// EQ state record - 43
+	RIU_R16Msk(A_ADR + 0x0fe8, 0x000f);
+	// EQ state record - 44
+	RIU_R16Msk(A_ADR + 0x0fec, 0xf000);
+	// EQ state record - 45
+	RIU_R16Msk(A_ADR + 0x0fec, 0x0f00);
+	// EQ state record - 46
+	RIU_R16Msk(A_ADR + 0x0fec, 0x00f0);
+	// EQ state record - 47
+	RIU_R16Msk(A_ADR + 0x0fec, 0x000f);
+	// EQ state record - 48
+	RIU_R16Msk(A_ADR + 0x0ff0, 0xf000);
+	// EQ state record - 49
+	RIU_R16Msk(A_ADR + 0x0ff0, 0x0f00);
+	// EQ state record - 50
+	RIU_R16Msk(A_ADR + 0x0ff0, 0x00f0);
+	// EQ state record - 51
+	RIU_R16Msk(A_ADR + 0x0ff0, 0x000f);
+	// EQ state record - 52
+	RIU_R16Msk(A_ADR + 0x0ff4, 0xf000);
+	// EQ state record - 53
+	RIU_R16Msk(A_ADR + 0x0ff4, 0x0f00);
+	// EQ state record - 54
+	RIU_R16Msk(A_ADR + 0x0ff4, 0x00f0);
+	// EQ state record - 55
+	RIU_R16Msk(A_ADR + 0x0ff4, 0x000f);
+	// EQ state record - 56
+	RIU_R16Msk(A_ADR + 0x0ff8, 0xf000);
+	// EQ state record - 57
+	RIU_R16Msk(A_ADR + 0x0ff8, 0x0f00);
+	// EQ state record - 58
+	RIU_R16Msk(A_ADR + 0x0ff8, 0x00f0);
+	// EQ state record - 59
+	RIU_R16Msk(A_ADR + 0x0ff8, 0x000f);
+	// EQ state record - 60
+	RIU_R16Msk(A_ADR + 0x0ffc, 0xf000);
+	// EQ state record - 61
+	RIU_R16Msk(A_ADR + 0x0ffc, 0x0f00);
+	// EQ state record - 62
+	RIU_R16Msk(A_ADR + 0x0ffc, 0x00f0);
+	// EQ state record - 63
+	RIU_R16Msk(A_ADR + 0x0ffc, 0x000f);
+	// select MUX to report eq state record - L2
+	RIU_W16Msk(A_ADR + 0x0eb4, 0x0c00, 0x0800);
+	// EQ state record - 0 (Current)
+	RIU_R16Msk(A_ADR + 0x0fc0, 0xf000);
+	// EQ state record - 1
+	RIU_R16Msk(A_ADR + 0x0fc0, 0x0f00);
+	// EQ state record - 2
+	RIU_R16Msk(A_ADR + 0x0fc0, 0x00f0);
+	// EQ state record - 3
+	RIU_R16Msk(A_ADR + 0x0fc0, 0x000f);
+	// EQ state record - 4
+	RIU_R16Msk(A_ADR + 0x0fc4, 0xf000);
+	// EQ state record - 5
+	RIU_R16Msk(A_ADR + 0x0fc4, 0x0f00);
+	// EQ state record - 6
+	RIU_R16Msk(A_ADR + 0x0fc4, 0x00f0);
+	// EQ state record - 7
+	RIU_R16Msk(A_ADR + 0x0fc4, 0x000f);
+	// EQ state record - 8
+	RIU_R16Msk(A_ADR + 0x0fc8, 0xf000);
+	// EQ state record - 9
+	RIU_R16Msk(A_ADR + 0x0fc8, 0x0f00);
+	// EQ state record - 10
+	RIU_R16Msk(A_ADR + 0x0fc8, 0x00f0);
+	// EQ state record - 11
+	RIU_R16Msk(A_ADR + 0x0fc8, 0x000f);
+	// EQ state record - 12
+	RIU_R16Msk(A_ADR + 0x0fcc, 0xf000);
+	// EQ state record - 13
+	RIU_R16Msk(A_ADR + 0x0fcc, 0x0f00);
+	// EQ state record - 14
+	RIU_R16Msk(A_ADR + 0x0fcc, 0x00f0);
+	// EQ state record - 15
+	RIU_R16Msk(A_ADR + 0x0fcc, 0x000f);
+	// EQ state record - 16
+	RIU_R16Msk(A_ADR + 0x0fd0, 0xf000);
+	// EQ state record - 17
+	RIU_R16Msk(A_ADR + 0x0fd0, 0x0f00);
+	// EQ state record - 18
+	RIU_R16Msk(A_ADR + 0x0fd0, 0x00f0);
+	// EQ state record - 19
+	RIU_R16Msk(A_ADR + 0x0fd0, 0x000f);
+	// EQ state record - 20
+	RIU_R16Msk(A_ADR + 0x0fd4, 0xf000);
+	// EQ state record - 21
+	RIU_R16Msk(A_ADR + 0x0fd4, 0x0f00);
+	// EQ state record - 22
+	RIU_R16Msk(A_ADR + 0x0fd4, 0x00f0);
+	// EQ state record - 23
+	RIU_R16Msk(A_ADR + 0x0fd4, 0x000f);
+	// EQ state record - 24
+	RIU_R16Msk(A_ADR + 0x0fd8, 0xf000);
+	// EQ state record - 25
+	RIU_R16Msk(A_ADR + 0x0fd8, 0x0f00);
+	// EQ state record - 26
+	RIU_R16Msk(A_ADR + 0x0fd8, 0x00f0);
+	// EQ state record - 27
+	RIU_R16Msk(A_ADR + 0x0fd8, 0x000f);
+	// EQ state record - 28
+	RIU_R16Msk(A_ADR + 0x0fdc, 0xf000);
+	// EQ state record - 29
+	RIU_R16Msk(A_ADR + 0x0fdc, 0x0f00);
+	// EQ state record - 30
+	RIU_R16Msk(A_ADR + 0x0fdc, 0x00f0);
+	// EQ state record - 31
+	RIU_R16Msk(A_ADR + 0x0fdc, 0x000f);
+	// EQ state record - 32
+	RIU_R16Msk(A_ADR + 0x0fe0, 0xf000);
+	// EQ state record - 33
+	RIU_R16Msk(A_ADR + 0x0fe0, 0x0f00);
+	// EQ state record - 34
+	RIU_R16Msk(A_ADR + 0x0fe0, 0x00f0);
+	// EQ state record - 35
+	RIU_R16Msk(A_ADR + 0x0fe0, 0x000f);
+	// EQ state record - 36
+	RIU_R16Msk(A_ADR + 0x0fe4, 0xf000);
+	// EQ state record - 37
+	RIU_R16Msk(A_ADR + 0x0fe4, 0x0f00);
+	// EQ state record - 38
+	RIU_R16Msk(A_ADR + 0x0fe4, 0x00f0);
+	// EQ state record - 39
+	RIU_R16Msk(A_ADR + 0x0fe4, 0x000f);
+	// EQ state record - 40
+	RIU_R16Msk(A_ADR + 0x0fe8, 0xf000);
+	// EQ state record - 41
+	RIU_R16Msk(A_ADR + 0x0fe8, 0x0f00);
+	// EQ state record - 42
+	RIU_R16Msk(A_ADR + 0x0fe8, 0x00f0);
+	// EQ state record - 43
+	RIU_R16Msk(A_ADR + 0x0fe8, 0x000f);
+	// EQ state record - 44
+	RIU_R16Msk(A_ADR + 0x0fec, 0xf000);
+	// EQ state record - 45
+	RIU_R16Msk(A_ADR + 0x0fec, 0x0f00);
+	// EQ state record - 46
+	RIU_R16Msk(A_ADR + 0x0fec, 0x00f0);
+	// EQ state record - 47
+	RIU_R16Msk(A_ADR + 0x0fec, 0x000f);
+	// EQ state record - 48
+	RIU_R16Msk(A_ADR + 0x0ff0, 0xf000);
+	// EQ state record - 49
+	RIU_R16Msk(A_ADR + 0x0ff0, 0x0f00);
+	// EQ state record - 50
+	RIU_R16Msk(A_ADR + 0x0ff0, 0x00f0);
+	// EQ state record - 51
+	RIU_R16Msk(A_ADR + 0x0ff0, 0x000f);
+	// EQ state record - 52
+	RIU_R16Msk(A_ADR + 0x0ff4, 0xf000);
+	// EQ state record - 53
+	RIU_R16Msk(A_ADR + 0x0ff4, 0x0f00);
+	// EQ state record - 54
+	RIU_R16Msk(A_ADR + 0x0ff4, 0x00f0);
+	// EQ state record - 55
+	RIU_R16Msk(A_ADR + 0x0ff4, 0x000f);
+	// EQ state record - 56
+	RIU_R16Msk(A_ADR + 0x0ff8, 0xf000);
+	// EQ state record - 57
+	RIU_R16Msk(A_ADR + 0x0ff8, 0x0f00);
+	// EQ state record - 58
+	RIU_R16Msk(A_ADR + 0x0ff8, 0x00f0);
+	// EQ state record - 59
+	RIU_R16Msk(A_ADR + 0x0ff8, 0x000f);
+	// EQ state record - 60
+	RIU_R16Msk(A_ADR + 0x0ffc, 0xf000);
+	// EQ state record - 61
+	RIU_R16Msk(A_ADR + 0x0ffc, 0x0f00);
+	// EQ state record - 62
+	RIU_R16Msk(A_ADR + 0x0ffc, 0x00f0);
+	// EQ state record - 63
+	RIU_R16Msk(A_ADR + 0x0ffc, 0x000f);
+	// select MUX to report eq state record - L3
+	RIU_W16Msk(A_ADR + 0x0eb4, 0x0c00, 0x0c00);
+	// EQ state record - 0 (Current)
+	RIU_R16Msk(A_ADR + 0x0fc0, 0xf000);
+	// EQ state record - 1
+	RIU_R16Msk(A_ADR + 0x0fc0, 0x0f00);
+	// EQ state record - 2
+	RIU_R16Msk(A_ADR + 0x0fc0, 0x00f0);
+	// EQ state record - 3
+	RIU_R16Msk(A_ADR + 0x0fc0, 0x000f);
+	// EQ state record - 4
+	RIU_R16Msk(A_ADR + 0x0fc4, 0xf000);
+	// EQ state record - 5
+	RIU_R16Msk(A_ADR + 0x0fc4, 0x0f00);
+	// EQ state record - 6
+	RIU_R16Msk(A_ADR + 0x0fc4, 0x00f0);
+	// EQ state record - 7
+	RIU_R16Msk(A_ADR + 0x0fc4, 0x000f);
+	// EQ state record - 8
+	RIU_R16Msk(A_ADR + 0x0fc8, 0xf000);
+	// EQ state record - 9
+	RIU_R16Msk(A_ADR + 0x0fc8, 0x0f00);
+	// EQ state record - 10
+	RIU_R16Msk(A_ADR + 0x0fc8, 0x00f0);
+	// EQ state record - 11
+	RIU_R16Msk(A_ADR + 0x0fc8, 0x000f);
+	// EQ state record - 12
+	RIU_R16Msk(A_ADR + 0x0fcc, 0xf000);
+	// EQ state record - 13
+	RIU_R16Msk(A_ADR + 0x0fcc, 0x0f00);
+	// EQ state record - 14
+	RIU_R16Msk(A_ADR + 0x0fcc, 0x00f0);
+	// EQ state record - 15
+	RIU_R16Msk(A_ADR + 0x0fcc, 0x000f);
+	// EQ state record - 16
+	RIU_R16Msk(A_ADR + 0x0fd0, 0xf000);
+	// EQ state record - 17
+	RIU_R16Msk(A_ADR + 0x0fd0, 0x0f00);
+	// EQ state record - 18
+	RIU_R16Msk(A_ADR + 0x0fd0, 0x00f0);
+	// EQ state record - 19
+	RIU_R16Msk(A_ADR + 0x0fd0, 0x000f);
+	// EQ state record - 20
+	RIU_R16Msk(A_ADR + 0x0fd4, 0xf000);
+	// EQ state record - 21
+	RIU_R16Msk(A_ADR + 0x0fd4, 0x0f00);
+	// EQ state record - 22
+	RIU_R16Msk(A_ADR + 0x0fd4, 0x00f0);
+	// EQ state record - 23
+	RIU_R16Msk(A_ADR + 0x0fd4, 0x000f);
+	// EQ state record - 24
+	RIU_R16Msk(A_ADR + 0x0fd8, 0xf000);
+	// EQ state record - 25
+	RIU_R16Msk(A_ADR + 0x0fd8, 0x0f00);
+	// EQ state record - 26
+	RIU_R16Msk(A_ADR + 0x0fd8, 0x00f0);
+	// EQ state record - 27
+	RIU_R16Msk(A_ADR + 0x0fd8, 0x000f);
+	// EQ state record - 28
+	RIU_R16Msk(A_ADR + 0x0fdc, 0xf000);
+	// EQ state record - 29
+	RIU_R16Msk(A_ADR + 0x0fdc, 0x0f00);
+	// EQ state record - 30
+	RIU_R16Msk(A_ADR + 0x0fdc, 0x00f0);
+	// EQ state record - 31
+	RIU_R16Msk(A_ADR + 0x0fdc, 0x000f);
+	// EQ state record - 32
+	RIU_R16Msk(A_ADR + 0x0fe0, 0xf000);
+	// EQ state record - 33
+	RIU_R16Msk(A_ADR + 0x0fe0, 0x0f00);
+	// EQ state record - 34
+	RIU_R16Msk(A_ADR + 0x0fe0, 0x00f0);
+	// EQ state record - 35
+	RIU_R16Msk(A_ADR + 0x0fe0, 0x000f);
+	// EQ state record - 36
+	RIU_R16Msk(A_ADR + 0x0fe4, 0xf000);
+	// EQ state record - 37
+	RIU_R16Msk(A_ADR + 0x0fe4, 0x0f00);
+	// EQ state record - 38
+	RIU_R16Msk(A_ADR + 0x0fe4, 0x00f0);
+	// EQ state record - 39
+	RIU_R16Msk(A_ADR + 0x0fe4, 0x000f);
+	// EQ state record - 40
+	RIU_R16Msk(A_ADR + 0x0fe8, 0xf000);
+	// EQ state record - 41
+	RIU_R16Msk(A_ADR + 0x0fe8, 0x0f00);
+	// EQ state record - 42
+	RIU_R16Msk(A_ADR + 0x0fe8, 0x00f0);
+	// EQ state record - 43
+	RIU_R16Msk(A_ADR + 0x0fe8, 0x000f);
+	// EQ state record - 44
+	RIU_R16Msk(A_ADR + 0x0fec, 0xf000);
+	// EQ state record - 45
+	RIU_R16Msk(A_ADR + 0x0fec, 0x0f00);
+	// EQ state record - 46
+	RIU_R16Msk(A_ADR + 0x0fec, 0x00f0);
+	// EQ state record - 47
+	RIU_R16Msk(A_ADR + 0x0fec, 0x000f);
+	// EQ state record - 48
+	RIU_R16Msk(A_ADR + 0x0ff0, 0xf000);
+	// EQ state record - 49
+	RIU_R16Msk(A_ADR + 0x0ff0, 0x0f00);
+	// EQ state record - 50
+	RIU_R16Msk(A_ADR + 0x0ff0, 0x00f0);
+	// EQ state record - 51
+	RIU_R16Msk(A_ADR + 0x0ff0, 0x000f);
+	// EQ state record - 52
+	RIU_R16Msk(A_ADR + 0x0ff4, 0xf000);
+	// EQ state record - 53
+	RIU_R16Msk(A_ADR + 0x0ff4, 0x0f00);
+	// EQ state record - 54
+	RIU_R16Msk(A_ADR + 0x0ff4, 0x00f0);
+	// EQ state record - 55
+	RIU_R16Msk(A_ADR + 0x0ff4, 0x000f);
+	// EQ state record - 56
+	RIU_R16Msk(A_ADR + 0x0ff8, 0xf000);
+	// EQ state record - 57
+	RIU_R16Msk(A_ADR + 0x0ff8, 0x0f00);
+	// EQ state record - 58
+	RIU_R16Msk(A_ADR + 0x0ff8, 0x00f0);
+	// EQ state record - 59
+	RIU_R16Msk(A_ADR + 0x0ff8, 0x000f);
+	// EQ state record - 60
+	RIU_R16Msk(A_ADR + 0x0ffc, 0xf000);
+	// EQ state record - 61
+	RIU_R16Msk(A_ADR + 0x0ffc, 0x0f00);
+	// EQ state record - 62
+	RIU_R16Msk(A_ADR + 0x0ffc, 0x00f0);
+	// EQ state record - 63
+	RIU_R16Msk(A_ADR + 0x0ffc, 0x000f);
+	// read CR un-Lock recoder
+	RIU_R16Msk(A_ADR + 0x118c, 0xffff);
+
+	RX_DEF_LOG("\n\n=== %s end ===\n", __func__);
+}
