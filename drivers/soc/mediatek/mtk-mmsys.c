@@ -204,7 +204,6 @@ static const struct mtk_mmsys_driver_data mt8195_vdosys1_driver_data = {
 	.num_cross_sys_w_h_configs = ARRAY_SIZE(mmsys_mt8195_vdo1_cross_sys_w_h_configs_list),
 	.sw0_rst_offset = MT8195_VDO1_SW0_RST_B,
 	.num_resets = 64,
-	.has_gce_client_reg = true,
 };
 
 static const struct mtk_mmsys_match_data mt8195_mmsys_match_data = {
@@ -231,6 +230,7 @@ static const struct mtk_mmsys_match_data mt8365_mmsys_match_data = {
 struct mtk_mmsys {
 	void __iomem *regs;
 	const struct mtk_mmsys_driver_data *data;
+	u8 subsys_id;
 	spinlock_t lock; /* protects mmsys_sw_rst_b reg */
 	struct reset_controller_dev rcdev;
 	struct cmdq_client_reg cmdq_base;
@@ -316,7 +316,7 @@ void mtk_mmsys_mdp_connect(struct device *dev, struct mmsys_cmdq_cmd *cmd,
 
 	for (i = 0; i < mmsys->data->mdp_num_routes; i++)
 		if (cur == routes[i].from_comp && next == routes[i].to_comp)
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id,
 					    mmsys->io_start + routes[i].addr,
 					    routes[i].val, 0xFFFFFFFF);
 }
@@ -332,7 +332,7 @@ void mtk_mmsys_mdp_disconnect(struct device *dev, struct mmsys_cmdq_cmd *cmd,
 
 	for (i = 0; i < mmsys->data->mdp_num_routes; i++)
 		if (cur == routes[i].from_comp && next == routes[i].to_comp)
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id,
 					    mmsys->io_start + routes[i].addr,
 					    0, 0xFFFFFFFF);
 }
@@ -345,17 +345,16 @@ void mtk_mmsys_mdp_isp_ctrl(struct device *dev, struct mmsys_cmdq_cmd *cmd,
 	const unsigned int *isp_ctrl = mmsys->data->mdp_isp_ctrl;
 	u32 reg;
 
-	WARN_ON(mmsys->cmdq_base.subsys == 0);
-
+	WARN_ON(mmsys->subsys_id == 0);
 	/* Direct link */
 	if (id == MDP_COMP_CAMIN) {
 		/* Reset MDP_DL_ASYNC_TX */
 		/* Bit  3: MDP_DL_ASYNC_TX / MDP_RELAY */
 		if (isp_ctrl[ISP_CTRL_MMSYS_SW0_RST_B]) {
 			reg = mmsys->io_start + isp_ctrl[ISP_CTRL_MMSYS_SW0_RST_B];
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 					    0x0, 0x00000008);
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 					    1 << 3, 0x00000008);
 		}
 
@@ -363,16 +362,16 @@ void mtk_mmsys_mdp_isp_ctrl(struct device *dev, struct mmsys_cmdq_cmd *cmd,
 		/* Bit  10: MDP_DL_ASYNC_RX */
 		if (isp_ctrl[ISP_CTRL_MMSYS_SW1_RST_B]) {
 			reg = mmsys->io_start + isp_ctrl[ISP_CTRL_MMSYS_SW1_RST_B];
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 					    0x0, 0x00000400);
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 					    1 << 10, 0x00000400);
 		}
 
 		/* Enable sof mode */
 		if (isp_ctrl[ISP_CTRL_ISP_RELAY_CFG_WD]) {
 			reg = mmsys->io_start + isp_ctrl[ISP_CTRL_ISP_RELAY_CFG_WD];
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 					    0 << 31, 0x80000000);
 		}
 	}
@@ -382,9 +381,9 @@ void mtk_mmsys_mdp_isp_ctrl(struct device *dev, struct mmsys_cmdq_cmd *cmd,
 		/* Bit  4: MDP_DL_ASYNC2_TX / MDP_RELAY2 */
 		if (isp_ctrl[ISP_CTRL_MMSYS_SW0_RST_B]) {
 			reg = mmsys->io_start + isp_ctrl[ISP_CTRL_MMSYS_SW0_RST_B];
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 					    0x0, 0x00000010);
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 					    1 << 4, 0x00000010);
 		}
 
@@ -392,16 +391,16 @@ void mtk_mmsys_mdp_isp_ctrl(struct device *dev, struct mmsys_cmdq_cmd *cmd,
 		/* Bit  11: MDP_DL_ASYNC2_RX */
 		if (isp_ctrl[ISP_CTRL_MMSYS_SW1_RST_B]) {
 			reg = mmsys->io_start + isp_ctrl[ISP_CTRL_MMSYS_SW1_RST_B];
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 					    0x0, 0x00000800);
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 					    1 << 11, 0x00000800);
 		}
 
 		/* Enable sof mode */
 		if (isp_ctrl[ISP_CTRL_IPU_RELAY_CFG_WD]) {
 			reg = mmsys->io_start + isp_ctrl[ISP_CTRL_IPU_RELAY_CFG_WD];
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 					    0 << 31, 0x80000000);
 		}
 	}
@@ -415,19 +414,18 @@ void mtk_mmsys_mdp_camin_ctrl(struct device *dev, struct mmsys_cmdq_cmd *cmd,
 	const unsigned int *isp_ctrl = mmsys->data->mdp_isp_ctrl;
 	u32 reg;
 
-	WARN_ON(mmsys->cmdq_base.subsys == 0);
-
+	WARN_ON(mmsys->subsys_id == 0);
 	/* Config for direct link */
 	if (id == MDP_COMP_CAMIN) {
 		if (isp_ctrl[ISP_CTRL_MDP_ASYNC_CFG_WD]) {
 			reg = mmsys->io_start + isp_ctrl[ISP_CTRL_MDP_ASYNC_CFG_WD];
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 				     (camin_h << 16) + camin_w, 0x3FFF3FFF);
 		}
 
 		if (isp_ctrl[ISP_CTRL_ISP_RELAY_CFG_WD]) {
 			reg = mmsys->io_start + isp_ctrl[ISP_CTRL_ISP_RELAY_CFG_WD];
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 				     (camin_h << 16) + camin_w, 0x3FFF3FFF);
 		}
 	}
@@ -435,12 +433,12 @@ void mtk_mmsys_mdp_camin_ctrl(struct device *dev, struct mmsys_cmdq_cmd *cmd,
 		if (isp_ctrl[ISP_CTRL_MDP_ASYNC_IPU_CFG_WD]) {
 			reg = mmsys->io_start +
 			      isp_ctrl[ISP_CTRL_MDP_ASYNC_IPU_CFG_WD];
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 				     (camin_h << 16) + camin_w, 0x3FFF3FFF);
 		}
 		if (isp_ctrl[ISP_CTRL_IPU_RELAY_CFG_WD]) {
 			reg = mmsys->io_start + isp_ctrl[ISP_CTRL_IPU_RELAY_CFG_WD];
-			cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys, reg,
+			cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id, reg,
 				     (camin_h << 16) + camin_w, 0x3FFF3FFF);
 		}
 	}
@@ -606,7 +604,7 @@ void mtk_mmsys_mdp_write_config(struct device *dev,
 	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
 	const u32 *configs = mmsys->data->mdp_mmsys_configs;
 
-	cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys,
+	cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id,
 			    mmsys->io_start + configs[alias_id], value, mask);
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_mdp_write_config);
@@ -617,7 +615,7 @@ void mtk_mmsys_write_reg_by_cmdq(struct device *dev,
 {
 	struct mtk_mmsys *mmsys = dev_get_drvdata(dev);
 
-	cmdq_pkt_write_mask(cmd->pkt, mmsys->cmdq_base.subsys,
+	cmdq_pkt_write_mask(cmd->pkt, mmsys->subsys_id,
 			    mmsys->io_start + offset, value, mask);
 }
 EXPORT_SYMBOL_GPL(mtk_mmsys_write_reg_by_cmdq);
@@ -642,6 +640,14 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to ioremap mmsys registers: %d\n", ret);
 		return ret;
 	}
+
+#if IS_REACHABLE(CONFIG_MTK_CMDQ)
+	ret = cmdq_dev_get_client_reg(dev, &mmsys->cmdq_base, 0);
+	if (ret)
+		dev_dbg(dev, "No mediatek,gce-client-reg!\n");
+#endif
+
+	mmsys->subsys_id = mmsys->cmdq_base.subsys;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
@@ -677,13 +683,9 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 	}
 
 #if IS_REACHABLE(CONFIG_MTK_CMDQ)
-	if (mmsys->data->has_gce_client_reg) {
-		ret = cmdq_dev_get_client_reg(dev, &mmsys->cmdq_base, 0);
-		if (ret) {
-			dev_err(dev, "No mediatek,gce-client-reg!\n");
-			return ret;
-		}
-	}
+	ret = cmdq_dev_get_client_reg(dev, &mmsys->cmdq_base, 0);
+	if (ret)
+		dev_dbg(dev, "No mediatek,gce-client-reg!\n");
 #endif
 
 	platform_set_drvdata(pdev, mmsys);
