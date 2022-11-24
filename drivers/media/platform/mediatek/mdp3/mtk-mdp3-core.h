@@ -14,6 +14,7 @@
 #include "mtk-mdp3-comp.h"
 #include "mtk-mdp3-vpu.h"
 
+#define MDP_NODE_NAME		"mdp3-rdma0"
 #define MDP_MODULE_NAME		"mtk-mdp3"
 #define MDP_DEVICE_NAME		"MediaTek MDP3"
 #define MDP_PHANDLE_NAME	"mediatek,mdp3"
