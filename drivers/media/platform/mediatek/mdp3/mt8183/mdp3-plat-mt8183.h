@@ -21,6 +21,13 @@ static const struct of_device_id mt8183_mdp_probe_infra[MDP_INFRA_MAX] = {
 	[MDP_INFRA_SCP] = { .compatible = "mediatek,mt8183-scp" }
 };
 
+static const struct mdp_pipe_info mt8183_pipe_info[] = {
+	[MDP_PIPE_RDMA0] = {MDP_PIPE_RDMA0, 0},
+	[MDP_PIPE_IMGI] = {MDP_PIPE_IMGI, 1},
+	[MDP_PIPE_WPEI] = {MDP_PIPE_WPEI, 2},
+	[MDP_PIPE_WPEI2] = {MDP_PIPE_WPEI2, 3}
+};
+
 static const u32 mt8183_mutex_idx[MDP_MAX_COMP_COUNT] = {
 	[MDP_COMP_RDMA0] = MUTEX_MOD_IDX_MDP_RDMA0,
 	[MDP_COMP_RSZ0] = MUTEX_MOD_IDX_MDP_RSZ0,
