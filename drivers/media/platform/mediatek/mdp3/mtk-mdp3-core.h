@@ -52,6 +52,7 @@ enum mdp_pipe_id {
 
 struct mtk_mdp_driver_data {
 	const struct of_device_id *mdp_probe_infra;
+	const struct of_device_id *mdp_sub_comp_dt_ids;
 	const struct mdp_platform_config *mdp_cfg;
 	const u32 *mdp_mutex_table_idx;
 	const struct mdp_comp_data *comp_data;
