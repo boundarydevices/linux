@@ -94,7 +94,8 @@ enum ifx_nl80211_vendor_subcmds {
 	SCMD(TWT)		= 14,
 	SCMD(OCE_ENABLE)	= 15,
 	SCMD(BSSCOLOR)		= 16,
-	SCMD(MAX)		= 17
+	SCMD(RANDMAC)		= 17,
+	SCMD(MAX)		= 18
 };
 
 /* enum ifx_vendor_attr - IFX nl80211 vendor attributes
@@ -507,6 +508,30 @@ struct ifx_twt_teardown {
 	struct ifx_twt_teardesc teardesc;	/* Teardown descriptor */
 };
 
+/* randmac define/enum/struct
+ */
+#define WL_RANDMAC_API_VERSION		0x0100 /**< version 1.0 */
+#define WL_RANDMAC_API_MIN_VERSION	0x0100 /**< version 1.0 */
+
+/** subcommands that can apply to randmac */
+enum {
+	WL_RANDMAC_SUBCMD_NONE				= 0,
+	WL_RANDMAC_SUBCMD_GET_VERSION			= 1,
+	WL_RANDMAC_SUBCMD_ENABLE			= 2,
+	WL_RANDMAC_SUBCMD_DISABLE			= 3,
+	WL_RANDMAC_SUBCMD_CONFIG			= 4,
+	WL_RANDMAC_SUBCMD_STATS				= 5,
+	WL_RANDMAC_SUBCMD_CLEAR_STATS			= 6,
+	WL_RANDMAC_SUBCMD_MAX
+};
+
+struct ifx_randmac {
+	u16 version;
+	u16 len;			/* total length */
+	u16 subcmd_id;	/* subcommand id */
+	u8 data[0];			/* subcommand data */
+};
+
 int ifx_cfg80211_vndr_cmds_twt(struct wiphy *wiphy,
 			       struct wireless_dev *wdev, const void  *data, int len);
 int ifx_cfg80211_vndr_cmds_bsscolor(struct wiphy *wiphy,
@@ -524,6 +549,9 @@ int ifx_cfg80211_vndr_cmds_ldpc_cap(struct wiphy *wiphy,
 int ifx_cfg80211_vndr_cmds_oce_enable(struct wiphy *wiphy,
 				      struct wireless_dev *wdev,
 				      const void *data, int len);
+int ifx_cfg80211_vndr_cmds_randmac(struct wiphy *wiphy,
+				   struct wireless_dev *wdev,
+				   const void *data, int len);
 
 #endif /* IFX_VENDOR_H */
 

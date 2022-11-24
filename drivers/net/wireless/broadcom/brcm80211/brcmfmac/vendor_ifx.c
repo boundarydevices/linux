@@ -568,3 +568,58 @@ int ifx_cfg80211_vndr_cmds_oce_enable(struct wiphy *wiphy,
 
 	return ret;
 }
+
+int ifx_cfg80211_vndr_cmds_randmac(struct wiphy *wiphy,
+				   struct wireless_dev *wdev, const void *data, int len)
+{
+	int ret = 0;
+	struct ifx_randmac iov_buf = {0};
+	u8 val = *(u8 *)data;
+	struct brcmf_cfg80211_vif *vif;
+	struct brcmf_if *ifp;
+
+	vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+	ifp = vif->ifp;
+	iov_buf.version = WL_RANDMAC_API_VERSION;
+	iov_buf.subcmd_id = WL_RANDMAC_SUBCMD_ENABLE;
+	iov_buf.len = offsetof(struct ifx_randmac, data);
+
+	if (val == 0x1) {
+		/* To set fw iovars of the form "wl randmac enable" using iw, call the
+		 * parent iovar "randmac" with the subcmd filled and passed along
+		 * ./iw dev wlan0 vendor send 0x000319 0x11 0x1
+		 */
+		ret = brcmf_fil_bsscfg_data_set(ifp, "randmac", (void *)&iov_buf, iov_buf.len);
+		if (ret)
+			brcmf_err("Failed to set randmac enable: %d\n", ret);
+	} else if (val == 0x0) {
+		iov_buf.subcmd_id = WL_RANDMAC_SUBCMD_DISABLE;
+		/* To set fw iovars of the form "wl randmac disable" using iw, call the
+		 * parent iovar "randmac" with the subcmd filled and passed along
+		 * ./iw dev wlan0 vendor send 0x000319 0x11 0x0
+		 */
+		ret = brcmf_fil_bsscfg_data_set(ifp, "randmac", (void *)&iov_buf, iov_buf.len);
+		if (ret)
+			brcmf_err("Failed to set randmac disable: %d\n", ret);
+	} else if (val == 0xa) {
+		int result_data = 0;
+		struct ifx_randmac *iov_resp = NULL;
+		u8 buf[64] = {0};
+		/* To get fw iovars of the form "wl randmac" using iw, call the
+		 * parent iovar "randmac" with the subcmd filled and passed along
+		 * ./iw dev wlan0 vendor recv 0x000319 0x11 0xa
+		 */
+		memcpy(buf, (void *)&iov_buf, iov_buf.len);
+		ret = brcmf_fil_iovar_data_get(ifp, "randmac", (void *)buf, sizeof(buf));
+		if (ret) {
+			brcmf_err("Failed to get randmac enable or disable: %d\n", ret);
+		} else {
+			iov_resp = (struct ifx_randmac *)buf;
+			if (iov_resp->subcmd_id == WL_RANDMAC_SUBCMD_ENABLE)
+				result_data = 1;
+			ifx_cfg80211_vndr_send_cmd_reply(wiphy, &result_data, sizeof(int));
+		}
+	}
+	return ret;
+}
+
