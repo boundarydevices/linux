@@ -556,13 +556,18 @@ static int mtk_drm_kms_init(struct drm_device *drm)
 	}
 
 	/*
-	 * 1. We currently support two fixed data streams, each optional,
+	 * 1. We currently support 3 fixed data streams, each optional,
 	 *    and each statically assigned to a crtc:
-	 *    OVL0 -> COLOR0 -> AAL -> OD -> RDMA0 -> UFOE -> DSI0 ...
+	 *    main(crtc 0): OVL0 -> COLOR0 -> AAL -> OD -> RDMA0 -> UFOE -> DSI0 ...
+	 *    ext(crtc 1): RDMA1 -> DPI0 ...
+	 *    third(crtc 2): RDMA2 -> DSI3 ...
 	 * 2. For multi mmsys architecture, crtc path data are located in
 	 *    different drm private data structures. Loop through crtc index to
 	 *    create crtc from the main path and then ext_path and finally the
-	 *    third path.
+	 *    third path. Note that we do not allow "main_path" and "ext_path"
+	 *    being defined by more than one mmsys, and we need to make sure
+	 *    the mapping between crtc index (0, 1, 2) to the path table
+	 *    (main, ext, third).
 	 */
 	for (i = 0; i < MAX_CRTC; i++) {
 		for (j = 0; j < private->data->mmsys_dev_num; j++) {
@@ -593,15 +598,23 @@ static int mtk_drm_kms_init(struct drm_device *drm)
 					priv_n->data->ext_len, NULL, 0,  j,
 					priv_n->data->conn_routes,
 					priv_n->data->conn_routes_num);
-				if (ret)
-					goto err_component_unbind;
+				if (ret) {
+					dev_info(drm->dev, "did not create crtc 1(ext_path) for mmsys(%d) ext_len(%d)",
+						j,
+						priv_n->data->ext_len);
+					break;
+				}
 
 				continue;
 			} else if (i == 2 && priv_n->data->third_len) {
 				ret = mtk_drm_crtc_create(drm, priv_n->data->third_path,
 					priv_n->data->third_len, NULL, 0, j, NULL, 0);
-				if (ret)
-					goto err_component_unbind;
+				if (ret) {
+					dev_info(drm->dev, "did not create crtc 2(third_path) for mmsys(%d) third_len(%d)",
+						j,
+						priv_n->data->third_len);
+					break;
+				}
 
 				continue;
 			}
@@ -639,6 +652,7 @@ static int mtk_drm_kms_init(struct drm_device *drm)
 	return 0;
 
 err_component_unbind:
+	dev_warn(drm->dev, "Unbind all mmsys devices due to error\n");
 	for (i = 0; i < private->data->mmsys_dev_num; i++)
 		component_unbind_all(private->all_drm_private[i]->dev, drm);
 put_mutex_dev:
@@ -969,7 +983,7 @@ static int mtk_drm_probe(struct platform_device *pdev)
 		private->data = match_data->drv_data[0];
 	}
 
-	private->all_drm_private = devm_kmalloc_array(dev, private->data->mmsys_dev_num,
+	private->all_drm_private = devm_kcalloc(dev, private->data->mmsys_dev_num,
 						      sizeof(*private->all_drm_private),
 						      GFP_KERNEL);
 	if (!private->all_drm_private)
