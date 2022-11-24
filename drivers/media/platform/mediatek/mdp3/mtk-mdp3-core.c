@@ -18,6 +18,7 @@
 #include "mt8183/mdp3-plat-mt8183.h"
 
 static const struct mtk_mdp_driver_data mt8183_mdp_driver_data = {
+	.mdp_plat_id = MT8183,
 	.mdp_probe_infra = mt8183_mdp_probe_infra,
 	.mdp_sub_comp_dt_ids = mt8183_sub_comp_dt_ids,
 	.mdp_cfg = &mt8183_plat_cfg,
