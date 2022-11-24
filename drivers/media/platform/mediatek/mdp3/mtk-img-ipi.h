@@ -12,6 +12,7 @@
 #include <linux/err.h>
 #include "mtk-mdp3-type.h"
 #include "mt8183/mdp3-comp-mt8183.h"
+#include "mt8195/mdp3-comp-mt8195.h"
 
 /* ISP-MDP generic input information */
 
@@ -135,12 +136,14 @@ struct img_frameparam {
 struct img_config {
 	union {
 		struct img_config_8183 config_8183;
+		struct img_config_8195 config_8195;
 	};
 } __packed;
 
 struct img_compparam {
 	union {
 		struct img_compparam_8183 comp_8183;
+		struct img_compparam_8195 comp_8195;
 	};
 } __packed;
 
