@@ -26,6 +26,7 @@ static const struct mtk_mdp_driver_data mt8183_mdp_driver_data = {
 	.comp_data_len = ARRAY_SIZE(mt8183_mdp_comp_data),
 	.format = mt8183_formats,
 	.format_len = ARRAY_SIZE(mt8183_formats),
+	.def_limit = &mt8183_mdp_def_limit,
 };
 
 static const struct of_device_id mdp_of_ids[] = {

@@ -59,6 +59,7 @@ struct mtk_mdp_driver_data {
 	unsigned int comp_data_len;
 	const struct mdp_format *format;
 	unsigned int format_len;
+	const struct mdp_limit *def_limit;
 };
 
 struct mdp_dev {
