@@ -161,8 +161,10 @@ void mdp_video_device_release(struct video_device *vdev)
 	vb2_dma_contig_clear_max_seg_size(&mdp->pdev->dev);
 
 	mdp_comp_destroy(mdp);
-	for (i = 0; i < MDP_PIPE_MAX; i++)
+	for (i = 0; i < MDP_PIPE_MAX; i++) {
 		mtk_mutex_put(mdp->mdp_mutex[i]);
+		mtk_mutex_put(mdp->mdp_mutex2[i]);
+	}
 
 	mdp_vpu_shared_mem_free(&mdp->vpu);
 	v4l2_m2m_release(mdp->m2m_dev);
@@ -205,12 +207,28 @@ static int mdp_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err_destroy_device;
 	}
+	mm2_pdev = __get_pdev_by_id(pdev, mm_pdev, MDP_INFRA_MUTEX2);
+	/* MUTEX2 must works with MMSYS2 */
+	if ((IS_ERR(mm2_pdev)) ||
+	    (mm2_pdev && IS_ERR_OR_NULL(mdp->mdp_mmsys2))) {
+		ret = -ENODEV;
+		goto err_destroy_device;
+	}
 	for (i = 0; i < mdp->mdp_data->pipe_info_len; i++) {
+		struct platform_device *p;
+		struct mtk_mutex **m;
+		u32 id;
+
 		mutex_id = mdp->mdp_data->pipe_info[i].mutex_id;
-		if (mdp->mdp_mutex[mutex_id])
+		id = mdp->mdp_data->pipe_info[i].mmsys_id;
+		p = (id && mm2_pdev) ? mm2_pdev : mm_pdev;
+		m = (id && mm2_pdev) ?
+			mdp->mdp_mutex2 : mdp->mdp_mutex;
+
+		if (m[mutex_id])
 			continue;
-		mdp->mdp_mutex[mutex_id] = mtk_mutex_get(&mm_pdev->dev);
-		if (!mdp->mdp_mutex[mutex_id]) {
+		m[mutex_id] = mtk_mutex_get(&p->dev);
+		if (!m[mutex_id]) {
 			ret = -ENODEV;
 			goto err_free_mutex;
 		}
@@ -291,8 +309,10 @@ err_destroy_job_wq:
 err_deinit_comp:
 	mdp_comp_destroy(mdp);
 err_free_mutex:
-	for (i = 0; i < mdp->mdp_data->pipe_info_len; i++)
+	for (i = 0; i < mdp->mdp_data->pipe_info_len; i++) {
 		mtk_mutex_put(mdp->mdp_mutex[i]);
+		mtk_mutex_put(mdp->mdp_mutex2[i]);
+	}
 err_destroy_device:
 	kfree(mdp);
 err_return:
