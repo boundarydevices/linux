@@ -17,6 +17,7 @@
 #include <linux/notifier.h>
 #include <linux/spinlock.h>
 #include <linux/cpumask.h>
+#include <linux/clk.h>
 
 /*
  * Flags to control the behaviour of a genpd.
@@ -60,6 +61,9 @@
  * GENPD_FLAG_MIN_RESIDENCY:	Enable the genpd governor to consider its
  *				components' next wakeup when determining the
  *				optimal idle state.
+ *
+ * GENPD_FLAG_PM_PD_CLK:	Instructs genpd to enable/disable PD clocks when
+ *				powering on/off domain.
  */
 #define GENPD_FLAG_PM_CLK	 (1U << 0)
 #define GENPD_FLAG_IRQ_SAFE	 (1U << 1)
@@ -68,6 +72,7 @@
 #define GENPD_FLAG_CPU_DOMAIN	 (1U << 4)
 #define GENPD_FLAG_RPM_ALWAYS_ON (1U << 5)
 #define GENPD_FLAG_MIN_RESIDENCY (1U << 6)
+#define GENPD_FLAG_PM_PD_CLK	 (1U << 7)
 
 enum gpd_status {
 	GENPD_STATE_ON = 0,	/* PM domain is on */
@@ -163,6 +168,8 @@ struct generic_pm_domain {
 #ifndef CONFIG_IMX_GKI_FIX
 	unsigned int state_idx_saved; /* saved power state for recovery after system suspend/resume */
 #endif
+	struct clk_bulk_data *clks;
+	int num_clks;
 };
 
 static inline struct generic_pm_domain *pd_to_genpd(struct dev_pm_domain *pd)
@@ -226,6 +233,7 @@ int pm_genpd_remove_subdomain(struct generic_pm_domain *genpd,
 			      struct generic_pm_domain *subdomain);
 int pm_genpd_init(struct generic_pm_domain *genpd,
 		  struct dev_power_governor *gov, bool is_off);
+int pm_genpd_of_add_clks(struct generic_pm_domain *genpd, struct device *dev);
 int pm_genpd_remove(struct generic_pm_domain *genpd);
 int dev_pm_genpd_set_performance_state(struct device *dev, unsigned int state);
 int dev_pm_genpd_add_notifier(struct device *dev, struct notifier_block *nb);
@@ -266,6 +274,12 @@ static inline int pm_genpd_init(struct generic_pm_domain *genpd,
 				struct dev_power_governor *gov, bool is_off)
 {
 	return -ENOSYS;
+}
+static inline int pm_genpd_of_add_clks(struct generic_pm_domain *genpd,
+				       struct device *dev)
+{
+	return 0;
+
 }
 static inline int pm_genpd_remove(struct generic_pm_domain *genpd)
 {
