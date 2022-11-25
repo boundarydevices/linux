@@ -1962,7 +1962,7 @@
 			hdmi_pavi: hdmi-pai-pvi@32fc4000 {
 				compatible = "fsl,imx8mp-hdmi-pavi";
 				reg = <0x32fc4000 0x1000>;
-				clocks = <&hdmiphy 0>, <&clk IMX8MP_CLK_HDMI_APB>;
+				clocks = <&clk IMX8MP_CLK_DUMMY>, <&clk IMX8MP_CLK_HDMI_APB>;
 				clock-names = "pvi_clk", "pai_clk";
 				power-domains = <&hdmi_blk_ctrl IMX8MP_HDMIBLK_PD_PVI>;
 				status = "disabled";
