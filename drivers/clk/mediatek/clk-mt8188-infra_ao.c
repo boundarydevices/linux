@@ -57,6 +57,10 @@ static const struct mtk_gate_regs infra_ao4_cg_regs = {
 #define GATE_INFRA_AO2(_id, _name, _parent, _shift)			\
 	GATE_MTK(_id, _name, _parent, &infra_ao2_cg_regs, _shift, &mtk_clk_gate_ops_setclr)
 
+#define GATE_INFRA_AO2_FLAGS(_id, _name, _parent, _shift, _flag)		\
+	GATE_MTK_FLAGS(_id, _name, _parent, &infra_ao2_cg_regs, _shift,	\
+		&mtk_clk_gate_ops_setclr, _flag)
+
 #define GATE_INFRA_AO3_FLAGS(_id, _name, _parent, _shift, _flag)		\
 	GATE_MTK_FLAGS(_id, _name, _parent, &infra_ao3_cg_regs, _shift,	\
 		&mtk_clk_gate_ops_setclr, _flag)
@@ -133,8 +137,8 @@ static const struct mtk_gate infra_ao_clks[] = {
 	GATE_INFRA_AO2(CLK_INFRA_AO_SPI1, "infra_ao_spi1", "top_spi", 6),
 	GATE_INFRA_AO2(CLK_INFRA_AO_SPI2, "infra_ao_spi2", "top_spi", 9),
 	GATE_INFRA_AO2(CLK_INFRA_AO_SPI3, "infra_ao_spi3", "top_spi", 10),
-	GATE_INFRA_AO2(CLK_INFRA_AO_FSSPM, "infra_ao_fsspm", "top_sspm", 15),
-	GATE_INFRA_AO2(CLK_INFRA_AO_SSPM_BUS_HCLK, "infra_ao_sspm_hclk", "top_axi", 17),
+	GATE_INFRA_AO2_FLAGS(CLK_INFRA_AO_FSSPM, "infra_ao_fsspm", "top_sspm", 15, CLK_IS_CRITICAL),
+	GATE_INFRA_AO2_FLAGS(CLK_INFRA_AO_SSPM_BUS_HCLK, "infra_ao_sspm_hclk", "top_axi", 17, CLK_IS_CRITICAL),
 	GATE_INFRA_AO2(CLK_INFRA_AO_APDMA_BCLK, "infra_ao_apdma_bclk", "top_axi", 18),
 	GATE_INFRA_AO2(CLK_INFRA_AO_SPI4, "infra_ao_spi4", "top_spi", 25),
 	GATE_INFRA_AO2(CLK_INFRA_AO_SPI5, "infra_ao_spi5", "top_spi", 26),
