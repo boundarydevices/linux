@@ -1950,7 +1950,6 @@ static void lpuart32_shutdown(struct uart_port *port)
 	temp &= ~(UARTCTRL_TE | UARTCTRL_RE | UARTCTRL_TIE |
 		UARTCTRL_TCIE | UARTCTRL_RIE | UARTCTRL_ILIE | UARTCTRL_SBK);
 	lpuart32_write(port, temp, UARTCTRL);
-	lpuart32_write(port, 0, UARTMODIR);
 
 	spin_unlock_irqrestore(&port->lock, flags);
 
