@@ -28,6 +28,8 @@ static void
 mtk_mt8195_phy_tmds_high_bit_clk_ratio(struct mtk_hdmi_phy *hdmi_phy,
 				       bool enable)
 {
+	dev_info(hdmi_phy->dev, "tmds_high_bit_clk_ratio enabled:%d\n", enable);
+
 	mtk_hdmi_ana_fifo_en(hdmi_phy);
 
 	/* HDMI 2.0 specification, 3.4Gbps <= TMDS Bit Rate <= 6G,
@@ -347,6 +349,11 @@ static int mtk_hdmi_pll_calculate_params(struct clk_hw *hw, unsigned long rate,
 
 	if ((tmds_clk < 25000000) || (tmds_clk > 594000000))
 		return -EINVAL;
+
+	if (tmds_clk >= 340000000)
+		hdmi_phy->is_over_340M = true;
+	else
+		hdmi_phy->is_over_340M = false;
 
 	da_hdmitx21_ref_ck = 26000000UL; //in HZ
 
@@ -682,7 +689,7 @@ static int mtk_hdmi_phy_configure(struct phy *phy, union phy_configure_opts *opt
 	struct phy_configure_opts_dp *dp_opts = &opts->dp;
 	struct mtk_hdmi_phy *hdmi_phy = phy_get_drvdata(phy);
 	int ret = 0;
-	bool enable = 0;
+	bool enable = hdmi_phy->is_over_340M;
 
 	ret = clk_set_rate(hdmi_phy->pll, dp_opts->link_rate);
 
@@ -697,7 +704,7 @@ out:
 
 struct mtk_hdmi_phy_conf mtk_hdmi_phy_8195_conf = {
 	/* TODO: CLK_SET_RATE_GATE causes hdmi_txpll clock
-	 * set_rate() fails. We need to adjust client 
+	 * set_rate() fails. We need to adjust client
 	 * calling sequences to properly address this issue.
 	 */
 	.flags = CLK_SET_RATE_PARENT,

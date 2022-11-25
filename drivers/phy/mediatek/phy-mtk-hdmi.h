@@ -42,6 +42,7 @@ struct mtk_hdmi_phy {
 	unsigned char drv_imp_d0;
 	unsigned int ibias;
 	unsigned int ibias_up;
+	bool is_over_340M;
 };
 
 void mtk_hdmi_phy_clear_bits(struct mtk_hdmi_phy *hdmi_phy, u32 offset,
