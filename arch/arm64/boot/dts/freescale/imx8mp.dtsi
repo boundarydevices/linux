@@ -2002,8 +2002,9 @@
 				interrupt-parent = <&irqsteer_hdmi>;
 				power-domains = <&hdmi_blk_ctrl IMX8MP_HDMIBLK_PD_HDMI_TX>;
 				clocks = <&clk IMX8MP_CLK_HDMI_APB>,
-						<&clk IMX8MP_CLK_HDMI_24M>;
-				clock-names = "iahb", "isfr";
+						<&clk IMX8MP_CLK_HDMI_24M>,
+						<&hdmiphy 0>;
+				clock-names = "iahb", "isfr", "pix";
 				assigned-clocks = <&clk IMX8MP_CLK_HDMI_APB>,
 							<&clk IMX8MP_CLK_HDMI_AXI>,
 							<&clk IMX8MP_CLK_HDMI_24M>;
