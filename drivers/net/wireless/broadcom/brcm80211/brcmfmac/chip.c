@@ -250,7 +250,7 @@ struct sbsocramregs {
 #define BRCMF_BLHS_POLL_INTERVAL			10	/* msec */
 #define BRCMF_BLHS_D2H_READY_TIMEOUT			100	/* msec */
 #define BRCMF_BLHS_D2H_TRXHDR_PARSE_DONE_TIMEOUT	50	/* msec */
-#define BRCMF_BLHS_D2H_VALDN_DONE_TIMEOUT		250	/* msec */
+#define BRCMF_BLHS_D2H_VALDN_DONE_TIMEOUT		450	/* msec */
 
 /* Bootloader handshake flags - dongle to host */
 #define BRCMF_BLHS_D2H_START			BIT(0)
