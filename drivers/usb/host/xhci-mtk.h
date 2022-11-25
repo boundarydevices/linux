@@ -175,6 +175,7 @@ struct xhci_hcd_mtk {
 	u32 uwk_vers;
 	bool fix_rx_depth;
 	bool keep_clk_on;
+	int wakeup_irq;
 	struct proc_dir_entry *root;
 	struct proc_dir_entry *testmode_file;
 };
