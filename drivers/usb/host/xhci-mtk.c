@@ -170,7 +170,10 @@ static void xhci_mtk_set_frame_interval(struct xhci_hcd_mtk *mtk)
 	struct usb_hcd *hcd = mtk->hcd;
 	u32 value;
 
-	if (!of_device_is_compatible(dev->of_node, "mediatek,mt8195-xhci"))
+	if (!of_device_is_compatible(dev->of_node, "mediatek,mt8195-xhci") &&
+	    !of_device_is_compatible(dev->of_node, "mediatek,mt8195-xhci-host") &&
+	    !of_device_is_compatible(dev->of_node, "mediatek,mt8195-xhci-p1") &&
+	    !of_device_is_compatible(dev->of_node, "mediatek,mt8195-xhci-p2"))
 		return;
 
 	value = readl(hcd->regs + HFCNTR_CFG);
@@ -1067,9 +1070,26 @@ static const struct dev_pm_ops xhci_mtk_pm_ops = {
 
 #define DEV_PM_OPS (IS_ENABLED(CONFIG_PM) ? &xhci_mtk_pm_ops : NULL)
 
+static const struct of_device_id mtk_xhci_p2_of_match[] = {
+	{ .compatible = "mediatek,mtk-xhci-p2"},
+	{ .compatible = "mediatek,mt8195-xhci-p2"},
+	{ },
+};
+MODULE_DEVICE_TABLE(of, mtk_xhci_p2_of_match);
+
+static struct platform_driver mtk_xhci_p2_driver = {
+	.probe	= xhci_mtk_probe,
+	.remove	= xhci_mtk_remove,
+	.driver	= {
+		.name = "xhci-mtk-p2",
+		.pm = DEV_PM_OPS,
+		.of_match_table = mtk_xhci_p2_of_match,
+	},
+};
 
 static const struct of_device_id mtk_xhci_p1_of_match[] = {
 	{ .compatible = "mediatek,mtk-xhci-p1"},
+	{ .compatible = "mediatek,mt8195-xhci-p1"},
 	{ },
 };
 MODULE_DEVICE_TABLE(of, mtk_xhci_p1_of_match);
@@ -1081,6 +1101,22 @@ static struct platform_driver mtk_xhci_p1_driver = {
 		.name = "xhci-mtk-p1",
 		.pm = DEV_PM_OPS,
 		.of_match_table = mtk_xhci_p1_of_match,
+	},
+};
+
+static const struct of_device_id mtk_xhci_host_of_match[] = {
+	{ .compatible = "mediatek,mt8195-xhci-host"},
+	{ },
+};
+MODULE_DEVICE_TABLE(of, mtk_xhci_host_of_match);
+
+static struct platform_driver mtk_xhci_host_driver = {
+	.probe	= xhci_mtk_probe,
+	.remove	= xhci_mtk_remove,
+	.driver	= {
+		.name = "mt8195-xhci-host",
+		.pm = DEV_PM_OPS,
+		.of_match_table = mtk_xhci_host_of_match,
 	},
 };
 
@@ -1107,7 +1143,13 @@ static int __init xhci_mtk_init(void)
 	int ret;
 
 	xhci_init_driver(&xhci_mtk_hc_driver, &xhci_mtk_overrides);
+	ret = platform_driver_register(&mtk_xhci_p2_driver);
+	if (ret < 0)
+		return ret;
 	ret = platform_driver_register(&mtk_xhci_p1_driver);
+	if (ret < 0)
+		return ret;
+	ret = platform_driver_register(&mtk_xhci_host_driver);
 	if (ret < 0)
 		return ret;
 	return platform_driver_register(&mtk_xhci_driver);
@@ -1116,7 +1158,9 @@ module_init(xhci_mtk_init);
 
 static void __exit xhci_mtk_exit(void)
 {
+	platform_driver_unregister(&mtk_xhci_p2_driver);
 	platform_driver_unregister(&mtk_xhci_p1_driver);
+	platform_driver_unregister(&mtk_xhci_host_driver);
 	platform_driver_unregister(&mtk_xhci_driver);
 }
 module_exit(xhci_mtk_exit);
