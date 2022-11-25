@@ -1962,8 +1962,7 @@
 			hdmi_pavi: hdmi-pai-pvi@32fc4000 {
 				compatible = "fsl,imx8mp-hdmi-pavi";
 				reg = <0x32fc4000 0x1000>;
-				clocks = <&clk IMX8MP_CLK_DUMMY>, <&clk IMX8MP_CLK_HDMI_APB>;
-				clock-names = "pvi_clk", "pai_clk";
+				clocks = <&clk IMX8MP_CLK_HDMI_APB>;
 				power-domains = <&hdmi_blk_ctrl IMX8MP_HDMIBLK_PD_PVI>;
 				status = "disabled";
 			};
@@ -1971,7 +1970,7 @@
 			lcdif3: lcd-controller@32fc6000 {
 				#address-cells = <1>;
 				#size-cells = <0>;
-				compatible = "fsl,imx8mp-lcdif3";
+				compatible = "fsl,imx8mp-lcdif1";
 				reg = <0x32fc6000 0x10000>;
 				clocks = <&hdmiphy 0>,
 						<&clk IMX8MP_CLK_HDMI_AXI>,
@@ -2012,9 +2011,6 @@
 							<&clk IMX8MP_SYS_PLL2_500M>,
 							<&clk IMX8MP_CLK_24M>;
 				assigned-clock-rates = <133000000>, <500000000>, <24000000>;
-				phys = <&hdmiphy>;
-				phy-names = "hdmi";
-				gpr = <&hdmi_blk_ctrl>;
 				status = "disabled";
 
 				port@0 {
