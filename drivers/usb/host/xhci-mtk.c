@@ -22,6 +22,7 @@
 #include <linux/proc_fs.h>
 #include <linux/reset.h>
 #include <linux/seq_file.h>
+#include <linux/interrupt.h>
 
 #include "xhci.h"
 #include "xhci-mtk.h"
@@ -132,9 +133,14 @@
 #define SSC_IP_SLEEP_EN	BIT(4)
 #define SSC_SPM_INT_EN		BIT(1)
 
+/* mt8195 port1 etc */
+#define WC1P_IS_EN	BIT(24)
+#define WC1P_IS_P	BIT(30) /* polarity for ip sleep */
+#define WC1P_IS_C(x)	(((x) & 0x7) << 27)  /* cycle debounce */
 enum ssusb_uwk_vers {
 	SSUSB_UWK_V1 = 1,
 	SSUSB_UWK_V2,
+	SSUSB_UWK_V3,
 	SSUSB_UWK_V1_1 = 101,	/* specific revision 1.01 */
 	SSUSB_UWK_V1_2,		/* specific revision 1.2 */
 	SSUSB_UWK_V1_3,		/* mt8195 IP0 */
@@ -560,6 +566,11 @@ static void usb_wakeup_ip_sleep_set(struct xhci_hcd_mtk *mtk, bool enable)
 		msk = SSC_IP_SLEEP_EN | SSC_SPM_INT_EN;
 		val = enable ? msk : 0;
 		break;
+	case SSUSB_UWK_V3:
+		reg = mtk->uwk_reg_base + PERI_WK_CTRL1;
+		msk = WC1P_IS_EN;
+		val = enable ? msk : 0;
+		break;
 	default:
 		return;
 	}
@@ -756,7 +767,7 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 			return irq;
 	}
 
-	wakeup_irq = platform_get_irq_byname_optional(pdev, "wakeup");
+	mtk->wakeup_irq = wakeup_irq = platform_get_irq_byname_optional(pdev, "wakeup");
 	if (wakeup_irq == -EPROBE_DEFER)
 		return wakeup_irq;
 
@@ -976,6 +987,8 @@ static int __maybe_unused xhci_mtk_suspend(struct device *dev)
 		del_timer_sync(&shared_hcd->rh_timer);
 	}
 
+	if (mtk->wakeup_irq > 0)
+		disable_irq_nosync(mtk->wakeup_irq);
 	ret = xhci_mtk_host_disable(mtk);
 	if (ret)
 		goto restart_poll_rh;
@@ -1036,13 +1049,30 @@ static int __maybe_unused xhci_mtk_runtime_suspend(struct device *dev)
 	struct xhci_hcd_mtk  *mtk = dev_get_drvdata(dev);
 	struct xhci_hcd *xhci = hcd_to_xhci(mtk->hcd);
 	int ret = 0;
+	struct device *parent;
+	struct device_driver *driver;
 
 	if (xhci->xhc_state)
 		return -ESHUTDOWN;
 
-	if (device_may_wakeup(dev))
+	if (device_may_wakeup(dev)) {
 		ret = xhci_mtk_suspend(dev);
-
+		if (!mtk->has_ippc) {
+			parent = dev->parent;
+			if (parent && parent->driver) {
+				dev_info(mtk->dev, "%s: parent pm callback\n", __func__);
+				driver = parent->driver;
+				ret = driver->pm->runtime_suspend(parent);
+				if (ret) {
+					dev_info(mtk->dev, "%s: parent pm fail!\n", __func__);
+					xhci_mtk_resume(mtk->dev);
+					return ret;
+				}
+			}
+		}
+		if (mtk->wakeup_irq > 0)
+			enable_irq(mtk->wakeup_irq);
+	}
 	/* -EBUSY: let PM automatically reschedule another autosuspend */
 	return ret ? -EBUSY : 0;
 }
@@ -1052,12 +1082,25 @@ static int __maybe_unused xhci_mtk_runtime_resume(struct device *dev)
 	struct xhci_hcd_mtk  *mtk = dev_get_drvdata(dev);
 	struct xhci_hcd *xhci = hcd_to_xhci(mtk->hcd);
 	int ret = 0;
+	struct device *parent;
+	struct device_driver *driver;
 
 	if (xhci->xhc_state)
 		return -ESHUTDOWN;
 
-	if (device_may_wakeup(dev))
+	if (device_may_wakeup(dev)) {
+		if (!mtk->has_ippc) {
+			parent = dev->parent;
+			if (parent && parent->driver) {
+				dev_info(mtk->dev, "%s: parent pm callback\n", __func__);
+				driver = parent->driver;
+				ret = driver->pm->runtime_resume(parent);
+				if (ret)
+					dev_info(mtk->dev, "%s: parent pm fail!\n", __func__);
+			}
+		}
 		ret = xhci_mtk_resume(dev);
+	}
 
 	return ret;
 }
