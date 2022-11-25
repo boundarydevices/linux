@@ -1280,6 +1280,9 @@ static irqreturn_t mtk_hdmi_hpd_work_handle(int irq, void *arg)
 	struct mtk_hdmi *hdmi = arg;
 	enum hdmi_hpd_state hpd;
 
+	/* 30ms is an empirical value that could debounce known HDMI monitor's HPD status. */
+	msleep(30);
+
 	hpd = mtk_hdmi_hpd_pord_status(hdmi);
 	dev_info(hdmi->dev, "hpd:%d\n", hpd);
 
