@@ -832,6 +832,17 @@ config REGULATOR_MTK_DVFSRC
 	  of Mediatek. It allows for voting on regulator state
 	  between multiple users.
 
+config REGULATOR_NT50358A
+	tristate "Novatek NT50358A Regulators"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  This adds support for voltage regulators in Novatek NT50358A
+	  Display Bias IC.
+	  The device supports two regulators (DSVP/DSVN).
+	  And DSVP is the real Vout range from 4V to 6V, DSVN is the real Vout range from -4V to -6V.
+	  It's common used to provide the power for the display panel.
+
 config REGULATOR_PALMAS
 	tristate "TI Palmas PMIC Regulators"
 	depends on MFD_PALMAS
