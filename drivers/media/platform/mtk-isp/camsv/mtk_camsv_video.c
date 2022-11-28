@@ -193,7 +193,7 @@ static void mtk_cam_dev_load_default_fmt(struct mtk_cam_dev *cam)
 	fmt->colorspace = V4L2_COLORSPACE_SRGB;
 	fmt->field = V4L2_FIELD_NONE;
 	fmt->ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT;
-	fmt->quantization = V4L2_QUANTIZATION_DEFAULT;
+	fmt->quantization = V4L2_QUANTIZATION_FULL_RANGE;
 	fmt->xfer_func = V4L2_XFER_FUNC_DEFAULT;
 
 	vdev->fmtinfo = mtk_cam_format_info_by_fourcc(fmt->pixelformat);
@@ -587,7 +587,7 @@ static int mtk_cam_vidioc_try_fmt(struct file *file, void *fh,
 	pix_mp->colorspace = V4L2_COLORSPACE_SRGB;
 	pix_mp->field = V4L2_FIELD_NONE;
 	pix_mp->ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT;
-	pix_mp->quantization = V4L2_QUANTIZATION_DEFAULT;
+	pix_mp->quantization = V4L2_QUANTIZATION_FULL_RANGE;
 	pix_mp->xfer_func = V4L2_XFER_FUNC_DEFAULT;
 
 	return 0;

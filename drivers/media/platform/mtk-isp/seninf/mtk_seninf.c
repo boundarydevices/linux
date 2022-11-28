@@ -1123,7 +1123,7 @@ static const struct v4l2_mbus_framefmt mtk_seninf_default_fmt = {
 	.colorspace = V4L2_COLORSPACE_SRGB,
 	.xfer_func = V4L2_XFER_FUNC_DEFAULT,
 	.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT,
-	.quantization = V4L2_QUANTIZATION_DEFAULT,
+	.quantization = V4L2_QUANTIZATION_FULL_RANGE
 };
 
 static int __seninf_set_routing(struct v4l2_subdev *sd,
