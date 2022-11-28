@@ -33,15 +33,13 @@
 #define MODEL_SCALING        1
 
 struct max1726x_platform_data {
+	u16 config;
+	u16 config2;
 	u16 designcap;
 	u16 ichgterm;
 	u16 vempty;
-	int vcharge;
-
 	u16 learncfg;
 	u16 relaxcfg;
-	u16 config;
-	u16 config2;
 	u16 fullsocthr;
 	u16 tgain;
 	u16 toff;
@@ -54,10 +52,8 @@ struct max1726x_platform_data {
 	u16 qrtable30;
 	u16 cvhalftime;
 	u16 cvmixcap;
-
 	u16 dpacc;
 	u16 modelcfg;
-
 	u16 model_data[MAX1726X_TABLE_SIZE];
 	u16 model_rcomp_seg;
 	int (*get_charging_status)(void);
@@ -77,6 +73,11 @@ struct max1726x_platform_data {
 	int soc_min;    /* in percent */
 	int curr_max;   /* in mA */
 	int curr_min;   /* in mA */
+	int vcharge;
+#define MAX_MASK16_CONFIG	BIT(0)
+#define MAX_MASK16_CONFIG2	BIT(1)
+	unsigned mask16;
+	unsigned mask32;
 };
 
 enum max1726x_register{
