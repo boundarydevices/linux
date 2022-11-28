@@ -323,20 +323,21 @@
 		status = "okay";
 	};
 
-	rt4801@3e {
-		compatible = "richtek,rt4801";
+	nt50358a@3e {
+		compatible = "novatek,nt50358a";
 		reg = <0x3e>;
 		status = "okay";
 		enable-gpios = <&pio 138 0>, <&pio 139 0>;
 
 		dsvp: DSVP {
-			regulator-name = "rt4801,dsvp";
+			regulator-name = "nt50358a,dsvp";
 			regulator-min-microvolt = <5800000>;
 			regulator-max-microvolt = <5800000>;
 			regulator-boot-on;
 		};
+
 		dsvn: DSVN {
-			regulator-name = "rt4801,dsvn";
+			regulator-name = "nt50358a,dsvn";
 			regulator-min-microvolt = <5800000>;
 			regulator-max-microvolt = <5800000>;
 			regulator-boot-on;
