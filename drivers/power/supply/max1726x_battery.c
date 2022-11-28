@@ -684,6 +684,10 @@ static int max1726x_init(struct max1726x_priv *priv)
 			else{
 				regmap_write(regmap, MAX1726X_MODELCFG_REG, 0x8000);
 			}
+			if (pdata->mask16 & MAX_MASK16_CONFIG)
+				regmap_write(regmap, MAX1726X_CONFIG_REG, pdata->config);
+			if (pdata->mask16 & MAX_MASK16_CONFIG2)
+				regmap_write(regmap, MAX1726X_CONFIG2_REG, pdata->config2);
 
 			/* Poll ModelCFG.ModelRefresh bit for clear */
 			ret = max1726x_poll_flag_clear(regmap, MAX1726X_MODELCFG_REG, MAX1726X_MODELCFG_REFRESH, 500);
@@ -808,148 +812,88 @@ static void max1726x_init_worker(struct work_struct *work)
 	max1726x_init(priv);
 }
 
+struct pdata_init32 {
+	const char *name;
+	int offset;
+	int default_val;
+};
+
+struct pdata_init16 {
+	const char *name;
+	u16 offset;
+	u16 default_val;
+};
+
+static const struct pdata_init16 pdata_setup16[] = {
+	{"config", offsetof(struct max1726x_platform_data, config), 0x2210},
+	{"config2", offsetof(struct max1726x_platform_data, config2), 0x0658},
+	{"designcap", offsetof(struct max1726x_platform_data, designcap), 0x0BB8},
+	{"ichgterm", offsetof(struct max1726x_platform_data, ichgterm), 0x0640},
+	{"vempty", offsetof(struct max1726x_platform_data, vempty), 0xA561},
+	{"learncfg", offsetof(struct max1726x_platform_data, learncfg), 0xC482},
+	{"relaxcfg", offsetof(struct max1726x_platform_data, relaxcfg), 0x2039},
+	{"fullsocthr", offsetof(struct max1726x_platform_data, fullsocthr), 0x5F05},
+	{"tgain", offsetof(struct max1726x_platform_data, tgain), 0xEE56},
+	{"toff", offsetof(struct max1726x_platform_data, toff), 0x1DA4},
+	{"curve", offsetof(struct max1726x_platform_data, curve), 0x0025},
+	{"rcomp0", offsetof(struct max1726x_platform_data, rcomp0), 0x0070},
+	{"tempco", offsetof(struct max1726x_platform_data, tempco), 0x223E},
+	{"qrtable00", offsetof(struct max1726x_platform_data, qrtable00), 0x1050},
+	{"qrtable10", offsetof(struct max1726x_platform_data, qrtable10), 0x2013},
+	{"qrtable20", offsetof(struct max1726x_platform_data, qrtable20), 0x0B04},
+	{"qrtable30", offsetof(struct max1726x_platform_data, qrtable30), 0x0885},
+	{"cvhalftime", offsetof(struct max1726x_platform_data, cvhalftime), 0x0A00},
+	{"cvmixcap", offsetof(struct max1726x_platform_data, cvmixcap), 0x08CA},
+	{"dpacc", offsetof(struct max1726x_platform_data, dpacc), 0x0C80},
+	{"modelcfg", offsetof(struct max1726x_platform_data, modelcfg), 0x8000},
+};
+
+static const struct pdata_init32 pdata_setup32[] = {
+	{"model-option", offsetof(struct max1726x_platform_data, model_option), 1},
+	{"rsense", offsetof(struct max1726x_platform_data, rsense), 10},
+	{"valrt-min", offsetof(struct max1726x_platform_data, volt_min), 0},	/* mV */ /* Disable alert */
+	{"valrt-max", offsetof(struct max1726x_platform_data, volt_max), 5100},	/* mV */ /* Disable alert */
+	{"talrt-min", offsetof(struct max1726x_platform_data, temp_min), -128},	/* DegreeC */ /* Disable alert */
+	{"talrt-max", offsetof(struct max1726x_platform_data, temp_max), 127},	/* DegreeC */ /* Disable alert */
+	{"salrt-min", offsetof(struct max1726x_platform_data, soc_min), 0},	/* Percent */ /* Disable alert */
+	{"salrt-max", offsetof(struct max1726x_platform_data, soc_max), 255},	/* Percent */ /* Disable alert */
+	{"ialrt-min", offsetof(struct max1726x_platform_data, curr_min), -5120}, /* mA */ /* Disable alert */
+	{"ialrt-max", offsetof(struct max1726x_platform_data, curr_max), 5080},	/* mA */ /* Disable alert */
+	{"vcharge", offsetof(struct max1726x_platform_data, vcharge), 4300},
+};
+
 static struct max1726x_platform_data *max1726x_parse_dt(struct device *dev)
 {
 	struct device_node *np = dev->of_node;
 	struct max1726x_platform_data *pdata;
 	struct property *prop;
-	int ret;
+	int ret, i;
+	unsigned mask32 = 0;
+	unsigned mask16 = 0;
 
 	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
 	if (!pdata)
 		return NULL;
 
-	ret = of_property_read_u32(np, "talrt-min", &pdata->temp_min);
-	if (ret)
-		pdata->temp_min = -128; /* DegreeC */ /* Disable alert */
+	for (i = 0; i < ARRAY_SIZE(pdata_setup16); i++) {
+		u16 *p = (u16 *)(((void *)pdata) +  pdata_setup16[i].offset);
+		ret = of_property_read_u16(np, pdata_setup16[i].name, p);
+		if (ret)
+			*p = pdata_setup16[i].default_val;
+		else
+			mask16 |= (1 << i);
+	}
+	pdata->mask16 = mask16;
 
-	ret = of_property_read_u32(np, "talrt-max", &pdata->temp_max);
-	if (ret)
-		pdata->temp_max = 127; /* DegreeC */ /* Disable alert */
-
-	ret = of_property_read_u32(np, "valrt-min", &pdata->volt_min);
-	if (ret)
-		pdata->volt_min = 0; /* mV */ /* Disable alert */
-
-	ret = of_property_read_u32(np, "valrt-max", &pdata->volt_max);
-	if (ret)
-		pdata->volt_max = 5100; /* mV */ /* Disable alert */
-
-	ret = of_property_read_u32(np, "ialrt-min", &pdata->curr_min);
-	if (ret)
-		pdata->curr_min = -5120; /* mA */ /* Disable alert */
-
-	ret = of_property_read_u32(np, "ialrt-max", &pdata->curr_max);
-	if (ret)
-		pdata->curr_max = 5080; /* mA */ /* Disable alert */
-
-	ret = of_property_read_u32(np, "salrt-min", &pdata->soc_min);
-	if (ret)
-		pdata->soc_min = 0; /* Percent */ /* Disable alert */
-
-	ret = of_property_read_u32(np, "salrt-max", &pdata->soc_max);
-	if (ret)
-		pdata->soc_max = 255; /* Percent */ /* Disable alert */
-
-
-	ret = of_property_read_u32(np, "rsense", &pdata->rsense);
-	if (ret)
-		pdata->rsense = 10;
-
-	ret = of_property_read_u32(np, "model-option", &pdata->model_option);
-	if (ret)
-		pdata->model_option = 1;
-
-
-	ret = of_property_read_u16(np, "vempty", &pdata->vempty);
-	if (ret)
-		pdata->vempty = 0xA561;
-
-	ret = of_property_read_u16(np, "ichgterm", &pdata->ichgterm);
-	if (ret)
-		pdata->ichgterm = 0x0640;
-
-	ret = of_property_read_u16(np, "designcap", &pdata->designcap);
-	if (ret)
-		pdata->designcap = 0x0BB8;
-
-	ret = of_property_read_u32(np, "vcharge", &pdata->vcharge);
-	if (ret)
-		pdata->vcharge = 4300;
-
-
-	ret = of_property_read_u16(np, "rcomp0", &pdata->rcomp0);
-	if (ret)
-		pdata->rcomp0 = 0x0070;
-
-	ret = of_property_read_u16(np, "tempco", &pdata->tempco);
-	if (ret)
-		pdata->tempco = 0x223E;
-
-	ret = of_property_read_u16(np, "learncfg", &pdata->learncfg);
-	if (ret)
-		pdata->learncfg = 0xC482;
-
-	ret = of_property_read_u16(np, "qrtable00", &pdata->qrtable00);
-	if (ret)
-		pdata->qrtable00 = 0x1050;
-
-	ret = of_property_read_u16(np, "qrtable10", &pdata->qrtable10);
-	if (ret)
-		pdata->qrtable10 = 0x2013;
-
-	ret = of_property_read_u16(np, "qrtable20", &pdata->qrtable20);
-	if (ret)
-		pdata->qrtable20 = 0x0B04;
-
-	ret = of_property_read_u16(np, "qrtable30", &pdata->qrtable30);
-	if (ret)
-		pdata->qrtable30 = 0x0885;
-
-	ret = of_property_read_u16(np, "dpacc", &pdata->dpacc);
-	if (ret)
-		pdata->dpacc = 0x0C80;
-
-	ret = of_property_read_u16(np, "modelcfg", &pdata->modelcfg);
-	if (ret)
-		pdata->modelcfg = 0x8000;
-
-
-	ret = of_property_read_u16(np, "relaxcfg", &pdata->relaxcfg);
-	if (ret)
-		pdata->relaxcfg = 0x2039;
-
-	ret = of_property_read_u16(np, "config", &pdata->config);
-	if (ret)
-		pdata->config = 0x2210;
-
-	ret = of_property_read_u16(np, "config2", &pdata->config2);
-	if (ret)
-		pdata->config2 = 0x0658;
-
-	ret = of_property_read_u16(np, "fullsocthr", &pdata->fullsocthr);
-	if (ret)
-		pdata->fullsocthr = 0x5F05;
-
-	ret = of_property_read_u16(np, "tgain", &pdata->tgain);
-	if (ret)
-		pdata->tgain = 0xEE56;
-
-	ret = of_property_read_u16(np, "toff", &pdata->toff);
-	if (ret)
-		pdata->toff = 0x1DA4;
-
-	ret = of_property_read_u16(np, "curve", &pdata->curve);
-	if (ret)
-		pdata->curve = 0x0025;
-
-	ret = of_property_read_u16(np, "cvhalftime", &pdata->cvhalftime);
-	if (ret)
-		pdata->curve = 0x0A00;
-
-	ret = of_property_read_u16(np, "cvmixcap", &pdata->cvmixcap);
-	if (ret)
-		pdata->curve = 0x08CA;
+	for (i = 0; i < ARRAY_SIZE(pdata_setup32); i++) {
+		int *p = (int *)(((void *)pdata) +  pdata_setup32[i].offset);
+		ret = of_property_read_u32(np, pdata_setup32[i].name, p);
+		if (ret)
+			*p = pdata_setup32[i].default_val;
+		else
+			mask32 |= (1 << i);
+	}
+	pdata->mask32 = mask32;
 
 	prop = of_find_property(np, "model-data", NULL);
 	if (prop && prop->length == MAX1726X_TABLE_SIZE_IN_BYTES) {
