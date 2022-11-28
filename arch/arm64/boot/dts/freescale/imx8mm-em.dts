@@ -719,6 +719,7 @@
 
 	max1726x@36 {
 		compatible  = "maxim,max1726x";
+		config = /bits/ 16 <0xa210>;
 		reg = <0x36>;
 		interrupts-extended = GPIRQ_MAX1726X;
 		pinctrl-names = "default";
