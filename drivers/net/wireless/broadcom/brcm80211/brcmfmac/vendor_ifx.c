@@ -35,6 +35,7 @@
 #include "debug.h"
 #include "fwil.h"
 #include "vendor_ifx.h"
+#include "xtlv.h"
 
 static int ifx_cfg80211_vndr_send_cmd_reply(struct wiphy *wiphy,
 					    const void  *data, int len)
@@ -621,3 +622,141 @@ int ifx_cfg80211_vndr_cmds_randmac(struct wiphy *wiphy,
 	return ret;
 }
 
+int ifx_cfg80211_vndr_cmds_mbo(struct wiphy *wiphy,
+			       struct wireless_dev *wdev,
+			       const void *data, int len)
+{
+	int ret = 0;
+	int tmp, attr_type, mbo_param;
+	const struct nlattr *attr_iter, *mbo_param_iter;
+
+	struct brcmf_cfg80211_vif *vif;
+	struct brcmf_if *ifp;
+	struct bcm_iov_buf *mbo_iov;
+	struct bcm_xtlv *mbo_xtlv;
+	u8 param[64] = {0};
+	u16 buf_len = 0, buf_len_start = 0;
+
+	vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+	ifp = vif->ifp;
+	mbo_iov = (struct bcm_iov_buf *)param;
+	mbo_iov->version = cpu_to_le16(IFX_MBO_IOV_VERSION);
+	mbo_xtlv = (struct bcm_xtlv *)mbo_iov->data;
+	buf_len_start = sizeof(param) - sizeof(struct bcm_iov_buf);
+	buf_len = buf_len_start;
+
+	nla_for_each_attr(attr_iter, data, len, tmp) {
+		attr_type = nla_type(attr_iter);
+
+		switch (attr_type) {
+		case IFX_VENDOR_ATTR_MBO_CMD:
+			mbo_iov->id = cpu_to_le16(nla_get_u8(attr_iter));
+			break;
+		case IFX_VENDOR_ATTR_MBO_PARAMS:
+			nla_for_each_nested(mbo_param_iter, attr_iter, tmp) {
+				mbo_param = nla_type(mbo_param_iter);
+
+				switch (mbo_param) {
+				case IFX_VENDOR_ATTR_MBO_PARAM_OPCLASS:
+				{
+					u8 op_class;
+
+					op_class = nla_get_u8(mbo_param_iter);
+					brcmf_pack_xtlv(IFX_VENDOR_ATTR_MBO_PARAM_OPCLASS,
+							&op_class, sizeof(op_class),
+							(char **)&mbo_xtlv, &buf_len);
+				}
+					break;
+				case IFX_VENDOR_ATTR_MBO_PARAM_CHAN:
+				{
+					u8 chan;
+
+					chan = nla_get_u8(mbo_param_iter);
+					brcmf_pack_xtlv(IFX_VENDOR_ATTR_MBO_PARAM_CHAN,
+							&chan, sizeof(chan),
+							(char **)&mbo_xtlv, &buf_len);
+				}
+					break;
+				case IFX_VENDOR_ATTR_MBO_PARAM_PREFERENCE:
+				{
+					u8 pref;
+
+					pref = nla_get_u8(mbo_param_iter);
+					brcmf_pack_xtlv(IFX_VENDOR_ATTR_MBO_PARAM_PREFERENCE,
+							&pref, sizeof(pref),
+							(char **)&mbo_xtlv, &buf_len);
+				}
+					break;
+				case IFX_VENDOR_ATTR_MBO_PARAM_REASON_CODE:
+				{
+					u8 reason;
+
+					reason = nla_get_u8(mbo_param_iter);
+					brcmf_pack_xtlv(IFX_VENDOR_ATTR_MBO_PARAM_REASON_CODE,
+							&reason, sizeof(reason),
+							(char **)&mbo_xtlv, &buf_len);
+				}
+					break;
+				case IFX_VENDOR_ATTR_MBO_PARAM_CELL_DATA_CAP:
+				{
+					u8 cell_data_cap;
+
+					cell_data_cap = nla_get_u8(mbo_param_iter);
+					brcmf_pack_xtlv(IFX_VENDOR_ATTR_MBO_PARAM_CELL_DATA_CAP,
+							&cell_data_cap, sizeof(cell_data_cap),
+							(char **)&mbo_xtlv, &buf_len);
+				}
+					break;
+				case IFX_VENDOR_ATTR_MBO_PARAM_COUNTERS:
+					break;
+				case IFX_VENDOR_ATTR_MBO_PARAM_ENABLE:
+				{
+					u8 enable;
+
+					enable = nla_get_u8(mbo_param_iter);
+					brcmf_pack_xtlv(IFX_VENDOR_ATTR_MBO_PARAM_ENABLE,
+							&enable, sizeof(enable),
+							(char **)&mbo_xtlv, &buf_len);
+				}
+					break;
+				case IFX_VENDOR_ATTR_MBO_PARAM_SUB_ELEM_TYPE:
+				{
+					u8 type;
+
+					type = nla_get_u8(mbo_param_iter);
+					brcmf_pack_xtlv(IFX_VENDOR_ATTR_MBO_PARAM_SUB_ELEM_TYPE,
+							&type, sizeof(type),
+							(char **)&mbo_xtlv, &buf_len);
+				}
+					break;
+				case IFX_VENDOR_ATTR_MBO_PARAM_BTQ_TRIG_START_OFFSET:
+				case IFX_VENDOR_ATTR_MBO_PARAM_BTQ_TRIG_RSSI_DELTA:
+				case IFX_VENDOR_ATTR_MBO_PARAM_ANQP_CELL_SUPP:
+				case IFX_VENDOR_ATTR_MBO_PARAM_BIT_MASK:
+				case IFX_VENDOR_ATTR_MBO_PARAM_ASSOC_DISALLOWED:
+				case IFX_VENDOR_ATTR_MBO_PARAM_CELLULAR_DATA_PREF:
+					return -EOPNOTSUPP;
+				default:
+					brcmf_err("unknown mbo param attr:%d\n", mbo_param);
+					return -EINVAL;
+				}
+			}
+			break;
+		default:
+			brcmf_err("Unknown MBO attribute %d, skipping\n",
+				  attr_type);
+			return -EINVAL;
+		}
+	}
+
+	buf_len = buf_len_start - buf_len;
+	mbo_xtlv->len = cpu_to_le16(buf_len);
+	mbo_iov->len = cpu_to_le16(buf_len);
+	buf_len += sizeof(struct bcm_iov_buf);
+	ret = brcmf_fil_iovar_data_set(ifp, "mbo", param, buf_len);
+
+	if (ret)
+		brcmf_err("set mbo enable error:%d\n", ret);
+
+	return ret;
+}
