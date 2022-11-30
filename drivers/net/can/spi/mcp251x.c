@@ -1456,6 +1456,9 @@ static int mcp251x_can_probe(struct spi_device *spi)
 	if (ret)
 		goto out_unregister_candev;
 
+	device_set_wakeup_capable(&spi->dev, true);
+	if (of_property_read_bool(spi->dev.of_node, "wakeup-source"))
+		device_set_wakeup_enable(&spi->dev, true);
 	netdev_info(net, "MCP%x successfully initialized.\n", priv->model);
 	return 0;
 
@@ -1515,7 +1518,14 @@ static int __maybe_unused mcp251x_can_suspend(struct device *dev)
 		priv->after_suspend = AFTER_SUSPEND_DOWN;
 	}
 
-	mcp251x_can_enable(priv, 0);
+	if (device_may_wakeup(dev)) {
+		int ret;
+
+		mcp251x_write_2regs(spi, CANINTE, CANINTE_WAKIE, 0);
+		ret = enable_irq_wake(spi->irq);
+	} else {
+		mcp251x_can_enable(priv, 0);
+	}
 
 	return 0;
 }
@@ -1525,6 +1535,10 @@ static int __maybe_unused mcp251x_can_resume(struct device *dev)
 	struct spi_device *spi = to_spi_device(dev);
 	struct mcp251x_priv *priv = spi_get_drvdata(spi);
 
+	if (device_may_wakeup(dev)) {
+		disable_irq_wake(spi->irq);
+		mcp251x_write_2regs(spi, CANINTE, 0x00, 0x00);
+	}
 	if (!priv->power_on)
 		mcp251x_can_enable(priv, 1);
 	if (priv->after_suspend & AFTER_SUSPEND_UP)
