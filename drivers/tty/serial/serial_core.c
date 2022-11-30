@@ -2943,6 +2943,18 @@ int uart_add_one_port(struct uart_driver *drv, struct uart_port *uport)
 			uport->line, uport->dev, port, uport->tty_groups);
 	if (!IS_ERR(tty_dev)) {
 		device_set_wakeup_capable(tty_dev, 1);
+		if (uport->dev) {
+			if (of_property_read_bool(uport->dev->of_node,
+					"wakeup-source")) {
+				ret = device_set_wakeup_enable(tty_dev, 1);
+				if (ret) {
+					dev_warn(tty_dev,
+						"device_set_wakeup_enable failed %d\n",
+						ret);
+					ret = 0;
+				}
+			}
+		}
 	} else {
 		dev_err(uport->dev, "Cannot register tty device on line %d\n",
 		       uport->line);
