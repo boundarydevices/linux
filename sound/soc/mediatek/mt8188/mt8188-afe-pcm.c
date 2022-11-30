@@ -1923,6 +1923,32 @@ static const struct snd_kcontrol_new mt8188_memif_controls[] = {
 			    MT8188_AFE_MEMIF_UL10),
 };
 
+int mt8188_afe_dai_suspend(struct snd_soc_component *component)
+{
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
+	struct regmap *regmap = afe->regmap;
+	int i;
+
+	for (i = 0; i < afe->reg_back_up_list_num; i++)
+		regmap_read(regmap, afe->reg_back_up_list[i],
+			    &afe->reg_back_up[i]);
+
+	return 0;
+}
+
+int mt8188_afe_dai_resume(struct snd_soc_component *component)
+{
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(component);
+	struct regmap *regmap = afe->regmap;
+	int i;
+
+	for (i = 0; i < afe->reg_back_up_list_num; i++)
+		regmap_write(regmap, afe->reg_back_up_list[i],
+			     afe->reg_back_up[i]);
+
+	return 0;
+}
+
 static const struct mtk_base_memif_data memif_data[MT8188_AFE_MEMIF_NUM] = {
 	[MT8188_AFE_MEMIF_DL2] = {
 		.name = "DL2",
@@ -3066,6 +3092,8 @@ static const struct snd_soc_component_driver mt8188_afe_component = {
 	.pointer       = mtk_afe_pcm_pointer,
 	.pcm_construct = mtk_afe_pcm_new,
 	.probe         = mt8188_afe_component_probe,
+	.suspend       = mt8188_afe_dai_suspend,
+	.resume        = mt8188_afe_dai_resume,
 };
 
 static int init_memif_priv_data(struct mtk_base_afe *afe)
@@ -3130,6 +3158,10 @@ static const struct reg_sequence mt8188_afe_reg_defaults[] = {
 static const struct reg_sequence mt8188_cg_patch[] = {
 	{ AUDIO_TOP_CON0, 0xfffffffb },
 	{ AUDIO_TOP_CON1, 0xfffffff8 },
+};
+
+static const unsigned int afe_backup_list[] = {
+	AUDIO_TOP_CON5,
 };
 
 static int mt8188_afe_init_registers(struct mtk_base_afe *afe)
@@ -3336,6 +3368,13 @@ static int mt8188_afe_pcm_dev_probe(struct platform_device *pdev)
 	afe->memif_fs = mt8188_memif_fs;
 	afe->irq_fs = mt8188_irq_fs;
 
+	afe->reg_back_up_list = afe_backup_list;
+	afe->reg_back_up_list_num = ARRAY_SIZE(afe_backup_list);
+	afe->reg_back_up = devm_kcalloc(dev, afe->reg_back_up_list_num,
+					sizeof(unsigned int), GFP_KERNEL);
+	if (!afe->reg_back_up)
+		return -ENOMEM;
+
 	afe->runtime_resume = mt8188_afe_runtime_resume;
 	afe->runtime_suspend = mt8188_afe_runtime_suspend;
 
@@ -3401,6 +3440,7 @@ MODULE_DEVICE_TABLE(of, mt8188_afe_pcm_dt_match);
 static const struct dev_pm_ops mt8188_afe_pm_ops = {
 	SET_RUNTIME_PM_OPS(mt8188_afe_runtime_suspend,
 			   mt8188_afe_runtime_resume, NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend, pm_runtime_force_resume)
 };
 
 static struct platform_driver mt8188_afe_pcm_driver = {
