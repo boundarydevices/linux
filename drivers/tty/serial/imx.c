@@ -228,6 +228,7 @@ struct imx_port {
 	unsigned		txen_levels;
 	unsigned		txing;
 	unsigned		rxing;
+	unsigned		tx_wait_complete;
 	struct delayed_work	rxact_work;
 
 	int			act_gpios[32];
@@ -606,7 +607,7 @@ static int imx_uart_transmit_buffer(struct imx_port *sport)
 	struct circ_buf *xmit = &sport->port.state->xmit;
 
 	if (sport->port.x_char) {
-		if (!sport->txing && sport->txen_mask) {
+		if (!sport->txing && sport->tx_wait_complete) {
 			imx_set_gpios(sport, sport->txen_mask, sport->txen_levels, 1);
 			sport->txing = 1;
 		}
@@ -622,7 +623,7 @@ static int imx_uart_transmit_buffer(struct imx_port *sport)
 		return 0;
 	}
 
-	if (!sport->txing && sport->txen_mask) {
+	if (!sport->txing && sport->tx_wait_complete) {
 		imx_set_gpios(sport, sport->txen_mask, sport->txen_levels, 1);
 		sport->txing = 1;
 	}
@@ -748,7 +749,7 @@ static void imx_uart_dma_tx(struct imx_port *sport)
 	ucr4 &= ~UCR4_TCEN;
 	imx_uart_writel(sport, ucr4, UCR4);
 
-	if (!sport->txing && sport->txen_mask) {
+	if (!sport->txing && sport->tx_wait_complete) {
 		imx_set_gpios(sport, sport->txen_mask, sport->txen_levels, 1);
 		sport->txing = 1;
 	}
@@ -1543,15 +1544,19 @@ void imx_startup_gpios(struct imx_port *sport)
 		levels = sport->rs485_levels;
 		sport->txen_mask = sport->rs485_txen_mask;
 		sport->txen_levels = sport->rs485_txen_levels;
-		if (sport->rs485_half_duplex)
+		if (sport->rs485_half_duplex) {
+			sport->tx_wait_complete = 1;
 			sport->port.rs485.flags &= ~SER_RS485_RX_DURING_TX;
-		else
+		} else {
+			sport->tx_wait_complete = 0;
 			sport->port.rs485.flags |= SER_RS485_RX_DURING_TX;
+		}
 	} else {
 		levels = sport->rs232_levels;
 		sport->txen_mask = sport->rs232_txen_mask;
 		sport->txen_levels = sport->rs232_txen_levels;
 		sport->port.rs485.flags |= SER_RS485_RX_DURING_TX;
+		sport->tx_wait_complete = sport->txen_mask ? 1 : 0;
 	}
 	if (sport->txing) {
 		levels &= ~sport->txen_mask;
