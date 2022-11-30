@@ -69,7 +69,7 @@
 			MX8MMN(IOMUXC_SAI5_RXD3_GPIO3_IO24, 0x1c0)	/* can2_tx1rts */
 			MX8MMN(IOMUXC_SAI3_MCLK_GPIO5_IO2, 0x16)	/* can2_tx2rts */
 #define GPIRQ_MCP25625_2	<&gpio1 8 IRQ_TYPE_LEVEL_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x19)
+			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x1c0)
 #define GP_MCP25625_2_RESET	<&gpio1 3 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, 0x100)
 		>;
@@ -789,6 +789,7 @@
 		reg = <0>;
 		reset-gpios = GP_MCP25625_1_RESET;
 		spi-max-frequency = <10000000>;
+		wakeup-source;
 	};
 };
 
@@ -813,6 +814,7 @@
 		reg = <0>;
 		reset-gpios = GP_MCP25625_2_RESET;
 		spi-max-frequency = <10000000>;
+		wakeup-source;
 	};
 };
 
@@ -1512,6 +1514,7 @@
 	rts-gpios; /* Not really, but needed for half-duplex */
 	status = "okay";
 	uart-has-rs485-half-duplex;
+	wakeup-source;
 };
 
 &usbotg1 {
