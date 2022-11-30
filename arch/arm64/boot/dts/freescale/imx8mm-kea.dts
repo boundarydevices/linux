@@ -117,9 +117,8 @@
 			MX8MMN(IOMUXC_SAI3_RXC_GPIO4_IO29, 0x1c0)	/* GPO1_STAT */
 			MX8MMN(IOMUXC_SAI3_RXD_GPIO4_IO30, 0x1c0)	/* GPO2_STAT */
 			MX8MMN(IOMUXC_SAI1_RXD7_GPIO4_IO9, 0x1c0)	/* GPO3_STAT */
-
-			MX8MMN(IOMUXC_SAI5_MCLK_GPIO3_IO25, 0x100)	/* LIN_EN */
-			MX8MMN(IOMUXC_SAI5_RXFS_GPIO3_IO19, 0x100)	/* LIN_RESET */
+#define GP_UART4_LIN_RESET        <&gpio3 19 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI5_RXFS_GPIO3_IO19, 0x0)	/* LIN_RESET, input to imx */
 
 			MX8MMN(IOMUXC_SAI1_RXD3_GPIO4_IO5, 0x100)	/* 12V_EN */
 
@@ -419,6 +418,8 @@
 		fsl,pins = <
 			MX8MMN(IOMUXC_UART4_RXD_UART4_DCE_RX, 0x140)
 			MX8MMN(IOMUXC_UART4_TXD_UART4_DCE_TX, 0x140)
+#define GP_UART4_LIN_EN        <&gpio3 25 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI5_MCLK_GPIO3_IO25, 0x100)	/* LIN_EN */
 		>;
 	};
 
@@ -1498,11 +1499,19 @@
 };
 
 &uart4 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart4>;
 	assigned-clocks = <&clk IMX8MMN(CLK_UART4)>;
 	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_80M)>;
+	control-gpios = GP_UART4_LIN_EN;
+	linux,rs485-enabled-at-boot-time;
+#define M_EN		1
+        off_levels = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart4>;
+	rs232_levels = <M_EN>;
+	rs485_levels = <M_EN>;
+	rts-gpios; /* Not really, but needed for half-duplex */
 	status = "okay";
+	uart-has-rs485-half-duplex;
 };
 
 &usbotg1 {
