@@ -928,8 +928,8 @@ static const struct mdp_format mt8195_formats[] = {
 		.depth		= { 8, 4 },
 		.row_depth	= { 8, 8 },
 		.num_planes	= 2,
-		.walign		= 4,
-		.halign		= 5,
+		.walign		= 6,
+		.halign		= 6,
 		.flags		= MDP_FMT_FLAG_OUTPUT,
 	}, {
 		.pixelformat	= V4L2_PIX_FMT_NV12M,
