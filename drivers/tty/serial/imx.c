@@ -2090,7 +2090,7 @@ static void imx_uart_poll_put_char(struct uart_port *port, unsigned char c)
 #endif
 
 /* called with port.lock taken and irqs off or from .probe without locking */
-static int imx_uart_rs485_config(struct uart_port *port,
+static int _imx_uart_rs485_config(struct uart_port *port,
 				 struct serial_rs485 *rs485conf)
 {
 	struct imx_port *sport = (struct imx_port *)port;
@@ -2121,8 +2121,17 @@ static int imx_uart_rs485_config(struct uart_port *port,
 		imx_uart_start_rx(port);
 
 	port->rs485 = *rs485conf;
-	imx_startup_gpios(sport);
 	return 0;
+}
+
+static int imx_uart_rs485_config(struct uart_port *port,
+				 struct serial_rs485 *rs485conf)
+{
+	struct imx_port *sport = (struct imx_port *)port;
+	int ret = _imx_uart_rs485_config(port, rs485conf);
+
+	imx_startup_gpios(sport);
+	return ret;
 }
 
 static const struct uart_ops imx_uart_pops = {
@@ -2461,7 +2470,7 @@ static int imx_uart_probe(struct platform_device *pdev)
 		if (!gpio_is_valid(gpio))
 			break;
 
-		sprintf(buf, "uart%d_gpio%d", id, i);
+		sprintf(buf, "ttymxc%d_gpio%d", id, i);
 		ret = devm_gpio_request_one(&pdev->dev, gpio,
 				(off_levels >> i) & 1 ?
 				GPIOF_OUT_INIT_HIGH : GPIOF_OUT_INIT_LOW, buf);
@@ -2610,7 +2619,7 @@ static int imx_uart_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"low-active RTS not possible when receiver is off, enabling receiver\n");
 
-	imx_uart_rs485_config(&sport->port, &sport->port.rs485);
+	_imx_uart_rs485_config(&sport->port, &sport->port.rs485);
 
 	/* Disable interrupts before requesting them */
 	ucr1 = imx_uart_readl(sport, UCR1);
