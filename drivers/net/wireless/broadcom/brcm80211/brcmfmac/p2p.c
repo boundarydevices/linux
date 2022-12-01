@@ -1265,7 +1265,6 @@ bool brcmf_p2p_scan_finding_common_channel(struct brcmf_cfg80211_info *cfg,
 {
 	struct brcmf_p2p_info *p2p = &cfg->p2p;
 	struct afx_hdl *afx_hdl = &p2p->afx_hdl;
-	struct brcmu_chan ch;
 	u8 *ie;
 	s32 err;
 	u8 p2p_dev_addr[ETH_ALEN];
