@@ -135,6 +135,7 @@ struct sgtl5000_priv {
 	u8 lrclk_strength;
 	u8 ana_power_pending;
 	u8 ana_ctrl_pending;
+	u8 mono_as_stereo;
 };
 
 /*
@@ -535,6 +536,36 @@ static int dac_put_volsw(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int dac_info_mono_as_stereo(struct snd_kcontrol *kcontrol,
+			  struct snd_ctl_elem_info *uinfo)
+{
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	uinfo->count = 1;
+	uinfo->value.integer.min = 0;
+	uinfo->value.integer.max = 1;
+	return 0;
+}
+
+static int dac_get_mono_as_stereo(struct snd_kcontrol *kcontrol,
+			 struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = sgtl5000->mono_as_stereo;
+	return 0;
+}
+
+static int dac_put_mono_as_stereo(struct snd_kcontrol *kcontrol,
+			 struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct sgtl5000_priv *sgtl5000 = snd_soc_codec_get_drvdata(codec);
+
+	sgtl5000->mono_as_stereo = ucontrol->value.integer.value[0];
+	return 0;
+}
+
 /*
  * custom function to get AVC threshold
  *
@@ -692,6 +723,14 @@ static const struct snd_kcontrol_new sgtl5000_snd_controls[] = {
 	SOC_SINGLE("DAP Input Swap LR", SGTL5000_CHIP_SSS_CTRL, 13, 1, 0),
 	SOC_SINGLE("DAC Input Swap LR", SGTL5000_CHIP_SSS_CTRL, 12, 1, 0),
 	SOC_SINGLE("I2S output Swap LR", SGTL5000_CHIP_SSS_CTRL, 10, 1, 0),
+	{
+		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name = "mono as stereo",
+		.access = SNDRV_CTL_ELEM_ACCESS_READWRITE,
+		.info = dac_info_mono_as_stereo,
+		.get = dac_get_mono_as_stereo,
+		.put = dac_put_mono_as_stereo,
+	},
 };
 
 static int test_for_adc_direct(struct snd_soc_codec *codec)
@@ -1006,7 +1045,7 @@ static int sgtl5000_pcm_hw_params(struct snd_pcm_substream *substream,
 
 	/* set mono to save power */
 	snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER, stereo,
-			channels == 1 ? 0 : stereo);
+		((channels == 1) && !sgtl5000->mono_as_stereo) ? 0 : stereo);
 
 	/* set codec clock base on lrclk */
 	ret = sgtl5000_set_clock(codec, params_rate(params));
