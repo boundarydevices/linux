@@ -156,15 +156,17 @@ static int brcmf_cfg80211_vndr_cmds_frameburst(struct wiphy *wiphy,
 	vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
 	ifp = vif->ifp;
 
-	if (val == 0x0 || val == 0x1)
+	if (val == 0x0 || val == 0x1) {
 		ret = brcmf_cfg80211_vndr_cmds_int_set(ifp, val,
 						       BRCMF_C_SET_FAKEFRAG);
-	else if (val == 0xff)
+	} else if (val == 0xff) {
 		ret = brcmf_cfg80211_vndr_cmds_int_get(ifp,
 						       BRCMF_C_GET_FAKEFRAG,
 						       wiphy);
-	else
+	} else {
 		brcmf_err("Invalid Input\n");
+		ret = -EINVAL;
+	}
 
 	return ret;
 }
