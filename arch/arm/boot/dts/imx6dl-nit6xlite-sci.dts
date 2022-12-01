@@ -1,0 +1,40 @@
+/*
+ * Copyright 2022 Boundary Devices
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/dts-v1/;
+#include "imx6dl.dtsi"
+#include "imx6qdl-nit6xlite.dtsi"
+
+/ {
+	model = "Boundary Devices i.MX6 Nitrogen6_Lite-sci Board";
+	compatible = "boundary,imx6dl-nit6xlite-sci", "fsl,imx6dl";
+};
+
+&iomuxc {
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			MX6QDL_PAD_GPIO_4__GPIO1_IO04		0x130b0		/* J28 pin 7 - barcode scanner gpio, old rev board */
+			MX6QDL_PAD_EIM_D23__GPIO3_IO23		0x130b1		/* J28 pin 7 - barcode scanner gpio, new rev board */
+			MX6QDL_PAD_EIM_D31__GPIO3_IO31		0x130b1
+		>;
+	};
+
+	pinctrl_uart3: uart3grp {
+		fsl,pins = <
+			MX6QDL_PAD_EIM_D24__UART3_TX_DATA	0x1b0b1
+			MX6QDL_PAD_EIM_D25__UART3_RX_DATA	0x1b0b1
+		>;
+	};
+};
+
+&uart3 {
+	/delete-property/ uart-has-rtscts;
+};
