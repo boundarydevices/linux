@@ -99,15 +99,10 @@ struct mtk_mmsys_driver_data {
 	const char *clk_driver;
 	const struct mtk_mmsys_routes *routes;
 	const unsigned int num_routes;
-	const struct mtk_mmsys_routes *mdp_routes;
-	const unsigned int mdp_num_routes;
-	const unsigned int *mdp_isp_ctrl;
 	const u16 sw0_rst_offset;
 	const u32 num_resets;
 	const struct mtk_mmsys_config *config;
 	const unsigned int num_configs;
-	const u32 *mdp_mmsys_configs;
-	const unsigned int mdp_num_mmsys_configs;
 	const u32 *main_sys_w_h_configs;
 	const unsigned int num_main_sys_w_h_configs;
 	const u32 *cross_sys_w_h_configs;
