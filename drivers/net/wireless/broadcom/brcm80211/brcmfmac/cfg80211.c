@@ -2458,6 +2458,22 @@ brcmf_set_key_mgmt(struct net_device *ndev, struct cfg80211_connect_params *sme)
 		mfp = BRCMF_MFP_REQUIRED;
 	else if (rsn_cap & RSN_CAP_MFPC_MASK)
 		mfp = BRCMF_MFP_CAPABLE;
+
+	/* In case of dpp, very low tput is observed if MFPC is set in
+	 * firmmare. Firmware needs to ensure that MFPC is not set when
+	 * MFPR was requested from fmac. However since this change being
+	 * specific to DPP, fmac needs to set wpa_auth prior to mfp, so
+	 * that firmware can use this info to prevent MFPC being set in
+	 * case of dpp.
+	 */
+	if (val == WFA_AUTH_DPP) {
+		brcmf_dbg(CONN, "setting wpa_auth to 0x%0x\n", val);
+		err = brcmf_fil_bsscfg_int_set(netdev_priv(ndev), "wpa_auth", val);
+		if (err) {
+			bphy_err(drvr, "could not set wpa_auth (%d)\n", err);
+			return err;
+		}
+	}
 	brcmf_fil_bsscfg_int_set(netdev_priv(ndev), "mfp", mfp);
 
 	offset += RSN_CAP_LEN;
@@ -2475,11 +2491,13 @@ brcmf_set_key_mgmt(struct net_device *ndev, struct cfg80211_connect_params *sme)
 	}
 
 skip_mfp_config:
-	brcmf_dbg(CONN, "setting wpa_auth to 0x%0x\n", val);
-	err = brcmf_fil_bsscfg_int_set(netdev_priv(ndev), "wpa_auth", val);
-	if (err) {
-		bphy_err(drvr, "could not set wpa_auth (%d)\n", err);
-		return err;
+	if (val != WFA_AUTH_DPP) {
+		brcmf_dbg(CONN, "setting wpa_auth to 0x%0x\n", val);
+		err = brcmf_fil_bsscfg_int_set(netdev_priv(ndev), "wpa_auth", val);
+		if (err) {
+			bphy_err(drvr, "could not set wpa_auth (%d)\n", err);
+			return err;
+		}
 	}
 
 	return err;
