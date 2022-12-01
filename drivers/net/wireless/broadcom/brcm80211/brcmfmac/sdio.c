@@ -1626,7 +1626,7 @@ static u8 brcmf_sdio_rxglom(struct brcmf_sdio *bus, u8 rxseq)
 			}
 		} else {
 			brcmf_err("overflowed glomd len(%d), ignore descriptor\n",
-				  dlen);
+				  bus->glomd->len);
 			dlen = 0;
 		}
 		dptr = bus->glomd->data;
