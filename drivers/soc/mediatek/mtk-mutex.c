@@ -7,14 +7,10 @@
 #include <linux/iopoll.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
-#include <linux/of_address.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/soc/mediatek/mtk-mmsys.h>
 #include <linux/soc/mediatek/mtk-mutex.h>
-#include <linux/soc/mediatek/mtk-cmdq.h>
-
-#define MTK_MUTEX_ENABLE			BIT(0)
 
 #define MT2701_MUTEX0_MOD0			0x2c
 #define MT2701_MUTEX0_SOF0			0x30
@@ -24,9 +20,8 @@
 #define DISP_REG_MUTEX_EN(n)			(0x20 + 0x20 * (n))
 #define DISP_REG_MUTEX(n)			(0x24 + 0x20 * (n))
 #define DISP_REG_MUTEX_RST(n)			(0x28 + 0x20 * (n))
-#define DISP_REG_MUTEX_MOD(mutex_mod_reg, n)	((mutex_mod_reg) + 0x20 * (n))
-#define DISP_REG_MUTEX_MOD1(mutex_mod_reg, n)	((mutex_mod_reg) + 0x20 * (n) + 0x4)
-#define DISP_REG_MUTEX_SOF(mutex_sof_reg, n)	((mutex_sof_reg) + 0x20 * (n))
+#define DISP_REG_MUTEX_MOD(mutex_mod_reg, n)	(mutex_mod_reg + 0x20 * (n))
+#define DISP_REG_MUTEX_SOF(mutex_sof_reg, n)	(mutex_sof_reg + 0x20 * (n))
 #define DISP_REG_MUTEX_MOD2(n)			(0x34 + 0x20 * (n))
 
 #define INT_MUTEX				BIT(1)
@@ -84,15 +79,6 @@
 #define MT8183_MUTEX_MOD_DISP_AAL0		15
 #define MT8183_MUTEX_MOD_DISP_GAMMA0		16
 #define MT8183_MUTEX_MOD_DISP_DITHER0		17
-
-#define MT8183_MUTEX_MOD_MDP_RDMA0		2
-#define MT8183_MUTEX_MOD_MDP_RSZ0		4
-#define MT8183_MUTEX_MOD_MDP_RSZ1		5
-#define MT8183_MUTEX_MOD_MDP_TDSHP0		6
-#define MT8183_MUTEX_MOD_MDP_WROT0		7
-#define MT8183_MUTEX_MOD_MDP_WDMA		8
-#define MT8183_MUTEX_MOD_MDP_AAL0		23
-#define MT8183_MUTEX_MOD_MDP_CCORR0		24
 
 #define MT8173_MUTEX_MOD_DISP_OVL0		11
 #define MT8173_MUTEX_MOD_DISP_OVL1		12
@@ -261,15 +247,6 @@
 
 #define MT8183_MUTEX_EOF_DSI0			(MT8183_MUTEX_SOF_DSI0 << 6)
 #define MT8183_MUTEX_EOF_DPI0			(MT8183_MUTEX_SOF_DPI0 << 6)
-#define MT8183_MUTEX_MDP_START			5
-#define MT8183_MUTEX_MDP_MOD_MASK		0x07FFFFFF
-#define MT8183_MUTEX_MDP_SOF_MASK		0x00000007
-
-#define MT8183_MDP_PIPE_IMGI			MT8183_MUTEX_MDP_START
-#define MT8183_MDP_PIPE_RDMA0			(MT8183_MUTEX_MDP_START + 1)
-#define MT8183_MDP_PIPE_WPEI			(MT8183_MUTEX_MDP_START + 2)
-#define MT8183_MDP_PIPE_WPEI2			(MT8183_MUTEX_MDP_START + 3)
-
 #define MT8195_MUTEX_EOF_DSI0			(MT8195_MUTEX_SOF_DSI0 << 7)
 #define MT8195_MUTEX_EOF_DSI1			(MT8195_MUTEX_SOF_DSI1 << 7)
 #define MT8195_MUTEX_EOF_DP_INTF0		(MT8195_MUTEX_SOF_DP_INTF0 << 7)
@@ -283,23 +260,6 @@
 #define MT8168_DISP_MUTEX_CFG			0x8
 #define MUTEX_DISABLE_CLK_GATING		0x0
 #define MUTEX_ENABLE_CLK_GATING			0x1
-
-#define MT8195_MUTEX_MDP_MOD_MASK		0xFFFFFFFF
-#define MT8195_MUTEX_MDP_MOD1_MASK		0x000000FF
-#define MT8195_MUTEX_MDP_SOF_MASK		0x00000007
-
-#define	MT8195_MDP_PIPE_WPEI			0
-#define	MT8195_MDP_PIPE_WPEI2			1
-#define	MT8195_MDP_PIPE_RDMA0			2
-#define	MT8195_MDP_PIPE_VPP1_SOUT		3
-
-#define	MT8195_MDP_PIPE_RDMA1			1
-#define	MT8195_MDP_PIPE_RDMA2			2
-#define	MT8195_MDP_PIPE_RDMA3			3
-
-#define	MT8195_MDP_PIPE_SPLIT			2
-#define	MT8195_MDP_PIPE_SPLIT2			3
-#define	MT8195_MDP_PIPE_VPP0_SOUT		4
 
 struct mtk_mutex {
 	int id;
@@ -319,11 +279,6 @@ enum mtk_mutex_sof_id {
 	DDP_MUTEX_SOF_MAX,
 };
 
-struct mtk_mutex_mod {
-	u8 tab;
-	u32 value;
-};
-
 struct mtk_mutex_cross_sys_config {
 	const unsigned int mutex_sys_id;
 	const unsigned int mod_id;
@@ -334,10 +289,6 @@ struct mtk_mutex_data {
 	const unsigned int *mutex_sof;
 	const unsigned int mutex_mod_reg;
 	const unsigned int mutex_sof_reg;
-	const unsigned int *mutex_mdp_offset;
-	const unsigned int mutex_mdp_mod_mask;
-	const unsigned int mutex_mdp_sof_mask;
-	const struct mtk_mutex_mod *mutex_table_mod;
 	const struct mtk_mutex_cross_sys_config *mutex_cross_sys_config;
 	const unsigned int mutex_cross_sys_config_num;
 	const bool no_clk;
@@ -349,9 +300,6 @@ struct mtk_mutex_ctx {
 	void __iomem			*regs;
 	struct mtk_mutex		mutex[10];
 	const struct mtk_mutex_data	*data;
-	phys_addr_t			addr;
-	struct cmdq_client_reg		cmdq_reg;
-	bool				has_gce_client_reg;
 };
 
 static const unsigned int mt2701_mutex_mod[DDP_COMPONENT_ID_MAX] = {
@@ -428,33 +376,6 @@ static const unsigned int mt8183_mutex_mod[DDP_COMPONENT_ID_MAX] = {
 	[DDP_COMPONENT_RDMA0] = MT8183_MUTEX_MOD_DISP_RDMA0,
 	[DDP_COMPONENT_RDMA1] = MT8183_MUTEX_MOD_DISP_RDMA1,
 	[DDP_COMPONENT_WDMA0] = MT8183_MUTEX_MOD_DISP_WDMA0,
-};
-
-static const struct mtk_mutex_mod mt8183_mutex_table_mod[MUTEX_TABLE_IDX_MAX] = {
-	[MUTEX_TABLE_IDX_MDP_RDMA0] = {
-		0, MT8183_MUTEX_MOD_MDP_RDMA0
-	},
-	[MUTEX_TABLE_IDX_MDP_RSZ0] = {
-		0, MT8183_MUTEX_MOD_MDP_RSZ0
-	},
-	[MUTEX_TABLE_IDX_MDP_RSZ1] = {
-		0, MT8183_MUTEX_MOD_MDP_RSZ1
-	},
-	[MUTEX_TABLE_IDX_MDP_TDSHP0] = {
-		0, MT8183_MUTEX_MOD_MDP_TDSHP0
-	},
-	[MUTEX_TABLE_IDX_MDP_WROT0] = {
-		0, MT8183_MUTEX_MOD_MDP_WROT0
-	},
-	[MUTEX_TABLE_IDX_MDP_WDMA] = {
-		0, MT8183_MUTEX_MOD_MDP_WDMA
-	},
-	[MUTEX_TABLE_IDX_MDP_AAL0] = {
-		0, MT8183_MUTEX_MOD_MDP_AAL0
-	},
-	[MUTEX_TABLE_IDX_MDP_CCORR0] = {
-		0, MT8183_MUTEX_MOD_MDP_CCORR0
-	},
 };
 
 static const unsigned int mt8186_mutex_mod[DDP_COMPONENT_ID_MAX] = {
@@ -565,14 +486,6 @@ static const unsigned int mt8183_mutex_sof[DDP_MUTEX_SOF_MAX] = {
 	[MUTEX_SOF_DPI0] = MT8183_MUTEX_SOF_DPI0 | MT8183_MUTEX_EOF_DPI0,
 };
 
-/* indicate which mutex is used by each pipepline */
-static const unsigned int mt8183_mutex_mdp_offset[MDP_PIPE_MAX] = {
-	[MDP_PIPE_IMGI] = MT8183_MDP_PIPE_IMGI,
-	[MDP_PIPE_RDMA0] = MT8183_MDP_PIPE_RDMA0,
-	[MDP_PIPE_WPEI] = MT8183_MDP_PIPE_WPEI,
-	[MDP_PIPE_WPEI2] = MT8183_MDP_PIPE_WPEI2,
-};
-
 static const unsigned int mt8365_mutex_sof[MUTEX_SOF_DSI3 + 1] = {
 	[MUTEX_SOF_SINGLE_MODE] = MUTEX_SOF_SINGLE_MODE,
 	[MUTEX_SOF_DSI0] = MUTEX_SOF_DSI0 | MUTEX_EOF_DSI0,
@@ -603,22 +516,6 @@ static const unsigned int mt8195_mutex_sof[DDP_MUTEX_SOF_MAX] = {
 		MT8195_MUTEX_SOF_DP_INTF0 | MT8195_MUTEX_EOF_DP_INTF0,
 	[MUTEX_SOF_DP_INTF1] =
 		MT8195_MUTEX_SOF_DP_INTF1 | MT8195_MUTEX_EOF_DP_INTF1,
-};
-
-static const unsigned int mt8195_mutex_vpp0_offset[MDP_PIPE_MAX] = {
-	[MDP_PIPE_WPEI] = MT8195_MDP_PIPE_WPEI,
-	[MDP_PIPE_WPEI2] = MT8195_MDP_PIPE_WPEI2,
-	[MDP_PIPE_RDMA0] = MT8195_MDP_PIPE_RDMA0,
-	[MDP_PIPE_VPP1_SOUT] = MT8195_MDP_PIPE_VPP1_SOUT,
-};
-
-static const unsigned int mt8195_mutex_vpp1_offset[MDP_PIPE_MAX] = {
-	[MDP_PIPE_SPLIT] = MT8195_MDP_PIPE_SPLIT,
-	[MDP_PIPE_SPLIT2] = MT8195_MDP_PIPE_SPLIT2,
-	[MDP_PIPE_RDMA1] = MT8195_MDP_PIPE_RDMA1,
-	[MDP_PIPE_RDMA2] = MT8195_MDP_PIPE_RDMA2,
-	[MDP_PIPE_RDMA3] = MT8195_MDP_PIPE_RDMA3,
-	[MDP_PIPE_VPP0_SOUT] = MT8195_MDP_PIPE_SPLIT,
 };
 
 static const struct mtk_mutex_cross_sys_config mt8195_mutex_cross_sys_config[] = {
@@ -664,10 +561,6 @@ static const struct mtk_mutex_data mt8183_mutex_driver_data = {
 	.mutex_sof = mt8183_mutex_sof,
 	.mutex_mod_reg = MT8183_MUTEX0_MOD0,
 	.mutex_sof_reg = MT8183_MUTEX0_SOF0,
-	.mutex_table_mod = mt8183_mutex_table_mod,
-	.mutex_mdp_offset = mt8183_mutex_mdp_offset,
-	.mutex_mdp_mod_mask = MT8183_MUTEX_MDP_MOD_MASK,
-	.mutex_mdp_sof_mask = MT8183_MUTEX_MDP_SOF_MASK,
 	.no_clk = true,
 };
 
@@ -702,22 +595,6 @@ static const struct mtk_mutex_data mt8195_mutex_driver_data = {
 	.mutex_cross_sys_config_num = ARRAY_SIZE(mt8195_mutex_cross_sys_config),
 };
 
-static const struct mtk_mutex_data mt8195_vpp0_mutex_driver_data = {
-	.mutex_mod_reg = MT8183_MUTEX0_MOD0,
-	.mutex_sof_reg = MT8183_MUTEX0_SOF0,
-	.mutex_mdp_offset = mt8195_mutex_vpp0_offset,
-	.mutex_mdp_mod_mask = MT8195_MUTEX_MDP_MOD_MASK,
-	.mutex_mdp_sof_mask = MT8195_MUTEX_MDP_SOF_MASK,
-};
-
-static const struct mtk_mutex_data mt8195_vpp1_mutex_driver_data = {
-	.mutex_mod_reg = MT8183_MUTEX0_MOD0,
-	.mutex_sof_reg = MT8183_MUTEX0_SOF0,
-	.mutex_mdp_offset = mt8195_mutex_vpp1_offset,
-	.mutex_mdp_mod_mask = MT8195_MUTEX_MDP_MOD_MASK,
-	.mutex_mdp_sof_mask = MT8195_MUTEX_MDP_SOF_MASK,
-};
-
 struct mtk_mutex *mtk_mutex_get(struct device *dev)
 {
 	struct mtk_mutex_ctx *mtx = dev_get_drvdata(dev);
@@ -732,21 +609,6 @@ struct mtk_mutex *mtk_mutex_get(struct device *dev)
 	return ERR_PTR(-EBUSY);
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_get);
-
-struct mtk_mutex *mtk_mutex_mdp_get(struct device *dev,
-				    enum mtk_mdp_pipe_id id)
-{
-	struct mtk_mutex_ctx *mtx = dev_get_drvdata(dev);
-	int i = mtx->data->mutex_mdp_offset[id];
-
-	if (!mtx->mutex[i].claimed) {
-		mtx->mutex[i].claimed = true;
-		return &mtx->mutex[i];
-	}
-
-	return ERR_PTR(-EBUSY);
-}
-EXPORT_SYMBOL_GPL(mtk_mutex_mdp_get);
 
 void mtk_mutex_put(struct mtk_mutex *mutex)
 {
@@ -836,65 +698,6 @@ void mtk_mutex_add_comp(struct mtk_mutex *mutex,
 		       DISP_REG_MUTEX_SOF(mtx->data->mutex_sof_reg, mutex->id));
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_add_comp);
-
-void mtk_mutex_set_mod(struct mtk_mutex *mutex,
-		       enum mtk_mutex_table_index idx)
-{
-	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
-						 mutex[mutex->id]);
-	unsigned int reg;
-	unsigned int offset;
-
-	WARN_ON(&mtx->mutex[mutex->id] != mutex);
-
-	if (idx < MUTEX_TABLE_IDX_MDP_RDMA0 ||
-	    idx >= MUTEX_TABLE_IDX_MAX)
-		return;
-
-	if (mtx->data->mutex_table_mod[idx].tab)
-		offset = DISP_REG_MUTEX_MOD2(mutex->id);
-	else
-		offset = DISP_REG_MUTEX_MOD(mtx->data->mutex_mod_reg,
-					    mutex->id);
-
-	reg = readl_relaxed(mtx->regs + offset);
-	reg |= 1 << mtx->data->mutex_table_mod[idx].value;
-	writel_relaxed(reg, mtx->regs + offset);
-}
-EXPORT_SYMBOL_GPL(mtk_mutex_set_mod);
-
-void mtk_mutex_set_sof(struct mtk_mutex *mutex,
-		       enum mtk_mutex_table_index idx)
-{
-	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
-						 mutex[mutex->id]);
-	unsigned int sof_id;
-
-	WARN_ON(&mtx->mutex[mutex->id] != mutex);
-
-	if (idx < MUTEX_TABLE_IDX_MDP_RDMA0 ||
-	    idx >= MUTEX_TABLE_IDX_MAX)
-		return;
-
-	switch (idx) {
-	case MUTEX_TABLE_IDX_MDP_RDMA0:
-	case MUTEX_TABLE_IDX_MDP_RSZ0:
-	case MUTEX_TABLE_IDX_MDP_RSZ1:
-	case MUTEX_TABLE_IDX_MDP_TDSHP0:
-	case MUTEX_TABLE_IDX_MDP_WROT0:
-	case MUTEX_TABLE_IDX_MDP_WDMA:
-	case MUTEX_TABLE_IDX_MDP_AAL0:
-	case MUTEX_TABLE_IDX_MDP_CCORR0:
-	default:
-		sof_id = MUTEX_SOF_SINGLE_MODE;
-		break;
-	}
-
-	writel_relaxed(mtx->data->mutex_sof[sof_id],
-		       mtx->regs +
-		       DISP_REG_MUTEX_SOF(mtx->data->mutex_sof_reg, mutex->id));
-}
-EXPORT_SYMBOL_GPL(mtk_mutex_set_sof);
 
 void mtk_mutex_remove_comp(struct mtk_mutex *mutex,
 			   enum mtk_ddp_comp_id id)
@@ -1038,74 +841,6 @@ void mtk_mutex_cross_sys_deconfig(struct mtk_mutex *mutex0, struct mtk_mutex *mu
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_cross_sys_deconfig);
 
-void mtk_mutex_add_mod_by_cmdq(struct mtk_mutex *mutex, u32 mod,
-			       u32 mod1, u32 sof, struct mmsys_cmdq_cmd *cmd)
-{
-	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
-						 mutex[mutex->id]);
-	unsigned int offset;
-
-	WARN_ON(&mtx->mutex[mutex->id] != mutex);
-
-	if (mod != MDP_PIPE_NONE) {
-		offset = DISP_REG_MUTEX_MOD(mtx->data->mutex_mod_reg, mutex->id);
-		cmdq_pkt_write_mask(cmd->pkt, mtx->cmdq_reg.subsys, mtx->addr + offset,
-				    mod, mtx->data->mutex_mdp_mod_mask);
-
-	}
-
-	if (mod1 != MDP_PIPE_NONE) {
-		offset = DISP_REG_MUTEX_MOD1(mtx->data->mutex_mod_reg, mutex->id);
-		cmdq_pkt_write_mask(cmd->pkt, mtx->cmdq_reg.subsys, mtx->addr + offset,
-				    mod1, mtx->data->mutex_mdp_mod_mask);
-	}
-
-	offset = DISP_REG_MUTEX_SOF(mtx->data->mutex_sof_reg, mutex->id);
-	cmdq_pkt_write_mask(cmd->pkt, mtx->cmdq_reg.subsys, mtx->addr + offset,
-			    sof, mtx->data->mutex_mdp_sof_mask);
-}
-EXPORT_SYMBOL_GPL(mtk_mutex_add_mod_by_cmdq);
-
-void mtk_mutex_clear_mod(struct mtk_mutex *mutex,
-			 enum mtk_mutex_table_index idx)
-{
-	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
-						 mutex[mutex->id]);
-	unsigned int reg;
-	unsigned int offset;
-
-	WARN_ON(&mtx->mutex[mutex->id] != mutex);
-
-	if (idx < MUTEX_TABLE_IDX_MDP_RDMA0 ||
-	    idx >= MUTEX_TABLE_IDX_MAX)
-		return;
-
-	if (mtx->data->mutex_table_mod[idx].tab)
-		offset = DISP_REG_MUTEX_MOD2(mutex->id);
-	else
-		offset = DISP_REG_MUTEX_MOD(mtx->data->mutex_mod_reg,
-					    mutex->id);
-
-	reg = readl_relaxed(mtx->regs + offset);
-	reg &= ~(1 << mtx->data->mutex_table_mod[idx].value);
-	writel_relaxed(reg, mtx->regs + offset);
-}
-EXPORT_SYMBOL_GPL(mtk_mutex_clear_mod);
-
-void mtk_mutex_clear_sof(struct mtk_mutex *mutex)
-{
-	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
-						 mutex[mutex->id]);
-
-	WARN_ON(&mtx->mutex[mutex->id] != mutex);
-
-	writel_relaxed(MUTEX_SOF_SINGLE_MODE,
-		       mtx->regs +
-		       DISP_REG_MUTEX_SOF(mtx->data->mutex_sof_reg,
-					  mutex->id));
-}
-EXPORT_SYMBOL_GPL(mtk_mutex_clear_sof);
-
 void mtk_mutex_enable(struct mtk_mutex *mutex)
 {
 	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
@@ -1117,29 +852,6 @@ void mtk_mutex_enable(struct mtk_mutex *mutex)
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_enable);
 
-void mtk_mutex_enable_by_cmdq(struct mtk_mutex *mutex, void *pkt)
-{
-#if IS_REACHABLE(CONFIG_MTK_CMDQ)
-	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
-						 mutex[mutex->id]);
-	struct cmdq_pkt *cmdq_pkt = (struct cmdq_pkt *)pkt;
-
-	WARN_ON(&mtx->mutex[mutex->id] != mutex);
-
-	if (!mtx->has_gce_client_reg) {
-		dev_dbg(mtx->dev, "mediatek,gce-client-reg hasn't been set in dts");
-		return;
-	}
-
-	cmdq_pkt_write_mask(cmdq_pkt, mtx->cmdq_reg.subsys,
-			    mtx->addr + DISP_REG_MUTEX_EN(mutex->id),
-			    MTK_MUTEX_ENABLE, MTK_MUTEX_ENABLE);
-#else
-	dev_dbg(mtx->dev, "Not support for enable MUTEX by CMDQ");
-#endif
-}
-EXPORT_SYMBOL_GPL(mtk_mutex_enable_by_cmdq);
-
 void mtk_mutex_disable(struct mtk_mutex *mutex)
 {
 	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
@@ -1150,20 +862,6 @@ void mtk_mutex_disable(struct mtk_mutex *mutex)
 	writel(0, mtx->regs + DISP_REG_MUTEX_EN(mutex->id));
 }
 EXPORT_SYMBOL_GPL(mtk_mutex_disable);
-
-void mtk_mutex_disable_by_cmdq(struct mtk_mutex *mutex,
-			       struct mmsys_cmdq_cmd *cmd)
-{
-	struct mtk_mutex_ctx *mtx = container_of(mutex, struct mtk_mutex_ctx,
-						 mutex[mutex->id]);
-
-	WARN_ON(&mtx->mutex[mutex->id] != mutex);
-
-	cmdq_pkt_write_mask(cmd->pkt, mtx->cmdq_reg.subsys,
-			    mtx->addr + DISP_REG_MUTEX_EN(mutex->id),
-			    0x0, MTK_MUTEX_ENABLE);
-}
-EXPORT_SYMBOL_GPL(mtk_mutex_disable_by_cmdq);
 
 void mtk_mutex_acquire(struct mtk_mutex *mutex)
 {
@@ -1192,7 +890,7 @@ static int mtk_mutex_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mtk_mutex_ctx *mtx;
-	struct resource *regs, addr;
+	struct resource *regs;
 	int i;
 
 	mtx = devm_kzalloc(dev, sizeof(*mtx), GFP_KERNEL);
@@ -1212,18 +910,6 @@ static int mtk_mutex_probe(struct platform_device *pdev)
 			return PTR_ERR(mtx->clk);
 		}
 	}
-
-	if (of_address_to_resource(dev->of_node, 0, &addr) < 0)
-		mtx->addr = 0L;
-	else
-		mtx->addr = addr.start;
-
-#if IS_REACHABLE(CONFIG_MTK_CMDQ)
-	if (cmdq_dev_get_client_reg(dev, &mtx->cmdq_reg, 0))
-		dev_dbg(dev, "No mediatek,gce-client-reg!\n");
-	else
-		mtx->has_gce_client_reg = true;
-#endif
 
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	mtx->regs = devm_ioremap_resource(dev, regs);
@@ -1261,10 +947,6 @@ static const struct of_device_id mutex_driver_dt_match[] = {
 	  .data = &mt8192_mutex_driver_data},
 	{ .compatible = "mediatek,mt8195-disp-mutex",
 	  .data = &mt8195_mutex_driver_data},
-	{ .compatible = "mediatek,mt8195-vpp0-mutex",
-	  .data = &mt8195_vpp0_mutex_driver_data},
-	{ .compatible = "mediatek,mt8195-vpp1-mutex",
-	  .data = &mt8195_vpp1_mutex_driver_data},
 	{ .compatible = "mediatek,mt8365-disp-mutex",
 	  .data = &mt8365_mutex_driver_data},
 	{},
