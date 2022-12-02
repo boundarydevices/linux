@@ -88,7 +88,7 @@ static int clk_mt8195_vpp1_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct device_node *node = dev->parent->of_node;
-	struct clk_onecell_data *clk_data;
+	struct clk_hw_onecell_data *clk_data;
 	int r;
 
 	clk_data = mtk_alloc_clk_data(CLK_VPP1_NR_CLK);
@@ -99,7 +99,7 @@ static int clk_mt8195_vpp1_probe(struct platform_device *pdev)
 	if (r)
 		goto free_vpp1_data;
 
-	r = of_clk_add_provider(node, of_clk_src_onecell_get, clk_data);
+	r = of_clk_add_hw_provider(node, of_clk_hw_onecell_get, clk_data);
 	if (r)
 		goto free_vpp1_data;
 
