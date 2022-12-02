@@ -11,7 +11,7 @@
 
 / {
 	model = "NXP i.MX8ULP EVK";
-	compatible = "fsl,imx8ulp-evk", "fsl,imx8ulp";
+	compatible = "boundary,imx8ulp-evk", "fsl,imx8ulp";
 
 	chosen {
 		stdout-path = &lpuart5;
@@ -676,5 +676,3 @@
 &epxp {
 	status = "okay";
 };
-
-#include "imx8ulp-android.dtsi"
