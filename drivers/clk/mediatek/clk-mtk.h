@@ -222,7 +222,7 @@ static inline struct clk_fixup_div *to_clk_fixup_div(struct clk_hw *hw)
 	return container_of(divider, struct clk_fixup_div, divider);
 }
 
-struct clk *mtk_clk_fixup_divider(
+struct clk_hw *mtk_clk_fixup_divider(
 		const char *name,
 		const char *parent,
 		unsigned long flags,
@@ -235,6 +235,6 @@ struct clk *mtk_clk_fixup_divider(
 
 void mtk_clk_register_fixup_dividers(const struct mtk_clk_divider *mcds,
 			int num, void __iomem *base, spinlock_t *lock,
-				struct clk_onecell_data *clk_data);
+				struct clk_hw_onecell_data *clk_data);
 
 #endif /* __DRV_CLK_MTK_H */

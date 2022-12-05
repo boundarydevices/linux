@@ -524,13 +524,13 @@ static const struct clk_ops clk_fixup_div_ops = {
 	.set_rate = clk_fixup_div_set_rate,
 };
 
-struct clk *mtk_clk_fixup_divider(const char *name, const char *parent,
+struct clk_hw *mtk_clk_fixup_divider(const char *name, const char *parent,
 				  unsigned long flags, void __iomem *reg,
 				  void __iomem *reg_fixup, u8 shift, u8 width,
 				  u8 clk_divider_flags, spinlock_t *lock)
 {
 	struct clk_fixup_div *fixup_div;
-	struct clk *clk;
+	struct clk_hw *hw;
 	struct clk_init_data init;
 
 	fixup_div = kzalloc(sizeof(*fixup_div), GFP_KERNEL);
@@ -552,39 +552,39 @@ struct clk *mtk_clk_fixup_divider(const char *name, const char *parent,
 	fixup_div->divider.hw.init = &init;
 	fixup_div->ops = &clk_divider_ops;
 
-	clk = clk_register(NULL, &fixup_div->divider.hw);
-	if (IS_ERR(clk))
+	hw = clk_hw_register(NULL, &fixup_div->divider.hw);
+	if (IS_ERR(hw))
 		kfree(fixup_div);
 
-	return clk;
+	return hw;
 }
 
 void mtk_clk_register_fixup_dividers(const struct mtk_clk_divider *mcds,
 			int num, void __iomem *base, spinlock_t *lock,
-				struct clk_onecell_data *clk_data)
+				struct clk_hw_onecell_data *clk_data)
 {
-	struct clk *clk;
+	struct clk_hw *hw;
 	int i;
 
 	for (i = 0; i < num; i++) {
 		const struct mtk_clk_divider *mcd = &mcds[i];
 
-		if (clk_data && !IS_ERR_OR_NULL(clk_data->clks[mcd->id]))
+		if (clk_data && !IS_ERR_OR_NULL(clk_data->hws[mcd->id]))
 			continue;
 
-		clk = mtk_clk_fixup_divider(mcd->name, mcd->parent_name,
+		hw = mtk_clk_fixup_divider(mcd->name, mcd->parent_name,
 			mcd->flags, base + mcd->div_reg,
 			base + mcd->div_reg_fixup, mcd->div_shift,
 			mcd->div_width, mcd->clk_divider_flags, lock);
 
-		if (IS_ERR(clk)) {
+		if (IS_ERR(hw)) {
 			pr_err("Failed to register clk %s: %ld\n",
-				mcd->name, PTR_ERR(clk));
+				mcd->name, PTR_ERR(hw));
 			continue;
 		}
 
 		if (clk_data)
-			clk_data->clks[mcd->id] = clk;
+			clk_data->hws[mcd->id] = hw;
 	}
 }
 
