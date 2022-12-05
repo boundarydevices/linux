@@ -559,6 +559,14 @@
 	pinctrl-1 = <&pinctrl_lpi2c3>;
 	status = "okay";
 
+	pcf2131: rtc@53 {
+			compatible = "nxp,pcf2131";
+			reg = <0x53>;
+			interrupt-parent = <&pcal6524>;
+			interrupts = <1 IRQ_TYPE_LEVEL_HIGH>;
+			status = "okay";
+	};
+
 	ptn5110: tcpc@50 {
 		compatible = "nxp,ptn5110";
 		reg = <0x50>;

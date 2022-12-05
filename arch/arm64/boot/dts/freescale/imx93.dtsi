@@ -45,6 +45,7 @@
 		serial7 = &lpuart8;
 		isi0 = &isi_0;
 		csi0 = &mipi_csi;
+		rtc0 = &bbnsm_rtc;
 	};
 
 	cpus {
