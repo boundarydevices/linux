@@ -31,6 +31,10 @@ properties:
           - const: mediatek,mt8183-disp-rdma
       - items:
           - enum:
+              - mediatek,mt8188-disp-rdma
+          - const: mediatek,mt8195-disp-rdma
+      - items:
+          - enum:
               - mediatek,mt7623-disp-rdma
               - mediatek,mt2712-disp-rdma
           - enum:

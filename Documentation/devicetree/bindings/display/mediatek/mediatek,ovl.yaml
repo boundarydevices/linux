@@ -33,6 +33,13 @@ properties:
           - enum:
               - mediatek,mt7623-disp-ovl
               - mediatek,mt2712-disp-ovl
+          - const: mediatek,mt2701-disp-ovl
+      - items:
+          - enum:
+              - mediatek,mt8188-disp-ovl
+              - mediatek,mt8195-disp-ovl
+          - const: mediatek,mt8183-disp-ovl
+      - items:
           - enum:
               - mediatek,mt2701-disp-ovl
 

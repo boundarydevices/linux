@@ -27,6 +27,8 @@ properties:
           - enum:
               - mediatek,mt2712-disp-aal
               - mediatek,mt8183-disp-aal
+              - mediatek,mt8186-disp-aal
+              - mediatek,mt8188-disp-aal
               - mediatek,mt8192-disp-aal
           - enum:
               - mediatek,mt8173-disp-aal
