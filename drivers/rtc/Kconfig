@@ -921,6 +921,21 @@ config RTC_DRV_PCF2127
 	  This driver can also be built as a module. If so, the module
 	  will be called rtc-pcf2127.
 
+config RTC_DRV_PCF2131
+	tristate "NXP PCF2131"
+	depends on RTC_I2C_AND_SPI
+	select REGMAP_I2C if I2C
+	select REGMAP_SPI if SPI_MASTER
+	select WATCHDOG_CORE if WATCHDOG
+	help
+	  If you say yes here you get support for the NXP PCF2131 RTC
+	  chips with integrated quartz crystal for industrial applications.
+	  Both chips also have watchdog timer and tamper switch detection
+	  features.
+
+	  This driver can also be built as a module. If so, the module
+	  will be called rtc-pcf2131.
+
 config RTC_DRV_RV3029C2
 	tristate "Micro Crystal RV3029/3049"
 	depends on RTC_I2C_AND_SPI
