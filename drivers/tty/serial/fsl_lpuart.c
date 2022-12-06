@@ -1945,11 +1945,11 @@ static void lpuart32_shutdown(struct uart_port *port)
 	temp &= ~(UARTBAUD_TDMAE | UARTBAUD_RDMAE | UARTBAUD_RIDMAE);
 	lpuart32_write(port, temp, UARTBAUD);
 
-	/* disable Rx/Tx and interrupts */
+	/* disable Rx/Tx and interrupts and break condition */
 	temp = lpuart32_read(port, UARTCTRL);
 	temp &= ~(UARTCTRL_TE | UARTCTRL_RE | UARTCTRL_TIE |
 		UARTCTRL_TCIE | UARTCTRL_RIE | UARTCTRL_ILIE |
-		UARTCTRL_LOOPS);
+		UARTCTRL_LOOPS | UARTCTRL_SBK);
 	lpuart32_write(port, temp, UARTCTRL);
 	lpuart32_write(port, 0, UARTMODIR);
 
