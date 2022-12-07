@@ -76,6 +76,7 @@
 #define GEN_S1P(cmd, p1)		S_GEN_S1P cmd p1		/* Generic_Short_Write_1P */
 #define GEN_L2P(cmd, p1, p2)		S_GEN_L2P cmd p1 p2		/* Generic_Long_Write_2P */
 #define GEN_L3P(cmd, p1, p2, p3)	S_GEN_L3P cmd p1 p2 p3		/* Generic_Long_Write_3P */
+#define GEN_L4P(cmd, p1, p2, p3, p4)	S_GEN_L4P cmd p1 p2 p3 p4	/* Generic_Long_Write_4P */
 #define GEN_L5P(addrl, addrh, p1, p2, p3, p4)	S_GEN_L5P addrl addrh p1 p2 p3 p4
 #define GEN_BUF(len)			S_GEN_BUF len
 #define DELAY(a)			S_DELAY a
