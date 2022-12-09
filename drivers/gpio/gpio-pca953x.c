@@ -453,7 +453,7 @@ static u8 pca953x_recalc_addr(struct pca953x_chip *chip, int reg, int off)
 static u8 pcal6534_recalc_addr(struct pca953x_chip *chip, int reg, int off)
 {
 	int addr;
-	int pinctrl;
+	int pinctrl = 0;
 
 	addr = (reg & PCAL_GPIO_MASK) * NBANK(chip);
 
