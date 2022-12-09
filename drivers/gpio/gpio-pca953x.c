@@ -309,7 +309,7 @@ static bool pcal6534_check_register(struct pca953x_chip *chip, unsigned int reg,
 	int bank;
 	int offset;
 
-	if (reg >= 0x30) {
+	if (reg >= 0x30 && reg < 0x54) {
 		/*
 		 * Reserved block between 14h and 2Fh does not align on
 		 * expected bank boundaries like other devices.
