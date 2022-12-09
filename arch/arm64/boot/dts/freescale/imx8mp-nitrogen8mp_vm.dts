@@ -372,6 +372,8 @@
 
 	aliases {
 		backlight_mipi = &backlight_mipi;
+		ethernet0 = &eqos;
+		/delete-property/ ethernet1;
 		fb_mipi = &fb_mipi;
 		fb_hdmi = &lcdif3;
 		lcdif = &lcdif1;
