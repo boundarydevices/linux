@@ -1493,6 +1493,11 @@
 			reg = <0x4c200200 0x200>;
 		};
 
+		ddrmix_blk_ctrl: blk-ctrl@4e010000 {
+			compatible = "nxp,blk-ctrl-ddrmix", "syscon", "simple-mfd";
+			reg = <0x4e010000 0x1000>;
+		};
+
 		ddr: memory-controller@4e300000 {
 			compatible = "nxp,imx9-memory-controller", "simple-mfd";
 			reg = <0x4e300000 0x2000>;
