@@ -14,3 +14,4 @@ obj-$(CONFIG_SND_SOC_MT8188) += snd-soc-mt8188-afe.o
 
 # machine driver
 obj-$(CONFIG_SND_SOC_MT8188_MT6359) += mt8188-mt6359.o
+obj-$(CONFIG_SND_SOC_MT8390_EVK) += mt8390-evk.o
