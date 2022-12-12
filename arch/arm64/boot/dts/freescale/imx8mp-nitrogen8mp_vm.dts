@@ -1073,6 +1073,7 @@
 &usdhc2 {
 	bus-width = <4>;
 	cd-gpios = GP_USDHC2_CD;
+	fsl,wp-controller;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc2>;
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
