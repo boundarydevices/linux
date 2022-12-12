@@ -65,6 +65,14 @@
 			reg = <0 0x60000000 0 0x1100000>;
 			no-map;
 		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x00000000 0x0c000000>;
+			linux,cma-default;
+		};
 	};
 
 	firmware {
