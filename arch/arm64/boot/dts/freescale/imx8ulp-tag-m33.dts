@@ -7,6 +7,9 @@
 #include "imx8ulp-rpmsg.dtsi"
 
 / {
+	model = "NXP i.MX 8ULP tag - m33";
+	compatible = "boundary,imx8ulp-tag-m33", "fsl,imx8ulp";
+
 	reserved-memory {
 		rsc_table: rsc_table@1fff8000{
 			reg = <0 0x1fff8000 0 0x1000>;
