@@ -48,6 +48,14 @@
 			alignment = <0 0x10000>;
 			reg = <0 0x57000000 0 0x1400000>;
 		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x00000000 0x0c000000>;
+			linux,cma-default;
+		};
 	};
 
 	usb_p0_vbus: usb0-otg-vbus {
