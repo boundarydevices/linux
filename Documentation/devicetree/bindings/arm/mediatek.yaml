@@ -182,6 +182,11 @@ properties:
           - enum:
               - mediatek,mt8183-pumpkin
           - const: mediatek,mt8183
+      - description: MediaTek Genio 700 EVK
+        items:
+          - enum:
+              - mediatek,mt8390-evk
+          - const: mediatek,mt8188
       - items:
           - enum:
               - mediatek,mt8516-pumpkin
