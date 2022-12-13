@@ -182,7 +182,7 @@
 #include "panel-q035-014.dtsi"
 
 / {
-	model = "FSL i.MX8ULP tag";
+	model = "NXP i.MX 8ULP tag";
 	compatible = "boundary,imx8ulp-tag", "fsl,imx8ulp";
 
 	aliases {
