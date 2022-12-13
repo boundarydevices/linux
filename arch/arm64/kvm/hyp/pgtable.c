@@ -327,22 +327,35 @@ struct hyp_map_data {
 
 static int hyp_set_prot_attr(enum kvm_pgtable_prot prot, kvm_pte_t *ptep)
 {
-	bool device = prot & KVM_PGTABLE_PROT_DEVICE;
-	u32 mtype = device ? MT_DEVICE_nGnRE : MT_NORMAL;
-	kvm_pte_t attr = FIELD_PREP(KVM_PTE_LEAF_ATTR_LO_S1_ATTRIDX, mtype);
-	u32 sh = KVM_PTE_LEAF_ATTR_LO_S1_SH_IS;
 	u32 ap = (prot & KVM_PGTABLE_PROT_W) ? KVM_PTE_LEAF_ATTR_LO_S1_AP_RW :
 					       KVM_PTE_LEAF_ATTR_LO_S1_AP_RO;
+	u32 sh = KVM_PTE_LEAF_ATTR_LO_S1_SH_IS;
+	kvm_pte_t attr;
+	u32 mtype;
 
 	if (!(prot & KVM_PGTABLE_PROT_R) ||
 	    (prot & (KVM_PGTABLE_PROT_PXN | KVM_PGTABLE_PROT_UXN)))
 		return -EINVAL;
 
+	switch (prot & (KVM_PGTABLE_PROT_DEVICE | KVM_PGTABLE_PROT_NORMAL_NC)) {
+	case KVM_PGTABLE_PROT_DEVICE | KVM_PGTABLE_PROT_NORMAL_NC:
+		return -EINVAL;
+	case KVM_PGTABLE_PROT_DEVICE:
+		mtype = MT_DEVICE_nGnRE;
+		break;
+	case KVM_PGTABLE_PROT_NORMAL_NC:
+		mtype = MT_NORMAL_NC;
+		break;
+	default:
+		mtype = MT_NORMAL;
+	}
+	attr = FIELD_PREP(KVM_PTE_LEAF_ATTR_LO_S1_ATTRIDX, mtype);
+
 	if (prot & KVM_PGTABLE_PROT_X) {
 		if (prot & KVM_PGTABLE_PROT_W)
 			return -EINVAL;
 
-		if (device)
+		if (mtype != MT_NORMAL)
 			return -EINVAL;
 
 		if (system_supports_bti_kernel())
