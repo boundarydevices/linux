@@ -1158,6 +1158,7 @@
 	dr_mode = "otg";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	status = "okay";
+	wakeup-source;
 
 	connector {
 		compatible = "gpio-usb-b-connector", "usb-b-connector";
@@ -1188,6 +1189,7 @@
 	mediatek,usb3-drd;
 	usb-role-switch;
 	status = "okay";
+	wakeup-source;
 
 	port {
 		ssusb1_ep: endpoint {
@@ -1219,6 +1221,7 @@
 	dr_mode = "host";
 	vusb33-supply = <&mt6359_vusb_ldo_reg>;
 	status = "okay";
+	wakeup-source;
 
 	connector {
 		compatible = "gpio-usb-b-connector", "usb-b-connector";
