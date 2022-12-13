@@ -495,7 +495,7 @@
 	};
 
 	sound-hdmi {
-		compatible = "fsl,imx-audio-hdmi";
+		compatible = "fsl,imx-audio-cdnhdmi";
 		model = "audio-hdmi";
 		audio-cpu = <&aud2htx>;
 		hdmi-out;
