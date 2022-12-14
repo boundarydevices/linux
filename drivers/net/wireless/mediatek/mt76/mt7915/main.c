@@ -63,6 +63,11 @@ static int mt7915_start(struct ieee80211_hw *hw)
 	if (ret)
 		goto out;
 
+	ret = mt7915_mcu_set_thermal_protect(phy);
+
+	if (ret)
+		goto out;
+
 	ret = mt76_connac_mcu_set_rts_thresh(&dev->mt76, 0x92b,
 					     phy->band_idx);
 	if (ret)
