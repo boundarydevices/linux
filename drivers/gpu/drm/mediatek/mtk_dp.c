@@ -2798,6 +2798,12 @@ static void mtk_dp_bridge_hpd_notify(struct drm_bridge *bridge,
 				train_info->cable_plugged_in = false;
 				mtk_dp->train_state = MTK_DP_TRAIN_STATE_STARTUP;
 			} else {
+				mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_3414,
+					HPD_OVR_EN_DP_TRANS_P0_MASK,
+					HPD_OVR_EN_DP_TRANS_P0_MASK);
+				mtk_dp_update_bits(mtk_dp, MTK_DP_TRANS_P0_3414,
+					HPD_SET_DP_TRANS_P0_MASK,
+					HPD_SET_DP_TRANS_P0_MASK);
 				train_info->cable_plugged_in = true;
 			}
 
