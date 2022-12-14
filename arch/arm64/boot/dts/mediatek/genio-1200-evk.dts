@@ -1001,6 +1001,11 @@
 	regulator-always-on;
 };
 
+/* For USB Hub */
+&mt6359_vcamio_ldo_reg {
+	regulator-always-on;
+};
+
 #include "mt6360.dtsi"
 
 /* For EMI_VDD2 */
