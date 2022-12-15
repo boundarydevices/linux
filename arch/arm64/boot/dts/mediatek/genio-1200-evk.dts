@@ -997,15 +997,17 @@
 	pinctrl-names = "default", "state_uhs";
 	pinctrl-0 = <&mmc1_pins_default>;
 	pinctrl-1 = <&mmc1_pins_uhs>;
-	cd-gpios = <&pio 129 GPIO_ACTIVE_LOW>;
 	bus-width = <4>;
 	max-frequency = <200000000>;
 	cap-sd-highspeed;
 	sd-uhs-sdr50;
 	sd-uhs-sdr104;
+	no-mmc;
+	no-sdio;
 	vmmc-supply = <&mt6360_ldo5>;
 	vqmmc-supply = <&mt6360_ldo3>;
 	status = "okay";
+	non-removable;
 };
 
 &spmi {
