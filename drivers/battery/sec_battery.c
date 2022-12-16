@@ -174,7 +174,7 @@ static int tuner_running_status;
 #endif
 
 int poweroff_charging;
-static int sec_bat_is_lpm_check(char *str)
+static int __maybe_unused sec_bat_is_lpm_check(char *str)
 {
 	if (strncmp(str, "charger", 7) == 0)
 		poweroff_charging = 1;
