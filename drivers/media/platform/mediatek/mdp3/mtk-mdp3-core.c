@@ -299,7 +299,7 @@ static int mdp_probe(struct platform_device *pdev)
 	}
 
 	mm_pdev = __get_pdev_by_id(pdev, NULL, MDP_INFRA_SCP);
-	if (WARN_ON(!mm_pdev)) {
+	if (IS_ERR_OR_NULL(mm_pdev)) {
 		dev_err(&pdev->dev, "Could not get scp device\n");
 		ret = -ENODEV;
 		goto err_destroy_clock_wq;
@@ -354,8 +354,10 @@ err_deinit_comp:
 	mdp_comp_destroy(mdp);
 err_free_mutex:
 	for (i = 0; i < mdp->mdp_data->pipe_info_len; i++) {
-		mtk_mutex_put(mdp->mdp_mutex[i]);
-		mtk_mutex_put(mdp->mdp_mutex2[i]);
+		if (mdp->mdp_mutex[i])
+			mtk_mutex_put(mdp->mdp_mutex[i]);
+		if (mdp->mdp_mutex2[i])
+			mtk_mutex_put(mdp->mdp_mutex2[i]);
 	}
 err_destroy_device:
 	kfree(mdp);
