@@ -916,6 +916,11 @@
 	};
 };
 
+&scp {
+	memory-region = <&scp_mem_reserved>;
+	status = "okay";
+};
+
 &keypad {
 	mediatek,debounce-us = <32000>;
 	mediatek,double-keys;
