@@ -1489,6 +1489,7 @@
 				power-domain-names = "bus", "usb", "usb-phy1",
 						     "usb-phy2", "pcie", "pcie-phy";
 				#power-domain-cells = <1>;
+				#clock-cells = <0>;				
 			};
 
 			hdmi_blk_ctrl: blk-ctrl@32fc0000 {
