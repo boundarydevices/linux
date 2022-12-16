@@ -201,8 +201,10 @@ void mdp_video_device_release(struct video_device *vdev)
 
 	mdp_comp_destroy(mdp);
 	for (i = 0; i < MDP_PIPE_MAX; i++) {
-		mtk_mutex_put(mdp->mdp_mutex[i]);
-		mtk_mutex_put(mdp->mdp_mutex2[i]);
+		if (mdp->mdp_mutex[i])
+			mtk_mutex_put(mdp->mdp_mutex[i]);
+		if (mdp->mdp_mutex2[i])
+			mtk_mutex_put(mdp->mdp_mutex2[i]);
 	}
 
 	mdp_vpu_shared_mem_free(&mdp->vpu);
