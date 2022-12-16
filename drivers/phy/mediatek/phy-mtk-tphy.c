@@ -184,6 +184,11 @@
 #define U3P_U3_PHYD_CDR1		0x05c
 #define P3D_RG_CDR_BIR_LTD1		GENMASK(28, 24)
 #define P3D_RG_CDR_BIR_LTD0		GENMASK(12, 8)
+#define P3D_RG_CDR_BIR_LTD0_VAL(x)	((0x1f & (x)) << 8)
+#define U3P_U3_PHYD_TOP1		0x100
+#define P3D_RG_SSUSB_PHY_MODE		GENMASK(2, 1)
+#define P3D_RG_SSUSB_PHY_MODE_VAL(x)	((0x3 & (x)) << 1)
+#define P3D_RG_SSUSB_FORCE_PHY_MODE	BIT(0)
 
 #define U3P_U3_PHYD_RXDET1		0x128
 #define P3D_RG_RXDET_STB2_SET		GENMASK(17, 9)
@@ -327,6 +332,7 @@ struct mtk_phy_instance {
 	int discth;
 	int pre_emphasis;
 	bool bc12_en;
+	bool phy_shared;
 };
 
 struct mtk_tphy {
@@ -767,6 +773,34 @@ static void u3_phy_instance_init(struct mtk_tphy *tphy,
 	struct u3phy_banks *u3_banks = &instance->u3_banks;
 	void __iomem *phya = u3_banks->phya;
 	void __iomem *phyd = u3_banks->phyd;
+	u32 tmp;
+
+	if (instance->phy_shared) {
+		/* switch to USB 3.0 phy */
+		tmp = readl(u3_banks->phyd + U3P_U3_PHYD_TOP1);
+		tmp &= ~P3D_RG_SSUSB_PHY_MODE;
+		tmp |= P3D_RG_SSUSB_PHY_MODE_VAL(0x01);
+		tmp |= P3D_RG_SSUSB_FORCE_PHY_MODE;
+		writel(tmp, u3_banks->phyd + U3P_U3_PHYD_TOP1);
+
+		tmp = readl(u3_banks->chip + U3P_U3_CHIP_GPIO_CTLD);
+		tmp |= (P3C_FORCE_IP_SW_RST | P3C_MCU_BUS_CK_GATE_EN);
+		writel(tmp, u3_banks->chip + U3P_U3_CHIP_GPIO_CTLD);
+
+		tmp = readl(u3_banks->chip + U3P_U3_CHIP_GPIO_CTLE);
+		tmp |= (P3C_RG_SWRST_U3_PHYD_FORCE_EN | P3C_RG_SWRST_U3_PHYD);
+		writel(tmp, u3_banks->chip + U3P_U3_CHIP_GPIO_CTLE);
+
+		udelay(10);
+
+		tmp = readl(u3_banks->chip + U3P_U3_CHIP_GPIO_CTLD);
+		tmp &= ~(P3C_FORCE_IP_SW_RST | P3C_MCU_BUS_CK_GATE_EN);
+		writel(tmp, u3_banks->chip + U3P_U3_CHIP_GPIO_CTLD);
+
+		tmp = readl(u3_banks->chip + U3P_U3_CHIP_GPIO_CTLE);
+		tmp &= ~(P3C_RG_SWRST_U3_PHYD_FORCE_EN | P3C_RG_SWRST_U3_PHYD);
+		writel(tmp, u3_banks->chip + U3P_U3_CHIP_GPIO_CTLE);
+	}
 
 	/* gating PCIe Analog XTAL clock */
 	mtk_phy_set_bits(u3_banks->spllc + U3P_SPLLC_XTALCTL3,
@@ -1637,6 +1671,9 @@ static int mtk_tphy_probe(struct platform_device *pdev)
 		instance->index = port;
 		phy_set_drvdata(phy, instance);
 		port++;
+
+		instance->phy_shared = of_property_read_bool(child_np,
+			"mediatek,phy-shared");
 
 		clks = instance->clks;
 		clks[0].id = "ref";     /* digital (& analog) clock */
