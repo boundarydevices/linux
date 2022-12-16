@@ -1898,6 +1898,7 @@
 					      <&comb_tx_imp_p1>;
 				nvmem-cell-names = "intr", "rx_imp", "tx_imp";
 				#phy-cells = <1>;
+				mediatek,phy-shared;
 			};
 		};
 
