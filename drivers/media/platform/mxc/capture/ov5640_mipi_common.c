@@ -2459,7 +2459,7 @@ static int ov5640_s_power(struct ov5640 *sensor, int on)
 	return on ? ov5640_power_on_reset(sensor) : ov5640_power_off(sensor);
 }
 
-static int ov5640_g_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
+static int __maybe_unused ov5640_g_parm(struct ov5640 *sensor, struct v4l2_streamparm *a)
 {
 	struct device *dev = &sensor->i2c_client->dev;
 	struct v4l2_captureparm *cparm = &a->parm.capture;
