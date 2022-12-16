@@ -46,6 +46,7 @@
 		vdo1-padding5 = &vdo1_padding5;
 		vdo1-padding6 = &vdo1_padding6;
 		vdo1-padding7 = &vdo1_padding7;
+		merge0 = &merge0;
 		merge1 = &merge1;
 		merge2 = &merge2;
 		merge3 = &merge3;
@@ -2227,6 +2228,32 @@
 			phys = <&mipi_tx0>;
 			phy-names = "dphy";
 			status = "disabled";
+		};
+
+		dsc0: dsc@1c009000 {
+			compatible = "mediatek,mt8195-disp-dsc";
+			reg = <0 0x1c009000 0 0x1000>;
+			interrupts = <GIC_SPI 645 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
+			clocks = <&vdosys0 CLK_VDO0_DSC_WRAP0>,
+				<&vdosys0 CLK_VDO0_DL_RELAY4>,
+				<&vdosys1 CLK_VDO1_DSC_VDO1_DL_ASYNC>;
+			clock-names = "dsc","dsc_async","dsc_async2";
+			mediatek,gce-client-reg =
+				 <&gce0 SUBSYS_1c00XXXX 0x9000 0x1000>;
+		};
+
+		merge0: merge0@1c014000 {
+			compatible = "mediatek,mt8195-disp-merge";
+			reg = <0 0x1c014000 0 0x1000>;
+			interrupts = <GIC_SPI 656 IRQ_TYPE_LEVEL_HIGH 0>;
+			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS0>;
+			clocks = <&vdosys0 CLK_VDO0_VPP_MERGE0>,
+				<&vdosys0 CLK_VDO0_DL_RELAY3>,
+				<&vdosys1 CLK_VDO1_MERGE_VDO1_DL_ASYNC>;
+			clock-names = "merge","merge_async","merge_async2";
+			mediatek,gce-client-reg =
+				 <&gce0 SUBSYS_1c01XXXX 0x4000 0x1000>;
 		};
 
 		vdosys0: syscon@1c01d000 {
