@@ -2892,7 +2892,10 @@ brcmf_cfg80211_connect(struct wiphy *wiphy, struct net_device *ndev,
 
 	brcmf_set_join_pref(ifp, &sme->bss_select);
 
-	if (sme->prev_bssid) {
+	/* The internal supplicant judges to use assoc or reassoc itself.
+	 * it is not necessary to specify REASSOC
+	 */
+	if ((sme->prev_bssid) && !brcmf_feat_is_enabled(ifp, BRCMF_FEAT_FWSUP)) {
 		brcmf_dbg(CONN, "Trying to REASSOC\n");
 		join_params_size = sizeof(ext_join_params->assoc_le);
 		err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_REASSOC,
