@@ -741,6 +741,12 @@ static int ak4458_i2c_probe(struct i2c_client *i2c)
 {
 	struct ak4458_priv *ak4458;
 	int ret, i;
+	int reg;
+
+	/* Check if first register can be read or not */
+	reg = i2c_smbus_read_byte_data(i2c, AK4458_00_CONTROL1);
+	if (reg < 0)
+		return -ENODEV;
 
 	ak4458 = devm_kzalloc(&i2c->dev, sizeof(*ak4458), GFP_KERNEL);
 	if (!ak4458)
