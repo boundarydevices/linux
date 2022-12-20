@@ -55,6 +55,12 @@
 #define SECO_MU_IO_FLAGS_USE_SEC_MEM	(0x02u)
 #define SECO_MU_IO_FLAGS_USE_SHORT_ADDR	(0x04u)
 
+struct ele_imem_buf {
+	u8 *buf;
+	phys_addr_t phyaddr;
+	u32 size;
+};
+
 struct ele_obuf_desc {
 	u8 *out_ptr;
 	u8 *out_usr_ptr;
@@ -141,6 +147,7 @@ struct ele_mu_priv {
 	int flags;
 	int max_dev_ctx;
 	struct ele_mu_device_ctx **ctxs;
+	struct ele_imem_buf imem;
 };
 
 int get_ele_mu_priv(struct ele_mu_priv **export);
