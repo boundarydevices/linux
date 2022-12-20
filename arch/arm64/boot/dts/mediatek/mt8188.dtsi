@@ -2048,6 +2048,8 @@
 				"gfx_fe0_async", "gfx_fe1_async","vdo_be_async",
 				"ethdr_top";
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDOSYS1>;
+			assigned-clocks = <&topckgen CLK_TOP_ETHDR>;
+			assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D6>;
 			iommus = <&iommu_vpp M4U_PORT_L3_HDR_DS_SMI>,
 				 <&iommu_vpp M4U_PORT_L3_HDR_ADL_SMI>;
 			interrupts = <GIC_SPI 566 IRQ_TYPE_LEVEL_HIGH 0>;
@@ -2311,6 +2313,8 @@
 			#clock-cells = <1>;
 			mediatek,gce-events =
 				 <CMDQ_EVENT_VDO0_DISP_STREAM_DONE_0>;
+			assigned-clocks = <&topckgen CLK_TOP_VPP>;
+			assigned-clock-parents = <&topckgen CLK_TOP_MAINPLL_D4>;
 		};
 
 		vdosys1: syscon@1c100000 {
@@ -2321,6 +2325,8 @@
 				<&gce0 SUBSYS_1c10XXXX 0x0000 0x1000>;
 			#clock-cells = <1>;
 			#reset-cells = <1>;
+			assigned-clocks = <&topckgen CLK_TOP_VPP>;
+			assigned-clock-parents = <&topckgen CLK_TOP_MAINPLL_D4>;
 		};
 
 		dp_intf0: dp-intf@1c015000 {
