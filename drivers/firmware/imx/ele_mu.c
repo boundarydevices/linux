@@ -240,7 +240,7 @@ static int imx_soc_device_register(struct platform_device *pdev)
 	return 0;
 }
 
-static int ele_trng_enable(struct platform_device *pdev)
+static int ele_do_start_rng(void)
 {
 	int ret;
 	int count = 5;
@@ -271,8 +271,9 @@ static int ele_trng_enable(struct platform_device *pdev)
 			return -EIO;
 	}
 
-	return ele_trng_init(&pdev->dev);
+	return 0;
 }
+
 /*
  * File operations for user-space
  */
@@ -1026,8 +1027,13 @@ static int ele_mu_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (info && info->enable_ele_trng) {
-		ret = ele_trng_enable(pdev);
+	/* start ele rng */
+	ret = ele_do_start_rng();
+	if (ret)
+		dev_err(dev, "Failed to start ele rng\n");
+
+	if (!ret && info && info->enable_ele_trng) {
+		ret = ele_trng_init(dev);
 		if (ret)
 			dev_err(dev, "Failed to init ele-trng\n");
 	}
