@@ -3290,6 +3290,7 @@ fec_enet_open(struct net_device *ndev)
 
 	/* Init MAC prior to mii bus probe */
 	fec_restart(ndev);
+	writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
 
 	/* Call phy_reset_after_clk_enable() again if it failed during
 	 * phy_reset_after_clk_enable() before because the PHY wasn't probed.
