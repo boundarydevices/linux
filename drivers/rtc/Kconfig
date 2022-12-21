@@ -921,6 +921,21 @@ config RTC_DRV_PCF2127
 	  This driver can also be built as a module. If so, the module
 	  will be called rtc-pcf2127.
 
+config RTC_DRV_PCF2131
+	tristate "NXP PCF2131"
+	depends on RTC_I2C_AND_SPI
+	select REGMAP_I2C if I2C
+	select REGMAP_SPI if SPI_MASTER
+	select WATCHDOG_CORE if WATCHDOG
+	help
+	  If you say yes here you get support for the NXP PCF2131 RTC
+	  chips with integrated quartz crystal for industrial applications.
+	  Both chips also have watchdog timer and tamper switch detection
+	  features.
+
+	  This driver can also be built as a module. If so, the module
+	  will be called rtc-pcf2131.
+
 config RTC_DRV_RV3029C2
 	tristate "Micro Crystal RV3029/3049"
 	depends on RTC_I2C_AND_SPI
@@ -1802,6 +1817,18 @@ config RTC_DRV_SNVS
 	   This driver can also be built as a module, if so, the module
 	   will be called "rtc-snvs".
 
+config RTC_DRV_BBNSM
+	tristate "NXP BBNSM RTC support"
+	select REGMAP_MMIO
+	depends on ARCH_MXC || COMPILE_TEST
+	depends on HAS_IOMEM
+	depends on OF
+	help
+	   If you say yes here you get support for the NXP BBNSM RTC module.
+
+	   This driver can also be built as a module, if so, the module
+	   will be called "rtc-bbnsm".
+
 config RTC_DRV_IMX_SC
 	depends on IMX_SCU
 	depends on HAVE_ARM_SMCCC
@@ -1809,6 +1836,13 @@ config RTC_DRV_IMX_SC
 	help
 	   If you say yes here you get support for the NXP i.MX System
 	   Controller RTC module.
+
+config RTC_DRV_IMX_RPMSG
+	tristate "NXP RPMSG RTC support"
+	depends on OF
+	help
+	   If you say yes here you get support for the NXP RPMSG
+	   RTC module.
 
 config RTC_DRV_ST_LPC
 	tristate "STMicroelectronics LPC RTC"
