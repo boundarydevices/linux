@@ -41,6 +41,8 @@ DECLARE_PER_CPU(struct task_struct *, __entry_task);
 
 #include <asm/types.h>
 
+typedef unsigned long mm_segment_t;
+
 struct cpu_context_save {
 	__u32	r4;
 	__u32	r5;
@@ -62,6 +64,7 @@ struct cpu_context_save {
 struct thread_info {
 	unsigned long		flags;		/* low level flags */
 	int			preempt_count;	/* 0 => preemptable, <0 => bug */
+	mm_segment_t		addr_limit;	/* address limit */
 	__u32			cpu;		/* cpu */
 	__u32			cpu_domain;	/* cpu domain */
 	struct cpu_context_save	cpu_context;	/* cpu context */
@@ -79,6 +82,7 @@ struct thread_info {
 {									\
 	.flags		= 0,						\
 	.preempt_count	= INIT_PREEMPT_COUNT,				\
+	.addr_limit	= KERNEL_DS,					\
 }
 
 static inline struct task_struct *thread_task(struct thread_info* ti)

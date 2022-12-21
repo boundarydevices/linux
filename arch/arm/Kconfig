@@ -132,6 +132,7 @@ config ARM
 	select PERF_USE_VMALLOC
 	select RTC_LIB
 	select SPARSE_IRQ if !(ARCH_FOOTBRIDGE || ARCH_RPC)
+	select SET_FS
 	select SYS_SUPPORTS_APM_EMULATION
 	select THREAD_INFO_IN_TASK
 	select TIMER_OF if OF
