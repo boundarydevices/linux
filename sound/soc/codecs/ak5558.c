@@ -424,7 +424,12 @@ static int ak5558_i2c_probe(struct i2c_client *i2c)
 	struct ak5558_priv *ak5558;
 	int ret = 0;
 	int dev_id;
-	int i;
+	int i, reg;
+
+	/* Check if first register can be read or not */
+	reg = i2c_smbus_read_byte_data(i2c, AK5558_00_POWER_MANAGEMENT1);
+	if (reg < 0)
+		return -ENODEV;
 
 	ak5558 = devm_kzalloc(&i2c->dev, sizeof(*ak5558), GFP_KERNEL);
 	if (!ak5558)

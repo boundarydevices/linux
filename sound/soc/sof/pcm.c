@@ -660,7 +660,7 @@ void snd_sof_new_platform_drv(struct snd_sof_dev *sdev)
 	else if (plat_data->of_machine)
 		drv_name = plat_data->of_machine->drv_name;
 	else
-		drv_name = NULL;
+		drv_name = plat_data->machine_drv_name;
 
 	pd->name = "sof-audio-component";
 	pd->probe = sof_pcm_probe;
