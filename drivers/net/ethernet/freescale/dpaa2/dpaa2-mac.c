@@ -5,7 +5,8 @@
 #include <linux/pcs-lynx.h>
 #include <linux/phy/phy.h>
 #include <linux/property.h>
-
+#include <linux/fsl/mc.h>
+#include <linux/msi.h>
 #include "dpaa2-eth.h"
 #include "dpaa2-mac.h"
 
@@ -336,12 +337,20 @@ static void dpaa2_mac_set_supported_interfaces(struct dpaa2_mac *mac)
 
 void dpaa2_mac_start(struct dpaa2_mac *mac)
 {
+	ASSERT_RTNL();
+
 	if (mac->serdes_phy)
 		phy_power_on(mac->serdes_phy);
+
+	phylink_start(mac->phylink);
 }
 
 void dpaa2_mac_stop(struct dpaa2_mac *mac)
 {
+	ASSERT_RTNL();
+
+	phylink_stop(mac->phylink);
+
 	if (mac->serdes_phy)
 		phy_power_off(mac->serdes_phy);
 }
@@ -420,7 +429,9 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
 	}
 	mac->phylink = phylink;
 
+	rtnl_lock();
 	err = phylink_fwnode_phy_connect(mac->phylink, dpmac_node, 0);
+	rtnl_unlock();
 	if (err) {
 		netdev_err(net_dev, "phylink_fwnode_phy_connect() = %d\n", err);
 		goto err_phylink_destroy;
@@ -438,10 +449,10 @@ err_pcs_destroy:
 
 void dpaa2_mac_disconnect(struct dpaa2_mac *mac)
 {
-	if (!mac->phylink)
-		return;
-
+	rtnl_lock();
 	phylink_disconnect_phy(mac->phylink);
+	rtnl_unlock();
+
 	phylink_destroy(mac->phylink);
 	dpaa2_pcs_destroy(mac);
 	of_phy_put(mac->serdes_phy);
@@ -571,4 +582,26 @@ void dpaa2_mac_get_ethtool_stats(struct dpaa2_mac *mac, u64 *data)
 		}
 		*(data + i) = value;
 	}
+}
+
+void dpaa2_mac_driver_attach(struct fsl_mc_device *dpmac_dev)
+{
+	struct device_driver *drv = driver_find("fsl_dpaa2_mac", &fsl_mc_bus_type);
+	struct device *dev = &dpmac_dev->dev;
+	int err;
+
+	if (dev && dev->driver == NULL && drv) {
+		err = device_attach(dev);
+		if (err && err != -EAGAIN)
+			dev_err(dev, "Error in attaching the fsl_dpaa2_mac driver\n");
+	}
+}
+
+void dpaa2_mac_driver_detach(struct fsl_mc_device *dpmac_dev)
+{
+	struct device_driver *drv = driver_find("fsl_dpaa2_mac", &fsl_mc_bus_type);
+	struct device *dev = &dpmac_dev->dev;
+
+	if (dev && dev->driver == drv)
+		device_release_driver(dev);
 }

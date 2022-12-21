@@ -98,14 +98,14 @@ static int dpaa2_dbg_ch_show(struct seq_file *file, void *offset)
 	int i;
 
 	seq_printf(file, "Channel stats for %s:\n", priv->net_dev->name);
-	seq_printf(file, "%s%16s%16s%16s%16s%16s%16s\n",
-		   "CHID", "CPU", "Deq busy", "Frames", "CDANs",
+	seq_printf(file, "%s  %5s%16s%16s%16s%16s%16s%16s\n",
+		   "IDX", "CHID", "CPU", "Deq busy", "Frames", "CDANs",
 		   "Avg Frm/CDAN", "Buf count");
 
 	for (i = 0; i < priv->num_channels; i++) {
 		ch = priv->channel[i];
-		seq_printf(file, "%4d%16d%16llu%16llu%16llu%16llu%16d\n",
-			   ch->ch_id,
+		seq_printf(file, "%3s%d%6d%16d%16llu%16llu%16llu%16llu%16d\n",
+			   "CH#", i, ch->ch_id,
 			   ch->nctx.desired_cpu,
 			   ch->stats.dequeue_portal_busy,
 			   ch->stats.frames,
@@ -118,6 +118,107 @@ static int dpaa2_dbg_ch_show(struct seq_file *file, void *offset)
 }
 
 DEFINE_SHOW_ATTRIBUTE(dpaa2_dbg_ch);
+
+static int dpaa2_dbg_bp_show(struct seq_file *file, void *offset)
+{
+	struct dpaa2_eth_priv *priv = (struct dpaa2_eth_priv *)file->private;
+	int i, j, num_queues, buf_cnt;
+	struct dpaa2_eth_bp *bp;
+	char ch_name[10];
+	int err;
+
+	/* Print out the header */
+	seq_printf(file, "Buffer pool info for %s:\n", priv->net_dev->name);
+	seq_printf(file, "%s  %10s%15s", "IDX", "BPID", "Buf count");
+	num_queues = dpaa2_eth_queue_count(priv);
+	for (i = 0; i < num_queues; i++) {
+		snprintf(ch_name, sizeof(ch_name), "CH#%d", i);
+		seq_printf(file, "%10s", ch_name);
+	}
+	seq_printf(file, "\n");
+
+	/* For each buffer pool, print out its BPID, the number of buffers in
+	 * that buffer pool and the channels which are using it.
+	 */
+	for (i = 0; i < priv->num_bps; i++) {
+		bp = priv->bp[i];
+
+		err = dpaa2_io_query_bp_count(NULL, bp->bpid, &buf_cnt);
+		if (err) {
+			netdev_warn(priv->net_dev, "Buffer count query error %d\n", err);
+			return err;
+		}
+
+		seq_printf(file, "%3s%d%10d%15d", "BP#", i, bp->bpid, buf_cnt);
+		for (j = 0; j < num_queues; j++) {
+			if (priv->channel[j]->bp == bp)
+				seq_printf(file, "%10s", "x");
+			else
+				seq_printf(file, "%10s", "");
+		}
+		seq_printf(file, "\n");
+	}
+
+	return 0;
+}
+
+DEFINE_SHOW_ATTRIBUTE(dpaa2_dbg_bp);
+
+static ssize_t dpaa2_dbg_reset_write(struct file *file, const char __user *buf,
+				     size_t count, loff_t *offset)
+{
+	struct dpaa2_eth_priv *priv = file->private_data;
+	struct rtnl_link_stats64 *percpu_stats;
+	struct dpaa2_eth_drv_stats *percpu_extras;
+	struct dpaa2_eth_fq *fq;
+	struct dpaa2_eth_channel *ch;
+	int i;
+
+	for_each_online_cpu(i) {
+		percpu_stats = per_cpu_ptr(priv->percpu_stats, i);
+		memset(percpu_stats, 0, sizeof(*percpu_stats));
+
+		percpu_extras = per_cpu_ptr(priv->percpu_extras, i);
+		memset(percpu_extras, 0, sizeof(*percpu_extras));
+	}
+
+	for (i = 0; i < priv->num_fqs; i++) {
+		fq = &priv->fq[i];
+		memset(&fq->stats, 0, sizeof(fq->stats));
+	}
+
+	for (i = 0; i < priv->num_channels; i++) {
+		ch = priv->channel[i];
+		memset(&ch->stats, 0, sizeof(ch->stats));
+	}
+
+	return count;
+}
+
+static const struct file_operations dpaa2_dbg_reset_ops = {
+	.open = simple_open,
+	.write = dpaa2_dbg_reset_write,
+};
+
+static ssize_t dpaa2_dbg_reset_mc_write(struct file *file,
+					const char __user *buf,
+					size_t count, loff_t *offset)
+{
+	struct dpaa2_eth_priv *priv = file->private_data;
+	int err;
+
+	err = dpni_reset_statistics(priv->mc_io, 0, priv->mc_token);
+	if (err)
+		netdev_err(priv->net_dev,
+			   "dpni_reset_statistics() failed %d\n", err);
+
+	return count;
+}
+
+static const struct file_operations dpaa2_dbg_reset_mc_ops = {
+	.open = simple_open,
+	.write = dpaa2_dbg_reset_mc_write,
+};
 
 void dpaa2_dbg_add(struct dpaa2_eth_priv *priv)
 {
@@ -139,6 +240,17 @@ void dpaa2_dbg_add(struct dpaa2_eth_priv *priv)
 
 	/* per-fq stats file */
 	debugfs_create_file("ch_stats", 0444, dir, priv, &dpaa2_dbg_ch_fops);
+
+	/* per buffer pool stats file */
+	debugfs_create_file("bp_stats", 0444, dir, priv, &dpaa2_dbg_bp_fops);
+
+	/* reset stats */
+	debugfs_create_file("reset_stats", 0200, dir, priv,
+			    &dpaa2_dbg_reset_ops);
+
+	/* reset MC stats */
+	debugfs_create_file("reset_mc_stats", 0222, dir, priv,
+			    &dpaa2_dbg_reset_mc_ops);
 }
 
 void dpaa2_dbg_remove(struct dpaa2_eth_priv *priv)
