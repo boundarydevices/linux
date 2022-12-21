@@ -1898,6 +1898,7 @@ struct xhci_hcd {
 #define XHCI_EP_CTX_BROKEN_DCS	BIT_ULL(42)
 #define XHCI_SUSPEND_RESUME_CLKS	BIT_ULL(43)
 #define XHCI_RESET_TO_DEFAULT	BIT_ULL(44)
+#define XHCI_CDNS_HOST		BIT_ULL(45)
 
 	unsigned int		num_active_eps;
 	unsigned int		limit_active_eps;
@@ -1943,6 +1944,7 @@ struct xhci_driver_overrides {
 			     struct usb_host_endpoint *ep);
 	int (*check_bandwidth)(struct usb_hcd *, struct usb_device *);
 	void (*reset_bandwidth)(struct usb_hcd *, struct usb_device *);
+	int (*bus_suspend)(struct usb_hcd *hcd);
 };
 
 #define	XHCI_CFC_DELAY		10
@@ -2196,6 +2198,16 @@ int xhci_find_raw_port_number(struct usb_hcd *hcd, int port1);
 struct xhci_hub *xhci_get_rhub(struct usb_hcd *hcd);
 
 void xhci_hc_died(struct xhci_hcd *xhci);
+#ifdef CONFIG_USB_HCD_TEST_MODE
+int xhci_submit_single_step_set_feature(struct usb_hcd *hcd,
+	struct urb *urb, int is_setup);
+#else
+static inline int xhci_submit_single_step_set_feature(struct usb_hcd *hcd,
+	struct urb *urb, int is_setup)
+{
+	return 0;
+}
+#endif
 
 #ifdef CONFIG_PM
 int xhci_bus_suspend(struct usb_hcd *hcd);

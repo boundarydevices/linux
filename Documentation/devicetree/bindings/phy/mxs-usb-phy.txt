@@ -9,6 +9,7 @@ Required properties:
 	* "fsl,imx6sx-usbphy" for imx6sx
 	* "fsl,imx7ulp-usbphy" for imx7ulp
 	* "fsl,imx8dxl-usbphy" for imx8dxl
+	* "fsl,imx8ulp-usbphy" for imx8ulp
   "fsl,imx23-usbphy" is still a fallback for other strings
 - reg: Should contain registers location and length
 - interrupts: Should contain phy interrupt
