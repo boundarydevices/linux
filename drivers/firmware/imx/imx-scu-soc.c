@@ -12,6 +12,8 @@
 
 static struct imx_sc_ipc *imx_sc_soc_ipc_handle;
 
+extern bool TKT340553_SW_WORKAROUND;
+
 struct imx_sc_msg_misc_get_soc_id {
 	struct imx_sc_rpc_msg hdr;
 	union {
@@ -113,9 +115,13 @@ int imx_scu_soc_init(struct device *dev)
 
 	/* format soc_id value passed from SCU firmware */
 	val = id & 0x1f;
-	soc_dev_attr->soc_id = devm_kasprintf(dev, GFP_KERNEL, "0x%x", val);
-	if (!soc_dev_attr->soc_id)
-		return -ENOMEM;
+	if (of_machine_is_compatible("fsl,imx8qm")) {
+		soc_dev_attr->soc_id = "i.MX8QM";
+		TKT340553_SW_WORKAROUND = true;
+	} else if (of_machine_is_compatible("fsl,imx8qxp"))
+		soc_dev_attr->soc_id = "i.MX8QXP";
+	else if (of_machine_is_compatible("fsl,imx8dxl"))
+		soc_dev_attr->soc_id = "i.MX8DXL";
 
 	/* format revision value passed from SCU firmware */
 	val = (id >> 5) & 0xf;

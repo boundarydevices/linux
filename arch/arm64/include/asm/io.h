@@ -148,6 +148,8 @@ bool ioremap_allowed(phys_addr_t phys_addr, size_t size, unsigned long prot);
 	ioremap_prot((addr), (size), PROT_NORMAL_NC)
 #define ioremap_np(addr, size)	\
 	ioremap_prot((addr), (size), PROT_DEVICE_nGnRnE)
+#define ioremap_cache_ns(addr, size)  \
+	ioremap_prot((addr), (size), PROT_NORMAL_NS)
 
 /*
  * io{read,write}{16,32,64}be() macros
