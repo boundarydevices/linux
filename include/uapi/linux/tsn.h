@@ -69,7 +69,7 @@ enum {
 	TSN_CMD_CBGEN_SET,
 	TSN_CMD_CBREC_SET,
 	TSN_CMD_CBSTAT_GET,
-	TSN_CMD_PCPMAP_SET_UNUSE,
+	TSN_CMD_PCPMAP_SET,
 	TSN_CMD_DSCP_SET,
 	TSN_CMD_ECHO,			/* user->kernel request/get-response */
 	TSN_CMD_REPLY,			/* kernel->user event */
@@ -98,7 +98,7 @@ enum {
 	TSN_ATTR_CBGEN,			/* 802.1CB sequence generate */
 	TSN_ATTR_CBREC,			/* 802.1CB sequence recover */
 	TSN_ATTR_CBSTAT,                 /* 802.1CB status */
-	TSN_ATTR_PCPMAP_UNUSE,
+	TSN_ATTR_PCPMAP,
 	TSN_ATTR_DSCP,
 	TSN_ATTR_CAP,		/* TSN capbility */
 	__TSN_CMD_ATTR_MAX,
@@ -369,6 +369,16 @@ enum {
 	__TSN_DSCP_ATTR_MAX,
 	TSN_DSCP_ATTR_MAX = __TSN_DSCP_ATTR_MAX - 1,
 };
+
+enum {
+	TSN_PCP_ATTR_UNSPEC,
+	TSN_PCP_ATTR_PCP,
+	TSN_PCP_ATTR_DEI,
+	TSN_PCP_ATTR_COS,
+	TSN_PCP_ATTR_DPL,
+	__TSN_PCP_ATTR_MAX,
+};
+#define TSN_PCP_ATTR_MAX (__TSN_PCP_ATTR_MAX - 1)
 
 #define ptptime_t __u64
 
@@ -1202,6 +1212,13 @@ struct tsn_qos_switch_dscp_conf {
 	__u8 dpl;
 	__u8 remark;
 	__u8 dscp; /* New ingress translated DSCP value */
+};
+
+struct tsn_qos_switch_pcp_conf {
+	__u8 pcp;
+	__u8 dei;
+	__u8 cos;
+	__u8 dpl;
 };
 
 #endif /* _UAPI_GENL_TSN_H */

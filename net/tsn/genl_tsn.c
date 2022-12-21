@@ -238,6 +238,13 @@ static const struct nla_policy dscp_policy[] = {
 	[TSN_DSCP_ATTR_DPL]		= { .type = NLA_U8},
 };
 
+static const struct nla_policy pcpmap_policy[] = {
+	[TSN_PCP_ATTR_PCP]		= { .type = NLA_U8},
+	[TSN_PCP_ATTR_DEI]		= { .type = NLA_U8},
+	[TSN_PCP_ATTR_COS]		= { .type = NLA_U8},
+	[TSN_PCP_ATTR_DPL]		= { .type = NLA_U8},
+};
+
 static ATOMIC_NOTIFIER_HEAD(tsn_notif_chain);
 
 /**
@@ -3206,6 +3213,61 @@ static int tsn_dscp_set(struct sk_buff *skb, struct genl_info *info)
 	return 0;
 }
 
+static int tsn_pcpmap_set(struct sk_buff *skb, struct genl_info *info)
+{
+	struct nlattr *pcpa[TSN_PCP_ATTR_MAX + 1];
+	struct tsn_qos_switch_pcp_conf pcp_conf;
+	const struct tsn_ops *tsnops;
+	struct net_device *netdev;
+	struct tsn_port *port;
+	struct nlattr *na;
+	int ret;
+
+	port = tsn_init_check(info, &netdev);
+	if (!port)
+		return -ENODEV;
+
+	tsnops = port->tsnops;
+
+	if (!info->attrs[TSN_ATTR_PCPMAP]) {
+		tsn_simple_reply(info, TSN_CMD_REPLY,
+				 netdev->name, -EINVAL);
+		return -EINVAL;
+	}
+
+	na = info->attrs[TSN_ATTR_PCPMAP];
+
+	if (!tsnops->pcpmap_set) {
+		tsn_simple_reply(info, TSN_CMD_REPLY,
+				 netdev->name, -EPERM);
+		return -1;
+	}
+
+	ret = NLA_PARSE_NESTED(pcpa, TSN_PCP_ATTR_MAX,
+			       na, pcpmap_policy);
+	if (ret) {
+		tsn_simple_reply(info, TSN_CMD_REPLY,
+				 netdev->name, -EINVAL);
+		return -EINVAL;
+	}
+
+	pcp_conf.pcp = nla_get_u32(pcpa[TSN_PCP_ATTR_PCP]);
+	pcp_conf.dei = nla_get_u32(pcpa[TSN_PCP_ATTR_DEI]);
+	pcp_conf.cos = nla_get_u32(pcpa[TSN_PCP_ATTR_COS]);
+	pcp_conf.dpl = nla_get_u32(pcpa[TSN_PCP_ATTR_DPL]);
+	ret = tsnops->pcpmap_set(netdev, &pcp_conf);
+	if (ret < 0) {
+		tsn_simple_reply(info, TSN_CMD_REPLY,
+				 netdev->name, ret);
+		return ret;
+	}
+
+	tsn_simple_reply(info, TSN_CMD_REPLY,
+			 netdev->name, 0);
+
+	return 0;
+}
+
 static const struct genl_ops tsnnl_ops[] = {
 	{
 		.cmd		= TSN_CMD_ECHO,
@@ -3351,6 +3413,11 @@ static const struct genl_ops tsnnl_ops[] = {
 		.doit		= tsn_dscp_set,
 		.flags		= GENL_ADMIN_PERM,
 		.validate	= GENL_DONT_VALIDATE_STRICT,
+	},
+	{
+		.cmd		= TSN_CMD_PCPMAP_SET,
+		.doit		= tsn_pcpmap_set,
+		.flags		= GENL_ADMIN_PERM,
 	},
 };
 
