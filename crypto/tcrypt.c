@@ -248,7 +248,7 @@ static void test_mb_aead_speed(const char *algo, int enc, int secs,
 	const int *b_size;
 	const char *key;
 	const char *e;
-	void *assoc;
+	void *assoc, *assoc_out;
 	char *iv;
 	int ret;
 
@@ -374,6 +374,8 @@ static void test_mb_aead_speed(const char *algo, int enc, int secs,
 
 				assoc = cur->axbuf[0];
 				memset(assoc, 0xff, aad_size);
+				assoc_out = cur->axbuf[1];
+				memset(assoc_out, 0xff, aad_size);
 
 				sg_init_aead(cur->sg, cur->xbuf,
 					     bs + (enc ? 0 : authsize),
@@ -381,7 +383,7 @@ static void test_mb_aead_speed(const char *algo, int enc, int secs,
 
 				sg_init_aead(cur->sgout, cur->xoutbuf,
 					     bs + (enc ? authsize : 0),
-					     assoc, aad_size);
+					     assoc_out, aad_size);
 
 				aead_request_set_ad(cur->req, aad_size);
 
@@ -399,6 +401,9 @@ static void test_mb_aead_speed(const char *algo, int enc, int secs,
 						       ret);
 						break;
 					}
+
+					memset(assoc, 0xff, aad_size);
+					memset(assoc_out, 0xff, aad_size);
 				}
 
 				aead_request_set_crypt(cur->req, cur->sg,
@@ -525,7 +530,7 @@ static void test_aead_speed(const char *algo, int enc, unsigned int secs,
 	struct scatterlist *sg;
 	struct scatterlist *sgout;
 	const char *e;
-	void *assoc;
+	void *assoc, *assoc_out;
 	char *iv;
 	char *xbuf[XBUFSIZE];
 	char *xoutbuf[XBUFSIZE];
@@ -596,6 +601,8 @@ static void test_aead_speed(const char *algo, int enc, unsigned int secs,
 
 			assoc = axbuf[0];
 			memset(assoc, 0xff, aad_size);
+			assoc_out = axbuf[1];
+			memset(assoc_out, 0xff, aad_size);
 
 			if ((*keysize + bs) > TVMEMSIZE * PAGE_SIZE) {
 				pr_err("template (%u) too big for tvmem (%lu)\n",
@@ -633,7 +640,7 @@ static void test_aead_speed(const char *algo, int enc, unsigned int secs,
 				     assoc, aad_size);
 
 			sg_init_aead(sgout, xoutbuf,
-				     bs + (enc ? authsize : 0), assoc,
+				     bs + (enc ? authsize : 0), assoc_out,
 				     aad_size);
 
 			aead_request_set_ad(req, aad_size);
@@ -655,6 +662,9 @@ static void test_aead_speed(const char *algo, int enc, unsigned int secs,
 					       ret);
 					break;
 				}
+
+				memset(assoc, 0xff, aad_size);
+				memset(assoc_out, 0xff, aad_size);
 			}
 
 			aead_request_set_crypt(req, sg, sgout,
@@ -1771,6 +1781,10 @@ static int do_test(const char *alg, u32 type, u32 mask, int m, u32 num_mb)
 		ret += tcrypt_test("hmac(streebog512)");
 		break;
 
+	case 117:
+		ret += tcrypt_test("rsa");
+		break;
+
 	case 150:
 		ret += tcrypt_test("ansi_cprng");
 		break;
@@ -1852,6 +1866,12 @@ static int do_test(const char *alg, u32 type, u32 mask, int m, u32 num_mb)
 		ret += tcrypt_test("cbc(aria)");
 		ret += tcrypt_test("cfb(aria)");
 		ret += tcrypt_test("ctr(aria)");
+		break;
+	case 193:
+		ret += tcrypt_test("tls11(hmac(sha1),cbc(aes))");
+		break;
+	case 194:
+		ret += tcrypt_test("tls12(hmac(sha256),cbc(aes))");
 		break;
 	case 200:
 		test_cipher_speed("ecb(aes)", ENCRYPT, sec, NULL, 0,

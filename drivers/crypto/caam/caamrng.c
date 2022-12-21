@@ -13,6 +13,7 @@
 #include <linux/completion.h>
 #include <linux/atomic.h>
 #include <linux/kfifo.h>
+#include <linux/busfreq-imx.h>
 
 #include "compat.h"
 
@@ -99,6 +100,7 @@ static int caam_rng_read_one(struct device *jrdev,
 		return -ENOMEM;
 	}
 
+	request_bus_freq(BUS_FREQ_HIGH);
 	init_completion(done);
 	err = caam_jr_enqueue(jrdev,
 			      caam_init_desc(desc, dst_dma),
@@ -108,6 +110,7 @@ static int caam_rng_read_one(struct device *jrdev,
 		err = 0;
 	}
 
+	release_bus_freq(BUS_FREQ_HIGH);
 	dma_unmap_single(jrdev, dst_dma, len, DMA_FROM_DEVICE);
 
 	return err ?: (ret ?: len);
@@ -170,6 +173,52 @@ static void caam_cleanup(struct hwrng *rng)
 	kfifo_free(&ctx->fifo);
 }
 
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_RNG_TEST
+static inline void test_len(struct hwrng *rng, size_t len, bool wait)
+{
+	u8 *buf;
+	int real_len;
+	struct caam_rng_ctx *ctx = to_caam_rng_ctx(rng);
+	struct device *dev = ctx->ctrldev;
+
+	buf = kzalloc(sizeof(u8) * len, GFP_KERNEL);
+	real_len = rng->read(rng, buf, len, wait);
+	dev_info(dev, "wanted %zu bytes, got %d\n", len, real_len);
+	if (real_len < 0)
+		dev_err(dev, "READ FAILED\n");
+	else if (real_len == 0 && wait)
+		dev_err(dev, "WAITING FAILED\n");
+	if (real_len > 0)
+		print_hex_dump_debug("random bytes@: ", DUMP_PREFIX_ADDRESS, 16,
+				     4, buf, real_len, 1);
+	kfree(buf);
+}
+
+static inline void test_mode_once(struct hwrng *rng, bool wait)
+{
+	test_len(rng, 32, wait);
+	test_len(rng, 64, wait);
+	test_len(rng, 128, wait);
+}
+
+static inline void test_mode(struct hwrng *rng, bool wait)
+{
+#define TEST_PASS 1
+	int i;
+
+	for (i = 0; i < TEST_PASS; i++)
+		test_mode_once(rng, wait);
+}
+
+static void self_test(struct hwrng *rng)
+{
+	pr_info("testing without waiting\n");
+	test_mode(rng, false);
+	pr_info("testing with waiting\n");
+	test_mode(rng, true);
+}
+#endif
+
 static int caam_init(struct hwrng *rng)
 {
 	struct caam_rng_ctx *ctx = to_caam_rng_ctx(rng);
@@ -224,10 +273,10 @@ int caam_rng_init(struct device *ctrldev)
 
 	/* Check for an instantiated RNG before registration */
 	if (priv->era < 10)
-		rng_inst = (rd_reg32(&priv->ctrl->perfmon.cha_num_ls) &
+		rng_inst = (rd_reg32(&priv->jr[0]->perfmon.cha_num_ls) &
 			    CHA_ID_LS_RNG_MASK) >> CHA_ID_LS_RNG_SHIFT;
 	else
-		rng_inst = rd_reg32(&priv->ctrl->vreg.rng) & CHA_VER_NUM_MASK;
+		rng_inst = rd_reg32(&priv->jr[0]->vreg.rng) & CHA_VER_NUM_MASK;
 
 	if (!rng_inst)
 		return 0;
@@ -255,6 +304,10 @@ int caam_rng_init(struct device *ctrldev)
 		caam_rng_exit(ctrldev);
 		return ret;
 	}
+
+#ifdef CONFIG_CRYPTO_DEV_FSL_CAAM_RNG_TEST
+	self_test(&ctx->rng);
+#endif
 
 	devres_close_group(ctrldev, caam_rng_init);
 	return 0;
