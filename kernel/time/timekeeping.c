@@ -1057,6 +1057,7 @@ noinstr time64_t __ktime_get_real_seconds(void)
 void ktime_get_snapshot(struct system_time_snapshot *systime_snapshot)
 {
 	struct timekeeper *tk = &tk_core.timekeeper;
+	u32 mono_mult, mono_shift;
 	unsigned int seq;
 	ktime_t base_raw;
 	ktime_t base_real;
@@ -1080,12 +1081,16 @@ void ktime_get_snapshot(struct system_time_snapshot *systime_snapshot)
 		base_raw = tk->tkr_raw.base;
 		nsec_real = timekeeping_cycles_to_ns(&tk->tkr_mono, now);
 		nsec_raw  = timekeeping_cycles_to_ns(&tk->tkr_raw, now);
+		mono_mult = tk->tkr_mono.mult;
+		mono_shift = tk->tkr_mono.shift;
 	} while (read_seqcount_retry(&tk_core.seq, seq));
 
 	systime_snapshot->cycles = now;
 	systime_snapshot->real = ktime_add_ns(base_real, nsec_real);
 	systime_snapshot->boot = ktime_add_ns(base_boot, nsec_real);
 	systime_snapshot->raw = ktime_add_ns(base_raw, nsec_raw);
+	systime_snapshot->mono_shift = mono_shift;
+	systime_snapshot->mono_mult = mono_mult;
 }
 EXPORT_SYMBOL_GPL(ktime_get_snapshot);
 
