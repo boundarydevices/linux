@@ -18,8 +18,6 @@ obj-$(CONFIG_DRM_IMX8QXP_LDB) += imx8qxp-ldb.o
 obj-$(CONFIG_DRM_IMX8MP_LDB) += imx8mp-ldb.o
 obj-$(CONFIG_DRM_IMX93_LDB) += imx93-ldb.o
 
-imx-ipuv3-crtc-objs  := ipuv3-crtc.o ipuv3-plane.o
-obj-$(CONFIG_DRM_IMX_IPUV3)	+= imx-ipuv3-crtc.o
 obj-$(CONFIG_DRM_IMX_HDMI) += dw_hdmi-imx.o
 obj-$(CONFIG_DRM_IMX_SEC_DSIM) += sec_mipi_dsim-imx.o
 obj-$(CONFIG_IMX8MP_HDMI_PAVI) += imx8mp-hdmi-pavi.o
