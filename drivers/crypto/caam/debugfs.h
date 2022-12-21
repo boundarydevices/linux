@@ -6,11 +6,14 @@
 
 struct dentry;
 struct caam_drv_private;
+struct caam_perfmon;
 
 #ifdef CONFIG_DEBUG_FS
-void caam_debugfs_init(struct caam_drv_private *ctrlpriv, struct dentry *root);
+void caam_debugfs_init(struct caam_drv_private *ctrlpriv,
+		       struct caam_perfmon *perfmon, struct dentry *root);
 #else
 static inline void caam_debugfs_init(struct caam_drv_private *ctrlpriv,
+				     struct caam_perfmon *perfmon,
 				     struct dentry *root)
 {}
 #endif
