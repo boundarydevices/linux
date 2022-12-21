@@ -19,3 +19,5 @@ obj-$(CONFIG_VIDEO_IMX7_CSI) += imx8mq-mipi-csi2.o
 obj-$(CONFIG_IMX8_MIPI_CSI2) 	  += imx8-mipi-csi2.o
 obj-$(CONFIG_IMX8_MIPI_CSI2_SAM)  += imx8-mipi-csi2-sam.o
 obj-$(CONFIG_DWC_MIPI_CSI2_HOST) += dwc-mipi-csi2.o
+
+obj-y += hdmirx/
