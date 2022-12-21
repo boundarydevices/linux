@@ -4126,6 +4126,7 @@ fec_probe(struct platform_device *pdev)
 	else
 		fep->wake_irq = fep->irq[0];
 
+	writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
 	init_completion(&fep->mdio_done);
 	/* board only enable one mii bus in default */
 	if (!of_get_property(np, "fsl,mii-exclusive", NULL))
