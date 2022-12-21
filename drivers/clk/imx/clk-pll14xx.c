@@ -104,7 +104,22 @@ static const struct imx_pll14xx_rate_table *imx_get_pll_settings(
 static long pll14xx_calc_rate(struct clk_pll14xx *pll, int mdiv, int pdiv,
 			      int sdiv, int kdiv, unsigned long prate)
 {
+	const struct imx_pll14xx_rate_table *rate_table = pll->rate_table;
+	unsigned long rate = 0;
 	u64 fvco = prate;
+	int i;
+
+	/*
+	 * Sometimes, the recalculated rate has deviation due to
+	 * the frac part. So find the accurate pll rate from the table
+	 * first, if no match rate in the table, use the rate calculated
+	 * from the equation below.
+	 */
+	for (i = 0; i < pll->rate_count; i++) {
+		if (rate_table[i].pdiv == pdiv && rate_table[i].mdiv == mdiv &&
+		    rate_table[i].sdiv == sdiv && rate_table[i].kdiv == kdiv)
+			rate = rate_table[i].rate;
+	}
 
 	/* fvco = (m * 65536 + k) * Fin / (p * 65536) */
 	fvco *= (mdiv * 65536 + kdiv);
@@ -112,7 +127,7 @@ static long pll14xx_calc_rate(struct clk_pll14xx *pll, int mdiv, int pdiv,
 
 	do_div(fvco, pdiv << sdiv);
 
-	return fvco;
+	return rate ? (unsigned long) rate : (unsigned long)fvco;
 }
 
 static long pll1443x_calc_kdiv(int mdiv, int pdiv, int sdiv,
@@ -461,6 +476,26 @@ static void clk_pll14xx_unprepare(struct clk_hw *hw)
 	val = readl_relaxed(pll->base + GNRL_CTL);
 	val &= ~RST_MASK;
 	writel_relaxed(val, pll->base + GNRL_CTL);
+}
+
+void clk_set_delta_k(struct clk_hw *hw, short int delta_k)
+{
+	struct clk_pll14xx *pll = to_clk_pll14xx(hw);
+	short int k;
+	u32 val;
+
+	val = readl_relaxed(pll->base + 8);
+	k = (val & KDIV_MASK) + delta_k;
+	writel_relaxed(k, pll->base + 8);
+}
+
+void clk_get_pll_setting(struct clk_hw *hw, u32 *pll_div_ctrl0,
+	u32 *pll_div_ctrl1)
+{
+	struct clk_pll14xx *pll = to_clk_pll14xx(hw);
+
+	*pll_div_ctrl0 = readl_relaxed(pll->base + 4);
+	*pll_div_ctrl1 = readl_relaxed(pll->base + 8);
 }
 
 static const struct clk_ops clk_pll1416x_ops = {
