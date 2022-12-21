@@ -341,6 +341,12 @@ config GPIO_ICH
 
 	  If unsure, say N.
 
+config GPIO_IMX_RPMSG
+	tristate "NXP i.MX7ULP RPMSG GPIO support"
+	depends on ARCH_MXC && RPMSG && GPIOLIB
+	help
+	  This driver support i.MX7ULP RPMSG virtual GPIOs.
+
 config GPIO_IMX_SCU
        def_bool y
        depends on IMX_SCU
@@ -1128,6 +1134,13 @@ config GPIO_ADP5520
 	help
 	  This option enables support for on-chip GPIO found
 	  on Analog Devices ADP5520 PMICs.
+
+config GPIO_ADP5585
+	tristate "GPIO Support for ADP5585"
+	depends on MFD_ADP5585
+	help
+	  This option enables support for on-chip GPIO found
+	  on Analog Devices ADP5585.
 
 config GPIO_ALTERA_A10SR
 	tristate "Altera Arria10 System Resource GPIO"
