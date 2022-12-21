@@ -98,6 +98,7 @@ struct fsl_lpspi_data {
 	struct clk *clk_ipg;
 	struct clk *clk_per;
 	bool is_slave;
+	u32 num_cs;
 	bool is_only_cs1;
 	bool is_first_byte;
 
@@ -301,6 +302,16 @@ static int fsl_lpspi_set_bitrate(struct fsl_lpspi_data *fsl_lpspi)
 	u8 prescale;
 
 	perclk_rate = clk_get_rate(fsl_lpspi->clk_per);
+	if (!perclk_rate) {
+		dev_err(fsl_lpspi->dev, "per-clk rate was not set\n");
+		return -EINVAL;
+	}
+
+	if (!config.speed_hz) {
+		dev_err(fsl_lpspi->dev,
+			"error: the transmission speed provided is 0!\n");
+		return -EINVAL;
+	}
 
 	if (config.speed_hz > perclk_rate / 2) {
 		dev_err(fsl_lpspi->dev,
@@ -840,6 +851,9 @@ static int fsl_lpspi_probe(struct platform_device *pdev)
 	fsl_lpspi->is_slave = is_slave;
 	fsl_lpspi->is_only_cs1 = of_property_read_bool((&pdev->dev)->of_node,
 						"fsl,spi-only-use-cs1-sel");
+	if (of_property_read_u32((&pdev->dev)->of_node, "num-cs",
+				 &fsl_lpspi->num_cs))
+		fsl_lpspi->num_cs = 1;
 
 	controller->bits_per_word_mask = SPI_BPW_RANGE_MASK(8, 32);
 	controller->transfer_one = fsl_lpspi_transfer_one;
@@ -849,6 +863,7 @@ static int fsl_lpspi_probe(struct platform_device *pdev)
 	controller->flags = SPI_MASTER_MUST_RX | SPI_MASTER_MUST_TX;
 	controller->dev.of_node = pdev->dev.of_node;
 	controller->bus_num = pdev->id;
+	controller->num_chipselect = fsl_lpspi->num_cs;
 	controller->slave_abort = fsl_lpspi_slave_abort;
 	if (!fsl_lpspi->is_slave)
 		controller->use_gpio_descriptors = true;
@@ -905,9 +920,12 @@ static int fsl_lpspi_probe(struct platform_device *pdev)
 	ret = fsl_lpspi_dma_init(&pdev->dev, fsl_lpspi, controller);
 	if (ret == -EPROBE_DEFER)
 		goto out_pm_get;
-
 	if (ret < 0)
 		dev_err(&pdev->dev, "dma setup error %d, use pio\n", ret);
+	else
+		/* disable LPSPI module IRQ when enable DMA mode successfully,
+		 * to prevent the unexpected LPSPI module IRQ events*/
+		disable_irq(irq);
 
 	ret = devm_spi_register_controller(&pdev->dev, controller);
 	if (ret < 0) {
