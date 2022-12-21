@@ -256,6 +256,13 @@
 		compatible = "mtk-fsource";
 		vfsource-supply = <&mt6359_vefuse_ldo_reg>;
 	};
+
+	can_clk: can-clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <20000000>;
+		clock-output-names = "can-clk";
+	};
 };
 
 &uart0 {
@@ -406,6 +413,24 @@
 				};
 			};
 		};
+	};
+};
+
+&spi1 {
+	pinctrl-0 = <&spi1_pins>;
+	pinctrl-names = "default";
+	mediatek,pad-select = <0>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	cs-gpios = <&pio 64 GPIO_ACTIVE_LOW>;
+
+	can0: can0@0 {
+		compatible = "microchip,mcp2518fd";
+		reg = <0>;
+		clocks = <&can_clk>;
+		spi-max-frequency = <20000000>;
+		interrupts-extended = <&pio 18 IRQ_TYPE_LEVEL_LOW>;
 	};
 };
 
@@ -762,6 +787,16 @@
 		pins {
 			pinmux = <PINMUX_GPIO102__FUNC_UTXD1>,
 				 <PINMUX_GPIO103__FUNC_URXD1>;
+		};
+	};
+
+	spi1_pins: spi1-pins {
+		pins {
+			pinmux = <PINMUX_GPIO136__FUNC_SPIM1_CSB>,
+				 <PINMUX_GPIO137__FUNC_SPIM1_CLK>,
+				 <PINMUX_GPIO138__FUNC_SPIM1_MO>,
+				 <PINMUX_GPIO139__FUNC_SPIM1_MI>;
+			bias-disable;
 		};
 	};
 
