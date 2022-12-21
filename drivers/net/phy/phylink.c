@@ -479,6 +479,7 @@ unsigned long phylink_get_capabilities(phy_interface_t interface,
 		break;
 
 	case PHY_INTERFACE_MODE_2500BASEX:
+	case PHY_INTERFACE_MODE_2500SGMII:
 		caps |= MAC_2500FD;
 		break;
 
