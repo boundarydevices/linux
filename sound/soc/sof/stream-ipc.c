@@ -19,6 +19,7 @@
 
 #include "ops.h"
 #include "sof-priv.h"
+#include "sof-audio.h"
 
 struct sof_stream {
 	size_t posn_offset;
@@ -26,19 +27,32 @@ struct sof_stream {
 
 /* Mailbox-based Generic IPC implementation */
 int sof_ipc_msg_data(struct snd_sof_dev *sdev,
-		     struct snd_pcm_substream *substream,
+		     struct snd_sof_pcm_stream *sps,
 		     void *p, size_t sz)
 {
-	if (!substream || !sdev->stream_box.size) {
+	if (!sps || !sdev->stream_box.size) {
 		snd_sof_dsp_mailbox_read(sdev, sdev->dsp_box.offset, p, sz);
 	} else {
-		struct sof_stream *stream = substream->runtime->private_data;
+		struct snd_pcm_substream *substream = sps->substream;
+		struct snd_compr_stream *cstream = sps->cstream;
+		size_t posn_offset;
 
-		/* The stream might already be closed */
-		if (!stream)
-			return -ESTRPIPE;
+		if (substream) {
+			struct sof_stream *pstream = substream->runtime->private_data;
 
-		snd_sof_dsp_mailbox_read(sdev, stream->posn_offset, p, sz);
+			if (!pstream)
+				return -ESTRPIPE;
+
+			posn_offset = pstream->posn_offset;
+		} else {
+			struct sof_compr_stream *sstream = cstream->runtime->private_data;
+
+			if (!sstream)
+				return -ESTRPIPE;
+			posn_offset = sstream->posn_offset;
+		}
+
+		snd_sof_dsp_mailbox_read(sdev, posn_offset, p, sz);
 	}
 
 	return 0;
