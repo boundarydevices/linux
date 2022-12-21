@@ -28,6 +28,8 @@
 #include <media/videobuf2-v4l2.h>
 #include <media/v4l2-mc.h>
 #include <media/v4l2-mem2mem.h>
+#include <media/v4l2-chip-ident.h>
+#include <media/videobuf2-core.h>
 
 #include <trace/events/v4l2.h>
 
@@ -654,6 +656,20 @@ static void v4l_print_decoder_cmd(const void *arg, bool write_only)
 				p->start.speed, p->start.format);
 	else if (p->cmd == V4L2_DEC_CMD_STOP)
 		pr_info("pts=%llu\n", p->stop.pts);
+}
+
+static void v4l_print_dbg_chip_ident(const void *arg, bool write_only)
+{
+	const struct v4l2_dbg_chip_ident *p = arg;
+
+	pr_cont("type=%u, ", p->match.type);
+	if (p->match.type == V4L2_CHIP_MATCH_I2C_DRIVER)
+		pr_cont("name=%.*s, ",
+				(int)sizeof(p->match.name), p->match.name);
+	else
+		pr_cont("addr=%u, ", p->match.addr);
+	pr_cont("chip_ident=%u, revision=0x%x\n",
+			p->ident, p->revision);
 }
 
 static void v4l_print_dbg_chip_info(const void *arg, bool write_only)
@@ -1304,11 +1320,14 @@ static void v4l_fill_fmtdesc(struct v4l2_fmtdesc *fmt)
 	case V4L2_PIX_FMT_BGRX32:	descr = "32-bit XBGR 8-8-8-8"; break;
 	case V4L2_PIX_FMT_RGBA32:	descr = "32-bit RGBA 8-8-8-8"; break;
 	case V4L2_PIX_FMT_RGBX32:	descr = "32-bit RGBX 8-8-8-8"; break;
+	case V4L2_PIX_FMT_B312:		descr = "12-bit Depth BGR"; break;
+	case V4L2_PIX_FMT_B412:		descr = "12-bit Depth BGRA"; break;
 	case V4L2_PIX_FMT_GREY:		descr = "8-bit Greyscale"; break;
 	case V4L2_PIX_FMT_Y4:		descr = "4-bit Greyscale"; break;
 	case V4L2_PIX_FMT_Y6:		descr = "6-bit Greyscale"; break;
 	case V4L2_PIX_FMT_Y10:		descr = "10-bit Greyscale"; break;
 	case V4L2_PIX_FMT_Y12:		descr = "12-bit Greyscale"; break;
+	case V4L2_PIX_FMT_Y012:		descr = "12-bit Greyscale"; break;
 	case V4L2_PIX_FMT_Y14:		descr = "14-bit Greyscale"; break;
 	case V4L2_PIX_FMT_Y16:		descr = "16-bit Greyscale"; break;
 	case V4L2_PIX_FMT_Y16_BE:	descr = "16-bit Greyscale BE"; break;
@@ -1347,6 +1366,8 @@ static void v4l_fill_fmtdesc(struct v4l2_fmtdesc *fmt)
 	case V4L2_PIX_FMT_YUV420:	descr = "Planar YUV 4:2:0"; break;
 	case V4L2_PIX_FMT_HI240:	descr = "8-bit Dithered RGB (BTTV)"; break;
 	case V4L2_PIX_FMT_M420:		descr = "YUV 4:2:0 (M420)"; break;
+	case V4L2_PIX_FMT_Y212:		descr = "12-bit Depth YUYV 4:2:2"; break;
+	case V4L2_PIX_FMT_Y312:		descr = "12-bit Depth YUV 4:4:4"; break;
 	case V4L2_PIX_FMT_NV12:		descr = "Y/CbCr 4:2:0"; break;
 	case V4L2_PIX_FMT_NV21:		descr = "Y/CrCb 4:2:0"; break;
 	case V4L2_PIX_FMT_NV16:		descr = "Y/CbCr 4:2:2"; break;
@@ -1354,6 +1375,7 @@ static void v4l_fill_fmtdesc(struct v4l2_fmtdesc *fmt)
 	case V4L2_PIX_FMT_NV24:		descr = "Y/CbCr 4:4:4"; break;
 	case V4L2_PIX_FMT_NV42:		descr = "Y/CrCb 4:4:4"; break;
 	case V4L2_PIX_FMT_P010:		descr = "10-bit Y/CbCr 4:2:0"; break;
+	case V4L2_PIX_FMT_P012:		descr = "12-bit Y/UV 4:2:0"; break;
 	case V4L2_PIX_FMT_NV12_4L4:	descr = "Y/CbCr 4:2:0 (4x4 Linear)"; break;
 	case V4L2_PIX_FMT_NV12_16L16:	descr = "Y/CbCr 4:2:0 (16x16 Linear)"; break;
 	case V4L2_PIX_FMT_NV12_32L32:   descr = "Y/CbCr 4:2:0 (32x32 Linear)"; break;
@@ -1364,6 +1386,7 @@ static void v4l_fill_fmtdesc(struct v4l2_fmtdesc *fmt)
 	case V4L2_PIX_FMT_NV61M:	descr = "Y/CrCb 4:2:2 (N-C)"; break;
 	case V4L2_PIX_FMT_NV12MT:	descr = "Y/CbCr 4:2:0 (64x32 MB, N-C)"; break;
 	case V4L2_PIX_FMT_NV12MT_16X16:	descr = "Y/CbCr 4:2:0 (16x16 MB, N-C)"; break;
+	case V4L2_PIX_FMT_P012M:	descr = "12-bit Y/UV 4:2:0 (N-C)"; break;
 	case V4L2_PIX_FMT_YUV420M:	descr = "Planar YUV 4:2:0 (N-C)"; break;
 	case V4L2_PIX_FMT_YVU420M:	descr = "Planar YVU 4:2:0 (N-C)"; break;
 	case V4L2_PIX_FMT_YUV422M:	descr = "Planar YUV 4:2:2 (N-C)"; break;
@@ -2177,22 +2200,7 @@ static int v4l_s_parm(const struct v4l2_ioctl_ops *ops,
 	struct v4l2_streamparm *p = arg;
 	int ret = check_fmt(file, p->type);
 
-	if (ret)
-		return ret;
-
-	/* Note: extendedmode is never used in drivers */
-	if (V4L2_TYPE_IS_OUTPUT(p->type)) {
-		memset(p->parm.output.reserved, 0,
-		       sizeof(p->parm.output.reserved));
-		p->parm.output.extendedmode = 0;
-		p->parm.output.outputmode &= V4L2_MODE_HIGHQUALITY;
-	} else {
-		memset(p->parm.capture.reserved, 0,
-		       sizeof(p->parm.capture.reserved));
-		p->parm.capture.extendedmode = 0;
-		p->parm.capture.capturemode &= V4L2_MODE_HIGHQUALITY;
-	}
-	return ops->vidioc_s_parm(file, fh, p);
+	return ret ? ret : ops->vidioc_s_parm(file, fh, p);
 }
 
 static int v4l_queryctrl(const struct v4l2_ioctl_ops *ops,
@@ -2609,6 +2617,18 @@ static int v4l_dbg_s_register(const struct v4l2_ioctl_ops *ops,
 #endif
 }
 
+static int v4l_dbg_g_chip_ident(const struct v4l2_ioctl_ops *ops,
+				struct file *file, void *fh, void *arg)
+{
+	struct v4l2_dbg_chip_ident *p = arg;
+
+	p->ident = V4L2_IDENT_NONE;
+	p->revision = 0;
+	if (p->match.type == V4L2_CHIP_MATCH_SUBDEV)
+		return -EINVAL;
+	return ops->vidioc_g_chip_ident(file, fh, p);
+}
+
 static int v4l_dbg_g_chip_info(const struct v4l2_ioctl_ops *ops,
 				struct file *file, void *fh, void *arg)
 {
@@ -2884,6 +2904,7 @@ static const struct v4l2_ioctl_info v4l2_ioctls[] = {
 	IOCTL_INFO(VIDIOC_TRY_DECODER_CMD, v4l_stub_try_decoder_cmd, v4l_print_decoder_cmd, 0),
 	IOCTL_INFO(VIDIOC_DBG_S_REGISTER, v4l_dbg_s_register, v4l_print_dbg_register, 0),
 	IOCTL_INFO(VIDIOC_DBG_G_REGISTER, v4l_dbg_g_register, v4l_print_dbg_register, 0),
+	IOCTL_INFO(VIDIOC_DBG_G_CHIP_IDENT, v4l_dbg_g_chip_ident, v4l_print_dbg_chip_ident, 0),
 	IOCTL_INFO(VIDIOC_S_HW_FREQ_SEEK, v4l_s_hw_freq_seek, v4l_print_hw_freq_seek, INFO_FL_PRIO),
 	IOCTL_INFO(VIDIOC_S_DV_TIMINGS, v4l_stub_s_dv_timings, v4l_print_dv_timings, INFO_FL_PRIO | INFO_FL_CLEAR(v4l2_dv_timings, bt.flags)),
 	IOCTL_INFO(VIDIOC_G_DV_TIMINGS, v4l_stub_g_dv_timings, v4l_print_dv_timings, 0),
@@ -3424,6 +3445,7 @@ out:
 	kfree(mbuf);
 	return err;
 }
+EXPORT_SYMBOL(video_usercopy);
 
 long video_ioctl2(struct file *file,
 	       unsigned int cmd, unsigned long arg)
