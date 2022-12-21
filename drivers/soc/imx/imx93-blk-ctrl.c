@@ -142,6 +142,8 @@ static int imx93_blk_ctrl_power_on(struct generic_pm_domain *genpd)
 		return ret;
 	}
 
+	/* Make sure PM runtime is active */
+	pm_runtime_set_active(bc->dev);
 	ret = pm_runtime_get_sync(bc->dev);
 	if (ret < 0) {
 		pm_runtime_put_noidle(bc->dev);
@@ -214,7 +216,7 @@ static int imx93_blk_ctrl_probe(struct platform_device *pdev)
 	if (IS_ERR(base))
 		return PTR_ERR(base);
 
-	bc->regmap = devm_regmap_init_mmio(dev, base, &regmap_config);
+	bc->regmap = regmap_init_mmio(NULL, base, &regmap_config);
 	if (IS_ERR(bc->regmap))
 		return dev_err_probe(dev, PTR_ERR(bc->regmap),
 				     "failed to init regmap\n");
@@ -222,15 +224,19 @@ static int imx93_blk_ctrl_probe(struct platform_device *pdev)
 	bc->domains = devm_kcalloc(dev, bc_data->num_domains,
 				   sizeof(struct imx93_blk_ctrl_domain),
 				   GFP_KERNEL);
-	if (!bc->domains)
-		return -ENOMEM;
+	if (!bc->domains) {
+		ret = -ENOMEM;
+		goto free_regmap;
+	}
 
 	bc->onecell_data.num_domains = bc_data->num_domains;
 	bc->onecell_data.domains =
 		devm_kcalloc(dev, bc_data->num_domains,
 			     sizeof(struct generic_pm_domain *), GFP_KERNEL);
-	if (!bc->onecell_data.domains)
-		return -ENOMEM;
+	if (!bc->onecell_data.domains) {
+		ret = -ENOMEM;
+		goto free_regmap;
+	}
 
 	for (i = 0; i < bc_data->num_clks; i++)
 		bc->clks[i].id = bc_data->clk_names[i];
@@ -239,7 +245,7 @@ static int imx93_blk_ctrl_probe(struct platform_device *pdev)
 	ret = devm_clk_bulk_get(dev, bc->num_clks, bc->clks);
 	if (ret) {
 		dev_err_probe(dev, ret, "failed to get bus clock\n");
-		return ret;
+		goto free_regmap;
 	}
 
 	for (i = 0; i < bc_data->num_domains; i++) {
@@ -287,6 +293,9 @@ static int imx93_blk_ctrl_probe(struct platform_device *pdev)
 cleanup_pds:
 	for (i--; i >= 0; i--)
 		pm_genpd_remove(&bc->domains[i].genpd);
+
+free_regmap:
+	regmap_exit(bc->regmap);
 
 	return ret;
 }

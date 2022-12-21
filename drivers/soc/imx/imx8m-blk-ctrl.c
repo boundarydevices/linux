@@ -5,7 +5,6 @@
  */
 
 #include <linux/device.h>
-#include <linux/interconnect.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
@@ -13,6 +12,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/clk.h>
+#include <linux/mfd/syscon.h>
+#include <soc/imx/gpcv2.h>
 
 #include <dt-bindings/power/imx8mm-power.h>
 #include <dt-bindings/power/imx8mn-power.h>
@@ -22,6 +23,8 @@
 #define BLK_SFT_RSTN	0x0
 #define BLK_CLK_EN	0x4
 #define BLK_MIPI_RESET_DIV	0x8 /* Mini/Nano/Plus DISPLAY_BLK_CTRL only */
+#define BLK_LCDIF_ARCACHE_CTRL	0x4C
+#define BLK_ISI_CACHE_CTRL	0x50
 
 struct imx8m_blk_ctrl_domain;
 
@@ -30,16 +33,28 @@ struct imx8m_blk_ctrl {
 	struct notifier_block power_nb;
 	struct device *bus_power_dev;
 	struct regmap *regmap;
+	struct regmap *noc_regmap;
 	struct imx8m_blk_ctrl_domain *domains;
 	struct genpd_onecell_data onecell_data;
 };
 
+struct imx8m_blk_ctrl_noc_data {
+	u32 off;
+	u32 priority;
+	u32 mode;
+	u32 extctrl;
+};
+
+struct imx8m_blk_ctrl_hurry_data {
+	u32 off;
+	u32 hurry_mask;
+};
+
+#define DOMAIN_MAX_NOC		4
 struct imx8m_blk_ctrl_domain_data {
 	const char *name;
 	const char * const *clk_names;
 	int num_clks;
-	const char * const *path_names;
-	int num_paths;
 	const char *gpc_name;
 	u32 rst_mask;
 	u32 clk_mask;
@@ -52,19 +67,20 @@ struct imx8m_blk_ctrl_domain_data {
 	 * register.
 	 */
 	u32 mipi_phy_rst_mask;
+	notifier_fn_t power_notifier_fn;
+	const struct imx8m_blk_ctrl_hurry_data *hurry_data;
+	const struct imx8m_blk_ctrl_noc_data *noc_data[DOMAIN_MAX_NOC];
 };
 
 #define DOMAIN_MAX_CLKS 4
-#define DOMAIN_MAX_PATHS 4
 
 struct imx8m_blk_ctrl_domain {
 	struct generic_pm_domain genpd;
 	const struct imx8m_blk_ctrl_domain_data *data;
 	struct clk_bulk_data clks[DOMAIN_MAX_CLKS];
-	struct icc_bulk_data paths[DOMAIN_MAX_PATHS];
 	struct device *power_dev;
 	struct imx8m_blk_ctrl *bc;
-	int num_paths;
+	struct notifier_block power_nb;
 };
 
 struct imx8m_blk_ctrl_data {
@@ -72,12 +88,40 @@ struct imx8m_blk_ctrl_data {
 	notifier_fn_t power_notifier_fn;
 	const struct imx8m_blk_ctrl_domain_data *domains;
 	int num_domains;
+	bool has_noc;
 };
 
 static inline struct imx8m_blk_ctrl_domain *
 to_imx8m_blk_ctrl_domain(struct generic_pm_domain *genpd)
 {
 	return container_of(genpd, struct imx8m_blk_ctrl_domain, genpd);
+}
+
+static int imx8m_blk_ctrl_qos_set(struct imx8m_blk_ctrl_domain *domain)
+{
+	const struct imx8m_blk_ctrl_domain_data *data = domain->data;
+	struct imx8m_blk_ctrl *bc = domain->bc;
+	struct regmap *regmap = bc->noc_regmap;
+	int i;
+
+	if (!data)
+		return 0;
+
+	if (data->hurry_data)
+		regmap_set_bits(bc->regmap, data->hurry_data->off, data->hurry_data->hurry_mask);
+
+	if (!regmap)
+		return 0;
+
+	for (i = 0; i < DOMAIN_MAX_NOC; i++) {
+		if (!data->noc_data[i])
+			continue;
+		regmap_write(regmap, data->noc_data[i]->off + 0x8, data->noc_data[i]->priority);
+		regmap_write(regmap, data->noc_data[i]->off + 0xc, data->noc_data[i]->mode);
+		regmap_write(regmap, data->noc_data[i]->off + 0x18, data->noc_data[i]->extctrl);
+	}
+
+	return 0;
 }
 
 static int imx8m_blk_ctrl_power_on(struct generic_pm_domain *genpd)
@@ -123,9 +167,7 @@ static int imx8m_blk_ctrl_power_on(struct generic_pm_domain *genpd)
 	if (data->mipi_phy_rst_mask)
 		regmap_set_bits(bc->regmap, BLK_MIPI_RESET_DIV, data->mipi_phy_rst_mask);
 
-	ret = icc_bulk_set_bw(domain->num_paths, domain->paths);
-	if (ret)
-		dev_err(bc->dev, "failed to set icc bw\n");
+	imx8m_blk_ctrl_qos_set(domain);
 
 	/* disable upstream clocks */
 	clk_bulk_disable_unprepare(data->num_clks, domain->clks);
@@ -169,6 +211,7 @@ static int imx8m_blk_ctrl_probe(struct platform_device *pdev)
 	const struct imx8m_blk_ctrl_data *bc_data;
 	struct device *dev = &pdev->dev;
 	struct imx8m_blk_ctrl *bc;
+	struct regmap *regmap;
 	void __iomem *base;
 	int i, ret;
 
@@ -176,6 +219,7 @@ static int imx8m_blk_ctrl_probe(struct platform_device *pdev)
 		.reg_bits	= 32,
 		.val_bits	= 32,
 		.reg_stride	= 4,
+		.disable_debugfs = true,
 	};
 
 	bc = devm_kzalloc(dev, sizeof(*bc), GFP_KERNEL);
@@ -214,34 +258,19 @@ static int imx8m_blk_ctrl_probe(struct platform_device *pdev)
 		return dev_err_probe(dev, PTR_ERR(bc->bus_power_dev),
 				     "failed to attach power domain \"bus\"\n");
 
+	regmap = syscon_regmap_lookup_by_compatible("fsl,imx8m-noc");
+	if (!IS_ERR(regmap))
+		bc->noc_regmap = regmap;
+
 	for (i = 0; i < bc_data->num_domains; i++) {
 		const struct imx8m_blk_ctrl_domain_data *data = &bc_data->domains[i];
 		struct imx8m_blk_ctrl_domain *domain = &bc->domains[i];
 		int j;
 
 		domain->data = data;
-		domain->num_paths = data->num_paths;
 
 		for (j = 0; j < data->num_clks; j++)
 			domain->clks[j].id = data->clk_names[j];
-
-		for (j = 0; j < data->num_paths; j++) {
-			domain->paths[j].name = data->path_names[j];
-			/* Fake value for now, just let ICC could configure NoC mode/priority */
-			domain->paths[j].avg_bw = 1;
-			domain->paths[j].peak_bw = 1;
-		}
-
-		ret = devm_of_icc_bulk_get(dev, data->num_paths, domain->paths);
-		if (ret) {
-			if (ret != -EPROBE_DEFER) {
-				dev_warn_once(dev, "Could not get interconnect paths, NoC will stay unconfigured!\n");
-				domain->num_paths = 0;
-			} else {
-				dev_err_probe(dev, ret, "failed to get noc entries\n");
-				goto cleanup_pds;
-			}
-		}
 
 		ret = devm_clk_bulk_get(dev, data->num_clks, domain->clks);
 		if (ret) {
@@ -257,6 +286,15 @@ static int imx8m_blk_ctrl_probe(struct platform_device *pdev)
 				      data->gpc_name);
 			ret = PTR_ERR(domain->power_dev);
 			goto cleanup_pds;
+		}
+
+		if (data->power_notifier_fn) {
+			domain->power_nb.notifier_call = data->power_notifier_fn;
+			ret = dev_pm_genpd_add_notifier(domain->power_dev, &domain->power_nb);
+			if (ret) {
+				dev_err_probe(dev, ret, "failed to add power notifier\n");
+				goto cleanup_pds;
+			}
 		}
 
 		domain->genpd.name = data->name;
@@ -469,6 +507,40 @@ static const struct imx8m_blk_ctrl_data imx8mm_vpu_blk_ctl_dev_data = {
 	.num_domains = ARRAY_SIZE(imx8mm_vpu_blk_ctl_domain_data),
 };
 
+static int imx8mp_vpu_h1_power_notifier(struct notifier_block *nb,
+					unsigned long action, void *data)
+{
+	struct imx8m_blk_ctrl_domain *domain = container_of(nb, struct imx8m_blk_ctrl_domain,
+							    power_nb);
+	struct imx8m_blk_ctrl *bc = domain->bc;
+
+	if (action == GENPD_NOTIFY_PRE_ON)
+		regmap_clear_bits(bc->regmap, BLK_CLK_EN, BIT(2));
+	else if (action == IMX_GPCV2_NOTIFY_ON_ADB400)
+		regmap_set_bits(bc->regmap, BLK_CLK_EN, BIT(2));
+
+	return NOTIFY_OK;
+}
+
+#define IMX8MP_VPUBLK_G1	0
+#define IMX8MP_VPUBLK_G2	1
+#define IMX8MP_VPUBLK_VCE	2
+
+static const struct imx8m_blk_ctrl_noc_data imx8mp_vpu_noc_data[] = {
+	[IMX8MP_VPUBLK_G1] = {
+		.off = 0xd80,
+		.priority = 0x80000303,
+	},
+	[IMX8MP_VPUBLK_G2] = {
+		.off = 0xe00,
+		.priority = 0x80000303,
+	},
+	[IMX8MP_VPUBLK_VCE] = {
+		.off = 0xe80,
+		.priority = 0x80000303,
+	},
+};
+
 static const struct imx8m_blk_ctrl_domain_data imx8mp_vpu_blk_ctl_domain_data[] = {
 	[IMX8MP_VPUBLK_PD_G1] = {
 		.name = "vpublk-g1",
@@ -477,8 +549,9 @@ static const struct imx8m_blk_ctrl_domain_data imx8mp_vpu_blk_ctl_domain_data[] 
 		.gpc_name = "g1",
 		.rst_mask = BIT(1),
 		.clk_mask = BIT(1),
-		.path_names = (const char *[]){"g1"},
-		.num_paths = 1,
+		.noc_data = {
+			&imx8mp_vpu_noc_data[IMX8MP_VPUBLK_G1],
+		},
 	},
 	[IMX8MP_VPUBLK_PD_G2] = {
 		.name = "vpublk-g2",
@@ -487,18 +560,21 @@ static const struct imx8m_blk_ctrl_domain_data imx8mp_vpu_blk_ctl_domain_data[] 
 		.gpc_name = "g2",
 		.rst_mask = BIT(0),
 		.clk_mask = BIT(0),
-		.path_names = (const char *[]){"g2"},
-		.num_paths = 1,
+		.noc_data = {
+			&imx8mp_vpu_noc_data[IMX8MP_VPUBLK_G2],
+		},
 	},
 	[IMX8MP_VPUBLK_PD_VC8000E] = {
-		.name = "vpublk-vc8000e",
-		.clk_names = (const char *[]){ "vc8000e", },
+		.name = "vpublk-h1",
+		.clk_names = (const char *[]){ "h1", },
 		.num_clks = 1,
-		.gpc_name = "vc8000e",
+		.gpc_name = "h1",
 		.rst_mask = BIT(2),
 		.clk_mask = BIT(2),
-		.path_names = (const char *[]){"vc8000e"},
-		.num_paths = 1,
+		.noc_data = {
+			&imx8mp_vpu_noc_data[IMX8MP_VPUBLK_VCE],
+		},
+		.power_notifier_fn = imx8mp_vpu_h1_power_notifier,
 	},
 };
 
@@ -673,6 +749,74 @@ static int imx8mp_media_power_notifier(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
+#define IMX8MP_MEDIABLK_LCDIF_RD	0
+#define IMX8MP_MEDIABLK_LCDIF_WR	1
+#define IMX8MP_MEDIABLK_ISI0		2
+#define IMX8MP_MEDIABLK_ISI1		3
+#define IMX8MP_MEDIABLK_ISI2		4
+#define IMX8MP_MEDIABLK_ISP0		5
+#define IMX8MP_MEDIABLK_ISP1		6
+#define IMX8MP_MEDIABLK_DWE		7
+
+static const struct imx8m_blk_ctrl_noc_data imx8mp_media_noc_data[] = {
+	[IMX8MP_MEDIABLK_LCDIF_RD] = {
+		.off = 0x980,
+		.priority = 0x80000202,
+		.extctrl = 1,
+	},
+	[IMX8MP_MEDIABLK_LCDIF_WR] = {
+		.off = 0xa00,
+		.priority = 0x80000202,
+		.extctrl = 1,
+	},
+	[IMX8MP_MEDIABLK_ISI0] = {
+		.off = 0xa80,
+		.priority = 0x80000202,
+		.extctrl = 1,
+	},
+	[IMX8MP_MEDIABLK_ISI1] = {
+		.off = 0xb00,
+		.priority = 0x80000202,
+		.extctrl = 1,
+	},
+	[IMX8MP_MEDIABLK_ISI2] = {
+		.off = 0xb80,
+		.priority = 0x80000202,
+		.extctrl = 1,
+	},
+	[IMX8MP_MEDIABLK_ISP0] = {
+		.off = 0xc00,
+		.priority = 0x80000707,
+	},
+	[IMX8MP_MEDIABLK_ISP1] = {
+		.off = 0xc80,
+		.priority = 0x80000707,
+	},
+	[IMX8MP_MEDIABLK_DWE] = {
+		.off = 0xd00,
+		.priority = 0x80000707,
+	},
+};
+
+#define IMX8MP_MEDIABLK_LCDIF1	0
+#define IMX8MP_MEDIABLK_ISI	1
+#define IMX8MP_MEDIABLK_LCDIF2	2
+
+static const struct imx8m_blk_ctrl_hurry_data imx8mp_media_hurry_data[] = {
+	[IMX8MP_MEDIABLK_LCDIF1] = {
+		.off = BLK_LCDIF_ARCACHE_CTRL,
+		.hurry_mask = GENMASK(12, 10),
+	},
+	[IMX8MP_MEDIABLK_ISI] = {
+		.off = BLK_ISI_CACHE_CTRL,
+		.hurry_mask = GENMASK(28, 20),
+	},
+	[IMX8MP_MEDIABLK_LCDIF2] = {
+		.off = BLK_LCDIF_ARCACHE_CTRL,
+		.hurry_mask = GENMASK(15, 13),
+	}
+};
+
 /*
  * From i.MX 8M Plus Applications Processor Reference Manual, Rev. 1,
  * section 13.2.2, 13.2.3
@@ -704,8 +848,11 @@ static const struct imx8m_blk_ctrl_domain_data imx8mp_media_blk_ctl_domain_data[
 		.gpc_name = "lcdif1",
 		.rst_mask = BIT(4) | BIT(5) | BIT(23),
 		.clk_mask = BIT(4) | BIT(5) | BIT(23),
-		.path_names = (const char *[]){"lcdif-rd", "lcdif-wr"},
-		.num_paths = 2,
+		.hurry_data = &imx8mp_media_hurry_data[IMX8MP_MEDIABLK_LCDIF1],
+		.noc_data = {
+			&imx8mp_media_noc_data[IMX8MP_MEDIABLK_LCDIF_RD],
+			&imx8mp_media_noc_data[IMX8MP_MEDIABLK_LCDIF_WR],
+		},
 	},
 	[IMX8MP_MEDIABLK_PD_ISI] = {
 		.name = "mediablk-isi",
@@ -714,8 +861,12 @@ static const struct imx8m_blk_ctrl_domain_data imx8mp_media_blk_ctl_domain_data[
 		.gpc_name = "isi",
 		.rst_mask = BIT(6) | BIT(7),
 		.clk_mask = BIT(6) | BIT(7),
-		.path_names = (const char *[]){"isi0", "isi1", "isi2"},
-		.num_paths = 3,
+		.hurry_data = &imx8mp_media_hurry_data[IMX8MP_MEDIABLK_ISI],
+		.noc_data = {
+			&imx8mp_media_noc_data[IMX8MP_MEDIABLK_ISI0],
+			&imx8mp_media_noc_data[IMX8MP_MEDIABLK_ISI1],
+			&imx8mp_media_noc_data[IMX8MP_MEDIABLK_ISI2],
+		},
 	},
 	[IMX8MP_MEDIABLK_PD_MIPI_CSI2_2] = {
 		.name = "mediablk-mipi-csi2-2",
@@ -733,8 +884,11 @@ static const struct imx8m_blk_ctrl_domain_data imx8mp_media_blk_ctl_domain_data[
 		.gpc_name = "lcdif2",
 		.rst_mask = BIT(11) | BIT(12) | BIT(24),
 		.clk_mask = BIT(11) | BIT(12) | BIT(24),
-		.path_names = (const char *[]){"lcdif-rd", "lcdif-wr"},
-		.num_paths = 2,
+		.hurry_data = &imx8mp_media_hurry_data[IMX8MP_MEDIABLK_LCDIF2],
+		.noc_data = {
+			&imx8mp_media_noc_data[IMX8MP_MEDIABLK_LCDIF_RD],
+			&imx8mp_media_noc_data[IMX8MP_MEDIABLK_LCDIF_WR],
+		},
 	},
 	[IMX8MP_MEDIABLK_PD_ISP] = {
 		.name = "mediablk-isp",
@@ -743,8 +897,10 @@ static const struct imx8m_blk_ctrl_domain_data imx8mp_media_blk_ctl_domain_data[
 		.gpc_name = "isp",
 		.rst_mask = BIT(16) | BIT(17) | BIT(18),
 		.clk_mask = BIT(16) | BIT(17) | BIT(18),
-		.path_names = (const char *[]){"isp0", "isp1"},
-		.num_paths = 2,
+		.noc_data = {
+			&imx8mp_media_noc_data[IMX8MP_MEDIABLK_ISP0],
+			&imx8mp_media_noc_data[IMX8MP_MEDIABLK_ISP1],
+		},
 	},
 	[IMX8MP_MEDIABLK_PD_DWE] = {
 		.name = "mediablk-dwe",
@@ -753,8 +909,9 @@ static const struct imx8m_blk_ctrl_domain_data imx8mp_media_blk_ctl_domain_data[
 		.gpc_name = "dwe",
 		.rst_mask = BIT(19) | BIT(20) | BIT(21),
 		.clk_mask = BIT(19) | BIT(20) | BIT(21),
-		.path_names = (const char *[]){"dwe"},
-		.num_paths = 1,
+		.noc_data = {
+			&imx8mp_media_noc_data[IMX8MP_MEDIABLK_DWE],
+		},
 	},
 	[IMX8MP_MEDIABLK_PD_MIPI_DSI_2] = {
 		.name = "mediablk-mipi-dsi-2",
