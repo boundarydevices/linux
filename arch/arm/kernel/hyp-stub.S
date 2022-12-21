@@ -236,4 +236,3 @@ __hyp_stub_trap:	W(b)	__hyp_stub_do_trap
 __hyp_stub_irq:		W(b)	.
 __hyp_stub_fiq:		W(b)	.
 ENDPROC(__hyp_stub_vectors)
-
