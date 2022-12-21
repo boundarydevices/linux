@@ -14,12 +14,14 @@
 #include <sound/control.h>
 #include <sound/pcm_params.h>
 #include <sound/soc-dapm.h>
+#include <sound/simple_card_utils.h>
 #include "imx-pcm-rpmsg.h"
 
 struct imx_rpmsg {
 	struct snd_soc_dai_link dai;
 	struct snd_soc_card card;
 	unsigned long sysclk;
+	struct asoc_simple_jack hp_jack;
 };
 
 static const struct snd_soc_dapm_widget imx_rpmsg_dapm_widgets[] = {
@@ -58,6 +60,8 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	struct platform_device *rpmsg_pdev = to_platform_device(dev);
 	struct device_node *np = rpmsg_pdev->dev.of_node;
 	struct of_phandle_args args;
+	const char *platform_name;
+	const char *model_string;
 	struct imx_rpmsg *data;
 	int ret = 0;
 
@@ -89,10 +93,20 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 			    SND_SOC_DAIFMT_CBC_CFC;
 
 	/* Optional codec node */
+	of_property_read_string(np, "model", &model_string);
 	ret = of_parse_phandle_with_fixed_args(np, "audio-codec", 0, 0, &args);
 	if (ret) {
-		data->dai.codecs->dai_name = "snd-soc-dummy-dai";
-		data->dai.codecs->name = "snd-soc-dummy";
+		if (of_device_is_compatible(np, "fsl,imx7ulp-rpmsg-audio")) {
+			data->dai.codecs->dai_name = "rpmsg-wm8960-hifi";
+			data->dai.codecs->name = RPMSG_CODEC_DRV_NAME_WM8960;
+		} else if (of_device_is_compatible(np, "fsl,imx8mm-rpmsg-audio") &&
+				!strcmp("ak4497-audio", model_string)) {
+			data->dai.codecs->dai_name = "rpmsg-ak4497-aif";
+			data->dai.codecs->name = RPMSG_CODEC_DRV_NAME_AK4497;
+		} else {
+			data->dai.codecs->dai_name = "snd-soc-dummy-dai";
+			data->dai.codecs->name = "snd-soc-dummy";
+		}
 	} else {
 		struct clk *clk;
 
@@ -110,6 +124,9 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 
 	data->dai.cpus->dai_name = dev_name(&rpmsg_pdev->dev);
 	data->dai.platforms->name = IMX_PCM_DRV_NAME;
+	if (!of_property_read_string(np, "fsl,platform", &platform_name))
+		data->dai.platforms->name = platform_name;
+
 	data->dai.playback_only = true;
 	data->dai.capture_only = true;
 	data->card.num_links = 1;
@@ -158,6 +175,11 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	data->hp_jack.pin.pin = "Headphone Jack";
+	data->hp_jack.pin.mask = SND_JACK_HEADPHONE;
+	snd_soc_card_jack_new_pins(&data->card, "Headphone Jack", SND_JACK_HEADPHONE,
+				   &data->hp_jack.jack, &data->hp_jack.pin, 1);
+	snd_soc_jack_report(&data->hp_jack.jack, SND_JACK_HEADPHONE, SND_JACK_HEADPHONE);
 fail:
 	pdev->dev.of_node = NULL;
 	return ret;
