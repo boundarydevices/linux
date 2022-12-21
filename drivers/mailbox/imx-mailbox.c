@@ -112,6 +112,7 @@ struct imx_mu_dcfg {
 	u32	xRR;		/* Receive Register0 */
 	u32	xSR[IMX_MU_xSR_MAX];	/* Status Registers */
 	u32	xCR[IMX_MU_xCR_MAX];	/* Control Registers */
+	u32	xBUF;		/* MU Buffer Register */
 };
 
 #define IMX_MU_xSR_GIPn(type, x) (type & IMX_MU_V2 ? BIT(x) : BIT(28 + (3 - (x))))
@@ -135,6 +136,16 @@ static struct imx_mu_priv *to_imx_mu_priv(struct mbox_controller *mbox)
 {
 	return container_of(mbox, struct imx_mu_priv, mbox);
 }
+
+uint8_t *get_mu_buf(struct mbox_chan *chan)
+{
+	uint8_t *addr;
+	struct imx_mu_priv *priv = to_imx_mu_priv(chan->mbox);
+
+	addr = priv->base + priv->dcfg->xBUF;
+	return addr;
+}
+EXPORT_SYMBOL(get_mu_buf);
 
 static void imx_mu_write(struct imx_mu_priv *priv, u32 val, u32 offs)
 {
@@ -532,7 +543,7 @@ static irqreturn_t imx_mu_isr(int irq, void *p)
 	}
 
 	if (priv->suspend)
-		pm_system_wakeup();
+		pm_system_irq_wakeup(priv->irq[0]);
 
 	return IRQ_HANDLED;
 }
@@ -961,6 +972,7 @@ static const struct imx_mu_dcfg imx_mu_cfg_imx8_seco = {
 	.xRR	= 0x10,
 	.xSR	= {0x20, 0x20, 0x20, 0x20},
 	.xCR	= {0x24, 0x24, 0x24, 0x24, 0x24},
+	.xBUF	= 0x8000,
 };
 
 static const struct of_device_id imx_mu_dt_ids[] = {
@@ -1050,7 +1062,20 @@ static struct platform_driver imx_mu_driver = {
 		.pm = &imx_mu_pm_ops,
 	},
 };
-module_platform_driver(imx_mu_driver);
+static int __init imx_mu_init(void)
+{
+	int ret;
+
+	ret = platform_driver_register(&imx_mu_driver);
+	if (ret)
+		pr_err("Unable to initialize mu driver\n");
+	else
+		pr_info("imx mu driver is registered.\n");
+
+	return ret;
+}
+
+arch_initcall(imx_mu_init);
 
 MODULE_AUTHOR("Oleksij Rempel <o.rempel@pengutronix.de>");
 MODULE_DESCRIPTION("Message Unit driver for i.MX");
