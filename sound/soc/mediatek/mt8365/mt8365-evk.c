@@ -460,7 +460,7 @@ static void mt8365_evk_parse_of(struct snd_soc_card *card,
 }
 
 static struct snd_soc_card mt8365_evk_card = {
-	.name = "mt-snd-card",
+	.name = "mt8365-evk",
 	.owner = THIS_MODULE,
 	.dai_link = mt8365_evk_dais,
 	.num_links = ARRAY_SIZE(mt8365_evk_dais),
