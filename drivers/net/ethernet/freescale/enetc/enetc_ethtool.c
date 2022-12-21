@@ -189,6 +189,21 @@ static const struct {
 	{ ENETC_PICDR(3),	"ICM DR3 discarded frames" },
 };
 
+static const struct {
+	int reg;
+	char name[ETH_GSTRING_LEN];
+} enetc_pmac_counters[] = {
+	{ ENETC_PM_RFRM(1),	"PMAC rx frames" },
+	{ ENETC_PM_RPKT(1),	"PMAC rx packets" },
+	{ ENETC_PM_RDRP(1),	"PMAC rx dropped packets" },
+	{ ENETC_PM_RFRG(1),	"PMAC rx fragment packets" },
+	{ ENETC_PM_TFRM(1),	"PMAC tx frames" },
+	{ ENETC_PM_TERR(1),	"PMAC tx error frames" },
+	{ ENETC_PM_TPKT(1),	"PMAC tx packets" },
+	{ ENETC_MAC_MERGE_MMFCRXR,	"MAC merge fragment rx counter" },
+	{ ENETC_MAC_MERGE_MMFCTXR,	"MAC merge fragment tx counter"},
+};
+
 static const char rx_ring_stats[][ETH_GSTRING_LEN] = {
 	"Rx ring %2d frames",
 	"Rx ring %2d alloc errors",
@@ -223,6 +238,9 @@ static int enetc_get_sset_count(struct net_device *ndev, int sset)
 		return len;
 
 	len += ARRAY_SIZE(enetc_port_counters);
+
+	if (priv->active_offloads & ENETC_F_QBU)
+		len += ARRAY_SIZE(enetc_pmac_counters);
 
 	return len;
 }
@@ -262,6 +280,16 @@ static void enetc_get_strings(struct net_device *ndev, u32 stringset, u8 *data)
 				ETH_GSTRING_LEN);
 			p += ETH_GSTRING_LEN;
 		}
+
+		if (!(priv->active_offloads & ENETC_F_QBU))
+			break;
+
+		for (i = 0; i < ARRAY_SIZE(enetc_pmac_counters); i++) {
+			strlcpy(p, enetc_pmac_counters[i].name,
+				ETH_GSTRING_LEN);
+			p += ETH_GSTRING_LEN;
+		}
+
 		break;
 	}
 }
@@ -299,6 +327,12 @@ static void enetc_get_ethtool_stats(struct net_device *ndev,
 
 	for (i = 0; i < ARRAY_SIZE(enetc_port_counters); i++)
 		data[o++] = enetc_port_rd(hw, enetc_port_counters[i].reg);
+
+	if (!(priv->active_offloads & ENETC_F_QBU))
+		return;
+
+	for (i = 0; i < ARRAY_SIZE(enetc_pmac_counters); i++)
+		data[o++] = enetc_port_rd(hw, enetc_pmac_counters[i].reg);
 }
 
 static void enetc_get_pause_stats(struct net_device *ndev,
@@ -864,6 +898,15 @@ static int enetc_set_link_ksettings(struct net_device *dev,
 	return phylink_ethtool_ksettings_set(priv->phylink, cmd);
 }
 
+static void enetc_get_channels(struct net_device *ndev,
+			       struct ethtool_channels *chan)
+{
+	struct enetc_ndev_priv *priv = netdev_priv(ndev);
+
+	chan->max_combined = priv->bdr_int_num;
+	chan->combined_count = priv->bdr_int_num;
+}
+
 static const struct ethtool_ops enetc_pf_ethtool_ops = {
 	.supported_coalesce_params = ETHTOOL_COALESCE_USECS |
 				     ETHTOOL_COALESCE_MAX_FRAMES |
@@ -894,6 +937,7 @@ static const struct ethtool_ops enetc_pf_ethtool_ops = {
 	.set_wol = enetc_set_wol,
 	.get_pauseparam = enetc_get_pauseparam,
 	.set_pauseparam = enetc_set_pauseparam,
+	.get_channels = enetc_get_channels,
 };
 
 static const struct ethtool_ops enetc_vf_ethtool_ops = {

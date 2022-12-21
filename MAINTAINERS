@@ -6325,6 +6325,7 @@ F:	drivers/net/ethernet/freescale/dpaa2/Kconfig
 F:	drivers/net/ethernet/freescale/dpaa2/Makefile
 F:	drivers/net/ethernet/freescale/dpaa2/dpaa2-eth*
 F:	drivers/net/ethernet/freescale/dpaa2/dpaa2-mac*
+F:	drivers/net/ethernet/freescale/dpaa2/dpaa2-xsk*
 F:	drivers/net/ethernet/freescale/dpaa2/dpkg.h
 F:	drivers/net/ethernet/freescale/dpaa2/dpmac*
 F:	drivers/net/ethernet/freescale/dpaa2/dpni*
@@ -8254,6 +8255,14 @@ F:	drivers/net/ethernet/freescale/enetc/enetc_ptp.c
 F:	drivers/ptp/ptp_qoriq.c
 F:	drivers/ptp/ptp_qoriq_debugfs.c
 F:	include/linux/fsl/ptp_qoriq.h
+
+FREESCALE QORIQ PPFE ETHERNET DRIVER
+M:	Anji Jagarlmudi <anji.jagarlmudi@nxp.com>
+M:	Calvin Johnson <calvin.johnson@nxp.com>
+L:	netdev@vger.kernel.org
+S:	Maintained
+F:	drivers/staging/fsl_ppfe
+F:	Documentation/devicetree/bindings/net/fsl_ppfe/pfe.txt
 
 FREESCALE QUAD SPI DRIVER
 M:	Han Xu <han.xu@nxp.com>

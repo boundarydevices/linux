@@ -328,6 +328,7 @@ static void enetc_set_loopback(struct net_device *ndev, bool en)
 		reg = (reg & ~ENETC_PM0_IFM_RLP) |
 		      (en ? ENETC_PM0_IFM_RLP : 0);
 		enetc_port_wr(hw, ENETC_PM0_IF_MODE, reg);
+		enetc_port_wr(hw, ENETC_PM1_IF_MODE, reg);
 	} else {
 		/* assume SGMII mode */
 		reg = enetc_port_rd(hw, ENETC_PM0_CMD_CFG);
@@ -567,11 +568,13 @@ static void enetc_mac_config(struct enetc_hw *hw, phy_interface_t phy_mode)
 		val &= ~(ENETC_PM0_IFM_EN_AUTO | ENETC_PM0_IFM_IFMODE_MASK);
 		val |= ENETC_PM0_IFM_IFMODE_GMII | ENETC_PM0_IFM_RG;
 		enetc_port_wr(hw, ENETC_PM0_IF_MODE, val);
+		enetc_port_wr(hw, ENETC_PM1_IF_MODE, val);
 	}
 
 	if (phy_mode == PHY_INTERFACE_MODE_USXGMII) {
 		val = ENETC_PM0_IFM_FULL_DPX | ENETC_PM0_IFM_IFMODE_XGMII;
 		enetc_port_wr(hw, ENETC_PM0_IF_MODE, val);
+		enetc_port_wr(hw, ENETC_PM1_IF_MODE, val);
 	}
 }
 
@@ -791,6 +794,7 @@ static const struct net_device_ops enetc_ndev_ops = {
 	.ndo_setup_tc		= enetc_pf_setup_tc,
 	.ndo_bpf		= enetc_setup_bpf,
 	.ndo_xdp_xmit		= enetc_xdp_xmit,
+	.ndo_xsk_wakeup		= enetc_xsk_wakeup,
 };
 
 static void enetc_pf_netdev_setup(struct enetc_si *si, struct net_device *ndev,
@@ -831,6 +835,9 @@ static void enetc_pf_netdev_setup(struct enetc_si *si, struct net_device *ndev,
 		ndev->features |= NETIF_F_HW_TC;
 		ndev->hw_features |= NETIF_F_HW_TC;
 	}
+
+	if (enetc_tsn_is_enabled() && (si->hw_features & ENETC_SI_F_QBU))
+		priv->active_offloads |= ENETC_F_QBU;
 
 	/* pick up primary MAC address from SI */
 	enetc_load_primary_mac_addr(&si->hw, ndev);
@@ -1023,6 +1030,7 @@ static void enetc_force_rgmii_mac(struct enetc_hw *hw, int speed, int duplex)
 		return;
 
 	enetc_port_wr(hw, ENETC_PM0_IF_MODE, val);
+	enetc_port_wr(hw, ENETC_PM1_IF_MODE, val);
 }
 
 static void enetc_pl_mac_link_up(struct phylink_config *config,
@@ -1339,6 +1347,8 @@ static int enetc_pf_probe(struct pci_dev *pdev,
 	if (err)
 		goto err_reg_netdev;
 
+	enetc_tsn_pf_init(ndev, pdev);
+
 	return 0;
 
 err_reg_netdev:
@@ -1377,6 +1387,8 @@ static void enetc_pf_remove(struct pci_dev *pdev)
 
 	if (pf->num_vfs)
 		enetc_sriov_configure(pdev, 0);
+
+	enetc_tsn_pf_deinit(si->ndev);
 
 	unregister_netdev(si->ndev);
 

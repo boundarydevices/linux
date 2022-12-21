@@ -92,19 +92,28 @@ int dpni_close(struct fsl_mc_io	*mc_io,
 	       u32		cmd_flags,
 	       u16		token);
 
+#define DPNI_POOL_ASSOC_QPRI	0
+#define DPNI_POOL_ASSOC_QDBIN	1
+
 /**
  * struct dpni_pools_cfg - Structure representing buffer pools configuration
  * @num_dpbp: Number of DPBPs
+ * @pool_options: Buffer assignment options.
+ *	This field is a combination of DPNI_POOL_ASSOC_flags
  * @pools: Array of buffer pools parameters; The number of valid entries
  *	must match 'num_dpbp' value
  * @pools.dpbp_id: DPBP object ID
+ * @pools.priority: Priority mask that indicates TC's used with this buffer.
+ *	If set to 0x00 MC will assume value 0xff.
  * @pools.buffer_size: Buffer size
  * @pools.backup_pool: Backup pool
  */
 struct dpni_pools_cfg {
 	u8		num_dpbp;
+	u8		pool_options;
 	struct {
 		int	dpbp_id;
+		u8	priority_mask;
 		u16	buffer_size;
 		int	backup_pool;
 	} pools[DPNI_MAX_DPBP];
@@ -494,7 +503,12 @@ int dpni_get_statistics(struct fsl_mc_io	*mc_io,
 			u32			cmd_flags,
 			u16			token,
 			u8			page,
+			u8			param,
 			union dpni_statistics	*stat);
+
+int dpni_reset_statistics(struct fsl_mc_io	*mc_io,
+			  u32			cmd_flags,
+			  u16			token);
 
 #define DPNI_LINK_OPT_AUTONEG		0x0000000000000001ULL
 #define DPNI_LINK_OPT_HALF_DUPLEX	0x0000000000000002ULL
@@ -638,6 +652,50 @@ struct dpni_fs_tbl_cfg {
 
 int dpni_prepare_key_cfg(const struct dpkg_profile_cfg *cfg,
 			 u8 *key_cfg_buf);
+
+/**
+ * enum dpni_tx_schedule_mode - DPNI Tx scheduling mode
+ * @DPNI_TX_SCHED_STRICT_PRIORITY: strict priority
+ * @DPNI_TX_SCHED_WEIGHTED_A: weighted based scheduling in group A
+ * @DPNI_TX_SCHED_WEIGHTED_B: weighted based scheduling in group B
+ */
+enum dpni_tx_schedule_mode {
+	DPNI_TX_SCHED_STRICT_PRIORITY = 0,
+	DPNI_TX_SCHED_WEIGHTED_A,
+	DPNI_TX_SCHED_WEIGHTED_B,
+};
+
+/**
+ * struct dpni_tx_schedule_cfg - Structure representing Tx scheduling conf
+ * @mode:		Scheduling mode
+ * @delta_bandwidth:	Bandwidth represented in weights from 100 to 10000;
+ *	not applicable for 'strict-priority' mode;
+ */
+struct dpni_tx_schedule_cfg {
+	enum dpni_tx_schedule_mode mode;
+	u16 delta_bandwidth;
+};
+
+/**
+ * struct dpni_tx_priorities_cfg - Structure representing transmission
+ *					priorities for DPNI TCs
+ * @tc_sched:	An array of traffic-classes
+ * @prio_group_A: Priority of group A
+ * @prio_group_B: Priority of group B
+ * @separate_groups: Treat A and B groups as separate
+ * @ceetm_ch_idx: ceetm channel index to apply the changes
+ */
+struct dpni_tx_priorities_cfg {
+	struct dpni_tx_schedule_cfg tc_sched[DPNI_MAX_TC];
+	u8 prio_group_A;
+	u8 prio_group_B;
+	u8 separate_groups;
+};
+
+int dpni_set_tx_priorities(struct fsl_mc_io *mc_io,
+			   u32 cmd_flags,
+			   u16 token,
+			   const struct dpni_tx_priorities_cfg *cfg);
 
 /**
  * struct dpni_rx_tc_dist_cfg - Rx traffic class distribution configuration
@@ -911,6 +969,12 @@ struct dpni_congestion_notification_cfg {
 	struct dpni_dest_cfg dest_cfg;
 	u16 notification_mode;
 };
+
+/** Compose TC parameter for function dpni_set_congestion_notification()
+ * and dpni_get_congestion_notification().
+ */
+#define DPNI_BUILD_CH_TC(ceetm_ch_idx, tc) \
+	((((ceetm_ch_idx) & 0x0F) << 4) | ((tc) & 0x0F))
 
 int dpni_set_congestion_notification(
 			struct fsl_mc_io *mc_io,

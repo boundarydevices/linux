@@ -230,12 +230,14 @@ struct stmmac_priv {
 	struct stmmac_channel channel[STMMAC_CH_MAX];
 
 	int speed;
+	bool mdio_rst_after_resume;
 	unsigned int flow_ctrl;
 	unsigned int pause;
 	struct mii_bus *mii;
 
 	struct phylink_config phylink_config;
 	struct phylink *phylink;
+	bool is_phy_started;
 
 	struct stmmac_extra_stats xstats ____cacheline_aligned_in_smp;
 	struct stmmac_safety_stats sstats;
