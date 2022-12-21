@@ -649,6 +649,64 @@
 							mediatek,infracfg = <&infracfg_ao>;
 							#power-domain-cells = <0>;
 						};
+
+						img_vcore: img-vcore@MT8188_POWER_DOMAIN_IMG_VCORE {
+							reg = <MT8188_POWER_DOMAIN_IMG_VCORE>;
+							clocks = <&topckgen CLK_TOP_IMG>,
+								 <&topckgen CLK_TOP_CFGREG_CLOCK_ISP_AXI_GALS>;
+							clock-names = "img_vcore0", "img_vcore1";
+							mediatek,infracfg = <&infracfg_ao>;
+							#address-cells = <1>;
+							#size-cells = <0>;
+							#power-domain-cells = <1>;
+
+							img-main@MT8188_POWER_DOMAIN_IMG_MAIN {
+								reg = <MT8188_POWER_DOMAIN_IMG_MAIN>;
+								clocks = <&imgsys CLK_IMGSYS_MAIN_LARB9>,
+									 <&imgsys CLK_IMGSYS_MAIN_VCORE_GALS>,
+									 <&imgsys CLK_IMGSYS_MAIN_DIP0>,
+									 <&imgsys CLK_IMGSYS_MAIN_GALS>;
+								clock-names = "img_main-0", "img_main-1",
+									      "img_main-2", "img_main-3";
+								mediatek,infracfg = <&infracfg_ao>;
+								#address-cells = <1>;
+								#size-cells = <0>;
+								#power-domain-cells = <1>;
+
+								dip@MT8188_POWER_DOMAIN_DIP {
+									reg = <MT8188_POWER_DOMAIN_DIP>;
+									clocks = <&imgsys CLK_IMGSYS_MAIN_WPE0>,
+										 <&imgsys CLK_IMGSYS_MAIN_IPE>,
+										 <&imgsys CLK_IMGSYS_MAIN_WPE1>,
+										 <&imgsys CLK_IMGSYS_MAIN_WPE2>,
+										 <&imgsys1_dip_top CLK_IMGSYS1_DIP_TOP_LARB10>,
+										 <&imgsys_wpe1 CLK_IMGSYS_WPE1_LARB11>,
+										 <&imgsys_wpe2 CLK_IMGSYS_WPE2_LARB11>,
+										 <&imgsys_wpe3 CLK_IMGSYS_WPE3_LARB11>,
+										 <&imgsys1_dip_nr CLK_IMGSYS1_DIP_NR_LARB15>;
+									clock-names = "dip-0", "dip-1",
+										"dip-2", "dip-3",
+										"dip-4", "dip-5",
+										"dip-6", "dip-7",
+										"dip-8";
+									mediatek,larb = \
+										<&imgsys1_dip_top &imgsys_wpe1
+										 &imgsys_wpe3 &imgsys_wpe2
+										 &imgsys1_dip_nr>;
+									#power-domain-cells = <0>;
+								};
+
+								ipe@MT8188_POWER_DOMAIN_IPE {
+									reg = <MT8188_POWER_DOMAIN_IPE>;
+									clocks = <&topckgen CLK_TOP_IPE>,
+									 <&imgsys CLK_IMGSYS_MAIN_IPE>,
+									 <&ipesys CLK_IPE_SMI_LARB12>;
+									clock-names= "ipe0", "ipe-0", "ipe-1";
+									mediatek,larb = <&ipesys>;
+									#power-domain-cells = <0>;
+								};
+							};
+						};
 					};
 				};
 
