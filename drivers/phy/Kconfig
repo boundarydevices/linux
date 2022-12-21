@@ -71,6 +71,16 @@ config PHY_CAN_TRANSCEIVER
 	  functional modes using gpios and sets the attribute max link
 	  rate, for CAN drivers.
 
+config PHY_MIXEL_LVDS
+	tristate "MIXEL LVDS PHY support"
+	depends on OF
+	select GENERIC_PHY
+
+config PHY_MIXEL_LVDS_COMBO
+	tristate "MIXEL LVDS PHY(LVDS+MIPI DSI combo PHY) support"
+	depends on OF
+	select GENERIC_PHY
+
 source "drivers/phy/allwinner/Kconfig"
 source "drivers/phy/amlogic/Kconfig"
 source "drivers/phy/broadcom/Kconfig"

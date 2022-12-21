@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: GPL-2.0
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/phy/fsl,samsung-hdmi-phy.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Freesclae iMX8MP HDMI PHY WITH SAMSUNG IP BLOCK
+
+maintainers:
+  - Sandor Yu <Sandor.yu@nxp.com>
+
+properties:
+  compatible:
+    enum:
+      - fsl,samsung-hdmi-phy
+
+  reg:
+    maxItems: 1
+
+  clock-output-names:
+    description:
+      The HDMI PHY Pixel output clock name.
+
+  "#clock-cells":
+    const: 0
+
+  "#phy-cells":
+    const: 0
+
+  clocks:
+    maxItems: 2
+    items:
+      - description: apb for system control and register configuration
+      - description: ref for crystal-oscillator reference PLL clock input.
+
+  clock-names:
+    - const: apb
+    - const: ref
+
+  reset:
+    maxItems: 1
+
+required:
+  - compatible
+  - reg
+  - "#clock-cells"
+  - "#phy-cells"
+  - clocks
+  - clock-names
+  - reset
+
+optional:
+  - clock-output-names
+
+additionalProperties: false
+
+examples:
+  - |
+    hdmiphy: hdmiphy@32fdff00 {
+      compatible = "fsl,samsung-hdmi-phy";
+      reg = <0x32fdff00 0x100>;
+      clocks = <&hdmimix_clk IMX8MP_CLK_HDMIMIX_TX_PHY_APB_CLK>,
+               <&hdmimix_clk IMX8MP_CLK_HDMIMIX_GLOBAL_XTAL24M_CLK>;
+      clock-names = "apb", "ref";
+      resets = <&hdmimix_reset IMX_HDMIMIX_HDMI_PHY_RESET>;
+      clock-output-names = "hdmi_pclk";
+      #phy-cells = <0>;
+      #clock-cells = <0>;
+    };
+
+    hdmi: hdmi@32fd8000 {
+      compatible = "fsl,imx8mp-hdmi";
+      ...
+      phys = <&hdmiphy>;
+      phy-names = "hdmi";
+      ...
+    };
+
+    lcdif3: lcd-controller@32fc6000 {
+      compatible = "fsl,imx8mp-lcdif3";
+      ...
+      clocks = <&hdmiphy 0>, ...;
+      clock-names = "pix", ...;
+      ...
+    };

@@ -32,6 +32,11 @@ properties:
     description:
       A phandle to the regulator for USB VBUS.
 
+  vbus-power-supply:
+    description:
+      A phandle to the vbus power supply provider, used to to detect the
+      possible BC charger type of it.
+
 required:
   - compatible
   - reg
