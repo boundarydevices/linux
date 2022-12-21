@@ -23,6 +23,7 @@
 #include <linux/iopoll.h>
 #include <linux/mmc/host.h>
 #include <linux/mmc/mmc.h>
+#include <linux/acpi.h>
 #include "sdhci-pltfm.h"
 #include "sdhci-esdhc.h"
 
@@ -40,6 +41,12 @@ static const struct esdhc_clk_fixup ls1021a_esdhc_clk = {
 	.sd_dflt_max_clk = 25000000,
 	.max_clk[MMC_TIMING_MMC_HS] = 46500000,
 	.max_clk[MMC_TIMING_SD_HS] = 46500000,
+};
+
+static const struct esdhc_clk_fixup ls1043a_esdhc_clk = {
+	.sd_dflt_max_clk = 25000000,
+	.max_clk[MMC_TIMING_UHS_SDR104] = 116700000,
+	.max_clk[MMC_TIMING_MMC_HS200] = 116700000,
 };
 
 static const struct esdhc_clk_fixup ls1046a_esdhc_clk = {
@@ -63,6 +70,7 @@ static const struct esdhc_clk_fixup p1010_esdhc_clk = {
 
 static const struct of_device_id sdhci_esdhc_of_match[] = {
 	{ .compatible = "fsl,ls1021a-esdhc", .data = &ls1021a_esdhc_clk},
+	{ .compatible = "fsl,ls1043a-esdhc", .data = &ls1043a_esdhc_clk},
 	{ .compatible = "fsl,ls1046a-esdhc", .data = &ls1046a_esdhc_clk},
 	{ .compatible = "fsl,ls1012a-esdhc", .data = &ls1012a_esdhc_clk},
 	{ .compatible = "fsl,p1010-esdhc",   .data = &p1010_esdhc_clk},
@@ -72,6 +80,14 @@ static const struct of_device_id sdhci_esdhc_of_match[] = {
 	{ }
 };
 MODULE_DEVICE_TABLE(of, sdhci_esdhc_of_match);
+
+#ifdef CONFIG_ACPI
+static const struct acpi_device_id sdhci_esdhc_ids[] = {
+	{"NXP0003" },
+	{ }
+};
+MODULE_DEVICE_TABLE(acpi, sdhci_esdhc_ids);
+#endif
 
 struct sdhci_esdhc {
 	u8 vendor_ver;
@@ -536,6 +552,12 @@ static int esdhc_of_enable_dma(struct sdhci_host *host)
 	}
 
 	value = sdhci_readl(host, ESDHC_DMA_SYSCTL);
+
+	if (!dev->of_node) {
+		value |= ESDHC_DMA_SNOOP;
+		sdhci_writel(host, value, ESDHC_DMA_SYSCTL);
+		return 0;
+	}
 
 	if (of_dma_is_coherent(dev->of_node))
 		value |= ESDHC_DMA_SNOOP;
@@ -1376,23 +1398,28 @@ static void esdhc_init(struct platform_device *pdev, struct sdhci_host *host)
 		esdhc->quirk_trans_complete_erratum = true;
 	}
 
-	clk = of_clk_get(np, 0);
-	if (!IS_ERR(clk)) {
-		/*
-		 * esdhc->peripheral_clock would be assigned with a value
-		 * which is eSDHC base clock when use periperal clock.
-		 * For some platforms, the clock value got by common clk
-		 * API is peripheral clock while the eSDHC base clock is
-		 * 1/2 peripheral clock.
-		 */
-		if (of_device_is_compatible(np, "fsl,ls1046a-esdhc") ||
-		    of_device_is_compatible(np, "fsl,ls1028a-esdhc") ||
-		    of_device_is_compatible(np, "fsl,ls1088a-esdhc"))
-			esdhc->peripheral_clock = clk_get_rate(clk) / 2;
-		else
-			esdhc->peripheral_clock = clk_get_rate(clk);
+	if (np) {
+		clk = of_clk_get(np, 0);
+		if (!IS_ERR(clk)) {
+			/*
+			 * esdhc->peripheral_clock would be assigned with a value
+			 * which is eSDHC base clock when use peripheral clock.
+			 * For some platforms, the clock value got by common clk
+			 * API is peripheral clock while the eSDHC base clock is
+			 * 1/2 peripheral clock.
+			 */
+			if (of_device_is_compatible(np, "fsl,ls1046a-esdhc") ||
+			    of_device_is_compatible(np, "fsl,ls1028a-esdhc") ||
+			    of_device_is_compatible(np, "fsl,ls1088a-esdhc"))
+				esdhc->peripheral_clock = clk_get_rate(clk) / 2;
+			else
+				esdhc->peripheral_clock = clk_get_rate(clk);
 
-		clk_put(clk);
+			clk_put(clk);
+		}
+	} else {
+		device_property_read_u32(&pdev->dev, "clock-frequency",
+					 &esdhc->peripheral_clock);
 	}
 
 	esdhc_clock_enable(host, false);
@@ -1426,7 +1453,7 @@ static int sdhci_esdhc_probe(struct platform_device *pdev)
 
 	np = pdev->dev.of_node;
 
-	if (of_property_read_bool(np, "little-endian"))
+	if (device_property_read_bool(&pdev->dev, "little-endian"))
 		host = sdhci_pltfm_init(pdev, &sdhci_esdhc_le_pdata,
 					sizeof(struct sdhci_esdhc));
 	else
@@ -1513,6 +1540,9 @@ static struct platform_driver sdhci_esdhc_driver = {
 		.name = "sdhci-esdhc",
 		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 		.of_match_table = sdhci_esdhc_of_match,
+#ifdef CONFIG_ACPI
+		.acpi_match_table = sdhci_esdhc_ids,
+#endif
 		.pm = &esdhc_of_dev_pm_ops,
 	},
 	.probe = sdhci_esdhc_probe,
