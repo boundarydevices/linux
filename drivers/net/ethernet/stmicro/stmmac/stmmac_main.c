@@ -1077,7 +1077,7 @@ static void stmmac_mac_link_up(struct phylink_config *config,
 
 	stmmac_mac_set(priv, priv->ioaddr, true);
 	if (phy && priv->dma_cap.eee) {
-		priv->eee_active = phy_init_eee(phy, 1) >= 0;
+		priv->eee_active = phy_init_eee(phy, 0) >= 0;
 		priv->eee_enabled = stmmac_eee_init(priv);
 		priv->tx_lpi_enabled = priv->eee_enabled;
 		stmmac_set_eee_pls(priv, priv->hw, true);
@@ -3830,6 +3830,7 @@ static int __stmmac_open(struct net_device *dev,
 	phylink_start(priv->phylink);
 	/* We may have called phylink_speed_down before */
 	phylink_speed_up(priv->phylink);
+	priv->is_phy_started = true;
 
 	ret = stmmac_request_irq(dev);
 	if (ret)
@@ -3897,6 +3898,7 @@ static int stmmac_release(struct net_device *dev)
 	/* Stop and disconnect the PHY */
 	phylink_stop(priv->phylink);
 	phylink_disconnect_phy(priv->phylink);
+	priv->is_phy_started = false;
 
 	stmmac_disable_all_queues(priv);
 
@@ -6365,7 +6367,15 @@ static int stmmac_vlan_rx_kill_vid(struct net_device *ndev, __be16 proto, u16 vi
 	clear_bit(vid, priv->active_vlans);
 
 	if (priv->hw->num_vlan) {
-		ret = stmmac_del_hw_vlan_rx_fltr(priv, ndev, priv->hw, proto, vid);
+		if (priv->is_phy_started == false) {
+			stmmac_init_phy(ndev);
+			phylink_start(priv->phylink);
+			ret = stmmac_del_hw_vlan_rx_fltr(priv, ndev, priv->hw, proto, vid);
+			phylink_stop(priv->phylink);
+			phylink_disconnect_phy(priv->phylink);
+		} else {
+			ret = stmmac_del_hw_vlan_rx_fltr(priv, ndev, priv->hw, proto, vid);
+		}
 		if (ret)
 			goto del_vlan_error;
 	}
@@ -7482,8 +7492,10 @@ static void stmmac_reset_queues_param(struct stmmac_priv *priv)
 	for (queue = 0; queue < rx_cnt; queue++)
 		stmmac_reset_rx_queue(priv, queue);
 
-	for (queue = 0; queue < tx_cnt; queue++)
+	for (queue = 0; queue < tx_cnt; queue++) {
 		stmmac_reset_tx_queue(priv, queue);
+		stmmac_clear_tx_descriptors(priv, &priv->dma_conf, queue);
+	}
 }
 
 /**
@@ -7515,7 +7527,7 @@ int stmmac_resume(struct device *dev)
 	} else {
 		pinctrl_pm_select_default_state(priv->device);
 		/* reset the phy so that it's ready */
-		if (priv->mii)
+		if (priv->mii && priv->mdio_rst_after_resume)
 			stmmac_mdio_reset(priv->mii);
 	}
 
@@ -7543,7 +7555,6 @@ int stmmac_resume(struct device *dev)
 	stmmac_reset_queues_param(priv);
 
 	stmmac_free_tx_skbufs(priv);
-	stmmac_clear_descriptors(priv, &priv->dma_conf);
 
 	stmmac_hw_setup(ndev, false);
 	stmmac_init_coalesce(priv);
