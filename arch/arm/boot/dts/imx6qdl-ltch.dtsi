@@ -179,23 +179,6 @@
 		>;
 	};
 
-	/* i2c1a wm8960 - Amplifier Mute, TDA7491LP13TR */
-	pinctrl_i2c1a_wm8960: i2c1a-wm8960grp {
-		fsl,pins = <
-#define GP_WM8960_AMP_STDBY	<&gpio4 7 GPIO_ACTIVE_LOW>		/* Low is standby */
-			MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x030b0
-#define GP_WM8960_AMP_MUTE		<&gpio4 21 GPIO_ACTIVE_LOW>		/* Low is muted */
-			MX6QDL_PAD_DISP0_DAT0__GPIO4_IO21	0x030b0
-#define GP_WM8960_AMP_G0	<&gpio4 25 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x030b0
-#define GP_WM8960_AMP_G1	<&gpio4 24 GPIO_ACTIVE_HIGH>
-			MX6QDL_PAD_DISP0_DAT3__GPIO4_IO24	0x030b0
-#define GP_WM8960_MIC_DET	<&gpio7 8 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_SD3_RST__GPIO7_IO08		0x1b0b0
-			MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* mclk */
-		>;
-	};
-
 	/* i2c1b touch J7, pin 4 */
 	pinctrl_i2c1b_ft5x06: i2c1b-ft5x06grp {
 		fsl,pins = <
@@ -319,6 +302,23 @@
 		fsl,pins = <
 #define GP_REG_WLAN_EN	<&gpio6 15 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_CS2__GPIO6_IO15	0x030b0
+		>;
+	};
+
+	/* i2c1a wm8960 - Amplifier Mute, TDA7491LP13TR */
+	pinctrl_sound_wm8960: sound-wm8960grp {
+		fsl,pins = <
+#define GP_WM8960_AMP_STDBY	<&gpio4 7 GPIO_ACTIVE_LOW>		/* Low is standby */
+			MX6QDL_PAD_KEY_ROW0__GPIO4_IO07		0x030b0
+#define GP_WM8960_AMP_MUTE		<&gpio4 21 GPIO_ACTIVE_LOW>		/* Low is muted */
+			MX6QDL_PAD_DISP0_DAT0__GPIO4_IO21	0x030b0
+#define GP_WM8960_AMP_G0	<&gpio4 25 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x030b0
+#define GP_WM8960_AMP_G1	<&gpio4 24 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_DISP0_DAT3__GPIO4_IO24	0x030b0
+#define GP_WM8960_MIC_DET	<&gpio7 8 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_SD3_RST__GPIO7_IO08		0x1b0b0
+			MX6QDL_PAD_GPIO_0__CCM_CLKO1		0x000b0		/* mclk */
 		>;
 	};
 
@@ -563,13 +563,13 @@
 	};
 
 	sound {
+		amp-gain-gpios = GP_WM8960_AMP_G0, GP_WM8960_AMP_G1;
 		amp-mute-gpios = GP_WM8960_AMP_MUTE;
 		/* delay between mute and standby enter */
 		amp-standby-enter-wait-ms = <50>;
 		/* delay between standby exit and unmute */
 		amp-standby-exit-delay-ms = <100>;
 		amp-standby-gpios = GP_WM8960_AMP_STDBY;
-		amp-gain-gpios = GP_WM8960_AMP_G0, GP_WM8960_AMP_G1;
 		/* amp-gain-seq = /bits/ 8 <0 1 2 3>; */ /* default */
 #ifdef USE_ASRC
 		asrc-controller = <&asrc>;
@@ -595,6 +595,8 @@
 		model = "wm8960-audio";
 		mux-int-port = <1>;
 		mux-ext-port = <3>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
 
 	v4l2-out {
@@ -717,15 +719,13 @@
 	clock-frequency = <100000>;
 
 	wm8960: wm8960@1a {
-		compatible = "wlf,wm8960";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c1a_wm8960>;
-		reg = <0x1a>;
-		clock-names = "mclk";
-		wlf,shared-lrclk;
-		clocks = <&clks IMX6QDL_CLK_CKO>;
 		assigned-clocks =        <&clks IMX6QDL_CLK_CKO>;
 		assigned-clock-parents = <&clks IMX6QDL_CLK_CKO2>;
+		compatible = "wlf,wm8960";
+		clock-names = "mclk";
+		clocks = <&clks IMX6QDL_CLK_CKO>;
+		reg = <0x1a>;
+		wlf,shared-lrclk;
 	};
 };
 
