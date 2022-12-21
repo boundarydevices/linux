@@ -27,6 +27,7 @@ obj-$(CONFIG_IMX8_ISI_CORE) += imx8-capture.o
 obj-$(CONFIG_IMX8_ISI_CAPTURE) 	  += imx8-isi-capture.o
 obj-$(CONFIG_IMX8_ISI_M2M)	+= imx8-isi-mem2mem.o
 obj-$(CONFIG_IMX8_ISI_HW) 	  += imx8-isi-hw.o
+obj-$(CONFIG_GMSL_MAX9286)	  += gmsl-max9286.o
 obj-$(CONFIG_DWC_MIPI_CSI2_HOST) += dwc-mipi-csi2.o
 
 obj-y += hdmirx/
