@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: ISC
-
 /* Copyright 2019, Cypress Semiconductor Corporation or a subsidiary of
  * Cypress Semiconductor Corporation. All rights reserved.
  * This software, including source code, documentation and related
