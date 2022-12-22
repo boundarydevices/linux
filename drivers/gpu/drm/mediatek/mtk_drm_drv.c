@@ -172,16 +172,25 @@ static const unsigned int mt8188_mtk_ddp_main[] = {
 };
 
 static const unsigned int mt8188_mtk_ddp_main_routes_0[] = {
-	DDP_COMPONENT_DSI0,
+	DDP_COMPONENT_DSC0,
+	DDP_COMPONENT_MERGE0,
+	DDP_COMPONENT_DP_INTF0,
 };
 
 static const unsigned int mt8188_mtk_ddp_main_routes_1[] = {
-	DDP_COMPONENT_DP_INTF0,
+	DDP_COMPONENT_DSI0
+};
+
+static const unsigned int mt8188_mtk_ddp_main_routes_2[] = {
+	DDP_COMPONENT_DSC0,
+	DDP_COMPONENT_MERGE0,
+	DDP_COMPONENT_DPI1,
 };
 
 static const struct mtk_drm_route mt8188_mtk_ddp_main_routes[] = {
 	{0, 0, ARRAY_SIZE(mt8188_mtk_ddp_main_routes_0), mt8188_mtk_ddp_main_routes_0},
-	{0, 0, ARRAY_SIZE(mt8188_mtk_ddp_main_routes_1), mt8188_mtk_ddp_main_routes_1}
+	{0, 0, ARRAY_SIZE(mt8188_mtk_ddp_main_routes_1), mt8188_mtk_ddp_main_routes_1},
+	{0, 1, ARRAY_SIZE(mt8188_mtk_ddp_main_routes_2), mt8188_mtk_ddp_main_routes_2},
 };
 
 static const unsigned int mt8188_mtk_ddp_ext[] = {
@@ -197,9 +206,14 @@ static const unsigned int mt8188_mtk_ddp_ext_routes_1[] = {
 	DDP_COMPONENT_DPI1
 };
 
+static const unsigned int mt8188_mtk_ddp_ext_routes_2[] = {
+	DDP_COMPONENT_DP_INTF0
+};
+
 static const struct mtk_drm_route mt8188_mtk_ddp_ext_routes[] = {
 	{1, 1, ARRAY_SIZE(mt8188_mtk_ddp_ext_routes_0), mt8188_mtk_ddp_ext_routes_0},
-	{1, 1, ARRAY_SIZE(mt8188_mtk_ddp_ext_routes_1), mt8188_mtk_ddp_ext_routes_1}
+	{1, 1, ARRAY_SIZE(mt8188_mtk_ddp_ext_routes_1), mt8188_mtk_ddp_ext_routes_1},
+	{1, 0, ARRAY_SIZE(mt8188_mtk_ddp_ext_routes_2), mt8188_mtk_ddp_ext_routes_2},
 };
 
 static const unsigned int mt8192_mtk_ddp_main[] = {
