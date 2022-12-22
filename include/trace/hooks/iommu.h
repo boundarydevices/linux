@@ -27,6 +27,10 @@ DECLARE_HOOK(android_vh_adjust_alloc_flags,
 	TP_PROTO(unsigned int order, gfp_t *alloc_flags),
 	TP_ARGS(order, alloc_flags));
 
+DECLARE_RESTRICTED_HOOK(android_rvh_iommu_iovad_init_alloc_algo,
+	TP_PROTO(struct device *dev, struct iova_domain *iovad),
+	TP_ARGS(dev, iovad), 1);
+
 #endif /* _TRACE_HOOK_IOMMU_H */
 
 /* This part must be outside protection */

@@ -713,6 +713,9 @@ static int iommu_dma_init_domain(struct iommu_domain *domain, struct device *dev
 	}
 
 	init_iova_domain(iovad, 1UL << order, base_pfn);
+
+	trace_android_rvh_iommu_iovad_init_alloc_algo(dev, iovad);
+
 	ret = iova_domain_init_rcaches(iovad);
 	if (ret)
 		goto done_unlock;
