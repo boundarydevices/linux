@@ -240,6 +240,7 @@ static struct snd_soc_dai_link mt8365_evk_dais[] = {
 		},
 		.dynamic = 1,
 		.dpcm_playback = 1,
+		.dpcm_merged_rate = 1,
 		SND_SOC_DAILINK_REG(playback1),
 	},
 	[DAI_LINK_DL2_PLAYBACK] = {
@@ -252,6 +253,7 @@ static struct snd_soc_dai_link mt8365_evk_dais[] = {
 		},
 		.dynamic = 1,
 		.dpcm_playback = 1,
+		.dpcm_merged_rate = 1,
 		SND_SOC_DAILINK_REG(playback2),
 	},
 	[DAI_LINK_AWB_CAPTURE] = {
@@ -264,6 +266,7 @@ static struct snd_soc_dai_link mt8365_evk_dais[] = {
 		},
 		.dynamic = 1,
 		.dpcm_capture = 1,
+		.dpcm_merged_rate = 1,
 		SND_SOC_DAILINK_REG(awb_capture),
 	},
 	[DAI_LINK_VUL_CAPTURE] = {
@@ -276,6 +279,7 @@ static struct snd_soc_dai_link mt8365_evk_dais[] = {
 		},
 		.dynamic = 1,
 		.dpcm_capture = 1,
+		.dpcm_merged_rate = 1,
 		SND_SOC_DAILINK_REG(vul),
 	},
 	/* Back End DAI links */
