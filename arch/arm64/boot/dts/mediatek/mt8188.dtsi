@@ -647,9 +647,21 @@
 			clock-names = "spi", "wrap";
 		};
 
+		imp_iic_wrap_c: syscon@11283000 {
+			compatible = "mediatek,mt8188-imp_iic_wrap_c", "syscon";
+			reg = <0 0x11283000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
 		imp_iic_wrap_w: syscon@11e02000 {
 			compatible = "mediatek,mt8188-imp_iic_wrap_w", "syscon";
 			reg = <0 0x11e02000 0 0x1000>;
+			#clock-cells = <1>;
+		};
+
+		imp_iic_wrap_en: syscon@11ec2000 {
+			compatible = "mediatek,mt8188-imp_iic_wrap_en", "syscon";
+			reg = <0 0x11ec2000 0 0x1000>;
 			#clock-cells = <1>;
 		};
 
