@@ -955,6 +955,7 @@
 		reg = <0x4a>;
 		reset-gpios = GP_TS_ATMEL_RESET;
 		wakeup-gpios = GP_TS_ATMEL;
+		status = "disabled";
 	};
 
 	ts_ft5x06: touchscreen@38 {
