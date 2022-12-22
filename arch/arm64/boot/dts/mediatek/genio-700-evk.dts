@@ -177,6 +177,36 @@
 			bias-pull-up = <MTK_PUPD_SET_R1R0_01>;
 		};
 	};
+
+	spi0_pins: spi0-pins {
+		pins-spi {
+			pinmux = <PINMUX_GPIO69__FUNC_O_SPIM0_CSB>,
+				<PINMUX_GPIO70__FUNC_O_SPIM0_CLK>,
+				<PINMUX_GPIO71__FUNC_B0_SPIM0_MOSI>,
+				<PINMUX_GPIO72__FUNC_B0_SPIM0_MISO>;
+			bias-disable;
+		};
+	};
+
+	spi1_pins: spi1-pins {
+		pins-spi {
+			pinmux = <PINMUX_GPIO75__FUNC_O_SPIM1_CSB>,
+				<PINMUX_GPIO76__FUNC_O_SPIM1_CLK>,
+				<PINMUX_GPIO77__FUNC_B0_SPIM1_MOSI>,
+				<PINMUX_GPIO78__FUNC_B0_SPIM1_MISO>;
+			bias-disable;
+		};
+	};
+
+	spi2_pins: spi2-pins {
+		pins-spi {
+			pinmux = <PINMUX_GPIO79__FUNC_O_SPIM2_CSB>,
+				<PINMUX_GPIO80__FUNC_O_SPIM2_CLK>,
+				<PINMUX_GPIO81__FUNC_B0_SPIM2_MOSI>,
+				<PINMUX_GPIO82__FUNC_B0_SPIM2_MISO>;
+			bias-disable;
+		};
+	};
 };
 
 &i2c0 {
@@ -287,3 +317,17 @@
 	non-removable;
 };
 
+&spi2 {
+	pinctrl-0 = <&spi2_pins>;
+	pinctrl-names = "default";
+	mediatek,pad-select = <0>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	spidev@0 {
+		compatible = "mediatek,aiot-board";
+		spi-max-frequency = <5000000>;
+		reg = <0>;
+	};
+};
