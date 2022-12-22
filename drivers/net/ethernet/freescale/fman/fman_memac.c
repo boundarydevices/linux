@@ -1159,7 +1159,7 @@ int memac_initialization(struct mac_device *mac_dev,
 	int			 err;
 	struct device_node	*phy_node;
 	struct fwnode_handle	*phy_fwnode;
-	struct fixed_phy_status *fixed_link, status = {0};
+	struct fixed_phy_status *fixed_link = NULL, status = {0};
 	struct fman_mac		*memac;
 	struct device		*pcs_dev, *dev = mac_dev->dev;
 	struct device_node	*mac_node = dev->of_node;
