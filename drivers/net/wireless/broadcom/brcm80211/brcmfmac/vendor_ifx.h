@@ -1,8 +1,6 @@
-// SPDX-License-Identifier: ISC
-
 /* Infineon WLAN driver: vendor specific implement
  *
- * ©2022 Cypress Semiconductor Corporation (an Infineon company)
+ * Copyright 2022 Cypress Semiconductor Corporation (an Infineon company)
  * or an affiliate of Cypress Semiconductor Corporation. All rights reserved.
  * This software, including source code, documentation and related materials
  * ("Software") is owned by Cypress Semiconductor Corporation or one of its
