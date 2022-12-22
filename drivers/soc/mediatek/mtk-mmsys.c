@@ -81,12 +81,20 @@ static const struct mtk_mmsys_driver_data mt8188_vdosys0_driver_data = {
 	.clk_driver = "clk-mt8188-vdo0",
 	.routes = mmsys_mt8188_routing_table,
 	.num_routes = ARRAY_SIZE(mmsys_mt8188_routing_table),
+	.main_sys_w_h_configs = mmsys_mt8188_vdo0_main_sys_w_h_configs_list,
+	.num_main_sys_w_h_configs = ARRAY_SIZE(mmsys_mt8188_vdo0_main_sys_w_h_configs_list),
+	.cross_sys_w_h_configs = mmsys_mt8188_vdo0_cross_sys_w_h_configs_list,
+	.num_cross_sys_w_h_configs = ARRAY_SIZE(mmsys_mt8188_vdo0_cross_sys_w_h_configs_list),
 };
 
 static const struct mtk_mmsys_driver_data mt8188_vdosys1_driver_data = {
 	.clk_driver = "clk-mt8188-vdo1",
 	.routes = mmsys_mt8188_vdo1_routing_table,
 	.num_routes = ARRAY_SIZE(mmsys_mt8188_vdo1_routing_table),
+	.main_sys_w_h_configs = mmsys_mt8188_vdo1_main_sys_w_h_configs_list,
+	.num_main_sys_w_h_configs = ARRAY_SIZE(mmsys_mt8188_vdo1_main_sys_w_h_configs_list),
+	.cross_sys_w_h_configs = mmsys_mt8188_vdo1_cross_sys_w_h_configs_list,
+	.num_cross_sys_w_h_configs = ARRAY_SIZE(mmsys_mt8188_vdo1_cross_sys_w_h_configs_list),
 	.sw0_rst_offset = MT8188_VDO1_SW0_RST_B,
 	.num_resets = 96,
 };
