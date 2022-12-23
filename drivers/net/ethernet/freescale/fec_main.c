@@ -77,6 +77,10 @@
 
 static void set_multicast_list(struct net_device *ndev);
 static void fec_enet_itr_coal_set(struct net_device *ndev);
+static int fec_enet_xdp_xmit(struct net_device *dev,
+			     int num_frames,
+			     struct xdp_frame **frames,
+			     u32 flags);
 
 #define DRIVER_NAME	"fec"
 
@@ -1514,6 +1518,7 @@ fec_enet_run_xdp(struct fec_enet_private *fep, struct bpf_prog *prog,
 	unsigned int sync, len = xdp->data_end - xdp->data;
 	u32 ret = FEC_ENET_XDP_PASS;
 	struct page *page;
+	struct xdp_frame *xdp_frame;
 	int err;
 	u32 act;
 
@@ -1546,9 +1551,9 @@ fec_enet_run_xdp(struct fec_enet_private *fep, struct bpf_prog *prog,
 		fallthrough;
 
 	case XDP_TX:
-		bpf_warn_invalid_xdp_action(fep->netdev, prog, act);
-		fallthrough;
-
+		xdp_frame = xdp_convert_buff_to_frame(xdp);
+		ret = fec_enet_xdp_xmit(fep->netdev, 1, &xdp_frame, 0);
+		break;
 	case XDP_ABORTED:
 		fallthrough;    /* handle aborts by dropping packet */
 
