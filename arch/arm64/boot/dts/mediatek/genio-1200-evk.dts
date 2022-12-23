@@ -916,6 +916,12 @@
 			bias-pull-up;
 		};
 	};
+
+	pwm_pins: pwm-pins {
+		pins {
+			pinmux = <PINMUX_GPIO107__FUNC_PWM_3>;
+		};
+	};
 };
 
 &mt6359_vgpu11_buck_reg {
@@ -1212,3 +1218,8 @@
 	mediatek,enable-dualpipe;
 };
 
+&pwm {
+	pinctrl-0 = <&pwm_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+};
