@@ -366,12 +366,6 @@ static int scsi_fill_sghdr_rq(struct scsi_device *sdev, struct request *rq,
 	return 0;
 }
 
-#ifdef CONFIG_AHCI_IMX
-extern void *sg_io_buffer_hack;
-#else
-#define sg_io_buffer_hack NULL
-#endif
-
 static int scsi_complete_sghdr_rq(struct request *rq, struct sg_io_hdr *hdr,
 		struct bio *bio)
 {
@@ -403,12 +397,7 @@ static int scsi_complete_sghdr_rq(struct request *rq, struct sg_io_hdr *hdr,
 			ret = -EFAULT;
 	}
 
-	if (sg_io_buffer_hack && !hdr->iovec_count)
-		r = copy_to_user(hdr->dxferp, sg_io_buffer_hack,
-				hdr->dxfer_len);
-	else
-		r = blk_rq_unmap_user(bio);
-
+	r = blk_rq_unmap_user(bio);
 	if (!ret)
 		ret = r;
 
@@ -429,9 +418,6 @@ static int sg_io(struct scsi_device *sdev, struct sg_io_hdr *hdr, fmode_t mode)
 		return -EINVAL;
 
 	if (hdr->dxfer_len > (queue_max_hw_sectors(sdev->request_queue) << 9))
-		return -EIO;
-
-	if (sg_io_buffer_hack && hdr->dxfer_len > 0x10000)
 		return -EIO;
 
 	if (hdr->dxfer_len)
@@ -463,15 +449,9 @@ static int sg_io(struct scsi_device *sdev, struct sg_io_hdr *hdr, fmode_t mode)
 	if (ret < 0)
 		goto out_put_request;
 
-	if (sg_io_buffer_hack && !hdr->iovec_count) {
-		if (hdr->dxfer_len)
-			ret = blk_rq_map_kern(rq->q, rq, sg_io_buffer_hack,
-					hdr->dxfer_len, GFP_KERNEL);
-	} else {
-		ret = blk_rq_map_user_io(rq, NULL, hdr->dxferp, hdr->dxfer_len,
-				GFP_KERNEL, hdr->iovec_count && hdr->dxfer_len,
-				hdr->iovec_count, 0, rq_data_dir(rq));
-	}
+	ret = blk_rq_map_user_io(rq, NULL, hdr->dxferp, hdr->dxfer_len,
+			GFP_KERNEL, hdr->iovec_count && hdr->dxfer_len,
+			hdr->iovec_count, 0, rq_data_dir(rq));
 	if (ret)
 		goto out_put_request;
 
