@@ -743,11 +743,6 @@ static int ak4458_i2c_probe(struct i2c_client *i2c)
 	int ret, i;
 	int reg;
 
-	/* Check if first register can be read or not */
-	reg = i2c_smbus_read_byte_data(i2c, AK4458_00_CONTROL1);
-	if (reg < 0)
-		return -ENODEV;
-
 	ak4458 = devm_kzalloc(&i2c->dev, sizeof(*ak4458), GFP_KERNEL);
 	if (!ak4458)
 		return -ENOMEM;
@@ -799,6 +794,14 @@ static int ak4458_i2c_probe(struct i2c_client *i2c)
 	pm_runtime_enable(&i2c->dev);
 	regcache_cache_only(ak4458->regmap, true);
 	ak4458_reset(ak4458, false);
+
+	/* Check if first register can be read or not */
+	reg = i2c_smbus_read_byte_data(i2c, AK4458_00_CONTROL1);
+	if (reg < 0) {
+		ak4458_reset(ak4458, true);
+		pm_runtime_disable(&i2c->dev);
+		return -ENODEV;
+	}
 
 	return 0;
 }
