@@ -219,10 +219,22 @@ static int get_etdm_wlen(unsigned int bitwidth)
 
 static bool is_valid_etdm_dai(int dai_id)
 {
-	if (dai_id < MT8188_AFE_IO_ETDM_START || dai_id >= MT8188_AFE_IO_ETDM_END)
-		return false;
-	else
+	switch (dai_id) {
+	case MT8188_AFE_IO_ETDM1_IN:
+		fallthrough;
+	case MT8188_AFE_IO_ETDM2_IN:
+		fallthrough;
+	case MT8188_AFE_IO_ETDM1_OUT:
+		fallthrough;
+	case MT8188_AFE_IO_ETDM2_OUT:
+		fallthrough;
+	case MT8188_AFE_IO_DPTX:
+		fallthrough;
+	case MT8188_AFE_IO_ETDM3_OUT:
 		return true;
+	default:
+		return false;
+	}
 }
 
 static int is_cowork_mode(struct snd_soc_dai *dai)
