@@ -322,6 +322,18 @@
 	pinctrl-0 = <&i2c1_pins>;
 	pinctrl-names = "default";
 	status = "okay";
+
+	touchscreen@5d {
+		compatible = "goodix,gt9271";
+		reg = <0x5d>;
+		interrupt-parent = <&pio>;
+		interrupts = <132 IRQ_TYPE_EDGE_RISING>;
+		irq-gpios = <&pio 132 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&pio 133 GPIO_ACTIVE_HIGH>;
+		AVDD28-supply = <&mt6360_ldo1>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&touch_pins>;
+	};
 };
 
 &i2c2 {
@@ -955,6 +967,19 @@
 	pwm_pins: pwm-pins {
 		pins {
 			pinmux = <PINMUX_GPIO107__FUNC_PWM_3>;
+		};
+	};
+
+	touch_pins: touchdefault {
+		touch_pin_irq: pin-irq {
+			pinmux = <PINMUX_GPIO132__FUNC_GPIO132>;
+			input-enable;
+			bias-disable;
+		};
+
+		touch_pin_reset: pin-reset {
+			pinmux = <PINMUX_GPIO133__FUNC_GPIO133>;
+			output-high;
 		};
 	};
 };
