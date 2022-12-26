@@ -348,7 +348,7 @@ static int imx93_clocks_probe(struct platform_device *pdev)
 	clks[IMX93_CLK_A55_CORE] = imx_clk_hw_cpu("a55_core", "a55_sel", clks[IMX93_CLK_A55_SEL]->clk,
 			 clks[IMX93_CLK_A55_SEL]->clk,
 			 clks[IMX93_CLK_ARM_PLL]->clk,
-			 clks[IMX93_CLK_A55]->clk);
+			 clks[IMX93_CLK_A55_GATE]->clk);
 
 	imx_check_clk_hws(clks, IMX93_CLK_END);
 
