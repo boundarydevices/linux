@@ -111,7 +111,7 @@
 	pinctrl-1 = <&pinctrl_sai6>;
 	assigned-clocks = <&cgc2 IMX8ULP_CLK_SAI6_SEL>;
 	assigned-clock-parents = <&cgc1 IMX8ULP_CLK_SPLL3_PFD1_DIV1>;
-	fsl,dataline = <0 0x01 0x04>;
+	fsl,dataline = <1 0x01 0x04>;
 	status = "okay";
 };
 
