@@ -1247,6 +1247,28 @@ static const struct panel_desc boe_nv140fhmn49 = {
 	},
 };
 
+static const struct drm_display_mode innolux_hk173vb_01b_mode = {
+	.clock = 533280,
+	.hdisplay = 3840,
+	.hsync_start = 3840 + 100,
+	.hsync_end = 3840 + 100 + 20,
+	.htotal = 3840 + 100 + 20 + 40,
+	.vdisplay = 2160,
+	.vsync_start = 2160 + 16,
+	.vsync_end = 2160 + 16 + 22,
+	.vtotal = 2160 + 16 + 22 + 24,
+};
+
+static const struct panel_desc innolux_hk173vb_01b = {
+	.modes = &innolux_hk173vb_01b_mode,
+	.num_modes = 1,
+	.bpc = 8,
+	.size = {
+		.width = 279,
+		.height = 174,
+	},
+};
+
 static const struct drm_display_mode innolux_n116bca_ea1_mode = {
 	.clock = 76420,
 	.hdisplay = 1366,
@@ -1747,6 +1769,9 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "boe,nv140fhmn49",
 		.data = &boe_nv140fhmn49,
+	}, {
+		.compatible = "innolux,hk173vb-01b",
+		.data = &innolux_hk173vb_01b,
 	}, {
 		.compatible = "innolux,n116bca-ea1",
 		.data = &innolux_n116bca_ea1,
