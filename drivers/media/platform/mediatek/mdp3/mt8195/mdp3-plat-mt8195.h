@@ -660,4 +660,9 @@ static const struct mdp_limit mt8195_mdp_def_limit = {
 	.v_scale_down_max = 128,
 };
 
+static const struct v4l2_rect mt8195_mdp_pp_criteria = {
+	.width = 1920,
+	.height = 1080,
+};
+
 #endif  /* __MDP3_PLAT_MT8195_H__ */

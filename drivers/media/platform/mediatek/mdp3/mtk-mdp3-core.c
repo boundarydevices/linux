@@ -15,7 +15,6 @@
 
 #include "mtk-mdp3-core.h"
 #include "mtk-mdp3-m2m.h"
-
 #include "mt8183/mdp3-plat-mt8183.h"
 #include "mt8195/mdp3-plat-mt8195.h"
 #include "mt8188/mdp3-plat-mt8188.h"
@@ -33,6 +32,7 @@ static const struct mtk_mdp_driver_data mt8183_mdp_driver_data = {
 	.format = mt8183_formats,
 	.format_len = ARRAY_SIZE(mt8183_formats),
 	.def_limit = &mt8183_mdp_def_limit,
+	.pp_used = MDP_PP_USED_1,
 };
 
 static const struct mtk_mdp_driver_data mt8195_mdp_driver_data = {
@@ -48,6 +48,8 @@ static const struct mtk_mdp_driver_data mt8195_mdp_driver_data = {
 	.format = mt8195_formats,
 	.format_len = ARRAY_SIZE(mt8195_formats),
 	.def_limit = &mt8195_mdp_def_limit,
+	.pp_criteria = &mt8195_mdp_pp_criteria,
+	.pp_used = MDP_PP_USED_2,
 };
 
 static const struct mtk_mdp_driver_data mt8188_mdp_driver_data = {
@@ -63,6 +65,8 @@ static const struct mtk_mdp_driver_data mt8188_mdp_driver_data = {
 	.format = mt8188_formats,
 	.format_len = ARRAY_SIZE(mt8188_formats),
 	.def_limit = &mt8188_mdp_def_limit,
+	.pp_criteria = &mt8188_mdp_pp_criteria,
+	.pp_used = MDP_PP_USED_2,
 };
 
 static const struct of_device_id mdp_of_ids[] = {
@@ -190,6 +194,10 @@ void mdp_video_device_release(struct video_device *vdev)
 	struct mdp_dev *mdp = (struct mdp_dev *)video_get_drvdata(vdev);
 	int i;
 
+	for (i = 0; i < mdp->mdp_data->pp_used; i++)
+		if (mdp->cmdq_clt[i])
+			cmdq_mbox_destroy(mdp->cmdq_clt[i]);
+
 	scp_put(mdp->scp);
 
 	destroy_workqueue(mdp->job_wq);
@@ -313,10 +321,12 @@ static int mdp_probe(struct platform_device *pdev)
 	mutex_init(&mdp->vpu_lock);
 	mutex_init(&mdp->m2m_lock);
 
-	mdp->cmdq_clt = cmdq_mbox_create(dev, 0);
-	if (IS_ERR(mdp->cmdq_clt)) {
-		ret = PTR_ERR(mdp->cmdq_clt);
-		goto err_put_scp;
+	for (i = 0; i < mdp->mdp_data->pp_used; i++) {
+		mdp->cmdq_clt[i] = cmdq_mbox_create(dev, i);
+		if (IS_ERR(mdp->cmdq_clt[i])) {
+			ret = PTR_ERR(mdp->cmdq_clt[i]);
+			goto err_mbox_destroy;
+		}
 	}
 
 	init_waitqueue_head(&mdp->callback_wq);
@@ -345,8 +355,8 @@ success_return:
 err_unregister_device:
 	v4l2_device_unregister(&mdp->v4l2_dev);
 err_mbox_destroy:
-	cmdq_mbox_destroy(mdp->cmdq_clt);
-err_put_scp:
+	while (--i >= 0)
+		cmdq_mbox_destroy(mdp->cmdq_clt[i]);
 	scp_put(mdp->scp);
 err_destroy_clock_wq:
 	destroy_workqueue(mdp->clock_wq);
