@@ -23,6 +23,7 @@ properties:
       - mediatek,mt8186-gce
       - mediatek,mt8192-gce
       - mediatek,mt8195-gce
+      - mediatek,mt8365-gce
 
   "#mbox-cells":
     const: 2
