@@ -2361,6 +2361,7 @@ static int ap1302_load_firmware(struct ap1302_device *ap1302)
 	}
 
 	/* The AP1302 starts outputting frames right after boot, stop it. */
+	msleep(300);
 	ret = ap1302_stall(ap1302, true);
 
 done:
