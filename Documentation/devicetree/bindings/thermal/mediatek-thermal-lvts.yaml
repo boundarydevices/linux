@@ -17,6 +17,7 @@ properties:
           - enum:
               - mediatek,mt6873-lvts
               - mediatek,mt8195-lvts
+              - mediatek,mt8188-lvts
 
   reg:
     maxItems: 1
