@@ -225,11 +225,12 @@ static ssize_t led_note_store(struct device *dev,
 		led_dat->note_mode = note_mode;
 		if (period >= 0) {
 			period >>= octave;
-			led_dat->period = period;
+			if (period)
+				led_dat->period = period;
 			if (!led_cdev->brightness)
 				led_cdev->brightness = led_cdev->max_brightness
 							>> 1;
-			led_set_brightness(led_cdev, led_cdev->brightness);
+			led_set_brightness(led_cdev, period ? led_cdev->brightness : 0);
 			led_dat->note_mode = NM_NORMAL;
 			if (count < size)
 				msleep(period ? 1000 : 100);
@@ -300,7 +301,6 @@ static int led_pwm_add(struct device *dev, struct led_pwm_priv *priv,
 	led_data->cdev.max_brightness = led->max_brightness;
 	led_data->cdev.flags = LED_CORE_SUSPENDRESUME;
 	led_data->octave = 4;
-	led_data->period = led_data->pwm->state.period;
 
 	if (fwnode)
 		led_data->pwm = devm_fwnode_pwm_get(dev, fwnode, NULL);
@@ -313,6 +313,7 @@ static int led_pwm_add(struct device *dev, struct led_pwm_priv *priv,
 				led->name, ret);
 		return ret;
 	}
+	led_data->period = led_data->pwm->state.period;
 
 	led_data->cdev.brightness_set_blocking = led_pwm_set;
 
