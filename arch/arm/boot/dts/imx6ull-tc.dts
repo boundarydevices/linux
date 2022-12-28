@@ -40,8 +40,6 @@
 		fsl,pins = <
 #define GP_COIN_C		<&gpio2 3 GPIO_ACTIVE_HIGH>
 			MX6UL_PAD_ENET1_TX_DATA0__GPIO2_IO03	0x1b0b0
-#define GP_COIN_A		<&gpio2 4 GPIO_ACTIVE_HIGH>
-			MX6UL_PAD_ENET1_TX_DATA1__GPIO2_IO04	0x1b0b0
 #define GP_COIN_IN		<&gpio2 5 GPIO_ACTIVE_HIGH>
 			MX6UL_PAD_ENET1_TX_EN__GPIO2_IO05	0x1b0b0
 #define GP_COIN_DROP_PWR	<&gpio2 6 GPIO_ACTIVE_HIGH>
@@ -157,6 +155,13 @@
 		/* Backlight */
 		fsl,pins = <
 			MX6UL_PAD_GPIO1_IO04__PWM3_OUT		0x030b0
+		>;
+	};
+
+	pinctrl_pwm5: pwm5grp {
+		/* Buzzer */
+		fsl,pins = <
+			MX6UL_PAD_ENET1_TX_DATA1__PWM5_OUT	0x030b0
 		>;
 	};
 
@@ -355,6 +360,15 @@
 
 	memory {
 		reg = <0x80000000 0x40000000>;
+	};
+
+	pwmleds {
+		compatible = "pwm-leds";
+		piezo {
+			label = "buzzer";
+			pwms = <&pwm5 0 7812500 0>;
+			max-brightness = <256>;
+		};
 	};
 
 	reg_vref_1v8: regulator-vref-1v8 {
@@ -646,6 +660,12 @@
 &pwm3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm3>;
+	status = "okay";
+};
+
+&pwm5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm5>;
 	status = "okay";
 };
 
