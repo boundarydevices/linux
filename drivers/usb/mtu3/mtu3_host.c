@@ -302,7 +302,13 @@ static void ssusb_host_setup(struct ssusb_mtk *ssusb)
 	ssusb_set_force_mode(ssusb, MTU3_DR_FORCE_HOST);
 
 	/* if port0 supports dual-role, works as host mode by default */
-	ssusb_set_force_vbus(ssusb, false);
+	/* This ssusb_set_force_vbus(ssusb, false) cause no effect
+	 * when USB P2 is switched to device in force_vbus mode.
+	 * Therefore the following condition is added.
+	 */
+	if (!ssusb->force_vbus)
+		ssusb_set_force_vbus(ssusb, false);
+
 	ssusb_set_vbus(&ssusb->otg_switch, 1);
 }
 
