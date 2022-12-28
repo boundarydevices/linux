@@ -193,7 +193,10 @@ static void lcdif_crtc_atomic_enable(struct drm_crtc *crtc,
 	/* config LCDIF output bus format */
 	lcdif_set_bus_fmt(lcdif, imx_crtc_state->bus_format);
 
-	lcdif_enable_controller(lcdif, use_i80);
+	/* defer the lcdif controller enable to plane update,
+	 * since until then the lcdif config is complete to
+	 * enable the controller to run actually.
+	 */
 }
 
 static void lcdif_crtc_atomic_disable(struct drm_crtc *crtc,
@@ -272,7 +275,6 @@ static int lcdif_enable_vblank(struct drm_crtc *crtc)
 	struct lcdif_crtc *lcdif_crtc = to_lcdif_crtc(crtc);
 	struct lcdif_soc *lcdif = dev_get_drvdata(lcdif_crtc->dev->parent);
 
-	pm_runtime_get_sync(lcdif_crtc->dev->parent);
 	lcdif_vblank_irq_enable(lcdif);
 	enable_irq(lcdif_crtc->vbl_irq);
 
@@ -286,7 +288,6 @@ static void lcdif_disable_vblank(struct drm_crtc *crtc)
 
 	disable_irq_nosync(lcdif_crtc->vbl_irq);
 	lcdif_vblank_irq_disable(lcdif);
-	pm_runtime_put(lcdif_crtc->dev->parent);
 }
 
 static const struct drm_crtc_funcs lcdif_crtc_funcs = {
