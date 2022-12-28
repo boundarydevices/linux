@@ -1465,8 +1465,11 @@ static int it66121_audio_get_eld(struct device *dev, void *data,
 
 	mutex_lock(&ctx->lock);
 
-	memcpy(buf, ctx->connector->eld,
-	       min(sizeof(ctx->connector->eld), len));
+	if (ctx->connector == NULL)
+		memset(buf, 0, len);
+	else
+		memcpy(buf, ctx->connector->eld,
+		       min(sizeof(ctx->connector->eld), len));
 
 	mutex_unlock(&ctx->lock);
 
