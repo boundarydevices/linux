@@ -155,7 +155,14 @@ static void ssusb_mode_sw_work(struct work_struct *work)
 		mtu3_stop(mtu);
 		switch_port_to_host(ssusb);
 		ssusb_set_vbus(otg_sx, 1);
-		ssusb_set_force_vbus(ssusb, false);
+
+		/* This ssusb_set_force_vbus(ssusb, false) cause no effect
+		 * when USB P2 is switched to device in force_vbus mode.
+		 * Therefore the following condition is added.
+		 */
+		if (!ssusb->force_vbus)
+			ssusb_set_force_vbus(ssusb, false);
+
 		ssusb->is_host = true;
 		break;
 	case USB_ROLE_DEVICE:
