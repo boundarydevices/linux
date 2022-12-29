@@ -1197,7 +1197,7 @@ static void mtk_hdmi_output_set_display_mode(struct mtk_hdmi *hdmi,
 	mtk_hdmi_aud_output_config(hdmi, mode);
 }
 
-void mtk_hdmi_clk_enable(struct mtk_hdmi *hdmi)
+void mtk_hdmi_clk_enable_mt8195(struct mtk_hdmi *hdmi)
 {
 	int i;
 
@@ -1316,7 +1316,7 @@ static int mtk_hdmi_enable_disable(struct mtk_hdmi *hdmi, bool enable)
 					    __func__, __LINE__, ret);
 
 			/* clk on */
-			mtk_hdmi_clk_enable(hdmi);
+			mtk_hdmi_clk_enable_mt8195(hdmi);
 			hdmi->power_clk_enabled = true;
 		}
 

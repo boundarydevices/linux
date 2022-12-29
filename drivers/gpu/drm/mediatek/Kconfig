@@ -36,12 +36,3 @@ config MTK_DPTX_SUPPORT
 	select PHY_MTK_DP
 	help
 	  DRM/KMS Display Port driver for Mediatek SoCs.
-
-config DRM_MEDIATEK_HDMI_MT8195_SUSPEND_LOW_POWER
-	tristate "DRM HDMI SUSPEND LOW POWER Support for Mediatek mt8195 SoCs"
-	depends on DRM_MEDIATEK_HDMI
-	help
-	  DRM/KMS HDMI SUSPEND_LOW_POWER for Mediatek SoCs.
-	  Choose this option if you want to disable/enable
-	  clock and power domain when platform enter suspend,
-	  and this config depends on DRM_MEDIATEK_HDMI.

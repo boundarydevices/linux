@@ -919,6 +919,22 @@ void mtk_hdmi_clk_disable_mt8183(struct mtk_hdmi *hdmi)
 	clk_disable_unprepare(hdmi->clk[MTK_MT8183_HDMI_CLK_AUD_SPDIF]);
 }
 
+void mtk_hdmi_clk_enable(struct mtk_hdmi *hdmi)
+{
+	if (hdmi && hdmi->conf && hdmi->conf->clk_enable)
+		hdmi->conf->clk_enable(hdmi);
+	else
+		dev_warn(hdmi->dev, "[%s][%d] hdmi clk_enable not defined\n", __func__, __LINE__);
+}
+
+void mtk_hdmi_clk_disable(struct mtk_hdmi *hdmi)
+{
+	if (hdmi && hdmi->conf && hdmi->conf->clk_disable)
+		hdmi->conf->clk_disable(hdmi);
+	else
+		dev_warn(hdmi->dev, "[%s][%d] hdmi clk_disable not defined\n", __func__, __LINE__);
+}
+
 static enum drm_connector_status
 mtk_hdmi_update_plugged_status(struct mtk_hdmi *hdmi)
 {
