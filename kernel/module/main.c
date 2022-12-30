@@ -60,6 +60,9 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/module.h>
 
+#undef CREATE_TRACE_POINTS
+#include <trace/hooks/module.h>
+
 /*
  * Mutex protects:
  * 1) List of modules (also safely readable with preempt_disable),
@@ -1095,6 +1098,21 @@ static const struct kernel_symbol *resolve_symbol(struct module *mod,
 		goto getname;
 	}
 
+	/*
+	 * ANDROID: GKI:
+	 * In case of an unsigned module symbol resolves only if:
+	 * 1. Symbol is in the list of unprotected symbol list OR
+	 * 2. If symbol owner is not NULL i.e. owner is another module;
+	 *    it has to be an unsigned module and not signed GKI module
+	 *    to protect symbols exported by signed GKI modules.
+	 */
+	if (!mod->sig_ok &&
+	    !gki_is_module_unprotected_symbol(name) &&
+	    fsa.owner && fsa.owner->sig_ok) {
+		fsa.sym = ERR_PTR(-EACCES);
+		goto getname;
+	}
+
 	err = ref_module(mod, fsa.owner);
 	if (err) {
 		fsa.sym = ERR_PTR(err);
@@ -1191,6 +1209,7 @@ static void free_module(struct module *mod)
 
 	/* This may be empty, but that's OK */
 	module_arch_freeing_init(mod);
+	trace_android_rvh_set_module_init_rw_nx(mod);
 	module_memfree(mod->init_layout.base);
 	kfree(mod->args);
 	percpu_modfree(mod);
@@ -1199,6 +1218,7 @@ static void free_module(struct module *mod)
 	lockdep_free_key_range(mod->data_layout.base, mod->data_layout.size);
 
 	/* Finally, free the core (containing the module structure) */
+	trace_android_rvh_set_module_core_rw_nx(mod);
 	module_memfree(mod->core_layout.base);
 #ifdef CONFIG_ARCH_WANTS_MODULES_DATA_IN_VMALLOC
 	vfree(mod->data_layout.base);
@@ -1247,6 +1267,14 @@ static int verify_exported_symbols(struct module *mod)
 				.name	= kernel_symbol_name(s),
 				.gplok	= true,
 			};
+
+			if (!mod->sig_ok && gki_is_module_protected_export(
+						kernel_symbol_name(s))) {
+				pr_err("%s: exports protected symbol %s\n",
+				       mod->name, kernel_symbol_name(s));
+				return -EACCES;
+			}
+
 			if (find_symbol(&fsa)) {
 				pr_err("%s: exports duplicate symbol %s"
 				       " (owned by %s)\n",
@@ -1327,9 +1355,15 @@ static int simplify_symbols(struct module *mod, const struct load_info *info)
 			     ignore_undef_symbol(info->hdr->e_machine, name)))
 				break;
 
-			ret = PTR_ERR(ksym) ?: -ENOENT;
-			pr_warn("%s: Unknown symbol %s (err %d)\n",
-				mod->name, name, ret);
+			if (PTR_ERR(ksym) == -EACCES) {
+				ret = -EACCES;
+				pr_warn("%s: Protected symbol: %s (err %d)\n",
+					mod->name, name, ret);
+			} else {
+				ret = PTR_ERR(ksym) ?: -ENOENT;
+				pr_warn("%s: Unknown symbol %s (err %d)\n",
+					mod->name, name, ret);
+			}
 			break;
 
 		default:
@@ -2342,7 +2376,9 @@ static void module_deallocate(struct module *mod, struct load_info *info)
 {
 	percpu_modfree(mod);
 	module_arch_freeing_init(mod);
+	trace_android_rvh_set_module_init_rw_nx(mod);
 	module_memfree(mod->init_layout.base);
+	trace_android_rvh_set_module_core_rw_nx(mod);
 	module_memfree(mod->core_layout.base);
 #ifdef CONFIG_ARCH_WANTS_MODULES_DATA_IN_VMALLOC
 	vfree(mod->data_layout.base);
@@ -2494,8 +2530,10 @@ static noinline int do_init_module(struct module *mod)
 	rcu_assign_pointer(mod->kallsyms, &mod->core_kallsyms);
 #endif
 	module_enable_ro(mod, true);
+	trace_android_rvh_set_module_permit_after_init(mod);
 	mod_tree_remove_init(mod);
 	module_arch_freeing_init(mod);
+	trace_android_rvh_set_module_init_rw_nx(mod);
 	mod->init_layout.base = NULL;
 	mod->init_layout.size = 0;
 	mod->init_layout.ro_size = 0;
@@ -2610,6 +2648,7 @@ static int complete_formation(struct module *mod, struct load_info *info)
 	module_enable_ro(mod, false);
 	module_enable_nx(mod);
 	module_enable_x(mod);
+	trace_android_rvh_set_module_permit_before_init(mod);
 
 	/*
 	 * Mark state as coming so strong_try_module_get() ignores us,
@@ -2749,6 +2788,8 @@ static int load_module(struct load_info *info, const char __user *uargs,
 			       "kernel\n", mod->name);
 		add_taint_module(mod, TAINT_UNSIGNED_MODULE, LOCKDEP_STILL_OK);
 	}
+#else
+	mod->sig_ok = 0;
 #endif
 
 	/* To avoid stressing percpu allocator, do this once we're unique. */

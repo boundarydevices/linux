@@ -10,6 +10,8 @@
 #include "ufs-sysfs.h"
 #include "ufshcd-priv.h"
 
+#include <trace/hooks/ufshcd.h>
+
 static const char *ufshcd_uic_link_state_to_string(
 			enum uic_link_state state)
 {
@@ -1337,10 +1339,12 @@ void ufs_sysfs_add_nodes(struct device *dev)
 	int ret;
 
 	ret = sysfs_create_groups(&dev->kobj, ufs_sysfs_groups);
-	if (ret)
+	if (ret) {
 		dev_err(dev,
 			"%s: sysfs groups creation failed (err = %d)\n",
 			__func__, ret);
+		return;
+	}
 }
 
 void ufs_sysfs_remove_nodes(struct device *dev)

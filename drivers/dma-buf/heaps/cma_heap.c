@@ -102,7 +102,7 @@ static struct sg_table *cma_heap_map_dma_buf(struct dma_buf_attachment *attachme
 {
 	struct dma_heap_attachment *a = attachment->priv;
 	struct sg_table *table = &a->table;
-	int attr = 0;
+	int attr = attachment->dma_map_attrs;
 	int ret;
 
 	if (a->uncached)
@@ -120,7 +120,7 @@ static void cma_heap_unmap_dma_buf(struct dma_buf_attachment *attachment,
 				   enum dma_data_direction direction)
 {
 	struct dma_heap_attachment *a = attachment->priv;
-	int attr = 0;
+	int attr = attachment->dma_map_attrs;
 
 	if (a->uncached)
 		attr = DMA_ATTR_SKIP_CPU_SYNC;
@@ -503,3 +503,4 @@ static int add_default_cma_heap(void)
 module_init(add_default_cma_heap);
 MODULE_DESCRIPTION("DMA-BUF CMA Heap");
 MODULE_LICENSE("GPL v2");
+MODULE_IMPORT_NS(DMA_BUF);
