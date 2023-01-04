@@ -1682,6 +1682,28 @@ static const struct panel_desc starry_kr122ea0sra = {
 	},
 };
 
+static const struct drm_display_mode koe_tx18d204vm0baa_mode = {
+	.clock = 148500,
+	.hdisplay = 1920,
+	.hsync_start = 1920 + 124,
+	.hsync_end = 1920 + 124 + 32,
+	.htotal = 1920 + 124 + 32 + 124,
+	.vdisplay = 1080,
+	.vsync_start = 1080 + 20,
+	.vsync_end = 1080 + 20 + 5,
+	.vtotal = 1080 + 20 + 5 + 20,
+};
+
+static const struct panel_desc koe_tx18d204vm0baa = {
+	.modes = &koe_tx18d204vm0baa_mode,
+	.num_modes = 1,
+	.bpc = 8,
+	.size = {
+		.width = 155,
+		.height = 87,
+	},
+};
+
 static const struct of_device_id platform_of_match[] = {
 	{
 		/* Must be first */
@@ -1773,6 +1795,9 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "starry,kr122ea0sra",
 		.data = &starry_kr122ea0sra,
+	}, {
+		.compatible = "koe,tx18d204vm0baa",
+		.data = &koe_tx18d204vm0baa,
 	}, {
 		/* sentinel */
 	}
