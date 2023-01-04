@@ -223,8 +223,7 @@
 	backlight_lcd0: backlight_lcd0 {
 		compatible = "pwm-backlight";
 		pwms = <&disp_pwm1 0 500000>;
-		power-supply = <&edp_panel_fixed_12v>;
-		enable-gpios = <&pio 95 GPIO_ACTIVE_HIGH>;
+		enable-gpios = <&pio 46 GPIO_ACTIVE_HIGH>;
 		brightness-levels = <0 1023>;
 		num-interpolated-steps = <1023>;
 		default-brightness-level = <576>;
@@ -740,6 +739,7 @@
 			bias-pull-up;
 			mediatek,rsel = <MTK_PULL_SET_RSEL_111>;
 			mediatek,drive-strength-adv = <7>;
+			drive-strength = <MTK_DRIVE_6mA>;
 		};
 	};
 
