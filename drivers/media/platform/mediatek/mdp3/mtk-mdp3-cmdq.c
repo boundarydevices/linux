@@ -134,6 +134,7 @@ static int mdp_path_subfrm_require(const struct mdp_path *path,
 	/* Set mutex mod */
 	for (index = 0; index < num_comp; index++) {
 		s32 inner_id = MDP_COMP_NONE;
+		const struct mdp_comp_blend *b;
 
 		if (CFG_CHECK(MT8183, p_id))
 			inner_id = CFG_GET(MT8183, path->config, components[index].type);
@@ -150,6 +151,11 @@ static int mdp_path_subfrm_require(const struct mdp_path *path,
 		id = ctx->comp->public_id;
 		mtk_mutex_write_mod(mutex, data->mdp_mutex_table_idx[id], false);
 
+		b = &data->comp_data[id].blend;
+		if (b->mod_aid)
+			mtk_mutex_write_mod(mutex,
+					    data->mdp_mutex_table_idx[b->mod_id],
+					    false);
 	}
 
 	mtk_mutex_write_sof(mutex, MUTEX_SOF_IDX_SINGLE_MODE);

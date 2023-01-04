@@ -192,11 +192,13 @@ static const struct mdp_comp_data mt8188_mdp_comp_data[MDP_MAX_COMP_COUNT] = {
 	},
 	[MDP_COMP_RSZ2] = {
 		{MDP_COMP_TYPE_RSZ, 1, MT8188_MDP_COMP_RSZ2, 1},
-		{2, 0, 0}
+		{2, 0, 0},
+		{true, MDP_COMP_MERGE2}
 	},
 	[MDP_COMP_RSZ3] = {
 		{MDP_COMP_TYPE_RSZ, 2, MT8188_MDP_COMP_RSZ3, 1},
-		{2, 0, 0}
+		{2, 0, 0},
+		{true, MDP_COMP_MERGE3}
 	},
 	[MDP_COMP_TDSHP0] = {
 		{MDP_COMP_TYPE_TDSHP, 0, MT8188_MDP_COMP_TDSHP0, 0},
