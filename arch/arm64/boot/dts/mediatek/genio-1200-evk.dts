@@ -230,15 +230,6 @@
 		default-brightness-level = <576>;
 	};
 
-	backlight_lcd1: backlight_lcd1 {
-		compatible = "pwm-backlight";
-		pwms = <&disp_pwm0 0 500000>;
-		enable-gpios = <&pio 137 GPIO_ACTIVE_HIGH>;
-		brightness-levels = <0 1023>;
-		num-interpolated-steps = <1023>;
-		default-brightness-level = <576>;
-	};
-
 	gpio-keys {
 		compatible = "gpio-keys";
 		input-name = "gpio-keys";
@@ -348,27 +339,6 @@
 		type3v3-supply = <&mt6359_vibr_ldo_reg>;
 		svid = /bits/ 16 <0xff01>;
 		status = "okay";
-	};
-
-	nt50358a@3e {
-		compatible = "novatek,nt50358a";
-		reg = <0x3e>;
-		status = "okay";
-		enable-gpios = <&pio 138 0>, <&pio 139 0>;
-
-		dsvp: DSVP {
-			regulator-name = "nt50358a,dsvp";
-			regulator-min-microvolt = <5800000>;
-			regulator-max-microvolt = <5800000>;
-			regulator-boot-on;
-		};
-
-		dsvn: DSVN {
-			regulator-name = "nt50358a,dsvn";
-			regulator-min-microvolt = <5800000>;
-			regulator-max-microvolt = <5800000>;
-			regulator-boot-on;
-		};
 	};
 };
 
@@ -529,24 +499,25 @@
 };
 
 &mipi_tx0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &dsi0 {
-	status = "disabled";
+	status = "okay";
 	#address-cells = <1>;
 	#size-cells = <0>;
+	poweron-in-hs-mode = <0>;
 	dsi_panel@0 {
-		compatible = "boe,tv101wum-nl6";
+		compatible = "startek,kd070fhfid015";
+		status = "okay";
 		reg = <0>;
-		enable-gpios = <&pio 108 0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&panel_pins_default>;
-		backlight = <&backlight_lcd1>;
-		pp1800-supply = <&mt6360_ldo2>;
-		avdd-supply = <&dsvp>;
-		avee-supply = <&dsvn>;
-		status = "okay";
+		reset-gpios = <&pio 108 GPIO_ACTIVE_HIGH>;
+		dcdc-gpios = <&pio 48 GPIO_ACTIVE_HIGH>;
+		enable-gpios = <&pio 47 GPIO_ACTIVE_HIGH>;
+		iovcc-supply = <&mt6360_ldo2>;
+		pp3300-supply = <&mt6360_ldo1>;
 		port {
 			dsi_panel_in: endpoint {
 				remote-endpoint = <&dsi_out>;
@@ -565,7 +536,7 @@
 &disp_pwm0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pwm0_gpio_def_cfg>;
-	status = "disabled";
+	status = "okay";
 };
 
 &eth {
@@ -705,10 +676,19 @@
 		};
 	};
 
-	panel_pins_default: panel_pins_default {
-		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO108__FUNC_GPIO108>,
-				<PINMUX_GPIO137__FUNC_GPIO137>;
+	panel_pins_default: panel-pins-default {
+		panel-dcdc {
+			pinmux = <PINMUX_GPIO48__FUNC_GPIO48>;
+			output-low;
+		};
+
+		panel-en {
+			pinmux = <PINMUX_GPIO47__FUNC_GPIO47>;
+			output-low;
+		};
+
+		panel-rst {
+			pinmux = <PINMUX_GPIO108__FUNC_GPIO108>;
 			output-high;
 		};
 	};
@@ -721,31 +701,15 @@
 
 	aud_pins_default: audiodefault {
 		pins_cmd_dat {
-			pinmux = <PINMUX_GPIO70__FUNC_AUD_SYNC_MOSI>,
-				 <PINMUX_GPIO69__FUNC_AUD_CLK_MOSI>,
+			pinmux = <PINMUX_GPIO69__FUNC_AUD_CLK_MOSI>,
+				 <PINMUX_GPIO70__FUNC_AUD_SYNC_MOSI>,
 				 <PINMUX_GPIO71__FUNC_AUD_DAT_MOSI0>,
 				 <PINMUX_GPIO72__FUNC_AUD_DAT_MOSI1>,
 				 <PINMUX_GPIO73__FUNC_AUD_DAT_MISO0>,
 				 <PINMUX_GPIO74__FUNC_AUD_DAT_MISO1>,
 				 <PINMUX_GPIO75__FUNC_AUD_DAT_MISO2>,
-				 <PINMUX_GPIO46__FUNC_I2SIN_MCK>,
-				 <PINMUX_GPIO47__FUNC_I2SIN_BCK>,
-				 <PINMUX_GPIO48__FUNC_I2SIN_WS>,
-				 <PINMUX_GPIO49__FUNC_I2SIN_D0>,
-				 <PINMUX_GPIO50__FUNC_I2SO1_MCK>,
-				 <PINMUX_GPIO51__FUNC_I2SO1_BCK>,
-				 <PINMUX_GPIO52__FUNC_I2SO1_WS>,
-				 <PINMUX_GPIO53__FUNC_I2SO1_D0>,
-				 <PINMUX_GPIO54__FUNC_I2SO1_D1>,
-				 <PINMUX_GPIO55__FUNC_I2SO1_D2>,
-				 <PINMUX_GPIO56__FUNC_I2SO1_D3>,
 				 <PINMUX_GPIO61__FUNC_DMIC1_CLK>,
-				 <PINMUX_GPIO62__FUNC_DMIC1_DAT>,
-				 <PINMUX_GPIO64__FUNC_DMIC2_DAT>,
-				 <PINMUX_GPIO14__FUNC_DMIC3_DAT>,
-				 <PINMUX_GPIO15__FUNC_DMIC3_CLK>,
-				 <PINMUX_GPIO16__FUNC_DMIC4_DAT>,
-				 <PINMUX_GPIO17__FUNC_DMIC4_CLK>;
+				 <PINMUX_GPIO62__FUNC_DMIC1_DAT>;
 		};
 	};
 
@@ -1044,8 +1008,8 @@
 };
 
 &mt6360_ldo1 {
-	regulator-min-microvolt = <3000000>;
-	regulator-max-microvolt = <3000000>;
+	regulator-min-microvolt = <3300000>;
+	regulator-max-microvolt = <3300000>;
 	regulator-always-on;
 };
 
@@ -1274,8 +1238,10 @@
 };
 
 &ovl1 {
-	/* Enable dual-pipe (4K60Hz output for vdosys0) by default */
-	mediatek,enable-dualpipe;
+	/* DSI0 does not support dualpipe output,
+	 * so disable dualpipe by disabling ovl1 node
+	 */
+	status = "disabled";
 };
 
 &pwm {
