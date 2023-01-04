@@ -34,6 +34,7 @@ struct stk_panel {
 	struct gpio_desc *dcdc_en_gpio;
 	struct backlight_device *backlight;
 	struct regulator *iovcc_supply;
+	struct regulator *pp3300_supply;
 
 	bool prepared;
 	bool enabled;
@@ -184,6 +185,7 @@ static int stk_panel_unprepare(struct drm_panel *panel)
 
 	stk_panel_off(stk);
 	regulator_disable(stk->iovcc_supply);
+	regulator_disable(stk->pp3300_supply);
 	gpiod_set_value(stk->enable_gpio, 1);
 	gpiod_set_value(stk->reset_gpio, 0);
 	gpiod_set_value(stk->dcdc_en_gpio, 1);
@@ -205,6 +207,9 @@ static int stk_panel_prepare(struct drm_panel *panel)
 	gpiod_set_value(stk->reset_gpio, 0);
 	gpiod_set_value(stk->dcdc_en_gpio, 0);
 	gpiod_set_value(stk->enable_gpio, 0);
+	ret = regulator_enable(stk->pp3300_supply);
+	if (ret < 0)
+		return ret;
 	ret = regulator_enable(stk->iovcc_supply);
 	if (ret < 0)
 		return ret;
@@ -235,6 +240,7 @@ static int stk_panel_prepare(struct drm_panel *panel)
 
 poweroff:
 	regulator_disable(stk->iovcc_supply);
+	regulator_disable(stk->pp3300_supply);
 	gpiod_set_value(stk->enable_gpio, 0);
 	gpiod_set_value(stk->reset_gpio, 0);
 	gpiod_set_value(stk->dcdc_en_gpio, 0);
@@ -370,6 +376,10 @@ static int stk_panel_add(struct stk_panel *stk)
 	stk->iovcc_supply = devm_regulator_get(dev, "iovcc");
 	if (IS_ERR(stk->iovcc_supply))
 		return PTR_ERR(stk->iovcc_supply);
+
+	stk->pp3300_supply = devm_regulator_get(dev, "pp3300");
+	if (IS_ERR(stk->pp3300_supply))
+		return PTR_ERR(stk->pp3300_supply);
 
 	stk->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
 	if (IS_ERR(stk->reset_gpio)) {
