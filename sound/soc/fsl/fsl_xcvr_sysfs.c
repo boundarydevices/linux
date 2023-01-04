@@ -103,7 +103,7 @@ static struct attribute_group fsl_xcvr_attr_group = {
 	.attrs = fsl_xcvr_attrs,
 };
 
-const struct attribute_group *fsl_xcvr_get_attr_grp()
+const struct attribute_group *fsl_xcvr_get_attr_grp(void)
 {
 	return &fsl_xcvr_attr_group;
 }
