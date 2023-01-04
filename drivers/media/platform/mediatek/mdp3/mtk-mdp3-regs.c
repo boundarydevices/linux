@@ -191,9 +191,9 @@ const struct mdp_format *mdp_try_fmt_mplane(struct mdp_dev *mdp,
 		bpl = clamp(bpl, min_bpl, max_bpl);
 		pix_mp->plane_fmt[i].bytesperline = bpl;
 
-		min_si = (bpl * pix_mp->height * fmt->depth[i]) /
+		min_si = ((u64)bpl * pix_mp->height * fmt->depth[i]) /
 			 fmt->row_depth[i];
-		max_si = (bpl * s.max_height * fmt->depth[i]) /
+		max_si = ((u64)bpl * s.max_height * fmt->depth[i]) /
 			 fmt->row_depth[i];
 
 		si = clamp(si, min_si, max_si);
