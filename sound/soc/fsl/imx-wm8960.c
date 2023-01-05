@@ -716,7 +716,10 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 	if (of_property_read_bool(pdev->dev.of_node, "codec-rpmsg"))
 		data->is_codec_rpmsg = true;
 
-	cpu_np = of_parse_phandle(np, "cpu-dai", 0);
+	cpu_np = of_parse_phandle(np, "audio-cpu", 0);
+	/* Give a chance to old DT binding */
+	if (!cpu_np)
+		cpu_np = of_parse_phandle(np, "cpu-dai", 0);
 	if (!cpu_np) {
 		dev_err(&pdev->dev, "cpu dai phandle missing or invalid\n");
 		ret = -EINVAL;
@@ -961,12 +964,23 @@ static int imx_wm8960_probe(struct platform_device *pdev)
 	data->card.late_probe = imx_wm8960_late_probe;
 
 	data->imx_hp_jack_gpio.gpio = of_get_named_gpio_flags(np,
-							      "hp-det-gpios", 0,
+							      "hp-det-gpio", 0,
 							      &data->hp_active_low);
-
+	if (!gpio_is_valid(data->imx_hp_jack_gpio.gpio)) {
+		/* Try with gpios*/
+		data->imx_hp_jack_gpio.gpio = of_get_named_gpio_flags(np,
+					      "hp-det-gpios", 0,
+					      &data->hp_active_low);
+	}
 	data->imx_mic_jack_gpio.gpio = of_get_named_gpio_flags(np,
-							       "mic-det-gpios", 0,
+							       "mic-det-gpio", 0,
 							       &data->mic_active_low);
+	if (!gpio_is_valid(data->imx_mic_jack_gpio.gpio)) {
+		/* Try with gpios*/
+		data->imx_mic_jack_gpio.gpio = of_get_named_gpio_flags(np,
+					       "mic-det-gpios", 0,
+					       &data->mic_active_low);
+	}
 
 	if (gpio_is_valid(data->imx_hp_jack_gpio.gpio) &&
 	    gpio_is_valid(data->imx_mic_jack_gpio.gpio) &&
