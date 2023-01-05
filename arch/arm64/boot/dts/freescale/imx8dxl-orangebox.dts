@@ -209,6 +209,10 @@
 	status = "okay";
 };
 
+&edma3 {
+	status = "okay";
+};
+
 &flexspi0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexspi0>;
