@@ -1787,7 +1787,7 @@ static const unsigned int mt8195_apu_region_msk[][MTK_LARB_NR_MAX] = {
 static const struct mtk_iommu_plat_data mt8195_data_apu = {
 	.m4u_plat       = M4U_MT8195,
 	.flags          = DCM_DISABLE | MTK_IOMMU_TYPE_APU |
-			  SHARE_PGTABLE,
+			  SHARE_PGTABLE | STD_AXI_MODE,
 	.inv_sel_reg    = REG_MMU_INV_SEL_GEN2,
 	.hw_list        = &apulist,
 	.banks_num	= 1,
