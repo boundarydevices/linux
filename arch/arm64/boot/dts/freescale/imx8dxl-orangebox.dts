@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2022 NXP
+ * Copyright 2022-2023 NXP
  */
 
 /dts-v1/;
@@ -85,6 +85,14 @@
 		reset-delay-us = <2000>;
 		reset-post-delay-ms = <40>;
 		#reset-cells = <0>;
+	};
+
+	pps {
+		compatible = "pps-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_pps>;
+		gpios = <&lsio_gpio5 9 GPIO_ACTIVE_HIGH>;
+		status = "okay";
 	};
 
 	reg_can1_en: regulator-can1-en{
@@ -492,6 +500,10 @@
 	status = "okay";
 };
 
+&lsio_gpio5 {
+	status = "okay";
+};
+
 &usdhc1 {
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc1>;
@@ -511,7 +523,7 @@
 	phy-handle = <&fixed0>;
 	nvmem-cells = <&fec_mac1>;
 	nvmem-cell-names = "mac-address";
-	status = "disabled";
+	status = "okay";
 
 	fixed0:fixed-link {
 		speed = <1000>;
@@ -682,6 +694,12 @@
 	pinctrl_usbotg2: otg2 {
 		fsl,pins = <
 			IMX8DXL_USB_SS3_TC1_CONN_USB_OTG2_PWR		0x00000021
+		>;
+	};
+
+	pinctrl_pps: pps {
+		fsl,pins = <
+			IMX8DXL_ENET0_REFCLK_125M_25M_LSIO_GPIO5_IO09	0x04000021
 		>;
 	};
 

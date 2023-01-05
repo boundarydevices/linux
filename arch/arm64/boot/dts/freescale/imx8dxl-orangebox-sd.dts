@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2022 NXP
+ * Copyright 2022-2023 NXP
  */
 
 #include "imx8dxl-orangebox.dts"
@@ -19,9 +19,4 @@
 
 &fec1 {
 	status = "disabled";
-};
-
-&eqos {
-	pinctrl-0 = <&pinctrl_eqos>, <&pinctrl_eqos_mdio>;
-	status = "okay";
 };
