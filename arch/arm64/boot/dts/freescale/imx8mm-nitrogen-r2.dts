@@ -48,10 +48,9 @@
 			"RINPUT1", "Mic Jack",
 			"Mic Jack", "MICB";
 		compatible = "fsl,imx-audio-wm8960";
-		/* JD2: hp detect high for headphone*/
-		hp-det-gpios = <&gpio4 28 GPIO_ACTIVE_HIGH>;
+		hp-det-gpio = <&gpio4 28 GPIO_ACTIVE_HIGH>;
 		/* Jack is not stuffed */
-		mic-det-gpios = <&gpio1 10 GPIO_ACTIVE_HIGH>;
+		mic-det-gpio = <&gpio1 10 GPIO_ACTIVE_HIGH>;
 		model = "wm8960-audio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
@@ -248,6 +247,8 @@
 		reg = <0x1a>;
 		clocks = <&clk IMX8MM_CLK_SAI1_ROOT>;
 		clock-names = "mclk1";
+		/* JD2: hp detect high for headphone*/
+		wlf,hp-cfg = <2 0 3>;
 		wlf,shared-lrclk;
 		#sound-dai-cells = <0>;
 	};
