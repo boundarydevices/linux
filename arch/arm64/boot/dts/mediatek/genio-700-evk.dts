@@ -220,7 +220,7 @@
 };
 
 &dp_intf1 {
-	status = "okay";
+	status = "disabled";
 	mediatek,oob-hpd;
 	ports {
 		port {
@@ -233,9 +233,12 @@
 
 &dp_tx {
 	pinctrl-names = "default";
-	status = "okay";
+	pinctrl-0 = <&dptx_pin>;
+	status = "disabled";
 
 	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		port {
 			dptx_in: endpoint {
 				remote-endpoint = <&dp_intf1_out>;
@@ -278,7 +281,7 @@
 &edp_tx {
 	pinctrl-names = "default";
 	pinctrl-0 = <&edp_pin>;
-	status = "okay";
+	status = "disabled";
 
 	ports {
 		#address-cells = <1>;
@@ -322,6 +325,13 @@
 	edp_pin: edp-pin-default {
 		pins-cmd-dat {
 			pinmux = <PINMUX_GPIO17__FUNC_I0_EDP_TX_HPD>;
+			bias-pull-up;
+		};
+	};
+
+	dptx_pin: dptx-pin {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO46__FUNC_I0_DP_TX_HPD>;
 			bias-pull-up;
 		};
 	};
@@ -815,6 +825,14 @@
 			op-sink-microwatt = <10000000>;
 			orientation-switch = <&it5205fn>;
 			mode-switch = <&it5205fn>;
+			displayport = <&dp_intf1>;
+
+			altmodes {
+				dp {
+					svid = <0x0ff01>;
+					vdo = <0x1c1c47>;
+				};
+			};
 
 			ports {
 				#address-cells = <1>;
