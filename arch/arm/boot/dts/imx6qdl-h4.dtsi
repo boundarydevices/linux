@@ -496,16 +496,11 @@
 	};
 
 	sound {
-		compatible = "fsl,imx6q-h4-wm8960",
-			     "fsl,imx-audio-wm8960";
-		model = "wm8960-audio";
-		cpu-dai = <&ssi1>;
-		audio-codec = <&wm8960>;
 #ifdef USE_ASRC
 		asrc-controller = <&asrc>;
 #endif
-		codec-master;
-		hp-det = <4 0>;
+		audio-codec = <&wm8960>;
+		audio-cpu = <&ssi1>;
 		audio-routing =
 			"Ext Spk", "SPK_LP",
 			"Ext Spk", "SPK_LN"
@@ -516,6 +511,11 @@
 			"CPU-Capture", "Capture"
 #endif
 			;
+		codec-master;
+		compatible = "fsl,imx6q-h4-wm8960",
+			     "fsl,imx-audio-wm8960";
+		hp-det = <4 0>;
+		model = "wm8960-audio";
 		mux-int-port = <1>;
 		mux-ext-port = <3>;
 	};
@@ -604,6 +604,7 @@
 		pinctrl-0 = <&pinctrl_i2c1_wm8960>;
 		reg = <0x1a>;
 		clock-names = "mclk";
+		wlf,hp-cfg = <4 0 3>;
 		wlf,shared-lrclk;
 		clocks = <&clks IMX6QDL_CLK_CKO>;
 		assigned-clocks =        <&clks IMX6QDL_CLK_CKO1_SEL>,  <&clks IMX6QDL_CLK_CKO1_PODF>, <&clks IMX6QDL_CLK_CKO>;
