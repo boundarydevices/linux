@@ -674,11 +674,8 @@
 	};
 
 	sound-wm8960 {
-		compatible = "fsl,imx-audio-wm8960";
-		model = "wm8960-audio";
-		cpu-dai = <&sai1>;
-		codec-master;
 		audio-codec = <&wm8960>;
+		audio-cpu = <&sai1>;
 		audio-routing =
 			"Headphone Jack", "HP_L",
 			"Headphone Jack", "HP_R",
@@ -688,9 +685,11 @@
 			"Ext Spk", "SPK_RN",
 			"LINPUT1", "Main MIC",
 			"Main MIC", "MICB";
-		/* JD2: hp detect high for headphone*/
+		codec-master;
+		compatible = "fsl,imx-audio-wm8960";
 		hp-det = <2 0>;
-		hp-det-gpios = GP_WM8960_HP_DET;
+		hp-det-gpio = GP_WM8960_HP_DET;
+		model = "wm8960-audio";
 	};
 
 	sound_hdmi: sound-hdmi {
@@ -1080,6 +1079,8 @@
 		reg = <0x1a>;
 		clocks = <&clk IMX8MQ_CLK_SAI1_ROOT>;
 		clock-names = "mclk";
+		/* JD2: hp detect high for headphone*/
+		wlf,hp-cfg = <2 0 3>;
 		wlf,shared-lrclk;
 	};
 };
