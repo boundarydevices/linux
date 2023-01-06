@@ -726,18 +726,11 @@
 	};
 
 	sound {
-		compatible = "fsl,imx6q-cid-wm8960",
-			     "fsl,imx-audio-wm8960";
-		model = "wm8960-audio";
-		cpu-dai = <&ssi1>;
-		audio-codec = <&wm8960>;
 #ifdef USE_ASRC
 		asrc-controller = <&asrc>;
 #endif
-		codec-master;
-		/* JD2: hp detect high for headphone*/
-		hp-det = <2 0>;
-		hp-det-gpios = GP_WM8960_HP_DET;
+		audio-codec = <&wm8960>;
+		audio-cpu = <&ssi1>;
 		audio-routing =
 			"Headphone Jack", "HP_L",
 			"Headphone Jack", "HP_R",
@@ -752,6 +745,12 @@
 			"CPU-Capture", "Capture"
 #endif
 			;
+		codec-master;
+		compatible = "fsl,imx6q-cid-wm8960",
+			     "fsl,imx-audio-wm8960";
+		hp-det = <2 0>;
+		hp-det-gpio = GP_WM8960_HP_DET;
+		model = "wm8960-audio";
 		mux-int-port = <1>;
 		mux-ext-port = <3>;
 	};
@@ -908,6 +907,8 @@
 		pinctrl-0 = <&pinctrl_i2c1a_wm8960>;
 		reg = <0x1a>;
 		clock-names = "mclk";
+		/* JD2: hp detect high for headphone*/
+		wlf,hp-cfg = <2 0 3>;
 		wlf,shared-lrclk;
 		clocks = <&clks IMX6QDL_CLK_CKO>;
 		assigned-clocks =        <&clks IMX6QDL_CLK_CKO>;
