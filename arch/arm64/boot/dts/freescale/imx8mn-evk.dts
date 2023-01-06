@@ -130,3 +130,5 @@
 &gpu {
 	status= "okay";
 };
+
+#include "imx8mn-android.dtsi"
