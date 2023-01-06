@@ -145,3 +145,5 @@
 			<400000000>, <400000000>;
 	status= "okay";
 };
+
+#include "imx8mn-android.dtsi"

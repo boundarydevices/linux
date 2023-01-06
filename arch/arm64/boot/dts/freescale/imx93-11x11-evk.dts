@@ -1218,3 +1218,5 @@
 		};
 	};
 };
+
+#include "imx93-android.dtsi"
