@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0
 //
-// mt8195-mt6359-demo.c  --
-//	MT8195-MT6359-DEMO ALSA SoC machine driver
+// mt8395-evk.c  -- MT8395 ALSA SoC machine driver
+//
+// Copyright (c) 2023 MediaTek Inc.
+// Author: Trevor Wu <trevor.wu@mediatek.com>
 //
 // Copyright (c) 2022 baylibre
 // Author: Nicolas Belin <nbelin@baylibre.com>
@@ -19,15 +21,20 @@
 #include "mt8195-afe-clk.h"
 #include "mt8195-afe-common.h"
 
-static const struct snd_soc_dapm_widget
-	mt8195_mt6359_demo_widgets[] = {
+struct mt8195_mt6359_priv {
+	struct snd_soc_jack dp_jack;
+	struct snd_soc_jack hdmi_jack;
+};
+
+static const struct snd_soc_dapm_widget mt8195_mt6359_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 };
 
-static const struct snd_soc_dapm_route mt8195_mt6359_demo_routes[] = {
-	{ "Headphone Jack", NULL, "AIF1 Playback" },
-	{ "AIF1 Capture", NULL, "Headset Mic" },
+static const struct snd_soc_dapm_route mt8195_mt6359_routes[] = {
+	{ "Headphone Jack", NULL, "Headphone L" },
+	{ "Headphone Jack", NULL, "Headphone R" },
+	{ "AIN1", NULL, "Headset Mic" },
 };
 
 static int mt8195_etdm_hw_params(struct snd_pcm_substream *substream,
@@ -264,6 +271,36 @@ static const struct snd_soc_ops mt8195_dptx_ops = {
 	.hw_params = mt8195_dptx_hw_params,
 };
 
+static int mt8195_dptx_codec_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct mt8195_mt6359_priv *priv = snd_soc_card_get_drvdata(rtd->card);
+	struct snd_soc_component *cmpnt_codec =
+		asoc_rtd_to_codec(rtd, 0)->component;
+	int ret;
+
+	ret = snd_soc_card_jack_new(rtd->card, "DP Jack", SND_JACK_LINEOUT,
+				    &priv->dp_jack, NULL, 0);
+	if (ret)
+		return ret;
+
+	return snd_soc_component_set_jack(cmpnt_codec, &priv->dp_jack, NULL);
+}
+
+static int mt8195_hdmi_codec_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct mt8195_mt6359_priv *priv = snd_soc_card_get_drvdata(rtd->card);
+	struct snd_soc_component *cmpnt_codec =
+		asoc_rtd_to_codec(rtd, 0)->component;
+	int ret;
+
+	ret = snd_soc_card_jack_new(rtd->card, "HDMI Jack", SND_JACK_LINEOUT,
+				    &priv->hdmi_jack, NULL, 0);
+	if (ret)
+		return ret;
+
+	return snd_soc_component_set_jack(cmpnt_codec, &priv->hdmi_jack, NULL);
+}
+
 static int mt8195_dptx_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 				       struct snd_pcm_hw_params *params)
 {
@@ -295,9 +332,12 @@ enum {
 	DAI_LINK_UL10_FE,
 	DAI_LINK_DL_SRC_BE,
 	DAI_LINK_DPTX_BE,
+	DAI_LINK_ETDM1_IN_BE,
 	DAI_LINK_ETDM2_IN_BE,
 	DAI_LINK_ETDM1_OUT_BE,
+	DAI_LINK_ETDM2_OUT_BE,
 	DAI_LINK_ETDM3_OUT_BE,
+	DAI_LINK_PCM1_BE,
 	DAI_LINK_UL_SRC1_BE,
 	DAI_LINK_UL_SRC2_BE,
 	DAI_LINK_DMIC_BE,
@@ -395,6 +435,11 @@ SND_SOC_DAILINK_DEFS(DPTX_BE,
 		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
 		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
+SND_SOC_DAILINK_DEFS(ETDM1_IN_BE,
+		     DAILINK_COMP_ARRAY(COMP_CPU("ETDM1_IN")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
+
 SND_SOC_DAILINK_DEFS(ETDM2_IN_BE,
 		     DAILINK_COMP_ARRAY(COMP_CPU("ETDM2_IN")),
 		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
@@ -405,8 +450,18 @@ SND_SOC_DAILINK_DEFS(ETDM1_OUT_BE,
 		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
 		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
+SND_SOC_DAILINK_DEFS(ETDM2_OUT_BE,
+		     DAILINK_COMP_ARRAY(COMP_CPU("ETDM2_OUT")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
+
 SND_SOC_DAILINK_DEFS(ETDM3_OUT_BE,
 		     DAILINK_COMP_ARRAY(COMP_CPU("ETDM3_OUT")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
+
+SND_SOC_DAILINK_DEFS(PCM1_BE,
+		     DAILINK_COMP_ARRAY(COMP_CPU("PCM1")),
 		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
 		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
@@ -425,7 +480,7 @@ SND_SOC_DAILINK_DEFS(DMIC_BE,
 		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
 		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
-static struct snd_soc_dai_link mt8195_mt6359_demo_dai_links[] = {
+static struct snd_soc_dai_link mt8195_mt6359_dai_links[] = {
 	/* FE */
 	[DAI_LINK_DL2_FE] = {
 		.name = "DL2_FE",
@@ -606,7 +661,6 @@ static struct snd_soc_dai_link mt8195_mt6359_demo_dai_links[] = {
 	/* BE */
 	[DAI_LINK_DL_SRC_BE] = {
 		.name = "DL_SRC_BE",
-		.init = mt8195_mt6359_init,
 		.no_pcm = 1,
 		.dpcm_playback = 1,
 		SND_SOC_DAILINK_REG(DL_SRC_BE),
@@ -618,6 +672,17 @@ static struct snd_soc_dai_link mt8195_mt6359_demo_dai_links[] = {
 		.ops = &mt8195_dptx_ops,
 		.be_hw_params_fixup = mt8195_dptx_hw_params_fixup,
 		SND_SOC_DAILINK_REG(DPTX_BE),
+	},
+	[DAI_LINK_ETDM1_IN_BE] = {
+		.name = "ETDM1_IN_BE",
+		.no_pcm = 1,
+		.dai_fmt = SND_SOC_DAIFMT_I2S |
+			SND_SOC_DAIFMT_NB_NF |
+			SND_SOC_DAIFMT_CBS_CFS,
+		.dpcm_capture = 1,
+		.ops = &mt8195_etdm_ops,
+		.be_hw_params_fixup = mt8195_etdm_hw_params_fixup,
+		SND_SOC_DAILINK_REG(ETDM1_IN_BE),
 	},
 	[DAI_LINK_ETDM2_IN_BE] = {
 		.name = "ETDM2_IN_BE",
@@ -641,6 +706,17 @@ static struct snd_soc_dai_link mt8195_mt6359_demo_dai_links[] = {
 		.be_hw_params_fixup = mt8195_etdm_hw_params_fixup,
 		SND_SOC_DAILINK_REG(ETDM1_OUT_BE),
 	},
+	[DAI_LINK_ETDM2_OUT_BE] = {
+		.name = "ETDM2_OUT_BE",
+		.no_pcm = 1,
+		.dai_fmt = SND_SOC_DAIFMT_I2S |
+			SND_SOC_DAIFMT_NB_NF |
+			SND_SOC_DAIFMT_CBS_CFS,
+		.dpcm_playback = 1,
+		.ops = &mt8195_etdm_ops,
+		.be_hw_params_fixup = mt8195_etdm_hw_params_fixup,
+		SND_SOC_DAILINK_REG(ETDM2_OUT_BE),
+	},
 	[DAI_LINK_ETDM3_OUT_BE] = {
 		.name = "ETDM3_OUT_BE",
 		.no_pcm = 1,
@@ -649,6 +725,15 @@ static struct snd_soc_dai_link mt8195_mt6359_demo_dai_links[] = {
 			SND_SOC_DAIFMT_CBS_CFS,
 		.dpcm_playback = 1,
 		SND_SOC_DAILINK_REG(ETDM3_OUT_BE),
+	},
+	[DAI_LINK_PCM1_BE] = {
+		.name = "PCM1_BE",
+		.no_pcm = 1,
+		.dai_fmt = SND_SOC_DAIFMT_I2S |
+			SND_SOC_DAIFMT_NB_NF |
+			SND_SOC_DAIFMT_CBS_CFS,
+		.dpcm_capture = 1,
+		SND_SOC_DAILINK_REG(PCM1_BE),
 	},
 	[DAI_LINK_UL_SRC1_BE] = {
 		.name = "UL_SRC1_BE",
@@ -670,22 +755,24 @@ static struct snd_soc_dai_link mt8195_mt6359_demo_dai_links[] = {
 	},
 };
 
-static struct snd_soc_card mt8195_mt6359_demo_soc_card = {
-	.name = "mt8195_mt6359_demo",
+static struct snd_soc_card mt8195_mt6359_soc_card = {
+	.name = "mt8395-evk",
 	.owner = THIS_MODULE,
-	.dai_link = mt8195_mt6359_demo_dai_links,
-	.num_links = ARRAY_SIZE(mt8195_mt6359_demo_dai_links),
-	.dapm_widgets = mt8195_mt6359_demo_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(mt8195_mt6359_demo_widgets),
-	.dapm_routes = mt8195_mt6359_demo_routes,
-	.num_dapm_routes = ARRAY_SIZE(mt8195_mt6359_demo_routes),
+	.dai_link = mt8195_mt6359_dai_links,
+	.num_links = ARRAY_SIZE(mt8195_mt6359_dai_links),
+	.dapm_widgets = mt8195_mt6359_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(mt8195_mt6359_widgets),
+	.dapm_routes = mt8195_mt6359_routes,
+	.num_dapm_routes = ARRAY_SIZE(mt8195_mt6359_routes),
 };
 
-static int mt8195_mt6359_demo_dev_probe(struct platform_device *pdev)
+static int mt8195_mt6359_dev_probe(struct platform_device *pdev)
 {
-	struct snd_soc_card *card = &mt8195_mt6359_demo_soc_card;
+	struct snd_soc_card *card = &mt8195_mt6359_soc_card;
 	struct device_node *platform_node;
 	struct snd_soc_dai_link *dai_link;
+	struct mt8195_mt6359_priv *priv;
+	int init6359 = 0;
 	int ret, i;
 
 	card->dev = &pdev->dev;
@@ -703,6 +790,10 @@ static int mt8195_mt6359_demo_dev_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
 	platform_node = of_parse_phandle(pdev->dev.of_node,
 					 "mediatek,platform", 0);
 
@@ -714,7 +805,26 @@ static int mt8195_mt6359_demo_dev_probe(struct platform_device *pdev)
 	for_each_card_prelinks(card, i, dai_link) {
 		if (!dai_link->platforms->name)
 			dai_link->platforms->of_node = platform_node;
+
+		if (strcmp(dai_link->name, "DPTX_BE") == 0) {
+			if (strcmp(dai_link->codecs->dai_name, "snd-soc-dummy-dai"))
+				dai_link->init = mt8195_dptx_codec_init;
+		} else if (strcmp(dai_link->name, "ETDM3_OUT_BE") == 0) {
+			if (strcmp(dai_link->codecs->dai_name, "snd-soc-dummy-dai"))
+				dai_link->init = mt8195_hdmi_codec_init;
+		} else if (strcmp(dai_link->name, "DL_SRC_BE") == 0 ||
+			   strcmp(dai_link->name, "UL_SRC1_BE") == 0 ||
+			   strcmp(dai_link->name, "UL_SRC2_BE") == 0) {
+			if (!init6359) {
+				if (strcmp(dai_link->codecs->dai_name, "snd-soc-dummy-dai")) {
+					dai_link->init = mt8195_mt6359_init;
+					init6359 = 1;
+				}
+			}
+		}
 	}
+
+	snd_soc_card_set_drvdata(card, priv);
 
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret)
@@ -723,28 +833,24 @@ static int mt8195_mt6359_demo_dev_probe(struct platform_device *pdev)
 	return ret;
 }
 
-#ifdef CONFIG_OF
-static const struct of_device_id mt8195_mt6359_demo_dt_match[] = {
-	{.compatible = "mediatek,mt8195_mt6359_demo",},
+static const struct of_device_id mt8195_mt6359_dt_match[] = {
+	{.compatible = "mediatek,mt8395-evk",},
 	{}
 };
-#endif
 
-static struct platform_driver mt8195_mt6359_demo_driver = {
+static struct platform_driver mt8195_mt6359_driver = {
 	.driver = {
-		.name = "mt8195_mt6359_demo",
-#ifdef CONFIG_OF
-		.of_match_table = mt8195_mt6359_demo_dt_match,
-#endif
+		.name = "mt8395-evk",
+		.of_match_table = mt8195_mt6359_dt_match,
 		.pm = &snd_soc_pm_ops,
 	},
-	.probe = mt8195_mt6359_demo_dev_probe,
+	.probe = mt8195_mt6359_dev_probe,
 };
 
-module_platform_driver(mt8195_mt6359_demo_driver);
+module_platform_driver(mt8195_mt6359_driver);
 
 /* Module information */
-MODULE_DESCRIPTION("MT8195-MT6359-DEMO ALSA SoC machine driver");
-MODULE_AUTHOR("Nicolas Belin <nbelin@baylibre.com>");
+MODULE_DESCRIPTION("MT8395-EVK ALSA SoC machine driver");
+MODULE_AUTHOR("Trevor Wu <trevor.wu@mediatek.com>");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("mt8195_mt6359_demo soc card");
+MODULE_ALIAS("mt8395-evk soc card");

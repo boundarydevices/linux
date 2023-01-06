@@ -245,14 +245,14 @@ config SND_SOC_MT8195_MT6359_RT1019_RT5682
 	  Select Y if you have such device.
 	  If unsure select "N".
 
-config SND_SOC_MT8195_MT6359_DEMO
-	tristate "ASoC Audio driver support for MT8195 Demo with MT6359 codec"
+config SND_SOC_MT8395_EVK
+	tristate "ASoC Audio driver support for MT8395 with MT6359 codec"
 	depends on SND_SOC_MT8195 && MTK_PMIC_WRAP
 	select SND_SOC_MT6359
 	select SND_SOC_DMIC
 	select SND_SOC_HDMI_CODEC
 	help
-	  This adds ASoC driver support for Mediatek MT8195 boards
+	  This adds ASoC driver support for MediaTek MT8395 boards
 	  with the MT6359 audio codec.
 	  Select Y if you have such device.
 	  If unsure select "N".
