@@ -529,11 +529,13 @@ static int mtk_etdm_cg_connect(struct snd_soc_dapm_widget *source,
 			return 1;
 
 		etdm_priv = afe_priv->dai_priv[etdm_priv->cowork_source_id];
-		for (i = 0; i < etdm_priv->cowork_slv_count; i++) {
-			if (etdm_priv->cowork_slv_id[i] == cg_id)
-				return 1;
-		}
 	}
+
+	for (i = 0; i < etdm_priv->cowork_slv_count; i++) {
+		if (etdm_priv->cowork_slv_id[i] == cg_id)
+			return 1;
+	}
+
 	return 0;
 }
 
