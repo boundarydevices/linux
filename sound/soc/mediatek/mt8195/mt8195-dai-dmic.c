@@ -34,6 +34,8 @@ struct mtk_dai_dmic_priv {
 	unsigned int iir_on;
 	unsigned int two_wire_mode;
 	unsigned int channels;
+	unsigned int dmic_clk_mono;
+	unsigned int clk_index[DMIC_NUM];
 };
 
 static const struct mtk_dai_dmic_ctrl_reg dmic_ctrl_regs[DMIC_NUM] = {
@@ -135,6 +137,7 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 	struct mtk_dai_dmic_priv *dmic_priv = NULL;
 	const struct mtk_dai_dmic_ctrl_reg *reg = NULL;
 	unsigned int channels;
+	unsigned int ch_base;
 	unsigned int msk;
 
 	dev_dbg(afe->dev, "%s(), name %s, event 0x%x\n",
@@ -142,16 +145,17 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 
 	dmic_priv = afe_priv->dai_priv[MT8195_AFE_IO_DMIC_IN];
 	channels = dmic_priv->channels;
+	ch_base = dmic_priv->dmic_clk_mono ? 1 : 2;
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
 		/* request fifo soft rst */
 		msk = 0;
-		if (channels > 6)
+		if (channels > ch_base * 3)
 			msk |= PWR2_TOP_CON1_DMIC4_FIFO_SOFT_RST_EN;
-		if (channels > 4)
+		if (channels > ch_base * 2)
 			msk |= PWR2_TOP_CON1_DMIC3_FIFO_SOFT_RST_EN;
-		if (channels > 2)
+		if (channels > ch_base)
 			msk |= PWR2_TOP_CON1_DMIC2_FIFO_SOFT_RST_EN;
 		if (channels > 0)
 			msk |= PWR2_TOP_CON1_DMIC1_FIFO_SOFT_RST_EN;
@@ -165,46 +169,46 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 		if (dmic_priv->iir_on)
 			msk |= AFE_DMIC_UL_SRC_CON0_UL_IIR_ON_TMP_CTL;
 
-		if (channels > 6) {
-			reg = get_dmic_ctrl_reg(DMIC3);
+		if (channels > ch_base * 3) {
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[3]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
-		if (channels > 4) {
-			reg = get_dmic_ctrl_reg(DMIC2);
+		if (channels > ch_base * 2) {
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[2]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
-		if (channels > 2) {
-			reg = get_dmic_ctrl_reg(DMIC1);
+		if (channels > ch_base) {
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[1]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
 		if (channels > 0) {
-			reg = get_dmic_ctrl_reg(DMIC0);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[0]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		msk = AFE_DMIC_UL_SRC_CON0_UL_SRC_ON_TMP_CTL;
-		if (channels > 6) {
-			reg = get_dmic_ctrl_reg(DMIC3);
+		if (channels > ch_base * 3) {
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[3]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
-		if (channels > 4) {
-			reg = get_dmic_ctrl_reg(DMIC2);
+		if (channels > ch_base * 2) {
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[2]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
-		if (channels > 2) {
-			reg = get_dmic_ctrl_reg(DMIC1);
+		if (channels > ch_base) {
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[1]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
 		if (channels > 0) {
-			reg = get_dmic_ctrl_reg(DMIC0);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[0]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
@@ -213,11 +217,11 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 
 		/* release fifo soft rst */
 		msk = 0;
-		if (channels > 6)
+		if (channels > ch_base * 3)
 			msk |= PWR2_TOP_CON1_DMIC4_FIFO_SOFT_RST_EN;
-		if (channels > 4)
+		if (channels > ch_base * 2)
 			msk |= PWR2_TOP_CON1_DMIC3_FIFO_SOFT_RST_EN;
-		if (channels > 2)
+		if (channels > ch_base)
 			msk |= PWR2_TOP_CON1_DMIC2_FIFO_SOFT_RST_EN;
 		if (channels > 0)
 			msk |= PWR2_TOP_CON1_DMIC1_FIFO_SOFT_RST_EN;
@@ -231,23 +235,23 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 			AFE_DMIC_UL_SRC_CON0_UL_IIR_ON_TMP_CTL |
 			AFE_DMIC_UL_SRC_CON0_UL_SDM_3_LEVEL_CTL;
 
-		if (channels > 6) {
-			reg = get_dmic_ctrl_reg(DMIC3);
+		if (channels > ch_base * 3) {
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[3]);
 			if (reg)
 				regmap_clear_bits(afe->regmap, reg->con0, msk);
 		}
-		if (channels > 4) {
-			reg = get_dmic_ctrl_reg(DMIC2);
+		if (channels > ch_base * 2) {
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[2]);
 			if (reg)
 				regmap_clear_bits(afe->regmap, reg->con0, msk);
 		}
-		if (channels > 2) {
-			reg = get_dmic_ctrl_reg(DMIC1);
+		if (channels > ch_base * 1) {
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[1]);
 			if (reg)
 				regmap_clear_bits(afe->regmap, reg->con0, msk);
 		}
 		if (channels > 0) {
-			reg = get_dmic_ctrl_reg(DMIC0);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[0]);
 			if (reg)
 				regmap_clear_bits(afe->regmap, reg->con0, msk);
 		}
@@ -275,6 +279,7 @@ static int mtk_dai_dmic_hw_params(struct snd_pcm_substream *substream,
 	struct mtk_dai_dmic_priv *dmic_priv = NULL;
 	unsigned int rate = params_rate(params);
 	unsigned int channels = params_channels(params);
+	unsigned int ch_base;
 	unsigned int two_wire_mode = 0;
 	unsigned int clk_phase_sel_ch1 = 0;
 	unsigned int clk_phase_sel_ch2 = 0;
@@ -291,14 +296,17 @@ static int mtk_dai_dmic_hw_params(struct snd_pcm_substream *substream,
 	clk_phase_sel_ch1 = dmic_priv->clk_phase_sel_ch[0];
 	clk_phase_sel_ch2 = dmic_priv->clk_phase_sel_ch[1];
 	iir_on = dmic_priv->iir_on;
+	ch_base = dmic_priv->dmic_clk_mono ? 1 : 2;
 
 	if (two_wire_mode)
 		val |= AFE_DMIC_UL_SRC_CON0_UL_TWO_WIRE_MODE_CTL;
 	else
 		clk_phase_sel_ch2 = clk_phase_sel_ch1 + 4;
+	msk |= AFE_DMIC_UL_SRC_CON0_UL_TWO_WIRE_MODE_CTL_MASK;
 
 	val |= AFE_DMIC_UL_SRC_CON0_UL_PHASE_SEL_CH1(clk_phase_sel_ch1);
 	val |= AFE_DMIC_UL_SRC_CON0_UL_PHASE_SEL_CH2(clk_phase_sel_ch2);
+	msk |= AFE_DMIC_UL_SRC_CON0_UL_PHASE_SEL_MASK;
 
 	mtk_dai_dmic_configure_array(dai);
 
@@ -320,31 +328,31 @@ static int mtk_dai_dmic_hw_params(struct snd_pcm_substream *substream,
 		val |= AFE_DMIC_UL_CON0_VOCIE_MODE_48K;
 		break;
 	}
+	msk |= AFE_DMIC_UL_VOICE_MODE_MASK;
 
 	if (iir_on) {
 		mtk_dai_dmic_load_iir_coeff_table(afe);
 		val |= AFE_DMIC_UL_SRC_CON0_UL_IIR_MODE_CTL(0);
+		msk |= AFE_DMIC_UL_SRC_CON0_UL_IIR_MODE_CTL_MASK;
 	}
 
-	msk = val;
-
-	if (channels > 6) {
-		reg = get_dmic_ctrl_reg(DMIC3);
+	if (channels > ch_base * 3) {
+		reg = get_dmic_ctrl_reg(dmic_priv->clk_index[3]);
 		if (reg)
 			regmap_update_bits(afe->regmap, reg->con0, msk, val);
 	}
-	if (channels > 4) {
-		reg = get_dmic_ctrl_reg(DMIC2);
+	if (channels > ch_base * 2) {
+		reg = get_dmic_ctrl_reg(dmic_priv->clk_index[2]);
 		if (reg)
 			regmap_update_bits(afe->regmap, reg->con0, msk, val);
 	}
-	if (channels > 2) {
-		reg = get_dmic_ctrl_reg(DMIC1);
+	if (channels > ch_base) {
+		reg = get_dmic_ctrl_reg(dmic_priv->clk_index[1]);
 		if (reg)
 			regmap_update_bits(afe->regmap, reg->con0, msk, val);
 	}
 	if (channels > 0) {
-		reg = get_dmic_ctrl_reg(DMIC0);
+		reg = get_dmic_ctrl_reg(dmic_priv->clk_index[0]);
 		if (reg)
 			regmap_update_bits(afe->regmap, reg->con0, msk, val);
 	}
@@ -354,6 +362,7 @@ static int mtk_dai_dmic_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 
 }
+
 static const struct snd_soc_dai_ops mtk_dai_dmic_ops = {
 	.hw_params	= mtk_dai_dmic_hw_params,
 };
@@ -430,8 +439,16 @@ static int init_dmic_priv_data(struct mtk_base_afe *afe)
 		return -ENOMEM;
 
 	dmic_priv->two_wire_mode =
-		of_property_read_bool(of_node,
-				      "mediatek,dmic-two-wire-mode");
+		of_property_read_bool(of_node, "mediatek,dmic-two-wire-mode");
+
+	ret = of_property_read_u32_array(of_node, "mediatek,dmic-clk-index",
+					 &dmic_priv->clk_index[0], DMIC_NUM);
+	if (ret) {
+		dmic_priv->clk_index[0] = DMIC0;
+		dmic_priv->clk_index[1] = DMIC1;
+		dmic_priv->clk_index[2] = DMIC2;
+		dmic_priv->clk_index[3] = DMIC3;
+	}
 
 	ret = of_property_read_u32_array(of_node, "mediatek,dmic-clk-phases",
 					 &dmic_priv->clk_phase_sel_ch[0],
@@ -465,6 +482,8 @@ static int init_dmic_priv_data(struct mtk_base_afe *afe)
 	dmic_priv->iir_on = of_property_read_bool(of_node,
 						  "mediatek,dmic-iir-on");
 
+	dmic_priv->dmic_clk_mono = of_property_read_bool(of_node,
+							 "mediatek,dmic-clk-mono");
 	afe_priv->dai_priv[MT8195_AFE_IO_DMIC_IN] = dmic_priv;
 	return 0;
 }
