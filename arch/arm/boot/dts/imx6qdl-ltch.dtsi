@@ -575,6 +575,7 @@
 		asrc-controller = <&asrc>;
 #endif
 		audio-codec = <&wm8960>;
+		audio-cpu = <&ssi1>;
 		audio-routing =
 			"Ext Spk", "HP_L",
 			"Ext Spk", "HP_R",
@@ -591,7 +592,6 @@
 		codec-master;
 		compatible = "fsl,imx6q-ltch-wm8960",
 			     "fsl,imx-audio-wm8960";
-		cpu-dai = <&ssi1>;
 		model = "wm8960-audio";
 		mux-int-port = <1>;
 		mux-ext-port = <3>;
