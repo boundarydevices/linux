@@ -121,6 +121,21 @@ struct fsl_asoc_card_priv {
 	bool is_playback_only;
 	bool is_capture_only;
 	char name[32];
+	struct gpio_desc *amp_mute;
+	struct gpio_desc *amp_standby;
+	unsigned amp_standby_enter_wait_ms;
+	unsigned amp_standby_exit_delay_ms;
+#define AMP_GAIN_CNT 2
+	struct gpio_desc *amp_gain[AMP_GAIN_CNT];
+	unsigned char amp_gain_seq[1 << AMP_GAIN_CNT];
+	char amp_gain_value;
+	char amp_mute_value;
+	char amp_disabled;
+	char hp_det_status;
+	char amp_standby_state;
+	char amp_mute_on_hp_detect;
+	char amp_standby_set_pending;
+	char amp_mute_clear_pending;
 };
 
 /*
@@ -171,6 +186,87 @@ static const struct snd_soc_dapm_route audio_map_esai[] = {
 	{"CLIENT1-Capture",  NULL, "CPU-Capture"},
 };
 
+static int do_mute(struct gpio_desc *gd, int mute)
+{
+	if (!gd)
+		return 0;
+
+	gpiod_set_value(gd, mute);
+	return 0;
+}
+
+static int amp_mute(struct fsl_asoc_card_priv *priv, int mute)
+{
+	priv->amp_disabled = priv->amp_mute_value = mute;
+	if (!mute && priv->amp_mute_on_hp_detect && priv->hp_det_status)
+		mute = 1;
+	pr_debug("mute=%x\n", mute);
+	return do_mute(priv->amp_mute, mute);
+}
+
+static int amp_stdby(struct fsl_asoc_card_priv *priv, int stdby)
+{
+	if (!priv->amp_standby)
+		return 0;
+	if (stdby == priv->amp_standby_state)
+		return 0;
+
+	if (stdby)
+		msleep(priv->amp_standby_enter_wait_ms);
+	priv->amp_standby_state = stdby;
+	pr_debug("stdby=%x\n", stdby);
+	gpiod_set_value(priv->amp_standby, stdby);
+	if (!stdby)
+		msleep(priv->amp_standby_exit_delay_ms);
+	return 0;
+}
+
+static int event_amp(struct snd_soc_dapm_widget *w,
+		    struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+	struct fsl_asoc_card_priv *priv = container_of(card,
+			struct fsl_asoc_card_priv, card);
+
+	if (event & SND_SOC_DAPM_POST_PMU) {
+		amp_stdby(priv, 0);
+		priv->amp_mute_clear_pending = 1;
+		return 0;
+	}
+	if (event & SND_SOC_DAPM_PRE_PMD) {
+		amp_mute(priv, 1);
+		priv->amp_standby_set_pending = 1;
+		return 0;
+	}
+	return 0;
+}
+
+static int event_amp_last(struct snd_soc_dapm_widget *w,
+		    struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+	struct fsl_asoc_card_priv *priv = container_of(card,
+			struct fsl_asoc_card_priv, card);
+
+	if ((event & SND_SOC_DAPM_POST_PMD) && priv->amp_standby_set_pending) {
+		priv->amp_standby_set_pending = 0;
+		return amp_stdby(priv, 1);
+	}
+	if ((event & SND_SOC_DAPM_POST_PMU) && priv->amp_mute_clear_pending) {
+		priv->amp_mute_clear_pending = 0;
+		return amp_mute(priv, 0);
+	}
+	return 0;
+}
+#define SND_SOC_DAPM_POST2(wname, wevent) \
+{	.id = snd_soc_dapm_post, .name = wname, .kcontrol_news = NULL, \
+	.num_kcontrols = 0, .reg = SND_SOC_NOPM, .event = wevent, \
+	.event_flags = SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD, \
+	.subseq = 1}
+
+
 /* Add all possible widgets into here without being redundant */
 static const struct snd_soc_dapm_widget fsl_asoc_card_dapm_widgets[] = {
 	SND_SOC_DAPM_LINE("Line Out Jack", NULL),
@@ -178,8 +274,11 @@ static const struct snd_soc_dapm_widget fsl_asoc_card_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
 	SND_SOC_DAPM_SPK("Ext Spk", NULL),
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
+	SND_SOC_DAPM_MIC("Main MIC", NULL),
 	SND_SOC_DAPM_MIC("AMIC", NULL),
 	SND_SOC_DAPM_MIC("DMIC", NULL),
+	SND_SOC_DAPM_SPK("Ext Spk", event_amp),
+	SND_SOC_DAPM_POST2("amp_post", event_amp_last),
 };
 
 #ifdef CONFIG_EXTCON
@@ -633,9 +732,11 @@ static int hp_jack_event(struct notifier_block *nb, unsigned long event,
 {
 	struct snd_soc_jack *jack = (struct snd_soc_jack *)data;
 	struct snd_soc_dapm_context *dapm = &jack->card->dapm;
+	struct fsl_asoc_card_priv *priv = snd_soc_card_get_drvdata(jack->card);
 
 	if (event & SND_JACK_HEADPHONE) {
 		/* Disable speaker if headphone is plugged in */
+		priv->hp_det_status = 1;
 		snd_soc_dapm_disable_pin(dapm, "Ext Spk");
 #ifdef CONFIG_EXTCON
 		if (fsl_asoc_card_edev)
@@ -643,6 +744,7 @@ static int hp_jack_event(struct notifier_block *nb, unsigned long event,
 #endif
 	} else {
 		snd_soc_dapm_enable_pin(dapm, "Ext Spk");
+		priv->hp_det_status = 0;
 #ifdef CONFIG_EXTCON
 		if (fsl_asoc_card_edev)
 			extcon_set_state_sync(fsl_asoc_card_edev, EXTCON_JACK_HEADPHONE, 0);
@@ -712,6 +814,112 @@ static int fsl_asoc_card_late_probe(struct snd_soc_card *card)
 	return 0;
 }
 
+static int amp_gain_set(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct fsl_asoc_card_priv *priv = container_of(card,
+			struct fsl_asoc_card_priv, card);
+	int value = ucontrol->value.integer.value[0];
+	int i;
+
+	if (value >= (1 << AMP_GAIN_CNT))
+		return -EINVAL;
+
+	priv->amp_gain_value = value;
+	value = priv->amp_gain_seq[value];
+
+	for (i = 0; i < AMP_GAIN_CNT; i++) {
+		struct gpio_desc *gd = priv->amp_gain[i];
+
+		if (!gd)
+			break;
+		gpiod_set_value(gd, value & 1);
+		value >>= 1;
+	}
+	return 0;
+}
+
+static int amp_gain_get(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct fsl_asoc_card_priv *priv = container_of(card,
+			struct fsl_asoc_card_priv, card);
+
+	ucontrol->value.integer.value[0] = priv->amp_gain_value;
+	return 0;
+}
+
+static int amp_enable_set(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct fsl_asoc_card_priv *priv = container_of(card,
+			struct fsl_asoc_card_priv, card);
+	int value = ucontrol->value.integer.value[0];
+
+	if (value > 1)
+		return -EINVAL;
+	value = (value ^ 1 ) | priv->amp_disabled;
+	priv->amp_mute_value = value;
+	if (priv->amp_mute)
+		gpiod_set_value(priv->amp_mute, value);
+	return 0;
+}
+
+static int amp_enable_get(struct snd_kcontrol *kcontrol,
+			    struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card =  snd_kcontrol_chip(kcontrol);
+	struct fsl_asoc_card_priv *priv = container_of(card,
+			struct fsl_asoc_card_priv, card);
+
+	ucontrol->value.integer.value[0] = priv->amp_mute_value ^ 1;
+	return 0;
+}
+
+static const struct snd_kcontrol_new more_controls[] = {
+	SOC_SINGLE_EXT("amp_gain", 0, 0, (1 << AMP_GAIN_CNT) - 1, 0,
+		       amp_gain_get, amp_gain_set),
+	SOC_SINGLE_EXT("amp_enable", 0, 0, 1, 0,
+		       amp_enable_get, amp_enable_set),
+};
+
+static ssize_t headphone_show(struct device *dev,
+			      struct device_attribute *attr, char *buf)
+{
+	struct snd_soc_card *card = dev_get_drvdata(dev);
+	struct fsl_asoc_card_priv *priv = snd_soc_card_get_drvdata(card);
+	int hp_status;
+
+	/* Check if headphone is plugged in */
+	hp_status = gpio_get_value_cansleep(priv->hp_jack.gpio.gpio);
+
+	if (priv->hp_jack.gpio.invert)
+		hp_status ^= 1;
+	strcpy(buf, hp_status ? "Headphone\n" : "Speaker\n");
+	return strlen(buf);
+}
+
+static ssize_t micphone_show(struct device *dev,
+			     struct device_attribute *attr, char *buf)
+{
+	struct snd_soc_card *card = dev_get_drvdata(dev);
+	struct fsl_asoc_card_priv *priv = snd_soc_card_get_drvdata(card);
+	int mic_status;
+
+	/* Check if headphone is plugged in */
+	mic_status = gpio_get_value_cansleep(priv->mic_jack.gpio.gpio);
+
+	if (priv->mic_jack.gpio.invert)
+		mic_status ^= 1;
+	strcpy(buf, mic_status ? "Mic Jack\n" : "Main MIC\n");
+	return strlen(buf);
+}
+static DEVICE_ATTR_RO(headphone);
+static DEVICE_ATTR_RO(micphone);
+
 static int fsl_asoc_card_probe(struct platform_device *pdev)
 {
 	struct device_node *cpu_np, *codec_np, *asrc_np;
@@ -726,6 +934,12 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 	struct platform_device *client_pdev[2];
 	const char *codec_dai_name;
 	const char *codec_dev_name;
+	struct gpio_desc *gd = NULL;
+	unsigned amp_standby_enter_wait_ms = 0;
+	unsigned amp_standby_exit_delay_ms = 0;
+	const struct snd_kcontrol_new *kcontrols = more_controls;
+	int kcontrols_cnt = ARRAY_SIZE(more_controls);
+	int i;
 	u32 asrc_fmt = 0;
 	u32 width;
 	int ret;
@@ -768,6 +982,51 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 				codec_dev_name = codec_pdev->name;
 			}
 		}
+	}
+
+	gd = devm_gpiod_get_index_optional(&pdev->dev, "amp-mute", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd)) {
+		ret = PTR_ERR(gd);
+		goto fail;
+	}
+	priv->amp_mute = gd;
+	priv->amp_mute_value = 1;
+	priv->amp_standby_state = 1;
+	gd = devm_gpiod_get_index_optional(&pdev->dev, "amp-standby", 0, GPIOD_OUT_HIGH);
+	if (IS_ERR(gd)) {
+		ret = PTR_ERR(gd);
+		goto fail;
+	}
+	priv->amp_standby = gd;
+
+	of_property_read_u32(np, "amp-standby-enter-wait-ms", &amp_standby_enter_wait_ms);
+	of_property_read_u32(np, "amp-standby-exit-delay-ms", &amp_standby_exit_delay_ms);
+	priv->amp_standby_enter_wait_ms = amp_standby_enter_wait_ms;
+	priv->amp_standby_exit_delay_ms = amp_standby_exit_delay_ms;
+	for (i = 0; i < (1 << AMP_GAIN_CNT); i++)
+		priv->amp_gain_seq[i] = i;
+
+	for (i = 0; i < AMP_GAIN_CNT; i++) {
+		gd = devm_gpiod_get_index_optional(&pdev->dev, "amp-gain", i, GPIOD_OUT_LOW);
+		if (IS_ERR(gd)) {
+			ret = PTR_ERR(gd);
+			goto fail;
+		}
+		priv->amp_gain[i] = gd;
+		if (!gd)
+			break;
+	}
+	of_property_read_u8_array(np, "amp-gain-seq", priv->amp_gain_seq,
+			(1 << i));
+	if (!priv->amp_gain[0]) {
+		kcontrols++;
+		kcontrols_cnt--;
+	}
+	if (!priv->amp_mute)
+		kcontrols_cnt--;
+	if (kcontrols_cnt) {
+		priv->card.controls	 = kcontrols;
+		priv->card.num_controls  = kcontrols_cnt;
 	}
 
 	asrc_np = of_parse_phandle(np, "audio-asrc", 0);
@@ -1158,6 +1417,9 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 			goto asrc_fail;
 
 		snd_soc_jack_notifier_register(&priv->hp_jack.jack, &hp_jack_nb);
+		ret = device_create_file(&pdev->dev, &dev_attr_headphone);
+		if (ret)
+			dev_warn(&pdev->dev, "create hp attr failed (%d)\n", ret);
 	}
 
 	if (of_property_read_bool(np, "mic-det-gpio")) {
@@ -1167,6 +1429,9 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 			goto asrc_fail;
 
 		snd_soc_jack_notifier_register(&priv->mic_jack.jack, &mic_jack_nb);
+		ret = device_create_file(&pdev->dev, &dev_attr_micphone);
+		if (ret)
+			dev_warn(&pdev->dev, "create mic attr failed (%d)\n", ret);
 	}
 
 #ifdef CONFIG_EXTCON
@@ -1194,6 +1459,21 @@ fail:
 	return ret;
 }
 
+static int fsl_asoc_card_remove(struct platform_device *pdev)
+{
+	struct snd_soc_card *card = platform_get_drvdata(pdev);
+	struct fsl_asoc_card_priv *priv = snd_soc_card_get_drvdata(card);
+
+	if (priv->amp_mute)
+		gpiod_set_value(priv->amp_mute, 1);
+	if (priv->amp_standby)
+		gpiod_set_value(priv->amp_standby, 1);
+	device_remove_file(&pdev->dev, &dev_attr_micphone);
+	device_remove_file(&pdev->dev, &dev_attr_headphone);
+
+	return 0;
+}
+
 static const struct of_device_id fsl_asoc_card_dt_ids[] = {
 	{ .compatible = "fsl,imx-audio-ac97", },
 	{ .compatible = "fsl,imx-audio-cs42888", },
@@ -1212,6 +1492,7 @@ MODULE_DEVICE_TABLE(of, fsl_asoc_card_dt_ids);
 
 static struct platform_driver fsl_asoc_card_driver = {
 	.probe = fsl_asoc_card_probe,
+	.remove = fsl_asoc_card_remove,
 	.driver = {
 		.name = "fsl-asoc-card",
 		.pm = &snd_soc_pm_ops,
