@@ -686,6 +686,7 @@
 		amp-standby-exit-delay-ms = <100>;
 		amp-standby-gpios = GP_WM8960_AMP_STDBY;
 		audio-codec = <&wm8960>;
+		audio-cpu = <&sai1>;
 		audio-routing =
 			"Ext Spk", "HP_L",
 			"Ext Spk", "HP_R",
@@ -693,7 +694,6 @@
 			"Main MIC", "MICB";
 		codec-master;
 		compatible = "fsl,imx-audio-wm8960";
-		cpu-dai = <&sai1>;
 		model = "wm8960-audio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
