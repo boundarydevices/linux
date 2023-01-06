@@ -272,15 +272,15 @@ int mdp_vpu_process(struct mdp_vpu_dev *vpu, struct img_ipi_frameparam *param)
 	memset(vpu->work, 0, vpu->work_size);
 	memset(vpu->config, 0, vpu->config_size);
 
-	param->self_data.va = (u64)vpu->work;
+	param->self_data.va = (unsigned long)vpu->work;
 	param->self_data.pa = vpu->work_addr;
-	param->config_data.va = (u64)vpu->config;
+	param->config_data.va = (unsigned long)vpu->config;
 	param->config_data.pa = vpu->config_addr;
 	param->drv_data = (unsigned long)vpu;
 	memcpy(vpu->param, param, sizeof(*param));
 
 	addr.pa = vpu->param_addr;
-	addr.va = (u64)vpu->param;
+	addr.va = (unsigned long)vpu->param;
 	mutex_unlock(vpu->lock);
 	return mdp_vpu_sendmsg(vpu, SCP_IPI_MDP_FRAME, &addr, sizeof(addr));
 }

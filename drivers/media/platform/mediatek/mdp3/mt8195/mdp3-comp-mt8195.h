@@ -11,11 +11,11 @@
 
 /*
  * ISP-MDP generic output information
- * MD5 of the target SCP blob:
- *     6da52bdcf4bf76a0983b313e1d4745d6
+ * MD5 of the target SCP prebuild:
+ *     a49ec487e458b5971880f1b63dc2a9d5
  */
 
-#define IMG_MAX_SUBFRAMES_8195      14
+#define IMG_MAX_SUBFRAMES_8195		20
 
 struct img_comp_frame_8195 {
 	u32 output_disable;
