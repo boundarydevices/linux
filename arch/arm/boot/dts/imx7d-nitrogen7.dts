@@ -575,14 +575,12 @@
 	};
 
 	sound {
-		compatible = "fsl,imx7d-nitrogen7-wm8960",
-			   "fsl,imx-audio-wm8960";
-		model = "wm8960-audio";
-		cpu-dai = <&sai1>;
+		assigned-clocks = <&clks IMX7D_AUDIO_MCLK_ROOT_SRC>,
+				  <&clks IMX7D_AUDIO_MCLK_ROOT_CLK>;
+		assigned-clock-parents = <&clks IMX7D_PLL_AUDIO_POST_DIV>;
+		assigned-clock-rates = <0>, <12288000>;
 		audio-codec = <&codec>;
-		codec-master;
-		/* JD2: hp detect high for headphone*/
-		hp-det = <2 0>;
+		audio-cpu = <&sai1>;
 		audio-routing =
 			"Headphone Jack", "HP_L",
 			"Headphone Jack", "HP_R",
@@ -592,10 +590,11 @@
 			"Ext Spk", "SPK_RN",
 			"LINPUT1", "Main MIC",
 			"Main MIC", "MICB";
-		assigned-clocks = <&clks IMX7D_AUDIO_MCLK_ROOT_SRC>,
-				  <&clks IMX7D_AUDIO_MCLK_ROOT_CLK>;
-		assigned-clock-parents = <&clks IMX7D_PLL_AUDIO_POST_DIV>;
-		assigned-clock-rates = <0>, <12288000>;
+		codec-master;
+		compatible = "fsl,imx7d-nitrogen7-wm8960",
+			   "fsl,imx-audio-wm8960";
+		hp-det = <2 0>;
+		model = "wm8960-audio";
 	};
 
 	usdhc2_pwrseq: usdhc2-pwrseq {
@@ -895,6 +894,8 @@
 		reg = <0x1a>;
 		clocks = <&clks IMX7D_AUDIO_MCLK_ROOT_DIV>;
 		clock-names = "mclk";
+		/* JD2: hp detect high for headphone*/
+		wlf,hp-cfg = <2 0 3>;
 		wlf,shared-lrclk;
 	};
 };
