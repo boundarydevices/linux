@@ -676,11 +676,8 @@
 	};
 
 	sound-wm8960 {
-		compatible = "fsl,imx-audio-wm8960";
-		model = "wm8960-audio";
-		cpu-dai = <&sai3>;
-		codec-master;
 		audio-codec = <&wm8960>;
+		audio-cpu = <&sai3>;
 		audio-routing =
 			"Ext Spk", "SPK_LP",
 			"Ext Spk", "SPK_LN",
@@ -690,9 +687,12 @@
 			"Main MIC", "MICB",
 			"RINPUT1", "Mic Jack",
 			"Mic Jack", "MICB";
+		codec-master;
+		compatible = "fsl,imx-audio-wm8960";
 #if 0		/* Jack is not stuffed */
-		mic-det-gpios = GP_WM8960_MIC_DET;
+		mic-det-gpio = GP_WM8960_MIC_DET;
 #endif
+		model = "wm8960-audio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
