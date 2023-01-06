@@ -1060,7 +1060,7 @@
 };
 
 &sound {
-	compatible = "mediatek,mt8195_mt6359_demo";
+	compatible = "mediatek,mt8395-evk";
 	model = "mt8195_demo";
 	pinctrl-names = "default";
 	pinctrl-0 = <&aud_pins_default>;
