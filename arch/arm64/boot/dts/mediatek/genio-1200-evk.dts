@@ -708,7 +708,13 @@
 				 <PINMUX_GPIO74__FUNC_AUD_DAT_MISO1>,
 				 <PINMUX_GPIO75__FUNC_AUD_DAT_MISO2>,
 				 <PINMUX_GPIO61__FUNC_DMIC1_CLK>,
-				 <PINMUX_GPIO62__FUNC_DMIC1_DAT>;
+				 <PINMUX_GPIO62__FUNC_DMIC1_DAT>,
+				 <PINMUX_GPIO17__FUNC_DMIC4_CLK>,
+				 <PINMUX_GPIO16__FUNC_DMIC4_DAT>,
+				 <PINMUX_GPIO65__FUNC_PCM_DO>,
+				 <PINMUX_GPIO66__FUNC_PCM_CLK>,
+				 <PINMUX_GPIO67__FUNC_PCM_DI>,
+				 <PINMUX_GPIO68__FUNC_PCM_SYNC>;
 		};
 	};
 
@@ -1082,18 +1088,21 @@
 &afe {
 	#sound-dai-cells = <0>;
 	memory-region = <&snd_dma_mem_reserved>;
-	mediatek,etdm-out1-multi-pin-mode = <1>;
 	mediatek,dmic-iir-on;
+	mediatek,dmic-clk-mono;
+	mediatek,dmic-clk-index = <0 3 2 1>;
 	status = "okay";
 };
 
 &mt6359codec {
+	mediatek,mic-type-0 = <1>; /* ACC */
 	mediatek,mic-type-1 = <3>; /* DCC */
+	mediatek,mic-type-2 = <1>; /* ACC */
 };
 
 &sound {
-	compatible = "mediatek,mt8195_mt6359_demo";
-	model = "mt8195_demo";
+	compatible = "mediatek,mt8395-evk";
+	model = "mt8395-evk";
 	pinctrl-names = "default";
 	pinctrl-0 = <&aud_pins_default>;
 	status = "okay";
