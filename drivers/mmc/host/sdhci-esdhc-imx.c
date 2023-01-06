@@ -1721,7 +1721,8 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		host->mmc->caps |= MMC_CAP_1_8V_DDR | MMC_CAP_3_3V_DDR;
 
 		/* GPIO CD can be set as a wakeup source */
-		host->mmc->caps |= MMC_CAP_CD_WAKE;
+		if (device_property_read_bool(&pdev->dev, "cd-wakeup-source"))
+			host->mmc->caps |= MMC_CAP_CD_WAKE;
 
 		if (!(imx_data->socdata->flags & ESDHC_FLAG_HS200))
 			host->quirks2 |= SDHCI_QUIRK2_BROKEN_HS200;
