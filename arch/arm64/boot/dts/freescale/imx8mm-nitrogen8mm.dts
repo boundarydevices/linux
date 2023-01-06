@@ -72,6 +72,7 @@
 
 	sound-wm8960 {
 		audio-codec = <&wm8960>;
+		audio-cpu = <&sai1>;
 		audio-routing =
 			"Headphone Jack", "HP_L",
 			"Headphone Jack", "HP_R",
@@ -85,12 +86,9 @@
 			"Mic Jack", "MICB";
 		codec-master;
 		compatible = "fsl,imx-audio-wm8960";
-		cpu-dai = <&sai1>;
-		/* JD2: hp detect high for headphone*/
 		hp-det = <2 0>;
-		hp-det-gpios = GP_WM8960_HP_DET;
-		/* Jack is not stuffed */
-		mic-det-gpios = GP_WM8960_MIC_DET;
+		hp-det-gpio = GP_WM8960_HP_DET;
+		mic-det-gpio = GP_WM8960_MIC_DET;
 		model = "wm8960-audio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
@@ -131,6 +129,8 @@
 		reg = <0x1a>;
 		clocks = <&clk IMX8MMN(CLK_SAI1_ROOT)>;
 		clock-names = "mclk";
+		/* JD2: hp detect high for headphone*/
+		wlf,hp-cfg = <2 0 3>;
 		wlf,shared-lrclk;
 	};
 };
