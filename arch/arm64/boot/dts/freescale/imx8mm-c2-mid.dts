@@ -1077,10 +1077,11 @@
 
 &i2c4a {
 	wm8960: codec@1a {
+		clock-names = "mclk";
+		clocks = <&clk IMX8MMN(CLK_SAI1_ROOT)>;
 		compatible = "wlf,wm8960";
 		reg = <0x1a>;
-		clocks = <&clk IMX8MMN(CLK_SAI1_ROOT)>;
-		clock-names = "mclk";
+		wlf,gpio-cfg = <1 3>;
 		wlf,shared-lrclk;
 	};
 };
