@@ -971,14 +971,15 @@
 
 &i2c1a {
 	wm8960: wm8960@1a {
-		compatible = "wlf,wm8960";
 		assigned-clocks =        <&clks IMX6QDL_CLK_CKO>;
 		assigned-clock-parents = <&clks IMX6QDL_CLK_CKO2>;
 		clock-names = "mclk";
 		clocks = <&clks IMX6QDL_CLK_CKO>;
+		compatible = "wlf,wm8960";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_i2c1a_wm8960>;
 		reg = <0x1a>;
+		wlf,gpio-cfg = <1 3>;
 		/* JD2: hp detect high for headphone*/
 		wlf,hp-cfg = <2 0 3>;
 		wlf,shared-lrclk;
