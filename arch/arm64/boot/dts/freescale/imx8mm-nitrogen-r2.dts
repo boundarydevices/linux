@@ -247,6 +247,7 @@
 		reg = <0x1a>;
 		clocks = <&clk IMX8MM_CLK_SAI1_ROOT>;
 		clock-names = "mclk1";
+		wlf,gpio-cfg = <1 3>;
 		/* JD2: hp detect high for headphone*/
 		wlf,hp-cfg = <2 0 3>;
 		wlf,shared-lrclk;
