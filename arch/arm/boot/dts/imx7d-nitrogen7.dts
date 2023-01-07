@@ -890,10 +890,11 @@
 	status = "okay";
 
 	codec: wm8960@1a {
+		clock-names = "mclk";
+		clocks = <&clks IMX7D_AUDIO_MCLK_ROOT_DIV>;
 		compatible = "wlf,wm8960";
 		reg = <0x1a>;
-		clocks = <&clks IMX7D_AUDIO_MCLK_ROOT_DIV>;
-		clock-names = "mclk";
+		wlf,gpio-cfg = <1 3>;
 		/* JD2: hp detect high for headphone*/
 		wlf,hp-cfg = <2 0 3>;
 		wlf,shared-lrclk;
