@@ -2394,8 +2394,6 @@
 			status = "disabled";
 			compatible = "mediatek,mt8195-edp-tx";
 			reg = <0 0x1c500000 0 0x8000>;
-			clocks = <&topckgen CLK_TOP_EDP>;
-			clock-names = "faxi";
 			nvmem-cells = <&dp_calibration>;
 			nvmem-cell-names = "dp_calibration_data";
 			power-domains = <&spm MT8188_POWER_DOMAIN_EDP_TX>;
