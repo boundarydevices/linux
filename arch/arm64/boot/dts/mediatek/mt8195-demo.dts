@@ -256,6 +256,14 @@
 		compatible = "mtk-fsource";
 		vfsource-supply = <&mt6359_vefuse_ldo_reg>;
 	};
+
+	usb_p2_vbus: usb-p2-vbus {
+		compatible = "regulator-fixed";
+		regulator-name = "p2_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+	};
 };
 
 &uart0 {
@@ -437,6 +445,20 @@
 		ssusb_ep: endpoint {
 			remote-endpoint = <&mt6360_ssusb_ep>;
 		};
+	};
+};
+
+&ssusb1 {
+	maximum-speed = "high-speed";
+	usb-role-switch;
+	dr_mode = "host";
+	vusb33-supply = <&mt6359_vusb_ldo_reg>;
+	status = "okay";
+
+	connector {
+		compatible = "gpio-usb-b-connector", "usb-b-connector";
+		type = "micro";
+		vbus-supply = <&usb_p2_vbus>;
 	};
 };
 
