@@ -4,7 +4,7 @@
  * Author: Seiya Wang <seiya.wang@mediatek.com>
  */
 /dts-v1/;
-#include "mt8195.dtsi"
+#include "mt8195-laptop-usb.dtsi"
 
 / {
 	model = "MediaTek MT8195 evaluation board";

@@ -1300,42 +1300,6 @@
 			status = "disabled";
 		};
 
-		ssusb: ssusb@11200000 {
-			compatible ="mediatek,mt8183-mtu3", "mediatek,mtu3";
-			reg = <0 0x11201000 0 0x2dff>,
-			      <0 0x11203e00 0 0x0100>;
-			reg-names = "mac", "ippc";
-			interrupts = <GIC_SPI 128 IRQ_TYPE_LEVEL_HIGH 0>;
-			phys = <&u2port0 PHY_TYPE_USB2>,
-			       <&u3port0 PHY_TYPE_USB3>;
-			clocks = <&infracfg_ao CLK_INFRA_AO_SSUSB>,
-				 <&topckgen CLK_TOP_SSUSB_REF>,
-				 <&infracfg_ao CLK_INFRA_AO_SSUSB_XHCI>;
-			clock-names = "sys_ck", "ref_ck", "mcu_ck";
-			#address-cells = <2>;
-			#size-cells = <2>;
-			ranges;
-			status = "disabled";
-
-			xhci0: xhci@11200000 {
-				compatible = "mediatek,mt8195-xhci",
-					     "mediatek,mtk-xhci";
-				reg = <0 0x11200000 0 0x1000>;
-				reg-names = "mac";
-				interrupts = <GIC_SPI 129 IRQ_TYPE_LEVEL_HIGH 0>;
-				assigned-clocks = <&topckgen CLK_TOP_USB_TOP>,
-						  <&topckgen CLK_TOP_SSUSB_XHCI>;
-				assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D5_D4>,
-							 <&topckgen CLK_TOP_UNIVPLL_D5_D4>;
-				clocks = <&infracfg_ao CLK_INFRA_AO_SSUSB>,
-					 <&infracfg_ao CLK_INFRA_AO_SSUSB_XHCI>,
-					 <&topckgen CLK_TOP_SSUSB_REF>,
-					 <&apmixedsys CLK_APMIXED_USB1PLL>;
-				clock-names = "sys_ck", "xhci_ck", "ref_ck", "mcu_ck";
-				status = "disabled";
-			};
-		};
-
 		eth: ethernet@11021000 {
 			compatible = "mediatek,mt8195-gmac", "snps,dwmac-5.10a";
 			reg = <0 0x11021000 0 0x4000>;
@@ -1468,67 +1432,6 @@
 			freq-table-hz = <0 0>, <0 0>, <0 0>,
 					<0 0>, <0 0>, <0 0>,
 					<0 0>, <0 0>;
-			status = "disabled";
-		};
-
-		xhci1: xhci1@11290000 {
-			compatible = "mediatek,mt8195-xhci",
-				     "mediatek,mtk-xhci";
-			reg = <0 0x11290000 0 0x1000>,
-			      <0 0x11293e00 0 0x0100>;
-			reg-names = "mac", "ippc";
-			interrupts = <GIC_SPI 530 IRQ_TYPE_LEVEL_HIGH 0>;
-			phys = <&u2port1 PHY_TYPE_USB2>;
-			assigned-clocks = <&topckgen CLK_TOP_USB_TOP_1P>,
-					  <&topckgen CLK_TOP_SSUSB_XHCI_1P>;
-			assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D5_D4>,
-						 <&topckgen CLK_TOP_UNIVPLL_D5_D4>;
-			clocks = <&pericfg_ao CLK_PERI_AO_SSUSB_1P_BUS>,
-				 <&pericfg_ao CLK_PERI_AO_SSUSB_1P_XHCI>,
-				 <&topckgen CLK_TOP_SSUSB_P1_REF>,
-				 <&apmixedsys CLK_APMIXED_USB1PLL>;
-			clock-names = "sys_ck", "xhci_ck", "ref_ck", "mcu_ck";
-			status = "disabled";
-		};
-
-		xhci2: xhci2@112a0000 {
-			compatible = "mediatek,mt8195-xhci",
-				     "mediatek,mtk-xhci";
-			reg = <0 0x112a0000 0 0x1000>,
-			      <0 0x112a3e00 0 0x0100>;
-			reg-names = "mac", "ippc";
-			interrupts = <GIC_SPI 533 IRQ_TYPE_LEVEL_HIGH 0>;
-			phys = <&u2port2 PHY_TYPE_USB2>;
-			assigned-clocks = <&topckgen CLK_TOP_USB_TOP_2P>,
-					  <&topckgen CLK_TOP_SSUSB_XHCI_2P>;
-			assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D5_D4>,
-						 <&topckgen CLK_TOP_UNIVPLL_D5_D4>;
-			clocks = <&pericfg_ao CLK_PERI_AO_SSUSB_2P_BUS>,
-				 <&pericfg_ao CLK_PERI_AO_SSUSB_2P_XHCI>,
-				 <&topckgen CLK_TOP_SSUSB_P2_REF>;
-			clock-names = "sys_ck", "xhci_ck", "ref_ck";
-			status = "disabled";
-		};
-
-		xhci3: xhci3@112b0000 {
-			compatible = "mediatek,mt8195-xhci",
-				     "mediatek,mtk-xhci";
-			reg = <0 0x112b0000 0 0x1000>,
-			      <0 0x112b3e00 0 0x0100>;
-			reg-names = "mac", "ippc";
-			interrupts = <GIC_SPI 536 IRQ_TYPE_LEVEL_HIGH 0>;
-			phys = <&u2port3 PHY_TYPE_USB2>;
-			assigned-clocks = <&topckgen CLK_TOP_USB_TOP_3P>,
-					  <&topckgen CLK_TOP_SSUSB_XHCI_3P>;
-			assigned-clock-parents = <&topckgen CLK_TOP_UNIVPLL_D5_D4>,
-						 <&topckgen CLK_TOP_UNIVPLL_D5_D4>;
-			clocks = <&pericfg_ao CLK_PERI_AO_SSUSB_3P_BUS>,
-				 <&pericfg_ao CLK_PERI_AO_SSUSB_3P_XHCI>,
-				 <&topckgen CLK_TOP_SSUSB_P3_REF>;
-			clock-names = "sys_ck", "xhci_ck", "ref_ck";
-			mediatek,syscon-wakeup = <&pericfg 0x400 106>;
-			wakeup-source;
-			usb2-lpm-disable;
 			status = "disabled";
 		};
 
