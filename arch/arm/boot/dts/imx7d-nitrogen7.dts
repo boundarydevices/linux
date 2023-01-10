@@ -457,6 +457,7 @@
 	compatible = "boundary,imx7d-nitrogen7", "fsl,imx7d";
 
 	aliases {
+		backlight_lcd = &backlight_lcd;
 		fb_lcd = &lcdif;
 		lcd = &display0;
 		mmc0 = &usdhc1;
