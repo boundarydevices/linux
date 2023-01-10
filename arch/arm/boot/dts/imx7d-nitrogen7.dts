@@ -265,8 +265,8 @@
 
 	pinctrl_usbotg1_2: usbotg1_2grp {
 		fsl,pins = <
-			/* OTG1_ID routed both to OTG1_ID and SD2_WP, disable SD2_WP */
-			MX7D_PAD_SD2_WP__GPIO5_IO10		0x04
+			/* OTG1_ID routed both to OTG1_ID and SD2_WP */
+			MX7D_PAD_SD2_WP__USB_OTG1_ID		0x78
 		>;
 	};
 
@@ -1032,6 +1032,7 @@
 };
 
 &usbotg1 {
+	otg-id-select;
 	vbus-supply = <&reg_usb_otg1_vbus>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg1>, <&pinctrl_usbotg1_2>;
