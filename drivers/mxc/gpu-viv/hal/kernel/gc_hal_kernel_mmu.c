@@ -3703,6 +3703,7 @@ gckMMU_FillFlatMapping(IN gckMMU Mmu, IN gctUINT64 PhysBase,
             break;
         }
     /* FALLTHRU */
+        fallthrough;
     case gcvPAGE_TYPE_1M:
         gcmkONERROR(gckMMU_FillFlatMappingWithPage1M(Mmu, PhysBase, flatSize, Reserved,
                                                      needShiftMapping, specificFlatMapping,
