@@ -1301,9 +1301,6 @@ static int brcmf_chip_setup(struct brcmf_chip_priv *chip)
 	u32 val;
 	int ret = 0;
 
-	if (chip->pub.ccsec)
-		return 0;
-
 	pub = &chip->pub;
 	cc = list_first_entry(&chip->cores, struct brcmf_core_priv, list);
 	base = cc->pub.base;
