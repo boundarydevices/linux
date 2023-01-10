@@ -177,6 +177,8 @@ static struct imx_usbmisc_data *usbmisc_get_init_data(struct device *dev)
 	} else {
 		dev_warn(dev, "No over current polarity defined\n");
 	}
+	if (of_find_property(np, "otg-id-select", NULL))
+		data->otg_id_select = 1;
 
 	data->pwr_pol = of_property_read_bool(np, "power-active-high");
 	data->evdo = of_property_read_bool(np, "external-vbus-divider");
