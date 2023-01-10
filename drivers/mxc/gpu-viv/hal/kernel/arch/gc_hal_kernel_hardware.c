@@ -5695,6 +5695,7 @@ _PmSetPowerOnDirection(IN gckHARDWARE Hardware,
 
         requireInit = gcvTRUE;
         /* FALLTHRU */
+        fallthrough;
 
     case gcvPOWER_SUSPEND:
         /* Clock on. */
@@ -5771,6 +5772,7 @@ _PmSetPowerOffDirection(IN gckHARDWARE Hardware,
             break;
         }
         /* FALLTHRU */
+        fallthrough;
 
     case gcvPOWER_IDLE:
         /* Stop. */
@@ -5790,6 +5792,7 @@ _PmSetPowerOffDirection(IN gckHARDWARE Hardware,
         }
 
         /* FALLTHRU */
+        fallthrough;
 
     case gcvPOWER_SUSPEND:
         if (Hardware->kernel->threadInitialized == gcvTRUE) {
@@ -5968,6 +5971,7 @@ _QchannelPowerOnDirection(IN gckHARDWARE Hardware, IN gceCHIPPOWERSTATE State)
 
         requireInit = gcvTRUE;
         /* FALLTHRU */
+        fallthrough;
 
     case gcvPOWER_SUSPEND:
         /* Power on, clock on. */
@@ -6041,6 +6045,7 @@ _QchannelPowerOffDirection(IN gckHARDWARE Hardware,
             break;
         }
         /* FALLTHRU */
+        fallthrough;
 
     case gcvPOWER_IDLE:
         /* Stop. */
@@ -6056,6 +6061,7 @@ _QchannelPowerOffDirection(IN gckHARDWARE Hardware,
         }
 
         /* FALLTHRU */
+        fallthrough;
 
     case gcvPOWER_SUSPEND:
         if (Hardware->kernel->threadInitialized == gcvTRUE) {
@@ -6150,6 +6156,8 @@ gckHARDWARE_SetPowerState(IN gckHARDWARE Hardware,
     case gcvPOWER_SUSPEND_TIMEOUT:
         timeout = gcvTRUE;
         /* FALLTHRU */
+        fallthrough;
+
     case gcvPOWER_OFF_BROADCAST:
     case gcvPOWER_IDLE_BROADCAST:
     case gcvPOWER_SUSPEND_BROADCAST:
