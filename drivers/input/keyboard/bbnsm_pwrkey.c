@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 //
-// Copyright 2022 NXP.
+// Copyright 2022-2023 NXP.
 
 #include <linux/device.h>
 #include <linux/err.h>
@@ -39,6 +39,7 @@ struct bbnsm_pwrkey {
 	int keycode;
 	int keystate;  /* 1:pressed */
 	int wakeup;
+	bool suspended;
 	struct timer_list check_timer;
 	struct input_dev *input;
 };
@@ -82,6 +83,16 @@ static irqreturn_t bbnsm_pwrkey_interrupt(int irq, void *dev_id)
 		return IRQ_NONE;
 
 	pm_wakeup_event(input->dev.parent, 0);
+
+	/*
+	 * Directly report key event after resume to make no key press
+	 * event is missed.
+	 */
+	if (bbnsm->suspended) {
+		bbnsm->keystate = 1;
+		input_event(input, EV_KEY, bbnsm->keycode, 1);
+		input_sync(input);
+	}
 
 	/* clear PWR OFF */
 	regmap_write(bbnsm->regmap, BBNSM_EVENTS, BBNSM_BTN_OFF);
@@ -179,6 +190,29 @@ error_probe:
 	return error;
 }
 
+static int __maybe_unused bbnsm_pwrkey_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct bbnsm_pwrkey *bbnsm = platform_get_drvdata(pdev);
+
+	bbnsm->suspended = true;
+
+	return 0;
+}
+
+static int __maybe_unused bbnsm_pwrkey_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct bbnsm_pwrkey *bbnsm = platform_get_drvdata(pdev);
+
+	bbnsm->suspended = false;
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(bbnsm_pwrkey_pm_ops, bbnsm_pwrkey_suspend,
+		bbnsm_pwrkey_resume);
+
 static const struct of_device_id bbnsm_pwrkey_ids[] = {
 	{ .compatible = "nxp,bbnsm-pwrkey" },
 	{ /* sentinel */ }
@@ -188,6 +222,7 @@ MODULE_DEVICE_TABLE(of, bbnsm_pwrkey_ids);
 static struct platform_driver bbnsm_pwrkey_driver = {
 	.driver = {
 		.name = "bbnsm_pwrkey",
+		.pm = &bbnsm_pwrkey_pm_ops,
 		.of_match_table = bbnsm_pwrkey_ids,
 	},
 	.probe = bbnsm_pwrkey_probe,
