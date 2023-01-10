@@ -113,6 +113,7 @@
 #define MX7D_USBNC_USB_CTRL2_DM_OVERRIDE_EN		BIT(15)
 #define MX7D_USBNC_USB_CTRL2_DP_DM_MASK			(BIT(12) | BIT(13) | \
 							BIT(14) | BIT(15))
+#define MX7D_USBNC_USB_CTRL2_ID_SELECT		BIT(20)
 
 #define MX7D_USB_OTG_PHY_CFG2_CHRG_CHRGSEL	BIT(0)
 #define MX7D_USB_OTG_PHY_CFG2_CHRG_VDATDETENB0	BIT(1)
@@ -679,9 +680,11 @@ static int usbmisc_imx7d_init(struct imx_usbmisc_data *data)
 	if (!data->hsic) {
 		reg = readl(usbmisc->base + MX7D_USBNC_USB_CTRL2);
 		reg &= ~MX7D_USB_VBUS_WAKEUP_SOURCE_MASK;
-		writel(reg | MX7D_USB_VBUS_WAKEUP_SOURCE_BVALID
-			| MX7D_USBNC_AUTO_RESUME,
-			usbmisc->base + MX7D_USBNC_USB_CTRL2);
+		reg |= MX7D_USB_VBUS_WAKEUP_SOURCE_BVALID |
+				MX7D_USBNC_AUTO_RESUME;
+		if (data->otg_id_select)
+			reg |= MX7D_USBNC_USB_CTRL2_ID_SELECT;
+		writel(reg, usbmisc->base + MX7D_USBNC_USB_CTRL2);
 		/* PHY tuning for signal quality */
 		reg = readl(usbmisc->base + MX7D_USB_OTG_PHY_CFG1);
 		if (data->emp_curr_control && data->emp_curr_control <=
