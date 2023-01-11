@@ -3635,8 +3635,9 @@
 			reg = <0 0x1c110000 0 0x1000>;
 			interrupts = <GIC_SPI 507 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&vdosys1 CLK_VDO1_VPP_MERGE4>,
-				 <&vdosys1 CLK_VDO1_MERGE4_DL_ASYNC>;
-			clock-names = "merge","merge_async";
+				 <&vdosys1 CLK_VDO1_MERGE4_DL_ASYNC>,
+				 <&vdosys0 CLK_VDO0_DL_ASYNC2>;
+			clock-names = "merge","merge_async","merge_async2";
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c11XXXX 0x0000 0x1000>;
 			mediatek,merge-fifo-en = <1>;
