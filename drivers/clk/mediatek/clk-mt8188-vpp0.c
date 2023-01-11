@@ -133,26 +133,11 @@ static int clk_mt8188_vpp0_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct mtk_clk_desc vpp0_desc = {
-	.clks = vpp0_clks,
-	.num_clks = ARRAY_SIZE(vpp0_clks),
-};
-
-static const struct of_device_id of_match_clk_mt8188_vpp0[] = {
-	{
-		.compatible = "mediatek,mt8188-vppsys0",
-		.data = &vpp0_desc,
-	}, {
-		/* sentinel */
-	}
-};
-
 static struct platform_driver clk_mt8188_vpp0_drv = {
-	.probe = mtk_clk_simple_probe,
-	.remove = mtk_clk_simple_remove,
+	.probe = clk_mt8188_vpp0_probe,
+	.remove = clk_mt8188_vpp0_remove,
 	.driver = {
 		.name = "clk-mt8188-vpp0",
-		.of_match_table = of_match_clk_mt8188_vpp0,
 	},
 };
 builtin_platform_driver(clk_mt8188_vpp0_drv);
