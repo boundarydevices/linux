@@ -306,9 +306,14 @@ static const unsigned int mt8195_mtk_ddp_ext_routes_1[] = {
 	DDP_COMPONENT_DPI1
 };
 
+static const unsigned int mt8195_mtk_ddp_ext_routes_2[] = {
+	DDP_COMPONENT_DP_INTF0
+};
+
 static const struct mtk_drm_route mt8195_mtk_ddp_ext_routes[] = {
 	{1, 1, ARRAY_SIZE(mt8195_mtk_ddp_ext_routes_0), mt8195_mtk_ddp_ext_routes_0},
-	{1, 1, ARRAY_SIZE(mt8195_mtk_ddp_ext_routes_1), mt8195_mtk_ddp_ext_routes_1}
+	{1, 1, ARRAY_SIZE(mt8195_mtk_ddp_ext_routes_1), mt8195_mtk_ddp_ext_routes_1},
+	{1, 0, ARRAY_SIZE(mt8195_mtk_ddp_ext_routes_1), mt8195_mtk_ddp_ext_routes_2}
 };
 
 static const struct mtk_mmsys_driver_data mt2701_mmsys_driver_data = {
