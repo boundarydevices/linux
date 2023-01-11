@@ -964,4 +964,33 @@
 #define CMDQ_SYNC_TOKEN_DISP_VA_START			1012
 #define CMDQ_SYNC_TOKEN_DISP_VA_END			1013
 
+/* GCE General Purpose Register (GPR) support
+ * Leave note for scenario usage here
+ */
+/* GCE: write mask */
+#define GCE_GPR_R00		0x00
+#define GCE_GPR_R01		0x01
+/* MDP: P1: JPEG dest */
+#define GCE_GPR_R02		0x02
+#define GCE_GPR_R03		0x03
+/* MDP: PQ color */
+#define GCE_GPR_R04		0x04
+/* MDP:2D sharpness */
+#define GCE_GPR_R05		0x05
+/* DISP: poll esd */
+#define GCE_GPR_R06		0x06
+#define GCE_GPR_R07		0x07
+/* MDP: P4: 2D sharpness dst */
+#define GCE_GPR_R08		0x08
+#define GCE_GPR_R09		0x09
+/* VCU: poll with timeout for GPR timer */
+#define GCE_GPR_R10		0x0A
+#define GCE_GPR_R11		0x0B
+/* CMDQ: debug */
+#define GCE_GPR_R12		0x0C
+#define GCE_GPR_R13		0x0D
+/* CMDQ: P7: debug */
+#define GCE_GPR_R14		0x0E
+#define GCE_GPR_R15		0x0F
+
 #endif
