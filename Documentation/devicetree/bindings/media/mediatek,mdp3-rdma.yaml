@@ -22,6 +22,7 @@ properties:
   compatible:
     enum:
       - mediatek,mt8183-mdp3-rdma
+      - mediatek,mt8188-mdp3-rdma
       - mediatek,mt8195-mdp3-rdma
 
   reg:
