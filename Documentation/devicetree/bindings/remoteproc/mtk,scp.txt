@@ -5,7 +5,9 @@ This binding provides support for ARM Cortex M4 Co-processor found on some
 Mediatek SoCs.
 
 Required properties:
-- compatible		Should be "mediatek,mt8183-scp"
+- compatible:		Should be one of the following,
+			"mediatek,mt8183-scp" for MT8183 SoCs
+			"mediatek,mt8188-scp" for MT8188 and MT8390 SoCs
 - reg			Should contain the address ranges for memory regions:
 			SRAM, CFG, and L1TCM.
 - reg-names		Contains the corresponding names for the memory regions:
