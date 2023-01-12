@@ -8,7 +8,7 @@
 #define IMX8MMN(a)	IMX8MN_##a
 #define IMX8MN_CLK_LCDIF_PIXEL IMX8MN_CLK_DISP_PIXEL_ROOT
 #include "imx8mn.dtsi"
-#include "imx8mmn-nitrogen8mm.dtsi"
+#include "imx8mmn-nitrogen8mm_rev2.dtsi"
 
 / {
 	model = "Boundary Devices i.MX8M Nano Nitrogen8MN";
@@ -27,10 +27,14 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	status = "okay";
+	/delete-node/ port;
+	/delete-node/ port@0;
+
 	port@0 {
 		reg = <0>;
-		csi1_ep: endpoint {
-			remote-endpoint = <&csi1_mipi_ep>;
+
+		mipi1_ov5640_ep: endpoint {
+			remote-endpoint = <&ov5640_mipi1_ep>;
 			data-lanes = <2>;
 			csis-hs-settle = <13>;
 			csis-clk-settle = <2>;
