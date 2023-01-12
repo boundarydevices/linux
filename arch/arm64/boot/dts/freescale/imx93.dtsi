@@ -487,7 +487,7 @@
 					     <GIC_SPI 201 IRQ_TYPE_LEVEL_HIGH>,
 					     <GIC_SPI 200 IRQ_TYPE_LEVEL_HIGH>,
 					     <GIC_SPI 199 IRQ_TYPE_LEVEL_HIGH>;
-				clocks = <&clk IMX93_CLK_BUS_AON>,
+				clocks = <&clk IMX93_CLK_PDM_IPG>,
 					 <&clk IMX93_CLK_PDM_GATE>,
 					 <&clk IMX93_CLK_AUDIO_PLL>,
 					 <&clk IMX93_CLK_DUMMY>;
