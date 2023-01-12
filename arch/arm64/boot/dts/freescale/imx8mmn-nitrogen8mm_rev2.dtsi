@@ -573,13 +573,6 @@
 			MX8MMN(IOMUXC_GPIO1_IO02_WDOG1_WDOG_B, 0x140)
 		>;
 	};
-
-	pinctrl_wdog_gpio: wdog-gpiogrp {
-		fsl,pins = <
-#define GP_WDOG_RESET	<&gpio1 2 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO02_GPIO1_IO2, 0x140)
-		>;
-	};
 };
 
 #ifndef SKIP_MIPI_PANELS
@@ -597,8 +590,8 @@
 #endif
 
 / {
-	model = "Boundary Devices i.MX8MMini Nitrogen8MM";
-	compatible = "boundary,imx8mm-nitrogen8mm", "fsl,imx8mm";
+	model = "Boundary Devices i.MX8MMini Nitrogen8MM Rev2";
+	compatible = "boundary,imx8mm-nitrogen8mm_rev2", "fsl,imx8mm";
 
 	aliases {
 		a53 = &A53_0;
@@ -713,7 +706,7 @@
 };
 
 &A53_0 {
-	cpu-supply = <&reg_buck4>;
+	cpu-supply = <&reg_buck3>;
 };
 
 &ecspi2 {
@@ -846,13 +839,11 @@
 			};
 
 			reg_buck4: buck4 {
-				alias = <&reg_buck4>;
 				regulator-always-on;
 				regulator-boot-on;
 				regulator-max-microvolt = <1800000>;
 				regulator-min-microvolt =  <400000>;
 				fast-slew = <1>;
-				dual-phase;
 			};
 
 			reg_buck5: buck5 {
@@ -1458,10 +1449,8 @@
 };
 
 &wdog1 {
-	pinctrl-names = "default", "gpio";
+	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_wdog>;
-	pinctrl-1 = <&pinctrl_wdog_gpio>;
-	reset-gpios = GP_WDOG_RESET;
 	fsl,ext-reset-output;
 	status = "okay";
 };
