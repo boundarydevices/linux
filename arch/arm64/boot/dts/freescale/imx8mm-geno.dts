@@ -7,7 +7,7 @@
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
 #include "imx8mm.dtsi"
-#include "imx8mmn-nitrogen8mm.dtsi"
+#include "imx8mmn-nitrogen8mm_rev2.dtsi"
 
 &iomuxc {
 	/delete-node/ mipi-er-tft050grp;
@@ -141,10 +141,6 @@
 	};
 };
 
-&A53_0 {
-	cpu-supply = <&reg_buck3>;
-};
-
 &csi1_bridge {
 	fsl,mipi-mode;
 	status = "okay";
@@ -253,10 +249,6 @@
 	status = "okay";
 };
 
-&reg_buck4 {
-	/delete-property/ dual-phase;
-};
-
 &sai1 {
 	assigned-clocks = <&clk IMX8MMN(AUDIO_PLL1)>, <&clk IMX8MMN(AUDIO_PLL2)>, <&clk IMX8MMN(CLK_SAI1)>;
 	assigned-clock-parents = <0>, <0>, <&clk IMX8MMN(AUDIO_PLL1_OUT)>;
@@ -290,9 +282,4 @@
 &vpumix_pd {
 	dvfs-supply = <&reg_buck5>;
 	idle-microvolt = <850000 805000 900000>;
-};
-
-&wdog1 {
-	/delete-property/ reset-gpios;
-	/delete-property/ pinctrl-1;
 };
