@@ -4,7 +4,7 @@
  */
 
 #define TOUCHSCREEN_I2C_BUS	i2c4
-#include "imx8mm-nitrogen8mm.dts"
+#include "imx8mm-nitrogen8mm_rev2.dts"
 
 #ifndef SKIP_MIPI_PANELS
 #include "panel-dmt055fhnmcmi.dtsi"
@@ -139,6 +139,13 @@
 			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x140)
 		>;
 	};
+
+	pinctrl_wdog_gpio: wdog-gpiogrp {
+		fsl,pins = <
+#define GP_WDOG_RESET	<&gpio1 2 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO02_GPIO1_IO2, 0x140)
+		>;
+	};
 };
 
 / {
@@ -161,10 +168,6 @@
 		clock-output-names = "mipi_pwm4";
 		pwms = <&pwm4 0 50>; /* 20 MHz */
 	};
-};
-
-&A53_0 {
-	cpu-supply = <&reg_buck3>;
 };
 
 &ecspi2 {
@@ -242,7 +245,7 @@
 #endif
 
 &reg_buck4 {
-	/delete-property/ dual-phase;
+	alias = <&reg_buck4>;
 };
 
 #ifndef SKIP_MIPI_PANELS
@@ -256,6 +259,11 @@
 };
 
 &wdog1 {
-	/delete-property/ reset-gpios;
-	/delete-property/ pinctrl-1;
+	/*
+	 * a very few boards need gpio mode, done by cmd_board
+	 * fdt get value gp gpio0 phandle;
+	 * fdt set wdog0 reset-gpios <${gp} 2 1>
+	 */
+	pinctrl-names = "default", "gpio";
+	pinctrl-1 = <&pinctrl_wdog_gpio>;
 };
