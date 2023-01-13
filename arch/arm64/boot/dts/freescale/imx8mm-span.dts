@@ -26,7 +26,6 @@
 	/delete-node/ sai3grp;
 	/delete-node/ sai5grp;
 	/delete-node/ sound-wm8960grp;
-	/delete-node/ wdog-gpiogrp;
 
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
