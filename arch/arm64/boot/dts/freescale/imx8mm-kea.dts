@@ -1015,7 +1015,6 @@
 
 			reg_buck4: buck4 {
 				/* AUX_0P8V, unused */
-				alias = <&reg_buck4>;
 				regulator-max-microvolt = <1800000>;
 				regulator-min-microvolt =  <400000>;
 				fast-slew = <1>;
