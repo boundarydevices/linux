@@ -611,7 +611,6 @@
 			};
 
 			reg_buck4: buck4 {
-				alias = <&reg_buck4>;
 				regulator-always-on;
 				regulator-boot-on;
 				regulator-max-microvolt = <1800000>;
