@@ -1862,8 +1862,7 @@
 		};
 
 		vppsys0: syscon@14000000 {
-			compatible = "mediatek,mt8195-vppsys0",
-				     "mediatek,mt8195-mmsys", "syscon";
+			compatible = "mediatek,mt8195-vppsys0", "syscon";
 			reg = <0 0x14000000 0 0x1000>;
 			#clock-cells = <1>;
 		};
@@ -2401,8 +2400,7 @@
 		};
 
 		vppsys1: syscon@14f00000 {
-			compatible = "mediatek,mt8195-vppsys1",
-				     "mediatek,mt8195-mmsys", "syscon";
+			compatible = "mediatek,mt8195-vppsys1", "syscon";
 			reg = <0 0x14f00000 0 0x1000>;
 			#clock-cells = <1>;
 		};
