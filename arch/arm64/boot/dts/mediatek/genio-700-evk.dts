@@ -818,6 +818,19 @@
 			output-high;
 		};
 	};
+
+	touch_pins: touchdefault {
+		touch_pin_irq: pin-irq {
+			pinmux = <PINMUX_GPIO6__FUNC_B_GPIO6>;
+			input-enable;
+			bias-disable;
+		};
+
+		touch_pin_reset: pin-reset {
+			pinmux = <PINMUX_GPIO5__FUNC_B_GPIO5>;
+			output-high;
+		};
+	};
 };
 
 &i2c0 {
@@ -834,6 +847,8 @@
 		reset-gpios = <&pio 5 GPIO_ACTIVE_HIGH>;
 		AVDD28-supply = <&lcm1_tp_avdd>;
 		VDDIO-supply = <&mt6359_vio18_ldo_reg>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&touch_pins>;
 	};
 };
 
