@@ -23,7 +23,7 @@ int set_card_codec_info(struct snd_soc_card *card)
 	int ret, i;
 
 	/* Loop over all the dai link sub nodes*/
-	for_each_child_of_node(dev->of_node, dl_node) {
+	for_each_available_child_of_node(dev->of_node, dl_node) {
 		if (of_property_read_string(dl_node, "dai-link-name",
 					    &dai_link_name))
 			return -EINVAL;
