@@ -18,6 +18,11 @@
 #include "mt8188-afe-clk.h"
 #include "mt8188-afe-common.h"
 
+struct mt8188_mt6359_priv {
+	struct snd_soc_jack dp_jack;
+	struct snd_soc_jack hdmi_jack;
+};
+
 static const struct snd_soc_dapm_widget
 	mt8188_mt6359_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone", NULL),
@@ -232,6 +237,36 @@ static int mt8188_dptx_hw_params(struct snd_pcm_substream *substream,
 static const struct snd_soc_ops mt8188_dptx_ops = {
 	.hw_params = mt8188_dptx_hw_params,
 };
+
+static int mt8188_dptx_codec_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct mt8188_mt6359_priv *priv = snd_soc_card_get_drvdata(rtd->card);
+	struct snd_soc_component *cmpnt_codec =
+		asoc_rtd_to_codec(rtd, 0)->component;
+	int ret;
+
+	ret = snd_soc_card_jack_new(rtd->card, "DP Jack", SND_JACK_LINEOUT,
+				    &priv->dp_jack, NULL, 0);
+	if (ret)
+		return ret;
+
+	return snd_soc_component_set_jack(cmpnt_codec, &priv->dp_jack, NULL);
+}
+
+static int mt8188_hdmi_codec_init(struct snd_soc_pcm_runtime *rtd)
+{
+	struct mt8188_mt6359_priv *priv = snd_soc_card_get_drvdata(rtd->card);
+	struct snd_soc_component *cmpnt_codec =
+		asoc_rtd_to_codec(rtd, 0)->component;
+	int ret;
+
+	ret = snd_soc_card_jack_new(rtd->card, "HDMI Jack", SND_JACK_LINEOUT,
+				    &priv->hdmi_jack, NULL, 0);
+	if (ret)
+		return ret;
+
+	return snd_soc_component_set_jack(cmpnt_codec, &priv->hdmi_jack, NULL);
+}
 
 static int mt8188_dptx_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 				       struct snd_pcm_hw_params *params)
@@ -554,7 +589,6 @@ static struct snd_soc_dai_link mt8188_mt6359_dai_links[] = {
 	/* BE */
 	[DAI_LINK_ADDA_BE] = {
 		.name = "ADDA_BE",
-		.init = mt8188_mt6359_init,
 		.no_pcm = 1,
 		.dpcm_playback = 1,
 		.dpcm_capture = 1,
@@ -651,6 +685,7 @@ static int mt8188_mt6359_dev_probe(struct platform_device *pdev)
 	struct snd_soc_card *card = &mt8188_mt6359_soc_card;
 	struct device_node *platform_node;
 	struct snd_soc_dai_link *dai_link;
+	struct mt8188_mt6359_priv *priv;
 	int ret, i;
 
 	card->dev = &pdev->dev;
@@ -676,6 +711,10 @@ static int mt8188_mt6359_dev_probe(struct platform_device *pdev)
 		}
 	}
 
+	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
 	platform_node = of_parse_phandle(pdev->dev.of_node,
 					 "mediatek,platform", 0);
 	if (!platform_node) {
@@ -685,7 +724,20 @@ static int mt8188_mt6359_dev_probe(struct platform_device *pdev)
 	for_each_card_prelinks(card, i, dai_link) {
 		if (!dai_link->platforms->name)
 			dai_link->platforms->of_node = platform_node;
+		if (strcmp(dai_link->name, "DPTX_BE") == 0) {
+			if (strcmp(dai_link->codecs->dai_name, "snd-soc-dummy-dai"))
+				dai_link->init = mt8188_dptx_codec_init;
+		} else if (strcmp(dai_link->name, "ETDM3_OUT_BE") == 0) {
+			if (strcmp(dai_link->codecs->dai_name, "snd-soc-dummy-dai"))
+				dai_link->init = mt8188_hdmi_codec_init;
+		} else if (strcmp(dai_link->name, "ADDA_BE") == 0) {
+			if (strcmp(dai_link->codecs->dai_name, "snd-soc-dummy-dai"))
+				dai_link->init = mt8188_mt6359_init;
+		}
 	}
+
+	snd_soc_card_set_drvdata(card, priv);
+
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
 	if (ret)
 		dev_err_probe(&pdev->dev, ret, "%s snd_soc_register_card fail\n",
