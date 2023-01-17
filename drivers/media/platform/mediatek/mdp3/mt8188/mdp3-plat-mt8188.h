@@ -31,13 +31,12 @@ static const struct of_device_id mt8188_mdp_probe_infra[MDP_INFRA_MAX] = {
 };
 
 static const struct mdp_pipe_info mt8188_pipe_info[] = {
-	{MDP_PIPE_WPEI, 0, 0},
-	{MDP_PIPE_RDMA0, 0, 2},
-	{MDP_PIPE_VPP1_SOUT, 0, 3},
-	{MDP_PIPE_RDMA1, 1, 2},
-	{MDP_PIPE_RDMA2, 1, 2},
-	{MDP_PIPE_RDMA3, 1, 3},
-	{MDP_PIPE_VPP0_SOUT, 1, 4},
+	[MDP_PIPE_WPEI] = {MDP_PIPE_WPEI, 0, 0},
+	[MDP_PIPE_RDMA0] = {MDP_PIPE_RDMA0, 0, 1},
+	[MDP_PIPE_RDMA2] = {MDP_PIPE_RDMA2, 1, 0},
+	[MDP_PIPE_RDMA3] = {MDP_PIPE_RDMA3, 1, 1},
+	[MDP_PIPE_VPP1_SOUT] = {MDP_PIPE_VPP1_SOUT, 0, 2},
+	[MDP_PIPE_VPP0_SOUT] = {MDP_PIPE_VPP0_SOUT, 1, 2},
 };
 
 static const u32 mt8188_mutex_idx[MDP_MAX_COMP_COUNT] = {
@@ -151,7 +150,7 @@ static const struct mdp_comp_data mt8188_mdp_comp_data[MDP_MAX_COMP_COUNT] = {
 		{3, 0, 0}
 	},
 	[MDP_COMP_FG0] = {
-		{MDP_COMP_TYPE_FG, 0, 0, MT8188_MDP_COMP_FG0, 0},
+		{MDP_COMP_TYPE_FG, 0, MT8188_MDP_COMP_FG0, 0},
 		{1, 0, 0}
 	},
 	[MDP_COMP_FG2] = {
