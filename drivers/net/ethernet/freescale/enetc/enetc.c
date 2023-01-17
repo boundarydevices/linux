@@ -1123,7 +1123,9 @@ static void enetc_flip_rx_buff(struct enetc_bdr *rx_ring,
 
 		enetc_put_rx_buff(rx_ring, rx_swbd);
 	} else {
-		enetc_free_rx_swbd(rx_ring, rx_swbd);
+		dma_unmap_page(rx_ring->dev, rx_swbd->dma, PAGE_SIZE,
+			       rx_swbd->dir);
+		rx_swbd->page = NULL;
 	}
 }
 
