@@ -1287,6 +1287,7 @@
 	dai-link-0 {
 		sound-dai = <&afe>;
 		dai-link-name = "ADDA_BE";
+		status = "okay";
 
 		codec-0 {
 			sound-dai = <&pmic 0>;
@@ -1296,9 +1297,20 @@
 	dai-link-1 {
 		sound-dai = <&afe>;
 		dai-link-name = "ETDM3_OUT_BE";
+		status = "okay";
 
 		codec-0 {
 			sound-dai = <&hdmi0>;
+		};
+	};
+
+	dai-link-2 {
+		sound-dai = <&afe>;
+		dai-link-name = "DPTX_BE";
+		status = "disabled";
+
+		codec-0 {
+			sound-dai = <&dp_tx>;
 		};
 	};
 };
