@@ -27,7 +27,7 @@
 #include "mdp_reg_wdma.h"
 
 static u32 mdp_comp_alias_id[MDP_COMP_TYPE_COUNT];
-int p_id;
+static int p_id;
 
 static inline const struct mdp_platform_config *
 __get_plat_cfg(const struct mdp_comp_ctx *ctx)

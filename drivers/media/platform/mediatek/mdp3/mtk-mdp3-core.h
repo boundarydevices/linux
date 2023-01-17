@@ -54,10 +54,10 @@ struct mdp_platform_config {
 
 /* indicate which mutex is used by each pipepline */
 enum mdp_pipe_id {
-	MDP_PIPE_RDMA0,
-	MDP_PIPE_IMGI,
 	MDP_PIPE_WPEI,
 	MDP_PIPE_WPEI2,
+	MDP_PIPE_IMGI,
+	MDP_PIPE_RDMA0,
 	MDP_PIPE_RDMA1,
 	MDP_PIPE_RDMA2,
 	MDP_PIPE_RDMA3,

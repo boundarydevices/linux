@@ -15,7 +15,7 @@
  *     a49ec487e458b5971880f1b63dc2a9d5
  */
 
-#define IMG_MAX_SUBFRAMES_8195		20
+#define IMG_MAX_SUBFRAMES_8195	20
 
 struct img_comp_frame_8195 {
 	u32 output_disable;

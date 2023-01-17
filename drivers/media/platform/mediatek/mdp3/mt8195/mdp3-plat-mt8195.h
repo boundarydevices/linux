@@ -31,16 +31,17 @@ static const struct of_device_id mt8195_mdp_probe_infra[MDP_INFRA_MAX] = {
 };
 
 static const struct mdp_pipe_info mt8195_pipe_info[] = {
-	[MDP_PIPE_RDMA0] = {MDP_PIPE_RDMA0, 0, 2},
 	[MDP_PIPE_WPEI] = {MDP_PIPE_WPEI, 0, 0},
 	[MDP_PIPE_WPEI2] = {MDP_PIPE_WPEI2, 0, 1},
+	[MDP_PIPE_IMGI] = {MDP_PIPE_IMGI, 0, 2},
+	[MDP_PIPE_RDMA0] = {MDP_PIPE_RDMA0, 0, 3},
 	[MDP_PIPE_RDMA1] = {MDP_PIPE_RDMA1, 1, 1},
 	[MDP_PIPE_RDMA2] = {MDP_PIPE_RDMA2, 1, 2},
 	[MDP_PIPE_RDMA3] = {MDP_PIPE_RDMA3, 1, 3},
-	[MDP_PIPE_SPLIT] = {MDP_PIPE_SPLIT, 1, 2},
-	[MDP_PIPE_SPLIT2] = {MDP_PIPE_SPLIT2, 1, 3},
-	[MDP_PIPE_VPP1_SOUT] = {MDP_PIPE_VPP1_SOUT, 0, 3},
-	[MDP_PIPE_VPP0_SOUT] = {MDP_PIPE_VPP0_SOUT, 1, 4},
+	[MDP_PIPE_SPLIT] = {MDP_PIPE_SPLIT, 1, 4},
+	[MDP_PIPE_SPLIT2] = {MDP_PIPE_SPLIT2, 1, 5},
+	[MDP_PIPE_VPP1_SOUT] = {MDP_PIPE_VPP1_SOUT, 0, 4},
+	[MDP_PIPE_VPP0_SOUT] = {MDP_PIPE_VPP0_SOUT, 1, 6},
 };
 
 static const u32 mt8195_mutex_idx[MDP_MAX_COMP_COUNT] = {
