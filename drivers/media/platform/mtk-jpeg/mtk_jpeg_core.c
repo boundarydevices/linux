@@ -108,6 +108,7 @@ static struct mtk_jpeg_fmt mtk_jpeg_dec_formats[] = {
 struct mtk_jpeg_src_buf {
 	struct vb2_v4l2_buffer b;
 	struct list_head list;
+	u32 bs_size;
 	struct mtk_jpeg_dec_param dec_param;
 };
 
@@ -588,6 +589,62 @@ static int mtk_jpeg_enc_s_selection(struct file *file, void *priv,
 	return 0;
 }
 
+static int mtk_jpeg_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
+{
+	struct v4l2_fh *fh;
+	struct vb2_queue *vq;
+	struct vb2_buffer *vb;
+	struct mtk_jpeg_src_buf *jpeg_src_buf;
+	struct mtk_jpeg_ctx *ctx;
+	struct mtk_jpeg_dev *jpeg;
+
+	if (IS_ERR_OR_NULL(file) || IS_ERR_OR_NULL(priv) || IS_ERR_OR_NULL(buf)) {
+		pr_info("%s %d qbuf error, some input param is null\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	if (buf->m.planes == NULL) {
+		pr_info("%s %d buffer planes is null\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	fh = file->private_data;
+	ctx = mtk_jpeg_fh_to_ctx(priv);
+	if (ctx == NULL) {
+		pr_info("%s %d ctx is null\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	jpeg = ctx->jpeg;
+	if (jpeg == NULL) {
+		pr_info("%s %d jpeg is null\n", __func__, __LINE__);
+		return -EINVAL;
+	}
+
+	vq = v4l2_m2m_get_vq(fh->m2m_ctx, buf->type);
+	if (buf->index >= vq->num_buffers) {
+		pr_info("%s %d buf num is over %d\n", __func__, __LINE__, buf->index);
+		return -EINVAL;
+	}
+
+	if (!V4L2_TYPE_IS_MULTIPLANAR(buf->type)) {
+		pr_info("%s %d buf type is not multiplanar\n", __func__, __LINE__);
+		goto end;
+	}
+
+	if (strcmp((const char *)jpeg->variant->dev_name, "mtk-jpeg-dec") == 0) {
+		vb = vq->bufs[buf->index];
+		jpeg_src_buf = mtk_jpeg_vb2_to_srcbuf(vb);
+		if (IS_ERR_OR_NULL(jpeg_src_buf))
+			pr_info("%s %d jpeg_src_buf null\n", __func__, __LINE__);
+		else
+			jpeg_src_buf->bs_size = buf->m.planes[0].bytesused;
+	}
+
+end:
+	return v4l2_m2m_qbuf(file, fh->m2m_ctx, buf);
+}
+
 static const struct v4l2_ioctl_ops mtk_jpeg_enc_ioctl_ops = {
 	.vidioc_querycap                = mtk_jpeg_querycap,
 	.vidioc_enum_fmt_vid_cap	= mtk_jpeg_enum_fmt_vid_cap,
@@ -625,7 +682,7 @@ static const struct v4l2_ioctl_ops mtk_jpeg_dec_ioctl_ops = {
 	.vidioc_g_fmt_vid_out_mplane    = mtk_jpeg_g_fmt_vid_mplane,
 	.vidioc_s_fmt_vid_cap_mplane    = mtk_jpeg_s_fmt_vid_cap_mplane,
 	.vidioc_s_fmt_vid_out_mplane    = mtk_jpeg_s_fmt_vid_out_mplane,
-	.vidioc_qbuf                    = v4l2_m2m_ioctl_qbuf,
+	.vidioc_qbuf                    = mtk_jpeg_qbuf,
 	.vidioc_subscribe_event         = mtk_jpeg_subscribe_event,
 	.vidioc_g_selection		= mtk_jpeg_dec_g_selection,
 
@@ -986,7 +1043,10 @@ static void mtk_jpeg_dec_device_run(void *priv)
 	spin_lock_irqsave(&jpeg->hw_lock, flags);
 	mtk_jpeg_dec_reset(jpeg->reg_base);
 	mtk_jpeg_dec_set_config(jpeg->reg_base,
-				&jpeg_src_buf->dec_param, &bs, &fb);
+				&jpeg_src_buf->dec_param,
+				jpeg_src_buf->bs_size,
+				&bs,
+				&fb);
 
 	mtk_jpeg_dec_start(jpeg->reg_base);
 	spin_unlock_irqrestore(&jpeg->hw_lock, flags);
