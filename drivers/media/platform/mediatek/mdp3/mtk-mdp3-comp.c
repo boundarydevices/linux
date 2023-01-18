@@ -766,12 +766,17 @@ static int config_rsz_subfrm(struct mdp_comp_ctx *ctx,
 		default:
 			goto rsz_subfrm_done;
 		}
-		id = data->comp_data[public_id].match.alias_id;
+
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rsz.subfrms[index].rsz_switch);
 		else if (CFG_CHECK(MT8188, p_id))
 			reg = CFG_COMP(MT8188, ctx->param, rsz.subfrms[index].rsz_switch);
-		mtk_mmsys_vpp_rsz_merge_config(ctx->comp->mdp_dev->mdp_mmsys2, id, reg);
+
+		/* config rsz_merge by svpp id */
+		if (public_id == MDP_COMP_RSZ2)
+			mtk_mmsys_vpp_rsz_merge_config(ctx->comp->mdp_dev->mdp_mmsys2, 2, reg);
+		else
+			mtk_mmsys_vpp_rsz_merge_config(ctx->comp->mdp_dev->mdp_mmsys2, 3, reg);
 
 		if (CFG_CHECK(MT8195, p_id))
 			reg = CFG_COMP(MT8195, ctx->param, rsz.subfrms[index].merge_cfg);
