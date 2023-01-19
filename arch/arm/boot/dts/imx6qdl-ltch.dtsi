@@ -106,6 +106,12 @@
 		>;
 	};
 
+	pinctrl_hdmi_cec: hdmi-cecgrp {
+		fsl,pins = <
+			MX6QDL_PAD_EIM_A25__HDMI_TX_CEC_LINE	0x1f8b0
+		>;
+	};
+
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 #define GP_BT_CLK_REQ		<&gpio2 0 GPIO_ACTIVE_HIGH>
@@ -439,6 +445,7 @@
 	aliases {
 		backlight_lvds = &backlight_lvds;
 		backlight_lvds2 = &backlight_lvds2;
+		fb_hdmi = &fb_hdmi;
 		fb_lvds = &fb_lvds;
 		fb_lvds2 = &fb_lvds2;
 		ldb = &ldb;
@@ -447,6 +454,7 @@
 		mmc2 = &usdhc2;
 		mxcfb0 = &fb_lvds;
 		mxcfb1 = &fb_lvds2;
+		mxcfb2 = &fb_hdmi;
 		pwm_lvds = &pwm4;
 		pwm_lvds2 = &pwm2;
 		rtc1 = &snvs_rtc;
@@ -500,6 +508,17 @@
 		default_bpp = <16>;
 		int_clk = <0>;
 		late_init = <0>;
+		status = "disabled";
+	};
+
+	fb_hdmi: fb@2 {
+		compatible = "fsl,mxc_sdc_fb";
+		default_bpp = <32>;
+		disp_dev = "hdmi";
+		interface_pix_fmt = "RGB24";
+		int_clk = <0>;
+		late_init = <0>;
+		mode_str ="1280x720M@60";
 		status = "disabled";
 	};
 
@@ -599,6 +618,13 @@
 		pinctrl-0 = <&pinctrl_sound_wm8960>;
 	};
 
+	sound-hdmi {
+		compatible = "fsl,imx6qdl-audio-hdmi",
+			     "fsl,imx-audio-hdmi";
+		model = "imx-audio-hdmi";
+		hdmi-controller = <&hdmi_audio>;
+	};
+
 	v4l2-out {
 		compatible = "fsl,mxc_v4l2_output";
 		status = "okay";
@@ -647,6 +673,28 @@
 	};
 };
 
+&hdmi_audio {
+	status = "okay";
+};
+
+&hdmi_cec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hdmi_cec>;
+	status = "okay";
+};
+
+&hdmi_core {
+	ipu_id = <1>;
+	disp_id = <0>;
+	status = "okay";
+};
+
+&hdmi_video {
+	fsl,phy_reg_cksymtx = <0x800d>;
+	fsl,phy_reg_vlev = <0x0294>;
+	status = "okay";
+};
+
 &fec {
 	fsl,err006687-workaround-present;
 	interrupts-extended = GPIRQ_ENET,
@@ -664,9 +712,22 @@
 		#address-cells = <0>;
 		#size-cells = <1>;
 
-		ethphy: ethernet-phy@4 {
-			reg = <4>;
+		ethphy: ethernet-phy {
+			compatible = "ethernet-phy-ieee802.3-c22";
 			interrupts-extended = GPIRQ_ENET_PHY;
+			reg-mask = <0x90>;	/* 4 - atheros, 7 - micrel */
+			rxc-skew-ps = <3000>;
+			rxd0-skew-ps = <0>;
+			rxd1-skew-ps = <0>;
+			rxd2-skew-ps = <0>;
+			rxd3-skew-ps = <0>;
+			rxdv-skew-ps = <0>;
+			txc-skew-ps = <3000>;
+			txd0-skew-ps = <0>;
+			txd1-skew-ps = <0>;
+			txd2-skew-ps = <0>;
+			txd3-skew-ps = <0>;
+			txen-skew-ps = <0>;
 		};
 	};
 };
@@ -846,6 +907,11 @@
 
 &i2c2d {
 	clock-frequency = <100000>;
+
+	edid@50 {
+		compatible = "fsl,imx6-hdmi-i2c";
+		reg = <0x50>;
+	};
 };
 
 &i2c3 {
