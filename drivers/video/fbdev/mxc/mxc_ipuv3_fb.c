@@ -3221,7 +3221,8 @@ static int mxcfb_dispdrv_init(struct platform_device *pdev,
 	mxcfbi->dispdrv = mxc_dispdrv_gethandle(disp_dev, &setting);
 	if (IS_ERR(mxcfbi->dispdrv)) {
 		ret = PTR_ERR(mxcfbi->dispdrv);
-		dev_err(&pdev->dev, "NO mxc display driver found!\n");
+		if (ret != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "NO mxc display driver found! (%d)\n", ret);
 		return ret;
 	} else {
 		/* fix-up  */
