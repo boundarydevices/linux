@@ -2545,6 +2545,10 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 	int irq = platform_get_irq(hdmi->pdev, 0);
 	int edid_status = HDMI_EDID_FAIL;
 
+	/* Check I2C driver is loaded and available */
+	if (!hdcp_init && !hdmi_i2c)
+		return -EPROBE_DEFER;
+
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
 	/* Check hdmi disp init once */
@@ -2854,11 +2858,8 @@ static int mxc_hdmi_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct property *pp;
 
-	/* Check I2C driver is loaded and available
-	 * check hdcp function is enable by dts */
+	/* check hdcp function is enable by dts */
 	hdmi_hdcp_get_property(pdev);
-	if (!hdmi_i2c && !hdcp_init)
-		return -ENODEV;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res)
