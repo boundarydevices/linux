@@ -106,6 +106,13 @@
 		>;
 	};
 
+	pinctrl_gpio_keys: gpio-keysgrp {
+		fsl,pins = <
+#define GP_GPIOKEY_SW4		<&gpio2 29 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_EIM_EB1__GPIO2_IO29		0x130b0
+		>;
+	};
+
 	pinctrl_hdmi_cec: hdmi-cecgrp {
 		fsl,pins = <
 			MX6QDL_PAD_EIM_A25__HDMI_TX_CEC_LINE	0x1f8b0
@@ -520,6 +527,18 @@
 		late_init = <0>;
 		mode_str ="1280x720M@60";
 		status = "disabled";
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+
+		sw4 {
+			label = "sw4";
+			gpios = GP_GPIOKEY_SW4;
+			linux,code = <KEY_4>;
+		};
 	};
 
 	memory {
