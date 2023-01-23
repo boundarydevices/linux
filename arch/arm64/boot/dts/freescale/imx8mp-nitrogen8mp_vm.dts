@@ -164,6 +164,13 @@
 		>;
 	};
 
+	pinctrl_mipi_ltk069wxict10: mipi-ltk069wxict10grp {
+		fsl,pins = <
+#define GP_LTK700WS08_DISPLAY_EN	<&gpio3 14 GPIO_ACTIVE_HIGH>
+			MX8MP_IOMUXC_NAND_DQS__GPIO3_IO14		0x100
+		>;
+	};
+
 	pinctrl_pmic: pmicirq {
 		fsl,pins = <
 #define GPIRQ_PMIC	<&gpio3 0 IRQ_TYPE_LEVEL_LOW>
@@ -365,6 +372,7 @@
 
 #include "panel-ltk0680ytmdb.dtsi"
 #include "panel-ltk069wxbct02.dtsi"
+#include "panel-ltk069wxict10.dtsi"
 
 / {
 	model = "Boundary i.MX8MPlus nitrogen8mp board";
@@ -564,6 +572,10 @@
 
 &clk {
 	init-on-array = <IMX8MP_CLK_HSIO_ROOT>;
+
+	video_pll1 {
+		modulation-frequency = <10000>;
+	};
 };
 
 &easrc {
