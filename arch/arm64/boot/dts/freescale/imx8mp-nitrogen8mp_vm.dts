@@ -375,8 +375,8 @@
 #include "panel-ltk069wxict10.dtsi"
 
 / {
-	model = "Boundary i.MX8MPlus nitrogen8mp board";
-	compatible = "boundary,imx8mp-nitrogen8mp", "fsl,imx8mp";
+	model = "Boundary i.MX8MPlus nitrogen8mp_vm board";
+	compatible = "boundary,imx8mp-nitrogen8mp_vm", "fsl,imx8mp";
 
 	aliases {
 		backlight_mipi = &backlight_mipi;
