@@ -159,6 +159,16 @@
 		>;
 	};
 
+	pinctrl_i2c3_gt911: i2c3_gt911grp {
+		fsl,pins = <
+#define GPIRQ_GT911			<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
+#define GP_GT911_IRQ			<&gpio1 9 GPIO_ACTIVE_HIGH>
+/*			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		*/
+#define GP_GT911_RESET		<&gpio2 7 GPIO_ACTIVE_HIGH>
+			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x030b0		/* Fake pin for driver */
+		>;
+	};
+
 	pinctrl_ipu1_di0: ipu1-di0grp {
 		fsl,pins = <
 			MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK 0x10
@@ -365,6 +375,8 @@
 		t_lvds = &t_lvds;
 		ts_egalax = &ts_egalax;
 		ts_ft5x06 = &ts_ft5x06;
+		ts_goodix = &ts_goodix;
+		ts_goodix2 = &ts_goodix2;
 		ts_gsl1680 = &ts_gsl1680;
 		ts_ili210x = &ts_ili210x;
 		ts_tsc2004 = &ts_tsc2004;
@@ -733,6 +745,30 @@
 		status = "disabled";
 		wakeup-gpios = GP_TOUCH;
 		wakeup-source;
+	};
+
+	ts_goodix: touchscreen@14 {
+		compatible = "goodix,gt911";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_gt911>;
+		reg = <0x14>;
+		reset-gpios = GP_GT911_RESET;
+		status = "disabled";
+	};
+
+	ts_goodix2: touchscreen@5d {
+		compatible = "goodix,gt911";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_GT911;
+		irq-gpios = GP_GT911_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_gt911>;
+		reg = <0x5d>;
+		reset-gpios = GP_GT911_RESET;
+		status = "disabled";
 	};
 
 	ts_gsl1680: touchscreen@40 {
