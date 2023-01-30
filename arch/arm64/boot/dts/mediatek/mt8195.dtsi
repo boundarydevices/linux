@@ -1059,6 +1059,7 @@
 			clocks = <&clk26m>,
 				<&apmixedsys CLK_APMIXED_APLL1>,
 				<&apmixedsys CLK_APMIXED_APLL2>,
+				<&apmixedsys CLK_APMIXED_HDMIRX_APLL>,
 				<&topckgen CLK_TOP_APLL12_DIV0>,
 				<&topckgen CLK_TOP_APLL12_DIV1>,
 				<&topckgen CLK_TOP_APLL12_DIV2>,
@@ -1073,11 +1074,13 @@
 				<&topckgen CLK_TOP_I2SO2_MCK>,
 				<&topckgen CLK_TOP_I2SI1_MCK>,
 				<&topckgen CLK_TOP_I2SI2_MCK>,
+				<&topckgen CLK_TOP_MPHONE_SLAVE_B>,
 				<&infracfg_ao CLK_INFRA_AO_AUDIO_26M_B>,
 				<&scp_adsp CLK_SCP_ADSP_AUDIODSP>;
 			clock-names = "clk26m",
 				"apll1",
 				"apll2",
+				"hdmirx_apll",
 				"apll12_div0",
 				"apll12_div1",
 				"apll12_div2",
@@ -1092,6 +1095,7 @@
 				"top_i2so2_mck",
 				"top_i2si1_mck",
 				"top_i2si2_mck",
+				"top_mphone_slave_b",
 				"infra_ao_audio_26m_b",
 				"scp_adsp_audiodsp";
 			status = "disabled";
