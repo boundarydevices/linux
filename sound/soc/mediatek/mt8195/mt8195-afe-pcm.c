@@ -3109,6 +3109,7 @@ static const dai_register_cb dai_register_cbs[] = {
 	mt8195_dai_dmic_register,
 	mt8195_dai_etdm_register,
 	mt8195_dai_pcm_register,
+	mt8195_dai_multi_in_register,
 	mt8195_dai_memif_register,
 };
 
