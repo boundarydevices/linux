@@ -17,6 +17,8 @@
 static const char *aud_clks[MT8195_CLK_NUM] = {
 	/* xtal */
 	[MT8195_CLK_XTAL_26M] = "clk26m",
+	/* pll */
+	[MT8195_CLK_APMIXED_HDMIRX_APLL] = "hdmirx_apll",
 	/* divider */
 	[MT8195_CLK_TOP_APLL1] = "apll1",
 	[MT8195_CLK_TOP_APLL2] = "apll2",
@@ -36,6 +38,7 @@ static const char *aud_clks[MT8195_CLK_NUM] = {
 	[MT8195_CLK_TOP_I2SI1_M_SEL] = "top_i2si1_mck",
 	[MT8195_CLK_TOP_I2SI2_M_SEL] = "top_i2si2_mck",
 	/* clock gate */
+	[MT8195_CLK_TOP_MPHONE_SLAVE_B] = "top_mphone_slave_b",
 	[MT8195_CLK_INFRA_AO_AUDIO_26M_B] = "infra_ao_audio_26m_b",
 	[MT8195_CLK_SCP_ADSP_AUDIODSP] = "scp_adsp_audiodsp",
 	/* afe clock gate */
@@ -60,6 +63,7 @@ static const char *aud_clks[MT8195_CLK_NUM] = {
 	[MT8195_CLK_AUD_HDMI_OUT] = "aud_hdmi_out",
 	[MT8195_CLK_AUD_ASRC11] = "aud_asrc11",
 	[MT8195_CLK_AUD_ASRC12] = "aud_asrc12",
+	[MT8195_CLK_AUD_MULTI_IN] = "aud_multi_in",
 	[MT8195_CLK_AUD_A1SYS] = "aud_a1sys",
 	[MT8195_CLK_AUD_A2SYS] = "aud_a2sys",
 	[MT8195_CLK_AUD_PCMIF] = "aud_pcmif",
