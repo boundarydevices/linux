@@ -8,6 +8,7 @@ snd-soc-mt8195-afe-objs := \
 	mt8195-dai-adda.o \
 	mt8195-dai-dmic.o \
 	mt8195-dai-etdm.o \
+	mt8195-dai-multi-in.o \
 	mt8195-dai-pcm.o
 
 obj-$(CONFIG_SND_SOC_MT8195) += snd-soc-mt8195-afe.o
