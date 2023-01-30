@@ -1025,6 +1025,33 @@
 			status = "disabled";
 		};
 
+		uart1: serial@11001200 {
+			compatible = "mediatek,mt6577-uart";
+			reg = <0 0x11001200 0 0x100>;
+			interrupts = <GIC_SPI 142 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&clk26m>, <&infracfg_ao CLK_INFRA_AO_UART1>;
+			clock-names = "baud", "bus";
+			status = "disabled";
+		};
+
+		uart2: serial@11001300 {
+			compatible = "mediatek,mt6577-uart";
+			reg = <0 0x11001300 0 0x100>;
+			interrupts = <GIC_SPI 143 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&clk26m>, <&infracfg_ao CLK_INFRA_AO_UART2>;
+			clock-names = "baud", "bus";
+			status = "disabled";
+		};
+
+		uart3: serial@11001400 {
+			compatible = "mediatek,mt6577-uart";
+			reg = <0 0x11001400 0 0x100>;
+			interrupts = <GIC_SPI 723 IRQ_TYPE_LEVEL_HIGH 0>;
+			clocks = <&clk26m>, <&infracfg_ao CLK_INFRA_AO_UART3>;
+			clock-names = "baud", "bus";
+			status = "disabled";
+		};
+
 		pericfg_ao: syscon@11003000 {
 			compatible = "mediatek,mt8188-pericfg_ao", "syscon";
 			reg = <0 0x11003000 0 0x1000>;
