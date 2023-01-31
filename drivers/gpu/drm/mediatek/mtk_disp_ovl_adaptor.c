@@ -213,7 +213,7 @@ int mtk_ovl_adaptor_clk_enable(struct device *dev)
 {
 	struct mtk_disp_ovl_adaptor *ovl_adaptor = dev_get_drvdata(dev);
 	struct device *comp;
-	int ret;
+	int ret = 0;
 	int i;
 
 	for (i = 0; i < OVL_ADAPTOR_MERGE0; i++) {
