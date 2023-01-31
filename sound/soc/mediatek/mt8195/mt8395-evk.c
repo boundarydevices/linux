@@ -313,6 +313,17 @@ static int mt8195_dptx_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	return 0;
 }
 
+static int mt8195_multi_in_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
+					   struct snd_pcm_hw_params *params)
+{
+	/* fix BE format to 32bit, clean param mask first */
+	snd_mask_reset_range(hw_param_mask(params, SNDRV_PCM_HW_PARAM_FORMAT),
+			     0, SNDRV_PCM_FORMAT_LAST);
+
+	params_set_format(params, SNDRV_PCM_FORMAT_S32_LE);
+	return 0;
+}
+
 enum {
 	DAI_LINK_DL2_FE,
 	DAI_LINK_DL3_FE,
@@ -337,6 +348,8 @@ enum {
 	DAI_LINK_ETDM1_OUT_BE,
 	DAI_LINK_ETDM2_OUT_BE,
 	DAI_LINK_ETDM3_OUT_BE,
+	DAI_LINK_MULTI_IN1_BE,
+	DAI_LINK_MULTI_IN2_BE,
 	DAI_LINK_PCM1_BE,
 	DAI_LINK_UL_SRC1_BE,
 	DAI_LINK_UL_SRC2_BE,
@@ -457,6 +470,16 @@ SND_SOC_DAILINK_DEFS(ETDM2_OUT_BE,
 
 SND_SOC_DAILINK_DEFS(ETDM3_OUT_BE,
 		     DAILINK_COMP_ARRAY(COMP_CPU("ETDM3_OUT")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
+
+SND_SOC_DAILINK_DEFS(MULTI_IN1_BE,
+		     DAILINK_COMP_ARRAY(COMP_CPU("MULTI_IN1")),
+		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
+		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
+
+SND_SOC_DAILINK_DEFS(MULTI_IN2_BE,
+		     DAILINK_COMP_ARRAY(COMP_CPU("MULTI_IN2")),
 		     DAILINK_COMP_ARRAY(COMP_DUMMY()),
 		     DAILINK_COMP_ARRAY(COMP_EMPTY()));
 
@@ -725,6 +748,25 @@ static struct snd_soc_dai_link mt8195_mt6359_dai_links[] = {
 			SND_SOC_DAIFMT_CBS_CFS,
 		.dpcm_playback = 1,
 		SND_SOC_DAILINK_REG(ETDM3_OUT_BE),
+	},
+	[DAI_LINK_MULTI_IN1_BE] = {
+		.name = "MULTI_IN1_BE",
+		.no_pcm = 1,
+		.dai_fmt = SND_SOC_DAIFMT_I2S |
+			SND_SOC_DAIFMT_NB_NF |
+			SND_SOC_DAIFMT_CBM_CFM,
+		.dpcm_capture = 1,
+		.be_hw_params_fixup = mt8195_multi_in_hw_params_fixup,
+		SND_SOC_DAILINK_REG(MULTI_IN1_BE),
+	},
+	[DAI_LINK_MULTI_IN2_BE] = {
+		.name = "MULTI_IN2_BE",
+		.no_pcm = 1,
+		.dai_fmt = SND_SOC_DAIFMT_I2S |
+			SND_SOC_DAIFMT_NB_NF |
+			SND_SOC_DAIFMT_CBM_CFM,
+		.dpcm_capture = 1,
+		SND_SOC_DAILINK_REG(MULTI_IN2_BE),
 	},
 	[DAI_LINK_PCM1_BE] = {
 		.name = "PCM1_BE",
