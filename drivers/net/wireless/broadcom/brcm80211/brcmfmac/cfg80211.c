@@ -6754,27 +6754,33 @@ brcmf_cfg80211_set_cqm_rssi_config(struct wiphy *wiphy, struct net_device *dev,
 {
 	struct brcmf_cfg80211_info *cfg = wiphy_to_cfg(wiphy);
 	struct brcmf_if *ifp;
-	struct wl_rssi_event rssi = {};
+	struct wl_rssi_event rssi;
 	int err = 0;
 
 	ifp = netdev_priv(dev);
-	if (rssi_thold == 0) {
-		cfg->cqm_info.enable = 0;
-		cfg->cqm_info.rssi_threshold = 0;
-	} else {
-		cfg->cqm_info.enable = 1;
-		cfg->cqm_info.rssi_threshold = rssi_thold;
+	if (rssi_thold == cfg->cqm_info.rssi_threshold)
+		return err;
 
-		rssi.rate_limit_msec = 0;
-		rssi.rssi_levels[rssi.num_rssi_levels++] = S8_MIN;
-		rssi.rssi_levels[rssi.num_rssi_levels++] =
-				cfg->cqm_info.rssi_threshold;
-		rssi.rssi_levels[rssi.num_rssi_levels++] = S8_MAX;
+	if (rssi_thold == 0) {
+		rssi.rate_limit_msec = cpu_to_le32(0);
+		rssi.num_rssi_levels = 0;
+		rssi.version = WL_RSSI_EVENT_IFX_VERSION;
+	} else {
+		rssi.rate_limit_msec = cpu_to_le32(0);
+		rssi.num_rssi_levels = 3;
+		rssi.rssi_levels[0] = S8_MIN;
+		rssi.rssi_levels[1] = rssi_thold;
+		rssi.rssi_levels[2] = S8_MAX;
+		rssi.version = WL_RSSI_EVENT_IFX_VERSION;
 	}
 
 	err = brcmf_fil_iovar_data_set(ifp, "rssi_event", &rssi, sizeof(rssi));
-	if (err < 0)
+	if (err < 0) {
 		brcmf_err("set rssi_event iovar failed (%d)\n", err);
+	} else {
+		cfg->cqm_info.enable = rssi_thold ? 1 : 0;
+		cfg->cqm_info.rssi_threshold = rssi_thold;
+	}
 
 	brcmf_dbg(TRACE, "enable = %d, rssi_threshold = %d\n",
 		cfg->cqm_info.enable, cfg->cqm_info.rssi_threshold);
@@ -7850,6 +7856,16 @@ static void brcmf_init_conf(struct brcmf_cfg80211_conf *conf)
 
 static void brcmf_register_event_handlers(struct brcmf_cfg80211_info *cfg)
 {
+	struct brcmf_if *ifp = netdev_priv(cfg_to_ndev(cfg));
+	struct wl_rssi_event rssi_event = {};
+	int err = 0;
+
+	/* get supported version from firmware side */
+	err = brcmf_fil_iovar_data_get(ifp, "rssi_event", &rssi_event,
+				       sizeof(rssi_event));
+	if (err)
+		brcmf_err("fail to get supported rssi_event version, err=%d\n", err);
+
 	brcmf_fweh_register(cfg->pub, BRCMF_E_LINK,
 			    brcmf_notify_connect_status);
 	brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH_IND,
@@ -7884,8 +7900,12 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info *cfg)
 			    brcmf_p2p_notify_action_tx_complete);
 	brcmf_fweh_register(cfg->pub, BRCMF_E_PSK_SUP,
 			    brcmf_notify_connect_status);
-	brcmf_fweh_register(cfg->pub, BRCMF_E_RSSI,
-				brcmf_notify_rssi);
+	if (rssi_event.version == WL_RSSI_EVENT_IFX_VERSION)
+		brcmf_fweh_register(cfg->pub, BRCMF_E_RSSI,
+				    brcmf_notify_rssi_change_ind);
+	else
+		brcmf_fweh_register(cfg->pub, BRCMF_E_RSSI,
+				    brcmf_notify_rssi);
 	brcmf_fweh_register(cfg->pub, BRCMF_E_EXT_AUTH_REQ,
 			    brcmf_notify_ext_auth_request);
 	brcmf_fweh_register(cfg->pub, BRCMF_E_EXT_AUTH_FRAME_RX,
@@ -7894,8 +7914,6 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info *cfg)
 			    brcmf_notify_mgmt_tx_status);
 	brcmf_fweh_register(cfg->pub, BRCMF_E_MGMT_FRAME_OFF_CHAN_COMPLETE,
 			    brcmf_notify_mgmt_tx_status);
-	brcmf_fweh_register(cfg->pub, BRCMF_E_RSSI,
-			    brcmf_notify_rssi_change_ind);
 	brcmf_fweh_register(cfg->pub, BRCMF_E_BCNLOST_MSG,
 			    brcmf_notify_beacon_loss);
 	brcmf_fweh_register(cfg->pub, BRCMF_E_TWT_SETUP,
