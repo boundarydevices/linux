@@ -167,6 +167,8 @@
 		regulator-max-microvolt = <3300000>;
 		gpio = <&pio 119 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
+		pinctrl-names = "default";
+		pinctrl-0 = <&lcm1_tp_avdd_pin>;
 	};
 
 	VDD_5V: VDD-5V {
@@ -842,6 +844,13 @@
 
 		touch_pin_reset: pin-reset {
 			pinmux = <PINMUX_GPIO5__FUNC_B_GPIO5>;
+			output-high;
+		};
+	};
+
+	lcm1_tp_avdd_pin: lcm1-tp-avdd-pin {
+		lcm1_tp_en: lcm1-tp-en{
+			pinmux = <PINMUX_GPIO120__FUNC_B_GPIO120>;
 			output-high;
 		};
 	};
