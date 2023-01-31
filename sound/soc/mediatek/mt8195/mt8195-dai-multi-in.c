@@ -9,6 +9,7 @@
 
 #include <linux/regmap.h>
 #include <linux/delay.h>
+#include <sound/pcm_params.h>
 #include "mt8195-afe-clk.h"
 #include "mt8195-afe-common.h"
 #include "mt8195-reg.h"
@@ -32,6 +33,11 @@ enum {
 	ETDM_OUT3_I2S,
 	ETDM_OUT3_DSD,
 	ETDM_IN2_EXT,
+};
+
+enum {
+	SUPPLY_SEQ_MULTI_IN_CG,
+	SUPPLY_SEQ_MULTI_IN_EN,
 };
 
 static const char * const multi_in_mux_map[] = {
@@ -142,6 +148,33 @@ static int mtk_dai_multi_in_mux_put(struct snd_kcontrol *kcontrol,
 	return snd_soc_dapm_put_enum_double(kcontrol, ucontrol);
 }
 
+static int mtk_multi_in_cg_event(struct snd_soc_dapm_widget *w,
+				 struct snd_kcontrol *kcontrol,
+				 int event)
+{
+	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
+	struct mt8195_afe_private *afe_priv = afe->platform_priv;
+
+	dev_dbg(cmpnt->dev, "%s(), name %s, event 0x%x\n",
+		__func__, w->name, event);
+
+	switch (event) {
+	case SND_SOC_DAPM_PRE_PMU:
+		mt8195_afe_enable_clk(afe, afe_priv->clk[MT8195_CLK_TOP_MPHONE_SLAVE_B]);
+		mt8195_afe_enable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_MULTI_IN]);
+		break;
+	case SND_SOC_DAPM_POST_PMD:
+		mt8195_afe_disable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_MULTI_IN]);
+		mt8195_afe_disable_clk(afe, afe_priv->clk[MT8195_CLK_TOP_MPHONE_SLAVE_B]);
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
 static SOC_VALUE_ENUM_SINGLE_AUTODISABLE_DECL(multi_in1_mux_map_enum,
 					      SND_SOC_NOPM,
 					      0,
@@ -172,8 +205,17 @@ static const struct snd_soc_dapm_widget mtk_dai_multi_in_widgets[] = {
 	SND_SOC_DAPM_MUX("MULTI_IN1_MUX", SND_SOC_NOPM, 0, 0,
 			 &multi_in1_mux_control),
 	SND_SOC_DAPM_MUX("MULTI_IN2_MUX", SND_SOC_NOPM, 0, 0,
-			 &multi_in2_mux_control),
-
+			&multi_in2_mux_control),
+	/* cg */
+	SND_SOC_DAPM_SUPPLY_S("MULTI_IN_CG", SUPPLY_SEQ_MULTI_IN_CG,
+			      SND_SOC_NOPM, 0, 0,
+			      mtk_multi_in_cg_event,
+			      SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+	/* en */
+	SND_SOC_DAPM_SUPPLY_S("MULTI_IN1_EN", SUPPLY_SEQ_MULTI_IN_EN,
+			      AFE_MPHONE_MULTI_CON0, AFE_MPHONE_MULTI_CON0_EN_SHIFT, 0, NULL, 0),
+	SND_SOC_DAPM_SUPPLY_S("MULTI_IN2_EN", SUPPLY_SEQ_MULTI_IN_EN,
+			      AFE_MPHONE_MULTI2_CON0, AFE_MPHONE_MULTI_CON0_EN_SHIFT, 0, NULL, 0),
 	SND_SOC_DAPM_INPUT("MULTI_INPUT"),
 };
 
@@ -200,6 +242,12 @@ static const struct snd_soc_dapm_route mtk_dai_multi_in_routes[] = {
 
 	{"MULTI1 Capture", NULL, "MULTI_INPUT"},
 	{"MULTI2 Capture", NULL, "MULTI_INPUT"},
+	/* cg */
+	{"MULTI1 Capture", NULL, "MULTI_IN_CG"},
+	{"MULTI2 Capture", NULL, "MULTI_IN_CG"},
+	/* en */
+	{"MULTI1 Capture", NULL, "MULTI_IN1_EN"},
+	{"MULTI2 Capture", NULL, "MULTI_IN2_EN"},
 };
 
 struct multi_in_con_reg {
@@ -223,31 +271,9 @@ static const struct multi_in_con_reg
 };
 
 /* dai ops */
-static int mtk_dai_multi_in_startup(struct snd_pcm_substream *substream,
-	struct snd_soc_dai *dai)
-{
-	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-
-	mt8195_afe_enable_clk(afe,
-			      afe_priv->clk[MT8195_CLK_TOP_MPHONE_SLAVE_B]);
-	mt8195_afe_enable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_MULTI_IN]);
-
-	return 0;
-}
-
-static void mtk_dai_multi_in_shutdown(struct snd_pcm_substream *substream,
-	struct snd_soc_dai *dai)
-{
-	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
-	struct mt8195_afe_private *afe_priv = afe->platform_priv;
-
-	mt8195_afe_disable_clk(afe, afe_priv->clk[MT8195_CLK_AUD_MULTI_IN]);
-	mt8195_afe_disable_clk(afe,
-		afe_priv->clk[MT8195_CLK_TOP_MPHONE_SLAVE_B]);
-}
-
-static int mtk_dai_multi_in_fmt_config(struct snd_soc_dai *dai)
+static int mtk_dai_multi_in_fmt_config(struct snd_soc_dai *dai,
+				       unsigned int bit_width,
+				       unsigned int channels)
 {
 	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
 	struct mt8195_afe_private *afe_priv = afe->platform_priv;
@@ -255,8 +281,6 @@ static int mtk_dai_multi_in_fmt_config(struct snd_soc_dai *dai)
 	struct mtk_dai_multi_in_priv *multi_in_priv = NULL;
 	const struct multi_in_con_reg *reg = &multi_in_con_regs[id];
 	unsigned int source = 0;
-	unsigned int channels = dai->channels;
-	unsigned int bit_width = dai->sample_bits;
 	unsigned int val = 0;
 	unsigned int mask = 0;
 
@@ -870,63 +894,21 @@ static int mtk_dai_multi_in_mux_config(struct snd_soc_dai *dai)
 	return 0;
 }
 
-static int mtk_dai_multi_in_prepare(struct snd_pcm_substream *substream,
-				    struct snd_soc_dai *dai)
+static int mtk_dai_multi_in_hw_params(struct snd_pcm_substream *substream,
+				      struct snd_pcm_hw_params *params,
+				      struct snd_soc_dai *dai)
 {
-	int ret = 0;
+	int ret;
+	unsigned int bit_width = params_width(params);
+	unsigned int channels = params_channels(params);
 
-	ret = mtk_dai_multi_in_fmt_config(dai);
+	ret = mtk_dai_multi_in_fmt_config(dai, bit_width, channels);
 	if (ret)
 		return ret;
 
 	ret = mtk_dai_multi_in_mux_config(dai);
 	if (ret)
 		return ret;
-
-	return ret;
-}
-
-static int mtk_dai_multi_in_enable(struct snd_soc_dai *dai)
-{
-	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
-	unsigned int id = DAI_TO_MULTI_IN_ID(dai->id);
-	const struct multi_in_con_reg *reg = &multi_in_con_regs[id];
-
-	return regmap_update_bits(afe->regmap, reg->con0,
-				  AFE_MPHONE_MULTI_CON0_EN_MASK,
-				  AFE_MPHONE_MULTI_CON0_EN);
-}
-
-static int mtk_dai_multi_in_disable(struct snd_soc_dai *dai)
-{
-	struct mtk_base_afe *afe = snd_soc_dai_get_drvdata(dai);
-	unsigned int id = DAI_TO_MULTI_IN_ID(dai->id);
-	const struct multi_in_con_reg *reg = &multi_in_con_regs[id];
-
-	return regmap_update_bits(afe->regmap, reg->con0,
-				  AFE_MPHONE_MULTI_CON0_EN_MASK,
-				  0x0);
-}
-
-static int mtk_dai_multi_in_trigger(struct snd_pcm_substream *substream,
-				    int cmd, struct snd_soc_dai *dai)
-{
-	int ret = 0;
-
-	dev_dbg(dai->dev, "%s cmd %d\n", __func__, cmd);
-
-	switch (cmd) {
-	case SNDRV_PCM_TRIGGER_START:
-	case SNDRV_PCM_TRIGGER_RESUME:
-		ret = mtk_dai_multi_in_enable(dai);
-		break;
-	case SNDRV_PCM_TRIGGER_STOP:
-	case SNDRV_PCM_TRIGGER_SUSPEND:
-		ret = mtk_dai_multi_in_disable(dai);
-		break;
-	default:
-		return -EINVAL;
-	}
 
 	return ret;
 }
@@ -982,11 +964,8 @@ static int mtk_dai_multi_in_set_fmt(struct snd_soc_dai *dai,
 }
 
 static const struct snd_soc_dai_ops mtk_dai_multi_in_ops = {
-	.startup	= mtk_dai_multi_in_startup,
-	.shutdown	= mtk_dai_multi_in_shutdown,
-	.prepare	= mtk_dai_multi_in_prepare,
+	.hw_params	= mtk_dai_multi_in_hw_params,
 	.set_fmt	= mtk_dai_multi_in_set_fmt,
-	.trigger	= mtk_dai_multi_in_trigger,
 };
 
 /* dai driver */
