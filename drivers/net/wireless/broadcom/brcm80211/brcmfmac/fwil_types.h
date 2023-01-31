@@ -205,6 +205,8 @@ enum {
 #define DL_TYPE_CLM			2
 
 #define MAX_RSSI_LEVELS			8
+#define WL_RSSI_EVENT_BRCM_VERSION      0
+#define WL_RSSI_EVENT_IFX_VERSION       1
 
 /* join preference types for join_pref iovar */
 enum brcmf_join_pref_types {
@@ -1127,7 +1129,8 @@ struct wl_rssi_event {
 	u32 rate_limit_msec;
 	u8 num_rssi_levels;
 	s8 rssi_levels[MAX_RSSI_LEVELS];
-	s8 pad[3];
+	u8 version;
+	s8 pad[2];
 };
 
 #endif /* FWIL_TYPES_H_ */
