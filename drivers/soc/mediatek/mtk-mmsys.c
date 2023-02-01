@@ -442,9 +442,12 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 	}
 
 #if IS_REACHABLE(CONFIG_MTK_CMDQ)
-	ret = cmdq_dev_get_client_reg(dev, &mmsys->cmdq_base, 0);
-	if (ret)
-		dev_dbg(dev, "No mediatek,gce-client-reg!\n");
+	if (!mmsys->data->is_vppsys) {
+		/* MDP does not depend on vppsys to provide cmdq_base, while vdosys does. */
+		ret = cmdq_dev_get_client_reg(dev, &mmsys->cmdq_base, 0);
+		if (ret)
+			dev_dbg(dev, "No mediatek,gce-client-reg!\n");
+	}
 #endif
 
 	platform_set_drvdata(pdev, mmsys);
