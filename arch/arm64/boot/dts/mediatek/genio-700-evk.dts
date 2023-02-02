@@ -320,6 +320,10 @@
 	};
 };
 
+&dmic_codec {
+	wakeup-delay-ms = <200>;
+};
+
 &edp_tx {
 	pinctrl-names = "default";
 	pinctrl-0 = <&edp_pin>;
@@ -1326,6 +1330,10 @@
 
 		codec-0 {
 			sound-dai = <&pmic 0>;
+		};
+
+		codec-1 {
+			sound-dai = <&dmic_codec>;
 		};
 	};
 
