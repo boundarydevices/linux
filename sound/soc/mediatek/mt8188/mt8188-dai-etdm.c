@@ -411,10 +411,43 @@ static struct mtk_dai_etdm_priv *get_etdm_priv_by_name(struct mtk_base_afe *afe,
 static int mtk_dai_etdm_enable_mclk(struct mtk_base_afe *afe, int dai_id)
 {
 	struct mt8188_afe_private *afe_priv = afe->platform_priv;
+	struct mtk_dai_etdm_priv *etdm_data = afe_priv->dai_priv[dai_id];
+	int clkmux_id = mtk_dai_etdm_get_clk_id_by_dai_id(dai_id);
 	int clkdiv_id = mtk_dai_etdm_get_clkdiv_id_by_dai_id(dai_id);
+	int apll = etdm_data->mclk_apll;
+	int apll_clk_id = mt8188_afe_get_mclk_source_clk_id(apll);
+	struct etdm_con_reg etdm_reg;
+	unsigned int val = 0;
+	unsigned int mask = 0;
+	int ret = 0;
 
-	if (clkdiv_id < 0)
+	if (clkmux_id < 0 || clkdiv_id < 0)
 		return -EINVAL;
+
+	if (apll_clk_id < 0)
+		return apll_clk_id;
+
+	ret = get_etdm_reg(dai_id, &etdm_reg);
+	if (ret < 0)
+		return ret;
+
+	mask |= ETDM_CON1_MCLK_OUTPUT;
+	if (etdm_data->mclk_dir == SND_SOC_CLOCK_OUT)
+		val |= ETDM_CON1_MCLK_OUTPUT;
+	regmap_update_bits(afe->regmap, etdm_reg.con1, mask, val);
+
+	/* enable parent clock before select apll*/
+	mt8188_afe_enable_clk(afe, afe_priv->clk[clkmux_id]);
+
+	/* select apll */
+	ret = mt8188_afe_set_clk_parent(afe, afe_priv->clk[clkmux_id],
+					afe_priv->clk[apll_clk_id]);
+	if (ret)
+		return ret;
+
+	/* set rate */
+	ret = mt8188_afe_set_clk_rate(afe, afe_priv->clk[clkdiv_id],
+				      etdm_data->mclk_freq);
 
 	mt8188_afe_enable_clk(afe, afe_priv->clk[clkdiv_id]);
 
@@ -424,12 +457,14 @@ static int mtk_dai_etdm_enable_mclk(struct mtk_base_afe *afe, int dai_id)
 static int mtk_dai_etdm_disable_mclk(struct mtk_base_afe *afe, int dai_id)
 {
 	struct mt8188_afe_private *afe_priv = afe->platform_priv;
+	int clkmux_id = mtk_dai_etdm_get_clk_id_by_dai_id(dai_id);
 	int clkdiv_id = mtk_dai_etdm_get_clkdiv_id_by_dai_id(dai_id);
 
-	if (clkdiv_id < 0)
+	if (clkmux_id < 0 || clkdiv_id < 0)
 		return -EINVAL;
 
 	mt8188_afe_disable_clk(afe, afe_priv->clk[clkdiv_id]);
+	mt8188_afe_disable_clk(afe, afe_priv->clk[clkmux_id]);
 
 	return 0;
 }
@@ -1967,54 +2002,6 @@ static int mtk_dai_etdm_out_configure(struct mtk_base_afe *afe,
 	return 0;
 }
 
-static int mtk_dai_etdm_mclk_configure(struct mtk_base_afe *afe, int dai_id)
-{
-	struct mt8188_afe_private *afe_priv = afe->platform_priv;
-	struct mtk_dai_etdm_priv *etdm_data = afe_priv->dai_priv[dai_id];
-	int clk_id = mtk_dai_etdm_get_clk_id_by_dai_id(dai_id);
-	int clkdiv_id = mtk_dai_etdm_get_clkdiv_id_by_dai_id(dai_id);
-	int apll;
-	int apll_clk_id;
-	struct etdm_con_reg etdm_reg;
-	int ret = 0;
-
-	if (clk_id < 0 || clkdiv_id < 0)
-		return 0;
-
-	ret = get_etdm_reg(dai_id, &etdm_reg);
-	if (ret < 0)
-		return ret;
-
-	if (etdm_data->mclk_dir == SND_SOC_CLOCK_OUT)
-		regmap_set_bits(afe->regmap, etdm_reg.con1,
-				ETDM_CON1_MCLK_OUTPUT);
-	else
-		regmap_clear_bits(afe->regmap, etdm_reg.con1,
-				  ETDM_CON1_MCLK_OUTPUT);
-
-	if (etdm_data->mclk_freq) {
-		apll = etdm_data->mclk_apll;
-		apll_clk_id = mt8188_afe_get_mclk_source_clk_id(apll);
-		if (apll_clk_id < 0)
-			return apll_clk_id;
-
-		/* select apll */
-		ret = mt8188_afe_set_clk_parent(afe, afe_priv->clk[clk_id],
-						afe_priv->clk[apll_clk_id]);
-		if (ret)
-			return ret;
-
-		/* set rate */
-		ret = mt8188_afe_set_clk_rate(afe, afe_priv->clk[clkdiv_id],
-					      etdm_data->mclk_freq);
-	} else {
-		if (etdm_data->mclk_dir == SND_SOC_CLOCK_OUT)
-			dev_dbg(afe->dev, "%s mclk freq = 0\n", __func__);
-	}
-
-	return ret;
-}
-
 static int mtk_dai_etdm_configure(struct mtk_base_afe *afe,
 				  unsigned int rate,
 				  unsigned int channels,
@@ -2104,10 +2091,6 @@ static int mtk_dai_etdm_hw_params(struct snd_pcm_substream *substream,
 	if (is_cowork_mode(dai)) {
 		mst_dai_id = get_etdm_cowork_master_id(dai);
 
-		ret = mtk_dai_etdm_mclk_configure(afe, mst_dai_id);
-		if (ret)
-			return ret;
-
 		ret = mtk_dai_etdm_configure(afe, rate, channels,
 					     bit_width, mst_dai_id);
 		if (ret)
@@ -2126,10 +2109,6 @@ static int mtk_dai_etdm_hw_params(struct snd_pcm_substream *substream,
 				return ret;
 		}
 	} else {
-		ret = mtk_dai_etdm_mclk_configure(afe, dai->id);
-		if (ret)
-			return ret;
-
 		ret = mtk_dai_etdm_configure(afe, rate, channels,
 					     bit_width, dai->id);
 	}
@@ -2349,10 +2328,6 @@ static int mtk_dai_hdmitx_dptx_hw_params(struct snd_pcm_substream *substream,
 		etdm_data->data_mode = MTK_DAI_ETDM_DATA_MULTI_PIN;
 	}
 
-	ret = mtk_dai_etdm_mclk_configure(afe, dai->id);
-	if (ret)
-		return ret;
-
 	ret = mtk_dai_etdm_configure(afe, rate, channels, width, dai->id);
 
 	return ret;
@@ -2414,7 +2389,6 @@ static int mtk_dai_etdm_probe(struct snd_soc_dai *dai)
 		dev_dbg(afe->dev, "MCLK always on, rate %d\n",
 			etdm_data->mclk_freq);
 		pm_runtime_get_sync(afe->dev);
-		mtk_dai_etdm_mclk_configure(afe, dai->id);
 		mtk_dai_etdm_enable_mclk(afe, dai->id);
 		pm_runtime_put_sync(afe->dev);
 	}
