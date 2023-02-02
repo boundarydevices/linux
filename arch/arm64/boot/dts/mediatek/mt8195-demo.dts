@@ -1153,46 +1153,6 @@
 	status = "okay";
 };
 
-&apusys_rv {
-	status = "okay";
-};
-
-&apu_top_3 {
-	//vapu-supply = <&mt6359_vproc1_reg>;
-	vapu-supply = <&mt6359_vproc1_buck_reg>;
-	//vmdla-supply = <&mt6359_vproc2_reg>;
-	vmdla-supply = <&mt6359_vproc2_buck_reg>;
-	//vsram-supply = <&mt6359_vsram_md_reg>;
-	vsram-supply = <&mt6359_vsram_md_ldo_reg>;
-
-	operating-points-v2 = <&opp_table_apu_conn>,
-			      <&opp_table_apu_rv>,
-			      <&opp_table_vpu>,
-			      <&opp_table_dla>;
-
-	status = "okay";
-};
-
-&mdla_devfreq {
-	power_table = <581>,
-		      <448>,
-		      <320>,
-		      <208>,
-		      <127>,
-		      <96>;
-	status = "okay";
-};
-
-&vpu_devfreq {
-	power_table = <493>,
-		      <402>,
-		      <295>,
-		      <200>,
-		      <119>,
-		      <87>;
-	status = "okay";
-};
-
 &dp_intf1 {
 	status = "disabled";
 	mediatek,oob-hpd;
