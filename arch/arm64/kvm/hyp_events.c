@@ -163,6 +163,53 @@ static const struct file_operations hyp_event_format_fops = {
 	.release = single_release,
 };
 
+static ssize_t hyp_header_page_read(struct file *filp, char __user *ubuf,
+				   size_t cnt, loff_t *ppos)
+{
+	struct buffer_data_page field;
+	struct trace_seq *s;
+	ssize_t r;
+
+	s = kmalloc(sizeof(*s), GFP_KERNEL);
+	if (!s)
+		return -ENOMEM;
+
+	trace_seq_init(s);
+	trace_seq_printf(s, "\tfield: u64 timestamp;\t"
+			 "offset:0;\tsize:%u;\tsigned:%u;\n",
+			 (unsigned int)sizeof(field.time_stamp),
+			 (unsigned int)is_signed_type(u64));
+
+	trace_seq_printf(s, "\tfield: local_t commit;\t"
+			 "offset:%u;\tsize:%u;\tsigned:%u;\n",
+			 (unsigned int)offsetof(typeof(field), commit),
+			 (unsigned int)sizeof(field.commit),
+			 (unsigned int)is_signed_type(long));
+
+	trace_seq_printf(s, "\tfield: int overwrite;\t"
+			 "offset:%u;\tsize:%u;\tsigned:%u;\n",
+			 (unsigned int)offsetof(typeof(field), commit),
+			 1,
+			 (unsigned int)is_signed_type(long));
+
+	trace_seq_printf(s, "\tfield: char data;\t"
+			 "offset:%u;\tsize:%u;\tsigned:%u;\n",
+			 (unsigned int)offsetof(typeof(field), data),
+			 (unsigned int)BUF_PAGE_SIZE,
+			 (unsigned int)is_signed_type(char));
+
+	r = simple_read_from_buffer(ubuf, cnt, ppos, s->buffer,
+				    trace_seq_used(s));
+	kfree(s);
+
+	return r;
+}
+
+static const struct file_operations hyp_header_page_fops = {
+	.read = hyp_header_page_read,
+	.llseek = default_llseek,
+};
+
 static char early_events[COMMAND_LINE_SIZE];
 
 static __init int setup_hyp_event_early(char *str)
@@ -217,6 +264,9 @@ void hyp_trace_init_event_tracefs(struct dentry *parent)
 		pr_err("Failed to create tracefs folder for hyp events\n");
 		return;
 	}
+
+	tracefs_create_file("header_page", 0400, parent, NULL,
+			    &hyp_header_page_fops);
 
 	parent = tracefs_create_dir("hypervisor", parent);
 	if (!parent) {
