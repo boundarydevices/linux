@@ -2171,6 +2171,9 @@ static int mtk_dai_etdm_set_sysclk(struct snd_soc_dai *dai,
 	else
 		dai_id = dai->id;
 
+	if (!is_valid_etdm_dai(dai_id))
+		return -EINVAL;
+
 	etdm_data = afe_priv->dai_priv[dai_id];
 	etdm_data->mclk_dir = dir;
 	return mtk_dai_etdm_cal_mclk(afe, freq, dai_id);
