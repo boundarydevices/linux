@@ -3728,7 +3728,13 @@ static s32 brcmf_inform_single_bss(struct brcmf_cfg80211_info *cfg,
 	channel = bi->ctl_ch;
 	band = BRCMU_CHAN_BAND_TO_NL80211(ch.band);
 	freq = ieee80211_channel_to_frequency(channel, band);
+	if (!freq)
+		return -EINVAL;
+
 	bss_data.chan = ieee80211_get_channel(wiphy, freq);
+	if (!bss_data.chan)
+		return -EINVAL;
+
 	bss_data.scan_width = NL80211_BSS_CHAN_WIDTH_20;
 	bss_data.boottime_ns = ktime_to_ns(ktime_get_boottime());
 
@@ -3823,7 +3829,7 @@ static s32 brcmf_inform_ibss(struct brcmf_cfg80211_info *cfg,
 	buf = kzalloc(WL_BSS_INFO_MAX, GFP_KERNEL);
 	if (buf == NULL) {
 		err = -ENOMEM;
-		goto CleanUp;
+		goto cleanup;
 	}
 
 	*(__le32 *)buf = cpu_to_le32(WL_BSS_INFO_MAX);
@@ -3832,7 +3838,7 @@ static s32 brcmf_inform_ibss(struct brcmf_cfg80211_info *cfg,
 				     buf, WL_BSS_INFO_MAX);
 	if (err) {
 		bphy_err(drvr, "WLC_GET_BSS_INFO failed: %d\n", err);
-		goto CleanUp;
+		goto cleanup;
 	}
 
 	bi = (struct brcmf_bss_info_le *)(buf + 4);
@@ -3842,8 +3848,16 @@ static s32 brcmf_inform_ibss(struct brcmf_cfg80211_info *cfg,
 
 	band = wiphy->bands[BRCMU_CHAN_BAND_TO_NL80211(ch.band)];
 	freq = ieee80211_channel_to_frequency(ch.control_ch_num, band->band);
+	if (!freq) {
+		err = -EINVAL;
+		goto cleanup;
+	}
 	cfg->channel = freq;
 	notify_channel = ieee80211_get_channel(wiphy, freq);
+	if (!notify_channel) {
+		err = -EINVAL;
+		goto cleanup;
+	}
 
 	notify_capability = le16_to_cpu(bi->capability);
 	notify_interval = le16_to_cpu(bi->beacon_period);
@@ -3864,12 +3878,12 @@ static s32 brcmf_inform_ibss(struct brcmf_cfg80211_info *cfg,
 
 	if (!bss) {
 		err = -ENOMEM;
-		goto CleanUp;
+		goto cleanup;
 	}
 
 	cfg80211_put_bss(wiphy, bss);
 
-CleanUp:
+cleanup:
 
 	kfree(buf);
 
@@ -6421,7 +6435,11 @@ static int brcmf_cfg80211_get_channel(struct wiphy *wiphy,
 	}
 
 	freq = ieee80211_channel_to_frequency(ch.control_ch_num, band);
+	if (!freq)
+		return -EINVAL;
 	chandef->chan = ieee80211_get_channel(wiphy, freq);
+	if (!chandef->chan)
+		return -EINVAL;
 	chandef->width = width;
 	chandef->center_freq1 = ieee80211_channel_to_frequency(ch.chnum, band);
 	chandef->center_freq2 = 0;
@@ -7318,7 +7336,11 @@ brcmf_bss_roaming_done(struct brcmf_cfg80211_info *cfg,
 
 	band = wiphy->bands[BRCMU_CHAN_BAND_TO_NL80211(ch.band)];
 	freq = ieee80211_channel_to_frequency(ch.control_ch_num, band->band);
+	if (!freq)
+		err = -EINVAL;
 	notify_channel = ieee80211_get_channel(wiphy, freq);
+	if (!notify_channel)
+		err = -EINVAL;
 
 done:
 	kfree(buf);
