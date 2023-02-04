@@ -181,7 +181,7 @@
 	pinctrl_pwm1: pwm1grp {
 		fsl,pins = <
 			/* J14 mipi display */
-			MX8MP_IOMUXC_GPIO1_IO01__PWM1_OUT	0x100
+			MX8MP_IOMUXC_GPIO1_IO01__PWM1_OUT	0x160
 		>;
 	};
 
