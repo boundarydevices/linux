@@ -1226,16 +1226,12 @@ void brcmf_set_mpc(struct brcmf_if *ifp, int mpc)
 {
 	struct brcmf_pub *drvr = ifp->drvr;
 	s32 err = 0;
-	struct brcmf_cfg80211_info *cfg = ifp->drvr->config;
 
 	ifp->drvr->req_mpc = mpc;
 	if (check_vif_up(ifp->vif)) {
-		if (cfg->pwr_save)
-			err = brcmf_fil_iovar_int_set(ifp, "mpc",
-						      ifp->drvr->req_mpc);
-		else
-			err = brcmf_fil_iovar_int_set(ifp, "mpc", 0);
-
+		err = brcmf_fil_iovar_int_set(ifp,
+					      "mpc",
+					      ifp->drvr->req_mpc);
 		if (err) {
 			bphy_err(drvr, "fail to set mpc\n");
 			return;
@@ -3678,8 +3674,6 @@ brcmf_cfg80211_set_power_mgmt(struct wiphy *wiphy, struct net_device *ndev,
 		brcmf_dbg(INFO, "Do not enable power save for P2P clients\n");
 		pm = PM_OFF;
 	}
-
-	brcmf_set_mpc(ifp, ifp->drvr->req_mpc);
 
 	brcmf_dbg(INFO, "power save %s\n", (pm ? "enabled" : "disabled"));
 

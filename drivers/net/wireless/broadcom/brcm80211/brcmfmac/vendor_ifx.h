@@ -73,8 +73,32 @@ enum ifx_nl80211_vendor_subcmds {
 	 * @IFX_VENDOR_SCMD_DCMD: equivilent to SCMD_PRIV_STR in DHD.
 	 *
 	 * @IFX_VENDOR_SCMD_FRAMEBURST: align ID to DHD.
+	 *
+	 * @IFX_VENDOR_SCMD_MUEDCA_OPT_ENABLE: Vendor command to enable/disable HE MU-EDCA opt.
+	 *
+	 * @IFX_VENDOR_SCMD_LDPC_CAP: Vendor command enable/disable LDPC Capability.
+	 *
+	 * @IFX_VENDOR_SCMD_AMSDU: Vendor command to enable/disable AMSDU on all the TID queues.
+	 *
+	 * @IFX_VENDOR_SCMD_TWT: Vendor subcommand to configure TWT.
+	 *	Uses attributes defined in enum ifx_vendor_attr_twt.
+	 *
+	 * @IFX_VENDOR_SCMD_OCE_ENABLE: Vendor command to enable/disable OCE Capability.
+	 *
+	 * @IFX_VENDOR_SCMD_BSS_COLOR: Vendor command to get BSSCOLOR value.
+	 *
+	 * @IFX_VENDOR_SCMD_RANDMAC: Vendor command to enable/disable RANDMAC Capability.
+	 *
+	 * @IFX_VENDOR_SCMD_MBO: Vendor subcommand to configure MBO.
+	 *      Uses attributes defined in enum ifx_vendor_attr_mbo.
+	 *
+	 * @IFX_VENDOR_SCMD_MPC: Vendor command to set/get MPC setting.
+	 *
+	 * @IFX_VENDOR_SCMD_MAX: This acts as a the tail of cmds list.
+	 *      Make sure it located at the end of the list.
 	 */
 	/* Reserved 2-5 */
+
 	SCMD(UNSPEC)		= 0,
 	SCMD(DCMD)		= 1,
 	SCMD(RSV2)		= 2,
@@ -94,7 +118,8 @@ enum ifx_nl80211_vendor_subcmds {
 	SCMD(BSSCOLOR)		= 16,
 	SCMD(RANDMAC)		= 17,
 	SCMD(MBO)		= 18,
-	SCMD(MAX)		= 19
+	SCMD(MPC)		= 19,
+	SCMD(MAX)		= 20
 };
 
 /* enum ifx_vendor_attr - IFX nl80211 vendor attributes
@@ -643,6 +668,9 @@ int ifx_cfg80211_vndr_cmds_randmac(struct wiphy *wiphy,
 				   struct wireless_dev *wdev,
 				   const void *data, int len);
 int ifx_cfg80211_vndr_cmds_mbo(struct wiphy *wiphy,
+			       struct wireless_dev *wdev,
+			       const void *data, int len);
+int ifx_cfg80211_vndr_cmds_mpc(struct wiphy *wiphy,
 			       struct wireless_dev *wdev,
 			       const void *data, int len);
 
