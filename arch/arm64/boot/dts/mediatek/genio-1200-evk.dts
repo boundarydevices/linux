@@ -66,6 +66,21 @@
 			no-map;
 		};
 
+		apu_reserve_memory: apu-reserve-memory{
+			compatible = "shared-dma-pool";
+			size = <0 0x1400000>; //20 MB
+			alignment = <0 0x10000>;
+			reg = <0 0x62000000 0 0x1400000>;
+
+		};
+
+		vpu_reserve_memory: vpu-reserve-memory {
+			compatible = "shared-dma-pool";
+			size = <0 0x1400000>; //20 MB
+			alignment = <0 0x10000>;
+			reg = <0 0x53000000 0 0x1400000>;
+		};
+
 		/* global autoconfigured region for contiguous allocations */
 		linux,cma {
 			compatible = "shared-dma-pool";
