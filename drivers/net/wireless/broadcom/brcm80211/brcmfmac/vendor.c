@@ -314,6 +314,13 @@ const struct wiphy_vendor_command brcmf_vendor_cmds[] = {
 			ifx_cfg80211_vndr_cmds_mbo),
 		.maxattr = IFX_VENDOR_ATTR_MBO_MAX
 	},
+	{
+		IFX_SUBCMD(MPC,
+			   (WIPHY_VENDOR_CMD_NEED_WDEV |
+			    WIPHY_VENDOR_CMD_NEED_NETDEV),
+			   VENDOR_CMD_RAW_DATA,
+			   ifx_cfg80211_vndr_cmds_mpc)
+	},
 };
 
 const struct nl80211_vendor_cmd_info brcmf_vendor_events[] = {
