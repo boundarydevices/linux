@@ -325,6 +325,7 @@
 	pinctrl-0 = <&i2c1_pins>;
 	clock-frequency = <100000>;
 	status = "okay";
+	clock-div = <2>;
 
 	it66121hdmitx: it66121hdmitx@4c {
 		compatible = "ite,it66121";
@@ -359,6 +360,17 @@
 				};
 			};
 		};
+	};
+
+	touch: gt911@5d {
+		compatible = "goodix,gt9271";
+		reg = <0x5d>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ts_pins>;
+		interrupt-parent = <&pio>;
+		interrupts = <78 IRQ_TYPE_EDGE_FALLING>;
+		irq-gpios = <&pio 78 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&pio 79 GPIO_ACTIVE_HIGH>;
 	};
 };
 
@@ -398,8 +410,41 @@
 	status = "okay";
 };
 
+&mipi_tx0 {
+	status = "okay";
+};
+
 &dsi0 {
 	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	poweron-in-hs-mode = <0>;
+
+	panel@0 {
+		compatible = "startek,kd070fhfid015";
+		status = "okay";
+		reg = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&panel_pins_default>;
+		reset-gpios = <&pio 20 GPIO_ACTIVE_HIGH>;
+		dcdc-gpios = <&pio 67 GPIO_ACTIVE_HIGH>;
+		enable-gpios = <&pio 129 GPIO_ACTIVE_HIGH>;
+		iovcc-supply = <&mt6357_vsim1_reg>;
+
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&dsi_out>;
+			};
+		};
+	};
+
+	ports {
+		port {
+			dsi_out: endpoint {
+				remote-endpoint = <&panel_in>;
+			};
+		};
+	};
 };
 
 &dpi0 {
@@ -429,6 +474,11 @@
 
 &mt6357_vibr_reg {
 	regulator-always-on;
+};
+
+&mt6357_vsim1_reg {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <1800000>;
 };
 
 &mt6357_vsim2_reg {
@@ -890,6 +940,36 @@
 		pinmux = <MT8365_PIN_117_DMIC0_CLK__FUNC_DMIC0_CLK>,
 			 <MT8365_PIN_118_DMIC0_DAT0__FUNC_DMIC0_DAT0>,
 			 <MT8365_PIN_119_DMIC0_DAT1__FUNC_DMIC0_DAT1>;
+		};
+	};
+
+	ts_pins: ts-pins {
+		pins-ctp-int1 {
+			pinmux = <MT8365_PIN_78_CMHSYNC__FUNC_GPIO78>;
+			input-enable;
+			bias-disable;
+		};
+
+		ts-rst {
+			pinmux = <MT8365_PIN_78_CMHSYNC__FUNC_GPIO78>;
+			output-low;
+		};
+	};
+
+	panel_pins_default: panel-pins-default {
+		panel-dcdc {
+			pinmux = <MT8365_PIN_67_CMPCLK__FUNC_GPIO67>;
+			output-low;
+		};
+
+		panel-en {
+			pinmux = <MT8365_PIN_129_TDM_TX_BCK__FUNC_GPIO129>;
+			output-low;
+		};
+
+		panel-rst {
+			pinmux = <MT8365_PIN_20_LCM_RST__FUNC_GPIO20>;
+			output-high;
 		};
 	};
 };
