@@ -460,6 +460,7 @@ struct mtk_mutex_data {
 	const unsigned int mutex_cross_sys_config_num;
 	const unsigned int *mutex_table_mod;
 	const bool no_clk;
+	const bool need_gce;
 };
 
 struct mtk_mutex_ctx {
@@ -885,6 +886,7 @@ static const struct mtk_mutex_data mt8183_mutex_driver_data = {
 	.mutex_sof_reg = MT8183_MUTEX0_SOF0,
 	.mutex_table_mod = mt8183_mutex_table_mod,
 	.no_clk = true,
+	.need_gce = true,
 };
 
 static const struct mtk_mutex_data mt8195_vpp_mutex_driver_data = {
@@ -892,6 +894,7 @@ static const struct mtk_mutex_data mt8195_vpp_mutex_driver_data = {
 	.mutex_mod_reg = MT8183_MUTEX0_MOD0,
 	.mutex_sof_reg = MT8183_MUTEX0_SOF0,
 	.mutex_table_mod = mt8195_mutex_table_mod,
+	.need_gce = true,
 };
 
 static const struct mtk_mutex_data mt8365_mutex_driver_data = {
@@ -923,6 +926,7 @@ static const struct mtk_mutex_data mt8188_vpp_mutex_driver_data = {
 	.mutex_mod_reg = MT8183_MUTEX0_MOD0,
 	.mutex_sof_reg = MT8183_MUTEX0_SOF0,
 	.mutex_table_mod = mt8188_mutex_table_mod,
+	.need_gce = true,
 };
 
 
@@ -1362,9 +1366,12 @@ static int mtk_mutex_probe(struct platform_device *pdev)
 	mtx->addr = addr.start;
 
 #if IS_REACHABLE(CONFIG_MTK_CMDQ)
-	ret = cmdq_dev_get_client_reg(dev, &mtx->cmdq_reg, 0);
-	if (ret)
-		dev_dbg(dev, "No mediatek,gce-client-reg!\n");
+	if (mtx->data->need_gce) {
+		/* query gce reg according to need_gce flag in mutex driver data */
+		ret = cmdq_dev_get_client_reg(dev, &mtx->cmdq_reg, 0);
+		if (ret)
+			dev_dbg(dev, "No mediatek,gce-client-reg!\n");
+	}
 #endif
 
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
