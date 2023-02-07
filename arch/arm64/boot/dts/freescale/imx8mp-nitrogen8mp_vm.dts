@@ -567,6 +567,26 @@
 	cpu-supply = <&buck2>;
 };
 
+&aips3 {
+	sas: sas@30a60000 {
+		compatible = "boundary,sas";
+		reg = <0x30a60000 0x10000>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_uart4>;
+		interrupts = <GIC_SPI 29 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&clk IMX8MP_CLK_UART4_ROOT>,
+			 <&clk IMX8MP_CLK_UART4_ROOT>;
+		clock-names = "ipg", "per";
+		status = "okay";
+		baud = <19200>;
+		interbyte_delay = <5>;
+		rxbufsize = <4096>;
+		txbufsize = <4096>;
+		maxtxmsg = <512>;
+		flush_on_mark = <0>;
+	};
+};
+
 &aud2htx {
 	status = "okay";
 };
@@ -998,11 +1018,7 @@
 };
 
 &uart4 { /* J2 */
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart4>;
-	assigned-clocks = <&clk IMX8MP_CLK_UART4>;
-	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_80M>;
-	status = "okay";
+	status = "disabled";
 };
 
 &usb3_0 {
