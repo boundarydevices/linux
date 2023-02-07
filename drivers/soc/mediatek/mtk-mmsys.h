@@ -122,6 +122,7 @@ struct mtk_mmsys_driver_data {
 	const u32 num_resets;
 	const bool is_vppsys;
 	const u8 vsync_len;
+	const bool need_gce;
 };
 
 /*
