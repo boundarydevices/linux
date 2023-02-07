@@ -79,7 +79,6 @@
 #define UBMR  0xa8 /* BRM Modulator Register */
 #define UBRC  0xac /* Baud Rate Count Register */
 #define IMX21_ONEMS 0xb0 /* One Millisecond register */
-#define IMX1_UTS 0xd0 /* UART Test Register on i.mx1 */
 #define IMX21_UTS 0xb4 /* UART Test Register on all other i.mx*/
 #define UMCR_MDEN 1		/* 9-bit/Multidrop enable */
 #define UMCR_TXB8 (1<<2)	/* parity bit goes here */
@@ -708,7 +707,6 @@ static int sas_open(struct inode *inode, struct file *file)
 		writel(0x8000, dev->base + UCR4);
 		writel(0x002b, dev->base + UESC);
 		writel(0x0, dev->base + UTIM);
-		writel(0x0, dev->base + IMX1_UTS);
 		writel(0, dev->base + IMX21_UTS);
 		dev->force_tx_par_err = 0;
 
