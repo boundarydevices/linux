@@ -58,6 +58,7 @@ static const struct mtk_mmsys_driver_data mt8173_mmsys_driver_data = {
 	.num_routes = ARRAY_SIZE(mmsys_default_routing_table),
 	.sw0_rst_offset = MT8183_MMSYS_SW0_RST_B,
 	.num_resets = 32,
+	.need_gce = true,
 };
 
 static const struct mtk_mmsys_driver_data mt8183_mmsys_driver_data = {
@@ -66,6 +67,7 @@ static const struct mtk_mmsys_driver_data mt8183_mmsys_driver_data = {
 	.num_routes = ARRAY_SIZE(mmsys_mt8183_routing_table),
 	.sw0_rst_offset = MT8183_MMSYS_SW0_RST_B,
 	.num_resets = 32,
+	.need_gce = true,
 };
 
 static const struct mtk_mmsys_driver_data mt8186_mmsys_driver_data = {
@@ -97,6 +99,7 @@ static const struct mtk_mmsys_driver_data mt8188_vdosys1_driver_data = {
 	.num_cross_sys_w_h_configs = ARRAY_SIZE(mmsys_mt8188_vdo1_cross_sys_w_h_configs_list),
 	.sw0_rst_offset = MT8188_VDO1_SW0_RST_B,
 	.num_resets = 96,
+	.need_gce = true,
 };
 
 static const struct mtk_mmsys_driver_data mt8188_vppsys0_driver_data = {
@@ -136,6 +139,7 @@ static const struct mtk_mmsys_driver_data mt8195_vdosys1_driver_data = {
 	.num_cross_sys_w_h_configs = ARRAY_SIZE(mmsys_mt8195_vdo1_cross_sys_w_h_configs_list),
 	.sw0_rst_offset = MT8195_VDO1_SW0_RST_B,
 	.num_resets = 64,
+	.need_gce = true,
 };
 
 static const struct mtk_mmsys_driver_data mt8195_vppsys0_driver_data = {
@@ -442,8 +446,8 @@ static int mtk_mmsys_probe(struct platform_device *pdev)
 	}
 
 #if IS_REACHABLE(CONFIG_MTK_CMDQ)
-	if (!mmsys->data->is_vppsys) {
-		/* MDP does not depend on vppsys to provide cmdq_base, while vdosys does. */
+	if (mmsys->data->need_gce) {
+		/* query gce reg according to need_gce flag in mmsys driver data */
 		ret = cmdq_dev_get_client_reg(dev, &mmsys->cmdq_base, 0);
 		if (ret)
 			dev_dbg(dev, "No mediatek,gce-client-reg!\n");
