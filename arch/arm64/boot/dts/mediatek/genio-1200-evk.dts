@@ -1030,6 +1030,10 @@
 	};
 };
 
+&dmic_codec {
+	wakeup-delay-ms = <200>;
+};
+
 &afe {
 	#sound-dai-cells = <0>;
 	memory-region = <&snd_dma_mem_reserved>;
