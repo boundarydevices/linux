@@ -1969,6 +1969,38 @@ hdmirx_probe(struct platform_device *pdev)
 static int
 hdmirx_remove(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
+	struct MTK_HDMI *myhdmi = dev_get_drvdata(dev);
+
+	if (myhdmi == NULL) {
+		RX_DEF_LOG("[RX] %s, myhdmi is NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	RX_DEF_LOG("[RX] %s\n", __func__);
+	hdmi_rx_power_off(myhdmi);
+
+	if (myhdmi->hdmi_v33 != NULL) {
+		RX_DEF_LOG("[RX] %s, release v3.3\n", __func__);
+		regulator_disable(myhdmi->hdmi_v33);
+		devm_regulator_put(myhdmi->hdmi_v33);
+	}
+	if (myhdmi->hdmi_v08 != NULL) {
+		RX_DEF_LOG("[RX] %s, release v0.8\n", __func__);
+		regulator_disable(myhdmi->hdmi_v08);
+		devm_regulator_put(myhdmi->hdmi_v08);
+	}
+#if HDMIRX_YOCTO
+	if (myhdmi->reg_vcore != NULL) {
+		RX_DEF_LOG("[RX] %s, release vcore\n", __func__);
+		regulator_disable(myhdmi->reg_vcore);
+		devm_regulator_put(myhdmi->reg_vcore);
+	}
+#endif
+
+	devm_kfree(dev, myhdmi);
+	dev_set_drvdata(dev, NULL);
+	RX_DEF_LOG("[RX] %s done\n", __func__);
 	return 0;
 }
 
