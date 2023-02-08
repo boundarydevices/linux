@@ -4,7 +4,7 @@
  * Zhou Guoniu <guoniu.zhou@nxp.com>
  */
 img_subsys: bus@58000000 {
-	compatible = "simple-pm-bus";
+	compatible = "simple-pm-bus", "simple-bus";
 	#address-cells = <1>;
 	#size-cells = <1>;
 	ranges = <0x58000000 0x0 0x58000000 0x1000000>;
