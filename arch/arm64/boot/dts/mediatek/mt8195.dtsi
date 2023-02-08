@@ -1894,6 +1894,8 @@
 				 <&vppsys1 CLK_VPP1_SVPP3_VDO1_DL_RELAY>,
 				 <&vppsys1 CLK_VPP1_SVPP2_VDO1_DL_RELAY>,
 				 <&vppsys1 CLK_VPP1_SVPP3_VDO0_DL_RELAY>;
+			assigned-clocks = <&topckgen CLK_TOP_VPP>;
+			assigned-clock-parents = <&topckgen CLK_TOP_MAINPLL_D4>;
 			mboxes = <&gce1 12 CMDQ_THR_PRIO_1>,
 				 <&gce1 13 CMDQ_THR_PRIO_1>,
 				 <&gce1 14 CMDQ_THR_PRIO_1>,
