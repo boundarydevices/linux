@@ -1603,6 +1603,8 @@
 				 <&vppsys1 CLK_VPP1_VPP0_DL_ASYNC>,
 				 <&vppsys1 CLK_VPP1_VPP0_DL1_RELAY>,
 				 <&vppsys0 CLK_VPP0_VPP12VPP0_ASYNC>;
+			assigned-clocks = <&topckgen CLK_TOP_VPP>;
+			assigned-clock-parents = <&topckgen CLK_TOP_MAINPLL_D4>;
 			mboxes = <&gce0 13 CMDQ_THR_PRIO_1>,
 				 <&gce0 14 CMDQ_THR_PRIO_1>,
 				 <&gce0 16 CMDQ_THR_PRIO_1>,
