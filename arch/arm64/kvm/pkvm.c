@@ -141,19 +141,6 @@ static int __pkvm_create_hyp_vcpu(struct kvm *host_kvm, struct kvm_vcpu *host_vc
 	return ret;
 }
 
-static bool pkvm_teardown_vm(struct kvm *host_kvm)
-{
-	if (!pkvm_is_hyp_created(host_kvm))
-		return false;
-
-	WARN_ON(kvm_call_hyp_nvhe(__pkvm_teardown_vm,
-				  host_kvm->arch.pkvm.handle));
-
-	host_kvm->arch.pkvm.handle = 0;
-
-	return true;
-}
-
 static void __pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 {
 	struct kvm_pinned_page *ppage;
@@ -161,16 +148,18 @@ static void __pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 	struct rb_node *node;
 	unsigned long pages = 0;
 
-	if (!pkvm_teardown_vm(host_kvm))
-		return;
+	if (!pkvm_is_hyp_created(host_kvm))
+		goto out_free;
 
-	free_hyp_memcache(&host_kvm->arch.pkvm.teardown_mc);
+	WARN_ON(kvm_call_hyp_nvhe(__pkvm_start_teardown_vm, host_kvm->arch.pkvm.handle));
 
 	node = rb_first(&host_kvm->arch.pkvm.pinned_pages);
 	while (node) {
 		ppage = rb_entry(node, struct kvm_pinned_page, node);
-		WARN_ON(kvm_call_hyp_nvhe(__pkvm_host_reclaim_page,
-					  page_to_pfn(ppage->page)));
+		WARN_ON(kvm_call_hyp_nvhe(__pkvm_reclaim_dying_guest_page,
+					  host_kvm->arch.pkvm.handle,
+					  page_to_pfn(ppage->page),
+					  ppage->ipa));
 		cond_resched();
 
 		unpin_user_pages_dirty_lock(&ppage->page, 1, true);
@@ -181,6 +170,12 @@ static void __pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 	}
 
 	account_locked_vm(mm, pages, false);
+
+	WARN_ON(kvm_call_hyp_nvhe(__pkvm_finalize_teardown_vm, host_kvm->arch.pkvm.handle));
+
+out_free:
+	host_kvm->arch.pkvm.handle = 0;
+	free_hyp_memcache(&host_kvm->arch.pkvm.teardown_mc);
 }
 
 /*
