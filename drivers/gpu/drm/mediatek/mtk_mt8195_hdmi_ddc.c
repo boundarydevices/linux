@@ -422,13 +422,19 @@ static unsigned char fg_ddc_data_write(struct mtk_hdmi_ddc *ddc,
 static int mtk_hdmi_ddc_xfer(struct i2c_adapter *adapter, struct i2c_msg *msgs,
 			     int num)
 {
-	struct mtk_hdmi_ddc *ddc = adapter->algo_data;
-	struct device *dev = adapter->dev.parent;
+	struct mtk_hdmi_ddc *ddc;
+	struct device *dev;
 	int ret;
 	int i;
 	unsigned char offset = 0;
 
-	if (!ddc)
+	if (!adapter || !msgs)
+		return -EINVAL;
+
+	ddc = adapter->algo_data;
+	dev = adapter->dev.parent;
+
+	if (!ddc || !ddc->regs)
 		return -EINVAL;
 
 	for (i = 0; i < num; i++) {
