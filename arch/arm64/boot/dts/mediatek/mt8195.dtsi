@@ -54,6 +54,7 @@
 		merge3 = &merge3;
 		merge4 = &merge4;
 		merge5 = &merge5;
+		mmc0 = &mmc0;
 		vdo1-rdma0 = &vdo1_rdma0;
 		vdo1-rdma1 = &vdo1_rdma1;
 		vdo1-rdma2 = &vdo1_rdma2;
