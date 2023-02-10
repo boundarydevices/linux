@@ -9,7 +9,7 @@
 
 #include <drm/drm_ioctl.h>
 
-#ifdef CONFIG_DRM_IMX_DPU
+#if IS_ENABLED(CONFIG_DRM_IMX_DPU)
 extern const struct drm_ioctl_desc imx_drm_dpu_ioctls[3];
 #else
 const struct drm_ioctl_desc imx_drm_dpu_ioctls[] = {};
