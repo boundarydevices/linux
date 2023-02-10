@@ -164,6 +164,9 @@ struct pkvm_module_ops {
 	phys_addr_t (*hyp_pa)(void *x);
 	void* (*hyp_va)(phys_addr_t phys);
 	unsigned long (*kern_hyp_va)(unsigned long x);
+	int (*register_hyp_event_ids)(unsigned long start, unsigned long end);
+	void* (*tracing_reserve_entry)(unsigned long length);
+	void (*tracing_commit_entry)(void);
 };
 
 int __pkvm_load_el2_module(struct module *this, unsigned long *token);
