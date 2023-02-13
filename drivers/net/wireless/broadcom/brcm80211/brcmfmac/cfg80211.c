@@ -3821,7 +3821,7 @@ static s32 brcmf_inform_ibss(struct brcmf_cfg80211_info *cfg,
 	buf = kzalloc(WL_BSS_INFO_MAX, GFP_KERNEL);
 	if (buf == NULL) {
 		err = -ENOMEM;
-		goto CleanUp;
+		goto cleanup;
 	}
 
 	*(__le32 *)buf = cpu_to_le32(WL_BSS_INFO_MAX);
@@ -3830,7 +3830,7 @@ static s32 brcmf_inform_ibss(struct brcmf_cfg80211_info *cfg,
 				     buf, WL_BSS_INFO_MAX);
 	if (err) {
 		bphy_err(drvr, "WLC_GET_BSS_INFO failed: %d\n", err);
-		goto CleanUp;
+		goto cleanup;
 	}
 
 	bi = (struct brcmf_bss_info_le *)(buf + 4);
