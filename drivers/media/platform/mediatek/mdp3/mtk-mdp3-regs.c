@@ -76,6 +76,7 @@ static void mdp_bound_align_image(u32 *w, u32 *h,
 				  unsigned int salign)
 {
 	unsigned int org_w, org_h;
+	struct v4l2_frmsize_stepwise c;
 
 	org_w = *w;
 	org_h = *h;
@@ -83,9 +84,13 @@ static void mdp_bound_align_image(u32 *w, u32 *h,
 			      h, s->min_height, s->max_height, s->step_height,
 			      salign);
 
-	s->min_width = org_w;
-	s->min_height = org_h;
-	v4l2_apply_frmsize_constraints(w, h, s);
+	c.min_width = org_w;
+	c.min_height = org_h;
+	c.max_width = s->max_width;
+	c.max_height = s->max_height;
+	c.step_width = 1 << s->step_width;
+	c.step_height = 1 << s->step_height;
+	v4l2_apply_frmsize_constraints(w, h, &c);
 }
 
 static int mdp_clamp_align(s32 *x, int min, int max, unsigned int align)
