@@ -204,7 +204,7 @@ int i2c_generic_scl_recovery(struct i2c_adapter *adap)
 
 	if (bri->prepare_recovery)
 		bri->prepare_recovery(adap);
-	if (bri->pinctrl)
+	if (bri->pins_gpio)
 		pinctrl_select_state(bri->pinctrl, bri->pins_gpio);
 
 	/*
@@ -261,7 +261,7 @@ int i2c_generic_scl_recovery(struct i2c_adapter *adap)
 
 	if (bri->unprepare_recovery)
 		bri->unprepare_recovery(adap);
-	if (bri->pinctrl)
+	if (bri->pins_default)
 		pinctrl_select_state(bri->pinctrl, bri->pins_default);
 
 	return ret;
@@ -283,6 +283,7 @@ static void i2c_gpio_init_pinctrl_recovery(struct i2c_adapter *adap)
 	struct i2c_bus_recovery_info *bri = adap->bus_recovery_info;
 	struct device *dev = &adap->dev;
 	struct pinctrl *p = bri->pinctrl;
+	int new = 0;
 
 	/*
 	 * we can't change states without pinctrl, so remove the states if
@@ -311,14 +312,14 @@ static void i2c_gpio_init_pinctrl_recovery(struct i2c_adapter *adap)
 			dev_dbg(dev, "no gpio or recovery state found for GPIO recovery\n");
 			bri->pins_gpio = NULL;
 		}
+		new = 1;
 	}
 
 	/* for pinctrl state changes, we need all the information */
 	if (bri->pins_default && bri->pins_gpio) {
-		dev_info(dev, "using pinctrl states for GPIO recovery");
+		if (new)
+			dev_info(dev, "using pinctrl states for GPIO recovery");
 	} else {
-		bri->pinctrl = NULL;
-		bri->pins_default = NULL;
 		bri->pins_gpio = NULL;
 	}
 }
@@ -341,7 +342,7 @@ static int i2c_gpio_init_generic_recovery(struct i2c_adapter *adap)
 	 * pins might be taken as GPIO, so we should inform pinctrl about
 	 * this and move the state to GPIO
 	 */
-	if (bri->pinctrl)
+	if (bri->pins_gpio)
 		pinctrl_select_state(bri->pinctrl, bri->pins_gpio);
 
 	/*
@@ -385,7 +386,7 @@ static int i2c_gpio_init_generic_recovery(struct i2c_adapter *adap)
 
 cleanup_pinctrl_state:
 	/* change the state of the pins back to their default state */
-	if (bri->pinctrl)
+	if (bri->pins_default)
 		pinctrl_select_state(bri->pinctrl, bri->pins_default);
 
 	return ret;
@@ -397,7 +398,7 @@ static int i2c_gpio_init_recovery(struct i2c_adapter *adap)
 	return i2c_gpio_init_generic_recovery(adap);
 }
 
-static int i2c_init_recovery(struct i2c_adapter *adap)
+int i2c_init_recovery(struct i2c_adapter *adap)
 {
 	struct i2c_bus_recovery_info *bri = adap->bus_recovery_info;
 	bool is_error_level = true;
@@ -446,6 +447,7 @@ static int i2c_init_recovery(struct i2c_adapter *adap)
 
 	return -EINVAL;
 }
+EXPORT_SYMBOL_GPL(i2c_init_recovery);
 
 static int i2c_smbus_host_notify_to_irq(const struct i2c_client *client)
 {
@@ -1435,7 +1437,16 @@ int i2c_handle_smbus_host_notify(struct i2c_adapter *adap, unsigned short addr)
 }
 EXPORT_SYMBOL_GPL(i2c_handle_smbus_host_notify);
 
-static int i2c_register_adapter(struct i2c_adapter *adap)
+void i2c_free_adapter_id(struct i2c_adapter *adap)
+{
+	mutex_lock(&core_lock);
+	/* free bus id */
+	idr_remove(&i2c_adapter_idr, adap->nr);
+	mutex_unlock(&core_lock);
+}
+EXPORT_SYMBOL_GPL(i2c_free_adapter_id);
+
+int i2c_register_adapter(struct i2c_adapter *adap)
 {
 	int res = -EINVAL;
 
@@ -1478,7 +1489,9 @@ static int i2c_register_adapter(struct i2c_adapter *adap)
 	dev_set_name(&adap->dev, "i2c-%d", adap->nr);
 	adap->dev.bus = &i2c_bus_type;
 	adap->dev.type = &i2c_adapter_type;
-	res = device_register(&adap->dev);
+	if (!adap->dev.kobj.kset)
+		device_initialize(&adap->dev);
+	res = device_add(&adap->dev);
 	if (res) {
 		pr_err("adapter '%s': can't register device (%d)\n", adap->name, res);
 		goto out_list;
@@ -1527,31 +1540,38 @@ out_reg:
 	device_unregister(&adap->dev);
 	wait_for_completion(&adap->dev_released);
 out_list:
-	mutex_lock(&core_lock);
-	idr_remove(&i2c_adapter_idr, adap->nr);
-	mutex_unlock(&core_lock);
+	i2c_free_adapter_id(adap);
 	return res;
 }
+EXPORT_SYMBOL_GPL(i2c_register_adapter);
 
-/**
- * __i2c_add_numbered_adapter - i2c_add_numbered_adapter where nr is never -1
- * @adap: the adapter to register (with adap->nr initialized)
- * Context: can sleep
- *
- * See i2c_add_numbered_adapter() for details.
- */
-static int __i2c_add_numbered_adapter(struct i2c_adapter *adap)
+int i2c_get_adapter_id(struct i2c_adapter *adapter, int id)
 {
-	int id;
+	struct device *dev = &adapter->dev;
+
+	if ((id < 0) && dev->of_node)
+		id = of_alias_get_id(dev->of_node, "i2c");
+	if (id >= 0) {
+		mutex_lock(&core_lock);
+		id = idr_alloc(&i2c_adapter_idr, adapter, id, id + 1, GFP_KERNEL);
+		mutex_unlock(&core_lock);
+		if (WARN(id < 0, "couldn't get idr"))
+			return id == -ENOSPC ? -EBUSY : id;
+		adapter->nr = id;
+		return 0;
+	}
 
 	mutex_lock(&core_lock);
-	id = idr_alloc(&i2c_adapter_idr, adap, adap->nr, adap->nr + 1, GFP_KERNEL);
+	id = idr_alloc(&i2c_adapter_idr, adapter,
+		       __i2c_first_dynamic_bus_num, 0, GFP_KERNEL);
 	mutex_unlock(&core_lock);
 	if (WARN(id < 0, "couldn't get idr"))
-		return id == -ENOSPC ? -EBUSY : id;
+		return id;
 
-	return i2c_register_adapter(adap);
+	adapter->nr = id;
+	return 0;
 }
+EXPORT_SYMBOL(i2c_get_adapter_id);
 
 /**
  * i2c_add_adapter - declare i2c adapter, use dynamic bus number
@@ -1569,26 +1589,10 @@ static int __i2c_add_numbered_adapter(struct i2c_adapter *adap)
  */
 int i2c_add_adapter(struct i2c_adapter *adapter)
 {
-	struct device *dev = &adapter->dev;
-	int id;
+	int ret = i2c_get_adapter_id(adapter, -1);
 
-	if (dev->of_node) {
-		id = of_alias_get_id(dev->of_node, "i2c");
-		if (id >= 0) {
-			adapter->nr = id;
-			return __i2c_add_numbered_adapter(adapter);
-		}
-	}
-
-	mutex_lock(&core_lock);
-	id = idr_alloc(&i2c_adapter_idr, adapter,
-		       __i2c_first_dynamic_bus_num, 0, GFP_KERNEL);
-	mutex_unlock(&core_lock);
-	if (WARN(id < 0, "couldn't get idr"))
-		return id;
-
-	adapter->nr = id;
-
+	if (ret)
+		return ret;
 	return i2c_register_adapter(adapter);
 }
 EXPORT_SYMBOL(i2c_add_adapter);
@@ -1616,12 +1620,16 @@ EXPORT_SYMBOL(i2c_add_adapter);
  * and the appropriate driver model device nodes are created.  Otherwise, a
  * negative errno value is returned.
  */
-int i2c_add_numbered_adapter(struct i2c_adapter *adap)
+int i2c_add_numbered_adapter(struct i2c_adapter *adapter)
 {
-	if (adap->nr == -1) /* -1 means dynamically assign bus id */
-		return i2c_add_adapter(adap);
+	int ret;
+	int id = adapter->nr;
 
-	return __i2c_add_numbered_adapter(adap);
+	adapter->nr = -1;
+	ret = i2c_get_adapter_id(adapter, id);
+	if (ret)
+		return ret;
+	return i2c_register_adapter(adapter);
 }
 EXPORT_SYMBOL_GPL(i2c_add_numbered_adapter);
 
@@ -1735,10 +1743,7 @@ void i2c_del_adapter(struct i2c_adapter *adap)
 	device_unregister(&adap->dev);
 	wait_for_completion(&adap->dev_released);
 
-	/* free bus id */
-	mutex_lock(&core_lock);
-	idr_remove(&i2c_adapter_idr, adap->nr);
-	mutex_unlock(&core_lock);
+	i2c_free_adapter_id(adap);
 
 	/* Clear the device structure in case this adapter is ever going to be
 	   added again */
