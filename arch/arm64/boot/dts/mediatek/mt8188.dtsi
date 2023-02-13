@@ -2873,7 +2873,7 @@
 
 		dp_tx: dp-tx@1c600000 {
 			status = "disabled";
-			compatible = "mediatek,mt8195-dp-tx";
+			compatible = "mediatek,mt8188-dp-tx";
 			#sound-dai-cells = <0>;
 			reg = <0 0x1c600000 0 0x8000>;
 			clocks = <&topckgen CLK_TOP_DPTX>;
