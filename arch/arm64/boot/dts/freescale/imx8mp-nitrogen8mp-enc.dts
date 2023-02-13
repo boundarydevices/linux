@@ -19,6 +19,25 @@
 		pwms = <&pwm4 0 50 0>; /* 1 / 50 ns = 20 MHz */
 	};
 
+	i2cmux {
+		compatible = "i2c-mux-pinctrl";
+		i2c-parent = <&i2c2>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c2_0: i2c2mux@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c2_1: i2c2mux@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+
 	reg_vref_2v5: regulator-vref-2v5 {
 		compatible = "regulator-fixed";
 		regulator-name = "vref-2v5";
@@ -65,10 +84,24 @@
 			MX8MP_IOMUXC_SAI5_RXD3__GPIO3_IO24		0x41
 			MX8MP_IOMUXC_SD1_DATA4__GPIO2_IO06		0x41
 			MX8MP_IOMUXC_SD1_DATA5__GPIO2_IO07		0x41
-			MX8MP_IOMUXC_SD1_DATA6__GPIO2_IO08		0x41
-			MX8MP_IOMUXC_SD1_DATA7__GPIO2_IO09		0x41
 			MX8MP_IOMUXC_SD1_RESET_B__GPIO2_IO10		0x41
 			MX8MP_IOMUXC_SPDIF_TX__GPIO5_IO03		0x41
+		>;
+	};
+
+	pinctrl_i2c2_sd: i2c2-sdgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SD1_DATA6__I2C2_SCL		0x400001c3
+			MX8MP_IOMUXC_SD1_DATA7__I2C2_SDA		0x400001c3
+		>;
+	};
+
+	pinctrl_i2c2_sd_1: i2c2-sd-1grp {
+		fsl,pins = <
+#define GP_I2C2_SD_SCL	<&gpio2 8 GPIO_OPEN_DRAIN>
+			MX8MP_IOMUXC_SD1_DATA6__GPIO2_IO08        	0x1c3
+#define GP_I2C2_SD_SDA	<&gpio2 9 GPIO_OPEN_DRAIN>
+			MX8MP_IOMUXC_SD1_DATA7__GPIO2_IO09        	0x1c3
 		>;
 	};
 
@@ -103,6 +136,96 @@
 	/delete-node/ can2;
 };
 
+&i2c2 {
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
+	/delete-property/ scl-gpios;
+	/delete-property/ sda-gpios;
+	/delete-node/ i2cmux9546@70;
+};
+
+&i2c2_0 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = <&pinctrl_i2c2>;
+	pinctrl-1 = <&pinctrl_i2c2_1>;
+	scl-gpios = GP_I2C2_SCL;
+	sda-gpios = GP_I2C2_SDA;
+
+	pca9546: i2cmux9546@70 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2_pca9546>;
+		compatible = "nxp,pca9546";
+		reg = <0x70>;
+		reset-gpios = GP_PCA9546_RESET;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c2a: i2c2@0 {
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c2b: i2c2@1 {
+			/* J9  - camera*/
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			/* edid  @50 */
+		};
+
+		i2c2c: i2c2@2 {
+			/* J10 - camera */
+			clock-frequency = <100000>;
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c2d: i2c2@3 {
+			/* rtc, J11 mipi */
+			clock-frequency = <100000>;
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};
+
+&i2c2_1 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = <&pinctrl_i2c2_sd>;
+	pinctrl-1 = <&pinctrl_i2c2_sd_1>;
+	scl-gpios = GP_I2C2_SD_SCL;
+	sda-gpios = GP_I2C2_SD_SDA;
+};
+
+&i2c2b {
+	basler_camera@36 {
+		compatible = "basler,basler-camera-vvcam", "basler-camera-vvcam";
+		reg = <0x36>;
+		csi_id = <0x00>;
+		status = "okay";
+
+		port {
+			basler_ep_0: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				link-frequencies = /bits/ 64 <750000000>;
+				max-lane-frequency = /bits/ 64 <750000000>;
+				max-pixel-frequency = /bits/ 64 <266000000>;
+				max-data-rate = /bits/ 64 <0>;
+				remote-endpoint = <&mipi_csi0_ep>;
+			};
+		};
+	};
+};
+
 &i2c2c {
 	/delete-node/ basler_camera@36;
 
@@ -127,6 +250,82 @@
 				remote-endpoint = <&mipi1_ov5640_ep>;
 			};
 		};
+	};
+};
+
+&i2c2d {
+	backlight_mipi2: backlight-mipi2@66 {
+		alias = <&backlight_mipi2>;
+		compatible = "rohm,bd2606";
+		default-brightness = <32>;	/* 63 is max */
+		display = <&display_subsystem>;
+		label = "bklght-bd2606";
+		led-sources = <0 1 2 3 4 5>;
+		reg = <0x66>;
+		status = "disabled";
+	};
+
+	rtc@52 {
+		backup-switchover-dsm;
+		compatible = "microcrystal,rv3028";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c2d_rv3028>;
+		reg = <0x52>;
+		interrupts-extended = GPIRQ_RV3028;
+		wakeup-source;
+	};
+
+	spi_lcd: spi@2f {
+		compatible = "nxp,sc18is602b";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_sc18is602b>;
+		reg = <0x2f>;
+		reset-gpios = GP_SC18IS602B_RESET;
+		status = "disabled";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		spidev_lcd: spidev@0 {
+			compatible = "spidev";
+			spi-cpha;
+			spi-cpol;
+			spi-max-frequency = <20000000>;
+			reg = <0>;
+		};
+	};
+
+	ts_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = GPIRQ_TS_FT5X06;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_ft5x06>;
+		reg = <0x38>;
+		reset-gpios = GP_TS_FT5X06_RESET;
+		wakeup-gpios = GP_TS_FT5X06_WAKE;
+		status = "disabled";
+	};
+
+	ts_ft5x06_3: touchscreen-3@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = GPIRQ_TS_FT5X06_3;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_ft5x06_3>;
+		reg = <0x38>;
+		reset-gpios = GP_TS_FT5X06_RESET_3;
+		wakeup-gpios = GP_TS_FT5X06_WAKE_3;
+		status = "disabled";
+	};
+
+	ts_goodix: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_TS_GT911;
+		irq-gpios = GP_TS_GT911_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_gt911>;
+		reg = <0x5d>;
+		reset-gpios = GP_TS_GT911_RESET;
+		status = "disabled";
 	};
 };
 
