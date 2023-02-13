@@ -1394,9 +1394,6 @@ static void mtk_dp_audio_mute(struct mtk_dp *mtk_dp, bool mute)
 		// Send one every two frames
 		mtk_dp_update_bits(mtk_dp, MTK_DP_ENC0_P0_30A4, 0x0F,
 				   AU_TS_CFG_DP_ENC0_P0_MASK);
-
-		mtk_dp_update_bits(mtk_dp, MTK_DP_ENC1_P0_3374, 0,
-				   AU_ASP_PACKET_ONLY_IN_HBLANK_ENABLE_MASK);
 	}
 }
 
