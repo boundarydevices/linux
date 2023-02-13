@@ -36,6 +36,7 @@ extern void pinctrl_put(struct pinctrl *p);
 extern struct pinctrl_state * __must_check pinctrl_lookup_state(
 							struct pinctrl *p,
 							const char *name);
+extern int pinctrl_commit_state(struct pinctrl *p, struct pinctrl_state *s);
 extern int pinctrl_select_state(struct pinctrl *p, struct pinctrl_state *s);
 
 extern struct pinctrl * __must_check devm_pinctrl_get(struct device *dev);
