@@ -650,6 +650,7 @@ struct i2c_bus_recovery_info {
 };
 
 int i2c_recover_bus(struct i2c_adapter *adap);
+int i2c_init_recovery(struct i2c_adapter *adap);
 
 /* Generic recovery routines */
 int i2c_generic_scl_recovery(struct i2c_adapter *adap);
@@ -860,6 +861,9 @@ static inline void i2c_mark_adapter_resumed(struct i2c_adapter *adap)
 /* administration...
  */
 #if IS_ENABLED(CONFIG_I2C)
+void i2c_free_adapter_id(struct i2c_adapter *adap);
+int i2c_register_adapter(struct i2c_adapter *adap);
+int i2c_get_adapter_id(struct i2c_adapter *adapter, int id);
 int i2c_add_adapter(struct i2c_adapter *adap);
 int devm_i2c_add_adapter(struct device *dev, struct i2c_adapter *adapter);
 void i2c_del_adapter(struct i2c_adapter *adap);
