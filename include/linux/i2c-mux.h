@@ -50,6 +50,11 @@ static inline void *i2c_mux_priv(struct i2c_mux_core *muxc)
 
 struct i2c_adapter *i2c_root_adapter(struct device *dev);
 
+void i2c_mux_add_adapters_set_locked(struct i2c_mux_core *muxc, bool mux_locked);
+struct i2c_adapter *i2c_mux_add_adapter_start(struct i2c_mux_core *muxc,
+			u32 chan_id, unsigned int class, int id);
+int i2c_mux_add_adapter_finish(struct i2c_adapter *adap);
+
 /*
  * Called to create an i2c bus on a multiplexed bus segment.
  * The chan_id parameter is passed to the select and deselect
