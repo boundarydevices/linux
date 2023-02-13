@@ -1236,7 +1236,7 @@ static void pinctrl_link_add(struct pinctrl_dev *pctldev,
  * @p: the pinctrl handle for the device that requests configuration
  * @state: the state handle to select/activate/program
  */
-static int pinctrl_commit_state(struct pinctrl *p, struct pinctrl_state *state)
+int pinctrl_commit_state(struct pinctrl *p, struct pinctrl_state *state)
 {
 	struct pinctrl_setting *setting, *setting2;
 	struct pinctrl_state *old_state = p->state;
@@ -1332,6 +1332,7 @@ unapply_new_state:
 
 	return ret;
 }
+EXPORT_SYMBOL_GPL(pinctrl_commit_state);
 
 /**
  * pinctrl_select_state() - select/activate/program a pinctrl state to HW
