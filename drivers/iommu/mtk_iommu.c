@@ -157,6 +157,7 @@
 
 #define MTK_IOMMU_GROUP_MAX	8
 #define MTK_IOMMU_BANK_MAX	5
+#define MTK_IOMMU_SEC_BANKID	4
 
 enum mtk_iommu_plat {
 	M4U_MT2712,
@@ -205,9 +206,13 @@ struct mtk_iommu_plat_data {
 };
 
 struct mtk_iommu_bank_data {
-	void __iomem			*base;
+	union {
+		void __iomem		*base;
+		u32			sec_bank_base;
+	};
 	int				irq;
 	u8				id;
+	bool				is_secure;
 	struct device			*parent_dev;
 	struct mtk_iommu_data		*parent_data;
 	spinlock_t			tlb_lock; /* lock for tlb range flush */
@@ -442,22 +447,42 @@ static irqreturn_t mtk_iommu_isr(int irq, void *dev_id)
 	struct mtk_iommu_data *data = bank->parent_data;
 	struct mtk_iommu_domain *dom = bank->m4u_dom;
 	unsigned int fault_larb = MTK_INVALID_LARBID, fault_port = 0, sub_comm = 0;
-	u32 int_state, regval, va34_32, pa34_32;
+	u32 int_state = ~0, regval, va34_32, pa34_32;
 	const struct mtk_iommu_plat_data *plat_data = data->plat_data;
 	void __iomem *base = bank->base;
-	u64 fault_iova, fault_pa;
+	u64 fault_iova = ~0ULL, fault_pa = ~0ULL;
+	struct arm_smccc_res res;
 	bool layer, write;
+	bool report_fault;
+	int ret;
 
-	/* Read error info from registers */
-	int_state = readl_relaxed(base + REG_MMU_FAULT_ST1);
-	if (int_state & F_REG_MMU0_FAULT_MASK) {
-		regval = readl_relaxed(base + REG_MMU0_INT_ID);
-		fault_iova = readl_relaxed(base + REG_MMU0_FAULT_VA);
-		fault_pa = readl_relaxed(base + REG_MMU0_INVLD_PA);
+	if (bank->is_secure) {
+		/* Enter to secure world to Read fault status if it is secure bank. */
+		arm_smccc_smc(MTK_SIP_KERNEL_IOMMU_CONTROL,
+			      IOMMU_ATF_CMD_SECURE_IOMMU_STATUS,
+			      bank->sec_bank_base, 0, 0, 0, 0, 0, &res);
+		if (res.a0 == 0) {
+			fault_iova = res.a1;
+			fault_pa = res.a2;
+			regval = res.a3;
+		} else {
+			dev_err_ratelimited(bank->parent_dev,
+					    "secure bank(%u) fault\n",
+					    bank->id);
+			goto tlb_flush_all;
+		}
 	} else {
-		regval = readl_relaxed(base + REG_MMU1_INT_ID);
-		fault_iova = readl_relaxed(base + REG_MMU1_FAULT_VA);
-		fault_pa = readl_relaxed(base + REG_MMU1_INVLD_PA);
+		/* Read error info from registers */
+		int_state = readl_relaxed(base + REG_MMU_FAULT_ST1);
+		if (int_state & F_REG_MMU0_FAULT_MASK) {
+			regval = readl_relaxed(base + REG_MMU0_INT_ID);
+			fault_iova = readl_relaxed(base + REG_MMU0_FAULT_VA);
+			fault_pa = readl_relaxed(base + REG_MMU0_INVLD_PA);
+		} else {
+			regval = readl_relaxed(base + REG_MMU1_INT_ID);
+			fault_iova = readl_relaxed(base + REG_MMU1_FAULT_VA);
+			fault_pa = readl_relaxed(base + REG_MMU1_INVLD_PA);
+		}
 	}
 	layer = fault_iova & F_MMU_FAULT_VA_LAYER_BIT;
 	write = fault_iova & F_MMU_FAULT_VA_WRITE_BIT;
@@ -483,20 +508,30 @@ static irqreturn_t mtk_iommu_isr(int irq, void *dev_id)
 		fault_larb = data->plat_data->larbid_remap[fault_larb][sub_comm];
 	}
 
-	if (report_iommu_fault(&dom->domain, bank->parent_dev, fault_iova,
-			       write ? IOMMU_FAULT_WRITE : IOMMU_FAULT_READ)) {
+	if (bank->is_secure) {
+		report_fault = true;
+	} else {
+		ret = report_iommu_fault(&dom->domain, bank->parent_dev, fault_iova,
+					 write ? IOMMU_FAULT_WRITE : IOMMU_FAULT_READ);
+		report_fault = ret == 0 ? false : true;
+	}
+
+	if (report_fault) {
 		dev_err_ratelimited(
 			bank->parent_dev,
-			"fault type=0x%x iova=0x%llx pa=0x%llx master=0x%x(larb=%d port=%d) layer=%d %s\n",
-			int_state, fault_iova, fault_pa, regval, fault_larb, fault_port,
+			"bank(%u) fault type=0x%x iova=0x%llx pa=0x%llx master=0x%x(larb=%d port=%d) layer=%d %s\n",
+			bank->id, int_state, fault_iova, fault_pa, regval, fault_larb, fault_port,
 			layer, write ? "write" : "read");
 	}
 
-	/* Interrupt clear */
-	regval = readl_relaxed(base + REG_MMU_INT_CONTROL0);
-	regval |= F_INT_CLR_BIT;
-	writel_relaxed(regval, base + REG_MMU_INT_CONTROL0);
+	if (!bank->is_secure) {
+		/* Interrupt clear */
+		regval = readl_relaxed(base + REG_MMU_INT_CONTROL0);
+		regval |= F_INT_CLR_BIT;
+		writel_relaxed(regval, base + REG_MMU_INT_CONTROL0);
+	}
 
+tlb_flush_all:
 	mtk_iommu_tlb_flush_all(data);
 
 	return IRQ_HANDLED;
@@ -1284,7 +1319,17 @@ static int mtk_iommu_probe(struct platform_device *pdev)
 			continue;
 		bank = &data->bank[i];
 		bank->id = i;
-		bank->base = base + i * MTK_IOMMU_BANK_SZ;
+		if (bank->id == MTK_IOMMU_SEC_BANKID) {
+			/* Record the secure bank's register base address for
+			 * checking in the secure world to indicate which iommu
+			 * the TF happen in.
+			 */
+			bank->sec_bank_base = ioaddr + i * MTK_IOMMU_BANK_SZ;
+			bank->is_secure = true;
+		} else {
+			bank->base = base + i * MTK_IOMMU_BANK_SZ;
+			bank->is_secure = false;
+		}
 		bank->m4u_dom = NULL;
 
 		bank->irq = platform_get_irq(pdev, i);
@@ -1293,6 +1338,15 @@ static int mtk_iommu_probe(struct platform_device *pdev)
 		bank->parent_dev = dev;
 		bank->parent_data = data;
 		spin_lock_init(&bank->tlb_lock);
+
+		if (!bank->is_secure)
+			continue;
+
+		/* Register IRQ for secure bank directly */
+		ret = devm_request_irq(bank->parent_dev, bank->irq, mtk_iommu_isr,
+				       0, dev_name(bank->parent_dev), (void *)bank);
+		if (ret)
+			return ret;
 	} while (++i < banks_num);
 
 	if (MTK_IOMMU_HAS_FLAG(data->plat_data, HAS_BCLK)) {
@@ -1404,7 +1458,7 @@ static int mtk_iommu_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 	for (i = 0; i < data->plat_data->banks_num; i++) {
 		bank = &data->bank[i];
-		if (!bank->m4u_dom)
+		if (!bank->m4u_dom && !bank->is_secure)
 			continue;
 		devm_free_irq(&pdev->dev, bank->irq, bank);
 	}
@@ -1427,10 +1481,27 @@ static int __maybe_unused mtk_iommu_runtime_suspend(struct device *dev)
 	do {
 		if (!data->plat_data->banks_enable[i])
 			continue;
-		base = data->bank[i].base;
-		reg->int_control[i] = readl_relaxed(base + REG_MMU_INT_CONTROL0);
-		reg->int_main_control[i] = readl_relaxed(base + REG_MMU_INT_MAIN_CONTROL);
-		reg->ivrp_paddr[i] = readl_relaxed(base + REG_MMU_IVRP_PADDR);
+		if (!data->bank[i].is_secure) {
+			base = data->bank[i].base;
+			reg->int_control[i] =
+				readl_relaxed(base + REG_MMU_INT_CONTROL0);
+			reg->int_main_control[i] =
+				readl_relaxed(base + REG_MMU_INT_MAIN_CONTROL);
+			reg->ivrp_paddr[i] =
+				readl_relaxed(base + REG_MMU_IVRP_PADDR);
+		} else {
+			struct arm_smccc_res res;
+
+			/* backup sec bank setting */
+			arm_smccc_smc(MTK_SIP_KERNEL_IOMMU_CONTROL,
+				      IOMMU_ATF_CMD_SECURE_IOMMU_SUSPEND,
+				      data->bank[i].sec_bank_base,
+				      0, 0, 0, 0, 0, &res);
+			if (res.a0 != 0) {
+				dev_err(dev, "secure back up fail, ret %ld\n", res.a0);
+				return -EAGAIN;
+			}
+		}
 	} while (++i < data->plat_data->banks_num);
 	clk_disable_unprepare(data->bclk);
 	return 0;
@@ -1465,14 +1536,33 @@ static int __maybe_unused mtk_iommu_runtime_resume(struct device *dev)
 	writel_relaxed(reg->vld_pa_rng, base + REG_MMU_VLD_PA_RNG);
 	do {
 		m4u_dom = data->bank[i].m4u_dom;
-		if (!data->plat_data->banks_enable[i] || !m4u_dom)
+		if (!data->plat_data->banks_enable[i])
 			continue;
-		base = data->bank[i].base;
-		writel_relaxed(reg->int_control[i], base + REG_MMU_INT_CONTROL0);
-		writel_relaxed(reg->int_main_control[i], base + REG_MMU_INT_MAIN_CONTROL);
-		writel_relaxed(reg->ivrp_paddr[i], base + REG_MMU_IVRP_PADDR);
-		writel(m4u_dom->cfg.arm_v7s_cfg.ttbr & MMU_PT_ADDR_MASK,
-		       base + REG_MMU_PT_BASE_ADDR);
+		if (!data->bank[i].is_secure) {
+			if (!m4u_dom)
+				continue;
+			base = data->bank[i].base;
+			writel_relaxed(reg->int_control[i],
+				       base + REG_MMU_INT_CONTROL0);
+			writel_relaxed(reg->int_main_control[i],
+				       base + REG_MMU_INT_MAIN_CONTROL);
+			writel_relaxed(reg->ivrp_paddr[i],
+				       base + REG_MMU_IVRP_PADDR);
+			writel(m4u_dom->cfg.arm_v7s_cfg.ttbr & MMU_PT_ADDR_MASK,
+			       base + REG_MMU_PT_BASE_ADDR);
+		} else {
+			struct arm_smccc_res res;
+
+			/* restore sec bank setting */
+			arm_smccc_smc(MTK_SIP_KERNEL_IOMMU_CONTROL,
+				      IOMMU_ATF_CMD_SECURE_IOMMU_RESUME,
+				      data->bank[i].sec_bank_base,
+				      0, 0, 0, 0, 0, &res);
+			if (res.a0 != 0) {
+				dev_err(dev, "secure restore fail, ret %ld\n", res.a0);
+				return -EAGAIN;
+			}
+		}
 	} while (++i < data->plat_data->banks_num);
 
 	/*
