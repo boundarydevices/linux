@@ -34,6 +34,7 @@ struct i2c_mux_priv {
 	struct i2c_algorithm algo;
 	struct i2c_mux_core *muxc;
 	u32 chan_id;
+	u32 init_complete;
 };
 
 static int __i2c_mux_master_xfer(struct i2c_adapter *adap,
@@ -280,24 +281,65 @@ static const struct i2c_lock_operations i2c_parent_lock_ops = {
 	.unlock_bus =  i2c_parent_unlock_bus,
 };
 
-int i2c_mux_add_adapter(struct i2c_mux_core *muxc,
-			u32 force_nr, u32 chan_id,
-			unsigned int class)
+static void i2c_mux_add_adapter_mux_locked(struct i2c_adapter *adap)
+{
+	struct i2c_mux_priv *priv = container_of(adap, struct i2c_mux_priv, adap);
+	struct i2c_adapter *parent = priv->muxc->parent;
+
+	if (parent->algo->master_xfer)
+		priv->algo.master_xfer = i2c_mux_master_xfer;
+	if (parent->algo->smbus_xfer)
+		priv->algo.smbus_xfer = i2c_mux_smbus_xfer;
+	adap->lock_ops = &i2c_mux_lock_ops;
+}
+
+static void i2c_mux_add_adapter_parent_locked(struct i2c_adapter *adap)
+{
+	struct i2c_mux_priv *priv = container_of(adap, struct i2c_mux_priv, adap);
+	struct i2c_adapter *parent = priv->muxc->parent;
+
+	if (parent->algo->master_xfer)
+		priv->algo.master_xfer = __i2c_mux_master_xfer;
+	if (parent->algo->smbus_xfer)
+		priv->algo.smbus_xfer = __i2c_mux_smbus_xfer;
+	adap->lock_ops = &i2c_parent_lock_ops;
+}
+
+void i2c_mux_add_adapters_set_locked(struct i2c_mux_core *muxc, bool mux_locked)
+{
+	int i;
+
+	muxc->mux_locked = mux_locked;
+	for (i = 0; i < muxc->num_adapters; i++) {
+		struct i2c_adapter *adap = muxc->adapter[i];
+
+		if (mux_locked)
+			i2c_mux_add_adapter_mux_locked(adap);
+		else
+			i2c_mux_add_adapter_parent_locked(adap);
+	}
+}
+EXPORT_SYMBOL_GPL(i2c_mux_add_adapters_set_locked);
+
+
+struct i2c_adapter *i2c_mux_add_adapter_start(struct i2c_mux_core *muxc,
+			u32 chan_id, unsigned int class, int id)
 {
 	struct i2c_adapter *parent = muxc->parent;
 	struct i2c_mux_priv *priv;
-	char symlink_name[20];
+	struct i2c_adapter *adap;
 	int ret;
 
 	if (muxc->num_adapters >= muxc->max_adapters) {
 		dev_err(muxc->dev, "No room for more i2c-mux adapters\n");
-		return -EINVAL;
+		return ERR_PTR(-EINVAL);
 	}
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv)
-		return -ENOMEM;
+		return ERR_PTR(-ENOMEM);
 
+	adap = &priv->adap;
 	/* Set up private adapter data */
 	priv->muxc = muxc;
 	priv->chan_id = chan_id;
@@ -305,40 +347,30 @@ int i2c_mux_add_adapter(struct i2c_mux_core *muxc,
 	/* Need to do algo dynamically because we don't know ahead
 	 * of time what sort of physical adapter we'll be dealing with.
 	 */
-	if (parent->algo->master_xfer) {
-		if (muxc->mux_locked)
-			priv->algo.master_xfer = i2c_mux_master_xfer;
-		else
-			priv->algo.master_xfer = __i2c_mux_master_xfer;
-	}
+	if (muxc->mux_locked)
+		i2c_mux_add_adapter_mux_locked(adap);
+	else
+		i2c_mux_add_adapter_parent_locked(adap);
+
 	if (parent->algo->master_xfer_atomic)
 		priv->algo.master_xfer_atomic = priv->algo.master_xfer;
 
-	if (parent->algo->smbus_xfer) {
-		if (muxc->mux_locked)
-			priv->algo.smbus_xfer = i2c_mux_smbus_xfer;
-		else
-			priv->algo.smbus_xfer = __i2c_mux_smbus_xfer;
-	}
 	if (parent->algo->smbus_xfer_atomic)
 		priv->algo.smbus_xfer_atomic = priv->algo.smbus_xfer;
 
 	priv->algo.functionality = i2c_mux_functionality;
 
 	/* Now fill out new adapter structure */
-	snprintf(priv->adap.name, sizeof(priv->adap.name),
+	snprintf(adap->name, sizeof(adap->name),
 		 "i2c-%d-mux (chan_id %d)", i2c_adapter_id(parent), chan_id);
-	priv->adap.owner = THIS_MODULE;
-	priv->adap.algo = &priv->algo;
-	priv->adap.algo_data = priv;
-	priv->adap.dev.parent = &parent->dev;
-	priv->adap.retries = parent->retries;
-	priv->adap.timeout = parent->timeout;
-	priv->adap.quirks = parent->quirks;
-	if (muxc->mux_locked)
-		priv->adap.lock_ops = &i2c_mux_lock_ops;
-	else
-		priv->adap.lock_ops = &i2c_parent_lock_ops;
+
+	adap->owner = THIS_MODULE;
+	adap->algo = &priv->algo;
+	adap->algo_data = priv;
+	adap->dev.parent = &parent->dev;
+	adap->retries = parent->retries;
+	adap->timeout = parent->timeout;
+	adap->quirks = parent->quirks;
 
 	/* Sanity check on class */
 	if (i2c_mux_parent_classes(parent) & class)
@@ -346,7 +378,7 @@ int i2c_mux_add_adapter(struct i2c_mux_core *muxc,
 			"Segment %d behind mux can't share classes with ancestors\n",
 			chan_id);
 	else
-		priv->adap.class = class;
+		adap->class = class;
 
 	/*
 	 * Try to populate the mux adapter's of_node, expands to
@@ -387,54 +419,73 @@ int i2c_mux_add_adapter(struct i2c_mux_core *muxc,
 			}
 		}
 
-		priv->adap.dev.of_node = child;
+		adap->dev.of_node = child;
 		of_node_put(mux_node);
 	}
+	ret = i2c_get_adapter_id(adap, id);
+	if (ret)
+		return ERR_PTR(ret);
+
+	device_initialize(&adap->dev);
+	dev_set_name(&adap->dev, "i2c-%d", adap->nr);
 
 	/*
 	 * Associate the mux channel with an ACPI node.
 	 */
 	if (has_acpi_companion(muxc->dev))
-		acpi_preset_companion(&priv->adap.dev,
+		acpi_preset_companion(&adap->dev,
 				      ACPI_COMPANION(muxc->dev),
 				      chan_id);
 
-	if (force_nr) {
-		priv->adap.nr = force_nr;
-		ret = i2c_add_numbered_adapter(&priv->adap);
-		if (ret < 0) {
-			dev_err(&parent->dev,
-				"failed to add mux-adapter %u as bus %u (error=%d)\n",
-				chan_id, force_nr, ret);
-			goto err_free_priv;
-		}
-	} else {
-		ret = i2c_add_adapter(&priv->adap);
-		if (ret < 0) {
-			dev_err(&parent->dev,
-				"failed to add mux-adapter %u (error=%d)\n",
-				chan_id, ret);
-			goto err_free_priv;
-		}
+	muxc->adapter[muxc->num_adapters++] = adap;
+	return adap;
+}
+EXPORT_SYMBOL_GPL(i2c_mux_add_adapter_start);
+
+int i2c_mux_add_adapter_finish(struct i2c_adapter *adap)
+{
+	struct i2c_mux_priv *priv = container_of(adap, struct i2c_mux_priv, adap);
+	struct i2c_mux_core *muxc = priv->muxc;
+	struct i2c_adapter *parent = muxc->parent;
+	char symlink_name[20];
+	int ret;
+
+	ret = i2c_register_adapter(adap);
+	if (ret < 0) {
+		dev_err(&parent->dev,
+			"failed to add mux-adapter %u (error=%d)\n",
+			priv->chan_id, ret);
+		goto err_free_priv;
 	}
 
-	WARN(sysfs_create_link(&priv->adap.dev.kobj, &muxc->dev->kobj,
+	WARN(sysfs_create_link(&adap->dev.kobj, &muxc->dev->kobj,
 			       "mux_device"),
 	     "can't create symlink to mux device\n");
 
-	snprintf(symlink_name, sizeof(symlink_name), "channel-%u", chan_id);
-	WARN(sysfs_create_link(&muxc->dev->kobj, &priv->adap.dev.kobj,
+	snprintf(symlink_name, sizeof(symlink_name), "channel-%u", priv->chan_id);
+	WARN(sysfs_create_link(&muxc->dev->kobj, &adap->dev.kobj,
 			       symlink_name),
-	     "can't create symlink to channel %u\n", chan_id);
+	     "can't create symlink to channel %u\n", priv->chan_id);
 	dev_info(&parent->dev, "Added multiplexed i2c bus %d\n",
-		 i2c_adapter_id(&priv->adap));
-
-	muxc->adapter[muxc->num_adapters++] = &priv->adap;
+		 i2c_adapter_id(adap));
+	priv->init_complete = 1;
 	return 0;
 
 err_free_priv:
 	kfree(priv);
 	return ret;
+}
+EXPORT_SYMBOL_GPL(i2c_mux_add_adapter_finish);
+
+int i2c_mux_add_adapter(struct i2c_mux_core *muxc,
+			u32 force_nr, u32 chan_id,
+			unsigned int class)
+{
+	struct i2c_adapter *adap = i2c_mux_add_adapter_start(muxc, chan_id, class,
+			force_nr ? force_nr : -1);
+	if (IS_ERR(adap))
+		return PTR_ERR(adap);
+	return i2c_mux_add_adapter_finish(adap);
 }
 EXPORT_SYMBOL_GPL(i2c_mux_add_adapter);
 
@@ -449,13 +500,18 @@ void i2c_mux_del_adapters(struct i2c_mux_core *muxc)
 
 		muxc->adapter[muxc->num_adapters] = NULL;
 
-		snprintf(symlink_name, sizeof(symlink_name),
+		if (priv->init_complete) {
+			snprintf(symlink_name, sizeof(symlink_name),
 			 "channel-%u", priv->chan_id);
-		sysfs_remove_link(&muxc->dev->kobj, symlink_name);
+			sysfs_remove_link(&muxc->dev->kobj, symlink_name);
 
-		sysfs_remove_link(&priv->adap.dev.kobj, "mux_device");
-		i2c_del_adapter(adap);
-		of_node_put(np);
+			sysfs_remove_link(&priv->adap.dev.kobj, "mux_device");
+			i2c_del_adapter(adap);
+			of_node_put(np);
+		} else {
+			put_device(&priv->adap.dev);
+			i2c_free_adapter_id(adap);
+		}
 		kfree(priv);
 	}
 }
