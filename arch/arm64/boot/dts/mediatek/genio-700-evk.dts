@@ -1357,3 +1357,11 @@
 		};
 	};
 };
+
+&cam_vcore {
+	domain-supply = <&mt6359_vproc1_buck_reg>;
+};
+
+&img_vcore {
+	domain-supply = <&mt6359_vproc1_buck_reg>;
+};
