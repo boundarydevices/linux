@@ -40,6 +40,15 @@
 			>;
 	};
 
+	pinctrl_i2c1_dac_1: i2c1_dac-1grp {
+		fsl,pins = <
+#define GP_I2C1_DAC_SCL	<&gpio5 27 GPIO_OPEN_DRAIN>
+				MX6QDL_PAD_CSI0_DAT9__GPIO5_IO27	0x4001b8b1
+#define GP_I2C1_DAC_SDA	<&gpio5 26 GPIO_OPEN_DRAIN>
+				MX6QDL_PAD_CSI0_DAT8__GPIO5_IO26	0x4001b8b1
+			>;
+	};
+
 	pinctrl_i2c1b_isl28022: i2c1b_isl28022 {
 		fsl,pins = <
 #define GPIRQ_ISL28022         <&gpio5 28 IRQ_TYPE_LEVEL_LOW>
@@ -72,14 +81,8 @@
 	i2cmux@4 {
 		compatible = "i2c-mux-pinctrl";
 		i2c-parent = <&i2c1>;
-	
-		pinctrl-names = "std", "dac";
-		pinctrl-0 = <&pinctrl_i2c1>;
-		pinctrl-1 = <&pinctrl_i2c1_dac>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-		mux-gpios = GP_I2C3MUX_A;
-		idle-state = <0>;
 	
 		i2c1a: i2c1@0 {
 			reg = <0>;
@@ -120,12 +123,20 @@
 &i2c1 {
 	/delete-property/ pinctrl-names;
 	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
+	/delete-property/ scl-gpios;
+	/delete-property/ sda-gpios;
 	/delete-node/ sgtl5000@a;
 	/delete-node/ rv4162@68;
 };
 
 &i2c1a {
 	clock-frequency = <100000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = <&pinctrl_i2c1>;
+	pinctrl-1 = <&pinctrl_i2c1_1>;
+	scl-gpios = GP_I2C1_SCL;
+	sda-gpios = GP_I2C1_SDA;
 	status = "okay";
 
 	sgtl5000: sgtl5000@a {
@@ -149,6 +160,11 @@
 
 &i2c1b {
 	clock-frequency = <10000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = <&pinctrl_i2c1_dac>;
+	pinctrl-1 = <&pinctrl_i2c1_dac_1>;
+	scl-gpios = GP_I2C1_DAC_SCL;
+	sda-gpios = GP_I2C1_DAC_SDA;
 	status = "okay";
 
 	isl28022@44 {
