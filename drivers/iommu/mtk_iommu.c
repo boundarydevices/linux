@@ -1742,8 +1742,8 @@ static const struct mtk_iommu_plat_data mt8195_data_apu = {
 			  SECURE_BANK_ENABLE,
  	.inv_sel_reg    = REG_MMU_INV_SEL_GEN2,
 	.hw_list        = &apulist,
-	.banks_num	= 1,
-	.banks_enable    = {true},
+	.banks_num	= 5,
+	.banks_enable   = {true, false, false, false, true},
 	.iova_region    = mt8195_multi_dom_apu,
 	.iova_region_nr = ARRAY_SIZE(mt8195_multi_dom_apu),
  };
