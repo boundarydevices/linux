@@ -501,7 +501,6 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 	const struct hc_driver *driver;
 	struct xhci_hcd *xhci;
 	struct resource *res;
-	struct usb_hcd *usb3_hcd;
 	struct usb_hcd *hcd;
 	int ret = -ENODEV;
 	int wakeup_irq;
@@ -611,7 +610,6 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 
 	xhci = hcd_to_xhci(hcd);
 	xhci->main_hcd = hcd;
-	xhci->allow_single_roothub = 1;
 
 	/*
 	 * imod_interval is the interrupt moderation value in nanoseconds.
@@ -621,29 +619,24 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 	xhci->imod_interval = 5000;
 	device_property_read_u32(dev, "imod-interval-ns", &xhci->imod_interval);
 
+	xhci->shared_hcd = usb_create_shared_hcd(driver, dev,
+			dev_name(dev), hcd);
+	if (!xhci->shared_hcd) {
+		ret = -ENOMEM;
+		goto disable_device_wakeup;
+	}
+
 	ret = usb_add_hcd(hcd, irq, IRQF_SHARED);
 	if (ret)
-		goto disable_device_wakeup;
+		goto put_usb3_hcd;
 
-	if (!xhci_has_one_roothub(xhci)) {
-		xhci->shared_hcd = usb_create_shared_hcd(driver, dev,
-							 dev_name(dev), hcd);
-		if (!xhci->shared_hcd) {
-			ret = -ENOMEM;
-			goto dealloc_usb2_hcd;
-		}
-	}
-
-	usb3_hcd = xhci_get_usb3_hcd(xhci);
-	if (usb3_hcd && HCC_MAX_PSA(xhci->hcc_params) >= 4 &&
+	if (HCC_MAX_PSA(xhci->hcc_params) >= 4 &&
 	    !(xhci->quirks & XHCI_BROKEN_STREAMS))
-		usb3_hcd->can_do_streams = 1;
+		xhci->shared_hcd->can_do_streams = 1;
 
-	if (xhci->shared_hcd) {
-		ret = usb_add_hcd(xhci->shared_hcd, irq, IRQF_SHARED);
-		if (ret)
-			goto put_usb3_hcd;
-	}
+	ret = usb_add_hcd(xhci->shared_hcd, irq, IRQF_SHARED);
+	if (ret)
+		goto dealloc_usb2_hcd;
 
 	if (wakeup_irq > 0) {
 		ret = dev_pm_set_dedicated_wake_irq(dev, wakeup_irq);
@@ -664,12 +657,12 @@ static int xhci_mtk_probe(struct platform_device *pdev)
 dealloc_usb3_hcd:
 	usb_remove_hcd(xhci->shared_hcd);
 
-put_usb3_hcd:
-	usb_put_hcd(xhci->shared_hcd);
-
 dealloc_usb2_hcd:
-	xhci_mtk_sch_exit(mtk);
 	usb_remove_hcd(hcd);
+
+put_usb3_hcd:
+	xhci_mtk_sch_exit(mtk);
+	usb_put_hcd(xhci->shared_hcd);
 
 disable_device_wakeup:
 	device_init_wakeup(dev, false);
@@ -702,15 +695,10 @@ static int xhci_mtk_remove(struct platform_device *pdev)
 	dev_pm_clear_wake_irq(dev);
 	device_init_wakeup(dev, false);
 
-	if (shared_hcd) {
-		usb_remove_hcd(shared_hcd);
-		xhci->shared_hcd = NULL;
-	}
+	usb_remove_hcd(shared_hcd);
+	xhci->shared_hcd = NULL;
 	usb_remove_hcd(hcd);
-
-	if (shared_hcd)
-		usb_put_hcd(shared_hcd);
-
+	usb_put_hcd(shared_hcd);
 	usb_put_hcd(hcd);
 	xhci_mtk_sch_exit(mtk);
 	clk_bulk_disable_unprepare(BULK_CLKS_NUM, mtk->clks);
@@ -728,16 +716,13 @@ static int __maybe_unused xhci_mtk_suspend(struct device *dev)
 	struct xhci_hcd_mtk *mtk = dev_get_drvdata(dev);
 	struct usb_hcd *hcd = mtk->hcd;
 	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
-	struct usb_hcd *shared_hcd = xhci->shared_hcd;
 	int ret;
 
 	xhci_dbg(xhci, "%s: stop port polling\n", __func__);
 	clear_bit(HCD_FLAG_POLL_RH, &hcd->flags);
 	del_timer_sync(&hcd->rh_timer);
-	if (shared_hcd) {
-		clear_bit(HCD_FLAG_POLL_RH, &shared_hcd->flags);
-		del_timer_sync(&shared_hcd->rh_timer);
-	}
+	clear_bit(HCD_FLAG_POLL_RH, &xhci->shared_hcd->flags);
+	del_timer_sync(&xhci->shared_hcd->rh_timer);
 
 	ret = xhci_mtk_host_disable(mtk);
 	if (ret)
@@ -749,10 +734,8 @@ static int __maybe_unused xhci_mtk_suspend(struct device *dev)
 
 restart_poll_rh:
 	xhci_dbg(xhci, "%s: restart port polling\n", __func__);
-	if (shared_hcd) {
-		set_bit(HCD_FLAG_POLL_RH, &shared_hcd->flags);
-		usb_hcd_poll_rh_status(shared_hcd);
-	}
+	set_bit(HCD_FLAG_POLL_RH, &xhci->shared_hcd->flags);
+	usb_hcd_poll_rh_status(xhci->shared_hcd);
 	set_bit(HCD_FLAG_POLL_RH, &hcd->flags);
 	usb_hcd_poll_rh_status(hcd);
 	return ret;
@@ -763,7 +746,6 @@ static int __maybe_unused xhci_mtk_resume(struct device *dev)
 	struct xhci_hcd_mtk *mtk = dev_get_drvdata(dev);
 	struct usb_hcd *hcd = mtk->hcd;
 	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
-	struct usb_hcd *shared_hcd = xhci->shared_hcd;
 	int ret;
 
 	usb_wakeup_set(mtk, false);
@@ -776,10 +758,8 @@ static int __maybe_unused xhci_mtk_resume(struct device *dev)
 		goto disable_clks;
 
 	xhci_dbg(xhci, "%s: restart port polling\n", __func__);
-	if (shared_hcd) {
-		set_bit(HCD_FLAG_POLL_RH, &shared_hcd->flags);
-		usb_hcd_poll_rh_status(shared_hcd);
-	}
+	set_bit(HCD_FLAG_POLL_RH, &xhci->shared_hcd->flags);
+	usb_hcd_poll_rh_status(xhci->shared_hcd);
 	set_bit(HCD_FLAG_POLL_RH, &hcd->flags);
 	usb_hcd_poll_rh_status(hcd);
 	return 0;
