@@ -970,7 +970,6 @@ static int mt8188_etdm_clk_src_sel_put(struct snd_kcontrol *kcontrol,
 	unsigned int old_val;
 	unsigned int mask;
 	unsigned int reg;
-	unsigned int shift;
 
 	if (source >= e->items)
 		return -EINVAL;
@@ -979,34 +978,28 @@ static int mt8188_etdm_clk_src_sel_put(struct snd_kcontrol *kcontrol,
 	if (!strcmp(kcontrol->id.name, "ETDM_OUT1_Clock_Source")) {
 		reg = ETDM_OUT1_CON4;
 		mask = ETDM_OUT_CON4_CLOCK_MASK;
-		shift = ETDM_OUT_CON4_CLOCK_SHIFT;
 		val = FIELD_PREP(ETDM_OUT_CON4_CLOCK_MASK, source);
 	} else if (!strcmp(kcontrol->id.name, "ETDM_OUT2_Clock_Source")) {
 		reg = ETDM_OUT2_CON4;
 		mask = ETDM_OUT_CON4_CLOCK_MASK;
-		shift = ETDM_OUT_CON4_CLOCK_SHIFT;
 		val = FIELD_PREP(ETDM_OUT_CON4_CLOCK_MASK, source);
 	} else if (!strcmp(kcontrol->id.name, "ETDM_OUT3_Clock_Source")) {
 		reg = ETDM_OUT3_CON4;
 		mask = ETDM_OUT_CON4_CLOCK_MASK;
-		shift = ETDM_OUT_CON4_CLOCK_SHIFT;
 		val = FIELD_PREP(ETDM_OUT_CON4_CLOCK_MASK, source);
 	} else if (!strcmp(kcontrol->id.name, "ETDM_IN1_Clock_Source")) {
 		reg = ETDM_IN1_CON2;
 		mask = ETDM_IN_CON2_CLOCK_MASK;
-		shift = ETDM_IN_CON2_CLOCK_SHIFT;
 		val = FIELD_PREP(ETDM_IN_CON2_CLOCK_MASK, source);
 	} else if (!strcmp(kcontrol->id.name, "ETDM_IN2_Clock_Source")) {
 		reg = ETDM_IN2_CON2;
 		mask = ETDM_IN_CON2_CLOCK_MASK;
-		shift = ETDM_IN_CON2_CLOCK_SHIFT;
 		val = FIELD_PREP(ETDM_IN_CON2_CLOCK_MASK, source);
 	}
 
 	if (reg) {
 		regmap_read(afe->regmap, reg, &old_val);
 		old_val &= mask;
-		old_val >>= shift;
 
 		if (old_val == val)
 			return 0;
