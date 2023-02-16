@@ -1078,7 +1078,7 @@
 				regulator-min-microvolt = <300000>;
 				regulator-max-microvolt = <1193750>;
 				regulator-enable-ramp-delay = <256>;
-				regulator-allowed-modes = <0 1 2 4>;
+				regulator-allowed-modes = <0 1 2>;
 			};
 		};
 	};
