@@ -18,21 +18,30 @@
 struct i2c_mux_pinctrl {
 	unsigned cur_channel;
 	unsigned num_channels;
-	unsigned idle_channel;
+	struct i2c_bus_recovery_info *parent_rinfo;
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *ps_idle;
 	struct i2c_bus_recovery_info rinfo[];
 };
 
-static void i2c_mux_pinctrl_to_gpio(struct i2c_mux_pinctrl *mux, u32 chan)
+static void i2c_mux_pinctrl_to_gpio(struct i2c_mux_core *muxc, u32 chan)
 {
+	struct i2c_mux_pinctrl *mux = i2c_mux_priv(muxc);
 	struct i2c_bus_recovery_info *rinfo;
 
+	/* Move away from i2c function, so lines won't toggle */
 	if (chan < mux->num_channels) {
-		/* Move away from i2c function, so lines won't toggle */
 		rinfo = &mux->rinfo[chan];
 		if (rinfo->pins_gpio)
 			pinctrl_commit_state(rinfo->pinctrl, rinfo->pins_gpio);
+	} else {
+		rinfo = mux->parent_rinfo;
+		if (rinfo) {
+			if (rinfo->pins_gpio)
+				pinctrl_commit_state(rinfo->pinctrl, rinfo->pins_gpio);
+			else if (rinfo->prepare_recovery)
+				rinfo->prepare_recovery(muxc->parent);
+		}
 	}
 }
 
@@ -46,7 +55,7 @@ static int i2c_mux_pinctrl_select(struct i2c_mux_core *muxc, u32 chan)
 	if (chan >= mux->num_channels)
 		return -EINVAL;
 
-	i2c_mux_pinctrl_to_gpio(mux, mux->cur_channel);
+	i2c_mux_pinctrl_to_gpio(muxc, mux->cur_channel);
 	mux->cur_channel = chan;
 	rinfo = &mux->rinfo[chan];
 	if (rinfo->pins_gpio)
@@ -56,30 +65,24 @@ static int i2c_mux_pinctrl_select(struct i2c_mux_core *muxc, u32 chan)
 	return pinctrl_commit_state(rinfo->pinctrl, rinfo->pins_default);
 }
 
-static int i2c_mux_pinctrl_deselect(struct i2c_mux_core *muxc, u32 prev_chan)
+static int i2c_mux_pinctrl_deselect(struct i2c_mux_core *muxc, u32 chan)
 {
 	struct i2c_mux_pinctrl *mux = i2c_mux_priv(muxc);
 	struct i2c_bus_recovery_info *rinfo;
-	int chan;
 
-	chan = mux->idle_channel;
-	if (chan == mux->cur_channel)
-		return 0;
-
-	i2c_mux_pinctrl_to_gpio(mux, prev_chan);
-	mux->cur_channel = chan;
-	if (chan < mux->num_channels) {
-		rinfo = &mux->rinfo[chan];
-
-		if (rinfo->pins_gpio)
-			muxc->parent->bus_recovery_info = rinfo;
-		else
-			muxc->parent->bus_recovery_info = NULL;
-		return pinctrl_commit_state(rinfo->pinctrl, rinfo->pins_default);
+	i2c_mux_pinctrl_to_gpio(muxc, chan);
+	mux->cur_channel = -1;
+	rinfo = mux->parent_rinfo;
+	muxc->parent->bus_recovery_info = rinfo;
+	if (rinfo) {
+		/* Return to parent pinctrl */
+		if (rinfo->pins_default)
+			pinctrl_commit_state(rinfo->pinctrl, rinfo->pins_default);
+		else if (rinfo->unprepare_recovery)
+			rinfo->unprepare_recovery(muxc->parent);
+	} else if (mux->ps_idle) {
+		pinctrl_commit_state(mux->pinctrl, mux->ps_idle);
 	}
-	muxc->parent->bus_recovery_info = NULL;
-	if (mux->ps_idle)
-		return pinctrl_commit_state(mux->pinctrl, mux->ps_idle);
 	return 0;
 }
 
@@ -105,10 +108,8 @@ int setup_base(struct device *dev, struct i2c_mux_pinctrl *mux, int num_names)
 				dev_warn(dev, "idle state must be last\n");
 				continue;
 			}
-			if (mux->idle_channel < mux->num_channels) {
-				dev_warn(dev,
-					"idle state already given to channel %d\n",
-					mux->idle_channel);
+			if (mux->parent_rinfo) {
+				dev_warn(dev, "parent idle overrides all\n");
 				continue;
 			}
 		} else  if (i < mux->num_channels) {
@@ -144,14 +145,6 @@ static int setup_adap(struct i2c_adapter *adap, struct i2c_mux_core *muxc, int c
 	if (!pinctrl || IS_ERR(pinctrl))
 		return 0;
 
-	if (device_property_read_bool(dev, "idle")) {
-		if (mux->idle_channel < mux->num_channels) {
-			dev_warn(dev, "idle already set to %d\n",
-				mux->idle_channel);
-		} else {
-			mux->idle_channel = chan;
-		}
-	}
 	rinfo->pinctrl = pinctrl;
 	rinfo->recover_bus = i2c_generic_scl_recovery;
 	adap->bus_recovery_info = rinfo;
@@ -235,9 +228,9 @@ static int i2c_mux_pinctrl_probe(struct platform_device *pdev)
 		goto err_put_parent;
 	}
 	mux = i2c_mux_priv(muxc);
-	mux->idle_channel = -2;
 	mux->cur_channel = -1;
 	mux->num_channels = num_channels;
+	mux->parent_rinfo = parent->bus_recovery_info;
 
 	platform_set_drvdata(pdev, muxc);
 
@@ -247,7 +240,7 @@ static int i2c_mux_pinctrl_probe(struct platform_device *pdev)
 		if (IS_ERR(adap))
 			return PTR_ERR(adap);
 		ret = setup_adap(adap, muxc, i);
-		i2c_mux_pinctrl_to_gpio(mux, i);
+		i2c_mux_pinctrl_to_gpio(muxc, i);
 		mux->cur_channel = -1;
 		if (ret)
 			goto err_del_adapter;
@@ -263,7 +256,7 @@ static int i2c_mux_pinctrl_probe(struct platform_device *pdev)
 				goto err_del_adapter;
 		}
 	}
-	if ((mux->idle_channel < mux->num_channels) || mux->ps_idle)
+	if (mux->parent_rinfo || mux->ps_idle)
 		muxc->deselect = i2c_mux_pinctrl_deselect;
 
 	for (i = 0; i < num_channels; i++) {
@@ -294,15 +287,21 @@ static int i2c_mux_pinctrl_probe(struct platform_device *pdev)
 		struct i2c_adapter *adap = muxc->adapter[i];
 
 		ret = i2c_mux_add_adapter_finish(adap);
-		i2c_mux_pinctrl_to_gpio(mux, i);
+		i2c_mux_pinctrl_to_gpio(muxc, i);
 		mux->cur_channel = -1;
 		if (ret)
 			goto err_del_adapter;
 	}
-
+	/* Return to parent/idle pinctrl */
+	i2c_mux_pinctrl_to_gpio(muxc, -1);
+	i2c_mux_pinctrl_deselect(muxc, -3);
 	return 0;
 
 err_del_adapter:
+	/* Return to parent/idle pinctrl */
+	mux->cur_channel = -1;
+	i2c_mux_pinctrl_to_gpio(muxc, -1);
+	i2c_mux_pinctrl_deselect(muxc, -3);
 	i2c_mux_del_adapters(muxc);
 err_put_parent:
 	i2c_put_adapter(parent);
