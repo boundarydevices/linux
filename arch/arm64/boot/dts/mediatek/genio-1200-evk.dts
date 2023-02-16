@@ -289,6 +289,13 @@
 						vdo = <0x1c1c47>;
 					};
 				};
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					port@0 {};
+				};
 			};
 
 			ports {
