@@ -791,3 +791,36 @@ int ifx_cfg80211_vndr_cmds_mpc(struct wiphy *wiphy,
 
 	return ret;
 }
+
+int ifx_cfg80211_vndr_cmds_giantrx(struct wiphy *wiphy,
+				   struct wireless_dev *wdev,
+				   const void *data, int len)
+{
+	int ret = 0;
+	struct brcmf_cfg80211_vif *vif;
+	struct brcmf_if *ifp;
+	int val = *(s32 *)data;
+	s32 buf = 0;
+
+	vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+	ifp = vif->ifp;
+
+	if (val == 0xa) {
+		ret = brcmf_fil_iovar_int_get(ifp, "giantrx", &buf);
+		if (ret) {
+			brcmf_err("get giantrx error:%d\n", ret);
+			return ret;
+		}
+
+		brcmf_dbg(INFO, "get giantrx: %d\n", buf);
+		ifx_cfg80211_vndr_send_cmd_reply(wiphy, &buf, sizeof(int));
+	} else {
+		brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1);
+		ret = brcmf_fil_iovar_int_set(ifp, "giantrx", val);
+		brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1);
+		if (ret)
+			brcmf_err("set giantrx error:%d\n", ret);
+	}
+	return ret;
+}
+
