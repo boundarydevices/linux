@@ -94,6 +94,8 @@ enum ifx_nl80211_vendor_subcmds {
 	 *
 	 * @IFX_VENDOR_SCMD_MPC: Vendor command to set/get MPC setting.
 	 *
+	 * @IFX_VENDOR_SCMD_GIANTRX: Vendor command to set/get GIANTRX setting.
+	 *
 	 * @IFX_VENDOR_SCMD_MAX: This acts as a the tail of cmds list.
 	 *      Make sure it located at the end of the list.
 	 */
@@ -119,7 +121,8 @@ enum ifx_nl80211_vendor_subcmds {
 	SCMD(RANDMAC)		= 17,
 	SCMD(MBO)		= 18,
 	SCMD(MPC)		= 19,
-	SCMD(MAX)		= 20
+	SCMD(GIANTRX)		= 20,
+	SCMD(MAX)		= 21
 };
 
 /* enum ifx_vendor_attr - IFX nl80211 vendor attributes
@@ -673,6 +676,9 @@ int ifx_cfg80211_vndr_cmds_mbo(struct wiphy *wiphy,
 int ifx_cfg80211_vndr_cmds_mpc(struct wiphy *wiphy,
 			       struct wireless_dev *wdev,
 			       const void *data, int len);
+int ifx_cfg80211_vndr_cmds_giantrx(struct wiphy *wiphy,
+				   struct wireless_dev *wdev,
+				   const void *data, int len);
 
 #endif /* IFX_VENDOR_H */
 
