@@ -156,9 +156,12 @@ struct afe_multi_gate {
 	MULTI_GATE_FLAGS(_name, _parent, _reg, _mask,	\
 		       CLK_SET_RATE_PARENT, CLK_GATE_SET_TO_DISABLE)
 
-static const struct afe_multi_gate dmic_clks =
+static const struct afe_multi_gate aud_multi_gate_clks[CLK_AUD_NR_MULTI_GATE] = {
 	MULTI_GATE("aud_afe_dmic", "top_a1sys_hp", AUDIO_TOP_CON1,
-		   BIT(10) | BIT(11) | BIT(12) | BIT(13));
+		   BIT(10) | BIT(11) | BIT(12) | BIT(13)),
+	MULTI_GATE("aud_dmic_hires", "top_audio_h", AUDIO_TOP_CON1,
+		   BIT(20) | BIT(21) | BIT(22) | BIT(23)),
+};
 
 struct audsys_multi_gate {
 	struct clk_hw hw;
@@ -276,8 +279,9 @@ void audsys_unregister_multi_gate(struct clk *clk)
 	kfree(gate);
 }
 
-void mt8188_audsys_clk_unregister(struct mtk_base_afe *afe)
+static void mt8188_audsys_clk_unregister(void *data)
 {
+	struct mtk_base_afe *afe = data;
 	struct mt8188_afe_private *afe_priv = afe->platform_priv;
 	struct clk *clk;
 	struct clk_lookup *cl;
@@ -297,11 +301,16 @@ void mt8188_audsys_clk_unregister(struct mtk_base_afe *afe)
 		clkdev_drop(cl);
 	}
 
-	cl = afe_priv->lookup[i];
-	clk = cl->clk;
-	audsys_unregister_multi_gate(clk);
+	for (i = 0; i < CLK_AUD_NR_MULTI_GATE; i++) {
+		cl = afe_priv->lookup[i + CLK_AUD_AFE_MULTI_GATE_START];
+		if (!cl)
+			continue;
 
-	clkdev_drop(cl);
+		clk = cl->clk;
+		audsys_unregister_multi_gate(clk);
+
+		clkdev_drop(cl);
+	}
 }
 
 int mt8188_audsys_clk_register(struct mtk_base_afe *afe)
@@ -345,28 +354,32 @@ int mt8188_audsys_clk_register(struct mtk_base_afe *afe)
 		afe_priv->lookup[i] = cl;
 	}
 
-	clk = audsys_register_multi_gate(afe->dev, dmic_clks.name,
-					 dmic_clks.parent_name,
-					 dmic_clks.flags,
-					 afe->base_addr + dmic_clks.reg,
-					 dmic_clks.mask,
-					 dmic_clks.cg_flags);
-	if (IS_ERR(clk)) {
-		dev_err(afe->dev, "Failed to register clk %s: %ld\n",
-			dmic_clks.name, PTR_ERR(clk));
-		return PTR_ERR(clk);
+	for (i = 0; i < CLK_AUD_NR_MULTI_GATE; i++) {
+		const struct afe_multi_gate *multi_gate = &aud_multi_gate_clks[i];
+
+		clk = audsys_register_multi_gate(afe->dev, multi_gate->name,
+						 multi_gate->parent_name,
+						 multi_gate->flags,
+						 afe->base_addr + multi_gate->reg,
+						 multi_gate->mask,
+						 multi_gate->cg_flags);
+		if (IS_ERR(clk)) {
+			dev_err(afe->dev, "Failed to register clk %s: %ld\n",
+				multi_gate->name, PTR_ERR(clk));
+			return PTR_ERR(clk);
+		}
+
+		cl = kzalloc(sizeof(*cl), GFP_KERNEL);
+		if (!cl)
+			return -ENOMEM;
+
+		cl->clk = clk;
+		cl->con_id = multi_gate->name;
+		cl->dev_id = dev_name(afe->dev);
+		clkdev_add(cl);
+
+		afe_priv->lookup[i + CLK_AUD_AFE_MULTI_GATE_START] = cl;
 	}
-
-	cl = kzalloc(sizeof(*cl), GFP_KERNEL);
-	if (!cl)
-		return -ENOMEM;
-
-	cl->clk = clk;
-	cl->con_id = dmic_clks.name;
-	cl->dev_id = dev_name(afe->dev);
-	clkdev_add(cl);
-
-	afe_priv->lookup[i] = cl;
 
 	return devm_add_action_or_reset(afe->dev, mt8188_audsys_clk_unregister, afe);
 }
