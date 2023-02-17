@@ -151,7 +151,6 @@ struct dp_cal_data {
 
 struct mtk_dp {
 	struct device *dev;
-	struct mtk_dp_driver_data *driver_data;
 	struct platform_device *phy_dev;
 	struct phy *phy;
 	struct dp_cal_data cal_data;
@@ -198,13 +197,6 @@ struct mtk_dp {
 
 	enum drm_connector_status hpd_state;
 };
-
-struct mtk_dp_driver_data {
-	const bool arrange;
-	const u8 audio_m_div2;
-};
-
-static const struct of_device_id mtk_dp_of_match[];
 
 enum mtk_dp_sdp_type {
 	MTK_DP_SDP_NONE = 0x00,
@@ -621,10 +613,8 @@ static void mtk_dp_audio_sdp_asp_set_channels(struct mtk_dp *mtk_dp,
 
 static void mtk_dp_audio_set_divider(struct mtk_dp *mtk_dp)
 {
-	u8 div2_id = mtk_dp->driver_data->audio_m_div2;
-
 	mtk_dp_update_bits(mtk_dp, MTK_DP_ENC0_P0_30BC,
-			   div2_id << AUDIO_M_CODE_MULT_DIV_SEL_DP_ENC0_P0_SHIFT,
+			   AUDIO_M_CODE_MULT_DIV_SEL_DP_ENC0_P0_DIV_2,
 			   AUDIO_M_CODE_MULT_DIV_SEL_DP_ENC0_P0_MASK);
 }
 
@@ -1521,14 +1511,6 @@ static void mtk_dp_sdp_set_down_cnt_init_in_hblank(struct mtk_dp *mtk_dp)
 			   SDP_DOWN_CNT_INIT_IN_HBLANK_DP_ENC1_P0_MASK);
 }
 
-static void mtk_dp_audio_sample_arrange(struct mtk_dp *mtk_dp)
-{
-	if (mtk_dp->driver_data->arrange) {
-		mtk_dp_update_bits(mtk_dp, MTK_DP_ENC1_P0_3374, 0, BIT(12));
-		mtk_dp_update_bits(mtk_dp, MTK_DP_ENC1_P0_3374, 0, 0xFFF);
-	}
-}
-
 static void mtk_dp_setup_tu(struct mtk_dp *mtk_dp)
 {
 	u32 sram_read_start = MTK_DP_TBC_BUF_READ_START_ADDR;
@@ -1542,7 +1524,6 @@ static void mtk_dp_setup_tu(struct mtk_dp *mtk_dp)
 	}
 
 	mtk_dp_setup_encoder(mtk_dp);
-	mtk_dp_audio_sample_arrange(mtk_dp);
 	mtk_dp_sdp_set_down_cnt_init_in_hblank(mtk_dp);
 	mtk_dp_sdp_set_down_cnt_init(mtk_dp, sram_read_start);
 }
@@ -2960,20 +2941,10 @@ static int mtk_dp_register_audio_driver(struct device *dev)
 	return 0;
 }
 
-static const struct mtk_dp_driver_data mt8195_dp_driver_data = {
-	.arrange = false,
-	.audio_m_div2 = 5,
-};
-static const struct mtk_dp_driver_data mt8188_dp_driver_data = {
-	.arrange = true,
-	.audio_m_div2 = 4,
-};
-
 static int mtk_dp_probe(struct platform_device *pdev)
 {
 	struct mtk_dp *mtk_dp;
 	struct device *dev = &pdev->dev;
-	const struct of_device_id *of_id;
 	int ret;
 	int irq_num = 0;
 
@@ -2982,8 +2953,7 @@ static int mtk_dp_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	mtk_dp->dev = dev;
-	of_id = of_match_device(mtk_dp_of_match, &pdev->dev);
-	mtk_dp->driver_data = (struct mtk_dp_driver_data *)of_id->data;
+
 	irq_num = platform_get_irq(pdev, 0);
 	if (irq_num < 0) {
 		dev_err(dev, "failed to request dp irq resource\n");
@@ -3127,12 +3097,7 @@ static const struct of_device_id mtk_dp_of_match[] = {
 		.compatible = "mediatek,mt8195-edp-tx",
 	},
 	{
-		.compatible = "mediatek,mt8188-dp-tx",
-		.data = &mt8188_dp_driver_data
-	},
-	{
 		.compatible = "mediatek,mt8195-dp-tx",
-		.data = &mt8195_dp_driver_data
 	},
 	{},
 };
