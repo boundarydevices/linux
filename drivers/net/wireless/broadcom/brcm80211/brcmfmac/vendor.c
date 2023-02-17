@@ -321,6 +321,13 @@ const struct wiphy_vendor_command brcmf_vendor_cmds[] = {
 			   VENDOR_CMD_RAW_DATA,
 			   ifx_cfg80211_vndr_cmds_mpc)
 	},
+	{
+		IFX_SUBCMD(GIANTRX,
+			   (WIPHY_VENDOR_CMD_NEED_WDEV |
+			    WIPHY_VENDOR_CMD_NEED_NETDEV),
+			   VENDOR_CMD_RAW_DATA,
+			   ifx_cfg80211_vndr_cmds_giantrx)
+	},
 };
 
 const struct nl80211_vendor_cmd_info brcmf_vendor_events[] = {
