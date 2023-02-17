@@ -169,11 +169,6 @@
 #define GPIRQ_TOUCH			<&gpio1 9 IRQ_TYPE_LEVEL_LOW>
 #define GP_TOUCH			<&gpio1 9 GPIO_ACTIVE_LOW>
 			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		/* J7 pin 4 - I2C3 */
-#define GPIRQ_TSC2004			<&gpio2 27 IRQ_TYPE_LEVEL_LOW>
-#define GP_TSC2004			<&gpio2 27 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_EIM_LBA__GPIO2_IO27		0x1b0b0		/* tsc2004(I2C3) irq */
-#define GP_TSC2004_RESET		<&gpio4 10 GPIO_ACTIVE_LOW>
-			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x030b0
 		>;
 	};
 
@@ -195,13 +190,23 @@
 		>;
 	};
 
-	pinctrl_i2c3_gt911: i2c3_gt911grp {
+	pinctrl_i2c3_gt911: i2c3-gt911grp {
 		fsl,pins = <
 #define GPIRQ_GT911			<&gpio1 9 IRQ_TYPE_LEVEL_HIGH>
 #define GP_GT911_IRQ			<&gpio1 9 GPIO_ACTIVE_HIGH>
 /*			MX6QDL_PAD_GPIO_9__GPIO1_IO09		0x1b0b0		*/
 #define GP_GT911_RESET		<&gpio2 7 GPIO_ACTIVE_HIGH>
 			MX6QDL_PAD_NANDF_D7__GPIO2_IO07		0x030b0		/* Fake pin for driver */
+		>;
+	};
+
+	pinctrl_i2c3_tsc2004: i2c3-tsc2004grp {
+		fsl,pins = <
+#define GPIRQ_TSC2004			<&gpio2 27 IRQ_TYPE_LEVEL_LOW>
+#define GP_TSC2004			<&gpio2 27 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_EIM_LBA__GPIO2_IO27		0x1b0b0		/* tsc2004(I2C3) irq */
+#define GP_TSC2004_RESET		<&gpio4 10 GPIO_ACTIVE_LOW>
+			MX6QDL_PAD_KEY_COL2__GPIO4_IO10		0x030b0
 		>;
 	};
 
@@ -811,6 +816,8 @@
 	ts_tsc2004: touchscreen@48 {
 		compatible = "tsc2004,tsc2004";
 		interrupts-extended = GPIRQ_TSC2004;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_i2c3_tsc2004>;
 		reg = <0x48>;
 		reset-gpios = GP_TSC2004_RESET;
 		wakeup-gpios = GP_TSC2004;
