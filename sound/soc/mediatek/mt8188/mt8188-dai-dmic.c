@@ -36,6 +36,7 @@ struct mtk_dai_dmic_priv {
 	unsigned int channels;
 	unsigned int dmic_clk_mono;
 	unsigned int clk_index[DMIC_NUM];
+	bool hires_required;
 };
 
 static const struct mtk_dai_dmic_ctrl_reg dmic_ctrl_regs[DMIC_NUM] = {
@@ -269,6 +270,25 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+static int mtk_afe_dmic_hires_connect(struct snd_soc_dapm_widget *source,
+				      struct snd_soc_dapm_widget *sink)
+{
+	struct snd_soc_dapm_widget *w = source;
+	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
+	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
+	struct mtk_dai_dmic_priv *dmic_priv;
+	struct mt8188_afe_private *afe_priv = afe->platform_priv;
+
+	dmic_priv = afe_priv->dai_priv[MT8188_AFE_IO_DMIC_IN];
+
+	if (!dmic_priv) {
+		dev_info(afe->dev, "dmic_priv == NULL");
+		return 0;
+	}
+
+	return (dmic_priv->hires_required) ? 1 : 0;
+}
+
 /* dai ops */
 static int mtk_dai_dmic_hw_params(struct snd_pcm_substream *substream,
 				  struct snd_pcm_hw_params *params,
@@ -309,8 +329,13 @@ static int mtk_dai_dmic_hw_params(struct snd_pcm_substream *substream,
 	msk |= AFE_DMIC_UL_SRC_CON0_UL_PHASE_SEL_MASK;
 
 	mtk_dai_dmic_configure_array(dai);
+	dmic_priv->hires_required = 0;
 
 	switch (rate) {
+	case 96000:
+		val |= AFE_DMIC_UL_CON0_VOCIE_MODE_96K;
+		dmic_priv->hires_required = 1;
+		break;
 	case 48000:
 		val |= AFE_DMIC_UL_CON0_VOCIE_MODE_48K;
 		break;
@@ -371,7 +396,8 @@ static const struct snd_soc_dai_ops mtk_dai_dmic_ops = {
 #define MTK_DMIC_RATES (SNDRV_PCM_RATE_8000 |\
 		       SNDRV_PCM_RATE_16000 |\
 		       SNDRV_PCM_RATE_32000 |\
-		       SNDRV_PCM_RATE_48000)
+		       SNDRV_PCM_RATE_48000 |\
+		       SNDRV_PCM_RATE_96000)
 
 #define MTK_DMIC_FORMATS (SNDRV_PCM_FMTBIT_S16_LE |\
 			 SNDRV_PCM_FMTBIT_S32_LE)
@@ -407,7 +433,7 @@ static const struct snd_soc_dapm_widget mtk_dai_dmic_widgets[] = {
 			    mtk_dmic_event,
 			    SND_SOC_DAPM_PRE_POST_PMU |
 			    SND_SOC_DAPM_PRE_POST_PMD),
-
+	SND_SOC_DAPM_CLOCK_SUPPLY("aud_dmic_hires"),
 	SND_SOC_DAPM_INPUT("DMIC_INPUT"),
 };
 
@@ -420,7 +446,8 @@ static const struct snd_soc_dapm_route mtk_dai_dmic_routes[] = {
 	{"I009", NULL, "DMIC Capture"},
 	{"I010", NULL, "DMIC Capture"},
 	{"I011", NULL, "DMIC Capture"},
-
+	{"DMIC Capture", NULL, "aud_dmic_hires", mtk_afe_dmic_hires_connect},
+	{"aud_dmic_hires", NULL, "AUDIO_HIRES"},
 	{"DMIC Capture", NULL, "DMIC_CK_ON"},
 	{"DMIC Capture", NULL, "DMIC_INPUT"},
 };
