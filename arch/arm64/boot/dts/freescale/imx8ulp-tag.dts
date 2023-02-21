@@ -35,6 +35,7 @@
 
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
+			MX8ULP_PAD_PTD13__PTD13		0x7
 			MX8ULP_PAD_PTD15__PTD15		0x7	/* IMU_IRQ */
 			MX8ULP_PAD_PTD16__PTD16		0x7	/* 29 */
 			MX8ULP_PAD_PTD17__PTD17		0x7	/* 30 */
@@ -42,7 +43,6 @@
 			MX8ULP_PAD_PTD19__PTD19		0x7	/* 26 */
 			MX8ULP_PAD_PTD20__PTD20		0x7	/* 33 */
 			MX8ULP_PAD_PTE0__PTE0		0x7	/* 64 */
-			MX8ULP_PAD_PTE1__PTE1		0x7	/* TUSB_IRQ */
 			MX8ULP_PAD_PTE2__PTE2		0x7	/* BACK */
 			MX8ULP_PAD_PTE3__PTE3		0x7	/* 19 */
 			MX8ULP_PAD_PTE6__PTE6		0x7	/* 34 */
@@ -63,7 +63,6 @@
 			MX8ULP_PAD_PTF25__PTF25		0x7	/* 27 */
 			MX8ULP_PAD_PTF26__PTF26		0x7	/* 51 */
 			MX8ULP_PAD_PTF27__PTF27		0x7	/* 57 */
-			MX8ULP_PAD_PTF28__PTF28		0x7	/*  5 */
 			MX8ULP_PAD_PTF29__PTF29		0x7	/* pmic_mode0 */
 			MX8ULP_PAD_PTF30__PTF30		0x7	/* pmic_mode1 */
 			MX8ULP_PAD_PTF31__PTF31		0x7	/* pmic_mode2 */
@@ -145,8 +144,8 @@
 
 	pinctrl_reg_usbotg1_vbus: reg-usbotg1-vbusgrp {
 		fsl,pins = <
-#define GP_REG_USB_OTG1_VBUS	<&gpiod 13 GPIO_ACTIVE_HIGH>
-			MX8ULP_PAD_PTD13__PTD13		0x02
+#define GP_REG_USB_OTG1_VBUS	<&gpiof 28 GPIO_ACTIVE_LOW>
+			MX8ULP_PAD_PTF28__PTF28		0x03
 		>;
 	};
 
