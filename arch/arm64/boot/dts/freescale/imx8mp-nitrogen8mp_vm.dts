@@ -19,19 +19,6 @@
 		>;
 	};
 
-	pinctrl_ecspi1: ecspi1grp {
-		fsl,pins = <
-			/* J6 */
-			MX8MP_IOMUXC_ECSPI1_SCLK__ECSPI1_SCLK		0x82	/* Pin 7 */
-			MX8MP_IOMUXC_ECSPI1_MOSI__ECSPI1_MOSI		0x82	/* Pin 6 */
-			MX8MP_IOMUXC_ECSPI1_MISO__ECSPI1_MISO		0x82	/* Pin 5 */
-#define GP_ECSPI1_CS	<&gpio5 9 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_ECSPI1_SS0__GPIO5_IO09		0x143	/* Pin 4 */
-			MX8MP_IOMUXC_GPIO1_IO04__GPIO1_IO04		0x100	/* Pin 8 */
-			MX8MP_IOMUXC_GPIO1_IO05__GPIO1_IO05		0x100	/* Pin 9 */
-		>;
-	};
-
 	pinctrl_eqos: eqosgrp {
 		fsl,pins = <
 			MX8MP_IOMUXC_ENET_MDC__ENET_QOS_MDC		0x20
@@ -62,6 +49,13 @@
 			MX8MP_IOMUXC_HDMI_DDC_SDA__HDMIMIX_HDMI_SDA	0x400001c3
 			MX8MP_IOMUXC_HDMI_HPD__HDMIMIX_HDMI_HPD		0x40000019
 			MX8MP_IOMUXC_HDMI_CEC__HDMIMIX_HDMI_CEC		0x40000019
+			/* J6 */
+			MX8MP_IOMUXC_ECSPI1_SS0__GPIO5_IO09		0x1c0	/* Pin 4 */
+			MX8MP_IOMUXC_ECSPI1_MISO__GPIO5_IO08		0x1c0   /* Pin 5 */
+			MX8MP_IOMUXC_ECSPI1_MOSI__GPIO5_IO07		0x1c0   /* Pin 6 */
+			MX8MP_IOMUXC_ECSPI1_SCLK__GPIO5_IO06		0x1c0   /* Pin 7 */
+			MX8MP_IOMUXC_GPIO1_IO04__GPIO1_IO04		0x1c0	/* Pin 8 */
+			MX8MP_IOMUXC_GPIO1_IO05__GPIO1_IO05		0x1c0	/* Pin 9 */
 		>;
 	};
 
@@ -602,22 +596,6 @@
 &easrc {
 	fsl,asrc-rate  = <48000>;
 	status = "okay";
-};
-
-&ecspi1 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	fsl,spi-num-chipselects = <1>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_ecspi1>;
-	cs-gpios = GP_ECSPI1_CS;
-	status = "okay";
-
-	spidev1: spi@0 {
-		compatible = "spidev";
-		reg = <0>;
-		spi-max-frequency = <500000>;
-	};
 };
 
 &eqos {
