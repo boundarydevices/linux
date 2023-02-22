@@ -440,6 +440,9 @@ static int mtk_hdmi_ddc_xfer(struct i2c_adapter *adapter, struct i2c_msg *msgs,
 	for (i = 0; i < num; i++) {
 		struct i2c_msg *msg = &msgs[i];
 
+		if (!msg->buf)
+			return -EINVAL;
+
 		if (msg->flags & I2C_M_RD) {
 			/* The underlying DDC hardware always issue a write request
 			 * that assigns the read offset as part of the read operation.

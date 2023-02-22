@@ -239,6 +239,9 @@ static int mtk_hdmi_ddc_xfer(struct i2c_adapter *adapter,
 	for (i = 0; i < num; i++) {
 		struct i2c_msg *msg = &msgs[i];
 
+		if (!msg->buf)
+			return -EINVAL;
+
 		dev_dbg(dev, "i2c msg, adr:0x%x, flags:%d, len :0x%x\n",
 			msg->addr, msg->flags, msg->len);
 
