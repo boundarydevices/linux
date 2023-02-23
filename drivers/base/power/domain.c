@@ -3032,6 +3032,7 @@ struct device *genpd_dev_pm_attach_by_name(struct device *dev, const char *name)
 
 	return genpd_dev_pm_attach_by_id(dev, index);
 }
+EXPORT_SYMBOL_GPL(genpd_dev_pm_attach_by_name);
 
 static const struct of_device_id idle_state_match[] = {
 	{ .compatible = "domain-idle-state", },
