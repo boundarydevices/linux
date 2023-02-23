@@ -179,3 +179,4 @@ module_exit(dmabuf_imx_exit);
 MODULE_AUTHOR("NXP Semiconductor, Inc.");
 MODULE_DESCRIPTION("imx dmabuf driver");
 MODULE_LICENSE("GPL");
+MODULE_IMPORT_NS(DMA_BUF);
