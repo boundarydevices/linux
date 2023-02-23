@@ -160,3 +160,4 @@ static int dsp_heap_create(void)
 }
 module_init(dsp_heap_create);
 MODULE_LICENSE("GPL v2");
+MODULE_IMPORT_NS(DMA_BUF);
