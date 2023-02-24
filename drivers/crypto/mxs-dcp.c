@@ -3,7 +3,7 @@
  * Freescale i.MX23/i.MX28 Data Co-Processor driver
  *
  * Copyright (C) 2013 Marek Vasut <marex@denx.de>
- * Copyright 2022 Kshitiz Varshney <kshitiz.varshney@nxp.com>
+ * Copyright 2022 NXP
  */
 
 #include <linux/dma-mapping.h>

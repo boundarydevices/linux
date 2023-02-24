@@ -35,7 +35,9 @@ static void ethosu_core_set_capacity(struct ethosu_buffer *buf,
 int ethosu_rpmsg_register(struct ethosu_rpmsg *erp,
 			  struct ethosu_rpmsg_msg *msg)
 {
+	write_lock(&erp->lock);
 	msg->id = idr_alloc_cyclic(&erp->msg_idr, msg, 0, INT_MAX, GFP_KERNEL);
+	write_unlock(&erp->lock);
 	if (msg->id < 0)
 		return msg->id;
 
@@ -45,14 +47,19 @@ int ethosu_rpmsg_register(struct ethosu_rpmsg *erp,
 void ethosu_rpmsg_deregister(struct ethosu_rpmsg *erp,
 			     struct ethosu_rpmsg_msg *msg)
 {
+	write_lock(&erp->lock);
 	idr_remove(&erp->msg_idr, msg->id);
+	write_unlock(&erp->lock);
 }
 
 struct ethosu_rpmsg_msg *ethosu_rpmsg_find(struct ethosu_rpmsg *erp,
 					   int msg_id)
 {
-	struct ethosu_rpmsg_msg *ptr =
-		(struct ethosu_rpmsg_msg *)idr_find(&erp->msg_idr, msg_id);
+	struct ethosu_rpmsg_msg *ptr;
+
+	read_lock(&erp->lock);
+	ptr = (struct ethosu_rpmsg_msg *)idr_find(&erp->msg_idr, msg_id);
+	read_unlock(&erp->lock);
 
 	if (!ptr)
 		return ERR_PTR(-EINVAL);
@@ -97,8 +104,8 @@ static int ethosu_rpmsg_send(struct ethosu_rpmsg *erp, uint32_t type)
 	msg.type = type;
 	msg.length = 0;
 
-	print_hex_dump(KERN_DEBUG, __func__, DUMP_PREFIX_NONE, 16, 1,
-			(void *)&msg, sizeof(msg),  true);
+	print_hex_dump_debug(__func__, DUMP_PREFIX_NONE, 16, 1, (void *)&msg,
+			     sizeof(msg), true);
 
 	ret = rpmsg_send(rpdev->ept, (void *)&msg, sizeof(msg));
 	if (ret) {
@@ -337,8 +344,8 @@ static int rpmsg_ethosu_cb(struct rpmsg_device *rpdev,
 
 	dev_dbg(&rpdev->dev, "msg(<- src 0x%x) len %d\n", src, len);
 
-	print_hex_dump(KERN_DEBUG, __func__, DUMP_PREFIX_NONE, 16, 1,
-			data, len,  true);
+	print_hex_dump_debug(__func__, DUMP_PREFIX_NONE, 16, 1, data,
+			     len, true);
 
 	rpmsg->callback(rpmsg->user_arg, data);
 
@@ -391,6 +398,7 @@ int ethosu_rpmsg_init(struct ethosu_rpmsg *erp,
 	erp->user_arg = user_arg;
 	erp->ping_count = 0;
 	idr_init(&erp->msg_idr);
+        rwlock_init(&erp->lock);
 
 	return register_rpmsg_driver(&ethosu_rpmsg_driver);
 }

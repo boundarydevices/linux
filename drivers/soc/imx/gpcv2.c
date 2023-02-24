@@ -481,6 +481,8 @@ static int imx_pgc_power_down(struct generic_pm_domain *genpd)
 		}
 	}
 
+	raw_notifier_call_chain(&genpd->power_notifiers, IMX_GPCV2_NOTIFY_OFF_ADB400, NULL);
+
 	if (domain->bits.pxx) {
 		/* enable power control */
 		for_each_set_bit(pgc, &domain->pgc, 32) {
@@ -1034,6 +1036,7 @@ static const struct imx_pgc_domain imx8mp_pgc_domains[] = {
 	[IMX8MP_POWER_DOMAIN_USB1_PHY] = {
 		.genpd = {
 			.name = "usb-otg1",
+			.flags = GENPD_FLAG_ACTIVE_WAKEUP,
 		},
 		.bits = {
 			.pxx = IMX8MP_USB1_PHY_Pxx_REQ,
@@ -1045,6 +1048,7 @@ static const struct imx_pgc_domain imx8mp_pgc_domains[] = {
 	[IMX8MP_POWER_DOMAIN_USB2_PHY] = {
 		.genpd = {
 			.name = "usb-otg2",
+			.flags = GENPD_FLAG_ACTIVE_WAKEUP,
 		},
 		.bits = {
 			.pxx = IMX8MP_USB2_PHY_Pxx_REQ,

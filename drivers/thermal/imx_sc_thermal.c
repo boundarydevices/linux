@@ -152,7 +152,7 @@ static int imx_sc_thermal_probe(struct platform_device *pdev)
 
 	np_cdev = of_find_node_by_name(NULL, "devfreq");
 
-	for (i = 0; resource_id[i] > 0; i++) {
+	for (i = 0; resource_id[i] >= 0; i++) {
 		sensor = devm_kzalloc(&pdev->dev, sizeof(*sensor), GFP_KERNEL);
 		if (!sensor)
 			return -ENOMEM;
@@ -241,7 +241,11 @@ static int imx_sc_thermal_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int imx_sc_sensors[] = { IMX_SC_R_SYSTEM, IMX_SC_R_PMIC_0, -1 };
+static const int imx_sc_sensors[] = {
+	IMX_SC_R_SYSTEM, IMX_SC_R_PMIC_0,
+	IMX_SC_R_AP_0, IMX_SC_R_AP_1,
+	IMX_SC_R_GPU_0_PID0, IMX_SC_R_GPU_1_PID0,
+	IMX_SC_R_DRC_0, -1 };
 
 static const struct of_device_id imx_sc_thermal_table[] = {
 	{ .compatible = "fsl,imx-sc-thermal", .data =  imx_sc_sensors },

@@ -987,6 +987,7 @@ struct pxp_devdata {
 	void (*pxp_data_path_config)(struct pxps *pxp);
 	void (*pxp_restart)(struct pxps *pxp);
 	unsigned int version;
+	bool input_fetch_arbit_en;
 };
 
 static const struct pxp_devdata pxp_devdata[] = {
@@ -1000,6 +1001,7 @@ static const struct pxp_devdata pxp_devdata[] = {
 		.pxp_data_path_config = NULL,
 		.pxp_restart = NULL,
 		.version = PXP_V3,
+		.input_fetch_arbit_en = false,
 	},
 	[PXP_V3P] = {
 		.pxp_wfe_a_configure = pxp_wfe_a_configure_v3p,
@@ -1011,6 +1013,7 @@ static const struct pxp_devdata pxp_devdata[] = {
 		.pxp_data_path_config = pxp_data_path_config_v3p,
 		.pxp_restart = NULL,
 		.version = PXP_V3P,
+		.input_fetch_arbit_en = false,
 	},
 	[PXP_V3_8ULP] = {
 		.pxp_wfe_a_configure = pxp_wfe_a_configure,
@@ -1022,6 +1025,7 @@ static const struct pxp_devdata pxp_devdata[] = {
 		.pxp_data_path_config = NULL,
 		.pxp_restart = pxp_software_restart,
 		.version = PXP_V3_8ULP,
+		.input_fetch_arbit_en = false,
 	},
 	[PXP_V3_IMX93] = {
 		.pxp_wfe_a_configure = NULL,
@@ -1033,6 +1037,11 @@ static const struct pxp_devdata pxp_devdata[] = {
 		.pxp_data_path_config = NULL,
 		.pxp_restart = imx93_pxp_software_restart,
 		.version = PXP_V3_IMX93,
+		/*
+		 * Due to iMX93 only connect one AXI bus to PXP, so need to
+		 * enable arbitration when use two PXP input fetch channels
+		 */
+		.input_fetch_arbit_en = true,
 	},
 };
 
@@ -1758,6 +1767,7 @@ static uint32_t pxp_fetch_ctrl_config(struct pxp_pixmap *in,
 	if (in->rotate || in->flip)
 		ctrl.block_en = 1;
 
+	ctrl.block_16 = 1;
 	ctrl.ch_en = 1;
 
 	return *(uint32_t *)&ctrl;
@@ -1781,8 +1791,13 @@ static uint32_t pxp_fetch_active_size_lrc(struct pxp_pixmap *in)
 
 	memset((void*)&size_lrc, 0x0, sizeof(size_lrc));
 
-	size_lrc.active_size_lrc_x = in->crop.width - 1;
-	size_lrc.active_size_lrc_y = in->crop.height - 1;
+	if (in->crop.width > 0 && in->crop.height > 0) {
+		size_lrc.active_size_lrc_x = in->crop.width - 1;
+		size_lrc.active_size_lrc_y = in->crop.height - 1;
+	} else {
+		size_lrc.active_size_lrc_x = in->width - 1;
+		size_lrc.active_size_lrc_y = in->height - 1;
+	}
 
 	return *(uint32_t *)&size_lrc;
 }
@@ -1879,16 +1894,22 @@ static uint32_t pxp_fetch_shift_calc(uint32_t in_fmt, uint32_t out_fmt,
 
 static int pxp_start(struct pxps *pxp)
 {
+	struct pxp_proc_data *proc_data = &pxp->pxp_conf_state.proc_data;
 	u32 val;
 
-	val = (BM_PXP_CTRL_ENABLE_ROTATE1 |
-	       BM_PXP_CTRL_ENABLE |
-	       BM_PXP_CTRL_ENABLE_CSC2 |
-	       BM_PXP_CTRL_ENABLE_PS_AS_OUT |
-	       BM_PXP_CTRL_ENABLE_ROTATE0 |
-	       BM_PXP_CTRL_BLOCK_SIZE);
+	if (pxp->devdata && pxp->devdata->input_fetch_arbit_en)
+		__raw_writel(BF_PXP_INPUT_FETCH_CTRL_CH0_ARBIT_EN(1),
+			     pxp->base + HW_PXP_INPUT_FETCH_CTRL_CH0_SET);
 
-	if (pxp->devdata->version <= PXP_V3_8ULP) {
+	val = (BM_PXP_CTRL_ENABLE | BM_PXP_CTRL_BLOCK_SIZE);
+
+	if (proc_data->lut_transform && pxp_is_v3(pxp)) {
+		val |= (BM_PXP_CTRL_ENABLE_CSC2 |
+		        BM_PXP_CTRL_ENABLE_ROTATE0 |
+			BM_PXP_CTRL_ENABLE_ROTATE1);
+	}
+
+	if (pxp->devdata && pxp->devdata->version <= PXP_V3_8ULP) {
 		val |= BM_PXP_CTRL_ENABLE_LUT;
 		val &= ~(BM_PXP_CTRL_BLOCK_SIZE);
 	}
@@ -1962,6 +1983,7 @@ static bool fmt_out_support(uint32_t format)
 {
 	switch (format) {
 	case PXP_PIX_FMT_ARGB32:
+	case PXP_PIX_FMT_ABGR32:
 	case PXP_PIX_FMT_XRGB32:
 	case PXP_PIX_FMT_BGRA32:
 	case PXP_PIX_FMT_RGB24:
@@ -2141,6 +2163,36 @@ static void filter_possible_outputs(struct pxp_pixmap *output,
 
 		position++;
 	} while (1);
+}
+
+/*
+ * PXP support PS/AS -> OUT, INPUT FETCH -> STORE data path
+ * don't support cross them, such as PS/AS -> STORE and ROTATION2
+ * (or ROTATION1 in some IMX platform reference manul)
+ * engine only can be used to rotate data from input fetch engine.
+ * So replace ROTATION1 with ROTATION0 when AS/PS engine are used
+ */
+static void filter_nodes_by_inputs_outputs(size_t *nodes_in_path,
+					   size_t *nodes_used)
+{
+	bool ps_as_engine_used;
+
+	ps_as_engine_used = (((*nodes_in_path) & (1 << PXP_2D_PS)) |
+			     ((*nodes_in_path) & (1 << PXP_2D_AS)) |
+			     ((*nodes_used) & (1 << PXP_2D_PS)) |
+			     ((*nodes_used) & (1 << PXP_2D_AS))) ? true : false;
+
+	if (ps_as_engine_used) {
+		if (*nodes_in_path & (1 << PXP_2D_ROTATION1)) {
+			clear_bit(PXP_2D_ROTATION1, (unsigned long *)nodes_in_path);
+			set_bit(PXP_2D_ROTATION0, (unsigned long *)nodes_in_path);
+		}
+
+		if (*nodes_used & (1 << PXP_2D_ROTATION1)) {
+			clear_bit(PXP_2D_ROTATION1, (unsigned long *)nodes_used);
+			set_bit(PXP_2D_ROTATION0, (unsigned long *)nodes_used);
+		}
+	}
 }
 
 static uint32_t calc_shortest_path(size_t *nodes_used)
@@ -3202,6 +3254,32 @@ static void pxp_2d_calc_mux(size_t nodes, struct mux_config *path_ctrl)
 	} while (1);
 }
 
+/*
+ * Workaround to support RGB with alpha channel of PS engine
+ */
+static void pxp_config_alpha(struct pxp_pixmap *input)
+{
+	struct pxp_alpha_ctrl alpha_ctrl;
+
+	memset((void*)&alpha_ctrl, 0x0, sizeof(alpha_ctrl));
+
+	switch (input->format) {
+	case PXP_PIX_FMT_ARGB32:
+	case PXP_PIX_FMT_ARGB555:
+	case PXP_PIX_FMT_ARGB444:
+	case PXP_PIX_FMT_RGBA32:
+	case PXP_PIX_FMT_RGBA555:
+	case PXP_PIX_FMT_RGBA444:
+		alpha_ctrl.poter_duff_enable = 1;
+		alpha_ctrl.s0_s1_factor_mode = 1;
+		alpha_ctrl.s0_global_alpha_mode = 1;
+		break;
+	default:
+		break;
+	}
+	pxp_writel(*(uint32_t *)&alpha_ctrl, HW_PXP_ALPHA_A_CTRL);
+}
+
 static int pxp_2d_op_handler(struct pxps *pxp)
 {
 	struct mux_config path_ctrl0;
@@ -3293,15 +3371,7 @@ reparse:
 					       possible_outputs,
 					       input, &nodes_used);
 
-		if (nodes_in_path & (1 << PXP_2D_ROTATION1)) {
-			clear_bit(PXP_2D_ROTATION1, (unsigned long *)&nodes_in_path);
-			set_bit(PXP_2D_ROTATION0, (unsigned long *)&nodes_in_path);
-		}
-
-		if (nodes_used & (1 << PXP_2D_ROTATION1)) {
-			clear_bit(PXP_2D_ROTATION1, (unsigned long *)&nodes_used);
-			set_bit(PXP_2D_ROTATION0, (unsigned long *)&nodes_used);
-		}
+		filter_nodes_by_inputs_outputs(&nodes_in_path, &nodes_used);
 
 		pr_debug("%s: nodes_in_path = 0x%x, nodes_used = 0x%x\n",
 			  __func__, (u32)nodes_in_path, (u32)nodes_used);
@@ -3348,6 +3418,9 @@ reparse:
 			task->input_num = 2;
 			goto reparse;
 		}
+
+		if (nodes_used & (1 << PXP_2D_PS))
+			pxp_config_alpha(input);
 
 		pxp_2d_calc_mux(nodes_in_path, &path_ctrl0);
 		pr_debug("%s: path_ctrl0 = 0x%x\n",

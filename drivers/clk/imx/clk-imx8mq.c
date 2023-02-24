@@ -15,7 +15,6 @@
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
-#include <soc/imx/soc.h>
 
 #include "clk.h"
 
@@ -318,8 +317,6 @@ static int imx8mq_clocks_probe(struct platform_device *pdev)
 	struct device_node *np = dev->of_node;
 	void __iomem *base;
 	int err;
-
-	check_m4_enabled();
 
 	clk_hw_data = kzalloc(struct_size(clk_hw_data, hws,
 					  IMX8MQ_CLK_END), GFP_KERNEL);

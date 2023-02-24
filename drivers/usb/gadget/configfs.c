@@ -4,6 +4,7 @@
 #include <linux/slab.h>
 #include <linux/device.h>
 #include <linux/nls.h>
+#include <linux/idr.h>
 #include <linux/usb/composite.h>
 #include <linux/usb/gadget_configfs.h>
 #include "configfs.h"
@@ -35,6 +36,10 @@ struct device *create_function_device(char *name)
 }
 EXPORT_SYMBOL_GPL(create_function_device);
 #endif
+
+#define DRIVER_NAME "configfs-gadget"
+
+static DEFINE_IDA(driver_id_numbers);
 
 int check_user_usb_string(const char *name,
 		struct usb_gadget_strings *stringtab_dev)
@@ -72,6 +77,7 @@ struct gadget_info {
 
 	struct usb_composite_driver composite;
 	struct usb_composite_dev cdev;
+	int driver_id_number;
 	bool use_os_desc;
 	char b_vendor_code;
 	char qw_sign[OS_STRING_QW_SIGN_LEN];
@@ -424,6 +430,8 @@ static void gadget_info_attr_release(struct config_item *item)
 	WARN_ON(!list_empty(&gi->string_list));
 	WARN_ON(!list_empty(&gi->available_func));
 	kfree(gi->composite.gadget_driver.function);
+	kfree(gi->composite.gadget_driver.driver.name);
+	ida_free(&driver_id_numbers, gi->driver_id_number);
 	kfree(gi);
 }
 
@@ -1715,7 +1723,6 @@ static const struct usb_gadget_driver configfs_driver_template = {
 	.max_speed	= USB_SPEED_SUPER_PLUS,
 	.driver = {
 		.owner          = THIS_MODULE,
-		.name		= "configfs-gadget",
 	},
 	.match_existing_only = 1,
 };
@@ -1810,6 +1817,7 @@ static struct config_group *gadgets_make(
 		const char *name)
 {
 	struct gadget_info *gi;
+	int ret = 0;
 
 	gi = kzalloc(sizeof(*gi), GFP_KERNEL);
 	if (!gi)
@@ -1851,20 +1859,33 @@ static struct config_group *gadgets_make(
 
 	gi->composite.gadget_driver = configfs_driver_template;
 
+	ret = ida_alloc(&driver_id_numbers, GFP_KERNEL);
+	if (ret < 0)
+		goto err;
+	gi->driver_id_number = ret;
+
+	gi->composite.gadget_driver.driver.name =
+		kasprintf(GFP_KERNEL, DRIVER_NAME ".%d", gi->driver_id_number);
+
 	gi->composite.gadget_driver.function = kstrdup(name, GFP_KERNEL);
 	gi->composite.name = gi->composite.gadget_driver.function;
 
-	if (!gi->composite.gadget_driver.function)
-		goto err;
+	if (!gi->composite.gadget_driver.function) {
+		ret = -ENOMEM;
+		goto err_func;
+	}
 
 	if (android_device_create(gi) < 0)
 		goto err;
 
 	return &gi->group;
 
+err_func:
+	kfree(gi->composite.gadget_driver.driver.name);
+	ida_free(&driver_id_numbers, gi->driver_id_number);
 err:
 	kfree(gi);
-	return ERR_PTR(-ENOMEM);
+	return ERR_PTR(ret);
 }
 
 static void gadgets_drop(struct config_group *group, struct config_item *item)

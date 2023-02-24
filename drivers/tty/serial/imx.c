@@ -2240,7 +2240,7 @@ static int imx_uart_probe(struct platform_device *pdev)
 	void __iomem *base;
 	u32 dma_buf_conf[2];
 	int ret = 0;
-	u32 ucr1;
+	u32 ucr1, ucr2;
 	struct resource *res;
 	int txirq, rxirq, rtsirq;
 
@@ -2381,6 +2381,11 @@ static int imx_uart_probe(struct platform_device *pdev)
 	ucr1 = imx_uart_readl(sport, UCR1);
 	ucr1 &= ~(UCR1_ADEN | UCR1_TRDYEN | UCR1_IDEN | UCR1_RRDYEN | UCR1_RTSDEN);
 	imx_uart_writel(sport, ucr1, UCR1);
+
+	/* Disable Ageing Timer interrupt */
+	ucr2 = imx_uart_readl(sport, UCR2);
+	ucr2 &= ~UCR2_ATEN;
+	imx_uart_writel(sport, ucr2, UCR2);
 
 	if (!imx_uart_is_imx1(sport) && sport->dte_mode) {
 		/*
