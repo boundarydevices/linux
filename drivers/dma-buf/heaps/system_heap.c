@@ -624,16 +624,16 @@ static int secure_heap_create(void)
 	struct reserved_mem *rmem;
 	int ret = -EINVAL;
 
-	/* All allocations should be a multiple of 64K bytes */
-	secure_heap_pool = gen_pool_create(PAGE_SHIFT + 4, -1);
-	if (!secure_heap_pool)
-		return -ENOMEM;
-
 	/* Add secure memory which reserved in dts into pool of genallocater */
 	np.full_name = "secure";
 	rmem = of_reserved_mem_lookup(&np);
 	if (!rmem || !rmem->base || !rmem->size)
-		goto fail;
+		return 0;
+
+	/* All allocations should be a multiple of 64K bytes */
+	secure_heap_pool = gen_pool_create(PAGE_SHIFT + 4, -1);
+	if (!secure_heap_pool)
+		return -ENOMEM;
 
 	ret = gen_pool_add(secure_heap_pool, rmem->base, rmem->size, -1);
 	if (ret)
