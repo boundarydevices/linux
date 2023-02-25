@@ -1852,8 +1852,8 @@ static int dwc3_probe(struct platform_device *pdev)
 	struct device		*dev = &pdev->dev;
 	struct resource		*res, dwc_res;
 	struct dwc3		*dwc;
-	struct gpio_desc	*reset_gpio;
-
+	struct gpio_descs	*reset_gpios;
+	int			i;
 	int			ret;
 
 	void __iomem		*regs;
@@ -1892,9 +1892,9 @@ static int dwc3_probe(struct platform_device *pdev)
 
 	dwc3_get_properties(dwc);
 
-	reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_HIGH);
-	if (IS_ERR(reset_gpio))
-		return PTR_ERR(reset_gpio);
+	reset_gpios = devm_gpiod_get_array_optional(dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(reset_gpios))
+		return PTR_ERR(reset_gpios);
 	dwc->reset = devm_reset_control_array_get_optional_shared(dev);
 	if (IS_ERR(dwc->reset)) {
 		ret = PTR_ERR(dwc->reset);
@@ -2006,7 +2006,10 @@ static int dwc3_probe(struct platform_device *pdev)
 		ret = dev_err_probe(dwc->dev, PTR_ERR(dwc->edev), "failed to get extcon\n");
 		goto err3;
 	}
-	gpiod_set_value_cansleep(reset_gpio, 0);
+	if (reset_gpios) {
+		for (i = 0; i < reset_gpios->ndescs; i++)
+			gpiod_set_value_cansleep(reset_gpios->desc[i], 0);
+	}
 
 	ret = dwc3_get_dr_mode(dwc);
 	if (ret)
