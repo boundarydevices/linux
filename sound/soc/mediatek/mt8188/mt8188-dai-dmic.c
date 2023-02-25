@@ -35,6 +35,7 @@ struct mtk_dai_dmic_priv {
 	unsigned int two_wire_mode;
 	unsigned int channels;
 	unsigned int dmic_clk_mono;
+	unsigned int clk_index[DMIC_NUM];
 };
 
 static const struct mtk_dai_dmic_ctrl_reg dmic_ctrl_regs[DMIC_NUM] = {
@@ -169,22 +170,22 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 			msk |= AFE_DMIC_UL_SRC_CON0_UL_IIR_ON_TMP_CTL;
 
 		if (channels > ch_base * 3) {
-			reg = get_dmic_ctrl_reg(DMIC3);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[3]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
 		if (channels > ch_base * 2) {
-			reg = get_dmic_ctrl_reg(DMIC2);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[2]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
 		if (channels > ch_base) {
-			reg = get_dmic_ctrl_reg(DMIC1);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[1]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
 		if (channels > 0) {
-			reg = get_dmic_ctrl_reg(DMIC0);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[0]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
@@ -192,22 +193,22 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_POST_PMU:
 		msk = AFE_DMIC_UL_SRC_CON0_UL_SRC_ON_TMP_CTL;
 		if (channels > ch_base * 3) {
-			reg = get_dmic_ctrl_reg(DMIC3);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[3]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
 		if (channels > ch_base * 2) {
-			reg = get_dmic_ctrl_reg(DMIC2);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[2]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
 		if (channels > ch_base) {
-			reg = get_dmic_ctrl_reg(DMIC1);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[1]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
 		if (channels > 0) {
-			reg = get_dmic_ctrl_reg(DMIC0);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[0]);
 			if (reg)
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
@@ -235,22 +236,22 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 			AFE_DMIC_UL_SRC_CON0_UL_SDM_3_LEVEL_CTL;
 
 		if (channels > ch_base * 3) {
-			reg = get_dmic_ctrl_reg(DMIC3);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[3]);
 			if (reg)
 				regmap_clear_bits(afe->regmap, reg->con0, msk);
 		}
 		if (channels > ch_base * 2) {
-			reg = get_dmic_ctrl_reg(DMIC2);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[2]);
 			if (reg)
 				regmap_clear_bits(afe->regmap, reg->con0, msk);
 		}
 		if (channels > ch_base * 1) {
-			reg = get_dmic_ctrl_reg(DMIC1);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[1]);
 			if (reg)
 				regmap_clear_bits(afe->regmap, reg->con0, msk);
 		}
 		if (channels > 0) {
-			reg = get_dmic_ctrl_reg(DMIC0);
+			reg = get_dmic_ctrl_reg(dmic_priv->clk_index[0]);
 			if (reg)
 				regmap_clear_bits(afe->regmap, reg->con0, msk);
 		}
@@ -334,22 +335,22 @@ static int mtk_dai_dmic_hw_params(struct snd_pcm_substream *substream,
 	msk = val;
 
 	if (channels > ch_base * 3) {
-		reg = get_dmic_ctrl_reg(DMIC3);
+		reg = get_dmic_ctrl_reg(dmic_priv->clk_index[3]);
 		if (reg)
 			regmap_update_bits(afe->regmap, reg->con0, msk, val);
 	}
 	if (channels > ch_base * 2) {
-		reg = get_dmic_ctrl_reg(DMIC2);
+		reg = get_dmic_ctrl_reg(dmic_priv->clk_index[2]);
 		if (reg)
 			regmap_update_bits(afe->regmap, reg->con0, msk, val);
 	}
 	if (channels > ch_base) {
-		reg = get_dmic_ctrl_reg(DMIC1);
+		reg = get_dmic_ctrl_reg(dmic_priv->clk_index[1]);
 		if (reg)
 			regmap_update_bits(afe->regmap, reg->con0, msk, val);
 	}
 	if (channels > 0) {
-		reg = get_dmic_ctrl_reg(DMIC0);
+		reg = get_dmic_ctrl_reg(dmic_priv->clk_index[0]);
 		if (reg)
 			regmap_update_bits(afe->regmap, reg->con0, msk, val);
 	}
@@ -438,6 +439,15 @@ static int init_dmic_priv_data(struct mtk_base_afe *afe)
 		of_property_read_bool(of_node,
 				      "mediatek,dmic-two-wire-mode");
 
+	ret = of_property_read_u32_array(of_node, "mediatek,dmic-clk-index",
+					 &dmic_priv->clk_index[0], DMIC_NUM);
+	if (ret) {
+		dmic_priv->clk_index[0] = DMIC0;
+		dmic_priv->clk_index[1] = DMIC1;
+		dmic_priv->clk_index[2] = DMIC2;
+		dmic_priv->clk_index[3] = DMIC3;
+	}
+
 	ret = of_property_read_u32_array(of_node, "mediatek,dmic-clk-phases",
 					 &dmic_priv->clk_phase_sel_ch[0],
 					 2);
@@ -489,7 +499,6 @@ int mt8188_dai_dmic_register(struct mtk_base_afe *afe)
 
 	dai->dai_drivers = mtk_dai_dmic_driver;
 	dai->num_dai_drivers = ARRAY_SIZE(mtk_dai_dmic_driver);
-
 	dai->dapm_widgets = mtk_dai_dmic_widgets;
 	dai->num_dapm_widgets = ARRAY_SIZE(mtk_dai_dmic_widgets);
 	dai->dapm_routes = mtk_dai_dmic_routes;
