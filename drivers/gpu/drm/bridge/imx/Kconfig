@@ -26,6 +26,17 @@ config DRM_IMX8QXP_PIXEL_LINK_TO_DPI
 	  Choose this to enable pixel link to display pixel interface(PXL2DPI)
 	  found in Freescale i.MX8qxp processor.
 
+config DRM_IMX95_MIPI_DSI
+	tristate "NXP i.MX95 specific extensions for Synopsys DW MIPI DSI"
+	depends on OF && MFD_SYSCON && COMMON_CLK
+	select DRM_DW_MIPI_DSI
+	select DRM_KMS_HELPER
+	select MULTIPLEXER
+	select REGMAP_MMIO
+	help
+	  Choose this to enable Synopsys DesignWare MIPI DSI found in NXP
+	  i.MX95 processor.
+
 config DRM_IMX95_PIXEL_INTERLEAVER
 	tristate "NXP i.MX95 pixel interleaver"
 	depends on OF && MFD_SYSCON && COMMON_CLK
