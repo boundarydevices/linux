@@ -1197,6 +1197,7 @@
 
 &pcie_phy {
 	clk_mode = <3>;
+	ext_osc = <1>;
 	status = "okay";
 };
 
