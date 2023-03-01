@@ -1846,8 +1846,10 @@ static int dwc3_probe(struct platform_device *pdev)
 		goto err2;
 	}
 
-	for (i = 0; i < reset_gpios->ndescs; i++)
-		gpiod_set_value_cansleep(reset_gpios->desc[i], 0);
+	if (reset_gpios) {
+		for (i = 0; i < reset_gpios->ndescs; i++)
+			gpiod_set_value_cansleep(reset_gpios->desc[i], 0);
+	}
 
 	ret = dwc3_get_dr_mode(dwc);
 	if (ret)
