@@ -488,6 +488,7 @@ static int mdp_path_config(struct mdp_dev *mdp, struct mdp_cmdq_cmd *cmd,
 		if (is_dummy_engine(path->mdp_dev, inner_id))
 			continue;
 
+		ctx = &path->comps[index];
 		if (CFG_CHECK(MT8183, p_id))
 			out = CFG_COMP(MT8183, ctx->param, outputs[0]);
 		else if (CFG_CHECK(MT8195, p_id))
@@ -496,7 +497,6 @@ static int mdp_path_config(struct mdp_dev *mdp, struct mdp_cmdq_cmd *cmd,
 			out = CFG_COMP(MT8188, ctx->param, outputs[0]);
 
 		compose = path->composes[out];
-		ctx = &path->comps[index];
 		ret = call_op(ctx, config_frame, cmd, compose);
 		if (ret)
 			return ret;
@@ -585,7 +585,7 @@ static void mdp_auto_release_work(struct work_struct *work)
 			mdp_m2m_job_finish(cmd->mdp_ctx);
 
 		if (cmd->user_cmdq_cb) {
-			struct cmdq_cb_data user_cb_data;
+			struct cmdq_cb_data user_cb_data = {0};
 
 			user_cb_data.sta = cmd->data->sta;
 			user_cb_data.pkt = cmd->data->pkt;
