@@ -2075,6 +2075,11 @@ static struct mdp_comp *mdp_comp_create(struct mdp_dev *mdp,
 	struct mdp_comp *comp;
 	int ret;
 
+	if (id < 0 || id >= MDP_MAX_COMP_COUNT) {
+		dev_err(dev, "Invalid component id %d\n", id);
+		return ERR_PTR(-EINVAL);
+	}
+
 	if (mdp->comp[id])
 		return ERR_PTR(-EEXIST);
 
