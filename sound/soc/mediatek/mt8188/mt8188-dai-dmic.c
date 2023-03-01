@@ -302,9 +302,11 @@ static int mtk_dai_dmic_hw_params(struct snd_pcm_substream *substream,
 		val |= AFE_DMIC_UL_SRC_CON0_UL_TWO_WIRE_MODE_CTL;
 	else
 		clk_phase_sel_ch2 = clk_phase_sel_ch1 + 4;
+	msk |= AFE_DMIC_UL_SRC_CON0_UL_TWO_WIRE_MODE_CTL_MASK;
 
 	val |= AFE_DMIC_UL_SRC_CON0_UL_PHASE_SEL_CH1(clk_phase_sel_ch1);
 	val |= AFE_DMIC_UL_SRC_CON0_UL_PHASE_SEL_CH2(clk_phase_sel_ch2);
+	msk |= AFE_DMIC_UL_SRC_CON0_UL_PHASE_SEL_MASK;
 
 	mtk_dai_dmic_configure_array(dai);
 
@@ -326,13 +328,13 @@ static int mtk_dai_dmic_hw_params(struct snd_pcm_substream *substream,
 		val |= AFE_DMIC_UL_CON0_VOCIE_MODE_48K;
 		break;
 	}
+	msk |= AFE_DMIC_UL_VOICE_MODE_MASK;
 
 	if (iir_on) {
 		mtk_dai_dmic_load_iir_coeff_table(afe);
 		val |= AFE_DMIC_UL_SRC_CON0_UL_IIR_MODE_CTL(0);
+		msk |= AFE_DMIC_UL_SRC_CON0_UL_IIR_MODE_CTL_MASK;
 	}
-
-	msk = val;
 
 	if (channels > ch_base * 3) {
 		reg = get_dmic_ctrl_reg(dmic_priv->clk_index[3]);
