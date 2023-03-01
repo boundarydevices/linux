@@ -386,6 +386,8 @@ static void mdp_prepare_buffer(struct img_image_buffer *b,
 			       struct mdp_frame *frame, struct vb2_buffer *vb)
 {
 	struct v4l2_pix_format_mplane *pix_mp = &frame->format.fmt.pix_mp;
+	struct mdp_m2m_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
+	struct device *dev = &ctx->mdp_dev->pdev->dev;
 	unsigned int i;
 
 	b->format.colorformat = frame->mdp_fmt->mdp_color;
@@ -408,7 +410,11 @@ static void mdp_prepare_buffer(struct img_image_buffer *b,
 		b->format.plane_fmt[i].size =
 			mdp_fmt_get_plane_size(frame->mdp_fmt, stride,
 					       pix_mp->height, i);
-		b->iova[i] = b->iova[i - 1] + b->format.plane_fmt[i - 1].size;
+		if ((i < 1) || (i >= IMG_MAX_PLANES))
+			dev_err(dev, "Invalid plane index[%d]! mdp colorformat[%lx]!\n",
+				i, b->format.colorformat);
+		else
+			b->iova[i] = b->iova[i - 1] + b->format.plane_fmt[i - 1].size;
 	}
 	b->usage = frame->usage;
 }
