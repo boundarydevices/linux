@@ -17,42 +17,41 @@
 			MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19		0x41	/* pin 1 */
 			MX8MP_IOMUXC_SAI1_RXD4__GPIO4_IO06		0x41	/* pin 3 */
 			MX8MP_IOMUXC_SAI1_TXC__GPIO4_IO11		0x41	/* pin 5 */
-			MX8MP_IOMUXC_SAI1_RXD5__GPIO4_IO07		0x41	/* pin 7 */
+#if 0
+			MX8MP_IOMUXC_SAI1_RXD5__GPIO4_IO07		0x41	/* pin 7 */ /* I2S DOUT */
+#endif
 			MX8MP_IOMUXC_GPIO1_IO07__GPIO1_IO07		0x41	/* pin 9 */
-			MX8MP_IOMUXC_SAI1_RXD6__GPIO4_IO08		0x41	/* pin 11 */
-			MX8MP_IOMUXC_SAI1_TXD4__GPIO4_IO16		0x41	/* pin 13 */
+#if 0
+			MX8MP_IOMUXC_SAI1_RXD6__GPIO4_IO08		0x41	/* pin 11 */ /* I2S SYNC */
+			MX8MP_IOMUXC_SAI1_TXD4__GPIO4_IO16		0x41	/* pin 13 */ /* I2S BCLK */
+#endif
 			MX8MP_IOMUXC_SAI1_RXD7__GPIO4_IO09		0x41	/* pin 15 */
 			MX8MP_IOMUXC_SAI1_TXFS__GPIO4_IO10		0x41	/* pin 17 */
 #if 0
-			/* 5V supply enable */
-			MX8MP_IOMUXC_SAI1_TXD0__GPIO4_IO12		0x41	/* pin 19 */
+			MX8MP_IOMUXC_SAI1_TXD0__GPIO4_IO12		0x41	/* pin 19 */ /* REG_5V enable */
+			MX8MP_IOMUXC_ECSPI1_MISO__GPIO5_IO08		0x41	/* pin 21 */ /* MUTE */
 #endif
-			MX8MP_IOMUXC_ECSPI1_MISO__GPIO5_IO08		0x41	/* pin 21 */
 			MX8MP_IOMUXC_SAI1_TXD1__GPIO4_IO13		0x41	/* pin 23 */
 			MX8MP_IOMUXC_SAI1_RXD2__GPIO4_IO04		0x41	/* pin 25 */
 			MX8MP_IOMUXC_SAI1_TXD2__GPIO4_IO14		0x41	/* pin 27 */
 			MX8MP_IOMUXC_SAI1_RXD3__GPIO4_IO05		0x41	/* pin 29 */
 #if 0
-			/* Tx enable for Uart3 */
-			MX8MP_IOMUXC_SAI1_TXD3__GPIO4_IO15		0x41	/* pin 31 */
+			MX8MP_IOMUXC_SAI1_TXD3__GPIO4_IO15		0x41	/* pin 31 */ /* Uart3 TX enable */
+			MX8MP_IOMUXC_SAI1_TXD5__GPIO4_IO17		0x41	/* pin 33 */ /* I2S DIN */
 #endif
-			MX8MP_IOMUXC_SAI1_TXD5__GPIO4_IO17		0x41	/* pin 33 */
 
 			MX8MP_IOMUXC_SAI1_MCLK__GPIO4_IO20		0x41	/* pin 4 */
 #if 0
-			/* I2C5 SDA */
-			MX8MP_IOMUXC_SAI5_MCLK__GPIO3_IO25		0x41	/* pin 6 */
+			MX8MP_IOMUXC_SAI5_MCLK__GPIO3_IO25		0x41	/* pin 6 */ /* I2C5 SDA */
 #endif
 			MX8MP_IOMUXC_SAI5_RXD3__GPIO3_IO24		0x41	/* pin 8 */
 			MX8MP_IOMUXC_ECSPI2_MISO__GPIO5_IO12		0x41	/* Pin 10 */
 #if 0
-			/* UART4 TX */
-			MX8MP_IOMUXC_ECSPI2_MOSI__GPIO5_IO11		0x41	/* Pin 12 */
+			MX8MP_IOMUXC_ECSPI2_MOSI__GPIO5_IO11		0x41	/* Pin 12 */ /* UART4 TX */
 #endif
 			MX8MP_IOMUXC_ECSPI2_SS0__GPIO5_IO13		0x41	/* Pin 14 */
 #if 0
-			/* UART4 RX */
-			MX8MP_IOMUXC_ECSPI2_SCLK__GPIO5_IO10		0x41	/* Pin 16 */
+			MX8MP_IOMUXC_ECSPI2_SCLK__GPIO5_IO10		0x41	/* Pin 16 */ /* UART4 RX */
 #endif
 			MX8MP_IOMUXC_ECSPI1_SS0__GPIO5_IO09		0x41	/* pin 18 */
 			MX8MP_IOMUXC_SD1_DATA4__GPIO2_IO06		0x41	/* pin 22 */
@@ -60,15 +59,13 @@
 			MX8MP_IOMUXC_SD1_DATA6__GPIO2_IO08		0x41	/* pin 26 */
 			MX8MP_IOMUXC_SD1_RESET_B__GPIO2_IO10		0x41	/* pin 28 */
 #if 0
-			/* I2C5 SCL */
-			MX8MP_IOMUXC_SPDIF_TX__GPIO5_IO03		0x41	/* pin 30 */
+			MX8MP_IOMUXC_SPDIF_TX__GPIO5_IO03		0x41	/* pin 30 */ /* I2C5 SCL */
 #endif
 			MX8MP_IOMUXC_SD1_DATA7__GPIO2_IO09		0x41	/* pin 34 */
 			MX8MP_IOMUXC_SAI2_RXD0__GPIO4_IO23		0x41	/* pin 36 */
 #if 0
-			/* UART3 from nitrogen8mp */
-			MX8MP_IOMUXC_ECSPI1_MOSI__GPIO5_IO07		0x41	/* pin 40 */
-			MX8MP_IOMUXC_ECSPI1_SCLK__GPIO5_IO06		0x41	/* pin 44 */
+			MX8MP_IOMUXC_ECSPI1_MOSI__GPIO5_IO07		0x41	/* pin 40 */ /* UART3 TX */
+			MX8MP_IOMUXC_ECSPI1_SCLK__GPIO5_IO06		0x41	/* pin 44 */ /* UART3 RX */
 #endif
 			MX8MP_IOMUXC_UART4_TXD__GPIO5_IO29		0x41	/* pin 42 */
 		>;
@@ -94,6 +91,23 @@
 		fsl,pins = <
 #define GP_REG_5V	<&gpio4 12 GPIO_ACTIVE_HIGH>
 			MX8MP_IOMUXC_SAI1_TXD0__GPIO4_IO12		0x100
+		>;
+	};
+
+	pinctrl_sai6: sai6grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI1_RXD6__AUDIOMIX_SAI6_TX_SYNC	0xd6
+			MX8MP_IOMUXC_SAI1_TXD4__AUDIOMIX_SAI6_TX_BCLK	0xd6
+			MX8MP_IOMUXC_SAI1_TXD5__AUDIOMIX_SAI6_RX_DATA00	0xd6
+			MX8MP_IOMUXC_SAI1_RXD5__AUDIOMIX_SAI6_TX_DATA00	0xd6
+		>;
+	};
+
+	pinctrl_sound_pcm5122: sound-pcm5122grp {
+		fsl,pins = <
+#define GP_PCM5122_MUTE	<&gpio5 8 GPIO_ACTIVE_HIGH>
+			MX8MP_IOMUXC_ECSPI1_MISO__GPIO5_IO08		0x140
+
 		>;
 	};
 
@@ -129,6 +143,34 @@
 		regulator-min-microvolt = <5000000>;
 		regulator-name = "reg_5v";
 	};
+
+	sound-pcm512x {
+		compatible = "fsl,imx-audio-pcm512x";
+		model = "pcm512x-audio";
+		audio-widgets =
+			"Line", "Left Line Out Jack",
+			"Line", "Right Line Out Jack";
+		audio-routing =
+			"Left Line Out Jack", "OUTL",
+			"Right Line Out Jack", "OUTR";
+		dac,24db_digital_gain;
+		dac,unmute_amp;
+		mute-amp-gpio = GP_PCM5122_MUTE;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_sound_pcm5122>;
+
+		pri-dai-link {
+			link-name = "pcm512x-hifi";
+			format = "i2s";
+			cpu {
+				sound-dai = <&sai6>;
+			};
+
+			codec {
+				sound-dai = <&pcm512x>;
+			};
+		};
+	};
 };
 
 &ecspi2 {
@@ -142,6 +184,30 @@
 	pinctrl-1 = <&pinctrl_i2c5_1>;
 	scl-gpios = GP_I2C5_SCL;
 	sda-gpios = GP_I2C5_SDA;
+	status = "okay";
+
+	pcm512x: pcm512x@4c {
+		compatible = "ti,pcm5122";
+		reg = <0x4c>;
+		AVDD-supply = <&reg_vref_3v3>;
+		DVDD-supply = <&reg_vref_3v3>;
+		CPVDD-supply = <&reg_vref_3v3>;
+		#sound-dai-cells = <0>;
+	};
+};
+
+&sai6 {
+	#sound-dai-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai6>;
+	assigned-clocks = <&clk IMX8MP_CLK_SAI6>;
+	assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL1_OUT>;
+	assigned-clock-rates = <12288000>;
+	clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI6_IPG>, <&clk IMX8MP_CLK_DUMMY>,
+		 <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI6_MCLK1>, <&clk IMX8MP_CLK_DUMMY>,
+		 <&clk IMX8MP_CLK_DUMMY>, <&clk IMX8MP_AUDIO_PLL1_OUT>,
+		 <&clk IMX8MP_AUDIO_PLL2_OUT>;
+	clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3", "pll8k", "pll11k";
 	status = "okay";
 };
 
