@@ -17,6 +17,7 @@ properties:
     enum:
       - fsl,imx8mm-pcie-phy
       - fsl,imx8mp-pcie-phy
+      - fsl,imx8qm-pcie-phy
 
   reg:
     maxItems: 1
@@ -69,6 +70,18 @@ properties:
   power-domains:
     description: PCIe PHY  power domain (optional).
     maxItems: 1
+
+  hsio-cfg:
+    description: |
+      Specifies the different usecases supported by the HSIO(High Speed IO)
+      module. PCIEAX2SATA means two lanes PCIea and a single lane SATA.
+      PCIEAX1PCIEBX1SATA represents a single lane PCIea, a single lane
+      PCIeb and a single lane SATA. PCIEAX2PCIEBX1 on behalf of a two
+      lanes PCIea, a single lane PCIeb.
+      Refer include/dt-bindings/phy/phy-imx8-pcie.h for the constants to
+      be used (optional).
+    $ref: /schemas/types.yaml#/definitions/uint32
+    enum: [ 1, 2, 3 ]
 
 required:
   - "#phy-cells"
