@@ -8,4 +8,5 @@
 
 / {
 	model = "Boundary i.MX 8M Plus Nitrogen8MP Rev20 ENC board";
+	compatible = "boundary,imx8mp-nitrogen8mp_r20-enc", "fsl,imx8mp";
 };
