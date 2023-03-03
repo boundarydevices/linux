@@ -142,6 +142,7 @@
 	pinctrl-1 = <&pinctrl_i2c5_1>;
 	scl-gpios = GP_I2C5_SCL;
 	sda-gpios = GP_I2C5_SDA;
+	status = "okay";
 };
 
 &uart3 {
