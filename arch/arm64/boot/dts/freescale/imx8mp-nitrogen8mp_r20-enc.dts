@@ -4,7 +4,7 @@
  */
 
 #define REV20
-#include "imx8mp-nitrogen8mp.dts"
+#include "imx8mp-nitrogen8mp-enc.dts"
 
 / {
 	model = "Boundary i.MX 8M Plus Nitrogen8MP Rev20 ENC board";
