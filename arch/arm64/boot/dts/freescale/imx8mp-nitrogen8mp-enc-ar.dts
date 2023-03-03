@@ -39,13 +39,19 @@
 			MX8MP_IOMUXC_SAI1_TXD5__GPIO4_IO17		0x41	/* pin 33 */
 
 			MX8MP_IOMUXC_SAI1_MCLK__GPIO4_IO20		0x41	/* pin 4 */
-			MX8MP_IOMUXC_SAI5_MCLK__GPIO3_IO25		0x41	/* pin 6 */
-			MX8MP_IOMUXC_SAI5_RXD3__GPIO3_IO24		0x41	/* pin 8 */
 #if 0
-			/* Uart4, I2C4 */
+			/* I2C5 SDA */
+			MX8MP_IOMUXC_SAI5_MCLK__GPIO3_IO25		0x41	/* pin 6 */
+#endif
+			MX8MP_IOMUXC_SAI5_RXD3__GPIO3_IO24		0x41	/* pin 8 */
 			MX8MP_IOMUXC_ECSPI2_MISO__GPIO5_IO12		0x41	/* Pin 10 */
+#if 0
+			/* UART4 TX */
 			MX8MP_IOMUXC_ECSPI2_MOSI__GPIO5_IO11		0x41	/* Pin 12 */
+#endif
 			MX8MP_IOMUXC_ECSPI2_SS0__GPIO5_IO13		0x41	/* Pin 14 */
+#if 0
+			/* UART4 RX */
 			MX8MP_IOMUXC_ECSPI2_SCLK__GPIO5_IO10		0x41	/* Pin 16 */
 #endif
 			MX8MP_IOMUXC_ECSPI1_SS0__GPIO5_IO09		0x41	/* pin 18 */
@@ -53,7 +59,10 @@
 			MX8MP_IOMUXC_SD1_DATA5__GPIO2_IO07		0x41	/* pin 24 */
 			MX8MP_IOMUXC_SD1_DATA6__GPIO2_IO08		0x41	/* pin 26 */
 			MX8MP_IOMUXC_SD1_RESET_B__GPIO2_IO10		0x41	/* pin 28 */
+#if 0
+			/* I2C5 SCL */
 			MX8MP_IOMUXC_SPDIF_TX__GPIO5_IO03		0x41	/* pin 30 */
+#endif
 			MX8MP_IOMUXC_SD1_DATA7__GPIO2_IO09		0x41	/* pin 34 */
 			MX8MP_IOMUXC_SAI2_RXD0__GPIO4_IO23		0x41	/* pin 36 */
 #if 0
@@ -65,19 +74,19 @@
 		>;
 	};
 
-	pinctrl_i2c4_x: i2c4-xgrp {
+	pinctrl_i2c5: i2c5grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_ECSPI2_MISO__I2C4_SCL		0x400001c3
-			MX8MP_IOMUXC_ECSPI2_SS0__I2C4_SDA		0x400001c3
+			MX8MP_IOMUXC_SPDIF_TX__I2C5_SCL			0x400001c3
+			MX8MP_IOMUXC_SAI5_MCLK__I2C5_SDA		0x400001c3
 		>;
 	};
 
-	pinctrl_i2c4_x_1: i2c4-x-1grp {
+	pinctrl_i2c5_1: i2c5-1grp {
 		fsl,pins = <
-#define GP_I2C4_X_SCL	<&gpio5 12 GPIO_OPEN_DRAIN>
-			MX8MP_IOMUXC_ECSPI2_MISO__GPIO5_IO12        	0x1c3
-#define GP_I2C4_X_SDA	<&gpio5 13 GPIO_OPEN_DRAIN>
-			MX8MP_IOMUXC_ECSPI2_SS0__GPIO5_IO13        	0x1c3
+#define GP_I2C5_SCL	<&gpio5 3 GPIO_OPEN_DRAIN>
+			MX8MP_IOMUXC_SPDIF_TX__GPIO5_IO03		0x1c3
+#define GP_I2C5_SDA	<&gpio3 25 GPIO_OPEN_DRAIN>
+			MX8MP_IOMUXC_SAI5_MCLK__GPIO3_IO25		0x1c3
 		>;
 	};
 
@@ -109,19 +118,6 @@
 	model = "Boundary i.MX 8M Plus Nitrogen8MP ENC AR board";
 	compatible = "boundary,imx8mp-nitrogen8mp-enc-ar", "fsl,imx8mp";
 
-	i2cmux {
-		compatible = "i2c-mux-pinctrl";
-		i2c-parent = <&i2c4>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		i2c4_0: i2c4mux@0 {
-			reg = <0>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-		};
-	};
-
 	reg_5v: regulator-5v {
 		compatible = "regulator-fixed";
 		enable-active-high;
@@ -139,13 +135,13 @@
 	status = "disabled";
 };
 
-&i2c4_0 {
+&i2c5 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default", "gpio";
-	pinctrl-0 = <&pinctrl_i2c4_x>;
-	pinctrl-1 = <&pinctrl_i2c4_x_1>;
-	scl-gpios = GP_I2C4_X_SCL;
-	sda-gpios = GP_I2C4_X_SDA;
+	pinctrl-0 = <&pinctrl_i2c5>;
+	pinctrl-1 = <&pinctrl_i2c5_1>;
+	scl-gpios = GP_I2C5_SCL;
+	sda-gpios = GP_I2C5_SDA;
 };
 
 &uart3 {
