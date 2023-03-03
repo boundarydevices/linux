@@ -54,6 +54,14 @@ config PHY_FSL_IMX8M_PCIE
 	  Enable this to add support for the PCIE PHY as found on
 	  i.MX8M family of SOCs.
 
+config PHY_FSL_IMX8Q_PCIE
+	tristate "Freescale i.MX8Q PCIE PHY"
+	depends on OF && HAS_IOMEM
+	select GENERIC_PHY
+	help
+	  Enable this to add support for the PCIE PHY as found on
+	  i.MX8Q family of SOCs.
+
 endif
 
 config PHY_FSL_LYNX_28G
