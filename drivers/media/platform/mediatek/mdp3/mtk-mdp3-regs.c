@@ -403,18 +403,22 @@ static void mdp_prepare_buffer(struct img_image_buffer *b,
 		b->iova[i] = vb2_dma_contig_plane_dma_addr(vb, i);
 	}
 	for (; i < MDP_COLOR_GET_PLANE_COUNT(b->format.colorformat); ++i) {
-		u32 stride = mdp_fmt_get_stride_contig(frame->mdp_fmt,
+		u32 stride;
+
+		if ((i < 1) || (i >= IMG_MAX_PLANES)) {
+			dev_err(dev, "Invalid plane index[%d]! mdp colorformat[%lx]!\n",
+				i, b->format.colorformat);
+			break;
+		}
+
+		stride =  mdp_fmt_get_stride_contig(frame->mdp_fmt,
 			b->format.plane_fmt[0].stride, i);
 
 		b->format.plane_fmt[i].stride = stride;
 		b->format.plane_fmt[i].size =
 			mdp_fmt_get_plane_size(frame->mdp_fmt, stride,
 					       pix_mp->height, i);
-		if ((i < 1) || (i >= IMG_MAX_PLANES))
-			dev_err(dev, "Invalid plane index[%d]! mdp colorformat[%lx]!\n",
-				i, b->format.colorformat);
-		else
-			b->iova[i] = b->iova[i - 1] + b->format.plane_fmt[i - 1].size;
+		b->iova[i] = b->iova[i - 1] + b->format.plane_fmt[i - 1].size;
 	}
 	b->usage = frame->usage;
 }
