@@ -1,0 +1,631 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2023 Boundary Devices
+ */
+#define TC358867_I2C_BUS	<&MIPI_I2C_BUS>
+#define concat(a, b)   _concat_(a, b)
+#define _concat_(a, b)  a ## b
+
+&iomuxc {
+	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
+		fsl,pins = <
+			/* gpio selected by u-boot */
+			MIPI_ENABLE_PAD		PAD_PULLDN
+		>;
+	};
+
+	pinctrl_mipi_cs005_0004_03: mipi-cs005-0004-03grp {
+		fsl,pins = <
+#define GP_CS005_0004_03_BKL_EN	<&MIPI_ENABLE_GP GPIO_ACTIVE_HIGH>
+				  MIPI_ENABLE_PAD	PAD_NOPULL
+#define GP_CS005_0004_03_DISPLAY_EN	<&MIPI_IRQ_GP GPIO_ACTIVE_HIGH>
+					  MIPI_IRQ_PAD	PAD_PULLDN
+		>;
+	};
+
+	pinctrl_mipi_er_tft050: mipi-er-tft050grp {
+		fsl,pins = <
+#define GP_TC358767_EN	<&MIPI_ENABLE_GP GPIO_ACTIVE_HIGH>
+			  MIPI_ENABLE_PAD	PAD_PULLDN
+		>;
+	};
+
+	pinctrl_mipi_lcd133_070: mipi-lcd133-070grp {
+		fsl,pins = <
+#define GP_LCD133_070_RESET	<&MIPI_IRQ_GP GPIO_ACTIVE_LOW>
+				  MIPI_IRQ_PAD	PAD_PULLDN
+#define GP_LCD133_070_ENABLE	<&MIPI_ENABLE_GP GPIO_ACTIVE_HIGH>
+				  MIPI_ENABLE_PAD PAD_PULLDN
+		>;
+	};
+
+	pinctrl_mipi_lcm_jm430: mipi-lcm-jm430grp {
+		fsl,pins = <
+			/* gpio selected by u-boot */
+			MIPI_ENABLE_PAD	PAD_PULLDN
+#define GP_JM430_DISPLAY_EN	<&MIPI_IRQ_GP GPIO_ACTIVE_HIGH>
+				  MIPI_IRQ_PAD	PAD_PULLDN
+		>;
+	};
+
+	pinctrl_mipi_ls050t1sx12: mipi-ls050t1sx12grp {
+		fsl,pins = <
+			/* gpio selected by u-boot */
+			MIPI_ENABLE_PAD	PAD_PULLDN
+		>;
+	};
+
+	pinctrl_mipi_ltk0680ytmdb: mipi-ltk0680ytmdbgrp {
+		fsl,pins = <
+			/* gpio selected by u-boot */
+			MIPI_ENABLE_PAD		PAD_PULLDN
+		>;
+	};
+
+	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
+		fsl,pins = <
+#define GP_LTK08_MIPI_EN	<&MIPI_IRQ_GP GPIO_ACTIVE_HIGH>
+				  MIPI_IRQ_PAD	PAD_PULLDN
+		>;
+	};
+
+	pinctrl_mipi_tcxd070iblmat77: mipi-tcxd070iblmat77grp {
+		fsl,pins = <
+			/* gpio selected by u-boot */
+			MIPI_ENABLE_PAD PAD_PULLDN
+		>;
+	};
+
+	pinctrl_mipi_zwt055azh: mipi-zwt055azhgrp {
+		fsl,pins = <
+			/* gpio selected by u-boot */
+			MIPI_ENABLE_PAD	PAD_PULLDN
+		>;
+	};
+
+	concat(pinctrl_, MIPI_PWM): concat(MIPI_PWM, grp) {
+		fsl,pins = <
+			MIPI_PWM_PAD		PAD_PULLDN
+		>;
+	};
+
+	pinctrl_sc18is602b: sc18is602bgrp {
+		fsl,pins = <
+#define GP_SC18IS602B_RESET	<&MIPI_ENABLE_GP GPIO_ACTIVE_LOW>
+				  MIPI_ENABLE_PAD PAD_PULLDN
+		>;
+	};
+
+	pinctrl_sn65dsi83: sn65dsi83grp {
+		fsl,pins = <
+#define GPIRQ_SN65DSI83	<&MIPI_IRQ_GP IRQ_TYPE_LEVEL_HIGH>
+			  MIPI_IRQ_PAD	PAD_PULLDNIRQ
+#define GP_SN65DSI83_EN	<&MIPI_ENABLE_GP GPIO_ACTIVE_HIGH>
+			  MIPI_ENABLE_PAD PAD_PULLDN
+		>;
+	};
+
+	pinctrl_ts_mipi_atmel: ts-mipi-atmelgrp {
+		fsl,pins = <
+#define GPIRQ_TS_MIPI_ATMEL	<&MIPI_TS_IRQ_GP IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_MIPI_ATMEL	<&MIPI_TS_IRQ_GP GPIO_ACTIVE_LOW>
+				  MIPI_TS_IRQ_PAD	PAD_PULLUPIRQ
+#define GP_TS_MIPI_ATMEL_RESET	<&MIPI_TS_RESET_GP GPIO_ACTIVE_LOW>
+				  MIPI_TS_RESET_PAD	PAD_PULLDN
+		>;
+	};
+
+	pinctrl_ts_mipi_ft5x06: ts-mipi-ft5x06grp {
+		fsl,pins = <
+#define GPIRQ_TS_MIPI_FT5X06	<&MIPI_TS_IRQ_GP IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_MIPI_FT5X06_WAKE	<&MIPI_TS_IRQ_GP GPIO_ACTIVE_LOW>
+				  MIPI_TS_IRQ_PAD PAD_PULLUPIRQ
+#define GP_TS_MIPI_FT5X06_RESET	<&MIPI_TS_RESET_GP GPIO_ACTIVE_LOW>
+				  MIPI_TS_RESET_PAD PAD_PULLDN
+		>;
+	};
+
+	/* only for panel-lxd-m8509a */
+	pinctrl_ts_mipi_ft5x06_3: ts-mipi-ft5x06-3grp {
+		fsl,pins = <
+#define GPIRQ_TS_MIPI_FT5X06_3		<&MIPI_PWM_GP IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_MIPI_FT5X06_WAKE_3	<&MIPI_PWM_GP GPIO_ACTIVE_LOW>
+					  MIPI_PWM_PAD_GPIO PAD_PULLUPIRQ
+#define GP_TS_MIPI_FT5X06_RESET_3	<&MIPI_TS_RESET_GP GPIO_ACTIVE_LOW>
+					  MIPI_TS_RESET_PAD PAD_PULLDN
+		>;
+	};
+
+	pinctrl_ts_mipi_gslx680: ts-mipi-gslx680grp {
+		fsl,pins = <
+#define GPIRQ_TS_MIPI_GSLX680	<&MIPI_TS_IRQ_GP IRQ_TYPE_EDGE_FALLING>
+				  MIPI_TS_IRQ_PAD	PAD_PULLUPIRQ
+#define GP_TS_MIPI_GSLX680_POWER	<&MIPI_TS_RESET_GP GPIO_ACTIVE_HIGH>
+					  MIPI_TS_RESET_PAD	PAD_PULLDN
+		>;
+	};
+
+	pinctrl_ts_mipi_gt911: ts-mipi-gt911grp {
+		fsl,pins = <
+#define GPIRQ_TS_MIPI_GT911	<&MIPI_TS_IRQ_GP IRQ_TYPE_LEVEL_HIGH>
+#define GP_TS_MIPI_GT911_IRQ	<&MIPI_TS_IRQ_GP GPIO_ACTIVE_HIGH>
+				  MIPI_TS_IRQ_PAD	PAD_PULLUPIRQ
+			/* driver writes levels, instead of active/inactive */
+#define GP_TS_MIPI_GT911_RESET	<&MIPI_TS_RESET_GP GPIO_ACTIVE_HIGH>
+				  MIPI_TS_RESET_PAD	PAD_PULLDN
+		>;
+	};
+
+	pinctrl_ts_mipi_ili251x: ts-mipi-ili251xgrp {
+		fsl,pins = <
+#define GPIRQ_TS_MIPI_ILI251X 	<&MIPI_TS_IRQ_GP IRQ_TYPE_EDGE_FALLING>
+				  MIPI_TS_IRQ_PAD PAD_PULLUPIRQ
+#define GP_TS_MIPI_ILI251X_RESET <&MIPI_TS_RESET_GP GPIO_ACTIVE_LOW>
+				   MIPI_TS_RESET_PAD PAD_PULLDN
+		>;
+	};
+
+	pinctrl_ts_mipi_st1633: ts-mipi-st1633grp {
+		fsl,pins = <
+#define GPIRQ_TS_MIPI_ST1633 	<&MIPI_TS_IRQ_GP IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_MIPI_ST1633_IRQ 	<&MIPI_TS_IRQ_GP GPIO_ACTIVE_LOW>
+				  MIPI_TS_IRQ_PAD PAD_PULLUPIRQ
+#define GP_TS_MIPI_ST1633_RESET	<&MIPI_TS_RESET_GP GPIO_ACTIVE_LOW>
+				  MIPI_TS_RESET_PAD PAD_PULLDN
+		>;
+	};
+};
+
+#include "panel-com50h5n03ulc.dtsi"
+#include "panel-cs005-0004-03.dtsi"
+#include "panel-dmt050wvnxcmi.dtsi"
+#include "panel-dmt055fhnmcmi.dtsi"
+#ifndef SKIP_LONTIUM_DAUGHTER_BOARDS
+#include "panel-er-tft050.dtsi"
+#endif
+#include "panel-lcd133-070.dtsi"
+#include "panel-lcm-jm430.dtsi"
+#include "panel-ls050t1sx12.dtsi"
+#include "panel-ltk0680ytmdb.dtsi"
+#include "panel-ltk080a60a004t.dtsi"
+#include "panel-lxd-m8509a.dtsi"
+#include "panel-m101nwwb.dtsi"
+#include "panel-tcxd070iblmat77.dtsi"
+#include "panel-zwt055azh.dtsi"
+
+/ {
+	aliases {
+		backlight_mipi = &backlight_mipi;
+		backlight_mipi2 = &backlight_mipi2;
+		fb_mipi = &fb_mipi;
+		lcdif = &MIPI_DISPLAY;
+		mipi = &fb_mipi;
+		mipi_dsi = &mipi_dsi;
+		mipi_dsi_bridge = &mipi_dsi;
+		mipi_to_lvds = &mipi_to_lvds;
+		pwm_mipi = &MIPI_PWM;
+		spi_lcd = &spi_lcd;
+		t_mipi = &t_mipi;
+		ts_atmel_mt = &ts_mipi_atmel_mt;
+		ts_ft5x06 = &ts_mipi_ft5x06;
+		ts_ft5x06_3 = &ts_mipi_ft5x06_3;
+		ts_ft7250 = &ts_mipi_ft7250;
+		ts_goodix = &ts_mipi_goodix;
+		ts_gsl1680 = &ts_mipi_gsl1680;
+		ts_ili251x = &ts_mipi_ili251x;
+		ts_st1633i = &ts_mipi_st1633i;
+	};
+
+	backlight_mipi: backlight-mipi {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <8>;
+		/*
+		 * panel-common takes cares of backlight,
+		 * skip old style blank/unblank
+		 */
+		display = <&backlight_mipi>;
+		pwms = <&MIPI_PWM 0 30000>;		/* 33.3 Khz */
+		status = "disabled";
+	};
+};
+
+&MIPI_I2C_BUS {
+	backlight_mipi2: backlight-mipi2@66 {
+		alias = <&backlight_mipi2>;
+		compatible = "rohm,bd2606";
+		default-brightness = <32>;	/* 63 is max */
+		display = <&MIPI_SUBSYSTEM>;
+		label = "bklght-bd2606";
+		led-sources = <0 1 2 3 4 5>;
+		reg = <0x66>;
+		status = "disabled";
+	};
+
+	spi_lcd: spi@2f {
+		compatible = "nxp,sc18is602b";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_sc18is602b>;
+		reg = <0x2f>;
+		reset-gpios = GP_SC18IS602B_RESET;
+		status = "disabled";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		spidev_lcd: spidev@0 {
+			compatible = "spidev";
+			spi-cpha;
+			spi-cpol;
+			spi-max-frequency = <20000000>;
+			reg = <0>;
+		};
+	};
+
+	ts_mipi_atmel_mt: touchscreen@4a {
+		compatible = "atmel,maxtouch";
+		interrupts-extended = GPIRQ_TS_MIPI_ATMEL;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_mipi_atmel>;
+		reg = <0x4a>;
+		reset-gpios = GP_TS_MIPI_ATMEL_RESET;
+		status = "disabled";
+		wakeup-gpios = GP_TS_MIPI_ATMEL;
+	};
+
+	ts_mipi_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = GPIRQ_TS_MIPI_FT5X06;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_mipi_ft5x06>;
+		reg = <0x38>;
+		reset-gpios = GP_TS_MIPI_FT5X06_RESET;
+		status = "disabled";
+		wakeup-gpios = GP_TS_MIPI_FT5X06_WAKE;
+	};
+
+	ts_mipi_ft5x06_3: touchscreen-3@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = GPIRQ_TS_MIPI_FT5X06_3;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_mipi_ft5x06_3>;
+		reg = <0x38>;
+		reset-gpios = GP_TS_MIPI_FT5X06_RESET_3;
+		status = "disabled";
+		wakeup-gpios = GP_TS_MIPI_FT5X06_WAKE_3;
+	};
+
+	ts_mipi_ft7250: touchscreen_ft7250@38 {
+		compatible = "edt,ft7250";
+		interrupts-extended = GPIRQ_TS_MIPI_FT5X06;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_mipi_ft5x06>;
+		reg = <0x38>;
+		reset-gpios = GP_TS_MIPI_FT5X06_RESET;
+		status = "disabled";
+		wakeup-gpios = GP_TS_MIPI_FT5X06_WAKE;
+	};
+
+	ts_mipi_goodix: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		display = <&MIPI_SUBSYSTEM>;
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_TS_MIPI_GT911;
+		irq-gpios = GP_TS_MIPI_GT911_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_mipi_gt911>;
+		reg = <0x5d>;
+		reset-gpios = GP_TS_MIPI_GT911_RESET;
+		status = "disabled";
+	};
+
+	ts_mipi_gsl1680: touchscreen@40 {
+		compatible = "silead,gsl1680";
+		interrupts-extended = GPIRQ_TS_MIPI_GSLX680;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_mipi_gslx680>;
+		power-gpios = GP_TS_MIPI_GSLX680_POWER;
+		reg = <0x40>;
+		status = "disabled";
+		touchscreen-size-x = <480>;	/* swapped below */
+		touchscreen-size-y = <800>;
+		touchscreen-swapped-x-y;
+	};
+
+	ts_mipi_ili251x: touchscreen@41 {
+		compatible = "ilitek,ili251x";
+		interrupts-extended = GPIRQ_TS_MIPI_ILI251X;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_mipi_ili251x>;
+		reg = <0x41>;
+		reset-gpios = GP_TS_MIPI_ILI251X_RESET;
+		status = "disabled";
+		touchscreen-size-x = <0x3fff>;
+		touchscreen-size-y = <0x3fff>;
+	};
+
+	ts_mipi_st1633i: touchscreen@55 {
+		compatible = "sitronix,st1633i";
+		interrupts-extended = GPIRQ_TS_MIPI_ST1633;
+		/* pins used by touchscreen */
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_mipi_st1633>;
+		reg = <0x55>;
+		reset-gpios = GP_TS_MIPI_ST1633_RESET;
+		status = "disabled";
+		wakeup-gpios = GP_TS_MIPI_ST1633_IRQ;
+	};
+};
+
+&mipi_dsi {
+	status = "disabled";
+
+	fb_mipi: panel@0 {
+		backlight = <&backlight_mipi>;
+		bits-per-color = <8>;
+		bridge-de-active = <0>;
+		bus-format = "rgb888";
+		clocks = MIPI_PHY_CLOCK,
+			MIPI_PIXEL_CLOCK;
+		clock-names = "mipi_clk", "pixel_clock";
+		compatible = "panel,common";
+		dsi-format = "rgb888";
+		dsi-lanes = <4>;
+#if 0
+		/* u-boot will set this where appropriate */
+		enable-gpios = GP_LTK08_MIPI_EN;
+		mipi-cmds = <&mipi_cmds_ltk080a60a004t>;
+#endif
+		mode-skip-eot;
+		mode-video;
+		mode-video-burst;
+		panel-height-mm = <136>;
+		panel-width-mm = <217>;
+		pinctrl-names = "sn65dsi83";
+		pinctrl-0 = <&pinctrl_sn65dsi83>;
+		power-supply = <&reg_vref_5v0>;
+		reg = <0>;
+		sn65dsi83 = <&mipi_to_lvds>;
+		spwg;
+
+		display-timings {
+			t_mipi: t-dsi-default {
+				/* m101nwwb by default */
+				clock-frequency = <66000000>;
+				hactive = <1280>;
+				vactive = <800>;
+				hback-porch = <5>;
+				hfront-porch = <123>;
+				vback-porch = <3>;
+				vfront-porch = <24>;
+				hsync-len = <1>;
+				vsync-len = <1>;
+#ifdef MIPI_HSYNC_HIGH
+				hsync-active = <1>;
+				vsync-active = <1>;
+#else
+				hsync-active = <0>;
+				vsync-active = <0>;
+#endif
+				de-active = <1>;
+			};
+		};
+
+		mipi_to_lvds: mipi-to-lvds {
+			alias = <&mipi_to_lvds>;
+			enable-gpios = GP_SN65DSI83_EN;
+			i2c-address = <0x2c>;
+			i2c-bus = <&MIPI_I2C_BUS>;
+			interrupts-extended = GPIRQ_SN65DSI83;
+			status = "disabled";
+		};
+
+#ifdef MIPI_ADD_PORT
+		port {
+			panel1_in: endpoint {
+				remote-endpoint = <&mipi_dsi_out>;
+			};
+		};
+#endif
+	};
+
+#ifdef MIPI_ADD_PORT
+	ports {
+		port@1 {
+			reg = <1>;
+
+			mipi_dsi_out: endpoint {
+				remote-endpoint = <&panel1_in>;
+			};
+		};
+	};
+#endif
+};
+
+&MIPI_PWM {
+	pinctrl-names = "default";
+	pinctrl-0 = <&concat(pinctrl_, MIPI_PWM)>;
+	status = "okay";
+};
+
+#ifndef SKIP_LONTIUM_DAUGHTER_BOARDS
+/* Some board's touch connector is already behind i2c mux */
+/* So this should not be included */
+&iomuxc {
+	pinctrl_lt8912_2: lt8912-2grp {
+		fsl,pins = <
+#define GP_LT8912_2_RESET	<&MIPI_ENABLE_GP GPIO_ACTIVE_LOW>
+				  MIPI_ENABLE_PAD	PAD_PULLDN
+#define GPIRQ_LT8912_2	<&MIPI_IRQ_GP IRQ_TYPE_LEVEL_LOW>
+			  MIPI_IRQ_PAD	PAD_PULLUPIRQ
+		>;
+	};
+};
+
+
+/ {
+	aliases {
+		pca9540 = &pca9540;
+		pca9540_2 = &pca9540_2;
+		pca9546 = &pca9546;
+		ts_ft5x06_2 = &ts_mipi_ft5x06_2;
+		ts_goodix2 = &ts_mipi_goodix2;
+	};
+};
+
+&MIPI_I2C_BUS {
+	pca9540: i2cmux9540@70 {
+		compatible = "nxp,pca9540";
+		reg = <0x70>;
+		status = "disabled";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		MIPI_I2C_BUS@0 {
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* Touch screens */
+			ts_ft5x06_3: touchscreen@38 {
+				compatible = "edt,ft5x06-ts";
+				interrupts-extended = GPIRQ_TS_MIPI_FT5X06;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_ts_mipi_ft5x06>;
+				reg = <0x38>;
+				reset-gpios = GP_TS_MIPI_FT5X06_RESET;
+				wakeup-gpios = GP_TS_MIPI_FT5X06_WAKE;
+			};
+		};
+
+		MIPI_I2C_BUS@1 {
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			lt8912_2: lt8912_2@48 {
+				compatible = "lontium,lt8912";
+				display-dsi = <&fb_mipi>;
+				interrupts-extended = GPIRQ_LT8912_2;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_lt8912_2>;
+				reg = <0x48>;
+				reset-gpios = GP_LT8912_2_RESET;
+			};
+		};
+	};
+
+	pca9540_2: i2cmux9540_2@70 {
+		compatible = "nxp,pca9540";
+		reg = <0x70>;
+		status = "disabled";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		MIPI_I2C_BUS@0 {
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* Touch screens */
+			touchscreen@5d {
+				compatible = "goodix,gt911";
+				display = <&MIPI_SUBSYSTEM>;
+				esd-recovery-timeout-ms = <2000>;
+				interrupts-extended = GPIRQ_TS_MIPI_GT911;
+				irq-gpios = GP_TS_MIPI_GT911_IRQ;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_ts_mipi_gt911>;
+				reg = <0x5d>;
+				reset-gpios = GP_TS_MIPI_GT911_RESET;
+			};
+		};
+
+		tc358767_bus: MIPI_I2C_BUS@1 {
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+
+	pca9546: i2cmux9546@70 {
+		compatible = "nxp,pca9546";
+		reg = <0x70>;
+		status = "disabled";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		MIPI_I2C_BUS@0 {
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			lt8912@48 {
+				compatible = "lontium,lt8912";
+				ddc-i2c-bus = <&ddc_i2c_bus>;
+				display-dsi = <&fb_mipi>;
+				reg = <0x48>;
+				reset-gpios = <&max7323 0 GPIO_ACTIVE_LOW>;
+			};
+		};
+
+		ddc_i2c_bus: MIPI_I2C_BUS@1 {
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			/* edid  @50 */
+		};
+
+		MIPI_I2C_BUS@2 {
+			clock-frequency = <100000>;
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			/* Touch screens */
+			ts_mipi_ft5x06_2: touchscreen@38 {
+				compatible = "edt,ft5x06-ts";
+				interrupts-extended = GPIRQ_TS_MIPI_FT5X06;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_ts_mipi_ft5x06>;
+				reg = <0x38>;
+				reset-gpios = GP_TS_MIPI_FT5X06_RESET;
+				wakeup-gpios = GP_TS_MIPI_FT5X06_WAKE;
+				status = "disabled";
+			};
+
+			ts_mipi_goodix2: touchscreen@5d {
+				compatible = "goodix,gt9271";
+				display = <&MIPI_SUBSYSTEM>;
+				esd-recovery-timeout-ms = <2000>;
+				interrupts-extended = GPIRQ_TS_MIPI_GT911;
+				irq-gpios = GP_TS_MIPI_GT911_IRQ;
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_ts_mipi_gt911>;
+				reg = <0x5d>;
+				reset-gpios = GP_TS_MIPI_GT911_RESET;
+				status = "disabled";
+			};
+		};
+
+		MIPI_I2C_BUS@3 {
+			clock-frequency = <100000>;
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			max7323: max7323@68 {
+				compatible = "maxim,max7323";
+				gpio-controller;
+				reg = <0x68>;
+				#gpio-cells = <2>;
+			};
+		};
+	};
+};
+#endif
