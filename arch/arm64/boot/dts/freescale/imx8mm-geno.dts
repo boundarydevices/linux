@@ -4,6 +4,7 @@
  */
 
 /dts-v1/;
+#define _MX8MMN(a)	MX8MM_##a
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
 #include "imx8mm.dtsi"
@@ -86,6 +87,7 @@
 		/delete-property/ mipi_cmds_er_tft050;
 		/delete-property/ pca9540_2;
 		/delete-property/ pinctrl_er_tft050;
+		/delete-property/ ts_ft5x06_2;
 		/delete-property/ ts_ft7250;
 		/delete-property/ ts_goodix;
 		/delete-property/ ts_goodix2;

@@ -3,20 +3,13 @@
  * Copyright 2019 Boundary Devices
  */
 
-#define TOUCHSCREEN_I2C_BUS	i2c4
+#define MIPI_I2C_BUS	i2c4
+#define MIPI_ENABLE_GP		gpio5 0
+#define MIPI_ENABLE_PAD		_MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0)	/* Pin 11 */
+
 #include "imx8mn-nitrogen8mn.dts"
 
 &iomuxc {
-	pinctrl_sn65dsi83: sn65dsi83grp {
-		fsl,pins = <
-#define GPIRQ_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
-			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x04)
-#undef  GP_SN65DSI83_EN
-#define GP_SN65DSI83_EN	<&gpio5 0 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x106)
-		>;
-	};
-
 	/delete-node/ i2c3a-rv4162grp;
 	/delete-node/ i2c3b-ov5640-mipigrp;
 
@@ -45,53 +38,9 @@
 		>;
 	};
 
-	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
-		fsl,pins = <
-#undef GP_MIPI_RESET
-#define GP_MIPI_RESET	<&gpio5 0 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x16)
-		>;
-	};
-
-	pinctrl_mipi_lcd133_070: mipi-lcd133-070grp {
-		fsl,pins = <
-#define GP_LCD133_070_RESET		<&gpio1 1 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x116)
-#undef GP_LCD133_070_ENABLE
-#define GP_LCD133_070_ENABLE		<&gpio5 0 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x116)
-		>;
-	};
-
-	pinctrl_mipi_lcm_jm430: mipi-lcm-jm430grp {
-		fsl,pins = <
-#undef GP_TC358762_EN
-#define GP_TC358762_EN	<&gpio5 0 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x16)
-#define GP_JM430_DISPLAY_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x106)
-		>;
-	};
-
-	pinctrl_mipi_ltk0680ytmdb: mipi-ltk0680ytmdbgrp {
-		fsl,pins = <
-#undef GP_MIPI_RESET
-#define GP_MIPI_RESET	<&gpio5 0 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x16)
-		>;
-	};
-
 	pinctrl_pwm4: pwm4grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_GPIO1_IO15_PWM4_OUT, 0x16)
-		>;
-	};
-
-	pinctrl_sc18is602b: sc18is602bgrp {
-		fsl,pins = <
-#undef  GP_SC18IS602B_RESET
-#define GP_SC18IS602B_RESET	<&gpio5 0 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0, 0x101)
 		>;
 	};
 };
@@ -179,12 +128,4 @@
 			csis-wclk;
 		};
 	};
-};
-
-&mipi_to_lvds {
-	enable-gpios = GP_SN65DSI83_EN;
-};
-
-&spi_lcd {
-	reset-gpios = GP_SC18IS602B_RESET;
 };
