@@ -2,8 +2,12 @@
 /*
  * Copyright 2022 Boundary Devices
  */
-#define TOUCHSCREEN_I2C_BUS	i2c3b
-#define PWM_MIPI	pwm1
+#define MIPI_I2C_BUS	i2c3b
+#define SKIP_LONTIUM_DAUGHTER_BOARDS
+#define MIPI_PWM		pwm1
+#define MIPI_PWM_GP		gpio1 1
+#define MIPI_PWM_PAD		_MX8MMN(IOMUXC_SPDIF_EXT_CLK_PWM1_OUT)
+#define MIPI_PWM_PAD_GPIO	_MX8MMN(IOMUXC_SPDIF_EXT_CLK_GPIO5_IO5)
 #include "imx8mm-nitrogen8mm_rev2.dts"
 
 &iomuxc {
