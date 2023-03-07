@@ -18,6 +18,7 @@
 		/delete-property/ pinctrl_lcm_jm430;
 		/delete-property/ pinctrl_ltk0680ytmdb;
 		/delete-property/ ts_ft5x06;
+		/delete-property/ ts_ft7250;
 		/delete-property/ ts_goodix;
 		/delete-property/ ts_st1633i;
 	};
@@ -77,19 +78,20 @@
 /delete-node/ &mipi_to_lvds;
 
 /delete-node/ &pinctrl_bt_rfkill;
-/delete-node/ &pinctrl_i2c1d_gt911;
-/delete-node/ &pinctrl_i2c1d_ft5x06;
-/delete-node/ &pinctrl_i2c1d_sn65dsi83;
-/delete-node/ &pinctrl_i2c1d_st1633;
+/delete-node/ &pinctrl_sn65dsi83;
+/delete-node/ &pinctrl_ts_mipi_gt911;
+/delete-node/ &pinctrl_ts_mipi_ft5x06;
+/delete-node/ &pinctrl_ts_mipi_st1633;
 /delete-node/ &pinctrl_mipi_com50h5n03ulc;
 /delete-node/ &pinctrl_mipi_lcm_jm430;
 /delete-node/ &pinctrl_mipi_ltk0680ytmdb;
 /delete-node/ &pinctrl_reg_wlan_vmmc;
 
 /delete-node/ &reg_wlan_vmmc;
-/delete-node/ &ts_goodix;
-/delete-node/ &ts_ft5x06;
-/delete-node/ &ts_st1633i;
+/delete-node/ &ts_mipi_goodix;
+/delete-node/ &ts_mipi_ft5x06;
+/delete-node/ &ts_mipi_ft7250;
+/delete-node/ &ts_mipi_st1633i;
 
 &ecspi2 {
 	status = "disabled";

@@ -138,46 +138,6 @@
 		>;
 	};
 
-	pinctrl_i2c1d_gt911: i2c1d-gt911grp {
-		fsl,pins = <
-#define GPIRQ_GT911 		<&gpio3 12 IRQ_TYPE_LEVEL_HIGH>
-#define GP_GT911_IRQ 		<&gpio3 12 GPIO_ACTIVE_HIGH>
-			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12		0xd6
-			/* driver writes levels, instead of active/inactive */
-#define GP_GT911_RESET		<&gpio3 13 GPIO_ACTIVE_HIGH>
-			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13		0x49
-		>;
-	};
-
-	pinctrl_i2c1d_ft5x06: i2c1d-ft5x06grp {
-		fsl,pins = <
-#define GPIRQ_I2C1D_FT5X06	<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
-#define GP_I2C1D_FT5X06_WAKE	<&gpio3 12 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12		0x49
-#define GP_I2C1D_FT5X06_RESET	<&gpio3 13 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13		0x49
-		>;
-	};
-
-	pinctrl_i2c1d_sn65dsi83: i2c1d-sn65dsi83grp {
-		fsl,pins = <
-#define GPIRQ_I2C1D_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
-			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1		0x04
-#define GP_I2C1D_SN65DSI83_EN	<&gpio3 15 GPIO_ACTIVE_HIGH>
-			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15		0x06
-		>;
-	};
-
-	pinctrl_i2c1d_st1633: i2c1d-st1633grp {
-		fsl,pins = <
-#define GPIRQ_ST1633 		<&gpio3 12 IRQ_TYPE_EDGE_FALLING>
-#define GP_ST1633_IRQ 		<&gpio3 12 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12		0xd6
-#define GP_ST1633_RESET		<&gpio3 13 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13		0x49
-		>;
-	};
-
 	pinctrl_i2c2: i2c2grp {
 		fsl,pins = <
 			MX8MQ_IOMUXC_I2C2_SCL_I2C2_SCL			0x4000007f
@@ -265,36 +225,6 @@
 		>;
 	};
 
-	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
-		fsl,pins = <
-#define GP_MIPI_RESET	<&gpio3 15 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15		0x16
-		>;
-	};
-
-	pinctrl_mipi_lcm_jm430: mipi-lcm-jm430grp {
-		fsl,pins = <
-#define GP_TC358762_EN	<&gpio3 15 GPIO_ACTIVE_HIGH>
-			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15		0x16
-#define GP_JM430_DISPLAY_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
-			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1		0x06
-		>;
-	};
-
-	pinctrl_mipi_ltk0680ytmdb: mipi-ltk0680ytmdbgrp {
-		fsl,pins = <
-#define GP_MIPI_RESET	<&gpio3 15 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15		0x16
-		>;
-	};
-
-	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
-		fsl,pins = <
-#define GP_LTK08_MIPI_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
-			MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1		0x16
-		>;
-	};
-
 	pinctrl_pcie0: pcie0grp {
 		fsl,pins = <
 #define GP_PCIE0_RESET		<&gpio5 7 GPIO_ACTIVE_LOW>
@@ -307,12 +237,6 @@
 	pinctrl_pwm2: pwm2grp {
 		fsl,pins = <
 			MX8MQ_IOMUXC_SPDIF_RX_PWM2_OUT			0x16
-		>;
-	};
-
-	pinctrl_pwm3: pwm3grp {
-		fsl,pins = <
-			MX8MQ_IOMUXC_SPDIF_TX_PWM3_OUT			0x16
 		>;
 	};
 
@@ -527,42 +451,15 @@
 	};
 };
 
-#include "panel-com50h5n03ulc.dtsi"
-#include "panel-lcm-jm430.dtsi"
-#include "panel-ltk0680ytmdb.dtsi"
-#include "panel-ltk080a60a004t.dtsi"
-#include "panel-m101nwwb.dtsi"
-
 / {
 	model = "Boundary Devices i.MX8MQ Nitrogen8M_som";
 	compatible = "boundary,imx8mq-nitrogen8m_som", "fsl,imx8mq";
 
 	aliases {
-		backlight_mipi = &backlight_mipi;
 		dcss = &dcss;
-		fb_mipi = &fb_mipi;
 		fb_hdmi = &hdmi;
-		lcdif = &lcdif;
-		mipi = &fb_mipi;
-		mipi_dsi = &mipi_dsi;
-		mipi_dsi_bridge = &mipi_dsi;
 		mipi_dsi_phy = &dphy;
-		mipi_to_lvds = &mipi_to_lvds;
-		pwm_mipi = &pwm3;
 		sound_hdmi = &sound_hdmi;
-		t_mipi = &t_mipi;
-		ts_ft5x06 = &ts_ft5x06;
-		ts_goodix = &ts_goodix;
-		ts_st1633i = &ts_st1633i;
-	};
-
-	backlight_mipi: backlight-mipi {
-		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
-		compatible = "pwm-backlight";
-		default-brightness-level = <8>;
-		display = <&lcdif>;
-		pwms = <&pwm3 0 30000>;		/* 33.3 Khz */
-		status = "disabled";
 	};
 
 	bt-rfkill {
@@ -639,7 +536,7 @@
 		regulator-max-microvolt = <3300000>;
 	};
 
-	reg_vref_5v: regulator-vref-5v {
+	reg_vref_5v0: regulator-vref-5v {
 		compatible = "regulator-fixed";
 		regulator-name = "vref-5v";
 		regulator-min-microvolt = <5000000>;
@@ -908,43 +805,6 @@
 	};
 };
 
-&i2c1d {
-	ts_ft5x06: touchscreen@38 {
-		compatible = "edt,ft5x06-ts";
-		interrupts-extended = GPIRQ_I2C1D_FT5X06;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c1d_ft5x06>;
-		reg = <0x38>;
-		reset-gpios = GP_I2C1D_FT5X06_RESET;
-		status = "disabled";
-		wakeup-gpios = GP_I2C1D_FT5X06_WAKE;
-	};
-
-	ts_goodix: touchscreen@5d {
-		compatible = "goodix,gt9271";
-		esd-recovery-timeout-ms = <2000>;
-		interrupts-extended = GPIRQ_GT911;
-		irq-gpios = GP_GT911_IRQ;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c1d_gt911>;
-		reg = <0x5d>;
-		reset-gpios = GP_GT911_RESET;
-		status = "disabled";
-	};
-
-	ts_st1633i: touchscreen@55 {
-		compatible = "sitronix,st1633i";
-		interrupts-extended = GPIRQ_ST1633;
-		/* pins used by touchscreen */
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c1d_st1633>;
-		reg = <0x55>;
-		reset-gpios = GP_ST1633_RESET;
-		status = "disabled";
-		wakeup-gpios = GP_ST1633_IRQ;
-	};
-};
-
 &i2c2 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default", "gpio";
@@ -1161,76 +1021,11 @@
 			       <80000000>,
 			       <0>,
 			       <20000000>;
-	status = "disabled";
 	#address-cells = <1>;
 	#size-cells = <0>;
 
 	fb_mipi: panel@0 {
-		backlight = <&backlight_mipi>;
-		bits-per-color = <8>;
-		bridge-de-active = <0>;
-		bus-format = "rgb888";
-		clocks = <&dphy 0>,
-			<&clk IMX8MQ_CLK_LCDIF_PIXEL>;
-		clock-names = "mipi_clk", "pixel_clock";
-		compatible = "panel,common";
 		delay-power-up = <2>;
-		dsi-format = "rgb888";
-		dsi-lanes = <4>;
-		mode-skip-eot;
-		mode-video;
-		mode-video-burst;
-		panel-height-mm = <136>;
-		panel-width-mm = <217>;
-		pinctrl-names = "sn65dsi83";
-		pinctrl-0 = <&pinctrl_i2c1d_sn65dsi83>;
-		power-supply = <&reg_vref_5v>;
-		reg = <0>;
-		sn65dsi83 = <&mipi_to_lvds>;
-		spwg;
-
-		display-timings {
-			t_mipi: t-dsi-default {
-				/* m101nwwb by default */
-				clock-frequency = <70000000>;
-				hactive = <1280>;
-				vactive = <800>;
-				hback-porch = <5>;
-				hfront-porch = <123>;
-				vback-porch = <3>;
-				vfront-porch = <24>;
-				hsync-len = <1>;
-				vsync-len = <1>;
-				hsync-active = <1>;
-				vsync-active = <1>;
-				de-active = <1>;
-			};
-		};
-
-		mipi_to_lvds: mipi-to-lvds {
-			alias = <&mipi_to_lvds>;
-			enable-gpios = GP_I2C1D_SN65DSI83_EN;
-			i2c-address = <0x2c>;
-			i2c-bus = <&i2c1d>;
-			interrupts-extended = GPIRQ_I2C1D_SN65DSI83;
-			status = "disabled";
-		};
-
-		port {
-			panel1_in: endpoint {
-				remote-endpoint = <&mipi_dsi_out>;
-			};
-		};
-	};
-
-	ports {
-		port@1 {
-			reg = <1>;
-
-			mipi_dsi_out: endpoint {
-				remote-endpoint = <&panel1_in>;
-			};
-		};
 	};
 };
 
@@ -1323,12 +1118,6 @@
 	status = "okay";
 };
 
-&pwm3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm3>;
-	status = "okay";
-};
-
 &pwm4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm4>;
@@ -1403,7 +1192,7 @@
 
 &usb3_phy0 {
 	status = "okay";
-	vbus-supply = <&reg_vref_5v>;
+	vbus-supply = <&reg_vref_5v0>;
 };
 
 &usb_dwc3_0 {
@@ -1416,7 +1205,7 @@
 
 &usb3_phy1 {
 	status = "okay";
-	vbus-supply = <&reg_vref_5v>;
+	vbus-supply = <&reg_vref_5v0>;
 };
 
 &usb_dwc3_1 {
@@ -1425,7 +1214,7 @@
 	pinctrl-0 = <&pinctrl_usb3_1>;
 	reset-gpios = GP_USB3_1_HUB_RESET;
 	status = "okay";
-	vbus-supply = <&reg_vref_5v>;
+	vbus-supply = <&reg_vref_5v0>;
 };
 
 &usdhc1 {
@@ -1481,3 +1270,36 @@
 	fsl,ext-reset-output;
 	status = "okay";
 };
+
+/* J11 mipi display */
+#define MIPI_ADD_PORT	/* imx8mq needs this */
+#define MIPI_DISPLAY		lcdif
+#define MIPI_SUBSYSTEM		lcdif
+#define MIPI_I2C_BUS		i2c1d
+#define SKIP_LONTIUM_DAUGHTER_BOARDS		/* MIPI_I2C_BUS is already behind i2cmux */
+#define MIPI_PWM		pwm3
+#define MIPI_PHY_CLOCK		<&dphy 0>
+#define MIPI_PIXEL_CLOCK	<&clk IMX8MQ_CLK_LCDIF_PIXEL>
+#define MIPI_HSYNC_HIGH
+
+#define MIPI_PWM_GP		gpio5 3
+#define MIPI_PWM_PAD		MX8MQ_IOMUXC_SPDIF_TX_PWM3_OUT
+#define MIPI_PWM_PAD_GPIO	MX8MQ_IOMUXC_SPDIF_TX_GPIO5_IO3		/* Pin 7 */
+
+#define MIPI_IRQ_GP		gpio1 1
+#define MIPI_IRQ_PAD		MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1	/* Pin 8 */
+
+#define MIPI_TS_IRQ_GP		gpio3 12
+#define MIPI_TS_IRQ_PAD		MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	/* Pin 9 */
+
+#define MIPI_TS_RESET_GP	gpio3 13
+#define MIPI_TS_RESET_PAD	MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	/* Pin 10 */
+
+#define MIPI_ENABLE_GP		gpio3 15
+#define MIPI_ENABLE_PAD		MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	/* Pin 11 */
+
+#define PAD_NOPULL		0x06
+#define PAD_PULLDN		0x06	/* No pulldown, need external resistor */
+#define PAD_PULLUPIRQ		0xc6
+#define PAD_PULLDNIRQ		0x86
+#include "nitrogen-mipi-dsi.dtsi"
