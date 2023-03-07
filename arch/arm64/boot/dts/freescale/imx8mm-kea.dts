@@ -4,16 +4,10 @@
  */
 
 /dts-v1/;
+#define _MX8MMN(a)	MX8MM_##a
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
 #include "imx8mm.dtsi"
-
-#ifndef TOUCHSCREEN_I2C_BUS
-#define TOUCHSCREEN_I2C_BUS	i2c2
-#endif
-#ifndef TC358867_I2C_BUS
-#define TC358867_I2C_BUS	<&TOUCHSCREEN_I2C_BUS>
-#endif
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -176,74 +170,6 @@
 		>;
 	};
 
-	pinctrl_sn65dsi83: sn65dsi83grp {
-		fsl,pins = <
-#define GPIRQ_SN65DSI83	<&gpio1 1 IRQ_TYPE_LEVEL_HIGH>
-			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x04)
-#define GP_SN65DSI83_EN	<&gpio1 9 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x106)
-		>;
-	};
-
-	pinctrl_ts_gt911: ts-gt911grp {
-		fsl,pins = <
-#define GPIRQ_GT911 		<&gpio1 6 IRQ_TYPE_LEVEL_HIGH>
-#define GP_GT911_IRQ 		<&gpio1 6 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, 0x1d6)
-			/* driver writes levels, instead of active/inactive */
-#define GP_GT911_RESET		<&gpio1 7 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, 0x149)
-		>;
-	};
-
-	pinctrl_ts_ft5x06: ts-ft5x06grp {
-		fsl,pins = <
-#define GPIRQ_TS_FT5X06	<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
-#define GP_TS_FT5X06_WAKE	<&gpio1 6 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, 0x149)
-#define GP_TS_FT5X06_RESET	<&gpio1 7 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, 0x109)
-		>;
-	};
-
-	pinctrl_ts_ft7250: ts-ft7250grp {
-		fsl,pins = <
-#define GPIRQ_TS_FT7250	<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
-#define GP_TS_FT7250_WAKE	<&gpio1 6 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, 0x149)
-#define GP_TS_FT7250_RESET	<&gpio1 7 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, 0x109)
-		>;
-	};
-
-	pinctrl_ts_gslx680: ts-gslx680grp {
-		fsl,pins = <
-#define GPIRQ_GSLX680	<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
-			MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, 0x149)
-#define GP_TS_GSLX680_POWER	<&gpio1 7 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, 0x109)
-		>;
-	};
-
-	pinctrl_ts_ili251x: ts-ili251xgrp {
-		fsl,pins = <
-#define GPIRQ_TS_ILI251X	<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
-			MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, 0x149)
-#define GP_TS_ILI251X_RESET	<&gpio1 7 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, 0x109)
-		>;
-	};
-
-	pinctrl_ts_st1633: ts-st1633grp {
-		fsl,pins = <
-#define GPIRQ_ST1633 		<&gpio1 6 IRQ_TYPE_EDGE_FALLING>
-#define GP_ST1633_IRQ 		<&gpio1 6 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, 0x1d6)
-#define GP_ST1633_RESET		<&gpio1 7 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, 0x149)
-		>;
-	};
-
 	pinctrl_i2c3: i2c3grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_I2C3_SCL_I2C3_SCL, 0x400001c3)
@@ -301,61 +227,9 @@
 		>;
 	};
 
-	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
-		fsl,pins = <
-#define GP_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
-		>;
-	};
-
-	pinctrl_mipi_lcd133_070: mipi-lcd133-070grp {
-		fsl,pins = <
-#define GP_LCD133_070_RESET		<&gpio1 1 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x116)
-#define GP_LCD133_070_ENABLE		<&gpio1 9 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x116)
-		>;
-	};
-
-	pinctrl_mipi_lcm_jm430: mipi-lcm-jm430grp {
-		fsl,pins = <
-#define GP_TC358762_EN	<&gpio1 9 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
-#define GP_JM430_DISPLAY_EN    <&gpio1 1 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x106)
-		>;
-	};
-
-	pinctrl_mipi_ls050t1sx12: mipi-ls050t1sx12grp {
-		fsl,pins = <
-#define GP_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
-		>;
-	};
-
-	pinctrl_mipi_ltk0680ytmdb: mipi-ltk0680ytmdbgrp {
-		fsl,pins = <
-#define GP_MIPI_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x16)
-		>;
-	};
-
-	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
-		fsl,pins = <
-#define GP_LTK08_MIPI_EN	<&gpio1 1 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x116)
-		>;
-	};
-
 	pinctrl_pwm2: pwm2grp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_SPDIF_RX_PWM2_OUT, 0x16)
-		>;
-	};
-
-	pinctrl_pwm3: pwm3grp {
-		fsl,pins = <
-			MX8MMN(IOMUXC_SPDIF_TX_PWM3_OUT, 0x116)
 		>;
 	};
 
@@ -388,13 +262,6 @@
 			MX8MMN(IOMUXC_SAI2_TXC_SAI2_TX_BCLK, 0xd6)
 			MX8MMN(IOMUXC_SAI2_TXD0_SAI2_TX_DATA0, 0xd6)
 			MX8MMN(IOMUXC_SAI2_RXD0_SAI2_RX_DATA0, 0xd6)
-		>;
-	};
-
-	pinctrl_sc18is602b: sc18is602bgrp {
-		fsl,pins = <
-#define GP_SC18IS602B_RESET	<&gpio1 9 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, 0x101)
 		>;
 	};
 
@@ -585,46 +452,9 @@
 	};
 };
 
-#include "panel-com50h5n03ulc.dtsi"
-#include "panel-dmt050wvnxcmi.dtsi"
-#include "panel-lcd133-070.dtsi"
-#include "panel-lcm-jm430.dtsi"
-#include "panel-ls050t1sx12.dtsi"
-#include "panel-ltk0680ytmdb.dtsi"
-#include "panel-ltk080a60a004t.dtsi"
-#include "panel-m101nwwb.dtsi"
-
 / {
 	model = "Boundary Devices i.MX8MMini kea";
 	compatible = "boundary,imx8mm-kea", "fsl,imx8mm";
-
-	aliases {
-		backlight_mipi = &backlight_mipi;
-		fb_mipi = &fb_mipi;
-		lcdif = &lcdif;
-		mipi = &fb_mipi;
-		mipi_dsi = &mipi_dsi;
-		mipi_to_lvds = &mipi_to_lvds;
-		pca9546 = &pca9546;
-		pwm_mipi = &pwm3;
-		spi_lcd = &spi_lcd;
-		t_mipi = &t_mipi;
-		ts_ft5x06 = &ts_ft5x06;
-		ts_ft7250 = &ts_ft7250;
-		ts_goodix = &ts_goodix;
-		ts_gsl1680 = &ts_gsl1680;
-		ts_ili251x = &ts_ili251x;
-		ts_st1633i = &ts_st1633i;
-	};
-
-	backlight_mipi: backlight-mipi {
-		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
-		compatible = "pwm-backlight";
-		default-brightness-level = <8>;
-		display = <&display_subsystem>;
-		pwms = <&pwm3 0 30000>;		/* 33.3 Khz */
-		status = "okay";
-	};
 
 	bt-rfkill {
 		compatible = "net,rfkill-gpio";
@@ -712,7 +542,7 @@
 		enable-active-high;
 	};
 
-	reg_vref_5v: regulator-vref-5v {
+	reg_vref_5v0: regulator-vref-5v {
 		compatible = "regulator-fixed";
 		regulator-name = "vref-5v";
 		regulator-min-microvolt = <5000000>;
@@ -1122,165 +952,6 @@
 	status = "okay";
 };
 
-
-&TOUCHSCREEN_I2C_BUS {
-	spi_lcd: spi@2f {
-		assigned-clocks = <&clk IMX8MMN(VIDEO_PLL1)>;
-		assigned-clock-rates = <384000000>;
-		compatible = "nxp,sc18is602b";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_sc18is602b>;
-		reg = <0x2f>;
-		reset-gpios = GP_SC18IS602B_RESET;
-		status = "disabled";
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		spidev_lcd: spidev@0 {
-			compatible = "spidev";
-			spi-cpha;
-			spi-cpol;
-			spi-max-frequency = <20000000>;
-			reg = <0>;
-		};
-	};
-
-	ts_ft5x06: touchscreen@38 {
-		compatible = "edt,ft5x06-ts";
-		interrupts-extended = GPIRQ_TS_FT5X06;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_ft5x06>;
-		reg = <0x38>;
-		reset-gpios = GP_TS_FT5X06_RESET;
-		status = "disabled";
-		wakeup-gpios = GP_TS_FT5X06_WAKE;
-	};
-
-	ts_ft7250: touchscreen_ft7250@38 {
-		compatible = "edt,ft7250";
-		interrupts-extended = GPIRQ_TS_FT7250;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_ft7250>;
-		reg = <0x38>;
-		reset-gpios = GP_TS_FT7250_RESET;
-		wakeup-gpios = GP_TS_FT7250_WAKE;
-		status = "disabled";
-	};
-
-	ts_goodix: touchscreen@5d {
-		compatible = "goodix,gt9271";
-		display = <&display_subsystem>;
-		esd-recovery-timeout-ms = <2000>;
-		interrupts-extended = GPIRQ_GT911;
-		irq-gpios = GP_GT911_IRQ;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_gt911>;
-		reg = <0x5d>;
-		reset-gpios = GP_GT911_RESET;
-		status = "disabled";
-	};
-
-	ts_gsl1680: touchscreen@40 {
-		compatible = "silead,gsl1680";
-		interrupts-extended = GPIRQ_GSLX680;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_gslx680>;
-		power-gpios = GP_TS_GSLX680_POWER;
-		reg = <0x40>;
-		status = "disabled";
-		touchscreen-size-x = <480>;	/* swapped below */
-		touchscreen-size-y = <800>;
-		touchscreen-swapped-x-y;
-	};
-
-	ts_ili251x: touchscreen@41 {
-		compatible = "ilitek,ili251x";
-		interrupts-extended = GPIRQ_TS_ILI251X;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_ili251x>;
-		reg = <0x41>;
-		reset-gpios = GP_TS_ILI251X_RESET;
-		status = "disabled";
-		touchscreen-size-x = <0x3fff>;
-		touchscreen-size-y = <0x3fff>;
-	};
-
-	ts_st1633i: touchscreen@55 {
-		compatible = "sitronix,st1633i";
-		interrupts-extended = GPIRQ_ST1633;
-		/* pins used by touchscreen */
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_st1633>;
-		reg = <0x55>;
-		reset-gpios = GP_ST1633_RESET;
-		status = "disabled";
-		wakeup-gpios = GP_ST1633_IRQ;
-	};
-
-	pca9546: i2cmux9546@70 {
-		compatible = "nxp,pca9546";
-		reg = <0x70>;
-		status = "disabled";
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		TOUCHSCREEN_I2C_BUS@0 {
-			clock-frequency = <100000>;
-			reg = <0>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			lt8912@48 {
-				compatible = "lontium,lt8912";
-				ddc-i2c-bus = <&ddc_i2c_bus>;
-				display-dsi = <&fb_mipi>;
-				reg = <0x48>;
-				reset-gpios = <&max7323 0 GPIO_ACTIVE_LOW>;
-			};
-		};
-
-		ddc_i2c_bus: TOUCHSCREEN_I2C_BUS@1 {
-			clock-frequency = <100000>;
-			reg = <1>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-			/* edid  @50 */
-		};
-
-		TOUCHSCREEN_I2C_BUS@2 {
-			clock-frequency = <100000>;
-			reg = <2>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			/* Touch screens */
-			ts_ft5x06_2: touchscreen@38 {
-				compatible = "edt,ft5x06-ts";
-				interrupts-extended = GPIRQ_TS_FT5X06;
-				pinctrl-names = "default";
-				pinctrl-0 = <&pinctrl_ts_ft5x06>;
-				reg = <0x38>;
-				reset-gpios = GP_TS_FT5X06_RESET;
-				wakeup-gpios = GP_TS_FT5X06_WAKE;
-			};
-		};
-
-		TOUCHSCREEN_I2C_BUS@3 {
-			clock-frequency = <100000>;
-			reg = <3>;
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			max7323: max7323@68 {
-				compatible = "maxim,max7323";
-				gpio-controller;
-				reg = <0x68>;
-				#gpio-cells = <2>;
-			};
-		};
-	};
-};
-
 &i2c3 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default", "gpio";
@@ -1381,83 +1052,6 @@
 	};
 };
 
-&mipi_dsi {
-	assigned-clocks = <&clk IMX8MMN(CLK_DSI_CORE)>,
-			  <&clk IMX8MMN(CLK_DSI_PHY_REF)>,
-			  <&clk IMX8MMN(VIDEO_PLL1_REF_SEL)>,
-			  <&clk IMX8MMN(CLK_LCDIF_PIXEL)>;
-	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_266M)>,
-				 <&clk IMX8MMN(VIDEO_PLL1_OUT)>,
-				 <&clk IMX8MMN(CLK_24M)>;
-	assigned-clock-rates = <266000000>, <0>, <0>, <66000000>;
-
-	clocks = <&clk IMX8MMN(CLK_DSI_CORE)>,
-		 <&clk IMX8MMN(CLK_DSI_PHY_REF)>,
-		 <&clk IMX8MMN(CLK_LCDIF_PIXEL)>;
-	clock-names = "cfg", "pll-ref", "pixel_clock";
-	status = "okay";
-
-	fb_mipi: panel@0 {
-		backlight = <&backlight_mipi>;
-		bits-per-color = <8>;
-		bridge-de-active = <0>;
-		bus-format = "rgb888";
-		clocks = <&mipi_dsi 0>,
-			<&clk IMX8MMN(CLK_LCDIF_PIXEL)>;
-		clock-names = "mipi_clk", "pixel_clock";
-		compatible = "panel,common";
-		dsi-format = "rgb888";
-		dsi-lanes = <4>;
-#if 0
-		/* u-boot will set this where appropriate */
-		enable-gpios = GP_LTK08_MIPI_EN;
-		mipi-cmds = <&mipi_cmds_ltk080a60a004t>;
-#endif
-		mode-skip-eot;
-		mode-video;
-#if 1
-		mode-video-burst;
-#else
-		mode-video-sync-pulse;
-#endif
-		panel-height-mm = <136>;
-		panel-width-mm = <217>;
-		pinctrl-names = "sn65dsi83";
-		pinctrl-0 = <&pinctrl_sn65dsi83>;
-		power-supply = <&reg_vref_5v>;
-		reg = <0>;
-		sn65dsi83 = <&mipi_to_lvds>;
-		spwg;
-
-		display-timings {
-			t_mipi: t-dsi-default {
-				/* m101nwwb by default */
-				clock-frequency = <66000000>;
-				hactive = <1280>;
-				vactive = <800>;
-				hback-porch = <5>;
-				hfront-porch = <123>;
-				vback-porch = <3>;
-				vfront-porch = <24>;
-				hsync-len = <1>;
-				vsync-len = <1>;
-				hsync-active = <0>;
-				vsync-active = <0>;
-				de-active = <1>;
-			};
-		};
-
-		mipi_to_lvds: mipi-to-lvds {
-			alias = <&mipi_to_lvds>;
-			enable-gpios = GP_SN65DSI83_EN;
-			i2c-address = <0x2c>;
-			i2c-bus = <&TOUCHSCREEN_I2C_BUS>;
-			interrupts-extended = GPIRQ_SN65DSI83;
-			status = "disabled";
-		};
-	};
-};
-
 &mu {
 	status = "okay";
 };
@@ -1468,12 +1062,6 @@
 	assigned-clock-rates = <40000000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm2>;
-	status = "okay";
-};
-
-&pwm3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm3>;
 	status = "okay";
 };
 
@@ -1608,4 +1196,62 @@
 	pinctrl-0 = <&pinctrl_wdog>;
 	fsl,ext-reset-output;
 	status = "okay";
+};
+
+/* J11 mipi display */
+#define MIPI_DISPLAY		lcdif
+#define MIPI_SUBSYSTEM		display_subsystem
+#ifndef MIPI_I2C_BUS
+#define MIPI_I2C_BUS		i2c2
+#endif
+#define MIPI_PHY_CLOCK		<&mipi_dsi 0>
+#define MIPI_PIXEL_CLOCK	<&clk IMX8MMN(CLK_LCDIF_PIXEL)>
+
+#ifndef MIPI_PWM
+#define MIPI_PWM		pwm3
+#define MIPI_PWM_GP		gpio5 3
+#define MIPI_PWM_PAD		_MX8MMN(IOMUXC_SPDIF_TX_PWM3_OUT)
+#define MIPI_PWM_PAD_GPIO	_MX8MMN(IOMUXC_SPDIF_TX_GPIO5_IO3)	/* Pin 7 */
+#endif
+
+#define MIPI_IRQ_GP		gpio1 1
+#define MIPI_IRQ_PAD		_MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1)	/* Pin 8 */
+
+#define MIPI_TS_IRQ_GP		gpio1 6
+#define MIPI_TS_IRQ_PAD		_MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6)	/* Pin 9 */
+
+#define MIPI_TS_RESET_GP	gpio1 7
+#define MIPI_TS_RESET_PAD	_MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7)	/* Pin 10 */
+
+#ifndef MIPI_ENABLE_PAD
+#define MIPI_ENABLE_GP		gpio1 9
+#define MIPI_ENABLE_PAD		_MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9)	/* Pin 11 */
+#endif
+
+#define PAD_NOPULL		0x0
+#define PAD_PULLDN		0x100
+#define PAD_PULLUPIRQ		0x1c0
+#define PAD_PULLDNIRQ		0x180
+#include "nitrogen-mipi-dsi.dtsi"
+
+&mipi_dsi {
+	assigned-clocks = <&clk IMX8MMN(CLK_DSI_CORE)>,
+			  <&clk IMX8MMN(CLK_DSI_PHY_REF)>,
+			  <&clk IMX8MMN(VIDEO_PLL1_REF_SEL)>,
+			  <&clk IMX8MMN(CLK_LCDIF_PIXEL)>;
+	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_266M)>,
+				 <&clk IMX8MMN(VIDEO_PLL1_OUT)>,
+				 <&clk IMX8MMN(CLK_24M)>;
+	assigned-clock-rates = <266000000>, <0>, <0>, <66000000>;
+
+	clocks = <&clk IMX8MMN(CLK_DSI_CORE)>,
+		 <&clk IMX8MMN(CLK_DSI_PHY_REF)>,
+		 <&clk IMX8MMN(CLK_LCDIF_PIXEL)>;
+	clock-names = "cfg", "pll-ref", "pixel_clock";
+	status = "okay";
+};
+
+&spi_lcd {
+	assigned-clocks = <&clk IMX8MMN(VIDEO_PLL1)>;
+	assigned-clock-rates = <384000000>;
 };
