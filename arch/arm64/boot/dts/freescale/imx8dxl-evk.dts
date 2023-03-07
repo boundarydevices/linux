@@ -240,7 +240,7 @@
 	};
 
 	scu_gpio0: scu-gpio0 {
-		compatible = "fsl,imx-scu-gpio";
+		compatible = "fsl,imx8qxp-sc-gpio";
 		gpio-controller;
 		#gpio-cells = <2>;
 		#interrupt-cells = <2>;
