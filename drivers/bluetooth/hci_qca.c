@@ -2302,7 +2302,7 @@ static int __maybe_unused qca_suspend(struct device *dev)
 error:
 	clear_bit(QCA_SUSPENDING, &qca->flags);
 
-	return ret;
+	return 0;
 }
 
 static int __maybe_unused qca_resume(struct device *dev)
