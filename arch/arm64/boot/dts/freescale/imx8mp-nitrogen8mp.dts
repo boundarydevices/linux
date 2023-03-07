@@ -7,7 +7,6 @@
 
 #include <dt-bindings/usb/pd.h>
 #include "imx8mp-nitrogen8mp-som.dtsi"
-#define TC358867_I2C_BUS	<&i2c2d>
 
 &iomuxc {
 	pinctrl-names = "default";
@@ -146,45 +145,6 @@
 		>;
 	};
 
-	pinctrl_mipi_com50h5n03ulc: mipi-com50h5n03ulcgrp {
-		fsl,pins = <
-#define GP_MIPI_RESET	<&gpio4 27 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27	0x16
-		>;
-	};
-
-	pinctrl_mipi_lcd133_070: mipi-lcd133-070grp {
-		fsl,pins = <
-#define GP_LCD133_070_RESET		<&gpio4 0 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00	0x116
-#define GP_LCD133_070_ENABLE		<&gpio4 27 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27	0x116
-		>;
-	};
-
-	pinctrl_mipi_lcm_jm430: mipi-lcm-jm430grp {
-		fsl,pins = <
-#define GP_TC358762_EN	<&gpio4 27 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27	0x16
-#define GP_JM430_DISPLAY_EN	<&gpio4 0 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00	0x100
-		>;
-	};
-
-	pinctrl_mipi_ltk0680ytmdb: mipi-ltk0680ytmdbgrp {
-		fsl,pins = <
-#define GP_MIPI_RESET	<&gpio4 27 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27	0x16
-		>;
-	};
-
-	pinctrl_mipi_ltk080a60a004t: mipi-ltk080a60a004tgrp {
-		fsl,pins = <
-#define GP_LTK08_MIPI_EN	<&gpio4 0 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00	0x116
-		>;
-	};
-
 	pinctrl_pdm: pdmgrp {
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI1_RXC__AUDIOMIX_PDM_CLK			0xd6
@@ -198,13 +158,6 @@
 			MX8MP_IOMUXC_SAI3_RXC__GPIO4_IO29	0x41
 #define GP_PCIE_DISABLE	<&gpio4 26 GPIO_ACTIVE_LOW>
 			MX8MP_IOMUXC_SAI2_TXD0__GPIO4_IO26	0x41
-		>;
-	};
-
-	pinctrl_pwm1: pwm1grp {
-		fsl,pins = <
-			/* J11 mipi display */
-			MX8MP_IOMUXC_GPIO1_IO01__PWM1_OUT	0x100
 		>;
 	};
 
@@ -242,22 +195,6 @@
 		>;
 	};
 
-	pinctrl_sc18is602b: sc18is602bgrp {
-		fsl,pins = <
-#define GP_SC18IS602B_RESET	<&gpio4 27 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27	0x101
-		>;
-	};
-
-	pinctrl_sn65dsi83: sn65dsi83grp {
-		fsl,pins = <
-#define GPIRQ_SN65DSI83	<&gpio4 0 IRQ_TYPE_LEVEL_HIGH>
-			MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00	0x04
-#define GP_SN65DSI83_EN	<&gpio4 27 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27	0x106
-		>;
-	};
-
 	pinctrl_sound_wm8960: sound-wm8960grp {
 		fsl,pins = <
 #define GP_WM8960_MIC_DET	<&gpio4 18 GPIO_ACTIVE_LOW>
@@ -277,26 +214,6 @@
 		>;
 	};
 
-	pinctrl_ts_ft5x06: ts-ft5x06grp {
-		fsl,pins = <
-#define GPIRQ_TS_FT5X06	<&gpio4 25 IRQ_TYPE_EDGE_FALLING>
-#define GP_TS_FT5X06_WAKE	<&gpio4 25 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_SAI2_TXC__GPIO4_IO25	0x149
-#define GP_TS_FT5X06_RESET	<&gpio4 24 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24	0x109
-		>;
-	};
-
-	pinctrl_ts_ft5x06_3: ts-ft5x06-3grp {
-		fsl,pins = <
-#define GPIRQ_TS_FT5X06_3	<&gpio1 1 IRQ_TYPE_EDGE_FALLING>
-#define GP_TS_FT5X06_WAKE_3	<&gpio1 1 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_GPIO1_IO01__GPIO1_IO01	0x149
-#define GP_TS_FT5X06_RESET_3	<&gpio4 24 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24	0x109
-		>;
-	};
-
 	pinctrl_ts_egalax_lvds: ts-egalax-lvdsgrp {
 		fsl,pins = <
 #define GPIRQ_TS_EGALAX_LVDS	<&gpio1 10 IRQ_TYPE_EDGE_FALLING>
@@ -310,16 +227,6 @@
 #define GPIRQ_TS_FT5X06_LVDS	<&gpio1 10 IRQ_TYPE_EDGE_FALLING>
 #define GP_TS_FT5X06_LVDS_WAKE	<&gpio1 10 GPIO_ACTIVE_LOW>
 			MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10	0x149
-		>;
-	};
-
-	pinctrl_ts_gt911: ts-gt911grp {
-		fsl,pins = <
-#define GPIRQ_TS_GT911	<&gpio4 25 IRQ_TYPE_LEVEL_HIGH>
-#define GP_TS_GT911_IRQ	<&gpio4 25 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_SAI2_TXC__GPIO4_IO25	0x1c0
-#define GP_TS_GT911_RESET	<&gpio4 24 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24	0x109
 		>;
 	};
 
@@ -416,48 +323,26 @@
 	};
 };
 
-#include "panel-com50h5n03ulc.dtsi"
-#include "panel-dmt050wvnxcmi.dtsi"
-#include "panel-lcd133-070.dtsi"
-#include "panel-lcm-jm430.dtsi"
-#include "panel-ltk0680ytmdb.dtsi"
-#include "panel-ltk080a60a004t.dtsi"
-#include "panel-lxd-m8509a.dtsi"
-#include "panel-m101nwwb.dtsi"
-
 / {
 	model = "Boundary i.MX8MPlus nitrogen8mp board";
 	compatible = "boundary,imx8mp-nitrogen8mp", "fsl,imx8mp";
 
 	aliases {
-		backlight_mipi = &backlight_mipi;
-		backlight_mipi2 = &backlight_mipi2;
 		backlight_lvds = &backlight_lvds;
 		backlight_lvds2 = &backlight_lvds2;
 		fb_lvds = &lcdif2;
 		fb_lvds2 = &lcdif2;
-		fb_mipi = &fb_mipi;
 		fb_hdmi = &lcdif3;
-		lcdif = &lcdif1;
 		ldb = &ldb;
 		ldb_chan = &ldb_chan;
 		ldb_chan2 = &ldb_chan2;
-		mipi = &fb_mipi;
-		mipi_dsi = &mipi_dsi;
-		mipi_dsi_bridge = &mipi_dsi;
-		mipi_to_lvds = &mipi_to_lvds;
-		pwm_mipi = &pwm1;
 		pwm_lvds = &pwm2;
 		pwm_lvds2 = &pwm2;
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
-		t_mipi = &t_mipi;
 		ts_atmel_mt = &ts_atmel_mt;
 		ts_egalax = &ts_egalax_lvds;
-		ts_ft5x06 = &ts_ft5x06;
 		ts_ft5x06_2 = &ts_ft5x06_lvds;
-		ts_ft5x06_3 = &ts_ft5x06_3;
-		ts_goodix = &ts_goodix;
 		ts_goodix2 = &ts_goodix_lvds2;
 		ts_goodix3 = &ts_goodix_lvds3;
 		ts_ili251x = &ts_ili251x_lvds;
@@ -488,15 +373,6 @@
 		pwms = <&pwm2 0 100000>;
 		status = "disabled";
 
-	};
-
-	backlight_mipi: backlight-mipi {
-		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
-		compatible = "pwm-backlight";
-		default-brightness-level = <8>;
-		display = <&lcdif1>;
-		pwms = <&pwm1 0 30000>;		/* 33.3 Khz */
-		status = "disabled";
 	};
 
 	chosen {
@@ -812,17 +688,6 @@
 };
 
 &i2c2d {
-	backlight_mipi2: backlight-mipi2@66 {
-		alias = <&backlight_mipi2>;
-		compatible = "rohm,bd2606";
-		default-brightness = <32>;	/* 63 is max */
-		display = <&display_subsystem>;
-		label = "bklght-bd2606";
-		led-sources = <0 1 2 3 4 5>;
-		reg = <0x66>;
-		status = "disabled";
-	};
-
 	rtc@52 {
 		backup-switchover-dsm;
 		compatible = "microcrystal,rv3028";
@@ -831,59 +696,6 @@
 		reg = <0x52>;
 		interrupts-extended = GPIRQ_RV3028;
 		wakeup-source;
-	};
-
-	spi_lcd: spi@2f {
-		compatible = "nxp,sc18is602b";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_sc18is602b>;
-		reg = <0x2f>;
-		reset-gpios = GP_SC18IS602B_RESET;
-		status = "disabled";
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		spidev_lcd: spidev@0 {
-			compatible = "spidev";
-			spi-cpha;
-			spi-cpol;
-			spi-max-frequency = <20000000>;
-			reg = <0>;
-		};
-	};
-
-	ts_ft5x06: touchscreen@38 {
-		compatible = "edt,ft5x06-ts";
-		interrupts-extended = GPIRQ_TS_FT5X06;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_ft5x06>;
-		reg = <0x38>;
-		reset-gpios = GP_TS_FT5X06_RESET;
-		wakeup-gpios = GP_TS_FT5X06_WAKE;
-		status = "disabled";
-	};
-
-	ts_ft5x06_3: touchscreen-3@38 {
-		compatible = "edt,ft5x06-ts";
-		interrupts-extended = GPIRQ_TS_FT5X06_3;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_ft5x06_3>;
-		reg = <0x38>;
-		reset-gpios = GP_TS_FT5X06_RESET_3;
-		wakeup-gpios = GP_TS_FT5X06_WAKE_3;
-		status = "disabled";
-	};
-
-	ts_goodix: touchscreen@5d {
-		compatible = "goodix,gt9271";
-		esd-recovery-timeout-ms = <2000>;
-		interrupts-extended = GPIRQ_TS_GT911;
-		irq-gpios = GP_TS_GT911_IRQ;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_gt911>;
-		reg = <0x5d>;
-		reset-gpios = GP_TS_GT911_RESET;
-		status = "disabled";
 	};
 };
 
@@ -1101,70 +913,6 @@
 	};
 };
 
-&mipi_dsi {
-	clocks = <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_DSI_PCLK>,
-		 <&media_blk_ctrl IMX8MP_CLK_MEDIA_BLK_CTRL_MIPI_DSI_CLKREF>,
-		 <&clk IMX8MP_CLK_MEDIA_DISP1_PIX_ROOT>;
-	clock-names = "cfg", "pll-ref", "pixel_clock";
-	status = "disabled";
-
-	fb_mipi: panel@0 {
-		backlight = <&backlight_mipi>;
-		bits-per-color = <8>;
-		bridge-de-active = <0>;
-		bus-format = "rgb888";
-		clocks = <&mipi_dsi 0>,
-			<&clk IMX8MP_CLK_MEDIA_DISP1_PIX_ROOT>;
-		clock-names = "mipi_clk", "pixel_clock";
-		compatible = "panel,common";
-		dsi-format = "rgb888";
-		dsi-lanes = <4>;
-#if 0
-		/* u-boot will set this where appropriate */
-		enable-gpios = GP_LTK08_MIPI_EN;
-		mipi-cmds = <&mipi_cmds_ltk080a60a004t>;
-#endif
-		mode-skip-eot;
-		mode-video;
-		mode-video-burst;
-		panel-height-mm = <136>;
-		panel-width-mm = <217>;
-		pinctrl-names = "sn65dsi83";
-		pinctrl-0 = <&pinctrl_sn65dsi83>;
-		power-supply = <&reg_vref_5v0>;
-		reg = <0>;
-		sn65dsi83 = <&mipi_to_lvds>;
-		spwg;
-
-		display-timings {
-			t_mipi: t-dsi-default {
-				/* m101nwwb by default */
-				clock-frequency = <66000000>;
-				hactive = <1280>;
-				vactive = <800>;
-				hback-porch = <5>;
-				hfront-porch = <123>;
-				vback-porch = <3>;
-				vfront-porch = <24>;
-				hsync-len = <1>;
-				vsync-len = <1>;
-				hsync-active = <0>;
-				vsync-active = <0>;
-				de-active = <1>;
-			};
-		};
-
-		mipi_to_lvds: mipi-to-lvds {
-			alias = <&mipi_to_lvds>;
-			enable-gpios = GP_SN65DSI83_EN;
-			i2c-address = <0x2c>;
-			i2c-bus = <&i2c2d>;
-			interrupts-extended = GPIRQ_SN65DSI83;
-			status = "disabled";
-		};
-	};
-};
-
 &mix_gpu_ml {
 	status = "okay";
 };
@@ -1195,12 +943,6 @@
 &pcie_phy {
 	clk_mode = <3>;
 	ext_osc = <1>;
-	status = "okay";
-};
-
-&pwm1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm1>;
 	status = "okay";
 };
 
@@ -1320,3 +1062,34 @@
 	status = "okay";
 	vmmc-supply = <&reg_vref_3v3>;
 };
+
+/* J11 mipi display */
+#define MIPI_DISPLAY		lcdif1
+#define MIPI_SUBSYSTEM		display_subsystem
+#define MIPI_I2C_BUS		i2c2d
+#define SKIP_LONTIUM_DAUGHTER_BOARDS		/* MIPI_I2C_BUS is already behind i2cmux */
+#define MIPI_PWM		pwm1
+#define MIPI_PHY_CLOCK		<&mipi_dsi 0>
+#define MIPI_PIXEL_CLOCK	<&clk IMX8MP_CLK_MEDIA_DISP1_PIX_ROOT>
+
+#define MIPI_PWM_GP		gpio1 1
+#define MIPI_PWM_PAD		MX8MP_IOMUXC_GPIO1_IO01__PWM1_OUT
+#define MIPI_PWM_PAD_GPIO	MX8MP_IOMUXC_GPIO1_IO01__GPIO1_IO01	/* Pin 7 */
+
+#define MIPI_IRQ_GP		gpio4 0
+#define MIPI_IRQ_PAD		MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00	/* Pin 8 */
+
+#define MIPI_TS_IRQ_GP		gpio4 25
+#define MIPI_TS_IRQ_PAD		MX8MP_IOMUXC_SAI2_TXC__GPIO4_IO25	/* Pin 9 */
+
+#define MIPI_TS_RESET_GP	gpio4 24
+#define MIPI_TS_RESET_PAD	MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24	/* Pin 10 */
+
+#define MIPI_ENABLE_GP		gpio4 27
+#define MIPI_ENABLE_PAD		MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27	/* Pin 11 */
+
+#define PAD_NOPULL		0x0
+#define PAD_PULLDN		0x100
+#define PAD_PULLUPIRQ		0x1c0
+#define PAD_PULLDNIRQ		0x180
+#include "nitrogen-mipi-dsi.dtsi"
