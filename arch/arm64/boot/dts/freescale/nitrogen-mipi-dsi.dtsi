@@ -23,13 +23,6 @@
 		>;
 	};
 
-	pinctrl_mipi_er_tft050: mipi-er-tft050grp {
-		fsl,pins = <
-#define GP_TC358767_EN	<&MIPI_ENABLE_GP GPIO_ACTIVE_HIGH>
-			  MIPI_ENABLE_PAD	PAD_PULLDN
-		>;
-	};
-
 	pinctrl_mipi_lcd133_070: mipi-lcd133-070grp {
 		fsl,pins = <
 #define GP_LCD133_070_RESET	<&MIPI_IRQ_GP GPIO_ACTIVE_LOW>
@@ -180,9 +173,6 @@
 #include "panel-cs005-0004-03.dtsi"
 #include "panel-dmt050wvnxcmi.dtsi"
 #include "panel-dmt055fhnmcmi.dtsi"
-#ifndef SKIP_LONTIUM_DAUGHTER_BOARDS
-#include "panel-er-tft050.dtsi"
-#endif
 #include "panel-lcd133-070.dtsi"
 #include "panel-lcm-jm430.dtsi"
 #include "panel-ls050t1sx12.dtsi"
@@ -459,8 +449,16 @@
 			  MIPI_IRQ_PAD	PAD_PULLUPIRQ
 		>;
 	};
+
+	pinctrl_mipi_er_tft050: mipi-er-tft050grp {
+		fsl,pins = <
+#define GP_TC358767_EN	<&MIPI_ENABLE_GP GPIO_ACTIVE_HIGH>
+			  MIPI_ENABLE_PAD	PAD_PULLDN
+		>;
+	};
 };
 
+#include "panel-er-tft050.dtsi"
 
 / {
 	aliases {
