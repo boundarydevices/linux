@@ -887,3 +887,16 @@
 #define PD_LVDS_TS_RESET(a)
 #define LVDS_NO_TS_RESET
 #include "nitrogen-lvds.dtsi"
+
+/ {
+	aliases {
+		/* Old style aliases (without lvds) for older u-boots */
+		/* Delete upon next branch */
+		ts_atmel_mt = &ts_lvds_atmel_mt;
+		ts_egalax = &ts_lvds_egalax;
+		ts_ft5x06_2 = &ts_lvds_ft5x06;
+		ts_goodix2 = &ts_lvds_goodix;
+		ts_goodix3 = &ts_lvds_goodix2;
+		ts_ili251x = &ts_lvds_ili251x;
+	};
+};
