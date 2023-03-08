@@ -12,20 +12,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
-	pinctrl_backlight_lvds: backlight-lvdsgrp {
-		fsl,pins = <
-#define GP_BACKLIGHT_LVDS  <&gpio4 22 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_SAI2_RXC__GPIO4_IO22	0x106
-		>;
-	};
-
-	pinctrl_backlight_lvds2: backlight-lvds2grp {
-		fsl,pins = <
-#define GP_BACKLIGHT_LVDS2  <&gpio4 21 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_SAI2_RXFS__GPIO4_IO21	0x106
-		>;
-	};
-
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
 			/* J31 */
@@ -161,15 +147,6 @@
 		>;
 	};
 
-	pinctrl_pwm2: pwm2grp {
-		fsl,pins = <
-			/* J27 pin 20 LVDS2 display */
-			MX8MP_IOMUXC_SAI5_RXD0__PWM2_OUT	0xd6
-			/* J28 pin 20 LVDS display */
-			MX8MP_IOMUXC_GPIO1_IO09__PWM2_OUT	0xd6
-		>;
-	};
-
 	pinctrl_pwm4: pwm4grp {
 		fsl,pins = <
 			/* J31, pin 36 */
@@ -201,49 +178,6 @@
 			MX8MP_IOMUXC_SAI1_TXD6__GPIO4_IO18	0x1c0
 #define GP_WM8960_HP_DET	<&gpio1 14 GPIO_ACTIVE_HIGH>
 			MX8MP_IOMUXC_GPIO1_IO14__GPIO1_IO14	0x80
-		>;
-	};
-
-	pinctrl_ts_atmel_lvds: ts-atmel-lvdsgrp {
-		fsl,pins = <
-#define GPIRQ_TS_ATMEL	<&gpio1 10 IRQ_TYPE_EDGE_FALLING>
-#define GP_TS_ATMEL	<&gpio1 10 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10	0x149
-#define GP_TS_ATMEL_RESET	<&gpio3 30 GPIO_ACTIVE_LOW>
-			/* No pad associated with gpio3 30 */
-		>;
-	};
-
-	pinctrl_ts_egalax_lvds: ts-egalax-lvdsgrp {
-		fsl,pins = <
-#define GPIRQ_TS_EGALAX_LVDS	<&gpio1 10 IRQ_TYPE_EDGE_FALLING>
-#define GP_TS_EGALAX_LVDS_WAKE	<&gpio1 10 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10	0x149
-		>;
-	};
-
-	pinctrl_ts_ft5x06_lvds: ts-ft5x06-lvdsgrp {
-		fsl,pins = <
-#define GPIRQ_TS_FT5X06_LVDS	<&gpio1 10 IRQ_TYPE_EDGE_FALLING>
-#define GP_TS_FT5X06_LVDS_WAKE	<&gpio1 10 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10	0x149
-		>;
-	};
-
-	pinctrl_ts_gt911_lvds: ts-gt911-lvdsgrp {
-		fsl,pins = <
-#define GPIRQ_TS_GT911_LVDS	<&gpio1 10 IRQ_TYPE_LEVEL_HIGH>
-#define GP_TS_GT911_LVDS_IRQ	<&gpio1 10 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10	0x1c0
-#define GP_TS_GT911_LVDS_RESET	<&gpio3 30 GPIO_OPEN_DRAIN>
-			/* No pad associated with gpio3 30 */
-		>;
-	};
-
-	pinctrl_ts_ili251x_lvds: ts-ili251x-lvdsgrp {
-		fsl,pins = <
-#define GPIRQ_TS_ILI251X_LVDS	<&gpio1 10 IRQ_TYPE_EDGE_FALLING>
-			MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10	0x149
 		>;
 	};
 
@@ -328,51 +262,8 @@
 	compatible = "boundary,imx8mp-nitrogen8mp", "fsl,imx8mp";
 
 	aliases {
-		backlight_lvds = &backlight_lvds;
-		backlight_lvds2 = &backlight_lvds2;
-		fb_lvds = &lcdif2;
-		fb_lvds2 = &lcdif2;
 		fb_hdmi = &lcdif3;
-		ldb = &ldb;
-		ldb_chan = &ldb_chan;
-		ldb_chan2 = &ldb_chan2;
-		pwm_lvds = &pwm2;
-		pwm_lvds2 = &pwm2;
-		t_lvds = &t_lvds;
-		t_lvds2 = &t_lvds2;
-		ts_atmel_mt = &ts_atmel_mt;
-		ts_egalax = &ts_egalax_lvds;
-		ts_ft5x06_2 = &ts_ft5x06_lvds;
-		ts_goodix2 = &ts_goodix_lvds2;
-		ts_goodix3 = &ts_goodix_lvds3;
-		ts_ili251x = &ts_ili251x_lvds;
 		usb_mux = &usb_mux;
-	};
-
-	backlight_lvds: backlight-lvds {
-		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
-		compatible = "pwm-backlight";
-		display = <&lcdif2>;
-		default-brightness-level = <8>;
-		enable-gpios = GP_BACKLIGHT_LVDS;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_backlight_lvds>;
-		pwms = <&pwm2 0 100000 0>;
-		status = "disabled";
-
-	};
-
-	backlight_lvds2: backlight-lvds2 {
-		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
-		compatible = "pwm-backlight";
-		display = <&lcdif2>;
-		default-brightness-level = <8>;
-		enable-gpios = GP_BACKLIGHT_LVDS2;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_backlight_lvds2>;
-		pwms = <&pwm2 0 100000 0>;
-		status = "disabled";
-
 	};
 
 	chosen {
@@ -713,72 +604,6 @@
 };
 
 &i2c4 {
-	ts_atmel_mt: touchscreen@4a {
-		compatible = "atmel,maxtouch";
-		interrupts-extended = GPIRQ_TS_ATMEL;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_atmel_lvds>;
-		reg = <0x4a>;
-		reset-gpios = GP_TS_ATMEL_RESET;
-		wakeup-gpios = GP_TS_ATMEL;
-		status = "disabled";
-	};
-
-	ts_egalax_lvds: touchscreen@4 {
-		compatible = "eeti,egalax_ts";
-		interrupts-extended = GPIRQ_TS_EGALAX_LVDS;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_egalax_lvds>;
-		reg = <0x04>;
-		status = "disabled";
-		wakeup-gpios = GP_TS_EGALAX_LVDS_WAKE;
-	};
-
-	ts_ft5x06_lvds: touchscreen@38 {
-		compatible = "edt,ft5x06-ts";
-		interrupts-extended = GPIRQ_TS_FT5X06_LVDS;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_ft5x06_lvds>;
-		reg = <0x38>;
-		status = "disabled";
-		wakeup-gpios = GP_TS_FT5X06_LVDS_WAKE;
-	};
-
-	ts_goodix_lvds2: touchscreen@14 {
-		compatible = "goodix,gt9271";
-		esd-recovery-timeout-ms = <2000>;
-		interrupts-extended = GPIRQ_TS_GT911_LVDS;
-		irq-gpios = GP_TS_GT911_LVDS_IRQ;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_gt911_lvds>;
-		reg = <0x14>;
-		reset-gpios = GP_TS_GT911_LVDS_RESET;
-		status = "disabled";
-	};
-
-	ts_goodix_lvds3: touchscreen@5d {
-		compatible = "goodix,gt9271";
-		esd-recovery-timeout-ms = <2000>;
-		interrupts-extended = GPIRQ_TS_GT911_LVDS;
-		irq-gpios = GP_TS_GT911_LVDS_IRQ;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_gt911_lvds>;
-		reg = <0x5d>;
-		reset-gpios = GP_TS_GT911_LVDS_RESET;
-		status = "disabled";
-	};
-
-	ts_ili251x_lvds: touchscreen@41 {
-		compatible = "ilitek,ili251x";
-		interrupts-extended = GPIRQ_TS_ILI251X_LVDS;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_ili251x_lvds>;
-		reg = <0x41>;
-		status = "disabled";
-		touchscreen-size-x = <0x3fff>;
-		touchscreen-size-y = <0x3fff>;
-	};
-
 	usb_mux: hd3ss3220@47 {
 		/* tusb320 is compatible with hd3ss3220 */
 		compatible = "ti,hd3ss3220";
@@ -817,54 +642,6 @@
 };
 
 &isp_1 {
-	status = "okay";
-};
-
-&ldb {
-	lvds-channel@0 {
-		backlight = <&backlight_lvds>;
-		fsl,data-mapping = "spwg";
-		fsl,data-width = <24>;
-
-		display-timings {
-			t_lvds: t_lvds_default {
-				/* m101nwwb by default */
-				clock-frequency = <74250000>;
-				hactive = <1280>;
-				vactive = <800>;
-				hback-porch = <5>;
-				hfront-porch = <123>;
-				vback-porch = <3>;
-				vfront-porch = <24>;
-				hsync-len = <1>;
-				vsync-len = <1>;
-			};
-		};
-	};
-
-	lvds-channel@1 {
-		backlight = <&backlight_lvds2>;
-		fsl,data-mapping = "spwg";
-		fsl,data-width = <24>;
-
-		display-timings {
-			t_lvds2: t_lvds_default {
-				/* m101nwwb by default */
-				clock-frequency = <74250000>;
-				hactive = <1280>;
-				vactive = <800>;
-				hback-porch = <5>;
-				hfront-porch = <123>;
-				vback-porch = <3>;
-				vfront-porch = <24>;
-				hsync-len = <1>;
-				vsync-len = <1>;
-			};
-		};
-	};
-};
-
-&ldb_phy {
 	status = "okay";
 };
 
@@ -943,12 +720,6 @@
 &pcie_phy {
 	clk_mode = <3>;
 	ext_osc = <1>;
-	status = "okay";
-};
-
-&pwm2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm2>;
 	status = "okay";
 };
 
@@ -1090,6 +861,29 @@
 
 #define PAD_NOPULL		0x0
 #define PAD_PULLDN		0x100
-#define PAD_PULLUPIRQ		0x1c0
+#define PAD_PULLUP		0x140
 #define PAD_PULLDNIRQ		0x180
+#define PAD_PULLUPIRQ		0x1c0
 #include "nitrogen-mipi-dsi.dtsi"
+
+#define LVDS_DISPLAY		lcdif2
+#define LVDS_I2C_BUS		i2c4
+#define LVDS_PWM		pwm2
+#define LVDS2_PWM		pwm2
+/* J28 pin 20 LVDS display, J27 pin 20 LVDS2 display */
+#define PD_LVDS_PWM(a)		MX8MP_IOMUXC_GPIO1_IO09__PWM2_OUT a MX8MP_IOMUXC_SAI5_RXD0__PWM2_OUT a
+
+#define GP_LVDS_BACKLIGHT(a)	<&gpio4 22 a>
+#define PD_LVDS_BACKLIGHT(a)	MX8MP_IOMUXC_SAI2_RXC__GPIO4_IO22 a
+
+#define GP_LVDS2_BACKLIGHT(a)	<&gpio4 21 a>
+#define PD_LVDS2_BACKLIGHT(a)	MX8MP_IOMUXC_SAI2_RXFS__GPIO4_IO21 a
+
+#define GP_LVDS_TS_IRQ(a)	<&gpio1 10 a>
+#define PD_LVDS_TS_IRQ(a)	MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10 a
+
+/* No pad associated with gpio3 30 */
+#define GP_LVDS_TS_RESET(a)	<&gpio3 30 a>
+#define PD_LVDS_TS_RESET(a)
+#define LVDS_NO_TS_RESET
+#include "nitrogen-lvds.dtsi"
