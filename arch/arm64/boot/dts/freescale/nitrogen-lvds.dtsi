@@ -1,0 +1,255 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2023 Boundary Devices
+ */
+
+&iomuxc {
+	pinctrl_backlight_lvds: backlight-lvdsgrp {
+		fsl,pins = <
+#define GP_BACKLIGHT_LVDS  <&LVDS_BACKLIGHT_GP GPIO_ACTIVE_HIGH>
+			LVDS_BACKLIGHT_PAD	PAD_PULLDN
+		>;
+	};
+
+#ifdef LVDS2_BACKLIGHT_PAD
+	pinctrl_backlight_lvds2: backlight-lvds2grp {
+		fsl,pins = <
+#define GP_BACKLIGHT_LVDS2  <&LVDS2_BACKLIGHT_GP GPIO_ACTIVE_HIGH>
+			LVDS2_BACKLIGHT_PAD	PAD_PULLDN
+		>;
+	};
+#endif
+
+	concat(pinctrl_, LVDS_PWM): concat(LVDS_PWM, grp) {
+		fsl,pins = <
+			LVDS_PWM_PAD(PAD_PULLDN)
+		>;
+	};
+
+	pinctrl_ts_lvds_atmel: ts-lvds-atmelgrp {
+		fsl,pins = <
+#define GPIRQ_TS_LVDS_ATMEL	<&LVDS_TS_IRQ_GP IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_LVDS_ATMEL	<&LVDS_TS_IRQ_GP GPIO_ACTIVE_LOW>
+			LVDS_TS_IRQ_PAD	PAD_PULLUPIRQ
+#define GP_TS_LVDS_ATMEL_RESET	<&LVDS_TS_RESET_GP GPIO_ACTIVE_LOW>
+			LVDS_TS_RESET_PAD(PAD_PULLDN)
+		>;
+	};
+
+	pinctrl_ts_lvds_egalax: ts-lvds-egalaxgrp {
+		fsl,pins = <
+#define GPIRQ_TS_LVDS_EGALAX	<&LVDS_TS_IRQ_GP IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_LVDS_EGALAX_WAKE	<&LVDS_TS_IRQ_GP GPIO_ACTIVE_LOW>
+			LVDS_TS_IRQ_PAD	PAD_PULLUPIRQ
+		>;
+	};
+
+	pinctrl_ts_lvds_ft5x06: ts-lvds-ft5x06grp {
+		fsl,pins = <
+#define GPIRQ_TS_LVDS_FT5X06	<&LVDS_TS_IRQ_GP IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_LVDS_FT5X06_WAKE	<&LVDS_TS_IRQ_GP GPIO_ACTIVE_LOW>
+			LVDS_TS_IRQ_PAD	PAD_PULLUPIRQ
+#define GP_TS_LVDS_FT5X06_RESET	<&LVDS_TS_RESET_GP GPIO_ACTIVE_LOW>
+			LVDS_TS_RESET_PAD(PAD_PULLDN)
+		>;
+	};
+
+	pinctrl_ts_lvds_gt911: ts-lvds-gt911grp {
+		fsl,pins = <
+#define GPIRQ_TS_LVDS_GT911	<&LVDS_TS_IRQ_GP IRQ_TYPE_LEVEL_HIGH>
+#define GP_TS_LVDS_GT911_IRQ	<&LVDS_TS_IRQ_GP GPIO_ACTIVE_HIGH>
+			LVDS_TS_IRQ_PAD	PAD_PULLUPIRQ
+#define GP_TS_LVDS_GT911_RESET	<&LVDS_TS_RESET_GP GPIO_OPEN_DRAIN>
+			LVDS_TS_RESET_PAD(PAD_PULLUP)
+		>;
+	};
+
+	pinctrl_ts_lvds_ili251x: ts-lvds-ili251xgrp {
+		fsl,pins = <
+#define GPIRQ_TS_LVDS_ILI251X	<&LVDS_TS_IRQ_GP IRQ_TYPE_EDGE_FALLING>
+			LVDS_TS_IRQ_PAD	PAD_PULLUPIRQ
+		>;
+	};
+};
+
+/ {
+	aliases {
+		backlight_lvds = &backlight_lvds;
+#ifdef LVDS2_BACKLIGHT_PAD
+		backlight_lvds2 = &backlight_lvds2;
+#endif
+		fb_lvds = &LVDS_DISPLAY;
+		fb_lvds2 = &LVDS_DISPLAY;
+		ldb = &ldb;
+		ldb_chan = &ldb_chan;
+		ldb_chan2 = &ldb_chan2;
+		pwm_lvds = &LVDS_PWM;
+		pwm_lvds2 = &LVDS_PWM;
+		t_lvds = &t_lvds;
+		t_lvds2 = &t_lvds2;
+		ts_atmel_mt = &ts_lvds_atmel_mt;
+		ts_egalax = &ts_lvds_egalax;
+		ts_ft5x06_2 = &ts_lvds_ft5x06;
+		ts_goodix2 = &ts_lvds_goodix2;
+#ifdef LVDS_NO_TS_RESET
+		ts_goodix3 = &ts_lvds_goodix3;
+#endif
+		ts_ili251x = &ts_lvds_ili251x;
+	};
+
+	backlight_lvds: backlight-lvds {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		display = <&LVDS_DISPLAY>;
+		default-brightness-level = <8>;
+		enable-gpios = GP_BACKLIGHT_LVDS;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight_lvds>;
+		pwms = <&LVDS_PWM 0 100000>;
+		status = "disabled";
+	};
+
+#ifdef LVDS2_BACKLIGHT_PAD
+	backlight_lvds2: backlight-lvds2 {
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
+		compatible = "pwm-backlight";
+		display = <&LVDS_DISPLAY>;
+		default-brightness-level = <8>;
+		enable-gpios = GP_BACKLIGHT_LVDS2;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight_lvds2>;
+		pwms = <&LVDS_PWM 0 100000>;
+		status = "disabled";
+	};
+#endif
+
+};
+
+&i2c4 {
+	ts_lvds_atmel_mt: touchscreen@4a {
+		compatible = "atmel,maxtouch";
+		interrupts-extended = GPIRQ_TS_LVDS_ATMEL;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_lvds_atmel>;
+		reg = <0x4a>;
+		reset-gpios = GP_TS_LVDS_ATMEL_RESET;
+		wakeup-gpios = GP_TS_LVDS_ATMEL;
+		status = "disabled";
+	};
+
+	ts_lvds_egalax: touchscreen@4 {
+		compatible = "eeti,egalax_ts";
+		interrupts-extended = GPIRQ_TS_LVDS_EGALAX;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_lvds_egalax>;
+		reg = <0x04>;
+		status = "disabled";
+		wakeup-gpios = GP_TS_LVDS_EGALAX_WAKE;
+	};
+
+	ts_lvds_ft5x06: touchscreen@38 {
+		compatible = "edt,ft5x06-ts";
+		interrupts-extended = GPIRQ_TS_LVDS_FT5X06;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_lvds_ft5x06>;
+		reg = <0x38>;
+#ifndef LVDS_NO_TS_RESET
+		reset-gpios = GP_TS_LVDS_FT5X06_RESET;
+#endif
+		status = "disabled";
+		wakeup-gpios = GP_TS_LVDS_FT5X06_WAKE;
+	};
+
+	ts_lvds_goodix2: touchscreen@14 {
+		compatible = "goodix,gt9271";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_TS_LVDS_GT911;
+		irq-gpios = GP_TS_LVDS_GT911_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_lvds_gt911>;
+		reg = <0x14>;
+		reset-gpios = GP_TS_LVDS_GT911_RESET;
+		status = "disabled";
+	};
+
+#ifdef LVDS_NO_TS_RESET
+	ts_lvds_goodix3: touchscreen@5d {
+		compatible = "goodix,gt9271";
+		esd-recovery-timeout-ms = <2000>;
+		interrupts-extended = GPIRQ_TS_LVDS_GT911;
+		irq-gpios = GP_TS_LVDS_GT911_IRQ;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_lvds_gt911>;
+		reg = <0x5d>;
+		reset-gpios = GP_TS_LVDS_GT911_RESET;
+		status = "disabled";
+	};
+#endif
+
+	ts_lvds_ili251x: touchscreen@41 {
+		compatible = "ilitek,ili251x";
+		interrupts-extended = GPIRQ_TS_LVDS_ILI251X;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_lvds_ili251x>;
+		reg = <0x41>;
+		status = "disabled";
+		touchscreen-size-x = <0x3fff>;
+		touchscreen-size-y = <0x3fff>;
+	};
+};
+
+&ldb {
+	lvds-channel@0 {
+		backlight = <&backlight_lvds>;
+		fsl,data-mapping = "spwg";
+		fsl,data-width = <24>;
+
+		display-timings {
+			t_lvds: t_lvds_default {
+				/* m101nwwb by default */
+				clock-frequency = <74250000>;
+				hactive = <1280>;
+				vactive = <800>;
+				hback-porch = <5>;
+				hfront-porch = <123>;
+				vback-porch = <3>;
+				vfront-porch = <24>;
+				hsync-len = <1>;
+				vsync-len = <1>;
+			};
+		};
+	};
+
+	lvds-channel@1 {
+#ifdef LVDS2_BACKLIGHT_PAD
+		backlight = <&backlight_lvds2>;
+#endif
+		fsl,data-mapping = "spwg";
+		fsl,data-width = <24>;
+
+		display-timings {
+			t_lvds2: t_lvds_default {
+				/* m101nwwb by default */
+				clock-frequency = <74250000>;
+				hactive = <1280>;
+				vactive = <800>;
+				hback-porch = <5>;
+				hfront-porch = <123>;
+				vback-porch = <3>;
+				vfront-porch = <24>;
+				hsync-len = <1>;
+				vsync-len = <1>;
+			};
+		};
+	};
+};
+
+&ldb_phy {
+	status = "okay";
+};
+
+&LVDS_PWM {
+	pinctrl-names = "default";
+	pinctrl-0 = <&concat(pinctrl_, LVDS_PWM)>;
+	status = "okay";
+};
