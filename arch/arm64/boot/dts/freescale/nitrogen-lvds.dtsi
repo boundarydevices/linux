@@ -87,14 +87,14 @@
 		pwm_lvds2 = &LVDS_PWM;
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
-		ts_atmel_mt = &ts_lvds_atmel_mt;
-		ts_egalax = &ts_lvds_egalax;
-		ts_ft5x06_2 = &ts_lvds_ft5x06;
-		ts_goodix2 = &ts_lvds_goodix2;
+		ts_lvds_atmel_mt = &ts_lvds_atmel_mt;
+		ts_lvds_egalax = &ts_lvds_egalax;
+		ts_lvds_ft5x06 = &ts_lvds_ft5x06;
+		ts_lvds_goodix = &ts_lvds_goodix;
 #ifdef LVDS_NO_TS_RESET
-		ts_goodix3 = &ts_lvds_goodix3;
+		ts_lvds_goodix2 = &ts_lvds_goodix2;
 #endif
-		ts_ili251x = &ts_lvds_ili251x;
+		ts_lvds_ili251x = &ts_lvds_ili251x;
 	};
 
 	backlight_lvds: backlight-lvds {
@@ -160,7 +160,7 @@
 		wakeup-gpios = GP_TS_LVDS_FT5X06_WAKE;
 	};
 
-	ts_lvds_goodix2: touchscreen@14 {
+	ts_lvds_goodix: touchscreen@14 {
 		compatible = "goodix,gt9271";
 		esd-recovery-timeout-ms = <2000>;
 		interrupts-extended = GPIRQ_TS_LVDS_GT911;
@@ -173,7 +173,7 @@
 	};
 
 #ifdef LVDS_NO_TS_RESET
-	ts_lvds_goodix3: touchscreen@5d {
+	ts_lvds_goodix2: touchscreen@5d {
 		compatible = "goodix,gt9271";
 		esd-recovery-timeout-ms = <2000>;
 		interrupts-extended = GPIRQ_TS_LVDS_GT911;
