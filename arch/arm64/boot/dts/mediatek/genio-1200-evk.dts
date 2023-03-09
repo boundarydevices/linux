@@ -874,6 +874,23 @@
 		};
 	};
 
+	hdmi0_pins_default: hdmi0default {
+		hdmirxhpd {
+			pinmux = <PINMUX_GPIO27__FUNC_HDMIRX20_HTPLG>;
+		};
+		hdmirx5v {
+			pinmux = <PINMUX_GPIO28__FUNC_HDMIRX20_PWR5V>;
+			bias-disable;
+		};
+		hdmirxscl {
+			pinmux = <PINMUX_GPIO29__FUNC_HDMIRX20_SCL>;
+		};
+		hdmirxsda {
+			pinmux = <PINMUX_GPIO30__FUNC_HDMIRX20_SDA>;
+			drive-strength = <MTK_DRIVE_10mA>;
+		};
+	};
+
 	dptx_pin: dptx_pin_default {
 		pins_cmd_dat1 {
 			pinmux = <PINMUX_GPIO18__FUNC_DP_TX_HPD>;
@@ -1155,6 +1172,14 @@
 };
 
 &disp_dpi1 {
+	status = "okay";
+};
+
+&hdmirx0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&hdmi0_pins_default>;
+	hdmi33v-supply = <&mt6359_vcn33_1_wifi_ldo_reg>;
+	hdmi08v-supply = <&mt6359_va09_ldo_reg>;
 	status = "okay";
 };
 

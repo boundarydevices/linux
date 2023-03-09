@@ -3423,6 +3423,33 @@
 			};
 		};
 
+		hdmirx0: hdmirx@1c400000 {
+			compatible = "mediatek,mt8195-hdmirx";
+			clocks = <&topckgen CLK_TOP_HDMI_APB>,
+				 <&topckgen CLK_TOP_MSDCPLL_D2>,
+				 <&topckgen CLK_TOP_HD20_HDCP_CCLK>,
+				 <&topckgen CLK_TOP_MSDCPLL_D4>,
+				 <&topckgen CLK_TOP_HDMI_XTAL>;
+			power-domains = <&spm MT8195_POWER_DOMAIN_HDMI_RX>;
+			clock-names = "hdmiclksel",
+				  "hdmiclk208m",
+				  "hdcpclksel",
+				  "hdcpclk104m",
+				  "hdmisel";
+			reg = <0 0x1c400000 0 0x1000>, /* rx */
+				  <0 0x1c300000 0 0x1000>, /* tx */
+				  <0 0x11d5f000 0 0x1000>, /* vdout */
+				  <0 0x11d60000 0 0x3000>, /* phy */
+				  <0 0x10014800 0 0x0400>, /* scdc */
+				  <0 0x10014400 0 0x0400>, /* edid */
+				  <0 0x1000c000 0 0x1000>, /* apmixedsys */
+				  <0 0x10000000 0 0x1000>, /* topckgen */
+				  <0 0x10007000 0 0x1000>; /* toprgu */
+			interrupts = <GIC_SPI 678 IRQ_TYPE_LEVEL_HIGH 0>,
+				<GIC_SPI 823 IRQ_TYPE_LEVEL_HIGH 0>;
+			status = "disabled";
+		};
+
 		edp_tx: edp-tx@1c500000 {
 			status = "disabled";
 			compatible = "mediatek,mt8195-edp-tx";
