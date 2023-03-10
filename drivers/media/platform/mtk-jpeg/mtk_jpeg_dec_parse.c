@@ -12,6 +12,7 @@
 
 #define TEM	0x01
 #define SOF0	0xc0
+#define DHT	0xc4
 #define RST	0xd0
 #define SOI	0xd8
 #define EOI	0xd9
@@ -54,18 +55,65 @@ static void read_skip(struct mtk_jpeg_stream *stream, long len)
 		read_byte(stream);
 }
 
+static bool parse_header(struct mtk_jpeg_stream *stream,
+			struct mtk_jpeg_dec_param *param)
+{
+	int i = 0, byte;
+	u32 word;
+
+	/* length */
+	if (read_word_be(stream, &word))
+		goto parse_end;
+
+	/* precision */
+	if (read_byte(stream) == -1)
+		goto parse_end;
+
+	if (read_word_be(stream, &word))
+		goto parse_end;
+	param->pic_h = word;
+
+	if (read_word_be(stream, &word))
+		goto parse_end;
+	param->pic_w = word;
+
+	param->comp_num = read_byte(stream);
+	if (param->comp_num != 1 && param->comp_num != 3)
+		goto parse_end;
+
+	for (i = 0; i < param->comp_num; i++) {
+		param->comp_id[i] = read_byte(stream);
+		if (param->comp_id[i] == -1)
+			break;
+
+		/* sampling */
+		byte = read_byte(stream);
+		if (byte == -1)
+			break;
+		param->sampling_w[i] = (byte >> 4) & 0x0F;
+		param->sampling_h[i] = byte & 0x0F;
+
+		param->qtbl_num[i] = read_byte(stream);
+		if (param->qtbl_num[i] == -1)
+			break;
+	}
+
+parse_end:
+	return !(i == param->comp_num);
+
+}
 static bool mtk_jpeg_do_parse(struct mtk_jpeg_dec_param *param, u8 *src_addr_va,
 			      u32 src_size)
 {
 	bool notfound = true;
+	bool file_end = false;
 	struct mtk_jpeg_stream stream;
 
 	stream.addr = src_addr_va;
 	stream.size = src_size;
 	stream.curr = 0;
-
-	while (notfound) {
-		int i, length, byte;
+	while (!file_end && (!param->huffman_tb_exist || notfound)) {
+		int length, byte;
 		u32 word;
 
 		byte = read_byte(&stream);
@@ -84,49 +132,17 @@ static bool mtk_jpeg_do_parse(struct mtk_jpeg_dec_param *param, u8 *src_addr_va,
 		length = 0;
 		switch (byte) {
 		case SOF0:
-			/* length */
-			if (read_word_be(&stream, &word))
-				break;
-
-			/* precision */
-			if (read_byte(&stream) == -1)
-				break;
-
-			if (read_word_be(&stream, &word))
-				break;
-			param->pic_h = word;
-
-			if (read_word_be(&stream, &word))
-				break;
-			param->pic_w = word;
-
-			param->comp_num = read_byte(&stream);
-			if (param->comp_num != 1 && param->comp_num != 3)
-				break;
-
-			for (i = 0; i < param->comp_num; i++) {
-				param->comp_id[i] = read_byte(&stream);
-				if (param->comp_id[i] == -1)
-					break;
-
-				/* sampling */
-				byte = read_byte(&stream);
-				if (byte == -1)
-					break;
-				param->sampling_w[i] = (byte >> 4) & 0x0F;
-				param->sampling_h[i] = byte & 0x0F;
-
-				param->qtbl_num[i] = read_byte(&stream);
-				if (param->qtbl_num[i] == -1)
-					break;
-			}
-
-			notfound = !(i == param->comp_num);
+			notfound = parse_header(&stream, param);
 			break;
 		case RST ... RST + 7:
 		case SOI:
-		case EOI:
 		case TEM:
+			break;
+		case EOI:
+			file_end = true;
+			break;
+		case DHT:
+			param->huffman_tb_exist = 1;
 			break;
 		default:
 			if (read_word_be(&stream, &word))
@@ -136,7 +152,6 @@ static bool mtk_jpeg_do_parse(struct mtk_jpeg_dec_param *param, u8 *src_addr_va,
 			break;
 		}
 	}
-
 	return !notfound;
 }
 

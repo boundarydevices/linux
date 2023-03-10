@@ -53,6 +53,7 @@ struct mtk_jpeg_dec_param {
 	u32 uv_size;
 	u32 dec_size;
 	u8 uv_brz_w;
+	u8 huffman_tb_exist;
 };
 
 struct mtk_jpeg_bs {
