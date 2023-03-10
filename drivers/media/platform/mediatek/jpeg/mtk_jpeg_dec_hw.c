@@ -376,6 +376,14 @@ static void mtk_jpeg_dec_set_q_table(void __iomem *base, u32 id0, u32 id1,
 	writel(val, base + JPGDEC_REG_QT_ID);
 }
 
+static void mtk_jpeg_dec_set_huffman_mode(void __iomem *base, u8 huffman_tb_exist)
+{
+	if (!huffman_tb_exist) {
+		writel(0x1, base + JPGDEC_REG_ST_HUFFMAN_EN);
+		writel(0x0, base + JPGDEC_REG_BUILD_HUFF_INDEX);
+	}
+}
+
 static void mtk_jpeg_dec_set_dma_group(void __iomem *base, u32 mcu_group,
 				       u32 group_num, u32 last_mcu)
 {
@@ -421,6 +429,7 @@ void mtk_jpeg_dec_set_config(void __iomem *base,
 				 cfg->comp_id[2]);
 	mtk_jpeg_dec_set_q_table(base, cfg->qtbl_num[0],
 				 cfg->qtbl_num[1], cfg->qtbl_num[2]);
+	mtk_jpeg_dec_set_huffman_mode(base, cfg->huffman_tb_exist);
 	mtk_jpeg_dec_set_sampling_factor(base, cfg->comp_num,
 					 cfg->sampling_w[0],
 					 cfg->sampling_h[0],
