@@ -1435,7 +1435,7 @@ static const struct tc_settings mt8188_tc_settings[] = {
 	}
 };
 
-static const struct lvts_data mt8188_lvts_data = {
+static struct lvts_data mt8188_lvts_data = {
 	.counting_window_us = 20,
 	.num_domain = MT8188_NUM_DOMAIN,
 	.num_tc = (ARRAY_SIZE(mt8188_tc_settings)),
