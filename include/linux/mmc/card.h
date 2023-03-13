@@ -237,6 +237,15 @@ struct mmc_queue_req;
 
 #define SDIO_MAX_FUNCS		7
 
+#define SDIO_FUNC_0		0
+#define SDIO_FUNC_1		1
+#define SDIO_FUNC_2		2
+#define SDIO_FUNC_3		3
+#define SDIO_FUNC_4		4
+#define SDIO_FUNC_5		5
+#define SDIO_FUNC_6		6
+#define SDIO_FUNC_7		7
+
 /* The number of MMC physical partitions.  These consist of:
  * boot partitions (2), general purpose partitions (4) and
  * RPMB partition (1) in MMC v4.4.

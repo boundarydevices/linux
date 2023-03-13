@@ -297,11 +297,11 @@ static int brcmf_sdiod_skbuff_read(struct brcmf_sdio_dev *sdiodev,
 	req_sz &= (uint)~3;
 
 	switch (func->num) {
-	case 1:
+	case SDIO_FUNC_1:
 		err = sdio_memcpy_fromio(func, ((u8 *)(skb->data)), addr,
 					 req_sz);
 		break;
-	case 2:
+	case SDIO_FUNC_2:
 		err = sdio_readsb(func, ((u8 *)(skb->data)), addr, req_sz);
 		break;
 	default:
@@ -348,7 +348,7 @@ static int mmc_submit_one(struct mmc_data *md, struct mmc_request *mr,
 	mc->arg |= (*addr & 0x1FFFF) << 9;	/* address */
 	mc->arg |= md->blocks & 0x1FF;	/* block count */
 	/* incrementing addr for function 1 */
-	if (func->num == 1)
+	if (func->num == SDIO_FUNC_1)
 		*addr += req_sz;
 
 	mmc_set_data_timeout(md, func->card);
@@ -441,7 +441,7 @@ static int brcmf_sdiod_sglist_rw(struct brcmf_sdio_dev *sdiodev,
 	mmc_cmd.arg |= (func->num & 0x7) << 28;	/* SDIO func num */
 	mmc_cmd.arg |= 1 << 27;			/* block mode */
 	/* for function 1 the addr will be incremented */
-	mmc_cmd.arg |= (func->num == 1) ? 1 << 26 : 0;
+	mmc_cmd.arg |= (func->num == SDIO_FUNC_1) ? 1 << 26 : 0;
 	mmc_cmd.flags = MMC_RSP_SPI_R5 | MMC_RSP_R5 | MMC_CMD_ADTC;
 	mmc_req.cmd = &mmc_cmd;
 	mmc_req.data = &mmc_dat;
@@ -1048,11 +1048,11 @@ static int brcmf_ops_sdio_probe(struct sdio_func *func,
 	brcmf_sdiod_acpi_set_power_manageable(dev, 0);
 
 	/* Consume func num 1 but dont do anything with it. */
-	if (func->num == 1)
+	if (func->num == SDIO_FUNC_1)
 		return 0;
 
 	/* Ignore anything but func 2 */
-	if (func->num != 2)
+	if (func->num != SDIO_FUNC_2)
 		return -ENODEV;
 
 	bus_if = kzalloc(sizeof(struct brcmf_bus), GFP_KERNEL);
@@ -1116,7 +1116,7 @@ static void brcmf_ops_sdio_remove(struct sdio_func *func)
 		/* start by unregistering irqs */
 		brcmf_sdiod_intr_unregister(sdiodev);
 
-		if (func->num != 1)
+		if (func->num != SDIO_FUNC_1)
 			return;
 
 		/* only proceed with rest of cleanup if func 1 */
@@ -1177,7 +1177,7 @@ static int brcmf_ops_sdio_suspend(struct device *dev)
 	if (!retry && config->pm_state == BRCMF_CFG80211_PM_STATE_SUSPENDING)
 		brcmf_err("timed out wait for cfg80211 suspended\n");
 
-	if (func->num != 1)
+	if (func->num != SDIO_FUNC_1)
 		return 0;
 
 	sdiodev = bus_if->bus_priv.sdio;
@@ -1214,7 +1214,7 @@ static int brcmf_ops_sdio_resume(struct device *dev)
 	int ret = 0;
 
 	brcmf_dbg(SDIO, "Enter: F%d\n", func->num);
-	if (func->num != 2)
+	if (func->num != SDIO_FUNC_2)
 		return 0;
 
 	if (!sdiodev->wowl_enabled) {
