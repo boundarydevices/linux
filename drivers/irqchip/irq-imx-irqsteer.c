@@ -55,6 +55,10 @@ struct irqsteer_data {
 	struct device           *trusty_dev;
 };
 
+#ifdef writel_relaxed
+#undef writel_relaxed
+#endif
+
 #define writel_relaxed(v, c) \
 	do { \
 		if (data->trusty_dev) { \
