@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2021-2022 NXP
+ * Copyright 2021-2023 NXP
  * Author: Alice Guo <alice.guo@nxp.com>
  * Author: Pankaj Gupta <pankaj.gupta@nxp.com>
  */
@@ -610,6 +610,22 @@ static int ele_mu_ioctl_setup_iobuf_handler(struct ele_mu_device_ctx *dev_ctx,
 			goto exit;
 		}
 	} else {
+		if (io.flags & SECO_MU_IO_FLAGS_IS_IN_OUT) {
+		/*
+		 * buffer is input and output both:
+		 * flush the memory "shared_mem->ptr + pos" with
+		 * size io.length.
+		 */
+			err = (int)copy_from_user(shared_mem->ptr + pos, io.user_buf,
+						  io.length);
+			if (err) {
+				devctx_err(dev_ctx,
+					   "Failed copy data to shared memory\n");
+				err = -EFAULT;
+				goto exit;
+			}
+		}
+
 		/*
 		 * buffer is output:
 		 * add an entry in the "pending buffers" list so data
