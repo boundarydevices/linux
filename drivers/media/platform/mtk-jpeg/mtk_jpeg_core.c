@@ -507,6 +507,8 @@ static int mtk_jpeg_subscribe_event(struct v4l2_fh *fh,
 	switch (sub->type) {
 	case V4L2_EVENT_SOURCE_CHANGE:
 		return v4l2_src_change_event_subscribe(fh, sub);
+	case V4L2_EVENT_EOS:
+		return v4l2_event_subscribe(fh, sub, 0, NULL);
 	}
 
 	return v4l2_ctrl_subscribe_event(fh, sub);
@@ -645,6 +647,72 @@ end:
 	return v4l2_m2m_qbuf(file, fh->m2m_ctx, buf);
 }
 
+static int mtk_jpeg_decoder_cmd(struct file *file, void *priv,
+				struct v4l2_decoder_cmd *cmd)
+{
+	struct v4l2_fh *fh = file->private_data;
+	struct mtk_jpeg_ctx *ctx = mtk_jpeg_fh_to_ctx(fh);
+	struct mtk_jpeg_dev *jpeg = ctx->jpeg;
+	int ret;
+	unsigned long flags;
+
+	ret = v4l2_m2m_ioctl_try_decoder_cmd(file, fh, cmd);
+	if (ret < 0)
+		return ret;
+
+	v4l2_dbg(1, debug, &jpeg->v4l2_dev, "dec cmd=%d\n", cmd->cmd);
+
+	if (cmd->cmd == V4L2_DEC_CMD_STOP) {
+		if (!vb2_is_streaming(v4l2_m2m_get_src_vq(fh->m2m_ctx))) {
+			v4l2_dbg(0, debug, &jpeg->v4l2_dev, "Out stream off\n");
+			return 0;
+		}
+
+		spin_lock_irqsave(&ctx->jpeg->hw_lock, flags);
+		ret = v4l2_m2m_ioctl_decoder_cmd(file, priv, cmd);
+		spin_unlock_irqrestore(&ctx->jpeg->hw_lock, flags);
+		if (ret < 0) {
+			v4l2_err(&jpeg->v4l2_dev, "dec cmd fail %d\n", ret);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+static int mtk_jpeg_encoder_cmd(struct file *file, void *priv,
+				struct v4l2_encoder_cmd *cmd)
+{
+	struct v4l2_fh *fh = file->private_data;
+	struct mtk_jpeg_ctx *ctx = mtk_jpeg_fh_to_ctx(fh);
+	struct mtk_jpeg_dev *jpeg = ctx->jpeg;
+	int ret;
+	unsigned long flags;
+
+	ret = v4l2_m2m_ioctl_try_encoder_cmd(file, fh, cmd);
+	if (ret < 0)
+		return ret;
+
+	v4l2_dbg(1, debug, &jpeg->v4l2_dev, "enc cmd=%d\n", cmd->cmd);
+
+	if (cmd->cmd == V4L2_ENC_CMD_STOP) {
+		if (!vb2_is_streaming(v4l2_m2m_get_src_vq(fh->m2m_ctx)) ||
+		    !vb2_is_streaming(v4l2_m2m_get_dst_vq(fh->m2m_ctx))) {
+			v4l2_dbg(0, debug, &jpeg->v4l2_dev, "Out or Cap stream off\n");
+			return 0;
+		}
+
+		spin_lock_irqsave(&ctx->jpeg->hw_lock, flags);
+		ret = v4l2_m2m_ioctl_encoder_cmd(file, priv, cmd);
+		spin_unlock_irqrestore(&ctx->jpeg->hw_lock, flags);
+		if (ret < 0) {
+			v4l2_err(&jpeg->v4l2_dev, "enc cmd fail %d\n", ret);
+			return 0;
+		}
+	}
+
+	return 0;
+}
 static const struct v4l2_ioctl_ops mtk_jpeg_enc_ioctl_ops = {
 	.vidioc_querycap                = mtk_jpeg_querycap,
 	.vidioc_enum_fmt_vid_cap	= mtk_jpeg_enum_fmt_vid_cap,
@@ -670,6 +738,9 @@ static const struct v4l2_ioctl_ops mtk_jpeg_enc_ioctl_ops = {
 	.vidioc_streamoff               = v4l2_m2m_ioctl_streamoff,
 
 	.vidioc_unsubscribe_event	= v4l2_event_unsubscribe,
+
+	.vidioc_try_encoder_cmd		= v4l2_m2m_ioctl_try_encoder_cmd,
+	.vidioc_encoder_cmd		= mtk_jpeg_encoder_cmd,
 };
 
 static const struct v4l2_ioctl_ops mtk_jpeg_dec_ioctl_ops = {
@@ -696,6 +767,9 @@ static const struct v4l2_ioctl_ops mtk_jpeg_dec_ioctl_ops = {
 	.vidioc_streamoff               = v4l2_m2m_ioctl_streamoff,
 
 	.vidioc_unsubscribe_event	= v4l2_event_unsubscribe,
+
+	.vidioc_try_decoder_cmd		= v4l2_m2m_ioctl_try_decoder_cmd,
+	.vidioc_decoder_cmd		= mtk_jpeg_decoder_cmd,
 };
 
 static int mtk_jpeg_queue_setup(struct vb2_queue *q,
@@ -819,9 +893,22 @@ static void mtk_jpeg_enc_buf_queue(struct vb2_buffer *vb)
 {
 	struct mtk_jpeg_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
 	struct mtk_jpeg_dev *jpeg = ctx->jpeg;
+	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
 
 	v4l2_dbg(2, debug, &jpeg->v4l2_dev, "(%d) buf_q id=%d, vb=%p\n",
 		 vb->vb2_queue->type, vb->index, vb);
+
+	if (V4L2_TYPE_IS_CAPTURE(vb->vb2_queue->type) &&
+		vb2_is_streaming(vb->vb2_queue) &&
+		v4l2_m2m_dst_buf_is_last(ctx->fh.m2m_ctx)) {
+		struct mtk_jpeg_q_data *q_data;
+
+		q_data = mtk_jpeg_get_q_data(ctx, vb->vb2_queue->type);
+		vbuf->field = V4L2_FIELD_NONE;
+		v4l2_m2m_last_buffer_done(ctx->fh.m2m_ctx, vbuf);
+		v4l2_dbg(0, debug, &jpeg->v4l2_dev, "last cap buf done\n");
+		return;
+	}
 
 	v4l2_m2m_buf_queue(ctx->fh.m2m_ctx, to_vb2_v4l2_buffer(vb));
 }
@@ -832,10 +919,23 @@ static void mtk_jpeg_dec_buf_queue(struct vb2_buffer *vb)
 	struct mtk_jpeg_dec_param *param;
 	struct mtk_jpeg_dev *jpeg = ctx->jpeg;
 	struct mtk_jpeg_src_buf *jpeg_src_buf;
+	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
 	bool header_valid;
 
 	v4l2_dbg(2, debug, &jpeg->v4l2_dev, "(%d) buf_q id=%d, vb=%p\n",
 		 vb->vb2_queue->type, vb->index, vb);
+
+	if (V4L2_TYPE_IS_CAPTURE(vb->vb2_queue->type) &&
+		vb2_is_streaming(vb->vb2_queue) &&
+		v4l2_m2m_dst_buf_is_last(ctx->fh.m2m_ctx)) {
+		struct mtk_jpeg_q_data *q_data;
+
+		q_data = mtk_jpeg_get_q_data(ctx, vb->vb2_queue->type);
+		vbuf->field = V4L2_FIELD_NONE;
+		v4l2_m2m_last_buffer_done(ctx->fh.m2m_ctx, vbuf);
+		v4l2_dbg(0, debug, &jpeg->v4l2_dev, "last cap buf done\n");
+		return;
+	}
 
 	if (vb->vb2_queue->type != V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
 		goto end;
@@ -1061,6 +1161,11 @@ dec_end:
 	v4l2_m2m_job_finish(jpeg->m2m_dev, ctx->fh.m2m_ctx);
 }
 
+static int mtk_jpeg_enc_job_ready(void *priv)
+{
+		return 1;
+}
+
 static int mtk_jpeg_dec_job_ready(void *priv)
 {
 	struct mtk_jpeg_ctx *ctx = priv;
@@ -1070,6 +1175,7 @@ static int mtk_jpeg_dec_job_ready(void *priv)
 
 static const struct v4l2_m2m_ops mtk_jpeg_enc_m2m_ops = {
 	.device_run = mtk_jpeg_enc_device_run,
+	.job_ready  = mtk_jpeg_enc_job_ready,
 };
 
 static const struct v4l2_m2m_ops mtk_jpeg_dec_m2m_ops = {
@@ -1145,7 +1251,14 @@ static irqreturn_t mtk_jpeg_enc_done(struct mtk_jpeg_dev *jpeg)
 	dst_buf->vb2_buf.timestamp = src_buf->vb2_buf.timestamp;
 
 	result_size = mtk_jpeg_enc_get_file_size(jpeg->reg_base);
+	v4l2_dbg(2, debug, &jpeg->v4l2_dev, "reult size = %d", result_size);
 	vb2_set_plane_payload(&dst_buf->vb2_buf, 0, result_size);
+
+	if (v4l2_m2m_is_last_draining_src_buf(ctx->fh.m2m_ctx, src_buf)) {
+		v4l2_dbg(0, debug, &jpeg->v4l2_dev, "mark stopped\n");
+		dst_buf->flags |= V4L2_BUF_FLAG_LAST;
+		v4l2_m2m_mark_stopped(ctx->fh.m2m_ctx);
+	}
 
 	buf_state = VB2_BUF_STATE_DONE;
 
@@ -1206,7 +1319,7 @@ static irqreturn_t mtk_jpeg_dec_irq(int irq, void *priv)
 		mtk_jpeg_dec_reset(jpeg->reg_base);
 
 	if (dec_irq_ret != MTK_JPEG_DEC_RESULT_EOF_DONE) {
-		dev_err(jpeg->dev, "decode failed\n");
+		dev_err(jpeg->dev, "decode failed, ret=0x%x\n", dec_irq_ret);
 		goto dec_end;
 	}
 
@@ -1217,6 +1330,13 @@ static irqreturn_t mtk_jpeg_dec_irq(int irq, void *priv)
 	buf_state = VB2_BUF_STATE_DONE;
 
 dec_end:
+
+	if (v4l2_m2m_is_last_draining_src_buf(ctx->fh.m2m_ctx, src_buf)) {
+		v4l2_dbg(0, debug, &jpeg->v4l2_dev, "mark stopped\n");
+		dst_buf->flags |= V4L2_BUF_FLAG_LAST;
+		v4l2_m2m_mark_stopped(ctx->fh.m2m_ctx);
+	}
+
 	v4l2_m2m_buf_done(src_buf, buf_state);
 	v4l2_m2m_buf_done(dst_buf, buf_state);
 	v4l2_m2m_job_finish(jpeg->m2m_dev, ctx->fh.m2m_ctx);
