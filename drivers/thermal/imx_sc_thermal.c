@@ -212,11 +212,6 @@ static int imx_sc_thermal_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int imx_sc_thermal_remove(struct platform_device *pdev)
-{
-	return 0;
-}
-
 static const int imx_sc_sensors[] = {
 	IMX_SC_R_SYSTEM, IMX_SC_R_PMIC_0,
 	IMX_SC_R_AP_0, IMX_SC_R_AP_1,
@@ -231,7 +226,6 @@ MODULE_DEVICE_TABLE(of, imx_sc_thermal_table);
 
 static struct platform_driver imx_sc_thermal_driver = {
 		.probe = imx_sc_thermal_probe,
-		.remove	= imx_sc_thermal_remove,
 		.driver = {
 			.name = "imx-sc-thermal",
 			.of_match_table = imx_sc_thermal_table,

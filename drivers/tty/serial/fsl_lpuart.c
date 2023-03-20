@@ -1936,7 +1936,7 @@ static void lpuart32_shutdown(struct uart_port *port)
 
 	spin_lock_irqsave(&port->lock, flags);
 
-	/* clear statue */
+	/* clear status */
 	temp = lpuart32_read(&sport->port, UARTSTAT);
 	lpuart32_write(&sport->port, temp, UARTSTAT);
 

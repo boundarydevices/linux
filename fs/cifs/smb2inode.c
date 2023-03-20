@@ -104,14 +104,15 @@ static int smb2_compound_op(const unsigned int xid, struct cifs_tcon *tcon,
 		goto finished;
 	}
 
-	vars->oparms.tcon = tcon;
-	vars->oparms.desired_access = desired_access;
-	vars->oparms.disposition = create_disposition;
-	vars->oparms.create_options = cifs_create_options(cifs_sb, create_options);
-	vars->oparms.fid = &fid;
-	vars->oparms.reconnect = false;
-	vars->oparms.mode = mode;
-	vars->oparms.cifs_sb = cifs_sb;
+	vars->oparms = (struct cifs_open_parms) {
+		.tcon = tcon,
+		.desired_access = desired_access,
+		.disposition = create_disposition,
+		.create_options = cifs_create_options(cifs_sb, create_options),
+		.fid = &fid,
+		.mode = mode,
+		.cifs_sb = cifs_sb,
+	};
 
 	rqst[num_rqst].rq_iov = &vars->open_iov[0];
 	rqst[num_rqst].rq_nvec = SMB2_CREATE_IOV_SIZE;
@@ -540,22 +541,41 @@ int smb2_query_path_info(const unsigned int xid, struct cifs_tcon *tcon,
 	rc = smb2_compound_op(xid, tcon, cifs_sb, full_path, FILE_READ_ATTRIBUTES, FILE_OPEN,
 			      create_options, ACL_NO_MODE, data, SMB2_OP_QUERY_INFO, cfile,
 			      err_iov, err_buftype);
-	if (rc == -EOPNOTSUPP) {
-		if (err_iov[0].iov_base && err_buftype[0] != CIFS_NO_BUFFER &&
-		    ((struct smb2_hdr *)err_iov[0].iov_base)->Command == SMB2_CREATE &&
-		    ((struct smb2_hdr *)err_iov[0].iov_base)->Status == STATUS_STOPPED_ON_SYMLINK) {
-			rc = smb2_parse_symlink_response(cifs_sb, err_iov, &data->symlink_target);
+	if (rc) {
+		struct smb2_hdr *hdr = err_iov[0].iov_base;
+
+		if (unlikely(!hdr || err_buftype[0] == CIFS_NO_BUFFER))
+			goto out;
+		if (rc == -EOPNOTSUPP && hdr->Command == SMB2_CREATE &&
+		    hdr->Status == STATUS_STOPPED_ON_SYMLINK) {
+			rc = smb2_parse_symlink_response(cifs_sb, err_iov,
+							 &data->symlink_target);
 			if (rc)
 				goto out;
-		}
-		*reparse = true;
-		create_options |= OPEN_REPARSE_POINT;
 
-		/* Failed on a symbolic link - query a reparse point info */
-		cifs_get_readable_path(tcon, full_path, &cfile);
-		rc = smb2_compound_op(xid, tcon, cifs_sb, full_path, FILE_READ_ATTRIBUTES,
-				      FILE_OPEN, create_options, ACL_NO_MODE, data,
-				      SMB2_OP_QUERY_INFO, cfile, NULL, NULL);
+			*reparse = true;
+			create_options |= OPEN_REPARSE_POINT;
+
+			/* Failed on a symbolic link - query a reparse point info */
+			cifs_get_readable_path(tcon, full_path, &cfile);
+			rc = smb2_compound_op(xid, tcon, cifs_sb, full_path,
+					      FILE_READ_ATTRIBUTES, FILE_OPEN,
+					      create_options, ACL_NO_MODE, data,
+					      SMB2_OP_QUERY_INFO, cfile, NULL, NULL);
+			goto out;
+		} else if (rc != -EREMOTE && IS_ENABLED(CONFIG_CIFS_DFS_UPCALL) &&
+			   hdr->Status == STATUS_OBJECT_NAME_INVALID) {
+			/*
+			 * Handle weird Windows SMB server behaviour. It responds with
+			 * STATUS_OBJECT_NAME_INVALID code to SMB2 QUERY_INFO request
+			 * for "\<server>\<dfsname>\<linkpath>" DFS reference,
+			 * where <dfsname> contains non-ASCII unicode symbols.
+			 */
+			rc = -EREMOTE;
+		}
+		if (rc == -EREMOTE && IS_ENABLED(CONFIG_CIFS_DFS_UPCALL) && cifs_sb &&
+		    (cifs_sb->mnt_cifs_flags & CIFS_MOUNT_NO_DFS))
+			rc = -EOPNOTSUPP;
 	}
 
 out:

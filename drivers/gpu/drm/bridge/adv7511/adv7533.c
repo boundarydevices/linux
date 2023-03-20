@@ -130,6 +130,29 @@ void adv7533_dsi_power_off(struct adv7511 *adv)
 	regmap_write(adv->regmap_cec, 0x27, 0x0b);
 }
 
+enum drm_mode_status adv7533_mode_valid(struct adv7511 *adv,
+					const struct drm_display_mode *mode)
+{
+	int lanes;
+	struct mipi_dsi_device *dsi = adv->dsi;
+
+	if (mode->clock > 80000)
+		lanes = 4;
+	else
+		lanes = 3;
+
+	/*
+	 * TODO: add support for dynamic switching of lanes
+	 * by using the bridge pre_enable() op . Till then filter
+	 * out the modes which shall need different number of lanes
+	 * than what was configured in the device tree.
+	 */
+	if (lanes != dsi->lanes)
+		return MODE_BAD;
+
+	return MODE_OK;
+}
+
 int adv7533_patch_registers(struct adv7511 *adv)
 {
 	return regmap_register_patch(adv->regmap,
