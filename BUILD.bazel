@@ -19,6 +19,8 @@ load(
 )
 load(":abi.bzl", "cc_binary_with_abi")
 load(":modules.bzl", "get_gki_modules_list")
+load(":imx.bzl", "define_imx")
+define_imx()
 
 package(
     default_visibility = [
