@@ -5,6 +5,8 @@ load("//build/bazel_common_rules/dist:dist.bzl", "copy_to_dist_dir")
 load("//build/kernel/kleaf:common_kernels.bzl", "define_common_kernels", "define_db845c")
 load("//build/kernel/kleaf:kernel.bzl", "ddk_headers", "kernel_build", "kernel_images", "kernel_modules_install")
 load(":modules.bzl", "COMMON_GKI_MODULES_LIST")
+load(":imx.bzl", "define_imx")
+define_imx()
 
 package(
     default_visibility = [
