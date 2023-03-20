@@ -819,7 +819,9 @@ disable:
 }
 static irqreturn_t lpi2c_imx_slave_isr(struct lpi2c_imx_struct *lpi2c_imx, u32 ssr, u32 sier_filter)
 {
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 	u8 value;
+#endif
 	u32 sasr;
 
 	if (sier_filter & SSR_BEF) { /* Arbitration lost */
@@ -831,31 +833,41 @@ static irqreturn_t lpi2c_imx_slave_isr(struct lpi2c_imx_struct *lpi2c_imx, u32 s
 	if (sier_filter & SSR_AVF) {
 		sasr = readl(lpi2c_imx->base + LPI2C_SASR);
 		if (1 & sasr) {
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 			/*controller give a read request and send first value with start*/
 			i2c_slave_event(lpi2c_imx->slave, I2C_SLAVE_READ_REQUESTED, &value);
 			writel(value, lpi2c_imx->base + LPI2C_STDR);
+#endif
 			goto ret;
 		} else {
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 			/*controller request to write to us*/
 			i2c_slave_event(lpi2c_imx->slave, I2C_SLAVE_WRITE_REQUESTED, &value);
+#endif
 		}
 	}
 
 	if (sier_filter & SSR_SDF) {
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 		/* STOP */
 		i2c_slave_event(lpi2c_imx->slave, I2C_SLAVE_STOP, &value);
+#endif
 	}
 
 	if (sier_filter & SSR_TDF) {
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 		/* controller wants to read from us */
 		i2c_slave_event(lpi2c_imx->slave, I2C_SLAVE_READ_PROCESSED, &value);
 		writel(value, lpi2c_imx->base + LPI2C_STDR);
+#endif
 	}
 
 	if (sier_filter & SSR_RDF) {
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 		/* controller wants to send data to us */
 		value = readl(lpi2c_imx->base + LPI2C_SRDR);
 		i2c_slave_event(lpi2c_imx->slave, I2C_SLAVE_WRITE_RECEIVED, &value);
+#endif
 	}
 
 ret:
@@ -951,6 +963,7 @@ static void lpi2c_imx_slave_init(struct lpi2c_imx_struct *lpi2c_imx)
 	writel(SLAVE_INT_FLAG, lpi2c_imx->base + LPI2C_SIER);
 }
 
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 static int lpi2c_imx_reg_slave(struct i2c_client *client)
 {
 	struct lpi2c_imx_struct *lpi2c_imx = i2c_get_adapdata(client->adapter);
@@ -997,6 +1010,7 @@ static int lpi2c_imx_unreg_slave(struct i2c_client *client)
 
 	return ret;
 }
+#endif
 
 static void lpi2c_imx_prepare_recovery(struct i2c_adapter *adap)
 {
@@ -1072,8 +1086,10 @@ static u32 lpi2c_imx_func(struct i2c_adapter *adapter)
 static const struct i2c_algorithm lpi2c_imx_algo = {
 	.master_xfer	= lpi2c_imx_xfer,
 	.functionality	= lpi2c_imx_func,
+#if IS_ENABLED(CONFIG_I2C_SLAVE)
 	.reg_slave		= lpi2c_imx_reg_slave,
 	.unreg_slave	= lpi2c_imx_unreg_slave,
+#endif
 };
 
 static const struct of_device_id lpi2c_imx_of_match[] = {
