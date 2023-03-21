@@ -839,25 +839,25 @@
 #define MIPI_SUBSYSTEM		display_subsystem
 #define MIPI_I2C_BUS		i2c2d
 #define SKIP_LONTIUM_DAUGHTER_BOARDS		/* MIPI_I2C_BUS is already behind i2cmux */
-#define MIPI_PWM		pwm1
 #define MIPI_PHY_CLOCK		<&mipi_dsi 0>
 #define MIPI_PIXEL_CLOCK	<&clk IMX8MP_CLK_MEDIA_DISP1_PIX_ROOT>
 
-#define MIPI_PWM_GP		gpio1 1
-#define MIPI_PWM_PAD		MX8MP_IOMUXC_GPIO1_IO01__PWM1_OUT
-#define MIPI_PWM_PAD_GPIO	MX8MP_IOMUXC_GPIO1_IO01__GPIO1_IO01	/* Pin 7 */
+#define MIPI_PWM		pwm1
+#define GP_MIPI_PWM(a)		<&gpio1 1 a>
+#define PD_MIPI_PWM(a)		MX8MP_IOMUXC_GPIO1_IO01__GPIO1_IO01 a	/* Pin 7 */
+#define PD_MIPI_PWM_OUT(a)	MX8MP_IOMUXC_GPIO1_IO01__PWM1_OUT a
 
-#define MIPI_IRQ_GP		gpio4 0
-#define MIPI_IRQ_PAD		MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00	/* Pin 8 */
+#define GP_MIPI_IRQ(a)		<&gpio4 0 a>
+#define PD_MIPI_IRQ(a)		MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00 a	/* Pin 8 */
 
-#define MIPI_TS_IRQ_GP		gpio4 25
-#define MIPI_TS_IRQ_PAD		MX8MP_IOMUXC_SAI2_TXC__GPIO4_IO25	/* Pin 9 */
+#define GP_MIPI_TS_IRQ(a)	<&gpio4 25 a>
+#define PD_MIPI_TS_IRQ(a)	MX8MP_IOMUXC_SAI2_TXC__GPIO4_IO25 a	/* Pin 9 */
 
-#define MIPI_TS_RESET_GP	gpio4 24
-#define MIPI_TS_RESET_PAD	MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24	/* Pin 10 */
+#define GP_MIPI_TS_RESET(a)	<&gpio4 24 a>
+#define PD_MIPI_TS_RESET(a)	MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24 a	/* Pin 10 */
 
-#define MIPI_ENABLE_GP		gpio4 27
-#define MIPI_ENABLE_PAD		MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27	/* Pin 11 */
+#define GP_MIPI_ENABLE(a)	<&gpio4 27 a>
+#define PD_MIPI_ENABLE(a)	MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27 a	/* Pin 11 */
 
 #define PAD_NOPULL		0x0
 #define PAD_PULLDN		0x100
@@ -867,22 +867,24 @@
 #include "nitrogen-mipi-dsi.dtsi"
 
 #define LVDS_DISPLAY		lcdif2
+#define LVDS_I2C_BUS		i2c4
 #define LVDS_PWM		pwm2
+#define LVDS2_PWM		pwm2
 /* J28 pin 20 LVDS display, J27 pin 20 LVDS2 display */
-#define LVDS_PWM_PAD(a)		MX8MP_IOMUXC_GPIO1_IO09__PWM2_OUT a MX8MP_IOMUXC_SAI5_RXD0__PWM2_OUT a
+#define PD_LVDS_PWM(a)		MX8MP_IOMUXC_GPIO1_IO09__PWM2_OUT a MX8MP_IOMUXC_SAI5_RXD0__PWM2_OUT a
 
-#define LVDS_BACKLIGHT_GP	gpio4 22
-#define LVDS_BACKLIGHT_PAD	MX8MP_IOMUXC_SAI2_RXC__GPIO4_IO22
+#define GP_LVDS_BACKLIGHT(a)	<&gpio4 22 a>
+#define PD_LVDS_BACKLIGHT(a)	MX8MP_IOMUXC_SAI2_RXC__GPIO4_IO22 a
 
-#define LVDS2_BACKLIGHT_GP	gpio4 21
-#define LVDS2_BACKLIGHT_PAD	MX8MP_IOMUXC_SAI2_RXFS__GPIO4_IO21
+#define GP_LVDS2_BACKLIGHT(a)	<&gpio4 21 a>
+#define PD_LVDS2_BACKLIGHT(a)	MX8MP_IOMUXC_SAI2_RXFS__GPIO4_IO21 a
 
-#define LVDS_TS_IRQ_GP		gpio1 10
-#define LVDS_TS_IRQ_PAD		MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10
+#define GP_LVDS_TS_IRQ(a)	<&gpio1 10 a>
+#define PD_LVDS_TS_IRQ(a)	MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10 a
 
 /* No pad associated with gpio3 30 */
-#define LVDS_TS_RESET_GP	gpio3 30
-#define LVDS_TS_RESET_PAD(a)
+#define GP_LVDS_TS_RESET(a)	<&gpio3 30 a>
+#define PD_LVDS_TS_RESET(a)
 #define LVDS_NO_TS_RESET
 #include "nitrogen-lvds.dtsi"
 
