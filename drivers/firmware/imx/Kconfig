@@ -55,7 +55,6 @@ config IMX_ELE_TRNG
 	tristate "i.MX ELE True Random Number Generator"
 	default y
 	select CRYPTO_RNG
-	select HW_RANDOM
 	help
 	  This driver provides kernel-side support for the Random Number
 	  Generator with ELE TRNG.
