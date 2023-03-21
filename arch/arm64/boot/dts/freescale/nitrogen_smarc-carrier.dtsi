@@ -1,0 +1,785 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2023 Boundary Devices
+ */
+
+#define concat(a, b)   _concat_(a, b)
+#define _concat_(a, b)  a ## b
+#define concat4(a, b, c, d)   _concat4_(a, b, c, d)
+#define _concat4_(a, b, c, d)  a ## b ## c ## d
+#define concat6(a, b, c, d, e, f)   _concat6_(a, b, c, d, e, f)
+#define _concat6_(a, b, c, d, e, f)  a ## b ## c ## d ## e ## f
+#define concat8(a, b, c, d, e, f, g, h)   _concat8_(a, b, c, d, e, f, g, h)
+#define _concat8_(a, b, c, d, e, f, g, h)  a ## b ## c ## d ## e ## f ## g ## h
+
+#define pinctrl(a) concat(pinctrl_, a): concat(a, grp)
+#define pinctrl2(a, b) concat4(pinctrl_, a, _, b): concat(a-b, grp)
+#define pinctrl3(a, b, c) concat6(pinctrl_, a, _, b, _, c): concat(a-b-c, grp)
+#define pinctrl4(a, b, c, d) concat8(pinctrl_, a, _, b, _, c, _, d): concat(a-b-c-d, grp)
+#define pinctrl_ref(a) <&concat(pinctrl_, a)>
+#define pinctrl_ref2(a, b) <&concat4(pinctrl_, a, _, b)>
+#define pinctrl_ref3(a, b, c) <&concat6(pinctrl_, a, _, b, _, c)>
+#define pinctrl_ref4(a, b, c, d) <&concat8(pinctrl_, a, _, b, _, c, _, d)>
+
+&iomuxc {
+	pinctrl-0 = <&pinctrl_hog>, <&pinctrl_hog_carrier>;
+
+	pinctrl2(gpio, keys) {
+		PINS_START
+			PD_SM_CHARGER_PRESENT(PAD_PULLUPIRQ)
+			PD_SM_FORCE_RECOV(PAD_PULLUPIRQ)
+			PD_SM_LID(PAD_PULLUPIRQ)
+			PD_SM_CARRIER_PWR_ON(PAD_PULLUPIRQ)
+			PD_SM_SLEEP(PAD_PULLUPIRQ)
+		PINS_END
+	};
+
+	pinctrl2(hog, carrier) {
+		PINS_START
+			PD_SM_ENET0_SDP(PAD_PULLDN)
+			PD_SM_ENET1_SDP(PAD_PULLDN)
+			PD_SM_LCD1_VDD_EN(PAD_PULLDN)
+			PD_SM_GPIO12(PAD_PULLDN)
+			PD_SM_ESPI_IO2(PAD_PULLDN)
+			PD_SM_ESPI_RESET(PAD_PULLDN)
+		PINS_END
+	};
+
+	pinctrl2(mux9546, lcd) {
+		PINS_START
+			PD_SM_GPIO13(PAD_PULLDN)
+		PINS_END
+	};
+
+	pinctrl4(reg, usbotg, vbus, oc) {
+		PINS_START
+			/* power enable/ over-current */
+			PD_SM_USB0_EN_OC_USB(PAD_PULLUPIRQ)
+		PINS_END
+	};
+
+	pinctrl4(reg, usbotg, vbus, off) {
+		PINS_START
+			PD_SM_USB0_EN_OC(PAD_PULLDN)
+		PINS_END
+	};
+
+	pinctrl(SM_CAN0) {
+		PINS_START
+			PD_SM_CAN0_RX_CAN(PAD_CAN)
+			PD_SM_CAN0_TX_CAN(PAD_CAN)
+		PINS_END
+	};
+
+	pinctrl(SM_CAN1) {
+		PINS_START
+			PD_SM_CAN1_RX_CAN(PAD_CAN)
+			PD_SM_CAN1_TX_CAN(PAD_CAN)
+		PINS_END
+	};
+
+	pinctrl(SM_ESPI) {
+		PINS_START
+			PD_SM_ESPI_CK_ESPI(PAD_ESPI)
+			PD_SM_ESPI_IO0_ESPI(PAD_ESPI)
+			PD_SM_ESPI_IO1_ESPI(PAD_ESPI)
+			PD_SM_ESPI_CS0(PAD_PULLUP)
+			PD_SM_ESPI_CS1(PAD_PULLUP)
+			PD_SM_ESPI_RESET(PAD_PULLUP)
+		PINS_END
+	};
+
+	pinctrl(SM_I2C_GP) {
+		PINS_START
+			PD_SM_I2C_GP_CK_I2C(PAD_I2C)
+			PD_SM_I2C_GP_DAT_I2C(PAD_I2C)
+		PINS_END
+	};
+
+	pinctrl2(SM_I2C_GP, 1) {
+		PINS_START
+			PD_SM_I2C_GP_CK(PAD_I2C)
+			PD_SM_I2C_GP_DAT(PAD_I2C)
+		PINS_END
+	};
+
+	pinctrl(SM_I2C_LCD) {
+		PINS_START
+			PD_SM_I2C_LCD_CK_I2C(PAD_I2C)
+			PD_SM_I2C_LCD_DAT_I2C(PAD_I2C)
+		PINS_END
+	};
+
+	pinctrl2(SM_I2C_LCD, 1) {
+		PINS_START
+			PD_SM_I2C_LCD_CK(PAD_I2C)
+			PD_SM_I2C_LCD_DAT(PAD_I2C)
+		PINS_END
+	};
+
+	pinctrl(SM_I2C_PM) {
+		PINS_START
+			PD_SM_I2C_PM_CK_I2C(PAD_I2C)
+			PD_SM_I2C_PM_DAT_I2C(PAD_I2C)
+		PINS_END
+	};
+
+	pinctrl2(SM_I2C_PM, 1) {
+		PINS_START
+			PD_SM_I2C_PM_CK(PAD_I2C)
+			PD_SM_I2C_PM_DAT(PAD_I2C)
+		PINS_END
+	};
+
+	pinctrl(SM_I2S0) {
+		PINS_START
+			/* WM8962 */
+			PD_SM_I2S0_LRCK_I2S(PAD_I2S)
+			PD_SM_I2S0_CK_I2S(PAD_I2S)
+			PD_SM_I2S0_SDIN_I2S(PAD_I2S)
+			PD_SM_I2S0_SDOUT_I2S(PAD_I2S)
+			PD_SM_AUDIO_MCK_I2S(PAD_I2S)
+		PINS_END
+	};
+
+	pinctrl(SM_I2S2) {
+		PINS_START
+			/* HDA/I2S */
+			PD_SM_I2S2_LRCK_I2S(PAD_I2S)
+			PD_SM_I2S2_CK_I2S(PAD_I2S)
+			PD_SM_I2S2_SDIN_I2S(PAD_I2S)
+			PD_SM_I2S2_SDOUT_I2S(PAD_I2S)
+		PINS_END
+	};
+
+	pinctrl(SM_PCIE) {
+		PINS_START
+			PD_SM_PCIE_A_RST(PAD_PULLDN)
+			PD_SM_PCIE_WAKE(PAD_PULLUP)
+			PD_SM_PCIE_CLK_REQ(PAD_PULLUP)
+		PINS_END
+	};
+
+	pinctrl(SM_PWM_CSI1) {
+		PINS_START
+			PD_SM_CSI1_MCK_PWM(PAD_PULLDN)
+		PINS_END
+	};
+
+	pinctrl(SM_SDIO) {
+		PINS_START
+			PD_SM_SDIO_CLK_SDIO(PAD_SDIO_CLK_50M)
+			PD_SM_SDIO_CMD_SDIO(PAD_SDIO_50M)
+			PD_SM_SDIO_DATA0_SDIO(PAD_SDIO_50M)
+			PD_SM_SDIO_DATA1_SDIO(PAD_SDIO_50M)
+			PD_SM_SDIO_DATA2_SDIO(PAD_SDIO_50M)
+			PD_SM_SDIO_DATA3_SDIO(PAD_SDIO_50M)
+			PD_SM_SDIO_PWR_EN_SDIO(PAD_PULLDN)
+			MX8MP_IOMUXC_GPIO1_IO04__USDHC2_VSELECT(PAD_PULLDN)
+			PD_SM_SDIO_WP_SDIO(PAD_PULLUPIRQ)
+			PD_SM_SDIO_CD(PAD_PULLUPIRQ)
+		PINS_END
+	};
+
+	pinctrl2(SM_SDIO, 100mhz) {
+		PINS_START
+			PD_SM_SDIO_CLK_SDIO(PAD_SDIO_CLK_100M)
+			PD_SM_SDIO_CMD_SDIO(PAD_SDIO_100M)
+			PD_SM_SDIO_DATA0_SDIO(PAD_SDIO_100M)
+			PD_SM_SDIO_DATA1_SDIO(PAD_SDIO_100M)
+			PD_SM_SDIO_DATA2_SDIO(PAD_SDIO_100M)
+			PD_SM_SDIO_DATA3_SDIO(PAD_SDIO_100M)
+		PINS_END
+	};
+
+	pinctrl2(SM_SDIO, 200mhz) {
+		PINS_START
+			PD_SM_SDIO_CLK_SDIO(PAD_SDIO_CLK_200M)
+			PD_SM_SDIO_CMD_SDIO(PAD_SDIO_200M)
+			PD_SM_SDIO_DATA0_SDIO(PAD_SDIO_200M)
+			PD_SM_SDIO_DATA1_SDIO(PAD_SDIO_200M)
+			PD_SM_SDIO_DATA2_SDIO(PAD_SDIO_200M)
+			PD_SM_SDIO_DATA3_SDIO(PAD_SDIO_200M)
+		PINS_END
+	};
+
+	pinctrl(SM_SER0) {
+		PINS_START
+			PD_SM_SER0_RX_UART(PAD_PULLUP)
+			PD_SM_SER0_TX_UART(PAD_PULLUP)
+			PD_SM_SER0_RTS_UART(PAD_PULLUP)
+			PD_SM_SER0_CTS_UART(PAD_PULLUP)
+		PINS_END
+	};
+
+	pinctrl(SM_SER1) {
+		PINS_START
+			PD_SM_SER1_RX_UART(PAD_PULLUP)
+			PD_SM_SER1_TX_UART(PAD_PULLUP)
+		PINS_END
+	};
+
+	pinctrl(SM_SER2) {
+		PINS_START
+			PD_SM_SER2_RX_UART(PAD_PULLUP)
+			PD_SM_SER2_TX_UART(PAD_PULLUP)
+		PINS_END
+	};
+
+	pinctrl(SM_SPI0) {
+		PINS_START
+			PD_SM_SPI0_CK_SPI(PAD_SPI0)
+			PD_SM_SPI0_DO_SPI(PAD_SPI0)
+			PD_SM_SPI0_DIN_SPI(PAD_SPI0)
+			PD_SM_SPI0_CS0(PAD_PULLUP)
+			PD_SM_SPI0_CS1(PAD_PULLUP)
+		PINS_END
+	};
+};
+
+/ {
+	aliases {
+		fb_hdmi = &SM_FB_HDMI;
+		usb_mux = &usb_mux;
+	};
+
+	chosen {
+		stdout-path = &SM_SER1;
+	};
+
+	connector {
+		compatible = "usb-c-connector";
+		label = "USB-C";
+		data-role = "dual";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				hs_ep: endpoint {
+					remote-endpoint = <&usb3_hs_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				ss_ep: endpoint {
+					remote-endpoint = <&hd3ss3220_in_ep>;
+				};
+			};
+		};
+	};
+
+	csi_mclk: csi-mclk {
+		compatible = "pwm-clock";
+		#clock-cells = <0>;
+		clock-frequency = <20000000>;
+		clock-output-names = "csi_mclk";
+		pwms = <&SM_PWM_CSI1 0 50 0>; /* 1 / 50 ns = 20 MHz */
+	};
+
+	gpio_keys: gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+
+		charger-present {
+			label = "charger present";
+			gpios = GP_SM_CHARGER_PRESENT(GPIO_ACTIVE_LOW);
+			linux,code = <KEY_0>;
+		};
+
+		force-recovery {
+			label = "force recovery";
+			gpios = GP_SM_FORCE_RECOV(GPIO_ACTIVE_LOW);
+			linux,code = <KEY_1>;
+		};
+
+		lid-open {
+			label = "lid open";
+			gpios = GP_SM_LID(GPIO_ACTIVE_LOW);
+			linux,code = <KEY_2>;
+		};
+
+		pwr-on {
+			label = "power on";
+			gpios = GP_SM_CARRIER_PWR_ON(GPIO_ACTIVE_LOW);
+			linux,code = <KEY_3>;
+		};
+
+		sleep {
+			label = "sleep";
+			gpios = GP_SM_SLEEP(GPIO_ACTIVE_LOW);
+			linux,code = <KEY_4>;
+		};
+	};
+
+	gpio_keys_can: gpio-keys-can {
+		compatible = "gpio-keys";
+
+		can1 {
+			label = "can1 detect";
+			gpios = GP_SM_GPIO5(GPIO_ACTIVE_HIGH);
+			linux,code = <KEY_1>;
+		};
+
+		can2 {
+			label = "can2 detect";
+			gpios = GP_SM_GPIO11(GPIO_ACTIVE_HIGH);
+			linux,code = <KEY_2>;
+		};
+	};
+
+	reg_can1_stby: regulator-can1-stby {
+		compatible = "regulator-fixed";
+		regulator-name = "can1-stby";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = GP_SM_GPIO1(GPIO_ACTIVE_HIGH);
+		enable-active-high;
+	};
+
+	reg_can2_stby: regulator-can2-stby {
+		compatible = "regulator-fixed";
+		regulator-name = "can2-stby";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = GP_SM_GPIO4(GPIO_ACTIVE_HIGH);
+		enable-active-high;
+	};
+
+	reg_usb_otg_vbus: regulator-usb-otg-vbus {
+		/* todo: make driver support this */
+		compatible = "regulator-fixed";
+		pinctrl-names = "default", "off";
+		pinctrl-1 = pinctrl_ref(reg_usbotg_vbus_oc);
+		pinctrl-0 = pinctrl_ref(reg_usbotg_vbus_off);
+		regulator-name = "usb_otg_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = GP_SM_USB0_EN_OC(GPIO_ACTIVE_HIGH);
+		enable-active-high;
+	};
+
+	sound-wm8962 {
+		audio-codec = <&wm8962>;
+		audio-cpu = <&SM_I2S0>;
+		audio-routing =
+			"Headphone Jack", "HPOUTL",
+			"Headphone Jack", "HPOUTR",
+			"Ext Spk", "SPKOUTL",
+			"Ext Spk", "SPKOUTR",
+			"AMIC", "MICBIAS",
+			"IN1R", "AMIC",
+			"IN2R", "AMIC",
+			"IN3L", "AMIC",
+			"IN3R", "AMIC";
+		codec-master;
+		model = "wm8962-audio";
+		status = "okay";
+	};
+};
+
+&SM_SPI0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = pinctrl_ref(SM_SPI0);
+	cs-gpios = GP_SM_SPI0_CS0(GPIO_ACTIVE_LOW), GP_SM_SPI0_CS1(GPIO_ACTIVE_LOW);
+	status = "okay";
+
+	spi@0 {
+		compatible = "spidev";
+		reg = <0>;
+		spi-max-frequency = <500000>;
+	};
+};
+
+&SM_ESPI {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = pinctrl_ref(SM_ESPI);
+	cs-gpios = GP_SM_ESPI_CS0(GPIO_ACTIVE_LOW), GP_SM_ESPI_CS1(GPIO_ACTIVE_LOW);
+	status = "okay";
+
+	spi@0 {
+		compatible = "spidev";
+		reg = <0>;
+		spi-max-frequency = <500000>;
+	};
+};
+
+&SM_CAN0 {
+	pinctrl-names = "default";
+	pinctrl-0 = pinctrl_ref(SM_CAN0);
+	status = "okay";
+	xceiver-supply = <&reg_can1_stby>;
+};
+
+&SM_CAN1 {
+	pinctrl-names = "default";
+	pinctrl-0 = pinctrl_ref(SM_CAN1);
+	status = "okay";
+};
+
+&SM_I2C_GP {
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = pinctrl_ref(SM_I2C_GP);
+	pinctrl-1 = pinctrl_ref2(SM_I2C_GP, 1);
+	scl-gpios = GP_SM_I2C_GP_CK(GPIO_OPEN_DRAIN);
+	sda-gpios = GP_SM_I2C_GP_DAT(GPIO_OPEN_DRAIN);
+	status = "okay";
+
+	mux9546-gp@73 {
+		compatible = "nxp,pca9546";
+		reg = <0x73>;
+		reset-gpios = GP_SM_GPIO6(GPIO_ACTIVE_LOW);
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c_gp_a: SM_I2C_GP@0 {
+			/* RTC */
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_gp_b: SM_I2C_GP@1 {
+			/* USB C */
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_gp_c: SM_I2C_GP@2 {
+			/* audio */
+			clock-frequency = <100000>;
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_gp_d: SM_I2C_GP@3 {
+			/* pcie */
+			clock-frequency = <100000>;
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};
+
+&i2c_gp_a {
+	rtc@52 {
+		backup-switchover-dsm;
+		compatible = "microcrystal,rv3028";
+		reg = <0x52>;
+		interrupts-extended = GP_SM_GPIO12(IRQ_TYPE_LEVEL_LOW);
+		wakeup-source;
+	};
+};
+
+&i2c_gp_b {
+	usb_mux: hd3ss3220@60 {
+		/* tusb320 is compatible with hd3ss3220 */
+		compatible = "ti,hd3ss3220";
+		interrupts-extended = GP_SM_GPIO11(IRQ_TYPE_LEVEL_LOW);
+		reg = <0x60>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				hd3ss3220_in_ep: endpoint {
+					remote-endpoint = <&ss_ep>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				hd3ss3220_out_ep: endpoint {
+					remote-endpoint = <&usb3_role_switch>;
+				};
+			};
+		};
+	};
+};
+
+&i2c_gp_c {
+	wm8962: codec@1a {
+		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIO_BLK_CTRL_SAI3_MCLK1>;
+		compatible = "wlf,wm8960";
+		reg = <0x1a>;
+		AVDD-supply = <&reg_vref_1v8>;
+		CPVDD-supply = <&reg_vref_1v8>;
+		DCVDD-supply = <&reg_vref_1v8>;
+		PLLVDD-supply = <&reg_vref_1v8>;
+		DBVDD-supply = <&reg_vref_3v3>;
+		MICVDD-supply = <&reg_vref_3v3>;
+		SPKVDD1-supply = <&reg_vref_5v0>;
+		SPKVDD2-supply = <&reg_vref_5v0>;
+		gpio-cfg = <
+			0x0000 /* 0:Default */
+			0x0000 /* 1:Default */
+			0x0000 /* 2:FN_DMICCLK */
+			0x0000 /* 3:Default */
+			0x0000 /* 4:FN_DMICCDAT */
+			0x0000 /* 5:Default */
+		>;
+	};
+};
+
+&SM_I2C_LCD {
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = pinctrl_ref(SM_I2C_LCD);
+	pinctrl-1 = pinctrl_ref2(SM_I2C_LCD, 1);
+	scl-gpios = GP_SM_I2C_LCD_CK(GPIO_OPEN_DRAIN);
+	sda-gpios = GP_SM_I2C_LCD_DAT(GPIO_OPEN_DRAIN);
+	status = "okay";
+
+	mux9546-lcd@73 {
+		compatible = "nxp,pca9546";
+		pinctrl-names = "default";
+		pinctrl-0 = pinctrl_ref(mux9546_lcd);
+		reg = <0x73>;
+		reset-gpios = GP_SM_GPIO13(GPIO_ACTIVE_LOW);
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		i2c_lcd_a: SM_I2C_LCD@0 {
+			/* EDP0 */
+			clock-frequency = <100000>;
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_lcd_b: SM_I2C_LCD@1 {
+			/* EDP1 */
+			clock-frequency = <100000>;
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_lcd_c: SM_I2C_LCD@2 {
+			/* DSI0 */
+			clock-frequency = <100000>;
+			reg = <2>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		i2c_lcd_d: SM_I2C_LCD@3 {
+			/* DSI1 */
+			clock-frequency = <100000>;
+			reg = <3>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};
+
+&SM_I2C_PM {
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = pinctrl_ref(SM_I2C_PM);
+	pinctrl-1 = pinctrl_ref2(SM_I2C_PM, 1);
+	scl-gpios = GP_SM_I2C_PM_CK(GPIO_OPEN_DRAIN);
+	sda-gpios = GP_SM_I2C_PM_DAT(GPIO_OPEN_DRAIN);
+	status = "okay";
+};
+
+&SM_I2C_CSI0{
+	camera@3c {
+		DOVDD-supply = <&reg_vref_1v8>;
+		DVDD-supply = <&reg_vref_3v3>;
+		compatible = "pi2ln";
+		csi_id = <0x00>;
+		powerdown-gpios = GP_SM_GPIO0(GPIO_ACTIVE_HIGH);
+		reg = <0x3c>;
+		reset-gpios = GP_SM_GPIO2(GPIO_ACTIVE_LOW);
+		status = "okay";
+
+		port {
+			pi_2lane_mipi_ep: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2>;
+				remote-endpoint = <&mipi1_csi0_ep>;
+			};
+		};
+	};
+};
+
+&SM_I2C_CSI1 {
+	camera@36 {
+		clocks = <&csi_mclk>;
+		clock-names = "csi_mclk";
+		compatible = "ovti,os08a20";
+		csi_id = <0x01>;
+		reg = <0x36>;
+		reset-gpios = GP_SM_GPIO3(GPIO_ACTIVE_LOW);
+		status = "okay";
+
+		port {
+			os08a20_mipi_ep: endpoint {
+				clock-lanes = <0>;
+				data-lanes = <1 2 3 4>;
+				link-frequencies = /bits/ 64 <750000000>;
+				max-lane-frequency = /bits/ 64 <750000000>;
+				max-pixel-frequency = /bits/ 64 <266000000>;
+				max-data-rate = /bits/ 64 <0>;
+				remote-endpoint = <&mipi_csi1_ep>;
+			};
+		};
+	};
+};
+
+&SM_PCIE {
+	pinctrl-names = "default";
+	pinctrl-0 = pinctrl_ref(SM_PCIE);
+	reset-gpio = GP_SM_PCIE_A_RST(GPIO_ACTIVE_LOW);
+	status = "okay";
+};
+
+&SM_PWM_CSI1 {
+	pinctrl-names = "default";
+	pinctrl-0 = pinctrl_ref(SM_PWM_CSI1);
+	status = "okay";
+};
+
+&SM_I2S0 {
+	pinctrl-names = "default";
+	pinctrl-0 = pinctrl_ref(SM_I2S0);
+	status = "okay";
+};
+
+&SM_I2S2 {
+	pinctrl-names = "default";
+	pinctrl-0 = pinctrl_ref(SM_I2S2);
+	status = "okay";
+};
+
+&SM_SER0 {
+	pinctrl-names = "default";
+	pinctrl-0 = pinctrl_ref(SM_SER0);
+	status = "okay";
+};
+
+&SM_SER1 {
+	/* console */
+	pinctrl-names = "default";
+	pinctrl-0 = pinctrl_ref(SM_SER1);
+	status = "okay";
+};
+
+&SM_SER2 {
+	pinctrl-names = "default";
+	pinctrl-0 = pinctrl_ref(SM_SER2);
+	status = "okay";
+};
+
+&SM_USBOTG {
+	fsl,over-current-active-low;
+	status = "okay";
+};
+
+&SM_USBOTG_DWC {
+	dr_mode = "otg";
+	status = "okay";
+	usb-role-switch;
+	vbus-supply = <&reg_usb_otg_vbus>;
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			usb3_hs_ep: endpoint {
+				remote-endpoint = <&hs_ep>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			usb3_role_switch: endpoint {
+				remote-endpoint = <&hd3ss3220_out_ep>;
+			};
+		};
+	};
+};
+
+&SM_USBOTG_PHY {
+	fsl,phy-tx-preemp-amp-tune = <2>;
+	status = "okay";
+	vbus-supply = <&reg_vref_5v0>;
+};
+
+&SM_SDIO {
+	bus-width = <4>;
+	cd-gpios = GP_SM_SDIO_CD(GPIO_ACTIVE_LOW);
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-0 = pinctrl_ref(SM_SDIO);
+	pinctrl-1 = pinctrl_ref2(SM_SDIO, 100mhz);
+	pinctrl-2 = pinctrl_ref2(SM_SDIO, 200mhz);
+	status = "okay";
+	vmmc-supply = <&reg_vref_3v3>;
+};
+
+/* J11 mipi display */
+#define MIPI_DISPLAY		SM_FB_MIPI
+#define MIPI_SUBSYSTEM		SM_FB_MIPI_SUBSYSTEM
+#define MIPI_PHY_CLOCK		SM_MIPI_PHY_CLOCK
+#define MIPI_PIXEL_CLOCK	SM_MIPI_PIXEL_CLOCK
+#define MIPI_I2C_BUS		i2c_lcd_c
+#define MIPI_PWM		SM_PWM_LCD0
+
+#define GP_MIPI_PWM(a)		GP_SM_LCD0_BKLT_PWM(a)
+#define PD_MIPI_PWM(a)		PD_SM_LCD0_BKLT_PWM(a)	/* Pin 7, S141 */
+#define PD_MIPI_PWM_OUT(a)	PD_SM_LCD0_BKLT_PWM_OUT(a)
+
+#define GP_MIPI_IRQ(a)		GP_SM_CARRIER_STANDBY(a)
+#define PD_MIPI_IRQ(a)		PD_SM_CARRIER_STANDBY(a) /* Pin 8, S153 */
+
+#define GP_MIPI_TS_IRQ(a)	GP_SM_LCD0_BKLT_EN(a)
+#define PD_MIPI_TS_IRQ(a)	PD_SM_LCD0_BKLT_EN(a)	/* Pin 9, S127 */
+
+#define GP_MIPI_TS_RESET(a)	GP_SM_GPIO7(a)		/* Pin 10, P115 */
+#define PD_MIPI_TS_RESET(a)
+
+#define GP_MIPI_ENABLE(a)	GP_SM_LCD0_VDD_EN(a)
+#define PD_MIPI_ENABLE(a)	PD_SM_LCD0_VDD_EN(a)	/* Pin 11, S133 */
+
+#include "nitrogen-mipi-dsi.dtsi"
+
+#define LVDS_DISPLAY		SM_FB_LVDS
+#define LVDS_I2C_BUS		SM_I2C_PM
+#define LVDS_PWM		SM_PWM_LCD0
+#define LVDS2_PWM		SM_PWM_LCD1
+/* J21 pin 20 LVDS display, J22 pin 20 LVDS2 display */
+#define PD_LVDS_PWM(a)		PD_SM_LCD0_BKLT_PWM_OUT(a) /* Pin 20, S141 */
+#define PD_LVDS2_PWM(a)		PD_SM_LCD1_BKLT_PWM_OUT(a) /* Pin 20, S122 */
+
+#define GP_LVDS_BACKLIGHT(a)	GP_SM_LCD0_BKLT_EN(a)
+#define PD_LVDS_BACKLIGHT(a)	PD_SM_LCD0_BKLT_EN(a)	/* Pin 19, S127 */
+
+#define GP_LVDS2_BACKLIGHT(a)	GP_SM_LVDS1_BACKLIGHT_EN(a)
+#define PD_LVDS2_BACKLIGHT(a)	PD_SM_LVDS1_BACKLIGHT_EN(a) /* Pin 19, S107 */
+
+#define GP_LVDS_TS_IRQ(a)	GP_SM_SMB_ALERT(a)
+#define PD_LVDS_TS_IRQ(a)	PD_SM_SMB_ALERT(a)	/* J23 Pin 4, P1 */
+
+#define GP_LVDS_TS_RESET(a)	GP_SM_ESPI_ALERT(a)
+#define PD_LVDS_TS_RESET(a)	PD_SM_ESPI_ALERT(a)	/* J23 Pin 3, S43 */
+#define LVDS_NO_TS_RESET				/* S43 not routed on 1st som run */
+#include "nitrogen-lvds.dtsi"
