@@ -1265,26 +1265,26 @@
 #define MIPI_DISPLAY		lcdif
 #define MIPI_SUBSYSTEM		lcdif
 #define MIPI_I2C_BUS		i2c4
-#define MIPI_PWM		pwm3
 #define MIPI_PHY_CLOCK		<&dphy 0>
 #define MIPI_PIXEL_CLOCK	<&clk IMX8MQ_CLK_LCDIF_PIXEL>
 #define MIPI_HSYNC_HIGH
 
-#define MIPI_PWM_GP		gpio5 3
-#define MIPI_PWM_PAD		MX8MQ_IOMUXC_SPDIF_TX_PWM3_OUT
-#define MIPI_PWM_PAD_GPIO	MX8MQ_IOMUXC_SPDIF_TX_GPIO5_IO3		/* Pin 7 */
+#define MIPI_PWM		pwm3
+#define GP_MIPI_PWM(a)		<&gpio5 3 a>
+#define PD_MIPI_PWM(a)	MX8MQ_IOMUXC_SPDIF_TX_GPIO5_IO3 a	/* Pin 7 */
+#define PD_MIPI_PWM_OUT(a)	MX8MQ_IOMUXC_SPDIF_TX_PWM3_OUT a
 
-#define MIPI_IRQ_GP		gpio1 1
-#define MIPI_IRQ_PAD		MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1	/* Pin 8 */
+#define GP_MIPI_IRQ(a)		<&gpio1 1 a>
+#define PD_MIPI_IRQ(a)		MX8MQ_IOMUXC_GPIO1_IO01_GPIO1_IO1 a	/* Pin 8 */
 
-#define MIPI_TS_IRQ_GP		gpio3 12
-#define MIPI_TS_IRQ_PAD		MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12	/* Pin 9 */
+#define GP_MIPI_TS_IRQ(a)	<&gpio3 12 a>
+#define PD_MIPI_TS_IRQ(a)	MX8MQ_IOMUXC_NAND_DATA06_GPIO3_IO12 a	/* Pin 9 */
 
-#define MIPI_TS_RESET_GP	gpio3 13
-#define MIPI_TS_RESET_PAD	MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13	/* Pin 10 */
+#define GP_MIPI_TS_RESET(a)	<&gpio3 13 a>
+#define PD_MIPI_TS_RESET(a)	MX8MQ_IOMUXC_NAND_DATA07_GPIO3_IO13 a	/* Pin 10 */
 
-#define MIPI_ENABLE_GP		gpio3 15
-#define MIPI_ENABLE_PAD		MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15	/* Pin 11 */
+#define GP_MIPI_ENABLE(a)	<&gpio3 15 a>
+#define PD_MIPI_ENABLE(a)	MX8MQ_IOMUXC_NAND_RE_B_GPIO3_IO15 a	/* Pin 11 */
 
 #define PAD_NOPULL		0x06
 #define PAD_PULLDN		0x06	/* No pulldown, need external resistor */
