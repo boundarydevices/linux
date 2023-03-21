@@ -4,8 +4,8 @@
  */
 
 #define MIPI_I2C_BUS	i2c4
-#define MIPI_ENABLE_GP		gpio5 0
-#define MIPI_ENABLE_PAD		_MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0)	/* Pin 11 */
+#define GP_MIPI_ENABLE(a)	<&gpio5 0 a>
+#define PD_MIPI_ENABLE(a)	_MX8MMN(IOMUXC_SAI3_TXC_GPIO5_IO0) a	/* Pin 11 */
 
 #include "imx8mn-nitrogen8mn.dts"
 
