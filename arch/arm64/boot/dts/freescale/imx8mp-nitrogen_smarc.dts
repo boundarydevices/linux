@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2023 Boundary Devices
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/usb/pd.h>
+#include "imx8mp-nitrogen_smarc-som.dtsi"
+#include "nitrogen_smarc-carrier.dtsi"
+/ {
+	model = "Boundary i.MX8MPlus nitrogen8mp smarc board";
+	compatible = "boundary,imx8mp-nitrogen-smarc", "fsl,imx8mp";
+};
