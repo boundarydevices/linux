@@ -1319,6 +1319,7 @@
 		"Headphone", "Headphone R",
 		"AIN1", "Headset Mic",
 		"DMIC_INPUT", "AP DMIC",
+		"AP DMIC", "AUDGLB",
 		"AP DMIC", "MIC_BIAS_0",
 		"AP DMIC", "MIC_BIAS_2";
 	status = "okay";
