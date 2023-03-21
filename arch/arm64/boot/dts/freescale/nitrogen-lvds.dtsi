@@ -2,72 +2,76 @@
 /*
  * Copyright 2023 Boundary Devices
  */
+#define concat(a, b)   _concat_(a, b)
+#define _concat_(a, b)  a ## b
+#define pinctrl(a) concat(pinctrl_, a): concat(a, grp)
+#define pinctrl_ref(a) <&concat(pinctrl_, a)>
 
 &iomuxc {
 	pinctrl_backlight_lvds: backlight-lvdsgrp {
 		fsl,pins = <
-#define GP_BACKLIGHT_LVDS  <&LVDS_BACKLIGHT_GP GPIO_ACTIVE_HIGH>
-			LVDS_BACKLIGHT_PAD	PAD_PULLDN
+			PD_LVDS_BACKLIGHT(PAD_PULLDN)
 		>;
 	};
 
 #ifdef LVDS2_BACKLIGHT_PAD
 	pinctrl_backlight_lvds2: backlight-lvds2grp {
 		fsl,pins = <
-#define GP_BACKLIGHT_LVDS2  <&LVDS2_BACKLIGHT_GP GPIO_ACTIVE_HIGH>
-			LVDS2_BACKLIGHT_PAD	PAD_PULLDN
+			PD_LVDS2_BACKLIGHT(PAD_PULLDN)
 		>;
 	};
 #endif
 
-	concat(pinctrl_, LVDS_PWM): concat(LVDS_PWM, grp) {
+#define VAL_pwm1	1
+#define VAL_pwm2	2
+#define VAL_pwm3	3
+#define VAL_pwm4	4
+#define VAL(a) concat(VAL_, a)
+
+	pinctrl(LVDS_PWM) {
 		fsl,pins = <
-			LVDS_PWM_PAD(PAD_PULLDN)
+			PD_LVDS_PWM(PAD_PULLDN)
 		>;
 	};
 
+#if VAL(LVDS2_PWM) != VAL(LVDS_PWM)
+	pinctrl(LVDS2_PWM) {
+		fsl,pins = <
+			PD_LVDS2_PWM(PAD_PULLDN)
+		>;
+	};
+#endif
+
 	pinctrl_ts_lvds_atmel: ts-lvds-atmelgrp {
 		fsl,pins = <
-#define GPIRQ_TS_LVDS_ATMEL	<&LVDS_TS_IRQ_GP IRQ_TYPE_EDGE_FALLING>
-#define GP_TS_LVDS_ATMEL	<&LVDS_TS_IRQ_GP GPIO_ACTIVE_LOW>
-			LVDS_TS_IRQ_PAD	PAD_PULLUPIRQ
-#define GP_TS_LVDS_ATMEL_RESET	<&LVDS_TS_RESET_GP GPIO_ACTIVE_LOW>
-			LVDS_TS_RESET_PAD(PAD_PULLDN)
+			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
+			PD_LVDS_TS_RESET(PAD_PULLDN)
 		>;
 	};
 
 	pinctrl_ts_lvds_egalax: ts-lvds-egalaxgrp {
 		fsl,pins = <
-#define GPIRQ_TS_LVDS_EGALAX	<&LVDS_TS_IRQ_GP IRQ_TYPE_EDGE_FALLING>
-#define GP_TS_LVDS_EGALAX_WAKE	<&LVDS_TS_IRQ_GP GPIO_ACTIVE_LOW>
-			LVDS_TS_IRQ_PAD	PAD_PULLUPIRQ
+			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
 		>;
 	};
 
 	pinctrl_ts_lvds_ft5x06: ts-lvds-ft5x06grp {
 		fsl,pins = <
-#define GPIRQ_TS_LVDS_FT5X06	<&LVDS_TS_IRQ_GP IRQ_TYPE_EDGE_FALLING>
-#define GP_TS_LVDS_FT5X06_WAKE	<&LVDS_TS_IRQ_GP GPIO_ACTIVE_LOW>
-			LVDS_TS_IRQ_PAD	PAD_PULLUPIRQ
-#define GP_TS_LVDS_FT5X06_RESET	<&LVDS_TS_RESET_GP GPIO_ACTIVE_LOW>
-			LVDS_TS_RESET_PAD(PAD_PULLDN)
+			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
+			PD_LVDS_TS_RESET(PAD_PULLDN)
 		>;
 	};
 
 	pinctrl_ts_lvds_gt911: ts-lvds-gt911grp {
 		fsl,pins = <
-#define GPIRQ_TS_LVDS_GT911	<&LVDS_TS_IRQ_GP IRQ_TYPE_LEVEL_HIGH>
-#define GP_TS_LVDS_GT911_IRQ	<&LVDS_TS_IRQ_GP GPIO_ACTIVE_HIGH>
-			LVDS_TS_IRQ_PAD	PAD_PULLUPIRQ
-#define GP_TS_LVDS_GT911_RESET	<&LVDS_TS_RESET_GP GPIO_OPEN_DRAIN>
-			LVDS_TS_RESET_PAD(PAD_PULLUP)
+			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
+			PD_LVDS_TS_RESET(PAD_PULLUP)
 		>;
 	};
 
 	pinctrl_ts_lvds_ili251x: ts-lvds-ili251xgrp {
 		fsl,pins = <
-#define GPIRQ_TS_LVDS_ILI251X	<&LVDS_TS_IRQ_GP IRQ_TYPE_EDGE_FALLING>
-			LVDS_TS_IRQ_PAD	PAD_PULLUPIRQ
+			PD_LVDS_TS_IRQ(PAD_PULLUPIRQ)
 		>;
 	};
 };
@@ -75,7 +79,7 @@
 / {
 	aliases {
 		backlight_lvds = &backlight_lvds;
-#ifdef LVDS2_BACKLIGHT_PAD
+#if (VAL(LVDS2_PWM) != VAL(LVDS_PWM)) || defined(LVDS2_BACKLIGHT_PAD)
 		backlight_lvds2 = &backlight_lvds2;
 #endif
 		fb_lvds = &LVDS_DISPLAY;
@@ -84,7 +88,7 @@
 		ldb_chan = &ldb_chan;
 		ldb_chan2 = &ldb_chan2;
 		pwm_lvds = &LVDS_PWM;
-		pwm_lvds2 = &LVDS_PWM;
+		pwm_lvds2 = &LVDS2_PWM;
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
 		ts_lvds_atmel_mt = &ts_lvds_atmel_mt;
@@ -102,73 +106,75 @@
 		compatible = "pwm-backlight";
 		display = <&LVDS_DISPLAY>;
 		default-brightness-level = <8>;
-		enable-gpios = GP_BACKLIGHT_LVDS;
+		enable-gpios = GP_LVDS_BACKLIGHT(GPIO_ACTIVE_HIGH);
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_lvds>;
 		pwms = <&LVDS_PWM 0 100000>;
 		status = "disabled";
 	};
 
-#ifdef LVDS2_BACKLIGHT_PAD
+#if (VAL(LVDS2_PWM) != VAL(LVDS_PWM)) || defined(LVDS2_BACKLIGHT_PAD)
 	backlight_lvds2: backlight-lvds2 {
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10>;
 		compatible = "pwm-backlight";
 		display = <&LVDS_DISPLAY>;
 		default-brightness-level = <8>;
-		enable-gpios = GP_BACKLIGHT_LVDS2;
+#ifdef LVDS2_BACKLIGHT_PAD
+		enable-gpios = GP_LVDS2_BACKLIGHT(GPIO_ACTIVE_HIGH);
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_backlight_lvds2>;
-		pwms = <&LVDS_PWM 0 100000>;
+#endif
+		pwms = <&LVDS2_PWM 0 100000>;
 		status = "disabled";
 	};
 #endif
 
 };
 
-&i2c4 {
+&LVDS_I2C_BUS {
 	ts_lvds_atmel_mt: touchscreen@4a {
 		compatible = "atmel,maxtouch";
-		interrupts-extended = GPIRQ_TS_LVDS_ATMEL;
+		interrupts-extended = GP_LVDS_TS_IRQ(IRQ_TYPE_EDGE_FALLING);
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ts_lvds_atmel>;
 		reg = <0x4a>;
-		reset-gpios = GP_TS_LVDS_ATMEL_RESET;
-		wakeup-gpios = GP_TS_LVDS_ATMEL;
+		reset-gpios = GP_LVDS_TS_RESET(GPIO_ACTIVE_LOW);
+		wakeup-gpios = GP_LVDS_TS_IRQ(GPIO_ACTIVE_LOW);
 		status = "disabled";
 	};
 
 	ts_lvds_egalax: touchscreen@4 {
 		compatible = "eeti,egalax_ts";
-		interrupts-extended = GPIRQ_TS_LVDS_EGALAX;
+		interrupts-extended = GP_LVDS_TS_IRQ(IRQ_TYPE_EDGE_FALLING);
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ts_lvds_egalax>;
 		reg = <0x04>;
 		status = "disabled";
-		wakeup-gpios = GP_TS_LVDS_EGALAX_WAKE;
+		wakeup-gpios = GP_LVDS_TS_IRQ(GPIO_ACTIVE_LOW);
 	};
 
 	ts_lvds_ft5x06: touchscreen@38 {
 		compatible = "edt,ft5x06-ts";
-		interrupts-extended = GPIRQ_TS_LVDS_FT5X06;
+		interrupts-extended = GP_LVDS_TS_IRQ(IRQ_TYPE_EDGE_FALLING);
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ts_lvds_ft5x06>;
 		reg = <0x38>;
 #ifndef LVDS_NO_TS_RESET
-		reset-gpios = GP_TS_LVDS_FT5X06_RESET;
+		reset-gpios = GP_LVDS_TS_RESET(GPIO_ACTIVE_LOW);
 #endif
 		status = "disabled";
-		wakeup-gpios = GP_TS_LVDS_FT5X06_WAKE;
+		wakeup-gpios = GP_LVDS_TS_IRQ(GPIO_ACTIVE_LOW);
 	};
 
 	ts_lvds_goodix: touchscreen@14 {
 		compatible = "goodix,gt9271";
 		esd-recovery-timeout-ms = <2000>;
-		interrupts-extended = GPIRQ_TS_LVDS_GT911;
-		irq-gpios = GP_TS_LVDS_GT911_IRQ;
+		interrupts-extended = GP_LVDS_TS_IRQ(IRQ_TYPE_LEVEL_HIGH);
+		irq-gpios = GP_LVDS_TS_IRQ(GPIO_ACTIVE_HIGH);
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ts_lvds_gt911>;
 		reg = <0x14>;
-		reset-gpios = GP_TS_LVDS_GT911_RESET;
+		reset-gpios = GP_LVDS_TS_RESET(GPIO_OPEN_DRAIN);
 		status = "disabled";
 	};
 
@@ -176,19 +182,19 @@
 	ts_lvds_goodix2: touchscreen@5d {
 		compatible = "goodix,gt9271";
 		esd-recovery-timeout-ms = <2000>;
-		interrupts-extended = GPIRQ_TS_LVDS_GT911;
-		irq-gpios = GP_TS_LVDS_GT911_IRQ;
+		interrupts-extended = GP_LVDS_TS_IRQ(IRQ_TYPE_LEVEL_HIGH);
+		irq-gpios = GP_LVDS_TS_IRQ(GPIO_ACTIVE_HIGH);
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ts_lvds_gt911>;
 		reg = <0x5d>;
-		reset-gpios = GP_TS_LVDS_GT911_RESET;
+		reset-gpios = GP_LVDS_TS_RESET(GPIO_OPEN_DRAIN);
 		status = "disabled";
 	};
 #endif
 
 	ts_lvds_ili251x: touchscreen@41 {
 		compatible = "ilitek,ili251x";
-		interrupts-extended = GPIRQ_TS_LVDS_ILI251X;
+		interrupts-extended = GP_LVDS_TS_IRQ(IRQ_TYPE_EDGE_FALLING);
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ts_lvds_ili251x>;
 		reg = <0x41>;
@@ -250,6 +256,14 @@
 
 &LVDS_PWM {
 	pinctrl-names = "default";
-	pinctrl-0 = <&concat(pinctrl_, LVDS_PWM)>;
+	pinctrl-0 = pinctrl_ref(LVDS_PWM);
 	status = "okay";
 };
+
+#if VAL(LVDS2_PWM) != VAL(LVDS_PWM)
+&LVDS2_PWM {
+	pinctrl-names = "default";
+	pinctrl-0 = pinctrl_ref(LVDS2_PWM);
+	status = "okay";
+};
+#endif
