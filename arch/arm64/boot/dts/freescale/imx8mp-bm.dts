@@ -330,7 +330,7 @@
 
 	pinctrl_usb3_0: usb3-0grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO13__USB1_OTG_OC	0x1c0
+			MX8MP_IOMUXC_GPIO1_IO13__USB1_OC	0x1c0
 		>;
 	};
 
