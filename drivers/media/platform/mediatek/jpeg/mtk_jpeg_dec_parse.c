@@ -50,30 +50,30 @@ static void read_skip(struct mtk_jpeg_stream *stream, long len)
 }
 
 static bool parse_header(struct mtk_jpeg_stream *stream,
-			struct mtk_jpeg_dec_param *param)
+			 struct mtk_jpeg_dec_param *param)
 {
-	int i = 0, byte;
+	int i, byte;
 	u32 word;
 
 	/* length */
 	if (read_word_be(stream, &word))
-		goto parse_end;
+		return false;
 
 	/* precision */
 	if (read_byte(stream) == -1)
-		goto parse_end;
+		return false;
 
 	if (read_word_be(stream, &word))
-		goto parse_end;
+		return false;
 	param->pic_h = word;
 
 	if (read_word_be(stream, &word))
-		goto parse_end;
+		return false;
 	param->pic_w = word;
 
 	param->comp_num = read_byte(stream);
 	if (param->comp_num != 1 && param->comp_num != 3)
-		goto parse_end;
+		return false;
 
 	for (i = 0; i < param->comp_num; i++) {
 		param->comp_id[i] = read_byte(stream);
@@ -92,21 +92,20 @@ static bool parse_header(struct mtk_jpeg_stream *stream,
 			break;
 	}
 
-parse_end:
-	return !(i == param->comp_num);
-
+	return (i == param->comp_num);
 }
+
 static bool mtk_jpeg_do_parse(struct mtk_jpeg_dec_param *param, u8 *src_addr_va,
 			      u32 src_size)
 {
-	bool notfound = true;
+	bool found = false;
 	bool file_end = false;
 	struct mtk_jpeg_stream stream;
 
 	stream.addr = src_addr_va;
 	stream.size = src_size;
 	stream.curr = 0;
-	while (!file_end && (!param->huffman_tb_exist || notfound)) {
+	while (!(file_end || (param->huffman_tb_exist && found))) {
 		int length, byte;
 		u32 word;
 
@@ -126,7 +125,7 @@ static bool mtk_jpeg_do_parse(struct mtk_jpeg_dec_param *param, u8 *src_addr_va,
 		length = 0;
 		switch (byte) {
 		case JPEG_MARKER_SOF0:
-			notfound = parse_header(&stream, param);
+			found = parse_header(&stream, param);
 			break;
 		case JPEG_MARKER_RST ... JPEG_MARKER_RST + 7:
 		case JPEG_MARKER_SOI:
@@ -146,7 +145,8 @@ static bool mtk_jpeg_do_parse(struct mtk_jpeg_dec_param *param, u8 *src_addr_va,
 			break;
 		}
 	}
-	return !notfound;
+
+	return found;
 }
 
 bool mtk_jpeg_parse(struct mtk_jpeg_dec_param *param, u8 *src_addr_va,
