@@ -81,6 +81,10 @@ static int brcmf_max_pm;
 module_param_named(max_pm, brcmf_max_pm, int, 0);
 MODULE_PARM_DESC(max_pm, "Use max power management mode by default");
 
+int brcmf_pkt_prio_enable;
+module_param_named(pkt_prio, brcmf_pkt_prio_enable, int, 0);
+MODULE_PARM_DESC(pkt_prio, "Support for update the packet priority");
+
 #ifdef DEBUG
 /* always succeed brcmf_bus_started() */
 static int brcmf_ignore_probe_fail;
@@ -547,6 +551,7 @@ struct brcmf_mp_device *brcmf_get_module_param(struct device *dev,
 #endif
 	settings->fw_ap_select = !!brcmf_fw_ap_select;
 	settings->disable_6ghz = !!brcmf_disable_6ghz;
+	settings->pkt_prio = !!brcmf_pkt_prio_enable;
 
 	if (bus_type == BRCMF_BUSTYPE_SDIO)
 		settings->bus.sdio.txglomsz = brcmf_sdiod_txglomsz;

@@ -141,6 +141,7 @@ struct brcmf_pub {
 	struct brcmf_pkt_filter_enable_le pkt_filter[MAX_PKT_FILTER_COUNT];
 	u8 sta_mac_idx;
 
+	struct cfg80211_qos_map *qos_map;
 };
 
 /* forward declarations */

@@ -16,6 +16,7 @@
 #include <net/ipv6.h>
 #include <brcmu_utils.h>
 #include <brcmu_wifi.h>
+#include <defs.h>
 
 #include "core.h"
 #include "bus.h"
@@ -71,6 +72,15 @@ struct wlc_d11rxhdr {
 	spin_unlock_irqrestore(&(ifp)->sta_list_lock, (flags))
 
 #define BRCMF_STA_NULL ((struct brcmf_sta *)NULL)
+
+/* dscp exception format {dscp hex, up}  */
+struct cfg80211_dscp_exception dscp_excpt[] = {
+{DSCP_EF, 6}, {DSCP_CS4, 5}, {DSCP_AF41, 5}, {DSCP_CS3, 4} };
+
+/* dscp range : up[0 ~ 7] */
+struct cfg80211_dscp_range dscp_range[8] = {
+{0, 7}, {8, 15}, {16, 23}, {24, 31},
+{32, 39}, {40, 47}, {48, 55}, {56, 63} };
 
 char *brcmf_ifname(struct brcmf_if *ifp)
 {
@@ -366,9 +376,13 @@ static netdev_tx_t brcmf_netdev_start_xmit(struct sk_buff *skb,
 	if (eh->h_proto == htons(ETH_P_PAE))
 		atomic_inc(&ifp->pend_8021x_cnt);
 
+	/* Look into dscp to WMM UP mapping with cfg80211_qos_map */
+	if (drvr->settings->pkt_prio) {
+		skb->priority = cfg80211_classify8021d(skb, drvr->qos_map);
 	/* determine the priority */
-	if ((skb->priority == 0) || (skb->priority > 7))
+	} else if ((skb->priority == 0) || (skb->priority > 7)) {
 		skb->priority = cfg80211_classify8021d(skb, NULL);
+	}
 
 	/* set pacing shift for packet aggregation */
 	sk_pacing_shift_update(skb->sk, 8);
@@ -1219,6 +1233,7 @@ static int brcmf_bus_started(struct brcmf_pub *drvr, struct cfg80211_ops *ops)
 	struct brcmf_bus *bus_if = drvr->bus_if;
 	struct brcmf_if *ifp;
 	struct brcmf_if *p2p_ifp;
+	int i, num;
 
 	brcmf_dbg(TRACE, "\n");
 
@@ -1256,6 +1271,22 @@ static int brcmf_bus_started(struct brcmf_pub *drvr, struct cfg80211_ops *ops)
 	if (drvr->config == NULL) {
 		ret = -ENOMEM;
 		goto fail;
+	}
+
+	/* update custom DSCP to PRIO mapping */
+	if (drvr->settings->pkt_prio) {
+		drvr->qos_map = kzalloc(sizeof(struct cfg80211_qos_map), GFP_KERNEL);
+		if (!drvr->qos_map) {
+			ret = -ENOMEM;
+			goto fail;
+		}
+		num = sizeof(dscp_excpt) / (sizeof(struct cfg80211_dscp_exception));
+		drvr->qos_map->num_des = num;
+		for (i = 0; i < num; i++) {
+			drvr->qos_map->dscp_exception[i].dscp = dscp_excpt[i].dscp;
+			drvr->qos_map->dscp_exception[i].up = dscp_excpt[i].up;
+		}
+		memcpy(drvr->qos_map->up, dscp_range, sizeof(dscp_range[8]));
 	}
 
 	ret = brcmf_net_attach(ifp, false);
@@ -1461,6 +1492,11 @@ void brcmf_detach(struct device *dev)
 			brcmf_remove_interface(drvr->iflist[i], false);
 	}
 	brcmf_bus_stop(drvr->bus_if);
+
+	if (drvr->settings->pkt_prio) {
+		kfree(drvr->qos_map);
+		drvr->qos_map = NULL;
+	}
 
 	brcmf_fweh_detach(drvr);
 	brcmf_proto_detach(drvr);
