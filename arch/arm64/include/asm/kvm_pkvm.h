@@ -54,6 +54,7 @@ void pkvm_host_reclaim_page(struct kvm *host_kvm, phys_addr_t ipa);
  * - AArch64 guests only (no support for AArch32 guests):
  *	AArch32 adds complexity in trap handling, emulation, condition codes,
  *	etc...
+ * - SVE
  * - RAS (v1)
  *	Supported by KVM
  */
@@ -68,6 +69,7 @@ void pkvm_host_reclaim_page(struct kvm *host_kvm, phys_addr_t ipa);
 	SYS_FIELD_PREP_ENUM(ID_AA64PFR0_EL1, EL1, IMP) | \
 	SYS_FIELD_PREP_ENUM(ID_AA64PFR0_EL1, EL2, IMP) | \
 	SYS_FIELD_PREP_ENUM(ID_AA64PFR0_EL1, EL3, IMP) | \
+	FIELD_PREP(ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_SVE), ID_AA64PFR0_EL1_SVE_IMP) | \
 	SYS_FIELD_PREP_ENUM(ID_AA64PFR0_EL1, RAS, IMP) \
 	)
 
@@ -148,11 +150,19 @@ void pkvm_host_reclaim_page(struct kvm *host_kvm, phys_addr_t ipa);
 #define PVM_ID_AA64MMFR3_ALLOW (0ULL)
 
 /*
- * No support for Scalable Vectors for protected VMs:
- *	Requires additional support from KVM, e.g., context-switching and
- *	trapping at EL2
+ * No restrictions for Scalable Vectors (SVE).
  */
-#define PVM_ID_AA64ZFR0_ALLOW (0ULL)
+#define PVM_ID_AA64ZFR0_ALLOW (\
+	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_SVEver) | \
+	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_AES) | \
+	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_BitPerm) | \
+	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_BF16) | \
+	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_SHA3) | \
+	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_SM4) | \
+	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_I8MM) | \
+	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_F32MM) | \
+	ARM64_FEATURE_MASK(ID_AA64ZFR0_EL1_F64MM) \
+	)
 
 /*
  * No support for debug, including breakpoints, and watchpoints for protected

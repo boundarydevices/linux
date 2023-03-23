@@ -85,8 +85,13 @@ static u64 get_restricted_features_unsigned(u64 sys_reg_val,
 
 static u64 get_pvm_id_aa64pfr0(const struct kvm_vcpu *vcpu)
 {
-	return get_restricted_features_unsigned(id_aa64pfr0_el1_sys_val,
-						PVM_ID_AA64PFR0_ALLOW);
+	u64 value = get_restricted_features_unsigned(id_aa64pfr0_el1_sys_val,
+						     PVM_ID_AA64PFR0_ALLOW);
+
+	if (!vcpu_has_sve(vcpu))
+		value &= ~ARM64_FEATURE_MASK(ID_AA64PFR0_EL1_SVE);
+
+	return value;
 }
 
 static u64 get_pvm_id_aa64pfr1(const struct kvm_vcpu *vcpu)
@@ -103,7 +108,11 @@ static u64 get_pvm_id_aa64pfr1(const struct kvm_vcpu *vcpu)
 
 static u64 get_pvm_id_aa64zfr0(const struct kvm_vcpu *vcpu)
 {
-	return id_aa64zfr0_el1_sys_val & PVM_ID_AA64ZFR0_ALLOW;
+	if (vcpu_has_sve(vcpu))
+		return get_restricted_features_unsigned(id_aa64zfr0_el1_sys_val,
+							PVM_ID_AA64ZFR0_ALLOW);
+
+	return 0;
 }
 
 static u64 get_pvm_id_aa64dfr0(const struct kvm_vcpu *vcpu)
@@ -435,8 +444,6 @@ static const struct sys_reg_desc pvm_sys_reg_descs[] = {
 	ID_UNALLOCATED(7,5),
 	ID_UNALLOCATED(7,6),
 	ID_UNALLOCATED(7,7),
-
-	/* Scalable Vector Registers are restricted. */
 
 	RAZ_WI(SYS_ERRIDR_EL1),
 	RAZ_WI(SYS_ERRSELR_EL1),
