@@ -1612,7 +1612,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 
 	/* Fetch GPIOs */
 	for (i = 0; i < ARRAY_SIZE(imx6_pcie->reset_gpios); i++) {
-		struct gpio_desc *gd = devm_gpiod_get_index(&pdev->dev, "reset", i,
+		struct gpio_desc *gd = devm_gpiod_get_index(dev, "reset", i,
 							    GPIOD_OUT_HIGH);
 
 		if (PTR_ERR(gd) == -EPROBE_DEFER)
@@ -1634,13 +1634,13 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 		return dev_err_probe(dev, PTR_ERR(imx6_pcie->pcie),
 				     "pcie clock source missing or invalid\n");
 
-	imx6_pcie->pcie_ext_src = devm_clk_get(&pdev->dev,
+	imx6_pcie->pcie_ext_src = devm_clk_get(dev,
 			"pcie_ext_src");
 	if (IS_ERR(imx6_pcie->pcie_ext_src)) {
 		if (PTR_ERR(imx6_pcie->pcie_ext_src) == -EPROBE_DEFER)
 			return PTR_ERR(imx6_pcie->pcie_ext_src);
 		imx6_pcie->pcie_ext_src = NULL;
-		dev_info(&pdev->dev,
+		dev_info(dev,
 			"pcie_ext_src clk src missing or invalid\n");
 	}
 
@@ -1706,10 +1706,10 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 		if (dbi_base->start == IMX8_HSIO_PCIEB_BASE_ADDR)
 			imx6_pcie->controller_id = 1;
 
-		imx6_pcie->pcie_inbound_axi = devm_clk_get(&pdev->dev,
+		imx6_pcie->pcie_inbound_axi = devm_clk_get(dev,
 				"pcie_inbound_axi");
 		if (IS_ERR(imx6_pcie->pcie_inbound_axi)) {
-			dev_err(&pdev->dev,
+			dev_err(dev,
 				"pcie clock source missing or invalid\n");
 			return PTR_ERR(imx6_pcie->pcie_inbound_axi);
 		}
@@ -1782,14 +1782,14 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 	pci->link_gen = 1;
 	of_property_read_u32(node, "fsl,max-link-speed", &pci->link_gen);
 
-	imx6_pcie->vpcie = devm_regulator_get_optional(&pdev->dev, "vpcie");
+	imx6_pcie->vpcie = devm_regulator_get_optional(dev, "vpcie");
 	if (IS_ERR(imx6_pcie->vpcie)) {
 		if (PTR_ERR(imx6_pcie->vpcie) != -ENODEV)
 			return PTR_ERR(imx6_pcie->vpcie);
 		imx6_pcie->vpcie = NULL;
 	}
 
-	imx6_pcie->vph = devm_regulator_get_optional(&pdev->dev, "vph");
+	imx6_pcie->vph = devm_regulator_get_optional(dev, "vph");
 	if (IS_ERR(imx6_pcie->vph)) {
 		if (PTR_ERR(imx6_pcie->vph) != -ENODEV)
 			return PTR_ERR(imx6_pcie->vph);
