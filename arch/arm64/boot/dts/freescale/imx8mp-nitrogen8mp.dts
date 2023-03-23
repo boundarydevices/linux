@@ -653,6 +653,7 @@
 		pwm_mipi = &pwm1;
 		pwm_lvds = &pwm2;
 		pwm_lvds2 = &pwm2;
+		sound_hdmi= &sound_hdmi;
 		t_lvds = &t_lvds;
 		t_lvds2 = &t_lvds2;
 		t_mipi = &t_mipi;
@@ -832,7 +833,7 @@
 		};
 	};
 
-	sound-hdmi {
+	sound_hdmi: sound-hdmi {
 		compatible = "fsl,imx-audio-hdmi";
 		model = "audio-hdmi";
 		audio-cpu = <&aud2htx>;
