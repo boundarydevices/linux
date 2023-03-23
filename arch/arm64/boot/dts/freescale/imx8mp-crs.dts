@@ -475,6 +475,7 @@
 
 	aliases {
 		fb_hdmi = &lcdif3;
+		sound_hdmi= &sound_hdmi;
 	};
 
 	bt-rfkill {
@@ -623,7 +624,7 @@
 		};
 	};
 
-	sound-hdmi {
+	sound_hdmi: sound-hdmi {
 		compatible = "fsl,imx-audio-hdmi";
 		model = "audio-hdmi";
 		audio-cpu = <&aud2htx>;
