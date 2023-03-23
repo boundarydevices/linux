@@ -396,6 +396,7 @@
 		mipi_dsi = &mipi_dsi;
 		mipi_dsi_bridge = &mipi_dsi;
 		pwm_mipi = &pwm1;
+		sound_hdmi= &sound_hdmi;
 		t_mipi = &t_mipi;
 		ts_goodix = &ts_goodix;
 		usb_mux = &usb_mux;
@@ -506,7 +507,7 @@
 		};
 	};
 
-	sound-hdmi {
+	sound_hdmi: sound-hdmi {
 		compatible = "fsl,imx-audio-hdmi";
 		model = "audio-hdmi";
 		audio-cpu = <&aud2htx>;
