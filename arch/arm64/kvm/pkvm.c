@@ -267,6 +267,12 @@ out_free:
 	free_hyp_memcache(&host_kvm->arch.pkvm.teardown_mc);
 }
 
+static void __pkvm_vcpu_hyp_created(struct kvm_vcpu *vcpu)
+{
+	if (kvm_vm_is_protected(vcpu->kvm))
+		vcpu->arch.sve_state = NULL;
+}
+
 /*
  * Allocates and donates memory for hypervisor VM structs at EL2.
  *
@@ -332,6 +338,7 @@ static int __pkvm_create_hyp_vm(struct kvm *host_kvm)
 		ret = __pkvm_create_hyp_vcpu(host_kvm, host_vcpu, idx);
 		if (ret)
 			goto destroy_vm;
+		__pkvm_vcpu_hyp_created(host_vcpu);
 	}
 
 	return 0;

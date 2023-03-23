@@ -571,6 +571,19 @@ static void unpin_host_sve_state(struct pkvm_hyp_vcpu *hyp_vcpu)
 			     sve_state + vcpu_sve_state_size(&hyp_vcpu->vcpu));
 }
 
+static void teardown_sve_state(struct pkvm_hyp_vcpu *hyp_vcpu)
+{
+	void *sve_state = hyp_vcpu->vcpu.arch.sve_state;
+
+	if (sve_state) {
+		struct kvm_hyp_memcache *vcpu_mc;
+
+		vcpu_mc = &hyp_vcpu->vcpu.arch.pkvm_memcache;
+		teardown_donated_memory(vcpu_mc, sve_state,
+					vcpu_sve_state_size(&hyp_vcpu->vcpu));
+	}
+}
+
 static void unpin_host_vcpus(struct pkvm_hyp_vcpu *hyp_vcpus[],
 			     unsigned int nr_vcpus)
 {
@@ -580,7 +593,9 @@ static void unpin_host_vcpus(struct pkvm_hyp_vcpu *hyp_vcpus[],
 		struct pkvm_hyp_vcpu *hyp_vcpu = hyp_vcpus[i];
 
 		unpin_host_vcpu(hyp_vcpu->host_vcpu);
-		unpin_host_sve_state(hyp_vcpu);
+
+		if (!pkvm_hyp_vcpu_is_protected(hyp_vcpu))
+			unpin_host_sve_state(hyp_vcpu);
 	}
 }
 
@@ -628,14 +643,23 @@ static int pkvm_vcpu_init_sve(struct pkvm_hyp_vcpu *hyp_vcpu, struct kvm_vcpu *h
 	sve_state_size = sve_state_size(sve_max_vl);
 	sve_state = kern_hyp_va(READ_ONCE(host_vcpu->arch.sve_state));
 
-	if (!sve_state || !sve_state_size) {
+	if (!sve_state || !sve_state_size || (sve_max_vl > kvm_sve_max_vl)) {
 		ret = -EINVAL;
 		goto err;
 	}
 
-	ret = hyp_pin_shared_mem(sve_state, sve_state + sve_state_size);
-	if (ret)
-		goto err;
+	if (pkvm_hyp_vcpu_is_protected(hyp_vcpu)) {
+		sve_state = map_donated_memory((unsigned long) sve_state,
+					        sve_state_size);
+		if (!sve_state) {
+			ret = -ENOMEM;
+			goto err;
+		}
+	} else {
+		ret = hyp_pin_shared_mem(sve_state, sve_state + sve_state_size);
+		if (ret)
+			goto err;
+	}
 
 	vcpu->arch.sve_state = sve_state;
 	vcpu->arch.sve_max_vl = sve_max_vl;
@@ -979,6 +1003,9 @@ int __pkvm_finalize_teardown_vm(pkvm_handle_t handle)
 			unmap_donated_memory_noclear(addr, PAGE_SIZE);
 		}
 
+		if (pkvm_hyp_vcpu_is_protected(hyp_vcpu))
+			teardown_sve_state(hyp_vcpu);
+
 		teardown_donated_memory(mc, hyp_vcpu, sizeof(*hyp_vcpu));
 	}
 
@@ -1047,16 +1074,17 @@ void pkvm_poison_pvmfw_pages(void)
  */
 void pkvm_reset_vcpu(struct pkvm_hyp_vcpu *hyp_vcpu)
 {
-	struct vcpu_reset_state *reset_state = &hyp_vcpu->vcpu.arch.reset_state;
+	struct kvm_vcpu *vcpu = &hyp_vcpu->vcpu;
+	struct vcpu_reset_state *reset_state = &vcpu->arch.reset_state;
 	struct pkvm_hyp_vm *hyp_vm = pkvm_hyp_vcpu_to_hyp_vm(hyp_vcpu);
 
 	WARN_ON(!reset_state->reset);
 
-	kvm_reset_vcpu_core(&hyp_vcpu->vcpu);
-	kvm_reset_pvm_sys_regs(&hyp_vcpu->vcpu);
+	kvm_reset_vcpu_core(vcpu);
+	kvm_reset_pvm_sys_regs(vcpu);
 
 	/* Must be done after reseting sys registers. */
-	kvm_reset_vcpu_psci(&hyp_vcpu->vcpu, reset_state);
+	kvm_reset_vcpu_psci(vcpu, reset_state);
 	if (hyp_vm->pvmfw_entry_vcpu == hyp_vcpu) {
 		struct kvm_vcpu *host_vcpu = hyp_vcpu->host_vcpu;
 		u64 entry = hyp_vm->kvm.arch.pkvm.pvmfw_load_addr;
@@ -1080,12 +1108,15 @@ void pkvm_reset_vcpu(struct pkvm_hyp_vcpu *hyp_vcpu)
 		set_bit(KVM_ARCH_FLAG_MMIO_GUARD, &hyp_vm->kvm.arch.flags);
 	}
 
+	if (pkvm_hyp_vcpu_is_protected(hyp_vcpu) && vcpu_has_sve(vcpu))
+		memset(vcpu->arch.sve_state, 0, vcpu_sve_state_size(vcpu));
+
 	reset_state->reset = false;
 
 	hyp_vcpu->exit_code = 0;
 
 	WARN_ON(hyp_vcpu->power_state != PSCI_0_2_AFFINITY_LEVEL_ON_PENDING);
-	WRITE_ONCE(hyp_vcpu->vcpu.arch.mp_state.mp_state, KVM_MP_STATE_RUNNABLE);
+	WRITE_ONCE(vcpu->arch.mp_state.mp_state, KVM_MP_STATE_RUNNABLE);
 	WRITE_ONCE(hyp_vcpu->power_state, PSCI_0_2_AFFINITY_LEVEL_ON);
 }
 
