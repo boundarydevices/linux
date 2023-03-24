@@ -41,7 +41,9 @@ struct uio_mem {
 	unsigned long		offs;
 	resource_size_t		size;
 	int			memtype;
+#ifndef CONFIG_IMX_GKI_FIX
 	bool			readonly;
+#endif
 	void __iomem		*internal_addr;
 	struct uio_map		*map;
 };
