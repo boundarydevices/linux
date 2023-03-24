@@ -270,6 +270,18 @@ static const struct multi_in_con_reg
 	},
 };
 
+static unsigned int get_multi_in_ch_fixup(unsigned int channels)
+{
+	if (channels > 6)
+		return 8;
+	else if (channels > 4)
+		return 6;
+	else if (channels > 2)
+		return 4;
+	else
+		return 2;
+}
+
 /* dai ops */
 static int mtk_dai_multi_in_fmt_config(struct snd_soc_dai *dai,
 				       unsigned int bit_width,
@@ -310,6 +322,7 @@ static int mtk_dai_multi_in_fmt_config(struct snd_soc_dai *dai,
 
 	regmap_update_bits(afe->regmap, reg->con0, mask, val);
 
+	channels = get_multi_in_ch_fixup(channels);
 	mask = 0;
 	val = 0;
 	val |= AFE_MPHONE_MULTI_CON1_CH_NUM(channels) |
