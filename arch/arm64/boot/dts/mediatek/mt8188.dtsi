@@ -3194,6 +3194,7 @@
 			clocks = <&vencsys CLK_VEN1_CKE2_JPGENC>;
 			clock-names = "jpgenc";
 			power-domains = <&spm MT8188_POWER_DOMAIN_VENC>;
+			mediatek,34bits = <1>;
 		};
 
 		jpgdec@1a040000 {
@@ -3211,6 +3212,7 @@
 				 <&vencsys CLK_VEN1_CKE3_JPGDEC>;
 			clock-names = "jpgdec-smi", "jpgdec";
 			power-domains = <&spm MT8188_POWER_DOMAIN_VDEC0>;
+			mediatek,34bits = <1>;
 		};
 
 		dpi1: dpi1@1c112000 {
