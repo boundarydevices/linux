@@ -200,7 +200,9 @@ static unsigned int phylink_pcs_neg_mode(unsigned int mode, phy_interface_t inte
 	case PHY_INTERFACE_MODE_QSGMII:
 	case PHY_INTERFACE_MODE_QUSGMII:
 	case PHY_INTERFACE_MODE_USXGMII:
+#ifndef CONFIG_IMX_GKI_FIX
 	case PHY_INTERFACE_MODE_10G_QXGMII:
+#endif
 		/* These protocols are designed for use with a PHY which
 		 * communicates its negotiation result back to the MAC via
 		 * inband communication. Note: there exist PHYs that run
@@ -293,8 +295,10 @@ static int phylink_interface_max_speed(phy_interface_t interface)
 		return SPEED_1000;
 
 	case PHY_INTERFACE_MODE_2500BASEX:
+#ifndef CONFIG_IMX_GKI_FIX
 	case PHY_INTERFACE_MODE_2500SGMII:
 	case PHY_INTERFACE_MODE_10G_QXGMII:
+#endif
 		return SPEED_2500;
 
 	case PHY_INTERFACE_MODE_5GBASER:
@@ -309,11 +313,15 @@ static int phylink_interface_max_speed(phy_interface_t interface)
 		return SPEED_10000;
 
 	case PHY_INTERFACE_MODE_25GBASER:
+#ifndef CONFIG_IMX_GKI_FIX
 	case PHY_INTERFACE_MODE_25GKR:
+#endif
 		return SPEED_25000;
 
 	case PHY_INTERFACE_MODE_XLGMII:
+#ifndef CONFIG_IMX_GKI_FIX
 	case PHY_INTERFACE_MODE_40GKR4:
+#endif
 		return SPEED_40000;
 
 	case PHY_INTERFACE_MODE_INTERNAL:
@@ -568,12 +576,14 @@ unsigned long phylink_get_capabilities(phy_interface_t interface,
 
 	switch (interface) {
 	case PHY_INTERFACE_MODE_USXGMII:
-		caps |= MAC_10000FD | MAC_5000FD;
+#ifdef CONFIG_IMX_GKI_FIX
+		caps |= MAC_10000FD | MAC_5000FD | MAC_2500FD;
 		fallthrough;
-
+#else
 	case PHY_INTERFACE_MODE_10G_QXGMII:
 		caps |= MAC_2500FD;
 		fallthrough;
+#endif
 
 	case PHY_INTERFACE_MODE_RGMII_TXID:
 	case PHY_INTERFACE_MODE_RGMII_RXID:
@@ -611,7 +621,9 @@ unsigned long phylink_get_capabilities(phy_interface_t interface,
 		break;
 
 	case PHY_INTERFACE_MODE_2500BASEX:
+#ifndef CONFIG_IMX_GKI_FIX
 	case PHY_INTERFACE_MODE_2500SGMII:
+#endif
 		caps |= MAC_2500FD;
 		break;
 
@@ -628,12 +640,16 @@ unsigned long phylink_get_capabilities(phy_interface_t interface,
 		break;
 
 	case PHY_INTERFACE_MODE_25GBASER:
+#ifndef CONFIG_IMX_GKI_FIX
 	case PHY_INTERFACE_MODE_25GKR:
+#endif
 		caps |= MAC_25000FD;
 		break;
 
 	case PHY_INTERFACE_MODE_XLGMII:
+#ifndef CONFIG_IMX_GKI_FIX
 	case PHY_INTERFACE_MODE_40GKR4:
+#endif
 		caps |= MAC_40000FD;
 		break;
 
@@ -890,6 +906,7 @@ skip_interface_checks:
  */
 static phy_interface_t phylink_c73_linkmode_to_interface(unsigned long *supported)
 {
+#ifndef CONFIG_IMX_GKI_FIX
 	if (linkmode_test_bit(ETHTOOL_LINK_MODE_40000baseKR4_Full_BIT, supported))
 		return PHY_INTERFACE_MODE_40GKR4;
 	if (linkmode_test_bit(ETHTOOL_LINK_MODE_25000baseKR_Full_BIT, supported) ||
@@ -897,6 +914,7 @@ static phy_interface_t phylink_c73_linkmode_to_interface(unsigned long *supporte
 	    linkmode_test_bit(ETHTOOL_LINK_MODE_25000baseKR_S_Full_BIT, supported) ||
 	    linkmode_test_bit(ETHTOOL_LINK_MODE_25000baseCR_S_Full_BIT, supported))
 		return PHY_INTERFACE_MODE_25GKR;
+#endif
 	if (linkmode_test_bit(ETHTOOL_LINK_MODE_10000baseKR_Full_BIT, supported))
 		return PHY_INTERFACE_MODE_10GKR;
 	if (linkmode_test_bit(ETHTOOL_LINK_MODE_1000baseKX_Full_BIT, supported))
@@ -1073,7 +1091,9 @@ managed:
 		case PHY_INTERFACE_MODE_5GBASER:
 		case PHY_INTERFACE_MODE_25GBASER:
 		case PHY_INTERFACE_MODE_USXGMII:
+#ifndef CONFIG_IMX_GKI_FIX
 		case PHY_INTERFACE_MODE_10G_QXGMII:
+#endif
 		case PHY_INTERFACE_MODE_10GKR:
 		case PHY_INTERFACE_MODE_10GBASER:
 		case PHY_INTERFACE_MODE_XLGMII:
@@ -1943,11 +1963,18 @@ static int phylink_bringup_phy(struct phylink *pl, struct phy_device *phy,
 	 * against all interface modes, which may lead to more ethtool link
 	 * modes being advertised than are actually supported.
 	 */
+#ifdef CONFIG_IMX_GKI_FIX
+	if (phy->is_c45 && config.rate_matching == RATE_MATCH_NONE &&
+	    interface != PHY_INTERFACE_MODE_RXAUI &&
+	    interface != PHY_INTERFACE_MODE_XAUI &&
+	    interface != PHY_INTERFACE_MODE_USXGMII)
+#else
 	if (phy->is_c45 && config.rate_matching == RATE_MATCH_NONE &&
 	    interface != PHY_INTERFACE_MODE_RXAUI &&
 	    interface != PHY_INTERFACE_MODE_XAUI &&
 	    interface != PHY_INTERFACE_MODE_USXGMII &&
 	    interface != PHY_INTERFACE_MODE_10G_QXGMII)
+#endif
 		config.interface = PHY_INTERFACE_MODE_NA;
 	else
 		config.interface = interface;
