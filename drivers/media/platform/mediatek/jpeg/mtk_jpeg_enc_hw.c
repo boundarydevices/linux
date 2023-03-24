@@ -62,10 +62,15 @@ void mtk_jpeg_enc_reset(void __iomem *base)
 }
 EXPORT_SYMBOL_GPL(mtk_jpeg_enc_reset);
 
-u32 mtk_jpeg_enc_get_file_size(void __iomem *base)
+u32 mtk_jpeg_enc_get_file_size(void __iomem *base, u32 support_34bit)
 {
-	return readl(base + JPEG_ENC_DMA_ADDR0) -
-	       readl(base + JPEG_ENC_DST_ADDR0);
+	if (support_34bit) {
+		return readl(base + JPEG_ENC_DMA_ADDR0) * 4 -
+			readl(base + JPEG_ENC_DST_ADDR0);
+	} else {
+		return readl(base + JPEG_ENC_DMA_ADDR0) -
+			readl(base + JPEG_ENC_DST_ADDR0);
+	}
 }
 EXPORT_SYMBOL_GPL(mtk_jpeg_enc_get_file_size);
 
@@ -84,14 +89,24 @@ void mtk_jpeg_set_enc_src(struct mtk_jpeg_ctx *ctx,  void __iomem *base,
 {
 	int i;
 	dma_addr_t dma_addr;
+	u32 support_34bit = ctx->jpeg->support_34bit;
 
 	for (i = 0; i < src_buf->num_planes; i++) {
 		dma_addr = vb2_dma_contig_plane_dma_addr(src_buf, i) +
 			   src_buf->planes[i].data_offset;
-		if (!i)
+		if (!i) {
 			writel(dma_addr, base + JPEG_ENC_SRC_LUMA_ADDR);
-		else
+#if IS_ENABLED(CONFIG_ARCH_DMA_ADDR_T_64BIT)
+			if (support_34bit)
+				writel(dma_addr >> 32, base + JPEG_ENC_SRC_LUMA_ADDR_EXT);
+#endif
+		} else {
 			writel(dma_addr, base + JPEG_ENC_SRC_CHROMA_ADDR);
+#if IS_ENABLED(CONFIG_ARCH_DMA_ADDR_T_64BIT)
+			if (support_34bit)
+				writel(dma_addr >> 32, base + JPEG_ENC_SRC_CHROMA_ADDR_EXT);
+#endif
+		}
 	}
 }
 EXPORT_SYMBOL_GPL(mtk_jpeg_set_enc_src);
@@ -103,6 +118,7 @@ void mtk_jpeg_set_enc_dst(struct mtk_jpeg_ctx *ctx, void __iomem *base,
 	size_t size;
 	u32 dma_addr_offset;
 	u32 dma_addr_offsetmask;
+	u32 support_34bit = ctx->jpeg->support_34bit;
 
 	dma_addr = vb2_dma_contig_plane_dma_addr(dst_buf, 0);
 	dma_addr_offset = ctx->enable_exif ? MTK_JPEG_MAX_EXIF_SIZE : 0;
@@ -112,7 +128,16 @@ void mtk_jpeg_set_enc_dst(struct mtk_jpeg_ctx *ctx, void __iomem *base,
 	writel(dma_addr_offset & ~0xf, base + JPEG_ENC_OFFSET_ADDR);
 	writel(dma_addr_offsetmask & 0xf, base + JPEG_ENC_BYTE_OFFSET_MASK);
 	writel(dma_addr & ~0xf, base + JPEG_ENC_DST_ADDR0);
+#if IS_ENABLED(CONFIG_ARCH_DMA_ADDR_T_64BIT)
+	if (support_34bit)
+		writel(dma_addr >> 32, base + JPEG_ENC_DEST_ADDR0_EXT);
+#endif
 	writel((dma_addr + size) & ~0xf, base + JPEG_ENC_STALL_ADDR0);
+#if IS_ENABLED(CONFIG_ARCH_DMA_ADDR_T_64BIT)
+	if (support_34bit)
+		writel(((dma_addr + size)>>32),
+			base + JPEG_ENC_STALL_ADDR0_EXT);
+#endif
 }
 EXPORT_SYMBOL_GPL(mtk_jpeg_set_enc_dst);
 
@@ -278,7 +303,7 @@ static irqreturn_t mtk_jpegenc_hw_irq_handler(int irq, void *priv)
 	if (!(irq_status & JPEG_ENC_INT_STATUS_DONE))
 		dev_warn(jpeg->dev, "Jpg Enc occurs unknown Err.");
 
-	result_size = mtk_jpeg_enc_get_file_size(jpeg->reg_base);
+	result_size = mtk_jpeg_enc_get_file_size(jpeg->reg_base, master_jpeg->support_34bit);
 	vb2_set_plane_payload(&dst_buf->vb2_buf, 0, result_size);
 	buf_state = VB2_BUF_STATE_DONE;
 	v4l2_m2m_buf_done(src_buf, buf_state);
