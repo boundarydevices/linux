@@ -1422,9 +1422,13 @@ static struct opp_table *_update_opp_table_clk(struct device *dev,
 	 * Return early if we don't need to get clk or we have already done it
 	 * earlier.
 	 */
-	if (!getclk || IS_ERR(opp_table) || !IS_ERR(opp_table->clk) ||
+	if (IS_ERR(opp_table) || !IS_ERR(opp_table->clk) ||
 	    opp_table->clks)
 		return opp_table;
+	if (!getclk) {
+		opp_table->clk_count = 1;
+		return opp_table;
+	}
 
 	/* Find clk for the device */
 	opp_table->clk = clk_get(dev, NULL);

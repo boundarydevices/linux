@@ -796,12 +796,11 @@ static int _read_rate(struct dev_pm_opp *new_opp, struct opp_table *opp_table,
 		return -ENODEV;
 
 	count = prop->length / sizeof(u64);
-	if (0) if (opp_table->clk_count != count) {
+	if (opp_table->clk_count != count) {
 		pr_err("%s: Count mismatch between opp-hz and clk_count (%d %d)\n",
 		       __func__, count, opp_table->clk_count);
 		return -EINVAL;
 	}
-	opp_table->clk_count = count;
 
 	rates = kmalloc_array(count, sizeof(*rates), GFP_KERNEL);
 	if (!rates)
