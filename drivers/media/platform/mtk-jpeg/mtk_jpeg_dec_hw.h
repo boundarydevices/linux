@@ -70,7 +70,7 @@ struct mtk_jpeg_fb {
 int mtk_jpeg_dec_fill_param(struct mtk_jpeg_dec_param *param);
 u32 mtk_jpeg_dec_get_int_status(void __iomem *dec_reg_base);
 u32 mtk_jpeg_dec_enum_result(u32 irq_result);
-void mtk_jpeg_dec_set_config(void __iomem *base,
+void mtk_jpeg_dec_set_config(void __iomem *base, u32 support_34bit,
 			     struct mtk_jpeg_dec_param *config,
 			     u32 bitstream_size,
 			     struct mtk_jpeg_bs *bs,

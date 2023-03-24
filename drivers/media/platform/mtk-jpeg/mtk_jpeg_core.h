@@ -87,6 +87,7 @@ struct mtk_jpeg_variant {
  * @reg_base:		JPEG registers mapping
  * @job_timeout_work:	IRQ timeout structure
  * @variant:		driver variant to be used
+ * @support_34bit:	flag to check if support dma_address 34bit
  */
 struct mtk_jpeg_dev {
 	struct mutex		lock;
@@ -100,6 +101,7 @@ struct mtk_jpeg_dev {
 	void __iomem		*reg_base;
 	struct delayed_work job_timeout_work;
 	const struct mtk_jpeg_variant *variant;
+	u32 support_34bit;
 };
 
 /**

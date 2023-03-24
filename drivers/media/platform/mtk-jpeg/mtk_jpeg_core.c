@@ -1144,6 +1144,7 @@ static void mtk_jpeg_dec_device_run(void *priv)
 	spin_lock_irqsave(&jpeg->hw_lock, flags);
 	mtk_jpeg_dec_reset(jpeg->reg_base);
 	mtk_jpeg_dec_set_config(jpeg->reg_base,
+				jpeg->support_34bit,
 				&jpeg_src_buf->dec_param,
 				jpeg_src_buf->bs_size,
 				&bs,
@@ -1250,7 +1251,8 @@ static irqreturn_t mtk_jpeg_enc_done(struct mtk_jpeg_dev *jpeg)
 	dst_buf = v4l2_m2m_dst_buf_remove(ctx->fh.m2m_ctx);
 	dst_buf->vb2_buf.timestamp = src_buf->vb2_buf.timestamp;
 
-	result_size = mtk_jpeg_enc_get_file_size(jpeg->reg_base);
+	result_size = mtk_jpeg_enc_get_file_size(jpeg->reg_base,
+		jpeg->support_34bit);
 	v4l2_dbg(2, debug, &jpeg->v4l2_dev, "reult size = %d", result_size);
 	vb2_set_plane_payload(&dst_buf->vb2_buf, 0, result_size);
 
@@ -1281,6 +1283,9 @@ static irqreturn_t mtk_jpeg_enc_irq(int irq, void *priv)
 		     JPEG_ENC_INT_STATUS_MASK_ALLIRQ;
 	if (irq_status)
 		writel(0, jpeg->reg_base + JPEG_ENC_INT_STS);
+
+	if (irq_status & JPEG_ENC_INT_STATUS_STALL)
+		pr_info("irq stall need to check output buffer size");
 
 	if (!(irq_status & JPEG_ENC_INT_STATUS_DONE))
 		return ret;
@@ -1499,6 +1504,13 @@ static int mtk_jpeg_probe(struct platform_device *pdev)
 	jpeg->variant = of_device_get_match_data(jpeg->dev);
 	INIT_DELAYED_WORK(&jpeg->job_timeout_work, mtk_jpeg_job_timeout_work);
 
+	ret = of_property_read_u32(pdev->dev.of_node, "mediatek,34bits", &jpeg->support_34bit);
+	if (ret != 0) {
+		dev_info(&pdev->dev, "default for 32bits");
+		jpeg->support_34bit = 0;
+	}
+	dev_info(&pdev->dev, "use 34bits: %d", jpeg->support_34bit);
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	jpeg->reg_base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(jpeg->reg_base)) {
@@ -1563,6 +1575,12 @@ static int mtk_jpeg_probe(struct platform_device *pdev)
 	if (ret) {
 		v4l2_err(&jpeg->v4l2_dev, "Failed to register video device\n");
 		goto err_vfd_jpeg_register;
+	}
+
+	if (jpeg->support_34bit) {
+		ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(34));
+		if (ret)
+			dev_info(&pdev->dev, "34-bit DMA enable failed\n");
 	}
 
 	video_set_drvdata(jpeg->vdev, jpeg);
