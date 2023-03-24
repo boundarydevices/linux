@@ -754,7 +754,6 @@ static int goodix_release_irq(struct goodix_ts_data *ts)
  */
 int goodix_reset_no_int_sync(struct goodix_ts_data *ts)
 {
-	unsigned char irq_was_requested = goodix_release_irq(ts);
 	int error;
 
 	/* begin select I2C slave addr */
@@ -782,12 +781,13 @@ int goodix_reset_no_int_sync(struct goodix_ts_data *ts)
 	 * power. Only do this in the non ACPI case since some ACPI boards
 	 * don't have a pull-up, so there the reset pin must stay active-high.
 	 */
+#if 0
 	if (ts->irq_pin_access_method == IRQ_PIN_ACCESS_GPIO) {
 		error = gpiod_direction_input(ts->gpiod_rst);
 		if (error)
 			goto error;
 	}
-
+#endif
 	return 0;
 
 error:
@@ -802,6 +802,7 @@ error:
  */
 static int goodix_reset(struct goodix_ts_data *ts)
 {
+	unsigned char irq_was_requested = goodix_release_irq(ts);
 	int error;
 
 	error = goodix_reset_no_int_sync(ts);
@@ -1472,7 +1473,6 @@ static int goodix_finish_setup(struct goodix_ts_data *ts)
 	error = goodix_request_irq(ts);
 	if (error < 0)
 		return error;
-	}
 	ts->disp_node = of_parse_phandle(np, "display", 0);
 	if (ts->disp_node) {
 		ts->drmnb.notifier_call = ts_drm_event;
@@ -1663,8 +1663,6 @@ reset:
 				error);
 			goto err_sysfs_remove_group;
 		}
-
-		return 0;
 	} else {
 		error = goodix_configure_dev(ts);
 		if (error)
@@ -1673,7 +1671,6 @@ reset:
 		if (error)
 			return error;
 	}
-
 	return 0;
 
 err_sysfs_remove_group:
@@ -1707,6 +1704,7 @@ static int __maybe_unused goodix_sleep(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct goodix_ts_data *ts = i2c_get_clientdata(client);
+	unsigned char irq_was_requested;
 	int error = 0;
 
 	if (ts->load_cfg_from_disk)
