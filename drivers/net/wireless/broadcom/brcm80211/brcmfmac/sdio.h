@@ -147,6 +147,16 @@
 /* watchdog polling interval */
 #define BRCMF_WD_POLL	msecs_to_jiffies(10)
 
+/* SDIO function number definition */
+#define SDIO_FUNC_0		0
+#define SDIO_FUNC_1		1
+#define SDIO_FUNC_2		2
+#define SDIO_FUNC_3		3
+#define SDIO_FUNC_4		4
+#define SDIO_FUNC_5		5
+#define SDIO_FUNC_6		6
+#define SDIO_FUNC_7		7
+
 /**
  * enum brcmf_sdiod_state - the state of the bus.
  *
