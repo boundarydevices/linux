@@ -328,6 +328,14 @@ const struct wiphy_vendor_command brcmf_vendor_cmds[] = {
 			   VENDOR_CMD_RAW_DATA,
 			   ifx_cfg80211_vndr_cmds_giantrx)
 	},
+	{
+		IFX_SUBCMD(WNM,
+			   (WIPHY_VENDOR_CMD_NEED_WDEV |
+				WIPHY_VENDOR_CMD_NEED_NETDEV),
+			ifx_vendor_attr_wnm_policy,
+			ifx_cfg80211_vndr_cmds_wnm),
+		.maxattr = IFX_VENDOR_ATTR_WNM_MAX
+	},
 };
 
 const struct nl80211_vendor_cmd_info brcmf_vendor_events[] = {
