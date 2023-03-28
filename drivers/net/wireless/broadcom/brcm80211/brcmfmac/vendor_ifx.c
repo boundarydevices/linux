@@ -824,3 +824,88 @@ int ifx_cfg80211_vndr_cmds_giantrx(struct wiphy *wiphy,
 	return ret;
 }
 
+int ifx_cfg80211_vndr_cmds_wnm(struct wiphy *wiphy,
+			       struct wireless_dev *wdev, const void  *data, int len)
+{
+	int tmp, attr_type = 0, wnm_param = 0, ret = 0;
+	const struct nlattr *attr_iter, *wnm_param_iter;
+
+	struct brcmf_cfg80211_vif *vif;
+	struct brcmf_if *ifp;
+	u8 param[64] = {0}, get_info = 0;
+	u16 buf_len = 0, wnm_id = 0;
+
+	vif = container_of(wdev, struct brcmf_cfg80211_vif, wdev);
+	ifp = vif->ifp;
+	nla_for_each_attr(attr_iter, data, len, tmp) {
+		attr_type = nla_type(attr_iter);
+
+		switch (attr_type) {
+		case IFX_VENDOR_ATTR_WNM_CMD:
+			wnm_id = cpu_to_le16(nla_get_u8(attr_iter));
+			break;
+		case IFX_VENDOR_ATTR_WNM_PARAMS:
+			nla_for_each_nested(wnm_param_iter, attr_iter, tmp) {
+				wnm_param = nla_type(wnm_param_iter);
+				switch (wnm_param) {
+				case IFX_VENDOR_ATTR_WNM_PARAM_GET_INFO:
+				{
+					get_info = (int)nla_get_u8(wnm_param_iter);
+				}
+					break;
+				case IFX_VENDOR_ATTR_WNM_PARAM_IDLE_PERIOD:
+				{
+					int period;
+
+					period = (int)nla_get_u8(wnm_param_iter);
+					memcpy(&param[buf_len], &period, sizeof(period));
+					buf_len += sizeof(period);
+				}
+					break;
+				case IFX_VENDOR_ATTR_WNM_PARAM_PROTECTION_OPT:
+				{
+					int option;
+
+					option = (int)nla_get_u8(wnm_param_iter);
+					memcpy(&param[buf_len], &option, sizeof(option));
+					buf_len += sizeof(option);
+				}
+					break;
+				default:
+					brcmf_err("unknown wnm param attr:%d\n", wnm_param);
+					return -EINVAL;
+				}
+			}
+			break;
+		default:
+			brcmf_err("Unknown wnm attribute %d, skipping\n",
+				  attr_type);
+			return -EINVAL;
+		}
+	}
+
+	switch (wnm_id) {
+	case IFX_WNM_CMD_IOV_WNM_MAXIDLE:
+	{
+		if (get_info) {
+			int get_period = 0;
+
+			ret = brcmf_fil_iovar_int_get(ifp, "wnm_maxidle", &get_period);
+			if (!ret)
+				ret = ifx_cfg80211_vndr_send_cmd_reply(
+					wiphy, &get_period, sizeof(get_period));
+		} else
+			ret = brcmf_fil_iovar_data_set(ifp, "wnm_maxidle", param, buf_len);
+	}
+	break;
+
+	default:
+		brcmf_err("unsupport wnm cmd:%d\n", wnm_id);
+		return -EINVAL;
+	}
+
+	if (ret)
+		brcmf_err("wnm %s error:%d\n", get_info?"get":"set", ret);
+
+	return ret;
+}
