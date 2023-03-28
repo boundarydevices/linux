@@ -6,13 +6,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
-	pinctrl_bt_rfkill: bt-rfkillgrp {
-		fsl,pins = <
-#define GP_BT_RFKILL_RESET	<&gpio3 14 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_NAND_DQS_GPIO3_IO14, 0x119)
-		>;
-	};
-
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
 			/* J15 */
@@ -234,6 +227,8 @@
 			MX8MMN(IOMUXC_UART1_TXD_UART1_DCE_TX, 0x140)
 			MX8MMN(IOMUXC_UART3_RXD_UART1_DCE_CTS_B, 0x140)
 			MX8MMN(IOMUXC_UART3_TXD_UART1_DCE_RTS_B, 0x140)
+#define GP_BT_ENABLE	<&gpio3 14 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_NAND_DQS_GPIO3_IO14, 0x119)
 		>;
 	};
 
@@ -397,16 +392,6 @@
 
 	aliases {
 		a53 = &A53_0;
-	};
-
-	bt-rfkill {
-		compatible = "net,rfkill-gpio";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		name = "bt-rfkill";
-		type = <2>; /* Bluetooth */
-		reset-gpios = GP_BT_RFKILL_RESET;
-		status = "okay";
 	};
 
 	csi_mclk: csi-mclk {
@@ -809,6 +794,12 @@
 	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_80M)>;
 	uart-has-rtscts;
 	status = "okay";
+
+	bluetooth {
+		compatible = "qcom,qca9377-bt";
+		enable-gpios = GP_BT_ENABLE;
+		max-speed = <3000000>;
+	};
 };
 
 &uart2 { /* console */
