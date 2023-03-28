@@ -96,6 +96,8 @@ enum ifx_nl80211_vendor_subcmds {
 	 *
 	 * @IFX_VENDOR_SCMD_GIANTRX: Vendor command to set/get GIANTRX setting.
 	 *
+	 * @IFX_VENDOR_SCMD_WNM: Vendor command to set/get WNM setting.
+	 *
 	 * @IFX_VENDOR_SCMD_MAX: This acts as a the tail of cmds list.
 	 *      Make sure it located at the end of the list.
 	 */
@@ -122,7 +124,8 @@ enum ifx_nl80211_vendor_subcmds {
 	SCMD(MBO)		= 18,
 	SCMD(MPC)		= 19,
 	SCMD(GIANTRX)		= 20,
-	SCMD(MAX)		= 21
+	SCMD(WNM)		= 25,
+	SCMD(MAX)		= 26
 };
 
 /* enum ifx_vendor_attr - IFX nl80211 vendor attributes
@@ -650,6 +653,81 @@ struct ifx_randmac {
 	u8 data[0];			/* subcommand data */
 };
 
+enum ifx_vendor_attr_wnm_param {
+	IFX_VENDOR_ATTR_WNM_PARAM_UNSPEC,
+	IFX_VENDOR_ATTR_WNM_PARAM_GET_INFO,
+	IFX_VENDOR_ATTR_WNM_PARAM_IDLE_PERIOD,
+	IFX_VENDOR_ATTR_WNM_PARAM_PROTECTION_OPT,
+	IFX_VENDOR_ATTR_WNM_PARAM_MAX
+};
+
+static const struct nla_policy
+ifx_vendor_attr_wnm_param_policy[IFX_VENDOR_ATTR_WNM_PARAM_MAX + 1] = {
+	[IFX_VENDOR_ATTR_WNM_PARAM_UNSPEC] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_WNM_PARAM_GET_INFO] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_WNM_PARAM_IDLE_PERIOD] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_WNM_PARAM_PROTECTION_OPT] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_WNM_PARAM_MAX] = {.type = NLA_U8},
+};
+
+enum ifx_vendor_attr_wnm {
+	IFX_VENDOR_ATTR_WNM_UNSPEC,
+	IFX_VENDOR_ATTR_WNM_CMD,
+	IFX_VENDOR_ATTR_WNM_PARAMS,
+	IFX_VENDOR_ATTR_WNM_MAX
+};
+
+static const struct nla_policy ifx_vendor_attr_wnm_policy[IFX_VENDOR_ATTR_WNM_MAX + 1] = {
+	[IFX_VENDOR_ATTR_WNM_UNSPEC] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_WNM_CMD] = {.type = NLA_U8},
+	[IFX_VENDOR_ATTR_WNM_PARAMS] =
+		NLA_POLICY_NESTED(ifx_vendor_attr_wnm_param_policy),
+	[IFX_VENDOR_ATTR_WNM_MAX] = {.type = NLA_U8},
+};
+
+enum {
+	IFX_WNM_CMD_IOV_WNM = 1,
+	IFX_WNM_CMD_IOV_WNM_MAXIDLE = 2,
+	IFX_WNM_CMD_IOV_WNM_TIMBC_OFFSET = 3,
+	IFX_WNM_CMD_IOV_WNM_BSSTRANS_URL = 4,
+	IFX_WNM_CMD_IOV_WNM_BSSTRANS_REQ = 5,
+	IFX_WNM_CMD_IOV_WNM_TFS_TCLASTYPE = 6,
+	IFX_WNM_CMD_IOV_WNM_PARP_DISCARD = 7,
+	IFX_WNM_CMD_IOV_WNM_PARP_ALLNODE = 8,
+	IFX_WNM_CMD_IOV_WNM_TIMBC_SET = 9,
+	IFX_WNM_CMD_IOV_WNM_TIMBC_STATUS = 10,
+	IFX_WNM_CMD_IOV_WNM_DMS_SET = 11,
+	IFX_WNM_CMD_IOV_WNM_DMS_TERM = 12,
+	IFX_WNM_CMD_IOV_WNM_SERVICE_TERM = 13,
+	IFX_WNM_CMD_IOV_WNM_SLEEP_INTV = 14,
+	IFX_WNM_CMD_IOV_WNM_SLEEP_MODE = 15,
+	IFX_WNM_CMD_IOV_WNM_BSSTRANS_QUERY = 16,
+	IFX_WNM_CMD_IOV_WNM_BSSTRANS_RESP = 17,
+	IFX_WNM_CMD_IOV_WNM_TCLAS_ADD = 18,
+	IFX_WNM_CMD_IOV_WNM_TCLAS_DEL = 19,
+	IFX_WNM_CMD_IOV_WNM_TCLAS_LIST = 20,
+	IFX_WNM_CMD_IOV_WNM_DMS_STATUS = 21,
+	IFX_WNM_CMD_IOV_WNM_KEEPALIVES_MAX_IDLE = 22,
+	IFX_WNM_CMD_IOV_WNM_PM_IGNORE_BCMC = 23,
+	IFX_WNM_CMD_IOV_WNM_DMS_DEPENDENCY = 24,
+	IFX_WNM_CMD_IOV_WNM_BSSTRANS_ROAMTHROTTLE = 25,
+	IFX_WNM_CMD_IOV_WNM_TFS_SET  = 26,
+	IFX_WNM_CMD_IOV_WNM_TFS_TERM = 27,
+	IFX_WNM_CMD_IOV_WNM_TFS_STATUS = 28,
+	IFX_WNM_CMD_IOV_WNM_BTQ_NBR_ADD = 29,
+	IFX_WNM_CMD_IOV_WNM_BTQ_NBR_DEL = 30,
+	IFX_WNM_CMD_IOV_WNM_BTQ_NBR_LIST = 31,
+	IFX_WNM_CMD_IOV_WNM_BSSTRANS_RSSI_RATE_MAP = 32,
+	IFX_WNM_CMD_IOV_WNM_KEEPALIVE_PKT_TYPE = 33,
+	IFX_WNM_CONFIG_CMD_IOV_WNM_TYPE_MAX
+};
+
+struct ifx_maxidle_wnm {
+	u8  get_info;
+	int period;
+	int protect;
+};
+
 int ifx_cfg80211_vndr_cmds_twt(struct wiphy *wiphy,
 			       struct wireless_dev *wdev, const void  *data, int len);
 int ifx_cfg80211_vndr_cmds_bsscolor(struct wiphy *wiphy,
@@ -679,6 +757,9 @@ int ifx_cfg80211_vndr_cmds_mpc(struct wiphy *wiphy,
 int ifx_cfg80211_vndr_cmds_giantrx(struct wiphy *wiphy,
 				   struct wireless_dev *wdev,
 				   const void *data, int len);
+int ifx_cfg80211_vndr_cmds_wnm(struct wiphy *wiphy,
+			       struct wireless_dev *wdev,
+			       const void *data, int len);
 
 #endif /* IFX_VENDOR_H */
 
