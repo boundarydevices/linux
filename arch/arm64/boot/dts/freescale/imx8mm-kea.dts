@@ -4,7 +4,6 @@
  */
 
 /dts-v1/;
-#define _MX8MMN(a)	MX8MM_##a
 #define MX8MMN(a, b)	MX8MM_##a b
 #define IMX8MMN(a)	IMX8MM_##a
 #include "imx8mm.dtsi"
@@ -1045,22 +1044,22 @@
 #ifndef MIPI_PWM
 #define MIPI_PWM		pwm3
 #define GP_MIPI_PWM(a)		<&gpio5 3 a>
-#define PD_MIPI_PWM(a)		_MX8MMN(IOMUXC_SPDIF_TX_GPIO5_IO3) a	/* Pin 7 */
-#define PD_MIPI_PWM_OUT(a)	_MX8MMN(IOMUXC_SPDIF_TX_PWM3_OUT) a
+#define PD_MIPI_PWM(a)		MX8MMN(IOMUXC_SPDIF_TX_GPIO5_IO3, a)	/* Pin 7 */
+#define PD_MIPI_PWM_OUT(a)	MX8MMN(IOMUXC_SPDIF_TX_PWM3_OUT, a)
 #endif
 
 #define GP_MIPI_IRQ(a)		<&gpio1 1 a>
-#define PD_MIPI_IRQ(a)		_MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1) a	/* Pin 8 */
+#define PD_MIPI_IRQ(a)		MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, a)	/* Pin 8 */
 
 #define GP_MIPI_TS_IRQ(a)	<&gpio1 6 a>
-#define PD_MIPI_TS_IRQ(a)	_MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6) a	/* Pin 9 */
+#define PD_MIPI_TS_IRQ(a)	MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, a)	/* Pin 9 */
 
 #define GP_MIPI_TS_RESET(a)	<&gpio1 7 a>
-#define PD_MIPI_TS_RESET(a)	_MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7) a	/* Pin 10 */
+#define PD_MIPI_TS_RESET(a)	MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, a)	/* Pin 10 */
 
 #ifndef MIPI_ENABLE_PAD
 #define GP_MIPI_ENABLE(a)	<&gpio1 9 a>
-#define PD_MIPI_ENABLE(a)	_MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9) a	/* Pin 11 */
+#define PD_MIPI_ENABLE(a)	MX8MMN(IOMUXC_GPIO1_IO09_GPIO1_IO9, a)	/* Pin 11 */
 #endif
 
 #define PAD_NOPULL		0x0
