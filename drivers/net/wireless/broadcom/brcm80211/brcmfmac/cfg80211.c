@@ -5263,13 +5263,14 @@ brcmf_parse_extension_ies(const u8 *extension_ie_buf, u32 extension_ie_len,
 			goto next;
 		}
 
-		/* skip parsing the HE capab & oper IE from upper layer
+		/* skip parsing the HE capab, HE_6G_capa & oper IE from upper layer
 		 * to avoid sending it to the FW, as these IEs will be
 		 * added by the FW based on the MAC & PHY capab if HE
 		 * is enabled.
 		 */
-		if (ext_ie->id == WLAN_EID_EXT_HE_CAPABILITY ||
-		    ext_ie->id == WLAN_EID_EXT_HE_OPERATION)
+		if (ext_ie->ext_id == WLAN_EID_EXT_HE_CAPABILITY ||
+		    ext_ie->ext_id == WLAN_EID_EXT_HE_OPERATION ||
+		    ext_ie->ext_id == WLAN_EID_EXT_HE_6GHZ_CAPA)
 			goto next;
 
 		parsed_info = &extension_ies->ie_info[extension_ies->count];
