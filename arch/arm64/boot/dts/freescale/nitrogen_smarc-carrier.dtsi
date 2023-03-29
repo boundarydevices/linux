@@ -691,6 +691,22 @@
 };
 #endif
 
+&SM_SDIO {
+	bus-width = <4>;
+	cd-gpios = GP_SM_SDIO_CD(GPIO_ACTIVE_LOW);
+#if 0
+	pinctrl-names = "default";
+	pinctrl-0 = pinctrl_ref(SM_SDIO);
+#else
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-0 = pinctrl_ref(SM_SDIO);
+	pinctrl-1 = pinctrl_ref2(SM_SDIO, 100mhz);
+	pinctrl-2 = pinctrl_ref2(SM_SDIO, 200mhz);
+#endif
+	status = "okay";
+	vmmc-supply = <&reg_vref_3v3>;
+};
+
 &SM_SER0 {
 	pinctrl-names = "default";
 	pinctrl-0 = pinctrl_ref(SM_SER0);
@@ -745,17 +761,6 @@
 	fsl,phy-tx-preemp-amp-tune = <2>;
 	status = "okay";
 	vbus-supply = <&reg_vref_5v0>;
-};
-
-&SM_SDIO {
-	bus-width = <4>;
-	cd-gpios = GP_SM_SDIO_CD(GPIO_ACTIVE_LOW);
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
-	pinctrl-0 = pinctrl_ref(SM_SDIO);
-	pinctrl-1 = pinctrl_ref2(SM_SDIO, 100mhz);
-	pinctrl-2 = pinctrl_ref2(SM_SDIO, 200mhz);
-	status = "okay";
-	vmmc-supply = <&reg_vref_3v3>;
 };
 
 /* J11 mipi display */
