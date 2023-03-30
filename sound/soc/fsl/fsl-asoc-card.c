@@ -1192,7 +1192,8 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_EXTCON
-	if (of_device_is_compatible(np, "fsl,imx-audio-wm8960")) {
+	if (of_device_is_compatible(np, "fsl,imx-audio-wm8960") ||
+			of_device_is_compatible(np, "fsl,imx-audio-wm8962")) {
 		fsl_asoc_card_edev = devm_extcon_dev_allocate(&pdev->dev,
 				fsl_asoc_card_cables);
 		if (IS_ERR(fsl_asoc_card_edev)) {
