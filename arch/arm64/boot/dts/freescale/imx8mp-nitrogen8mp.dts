@@ -157,7 +157,7 @@
 	pinctrl_reg_usbotg_vbus: reg-usbotg-vbusgrp {
 		fsl,pins = <
 #define GP_REG_USB_OTG_VBUS	<&gpio1 12 GPIO_ACTIVE_HIGH>
-			MX8MP_IOMUXC_GPIO1_IO12__GPIO1_IO12	0x16
+			MX8MP_IOMUXC_GPIO1_IO12__GPIO1_IO12	0x100
 		>;
 	};
 
@@ -211,7 +211,7 @@
 	pinctrl_usb3_1: usb3-1grp {
 		fsl,pins = <
 #define GP_USB3_1_HUB_RESET	<&gpio1 6 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_GPIO1_IO06__GPIO1_IO06	0x16
+			MX8MP_IOMUXC_GPIO1_IO06__GPIO1_IO06	0x100
 		>;
 	};
 
@@ -263,7 +263,7 @@
 
 	aliases {
 		fb_hdmi = &lcdif3;
-		sound_hdmi= &sound_hdmi;
+		sound_hdmi = &sound_hdmi;
 		usb_mux = &usb_mux;
 	};
 
