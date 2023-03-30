@@ -131,6 +131,7 @@
 		PINS_END
 	};
 
+#ifdef SM_I2S0
 	pinctrl(SM_I2S0) {
 		PINS_START
 			/* WM8962 */
@@ -141,7 +142,9 @@
 			PD_SM_AUDIO_MCK_I2S(PAD_I2S)
 		PINS_END
 	};
+#endif
 
+#ifdef SM_I2S2
 	pinctrl(SM_I2S2) {
 		PINS_START
 			/* HDA/I2S */
@@ -151,6 +154,7 @@
 			PD_SM_I2S2_SDOUT_I2S(PAD_I2S)
 		PINS_END
 	};
+#endif
 
 	pinctrl(SM_PCIE) {
 		PINS_START
@@ -160,11 +164,13 @@
 		PINS_END
 	};
 
+#ifdef SM_PWM_CSI1
 	pinctrl(SM_PWM_CSI1) {
 		PINS_START
 			PD_SM_CSI1_MCK_PWM(PAD_PULLDN)
 		PINS_END
 	};
+#endif
 
 	pinctrl(SM_SDIO) {
 		PINS_START
@@ -272,6 +278,7 @@
 		};
 	};
 
+#ifdef SM_PWM_CSI1
 	csi_mclk: csi-mclk {
 		compatible = "pwm-clock";
 		#clock-cells = <0>;
@@ -279,6 +286,7 @@
 		clock-output-names = "csi_mclk";
 		pwms = <&SM_PWM_CSI1 0 50>; /* 1 / 50 ns = 20 MHz */
 	};
+#endif
 
 	gpio_keys: gpio-keys {
 		compatible = "gpio-keys";
@@ -363,6 +371,7 @@
 		enable-active-high;
 	};
 
+#ifdef SM_I2S0
 	sound-wm8962 {
 		audio-codec = <&wm8962>;
 		audio-cpu = <&SM_I2S0>;
@@ -380,6 +389,7 @@
 		model = "wm8962-audio";
 		status = "okay";
 	};
+#endif
 };
 
 &SM_SPI0 {
@@ -513,6 +523,7 @@
 	};
 };
 
+#ifdef SM_I2S0
 &i2c_gp_c {
 	wm8962: codec@1a {
 		clocks = SM_AUDIO_MCK;
@@ -536,6 +547,7 @@
 		>;
 	};
 };
+#endif
 
 &SM_I2C_LCD {
 	clock-frequency = <100000>;
@@ -599,6 +611,7 @@
 	status = "okay";
 };
 
+#ifdef SM_I2C_CSI0
 &SM_I2C_CSI0{
 	camera@3c {
 		DOVDD-supply = <&reg_vref_1v8>;
@@ -619,7 +632,9 @@
 		};
 	};
 };
+#endif
 
+#ifdef SM_I2C_CSI1
 &SM_I2C_CSI1 {
 	camera@36 {
 		clocks = <&csi_mclk>;
@@ -643,6 +658,7 @@
 		};
 	};
 };
+#endif
 
 &SM_PCIE {
 	pinctrl-names = "default";
@@ -651,23 +667,29 @@
 	status = "okay";
 };
 
+#ifdef SM_PWM_CSI1
 &SM_PWM_CSI1 {
 	pinctrl-names = "default";
 	pinctrl-0 = pinctrl_ref(SM_PWM_CSI1);
 	status = "okay";
 };
+#endif
 
+#ifdef SM_I2S0
 &SM_I2S0 {
 	pinctrl-names = "default";
 	pinctrl-0 = pinctrl_ref(SM_I2S0);
 	status = "okay";
 };
+#endif
 
+#ifdef SM_I2S2
 &SM_I2S2 {
 	pinctrl-names = "default";
 	pinctrl-0 = pinctrl_ref(SM_I2S2);
 	status = "okay";
 };
+#endif
 
 &SM_SDIO {
 	bus-width = <4>;
