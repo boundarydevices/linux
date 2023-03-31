@@ -251,6 +251,8 @@
 
 / {
 	aliases {
+		ethernet0 = &eqos;
+		ethernet1 = &fec;
 		sound_hdmi= &sound_hdmi;
 	};
 
