@@ -229,6 +229,11 @@
 };
 
 / {
+	aliases {
+		ethernet0 = &eqos;
+		ethernet1 = &fec;
+	};
+
 	bt-rfkill {
 		compatible = "net,rfkill-gpio";
 		pinctrl-names = "default";
