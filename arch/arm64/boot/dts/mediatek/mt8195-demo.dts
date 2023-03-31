@@ -949,18 +949,6 @@
 	regulator-always-on;
 };
 
-&mt6359_vproc1_buck_reg {
-	regulator-always-on;
-};
-
-&mt6359_vproc2_buck_reg {
-	regulator-always-on;
-};
-
-&mt6359_vsram_md_ldo_reg {
-	regulator-always-on;
-};
-
 &mt6359_vbbck_ldo_reg {
 	regulator-always-on;
 };
