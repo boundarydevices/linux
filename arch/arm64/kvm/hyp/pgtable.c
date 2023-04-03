@@ -96,11 +96,6 @@ static bool kvm_pte_table(kvm_pte_t pte, s8 level)
 	return FIELD_GET(KVM_PTE_TYPE, pte) == KVM_PTE_TYPE_TABLE;
 }
 
-static kvm_pte_t *kvm_pte_follow(kvm_pte_t pte, struct kvm_pgtable_mm_ops *mm_ops)
-{
-	return mm_ops->phys_to_virt(kvm_pte_to_phys(pte));
-}
-
 static void kvm_clear_pte(kvm_pte_t *ptep)
 {
 	WRITE_ONCE(*ptep, 0);
