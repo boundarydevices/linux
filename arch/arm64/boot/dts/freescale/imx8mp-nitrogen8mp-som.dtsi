@@ -9,13 +9,6 @@
 #include "imx8mp.dtsi"
 
 &iomuxc {
-	pinctrl_bt_rfkill: bt-rfkillgrp {
-		fsl,pins = <
-#define GP_BT_RFKILL_RESET	<&gpio3 9 GPIO_ACTIVE_LOW>
-			MX8MP_IOMUXC_NAND_DATA03__GPIO3_IO09	0x119
-		>;
-	};
-
 	pinctrl_eqos: eqosgrp {
 		fsl,pins = <
 			MX8MP_IOMUXC_ENET_MDC__ENET_QOS_MDC		0x20
@@ -129,6 +122,8 @@
 			MX8MP_IOMUXC_UART1_TXD__UART1_DCE_TX	0x140
 			MX8MP_IOMUXC_UART3_RXD__UART1_DCE_CTS	0x140
 			MX8MP_IOMUXC_UART3_TXD__UART1_DCE_RTS	0x140
+#define GP_BT_ENABLE	<&gpio3 9 GPIO_ACTIVE_HIGH>
+			MX8MP_IOMUXC_NAND_DATA03__GPIO3_IO09	0x119
 		>;
 	};
 
@@ -232,16 +227,6 @@
 	aliases {
 		ethernet0 = &eqos;
 		ethernet1 = &fec;
-	};
-
-	bt-rfkill {
-		compatible = "net,rfkill-gpio";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		name = "bt-rfkill";
-		type = <2>; /* Bluetooth */
-		reset-gpios = GP_BT_RFKILL_RESET;
-		status = "okay";
 	};
 
 	reg_vref_1v8: regulator-vref-1v8 {
@@ -525,6 +510,12 @@
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_80M>;
 	uart-has-rtscts;
 	status = "okay";
+
+	bluetooth {
+		compatible = "qcom,qca9377-bt";
+		enable-gpios = GP_BT_ENABLE;
+		max-speed = <3000000>;
+	};
 };
 
 &usdhc2 {
