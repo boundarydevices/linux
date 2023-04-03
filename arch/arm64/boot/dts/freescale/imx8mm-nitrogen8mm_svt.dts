@@ -13,14 +13,6 @@
 &iomuxc {
 	/delete-node/ ecspi2-mcp2515tgrp;
 
-	pinctrl_bt_rfkill: bt-rfkillgrp {
-		fsl,pins = <
-#undef GP_BT_RFKILL_RESET
-#define GP_BT_RFKILL_RESET	<&gpio4 25 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_SAI2_TXC_GPIO4_IO25, 0x119)
-		>;
-	};
-
 	pinctrl_fec1: fec1grp {
 		fsl,pins = <
 			/* PAD_CTL_ODE is screwy on 8mm mini, avoid it */
@@ -79,6 +71,9 @@
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x09)
+#undef GP_BT_ENABLE
+#define GP_BT_ENABLE	<&gpio4 25 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI2_TXC_GPIO4_IO25, 0x119)
 		>;
 	};
 
@@ -126,10 +121,6 @@
 		/delete-property/ sai2;
 		/delete-property/ sai5;
 		/delete-property/ spi1;
-	};
-
-	bt-rfkill {
-		reset-gpios = GP_BT_RFKILL_RESET;
 	};
 
 	gpio_leds: leds {
