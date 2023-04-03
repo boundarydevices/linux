@@ -18,13 +18,6 @@
 		>;
 	};
 
-	pinctrl_bt_rfkill: bt-rfkillgrp {
-		fsl,pins = <
-#define GP_BT_RFKILL_RESET	<&gpio3 19 GPIO_ACTIVE_LOW>
-			MX8MQ_IOMUXC_SAI5_RXFS_GPIO3_IO19		0x19
-		>;
-	};
-
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
 			/* J17 */
@@ -337,6 +330,8 @@
 			MX8MQ_IOMUXC_UART3_TXD_UART3_DCE_TX		0x45
 			MX8MQ_IOMUXC_ECSPI1_SS0_UART3_DCE_RTS_B		0x45
 			MX8MQ_IOMUXC_ECSPI1_MISO_UART3_DCE_CTS_B	0x45
+#define GP_BT_ENABLE	<&gpio3 19 GPIO_ACTIVE_HIGH>
+			MX8MQ_IOMUXC_SAI5_RXFS_GPIO3_IO19		0x19
 		>;
 	};
 
@@ -475,16 +470,6 @@
 		pinctrl-0 = <&pinctrl_backlight_edp>;
 		pwms = <&pwm1 0 30000>;		/* 33.3 Khz */
 		status = "disabled";
-	};
-
-	bt-rfkill {
-		compatible = "net,rfkill-gpio";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		name = "bt-rfkill";
-		type = <2>; /* Bluetooth */
-		reset-gpios = GP_BT_RFKILL_RESET;
-		status = "okay";
 	};
 
 	gpio-keys {
@@ -1138,6 +1123,12 @@
 	assigned-clock-parents = <&clk IMX8MQ_SYS1_PLL_80M>;
 	uart-has-rtscts;
 	status = "okay";
+
+	bluetooth {
+		compatible = "qcom,qca9377-bt";
+		enable-gpios = GP_BT_ENABLE;
+		max-speed = <3000000>;
+	};
 };
 
 &uart4 {
