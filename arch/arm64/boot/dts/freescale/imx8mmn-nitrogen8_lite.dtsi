@@ -6,13 +6,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog>;
 
-	pinctrl_bt_rfkill: bt-rfkillgrp {
-		fsl,pins = <
-#define GP_BT_RFKILL_RESET	<&gpio3 6 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_NAND_DATA00_GPIO3_IO6, 0x1c0)	/* BT_EN */
-		>;
-	};
-
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
 			/* J48 */
@@ -218,6 +211,8 @@
 			MX8MMN(IOMUXC_UART1_TXD_UART1_DCE_TX, 0x140)
 			MX8MMN(IOMUXC_UART3_RXD_UART1_DCE_CTS_B, 0x140)
 			MX8MMN(IOMUXC_UART3_TXD_UART1_DCE_RTS_B, 0x140)
+#define GP_BT_ENABLE	<&gpio3 6 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_NAND_DATA00_GPIO3_IO6, 0x1c0)	/* BT_EN */
 		>;
 	};
 
@@ -398,16 +393,6 @@
 	chosen {
 		bootargs = "console=ttymxc1,115200";
 		stdout-patch = &uart2;
-	};
-
-	bt-rfkill {
-		compatible = "net,rfkill-gpio";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_bt_rfkill>;
-		name = "bt-rfkill";
-		type = <2>; /* Bluetooth */
-		reset-gpios = GP_BT_RFKILL_RESET;
-		status = "okay";
 	};
 
 	csi_mclk: csi-mclk {
@@ -842,6 +827,12 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
 	status = "okay";
+
+	bluetooth {
+		compatible = "qcom,qca9377-bt";
+		enable-gpios = GP_BT_ENABLE;
+		max-speed = <3000000>;
+	};
 };
 
 &uart2 { /* J9 - console */
