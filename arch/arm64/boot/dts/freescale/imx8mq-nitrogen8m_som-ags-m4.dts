@@ -68,8 +68,6 @@
 				<&rsc_table>, <&m4_reserved>;
 		syscon = <&src>;
 	};
-
-	/delete-node/ bt-rfkill;
 };
 
 /delete-node/ &mipi_cmds_com50h5n03ulc;
@@ -77,7 +75,6 @@
 /delete-node/ &mipi_cmds_ltk0680ytmdb;
 /delete-node/ &mipi_to_lvds;
 
-/delete-node/ &pinctrl_bt_rfkill;
 /delete-node/ &pinctrl_sn65dsi83;
 /delete-node/ &pinctrl_ts_mipi_gt911;
 /delete-node/ &pinctrl_ts_mipi_ft5x06;
