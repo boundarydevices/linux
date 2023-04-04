@@ -141,9 +141,6 @@ static void __dwc3_set_mode(struct work_struct *work)
 	if (dwc->current_dr_role == DWC3_GCTL_PRTCAP_OTG)
 		dwc3_otg_update(dwc, 0);
 
-	if (!desired_dr_role)
-		goto out;
-
 	if (desired_dr_role == dwc->current_dr_role)
 		goto out;
 
