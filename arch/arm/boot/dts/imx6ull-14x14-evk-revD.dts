@@ -41,6 +41,15 @@
 	};
 };
 
+&i2c1 {
+	fxls8974@18 {
+		compatible = "nxp,fxls8974cf";
+		reg = <0x18>;
+		interrupt-parent = <&gpio5>;
+		interrupts = <0 8>;
+	};
+};
+
 &i2c2 {
 	codec: wm8962@1a {
 		compatible = "wlf,wm8962";
