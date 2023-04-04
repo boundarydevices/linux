@@ -745,7 +745,7 @@ static int max17135_regulator_probe(struct platform_device *pdev)
 		config.driver_data = max17135;
 		config.of_node = pdata->regulators[i].reg_node;
 
-		rdev[i] = regulator_register(&max17135_reg[id], &config);
+		rdev[i] = regulator_register(config.dev, &max17135_reg[id], &config);
 		if (IS_ERR(rdev[i])) {
 			ret = PTR_ERR(rdev[i]);
 			dev_err(&pdev->dev, "regulator init failed for %d\n",
