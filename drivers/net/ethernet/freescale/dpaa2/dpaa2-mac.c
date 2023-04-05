@@ -187,6 +187,13 @@ static void dpaa2_mac_config(struct phylink_config *config, unsigned int mode,
 	err = phy_set_mode_ext(mac->serdes_phy, PHY_MODE_ETHERNET, state->interface);
 	if (err)
 		netdev_err(mac->net_dev, "phy_set_mode_ext() = %d\n", err);
+
+	if (!mac->retimer_phy)
+		return;
+
+	err = phy_set_mode_ext(mac->retimer_phy, PHY_MODE_ETHERNET, state->interface);
+	if (err)
+		netdev_err(mac->net_dev, "phy_set_mode_ext() on retimer = %d\n", err);
 }
 
 static void dpaa2_mac_link_up(struct phylink_config *config,
@@ -364,6 +371,7 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
 {
 	struct net_device *net_dev = mac->net_dev;
 	struct fwnode_handle *dpmac_node;
+	struct phy *retimer_phy = NULL;
 	struct phy *serdes_phy = NULL;
 	struct phylink *phylink;
 	int err;
@@ -392,8 +400,17 @@ int dpaa2_mac_connect(struct dpaa2_mac *mac)
 			return PTR_ERR(serdes_phy);
 		else
 			phy_init(serdes_phy);
+
+		retimer_phy = of_phy_get(to_of_node(dpmac_node), "retimer");
+		if (retimer_phy == ERR_PTR(-ENODEV))
+			retimer_phy = NULL;
+		else if (IS_ERR(retimer_phy))
+			return PTR_ERR(retimer_phy);
+		else
+			phy_init(retimer_phy);
 	}
 	mac->serdes_phy = serdes_phy;
+	mac->retimer_phy = retimer_phy;
 
 	/* The MAC does not have the capability to add RGMII delays so
 	 * error out if the interface mode requests them and there is no PHY
