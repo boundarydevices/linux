@@ -984,8 +984,6 @@ struct dwc3_scratchpad_array {
 struct dwc3_platform_data {
 	struct xhci_plat_priv *xhci_priv;
 	void	(*set_role_post)(struct dwc3 *dwc, u32 role);
-	unsigned long long quirks;
-#define DWC3_SOFT_ITP_SYNC	BIT(0)
 };
 
 /**
