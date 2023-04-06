@@ -810,6 +810,13 @@
 								clock-names = "hdmi_tx";
 								#power-domain-cells = <0>;
 							};
+
+							power-domain@MT8195_POWER_DOMAIN_HDMI_RX {
+								reg = <MT8195_POWER_DOMAIN_HDMI_RX>;
+								clocks = <&topckgen CLK_TOP_HDMI_APB>;
+								clock-names = "hdmi_rx";
+								#power-domain-cells = <0>;
+							};
 						};
 
 						power-domain@MT8195_POWER_DOMAIN_IMG {
