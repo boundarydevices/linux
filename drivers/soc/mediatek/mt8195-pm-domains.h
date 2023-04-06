@@ -356,6 +356,16 @@ static const struct scpsys_domain_data scpsys_domain_data_mt8195[] = {
 		.sram_pdn_ack_bits = GENMASK(12, 12),
 		.caps = MTK_SCPD_KEEP_DEFAULT_OFF | MTK_SCPD_ACTIVE_WAKEUP,
 	},
+	[MT8195_POWER_DOMAIN_HDMI_RX] = {
+		.name = "hdmi_rx",
+		.sta_mask = BIT(19),
+		.ctl_offs = 0x384,
+		.pwr_sta_offs = 0x16c,
+		.pwr_sta2nd_offs = 0x170,
+		.sram_pdn_bits = GENMASK(8, 8),
+		.sram_pdn_ack_bits = GENMASK(12, 12),
+		.caps = MTK_SCPD_KEEP_DEFAULT_OFF | MTK_SCPD_ACTIVE_WAKEUP,
+	},
 	[MT8195_POWER_DOMAIN_WPESYS] = {
 		.name = "wpesys",
 		.sta_mask = BIT(15),
