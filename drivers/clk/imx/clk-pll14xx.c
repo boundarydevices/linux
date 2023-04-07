@@ -66,6 +66,7 @@ static const struct imx_pll14xx_rate_table imx_pll1416x_tbl[] = {
 /* fout = (24M * (m + k/65536)/ p) >> s */
 static const struct imx_pll14xx_rate_table imx_pll1443x_tbl[] = {
 	PLL_1443X_RATE(1039500000U, 173, 2, 1, 16384),
+	PLL_1443X_RATE(756000000U, 378, 3, 2, 0),	/* (24M * 378 / 3) >> 2 = 756M */
 	PLL_1443X_RATE(650000000U, 325, 3, 2, 0),	/* (24M * 325 / 3) >> 2 = 650M */
 	PLL_1443X_RATE(594000000U, 198, 2, 2, 0),	/* (24M * 198 / 2) >> 2 = 594M */
 	PLL_1443X_RATE(519750000U, 173, 2, 2, 16384),	/* (24M * (173 + 16384/65536) / 2) >> 2 = 519.75M */
