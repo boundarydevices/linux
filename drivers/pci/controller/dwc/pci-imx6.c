@@ -2412,6 +2412,20 @@ static int __init imx6_pcie_compliance_test_enable(char *str)
 __setup("pcie_cz_enabled=", imx6_pcie_compliance_test_enable);
 #endif
 
+static void imx6_pcie_cleanup(struct platform_device *pdev)
+{
+	struct imx6_pcie *imx6_pcie = platform_get_drvdata(pdev);
+
+	switch (imx6_pcie->drvdata->mode) {
+	case DW_PCIE_RC_TYPE:
+		/* add attributes for bus freq */
+		sysfs_remove_group(&pdev->dev.kobj, &imx_pcie_attrgroup);
+		break;
+	default:
+		break;
+	}
+}
+
 static int imx6_pcie_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -2791,8 +2805,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 				dev_info(dev, "To do the compliance tests.\n");
 				ret = 0;
 			} else {
-				imx6_pcie_detach_pd(dev);
-				return ret;
+				goto err_ret;
 			}
 		}
 
@@ -2817,6 +2830,7 @@ static int imx6_pcie_probe(struct platform_device *pdev)
 
 err_ret:
 	imx6_pcie_detach_pd(dev);
+	imx6_pcie_cleanup(pdev);
 	return ret;
 }
 
@@ -2826,6 +2840,13 @@ static void imx6_pcie_shutdown(struct platform_device *pdev)
 
 	/* bring down link, so bootloader gets clean state in case of reboot */
 	imx6_pcie_assert_core_reset(imx6_pcie);
+}
+
+static int imx6_pcie_remove(struct platform_device *pdev)
+{
+	imx6_pcie_shutdown(pdev);
+	imx6_pcie_cleanup(pdev);
+	return 0;
 }
 
 static const struct imx6_pcie_drvdata drvdata[] = {
@@ -2961,6 +2982,7 @@ static struct platform_driver imx6_pcie_driver = {
 		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 	.probe    = imx6_pcie_probe,
+	.remove	  = imx6_pcie_remove,
 	.shutdown = imx6_pcie_shutdown,
 };
 
