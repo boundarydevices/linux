@@ -22,18 +22,34 @@ obj-$(CONFIG_MODVERSIONS) += version.o
 obj-$(CONFIG_MODULE_UNLOAD_TAINT_TRACKING) += tracking.o
 
 #
-# ANDROID: GKI: Generate headerfile required for gki_module.o
+# ANDROID: GKI: Generate headerfiles required for gki_module.o
 #
 # Dependencies on generated files need to be listed explicitly
 $(obj)/gki_module.o: $(obj)/gki_module_protected_exports.h \
 			$(obj)/gki_module_unprotected.h
 
-$(obj)/gki_module_unprotected.h: $(srctree)/scripts/gen_gki_modules_headers.sh \
-	                         $(if $(wildcard ${OUT_DIR}/abi_symbollist.raw), ${OUT_DIR}/abi_symbollist.raw)
-	$(Q)$(CONFIG_SHELL) $(srctree)/scripts/gen_gki_modules_headers.sh $@ \
-	"$(srctree)"
+ALL_KMI_SYMBOLS := all_kmi_symbols
 
-$(obj)/gki_module_protected_exports.h: $(srctree)/android/abi_gki_protected_exports \
+$(obj)/gki_module_unprotected.h: $(ALL_KMI_SYMBOLS) \
 				$(srctree)/scripts/gen_gki_modules_headers.sh
 	$(Q)$(CONFIG_SHELL) $(srctree)/scripts/gen_gki_modules_headers.sh $@ \
-	"$(srctree)"
+	"$(srctree)" \
+	$(ALL_KMI_SYMBOLS)
+
+# Generate symbol list with union of all symbol list for arm64; empty for others
+$(ALL_KMI_SYMBOLS): $(if $(filter arm64,$(ARCH)),$(wildcard $(srctree)/android/abi_gki_aarch64_*),)
+	$(if $(strip $^),cat $^ > $(ALL_KMI_SYMBOLS), echo "" > $(ALL_KMI_SYMBOLS))
+
+# ABI protected exports list file specific to ARCH if exists else empty
+ABI_PROTECTED_EXPORTS_FILE :=
+ifeq ($(ARCH),arm64)
+	ABI_PROTECTED_EXPORTS_FILE := $(wildcard $(srctree)/android/abi_gki_protected_exports_aarch64)
+else
+	ABI_PROTECTED_EXPORTS_FILE := $(wildcard $(srctree)/android/abi_gki_protected_exports_$(ARCH))
+endif
+
+$(obj)/gki_module_protected_exports.h: $(ABI_PROTECTED_EXPORTS_FILE) \
+				$(srctree)/scripts/gen_gki_modules_headers.sh
+	$(Q)$(CONFIG_SHELL) $(srctree)/scripts/gen_gki_modules_headers.sh $@ \
+	"$(srctree)" \
+	$(ABI_PROTECTED_EXPORTS_FILE)

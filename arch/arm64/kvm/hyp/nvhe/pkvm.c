@@ -12,6 +12,7 @@
 
 #include <asm/kvm_emulate.h>
 
+#include <nvhe/arm-smccc.h>
 #include <nvhe/mem_protect.h>
 #include <nvhe/memory.h>
 #include <nvhe/mm.h>
@@ -24,11 +25,50 @@ unsigned long __icache_flags;
 /* Used by kvm_get_vttbr(). */
 unsigned int kvm_arm_vmid_bits;
 
+unsigned int kvm_host_sve_max_vl;
+
 /*
  * The currently loaded hyp vCPU for each physical CPU. Used only when
  * protected KVM is enabled, but for both protected and non-protected VMs.
  */
 static DEFINE_PER_CPU(struct pkvm_hyp_vcpu *, loaded_hyp_vcpu);
+
+/*
+ * Host fp state for all cpus. This could include the host simd state, as well
+ * as the sve and sme states if supported. Written to when the guest accesses
+ * its own FPSIMD state, and read when the guest state is live and we need to
+ * switch back to the host.
+ *
+ * Only valid when (fp_state == FP_STATE_GUEST_OWNED) in the hyp vCPU structure.
+ */
+void *host_fp_state;
+
+static void *__get_host_fpsimd_bytes(void)
+{
+	void *state = host_fp_state +
+		      size_mul(pkvm_host_fp_state_size(), hyp_smp_processor_id());
+
+	if (state < host_fp_state)
+		return NULL;
+
+	return state;
+}
+
+struct user_fpsimd_state *get_host_fpsimd_state(struct kvm_vcpu *vcpu)
+{
+	if (likely(!is_protected_kvm_enabled()))
+		return vcpu->arch.host_fpsimd_state;
+
+	WARN_ON(system_supports_sve());
+	return __get_host_fpsimd_bytes();
+}
+
+struct kvm_host_sve_state *get_host_sve_state(struct kvm_vcpu *vcpu)
+{
+	WARN_ON(!system_supports_sve());
+	WARN_ON(!is_protected_kvm_enabled());
+	return __get_host_fpsimd_bytes();
+}
 
 /*
  * Set trap register values based on features in ID_AA64PFR0.
@@ -255,6 +295,12 @@ void pkvm_hyp_vm_table_init(void *tbl)
 	vm_table = tbl;
 }
 
+void pkvm_hyp_host_fp_init(void *host_fp)
+{
+	WARN_ON(host_fp_state);
+	host_fp_state = host_fp;
+}
+
 /*
  * Return the hyp vm structure corresponding to the handle.
  */
@@ -266,6 +312,27 @@ static struct pkvm_hyp_vm *get_vm_by_handle(pkvm_handle_t handle)
 		return NULL;
 
 	return vm_table[idx];
+}
+
+int __pkvm_reclaim_dying_guest_page(pkvm_handle_t handle, u64 pfn, u64 ipa)
+{
+	struct pkvm_hyp_vm *hyp_vm;
+	int ret = -EINVAL;
+
+	hyp_spin_lock(&vm_table_lock);
+	hyp_vm = get_vm_by_handle(handle);
+	if (!hyp_vm || !hyp_vm->is_dying)
+		goto unlock;
+
+	ret = __pkvm_host_reclaim_page(hyp_vm, pfn, ipa);
+	if (ret)
+		goto unlock;
+
+	drain_hyp_pool(hyp_vm, &hyp_vm->host_kvm->arch.pkvm.teardown_stage2_mc);
+unlock:
+	hyp_spin_unlock(&vm_table_lock);
+
+	return ret;
 }
 
 struct pkvm_hyp_vcpu *pkvm_load_hyp_vcpu(pkvm_handle_t handle,
@@ -280,7 +347,7 @@ struct pkvm_hyp_vcpu *pkvm_load_hyp_vcpu(pkvm_handle_t handle,
 
 	hyp_spin_lock(&vm_table_lock);
 	hyp_vm = get_vm_by_handle(handle);
-	if (!hyp_vm || hyp_vm->nr_vcpus <= vcpu_idx)
+	if (!hyp_vm || hyp_vm->is_dying || hyp_vm->nr_vcpus <= vcpu_idx)
 		goto unlock;
 
 	hyp_vcpu = hyp_vm->vcpus[vcpu_idx];
@@ -796,7 +863,33 @@ teardown_donated_memory(struct kvm_hyp_memcache *mc, void *addr, size_t size)
 	unmap_donated_memory_noclear(addr, size);
 }
 
-int __pkvm_teardown_vm(pkvm_handle_t handle)
+int __pkvm_start_teardown_vm(pkvm_handle_t handle)
+{
+	struct pkvm_hyp_vm *hyp_vm;
+	int ret = 0;
+
+	hyp_spin_lock(&vm_table_lock);
+	hyp_vm = get_vm_by_handle(handle);
+	if (!hyp_vm) {
+		ret = -ENOENT;
+		goto unlock;
+	} else if (WARN_ON(hyp_page_count(hyp_vm))) {
+		ret = -EBUSY;
+		goto unlock;
+	} else if (hyp_vm->is_dying) {
+		ret = -EINVAL;
+		goto unlock;
+	}
+
+	hyp_vm->is_dying = true;
+
+unlock:
+	hyp_spin_unlock(&vm_table_lock);
+
+	return ret;
+}
+
+int __pkvm_finalize_teardown_vm(pkvm_handle_t handle)
 {
 	struct kvm_hyp_memcache *mc, *stage2_mc;
 	size_t vm_size, last_ran_size;
@@ -811,9 +904,7 @@ int __pkvm_teardown_vm(pkvm_handle_t handle)
 	if (!hyp_vm) {
 		err = -ENOENT;
 		goto err_unlock;
-	}
-
-	if (WARN_ON(hyp_page_count(hyp_vm))) {
+	} else if (!hyp_vm->is_dying) {
 		err = -EBUSY;
 		goto err_unlock;
 	}
@@ -828,8 +919,8 @@ int __pkvm_teardown_vm(pkvm_handle_t handle)
 	mc = &host_kvm->arch.pkvm.teardown_mc;
 	stage2_mc = &host_kvm->arch.pkvm.teardown_stage2_mc;
 
-	/* Reclaim guest pages (including page-table pages) */
-	reclaim_guest_pages(hyp_vm, stage2_mc);
+	destroy_hyp_vm_pgt(hyp_vm);
+	drain_hyp_pool(hyp_vm, stage2_mc);
 	unpin_host_vcpus(hyp_vm->vcpus, hyp_vm->nr_vcpus);
 
 	/* Push the metadata pages to the teardown memcache */
@@ -1478,4 +1569,15 @@ bool kvm_hyp_handle_hvc64(struct kvm_vcpu *vcpu, u64 *exit_code)
 	}
 
 	return false;
+}
+
+/*
+ * Notify pKVM about events that can undermine pKVM security.
+ */
+void pkvm_handle_system_misconfiguration(enum pkvm_system_misconfiguration event)
+{
+	if (event == NO_DMA_ISOLATION)
+		pkvm_poison_pvmfw_pages();
+	else
+		BUG();
 }

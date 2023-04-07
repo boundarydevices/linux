@@ -13,6 +13,23 @@
 #include <asm/kvm_pgtable.h>
 #include <asm/sysreg.h>
 
+/*
+ * Stores the sve state for the host in protected mode.
+ */
+struct kvm_host_sve_state {
+	u64 zcr_el1;
+
+	/*
+	 * Ordering is important since __sve_save_state/__sve_restore_state
+	 * relies on it.
+	 */
+	u32 fpsr;
+	u32 fpcr;
+
+	/* Must be SVE_VQ_BYTES (128 bit) aligned. */
+	char sve_regs[];
+};
+
 /* Maximum number of VMs that can co-exist under pKVM. */
 #define KVM_MAX_PVMS 255
 
@@ -242,6 +259,21 @@ static inline int pkvm_get_max_wrps(void)
 	return num ? num + 1 : 0;
 }
 
+enum pkvm_moveable_reg_type {
+	PKVM_MREG_MEMORY,
+	PKVM_MREG_PROTECTED_RANGE,
+};
+
+struct pkvm_moveable_reg {
+	phys_addr_t start;
+	u64 size;
+	enum pkvm_moveable_reg_type type;
+};
+
+#define PKVM_NR_MOVEABLE_REGS 512
+extern struct pkvm_moveable_reg kvm_nvhe_sym(pkvm_moveable_regs)[];
+extern unsigned int kvm_nvhe_sym(pkvm_moveable_regs_nr);
+
 extern struct memblock_region kvm_nvhe_sym(hyp_memory)[];
 extern unsigned int kvm_nvhe_sym(hyp_memblock_nr);
 
@@ -292,27 +324,28 @@ static inline unsigned long __hyp_pgtable_max_pages(unsigned long nr_pages)
 	return total;
 }
 
-static inline unsigned long __hyp_pgtable_total_pages(void)
+static inline unsigned long __hyp_pgtable_moveable_regs_pages(void)
 {
 	unsigned long res = 0, i;
 
-	/* Cover all of memory with page-granularity */
-	for (i = 0; i < kvm_nvhe_sym(hyp_memblock_nr); i++) {
-		struct memblock_region *reg = &kvm_nvhe_sym(hyp_memory)[i];
+	/* Cover all of moveable regions with page-granularity */
+	for (i = 0; i < kvm_nvhe_sym(pkvm_moveable_regs_nr); i++) {
+		struct pkvm_moveable_reg *reg = &kvm_nvhe_sym(pkvm_moveable_regs)[i];
 		res += __hyp_pgtable_max_pages(reg->size >> PAGE_SHIFT);
 	}
 
 	return res;
 }
 
+#define __PKVM_PRIVATE_SZ SZ_1G
+
 static inline unsigned long hyp_s1_pgtable_pages(void)
 {
 	unsigned long res;
 
-	res = __hyp_pgtable_total_pages();
+	res = __hyp_pgtable_moveable_regs_pages();
 
-	/* Allow 1 GiB for private mappings */
-	res += __hyp_pgtable_max_pages(SZ_1G >> PAGE_SHIFT);
+	res += __hyp_pgtable_max_pages(__PKVM_PRIVATE_SZ >> PAGE_SHIFT);
 
 	return res;
 }
@@ -325,9 +358,9 @@ static inline unsigned long host_s2_pgtable_pages(void)
 	 * Include an extra 16 pages to safely upper-bound the worst case of
 	 * concatenated pgds.
 	 */
-	res = __hyp_pgtable_total_pages() + 16;
+	res = __hyp_pgtable_moveable_regs_pages() + 16;
 
-	/* Allow 1 GiB for MMIO mappings */
+	/* Allow 1 GiB for non-moveable regions */
 	res += __hyp_pgtable_max_pages(SZ_1G >> PAGE_SHIFT);
 
 	return res;
@@ -367,6 +400,21 @@ static inline unsigned long hyp_ffa_proxy_pages(void)
 
 	/* Plus a page each for the hypervisor's RX and TX mailboxes. */
 	return (2 * KVM_FFA_MBOX_NR_PAGES) + DIV_ROUND_UP(desc_max, PAGE_SIZE);
+}
+
+static inline size_t pkvm_host_fp_state_size(void)
+{
+	if (system_supports_sve())
+		return size_add(sizeof(struct kvm_host_sve_state),
+		       SVE_SIG_REGS_SIZE(sve_vq_from_vl(kvm_host_sve_max_vl)));
+	else
+		return sizeof(struct user_fpsimd_state);
+}
+
+static inline unsigned long hyp_host_fp_pages(unsigned long nr_cpus)
+{
+	return PAGE_ALIGN(size_mul(nr_cpus, pkvm_host_fp_state_size())) >>
+		PAGE_SHIFT;
 }
 
 #endif	/* __ARM64_KVM_PKVM_H__ */

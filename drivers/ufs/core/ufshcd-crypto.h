@@ -40,14 +40,14 @@ ufshcd_prepare_req_desc_hdr_crypto(struct ufshcd_lrb *lrbp, u32 *dword_0,
 static inline void ufshcd_crypto_clear_prdt(struct ufs_hba *hba,
 					    struct ufshcd_lrb *lrbp)
 {
-	if (!(hba->quirks & UFSHCD_QUIRK_KEYS_IN_PRDT))
+	if (!(hba->android_quirks & UFSHCD_ANDROID_QUIRK_KEYS_IN_PRDT))
 		return;
 
 	if (!(scsi_cmd_to_rq(lrbp->cmd)->crypt_ctx))
 		return;
 
 	memzero_explicit(lrbp->ucd_prdt_ptr,
-			 hba->sg_entry_size * scsi_sg_count(lrbp->cmd));
+			 ufshcd_sg_entry_size(hba) * scsi_sg_count(lrbp->cmd));
 }
 
 bool ufshcd_crypto_enable(struct ufs_hba *hba);

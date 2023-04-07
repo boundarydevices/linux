@@ -5,10 +5,12 @@
  */
 
 #include <linux/io.h>
+#include <linux/kmemleak.h>
 #include <linux/kvm_host.h>
 #include <linux/memblock.h>
 #include <linux/mm.h>
 #include <linux/mutex.h>
+#include <linux/of_address.h>
 #include <linux/of_fdt.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/sort.h>
@@ -17,13 +19,17 @@
 #include <asm/kvm_mmu.h>
 #include <asm/kvm_pkvm.h>
 #include <asm/kvm_pkvm_module.h>
+#include <asm/setup.h>
 
 #include "hyp_constants.h"
+
+DEFINE_STATIC_KEY_FALSE(kvm_protected_mode_initialized);
 
 static struct reserved_mem *pkvm_firmware_mem;
 static phys_addr_t *pvmfw_base = &kvm_nvhe_sym(pvmfw_base);
 static phys_addr_t *pvmfw_size = &kvm_nvhe_sym(pvmfw_size);
 
+static struct pkvm_moveable_reg *moveable_regs = kvm_nvhe_sym(pkvm_moveable_regs);
 static struct memblock_region *hyp_memory = kvm_nvhe_sym(hyp_memory);
 static unsigned int *hyp_memblock_nr_ptr = &kvm_nvhe_sym(hyp_memblock_nr);
 
@@ -63,6 +69,80 @@ static int __init register_memblock_regions(void)
 	return 0;
 }
 
+static int cmp_moveable_reg(const void *p1, const void *p2)
+{
+	const struct pkvm_moveable_reg *r1 = p1;
+	const struct pkvm_moveable_reg *r2 = p2;
+
+	/*
+	 * Moveable regions may overlap, so put the largest one first when start
+	 * addresses are equal to allow a simpler walk from e.g.
+	 * host_stage2_unmap_unmoveable_regs().
+	 */
+	if (r1->start < r2->start)
+		return -1;
+	else if (r1->start > r2->start)
+		return 1;
+	else if (r1->size > r2->size)
+		return -1;
+	else if (r1->size < r2->size)
+		return 1;
+	return 0;
+}
+
+static void __init sort_moveable_regs(void)
+{
+	sort(moveable_regs,
+	     kvm_nvhe_sym(pkvm_moveable_regs_nr),
+	     sizeof(struct pkvm_moveable_reg),
+	     cmp_moveable_reg,
+	     NULL);
+}
+
+static int __init register_moveable_regions(void)
+{
+	struct memblock_region *reg;
+	struct device_node *np;
+	int i = 0;
+
+	for_each_mem_region(reg) {
+		if (i >= PKVM_NR_MOVEABLE_REGS)
+			return -ENOMEM;
+		moveable_regs[i].start = reg->base;
+		moveable_regs[i].size = reg->size;
+		moveable_regs[i].type = PKVM_MREG_MEMORY;
+		i++;
+	}
+
+	for_each_compatible_node(np, NULL, "pkvm,protected-region") {
+		struct resource res;
+		u64 start, size;
+		int ret;
+
+		if (i >= PKVM_NR_MOVEABLE_REGS)
+			return -ENOMEM;
+
+		ret = of_address_to_resource(np, 0, &res);
+		if (ret)
+			return ret;
+
+		start = res.start;
+		size = resource_size(&res);
+		if (!PAGE_ALIGNED(start) || !PAGE_ALIGNED(size))
+			return -EINVAL;
+
+		moveable_regs[i].start = start;
+		moveable_regs[i].size = size;
+		moveable_regs[i].type = PKVM_MREG_PROTECTED_RANGE;
+		i++;
+	}
+
+	kvm_nvhe_sym(pkvm_moveable_regs_nr) = i;
+	sort_moveable_regs();
+
+	return 0;
+}
+
 void __init kvm_hyp_reserve(void)
 {
 	u64 hyp_mem_pages = 0;
@@ -81,11 +161,19 @@ void __init kvm_hyp_reserve(void)
 		return;
 	}
 
+	ret = register_moveable_regions();
+	if (ret) {
+		*hyp_memblock_nr_ptr = 0;
+		kvm_err("Failed to register pkvm moveable regions: %d\n", ret);
+		return;
+	}
+
 	hyp_mem_pages += hyp_s1_pgtable_pages();
 	hyp_mem_pages += host_s2_pgtable_pages();
 	hyp_mem_pages += hyp_vm_table_pages();
 	hyp_mem_pages += hyp_vmemmap_pages(STRUCT_HYP_PAGE_SIZE);
 	hyp_mem_pages += hyp_ffa_proxy_pages();
+	hyp_mem_pages += hyp_host_fp_pages(num_possible_cpus());
 
 	/*
 	 * Try to allocate a PMD-aligned region to reduce TLB pressure once
@@ -232,21 +320,18 @@ void pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 	struct mm_struct *mm = current->mm;
 	struct rb_node *node;
 
-	if (host_kvm->arch.pkvm.handle) {
-		WARN_ON(kvm_call_hyp_nvhe(__pkvm_teardown_vm,
-					  host_kvm->arch.pkvm.handle));
-	}
+	if (!host_kvm->arch.pkvm.handle)
+		goto out_free;
 
-	host_kvm->arch.pkvm.handle = 0;
-	free_hyp_memcache(&host_kvm->arch.pkvm.teardown_mc, host_kvm);
-	free_hyp_stage2_memcache(&host_kvm->arch.pkvm.teardown_stage2_mc,
-				 host_kvm);
+	WARN_ON(kvm_call_hyp_nvhe(__pkvm_start_teardown_vm, host_kvm->arch.pkvm.handle));
 
 	node = rb_first(&host_kvm->arch.pkvm.pinned_pages);
 	while (node) {
 		ppage = rb_entry(node, struct kvm_pinned_page, node);
-		WARN_ON(kvm_call_hyp_nvhe(__pkvm_host_reclaim_page,
-					  page_to_pfn(ppage->page)));
+		WARN_ON(kvm_call_hyp_nvhe(__pkvm_reclaim_dying_guest_page,
+					  host_kvm->arch.pkvm.handle,
+					  page_to_pfn(ppage->page),
+					  ppage->ipa));
 		cond_resched();
 
 		account_locked_vm(mm, 1, false);
@@ -255,6 +340,14 @@ void pkvm_destroy_hyp_vm(struct kvm *host_kvm)
 		rb_erase(&ppage->node, &host_kvm->arch.pkvm.pinned_pages);
 		kfree(ppage);
 	}
+
+	WARN_ON(kvm_call_hyp_nvhe(__pkvm_finalize_teardown_vm, host_kvm->arch.pkvm.handle));
+
+out_free:
+	host_kvm->arch.pkvm.handle = 0;
+	free_hyp_memcache(&host_kvm->arch.pkvm.teardown_mc, host_kvm);
+	free_hyp_stage2_memcache(&host_kvm->arch.pkvm.teardown_stage2_mc,
+				 host_kvm);
 }
 
 int pkvm_init_host_vm(struct kvm *host_kvm, unsigned long type)
@@ -298,10 +391,6 @@ void pkvm_host_reclaim_page(struct kvm *host_kvm, phys_addr_t ipa)
 		return;
 
 	ppage = container_of(node, struct kvm_pinned_page, node);
-
-	WARN_ON(kvm_call_hyp_nvhe(__pkvm_host_reclaim_page,
-				  page_to_pfn(ppage->page)));
-
 	account_locked_vm(mm, 1, false);
 	unpin_user_pages_dirty_lock(&ppage->page, 1, true);
 	kfree(ppage);
@@ -349,7 +438,7 @@ static int __init pkvm_firmware_rmem_clear(void)
 	void *addr;
 	phys_addr_t size;
 
-	if (likely(!pkvm_firmware_mem) || is_protected_kvm_enabled())
+	if (likely(!pkvm_firmware_mem))
 		return 0;
 
 	kvm_info("Clearing unused pKVM firmware memory\n");
@@ -363,7 +452,71 @@ static int __init pkvm_firmware_rmem_clear(void)
 	memunmap(addr);
 	return 0;
 }
-device_initcall_sync(pkvm_firmware_rmem_clear);
+
+static void _kvm_host_prot_finalize(void *arg)
+{
+	int *err = arg;
+
+	if (WARN_ON(kvm_call_hyp_nvhe(__pkvm_prot_finalize)))
+		WRITE_ONCE(*err, -EINVAL);
+}
+
+static int pkvm_drop_host_privileges(void)
+{
+	int ret = 0;
+
+	/*
+	 * Flip the static key upfront as that may no longer be possible
+	 * once the host stage 2 is installed.
+	 */
+	static_branch_enable(&kvm_protected_mode_initialized);
+
+	/*
+	 * Fixup the boot mode so that we don't take spurious round
+	 * trips via EL2 on cpu_resume. Flush to the PoC for a good
+	 * measure, so that it can be observed by a CPU coming out of
+	 * suspend with the MMU off.
+	 */
+	__boot_cpu_mode[0] = __boot_cpu_mode[1] = BOOT_CPU_MODE_EL1;
+	dcache_clean_poc((unsigned long)__boot_cpu_mode,
+			 (unsigned long)(__boot_cpu_mode + 2));
+
+	on_each_cpu(_kvm_host_prot_finalize, &ret, 1);
+	return ret;
+}
+
+static int __init finalize_pkvm(void)
+{
+	int ret;
+
+	if (!is_protected_kvm_enabled()) {
+		pkvm_firmware_rmem_clear();
+		return 0;
+	}
+
+	/*
+	 * Modules can play an essential part in the pKVM protection. All of
+	 * them must properly load to enable protected VMs.
+	 */
+	if (pkvm_load_early_modules())
+		pkvm_firmware_rmem_clear();
+
+	/*
+	 * Exclude HYP sections from kmemleak so that they don't get peeked
+	 * at, which would end badly once inaccessible.
+	 */
+	kmemleak_free_part(__hyp_bss_start, __hyp_bss_end - __hyp_bss_start);
+	kmemleak_free_part_phys(hyp_mem_base, hyp_mem_size);
+
+	ret = pkvm_drop_host_privileges();
+	if (ret) {
+		pr_err("Failed to de-privilege the host kernel: %d\n", ret);
+		pkvm_firmware_rmem_clear();
+	}
+
+	return ret;
+}
+device_initcall_sync(finalize_pkvm);
 
 static int pkvm_vm_ioctl_set_fw_ipa(struct kvm *kvm, u64 ipa)
 {
@@ -417,14 +570,123 @@ int pkvm_vm_ioctl_enable_cap(struct kvm *kvm, struct kvm_enable_cap *cap)
 }
 
 #ifdef CONFIG_MODULES
-static int __init early_pkvm_enable_modules(char *arg)
+static char early_pkvm_modules[COMMAND_LINE_SIZE] __initdata;
+
+static int __init pkvm_enable_module_late_loading(void)
 {
-	kvm_nvhe_sym(__pkvm_modules_enabled) = true;
+	extern unsigned long kvm_nvhe_sym(pkvm_priv_hcall_limit);
+
+	WARN(1, "Loading pKVM modules with kvm-arm.protected_modules is deprecated\n"
+	     "Use kvm-arm.protected_modules=<module1>,<module2>");
+
+	/*
+	 * Move the limit to allow module loading HVCs. It will be moved back to
+	 * its original position in __pkvm_close_module_registration().
+	 */
+	kvm_nvhe_sym(pkvm_priv_hcall_limit) = __KVM_HOST_SMCCC_FUNC___pkvm_alloc_module_va;
 
 	return 0;
 }
-early_param("kvm-arm.protected_modules", early_pkvm_enable_modules);
-#endif
+
+static int __init early_pkvm_modules_cfg(char *arg)
+{
+	if (!arg)
+		return pkvm_enable_module_late_loading();
+
+	strscpy(early_pkvm_modules, arg, COMMAND_LINE_SIZE);
+
+	return 0;
+}
+early_param("kvm-arm.protected_modules", early_pkvm_modules_cfg);
+
+static void free_modprobe_argv(struct subprocess_info *info)
+{
+	kfree(info->argv[3]);
+	kfree(info->argv);
+}
+
+/*
+ * Heavily inspired by request_module(). The latest couldn't be reused though as
+ * the feature can be disabled depending on umh configuration. Here some
+ * security is enforced by making sure this can be called only when pKVM is
+ * enabled, not yet completely initialized.
+ */
+static int __init pkvm_request_early_module(char *module_name)
+{
+	char *modprobe_path = CONFIG_MODPROBE_PATH;
+	struct subprocess_info *info;
+	static char *envp[] = {
+		"HOME=/",
+		"TERM=linux",
+		"PATH=/sbin:/usr/sbin:/bin:/usr/bin",
+		NULL
+	};
+	char **argv;
+
+	if (!is_protected_kvm_enabled())
+		return -EACCES;
+
+	if (static_branch_likely(&kvm_protected_mode_initialized))
+		return -EACCES;
+
+	argv = kmalloc(sizeof(char *[5]), GFP_KERNEL);
+	if (!argv)
+		return -ENOMEM;
+
+	module_name = kstrdup(module_name, GFP_KERNEL);
+	if (!module_name)
+		goto free_argv;
+
+	argv[0] = modprobe_path;
+	argv[1] = "-q";
+	argv[2] = "--";
+	argv[3] = module_name;
+	argv[4] = NULL;
+
+	info = call_usermodehelper_setup(modprobe_path, argv, envp, GFP_KERNEL,
+					 NULL, free_modprobe_argv, NULL);
+	if (!info)
+		goto free_module_name;
+
+	/* Even with CONFIG_STATIC_USERMODEHELPER we really want this path */
+	info->path = modprobe_path;
+
+	return call_usermodehelper_exec(info, UMH_WAIT_PROC | UMH_KILLABLE);
+
+free_module_name:
+	kfree(module_name);
+free_argv:
+	kfree(argv);
+
+	return -ENOMEM;
+}
+
+int __init pkvm_load_early_modules(void)
+{
+	char *token, *buf = early_pkvm_modules;
+	int err;
+
+	while (true) {
+		token = strsep(&buf, ",");
+
+		if (!token)
+			break;
+
+		if (*token) {
+			err = pkvm_request_early_module(token);
+			if (err) {
+				pr_err("Failed to load pkvm module %s: %d\n",
+				       token, err);
+				return err;
+			}
+		}
+
+		if (buf)
+			*(buf - 1) = ',';
+	}
+
+	return 0;
+}
 
 struct pkvm_mod_sec_mapping {
 	struct pkvm_module_section *sec;
@@ -501,9 +763,9 @@ static int __pkvm_cmp_mod_sec(const void *p1, const void *p2)
 	return s1->sec->start < s2->sec->start ? -1 : s1->sec->start > s2->sec->start;
 }
 
-int __pkvm_load_el2_module(struct pkvm_el2_module *mod, struct module *this,
-			   unsigned long *token)
+int __pkvm_load_el2_module(struct module *this, unsigned long *token)
 {
+	struct pkvm_el2_module *mod = &this->arch.hyp;
 	struct pkvm_mod_sec_mapping secs_map[] = {
 		{ &mod->text, KVM_PGTABLE_PROT_R | KVM_PGTABLE_PROT_X },
 		{ &mod->bss, KVM_PGTABLE_PROT_R | KVM_PGTABLE_PROT_W },
@@ -511,9 +773,10 @@ int __pkvm_load_el2_module(struct pkvm_el2_module *mod, struct module *this,
 		{ &mod->data, KVM_PGTABLE_PROT_R | KVM_PGTABLE_PROT_W },
 	};
 	void *start, *end, *hyp_va;
+	struct arm_smccc_res res;
 	kvm_nvhe_reloc_t *endrel;
+	int ret, i, secs_first;
 	size_t offset, size;
-	int ret, i;
 
 	if (!is_protected_kvm_enabled())
 		return -EOPNOTSUPP;
@@ -530,17 +793,24 @@ int __pkvm_load_el2_module(struct pkvm_el2_module *mod, struct module *this,
 		return -ENODEV;
 	}
 
+	/* Missing or empty module sections are placed first */
 	sort(secs_map, ARRAY_SIZE(secs_map), sizeof(secs_map[0]), __pkvm_cmp_mod_sec, NULL);
-	start = secs_map[0].sec->start;
+	for (secs_first = 0; secs_first < ARRAY_SIZE(secs_map); secs_first++) {
+		start = secs_map[secs_first].sec->start;
+		if (start)
+			break;
+	}
 	end = secs_map[ARRAY_SIZE(secs_map) - 1].sec->end;
-	size = PAGE_ALIGN(end - start);
+	size = end - start;
 
-	hyp_va = (void *)kvm_call_hyp_nvhe(__pkvm_alloc_module_va, size >> PAGE_SHIFT);
-	if (!hyp_va) {
+	arm_smccc_1_1_hvc(KVM_HOST_SMCCC_FUNC(__pkvm_alloc_module_va),
+			  size >> PAGE_SHIFT, &res);
+	if (res.a0 != SMCCC_RET_SUCCESS || !res.a1) {
 		kvm_err("Failed to allocate hypervisor VA space for EL2 module\n");
 		module_put(this);
-		return -ENOMEM;
+		return res.a0 == SMCCC_RET_SUCCESS ? -ENOMEM : -EPERM;
 	}
+	hyp_va = (void *)res.a1;
 
 	/*
 	 * The token can be used for other calls related to this module.
@@ -553,7 +823,8 @@ int __pkvm_load_el2_module(struct pkvm_el2_module *mod, struct module *this,
 	endrel = (void *)mod->relocs + mod->nr_relocs * sizeof(*endrel);
 	kvm_apply_hyp_module_relocations(start, hyp_va, mod->relocs, endrel);
 
-	ret = pkvm_map_module_sections(secs_map, hyp_va, ARRAY_SIZE(secs_map));
+	ret = pkvm_map_module_sections(secs_map + secs_first, hyp_va,
+				       ARRAY_SIZE(secs_map) - secs_first);
 	if (ret) {
 		kvm_err("Failed to map EL2 module page: %d\n", ret);
 		module_put(this);
@@ -573,17 +844,9 @@ int __pkvm_load_el2_module(struct pkvm_el2_module *mod, struct module *this,
 }
 EXPORT_SYMBOL_GPL(__pkvm_load_el2_module);
 
-int __pkvm_register_el2_call(dyn_hcall_t hfn, unsigned long token,
-			     unsigned long hyp_text_kern_va)
+int __pkvm_register_el2_call(unsigned long hfn_hyp_va)
 {
-	unsigned long hfn_hyp_va, offset, text_hyp_va = token;
-	int ret;
-
-	offset = (unsigned long)hfn - hyp_text_kern_va;
-	hfn_hyp_va = text_hyp_va + offset;
-
-	ret = kvm_call_hyp_nvhe(__pkvm_register_hcall,
-				(unsigned long)hfn_hyp_va);
-	return ret;
+	return kvm_call_hyp_nvhe(__pkvm_register_hcall, hfn_hyp_va);
 }
 EXPORT_SYMBOL_GPL(__pkvm_register_el2_call);
+#endif /* CONFIG_MODULES */

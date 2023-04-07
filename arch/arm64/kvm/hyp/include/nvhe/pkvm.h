@@ -13,6 +13,13 @@
 #include <nvhe/spinlock.h>
 
 /*
+ * Misconfiguration events that can undermine pKVM security.
+ */
+enum pkvm_system_misconfiguration {
+	NO_DMA_ISOLATION,
+};
+
+/*
  * Holds the relevant data for maintaining the vcpu state completely at hyp.
  */
 struct pkvm_hyp_vcpu {
@@ -64,9 +71,18 @@ struct pkvm_hyp_vm {
 	 */
 	unsigned int nr_vcpus;
 
+	/*
+	 * True when the guest is being torn down. When in this state, the
+	 * guest's vCPUs can't be loaded anymore, but its pages can be
+	 * reclaimed by the host.
+	 */
+	bool is_dying;
+
 	/* Array of the hyp vCPU structures for this VM. */
 	struct pkvm_hyp_vcpu *vcpus[];
 };
+
+extern void *host_fp_state;
 
 static inline struct pkvm_hyp_vm *
 pkvm_hyp_vcpu_to_hyp_vm(struct pkvm_hyp_vcpu *hyp_vcpu)
@@ -91,12 +107,15 @@ extern phys_addr_t pvmfw_base;
 extern phys_addr_t pvmfw_size;
 
 void pkvm_hyp_vm_table_init(void *tbl);
+void pkvm_hyp_host_fp_init(void *host_fp);
 
 int __pkvm_init_vm(struct kvm *host_kvm, unsigned long vm_hva,
 		   unsigned long pgd_hva, unsigned long last_ran_hva);
 int __pkvm_init_vcpu(pkvm_handle_t handle, struct kvm_vcpu *host_vcpu,
 		     unsigned long vcpu_hva);
-int __pkvm_teardown_vm(pkvm_handle_t handle);
+int __pkvm_start_teardown_vm(pkvm_handle_t handle);
+int __pkvm_finalize_teardown_vm(pkvm_handle_t handle);
+int __pkvm_reclaim_dying_guest_page(pkvm_handle_t handle, u64 pfn, u64 ipa);
 
 struct pkvm_hyp_vcpu *pkvm_load_hyp_vcpu(pkvm_handle_t handle,
 					 unsigned int vcpu_idx);
@@ -133,8 +152,19 @@ static inline bool pkvm_ipa_range_has_pvmfw(struct pkvm_hyp_vm *vm,
 	return ipa_end > pkvm->pvmfw_load_addr && ipa_start < pvmfw_load_end;
 }
 
+static inline void pkvm_set_max_sve_vq(void)
+{
+	sve_cond_update_zcr_vq(sve_vq_from_vl(kvm_host_sve_max_vl) - 1,
+			       SYS_ZCR_EL2);
+}
+
 int pkvm_load_pvmfw_pages(struct pkvm_hyp_vm *vm, u64 ipa, phys_addr_t phys,
 			  u64 size);
 void pkvm_poison_pvmfw_pages(void);
+
+/*
+ * Notify pKVM about events that can undermine pKVM security.
+ */
+void pkvm_handle_system_misconfiguration(enum pkvm_system_misconfiguration event);
 
 #endif /* __ARM64_KVM_NVHE_PKVM_H__ */

@@ -34,6 +34,7 @@ static void *vm_table_base;
 static void *hyp_pgt_base;
 static void *host_s2_pgt_base;
 static void *ffa_proxy_pages;
+static void *hyp_host_fp_base;
 static struct kvm_pgtable_mm_ops pkvm_pgtable_mm_ops;
 static struct hyp_pool hpool;
 
@@ -66,6 +67,11 @@ static int divide_memory_pool(void *virt, unsigned long size)
 	nr_pages = hyp_ffa_proxy_pages();
 	ffa_proxy_pages = hyp_early_alloc_contig(nr_pages);
 	if (!ffa_proxy_pages)
+		return -ENOMEM;
+
+	nr_pages = hyp_host_fp_pages(hyp_nr_cpus);
+	hyp_host_fp_base = hyp_early_alloc_contig(nr_pages);
+	if (!hyp_host_fp_base)
 		return -ENOMEM;
 
 	return 0;
@@ -303,6 +309,23 @@ static int fix_hyp_pgtable_refcnt(void)
 				&walker);
 }
 
+static int unmap_protected_regions(void)
+{
+	struct pkvm_moveable_reg *reg;
+	int i, ret;
+
+	for (i = 0; i < pkvm_moveable_regs_nr; i++) {
+		reg = &pkvm_moveable_regs[i];
+		if (reg->type != PKVM_MREG_PROTECTED_RANGE)
+			continue;
+		ret = host_stage2_protect_pages_locked(reg->start, reg->size);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
 void __noreturn __pkvm_init_finalise(void)
 {
 	struct kvm_host_data *host_data = this_cpu_ptr(&kvm_host_data);
@@ -344,11 +367,16 @@ void __noreturn __pkvm_init_finalise(void)
 	if (ret)
 		goto out;
 
+	ret = unmap_protected_regions();
+	if (ret)
+		goto out;
+
 	ret = hyp_ffa_init(ffa_proxy_pages);
 	if (ret)
 		goto out;
 
 	pkvm_hyp_vm_table_init(vm_table_base);
+	pkvm_hyp_host_fp_init(hyp_host_fp_base);
 out:
 	/*
 	 * We tail-called to here from handle___pkvm_init() and will not return,

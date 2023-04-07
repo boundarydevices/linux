@@ -25,7 +25,8 @@ hyp_spinlock_t pkvm_pgd_lock;
 struct memblock_region hyp_memory[HYP_MEMBLOCK_REGIONS];
 unsigned int hyp_memblock_nr;
 
-static u64 __io_map_base;
+static u64 __private_range_base;
+static u64 __private_range_cur;
 
 struct hyp_fixmap_slot {
 	u64 addr;
@@ -50,29 +51,29 @@ static int __pkvm_create_mappings(unsigned long start, unsigned long size,
  * @size:	The size of the VA range to reserve.
  * @haddr:	The hypervisor virtual start address of the allocation.
  *
- * The private virtual address (VA) range is allocated above __io_map_base
+ * The private virtual address (VA) range is allocated above __private_range_base
  * and aligned based on the order of @size.
  *
  * Return: 0 on success or negative error code on failure.
  */
 int pkvm_alloc_private_va_range(size_t size, unsigned long *haddr)
 {
-	unsigned long base, addr;
+	unsigned long cur, addr;
 	int ret = 0;
 
 	hyp_spin_lock(&pkvm_pgd_lock);
 
 	/* Align the allocation based on the order of its size */
-	addr = ALIGN(__io_map_base, PAGE_SIZE << get_order(size));
+	addr = ALIGN(__private_range_cur, PAGE_SIZE << get_order(size));
 
 	/* The allocated size is always a multiple of PAGE_SIZE */
-	base = addr + PAGE_ALIGN(size);
+	cur = addr + PAGE_ALIGN(size);
 
-	/* Are we overflowing on the vmemmap ? */
-	if (!addr || base > __hyp_vmemmap)
+	/* Has the private range grown too large ? */
+	if (!addr || cur > __hyp_vmemmap || (cur - __private_range_base) > __PKVM_PRIVATE_SZ) {
 		ret = -ENOMEM;
-	else {
-		__io_map_base = base;
+	} else {
+		__private_range_cur = cur;
 		*haddr = addr;
 	}
 
@@ -101,46 +102,69 @@ int __pkvm_create_private_mapping(phys_addr_t phys, size_t size,
 	return err;
 }
 
+#ifdef CONFIG_NVHE_EL2_DEBUG
+static unsigned long mod_range_start = ULONG_MAX;
+static unsigned long mod_range_end;
+static DEFINE_HYP_SPINLOCK(mod_range_lock);
+
+static void update_mod_range(unsigned long addr, size_t size)
+{
+	hyp_spin_lock(&mod_range_lock);
+	mod_range_start = min(mod_range_start, addr);
+	mod_range_end = max(mod_range_end, addr + size);
+	hyp_spin_unlock(&mod_range_lock);
+}
+
+void assert_in_mod_range(unsigned long addr)
+{
+	/*
+	 * This is not entirely watertight if there are private range
+	 * allocations between modules being loaded, but in practice that is
+	 * probably going to be allocation initiated by the modules themselves.
+	 */
+	hyp_spin_lock(&mod_range_lock);
+	WARN_ON(addr < mod_range_start || mod_range_end <= addr);
+	hyp_spin_unlock(&mod_range_lock);
+}
+#else
+static inline void update_mod_range(unsigned long addr, size_t size) { }
+#endif
+
 void *__pkvm_alloc_module_va(u64 nr_pages)
 {
+	size_t size = nr_pages << PAGE_SHIFT;
 	unsigned long addr = 0;
 
-	pkvm_modules_lock();
-	if (pkvm_modules_enabled())
-		pkvm_alloc_private_va_range(nr_pages << PAGE_SHIFT, &addr);
-	pkvm_modules_unlock();
+	if (!pkvm_alloc_private_va_range(size, &addr))
+		update_mod_range(addr, size);
 
 	return (void *)addr;
 }
 
-int __pkvm_map_module_page(u64 pfn, void *va, enum kvm_pgtable_prot prot)
+int __pkvm_map_module_page(u64 pfn, void *va, enum kvm_pgtable_prot prot, bool is_protected)
 {
-	int ret = -EACCES;
+	unsigned long addr = (unsigned long)va;
+	int ret;
 
-	pkvm_modules_lock();
+	assert_in_mod_range(addr);
 
-	if (!pkvm_modules_enabled())
-		goto err;
+	if (!is_protected) {
+		ret = __pkvm_host_donate_hyp(pfn, 1);
+		if (ret)
+			return ret;
+	}
 
-	ret = __pkvm_host_donate_hyp(pfn, 1);
-	if (ret)
-		goto err;
-
-	ret = __pkvm_create_mappings((unsigned long)va, PAGE_SIZE, hyp_pfn_to_phys(pfn), prot);
-err:
-	pkvm_modules_unlock();
+	ret = __pkvm_create_mappings(addr, PAGE_SIZE, hyp_pfn_to_phys(pfn), prot);
+	if (ret && !is_protected)
+		WARN_ON(__pkvm_hyp_donate_host(pfn, 1));
 
 	return ret;
 }
 
 void __pkvm_unmap_module_page(u64 pfn, void *va)
 {
-	pkvm_modules_lock();
-	if (pkvm_modules_enabled()) {
-		WARN_ON(__pkvm_hyp_donate_host(pfn, 1));
-		pkvm_remove_mappings(va, va + PAGE_SIZE);
-	}
-	pkvm_modules_unlock();
+	WARN_ON(__pkvm_hyp_donate_host(pfn, 1));
+	pkvm_remove_mappings(va, va + PAGE_SIZE);
 }
 
 int pkvm_create_mappings_locked(void *from, void *to, enum kvm_pgtable_prot prot)
@@ -386,9 +410,10 @@ int hyp_create_idmap(u32 hyp_va_bits)
 	 * with the idmap to place the IOs and the vmemmap. IOs use the lower
 	 * half of the quarter and the vmemmap the upper half.
 	 */
-	__io_map_base = start & BIT(hyp_va_bits - 2);
-	__io_map_base ^= BIT(hyp_va_bits - 2);
-	__hyp_vmemmap = __io_map_base | BIT(hyp_va_bits - 3);
+	__private_range_base = start & BIT(hyp_va_bits - 2);
+	__private_range_base ^= BIT(hyp_va_bits - 2);
+	__private_range_cur = __private_range_base;
+	__hyp_vmemmap = __private_range_base | BIT(hyp_va_bits - 3);
 
 	return __pkvm_create_mappings(start, end - start, start, PAGE_HYP_EXEC);
 }

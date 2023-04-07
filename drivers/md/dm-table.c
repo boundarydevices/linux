@@ -1204,21 +1204,12 @@ struct dm_crypto_profile {
 	struct mapped_device *md;
 };
 
-struct dm_keyslot_evict_args {
-	const struct blk_crypto_key *key;
-	int err;
-};
-
 static int dm_keyslot_evict_callback(struct dm_target *ti, struct dm_dev *dev,
 				     sector_t start, sector_t len, void *data)
 {
-	struct dm_keyslot_evict_args *args = data;
-	int err;
+	const struct blk_crypto_key *key = data;
 
-	err = blk_crypto_evict_key(bdev_get_queue(dev->bdev), args->key);
-	if (!args->err)
-		args->err = err;
-	/* Always try to evict the key from all devices. */
+	blk_crypto_evict_key(dev->bdev, key);
 	return 0;
 }
 
@@ -1231,7 +1222,6 @@ static int dm_keyslot_evict(struct blk_crypto_profile *profile,
 {
 	struct mapped_device *md =
 		container_of(profile, struct dm_crypto_profile, profile)->md;
-	struct dm_keyslot_evict_args args = { key };
 	struct dm_table *t;
 	int srcu_idx;
 
@@ -1244,17 +1234,18 @@ static int dm_keyslot_evict(struct blk_crypto_profile *profile,
 
 		if (!ti->type->iterate_devices)
 			continue;
-		ti->type->iterate_devices(ti, dm_keyslot_evict_callback, &args);
+		ti->type->iterate_devices(ti, dm_keyslot_evict_callback,
+					  (void *)key);
 	}
 
 	dm_put_live_table(md, srcu_idx);
-	return args.err;
+	return 0;
 }
 
 struct dm_derive_sw_secret_args {
-	const u8 *wrapped_key;
-	unsigned int wrapped_key_size;
-	u8 *secret;
+	const u8 *eph_key;
+	size_t eph_key_size;
+	u8 *sw_secret;
 	int err;
 };
 
@@ -1263,15 +1254,14 @@ static int dm_derive_sw_secret_callback(struct dm_target *ti,
 					sector_t len, void *data)
 {
 	struct dm_derive_sw_secret_args *args = data;
-	struct request_queue *q = bdev_get_queue(dev->bdev);
 
 	if (!args->err)
 		return 0;
 
-	args->err = blk_crypto_derive_sw_secret(q->crypto_profile,
-						args->wrapped_key,
-						args->wrapped_key_size,
-						args->secret);
+	args->err = blk_crypto_derive_sw_secret(dev->bdev,
+						args->eph_key,
+						args->eph_key_size,
+						args->sw_secret);
 	/* Try another device in case this fails. */
 	return 0;
 }
@@ -1282,16 +1272,15 @@ static int dm_derive_sw_secret_callback(struct dm_target *ti,
  * first device that supports derive_sw_secret().
  */
 static int dm_derive_sw_secret(struct blk_crypto_profile *profile,
-			       const u8 *wrapped_key,
-			       unsigned int wrapped_key_size,
-			       u8 secret[BLK_CRYPTO_SW_SECRET_SIZE])
+			       const u8 *eph_key, size_t eph_key_size,
+			       u8 sw_secret[BLK_CRYPTO_SW_SECRET_SIZE])
 {
 	struct mapped_device *md =
 		container_of(profile, struct dm_crypto_profile, profile)->md;
 	struct dm_derive_sw_secret_args args = {
-		.wrapped_key = wrapped_key,
-		.wrapped_key_size = wrapped_key_size,
-		.secret = secret,
+		.eph_key = eph_key,
+		.eph_key_size = eph_key_size,
+		.sw_secret = sw_secret,
 		.err = -EOPNOTSUPP,
 	};
 	struct dm_table *t;
