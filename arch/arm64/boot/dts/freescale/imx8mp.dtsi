@@ -1374,6 +1374,7 @@
 							 <&clk IMX8MP_SYS_PLL1_800M>;
 				assigned-clock-rates = <0>, <500000000>, <200000000>;
 				interrupts = <GIC_SPI 6 IRQ_TYPE_LEVEL_HIGH>;
+				ldb-node = <&ldb>;
 				power-domains = <&media_blk_ctrl IMX8MP_MEDIABLK_PD_LCDIF_2>;
 				status = "disabled";
 
