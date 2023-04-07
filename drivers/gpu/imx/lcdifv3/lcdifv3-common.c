@@ -58,6 +58,7 @@ struct lcdifv3_soc {
 	struct clk *clk_disp_apb;
 	struct clk *clk_ldb;
 	struct clk *clk_ldb_pll;
+	bool dual;
 	struct device *trusty_dev;
 
 	u32 thres_low_mul;
@@ -420,8 +421,14 @@ void lcdifv3_set_mode(struct lcdifv3_soc *lcdifv3, struct videomode *vmode)
 		pr_info("%s: wanted %ld got %ld\n", __func__, vmode->pixelclock * 7, pixelclock * 7);
 	}
 	if (lcdifv3->clk_ldb) {
-		clk_set_rate(lcdifv3->clk_ldb, pixelclock * 7);
+		unsigned long pix = pixelclock * 7;
+
+		if (lcdifv3->dual)
+			pix >>= 1;
+		clk_set_rate(lcdifv3->clk_ldb, pix);
 		pixelclock = clk_get_rate(lcdifv3->clk_ldb) / 7;
+		if (lcdifv3->dual)
+			pixelclock <<= 1;
 		pr_info("%s: wanted %ld got %ld\n", __func__, vmode->pixelclock * 7, pixelclock * 7);
 	}
 	clk_set_rate(lcdifv3->clk_pix, pixelclock);
@@ -723,6 +730,7 @@ static int imx_lcdifv3_probe(struct platform_device *pdev)
 	int ret;
 	struct device *dev = &pdev->dev;
 	struct device_node *np = dev->of_node;
+	struct device_node *ldb_node;
 	struct lcdifv3_soc *lcdifv3;
 	struct resource *res;
 	const struct of_device_id *of_id;
@@ -781,6 +789,10 @@ static int imx_lcdifv3_probe(struct platform_device *pdev)
 	if (IS_ERR(lcdifv3->clk_ldb_pll))
 		return dev_err_probe(dev, PTR_ERR(lcdifv3->clk_ldb_pll),
 				"clk_ldb_pll clock failed\n");
+
+	ldb_node = of_parse_phandle(np, "ldb-node", 0);
+	if (ldb_node)
+		lcdifv3->dual = of_property_read_bool(ldb_node, "fsl,dual-channel");
 
 	lcdifv3->clk_pix = devm_clk_get(dev, "pix");
 	if (IS_ERR(lcdifv3->clk_pix))
