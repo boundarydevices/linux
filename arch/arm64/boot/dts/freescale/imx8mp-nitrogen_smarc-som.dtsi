@@ -269,8 +269,6 @@
 
 	gpio_keys_batt: gpio-keys-batt {
 		compatible = "gpio-keys";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_gpio_keys>;
 
 		battery_low {
 			label = "battery_low";
