@@ -1371,6 +1371,7 @@
 							 <&clk IMX8MP_VIDEO_PLL1_OUT>;
 				assigned-clock-rates = <0>, <500000000>, <200000000>;
 				interrupts = <GIC_SPI 6 IRQ_TYPE_LEVEL_HIGH>;
+				ldb-node = <&ldb>;
 				power-domains = <&mediamix_pd>;
 				status = "disabled";
 
