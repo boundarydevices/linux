@@ -252,6 +252,10 @@ _IMX_IN_TREE_MODULES = [
     "drivers/soc/imx/imx8m-blk-ctrl.ko",
     "drivers/pinctrl/freescale/pinctrl-imx8mm.ko",
     "drivers/soc/imx/gpcv2-imx.ko",
+    "sound/soc/codecs/snd-soc-rpmsg-pcm512x-i2c.ko",
+    "sound/soc/fsl/snd-soc-imx-pcm512x-rpmsg.ko",
+    "drivers/soc/imx/lpa_ctrl.ko",
+    "sound/soc/codecs/snd-soc-rpmsg-pcm512x.ko",
 ]
 
 def define_imx():
