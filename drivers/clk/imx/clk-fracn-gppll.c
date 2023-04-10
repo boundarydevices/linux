@@ -66,6 +66,7 @@ struct clk_fracn_gppll {
 static const struct imx_fracn_gppll_rate_table fracn_tbl[] = {
 	PLL_FRACN_GP(1700000000U, 141, 0, 0, 1, 2),
 	PLL_FRACN_GP(1400000000U, 175, 0, 0, 1, 3),
+	PLL_FRACN_GP(1039500000U, 173, 25, 100, 1, 4),
 	PLL_FRACN_GP(900000000U, 150, 0, 0, 1, 4),
 	PLL_FRACN_GP(650000000U, 162, 50, 100, 0, 6),
 	PLL_FRACN_GP(594000000U, 198, 0, 1, 0, 8),
