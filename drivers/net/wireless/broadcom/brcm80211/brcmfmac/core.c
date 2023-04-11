@@ -971,10 +971,11 @@ static void brcmf_del_if(struct brcmf_pub *drvr, s32 bsscfgidx,
 
 void brcmf_remove_interface(struct brcmf_if *ifp, bool locked)
 {
-	if (!ifp || WARN_ON(ifp->drvr->iflist[ifp->bsscfgidx] != ifp))
+	if (!ifp || !(ifp->drvr) || WARN_ON(ifp->drvr->iflist[ifp->bsscfgidx] != ifp)) {
+		brcmf_err("Invalid interface or driver\n");
 		return;
-	brcmf_dbg(TRACE, "Enter, bsscfgidx=%d, ifidx=%d\n", ifp->bsscfgidx,
-		  ifp->ifidx);
+	}
+	brcmf_dbg(TRACE, "Enter, bsscfgidx=%d, ifidx=%d\n", ifp->bsscfgidx, ifp->ifidx);
 	brcmf_proto_del_if(ifp->drvr, ifp);
 	brcmf_del_if(ifp->drvr, ifp->bsscfgidx, locked);
 }
