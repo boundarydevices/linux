@@ -28,7 +28,7 @@
 #define GET_INFO_DATA                   0x17
 #define ELE_START_RNG_REQ		0xA3
 #define ELE_GET_TRNG_STATE_REQ		0xA4
-#define ELE_GET_RANDOM_REQ		0x22
+#define ELE_GET_RANDOM_REQ		0xCD
 #define CSAL_TRNG_STATE_MASK		0x0000ffff
 
 #define ELE_VERSION			0x6

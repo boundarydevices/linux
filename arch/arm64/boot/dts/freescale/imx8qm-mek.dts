@@ -1010,11 +1010,25 @@
 	};
 };
 
+&phyx2_0{
+	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_INPUT>;
+	status = "okay";
+};
+
+&phyx2_1{
+	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_INPUT>;
+	status = "okay";
+};
+
+&phyx1{
+	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_INPUT>;
+	status = "okay";
+};
+
 &pciea{
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pciea>;
 	reset-gpio = <&lsio_gpio4 29 GPIO_ACTIVE_LOW>;
-	ext_osc = <1>;
 	vpcie-supply = <&reg_pciea>;
 	status = "okay";
 };
@@ -1023,15 +1037,10 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcieb>;
 	reset-gpio = <&lsio_gpio5 0 GPIO_ACTIVE_LOW>;
-	ext_osc = <1>;
 	status = "okay";
 };
 
 &sata {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_sata>;
-	clkreq-gpio = <&lsio_gpio4 30 GPIO_ACTIVE_LOW>;
-	ext_osc = <1>;
 	status = "okay";
 };
 
@@ -1625,14 +1634,9 @@
 
 	pinctrl_pcieb: pciebgrp{
 		fsl,pins = <
+			IMX8QM_PCIE_CTRL1_CLKREQ_B_HSIO_PCIE1_CLKREQ_B		0x06000021
 			IMX8QM_PCIE_CTRL1_WAKE_B_LSIO_GPIO4_IO31		0x04000021
 			IMX8QM_PCIE_CTRL1_PERST_B_LSIO_GPIO5_IO00		0x06000021
-		>;
-	};
-
-	pinctrl_sata: satagrp{
-		fsl,pins = <
-			IMX8QM_PCIE_CTRL1_CLKREQ_B_LSIO_GPIO4_IO30		0x06000021
 		>;
 	};
 

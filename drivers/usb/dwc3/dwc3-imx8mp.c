@@ -176,7 +176,6 @@ static struct xhci_plat_priv dwc3_imx8mp_xhci_priv = {
 static struct dwc3_platform_data dwc3_imx8mp_pdata = {
 	.xhci_priv = &dwc3_imx8mp_xhci_priv,
 	.set_role_post = dwc3_imx8mp_set_role_post,
-	.quirks = DWC3_SOFT_ITP_SYNC,
 };
 
 static struct of_dev_auxdata dwc3_imx8mp_auxdata[] = {
