@@ -3017,11 +3017,6 @@ static int cdns3_gadget_check_config(struct usb_gadget *gadget)
 	priv_dev->ep_buf_size = priv_dev->ep_iso_burst =
 			(priv_dev->onchip_buffers - 2) / (n_in + 1);
 
-	if (priv_dev->dev_ver < DEV_VER_V2) {
-		priv_dev->ep_buf_size = min_t(u8, priv_dev->ep_buf_size, 4);
-		priv_dev->ep_iso_burst = min_t(u8, priv_dev->ep_iso_burst, 4);
-	}
-
 	return 0;
 }
 
