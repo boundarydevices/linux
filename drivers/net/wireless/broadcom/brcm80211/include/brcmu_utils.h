@@ -129,6 +129,7 @@ struct sk_buff *brcmu_pktq_pdeq_match(struct pktq *pq, int prec,
 /* packet primitives */
 struct sk_buff *brcmu_pkt_buf_get_skb(uint len);
 void brcmu_pkt_buf_free_skb(struct sk_buff *skb);
+struct sk_buff *__brcmu_pkt_buf_get_skb(uint len, gfp_t gfp_mask);
 
 /* Empty the queue at particular precedence level */
 /* callback function fn(pkt, arg) returns true if pkt belongs to if */
