@@ -68,6 +68,7 @@
 		memory-region = <&vdevbuffer>, <&vdev0vring0>, <&vdev0vring1>,
 				<&rsc_table>, <&m4_reserved>;
 		syscon = <&src>;
+		fsl,startup-delay-ms = <500>;
 	};
 
 	/delete-node/ bt-rfkill;
