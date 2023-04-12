@@ -51,14 +51,15 @@
 			no-map;
 		};
 
-		rsc_table: rsc_table@b8000000 {
-			reg = <0 0xb8000000 0 0x8000>;
+		rsc_table: rsc_table@b80ff000 {
+			reg = <0 0xb80ff000 0 0x1000>;
+			no-map;
 		};
 	};
 
 	imx8mq-cm4 {
 		compatible = "fsl,imx8mq-cm4";
-		rsc-da = <0xb8000000>;
+		rsc-da = <0xb80ff000>;
 		clocks = <&clk IMX8MQ_CLK_M4_DIV>;
 		mbox-names = "tx", "rx", "rxdb";
 		mboxes = <&mu 0 1
