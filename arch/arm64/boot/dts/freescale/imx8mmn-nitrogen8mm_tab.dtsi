@@ -280,7 +280,7 @@
 
 	pinctrl_sound_wm8960: sound-wm8960grp {
 		fsl,pins = <
-#define GP_WM8960_HP_DET		<&gpio1 1 GPIO_ACTIVE_HIGH>
+#define GP_WM8960_HP_DET		<&gpio1 1 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, 0x80)
 		>;
 	};
@@ -668,7 +668,7 @@
 			"RINPUT1", "Main MIC",
 			"Main MIC", "MICB";
 		/* JD2: hp detect high for headphone*/
-		hp-det = <2 0>;
+		hp-det = <2 1>;
 		hp-det-gpios = GP_WM8960_HP_DET;
 		mic-det-gpios = GP_WM8960_HP_DET;
 		pinctrl-names = "default";
@@ -1120,6 +1120,9 @@
 		reg = <0x1a>;
 		clocks = <&clk IMX8MMN(CLK_SAI3_ROOT)>;
 		clock-names = "mclk";
+		wlf,gpio-cfg = <1 3>;
+		/* JD2: hp detect high for headphone*/
+		wlf,hp-cfg = <2 3 3>;
 		wlf,shared-lrclk;
 	};
 };
