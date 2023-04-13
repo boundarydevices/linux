@@ -748,14 +748,12 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-14x14-evk-csi.dtb \
 	imx6ul-14x14-evk-emmc.dtb \
 	imx6ul-14x14-evk-btwifi.dtb \
-	imx6ul-14x14-evk-btwifi-sdio3_0.dtb \
 	imx6ul-14x14-evk-ecspi-slave.dtb \
 	imx6ul-14x14-evk-ecspi.dtb \
 	imx6ul-14x14-evk-gpmi-weim.dtb \
 	imx6ul-9x9-evk.dtb \
 	imx6ul-9x9-evk-ldo.dtb \
 	imx6ul-9x9-evk-btwifi.dtb \
-	imx6ul-9x9-evk-btwifi-sdio3_0.dtb \
 	imx6ul-ccimx6ulsbcexpress.dtb \
 	imx6ul-ccimx6ulsbcpro.dtb \
 	imx6ul-geam.dtb \
@@ -780,13 +778,11 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ull-14x14-evk.dtb \
 	imx6ull-14x14-evk-emmc.dtb \
 	imx6ull-14x14-evk-btwifi.dtb \
-	imx6ull-14x14-evk-btwifi-sdio3_0.dtb \
 	imx6ull-14x14-evk-gpmi-weim.dtb \
 	imx6ull-14x14-evk-revD.dtb \
 	imx6ull-9x9-evk.dtb \
 	imx6ull-9x9-evk-ldo.dtb \
 	imx6ull-9x9-evk-btwifi.dtb \
-	imx6ull-9x9-evk-btwifi-sdio3_0.dtb \
 	imx6ull-colibri-aster.dtb \
 	imx6ull-colibri-emmc-aster.dtb \
 	imx6ull-colibri-emmc-eval-v3.dtb \
@@ -812,7 +808,6 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ull-tqma6ull2l-mba6ulx.dtb \
 	imx6ulz-14x14-evk.dtb \
 	imx6ulz-14x14-evk-btwifi.dtb \
-	imx6ulz-14x14-evk-btwifi-sdio3_0.dtb \
 	imx6ulz-14x14-evk-emmc.dtb \
 	imx6ulz-14x14-evk-gpmi-weim.dtb \
 	imx6ulz-bsh-smm-m2.dtb
