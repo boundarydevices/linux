@@ -614,6 +614,11 @@
 	status = "okay";
 };
 
+&phyx1 {
+        fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_INPUT>;
+        status = "okay";
+};
+
 &pcieb{
 	compatible = "fsl,imx8qxp-pcie","snps,dw-pcie";
 	pinctrl-names = "default";
