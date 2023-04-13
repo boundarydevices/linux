@@ -653,6 +653,14 @@ static int lpi2c_imx_push_rx_cmd(struct lpi2c_imx_struct *lpi2c_imx,
 	unsigned int temp, rx_remain;
 	unsigned long orig_jiffies = jiffies;
 
+	/*
+	 * The master of LPI2C needs to read data from the slave by writing
+	 * the number of received data to txfifo. However, the TXFIFO register
+	 * only has one byte length, and if the length of the data that needs
+	 * to be read exceeds 256 bytes, it needs to be written to TXFIFO
+	 * multiple times. TXFIFO has a depth limit, so the "while wait loop"
+	 * here is needed to prevent TXFIFO from overflowing.
+	 */
 	rx_remain = msg->len;
 	do {
 		temp = rx_remain > CHUNK_DATA ?
@@ -669,6 +677,7 @@ static int lpi2c_imx_push_rx_cmd(struct lpi2c_imx_struct *lpi2c_imx,
 		}
 		writel(temp, lpi2c_imx->base + LPI2C_MTDR);
 		rx_remain = rx_remain - (temp & 0xff) - 1;
+		orig_jiffies = jiffies;
 	} while (rx_remain > 0);
 
 	return 0;
