@@ -37,14 +37,15 @@
 			no-map;
 		};
 
-		rsc_table: rsc_table@71000000{
-			reg = <0 0x71000000 0 0x8000>;
+		rsc_table: rsc_table@710ff000 {
+			reg = <0 0x710ff000 0 0x8000>;
+			no-map;
 		};
 	};
 
 	imx8mn-cm7 {
 		compatible = "fsl,imx8mn-cm7";
-		rsc-da = <0x71000000>;
+		rsc-da = <0x710ff000>;
 		mbox-names = "tx", "rx", "rxdb";
 		mboxes = <&mu 0 1
 			  &mu 1 1
