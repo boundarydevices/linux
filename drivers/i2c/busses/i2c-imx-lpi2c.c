@@ -670,7 +670,7 @@ static int lpi2c_imx_push_rx_cmd(struct lpi2c_imx_struct *lpi2c_imx,
 		temp |= (RECV_DATA << 8);
 		while ((readl(lpi2c_imx->base + LPI2C_MFSR) & 0xff) > fifo_watermark) {
 			if (time_after(jiffies, orig_jiffies + msecs_to_jiffies(1000))) {
-				dev_dbg(&lpi2c_imx->adapter.dev, "txfifo empty timeout\n");
+				dev_dbg(&lpi2c_imx->adapter.dev, "push receive data command timeout\n");
 				if (lpi2c_imx->adapter.bus_recovery_info)
 					i2c_recover_bus(&lpi2c_imx->adapter);
 				return -ETIMEDOUT;
