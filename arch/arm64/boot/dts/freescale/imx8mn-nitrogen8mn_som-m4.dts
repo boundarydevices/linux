@@ -45,7 +45,7 @@
 
 	imx8mn-cm7 {
 		compatible = "fsl,imx8mn-cm7";
-		rsc-da = <0x71000000>;
+		rsc-da = <0x710ff000>;
 		mbox-names = "tx", "rx", "rxdb";
 		mboxes = <&mu 0 1
 			  &mu 1 1
@@ -53,6 +53,7 @@
 		memory-region = <&vdevbuffer>, <&vdev0vring0>, <&vdev0vring1>,
 				<&rsc_table>, <&m4_reserved>;
 		status = "okay";
+		fsl,startup-delay-ms = <500>;
 	};
 };
 
