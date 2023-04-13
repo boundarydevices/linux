@@ -652,6 +652,7 @@ static int lpi2c_imx_push_rx_cmd(struct lpi2c_imx_struct *lpi2c_imx,
 {
 	unsigned int temp, rx_remain;
 	unsigned long orig_jiffies = jiffies;
+	int fifo_watermark;
 
 	/*
 	 * The master of LPI2C needs to read data from the slave by writing
@@ -662,11 +663,12 @@ static int lpi2c_imx_push_rx_cmd(struct lpi2c_imx_struct *lpi2c_imx,
 	 * here is needed to prevent TXFIFO from overflowing.
 	 */
 	rx_remain = msg->len;
+	fifo_watermark = lpi2c_imx->txfifosize >> 1;
 	do {
 		temp = rx_remain > CHUNK_DATA ?
 			CHUNK_DATA - 1 : rx_remain - 1;
 		temp |= (RECV_DATA << 8);
-		while ((readl(lpi2c_imx->base + LPI2C_MFSR) & 0xff) > 2) {
+		while ((readl(lpi2c_imx->base + LPI2C_MFSR) & 0xff) > fifo_watermark) {
 			if (time_after(jiffies, orig_jiffies + msecs_to_jiffies(1000))) {
 				dev_dbg(&lpi2c_imx->adapter.dev, "txfifo empty timeout\n");
 				if (lpi2c_imx->adapter.bus_recovery_info)
