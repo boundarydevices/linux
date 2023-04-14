@@ -44,6 +44,8 @@ Latest Android 11 sources are in branch [boundary-android-11.0.0\_2.2.0][latest-
 
 Latest Android 12 sources are in branch [boundary-android-12.1.0\_1.0.0][latest-12]
 
+Latest Android 13 sources are in branch [boundary-android-13.0.0\_1.0.0][latest-13]
+
 Linux (i.MX)
 ------------
 The latest 3.0.35 kernel is in branch [boundary-imx\_3.0.35\_4.1.0][latest-3.0.35]
@@ -96,6 +98,7 @@ These branches are based on Freescale releases of the same name (minus the 'boun
 [latest-10]:https://github.com/boundarydevices/linux-imx6/tree/boundary-android-10.0.0_2.5.0 "Boundary Android 10 kernel tree"
 [latest-11]:https://github.com/boundarydevices/linux-imx6/tree/boundary-android-11.0.0_2.2.0 "Boundary Android 11 kernel tree"
 [latest-12]:https://github.com/boundarydevices/linux/tree/boundary-android-12.1.0_1.0.0 "Boundary Android 12.1 kernel tree"
+[latest-13]:https://github.com/boundarydevices/linux/tree/boundary-android-13.0.0_1.0.0 "Boundary Android 13 kernel tree"
 [latest-3.0.35]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.0.35_4.1.0 "Boundary 3.0.35 4.1.0 kernel tree"
 [latest-3.10.x]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.10.53_1.1.1_ga "Boundary 3.10.53-1.1.1 GA kernel tree"
 [latest-3.14.x]:https://github.com/boundarydevices/linux-imx6/tree/boundary-imx_3.14.52_1.1.0_ga "Boundary 3.14.52-1.1.0 GA kernel tree"
