@@ -246,6 +246,12 @@ static int sn_setup_regs(struct panel_sn65dsi83 *sn)
 				i = 5;
 		}
 	}
+	/*
+	 * changing from 62M to 63M (1->2) causes an unstable panel
+	 * changing from 1->3 does not.
+	 */
+	if (i == 2)
+		i = 3;
 	sn_i2c_write_byte(sn, SN_CLK_SRC, (i << 1) | 1);
 	sn_i2c_write_byte(sn, SN_CLK_DIV, (sn->dsi_clk_divider - 1) << 3);
 
