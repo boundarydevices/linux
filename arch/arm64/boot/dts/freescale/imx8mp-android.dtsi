@@ -85,3 +85,7 @@
 &vpumix_blk_ctl {
 	trusty;
 };
+
+&uart1 {
+	/delete-node/ bluetooth;
+};

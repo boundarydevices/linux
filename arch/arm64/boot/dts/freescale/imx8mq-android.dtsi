@@ -111,3 +111,7 @@
 &irqsteer {
 	trusty;
 };
+
+&uart3 {
+       /delete-node/ bluetooth;
+};

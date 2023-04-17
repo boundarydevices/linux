@@ -73,3 +73,7 @@
 		pmsg-size       = <0x00020000>;
 	};
 };
+
+&lpuart1 {
+       /delete-node/ bluetooth;
+};
