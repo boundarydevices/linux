@@ -3,11 +3,12 @@
  * Copyright 2023 NXP
  */
 
-#include "imx6ull-14x14-evk.dts"
+#include <dt-bindings/clock/imx6ul-clock.h>
 
-/delete-node/ &codec;
+/dts-v1/;
+/plugin/;
 
-/ {
+&{/} {
 	sound-wm8960 {
 		status = "disabled";
 	};
@@ -24,9 +25,9 @@
 		compatible = "fsl,imx-audio-wm8962";
 		model = "wm8962-audio";
 		audio-cpu = <&sai2>;
-		audio-codec = <&codec>;
+		audio-codec = <&wm8962>;
 		audio-asrc = <&asrc>;
-		hp-det-gpio = <&gpio5 4 GPIO_ACTIVE_LOW>;
+		hp-det-gpio = <&gpio5 4 0>;
 		audio-routing =
 			"Headphone Jack", "HPOUTL",
 			"Headphone Jack", "HPOUTR",
@@ -42,6 +43,9 @@
 };
 
 &i2c1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	fxls8974@18 {
 		compatible = "nxp,fxls8974cf";
 		reg = <0x18>;
@@ -50,8 +54,15 @@
 	};
 };
 
+&codec {
+	status = "disabled";
+};
+
 &i2c2 {
-	codec: wm8962@1a {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	wm8962: wm8962@1a {
 		compatible = "wlf,wm8962";
 		reg = <0x1a>;
 		clocks = <&clks IMX6UL_CLK_SAI2>;
