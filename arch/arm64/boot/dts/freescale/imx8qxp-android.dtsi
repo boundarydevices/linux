@@ -64,7 +64,7 @@
 };
 
 &{/reserved-memory} {
-	ramoops@0x91f00000 {
+	ramoops@91f00000 {
 		compatible = "ramoops";
 		reg = <0 0x91f00000 0 0x00100000>;
 		record-size     = <0x00020000>;

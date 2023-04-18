@@ -45,7 +45,7 @@
 };
 
 &resmem {
-	ramoops@0xdff00000 {
+	ramoops@dff00000 {
 		compatible = "ramoops";
 		reg = <0 0xdff00000 0 0x00100000>;
 		record-size     = <0x00020000>;
