@@ -119,6 +119,8 @@ static struct miscdevice gzvm_dev = {
 
 static int gzvm_drv_probe(struct platform_device *pdev)
 {
+	int ret;
+
 	if (gzvm_arch_probe(gzvm_drv.drv_version, &gzvm_drv.hyp_version) != 0) {
 		dev_err(&pdev->dev, "Not found available conduit\n");
 		return -ENODEV;
@@ -128,11 +130,19 @@ static int gzvm_drv_probe(struct platform_device *pdev)
 		 gzvm_drv.hyp_version.major, gzvm_drv.hyp_version.minor,
 		 gzvm_drv.hyp_version.sub);
 
-	return misc_register(&gzvm_dev);
+	ret = misc_register(&gzvm_dev);
+	if (ret)
+		return ret;
+
+	ret = gzvm_drv_irqfd_init();
+	if (ret)
+		return ret;
+	return 0;
 }
 
 static void gzvm_drv_remove(struct platform_device *pdev)
 {
+	gzvm_drv_irqfd_exit();
 	misc_deregister(&gzvm_dev);
 }
 
