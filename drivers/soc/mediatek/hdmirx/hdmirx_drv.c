@@ -1514,14 +1514,19 @@ static long hdmirx_ioctl(struct file *filp,
 		break;
 
 	case MTK_HDMIRX_DRV_VER:
-		temp = HDMIRX_DRV_VER;
-		if (copy_to_user((void __user *)arg, &temp,
-			sizeof(temp))) {
+	{
+		struct HDMIRX_DRIVER_VERSION ver;
+
+		ver.version_major = HDMIRX_DRV_VER_MAJOR;
+		ver.version_minor = HDMIRX_DRV_VER_MINOR;
+		ver.version_patchlevel = HDMIRX_DRV_VER_PATCHLEVEL;
+		if (copy_to_user((void __user *)arg, &ver,
+			sizeof(struct HDMIRX_DRIVER_VERSION))) {
 			RX_DEF_LOG("[RX] failed: %d\n", __LINE__);
 			r = -EFAULT;
 		}
 		break;
-
+	}
 	default:
 		r = -EFAULT;
 		RX_DEF_LOG("[RX] Unknown ioctl: 0x%x\n", cmd);

@@ -8,9 +8,9 @@
 
 #define HDMIRX_DEVNAME "hdmirx"
 
-#define HDMIRX_DRV_VER_MAJOR 1
-#define HDMIRX_DRV_VER_MINOR 0
-#define HDMIRX_DRV_VER ((HDMIRX_DRV_VER_MAJOR << 8) | HDMIRX_DRV_VER_MINOR)
+#define HDMIRX_DRV_VER_MAJOR		1
+#define HDMIRX_DRV_VER_MINOR		0
+#define HDMIRX_DRV_VER_PATCHLEVEL	0
 
 #define VENDORSPEC_INFOFRAME_TYPE 0x01
 #define AVI_INFOFRAME_TYPE 0x02
@@ -69,6 +69,12 @@ enum HdmiRxDP {
 	HDMIRX_BIT_DEPTH_10_BIT,	/* 30bits */
 	HDMIRX_BIT_DEPTH_12_BIT,	/* 36bits */
 	HDMIRX_BIT_DEPTH_16_BIT		/* 48bits */
+};
+
+struct HDMIRX_DRIVER_VERSION {
+	u32 version_major;		/* Major version */
+	u32 version_minor;		/* Minor version */
+	u32 version_patchlevel;		/* Patch level */
 };
 
 struct HDMIRX_DEV_INFO {
@@ -215,7 +221,7 @@ enum HDMI_SWITCH_NO {
 #define MTK_HDMIRX_SWITCH		HDMI_IOW(5, unsigned int)
 /* get HDR10 packet */
 #define MTK_HDMIRX_PKT			HDMI_IOWR(6, struct hdr10InfoPkt)
-#define MTK_HDMIRX_DRV_VER		HDMI_IOWR(7, unsigned int)
+#define MTK_HDMIRX_DRV_VER		HDMI_IOWR(7, struct HDMIRX_DRIVER_VERSION)
 
 #define CP_MTK_HDMIRX_VID_INFO		HDMI_IOWR(1, struct HDMIRX_VID_PARA)
 #define CP_MTK_HDMIRX_AUD_INFO		HDMI_IOWR(2, struct HDMIRX_AUD_INFO)
@@ -223,6 +229,6 @@ enum HDMI_SWITCH_NO {
 #define CP_MTK_HDMIRX_DEV_INFO		HDMI_IOWR(4, struct HDMIRX_DEV_INFO)
 #define CP_MTK_HDMIRX_SWITCH		HDMI_IOW(5, unsigned int)
 #define CP_MTK_HDMIRX_PKT		HDMI_IOWR(6, struct hdr10InfoPkt)
-#define CP_MTK_HDMIRX_DRV_VER		HDMI_IOWR(7, unsigned int)
+#define CP_MTK_HDMIRX_DRV_VER		HDMI_IOWR(7, struct HDMIRX_DRIVER_VERSION)
 
 #endif
