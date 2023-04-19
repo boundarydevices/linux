@@ -328,4 +328,5 @@ def define_imx():
         name = "imx_abi",
         kernel_build = ":imx",
         kernel_modules = _IMX_EXT_MODULES,
+        module_grouping = False,
     )
