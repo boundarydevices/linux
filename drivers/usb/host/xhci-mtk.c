@@ -1025,6 +1025,9 @@ static int __maybe_unused xhci_mtk_resume(struct device *dev)
 			goto enable_wakeup;
 	}
 
+	if (mtk->wakeup_irq > 0)
+		enable_irq(mtk->wakeup_irq);
+
 	ret = xhci_mtk_host_enable(mtk);
 	if (ret)
 		goto disable_clks;
@@ -1090,6 +1093,9 @@ static int __maybe_unused xhci_mtk_runtime_resume(struct device *dev)
 		return -ESHUTDOWN;
 
 	if (device_may_wakeup(dev)) {
+		if (mtk->wakeup_irq > 0)
+			disable_irq_nosync(mtk->wakeup_irq);
+
 		if (!mtk->has_ippc) {
 			parent = dev->parent;
 			if (parent && parent->driver) {
