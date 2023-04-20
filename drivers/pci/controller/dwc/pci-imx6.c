@@ -176,6 +176,7 @@ struct imx6_pcie {
 #define CTRL2_PM_XMT_TURNOFF			BIT(9)
 #define STTS0_PM_LINKST_IN_L2			BIT(13)
 
+static int imx6_pcie_cz_enabled;
 static unsigned int imx6_pcie_grp_offset(const struct imx6_pcie *imx6_pcie)
 {
 	WARN_ON(imx6_pcie->drvdata->variant != IMX8MQ &&
@@ -1003,12 +1004,14 @@ static int imx6_pcie_start_link(struct dw_pcie *pci)
 	 * started in Gen2 mode, there is a possibility the devices on the
 	 * bus will not be detected at all.  This happens with PCIe switches.
 	 */
-	dw_pcie_dbi_ro_wr_en(pci);
-	tmp = dw_pcie_readl_dbi(pci, offset + PCI_EXP_LNKCAP);
-	tmp &= ~PCI_EXP_LNKCAP_SLS;
-	tmp |= PCI_EXP_LNKCAP_SLS_2_5GB;
-	dw_pcie_writel_dbi(pci, offset + PCI_EXP_LNKCAP, tmp);
-	dw_pcie_dbi_ro_wr_dis(pci);
+	if (!imx6_pcie_cz_enabled) {
+		dw_pcie_dbi_ro_wr_en(pci);
+		tmp = dw_pcie_readl_dbi(pci, offset + PCI_EXP_LNKCAP);
+		tmp &= ~PCI_EXP_LNKCAP_SLS;
+		tmp |= PCI_EXP_LNKCAP_SLS_2_5GB;
+		dw_pcie_writel_dbi(pci, offset + PCI_EXP_LNKCAP, tmp);
+		dw_pcie_dbi_ro_wr_dis(pci);
+	}
 
 	/* Start LTSSM. */
 	imx6_pcie_ltssm_enable(dev);
@@ -1484,6 +1487,17 @@ static const struct dev_pm_ops imx6_pcie_pm_ops = {
 	NOIRQ_SYSTEM_SLEEP_PM_OPS(imx6_pcie_suspend_noirq,
 				  imx6_pcie_resume_noirq)
 };
+
+static int __init imx6_pcie_compliance_test_enable(char *str)
+{
+	if (!strcmp(str, "yes")) {
+		pr_info("Enable the i.MX PCIe compliance tests mode.\n");
+		imx6_pcie_cz_enabled = 1;
+	}
+	return 1;
+}
+
+__setup("pcie_cz_enabled=", imx6_pcie_compliance_test_enable);
 
 static int imx6_pcie_probe(struct platform_device *pdev)
 {
