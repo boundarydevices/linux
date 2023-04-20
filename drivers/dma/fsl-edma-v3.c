@@ -240,6 +240,22 @@ static struct fsl_edma3_desc *to_fsl_edma3_desc(struct virt_dma_desc *vd)
 	return container_of(vd, struct fsl_edma3_desc, vdesc);
 }
 
+static bool is_srcid_in_use(struct fsl_edma3_engine *fsl_edma3, u32 srcid)
+{
+	struct fsl_edma3_chan *fsl_chan;
+	int i;
+
+	for (i = 0; i < fsl_edma3->n_chans; i++) {
+		fsl_chan = &fsl_edma3->chans[i];
+
+		if (srcid == fsl_chan->srcid) {
+			dev_err(&fsl_chan->pdev->dev, "The srcid is using! Can't use repeatly.");
+			return true;
+		}
+	}
+	return false;
+}
+
 static void fsl_edma3_enable_request(struct fsl_edma3_chan *fsl_chan)
 {
 	void __iomem *addr = fsl_chan->membase;
@@ -896,6 +912,7 @@ static struct dma_chan *fsl_edma3_xlate(struct of_phandle_args *dma_spec,
 	struct fsl_edma3_engine *fsl_edma3 = ofdma->of_dma_data;
 	struct dma_chan *chan, *_chan;
 	struct fsl_edma3_chan *fsl_chan;
+	bool srcid_used = false;
 
 	if (dma_spec->args_count != 3)
 		return NULL;
@@ -907,6 +924,13 @@ static struct dma_chan *fsl_edma3_xlate(struct of_phandle_args *dma_spec,
 			continue;
 
 		fsl_chan = to_fsl_edma3_chan(chan);
+		srcid_used = is_srcid_in_use(fsl_edma3, dma_spec->args[0]);
+		if (srcid_used) {
+			dev_err(&fsl_chan->pdev->dev, "The srcid %d has been used. Please check srcid config!",
+				dma_spec->args[0]);
+			return NULL;
+		}
+
 		if (fsl_edma3->drvdata->dmamuxs == 0 &&
 		    fsl_chan->hw_chanid == dma_spec->args[0]) {
 			chan = dma_get_slave_channel(chan);
