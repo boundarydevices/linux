@@ -22,6 +22,7 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/v4l2-mediabus.h>
 #include <media/v4l2-device.h>
@@ -302,18 +303,24 @@ static int os08a20_power_off(struct os08a20 *sensor)
 	return 0;
 }
 
-static int os08a20_s_power(struct v4l2_subdev *sd, int on)
+static int os08a20_runtime_suspend(struct device *dev)
 {
+	struct v4l2_subdev *sd = dev_get_drvdata(dev);
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
 
 	pr_debug("enter %s\n", __func__);
-	if (on)
-		os08a20_power_on(sensor);
-	else
-		os08a20_power_off(sensor);
+	return os08a20_power_off(sensor);
+}
 
-	return 0;
+static int os08a20_runtime_resume(struct device *dev)
+{
+	struct v4l2_subdev *sd = dev_get_drvdata(dev);
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct os08a20 *sensor = client_to_os08a20(client);
+
+	pr_debug("enter %s\n", __func__);
+	return os08a20_power_on(sensor);
 }
 
 static int os08a20_get_clk(struct os08a20 *sensor, void *clk)
@@ -699,13 +706,24 @@ static int os08a20_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct os08a20 *sensor = client_to_os08a20(client);
+	int ret = 0;
 
-	if (enable)
+	if (enable) {
+		ret = pm_runtime_resume_and_get(&client->dev);
+		if (ret < 0)
+			return ret;
 		os08a20_write_reg(sensor, 0x0100, 0x01);
-	else
+	} else {
 		os08a20_write_reg(sensor, 0x0100, 0x00);
+	}
 
 	sensor->stream_status = enable;
+
+	if (!enable || ret) {
+		pm_runtime_mark_last_busy(&sensor->i2c_client->dev);
+		pm_runtime_put_autosuspend(&client->dev);
+	}
+
 	return 0;
 }
 
@@ -799,12 +817,18 @@ static int os08a20_set_fmt(struct v4l2_subdev *sd,
 		return -EINVAL;
 	}
 
+	pm_runtime_get_noresume(&sensor->i2c_client->dev);
+
 	os08a20_write_reg(sensor, 0x103, 0x01);
 	msleep(10);
 
 	ret = os08a20_write_reg_arry(sensor,
 		(struct vvcam_sccb_data_s *)sensor->cur_mode.preg_data,
 		sensor->cur_mode.reg_data_count);
+
+	pm_runtime_mark_last_busy(&sensor->i2c_client->dev);
+	pm_runtime_put_autosuspend(&sensor->i2c_client->dev);
+
 	if (ret < 0) {
 		pr_err("%s:os08a20_write_reg_arry error\n",__func__);
 		mutex_unlock(&sensor->lock);
@@ -937,7 +961,6 @@ static const struct v4l2_subdev_pad_ops os08a20_subdev_pad_ops = {
 };
 
 static struct v4l2_subdev_core_ops os08a20_subdev_core_ops = {
-	.s_power = os08a20_s_power,
 	.ioctl = os08a20_priv_ioctl,
 };
 
@@ -1219,12 +1242,29 @@ static int os08a20_probe(struct i2c_client *client)
 		goto probe_err_regulator_disable;
 	}
 
-	retval = os08a20_power_on(sensor);
-	if (retval < 0) {
-		dev_err(dev, "%s: sensor power on fail\n", __func__);
+	sd = &sensor->subdev;
+	v4l2_i2c_subdev_init(sd, client, &os08a20_subdev_ops);
+	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
+	sd->dev = &client->dev;
+	sd->entity.ops = &os08a20_sd_media_ops;
+	sd->entity.function = MEDIA_ENT_F_CAM_SENSOR;
+	sensor->pads[OS08A20_SENS_PAD_SOURCE].flags = MEDIA_PAD_FL_SOURCE;
+	retval = media_entity_pads_init(&sd->entity, OS08A20_SENS_PADS_NUM,
+					sensor->pads);
+	if (retval)
 		goto probe_err_regulator_disable;
+
+	/* os08a20 power on*/
+	retval = os08a20_runtime_resume(dev);
+	if (retval) {
+		dev_err(dev, "failed to power on\n");
+		goto probe_err_free_ctrls;
 	}
 
+	pm_runtime_set_active(dev);
+	pm_runtime_get_noresume(dev);
+	pm_runtime_enable(dev);
+	
 	os08a20_reset(sensor);
 
 	os08a20_read_reg(sensor, 0x300a, &reg_val);
@@ -1236,21 +1276,9 @@ static int os08a20_probe(struct i2c_client *client)
 	if (chip_id != 0x530841) {
 		pr_warn("camera os08a20 is not found\n");
 		retval = -ENODEV;
-		goto probe_err_power_off;
+		goto probe_err_pm_runtime;
 	}
 
-	sd = &sensor->subdev;
-	v4l2_i2c_subdev_init(sd, client, &os08a20_subdev_ops);
-	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
-	sd->dev = &client->dev;
-	sd->entity.ops = &os08a20_sd_media_ops;
-	sd->entity.function = MEDIA_ENT_F_CAM_SENSOR;
-	sensor->pads[OS08A20_SENS_PAD_SOURCE].flags = MEDIA_PAD_FL_SOURCE;
-	retval = media_entity_pads_init(&sd->entity,
-				OS08A20_SENS_PADS_NUM,
-				sensor->pads);
-	if (retval < 0)
-		goto probe_err_power_off;
 #if LINUX_VERSION_CODE > KERNEL_VERSION(5, 12, 0)
 	retval = v4l2_async_register_subdev_sensor(sd);
 #else
@@ -1259,7 +1287,7 @@ static int os08a20_probe(struct i2c_client *client)
 	if (retval < 0) {
 		dev_err(&client->dev,"%s--Async register failed, ret=%d\n",
 			__func__,retval);
-		goto probe_err_free_entiny;
+		goto probe_err_pm_runtime;
 	}
 
 	memcpy(&sensor->cur_mode, &pos08a20_mode_info[0],
@@ -1268,14 +1296,21 @@ static int os08a20_probe(struct i2c_client *client)
 	mutex_init(&sensor->lock);
 	pr_info("%s camera mipi os08a20, is found\n", __func__);
 
+
+	pm_runtime_set_autosuspend_delay(dev, 1000);
+	pm_runtime_use_autosuspend(dev);
+	pm_runtime_put_autosuspend(dev);
+
 	return 0;
 
-probe_err_free_entiny:
+probe_err_pm_runtime:
+	pm_runtime_put_noidle(dev);
+	pm_runtime_disable(dev);
+	os08a20_runtime_suspend(dev);
+probe_err_free_ctrls:
+	v4l2_ctrl_handler_free(&sensor->ctrls.handler);
+probe_err_entity_cleanup:
 	media_entity_cleanup(&sd->entity);
-
-probe_err_power_off:
-	os08a20_power_off(sensor);
-
 probe_err_regulator_disable:
 	os08a20_regulator_disable(sensor);
 
@@ -1286,12 +1321,16 @@ static void os08a20_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct os08a20 *sensor = client_to_os08a20(client);
+	struct device *dev = &client->dev;
 
 	pr_info("enter %s\n", __func__);
 
+	pm_runtime_disable(dev);
+	if (!pm_runtime_status_suspended(dev))
+		os08a20_runtime_suspend(dev);
+	pm_runtime_set_suspended(dev);
 	v4l2_async_unregister_subdev(sd);
 	media_entity_cleanup(&sd->entity);
-	os08a20_power_off(sensor);
 	os08a20_regulator_disable(sensor);
 	mutex_destroy(&sensor->lock);
 }
@@ -1323,6 +1362,7 @@ static int __maybe_unused os08a20_resume(struct device *dev)
 
 static const struct dev_pm_ops os08a20_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(os08a20_suspend, os08a20_resume)
+	SET_RUNTIME_PM_OPS(os08a20_runtime_suspend, os08a20_runtime_resume, NULL)
 };
 
 static const struct i2c_device_id os08a20_id[] = {
