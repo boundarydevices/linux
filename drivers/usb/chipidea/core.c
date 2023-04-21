@@ -1262,7 +1262,6 @@ static int ci_hdrc_probe(struct platform_device *pdev)
 	INIT_WORK(&ci->power_lost_work, ci_power_lost_work);
 	device_set_wakeup_capable(&pdev->dev, true);
 	dbg_create_files(ci);
-	mutex_init(&ci->mutex);
 
 	return 0;
 
