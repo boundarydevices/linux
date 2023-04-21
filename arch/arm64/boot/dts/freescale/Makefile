@@ -350,3 +350,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-powersave.dtb imx8mp-evk-powersave-non-rpms
                           imx8mp-evk-hifiberry-dacpp-m-rpmsg.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mq-evk-pcie1-m2-gki.dtb imx8mq-evk-lcdif-adv7535-gki.dtb \
                           imx8mq-evk-dcss-rm67199-gki.dtb  imx8mq-evk-dcss-rm67191-gki.dtb imx8mq-evk-dual-display-gki.dtb
+
+imx8mp-evk-revb4-powersave-non-rpmsg-dtbs := imx8mp-evk-powersave-non-rpmsg.dtb imx8mp-evk-revb4.dtbo
+
+dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-revb4-powersave-non-rpmsg.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-revb4-powersave.dtb
