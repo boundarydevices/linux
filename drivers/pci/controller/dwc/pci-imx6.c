@@ -1486,6 +1486,7 @@ static const struct dev_pm_ops imx6_pcie_pm_ops = {
 				  imx6_pcie_resume_noirq)
 };
 
+#ifndef MODULE
 static int __init imx6_pcie_compliance_test_enable(char *str)
 {
 	if (!strcmp(str, "yes")) {
@@ -1496,6 +1497,7 @@ static int __init imx6_pcie_compliance_test_enable(char *str)
 }
 
 __setup("pcie_cz_enabled=", imx6_pcie_compliance_test_enable);
+#endif
 
 static int imx6_pcie_probe(struct platform_device *pdev)
 {
