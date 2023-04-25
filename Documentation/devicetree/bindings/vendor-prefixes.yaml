@@ -607,6 +607,8 @@ patternProperties:
     description: Injoinic Technology Corp.
   "^innolux,.*":
     description: Innolux Corporation
+  "^inphi,.*":
+    description: Inphi Corporation
   "^inside-secure,.*":
     description: INSIDE Secure
   "^insignal,.*":
