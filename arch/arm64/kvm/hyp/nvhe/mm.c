@@ -176,6 +176,11 @@ void __pkvm_unmap_module_page(u64 pfn, void *va)
 	pkvm_remove_mappings(va, va + PAGE_SIZE);
 }
 
+int __hyp_allocator_map(unsigned long va, phys_addr_t phys)
+{
+	return __pkvm_create_mappings(va, PAGE_SIZE, phys, PAGE_HYP);
+}
+
 int pkvm_create_mappings_locked(void *from, void *to, enum kvm_pgtable_prot prot)
 {
 	unsigned long start = (unsigned long)from;
