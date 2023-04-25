@@ -177,8 +177,8 @@ static const u32 nxp_bus_flags = DRM_BUS_FLAG_DE_LOW |
 				  DRM_BUS_FLAG_PIXDATA_SAMPLE_POSEDGE;
 
 struct rm67162_platform_data {
-	struct drm_display_mode *mode;
-	struct cmd_set_entry *cmds;
+	const struct drm_display_mode *mode;
+	const struct cmd_set_entry *cmds;
 	int cmds_cnt;
 };
 
@@ -644,7 +644,7 @@ static int nxp_panel_probe(struct mipi_dsi_device *dsi)
 	return ret;
 }
 
-static int nxp_panel_remove(struct mipi_dsi_device *dsi)
+static void nxp_panel_remove(struct mipi_dsi_device *dsi)
 {
 	struct nxp_panel *nxp = mipi_dsi_get_drvdata(dsi);
 	struct device *dev = &dsi->dev;
@@ -655,8 +655,6 @@ static int nxp_panel_remove(struct mipi_dsi_device *dsi)
 		dev_err(dev, "Failed to detach from host (%d)\n", ret);
 
 	drm_panel_remove(&nxp->panel);
-
-	return 0;
 }
 
 static void nxp_panel_shutdown(struct mipi_dsi_device *dsi)
