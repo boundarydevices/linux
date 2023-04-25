@@ -311,6 +311,12 @@ _IMX_IN_TREE_MODULES = [
     "drivers/mtd/nand/raw/nand.ko",
     "sound/soc/codecs/snd-soc-cs42xx8.ko",
     "drivers/mtd/nand/nandcore.ko",
+    "drivers/i2c/busses/i2c-flexio.ko",
+    "sound/soc/codecs/snd-soc-wm8962.ko",
+    "drivers/mfd/imx-flexio.ko",
+    "drivers/iio/light/tsl2540.ko",
+    "drivers/gpu/drm/panel/panel-nxp-rm67162.ko",
+    "drivers/phy/freescale/phy-fsl-imx8q-pcie.ko",
 ]
 
 def define_imx():
