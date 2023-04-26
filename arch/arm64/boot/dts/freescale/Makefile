@@ -301,3 +301,4 @@ dtb-$(CONFIG_ARCH_MXC) += imx8mq-bio.dtb \
 			  imx8mq-son.dtb \
 
 dtb-$(CONFIG_ARCH_MXC) += imx8ulp-tag.dtb imx8ulp-tag-m33.dtb \
+			  imx8ulp-tag-test.dtb imx8ulp-tag-test-m33.dtb \
