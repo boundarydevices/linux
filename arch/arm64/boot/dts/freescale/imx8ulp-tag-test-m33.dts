@@ -1,0 +1,536 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright 2022 Boundary Devices
+ */
+
+#include "imx8ulp-tag-test.dts"
+#include "imx8ulp-rpmsg.dtsi"
+
+#define GPIO_KEYS_J15P3		<&rpmsg_gpioc 8 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J15P5		<&rpmsg_gpioa 0 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J15P7		<&rpmsg_gpioa 2 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J15P9		<&rpmsg_gpioa 4 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J15P11	<&rpmsg_gpioa 6  GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J15P13	<&rpmsg_gpioa 8 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J15P15	<&rpmsg_gpioa 10  GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J15P17	<&rpmsg_gpioa 12 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J15P19	<&rpmsg_gpioa 15 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J15P21	<&rpmsg_gpioa 17 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J15P23	<&rpmsg_gpioa 19 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J15P25	<&rpmsg_gpioa 21 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J15P27	<&rpmsg_gpioa 23 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J15P29	<&rpmsg_gpiob 1 GPIO_ACTIVE_HIGH>
+
+#define GPIO_KEYS_J24P1		<&rpmsg_gpiob 3 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J24P3		<&rpmsg_gpiob 5 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J24P5		<&rpmsg_gpiob 7 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J24P7		<&rpmsg_gpiob 9 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J24P9		<&rpmsg_gpiob 13 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J24P11	<&rpmsg_gpioc 0 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J24P13	<&rpmsg_gpioc 2 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J24P15	<&rpmsg_gpioc 4 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J24P17	<&rpmsg_gpioc 6 GPIO_ACTIVE_HIGH>
+
+#define GPIO_KEYS_J6P1		<&rpmsg_gpioc 9 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J6P3		<&rpmsg_gpioc 11 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J6P5		<&rpmsg_gpioc 13 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J6P7		<&rpmsg_gpioc 15  GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J6P9		<&rpmsg_gpioc 17 GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J6P11		<&rpmsg_gpioc 19  GPIO_ACTIVE_HIGH>
+#define GPIO_KEYS_J6P13		<&rpmsg_gpioc 21 GPIO_ACTIVE_HIGH>
+#if 0
+#define GPIO_KEYS_J6P15		<&rpmsg_gpioc 23 GPIO_ACTIVE_HIGH>
+#endif
+
+#define GPIO_LEDS_J15P4		<&rpmsg_gpioc 7 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J15P6		<&rpmsg_gpioa 1 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J15P8		<&rpmsg_gpioa 3 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J15P10	<&rpmsg_gpioa 5 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J15P12	<&rpmsg_gpioa 7  GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J15P14	<&rpmsg_gpioa 9 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J15P16	<&rpmsg_gpioa 11 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J15P18	<&rpmsg_gpioa 13 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J15P20	<&rpmsg_gpioa 16 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J15P22	<&rpmsg_gpioa 18 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J15P24	<&rpmsg_gpioa 20  GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J15P26	<&rpmsg_gpioa 22 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J15P28	<&rpmsg_gpioa 24 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J15P30	<&rpmsg_gpiob 0 GPIO_ACTIVE_HIGH>
+
+#define GPIO_LEDS_J24P2		<&rpmsg_gpiob 2 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J24P4		<&rpmsg_gpiob 4 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J24P6		<&rpmsg_gpiob 6 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J24P8		<&rpmsg_gpiob 8 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J24P10	<&rpmsg_gpiob 12 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J24P12	<&rpmsg_gpiob 14 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J24P14	<&rpmsg_gpioc 1 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J24P16	<&rpmsg_gpioc 3 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J24P18	<&rpmsg_gpioc 5 GPIO_ACTIVE_HIGH>
+
+#define GPIO_LEDS_J6P2		<&rpmsg_gpioc 10 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J6P4		<&rpmsg_gpioc 12 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J6P6		<&rpmsg_gpioc 14 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J6P8		<&rpmsg_gpioc 16  GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J6P10		<&rpmsg_gpioc 18 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J6P12		<&rpmsg_gpioc 20 GPIO_ACTIVE_HIGH>
+#define GPIO_LEDS_J6P14		<&rpmsg_gpioc 22 GPIO_ACTIVE_HIGH>
+
+/ {
+	model = "NXP i.MX 8ULP tag-test - m33";
+	compatible = "boundary,imx8ulp-tag-test-m33", "fsl,imx8ulp";
+
+	gpio-keys-j15 {
+		compatible = "gpio-keys";
+
+		J15P3 {
+			label = "J15P3";
+			gpios = GPIO_KEYS_J15P3;
+			linux,code = <KEY_A>;
+		};
+
+		J15P5 {
+			label = "J15P5";
+			gpios = GPIO_KEYS_J15P5;
+			linux,code = <KEY_B>;
+		};
+
+		J15P7 {
+			label = "J15P7";
+			gpios = GPIO_KEYS_J15P7;
+			linux,code = <KEY_C>;
+		};
+
+		J15P9 {
+			label = "J15P9";
+			gpios = GPIO_KEYS_J15P9;
+			linux,code = <KEY_D>;
+		};
+
+		J15P11 {
+			label = "J15P11";
+			gpios = GPIO_KEYS_J15P11;
+			linux,code = <KEY_E>;
+		};
+
+		J15P13 {
+			label = "J15P13";
+			gpios = GPIO_KEYS_J15P13;
+			linux,code = <KEY_F>;
+		};
+
+		J15P15 {
+			label = "J15P15";
+			gpios = GPIO_KEYS_J15P15;
+			linux,code = <KEY_G>;
+		};
+
+		J15P17 {
+			label = "J15P17";
+			gpios = GPIO_KEYS_J15P17;
+			linux,code = <KEY_H>;
+		};
+
+		J15P19 {
+			label = "J15P19";
+			gpios = GPIO_KEYS_J15P19;
+			linux,code = <KEY_I>;
+		};
+
+		J15P21 {
+			label = "J15P21";
+			gpios = GPIO_KEYS_J15P21;
+			linux,code = <KEY_J>;
+		};
+
+		J15P23 {
+			label = "J15P23";
+			gpios = GPIO_KEYS_J15P23;
+			linux,code = <KEY_K>;
+		};
+
+		J15P25 {
+			label = "J15P25";
+			gpios = GPIO_KEYS_J15P25;
+			linux,code = <KEY_L>;
+		};
+
+		J15P27 {
+			label = "J15P27";
+			gpios = GPIO_KEYS_J15P27;
+			linux,code = <KEY_M>;
+		};
+
+		J15P29 {
+			label = "J15P29";
+			gpios = GPIO_KEYS_J15P29;
+			linux,code = <KEY_N>;
+		};
+	};
+
+	gpio-keys-j24 {
+		compatible = "gpio-keys";
+
+		J24P1 {
+			label = "J24P1";
+			gpios = GPIO_KEYS_J24P1;
+			linux,code = <KEY_A>;
+		};
+
+		J24P3 {
+			label = "J24P3";
+			gpios = GPIO_KEYS_J24P3;
+			linux,code = <KEY_B>;
+		};
+
+		J24P5 {
+			label = "J24P5";
+			gpios = GPIO_KEYS_J24P5;
+			linux,code = <KEY_C>;
+		};
+
+		J24P7 {
+			label = "J24P7";
+			gpios = GPIO_KEYS_J24P7;
+			linux,code = <KEY_D>;
+		};
+
+		J24P9 {
+			label = "J24P9";
+			gpios = GPIO_KEYS_J24P9;
+			linux,code = <KEY_E>;
+		};
+
+		J24P11 {
+			label = "J24P11";
+			gpios = GPIO_KEYS_J24P11;
+			linux,code = <KEY_F>;
+		};
+
+		J24P13 {
+			label = "J24P13";
+			gpios = GPIO_KEYS_J24P13;
+			linux,code = <KEY_G>;
+		};
+
+		J24P15 {
+			label = "J24P15";
+			gpios = GPIO_KEYS_J24P15;
+			linux,code = <KEY_H>;
+		};
+
+		J24P17 {
+			label = "J24P17";
+			gpios = GPIO_KEYS_J24P17;
+			linux,code = <KEY_I>;
+		};
+	};
+
+	gpio-keys-j6a {
+		compatible = "gpio-keys";
+
+		J6P1 {
+			label = "J6P1";
+			gpios = GPIO_KEYS_J6P1;
+			linux,code = <KEY_A>;
+		};
+
+		J6P3 {
+			label = "J6P3";
+			gpios = GPIO_KEYS_J6P3;
+			linux,code = <KEY_B>;
+		};
+
+		J6P5 {
+			label = "J6P5";
+			gpios = GPIO_KEYS_J6P5;
+			linux,code = <KEY_C>;
+		};
+
+		J6P7 {
+			label = "J6P7";
+			gpios = GPIO_KEYS_J6P7;
+			linux,code = <KEY_D>;
+		};
+
+		J6P9 {
+			label = "J6P9";
+			gpios = GPIO_KEYS_J6P9;
+			linux,code = <KEY_E>;
+		};
+
+		J6P11 {
+			label = "J6P11";
+			gpios = GPIO_KEYS_J6P11;
+			linux,code = <KEY_F>;
+		};
+
+		J6P13 {
+			label = "J6P13";
+			gpios = GPIO_KEYS_J6P13;
+			linux,code = <KEY_G>;
+		};
+
+#ifdef GPIO_KEYS_J6P15
+		J6P15 {
+			label = "J6P15";
+			gpios = GPIO_KEYS_J6P15;
+			linux,code = <KEY_H>;
+		};
+#endif
+	};
+
+	gpio-leds-j15 {
+		compatible = "gpio-leds";
+
+		J15P4 {
+			label = "J15P4";
+			gpios = GPIO_LEDS_J15P4;
+			default-state = "on";
+		};
+
+		J15P6 {
+			label = "J15P6";
+			gpios = GPIO_LEDS_J15P6;
+			default-state = "on";
+		};
+
+		J15P8 {
+			label = "J15P8";
+			gpios = GPIO_LEDS_J15P8;
+			default-state = "on";
+		};
+
+		J15P10 {
+			label = "J15P10";
+			gpios = GPIO_LEDS_J15P10;
+			default-state = "on";
+		};
+
+		J15P12 {
+			label = "J15P12";
+			gpios = GPIO_LEDS_J15P12;
+			default-state = "on";
+		};
+
+		J15P14 {
+			label = "J15P14";
+			gpios = GPIO_LEDS_J15P14;
+			default-state = "on";
+		};
+
+		J15P16 {
+			label = "J15P16";
+			gpios = GPIO_LEDS_J15P16;
+			default-state = "on";
+		};
+
+		J15P18 {
+			label = "J15P18";
+			gpios = GPIO_LEDS_J15P18;
+			default-state = "on";
+		};
+
+		J15P20 {
+			label = "J15P20";
+			gpios = GPIO_LEDS_J15P20;
+			default-state = "on";
+		};
+
+		J15P22 {
+			label = "J15P22";
+			gpios = GPIO_LEDS_J15P22;
+			default-state = "on";
+		};
+
+		J15P24 {
+			label = "J15P24";
+			gpios = GPIO_LEDS_J15P24;
+			default-state = "on";
+		};
+
+		J15P26 {
+			label = "J15P26";
+			gpios = GPIO_LEDS_J15P26;
+			default-state = "on";
+		};
+
+		J15P28 {
+			label = "J15P28";
+			gpios = GPIO_LEDS_J15P28;
+			default-state = "on";
+		};
+
+		J15P30 {
+			label = "J15P30";
+			gpios = GPIO_LEDS_J15P30;
+			default-state = "on";
+		};
+	};
+
+	gpio-leds-j24 {
+		compatible = "gpio-leds";
+
+		J24P2 {
+			label = "J24P2";
+			gpios = GPIO_LEDS_J24P2;
+			default-state = "on";
+		};
+
+		J24P4 {
+			label = "J24P4";
+			gpios = GPIO_LEDS_J24P4;
+			default-state = "on";
+		};
+
+		J24P6 {
+			label = "J24P6";
+			gpios = GPIO_LEDS_J24P6;
+			default-state = "on";
+		};
+
+		J24P8 {
+			label = "J24P8";
+			gpios = GPIO_LEDS_J24P8;
+			default-state = "on";
+		};
+
+		J24P10 {
+			label = "J24P10";
+			gpios = GPIO_LEDS_J24P10;
+			default-state = "on";
+		};
+
+		J24P12 {
+			label = "J24P12";
+			gpios = GPIO_LEDS_J24P12;
+			default-state = "on";
+		};
+
+		J24P14 {
+			label = "J24P12";
+			gpios = GPIO_LEDS_J24P14;
+			default-state = "on";
+		};
+
+		J24P16 {
+			label = "J24P16";
+			gpios = GPIO_LEDS_J24P16;
+			default-state = "on";
+		};
+
+		J24P18 {
+			label = "J24P18";
+			gpios = GPIO_LEDS_J24P18;
+			default-state = "on";
+		};
+	};
+
+	gpio-leds-j6a {
+		compatible = "gpio-leds";
+
+		J6P2 {
+			label = "J6P4";
+			gpios = GPIO_LEDS_J6P2;
+			default-state = "on";
+		};
+
+		J6P4 {
+			label = "J6P4";
+			gpios = GPIO_LEDS_J6P4;
+			default-state = "on";
+		};
+
+		J6P6 {
+			label = "J6P6";
+			gpios = GPIO_LEDS_J6P6;
+			default-state = "on";
+		};
+
+		J6P8 {
+			label = "J6P8";
+			gpios = GPIO_LEDS_J6P8;
+			default-state = "on";
+		};
+
+		J6P10 {
+			label = "J6P10";
+			gpios = GPIO_LEDS_J6P10;
+			default-state = "on";
+		};
+
+		J6P12 {
+			label = "J6P12";
+			gpios = GPIO_LEDS_J6P12;
+			default-state = "on";
+		};
+
+		J6P14 {
+			label = "J6P14";
+			gpios = GPIO_LEDS_J6P14;
+			default-state = "on";
+		};
+	};
+
+	reserved-memory {
+		rsc_table: rsc_table@1fff8000{
+			reg = <0 0x1fff8000 0 0x1000>;
+			no-map;
+		};
+
+		vdev0vring0: vdev0vring0@aff00000 {
+			reg = <0 0xaff00000 0 0x8000>;
+			no-map;
+		};
+
+		vdev0vring1: vdev0vring1@aff08000 {
+			reg = <0 0xaff08000 0 0x8000>;
+			no-map;
+		};
+
+		vdev1vring0: vdev1vring0@aff10000 {
+			reg = <0 0xaff10000 0 0x8000>;
+			no-map;
+		};
+
+		vdev1vring1: vdev1vring1@aff18000 {
+			reg = <0 0xaff18000 0 0x8000>;
+			no-map;
+		};
+
+		vdevbuffer: vdevbuffer@a8400000 {
+			compatible = "shared-dma-pool";
+			reg = <0 0xa8400000 0 0x100000>;
+			no-map;
+		};
+
+		m33_reserved: m33_noncacheable_section@a8600000 {
+			no-map;
+			reg = <0 0xa8600000 0 0x1000000>;
+		};
+	};
+
+};
+
+&i2c_rpbus_0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+};
+
+&i2c_rpbus_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+};
+
+&imx8ulp_cm33 {
+	ipc-only;
+	rsc-da=<0x1fff8000>;
+	mbox-names = "tx", "rx", "rxdb";
+	mboxes = <&mu 0 1
+			&mu 1 1
+			&mu 3 1>;
+	memory-region = <&vdevbuffer>, <&vdev0vring0>, <&vdev0vring1>,
+			<&vdev1vring0>, <&vdev1vring1>, <&rsc_table>;
+	status = "okay";
+};
