@@ -10,26 +10,6 @@
 &iomuxc1 {
 	pinctrl-0 = <&pinctrl_hog_som>, <&pinctrl_hog>;
 
-	pinctrl_fec: fecgrp {
-		fsl,pins = <
-			MX8ULP_PAD_PTF8__ENET0_MDIO	0x43
-			MX8ULP_PAD_PTF9__ENET0_MDC	0x43
-			MX8ULP_PAD_PTF6__ENET0_CRS_DV	0x43
-			MX8ULP_PAD_PTF5__ENET0_RXER	0x43
-			MX8ULP_PAD_PTF1__ENET0_RXD0	0x43
-			MX8ULP_PAD_PTF0__ENET0_RXD1	0x43
-			MX8ULP_PAD_PTF4__ENET0_TXEN	0x43
-			MX8ULP_PAD_PTF3__ENET0_TXD0	0x43
-			MX8ULP_PAD_PTF2__ENET0_TXD1	0x43
-			MX8ULP_PAD_PTF7__ENET0_REFCLK	0x10043
-			MX8ULP_PAD_PTE13__ENET0_1588_CLKIN 0x10043
-			MX8ULP_PAD_PTE12__ENET0_1588_TMR0 0x10043
-			MX8ULP_PAD_PTF12__ENET0_1588_TMR1 0x10043
-			MX8ULP_PAD_PTF13__ENET0_1588_TMR2 0x10043
-			MX8ULP_PAD_PTF14__ENET0_1588_TMR3 0x10043
-		>;
-	};
-
 	pinctrl_hog: hoggrp {
 		fsl,pins = <
 			MX8ULP_PAD_PTD13__PTD13		0x7
@@ -266,24 +246,6 @@
 			mipi_dsi_out: endpoint {
 				remote-endpoint = <&panel1_in>;
 			};
-		};
-	};
-};
-
-&fec {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_fec>;
-	phy-mode = "rmii";
-	phy-handle = <&ethphy>;
-	status = "disabled";
-
-	mdio {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		ethphy: ethernet-phy@1 {
-			reg = <1>;
-			micrel,led-mode = <1>;
 		};
 	};
 };
