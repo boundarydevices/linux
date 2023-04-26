@@ -1,0 +1,718 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright 2023 Boundary Devices
+ */
+
+/dts-v1/;
+
+#include "imx8ulp-tag-som.dtsi"
+
+&iomuxc1 {
+	pinctrl_backlight_mipi: backlight_mipigrp{
+		fsl,pins = <
+#define GP_BACKLIGHT_MIPI	<&gpioe 9 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE9__PTE9		0x7
+		>;
+	};
+
+	pinctrl_fec: fecgrp {
+		fsl,pins = <
+			MX8ULP_PAD_PTF8__ENET0_MDIO	0x43
+			MX8ULP_PAD_PTF9__ENET0_MDC	0x43
+			MX8ULP_PAD_PTF6__ENET0_CRS_DV	0x43
+			MX8ULP_PAD_PTF5__ENET0_RXER	0x43
+			MX8ULP_PAD_PTF1__ENET0_RXD0	0x43
+			MX8ULP_PAD_PTF0__ENET0_RXD1	0x43
+			MX8ULP_PAD_PTF4__ENET0_TXEN	0x43
+			MX8ULP_PAD_PTF3__ENET0_TXD0	0x43
+			MX8ULP_PAD_PTF2__ENET0_TXD1	0x43
+			MX8ULP_PAD_PTF7__ENET0_REFCLK	0x10043
+#define GP_FEC_RESET	<&gpiof 11 GPIO_ACTIVE_LOW>
+			MX8ULP_PAD_PTF11__PTF11		0x7
+#define GPIRQ_FEC_PHY	<&gpiof 10 IRQ_TYPE_LEVEL_LOW>
+			MX8ULP_PAD_PTF10__PTF10		0x7
+		>;
+	};
+
+	pinctrl_gpio_keys_j6b: gpio-keys-j6grp {
+		fsl,pins = <
+#define GPIO_KEYS_J6P17	<&gpiod 15 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTD15__PTD15		0x7
+#define GPIO_KEYS_J6P19	<&gpiod 20 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTD20__PTD20		0x7
+#define GPIO_KEYS_J6P21	<&gpioe 10 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE10__PTE10		0x7
+#define GPIO_KEYS_J6P23	<&gpiof 12 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTF12__PTF12		0x7
+#if 0
+#define GPIO_KEYS_J6P25	<&gpiof 14 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTF14__PTF14		0x7
+#endif
+#define GPIO_KEYS_J6P27	<&gpiof 18 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTF18__PTF18		0x7
+#define GPIO_KEYS_J6P29	<&gpiof 25 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTF25__PTF25		0x7
+		>;
+	};
+
+	pinctrl_gpio_keys_m2: gpio-keys-xgrp {
+		fsl,pins = <
+#if 0
+#define GPIO_KEYS_J12	<&gpioe 0 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE0__PTE0		0x7
+#endif
+#define GPIO_KEYS_J13	<&gpioe 2 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE2__PTE2		0x7
+#define GPIO_KEYS_J14	<&gpioe 4 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE4__PTE4		0x7
+#define GPIO_KEYS_J16	<&gpioe 12 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE12__PTE12		0x7
+#define GPIO_KEYS_J17	<&gpioe 16  GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE16__PTE16		0x7
+#define GPIO_KEYS_J18	<&gpioe 18 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE18__PTE18		0x7
+#define GPIO_KEYS_J19	<&gpiof 24 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTF24__PTF24		0x7
+#define GPIO_KEYS_J20	<&gpioe 10 GPIO_ACTIVE_HIGH>
+#if 0			/* Also J6P21 */
+			MX8ULP_PAD_PTE10__PTE10		0x7
+#endif
+#define GPIO_KEYS_J22	<&gpioe 14 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE14__PTE14		0x7
+		>;
+	};
+
+	pinctrl_gpio_leds_j6b: gpio-leds-j6grp {
+		fsl,pins = <
+#if 0
+#define GPIO_LEDS_J6P16	<&gpiod 12 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTD12__PTD12		0x7
+#endif
+#define GPIO_LEDS_J6P18	<&gpiod 18 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTD18__PTD18		0x7
+#define GPIO_LEDS_J6P20	<&gpiod 23 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTD23__PTD23		0x7
+#define GPIO_LEDS_J6P22	<&gpioe 23 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE23__PTE23		0x7
+#define GPIO_LEDS_J6P24	<&gpiof 13 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTF13__PTF13		0x7
+#if 0
+#define GPIO_LEDS_J6P26	<&gpiof 17 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTF17__PTF17		0x7
+#endif
+#define GPIO_LEDS_J6P28	<&gpiof 19 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTF19__PTF19		0x7
+#define GPIO_LEDS_J6P30	<&gpiod 19 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTD19__PTD19		0x7
+		>;
+	};
+
+	pinctrl_gpio_leds_m2: gpio-leds-xgrp {
+		fsl,pins = <
+#if 0
+#define GPIO_LEDS_J12	<&gpioe 1 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE1__PTE1		0x7
+#endif
+#define GPIO_LEDS_J13	<&gpioe 3 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE3__PTE3		0x7
+#define GPIO_LEDS_J14	<&gpioe 5 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE5__PTE5		0x7
+#define GPIO_LEDS_J16	<&gpioe 13 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE13__PTE13		0x7
+#define GPIO_LEDS_J17	<&gpioe 17 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE17__PTE17		0x7
+#define GPIO_LEDS_J18	<&gpioe 19 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE19__PTE19		0x7
+#define GPIO_LEDS_J19	<&gpiof 28 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTF28__PTF28		0x7
+#define GPIO_LEDS_J20	<&gpioe 11 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE11__PTE11		0x7
+#define GPIO_LEDS_J22	<&gpioe 15 GPIO_ACTIVE_HIGH>
+			MX8ULP_PAD_PTE15__PTE15		0x7
+		>;
+	};
+
+	/* CSI i2c bus*/
+	pinctrl_lpi2c7: lpi2c7grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTF20__LPI2C7_SCL	0x27
+			MX8ULP_PAD_PTF21__LPI2C7_SDA	0x27
+			MX8ULP_PAD_PTD16__PTD16		0x7
+			MX8ULP_PAD_PTD17__PTD17		0x7
+		>;
+	};
+
+	/* J11, M.2 connector */
+	pinctrl_lpuart4: lpuart4grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE18__LPUART4_TX	0x03
+			MX8ULP_PAD_PTE19__LPUART4_RX	0x03
+			MX8ULP_PAD_PTE16__LPUART4_CTS_B	0x03
+			MX8ULP_PAD_PTE17__LPUART4_RTS_B 0x03
+		>;
+	};
+
+	/* J9 connector */
+	pinctrl_lpuart7: lpuart7grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTF22__LPUART7_TX	0x03
+			MX8ULP_PAD_PTF23__LPUART7_RX	0x03
+		>;
+	};
+
+	pinctrl_mipi_com35h3r04uly: mipi-com35h3r04ulygrp {
+		fsl,pins = <
+#define GP_LCD_RESET	<&gpioe 7 GPIO_ACTIVE_LOW>
+			MX8ULP_PAD_PTE7__PTE7		0x02
+		>;
+	};
+
+	pinctrl_mipi_q035_014: mipi-q035-014grp {
+		fsl,pins = <
+#define GP_LCD_RESET	<&gpioe 7 GPIO_ACTIVE_LOW>
+			MX8ULP_PAD_PTE7__PTE7		0x02
+		>;
+	};
+
+	pinctrl_reg_usbotg1_vbus: reg-usbotg1-vbusgrp {
+		fsl,pins = <
+#define GP_REG_USB_OTG1_VBUS	<&gpiod 13 GPIO_ACTIVE_LOW>
+			MX8ULP_PAD_PTD13__PTD13		0x03
+		>;
+	};
+
+	pinctrl_reg_usbotg2_vbus: reg-usbotg2-vbusgrp {
+		fsl,pins = <
+#define GP_REG_USB_OTG2_VBUS	<&gpiod 21 GPIO_ACTIVE_LOW>
+			MX8ULP_PAD_PTD21__PTD21		0x03
+		>;
+	};
+
+	pinctrl_tpm4: tpm4grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE8__TPM4_CH0	0x7
+		>;
+	};
+
+	pinctrl_ts_atmel: ts-atmelgrp {
+		fsl,pins = <
+#define GPIRQ_TS_ATMEL	<&gpioe 22 IRQ_TYPE_EDGE_FALLING>
+#define GP_TS_ATMEL	<&gpioe 22 GPIO_ACTIVE_LOW>
+			MX8ULP_PAD_PTE22__PTE22		0x03
+#define GP_TS_ATMEL_RESET <&gpiof 26 GPIO_ACTIVE_LOW>
+			MX8ULP_PAD_PTF26__PTF26		0x03
+		>;
+	};
+
+	pinctrl_usbotg1: usbotg1grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTD14__USB0_OC	0x10003
+		>;
+	};
+
+	pinctrl_usbotg2: usbotg2grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTD22__USB1_OC	0x10003
+		>;
+	};
+
+	pinctrl_usdhc2: usdhc2grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE2__SDHC2_CLK	0x10042
+			MX8ULP_PAD_PTE3__SDHC2_CMD	0x43
+			MX8ULP_PAD_PTE1__SDHC2_D0	0x43
+			MX8ULP_PAD_PTE0__SDHC2_D1	0x43
+			MX8ULP_PAD_PTE5__SDHC2_D2	0x43
+			MX8ULP_PAD_PTE4__SDHC2_D3	0x43
+			MX8ULP_PAD_PTE12__SDHC2_RESET_B	0x43
+		>;
+	};
+};
+
+#include "panel-com35h3r04uly.dtsi"
+#include "panel-q035-014.dtsi"
+
+/ {
+	model = "NXP i.MX 8ULP tag test";
+	compatible = "boundary,imx8ulp-tag", "fsl,imx8ulp";
+
+	aliases {
+		backlight_mipi = &backlight_mipi;
+		fb_mipi = &fb_mipi;
+		mipi = &fb_mipi;
+		mipi_dsi = &dsi;
+		mipi_dsi_bridge = &dsi;
+		mipi_dsi_phy = &dphy;
+		pwm_mipi = &tpm4;
+		t_mipi = &t_mipi;
+	};
+
+	backlight_mipi: backlight-mipi {
+		brightness-levels = <
+				0  /*1  2  3  4  5  6  7  8  9
+				10 11 12 13 14 15 16 17 18 19*/
+				20 21 22 23 24 25 26 27 28 29
+				30 31 32 33 34 35 36 37 38 39
+				40 41 42 43 44 45 46 47 48 49
+				50 51 52 53 54 55 56 57 58 59
+				60 61 62 63 64 65 66 67 68 69
+				70 71 72 73 74 75 76 77 78 79
+				80 81 82 83 84 85 86 87 88 89
+				90 91 92 93 94 95 96 97 98 99
+				100
+				>;
+		compatible = "pwm-backlight";
+		default-brightness-level = <81>;
+		enable-gpios = GP_BACKLIGHT_MIPI;
+		pinctrl-0 = <&pinctrl_backlight_mipi>;
+		pinctrl-names = "default";
+		pwms = <&tpm4 0 50000 0>;
+		status = "okay";
+	};
+
+	chosen {
+		stdout-path = &lpuart7;
+		bootargs = "console=ttyLP3,115200 earlycon";
+	};
+
+	gpio-keys-j6b {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys_j6b>;
+
+		J6P17 {
+			label = "J6P17";
+			gpios = GPIO_KEYS_J6P17;
+			linux,code = <KEY_I>;
+		};
+
+		J6P19 {
+			label = "J6P19";
+			gpios = GPIO_KEYS_J6P19;
+			linux,code = <KEY_J>;
+		};
+
+		J6P21 {
+			label = "J6P21";
+			gpios = GPIO_KEYS_J6P21;
+			linux,code = <KEY_K>;
+		};
+
+		J6P23 {
+			label = "J6P23";
+			gpios = GPIO_KEYS_J6P23;
+			linux,code = <KEY_L>;
+		};
+
+#ifdef GPIO_KEYS_J6P25
+		J6P25 {
+			label = "J6P25";
+			gpios = GPIO_KEYS_J6P25;
+			linux,code = <KEY_M>;
+		};
+#endif
+
+		J6P27 {
+			label = "J6P27";
+			gpios = GPIO_KEYS_J6P27;
+			linux,code = <KEY_N>;
+		};
+
+		J6P29 {
+			label = "J6P29";
+			gpios = GPIO_KEYS_J6P29;
+			linux,code = <KEY_O>;
+		};
+	};
+
+	gpio-keys-m2 {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys_m2>;
+
+#ifdef GPIO_KEYS_J12
+		J12 {
+			label = "J12";
+			gpios = GPIO_KEYS_J12;
+			linux,code = <KEY_A>;
+		};
+#endif
+
+		J13 {
+			label = "J13";
+			gpios = GPIO_KEYS_J13;
+			linux,code = <KEY_B>;
+		};
+
+		J14 {
+			label = "J14";
+			gpios = GPIO_KEYS_J14;
+			linux,code = <KEY_C>;
+		};
+
+		J16 {
+			label = "J16";
+			gpios = GPIO_KEYS_J16;
+			linux,code = <KEY_D>;
+		};
+
+		J17 {
+			label = "J17";
+			gpios = GPIO_KEYS_J17;
+			linux,code = <KEY_E>;
+		};
+
+		J18 {
+			label = "J18";
+			gpios = GPIO_KEYS_J18;
+			linux,code = <KEY_F>;
+		};
+
+		J19 {
+			label = "J19";
+			gpios = GPIO_KEYS_J19;
+			linux,code = <KEY_G>;
+		};
+
+		J20 {
+			label = "J20";
+			gpios = GPIO_KEYS_J20;
+			linux,code = <KEY_H>;
+		};
+
+		J22 {
+			label = "J22";
+			gpios = GPIO_KEYS_J22;
+			linux,code = <KEY_I>;
+		};
+	};
+
+	gpio-leds-j6b {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_leds_j6b>;
+
+#ifdef GPIO_LEDS_J6P16
+		J6P16 {
+			label = "J6P16";
+			gpios = GPIO_LEDS_J6P16;
+			default-state = "on";
+		};
+#endif
+
+		J6P18 {
+			label = "J6P18";
+			gpios = GPIO_LEDS_J6P18;
+			default-state = "on";
+		};
+
+		J6P20 {
+			label = "J6P20";
+			gpios = GPIO_LEDS_J6P20;
+			default-state = "on";
+		};
+
+		J6P22 {
+			label = "J6P22";
+			gpios = GPIO_LEDS_J6P22;
+			default-state = "on";
+		};
+
+		J6P24 {
+			label = "J6P24";
+			gpios = GPIO_LEDS_J6P24;
+			default-state = "on";
+		};
+
+#ifdef GPIO_LEDS_J6P26
+		J6P26 {
+			label = "J6P26";
+			gpios = GPIO_LEDS_J6P26;
+			default-state = "on";
+		};
+#endif
+
+		J6P28 {
+			label = "J6P28";
+			gpios = GPIO_LEDS_J6P28;
+			default-state = "on";
+		};
+
+		J6P30 {
+			label = "J6P30";
+			gpios = GPIO_LEDS_J6P30;
+			default-state = "on";
+		};
+	};
+
+	gpio-leds-m2 {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_leds_m2>;
+
+#ifdef GPIO_LEDS_J12
+		J12 {
+			label = "J12";
+			gpios = GPIO_LEDS_J12;
+			default-state = "on";
+		};
+#endif
+
+		J13 {
+			label = "J13";
+			gpios = GPIO_LEDS_J13;
+			default-state = "on";
+		};
+
+		J14 {
+			label = "J14";
+			gpios = GPIO_LEDS_J14;
+			default-state = "on";
+		};
+
+		J16 {
+			label = "J16";
+			gpios = GPIO_LEDS_J16;
+			default-state = "on";
+		};
+
+		J17 {
+			label = "J17";
+			gpios = GPIO_LEDS_J17;
+			default-state = "on";
+		};
+
+		J18 {
+			label = "J18";
+			gpios = GPIO_LEDS_J18;
+			default-state = "on";
+		};
+
+		J19 {
+			label = "J19";
+			gpios = GPIO_LEDS_J19;
+			default-state = "on";
+		};
+
+		J20 {
+			label = "J20";
+			gpios = GPIO_LEDS_J20;
+			default-state = "on";
+		};
+
+		J22 {
+			label = "J22";
+			gpios = GPIO_LEDS_J22;
+			default-state = "on";
+		};
+	};
+
+	reg_usbotg1_vbus: regulator-usbotg1-vbus {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usbotg1_vbus>;
+		regulator-name = "usb_otg1_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = GP_REG_USB_OTG1_VBUS;
+		enable-active-high;
+	};
+
+	reg_usbotg2_vbus: regulator-usbotg2-vbus {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usbotg2_vbus>;
+		regulator-name = "usb_otg2_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = GP_REG_USB_OTG2_VBUS;
+		enable-active-high;
+	};
+};
+
+&dcnano {
+	status = "okay";
+};
+
+&dphy {
+	status = "okay";
+};
+
+&dsi {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	fb_mipi: panel@0 {
+		backlight = <&backlight_mipi>;
+		bits-per-color = <8>;
+		bridge-de-active = <0>;
+		bus-format = "rgb888";
+		clocks = <&dphy 0>,
+			<&pcc5 IMX8ULP_CLK_DC_NANO>;
+		clock-names = "mipi_clk", "pixel_clock";
+		compatible = "panel,common";
+		delay-power-up = <2>;
+		dsi-format = "rgb888";
+		dsi-lanes = <4>;
+		mode-skip-eot;
+		mode-video;
+		mode-video-burst;
+		panel-height-mm = <136>;
+		panel-width-mm = <217>;
+		power-supply = <&reg_vref_5v>;
+		reg = <0>;
+		spwg;
+
+		display-timings {
+			t_mipi: t-dsi-default {
+				/* m101nwwb by default */
+				clock-frequency = <70000000>;
+				hactive = <1280>;
+				vactive = <800>;
+				hback-porch = <5>;
+				hfront-porch = <123>;
+				vback-porch = <3>;
+				vfront-porch = <24>;
+				hsync-len = <1>;
+				vsync-len = <1>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <1>;
+			};
+		};
+
+		port {
+			panel1_in: endpoint {
+				remote-endpoint = <&mipi_dsi_out>;
+			};
+		};
+	};
+
+	ports {
+		port@1 {
+			reg = <1>;
+
+			mipi_dsi_out: endpoint {
+				remote-endpoint = <&panel1_in>;
+			};
+		};
+	};
+};
+
+&fec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_fec>;
+	phy-mode = "rmii";
+	phy-handle = <&ethphy>;
+	status = "okay";
+#if 0
+	phy-reset-gpios = GP_FEC_RESET;
+#endif
+
+	mdio {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		ethphy: ethernet-phy@7 {
+			interrupts-extended = GPIRQ_FEC_PHY;
+			reg = <7>;
+			micrel,led-mode = <1>;
+		};
+	};
+};
+
+&lpi2c5 {
+	ts_atmel_mt: touchscreen@4a {
+		compatible = "atmel,maxtouch";
+		interrupts-extended = GPIRQ_TS_ATMEL;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ts_atmel>;
+		reg = <0x4a>;
+		reset-gpios = GP_TS_ATMEL_RESET;
+		status = "disabled";
+	};
+};
+
+&lpi2c7 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpi2c7>;
+	pinctrl-1 = <&pinctrl_lpi2c7>;
+	status = "okay";
+};
+
+&lpuart4 {
+	/* J11, M.2 connector */
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpuart4>;
+	pinctrl-1 = <&pinctrl_lpuart4>;
+	status = "disabled";
+};
+
+&lpuart7 {
+	/* J9 - console */
+	/* Let probe happen earlier */
+	/delete-property/ dmas;
+	/delete-property/ dma-names;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpuart7>;
+	pinctrl-1 = <&pinctrl_lpuart7>;
+	status = "okay";
+};
+
+&tpm4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_tpm4>;
+	status = "okay";
+};
+
+&usbmisc1 {
+	status = "okay";
+};
+
+&usbotg1 {
+	dr_mode = "otg";
+	over-current-active-low;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_usbotg1>;
+	pinctrl-1 = <&pinctrl_usbotg1>;
+	power-active-high;
+	status = "okay";
+	vbus-supply = <&reg_usbotg1_vbus>;
+};
+
+&usbphy1 {
+	fsl,tx-d-cal = <88>;
+	status = "okay";
+};
+
+&usbmisc2 {
+	status = "okay";
+};
+
+&usbotg2 {
+	dr_mode = "otg";
+	over-current-active-low;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_usbotg2>;
+	pinctrl-1 = <&pinctrl_usbotg2>;
+	power-active-high;
+	status = "okay";
+	vbus-supply = <&reg_usbotg2_vbus>;
+};
+
+&usbphy2 {
+	fsl,tx-d-cal = <88>;
+	status = "okay";
+};
+
+&usdhc2 {
+	bus-width = <4>;
+	non-removable;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc2>;
+	status = "disabled";
+};
