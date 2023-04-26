@@ -39,6 +39,10 @@
 	};
 };
 
+&flexcan1 {
+	status = "disabled";
+};
+
 &sai1 {
 	#sound-dai-cells = <0>;
 	assigned-clocks = <&clk IMX93_CLK_SAI1>;
