@@ -142,6 +142,7 @@
 #define PM_CLK_AO			BIT(15)
 #define IFA_IOMMU_PCIE_SUPPORT		BIT(16)
 #define CFG_IFA_MASTER_IN_ATF		BIT(20)
+#define SECURE_BANK_ENABLE		BIT(21)
 
 #define MTK_IOMMU_HAS_FLAG_MASK(pdata, _x, mask)	\
 				((((pdata)->flags) & (mask)) == (_x))
@@ -1319,7 +1320,8 @@ static int mtk_iommu_probe(struct platform_device *pdev)
 			continue;
 		bank = &data->bank[i];
 		bank->id = i;
-		if (bank->id == MTK_IOMMU_SEC_BANKID) {
+		if (MTK_IOMMU_HAS_FLAG(data->plat_data, SECURE_BANK_ENABLE) &&
+		    bank->id == MTK_IOMMU_SEC_BANKID) {
 			/* Record the secure bank's register base address for
 			 * checking in the secure world to indicate which iommu
 			 * the TF happen in.
@@ -1736,7 +1738,8 @@ static const struct mtk_iommu_plat_data mt8192_data_apu = {
 static const struct mtk_iommu_plat_data mt8195_data_apu = {
 	.m4u_plat       = M4U_MT8195,
 	.flags          = DCM_DISABLE | MTK_IOMMU_TYPE_APU |
-			  SHARE_PGTABLE | STD_AXI_MODE,
+			  SHARE_PGTABLE | STD_AXI_MODE |
+			  SECURE_BANK_ENABLE,
  	.inv_sel_reg    = REG_MMU_INV_SEL_GEN2,
 	.hw_list        = &apulist,
 	.banks_num	= 1,
