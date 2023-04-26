@@ -19,6 +19,7 @@
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
 #include <linux/of.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/regmap.h>
 #include <linux/regulator/of_regulator.h>
 #include <linux/regulator/consumer.h>
@@ -64,6 +65,9 @@ struct regulator_map {
 struct regulator_enable_gpio {
 	struct list_head list;
 	struct gpio_desc *gpiod;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pins_off;
+	struct pinctrl_state *pins_on;
 	u32 enable_count;	/* a number of enabled shared GPIO */
 	u32 request_count;	/* a number of requested shared GPIO */
 };
@@ -2481,6 +2485,43 @@ void regulator_bulk_unregister_supply_alias(struct device *dev,
 }
 EXPORT_SYMBOL_GPL(regulator_bulk_unregister_supply_alias);
 
+static void regulator_pinctrl_request(struct regulator_config *cfg)
+{
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pins_off;
+	struct pinctrl_state *pins_on;
+
+	pinctrl = devm_pinctrl_get(cfg->dev);
+	if (IS_ERR(pinctrl))
+		pinctrl = NULL;
+	if (!pinctrl)
+		return;
+
+	pins_off = pinctrl_lookup_state(pinctrl, "off");
+	if (IS_ERR(pins_off))
+		pins_off = NULL;
+	pins_on = pinctrl_lookup_state(pinctrl, "on");
+	if (IS_ERR(pins_on))
+		pins_on = NULL;
+	if (!pins_off && !pins_on)
+		return;
+
+	if (!pins_off) {
+		pins_off = pinctrl_lookup_state(pinctrl, "default");
+		if (IS_ERR(pins_off))
+			pins_off = NULL;
+	}
+	if (!pins_on) {
+		pins_on = pinctrl_lookup_state(pinctrl, "default");
+		if (IS_ERR(pins_on))
+			pins_on = NULL;
+	}
+	if (pins_off && pins_on) {
+		cfg->pinctrl = pinctrl;
+		cfg->pins_off = pins_off;
+		cfg->pins_on = pins_on;
+	}
+}
 
 /* Manage enable GPIO list. Same GPIO pin can be shared among regulators */
 static int regulator_ena_gpio_request(struct regulator_dev *rdev,
@@ -2510,6 +2551,11 @@ static int regulator_ena_gpio_request(struct regulator_dev *rdev,
 	new_pin = NULL;
 
 	pin->gpiod = gpiod;
+	if (config->pinctrl) {
+		pin->pinctrl = config->pinctrl;
+		pin->pins_off = config->pins_off;
+		pin->pins_on = config->pins_on;
+	}
 	list_add(&pin->list, &regulator_ena_gpio_list);
 
 update_ena_gpio_to_rdev:
@@ -2563,8 +2609,11 @@ static int regulator_ena_gpio_ctrl(struct regulator_dev *rdev, bool enable)
 
 	if (enable) {
 		/* Enable GPIO at initial use */
-		if (pin->enable_count == 0)
+		if (pin->enable_count == 0) {
 			gpiod_set_value_cansleep(pin->gpiod, 1);
+			if (pin->pins_on)
+				pinctrl_select_state(pin->pinctrl, pin->pins_on);
+		}
 
 		pin->enable_count++;
 	} else {
@@ -2575,6 +2624,8 @@ static int regulator_ena_gpio_ctrl(struct regulator_dev *rdev, bool enable)
 
 		/* Disable GPIO if not used */
 		if (pin->enable_count <= 1) {
+			if (pin->pins_off)
+				pinctrl_select_state(pin->pinctrl, pin->pins_off);
 			gpiod_set_value_cansleep(pin->gpiod, 0);
 			pin->enable_count = 0;
 		}
@@ -5584,6 +5635,7 @@ regulator_register(struct device *dev,
 			goto wash;
 	}
 
+	regulator_pinctrl_request(config);
 	if (config->ena_gpiod) {
 		ret = regulator_ena_gpio_request(rdev, config);
 		if (ret != 0) {

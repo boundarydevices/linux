@@ -457,6 +457,9 @@ struct regulator_config {
 	struct regmap *regmap;
 
 	struct gpio_desc *ena_gpiod;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pins_off;
+	struct pinctrl_state *pins_on;
 };
 
 /**
