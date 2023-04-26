@@ -11,7 +11,6 @@
 #include <linux/align.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
-#include <linux/ioport.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/sizes.h>
@@ -19,59 +18,6 @@
 
 #include "../../pci.h"
 #include "pcie-designware.h"
-
-int dw_pcie_get_resources(struct dw_pcie *pci)
-{
-	struct platform_device *pdev = to_platform_device(pci->dev);
-	struct device_node *np = dev_of_node(pci->dev);
-	struct resource *res;
-
-	if (!pci->dbi_base) {
-		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dbi");
-		pci->dbi_base = devm_pci_remap_cfg_resource(pci->dev, res);
-		if (IS_ERR(pci->dbi_base))
-			return PTR_ERR(pci->dbi_base);
-	}
-
-	/* DBI2 is mainly useful for the endpoint controller */
-	if (!pci->dbi_base2) {
-		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dbi2");
-		if (res) {
-			pci->dbi_base2 = devm_pci_remap_cfg_resource(pci->dev, res);
-			if (IS_ERR(pci->dbi_base2))
-				return PTR_ERR(pci->dbi_base2);
-		} else {
-			pci->dbi_base2 = pci->dbi_base + SZ_4K;
-		}
-	}
-
-	/* For non-unrolled iATU/eDMA platforms this range will be ignored */
-	if (!pci->atu_base) {
-		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "atu");
-		if (res) {
-			pci->atu_size = resource_size(res);
-			pci->atu_base = devm_ioremap_resource(pci->dev, res);
-			if (IS_ERR(pci->atu_base))
-				return PTR_ERR(pci->atu_base);
-		} else {
-			pci->atu_base = pci->dbi_base + DEFAULT_DBI_ATU_OFFSET;
-		}
-	}
-
-	/* Set a default value suitable for at most 8 in and 8 out windows */
-	if (!pci->atu_size)
-		pci->atu_size = SZ_4K;
-
-	if (pci->link_gen < 1)
-		pci->link_gen = of_pci_get_max_link_speed(np);
-
-	of_property_read_u32(np, "num-lanes", &pci->num_lanes);
-
-	if (of_property_read_bool(np, "snps,enable-cdm-check"))
-		dw_pcie_cap_set(pci, CDM_CHECK);
-
-	return 0;
-}
 
 void dw_pcie_version_detect(struct dw_pcie *pci)
 {
@@ -693,8 +639,25 @@ static void dw_pcie_iatu_detect_regions(struct dw_pcie *pci)
 
 void dw_pcie_iatu_detect(struct dw_pcie *pci)
 {
+	struct platform_device *pdev = to_platform_device(pci->dev);
+
 	if (dw_pcie_iatu_unroll_enabled(pci)) {
 		dw_pcie_cap_set(pci, IATU_UNROLL);
+
+		if (!pci->atu_base) {
+			struct resource *res =
+				platform_get_resource_byname(pdev, IORESOURCE_MEM, "atu");
+			if (res) {
+				pci->atu_size = resource_size(res);
+				pci->atu_base = devm_ioremap_resource(pci->dev, res);
+			}
+			if (!pci->atu_base || IS_ERR(pci->atu_base))
+				pci->atu_base = pci->dbi_base + DEFAULT_DBI_ATU_OFFSET;
+		}
+
+		if (!pci->atu_size)
+			/* Pick a minimal default, enough for 8 in and 8 out windows */
+			pci->atu_size = SZ_4K;
 	} else {
 		pci->atu_base = pci->dbi_base + PCIE_ATU_VIEWPORT_BASE;
 		pci->atu_size = PCIE_ATU_VIEWPORT_SIZE;
@@ -712,6 +675,7 @@ void dw_pcie_iatu_detect(struct dw_pcie *pci)
 
 void dw_pcie_setup(struct dw_pcie *pci)
 {
+	struct device_node *np = pci->dev->of_node;
 	u32 val;
 
 	if (pci->link_gen > 0)
@@ -734,13 +698,19 @@ void dw_pcie_setup(struct dw_pcie *pci)
 		dw_pcie_writel_dbi(pci, PCIE_LINK_WIDTH_SPEED_CONTROL, val);
 	}
 
-	if (dw_pcie_cap_is(pci, CDM_CHECK)) {
+	if (of_property_read_bool(np, "snps,enable-cdm-check")) {
 		val = dw_pcie_readl_dbi(pci, PCIE_PL_CHK_REG_CONTROL_STATUS);
 		val |= PCIE_PL_CHK_REG_CHK_REG_CONTINUOUS |
 		       PCIE_PL_CHK_REG_CHK_REG_START;
 		dw_pcie_writel_dbi(pci, PCIE_PL_CHK_REG_CONTROL_STATUS, val);
 	}
 
+	val = dw_pcie_readl_dbi(pci, PCIE_PORT_LINK_CONTROL);
+	val &= ~PORT_LINK_FAST_LINK_MODE;
+	val |= PORT_LINK_DLL_LINK_EN;
+	dw_pcie_writel_dbi(pci, PCIE_PORT_LINK_CONTROL, val);
+
+	of_property_read_u32(np, "num-lanes", &pci->num_lanes);
 	if (!pci->num_lanes) {
 		dev_dbg(pci->dev, "Using h/w default number of lanes\n");
 		return;

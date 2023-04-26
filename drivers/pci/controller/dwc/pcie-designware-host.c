@@ -16,6 +16,7 @@
 #include <linux/pci_regs.h>
 #include <linux/platform_device.h>
 
+#include "../../pci.h"
 #include "pcie-designware.h"
 
 static struct pci_ops dw_pcie_ops;
@@ -395,10 +396,6 @@ int dw_pcie_host_init(struct dw_pcie_rp *pp)
 
 	raw_spin_lock_init(&pp->lock);
 
-	ret = dw_pcie_get_resources(pci);
-	if (ret)
-		return ret;
-
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "config");
 	if (res) {
 		pp->cfg0_size = resource_size(res);
@@ -410,6 +407,13 @@ int dw_pcie_host_init(struct dw_pcie_rp *pp)
 	} else {
 		dev_err(dev, "Missing *config* reg space\n");
 		return -ENODEV;
+	}
+
+	if (!pci->dbi_base) {
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dbi");
+		pci->dbi_base = devm_pci_remap_cfg_resource(dev, res);
+		if (IS_ERR(pci->dbi_base))
+			return PTR_ERR(pci->dbi_base);
 	}
 
 	bridge = devm_pci_alloc_host_bridge(dev, 0);
@@ -425,6 +429,9 @@ int dw_pcie_host_init(struct dw_pcie_rp *pp)
 		pp->io_bus_addr = win->res->start - win->offset;
 		pp->io_base = pci_pio_to_address(win->res->start);
 	}
+
+	if (pci->link_gen < 1)
+		pci->link_gen = of_pci_get_max_link_speed(np);
 
 	/* Set default bus ops */
 	bridge->ops = &dw_pcie_ops;
