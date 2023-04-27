@@ -6768,7 +6768,7 @@ brcmf_cfg80211_set_bitrate(struct wiphy *wiphy,  struct net_device *ndev,
 		rspec = WL_RSPEC_ENCODE_HE;     /* 11ax HE */
 		rspec |= (WL_RSPEC_HE_NSS_UNSPECIFIED << WL_RSPEC_HE_NSS_SHIFT) | (mcs - 1);
 		/* set the other rspec fields */
-		hegi = mask->control[band].he_gi;
+		hegi = mask->control[band].he_gi + 1;
 		rspec |= ((hegi != 0xFF) ? HE_GI_TO_RSPEC(hegi) : 0);
 
 		if (band == NL80211_BAND_2GHZ)
