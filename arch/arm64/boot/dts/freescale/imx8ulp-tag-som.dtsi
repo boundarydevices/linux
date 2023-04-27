@@ -262,6 +262,7 @@
 &usbotg1 {
 	dr_mode = "otg";
 	status = "okay";
+	usb-role-switch;
 
 	ports {
 		#address-cells = <1>;
