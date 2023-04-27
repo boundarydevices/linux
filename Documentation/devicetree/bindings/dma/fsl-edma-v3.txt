@@ -22,7 +22,7 @@ Required properties:
 	     |---> edma controller instance, 0, 1, 2,..etc
 
 - #dma-cells : Must be <3>.
-	The 1st cell specifies the channel ID, but source/event id on i.mx8ulp
+	The 1st cell specifies the source ID.
 	The 2nd cell specifies the channel priority.
 	The 3rd cell specifies the channel attributes which include below:
 	BIT(0): transmit or receive:
