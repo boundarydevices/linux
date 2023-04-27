@@ -694,7 +694,7 @@
 };
 
 &usbotg2 {
-	dr_mode = "otg";
+	dr_mode = "host";
 	over-current-active-low;
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_usbotg2>;
