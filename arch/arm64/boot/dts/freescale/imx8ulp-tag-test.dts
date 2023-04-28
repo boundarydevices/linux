@@ -245,6 +245,7 @@
 		mipi_dsi_phy = &dphy;
 		pwm_mipi = &tpm4;
 		t_mipi = &t_mipi;
+		ts_atmel_mt = &ts_mipi_atmel_mt;
 	};
 
 	backlight_mipi: backlight-mipi {
@@ -623,7 +624,7 @@
 };
 
 &lpi2c5 {
-	ts_atmel_mt: touchscreen@4a {
+	ts_mipi_atmel_mt: touchscreen@4a {
 		compatible = "atmel,maxtouch";
 		interrupts-extended = GPIRQ_TS_ATMEL;
 		pinctrl-names = "default";
