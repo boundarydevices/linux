@@ -292,11 +292,7 @@
 	bus-width = <8>;
 	no-mmc-hs400;
 	non-removable;
-#if 0
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
-#else
-	pinctrl-names = "default", "state_100mhz";
-#endif
 	pinctrl-0 = <&pinctrl_usdhc0>;
 	pinctrl-1 = <&pinctrl_usdhc0>;
 	pinctrl-2 = <&pinctrl_usdhc0>;
