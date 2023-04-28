@@ -171,8 +171,6 @@ static int rpmsg_lifecycle_probe(struct platform_device *pdev)
 	init_completion(&cmd_complete);
 
 	return register_rpmsg_driver(&rpmsg_life_cycle_driver);
-
-	return 0;
 }
 
 static const struct of_device_id rpmsg_lifecycle_id[] = {
@@ -181,7 +179,7 @@ static const struct of_device_id rpmsg_lifecycle_id[] = {
 };
 MODULE_DEVICE_TABLE(of, rpmsg_lifecycle_id);
 
-static struct platform_driver rpmsg_lifecycle_driver = {
+static struct platform_driver rpmsg_lifecycle_platform_driver = {
 	.driver = {
 		.name = "rpmsg-lifecycle",
 		.owner = THIS_MODULE,
@@ -190,7 +188,7 @@ static struct platform_driver rpmsg_lifecycle_driver = {
 	},
 	.probe = rpmsg_lifecycle_probe,
 };
-module_platform_driver(rpmsg_lifecycle_driver);
+module_platform_driver(rpmsg_lifecycle_platform_driver);
 
 MODULE_AUTHOR("NXP Semiconductor");
 MODULE_DESCRIPTION("NXP rpmsg life cycle driver");
