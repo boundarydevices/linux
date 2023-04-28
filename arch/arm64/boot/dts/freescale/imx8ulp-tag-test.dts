@@ -176,14 +176,14 @@
 
 	pinctrl_reg_usbotg1_vbus: reg-usbotg1-vbusgrp {
 		fsl,pins = <
-#define GP_REG_USB_OTG1_VBUS	<&gpiod 13 GPIO_ACTIVE_LOW>
+#define GP_REG_USB_OTG1_VBUS	<&gpiod 13 GPIO_ACTIVE_HIGH>
 			MX8ULP_PAD_PTD13__PTD13		0x03
 		>;
 	};
 
 	pinctrl_reg_usbotg2_vbus: reg-usbotg2-vbusgrp {
 		fsl,pins = <
-#define GP_REG_USB_OTG2_VBUS	<&gpiod 21 GPIO_ACTIVE_LOW>
+#define GP_REG_USB_OTG2_VBUS	<&gpiod 21 GPIO_ACTIVE_HIGH>
 			MX8ULP_PAD_PTD21__PTD21		0x03
 		>;
 	};
