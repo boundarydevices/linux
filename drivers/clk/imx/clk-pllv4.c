@@ -107,9 +107,9 @@ static long clk_pllv4_round_rate(struct clk_hw *hw, unsigned long rate,
 	u32 mult;
 
 	if (pll->use_mult_range) {
-		round_rate = rate;
-		do_div(round_rate, parent_rate);
-		mult = round_rate;
+		temp64 = (u64)rate;
+		do_div(temp64, parent_rate);
+		mult = temp64;
 		if (mult >= pllv4_mult_range[1] &&
 		    mult <= pllv4_mult_range[0]) {
 			round_rate = parent_rate * mult;
