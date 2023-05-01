@@ -40,6 +40,12 @@
 			MX8MMN(IOMUXC_GPIO1_IO04_GPIO1_IO4, 0x1c0)
 #define GP_MCP25625_1_RESET	<&gpio4 18 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_SAI1_TXD6_GPIO4_IO18, 0x100)	/* can1_reset */
+#define GP_CAN1_EN		<&gpio4 11 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI1_TXC_GPIO4_IO11 , 0x140)
+#define GP_CAN1_STANDBY		<&gpio4 20 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_MCLK_GPIO4_IO20, 0x140)
+#define GP_CAN1_ERR		<&gpio4 27 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI2_MCLK_GPIO4_IO27, 0x100)
 		>;
 	};
 
@@ -65,6 +71,12 @@
 			MX8MMN(IOMUXC_GPIO1_IO08_GPIO1_IO8, 0x1c0)
 #define GP_MCP25625_2_RESET	<&gpio1 3 GPIO_ACTIVE_LOW>
 			MX8MMN(IOMUXC_GPIO1_IO03_GPIO1_IO3, 0x100)
+#define GP_CAN2_EN		<&gpio4 19 GPIO_ACTIVE_HIGH>
+			MX8MMN(IOMUXC_SAI1_TXD7_GPIO4_IO19, 0x140)
+#define GP_CAN2_STANDBY		<&gpio4 12 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_TXD0_GPIO4_IO12, 0x140)
+#define GP_CAN2_ERR		<&gpio3 20 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI5_RXC_GPIO3_IO20, 0x100)
 		>;
 	};
 
@@ -88,8 +100,8 @@
 			MX8MMN(IOMUXC_ENET_TD3_ENET1_RGMII_TD3, 0x00)
 			MX8MMN(IOMUXC_ENET_TXC_ENET1_RGMII_TXC, 0x00)
 			MX8MMN(IOMUXC_ENET_TX_CTL_ENET1_RGMII_TX_CTL, 0x00)
-#define GP_FEC1_RESET	<&gpio3 15 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_NAND_RE_B_GPIO3_IO15, 0x159)
+#define GP_FEC1_RESET	<&gpio1 0 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_GPIO1_IO00_GPIO1_IO0, 0x159)
 #define GPIRQ_FEC1_PHY	<&gpio3 16 IRQ_TYPE_LEVEL_LOW>
 			MX8MMN(IOMUXC_NAND_READY_B_GPIO3_IO16, 0x159)
 		>;
@@ -226,17 +238,18 @@
 		>;
 	};
 
-	pinctrl_pwm2: pwm2grp {
+	pinctrl_pcie0: pcie0grp {
 		fsl,pins = <
-			MX8MMN(IOMUXC_SPDIF_RX_PWM2_OUT, 0x16)
+#define GP_PCIE0_RESET		<&gpio4 2 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_RXD0_GPIO4_IO2, 0x100)
+#define GP_PCIE0_DISABLE	<&gpio4 10 GPIO_ACTIVE_LOW>
+			MX8MMN(IOMUXC_SAI1_TXFS_GPIO4_IO10, 0x100)
 		>;
 	};
 
-	/* For EC21-ALCC modem */
-	pinctrl_reg_3p7v: reg-3p7vgrp {
+	pinctrl_pwm2: pwm2grp {
 		fsl,pins = <
-#define GP_REG_3P7V	<&gpio4 20 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_SAI1_MCLK_GPIO4_IO20, 0x100)
+			MX8MMN(IOMUXC_SPDIF_RX_PWM2_OUT, 0x16)
 		>;
 	};
 
@@ -423,32 +436,6 @@
 			MX8MMN(IOMUXC_GPIO1_IO02_WDOG1_WDOG_B, 0x140)
 		>;
 	};
-
-	pinctrl_wwan_rfkill: wwan-rfkillgrp {
-		fsl,pins = <
-			/* EC21 - Modem pins */
-#define GP_EC21_RESET		<&gpio4 2 (GPIO_OPEN_DRAIN | GPIO_ACTIVE_LOW)>
-			MX8MMN(IOMUXC_SAI1_RXD0_GPIO4_IO2, 0x140)	/*  98, LTE_RESET_N */
-#define GP_EC21_USB_BOOT	<&gpio4 27 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_SAI2_MCLK_GPIO4_IO27, 0x100)	/* 123, LTE_USB_BOOT */
-#define GP_EC21_POWER_KEY	<&gpio4 10 GPIO_OPEN_DRAIN>
-			MX8MMN(IOMUXC_SAI1_TXFS_GPIO4_IO10, 0x140)	/* 106, LTE_ON_OFF */
-#define GP_EC21_USIM_DETECT	<&gpio3 20 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_SAI5_RXC_GPIO3_IO20, 0x100)	/*  84, LTE_USIM_DETECT */
-#define GP_EC21_WAKE_UP		<&gpio4 11 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_SAI1_TXC_GPIO4_IO11 , 0x100)	/* 107, LTE_WAKE_UP */
-#define GP_EC21_AP_READY	<&gpio4 19 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_SAI1_TXD7_GPIO4_IO19, 0x100)	/* 115, LTE_AP_READY */
-#define GP_EC21_ACTIVE_STATUS	<&gpio4 1 GPIO_ACTIVE_LOW>
-			MX8MMN(IOMUXC_SAI1_RXC_GPIO4_IO1, 0x1c0)	/*  97, LTE_STAT */
-#define GP_EC21_NET_STAT	<&gpio1 0 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_GPIO1_IO00_GPIO1_IO0, 0x80)	/*   0, LTE_NET_STAT */
-#define GP_EC21_NET_MODE	<&gpio4 12 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_SAI1_TXD0_GPIO4_IO12, 0x80)	/* 108, LTE_NET_MODE */
-#define GP_EC21_RI		<&gpio4 0 GPIO_ACTIVE_HIGH>
-			MX8MMN(IOMUXC_SAI1_RXFS_GPIO4_IO0, 0x80)	/*  96, LTE_RI */
-		>;
-	};
 };
 
 / {
@@ -493,6 +480,12 @@
 		};
 	};
 
+	pcie0_refclk: pcie0-refclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <100000000>;
+	};
+
 	reg_usdhc2_vqmmc: regulator-usdhc2-vqmmc {
 		compatible = "regulator-gpio";
 		pinctrl-names = "default";
@@ -529,18 +522,6 @@
 		regulator-max-microvolt = <3300000>;
 	};
 
-	reg_vref_3v7: regulator-vref-3v7 {
-		compatible = "regulator-fixed";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_reg_3p7v>;
-		regulator-name = "ec21_3v7";
-		regulator-min-microvolt = <3700000>;
-		regulator-max-microvolt = <3700000>;
-		startup-delay-us = <60000>;
-		gpio = GP_REG_3P7V;
-		enable-active-high;
-	};
-
 	reg_vref_5v0: regulator-vref-5v {
 		compatible = "regulator-fixed";
 		regulator-name = "vref-5v";
@@ -558,30 +539,6 @@
 		gpio = GP_REG_WLAN_VMMC;
 		startup-delay-us = <70000>;
 		enable-active-high;
-	};
-
-	wwan_rfkill: wwan-rfkill {
-#if 0
-		/* power-key is not connected, so don't use status */
-		active-status-gpios = GP_EC21_ACTIVE_STATUS;
-#endif
-		compatible = "net,rfkill-gpio";
-#if 1
-		low-gpios = GP_EC21_USB_BOOT;
-		high-gpios = GP_EC21_USIM_DETECT,GP_EC21_WAKE_UP,GP_EC21_AP_READY;
-#else
-		high-gpios = GP_EC21_USB_BOOT,GP_EC21_USIM_DETECT,GP_EC21_WAKE_UP,GP_EC21_AP_READY;
-#endif
-		name = "wwan-rfkill";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_wwan_rfkill>;
-		power-key-low-off = <700>;
-		power-key-low-on = <550>;
-		power-key-gpios = GP_EC21_POWER_KEY;
-		reset-gpios = GP_EC21_RESET;
-		status = "okay";
-		type = <5>;     /* WWAN */
-		vdd-supply = <&reg_vref_3v7>;
 	};
 };
 
@@ -1055,6 +1012,28 @@
 	status = "okay";
 };
 
+&pcie0 {
+	assigned-clocks = <&clk IMX8MM_CLK_PCIE1_AUX>,
+			  <&clk IMX8MM_CLK_PCIE1_PHY>,
+			  <&clk IMX8MM_CLK_PCIE1_CTRL>;
+	assigned-clock-rates = <10000000>, <100000000>, <250000000>;
+	assigned-clock-parents = <&clk IMX8MM_SYS_PLL2_50M>,
+				 <&clk IMX8MM_SYS_PLL2_100M>,
+				 <&clk IMX8MM_SYS_PLL2_250M>;
+	clocks = <&clk IMX8MM_CLK_PCIE1_ROOT>,
+		 <&clk IMX8MM_CLK_PCIE1_AUX>,
+		 <&clk IMX8MM_CLK_PCIE1_PHY>,
+		 <&pcie0_refclk>;
+	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
+	disable-gpio = GP_PCIE0_DISABLE;
+	ext_osc = <0>;
+	l1ss-disabled;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie0>;
+	reset-gpio = GP_PCIE0_RESET;
+	status = "okay";
+};
+
 &pwm2 {
 	assigned-clocks = <&clk IMX8MMN(CLK_PWM2)>;
 	assigned-clock-parents = <&clk IMX8MMN(SYS_PLL1_40M)>;
@@ -1216,11 +1195,11 @@
 #define GP_MIPI_IRQ(a)		<&gpio1 1 a>
 #define PD_MIPI_IRQ(a)		MX8MMN(IOMUXC_GPIO1_IO01_GPIO1_IO1, a)	/* Pin 8 */
 
-#define GP_MIPI_TS_IRQ(a)	<&gpio1 6 a>
-#define PD_MIPI_TS_IRQ(a)	MX8MMN(IOMUXC_GPIO1_IO06_GPIO1_IO6, a)	/* Pin 9 */
+#define GP_MIPI_TS_IRQ(a)	<&gpio4 0 a>
+#define PD_MIPI_TS_IRQ(a)	MX8MMN(IOMUXC_SAI1_RXFS_GPIO4_IO0, a)	/* Pin 9 */
 
-#define GP_MIPI_TS_RESET(a)	<&gpio1 7 a>
-#define PD_MIPI_TS_RESET(a)	MX8MMN(IOMUXC_GPIO1_IO07_GPIO1_IO7, a)	/* Pin 10 */
+#define GP_MIPI_TS_RESET(a)	<&gpio4 1 a>
+#define PD_MIPI_TS_RESET(a)	MX8MMN(IOMUXC_SAI1_RXC_GPIO4_IO1, a)	/* Pin 10 */
 
 #ifndef MIPI_ENABLE_PAD
 #define GP_MIPI_ENABLE(a)	<&gpio1 9 a>
