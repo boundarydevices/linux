@@ -88,7 +88,7 @@
 
 	pinctrl_reg_usbotg1_vbus: reg-usbotg1-vbusgrp {
 		fsl,pins = <
-#define GP_REG_USB_OTG1_VBUS	<&gpiof 28 GPIO_ACTIVE_HIGH>
+#define GP_REG_USB_OTG1_VBUS	<&gpiof 28 GPIO_ACTIVE_LOW>
 			MX8ULP_PAD_PTF28__PTF28		0x03
 		>;
 	};
@@ -177,7 +177,6 @@
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
 		gpio = GP_REG_USB_OTG1_VBUS;
-		enable-active-high;
 	};
 };
 
