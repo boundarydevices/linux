@@ -4330,7 +4330,7 @@ EXPORT_SYMBOL_GPL(spi_write_then_read);
 
 #if IS_ENABLED(CONFIG_OF_DYNAMIC)
 /* Must call put_device() when done with returned spi_device device */
-static struct spi_device *of_find_spi_device_by_node(struct device_node *node)
+struct spi_device *of_find_spi_device_by_node(struct device_node *node)
 {
 	struct device *dev = bus_find_device_by_of_node(&spi_bus_type, node);
 
