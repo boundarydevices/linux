@@ -257,34 +257,6 @@ the second byte and Y'\ :sub:`7-0` in the third byte.
     - The padding bits contain undefined values that must be ignored by all
       applications and drivers.
 
-The next lists the packed YUV 4:4:4 formats with more than 8 bits per component.
-expand the bits per component to 16 bits, data in the high bits, zeros in the low bits,
-arranged in little endian order. storing 1 pixels in 6 bytes.
-
-.. flat-table:: Packed YUV 4:4:4 Image Formats (more than 8bpc)
-    :header-rows: 1
-    :stub-columns: 0
-
-    * - Identifier
-      - Code
-      - Byte 1-0
-      - Byte 3-2
-      - Byte 5-4
-      - Byte 7-6
-      - Byte 9-8
-      - Byte 11-10
-
-    * .. _V4L2-PIX-FMT-Y312:
-
-      - ``V4L2_PIX_FMT_Y312``
-      - 'Y312'
-
-      - Y'\ :sub:`0`
-      - Cb\ :sub:`0`
-      - Cr\ :sub:`0`
-      - Y'\ :sub:`1`
-      - Cb\ :sub:`1`
-      - Cr\ :sub:`1`
 
 4:2:2 Subsampling
 =================
