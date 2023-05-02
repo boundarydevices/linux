@@ -69,14 +69,6 @@
 			reg = <0 0x57000000 0 0x1400000>;
 		};
 
-		/* global autoconfigured region for contiguous allocations */
-		linux,cma {
-			compatible = "shared-dma-pool";
-			reusable;
-			size = <0x00000000 0x0c000000>;
-			linux,cma-default;
-		};
-
 		/* 12 MiB reserved for OP-TEE (BL32)
 		 * +-----------------------+ 0x43e0_0000
 		 * |      SHMEM 2MiB       |
