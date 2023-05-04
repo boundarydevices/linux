@@ -24,13 +24,10 @@
 	backlight_lcd0: backlight-lcd0 {
 		compatible = "pwm-backlight";
 		pwms = <&disp_pwm0 0 500000>;
-		power-supply = <&edp_panel_fixed_3v3>;
 		enable-gpios = <&pio 8 GPIO_ACTIVE_HIGH>;
 		brightness-levels = <0 1023>;
 		num-interpolated-steps = <1023>;
 		default-brightness-level = <576>;
-		default-on;
-		enable-active-high;
 	};
 
 	chosen {
@@ -46,26 +43,6 @@
 		gpio = <&pio 15 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&edp_panel_3v3_en_pins>;
-		regulator-always-on;
-
-		regulator-state-mem {
-			regulator-on-in-suspend;
-		};
-	};
-
-	edp_panel: panel {
-		compatible = "auo,g156han03";
-		power-supply = <&edp_panel_fixed_3v3>;
-		backlight = <&backlight_lcd0>;
-		width-mm = <350>;
-		height-mm = <216>;
-		status = "disabled";
-
-		port {
-			panel_in: endpoint {
-				remote-endpoint = <&edp_out>;
-			};
-		};
 	};
 
 	memory@40000000 {
@@ -240,25 +217,8 @@
 	};
 };
 
-&disp_pwm0 {
-	status = "okay";
-	pinctrl-names = "default";
-	pinctrl-0 = <&disp_pwm0_pin_default>;
-};
-
 &dpi1 {
 	status = "okay";
-};
-
-&dp_intf0 {
-	status = "disabled";
-	ports {
-		port {
-			dp_intf0_out: endpoint {
-				remote-endpoint = <&edp_in>;
-			};
-		};
-	};
 };
 
 &dp_intf1 {
@@ -324,31 +284,6 @@
 	wakeup-delay-ms = <200>;
 };
 
-&edp_tx {
-	pinctrl-names = "default";
-	pinctrl-0 = <&edp_pin>;
-	status = "disabled";
-
-	ports {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		port@0 {
-			reg = <0>;
-			edp_in: endpoint {
-			remote-endpoint = <&dp_intf0_out>;
-			};
-		};
-
-		port@1 {
-			reg = <1>;
-			edp_out: endpoint {
-				remote-endpoint = <&panel_in>;
-			};
-		};
-	};
-};
-
 &hdmi0 {
 	status = "okay";
 };
@@ -381,23 +316,10 @@
 		};
 	};
 
-	disp_pwm0_pin_default: disp-pwm0-pin-default {
-		pins1 {
-			pinmux = <PINMUX_GPIO29__FUNC_O_DISP_PWM0>;
-		};
-	};
-
 	edp_panel_3v3_en_pins: edp-panel-3v3-en-pins {
 		pins1 {
 			pinmux = <PINMUX_GPIO15__FUNC_B_GPIO15>;
 			output-high;
-		};
-	};
-
-	edp_pin: edp-pin-default {
-		pins-cmd-dat {
-			pinmux = <PINMUX_GPIO17__FUNC_I0_EDP_TX_HPD>;
-			bias-pull-up;
 		};
 	};
 
