@@ -1267,6 +1267,11 @@ static const struct panel_desc innolux_hk173vb_01b = {
 		.width = 279,
 		.height = 174,
 	},
+	.delay = {
+		.hpd_reliable = 210,
+		.enable = 50,
+		.unprepare = 500,
+	},
 };
 
 static const struct drm_display_mode innolux_n116bca_ea1_mode = {
@@ -1495,6 +1500,11 @@ static const struct panel_desc lg_lp120up1 = {
 		.width = 267,
 		.height = 183,
 	},
+	.delay = {
+		.hpd_reliable = 210,
+		.enable = 50,
+		.unprepare = 500,
+	},
 };
 
 static const struct drm_display_mode auo_g156han03_mode = {
@@ -1516,6 +1526,11 @@ static const struct panel_desc auo_g156han03 = {
 	.size = {
 		.width = 350,
 		.height = 216,
+	},
+	.delay = {
+		.hpd_reliable = 210,
+		.enable = 50,
+		.unprepare = 500,
 	},
 };
 
@@ -1723,6 +1738,9 @@ static const struct panel_desc koe_tx18d204vm0baa = {
 	.size = {
 		.width = 155,
 		.height = 87,
+	},
+	.delay = {
+		.hpd_reliable = 1000,
 	},
 };
 
