@@ -42,6 +42,13 @@
 		>;
 	};
 
+	pinctrl_lpi2c5: lpi2c5grp {
+		fsl,pins = <
+			MX8ULP_PAD_PTE4__LPI2C5_SCL	0x27
+			MX8ULP_PAD_PTE5__LPI2C5_SDA	0x27
+		>;
+	};
+
 	pinctrl_lpspi5: lpspi5grp {
 		fsl,pins = <
 			MX8ULP_PAD_PTE20__LPSPI5_SIN	0x10043
