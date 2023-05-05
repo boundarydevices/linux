@@ -248,7 +248,7 @@ static bool is_srcid_in_use(struct fsl_edma3_engine *fsl_edma3, u32 srcid)
 	for (i = 0; i < fsl_edma3->n_chans; i++) {
 		fsl_chan = &fsl_edma3->chans[i];
 
-		if (srcid == fsl_chan->srcid) {
+		if (fsl_chan->srcid && srcid == fsl_chan->srcid) {
 			dev_err(&fsl_chan->pdev->dev, "The srcid is using! Can't use repeatly.");
 			return true;
 		}
