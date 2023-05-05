@@ -465,7 +465,7 @@
 		compatible = "nxp,pca9451a";
 		reg = <0x25>;
 		interrupt-parent = <&pcal6524>;
-		interrupts = <11 IRQ_TYPE_LEVEL_LOW>;
+		interrupts = <11 IRQ_TYPE_EDGE_FALLING>;
 
 		regulators {
 			buck1: BUCK1 {
@@ -579,7 +579,7 @@
 			compatible = "nxp,pcf2131";
 			reg = <0x53>;
 			interrupt-parent = <&pcal6524>;
-			interrupts = <1 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <1 IRQ_TYPE_EDGE_FALLING>;
 			status = "okay";
 	};
 
