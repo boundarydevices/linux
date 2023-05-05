@@ -34,6 +34,11 @@
 		status = "disabled";
 	};
 
+	i2c_rpbus_2: i2c-rpbus-2 {
+		compatible = "fsl,i2c-rpbus-v2";
+		status = "disabled";
+	};
+
 	rpmsg_gpioa: gpio@0 {
 		compatible = "fsl,imx-rpmsg-gpio";
 		port_idx = <0>;
