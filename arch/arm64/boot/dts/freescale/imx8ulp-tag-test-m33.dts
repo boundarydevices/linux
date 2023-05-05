@@ -523,21 +523,6 @@
 	status = "okay";
 };
 
-&i2c_rpbus_2 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	status = "okay";
-
-	ts_mipi_atmel_mt: touchscreen@4a {
-		compatible = "atmel,maxtouch";
-		interrupts-extended = GPIRQ_TS_ATMEL;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ts_atmel>;
-		reg = <0x4a>;
-		reset-gpios = GP_TS_ATMEL_RESET;
-	};
-};
-
 &imx8ulp_cm33 {
 	ipc-only;
 	rsc-da=<0x1fff8000>;
@@ -548,9 +533,4 @@
 	memory-region = <&vdevbuffer>, <&vdev0vring0>, <&vdev0vring1>,
 			<&vdev1vring0>, <&vdev1vring1>, <&rsc_table>;
 	status = "okay";
-};
-
-&lpi2c5 {
-	status = "disabled";
-	/delete-node/ touchscreen@4a;
 };
