@@ -57,11 +57,6 @@
 	status = "disabled";
 };
 
-&isp0_reserved {
-	no-map;
-	reg = <0 0x82400000 0 0x10000000>;
-};
-
 &resmem {
 	ramoops@94400000 {
 		compatible = "ramoops";
