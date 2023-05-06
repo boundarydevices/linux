@@ -688,7 +688,7 @@ static int mp2662_probe(struct i2c_client *client,
 	return 0;
 }
 
-static int mp2662_remove(struct i2c_client *client)
+static void mp2662_remove(struct i2c_client *client)
 {
 	struct mp2662_device *mp = i2c_get_clientdata(client);
 
@@ -696,8 +696,6 @@ static int mp2662_remove(struct i2c_client *client)
 
 	/* reset all registers to default values */
 	mp2662_chip_reset(mp);
-
-	return 0;
 }
 
 static const struct i2c_device_id mp2662_i2c_ids[] = {
