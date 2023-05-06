@@ -422,7 +422,7 @@ static int fxos8700_get_scale(struct fxos8700_data *data,
 static int fxos8700_get_data(struct fxos8700_data *data, int chan_type,
 			     int axis, int *val)
 {
-	u8 base;
+	u8 base, reg;
 	s16 tmp;
 	int ret;
 
@@ -448,12 +448,14 @@ static int fxos8700_get_data(struct fxos8700_data *data, int chan_type,
 	if (ret)
 		return ret;
 
+	/* Convert axis to buffer index */
+	reg = axis - IIO_MOD_X;
 
 	/*
 	 * Convert to native endianness. The accel data and magn data
 	 * are signed, so a forced type conversion is needed.
 	 */
-	tmp = be16_to_cpu(data->buf[0]);
+	tmp = be16_to_cpu(data->buf[reg]);
 
 	/*
 	 * ACCEL output data registers contain the X-axis, Y-axis, and Z-axis

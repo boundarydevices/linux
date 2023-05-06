@@ -254,6 +254,47 @@ dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek.dtb imx8qm-mek-ov5640.dtb \
 			  imx8qm-mek-esai.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-dom0.dtb imx8qm-mek-domu.dtb \
 			  imx8qm-mek-root.dtb imx8qm-mek-inmate.dtb
+
+imx8qm-mek-revd-dtbs := imx8qm-mek.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-rpmsg-dtbs := imx8qm-mek-rpmsg.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-ov5640-dtbs := imx8qm-mek-ov5640.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-enet2-tja1100-dtbs := imx8qm-mek-enet2-tja1100.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-hdmi-dtbs := imx8qm-mek-hdmi.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-jdi-wuxga-lvds1-panel-dtbs := imx8qm-mek-jdi-wuxga-lvds1-panel.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-jdi-wuxga-lvds1-panel-rpmsg-dtbs := imx8qm-mek-jdi-wuxga-lvds1-panel-rpmsg.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-pcie-ep-dtbs := imx8qm-mek-pcie-ep.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-usdhc3-m2-dtbs := imx8qm-mek-usdhc3-m2.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-usd-wifi-dtbs := imx8qm-mek-usd-wifi.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-hdmi-rx-dtbs := imx8qm-mek-hdmi-rx.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-hdmi-rx-ov5640-dtbs := imx8qm-mek-hdmi-rx-ov5640.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-ca53-dtbs := imx8qm-mek-ca53.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-ca72-dtbs := imx8qm-mek-ca72.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-dsi-rm67191-dtbs := imx8qm-mek-dsi-rm67191.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-dsi-rm67199-dtbs := imx8qm-mek-dsi-rm67199.dtb imx8qm-mek-revd.dtbo
+imx8qm-pcieax2pciebx1-revd-dtbs := imx8qm-pcieax2pciebx1.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-esai-dtbs := imx8qm-mek-esai.dtb imx8qm-mek-revd.dtbo
+imx8qm-mek-revd-root-dtbs := imx8qm-mek-root.dtb imx8qm-mek-revd.dtbo
+
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-rpmsg.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-ov5640.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-enet2-tja1100.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-hdmi.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-jdi-wuxga-lvds1-panel.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-jdi-wuxga-lvds1-panel-rpmsg.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-pcie-ep.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-usdhc3-m2.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-usd-wifi.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-hdmi-rx.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-hdmi-rx-ov5640.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-ca53.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-ca72.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-dsi-rm67191.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-dsi-rm67199.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-pcieax2pciebx1-revd.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-esai.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-revd-root.dtb
+
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-ai_ml.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qxp-colibri-eval-v3.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8dxl-evk.dtb \
@@ -322,14 +363,16 @@ dtb-$(CONFIG_ARCH_MXC) += imx93-11x11-evk.dtb \
 			  imx93-11x11-evk-rm67199.dtb imx93-11x11-evk-boe-wxga-lvds-panel.dtb \
 			  imx93-11x11-evk-flexspi-m2.dtb \
 			  imx93-11x11-evk-mt9m114.dtb \
-			  imx93-11x11-evk-ld.dtb
+			  imx93-11x11-evk-ld.dtb \
+			  imx93-11x11-evk-rpmsg.dtb imx93-11x11-evk-rpmsg-lpv.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx93-9x9-qsb.dtb \
 			  imx93-9x9-qsb-can1.dtb \
 			  imx93-9x9-qsb-flexspi-m2.dtb \
 			  imx93-9x9-qsb-ontat-wvga-panel.dtb \
 			  imx93-9x9-qsb-mt9m114.dtb \
 			  imx93-9x9-qsb-i3c.dtb \
-			  imx93-9x9-qsb-lpspi.dtb imx93-9x9-qsb-lpspi-slave.dtb
+			  imx93-9x9-qsb-lpspi.dtb imx93-9x9-qsb-lpspi-slave.dtb \
+			  imx93-9x9-qsb-ld.dtb imx93-9x9-qsb-aud-hat.dtb
 
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-venice-gw72xx-0x-imx219.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mm-venice-gw72xx-0x-rs232-rts.dtb
@@ -344,7 +387,8 @@ dtb-$(CONFIG_ARCH_S32) += s32g274a-evb.dtb
 dtb-$(CONFIG_ARCH_S32) += s32g274a-rdb2.dtb
 dtb-$(CONFIG_ARCH_S32) += s32v234-evb.dtb \
 			  s32v234-sbc.dtb
-dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-sof-cs42888.dtb imx8qm-mek-sof-wm8960.dtb imx8qm-mek-sof.dtb
+dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-sof-cs42888.dtb imx8qm-mek-sof-wm8960.dtb \
+			  imx8qm-mek-revd-sof-wm8962.dtb imx8qm-mek-sof.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8qm-mek-md.dtb
 dtb-$(CONFIG_ARCH_MXC) += imx8mp-evk-powersave.dtb imx8mp-evk-powersave-non-rpmsg.dtb \
                           imx8mp-evk-hifiberry-dacpp-m-rpmsg.dtb

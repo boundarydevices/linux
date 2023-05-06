@@ -178,7 +178,7 @@ static const s64 ov5640_csi2_link_freqs[] = {
 };
 
 /* Link freq for default mode: UYVY 16 bpp, 2 data lanes. */
-#define OV5640_DEFAULT_LINK_FREQ	13
+#define OV5640_DEFAULT_LINK_FREQ	19
 
 enum ov5640_format_mux {
 	OV5640_FMT_MUX_YUV422 = 0,

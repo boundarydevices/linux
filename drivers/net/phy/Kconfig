@@ -190,11 +190,6 @@ config LXT_PHY
 	help
 	  Currently supports the lxt970, lxt971
 
-config INPHI_PHY
-	tristate "Inphi CDR 10G/25G Ethernet PHY"
-	help
-	  Currently supports the IN112525_S03 part @ 25G
-
 config INTEL_XWAY_PHY
 	tristate "Intel XWAY PHYs"
 	help

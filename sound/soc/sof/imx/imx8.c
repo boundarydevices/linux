@@ -200,15 +200,6 @@ static int imx8_run(struct snd_sof_dev *sdev)
 	return 0;
 }
 
-/* post fw run operations */
-int imx8_post_fw_run(struct snd_sof_dev *sdev)
-{
-	/* hardware requirement */
-	udelay(10);
-
-	return 0;
-}
-
 static int imx8_probe(struct snd_sof_dev *sdev)
 {
 	struct platform_device *pdev =
@@ -562,9 +553,6 @@ static struct snd_sof_dsp_ops sof_imx8_ops = {
 
 	/* firmware loading */
 	.load_firmware	= snd_sof_load_firmware_memcpy,
-
-	/* pre/post fw run */
-	.post_fw_run = imx8_post_fw_run,
 
 	/* Debug information */
 	.dbg_dump = imx8_dump,

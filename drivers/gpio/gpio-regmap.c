@@ -24,6 +24,8 @@ struct gpio_regmap {
 	unsigned int reg_dir_in_base;
 	unsigned int reg_dir_out_base;
 
+	int (*get_direction)(struct gpio_regmap *gpio, unsigned int offset);
+
 	int (*reg_mask_xlate)(struct gpio_regmap *gpio, unsigned int base,
 			      unsigned int offset, unsigned int *reg,
 			      unsigned int *mask);
@@ -111,6 +113,9 @@ static int gpio_regmap_get_direction(struct gpio_chip *chip,
 	unsigned int base, val, reg, mask;
 	int invert, ret;
 
+	if (gpio->get_direction)
+		return gpio->get_direction(gpio, offset);
+
 	if (gpio->reg_dir_out_base) {
 		base = gpio_regmap_addr(gpio->reg_dir_out_base);
 		invert = 0;
@@ -140,7 +145,16 @@ static int gpio_regmap_set_direction(struct gpio_chip *chip,
 {
 	struct gpio_regmap *gpio = gpiochip_get_data(chip);
 	unsigned int base, val, reg, mask;
-	int invert, ret;
+	int invert, ret, dir;
+
+	if (gpio->get_direction) {
+		dir = gpio->get_direction(gpio, offset);
+		if (dir == GPIO_LINE_DIRECTION_IN && output)
+			return -EOPNOTSUPP;
+		if (dir == GPIO_LINE_DIRECTION_OUT && !output)
+			return -EOPNOTSUPP;
+		return 0;
+	}
 
 	if (gpio->reg_dir_out_base) {
 		base = gpio_regmap_addr(gpio->reg_dir_out_base);
@@ -230,6 +244,7 @@ struct gpio_regmap *gpio_regmap_register(const struct gpio_regmap_config *config
 	gpio->reg_clr_base = config->reg_clr_base;
 	gpio->reg_dir_in_base = config->reg_dir_in_base;
 	gpio->reg_dir_out_base = config->reg_dir_out_base;
+	gpio->get_direction = config->get_direction;
 
 	/* if not set, assume there is only one register */
 	if (!gpio->ngpio_per_reg)
@@ -265,7 +280,8 @@ struct gpio_regmap *gpio_regmap_register(const struct gpio_regmap_config *config
 	else if (gpio->reg_set_base)
 		chip->set = gpio_regmap_set;
 
-	if (gpio->reg_dir_in_base || gpio->reg_dir_out_base) {
+	if (gpio->reg_dir_in_base || gpio->reg_dir_out_base ||
+	    gpio->get_direction) {
 		chip->get_direction = gpio_regmap_get_direction;
 		chip->direction_input = gpio_regmap_direction_input;
 		chip->direction_output = gpio_regmap_direction_output;

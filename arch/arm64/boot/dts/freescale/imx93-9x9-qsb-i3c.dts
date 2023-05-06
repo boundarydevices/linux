@@ -58,7 +58,7 @@
 		compatible = "nxp,ptn5110";
 		reg = <0x50 0x00 0x50>;
 		interrupt-parent = <&gpio3>;
-		interrupts = <27 IRQ_TYPE_LEVEL_LOW>;
+		interrupts = <26 IRQ_TYPE_LEVEL_LOW>;
 		status = "okay";
 
 		port {

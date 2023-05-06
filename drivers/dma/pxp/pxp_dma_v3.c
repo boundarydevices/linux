@@ -1565,10 +1565,9 @@ static uint32_t pxp_store_ctrl_config(struct pxp_pixmap *out, uint8_t mode,
 			ctrl.store_memory_en = 1;
 		}
 	} else {
-		if (fill_en) {
+		if (fill_en)
 			ctrl.fill_data_en = 1;
-			ctrl.wr_num_bytes = 3;
-		}
+
 		ctrl.store_memory_en = 1;
 	}
 
@@ -1577,6 +1576,7 @@ static uint32_t pxp_store_ctrl_config(struct pxp_pixmap *out, uint8_t mode,
 
 	ctrl.ch_en = 1;
 	ctrl.block_16 = 1;
+	ctrl.wr_num_bytes = 3;
 
 	return *(uint32_t *)&ctrl;
 }
@@ -1769,6 +1769,7 @@ static uint32_t pxp_fetch_ctrl_config(struct pxp_pixmap *in,
 
 	ctrl.block_16 = 1;
 	ctrl.ch_en = 1;
+	ctrl.rd_num_bytes = 3;
 
 	return *(uint32_t *)&ctrl;
 }
@@ -2512,16 +2513,29 @@ static int pxp_ps_config(struct pxp_pixmap *input,
 
 	switch (is_yuv(input->format)) {
 	case 0:		/* RGB */
-	case 1:		/* 1 Plane YUV */
+	case 1:
+		/*
+		 * 1 Plane YUV.
+		 * Refer to PXP manual, in monochrome modes Y8 and Y4,
+		 * the low 16 bits of PS_VBUF register are used as the
+		 * U/V data in the datapath instead of sourcing U/V data
+		 * from external buffers.
+		 */
+		if (input->format == PXP_PIX_FMT_GY04 ||
+		    input->format == PXP_PIX_FMT_GREY)
+			pxp_writel(0x8080, HW_PXP_PS_VBUF);
 		break;
 	case 2:		/* NV16,NV61,NV12,NV21 */
 		U = (input->paddr_u) ? input->paddr_u :
 				       input->paddr + input->width * input->height;
 		if ((input->format == PXP_PIX_FMT_NV16) ||
-		    (input->format == PXP_PIX_FMT_NV61))
+		    (input->format == PXP_PIX_FMT_NV61)) {
 			pxp_writel(U + offset, HW_PXP_PS_UBUF);
-		else
-			pxp_writel(U + (offset >> 1), HW_PXP_PS_UBUF);
+		} else {
+			offset = input->crop.y * input->pitch >> 1;
+			offset += input->crop.x;
+			pxp_writel(U + offset, HW_PXP_PS_UBUF);
+		}
 		break;
 	case 3:		/* YUV422P, YUV420P */
 		U = (input->paddr_u) ? input->paddr_u :
@@ -2532,15 +2546,19 @@ static int pxp_ps_config(struct pxp_pixmap *input,
 					       U + (input->width * input->height >> 1);
 			pxp_writel(V + (offset >> 1), HW_PXP_PS_VBUF);
 		} else if (input->format == PXP_PIX_FMT_YUV420P) {
-			pxp_writel(U + (offset >> 2), HW_PXP_PS_UBUF);
+			offset = input->crop.y * input->pitch >> 2;
+			offset += input->crop.x >> 1;
+			pxp_writel(U + offset, HW_PXP_PS_UBUF);
 			V = (input->paddr_v) ? input->paddr_v :
 					       U + (input->width * input->height >> 2);
-			pxp_writel(V + (offset >> 2), HW_PXP_PS_VBUF);
+			pxp_writel(V + offset, HW_PXP_PS_VBUF);
 		} else if (input->format == PXP_PIX_FMT_YVU420P) {
 			V = (input->paddr_v) ? input->paddr_v :
 					       U + (input->width * input->height >> 2);
-			pxp_writel(U + (offset >> 2), HW_PXP_PS_VBUF);
-			pxp_writel(V + (offset >> 2), HW_PXP_PS_UBUF);
+			offset = input->crop.y * input->pitch >> 2;
+			offset += input->crop.x >> 1;
+			pxp_writel(U + offset, HW_PXP_PS_VBUF);
+			pxp_writel(V + offset, HW_PXP_PS_UBUF);
 		}
 
 		break;
@@ -3280,6 +3298,22 @@ static void pxp_config_alpha(struct pxp_pixmap *input)
 	pxp_writel(*(uint32_t *)&alpha_ctrl, HW_PXP_ALPHA_A_CTRL);
 }
 
+/*
+ * Workaround to support data copy when only use AS engine
+ * It will use MERGEAS raster operation and only remain pixel
+ * data from As engine
+ */
+static void pxp_as_alpha_config(struct pxp_pixmap *input)
+{
+	if (alpha_blending_version != PXP_ALPHA_BLENDING_NONE)
+		return;
+
+	if (input->g_alpha.global_alpha_enable)
+		return;
+
+	alpha_blending_version = PXP_ALPHA_BLENDING_V1;
+}
+
 static int pxp_2d_op_handler(struct pxps *pxp)
 {
 	struct mux_config path_ctrl0;
@@ -3421,6 +3455,12 @@ reparse:
 
 		if (nodes_used & (1 << PXP_2D_PS))
 			pxp_config_alpha(input);
+
+		if (nodes_used & (1 << PXP_2D_AS)) {
+			/* Need to select mux3 port 0 when use AS engine */
+			path_ctrl0.mux3_sel = 0;
+			pxp_as_alpha_config(input);
+		}
 
 		pxp_2d_calc_mux(nodes_in_path, &path_ctrl0);
 		pr_debug("%s: path_ctrl0 = 0x%x\n",
