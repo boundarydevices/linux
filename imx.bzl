@@ -317,6 +317,12 @@ _IMX_IN_TREE_MODULES = [
     "drivers/iio/light/tsl2540.ko",
     "drivers/gpu/drm/panel/panel-nxp-rm67162.ko",
     "drivers/phy/freescale/phy-fsl-imx8q-pcie.ko",
+    "drivers/power/supply/mp2662_charger.ko",
+    "drivers/iio/industrialio-configfs.ko",
+    "drivers/iio/trigger/iio-trig-sysfs.ko",
+    "drivers/power/supply/max17042_battery.ko",
+    "drivers/iio/trigger/iio-trig-hrtimer.ko",
+    "drivers/iio/industrialio-sw-trigger.ko",
 ]
 
 def define_imx():
