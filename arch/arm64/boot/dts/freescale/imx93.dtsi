@@ -371,7 +371,7 @@
 			};
 
 			flexcan1: can@443a0000 {
-				compatible = "fsl,imx93-flexcan", "fsl,imx8mp-flexcan";
+				compatible = "fsl,imx93-flexcan";
 				reg = <0x443a0000 0x10000>;
 				interrupts = <GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk IMX93_CLK_BUS_AON>,
@@ -381,6 +381,7 @@
 				assigned-clock-parents = <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>;
 				assigned-clock-rates = <40000000>;
 				fsl,clk-source = /bits/ 8 <0>;
+				fsl,stop-mode = <&anomix_ns_gpr 0x14 0>;
 				status = "disabled";
 			};
 
@@ -805,7 +806,7 @@
 			};
 
 			flexcan2: can@425b0000 {
-				compatible = "fsl,imx93-flexcan", "fsl,imx8mp-flexcan";
+				compatible = "fsl,imx93-flexcan";
 				reg = <0x425b0000 0x10000>;
 				interrupts = <GIC_SPI 51 IRQ_TYPE_LEVEL_HIGH>;
 				clocks = <&clk IMX93_CLK_BUS_WAKEUP>,
@@ -815,6 +816,7 @@
 				assigned-clock-parents = <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>;
 				assigned-clock-rates = <40000000>;
 				fsl,clk-source = /bits/ 8 <0>;
+				fsl,stop-mode = <&wakeupmix_gpr 0x0C 2>;
 				status = "disabled";
 			};
 
