@@ -39,6 +39,23 @@
 
 #define	D11_PHY_HDR_LEN				6
 
+#define WL_CNT_XTLV_SLICE_IDX		256
+
+#define IOVAR_XTLV_BEGIN		4
+
+#define XTLV_TYPE_SIZE		2
+
+#define XTLV_TYPE_LEN_SIZE		4
+
+#define WL_CNT_IOV_BUF		2048
+
+#define CNT_VER_6	6
+#define CNT_VER_10	10
+#define CNT_VER_30	30
+
+/* Macro to calculate packing factor with scalar 4 in a xTLV */
+#define PACKING_FACTOR(args) ((args) % 4 == 0 ? 0 : (4 - ((args) % 4)))
+
 struct d11rxhdr_le {
 	__le16 RxFrameSize;
 	u16 PAD;
@@ -64,6 +81,125 @@ struct wlc_d11rxhdr {
 	s8 do_rssi_ma;
 	s8 rxpwr[4];
 } __packed;
+
+static const char fmac_ethtool_string_stats_v6[][ETH_GSTRING_LEN] = {
+	"txbyte", "txerror", "txprshort", "txnobuf", "txrunt", "txcmiss", "txphyerr",
+	"rxframe", "rxerror", "rxnobuf", "rxbadds", "rxfragerr",
+	"rxgiant", "rxbadproto", "rxbadda", "rxoflo", "d11cnt_rxcrc_off", "dmade",
+	"dmape", "tbtt", "pkt_callback_reg_fail", "txackfrm", "txbcnfrm", "rxtoolate",
+	"txtplunfl", "rxinvmachdr", "rxbadplcp", "rxstrt", "rxmfrmucastmbss",
+	"rxrtsucast", "rxackucast", "rxmfrmocast", "rxrtsocast", "rxdfrmmcast",
+	"rxcfrmmcast", "rxdfrmucastobss", "rxrsptmout", "rxf0ovfl", "rxf2ovfl", "pmqovfl",
+	"frmscons", "rxback", "txfrag", "txfail", "txretrie", "txrts", "txnoack", "rxmulti",
+
+	"txfrmsnt", "tkipmicfaill", "tkipreplay", "ccmpreplay", "fourwayfail", "wepicverr",
+	"tkipicverr", "tkipmicfaill_mcst", "tkipreplay_mcst", "ccmpreplay_mcst",
+	"fourwayfail_mcst", "wepicverr_mcst", "tkipicverr_mcst", "txexptime", "phywatchdog",
+	"prq_undirected_entries", "atim_suppress_count", "bcn_template_not_ready_done",
+
+	"rx1mbps", "rx5mbps5", "rx9mbps", "rx12mbps", "rx24mbps", "rx48mbps",
+	"rx108mbps", "rx216mbps", "rx324mbps", "rx432mbps", "rx540mbps",
+	"pktengrxdmcast", "bphy_txmpdu_sgi", "txmpdu_stbc", "rxdrop20s",
+};
+
+static const char fmac_ethtool_string_stats_v10[][ETH_GSTRING_LEN] = {
+	"txframe", "txbyte", "txretrans", "txerror", "txctl", "txprshort",
+	"txserr", "txnobuf", "txnoassoc", "txrunt",
+	"txchit", "txcmiss", "txphyerr", "txphycrs", "rxframe", "rxbyte",
+	"rxerror", "rxctl", "rxnobuf", "rxnondata",
+	"rxbadds", "rxbadcm", "rxfragerr", "rxrunt", "rxgiant", "rxnoscb",
+	"rxbadprot", "rxbadsrcma", "rxbadda", "rxfilter",
+	"rxoflo", "rxuflo[0]", "rxuflo[1]", "rxuflo[2]", "rxuflo[3]",
+	"rxuflo[4]", "rxuflo[5]", "d11cnt_rxcrc_off", "d11cnt_txnocts_off",
+	"dmade", "dmada", "dmape", "reset", "tbtt", "txdmawar",
+	"pkt_callback_reg_fail", "txallfrm", "txrtsfrm", "txctsfrm",
+	"txackfrm", "txdnlfrm", "txbcnfrm", "txfunfl[0]", "txfunfl[1]",
+	"txfunfl[2]", "txfunfl[3]", "txfunfl[4]", "txfunfl[5]", "rxtoolate",
+	"txfbw", "txtplunfl", "txphyerror", "rxfrmtoolong", "rxfrmtooshrt",
+	"rxinvmachdr", "rxbadfcs", "rxbadplcp", "rxcrsglitch",
+	"rxstrt", "rxdfrmucastmbss", "rxmfrmucastmbss", "rxcfrmucast",
+	"rxrtsucast", "rxctsucast", "rxackucast",
+	"rxdfrmocast", "rxmfrmocast", "rxcfrmocast", "rxrtsocast",
+	"rxctsocast", "rxdfrmmcast", "rxmfrmmcast", "rxcfrmmcast",
+	"rxbeaconmbss", "rxdfrmucastobss", "rxbeaconobss", "rxrsptmout",
+	"bcntxcancl", "rxf0ovfl", "rxf1ovfl", "rxf2ovfl", "txsfovfl",
+	"pmqovfl", "rxcgprqfrm", "rxcgprsqovfl", "txcgprsfail", "txcgprssuc", "prs_timeout",
+	"rxnack", "frmscons", "txnack", "rxback", "txback", "txfrag", "txmulti", "txfail",
+	"txretry", "txretrie", "rxdup", "txrts", "txnocts", "txnoack", "rxfrag", "rxmulti",
+	"rxcrc", "txfrmsnt", "rxundec", "tkipmicfaill", "tkipcntrmsr", "tkipreplay", "ccmpfmterr",
+	"ccmpreplay", "ccmpundec", "fourwayfail", "wepundec", "wepicverr", "decsuccess",
+	"tkipicverr", "wepexcluded", "psmwds", "phywatchdog", "prq_entries_handled",
+	"prq_undirected_entries", "prq_bad_entries", "atim_suppress_count",
+	"bcn_template_not_ready", "bcn_template_not_ready_done", "late_tbtt_dpc",
+	"rx1mbps", "rx2mbps", "rx5mbps5", "rx6mbps", "rx9mbps", "rx11mbps", "rx12mbps", "rx18mbps",
+	"rx24mbps", "rx36mbps", "rx48mbps", "rx54mbps", "rx108mbps", "rx162mbps",
+	"rx216mbps", "rx270mbps", "rx324mbps", "rx378mbps", "rx432mbps", "rx486mbps", "rx540mbps",
+	"pktengrxducast", "pktengrxdmcast", "bphy_rxcrsglitch", "bphy_b", "txexptime",
+	"rxmpdu_sgi", "txmpdu_stbc", "rxmpdu_stbc", "tkipmicfaill_mcst", "tkipcntrmsr_mcst",
+	"tkipreplay_mcst", "ccmpfmterr_mcst", "ccmpreplay_mcst", "ccmpundec_mcst",
+	"fourwayfail_mcst", "wepundec_mcst", "wepicverr_mcst", "decsuccess_mcst",
+	"tkipicverr_mcst", "wepexcluded_mcst", "reinit", "pstatxnoassoc",
+	"pstarxucast", "pstarxbcmc", "pstatxbcmc", "cso_normal", "chained",
+	"chainedsz1", "unchained", "maxchainsz", "currchainsz", "rxdrop20s",
+	"pciereset", "cfgrestore", "reinitreason[0]", "reinitreason[1]",
+	"reinitreason[2]", "reinitreason[3]", "reinitreason[4]",
+	"reinitreason[5]", "reinitreason[6]", "reinitreason[7]", "rxrtry",
+};
+
+static const char fmac_ethtool_string_stats_v30[][ETH_GSTRING_LEN] = {
+	"txframe", "txbyte", "txretrans", "txerror", "txctl", "txprshort", "txserr", "txnobuf",
+	"txnoassoc", "txrunt", "txchit", "txcmiss", "txuflo", "txphyerr", "txphycrs",
+	"rxframe", "rxbyte", "rxerror", "rxctl", "rxnobuf", "rxnondata", "rxbadds", "rxbadcm",
+	"rxfragerr", "rxrunt", "rxgiant", "rxnoscb", "rxbadproto", "rxbadsrcmac",
+	"rxbadda", "rxfilter", "rxoflo", "rxuflo[0]", "rxuflo[1]",
+	"rxuflo[2]", "rxuflo[3]", "rxuflo[4]", "rxuflo[5]",
+
+	"d11cnt_txrts_off", "d11cnt_rxcrc_off", "d11cnt_txnocts_off", "dmade", "dmada",
+	"dmape", "reset", "tbtt", "txdmawar", "pkt_callback_reg_fail",
+	"txfrag", "txmulti", "txfail", "txretry",
+	"txretrie", "rxdup", "txrts", "txnocts", "txnoack", "rxfrag",
+	"rxmulti", "rxcrc", "txfrmsnt", "rxundec",
+	"tkipmicfaill", "tkipcntrmsr", "tkipreplay", "ccmpfmterr",
+	"ccmpreplay", "ccmpundec", "fourwayfail", "wepundec",
+	"wepicverr", "decsuccess", "tkipicverr", "wepexcluded",
+	"txchanrej", "psmwds", "phywatchdog",
+	"prq_entries_handled", "prq_undirected_entries", "prq_bad_entries",
+	"atim_suppress_count", "bcn_template_not_ready", "bcn_template_not_ready_done",
+	"late_tbtt_dpc",
+
+	"rx1mbps", "rx2mbps", "rx5mbps5", "rx6mbps", "rx9mbps",
+	"rx11mbps", "rx12mbps", "rx18mbps", "rx24mbps", "rx36mbps",
+	"rx48mbps", "rx54mbps", "rx108mbps", "rx162mbps", "rx216mbps",
+	"rx270mbps", "rx324mbps", "rx378mbps", "rx432mbps", "rx486mbps",
+	"rx540mbps", "rfdisable", "txexptime", "txmpdu_sgi", "rxmpdu_sgi",
+	"txmpdu_stbc", "rxmpdu_stbc", "rxundec_mcst",
+
+	"tkipmicfaill_mcst", "tkipcntrmsr_mcst", "tkipreplay_mcst",
+	"ccmpfmterr_mcst", "ccmpreplay_mcst", "ccmpundec_mcst",
+	"fourwayfail_mcst", "wepundec_mcst", "wepicverr_mcst",
+	"decsuccess_mcst", "tkipicverr_mcst", "wepexcluded_mcst",
+	"dma_hang", "reinit", "pstatxucast",
+	"pstatxnoassoc", "pstarxucast", "pstarxbcmc",
+	"pstatxbcmc", "cso_passthrough", "cso_normal",
+	"chained", "chainedsz1", "unchained",
+	"maxchainsz", "currchainsz", "pciereset",
+	"cfgrestore", "reinitreason[0]", "reinitreason[1]",
+	"reinitreason[2]", "reinitreason[3]", "reinitreason[4]",
+	"reinitreason[5]", "reinitreason[6]", "reinitreason[7]",
+	"rxrtry", "rxmpdu_mu",
+
+	"txbar", "rxbar", "txpspoll", "rxpspoll", "txnull",
+	"rxnull", "txqosnull", "rxqosnull", "txassocreq", "rxassocreq",
+	"txreassocreq", "rxreassocreq", "txdisassoc", "rxdisassoc",
+	"txassocrsp", "rxassocrsp", "txreassocrsp", "rxreassocrsp",
+	"txauth", "rxauth", "txdeauth", "rxdeauth", "txprobereq",
+	"rxprobereq", "txprobersp", "rxprobersp", "txaction",
+	"rxaction", "ampdu_wds", "txlost", "txdatamcast",
+	"txdatabcast", "psmxwds", "rxback", "txback",
+	"p2p_tbtt", "p2p_tbtt_miss", "txqueue_start", "txqueue_end",
+	"txbcast", "txdropped", "rxbcast", "rxdropped",
+	"txq_end_assoccb",
+};
 
 #define BRCMF_IF_STA_LIST_LOCK_INIT(ifp) spin_lock_init(&(ifp)->sta_list_lock)
 #define BRCMF_IF_STA_LIST_LOCK(ifp, flags) \
@@ -596,11 +732,148 @@ static void brcmf_ethtool_get_drvinfo(struct net_device *ndev,
 	strscpy(info->fw_version, drvr->fwver, sizeof(info->fw_version));
 	strscpy(info->bus_info, dev_name(drvr->bus_if->dev),
 		sizeof(info->bus_info));
+
+	if (!drvr->cnt_ver) {
+		int ret;
+		u8 *iovar_out;
+
+		iovar_out = kzalloc(WL_CNT_IOV_BUF, GFP_KERNEL);
+		if (!iovar_out)
+			return;
+		ret = brcmf_fil_iovar_data_get(ifp, "counters", iovar_out, WL_CNT_IOV_BUF);
+		if (ret) {
+			brcmf_err("Failed to get counters, code :%d\n", ret);
+			goto done;
+		}
+		memcpy(&drvr->cnt_ver, iovar_out, sizeof(drvr->cnt_ver));
+done:
+	kfree(iovar_out);
+	iovar_out = NULL;
+	}
+}
+
+static void brcmf_et_get_strings(struct net_device *net_dev,
+				u32 sset, u8 *strings)
+{
+	struct brcmf_if *ifp = netdev_priv(net_dev);
+	struct brcmf_pub *drvr = ifp->drvr;
+
+	if (sset == ETH_SS_STATS) {
+		switch (drvr->cnt_ver) {
+		case CNT_VER_6:
+			memcpy(strings, fmac_ethtool_string_stats_v6,
+				sizeof(fmac_ethtool_string_stats_v6));
+			break;
+		case CNT_VER_10:
+			memcpy(strings, fmac_ethtool_string_stats_v10,
+				sizeof(fmac_ethtool_string_stats_v10));
+			break;
+		case CNT_VER_30:
+			memcpy(strings, fmac_ethtool_string_stats_v30,
+				sizeof(fmac_ethtool_string_stats_v30));
+			break;
+		default:
+			brcmf_err("Unsupported counters version\n");
+		}
+	}
+}
+
+static int brcmf_find_wlc_cntr_tlv(u8 *src, u16 *len)
+{
+	u16 tlv_id, data_len;
+	u16 packing_offset, cur_tlv = IOVAR_XTLV_BEGIN;
+
+	while (cur_tlv < *len) {
+		memcpy(&tlv_id, (src + cur_tlv), sizeof(*len));
+		memcpy(&data_len, (src + cur_tlv + XTLV_TYPE_SIZE), sizeof(*len));
+		if (tlv_id == WL_CNT_XTLV_SLICE_IDX) {
+			*len = data_len;
+			return cur_tlv;
+		}
+		/* xTLV data has 4 bytes packing. So caclculate the packing offset using the data */
+		packing_offset = PACKING_FACTOR(data_len);
+		cur_tlv += XTLV_TYPE_LEN_SIZE + data_len + packing_offset;
+	}
+	return -EINVAL;
+}
+
+static void brcmf_et_get_stats(struct net_device *netdev,
+				struct ethtool_stats *et_stats, u64 *results_buf)
+{
+	struct brcmf_if *ifp = netdev_priv(netdev);
+	u8 *iovar_out, *src, ret;
+	u16 version, len, xTLV_wl_cnt_offset = 0;
+	u16 soffset = 0, idx = 0;
+
+	iovar_out = kzalloc(WL_CNT_IOV_BUF, GFP_KERNEL);
+
+	if (!iovar_out)
+		return;
+
+	ret = brcmf_fil_iovar_data_get(ifp, "counters", iovar_out, WL_CNT_IOV_BUF);
+	if (ret) {
+		brcmf_err("Failed to get counters, code :%d\n", ret);
+		goto done;
+	}
+	src = iovar_out;
+
+	memcpy(&version, src, sizeof(version));
+	soffset += sizeof(version);
+	memcpy(&len, (src + soffset), sizeof(len));
+	soffset += sizeof(len);
+
+	/* Check counters version and decide if its non-TLV or TLV (version>=30)*/
+	if (version >= CNT_VER_30) {
+		xTLV_wl_cnt_offset = brcmf_find_wlc_cntr_tlv(src, &len);
+		len = (len / sizeof(u32));
+	} else {
+		len = (len / sizeof(u32)) - sizeof(u32);
+	}
+
+	src = src + soffset + xTLV_wl_cnt_offset;
+	while (idx < (len)) {
+		results_buf[idx++] = *((u32 *)src);
+		src += sizeof(u32);
+	}
+done:
+	kfree(iovar_out);
+	iovar_out = NULL;
+}
+
+static int brcmf_et_get_scount(struct net_device *dev, int sset)
+{
+	u16 array_size;
+	struct brcmf_if *ifp = netdev_priv(dev);
+	struct brcmf_pub *drvr = ifp->drvr;
+
+	if (sset == ETH_SS_STATS) {
+		switch (drvr->cnt_ver) {
+		case CNT_VER_6:
+			array_size = ARRAY_SIZE(fmac_ethtool_string_stats_v6);
+			break;
+		case CNT_VER_10:
+			array_size = ARRAY_SIZE(fmac_ethtool_string_stats_v10);
+			break;
+		case CNT_VER_30:
+			array_size = ARRAY_SIZE(fmac_ethtool_string_stats_v30);
+			break;
+		default:
+			brcmf_err("Unsupported counters version\n");
+			return -EOPNOTSUPP;
+		}
+	} else {
+		brcmf_dbg(INFO, "Does not support ethtool string set %d\n", sset);
+		return -EOPNOTSUPP;
+	}
+	return array_size;
 }
 
 static const struct ethtool_ops brcmf_ethtool_ops = {
 	.get_drvinfo = brcmf_ethtool_get_drvinfo,
 	.get_ts_info = ethtool_op_get_ts_info,
+	.get_strings		= brcmf_et_get_strings,
+	.get_ethtool_stats	= brcmf_et_get_stats,
+	.get_sset_count		= brcmf_et_get_scount,
 };
 
 static int brcmf_netdev_stop(struct net_device *ndev)
