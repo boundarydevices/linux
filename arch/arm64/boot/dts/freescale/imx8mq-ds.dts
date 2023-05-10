@@ -438,6 +438,16 @@
 	cpu-supply = <&reg_arm_dram>;
 };
 
+&dcss {
+	status = "okay";
+
+	port {
+		dcss_out: endpoint {
+			remote-endpoint = <&hdmi_in>;
+		};
+	};
+};
+
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_fec1>;
@@ -459,6 +469,26 @@
 			reg-mask = <0x90>;
 		};
 	};
+};
+
+&gpu3d {
+	status = "okay";
+};
+
+&hdmi {
+	compatible = "cdn,imx8mq-hdmi";
+	lane-mapping = <0xe4>;
+	status = "okay";
+
+	port {
+		hdmi_in: endpoint {
+			remote-endpoint = <&dcss_out>;
+		};
+	};
+};
+
+&irqsteer {
+	status = "okay";
 };
 
 &i2c1 {
