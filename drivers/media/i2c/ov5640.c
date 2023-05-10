@@ -2485,13 +2485,6 @@ static void ov5640_powerup_sequence(struct ov5640_dev *sensor)
 				 OV5640_REG_SYS_CTRL0_SW_RST);
 	}
 	usleep_range(20000, 25000);
-
-	/*
-	 * software standby: allows registers programming;
-	 * exit at restore_mode() for CSI, s_stream(1) for DVP
-	 */
-	ov5640_write_reg(sensor, OV5640_REG_SYS_CTRL0,
-			 OV5640_REG_SYS_CTRL0_SW_PWDN);
 }
 
 static int ov5640_set_power_on(struct ov5640_dev *sensor)

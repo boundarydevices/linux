@@ -41,7 +41,7 @@
 
 /* PPI */
 #define EnContCK		TRUE
-#define HSSetNum		1
+#define HSSetNum		3
 #define EnDeSkew		TRUE
 #define PPIDbgSel		12
 #define RegIgnrNull		1
@@ -614,15 +614,7 @@ static void mipi_rx_configuration(struct it6161 *it6161)
 	it6161_mipi_rx_set_bits(it6161, 0x80, 0x20, ENABLE_MIPI_RX_EXTERNAL_CLOCK << 5);
 
 	it6161_mipi_rx_write(it6161, 0x21, 0x00);
-
-	/* Workaround:
-	 * Some IT6161 on iMX8ULP EVK boards will trigger PPS P video stable
-	 * interrupt and the hdmi display will black then resume.
-	 * IT6161 MIPI RX may have compatibility issue, but not confirmed by ITE.
-	 * Set MIPI RX reg 0x84=0xC0,
-	 * display black issue will not be observed.
-	 */
-	it6161_mipi_rx_write(it6161, 0x84, 0xC0);
+	it6161_mipi_rx_set_bits(it6161, 0x84, 0x70, 0x00);
 
 	it6161_mipi_rx_set_bits(it6161, 0xA0, 0x01, EnMBPM);
 
