@@ -62,3 +62,7 @@
 		>;
 	};
 };
+
+&uart3 {
+	status = "disabled";
+};
