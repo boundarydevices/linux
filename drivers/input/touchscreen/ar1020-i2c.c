@@ -467,7 +467,7 @@ error:
 /*
  * Unregister/remove the kernel driver from memory.
  */
-static int ar1020_i2c_remove(struct i2c_client *client)
+static void ar1020_i2c_remove(struct i2c_client *client)
 {
 	struct ar1020_i2c_priv *priv =
 			(struct ar1020_i2c_priv *)i2c_get_clientdata(client);
@@ -476,7 +476,6 @@ static int ar1020_i2c_remove(struct i2c_client *client)
 	input_unregister_device(priv->input);
 	kfree(priv);
 	g_priv = NULL;
-	return 0;
 }
 
 /* This structure describe a list of supported slave chips */
