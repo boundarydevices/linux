@@ -311,7 +311,7 @@ exit1:
 	tfp410_off(tfp);
 	tfp->rtask = NULL;
 //	pr_err("%s: ts_thread exiting\n",client_name);
-	complete_and_exit(&tfp->init_exit, 0);
+	kthread_complete_and_exit(&tfp->init_exit, 0);
 }
 
 /*
@@ -563,10 +563,11 @@ release_gpio:
 	return result;
 }
 
-static int tfp410_remove(struct i2c_client *client)
+static void tfp410_remove(struct i2c_client *client)
 {
 	struct tfp410_priv *tfp = i2c_get_clientdata(client);
-	int result = tfp410_off(tfp);
+
+	tfp410_off(tfp);
 	device_remove_file(&client->dev, &dev_attr_tfp410_reg);
 	if (tfp) {
 		if (tfp->irq >= 0)
@@ -574,7 +575,6 @@ static int tfp410_remove(struct i2c_client *client)
 		tfp_deinit(tfp);
 		kfree(tfp);
 	}
-	return result;
 }
 
 static int tfp410_suspend(struct device *dev)
