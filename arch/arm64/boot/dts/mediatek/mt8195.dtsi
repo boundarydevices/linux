@@ -2940,10 +2940,7 @@
 			reg = <0 0x1c009000 0 0x1000>;
 			interrupts = <GIC_SPI 645 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
-			clocks = <&vdosys0 CLK_VDO0_DSC_WRAP0>,
-				<&vdosys0 CLK_VDO0_DL_ASYNC4>,
-				<&vdosys1 CLK_VDO1_VDO0_DSC_TO_VDO1_DL_ASYNC>;
-			clock-names = "dsc","dsc_async","dsc_async2";
+			clocks = <&vdosys0 CLK_VDO0_DSC_WRAP0>;
 			mediatek,gce-client-reg =
 				 <&gce0 SUBSYS_1c00XXXX 0x9000 0x1000>;
 		};
@@ -3031,10 +3028,7 @@
 			reg = <0 0x1c014000 0 0x1000>;
 			interrupts = <GIC_SPI 656 IRQ_TYPE_LEVEL_HIGH 0>;
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS0>;
-			clocks = <&vdosys0 CLK_VDO0_VPP_MERGE0>,
-				<&vdosys0 CLK_VDO0_DL_ASYNC3>,
-				<&vdosys1 CLK_VDO1_VDO0_MERGE_TO_VDO1_DL_ASYNC>;
-			clock-names = "merge","merge_async","merge_async2";
+			clocks = <&vdosys0 CLK_VDO0_VPP_MERGE0>;
 			mediatek,gce-client-reg =
 				 <&gce0 SUBSYS_1c01XXXX 0x4000 0x1000>;
 		};
@@ -3055,6 +3049,10 @@
 			compatible = "mediatek,mt8195-vdosys0", "syscon";
 			reg = <0 0x1c01a000 0 0x1000>;
 			mboxes = <&gce0 0 CMDQ_THR_PRIO_4>;
+			clocks = <&vdosys0 CLK_VDO0_DL_ASYNC2>,
+				<&vdosys0 CLK_VDO0_DL_ASYNC3>,
+				<&vdosys0 CLK_VDO0_DL_ASYNC4>;
+			clock-names = "cross_sys_async0","cross_sys_async1","cross_sys_async2";
 			#clock-cells = <1>;
 		};
 
@@ -3063,6 +3061,9 @@
 			reg = <0 0x1c100000 0 0x1000>;
 			mboxes = <&gce0 1 CMDQ_THR_PRIO_4>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c10XXXX 0x0000 0x1000>;
+			clocks = <&vdosys1 CLK_VDO1_VDO0_MERGE_TO_VDO1_DL_ASYNC>,
+				<&vdosys1 CLK_VDO1_VDO0_DSC_TO_VDO1_DL_ASYNC>;
+			clock-names = "cross_sys_async0","cross_sys_async1";
 			#clock-cells = <1>;
 			#reset-cells = <1>;
 		};
@@ -3215,9 +3216,8 @@
 			reg = <0 0x1c110000 0 0x1000>;
 			interrupts = <GIC_SPI 507 IRQ_TYPE_LEVEL_HIGH 0>;
 			clocks = <&vdosys1 CLK_VDO1_VPP_MERGE4>,
-				 <&vdosys1 CLK_VDO1_MERGE4_DL_ASYNC>,
-				 <&vdosys0 CLK_VDO0_DL_ASYNC2>;
-			clock-names = "merge","merge_async","merge_async2";
+				 <&vdosys1 CLK_VDO1_MERGE4_DL_ASYNC>;
+			clock-names = "merge","merge_async";
 			power-domains = <&spm MT8195_POWER_DOMAIN_VDOSYS1>;
 			mediatek,gce-client-reg = <&gce0 SUBSYS_1c11XXXX 0x0000 0x1000>;
 			mediatek,merge-fifo-en = <1>;

@@ -1165,6 +1165,7 @@
 
 &disp_dpi1 {
 	status = "okay";
+	mediatek,indicated-display-path = <1>;
 };
 
 &hdmirx0 {
@@ -1177,13 +1178,6 @@
 
 &hdmi0 {
 	status = "okay";
-};
-
-&ovl1 {
-	/* DSI0 does not support dualpipe output,
-	 * so disable dualpipe by disabling ovl1 node
-	 */
-	status = "disabled";
 };
 
 &pwm {

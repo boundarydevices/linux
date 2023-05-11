@@ -1195,14 +1195,10 @@
 
 &disp_dpi1 {
 	status = "okay";
+	mediatek,indicated-display-path = <1>;
 };
 
 &hdmi0 {
 	status = "okay";
-};
-
-&ovl1 {
-	/* Enable dual-pipe (4K60Hz output for vdosys0) by default */
-	mediatek,enable-dualpipe;
 };
 
