@@ -2142,7 +2142,7 @@ exit1:
 	return ret;
 }
 
-static int tc358778_remove(struct i2c_client *client)
+static void tc358778_remove(struct i2c_client *client)
 {
 	struct tc358778_priv *tc = i2c_get_clientdata(client);
 
@@ -2153,7 +2153,6 @@ static int tc358778_remove(struct i2c_client *client)
 	fb_unregister_client(&tc->drmnb);
 	fb_unregister_client(&tc->fbnb);
 	tc_powerdown(tc);
-	return 0;
 }
 
 static void tc358778_shutdown(struct i2c_client *client)
