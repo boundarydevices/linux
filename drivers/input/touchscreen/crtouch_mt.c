@@ -1169,7 +1169,7 @@ err_free_mem:
 	return result;
 }
 
-static int crtouch_remove(struct i2c_client *client)
+static void crtouch_remove(struct i2c_client *client)
 {
 	struct crtouch_data *crtouch = i2c_get_clientdata(client);
 
@@ -1186,7 +1186,6 @@ static int crtouch_remove(struct i2c_client *client)
 	if (gpio_is_valid(crtouch->reset_gpio))
 		gpio_set_value(crtouch->reset_gpio, crtouch->reset_active_low ? 0 : 1);
 	kfree(crtouch);
-	return 0;
 }
 
 static const struct i2c_device_id crtouch_idtable[] = {
