@@ -1159,8 +1159,8 @@ static void xrm117x_break_ctl(struct uart_port *port, int break_state)
 }
 
 static void xrm117x_set_termios(struct uart_port *port,
-				  struct ktermios *termios,
-				  struct ktermios *old)
+				struct ktermios *termios,
+				const struct ktermios *old)
 {
 	struct xrm117x_ch *ch = to_xrm117x_ch(port, port);
 	unsigned int lcr, flow = 0;
@@ -1770,10 +1770,10 @@ static int xrm117x_spi_probe(struct spi_device *spi)
 }
 
 
-static int xrm117x_spi_remove(struct spi_device *spi)
+static void xrm117x_spi_remove(struct spi_device *spi)
 {
 
-      return xrm117x_remove(&spi->dev);
+      xrm117x_remove(&spi->dev);
 }
 
 static const struct spi_device_id xrm117x_spi_ids[] = {
