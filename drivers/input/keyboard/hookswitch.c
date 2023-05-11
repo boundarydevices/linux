@@ -200,15 +200,13 @@ static int cwc_hookswitch_probe(struct i2c_client *client,
 	return ret;
 }
 
-static int cwc_hookswitch_remove(struct i2c_client *client)
+static void cwc_hookswitch_remove(struct i2c_client *client)
 {
 	sysfs_remove_group(&fake_keyboard_dev->dev.kobj, &hookswitch_attr_group);
 	input_unregister_device(fake_keyboard_dev);
 
 	if (!IS_ERR_OR_NULL(thread))
 		kthread_stop(thread);
-
-	return 0;
 }
 
 static const struct i2c_device_id cwc_hookswitch_id[] = {
