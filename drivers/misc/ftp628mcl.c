@@ -351,14 +351,12 @@ static int ftp628_probe(struct spi_device *spi)
 	return 0;
 }
 
-static int ftp628_remove(struct spi_device *spi)
+static void ftp628_remove(struct spi_device *spi)
 {
 	misc_deregister(&ftp628_device);
 	sysfs_remove_group(&spi->dev.kobj, &ftp628_attr_group);
 
 	dev_info(&spi->dev, "removed!\n");
-
-	return 0;
 }
 
 static struct spi_driver ftp628_driver = {
