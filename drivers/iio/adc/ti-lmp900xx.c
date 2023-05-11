@@ -1051,7 +1051,7 @@ error1:
 	return ret;
 }
 
-static int lmp900xx_remove(struct spi_device *spi)
+static void lmp900xx_remove(struct spi_device *spi)
 {
 	struct iio_dev *iio = spi_get_drvdata(spi);
 	struct lmp900xx_state *st = iio_priv(iio);
@@ -1061,7 +1061,6 @@ static int lmp900xx_remove(struct spi_device *spi)
 	iio_trigger_unregister(st->trig);
 	gpiochip_remove(&st->gpio.chip);
 	regulator_disable(st->reg);
-	return 0;
 }
 
 static const struct spi_device_id lmp900xx_id[] = {
