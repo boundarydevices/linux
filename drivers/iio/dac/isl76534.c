@@ -328,10 +328,9 @@ exit1:
 	return ret;
 }
 
-static int isl76534_remove(struct i2c_client *client)
+static void isl76534_remove(struct i2c_client *client)
 {
 	iio_device_unregister(i2c_get_clientdata(client));
-	return 0;
 }
 
 static const struct i2c_device_id isl76534_id[] = {
