@@ -195,7 +195,7 @@ static void serial_max7w_shutdown(struct uart_port *port)
 
 static void
 serial_max7w_set_termios(struct uart_port *port, struct ktermios *termios,
-		       struct ktermios *old)
+		       const struct ktermios *old)
 {
 }
 
@@ -633,7 +633,7 @@ out1:
 	return ret;
 }
 
-static int max7w_remove(struct i2c_client *client)
+static void max7w_remove(struct i2c_client *client)
 {
 	struct uart_max7w_sc *sc = i2c_get_clientdata(client);
 	sc->stop = 1;
@@ -645,7 +645,6 @@ static int max7w_remove(struct i2c_client *client)
 	free_irq(sc->irq, sc);
 	if (sc->reset_gpio)
 		gpiod_set_value(sc->reset_gpio, 1);
-	return 0;
 }
 
 /*-----------------------------------------------------------------------*/
