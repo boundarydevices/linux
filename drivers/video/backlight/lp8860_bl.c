@@ -367,7 +367,7 @@ err_gpio:
 	return ret;
 }
 
-static int lp8860_backlight_remove(struct i2c_client *client)
+static void lp8860_backlight_remove(struct i2c_client *client)
 {
 	struct lp8860_bl_data *pb = i2c_get_clientdata(client);
 
@@ -376,7 +376,6 @@ static int lp8860_backlight_remove(struct i2c_client *client)
 
 	if (pb->exit)
 		pb->exit(&client->dev);
-	return 0;
 }
 
 #ifdef CONFIG_PM_SLEEP
