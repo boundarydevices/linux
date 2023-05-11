@@ -3080,7 +3080,7 @@ static struct regulator *gpo_regulator;
 
 static int ov5642_probe(struct i2c_client *adapter,
 				const struct i2c_device_id *device_id);
-static int ov5642_remove(struct i2c_client *client);
+static void ov5642_remove(struct i2c_client *client);
 
 static s32 ov5642_read_reg(u16 reg, u8 *val);
 static s32 ov5642_write_reg(u16 reg, u8 val);
@@ -4184,7 +4184,7 @@ static int ov5642_probe(struct i2c_client *client,
  * @param client            struct i2c_client *
  * @return  Error code indicating success or failure
  */
-static int ov5642_remove(struct i2c_client *client)
+static void ov5642_remove(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 
@@ -4206,8 +4206,6 @@ static int ov5642_remove(struct i2c_client *client)
 
 	device_remove_file(&client->dev,
 		&dev_attr_ov5642_reg);
-
-	return 0;
 }
 
 /*!
