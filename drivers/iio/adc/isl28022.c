@@ -835,7 +835,7 @@ error2:
 	return ret;
 }
 
-static int isl28022_remove(struct i2c_client *client)
+static void isl28022_remove(struct i2c_client *client)
 {
 	struct iio_dev *iio = i2c_get_clientdata(client);
 	struct isl28022_state *st = iio_priv(iio);
@@ -843,7 +843,6 @@ static int isl28022_remove(struct i2c_client *client)
 	iio_device_unregister(iio);
 	iio_triggered_buffer_cleanup(iio);
 	iio_trigger_unregister(st->trig);
-	return 0;
 }
 
 static const struct i2c_device_id isl2802x_id[] = {
