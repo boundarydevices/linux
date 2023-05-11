@@ -118,7 +118,7 @@ static int hp_init(struct device *dev, struct imx_sgtl5000_data *data)
 	gpios->jack_status_check = hpjack_status_check;
 	gpios->data = data;
 
-	ret = snd_soc_card_jack_new(&data->card, "Headphone Jack", SND_JACK_HEADPHONE,
+	ret = snd_soc_card_jack_new_pins(&data->card, "Headphone Jack", SND_JACK_HEADPHONE,
 		&data->hp_jack, &data->hp_jack_pins, 1);
 
 	gpios->desc = gpiod_get_index(dev, gpios->name, gpios->idx, GPIOD_IN);
