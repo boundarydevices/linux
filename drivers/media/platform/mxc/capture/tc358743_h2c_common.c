@@ -2438,7 +2438,6 @@ static struct snd_soc_component_driver soc_component_dev_tc358743 = {
 	.idle_bias_on		= 1,
 	.use_pmdown_time	= 1,
 	.endianness		= 1,
-	.non_legacy_dai_naming	= 1,
 };
 
 #define AIC3X_RATES	SNDRV_PCM_RATE_8000_96000
@@ -3127,7 +3126,7 @@ err4:
  * @param client	    struct i2c_client *
  * @return  Error code indicating success or failure
  */
-static int tc358743_remove(struct i2c_client *client)
+static void tc358743_remove(struct i2c_client *client)
 {
 	int i;
 	struct tc_data *td = to_tc358743(client);
@@ -3157,7 +3156,6 @@ static int tc358743_remove(struct i2c_client *client)
 	mutex_destroy(&td->access_lock);
 	if (g_td == td)
 		g_td = NULL;
-	return 0;
 }
 
 static struct i2c_driver tc358743_i2c_driver;
