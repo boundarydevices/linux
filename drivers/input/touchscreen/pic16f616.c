@@ -548,7 +548,7 @@ exit1:
 	return err;
 }
 
-static int ts_remove(struct i2c_client *client)
+static void ts_remove(struct i2c_client *client)
 {
 	struct pic16f616_ts* ts = i2c_get_clientdata(client);
 
@@ -561,7 +561,6 @@ static int ts_remove(struct i2c_client *client)
 		pr_err("%s: Error ts!=gts\n",client_name);
 	}
 	kfree(ts);
-	return 0;
 }
 
 static int pic_setup(char *options)
