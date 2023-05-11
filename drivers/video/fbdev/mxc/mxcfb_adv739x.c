@@ -442,7 +442,7 @@ exit1:
 	return ret;
 }
 
-static int adv739x_remove(struct i2c_client *client)
+static void adv739x_remove(struct i2c_client *client)
 {
 	struct adv739x_data *adv739x = i2c_get_clientdata(client);
 
@@ -450,7 +450,6 @@ static int adv739x_remove(struct i2c_client *client)
 	mxc_dispdrv_unregister(adv739x->disp_adv739x);
 	device_remove_file(&client->dev, &dev_attr_adv739x_reg);
 	kfree(adv739x);
-	return 0;
 }
 
 static const struct i2c_device_id adv739x_id[] = {
