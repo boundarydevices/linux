@@ -53,10 +53,9 @@ static const struct sensor_device_attribute ads1000_attr =
 /*
  * Driver interface
  */
-static int ads1000_remove(struct i2c_client *client)
+static void ads1000_remove(struct i2c_client *client)
 {
 	device_remove_file(&client->dev, &ads1000_attr.dev_attr);
-	return 0;
 }
 
 static int ads1000_probe
