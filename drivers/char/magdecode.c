@@ -77,14 +77,10 @@ struct mag_dev {
 	/*
 	 * gpio pin numbers and flags
 	 */
-	int front_pin;
-	int front_pin_close_high;
-	int rear_pin;
-	int rear_pin_close_high;
-	int clock_pin;
-	int clock_pin_active_high;
-	int data_pin;
-	int data_pin_active_high;
+	struct gpio_desc *front_pin;
+	struct gpio_desc *rear_pin;
+	struct gpio_desc *clock_pin;
+	struct gpio_desc *data_pin;
 	char edge;
 	char last_front;
 	char last_rear;
@@ -148,17 +144,16 @@ static void data_timer(struct timer_list *t)
 	spin_unlock_irqrestore(&dev->lock, flags);
 }
 
-static void check_pin(struct mag_dev *dev,
-		      int pin, int active_high)
+static void check_pin(struct mag_dev *dev, struct gpio_desc *pin, u8 event)
 {
-	u8 level, event;
-	level = (0 != gpio_get_value(pin)) ^ active_high;
+	u8 level = gpiod_get_value(pin) ? 0 : 1;
 
 	/* Determine which switch it was, and whether it was opened or closed */
-	if (pin == dev->front_pin)
-		dev->last_front = event = 'F' | (level << 5);
+	/* Upper case means active, lower case inactive */
+	if (event == 'F')
+		dev->last_front = event |= (level << 5);
 	else
-		dev->last_rear = event = 'R' | (level << 5);
+		dev->last_rear = event |= (level << 5);
 
 	/* Add to event queue */
 	dev->events[dev->e_add].type = event;
@@ -168,10 +163,9 @@ static void check_pin(struct mag_dev *dev,
 	wake_up(&dev->queue);
 }
 
-static void mag_switch_handler(struct mag_dev *dev,
-			       int pin, int active_high)
+static void mag_switch_handler(struct mag_dev *dev, struct gpio_desc *pin, u8 event)
 {
-	check_pin(dev, pin, active_high);
+	check_pin(dev, pin, event);
 }
 
 static void front_timer(struct timer_list *t)
@@ -181,8 +175,7 @@ static void front_timer(struct timer_list *t)
 
 	spin_lock_irqsave(&dev->lock, flags);
 
-	mag_switch_handler(dev, dev->front_pin,
-			   dev->front_pin_close_high);
+	mag_switch_handler(dev, dev->front_pin, 'F');
 
 	spin_unlock_irqrestore(&dev->lock, flags);
 }
@@ -201,8 +194,7 @@ static void rear_timer(struct timer_list *t)
 
 	spin_lock_irqsave(&dev->lock, flags);
 
-	mag_switch_handler(dev, dev->rear_pin,
-			   dev->rear_pin_close_high);
+	mag_switch_handler(dev, dev->rear_pin, 'R');
 
 	spin_unlock_irqrestore(&dev->lock, flags);
 }
@@ -217,10 +209,10 @@ static irqreturn_t rear_switch_handler(int irq, void *dev_id)
 static irqreturn_t mag_clock_handler(int irq, void *dev_id)
 {
 	struct mag_dev *dev = dev_id;
-	int level = (0 != gpio_get_value(dev->data_pin));
+	int level = gpiod_get_value(dev->data_pin) ? 0 : 1;
 
 	/* save data value to buffer */
-	if (level ^ dev->data_pin_active_high)
+	if (level)
 		dev->data[dev->d_add / 8] |= 1 << (dev->d_add & 0x07);
 	else
 		dev->data[dev->d_add / 8] &= ~(1 << (dev->d_add & 0x07));
@@ -251,10 +243,10 @@ static int mag_open(struct inode *inode, struct file *file)
 		timer_setup(&dev->front_timer, front_timer, 0);
 		timer_setup(&dev->rear_timer, rear_timer, 0);
 
-		check_pin(dev, dev->rear_pin, dev->rear_pin_close_high);
-		check_pin(dev, dev->front_pin, dev->front_pin_close_high);
+		check_pin(dev, dev->rear_pin, 'R');
+		check_pin(dev, dev->front_pin, 'F');
 		result = devm_request_irq(&dev->pdev->dev,
-					  gpio_to_irq(dev->front_pin),
+					  gpiod_to_irq(dev->front_pin),
 					  front_switch_handler,
 					  IRQ_TYPE_EDGE_BOTH,
 					  "magfront",
@@ -263,7 +255,7 @@ static int mag_open(struct inode *inode, struct file *file)
 			goto fail_rirq1;
 
 		result = devm_request_irq(&dev->pdev->dev,
-					  gpio_to_irq(dev->rear_pin),
+					  gpiod_to_irq(dev->rear_pin),
 					  rear_switch_handler,
 					  IRQ_TYPE_EDGE_BOTH,
 					  "magrear",
@@ -272,11 +264,11 @@ static int mag_open(struct inode *inode, struct file *file)
 			goto fail_rirq2;
 
 		result = devm_request_irq(&dev->pdev->dev,
-					  gpio_to_irq(dev->clock_pin),
+					  gpiod_to_irq(dev->clock_pin),
 					  mag_clock_handler,
-					  dev->clock_pin_active_high
-					  ? IRQ_TYPE_EDGE_RISING
-					  : IRQ_TYPE_EDGE_FALLING,
+					  gpiod_is_active_low(dev->clock_pin)
+					  ? IRQ_TYPE_EDGE_FALLING
+					  : IRQ_TYPE_EDGE_RISING,
 					  "magclock",
 					  file->private_data);
 		if (result)
@@ -288,10 +280,10 @@ static int mag_open(struct inode *inode, struct file *file)
 
 fail_rirq3:
 	devm_free_irq(&dev->pdev->dev,
-		      gpio_to_irq(dev->rear_pin), file->private_data);
+		      gpiod_to_irq(dev->rear_pin), file->private_data);
 fail_rirq2:
 	devm_free_irq(&dev->pdev->dev,
-		      gpio_to_irq(dev->front_pin), file->private_data);
+		      gpiod_to_irq(dev->front_pin), file->private_data);
 fail_rirq1:
 	return result;
 }
@@ -306,11 +298,11 @@ static int mag_release(struct inode *inode, struct file *file)
 	if (!dev->open_count) {
 		/* IRQ release */
 		devm_free_irq(&dev->pdev->dev,
-			      gpio_to_irq(dev->front_pin), dev);
+			      gpiod_to_irq(dev->front_pin), dev);
 		devm_free_irq(&dev->pdev->dev,
-			      gpio_to_irq(dev->rear_pin), dev);
+			      gpiod_to_irq(dev->rear_pin), dev);
 		devm_free_irq(&dev->pdev->dev,
-			      gpio_to_irq(dev->clock_pin), dev);
+			      gpiod_to_irq(dev->clock_pin), dev);
 	}
 
 	return 0;
@@ -506,19 +498,11 @@ static struct file_operations const mag_fops = {
 	.release = mag_release,
 };
 
-struct gpio_def {
-	char const *name;
-	int	*gpio_pin;
-	int	*active_high;
-};
-
 static ssize_t show_front(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct mag_dev *mag = dev_get_drvdata(dev);
-	return sprintf(buf, "%d\n",
-		       (0 != gpio_get_value(mag->front_pin))
-			^ mag->front_pin_close_high);
+	return sprintf(buf, "%d\n", gpiod_get_value(mag->front_pin));
 }
 
 static struct kobj_attribute front =
@@ -528,9 +512,7 @@ static ssize_t show_rear(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct mag_dev *mag = dev_get_drvdata(dev);
-	return sprintf(buf, "%d\n",
-		       (0 != gpio_get_value(mag->rear_pin))
-			^ mag->rear_pin_close_high);
+	return sprintf(buf, "%d\n", gpiod_get_value(mag->rear_pin));
 }
 
 static struct kobj_attribute rear =
@@ -594,55 +576,36 @@ static struct attribute_group mag_attr_grp = {
 	.attrs = mag_attrs,
 };
 
+int mag_get_pin(struct device *dev, struct gpio_desc **pgd, const char* pin_name)
+{
+	struct gpio_desc *desc;
+	int ret;
+
+	desc = devm_gpiod_get(dev, pin_name, GPIOD_IN);
+	if (!IS_ERR(desc)) {
+		*pgd = desc;
+		return 0;
+	}
+	ret = PTR_ERR(desc);
+	dev_err(dev, "Error requesting %s (%d)\n", pin_name, ret);
+	return ret;
+}
+
 static int mag_of_probe(struct platform_device *pdev,
 			struct device_node *np,
-			struct mag_dev *dev)
+			struct mag_dev *mdev)
 {
-	int i;
-	struct gpio_def pins[] = {
-		{ "front_pin",
-		  &dev->front_pin,
-		  &dev->front_pin_close_high }
-	,	{ "rear_pin",
-		  &dev->rear_pin,
-		  &dev->rear_pin_close_high}
-	,	{ "clock_pin",
-		  &dev->clock_pin,
-		  &dev->clock_pin_active_high}
-	,	{ "data_pin",
-		  &dev->data_pin,
-		  &dev->data_pin_active_high}
-	};
-	for (i = 0; i < ARRAY_SIZE(pins); i++)
-		*pins[i].gpio_pin = -1;
+	struct device *dev = &pdev->dev;
+	int ret;
 
-	for (i = 0; i < ARRAY_SIZE(pins); i++) {
-		int rv;
-		enum of_gpio_flags gpio_flags;
-		int pin = of_get_named_gpio_flags(np, pins[i].name,
-						  0, &gpio_flags);
-		if (!gpio_is_valid(pin)) {
-			dev_err(&pdev->dev, "Invalid %s\n", pins[i].name);
-			break;
-		}
-		*pins[i].gpio_pin = pin;
-		*pins[i].active_high = !(gpio_flags & OF_GPIO_ACTIVE_LOW);
-		rv = devm_gpio_request(&pdev->dev, pin, pins[i].name);
-		if (rv) {
-			dev_err(&pdev->dev, "Error %d requesting pin %d:%s\n",
-				rv, pin, pins[i].name);
-			break;
-		}
-	}
-	if (i < ARRAY_SIZE(pins)) {
-		while (0 <= i) {
-			devm_gpio_free(&pdev->dev, *pins[i].gpio_pin);
-			*pins[i].gpio_pin = -1;
-			i--;
-		}
-	}
-
-	return (i == ARRAY_SIZE(pins)) ? 0 : -EINVAL;
+	ret = mag_get_pin(dev, &mdev->front_pin, "front_pin");
+	if (!ret)
+		ret = mag_get_pin(dev, &mdev->rear_pin, "rear_pin");
+	if (!ret)
+		ret = mag_get_pin(dev, &mdev->clock_pin, "clock_pin");
+	if (!ret)
+		ret = mag_get_pin(dev, &mdev->data_pin, "data_pin");
+	return ret;
 }
 
 static int mag_probe(struct platform_device *pdev)
@@ -700,22 +663,11 @@ static int mag_remove(struct platform_device *pdev)
 {
 	struct mag_dev *dev = platform_get_drvdata(pdev);
 	if (dev) {
-		int i;
-		int pins[] = {
-			dev->front_pin,
-			dev->rear_pin,
-			dev->clock_pin,
-			dev->data_pin,
-		};
-
 		sysfs_remove_group(&pdev->dev.kobj, &mag_attr_grp);
 		if (!IS_ERR(dev->chrdev)) {
 			device_destroy(magdecode_class, devnum);
 			dev->chrdev = 0;
 		}
-		for (i = 0; i < ARRAY_SIZE(pins); i++)
-			if (gpio_is_valid(pins[i]))
-				devm_gpio_free(&pdev->dev, pins[i]);
 	}
 	return 0;
 }
