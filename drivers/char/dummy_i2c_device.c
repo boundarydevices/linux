@@ -138,7 +138,7 @@ static int di2cd_probe(struct i2c_client *client, const struct i2c_device_id *id
 	return 0;
 }
 
-static int di2cd_remove(struct i2c_client *client)
+static void di2cd_remove(struct i2c_client *client)
 {
 	struct dummy_i2c_device *d = i2c_get_clientdata(client);
 
@@ -150,7 +150,6 @@ static int di2cd_remove(struct i2c_client *client)
 		regulator_disable(d->c1);
 	if (d->c2)
 		regulator_disable(d->c2);
-	return 0;
 }
 
 static const struct i2c_device_id di2cd_idtable[] = {
