@@ -378,7 +378,7 @@ err_out:
 	return err;
 }
 
-static int lm3643_remove(struct i2c_client *client)
+static void lm3643_remove(struct i2c_client *client)
 {
 	struct lm3643_chip_data *chip = i2c_get_clientdata(client);
 
@@ -388,8 +388,6 @@ static int lm3643_remove(struct i2c_client *client)
 	flush_work(&chip->work_flash);
 	regmap_write(chip->regmap, REG_ENABLE, 0);
 	gpiod_set_value(chip->pdata->hwen_gpio, 0);
-
-	return 0;
 }
 
 static const struct i2c_device_id lm3643_id[] = {
