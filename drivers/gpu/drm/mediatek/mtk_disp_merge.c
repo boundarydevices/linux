@@ -216,16 +216,6 @@ int mtk_merge_clk_enable(struct device *dev)
 		return ret;
 	}
 
-	ret = clk_prepare_enable(priv->async2_clk);
-	if (ret) {
-		/* should clean up the state of priv->clk */
-		clk_disable_unprepare(priv->async_clk);
-		clk_disable_unprepare(priv->clk);
-
-		dev_err(dev, "async2 clk prepare enable failed\n");
-		return ret;
-	}
-
 	return ret;
 }
 
@@ -233,7 +223,6 @@ void mtk_merge_clk_disable(struct device *dev)
 {
 	struct mtk_disp_merge *priv = dev_get_drvdata(dev);
 
-	clk_disable_unprepare(priv->async2_clk);
 	clk_disable_unprepare(priv->async_clk);
 	clk_disable_unprepare(priv->clk);
 }

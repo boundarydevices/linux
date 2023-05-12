@@ -463,6 +463,7 @@ static int mtk_crtc_ddp_hw_init(struct mtk_drm_crtc *mtk_crtc)
 	unsigned int width, height, vrefresh, bpc = MTK_MAX_BPC;
 	int ret;
 	int i;
+	bool is_2p_input = false;
 
 	if (WARN_ON(!crtc->state))
 		return -EINVAL;
@@ -508,6 +509,11 @@ static int mtk_crtc_ddp_hw_init(struct mtk_drm_crtc *mtk_crtc)
 	}
 
 	for (i = 0; i < mtk_crtc->ddp_comp_nr - 1; i++) {
+		if ((mtk_crtc->ddp_comp[i]->id >=  DDP_COMPONENT_MERGE0) &&
+			(mtk_crtc->ddp_comp[i]->id <=  DDP_COMPONENT_MERGE5)) {
+			is_2p_input = true;
+		}
+
 		if (!mtk_ddp_comp_connect(mtk_crtc->ddp_comp[i], mtk_crtc->mmsys_dev,
 					  mtk_crtc->ddp_comp[i + 1]->id)) {
 			mtk_mmsys_ddp_connect(mtk_crtc->mmsys_dev,
@@ -523,6 +529,10 @@ static int mtk_crtc_ddp_hw_init(struct mtk_drm_crtc *mtk_crtc)
 			mtk_mutex_add_comp(mtk_crtc->mutex,
 					   mtk_crtc->ddp_comp[i]->id);
 	}
+
+	if (mtk_crtc->ddp_comp[i]->funcs->set_2p_input)
+		mtk_crtc->ddp_comp[i]->funcs->set_2p_input(mtk_crtc->ddp_comp[i]->dev, is_2p_input);
+
 	if (!mtk_ddp_comp_add(mtk_crtc->ddp_comp[i], mtk_crtc->mutex))
 		mtk_mutex_add_comp(mtk_crtc->mutex, mtk_crtc->ddp_comp[i]->id);
 	if (mtk_crtc->cross_sys_mutex) {
@@ -532,7 +542,7 @@ static int mtk_crtc_ddp_hw_init(struct mtk_drm_crtc *mtk_crtc)
 	}
 
 	if (mtk_crtc->cross_sys_mmsys_dev) {
-		mtk_mmsys_cross_sys_config(mtk_crtc->mmsys_dev,
+		mtk_mmsys_cross_sys_prepare(mtk_crtc->mmsys_dev,
 			mtk_crtc->cross_sys_mmsys_dev,
 			width, height, NULL);
 	}
@@ -661,6 +671,11 @@ static void mtk_crtc_ddp_hw_fini(struct mtk_drm_crtc *mtk_crtc)
 			mtk_mutex_remove_comp(mtk_crtc->mutex,
 						mtk_crtc->ddp_comp[i]->id);
 	}
+
+	if (mtk_crtc->cross_sys_mmsys_dev)
+		mtk_mmsys_cross_sys_unprepare(mtk_crtc->mmsys_dev,
+			mtk_crtc->cross_sys_mmsys_dev);
+
 	if (!mtk_ddp_comp_remove(mtk_crtc->ddp_comp[i], mtk_crtc->mutex))
 		mtk_mutex_remove_comp(mtk_crtc->mutex, mtk_crtc->ddp_comp[i]->id);
 	if (mtk_crtc->cross_sys_mutex) {
