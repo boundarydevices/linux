@@ -32,7 +32,7 @@
 #define GP_EQOS_RESET	<&gpio3 16 GPIO_ACTIVE_LOW>
 			MX8MP_IOMUXC_NAND_READY_B__GPIO3_IO16		0x100
 #define GPIRQ_EQOS_PHY	<&gpio1 3 IRQ_TYPE_LEVEL_LOW>
-			MX8MP_IOMUXC_GPIO1_IO03__GPIO1_IO03		0x10
+			MX8MP_IOMUXC_GPIO1_IO03__GPIO1_IO03		0x140
 		>;
 	};
 
@@ -257,7 +257,7 @@
 
 		battery_low {
 			label = "battery_low";
-			gpios = <&mcp23018 15 GPIO_ACTIVE_LOW>;
+			gpios = <&mcp23018 15 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 			linux,code = <KEY_1>;
 		};
 	};
@@ -608,9 +608,17 @@
 		#interrupt-cells = <0x2>;
 		microchip,irq-mirror;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_i2c6c_mcp23018>;
+		pinctrl-0 = <&pinctrl_i2c6c_mcp23018>, <&mcp_pullups>;
 		reg = <0x20>;
 		reset-gpios = GP_I2C6C_MCP23018_RESET;
+
+		mcp_pullups: pinmux {
+			pins =  "gpio0", "gpio1", "gpio2", "gpio3",
+				"gpio4", "gpio5", "gpio6", "gpio7",
+				"gpio8", "gpio9", "gpio10", "gpio11",
+				"gpio12", "gpio13", "gpio14", "gpio15";
+			bias-pull-up;
+		};
 	};
 };
 
@@ -1054,7 +1062,7 @@
 #define PD_SM_LID(a)			MX8MP_IOMUXC_GPIO1_IO11__GPIO1_IO11 a
 #define GP_SM_SLEEP(a)			<&gpio1 8 a>
 #define PD_SM_SLEEP(a)			MX8MP_IOMUXC_GPIO1_IO08__GPIO1_IO08 a
-#define GP_SM_CHARGING(a)		<&mcp23018 14 a>
+#define GP_SM_CHARGING(a)		<&mcp23018 14 (a | GPIO_PULL_UP)>
 #define PD_SM_CHARGING(a)
 #define GP_SM_CHARGER_PRESENT(a)	<&gpio4 19 a>
 #define PD_SM_CHARGER_PRESENT(a)	MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19 a
@@ -1064,34 +1072,34 @@
 #define PD_SM_CARRIER_PWR_ON(a)		MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10 a
 #define GP_SM_FORCE_RECOV(a)		<&gpio4 18 a>
 #define PD_SM_FORCE_RECOV(a)		MX8MP_IOMUXC_SAI1_TXD6__GPIO4_IO18 a
-#define GP_SM_BAT_LOW(a)		<&mcp23018 15 a>
+#define GP_SM_BAT_LOW(a)		<&mcp23018 15 (a | GPIO_PULL_UP)>
 #define PD_SM_BAT_LOW(a)
 
-#define GP_SM_GPIO0(a)			<&mcp23018 0 a>
+#define GP_SM_GPIO0(a)			<&mcp23018 0 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO0(a)
-#define GP_SM_GPIO1(a)			<&mcp23018 1 a>
+#define GP_SM_GPIO1(a)			<&mcp23018 1 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO1(a)
-#define GP_SM_GPIO2(a)			<&mcp23018 2 a>
+#define GP_SM_GPIO2(a)			<&mcp23018 2 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO2(a)
-#define GP_SM_GPIO3(a)			<&mcp23018 3 a>
+#define GP_SM_GPIO3(a)			<&mcp23018 3 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO3(a)
-#define GP_SM_GPIO4(a)			<&mcp23018 4 a>
+#define GP_SM_GPIO4(a)			<&mcp23018 4 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO4(a)
-#define GP_SM_GPIO5(a)			<&mcp23018 5 a>
+#define GP_SM_GPIO5(a)			<&mcp23018 5 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO5(a)
-#define GP_SM_GPIO6(a)			<&mcp23018 6 a>
+#define GP_SM_GPIO6(a)			<&mcp23018 6 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO6(a)
-#define GP_SM_GPIO7(a)			<&mcp23018 7 a>
+#define GP_SM_GPIO7(a)			<&mcp23018 7 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO7(a)
-#define GP_SM_GPIO8(a)			<&mcp23018 9 a>
+#define GP_SM_GPIO8(a)			<&mcp23018 9 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO8(a)
-#define GP_SM_GPIO9(a)			<&mcp23018 10 a>
+#define GP_SM_GPIO9(a)			<&mcp23018 10 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO9(a)
-#define GP_SM_GPIO10(a)			<&mcp23018 11 a>
+#define GP_SM_GPIO10(a)			<&mcp23018 11 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO10(a)
-#define GP_SM_GPIO11(a)			<&mcp23018 12 a>
+#define GP_SM_GPIO11(a)			<&mcp23018 12 (a | GPIO_PULL_UP)>
 #define PD_SM_GPIO11(a)
-#define GP_SM_RESET_OUT(a)		<&mcp23018 13 a>
+#define GP_SM_RESET_OUT(a)		<&mcp23018 13 (a | GPIO_PULL_UP)>
 #define PD_SM_RESET_OUT(a)
 #define GP_SM_POWER_BTN(a)
 #define PD_SM_POWER_BTN(a)
@@ -1129,7 +1137,7 @@
 #define GP_SM_ESPI_IO1(a)		<&gpio5 12 a>
 #define PD_SM_ESPI_IO1(a)		MX8MP_IOMUXC_ECSPI2_MISO__GPIO5_IO12 a
 #define PD_SM_ESPI_IO1_ESPI(a)		MX8MP_IOMUXC_ECSPI2_MISO__ECSPI2_MISO a
-#define GP_SM_ESPI_ALERT(a)		<&mcp23018 8 a>
+#define GP_SM_ESPI_ALERT(a)		<&mcp23018 8 (a | GPIO_PULL_UP)>
 #define PD_SM_ESPI_ALERT(a)
 #define GP_SM_ESPI_IO2(a)		<&gpio1 15 a>
 #define PD_SM_ESPI_IO2(a)		MX8MP_IOMUXC_GPIO1_IO15__GPIO1_IO15 a
