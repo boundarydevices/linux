@@ -526,17 +526,16 @@
 #ifdef SM_I2S0
 &i2c_gp_c {
 	wm8962: codec@1a {
-		clocks = SM_AUDIO_MCK;
-		compatible = "wlf,wm8960";
-		reg = <0x1a>;
 		AVDD-supply = <&reg_vref_1v8>;
 		CPVDD-supply = <&reg_vref_1v8>;
-		DCVDD-supply = <&reg_vref_1v8>;
-		PLLVDD-supply = <&reg_vref_1v8>;
 		DBVDD-supply = <&reg_vref_3v3>;
+		DCVDD-supply = <&reg_vref_1v8>;
 		MICVDD-supply = <&reg_vref_3v3>;
+		PLLVDD-supply = <&reg_vref_1v8>;
 		SPKVDD1-supply = <&reg_vref_5v0>;
 		SPKVDD2-supply = <&reg_vref_5v0>;
+		clocks = SM_AUDIO_MCK;
+		compatible = "wlf,wm8962";
 		gpio-cfg = <
 			0x0000 /* 0:Default */
 			0x0000 /* 1:Default */
@@ -545,6 +544,7 @@
 			0x0000 /* 4:FN_DMICCDAT */
 			0x0000 /* 5:Default */
 		>;
+		reg = <0x1a>;
 	};
 };
 #endif
