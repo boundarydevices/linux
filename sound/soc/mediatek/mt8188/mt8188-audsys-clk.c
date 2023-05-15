@@ -371,9 +371,14 @@ void mt8188_audsys_clk_unregister(struct mtk_base_afe *afe)
 		clkdev_drop(cl);
 	}
 
-	cl = afe_priv->lookup[i];
-	clk = cl->clk;
-	audsys_unregister_multi_gate(clk);
+	for (i = 0; i < CLK_AUD_NR_MULTI_GATE; i++) {
+		cl = afe_priv->lookup[i + CLK_AUD_AFE_MULTI_GATE_START];
+		if (!cl)
+			continue;
 
-	clkdev_drop(cl);
+		clk = cl->clk;
+		audsys_unregister_multi_gate(clk);
+
+		clkdev_drop(cl);
+	}
 }
