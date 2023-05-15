@@ -214,6 +214,9 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 				regmap_set_bits(afe->regmap, reg->con0, msk);
 		}
 
+		if (dmic_priv->hires_required)
+			mt8188_afe_enable_clk(afe, afe_priv->clk[MT8188_CLK_AUD_DMIC_HIRES]);
+
 		mt8188_afe_enable_clk(afe, afe_priv->clk[MT8188_CLK_AUD_AFE_DMIC]);
 
 		/* release fifo soft rst */
@@ -262,31 +265,15 @@ static int mtk_dmic_event(struct snd_soc_dapm_widget *w,
 		usleep_range(125, 126);
 
 		mt8188_afe_disable_clk(afe, afe_priv->clk[MT8188_CLK_AUD_AFE_DMIC]);
+
+		if (dmic_priv->hires_required)
+			mt8188_afe_disable_clk(afe, afe_priv->clk[MT8188_CLK_AUD_DMIC_HIRES]);
 		break;
 	default:
 		break;
 	}
 
 	return 0;
-}
-
-static int mtk_afe_dmic_hires_connect(struct snd_soc_dapm_widget *source,
-				      struct snd_soc_dapm_widget *sink)
-{
-	struct snd_soc_dapm_widget *w = source;
-	struct snd_soc_component *cmpnt = snd_soc_dapm_to_component(w->dapm);
-	struct mtk_base_afe *afe = snd_soc_component_get_drvdata(cmpnt);
-	struct mtk_dai_dmic_priv *dmic_priv;
-	struct mt8188_afe_private *afe_priv = afe->platform_priv;
-
-	dmic_priv = afe_priv->dai_priv[MT8188_AFE_IO_DMIC_IN];
-
-	if (!dmic_priv) {
-		dev_info(afe->dev, "dmic_priv == NULL");
-		return 0;
-	}
-
-	return (dmic_priv->hires_required) ? 1 : 0;
 }
 
 /* dai ops */
@@ -433,7 +420,6 @@ static const struct snd_soc_dapm_widget mtk_dai_dmic_widgets[] = {
 			    mtk_dmic_event,
 			    SND_SOC_DAPM_PRE_POST_PMU |
 			    SND_SOC_DAPM_PRE_POST_PMD),
-	SND_SOC_DAPM_CLOCK_SUPPLY("aud_dmic_hires"),
 	SND_SOC_DAPM_INPUT("DMIC_INPUT"),
 };
 
@@ -446,8 +432,6 @@ static const struct snd_soc_dapm_route mtk_dai_dmic_routes[] = {
 	{"I009", NULL, "DMIC Capture"},
 	{"I010", NULL, "DMIC Capture"},
 	{"I011", NULL, "DMIC Capture"},
-	{"DMIC Capture", NULL, "aud_dmic_hires", mtk_afe_dmic_hires_connect},
-	{"aud_dmic_hires", NULL, "AUDIO_HIRES"},
 	{"DMIC Capture", NULL, "DMIC_CK_ON"},
 	{"DMIC Capture", NULL, "DMIC_INPUT"},
 };
