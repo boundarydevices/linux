@@ -58,42 +58,85 @@ struct dwc3_imx8mp {
 	int				irq;
 	bool				pm_suspended;
 	bool				wakeup_pending;
+	u32				usb_ctrl0_clr;
+	u32				usb_ctrl0_set;
+	u32				usb_ctrl1_clr;
+	u32				usb_ctrl1_set;
+	int				vbus_oc_combined;
 };
 
-static void imx8mp_configure_glue(struct dwc3_imx8mp *dwc3_imx)
+static void imx8mp_ctrl0_1(struct dwc3_imx8mp *dwc3_imx, u32 clr0, u32 set0,
+			   u32 clr1, u32 set1)
 {
-	struct device *dev = dwc3_imx->dev;
 	u32 value;
 
 	if (!dwc3_imx->glue_base)
 		return;
 
-	value = readl(dwc3_imx->glue_base + USB_CTRL0);
+	if (clr0 || set0) {
+		value = readl(dwc3_imx->glue_base + USB_CTRL0);
+		value &= ~clr0;
+		value |= set0;
+		writel(value, dwc3_imx->glue_base + USB_CTRL0);
+	}
+	if (clr1 || set1) {
+		value = readl(dwc3_imx->glue_base + USB_CTRL1);
+		value &= ~clr1;
+		value |= set1;
+		writel(value, dwc3_imx->glue_base + USB_CTRL1);
+		pr_debug("%s: %x\n", __func__, value);
+	}
+}
+
+static void imx8mp_configure_glue(struct dwc3_imx8mp *dwc3_imx, u32 role)
+{
+	u32 clr1 = dwc3_imx->usb_ctrl1_clr;
+	u32 set1 = dwc3_imx->usb_ctrl1_set;
+
+       if ((role != DWC3_GCTL_PRTCAP_HOST) && dwc3_imx->vbus_oc_combined) {
+	       /* OC is only valid in host mode */
+	       /* OC is active high if no OC signal */
+               set1 &= ~USB_CTRL1_OC_POLARITY;
+               clr1 |= USB_CTRL1_OC_POLARITY;
+       }
+       imx8mp_ctrl0_1(dwc3_imx, dwc3_imx->usb_ctrl0_clr, dwc3_imx->usb_ctrl0_set, clr1, set1);
+}
+
+static void imx8mp_parse_glue(struct dwc3_imx8mp *dwc3_imx)
+{
+	struct device *dev = dwc3_imx->dev;
+	u32 clr0 = 0, set0 = 0;
+	u32 clr1 = 0, set1 = 0;
+	u32 vbus_oc_combined = 0;
 
 	if (device_property_read_bool(dev, "fsl,permanently-attached"))
-		value |= (USB_CTRL0_USB2_FIXED | USB_CTRL0_USB3_FIXED);
+		set0 = (USB_CTRL0_USB2_FIXED | USB_CTRL0_USB3_FIXED);
 	else
-		value &= ~(USB_CTRL0_USB2_FIXED | USB_CTRL0_USB3_FIXED);
+		clr0 = (USB_CTRL0_USB2_FIXED | USB_CTRL0_USB3_FIXED);
 
 	if (device_property_read_bool(dev, "fsl,disable-port-power-control"))
-		value &= ~(USB_CTRL0_PORTPWR_EN);
+		clr0 |= USB_CTRL0_PORTPWR_EN;
 	else
-		value |= USB_CTRL0_PORTPWR_EN;
+		set0 |= USB_CTRL0_PORTPWR_EN;
 
-	writel(value, dwc3_imx->glue_base + USB_CTRL0);
-
-	value = readl(dwc3_imx->glue_base + USB_CTRL1);
 	if (device_property_read_bool(dev, "fsl,over-current-active-low"))
-		value |= USB_CTRL1_OC_POLARITY;
+		set1 = USB_CTRL1_OC_POLARITY;
 	else
-		value &= ~USB_CTRL1_OC_POLARITY;
+		clr1 = USB_CTRL1_OC_POLARITY;
 
 	if (device_property_read_bool(dev, "fsl,power-active-low"))
-		value |= USB_CTRL1_PWR_POLARITY;
+		set1 |= USB_CTRL1_PWR_POLARITY;
 	else
-		value &= ~USB_CTRL1_PWR_POLARITY;
+		clr1 |= USB_CTRL1_PWR_POLARITY;
 
-	writel(value, dwc3_imx->glue_base + USB_CTRL1);
+	if (device_property_read_bool(dev, "fsl,vbus-oc-combined"))
+		vbus_oc_combined = 1;
+
+	dwc3_imx->usb_ctrl0_clr = clr0;
+	dwc3_imx->usb_ctrl0_set = set0;
+	dwc3_imx->usb_ctrl1_clr = clr1;
+	dwc3_imx->usb_ctrl1_set = set1;
+	dwc3_imx->vbus_oc_combined = vbus_oc_combined;
 }
 
 static void dwc3_imx8mp_wakeup_enable(struct dwc3_imx8mp *dwc3_imx,
@@ -149,6 +192,10 @@ static irqreturn_t dwc3_imx8mp_interrupt(int irq, void *_dwc3_imx)
 
 static void dwc3_imx8mp_set_role_post(struct dwc3 *dwc, u32 role)
 {
+	struct dwc3_imx8mp *dwc3_imx = dev_get_drvdata(dwc->dev->parent);
+
+	imx8mp_configure_glue(dwc3_imx, role);
+	dev_dbg(dwc->dev, "%s: %d\n", __func__, role);
 	switch (role) {
 	case DWC3_GCTL_PRTCAP_HOST:
 		/*
@@ -253,8 +300,7 @@ static int dwc3_imx8mp_probe(struct platform_device *pdev)
 		goto disable_clks;
 	}
 	dwc3_imx->irq = irq;
-
-	imx8mp_configure_glue(dwc3_imx);
+	imx8mp_parse_glue(dwc3_imx);
 
 	pm_runtime_set_active(dev);
 	pm_runtime_enable(dev);
@@ -361,7 +407,7 @@ static int __maybe_unused dwc3_imx8mp_resume(struct dwc3_imx8mp *dwc3_imx,
 	dwc3_imx->pm_suspended = false;
 #if 0
 	/* Upon power loss any previous configuration is lost, restore it */
-	imx8mp_configure_glue(dwc3_imx);
+	imx8mp_configure_glue(dwc3_imx, dwc->current_dr_role);
 #endif
 	if (dwc3_imx->wakeup_pending) {
 		dwc3_imx->wakeup_pending = false;
