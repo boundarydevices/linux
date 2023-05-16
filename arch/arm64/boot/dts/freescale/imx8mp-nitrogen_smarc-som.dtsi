@@ -910,8 +910,10 @@
 #define PD_SM_SDIO_VSELECT_SDIO(a)	MX8MP_IOMUXC_GPIO1_IO04__USDHC2_VSELECT a
 
 /* todo SM_CLKOUT2, need to add to imx8mp clk driver */
+#if 0
 #define GP_SM_GPIO13(a)			<&gpio1 0 a>
 #define PD_SM_GPIO13(a)			MX8MP_IOMUXC_GPIO1_IO00__GPIO1_IO00 a
+#endif
 #define PAD_SDIO_CLK_50M		0x190
 #define PAD_SDIO_50M			0x1d0
 #define PAD_SDIO_CLK_100M		0x194
