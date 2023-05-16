@@ -38,6 +38,9 @@
 #define HDMI_CTL_1 0xc4
 #define HDMI_CTL_3 0xcc
 
+#define RG_HDMITX_PWR5V_O BIT(9)
+#define RG_HDMITX_PWR5V_O_SHIFT (9)
+
 #define REG_ANA_HDMI20_FIFO_EN BIT(16)
 
 #define REG_HDMITXPLL_DIV GENMASK(4, 0)
