@@ -40,27 +40,27 @@
 			PD_SM_ENET1_SDP(PAD_PULLDN)
 			PD_SM_LCD1_VDD_EN(PAD_PULLDN)
 			PD_SM_GPIO12(PAD_PULLDN)
-			PD_SM_ESPI_IO2(PAD_PULLDN)
-			PD_SM_ESPI_RESET(PAD_PULLDN)
 		PINS_END
 	};
 
+#ifdef PD_SM_GPIO13
 	pinctrl2(mux9546, lcd) {
 		PINS_START
 			PD_SM_GPIO13(PAD_PULLDN)
 		PINS_END
 	};
-
-	pinctrl4(reg, usbotg, vbus, oc) {
-		PINS_START
-			/* power enable/ over-current */
-			PD_SM_USB0_EN_OC_USB(PAD_PULLUPIRQ)
-		PINS_END
-	};
+#endif
 
 	pinctrl4(reg, usbotg, vbus, off) {
 		PINS_START
 			PD_SM_USB0_EN_OC(PAD_PULLDN)
+		PINS_END
+	};
+
+	pinctrl4(reg, usbotg, vbus, on) {
+		PINS_START
+			/* power enable/ over-current */
+			PD_SM_USB0_EN_OC_USB(PAD_PULLUPIRQ)
 		PINS_END
 	};
 
@@ -85,7 +85,8 @@
 			PD_SM_ESPI_IO1_ESPI(PAD_ESPI)
 			PD_SM_ESPI_CS0(PAD_PULLUP)
 			PD_SM_ESPI_CS1(PAD_PULLUP)
-			PD_SM_ESPI_RESET(PAD_PULLUP)
+			PD_SM_ESPI_RESET(PAD_PULLDN)
+			PD_SM_ESPI_IO2(PAD_PULLDN)
 		PINS_END
 	};
 
@@ -359,11 +360,10 @@
 	};
 
 	reg_usb_otg_vbus: regulator-usb-otg-vbus {
-		/* todo: make driver support this */
 		compatible = "regulator-fixed";
-		pinctrl-names = "default", "off";
-		pinctrl-1 = pinctrl_ref(reg_usbotg_vbus_oc);
-		pinctrl-0 = pinctrl_ref(reg_usbotg_vbus_off);
+		pinctrl-names = "off", "on";
+		pinctrl-0 = pinctrl_ref4(reg, usbotg, vbus, off);
+		pinctrl-1 = pinctrl_ref4(reg, usbotg, vbus, on);
 		regulator-name = "usb_otg_vbus";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
@@ -560,10 +560,14 @@
 
 	mux9546-lcd@73 {
 		compatible = "nxp,pca9546";
+#ifdef PD_SM_GPIO13
 		pinctrl-names = "default";
 		pinctrl-0 = pinctrl_ref(mux9546_lcd);
+#endif
 		reg = <0x73>;
+#ifdef GP_SM_GPIO13
 		reset-gpios = GP_SM_GPIO13(GPIO_ACTIVE_LOW);
+#endif
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -728,6 +732,7 @@
 
 &SM_USBOTG {
 	fsl,over-current-active-low;
+	fsl,vbus-oc-combined;
 	status = "okay";
 };
 
