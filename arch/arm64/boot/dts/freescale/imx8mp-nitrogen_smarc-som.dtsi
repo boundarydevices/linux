@@ -385,7 +385,9 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			at803x,hib-disabled;
 			eee-broken-1000t;
+#if 0	/* TEMP, until next som run which swaps gpio3/4 */
 			interrupts-extended = GPIRQ_EQOS_PHY;
+#endif
 #if 0
 			reset-gpios = GP_EQOS_RESET;
 #endif
