@@ -334,11 +334,13 @@
 			linux,code = <KEY_1>;
 		};
 
+#if 0	/* Temporary GP_SM_GPIO11 is used for hd3ss3220 interrupt, need something else here */
 		can2 {
 			label = "can2 detect";
 			gpios = GP_SM_GPIO11(GPIO_ACTIVE_HIGH);
 			linux,code = <KEY_2>;
 		};
+#endif
 	};
 
 	reg_can1_stby: regulator-can1-stby {
