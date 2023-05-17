@@ -12,7 +12,6 @@ _IMX_EXT_MODULES = [
 _IMX_IN_TREE_MODULES = [
     "drivers/nvmem/nvmem-imx-ocotp-fsb-s400.ko",
     "drivers/firmware/imx/el_enclave.ko",
-    "drivers/soc/imx/soc-imx9.ko",
     "drivers/gpu/drm/imx/imxdrm.ko",
     "drivers/i2c/i2c-dev.ko",
     "drivers/rtc/rtc-imx-rpmsg.ko",
@@ -323,6 +322,8 @@ _IMX_IN_TREE_MODULES = [
     "drivers/power/supply/max17042_battery.ko",
     "drivers/iio/trigger/iio-trig-hrtimer.ko",
     "drivers/iio/industrialio-sw-trigger.ko",
+    "net/wireless/cfg80211.ko",
+    "net/mac80211/mac80211.ko",
 ]
 
 def define_imx():
