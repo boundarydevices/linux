@@ -129,10 +129,11 @@ static void imx8mp_ldb_encoder_enable(struct drm_encoder *encoder)
 		imx8mp_ldb->channel[0].phy_is_on = true;
 
 		backlight = imx8mp_ldb->channel[0].backlight;
-		backlight->props.state &= ~BL_CORE_FBBLANK;
-		backlight->props.power = FB_BLANK_UNBLANK;
-		backlight_update_status(backlight);
-
+		if (backlight) {
+			backlight->props.state &= ~BL_CORE_FBBLANK;
+			backlight->props.power = FB_BLANK_UNBLANK;
+			backlight_update_status(backlight);
+		}
 	}
 	if (imx8mp_ldb->channel[1].base.is_valid || ldb->dual) {
 		ldb->ldb_ctrl &= ~LDB_CH1_MODE_EN_MASK;
@@ -142,9 +143,11 @@ static void imx8mp_ldb_encoder_enable(struct drm_encoder *encoder)
 		imx8mp_ldb->channel[1].phy_is_on = true;
 
 		backlight = imx8mp_ldb->channel[1].backlight;
-		backlight->props.state &= ~BL_CORE_FBBLANK;
-		backlight->props.power = FB_BLANK_UNBLANK;
-		backlight_update_status(backlight);
+		if (backlight) {
+			backlight->props.state &= ~BL_CORE_FBBLANK;
+			backlight->props.power = FB_BLANK_UNBLANK;
+			backlight_update_status(backlight);
+		}
 	}
 }
 
@@ -187,9 +190,11 @@ static void imx8mp_ldb_encoder_disable(struct drm_encoder *encoder)
 		phy_power_off(imx8mp_ldb->channel[0].phy);
 
 		backlight = imx8mp_ldb->channel[0].backlight;
-		backlight->props.power = FB_BLANK_POWERDOWN;
-		backlight->props.state |= BL_CORE_FBBLANK;
-		backlight_update_status(backlight);
+		if (backlight) {
+			backlight->props.power = FB_BLANK_POWERDOWN;
+			backlight->props.state |= BL_CORE_FBBLANK;
+			backlight_update_status(backlight);
+		}
 	}
 	if (imx8mp_ldb->channel[1].phy_is_on) {
 		imx8mp_ldb->channel[1].phy_is_on = false;
@@ -197,9 +202,11 @@ static void imx8mp_ldb_encoder_disable(struct drm_encoder *encoder)
 		phy_power_off(imx8mp_ldb->channel[1].phy);
 
 		backlight = imx8mp_ldb->channel[1].backlight;
-		backlight->props.power = FB_BLANK_POWERDOWN;
-		backlight->props.state |= BL_CORE_FBBLANK;
-		backlight_update_status(backlight);
+		if (backlight) {
+			backlight->props.power = FB_BLANK_POWERDOWN;
+			backlight->props.state |= BL_CORE_FBBLANK;
+			backlight_update_status(backlight);
+		}
 	}
 
 	clk_disable_unprepare(imx8mp_ldb->clk_root);
