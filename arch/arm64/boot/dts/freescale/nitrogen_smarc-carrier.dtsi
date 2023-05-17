@@ -537,12 +537,12 @@
 		clocks = SM_AUDIO_MCK;
 		compatible = "wlf,wm8962";
 		gpio-cfg = <
-			0x0000 /* 0:Default */
-			0x0000 /* 1:Default */
-			0x0000 /* 2:FN_DMICCLK */
-			0x0000 /* 3:Default */
-			0x0000 /* 4:FN_DMICCDAT */
-			0x0000 /* 5:Default */
+			0x0000 /* n/c */
+			0x0000 /* gpio2: */
+			0x0000 /* gpio3: */
+			0x0000 /* n/c */
+			0x8081 /* gpio5:HP detect */
+			0x8095 /* gpio6:Mic detect */
 		>;
 		reg = <0x1a>;
 	};
