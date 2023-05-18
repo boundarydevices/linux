@@ -1204,8 +1204,9 @@
 				reg = <0x32e10000 0x400>;
 				clocks = <&clk IMX8MN_CLK_DSI_CORE>,
 					 <&clk IMX8MN_CLK_DSI_PHY_REF>,
-					 <&clk IMX8MN_CLK_DISP_APB_ROOT>;
-				clock-names = "cfg", "pll-ref", "apb-root";
+					 <&clk IMX8MN_CLK_DISP_APB_ROOT>,
+					 <&clk IMX8MN_CLK_DISP_PIXEL_ROOT>;
+				clock-names = "cfg", "pll-ref", "apb-root", "pixel_clock";
 				assigned-clocks = <&clk IMX8MN_CLK_DSI_CORE>,
 						  <&clk IMX8MN_CLK_DSI_PHY_REF>;
 				assigned-clock-parents = <&clk IMX8MN_SYS_PLL1_266M>,
