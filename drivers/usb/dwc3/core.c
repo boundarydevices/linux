@@ -126,6 +126,7 @@ void dwc3_set_prtcap(struct dwc3 *dwc, u32 mode)
 
 void dwc3_set_vbus(struct dwc3 *dwc, bool enabled)
 {
+	unsigned long flags;
 	u32 ret;
 
 	if (enabled) {
@@ -133,21 +134,31 @@ void dwc3_set_vbus(struct dwc3 *dwc, bool enabled)
 			otg_set_vbus(dwc->usb2_phy->otg, true);
 		phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_HOST);
 		phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_HOST);
-		if (dwc->vbus_reg && !regulator_is_enabled(dwc->vbus_reg)) {
+		spin_lock_irqsave(&dwc->lock, flags);
+		if (dwc->vbus_reg && !dwc->vbus_enabled) {
 			ret = regulator_enable(dwc->vbus_reg);
-			if (ret < 0)
+			if (ret < 0) {
 				dev_err(dwc->dev, "failed to enable vbus\n");
+			} else {
+				dwc->vbus_enabled = 1;
+				dev_dbg(dwc->dev, "vbus enabled\n");
+			}
 		}
+		spin_unlock_irqrestore(&dwc->lock, flags);
 	} else {
 		if (dwc->usb2_phy)
 			otg_set_vbus(dwc->usb2_phy->otg, false);
 		phy_set_mode(dwc->usb2_generic_phy, PHY_MODE_USB_DEVICE);
 		phy_set_mode(dwc->usb3_generic_phy, PHY_MODE_USB_DEVICE);
-		if (dwc->vbus_reg && regulator_is_enabled(dwc->vbus_reg)) {
+		spin_lock_irqsave(&dwc->lock, flags);
+		if (dwc->vbus_reg && dwc->vbus_enabled) {
 			ret = regulator_disable(dwc->vbus_reg);
 			if (ret < 0)
 				dev_err(dwc->dev, "failed to disable vbus\n");
+			dwc->vbus_enabled = 0;
+			dev_dbg(dwc->dev, "vbus disabled\n");
 		}
+		spin_unlock_irqrestore(&dwc->lock, flags);
 	}
 }
 
@@ -1670,6 +1681,7 @@ static void dwc3_get_properties(struct dwc3 *dwc)
 		vbus_reg = NULL;
 	}
 	dwc->vbus_reg = vbus_reg;
+	dev_dbg(dwc->dev, "vbus %lx\n", (long)dwc->vbus_reg);
 
 	dwc->host_vbus_glitches = device_property_read_bool(dev,
 				"snps,host-vbus-glitches");
