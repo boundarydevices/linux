@@ -16,16 +16,12 @@ DECLARE_RESTRICTED_HOOK(android_rvh_shmem_get_folio,
 			TP_PROTO(struct shmem_inode_info *info, struct folio **folio),
 			TP_ARGS(info, folio), 2);
 
-/*
-
-DECLARE_RESTRICTED_HOOK(android_rvh_set_skip_swapcache_flags,
-			TP_PROTO(gfp_t *flags),
-			TP_ARGS(flags), 1);
 DECLARE_RESTRICTED_HOOK(android_rvh_set_gfp_zone_flags,
-			TP_PROTO(gfp_t *flags),
+			TP_PROTO(unsigned int *flags),	/* gfp_t *flags */
 			TP_ARGS(flags), 1);
+
 DECLARE_RESTRICTED_HOOK(android_rvh_set_readahead_gfp_mask,
-			TP_PROTO(gfp_t *flags),
+			TP_PROTO(unsigned int *flags),	/* gfp_t *flags */
 			TP_ARGS(flags), 1);
 DECLARE_HOOK(android_vh_mmap_region,
 	TP_PROTO(struct vm_area_struct *vma, unsigned long addr),
@@ -35,7 +31,6 @@ DECLARE_HOOK(android_vh_try_to_unmap_one,
 		unsigned long addr, void *arg, bool ret),
 	TP_ARGS(folio, vma, addr, arg, ret));
 
-*/
 #endif /* _TRACE_HOOK_MM_H */
 
 /* This part must be outside protection */
