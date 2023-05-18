@@ -1111,6 +1111,16 @@
 			sound-dai = <&hdmi0>;
 		};
 	};
+
+	dai-link-4 {
+		sound-dai = <&afe>;
+		dai-link-name = "DPTX_BE";
+		status = "disabled";
+
+		codec-0 {
+			sound-dai = <&dp_tx>;
+		};
+	};
 };
 
 &mfg0 {
