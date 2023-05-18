@@ -184,7 +184,7 @@ static int imx_soc_device_register(struct platform_device *pdev)
 	struct gen_pool *sram_pool;
 	u32 *get_info_data;
 	phys_addr_t get_info_addr;
-	u32 soc_rev;
+	u8 major_ver, minor_ver;
 	u32 v[4];
 	int err;
 
@@ -210,15 +210,16 @@ static int imx_soc_device_register(struct platform_device *pdev)
 	if (!attr)
 		return -ENOMEM;
 
-	err = ele_get_info(get_info_addr, 23 * sizeof(u32));
+	err = ele_get_info(get_info_addr, ELE_GET_INFO_READ_SZ);
 	if (err) {
 		attr->revision = kasprintf(GFP_KERNEL, "A0");
 	} else {
-		soc_rev = (get_info_data[1] & 0xffff0000) >> 16;
-		if (soc_rev == 0xA100)
-			attr->revision = kasprintf(GFP_KERNEL, "A1");
+		major_ver = (get_info_data[1] & 0xffff0000) >> 24;
+		minor_ver = (get_info_data[1] & 0xffff0000) & 0xFF;
+		if (minor_ver)
+			attr->revision = kasprintf(GFP_KERNEL, "%x.%x", major_ver, minor_ver);
 		else
-			attr->revision = kasprintf(GFP_KERNEL, "A0");
+			attr->revision = kasprintf(GFP_KERNEL, "%x", major_ver);
 	}
 
 	gen_pool_free(sram_pool, (unsigned long)get_info_data, 0x100);
