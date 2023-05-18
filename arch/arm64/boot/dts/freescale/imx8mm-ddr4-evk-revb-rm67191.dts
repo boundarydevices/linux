@@ -39,10 +39,6 @@
 				 <&clk IMX8MM_VIDEO_PLL1_OUT>,
 				 <&clk IMX8MM_CLK_24M>;
 	assigned-clock-rates = <266000000>, <0>, <0>, <66000000>;
-	clocks = <&clk IMX8MM_CLK_DSI_CORE>,
-		 <&clk IMX8MM_CLK_DSI_PHY_REF>,
-		 <&clk IMX8MM_CLK_LCDIF_PIXEL>;
-	clock-names = "cfg", "pll-ref", "pixel_clock";
 
 	fb_mipi: panel@0 {
 		bits-per-color = <8>;
