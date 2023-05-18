@@ -761,11 +761,7 @@ release_pfn_map(gckOS Os, struct device *dev, struct um_desc *um)
                 SetPageDirty(page);
 
             if (um->refs[i])
-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 6, 0)
-                unpin_user_page(page);
-#else
                 put_page(page);
-#endif
         }
     }
 
