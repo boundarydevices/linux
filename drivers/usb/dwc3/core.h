@@ -1353,6 +1353,7 @@ struct dwc3 {
 
 	unsigned		dis_split_quirk:1;
 	unsigned		async_callbacks:1;
+	unsigned		vbus_enabled:1;
 
 	u16			imod_interval;
 
