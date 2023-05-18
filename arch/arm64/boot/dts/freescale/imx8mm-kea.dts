@@ -1204,11 +1204,6 @@
 				 <&clk IMX8MMN(VIDEO_PLL1_OUT)>,
 				 <&clk IMX8MMN(CLK_24M)>;
 	assigned-clock-rates = <266000000>, <0>, <0>, <66000000>;
-
-	clocks = <&clk IMX8MMN(CLK_DSI_CORE)>,
-		 <&clk IMX8MMN(CLK_DSI_PHY_REF)>,
-		 <&clk IMX8MMN(CLK_LCDIF_PIXEL)>;
-	clock-names = "cfg", "pll-ref", "pixel_clock";
 	status = "okay";
 };
 
