@@ -27,6 +27,7 @@
 #define DISP_REG_OVL_DATAPATH_CON		0x0024
 #define OVL_LAYER_SMI_ID_EN				BIT(0)
 #define OVL_BGCLR_SEL_IN				BIT(2)
+#define OVL_OUTPUT_CLAMP				BIT(26)
 #define DISP_REG_OVL_ROI_BGCLR			0x0028
 #define DISP_REG_OVL_SRC_CON			0x002c
 #define DISP_REG_OVL_CON(n)			(0x0030 + 0x20 * (n))
@@ -156,7 +157,7 @@ void mtk_ovl_start(struct device *dev)
 		unsigned int reg;
 
 		reg = readl(ovl->regs + DISP_REG_OVL_DATAPATH_CON);
-		reg = reg | OVL_LAYER_SMI_ID_EN;
+		reg = reg | OVL_LAYER_SMI_ID_EN | OVL_OUTPUT_CLAMP;
 		writel_relaxed(reg, ovl->regs + DISP_REG_OVL_DATAPATH_CON);
 	}
 	writel_relaxed(0x1, ovl->regs + DISP_REG_OVL_EN);
