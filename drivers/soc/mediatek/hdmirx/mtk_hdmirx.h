@@ -10,6 +10,7 @@
 #include <linux/kernel.h>
 #include <linux/types.h>
 #include <linux/tee_drv.h>
+#include <linux/soc/mediatek/mtk-hdmirx-intf.h>
 
 #include "hdmirx.h"
 #include "mtk_hdmi_rpt.h"
@@ -2076,6 +2077,10 @@ struct HdmiVRR vrr_emp;
 	u8 key_present;
 
 	u32 temp;
+
+	/* hdmirx capture driver */
+	struct hdmirx_capture_driver *capture_driver;
+	struct hdmirx_capture_interface capture_intf;
 };
 
 #define RX_ADR myhdmi->dig_addr
