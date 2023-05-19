@@ -41,6 +41,7 @@
 #endif
 #include <linux/pm_runtime.h>
 
+#include <linux/soc/mediatek/mtk-hdmirx-intf.h>
 #include "mtk_hdmirx.h"
 #include "mtk_hdmi_rpt.h"
 #include "hdmi_rx2_hw.h"
@@ -1050,6 +1051,42 @@ void hdmirx_set_vcore(struct MTK_HDMI *myhdmi, u32 vcore)
 #endif
 }
 
+void notify_vid_capture_device(struct MTK_HDMI *myhdmi, enum HDMIRX_NOTIFY_T notify)
+{
+	struct HDMIRX_VID_PARA vid_para;
+
+	if (myhdmi->capture_driver == NULL) {
+		RX_DEF_LOG("[RX] capture device not registered, skip notify[%d].\n", notify);
+		return;
+	}
+
+	switch (notify) {
+	case HDMI_RX_TIMING_LOCK:
+		if (myhdmi->vid_locked == 0) {
+			RX_DEF_LOG("[RX] timing not locked, skip notify[%d].\n", notify);
+			return;
+		}
+
+		io_get_vid_info(myhdmi, &vid_para);
+		myhdmi->capture_intf.width = vid_para.hactive;
+		myhdmi->capture_intf.height = vid_para.vactive;
+		myhdmi->capture_intf.color_space = (enum hdmirx_intf_cs)vid_para.cs;
+
+		RX_INFO_LOG("[RX] notify capture device to probe with w/h/cs: [%u/%u/%d].\n",
+					 myhdmi->capture_intf.width, myhdmi->capture_intf.height,
+					 myhdmi->capture_intf.color_space);
+		myhdmi->capture_driver->ops->probe(&myhdmi->capture_intf);
+		break;
+	case HDMI_RX_TIMING_UNLOCK:
+		RX_INFO_LOG("[RX] notify capture device to disconnect.\n");
+		myhdmi->capture_driver->ops->disconnect(&myhdmi->capture_intf);
+		break;
+	default:
+		RX_DEF_LOG("[RX] unknown notify[%d] to vid_capture_device, skip it\n");
+		break;
+	}
+}
+
 void
 hdmirx_state_callback(struct MTK_HDMI *myhdmi,
 	enum HDMIRX_NOTIFY_T notify)
@@ -1111,11 +1148,13 @@ hdmirx_state_callback(struct MTK_HDMI *myhdmi,
 		notify_uevent(&myhdmi->switch_data,
 			HDMI_RX_TIMING_LOCK);
 		myhdmi->video_notify = HDMI_RX_TIMING_LOCK;
+		notify_vid_capture_device(myhdmi, HDMI_RX_TIMING_LOCK);
 		break;
 	case HDMI_RX_TIMING_UNLOCK:
 		notify_uevent(&myhdmi->switch_data,
 			HDMI_RX_TIMING_UNLOCK);
 		myhdmi->video_notify = HDMI_RX_TIMING_UNLOCK;
+		notify_vid_capture_device(myhdmi, HDMI_RX_TIMING_UNLOCK);
 		break;
 	case HDMI_RX_AUD_LOCK:
 		notify_uevent(&myhdmi->switch_data,
@@ -1412,6 +1451,37 @@ void hdmirx_toprgu_rst(struct MTK_HDMI *myhdmi)
 	w_reg(R_ADR + 0x90, 0x85010000);
 	w_reg(R_ADR + 0x90, 0x85000000);
 }
+
+
+int hdmirx_register_capture_driver(struct hdmirx_capture_driver *capture_driver)
+{
+	struct device *dev = capture_driver->hdmirx_dev;
+	struct MTK_HDMI *myhdmi = dev_get_drvdata(dev);
+
+	if (myhdmi->capture_driver) {
+		RX_DEF_LOG("[RX] Double-register capture driver! Please check it!\n");
+		return -EINVAL;
+	}
+	myhdmi->capture_driver = capture_driver;
+	myhdmi->capture_intf.priv = capture_driver->priv;
+
+	if (myhdmi->vid_locked)
+		notify_vid_capture_device(myhdmi, HDMI_RX_TIMING_LOCK);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(hdmirx_register_capture_driver);
+
+void hdmirx_unregister_capture_driver(struct hdmirx_capture_driver *capture_driver)
+{
+	struct device *dev = capture_driver->hdmirx_dev;
+	struct MTK_HDMI *myhdmi = dev_get_drvdata(dev);
+
+	myhdmi->capture_driver = NULL;
+	myhdmi->capture_intf.priv = NULL;
+}
+EXPORT_SYMBOL_GPL(hdmirx_unregister_capture_driver);
+
 
 static int hdmirx_release(struct inode *inode,
 	struct file *file)
