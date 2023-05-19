@@ -577,8 +577,8 @@
 					bias-disable;
 				};
 				pins-5vctrl {
-					pinmux = <PINMUX_GPIO31__FUNC_GPIO31>;
-					output-high;
+					pinmux = <PINMUX_GPIO31__FUNC_HDMITX20_PWR5V>;
+					bias-disable;
 				};
 			};
 		};
