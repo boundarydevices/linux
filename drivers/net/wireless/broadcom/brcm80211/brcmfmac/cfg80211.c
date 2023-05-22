@@ -5596,8 +5596,23 @@ brcmf_parse_configure_sae_pwe(struct brcmf_if *ifp,
 	const struct brcmf_tlv *supp_rate_ie;
 	u8 ie_len, i;
 	bool support_sae_h2e = false, must_sae_h2e = false;
+	u32 wpa_auth = 0;
+
+	/* get configured wpa_auth */
+	err = brcmf_fil_bsscfg_int_get(ifp, "wpa_auth", &wpa_auth);
+	if ((wpa_auth & WPA3_AUTH_SAE_PSK) == 0) {
+		/* wpa_auth is not SAE, ignore sae_pwe. */
+		brcmf_dbg(INFO, "wpa_auth is not SAE:0x%x\n", wpa_auth);
+		return 0;
+	}
 
 	if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_SAE_EXT)) {
+		err = brcmf_fil_iovar_int_set(ifp, "extsae_pwe", 0);
+		if (err) {
+			brcmf_err("extsae_pwe iovar is not supported\n");
+			return -EOPNOTSUPP;
+		}
+
 		rsnx_ie = brcmf_parse_tlvs((u8 *)settings->beacon.tail,
 					   settings->beacon.tail_len,
 					   WLAN_EID_RSNX);
