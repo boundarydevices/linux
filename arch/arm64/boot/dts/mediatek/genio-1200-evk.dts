@@ -260,7 +260,7 @@
 
 		tcpc {
 			compatible = "mediatek,mt6360-tcpc";
-			interrupts-extended = <&pio 100 IRQ_TYPE_LEVEL_LOW>;
+			interrupts-extended = <&pio 17 IRQ_TYPE_LEVEL_LOW>;
 			interrupt-names = "PD_IRQB";
 			tcpc-vbus-supply = <&otg_vbus_regulator>;
 
@@ -844,7 +844,7 @@
 
 	mt6360_pins: mt6360-pins {
 		pins {
-			pinmux = <PINMUX_GPIO100__FUNC_GPIO100>,
+			pinmux = <PINMUX_GPIO17__FUNC_GPIO17>,
 				 <PINMUX_GPIO128__FUNC_GPIO128>;
 			input-enable;
 			bias-pull-up;
